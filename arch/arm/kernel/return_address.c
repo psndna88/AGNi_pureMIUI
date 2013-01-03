@@ -11,7 +11,7 @@
 #include <linux/export.h>
 #include <linux/ftrace.h>
 
-#if defined(CONFIG_FRAME_POINTER) && !defined(CONFIG_ARM_UNWIND)
+#if defined(CONFIG_FRAME_POINTER) || !defined(CONFIG_ARM_UNWIND)
 #include <linux/sched.h>
 
 #include <asm/stacktrace.h>
@@ -56,17 +56,13 @@ void *return_address(unsigned int level)
 		return NULL;
 }
 
-#else /* if defined(CONFIG_FRAME_POINTER) && !defined(CONFIG_ARM_UNWIND) */
-
-#if defined(CONFIG_ARM_UNWIND)
-#warning "TODO: return_address should use unwind tables"
-#endif
+#else /* CONFIG_FRAME_POINTER || CONFIG_ARM_UNWIND */
 
 void *return_address(unsigned int level)
 {
 	return NULL;
 }
 
-#endif /* if defined(CONFIG_FRAME_POINTER) && !defined(CONFIG_ARM_UNWIND) / else */
+#endif /* CONFIG_FRAME_POINTER || CONFIG_ARM_UNWIND */
 
 EXPORT_SYMBOL_GPL(return_address);
