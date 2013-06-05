@@ -891,13 +891,14 @@ static int update_cpumask(struct cpuset *cs, struct cpuset *trialcs,
 
 		cpumask_and(trialcs->cpus_allowed, trialcs->cpus_requested, cpu_active_mask);
 	}
-	retval = validate_change(cs, trialcs);
-	if (retval < 0)
-		return retval;
 
 	/* Nothing to do if the cpus didn't change */
 	if (cpumask_equal(cs->cpus_requested, trialcs->cpus_requested))
 		return 0;
+
+	retval = validate_change(cs, trialcs);
+	if (retval < 0)
+		return retval;
 
 	retval = heap_init(&heap, PAGE_SIZE, GFP_KERNEL, NULL);
 	if (retval)
