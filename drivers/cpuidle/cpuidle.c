@@ -263,7 +263,7 @@ static void poll_idle_init(struct cpuidle_driver *drv) {}
  */
 int cpuidle_enable_device(struct cpuidle_device *dev)
 {
-	int ret, i;
+	int ret;
 	struct cpuidle_driver *drv;
 
 	if (!dev)
@@ -292,12 +292,6 @@ int cpuidle_enable_device(struct cpuidle_device *dev)
 	if (cpuidle_curr_governor->enable &&
 	    (ret = cpuidle_curr_governor->enable(drv, dev)))
 		goto fail_sysfs;
-
-	for (i = 0; i < dev->state_count; i++) {
-		dev->states_usage[i].usage = 0;
-		dev->states_usage[i].time = 0;
-	}
-	dev->last_residency = 0;
 
 	smp_wmb();
 
@@ -351,6 +345,14 @@ static void __cpuidle_unregister_device(struct cpuidle_device *dev)
 	module_put(drv->owner);
 }
 
+static int __cpuidle_device_init(struct cpuidle_device *dev)
+{
+	memset(dev->states_usage, 0, sizeof(dev->states_usage));
+	dev->last_residency = 0;
+
+	return 0;
+}
+
 /**
  * __cpuidle_register_device - internal register function called before register
  * and enable routines
@@ -391,6 +393,10 @@ int cpuidle_register_device(struct cpuidle_device *dev)
 		return -EINVAL;
 
 	mutex_lock(&cpuidle_lock);
+
+	ret = __cpuidle_device_init(dev);
+	if (ret)
+		goto out_unlock;
 
 	ret = __cpuidle_register_device(dev);
 	if (ret)
