@@ -2802,6 +2802,7 @@ static struct device_attribute dev_attr_ro_cdrom =
 	__ATTR(ro, 0444, fsg_show_ro, NULL);
 static struct device_attribute dev_attr_file_nonremovable =
 	__ATTR(file, 0644, fsg_show_file, fsg_store_file);
+static DEVICE_ATTR(cdrom, 0644, fsg_show_cdrom, fsg_store_cdrom);
 
 #ifdef CONFIG_USB_MSC_PROFILING
 static DEVICE_ATTR(perf, 0644, fsg_show_perf, fsg_store_perf);
@@ -2882,6 +2883,10 @@ static int create_lun_device(struct fsg_common *common,
 			goto error_luns;
 
 		rc = device_create_file(&curlun->dev, &dev_attr_nofua);
+		if (rc)
+			goto error_luns;
+
+		rc = device_create_file(&curlun->dev, &dev_attr_cdrom);
 		if (rc)
 			goto error_luns;
 
@@ -3086,6 +3091,7 @@ static void fsg_common_release(struct kref *ref)
 #ifdef CONFIG_USB_MSC_PROFILING
 			device_remove_file(&lun->dev, &dev_attr_perf);
 #endif
+			device_remove_file(&lun->dev, &dev_attr_cdrom);
 			device_remove_file(&lun->dev, &dev_attr_nofua);
 			device_remove_file(&lun->dev,
 					   lun->cdrom
