@@ -104,7 +104,6 @@ config HAVE_KERNEL_LZ4
 choice
 	prompt "Kernel compression mode"
 	default KERNEL_GZIP
-	depends on HAVE_KERNEL_GZIP || HAVE_KERNEL_BZIP2 || HAVE_KERNEL_LZMA || HAVE_KERNEL_XZ || HAVE_KERNEL_LZO || HAVE_KERNEL_LZ4
 	help
 	  The linux kernel is a kind of self-extracting executable.
 	  Several compression algorithms are available, which differ
@@ -125,14 +124,14 @@ choice
 
 config KERNEL_GZIP
 	bool "Gzip"
-	depends on HAVE_KERNEL_GZIP
+	select HAVE_KERNEL_GZIP
 	help
 	  The old and tried gzip compression. It provides a good balance
 	  between compression ratio and decompression speed.
 
 config KERNEL_BZIP2
 	bool "Bzip2"
-	depends on HAVE_KERNEL_BZIP2
+	select HAVE_KERNEL_BZIP2
 	help
 	  Its compression ratio and speed is intermediate.
 	  Decompression speed is slowest among the choices.  The kernel
@@ -142,7 +141,7 @@ config KERNEL_BZIP2
 
 config KERNEL_LZMA
 	bool "LZMA"
-	depends on HAVE_KERNEL_LZMA
+	select HAVE_KERNEL_LZMA
 	help
 	  This compression algorithm's ratio is best.  Decompression speed
 	  is between gzip and bzip2.  Compression is slowest.
@@ -150,7 +149,7 @@ config KERNEL_LZMA
 
 config KERNEL_XZ
 	bool "XZ"
-	depends on HAVE_KERNEL_XZ
+	select HAVE_KERNEL_XZ
 	help
 	  XZ uses the LZMA2 algorithm and instruction set specific
 	  BCJ filters which can improve compression ratio of executable
@@ -165,7 +164,7 @@ config KERNEL_XZ
 
 config KERNEL_LZO
 	bool "LZO"
-	depends on HAVE_KERNEL_LZO
+	select HAVE_KERNEL_LZO
 	help
 	  Its compression ratio is the poorest among the choices. The kernel
 	  size is about 10% bigger than gzip; however its speed
@@ -173,7 +172,7 @@ config KERNEL_LZO
 
 config KERNEL_LZ4
 	bool "LZ4"
-	depends on HAVE_KERNEL_LZ4
+	select HAVE_KERNEL_LZ4
 	help
 	  LZ4 is an LZ77-type compressor with a fixed, byte-oriented encoding.
 	  A preliminary version of LZ4 de/compression tool is available at
