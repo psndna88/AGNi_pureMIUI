@@ -175,7 +175,7 @@
 		bgt	18f
 
 
-		.macro	forward_copy_shift pull push
+		.macro	forward_copy_shift pullshift pushshift
 
 		subs	r2, r2, #28
 		blt	14f
@@ -197,24 +197,24 @@
 
 12:	PLD(	pld	[r1, #124]		)
 13:		ldr4w	r1, r4, r5, r6, r7, abort=19f
-		mov	r3, lr, pull #\pull
+		mov	r3, lr, pullbits #\pullshift
 		subs	r2, r2, #32
 		ldr4w	r1, r8, r9, ip, lr, abort=19f
-		orr	r3, r3, r4, push #\push
-		mov	r4, r4, pull #\pull
-		orr	r4, r4, r5, push #\push
-		mov	r5, r5, pull #\pull
-		orr	r5, r5, r6, push #\push
-		mov	r6, r6, pull #\pull
-		orr	r6, r6, r7, push #\push
-		mov	r7, r7, pull #\pull
-		orr	r7, r7, r8, push #\push
-		mov	r8, r8, pull #\pull
-		orr	r8, r8, r9, push #\push
-		mov	r9, r9, pull #\pull
-		orr	r9, r9, ip, push #\push
-		mov	ip, ip, pull #\pull
-		orr	ip, ip, lr, push #\push
+		orr	r3, r3, r4, pushbits #\pushshift
+		mov	r4, r4, pullbits #\pullshift
+		orr	r4, r4, r5, pushbits #\pushshift
+		mov	r5, r5, pullbits #\pullshift
+		orr	r5, r5, r6, pushbits #\pushshift
+		mov	r6, r6, pullbits #\pullshift
+		orr	r6, r6, r7, pushbits #\pushshift
+		mov	r7, r7, pullbits #\pullshift
+		orr	r7, r7, r8, pushbits #\pushshift
+		mov	r8, r8, pullbits #\pullshift
+		orr	r8, r8, r9, pushbits #\pushshift
+		mov	r9, r9, pullbits #\pullshift
+		orr	r9, r9, ip, pushbits #\pushshift
+		mov	ip, ip, pullbits #\pullshift
+		orr	ip, ip, lr, pushbits #\pushshift
 		str8w	r0, r3, r4, r5, r6, r7, r8, r9, ip, , abort=19f
 		bge	12b
 	PLD(	cmn	r2, #96			)
@@ -225,26 +225,26 @@
 14:		ands	ip, r2, #28
 		beq	16f
 
-15:		mov	r3, lr, pull #\pull
+15:		mov	r3, lr, pullbits #\pullshift
 		ldr1w	r1, lr, abort=21f
 		subs	ip, ip, #4
-		orr	r3, r3, lr, push #\push
+		orr	r3, r3, lr, pushbits #\pushshift
 		str1w	r0, r3, abort=21f
 		bgt	15b
 	CALGN(	cmp	r2, #0			)
 	CALGN(	bge	11b			)
 
-16:		sub	r1, r1, #(\push / 8)
+16:		sub	r1, r1, #(\pushshift / 8)
 		b	8b
 
 		.endm
 
 
-		forward_copy_shift	pull=8	push=24
+		forward_copy_shift	pullshift=8	pushshift=24
 
-17:		forward_copy_shift	pull=16	push=16
+17:		forward_copy_shift	pullshift=16	pushshift=16
 
-18:		forward_copy_shift	pull=24	push=8
+18:		forward_copy_shift	pullshift=24	pushshift=8
 
 
 /*
