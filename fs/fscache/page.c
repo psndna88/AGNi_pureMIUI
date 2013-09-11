@@ -875,7 +875,7 @@ int __fscache_write_page(struct fscache_cookie *cookie,
 			       fscache_release_write_op);
 	op->op.flags = FSCACHE_OP_ASYNC | (1 << FSCACHE_OP_WAITING);
 
-	ret = radix_tree_preload(gfp & ~__GFP_HIGHMEM);
+	ret = radix_tree_maybe_preload(gfp & ~__GFP_HIGHMEM);
 	if (ret < 0)
 		goto nomem_free;
 
