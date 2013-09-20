@@ -282,9 +282,9 @@ static unsigned long get_next_ra_size(struct file_ra_state *ra,
 	unsigned long newsize;
 
 	if (cur < (max >> 4))
-		newsize = cur >> 2;
+		newsize = cur << 2;
 	else
-		newsize = cur >> 1;
+		newsize = cur << 1;
 
 	return min(newsize, max);
 }
