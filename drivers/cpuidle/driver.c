@@ -171,12 +171,10 @@ static void __cpuidle_driver_init(struct cpuidle_driver *drv)
 	 * order, because usually on of the the deeper states has this flag set.
 	 */
 	for (i = drv->state_count - 1; i >= 0 ; i--) {
-
-		if (!(drv->states[i].flags & CPUIDLE_FLAG_TIMER_STOP))
-			continue;
-
-		drv->bctimer = 1;
-		break;
+		if (drv->states[i].flags & CPUIDLE_FLAG_TIMER_STOP) {
+			drv->bctimer = 1;
+			break;
+		}
 	}
 }
 
