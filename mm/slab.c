@@ -1740,15 +1740,6 @@ static void *kmem_getpages(struct kmem_cache *cachep, gfp_t flags, int nodeid)
 {
 	struct page *page;
 	int nr_pages;
-	int i;
-
-#ifndef CONFIG_MMU
-	/*
-	 * Nommu uses slab's for process anonymous memory allocations, and thus
-	 * requires __GFP_COMP to properly refcount higher order allocations
-	 */
-	flags |= __GFP_COMP;
-#endif
 
 	flags |= cachep->allocflags;
 	if (cachep->flags & SLAB_RECLAIM_ACCOUNT)
@@ -1797,9 +1788,13 @@ static void *kmem_getpages(struct kmem_cache *cachep, gfp_t flags, int nodeid)
  */
 static void kmem_freepages(struct kmem_cache *cachep, void *addr)
 {
+<<<<<<< HEAD
 	unsigned long i = (1 << cachep->gfporder);
 	struct page *page = virt_to_page(addr);
 	const unsigned long nr_freed = i;
+=======
+	const unsigned long nr_freed = (1 << cachep->gfporder);
+>>>>>>> a84e672aeebb... slab: use __GFP_COMP flag for allocating slab pages
 
 	kmemcheck_free_shadow(page, cachep->gfporder);
 
@@ -1809,12 +1804,19 @@ static void kmem_freepages(struct kmem_cache *cachep, void *addr)
 	else
 		sub_zone_page_state(page_zone(page),
 				NR_SLAB_UNRECLAIMABLE, nr_freed);
+<<<<<<< HEAD
 	while (i--) {
 		BUG_ON(!PageSlab(page));
 		__ClearPageSlabPfmemalloc(page);
 		__ClearPageSlab(page);
 		page++;
 	}
+=======
+
+	BUG_ON(!PageSlab(page));
+	__ClearPageSlabPfmemalloc(page);
+	__ClearPageSlab(page);
+>>>>>>> a84e672aeebb... slab: use __GFP_COMP flag for allocating slab pages
 
 	memcg_release_pages(cachep, cachep->gfporder);
 	if (current->reclaim_state)
@@ -2380,7 +2382,7 @@ __kmem_cache_create (struct kmem_cache *cachep, unsigned long flags)
 	cachep->colour = left_over / cachep->colour_off;
 	cachep->slab_size = slab_size;
 	cachep->flags = flags;
-	cachep->allocflags = 0;
+	cachep->allocflags = __GFP_COMP;
 	if (CONFIG_ZONE_DMA_FLAG && (flags & SLAB_CACHE_DMA))
 		cachep->allocflags |= GFP_DMA;
 	cachep->size = size;
@@ -2748,6 +2750,7 @@ static void slab_put_obj(struct kmem_cache *cachep, struct slab *slabp,
 static void slab_map_pages(struct kmem_cache *cache, struct slab *slab,
 			   void *addr)
 {
+<<<<<<< HEAD
 	int nr_pages;
 	struct page *page;
 
@@ -2762,6 +2765,10 @@ static void slab_map_pages(struct kmem_cache *cache, struct slab *slab,
 		page->slab_page = slab;
 		page++;
 	} while (--nr_pages);
+=======
+	page->slab_cache = cache;
+	page->slab_page = slab;
+>>>>>>> a84e672aeebb... slab: use __GFP_COMP flag for allocating slab pages
 }
 
 /*
