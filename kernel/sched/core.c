@@ -5274,6 +5274,7 @@ unsigned long long task_sched_runtime(struct task_struct *p)
 	u64 ns = 0;
 
 #if defined(CONFIG_64BIT) && defined(CONFIG_SMP)
+
  /*
 	* 64-bit doesn't need locks to atomically read a 64bit value.
 	* So we have a optimization chance when the task's delta_exec is 0.
@@ -5285,6 +5286,7 @@ unsigned long long task_sched_runtime(struct task_struct *p)
 	*/
  if (!p->on_cpu)
  return p->se.sum_exec_runtime;
+
 #endif
 
 	rq = task_rq_lock(p, &flags);
