@@ -2429,9 +2429,10 @@ static void cache_resume(struct dm_target *ti)
 /*
  * Status format:
  *
- * <#used metadata blocks>/<#total metadata blocks>
+ * <metadata block size> <#used metadata blocks>/<#total metadata blocks>
+ * <cache block size> <#used cache blocks>/<#total cache blocks>
  * <#read hits> <#read misses> <#write hits> <#write misses>
- * <#demotions> <#promotions> <#blocks in cache> <#dirty>
+ * <#demotions> <#promotions> <#dirty>
  * <#features> <features>*
  * <#core args> <core args>
  * <#policy args> <policy args>*
@@ -2472,17 +2473,20 @@ static void cache_status(struct dm_target *ti, status_type_t type,
 
 		residency = policy_residency(cache->policy);
 
-		DMEMIT("%llu/%llu %u %u %u %u %u %u %llu %u ",
+		DMEMIT("%u %llu/%llu %u %llu/%llu %u %u %u %u %u %u %llu ",
+		       (unsigned)(DM_CACHE_METADATA_BLOCK_SIZE >> SECTOR_SHIFT),
 		       (unsigned long long)(nr_blocks_metadata - nr_free_blocks_metadata),
 		       (unsigned long long)nr_blocks_metadata,
+		       cache->sectors_per_block,
+		       (unsigned long long) from_cblock(residency),
+		       (unsigned long long) from_cblock(cache->cache_size),
 		       (unsigned) atomic_read(&cache->stats.read_hit),
 		       (unsigned) atomic_read(&cache->stats.read_miss),
 		       (unsigned) atomic_read(&cache->stats.write_hit),
 		       (unsigned) atomic_read(&cache->stats.write_miss),
 		       (unsigned) atomic_read(&cache->stats.demotion),
 		       (unsigned) atomic_read(&cache->stats.promotion),
-		       (unsigned long long) from_cblock(residency),
-		       cache->nr_dirty);
+		       (unsigned long long) from_cblock(cache->nr_dirty));
 
 		if (cache->features.write_through)
 			DMEMIT("1 writethrough ");
