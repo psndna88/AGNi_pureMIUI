@@ -8,6 +8,8 @@ TARGETS += mount
 TARGETS += net
 TARGETS += ptrace
 TARGETS += vm
+TARGETS += powerpc
+TARGETS += user
 
 all:
 	for TARGET in $(TARGETS); do \
