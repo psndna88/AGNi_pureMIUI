@@ -748,7 +748,7 @@ module_param_named(enabled, apparmor_enabled, aabool, S_IRUSR);
 static int __init apparmor_enabled_setup(char *str)
 {
 	unsigned long enabled;
-	int error = strict_strtoul(str, 0, &enabled);
+	int error = kstrtoul(str, 0, &enabled);
 	if (!error)
 		apparmor_enabled = enabled ? 1 : 0;
 	return 1;
