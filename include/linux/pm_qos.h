@@ -95,6 +95,7 @@ struct pm_qos_constraints {
 	s32 target_value;	/* Do not change to 64 bit */
 	s32 target_per_cpu[NR_CPUS];
 	s32 default_value;
+	s32 no_constraint_value;
 	enum pm_qos_type type;
 	struct blocking_notifier_head *notifiers;
 };
