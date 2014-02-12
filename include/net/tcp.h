@@ -796,8 +796,6 @@ struct tcp_congestion_ops {
 
 	/* return slow start threshold (required) */
 	u32 (*ssthresh)(struct sock *sk);
-	/* lower bound for congestion window (optional) */
-	u32 (*min_cwnd)(const struct sock *sk);
 	/* do new cwnd calculation (required) */
 	void (*cong_avoid)(struct sock *sk, u32 ack, u32 in_flight);
 	/* call before changing ca_state (optional) */
@@ -832,7 +830,6 @@ extern void tcp_cong_avoid_ai(struct tcp_sock *tp, u32 w);
 extern struct tcp_congestion_ops tcp_init_congestion_ops;
 extern u32 tcp_reno_ssthresh(struct sock *sk);
 extern void tcp_reno_cong_avoid(struct sock *sk, u32 ack, u32 in_flight);
-extern u32 tcp_reno_min_cwnd(const struct sock *sk);
 extern struct tcp_congestion_ops tcp_reno;
 
 static inline void tcp_set_ca_state(struct sock *sk, const u8 ca_state)
