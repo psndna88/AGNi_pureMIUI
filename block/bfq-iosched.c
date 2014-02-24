@@ -1181,10 +1181,10 @@ static void bfq_merged_requests(struct request_queue *q, struct request *rq,
 	 */
 	if (bfqq == next_bfqq &&
 	    !list_empty(&rq->queuelist) && !list_empty(&next->queuelist) &&
-	    time_before(rq_fifo_time(next), rq_fifo_time(rq))) {
+	    time_before(next->fifo_time, rq->fifo_time)) {
 		list_del_init(&rq->queuelist);
 		list_replace_init(&next->queuelist, &rq->queuelist);
-		rq_set_fifo_time(rq, rq_fifo_time(next));
+		rq->fifo_time = next->fifo_time;
 	}
 
 	if (bfqq->next_rq == next)
@@ -1800,7 +1800,7 @@ static struct request *bfq_check_fifo(struct bfq_queue *bfqq)
 
 	rq = rq_entry_fifo(bfqq->fifo.next);
 
-	if (time_before(jiffies, rq_fifo_time(rq)))
+	if (time_before(jiffies, rq->fifo_time))
 		return NULL;
 
 	return rq;
@@ -3372,7 +3372,7 @@ static void bfq_insert_request(struct request_queue *q, struct request *rq)
 	 */
 	if (bfqq->bic != NULL)
 		bfqq->bic->wr_time_left = 0;
-	rq_set_fifo_time(rq, jiffies + bfqd->bfq_fifo_expire[rq_is_sync(rq)]);
+	rq->fifo_time = jiffies + bfqd->bfq_fifo_expire[rq_is_sync(rq)];
 	list_add_tail(&rq->queuelist, &bfqq->fifo);
 
 	bfq_rq_enqueued(bfqd, bfqq, rq);

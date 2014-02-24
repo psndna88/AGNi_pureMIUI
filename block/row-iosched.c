@@ -335,7 +335,7 @@ static void row_add_request(struct request_queue *q,
 	list_add_tail(&rq->queuelist, &rqueue->fifo);
 	rd->nr_reqs[rq_data_dir(rq)]++;
 	rqueue->nr_req++;
-	rq_set_fifo_time(rq, jiffies); /* for statistics*/
+	rq->fifo_time=jiffies; /* for statistics*/
 
 	if (rq->cmd_flags & REQ_URGENT) {
 		WARN_ON(1);
