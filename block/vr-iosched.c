@@ -117,7 +117,7 @@ vr_add_request(struct request_queue *q, struct request *rq)
 	vr_add_rq_rb(vd, rq);
 
 	if (vd->fifo_expire[dir]) {
-		rq_set_fifo_time(rq, jiffies + vd->fifo_expire[dir]);
+		rq->fifo_time = jiffies + vd->fifo_expire[dir];
 		list_add_tail(&rq->queuelist, &vd->fifo_list[dir]);
 	}
 }
@@ -171,9 +171,9 @@ struct request *next)
 	* and move into next position (next will be deleted) in fifo
 	*/
 	if (!list_empty(&rq->queuelist) && !list_empty(&next->queuelist)) {
-		if (time_before(rq_fifo_time(next), rq_fifo_time(rq))) {
+		if (time_before(next->fifo_time, rq->fifo_time)) {
 			list_move(&rq->queuelist, &next->queuelist);
-			rq_set_fifo_time(rq, rq_fifo_time(next));
+			rq->fifo_time = next->fifo_time;
 		}
 	}
 
@@ -216,7 +216,7 @@ vr_expired_request(struct vr_data *vd, int ddir)
 		return NULL;
 
 	rq = rq_entry_fifo(vd->fifo_list[ddir].next);
-	if (time_after(jiffies, rq_fifo_time(rq)))
+	if (time_after(jiffies, rq->fifo_time))
 		return rq;
 
 	return NULL;
@@ -232,7 +232,7 @@ vr_check_fifo(struct vr_data *vd)
 	struct request *rq_async = vr_expired_request(vd, ASYNC);
 
 	if (rq_async && rq_sync) {
-		if (time_after(rq_fifo_time(rq_async), rq_fifo_time(rq_sync)))
+		if (time_after(rq_async->fifo_time, rq_sync->fifo_time))
 			return rq_sync;
 	}
 	else if (rq_sync)
