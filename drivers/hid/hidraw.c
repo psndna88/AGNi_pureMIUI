@@ -309,12 +309,13 @@ static void drop_ref(struct hidraw *hidraw, int exists_bit)
 		hidraw->exist = 0;
 		if (hidraw->open)
 			wake_up_interruptible(&hidraw->wait);
+		device_destroy(hidraw_class,
+			       MKDEV(hidraw_major, hidraw->minor));
 	} else {
 		--hidraw->open;
 	}
 
 	if (!hidraw->open && !hidraw->exist) {
-		device_destroy(hidraw_class, MKDEV(hidraw_major, hidraw->minor));
 		hidraw_table[hidraw->minor] = NULL;
 		kfree(hidraw);
 	}
