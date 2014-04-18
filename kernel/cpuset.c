@@ -973,7 +973,7 @@ static void cpuset_change_task_nodemask(struct task_struct *tsk,
 	 * Allow tasks that have access to memory reserves because they have
 	 * been OOM killed to get memory anywhere.
 	 */
-	if (unlikely(test_thread_flag(TIF_MEMDIE)))
+	if (unlikely(test_thread_flag_relaxed(TIF_MEMDIE)))
 		return;
 	if (current->flags & PF_EXITING) /* Let dying task have memory */
 		return;
@@ -2451,7 +2451,7 @@ int __cpuset_node_allowed_softwall(int node, gfp_t gfp_mask)
 	 * Allow tasks that have access to memory reserves because they have
 	 * been OOM killed to get memory anywhere.
 	 */
-	if (unlikely(test_thread_flag(TIF_MEMDIE)))
+	if (unlikely(test_thread_flag_relaxed(TIF_MEMDIE)))
 		return 1;
 	if (gfp_mask & __GFP_HARDWALL)	/* If hardwall request, stop here */
 		return 0;
@@ -2504,7 +2504,7 @@ int __cpuset_node_allowed_hardwall(int node, gfp_t gfp_mask)
 	 * Allow tasks that have access to memory reserves because they have
 	 * been OOM killed to get memory anywhere.
 	 */
-	if (unlikely(test_thread_flag(TIF_MEMDIE)))
+	if (unlikely(test_thread_flag_relaxed(TIF_MEMDIE)))
 		return 1;
 	return 0;
 }

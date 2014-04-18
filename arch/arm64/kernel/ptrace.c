@@ -1155,10 +1155,10 @@ asmlinkage int syscall_trace_enter(struct pt_regs *regs)
 	if (secure_computing(regs->syscallno) == -1)
 		return RET_SKIP_SYSCALL_TRACE;
 
-	if (test_thread_flag(TIF_SYSCALL_TRACE))
+	if (test_thread_flag_relaxed(TIF_SYSCALL_TRACE))
 		tracehook_report_syscall(regs, PTRACE_SYSCALL_ENTER);
 
-	if (test_thread_flag(TIF_SYSCALL_TRACEPOINT))
+	if (test_thread_flag_relaxed(TIF_SYSCALL_TRACEPOINT))
 		trace_sys_enter(regs, regs->syscallno);
 
 	if (IS_SKIP_SYSCALL(regs->syscallno)) {
@@ -1184,9 +1184,9 @@ asmlinkage int syscall_trace_enter(struct pt_regs *regs)
 
 asmlinkage void syscall_trace_exit(struct pt_regs *regs)
 {
-	if (test_thread_flag(TIF_SYSCALL_TRACEPOINT))
+	if (test_thread_flag_relaxed(TIF_SYSCALL_TRACEPOINT))
 		trace_sys_exit(regs, regs_return_value(regs));
 
-	if (test_thread_flag(TIF_SYSCALL_TRACE))
+	if (test_thread_flag_relaxed(TIF_SYSCALL_TRACE))
 		tracehook_report_syscall(regs, PTRACE_SYSCALL_EXIT);
 }

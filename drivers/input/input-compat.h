@@ -22,11 +22,11 @@
 #if defined(CONFIG_X86_64) || defined(CONFIG_TILE)
 #  define INPUT_COMPAT_TEST is_compat_task()
 #elif defined(CONFIG_S390)
-#  define INPUT_COMPAT_TEST test_thread_flag(TIF_31BIT)
+#  define INPUT_COMPAT_TEST test_thread_flag_relaxed(TIF_31BIT)
 #elif defined(CONFIG_MIPS)
-#  define INPUT_COMPAT_TEST test_thread_flag(TIF_32BIT_ADDR)
+#  define INPUT_COMPAT_TEST test_thread_flag_relaxed(TIF_32BIT_ADDR)
 #else
-#  define INPUT_COMPAT_TEST test_thread_flag(TIF_32BIT)
+#  define INPUT_COMPAT_TEST test_thread_flag_relaxed(TIF_32BIT)
 #endif
 
 struct input_event_compat {

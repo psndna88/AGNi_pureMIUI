@@ -302,12 +302,12 @@ struct compat_shmid64_ds {
 
 static inline int is_compat_task(void)
 {
-	return test_thread_flag(TIF_32BIT);
+	return test_thread_flag_relaxed(TIF_32BIT);
 }
 
 static inline int is_compat_thread(struct thread_info *thread)
 {
-	return test_ti_thread_flag(thread, TIF_32BIT);
+	return test_ti_thread_flag_relaxed(thread, TIF_32BIT);
 }
 
 #else /* !CONFIG_COMPAT */
