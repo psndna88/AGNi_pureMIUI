@@ -46,6 +46,17 @@ void pm_qos_add_request(handle, param_class, target_value):
   Clients of pm_qos need to save the returned handle for future use in other
   pm_qos API functions.
 
+The handle is a pm_qos_request object. By default the request object sets the
+request type to PM_QOS_REQ_ALL_CORES, in which case, the PM QoS request
+applies to all cores. However, the driver can also specify a request type to
+be either of
+        PM_QOS_REQ_ALL_CORES,
+        PM_QOS_REQ_AFFINE_CORES,
+        PM_QOS_REQ_AFFINE_IRQ,
+
+Specify the cpumask when type is set to PM_QOS_REQ_AFFINE_CORES and specify
+the IRQ number with PM_QOS_REQ_AFFINE_IRQ.
+
 void pm_qos_update_request(handle, new_target_value):
   Will update the list element pointed to by the handle with the new target value
   and recompute the new aggregated target, calling the notification tree if the
@@ -58,6 +69,13 @@ void pm_qos_remove_request(handle):
 
 int pm_qos_request(param_class):
   Returns the aggregated value for a given PM QoS class.
+
+int pm_qos_request_for_cpu(param_class, cpu):
+Returns the aggregated value for a given PM QoS class for the specified cpu.
+
+int pm_qos_request_for_cpumask(param_class, cpumask):
+Returns the aggregated value for a given PM QoS class for the specified
+cpumask.
 
 int pm_qos_request_active(handle):
   Returns if the request is still active, i.e. it has not been removed from a
