@@ -655,8 +655,13 @@ extern struct sk_buff *skb_clone(struct sk_buff *skb,
 				 gfp_t priority);
 extern struct sk_buff *skb_copy(const struct sk_buff *skb,
 				gfp_t priority);
-extern struct sk_buff *__pskb_copy(struct sk_buff *skb,
-				 int headroom, gfp_t gfp_mask);
+extern struct sk_buff *__pskb_copy_fclone(struct sk_buff *skb, int headroom,
+				   gfp_t gfp_mask, bool fclone);
+static inline struct sk_buff *__pskb_copy(struct sk_buff *skb, int headroom,
+					  gfp_t gfp_mask)
+{
+	return __pskb_copy_fclone(skb, headroom, gfp_mask, false);
+}
 
 extern int	       pskb_expand_head(struct sk_buff *skb,
 					int nhead, int ntail,
@@ -2192,6 +2197,14 @@ static inline struct sk_buff *pskb_copy(struct sk_buff *skb,
 {
 	return __pskb_copy(skb, skb_headroom(skb), gfp_mask);
 }
+
+
+static inline struct sk_buff *pskb_copy_for_clone(struct sk_buff *skb,
+						  gfp_t gfp_mask)
+{
+	return __pskb_copy_fclone(skb, skb_headroom(skb), gfp_mask, true);
+}
+
 
 /**
  *	skb_clone_writable - is the header of a clone writable
