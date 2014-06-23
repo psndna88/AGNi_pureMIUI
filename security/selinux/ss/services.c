@@ -2435,7 +2435,7 @@ out:
 }
 
 /**
- * security_genfs_sid - Obtain a SID for a file in a filesystem
+ * __security_genfs_sid - Helper to obtain a SID for a file in a filesystem
  * @fstype: filesystem type
  * @path: path from root of mount
  * @sclass: file security class
@@ -2444,11 +2444,13 @@ out:
  * Obtain a SID to use for a file in a filesystem that
  * cannot support xattr or use a fixed labeling behavior like
  * transition SIDs or task SIDs.
+ *
+ * The caller must acquire the policy_rwlock before calling this function.
  */
-int security_genfs_sid(const char *fstype,
-		       char *path,
-		       u16 orig_sclass,
-		       u32 *sid)
+static inline int __security_genfs_sid(const char *fstype,
+				       char *path,
+				       u16 orig_sclass,
+				       u32 *sid)
 {
 	int len;
 	u16 sclass;
@@ -2458,8 +2460,6 @@ int security_genfs_sid(const char *fstype,
 
 	while (path[0] == '/' && path[1] == '/')
 		path++;
-
-	read_lock(&policy_rwlock);
 
 	sclass = unmap_class(orig_sclass);
 	*sid = SECINITSID_UNLABELED;
@@ -2494,8 +2494,30 @@ int security_genfs_sid(const char *fstype,
 	*sid = c->sid[0];
 	rc = 0;
 out:
-	read_unlock(&policy_rwlock);
 	return rc;
+}
+
+/**
+ * security_genfs_sid - Obtain a SID for a file in a filesystem
+ * @fstype: filesystem type
+ * @path: path from root of mount
+ * @sclass: file security class
+ * @sid: SID for path
+ *
+ * Acquire policy_rwlock before calling __security_genfs_sid() and release
+ * it afterward.
+ */
+int security_genfs_sid(const char *fstype,
+		       char *path,
+		       u16 orig_sclass,
+		       u32 *sid)
+{
+	int retval;
+
+	read_lock(&policy_rwlock);
+	retval = __security_genfs_sid(fstype, path, orig_sclass, sid);
+	read_unlock(&policy_rwlock);
+	return retval;
 }
 
 /**
@@ -2531,7 +2553,7 @@ int security_fs_use(
 		}
 		*sid = c->sid[0];
 	} else {
-		rc = security_genfs_sid(fstype, "/", SECCLASS_DIR, sid);
+		rc = __security_genfs_sid(fstype, "/", SECCLASS_DIR, sid);
 		if (rc) {
 			*behavior = SECURITY_FS_USE_NONE;
 			rc = 0;
