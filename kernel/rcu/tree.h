@@ -337,7 +337,7 @@ struct rcu_data {
 	int nocb_p_count_lazy;		/*  (approximate). */
 	wait_queue_head_t nocb_wq;	/* For nocb kthreads to sleep on. */
 	struct task_struct *nocb_kthread;
-	bool nocb_defer_wakeup;		/* Defer wakeup of nocb_kthread. */
+	int nocb_defer_wakeup;		/* Defer wakeup of nocb_kthread. */
 
 	/* The following fields are used by the leader, hence own cacheline. */
 	struct rcu_head *nocb_gp_head ____cacheline_internodealigned_in_smp;
@@ -371,6 +371,11 @@ struct rcu_data {
 #define RCU_SIGNAL_INIT		RCU_SAVE_DYNTICK
 
 #define RCU_JIFFIES_TILL_FORCE_QS	 3	/* for rsp->jiffies_force_qs */
+
+/* Values for nocb_defer_wakeup field in struct rcu_data. */
+#define RCU_NOGP_WAKE_NOT	0
+#define RCU_NOGP_WAKE		1
+#define RCU_NOGP_WAKE_FORCE	2
 
 #define RCU_STALL_RAT_DELAY		2	/* Allow other CPUs time */
 						/*  to take at least one */
@@ -567,7 +572,7 @@ static bool __call_rcu_nocb(struct rcu_data *rdp, struct rcu_head *rhp,
 static bool rcu_nocb_adopt_orphan_cbs(struct rcu_state *rsp,
 				      struct rcu_data *rdp,
 				      unsigned long flags);
-static bool rcu_nocb_need_deferred_wakeup(struct rcu_data *rdp);
+static int rcu_nocb_need_deferred_wakeup(struct rcu_data *rdp);
 static void do_nocb_deferred_wakeup(struct rcu_data *rdp);
 static void rcu_boot_init_nocb_percpu_data(struct rcu_data *rdp);
 static void rcu_kick_nohz_cpu(int cpu);
