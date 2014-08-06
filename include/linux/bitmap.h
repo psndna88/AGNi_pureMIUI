@@ -114,7 +114,7 @@ extern int __bitmap_subset(const unsigned long *bitmap1,
 extern int __bitmap_weight(const unsigned long *bitmap, unsigned int nbits);
 
 extern void bitmap_set(unsigned long *map, unsigned int start, int len);
-extern void bitmap_clear(unsigned long *map, int start, int nr);
+extern void bitmap_clear(unsigned long *map, unsigned int start, int len);
 
 extern unsigned long bitmap_find_next_zero_area_off(unsigned long *map,
 						    unsigned long size,
