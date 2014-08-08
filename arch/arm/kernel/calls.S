@@ -391,6 +391,9 @@
 		CALL(sys_finit_module)
 /* 380 */	CALL(sys_sched_setattr)
 		CALL(sys_sched_getattr)
+		CALL(sys_renameat2)
+		CALL(sys_seccomp)
+		CALL(sys_getrandom)
 		CALL(sys_ni_syscall)		/* reserved sys_renameat2     */
 		CALL(sys_seccomp)
 
