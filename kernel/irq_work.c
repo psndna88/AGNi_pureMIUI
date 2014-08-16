@@ -114,8 +114,10 @@ bool irq_work_needs_cpu(void)
 
 	raised = &__get_cpu_var(raised_list);
 	lazy = &__get_cpu_var(lazy_list);
-	if (llist_empty_relaxed(raised) && llist_empty_relaxed(lazy))
-		return false;
+
+	if (llist_empty_relaxed(raised) || arch_irq_work_has_interrupt())
+		if (llist_empty_relaxed(lazy))
+			return false;
 
 	/* All work should have been flushed before going offline */
 	WARN_ON_ONCE(cpu_is_offline(smp_processor_id()));
@@ -169,6 +171,15 @@ void irq_work_run(void)
 	irq_work_run_list(&__get_cpu_var(lazy_list));
 }
 EXPORT_SYMBOL_GPL(irq_work_run);
+
+void irq_work_tick(void)
+{
+	struct llist_head *raised = &__get_cpu_var(raised_list);
+
+	if (!llist_empty_relaxed(raised) && !arch_irq_work_has_interrupt())
+		irq_work_run_list(raised);
+	irq_work_run_list(&__get_cpu_var(lazy_list));
+}
 
 /*
  * Synchronize against the irq_work @entry, ensures the entry is not
