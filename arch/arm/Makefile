@@ -49,8 +49,6 @@ AS		+= -EL
 LD		+= -EL
 endif
 
-comma = ,
-
 #
 # The Scalar Replacement of Aggregates (SRA) optimization pass in GCC 4.9 and
 # later may result in code being generated that handles signed short and signed
