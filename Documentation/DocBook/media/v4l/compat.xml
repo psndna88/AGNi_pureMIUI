@@ -2513,6 +2513,16 @@ that used it. It was originally scheduled for removal in 2.6.35.
       </orderedlist>
     </section>
 
+    <section>
+      <title>V4L2 in Linux 3.18</title>
+      <orderedlist>
+	<listitem>
+	  <para>Added <constant>V4L2_CID_PAN_SPEED</constant> and
+ <constant>V4L2_CID_TILT_SPEED</constant> camera controls.</para>
+	</listitem>
+      </orderedlist>
+    </section>
+
     <section id="other">
       <title>Relation of V4L2 to other Linux multimedia APIs</title>
 
