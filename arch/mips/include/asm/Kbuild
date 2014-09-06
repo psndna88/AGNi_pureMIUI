@@ -1,3 +1,4 @@
 # MIPS headers
+generic-y += irq_work.h
 generic-y += mcs_spinlock.h
 generic-y += trace_clock.h
