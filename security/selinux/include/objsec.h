@@ -24,6 +24,7 @@
 #include <linux/binfmts.h>
 #include <linux/in.h>
 #include <linux/spinlock.h>
+#include <net/net_namespace.h>
 #include <linux/in6.h>
 #include <net/net_namespace.h>
 
