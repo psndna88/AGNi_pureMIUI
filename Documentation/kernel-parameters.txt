@@ -2591,6 +2591,13 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			quiescent states.  Units are jiffies, minimum
 			value is one, and maximum value is HZ.
 
+	rcutree.kthread_prio= 	 [KNL,BOOT]
+			Set the SCHED_FIFO priority of the RCU
+			per-CPU kthreads (rcuc/N). This value is also
+			used for the priority of the RCU boost threads
+			(rcub/N). Valid values are 1-99 and the default
+			is 1 (the least-favored priority).
+
 	rcutree.qhimark= [KNL]
 			Set threshold of queued
 			RCU callbacks over which batch limiting is disabled.
