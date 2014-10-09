@@ -2037,8 +2037,7 @@ retry_cpuset:
 	page = __alloc_pages_nodemask(gfp, order,
 				      policy_zonelist(gfp, pol, node),
 				      policy_nodemask(gfp, pol));
-	if (unlikely(mpol_needs_cond_ref(pol)))
-		__mpol_put(pol);
+	mpol_cond_put(pol);
 	if (unlikely(!put_mems_allowed(cpuset_mems_cookie) && !page))
 		goto retry_cpuset;
 	return page;
