@@ -942,7 +942,7 @@ select_task_rq_dl(struct task_struct *p, int sd_flag, int flags)
 	struct rq *rq;
 	int cpu = task_cpu(p);
 
-	if (sd_flag != SD_BALANCE_WAKE && sd_flag != SD_BALANCE_FORK)
+	if (sd_flag != SD_BALANCE_WAKE)
 		goto out;
 
 	rq = cpu_rq(cpu);
