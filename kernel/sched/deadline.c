@@ -1717,7 +1717,6 @@ static void switched_from_dl(struct rq *rq, struct task_struct *p)
 
 	if (pull_dl_task(rq))
 		resched_curr(rq);
-#endif
 }
 
 /*
