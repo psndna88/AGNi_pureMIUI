@@ -454,6 +454,7 @@ void lazyplug_enter_lazy(bool enter)
 	} else if (!enter && Lprevious_state) {
 #ifdef DEBUG_LAZYPLUG
 		pr_info("lazyplug: exiting lazy mode\n");
+#endif
 		nr_run_profile_sel = Lnr_run_profile_sel;
 		Lprevious_state = false;
 	}
