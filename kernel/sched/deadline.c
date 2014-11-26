@@ -613,26 +613,6 @@ again:
 
 	sched_clock_tick();
 	update_rq_clock(rq);
-
-	/*
-	 * If the throttle happened during sched-out; like:
-	 *
-	 *   schedule()
-	 *     deactivate_task()
-	 *       dequeue_task_dl()
-	 *         update_curr_dl()
-	 *           start_dl_timer()
-	 *         __dequeue_task_dl()
-	 *     prev->on_rq = 0;
-	 *
-	 * We can be both throttled and !queued. Replenish the counter
-	 * but do not enqueue -- wait for our wakeup to do that.
-	 */
-	if (!task_on_rq_queued(p)) {
-		replenish_dl_entity(dl_se, dl_se);
-		goto unlock;
-	}
-
 	enqueue_task_dl(rq, p, ENQUEUE_REPLENISH);
 	if (dl_task(rq->curr))
 		check_preempt_curr_dl(rq, p, 0);
@@ -641,26 +621,12 @@ again:
 
 #ifdef CONFIG_SMP
 	/*
-	 * Perform balancing operations here; after the replenishments.  We
-	 * cannot drop rq->lock before this, otherwise the assertion in
-	 * start_dl_timer() about not missing updates is not true.
-	 *
-	 * If we find that the rq the task was on is no longer available, we
-	 * need to select a new rq.
-	 *
-	 * XXX figure out if select_task_rq_dl() deals with offline cpus.
-	 */
-	if (unlikely(!rq->online))
-		rq = dl_task_offline_migration(rq, p);
-
-	/*
-	 * Queueing this task back might have overloaded rq, check if we need
-	 * to kick someone away.
+	 * Queueing this task back might have overloaded rq,
+	 * check if we need to kick someone away.
 	 */
 	if (has_pushable_dl_tasks(rq))
 		push_dl_task(rq);
 #endif
-
 unlock:
 	raw_spin_unlock(&rq->lock);
 
@@ -729,7 +695,7 @@ static void update_curr_dl(struct rq *rq)
 	if (dl_runtime_exceeded(rq, dl_se)) {
 		dl_se->dl_throttled = 1;
 		__dequeue_task_dl(rq, curr, 0);
-		if (unlikely(dl_se->dl_boosted || !start_dl_timer(curr)))
+		if (unlikely(!start_dl_timer(dl_se, curr->dl.dl_boosted)))
 			enqueue_task_dl(rq, curr, ENQUEUE_REPLENISH);
 
 		if (!is_leftmost(curr, &rq->dl))
