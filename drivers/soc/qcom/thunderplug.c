@@ -41,7 +41,7 @@ struct notifier_block lcd_worker;
 
 #define CPU_LOAD_THRESHOLD        (40)
 
-#define DEF_SAMPLING_MS			(500)
+#define DEF_SAMPLING_MS			(400)
 
 static int sampling_time = DEF_SAMPLING_MS;
 static int load_threshold = CPU_LOAD_THRESHOLD;
