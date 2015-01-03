@@ -1206,6 +1206,11 @@ fail:
 static int mtp_open(struct inode *ip, struct file *fp)
 {
 	printk(KERN_INFO "mtp_open\n");
+	if (!_mtp_dev->cdev) {
+		WARN(1, "_mtp_dev->cdev is NULL in mtp_open\n");
+		return -ENODEV;
+	}
+
 	if (mtp_lock(&_mtp_dev->open_excl))
 		return -EBUSY;
 
