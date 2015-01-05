@@ -705,6 +705,11 @@ static inline u64 __rq_clock_broken(struct rq *rq)
 	return ACCESS_ONCE(rq->clock);
 }
 
+static inline u64 __rq_clock_broken(struct rq *rq)
+{
+	return ACCESS_ONCE(rq->clock);
+}
+
 static inline u64 rq_clock(struct rq *rq)
 {
 	lockdep_assert_held(&rq->lock);
