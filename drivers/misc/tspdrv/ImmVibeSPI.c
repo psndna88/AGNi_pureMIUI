@@ -54,6 +54,8 @@
 #define ISA1000_VIB_DEFAULT_TIMEOUT	15000
 static unsigned int gpio_haptic_en;
 
+static int pwm_duty = 0;
+
 /*
 ** PWM to ISA1000
 */
@@ -89,7 +91,7 @@ static int isa1000_vib_set(struct isa1000_vib *vib, int on)
 
 	if (on) {
 		rc = pwm_config(pwm,
-						(pwm_period_ns * 100/100),
+						(pwm_period_ns * pwm_duty) / 100,
 						pwm_period_ns);
 		if (rc < 0){
 			pr_err( "Unable to config pwm%d\n",rc);
@@ -216,6 +218,30 @@ static void isa1000_vib_set_level(int level)
 chip_dwn:
         gpio_set_value_cansleep(GPIO_ISA1000_EN, 0);
 }
+
+static ssize_t vibrator_amp_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", pwm_duty);
+}
+
+static ssize_t vibrator_amp_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+    int gain;
+	sscanf(buf, "%d", &gain);
+
+    if(gain>100)
+        gain=100;
+    else if(gain<80)
+        gain=80;
+
+    pwm_duty = gain;
+
+	return size;
+}
+
+static DEVICE_ATTR(amp, S_IRUGO | S_IWUSR, vibrator_amp_show, vibrator_amp_store);
 
 static int isa1000_setup(void)
 {
@@ -374,6 +400,11 @@ VibeStatus ImmVibeSPI_ForceOut_Initialize(void)
         return VIBE_E_FAIL;
     }
     /**/
+
+    Ret = device_create_file(vib_dev->timed_dev.dev, &dev_attr_amp);
+    if (Ret < 0) {
+	pr_err("[VIB] %s, create sysfs fail: amp\n", __func__);
+    }
 
     /* Disable amp */
     ImmVibeSPI_ForceOut_AmpDisable(0);
