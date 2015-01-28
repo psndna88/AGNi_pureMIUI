@@ -1703,8 +1703,8 @@ static void cancel_dl_timer(struct rq *rq, struct task_struct *p)
 
 static void switched_from_dl(struct rq *rq, struct task_struct *p)
 {
+	/* XXX we should retain the bw until 0-lag */
 	cancel_dl_timer(rq, p);
-
 	__dl_clear_params(p);
 
 	/*
