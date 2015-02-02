@@ -69,6 +69,8 @@
 #include <net/checksum.h>
 #include <net/tcp_states.h>
 
+#define TCP_BACKLOG_SCALE 4
+
 struct cgroup;
 struct cgroup_subsys;
 #ifdef CONFIG_NET
@@ -784,7 +786,7 @@ static inline bool sk_rcvqueues_full(const struct sock *sk, const struct sk_buff
 static inline __must_check int sk_add_backlog(struct sock *sk, struct sk_buff *skb,
 					      unsigned int limit)
 {
-	if (sk_rcvqueues_full(sk, skb, limit))
+	if (sk_rcvqueues_full(sk, skb, limit * TCP_BACKLOG_SCALE))
 		return -ENOBUFS;
 
 	/*
