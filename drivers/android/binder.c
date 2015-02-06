@@ -2756,9 +2756,9 @@ retry:
 				return -EFAULT;
 			ptr += sizeof(uint32_t);
 			binder_stat_br(proc, thread, thread->return_error2);
+			thread->return_error2 = BR_OK;
 			if (ptr == end)
 				goto done;
-			thread->return_error2 = BR_OK;
 		}
 		if (put_user_preempt_disabled(thread->return_error, (uint32_t __user *)ptr))
 			return -EFAULT;
