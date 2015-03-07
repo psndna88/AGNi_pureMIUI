@@ -11,7 +11,7 @@ echo " "
 echo "          BATCH MODE: Building AGNi LOS-O variant..."
 # AGNI pureLOS-O
 rm drivers/staging/prima/wlan.ko
-./build_kernel_kenzo_losO.sh
+./build_kernel_kenzo_losO.sh || exit 1
 #mv -f $KERNELDIR/BUILT_kenzo-losO $TEMP_DIR/
 rm .config
 echo " "
@@ -24,7 +24,7 @@ echo " "
 echo "          BATCH MODE: Building AGNi LOS-N variant..."
 # AGNI pureLOS-N
 rm drivers/staging/prima/wlan.ko
-./build_kernel_kenzo_losN.sh
+./build_kernel_kenzo_losN.sh || exit 1
 #mv -f $KERNELDIR/BUILT_kenzo-losN $TEMP_DIR/
 rm .config
 echo " "
@@ -38,7 +38,7 @@ echo " "
 echo "          BATCH MODE: Building AGNi MIUI-N variant..."
 # AGNI pureMIUI-N
 rm drivers/staging/prima/wlan.ko
-./build_kernel_kenzo_miuiN.sh
+./build_kernel_kenzo_miuiN.sh || exit 1
 #mv -f $KERNELDIR/BUILT_kenzo-miuiN $TEMP_DIR/
 rm .config
 echo " "
@@ -52,7 +52,7 @@ echo " "
 echo "          BATCH MODE: Building AGNi MIUI-MM variant..."
 # AGNI pureMIUI-MM
 rm drivers/staging/prima/wlan.ko
-./build_kernel_kenzo_miuiMM.sh
+./build_kernel_kenzo_miuiMM.sh || exit 1
 #mv -f $KERNELDIR/BUILT_kenzo-miuiMM $TEMP_DIR/
 rm .config
 echo " "

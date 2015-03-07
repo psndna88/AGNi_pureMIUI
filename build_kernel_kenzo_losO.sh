@@ -17,6 +17,11 @@ fi
 rm $KERNELDIR/arch/arm/boot/dts/*.dtb
 rm $KERNELDIR/drivers/staging/prima/wlan.ko
 rm $KERNELDIR/include/generated/compile.h
+if [ -f $KERNELDIR/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi.bak ];
+	then
+	rm $KERNELDIR/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi
+	mv $KERNELDIR/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi.bak $KERNELDIR/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi
+fi
 make -j4 || exit 1
 
 rm -rf $KERNELDIR/BUILT_kenzo-losO

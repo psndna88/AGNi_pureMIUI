@@ -17,8 +17,15 @@ fi
 rm $KERNELDIR/arch/arm/boot/dts/*.dtb
 rm $KERNELDIR/drivers/staging/prima/wlan.ko
 rm $KERNELDIR/include/generated/compile.h
-cp $KERNELDIR/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi $KERNELDIR/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi.bak
-sed -i '/AGNI_OREO_SYSMOUNT_MARKER/d' $KERNELDIR/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi
+if [ "`grep "AGNI_OREO_SYSMOUNT_MARKER" $KERNELDIR/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi`" ];
+	then
+	if [ -f $KERNELDIR/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi.bak ];
+		then
+		rm $KERNELDIR/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi.bak
+	fi
+	cp -f $KERNELDIR/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi $KERNELDIR/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi.bak
+	sed -i '/AGNI_OREO_SYSMOUNT_MARKER/d' $KERNELDIR/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi
+fi
 make -j4 || exit 1
 rm $KERNELDIR/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi
 mv $KERNELDIR/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi.bak $KERNELDIR/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi
