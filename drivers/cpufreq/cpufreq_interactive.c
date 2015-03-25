@@ -1027,11 +1027,10 @@ static ssize_t store_timer_rate(struct cpufreq_interactive_tunables *tunables,
 	struct cpufreq_interactive_tunables *t;
 	int cpu;
 
-
 	if (!is_perfd(current->comm))
 		return 0;
 
-	ret = kstrtoul(buf, 0, &val);
+        ret = kstrtoul(buf, 0, &val);
 
 	if (ret < 0)
 		return ret;
