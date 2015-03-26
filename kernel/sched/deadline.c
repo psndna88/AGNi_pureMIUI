@@ -220,7 +220,7 @@ static inline void set_post_schedule(struct rq *rq)
 
 static struct rq *find_lock_later_rq(struct task_struct *task, struct rq *rq);
 
-static struct rq *dl_task_offline_migration(struct rq *rq, struct task_struct *p)
+static void dl_task_offline_migration(struct rq *rq, struct task_struct *p)
 {
 	struct rq *later_rq = NULL;
 	bool fallback = false;
@@ -254,19 +254,14 @@ static struct rq *dl_task_offline_migration(struct rq *rq, struct task_struct *p
 		double_lock_balance(rq, later_rq);
 	}
 
-	/*
-	 * By now the task is replenished and enqueued; migrate it.
-	 */
 	deactivate_task(rq, p, 0);
 	set_task_cpu(p, later_rq->cpu);
-	activate_task(later_rq, p, 0);
+	activate_task(later_rq, p, ENQUEUE_REPLENISH);
 
 	if (!fallback)
 		resched_curr(later_rq);
-
-	double_unlock_balance(later_rq, rq);
-
-	return later_rq;
+	
+	double_unlock_balance(rq, later_rq);
 }
 
 #else
@@ -613,6 +608,17 @@ again:
 
 	sched_clock_tick();
 	update_rq_clock(rq);
+
+#ifdef CONFIG_SMP
+	/*
+	 * If we find that the rq the task was on is no longer
+	 * available, we need to select a new rq.
+	 */
+	if (unlikely(!rq->online)) {
+		dl_task_offline_migration(rq, p);
+		goto unlock;
+	}
+#endif
 
 	/*
 	 * If the throttle happened during sched-out; like:
