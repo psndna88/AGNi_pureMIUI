@@ -33,17 +33,16 @@
 #define INTERNAL_SEED 0
 #define EXTERNAL_SEED 1
 
-#define FRANDOM_MAJOR 235
-#define FRANDOM_MINOR 11 
-#define ERANDOM_MINOR 12 
+#define NR_FRANDOM_DEVS 2
 
 static struct file_operations frandom_fops; /* Values assigned below */
 
 static int erandom_seeded = 0; /* Internal flag */
 
-static int frandom_major = FRANDOM_MAJOR;
-static int frandom_minor = FRANDOM_MINOR;
-static int erandom_minor = ERANDOM_MINOR;
+static dev_t frandom_devt;
+static dev_t erandom_devt;
+static int frandom_minor;
+static int erandom_minor;
 static int frandom_bufsize = 256;
 static int frandom_chunklimit = 0; /* =0 means unlimited */
 
@@ -56,15 +55,9 @@ struct device *erandom_device;
 MODULE_DESCRIPTION("Fast pseudo-random number generator");
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Eli Billauer");
-module_param(frandom_major, int, 0);
-module_param(frandom_minor, int, 0);
-module_param(erandom_minor, int, 0);
 module_param(frandom_bufsize, int, 0);
 module_param(frandom_chunklimit, int, 0);
 
-MODULE_PARM_DESC(frandom_major,"Major number of /dev/frandom and /dev/erandom");
-MODULE_PARM_DESC(frandom_minor,"Minor number of /dev/frandom");
-MODULE_PARM_DESC(erandom_minor,"Minor number of /dev/erandom");
 MODULE_PARM_DESC(frandom_bufsize,"Internal buffer size in bytes. Default is 256. Must be >= 256");
 MODULE_PARM_DESC(frandom_chunklimit,"Limit for read() blocks size. 0 (default) is unlimited, otherwise must be >= 256");
 
@@ -188,7 +181,7 @@ static int frandom_open(struct inode *inode, struct file *filp)
 	int num = iminor(inode);
 
 	/* This should never happen, now when the minors are regsitered
-	 * explicitly
+	 * explicitly (or dynamically)
 	 */
 	if ((num != frandom_minor) && (num != erandom_minor)) return -ENODEV;
   
@@ -288,14 +281,11 @@ static struct file_operations frandom_fops = {
 };
 
 static void frandom_cleanup_module(void) {
-	unregister_chrdev_region(MKDEV(frandom_major, erandom_minor), 1);
+	device_destroy(frandom_class, erandom_devt);
 	cdev_del(&erandom_cdev);
-	device_destroy(frandom_class, MKDEV(frandom_major, erandom_minor));
-
-	unregister_chrdev_region(MKDEV(frandom_major, frandom_minor), 1);
+	device_destroy(frandom_class, frandom_devt);
 	cdev_del(&frandom_cdev);
-	device_destroy(frandom_class, MKDEV(frandom_major, frandom_minor));
-	class_destroy(frandom_class);
+	unregister_chrdev_region(frandom_devt, NR_FRANDOM_DEVS);
 
 	kfree(erandom_state->buf);
 	kfree(erandom_state);
@@ -347,21 +337,25 @@ static int frandom_init_module(void)
 	 * fops in frandom_cleanup_module()
 	 */
 
-	cdev_init(&frandom_cdev, &frandom_fops);
-	frandom_cdev.owner = THIS_MODULE;
-	result = cdev_add(&frandom_cdev, MKDEV(frandom_major, frandom_minor), 1);
-	if (result) {
-	  printk(KERN_WARNING "frandom: Failed to add cdev for /dev/frandom\n");
+	result = alloc_chrdev_region(&frandom_devt, 0, NR_FRANDOM_DEVS, "frandom");
+	if (result < 0) {
+		printk(KERN_WARNING "frandom: failed to alloc frandom region\n");
 	  goto error1;
 	}
 
-	result = register_chrdev_region(MKDEV(frandom_major, frandom_minor), 1, "/dev/frandom");
-	if (result < 0) {
-		printk(KERN_WARNING "frandom: can't get major/minor %d/%d\n", frandom_major, frandom_minor);
+	frandom_minor = MINOR(frandom_devt);
+	erandom_minor = frandom_minor + 1;
+	erandom_devt = MKDEV(MAJOR(frandom_devt), erandom_minor);
+
+	cdev_init(&frandom_cdev, &frandom_fops);
+	frandom_cdev.owner = THIS_MODULE;
+	result = cdev_add(&frandom_cdev, frandom_devt, 1);
+	if (result) {
+	  printk(KERN_WARNING "frandom: Failed to add cdev for /dev/frandom\n");
 	  goto error2;
 	}
 
-	frandom_device = device_create(frandom_class, NULL, MKDEV(frandom_major, frandom_minor), NULL, "frandom");
+	frandom_device = device_create(frandom_class, NULL, frandom_devt, NULL, "frandom");
 
 	if (IS_ERR(frandom_device)) {
 		printk(KERN_WARNING "frandom: Failed to create frandom device\n");
@@ -370,43 +364,35 @@ static int frandom_init_module(void)
 
 	cdev_init(&erandom_cdev, &frandom_fops);
 	erandom_cdev.owner = THIS_MODULE;
-	result = cdev_add(&erandom_cdev, MKDEV(frandom_major, erandom_minor), 1);
+	result = cdev_add(&erandom_cdev, erandom_devt, 1);
 	if (result) {
 	  printk(KERN_WARNING "frandom: Failed to add cdev for /dev/erandom\n");
 	  goto error4;
 	}
 
-	result = register_chrdev_region(MKDEV(frandom_major, erandom_minor), 1, "/dev/erandom");
-	if (result < 0) {
-		printk(KERN_WARNING "frandom: can't get major/minor %d/%d\n", frandom_major, erandom_minor);
-		goto error5;
-	}
-
-	erandom_device = device_create(frandom_class, NULL, MKDEV(frandom_major, erandom_minor), NULL, "erandom");
+	erandom_device = device_create(frandom_class, NULL, erandom_devt, NULL, "erandom");
 
 	if (IS_ERR(erandom_device)) {
 		printk(KERN_WARNING "frandom: Failed to create erandom device\n");
-		goto error6;
+		goto error5;
 	}
 	return 0; /* succeed */
 
- error6:
-	unregister_chrdev_region(MKDEV(frandom_major, erandom_minor), 1);
- error5:
+error5:
 	cdev_del(&erandom_cdev);
- error4:
-	device_destroy(frandom_class, MKDEV(frandom_major, frandom_minor));
- error3:
-	unregister_chrdev_region(MKDEV(frandom_major, frandom_minor), 1);
- error2:
+error4:
+	device_destroy(frandom_class, frandom_devt);
+error3:
 	cdev_del(&frandom_cdev);
- error1:
+error2:
+	unregister_chrdev_region(frandom_devt, NR_FRANDOM_DEVS);
+error1:
 	class_destroy(frandom_class);
- error0:
+error0:
 	kfree(erandom_state->buf);
 	kfree(erandom_state);
 
-	return result;	
+    return result;
 }
 
 module_init(frandom_init_module);
