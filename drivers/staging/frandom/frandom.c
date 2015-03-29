@@ -1,6 +1,6 @@
 /*
 ** frandom.c
-**      Fast pseudo-random generator 
+**      Fast pseudo-random generator
 **
 **      (c) Copyright 2003-2011 Eli Billauer
 **      http://www.billauer.co.il
@@ -19,13 +19,13 @@
 
 #include <linux/kernel.h>
 #include <linux/init.h>
-#include <linux/slab.h> 
-#include <linux/fs.h> 
+#include <linux/slab.h>
+#include <linux/fs.h>
 #include <linux/errno.h>
-#include <linux/types.h> 
+#include <linux/types.h>
 #include <linux/random.h>
 
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 #include <linux/cdev.h>
 #include <linux/err.h>
 #include <linux/device.h>
@@ -35,16 +35,16 @@
 
 #define NR_FRANDOM_DEVS 2
 
-static struct file_operations frandom_fops; /* Values assigned below */
+static const struct file_operations frandom_fops; /* Values assigned below */
 
-static int erandom_seeded = 0; /* Internal flag */
+static int erandom_seeded; /* Internal flag */
 
 static dev_t frandom_devt;
 static dev_t erandom_devt;
 static int frandom_minor;
 static int erandom_minor;
 static int frandom_bufsize = 256;
-static int frandom_chunklimit = 0; /* =0 means unlimited */
+static int frandom_chunklimit; /* =0 means unlimited */
 
 static struct cdev frandom_cdev;
 static struct cdev erandom_cdev;
@@ -58,15 +58,17 @@ MODULE_AUTHOR("Eli Billauer");
 module_param(frandom_bufsize, int, 0);
 module_param(frandom_chunklimit, int, 0);
 
-MODULE_PARM_DESC(frandom_bufsize,"Internal buffer size in bytes. Default is 256. Must be >= 256");
-MODULE_PARM_DESC(frandom_chunklimit,"Limit for read() blocks size. 0 (default) is unlimited, otherwise must be >= 256");
+MODULE_PARM_DESC(frandom_bufsize,
+	"Internal buffer size in bytes. Default is 256. Must be >= 256");
+MODULE_PARM_DESC(frandom_chunklimit,
+	"Limit for read() blocks size. 0 (default) is unlimited,"
+	"otherwise must be >= 256");
 
-struct frandom_state
-{
+struct frandom_state {
 	struct semaphore sem; /* Semaphore on the state structure */
 
 	u8 S[256]; /* The state array */
-	u8 i;        
+	u8 i;
 	u8 j;
 
 	char *buf;
@@ -76,10 +78,10 @@ static struct frandom_state *erandom_state;
 
 static inline void swap_byte(u8 *a, u8 *b)
 {
-	u8 swapByte; 
-  
-	swapByte = *a; 
-	*a = *b;      
+	u8 swapByte;
+
+	swapByte = *a;
+	*a = *b;
 	*b = swapByte;
 }
 
@@ -93,7 +95,7 @@ void erandom_get_random_bytes(char *buf, size_t count)
 	unsigned int i;
 	unsigned int j;
 	u8 *S;
-  
+
 	/* If we fail to get the semaphore, we revert to external random data.
 	   Since semaphore blocking is expected to be very rare, and interrupts
 	   during these rare and very short periods of time even less frequent,
@@ -111,29 +113,30 @@ void erandom_get_random_bytes(char *buf, size_t count)
 	   RNG is already restored in the boot sequence (not critical, but
 	   better.
 	*/
-	
+
 	if (!erandom_seeded) {
 		erandom_seeded = 1;
 		init_rand_state(state, EXTERNAL_SEED);
-		printk(KERN_INFO "frandom: Seeded global generator now (used by erandom)\n");
+		pr_info("frandom: Seeded global generator now (used by erandom)\n");
 	}
 
-	i = state->i;     
+	i = state->i;
 	j = state->j;
-	S = state->S;  
+	S = state->S;
 
-	for (k=0; k<count; k++) {
+	for (k = 0; k < count; k++) {
 		i = (i + 1) & 0xff;
 		j = (j + S[i]) & 0xff;
 		swap_byte(&S[i], &S[j]);
 		*buf++ = S[(S[i] + S[j]) & 0xff];
 	}
- 
-	state->i = i;     
+
+	state->i = i;
 	state->j = j;
 
 	up(&state->sem);
 }
+EXPORT_SYMBOL(erandom_get_random_bytes);
 
 static void init_rand_state(struct frandom_state *state, int seedflag)
 {
@@ -147,13 +150,13 @@ static void init_rand_state(struct frandom_state *state, int seedflag)
 		get_random_bytes(seed, 256);
 
 	S = state->S;
-	for (i=0; i<256; i++)
-		*S++=i;
+	for (i = 0; i < 256; i++)
+		*S++ = i;
 
-	j=0;
+	j = 0;
 	S = state->S;
 
-	for (i=0; i<256; i++) {
+	for (i = 0; i < 256; i++) {
 		j = (j + S[i] + *seed++) & 0xff;
 		swap_byte(&S[i], &S[j]);
 	}
@@ -162,8 +165,8 @@ static void init_rand_state(struct frandom_state *state, int seedflag)
 	   generated. So we do it:
 	*/
 
-	i=0; j=0;
-	for (k=0; k<256; k++) {
+	i = 0; j = 0;
+	for (k = 0; k < 256; k++) {
 		i = (i + 1) & 0xff;
 		j = (j + S[i]) & 0xff;
 		swap_byte(&S[i], &S[j]);
@@ -175,7 +178,7 @@ static void init_rand_state(struct frandom_state *state, int seedflag)
 
 static int frandom_open(struct inode *inode, struct file *filp)
 {
-  
+
 	struct frandom_state *state;
 
 	int num = iminor(inode);
@@ -183,8 +186,9 @@ static int frandom_open(struct inode *inode, struct file *filp)
 	/* This should never happen, now when the minors are regsitered
 	 * explicitly (or dynamically)
 	 */
-	if ((num != frandom_minor) && (num != erandom_minor)) return -ENODEV;
-  
+	if ((num != frandom_minor) && (num != erandom_minor))
+		return -ENODEV;
+
 	state = kmalloc(sizeof(struct frandom_state), GFP_KERNEL);
 	if (!state)
 		return -ENOMEM;
@@ -214,7 +218,7 @@ static int frandom_release(struct inode *inode, struct file *filp)
 
 	kfree(state->buf);
 	kfree(state);
-  
+
 	return 0;
 }
 
@@ -229,18 +233,18 @@ static ssize_t frandom_read(struct file *filp, char *buf, size_t count,
 	unsigned int i;
 	unsigned int j;
 	u8 *S;
-  
+
 	if (down_interruptible(&state->sem))
 		return -ERESTARTSYS;
-  
+
 	if ((frandom_chunklimit > 0) && (count > frandom_chunklimit))
 		count = frandom_chunklimit;
 
 	ret = count; /* It's either everything or an error... */
-  
-	i = state->i;     
+
+	i = state->i;
 	j = state->j;
-	S = state->S;  
+	S = state->S;
 
 	while (count) {
 		if (count > frandom_bufsize)
@@ -250,13 +254,13 @@ static ssize_t frandom_read(struct file *filp, char *buf, size_t count,
 
 		localbuf = state->buf;
 
-		for (k=0; k<dobytes; k++) {
+		for (k = 0; k < dobytes; k++) {
 			i = (i + 1) & 0xff;
 			j = (j + S[i]) & 0xff;
 			swap_byte(&S[i], &S[j]);
 			*localbuf++ = S[(S[i] + S[j]) & 0xff];
 		}
- 
+
 		if (copy_to_user(buf, state->buf, dobytes)) {
 			ret = -EFAULT;
 			goto out;
@@ -267,20 +271,21 @@ static ssize_t frandom_read(struct file *filp, char *buf, size_t count,
 	}
 
  out:
-	state->i = i;     
+	state->i = i;
 	state->j = j;
 
 	up(&state->sem);
 	return ret;
 }
 
-static struct file_operations frandom_fops = {
-	read:       frandom_read,
-	open:       frandom_open,
-	release:    frandom_release,
+static const struct file_operations frandom_fops = {
+	.read		= frandom_read,
+	.open		= frandom_open,
+	.release	= frandom_release,
 };
 
-static void frandom_cleanup_module(void) {
+static void frandom_cleanup_module(void)
+{
 	device_destroy(frandom_class, erandom_devt);
 	cdev_del(&erandom_cdev);
 	device_destroy(frandom_class, frandom_devt);
@@ -298,13 +303,15 @@ static int frandom_init_module(void)
 
 	/* The buffer size MUST be at least 256 bytes, because we assume that
 	   minimal length in init_rand_state().
-	*/       
+	*/
 	if (frandom_bufsize < 256) {
-		printk(KERN_ERR "frandom: Refused to load because frandom_bufsize=%d < 256\n",frandom_bufsize);
+		pr_err("frandom: Invalid frandom_bufsize: %d\n",
+			frandom_bufsize);
 		return -EINVAL;
 	}
 	if ((frandom_chunklimit != 0) && (frandom_chunklimit < 256)) {
-		printk(KERN_ERR "frandom: Refused to load because frandom_chunklimit=%d < 256 and != 0\n",frandom_chunklimit);
+		pr_err("frandom: Invalid frandom_chunklimit: %d\n",
+			frandom_chunklimit);
 		return -EINVAL;
 	}
 
@@ -327,20 +334,21 @@ static int frandom_init_module(void)
 	frandom_class = class_create(THIS_MODULE, "fastrng");
 	if (IS_ERR(frandom_class)) {
 		result = PTR_ERR(frandom_class);
-		printk(KERN_WARNING "frandom: Failed to register class fastrng\n");
+		pr_warn("frandom: Failed to register class fastrng\n");
 		goto error0;
 	}
-	
+
 	/*
 	 * Register your major, and accept a dynamic number. This is the
 	 * first thing to do, in order to avoid releasing other module's
 	 * fops in frandom_cleanup_module()
 	 */
 
-	result = alloc_chrdev_region(&frandom_devt, 0, NR_FRANDOM_DEVS, "frandom");
+	result = alloc_chrdev_region(&frandom_devt, 0, NR_FRANDOM_DEVS,
+		"frandom");
 	if (result < 0) {
-		printk(KERN_WARNING "frandom: failed to alloc frandom region\n");
-	  goto error1;
+		pr_warn("frandom: failed to alloc frandom region\n");
+		goto error1;
 	}
 
 	frandom_minor = MINOR(frandom_devt);
@@ -351,14 +359,15 @@ static int frandom_init_module(void)
 	frandom_cdev.owner = THIS_MODULE;
 	result = cdev_add(&frandom_cdev, frandom_devt, 1);
 	if (result) {
-	  printk(KERN_WARNING "frandom: Failed to add cdev for /dev/frandom\n");
-	  goto error2;
+		pr_warn("frandom: Failed to add cdev for /dev/frandom\n");
+		goto error2;
 	}
 
-	frandom_device = device_create(frandom_class, NULL, frandom_devt, NULL, "frandom");
+	frandom_device = device_create(frandom_class, NULL, frandom_devt,
+		NULL, "frandom");
 
 	if (IS_ERR(frandom_device)) {
-		printk(KERN_WARNING "frandom: Failed to create frandom device\n");
+		pr_warn("frandom: Failed to create frandom device\n");
 		goto error3;
 	}
 
@@ -366,14 +375,15 @@ static int frandom_init_module(void)
 	erandom_cdev.owner = THIS_MODULE;
 	result = cdev_add(&erandom_cdev, erandom_devt, 1);
 	if (result) {
-	  printk(KERN_WARNING "frandom: Failed to add cdev for /dev/erandom\n");
-	  goto error4;
+		pr_warn("frandom: Failed to add cdev for /dev/erandom\n");
+		goto error4;
 	}
 
-	erandom_device = device_create(frandom_class, NULL, erandom_devt, NULL, "erandom");
+	erandom_device = device_create(frandom_class, NULL, erandom_devt,
+		NULL, "erandom");
 
 	if (IS_ERR(erandom_device)) {
-		printk(KERN_WARNING "frandom: Failed to create erandom device\n");
+		pr_warn("frandom: Failed to create erandom device\n");
 		goto error5;
 	}
 	return 0; /* succeed */
@@ -392,10 +402,8 @@ error0:
 	kfree(erandom_state->buf);
 	kfree(erandom_state);
 
-    return result;
+	return result;
 }
 
 module_init(frandom_init_module);
 module_exit(frandom_cleanup_module);
-
-EXPORT_SYMBOL(erandom_get_random_bytes);
