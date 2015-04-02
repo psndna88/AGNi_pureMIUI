@@ -61,4 +61,3 @@ obj-$(CONFIG_GOLDFISH)		+= goldfish/
 obj-$(CONFIG_USB_DWC2)		+= dwc2/
 obj-$(CONFIG_PRIMA_WLAN)	+= prima/
 obj-$(CONFIG_PRONTO_WLAN)	+= prima/
-obj-$(CONFIG_FRANDOM)		+= frandom/
