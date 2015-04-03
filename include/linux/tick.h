@@ -70,6 +70,11 @@ struct tick_sched {
 	int				do_timer_last;
 };
 
+enum tick_broadcast_state {
+	TICK_BROADCAST_EXIT,
+	TICK_BROADCAST_ENTER,
+};
+
 extern void __init tick_init(void);
 extern int tick_is_oneshot_available(void);
 extern u64 jiffy_to_sched_clock(u64 *now, u64 *jiffy_sched_clock);
@@ -91,6 +96,12 @@ static inline void tick_cancel_sched_timer(int cpu) { }
 # ifdef CONFIG_GENERIC_CLOCKEVENTS_BROADCAST
 extern struct tick_device *tick_get_broadcast_device(void);
 extern struct cpumask *tick_get_broadcast_mask(void);
+
+#if defined(CONFIG_GENERIC_CLOCKEVENTS_BROADCAST) && defined(CONFIG_TICK_ONESHOT)
+extern int tick_broadcast_oneshot_control(enum tick_broadcast_state state);
+#else
+static inline int tick_broadcast_oneshot_control(enum tick_broadcast_state state) { return 0; }
+#endif
 
 #  ifdef CONFIG_TICK_ONESHOT
 extern struct cpumask *tick_get_broadcast_oneshot_mask(void);
@@ -142,6 +153,14 @@ DECLARE_PER_CPU(struct tick_sched, tick_cpu_sched);
 static inline int tick_nohz_tick_stopped(void)
 {
 	return __this_cpu_read(tick_cpu_sched.tick_stopped);
+}
+static inline int tick_broadcast_enter(void)
+{
+	return tick_broadcast_oneshot_control(TICK_BROADCAST_ENTER);
+}
+static inline void tick_broadcast_exit(void)
+{
+	tick_broadcast_oneshot_control(TICK_BROADCAST_EXIT);
 }
 
 extern void tick_nohz_idle_enter(void);
