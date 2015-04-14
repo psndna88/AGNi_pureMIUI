@@ -526,19 +526,7 @@ static int start_dl_timer(struct task_struct *p)
 	if (ktime_us_delta(act, now) < 0)
 		return 0;
 
-	/*
-	 * !enqueued will guarantee another callback; even if one is already in
-	 * progress. This ensures a balanced {get,put}_task_struct().
-	 *
-	 * The race against __run_timer() clearing the enqueued state is
-	 * harmless because we're holding task_rq()->lock, therefore the timer
-	 * expiring after we've done the check will wait on its task_rq_lock()
-	 * and observe our state.
-	 */
-	if (!hrtimer_is_queued(timer)) {
-		get_task_struct(p);
-		hrtimer_start(timer, act, HRTIMER_MODE_ABS);
-	}
+	hrtimer_start(&dl_se->dl_timer, act, HRTIMER_MODE_ABS);
 
 	return 1;
 }
