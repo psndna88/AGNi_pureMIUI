@@ -1395,7 +1395,6 @@ exit:
 }
 
 #ifdef CONFIG_CPU_IDLE_MULTIPLE_DRIVERS
-static DEFINE_PER_CPU(struct cpuidle_device, cpuidle_dev);
 static int cpuidle_register_cpu(struct cpuidle_driver *drv,
 		struct cpumask *mask)
 {
