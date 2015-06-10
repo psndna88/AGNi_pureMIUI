@@ -122,6 +122,15 @@ config ARM_MEMLAT_MON
 	  This driver uses these counters to implement the APIs needed by
 	  the mem_latency devfreq governor.
 
+config ADRENO_IDLER
+	tristate "MSM Adreno idler"
+	depends on DEVFREQ_GOV_QCOM_ADRENO_TZ
+	help
+	  Uses a different calculation method on top of Adreno TZ
+	  just for calculating frequency for idle to reduce the
+	  wasted power coming from stock Adreno TZ while
+	  maintaining high-performance.
+
 config QCOMCCI_HWMON
 	tristate "QCOM CCI Cache monitor hardware"
 	depends on ARCH_QCOM
