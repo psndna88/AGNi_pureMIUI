@@ -261,7 +261,8 @@ static void aw2013_led_blink_set(struct aw2013_led *led, unsigned long blinking)
 		}
 	}
 
-	led->cdev.brightness = blinking ? led->cdev.max_brightness : 0;
+	if (!led->cdev.brightness)
+		led->cdev.brightness = blinking ? led->cdev.max_brightness : 0;
 
 	if (blinking > 0) {
 		aw2013_write(led, AW_REG_GLOBAL_CONTROL,
@@ -278,10 +279,32 @@ static void aw2013_led_blink_set(struct aw2013_led *led, unsigned long blinking)
 			led->pdata->fall_time_ms << 4 |
 			led->pdata->off_time_ms);
 		aw2013_read(led, AW_REG_LED_ENABLE, &val);
+                // sync up the blinking by pulling them all down first
+		aw2013_write(led, AW_REG_GLOBAL_CONTROL,
+			0);
+		aw2013_write(led, AW_REG_LED_ENABLE, 0);
+		msleep(50);
+		aw2013_write(led, AW_REG_GLOBAL_CONTROL,
+			AW_LED_MOUDLE_ENABLE_MASK);
 		aw2013_write(led, AW_REG_LED_ENABLE, val | (1 << led->id));
 	} else {
 		aw2013_read(led, AW_REG_LED_ENABLE, &val);
 		aw2013_write(led, AW_REG_LED_ENABLE, val & (~(1 << led->id)));
+		if (led->cdev.brightness) {
+			// Disabling blink doesn't shut down the LED, put it
+			// back up after clearing the timers
+			if (led->cdev.brightness > led->cdev.max_brightness)
+				led->cdev.brightness = led->cdev.max_brightness;
+			aw2013_write(led, AW_REG_GLOBAL_CONTROL,
+					AW_LED_MOUDLE_ENABLE_MASK);
+			aw2013_write(led, AW_REG_LED_CONFIG_BASE + led->id,
+					led->pdata->max_current);
+			aw2013_write(led, AW_REG_LED_BRIGHTNESS_BASE + led->id,
+					led->cdev.brightness);
+			aw2013_write(led, AW_REG_LED_BRIGHTNESS_BASE + led->id,
+				led->cdev.brightness);
+			aw2013_write(led, AW_REG_LED_ENABLE, val);
+		}
 	}
 
 	aw2013_read(led, AW_REG_LED_ENABLE, &val);
