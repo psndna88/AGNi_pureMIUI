@@ -469,6 +469,9 @@ static void a5xx_regulator_disable(struct adreno_device *adreno_dev)
 	unsigned int reg;
 	struct kgsl_device *device = &adreno_dev->dev;
 
+	if (adreno_is_a510(adreno_dev))
+		return;
+
 	/* If feature is not supported or not enabled */
 	if (!adreno_is_a510(adreno_dev) &&
 		(!ADRENO_FEATURE(adreno_dev, ADRENO_SPTP_PC) ||
