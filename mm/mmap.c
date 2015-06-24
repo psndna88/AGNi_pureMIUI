@@ -1239,10 +1239,7 @@ unsigned long do_mmap_pgoff(struct file *file, unsigned long addr,
 
 	*populate = 0;
 
-	while (file && (file->f_mode & FMODE_NONMAPPABLE))
-		file = file->f_op->get_lower_file(file);
-
-        if (!len)
+	if (!len)
 		return -EINVAL;
 
 	/*
