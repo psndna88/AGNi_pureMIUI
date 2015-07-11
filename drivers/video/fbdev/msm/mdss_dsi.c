@@ -37,6 +37,7 @@
 #include "mdss_dsi_phy.h"
 #include "mdss_dba_utils.h"
 #include "dsi_access.h"
+#include "mdss_livedisplay.h"
 
 #ifdef CONFIG_STATE_NOTIFIER
 #include <linux/state_notifier.h>
@@ -3612,6 +3613,9 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 				pr_err("unable to change bitclk error-%d\n",
 					rc);
 		}
+		break;
+	case MDSS_EVENT_UPDATE_LIVEDISPLAY:
+		rc = mdss_livedisplay_update(ctrl_pdata, (int)(unsigned long) arg);
 		break;
 	default:
 		pr_debug("%s: unhandled event=%d\n", __func__, event);
