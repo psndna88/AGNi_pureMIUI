@@ -5261,9 +5261,6 @@ int msm_thermal_pre_init(struct device *dev)
 		goto pre_init_exit;
 	}
 
-	if (!tsens_temp_at_panic)
-		msm_thermal_panic_notifier_init(dev);
-
 	if (!thresh) {
 		thresh = kzalloc(
 				sizeof(struct threshold_info) * MSM_LIST_MAX_NR,
@@ -5419,6 +5416,7 @@ int msm_thermal_init(struct msm_thermal_data *pdata)
 		cpus_previously_online_update();
 		register_cpu_notifier(&msm_thermal_cpu_notifier);
 	}
+	msm_thermal_panic_notifier_init(&pdata->pdev->dev);
 
 	return ret;
 }
