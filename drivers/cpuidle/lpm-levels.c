@@ -563,6 +563,9 @@ static int cpu_power_select(struct cpuidle_device *dev,
 
 		lvl_latency_us = pwr_params->latency_us;
 
+		if (i > 0 && suspend_in_progress)
+			continue;
+
 		if (latency_us < lvl_latency_us)
 			break;
 
