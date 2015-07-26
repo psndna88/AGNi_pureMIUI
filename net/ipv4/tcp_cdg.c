@@ -257,13 +257,12 @@ static bool tcp_cdg_backoff(struct sock *sk, u32 grad)
 }
 
 /* Not called in CWR or Recovery state. */
-static void tcp_cdg_cong_avoid(struct sock *sk, u32 ack, u32 acked)
+static void tcp_cdg_cong_avoid(struct sock *sk, u32 ack, u32 in_flight)
 {
 	struct cdg *ca = inet_csk_ca(sk);
 	struct tcp_sock *tp = tcp_sk(sk);
 	u32 prior_snd_cwnd;
 	u32 incr;
-	u32 in_flight;
 
 	if (tp->snd_cwnd < tp->snd_ssthresh && hystart_detect)
 		tcp_cdg_hystart_update(sk);
@@ -289,7 +288,7 @@ static void tcp_cdg_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 	}
 
 	prior_snd_cwnd = tp->snd_cwnd;
-	tcp_reno_cong_avoid(sk, ack, acked);
+	tcp_reno_cong_avoid(sk, ack, in_flight);
 
 	incr = tp->snd_cwnd - prior_snd_cwnd;
 	ca->shadow_wnd = max(ca->shadow_wnd, ca->shadow_wnd + incr);
@@ -398,7 +397,7 @@ static void tcp_cdg_release(struct sock *sk)
 	kfree(ca->gradients);
 }
 
-struct tcp_congestion_ops tcp_cdg __read_mostly = {
+static struct tcp_congestion_ops tcp_cdg __read_mostly = {
 	.cong_avoid = tcp_cdg_cong_avoid,
 	.cwnd_event = tcp_cdg_cwnd_event,
 	.pkts_acked = tcp_cdg_acked,
