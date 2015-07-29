@@ -179,6 +179,11 @@ static struct usbmix_name_map audigy2nx_map[] = {
 	{ 0 } /* terminator */
 };
 
+static struct usbmix_name_map mbox1_map[] = {
+	{ 1, "Clock" },
+	{ 0 } /* terminator */
+};
+
 static struct usbmix_selector_map c400_selectors[] = {
 	{
 		.id = 0x80,
@@ -322,6 +327,12 @@ static struct usbmix_name_map hercules_usb51_map[] = {
 	{ 0 }				/* terminator */
 };
 
+/* Plantronics Gamecom 780 has a broken volume control, better to disable it */
+static struct usbmix_name_map gamecom780_map[] = {
+	{ 9, NULL }, /* FU, speaker out */
+	{}
+};
+
 /* some (all?) SCMS USB3318 devices are affected by a firmware lock up
  * when anything attempts to access FU 10 (control)
  */
@@ -380,6 +391,10 @@ static struct usbmix_ctl_map usbmix_ctl_maps[] = {
 		.id = USB_ID(0x046d, 0x09a4),
 		.ignore_ctl_error = 1,
 	},
+	{	/* Plantronics GameCom 780 */
+		.id = USB_ID(0x047f, 0xc010),
+		.map = gamecom780_map,
+	},
 	{
 		/* Hercules DJ Console (Windows Edition) */
 		.id = USB_ID(0x06f8, 0xb000),
@@ -406,6 +421,10 @@ static struct usbmix_ctl_map usbmix_ctl_maps[] = {
 		.selector_map = c400_selectors,
 	},
 	{
+		.id = USB_ID(0x0763, 0x2031),
+		.selector_map = c400_selectors,
+	},
+	{
 		.id = USB_ID(0x08bb, 0x2702),
 		.map = linex_map,
 		.ignore_ctl_error = 1,
@@ -421,6 +440,10 @@ static struct usbmix_ctl_map usbmix_ctl_maps[] = {
 	{
 		.id = USB_ID(0x0ccd, 0x0028),
 		.map = aureon_51_2_map,
+	},
+	{
+		.id = USB_ID(0x0dba, 0x1000),
+		.map = mbox1_map,
 	},
 	{
 		.id = USB_ID(0x13e5, 0x0001),
