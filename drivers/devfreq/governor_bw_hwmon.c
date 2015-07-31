@@ -72,6 +72,7 @@ struct hwmon_node {
 	unsigned int down_cnt;
 	ktime_t prev_ts;
 	ktime_t hist_max_ts;
+	bool sampled;
 	bool mon_started;
 	struct list_head list;
 	void *orig_data;
@@ -189,19 +190,18 @@ static unsigned int mbps_to_bytes(unsigned long mbps, unsigned int ms)
 	return mbps;
 }
 
-int bw_hwmon_sample_end(struct bw_hwmon *hwmon)
+static int __bw_hwmon_sample_end(struct bw_hwmon *hwmon)
 {
 	struct devfreq *df;
 	struct hwmon_node *node;
 	ktime_t ts;
-	unsigned long bytes, mbps, flags;
+	unsigned long bytes, mbps;
 	unsigned int us;
 	int wake = 0;
 
 	df = hwmon->df;
 	node = df->data;
 
-	spin_lock_irqsave(&irq_lock, flags);
 	ts = ktime_get();
 	us = ktime_to_us(ktime_sub(ts, node->prev_ts));
 
@@ -229,10 +229,22 @@ int bw_hwmon_sample_end(struct bw_hwmon *hwmon)
 
 	node->prev_ts = ts;
 	node->wake = wake;
-	spin_unlock_irqrestore(&irq_lock, flags);
+	node->sampled = true;
 
 	dev_dbg(df->dev.parent, "MB/s: %5lu, us:%6d, wake: %d\n",
 		mbps, us, wake);
+
+	return wake;
+}
+
+int bw_hwmon_sample_end(struct bw_hwmon *hwmon)
+{
+	unsigned long flags;
+	int wake;
+
+	spin_lock_irqsave(&irq_lock, flags);
+	wake = __bw_hwmon_sample_end(hwmon);
+	spin_unlock_irqrestore(&irq_lock, flags);
 
 	return wake;
 }
@@ -258,8 +270,16 @@ static unsigned long get_bw_and_set_irq(struct hwmon_node *node,
 	unsigned long hist_lo_tol, hyst_lo_tol;
 	struct bw_hwmon *hw = node->hw;
 	unsigned int new_bw, io_percent;
+	ktime_t ts;
+	unsigned int ms;
 
 	spin_lock_irqsave(&irq_lock, flags);
+
+	ts = ktime_get();
+	ms = ktime_to_ms(ktime_sub(ts, node->prev_ts));
+	if (!node->sampled || ms >= node->sample_ms)
+		__bw_hwmon_sample_end(node->hw);
+	node->sampled = false;
 
 	req_mbps = meas_mbps = node->max_mbps;
 	node->max_mbps = 0;
