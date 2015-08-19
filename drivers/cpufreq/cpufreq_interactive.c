@@ -143,8 +143,10 @@ struct cpufreq_interactive_tunables {
 	 */
 	unsigned int max_freq_hysteresis;
 
-	/* Whether to change frequency immediately for notification */
-	bool fast_ramp_up;
+	/* Ignore hispeed_freq and above_hispeed_delay for notification */
+	bool ignore_hispeed_on_notif;
+
+	/* Ignore min_sample_time for notification */
 	bool fast_ramp_down;
 };
 
@@ -411,7 +413,6 @@ static u64 update_load(int cpu)
 	return now;
 }
 
-#define MAX_LOCAL_LOAD 100
 static void __cpufreq_interactive_timer(unsigned long data, bool is_notif)
 {
 	u64 now;
@@ -503,9 +504,10 @@ static void __cpufreq_interactive_timer(unsigned long data, bool is_notif)
 	this_hispeed_freq = max(tunables->hispeed_freq, ppol->policy->min);
 	this_hispeed_freq = min(this_hispeed_freq, ppol->policy->max);
 
-	if (cpu_load >= tunables->go_hispeed_load) {
-		if (ppol->target_freq < this_hispeed_freq &&
-		    (!tunables->fast_ramp_up || cpu_load <= MAX_LOCAL_LOAD)) {
+	if (tunables->ignore_hispeed_on_notif && is_notif) {
+		new_freq = choose_freq(ppol, loadadjfreq);
+	} else if (cpu_load >= tunables->go_hispeed_load) {
+		if (ppol->target_freq < this_hispeed_freq) {
 			new_freq = this_hispeed_freq;
 		} else {
 			new_freq = choose_freq(ppol, loadadjfreq);
@@ -520,7 +522,7 @@ static void __cpufreq_interactive_timer(unsigned long data, bool is_notif)
 			new_freq = tunables->hispeed_freq;
 	}
 
-	if ((!tunables->fast_ramp_up || cpu_load <= MAX_LOCAL_LOAD) &&
+	if ((!tunables->ignore_hispeed_on_notif || !is_notif) &&
 	    ppol->target_freq >= this_hispeed_freq &&
 	    new_freq > ppol->target_freq &&
 	    now - ppol->hispeed_validate_time <
@@ -927,7 +929,7 @@ static ssize_t store_##file_name(					\
 }
 show_store_one(max_freq_hysteresis);
 show_store_one(align_windows);
-show_store_one(fast_ramp_up);
+show_store_one(ignore_hispeed_on_notif);
 show_store_one(fast_ramp_down);
 
 static ssize_t show_go_hispeed_load(struct cpufreq_interactive_tunables
@@ -1279,7 +1281,7 @@ show_store_gov_pol_sys(use_sched_load);
 show_store_gov_pol_sys(use_migration_notif);
 show_store_gov_pol_sys(max_freq_hysteresis);
 show_store_gov_pol_sys(align_windows);
-show_store_gov_pol_sys(fast_ramp_up);
+show_store_gov_pol_sys(ignore_hispeed_on_notif);
 show_store_gov_pol_sys(fast_ramp_down);
 
 #define gov_sys_attr_rw(_name)						\
@@ -1306,7 +1308,7 @@ gov_sys_pol_attr_rw(use_sched_load);
 gov_sys_pol_attr_rw(use_migration_notif);
 gov_sys_pol_attr_rw(max_freq_hysteresis);
 gov_sys_pol_attr_rw(align_windows);
-gov_sys_pol_attr_rw(fast_ramp_up);
+gov_sys_pol_attr_rw(ignore_hispeed_on_notif);
 gov_sys_pol_attr_rw(fast_ramp_down);
 
 /* One Governor instance for entire system */
@@ -1323,7 +1325,7 @@ static struct attribute *interactive_attributes_gov_sys[] = {
 	&use_migration_notif_gov_sys.attr,
 	&max_freq_hysteresis_gov_sys.attr,
 	&align_windows_gov_sys.attr,
-	&fast_ramp_up_gov_sys.attr,
+	&ignore_hispeed_on_notif_gov_sys.attr,
 	&fast_ramp_down_gov_sys.attr,
 	NULL,
 };
@@ -1347,7 +1349,7 @@ static struct attribute *interactive_attributes_gov_pol[] = {
 	&use_migration_notif_gov_pol.attr,
 	&max_freq_hysteresis_gov_pol.attr,
 	&align_windows_gov_pol.attr,
-	&fast_ramp_up_gov_pol.attr,
+	&ignore_hispeed_on_notif_gov_pol.attr,
 	&fast_ramp_down_gov_pol.attr,
 	NULL,
 };
