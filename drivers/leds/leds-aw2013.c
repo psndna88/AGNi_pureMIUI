@@ -261,7 +261,7 @@ static void aw2013_led_work(struct work_struct *work)
 
 	aw2013_read(led, AW_REG_LED_ENABLE, &val);
 
-	dev_info(&led->pdata->led->client->dev,
+	dev_dbg(&led->pdata->led->client->dev,
 			"%s: enabled=%d brightness=%d blinking=%d",
 			__func__, val, led->cdev.brightness, led->blinking);
 
@@ -290,7 +290,7 @@ static void aw2013_set_brightness(struct led_classdev *cdev,
 	if (brightness > led->cdev.max_brightness)
 		brightness = led->cdev.max_brightness;
 
-	dev_info(&led->pdata->led->client->dev,
+	dev_dbg(&led->pdata->led->client->dev,
 			"%s cur=%d new=%d", __func__, led->brightness, brightness);
 
 	if (led->brightness != brightness) {
