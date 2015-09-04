@@ -269,7 +269,7 @@ static void aw2013_led_work(struct work_struct *work)
 	 * If value in AW_REG_LED_ENABLE is 0, it means the RGB leds are
 	 * all off. So we need to power it off.
 	 */
-	if (val == 0) {
+	if (val == 0 && led->pdata->led->poweron) {
 		if (aw2013_power_on(led->pdata->led, false)) {
 			dev_err(&led->pdata->led->client->dev,
 				"power off failed");
@@ -319,7 +319,8 @@ static ssize_t aw2013_store_blink(struct device *dev,
 	mutex_lock(&led->pdata->led->lock);
 	if (led->blinking != blinking) {
 		led->blinking = blinking;
-		queue_work(led->workqueue, &led->work);
+		if (led->cdev.brightness > 0)
+			queue_work(led->workqueue, &led->work);
 	}
 	mutex_unlock(&led->pdata->led->lock);
 
@@ -362,14 +363,21 @@ static ssize_t aw2013_led_time_store(struct device *dev,
 			&fall_time_ms, &off_time_ms);
 
 	mutex_lock(&led->pdata->led->lock);
-	led->pdata->rise_time_ms = (rise_time_ms > MAX_RISE_TIME_MS) ?
+	if (led->pdata->rise_time_ms != rise_time_ms ||
+			led->pdata->hold_time_ms != hold_time_ms ||
+			led->pdata->fall_time_ms != fall_time_ms ||
+			led->pdata->off_time_ms  != off_time_ms) {
+		led->pdata->rise_time_ms = (rise_time_ms > MAX_RISE_TIME_MS) ?
 				MAX_RISE_TIME_MS : rise_time_ms;
-	led->pdata->hold_time_ms = (hold_time_ms > MAX_HOLD_TIME_MS) ?
+		led->pdata->hold_time_ms = (hold_time_ms > MAX_HOLD_TIME_MS) ?
 				MAX_HOLD_TIME_MS : hold_time_ms;
-	led->pdata->fall_time_ms = (fall_time_ms > MAX_FALL_TIME_MS) ?
+		led->pdata->fall_time_ms = (fall_time_ms > MAX_FALL_TIME_MS) ?
 				MAX_FALL_TIME_MS : fall_time_ms;
-	led->pdata->off_time_ms = (off_time_ms > MAX_OFF_TIME_MS) ?
+		led->pdata->off_time_ms = (off_time_ms > MAX_OFF_TIME_MS) ?
 				MAX_OFF_TIME_MS : off_time_ms;
+		if (led->cdev.brightness > 0)
+			queue_work(led->workqueue, &led->work);
+	}
 	mutex_unlock(&led->pdata->led->lock);
 
 	return len;
