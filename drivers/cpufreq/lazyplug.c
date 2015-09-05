@@ -421,6 +421,15 @@ static void lazyplug_suspend(struct early_suspend *handler)
 	}
 }
 
+static void cpu_all_up(struct work_struct *work);
+static DECLARE_WORK(cpu_all_up_work, cpu_all_up);
+
+static void cpu_all_up(struct work_struct *work)
+{
+	cpu_all_ctrl(true);
+	wakeup_boost();
+}
+
 #ifdef CONFIG_POWERSUSPEND
 static void lazyplug_resume(struct power_suspend *handler)
 #else
@@ -435,9 +444,7 @@ static void lazyplug_resume(struct early_suspend *handler)
 		suspended = false;
 		mutex_unlock(&lazyplug_mutex);
 
-		cpu_all_ctrl(true);
-
-		wakeup_boost();
+		schedule_work(&cpu_all_up_work);
 	}
 	queue_delayed_work_on(0, lazyplug_wq, &lazyplug_work,
 		msecs_to_jiffies(10));
