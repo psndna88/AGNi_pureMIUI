@@ -96,6 +96,7 @@
 #define BUSY_PERSISTENCE		(3500 / DEF_SAMPLING_MS)
 
 static DEFINE_MUTEX(lazyplug_mutex);
+static DEFINE_MUTEX(lazymode_mutex);
 
 static struct delayed_work lazyplug_work;
 static struct delayed_work lazyplug_boost;
@@ -466,21 +467,26 @@ static struct early_suspend lazyplug_early_suspend_driver = {
 };
 #endif	/* CONFIG_HAS_EARLYSUSPEND */
 
-static unsigned int __read_mostly Lnr_run_profile_sel = 0;
-static unsigned int __read_mostly Ltouch_boost_active = true;
+static unsigned int Lnr_run_profile_sel = 0;
+static unsigned int Ltouch_boost_active = true;
+static bool Lprevious_state = false;
 void lazyplug_enter_lazy(bool enter)
 {
-	if (enter) {
+	mutex_lock(&lazymode_mutex);
+	if (enter && !Lprevious_state) {
 		pr_info("lazyplug: entering lazy mode\n");
 		Lnr_run_profile_sel = nr_run_profile_sel;
 		Ltouch_boost_active = touch_boost_active;
 		nr_run_profile_sel = 2; /* conversative profile */
 		touch_boost_active = false;
-	} else {
+		Lprevious_state = true;
+	} else if (!enter && Lprevious_state) {
 		pr_info("lazyplug: exiting lazy mode\n");
 		touch_boost_active = Ltouch_boost_active;
 		nr_run_profile_sel = Lnr_run_profile_sel;
+		Lprevious_state = false;
 	}
+	mutex_unlock(&lazymode_mutex);
 }
 
 static void lazyplug_input_event(struct input_handle *handle,
