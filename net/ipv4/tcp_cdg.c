@@ -139,7 +139,7 @@ static void tcp_cdg_hystart_update(struct sock *sk)
 {
 	struct cdg *ca = inet_csk_ca(sk);
 	struct tcp_sock *tp = tcp_sk(sk);
-
+	u32 in_flight;
 	ca->delay_min = min_not_zero(ca->delay_min, ca->rtt.min);
 	if (ca->delay_min == 0)
 		return;
@@ -147,7 +147,7 @@ static void tcp_cdg_hystart_update(struct sock *sk)
 	if (hystart_detect & HYSTART_ACK_TRAIN) {
 		u32 now_us = div_u64(local_clock(), NSEC_PER_USEC);
 
-		if (ca->last_ack == 0 || !tcp_is_cwnd_limited(sk)) {
+		if (ca->last_ack == 0 || !tcp_is_cwnd_limited(sk, in_flight)) {
 			ca->last_ack = now_us;
 			ca->round_start = now_us;
 		} else if (before(now_us, ca->last_ack + 3000)) {
@@ -252,7 +252,7 @@ static bool tcp_cdg_backoff(struct sock *sk, u32 grad)
 
 	ca->shadow_wnd = max(ca->shadow_wnd, tp->snd_cwnd);
 	ca->state = CDG_BACKOFF;
-	tcp_enter_cwr(sk);
+	tcp_enter_cwr(sk, 1);
 	return true;
 }
 
@@ -263,6 +263,7 @@ static void tcp_cdg_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 	struct tcp_sock *tp = tcp_sk(sk);
 	u32 prior_snd_cwnd;
 	u32 incr;
+	u32 in_flight;
 
 	if (tp->snd_cwnd < tp->snd_ssthresh && hystart_detect)
 		tcp_cdg_hystart_update(sk);
@@ -282,7 +283,7 @@ static void tcp_cdg_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 			return;
 	}
 
-	if (!tcp_is_cwnd_limited(sk)) {
+	if (!tcp_is_cwnd_limited(sk, in_flight)) {
 		ca->shadow_wnd = min(ca->shadow_wnd, tp->snd_cwnd);
 		return;
 	}
