@@ -529,13 +529,6 @@ void acct_update_power(struct task_struct *p, cputime_t cputime);
 static inline void acct_update_power(struct task_struct *p, cputime_t cputime) {}
 #endif
 
-#ifdef CONFIG_TASK_CPUFREQ_STATS
-void update_time_in_state(struct task_struct *p, int cpu);
-void update_cumulative_time_in_state(struct task_struct *p,
-				     struct task_struct *parent,
-				     int cpu);
-int cpufreq_stats_get_max_state(int cpu);
-void update_freq_table(unsigned int* freq_table, int cpu,
-		       unsigned int max_state);
-#endif
+struct sched_domain;
+unsigned long cpufreq_scale_freq_capacity(struct sched_domain *sd, int cpu);
 #endif /* _LINUX_CPUFREQ_H */
