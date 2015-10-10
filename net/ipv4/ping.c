@@ -15,6 +15,7 @@
  * Authors:	Vasiliy Kulikov / Openwall (for Linux 2.6),
  *		Pavel Kankovsky (for Linux 2.4.32)
  *
+ * Copyright (C) 2015 XiaoMi, Inc.
  * Pavel gave all rights to bugs to Vasiliy,
  * none of the bugs are Pavel's now.
  *
