@@ -1952,6 +1952,9 @@ static int _init(struct kgsl_device *device)
 {
 	int status = 0;
 	switch (device->state) {
+	case KGSL_STATE_DEEP_NAP:
+		pm_qos_update_request(&device->pwrctrl.pm_qos_req_dma,
+			device->pwrctrl.pm_qos_active_latency);
 	case KGSL_STATE_NAP:
 	case KGSL_STATE_SLEEP:
 		/* Force power on to do the stop */
