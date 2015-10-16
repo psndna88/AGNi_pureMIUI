@@ -108,6 +108,11 @@ int cpuidle_idle_call(void)
 	struct cpuidle_driver *drv;
 	int next_state, entered_state;
 
+	if (need_resched()) {
+		local_irq_enable();
+		return 0;
+	}
+
 	if (off)
 		return -ENODEV;
 
