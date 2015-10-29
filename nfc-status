@@ -1,0 +1,40 @@
+#!/bin/sh
+
+STATE=$1
+shift
+OPER=$*
+
+play()
+{
+    canberra-gtk-play --file=$1 &
+}
+
+
+if [ "$STATE" = "START" ]; then
+    zenity --title="NFC operation" --info --text="$OPER" &
+    echo $! > nfc-status.pid
+    play /usr/share/sounds/ubuntu/stereo/system-ready.ogg
+    #espeak "NFC $OPER"
+fi
+
+if [ "$STATE" = "SUCCESS" -o "$STATE" = "FAIL" ]; then
+    if [ -r nfc-status.pid ]; then
+	pid=`cat nfc-status.pid`
+	rm nfc-status.pid
+	if [ $pid -gt 0 ]; then
+	    if ps -o command $pid | grep -q zenity; then
+		kill $pid
+	    fi
+	fi
+    fi
+fi
+
+if [ "$STATE" = "SUCCESS" ]; then
+    play /usr/share/sounds/freedesktop/stereo/complete.oga
+    #espeak "Success"
+fi
+
+if [ "$STATE" = "FAIL" ]; then
+    play /usr/share/sounds/freedesktop/stereo/bell.oga
+    #espeak "Failed"
+fi
