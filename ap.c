@@ -151,14 +151,20 @@ void ath_set_cts_width(struct sigma_dut *dut, const char *ifname,
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"wifitool cts_width failed");
 		}
+		snprintf(buf, sizeof(buf),
+			 "athdiag --set --address=0x10024  --val=0xd90b8a14");
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"disabling phy restart failed");
+		}
 	} else {
 		sigma_dut_print(dut, DUT_MSG_ERROR, "Unsupported CTS_WIDTH");
 	}
 }
 
 
-static void ath_config_dyn_bw_sig(struct sigma_dut *dut, const char *ifname,
-				  const char *val)
+void ath_config_dyn_bw_sig(struct sigma_dut *dut, const char *ifname,
+			   const char *val)
 {
 	char buf[60];
 
@@ -168,6 +174,12 @@ static void ath_config_dyn_bw_sig(struct sigma_dut *dut, const char *ifname,
 		if (system(buf) != 0) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"iwpriv cwmenable 1 failed");
+		}
+		snprintf(buf, sizeof(buf), "wifitool %s beeliner_fw_test 96 1",
+			 ifname);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"disabling RTS from rate control logic failed");
 		}
 	} else if (strcasecmp(val, "disable") == 0) {
 		dut->ap_dyn_bw_sig = AP_DYN_BW_SGNL_DISABLED;

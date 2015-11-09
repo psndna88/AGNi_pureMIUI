@@ -3220,32 +3220,23 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 
 	val = get_param(cmd, "DYN_BW_SGNL");
 	if (val) {
-		if (strcasecmp(val, "Enable") == 0) {
-			snprintf(buf, sizeof(buf), "iwpriv %s cwmenable 1",
-				 intf);
-		} else if (strcasecmp(val, "Disable") == 0) {
-			snprintf(buf, sizeof(buf), "iwpriv %s cwmenable 0",
-				 intf);
-		} else {
-			send_resp(dut, conn, SIGMA_ERROR,
-				  "ErrorCode,DYN_BW_SGNL value not supported");
-			return 0;
-		}
-
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"Failed to set DYN_BW_SGNL");
-		}
-
-		if (get_driver_type() == DRIVER_WCN) {
+		switch (get_driver_type()) {
+		case DRIVER_WCN:
 			snprintf(buf, sizeof(buf), "iwpriv %s cts_cbw 3", intf);
 			if (system(buf) != 0) {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
 						"Failed to set cts_cbw in DYN_BW_SGNL");
 				return 0;
 			}
+			break;
+		case DRIVER_ATHEROS:
+			ath_config_dyn_bw_sig(dut, intf, val);
+			break;
+		default:
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to set DYN_BW_SGNL");
+			break;
 		}
-
 	}
 
 	val = get_param(cmd, "RTS_FORCE");
