@@ -3243,18 +3243,21 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 	if (val) {
 		if (strcasecmp(val, "Enable") == 0) {
 			snprintf(buf, sizeof(buf), "iwconfig %s rts 64", intf);
+			if (system(buf) != 0) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"Failed to set RTS_FORCE 64");
+			}
 		} else if (strcasecmp(val, "Disable") == 0) {
 			snprintf(buf, sizeof(buf), "iwconfig %s rts 2347",
 				 intf);
+			if (system(buf) != 0) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"Failed to set RTS_FORCE 2347");
+			}
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,RTS_FORCE value not supported");
 			return 0;
-		}
-
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"Failed to set RTS_FORCE");
 		}
 	}
 
