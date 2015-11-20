@@ -274,7 +274,6 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 {
 	/* const char *name = get_param(cmd, "NAME"); */
 	/* const char *ifname = get_param(cmd, "INTERFACE"); */
-	/* const char *reg_mode = get_param(cmd, "regulatory_mode"); */
 	const char *val;
 	unsigned int wlan_tag = 1;
 	char *ifname = get_main_ifname();
@@ -295,6 +294,12 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 			return -1;
 		snprintf(dut->ap_countrycode, sizeof(dut->ap_countrycode),
 			 "%s", val);
+	}
+
+	val = get_param(cmd, "regulatory_mode");
+	if (val) {
+		if (strcasecmp(val, "11d") == 0 || strcasecmp(val, "11h") == 0)
+			dut->ap_regulatory_mode = AP_80211D_MODE_ENABLED;
 	}
 
 	val = get_param(cmd, "SSID");
@@ -320,6 +325,23 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 			pos++;
 			dut->ap_channel_1 = atoi(pos);
 		}
+	}
+
+	/* Overwrite the AP channel with DFS channel if configured */
+	val = get_param(cmd, "dfs_chan");
+	if (val) {
+		dut->ap_channel = atoi(val);
+	}
+
+	val = get_param(cmd, "dfs_mode");
+	if (val) {
+		if (strcasecmp(val, "Enable") == 0)
+			dut->ap_dfs_mode = AP_DFS_MODE_ENABLED;
+		else if (strcasecmp(val, "Disable") == 0)
+			dut->ap_dfs_mode = AP_DFS_MODE_DISABLED;
+		else
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Unsupported dfs_mode value: %s", val);
 	}
 
 	val = get_param(cmd, "MODE");
@@ -2459,6 +2481,12 @@ static int cmd_wcn_ap_config_commit(struct sigma_dut *dut,
 			 dut->ap_countrycode);
 		run_ndc(dut, buf);
 	}
+
+	if (dut->ap_regulatory_mode == AP_80211D_MODE_ENABLED)
+		run_ndc(dut, "ndc softap qccmd set ieee80211d=1");
+
+	if (dut->ap_dfs_mode == AP_DFS_MODE_ENABLED)
+		run_ndc(dut, "ndc softap qccmd set ieee80211h=1");
 
 	run_ndc(dut, "ndc softap startap");
 
@@ -4956,6 +4984,9 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	dut->ap_bss_load = -1;
 	dut->ap_p2p_cross_connect = -1;
 
+	dut->ap_regulatory_mode = AP_80211D_MODE_DISABLED;
+	dut->ap_dfs_mode = AP_DFS_MODE_DISABLED;
+
 	if (dut->program == PROGRAM_HS2 || dut->program == PROGRAM_HS2_R2) {
 		int i;
 		enum driver_type drv;
@@ -6720,6 +6751,7 @@ void ap_register_cmds(void)
 	sigma_dut_reg_cmd("ap_set_11n_wireless", NULL, cmd_ap_set_wireless);
 	sigma_dut_reg_cmd("ap_set_11n", NULL, cmd_ap_set_wireless);
 	sigma_dut_reg_cmd("ap_set_11d", NULL, cmd_ap_set_wireless);
+	sigma_dut_reg_cmd("ap_set_11h", NULL, cmd_ap_set_wireless);
 	sigma_dut_reg_cmd("ap_set_security", NULL, cmd_ap_set_security);
 	sigma_dut_reg_cmd("ap_set_apqos", NULL, cmd_ap_set_apqos);
 	sigma_dut_reg_cmd("ap_set_staqos", NULL, cmd_ap_set_staqos);

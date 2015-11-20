@@ -426,6 +426,14 @@ struct sigma_dut {
 	} ap_vht_chwidth;
 	int ap_txBF;
 	int ap_mu_txBF;
+	enum ap_regulatory_mode {
+		AP_80211D_MODE_DISABLED,
+		AP_80211D_MODE_ENABLED,
+	} ap_regulatory_mode;
+	enum ap_dfs_mode {
+		AP_DFS_MODE_DISABLED,
+		AP_DFS_MODE_ENABLED,
+	} ap_dfs_mode;
 
 	const char *hostapd_debug_log;
 
