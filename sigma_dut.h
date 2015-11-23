@@ -200,6 +200,10 @@ struct sigma_stream {
 	int num_retry;
 	char ifname[IFNAMSIZ]; /* ifname from the command */
 	struct sigma_dut *dut; /* for traffic agent thread to access context */
+	/* console */
+	char test_name[9]; /* test case name */
+	int can_quit;
+	int reset;
 };
 
 #endif /* CONFIG_TRAFFIC_AGENT */
@@ -611,6 +615,7 @@ enum sigma_program sigma_program_to_enum(const char *prog);
 
 /* uapsd_stream.c */
 void receive_uapsd(struct sigma_stream *s);
+void send_uapsd_console(struct sigma_stream *s);
 
 /* nan.c */
 int nan_preset_testparameters(struct sigma_dut *dut, struct sigma_conn *conn,

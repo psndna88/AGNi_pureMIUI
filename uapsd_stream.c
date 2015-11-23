@@ -757,6 +757,155 @@ struct uapsd_rcv_state_table sta_uapsd_recv_tbl[LAST_TC + 10][6] = {
 #endif /* CONFIG_WFA_WMM_AC */
 };
 
+/* U-APSD console data */
+#define NETWORK_CLASS_C 0x00ffffff
+#define UAPSD_CONSOLE_TIMER 200
+
+typedef int (*uapsd_console_state_func_ptr)(struct sigma_stream *s,
+					    unsigned int *rx_msg_buf, int len);
+struct uapsd_console_state_table {
+	uapsd_console_state_func_ptr state_func;
+};
+
+static int console_rx_hello(struct sigma_stream *, unsigned int *, int);
+static int console_rx_confirm(struct sigma_stream *, unsigned int *, int);
+static int console_rx_confirm_tx_vi(struct sigma_stream *, unsigned int *, int);
+static int console_rx_tx_stop(struct sigma_stream *, unsigned int *, int);
+static int console_rx_vo_tx_stop(struct sigma_stream *, unsigned int *, int);
+static int console_rx_vi_tx_stop(struct sigma_stream *, unsigned int *, int);
+static int console_rx_vi_tx_vi(struct sigma_stream *, unsigned int *, int);
+static int console_rx_vi_tx_bcst(struct sigma_stream *, unsigned int *, int);
+static int console_rx_be_tx_bcst(struct sigma_stream *, unsigned int *, int);
+static int console_rx_be_tx_be(struct sigma_stream *, unsigned int *, int);
+static int console_rx_be_tx_be_tx_stop(struct sigma_stream *, unsigned int *,
+				       int);
+static int console_rx_bk_tx_stop(struct sigma_stream *, unsigned int *, int);
+static int console_rx_vi_tx_vo_tx_stop(struct sigma_stream *, unsigned int *,
+				       int);
+static int console_rx_vo_tx_bcst_tx_stop(struct sigma_stream *, unsigned int *,
+					 int);
+static int console_rx_vi_tx_be(struct sigma_stream *, unsigned int *, int);
+static int console_rx_vi_tx_bk(struct sigma_stream *, unsigned int *, int);
+static int console_rx_vo_tx_vo_cyclic(struct sigma_stream *, unsigned int *,
+				      int);
+static int console_rx_vo_tx_vo(struct sigma_stream *, unsigned int *, int);
+static int console_rx_vo_tx_vo_tx_stop(struct sigma_stream *, unsigned int *,
+				       int);
+static int console_rx_vo_tx_2vo(struct sigma_stream *, unsigned int *, int);
+static int console_rx_be_tx_bcst_tx_stop(struct sigma_stream *, unsigned int *,
+					 int);
+static int console_rx_vo(struct sigma_stream *, unsigned int *, int);
+static int console_rx_vi(struct sigma_stream *, unsigned int *, int);
+static int console_rx_be(struct sigma_stream *, unsigned int *, int);
+static int console_rx_vo_tx_all_tx_stop(struct sigma_stream *, unsigned int *,
+					int);
+static int console_rx_vi_tx_vi_tx_stop(struct sigma_stream *, unsigned int *,
+				       int);
+
+/* U-APSD console process table for each of the test cases */
+struct uapsd_console_state_table uapsd_console_state_tbl[LAST_TC + 1][10] = {
+	/* Ini */
+	{{console_rx_hello}, {console_rx_confirm}, {console_rx_vo_tx_vo},
+	 {console_rx_tx_stop}, {NULL}, {NULL}, {NULL}, {NULL}, {NULL}, {NULL}},
+
+	/* B.D */
+	{{console_rx_hello}, {console_rx_confirm}, {console_rx_vo_tx_vo},
+	 {console_rx_vo_tx_stop}, {console_rx_tx_stop}, {console_rx_tx_stop},
+	 {NULL}, {NULL}, {NULL}, {NULL}},
+
+	/* B.H */
+	{{console_rx_hello}, {console_rx_confirm}, {console_rx_vo_tx_2vo},
+	 {console_rx_vo_tx_stop}, {console_rx_tx_stop}, {console_rx_tx_stop},
+	 {NULL}, {NULL}, {NULL}, {NULL}},
+
+	/* B.B */
+	{{console_rx_hello}, {console_rx_confirm}, {console_rx_vo},
+	 {console_rx_vi}, {console_rx_be}, {console_rx_bk_tx_stop},
+	 {console_rx_tx_stop}, {NULL}, {NULL}, {NULL}},
+
+	/* B.M */
+	{{console_rx_hello}, {console_rx_confirm}, {console_rx_vi_tx_stop},
+	 {console_rx_tx_stop}, {NULL}, {NULL}, {NULL}, {NULL}, {NULL}, {NULL}},
+
+	/* M.D */
+	{{console_rx_hello}, {console_rx_confirm}, {console_rx_vi_tx_be},
+	 {console_rx_vi_tx_bk}, {console_rx_vi_tx_vi},
+	 {console_rx_vi_tx_vo_tx_stop}, {console_rx_tx_stop},
+	 {NULL}, {NULL}, {NULL}},
+
+	/* B.Z */
+	{{console_rx_hello}, {console_rx_confirm_tx_vi},
+	 {console_rx_vo_tx_bcst_tx_stop}, {console_rx_tx_stop},
+	 {NULL}, {NULL}, {NULL}, {NULL}},
+
+	/* M.Y */
+	{{console_rx_hello}, {console_rx_confirm}, {console_rx_vi_tx_vi},
+	 {console_rx_vo}, {console_rx_be_tx_be},
+	 {console_rx_be_tx_bcst_tx_stop}, {console_rx_tx_stop},
+	 {NULL}, {NULL}, {NULL}},
+
+	/* L.1 */
+	{{console_rx_hello}, {console_rx_confirm}, {console_rx_vo_tx_vo_cyclic},
+	 {console_rx_tx_stop}, {NULL}, {NULL}, {NULL}, {NULL}, {NULL}, {NULL}},
+
+	/* A.Y */
+	{{console_rx_hello}, {console_rx_confirm}, {console_rx_vi_tx_vi},
+	 {console_rx_vo}, {console_rx_be_tx_be}, {console_rx_be},
+	 {console_rx_be_tx_bcst_tx_stop}, {console_rx_tx_stop}, {NULL}, {NULL}},
+
+	/* B.W */
+	{{console_rx_hello}, {console_rx_confirm}, {console_rx_vi_tx_bcst},
+	 {console_rx_vi_tx_bcst}, {console_rx_vi_tx_stop}, {console_rx_tx_stop},
+	 {NULL}, {NULL}, {NULL}, {NULL}},
+
+	/* A.J */
+	{{console_rx_hello}, {console_rx_confirm}, {console_rx_vo},
+	 {console_rx_vo_tx_all_tx_stop}, {console_rx_tx_stop},
+	 {NULL}, {NULL}, {NULL}, {NULL}, {NULL}},
+
+	/* M.V */
+	{{console_rx_hello}, {console_rx_confirm}, {console_rx_vi_tx_vi},
+	 {console_rx_be_tx_be}, {console_rx_vi_tx_vi_tx_stop},
+	 {console_rx_tx_stop}, {NULL}, {NULL}, {NULL}, {NULL}},
+
+	/* M.U */
+	{{console_rx_hello}, {console_rx_confirm}, {console_rx_vi_tx_vi},
+	 {console_rx_be_tx_be}, {console_rx_vo_tx_vo},
+	 {console_rx_vo_tx_vo_tx_stop}, {console_rx_tx_stop},
+	 {NULL}, {NULL}, {NULL}},
+
+	/* A.U */
+	{{console_rx_hello}, {console_rx_confirm}, {console_rx_vi_tx_vi},
+	 {console_rx_be}, {console_rx_be_tx_be}, {console_rx_be},
+	 {console_rx_vo_tx_vo}, {console_rx_vo_tx_stop}, {console_rx_tx_stop},
+	 {NULL}},
+
+	/* M.L */
+	{{console_rx_hello}, {console_rx_confirm},
+	 {console_rx_be_tx_be_tx_stop}, {console_rx_tx_stop},
+	 {NULL}, {NULL}, {NULL}, {NULL}, {NULL}, {NULL}},
+
+	/* B.K */
+	{{console_rx_hello}, {console_rx_confirm}, {console_rx_vi_tx_vi},
+	 {console_rx_be_tx_be}, {console_rx_vi_tx_stop}, {console_rx_tx_stop},
+	 {NULL}, {NULL}, {NULL}, {NULL}},
+
+	/* M.B */
+	{{console_rx_hello}, {console_rx_confirm}, {console_rx_vo},
+	 {console_rx_vi}, {console_rx_be}, {console_rx_bk_tx_stop},
+	 {console_rx_tx_stop}, {NULL}, {NULL}, {NULL}},
+
+	/* M.K */
+	{{console_rx_hello}, {console_rx_confirm}, {console_rx_vi_tx_vi},
+	 {console_rx_be_tx_be}, {console_rx_vi_tx_stop}, {console_rx_tx_stop},
+	 {NULL}, {NULL}, {NULL}, {NULL}},
+
+	/* M.W */
+	{{console_rx_hello}, {console_rx_confirm}, {console_rx_vi_tx_bcst},
+	 {console_rx_be_tx_bcst}, {console_rx_vi_tx_stop}, {console_rx_tx_stop},
+	 {NULL}, {NULL}, {NULL}, {NULL}}
+};
+
 
 static void create_apts_pkt(int msg, unsigned int txbuf[],
 			    u32 uapsd_dscp, struct sigma_stream *s)
@@ -1239,6 +1388,9 @@ static void sigma_uapsd_reset(struct sigma_stream *s)
 
 	s->num_retry++;
 
+	/* if reset is called from U-APSD console set it */
+	s->reset = 1;
+
 	reset_pkt = malloc(s->payload_size);
 	if (reset_pkt == NULL)
 		return;
@@ -1425,4 +1577,1040 @@ void receive_uapsd(struct sigma_stream *s)
 	}
 	pthread_cond_destroy(&s->tx_thr_cond);
 	pthread_mutex_destroy(&s->tx_thr_mutex);
+}
+
+
+/* U-APSD apts console code implementation */
+static int packet_expected(struct sigma_stream *s, unsigned int *rpkt,
+			   unsigned int type, u32 tos)
+{
+	u8 type_ok = 0;
+	u8 tos_ok = 0;
+	int res = 0;
+	struct sigma_dut *dut = s->dut;
+
+	type_ok = (rpkt[10] == type) ? 1 : 0;
+
+	switch (tos) {
+	case TOS_VO7:
+	case TOS_VO:
+	case TOS_VO6:
+	case TOS_VO2:
+		if (rpkt[1] == TOS_VO7 || rpkt[1] == TOS_VO ||
+		    rpkt[1] == TOS_VO6 || rpkt[1] == TOS_VO2)
+			tos_ok = 1;
+		break;
+	case TOS_VI:
+	case TOS_VI4:
+	case TOS_VI5:
+		if (rpkt[1] == TOS_VI || rpkt[1] == TOS_VI4 ||
+		    rpkt[1] == TOS_VI5)
+			tos_ok = 1;
+		break;
+	case TOS_BE:
+	case TOS_EE:
+		if (rpkt[1] == TOS_BE || rpkt[1] == TOS_EE)
+			tos_ok = 1;
+		break;
+	case TOS_BK:
+	case TOS_LE:
+		if (rpkt[1] == TOS_BK || rpkt[1] == TOS_LE)
+			tos_ok = 1;
+		break;
+	default:
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"packet_expected: recv not known tos=0x%x",
+				tos);
+		break;
+	}
+
+	res = type_ok && tos_ok;
+	if (!res) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"packet_expected: No match: received pkt_type %u expected type %u, received dscp 0x%x expected dscp 0x%x",
+				rpkt[10], type, rpkt[1], tos);
+	}
+
+	return res;
+}
+
+
+static int console_send(struct sigma_stream *s, u32 pkt_type, u32 tos)
+{
+	u32 *tpkt;
+	int res = 0;
+	struct sigma_dut *dut = s->dut;
+
+	tpkt = malloc(s->payload_size);
+	if (tpkt == NULL) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"console_send: Send buffer allocation failed");
+		return 0;
+	}
+	memset(tpkt, 0, s->payload_size);
+	create_apts_pkt(pkt_type, tpkt, tos, s);
+	if (pkt_type == APTS_DEFAULT || pkt_type == APTS_STOP)
+		tpkt[0] = ++(s->rx_cookie);
+	tpkt[1] = tos;
+	setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
+	res = send(s->sock, tpkt, s->payload_size / 2, 0);
+	if (res >= 0) {
+		s->tx_frames++;
+		s->tx_payload_bytes += res;
+	}
+	s->uapsd_rx_state++;
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"console_send: Sent packet return %d Type %d Tos %d",
+			res, tpkt[10], tpkt[1]);
+	free(tpkt);
+
+	return 0;
+}
+
+
+static int console_rx_hello(struct sigma_stream *s, unsigned int *rpkt, int len)
+{
+	struct sigma_dut *dut = s->dut;
+
+	if (!packet_expected(s, rpkt, APTS_HELLO, TOS_BE)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"console_rx_hello: Hello not Recv or Bad TOS");
+		return 0;
+	}
+
+	s->rx_cookie = 0;
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"console_rx_hello: Recv Hello, Sent Test Case");
+	console_send(s, s->uapsd_sta_tc, TOS_BE);
+
+	return 0;
+}
+
+
+static int console_rx_confirm(struct sigma_stream *s, unsigned int *rpkt,
+			      int len)
+{
+	struct sigma_dut *dut = s->dut;
+
+	if (!packet_expected(s, rpkt, APTS_CONFIRM, TOS_BE)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"console_rx_confirm: Confirm not Recv or Bad TOS");
+		return 0;
+	}
+
+	s->rx_cookie = 0;
+	s->uapsd_rx_state++;
+	sigma_dut_print(dut, DUT_MSG_INFO, "console_rx_confirm: Recv Confirm");
+
+	return 0;
+}
+
+
+static int console_rx_confirm_tx_vi(struct sigma_stream *s, unsigned int *rpkt,
+				    int len)
+{
+	struct sigma_dut *dut = s->dut;
+
+	if (!packet_expected(s, rpkt, APTS_CONFIRM, TOS_BE)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"console_rx_confirm_tx_vi: Confirm not Recv or Bad TOS");
+		return 0;
+	}
+
+	s->rx_cookie = 0;
+	console_send(s, APTS_DEFAULT, TOS_VI);
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"console_rx_confirm_tx_vi: Recv Confirm, Sent VI");
+
+	return 0;
+
+}
+
+
+static int console_rx_tx_stop(struct sigma_stream *s, unsigned int *rpkt,
+			      int len)
+{
+	struct sigma_dut *dut = s->dut;
+
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"console_rx_tx_stop: Send stop to STA again quit %d stop %d",
+			s->can_quit, s->stop);
+
+	console_send(s, APTS_STOP, TOS_BE);
+
+	if (packet_expected(s, rpkt, APTS_STOP, TOS_BE)) {
+		if (s->can_quit) {
+			s->stop = 1;
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"console_rx_tx_stop: Send stop to STA again quit %d stop %d",
+					s->can_quit, s->stop);
+		} else {
+			s->can_quit = 1;
+		}
+	} else {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"console_rx_tx_stop: STOP not Recv or Bad TOS");
+	}
+
+	return 0;
+}
+
+
+static int console_rx_vo_tx_vo(struct sigma_stream *s, unsigned int *rpkt,
+			       int len)
+{
+	struct sigma_dut *dut = s->dut;
+	unsigned int tos = TOS_VO7;
+	int res;
+
+	if (!packet_expected(s, rpkt, APTS_DEFAULT, TOS_VO)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"console_rx_vo_tx_vo: Expected Pkt not Recv or Bad TOS");
+		return 0;
+	}
+
+	rpkt[0] = ++(s->rx_cookie);
+	rpkt[1] = TOS_VO;
+	setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
+	res = send(s->sock, rpkt, s->payload_size / 2, 0);
+	if (res >= 0) {
+		s->tx_frames++;
+		s->tx_payload_bytes += res;
+	}
+	s->uapsd_rx_state++;
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"console_rx_vo_tx_vo: Recv VO, Sent VO");
+
+	return 0;
+}
+
+
+static int console_rx_vo_tx_vo_tx_stop(struct sigma_stream *s,
+				       unsigned int *rpkt, int len)
+{
+	struct sigma_dut *dut = s->dut;
+	unsigned int tos = TOS_VO7;
+	int res;
+
+	if (!packet_expected(s, rpkt, APTS_DEFAULT, TOS_VO)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"console_rx_vo_tx_vo_tx_stop: Expected Pkt not Recv or Bad TOS");
+		return 0;
+	}
+
+	rpkt[0] = ++(s->rx_cookie);
+	rpkt[1] = TOS_VO;
+	setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
+	res = send(s->sock, rpkt, s->payload_size / 2, 0);
+	if (res >= 0) {
+		s->tx_frames++;
+		s->tx_payload_bytes += res;
+	}
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"console_rx_vo_tx_vo_tx_stop: Recv VO, Sent VO");
+		usleep(500000);
+		console_send(s, APTS_STOP, TOS_BE);
+
+	return 0;
+}
+
+
+static int console_rx_vo_tx_all_tx_stop(struct sigma_stream *s,
+					unsigned int *rpkt, int len)
+{
+	struct sigma_dut *dut = s->dut;
+	u32 tos = TOS_VO7;
+	int res;
+
+	if (!packet_expected(s, rpkt, APTS_DEFAULT, TOS_VO)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"console_rx_vo_tx_all_tx_stop: Expected Pkt not Recv or Bad TOS");
+		return 0;
+	}
+
+	rpkt[0] = ++(s->rx_cookie);
+	rpkt[1] = TOS_VO;
+	setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
+	res = send(s->sock, rpkt, s->payload_size / 2, 0);
+	if (res >= 0) {
+		s->tx_frames++;
+		s->tx_payload_bytes += res;
+	}
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"console_rx_vo_tx_all_tx_stop: Recv VO, Sent VO");
+	rpkt[0] = ++(s->rx_cookie);
+	tos = TOS_VI;
+	rpkt[1] = tos;
+	setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
+	res = send(s->sock, rpkt, s->payload_size / 2, 0);
+	if (res >= 0) {
+		s->tx_frames++;
+		s->tx_payload_bytes += res;
+	}
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"console_rx_vo_tx_all_tx_stop: Sent VI");
+	rpkt[0] = ++(s->rx_cookie);
+	tos = TOS_BE;
+	rpkt[1] = tos;
+	setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
+	res = send(s->sock, rpkt, s->payload_size / 2, 0);
+	if (res >= 0) {
+		s->tx_frames++;
+		s->tx_payload_bytes += res;
+	}
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"console_rx_vo_tx_all_tx_stop: Sent BE");
+	rpkt[0] = ++(s->rx_cookie);
+	tos = TOS_BK;
+	rpkt[1] = tos;
+	setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
+	res = send(s->sock, rpkt, s->payload_size / 2, 0);
+	if (res >= 0) {
+		s->tx_frames++;
+		s->tx_payload_bytes += res;
+	}
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"console_rx_vo_tx_all_tx_stop: Sent BK");
+	usleep(500000);
+	console_send(s, APTS_STOP, TOS_BE);
+
+	return 0;
+}
+
+
+static int console_rx_be_tx_be(struct  sigma_stream *s, unsigned int *rpkt,
+			       int len)
+{
+	struct sigma_dut *dut = s->dut;
+	u32 tos = TOS_BE;
+	int res;
+
+	if (!packet_expected(s, rpkt, APTS_DEFAULT, TOS_BE)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"console_rx_be_tx_be: Expected Pkt not Recv or Bad TOS");
+		return 0;
+	}
+
+	rpkt[0] = ++(s->rx_cookie);
+	setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
+	res = send(s->sock, rpkt, s->payload_size / 2, 0);
+	if (res >= 0) {
+		s->tx_frames++;
+		s->tx_payload_bytes += res;
+	}
+	s->uapsd_rx_state++;
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"console_rx_be_tx_be: Recv BE, Sent BE");
+
+	return 0;
+}
+
+
+static int console_rx_be_tx_be_tx_stop(struct sigma_stream *s,
+				       unsigned int *rpkt, int len)
+{
+	struct sigma_dut *dut = s->dut;
+	u32 tos = TOS_BE;
+	int res;
+
+	if (!packet_expected(s, rpkt, APTS_DEFAULT, TOS_BE)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"console_rx_be_tx_be_tx_stop: Expected Pkt not Recv or Bad TOS");
+		return 0;
+	}
+
+	rpkt[0] = ++(s->rx_cookie);
+	setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
+	res = send(s->sock, rpkt, s->payload_size / 2, 0);
+	if (res >= 0) {
+		s->tx_frames++;
+		s->tx_payload_bytes += res;
+	}
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"console_rx_be_tx_be_tx_stop: Recv BE, Sent BE");
+	console_send(s, APTS_STOP, TOS_BE);
+
+	return 0;
+}
+
+
+static int console_rx_vi_tx_be(struct sigma_stream *s, unsigned int *rpkt,
+			       int len)
+{
+	struct sigma_dut *dut = s->dut;
+	u32 tos = TOS_BE;
+	int res;
+
+	if (!packet_expected(s, rpkt, APTS_DEFAULT, TOS_VI)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"console_rx_vi_tx_be: Expected Pkt not Recv or Bad TOS");
+		return 0;
+	}
+
+	rpkt[0] = ++(s->rx_cookie);
+	rpkt[1] = tos;
+	setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
+	res = send(s->sock, rpkt, s->payload_size / 2, 0);
+	if (res >= 0) {
+		s->tx_frames++;
+		s->tx_payload_bytes += res;
+	}
+	s->uapsd_rx_state++;
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"console_rx_vi_tx_be: Recv VI, Sent BE");
+
+	return 0;
+}
+
+
+static int console_rx_vi_tx_bk(struct sigma_stream *s, unsigned int *rpkt,
+			       int len)
+{
+	struct sigma_dut *dut = s->dut;
+	u32 tos = TOS_BK;
+	int res;
+
+	if (!packet_expected(s, rpkt, APTS_DEFAULT, TOS_VI)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"console_rx_vi_tx_bk: Expected Pkt not Recv or Bad TOS");
+		return 0;
+	}
+
+	rpkt[0] = ++(s->rx_cookie);
+	rpkt[1] = tos;
+	setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
+	res = send(s->sock, rpkt, s->payload_size / 2, 0);
+	if (res >= 0) {
+		s->tx_frames++;
+		s->tx_payload_bytes += res;
+	}
+	s->uapsd_rx_state++;
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"console_rx_vi_tx_bk: Recv VI, Sent BK");
+
+	return 0;
+}
+
+
+static int console_rx_vo_tx_bcst_tx_stop(struct sigma_stream *s,
+					 unsigned int *rpkt, int len)
+{
+	struct sigma_dut *dut = s->dut;
+	u32 tos = TOS_BE;
+	int res;
+	int broadcast = 1;
+	struct sockaddr_in bcst_addr;
+
+	if (!packet_expected(s, rpkt, APTS_DEFAULT, TOS_VO)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"console_rx_vo_tx_bcst_tx_stop: Expected Pkt not Recv or Bad TOS");
+		return 0;
+	}
+
+	memset(&bcst_addr, 0, sizeof(struct sockaddr_in));
+	bcst_addr.sin_family = AF_INET;
+	bcst_addr.sin_port = htons(s->dst_port);
+	bcst_addr.sin_addr.s_addr = (s->dst.s_addr | ~(NETWORK_CLASS_C));
+
+	usleep(300000);
+	rpkt[0] = ++(s->rx_cookie);
+	rpkt[1] = tos;
+	setsockopt(s->sock, SOL_SOCKET, SO_BROADCAST, &broadcast,
+		   sizeof(broadcast));
+	setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
+	res = sendto(s->sock, rpkt, s->payload_size / 2, 0,
+		     (struct sockaddr *) &bcst_addr, sizeof(bcst_addr));
+	if (res >= 0) {
+		s->tx_frames++;
+		s->tx_payload_bytes += res;
+	}
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"console_rx_vo_tx_bcst_tx_stop: Recv VO, Sent Broadcast res = %d",
+			res);
+	console_send(s, APTS_STOP, TOS_BE);
+
+	return 0;
+}
+
+
+static int console_rx_vi_tx_bcst(struct sigma_stream *s, unsigned int *rpkt,
+				 int len)
+{
+	struct sigma_dut *dut = s->dut;
+	u32 tos = TOS_VI;
+	int res;
+	int broadcast = 1;
+	struct sockaddr_in bcst_addr;
+
+	if (!packet_expected(s, rpkt, APTS_DEFAULT, TOS_VI)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"console_rx_vi_tx_bcst: Expected Pkt not Recv or Bad TOS");
+		return 0;
+	}
+
+	memset(&bcst_addr, 0, sizeof(struct sockaddr_in));
+	bcst_addr.sin_family = AF_INET;
+	bcst_addr.sin_port = htons(s->dst_port);
+	bcst_addr.sin_addr.s_addr = (s->dst.s_addr | ~(NETWORK_CLASS_C));
+
+	rpkt[0] = ++(s->rx_cookie);
+	setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
+	res = send(s->sock, rpkt, s->payload_size / 2, 0);
+	if (res >= 0) {
+		s->tx_frames++;
+		s->tx_payload_bytes += res;
+	}
+	tos = TOS_BE;
+	rpkt[0] = ++(s->rx_cookie);
+	rpkt[1] = tos;
+	setsockopt(s->sock, SOL_SOCKET, SO_BROADCAST, &broadcast,
+		   sizeof(broadcast));
+	setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
+	res = sendto(s->sock, rpkt, s->payload_size / 2, 0,
+		     (struct sockaddr *) &bcst_addr, sizeof(bcst_addr));
+	if (res >= 0) {
+		s->tx_frames++;
+		s->tx_payload_bytes += res;
+	}
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"console_rx_vi_tx_bcst: Recv/Sent VI, Sent Broadcast res = %d",
+			res);
+	s->uapsd_rx_state++;
+
+	return 0;
+}
+
+
+static int console_rx_be_tx_bcst(struct sigma_stream *s, unsigned int *rpkt,
+				 int len)
+{
+	struct sigma_dut *dut = s->dut;
+	u32 tos = TOS_BE;
+	int res;
+	int broadcast = 1;
+	struct sockaddr_in bcst_addr;
+
+	if (!packet_expected(s, rpkt, APTS_DEFAULT, TOS_BE)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"console_rx_be_tx_bcst: Expected Pkt not Recv or Bad TOS");
+		return 0;
+	}
+
+	memset(&bcst_addr, 0, sizeof(struct sockaddr_in));
+	bcst_addr.sin_family = AF_INET;
+	bcst_addr.sin_port = htons(s->dst_port);
+	bcst_addr.sin_addr.s_addr = (s->dst.s_addr | ~(NETWORK_CLASS_C));
+
+	rpkt[0] = ++(s->rx_cookie);
+	setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
+	res = send(s->sock, rpkt, s->payload_size / 2, 0);
+	if (res >= 0) {
+		s->tx_frames++;
+		s->tx_payload_bytes += res;
+	}
+	rpkt[0] = ++(s->rx_cookie);
+	rpkt[1] = tos;
+	setsockopt(s->sock, SOL_SOCKET, SO_BROADCAST, &broadcast,
+		   sizeof(broadcast));
+	setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
+	res = sendto(s->sock, rpkt, s->payload_size / 2, 0,
+		     (struct sockaddr *) &bcst_addr, sizeof(bcst_addr));
+	if (res >= 0) {
+		s->tx_frames++;
+		s->tx_payload_bytes += res;
+	}
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"console_rx_be_tx_bcst: Recv/Sent BE, Sent Broadcast res = %d",
+			res);
+	s->uapsd_rx_state++;
+
+	return 0;
+}
+
+
+static int console_rx_be_tx_bcst_tx_stop(struct sigma_stream *s,
+					 unsigned int *rpkt, int len)
+{
+	struct sigma_dut *dut = s->dut;
+	u32 tos = TOS_BE;
+	int res;
+	int broadcast = 1;
+	struct sockaddr_in bcst_addr;
+
+	if (!packet_expected(s, rpkt, APTS_DEFAULT, TOS_BE)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"console_rx_be_tx_bcst_tx_stop: Expected Pkt not Recv or Bad TOS");
+		return 0;
+	}
+
+	memset(&bcst_addr, 0, sizeof(struct sockaddr_in));
+	bcst_addr.sin_family = AF_INET;
+	bcst_addr.sin_port = htons(s->dst_port);
+	bcst_addr.sin_addr.s_addr = (s->dst.s_addr | ~(NETWORK_CLASS_C));
+
+	rpkt[0] = ++(s->rx_cookie);
+	setsockopt(s->sock, SOL_SOCKET, SO_BROADCAST, &broadcast,
+		   sizeof(broadcast));
+	setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
+	res = sendto(s->sock, rpkt, s->payload_size / 2, 0,
+		     (struct sockaddr *) &bcst_addr, sizeof(bcst_addr));
+	if (res >= 0) {
+		s->tx_frames++;
+		s->tx_payload_bytes += res;
+	}
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"console_rx_be_tx_bcst_tx_stop: Recv BE, Sent Broadcast res = %d",
+			res);
+	console_send(s, APTS_STOP, TOS_BE);
+
+	return 0;
+}
+
+
+static int console_rx_vi_tx_vi(struct sigma_stream *s, unsigned int *rpkt,
+			       int len)
+{
+	struct sigma_dut *dut = s->dut;
+	u32 tos = TOS_VI;
+	int res;
+
+	if (!packet_expected(s, rpkt, APTS_DEFAULT, TOS_VI)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"console_rx_vi_tx_vi: Expected Pkt not Recv or Bad TOS");
+		return 0;
+	}
+
+	rpkt[0] = ++(s->rx_cookie);
+	setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
+	res = send(s->sock, rpkt, s->payload_size / 2, 0);
+	if (res >= 0) {
+		s->tx_frames++;
+		s->tx_payload_bytes += res;
+	}
+	s->uapsd_rx_state++;
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"console_rx_vi_tx_vi: Recv VI, Sent VI");
+
+	return 0;
+}
+
+
+static int console_rx_vi_tx_vi_tx_stop(struct sigma_stream *s,
+				       unsigned int *rpkt, int len)
+{
+	struct sigma_dut *dut = s->dut;
+	u32 tos = TOS_VI;
+	int res;
+
+	if (!packet_expected(s, rpkt, APTS_DEFAULT, TOS_VI)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"console_rx_vi_tx_vi_tx_stop: Expected Pkt not Recv or Bad TOS");
+		return 0;
+	}
+
+	rpkt[0] = ++(s->rx_cookie);
+	setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
+	res = send(s->sock, rpkt, s->payload_size / 2, 0);
+	if (res >= 0) {
+		s->tx_frames++;
+		s->tx_payload_bytes += res;
+	}
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"console_rx_vi_tx_vi_tx_stop: Recv VI, Sent VI");
+	console_send(s, APTS_STOP, TOS_BE);
+
+	return 0;
+}
+
+
+static int console_rx_vi_tx_vo_tx_stop(struct sigma_stream *s,
+				       unsigned int *rpkt, int len)
+{
+	struct sigma_dut *dut = s->dut;
+	u32 tos = TOS_VO7;
+	int res;
+
+	if (!packet_expected(s, rpkt, APTS_DEFAULT, TOS_VI)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"console_rx_vi_tx_vo_tx_stop: Expected Pkt not Recv or Bad TOS");
+		return 0;
+	}
+
+	rpkt[0] = ++(s->rx_cookie);
+	rpkt[1] = TOS_VO;
+	setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
+	res = send(s->sock, rpkt, s->payload_size / 2, 0);
+	if (res >= 0) {
+		s->tx_frames++;
+		s->tx_payload_bytes += res;
+	}
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"console_rx_vi_tx_vo_tx_stop: Recv VI, Sent VO");
+	console_send(s, APTS_STOP, TOS_BE);
+
+	return 0;
+}
+
+
+static int console_rx_vo_tx_stop(struct sigma_stream *s, unsigned int *rpkt,
+				 int len)
+{
+	struct sigma_dut *dut = s->dut;
+
+	if (!packet_expected(s, rpkt, APTS_DEFAULT, TOS_VO)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"console_rx_vo_tx_stop: Expected Pkt not Recv or Bad TOS");
+		return 0;
+	}
+
+	sigma_dut_print(dut, DUT_MSG_INFO, "console_rx_vo_tx_stop: Recv VO");
+	sleep(1);
+	console_send(s, APTS_STOP, TOS_BE);
+
+	return 0;
+}
+
+
+static int console_rx_vi_tx_stop(struct sigma_stream *s, unsigned int *rpkt,
+				 int len)
+{
+	struct sigma_dut *dut = s->dut;
+
+	if (!packet_expected(s, rpkt, APTS_DEFAULT, TOS_VI)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"console_rx_vi_tx_stop: Expected Pkt not Recv or Bad TOS");
+		return 0;
+	}
+
+	sigma_dut_print(dut, DUT_MSG_INFO, "console_rx_vi_tx_stop: Recv VI");
+	console_send(s, APTS_STOP, TOS_BE);
+
+	return 0;
+}
+
+
+static int console_rx_bk_tx_stop(struct  sigma_stream *s, unsigned int *rpkt,
+				 int len)
+{
+	struct sigma_dut *dut = s->dut;
+
+	if (!packet_expected(s, rpkt, APTS_DEFAULT, TOS_BK)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"console_rx_bk_tx_stop: Expected Pkt not Recv or Bad TOS");
+		return 0;
+	}
+
+	sigma_dut_print(dut, DUT_MSG_INFO, "console_rx_bk_tx_stop: Recv BK");
+	console_send(s, APTS_STOP, TOS_BE);
+
+	return 0;
+}
+
+
+static int console_rx_vo_tx_2vo(struct sigma_stream *s, unsigned int *rpkt,
+				int len)
+{
+	struct sigma_dut *dut = s->dut;
+	u32 tos = TOS_VO7;
+	int res;
+
+	if (!packet_expected(s, rpkt, APTS_DEFAULT, TOS_VO)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"console_rx_vo_tx_2vo: Expected Pkt not Recv or Bad TOS");
+		return 0;
+	}
+
+	rpkt[0] = ++(s->rx_cookie);
+	rpkt[1] = TOS_VO;
+	setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
+	res = send(s->sock, rpkt, s->payload_size / 2, 0);
+	if (res >= 0) {
+		s->tx_frames++;
+		s->tx_payload_bytes += res;
+	}
+	rpkt[0] = ++(s->rx_cookie);
+	res = send(s->sock, rpkt, s->payload_size / 2, 0);
+	if (res >= 0) {
+		s->tx_frames++;
+		s->tx_payload_bytes += res;
+	}
+	s->uapsd_rx_state++;
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"console_rx_vo_tx_2vo: Recv VO, Sent 2 VO");
+
+	return 0;
+}
+
+
+static int console_rx_be(struct sigma_stream *s, unsigned int *rpkt, int len)
+{
+	struct sigma_dut *dut = s->dut;
+
+	if (!packet_expected(s, rpkt, APTS_DEFAULT, TOS_BE)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"console_rx_be: Expected Pkt not Recv or Bad TOS");
+		return 0;
+	}
+
+	s->uapsd_rx_state++;
+	sigma_dut_print(dut, DUT_MSG_INFO, "console_rx_be: Recv BE");
+
+	return 0;
+}
+
+
+static int console_rx_vi(struct sigma_stream *s, unsigned int *rpkt, int len)
+{
+	struct sigma_dut *dut = s->dut;
+
+	if (!packet_expected(s, rpkt, APTS_DEFAULT, TOS_VI)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"console_rx_vi: Expected Pkt not Recv or Bad TOS");
+		return 0;
+	}
+
+	s->uapsd_rx_state++;
+	sigma_dut_print(dut, DUT_MSG_INFO, "console_rx_vi: Recv VI");
+
+	return 0;
+}
+
+
+static int console_rx_vo(struct sigma_stream *s, unsigned int *rpkt, int len)
+{
+	struct sigma_dut *dut = s->dut;
+
+	if (!packet_expected(s, rpkt, APTS_DEFAULT, TOS_VO)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"console_rx_vo : Expected Pkt not Recv or Bad TOS");
+		return 0;
+	}
+
+	s->uapsd_rx_state++;
+	sigma_dut_print(dut, DUT_MSG_INFO, "console_rx_vo: Recv VO");
+
+	return 0;
+
+}
+
+
+static int console_rx_vo_tx_vo_cyclic(struct sigma_stream *s,
+				      unsigned int *rpkt, int len)
+{
+	int res = 0;
+	unsigned int tos = 0;
+	unsigned int *tpkt;
+	struct sigma_dut *dut = s->dut;
+
+	tpkt = malloc(s->payload_size);
+	if (tpkt == NULL)
+		return -1;
+
+	if (!packet_expected(s, rpkt, APTS_DEFAULT, TOS_VO)) {
+		if (rpkt[10] != APTS_STOP)
+			sigma_uapsd_reset(s);
+
+		if (!packet_expected(s, rpkt, APTS_STOP, TOS_BE)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"console_rx_vo_tx_vo_cyclic: Expected STOP Pkt not Recv or Bad TOS");
+			free(tpkt);
+			return 0;
+		}
+
+		tpkt[0] = s->rx_cookie;
+		tos = TOS_BE;
+		setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
+		create_apts_pkt(APTS_STOP, tpkt, tos, s);
+		tpkt[1] = tos;
+		if (s->can_quit) {
+			res = send(s->sock, tpkt, s->payload_size / 2, 0);
+			if (res >= 0) {
+				s->tx_frames++;
+				s->tx_payload_bytes += res;
+			}
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"console_rx_vo_tx_vo_cyclic: Sent STOP");
+			sleep(5);
+			s->stop = 1;
+		} else {
+			res = send(s->sock, tpkt, s->payload_size / 2, 0);
+			if (res >= 0) {
+				s->tx_frames++;
+				s->tx_payload_bytes += res;
+			}
+			s->can_quit = 1;
+		}
+	} else {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"console_rx_vo_tx_vo_cyclic: Recv Pkt: %d Cookie: %d Sta-id %d",
+				rpkt[0], s->rx_cookie, s->sta_id);
+		rpkt[0] = ++(s->rx_cookie);
+		tos = TOS_VO7;
+		rpkt[1] = TOS_VO;
+		res = setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos,
+				 sizeof(tos));
+		res = send(s->sock, rpkt, s->payload_size / 2, 0);
+		if (res >= 0) {
+			s->tx_frames++;
+			s->tx_payload_bytes += res;
+		}
+
+		if (s->rx_cookie >= 3000) {
+			/* No state change for L.1 */
+		}
+	}
+
+	free(tpkt);
+
+	return 0;
+}
+
+
+static struct apts_pkt * apts_lookup(const char *s)
+{
+	struct apts_pkt *t;
+
+	for (t = &apts_pkts[1]; s && t->cmd; t++) {
+		if (t->name && strcmp(t->name, s) == 0)
+			return t;
+	}
+
+	return NULL;
+}
+
+
+void send_uapsd_console(struct sigma_stream *s)
+{
+	struct timeval tv;
+	fd_set rfds;
+	int res;
+	unsigned int *rpkt;
+	uapsd_console_state_func_ptr console_state_func;
+	struct apts_pkt *testcase;
+	struct sigma_dut *dut = s->dut;
+	/* start timer for self exit */
+	int uapsd_timer = UAPSD_CONSOLE_TIMER;
+
+	s->can_quit = 0;
+	s->reset = 0;
+	s->reset_rx = 0;
+	s->uapsd_sta_tc = 0;
+
+	testcase = apts_lookup(s->test_name);
+	if (testcase == NULL) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"send_uapsd_console: no testcase found");
+		return;
+	}
+
+	/* send test case number to be executed */
+	s->uapsd_sta_tc = testcase->cmd;
+	if (s->uapsd_sta_tc < B_D || s->uapsd_sta_tc > LAST_TC) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"send_uapsd_console: Test Case: %s Unknown",
+				s->test_name);
+		return;
+	}
+
+	s->payload_size = 512;
+	rpkt = malloc(s->payload_size);
+	if (rpkt == NULL) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"send_uapsd_console: buffer allocation failed");
+		return;
+	}
+
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"send_uapsd_console: Uapsd Console Start");
+
+	while (!s->stop) {
+		uapsd_timer--;
+		FD_ZERO(&rfds);
+		FD_SET(s->sock, &rfds);
+		tv.tv_sec = 0;
+		tv.tv_usec = 300000;
+		res = select(s->sock + 1, &rfds, NULL, NULL, &tv);
+		if (res < 0) {
+			perror("select");
+			usleep(10000);
+		} else if (FD_ISSET(s->sock, &rfds)) {
+			memset(rpkt, 0, s->payload_size);
+			res = recv(s->sock, rpkt, s->payload_size, 0);
+			if (res < 0) {
+				perror("recv");
+				break;
+			}
+
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"send_uapsd_console: running res %d cookie %d dscp %d apts-pkt %d sta-id %d",
+					res, rpkt[0], rpkt[1], rpkt[10],
+					rpkt[9]);
+			if (res == 0)
+				continue;
+
+			s->rx_frames++;
+			s->rx_payload_bytes += res;
+			/*
+			 * Reset the timer as packet is received
+			 * within steps.
+			 */
+			uapsd_timer = UAPSD_CONSOLE_TIMER;
+
+			if (rpkt[10] == APTS_HELLO) {
+				if (s->reset)
+					s->reset = 0;
+				s->rx_cookie = 0;
+				/* assign a id to this sta */
+				s->sta_id = dut->num_streams;
+				/* uapsd console process table state */
+				s->uapsd_rx_state = 0;
+				s->can_quit = 1;
+			} else {
+				if (s->reset)
+					continue;
+			}
+
+			if (rpkt[10] == APTS_RESET) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"send_uapsd_console: RESET Pkt recv");
+				s->reset_rx = 1;
+				sigma_uapsd_reset(s);
+			}
+
+			if (rpkt[10] == APTS_RESET_STOP) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"send_uapsd_console: RESET STOP Pkt recv");
+				s->stop = 1;
+			}
+
+			if (rpkt[10] == APTS_BCST) {
+				sigma_dut_print(dut, DUT_MSG_INFO,
+						"send_uapsd_console: Broadcast Pkt recv");
+				continue;
+			}
+
+			console_state_func =
+				uapsd_console_state_tbl[s->uapsd_sta_tc]
+				[s->uapsd_rx_state].state_func;
+			if (console_state_func) {
+				console_state_func(s, rpkt, res);
+			} else {
+				sigma_dut_print(dut, DUT_MSG_INFO,
+						"send_uapsd_console: Null function detected for TC: %d in uapsd_rx_state: %d",
+						s->uapsd_sta_tc,
+						s->uapsd_rx_state);
+			}
+		}
+
+		/* Stop the thread. No transactions for the set time */
+		if (uapsd_timer == 0) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"send_uapsd_console: Timer Expired");
+			s->stop = 1;
+		}
+	}
+
+	free(rpkt);
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"send_uapsd_console: Uapsd Console End");
 }

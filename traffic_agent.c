@@ -123,6 +123,15 @@ static int cmd_traffic_agent_config(struct sigma_dut *dut,
 		s->user_priority = atoi(val);
 	}
 
+	val = get_param(cmd, "tagName");
+	if (val) {
+		strncpy(s->test_name, val, sizeof(s->test_name));
+		s->test_name[sizeof(s->test_name) - 1] = '\0';
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Traffic agent: U-APSD console tagname %s",
+				s->test_name);
+	}
+
 	if (dut->throughput_pktsize && s->frame_rate == 0 && s->sender &&
 	    dut->throughput_pktsize != s->payload_size &&
 	    (s->profile == SIGMA_PROFILE_FILE_TRANSFER ||
@@ -666,7 +675,7 @@ static void * send_thread(void *ctx)
 	case SIGMA_PROFILE_START_SYNC:
 		break;
 	case SIGMA_PROFILE_UAPSD:
-		send_file(s);
+		send_uapsd_console(s);
 		break;
 	}
 
@@ -907,6 +916,13 @@ static int cmd_traffic_agent_send(struct sigma_dut *dut,
 
 		if (!s)
 			continue;
+
+		/*
+		 * Provide dut context to the thread to support debugging and
+		 * returning of error messages.
+		 */
+		s->dut = dut;
+
 		sigma_dut_print(dut, DUT_MSG_DEBUG, "Traffic agent: start "
 				"send for stream %d", data->streams[i]);
 		res = pthread_create(&s->thr, NULL, send_thread, s);
