@@ -3,6 +3,7 @@
 #
 
 # Object files in subdirectories
+CFLAGS_KERNEL := -fno-unsafe-math-optimizations -fno-strict-aliasing
 
 obj-$(CONFIG_USB)		+= core/
 obj-$(CONFIG_USB_PHY)		+= phy/

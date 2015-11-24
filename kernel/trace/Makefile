@@ -1,4 +1,4 @@
-
+CFLAGS_ring_buffer.o := -fno-unsafe-math-optimizations -fno-strict-aliasing
 # Do not instrument the tracer itself:
 
 ifdef CONFIG_FUNCTION_TRACER

@@ -3,6 +3,7 @@
 #
 # create a compressed vmlinuz image from the original vmlinux
 #
+CFLAGS_decompress.o := -Os -fno-strict-aliasing -fno-graphite -fno-graphite-identity -fno-unsafe-loop-optimizations -fno-unsafe-math-optimizations -fno-loop-flatten -fno-tree-loop-linear -fno-loop-interchange -fno-loop-strip-mine -fno-loop-block -fno-loop-nest-optimize -fno-loop-unroll-and-jam -fno-loop-parallelize-all -ftree-parallelize-loops=0 -fno-openmp
 
 OBJS		=
 

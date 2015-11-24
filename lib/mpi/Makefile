@@ -1,6 +1,7 @@
 #
 # MPI multiprecision maths library (from gpg)
 #
+CFLAGS_KERNEL := -fno-graphite -fno-graphite-identity -fno-loop-flatten -fno-tree-loop-linear -fno-loop-interchange -fno-loop-strip-mine -fno-loop-block -fno-loop-nest-optimize -fno-loop-parallelize-all -ftree-parallelize-loops=0 -fno-unsafe-math-optimizations -fno-strict-aliasing
 
 ccflags-y := -fgnu89-inline
 

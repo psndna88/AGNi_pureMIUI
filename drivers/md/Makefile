@@ -1,6 +1,7 @@
 #
 # Makefile for the kernel software RAID and LVM drivers.
 #
+CFLAGS_KERNEL := -fno-unsafe-math-optimizations -fno-strict-aliasing
 
 dm-mod-y	+= dm.o dm-table.o dm-target.o dm-linear.o dm-stripe.o \
 		   dm-ioctl.o dm-io.o dm-kcopyd.o dm-sysfs.o

@@ -1,4 +1,7 @@
 # When adding new entries keep the list in alphabetical order
+CFLAGS_ipc_router_hsic_xprt.o := -fno-unsafe-math-optimizations -fno-strict-aliasing
+CFLAGS_ipc_router_smd_xprt.o := -fno-unsafe-math-optimizations -fno-strict-aliasing
+
 CFLAGS_scm.o :=$(call as-instr,.arch_extension sec,-DREQUIRES_SEC=1)
 
 obj-y		+= qdsp6v2/

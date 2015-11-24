@@ -1,7 +1,7 @@
 #
 # Makefile for the Linux network device drivers.
 #
-
+CFLAGS_KERNEL := -fno-unsafe-math-optimizations -fno-strict-aliasing
 #
 # Networking Core Drivers
 #

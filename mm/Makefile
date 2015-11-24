@@ -1,6 +1,7 @@
 #
 # Makefile for the linux memory manager.
 #
+CFLAGS_KERNEL := -Wno-implicit-function-declaration -Wno-discarded-qualifiers -Wno-int-conversion
 
 KASAN_SANITIZE_slab_common.o := n
 KASAN_SANITIZE_slub.o := n

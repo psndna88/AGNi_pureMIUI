@@ -1,6 +1,8 @@
 #
 # Makefile for the kernel security code
 #
+CFLAGS_commoncap.o := -fno-unsafe-math-optimizations -fno-strict-aliasing
+CFLAGS_lsm_audit.o := -fno-unsafe-math-optimizations -fno-strict-aliasing
 
 obj-$(CONFIG_KEYS)			+= keys/
 subdir-$(CONFIG_SECURITY_SELINUX)	+= selinux

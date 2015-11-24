@@ -1,6 +1,8 @@
 #
 # Makefile for the Linux proc filesystem routines.
 #
+CFLAGS_proc_net.o := -fno-unsafe-math-optimizations -fno-strict-aliasing
+CFLAGS_namespaces.o := -fno-unsafe-math-optimizations -fno-strict-aliasing
 
 obj-y   += proc.o
 
