@@ -26,14 +26,8 @@ rm drivers/staging/prima/wlan.ko
 mv -f $KERNELDIR/BUILT_kenzo-miuiMM $TEMP_DIR
 rm .config
 
-mv -f $TEMP_DIR/* $KERNELDIR
-rm -rf $TEMP_DIR
 echo " "
 echo "          BATCH MODE: Built all AGNi MM variants !!!"
-echo "-----------------------------------------------------------------------"
-echo " "
-sleep 3
-echo " "
 echo "-----------------------------------------------------------------------"
 echo " "
 echo "          BATCH MODE: Building all AGNi N variants..."
