@@ -400,18 +400,23 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 	 * If there is an extended block of busy processing,
 	 * increase frequency.  Otherwise run the normal algorithm.
 	 */
+
 	if (priv->bin.busy_time > CEILING ||
 		(busy_bin > CEILING && frame_flag)) {
 		val = -1 * level;
 		busy_bin = 0;
 		frame_flag = 0;
 	} else {
-
 		scm_data[0] = level;
 		scm_data[1] = priv->bin.total_time;
 		scm_data[2] = priv->bin.busy_time;
 		__secure_tz_update_entry3(scm_data, sizeof(scm_data),
 					&val, sizeof(val), priv->is_64);
+
+		if ((val == 0) &&
+			(level >= (devfreq->profile->max_state - 2)) &&
+			((priv->bin.busy_time * 100 / priv->bin.total_time) < 98))
+			val = 1;
 	}
 	priv->bin.total_time = 0;
 	priv->bin.busy_time = 0;
@@ -427,6 +432,7 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 	}
 
 	*freq = devfreq->profile->freq_table[level];
+
 	return 0;
 }
 
