@@ -809,14 +809,14 @@ static struct miscdevice ashmem_misc = {
 
 static int __init ashmem_init(void)
 {
-	int ret;
+	int ret = -ENOMEM;
 
 	ashmem_area_cachep = kmem_cache_create("ashmem_area_cache",
 					       sizeof(struct ashmem_area),
 					       0, 0, NULL);
 	if (unlikely(!ashmem_area_cachep)) {
 		pr_err("failed to create slab cache\n");
-		return -ENOMEM;
+		goto out;
 	}
 
 	ashmem_range_cachep = kmem_cache_create("ashmem_range_cache",
@@ -824,13 +824,13 @@ static int __init ashmem_init(void)
 						0, 0, NULL);
 	if (unlikely(!ashmem_range_cachep)) {
 		pr_err("failed to create slab cache\n");
-		return -ENOMEM;
+		goto out_free1;
 	}
 
 	ret = misc_register(&ashmem_misc);
 	if (unlikely(ret)) {
 		pr_err("failed to register misc device!\n");
-		return ret;
+		goto out_free2;
 	}
 
 	register_shrinker(&ashmem_shrinker);
@@ -838,5 +838,12 @@ static int __init ashmem_init(void)
 	pr_info("initialized\n");
 
 	return 0;
+
+out_free2:
+	kmem_cache_destroy(ashmem_range_cachep);
+out_free1:
+	kmem_cache_destroy(ashmem_area_cachep);
+out:
+	return ret;
 }
 device_initcall(ashmem_init);
