@@ -592,6 +592,7 @@ void sniffer_close(struct sigma_dut *dut);
 void ath_disable_txbf(struct sigma_dut *dut, const char *intf);
 void ath_config_dyn_bw_sig(struct sigma_dut *dut, const char *ifname,
 			   const char *val);
+void novap_reset(struct sigma_dut *dut, const char *ifname);
 
 /* sta.c */
 int set_ps(const char *intf, struct sigma_dut *dut, int enabled);

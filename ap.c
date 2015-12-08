@@ -6652,7 +6652,7 @@ static int ath_ndpa_stainfo_mac(struct sigma_dut *dut, const char *ifname,
 }
 
 
-static void novap_reset(struct sigma_dut *dut, const char *ifname)
+void novap_reset(struct sigma_dut *dut, const char *ifname)
 {
 	char buf[60];
 
