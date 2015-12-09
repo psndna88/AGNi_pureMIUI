@@ -206,6 +206,12 @@ static void ath_config_rts_force(struct sigma_dut *dut, const char *ifname,
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"iwconfig rts 64 failed");
 		}
+		snprintf(buf, sizeof(buf), "wifitool %s beeliner_fw_test 100 1",
+			 ifname);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"wifitool beeliner_fw_test 100 1 failed");
+		}
 	} else if (strcasecmp(val, "disable") == 0) {
 		dut->ap_sig_rts = 2;
 		snprintf(buf, sizeof(buf), "iwconfig %s rts 2347", ifname);

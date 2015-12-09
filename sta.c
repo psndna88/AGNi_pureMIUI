@@ -3249,6 +3249,12 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 				sigma_dut_print(dut, DUT_MSG_ERROR,
 						"Failed to set RTS_FORCE 64");
 			}
+			snprintf(buf, sizeof(buf),
+				 "wifitool %s beeliner_fw_test 100 1", intf);
+			if (system(buf) != 0) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"wifitool beeliner_fw_test 100 1 failed");
+			}
 		} else if (strcasecmp(val, "Disable") == 0) {
 			snprintf(buf, sizeof(buf), "iwconfig %s rts 2347",
 				 intf);
