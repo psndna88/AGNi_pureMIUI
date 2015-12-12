@@ -922,7 +922,7 @@ int32_t msm_sensor_driver_probe(void *setting,
 		s_ctrl->sensordata->power_info.power_down_setting,
 		s_ctrl->sensordata->power_info.power_down_setting_size);
 	if (rc < 0) {
-		pr_err("failed: msm_camera_fill_vreg_params for PDOWN rc %d",
+		pr_debug("failed: msm_camera_fill_vreg_params for PDOWN rc %d",
 			rc);
 		goto free_camera_info;
 	}
