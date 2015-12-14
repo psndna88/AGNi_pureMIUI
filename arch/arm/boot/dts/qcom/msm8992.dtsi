@@ -80,6 +80,18 @@
 			qcom,acc = <&acc0>;
 			qcom,ldo = <&ldo0>;
 			next-level-cache = <&L2_0>;
+			sched-energy-costs = <&CPU_COST_0 &CLUSTER_COST_0>;
+			// The currents(uA) correspond to the frequencies in the
+			// frequency table.
+			current = < 18250 //384000 kHZ
+			            24330 //460800 kHZ
+			            26920 //600000 kHZ
+			            34600 //672000 kHz
+			            38150 //787200 kHZ
+			            46880 //864000 kHZ
+			            55940 //960000 kHZ
+			            81740 //1248000 kHZ
+			            105870>; //1440000 kHZ
 			L2_0: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -104,6 +116,18 @@
 			qcom,acc = <&acc1>;
 			qcom,ldo = <&ldo1>;
 			next-level-cache = <&L2_0>;
+			sched-energy-costs = <&CPU_COST_0 &CLUSTER_COST_0>;
+			// The currents(uA) correspond to the frequencies in the
+			// frequency table.
+			current = < 7665 //384000 kHZ
+			            10219 //460800 kHZ
+			            11306 //600000 kHZ
+			            14532 //672000 kHz
+			            16023 //787200 kHZ
+			            19690 //864000 kHZ
+			            23495 //960000 kHZ
+			            34331 //1248000 kHZ
+			            44465>; //1440000 kHZ
 			L1_I_1: l1-icache {
 				compatible = "arm,arch-cache";
 				qcom,dump-size = <0x9040>;
@@ -122,6 +146,18 @@
 			qcom,acc = <&acc2>;
 			qcom,ldo = <&ldo2>;
 			next-level-cache = <&L2_0>;
+			sched-energy-costs = <&CPU_COST_0 &CLUSTER_COST_0>;
+			// The currents(uA) correspond to the frequencies in the
+			// frequency table.
+			current = < 7848 //384000 kHZ
+			            10462 //460800 kHZ
+			            11576 //600000 kHZ
+			            14878 //672000 kHz
+			            16405 //787200 kHZ
+			            20158 //864000 kHZ
+			            24054 //960000 kHZ
+			            35148 //1248000 kHZ
+			            45524>; //1440000 kHZ
 			L1_I_2: l1-icache {
 				compatible = "arm,arch-cache";
 				qcom,dump-size = <0x9040>;
@@ -140,6 +176,18 @@
 			qcom,acc = <&acc3>;
 			qcom,ldo = <&ldo3>;
 			next-level-cache = <&L2_0>;
+			sched-energy-costs = <&CPU_COST_0 &CLUSTER_COST_0>;
+			// The currents(uA) correspond to the frequencies in the
+			// frequency table.
+			current = < 8760 //384000 kHZ
+			            11678 //460800 kHZ
+			            12922 //600000 kHZ
+			            16608 //672000 kHz
+			            18312 //787200 kHZ
+			            22502 //864000 kHZ
+			            26851 //960000 kHZ
+			            39235 //1248000 kHZ
+			            50818>; //1440000 kHZ
 			L1_I_3: l1-icache {
 				compatible = "arm,arch-cache";
 				qcom,dump-size = <0x9040>;
@@ -158,6 +206,22 @@
 			qcom,acc = <&acc4>;
 			qcom,ldo = <&ldo4>;
 			next-level-cache = <&L2_1>;
+			sched-energy-costs = <&CPU_COST_1 &CLUSTER_COST_1>;
+			// The currents(uA) correspond to the frequencies in the
+			// frequency table.
+			current = < 67740 //384000 kHZ
+			            82960 //480000 kHZ
+			            105870 //633600 kHZ
+			            133160 //768000 kHZ
+			            150160 //864000 kHZ
+			            167180 //960000 kHZ
+			            230040 //1248000 kHZ
+			            261430 //1344000 kHZ
+			            290460 //1440000 kHZ
+			            317200 //1536000 kHZ
+			            352870 //1632000 kHZ
+			            374360 //1689600 kHZ
+			            443880>; //1824000 kHZ
 			L2_1: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -182,6 +246,22 @@
 			qcom,acc = <&acc5>;
 			qcom,ldo = <&ldo5>;
 			next-level-cache = <&L2_1>;
+			sched-energy-costs = <&CPU_COST_1 &CLUSTER_COST_1>;
+			// The currents(uA) correspond to the frequencies in the
+			// frequency table.
+			current = < 49450 //384000 kHZ
+			            60561 //480000 kHZ
+			            77285 //633600 kHZ
+			            97207 //768000 kHZ
+			            109617 //864000 kHZ
+			            122041 //960000 kHZ
+			            167929 //1248000 kHZ
+			            190844 //1344000 kHZ
+			            212036 //1440000 kHZ
+			            231556 //1536000 kHZ
+			            257595 //1632000 kHZ
+			            273283 //1689600 kHZ
+			            324032>; //1824000 kHZ
 			L1_I_101: l1-icache {
 				compatible = "arm,arch-cache";
 				qcom,dump-size = <0xd840>;
@@ -189,6 +269,71 @@
 			L1_D_101: l1-dcache {
 				compatible = "arm,arch-cache";
 				qcom,dump-size = <0x9040>;
+			};
+		};
+
+		energy-costs {
+			CPU_COST_0: core-cost0 {
+				busy-cost-data = <
+					184    48
+					266    66
+					378   115
+					419   137
+					450   156
+					532   217
+					573   251
+					593   273
+				>;
+				idle-cost-data = <
+			  		0
+				>;
+			};
+			CPU_COST_1: core-cost1 {
+				busy-cost-data = <
+					256   155
+					358   174
+					512   289
+					614   428
+					716   602
+					829   835
+					921  1098
+		       			1024  1382
+				>;
+				idle-cost-data = <
+			  		0
+				>;
+			};
+			CLUSTER_COST_0: cluster-cost0 {
+				busy-cost-data = <
+					184    74
+					266   104
+					378   151
+					419   168
+					450   181
+					532   220
+					573   238
+					593   250
+				>;
+				idle-cost-data = <
+			 		110
+			 		105
+				>;
+			};
+			CLUSTER_COST_1: cluster-cost1 {
+				busy-cost-data = <
+					256    90
+					358   127
+					512   174
+					614   201
+					716   222
+					829   240
+					921   252
+		       			1024   259
+				>;
+				idle-cost-data = <
+					267
+					231
+				>;
 			};
 		};
 	};
