@@ -10,22 +10,8 @@
 #include <linux/linkage.h>
 #include <linux/list.h>
 
-static __always_inline int preempt_count(void)
-{
-	return READ_ONCE(current_thread_info()->preempt_count);
-}
 
-static __always_inline volatile int *preempt_count_ptr(void)
-{
-	return &current_thread_info()->preempt_count;
-}
-
-static __always_inline void preempt_count_set(int pc)
-{
-	*preempt_count_ptr() = pc;
-}
-
-#if defined(CONFIG_DEBUG_PREEMPT) || defined(CONFIG_PREEMPT_TRACER)
+#if 1 && (defined(CONFIG_DEBUG_PREEMPT) || defined(CONFIG_PREEMPT_TRACER))
   extern void add_preempt_count(int val);
   extern void sub_preempt_count(int val);
 #else
@@ -35,6 +21,14 @@ static __always_inline void preempt_count_set(int pc)
 
 #define inc_preempt_count() add_preempt_count(1)
 #define dec_preempt_count() sub_preempt_count(1)
+
+
+#define preempt_count()	(current_thread_info()->preempt_count)
+
+#ifndef TJK_HMP
+#define set_preempt_need_resched()
+#endif
+
 
 #ifdef CONFIG_PREEMPT
 
@@ -138,6 +132,9 @@ do { \
 #define preempt_enable_notrace()		barrier()
 
 #endif /* CONFIG_PREEMPT_COUNT */
+
+#define preempt_set_need_resched()
+#define preempt_fold_need_resched()
 
 #ifdef CONFIG_PREEMPT_NOTIFIERS
 
