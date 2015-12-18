@@ -526,9 +526,7 @@ void msm_isp_calculate_bandwidth(
 			stream_info->format_factor / ISP_Q2;
 	} else {
 		int rdi = SRC_TO_INTF(stream_info->stream_src);
-		if (rdi < VFE_SRC_MAX)
-			stream_info->bandwidth =
-				axi_data->src_info[rdi].pixel_clock;
+		stream_info->bandwidth = axi_data->src_info[rdi].pixel_clock;
 	}
 }
 
@@ -583,7 +581,6 @@ int msm_isp_request_axi_stream(struct vfe_device *vfe_dev, void *arg)
 	uint32_t io_format = 0;
 	struct msm_vfe_axi_stream_request_cmd *stream_cfg_cmd = arg;
 	struct msm_vfe_axi_stream *stream_info;
-	struct msm_vfe_axi_shared_data *axi_data = &vfe_dev->axi_data;
 
 	rc = msm_isp_axi_create_stream(
 		&vfe_dev->axi_data, stream_cfg_cmd);
@@ -638,7 +635,6 @@ int msm_isp_request_axi_stream(struct vfe_device *vfe_dev, void *arg)
 		vfe_dev->vt_enable = stream_cfg_cmd->vt_enable;
 		msm_isp_start_avtimer();
 	}
-	axi_data->burst_len = stream_cfg_cmd->burst_len;
 	if (stream_info->num_planes > 1) {
 		msm_isp_axi_reserve_comp_mask(
 			&vfe_dev->axi_data, stream_info);
@@ -923,17 +919,13 @@ static void msm_isp_process_done_buf(struct vfe_device *vfe_dev,
 	struct msm_isp_event_data buf_event;
 	struct timeval *time_stamp;
 	uint32_t stream_idx = HANDLE_TO_IDX(stream_info->stream_handle);
-	uint32_t src_intf = SRC_TO_INTF(stream_info->stream_src);
-	uint32_t frame_id = 0;
+	uint32_t frame_id = vfe_dev->axi_data.
+		src_info[SRC_TO_INTF(stream_info->stream_src)].frame_id;
 	memset(&buf_event, 0, sizeof(buf_event) );
 
 	if(stream_idx >= MAX_NUM_STREAM) {
 		pr_err("%s: Invalid stream_idx \n", __func__);
 		return;
-	}
-
-	if (src_intf < VFE_SRC_MAX) {
-		frame_id = vfe_dev->axi_data.src_info[src_intf].frame_id;
 	}
 
 	if (buf && ts) {
@@ -1277,7 +1269,7 @@ static int msm_isp_start_axi_stream(struct vfe_device *vfe_dev,
 			enum msm_isp_camif_update_state camif_update)
 {
 	int i, rc = 0;
-	uint8_t src_state = 0, wait_for_complete = 0;
+	uint8_t src_state, wait_for_complete = 0;
 	uint32_t wm_reload_mask = 0x0;
 	struct msm_vfe_axi_stream *stream_info;
 	struct msm_vfe_axi_shared_data *axi_data = &vfe_dev->axi_data;
@@ -1294,9 +1286,8 @@ static int msm_isp_start_axi_stream(struct vfe_device *vfe_dev,
 		stream_info = &axi_data->stream_info[
 			HANDLE_TO_IDX(stream_cfg_cmd->stream_handle[i])];
 		stream_info->frame_id = 0;
-		if (SRC_TO_INTF(stream_info->stream_src) < VFE_SRC_MAX)
-			src_state = axi_data->src_info[
-				SRC_TO_INTF(stream_info->stream_src)].active;
+		src_state = axi_data->src_info[
+			SRC_TO_INTF(stream_info->stream_src)].active;
 
 		msm_isp_calculate_bandwidth(axi_data, stream_info);
 		msm_isp_reset_framedrop(vfe_dev, stream_info);

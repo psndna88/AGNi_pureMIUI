@@ -749,16 +749,6 @@ static int msm_isp_send_hw_cmd(struct vfe_device *vfe_dev,
 		}
 		break;
 	}
-	case SET_WM_UB_SIZE: {
-	  	  if (cmd_len < sizeof(uint32_t)) {
-			pr_err("%s:%d failed: invalid cmd len %u exp %zu\n",
-				__func__, __LINE__, cmd_len,
-				sizeof(uint32_t));
-			return -EINVAL;
-		}
-		vfe_dev->vfe_ub_size = *cfg_data;
-		break;
-	}
 	}
 	return 0;
 }
