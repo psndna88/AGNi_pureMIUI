@@ -57,7 +57,7 @@ void handle_IRQ(unsigned int irq, struct pt_regs *regs)
 	 * than crashing, do something sensible.
 	 */
 	if (unlikely(irq >= nr_irqs)) {
-		pr_warn_ratelimited("Bad IRQ%u\n", irq);
+		pr_debug("Bad IRQ%u\n", irq);
 		ack_bad_irq(irq);
 	} else {
 		generic_handle_irq(irq);
