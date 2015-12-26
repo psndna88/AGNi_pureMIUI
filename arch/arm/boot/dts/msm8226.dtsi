@@ -1272,6 +1272,7 @@
 		compatible = "qcom,bam_dmux";
 		reg = <0xfc834000 0x7000>;
 		interrupts = <0 29 1>;
+		qcom,fast-shutdown;
 	};
 
 	qcom,msm-rtb {
