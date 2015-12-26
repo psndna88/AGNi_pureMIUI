@@ -1,3 +1,4 @@
+
 /*
  * Completely Fair Scheduling (CFS) Class (SCHED_NORMAL/SCHED_BATCH)
  *
@@ -7914,6 +7915,7 @@ void idle_balance(int this_cpu, struct rq *this_rq)
 		interval = msecs_to_jiffies(sd->balance_interval);
 		if (time_after(next_balance, sd->last_balance + interval))
 			next_balance = sd->last_balance + interval;
+
 			/*
 			* Stop searching for tasks to pull if there are
 			* now runnable tasks on this rq.
