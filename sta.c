@@ -7261,6 +7261,7 @@ static int cmd_sta_osu(struct sigma_dut *dut, struct sigma_conn *conn,
 		       name ? "-O'" : "", name ? name : "",
 		       name ? "'" : "");
 
+	hs2_set_policy(dut);
 	if (run_hs20_osu(dut, buf) < 0) {
 		FILE *f;
 
@@ -7323,7 +7324,6 @@ report:
 
 	snprintf(buf, sizeof(buf), "SSID,%s,BSSID,%s", ssid, bssid);
 	send_resp(dut, conn, SIGMA_COMPLETE, buf);
-	hs2_set_policy(dut);
 	return 0;
 }
 
