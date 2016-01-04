@@ -453,6 +453,8 @@ int sk_attach_filter(struct sock_fprog *fprog, struct sock *sk);
 int __sk_attach_filter(struct sock_fprog *fprog, struct sock *sk,
 		       bool locked);
 int sk_attach_bpf(u32 ufd, struct sock *sk);
+int sk_reuseport_attach_filter(struct sock_fprog *fprog, struct sock *sk);
+int sk_reuseport_attach_bpf(u32 ufd, struct sock *sk);
 int sk_detach_filter(struct sock *sk);
 int __sk_detach_filter(struct sock *sk, bool locked);
 
