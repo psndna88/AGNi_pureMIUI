@@ -142,6 +142,7 @@ struct kgsl_memdesc_ops {
  * @physaddr: Physical address of the memory object
  * @size: Size of the memory object
  * @mmapsize: Total size of the object in VM (including guard)
+ * @mapsize: Size of memory mapped in userspace
  * @priv: Internal flags and settings
  * @sgt: Scatter gather table for allocated pages
  * @ops: Function hooks for the memdesc memory type
@@ -159,6 +160,7 @@ struct kgsl_memdesc {
 	phys_addr_t physaddr;
 	uint64_t size;
 	uint64_t mmapsize;
+	uint64_t mapsize;
 	unsigned int priv;
 	struct sg_table *sgt;
 	struct kgsl_memdesc_ops *ops;
