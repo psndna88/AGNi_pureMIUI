@@ -2032,6 +2032,11 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 		owrt_ap_set_vap(dut, vap_id, "vhtmubfer", "1");
 	}
 
+	if (dut->ap_tx_stbc) {
+		/* STBC and beamforming are mutually exclusive features */
+		owrt_ap_set_vap(dut, vap_id, "implicitbf", "0");
+	}
+
 	/* enable dfsmode */
 	snprintf(buf, sizeof(buf), "%d", dut->ap_dfs_mode);
 	owrt_ap_set_vap(dut, vap_id, "doth", buf);
