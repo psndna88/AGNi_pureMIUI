@@ -267,6 +267,7 @@ static int proc_readfd_common(struct file * filp, void * dirent,
 						     (void *)(unsigned long)fd);
 				if (rv < 0)
 					goto out_fd_loop;
+				cond_resched();
 				rcu_read_lock();
 			}
 			rcu_read_unlock();
