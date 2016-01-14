@@ -908,7 +908,9 @@ static int edp_event_thread(void *data)
 
 		if (ret) {
 			pr_debug("%s: interrupted", __func__);
+
                         continue;
+
 		}
 
 		spin_lock_irqsave(&ep->event_lock, flag);
