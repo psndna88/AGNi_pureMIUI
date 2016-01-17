@@ -577,7 +577,7 @@ static inline bool pp_is_pa_v1_7(void)
 
 }
 
-inline int linear_map(int in, int *out, int in_max, int out_max)
+static inline int linear_map(int in, int *out, int in_max, int out_max)
 {
 	if (in < 0 || !out || in_max <= 0 || out_max <= 0)
 		return -EINVAL;
