@@ -794,7 +794,18 @@ static int cmd_sta_set_ip_config(struct sigma_dut *dut,
 	}
 
 	ip = get_param(cmd, "ip");
+	if (!ip) {
+		send_resp(dut, conn, SIGMA_INVALID,
+			  "ErrorCode,Missing IP address");
+		return 0;
+	}
+
 	mask = get_param(cmd, "mask");
+	if (!mask) {
+		send_resp(dut, conn, SIGMA_INVALID,
+			  "ErrorCode,Missing subnet mask");
+		return 0;
+	}
 
 	if (type == 2) {
 		int net = atoi(mask);
@@ -839,8 +850,7 @@ static int cmd_sta_set_ip_config(struct sigma_dut *dut,
 		static_ip_file(6, ip, mask, NULL);
 		return 1;
 	} else if (type == 1) {
-		if (ip == NULL || !is_ip_addr(ip) ||
-		    mask == NULL || !is_ip_addr(mask))
+		if (!is_ip_addr(ip) || !is_ip_addr(mask))
 			return -1;
 	}
 
