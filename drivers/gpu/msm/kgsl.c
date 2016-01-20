@@ -3898,9 +3898,9 @@ static int kgsl_mmap(struct file *file, struct vm_area_struct *vma)
 		break;
 	case KGSL_CACHEMODE_WRITETHROUGH:
 		vma->vm_page_prot = pgprot_writethroughcache(vma->vm_page_prot);
-		if (vma->vm_page_prot ==
-			pgprot_writebackcache(vma->vm_page_prot))
-			WARN_ONCE(1, "WRITETHROUGH is deprecated for arm64");
+#ifdef CONFIG_ARM64
+		WARN_ONCE(1, "WRITETHROUGH is deprecated for arm64");
+#endif
 		break;
 	case KGSL_CACHEMODE_WRITEBACK:
 		vma->vm_page_prot = pgprot_writebackcache(vma->vm_page_prot);
