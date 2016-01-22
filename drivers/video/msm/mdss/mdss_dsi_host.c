@@ -20,7 +20,7 @@
 #include <linux/slab.h>
 #include <linux/iopoll.h>
 #include <linux/kthread.h>
-
+#include <linux/time.h>
 #include <linux/msm_iommu_domains.h>
 
 #include "mdss.h"
@@ -1543,6 +1543,7 @@ static int mdss_dsi_cmds2buf_tx(struct mdss_dsi_ctrl_pdata *ctrl,
 	struct dsi_cmd_desc *cm;
 	struct dsi_ctrl_hdr *dchdr;
 	int len, wait, tot = 0;
+	struct timespec now_ts;
 
 	tp = &ctrl->tx_buf;
 	mdss_dsi_buf_init(tp);
@@ -1562,6 +1563,14 @@ static int mdss_dsi_cmds2buf_tx(struct mdss_dsi_ctrl_pdata *ctrl,
 			tp->data = tp->start; /* begin of buf */
 
 			wait = mdss_dsi_wait4video_eng_busy(ctrl);
+
+			get_monotonic_boottime(&now_ts);
+			if (timespec_compare(&ctrl->wait_until_ts, &now_ts) > 0) {
+				const struct timespec diff_ts =
+					timespec_sub(ctrl->wait_until_ts, now_ts);
+				usleep(timespec_to_ns(&diff_ts) / NSEC_PER_USEC);
+			}
+
 			mdss_dsi_enable_irq(ctrl, DSI_CMD_TERM);
 			if (use_dma_tpg)
 				len = mdss_dsi_cmd_dma_tpg_tx(ctrl, tp);
@@ -1575,8 +1584,11 @@ static int mdss_dsi_cmds2buf_tx(struct mdss_dsi_ctrl_pdata *ctrl,
 			}
 
 
-			if (!wait || dchdr->wait > VSYNC_PERIOD)
-				usleep(dchdr->wait * 1000);
+			if (!wait || dchdr->wait > VSYNC_PERIOD) {
+				get_monotonic_boottime(&ctrl->wait_until_ts);
+				timespec_add_ns(&ctrl->wait_until_ts,
+						dchdr->wait * NSEC_PER_MSEC);
+			}
 
 			mdss_dsi_buf_init(tp);
 			len = 0;
