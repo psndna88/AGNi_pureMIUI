@@ -728,6 +728,8 @@ static irqreturn_t mxhci_hsic_wakeup_irq(int irq, void *data)
 	}
 	spin_unlock(&mxhci->wakeup_lock);
 
+	pm_relax(mxhci->dev);
+
 	return IRQ_HANDLED;
 }
 
