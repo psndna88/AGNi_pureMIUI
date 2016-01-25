@@ -50,6 +50,10 @@
 #endif
 #include <linux/miscdevice.h>
 #include <linux/kernel.h>
+#include <linux/proximity_state.h>
+#ifdef CONFIG_WAKE_GESTURES
+#include <linux/wake_gestures.h>
+#endif
 
 #define DRIVER_VERSION  "3.10.1 20150902"
 
@@ -64,6 +68,12 @@
 
 
 #define STK_ALS_FIR
+
+static bool stk_prox_near;
+bool prox_near_stk3x1x(void)
+{
+	return stk_prox_near;
+}
 
 
 
@@ -2190,6 +2200,19 @@ static ssize_t stk_ps_distance_show(struct device *dev, struct device_attribute 
 		return ret;
 	dist = (ret & STK_FLG_NF_MASK) ? 1 : 0;
 
+	if (dist) {
+#ifdef CONFIG_WAKE_GESTURES
+		if (debug_wake_timer)
+			pr_info("stk3x1x: proximity near not detected !\n");
+#endif
+		stk_prox_near = false;
+	} else {
+#ifdef CONFIG_WAKE_GESTURES
+		if (debug_wake_timer)
+			pr_info("stk3x1x: proximity near detected !\n");
+#endif
+		stk_prox_near = true;
+	}
 	ps_data->ps_distance_last = dist;
 	input_report_abs(ps_data->ps_input_dev, ABS_DISTANCE, dist);
 	input_sync(ps_data->ps_input_dev);

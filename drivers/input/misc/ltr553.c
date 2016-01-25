@@ -49,6 +49,10 @@
 #include <linux/pm_wakeup.h>
 #include <linux/wakelock.h>
 #include <linux/atomic.h>
+#include <linux/proximity_state.h>
+#ifdef CONFIG_WAKE_GESTURES
+#include <linux/wake_gestures.h>
+#endif
 
 #define SENSOR_NAME		"proximity"
 #define LTR553_DRV_NAME		"ltr553"
@@ -92,6 +96,12 @@ static int als_times;
 static int als_temp[ALS_AVR_COUNT] = {0};
 static int first_cycle = 1;
 #endif
+
+static bool ltr_prox_near;
+bool prox_near_ltr55x(void)
+{
+	return ltr_prox_near;
+}
 
 static u32 ps_state_last = 1;
 
@@ -688,6 +698,11 @@ static void ltr553_ps_work_func(struct work_struct *work)
 					ABS_DISTANCE, NEAR_VAL);
 				input_sync(data->input_dev_ps);
 				data->distance_flag = 0;
+#ifdef CONFIG_WAKE_GESTURES
+				if (debug_wake_timer)
+					pr_info("ltr55x: proximity near detected !\n");
+#endif
+				ltr_prox_near = true;
 			}
 
 			if (adc_value < ntf_final) {
@@ -695,6 +710,11 @@ static void ltr553_ps_work_func(struct work_struct *work)
 					ABS_DISTANCE, FAR_VAL);
 				input_sync(data->input_dev_ps);
 				data->distance_flag = 1;
+#ifdef CONFIG_WAKE_GESTURES
+				if (debug_wake_timer)
+					pr_info("ltr55x: proximity near not detected !\n");
+#endif
+				ltr_prox_near = false;
 			}
 
 		}
@@ -1022,6 +1042,8 @@ static ssize_t ltr553_show_lux_data(struct device *dev,
 	struct ltr553_data *data = dev_get_drvdata(dev);
 	struct i2c_client *client = data->client;
 	lux = ltr553_als_read(client);
+/*	if (lux < 10)
+		lux = 1; */
 	return sprintf(buf, "%d\n", lux);
 }
 

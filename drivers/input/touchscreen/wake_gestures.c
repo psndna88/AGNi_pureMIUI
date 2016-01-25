@@ -34,6 +34,7 @@
 #include <asm-generic/cputime.h>
 #include <linux/qdsp6v2/apr.h>
 #include <linux/display_state.h>
+#include <linux/proximity_state.h>
 /*
 #include <linux/wakelock.h>
 */
@@ -183,10 +184,24 @@ static void wake_gesture_delayed_shut(struct work_struct * wake_gesture_delayed_
 	return;
 }
 
+/* Wake Gestures - proximity detect */
+bool wake_gesture_proximity_detect(void) {
+
+	bool prox_near;
+
+	if ((prox_near_ltr55x()) || (prox_near_stk3x1x())) {
+		prox_near = true;
+	} else {
+		prox_near = false;
+	}
+
+	return prox_near;
+}
+
 /* Wake Gestures - call detect worker */
 static void wake_gesture_q6voice_detect(void) {
 	if ((dt2w_switch_temp) || (s2w_switch_temp)) {
-		if (q6voice_voice_session_active()) {
+		if ((q6voice_voice_session_active()) && (wake_gesture_proximity_detect())) {
 			if (debug_wake_timer)
 				pr_info("wake gesture: voice call detected... !\n");
 			wake_gesture_switches_shut();
