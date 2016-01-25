@@ -2870,6 +2870,14 @@ config MSM_DCVS
 	  algorithm and the algorithm returns a frequency for the core which is
 	  passed to the frequency change driver.
 
+config MSM_HOTPLUG
+ 	bool "MSM hotplug driver"
+ 	depends on HOTPLUG_CPU
+ 	default y
+ 	help
+ 	  The MSM hotplug driver controls on-/offlining of additional cores based
+ 	  on current cpu load.
+
 config MSM_CPR
 	tristate "Use MSM CPR in S/W mode"
 	help
