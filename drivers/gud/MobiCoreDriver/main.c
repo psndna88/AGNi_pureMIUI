@@ -1569,12 +1569,12 @@ static struct platform_driver mc_plat_driver = {
 	},
 };
 
-static int mobicore_register(void)
+static int __init mobicore_register(void)
 {
 	return platform_driver_register(&mc_plat_driver);
 }
 
-static void mobicore_unregister(void)
+static void __exit mobicore_unregister(void)
 {
 	platform_driver_unregister(&mc_plat_driver);
 	mobicore_exit();
