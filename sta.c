@@ -4423,6 +4423,11 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		strncpy(token, val, sizeof(token));
 		token[sizeof(token) - 1] = '\0';
 		result = strtok(token, ";");
+		if (!result) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"VHT NSS not specified");
+			return 0;
+		}
 		nss = atoi(result);
 
 		snprintf(buf, sizeof(buf), "iwpriv %s nss %d", intf, nss);
@@ -4439,6 +4444,11 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		}
 		result = strtok(result, "-");
 		result = strtok(NULL, "-");
+		if (!result) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"VHT MCS not specified");
+			return 0;
+		}
 		mcs = atoi(result);
 
 		snprintf(buf, sizeof(buf), "iwpriv %s vhtmcs %d", intf, mcs);
