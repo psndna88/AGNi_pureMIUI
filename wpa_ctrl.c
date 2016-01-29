@@ -117,6 +117,9 @@ struct wpa_ctrl * wpa_ctrl_open(const char *ctrl_path)
 	size_t res;
 	int tries = 0;
 
+	if (ctrl_path == NULL)
+		return NULL;
+
 	ctrl = os_malloc(sizeof(*ctrl));
 	if (ctrl == NULL)
 		return NULL;
@@ -167,7 +170,7 @@ try_again:
 	 * Otherwise, it's a normal UNIX domain socket appearing in the
 	 * filesystem.
 	 */
-	if (ctrl_path != NULL && *ctrl_path != '/') {
+	if (*ctrl_path != '/') {
 		char buf[21];
 		os_snprintf(buf, sizeof(buf), "wpa_%s", ctrl_path);
 		if (socket_local_client_connect(
