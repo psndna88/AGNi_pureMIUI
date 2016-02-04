@@ -2560,8 +2560,8 @@ void send_uapsd_console(struct sigma_stream *s)
 				if (s->reset)
 					s->reset = 0;
 				s->rx_cookie = 0;
-				/* assign a id to this sta */
-				s->sta_id = dut->num_streams;
+				/* assign a unique id to this sta */
+				s->sta_id = s->stream_id;
 				/* uapsd console process table state */
 				s->uapsd_rx_state = 0;
 				s->can_quit = 1;
