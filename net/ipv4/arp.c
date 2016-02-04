@@ -743,6 +743,14 @@ static int arp_process(struct net *net, struct sock *sk, struct sk_buff *skb)
 		goto out;
 
 /*
+ *	For some 802.11 wireless deployments (and possibly other networks),
+ *	there will be an ARP proxy and gratuitous ARP frames are attacks
+ *	and thus should not be accepted.
+ */
+	if (sip == tip && IN_DEV_ORCONF(in_dev, DROP_GRATUITOUS_ARP))
+		goto out;
+
+/*
  *     Special case: We must set Frame Relay source Q.922 address
  */
 	if (dev_type == ARPHRD_DLCI)
