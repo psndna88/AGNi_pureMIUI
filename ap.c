@@ -4683,11 +4683,10 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	if (drv == DRIVER_QNXNTO) {
 		snprintf(buf, sizeof(buf),
-			 "hostapd -B %s%s -P %s %s%s" SIGMA_TMPDIR
+			 "hostapd -B %s%s %s%s" SIGMA_TMPDIR
 			 "/sigma_dut-ap.conf",
 			 dut->hostapd_debug_log ? "-ddKt -f " : "",
 			 dut->hostapd_debug_log ? dut->hostapd_debug_log : "",
-			 sigma_hapd_ctrl,
 			 dut->hostapd_entropy_log ? " -e" : "",
 			 dut->hostapd_entropy_log ? dut->hostapd_entropy_log :
 			 "");
