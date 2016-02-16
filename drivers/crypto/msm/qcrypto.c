@@ -1524,7 +1524,8 @@ static void _qce_ahash_complete(void *cookie, unsigned char *digest,
 #endif
 	if (digest) {
 		memcpy(rctx->digest, digest, diglen);
-		memcpy(areq->result, digest, diglen);
+		if (rctx->last_blk)
+			memcpy(areq->result, digest, diglen);
 	}
 	if (authdata) {
 		rctx->byte_count[0] = auth32[0];
