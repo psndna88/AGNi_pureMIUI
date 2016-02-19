@@ -63,6 +63,9 @@ unsigned int sysctl_sched_sync_hint_enable = 1;
 unsigned int sysctl_sched_is_big_little = 0;
 unsigned int sysctl_sched_sync_hint_enable = 1;
 
+unsigned int sysctl_sched_is_big_little = 0;
+unsigned int sysctl_sched_sync_hint_enable = 1;
+
 /*
  * The initial- and re-scaling of tunables is configurable
  * (default SCHED_TUNABLESCALING_LOG = *(1+ilog(ncpus))
