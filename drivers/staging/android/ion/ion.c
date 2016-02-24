@@ -676,6 +676,7 @@ static void ion_free_nolock(struct ion_client *client, struct ion_handle *handle
 	BUG_ON(client != handle->client);
 
 	valid_handle = ion_handle_validate(client, handle);
+
 	if (!valid_handle) {
 		WARN(1, "%s: invalid handle passed to free.\n", __func__);
 		return;
