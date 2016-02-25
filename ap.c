@@ -825,6 +825,10 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
+	val = get_param(cmd, "MU_NDPA_FrameFormat");
+	if (val)
+		dut->ap_ndpa_frame = atoi(val);
+
 	return 1;
 }
 
@@ -3735,6 +3739,36 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 				"l2tif brif failed");
 		sigma_dut_print(dut, DUT_MSG_INFO, "Enabled l2tif");
 	}
+
+	if (dut->ap_ndpa_frame == 0) {
+		snprintf(buf, sizeof(buf),
+			 "wifitool %s beeliner_fw_test 117 192", ifname);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"wifitool beeliner_fw_test 117 192 failed");
+		}
+		snprintf(buf, sizeof(buf),
+			 "wifitool %s beeliner_fw_test 118 192", ifname);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"wifitool beeliner_fw_test 117 192 failed");
+		}
+	} else if (dut->ap_ndpa_frame == 1) {
+		/* Driver default - no changes needed */
+	} else if (dut->ap_ndpa_frame == 2) {
+		snprintf(buf, sizeof(buf),
+			 "wifitool %s beeliner_fw_test 115 1", ifname);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"wifitool beeliner_fw_test 117 192 failed");
+		}
+		snprintf(buf, sizeof(buf),
+			 "wifitool %s beeliner_fw_test 116 1", ifname);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"wifitool beeliner_fw_test 117 192 failed");
+		}
+	}
 }
 
 
@@ -5083,6 +5117,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_mode = AP_11ac;
 		dut->ap_channel = 36;
 		dut->ap_ampdu = 0;
+		dut->ap_ndpa_frame = 1;
 		if (dut->device_type == AP_testbed) {
 			dut->ap_amsdu = 2;
 			dut->ap_ldpc = 2;

@@ -438,6 +438,7 @@ struct sigma_dut {
 		AP_DFS_MODE_DISABLED,
 		AP_DFS_MODE_ENABLED,
 	} ap_dfs_mode;
+	int ap_ndpa_frame;
 
 	const char *hostapd_debug_log;
 
