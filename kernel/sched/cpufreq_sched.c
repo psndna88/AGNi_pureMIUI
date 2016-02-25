@@ -14,7 +14,8 @@
 
 #include "sched.h"
 
-#define THROTTLE_NSEC		20000000 /* 50ms default */
+#define THROTTLE_DOWN_NSEC	20000000 /* 20ms default */
+#define THROTTLE_UP_NSEC	500000 /* 500us default */
 
 static DEFINE_PER_CPU(unsigned long, pcpu_capacity);
 static DEFINE_PER_CPU(struct cpufreq_policy *, pcpu_policy);
@@ -22,9 +23,13 @@ static DEFINE_PER_CPU(int, governor_started);
 
 /**
  * gov_data - per-policy data internal to the governor
- * @throttle: next throttling period expiry. Derived from throttle_nsec
- * @throttle_nsec: throttle period length in nanoseconds
- * @freq: new frequency stored in *_sched_update_cpu and used in *_sched_thread
+ * @up_throttle: next throttling period expiry if increasing OPP
+ * @down_throttle: next throttling period expiry if decreasing OPP
+ * @up_throttle_nsec: throttle period length in nanoseconds if increasing OPP
+ * @down_throttle_nsec: throttle period length in nanoseconds if decreasing OPP
+ * @task: worker thread for dvfs transition that may block/sleep
+ * @irq_work: callback used to wake up worker thread
+ * @requested_freq: last frequency requested by the sched governor
  *
  * struct gov_data is the per-policy cpufreq_sched-specific data structure. A
  * per-policy instance of it is created when the cpufreq_sched governor receives
@@ -35,8 +40,10 @@ static DEFINE_PER_CPU(int, governor_started);
  * call down_write(policy->rwsem).
  */
 struct gov_data {
-	ktime_t throttle;
-	unsigned int throttle_nsec;
+	ktime_t up_throttle;
+	ktime_t down_throttle;
+	unsigned int up_throttle_nsec;
+	unsigned int down_throttle_nsec;
 	struct cpufreq_policy *policy;
 	unsigned int freq;
 	bool change_pending;
@@ -67,7 +74,8 @@ static void cpufreq_sched_try_driver_target(struct cpufreq_policy *policy, unsig
 
 	__cpufreq_driver_target(policy, freq, CPUFREQ_RELATION_L);
 
-	gd->throttle = ktime_add_ns(ktime_get(), gd->throttle_nsec);
+	gd->up_throttle = ktime_add_ns(ktime_get(), gd->up_throttle_nsec);
+	gd->down_throttle = ktime_add_ns(ktime_get(), gd->down_throttle_nsec);
 	up_write(&policy->rwsem);
 }
 
@@ -171,8 +179,11 @@ void cpufreq_sched_set_cap(int cpu, unsigned long capacity)
 
 	gd = policy->governor_data;
 
+	ktime_t throttle = gd->requested_freq < cur_freq ?
+		gd->down_throttle : gd->up_throttle;
+
 	/* bail early if we are throttled */
-	if (ktime_compare(ktime_get(), gd->throttle) < 0)
+	if (ktime_compare(ktime_get(), throttle) < 0)
 		goto out;
 
 	/* find max capacity requested by cpus in this policy */
@@ -300,19 +311,12 @@ static int cpufreq_sched_policy_init(struct cpufreq_policy *policy)
 		goto err;
 	}
 
-	/*
-	 * Don't ask for freq changes at an higher rate than what
-	 * the driver advertises as transition latency.
-	 */
-#ifdef THROTTLE_FROM_CPUFREQ_DRIVER_LATENCY
-	gd->throttle_nsec = policy->cpuinfo.transition_latency ?
+	gd->up_throttle_nsec = policy->cpuinfo.transition_latency ?
 			    policy->cpuinfo.transition_latency :
-			    THROTTLE_NSEC;
-#else
-	gd->throttle_nsec = THROTTLE_NSEC;
-#endif
+			    THROTTLE_UP_NSEC;
+	gd->down_throttle_nsec = THROTTLE_DOWN_NSEC;
 	pr_debug("%s: throttle threshold = %u [ns]\n",
-		  __func__, gd->throttle_nsec);
+		  __func__, gd->up_throttle_nsec);
 
 	policy->governor_data = gd;
 	gd->policy = policy;
