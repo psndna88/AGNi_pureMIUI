@@ -176,13 +176,24 @@ if [ "$CMD" = "HS20-DEAUTH-IMMINENT-NOTICE" ]; then
     CODE="$3"
     DELAY="$4"
     URL="$5"
+    count=1
     echo "HS 2.0 Deauthentication Imminent notification received - code=$CODE reauth_delay=$DELAY URL: $URL" >> summary
     case "$URL" in
 	http*)
-	    if ! busybox pidof hs20-osu-client; then
+	    while [ $count -le 10 ]
+	    do
 		sleep 1
-		nohup hs20-osu-client -w $IFACE_DIR -f Logs/hs20-osu-client.txt browser $URL > Logs/browser.txt 2>&1 &
-	    fi
+		addr=$(busybox ip addr show dev $IFNAME | grep "inet ")
+		if [ -n "$addr" ]; then
+		    if ! busybox pidof hs20-osu-client; then
+			nohup hs20-osu-client -w $IFACE_DIR -f Logs/hs20-osu-client.txt browser $URL > Logs/browser.txt 2>&1 &
+		    fi
+		    break
+		else
+		    echo "waiting $count seconds"
+		fi
+		count=$(($count + 1))
+	    done
 	    ;;
     esac
 #    notify-send "HS 2.0 Deauthentication imminent"
