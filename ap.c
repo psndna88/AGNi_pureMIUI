@@ -5136,6 +5136,8 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_chwidth = AP_80;
 		dut->ap_tx_stbc = 1;
 		dut->ap_dyn_bw_sig = AP_DYN_BW_SGNL_ENABLED;
+		if (get_openwrt_driver_type() == OPENWRT_DRIVER_ATHEROS)
+			dut->ap_dfs_mode = AP_DFS_MODE_ENABLED;
 		if (get_driver_type() == DRIVER_ATHEROS)
 			ath_reset_vht_defaults(dut);
 	}
