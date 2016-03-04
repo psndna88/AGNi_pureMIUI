@@ -328,6 +328,7 @@ enum bpf_func_id {
 
 /* BPF_FUNC_skb_set_tunnel_key flags. */
 #define BPF_F_ZERO_CSUM_TX              (1ULL << 1)
+#define BPF_F_DONT_FRAGMENT             (1ULL << 2)
 
 /* BPF_FUNC_get_stackid flags. */
 #define BPF_F_SKIP_FIELD_MASK		0xffULL
