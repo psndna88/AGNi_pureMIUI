@@ -2471,6 +2471,8 @@ static struct apts_pkt * apts_lookup(const char *s)
 	struct apts_pkt *t;
 
 	for (t = &apts_pkts[1]; s && t->cmd; t++) {
+		if (strcmp(s, "L.1AP") == 0)
+			s = "L.1";
 		if (t->name && strcmp(t->name, s) == 0)
 			return t;
 	}
