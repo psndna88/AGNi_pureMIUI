@@ -965,7 +965,7 @@ static netdev_tx_t geneve6_xmit_skb(struct sk_buff *skb, struct net_device *dev,
 		ttl = ttl ? : ip6_dst_hoplimit(dst);
 	}
 	err = udp_tunnel6_xmit_skb(dst, gs6->sock->sk, skb, dev,
-				   &fl6.saddr, &fl6.daddr, prio, ttl,
+				   &fl6.saddr, &fl6.daddr, prio, ttl, 0,
 				   sport, geneve->dst_port, !udp_csum);
 	return NETDEV_TX_OK;
 
