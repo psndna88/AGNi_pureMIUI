@@ -2417,12 +2417,18 @@ static int console_rx_vo_tx_vo_cyclic(struct sigma_stream *s,
 			return 0;
 		}
 
+		memset(tpkt, 0, s->payload_size);
 		tpkt[0] = s->rx_cookie;
 		tos = TOS_BE;
 		setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
 		create_apts_pkt(APTS_STOP, tpkt, tos, s);
 		tpkt[1] = tos;
 		if (s->can_quit) {
+			const char *stop_cmd = "APTSL1 STOP";
+			size_t stop_cmd_len = strlen(stop_cmd);
+
+			if (s->payload_size > 11 * sizeof(int) + stop_cmd_len)
+				memcpy(&tpkt[11], stop_cmd, stop_cmd_len + 1);
 			res = send(s->sock, tpkt, s->payload_size / 2, 0);
 			if (res >= 0) {
 				s->tx_frames++;
