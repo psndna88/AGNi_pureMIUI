@@ -465,6 +465,11 @@ struct sigma_dut {
 
 	int ap_wpsnfc;
 
+	enum ap_wme {
+		AP_WME_OFF,
+		AP_WME_ON,
+	} ap_wme;
+
 #ifdef CONFIG_SNIFFER
 	pid_t sniffer_pid;
 	char sniffer_filename[200];
