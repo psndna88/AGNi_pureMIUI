@@ -75,6 +75,7 @@ ver += $(filter 5.1%,$(PLATFORM_VERSION))
 ver += $(filter L%,$(PLATFORM_VERSION))
 ver += $(filter M%,$(PLATFORM_VERSION))
 ver += $(filter 6.0%,$(PLATFORM_VERSION))
+ver += $(filter N%,$(PLATFORM_VERSION))
 ifneq (,$(strip $(ver)))
 CFLAGS += -DANDROID43
 CFLAGS += -Wno-unused-parameter
