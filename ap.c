@@ -6795,6 +6795,50 @@ static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int wcn_vht_chnum_band(struct sigma_dut *dut, const char *ifname,
+			      const char *val)
+{
+	char *token, *result;
+	int channel = 36;
+	char buf[100];
+
+	/* Extract the channel info */
+	token = strdup(val);
+	if (!token)
+		return -1;
+	result = strtok(token, ";");
+	if (result)
+		channel = atoi(result);
+
+	/* Issue the channel switch command */
+	snprintf(buf, sizeof(buf), "iwpriv %s setChanChange %d",
+		 ifname, channel);
+	if (system(buf) != 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"iwpriv setChanChange failed!");
+	}
+
+	free(token);
+	return 0;
+}
+
+
+static int wcn_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
+			       struct sigma_cmd *cmd)
+{
+	const char *val;
+	char *ifname;
+
+	ifname = get_main_ifname();
+
+	val = get_param(cmd, "chnum_band");
+	if (val && wcn_vht_chnum_band(dut, ifname, val) < 0)
+		return -1;
+
+	return 1;
+}
+
+
 static int cmd_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 			       struct sigma_cmd *cmd)
 {
@@ -6813,6 +6857,8 @@ static int cmd_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 				  "errorCode,Unsupported ap_set_rfeature with the current openwrt driver");
 			return 0;
 		}
+	case DRIVER_WCN:
+		return wcn_ap_set_rfeature(dut, conn, cmd);
 	default:
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Unsupported ap_set_rfeature with the current driver");
