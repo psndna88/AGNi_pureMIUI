@@ -1018,8 +1018,10 @@ static int __tcp_transmit_skb(struct sock *sk, struct sk_buff *skb,
 	if (likely(tcb->tcp_flags & TCPHDR_ACK))
 		tcp_event_ack_sent(sk, tcp_skb_pcount(skb), rcv_nxt);
 
-	if (skb->len != tcp_header_size)
+	if (skb->len != tcp_header_size) {
 		tcp_event_data_sent(tp, sk);
+		tp->data_segs_out += tcp_skb_pcount(skb);
+	}
 
 	if (after(tcb->end_seq, tp->snd_nxt) || tcb->seq == tcb->end_seq)
 		TCP_ADD_STATS(sock_net(sk), TCP_MIB_OUTSEGS,
