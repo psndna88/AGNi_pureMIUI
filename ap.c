@@ -1082,6 +1082,19 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
+	val = get_param(cmd, "PreAuthentication");
+	if (val) {
+		if (strcasecmp(val, "disabled") == 0) {
+			dut->ap_rsn_preauth = 0;
+		} else if (strcasecmp(val, "enabled") == 0) {
+			dut->ap_rsn_preauth = 1;
+		} else {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Unsupported PreAuthentication value");
+			return 0;
+		}
+	}
+
 	return 1;
 }
 
@@ -1864,6 +1877,10 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 	/* Add SHA256 */
 	snprintf(buf, sizeof(buf), "%d", dut->ap_add_sha256);
 	owrt_ap_set_vap(dut, vap_id, "add_sha256", buf);
+
+	/* Enable RSN preauthentication, if asked to */
+	snprintf(buf, sizeof(buf), "%d", dut->ap_rsn_preauth);
+	owrt_ap_set_vap(dut, vap_id, "rsn_preauth", buf);
 
 	/* Hotspot 2.0 */
 	if (dut->ap_hs2) {
@@ -5040,6 +5057,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	dut->ap_txBF = 0;
 	dut->ap_chwidth = AP_AUTO;
 
+	dut->ap_rsn_preauth = 0;
 	dut->ap_wpsnfc = 0;
 	dut->ap_bss_load = -1;
 	dut->ap_p2p_cross_connect = -1;

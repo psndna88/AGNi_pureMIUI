@@ -360,6 +360,7 @@ struct sigma_dut {
 		AP2_OSEN
 	} ap2_key_mgmt;
 	int ap_add_sha256;
+	int ap_rsn_preauth;
 	enum ap_pmf {
 		AP_PMF_DISABLED,
 		AP_PMF_OPTIONAL,
