@@ -293,6 +293,7 @@ int get_ip_config(struct sigma_dut *dut, const char *ifname, char *buf,
 	char tmp[256], *pos, *pos2;
 	FILE *f;
 	char ip[16], mask[15], dns[16], sec_dns[16];
+	const char *str_ps;
 	int is_dhcp = 0;
 	int s;
 #ifdef ANDROID
@@ -361,18 +362,25 @@ int get_ip_config(struct sigma_dut *dut, const char *ifname, char *buf,
 	}
 #else /* ANDROID */
 #ifdef __linux__
-	snprintf(tmp, sizeof(tmp), "ps ax | grep dhclient | grep -v grep | "
-		 "grep -q %s", ifname);
+	if (get_driver_type() == DRIVER_OPENWRT)
+		str_ps = "ps -w";
+	else
+		str_ps = "ps ax";
+	snprintf(tmp, sizeof(tmp),
+		 "%s | grep dhclient | grep -v grep | grep -q %s",
+		 str_ps, ifname);
 	if (system(tmp) == 0)
 		is_dhcp = 1;
 	else {
-		snprintf(tmp, sizeof(tmp), "ps ax | grep udhcpc | "
-			 "grep -v grep | grep -q %s", ifname);
+		snprintf(tmp, sizeof(tmp),
+			 "%s | grep udhcpc | grep -v grep | grep -q %s",
+			 str_ps, ifname);
 		if (system(tmp) == 0)
 			is_dhcp = 1;
 		else {
-			snprintf(tmp, sizeof(tmp), "ps ax | grep dhcpcd | "
-				 "grep -v grep | grep -q %s", ifname);
+			snprintf(tmp, sizeof(tmp),
+				 "%s | grep dhcpcd | grep -v grep | grep -q %s",
+				 str_ps, ifname);
 			if (system(tmp) == 0)
 				is_dhcp = 1;
 		}
