@@ -1004,4 +1004,7 @@ config MFSE_QMI
 	help
 	 This option enables the QMI client driver for MFSE service.
 
+config STATE_NOTIFIER
+    bool "State Notifier"
+
 source "drivers/soc/qcom/memshare/Kconfig"
