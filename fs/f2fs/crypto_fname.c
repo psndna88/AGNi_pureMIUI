@@ -124,7 +124,6 @@ static int f2fs_fname_encrypt(struct inode *inode,
 	ablkcipher_request_set_crypt(req, &src_sg, &dst_sg, ciphertext_len, iv);
 	res = crypto_ablkcipher_encrypt(req);
 	if (res == -EINPROGRESS || res == -EBUSY) {
-		BUG_ON(req->base.data != &ecr);
 		wait_for_completion(&ecr.completion);
 		res = ecr.res;
 	}
@@ -180,7 +179,6 @@ static int f2fs_fname_decrypt(struct inode *inode,
 	ablkcipher_request_set_crypt(req, &src_sg, &dst_sg, iname->len, iv);
 	res = crypto_ablkcipher_decrypt(req);
 	if (res == -EINPROGRESS || res == -EBUSY) {
-		BUG_ON(req->base.data != &ecr);
 		wait_for_completion(&ecr.completion);
 		res = ecr.res;
 	}
@@ -259,6 +257,18 @@ u32 f2fs_fname_crypto_round_up(u32 size, u32 blksize)
 	return ((size + blksize - 1) / blksize) * blksize;
 }
 
+unsigned f2fs_fname_encrypted_size(struct inode *inode, u32 ilen)
+{
+	struct f2fs_crypt_info *ci = F2FS_I(inode)->i_crypt_info;
+	int padding = 32;
+
+	if (ci)
+		padding = 4 << (ci->ci_flags & F2FS_POLICY_FLAGS_PAD_MASK);
+	if (ilen < F2FS_CRYPTO_BLOCK_SIZE)
+		ilen = F2FS_CRYPTO_BLOCK_SIZE;
+	return f2fs_fname_crypto_round_up(ilen, padding);
+}
+
 /**
  * f2fs_fname_crypto_alloc_obuff() -
  *
@@ -268,15 +278,8 @@ u32 f2fs_fname_crypto_round_up(u32 size, u32 blksize)
 int f2fs_fname_crypto_alloc_buffer(struct inode *inode,
 				   u32 ilen, struct f2fs_str *crypto_str)
 {
-	unsigned int olen;
-	int padding = 16;
-	struct f2fs_crypt_info *ci = F2FS_I(inode)->i_crypt_info;
+	unsigned int olen = f2fs_fname_encrypted_size(inode, ilen);
 
-	if (ci)
-		padding = 4 << (ci->ci_flags & F2FS_POLICY_FLAGS_PAD_MASK);
-	if (padding < F2FS_CRYPTO_BLOCK_SIZE)
-		padding = F2FS_CRYPTO_BLOCK_SIZE;
-	olen = f2fs_fname_crypto_round_up(ilen, padding);
 	crypto_str->len = olen;
 	if (olen < F2FS_FNAME_CRYPTO_DIGEST_SIZE * 2)
 		olen = F2FS_FNAME_CRYPTO_DIGEST_SIZE * 2;
@@ -319,7 +322,10 @@ int f2fs_fname_disk_to_usr(struct inode *inode,
 		oname->len = iname->len;
 		return oname->len;
 	}
-
+	if (iname->len < F2FS_CRYPTO_BLOCK_SIZE) {
+		printk("encrypted inode too small");
+		return -EUCLEAN;
+	}
 	if (F2FS_I(inode)->i_crypt_info)
 		return f2fs_fname_decrypt(inode, iname, oname);
 
