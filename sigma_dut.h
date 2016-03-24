@@ -520,6 +520,7 @@ struct sigma_dut {
 
 	int iface_down_on_reset;
 	int write_stats; /* traffic stream e2e*.txt files */
+	int sim_no_username; /* do not set SIM username to use real SIM */
 };
 
 

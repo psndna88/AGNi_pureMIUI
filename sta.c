@@ -1256,7 +1256,8 @@ static int cmd_sta_set_psk(struct sigma_dut *dut, struct sigma_conn *conn,
 
 
 static int set_eap_common(struct sigma_dut *dut, struct sigma_conn *conn,
-			  const char *ifname, struct sigma_cmd *cmd)
+			  const char *ifname, int username_identity,
+			  struct sigma_cmd *cmd)
 {
 	const char *val, *alg;
 	int id;
@@ -1328,16 +1329,18 @@ ca_cert_selected:
 			return -2;
 	}
 
-	val = get_param(cmd, "username");
-	if (val) {
-		if (set_network_quoted(ifname, id, "identity", val) < 0)
-			return -2;
-	}
+	if (username_identity) {
+		val = get_param(cmd, "username");
+		if (val) {
+			if (set_network_quoted(ifname, id, "identity", val) < 0)
+				return -2;
+		}
 
-	val = get_param(cmd, "password");
-	if (val) {
-		if (set_network_quoted(ifname, id, "password", val) < 0)
-			return -2;
+		val = get_param(cmd, "password");
+		if (val) {
+			if (set_network_quoted(ifname, id, "password", val) < 0)
+				return -2;
+		}
 	}
 
 	return id;
@@ -1366,7 +1369,7 @@ static int cmd_sta_set_eaptls(struct sigma_dut *dut, struct sigma_conn *conn,
 	else
 		ifname = intf;
 
-	id = set_eap_common(dut, conn, ifname, cmd);
+	id = set_eap_common(dut, conn, ifname, 1, cmd);
 	if (id < 0)
 		return id;
 
@@ -1463,7 +1466,7 @@ static int cmd_sta_set_eapttls(struct sigma_dut *dut, struct sigma_conn *conn,
 	else
 		ifname = intf;
 
-	id = set_eap_common(dut, conn, ifname, cmd);
+	id = set_eap_common(dut, conn, ifname, 1, cmd);
 	if (id < 0)
 		return id;
 
@@ -1498,7 +1501,7 @@ static int cmd_sta_set_eapsim(struct sigma_dut *dut, struct sigma_conn *conn,
 	else
 		ifname = intf;
 
-	id = set_eap_common(dut, conn, ifname, cmd);
+	id = set_eap_common(dut, conn, ifname, !dut->sim_no_username, cmd);
 	if (id < 0)
 		return id;
 
@@ -1525,7 +1528,7 @@ static int cmd_sta_set_peap(struct sigma_dut *dut, struct sigma_conn *conn,
 	else
 		ifname = intf;
 
-	id = set_eap_common(dut, conn, ifname, cmd);
+	id = set_eap_common(dut, conn, ifname, 1, cmd);
 	if (id < 0)
 		return id;
 
@@ -1576,7 +1579,7 @@ static int cmd_sta_set_eapfast(struct sigma_dut *dut, struct sigma_conn *conn,
 	else
 		ifname = intf;
 
-	id = set_eap_common(dut, conn, ifname, cmd);
+	id = set_eap_common(dut, conn, ifname, 1, cmd);
 	if (id < 0)
 		return id;
 
@@ -1634,7 +1637,7 @@ static int cmd_sta_set_eapaka(struct sigma_dut *dut, struct sigma_conn *conn,
 	else
 		ifname = intf;
 
-	id = set_eap_common(dut, conn, ifname, cmd);
+	id = set_eap_common(dut, conn, ifname, !dut->sim_no_username, cmd);
 	if (id < 0)
 		return id;
 
@@ -1661,7 +1664,7 @@ static int cmd_sta_set_eapakaprime(struct sigma_dut *dut,
 	else
 		ifname = intf;
 
-	id = set_eap_common(dut, conn, ifname, cmd);
+	id = set_eap_common(dut, conn, ifname, !dut->sim_no_username, cmd);
 	if (id < 0)
 		return id;
 

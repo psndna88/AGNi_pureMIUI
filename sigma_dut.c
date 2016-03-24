@@ -731,7 +731,7 @@ int main(int argc, char *argv[])
 
 	for (;;) {
 		c = getopt(argc, argv,
-			   "ab:Bc:C:dDE:e:fhH:i:Ik:l:L:m:M:np:qr:R:s:S:tT:uv:VWw:");
+			   "aAb:Bc:C:dDE:e:fhH:i:Ik:l:L:m:M:np:qr:R:s:S:tT:uv:VWw:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -865,9 +865,12 @@ int main(int argc, char *argv[])
 				       "Use iface down/up in reset cmd");
 		       sigma_dut.iface_down_on_reset = 1;
 		       break;
+		case 'A':
+			sigma_dut.sim_no_username = 1;
+			break;
 		case 'h':
 		default:
-			printf("usage: sigma_dut [-aBdfqDIntuVW] [-p<port>] "
+			printf("usage: sigma_dut [-aABdfqDIntuVW] [-p<port>] "
 			       "[-s<sniffer>] [-m<set_maccaddr.sh>] \\\n"
 				"       [-M<main ifname>] [-R<radio ifname>] "
 			       "[-S<station ifname>] \\\n"
