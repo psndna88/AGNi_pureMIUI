@@ -631,7 +631,7 @@ int arch_validate_hwbkpt_settings(struct perf_event *bp)
 	info->address &= ~alignment_mask;
 	info->ctrl.len <<= offset;
 
-	if (!bp->overflow_handler) {
+	if (is_default_overflow_handler(bp)) {
 		/*
 		 * Mismatch breakpoints are required for single-stepping
 		 * breakpoints.
@@ -760,7 +760,7 @@ static void watchpoint_handler(unsigned long addr, unsigned int fsr,
 		 * can't help us with this.
 		 */
 		if (watchpoint_fault_on_uaccess(regs, info))
-			goto step;
+			enable_single_step(wp, instruction_pointer(regs));
 
 		perf_bp_event(wp, regs);
 
@@ -769,11 +769,8 @@ static void watchpoint_handler(unsigned long addr, unsigned int fsr,
 		 * Otherwise, insert a temporary mismatch breakpoint so that
 		 * we can single-step over the watchpoint trigger.
 		 */
-		if (wp->overflow_handler)
-			goto unlock;
-
-step:
-		enable_single_step(wp, instruction_pointer(regs));
+		if (is_default_overflow_handler(wp))
+			enable_single_step(wp, instruction_pointer(regs));
 unlock:
 		rcu_read_unlock();
 	}

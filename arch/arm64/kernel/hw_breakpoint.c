@@ -662,7 +662,7 @@ static int breakpoint_handler(unsigned long unused, unsigned int esr,
 		perf_bp_event(bp, regs);
 
 		/* Do we need to handle the stepping? */
-		if (!bp->overflow_handler)
+		if (is_default_overflow_handler(bp))
 			step = 1;
 unlock:
 		rcu_read_unlock();
@@ -788,7 +788,7 @@ static int watchpoint_handler(unsigned long addr, unsigned int esr,
 		perf_bp_event(wp, regs);
 
 		/* Do we need to handle the stepping? */
-		if (!wp->overflow_handler)
+		if (is_default_overflow_handler(wp))
 			step = 1;
 	}
 	if (min_dist > 0 && min_dist != -1) {
