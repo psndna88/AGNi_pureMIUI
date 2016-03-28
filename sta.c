@@ -2534,6 +2534,21 @@ static void ath_sta_set_amsdu(struct sigma_dut *dut, const char *intf,
 }
 
 
+static int iwpriv_sta_set_ampdu(struct sigma_dut *dut, const char *intf,
+				int ampdu)
+{
+	char buf[60];
+
+	snprintf(buf, sizeof(buf), "iwpriv %s ampdu %d", intf, ampdu);
+	if (system(buf) != 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "iwpriv ampdu failed");
+		return -1;
+	}
+
+	return 0;
+}
+
+
 static void ath_sta_set_stbc(struct sigma_dut *dut, const char *intf,
 			     const char *val)
 {
@@ -3121,7 +3136,8 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 		sigma_dut_print(dut, DUT_MSG_DEBUG, "%s A-MPDU aggregation",
 				ampdu ? "Enabling" : "Disabling");
 		snprintf(buf, sizeof(buf), "SET ampdu %d", ampdu);
-		if (wpa_command(intf, buf) < 0) {
+		if (wpa_command(intf, buf) < 0 &&
+		    iwpriv_sta_set_ampdu(dut, intf, ampdu) < 0) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,set aggr failed");
 			return 0;
