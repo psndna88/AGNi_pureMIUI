@@ -1343,7 +1343,6 @@ static int lpm_cpuidle_select(struct cpuidle_driver *drv,
 	if (idx < 0)
 		return -EPERM;
 
-	trace_cpu_idle_rcuidle(idx, dev->cpu);
 	return idx;
 }
 
@@ -1392,7 +1391,6 @@ exit:
 	trace_cpu_idle_exit(idx, success);
 	update_history(dev, idx);
 
-	trace_cpu_idle_rcuidle(PWR_EVENT_EXIT, dev->cpu);
 	end_time = ktime_to_ns(ktime_get()) - start_time;
 	dev->last_residency = do_div(end_time, 1000);
 	local_irq_enable();
