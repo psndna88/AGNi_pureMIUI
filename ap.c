@@ -2107,8 +2107,15 @@ static int cmd_owrt_ap_config_commit(struct sigma_dut *dut,
 	run_system(dut, "wifi down");
 
 	/* Reset the wireless configuration */
-	run_system(dut,
-		   "rm -f /etc/config/wireless && wifi detect > /etc/config/wireless");
+	run_system(dut, "rm -rf /etc/config/wireless");
+	switch (get_openwrt_driver_type()) {
+	case OPENWRT_DRIVER_ATHEROS:
+		run_system(dut, "wifi detect qcawifi > /etc/config/wireless");
+		break;
+	default:
+		run_system(dut, "wifi detect > /etc/config/wireless");
+		break;
+	}
 
 	/* Configure Radio & VAP, commit the config */
 	owrt_ap_config_radio(dut);
