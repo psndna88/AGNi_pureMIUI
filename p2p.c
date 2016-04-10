@@ -444,37 +444,41 @@ static int cmd_sta_set_p2p(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->intra_bss = intra_bss;
 	}
 
-	noa_dur = get_param(cmd, "NoA_duration");
-	noa_int = get_param(cmd, "NoA_Interval");
-	noa_count = get_param(cmd, "NoA_Count");
-	if (noa_dur)
-		dut->noa_duration = atoi(noa_dur);
+	/* NoA is not applicable for 60 GHz */
+	if (dut->program != PROGRAM_60GHZ) {
+		noa_dur = get_param(cmd, "NoA_duration");
+		noa_int = get_param(cmd, "NoA_Interval");
+		noa_count = get_param(cmd, "NoA_Count");
+		if (noa_dur)
+			dut->noa_duration = atoi(noa_dur);
 
-	if (noa_int)
-		dut->noa_interval = atoi(noa_int);
+		if (noa_int)
+			dut->noa_interval = atoi(noa_int);
 
-	if (noa_count)
-		dut->noa_count = atoi(noa_count);
+		if (noa_count)
+			dut->noa_count = atoi(noa_count);
 
-	if (noa_dur || noa_int || noa_count) {
-		int start;
-		const char *ifname;
-		if (dut->noa_count == 0 && dut->noa_duration == 0)
-			start = 0;
-		else if (dut->noa_duration > 102) /* likely non-periodic NoA */
-			start = 50;
-		else
-			start = 102 - dut->noa_duration;
-		snprintf(buf, sizeof(buf), "P2P_SET noa %d,%d,%d",
-			 dut->noa_count, start,
-			 dut->noa_duration);
-		ifname = get_group_ifname(dut, intf);
-		sigma_dut_print(dut, DUT_MSG_INFO,
-				"Set GO NoA for interface %s", ifname);
-		if (wpa_command(ifname, buf) < 0) {
-			send_resp(dut, conn, SIGMA_ERROR,
-				  "errorCode,Use of NoA as GO not supported");
-			return 0;
+		if (noa_dur || noa_int || noa_count) {
+			int start;
+			const char *ifname;
+			if (dut->noa_count == 0 && dut->noa_duration == 0)
+				start = 0;
+			else if (dut->noa_duration > 102) /* likely non-periodic
+							   * NoA */
+				start = 50;
+			else
+				start = 102 - dut->noa_duration;
+			snprintf(buf, sizeof(buf), "P2P_SET noa %d,%d,%d",
+				dut->noa_count, start,
+				dut->noa_duration);
+			ifname = get_group_ifname(dut, intf);
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Set GO NoA for interface %s", ifname);
+			if (wpa_command(ifname, buf) < 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Use of NoA as GO not supported");
+				return 0;
+			}
 		}
 	}
 
