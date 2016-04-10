@@ -372,8 +372,15 @@ static int cmd_sta_set_p2p(struct sigma_dut *dut, struct sigma_conn *conn,
 	val = get_param(cmd, "LISTEN_CHN");
 	if (val) {
 		dut->listen_chn = atoi(val);
-		snprintf(buf, sizeof(buf), "P2P_SET listen_channel %d",
-			 dut->listen_chn);
+		if (dut->listen_chn == 2) {
+			/* social channel 2 on 60 GHz band */
+			snprintf(buf, sizeof(buf),
+				 "P2P_SET listen_channel 2 180");
+		} else {
+			/* social channels 1/6/11 on 2.4 GHz band */
+			snprintf(buf, sizeof(buf), "P2P_SET listen_channel %d",
+				 dut->listen_chn);
+		}
 		if (wpa_command(intf, buf) < 0)
 			return -2;
 	}
@@ -1483,8 +1490,16 @@ int cmd_sta_p2p_reset(struct sigma_dut *dut, struct sigma_conn *conn,
 	wpa_command(intf, "P2P_SERVICE_FLUSH");
 	wpa_command(intf, "P2P_SET disabled 0");
 	wpa_command(intf, "P2P_SET ssid_postfix ");
-	wpa_command(intf, "P2P_SET listen_channel 6");
-	dut->listen_chn = 6;
+
+	if (dut->program == PROGRAM_60GHZ) {
+		wpa_command(intf, "SET p2p_oper_reg_class 180");
+		wpa_command(intf, "P2P_SET listen_channel 2 180");
+		dut->listen_chn = 2;
+	} else {
+		wpa_command(intf, "P2P_SET listen_channel 6");
+		dut->listen_chn = 6;
+	}
+
 	wpa_command(intf, "P2P_EXT_LISTEN");
 	wpa_command(intf, "SET p2p_go_intent 7");
 	wpa_command(intf, "P2P_SET client_apsd disable");
