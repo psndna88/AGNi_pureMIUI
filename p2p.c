@@ -26,6 +26,31 @@ int run_system(struct sigma_dut *dut, const char *cmd)
 }
 
 
+static int get_60g_freq(int chan)
+{
+	int freq = 0;
+
+	switch(chan) {
+	case 1:
+		freq = 58320;
+		break;
+	case 2:
+		freq = 60480;
+		break;
+	case 3:
+		freq = 62640;
+		break;
+	case 4:
+		/* freq = 64800; Not supported in Sparrow 2.0 */
+		break;
+	default:
+		break;
+	}
+
+	return freq;
+}
+
+
 static int p2p_group_add(struct sigma_dut *dut, const char *ifname,
 			 int go, const char *grpid, const char *ssid)
 {
@@ -540,7 +565,14 @@ static int cmd_sta_start_autonomous_go(struct sigma_dut *dut,
 		return -1;
 
 	chan = atoi(oper_chn);
-	if (chan >= 1 && chan <= 13)
+	if (dut->program == PROGRAM_60GHZ) {
+		freq = get_60g_freq(chan);
+		if (freq == 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Invalid channel: %d", chan);
+			return -1;
+		}
+	} else if (chan >= 1 && chan <= 13)
 		freq = 2407 + chan * 5;
 	else if (chan == 14)
 		freq = 2484;
@@ -777,7 +809,7 @@ static int cmd_sta_p2p_start_group_formation(struct sigma_dut *dut,
 	const char *init_go_neg = get_param(cmd, "INIT_GO_NEG");
 	const char *oper_chn = get_param(cmd, "OPER_CHN");
 	const char *ssid_param = get_param(cmd, "SSID");
-	int freq = 0, chan, init;
+	int freq = 0, chan = 0, init;
 	char buf[256];
 	struct wpa_ctrl *ctrl;
 
@@ -789,7 +821,17 @@ static int cmd_sta_p2p_start_group_formation(struct sigma_dut *dut,
 	else
 		init = 0;
 
-	if (oper_chn) {
+	if (dut->program == PROGRAM_60GHZ) {
+		if (!oper_chn)
+			return -1;
+		chan = atoi(oper_chn);
+		freq = get_60g_freq(chan);
+		if (freq == 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Invalid channel: %d", chan);
+			return -1;
+		}
+	} else if (oper_chn) {
 		chan = atoi(oper_chn);
 		if (chan >= 1 && chan <= 13)
 			freq = 2407 + chan * 5;
@@ -805,8 +847,9 @@ static int cmd_sta_p2p_start_group_formation(struct sigma_dut *dut,
 		return 0;
 	}
 
-	sigma_dut_print(dut, DUT_MSG_DEBUG, "Trying to discover peer %s for "
-			"group formation", devid);
+	sigma_dut_print(dut, DUT_MSG_DEBUG,
+			"Trying to discover peer %s for group formation chan %d (freq %d)",
+			devid, chan, freq);
 	if (p2p_discover_peer(dut, intf, devid, init) < 0) {
 		send_resp(dut, conn, SIGMA_ERROR, "ErrorCode,Could not "
 			  "discover the requested peer");
