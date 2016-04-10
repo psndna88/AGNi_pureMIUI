@@ -338,7 +338,7 @@ static int cmd_sta_get_p2p_dev_address(struct sigma_dut *dut,
 static int cmd_sta_set_p2p(struct sigma_dut *dut, struct sigma_conn *conn,
 			   struct sigma_cmd *cmd)
 {
-	const char *intf = get_param(cmd, "Interface");
+	const char *intf = get_p2p_ifname(get_param(cmd, "Interface"));
 	char buf[256];
 	const char *val;
 	const char *noa_dur, *noa_int, *noa_count;
@@ -647,7 +647,7 @@ static int cmd_sta_start_autonomous_go(struct sigma_dut *dut,
 static int cmd_sta_p2p_connect(struct sigma_dut *dut, struct sigma_conn *conn,
 			       struct sigma_cmd *cmd)
 {
-	const char *intf = get_param(cmd, "Interface");
+	const char *intf = get_p2p_ifname(get_param(cmd, "Interface"));
 	const char *devid = get_param(cmd, "P2PDevID");
 	/* const char *grpid_param = get_param(cmd, "GroupID"); */
 	int res;
@@ -771,7 +771,7 @@ static int cmd_sta_p2p_start_group_formation(struct sigma_dut *dut,
 					     struct sigma_conn *conn,
 					     struct sigma_cmd *cmd)
 {
-	const char *intf = get_param(cmd, "Interface");
+	const char *intf = get_p2p_ifname(get_param(cmd, "Interface"));
 	const char *devid = get_param(cmd, "P2PDevID");
 	const char *intent_val = get_param(cmd, "INTENT_VAL");
 	const char *init_go_neg = get_param(cmd, "INIT_GO_NEG");

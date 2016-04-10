@@ -11,6 +11,7 @@
 #include <signal.h>
 #include <netinet/tcp.h>
 #endif /* __linux__ */
+#include "wpa_ctrl.h"
 #include "wpa_helpers.h"
 
 #define SIGMA_DUT_PORT 9000
@@ -23,6 +24,8 @@ static struct sigma_dut sigma_dut;
 char *sigma_main_ifname = NULL;
 char *sigma_radio_ifname[MAX_RADIO] = {};
 char *sigma_station_ifname = NULL;
+char *sigma_p2p_ifname = NULL;
+static char *sigma_p2p_ifname_buf = NULL;
 char *sigma_wpas_ctrl = "/var/run/wpa_supplicant/";
 char *sigma_hapd_ctrl = NULL;
 char *ap_inet_addr = "192.168.43.1";
@@ -653,6 +656,31 @@ static int run_local_cmd(int port, char *lcmd)
 }
 
 
+static void determine_sigma_p2p_ifname(void)
+{
+	char buf[256];
+	struct wpa_ctrl *ctrl;
+
+	if (sigma_p2p_ifname)
+		return;
+
+	snprintf(buf, sizeof(buf), "p2p-dev-%s", get_station_ifname());
+	ctrl = open_wpa_mon(buf);
+	if (ctrl) {
+		wpa_ctrl_detach(ctrl);
+		wpa_ctrl_close(ctrl);
+		sigma_p2p_ifname_buf = strdup(buf);
+		sigma_p2p_ifname = sigma_p2p_ifname_buf;
+		sigma_dut_print(&sigma_dut, DUT_MSG_INFO,
+				"Using interface %s for P2P operations instead of interface %s",
+				sigma_p2p_ifname ? sigma_p2p_ifname : "NULL",
+				get_station_ifname());
+	} else {
+		sigma_p2p_ifname = get_station_ifname();
+	}
+}
+
+
 static void set_defaults(struct sigma_dut *dut)
 {
 	dut->ap_p2p_cross_connect = -1;
@@ -731,7 +759,7 @@ int main(int argc, char *argv[])
 
 	for (;;) {
 		c = getopt(argc, argv,
-			   "aAb:Bc:C:dDE:e:fhH:i:Ik:l:L:m:M:np:qr:R:s:S:tT:uv:VWw:");
+			   "aAb:Bc:C:dDE:e:fhH:i:Ik:l:L:m:M:np:P:qr:R:s:S:tT:uv:VWw:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -781,6 +809,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'p':
 			port = atoi(optarg);
+			break;
+		case 'P':
+			sigma_p2p_ifname = optarg;
 			break;
 		case 'q':
 			sigma_dut.debug_level++;
@@ -873,7 +904,7 @@ int main(int argc, char *argv[])
 			printf("usage: sigma_dut [-aABdfqDIntuVW] [-p<port>] "
 			       "[-s<sniffer>] [-m<set_maccaddr.sh>] \\\n"
 				"       [-M<main ifname>] [-R<radio ifname>] "
-			       "[-S<station ifname>] \\\n"
+			       "[-S<station ifname>] [-P<p2p_ifname>]\\\n"
 			       "       [-T<throughput pktsize>] \\\n"
 			       "       [-w<wpa_supplicant/hostapd ctrl_iface "
 			       "dir>] \\\n"
@@ -895,6 +926,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	determine_sigma_p2p_ifname();
 	if (local_cmd)
 		return run_local_cmd(port, local_cmd);
 
@@ -960,6 +992,7 @@ int main(int argc, char *argv[])
 	sniffer_close(&sigma_dut);
 #endif /* CONFIG_SNIFFER */
 
+	free(sigma_p2p_ifname_buf);
 	close_socket(&sigma_dut);
 	sigma_dut_unreg_cmds(&sigma_dut);
 
