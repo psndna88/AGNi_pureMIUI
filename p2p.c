@@ -1651,6 +1651,12 @@ static int cmd_sta_set_sleep(struct sigma_dut *dut, struct sigma_conn *conn,
 	char *ifname;
 	const char *grpid = get_param(cmd, "GroupID");
 
+	if (dut->program == PROGRAM_60GHZ) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,UAPSD Sleep is not applicable for 60 GHz");
+		return 0;
+	}
+
 	if (grpid == NULL)
 		ifname = get_station_ifname();
 	else {
