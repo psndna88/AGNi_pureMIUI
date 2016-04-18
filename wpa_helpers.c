@@ -26,6 +26,15 @@ char * get_main_ifname(void)
 	if (sigma_main_ifname)
 		return sigma_main_ifname;
 
+	if (drv == DRIVER_ATHEROS || openwrt_drv == OPENWRT_DRIVER_ATHEROS) {
+		if (if_nametoindex("ath2") > 0)
+			return "ath2";
+		else if (if_nametoindex("ath1") > 0)
+			return "ath1";
+		else
+			return "ath0";
+	}
+
       if (if_nametoindex("p2p0") > 0)
 	      return "p2p0";
       if (if_nametoindex("wlan1") > 0) {
@@ -42,15 +51,6 @@ char * get_main_ifname(void)
       }
       if (if_nametoindex("wlan0") > 0)
 	      return "wlan0";
-
-      if (drv == DRIVER_ATHEROS || openwrt_drv == OPENWRT_DRIVER_ATHEROS) {
-	      if (if_nametoindex("ath2") > 0)
-		      return "ath2";
-	      else if (if_nametoindex("ath1") > 0)
-		      return "ath1";
-	      else
-		      return "ath0";
-      }
 
       return "unknown";
 }
