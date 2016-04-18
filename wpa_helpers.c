@@ -35,24 +35,24 @@ char * get_main_ifname(void)
 			return "ath0";
 	}
 
-      if (if_nametoindex("p2p0") > 0)
-	      return "p2p0";
-      if (if_nametoindex("wlan1") > 0) {
-	      struct stat s;
-	      if (stat("/sys/module/mac80211", &s) == 0 &&
-		  if_nametoindex("wlan0")) {
-		      /*
-		       * Likely a dual-radio AP device; use wlan0 for STA/P2P
-		       * operations.
-		       */
-		      return "wlan0";
-	      }
-	      return "wlan1";
-      }
-      if (if_nametoindex("wlan0") > 0)
-	      return "wlan0";
+	if (if_nametoindex("p2p0") > 0)
+		return "p2p0";
+	if (if_nametoindex("wlan1") > 0) {
+		struct stat s;
+		if (stat("/sys/module/mac80211", &s) == 0 &&
+		    if_nametoindex("wlan0")) {
+			/*
+			 * Likely a dual-radio AP device; use wlan0 for STA/P2P
+			 * operations.
+			 */
+			return "wlan0";
+		}
+		return "wlan1";
+	}
+	if (if_nametoindex("wlan0") > 0)
+		return "wlan0";
 
-      return "unknown";
+	return "unknown";
 }
 
 
