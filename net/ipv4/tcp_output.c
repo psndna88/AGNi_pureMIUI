@@ -2322,7 +2322,7 @@ void tcp_send_loss_probe(struct sock *sk)
 	if (WARN_ON(!skb || !tcp_skb_pcount(skb)))
 		goto rearm_timer;
 
-	if (__tcp_retransmit_skb(sk, skb))
+	if (__tcp_retransmit_skb(sk, skb, 1))
 		goto rearm_timer;
 
 	tp->tlp_retrans = 1;
@@ -2611,17 +2611,17 @@ static void tcp_retrans_try_collapse(struct sock *sk, struct sk_buff *to,
  * state updates are done by the caller.  Returns non-zero if an
  * error occurred which prevented the send.
  */
-int __tcp_retransmit_skb(struct sock *sk, struct sk_buff *skb)
+int __tcp_retransmit_skb(struct sock *sk, struct sk_buff *skb, int segs)
 {
-	struct tcp_sock *tp = tcp_sk(sk);
 	struct inet_connection_sock *icsk = inet_csk(sk);
+	struct tcp_sock *tp = tcp_sk(sk);
 	unsigned int cur_mss;
-	int err;
+	int diff, len, err;
 
-	/* Inconslusive MTU probe */
-	if (icsk->icsk_mtup.probe_size) {
+
+	/* Inconclusive MTU probe */
+	if (icsk->icsk_mtup.probe_size)
 		icsk->icsk_mtup.probe_size = 0;
-	}
 
 	/* Do not sent more than we queued. 1/4 is reserved for possible
 	 * copying overhead: fragmentation, tunneling, mangling etc.
@@ -2657,29 +2657,26 @@ int __tcp_retransmit_skb(struct sock *sk, struct sk_buff *skb)
 	    TCP_SKB_CB(skb)->seq != tp->snd_una)
 		return -EAGAIN;
 
-	if (skb->len > cur_mss) {
-		if (tcp_fragment(sk, skb, cur_mss, cur_mss, GFP_ATOMIC))
+	len = cur_mss * segs;
+	if (skb->len > len) {
+		if (tcp_fragment(sk, skb, len, cur_mss, GFP_ATOMIC))
 			return -ENOMEM; /* We'll try again later. */
 	} else {
-		int oldpcount = tcp_skb_pcount(skb);
+		if (skb_unclone(skb, GFP_ATOMIC))
+			return -ENOMEM;
 
-		if (unlikely(oldpcount > 1)) {
-			if (skb_unclone(skb, GFP_ATOMIC))
-				return -ENOMEM;
-			tcp_init_tso_segs(skb, cur_mss);
-			tcp_adjust_pcount(sk, skb, oldpcount - tcp_skb_pcount(skb));
-		}
+		diff = tcp_skb_pcount(skb);
+		tcp_set_skb_tso_segs(skb, cur_mss);
+		diff -= tcp_skb_pcount(skb);
+		if (diff)
+			tcp_adjust_pcount(sk, skb, diff);
+		if (skb->len < cur_mss)
+			tcp_retrans_try_collapse(sk, skb, cur_mss);
 	}
 
 	/* RFC3168, section 6.1.1.1. ECN fallback */
 	if ((TCP_SKB_CB(skb)->tcp_flags & TCPHDR_SYN_ECN) == TCPHDR_SYN_ECN)
 		tcp_ecn_clear_syn(sk, skb);
-
-	tcp_retrans_try_collapse(sk, skb, cur_mss);
-
-	/* Make a copy, if the first transmission SKB clone we made
-	 * is still in somebody's hands, else make a clone.
-	 */
 
 	/* make sure skb->data is aligned on arches that require it
 	 * and check if ack-trimming & collapsing extended the headroom
@@ -2698,20 +2695,22 @@ int __tcp_retransmit_skb(struct sock *sk, struct sk_buff *skb)
 	}
 
 	if (likely(!err)) {
+		segs = tcp_skb_pcount(skb);
+
 		TCP_SKB_CB(skb)->sacked |= TCPCB_EVER_RETRANS;
 		/* Update global TCP statistics. */
-		TCP_INC_STATS(sock_net(sk), TCP_MIB_RETRANSSEGS);
+		TCP_ADD_STATS(sock_net(sk), TCP_MIB_RETRANSSEGS, segs);
 		if (TCP_SKB_CB(skb)->tcp_flags & TCPHDR_SYN)
 			NET_INC_STATS_BH(sock_net(sk), LINUX_MIB_TCPSYNRETRANS);
-		tp->total_retrans++;
+		tp->total_retrans += segs;
 	}
 	return err;
 }
 
-int tcp_retransmit_skb(struct sock *sk, struct sk_buff *skb)
+int tcp_retransmit_skb(struct sock *sk, struct sk_buff *skb, int segs)
 {
 	struct tcp_sock *tp = tcp_sk(sk);
-	int err = __tcp_retransmit_skb(sk, skb);
+	int err = __tcp_retransmit_skb(sk, skb, segs);
 
 	if (err == 0) {
 #if FASTRETRANS_DEBUG > 0
@@ -2802,6 +2801,7 @@ void tcp_xmit_retransmit_queue(struct sock *sk)
 
 	tcp_for_write_queue_from(skb, sk) {
 		__u8 sacked = TCP_SKB_CB(skb)->sacked;
+		int segs;
 
 		if (skb == tcp_send_head(sk))
 			break;
@@ -2809,14 +2809,8 @@ void tcp_xmit_retransmit_queue(struct sock *sk)
 		if (!hole)
 			tp->retransmit_skb_hint = skb;
 
-		/* Assume this retransmit will generate
-		 * only one packet for congestion window
-		 * calculation purposes.  This works because
-		 * tcp_retransmit_skb() will chop up the
-		 * packet to be MSS sized and all the
-		 * packet counting works out.
-		 */
-		if (tcp_packets_in_flight(tp) >= tp->snd_cwnd)
+		segs = tp->snd_cwnd - tcp_packets_in_flight(tp);
+		if (segs <= 0)
 			return;
 
 		if (fwd_rexmitting) {
@@ -2853,7 +2847,7 @@ begin_fwd:
 		if (sacked & (TCPCB_SACKED_ACKED|TCPCB_SACKED_RETRANS))
 			continue;
 
-		if (tcp_retransmit_skb(sk, skb))
+		if (tcp_retransmit_skb(sk, skb, segs))
 			return;
 
 		NET_INC_STATS_BH(sock_net(sk), mib_idx);
