@@ -481,6 +481,17 @@
 		qcom,offset-page-indices = <56>;
 	};
 
+	rpm_msg_ram: memory@0x200000 {
+		compatible = "qcom,rpm-msg-ram";
+		reg = <0x200000 0x1000>,
+			<0x290000 0x1000>;
+	};
+
+	rpm_code_ram: rpm-memory@0x60000 {
+		compatible = "qcom,rpm-code-ram";
+		reg = <0x60000 0x5000>;
+	};
+
 	qcom,rpm-stats@200000 {
 		compatible = "qcom,rpm-stats";
 		reg = <0x200000 0x1000>,
@@ -502,5 +513,12 @@
 		compatible = "qcom,rpmrbcpr-stats";
 		reg = <0x29daa0 0x1a0000>;
 		qcom,start-offset = <0x190010>;
+	};
+
+	qcom,system-stats@60140 {
+		compatible = "qcom,system-stats";
+		qcom,rpm-msg-ram = <&rpm_msg_ram>;
+		qcom,rpm-code-ram = <&rpm_code_ram>;
+		qcom,masters = "APSS", "MPSS", "ADSP", "SLPI";
 	};
 };
