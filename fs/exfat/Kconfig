@@ -1,3 +1,5 @@
+menu "exFAT Filesystem"
+
 config EXFAT_FS
 	tristate "exFAT fs support"
 	select NLS
@@ -37,3 +39,24 @@ config EXFAT_DEFAULT_IOCHARSET
 	depends on EXFAT_FS
 	help
 	  Set this to the default input/output character set you'd like exFAT to use.
+
+config EXFAT_VIRTUAL_XATTR
+	bool "Virtual xattr support for exFAT filesystem"
+	default y
+	depends on EXFAT_FS
+	help
+	  Modification of exFAT filesystem for virtual xattr
+
+config EXFAT_VIRTUAL_XATTR_SELINUX_LABEL
+	string "Default string for SELinux label"
+	depends on EXFAT_FS && EXFAT_VIRTUAL_XATTR
+	default "u:object_r:sdcard_external:s0"
+	help
+	  Set this to the default string for SELinux label.
+
+config EXFAT_SUPPORT_STLOG
+	bool "Enable storage log"
+	default y
+	depends on EXFAT_FS && PROC_STLOG
+
+endmenu
