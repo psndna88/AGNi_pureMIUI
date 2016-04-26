@@ -6869,6 +6869,7 @@ static int cmd_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 				  "errorCode,Unsupported ap_set_rfeature with the current openwrt driver");
 			return 0;
 		}
+	case DRIVER_LINUX_WCN:
 	case DRIVER_WCN:
 		return wcn_ap_set_rfeature(dut, conn, cmd);
 	default:
