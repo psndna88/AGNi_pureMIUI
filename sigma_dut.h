@@ -569,7 +569,8 @@ enum driver_type {
 	DRIVER_AR6003,
 	DRIVER_WIL6210,
 	DRIVER_QNXNTO,
-	DRIVER_OPENWRT
+	DRIVER_OPENWRT,
+	DRIVER_LINUX_WCN,
 };
 
 enum openwrt_driver_type {

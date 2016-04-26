@@ -4366,7 +4366,8 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 	case AP_11g:
 	case AP_11b:
 	case AP_11ng:
-		ifname = drv == DRIVER_MAC80211 ? "wlan0" : "ath0";
+		ifname = (drv == DRIVER_MAC80211 || drv == DRIVER_LINUX_WCN) ?
+			"wlan0" : "ath0";
 		if (drv == DRIVER_QNXNTO && sigma_main_ifname)
 			ifname = sigma_main_ifname;
 		fprintf(f, "hw_mode=g\n");
@@ -4379,7 +4380,7 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 				ifname = sigma_main_ifname;
 			else
 				ifname = "wlan0";
-		} else if (drv == DRIVER_MAC80211) {
+		} else if (drv == DRIVER_MAC80211 || drv == DRIVER_LINUX_WCN) {
 			if (if_nametoindex("wlan1") > 0)
 				ifname = "wlan1";
 			else
@@ -4394,10 +4395,11 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		return -1;
 	}
 
-	if (drv == DRIVER_MAC80211)
+	if (drv == DRIVER_MAC80211 || drv == DRIVER_LINUX_WCN)
 		fprintf(f, "driver=nl80211\n");
 
-	if ((drv == DRIVER_MAC80211 || drv == DRIVER_QNXNTO) &&
+	if ((drv == DRIVER_MAC80211 || drv == DRIVER_QNXNTO ||
+	     drv == DRIVER_LINUX_WCN) &&
 	    (dut->ap_mode == AP_11ng || dut->ap_mode == AP_11na)) {
 		fprintf(f, "ieee80211n=1\n");
 		if (dut->ap_mode == AP_11ng && dut->ap_chwidth == AP_40) {
@@ -4419,14 +4421,16 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
-	if ((drv == DRIVER_MAC80211 || drv == DRIVER_QNXNTO) &&
+	if ((drv == DRIVER_MAC80211 || drv == DRIVER_QNXNTO ||
+	     drv == DRIVER_LINUX_WCN) &&
 	    dut->ap_mode == AP_11ac) {
 		fprintf(f, "ieee80211ac=1\n"
 			"ieee80211n=1\n"
 			"ht_capab=[HT40+]\n");
 	}
 
-	if ((drv == DRIVER_MAC80211 || drv == DRIVER_QNXNTO) &&
+	if ((drv == DRIVER_MAC80211 || drv == DRIVER_QNXNTO ||
+	     drv == DRIVER_LINUX_WCN) &&
 	    (dut->ap_mode == AP_11ac || dut->ap_mode == AP_11na)) {
 		if (dut->ap_countrycode[0]) {
 			fprintf(f, "country_code=%s\n", dut->ap_countrycode);
@@ -5253,6 +5257,7 @@ static int cmd_ap_get_info(struct sigma_dut *dut, struct sigma_conn *conn,
 		send_resp(dut, conn, SIGMA_COMPLETE, resp);
 		return 0;
 	}
+	case DRIVER_LINUX_WCN:
 	case DRIVER_MAC80211: {
 		struct utsname uts;
 		char *version;
