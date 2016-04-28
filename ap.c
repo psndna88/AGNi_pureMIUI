@@ -547,20 +547,21 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 		int nss, mcs;
 		char token[20];
 		char *result = NULL;
+		char *saveptr;
 
 		if (strlen(val) >= sizeof(token))
 			return -1;
 		strcpy(token, val);
-		result = strtok(token, ";");
+		result = strtok_r(token, ";", &saveptr);
 		nss = atoi(result);
-		result = strtok(NULL, ";");
+		result = strtok_r(NULL, ";", &saveptr);
 		if (result == NULL) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"VHTMCS NOT SPECIFIED!");
 			return 0;
 		}
-		result = strtok(result, "-");
-		result = strtok(NULL, "-");
+		result = strtok_r(result, "-", &saveptr);
+		result = strtok_r(NULL, "-", &saveptr);
 		mcs = atoi(result);
 		switch (nss) {
 		case 1:
@@ -2254,6 +2255,7 @@ static int kill_process(struct sigma_dut *dut, char *proc_name,
 	DIR *dir_in;
 	FILE *fp;
 	char *pid, *temp;
+	char *saveptr;
 
 	if (dir == NULL)
 		return -1;
@@ -2277,8 +2279,8 @@ static int kill_process(struct sigma_dut *dut, char *proc_name,
 		if (fgets(buf, 100, fp) == NULL)
 			buf[0] = '\0';
 		fclose(fp);
-		pid = strtok(buf, " ");
-		temp = strtok(NULL, " ");
+		pid = strtok_r(buf, " ", &saveptr);
+		temp = strtok_r(NULL, " ", &saveptr);
 		if (pid && temp &&
 		    strncmp(temp, proc_name, strlen(proc_name)) == 0) {
 			sigma_dut_print(dut, DUT_MSG_INFO,
@@ -6491,6 +6493,7 @@ static int ath_vht_op_mode_notif(struct sigma_dut *dut, const char *ifname,
 	char *token, *result;
 	int nss = 0, chwidth = 0;
 	char buf[100];
+	char *saveptr;
 
 	/*
 	 * The following commands should be invoked to generate
@@ -6501,7 +6504,7 @@ static int ath_vht_op_mode_notif(struct sigma_dut *dut, const char *ifname,
 	token = strdup(val);
 	if (!token)
 		return -1;
-	result = strtok(token, ";");
+	result = strtok_r(token, ";", &saveptr);
 	if (result) {
 		int count = atoi(result);
 
@@ -6524,7 +6527,7 @@ static int ath_vht_op_mode_notif(struct sigma_dut *dut, const char *ifname,
 	}
 
 	/* Extract the Channel width info */
-	result = strtok(NULL, ";");
+	result = strtok_r(NULL, ";", &saveptr);
 	if (result) {
 		switch (atoi(result)) {
 		case 20:
@@ -6570,11 +6573,12 @@ static int ath_vht_nss_mcs(struct sigma_dut *dut, const char *ifname,
 	int nss, mcs;
 	char *token, *result;
 	char buf[100];
+	char *saveptr;
 
 	token = strdup(val);
 	if (!token)
 		return -1;
-	result = strtok(token, ";");
+	result = strtok_r(token, ";", &saveptr);
 	if (strcasecmp(result, "def") != 0) {
 		nss = atoi(result);
 
@@ -6596,7 +6600,7 @@ static int ath_vht_nss_mcs(struct sigma_dut *dut, const char *ifname,
 		}
 	}
 
-	result = strtok(NULL, ";");
+	result = strtok_r(NULL, ";", &saveptr);
 	if (strcasecmp(result, "def") == 0) {
 		if (dut->device_type == AP_testbed && dut->ap_sgi80 == 1) {
 			snprintf(buf, sizeof(buf), "iwpriv %s vhtmcs 7",
@@ -6634,17 +6638,18 @@ static int ath_vht_chnum_band(struct sigma_dut *dut, const char *ifname,
 	int channel = 36;
 	int chwidth = 80;
 	char buf[100];
+	char *saveptr;
 
 	/* Extract the channel info */
 	token = strdup(val);
 	if (!token)
 		return -1;
-	result = strtok(token, ";");
+	result = strtok_r(token, ";", &saveptr);
 	if (result)
 		channel = atoi(result);
 
 	/* Extract the channel width info */
-	result = strtok(NULL, ";");
+	result = strtok_r(NULL, ";", &saveptr);
 	if (result)
 		chwidth = atoi(result);
 
@@ -6813,12 +6818,13 @@ static int wcn_vht_chnum_band(struct sigma_dut *dut, const char *ifname,
 	char *token, *result;
 	int channel = 36;
 	char buf[100];
+	char *saveptr;
 
 	/* Extract the channel info */
 	token = strdup(val);
 	if (!token)
 		return -1;
-	result = strtok(token, ";");
+	result = strtok_r(token, ";", &saveptr);
 	if (result)
 		channel = atoi(result);
 

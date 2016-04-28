@@ -2441,10 +2441,11 @@ static void ath_sta_set_noack(struct sigma_dut *dut, const char *intf,
 	char token[50];
 	char *result;
 	char buf[100];
+	char *saveptr;
 
 	strncpy(token, val, sizeof(token));
 	token[sizeof(token) - 1] = '\0';
-	result = strtok(token, ":");
+	result = strtok_r(token, ":", &saveptr);
 	while (result) {
 		if (strcmp(result, "disable") == 0) {
 			snprintf(buf, sizeof(buf),
@@ -2459,7 +2460,7 @@ static void ath_sta_set_noack(struct sigma_dut *dut, const char *intf,
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"iwpriv noackpolicy failed");
 		}
-		result = strtok(NULL, ":");
+		result = strtok_r(NULL, ":", &saveptr);
 		counter++;
 	}
 }
@@ -3843,6 +3844,7 @@ static int sta_get_parameter_60g(struct sigma_dut *dut, struct sigma_conn *conn,
 		char *bss_line;
 		char *bss_id = NULL;
 		const char *ifname = get_param(cmd, "Interface");
+		char *saveptr;
 
 		if (ifname == NULL) {
 			sigma_dut_print(dut, DUT_MSG_INFO,
@@ -3867,7 +3869,7 @@ static int sta_get_parameter_60g(struct sigma_dut *dut, struct sigma_conn *conn,
 				ifname, bss_list);
 
 		snprintf(buf, sizeof(buf), "DeviceList");
-		bss_line = strtok(bss_list, "\n");
+		bss_line = strtok_r(bss_list, "\n", &saveptr);
 		while (bss_line) {
 			if (sscanf(bss_line, "bssid=%ms", &bss_id) > 0 &&
 			    bss_id) {
@@ -3898,7 +3900,7 @@ static int sta_get_parameter_60g(struct sigma_dut *dut, struct sigma_conn *conn,
 				}
 			}
 
-			bss_line = strtok(NULL, "\n");
+			bss_line = strtok_r(NULL, "\n", &saveptr);
 		}
 
 		sigma_dut_print(dut, DUT_MSG_INFO, "DiscoveredDevList is %s",
@@ -4361,10 +4363,11 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		char delim[] = ";";
 		char token[30];
 		int value, config_val = 0;
+		char *saveptr;
 
 		strncpy(token, val, sizeof(token));
 		token[sizeof(token) - 1] = '\0';
-		result = strtok(token, delim);
+		result = strtok_r(token, delim, &saveptr);
 
 		/* Extract the NSS information */
 		if (result) {
@@ -4403,7 +4406,7 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		}
 
 		/* Extract the channel width information */
-		result = strtok(NULL, delim);
+		result = strtok_r(NULL, delim, &saveptr);
 		if (result) {
 			value = atoi(result);
 			switch (value) {
@@ -4447,10 +4450,11 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		char token[20];
 		char *result = NULL;
 		unsigned int vht_mcsmap = 0;
+		char *saveptr;
 
 		strncpy(token, val, sizeof(token));
 		token[sizeof(token) - 1] = '\0';
-		result = strtok(token, ";");
+		result = strtok_r(token, ";", &saveptr);
 		if (!result) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"VHT NSS not specified");
@@ -4464,14 +4468,14 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 					"iwpriv nss failed");
 		}
 
-		result = strtok(NULL, ";");
+		result = strtok_r(NULL, ";", &saveptr);
 		if (result == NULL) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"VHTMCS NOT SPECIFIED!");
 			return 0;
 		}
-		result = strtok(result, "-");
-		result = strtok(NULL, "-");
+		result = strtok_r(result, "-", &saveptr);
+		result = strtok_r(NULL, "-", &saveptr);
 		if (!result) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"VHT MCS not specified");
@@ -6491,11 +6495,12 @@ static int ath_sta_set_rfeature_vht(const char *intf, struct sigma_dut *dut,
 		/* String (nss_operating_mode; mcs_operating_mode) */
 		int nss, mcs;
 		char buf[50];
+		char *saveptr;
 
 		token = strdup(val);
 		if (!token)
 			return 0;
-		result = strtok(token, ";");
+		result = strtok_r(token, ";", &saveptr);
 		if (strcasecmp(result, "def") != 0) {
 			nss = atoi(result);
 			if (nss == 4)
@@ -6509,7 +6514,7 @@ static int ath_sta_set_rfeature_vht(const char *intf, struct sigma_dut *dut,
 			}
 		}
 
-		result = strtok(NULL, ";");
+		result = strtok_r(NULL, ";", &saveptr);
 		if (strcasecmp(result, "def") == 0) {
 			snprintf(buf, sizeof(buf), "iwpriv %s set11NRates 0",
 				 intf);
