@@ -7,6 +7,7 @@
  */
 
 #include "sigma_dut.h"
+#include "wpa_helpers.h"
 
 #define TG_MAX_CLIENTS_CONNECTIONS 1
 
@@ -1184,14 +1185,16 @@ static int cmd_traffic_agent_receive_start(struct sigma_dut *dut,
 		/*
 		 * Provide dut context to the thread to support debugging and
 		 * returning of error messages. Similarly, provide interface
-		 * information to the thread.
+		 * information to the thread. If the Interface parameter is not
+		 * passed, get it from get_station_ifname() since the interface
+		 * name is needed for power save mode configuration for Uapsd
+		 * cases.
 		 */
 		s->dut = dut;
 		val = get_param(cmd, "Interface");
-		if (val) {
-			strncpy(s->ifname, val, sizeof(s->ifname));
-			s->ifname[sizeof(s->ifname) - 1] = '\0';
-		}
+		strncpy(s->ifname, (val ? val : get_station_ifname()),
+			sizeof(s->ifname));
+		s->ifname[sizeof(s->ifname) - 1] = '\0';
 
 		sigma_dut_print(dut, DUT_MSG_DEBUG, "Traffic agent: start "
 				"receive for stream %d", streams[i]);
