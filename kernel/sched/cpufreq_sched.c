@@ -14,7 +14,7 @@
 
 #include "sched.h"
 
-#define THROTTLE_DOWN_NSEC	20000000 /* 20ms default */
+#define THROTTLE_DOWN_NSEC	50000000 /* 50ms default */
 #define THROTTLE_UP_NSEC	500000 /* 500us default */
 
 static DEFINE_PER_CPU(unsigned long, pcpu_capacity);
