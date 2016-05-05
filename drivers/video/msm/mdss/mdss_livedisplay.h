@@ -31,6 +31,7 @@ struct mdss_livedisplay_ctx {
 	uint8_t sre_medium_value;
 	uint8_t sre_strong_value;
 	uint8_t aco_value;
+	uint8_t cabc_ce_value;
 
 	const uint8_t *ce_off_cmds;
 	const uint8_t *ce_on_cmds;
@@ -90,6 +91,7 @@ enum {
 	MODE_COLOR_ENHANCE	= 0x08,
 	MODE_PRESET		= 0x10,
 	MODE_RGB		= 0x20,
+	MODE_CABC_COLOR_ENHANCE	= 0x40,
 	MODE_UPDATE_ALL		= 0xFF,
 };
 
@@ -99,7 +101,10 @@ int mdss_livedisplay_create_sysfs(struct msm_fb_data_type *mfd);
 
 static inline bool is_cabc_cmd(uint32_t value)
 {
-    return (value & MODE_CABC) || (value & MODE_SRE) || (value & MODE_AUTO_CONTRAST);
+	return (value & MODE_CABC) ||
+			(value & MODE_SRE) ||
+			(value & MODE_AUTO_CONTRAST) ||
+			(value & MODE_CABC_COLOR_ENHANCE);
 }
 
 static inline struct mdss_livedisplay_ctx* get_ctx(struct msm_fb_data_type *mfd)
