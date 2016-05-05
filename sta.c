@@ -1384,7 +1384,8 @@ static int cmd_sta_set_eaptls(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (set_network(ifname, id, "eap", "TLS") < 0)
 		return -2;
 
-	if (set_network_quoted(ifname, id, "identity",
+	if (!get_param(cmd, "username") &&
+	    set_network_quoted(ifname, id, "identity",
 			       "wifi-user@wifilabs.local") < 0)
 		return -2;
 
