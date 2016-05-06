@@ -55,8 +55,6 @@ static void cs_check_cpu(int cpu, unsigned int load)
 	struct cs_dbs_tuners *cs_tuners = dbs_data->tuners;
 	u64 now;
 
-	cpufreq_notify_utilization(policy, load);
-
 	/*
 	 * break out if we 'cannot' reduce the speed as the user might
 	 * want freq_step to be zero
