@@ -175,6 +175,12 @@ config CPU_FREQ_DEFAULT_GOV_RELAXED
 	  governor. If unsure have a look at the help section of the
 	  driver. Fallback governor will be the interactive governor.
 
+config CPU_FREQ_DEFAULT_GOV_BIOSHOCK
+	bool "BioShock"
+	select CPU_FREQ_GOV_BIOSHOCK
+	help
+	  Default governor of BioShock kernel
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -257,6 +263,12 @@ config CPU_FREQ_GOV_CHILL
 	help
 	  'chill' - similar to 'conservative', but optimized for devices
 	  that go into suspended or display off states often.
+
+config CPU_FREQ_GOV_BIOSHOCK
+	tristate "'bioshock' cpufreq bioshock"
+	depends on CPU_FREQ
+	help
+	  'bioshock' - More aggressive version of conservative
 
 config CPU_FREQ_GOV_CONSERVATIVE
 	tristate "'conservative' cpufreq governor"
