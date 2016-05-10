@@ -625,8 +625,8 @@ endif
 endif
 KBUILD_CFLAGS += $(stackp-flag)
 
-# This warning generated too much noise in a regular build.
-# Use make W=1 to enable this warning (see scripts/Makefile.build)
+# These warnings generated too much noise in a regular build.
+# Use make W=1 to enable them (see scripts/Makefile.build)
 KBUILD_CFLAGS   += $(call cc-disable-warning, unused-but-set-variable)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, format-truncation)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, format-overflow)
@@ -636,6 +636,7 @@ KBUILD_CFLAGS   += $(call cc-disable-warning, stringop-truncation)
 KBUILD_CFLAGS   += $(call cc-disable-warning, sizeof-pointer-memaccess)
 KBUILD_CFLAGS   += $(call cc-disable-warning, packed-not-aligned)
 KBUILD_CFLAGS   += $(call cc-disable-warning, stringop-overflow)
+KBUILD_CFLAGS += $(call cc-disable-warning, unused-const-variable)
 
 ifdef CONFIG_FRAME_POINTER
 KBUILD_CFLAGS	+= -fno-omit-frame-pointer -fno-optimize-sibling-calls
