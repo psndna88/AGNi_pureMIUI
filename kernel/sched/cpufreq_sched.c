@@ -179,7 +179,7 @@ void cpufreq_sched_set_cap(int cpu, unsigned long capacity)
 
 	gd = policy->governor_data;
 
-	ktime_t throttle = gd->requested_freq < cur_freq ?
+	ktime_t throttle = gd->freq < policy->cur ?
 		gd->down_throttle : gd->up_throttle;
 
 	/* bail early if we are throttled */
@@ -350,6 +350,8 @@ static int cpufreq_sched_policy_exit(struct cpufreq_policy *policy)
 
 	clear_sched_energy_freq();
 
+	sysfs_remove_group(get_governor_parent_kobj(policy), get_sysfs_attr());
+
 	policy->governor_data = NULL;
 	mutex_lock(&gov_list_lock);
 	list_del(&gd->gov_list);
@@ -398,12 +400,12 @@ static int cpufreq_sched_setup(struct cpufreq_policy *policy, unsigned int event
 }
 
 /* Tunables */
-static ssize_t show_throttle_ns(struct gov_data *gd, char *buf)
+static ssize_t show_up_throttle_nsec(struct gov_data *gd, char *buf)
 {
-	return sprintf(buf, "%u\n", gd->throttle_nsec);
+	return sprintf(buf, "%u\n", gd->up_throttle_nsec);
 }
 
-static ssize_t store_throttle_ns(struct gov_data *gd,
+static ssize_t store_up_throttle_nsec(struct gov_data *gd,
 		const char *buf, size_t count)
 {
 	int ret;
@@ -412,9 +414,28 @@ static ssize_t store_throttle_ns(struct gov_data *gd,
 	ret = kstrtoul(buf, 0, &val);
 	if (ret < 0)
 		return ret;
-	gd->throttle_nsec = val;
+	gd->up_throttle_nsec = val;
 	return count;
 }
+
+static ssize_t show_down_throttle_nsec(struct gov_data *gd, char *buf)
+{
+	return sprintf(buf, "%u\n", gd->down_throttle_nsec);
+}
+
+static ssize_t store_down_throttle_nsec(struct gov_data *gd,
+		const char *buf, size_t count)
+{
+	int ret;
+	long unsigned int val;
+
+	ret = kstrtoul(buf, 0, &val);
+	if (ret < 0)
+		return ret;
+	gd->down_throttle_nsec = val;
+	return count;
+}
+
 /*
  * Create show/store routines
  * - sys: One governor instance for complete SYSTEM
@@ -446,11 +467,13 @@ static ssize_t store_##file_name##_gov_pol				\
 	store_gov_pol_sys(file_name); \
 	gov_pol_attr_rw(file_name)
 
-tunable_handlers(throttle_ns);
+tunable_handlers(down_throttle_nsec);
+tunable_handlers(up_throttle_nsec);
 
 /* Per policy governor instance */
 static struct attribute *sched_attributes_gov_pol[] = {
-	&throttle_ns_gov_pol.attr,
+	&up_throttle_nsec_gov_pol.attr,
+	&down_throttle_nsec_gov_pol.attr,
 	NULL,
 };
 
