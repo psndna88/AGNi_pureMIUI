@@ -434,8 +434,6 @@ static ssize_t mdss_livedisplay_set_aco(struct device *dev,
 		mdss_livedisplay_update_locked(get_ctrl(mfd), MODE_AUTO_CONTRAST);
 	}
 
-	mutex_unlock(&mlc->lock);
-
 	return count;
 }
 
