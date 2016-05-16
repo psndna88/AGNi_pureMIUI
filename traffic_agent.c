@@ -459,8 +459,8 @@ static void send_file(struct sigma_stream *s)
 	char *pkt;
 	struct timeval stop, now, start;
 	int res;
-	unsigned int counter = 0;
-	int sleep_time, sleep_usec, pkt_spacing, duration = 0;
+	unsigned int counter = 0, total_sleep_usec = 0, total_pkts;
+	int sleep_usec = 0;
 
 	if (s->duration <= 0 || s->frame_rate < 0 || s->payload_size < 20)
 		return;
@@ -480,17 +480,7 @@ static void send_file(struct sigma_stream *s)
 	gettimeofday(&stop, NULL);
 	stop.tv_sec += s->duration;
 
-	if (s->frame_rate == 0) {
-		sleep_time = 0;
-		pkt_spacing = 0;
-	} else {
-		sleep_time = 1000000 / s->frame_rate;
-		pkt_spacing = sleep_time;
-		sleep_time -= 100;
-		if (sleep_time < 0)
-			sleep_time = 0;
-	}
-	sleep_usec = sleep_time;
+	total_pkts = s->duration * s ->frame_rate;
 
 	gettimeofday(&start, NULL);
 
@@ -498,30 +488,37 @@ static void send_file(struct sigma_stream *s)
 		counter++;
 		WPA_PUT_BE32(&pkt[8], counter);
 
-		if (sleep_usec)
+		if (sleep_usec) {
 			usleep(sleep_usec);
+			total_sleep_usec += sleep_usec;
+		}
 
 		gettimeofday(&now, NULL);
 		if (now.tv_sec > stop.tv_sec ||
 		    (now.tv_sec == stop.tv_sec && now.tv_usec >= stop.tv_usec))
 			break;
 
-		if (sleep_time) {
-			/* Update sleep time based on current time */
+		if (s->frame_rate && (unsigned int) s->tx_frames >= total_pkts)
+			break;
+
+		if (s->frame_rate == 0 || s->tx_frames == 0)
+			sleep_usec = 0;
+		else if (sleep_usec || s->frame_rate < 10 ||
+			 counter % (s->frame_rate / 10) == 0) {
+			/* Recalculate sleep_usec for every 100 ms approximately
+			 */
 			struct timeval tmp;
-			int diff;
+			int diff, duration;
 
-			duration += pkt_spacing;
 			timersub(&now, &start, &tmp);
-			diff = tmp.tv_sec * 1000000 + tmp.tv_usec;
 
-			if (diff > duration) {
-				sleep_usec = pkt_spacing - (diff - duration);
-				sleep_usec -= 100;
-			} else {
-				sleep_usec = pkt_spacing - 100;
-			}
-			if (sleep_usec < 0)
+			diff = tmp.tv_sec * 1000000 + tmp.tv_usec;
+			duration = (1000000 / s->frame_rate) * s->tx_frames;
+
+			if (duration > diff)
+				sleep_usec = (total_sleep_usec +
+					      (duration - diff)) / s->tx_frames;
+			else
 				sleep_usec = 0;
 		}
 
@@ -549,6 +546,10 @@ static void send_file(struct sigma_stream *s)
 			}
 		}
 	}
+
+	sigma_dut_print(s->dut, DUT_MSG_DEBUG,
+			"send_file: counter %u s->tx_frames %d total_sleep_usec %u",
+			counter, s->tx_frames, total_sleep_usec);
 
 	free(pkt);
 }
