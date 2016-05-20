@@ -1006,7 +1006,7 @@ static int f2fs_collapse_range(struct inode *inode, loff_t offset, loff_t len)
 
 	ret = truncate_blocks(inode, new_size, true);
 	if (!ret)
-		i_size_write(inode, new_size);
+		f2fs_i_size_write(inode, new_size);
 
 	return ret;
 }
@@ -1143,8 +1143,7 @@ static int f2fs_zero_range(struct inode *inode, loff_t offset, loff_t len,
 
 out:
 	if (!(mode & FALLOC_FL_KEEP_SIZE) && i_size_read(inode) < new_size) {
-		i_size_write(inode, new_size);
-		mark_inode_dirty(inode);
+		f2fs_i_size_write(inode, new_size);
 		update_inode_page(inode);
 	}
 
@@ -1204,7 +1203,7 @@ static int f2fs_insert_range(struct inode *inode, loff_t offset, loff_t len)
 	truncate_pagecache(inode, 0, offset);
 
 	if (!ret)
-		i_size_write(inode, new_size);
+		f2fs_i_size_write(inode, new_size);
 	return ret;
 }
 
@@ -1253,8 +1252,7 @@ static int expand_inode_data(struct inode *inode, loff_t offset,
 	}
 
 	if (!(mode & FALLOC_FL_KEEP_SIZE) && i_size_read(inode) < new_size) {
-		i_size_write(inode, new_size);
-		mark_inode_dirty(inode);
+		f2fs_i_size_write(inode, new_size);
 		update_inode_page(inode);
 	}
 
