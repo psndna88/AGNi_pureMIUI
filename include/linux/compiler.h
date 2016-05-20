@@ -215,6 +215,10 @@ void ftrace_likely_update(struct ftrace_branch_data *f, int val, int expect);
 #define __deprecated_for_modules
 #endif
 
+#ifndef __malloc
+#define __malloc
+#endif
+
 /*
  * Allow us to avoid 'defined but not used' warnings on functions and data,
  * as well as force them to be emitted to the assembly file.
