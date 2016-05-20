@@ -637,9 +637,6 @@ static int f2fs_rename(struct inode *old_dir, struct dentry *old_dentry,
 			add_orphan_inode(sbi, new_inode->i_ino);
 		else
 			release_orphan_inode(sbi);
-
-		update_inode_page(old_inode);
-		update_inode_page(new_inode);
 	} else {
 		f2fs_balance_fs(sbi, true);
 
@@ -651,10 +648,8 @@ static int f2fs_rename(struct inode *old_dir, struct dentry *old_dentry,
 			goto out_dir;
 		}
 
-		if (old_dir_entry) {
+		if (old_dir_entry)
 			f2fs_i_links_write(new_dir, true);
-			update_inode_page(new_dir);
-		}
 
 		/*
 		 * old entry and new entry can locate in the same inline
@@ -692,13 +687,11 @@ static int f2fs_rename(struct inode *old_dir, struct dentry *old_dentry,
 		if (old_dir != new_dir) {
 			f2fs_set_link(old_inode, old_dir_entry,
 						old_dir_page, new_dir);
-			update_inode_page(old_inode);
 		} else {
 			f2fs_dentry_kunmap(old_inode, old_dir_page);
 			f2fs_put_page(old_dir_page, 0);
 		}
 		f2fs_i_links_write(old_dir, false);
-		update_inode_page(old_dir);
 	}
 
 	f2fs_unlock_op(sbi);
