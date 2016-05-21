@@ -20,7 +20,6 @@
 #include <linux/uaccess.h>
 #include <linux/mount.h>
 #include <linux/pagevec.h>
-#include <linux/random.h>
 #include <linux/aio.h>
 #include <linux/uuid.h>
 #include <linux/file.h>
