@@ -169,7 +169,7 @@ static int f2fs_link(struct dentry *old_dentry, struct inode *dir,
 	int err;
 
 	if (f2fs_encrypted_inode(dir) &&
-		!f2fs_is_child_context_consistent_with_parent(dir, inode))
+			!fscrypt_has_permitted_context(dir, inode))
 		return -EPERM;
 
 	f2fs_balance_fs(sbi, true);
@@ -262,6 +262,21 @@ static struct dentry *f2fs_lookup(struct inode *dir, struct dentry *dentry,
 	int err = 0;
 	unsigned int root_ino = F2FS_ROOT_INO(F2FS_I_SB(dir));
 
+	if (f2fs_encrypted_inode(dir)) {
+		int res = fscrypt_get_encryption_info(dir);
+
+		/*
+		 * DCACHE_ENCRYPTED_WITH_KEY is set if the dentry is
+		 * created while the directory was encrypted and we
+		 * don't have access to the key.
+		 */
+		if (fscrypt_has_encryption_key(dir))
+			fscrypt_set_encrypted_dentry(dentry);
+		fscrypt_set_d_op(dentry);
+		if (res && res != -ENOKEY)
+			return ERR_PTR(res);
+	}
+
 	if (dentry->d_name.len > F2FS_NAME_LEN)
 		return ERR_PTR(-ENAMETOOLONG);
 
@@ -288,10 +303,18 @@ static struct dentry *f2fs_lookup(struct inode *dir, struct dentry *dentry,
 		if (err)
 			goto err_out;
 	}
+	if (!IS_ERR(inode) && f2fs_encrypted_inode(dir) &&
+			(S_ISDIR(inode->i_mode) || S_ISLNK(inode->i_mode)) &&
+			!fscrypt_has_permitted_context(dir, inode)) {
+		bool nokey = f2fs_encrypted_inode(inode) &&
+			!fscrypt_has_encryption_key(inode);
+		err = nokey ? -ENOKEY : -EPERM;
+		goto err_out;
+	}
 	return d_splice_alias(inode, dentry);
 
 err_out:
-	iget_failed(inode);
+	iput(inode);
 	return ERR_PTR(err);
 }
 
@@ -360,20 +383,20 @@ static int f2fs_symlink(struct inode *dir, struct dentry *dentry,
 	struct f2fs_sb_info *sbi = F2FS_I_SB(dir);
 	struct inode *inode;
 	size_t len = strlen(symname);
-	struct f2fs_str disk_link = FSTR_INIT((char *)symname, len + 1);
-	struct f2fs_encrypted_symlink_data *sd = NULL;
+	struct fscrypt_str disk_link = FSTR_INIT((char *)symname, len + 1);
+	struct fscrypt_symlink_data *sd = NULL;
 	int err;
 
 	if (f2fs_encrypted_inode(dir)) {
-		err = f2fs_get_encryption_info(dir);
+		err = fscrypt_get_encryption_info(dir);
 		if (err)
 			return err;
 
-		if (!f2fs_encrypted_inode(dir))
+		if (!fscrypt_has_encryption_key(dir))
 			return -EPERM;
 
-		disk_link.len = (f2fs_fname_encrypted_size(dir, len) +
-				sizeof(struct f2fs_encrypted_symlink_data));
+		disk_link.len = (fscrypt_fname_encrypted_size(dir, len) +
+				sizeof(struct fscrypt_symlink_data));
 	}
 
 	if (disk_link.len > dir->i_sb->s_blocksize)
@@ -400,7 +423,7 @@ static int f2fs_symlink(struct inode *dir, struct dentry *dentry,
 
 	if (f2fs_encrypted_inode(inode)) {
 		struct qstr istr = QSTR_INIT(symname, len);
-		struct f2fs_str ostr;
+		struct fscrypt_str ostr;
 
 		sd = kzalloc(disk_link.len, GFP_NOFS);
 		if (!sd) {
@@ -408,18 +431,18 @@ static int f2fs_symlink(struct inode *dir, struct dentry *dentry,
 			goto err_out;
 		}
 
-		err = f2fs_get_encryption_info(inode);
+		err = fscrypt_get_encryption_info(inode);
 		if (err)
 			goto err_out;
 
-		if (!f2fs_encrypted_inode(inode)) {
+		if (!fscrypt_has_encryption_key(inode)) {
 			err = -EPERM;
 			goto err_out;
 		}
 
 		ostr.name = sd->encrypted_path;
 		ostr.len = disk_link.len;
-		err = f2fs_fname_usr_to_disk(inode, &istr, &ostr);
+		err = fscrypt_fname_usr_to_disk(inode, &istr, &ostr);
 		if (err < 0)
 			goto err_out;
 
@@ -559,8 +582,7 @@ static int f2fs_rename(struct inode *old_dir, struct dentry *old_dentry,
 	int err = -ENOENT;
 
 	if ((old_dir != new_dir) && f2fs_encrypted_inode(new_dir) &&
-		!f2fs_is_child_context_consistent_with_parent(new_dir,
-							old_inode)) {
+			!fscrypt_has_permitted_context(new_dir, old_inode)) {
 		err = -EPERM;
 		goto out;
 	}
@@ -705,21 +727,20 @@ out:
 	return err;
 }
 
-#ifdef CONFIG_F2FS_FS_ENCRYPTION
 static void *f2fs_encrypted_follow_link(struct dentry *dentry,
 						struct nameidata *nd)
 {
 	struct page *cpage = NULL;
 	char *caddr, *paddr = NULL;
-	struct f2fs_str cstr = FSTR_INIT(NULL, 0);
-	struct f2fs_str pstr = FSTR_INIT(NULL, 0);
+	struct fscrypt_str cstr = FSTR_INIT(NULL, 0);
+	struct fscrypt_str pstr = FSTR_INIT(NULL, 0);
+	struct fscrypt_symlink_data *sd;
 	struct inode *inode = dentry->d_inode;
-	struct f2fs_encrypted_symlink_data *sd;
 	loff_t size = min_t(loff_t, i_size_read(inode), PAGE_SIZE - 1);
 	u32 max_size = inode->i_sb->s_blocksize;
 	int res;
 
-	res = f2fs_get_encryption_info(inode);
+	res = fscrypt_get_encryption_info(inode);
 	if (res)
 		return ERR_PTR(res);
 
@@ -730,7 +751,7 @@ static void *f2fs_encrypted_follow_link(struct dentry *dentry,
 	caddr[size] = 0;
 
 	/* Symlink is encrypted */
-	sd = (struct f2fs_encrypted_symlink_data *)caddr;
+	sd = (struct fscrypt_symlink_data *)caddr;
 	cstr.name = sd->encrypted_path;
 	cstr.len = le16_to_cpu(sd->len);
 
@@ -740,25 +761,24 @@ static void *f2fs_encrypted_follow_link(struct dentry *dentry,
 		goto errout;
 	}
 
-	/* this is broken symlink case */
-	if (unlikely(cstr.name[0] == 0)) {
-		res = -ENOENT;
-		goto errout;
-	}
-
-	if ((cstr.len + sizeof(struct f2fs_encrypted_symlink_data) - 1) >
-								max_size) {
+	if ((cstr.len + sizeof(struct fscrypt_symlink_data) - 1) > max_size) {
 		/* Symlink data on the disk is corrupted */
 		res = -EIO;
 		goto errout;
 	}
-	res = f2fs_fname_crypto_alloc_buffer(inode, cstr.len, &pstr);
+	res = fscrypt_fname_alloc_buffer(inode, cstr.len, &pstr);
 	if (res)
 		goto errout;
 
-	res = f2fs_fname_disk_to_usr(inode, NULL, &cstr, &pstr);
+	res = fscrypt_fname_disk_to_usr(inode, 0, 0, &cstr, &pstr);
 	if (res < 0)
 		goto errout;
+
+	/* this is broken symlink case */
+	if (unlikely(pstr.name[0] == 0)) {
+		res = -ENOENT;
+		goto errout;
+	}
 
 	paddr = pstr.name;
 
@@ -770,7 +790,7 @@ static void *f2fs_encrypted_follow_link(struct dentry *dentry,
 	page_cache_release(cpage);
 	return NULL;
 errout:
-	f2fs_fname_crypto_free_buffer(&pstr);
+	fscrypt_fname_free_buffer(&pstr);
 	kunmap(cpage);
 	page_cache_release(cpage);
 	return ERR_PTR(res);
@@ -797,7 +817,6 @@ const struct inode_operations f2fs_encrypted_symlink_inode_operations = {
 	.removexattr	= generic_removexattr,
 #endif
 };
-#endif
 
 const struct inode_operations f2fs_dir_inode_operations = {
 	.create		= f2fs_create,
