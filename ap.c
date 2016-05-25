@@ -3046,7 +3046,7 @@ static int cmd_ath_ap_anqpserver_start(struct sigma_dut *dut)
 				*next++ = '\0';
 
 			len = strlen(start);
-			hexstr = malloc(len * 2);
+			hexstr = malloc(len * 2 + 1);
 			if (hexstr == NULL) {
 				free(dnbuf);
 				free(anqp_dn);
