@@ -2319,6 +2319,13 @@ int q6asm_open_write_compressed(struct audio_client *ac, uint32_t format,
 			rc = -EINVAL;
 			goto fail_cmd;
 		}
+	case FORMAT_DTS:
+		open.fmt_id = ASM_MEDIA_FMT_DTS;
+		break;
+	default:
+		pr_err("%s: Invalid format[%d]\n", __func__, format);
+		rc = -EINVAL;
+		goto fail_cmd;
 	}
 	/*Below flag indicates the DSP that Compressed audio input
 	stream is not IEC 61937 or IEC 60958 packetizied*/
