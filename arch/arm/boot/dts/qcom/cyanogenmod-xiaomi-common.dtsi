@@ -12,14 +12,11 @@
 
 / {
 	memory {
-		#address-cells = <2>;
-		#size-cells = <2>;
-
-		ramoops_mem: ramoops_region@0 {
+		ramoops_mem: ramoops_mem_region {
 			linux,reserve-contiguous-region;
 			linux,reserve-region;
 			linux,remove-completely;
-			reg = <0 0x8d900000 0 0x00100000>;
+			reg = <0x0 0x8d900000 0x0 0x00100000>;
 			label = "ramoops_mem";
 		};
 	};
@@ -36,7 +33,7 @@
 		android,ramoops-record-size = <0x40000>;
 		android,ramoops-annotate-size = <0x1000>;
 		android,ramoops-dump-oops = <0x1>;
+
 		linux,contiguous-region = <&ramoops_mem>;
 	};
-
 };
