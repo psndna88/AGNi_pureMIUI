@@ -31,6 +31,7 @@
 #include <linux/init.h>
 #include <linux/sched.h>
 #include <linux/syscalls.h>
+#include <linux/rtc.h>
 
 #include <asm/atomic.h>
 #include <asm/debug-monitors.h>
@@ -199,6 +200,7 @@ static int __die(const char *str, int err, struct thread_info *thread,
 
 	pr_emerg("Internal error: %s: %x [#%d]" S_PREEMPT S_SMP "\n",
 		 str, err, ++die_counter);
+	show_time(NULL);
 
 	/* trap and error numbers are mostly meaningless on ARM */
 	ret = notify_die(DIE_OOPS, str, regs, err, 0, SIGSEGV);

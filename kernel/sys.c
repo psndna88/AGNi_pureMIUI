@@ -406,6 +406,7 @@ void kernel_restart(char *cmd)
 	else
 		printk(KERN_EMERG "Restarting system with command '%s'.\n", cmd);
 	kmsg_dump(KMSG_DUMP_RESTART);
+	show_time("Restart:");
 	machine_restart(cmd);
 }
 EXPORT_SYMBOL_GPL(kernel_restart);
@@ -430,6 +431,7 @@ void kernel_halt(void)
 	syscore_shutdown();
 	printk(KERN_EMERG "System halted.\n");
 	kmsg_dump(KMSG_DUMP_HALT);
+	show_time("System halted:");
 	machine_halt();
 }
 
@@ -449,6 +451,7 @@ void kernel_power_off(void)
 	syscore_shutdown();
 	printk(KERN_EMERG "Power down.\n");
 	kmsg_dump(KMSG_DUMP_POWEROFF);
+	show_time("Power down:");
 	machine_power_off();
 }
 EXPORT_SYMBOL_GPL(kernel_power_off);
