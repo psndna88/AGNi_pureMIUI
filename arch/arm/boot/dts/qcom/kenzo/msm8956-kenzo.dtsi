@@ -13,6 +13,7 @@
 
 #include "msm8956-pinctrl-kenzo.dtsi"
 #include "msm8956-camera-sensor-kenzo.dtsi"
+#include "cyanogenmod-xiaomi-common.dtsi"
 #include "../msm8976-mdss-mtp.dtsi"
 /*#include "msm8976-wsa881x.dtsi"*/
 
