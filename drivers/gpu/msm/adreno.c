@@ -646,7 +646,6 @@ void adreno_cp_callback(struct adreno_device *adreno_dev, int bit)
 {
 	struct kgsl_device *device = &adreno_dev->dev;
 
-	queue_work(device->work_queue, &device->event_work);
 	adreno_dispatcher_schedule(device);
 }
 
