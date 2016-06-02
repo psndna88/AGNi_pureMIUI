@@ -4732,7 +4732,8 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		    dut->ap_tx_stbc || dut->ap_mu_txBF) {
 			fprintf(f, "vht_capab=%s%s%s%s%s\n",
 				dut->ap_sgi80 ? "[SHORT-GI-80]" : "",
-				dut->ap_txBF ? "[SU-BEAMFORMER]" : "",
+				dut->ap_txBF ?
+				"[SU-BEAMFORMER][SU-BEAMFORMEE]" : "",
 				dut->ap_ldpc ? "[RXLDPC]" : "",
 				dut->ap_tx_stbc ? "[TX-STBC-2BY1]" : "",
 				dut->ap_mu_txBF ? "[MU-BEAMFORMER]" : "");
