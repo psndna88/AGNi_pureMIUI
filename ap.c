@@ -5072,6 +5072,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	dut->ap_sig_rts = 0;
 	dut->ap_rx_amsdu = 0;
 	dut->ap_txBF = 0;
+	dut->ap_mu_txBF = 0;
 	dut->ap_chwidth = AP_AUTO;
 
 	dut->ap_rsn_preauth = 0;
