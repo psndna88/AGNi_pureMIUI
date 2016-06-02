@@ -2058,10 +2058,8 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 		owrt_ap_set_vap(dut, vap_id, "vhtsubfer", "1");
 	}
 
-	if (dut->ap_mu_txBF) {
-		owrt_ap_set_vap(dut, vap_id, "vhtmubfee", "1");
+	if (dut->ap_mu_txBF)
 		owrt_ap_set_vap(dut, vap_id, "vhtmubfer", "1");
-	}
 
 	if (dut->ap_tx_stbc) {
 		/* STBC and beamforming are mutually exclusive features */
