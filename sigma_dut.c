@@ -845,7 +845,7 @@ int main(int argc, char *argv[])
 			break;
 		case 'T':
 			sigma_dut.throughput_pktsize = atoi(optarg);
-			if (sigma_dut.throughput_pktsize <= 0) {
+			if (sigma_dut.throughput_pktsize == 0) {
 				printf("Invalid -T value\n");
 				exit(0);
 			}

@@ -138,8 +138,8 @@ static int cmd_traffic_agent_config(struct sigma_dut *dut,
 	    (s->profile == SIGMA_PROFILE_FILE_TRANSFER ||
 	     s->profile == SIGMA_PROFILE_IPTV ||
 	     s->profile == SIGMA_PROFILE_UAPSD)) {
-		sigma_dut_print(dut, DUT_MSG_INFO, "Traffic agent: Override "
-				"throughput test payload size %d -> %d",
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Traffic agent: Override throughput test payload size %u -> %u",
 				s->payload_size, dut->throughput_pktsize);
 		s->payload_size = dut->throughput_pktsize;
 	}

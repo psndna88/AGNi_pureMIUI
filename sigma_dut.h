@@ -150,7 +150,7 @@ struct sigma_stream {
 	int src_port;
 	int frame_rate;
 	int duration;
-	int payload_size;
+	unsigned int payload_size;
 	int start_delay;
 	int max_cnt;
 	enum sigma_traffic_class {
@@ -451,8 +451,8 @@ struct sigma_dut {
 	pthread_t thr;
 #endif /* CONFIG_TRAFFIC_AGENT */
 
-	int throughput_pktsize; /* If non-zero, override pktsize for throughput
-				 * tests */
+	unsigned int throughput_pktsize; /* If non-zero, override pktsize for
+					  * throughput tests */
 	int no_timestamps;
 
 	const char *sniffer_ifname;
