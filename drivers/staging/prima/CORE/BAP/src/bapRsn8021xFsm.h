@@ -151,7 +151,7 @@ typedef struct sAagSsidEntry tAagSsidEntry;
 typedef enum
 {
     //Internal to RSN
-    //This event is triggered by RSNï¿½s timers
+    //This event is triggered by RSN’s timers
     RSN_FSM_TIMER_EXPIRED,  
     //BAP use this event to inform auth/supp to start processing
     //authentication. When BAP send this event to RSN, it is presumed 

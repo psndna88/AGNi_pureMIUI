@@ -168,21 +168,21 @@ typedef void ( *wpalPacketLowPacketCB )( wpt_packet *pPacket, void *usrData );
 
 
 /*---------------------------------------------------------------------------
-    wpalPacketInit ï¿½ Initialize all wpt_packet related objects. Allocate memory for wpt_packet. 
+    wpalPacketInit – Initialize all wpt_packet related objects. Allocate memory for wpt_packet. 
     Allocate memory for TX management frames and RX frames.
     For our legacy UMAC, it is not needed because vos_packet contains wpt_packet.
     Param: 
-        pPalContext ï¿½ A context PAL uses??
+        pPalContext – A context PAL uses??
     Return:
         eWLAN_PAL_STATUS_SUCCESS -- success
 ---------------------------------------------------------------------------*/
 wpt_status wpalPacketInit(void *pPalContext);
 
 /*---------------------------------------------------------------------------
-    wpalPacketClose ï¿½ Free all allocated resource by wpalPacketInit.
+    wpalPacketClose – Free all allocated resource by wpalPacketInit.
     For our legacy UMAC, it is not needed because vos_packet contains pal_packet.
     Param: 
-        pPalContext ï¿½ A context PAL uses??
+        pPalContext – A context PAL uses??
     Return:
         eWLAN_PAL_STATUS_SUCCESS -- success
 ---------------------------------------------------------------------------*/
@@ -190,10 +190,10 @@ wpt_status wpalPacketClose(void *pPalContext);
 
 
 /*---------------------------------------------------------------------------
-    wpalPacketAlloc ï¿½ Allocate a wpt_packet from PAL.
+    wpalPacketAlloc – Allocate a wpt_packet from PAL.
     Param: 
-        pPalContext ï¿½ A context PAL uses??
-        pktType ï¿½ specify the type of wpt_packet to allocate
+        pPalContext – A context PAL uses??
+        pktType – specify the type of wpt_packet to allocate
         nPktSize - specify the maximum size of the packet buffer.
     Return:
         A pointer to the wpt_packet. NULL means fail.
@@ -202,10 +202,10 @@ wpt_packet * wpalPacketAlloc(wpt_packet_type pktType, wpt_uint32 nPktSize,
                              wpalPacketLowPacketCB rxLowCB, void *usrdata);
 
 /*---------------------------------------------------------------------------
-    wpalPacketFree ï¿½ Free a wpt_packet chain for one particular type.
+    wpalPacketFree – Free a wpt_packet chain for one particular type.
     Packet type is carried in wpt_packet structure.
     Param: 
-        pPalContext ï¿½ A context PAL uses??
+        pPalContext – A context PAL uses??
         pPkt - pointer to a packet to be freed.
     Return:
         eWLAN_PAL_STATUS_SUCCESS - success
@@ -213,9 +213,9 @@ wpt_packet * wpalPacketAlloc(wpt_packet_type pktType, wpt_uint32 nPktSize,
 wpt_status wpalPacketFree(wpt_packet *pPkt);
 
 /*---------------------------------------------------------------------------
-    wpalPacketGetLength ï¿½ Get number of bytes in a wpt_packet.
+    wpalPacketGetLength – Get number of bytes in a wpt_packet.
     Param: 
-        pPalContext ï¿½ PAL context returned from PAL open
+        pPalContext – PAL context returned from PAL open
         pPkt - pointer to a packet to be freed.
     Return:
         Length of the data include layer-2 headers. For example, if the frame is 802.3, 
@@ -224,32 +224,32 @@ wpt_status wpalPacketFree(wpt_packet *pPkt);
 wpt_uint32 wpalPacketGetLength(wpt_packet *pPkt);
 
 /*---------------------------------------------------------------------------
-    wpalPacketRawTrimHead ï¿½ Move the starting offset and reduce packet length.
+    wpalPacketRawTrimHead – Move the starting offset and reduce packet length.
           The function can only be used with raw packets,
           whose buffer is one piece and allocated by WLAN driver. 
     Param: 
         pPkt - pointer to a wpt_packet.
-        size ï¿½ number of bytes to take off the head.
+        size – number of bytes to take off the head.
     Return:
         eWPAL_STATUS_SUCCESS - success. Fail otherwise.
 ---------------------------------------------------------------------------*/
 wpt_status wpalPacketRawTrimHead(wpt_packet *pPkt, wpt_uint32 size);
 
 /*---------------------------------------------------------------------------
-    wpalPacketRawTrimTail ï¿½ reduce the length of the packet. The function can 
+    wpalPacketRawTrimTail – reduce the length of the packet. The function can 
           only be used with raw packets, whose buffer is one piece and 
           allocated by WLAN driver. This also reduce the length of the packet.
     Param: 
         pPkt - pointer to a wpt_packet.
-        size ï¿½ number of bytes to take of the packet length
+        size – number of bytes to take of the packet length
     Return:
-        eWLAN_PAL_STATUS_SUCCESS ï¿½ success. Otherwise fail.
+        eWLAN_PAL_STATUS_SUCCESS – success. Otherwise fail.
 ---------------------------------------------------------------------------*/
 wpt_status wpalPacketRawTrimTail(wpt_packet *pPkt, wpt_uint32 size);
 
 
 /*---------------------------------------------------------------------------
-    wpalPacketGetRawBuf ï¿½ Return the starting buffer's virtual address for the RAW flat buffer
+    wpalPacketGetRawBuf – Return the starting buffer's virtual address for the RAW flat buffer
     It is inline in hope of faster implementation for certain platform.
     Param: 
         pPkt - pointer to a wpt_packet.
@@ -261,7 +261,7 @@ extern wpt_uint8 *wpalPacketGetRawBuf(wpt_packet *pPkt);
 
 
 /*---------------------------------------------------------------------------
-    wpalPacketSetRxLength ï¿½ Set the valid data length on a RX packet. This function must 
+    wpalPacketSetRxLength – Set the valid data length on a RX packet. This function must 
     be called once per RX packet per receiving. It indicates the available data length from
     the start of the buffer.
     Param: 
@@ -274,22 +274,22 @@ extern wpt_status wpalPacketSetRxLength(wpt_packet *pPkt, wpt_uint32 len);
 
 
 /*---------------------------------------------------------------------------
-    wpalIteratorInit ï¿½ Initialize an interator by updating pCur to first item.
+    wpalIteratorInit – Initialize an interator by updating pCur to first item.
     Param: 
-        pIter ï¿½ pointer to a caller allocated wpt_iterator
-        pPacket ï¿½ pointer to a wpt_packet
+        pIter – pointer to a caller allocated wpt_iterator
+        pPacket – pointer to a wpt_packet
     Return:
         eWLAN_PAL_STATUS_SUCCESS - success
 ---------------------------------------------------------------------------*/
 wpt_status wpalIteratorInit(wpt_iterator *pIter, wpt_packet *pPacket);
 
 /*---------------------------------------------------------------------------
-    wpalIteratorNext ï¿½ Get the address for the next item
+    wpalIteratorNext – Get the address for the next item
     Param: 
-        pIter ï¿½ pointer to a caller allocated wpt_iterator
-        pPacket ï¿½ pointer to a wpt_packet
-        ppAddr ï¿½ Caller allocated pointer to return the address of the item. For DMA-able devices, this is the physical address of the item.
-        pLen ï¿½ To return the number of bytes in the item.
+        pIter – pointer to a caller allocated wpt_iterator
+        pPacket – pointer to a wpt_packet
+        ppAddr – Caller allocated pointer to return the address of the item. For DMA-able devices, this is the physical address of the item.
+        pLen – To return the number of bytes in the item.
     Return:
         eWLAN_PAL_STATUS_SUCCESS - success
 ---------------------------------------------------------------------------*/
@@ -297,12 +297,12 @@ wpt_status wpalIteratorNext(wpt_iterator *pIter, wpt_packet *pPacket, void **ppA
 
 
 /*---------------------------------------------------------------------------
-    wpalLockPacketForTransfer ï¿½ Packet must be locked before transfer can begin,
+    wpalLockPacketForTransfer – Packet must be locked before transfer can begin,
     the lock will ensure that the DMA engine has access to the data packet
     in a cache coherent manner
  
     Param: 
-        pPacket ï¿½ pointer to a wpt_packet
+        pPacket – pointer to a wpt_packet
  
     Return:
         eWLAN_PAL_STATUS_SUCCESS - success
@@ -310,10 +310,10 @@ wpt_status wpalIteratorNext(wpt_iterator *pIter, wpt_packet *pPacket, void **ppA
 wpt_status wpalLockPacketForTransfer( wpt_packet *pPacket);
 
 /*---------------------------------------------------------------------------
-    wpalUnlockPacket ï¿½ Once the transfer has been completed the packet should
+    wpalUnlockPacket – Once the transfer has been completed the packet should
                        be unlocked so that normal operation may resume
     Param: 
-        pPacket ï¿½ pointer to a wpt_packet
+        pPacket – pointer to a wpt_packet
  
     Return:
         eWLAN_PAL_STATUS_SUCCESS - success
@@ -321,10 +321,10 @@ wpt_status wpalLockPacketForTransfer( wpt_packet *pPacket);
 wpt_status wpalUnlockPacket( wpt_packet *pPacket);
 
 /*---------------------------------------------------------------------------
-    wpalPacketGetFragCount ï¿½ Get count of memory chains (fragments)
+    wpalPacketGetFragCount – Get count of memory chains (fragments)
                        in a packet
     Param: 
-        pPacket ï¿½ pointer to a wpt_packet
+        pPacket – pointer to a wpt_packet
  
     Return:
         memory fragment count in a packet
@@ -332,9 +332,9 @@ wpt_status wpalUnlockPacket( wpt_packet *pPacket);
 wpt_int32 wpalPacketGetFragCount(wpt_packet *pPkt);
 
 /*---------------------------------------------------------------------------
-    wpalIsPacketLocked ï¿½  Check whether the Packet is locked for DMA.
+    wpalIsPacketLocked –  Check whether the Packet is locked for DMA.
     Param: 
-        pPacket ï¿½ pointer to a wpt_packet
+        pPacket – pointer to a wpt_packet
  
     Return:
         eWLAN_PAL_STATUS_SUCCESS
@@ -373,7 +373,7 @@ wpt_status wpalGetNumRxPacketAllocFailures(wpt_uint32 *numRxResource);
 wpt_status wpalGetNumRxFreePacket(wpt_uint32 *numRxResource);
 
 /*---------------------------------------------------------------------------
-    wpalPacketStallUpdateInfo ï¿½ Update each channel information when stall
+    wpalPacketStallUpdateInfo – Update each channel information when stall
        detected, also power state and free resource count
 
     Param:
@@ -396,7 +396,7 @@ void wpalPacketStallUpdateInfo
 
 #ifdef FEATURE_WLAN_DIAG_SUPPORT
 /*---------------------------------------------------------------------------
-    wpalPacketStallDumpLog ï¿½ Trigger to send log packet to DIAG
+    wpalPacketStallDumpLog – Trigger to send log packet to DIAG
        Updated transport system information will be sent to DIAG
 
     Param:
@@ -450,9 +450,9 @@ void wpalFwLogPktSerialize
 );
 
 /*---------------------------------------------------------------------------
-    wpalGetOSPktHead ï¿½ Get the head of OS spacific socket buffer
+    wpalGetOSPktHead – Get the head of OS spacific socket buffer
     Param:
-        pPacket ï¿½ pointer to a wpt_packet
+        pPacket – pointer to a wpt_packet
 
     Return:
         void* - success
@@ -460,9 +460,9 @@ void wpalFwLogPktSerialize
 void* wpalGetOSPktHead( wpt_packet *pPacket);
 
 /*---------------------------------------------------------------------------
-     wpalGetOSPktend ï¿½ Get end pointer of OS spacific socket buffer
+     wpalGetOSPktend – Get end pointer of OS spacific socket buffer
     Param:
-        pPacket ï¿½ pointer to a wpt_packet
+        pPacket – pointer to a wpt_packet
 
     Return:
         void*  - success
@@ -470,9 +470,9 @@ void* wpalGetOSPktHead( wpt_packet *pPacket);
 void* wpalGetOSPktend( wpt_packet *pPacket);
 
 /*---------------------------------------------------------------------------
-    wpalRecoverTail ï¿½ recover currupted skb tail.
+    wpalRecoverTail – recover currupted skb tail.
     Param:
-        pPacket ï¿½ pointer to a wpt_packet
+        pPacket – pointer to a wpt_packet
 
     Return:
         void  - success
