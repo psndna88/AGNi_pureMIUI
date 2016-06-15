@@ -554,6 +554,11 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 			return -1;
 		strcpy(token, val);
 		result = strtok_r(token, ";", &saveptr);
+		if (!result) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"VHT NSS not specified");
+			return 0;
+		}
 		nss = atoi(result);
 		result = strtok_r(NULL, ";", &saveptr);
 		if (result == NULL) {
@@ -563,6 +568,11 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 		result = strtok_r(result, "-", &saveptr);
 		result = strtok_r(NULL, "-", &saveptr);
+		if (!result) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"VHT MCS not specified");
+			return 0;
+		}
 		mcs = atoi(result);
 		switch (nss) {
 		case 1:
@@ -6600,6 +6610,11 @@ static int ath_vht_nss_mcs(struct sigma_dut *dut, const char *ifname,
 	if (!token)
 		return -1;
 	result = strtok_r(token, ";", &saveptr);
+	if (!result) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"VHT NSS not specified");
+		goto end;
+	}
 	if (strcasecmp(result, "def") != 0) {
 		nss = atoi(result);
 
@@ -6622,6 +6637,11 @@ static int ath_vht_nss_mcs(struct sigma_dut *dut, const char *ifname,
 	}
 
 	result = strtok_r(NULL, ";", &saveptr);
+	if (!result) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"VHT MCS not specified");
+		goto end;
+	}
 	if (strcasecmp(result, "def") == 0) {
 		if (dut->device_type == AP_testbed && dut->ap_sgi80 == 1) {
 			snprintf(buf, sizeof(buf), "iwpriv %s vhtmcs 7",
@@ -6647,6 +6667,7 @@ static int ath_vht_nss_mcs(struct sigma_dut *dut, const char *ifname,
 		}
 	}
 
+end:
 	free(token);
 	return 0;
 }

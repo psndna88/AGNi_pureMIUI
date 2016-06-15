@@ -6501,6 +6501,11 @@ static int ath_sta_set_rfeature_vht(const char *intf, struct sigma_dut *dut,
 		if (!token)
 			return 0;
 		result = strtok_r(token, ";", &saveptr);
+		if (!result) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+				"VHT NSS not specified");
+			goto failed;
+		}
 		if (strcasecmp(result, "def") != 0) {
 			nss = atoi(result);
 			if (nss == 4)
@@ -6515,6 +6520,11 @@ static int ath_sta_set_rfeature_vht(const char *intf, struct sigma_dut *dut,
 		}
 
 		result = strtok_r(NULL, ";", &saveptr);
+		if (!result) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+				"VHT MCS not specified");
+			goto failed;
+		}
 		if (strcasecmp(result, "def") == 0) {
 			snprintf(buf, sizeof(buf), "iwpriv %s set11NRates 0",
 				 intf);
