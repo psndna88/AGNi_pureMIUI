@@ -932,11 +932,86 @@ static int ath_ap_send_addba_req(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int ath10k_debug_enable_addba_req(struct sigma_dut *dut, int tid,
+					 const char *sta_mac,
+					 const char *dir_path)
+{
+	DIR *dir;
+	struct dirent *entry;
+	char buf[128], path[128];
+	int ret = 0;
+
+	dir = opendir(dir_path);
+	if (!dir)
+		return 0;
+
+	while ((entry = readdir(dir))) {
+		ret = 1;
+
+		if (strcmp(entry->d_name, ".") == 0 ||
+		    strcmp(entry->d_name, "..") == 0)
+			continue;
+
+		snprintf(path, sizeof(path) - 1, "%s/%s",
+			 dir_path, entry->d_name);
+		path[sizeof(path) - 1] = 0;
+
+		if (strcmp(entry->d_name, sta_mac) == 0) {
+			snprintf(buf, sizeof(buf), "echo 1 > %s/aggr_mode",
+				 path);
+			if (system(buf) != 0) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"Failed to set aggr mode for ath10k");
+			}
+
+			snprintf(buf, sizeof(buf), "echo %d 32 > %s/addba",
+				 tid, path);
+			if (system(buf) != 0) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"Failed to set addbareq for ath10k");
+			}
+
+			break;
+		}
+
+		/* Recursively search subdirectories */
+		ath10k_debug_enable_addba_req(dut, tid, sta_mac, path);
+	}
+
+	closedir(dir);
+
+	return ret;
+}
+
+
+static int ath10k_ap_send_addba_req(struct sigma_dut *dut,
+				    struct sigma_cmd *cmd)
+{
+	const char *val;
+	int tid = 0;
+
+	val = get_param(cmd, "TID");
+	if (val)
+		tid = atoi(val);
+
+	val = get_param(cmd, "sta_mac_address");
+	if (!val) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to parse station MAC address");
+		return 0;
+	}
+
+	return ath10k_debug_enable_addba_req(dut, tid, val,
+					     "/sys/kernel/debug/ieee80211");
+}
+
+
 static int cmd_ap_send_addba_req(struct sigma_dut *dut, struct sigma_conn *conn,
 				 struct sigma_cmd *cmd)
 {
 	/* const char *name = get_param(cmd, "NAME"); */
 	/* const char *ifname = get_param(cmd, "INTERFACE"); */
+	struct stat s;
 
 	switch (get_driver_type()) {
 	case DRIVER_ATHEROS:
@@ -950,6 +1025,10 @@ static int cmd_ap_send_addba_req(struct sigma_dut *dut, struct sigma_conn *conn,
 				  "errorCode,ap_send_addba_req not supported with this driver");
 			return 0;
 		}
+	case DRIVER_MAC80211:
+		if (stat("/sys/module/ath10k_core", &s) == 0)
+			return ath10k_ap_send_addba_req(dut, cmd);
+		/* fall through */
 	default:
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,ap_send_addba_req not supported with this driver");
