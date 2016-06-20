@@ -747,53 +747,6 @@ exit:
 	return is_idle;
 }
 
-static int mdss_mdp_is_pipe_idle(struct mdss_mdp_pipe *pipe,
-	bool ignore_force_on)
-{
-	u32 reg_val;
-	u32 vbif_idle_mask, forced_on_mask, clk_status_idle_mask;
-	bool is_idle = false, is_forced_on;
-	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
-
-	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON, false);
-
-	forced_on_mask = BIT(pipe->clk_ctrl.bit_off + CLK_FORCE_ON_OFFSET);
-	reg_val = readl_relaxed(mdata->mdp_base + pipe->clk_ctrl.reg_off);
-	is_forced_on = (reg_val & forced_on_mask) ? true : false;
-
-	pr_debug("pipe#:%d clk_ctrl: 0x%x forced_on_mask: 0x%x\n", pipe->num,
-		reg_val, forced_on_mask);
-	/* if forced on then no need to check status */
-	if (!is_forced_on) {
-		clk_status_idle_mask =
-			BIT(pipe->clk_status.bit_off + CLK_STATUS_OFFSET);
-		reg_val = readl_relaxed(mdata->mdp_base +
-			pipe->clk_status.reg_off);
-
-		if (reg_val & clk_status_idle_mask)
-			is_idle = false;
-
-		pr_debug("pipe#:%d clk_status:0x%x clk_status_idle_mask:0x%x\n",
-			pipe->num, reg_val, clk_status_idle_mask);
-	}
-
-	if (!ignore_force_on && (is_forced_on || !is_idle))
-		goto exit;
-
-	vbif_idle_mask = BIT(pipe->xin_id + 16);
-	reg_val = readl_relaxed(mdata->vbif_base + MMSS_VBIF_XIN_HALT_CTRL1);
-
-	if (reg_val & vbif_idle_mask)
-		is_idle = true;
-
-	pr_debug("pipe#:%d XIN_HALT_CTRL1: 0x%x\n", pipe->num, reg_val);
-
-exit:
-	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF, false);
-
-	return is_idle;
-}
-
 /**
  * mdss_mdp_pipe_fetch_halt() - Halt VBIF client corresponding to specified pipe
  * @pipe: pointer to the pipe data structure which needs to be halted.

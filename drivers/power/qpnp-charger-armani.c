@@ -5771,18 +5771,18 @@ static struct spmi_driver qpnp_charger_driver = {
  * qpnp_chg_init() - register spmi driver for qpnp-chg
  */
 int __init
-qpnp_chg_init(void)
+qpnp_chg_init_armani(void)
 {
 	return spmi_driver_register(&qpnp_charger_driver);
 }
-module_init(qpnp_chg_init);
+module_init(qpnp_chg_init_armani);
 
 static void __exit
-qpnp_chg_exit(void)
+qpnp_chg_exit_armani(void)
 {
 	spmi_driver_unregister(&qpnp_charger_driver);
 }
-module_exit(qpnp_chg_exit);
+module_exit(qpnp_chg_exit_armani);
 
 
 MODULE_DESCRIPTION("QPNP charger driver");
