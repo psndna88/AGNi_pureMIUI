@@ -5154,6 +5154,8 @@ static struct cgroup_subsys_state *css_create(struct cgroup *cgrp,
 	lockdep_assert_held(&cgroup_mutex);
 
 	css = ss->css_alloc(parent_css);
+	if (!css)
+		css = ERR_PTR(-ENOMEM);
 	if (IS_ERR(css))
 		return css;
 
