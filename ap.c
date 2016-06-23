@@ -5313,6 +5313,10 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 			ath_reset_vht_defaults(dut);
 	}
 
+	if (dut->program == PROGRAM_LOC) {
+		dut->ap_msnt_type = 0;
+	}
+
 	if (kill_process(dut, "(hostapd)", 1, SIGTERM) == 0 ||
 	    system("killall hostapd") == 0) {
 		int i;
@@ -5803,6 +5807,54 @@ static int ath_ap_send_frame_vht(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int ath_ap_send_frame_loc(struct sigma_dut *dut, struct sigma_conn *conn,
+				 struct sigma_cmd *cmd)
+{
+	const char *val;
+	FILE *f;
+
+	val = get_param(cmd, "MsntType");
+	if (val) {
+		if (dut->ap_msnt_type == 0)
+			dut->ap_msnt_type = atoi(val);
+
+		if (dut->ap_msnt_type != 5 && dut->ap_msnt_type != 2) {
+			dut->ap_msnt_type = atoi(val);
+			if (dut->ap_msnt_type == 1) {
+				f = fopen("/tmp/ftmrr.txt", "a");
+				if (!f) {
+					sigma_dut_print(dut, DUT_MSG_ERROR,
+							"Failed to open /tmp/ftmrr.txt");
+					return -1;
+				}
+
+				fprintf(f, "sta_mac = %s\n", cmd->values[3]);
+				fprintf(f, "meas_type = 0x10\nrand_inter = 0x0\nmin_ap_count = 0x%s\ndialogtoken = 0x1\nnum_repetitions = 0x0\nmeas_token = 0xf\nmeas_req_mode = 0x00\n",
+					cmd->values[7]);
+				fclose(f);
+				dut->ap_msnt_type = 5;
+				run_system(dut, "wpc -f /tmp/ftmrr.txt");
+			}
+		} else if (dut->ap_msnt_type == 5) {
+			run_system(dut, "wpc -f /tmp/ftmrr.txt");
+		} else if (dut->ap_msnt_type == 2) {
+			f = fopen("/tmp/wru.txt", "w");
+			if (!f) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"Failed to open /tmp/wru.txt");
+				return -1;
+			}
+
+			fprintf(f, "sta_mac = %s\n", cmd->values[3]);
+			fprintf(f, "meas_type = 0x08\ndialogtoken = 0x1\nnum_repetitions = 0x0\nmeas_token = 0x1\nmeas_req_mode = 0x00\nloc_subject = 0x01\n");
+			fclose(f);
+			run_system(dut, "wpc -w /tmp/wru.txt");
+		}
+	}
+	return 1;
+}
+
+
 static int ap_send_frame_vht(struct sigma_dut *dut, struct sigma_conn *conn,
 			     struct sigma_cmd *cmd)
 {
@@ -5827,6 +5879,29 @@ static int ap_send_frame_vht(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int ap_send_frame_loc(struct sigma_dut *dut, struct sigma_conn *conn,
+			     struct sigma_cmd *cmd)
+{
+	switch (get_driver_type()) {
+	case DRIVER_ATHEROS:
+		return ath_ap_send_frame_loc(dut, conn, cmd);
+	case DRIVER_OPENWRT:
+		switch (get_openwrt_driver_type()) {
+		case OPENWRT_DRIVER_ATHEROS:
+			return ath_ap_send_frame_loc(dut, conn, cmd);
+		default:
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported ap_send_frame_loc with the current openwrt driver");
+			return 0;
+		}
+	default:
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Unsupported ap_send_frame_loc with the current driver");
+		return 0;
+	}
+}
+
+
 int cmd_ap_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 		      struct sigma_cmd *cmd)
 {
@@ -5844,6 +5919,8 @@ int cmd_ap_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 			return ap_send_frame_hs2(dut, conn, cmd);
 		if (strcasecmp(val, "VHT") == 0)
 			return ap_send_frame_vht(dut, conn, cmd);
+		if (strcasecmp(val, "LOC") == 0)
+			return ap_send_frame_loc(dut, conn, cmd);
 	}
 
 	val = get_param(cmd, "PMFFrameType");

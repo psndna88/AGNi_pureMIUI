@@ -441,6 +441,8 @@ struct sigma_dut {
 	} ap_dfs_mode;
 	int ap_ndpa_frame;
 
+	int ap_msnt_type;
+
 	const char *hostapd_debug_log;
 
 #ifdef CONFIG_TRAFFIC_AGENT
