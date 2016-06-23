@@ -62,6 +62,7 @@ static int ath_ap_start_hostapd(struct sigma_dut *dut);
 static void ath_ap_set_params(struct sigma_dut *dut);
 static int kill_process(struct sigma_dut *dut, char *proc_name,
 			unsigned char is_proc_instance_one, int sig);
+static int owrt_ap_append_hostapd_conf(struct sigma_dut *dut);
 
 
 static int cmd_ap_ca_version(struct sigma_dut *dut, struct sigma_conn *conn,
@@ -889,6 +890,13 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 		ath_set_lci_config(dut, val, cmd);
 	}
 
+	val = get_param(cmd, "InfoZ");
+	if (val) {
+		if (strlen(val) > sizeof(dut->ap_infoz) - 1)
+			return -1;
+		snprintf(dut->ap_infoz, sizeof(dut->ap_infoz), "%s", val);
+	}
+
 	val = get_param(cmd, "LocCivicAddr");
 	if (val) {
 		if (strlen(val) > sizeof(dut->ap_val_lcr) - 1)
@@ -920,6 +928,19 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 		if (dut->ap_opchannel < 3) {
 			dut->ap_val_opchannel[dut->ap_opchannel] = atoi(val);
 			dut->ap_opchannel++;
+		}
+	}
+
+	val = get_param(cmd, "URI-FQDNdescriptor");
+	if (val) {
+		if (strcasecmp(val, "HELD") == 0) {
+			dut->ap_fqdn_held = 1;
+		} else if (strcasecmp(val, "SUPL") == 0) {
+			dut->ap_fqdn_supl = 1;
+		} else {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Unsupported URI-FQDNdescriptor");
+			return 0;
 		}
 	}
 
@@ -2258,6 +2279,9 @@ static int owrt_ap_post_config_commit(struct sigma_dut *dut,
 			return 0;
 		}
 	}
+
+	if (dut->program == PROGRAM_LOC && dut->ap_interworking)
+		owrt_ap_append_hostapd_conf(dut);
 
 	if (get_openwrt_driver_type() == OPENWRT_DRIVER_ATHEROS)
 		ath_ap_set_params(dut);
@@ -4476,6 +4500,97 @@ static int cmd_ath_ap_config_commit(struct sigma_dut *dut,
 }
 
 
+static int owrt_ap_append_hostapd_conf(struct sigma_dut *dut)
+{
+	FILE *f;
+
+	if (kill_process(dut, "(hostapd)", 1, SIGTERM) == 0 ||
+	    system("killall hostapd") == 0) {
+		int i;
+		/* Wait some time to allow hostapd to complete cleanup before
+		 * starting a new process */
+		for (i = 0; i < 10; i++) {
+			usleep(500000);
+			if (system("pidof hostapd") != 0)
+				break;
+		}
+	}
+
+	f = fopen("/var/run/hostapd-ath0.conf", "a");
+	if (f == NULL)
+		return -2;
+
+	if (dut->ap_interworking && append_hostapd_conf_interworking(dut, f)) {
+		fclose(f);
+		return -2;
+	}
+
+	if (dut->ap_lci == 1 && strlen(dut->ap2_ssid) > 0) {
+		unsigned char addr[6];
+		unsigned char addr2[6];
+		struct ifreq ifr;
+		char *ifname;
+		int s;
+
+		s = socket(AF_INET, SOCK_DGRAM, 0);
+		if (s < 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to open socket");
+			fclose(f);
+			return -1;
+		}
+
+		memset(&ifr, 0, sizeof(ifr));
+		ifname = "ath0";
+		strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+		if (ioctl(s, SIOCGIFHWADDR, &ifr) < 0) {
+			perror("ioctl");
+			close(s);
+			fclose(f);
+			return -1;
+		}
+		memcpy(addr, ifr.ifr_hwaddr.sa_data, 6);
+
+		memset(&ifr, 0, sizeof(ifr));
+		ifname = "ath01";
+		strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+		if (ioctl(s, SIOCGIFHWADDR, &ifr) < 0) {
+			perror("ioctl");
+			close(s);
+			fclose(f);
+			return -1;
+		}
+		close(s);
+		memcpy(addr2, ifr.ifr_hwaddr.sa_data, 6);
+
+		fprintf(f,
+			"anqp_elem=265:0010%s%s060101070d00%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n",
+			dut->ap_val_lci, dut->ap_infoz,
+			addr[0], addr[1], addr[2],
+			addr[3], addr[4], addr[5],
+			addr2[0], addr2[1], addr2[2],
+			addr2[3], addr2[4], addr2[5]);
+	} else if (dut->ap_lci == 1) {
+		fprintf(f, "anqp_elem=265:0010%s%s060101\n",
+			dut->ap_val_lci, dut->ap_infoz);
+	}
+
+	if (dut->ap_lcr == 1)
+		fprintf(f, "anqp_elem=266:0000b2555302ae%s\n",
+			dut->ap_val_lcr);
+
+	if (dut->ap_fqdn_held == 1 && dut->ap_fqdn_supl == 1)
+		fprintf(f,
+			"anqp_elem=267:00110168656c642e6578616d706c652e636f6d0011027375706c2e6578616d706c652e636f6d");
+
+	fclose(f);
+	run_system(dut,
+		   "hostapd -P /var/run/wifi-ath0.pid -B /var/run/hostapd-ath0.conf -e /var/run/entropy-ath0.bin");
+
+	return 0;
+}
+
+
 static int set_ebtables_proxy_arp(struct sigma_dut *dut, const char *chain,
 				  const char *ifname)
 {
@@ -5534,12 +5649,15 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_rtt = 1;
 		dut->ap_lci = 0;
 		dut->ap_val_lci[0] = '\0';
+		dut->ap_infoz[0] = '\0';
 		dut->ap_lcr = 0;
 		dut->ap_val_lcr[0] = '\0';
 		dut->ap_neighap = 0;
 		dut->ap_opchannel = 0;
 		dut->ap_scan = 0;
 		dut->ap2_ssid[0] = '\0';
+		dut->ap_fqdn_held = 0;
+		dut->ap_fqdn_supl = 0;
 		dut->ap_interworking = 0;
 		dut->ap_gas_cb_delay = 0;
 		dut->ap_msnt_type = 0;

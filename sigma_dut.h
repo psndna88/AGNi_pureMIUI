@@ -443,6 +443,7 @@ struct sigma_dut {
 
 	int ap_lci;
 	char ap_val_lci[33];
+	char ap_infoz[17];
 	int ap_lcr;
 	char ap_val_lcr[400];
 	int ap_rrm;
@@ -452,6 +453,8 @@ struct sigma_dut {
 	int ap_opchannel; /* number of oper channels */
 	int ap_val_opchannel[3];
 	int ap_scan;
+	int ap_fqdn_held;
+	int ap_fqdn_supl;
 	int ap_msnt_type;
 
 	const char *hostapd_debug_log;
