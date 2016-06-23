@@ -276,6 +276,28 @@ static int run_hostapd_cli(struct sigma_dut *dut, char *buf)
 }
 
 
+static int ath_set_lci_config(struct sigma_dut *dut, const char *val,
+			      struct sigma_cmd *cmd)
+{
+	FILE *f;
+	int i;
+
+	f = fopen("/tmp/lci_cfg.txt", "w");
+	if (!f) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to open /tmp/lci_cfg.txt");
+		return -1;
+	}
+
+	for (i = 2; i < cmd->count; i++)
+		fprintf(f, "%s = %s \n", cmd->params[i], cmd->values[i]);
+	fprintf(f, "\n");
+	fclose(f);
+
+	return 0;
+}
+
+
 static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 			       struct sigma_cmd *cmd)
 {
@@ -857,6 +879,49 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 	val = get_param(cmd, "GAS_CB_DELAY");
 	if (val)
 		dut->ap_gas_cb_delay = atoi(val);
+
+	val = get_param(cmd, "LCI");
+	if (val) {
+		if (strlen(val) > sizeof(dut->ap_val_lci) - 1)
+			return -1;
+		dut->ap_lci = 1;
+		snprintf(dut->ap_val_lci, sizeof(dut->ap_val_lci), "%s", val);
+		ath_set_lci_config(dut, val, cmd);
+	}
+
+	val = get_param(cmd, "LocCivicAddr");
+	if (val) {
+		if (strlen(val) > sizeof(dut->ap_val_lcr) - 1)
+			return -1;
+		dut->ap_lcr = 1;
+		snprintf(dut->ap_val_lcr, sizeof(dut->ap_val_lcr), "%s", val);
+		if (dut->ap_lci == 0)
+			ath_set_lci_config(dut, val, cmd);
+	}
+
+	val = get_param(cmd, "NeighAPBSSID");
+	if (val) {
+		if (dut->ap_neighap < 3) {
+			if (parse_mac_address(
+				    dut, val,
+				    dut->ap_val_neighap[dut->ap_neighap]) < 0) {
+				send_resp(dut, conn, SIGMA_INVALID,
+					  "Failed to parse MAC address");
+				return 0;
+			}
+			dut->ap_neighap++;
+			if (dut->ap_lci == 1)
+				dut->ap_scan = 1;
+		}
+	}
+
+	val = get_param(cmd, "OpChannel");
+	if (val) {
+		if (dut->ap_opchannel < 3) {
+			dut->ap_val_opchannel[dut->ap_opchannel] = atoi(val);
+			dut->ap_opchannel++;
+		}
+	}
 
 	return 1;
 }
@@ -3472,7 +3537,7 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 	const char *basedev = "wifi1";
 	const char *ifname = dut->ap_is_dual ? "ath1" : "ath0";
 	int i;
-	char buf[100];
+	char buf[300];
 
 	if (dut->ap_countrycode[0]) {
 		snprintf(buf, sizeof(buf), "iwpriv %s setCountry %s",
@@ -3909,6 +3974,149 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"wifitool beeliner_fw_test 117 192 failed");
 		}
+	}
+
+	if (dut->ap_rtt == 1) {
+		snprintf(buf, sizeof(buf), "iwpriv %s enable_rtt 1", ifname);
+		run_system(dut, buf);
+	}
+
+	if (dut->ap_lci == 1) {
+		snprintf(buf, sizeof(buf), "iwpriv %s enable_lci 1", ifname);
+		run_system(dut, buf);
+	}
+
+	if (dut->ap_lcr == 1) {
+		snprintf(buf, sizeof(buf), "iwpriv %s enable_lcr 1", ifname);
+		run_system(dut, buf);
+	}
+
+	if (dut->ap_rrm == 1) {
+		snprintf(buf, sizeof(buf), "iwpriv %s rrm 1", ifname);
+		run_system(dut, buf);
+	}
+
+	if (dut->ap_lci == 1 || dut->ap_lcr == 1) {
+		run_system(dut, "wpc -l /tmp/lci_cfg.txt");
+	}
+
+	if (dut->ap_neighap >= 1 && dut->ap_lci == 0) {
+		FILE *f;
+
+		f = fopen("/tmp/nbr_report.txt", "w");
+		if (!f) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to open /tmp/nbr_report.txt");
+			return;
+		}
+
+		fprintf(f,
+			"ap_1 = 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x00 0x3c 0x00 0x00 0x80 0x%x 0x09 0x06 0x03 0x02 0x2a 0x00\n",
+			dut->ap_val_neighap[0][0], dut->ap_val_neighap[0][1],
+			dut->ap_val_neighap[0][2], dut->ap_val_neighap[0][3],
+			dut->ap_val_neighap[0][4], dut->ap_val_neighap[0][5],
+			dut->ap_val_opchannel[0]);
+		fclose(f);
+
+		f = fopen("/tmp/ftmrr.txt", "w");
+		if (!f) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to open /tmp/ftmrr.txt");
+			return;
+		}
+
+		fprintf(f,
+			"ap_1 = 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x00 0x3c 0x00 0x00 0x80 0x%x 0x09 0x06 0x03 0x02 0x2a 0x00\n",
+			dut->ap_val_neighap[0][0], dut->ap_val_neighap[0][1],
+			dut->ap_val_neighap[0][2], dut->ap_val_neighap[0][3],
+			dut->ap_val_neighap[0][4], dut->ap_val_neighap[0][5],
+			dut->ap_val_opchannel[0]);
+		fclose(f);
+	}
+
+	if (dut->ap_neighap >= 2 && dut->ap_lci == 0) {
+		FILE *f;
+
+		f = fopen("/tmp/nbr_report.txt", "a");
+		if (!f) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to open /tmp/nbr_report.txt");
+			return;
+		}
+		fprintf(f,
+			"ap_2 = 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x00 0x3c 0x00 0x00 0x80 0x%x 0x09 0x06 0x03 0x02 0x6a 0x00\n",
+			dut->ap_val_neighap[1][0], dut->ap_val_neighap[1][1],
+			dut->ap_val_neighap[1][2], dut->ap_val_neighap[1][3],
+			dut->ap_val_neighap[1][4], dut->ap_val_neighap[1][5],
+			dut->ap_val_opchannel[1]);
+		fclose(f);
+
+		f = fopen("/tmp/ftmrr.txt", "a");
+		if (!f) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to open /tmp/ftmrr.txt");
+			return;
+		}
+		fprintf(f,
+			"ap_2 = 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x00 0x3c 0x00 0x00 0x80 0x%x 0x09 0x06 0x03 0x02 0x6a 0x00\n",
+			dut->ap_val_neighap[1][0], dut->ap_val_neighap[1][1],
+			dut->ap_val_neighap[1][2], dut->ap_val_neighap[1][3],
+			dut->ap_val_neighap[1][4], dut->ap_val_neighap[1][5],
+			dut->ap_val_opchannel[1]);
+		fclose(f);
+	}
+
+	if (dut->ap_neighap >= 3 && dut->ap_lci == 0) {
+		FILE *f;
+
+		f = fopen("/tmp/nbr_report.txt", "a");
+		if (!f) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to open /tmp/nbr_report.txt");
+			return;
+		}
+
+		fprintf(f,
+			"ap_3 = 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x00 0x3c 0x00 0x00 0x80 0x%x 0x09 0x06 0x03 0x02 0x9b 0x00\n",
+			dut->ap_val_neighap[2][0], dut->ap_val_neighap[2][1],
+			dut->ap_val_neighap[2][2], dut->ap_val_neighap[2][3],
+			dut->ap_val_neighap[2][4], dut->ap_val_neighap[2][5],
+			dut->ap_val_opchannel[2]);
+		fclose(f);
+
+		f = fopen("/tmp/ftmrr.txt", "a");
+		if (!f) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to open /tmp/ftmrr.txt");
+			return;
+		}
+
+		fprintf(f,
+			"ap_3 = 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x00 0x3c 0x00 0x00 0x80 0x%x 0x09 0x06 0x03 0x02 0x9b 0x00\n",
+			dut->ap_val_neighap[2][0], dut->ap_val_neighap[2][1],
+			dut->ap_val_neighap[2][2], dut->ap_val_neighap[2][3],
+			dut->ap_val_neighap[2][4], dut->ap_val_neighap[2][5],
+			dut->ap_val_opchannel[2]);
+		fclose(f);
+	}
+
+	if (dut->ap_neighap) {
+		snprintf(buf, sizeof(buf), "iwpriv %s enable_rtt 1", ifname);
+		run_system(dut, buf);
+		snprintf(buf, sizeof(buf), "iwpriv %s enable_lci 1", ifname);
+		run_system(dut, buf);
+		snprintf(buf, sizeof(buf), "iwpriv %s enable_lcr 1", ifname);
+		run_system(dut, buf);
+		snprintf(buf, sizeof(buf), "iwpriv %s rrm 1", ifname);
+		run_system(dut, buf);
+	}
+
+	if (dut->ap_scan == 1) {
+		snprintf(buf, sizeof(buf), "iwpriv %s scanentryage 600",
+			 ifname);
+		run_system(dut, buf);
+		snprintf(buf, sizeof(buf), "iwlist %s scan", ifname);
+		run_system(dut, buf);
 	}
 }
 
@@ -5322,6 +5530,16 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 
 	if (dut->program == PROGRAM_LOC) {
+		dut->ap_rrm = 1;
+		dut->ap_rtt = 1;
+		dut->ap_lci = 0;
+		dut->ap_val_lci[0] = '\0';
+		dut->ap_lcr = 0;
+		dut->ap_val_lcr[0] = '\0';
+		dut->ap_neighap = 0;
+		dut->ap_opchannel = 0;
+		dut->ap_scan = 0;
+		dut->ap2_ssid[0] = '\0';
 		dut->ap_interworking = 0;
 		dut->ap_gas_cb_delay = 0;
 		dut->ap_msnt_type = 0;

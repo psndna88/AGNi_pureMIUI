@@ -441,6 +441,17 @@ struct sigma_dut {
 	} ap_dfs_mode;
 	int ap_ndpa_frame;
 
+	int ap_lci;
+	char ap_val_lci[33];
+	int ap_lcr;
+	char ap_val_lcr[400];
+	int ap_rrm;
+	int ap_rtt;
+	int ap_neighap; /* number of configured neighbor APs */
+	unsigned char ap_val_neighap[3][6];
+	int ap_opchannel; /* number of oper channels */
+	int ap_val_opchannel[3];
+	int ap_scan;
 	int ap_msnt_type;
 
 	const char *hostapd_debug_log;
