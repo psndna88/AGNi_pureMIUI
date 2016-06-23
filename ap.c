@@ -850,6 +850,14 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (val)
 		dut->ap_ndpa_frame = atoi(val);
 
+	val = get_param(cmd, "interworking");
+	if (val && strcmp(val, "1") == 0)
+		dut->ap_interworking = 1;
+
+	val = get_param(cmd, "GAS_CB_DELAY");
+	if (val)
+		dut->ap_gas_cb_delay = atoi(val);
+
 	return 1;
 }
 
@@ -5314,6 +5322,8 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 
 	if (dut->program == PROGRAM_LOC) {
+		dut->ap_interworking = 0;
+		dut->ap_gas_cb_delay = 0;
 		dut->ap_msnt_type = 0;
 	}
 
