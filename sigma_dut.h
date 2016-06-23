@@ -493,6 +493,7 @@ struct sigma_dut {
 		PROGRAM_HT,
 		PROGRAM_VHT,
 		PROGRAM_NAN,
+		PROGRAM_LOC,
 	} program;
 
 	enum device_type {

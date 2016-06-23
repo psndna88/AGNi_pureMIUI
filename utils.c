@@ -109,6 +109,8 @@ enum sigma_program sigma_program_to_enum(const char *prog)
 		return PROGRAM_60GHZ;
 	if (strcasecmp(prog, "NAN") == 0)
 		return PROGRAM_NAN;
+	if (strcasecmp(prog, "LOC") == 0)
+		return PROGRAM_LOC;
 
 	return PROGRAM_UNKNOWN;
 }
