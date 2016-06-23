@@ -623,8 +623,10 @@ int ath_set_width(struct sigma_dut *dut, struct sigma_conn *conn,
 int p2p_cmd_sta_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
 			      struct sigma_cmd *cmd);
 
-/* utils.h */
+/* utils.c */
 enum sigma_program sigma_program_to_enum(const char *prog);
+int parse_mac_address(struct sigma_dut *dut, const char *arg,
+		      unsigned char *addr);
 
 /* uapsd_stream.c */
 void receive_uapsd(struct sigma_stream *s);

@@ -6802,66 +6802,6 @@ static int ath_vht_chnum_band(struct sigma_dut *dut, const char *ifname,
 }
 
 
-static int parse_hex(char c)
-{
-	if (c >= '0' && c <= '9')
-		return c - '0';
-	if (c >= 'a' && c <= 'f')
-		return c - 'a' + 10;
-	if (c >= 'A' && c <= 'F')
-		return c - 'A' + 10;
-	return -1;
-}
-
-
-static int hex_byte(const char *str)
-{
-	int res1, res2;
-
-	res1 = parse_hex(str[0]);
-	if (res1 < 0)
-		return -1;
-	res2 = parse_hex(str[1]);
-	if (res2 < 0)
-		return -1;
-	return (res1 << 4) | res2;
-}
-
-
-static int parse_mac_address(struct sigma_dut *dut, const char *arg,
-			     unsigned char *addr)
-{
-	int i;
-	const char *pos = arg;
-
-	if (strlen(arg) != 17)
-		goto fail;
-
-	for (i = 0; i < ETH_ALEN; i++) {
-		int val;
-
-		val = hex_byte(pos);
-		if (val < 0)
-			goto fail;
-		addr[i] = val;
-		if (i + 1 < ETH_ALEN) {
-			pos += 2;
-			if (*pos != ':')
-				goto fail;
-			pos++;
-		}
-	}
-
-	return 0;
-
-fail:
-	sigma_dut_print(dut, DUT_MSG_ERROR,
-			"Invalid MAC address %s (expected format xx:xx:xx:xx:xx:xx)",
-			arg);
-	return -1;
-}
-
-
 static int ath_ndpa_stainfo_mac(struct sigma_dut *dut, const char *ifname,
 				const char *val)
 {
