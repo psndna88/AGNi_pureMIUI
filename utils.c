@@ -34,6 +34,8 @@ int set_wifi_chip(const char *chip_type)
 		wifi_chip_type = DRIVER_QNXNTO;
 	else if (strcmp(chip_type, "OPENWRT") == 0)
 		wifi_chip_type = DRIVER_OPENWRT;
+	else if (!strncmp(chip_type, "LINUX-WCN", strlen("LINUX-WCN")))
+		wifi_chip_type = DRIVER_LINUX_WCN;
 	else
 		return -1;
 

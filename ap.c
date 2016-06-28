@@ -24,6 +24,7 @@
 #include "wpa_helpers.h"
 #ifdef ANDROID
 #include <hardware_legacy/wifi.h>
+#include <private/android_filesystem_config.h>
 #endif /* ANDROID */
 
 /* Temporary files for ap_send_addba_req */
@@ -547,20 +548,31 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 		int nss, mcs;
 		char token[20];
 		char *result = NULL;
+		char *saveptr;
 
 		if (strlen(val) >= sizeof(token))
 			return -1;
 		strcpy(token, val);
-		result = strtok(token, ";");
+		result = strtok_r(token, ";", &saveptr);
+		if (!result) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"VHT NSS not specified");
+			return 0;
+		}
 		nss = atoi(result);
-		result = strtok(NULL, ";");
+		result = strtok_r(NULL, ";", &saveptr);
 		if (result == NULL) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"VHTMCS NOT SPECIFIED!");
 			return 0;
 		}
-		result = strtok(result, "-");
-		result = strtok(NULL, "-");
+		result = strtok_r(result, "-", &saveptr);
+		result = strtok_r(NULL, "-", &saveptr);
+		if (!result) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"VHT MCS not specified");
+			return 0;
+		}
 		mcs = atoi(result);
 		switch (nss) {
 		case 1:
@@ -2057,10 +2069,8 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 		owrt_ap_set_vap(dut, vap_id, "vhtsubfer", "1");
 	}
 
-	if (dut->ap_mu_txBF) {
-		owrt_ap_set_vap(dut, vap_id, "vhtmubfee", "1");
+	if (dut->ap_mu_txBF)
 		owrt_ap_set_vap(dut, vap_id, "vhtmubfer", "1");
-	}
 
 	if (dut->ap_tx_stbc) {
 		/* STBC and beamforming are mutually exclusive features */
@@ -2107,8 +2117,15 @@ static int cmd_owrt_ap_config_commit(struct sigma_dut *dut,
 	run_system(dut, "wifi down");
 
 	/* Reset the wireless configuration */
-	run_system(dut,
-		   "rm -f /etc/config/wireless && wifi detect > /etc/config/wireless");
+	run_system(dut, "rm -rf /etc/config/wireless");
+	switch (get_openwrt_driver_type()) {
+	case OPENWRT_DRIVER_ATHEROS:
+		run_system(dut, "wifi detect qcawifi > /etc/config/wireless");
+		break;
+	default:
+		run_system(dut, "wifi detect > /etc/config/wireless");
+		break;
+	}
 
 	/* Configure Radio & VAP, commit the config */
 	owrt_ap_config_radio(dut);
@@ -2247,6 +2264,7 @@ static int kill_process(struct sigma_dut *dut, char *proc_name,
 	DIR *dir_in;
 	FILE *fp;
 	char *pid, *temp;
+	char *saveptr;
 
 	if (dir == NULL)
 		return -1;
@@ -2270,8 +2288,8 @@ static int kill_process(struct sigma_dut *dut, char *proc_name,
 		if (fgets(buf, 100, fp) == NULL)
 			buf[0] = '\0';
 		fclose(fp);
-		pid = strtok(buf, " ");
-		temp = strtok(NULL, " ");
+		pid = strtok_r(buf, " ", &saveptr);
+		temp = strtok_r(NULL, " ", &saveptr);
 		if (pid && temp &&
 		    strncmp(temp, proc_name, strlen(proc_name)) == 0) {
 			sigma_dut_print(dut, DUT_MSG_INFO,
@@ -3037,7 +3055,7 @@ static int cmd_ath_ap_anqpserver_start(struct sigma_dut *dut)
 				*next++ = '\0';
 
 			len = strlen(start);
-			hexstr = malloc(len * 2);
+			hexstr = malloc(len * 2 + 1);
 			if (hexstr == NULL) {
 				free(dnbuf);
 				free(anqp_dn);
@@ -4359,7 +4377,8 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 	case AP_11g:
 	case AP_11b:
 	case AP_11ng:
-		ifname = drv == DRIVER_MAC80211 ? "wlan0" : "ath0";
+		ifname = (drv == DRIVER_MAC80211 || drv == DRIVER_LINUX_WCN) ?
+			"wlan0" : "ath0";
 		if (drv == DRIVER_QNXNTO && sigma_main_ifname)
 			ifname = sigma_main_ifname;
 		fprintf(f, "hw_mode=g\n");
@@ -4372,7 +4391,7 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 				ifname = sigma_main_ifname;
 			else
 				ifname = "wlan0";
-		} else if (drv == DRIVER_MAC80211) {
+		} else if (drv == DRIVER_MAC80211 || drv == DRIVER_LINUX_WCN) {
 			if (if_nametoindex("wlan1") > 0)
 				ifname = "wlan1";
 			else
@@ -4387,17 +4406,19 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		return -1;
 	}
 
-	if (drv == DRIVER_MAC80211)
+	if (drv == DRIVER_MAC80211 || drv == DRIVER_LINUX_WCN)
 		fprintf(f, "driver=nl80211\n");
 
-	if ((drv == DRIVER_MAC80211 || drv == DRIVER_QNXNTO) &&
+	if ((drv == DRIVER_MAC80211 || drv == DRIVER_QNXNTO ||
+	     drv == DRIVER_LINUX_WCN) &&
 	    (dut->ap_mode == AP_11ng || dut->ap_mode == AP_11na)) {
 		fprintf(f, "ieee80211n=1\n");
+		fprintf(f, "ht_capab=");
 		if (dut->ap_mode == AP_11ng && dut->ap_chwidth == AP_40) {
 			if (dut->ap_channel >= 1 && dut->ap_channel <= 7)
-				fprintf(f, "ht_capab=[HT40+]\n");
+				fprintf(f, "[HT40+]");
 			else if (dut->ap_channel >= 8 && dut->ap_channel <= 11)
-				fprintf(f, "ht_capab=[HT40-]\n");
+				fprintf(f, "[HT40-]");
 		}
 
 		/* configure ht_capab based on channel width */
@@ -4406,20 +4427,27 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		     (dut->ap_chwidth == AP_AUTO &&
 		      dut->default_ap_chwidth == AP_40))) {
 			if (is_ht40plus_chan(dut->ap_channel))
-				fprintf(f, "ht_capab=[HT40+]\n");
+				fprintf(f, "[HT40+]");
 			else if (is_ht40minus_chan(dut->ap_channel))
-				fprintf(f, "ht_capab=[HT40-]\n");
+				fprintf(f, "[HT40-]");
 		}
+
+		if (dut->ap_tx_stbc)
+			fprintf(f, "[TX-STBC]");
+
+		fprintf(f, "\n");
 	}
 
-	if ((drv == DRIVER_MAC80211 || drv == DRIVER_QNXNTO) &&
+	if ((drv == DRIVER_MAC80211 || drv == DRIVER_QNXNTO ||
+	     drv == DRIVER_LINUX_WCN) &&
 	    dut->ap_mode == AP_11ac) {
 		fprintf(f, "ieee80211ac=1\n"
 			"ieee80211n=1\n"
 			"ht_capab=[HT40+]\n");
 	}
 
-	if ((drv == DRIVER_MAC80211 || drv == DRIVER_QNXNTO) &&
+	if ((drv == DRIVER_MAC80211 || drv == DRIVER_QNXNTO ||
+	     drv == DRIVER_LINUX_WCN) &&
 	    (dut->ap_mode == AP_11ac || dut->ap_mode == AP_11na)) {
 		if (dut->ap_countrycode[0]) {
 			fprintf(f, "country_code=%s\n", dut->ap_countrycode);
@@ -4712,12 +4740,14 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		fprintf(f, "vht_oper_chwidth=%d\n", dut->ap_vht_chwidth);
 
 		if (dut->ap_sgi80 || dut->ap_txBF || dut->ap_ldpc ||
-		    dut->ap_tx_stbc) {
-			fprintf(f, "vht_capab=%s%s%s%s\n",
+		    dut->ap_tx_stbc || dut->ap_mu_txBF) {
+			fprintf(f, "vht_capab=%s%s%s%s%s\n",
 				dut->ap_sgi80 ? "[SHORT-GI-80]" : "",
-				dut->ap_txBF ? "[SU-BEAMFORMER]" : "",
+				dut->ap_txBF ?
+				"[SU-BEAMFORMER][SU-BEAMFORMEE][BF-ANTENNA-2][SOUNDING-DIMENSION-2]" : "",
 				dut->ap_ldpc ? "[RXLDPC]" : "",
-				dut->ap_tx_stbc ? "[TX-STBC-2BY1]" : "");
+				dut->ap_tx_stbc ? "[TX-STBC-2BY1]" : "",
+				dut->ap_mu_txBF ? "[MU-BEAMFORMER]" : "");
 		}
 	}
 
@@ -4743,6 +4773,19 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 #endif /* __QNXNTO__ */
 		}
 	}
+
+#ifdef ANDROID
+	/* Set proper conf file permissions so that hostapd process
+	 * can access it.
+	 */
+	if (chmod(SIGMA_TMPDIR "/sigma_dut-ap.conf",
+		  S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP) < 0)
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Error changing permissions");
+
+	if (chown(SIGMA_TMPDIR "/sigma_dut-ap.conf", -1, AID_WIFI) < 0)
+		sigma_dut_print(dut, DUT_MSG_ERROR, "Error changing groupid");
+#endif /* ANDROID */
 
 	if (drv == DRIVER_QNXNTO) {
 		snprintf(buf, sizeof(buf),
@@ -5055,6 +5098,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	dut->ap_sig_rts = 0;
 	dut->ap_rx_amsdu = 0;
 	dut->ap_txBF = 0;
+	dut->ap_mu_txBF = 0;
 	dut->ap_chwidth = AP_AUTO;
 
 	dut->ap_rsn_preauth = 0;
@@ -5246,6 +5290,7 @@ static int cmd_ap_get_info(struct sigma_dut *dut, struct sigma_conn *conn,
 		send_resp(dut, conn, SIGMA_COMPLETE, resp);
 		return 0;
 	}
+	case DRIVER_LINUX_WCN:
 	case DRIVER_MAC80211: {
 		struct utsname uts;
 		char *version;
@@ -6479,6 +6524,7 @@ static int ath_vht_op_mode_notif(struct sigma_dut *dut, const char *ifname,
 	char *token, *result;
 	int nss = 0, chwidth = 0;
 	char buf[100];
+	char *saveptr;
 
 	/*
 	 * The following commands should be invoked to generate
@@ -6489,7 +6535,7 @@ static int ath_vht_op_mode_notif(struct sigma_dut *dut, const char *ifname,
 	token = strdup(val);
 	if (!token)
 		return -1;
-	result = strtok(token, ";");
+	result = strtok_r(token, ";", &saveptr);
 	if (result) {
 		int count = atoi(result);
 
@@ -6512,7 +6558,7 @@ static int ath_vht_op_mode_notif(struct sigma_dut *dut, const char *ifname,
 	}
 
 	/* Extract the Channel width info */
-	result = strtok(NULL, ";");
+	result = strtok_r(NULL, ";", &saveptr);
 	if (result) {
 		switch (atoi(result)) {
 		case 20:
@@ -6558,11 +6604,17 @@ static int ath_vht_nss_mcs(struct sigma_dut *dut, const char *ifname,
 	int nss, mcs;
 	char *token, *result;
 	char buf[100];
+	char *saveptr;
 
 	token = strdup(val);
 	if (!token)
 		return -1;
-	result = strtok(token, ";");
+	result = strtok_r(token, ";", &saveptr);
+	if (!result) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"VHT NSS not specified");
+		goto end;
+	}
 	if (strcasecmp(result, "def") != 0) {
 		nss = atoi(result);
 
@@ -6584,7 +6636,12 @@ static int ath_vht_nss_mcs(struct sigma_dut *dut, const char *ifname,
 		}
 	}
 
-	result = strtok(NULL, ";");
+	result = strtok_r(NULL, ";", &saveptr);
+	if (!result) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"VHT MCS not specified");
+		goto end;
+	}
 	if (strcasecmp(result, "def") == 0) {
 		if (dut->device_type == AP_testbed && dut->ap_sgi80 == 1) {
 			snprintf(buf, sizeof(buf), "iwpriv %s vhtmcs 7",
@@ -6610,6 +6667,7 @@ static int ath_vht_nss_mcs(struct sigma_dut *dut, const char *ifname,
 		}
 	}
 
+end:
 	free(token);
 	return 0;
 }
@@ -6622,17 +6680,18 @@ static int ath_vht_chnum_band(struct sigma_dut *dut, const char *ifname,
 	int channel = 36;
 	int chwidth = 80;
 	char buf[100];
+	char *saveptr;
 
 	/* Extract the channel info */
 	token = strdup(val);
 	if (!token)
 		return -1;
-	result = strtok(token, ";");
+	result = strtok_r(token, ";", &saveptr);
 	if (result)
 		channel = atoi(result);
 
 	/* Extract the channel width info */
-	result = strtok(NULL, ";");
+	result = strtok_r(NULL, ";", &saveptr);
 	if (result)
 		chwidth = atoi(result);
 
@@ -6801,12 +6860,13 @@ static int wcn_vht_chnum_band(struct sigma_dut *dut, const char *ifname,
 	char *token, *result;
 	int channel = 36;
 	char buf[100];
+	char *saveptr;
 
 	/* Extract the channel info */
 	token = strdup(val);
 	if (!token)
 		return -1;
-	result = strtok(token, ";");
+	result = strtok_r(token, ";", &saveptr);
 	if (result)
 		channel = atoi(result);
 
@@ -6857,6 +6917,7 @@ static int cmd_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 				  "errorCode,Unsupported ap_set_rfeature with the current openwrt driver");
 			return 0;
 		}
+	case DRIVER_LINUX_WCN:
 	case DRIVER_WCN:
 		return wcn_ap_set_rfeature(dut, conn, cmd);
 	default:

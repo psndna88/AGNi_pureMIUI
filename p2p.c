@@ -26,6 +26,31 @@ int run_system(struct sigma_dut *dut, const char *cmd)
 }
 
 
+static int get_60g_freq(int chan)
+{
+	int freq = 0;
+
+	switch(chan) {
+	case 1:
+		freq = 58320;
+		break;
+	case 2:
+		freq = 60480;
+		break;
+	case 3:
+		freq = 62640;
+		break;
+	case 4:
+		/* freq = 64800; Not supported in Sparrow 2.0 */
+		break;
+	default:
+		break;
+	}
+
+	return freq;
+}
+
+
 static int p2p_group_add(struct sigma_dut *dut, const char *ifname,
 			 int go, const char *grpid, const char *ssid)
 {
@@ -338,7 +363,7 @@ static int cmd_sta_get_p2p_dev_address(struct sigma_dut *dut,
 static int cmd_sta_set_p2p(struct sigma_dut *dut, struct sigma_conn *conn,
 			   struct sigma_cmd *cmd)
 {
-	const char *intf = get_param(cmd, "Interface");
+	const char *intf = get_p2p_ifname(get_param(cmd, "Interface"));
 	char buf[256];
 	const char *val;
 	const char *noa_dur, *noa_int, *noa_count;
@@ -347,8 +372,15 @@ static int cmd_sta_set_p2p(struct sigma_dut *dut, struct sigma_conn *conn,
 	val = get_param(cmd, "LISTEN_CHN");
 	if (val) {
 		dut->listen_chn = atoi(val);
-		snprintf(buf, sizeof(buf), "P2P_SET listen_channel %d",
-			 dut->listen_chn);
+		if (dut->listen_chn == 2) {
+			/* social channel 2 on 60 GHz band */
+			snprintf(buf, sizeof(buf),
+				 "P2P_SET listen_channel 2 180");
+		} else {
+			/* social channels 1/6/11 on 2.4 GHz band */
+			snprintf(buf, sizeof(buf), "P2P_SET listen_channel %d",
+				 dut->listen_chn);
+		}
 		if (wpa_command(intf, buf) < 0)
 			return -2;
 	}
@@ -412,37 +444,41 @@ static int cmd_sta_set_p2p(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->intra_bss = intra_bss;
 	}
 
-	noa_dur = get_param(cmd, "NoA_duration");
-	noa_int = get_param(cmd, "NoA_Interval");
-	noa_count = get_param(cmd, "NoA_Count");
-	if (noa_dur)
-		dut->noa_duration = atoi(noa_dur);
+	/* NoA is not applicable for 60 GHz */
+	if (dut->program != PROGRAM_60GHZ) {
+		noa_dur = get_param(cmd, "NoA_duration");
+		noa_int = get_param(cmd, "NoA_Interval");
+		noa_count = get_param(cmd, "NoA_Count");
+		if (noa_dur)
+			dut->noa_duration = atoi(noa_dur);
 
-	if (noa_int)
-		dut->noa_interval = atoi(noa_int);
+		if (noa_int)
+			dut->noa_interval = atoi(noa_int);
 
-	if (noa_count)
-		dut->noa_count = atoi(noa_count);
+		if (noa_count)
+			dut->noa_count = atoi(noa_count);
 
-	if (noa_dur || noa_int || noa_count) {
-		int start;
-		const char *ifname;
-		if (dut->noa_count == 0 && dut->noa_duration == 0)
-			start = 0;
-		else if (dut->noa_duration > 102) /* likely non-periodic NoA */
-			start = 50;
-		else
-			start = 102 - dut->noa_duration;
-		snprintf(buf, sizeof(buf), "P2P_SET noa %d,%d,%d",
-			 dut->noa_count, start,
-			 dut->noa_duration);
-		ifname = get_group_ifname(dut, intf);
-		sigma_dut_print(dut, DUT_MSG_INFO,
-				"Set GO NoA for interface %s", ifname);
-		if (wpa_command(ifname, buf) < 0) {
-			send_resp(dut, conn, SIGMA_ERROR,
-				  "errorCode,Use of NoA as GO not supported");
-			return 0;
+		if (noa_dur || noa_int || noa_count) {
+			int start;
+			const char *ifname;
+			if (dut->noa_count == 0 && dut->noa_duration == 0)
+				start = 0;
+			else if (dut->noa_duration > 102) /* likely non-periodic
+							   * NoA */
+				start = 50;
+			else
+				start = 102 - dut->noa_duration;
+			snprintf(buf, sizeof(buf), "P2P_SET noa %d,%d,%d",
+				dut->noa_count, start,
+				dut->noa_duration);
+			ifname = get_group_ifname(dut, intf);
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Set GO NoA for interface %s", ifname);
+			if (wpa_command(ifname, buf) < 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Use of NoA as GO not supported");
+				return 0;
+			}
 		}
 	}
 
@@ -540,7 +576,14 @@ static int cmd_sta_start_autonomous_go(struct sigma_dut *dut,
 		return -1;
 
 	chan = atoi(oper_chn);
-	if (chan >= 1 && chan <= 13)
+	if (dut->program == PROGRAM_60GHZ) {
+		freq = get_60g_freq(chan);
+		if (freq == 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Invalid channel: %d", chan);
+			return -1;
+		}
+	} else if (chan >= 1 && chan <= 13)
 		freq = 2407 + chan * 5;
 	else if (chan == 14)
 		freq = 2484;
@@ -647,7 +690,7 @@ static int cmd_sta_start_autonomous_go(struct sigma_dut *dut,
 static int cmd_sta_p2p_connect(struct sigma_dut *dut, struct sigma_conn *conn,
 			       struct sigma_cmd *cmd)
 {
-	const char *intf = get_param(cmd, "Interface");
+	const char *intf = get_p2p_ifname(get_param(cmd, "Interface"));
 	const char *devid = get_param(cmd, "P2PDevID");
 	/* const char *grpid_param = get_param(cmd, "GroupID"); */
 	int res;
@@ -771,13 +814,13 @@ static int cmd_sta_p2p_start_group_formation(struct sigma_dut *dut,
 					     struct sigma_conn *conn,
 					     struct sigma_cmd *cmd)
 {
-	const char *intf = get_param(cmd, "Interface");
+	const char *intf = get_p2p_ifname(get_param(cmd, "Interface"));
 	const char *devid = get_param(cmd, "P2PDevID");
 	const char *intent_val = get_param(cmd, "INTENT_VAL");
 	const char *init_go_neg = get_param(cmd, "INIT_GO_NEG");
 	const char *oper_chn = get_param(cmd, "OPER_CHN");
 	const char *ssid_param = get_param(cmd, "SSID");
-	int freq = 0, chan, init;
+	int freq = 0, chan = 0, init;
 	char buf[256];
 	struct wpa_ctrl *ctrl;
 
@@ -789,7 +832,17 @@ static int cmd_sta_p2p_start_group_formation(struct sigma_dut *dut,
 	else
 		init = 0;
 
-	if (oper_chn) {
+	if (dut->program == PROGRAM_60GHZ) {
+		if (!oper_chn)
+			return -1;
+		chan = atoi(oper_chn);
+		freq = get_60g_freq(chan);
+		if (freq == 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Invalid channel: %d", chan);
+			return -1;
+		}
+	} else if (oper_chn) {
 		chan = atoi(oper_chn);
 		if (chan >= 1 && chan <= 13)
 			freq = 2407 + chan * 5;
@@ -805,8 +858,9 @@ static int cmd_sta_p2p_start_group_formation(struct sigma_dut *dut,
 		return 0;
 	}
 
-	sigma_dut_print(dut, DUT_MSG_DEBUG, "Trying to discover peer %s for "
-			"group formation", devid);
+	sigma_dut_print(dut, DUT_MSG_DEBUG,
+			"Trying to discover peer %s for group formation chan %d (freq %d)",
+			devid, chan, freq);
 	if (p2p_discover_peer(dut, intf, devid, init) < 0) {
 		send_resp(dut, conn, SIGMA_ERROR, "ErrorCode,Could not "
 			  "discover the requested peer");
@@ -1440,8 +1494,16 @@ int cmd_sta_p2p_reset(struct sigma_dut *dut, struct sigma_conn *conn,
 	wpa_command(intf, "P2P_SERVICE_FLUSH");
 	wpa_command(intf, "P2P_SET disabled 0");
 	wpa_command(intf, "P2P_SET ssid_postfix ");
-	wpa_command(intf, "P2P_SET listen_channel 6");
-	dut->listen_chn = 6;
+
+	if (dut->program == PROGRAM_60GHZ) {
+		wpa_command(intf, "SET p2p_oper_reg_class 180");
+		wpa_command(intf, "P2P_SET listen_channel 2 180");
+		dut->listen_chn = 2;
+	} else {
+		wpa_command(intf, "P2P_SET listen_channel 6");
+		dut->listen_chn = 6;
+	}
+
 	wpa_command(intf, "P2P_EXT_LISTEN");
 	wpa_command(intf, "SET p2p_go_intent 7");
 	wpa_command(intf, "P2P_SET client_apsd disable");
@@ -1588,6 +1650,12 @@ static int cmd_sta_set_sleep(struct sigma_dut *dut, struct sigma_conn *conn,
 	struct wfa_cs_p2p_group *grp;
 	char *ifname;
 	const char *grpid = get_param(cmd, "GroupID");
+
+	if (dut->program == PROGRAM_60GHZ) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,UAPSD Sleep is not applicable for 60 GHz");
+		return 0;
+	}
 
 	if (grpid == NULL)
 		ifname = get_station_ifname();
