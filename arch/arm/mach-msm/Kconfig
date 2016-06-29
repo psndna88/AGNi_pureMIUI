@@ -3049,6 +3049,15 @@ config KRAIT_REGULATOR
 	 line from the PMIC. This supply line is powered by multiple
 	 regulators running in ganged mode inside the PMIC. Enable
 	 this option to support such configurations.
+
+config XIAOMI_DIOR_DTB
+	depends on ARCH_MSM8226
+	default n
+	bool "Xiaomi Dior Device DTBs"
+	help
+	 Only include Xiaomi Dior specific DTBs to limit the number that
+	 get built during kernel compilation.
+
 endif
 
 config KERNEL_TEXT_MPU_PROT
