@@ -334,7 +334,7 @@ static inline void destroy_params(const struct kernel_param *params,
 /* All the helper functions */
 /* The macros to do compile-time type checking stolen from Jakub
    Jelinek, who IIRC came up with this idea for the 2.4 module init code. */
-#define __param_check(name, p, type) \
+#define __param_check(name, p, type); \
 	static inline type *__check_##name(void) { return(p); }
 
 extern struct kernel_param_ops param_ops_byte;
