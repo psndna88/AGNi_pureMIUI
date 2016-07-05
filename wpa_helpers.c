@@ -14,6 +14,7 @@
 
 extern char *sigma_main_ifname;
 extern char *sigma_station_ifname;
+extern char *sigma_p2p_ifname;
 extern char *sigma_wpas_ctrl;
 
 
@@ -25,33 +26,33 @@ char * get_main_ifname(void)
 	if (sigma_main_ifname)
 		return sigma_main_ifname;
 
-      if (if_nametoindex("p2p0") > 0)
-	      return "p2p0";
-      if (if_nametoindex("wlan1") > 0) {
-	      struct stat s;
-	      if (stat("/sys/module/mac80211", &s) == 0 &&
-		  if_nametoindex("wlan0")) {
-		      /*
-		       * Likely a dual-radio AP device; use wlan0 for STA/P2P
-		       * operations.
-		       */
-		      return "wlan0";
-	      }
-	      return "wlan1";
-      }
-      if (if_nametoindex("wlan0") > 0)
-	      return "wlan0";
+	if (drv == DRIVER_ATHEROS || openwrt_drv == OPENWRT_DRIVER_ATHEROS) {
+		if (if_nametoindex("ath2") > 0)
+			return "ath2";
+		else if (if_nametoindex("ath1") > 0)
+			return "ath1";
+		else
+			return "ath0";
+	}
 
-      if (drv == DRIVER_ATHEROS || openwrt_drv == OPENWRT_DRIVER_ATHEROS) {
-	      if (if_nametoindex("ath2") > 0)
-		      return "ath2";
-	      else if (if_nametoindex("ath1") > 0)
-		      return "ath1";
-	      else
-		      return "ath0";
-      }
+	if (if_nametoindex("p2p0") > 0)
+		return "p2p0";
+	if (if_nametoindex("wlan1") > 0) {
+		struct stat s;
+		if (stat("/sys/module/mac80211", &s) == 0 &&
+		    if_nametoindex("wlan0")) {
+			/*
+			 * Likely a dual-radio AP device; use wlan0 for STA/P2P
+			 * operations.
+			 */
+			return "wlan0";
+		}
+		return "wlan1";
+	}
+	if (if_nametoindex("wlan0") > 0)
+		return "wlan0";
 
-      return "unknown";
+	return "unknown";
 }
 
 
@@ -72,6 +73,18 @@ char * get_station_ifname(void)
 
 	/* If nothing else matches, hope for best and guess.. */
 	return "wlan0";
+}
+
+
+const char * get_p2p_ifname(const char *primary_ifname)
+{
+	if (strcmp(get_station_ifname(), primary_ifname) != 0)
+		return primary_ifname;
+
+	if (sigma_p2p_ifname)
+		return sigma_p2p_ifname;
+
+	return get_station_ifname();
 }
 
 
