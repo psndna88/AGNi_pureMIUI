@@ -75,7 +75,7 @@ enum openwrt_driver_type get_openwrt_driver_type(void)
 	struct stat s;
 
 	if (openwrt_chip_type == OPENWRT_DRIVER_NOT_SET) {
-		if (stat("/sys/module/ath_hal", &s) == 0)
+		if (stat("/sys/module/umac", &s) == 0)
 			openwrt_chip_type = OPENWRT_DRIVER_ATHEROS;
 	}
 
