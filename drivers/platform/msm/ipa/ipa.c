@@ -1485,7 +1485,7 @@ static void ipa_free_buffer(void *user1, int user2)
 	kfree(user1);
 }
 
-static int ipa_q6_pipe_delay(bool zip_pipes)
+int ipa_q6_pipe_delay(bool zip_pipes)
 {
 	u32 reg_val = 0;
 	int client_idx;
@@ -1870,14 +1870,14 @@ int ipa_q6_pre_shutdown_cleanup(void)
 		BUG();
 
 	ipa_inc_client_enable_clks();
+
 	/*
-	 * pipe delay and holb discard for ZIP pipes are handled
-	 * in post shutdown callback.
-	 */
-	if (ipa_q6_pipe_delay(false)) {
-		IPAERR("Failed to delay Q6 pipes\n");
-		BUG();
-	}
+	 * Do not delay Q6 pipes here. This may result in IPA reading a
+	 * DMA_TASK with lock bit set and then Q6 pipe delay is set. In this
+	 * situation IPA will be remain locked as the DMA_TASK with unlock
+	 * bit will not be read by IPA as pipe delay is enabled. IPA uC will
+	 * wait for pipe to be empty before issuing a BAM pipe reset.
+	*/
 
 	if (ipa_q6_monitor_holb_mitigation(false)) {
 		IPAERR("Failed to disable HOLB monitroing on Q6 pipes\n");
@@ -1916,13 +1916,13 @@ int ipa_q6_post_shutdown_cleanup(void)
 	int res;
 
 	/*
-	 * pipe delay and holb discard for ZIP pipes are handled in
-	 * post shutdown.
-	 */
-	if (ipa_q6_pipe_delay(true)) {
-		IPAERR("Failed to delay Q6 ZIP pipes\n");
-		BUG();
-	}
+	 * Do not delay Q6 pipes here. This may result in IPA reading a
+	 * DMA_TASK with lock bit set and then Q6 pipe delay is set. In this
+	 * situation IPA will be remain locked as the DMA_TASK with unlock
+	 * bit will not be read by IPA as pipe delay is enabled. IPA uC will
+	 * wait for pipe to be empty before issuing a BAM pipe reset.
+	*/
+
 	if (ipa_q6_avoid_holb(true)) {
 		IPAERR("Failed to set HOLB on Q6 ZIP pipes\n");
 		BUG();
