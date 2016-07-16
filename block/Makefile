@@ -11,7 +11,7 @@ obj-$(CONFIG_BLOCK) := elevator.o blk-core.o blk-tag.o blk-sysfs.o \
 obj-$(CONFIG_BLK_DEV_BSG)	+= bsg.o
 obj-$(CONFIG_BLK_DEV_BSGLIB)	+= bsg-lib.o
 obj-$(CONFIG_BLK_CGROUP)	+= blk-cgroup.o
-obj-$(CONFIG_BLK_DEV_THROTTLING)	+= blk-throttle.o
+obj-$(CONFIG_BLK_DEV_THROTTLING) += blk-throttle.o
 obj-$(CONFIG_IOSCHED_NOOP)	+= noop-iosched.o
 obj-$(CONFIG_IOSCHED_DEADLINE)	+= deadline-iosched.o
 obj-$(CONFIG_IOSCHED_ROW)	+= row-iosched.o
@@ -20,6 +20,8 @@ obj-$(CONFIG_IOSCHED_BFQ)	+= bfq-iosched.o
 obj-$(CONFIG_IOSCHED_TEST)	+= test-iosched.o
 obj-$(CONFIG_IOSCHED_FIOPS)     += fiops-iosched.o
 obj-$(CONFIG_IOSCHED_SIO)       += sio-iosched.o
+obj-$(CONFIG_IOSCHED_MAPLE)     += maple-iosched.o
+
 
 obj-$(CONFIG_BLOCK_COMPAT)	+= compat_ioctl.o
 obj-$(CONFIG_BLK_DEV_INTEGRITY)	+= blk-integrity.o
