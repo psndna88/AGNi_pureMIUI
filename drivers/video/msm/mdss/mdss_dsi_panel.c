@@ -358,22 +358,9 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 			return rc;
 		}
 		if (!pinfo->cont_splash_enabled) {
-			if (gpio_is_valid(ctrl_pdata->disp_en_gpio)) {
-				rc = gpio_direction_output(
-					ctrl_pdata->disp_en_gpio, 1);
-				if (rc) {
-					pr_err("%s: unable to set dir for disp_en gpio\n",
-						__func__);
-					goto gpio_err;
-				}
-			}
+			if (gpio_is_valid(ctrl_pdata->disp_en_gpio))
+				gpio_set_value((ctrl_pdata->disp_en_gpio), 1);
 
-			rc = gpio_direction_output(ctrl_pdata->rst_gpio, 1);
-			if (rc) {
-				pr_err("%s: unable to set dir for rst gpio\n",
-					__func__);
-				goto gpio_err;
-			}
 			for (i = 0; i < pdata->panel_info.rst_seq_len; ++i) {
 				gpio_set_value((ctrl_pdata->rst_gpio),
 					pdata->panel_info.rst_seq[i]);
