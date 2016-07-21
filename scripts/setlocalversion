@@ -77,7 +77,7 @@ scm_version()
 				printf '%s%s%s' -g "`git show-ref -s --abbrev --tags $tag 2>/dev/null`" $commit
 			# If we don't have a tag at all we print -g{commitish}.
 			else
-				printf '%s%s' -g $head
+				printf '%s%s'
 			fi
 		fi
 
