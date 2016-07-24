@@ -48,10 +48,10 @@ zen_merged_requests(struct request_queue *q, struct request *req,
 	 * if next expires before rq, assign its expire time to arq
 	 * and move into next position (next will be deleted) in fifo
 	 */
-	if (!list_empty(&req->queuelist) && !list_empty(&next->queuelist)) {
-		if (time_before(rq_fifo_time(next), rq_fifo_time(req))) {
-			list_move(&req->queuelist, &next->queuelist);
-			rq_set_fifo_time(req, rq_fifo_time(next));
+	if (!list_empty(&rq->queuelist) && !list_empty(&next->queuelist)) {
+		if (time_before(next->fifo_time, rq->fifo_time)) {
+			list_move(&rq->queuelist, &next->queuelist);
+			rq->fifo_time = next->fifo_time;
 		}
 	}
 
@@ -64,9 +64,9 @@ static void zen_add_request(struct request_queue *q, struct request *rq)
 	struct zen_data *zdata = zen_get_data(q);
 	const int sync = rq_is_sync(rq);
 
-	if (zdata->fifo_expire[sync]) {
-		rq_set_fifo_time(rq, jiffies + zdata->fifo_expire[sync]);
-		list_add_tail(&rq->queuelist, &zdata->fifo_list[sync]);
+	if (zdata->fifo_expire[dir]) {
+		rq->fifo_time = jiffies + zdata->fifo_expire[dir];
+		list_add_tail(&rq->queuelist, &zdata->fifo_list[dir]);
 	}
 }
 
@@ -92,7 +92,7 @@ zen_expired_request(struct zen_data *zdata, int ddir)
                 return NULL;
 
         rq = rq_entry_fifo(zdata->fifo_list[ddir].next);
-        if (time_after_eq(jiffies, rq_fifo_time(rq)))
+        if (time_after(jiffies, rq->fifo_time))
                 return rq;
 
         return NULL;
@@ -109,7 +109,7 @@ zen_check_fifo(struct zen_data *zdata)
         struct request *rq_async = zen_expired_request(zdata, ASYNC);
 
         if (rq_async && rq_sync) {
-        	if (time_after(rq_fifo_time(rq_async), rq_fifo_time(rq_sync)))
+        	if (time_after(rq_async->fifo_time, rq_sync->fifo_time))
                 	return rq_sync;
         } else if (rq_sync) {
                 return rq_sync;
@@ -159,7 +159,7 @@ static int zen_dispatch_requests(struct request_queue *q, int force)
 
 static int zen_init_queue(struct request_queue *q, struct elevator_type *e)
 {
-	struct zen_data *zdata;
+    struct zen_data *zdata;
     struct elevator_queue *eq;
     
     eq = elevator_alloc(q, e);
