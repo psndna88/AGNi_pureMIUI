@@ -690,8 +690,10 @@ static int add_ipv6_rule(struct sigma_dut *dut, const char *ifname)
 		return -1;
 
 	result = malloc(result_len);
-	if (result == NULL)
+	if (result == NULL) {
+		fclose(fp);
 		return -1;
+	}
 
 	len = fread(result, 1, result_len, fp);
 	fclose(fp);
@@ -5214,11 +5216,13 @@ static int sta_inject_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (res < 0) {
 		send_resp(dut, conn, SIGMA_ERROR, "errorCode,Failed to "
 			  "inject frame");
+		close(s);
 		return 0;
 	}
 	if (res < pos - buf) {
 		send_resp(dut, conn, SIGMA_ERROR, "errorCode,Only partial "
 			  "frame sent");
+		close(s);
 		return 0;
 	}
 
@@ -5488,6 +5492,7 @@ static int cmd_sta_send_frame_hs2_arpannounce(struct sigma_dut *dut,
 			sigma_dut_print(dut, DUT_MSG_INFO, "Failed to get "
 					"%s IP address: %s",
 					ifname, strerror(errno));
+			close(s);
 			return -1;
 		} else {
 			memcpy(&saddr, &ifr.ifr_addr,
@@ -5563,6 +5568,7 @@ static int cmd_sta_send_frame_hs2_arpreply(struct sigma_dut *dut,
 	if (res < 0) {
 		send_resp(dut, conn, SIGMA_ERROR, "errorCode,Failed to "
 			  "inject frame");
+		close(s);
 		return 0;
 	}
 

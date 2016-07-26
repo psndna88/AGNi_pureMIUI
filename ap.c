@@ -3120,14 +3120,17 @@ static int cmd_ath_ap_anqpserver_start(struct sigma_dut *dut)
 		char *next, *start, *dnbuf, *dn1, *anqp_dn;
 		int len, dn_len_max;
 		dnbuf = strdup(dut->ap_domain_name_list);
-		if (dnbuf == NULL)
+		if (dnbuf == NULL) {
+			fclose(f);
 			return 0;
+		}
 
 		len = strlen(dnbuf);
 		dn_len_max = 50 + len*2;
 		anqp_dn = malloc(dn_len_max);
 		if (anqp_dn == NULL) {
 			free(dnbuf);
+			fclose(f);
 			return -1;
 		}
 		start = dnbuf;
@@ -3144,6 +3147,7 @@ static int cmd_ath_ap_anqpserver_start(struct sigma_dut *dut)
 			if (hexstr == NULL) {
 				free(dnbuf);
 				free(anqp_dn);
+				fclose(f);
 				return -1;
 			}
 			ascii2hexstr(start, hexstr);
@@ -4719,8 +4723,10 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		unsigned char bssid[6];
 		char ifname2[50];
 
-		if (get_hwaddr(ifname, bssid))
+		if (get_hwaddr(ifname, bssid)) {
+			fclose(f);
 			return -2;
+		}
 		bssid[0] |= 0x02;
 
 		snprintf(ifname2, sizeof(ifname2), "%s_1", ifname);
@@ -4785,6 +4791,7 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		if (check_channel(dut->ap_channel) < 0) {
 			send_resp(dut, conn, SIGMA_INVALID,
 				  "errorCode,Invalid channel");
+			fclose(f);
 			return 0;
 		}
 
@@ -5645,11 +5652,13 @@ static int ap_inject_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (res < 0) {
 		send_resp(dut, conn, SIGMA_ERROR, "errorCode,Failed to "
 			  "inject frame");
+		close(s);
 		return 0;
 	}
 	if (res < pos - buf) {
 		send_resp(dut, conn, SIGMA_ERROR, "errorCode,Only partial "
 			  "frame sent");
+		close(s);
 		return 0;
 	}
 
