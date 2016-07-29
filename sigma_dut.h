@@ -648,4 +648,13 @@ int nan_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 				      struct sigma_conn *conn,
 				      struct sigma_cmd *cmd);
 
+/* ftm.c */
+int loc_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
+			    struct sigma_cmd *cmd);
+int loc_cmd_sta_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
+			   struct sigma_cmd *cmd);
+int loc_cmd_sta_preset_testparameters(struct sigma_dut *dut,
+				      struct sigma_conn *conn,
+				      struct sigma_cmd *cmd);
+
 #endif /* SIGMA_DUT_H */

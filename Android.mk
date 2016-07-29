@@ -12,6 +12,7 @@ OBJS += dev.c
 OBJS += ap.c
 OBJS += powerswitch.c
 OBJS += atheros.c
+OBJS += ftm.c
 
 # Initialize CFLAGS to limit to local module
 CFLAGS =
