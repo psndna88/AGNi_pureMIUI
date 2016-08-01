@@ -2202,12 +2202,12 @@ void toggle_wakeup_interrupt(struct msm_hs_port *msm_uport)
 
 	if (!(msm_uport->wakeup.enabled)) {
 		MSM_HS_DBG("%s(): Enable Wakeup IRQ", __func__);
-		enable_irq(msm_uport->wakeup.irq);
-		disable_irq(uport->irq);
 		spin_lock_irqsave(&uport->lock, flags);
 		msm_uport->wakeup.ignore = 1;
 		msm_uport->wakeup.enabled = true;
 		spin_unlock_irqrestore(&uport->lock, flags);
+		disable_irq(uport->irq);
+		enable_irq(msm_uport->wakeup.irq);
 	} else {
 		disable_irq_nosync(msm_uport->wakeup.irq);
 		enable_irq(uport->irq);
