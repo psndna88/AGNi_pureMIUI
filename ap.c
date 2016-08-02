@@ -1025,6 +1025,12 @@ static int cmd_ap_send_addba_req(struct sigma_dut *dut, struct sigma_conn *conn,
 				  "errorCode,ap_send_addba_req not supported with this driver");
 			return 0;
 		}
+	case DRIVER_WCN:
+	case DRIVER_LINUX_WCN:
+		/* AP automatically sends ADDBA request after association. */
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"ap_send_addba_req command ignored");
+		return 1;
 	case DRIVER_MAC80211:
 		if (stat("/sys/module/ath10k_core", &s) == 0)
 			return ath10k_ap_send_addba_req(dut, cmd);
