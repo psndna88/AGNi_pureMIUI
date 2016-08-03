@@ -79,7 +79,7 @@
 #define MSM_CPP_START_ADDRESS		0x0
 #define MSM_CPP_END_ADDRESS			0x3F00
 
-#define MSM_CPP_POLL_RETRIES		200
+#define MSM_CPP_POLL_RETRIES		20
 #define MSM_CPP_TASKLETQ_SIZE		16
 #define MSM_CPP_TX_FIFO_LEVEL		16
 
@@ -160,13 +160,6 @@ struct msm_cpp_work_t {
 	struct work_struct my_work;
 	struct cpp_device *cpp_dev;
 };
-
-struct msm_cpp_clock_settings_t {
-	long clock_rate;
-	uint64_t avg;
-	uint64_t inst;
-};
-
 
 struct cpp_device {
 	struct platform_device *pdev;

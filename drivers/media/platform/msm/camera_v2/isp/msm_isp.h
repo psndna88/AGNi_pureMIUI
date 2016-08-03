@@ -20,11 +20,12 @@
 #include <linux/io.h>
 #include <linux/list.h>
 #include <linux/delay.h>
-#include <linux/avtimer_kernel.h>
+#include <linux/avtimer.h>
 #include <media/v4l2-subdev.h>
 #include <media/msmb_isp.h>
 #include <mach/msm_bus.h>
 #include <mach/msm_bus_board.h>
+
 #include "msm_buf_mgr.h"
 
 #define MAX_IOMMU_CTX 2
@@ -35,6 +36,10 @@
 #define MAX_NUM_STATS_COMP_MASK 2
 #define MAX_INIT_FRAME_DROP 31
 #define ISP_Q2 (1 << 2)
+
+#define AVTIMER_MSW_PHY_ADDR 0xFE05300C
+#define AVTIMER_LSW_PHY_ADDR 0xFE053008
+#define AVTIMER_ITERATION_CTR 16
 
 #define VFE_PING_FLAG 0xFFFFFFFF
 #define VFE_PONG_FLAG 0x0
@@ -279,6 +284,7 @@ struct msm_vfe_axi_stream {
 	uint32_t stream_handle;
 	uint8_t buf_divert;
 	enum msm_vfe_axi_stream_type stream_type;
+	uint32_t vt_enable;
 	uint32_t frame_based;
 	uint32_t framedrop_period;
 	uint32_t framedrop_pattern;
@@ -325,7 +331,6 @@ struct msm_vfe_src_info {
 	uint32_t width;
 	long pixel_clock;
 	uint32_t input_format;/*V4L2 pix format with bayer pattern*/
-	uint32_t last_updt_frm_id;
 };
 
 enum msm_wm_ub_cfg_type {
@@ -392,7 +397,6 @@ struct msm_vfe_stats_shared_data {
 	atomic_t stats_comp_mask;
 	uint16_t stream_handle_cnt;
 	atomic_t stats_update;
-	uint32_t stats_mask;
 };
 
 struct msm_vfe_tasklet_queue_cmd {
@@ -422,24 +426,6 @@ struct msm_vfe_error_info {
 struct msm_vfe_frame_ts {
 	struct timeval buf_time;
 	uint32_t frame_id;
-};
-
-struct msm_isp_statistics {
-	int32_t imagemaster0_overflow;
-	int32_t imagemaster1_overflow;
-	int32_t imagemaster2_overflow;
-	int32_t imagemaster3_overflow;
-	int32_t imagemaster4_overflow;
-	int32_t imagemaster5_overflow;
-	int32_t imagemaster6_overflow;
-	int32_t be_overflow;
-	int32_t bg_overflow;
-	int32_t bf_overflow;
-	int32_t awb_overflow;
-	int32_t rs_overflow;
-	int32_t cs_overflow;
-	int32_t ihist_overflow;
-	int32_t skinbhist_overflow;
 };
 
 struct vfe_device {
@@ -476,7 +462,8 @@ struct vfe_device {
 	struct list_head tasklet_q;
 	struct tasklet_struct vfe_tasklet;
 	struct msm_vfe_tasklet_queue_cmd
-	tasklet_queue_cmd[MSM_VFE_TASKLETQ_SIZE];
+		tasklet_queue_cmd[MSM_VFE_TASKLETQ_SIZE];
+
 	uint32_t soc_hw_version;
 	uint32_t vfe_hw_version;
 	struct msm_vfe_hardware_info *hw_info;
@@ -489,8 +476,8 @@ struct vfe_device {
 	int vfe_clk_idx;
 	uint32_t vfe_open_cnt;
 	uint8_t vt_enable;
-	uint8_t ignore_error;
-	struct msm_isp_statistics *stats;
+	void __iomem *p_avtimer_msw;
+	void __iomem *p_avtimer_lsw;
 };
 
 #endif

@@ -34,12 +34,6 @@ config MSMB_CAMERA_DEBUG
 	---help---
 	  Enable printk() debug for msm camera 2.0
 
-config MSM_SENSOR_DRIVER_DEBUG
-        tristate "support for debug"
-	default y
-        ---help---
-          support for debug
-
 if MSMB_CAMERA
 source "drivers/media/platform/msm/camera_v2/Kconfig"
 endif # MSMB_CAMERA

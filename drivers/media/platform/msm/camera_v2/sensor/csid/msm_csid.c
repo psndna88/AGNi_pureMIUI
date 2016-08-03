@@ -50,13 +50,6 @@ static int msm_csid_cid_lut(
 		return -EINVAL;
 	}
 	for (i = 0; i < csid_lut_params->num_cid && i < 16; i++) {
-		if (csid_lut_params->vc_cfg[i]->cid >=
-			csid_lut_params->num_cid ||
-			csid_lut_params->vc_cfg[i]->cid < 0) {
-				pr_err("%s: cid outside range %d\n",
-					__func__, csid_lut_params->vc_cfg[i]->cid);
-				return -EINVAL;
-		}
 		CDBG("%s lut params num_cid = %d, cid = %d, dt = %x, df = %d\n",
 			__func__,
 			csid_lut_params->num_cid,
@@ -102,7 +95,7 @@ static void msm_csid_set_debug_reg(void __iomem *csidbase,
 static void msm_csid_reset(struct csid_device *csid_dev)
 {
 	msm_camera_io_w(CSID_RST_STB_ALL, csid_dev->base + CSID_RST_CMD_ADDR);
-	wait_for_completion(&csid_dev->reset_complete);
+	wait_for_completion_interruptible(&csid_dev->reset_complete);
 	return;
 }
 
@@ -464,8 +457,9 @@ static long msm_csid_cmd(struct csid_device *csid_dev, void *arg)
 			break;
 		}
 		for (i = 0; i < csid_params.lut_params.num_cid; i++) {
-			vc_cfg = kzalloc(sizeof(struct msm_camera_csid_vc_cfg),
-			    GFP_KERNEL);
+			vc_cfg = kzalloc(csid_params.lut_params.num_cid *
+				sizeof(struct msm_camera_csid_vc_cfg),
+				GFP_KERNEL);
 			if (!vc_cfg) {
 				pr_err("%s: %d failed\n", __func__, __LINE__);
 				for (i--; i >= 0; i--)
@@ -475,7 +469,8 @@ static long msm_csid_cmd(struct csid_device *csid_dev, void *arg)
 			}
 			if (copy_from_user(vc_cfg,
 				(void *)csid_params.lut_params.vc_cfg[i],
-				sizeof(struct msm_camera_csid_vc_cfg))) {
+				(csid_params.lut_params.num_cid *
+				sizeof(struct msm_camera_csid_vc_cfg)))) {
 				pr_err("%s: %d failed\n", __func__, __LINE__);
 				kfree(vc_cfg);
 				for (i--; i >= 0; i--)

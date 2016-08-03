@@ -1,4 +1,5 @@
-/* Copyright (c) 2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2015 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -350,12 +351,6 @@ static void msm_vfe40_init_hardware_reg(struct vfe_device *vfe_dev)
 	msm_camera_io_w_mb(0xFEFFFFFF, vfe_dev->vfe_base + 0x2C);
 	msm_camera_io_w(0xFFFFFFFF, vfe_dev->vfe_base + 0x30);
 	msm_camera_io_w_mb(0xFEFFFFFF, vfe_dev->vfe_base + 0x34);
-	msm_camera_io_w(vfe_dev->stats_data.stats_mask,
-		vfe_dev->vfe_base + 0x44);
-	msm_camera_io_w(1, vfe_dev->vfe_base + 0x24);
-	msm_camera_io_w(0, vfe_dev->vfe_base + 0x30);
-	msm_camera_io_w_mb(0, vfe_dev->vfe_base + 0x34);
-	msm_camera_io_w(1, vfe_dev->vfe_base + 0x24);
 }
 
 static void msm_vfe40_process_reset_irq(struct vfe_device *vfe_dev,
@@ -368,9 +363,8 @@ static void msm_vfe40_process_reset_irq(struct vfe_device *vfe_dev,
 static void msm_vfe40_process_halt_irq(struct vfe_device *vfe_dev,
 	uint32_t irq_status0, uint32_t irq_status1)
 {
-    if (irq_status1 & (1 << 8)) {
-        msm_camera_io_w(0x0, vfe_dev->vfe_base + 0x2C0);
-    }
+	if (irq_status1 & (1 << 8))
+		complete(&vfe_dev->halt_complete);
 }
 
 static void msm_vfe40_process_camif_irq(struct vfe_device *vfe_dev,
@@ -486,74 +480,44 @@ static void msm_vfe40_process_error_status(struct vfe_device *vfe_dev)
 		pr_err_ratelimited("%s: violation\n", __func__);
 		msm_vfe40_process_violation_status(vfe_dev);
 	}
-	if (error_status1 & (1 << 9)) {
-		vfe_dev->stats->imagemaster0_overflow++;
+	if (error_status1 & (1 << 9))
 		pr_err_ratelimited("%s: image master 0 bus overflow\n",
 			__func__);
-	}
-	if (error_status1 & (1 << 10)) {
-		vfe_dev->stats->imagemaster1_overflow++;
+	if (error_status1 & (1 << 10))
 		pr_err_ratelimited("%s: image master 1 bus overflow\n",
 			__func__);
-	}
-	if (error_status1 & (1 << 11)) {
-		vfe_dev->stats->imagemaster2_overflow++;
+	if (error_status1 & (1 << 11))
 		pr_err_ratelimited("%s: image master 2 bus overflow\n",
 			__func__);
-	}
-	if (error_status1 & (1 << 12)) {
-		vfe_dev->stats->imagemaster3_overflow++;
+	if (error_status1 & (1 << 12))
 		pr_err_ratelimited("%s: image master 3 bus overflow\n",
 			__func__);
-	}
-	if (error_status1 & (1 << 13)) {
-		vfe_dev->stats->imagemaster4_overflow++;
+	if (error_status1 & (1 << 13))
 		pr_err_ratelimited("%s: image master 4 bus overflow\n",
 			__func__);
-	}
-	if (error_status1 & (1 << 14)) {
-		vfe_dev->stats->imagemaster5_overflow++;
+	if (error_status1 & (1 << 14))
 		pr_err_ratelimited("%s: image master 5 bus overflow\n",
 			__func__);
-	}
-	if (error_status1 & (1 << 15)) {
-		vfe_dev->stats->imagemaster6_overflow++;
+	if (error_status1 & (1 << 15))
 		pr_err_ratelimited("%s: image master 6 bus overflow\n",
 			__func__);
-	}
-	if (error_status1 & (1 << 16)) {
-		vfe_dev->stats->be_overflow++;
+	if (error_status1 & (1 << 16))
 		pr_err_ratelimited("%s: status be bus overflow\n", __func__);
-	}
-	if (error_status1 & (1 << 17)) {
-		vfe_dev->stats->bg_overflow++;
+	if (error_status1 & (1 << 17))
 		pr_err_ratelimited("%s: status bg bus overflow\n", __func__);
-	}
-	if (error_status1 & (1 << 18)) {
-		vfe_dev->stats->bf_overflow++;
+	if (error_status1 & (1 << 18))
 		pr_err_ratelimited("%s: status bf bus overflow\n", __func__);
-	}
-	if (error_status1 & (1 << 19)) {
-		vfe_dev->stats->awb_overflow++;
+	if (error_status1 & (1 << 19))
 		pr_err_ratelimited("%s: status awb bus overflow\n", __func__);
-	}
-	if (error_status1 & (1 << 20)) {
-		vfe_dev->stats->imagemaster0_overflow++;
+	if (error_status1 & (1 << 20))
 		pr_err_ratelimited("%s: status rs bus overflow\n", __func__);
-	}
-	if (error_status1 & (1 << 21)) {
-		vfe_dev->stats->cs_overflow++;
+	if (error_status1 & (1 << 21))
 		pr_err_ratelimited("%s: status cs bus overflow\n", __func__);
-	}
-	if (error_status1 & (1 << 22)) {
-		vfe_dev->stats->ihist_overflow++;
+	if (error_status1 & (1 << 22))
 		pr_err_ratelimited("%s: status ihist bus overflow\n", __func__);
-	}
-	if (error_status1 & (1 << 23)) {
-		vfe_dev->stats->skinbhist_overflow++;
+	if (error_status1 & (1 << 23))
 		pr_err_ratelimited("%s: status skin bhist bus overflow\n",
 			__func__);
-	}
 }
 
 static void msm_vfe40_read_irq_status(struct vfe_device *vfe_dev,
@@ -1108,7 +1072,7 @@ static void msm_vfe40_axi_clear_wm_xbar_reg(
 		vfe_dev->vfe_base + VFE40_XBAR_BASE(wm));
 }
 
-#define MSM_ISP40_TOTAL_WM_UB 819
+#define MSM_ISP40_TOTAL_WM_UB 1140
 
 static void msm_vfe40_cfg_axi_ub_equal_default(
 	struct vfe_device *vfe_dev)
@@ -1182,27 +1146,19 @@ static long msm_vfe40_axi_halt(struct vfe_device *vfe_dev,
 	uint32_t blocking)
 {
 	long rc = 0;
-	uint32_t axi_busy_flag = true;
 	/* Keep only restart mask and halt mask*/
 	msm_camera_io_w(BIT(31), vfe_dev->vfe_base + 0x28);
-	msm_camera_io_w(BIT(8),  vfe_dev->vfe_base + 0x2C);
+	msm_camera_io_w(BIT(8), vfe_dev->vfe_base + 0x2C);
 	/* Clear IRQ Status*/
-	msm_camera_io_w(0x7FFFFFFF, vfe_dev->vfe_base + 0x30);
-	msm_camera_io_w(0xFEFFFEFF, vfe_dev->vfe_base + 0x34);
-	msm_camera_io_w(0x1, vfe_dev->vfe_base + 0x24);
+	msm_camera_io_w(0xFFFFFFFF, vfe_dev->vfe_base + 0x30);
+	msm_camera_io_w(0xFEFFFFFF, vfe_dev->vfe_base + 0x34);
+	init_completion(&vfe_dev->halt_complete);
+	msm_camera_io_w_mb(0x1, vfe_dev->vfe_base + 0x2C0);
 	if (blocking) {
-		/* Halt AXI Bus Bridge */
-		msm_camera_io_w_mb(0x1, vfe_dev->vfe_base + 0x2C0);
 		atomic_set(&vfe_dev->error_info.overflow_state, NO_OVERFLOW);
-		while (axi_busy_flag) {
-			if (msm_camera_io_r(
-				vfe_dev->vfe_base + 0x2E4) & 0x1)
-				axi_busy_flag = false;
-		}
+		rc = wait_for_completion_interruptible_timeout(
+			&vfe_dev->halt_complete, msecs_to_jiffies(500));
 	}
-        else {
-	        msm_camera_io_w_mb(0x1, vfe_dev->vfe_base + 0x2C0);
-        }
 	return rc;
 }
 
@@ -1286,7 +1242,6 @@ static void msm_vfe40_stats_cfg_comp_mask(struct vfe_device *vfe_dev,
 	else
 		comp_mask &= ~stats_mask;
 	msm_camera_io_w(comp_mask << 16, vfe_dev->vfe_base + 0x44);
-	vfe_dev->stats_data.stats_mask = (comp_mask << 16);
 }
 
 static void msm_vfe40_stats_cfg_wm_irq_mask(
