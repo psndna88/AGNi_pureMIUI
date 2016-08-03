@@ -1688,15 +1688,17 @@ static void qpnp_timed_enable_worker(struct work_struct *work)
 		value = (value > hap->timeout_ms ?
 				 hap->timeout_ms : value);
 		hap->state = 1;
-		hrtimer_start(&hap->hap_timer,
-			      ktime_set(value / 1000, (value % 1000) * 1000000),
-			      HRTIMER_MODE_REL);
 	}
 	mutex_unlock(&hap->lock);
 	if (hap->play_mode == QPNP_HAP_DIRECT)
 		qpnp_hap_set(hap, hap->state);
 	else
 		schedule_work(&hap->work);
+
+	if (value)
+		hrtimer_start(&hap->hap_timer,
+			      ktime_set(value / 1000, (value % 1000) * 1000000),
+			      HRTIMER_MODE_REL);
 }
 
 /* enable interface from timed output class */
