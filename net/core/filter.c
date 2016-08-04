@@ -1364,6 +1364,12 @@ static inline int bpf_try_make_writable(struct sk_buff *skb,
 	return err;
 }
 
+static inline void bpf_push_mac_rcsum(struct sk_buff *skb)
+{
+	if (skb_at_tc_ingress(skb))
+		skb_postpush_rcsum(skb, skb_mac_header(skb), skb->mac_len);
+}
+
 static u64 bpf_skb_store_bytes(u64 r1, u64 r2, u64 r3, u64 r4, u64 flags)
 {
 	struct sk_buff *skb = (struct sk_buff *) (long) r1;
@@ -1576,9 +1582,6 @@ static const struct bpf_func_proto bpf_csum_diff_proto = {
 
 static inline int __bpf_rx_skb(struct net_device *dev, struct sk_buff *skb)
 {
-	if (skb_at_tc_ingress(skb))
-		skb_postpush_rcsum(skb, skb_mac_header(skb), skb->mac_len);
-
 	return dev_forward_skb(dev, skb);
 }
 
@@ -1616,6 +1619,8 @@ static u64 bpf_clone_redirect(u64 r1, u64 ifindex, u64 flags, u64 r4, u64 r5)
 	skb = skb_clone(skb, GFP_ATOMIC);
 	if (unlikely(!skb))
 		return -ENOMEM;
+
+	bpf_push_mac_rcsum(skb);
 
 	return flags & BPF_F_INGRESS ?
 	       __bpf_rx_skb(dev, skb) : __bpf_tx_skb(dev, skb);
@@ -1661,6 +1666,8 @@ int skb_do_redirect(struct sk_buff *skb)
 		kfree_skb(skb);
 		return -EINVAL;
 	}
+
+	bpf_push_mac_rcsum(skb);
 
 	return ri->flags & BPF_F_INGRESS ?
 	       __bpf_rx_skb(dev, skb) : __bpf_tx_skb(dev, skb);
