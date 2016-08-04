@@ -759,7 +759,7 @@ int main(int argc, char *argv[])
 
 	for (;;) {
 		c = getopt(argc, argv,
-			   "aAb:Bc:C:dDE:e:fhH:i:Ik:l:L:m:M:np:P:qr:R:s:S:tT:uv:VWw:");
+			   "aAb:Bc:C:dDE:e:fhH:i:Ik:l:L:m:M:nN:o:O:p:P:qr:R:s:S:tT:uv:VWw:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -859,6 +859,15 @@ int main(int argc, char *argv[])
 		case 'n':
 			sigma_dut.no_ip_addr_set = 1;
 			break;
+		case 'N':
+			sigma_dut.vendor_name = optarg;
+			break;
+		case 'o':
+			sigma_dut.model_name = optarg;
+			break;
+		case 'O':
+			sigma_dut.version_name = optarg;
+			break;
 		case 'S':
 			sigma_station_ifname = optarg;
 			break;
@@ -919,6 +928,9 @@ int main(int argc, char *argv[])
 			       "       [-i <IP address of the AP>] \\\n"
 			       "       [-k <subnet mask for the AP>] \\\n"
 			       "       [-e <hostapd entropy file>] \\\n"
+			       "       [-N <device_get_info vendor>] \\\n"
+			       "       [-o <device_get_info model>] \\\n"
+			       "       [-O <device_get_info version>] \\\n"
 			       "       [-r <HT40>]\n");
 			printf("local command: sigma_dut [-p<port>] "
 			       "<-l<cmd>>\n");

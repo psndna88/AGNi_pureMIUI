@@ -521,6 +521,10 @@ struct sigma_dut {
 	int iface_down_on_reset;
 	int write_stats; /* traffic stream e2e*.txt files */
 	int sim_no_username; /* do not set SIM username to use real SIM */
+
+	const char *vendor_name; /* device_get_info vendor override */
+	const char *model_name; /* device_get_info model override */
+	const char *version_name; /* device_get_info version override */
 };
 
 

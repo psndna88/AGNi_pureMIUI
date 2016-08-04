@@ -70,6 +70,7 @@ static void get_ver(const char *cmd, char *buf, size_t buflen)
 static int cmd_device_get_info(struct sigma_dut *dut, struct sigma_conn *conn,
 			       struct sigma_cmd *cmd)
 {
+	const char *vendor = "Qualcomm Atheros";
 	const char *model = "N/A";
 	const char *version = "N/A";
 #ifdef __linux__
@@ -154,8 +155,14 @@ static int cmd_device_get_info(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 #endif /* __linux__ */
 
-	snprintf(resp, sizeof(resp), "vendor,Qualcomm Atheros,"
-		 "model,%s,version,%s", model, version);
+	if (dut->vendor_name)
+		vendor = dut->vendor_name;
+	if (dut->model_name)
+		model = dut->model_name;
+	if (dut->version_name)
+		version = dut->version_name;
+	snprintf(resp, sizeof(resp), "vendor,%s,model,%s,version,%s",
+		 vendor, model, version);
 
 	send_resp(dut, conn, SIGMA_COMPLETE, resp);
 	return 0;
