@@ -32,6 +32,7 @@
 #include "mdss_debug.h"
 #include "mdss_dba_utils.h"
 #include "mdss_dsi_phy.h"
+#include "mdss_livedisplay.h"
 
 #define XO_CLK_RATE	19200000
 
@@ -1447,6 +1448,10 @@ static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
 	}
 
 	ctrl_pdata->ctrl_state |= CTRL_STATE_PANEL_INIT;
+
+	mdss_livedisplay_update(pdata->panel_info.livedisplay,
+			MODE_UPDATE_ALL);
+
 error:
 	mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 0);
 
