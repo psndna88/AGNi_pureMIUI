@@ -2903,6 +2903,13 @@ static __ref int do_hotplug(void *data)
 
 	return ret;
 }
+
+#ifdef CONFIG_MSM_HOTPLUG
+int msm_thermal_deny_cpu_up(uint32_t cpu) {
+    return cpus_offlined & BIT(cpu);
+}
+#endif
+
 #else
 static void __ref do_core_control(long temp)
 {
