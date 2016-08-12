@@ -3939,7 +3939,7 @@ static int cmd_sta_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
 
 #ifdef ANDROID_NAN
 	if (strcasecmp(program, "NAN") == 0)
-		return nan_cmd_sta_exec_action(dut, conn, cmd);
+		return nan_cmd_sta_get_parameter(dut, conn, cmd);
 #endif /* ANDROID_NAN */
 
 	send_resp(dut, conn, SIGMA_ERROR, "ErrorCode,Unsupported parameter");
