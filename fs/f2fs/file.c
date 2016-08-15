@@ -1036,7 +1036,7 @@ static int __exchange_data_block(struct inode *src_inode,
 
 		do_replace = f2fs_kvzalloc(sizeof(int) * olen, GFP_KERNEL);
 		if (!do_replace) {
-			kvfree(src_blkaddr);
+			f2fs_kvfree(src_blkaddr);
 			return -ENOMEM;
 		}
 
@@ -1054,15 +1054,15 @@ static int __exchange_data_block(struct inode *src_inode,
 		dst += olen;
 		len -= olen;
 
-		kvfree(src_blkaddr);
-		kvfree(do_replace);
+		f2fs_kvfree(src_blkaddr);
+		f2fs_kvfree(do_replace);
 	}
 	return 0;
 
 roll_back:
 	__roll_back_blkaddrs(src_inode, src_blkaddr, do_replace, src, len);
-	kvfree(src_blkaddr);
-	kvfree(do_replace);
+	f2fs_kvfree(src_blkaddr);
+	f2fs_kvfree(do_replace);
 	return ret;
 }
 
