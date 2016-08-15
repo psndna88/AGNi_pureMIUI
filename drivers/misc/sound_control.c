@@ -10,19 +10,25 @@
 #include <linux/device.h>
 #include <linux/miscdevice.h>
 
-#define SOUNDCONTROL_MAJOR_VERSION 3
-#define SOUNDCONTROL_MINOR_VERSION 0
+#define SOUND_CONTROL_MAJOR_VERSION 3
+#define SOUND_CONTROL_MINOR_VERSION 1
 
 extern void update_headphones_volume_boost(int vol_boost);
 extern void update_speaker_gain(int vol_boost);
+extern void update_mic_gain(int vol_boost);
 
 //Headphones
 int headphones_boost = 0;
 int headphones_boost_limit = 20;
 
 //Speakers
+
 int speaker_boost = 0;
 int speaker_boost_limit = 10;
+
+//Micrphone/Earpiece
+int mic_boost = 0;
+int mic_boost_limit = 10;
 
 static ssize_t headphones_boost_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -75,13 +81,42 @@ static ssize_t speaker_boost_store(struct device *dev,
 	return size;
 }
 
+static ssize_t mic_boost_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", mic_boost);
+}
+
+static ssize_t mic_boost_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	int new_val;
+
+	sscanf(buf, "%d", &new_val);
+
+	if (new_val != mic_boost) {
+		if (new_val >= mic_boost_limit)
+			new_val = mic_boost_limit;
+
+		pr_info("New mic_boost: %d\n", new_val);
+
+		speaker_boost = new_val;
+		update_mic_gain(mic_boost);
+	}
+
+	return size;
+}
+
 static DEVICE_ATTR(volume_boost, 0664, headphones_boost_show,headphones_boost_store);
 static DEVICE_ATTR(speaker_boost, 0664, speaker_boost_show, speaker_boost_store);
+static DEVICE_ATTR(mic_boost, 0664, mic_boost_show, mic_boost_store);
+
 
 static struct attribute *soundcontrol_attributes[] =
 {
 	&dev_attr_volume_boost.attr,
 	&dev_attr_speaker_boost.attr,
+	&dev_attr_mic_boost.attr,
 	NULL
 };
 

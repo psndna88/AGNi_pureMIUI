@@ -49,6 +49,7 @@ struct sound_control {
  	struct snd_soc_codec *snd_control_codec;
  	int default_headphones_value;
  	int default_speaker_value;
+	int default_mic_value;
 } soundcontrol;
 
 #define TASHA_MAX_MICBIAS 4
@@ -12389,6 +12390,23 @@ void update_speaker_gain(int vol_boost)
  		WCD9335_CDC_RX6_RX_VOL_CTL));
 }
 
+void update_mic_gain(int vol_boost)
+{
+	int default_val = soundcontrol.default_mic_value;
+	int boosted_val = default_val + vol_boost;
+	
+	pr_info("Sound Control: Speaker default value %d\n", default_val);
+	
+	snd_soc_write(soundcontrol.snd_control_codec,
+ 		WCD9335_CDC_RX0_RX_VOL_CTL, boosted_val);
+ 	snd_soc_write(soundcontrol.snd_control_codec,
+ 		WCD9335_CDC_RX0_RX_VOL_MIX_CTL, boosted_val);
+ 		 
+ 	pr_info("Sound Control: Boosted Speaker RX6 value %d\n",
+ 		snd_soc_read(soundcontrol.snd_control_codec,
+ 		WCD9335_CDC_RX0_RX_VOL_CTL));
+}
+
 static int tasha_codec_probe(struct snd_soc_codec *codec)
 {
 	struct wcd9xxx *control;
@@ -12589,7 +12607,9 @@ static int tasha_codec_probe(struct snd_soc_codec *codec)
  		WCD9335_CDC_RX1_RX_VOL_CTL);
  	soundcontrol.default_speaker_value = snd_soc_read(codec,
  		WCD9335_CDC_RX6_RX_VOL_CTL);
- 		
+ 	soundcontrol.default_mic_value = snd_soc_read(codec,
+ 		WCD9335_CDC_RX0_RX_VOL_CTL);
+
 	return ret;
 
 err_pdata:
