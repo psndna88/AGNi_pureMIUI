@@ -6040,6 +6040,7 @@ static int ath_ap_send_frame_loc(struct sigma_dut *dut, struct sigma_conn *conn,
 {
 	const char *val;
 	FILE *f;
+	int rand_int = 0;
 
 	val = get_param(cmd, "MsntType");
 	if (val) {
@@ -6049,6 +6050,9 @@ static int ath_ap_send_frame_loc(struct sigma_dut *dut, struct sigma_conn *conn,
 		if (dut->ap_msnt_type != 5 && dut->ap_msnt_type != 2) {
 			dut->ap_msnt_type = atoi(val);
 			if (dut->ap_msnt_type == 1) {
+				val = get_param(cmd, "RandInterval");
+				if (val)
+					rand_int = atoi(val);
 				f = fopen("/tmp/ftmrr.txt", "a");
 				if (!f) {
 					sigma_dut_print(dut, DUT_MSG_ERROR,
@@ -6057,8 +6061,8 @@ static int ath_ap_send_frame_loc(struct sigma_dut *dut, struct sigma_conn *conn,
 				}
 
 				fprintf(f, "sta_mac = %s\n", cmd->values[3]);
-				fprintf(f, "meas_type = 0x10\nrand_inter = 0x0\nmin_ap_count = 0x%s\ndialogtoken = 0x1\nnum_repetitions = 0x0\nmeas_token = 0xf\nmeas_req_mode = 0x00\n",
-					cmd->values[7]);
+				fprintf(f, "meas_type = 0x10\nrand_inter = 0x%x\nmin_ap_count = 0x%s\ndialogtoken = 0x1\nnum_repetitions = 0x0\nmeas_token = 0xf\nmeas_req_mode = 0x00\n",
+					rand_int, cmd->values[7]);
 				fclose(f);
 				dut->ap_msnt_type = 5;
 				run_system(dut, "wpc -f /tmp/ftmrr.txt");
