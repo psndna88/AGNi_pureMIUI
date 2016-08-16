@@ -68,8 +68,10 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 		buf = malloc(len);
-		if (!buf)
+		if (!buf) {
+			fclose(f);
 			return -1;
+		}
 		/* Read up the command line */
 		if (fread(buf, 1, len, f) != len) {
 			fclose(f);
