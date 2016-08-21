@@ -157,10 +157,10 @@ static inline void wcd_clsh_set_buck_mode(struct snd_soc_codec *codec,
 {
 	if (mode == CLS_H_HIFI)
 		snd_soc_update_bits(codec, WCD9XXX_A_ANA_RX_SUPPLIES,
-				    0x08, 0x08); /* set to HIFI */
+				    0x04, 0x04); /* set to HIFI */
 	else
 		snd_soc_update_bits(codec, WCD9XXX_A_ANA_RX_SUPPLIES,
-				    0x08, 0x00); /* set to default */
+				    0x04, 0x00); /* set to default */
 }
 
 static inline void wcd_clsh_set_flyback_mode(struct snd_soc_codec *codec,
