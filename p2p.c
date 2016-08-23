@@ -73,6 +73,9 @@ static void start_dhcp(struct sigma_dut *dut, const char *group_ifname, int go)
 		if (access("/system/bin/dhcpcd", F_OK) != -1) {
 			snprintf(buf, sizeof(buf), "/system/bin/dhcpcd -KL %s",
 				 group_ifname);
+		} else if (access("/system/bin/dhcptool", F_OK) != -1) {
+			snprintf(buf, sizeof(buf), "/system/bin/dhcptool %s",
+				 group_ifname);
 		} else {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"DHCP client program missing");
@@ -107,6 +110,11 @@ static void stop_dhcp(struct sigma_dut *dut, const char *group_ifname, int go)
 			snprintf(path, sizeof(path),
 				 "/data/misc/dhcp/dhcpcd-%s.pid", group_ifname);
 		} else {
+			/*
+			 * dhcptool terminates as soon as IP is
+			 * assigned/registered using ioctls, no need to kill it
+			 * explicitly.
+			 */
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"No active DHCP client program");
 			return;

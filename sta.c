@@ -635,8 +635,16 @@ static int start_dhcp_client(struct sigma_dut *dut, const char *ifname)
 	char buf[200];
 
 #ifdef ANDROID
-	snprintf(buf, sizeof(buf),
-		 "/system/bin/dhcpcd -b %s", ifname);
+	if (access("/system/bin/dhcpcd", F_OK) != -1) {
+		snprintf(buf, sizeof(buf),
+			 "/system/bin/dhcpcd -b %s", ifname);
+	} else if (access("/system/bin/dhcptool", F_OK) != -1) {
+		snprintf(buf, sizeof(buf), "/system/bin/dhcptool %s &", ifname);
+	} else {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"DHCP client program missing");
+		return 0;
+	}
 #else /* ANDROID */
 	snprintf(buf, sizeof(buf),
 		 "dhclient -nw -pf /var/run/dhclient-%s.pid %s",
