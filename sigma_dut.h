@@ -266,6 +266,7 @@ struct sigma_dut {
 
 	int go;
 	int p2p_client;
+	char *p2p_ifname;
 
 	int client_uapsd;
 
@@ -639,6 +640,8 @@ int ath_set_width(struct sigma_dut *dut, struct sigma_conn *conn,
 /* p2p.c */
 int p2p_cmd_sta_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
 			      struct sigma_cmd *cmd);
+void p2p_create_event_thread(struct sigma_dut *dut);
+void stop_event_thread(void);
 
 /* utils.c */
 enum sigma_program sigma_program_to_enum(const char *prog);

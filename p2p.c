@@ -51,6 +51,226 @@ static int get_60g_freq(int chan)
 }
 
 
+#define GO_IP_ADDR "192.168.43.1"
+#define START_IP_RANGE "192.168.43.10"
+#define END_IP_RANGE "192.168.43.100"
+#define FLUSH_IP_ADDR "0.0.0.0"
+
+static void start_dhcp(struct sigma_dut *dut, const char *group_ifname, int go)
+{
+#ifdef __linux__
+	char buf[200];
+
+	if (go) {
+		snprintf(buf, sizeof(buf), "ifconfig %s %s", group_ifname,
+			 GO_IP_ADDR);
+		run_system(dut, buf);
+		snprintf(buf, sizeof(buf),
+			 "/system/bin/dnsmasq -x /data/dnsmasq.pid --no-resolv --no-poll --dhcp-range=%s,%s,1h",
+			 START_IP_RANGE, END_IP_RANGE);
+	} else {
+#ifdef ANDROID
+		if (access("/system/bin/dhcpcd", F_OK) != -1) {
+			snprintf(buf, sizeof(buf), "/system/bin/dhcpcd -KL %s",
+				 group_ifname);
+		} else {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"DHCP client program missing");
+			return;
+		}
+#else /* ANDROID */
+		snprintf(buf, sizeof(buf),
+			 "dhclient -nw -pf /var/run/dhclient-%s.pid %s",
+			 group_ifname, group_ifname);
+#endif /* ANDROID */
+	}
+
+	run_system(dut, buf);
+#endif /* __linux__ */
+}
+
+
+static void stop_dhcp(struct sigma_dut *dut, const char *group_ifname, int go)
+{
+#ifdef __linux__
+	char path[128];
+	char buf[200];
+	struct stat s;
+
+	if (go) {
+		snprintf(path, sizeof(path), "/data/dnsmasq.pid");
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Kill previous DHCP server: %s", buf);
+	} else {
+#ifdef ANDROID
+		if (access("/system/bin/dhcpcd", F_OK) != -1) {
+			snprintf(path, sizeof(path),
+				 "/data/misc/dhcp/dhcpcd-%s.pid", group_ifname);
+		} else {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"No active DHCP client program");
+			return;
+		}
+		snprintf(path, sizeof(path), "/data/misc/dhcp/dhcpcd-%s.pid",
+			 group_ifname);
+#else /* ANDROID */
+		snprintf(path, sizeof(path), "/var/run/dhclient-%s.pid",
+			 group_ifname);
+#endif /* ANDROID */
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Kill previous DHCP client: %s", buf);
+	}
+	if (stat(path, &s) == 0) {
+		snprintf(buf, sizeof(buf), "kill `cat %s`", path);
+		run_system(dut, buf);
+		unlink(path);
+		sleep(1);
+	}
+
+	snprintf(buf, sizeof(buf), "ip address flush dev %s", group_ifname);
+	run_system(dut, buf);
+	snprintf(buf, sizeof(buf), "ifconfig %s %s",
+		 group_ifname, FLUSH_IP_ADDR);
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "Clear IP address: %s", buf);
+	run_system(dut, buf);
+#endif /* __linux__ */
+}
+
+
+static int stop_event_rx = 0;
+
+#ifdef __linux__
+void stop_event_thread()
+{
+	stop_event_rx = 1;
+	printf("sigma_dut dhcp terminating\n");
+}
+#endif /* __linux__ */
+
+
+static void * wpa_event_recv(void *ptr)
+{
+	struct sigma_dut *dut = ptr;
+	struct wpa_ctrl *ctrl;
+	char buf[4096];
+	char *pos, *gtype, *p2p_group_ifname = NULL;
+	int fd, ret, i;
+	int go = 0;
+	fd_set rfd;
+	struct timeval tv;
+	size_t len;
+
+	const char *events[] = {
+		"P2P-GROUP-STARTED",
+		"P2P-GROUP-REMOVED",
+		NULL
+	};
+
+	ctrl = open_wpa_mon(dut->p2p_ifname);
+	if (!ctrl) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to open wpa_supplicant monitor connection");
+		return NULL;
+	}
+
+	for (i = 0; events[i]; i++) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Waiting for wpa_cli event: %s", events[i]);
+	}
+
+	fd = wpa_ctrl_get_fd(ctrl);
+	if (fd < 0) {
+		wpa_ctrl_detach(ctrl);
+		wpa_ctrl_close(ctrl);
+		return NULL;
+	}
+
+	while (!stop_event_rx) {
+		FD_ZERO(&rfd);
+		FD_SET(fd, &rfd);
+		tv.tv_sec = 1;
+		tv.tv_usec = 0;
+
+		ret = select(fd + 1, &rfd, NULL, NULL, &tv);
+		if (ret == 0)
+			continue;
+		if (ret < 0) {
+			sigma_dut_print(dut, DUT_MSG_INFO, "select: %s",
+					strerror(errno));
+			usleep(100000);
+			continue;
+		}
+
+		len = sizeof(buf);
+		if (wpa_ctrl_recv(ctrl, buf, &len) < 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failure while waiting for events");
+			continue;
+		}
+
+		ret = 0;
+		pos = strchr(buf, '>');
+		if (pos) {
+			for (i = 0; events[i]; i++) {
+				if (strncmp(pos + 1, events[i],
+					    strlen(events[i])) == 0) {
+					ret = 1;
+					break; /* Event found */
+				}
+			}
+		}
+		if (!ret)
+			continue;
+
+		if (strstr(buf, "P2P-GROUP-")) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG, "Group event '%s'",
+					buf);
+			p2p_group_ifname = strchr(buf, ' ');
+			if (!p2p_group_ifname)
+				continue;
+			p2p_group_ifname++;
+			pos = strchr(p2p_group_ifname, ' ');
+			if (!pos)
+				continue;
+			*pos++ = '\0';
+			gtype = pos;
+			pos = strchr(gtype, ' ');
+			if (!pos)
+				continue;
+			*pos++ = '\0';
+
+			go = strcmp(gtype, "GO") == 0;
+		}
+
+		if (strstr(buf, "P2P-GROUP-STARTED")) {
+			start_dhcp(dut, p2p_group_ifname, go);
+		} else if (strstr(buf, "P2P-GROUP-REMOVED")) {
+			stop_dhcp(dut, p2p_group_ifname, go);
+			go = 0;
+		}
+	}
+
+	/* terminate DHCP server, if runnin! */
+	if (go)
+		stop_dhcp(dut, p2p_group_ifname, go);
+
+	wpa_ctrl_detach(ctrl);
+	wpa_ctrl_close(ctrl);
+
+	pthread_exit(0);
+	return NULL;
+}
+
+
+void p2p_create_event_thread(struct sigma_dut *dut)
+{
+	static pthread_t event_thread;
+
+	/* create event thread */
+	pthread_create(&event_thread, NULL, &wpa_event_recv, (void *) dut);
+}
+
+
 static int p2p_group_add(struct sigma_dut *dut, const char *ifname,
 			 int go, const char *grpid, const char *ssid)
 {

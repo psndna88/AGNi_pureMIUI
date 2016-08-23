@@ -467,6 +467,7 @@ static int stop_loop = 0;
 static void handle_term(int sig)
 {
 	stop_loop = 1;
+	stop_event_thread();
 	printf("sigma_dut terminating\n");
 }
 #endif /* __linux__ */
@@ -656,13 +657,13 @@ static int run_local_cmd(int port, char *lcmd)
 }
 
 
-static void determine_sigma_p2p_ifname(void)
+static char * determine_sigma_p2p_ifname(void)
 {
 	char buf[256];
 	struct wpa_ctrl *ctrl;
 
 	if (sigma_p2p_ifname)
-		return;
+		return sigma_p2p_ifname;
 
 	snprintf(buf, sizeof(buf), "p2p-dev-%s", get_station_ifname());
 	ctrl = open_wpa_mon(buf);
@@ -678,6 +679,8 @@ static void determine_sigma_p2p_ifname(void)
 	} else {
 		sigma_p2p_ifname = get_station_ifname();
 	}
+
+	return sigma_p2p_ifname;
 }
 
 
@@ -745,6 +748,7 @@ int main(int argc, char *argv[])
 	int daemonize = 0;
 	int port = SIGMA_DUT_PORT;
 	char *local_cmd = NULL;
+	int internal_dhcp_enabled = 0;
 #ifdef __QNXNTO__
 	char *env_str = NULL;
 	char buf[20];
@@ -759,7 +763,7 @@ int main(int argc, char *argv[])
 
 	for (;;) {
 		c = getopt(argc, argv,
-			   "aAb:Bc:C:dDE:e:fhH:i:Ik:l:L:m:M:nN:o:O:p:P:qr:R:s:S:tT:uv:VWw:");
+			   "aAb:Bc:C:dDE:e:fghH:i:Ik:l:L:m:M:nN:o:O:p:P:qr:R:s:S:tT:uv:VWw:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -793,6 +797,11 @@ int main(int argc, char *argv[])
 		case 'f':
 			/* Disable writing stats */
 			sigma_dut.write_stats = 0;
+			break;
+		case 'g':
+			/* Enable internal processing of P2P group formation
+			 * events to start/stop DHCP server/client. */
+			internal_dhcp_enabled = 1;
 			break;
 		case 'H':
 			sigma_dut.hostapd_debug_log = optarg;
@@ -939,7 +948,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	determine_sigma_p2p_ifname();
+	sigma_dut.p2p_ifname = determine_sigma_p2p_ifname();
 	if (local_cmd)
 		return run_local_cmd(port, local_cmd);
 
@@ -998,6 +1007,9 @@ int main(int argc, char *argv[])
 		setlinebuf(stdout);
 #endif /* __linux__ */
 	}
+
+	if (internal_dhcp_enabled)
+		p2p_create_event_thread(&sigma_dut);
 
 	run_loop(&sigma_dut);
 
