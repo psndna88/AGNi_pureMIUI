@@ -70,6 +70,8 @@ dtb-$(CONFIG_ARCH_MSM8916) += hydrogen-msm8956-mtp.dtb \
 	hydrogen-msm8956-v1.1-mtp.dtb \
 	hydrogen-msm8976-mtp.dtb \
 	hydrogen-msm8976-v1.1-mtp.dtb
+else ifeq ($(CONFIG_MACH_XIAOMI_KENZO),y)
+dtb-$(CONFIG_ARCH_MSM8916) += kenzo-msm8956-mtp.dtb
 else
 dtb-$(CONFIG_ARCH_MSM8916) += msm8916-sim.dtb \
 	msm8916-rumi.dtb \
