@@ -49,7 +49,6 @@
 	aliases {
 		sdhc1 = &sdhc_1; /* SDC1 eMMC slot */
 		sdhc2 = &sdhc_2; /* SDC2 SD card slot */
-		sdhc3 = &sdhc_3; /* SDC3 SDIO card slot */
 		spi0 = &spi_0;
 	};
 
@@ -61,7 +60,7 @@
 			linux,reserve-contiguous-region;
 			linux,reserve-region;
 			linux,remove-completely;
-			reg = <0x0 0x85b00000 0x0 0x0d00000>;
+			reg = <0x0 0x86300000 0x0 0x0500000>;
 			label = "other_ext_mem";
 		};
 
@@ -117,10 +116,17 @@
 			reg = <0x0 0x0 0x0 0x400000>;
 			label = "adsp_mem";
 		};
+
+		tzapp_mem: tzapp_region@0 {
+			linux,reserve-contiguous-region;
+			linux,reserve-region;
+			linux,remove-completely;
+			reg = <0 0x8DD00000 0 0x1900000>;
+			label = "tzapp_mem";
+		};
 	};
 };
 
-#include "msm8976-pinctrl.dtsi"
 #include "msm8976-ion.dtsi"
 #include "msm8976-iommu.dtsi"
 #include "msm8976-iommu-domains.dtsi"
@@ -986,61 +992,6 @@
 		status = "disabled";
 	};
 
-	sdhc_3: sdhci@7a24900 {
-		compatible = "qcom,sdhci-msm";
-		reg = <0x7a24900 0x11c>, <0x7a24000 0x800>;
-		reg-names = "hc_mem", "core_mem";
-
-		qcom,bus-width = <4>;
-		gpios = <&msm_gpio 44 0>, /* CLK */
-			<&msm_gpio 43 0>, /* CMD */
-			<&msm_gpio 42 0>, /* DATA0 */
-			<&msm_gpio 41 0>, /* DATA1 */
-			<&msm_gpio 40 0>, /* DATA2 */
-			<&msm_gpio 39 0>; /* DATA3 */
-		qcom,gpio-names = "CLK", "CMD", "DAT0", "DAT1", "DAT2", "DAT3";
-
-		qcom,clk-rates = <400000 20000000 25000000 50000000 100000000
-								200000000>;
-		qcom,cpu-dma-latency-us = <60>;
-		qcom,cpu-affinity = "affine_cores";
-		qcom,cpu-affinity-mask = <0x0f>;
-
-		clock-names = "iface_clk", "core_clk";
-		clocks = <&clock_gcc clk_gcc_sdcc3_ahb_clk>,
-			<&clock_gcc clk_gcc_sdcc3_apps_clk>;
-
-		qcom,core_3_0v_support;
-		qcom,nonremovable;
-		qcom,msm-bus,name = "sdhc3";
-		qcom,msm-bus,num-cases = <8>;
-		qcom,msm-bus,num-paths = <1>;
-		qcom,msm-bus,vectors-KBps = <79 512 0 0>, /* No vote */
-			<79 512 1600 3200>,    /* 400 KB/s*/
-			<79 512 80000 160000>, /* 20 MB/s */
-			<79 512 100000 200000>, /* 25 MB/s */
-			<79 512 200000 400000>, /* 50 MB/s */
-			<79 512 400000 800000>, /* 100 MB/s */
-			<79 512 800000 800000>, /* 200 MB/s */
-			<79 512 2048000 4096000>; /* Max. bandwidth */
-		qcom,bus-bw-vectors-bps = <0 400000 20000000 25000000 50000000
-						100000000 200000000 4294967295>;
-
-		#address-cells = <0>;
-		interrupt-parent = <&sdhc_3>;
-		interrupts = <0 1 2>;
-		#interrupt-cells = <1>;
-		interrupt-map-mask = <0xffffffff>;
-		interrupt-map = <0 &intc 0 295 0
-			1 &intc 0 297 0
-			2 &msm_gpio 45 0x4>;
-		interrupt-names = "hc_irq", "pwr_irq", "sdiowakeup_irq";
-
-		qcom,bus-speed-mode = "SDR12", "SDR25", "SDR50", "DDR50",
-						"SDR104";
-		status = "disabled";
-	};
-
 	blsp1_uart2: serial@78b0000 {
 		compatible = "qcom,msm-lsuart-v14";
 		reg = <0x78b0000 0x200>;
@@ -1459,8 +1410,8 @@
 		reg = <0xb017000 0x1000>;
 		reg-names = "wdt-base";
 		interrupts = <0 3 0>, <0 4 0>;
-		qcom,bark-time = <11000>;
-		qcom,pet-time = <10000>;
+		qcom,bark-time = <20000>;
+		qcom,pet-time = <15000>;
 		qcom,ipi-ping;
 	};
 
@@ -1556,9 +1507,9 @@
 		qcom,ce-opp-freq = <100000000>;
 	};
 
-	qcom_seecom: qseecom@85b00000 {
+	qcom_seecom: qseecom@8dd00000 {
 		compatible = "qcom,qseecom";
-		reg = <0x85b00000 0x800000>;
+		reg = <0x8dd00000 0x1900000>;
 		reg-names = "secapp-region";
 		qcom,hlos-num-ce-hw-instances = <1>;
 		qcom,hlos-ce-hw-instance = <0>;
@@ -1566,7 +1517,7 @@
 		qcom,msm-bus,name = "qseecom-noc";
 		qcom,disk-encrypt-pipe-pair = <2>;
 		qcom,support-fde;
-		qcom,appsbl-qseecom-support;
+		/*qcom,appsbl-qseecom-support;*/
 		qcom,msm-bus,num-cases = <4>;
 		qcom,msm-bus,num-paths = <1>;
 		qcom,support-bus-scaling;
@@ -2210,7 +2161,7 @@
 			"AIF4 VI", "MCLK",
 			"RX_BIAS", "MCLK",
 			"MADINPUT", "MCLK",
-			"AMIC2", "MIC BIAS2",
+			/*"AMIC2", "MIC BIAS2",
 			"MIC BIAS2", "Headset Mic",
 			"AMIC3", "MIC BIAS2",
 			"MIC BIAS2", "ANCRight Headset Mic",
@@ -2233,19 +2184,25 @@
 			"DMIC5", "MIC BIAS4",
 			"MIC BIAS4", "Digital Mic5",
 			"SpkrLeft IN", "SPK1 OUT",
-			"SpkrRight IN", "SPK2 OUT";
+			"SpkrRight IN", "SPK2 OUT";*/
+			"AMIC1", "MIC BIAS1",
+			"MIC BIAS1", "Handset Mic",
+			"AMIC2", "MIC BIAS2",
+			"MIC BIAS2", "Headset Mic",
+			"AMIC3", "MIC BIAS3",
+			"MIC BIAS3", "Secondary Mic";
 
 		qcom,msm-gpios =
-			"us_eu_gpio";
+			"ext_spk_gpio";
 		qcom,pinctrl-names =
-			"all_off",
-			"us_eu_gpio_act";
+			"spk_ext_pa_act",
+			"spk_ext_pa_sus";
 		pinctrl-names =
-			"all_off",
-			"us_eu_gpio_act";
-		pinctrl-0 = <&cross_conn_det_sus>;
-		pinctrl-1 = <&cross_conn_det_act>;
-		qcom,cdc-us-euro-gpios = <&msm_gpio 144 0>;
+			"spk_ext_pa_act",
+			"spk_ext_pa_sus";
+		pinctrl-0 = <&spk_ext_pa_active>;
+		pinctrl-1 = <&spk_ext_pa_suspend>;
+		qcom,msm-spk-ext-pa = <&msm_gpio 101 0>;
 
 		qcom,msm-mbhc-hphl-swh = <0>;
 		qcom,msm-mbhc-gnd-swh = <0>;
@@ -2286,11 +2243,11 @@
 				"msm-dai-q6-dev.12292", "msm-dai-q6-dev.12293";
 		asoc-codec = <&stub_codec>;
 		asoc-codec-names = "msm-stub-codec.1";
-		qcom,max-aux-codec = <2>;
+		/*qcom,max-aux-codec = <2>;
 		qcom,aux-codec = "wsa881x.20170211", "wsa881x.20170212",
 				 "wsa881x.21170213", "wsa881x.21170214";
 		qcom,aux-codec-prefix = "SpkrLeft", "SpkrRight",
-					"SpkrLeft", "SpkrRight";
+					"SpkrLeft", "SpkrRight";*/
 	};
 
 	wcd9xxx_intc: wcd9xxx-irq {
@@ -2316,6 +2273,11 @@
 		clock-names = "osr_clk";
 		clocks = <&clock_gcc clk_div_clk2>;
 		qcom,node_has_rpm_clock;
+		qcom,codec-mclk-clk-freq = <9600000>;
+		pinctrl-names = "i2s_mclk_sleep",
+				"i2s_mclk_active";
+		pinctrl-0 = <&mclk_line_sus>;
+		pinctrl-1 = <&mclk_line_act>;
 		#clock-cells = <1>;
 	};
 
@@ -2774,8 +2736,10 @@
 
 		qcom,wcd-rst-gpio-node = <&wcd_rst_gpio>;
 
-		clock-names = "wcd_clk";
-		clocks = <&clock_audio clk_audio_pmi_clk>;
+		clock-names = "wcd_pmi_clk",
+				"wcd_ap_clk";
+		clocks = <&clock_audio clk_audio_pmi_clk>,
+				<&clock_audio clk_audio_ap_clk1>;
 	};
 };
 
@@ -2784,10 +2748,10 @@
 		status = "ok";
 		qcom,mode = <1>;
 		qcom,pull = <5>;
-		qcom,vin-sel = <2>;
+		qcom,vin-sel = <3>;
 		qcom,src-sel = <2>;
 		qcom,master-en = <1>;
-		qcom,out-strength = <2>;
+		qcom,out-strength = <3>;
 	};
 	gpio@c600 {
 		status = "ok";
@@ -2796,6 +2760,17 @@
 		qcom,vin-sel = <0>;
 		qcom,src-sel = <0>;
 		qcom,master-en = <1>;
+	};
+};
+
+&pmi8950_gpios{
+	gpio@c000{
+		status = "okay";
+		qcom,mode = <1>;			/*DIGITAL OUT*/
+		qcom,pull = <5>;			/*NO PULL*/
+		qcom,src-sel = <6>; 		/*DTEST1 OUT*/
+		qcom,master-en = <1>;		/*ENABLE GPIO*/
+		qcom,out-strength = <3>;	/*Max strength current*/
 	};
 };
 
