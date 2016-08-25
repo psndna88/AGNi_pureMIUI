@@ -11,7 +11,7 @@
 #include <linux/miscdevice.h>
 
 #define SOUND_CONTROL_MAJOR_VERSION 3
-#define SOUND_CONTROL_MINOR_VERSION 1
+#define SOUND_CONTROL_MINOR_VERSION 2
 
 extern void update_headphones_volume_boost(int vol_boost);
 extern void update_speaker_gain(int vol_boost);
@@ -100,7 +100,7 @@ static ssize_t mic_boost_store(struct device *dev,
 
 		pr_info("New mic_boost: %d\n", new_val);
 
-		speaker_boost = new_val;
+		mic_boost = new_val;
 		update_mic_gain(mic_boost);
 	}
 
