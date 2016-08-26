@@ -200,7 +200,7 @@ void set_pgdat_percpu_threshold(pg_data_t *pgdat,
 			continue;
 
 		threshold = (*calculate_pressure)(zone);
-		for_each_possible_cpu(cpu)
+		for_each_online_cpu(cpu)
 			per_cpu_ptr(zone->pageset, cpu)->stat_threshold
 							= threshold;
 	}
@@ -1281,7 +1281,7 @@ static void vmstat_update(struct work_struct *w)
 {
 	refresh_cpu_vm_stats(smp_processor_id());
 	schedule_delayed_work_on(smp_processor_id(),
-		&__get_cpu_var(vmstat_work),
+		this_cpu_ptr(&vmstat_work),
 		round_jiffies_relative(sysctl_stat_interval));
 }
 
@@ -1290,7 +1290,8 @@ static void __cpuinit start_cpu_timer(int cpu)
 	struct delayed_work *work = &per_cpu(vmstat_work, cpu);
 
 	INIT_DEFERRABLE_WORK(work, vmstat_update);
-	schedule_delayed_work_on(cpu, work, __round_jiffies_relative(HZ, cpu));
+	schedule_delayed_work_on(cpu,
+		&per_cpu(vmstat_work, cpu), 0);
 }
 
 /*
