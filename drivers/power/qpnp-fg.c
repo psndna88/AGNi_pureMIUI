@@ -1674,7 +1674,7 @@ static int get_monotonic_soc_raw(struct fg_chip *chip)
 }
 
 #define EMPTY_CAPACITY		0
-#define DEFAULT_CAPACITY	50
+#define DEFAULT_CAPACITY	-2
 #define MISSING_CAPACITY	100
 #define FULL_CAPACITY		100
 #define FULL_SOC_RAW		0xFF
@@ -3775,10 +3775,6 @@ static irqreturn_t fg_batt_missing_irq_handler(int irq, void *_chip)
 		}
 	}
 
-	if (fg_debug_mask & FG_IRQS)
-		pr_info("batt-missing triggered: %s\n",
-				batt_missing ? "missing" : "present");
-
 	if (chip->power_supply_registered)
 		power_supply_changed(&chip->bms_psy);
 	return IRQ_HANDLED;
@@ -5707,8 +5703,7 @@ static int fg_common_hw_init(struct fg_chip *chip)
 		}
 	}
 
-	rc = fg_mem_masked_write(chip, settings[FG_MEM_DELTA_SOC].address, 0xFF,
-			soc_to_setpoint(settings[FG_MEM_DELTA_SOC].value),
+	rc = fg_mem_masked_write(chip, settings[FG_MEM_DELTA_SOC].address, 0xFF, 1,
 			settings[FG_MEM_DELTA_SOC].offset);
 	if (rc) {
 		pr_err("failed to write delta soc rc=%d\n", rc);
