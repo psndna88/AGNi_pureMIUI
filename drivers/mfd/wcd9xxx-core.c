@@ -34,6 +34,9 @@
 #include <linux/regmap.h>
 #include <sound/soc.h>
 #include "wcd9xxx-regmap.h"
+#ifdef CONFIG_MACH_XIAOMI_KENZO
+#include <linux/reboot.h>
+#endif
 
 #define WCD9XXX_REGISTER_START_OFFSET 0x800
 #define WCD9XXX_SLIM_RW_MAX_TRIES 3
@@ -1061,6 +1064,13 @@ static int wcd9335_bring_up(struct wcd9xxx *wcd9xxx)
 		return -EINVAL;
 	}
 
+#ifdef CONFIG_MACH_XIAOMI_KENZO
+	if (val < 0 || byte0 < 0) {
+		pr_err("%s: some thing wrong with the codec restart target\n", __func__);
+		emergency_restart();
+	}
+#endif
+
 	if ((val & 0x80) && (byte0 == 0x0)) {
 		dev_info(wcd9xxx->dev, "%s: wcd9335 codec version is v1.1\n",
 			 __func__);
@@ -1341,6 +1351,13 @@ static const struct wcd9xxx_codec_type
 			 *version);
 	}
 exit:
+#ifdef CONFIG_MACH_XIAOMI_KENZO
+	if (rc < 0) {
+		pr_err("%s: some thing wrong with the codec restart target\n", __func__);
+		emergency_restart();
+	}
+#endif
+
 	return d;
 }
 

@@ -45,6 +45,11 @@
 #include "sdhci-msm-ice.h"
 #include "cmdq_hci.h"
 
+#ifdef CONFIG_MACH_XIAOMI_KENZO
+extern int sd_slot_plugoutt;
+struct sdhci_msm_reg_data *sd_vdd_vreg = NULL;
+#endif
+
 enum sdc_mpm_pin_state {
 	SDC_DAT1_DISABLE,
 	SDC_DAT1_ENABLE,
@@ -1306,6 +1311,13 @@ static int sdhci_msm_dt_parse_vreg_info(struct device *dev,
 	if (of_get_property(np, prop_name, NULL))
 		vreg->is_always_on = true;
 
+#ifdef CONFIG_MACH_XIAOMI_KENZO
+	snprintf(prop_name, MAX_PROP_SIZE,
+			"qcom,%s-is-sd-vdd", vreg_name);
+	if (of_get_property(np, prop_name, NULL))
+		vreg->is_sd_vdd = true;
+#endif
+
 	snprintf(prop_name, MAX_PROP_SIZE,
 			"qcom,%s-lpm-sup", vreg_name);
 	if (of_get_property(np, prop_name, NULL))
@@ -1334,6 +1346,11 @@ static int sdhci_msm_dt_parse_vreg_info(struct device *dev,
 	}
 
 	*vreg_data = vreg;
+
+#ifdef CONFIG_MACH_XIAOMI_KENZO
+	if (vreg->is_sd_vdd == true)
+		sd_vdd_vreg = vreg;
+#endif
 	dev_dbg(dev, "%s: %s %s vol=[%d %d]uV, curr=[%d %d]uA\n",
 		vreg->name, vreg->is_always_on ? "always_on," : "",
 		vreg->lpm_sup ? "lpm_sup," : "", vreg->low_vol_level,
@@ -2115,6 +2132,11 @@ static int sdhci_msm_vreg_enable(struct sdhci_msm_reg_data *vreg)
 {
 	int ret = 0;
 
+#ifdef CONFIG_MACH_XIAOMI_KENZO
+	if ((vreg != NULL) && (vreg->is_sd_vdd == 1) && (sd_slot_plugoutt == 1))
+		return ret;
+#endif
+
 	/* Put regulator in HPM (high power mode) */
 	ret = sdhci_msm_vreg_set_optimum_mode(vreg, vreg->hpm_uA);
 	if (ret < 0)
@@ -2171,6 +2193,18 @@ static int sdhci_msm_vreg_disable(struct sdhci_msm_reg_data *vreg)
 out:
 	return ret;
 }
+
+#ifdef CONFIG_MACH_XIAOMI_KENZO
+int sdhci_msm_disable_sd_vdd(void)
+{
+	int ret = 0;
+	if ((sd_vdd_vreg != NULL) && (sd_vdd_vreg->is_sd_vdd == 1)) {
+		pr_err("sdhci_msm_disable_sd_vdd \n");
+		ret = sdhci_msm_vreg_disable(sd_vdd_vreg);
+	}
+	return ret;
+}
+#endif
 
 static int sdhci_msm_setup_vreg(struct sdhci_msm_pltfm_data *pdata,
 			bool enable, bool is_init)
@@ -4209,7 +4243,12 @@ static int sdhci_msm_resume(struct device *dev)
 		if (ret)
 			pr_err("%s: %s: Failed to request card detection IRQ %d\n",
 					mmc_hostname(host->mmc), __func__, ret);
-	}
+		}
+
+#ifdef CONFIG_MACH_XIAOMI_KENZO
+		if ((sd_slot_plugoutt == 1) && (mmc_hostname(host->mmc) != NULL) && (!strcmp(mmc_hostname(host->mmc), "mmc1")))
+			sd_slot_plugoutt = gpio_get_value_cansleep(msm_host->pdata->status_gpio);
+#endif
 
 	if (pm_runtime_suspended(dev)) {
 		pr_debug("%s: %s: runtime suspended, defer system resume\n",
