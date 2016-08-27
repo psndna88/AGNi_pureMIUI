@@ -1997,7 +1997,9 @@ static int qpnp_parse_dt_config(struct spmi_device *spmi,
 	}
 
 	_pwm_change_mode(chip, enable);
-	_pwm_enable(chip);
+
+	if (chip->dtest_line != 1)
+		_pwm_enable(chip);
 
 read_opt_props:
 	/* Initialize optional config parameters from DT if provided */

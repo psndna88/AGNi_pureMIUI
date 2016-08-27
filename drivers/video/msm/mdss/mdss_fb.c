@@ -51,6 +51,7 @@
 #include <linux/qcom_iommu.h>
 #include <linux/msm_iommu_domains.h>
 
+#include "mdss_dsi.h"
 #include "mdss_fb.h"
 #include "mdss_mdp_splash_logo.h"
 #define CREATE_TRACE_POINTS
@@ -774,6 +775,8 @@ static ssize_t mdss_fb_get_dfps_mode(struct device *dev,
 
 	return ret;
 }
+extern  void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
+			struct dsi_panel_cmds *pcmds);
 
 static DEVICE_ATTR(msm_fb_type, S_IRUGO, mdss_fb_get_type, NULL);
 static DEVICE_ATTR(msm_fb_split, S_IRUGO | S_IWUSR, mdss_fb_show_split,
@@ -1466,7 +1469,7 @@ static int mdss_fb_blank_blank(struct msm_fb_data_type *mfd,
 
 	return ret;
 }
-
+int esd_backlight = 0;
 static int mdss_fb_blank_unblank(struct msm_fb_data_type *mfd)
 {
 	int ret = 0;
@@ -1518,24 +1521,17 @@ static int mdss_fb_blank_unblank(struct msm_fb_data_type *mfd)
 		if (!mfd->allow_bl_update) {
 			mfd->allow_bl_update = true;
 			/*
-			 * 1.) If in AD calibration mode then frameworks would
-			 * not be allowed to update backlight hence post unblank
+			 * If in AD calibration mode then frameworks would not
+			 * be allowed to update backlight hence post unblank
 			 * the backlight would remain 0 (0 is set in blank).
 			 * Hence resetting back to calibration mode value
-			 *
-			 * 2.) If the panel is recovering from ESD attack, then
-			 * the frameworks might not set the backlight post
-			 * unblank, hence the backlight might remain zero. Set
-			 * the backlight in such cases to the unset_bl_level
-			 * value which will be stored prior to ESD recovery
-			 * during blank.
 			 */
 			if (IS_CALIB_MODE_BL(mfd))
 				mdss_fb_set_backlight(mfd, mfd->calib_mode_bl);
-			else if (!mfd->panel_info->mipi.post_init_delay ||
-				cur_panel_dead)
+			else if ((!mfd->panel_info->mipi.post_init_delay ||
+				cur_panel_dead) && esd_backlight)
 				mdss_fb_set_backlight(mfd, mfd->unset_bl_level);
-
+				esd_backlight = 0;
 			/*
 			 * it blocks the backlight update between unblank and
 			 * first kickoff to avoid backlight turn on before black
