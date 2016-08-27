@@ -55,6 +55,9 @@ modules.builtin
 #
 !.gitignore
 !.mailmap
+!drivers/input/touchscreen/FT5346_LQ_CX865_Biel0x3b_V20_D01_20151023_app.i
+!drivers/input/touchscreen/FT5346_LQ_CX865_Mutton0x53_Sharp_Black_V11_D01_20151022_app.i
+!drivers/input/touchscreen/FT5346_LQ_L8650_Ofilm0x51_V02_D01_20151228_app.i
 
 #
 # Generated include files
