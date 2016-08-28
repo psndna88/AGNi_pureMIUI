@@ -798,16 +798,9 @@ bool f2fs_fill_dentries(struct file *file, void *dirent, filldir_t filldir,
 			int save_len = fstr->len;
 			int ret;
 
-			de_name.name = f2fs_kmalloc(de_name.len, GFP_NOFS);
-			if (!de_name.name)
-				return false;
-
-			memcpy(de_name.name, d->filename[bit_pos], de_name.len);
-
 			ret = fscrypt_fname_disk_to_usr(d->inode,
 						(u32)de->hash_code, 0,
 						&de_name, fstr);
-			kfree(de_name.name);
 			if (ret < 0)
 				return true;
 
