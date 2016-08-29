@@ -2011,13 +2011,13 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 
 			if (dut->ap_cipher == AP_CCMP_TKIP) {
 				strncat(buf, "+ccmp+tkip",
-					sizeof(buf) - sizeof("+ccmp+tkip"));
+					sizeof(buf) - strlen(buf) - 1);
 			} else if (dut->ap_cipher == AP_TKIP) {
 				strncat(buf, "+tkip",
-					sizeof(buf) - sizeof("+tkip"));
+					sizeof(buf) - strlen(buf) - 1);
 			} else {
 				strncat(buf, "+ccmp",
-					sizeof(buf) - sizeof("+ccmp"));
+					sizeof(buf) - strlen(buf) - 1);
 			}
 
 			owrt_ap_set_vap(dut, vap_count, "encryption", buf);
@@ -2037,11 +2037,14 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 			}
 
 			if (dut->ap_cipher == AP_CCMP_TKIP) {
-				strncat(buf, "+ccmp+tkip", sizeof(buf));
+				strncat(buf, "+ccmp+tkip",
+					sizeof(buf) - strlen(buf) - 1);
 			} else if (dut->ap_cipher == AP_TKIP) {
-				strncat(buf, "+tkip", sizeof(buf));
+				strncat(buf, "+tkip",
+					sizeof(buf) - strlen(buf) - 1);
 			} else {
-				strncat(buf, "+ccmp", sizeof(buf));
+				strncat(buf, "+ccmp",
+					sizeof(buf) - strlen(buf) - 1);
 			}
 			owrt_ap_set_vap(dut, vap_count, "encryption", buf);
 			snprintf(buf, sizeof(buf), "%s", dut->ap_radius_ipaddr);
