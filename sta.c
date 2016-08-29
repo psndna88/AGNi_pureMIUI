@@ -6443,6 +6443,7 @@ static int cmd_sta_set_rfeature_tdls(const char *intf, struct sigma_dut *dut,
 
 	switch (chsm) {
 	case CHSM_NOT_SET:
+		res = 1;
 		break;
 	case CHSM_ENABLE:
 		if (off_ch_num < 0) {
