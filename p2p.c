@@ -414,7 +414,8 @@ static struct wfa_cs_p2p_group * p2p_group_get(struct sigma_dut *dut,
 
 static const char * get_group_ifname(struct sigma_dut *dut, const char *ifname)
 {
-	char buf[1000], *iface, *pos;
+	static char buf[1000];
+	char *iface, *pos;
 	char state[100];
 
 	if (dut->groups) {
