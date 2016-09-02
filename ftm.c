@@ -177,7 +177,7 @@ static int loc_write_xml_file(struct sigma_dut *dut, const char *dst_mac_str,
 	fprintf(xml, "    <burstperiod>%u</burstperiod>\n", 0);
 	/* Use parameters from LOWI cache */
 	fprintf(xml, "    <paramControl>%u</paramControl>\n", 0);
-	fprintf(xml, "    <ptsftimer>%u</ptsftimer>\n",1);
+	fprintf(xml, "    <ptsftimer>%u</ptsftimer>\n", 0);
 	fprintf(xml, "    <center_freq1>%u</center_freq1>\n", center_freq);
 	fprintf(xml, "    <center_freq2>0</center_freq2>\n");
 	fprintf(xml, "    <ch>%u</ch>\n", primary_ch);
