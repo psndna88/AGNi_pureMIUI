@@ -669,6 +669,7 @@ struct rq {
 	int mostly_idle_nr_run;
 	int mostly_idle_freq;
 	unsigned long hmp_flags;
+	unsigned int cur_freq, max_freq, min_freq, max_possible_freq;
 
 	u64 cur_irqload;
 	u64 avg_irqload;
