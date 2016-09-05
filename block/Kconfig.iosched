@@ -73,6 +73,13 @@ config IOSCHED_ANXIETY
 	  READ requests are given priority over WRITE requests due to their
 	  essentiality in determining load-time latency.
 
+config IOSCHED_ZEN
+	tristate "Zen I/O scheduler"
+	default y
+	---help---
+	  FCFS, dispatches are back-inserted, deadlines ensure fairness.
+	  Should work best with devices where there is no travel delay.
+
 choice
 	prompt "Default I/O scheduler"
 	default DEFAULT_CFQ
@@ -98,6 +105,9 @@ choice
 	config DEFAULT_DEPRESSION
 		bool "Depression" if IOSCHED_DEPRESSION=y
 
+	config DEFAULT_ZEN
+		bool "ZEN" if IOSCHED_ZEN=y
+
 endchoice
 
 config DEFAULT_IOSCHED
@@ -107,6 +117,7 @@ config DEFAULT_IOSCHED
 	default "tripndroid" if DEFAULT_TRIPNDROID
 	default "cfq" if DEFAULT_CFQ
 	default "anxiety" if DEFAULT_ANXIETY
+	default "zen" if DEFAULT_ZEN
 	default "noop" if DEFAULT_NOOP
 
 endmenu
