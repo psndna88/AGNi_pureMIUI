@@ -98,7 +98,7 @@
 #define LITTLE_CORES    4
 #define BIG_CORES       4
 
-#define MSM_HOTPLUG_VERSION             "2.1"
+#define MSM_HOTPLUG_VERSION             "2.11"
 
 #define MSM_HOTPLUG                     "msm_hotplug"
 #define HOTPLUG_ENABLED                 0
@@ -421,7 +421,6 @@ static int get_lowest_load_cpu(void)
 {
     int cpu, lowest_cpu = 0;
     unsigned int lowest_load = UINT_MAX;
-    unsigned int cpu_load[stats.total_cpus];
     unsigned int proj_load;
     struct cpu_load_data *pcpu;
 
@@ -430,9 +429,8 @@ static int get_lowest_load_cpu(void)
         if (!cpu_online(cpu))
             continue;
         pcpu = &per_cpu(cpuload, cpu);
-        cpu_load[cpu] = pcpu->cur_load_maxfreq;
-        if (cpu_load[cpu] < lowest_load) {
-            lowest_load = cpu_load[cpu];
+        if (pcpu->cur_load_maxfreq < lowest_load) {
+            lowest_load = pcpu->cur_load_maxfreq;
             lowest_cpu = cpu;
         }
     }
@@ -444,32 +442,38 @@ static int get_lowest_load_cpu(void)
     if (hotplug.offline_load && lowest_load >= hotplug.offline_load)
         return -EPERM;
 
+    // Skip cpu 0
+    if (lowest_cpu == 0)
+        return -EPERM;
+
     return lowest_cpu;
 }
 
 static int get_lowest_load_cpu_big(void)
 {
-    int cpu, lowest_cpu = 4;
+    int cpu, lowest_cpu;
     unsigned int lowest_load = UINT_MAX;
-    unsigned int cpu_load[stats.total_cpus_big];
     unsigned int proj_load;
     struct cpu_load_data *pcpu;
 
-    // Take down first big core (cpu4) last
+    lowest_cpu = stats.total_cpus;
+
+    // Skip first big core
     for (cpu = stats.total_cpus + 1; cpu < stats.total_cpus + stats.total_cpus_big; cpu++) {
         if (!cpu_online(cpu))
             continue;
         pcpu = &per_cpu(cpuload, cpu);
-        cpu_load[cpu] = pcpu->cur_load_maxfreq;
-        if (cpu_load[cpu] < lowest_load) {
-            lowest_load = cpu_load[cpu];
+        if (pcpu->cur_load_maxfreq < lowest_load) {
+            lowest_load = pcpu->cur_load_maxfreq;
             lowest_cpu = cpu;
         }
     }
 
     // Don't elect any cpu if the resulting load will trigger adding a core
+    // unless there is only one big core up
     proj_load = stats.cur_avg_load_big - lowest_load;
-    if (proj_load > (stats.online_cpus - 1) * hotplug.online_load_big)
+    if ((proj_load > (stats.online_cpus_big - 1) * hotplug.online_load_big)
+         && (stats.online_cpus_big - 1) != 0)
         return -EPERM;
 
     return lowest_cpu;
@@ -518,7 +522,7 @@ static void big_down(void)
     for (cpu = 0; cpu < stats.total_cpus_big; cpu++) {
         lowest_cpu = get_lowest_load_cpu_big();
         if (lowest_cpu >= stats.total_cpus
-                && lowest_cpu <= stats.total_cpus + stats.total_cpus_big) {
+                && lowest_cpu < stats.total_cpus + stats.total_cpus_big) {
             /* HACK: Prevent big cluster turned off when changing governor settings. */
             if (prevent_big_off && lowest_cpu == stats.total_cpus) {
                 // Turn on first of big cores
