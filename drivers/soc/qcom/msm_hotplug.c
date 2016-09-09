@@ -41,6 +41,12 @@
     offline_load         : minimal load to elect a LITTLE core for downing
                            (rw, 0-100, defaults to 0, disabled when 0)
 
+    min_cpus_online_big  : minimum big cores to keep up at all times
+                           (rw, 0-4, defaults to 0 for s810)
+
+    max_cpus_online_big  : maximum big cores allowed up at all times when screen on
+                           (rw, 1-4, defaults to 4 for s810)
+
     offline_load_big     : average load of all big cores to reach to remove a big core
                            (rw, 0-100, defaults to 20)
 
@@ -98,7 +104,7 @@
 #define LITTLE_CORES    4
 #define BIG_CORES       4
 
-#define MSM_HOTPLUG_VERSION             "2.11"
+#define MSM_HOTPLUG_VERSION             "2.2"
 
 #define MSM_HOTPLUG                     "msm_hotplug"
 #define HOTPLUG_ENABLED                 0
@@ -106,10 +112,12 @@
 #define START_DELAY                     20000
 #define DEFAULT_HISTORY_SIZE            10
 #define DEFAULT_DOWN_LOCK_DUR           1000
-#define DEFAULT_MIN_CPUS_ONLINE         3
+#define DEFAULT_MIN_CPUS_ONLINE         2
 #define DEFAULT_MAX_CPUS_ONLINE         LITTLE_CORES
 #define DEFAULT_MAX_CPUS_ONLINE_SUSP    2
 #define DEFAULT_OFFLINE_LOAD            0
+#define DEFAULT_MIN_CPUS_ONLINE_BIG     1
+#define DEFAULT_MAX_CPUS_ONLINE_BIG     BIG_CORES
 #define DEFAULT_OFFLINE_LOAD_BIG        20
 #define DEFAULT_ONLINE_LOAD_BIG         80
 #define DEFAULT_KICK_IN_LOAD_BIG        70
@@ -153,6 +161,8 @@ static struct cpu_hotplug {
     unsigned int min_cpus_online;
     unsigned int max_cpus_online;
     unsigned int offline_load;
+    unsigned int min_cpus_online_big;
+    unsigned int max_cpus_online_big;
     unsigned int offline_load_big;
     unsigned int online_load_big;
     unsigned int kick_in_load_big;
@@ -166,6 +176,8 @@ static struct cpu_hotplug {
     .min_cpus_online = DEFAULT_MIN_CPUS_ONLINE,
     .max_cpus_online = DEFAULT_MAX_CPUS_ONLINE,
     .offline_load = DEFAULT_OFFLINE_LOAD,
+    .min_cpus_online_big = DEFAULT_MIN_CPUS_ONLINE_BIG,
+    .max_cpus_online_big = DEFAULT_MAX_CPUS_ONLINE_BIG,
     .offline_load_big = DEFAULT_OFFLINE_LOAD_BIG,
     .online_load_big = DEFAULT_ONLINE_LOAD_BIG,
     .kick_in_load_big = DEFAULT_KICK_IN_LOAD_BIG,
@@ -515,9 +527,6 @@ static void big_up(void)
 static void big_down(void)
 {
     int cpu, lowest_cpu;
-    unsigned int target_big_off; // how many big cores to offline
-
-    target_big_off = stats.total_cpus_big - hotplug.target_cpus_big;
 
     for (cpu = 0; cpu < stats.total_cpus_big; cpu++) {
         lowest_cpu = get_lowest_load_cpu_big();
@@ -542,7 +551,7 @@ static void big_down(void)
                 continue;
             if (check_down_lock(lowest_cpu))
                 continue;
-            if (target_big_off <= stats.total_cpus_big - num_online_big_cpus())
+            if (hotplug.target_cpus_big >= num_online_big_cpus())
                 break;
             cpu_down(lowest_cpu);
         }
@@ -565,26 +574,35 @@ static void big_updown(unsigned int fast_lane_req)
     }
 
     if (fast_lane_req == 1) {
+
         // If fast lane has been requested, up everything we have
-        hotplug.target_cpus_big = stats.total_cpus_big;
-    } else if (stats.online_cpus == stats.total_cpus) {
-        // Only if all little are up, up big cores depending on load, one at a time
-        if ((avg_load_little_cpus >= hotplug.kick_in_load_big && stats.online_cpus_big == 0) ||
-            (avg_load_big_cpus >= hotplug.online_load_big
-                 && stats.online_cpus_big < stats.total_cpus_big)  ) {
-            // if the average load of big cluster is above threshold,
-            // up one more big core if there is one left to up
+        hotplug.target_cpus_big = hotplug.max_cpus_online_big;
+
+    } else if ( // Target at least the min amount of cores up
+                stats.online_cpus_big < hotplug.min_cpus_online_big ) {
+
+            hotplug.target_cpus_big = hotplug.min_cpus_online_big;
+
+    } else if ( // Up first big core if all allowed little cores are up and kick_in load reached
+                (   stats.online_cpus_big == 0
+                 && stats.online_cpus     >= hotplug.max_cpus_online
+                 && avg_load_little_cpus  >= hotplug.kick_in_load_big                     ) ||
+
+                // Up one more big core if average load is reached
+                // and we are allowed for more cores
+                (   stats.online_cpus_big != 0
+                 && avg_load_big_cpus     >= hotplug.online_load_big
+                 && stats.online_cpus_big < hotplug.max_cpus_online_big                   )    ) {
+
             hotplug.target_cpus_big++;
-        } else if (avg_load_big_cpus <= hotplug.offline_load_big && stats.online_cpus_big > 0) {
-            // if the average load of big cluster is below threshold,
-            // down one more big core if there is one left to down
+
+    } else if (  // Down one big core if average load is below threshold
+                 // and we are allowed less cores
+                    stats.online_cpus_big >  hotplug.min_cpus_online_big
+                 && avg_load_big_cpus     <= hotplug.offline_load_big                          ) {
+
             hotplug.target_cpus_big--;
-        }
-    } else {
-        // If not all little cores are up, big cores can only be down'ed
-        if (avg_load_big_cpus <= hotplug.offline_load_big && stats.online_cpus_big > 0) {
-            hotplug.target_cpus_big--;
-        }
+
     }
 
     if (stats.online_cpus_big != hotplug.target_cpus_big) {
@@ -731,6 +749,8 @@ static void msm_hotplug_work(struct work_struct *work)
         goto reschedule;
     }
 
+    big_updown(0);
+
     /* If number of cpus locked, break out early */
     if (hotplug.min_cpus_online == stats.total_cpus) {
         if (stats.online_cpus != hotplug.min_cpus_online)
@@ -761,7 +781,6 @@ static void msm_hotplug_work(struct work_struct *work)
         else if (target < stats.online_cpus)
             offline_cpu(target);
     }
-    big_updown(0);
 
 reschedule:
 
@@ -772,7 +791,7 @@ reschedule:
 
 static void msm_hotplug_suspend(void)
 {
-    int cpu;
+    int online_cpus, online_cpus_big;
 
     mutex_lock(&hotplug.msm_hotplug_mutex);
     hotplug.suspended = 1;
@@ -787,17 +806,25 @@ static void msm_hotplug_suspend(void)
         cancel_delayed_work_sync(&hotplug_work);
     }
 
-    // Turn off little cores but remain max_cpus_online_susp
-    // Skip cpu 0
-    for (cpu = 1; cpu < stats.total_cpus; cpu++) {
-        if (hotplug.max_cpus_online_susp == num_online_little_cpus())
-            break;
-        cpu_down(cpu);
+    // Suspend to max allowed little cores
+    online_cpus = num_online_cpus();
+    hotplug.target_cpus = hotplug.max_cpus_online_susp;
+    if (online_cpus != hotplug.target_cpus) {
+        if (hotplug.target_cpus > online_cpus)
+            little_up();
+        else if (hotplug.target_cpus < online_cpus)
+            little_down();
     }
 
-    // Turn off all of big cores
-    for (cpu = stats.total_cpus; cpu < stats.total_cpus + stats.total_cpus_big; cpu++)
-        cpu_down(cpu);
+    // Suspend all big cores
+    online_cpus_big = num_online_big_cpus();
+    hotplug.target_cpus_big = 0;
+    if (online_cpus_big != hotplug.target_cpus_big) {
+        if (hotplug.target_cpus_big > online_cpus_big)
+            big_up();
+        else if (hotplug.target_cpus_big < online_cpus_big)
+            big_down();
+    }
 
     pr_info("%s: suspended.\n", MSM_HOTPLUG);
 
@@ -806,7 +833,7 @@ static void msm_hotplug_suspend(void)
 
 static void msm_hotplug_resume(void)
 {
-    int cpu, required_reschedule = 0, required_wakeup = 0;
+    int required_reschedule = 0, required_wakeup = 0, online_cpus, online_cpus_big;
 
     if (hotplug.suspended) {
         mutex_lock(&hotplug.msm_hotplug_mutex);
@@ -819,21 +846,27 @@ static void msm_hotplug_resume(void)
     }
 
     if (required_wakeup) {
-        /* Fire up all CPUs */
-        for_each_cpu_not(cpu, cpu_online_mask) {
-            if (cpu == 0)
-                continue;
-#ifdef CONFIG_THERMAL_MONITOR
-            // Only up a cpu if thermal control allows it !
-            if(!msm_thermal_deny_cpu_up(cpu)) {
-#endif
-                cpu_up(cpu);
-#ifdef CONFIG_THERMAL_MONITOR
-            }
-#endif
-            if (!timeout_enabled)
-                apply_down_lock(cpu);
+
+        // Resume little cores, as many as max allowed
+        online_cpus = num_online_cpus();
+        hotplug.target_cpus = hotplug.max_cpus_online;
+        if (online_cpus != hotplug.target_cpus) {
+            if (hotplug.target_cpus > online_cpus)
+                little_up();
+            else if (hotplug.target_cpus < online_cpus)
+                little_down();
         }
+
+        // Resume big cores, as many as max allowed
+        online_cpus_big = num_online_big_cpus();
+        hotplug.target_cpus_big = hotplug.max_cpus_online_big;
+        if (online_cpus_big != hotplug.target_cpus_big) {
+            if (hotplug.target_cpus_big > online_cpus_big)
+                big_up();
+            else if (hotplug.target_cpus_big < online_cpus_big)
+                big_down();
+        }
+
     }
 
     /* Resume hotplug workqueue if required */
@@ -1166,6 +1199,64 @@ static ssize_t store_offline_load(struct device *dev,
     return count;
 }
 
+static ssize_t show_min_cpus_online_big(struct device *dev,
+                    struct device_attribute *msm_hotplug_attrs,
+                    char *buf)
+{
+    return sprintf(buf, "%u\n", hotplug.min_cpus_online_big);
+}
+
+static ssize_t store_min_cpus_online_big(struct device *dev,
+                     struct device_attribute *msm_hotplug_attrs,
+                     const char *buf, size_t count)
+{
+    int ret;
+    unsigned int val;
+
+    ret = sscanf(buf, "%u", &val);
+    if (ret != 1)
+        return -EINVAL;
+
+    if (val > stats.total_cpus_big)
+        return -EINVAL;
+
+    if (hotplug.max_cpus_online_big < val)
+        hotplug.max_cpus_online_big = val;
+
+    hotplug.min_cpus_online_big = val;
+
+    return count;
+}
+
+static ssize_t show_max_cpus_online_big(struct device *dev,
+                    struct device_attribute *msm_hotplug_attrs,
+                    char *buf)
+{
+    return sprintf(buf, "%u\n",hotplug.max_cpus_online_big);
+}
+
+static ssize_t store_max_cpus_online_big(struct device *dev,
+                     struct device_attribute *msm_hotplug_attrs,
+                     const char *buf, size_t count)
+{
+    int ret;
+    unsigned int val;
+
+    ret = sscanf(buf, "%u", &val);
+    if (ret != 1)
+        return -EINVAL;
+
+    if (val < 1 || val > stats.total_cpus_big)
+        return -EINVAL;
+
+    if (hotplug.min_cpus_online_big > val)
+        hotplug.min_cpus_online_big = val;
+
+    hotplug.max_cpus_online_big = val;
+
+    return count;
+}
+
 static ssize_t show_offline_load_big(struct device *dev,
                  struct device_attribute *msm_hotplug_attrs,
                  char *buf)
@@ -1350,6 +1441,10 @@ static DEVICE_ATTR(max_cpus_online, (S_IWUGO|S_IRUGO), show_max_cpus_online,
 static DEVICE_ATTR(max_cpus_online_susp, (S_IWUGO|S_IRUGO), show_max_cpus_online_susp,
             store_max_cpus_online_susp);
 static DEVICE_ATTR(offline_load, (S_IWUGO|S_IRUGO), show_offline_load, store_offline_load);
+static DEVICE_ATTR(min_cpus_online_big, (S_IWUGO|S_IRUGO), show_min_cpus_online_big,
+            store_min_cpus_online_big);
+static DEVICE_ATTR(max_cpus_online_big, (S_IWUGO|S_IRUGO), show_max_cpus_online_big,
+            store_max_cpus_online_big);
 static DEVICE_ATTR(offline_load_big, (S_IWUGO|S_IRUGO), show_offline_load_big,
             store_offline_load_big);
 static DEVICE_ATTR(online_load_big, (S_IWUGO|S_IRUGO), show_online_load_big,
@@ -1373,6 +1468,8 @@ static struct attribute *msm_hotplug_attrs[] = {
     &dev_attr_max_cpus_online.attr,
     &dev_attr_max_cpus_online_susp.attr,
     &dev_attr_offline_load.attr,
+    &dev_attr_min_cpus_online_big.attr,
+    &dev_attr_max_cpus_online_big.attr,
     &dev_attr_offline_load_big.attr,
     &dev_attr_online_load_big.attr,
     &dev_attr_kick_in_load_big.attr,
