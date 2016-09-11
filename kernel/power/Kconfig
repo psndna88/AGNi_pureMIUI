@@ -33,6 +33,13 @@ config POWERSUSPEND
 	  Call early suspend handlers when the user requested sleep state
 	  changes.
 
+config POWERSUSPEND_DEBUG
+	bool "Powersuspend driver debugging code"
+	default n
+	depends on POWERSUSPEND
+	help
+	  Output debugging info in dmesg [POWERSUSPEND] (Yank555.lu)
+
 config HIBERNATE_CALLBACKS
 	bool
 
