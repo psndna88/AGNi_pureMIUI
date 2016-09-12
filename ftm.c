@@ -8,6 +8,7 @@
 #include "sigma_dut.h"
 #include <sys/stat.h>
 #include <regex.h>
+#include "wpa_helpers.h"
 
 static const char LOC_XML_FILE_PATH[] = "./data/sigma-dut-target.xml";
 
@@ -16,10 +17,18 @@ static const char LOC_LOWI_TEST_RANGING[] =
 "lowi_test -r ./data/sigma-dut-target.xml -n 1";
 static const char LOC_LOWI_TEST_NEIGHBOR_RPT_REQ[] = "lowi_test -nrr";
 static const char LOC_LOWI_TEST_ANQP_REQ[] = "lowi_test -anqp -mac ";
-static const char WPA_CLI_RM_ENABLE[] =
-"wpa_cli -i /data/misc/wifi/sockets/wlan0 VENDOR 1374 74 08000400BD000000";
-static const char WPA_CLI_RM_DISABLE[] =
-"wpa_cli -i /data/misc/wifi/sockets/wlan0 VENDOR 1374 74 0800040000000000";
+static const char WPA_INTERWORKING_ENABLE[] =
+"SET interworking 1";
+static const char WPA_INTERWORKING_DISABLE[] =
+"SET interworking 0";
+static const char WPA_RM_ENABLE[] =
+"VENDOR 1374 74 08000400BD000000";
+static const char WPA_RM_DISABLE[] =
+"VENDOR 1374 74 0800040000000000";
+static const char WPA_ADDRESS_3_ENABLE[] =
+"SET gas_address3 1";
+static const char WPA_ADDRESS_3_DISABLE[] =
+"SET gas_address3 0";
 
 #ifndef ETH_ALEN
 #define ETH_ALEN 6
@@ -58,8 +67,11 @@ static const char LOC_CAPI_FRAME_NAME_VAL_ANQP[] = "AnqpQuery";
 static const char LOC_CAPI_FRAME_NAME_VAL_NRR[] = "NeighReportReq";
 
 static const char LOC_CAPI_FQDN[] = "AskForPublicIdentifierURI-FQDN";
+static const char LOC_CAPI_ADDRESS3[] = "address3";
+static const char LOC_WILD_CARD_BSSID[] = "FF:FF:FF:FF:FF:FF";
 
 static const char LOC_CAPI_RM_FTMRR_NAME[] = "RMEnabledCapBitmap";
+static const char LOC_CAPI_INTERWORKING_NAME[] = "Interworking";
 
 #define LOC_MAX_RM_FLAGS 10
 #define LOC_RM_FLAG_VAL_ARRAY 2
@@ -177,7 +189,7 @@ static int loc_write_xml_file(struct sigma_dut *dut, const char *dst_mac_str,
 	fprintf(xml, "    <burstperiod>%u</burstperiod>\n", 0);
 	/* Use parameters from LOWI cache */
 	fprintf(xml, "    <paramControl>%u</paramControl>\n", 0);
-	fprintf(xml, "    <ptsftimer>%u</ptsftimer>\n",1);
+	fprintf(xml, "    <ptsftimer>%u</ptsftimer>\n", 0);
 	fprintf(xml, "    <center_freq1>%u</center_freq1>\n", center_freq);
 	fprintf(xml, "    <center_freq2>0</center_freq2>\n");
 	fprintf(xml, "    <ch>%u</ch>\n", primary_ch);
@@ -422,6 +434,7 @@ int loc_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 int loc_cmd_sta_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 			   struct sigma_cmd *cmd)
 {
+	const char *address3Cmnd = WPA_ADDRESS_3_DISABLE;
 	enum lowi_tst_cmd cmnd = LOWI_TST_NEIGHBOR_REPORT_REQ; /* Default */
 	/* Mandatory arguments */
 	const char *interface = get_param(cmd, LOC_CAPI_INTERFACE);
@@ -433,6 +446,7 @@ int loc_cmd_sta_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *locCivic = get_param(cmd, LOC_CAPI_LOC_CIVIC);
 	const char *lci = get_param(cmd, LOC_CAPI_LCI);
 	const char *fqdn = get_param(cmd, LOC_CAPI_FQDN);
+	const char *address3 = get_param(cmd, LOC_CAPI_ADDRESS3);
 
 	const char *params = NULL;
 
@@ -477,6 +491,17 @@ int loc_cmd_sta_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (!fqdn)
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"%s - Command missing FQDN", __func__);
+	if (!address3) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s - Command missing address3", __func__);
+	} else {
+		sigma_dut_print(dut, DUT_MSG_DEBUG, "%s - address3: %s",
+				__func__, address3);
+		if (strcasecmp(address3, LOC_WILD_CARD_BSSID) == 0)
+			address3Cmnd = WPA_ADDRESS_3_ENABLE;
+		else
+			address3Cmnd = WPA_ADDRESS_3_DISABLE;
+	}
 
 	if (strcasecmp(program, LOC_CAPI_PROG_VAL) != 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
@@ -495,6 +520,14 @@ int loc_cmd_sta_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 		cmnd = LOWI_TST_NEIGHBOR_REPORT_REQ;
 	}
 
+	if (cmnd == LOWI_TST_ANQP_REQ) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG, "%s - Executing command %s",
+				__func__, address3Cmnd);
+		if (wpa_command(get_station_ifname(), address3Cmnd) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR, NULL);
+			return -1;
+		}
+	}
 	if (pass_request_to_ltest(dut, cmnd, params) < 0) {
 		/* Loc operation has failed. */
 		sigma_dut_print(dut, DUT_MSG_ERROR,
@@ -616,8 +649,9 @@ int loc_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 				      struct sigma_cmd *cmd)
 {
 	const char *rmFTMRFlagStr = get_param(cmd, LOC_CAPI_RM_FTMRR_NAME);
+	const char *interworkingEn = get_param(cmd, LOC_CAPI_INTERWORKING_NAME);
 	unsigned int rmFTMRFlag = 0;
-	unsigned int i;
+	unsigned int i, interworking = 0;
 	char rmBitFlags[LOC_MAX_RM_FLAGS][LOC_RM_FLAG_VAL_ARRAY];
 
 	sigma_dut_print(dut, DUT_MSG_INFO, "%s", __func__);
@@ -626,11 +660,12 @@ int loc_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 
 	sigma_dut_print(dut, DUT_MSG_INFO, "%s - 1", __func__);
 	/*
-	 * This function is used to configure the RM capability bits only.
-	 * If this parameter is not present just returning COMPLETE
+	 * This function is used to configure the RM capability bits and
+	 * the Interworking bit only.
+	 * If these parameters are not present just returning COMPLETE
 	 * because all other parameters are ignored.
 	 */
-	if (!rmFTMRFlagStr) {
+	if (!rmFTMRFlagStr && !interworkingEn) {
 		sigma_dut_print(dut, DUT_MSG_INFO, "%s - 2", __func__);
 		sigma_dut_print(dut, DUT_MSG_ERROR, "%s - Did not get %s",
 				__func__, LOC_CAPI_RM_FTMRR_NAME);
@@ -638,39 +673,57 @@ int loc_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 		return 0;
 	}
 
-	rmFTMRFlag = 25; /* Default invalid */
-	sigma_dut_print(dut, DUT_MSG_INFO, "%s - rmFTMRFlagStr: %s",
-			__func__, rmFTMRFlagStr);
-	parse_rm_bits(dut, rmFTMRFlagStr, rmBitFlags);
-	for (i = 0; i < LOC_MAX_RM_FLAGS; i++) {
-		if (rmBitFlags[i][0] == 34)
-			rmFTMRFlag = rmBitFlags[i][1];
-	}
-	sigma_dut_print(dut, DUT_MSG_INFO, "%s - rmFTMRFlag %u",
-			__func__, rmFTMRFlag);
-
-	if (rmFTMRFlag == 0) { /* Disable RM - FTMRR capability */
-		sigma_dut_print(dut, DUT_MSG_INFO, "%s - Disabling RM - FTMRR",
-				__func__);
-		if (system(WPA_CLI_RM_DISABLE) != 0) {
-			send_resp(dut, conn, SIGMA_ERROR, NULL);
-			return -1;
+	if (rmFTMRFlagStr) {
+		rmFTMRFlag = 25; /* Default invalid */
+		sigma_dut_print(dut, DUT_MSG_INFO, "%s - rmFTMRFlagStr: %s",
+				__func__, rmFTMRFlagStr);
+		parse_rm_bits(dut, rmFTMRFlagStr, rmBitFlags);
+		for (i = 0; i < LOC_MAX_RM_FLAGS; i++) {
+			if (rmBitFlags[i][0] == 34)
+				rmFTMRFlag = rmBitFlags[i][1];
 		}
-	} else if (rmFTMRFlag == 1) { /* Enable RM - FTMRR capability */
-		sigma_dut_print(dut, DUT_MSG_INFO, "%s - Enabling RM - FTMRR",
-				__func__);
-		if ((system(WPA_CLI_RM_ENABLE) != 0)) {
-			send_resp(dut, conn, SIGMA_ERROR, NULL);
-			return 0;
+		sigma_dut_print(dut, DUT_MSG_INFO, "%s - rmFTMRFlag %u",
+				__func__, rmFTMRFlag);
+		if (rmFTMRFlag == 0) { /* Disable RM - FTMRR capability */
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"%s - Disabling RM - FTMRR",
+					__func__);
+			if (wpa_command(get_station_ifname(), WPA_RM_DISABLE) <
+			    0) {
+				send_resp(dut, conn, SIGMA_ERROR, NULL);
+				return -1;
+			}
+		} else if (rmFTMRFlag == 1) { /* Enable RM - FTMRR capability */
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"%s - Enabling RM - FTMRR",
+					__func__);
+			if (wpa_command(get_station_ifname(), WPA_RM_ENABLE) <
+			    0) {
+				send_resp(dut, conn, SIGMA_ERROR, NULL);
+				return 0;
+			}
+		} else {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"%s - No Setting for - FTMRR",
+					__func__);
 		}
-	} else {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s - No Setting for - FTMRR", __func__);
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"%s - Succeeded in Enabling/Disabling RM Capability for FTMRR",
+				__func__);
 	}
 
-	sigma_dut_print(dut, DUT_MSG_INFO,
-			"%s - Succeeded in Enabling/Disabling RM Capability for FTMRR",
-			__func__);
+	if (interworkingEn) {
+		sscanf(interworkingEn, "%u", &interworking);
+		sigma_dut_print(dut, DUT_MSG_INFO, "%s - interworking: %u",
+				__func__, interworking);
+		if (interworking)
+			wpa_command(get_station_ifname(),
+				    WPA_INTERWORKING_ENABLE);
+		else
+			wpa_command(get_station_ifname(),
+				    WPA_INTERWORKING_DISABLE);
+	}
+
 	send_resp(dut, conn, SIGMA_COMPLETE, NULL);
 	return 0;
 }
