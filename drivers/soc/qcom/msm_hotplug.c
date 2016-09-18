@@ -72,6 +72,9 @@
     current_cores        : show current core up count
                            (ro, format "big.LITTLE")
 
+    debug                : print debugging info to dmesg
+                           (rw, 0/1, defaults to 0)
+
     version              : show current msm_hotplug version
                            (ro)
 
@@ -104,7 +107,7 @@
 #define LITTLE_CORES    4
 #define BIG_CORES       4
 
-#define MSM_HOTPLUG_VERSION             "2.3"
+#define MSM_HOTPLUG_VERSION             "2.4"
 
 #define MSM_HOTPLUG                     "msm_hotplug"
 #define HOTPLUG_ENABLED                 0
@@ -235,6 +238,8 @@ struct cpu_load_data {
 static DEFINE_PER_CPU(struct cpu_load_data, cpuload);
 
 static bool io_is_busy = DEFAULT_IO_IS_BUSY;
+
+static bool debug_dmesg = false;
 
 static int num_online_little_cpus(void)
 {
@@ -514,7 +519,14 @@ static void big_up(void)
 #endif
                 cpu_up(cpu);
                 apply_down_lock(cpu);
+                if (unlikely(debug_dmesg)) {
+                    pr_info("[msm_hotplug] brought up cpu%d\n", cpu);
+                }
 #ifdef CONFIG_THERMAL_MONITOR
+            } else {
+                if (unlikely(debug_dmesg)) {
+                    pr_info("[msm_hotplug] bringup of cpu%d denied by msm_thermal\n", cpu);
+                }
             }
 #endif
         }
@@ -535,15 +547,24 @@ static void big_down(void)
             /* HACK: Prevent big cluster turned off when changing governor settings. */
             if (prevent_big_off && lowest_cpu == stats.total_cpus) {
                 // Turn on first of big cores
-                if (!cpu_online(stats.total_cpus))
+                if (!cpu_online(stats.total_cpus)) {
 #ifdef CONFIG_THERMAL_MONITOR
                     // Only up a cpu if thermal control allows it !
                     if(!msm_thermal_deny_cpu_up(stats.total_cpus)) {
 #endif
                         cpu_up(stats.total_cpus);
+                        if (unlikely(debug_dmesg)) {
+                            pr_info("[msm_hotplug] brought up cpu%d\n", stats.total_cpus);
+                        }
 #ifdef CONFIG_THERMAL_MONITOR
-                }
+                    } else {
+                        if (unlikely(debug_dmesg)) {
+                            pr_info("[msm_hotplug] bringup of cpu%d denied by msm_thermal\n",
+                                    stats.total_cpus);
+                        }
+                    }
 #endif
+                }
                 continue;
             }
 
@@ -554,6 +575,9 @@ static void big_down(void)
             if (hotplug.target_cpus_big >= num_online_big_cpus())
                 break;
             cpu_down(lowest_cpu);
+            if (unlikely(debug_dmesg)) {
+                pr_info("[msm_hotplug] brought down cpu%d\n", lowest_cpu);
+            }
         }
     }
 }
@@ -629,7 +653,14 @@ static void little_up(void)
 #endif
             cpu_up(cpu);
             apply_down_lock(cpu);
+            if (unlikely(debug_dmesg)) {
+                pr_info("[msm_hotplug] brought up cpu%d\n", cpu);
+            }
 #ifdef CONFIG_THERMAL_MONITOR
+        } else {
+            if (unlikely(debug_dmesg)) {
+                pr_info("[msm_hotplug] bringup of cpu%d denied by msm_thermal\n", cpu);
+            }
         }
 #endif
     }
@@ -648,6 +679,9 @@ static void little_down(void)
             if (check_down_lock(lowest_cpu))
                 break;
             cpu_down(lowest_cpu);
+            if (unlikely(debug_dmesg)) {
+                pr_info("[msm_hotplug] brought down cpu%d\n", lowest_cpu);
+            }
         }
         if (hotplug.target_cpus >= num_online_little_cpus())
             break;
@@ -711,15 +745,24 @@ static void __cpuinit msm_hotplug_work(struct work_struct *work)
     /* HACK: Prevent big cluster turned off when changing governor settings. */
     // Turn on first of big cores
     if (prevent_big_off) {
-        if (!cpu_online(stats.total_cpus))
+        if (!cpu_online(stats.total_cpus)) {
 #ifdef CONFIG_THERMAL_MONITOR
             // Only up a cpu if thermal control allows it !
             if(!msm_thermal_deny_cpu_up(stats.total_cpus)) {
 #endif
                 cpu_up(stats.total_cpus);
+                if (unlikely(debug_dmesg)) {
+                    pr_info("[msm_hotplug] brought up cpu%d\n", stats.total_cpus);
+                }
 #ifdef CONFIG_THERMAL_MONITOR
+            } else {
+                if (unlikely(debug_dmesg)) {
+                    pr_info("[msm_hotplug] bringup of cpu%d denied by msm_thermal\n",
+                            stats.total_cpus);
+                }
             }
 #endif
+        }
     }
 
     if (timeout_enabled) {
@@ -929,7 +972,14 @@ static int __cpuinit msm_hotplug_start(int start_immediately)
 #endif
             cpu_up(cpu);
             apply_down_lock(cpu);
+            if (unlikely(debug_dmesg)) {
+                pr_info("[msm_hotplug] brought up cpu%d\n", cpu);
+            }
 #ifdef CONFIG_THERMAL_MONITOR
+        } else {
+            if (unlikely(debug_dmesg)) {
+                pr_info("[msm_hotplug] bringup of cpu%d denied by msm_thermal\n", cpu);
+            }
         }
 #endif
     }
@@ -978,7 +1028,14 @@ static void __cpuinit msm_hotplug_stop(void)
         if(!msm_thermal_deny_cpu_up(cpu)) {
 #endif
             cpu_up(cpu);
+            if (unlikely(debug_dmesg)) {
+                pr_info("[msm_hotplug] brought up cpu%d\n", cpu);
+            }
 #ifdef CONFIG_THERMAL_MONITOR
+        } else {
+            if (unlikely(debug_dmesg)) {
+                pr_info("[msm_hotplug] bringup of cpu%d denied by msm_thermal\n", cpu);
+            }
         }
 #endif
     }
@@ -1424,6 +1481,32 @@ static ssize_t show_current_cores(struct device *dev,
     return sprintf(buf, "big.LITTLE : %u.%u\n", num_online_big_cpus(), num_online_little_cpus());
 }
 
+static ssize_t show_debug(struct device *dev,
+                   struct device_attribute *msm_hotplug_attrs,
+                   char *buf)
+{
+    return sprintf(buf, "%u\n", debug_dmesg ? 1 : 0);
+}
+
+static ssize_t store_debug(struct device *dev,
+                    struct device_attribute *msm_hotplug_attrs,
+                    const char *buf, size_t count)
+{
+    int ret;
+    unsigned int val;
+
+    ret = sscanf(buf, "%u", &val);
+    if (ret != 1)
+        return -EINVAL;
+
+    if (val < 0 || val > 1)
+        return -EINVAL;
+
+    debug_dmesg = val != 0 ? true : false;
+
+    return count;
+}
+
 static ssize_t show_version(struct device *dev,
                  struct device_attribute *msm_hotplug_attrs,
                  char *buf)
@@ -1458,6 +1541,7 @@ static DEVICE_ATTR(big_core_up_delay, (S_IWUGO|S_IRUGO), show_big_core_up_delay,
 static DEVICE_ATTR(io_is_busy, (S_IWUGO|S_IRUGO), show_io_is_busy, store_io_is_busy);
 static DEVICE_ATTR(current_load, S_IRUGO, show_current_load, NULL);
 static DEVICE_ATTR(current_cores, S_IRUGO, show_current_cores, NULL);
+static DEVICE_ATTR(debug, (S_IWUGO|S_IRUGO), show_debug, store_debug);
 static DEVICE_ATTR(version, S_IRUGO, show_version, NULL);
 
 static struct attribute *msm_hotplug_attrs[] = {
@@ -1478,6 +1562,7 @@ static struct attribute *msm_hotplug_attrs[] = {
     &dev_attr_io_is_busy.attr,
     &dev_attr_current_load.attr,
     &dev_attr_current_cores.attr,
+    &dev_attr_debug.attr,
     &dev_attr_version.attr,
     NULL,
 };
