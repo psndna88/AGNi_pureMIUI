@@ -127,6 +127,10 @@ config CPU_FREQ_DEFAULT_GOV_IMPULSE
 	  loading your cpufreq low-level hardware driver, using the
 	  'impulse' governor for latency-sensitive workloads.
 
+ config CPU_FREQ_DEFAULT_GOV_DARKNESS
+	bool "darkness"
+	select CPU_FREQ_GOV_DARKNESS
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -232,6 +236,9 @@ config CPU_FREQ_GOV_IMPULSE
 	  designed for latency-sensitive workloads.
 
 	  If in doubt, say N.
+
+config CPU_FREQ_GOV_DARKNESS
+	tristate "'darkness' cpufreq policy governor"
 
 config CPU_BOOST
 	tristate "Event base short term CPU freq boost"
