@@ -162,36 +162,32 @@ int set_ps(const char *intf, struct sigma_dut *dut, int enabled)
 	if (wifi_chip_type == DRIVER_WCN) {
 		if (enabled) {
 			snprintf(buf, sizeof(buf), "iwpriv wlan0 dump 906");
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-					"Failed to enable power save");
-				return -1;
-			}
+			if (system(buf) != 0)
+				goto set_power_save;
 		} else {
 			snprintf(buf, sizeof(buf), "iwpriv wlan0 dump 905");
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"Failed to stop power save timer");
-				return -1;
-			}
+			if (system(buf) != 0)
+				goto set_power_save;
 			snprintf(buf, sizeof(buf), "iwpriv wlan0 dump 912");
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"Failed to disable power save");
-				 return -1;
-			}
+			if (system(buf) != 0)
+				goto set_power_save;
 		}
 
 		return 0;
 	}
 
+set_power_save:
 	snprintf(buf, sizeof(buf), "./iw dev %s set power_save %s",
 		 intf, enabled ? "on" : "off");
 	if (system(buf) != 0) {
 		snprintf(buf, sizeof(buf), "iw dev %s set power_save %s",
 			 intf, enabled ? "on" : "off");
-		if (system(buf) != 0)
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to set power save %s",
+					enabled ? "on" : "off");
 			return -1;
+		}
 	}
 
 	return 0;

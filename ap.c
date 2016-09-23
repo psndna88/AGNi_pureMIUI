@@ -5463,7 +5463,9 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 				struct sigma_cmd *cmd)
 {
 	const char *type;
+	enum driver_type drv;
 
+	drv = get_driver_type();
 	dut->program = sigma_program_to_enum(get_param(cmd, "PROGRAM"));
 	dut->device_type = AP_unknown;
 	type = get_param(cmd, "type");
@@ -5513,9 +5515,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	if (dut->program == PROGRAM_HS2 || dut->program == PROGRAM_HS2_R2) {
 		int i;
-		enum driver_type drv;
 
-		drv = get_driver_type();
 		if (drv == DRIVER_ATHEROS)
 			cmd_ath_ap_hs2_reset(dut);
 		else if (drv == DRIVER_OPENWRT)
@@ -5601,7 +5601,13 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 			dut->ap_sgi80 = 0;
 		} else {
 			dut->ap_amsdu = 1;
-			dut->ap_ldpc = 1;
+			/*
+			 * As LDPC is optional, don't enable this by default
+			 * for LINUX-WCN driver. The ap_set_wireless command
+			 * can be used to enable LDPC, when needed.
+			 */
+			if (drv != DRIVER_LINUX_WCN)
+				dut->ap_ldpc = 1;
 			dut->ap_rx_amsdu = 1;
 			dut->ap_sgi80 = 1;
 		}
