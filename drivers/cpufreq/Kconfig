@@ -131,6 +131,11 @@ config CPU_FREQ_DEFAULT_GOV_IMPULSE
 	bool "darkness"
 	select CPU_FREQ_GOV_DARKNESS
 
+config CPU_FREQ_DEFAULT_GOV_ALUCARD
+	bool "alucard"
+	select CPU_FREQ_GOV_ALUCARD
+	help
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -239,6 +244,10 @@ config CPU_FREQ_GOV_IMPULSE
 
 config CPU_FREQ_GOV_DARKNESS
 	tristate "'darkness' cpufreq policy governor"
+
+config CPU_FREQ_GOV_ALUCARD
+	tristate "'alucard' cpufreq governor"
+	depends on CPU_FREQ
 
 config CPU_BOOST
 	tristate "Event base short term CPU freq boost"
