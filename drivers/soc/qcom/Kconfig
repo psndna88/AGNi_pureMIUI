@@ -642,6 +642,7 @@ config MSM_TEST_PACMAN
 
 config MSM_CORE_CTL_HELPER
 	tristate "Core control helper functions for dynamically hotplug CPUs"
+    depends on !THUNDERPLUG_CONTROL
 	help
 	  Provide helper functions for core control driver. Core control
 	  driver dynamically hotplugs CPUs from kernel based on current
@@ -672,6 +673,12 @@ config MSM_PERFORMANCE_HOTPLUG_ON
 	  capability of msm_performance driver. Setting this flag to false will
           compile out the nodes needed for core-control functionality through
           msm_performance.
+
+config THUNDERPLUG_CONTROL
+	tristate "Thunderplug - plugging down/up of multi-cores using powersuspend"
+    default n
+    help
+     This driver uses powersuspend to take down the cpu cores on a hexa core device.
 
 config QCOM_NPA_DUMP
 	bool "Read NPA dump from the RPM memory"
