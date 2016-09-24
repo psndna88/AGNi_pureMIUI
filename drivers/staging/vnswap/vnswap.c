@@ -119,23 +119,23 @@ int vnswap_init_backing_storage(void)
 			PTR_ERR(backing_storage_file);
 		backing_storage_file = NULL;
 		set_fs(oldfs);
-		pr_err("%s %d: filp_open failed" \
+/*		pr_err("%s %d: filp_open failed" \
 				"(backing_storage_file, error, " \
 				"backing_storage_filename)" \
 				" = (0x%08x, 0x%08x, %s)\n",
 				__func__, __LINE__,
 				(unsigned int) backing_storage_file,
-				ret, vnswap_device->backing_storage_filename);
+				ret, vnswap_device->backing_storage_filename); */
 		goto error;
 	} else {
 		set_fs(oldfs);
 		vnswap_device->stats.vnswap_backing_storage_open_fail = 0;
-		dprintk("%s %d: filp_open success" \
+/*		dprintk("%s %d: filp_open success" \
 				"(backing_storage_file, error, backing_storage_filename)"
 				"= (0x%08x, 0x%08x, %s)\n",
 				__func__, __LINE__,
 				(unsigned int) backing_storage_file,
-				ret, vnswap_device->backing_storage_filename);
+				ret, vnswap_device->backing_storage_filename); */
 	}
 
 	mapping = backing_storage_file->f_mapping;
@@ -216,10 +216,10 @@ int vnswap_init_backing_storage(void)
 	for (probe_block = 0; probe_block < last_block; probe_block++) {
 		first_block = bmap(inode, probe_block);
 		if (first_block == 0) {
-			pr_err("%s %d: backing_storage file has holes." \
+/*			pr_err("%s %d: backing_storage file has holes." \
 					"(probe_block, first_block) = (%llu,%llu)\n",
 					__func__, __LINE__,
-					probe_block, first_block);
+					probe_block, first_block); */
 			ret = -EINVAL;
 			goto free_bmap;
 		}
@@ -778,13 +778,13 @@ void __vnswap_make_request(struct vnswap *vnswap,
 	if (offset) {
 		atomic_inc(&vnswap_device->stats.
 			vnswap_bio_invalid_num);
-		pr_err("%s %d: invalid offset. " \
+/*		pr_err("%s %d: invalid offset. " \
 				"(bio->bi_sector, index, offset," \
 				"vnswap_bio_invalid_num) = (%llu, %d, %d, %d)\n",
 				__func__, __LINE__, bio->bi_sector,
 				index, offset,
 				vnswap_device->stats.
-					vnswap_bio_invalid_num.counter);
+					vnswap_bio_invalid_num.counter); */
 		goto out_error;
 	}
 
@@ -886,7 +886,7 @@ void vnswap_make_request(struct request_queue *queue, struct bio *bio)
 	if (!vnswap_valid_io_request(vnswap, bio)) {
 		atomic_inc(&vnswap_device->stats.
 			vnswap_bio_invalid_num);
-		pr_err("%s %d: invalid io request. " \
+/*		pr_err("%s %d: invalid io request. " \
 				"(bio->bi_sector, bio->bi_size," \
 				"vnswap->disksize, vnswap_bio_invalid_num) = " \
 				"(%llu, %d, %llu, %d)\n",
@@ -894,7 +894,7 @@ void vnswap_make_request(struct request_queue *queue, struct bio *bio)
 				bio->bi_sector, bio->bi_size,
 				vnswap->disksize,
 				vnswap_device->stats.
-					vnswap_bio_invalid_num.counter);
+					vnswap_bio_invalid_num.counter); */
 		goto error;
 	}
 
