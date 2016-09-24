@@ -23,9 +23,9 @@
 #include <linux/kthread.h>
 #include <linux/slab.h>
 #include <asm/cputime.h>
-#ifdef CONFIG_STATE_NOTIFIER
+//#ifdef CONFIG_STATE_NOTIFIER
 #include <linux/state_notifier.h>
-#endif
+//#endif
 
 struct cpufreq_impulse_policyinfo {
 	struct timer_list policy_timer;
@@ -102,9 +102,9 @@ struct cpufreq_impulse_tunables {
 	 * The sample rate of the timer used to increase frequency
 	 */
 	unsigned long timer_rate;
-#ifdef CONFIG_STATE_NOTIFIER
+//#ifdef CONFIG_STATE_NOTIFIER
 	unsigned long timer_rate_prev;
-#endif
+//#endif
 	/*
 	 * Wait this long before raising speed above hispeed, by default a
 	 * single timer interval.
@@ -433,7 +433,7 @@ static void cpufreq_impulse_timer(unsigned long data)
 	spin_lock_irqsave(&ppol->load_lock, flags);
 	ppol->last_evaluated_jiffy = get_jiffies_64();
 
-#ifdef CONFIG_STATE_NOTIFIER
+//#ifdef CONFIG_STATE_NOTIFIER
 	if (!state_suspended &&
 		tunables->timer_rate != tunables->timer_rate_prev)
 		tunables->timer_rate = tunables->timer_rate_prev;
@@ -444,7 +444,7 @@ static void cpufreq_impulse_timer(unsigned long data)
 			= max(tunables->timer_rate,
 				DEFAULT_TIMER_RATE_SUSP);
 	}
-#endif
+//#endif
 
 #ifdef CONFIG_SCHED_FREQ_INPUT
 	if (tunables->use_sched_load)
@@ -496,9 +496,9 @@ static void cpufreq_impulse_timer(unsigned long data)
 	spin_lock_irqsave(&ppol->target_freq_lock, flags);
 	cpu_load = loadadjfreq / ppol->policy->cur;
 	tunables->boosted = cpu_load >= tunables->go_hispeed_load;
-#ifdef CONFIG_STATE_NOTIFIER
+//#ifdef CONFIG_STATE_NOTIFIER
 	tunables->boosted = tunables->boosted && !state_suspended;
-#endif
+//#endif
 	this_hispeed_freq = max(tunables->hispeed_freq, ppol->policy->min);
 
 	if (tunables->boosted) {
@@ -635,11 +635,11 @@ static int cpufreq_impulse_speedchange_task(void *data)
 
  			if (ppol->target_freq != ppol->policy->cur) {
 				tunables = ppol->policy->governor_data;
-#ifdef CONFIG_STATE_NOTIFIER
+//#ifdef CONFIG_STATE_NOTIFIER
 				if (tunables->powersave_bias || state_suspended)
-#else
-				if (tunables->powersave_bias)
-#endif
+//#else
+//				if (tunables->powersave_bias)
+//#endif
 					__cpufreq_driver_target(ppol->policy,
 								ppol->target_freq,
 								CPUFREQ_RELATION_C);
@@ -965,9 +965,9 @@ static ssize_t store_timer_rate(struct cpufreq_impulse_tunables *tunables,
 		pr_warn("timer_rate not aligned to jiffy. Rounded up to %lu\n",
 			val_round);
 	tunables->timer_rate = val_round;
-#ifdef CONFIG_STATE_NOTIFIER
+//#ifdef CONFIG_STATE_NOTIFIER
 	tunables->timer_rate_prev = val_round;
-#endif
+//#endif
 
 	if (!tunables->use_sched_load)
 		return count;
@@ -978,9 +978,9 @@ static ssize_t store_timer_rate(struct cpufreq_impulse_tunables *tunables,
 		t = per_cpu(polinfo, cpu)->cached_tunables;
 		if (t && t->use_sched_load) {
 			t->timer_rate = val_round;
-#ifdef CONFIG_STATE_NOTIFIER
+//#ifdef CONFIG_STATE_NOTIFIER
 			t->timer_rate_prev = val_round;
-#endif
+//#endif
 		}
 	}
 	set_window_helper(tunables);
@@ -1353,9 +1353,9 @@ static struct cpufreq_impulse_tunables *alloc_tunable(
 	tunables->ntarget_loads = ARRAY_SIZE(default_target_loads);
 	tunables->min_sample_time = DEFAULT_MIN_SAMPLE_TIME;
 	tunables->timer_rate = DEFAULT_TIMER_RATE;
-#ifdef CONFIG_STATE_NOTIFIER
+//#ifdef CONFIG_STATE_NOTIFIER
 	tunables->timer_rate_prev = DEFAULT_TIMER_RATE;
-#endif
+//#endif
 	tunables->timer_slack_val = DEFAULT_TIMER_SLACK;
 
 	spin_lock_init(&tunables->target_loads_lock);

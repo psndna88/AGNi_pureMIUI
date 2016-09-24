@@ -32,8 +32,8 @@
 #define INC_CPU_LOAD				80
 #define INC_CPU_LOAD_AT_MIN_FREQ	70
 
-#define DEF_SAMPLING_RATE			(30000)
-#define MIN_SAMPLING_RATE			(10000)
+#define DEF_SAMPLING_RATE			(50000)
+#define MIN_SAMPLING_RATE			(20000)
 
 /* Pump Inc/Dec for all cores */
 #define PUMP_INC_STEP_AT_MIN_FREQ	2
