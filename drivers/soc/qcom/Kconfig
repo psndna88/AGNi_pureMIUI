@@ -674,12 +674,6 @@ config MSM_PERFORMANCE_HOTPLUG_ON
           compile out the nodes needed for core-control functionality through
           msm_performance.
 
-config THUNDERPLUG_CONTROL
-	tristate "Thunderplug - plugging down/up of multi-cores using powersuspend"
-    default n
-    help
-     This driver uses powersuspend to take down the cpu cores on a hexa core device.
-
 config QCOM_NPA_DUMP
 	bool "Read NPA dump from the RPM memory"
 	depends on DEBUG_FS

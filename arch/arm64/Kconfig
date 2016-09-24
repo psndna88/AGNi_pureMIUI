@@ -715,6 +715,8 @@ endif
 
 source "drivers/cpuidle/Kconfig"
 
+source "arch/arm64/hotplug/Kconfig"
+
 endmenu
 
 source "net/Kconfig"

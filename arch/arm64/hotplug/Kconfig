@@ -1,0 +1,5 @@
+config THUNDERPLUG_CONTROL
+	tristate "ThunderPlug: hotplug of cores using powersuspend"
+	help
+	  This driver uses powersuspend to take down the cpu cores
+	  ranging from dual core CPUs to Octa Core CPUs
