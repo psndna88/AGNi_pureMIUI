@@ -23,10 +23,6 @@
 #undef CDBG
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
 
-
-extern int lct_hardwareid;
-
-
 #define SENSOR_MAX_MOUNTANGLE (360)
 
 static struct v4l2_file_operations msm_sensor_v4l2_subdev_fops;
@@ -515,18 +511,6 @@ static int32_t msm_sensor_get_power_down_settings(void *setting,
 			pd[i].seq_type, pd[i].seq_val,
 			pd[i].config_val, pd[i].delay);
 	}
-
-	CDBG(" %s slave_info->camera_id = %d ,lct_hardwareid=%d\n", __func__, slave_info->camera_id, lct_hardwareid);
-	if ((slave_info->camera_id == CAMERA_0) && (lct_hardwareid == 0)) {
-		for (i = 0; i < power_info->power_down_setting_size; i++) {
-			if (power_info->power_down_setting[i].seq_val == SENSOR_GPIO_VANA) {
-				power_info->power_down_setting[i].seq_type = SENSOR_VREG;
-				power_info->power_down_setting[i].seq_val = CAM_VANA;
-
-			}
-		}
-		printk("%s it is not p3 or later hardware\n", __func__);
-	}
 	return rc;
 }
 
@@ -587,19 +571,6 @@ static int32_t msm_sensor_get_power_up_settings(void *setting,
 	/* Fill power up setting and power up setting size */
 	power_info->power_setting = pu;
 	power_info->power_setting_size = size;
-
-	CDBG(" %s slave_info->camera_id = %d ,lct_hardwareid=%d\n", __func__, slave_info->camera_id, lct_hardwareid);
-	if ((slave_info->camera_id == CAMERA_0) && (lct_hardwareid == 0)) {
-		for (i = 0; i < power_info->power_setting_size; i++) {
-			if (power_info->power_setting[i].seq_val == SENSOR_GPIO_VANA) {
-				power_info->power_setting[i].seq_type = SENSOR_VREG;
-				power_info->power_setting[i].seq_val = CAM_VANA;
-
-			}
-		}
-		printk("%s it is not p3 or later hardware\n", __func__);
-	}
-
 
 	return rc;
 }
