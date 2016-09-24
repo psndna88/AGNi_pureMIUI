@@ -88,7 +88,7 @@ static inline void offline_cpus(void)
 		default:
 		break;
 	}
-	for(cpu = 7; cpu > (suspend_cpu_num - 1); cpu--) {
+	for(cpu = 5; cpu > (suspend_cpu_num - 1); cpu--) {
 		if (cpu_online(cpu))
 			cpu_down(cpu);
 	}
@@ -205,7 +205,7 @@ static ssize_t thunderplug_suspend_cpus_store(struct kobject *kobj, struct kobj_
 {
 	int val;
 	sscanf(buf, "%d", &val);
-	if(val < 1 || val > 8)
+	if(val < 1 || val > 6)
 		pr_info("%s: suspend cpus off-limits\n", THUNDERPLUG);
 	else
 		suspend_cpu_num = val;
@@ -371,7 +371,7 @@ static void __cpuinit tplug_resume_work_fn(struct work_struct *work)
 static void __cpuinit tplug_work_fn(struct work_struct *work)
 {
 	int i;
-	unsigned int load[8], avg_load[8];
+	unsigned int load[6], avg_load[6];
 
 	switch(endurance_level)
 	{
@@ -406,7 +406,7 @@ static void __cpuinit tplug_work_fn(struct work_struct *work)
 	{
 	if(DEBUG)
 		pr_info("%s : bringing back cpu%d\n", THUNDERPLUG,i);
-		if(!((i+1) > 7))
+		if(!((i+1) > 5))
 			cpu_up(i+1);
 	}
 	else if(cpu_online(i) && avg_load[i] < load_threshold && cpu_online(i+1))
