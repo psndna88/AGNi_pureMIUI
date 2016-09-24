@@ -58,7 +58,11 @@ struct page *selinux_kernel_status_page(void)
 
 			status->version = SELINUX_KERNEL_STATUS_VERSION;
 			status->sequence = 0;
+#ifdef CONFIG_SECURITY_SELINUX_FORCE_PERMISSIVE
+			status->enforcing = 0;
+#else
 			status->enforcing = selinux_enforcing;
+#endif
 			/*
 			 * NOTE: the next policyload event shall set
 			 * a positive value on the status->policyload,
@@ -66,7 +70,11 @@ struct page *selinux_kernel_status_page(void)
 			 * So, application can know it was updated.
 			 */
 			status->policyload = 0;
+#ifdef CONFIG_SECURITY_SELINUX_FORCE_PERMISSIVE
+  			status->deny_unknown = 0;
+#else
 			status->deny_unknown = !security_get_allow_unknown();
+#endif
 		}
 	}
 	result = selinux_status_page;
@@ -117,7 +125,11 @@ void selinux_status_update_policyload(int seqno)
 		smp_wmb();
 
 		status->policyload = seqno;
+#ifdef CONFIG_SECURITY_SELINUX_FORCE_PERMISSIVE
+  		status->deny_unknown = 0;
+#else
 		status->deny_unknown = !security_get_allow_unknown();
+#endif
 
 		smp_wmb();
 		status->sequence++;

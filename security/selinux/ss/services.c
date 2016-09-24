@@ -772,6 +772,10 @@ out:
 	kfree(n);
 	kfree(t);
 
+#ifdef CONFIG_SECURITY_SELINUX_FORCE_PERMISSIVE
+	selinux_enforcing = 0;
+#endif
+
 	if (!selinux_enforcing)
 		return 0;
 	return -EPERM;
@@ -1530,6 +1534,11 @@ out:
 	kfree(s);
 	kfree(t);
 	kfree(n);
+
+#ifdef CONFIG_SECURITY_SELINUX_FORCE_PERMISSIVE
+	selinux_enforcing = 0;
+#endif
+
 	if (!selinux_enforcing)
 		return 0;
 	return -EACCES;
