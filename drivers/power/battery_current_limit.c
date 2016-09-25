@@ -205,7 +205,8 @@ static struct work_struct bcl_hotplug_work;
 static DEFINE_MUTEX(bcl_hotplug_mutex);
 static bool bcl_hotplug_enabled;
 static uint32_t battery_soc_val = 100;
-static uint32_t soc_low_threshold;
+static uint32_t soc_low_threshold = 1;
+module_param_named(low_battery_value, soc_low_threshold, int, 0664);
 static struct power_supply bcl_psy;
 static const char bcl_psy_name[] = "bcl";
 
@@ -1499,8 +1500,6 @@ static int probe_bcl_periph_prop(struct bcl_context *bcl)
 		bcl->vbat_high_thresh.trip_value, ibat_probe_exit);
 	BCL_FETCH_DT_U32(ibat_node, key, "qcom,vph-low-threshold-uv", ret,
 		bcl->vbat_low_thresh.trip_value, ibat_probe_exit);
-	BCL_FETCH_DT_U32(ibat_node, key, "qcom,soc-low-threshold", ret,
-		soc_low_threshold, ibat_probe_exit);
 	bcl->vbat_high_thresh.trip_notify
 		= bcl->vbat_low_thresh.trip_notify = bcl_periph_vbat_notify;
 	bcl->vbat_high_thresh.trip_data
