@@ -50,6 +50,10 @@
 #define FT_SUSPEND_LEVEL 1
 #endif
 
+#ifdef CONFIG_WAKE_GESTURES
+#include <linux/wake_gestures.h>
+#endif
+
 #if defined(CONFIG_TOUCHSCREEN_GESTURE)
 #endif
 
@@ -94,13 +98,6 @@ extern void ctp_set_gesture_data(int value);
 #define CTP_PROC_LOCKDOWN_FILE "tp_lockdown_info"
 char tp_lockdown_info[128];
 u8 uc_tp_vendor_id;
-
-#define FT_CHARGING_STATUS
-
-#if defined(FT_CHARGING_STATUS)
-int charging_flag = 0;
-extern int FG_charger_status;
-#endif
 
 static struct i2c_client *fts_proc_entry_i2c_client;
 
@@ -324,7 +321,11 @@ struct ft5x06_ts_data {
 
 struct ft5x06_ts_data *ft5x06_ts = NULL;
 
-extern int is_tp_driver_loaded;
+#ifdef CONFIG_WAKE_GESTURES
+bool scr_suspended_ft(void) {
+	return ft5x06_ts->suspended;
+}
+#endif
 
 static DEFINE_MUTEX(i2c_rw_access);
 
@@ -633,6 +634,11 @@ static irqreturn_t ft5x06_ts_interrupt(int irq, void *dev_id)
 		if (!num_touches && !status && !id)
 			break;
 
+#ifdef CONFIG_WAKE_GESTURES
+		if (data->suspended)
+			x += 5000;
+#endif
+
 		input_mt_slot(ip_dev, id);
 		if (status == FT_TOUCH_DOWN || status == FT_TOUCH_CONTACT) {
 			input_mt_report_slot_state(ip_dev, MT_TOOL_FINGER, 1);
@@ -906,8 +912,6 @@ static int ft5x06_ts_suspend(struct device *dev)
 		return 0;
 	}
 #endif
-
-
 	if (data->loading_fw) {
 		dev_info(dev, "Firmware loading in process...\n");
 		return 0;
@@ -917,6 +921,19 @@ static int ft5x06_ts_suspend(struct device *dev)
 		dev_info(dev, "Already in suspend state\n");
 		return 0;
 	}
+
+#ifdef CONFIG_WAKE_GESTURES
+	if (device_may_wakeup(dev) && (s2w_switch || dt2w_switch)) {
+		ft5x0x_write_reg(data->client, 0xD0, 1);
+		err = enable_irq_wake(data->client->irq);
+		if (err)
+			dev_err(&data->client->dev,
+				"%s: set_irq_wake failed\n", __func__);
+		data->suspended = true;
+
+		return err;
+	}
+#endif
 
 	disable_irq(data->client->irq);
 
@@ -971,6 +988,36 @@ static int ft5x06_ts_resume(struct device *dev)
 		dev_dbg(dev, "Already in awake state\n");
 		return 0;
 	}
+
+#ifdef CONFIG_WAKE_GESTURES
+	if (device_may_wakeup(dev) && (s2w_switch || dt2w_switch)) {
+		ft5x0x_write_reg(data->client, 0xD0, 0);
+
+		for (i = 0; i < data->pdata->num_max_touches; i++) {
+			input_mt_slot(data->input_dev, i);
+			input_mt_report_slot_state(data->input_dev, MT_TOOL_FINGER, 0);
+		}
+		input_mt_report_pointer_emulation(data->input_dev, false);
+		input_sync(data->input_dev);
+
+		err = disable_irq_wake(data->client->irq);
+		if (err)
+			dev_err(dev, "%s: disable_irq_wake failed\n",
+				__func__);
+		data->suspended = false;
+
+		if (dt2w_switch_changed) {
+			dt2w_switch = dt2w_switch_temp;
+			dt2w_switch_changed = false;
+		}
+		if (s2w_switch_changed) {
+			s2w_switch = s2w_switch_temp;
+			s2w_switch_changed = false;
+		}
+
+		return err;
+	}
+#endif
 
 	if (gpio_is_valid(data->pdata->reset_gpio)) {
 		gpio_set_value_cansleep(data->pdata->reset_gpio, 0);
@@ -2845,20 +2892,6 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 	u8 reg_value;
 	u8 reg_addr;
 	int err, len;
-
-
-#ifdef SUPPORT_READ_TP_VERSION
-	char fw_version[64];
-#endif
-	printk("%s, of_node=%s, is_tp_driver_loaded=%d\n", __func__,
-		client->dev.of_node->name, is_tp_driver_loaded);
-
-	if (is_tp_driver_loaded == 1) {
-		printk("%s, other driver has been loaded\n", __func__);
-		return ENODEV;
-	}
-
-
 	if (client->dev.of_node) {
 		pdata = devm_kzalloc(&client->dev,
 			sizeof(struct ft5x06_ts_platform_data), GFP_KERNEL);
@@ -3060,6 +3093,10 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 		goto free_reset_gpio;
 	}
 
+#ifdef CONFIG_WAKE_GESTURES
+	device_init_wakeup(&client->dev, 1);
+#endif
+
 	err = device_create_file(&client->dev, &dev_attr_fw_name);
 	if (err) {
 		dev_err(&client->dev, "sys file creation failed\n");
@@ -3183,11 +3220,6 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 
 	printk("%s, Firmware version = 0x%02x.%d.%d, fw_vendor_id=0x%02x\n", __func__,
 		data->fw_ver[0], data->fw_ver[1], data->fw_ver[2], data->fw_vendor_id);
-#ifdef SUPPORT_READ_TP_VERSION
-	memset(fw_version, 0, sizeof(fw_version));
-	sprintf(fw_version, "[FW]0x%x, [IC]FT5346", data->fw_ver[0]);
-	init_tp_fm_info(0, fw_version, "FocalTech");
-#endif
 
 	lct_ctp_upgrade_int(ft5x06_ctp_upgrade_func, ft5x06_ctp_upgrade_read_ver_func);
 
@@ -3231,9 +3263,6 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 	ctp_cover_switch_init(lct_ctp_cover_state_switch);
 #endif
 
-
-	is_tp_driver_loaded = 1;
-	printk("%s done\n", __func__);
 	return 0;
 
 free_debug_dir:
