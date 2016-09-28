@@ -162,36 +162,32 @@ int set_ps(const char *intf, struct sigma_dut *dut, int enabled)
 	if (wifi_chip_type == DRIVER_WCN) {
 		if (enabled) {
 			snprintf(buf, sizeof(buf), "iwpriv wlan0 dump 906");
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-					"Failed to enable power save");
-				return -1;
-			}
+			if (system(buf) != 0)
+				goto set_power_save;
 		} else {
 			snprintf(buf, sizeof(buf), "iwpriv wlan0 dump 905");
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"Failed to stop power save timer");
-				return -1;
-			}
+			if (system(buf) != 0)
+				goto set_power_save;
 			snprintf(buf, sizeof(buf), "iwpriv wlan0 dump 912");
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"Failed to disable power save");
-				 return -1;
-			}
+			if (system(buf) != 0)
+				goto set_power_save;
 		}
 
 		return 0;
 	}
 
+set_power_save:
 	snprintf(buf, sizeof(buf), "./iw dev %s set power_save %s",
 		 intf, enabled ? "on" : "off");
 	if (system(buf) != 0) {
 		snprintf(buf, sizeof(buf), "iw dev %s set power_save %s",
 			 intf, enabled ? "on" : "off");
-		if (system(buf) != 0)
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to set power save %s",
+					enabled ? "on" : "off");
 			return -1;
+		}
 	}
 
 	return 0;
@@ -635,8 +631,16 @@ static int start_dhcp_client(struct sigma_dut *dut, const char *ifname)
 	char buf[200];
 
 #ifdef ANDROID
-	snprintf(buf, sizeof(buf),
-		 "/system/bin/dhcpcd -b %s", ifname);
+	if (access("/system/bin/dhcpcd", F_OK) != -1) {
+		snprintf(buf, sizeof(buf),
+			 "/system/bin/dhcpcd -b %s", ifname);
+	} else if (access("/system/bin/dhcptool", F_OK) != -1) {
+		snprintf(buf, sizeof(buf), "/system/bin/dhcptool %s &", ifname);
+	} else {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"DHCP client program missing");
+		return 0;
+	}
 #else /* ANDROID */
 	snprintf(buf, sizeof(buf),
 		 "dhclient -nw -pf /var/run/dhclient-%s.pid %s",
@@ -6435,6 +6439,7 @@ static int cmd_sta_set_rfeature_tdls(const char *intf, struct sigma_dut *dut,
 
 	switch (chsm) {
 	case CHSM_NOT_SET:
+		res = 1;
 		break;
 	case CHSM_ENABLE:
 		if (off_ch_num < 0) {

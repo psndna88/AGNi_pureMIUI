@@ -13,6 +13,8 @@
 #include <signal.h>
 #include <ctype.h>
 
+#include "wpa_helpers.h"
+
 #ifdef ANDROID
 #define SHELL "/system/bin/sh"
 #else /* ANDROID */
@@ -50,7 +52,7 @@ static int cmd_traffic_send_ping(struct sigma_dut *dut,
 	char buf[100];
 	int type = 1;
 	int dscp = 0, use_dscp = 0;
-	char extra[100], int_arg[100];
+	char extra[100], int_arg[100], intf_arg[100];
 
 	val = get_param(cmd, "Type");
 	if (!val)
@@ -126,11 +128,16 @@ static int cmd_traffic_send_ping(struct sigma_dut *dut,
 	int_arg[0] = '\0';
 	if (rate != 1)
 		snprintf(int_arg, sizeof(int_arg), " -i %f", interval);
+	intf_arg[0] = '\0';
+	if (type == 2)
+		snprintf(intf_arg, sizeof(intf_arg), " -I %s",
+			 get_station_ifname());
 	fprintf(f, "#!" SHELL "\n"
-		"ping%s -c %d%s -s %d%s -q %s > " SIGMA_TMPDIR
+		"ping%s -c %d%s -s %d%s -q%s %s > " SIGMA_TMPDIR
 		"/sigma_dut-ping.%d &\n"
 		"echo $! > " SIGMA_TMPDIR "/sigma_dut-ping-pid.%d\n",
-		type == 2 ? "6" : "", pkts, int_arg, size, extra, dst, id, id);
+		type == 2 ? "6" : "", pkts, int_arg, size, extra,
+		intf_arg, dst, id, id);
 
 	fclose(f);
 	if (chmod(SIGMA_TMPDIR "/sigma_dut-ping.sh",

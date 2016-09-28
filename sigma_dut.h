@@ -266,6 +266,7 @@ struct sigma_dut {
 
 	int go;
 	int p2p_client;
+	char *p2p_ifname;
 
 	int client_uapsd;
 
@@ -443,6 +444,7 @@ struct sigma_dut {
 
 	int ap_lci;
 	char ap_val_lci[33];
+	char ap_infoz[17];
 	int ap_lcr;
 	char ap_val_lcr[400];
 	int ap_rrm;
@@ -452,6 +454,8 @@ struct sigma_dut {
 	int ap_opchannel; /* number of oper channels */
 	int ap_val_opchannel[3];
 	int ap_scan;
+	int ap_fqdn_held;
+	int ap_fqdn_supl;
 	int ap_msnt_type;
 
 	const char *hostapd_debug_log;
@@ -636,6 +640,8 @@ int ath_set_width(struct sigma_dut *dut, struct sigma_conn *conn,
 /* p2p.c */
 int p2p_cmd_sta_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
 			      struct sigma_cmd *cmd);
+void p2p_create_event_thread(struct sigma_dut *dut);
+void stop_event_thread(void);
 
 /* utils.c */
 enum sigma_program sigma_program_to_enum(const char *prog);
