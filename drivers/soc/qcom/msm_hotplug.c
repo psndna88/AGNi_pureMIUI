@@ -110,7 +110,7 @@
 #define MSM_HOTPLUG_VERSION             "2.4"
 
 #define MSM_HOTPLUG                     "msm_hotplug"
-#define HOTPLUG_ENABLED                 1
+#define HOTPLUG_ENABLED                 0
 #define DEFAULT_UPDATE_RATE             200
 #define START_DELAY                     20000
 #define DEFAULT_HISTORY_SIZE            10
