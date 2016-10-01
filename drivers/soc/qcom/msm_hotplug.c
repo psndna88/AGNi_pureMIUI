@@ -133,7 +133,7 @@
 
 unsigned int msm_enabled = HOTPLUG_ENABLED;
 
-struct notifier_block msm_hotplug_fb_notif;
+struct notifier_block __refdata msm_hotplug_fb_notif;
 
 /* HACK: Prevent big cluster turned off when changing governor settings. */
 bool prevent_big_off = false;
@@ -1514,7 +1514,7 @@ static ssize_t show_version(struct device *dev,
     return sprintf(buf, "%s\n", MSM_HOTPLUG_VERSION);
 }
 
-static DEVICE_ATTR(msm_enabled, (S_IWUGO|S_IRUGO), show_enable_hotplug, store_enable_hotplug);
+static DEVICE_ATTR(msm_enabled_ops, (S_IWUGO|S_IRUGO), show_enable_hotplug, store_enable_hotplug);
 static DEVICE_ATTR(update_rate, (S_IWUGO|S_IRUGO), show_update_rate, store_update_rate);
 static DEVICE_ATTR(load_levels, (S_IWUGO|S_IRUGO), show_load_levels, store_load_levels);
 static DEVICE_ATTR(min_cpus_online, (S_IWUGO|S_IRUGO), show_min_cpus_online,
@@ -1545,7 +1545,7 @@ static DEVICE_ATTR(debug, (S_IWUGO|S_IRUGO), show_debug, store_debug);
 static DEVICE_ATTR(version, S_IRUGO, show_version, NULL);
 
 static struct attribute *msm_hotplug_attrs[] = {
-    &dev_attr_msm_enabled.attr,
+    &dev_attr_msm_enabled_ops.attr,
     &dev_attr_update_rate.attr,
     &dev_attr_load_levels.attr,
     &dev_attr_min_cpus_online.attr,

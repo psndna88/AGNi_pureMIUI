@@ -47,6 +47,7 @@
 #ifdef CONFIG_MSM_HOTPLUG
 #include <linux/msm_hotplug.h>
 #include <linux/workqueue.h>
+#include <linux/init.h>
 #endif
 
 #define FPC1020_RESET_LOW_US 1000
@@ -249,7 +250,7 @@ static void __cpuinit msm_hotplug_resume_call(struct work_struct *msm_hotplug_re
 {
 	msm_hotplug_resume_timeout();
 }
-static DECLARE_WORK(msm_hotplug_resume_call_work, msm_hotplug_resume_call);
+static __refdata DECLARE_WORK(msm_hotplug_resume_call_work, msm_hotplug_resume_call);
 #endif
 
 static irqreturn_t fpc1020_irq_handler(int irq, void *handle)
