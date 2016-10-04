@@ -4193,6 +4193,11 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 	dut->er_oper_performed = 0;
 	dut->er_oper_bssid[0] = '\0';
 
+	if (dut->program == PROGRAM_LOC) {
+		/* Disable Interworking by default */
+		wpa_command(get_station_ifname(), "SET interworking 0");
+	}
+
 	if (dut->program != PROGRAM_VHT)
 		return cmd_sta_p2p_reset(dut, conn, cmd);
 	return 1;
