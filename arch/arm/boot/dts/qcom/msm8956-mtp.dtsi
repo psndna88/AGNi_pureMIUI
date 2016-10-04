@@ -254,8 +254,6 @@
 
 &pmi8950_charger {
 	qcom,battery-data = <&mtp_batterydata>;
-	qcom,chg-led-support;
-	qcom,chg-led-sw-controls;
 };
 
 &pm8950_cajon_dig {
