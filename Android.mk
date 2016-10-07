@@ -52,9 +52,12 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := sigma_dut
 LOCAL_MODULE_TAGS := optional
 LOCAL_C_INCLUDES += \
-	$(LOCAL_PATH) frameworks/base/cmds/keystore system/security/keystore \
-	$(LOCAL_PATH) hardware/qcom/wlan/qcwcn/wifi_hal \
-	$(LOCAL_PATH) hardware/libhardware_legacy/include/hardware_legacy
+	$(LOCAL_PATH) \
+	frameworks/base/cmds/keystore \
+	system/security/keystore \
+	hardware/qcom/wlan/qcwcn/wifi_hal \
+	hardware/libhardware_legacy/include/hardware_legacy \
+	frameworks/opt/net/wifi/libwifi_hal/include
 LOCAL_SHARED_LIBRARIES := libc libcutils
 LOCAL_SHARED_LIBRARIES += libhardware_legacy
 ifneq ($(wildcard hardware/qcom/wlan/qcwcn/wifi_hal/nan_cert.h),)
@@ -62,16 +65,7 @@ LOCAL_SHARED_LIBRARIES += libwifi-hal-qcom
 OBJS += nan.c
 CFLAGS += -DANDROID_NAN
 endif
-ver = $(filter 4.3%,$(PLATFORM_VERSION))
-ver += $(filter 4.4%,$(PLATFORM_VERSION))
-ver += $(filter 5.0%,$(PLATFORM_VERSION))
-ver += $(filter 5.1%,$(PLATFORM_VERSION))
-ver += $(filter L%,$(PLATFORM_VERSION))
-ver += $(filter M%,$(PLATFORM_VERSION))
-ver += $(filter 6.0%,$(PLATFORM_VERSION))
-ver += $(filter N%,$(PLATFORM_VERSION))
-ver += $(filter 7.%,$(PLATFORM_VERSION))
-ifneq (,$(strip $(ver)))
+ifeq ($(call is-platform-sdk-version-at-least,16),true)
 CFLAGS += -DANDROID43
 CFLAGS += -Wno-unused-parameter
 LOCAL_C_INCLUDES += system/security/keystore/include/keystore
