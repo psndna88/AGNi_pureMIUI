@@ -99,6 +99,13 @@ extern void ctp_set_gesture_data(int value);
 char tp_lockdown_info[128];
 u8 uc_tp_vendor_id;
 
+#define FT_CHARGING_STATUS
+
+#if defined(FT_CHARGING_STATUS)
+int charging_flag = 0;
+extern int FG_charger_status;
+#endif
+
 static struct i2c_client *fts_proc_entry_i2c_client;
 
 static unsigned char firmware_data[] = {
@@ -326,6 +333,8 @@ bool scr_suspended_ft(void) {
 	return ft5x06_ts->suspended;
 }
 #endif
+
+extern int is_tp_driver_loaded;
 
 static DEFINE_MUTEX(i2c_rw_access);
 
@@ -912,6 +921,7 @@ static int ft5x06_ts_suspend(struct device *dev)
 		return 0;
 	}
 #endif
+
 	if (data->loading_fw) {
 		dev_info(dev, "Firmware loading in process...\n");
 		return 0;
@@ -2892,6 +2902,18 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 	u8 reg_value;
 	u8 reg_addr;
 	int err, len;
+
+#ifdef SUPPORT_READ_TP_VERSION
+	char fw_version[64];
+#endif
+	printk("%s, of_node=%s, is_tp_driver_loaded=%d\n", __func__,
+		client->dev.of_node->name, is_tp_driver_loaded);
+
+	if (is_tp_driver_loaded == 1) {
+		printk("%s, other driver has been loaded\n", __func__);
+		return ENODEV;
+	}
+
 	if (client->dev.of_node) {
 		pdata = devm_kzalloc(&client->dev,
 			sizeof(struct ft5x06_ts_platform_data), GFP_KERNEL);
@@ -3220,6 +3242,11 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 
 	printk("%s, Firmware version = 0x%02x.%d.%d, fw_vendor_id=0x%02x\n", __func__,
 		data->fw_ver[0], data->fw_ver[1], data->fw_ver[2], data->fw_vendor_id);
+#ifdef SUPPORT_READ_TP_VERSION
+	memset(fw_version, 0, sizeof(fw_version));
+	sprintf(fw_version, "[FW]0x%x, [IC]FT5346", data->fw_ver[0]);
+	init_tp_fm_info(0, fw_version, "FocalTech");
+#endif
 
 	lct_ctp_upgrade_int(ft5x06_ctp_upgrade_func, ft5x06_ctp_upgrade_read_ver_func);
 
@@ -3263,6 +3290,8 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 	ctp_cover_switch_init(lct_ctp_cover_state_switch);
 #endif
 
+	is_tp_driver_loaded = 1;
+	printk("%s done\n", __func__);
 	return 0;
 
 free_debug_dir:
