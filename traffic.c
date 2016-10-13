@@ -86,7 +86,7 @@ static int cmd_traffic_send_ping(struct sigma_dut *dut,
 	if (val == NULL)
 		return -1;
 	dur = atoi(val);
-	if (dur <= 0)
+	if (dur <= 0 || dur > 3600)
 		dur = 3600;
 
 	pkts = dur * rate;
