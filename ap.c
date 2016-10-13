@@ -5344,34 +5344,63 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static void parse_qos_params(struct qos_params *qos, const char *cwmin,
-			     const char *cwmax, const char *aifs,
-			     const char *txop, const char *acm)
+static int parse_qos_params(struct sigma_dut *dut, struct sigma_conn *conn,
+			    struct qos_params *qos, const char *cwmin,
+			    const char *cwmax, const char *aifs,
+			    const char *txop, const char *acm)
 {
+	int val;
+
 	if (cwmin) {
 		qos->ac = 1;
-		qos->cwmin = atoi(cwmin);
+		val = atoi(cwmin);
+		if (val < 0 || val > 15) {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Invalid cwMin");
+			return 0;
+		}
+		qos->cwmin = val;
 	}
 
 	if (cwmax) {
 		qos->ac = 1;
-		qos->cwmax = atoi(cwmax);
+		val = atoi(cwmax);
+		if (val < 0 || val > 15) {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Invalid cwMax");
+			return 0;
+		}
+		qos->cwmax = val;
 	}
 
 	if (aifs) {
 		qos->ac = 1;
-		qos->aifs = atoi(aifs);
+		val = atoi(aifs);
+		if (val < 1 || val > 255) {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Invalid AIFS");
+			return 0;
+		}
+		qos->aifs = val;
 	}
 
 	if (txop) {
 		qos->ac = 1;
-		qos->txop = atoi(txop) * 32;
+		val = atoi(txop);
+		if (val < 0 || val > 0xffff) {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Invalid txop");
+			return 0;
+		}
+		qos->txop = val * 32;
 	}
 
 	if (acm) {
 		qos->ac = 1;
 		qos->acm = strcasecmp(acm, "on") == 0;
 	}
+
+	return 1;
 }
 
 
@@ -5379,18 +5408,32 @@ static int cmd_ap_set_apqos(struct sigma_dut *dut, struct sigma_conn *conn,
 			    struct sigma_cmd *cmd)
 {
 	/* TXOP: The values provided here for VHT5G only */
-	parse_qos_params(&dut->ap_qos[AP_AC_VO], get_param(cmd, "cwmin_VO"),
-			 get_param(cmd, "cwmax_VO"), get_param(cmd, "AIFS_VO"),
-			 get_param(cmd, "TXOP_VO"), get_param(cmd, "ACM_VO"));
-	parse_qos_params(&dut->ap_qos[AP_AC_VI], get_param(cmd, "cwmin_VI"),
-			 get_param(cmd, "cwmax_VI"), get_param(cmd, "AIFS_VI"),
-			 get_param(cmd, "TXOP_VI"), get_param(cmd, "ACM_VI"));
-	parse_qos_params(&dut->ap_qos[AP_AC_BE], get_param(cmd, "cwmin_BE"),
-			 get_param(cmd, "cwmax_BE"), get_param(cmd, "AIFS_BE"),
-			 get_param(cmd, "TXOP_BE"), get_param(cmd, "ACM_BE"));
-	parse_qos_params(&dut->ap_qos[AP_AC_BK], get_param(cmd, "cwmin_BK"),
-			 get_param(cmd, "cwmax_BK"), get_param(cmd, "AIFS_BK"),
-			 get_param(cmd, "TXOP_BK"), get_param(cmd, "ACM_BK"));
+	if (!parse_qos_params(dut, conn, &dut->ap_qos[AP_AC_VO],
+			      get_param(cmd, "cwmin_VO"),
+			      get_param(cmd, "cwmax_VO"),
+			      get_param(cmd, "AIFS_VO"),
+			      get_param(cmd, "TXOP_VO"),
+			      get_param(cmd, "ACM_VO")) ||
+	    !parse_qos_params(dut, conn, &dut->ap_qos[AP_AC_VI],
+			      get_param(cmd, "cwmin_VI"),
+			      get_param(cmd, "cwmax_VI"),
+			      get_param(cmd, "AIFS_VI"),
+			      get_param(cmd, "TXOP_VI"),
+			      get_param(cmd, "ACM_VI")) ||
+	    !parse_qos_params(dut, conn, &dut->ap_qos[AP_AC_BE],
+			      get_param(cmd, "cwmin_BE"),
+			      get_param(cmd, "cwmax_BE"),
+			      get_param(cmd, "AIFS_BE"),
+			      get_param(cmd, "TXOP_BE"),
+			      get_param(cmd, "ACM_BE")) ||
+	    !parse_qos_params(dut, conn, &dut->ap_qos[AP_AC_BK],
+			      get_param(cmd, "cwmin_BK"),
+			      get_param(cmd, "cwmax_BK"),
+			      get_param(cmd, "AIFS_BK"),
+			      get_param(cmd, "TXOP_BK"),
+			      get_param(cmd, "ACM_BK")))
+		return 0;
+
 	return 1;
 }
 
@@ -5398,18 +5441,32 @@ static int cmd_ap_set_apqos(struct sigma_dut *dut, struct sigma_conn *conn,
 static int cmd_ap_set_staqos(struct sigma_dut *dut, struct sigma_conn *conn,
 			     struct sigma_cmd *cmd)
 {
-	parse_qos_params(&dut->ap_sta_qos[AP_AC_VO], get_param(cmd, "cwmin_VO"),
-			 get_param(cmd, "cwmax_VO"), get_param(cmd, "AIFS_VO"),
-			 get_param(cmd, "TXOP_VO"), get_param(cmd, "ACM_VO"));
-	parse_qos_params(&dut->ap_sta_qos[AP_AC_VI], get_param(cmd, "cwmin_VI"),
-			 get_param(cmd, "cwmax_VI"), get_param(cmd, "AIFS_VI"),
-			 get_param(cmd, "TXOP_VI"), get_param(cmd, "ACM_VI"));
-	parse_qos_params(&dut->ap_sta_qos[AP_AC_BE], get_param(cmd, "cwmin_BE"),
-			 get_param(cmd, "cwmax_BE"), get_param(cmd, "AIFS_BE"),
-			 get_param(cmd, "TXOP_BE"), get_param(cmd, "ACM_BE"));
-	parse_qos_params(&dut->ap_sta_qos[AP_AC_BK], get_param(cmd, "cwmin_BK"),
-			 get_param(cmd, "cwmax_BK"), get_param(cmd, "AIFS_BK"),
-			 get_param(cmd, "TXOP_BK"), get_param(cmd, "ACM_BK"));
+	if (!parse_qos_params(dut, conn, &dut->ap_sta_qos[AP_AC_VO],
+			      get_param(cmd, "cwmin_VO"),
+			      get_param(cmd, "cwmax_VO"),
+			      get_param(cmd, "AIFS_VO"),
+			      get_param(cmd, "TXOP_VO"),
+			      get_param(cmd, "ACM_VO")) ||
+	    !parse_qos_params(dut, conn, &dut->ap_sta_qos[AP_AC_VI],
+			      get_param(cmd, "cwmin_VI"),
+			      get_param(cmd, "cwmax_VI"),
+			      get_param(cmd, "AIFS_VI"),
+			      get_param(cmd, "TXOP_VI"),
+			      get_param(cmd, "ACM_VI")) ||
+	    !parse_qos_params(dut, conn, &dut->ap_sta_qos[AP_AC_BE],
+			      get_param(cmd, "cwmin_BE"),
+			      get_param(cmd, "cwmax_BE"),
+			      get_param(cmd, "AIFS_BE"),
+			      get_param(cmd, "TXOP_BE"),
+			      get_param(cmd, "ACM_BE")) ||
+	    !parse_qos_params(dut, conn, &dut->ap_sta_qos[AP_AC_BK],
+			      get_param(cmd, "cwmin_BK"),
+			      get_param(cmd, "cwmax_BK"),
+			      get_param(cmd, "AIFS_BK"),
+			      get_param(cmd, "TXOP_BK"),
+			      get_param(cmd, "ACM_BK")))
+		return 0;
+
 	return 1;
 }
 
