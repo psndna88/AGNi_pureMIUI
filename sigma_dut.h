@@ -458,6 +458,13 @@ struct sigma_dut {
 	int ap_fqdn_supl;
 	int ap_msnt_type;
 
+	int ap_mbo;
+	int ap_ne_class;
+	int ap_ne_op_ch;
+	int ap_set_bssidpref;
+	int ap_btmreq_disassoc_imnt;
+	int ap_btmreq_term_bit;
+
 	const char *hostapd_debug_log;
 
 #ifdef CONFIG_TRAFFIC_AGENT
@@ -511,6 +518,7 @@ struct sigma_dut {
 		PROGRAM_VHT,
 		PROGRAM_NAN,
 		PROGRAM_LOC,
+		PROGRAM_MBO
 	} program;
 
 	enum device_type {

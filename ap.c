@@ -2328,6 +2328,16 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 					     "'267:00110168656c642e6578616d706c652e636f6d0011027375706c2e6578616d706c652e636f6d'");
 	}
 
+	if (dut->program == PROGRAM_MBO) {
+		owrt_ap_set_vap(dut, vap_id, "interworking", "1");
+		owrt_ap_set_vap(dut, vap_id, "mbo", "1");
+		owrt_ap_set_vap(dut, vap_id, "rrm", "1");
+		owrt_ap_set_vap(dut, vap_id, "mbo_cellular_pref", "1");
+
+		owrt_ap_set_list_vap(dut, vap_id, "anqp_elem",
+				     "'272:34108cfdf0020df1f7000000733000030101'");
+	}
+
 	return 1;
 }
 
@@ -4207,6 +4217,16 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 		snprintf(buf, sizeof(buf), "iwlist %s scan", ifname);
 		run_system(dut, buf);
 	}
+
+	if (dut->ap_set_bssidpref) {
+		snprintf(buf, sizeof(buf),
+			 "wifitool %s setbssidpref 00:00:00:00:00:00 0 00 00",
+			 ifname);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"wifitool clear bssidpref failed");
+		}
+	}
 }
 
 
@@ -5643,6 +5663,14 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_msnt_type = 0;
 	}
 
+	if (dut->program == PROGRAM_MBO) {
+		dut->ap_mbo = 1;
+		dut->ap_interworking = 1;
+		dut->ap_ne_class = 0;
+		dut->ap_ne_op_ch = 0;
+		dut->ap_set_bssidpref = 1;
+	}
+
 	if (kill_process(dut, "(hostapd)", 1, SIGTERM) == 0 ||
 	    system("killall hostapd") == 0) {
 		int i;
@@ -6185,6 +6213,71 @@ static int ath_ap_send_frame_loc(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int ath_ap_send_frame_mbo(struct sigma_dut *dut, struct sigma_conn *conn,
+				 struct sigma_cmd *cmd)
+{
+	const char *val;
+	char *ifname;
+	char buf[100];
+	int disassoc_timer = 0;
+	int apchanrpt = 0;
+	int req_ssid = 0;
+
+	ifname = get_main_ifname();
+
+	val = get_param(cmd, "FrameName");
+	if (!val)
+		return -1;
+
+	if (strcasecmp(val, "BTMReq") == 0) {
+		val = get_param(cmd, "Disassoc_Timer");
+		if (val)
+			disassoc_timer = atoi(val);
+		snprintf(buf, sizeof(buf),
+			 "wifitool %s sendbstmreq %s %s %d 3 %d %d",
+			 ifname, cmd->values[3], cmd->values[5], disassoc_timer,
+			 dut->ap_btmreq_disassoc_imnt, dut->ap_btmreq_term_bit);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"wifitool btmreq failed!");
+		}
+	} else if (strcasecmp(val, "BcnRptReq") == 0) {
+		val = get_param(cmd, "APChanRpt");
+		if (val)
+			apchanrpt = atoi(val);
+		val = get_param(cmd, "SSID");
+		req_ssid = strcasecmp(val, "") != 0;
+		if (apchanrpt != 0) {
+			snprintf(buf, sizeof(buf),
+				 "wifitool %s sendbcnrpt %s %s %s %s %s %s %d %s %s 1 1 %s",
+				 ifname, cmd->values[4], cmd->values[5],
+				 cmd->values[6], cmd->values[7], cmd->values[8],
+				 cmd->values[9], req_ssid,
+				 cmd->values[12], cmd->values[13],
+				 cmd->values[10]);
+			if (system(buf) != 0) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"wifitool btmreq failed!");
+			}
+		} else {
+			snprintf(buf, sizeof(buf),
+				 "wifitool %s sendbcnrpt %s %s %s %s %s %s %d %s %s 1 0 %s",
+				 ifname, cmd->values[4], cmd->values[5],
+				 cmd->values[6], cmd->values[7], cmd->values[8],
+				 cmd->values[9], req_ssid,
+				 cmd->values[12], cmd->values[13],
+				 cmd->values[10]);
+			if (system(buf) != 0) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"wifitool btmreq failed!");
+			}
+		}
+	}
+
+	return 1;
+}
+
+
 static int ap_send_frame_vht(struct sigma_dut *dut, struct sigma_conn *conn,
 			     struct sigma_cmd *cmd)
 {
@@ -6232,6 +6325,29 @@ static int ap_send_frame_loc(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int ap_send_frame_mbo(struct sigma_dut *dut, struct sigma_conn *conn,
+			     struct sigma_cmd *cmd)
+{
+	switch (get_driver_type()) {
+	case DRIVER_ATHEROS:
+		return ath_ap_send_frame_mbo(dut, conn, cmd);
+	case DRIVER_OPENWRT:
+		switch (get_openwrt_driver_type()) {
+		case OPENWRT_DRIVER_ATHEROS:
+			return ath_ap_send_frame_mbo(dut, conn, cmd);
+		default:
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported ap_send_frame with the current openwrt driver");
+			return 0;
+		}
+	default:
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Unsupported ap_send_frame with the current driver");
+		return 0;
+	}
+}
+
+
 int cmd_ap_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 		      struct sigma_cmd *cmd)
 {
@@ -6251,6 +6367,8 @@ int cmd_ap_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 			return ap_send_frame_vht(dut, conn, cmd);
 		if (strcasecmp(val, "LOC") == 0)
 			return ap_send_frame_loc(dut, conn, cmd);
+		if (strcasecmp(val, "MBO") == 0)
+			return ap_send_frame_mbo(dut, conn, cmd);
 	}
 
 	val = get_param(cmd, "PMFFrameType");
@@ -7246,6 +7364,66 @@ void novap_reset(struct sigma_dut *dut, const char *ifname)
 }
 
 
+static void ath_set_assoc_disallow(struct sigma_dut *dut, const char *ifname,
+				   const char *val)
+{
+	char buf[80];
+
+	if (strcasecmp(val, "enable") == 0) {
+		snprintf(buf, sizeof(buf), "iwpriv %s mbo_asoc_dis 1", ifname);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"iwpriv mbo_asoc_dis enable failed");
+		}
+	} else if (strcasecmp(val, "disable") == 0) {
+		snprintf(buf, sizeof(buf), "iwpriv %s mbo_asoc_dis 0", ifname);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"iwpriv mbo_asoc_dis disable failed");
+		}
+	} else {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Unsupported assoc_disallow");
+	}
+}
+
+
+static int ath_set_nebor_bssid(struct sigma_dut *dut, const char *ifname,
+			       const char *val)
+{
+	char buf[80];
+	unsigned char mac_addr[6];
+
+	if (parse_mac_address(dut, val, mac_addr) < 0)
+		return -1;
+
+	if (dut->ap_set_bssidpref) {
+		snprintf(buf, sizeof(buf),
+			 "wifitool %s setbssidpref 00:00:00:00:00:00 0 00 00",
+			 ifname);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"wifitool clear bssidpref failed");
+		}
+	}
+
+	if (dut->ap_ne_class && dut->ap_ne_op_ch) {
+		snprintf(buf, sizeof(buf),
+			 "wifitool %s setbssidpref %02x:%02x:%02x:%02x:%02x:%02x 1 %d %d",
+			 ifname, mac_addr[0], mac_addr[1], mac_addr[2],
+			 mac_addr[3], mac_addr[4], mac_addr[5],
+			 dut->ap_ne_class, dut->ap_ne_op_ch);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"wifitool setbssidpref failed");
+		}
+		dut->ap_set_bssidpref = 1;
+	}
+
+	return 0;
+}
+
+
 static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 			       struct sigma_cmd *cmd)
 {
@@ -7290,6 +7468,30 @@ static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 	val = get_param(cmd, "txBandwidth");
 	if (val && ath_set_width(dut, conn, ifname, val) < 0)
 		return -1;
+
+	val = get_param(cmd, "Assoc_Disallow");
+	if (val)
+		ath_set_assoc_disallow(dut, ifname, val);
+
+	val = get_param(cmd, "Nebor_Op_Class");
+	if (val)
+		dut->ap_ne_class = atoi(val);
+
+	val = get_param(cmd, "Nebor_Op_Ch");
+	if (val)
+		dut->ap_ne_op_ch = atoi(val);
+
+	val = get_param(cmd, "Nebor_BSSID");
+	if (val && ath_set_nebor_bssid(dut, ifname, val) < 0)
+		return -1;
+
+	val = get_param(cmd, "BTMReq_DisAssoc_Imnt");
+	if (val)
+		dut->ap_btmreq_disassoc_imnt = atoi(val);
+
+	val = get_param(cmd, "BTMReq_Term_Bit");
+	if (val)
+		dut->ap_btmreq_term_bit = atoi(val);
 
 	return 1;
 }
