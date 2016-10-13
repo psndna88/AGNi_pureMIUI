@@ -685,7 +685,8 @@ static int add_ipv6_rule(struct sigma_dut *dut, const char *ifname)
 {
 	char cmd[200], *result, *pos;
 	FILE *fp;
-	int len, tableid, result_len = 1000;
+	int tableid;
+	size_t len, result_len = 1000;
 
 	snprintf(cmd, sizeof(cmd), "ip -6 route list table all | grep %s",
 		 ifname);
@@ -699,13 +700,14 @@ static int add_ipv6_rule(struct sigma_dut *dut, const char *ifname)
 		return -1;
 	}
 
-	len = fread(result, 1, result_len, fp);
+	len = fread(result, 1, result_len - 1, fp);
 	fclose(fp);
 
 	if (len == 0) {
 		free(result);
 		return -1;
 	}
+	result[len] = '\0';
 
 	pos = strstr(result, "table ");
 	if (pos == NULL) {
