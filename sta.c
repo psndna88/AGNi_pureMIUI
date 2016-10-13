@@ -7274,6 +7274,7 @@ static int cmd_sta_set_systime(struct sigma_dut *dut, struct sigma_conn *conn,
 	struct tm tm;
 	time_t t;
 	const char *val;
+	int v;
 
 	wpa_command(get_station_ifname(), "PMKSA_FLUSH");
 
@@ -7291,8 +7292,15 @@ static int cmd_sta_set_systime(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (val)
 		tm.tm_mday = atoi(val);
 	val = get_param(cmd, "month");
-	if (val)
-		tm.tm_mon = atoi(val) - 1;
+	if (val) {
+		v = atoi(val);
+		if (v < 1 || v > 12) {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Invalid month");
+			return 0;
+		}
+		tm.tm_mon = v - 1;
+	}
 	val = get_param(cmd, "year");
 	if (val) {
 		int year = atoi(val);
