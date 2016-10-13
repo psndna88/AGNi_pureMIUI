@@ -4668,6 +4668,12 @@ static void ath_sta_inject_frame(struct sigma_dut *dut, const char *intf,
 	char buf[100];
 	int tid_to_dscp [] = { 0x00, 0x20, 0x40, 0x60, 0x80, 0xa0, 0xc0, 0xe0 };
 
+	if (tid < 0 ||
+	    tid >= (int) (sizeof(tid_to_dscp) / sizeof(tid_to_dscp[0]))) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "Unsupported TID: %d", tid);
+		return;
+	}
+
 	/*
 	 * Two ways to ensure that addba request with a
 	 * non zero TID could be sent out. EV 117296

@@ -952,6 +952,12 @@ static void ath_inject_frame(struct sigma_dut *dut, const char *ifname, int tid)
 	char buf[256];
 	int tid_to_dscp[] = { 0x00, 0x20, 0x40, 0x60, 0x80, 0xa0, 0xc0, 0xe0 };
 
+	if (tid < 0 ||
+	    tid >= (int) (sizeof(tid_to_dscp) / sizeof(tid_to_dscp[0]))) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "Unsupported TID: %d", tid);
+		return;
+	}
+
 	snprintf(buf, sizeof(buf),
 		 "wlanconfig %s list sta | grep : | cut -b 1-17 > %s",
 		 ifname, VI_QOS_TMP_FILE);
