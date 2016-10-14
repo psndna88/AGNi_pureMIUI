@@ -2267,51 +2267,7 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 
 		owrt_ap_set_vap(dut, vap_id, "interworking", "1");
 
-		if (dut->ap_lci == 1 && strlen(dut->ap2_ssid) > 0) {
-			unsigned char addr[6];
-			unsigned char addr2[6];
-			struct ifreq ifr;
-			char *ifname;
-			int s;
-
-			s = socket(AF_INET, SOCK_DGRAM, 0);
-			if (s < 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"Failed to open socket");
-				return -1;
-			}
-
-			memset(&ifr, 0, sizeof(ifr));
-			ifname = "ath0";
-			strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
-			if (ioctl(s, SIOCGIFHWADDR, &ifr) < 0) {
-				perror("ioctl");
-				close(s);
-				return -1;
-			}
-			memcpy(addr, ifr.ifr_hwaddr.sa_data, 6);
-
-			memset(&ifr, 0, sizeof(ifr));
-			ifname = "ath01";
-			strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
-			if (ioctl(s, SIOCGIFHWADDR, &ifr) < 0) {
-				perror("ioctl");
-				close(s);
-				return -1;
-			}
-			close(s);
-			memcpy(addr2, ifr.ifr_hwaddr.sa_data, 6);
-
-			sprintf(anqpval,
-				"'265:0010%s%s060101070d00%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x'",
-				dut->ap_val_lci, dut->ap_infoz,
-				addr[0], addr[1], addr[2],
-				addr[3], addr[4], addr[5],
-				addr2[0], addr2[1], addr2[2],
-				addr2[3], addr2[4], addr2[5]);
-
-			owrt_ap_set_list_vap(dut, vap_id, "anqp_elem", anqpval);
-		} else if (dut->ap_lci == 1) {
+		if (dut->ap_lci == 1 && strlen(dut->ap2_ssid) == 0) {
 			sprintf(anqpval, "'265:0010%s%s060101'",
 				dut->ap_val_lci, dut->ap_infoz);
 			owrt_ap_set_list_vap(dut, vap_id, "anqp_elem", anqpval);
@@ -2339,6 +2295,54 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 	}
 
 	return 1;
+}
+
+
+static int owrt_ap_config_vap_anqp(struct sigma_dut *dut)
+{
+	char anqpval[1024];
+	unsigned char addr[6];
+	unsigned char addr2[6];
+	struct ifreq ifr;
+	char *ifname;
+	int s;
+	int vap_id = 0;
+
+	s = socket(AF_INET, SOCK_DGRAM, 0);
+	if (s < 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to open socket");
+		return -1;
+	}
+
+	memset(&ifr, 0, sizeof(ifr));
+	ifname = "ath0";
+	strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+	if (ioctl(s, SIOCGIFHWADDR, &ifr) < 0) {
+		perror("ioctl");
+		close(s);
+		return -1;
+	}
+	memcpy(addr, ifr.ifr_hwaddr.sa_data, 6);
+
+	memset(&ifr, 0, sizeof(ifr));
+	ifname = "ath01";
+	strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+	if (ioctl(s, SIOCGIFHWADDR, &ifr) < 0) {
+		perror("ioctl");
+		close(s);
+		return -1;
+	}
+	close(s);
+	memcpy(addr2, ifr.ifr_hwaddr.sa_data, 6);
+
+	snprintf(anqpval, sizeof(anqpval),
+		 "'265:0010%s%s060101070d00%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x'",
+		 dut->ap_val_lci, dut->ap_infoz,
+		 addr[0], addr[1], addr[2], addr[3], addr[4], addr[5],
+		 addr2[0], addr2[1], addr2[2], addr2[3], addr2[4], addr2[5]);
+
+	owrt_ap_set_list_vap(dut, vap_id, "anqp_elem", anqpval);
+	return 0;
 }
 
 
@@ -2391,6 +2395,13 @@ static int cmd_owrt_ap_config_commit(struct sigma_dut *dut,
 
 	/* Start AP */
 	run_system(dut, "wifi up");
+
+	if (dut->ap_lci == 1 && dut->ap_interworking &&
+	    strlen(dut->ap2_ssid) > 0) {
+		owrt_ap_config_vap_anqp(dut);
+		run_system(dut, "uci commit");
+		run_system(dut, "wifi");
+	}
 
 	return owrt_ap_post_config_commit(dut, conn, cmd);
 }
