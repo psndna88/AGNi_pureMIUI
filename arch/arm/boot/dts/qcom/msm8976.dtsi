@@ -91,7 +91,7 @@
 
 		secure_mem: secure_region@0 {
 			linux,reserve-contiguous-region;
-			reg = <0x0 0x0 0x0 0x8100000>;
+			reg = <0x0 0x0 0x0 0x7A00000>;
 			label = "secure_mem";
 		};
 
@@ -2324,11 +2324,6 @@
 				"msm-dai-q6-dev.12292", "msm-dai-q6-dev.12293";
 		asoc-codec = <&stub_codec>;
 		asoc-codec-names = "msm-stub-codec.1";
-		qcom,max-aux-codec = <2>;
-		qcom,aux-codec = "wsa881x.20170211", "wsa881x.20170212",
-				 "wsa881x.21170213", "wsa881x.21170214";
-		qcom,aux-codec-prefix = "SpkrLeft", "SpkrRight",
-					"SpkrLeft", "SpkrRight";
 	};
 
 	wcd9xxx_intc: wcd9xxx-irq {
@@ -2704,7 +2699,6 @@
 		/* GPIO output to mss */
 		qcom,gpio-force-stop = <&smp2pgpio_ssr_smp2p_1_out 0 0>;
 		linux,contiguous-region = <&modem_mem>;
-		qcom,mx-spike-wa;
 	};
 
 	mcd {
@@ -2726,15 +2720,6 @@
 		vdd-wlan-supply = <&rome_vreg>;
 		vdd-wlan-io-supply = <&pm8950_l5>;
 		qcom,wlan-ramdump-dynamic = <0x200000>;
-		qcom,cnss-enable-bus-bandwidth;
-		qcom,msm-bus,name = "msm-cnss";
-		qcom,msm-bus,num-cases = <4>;
-		qcom,msm-bus,num-paths = <1>;
-		qcom,msm-bus,vectors-KBps =
-				<79 512 0 0>,			/* No vote */
-				<79 512 6250 200000>,		/* 50 Mbps */
-				<79 512 25000 200000>,		/* 200 Mbps */
-				<79 512 2048000 4096000>;	/* MAX */
 		status = "disabled";
 	};
 

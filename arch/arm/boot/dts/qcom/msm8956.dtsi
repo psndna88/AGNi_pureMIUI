@@ -89,7 +89,7 @@
 
 		secure_mem: secure_region@0 {
 			linux,reserve-contiguous-region;
-			reg = <0x0 0x0 0x0 0x8100000>;
+			reg = <0x0 0x0 0x0 0x7A00000>;
 			label = "secure_mem";
 		};
 
@@ -1351,7 +1351,6 @@
 			qcom,smd-irq-bitmask = <0x1000>;
 			interrupts = <0 25 1>;
 			label = "modem";
-			qcom,not-loadable;
 		};
 
 		qcom,smsm-modem {
@@ -1550,7 +1549,6 @@
 		qcom,xprt-linkid = <1>;
 		qcom,xprt-version = <1>;
 		qcom,fragmented-data;
-		qcom,disable-pil-loading;
 	};
 
 	qcom,ipc_router_q6_xprt {
@@ -2246,11 +2244,6 @@
 				"msm-dai-q6-dev.12292", "msm-dai-q6-dev.12293";
 		asoc-codec = <&stub_codec>;
 		asoc-codec-names = "msm-stub-codec.1";
-		/*qcom,max-aux-codec = <2>;
-		qcom,aux-codec = "wsa881x.20170211", "wsa881x.20170212",
-				 "wsa881x.21170213", "wsa881x.21170214";
-		qcom,aux-codec-prefix = "SpkrLeft", "SpkrRight",
-					"SpkrLeft", "SpkrRight";*/
 	};
 
 	wcd9xxx_intc: wcd9xxx-irq {
