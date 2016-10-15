@@ -237,7 +237,7 @@ static int ksm_nr_node_ids = 1;
 #endif
 
 #define KSM_RUN_STOP	0
-#define KSM_RUN_MERGE	1
+#define KSM_RUN_MERGE	0
 #define KSM_RUN_UNMERGE	2
 #define KSM_RUN_OFFLINE	4
 static unsigned long ksm_run = KSM_RUN_MERGE;
