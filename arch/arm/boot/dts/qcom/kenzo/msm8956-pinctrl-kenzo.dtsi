@@ -120,11 +120,11 @@
 			};
 		};
 
-		hall_int_pin{
+		hall_sensor_irq {
 			qcom,pins = <&gp 107>;
 			qcom,pin-func = <0>;
 			qcom,num-grp-pins = <1>;
-			label = "hall_int_pin";
+			label = "hall_sensor_irq";
 			hall_int_active: active {
 				drive-strength = <6>;
 				bias-pull-up;

@@ -130,14 +130,18 @@
 		qcom,ntc-min-uv = <1800000>;
 		qcom,ntc-max-uv = <1800000>;
 	};
-	hall_switch {
-		compatible = "hall-switch,och175";
+	hall {
+		compatible = "hall-switch";
 		pinctrl-names = "hall_active","hall_suspend";
 		pinctrl-0 = <&hall_int_active>;
 		pinctrl-1 = <&hall_int_suspend>;
-		vdd-io-supply= <&pm8950_l5>;
-		interrupt-names = "hall_irq";
-		hall,irq-gpio = <&msm_gpio 107 0x00>;
+		vddio-supply= <&pm8950_l5>;
+		interrupt-names = "hall_sensor_irq";
+		hall,irq-gpio = <&msm_gpio 107 0x2001>;
+		linux,gpio-int = <&msm_gpio 107 1>;
+		linux,wakeup;
+		linux,min-uv = <0x192d50>;
+		linux,max-uv = <0x325aa0>;
 	};
 	gen-vkeys {
 		compatible = "qcom,gen-vkeys";
