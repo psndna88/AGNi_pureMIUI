@@ -1718,14 +1718,14 @@ static int owrt_ap_config_vap_hs2(struct sigma_dut *dut, int vap_id)
 					     "'eng:Wireless Broadband Alliance'");
 			owrt_ap_set_list_vap(dut, vap_id, "osu_service_desc",
 					     "'eng:Free service for test purpose'");
-			hs20_icon_filename = "icon_green_zxx.png";
+			hs20_icon_filename = "icon_orange_zxx.png";
 			if (dut->ap_osu_icon_tag == 2)
 				hs20_icon_filename = "wifi-abgn-logo_270x73.png";
 
 			snprintf(hs20_icon, sizeof(hs20_icon),
-				 "'128:61:zxx:image/png:icon_green_zxx.png:/etc/ath/%s'",
+				 "'128:61:zxx:image/png:icon_orange_zxx.png:/etc/ath/%s'",
 				 hs20_icon_filename);
-			osu_icon = "icon_green_zxx.png";
+			osu_icon = "icon_orange_zxx.png";
 			osu_friendly_name = "'kor:와이어리스 브로드밴드 얼라이언스'";
 			break;
 		case 3:
@@ -1736,45 +1736,45 @@ static int owrt_ap_config_vap_hs2(struct sigma_dut *dut, int vap_id)
 		case 4:
 		case 104:
 			owrt_ap_set_list_vap(dut, vap_id, "osu_friendly_name",
-					     "'eng:SP Blue Test Only'");
+					     "'eng:SP Orange Test Only'");
 			owrt_ap_set_list_vap(dut, vap_id, "osu_service_desc",
 					     "'eng:Free service for test purpose'");
-			hs20_icon_filename = "icon_blue_eng.png";
+			hs20_icon_filename = "icon_orange_eng.png";
 			if (dut->ap_osu_icon_tag == 2)
 				hs20_icon_filename = "wifi-abgn-logo_270x73.png";
 
 			snprintf(hs20_icon, sizeof(hs20_icon),
-				 "'160:76:eng:image/png:icon_blue_eng.png:/etc/ath/%s'",
+				 "'160:76:eng:image/png:icon_orange_eng.png:/etc/ath/%s'",
 				 hs20_icon_filename);
 			owrt_ap_set_list_vap(dut, vap_id, "hs20_icon",
 					     hs20_icon);
 			osu_friendly_name = "'kor:SP 파랑 테스트 전용'";
 
-			hs20_icon_filename = "icon_blue_zxx.png";
+			hs20_icon_filename = "icon_orange_zxx.png";
 			if (dut->ap_osu_icon_tag == 2)
 				hs20_icon_filename = "wifi-abgn-logo_270x73.png";
 
 			snprintf(hs20_icon, sizeof(hs20_icon),
-				 "'128:61:zxx:image/png:icon_blue_zxx.png:/etc/ath/%s'",
+				 "'128:61:zxx:image/png:icon_orange_zxx.png:/etc/ath/%s'",
 				 hs20_icon_filename);
-			osu_icon = "icon_blue_zxx.png";
+			osu_icon = "icon_orange_zxx.png";
 			break;
 		case 5:
 		case 105:
 			owrt_ap_set_list_vap(dut, vap_id, "osu_friendly_name",
-					     "'eng:SP Blue Test Only'");
+					     "'eng:SP Orange Test Only'");
 			owrt_ap_set_list_vap(dut, vap_id, "osu_service_desc",
 					     "'eng:Free service for test purpose'");
 			osu_friendly_name = "'kor:SP 파랑 테스트 전용'";
 
-			hs20_icon_filename = "icon_blue_zxx.png";
+			hs20_icon_filename = "icon_orange_zxx.png";
 			if (dut->ap_osu_icon_tag == 2)
 				hs20_icon_filename = "wifi-abgn-logo_270x73.png";
 
 			snprintf(hs20_icon, sizeof(hs20_icon),
-				 "'128:61:zxx:image/png:icon_blue_zxx.png:/etc/ath/%s'",
+				 "'128:61:zxx:image/png:icon_orange_zxx.png:/etc/ath/%s'",
 				 hs20_icon_filename);
-			osu_icon = "icon_blue_zxx.png";
+			osu_icon = "icon_orange_zxx.png";
 			break;
 		case 6:
 		case 106:
@@ -1830,32 +1830,32 @@ static int owrt_ap_config_vap_hs2(struct sigma_dut *dut, int vap_id)
 		case 7:
 		case 107:
 			owrt_ap_set_list_vap(dut, vap_id, "osu_friendly_name",
-					     "'eng:SP Orange Test Only'");
+					     "'eng:SP Green Test Only'");
 			owrt_ap_set_list_vap(dut, vap_id, "osu_service_desc",
 					     "'eng:Free service for test purpose'");
 
-			hs20_icon_filename = "icon_orange_eng.png";
+			hs20_icon_filename = "icon_green_eng.png";
 			if (dut->ap_osu_icon_tag == 2)
 				hs20_icon_filename = "wifi-abgn-logo_270x73.png";
 
 			snprintf(hs20_icon, sizeof(hs20_icon),
-				 "'160:76:eng:image/png:icon_orange_eng.png:/etc/ath/%s'",
+				 "'160:76:eng:image/png:icon_green_eng.png:/etc/ath/%s'",
 				 hs20_icon_filename);
 			owrt_ap_set_list_vap(dut, vap_id, "hs20_icon",
 					     hs20_icon);
 
 			owrt_ap_set_list_vap(dut, vap_id, "osu_icon",
-					     "'icon_orange_eng.png'");
+					     "'icon_green_eng.png'");
 			osu_friendly_name = "'kor:SP 오렌지 테스트 전용'";
 
-			hs20_icon_filename = "icon_orange_zxx.png";
+			hs20_icon_filename = "icon_green_zxx.png";
 			if (dut->ap_osu_icon_tag == 2)
 				hs20_icon_filename = "wifi-abgn-logo_270x73.png";
 
 			snprintf(hs20_icon, sizeof(hs20_icon),
-				 "'128:61:zxx:image/png:icon_orange_zxx.png:/etc/ath/%s'",
+				 "'128:61:zxx:image/png:icon_green_zxx.png:/etc/ath/%s'",
 				 hs20_icon_filename);
-			osu_icon = "icon_orange_zxx.png";
+			osu_icon = "icon_green_zxx.png";
 			break;
 		case 8:
 		case 108:
