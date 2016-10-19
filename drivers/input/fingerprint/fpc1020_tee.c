@@ -301,6 +301,9 @@ static int fpc1020_request_named_gpio(struct fpc1020_data *fpc1020,
 	return 0;
 }
 
+int fingerprint_fpc1020_init = 0;
+EXPORT_SYMBOL_GPL(fingerprint_fpc1020_init);
+
 static int fpc1020_probe(struct platform_device* pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -384,9 +387,11 @@ static int fpc1020_probe(struct platform_device* pdev)
 
 	dev_info(dev, "%s: ok\n", __func__);
 exit:
+	fingerprint_fpc1020_init = 1;
 	return rc;
 
 not_irq:
+	fingerprint_fpc1020_init = 0;
 	sysfs_remove_group(&fpc1020->dev->kobj, &attribute_group);
 	mutex_destroy(&fpc1020->lock);
 	wake_lock_destroy(&fpc1020->ttw_wl);
