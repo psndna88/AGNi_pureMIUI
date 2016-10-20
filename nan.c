@@ -319,9 +319,14 @@ int sigma_nan_enable(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 
 	nan_enable_request(0, global_interface_handle, &req);
-	abstime.tv_sec = 4;
+
+	/* To ensure sta_get_events to get the events
+	 * only after joining the NAN cluster. */
+	abstime.tv_sec = 30;
 	abstime.tv_nsec = 0;
-	return wait(abstime);
+	wait(abstime);
+
+	return 0;
 }
 
 
@@ -334,7 +339,9 @@ int sigma_nan_disable(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	abstime.tv_sec = 4;
 	abstime.tv_nsec = 0;
-	return wait(abstime);
+	wait(abstime);
+
+	return 0;
 }
 
 
@@ -376,8 +383,9 @@ int sigma_nan_config_enable(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	abstime.tv_sec = 4;
 	abstime.tv_nsec = 0;
+	wait(abstime);
 
-	return wait(abstime);
+	return 0;
 }
 
 
@@ -637,10 +645,11 @@ static int nan_further_availability_rx(struct sigma_dut *dut,
 	}
 
 	nan_enable_request(0, global_interface_handle, &req);
+
 	abstime.tv_sec = 4;
 	abstime.tv_nsec = 0;
-
 	wait(abstime);
+
 	return 0;
 }
 
@@ -954,6 +963,9 @@ void nan_event_disceng_event(NanDiscEngEventInd *event)
 				MAC_ADDR_STR,
 				__func__,
 				MAC_ADDR_ARRAY(event->data.cluster.addr));
+		/* To ensure sta_get_events to get the events
+		 * only after joining the NAN cluster. */
+		pthread_cond_signal(&gCondition);
 	}
 	if (event->event_type == NAN_EVENT_ID_STARTED_CLUSTER) {
 		sigma_dut_print(global_dut, DUT_MSG_INFO,
@@ -970,7 +982,6 @@ void nan_event_disceng_event(NanDiscEngEventInd *event)
 		memcpy(global_nan_mac_addr, event->data.mac_addr.addr,
 		       sizeof(global_nan_mac_addr));
 	}
-	pthread_cond_signal(&gCondition);
 }
 
 
