@@ -78,6 +78,7 @@
 
 #if (WAKE_GESTURES_ENABLED)
 int gestures_switch = WG_DEFAULT;
+int vib_wake_switch = 0;
 static struct input_dev *gesture_dev;
 #endif
 
@@ -147,7 +148,9 @@ static void wake_presspwr(struct work_struct * wake_presspwr_work) {
 	msleep(WG_PWRKEY_DUR);
 	mutex_unlock(&pwrkeyworklock);
 
+	if (vib_wake_switch) {
 	set_vibrate(vib_strength);
+	}
 
 	return;
 }
@@ -653,6 +656,29 @@ static ssize_t wake_gestures_dump(struct device *dev,
 
 static DEVICE_ATTR(wake_gestures, (S_IWUSR|S_IRUGO),
 	wake_gestures_show, wake_gestures_dump);
+
+static ssize_t vib_wake_switch_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	size_t count = 0;
+	count += sprintf(buf, "%d\n", vib_wake_switch);
+	return count;
+}
+static ssize_t vib_wake_switch_dump(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	int val;
+	sscanf(buf, "%d ", &val);
+
+	if (val < 0 || val > 1)
+        return -EINVAL;
+
+	vib_wake_switch = val;
+	return count;
+}
+
+static DEVICE_ATTR(vib_wake, (S_IWUSR|S_IRUGO),
+	vib_wake_switch_show, vib_wake_switch_dump);
 #endif	
 
 static ssize_t vib_strength_show(struct device *dev,
@@ -764,6 +790,10 @@ static int __init wake_gestures_init(void)
 	rc = sysfs_create_file(android_touch_kobj, &dev_attr_wake_gestures.attr);
 	if (rc) {
 		pr_warn("%s: sysfs_create_file failed for wake_gestures\n", __func__);
+	}
+	rc = sysfs_create_file(android_touch_kobj, &dev_attr_vib_wake.attr);
+	if (rc) {
+		pr_warn("%s: sysfs_create_file failed for vib_wake\n", __func__);
 	}
 
 	return 0;
