@@ -2519,12 +2519,18 @@ static void ath_sta_set_11nrates(struct sigma_dut *dut, const char *intf,
 				 const char *val)
 {
 	char buf[100];
-	int rate_code;
+	int rate_code, v;
 
 	/* Disable Tx Beam forming when using a fixed rate */
 	ath_disable_txbf(dut, intf);
 
-	rate_code = 0x80 + atoi(val);
+	v = atoi(val);
+	if (v < 0 || v > 32) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Invalid Fixed MCS rate: %d", v);
+		return;
+	}
+	rate_code = 0x80 + v;
 
 	snprintf(buf, sizeof(buf), "iwpriv %s set11NRates 0x%x",
 		 intf, rate_code);
