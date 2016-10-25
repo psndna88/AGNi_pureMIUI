@@ -3902,6 +3902,7 @@ __wlan_hdd_cfg80211_extscan_set_ssid_hotlist(struct wiphy *wiphy,
     uint32_t request_id;
     char ssid_string[SIR_MAC_MAX_SSID_LENGTH + 1] = {'\0'};
     int ssid_len;
+    int ssid_length;
     eHalStatus status;
     int i, rem, retval;
     unsigned long rc;
@@ -3992,12 +3993,15 @@ __wlan_hdd_cfg80211_extscan_set_ssid_hotlist(struct wiphy *wiphy,
             hddLog(LOGE, FL("attr ssid failed"));
             goto fail;
         }
-        nla_memcpy(ssid_string,
-               tb2[PARAM_SSID],
-               sizeof(ssid_string));
+        ssid_length = nla_strlcpy(ssid_string, tb2[PARAM_SSID],
+                                  sizeof(ssid_string));
         hddLog(LOG1, FL("SSID %s"),
                ssid_string);
         ssid_len = strlen(ssid_string);
+        if (ssid_length > SIR_MAC_MAX_SSID_LENGTH) {
+                hddLog(LOGE, FL("Invalid ssid length"));
+                goto fail;
+        }
         memcpy(request->ssid[i].ssid.ssId, ssid_string, ssid_len);
         request->ssid[i].ssid.length = ssid_len;
         request->ssid[i].ssid.ssId[ssid_len] = '\0';
@@ -4208,16 +4212,20 @@ static int __wlan_hdd_cfg80211_extscan_get_valid_channels(struct wiphy *wiphy,
                                         struct wireless_dev *wdev,
                                         const void *data, int dataLen)
 {
-    hdd_context_t *pHddCtx                               = wiphy_priv(wiphy);
-    tANI_U32 ChannelList[WNI_CFG_VALID_CHANNEL_LIST_LEN] = {0};
-    tANI_U8 numChannels                                  = 0;
+    hdd_context_t *pHddCtx = wiphy_priv(wiphy);
+    struct net_device *dev = wdev->netdev;
+    hdd_adapter_t *pAdapter = WLAN_HDD_GET_PRIV_PTR(dev);
+    uint32_t chan_list[WNI_CFG_VALID_CHANNEL_LIST_LEN] = {0};
+    uint8_t num_channels  = 0;
+    uint8_t num_chan_new  = 0;
+    uint8_t buf[256] = {0};
     struct nlattr *tb[QCA_WLAN_VENDOR_ATTR_EXTSCAN_SUBCMD_CONFIG_PARAM_MAX + 1];
     tANI_U32 requestId, maxChannels;
     tWifiBand wifiBand;
     eHalStatus status;
     struct sk_buff *replySkb;
-    tANI_U8 i;
-    int ret;
+    tANI_U8 i,j,k;
+    int ret,len = 0;;
 
     ENTER();
 
@@ -4264,22 +4272,43 @@ static int __wlan_hdd_cfg80211_extscan_get_valid_channels(struct wiphy *wiphy,
     hddLog(VOS_TRACE_LEVEL_INFO, FL("Max channels %d"), maxChannels);
 
     status = sme_GetValidChannelsByBand((tHalHandle)(pHddCtx->hHal),
-                                        wifiBand, ChannelList,
-                                        &numChannels);
+                                        wifiBand, chan_list,
+                                         &num_channels);
     if (eHAL_STATUS_SUCCESS != status) {
         hddLog(VOS_TRACE_LEVEL_ERROR,
            FL("sme_GetValidChannelsByBand failed (err=%d)"), status);
         return -EINVAL;
     }
 
-    numChannels = VOS_MIN(numChannels, maxChannels);
-    hddLog(VOS_TRACE_LEVEL_INFO, FL("Number of channels (%d)"), numChannels);
+    num_channels = VOS_MIN(num_channels, maxChannels);
+    num_chan_new = num_channels;
+    /* remove the indoor only channels if iface is SAP */
+    if (WLAN_HDD_SOFTAP == pAdapter->device_mode)
+    {
+        num_chan_new = 0;
+        for (i = 0; i < num_channels; i++)
+            for (j = 0; j < IEEE80211_NUM_BANDS; j++) {
+                if (wiphy->bands[j] == NULL)
+                    continue;
+                for (k = 0; k < wiphy->bands[j]->n_channels; k++) {
+                    if ((chan_list[i] ==
+                                wiphy->bands[j]->channels[k].center_freq) &&
+                            (!(wiphy->bands[j]->channels[k].flags &
+                               IEEE80211_CHAN_INDOOR_ONLY))) {
+                        chan_list[num_chan_new] = chan_list[i];
+                        num_chan_new++;
+                    }
+                }
+            }
+    }
 
-    for (i = 0; i < numChannels; i++)
-        hddLog(VOS_TRACE_LEVEL_INFO, "Channel: %u ", ChannelList[i]);
+    hddLog(LOG1, FL("Number of channels: %d"), num_chan_new);
+    for (i = 0; i < num_chan_new; i++)
+        len += scnprintf(buf + len, sizeof(buf) - len, "%u ", chan_list[i]);
+    hddLog(LOG1, "Channels: %s", buf);
 
     replySkb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy, sizeof(u32) +
-                                                    sizeof(u32) * numChannels +
+                                                    sizeof(u32) * num_chan_new +
                                                     NLMSG_HDRLEN);
 
     if (!replySkb) {
@@ -4289,9 +4318,9 @@ static int __wlan_hdd_cfg80211_extscan_get_valid_channels(struct wiphy *wiphy,
     }
     if (nla_put_u32(replySkb,
                 QCA_WLAN_VENDOR_ATTR_EXTSCAN_RESULTS_NUM_CHANNELS,
-                numChannels) ||
+                num_chan_new) ||
             nla_put(replySkb, QCA_WLAN_VENDOR_ATTR_EXTSCAN_RESULTS_CHANNELS,
-                sizeof(u32) * numChannels, ChannelList)) {
+                sizeof(u32) * num_chan_new, chan_list)) {
 
         hddLog(VOS_TRACE_LEVEL_ERROR, FL("nla put fail"));
         kfree_skb(replySkb);
@@ -7901,7 +7930,11 @@ int wlan_hdd_cfg80211_init(struct device *dev,
 #ifndef CONFIG_ENABLE_LINUX_REG
     /* the flag for the other case would be initialzed in
        vos_init_wiphy_from_nv_bin */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0))
+    wiphy->regulatory_flags |= REGULATORY_STRICT_REG;
+#else
     wiphy->flags |= WIPHY_FLAG_STRICT_REGULATORY;
+#endif
 #endif
 
     /* This will disable updating of NL channels from passive to
@@ -7919,7 +7952,7 @@ int wlan_hdd_cfg80211_init(struct device *dev,
                  |  WIPHY_FLAG_HAS_REMAIN_ON_CHANNEL
                     | WIPHY_FLAG_OFFCHAN_TX;
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0))
-    wiphy->regulatory_flags = REGULATORY_COUNTRY_IE_IGNORE;
+    wiphy->regulatory_flags |= REGULATORY_COUNTRY_IE_IGNORE;
 #else
      wiphy->country_ie_pref = NL80211_COUNTRY_IE_IGNORE_CORE;
 #endif
@@ -11089,11 +11122,10 @@ static int __wlan_hdd_change_station(struct wiphy *wiphy,
             }
 
             if (pHddCtx->cfg_ini->fEnableTDLSWmmMode &&
-                   (params->sta_flags_set & BIT(NL80211_STA_FLAG_WME))) {
-
+                (params->ht_capa || params->vht_capa ||
+                (params->sta_flags_set & BIT(NL80211_STA_FLAG_WME))))
                 /* TDLS Peer is WME/QoS capable */
                 isQosWmmSta = TRUE;
-            }
 
             VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
                       "%s: TDLS Peer is QOS capable isQosWmmSta= %d HTcapPresent= %d",
@@ -12592,6 +12624,42 @@ VOS_STATUS wlan_hdd_cfg80211_roam_metrics_handover(hdd_adapter_t * pAdapter,
 }
 #endif
 
+
+/**
+ * wlan_hdd_cfg80211_validate_scan_req - validate scan request
+ * @scan_req: scan request to be checked
+ *
+ * Return: true or false
+ */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0))
+static inline bool wlan_hdd_cfg80211_validate_scan_req(struct
+                                                       cfg80211_scan_request
+                                                       *scan_req)
+{
+        if (!scan_req || !scan_req->wiphy) {
+                hddLog(VOS_TRACE_LEVEL_ERROR, "Invalid scan request");
+                return false;
+        }
+        if (vos_is_load_unload_in_progress(VOS_MODULE_ID_HDD, NULL)) {
+                hddLog(VOS_TRACE_LEVEL_ERROR, "Load/Unload in progress");
+                return false;
+        }
+        return true;
+}
+#else
+static inline bool wlan_hdd_cfg80211_validate_scan_req(struct
+                                                       cfg80211_scan_request
+                                                       *scan_req)
+{
+        if (!scan_req || !scan_req->wiphy) {
+                hddLog(VOS_TRACE_LEVEL_ERROR, "Invalid scan request");
+                return false;
+        }
+        return true;
+}
+#endif
+
+
 /*
  * FUNCTION: hdd_cfg80211_scan_done_callback
  * scanning callback function, called after finishing scan
@@ -12708,9 +12776,17 @@ static eHalStatus hdd_cfg80211_scan_done_callback(tHalHandle halHandle,
     /* Scan is no longer pending */
     pScanInfo->mScanPending = VOS_FALSE;
 
-    if (!req || req->wiphy == NULL)
+    if (!wlan_hdd_cfg80211_validate_scan_req(req))
     {
-        hddLog(VOS_TRACE_LEVEL_ERROR, "request is became NULL");
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0))
+            hddLog(VOS_TRACE_LEVEL_ERROR, FL("interface state %s"),
+                   iface_down ? "up" : "down");
+#endif
+
+        if (pAdapter->dev) {
+               hddLog(VOS_TRACE_LEVEL_ERROR, FL("device name %s"),
+                      pAdapter->dev->name);
+        }
         complete(&pScanInfo->abortscan_event_var);
         goto allow_suspend;
     }
@@ -12796,13 +12872,6 @@ v_BOOL_t hdd_isConnectionInProgress( hdd_context_t *pHddCtx)
     VOS_STATUS status = 0;
     v_U8_t staId = 0;
     v_U8_t *staMac = NULL;
-
-    if (TRUE == pHddCtx->btCoexModeSet)
-    {
-        VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
-           FL("BTCoex Mode operation in progress"));
-        return VOS_TRUE;
-    }
 
     status = hdd_get_front_adapter ( pHddCtx, &pAdapterNode );
 
@@ -13029,11 +13098,26 @@ int __wlan_hdd_cfg80211_scan( struct wiphy *wiphy,
 
     /* Check if scan is allowed at this point of time.
      */
-    if (hdd_isConnectionInProgress(pHddCtx))
+    if (TRUE == pHddCtx->btCoexModeSet)
     {
-        hddLog(VOS_TRACE_LEVEL_ERROR, "%s: Scan not allowed", __func__);
+        VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
+           FL("BTCoex Mode operation in progress"));
         return -EBUSY;
     }
+    if (hdd_isConnectionInProgress(pHddCtx))
+    {
+        hddLog(VOS_TRACE_LEVEL_ERROR, FL("Scan not allowed"));
+        if (SCAN_ABORT_THRESHOLD < pHddCtx->con_scan_abort_cnt) {
+            VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                    FL("Triggering SSR, SSR status = %d"), status);
+            vos_wlanRestart();
+        }
+        else
+            pHddCtx->con_scan_abort_cnt++;
+
+        return -EBUSY;
+    }
+    pHddCtx->con_scan_abort_cnt = 0;
 
     vos_mem_zero( &scanRequest, sizeof(scanRequest));
 
@@ -15679,6 +15763,8 @@ static int __wlan_hdd_cfg80211_get_station(struct wiphy *wiphy, struct net_devic
     {
         VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
                   "%s: Roaming in progress, so unable to proceed this request", __func__);
+        /* return a cached value */
+        sinfo->signal = pAdapter->rssi;
         return 0;
     }
 

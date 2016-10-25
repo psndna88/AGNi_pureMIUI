@@ -2494,10 +2494,10 @@ tANI_BOOLEAN pmcShouldBmpsTimerRun( tpAniSirGlobal pMac )
         return eANI_BOOLEAN_FALSE;
     }
 
-    if(pMac->pmc.isHostPsEn && pMac->pmc.remainInPowerActiveTillDHCP)
+    if(pMac->pmc.isHostPsEn)
     {
         pmcLog(pMac, LOG1,
-               FL("Host controlled ps enabled and host wants active mode, so dont allow BMPS"));
+               FL("Host controlled ps enabled, so don't run the timer"));
         return eANI_BOOLEAN_FALSE;
     }
 

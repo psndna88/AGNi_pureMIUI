@@ -911,7 +911,7 @@ static int oem_msg_callback(struct sk_buff *skb)
       }
       aniMsgBody = (char *)((char *)msg_hdr + sizeof(tAniMsgHdr));
       oemMsgSubType = (tANI_U32*) aniMsgBody;
-      hddLog(LOGE, FL("oemMsgSubType: 0x%x"), *oemMsgSubType);
+      hddLog(LOG1, FL("oemMsgSubType: 0x%x"), *oemMsgSubType);
 
       oem_process_data_req_msg(msg_hdr->length,
                               (char *) ((char *)msg_hdr +

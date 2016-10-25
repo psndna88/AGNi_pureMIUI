@@ -1029,12 +1029,13 @@ PopulateDot11fExtCap(tpAniSirGlobal      pMac,
                            tDot11fIEExtCap  *pDot11f,
                            tpPESession   psessionEntry)
 {
+     struct s_ext_cap *p_ext_cap = (struct s_ext_cap *)pDot11f->bytes;
 
 #ifdef WLAN_FEATURE_11AC
     if (psessionEntry->vhtCapability &&
         psessionEntry->limSystemRole != eLIM_STA_IN_IBSS_ROLE )
     {
-        pDot11f->operModeNotification = 1;
+        p_ext_cap->operModeNotification = 1;
         pDot11f->present = 1;
     }
 #endif
@@ -1051,9 +1052,15 @@ PopulateDot11fExtCap(tpAniSirGlobal      pMac,
          && pMac->roam.configParam.channelBondingMode24GHz)
 #endif
        {
-           pDot11f->bssCoexistMgmtSupport = 1;
+           p_ext_cap->bssCoexistMgmtSupport = 1;
            pDot11f->present = 1;
        }
+    }
+
+    if (pDot11f->present)
+    {
+        /* Need to compute the num_bytes based on bits set */
+        pDot11f->num_bytes = lim_compute_ext_cap_ie_length(pDot11f);
     }
     return eSIR_SUCCESS;
 }
@@ -2653,10 +2660,13 @@ sirConvertAssocRespFrame2Struct(tpAniSirGlobal pMac,
     }
     if (ar.ExtCap.present)
     {
+        struct s_ext_cap *p_ext_cap;
         vos_mem_copy(&pAssocRsp->ExtCap, &ar.ExtCap, sizeof(tDot11fIEExtCap));
+
+        p_ext_cap = (struct s_ext_cap *)&pAssocRsp->ExtCap.bytes;
         limLog(pMac, LOG1,
                FL("ExtCap is present, TDLSChanSwitProhibited: %d"),
-               ar.ExtCap.TDLSChanSwitProhibited);
+               p_ext_cap->TDLSChanSwitProhibited);
     }
     if ( ar.WMMParams.present )
     {
@@ -2973,6 +2983,8 @@ sirFillBeaconMandatoryIEforEseBcnReport(tpAniSirGlobal   pMac,
         limLog(pMac, LOGE, FL("Failed to allocate memory") );
         return eSIR_FAILURE;
     }
+    vos_mem_zero(pBies, sizeof(tDot11fBeaconIEs));
+
     // delegate to the framesc-generated code,
     status = dot11fUnpackBeaconIEs( pMac, pPayload, nPayload, pBies );
 
@@ -3272,6 +3284,8 @@ sirParseBeaconIE(tpAniSirGlobal        pMac,
         limLog(pMac, LOGE, FL("Failed to allocate memory") );
         return eSIR_FAILURE;
     }
+    vos_mem_zero(pBies, sizeof(tDot11fBeaconIEs));
+
     // delegate to the framesc-generated code,
     status = dot11fUnpackBeaconIEs( pMac, pPayload, nPayload, pBies );
 

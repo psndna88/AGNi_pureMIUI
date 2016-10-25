@@ -767,12 +767,15 @@ limHandle80211Frames(tpAniSirGlobal pMac, tpSirMsgQ limMsg, tANI_U8 *pDeferMsg)
                           WDA_GET_RX_PAYLOAD_LEN(pRxPacketInfo));
 
             /* Max candidates allowed */
-            if (candidateChanInfo->candidateCount > SIR_PER_ROAM_MAX_AP_CNT)
+            if (candidateChanInfo->candidateCount >
+                SIR_PER_ROAM_MAX_CANDIDATE_CNT)
             {
                 limLog(pMac, LOGE,
-                       FL("Got maximum candidates as %d setting default"),
-                       candidateChanInfo->candidateCount);
-                candidateChanInfo->candidateCount = SIR_PER_ROAM_MAX_AP_CNT;
+                       FL("Got maximum candidates as %d, setting count as %d"),
+                       candidateChanInfo->candidateCount,
+                       SIR_PER_ROAM_MAX_CANDIDATE_CNT);
+                candidateChanInfo->candidateCount =
+                        SIR_PER_ROAM_MAX_CANDIDATE_CNT;
             }
 
             vos_mem_set(&pMac->candidateChannelInfo,

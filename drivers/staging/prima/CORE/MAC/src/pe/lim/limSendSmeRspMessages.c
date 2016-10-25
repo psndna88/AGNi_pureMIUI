@@ -1468,7 +1468,7 @@ limSendSmeDisassocInd(tpAniSirGlobal pMac, tpDphHashNode pStaDs,tpPESession pses
 
     pSirSmeDisassocInd->sessionId     =  psessionEntry->smeSessionId;
     pSirSmeDisassocInd->transactionId =  psessionEntry->transactionId;
-    pSirSmeDisassocInd->statusCode    =  pStaDs->mlmStaContext.disassocReason;
+    pSirSmeDisassocInd->statusCode    =  eSIR_SME_DEAUTH_STATUS;
     pSirSmeDisassocInd->reasonCode    =  pStaDs->mlmStaContext.disassocReason;
     pSirSmeDisassocInd->assocId       =  pStaDs->assocId;
 

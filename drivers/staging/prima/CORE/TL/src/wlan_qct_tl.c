@@ -6234,6 +6234,7 @@ WLANTL_RxFrames
             dropping EAPOL packet in the driver use TID to zero.*/
          VOS_TRACE( VOS_MODULE_ID_TL, VOS_TRACE_LEVEL_INFO,
              "WLAN TL:Invalid Tid: %d Frame type: %d", ucTid, ucFrmType);
+         WDA_GET_RX_TID( pvBDHeader ) = 0;
          ucTid = 0;
       }
 
@@ -8972,7 +8973,7 @@ static void WLANTL_ClearOldPERStats(WLANTL_CbType *pTLCb, v_U8_t incrementCnt)
 static void WLANTL_updatePERStats(WLANTL_CbType *pTLCb,
                                   v_U8_t rateIndex)
 {
-   v_U8_t incrementCnt;
+   v_U8_t incrementCnt = 0;
    v_U64_t currentTime, timeDifference;
 
    /*

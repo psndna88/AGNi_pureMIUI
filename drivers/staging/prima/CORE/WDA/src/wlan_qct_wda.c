@@ -8851,8 +8851,6 @@ VOS_STATUS WDA_ProcessAggrAddTSReq(tWDA_CbContext *pWDA,
    {
       VOS_TRACE( VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_ERROR,
               "Failure in ADD TS REQ Params WDI API, free all the memory " );
-      vos_mem_free(pWdaParams->wdaWdiApiMsgParam) ;
-      vos_mem_free(pWdaParams);
 
       /* send the failure response back to PE*/
       for( i = 0; i < HAL_QOS_NUM_AC_MAX; i++ )
@@ -8862,6 +8860,10 @@ VOS_STATUS WDA_ProcessAggrAddTSReq(tWDA_CbContext *pWDA,
 
       WDA_SendMsg(pWdaParams->pWdaContext, WDA_AGGR_QOS_RSP, 
                         (void *)pAggrAddTsReqParams , 0) ;
+
+      vos_mem_free(pWdaParams->wdaWdiApiMsgParam) ;
+      vos_mem_free(pWdaParams);
+
    }
    return CONVERT_WDI2VOS_STATUS(status) ;
 }
@@ -13357,7 +13359,9 @@ VOS_STATUS WDA_HALDumpCmdReq(tpAniSirGlobal   pMac, tANI_U32  cmd,
             VOS_TRACE( VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
             "%s: WDA_HALDUMP reporting  other error",__func__);
          }
-         VOS_BUG(0);
+         if (!(vos_isLoadUnloadInProgress() ||
+               vos_is_logp_in_progress(VOS_MODULE_ID_VOSS, NULL)))
+             VOS_BUG(0);
       }
    }
    return status;
@@ -18142,6 +18146,8 @@ VOS_STATUS WDA_ProcessPERRoamScanOffloadReq(tWDA_CbContext *pWDA,
           pPERRoamOffloadScanReqParams->PERtimerThreshold;
    pwdiPERRoamOffloadScanInfo->isPERRoamCCAEnabled =
           pPERRoamOffloadScanReqParams->isPERRoamCCAEnabled;
+   pwdiPERRoamOffloadScanInfo->PERRoamFullScanThreshold =
+          pPERRoamOffloadScanReqParams->PERRoamFullScanThreshold;
    pwdiPERRoamOffloadScanInfo->PERroamTriggerPercent =
           pPERRoamOffloadScanReqParams->PERroamTriggerPercent;
 

@@ -2305,6 +2305,7 @@ VOS_STATUS hdd_wlan_re_init(void)
 
     /* Restart all adapters */
    hdd_start_all_adapters(pHddCtx);
+   pHddCtx->con_scan_abort_cnt = 0;
    pHddCtx->hdd_mcastbcast_filter_set = FALSE;
    pHddCtx->btCoexModeSet = FALSE;
    hdd_register_mcast_bcast_filter(pHddCtx);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016. The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -2591,15 +2591,22 @@ void limProcessChannelSwitchTimeout(tpAniSirGlobal pMac)
     tpPESession psessionEntry = NULL;
     tANI_U8    channel; // This is received and stored from channelSwitch Action frame
    
-    if((psessionEntry = peFindSessionBySessionId(pMac, pMac->lim.limTimers.gLimChannelSwitchTimer.sessionId))== NULL) 
-    {
-        limLog(pMac, LOGP,FL("Session Does not exist for given sessionID"));
+    if ((psessionEntry = peFindSessionBySessionId(pMac,
+       pMac->lim.limTimers.gLimChannelSwitchTimer.sessionId))== NULL) {
+        limLog(pMac, LOGW,FL("Session Does not exist for given sessionID"));
         return;
     }
 
     if (psessionEntry->limSystemRole != eLIM_STA_ROLE)
     {
         PELOGW(limLog(pMac, LOGW, "Channel switch can be done only in STA role, Current Role = %d", psessionEntry->limSystemRole);)
+        return;
+    }
+    if (psessionEntry->gLimSpecMgmt.dot11hChanSwState !=
+                                  eLIM_11H_CHANSW_RUNNING) {
+        limLog(pMac, LOGW,
+            FL("Channel switch timer should not have been running in state %d"),
+            psessionEntry->gLimSpecMgmt.dot11hChanSwState);
         return;
     }
     channel = psessionEntry->gLimChannelSwitch.primaryChannel;
@@ -2665,9 +2672,14 @@ void limProcessChannelSwitchTimeout(tpAniSirGlobal pMac)
          * then we cannot switch the channel. Just disassociate from AP. 
          * We will find a better AP !!!
          */
-        limTearDownLinkWithAp(pMac, 
+        if ((psessionEntry->limMlmState == eLIM_MLM_LINK_ESTABLISHED_STATE) &&
+           (psessionEntry->limSmeState != eLIM_SME_WT_DISASSOC_STATE)&&
+           (psessionEntry->limSmeState != eLIM_SME_WT_DEAUTH_STATE)) {
+              limLog(pMac, LOGE, FL("Invalid channel!! Disconnect.."));
+              limTearDownLinkWithAp(pMac,
                         pMac->lim.limTimers.gLimChannelSwitchTimer.sessionId,
                         eSIR_MAC_UNSPEC_FAILURE_REASON);
+        }
         return;
     }
     limCovertChannelScanType(pMac, psessionEntry->currentOperChannel, false);
@@ -8555,24 +8567,23 @@ bool lim_is_robust_mgmt_action_frame(uint8 action_catagory)
 }
 
 /**
- * lim_is_ext_cap_ie_present - checks if ext ie is present
+ * lim_compute_ext_cap_ie_length - compute the length of ext cap ie
+ * based on the bits set
  * @ext_cap: extended IEs structure
  *
- * Return: true if ext IEs are present else false
+ * Return: length of the ext cap ie, 0 means should not present
  */
-bool lim_is_ext_cap_ie_present (tDot11fIEExtCap *ext_cap)
-{
-    int i, size;
-    uint8_t *tmp_buf;
+tANI_U8 lim_compute_ext_cap_ie_length (tDot11fIEExtCap *ext_cap) {
+    tANI_U8 i = DOT11F_IE_EXTCAP_MAX_LEN;
 
-    tmp_buf = (uint8_t *) ext_cap;
-    size = sizeof(*ext_cap);
+    while (i) {
+        if (ext_cap->bytes[i-1]) {
+            break;
+        }
+        i --;
+    }
 
-    for (i = 0; i < size; i++)
-        if (tmp_buf[i])
-            return true;
-
-    return false;
+    return i;
 }
 
 /**

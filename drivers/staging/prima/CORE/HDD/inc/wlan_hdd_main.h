@@ -1605,6 +1605,7 @@ struct hdd_context_s
     vos_timer_t tdls_source_timer;
 
     v_U64_t extscan_start_time_since_boot;
+    v_U8_t con_scan_abort_cnt;
 };
 
 typedef enum  {

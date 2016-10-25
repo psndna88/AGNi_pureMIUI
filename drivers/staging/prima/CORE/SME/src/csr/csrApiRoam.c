@@ -80,8 +80,10 @@
 #define CSR_NUM_IBSS_START_CHANNELS_24      3
 #define CSR_DEF_IBSS_START_CHANNEL_50       36
 #define CSR_DEF_IBSS_START_CHANNEL_24       1
-#define CSR_WAIT_FOR_KEY_TIMEOUT_PERIOD         ( 5 * PAL_TIMER_TO_SEC_UNIT )  // 5 seconds, for WPA, WPA2, CCKM
-#define CSR_WAIT_FOR_WPS_KEY_TIMEOUT_PERIOD         ( 120 * PAL_TIMER_TO_SEC_UNIT )  // 120 seconds, for WPS
+/* 15 seconds, for WPA, WPA2, CCKM */
+#define CSR_WAIT_FOR_KEY_TIMEOUT_PERIOD     (15 * PAL_TIMER_TO_SEC_UNIT)
+/* 120 seconds, for WPS */
+#define CSR_WAIT_FOR_WPS_KEY_TIMEOUT_PERIOD (120 * PAL_TIMER_TO_SEC_UNIT)
 /*---------------------------------------------------------------------------
   OBIWAN recommends [8 10]% : pick 9% 
 ---------------------------------------------------------------------------*/
@@ -1945,6 +1947,8 @@ eHalStatus csrChangeDefaultConfigParam(tpAniSirGlobal pMac, tCsrConfigParam *pPa
         pMac->roam.configParam.PERtimerThreshold = pParam->PERtimerThreshold;
         pMac->roam.configParam.isPERRoamCCAEnabled =
                 pParam->isPERRoamCCAEnabled;
+        pMac->roam.configParam.PERRoamFullScanThreshold =
+                pParam->PERRoamFullScanThreshold;
         pMac->roam.configParam.PERroamTriggerPercent =
                 pParam->PERroamTriggerPercent;
 #endif
@@ -2163,6 +2167,8 @@ eHalStatus csrGetConfigParam(tpAniSirGlobal pMac, tCsrConfigParam *pParam)
         pParam->PERtimerThreshold = pMac->roam.configParam.PERtimerThreshold;
         pParam->isPERRoamCCAEnabled =
                 pMac->roam.configParam.isPERRoamCCAEnabled;
+        pParam->PERRoamFullScanThreshold =
+                pMac->roam.configParam.PERRoamFullScanThreshold;
         pParam->PERroamTriggerPercent =
                 pMac->roam.configParam.PERroamTriggerPercent;
 #endif
@@ -8312,7 +8318,7 @@ static void csrRoamRoamingStateReassocRspProcessor( tpAniSirGlobal pMac, tpSirSm
     tCsrRoamInfo roamInfo;
     tANI_U32 roamId = 0;
     tANI_U32 current_timestamp, max_time = -1;
-    tANI_U32 candidateApCnt, oldestIndex;
+    tANI_U32 candidateApCnt, oldestIndex = 0;
     tANI_U8 nilMac[6] = {0};
 
     if (eSIR_SME_SUCCESS == pSmeJoinRsp->statusCode)
@@ -10094,6 +10100,13 @@ void csrRoamCheckForLinkStatusChange( tpAniSirGlobal pMac, tSirSmeRsp *pSirMsg )
                                      &roamInfo, 0,
                                      eCSR_ROAM_LOSTLINK,
                                      eCSR_ROAM_RESULT_DISASSOC_IND);
+                pSession = CSR_GET_SESSION(pMac,
+                          pDisConDoneInd->sessionId);
+                if (pSession &&
+                   !CSR_IS_INFRA_AP(&pSession->connectedProfile))
+                     csrRoamStateChange(pMac,
+                        eCSR_ROAMING_STATE_IDLE,
+                        pDisConDoneInd->sessionId);
             }
             else
             {
@@ -16641,8 +16654,8 @@ csrRoamScanOffloadPrepareProbeReqTemplate(tpAniSirGlobal pMac,
 ||    V           |  RSO_START  |  RSO_STOP  |  RSO_RESTART | RSO_UPDATE_CFG ||
 || --------------------------------------------------------------------------||
 || RSO_START      |     NO      |   YES      |     NO       |      NO        ||
-|| RSO_STOP       |    YES      |   YES      |     YES      |      YES       ||
-|| RSO_RESTART    |    YES      |   NO       |     NO       |      YES       ||
+|| RSO_STOP       |    YES      |   NO       |     YES      |      YES       ||
+|| RSO_RESTART    |    YES      |   NO       |     YES      |      YES       ||
 || RSO_UPDATE_CFG |    YES      |   NO       |     YES      |      YES       ||
 ||===========================================================================||
 */
@@ -16654,9 +16667,10 @@ csrRoamScanOffloadPrepareProbeReqTemplate(tpAniSirGlobal pMac,
 
 #define RSO_START_ALLOW_MASK   ( RSO_STOP_BIT )
 #define RSO_STOP_ALLOW_MASK    ( RSO_UPDATE_CFG_BIT | RSO_RESTART_BIT | \
-                                 RSO_STOP_BIT | RSO_START_BIT )
-#define RSO_RESTART_ALLOW_MASK ( RSO_UPDATE_CFG_BIT | RSO_START_BIT )
-#define RSO_UPDATE_CFG_ALLOW_MASK  (RSO_UPDATE_CFG_BIT | RSO_STOP_BIT | \
+                                 RSO_START_BIT )
+#define RSO_RESTART_ALLOW_MASK ( RSO_UPDATE_CFG_BIT | RSO_START_BIT | \
+                                 RSO_RESTART_BIT )
+#define RSO_UPDATE_CFG_ALLOW_MASK  (RSO_UPDATE_CFG_BIT | RSO_RESTART_BIT | \
                                     RSO_START_BIT)
 
 tANI_BOOLEAN CsrIsRSOCommandAllowed(tpAniSirGlobal pMac, tANI_U8 command)
@@ -17200,6 +17214,8 @@ send_roam_scan_offload_cmd:
               pMac->roam.configParam.PERtimerThreshold;
       PERRoamReqBuf->isPERRoamCCAEnabled =
               pMac->roam.configParam.isPERRoamCCAEnabled;
+      PERRoamReqBuf->PERRoamFullScanThreshold =
+              pMac->roam.configParam.PERRoamFullScanThreshold;
       PERRoamReqBuf->PERroamTriggerPercent =
               pMac->roam.configParam.PERroamTriggerPercent;
       PERRoamReqBuf->sessionId = sessionId;

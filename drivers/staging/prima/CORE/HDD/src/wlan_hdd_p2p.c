@@ -257,21 +257,28 @@ eHalStatus wlan_hdd_remain_on_channel_callback( tHalHandle hHal, void* pCtx,
                 NULL, 0 );
     }
     mutex_lock(&pHddCtx->roc_lock);
+    pRemainChanCtx = cfgState->remain_on_chan_ctx;
     if ( pRemainChanCtx )
     {
+        /* Trigger kernel panic if ROC timer state is not set to unused state
+         * before freeing the ROC ctx.
+         */
+         if (VOS_TIMER_STATE_UNUSED != vos_timer_getCurrentState(
+                 &pRemainChanCtx->hdd_remain_on_chan_timer))
+            VOS_BUG(0);
+
         if (pRemainChanCtx->action_pkt_buff.frame_ptr != NULL
                 && pRemainChanCtx->action_pkt_buff.frame_length != 0)
         {
             vos_mem_free(pRemainChanCtx->action_pkt_buff.frame_ptr);
         }
+        hddLog( LOG1, FL(
+                    "Freeing ROC ctx cfgState->remain_on_chan_ctx=%p"),
+                cfgState->remain_on_chan_ctx);
+        vos_mem_free( pRemainChanCtx );
+        pRemainChanCtx = NULL;
+        cfgState->remain_on_chan_ctx = NULL;
     }
-
-    hddLog( LOG1, FL(
-                "Freeing ROC ctx cfgState->remain_on_chan_ctx=%p"),
-            cfgState->remain_on_chan_ctx);
-    vos_mem_free( pRemainChanCtx );
-    pRemainChanCtx = NULL;
-    cfgState->remain_on_chan_ctx = NULL;
     mutex_unlock(&pHddCtx->roc_lock);
     if (eHAL_STATUS_SUCCESS != status)
         complete(&pAdapter->rem_on_chan_ready_event);
@@ -764,10 +771,13 @@ static int wlan_hdd_request_remain_on_channel( struct wiphy *wiphy,
        return -EBUSY;
     }
 
-    /* When P2P-GO and if we are trying to unload the driver then
-     * wlan driver is keep on receiving the remain on channel command
-     * and which is resulting in crash. So not allowing any remain on
-     * channel requets when Load/Unload is in progress*/
+    if (TRUE == pHddCtx->btCoexModeSet)
+    {
+        VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
+           FL("BTCoex Mode operation in progress"));
+        return -EBUSY;
+    }
+
     if(hdd_isConnectionInProgress((hdd_context_t *)pAdapter->pHddCtx))
     {
         hddLog( LOGE,
@@ -776,6 +786,9 @@ static int wlan_hdd_request_remain_on_channel( struct wiphy *wiphy,
     }
 
     mutex_lock(&pHddCtx->roc_lock);
+
+   if (cfgState->remain_on_chan_ctx)
+       VOS_BUG(0);
 
     pRemainChanCtx = vos_mem_malloc( sizeof(hdd_remain_on_chan_ctx_t) );
     if( NULL == pRemainChanCtx )

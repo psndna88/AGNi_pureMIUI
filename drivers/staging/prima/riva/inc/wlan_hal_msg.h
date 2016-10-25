@@ -9008,7 +9008,8 @@ typedef PACKED_PRE struct PACKED_POST {
     tANI_U32 waitPeriodForNextPERScan;
     tANI_U32 PERtimerThreshold;
     tANI_U32 PERroamTriggerPercent;
-    tANI_U32 reserved;
+    tANI_S16 PERRoamFullScanThreshold;
+    tANI_U16 reserved;
 } tPerRoamConfigParams, * tpPerRoamConfigParams;
 
 typedef PACKED_PRE struct PACKED_POST

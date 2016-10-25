@@ -2216,15 +2216,10 @@ static eHalStatus csrNeighborRoamProcessScanComplete (tpAniSirGlobal pMac)
 
                     else
                     {
-#ifdef WLAN_FEATURE_ROAM_SCAN_OFFLOAD
-                        if (pMac->PERroamCandidatesCnt == 0)
-#endif
-                        {
-                            /* There is no candidate or We are not roaming Now.
-                             * Inform the FW to restart Roam Offload Scan  */
-                            csrRoamOffloadScan(pMac, ROAM_SCAN_OFFLOAD_RESTART,
-                                REASON_NO_CAND_FOUND_OR_NOT_ROAMING_NOW);
-                        }
+                        /* There is no candidate or We are not roaming Now.
+                         * Inform the FW to restart Roam Offload Scan  */
+                        csrRoamOffloadScan(pMac, ROAM_SCAN_OFFLOAD_RESTART,
+                            REASON_NO_CAND_FOUND_OR_NOT_ROAMING_NOW);
                     }
                 }
                 CSR_NEIGHBOR_ROAM_STATE_TRANSITION(eCSR_NEIGHBOR_ROAM_STATE_CONNECTED);

@@ -1786,7 +1786,8 @@ static eHalStatus hdd_AssociationCompletionHandler( hdd_adapter_t *pAdapter, tCs
                                          (int)pRoamInfo->pBssDesc->channelId);
                         hddLog(LOG1, "assocReqlen %d assocRsplen %d", assocReqlen,
                                          assocRsplen);
-                        if (pHddCtx->cfg_ini->gEnableRoamDelayStats)
+                        if (pHddCtx->cfg_ini &&
+                            pHddCtx->cfg_ini->gEnableRoamDelayStats)
                         {
                             vos_record_roam_event(e_HDD_SEND_REASSOC_RSP, NULL, 0);
                         }
@@ -1840,7 +1841,8 @@ static eHalStatus hdd_AssociationCompletionHandler( hdd_adapter_t *pAdapter, tCs
                     if(ft_carrier_on)
                     {
                         hdd_SendReAssocEvent(dev, pAdapter, pRoamInfo, reqRsnIe, reqRsnLength);
-                        if (pHddCtx->cfg_ini->gEnableRoamDelayStats)
+                        if (pHddCtx->cfg_ini &&
+                            pHddCtx->cfg_ini->gEnableRoamDelayStats)
                         {
                             vos_record_roam_event(e_HDD_SEND_REASSOC_RSP, NULL, 0);
                         }
@@ -1934,7 +1936,7 @@ static eHalStatus hdd_AssociationCompletionHandler( hdd_adapter_t *pAdapter, tCs
             hddLog(VOS_TRACE_LEVEL_INFO, FL("Enabling queues"));
             netif_tx_wake_all_queues(dev);
         }
-        if (pHddCtx->cfg_ini->gEnableRoamDelayStats)
+        if (pHddCtx->cfg_ini && pHddCtx->cfg_ini->gEnableRoamDelayStats)
         {
             vos_record_roam_event(e_HDD_ENABLE_TX_QUEUE, NULL, 0);
         }

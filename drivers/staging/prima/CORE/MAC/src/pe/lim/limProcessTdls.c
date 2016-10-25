@@ -2919,13 +2919,18 @@ void PopulateDot11fLinkIden(tpAniSirGlobal pMac, tpPESession psessionEntry,
 void PopulateDot11fTdlsExtCapability(tpAniSirGlobal pMac, 
                                         tDot11fIEExtCap *extCapability)
 {
-    extCapability->TDLSPeerPSMSupp = PEER_PSM_SUPPORT ;
-    extCapability->TDLSPeerUAPSDBufferSTA = pMac->lim.gLimTDLSBufStaEnabled;
-    extCapability->TDLSChannelSwitching = pMac->lim.gLimTDLSOffChannelEnabled ;
-    extCapability->TDLSSupport = TDLS_SUPPORT ;
-    extCapability->TDLSProhibited = TDLS_PROHIBITED ;
-    extCapability->TDLSChanSwitProhibited = TDLS_CH_SWITCH_PROHIBITED ;
-    extCapability->present = 1 ;
+    struct s_ext_cap *p_ext_cap = (struct s_ext_cap *)extCapability->bytes;
+
+    p_ext_cap->TDLSPeerPSMSupp = PEER_PSM_SUPPORT ;
+    p_ext_cap->TDLSPeerUAPSDBufferSTA = pMac->lim.gLimTDLSBufStaEnabled;
+    p_ext_cap->TDLSChannelSwitching = pMac->lim.gLimTDLSOffChannelEnabled ;
+    p_ext_cap->TDLSSupport = TDLS_SUPPORT ;
+    p_ext_cap->TDLSProhibited = TDLS_PROHIBITED ;
+    p_ext_cap->TDLSChanSwitProhibited = TDLS_CH_SWITCH_PROHIBITED ;
+
+    extCapability->present = 1;
+    extCapability->num_bytes = lim_compute_ext_cap_ie_length(extCapability);
+
     return ;
 }
 

@@ -3977,7 +3977,7 @@ typedef struct
 
 #ifdef WLAN_FEATURE_ROAM_SCAN_OFFLOAD
 #define SIR_PER_ROAM_MAX_AP_CNT 20
-#define SIR_PER_ROAM_MAX_CANDIDATE_CNT 10
+#define SIR_PER_ROAM_MAX_CANDIDATE_CNT 32
 typedef struct __attribute__((packed))
 {
     tANI_U8    channelNumber;
@@ -4072,6 +4072,7 @@ typedef struct sSirPERRoamOffloadScanReq
   tANI_U32  waitPeriodForNextPERScan;
   tANI_U32  PERtimerThreshold;
   tANI_U32  PERroamTriggerPercent;
+  tANI_S16  PERRoamFullScanThreshold;
 } tSirPERRoamOffloadScanReq, *tpSirPERRoamOffloadScanReq;
 
 typedef struct sSirPERRoamTriggerScanReq
