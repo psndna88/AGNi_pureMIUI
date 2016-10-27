@@ -106,12 +106,12 @@
 
  	goodix_fingerprint {
  		compatible = "goodix,fingerprint";
- 		vcc_spi-supply  = <&pm8950_l10>;
- 		vdd_ana-supply  = <&pm8950_l10>;
- 		vdd_io-supply   = <&pm8950_l10>;
- 		goodix,gpio_reset = <&msm_gpio 110 0>;
- 		goodix,gpio_irq = <&msm_gpio 106 0>;
- 		goodix,gpio_pwr = <&msm_gpio 119 0>; 
+		vcc_spi-supply  = <&pm8950_l10>;
+		vdd_ana-supply  = <&pm8950_l10>;
+		vdd_io-supply   = <&pm8950_l10>;
+		goodix,gpio_reset = <&msm_gpio 110 0>;
+		goodix,gpio_irq = <&msm_gpio 106 0>;
+		goodix,gpio_pwr = <&msm_gpio 119 0>;
  	};
 };
 

@@ -203,7 +203,7 @@
 		fpc,enable-wakeup;
 	};
 
-	goodix_gf318m {
+	goodix_fingerprint {
 		compatible = "goodix,fingerprint";
 		vcc_spi-supply  = <&pm8950_l10>;
 		vdd_ana-supply  = <&pm8950_l10>;

@@ -1,0 +1,22 @@
+diff --git a/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi b/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi
+index d323265..9dbdbd3 100644
+--- a/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi
++++ b/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi
+@@ -192,17 +192,6 @@
+ 		vdd-supply = <&pm8950_l10>;
+ 	};
+ 
+-	fpc_fpc1020 {
+-		compatible = "fpc,fpc1020";
+-		fpc,gpio_rst = <&msm_gpio 110 0>;
+-		fpc,gpio_irq = <&msm_gpio 106 0>;
+-		fpc,irq_flags = <0x2001>;
+-		fpc,event-type = <4>;
+-		fpc,event-code = <4>;
+-		vcc_spi-supply = <&pm8950_l6>;
+-		fpc,enable-wakeup;
+-	};
+-
+ 	goodix_fingerprint {
+ 		compatible = "goodix,fingerprint";
+ 		vcc_spi-supply  = <&pm8950_l10>;
