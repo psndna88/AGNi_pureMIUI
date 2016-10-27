@@ -10,12 +10,12 @@
 #include "wpa_ctrl.h"
 #include "wpa_helpers.h"
 #include "wifi_hal.h"
-#include "nan.h"
+#include "nan_cert.h"
 
 pthread_cond_t gCondition;
 pthread_mutex_t gMutex;
-
-wifi_handle global_handle;
+wifi_handle global_wifi_handle;
+wifi_interface_handle global_interface_handle;
 static int nan_state = 0;
 static int event_anyresponse = 0;
 static int is_fam = 0;
@@ -197,6 +197,30 @@ int nan_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 }
 
 
+void nan_print_further_availability_chan(struct sigma_dut *dut,
+					 u8 num_chans,
+					 NanFurtherAvailabilityChannel *fachan)
+{
+	int idx;
+
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"********Printing FurtherAvailabilityChan Info******");
+	sigma_dut_print(dut, DUT_MSG_INFO, "Numchans:%d", num_chans);
+	for (idx = 0; idx < num_chans; idx++) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"[%d]: NanAvailDuration:%d class_val:%02x channel:%d",
+				idx, fachan->entry_control,
+				fachan->class_val, fachan->channel);
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"[%d]: mapid:%d Availability bitmap:%08x",
+				idx, fachan->mapid,
+				fachan->avail_interval_bitmap);
+	}
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"*********************Done**********************");
+}
+
+
 int sigma_nan_enable(struct sigma_dut *dut, struct sigma_conn *conn,
 		     struct sigma_cmd *cmd)
 {
@@ -213,38 +237,14 @@ int sigma_nan_enable(struct sigma_dut *dut, struct sigma_conn *conn,
 	NanEnableRequest req;
 
 	memset(&req, 0, sizeof(NanEnableRequest));
-	req.header.handle = 0xFFFF;
-	req.header.transaction_id = 0;
-	req.support_5g = 1;
-	req.config_5g_beacons = 1;
-	req.beacon_5g_val = 1;
-	req.config_5g_discovery = 1;
-	req.discovery_5g_val = 1;
 	req.cluster_low = 0;
 	req.cluster_high = 0xFFFF;
-	req.sid_beacon = 1;
-	req.rssi_close = 60;
-	req.rssi_middle = 70;
-	req.rssi_proximity = 70;
-	req.hop_count_limit = 2;
-	req.random_time = 120;
-	req.master_pref = 30;
-	req.periodic_scan_interval = 20;
+	req.master_pref = 100;
 
-	/* This is a debug hack to becon in channel 11 */
+	/* This is a debug hack to beacon in channel 11 */
 	if (oper_chan) {
 		req.config_2dot4g_support = 1;
 		req.support_2dot4g_val = 111;
-	}
-
-	if (dut->device_type == STA_testbed) {
-		sigma_dut_print(dut, DUT_MSG_INFO, "Device in Test Bed mode");
-		req.config_debug_flags = 1;
-		req.debug_flags_val = 0x80000000;
-		if (high_tsf) {
-			if (strcasecmp(high_tsf, "On") == 0)
-				req.debug_flags_val = 0xc0000000;
-		}
 	}
 
 	if (master_pref) {
@@ -283,15 +283,16 @@ int sigma_nan_enable(struct sigma_dut *dut, struct sigma_conn *conn,
 			req.support_2dot4g_val = 1;
 			req.config_2dot4g_beacons = 1;
 			req.beacon_2dot4g_val = 1;
-			req.config_2dot4g_discovery = 1;
-			req.discovery_2dot4g_val = 1;
+			req.config_2dot4g_sdf = 1;
+			req.sdf_2dot4g_val = 1;
 
 			/* Disable 5G support */
-			req.support_5g = 0;
+			req.config_support_5g = 1;
+			req.support_5g_val = 0;
 			req.config_5g_beacons = 1;
 			req.beacon_5g_val = 0;
-			req.config_5g_discovery = 1;
-			req.discovery_5g_val = 0;
+			req.config_5g_sdf = 1;
+			req.sdf_5g_val = 0;
 		}
 	}
 
@@ -313,32 +314,34 @@ int sigma_nan_enable(struct sigma_dut *dut, struct sigma_conn *conn,
 		req.support_2dot4g_val = 1;
 		req.config_2dot4g_beacons = 1;
 		req.beacon_2dot4g_val = 0;
-		req.config_2dot4g_discovery = 1;
-		req.discovery_2dot4g_val = 1;
+		req.config_2dot4g_sdf = 1;
+		req.sdf_2dot4g_val = 1;
 	}
 
-	nan_enable_request(0, global_handle, &req);
-	abstime.tv_sec = 4;
+	nan_enable_request(0, global_interface_handle, &req);
+
+	/* To ensure sta_get_events to get the events
+	 * only after joining the NAN cluster. */
+	abstime.tv_sec = 30;
 	abstime.tv_nsec = 0;
-	return wait(abstime);
+	wait(abstime);
+
+	return 0;
 }
 
 
 int sigma_nan_disable(struct sigma_dut *dut, struct sigma_conn *conn,
 		      struct sigma_cmd *cmd)
 {
-	NanDisableRequest req;
 	struct timespec abstime;
 
-	memset(&req, 0, sizeof(NanDisableRequest));
-	req.header.handle = 0x0;
-	req.header.transaction_id = 0;
-
-	nan_disable_request(0, global_handle, &req);
+	nan_disable_request(0, global_interface_handle);
 
 	abstime.tv_sec = 4;
 	abstime.tv_nsec = 0;
-	return wait(abstime);
+	wait(abstime);
+
+	return 0;
 }
 
 
@@ -352,8 +355,6 @@ int sigma_nan_config_enable(struct sigma_dut *dut, struct sigma_conn *conn,
 	NanConfigRequest req;
 
 	memset(&req, 0, sizeof(NanConfigRequest));
-	req.header.handle = 0x0;
-	req.header.transaction_id = 0;
 	req.config_rssi_proximity = 1;
 	req.rssi_proximity = 70;
 
@@ -378,12 +379,13 @@ int sigma_nan_config_enable(struct sigma_dut *dut, struct sigma_conn *conn,
 		req.hop_count_force_val = hop_count_val;
 	}
 
-	nan_config_request(0, global_handle, &req);
+	nan_config_request(0, global_interface_handle, &req);
 
 	abstime.tv_sec = 4;
 	abstime.tv_nsec = 0;
+	wait(abstime);
 
-	return wait(abstime);
+	return 0;
 }
 
 
@@ -407,15 +409,13 @@ static int sigma_nan_subscribe_request(struct sigma_dut *dut,
 	u8 input_tx[NAN_MAX_MATCH_FILTER_LEN];
 
 	memset(&req, 0, sizeof(NanSubscribeRequest));
-	req.header.handle = 0xFFFF;
-	req.header.transaction_id = 0;
 	req.ttl = 0;
 	req.period =  1000;
 	req.subscribe_type = 1;
 	req.serviceResponseFilter = 1; /* MAC */
 	req.serviceResponseInclude = 0;
 	req.ssiRequiredForMatchIndication = 0;
-	req.subscribe_match = NAN_MATCH_ALG_MATCH_CONTINUOUS;
+	req.subscribe_match_indicator = NAN_MATCH_ALG_MATCH_CONTINUOUS;
 	req.subscribe_count = 0;
 
 	if (subscribe_type) {
@@ -427,9 +427,8 @@ static int sigma_nan_subscribe_request(struct sigma_dut *dut,
 			NanSubscribeCancelRequest req;
 
 			memset(&req, 0, sizeof(NanSubscribeCancelRequest));
-			req.header.handle = 128;
-			req.header.transaction_id = 0;
-			nan_subscribe_cancel_request(0, global_handle, &req);
+			nan_subscribe_cancel_request(0, global_interface_handle,
+						     &req);
 			return 0;
 		}
 	}
@@ -499,7 +498,7 @@ static int sigma_nan_subscribe_request(struct sigma_dut *dut,
 		strlen(service_name) + 1);
 	req.service_name_len = strlen(service_name);
 
-	nan_subscribe_request(0, global_handle, &req);
+	nan_subscribe_request(0, global_interface_handle, &req);
 	return 0;
 }
 
@@ -509,19 +508,17 @@ int config_post_disc_attr(void)
 	NanConfigRequest configReq;
 
 	memset(&configReq, 0, sizeof(NanConfigRequest));
-	configReq.header.handle = 0x0;
-	configReq.header.transaction_id = 0;
 
 	/* Configure Post disc attr */
 	/* Make these defines and use correct enum */
-	configReq.config_discovery_attr = 1;
-	configReq.discovery_attr_val.type = 4; /* Further Nan discovery */
-	configReq.discovery_attr_val.role = 0;
-	configReq.discovery_attr_val.transmit_freq = 1;
-	configReq.discovery_attr_val.duration = 0;
-	configReq.discovery_attr_val.avail_interval_bitmap = 0x00000008;
+	configReq.num_config_discovery_attr = 1;
+	configReq.discovery_attr_val[0].type = 4; /* Further Nan discovery */
+	configReq.discovery_attr_val[0].role = 0;
+	configReq.discovery_attr_val[0].transmit_freq = 1;
+	configReq.discovery_attr_val[0].duration = 0;
+	configReq.discovery_attr_val[0].avail_interval_bitmap = 0x00000008;
 
-	nan_config_request(0, global_handle, &configReq);
+	nan_config_request(0, global_interface_handle, &configReq);
 	return 0;
 }
 
@@ -542,11 +539,9 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 	u8 input_tx[NAN_MAX_MATCH_FILTER_LEN];
 
 	memset(&req, 0, sizeof(NanPublishRequest));
-	req.header.handle = 0xFFFF;
-	req.header.transaction_id = 0;
 	req.ttl = 0;
 	req.period = 500;
-	req.replied_event_flag = 1;
+	req.publish_match_indicator = 1;
 	req.publish_type = NAN_PUBLISH_TYPE_UNSOLICITED;
 	req.tx_type = NAN_TX_TYPE_BROADCAST;
 	req.publish_count = 0;
@@ -561,9 +556,8 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 			NanPublishCancelRequest req;
 
 			memset(&req, 0, sizeof(NanPublishCancelRequest));
-			req.header.handle = 1;
-			req.header.transaction_id = 0;
-			nan_publish_cancel_request(0, global_handle, &req);
+			nan_publish_cancel_request(0, global_interface_handle,
+						   &req);
 			return 0;
 		}
 	}
@@ -611,7 +605,7 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 		strlen(service_name) + 1);
 	req.service_name_len = strlen(service_name);
 
-	nan_publish_request(0, global_handle, &req);
+	nan_publish_request(0, global_interface_handle, &req);
 
 	return 0;
 }
@@ -629,30 +623,9 @@ static int nan_further_availability_rx(struct sigma_dut *dut,
 	NanEnableRequest req;
 
 	memset(&req, 0, sizeof(NanEnableRequest));
-	req.header.handle = 0xFFFF;
-	req.header.transaction_id = 0;
-	req.support_5g = 1;
-	req.config_5g_beacons = 1;
-	req.beacon_5g_val = 1;
-	req.config_5g_discovery = 1;
-	req.discovery_5g_val = 1;
 	req.cluster_low = 0;
 	req.cluster_high = 0xFFFF;
-	req.sid_beacon = 1;
-	req.rssi_close = 60;
-	req.rssi_middle = 70;
-	req.rssi_proximity = 70;
-	req.hop_count_limit = 2;
-	req.random_time = 120;
 	req.master_pref = 30;
-	req.periodic_scan_interval = 20;
-
-	if (dut->device_type == STA_testbed) {
-		sigma_dut_print(dut, DUT_MSG_INFO, "Device in Test Bed mode");
-		req.config_debug_flags = 1;
-		/* TODO: Make a comment here.. */
-		req.debug_flags_val = 0xA0000000;
-	}
 
 	if (master_pref)
 		req.master_pref = strtoul(master_pref, NULL, 0);
@@ -671,11 +644,12 @@ static int nan_further_availability_rx(struct sigma_dut *dut,
 		req.hop_count_force_val = hop_count_val;
 	}
 
-	nan_enable_request(0, global_handle, &req);
+	nan_enable_request(0, global_interface_handle, &req);
+
 	abstime.tv_sec = 4;
 	abstime.tv_nsec = 0;
-
 	wait(abstime);
+
 	return 0;
 }
 
@@ -691,29 +665,9 @@ static int nan_further_availability_tx(struct sigma_dut *dut,
 	NanConfigRequest configReq;
 
 	memset(&req, 0, sizeof(NanEnableRequest));
-	req.header.handle = 0xFFFF;
-	req.header.transaction_id = 0;
-	req.support_5g = 1;
-	req.config_5g_beacons = 1;
-	req.beacon_5g_val = 1;
-	req.config_5g_discovery = 1;
-	req.discovery_5g_val = 1;
 	req.cluster_low = 0;
 	req.cluster_high = 0xFFFF;
-	req.sid_beacon = 1;
-	req.rssi_close = 60;
-	req.rssi_middle = 70;
-	req.rssi_proximity = 70;
-	req.hop_count_limit = 2;
-	req.random_time = 120;
 	req.master_pref = 30;
-	req.periodic_scan_interval = 20;
-
-	if (dut->device_type == STA_testbed) {
-		sigma_dut_print(dut, DUT_MSG_INFO, "Device in Test Bed mode");
-		req.config_debug_flags = 1;
-		req.debug_flags_val = 0x00000000;
-	}
 
 	if (master_pref)
 		req.master_pref = strtoul(master_pref, NULL, 0);
@@ -732,25 +686,21 @@ static int nan_further_availability_tx(struct sigma_dut *dut,
 		req.hop_count_force_val = hop_count_val;
 	}
 
-	nan_enable_request(0, global_handle, &req);
+	nan_enable_request(0, global_interface_handle, &req);
 
 	/* Start the config of fam */
 
 	memset(&configReq, 0, sizeof(NanConfigRequest));
-	configReq.header.handle = 0x0;
-	configReq.header.transaction_id = 0;
 
 	configReq.config_fam = 1;
 	configReq.fam_val.numchans = 1;
-	configReq.fam_val.entry_control = 0;
-	configReq.fam_val.class_val = 81;
-	configReq.fam_val.channel = 6;
-	configReq.fam_val.mapid = 0;
-	configReq.fam_val.avail_interval_bitmap = 0x7ffffffe;
-	configReq.fam_val.vendor_elements_len = 0;
-	memset(&configReq.fam_val.vendor_elements[0], 0,
-	       sizeof(configReq.fam_val.vendor_elements));
-	nan_config_request(0, global_handle, &configReq);
+	configReq.fam_val.famchan[0].entry_control = 0;
+	configReq.fam_val.famchan[0].class_val = 81;
+	configReq.fam_val.famchan[0].channel = 6;
+	configReq.fam_val.famchan[0].mapid = 0;
+	configReq.fam_val.famchan[0].avail_interval_bitmap = 0x7ffffffe;
+
+	nan_config_request(0, global_interface_handle, &configReq);
 
 	return 0;
 }
@@ -767,9 +717,7 @@ int sigma_nan_transmit_followup(struct sigma_dut *dut,
 	NanTransmitFollowupRequest req;
 
 	memset(&req, 0, sizeof(NanTransmitFollowupRequest));
-	req.header.handle = (uint16_t)global_header_handle;
-	req.header.transaction_id = 0;
-	req.match_handle = global_match_handle;
+	req.requestor_instance_id = global_match_handle;
 	req.addr[0] = 0xFF;
 	req.addr[1] = 0xFF;
 	req.addr[2] = 0xFF;
@@ -782,11 +730,11 @@ int sigma_nan_transmit_followup(struct sigma_dut *dut,
 
 	if (requestor_id) {
 		/* int requestor_id_val = atoi(requestor_id); */
-		req.match_handle = global_match_handle;
+		req.requestor_instance_id = global_match_handle;
 	}
 	if (local_id) {
 		/* int local_id_val = atoi(local_id); */
-		req.header.handle = global_header_handle;
+		req.publish_subscribe_id = global_header_handle;
 	}
 
 	if (mac == NULL) {
@@ -795,28 +743,26 @@ int sigma_nan_transmit_followup(struct sigma_dut *dut,
 	}
 	nan_parse_mac_address(dut, mac, req.addr);
 
-#if 0
 	if (requestor_id)
-		req.match_handle = strtoul(requestor_id, NULL, 0);
-#endif
+		req.requestor_instance_id = strtoul(requestor_id, NULL, 0);
 
-	nan_transmit_followup_request(0, global_handle, &req);
+
+	nan_transmit_followup_request(0, global_interface_handle, &req);
 	return 0;
 }
 
 /* NotifyResponse invoked to notify the status of the Request */
-void nan_notify_response(NanResponseMsg *rsp_data)
+void nan_notify_response(transaction_id id, NanResponseMsg *rsp_data)
 {
 	sigma_dut_print(global_dut, DUT_MSG_INFO,
-			"%s: handle %d status %d value %d response_type %d",
-			__func__, rsp_data->header.handle,
+			"%s: status %d value %d response_type %d",
+			__func__,
 			rsp_data->status, rsp_data->value,
 			rsp_data->response_type);
-	global_header_handle = rsp_data->header.handle;
 	if (rsp_data->response_type == NAN_RESPONSE_STATS) {
-		sigma_dut_print(global_dut, DUT_MSG_INFO, "%s: stats_id %d",
+		sigma_dut_print(global_dut, DUT_MSG_INFO, "%s: stats_type %d",
 				__func__,
-				rsp_data->body.stats_response.stats_id);
+				rsp_data->body.stats_response.stats_type);
 	}
 #if 0
 	if (rsp_data->response_type == NAN_RESPONSE_CONFIG &&
@@ -831,20 +777,21 @@ void nan_event_publish_replied(NanPublishRepliedInd *event)
 {
 	sigma_dut_print(global_dut, DUT_MSG_INFO,
 			"%s: handle %d " MAC_ADDR_STR " rssi:%d",
-			__func__, event->header.handle,
+			__func__, event->requestor_instance_id,
 			MAC_ADDR_ARRAY(event->addr), event->rssi_value);
 	event_anyresponse = 1;
 	snprintf(global_event_resp_buf, sizeof(global_event_resp_buf),
-		 "EventName,Replied,RemoteInstanceId %d,mac," MAC_ADDR_STR,
-		 event->header.handle, MAC_ADDR_ARRAY(event->addr));
+		 "EventName,Replied,RemoteInstanceID %d,mac," MAC_ADDR_STR,
+		 (event->requestor_instance_id >> 24),
+		 MAC_ADDR_ARRAY(event->addr));
 }
 
 
 /* Events Callback */
 void nan_event_publish_terminated(NanPublishTerminatedInd *event)
 {
-	sigma_dut_print(global_dut, DUT_MSG_INFO, "%s: handle %d reason %d",
-			__func__, event->header.handle, event->reason);
+	sigma_dut_print(global_dut, DUT_MSG_INFO, "%s: publish_id %d reason %d",
+			__func__, event->publish_id, event->reason);
 }
 
 
@@ -852,32 +799,33 @@ void nan_event_publish_terminated(NanPublishTerminatedInd *event)
 void nan_event_match(NanMatchInd *event)
 {
 	sigma_dut_print(global_dut, DUT_MSG_INFO,
-			"%s: handle %d match_handle %08x " MAC_ADDR_STR
+			"%s: Pub/Sub Id %d remote_requestor_id %08x "
+			MAC_ADDR_STR
 			" rssi:%d",
 			__func__,
-			event->header.handle,
-			event->match_handle,
+			event->publish_subscribe_id,
+			event->requestor_instance_id,
 			MAC_ADDR_ARRAY(event->addr),
 			event->rssi_value);
 	event_anyresponse = 1;
-	global_header_handle = event->header.handle;
-	global_match_handle = event->match_handle;
+	global_header_handle = event->publish_subscribe_id;
+	global_match_handle = event->requestor_instance_id;
+
 	/* memset(event_resp_buf, 0, sizeof(event_resp_buf)); */
 	/* global_pub_sub_handle = event->header.handle; */
 	/* Print the SSI */
 	sigma_dut_print(global_dut, DUT_MSG_INFO, "Printing SSI:");
-#if 0
-	nanhexdump(event->service_specific_info,
-		   event->service_specific_info_len);
-#endif
+	nan_hex_dump(global_dut, event->service_specific_info,
+		event->service_specific_info_len);
 	snprintf(global_event_resp_buf, sizeof(global_event_resp_buf),
 		 "EventName,DiscoveryResult,RemoteInstanceID,%d,LocalInstanceID,%d,mac,"
-		 MAC_ADDR_STR " ", (event->match_handle >> 24),
-		 event->header.handle, MAC_ADDR_ARRAY(event->addr));
+		 MAC_ADDR_STR " ", (event->requestor_instance_id >> 24),
+		 event->publish_subscribe_id, MAC_ADDR_ARRAY(event->addr));
 
 	/* Print the match filter */
 	sigma_dut_print(global_dut, DUT_MSG_INFO, "Printing sdf match filter:");
-	/* nanhexdump(event->sdf_match_filter, event->sdf_match_filter_len); */
+	nan_hex_dump(global_dut, event->sdf_match_filter,
+		     event->sdf_match_filter_len);
 
 	/* Print the conn_capability */
 	sigma_dut_print(global_dut, DUT_MSG_INFO,
@@ -908,47 +856,77 @@ void nan_event_match(NanMatchInd *event)
 	/* Print the discovery_attr */
 	sigma_dut_print(global_dut, DUT_MSG_INFO,
 			"Printing PostDiscovery Attribute");
-	if (event->is_discovery_attr_valid) {
-		sigma_dut_print(global_dut, DUT_MSG_INFO,
-				"Conn Type:%d Device Role:%d"
-				MAC_ADDR_STR,
-				event->discovery_attr.type,
-				event->discovery_attr.role,
-				MAC_ADDR_ARRAY(event->discovery_attr.addr));
-		/* nanPrintFurtherAvailabilityMap(&event->discovery_attr.fam);
-		 */
-		sigma_dut_print(global_dut, DUT_MSG_INFO,
-				"Printing Mesh Id:");
-#if 0
-		nanhexdump(event->discovery_attr.mesh_id,
-			   sizeof(event->discovery_attr.mesh_id));
-#endif
+	if (event->num_rx_discovery_attr) {
+		int idx;
+
+		for (idx = 0; idx < event->num_rx_discovery_attr; idx++) {
+			sigma_dut_print(global_dut, DUT_MSG_INFO,
+					"PostDiscovery Attribute - %d", idx);
+			sigma_dut_print(global_dut, DUT_MSG_INFO,
+					"Conn Type:%d Device Role:%d"
+					MAC_ADDR_STR,
+					event->discovery_attr[idx].type,
+					event->discovery_attr[idx].role,
+					MAC_ADDR_ARRAY(event->discovery_attr[idx].addr));
+			sigma_dut_print(global_dut, DUT_MSG_INFO,
+					"Duration:%d MapId:%d "
+					"avail_interval_bitmap:%04x",
+					event->discovery_attr[idx].duration,
+					event->discovery_attr[idx].mapid,
+					event->discovery_attr[idx].avail_interval_bitmap);
+			sigma_dut_print(global_dut, DUT_MSG_INFO,
+					"Printing Mesh Id:");
+			nan_hex_dump(global_dut,
+				     event->discovery_attr[idx].mesh_id,
+				     event->discovery_attr[idx].mesh_id_len);
+			sigma_dut_print(global_dut, DUT_MSG_INFO,
+					"Printing Infrastructure Ssid:");
+			nan_hex_dump(global_dut,
+				     event->discovery_attr[idx].infrastructure_ssid_val,
+				     event->discovery_attr[idx].infrastructure_ssid_len);
+		}
 	} else {
 		sigma_dut_print(global_dut, DUT_MSG_INFO,
 				"PostDiscovery attribute not present");
 	}
 
 	/* Print the fam */
-	if (event->is_fam_valid) {
-		/* nanPrintFurtherAvailabilityMap(&event->fam); */
+	if (event->num_chans) {
+		nan_print_further_availability_chan(global_dut,
+						    event->num_chans,
+						    &event->famchan[0]);
+	} else {
+		sigma_dut_print(global_dut, DUT_MSG_INFO,
+				"Further Availability Map not present");
+	}
+	if (event->cluster_attribute_len) {
+		sigma_dut_print(global_dut, DUT_MSG_INFO,
+				"Printing Cluster Attribute:");
+		nan_hex_dump(global_dut, event->cluster_attribute,
+			     event->cluster_attribute_len);
+	} else {
+		sigma_dut_print(global_dut, DUT_MSG_INFO,
+				"Cluster Attribute not present");
 	}
 }
 
 
 /* Events Callback */
-void nan_event_unmatch(NanUnmatchInd *event)
+void nan_event_match_expired(NanMatchExpiredInd *event)
 {
 	sigma_dut_print(global_dut, DUT_MSG_INFO,
-			"%s: handle %d match_handle %08x",
-			__func__, event->header.handle, event->match_handle);
+			"%s: publish_subscribe_id %d match_handle %08x",
+			__func__, event->publish_subscribe_id,
+			event->requestor_instance_id);
 }
 
 
 /* Events Callback */
 void nan_event_subscribe_terminated(NanSubscribeTerminatedInd *event)
 {
-	sigma_dut_print(global_dut, DUT_MSG_INFO, "%s: handle %d reason %d",
-			__func__, event->header.handle, event->reason);
+	sigma_dut_print(global_dut, DUT_MSG_INFO,
+			"%s: Subscribe Id %d reason %d",
+			__func__, event->subscribe_id, event->reason);
 }
 
 
@@ -956,67 +934,69 @@ void nan_event_subscribe_terminated(NanSubscribeTerminatedInd *event)
 void nan_event_followup(NanFollowupInd *event)
 {
 	sigma_dut_print(global_dut, DUT_MSG_INFO,
-			"%s: handle %d match_handle 0x%08x dw_or_faw %d "
-			MAC_ADDR_STR, __func__, event->header.handle,
-			event->match_handle, event->dw_or_faw,
+			"%s: Publish/Subscribe Id %d match_handle 0x%08x dw_or_faw %d "
+			MAC_ADDR_STR, __func__, event->publish_subscribe_id,
+			event->requestor_instance_id, event->dw_or_faw,
 			MAC_ADDR_ARRAY(event->addr));
 
-	global_match_handle = event->match_handle;
-	global_header_handle = event->header.handle;
-#if 0
-	nanhexdump(event->service_specific_info,
-		   event->service_specific_info_len);
-#endif
+	global_match_handle = event->publish_subscribe_id;
+	global_header_handle = event->requestor_instance_id;
+	sigma_dut_print(global_dut, DUT_MSG_INFO, "%s: Printing SSI", __func__);
+	nan_hex_dump(global_dut, event->service_specific_info,
+		     event->service_specific_info_len);
 	event_anyresponse = 1;
 	snprintf(global_event_resp_buf, sizeof(global_event_resp_buf),
 		 "EventName,FollowUp,RemoteInstanceID,%d,LocalInstanceID,%d,mac,"
-		 MAC_ADDR_STR " ", event->match_handle >> 24,
-		 event->header.handle, MAC_ADDR_ARRAY(event->addr));
+		 MAC_ADDR_STR " ", event->requestor_instance_id >> 24,
+		 event->publish_subscribe_id, MAC_ADDR_ARRAY(event->addr));
 }
 
 
 /* Events Callback */
 void nan_event_disceng_event(NanDiscEngEventInd *event)
 {
-	sigma_dut_print(global_dut, DUT_MSG_INFO, "%s: handle %d event_id %d",
-			__func__, event->header.handle, event->event_id);
+	sigma_dut_print(global_dut, DUT_MSG_INFO, "%s: event_type %d",
+			__func__, event->event_type);
 
-	if (event->event_id == NAN_EVENT_ID_JOINED_CLUSTER) {
+	if (event->event_type == NAN_EVENT_ID_JOINED_CLUSTER) {
 		sigma_dut_print(global_dut, DUT_MSG_INFO, "%s: Joined cluster "
 				MAC_ADDR_STR,
 				__func__,
 				MAC_ADDR_ARRAY(event->data.cluster.addr));
+		/* To ensure sta_get_events to get the events
+		 * only after joining the NAN cluster. */
+		pthread_cond_signal(&gCondition);
 	}
-	if (event->event_id == NAN_EVENT_ID_STARTED_CLUSTER) {
+	if (event->event_type == NAN_EVENT_ID_STARTED_CLUSTER) {
 		sigma_dut_print(global_dut, DUT_MSG_INFO,
 				"%s: Started cluster " MAC_ADDR_STR,
 				__func__,
 				MAC_ADDR_ARRAY(event->data.cluster.addr));
 	}
-	if (event->event_id == NAN_EVENT_ID_STA_MAC_ADDR) {
-		sigma_dut_print(global_dut, DUT_MSG_INFO, "%s: Self STA "
+	if (event->event_type == NAN_EVENT_ID_DISC_MAC_ADDR) {
+		sigma_dut_print(global_dut, DUT_MSG_INFO,
+				"%s: Discovery Mac Address "
 				MAC_ADDR_STR,
 				__func__,
 				MAC_ADDR_ARRAY(event->data.mac_addr.addr));
 		memcpy(global_nan_mac_addr, event->data.mac_addr.addr,
 		       sizeof(global_nan_mac_addr));
 	}
-	pthread_cond_signal(&gCondition);
 }
 
 
 /* Events Callback */
 void nan_event_disabled(NanDisabledInd *event)
 {
-	sigma_dut_print(global_dut, DUT_MSG_INFO, "%s: handle %d reason %d",
-			__func__, event->header.handle, event->reason);
+	sigma_dut_print(global_dut, DUT_MSG_INFO, "%s: reason %d",
+			__func__, event->reason);
 	/* pthread_cond_signal(&gCondition); */
 }
 
 
 void * my_thread_function(void *ptr)
 {
-	wifi_event_loop(global_handle);
+	wifi_event_loop(global_wifi_handle);
 	pthread_exit(0);
 	return (void *) NULL;
 }
@@ -1027,7 +1007,7 @@ static NanCallbackHandler callbackHandler = {
 	.EventPublishReplied = nan_event_publish_replied,
 	.EventPublishTerminated = nan_event_publish_terminated,
 	.EventMatch = nan_event_match,
-	.EventUnMatch = nan_event_unmatch,
+	.EventMatchExpired = nan_event_match_expired,
 	.EventSubscribeTerminated = nan_event_subscribe_terminated,
 	.EventFollowup = nan_event_followup,
 	.EventDiscEngEvent = nan_event_disceng_event,
@@ -1037,20 +1017,21 @@ static NanCallbackHandler callbackHandler = {
 void nan_init(struct sigma_dut *dut)
 {
 	pthread_t thread1;	/* thread variables */
-	wifi_error err = wifi_initialize(&global_handle);
+	wifi_error err = wifi_initialize(&global_wifi_handle);
 
 	if (err) {
 		printf("wifi hal initialize failed\n");
 		return;
 	}
 
+	global_interface_handle = wifi_get_iface_handle(global_wifi_handle,
+							(char *) "wlan0");
 	/* create threads 1 */
 	pthread_create(&thread1, NULL, &my_thread_function, NULL);
 
 	pthread_mutex_init(&gMutex, NULL);
 	pthread_cond_init(&gCondition, NULL);
-
-	nan_register_handler(global_handle, callbackHandler);
+	nan_register_handler(global_interface_handle, callbackHandler);
 }
 
 
@@ -1161,7 +1142,7 @@ int nan_cmd_sta_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 	memset(&rsp, 0, sizeof(NanStaParameter));
 
-	nan_get_sta_parameter(0, global_handle, &rsp);
+	nan_get_sta_parameter(0, global_interface_handle, &rsp);
 	sigma_dut_print(dut, DUT_MSG_INFO,
 			"%s: NanStaparameter Master_pref:%02x, Random_factor:%02x, hop_count:%02x beacon_transmit_time:%d",
 			__func__, rsp.master_pref, rsp.random_factor,
