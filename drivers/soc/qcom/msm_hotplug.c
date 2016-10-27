@@ -132,6 +132,7 @@
 #define HOTPLUG_TIMEOUT                 2000
 
 unsigned int msm_enabled = HOTPLUG_ENABLED;
+EXPORT_SYMBOL(msm_enabled);
 
 struct notifier_block __refdata msm_hotplug_fb_notif;
 
@@ -142,7 +143,9 @@ EXPORT_SYMBOL(prevent_big_off);
 static bool timeout_enabled = false;
 static s64 pre_time;
 bool msm_hotplug_scr_suspended = false;
+EXPORT_SYMBOL(msm_hotplug_scr_suspended);
 bool msm_hotplug_fingerprint_called = false;
+EXPORT_SYMBOL(msm_hotplug_fingerprint_called);
 
 static void msm_hotplug_suspend(void);
 
