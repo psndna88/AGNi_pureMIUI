@@ -188,10 +188,9 @@ int nan_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 				      struct sigma_cmd *cmd)
 {
 	const char *oper_chan = get_param(cmd, "oper_chan");
-	int channel = 0;
 
-	channel = atoi(oper_chan);
-	dut->sta_channel = channel;
+	if (oper_chan)
+		dut->sta_channel = atoi(oper_chan);
 
 	return 0;
 }
@@ -494,9 +493,11 @@ static int sigma_nan_subscribe_request(struct sigma_dut *dut,
 		nan_hex_dump(dut, req.rx_match_filter, filter_len_rx);
 	}
 
-	strlcpy((char *) req.service_name, service_name,
-		strlen(service_name) + 1);
-	req.service_name_len = strlen(service_name);
+	if (service_name) {
+		strlcpy((char *) req.service_name, service_name,
+			strlen(service_name) + 1);
+		req.service_name_len = strlen(service_name);
+	}
 
 	nan_subscribe_request(0, global_interface_handle, &req);
 	return 0;
@@ -545,9 +546,12 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 	req.publish_type = NAN_PUBLISH_TYPE_UNSOLICITED;
 	req.tx_type = NAN_TX_TYPE_BROADCAST;
 	req.publish_count = 0;
-	strlcpy((char *) req.service_name, service_name,
-		strlen(service_name) + 1);
-	req.service_name_len = strlen(service_name);
+
+	if (service_name) {
+		strlcpy((char *) req.service_name, service_name,
+			strlen(service_name) + 1);
+		req.service_name_len = strlen(service_name);
+	}
 
 	if (publish_type) {
 		if (strcasecmp(publish_type, "Solicited") == 0) {
@@ -601,9 +605,12 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 		memcpy(req.rx_match_filter, input_rx, filter_len_rx);
 		nan_hex_dump(dut, req.rx_match_filter, filter_len_rx);
 	}
-	strlcpy((char *) req.service_name, service_name,
-		strlen(service_name) + 1);
-	req.service_name_len = strlen(service_name);
+
+	if (service_name) {
+		strlcpy((char *) req.service_name, service_name,
+			strlen(service_name) + 1);
+		req.service_name_len = strlen(service_name);
+	}
 
 	nan_publish_request(0, global_interface_handle, &req);
 
@@ -726,7 +733,9 @@ int sigma_nan_transmit_followup(struct sigma_dut *dut,
 	req.addr[5] = 0xFF;
 	req.priority = NAN_TX_PRIORITY_NORMAL;
 	req.dw_or_faw = 0;
-	req.service_specific_info_len = strlen(service_name);
+
+	if (service_name)
+		req.service_specific_info_len = strlen(service_name);
 
 	if (requestor_id) {
 		/* int requestor_id_val = atoi(requestor_id); */
@@ -1014,6 +1023,7 @@ static NanCallbackHandler callbackHandler = {
 	.EventDisabled = nan_event_disabled,
 };
 
+
 void nan_init(struct sigma_dut *dut)
 {
 	pthread_t thread1;	/* thread variables */
@@ -1031,7 +1041,8 @@ void nan_init(struct sigma_dut *dut)
 
 	pthread_mutex_init(&gMutex, NULL);
 	pthread_cond_init(&gCondition, NULL);
-	nan_register_handler(global_interface_handle, callbackHandler);
+	if (global_interface_handle)
+		nan_register_handler(global_interface_handle, callbackHandler);
 }
 
 
@@ -1182,6 +1193,9 @@ int nan_cmd_sta_get_events(struct sigma_dut *dut, struct sigma_conn *conn,
 			   struct sigma_cmd *cmd)
 {
 	const char *action = get_param(cmd, "Action");
+
+	if (!action)
+		return 0;
 
 	/* Check action for start, stop and get events. */
 	if (strcasecmp(action, "Start") == 0) {
