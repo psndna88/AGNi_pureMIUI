@@ -6320,7 +6320,8 @@ static int ath_ap_send_frame_mbo(struct sigma_dut *dut, struct sigma_conn *conn,
 		if (val)
 			apchanrpt = atoi(val);
 		val = get_param(cmd, "SSID");
-		req_ssid = strcasecmp(val, "") != 0;
+		if (val)
+			req_ssid = strcasecmp(val, "") != 0;
 		if (apchanrpt != 0) {
 			snprintf(buf, sizeof(buf),
 				 "wifitool %s sendbcnrpt %s %s %s %s %s %s %d %s %s 1 1 %s",
