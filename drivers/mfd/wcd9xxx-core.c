@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2015, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2016 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -2942,7 +2943,7 @@ static int wcd9xxx_slim_probe(struct slim_device *slim)
 		pr_err("%s: failed to get slimbus %s logical address: %d\n",
 		       __func__, wcd9xxx->slim->name, ret);
 		ret = -EPROBE_DEFER;
-		goto err_reset;
+		goto reboot;
 	}
 	wcd9xxx->read_dev = wcd9xxx_slim_read_device;
 	wcd9xxx->write_dev = wcd9xxx_slim_write_device;
@@ -2966,7 +2967,7 @@ static int wcd9xxx_slim_probe(struct slim_device *slim)
 		pr_err("%s: failed to get slimbus %s logical address: %d\n",
 		       __func__, wcd9xxx->slim->name, ret);
 		ret = -EPROBE_DEFER;
-		goto err_slim_add;
+		goto reboot;
 	}
 	wcd9xxx_inf_la = wcd9xxx->slim_slave->laddr;
 	wcd9xxx_set_intf_type(WCD9XXX_INTERFACE_TYPE_SLIMBUS);
@@ -3013,6 +3014,10 @@ err_codec:
 	kfree(wcd9xxx);
 	slim_set_clientdata(slim, NULL);
 err:
+	return ret;
+reboot:
+	pr_err("%s: some thing wrong with the codec - restart target\n", __func__);
+	emergency_restart();
 	return ret;
 }
 static int wcd9xxx_slim_remove(struct slim_device *pdev)

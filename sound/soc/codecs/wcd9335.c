@@ -778,12 +778,11 @@ struct tasha_priv {
 	int swr_clk_users;
 	int power_active_ref;
 	int (*zdet_gpio_cb)(struct snd_soc_codec *codec, bool high);
-
-	struct on_demand_supply on_demand_list[ON_DEMAND_SUPPLIES_MAX];
-
 #if defined(CONFIG_SPEAKER_EXT_PA)
 	int (*spk_ext_pa_cb)(struct snd_soc_codec *codec, int enable);
 #endif
+
+	struct on_demand_supply on_demand_list[ON_DEMAND_SUPPLIES_MAX];
 
 	int (*machine_codec_event_cb)(struct snd_soc_codec *codec,
 				      enum wcd9335_codec_event);
@@ -1462,8 +1461,7 @@ static int tasha_mbhc_request_micbias(struct snd_soc_codec *codec,
 	 * If micbias is requested, make sure that there
 	 * is vote to enable mclk
 	 */
-#if defined(CONFIG_WCD9335_CODEC_MCLK_USE_MSM_GPIO)
-#else
+#ifndef CONFIG_WCD9335_CODEC_MCLK_USE_MSM_GPIO
 	if (req == MICB_ENABLE)
 		tasha_cdc_mclk_enable(codec, true, false);
 #endif
@@ -1474,9 +1472,7 @@ static int tasha_mbhc_request_micbias(struct snd_soc_codec *codec,
 	 * Release vote for mclk while requesting for
 	 * micbias disable
 	 */
-#if defined(CONFIG_WCD9335_CODEC_MCLK_USE_MSM_GPIO)
-
-#else
+#ifndef CONFIG_WCD9335_CODEC_MCLK_USE_MSM_GPIO
 	if (req == MICB_DISABLE)
 		tasha_cdc_mclk_enable(codec, false, false);
 #endif
@@ -10928,9 +10924,8 @@ static struct snd_soc_dai_driver tasha_dai[] = {
 		.id = AIF4_MAD_TX,
 		.capture = {
 			.stream_name = "AIF4 MAD TX",
-			.rates = SNDRV_PCM_RATE_16000 | SNDRV_PCM_RATE_48000 |
-				 SNDRV_PCM_RATE_192000 | SNDRV_PCM_RATE_384000,
-			.formats = TASHA_FORMATS_S16_S24_S32_LE,
+			.rates = SNDRV_PCM_RATE_16000,
+			.formats = TASHA_FORMATS_S16_S24_LE,
 			.rate_min = 16000,
 			.rate_max = 384000,
 			.channels_min = 1,
