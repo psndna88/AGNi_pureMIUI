@@ -4114,6 +4114,12 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 		wpa_command(intf, "SET tdls_disabled 0");
 		wpa_command(intf, "SET tdls_testing 0");
 		dut->no_tpk_expiration = 0;
+		if (get_driver_type() == DRIVER_WCN) {
+			/* Enable the WCN driver in TDLS Explicit trigger mode
+			 */
+			wpa_command(intf, "SET tdls_external_control 0");
+			wpa_command(intf, "SET tdls_trigger_control 0");
+		}
 	}
 
 	switch (get_driver_type()) {
