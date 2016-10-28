@@ -1,0 +1,30 @@
+# Xiaomi configuration options
+
+config MACH_XIAOMI
+	bool "XIAOMI device"
+	depends on ARCH_MSM
+	help
+	  Support for Xiaomi products
+
+config MACH_XIAOMI_MSM8956
+	bool "XIAOMI MSM8956"
+	depends on ARCH_MSM8916
+	select MACH_XIAOMI
+	help
+	  Support for MSM8956 Xiaomi variants
+
+menu "Xiaomi board selection"
+
+	config MACH_XIAOMI_KENZO
+		bool "XIAOMI_KENZO board"
+		select MACH_XIAOMI_MSM8956
+		help
+		  Support for Xiaomi Redmi Note 3 variant
+
+	config MACH_XIAOMI_HYDROGEN
+		bool "XIAOMI_HYDROGEN board"
+		select MACH_XIAOMI_MSM8956
+		help
+		  Support for Xiaomi Mi Max variant
+
+endmenu
