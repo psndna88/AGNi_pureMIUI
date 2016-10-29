@@ -613,6 +613,7 @@ int f2fs_read_inline_dir(struct file *file, void *dirent, filldir_t filldir,
 	struct f2fs_inline_dentry *inline_dentry = NULL;
 	struct page *ipage = NULL;
 	struct f2fs_dentry_ptr d;
+	int err;
 
 	if (pos >= NR_INLINE_DENTRY)
 		return 0;
@@ -627,11 +628,12 @@ int f2fs_read_inline_dir(struct file *file, void *dirent, filldir_t filldir,
 
 	make_dentry_ptr(inode, &d, (void *)inline_dentry, 2);
 
-	if (!f2fs_fill_dentries(file, dirent, filldir, &d, 0, bit_pos, fstr))
+	err = f2fs_fill_dentries(file, dirent, filldir, &d, 0, bit_pos, fstr);
+	if (!err)
 		file->f_pos = NR_INLINE_DENTRY;
 
 	f2fs_put_page(ipage, 1);
-	return 0;
+	return err < 0 ? err : 0;
 }
 
 int f2fs_inline_data_fiemap(struct inode *inode,
