@@ -293,11 +293,10 @@ MODULE_DEVICE_TABLE(of, ov7695_dt_match);
 
 static int32_t ov7695_platform_probe(struct platform_device *pdev)
 {
-	int32_t rc = -EFAULT;
-	const struct of_device_id *match = NULL;
+	int32_t rc;
+	const struct of_device_id *match;
 	match = of_match_device(ov7695_dt_match, &pdev->dev);
-	if (match)
-		rc = msm_sensor_platform_probe(pdev, match->data);
+	rc = msm_sensor_platform_probe(pdev, match->data);
 	return rc;
 }
 
