@@ -1108,8 +1108,8 @@ kgsl_iommu_unmap(struct kgsl_pagetable *pt,
 		unmapped = iommu_unmap(iommu_pt->domain, gpuaddr, range);
 	if (unmapped != range) {
 		KGSL_CORE_ERR(
-			"iommu_unmap(%llx, %lld) failed with unmapped size: %zd\n",
-			gpuaddr, range, unmapped);
+			"iommu_unmap(%p, %llx, %lld) failed with unmapped size: %zd\n",
+			iommu_pt->domain, gpuaddr, range, unmapped);
 		return -EINVAL;
 	}
 
@@ -1237,8 +1237,8 @@ int _iommu_add_guard_page(struct kgsl_pagetable *pt,
 				protflags & ~IOMMU_WRITE);
 		if (ret) {
 			KGSL_CORE_ERR(
-			"iommu_map(addr %016llX, flags %x) err: %d\n",
-			gpuaddr, protflags & ~IOMMU_WRITE,
+			"iommu_map(%p, addr %016llX, flags %x) err: %d\n",
+			iommu_pt->domain, gpuaddr, protflags & ~IOMMU_WRITE,
 			ret);
 			return ret;
 		}
@@ -1306,8 +1306,9 @@ kgsl_iommu_map(struct kgsl_pagetable *pt,
 	}
 
 	if (mapped != size) {
-		KGSL_CORE_ERR("iommu_map_sg(%016llX, %lld, %x) err: %zd\n",
-				addr, size,	flags, mapped);
+		KGSL_CORE_ERR("iommu_map_sg(%p, %016llX, %lld, %x) err: %zd\n",
+				iommu_pt->domain, addr, size,
+				flags, mapped);
 		return -ENODEV;
 	}
 
