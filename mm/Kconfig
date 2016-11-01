@@ -510,7 +510,7 @@ config USE_USER_ACCESSIBLE_TIMERS
 	  separately.
 
 config ZBUD
-	tristate "Zbud- A special purpose allocator for storing compressed pages"
+	tristate
 	default n
 	help
 	  A special purpose allocator for storing compressed pages.
@@ -522,8 +522,8 @@ config ZBUD
 config ZSWAP
 	bool "Compressed cache for swap pages (EXPERIMENTAL)"
 	depends on FRONTSWAP && CRYPTO=y
-	select CRYPTO_LZ4
-	select ZPOOL
+	select CRYPTO_LZO
+	select ZBUD
 	default n
 	help
 	  A lightweight compressed cache for swap pages.  It takes
@@ -616,7 +616,6 @@ config ZSMALLOC_STAT
 	bool "Export zsmalloc statistics"
 	depends on ZSMALLOC
 	select DEBUG_FS
-	default n
 	help
 	  This option enables code in the zsmalloc to collect various
 	  statistics about whats happening in zsmalloc and exports that

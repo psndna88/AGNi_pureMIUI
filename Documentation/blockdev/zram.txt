@@ -19,9 +19,7 @@ Following shows a typical sequence of steps for using zram.
 1) Load Module:
 	modprobe zram num_devices=4
 	This creates 4 devices: /dev/zram{0,1,2,3}
-
-num_devices parameter is optional and tells zram how many devices should be
-pre-created. Default: 1.
+	(num_devices parameter is optional. Default: 1)
 
 2) Set max number of compression streams
 	Compression backend may use up to max_comp_streams compression streams,
@@ -99,24 +97,7 @@ size of the disk when not in use so a huge zram is wasteful.
 	mkfs.ext4 /dev/zram1
 	mount /dev/zram1 /tmp
 
-7) Add/remove zram devices
-
-zram provides a control interface, which enables dynamic (on-demand) device
-addition and removal.
-
-In order to add a new /dev/zramX device, perform read operation on hot_add
-attribute. This will return either new device's device id (meaning that you
-can use /dev/zram<id>) or error code.
-
-Example:
-	cat /sys/class/zram-control/hot_add
-	1
-
-To remove the existing /dev/zramX device (where X is a device id)
-execute
-	echo X > /sys/class/zram-control/hot_remove
-
-8) Stats:
+7) Stats:
 Per-device statistics are exported as various nodes under /sys/block/zram<id>/
 
 A brief description of exported device attritbutes. For more details please
@@ -144,9 +125,8 @@ mem_used_max      RW    the maximum amount memory zram have consumed to
                         store compressed data
 mem_limit         RW    the maximum amount of memory ZRAM can use to store
                         the compressed data
-pages_compacted   RO    the number of pages freed during compaction
-                        (available only via zram<id>/mm_stat node)
-compact           WO    trigger memory compaction
+num_migrated      RO    the number of objects migrated migrated by compaction
+
 
 WARNING
 =======
@@ -192,11 +172,11 @@ line of text and contains the following stats separated by whitespace:
 	zero_pages
 	num_migrated
 
-9) Deactivate:
+8) Deactivate:
 	swapoff /dev/zram0
 	umount /dev/zram1
 
-10) Reset:
+9) Reset:
 	Write any positive value to 'reset' sysfs node
 	echo 1 > /sys/block/zram0/reset
 	echo 1 > /sys/block/zram1/reset
