@@ -791,18 +791,32 @@ REG_TABLE_ENTRY g_registry_table[] =
                  CFG_ACTIVE_MIN_CHANNEL_TIME_MAX ),
 
    REG_VARIABLE( CFG_ACTIVE_MAX_CHANNEL_TIME_BTC_NAME, WLAN_PARAM_Integer,
-                 hdd_config_t, nActiveMaxChnTimeBtc,
+                 hdd_config_t, max_chntime_btc_esco,
                  VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
                  CFG_ACTIVE_MAX_CHANNEL_TIME_BTC_DEFAULT,
                  CFG_ACTIVE_MAX_CHANNEL_TIME_BTC_MIN,
                  CFG_ACTIVE_MAX_CHANNEL_TIME_BTC_MAX ),
 
    REG_VARIABLE( CFG_ACTIVE_MIN_CHANNEL_TIME_BTC_NAME, WLAN_PARAM_Integer,
-                 hdd_config_t, nActiveMinChnTimeBtc,
+                 hdd_config_t, min_chntime_btc_esco,
                  VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
                  CFG_ACTIVE_MIN_CHANNEL_TIME_BTC_DEFAULT,
                  CFG_ACTIVE_MIN_CHANNEL_TIME_BTC_MIN,
                  CFG_ACTIVE_MIN_CHANNEL_TIME_BTC_MAX ),
+
+   REG_VARIABLE(CFG_ACTIVE_MIN_CHANNEL_TIME_BTC_SCO_NAME, WLAN_PARAM_Integer,
+                hdd_config_t, min_chntime_btc_sco,
+                VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+                CFG_ACTIVE_MIN_CHANNEL_TIME_BTC_SCO_DEFAULT,
+                CFG_ACTIVE_MIN_CHANNEL_TIME_BTC_SCO_MIN,
+                CFG_ACTIVE_MIN_CHANNEL_TIME_BTC_SCO_MAX ),
+
+   REG_VARIABLE(CFG_ACTIVE_MAX_CHANNEL_TIME_BTC_SCO_NAME, WLAN_PARAM_Integer,
+                hdd_config_t, max_chntime_btc_sco,
+                VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+                CFG_ACTIVE_MAX_CHANNEL_TIME_BTC_SCO_DEFAULT,
+                CFG_ACTIVE_MAX_CHANNEL_TIME_BTC_SCO_MIN,
+                CFG_ACTIVE_MAX_CHANNEL_TIME_BTC_SCO_MAX ),
 
    REG_VARIABLE( CFG_RETRY_LIMIT_ZERO_NAME, WLAN_PARAM_Integer,
                  hdd_config_t, retryLimitZero,
@@ -5939,8 +5953,14 @@ VOS_STATUS hdd_set_sme_config( hdd_context_t *pHddCtx )
    smeConfig->csrConfig.nActiveMinChnTime        = pConfig->nActiveMinChnTime;
    smeConfig->csrConfig.nPassiveMaxChnTime       = pConfig->nPassiveMaxChnTime;
    smeConfig->csrConfig.nPassiveMinChnTime       = pConfig->nPassiveMinChnTime;
-   smeConfig->csrConfig.nActiveMaxChnTimeBtc     = pConfig->nActiveMaxChnTimeBtc;
-   smeConfig->csrConfig.nActiveMinChnTimeBtc     = pConfig->nActiveMinChnTimeBtc;
+   smeConfig->csrConfig.max_chntime_btc_esco =
+                        pConfig->max_chntime_btc_esco;
+   smeConfig->csrConfig.min_chntime_btc_esco =
+                        pConfig->min_chntime_btc_esco;
+   smeConfig->csrConfig.min_chntime_btc_sco =
+                        pConfig->min_chntime_btc_sco;
+   smeConfig->csrConfig.max_chntime_btc_sco =
+                        pConfig->max_chntime_btc_sco;
    smeConfig->csrConfig.disableAggWithBtc        = pConfig->disableAggWithBtc;
 #ifdef WLAN_AP_STA_CONCURRENCY
    smeConfig->csrConfig.nActiveMaxChnTimeConc    = pConfig->nActiveMaxChnTimeConc;

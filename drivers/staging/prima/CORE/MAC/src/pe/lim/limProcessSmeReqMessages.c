@@ -1532,8 +1532,10 @@ __limProcessSmeScanReq(tpAniSirGlobal pMac, tANI_U32 *pMsgBuf)
               pMlmScanReq->maxChannelTime = pScanReq->maxChannelTime;
           }
 
-          pMlmScanReq->minChannelTimeBtc = pScanReq->minChannelTimeBtc;
-          pMlmScanReq->maxChannelTimeBtc = pScanReq->maxChannelTimeBtc;
+          pMlmScanReq->min_chntime_btc_esco =
+                   pScanReq->min_chntime_btc_esco;
+          pMlmScanReq->max_chntime_btc_esco =
+                   pScanReq->max_chntime_btc_esco;
           pMlmScanReq->dot11mode = pScanReq->dot11mode;
           pMlmScanReq->p2pSearch = pScanReq->p2pSearch;
 

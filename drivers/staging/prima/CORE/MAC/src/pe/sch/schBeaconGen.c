@@ -286,9 +286,15 @@ tSirRetStatus schSetFixedBeaconFields(tpAniSirGlobal pMac,tpPESession psessionEn
         vos_mem_set(( tANI_U8* )&(psessionEntry->probeRespFrame),
                     sizeof(psessionEntry->probeRespFrame), 0);
 
-        /* Can be efficiently updated whenever new IE added  in Probe response in future */
-        limUpdateProbeRspTemplateIeBitmapBeacon1(pMac,pBcn1,&psessionEntry->DefProbeRspIeBitmap[0],
-                                                &psessionEntry->probeRespFrame);
+        /* Can be efficiently updated whenever new IE added
+         * in Probe response in future
+         */
+        if (limUpdateProbeRspTemplateIeBitmapBeacon1(pMac, pBcn1,
+                psessionEntry) != eSIR_SUCCESS)
+        {
+                    schLog(pMac, LOGE,
+                        FL("Failed to build ProbeRsp template"));
+        }
     }
 
     nStatus = dot11fPackBeacon1( pMac, pBcn1, ptr,
@@ -506,11 +512,21 @@ tSirRetStatus schSetFixedBeaconFields(tpAniSirGlobal pMac,tpPESession psessionEn
     return eSIR_SUCCESS;
 }
 
-void limUpdateProbeRspTemplateIeBitmapBeacon1(tpAniSirGlobal pMac,
+tSirRetStatus limUpdateProbeRspTemplateIeBitmapBeacon1(tpAniSirGlobal pMac,
                                               tDot11fBeacon1* beacon1,
-                                              tANI_U32* DefProbeRspIeBitmap,
-                                              tDot11fProbeResponse* prb_rsp)
+                                              tpPESession psessionEntry)
 {
+    tANI_U32* DefProbeRspIeBitmap;
+    tDot11fProbeResponse* prb_rsp;
+
+    if (!psessionEntry) {
+        schLog(pMac, LOGE, FL("PESession is null!"));
+        return eSIR_FAILURE;
+    }
+
+    DefProbeRspIeBitmap = &psessionEntry->DefProbeRspIeBitmap[0];
+    prb_rsp = &psessionEntry->probeRespFrame;
+
     prb_rsp->BeaconInterval = beacon1->BeaconInterval;
     vos_mem_copy((void *)&prb_rsp->Capabilities, (void *)&beacon1->Capabilities,
                  sizeof(beacon1->Capabilities));
@@ -519,8 +535,10 @@ void limUpdateProbeRspTemplateIeBitmapBeacon1(tpAniSirGlobal pMac,
     if(beacon1->SSID.present)
     {
         SetProbeRspIeBitmap(DefProbeRspIeBitmap,SIR_MAC_SSID_EID);
-        /* populating it, because probe response has to go with SSID even in hidden case */
-        PopulateDot11fSSID2( pMac, &prb_rsp->SSID );
+        /* populating it, because probe response has to go with
+         * SSID even in hidden case
+         */
+        PopulateDot11fSSID(pMac, &psessionEntry->ssId, &prb_rsp->SSID);
     }
     /* supported rates */
     if(beacon1->SuppRates.present)
@@ -540,6 +558,8 @@ void limUpdateProbeRspTemplateIeBitmapBeacon1(tpAniSirGlobal pMac,
     }
 
     /* IBSS params will not be present in the Beacons transmitted by AP */
+
+    return eSIR_SUCCESS;
 }
 
 void limUpdateProbeRspTemplateIeBitmapBeacon2(tpAniSirGlobal pMac,
