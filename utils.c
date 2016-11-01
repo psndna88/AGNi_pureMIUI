@@ -111,6 +111,8 @@ enum sigma_program sigma_program_to_enum(const char *prog)
 		return PROGRAM_NAN;
 	if (strcasecmp(prog, "LOC") == 0)
 		return PROGRAM_LOC;
+	if (strcasecmp(prog, "MBO") == 0)
+		return PROGRAM_MBO;
 
 	return PROGRAM_UNKNOWN;
 }

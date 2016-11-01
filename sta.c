@@ -685,7 +685,8 @@ static int add_ipv6_rule(struct sigma_dut *dut, const char *ifname)
 {
 	char cmd[200], *result, *pos;
 	FILE *fp;
-	int len, tableid, result_len = 1000;
+	int tableid;
+	size_t len, result_len = 1000;
 
 	snprintf(cmd, sizeof(cmd), "ip -6 route list table all | grep %s",
 		 ifname);
@@ -699,13 +700,14 @@ static int add_ipv6_rule(struct sigma_dut *dut, const char *ifname)
 		return -1;
 	}
 
-	len = fread(result, 1, result_len, fp);
+	len = fread(result, 1, result_len - 1, fp);
 	fclose(fp);
 
 	if (len == 0) {
 		free(result);
 		return -1;
 	}
+	result[len] = '\0';
 
 	pos = strstr(result, "table ");
 	if (pos == NULL) {
@@ -3939,7 +3941,7 @@ static int cmd_sta_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
 
 #ifdef ANDROID_NAN
 	if (strcasecmp(program, "NAN") == 0)
-		return nan_cmd_sta_exec_action(dut, conn, cmd);
+		return nan_cmd_sta_get_parameter(dut, conn, cmd);
 #endif /* ANDROID_NAN */
 
 	send_resp(dut, conn, SIGMA_ERROR, "ErrorCode,Unsupported parameter");
@@ -4192,6 +4194,11 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 
 	dut->er_oper_performed = 0;
 	dut->er_oper_bssid[0] = '\0';
+
+	if (dut->program == PROGRAM_LOC) {
+		/* Disable Interworking by default */
+		wpa_command(get_station_ifname(), "SET interworking 0");
+	}
 
 	if (dut->program != PROGRAM_VHT)
 		return cmd_sta_p2p_reset(dut, conn, cmd);
@@ -4662,6 +4669,12 @@ static void ath_sta_inject_frame(struct sigma_dut *dut, const char *intf,
 {
 	char buf[100];
 	int tid_to_dscp [] = { 0x00, 0x20, 0x40, 0x60, 0x80, 0xa0, 0xc0, 0xe0 };
+
+	if (tid < 0 ||
+	    tid >= (int) (sizeof(tid_to_dscp) / sizeof(tid_to_dscp[0]))) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "Unsupported TID: %d", tid);
+		return;
+	}
 
 	/*
 	 * Two ways to ensure that addba request with a
@@ -7261,6 +7274,7 @@ static int cmd_sta_set_systime(struct sigma_dut *dut, struct sigma_conn *conn,
 	struct tm tm;
 	time_t t;
 	const char *val;
+	int v;
 
 	wpa_command(get_station_ifname(), "PMKSA_FLUSH");
 
@@ -7278,8 +7292,15 @@ static int cmd_sta_set_systime(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (val)
 		tm.tm_mday = atoi(val);
 	val = get_param(cmd, "month");
-	if (val)
-		tm.tm_mon = atoi(val) - 1;
+	if (val) {
+		v = atoi(val);
+		if (v < 1 || v > 12) {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Invalid month");
+			return 0;
+		}
+		tm.tm_mon = v - 1;
+	}
 	val = get_param(cmd, "year");
 	if (val) {
 		int year = atoi(val);

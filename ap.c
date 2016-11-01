@@ -952,6 +952,12 @@ static void ath_inject_frame(struct sigma_dut *dut, const char *ifname, int tid)
 	char buf[256];
 	int tid_to_dscp[] = { 0x00, 0x20, 0x40, 0x60, 0x80, 0xa0, 0xc0, 0xe0 };
 
+	if (tid < 0 ||
+	    tid >= (int) (sizeof(tid_to_dscp) / sizeof(tid_to_dscp[0]))) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "Unsupported TID: %d", tid);
+		return;
+	}
+
 	snprintf(buf, sizeof(buf),
 		 "wlanconfig %s list sta | grep : | cut -b 1-17 > %s",
 		 ifname, VI_QOS_TMP_FILE);
@@ -1718,14 +1724,14 @@ static int owrt_ap_config_vap_hs2(struct sigma_dut *dut, int vap_id)
 					     "'eng:Wireless Broadband Alliance'");
 			owrt_ap_set_list_vap(dut, vap_id, "osu_service_desc",
 					     "'eng:Free service for test purpose'");
-			hs20_icon_filename = "icon_green_zxx.png";
+			hs20_icon_filename = "icon_orange_zxx.png";
 			if (dut->ap_osu_icon_tag == 2)
 				hs20_icon_filename = "wifi-abgn-logo_270x73.png";
 
 			snprintf(hs20_icon, sizeof(hs20_icon),
-				 "'128:61:zxx:image/png:icon_green_zxx.png:/etc/ath/%s'",
+				 "'128:61:zxx:image/png:icon_orange_zxx.png:/etc/ath/%s'",
 				 hs20_icon_filename);
-			osu_icon = "icon_green_zxx.png";
+			osu_icon = "icon_orange_zxx.png";
 			osu_friendly_name = "'kor:와이어리스 브로드밴드 얼라이언스'";
 			break;
 		case 3:
@@ -1736,45 +1742,45 @@ static int owrt_ap_config_vap_hs2(struct sigma_dut *dut, int vap_id)
 		case 4:
 		case 104:
 			owrt_ap_set_list_vap(dut, vap_id, "osu_friendly_name",
-					     "'eng:SP Blue Test Only'");
+					     "'eng:SP Orange Test Only'");
 			owrt_ap_set_list_vap(dut, vap_id, "osu_service_desc",
 					     "'eng:Free service for test purpose'");
-			hs20_icon_filename = "icon_blue_eng.png";
+			hs20_icon_filename = "icon_orange_eng.png";
 			if (dut->ap_osu_icon_tag == 2)
 				hs20_icon_filename = "wifi-abgn-logo_270x73.png";
 
 			snprintf(hs20_icon, sizeof(hs20_icon),
-				 "'160:76:eng:image/png:icon_blue_eng.png:/etc/ath/%s'",
+				 "'160:76:eng:image/png:icon_orange_eng.png:/etc/ath/%s'",
 				 hs20_icon_filename);
 			owrt_ap_set_list_vap(dut, vap_id, "hs20_icon",
 					     hs20_icon);
 			osu_friendly_name = "'kor:SP 파랑 테스트 전용'";
 
-			hs20_icon_filename = "icon_blue_zxx.png";
+			hs20_icon_filename = "icon_orange_zxx.png";
 			if (dut->ap_osu_icon_tag == 2)
 				hs20_icon_filename = "wifi-abgn-logo_270x73.png";
 
 			snprintf(hs20_icon, sizeof(hs20_icon),
-				 "'128:61:zxx:image/png:icon_blue_zxx.png:/etc/ath/%s'",
+				 "'128:61:zxx:image/png:icon_orange_zxx.png:/etc/ath/%s'",
 				 hs20_icon_filename);
-			osu_icon = "icon_blue_zxx.png";
+			osu_icon = "icon_orange_zxx.png";
 			break;
 		case 5:
 		case 105:
 			owrt_ap_set_list_vap(dut, vap_id, "osu_friendly_name",
-					     "'eng:SP Blue Test Only'");
+					     "'eng:SP Orange Test Only'");
 			owrt_ap_set_list_vap(dut, vap_id, "osu_service_desc",
 					     "'eng:Free service for test purpose'");
 			osu_friendly_name = "'kor:SP 파랑 테스트 전용'";
 
-			hs20_icon_filename = "icon_blue_zxx.png";
+			hs20_icon_filename = "icon_orange_zxx.png";
 			if (dut->ap_osu_icon_tag == 2)
 				hs20_icon_filename = "wifi-abgn-logo_270x73.png";
 
 			snprintf(hs20_icon, sizeof(hs20_icon),
-				 "'128:61:zxx:image/png:icon_blue_zxx.png:/etc/ath/%s'",
+				 "'128:61:zxx:image/png:icon_orange_zxx.png:/etc/ath/%s'",
 				 hs20_icon_filename);
-			osu_icon = "icon_blue_zxx.png";
+			osu_icon = "icon_orange_zxx.png";
 			break;
 		case 6:
 		case 106:
@@ -1830,32 +1836,32 @@ static int owrt_ap_config_vap_hs2(struct sigma_dut *dut, int vap_id)
 		case 7:
 		case 107:
 			owrt_ap_set_list_vap(dut, vap_id, "osu_friendly_name",
-					     "'eng:SP Orange Test Only'");
+					     "'eng:SP Green Test Only'");
 			owrt_ap_set_list_vap(dut, vap_id, "osu_service_desc",
 					     "'eng:Free service for test purpose'");
 
-			hs20_icon_filename = "icon_orange_eng.png";
+			hs20_icon_filename = "icon_green_eng.png";
 			if (dut->ap_osu_icon_tag == 2)
 				hs20_icon_filename = "wifi-abgn-logo_270x73.png";
 
 			snprintf(hs20_icon, sizeof(hs20_icon),
-				 "'160:76:eng:image/png:icon_orange_eng.png:/etc/ath/%s'",
+				 "'160:76:eng:image/png:icon_green_eng.png:/etc/ath/%s'",
 				 hs20_icon_filename);
 			owrt_ap_set_list_vap(dut, vap_id, "hs20_icon",
 					     hs20_icon);
 
 			owrt_ap_set_list_vap(dut, vap_id, "osu_icon",
-					     "'icon_orange_eng.png'");
+					     "'icon_green_eng.png'");
 			osu_friendly_name = "'kor:SP 오렌지 테스트 전용'";
 
-			hs20_icon_filename = "icon_orange_zxx.png";
+			hs20_icon_filename = "icon_green_zxx.png";
 			if (dut->ap_osu_icon_tag == 2)
 				hs20_icon_filename = "wifi-abgn-logo_270x73.png";
 
 			snprintf(hs20_icon, sizeof(hs20_icon),
-				 "'128:61:zxx:image/png:icon_orange_zxx.png:/etc/ath/%s'",
+				 "'128:61:zxx:image/png:icon_green_zxx.png:/etc/ath/%s'",
 				 hs20_icon_filename);
-			osu_icon = "icon_orange_zxx.png";
+			osu_icon = "icon_green_zxx.png";
 			break;
 		case 8:
 		case 108:
@@ -2267,51 +2273,7 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 
 		owrt_ap_set_vap(dut, vap_id, "interworking", "1");
 
-		if (dut->ap_lci == 1 && strlen(dut->ap2_ssid) > 0) {
-			unsigned char addr[6];
-			unsigned char addr2[6];
-			struct ifreq ifr;
-			char *ifname;
-			int s;
-
-			s = socket(AF_INET, SOCK_DGRAM, 0);
-			if (s < 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"Failed to open socket");
-				return -1;
-			}
-
-			memset(&ifr, 0, sizeof(ifr));
-			ifname = "ath0";
-			strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
-			if (ioctl(s, SIOCGIFHWADDR, &ifr) < 0) {
-				perror("ioctl");
-				close(s);
-				return -1;
-			}
-			memcpy(addr, ifr.ifr_hwaddr.sa_data, 6);
-
-			memset(&ifr, 0, sizeof(ifr));
-			ifname = "ath01";
-			strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
-			if (ioctl(s, SIOCGIFHWADDR, &ifr) < 0) {
-				perror("ioctl");
-				close(s);
-				return -1;
-			}
-			close(s);
-			memcpy(addr2, ifr.ifr_hwaddr.sa_data, 6);
-
-			sprintf(anqpval,
-				"'265:0010%s%s060101070d00%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x'",
-				dut->ap_val_lci, dut->ap_infoz,
-				addr[0], addr[1], addr[2],
-				addr[3], addr[4], addr[5],
-				addr2[0], addr2[1], addr2[2],
-				addr2[3], addr2[4], addr2[5]);
-
-			owrt_ap_set_list_vap(dut, vap_id, "anqp_elem", anqpval);
-		} else if (dut->ap_lci == 1) {
+		if (dut->ap_lci == 1 && strlen(dut->ap2_ssid) == 0) {
 			sprintf(anqpval, "'265:0010%s%s060101'",
 				dut->ap_val_lci, dut->ap_infoz);
 			owrt_ap_set_list_vap(dut, vap_id, "anqp_elem", anqpval);
@@ -2328,7 +2290,65 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 					     "'267:00110168656c642e6578616d706c652e636f6d0011027375706c2e6578616d706c652e636f6d'");
 	}
 
+	if (dut->program == PROGRAM_MBO) {
+		owrt_ap_set_vap(dut, vap_id, "interworking", "1");
+		owrt_ap_set_vap(dut, vap_id, "mbo", "1");
+		owrt_ap_set_vap(dut, vap_id, "rrm", "1");
+		owrt_ap_set_vap(dut, vap_id, "mbo_cellular_pref", "1");
+
+		owrt_ap_set_list_vap(dut, vap_id, "anqp_elem",
+				     "'272:34108cfdf0020df1f7000000733000030101'");
+	}
+
 	return 1;
+}
+
+
+static int owrt_ap_config_vap_anqp(struct sigma_dut *dut)
+{
+	char anqpval[1024];
+	unsigned char addr[6];
+	unsigned char addr2[6];
+	struct ifreq ifr;
+	char *ifname;
+	int s;
+	int vap_id = 0;
+
+	s = socket(AF_INET, SOCK_DGRAM, 0);
+	if (s < 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to open socket");
+		return -1;
+	}
+
+	memset(&ifr, 0, sizeof(ifr));
+	ifname = "ath0";
+	strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+	if (ioctl(s, SIOCGIFHWADDR, &ifr) < 0) {
+		perror("ioctl");
+		close(s);
+		return -1;
+	}
+	memcpy(addr, ifr.ifr_hwaddr.sa_data, 6);
+
+	memset(&ifr, 0, sizeof(ifr));
+	ifname = "ath01";
+	strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+	if (ioctl(s, SIOCGIFHWADDR, &ifr) < 0) {
+		perror("ioctl");
+		close(s);
+		return -1;
+	}
+	close(s);
+	memcpy(addr2, ifr.ifr_hwaddr.sa_data, 6);
+
+	snprintf(anqpval, sizeof(anqpval),
+		 "'265:0010%s%s060101070d00%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x'",
+		 dut->ap_val_lci, dut->ap_infoz,
+		 addr[0], addr[1], addr[2], addr[3], addr[4], addr[5],
+		 addr2[0], addr2[1], addr2[2], addr2[3], addr2[4], addr2[5]);
+
+	owrt_ap_set_list_vap(dut, vap_id, "anqp_elem", anqpval);
+	return 0;
 }
 
 
@@ -2381,6 +2401,13 @@ static int cmd_owrt_ap_config_commit(struct sigma_dut *dut,
 
 	/* Start AP */
 	run_system(dut, "wifi up");
+
+	if (dut->ap_lci == 1 && dut->ap_interworking &&
+	    strlen(dut->ap2_ssid) > 0) {
+		owrt_ap_config_vap_anqp(dut);
+		run_system(dut, "uci commit");
+		run_system(dut, "wifi");
+	}
 
 	return owrt_ap_post_config_commit(dut, conn, cmd);
 }
@@ -4207,6 +4234,16 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 		snprintf(buf, sizeof(buf), "iwlist %s scan", ifname);
 		run_system(dut, buf);
 	}
+
+	if (dut->ap_set_bssidpref) {
+		snprintf(buf, sizeof(buf),
+			 "wifitool %s setbssidpref 00:00:00:00:00:00 0 00 00",
+			 ifname);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"wifitool clear bssidpref failed");
+		}
+	}
 }
 
 
@@ -5307,34 +5344,63 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static void parse_qos_params(struct qos_params *qos, const char *cwmin,
-			     const char *cwmax, const char *aifs,
-			     const char *txop, const char *acm)
+static int parse_qos_params(struct sigma_dut *dut, struct sigma_conn *conn,
+			    struct qos_params *qos, const char *cwmin,
+			    const char *cwmax, const char *aifs,
+			    const char *txop, const char *acm)
 {
+	int val;
+
 	if (cwmin) {
 		qos->ac = 1;
-		qos->cwmin = atoi(cwmin);
+		val = atoi(cwmin);
+		if (val < 0 || val > 15) {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Invalid cwMin");
+			return 0;
+		}
+		qos->cwmin = val;
 	}
 
 	if (cwmax) {
 		qos->ac = 1;
-		qos->cwmax = atoi(cwmax);
+		val = atoi(cwmax);
+		if (val < 0 || val > 15) {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Invalid cwMax");
+			return 0;
+		}
+		qos->cwmax = val;
 	}
 
 	if (aifs) {
 		qos->ac = 1;
-		qos->aifs = atoi(aifs);
+		val = atoi(aifs);
+		if (val < 1 || val > 255) {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Invalid AIFS");
+			return 0;
+		}
+		qos->aifs = val;
 	}
 
 	if (txop) {
 		qos->ac = 1;
-		qos->txop = atoi(txop) * 32;
+		val = atoi(txop);
+		if (val < 0 || val > 0xffff) {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Invalid txop");
+			return 0;
+		}
+		qos->txop = val * 32;
 	}
 
 	if (acm) {
 		qos->ac = 1;
 		qos->acm = strcasecmp(acm, "on") == 0;
 	}
+
+	return 1;
 }
 
 
@@ -5342,18 +5408,32 @@ static int cmd_ap_set_apqos(struct sigma_dut *dut, struct sigma_conn *conn,
 			    struct sigma_cmd *cmd)
 {
 	/* TXOP: The values provided here for VHT5G only */
-	parse_qos_params(&dut->ap_qos[AP_AC_VO], get_param(cmd, "cwmin_VO"),
-			 get_param(cmd, "cwmax_VO"), get_param(cmd, "AIFS_VO"),
-			 get_param(cmd, "TXOP_VO"), get_param(cmd, "ACM_VO"));
-	parse_qos_params(&dut->ap_qos[AP_AC_VI], get_param(cmd, "cwmin_VI"),
-			 get_param(cmd, "cwmax_VI"), get_param(cmd, "AIFS_VI"),
-			 get_param(cmd, "TXOP_VI"), get_param(cmd, "ACM_VI"));
-	parse_qos_params(&dut->ap_qos[AP_AC_BE], get_param(cmd, "cwmin_BE"),
-			 get_param(cmd, "cwmax_BE"), get_param(cmd, "AIFS_BE"),
-			 get_param(cmd, "TXOP_BE"), get_param(cmd, "ACM_BE"));
-	parse_qos_params(&dut->ap_qos[AP_AC_BK], get_param(cmd, "cwmin_BK"),
-			 get_param(cmd, "cwmax_BK"), get_param(cmd, "AIFS_BK"),
-			 get_param(cmd, "TXOP_BK"), get_param(cmd, "ACM_BK"));
+	if (!parse_qos_params(dut, conn, &dut->ap_qos[AP_AC_VO],
+			      get_param(cmd, "cwmin_VO"),
+			      get_param(cmd, "cwmax_VO"),
+			      get_param(cmd, "AIFS_VO"),
+			      get_param(cmd, "TXOP_VO"),
+			      get_param(cmd, "ACM_VO")) ||
+	    !parse_qos_params(dut, conn, &dut->ap_qos[AP_AC_VI],
+			      get_param(cmd, "cwmin_VI"),
+			      get_param(cmd, "cwmax_VI"),
+			      get_param(cmd, "AIFS_VI"),
+			      get_param(cmd, "TXOP_VI"),
+			      get_param(cmd, "ACM_VI")) ||
+	    !parse_qos_params(dut, conn, &dut->ap_qos[AP_AC_BE],
+			      get_param(cmd, "cwmin_BE"),
+			      get_param(cmd, "cwmax_BE"),
+			      get_param(cmd, "AIFS_BE"),
+			      get_param(cmd, "TXOP_BE"),
+			      get_param(cmd, "ACM_BE")) ||
+	    !parse_qos_params(dut, conn, &dut->ap_qos[AP_AC_BK],
+			      get_param(cmd, "cwmin_BK"),
+			      get_param(cmd, "cwmax_BK"),
+			      get_param(cmd, "AIFS_BK"),
+			      get_param(cmd, "TXOP_BK"),
+			      get_param(cmd, "ACM_BK")))
+		return 0;
+
 	return 1;
 }
 
@@ -5361,18 +5441,32 @@ static int cmd_ap_set_apqos(struct sigma_dut *dut, struct sigma_conn *conn,
 static int cmd_ap_set_staqos(struct sigma_dut *dut, struct sigma_conn *conn,
 			     struct sigma_cmd *cmd)
 {
-	parse_qos_params(&dut->ap_sta_qos[AP_AC_VO], get_param(cmd, "cwmin_VO"),
-			 get_param(cmd, "cwmax_VO"), get_param(cmd, "AIFS_VO"),
-			 get_param(cmd, "TXOP_VO"), get_param(cmd, "ACM_VO"));
-	parse_qos_params(&dut->ap_sta_qos[AP_AC_VI], get_param(cmd, "cwmin_VI"),
-			 get_param(cmd, "cwmax_VI"), get_param(cmd, "AIFS_VI"),
-			 get_param(cmd, "TXOP_VI"), get_param(cmd, "ACM_VI"));
-	parse_qos_params(&dut->ap_sta_qos[AP_AC_BE], get_param(cmd, "cwmin_BE"),
-			 get_param(cmd, "cwmax_BE"), get_param(cmd, "AIFS_BE"),
-			 get_param(cmd, "TXOP_BE"), get_param(cmd, "ACM_BE"));
-	parse_qos_params(&dut->ap_sta_qos[AP_AC_BK], get_param(cmd, "cwmin_BK"),
-			 get_param(cmd, "cwmax_BK"), get_param(cmd, "AIFS_BK"),
-			 get_param(cmd, "TXOP_BK"), get_param(cmd, "ACM_BK"));
+	if (!parse_qos_params(dut, conn, &dut->ap_sta_qos[AP_AC_VO],
+			      get_param(cmd, "cwmin_VO"),
+			      get_param(cmd, "cwmax_VO"),
+			      get_param(cmd, "AIFS_VO"),
+			      get_param(cmd, "TXOP_VO"),
+			      get_param(cmd, "ACM_VO")) ||
+	    !parse_qos_params(dut, conn, &dut->ap_sta_qos[AP_AC_VI],
+			      get_param(cmd, "cwmin_VI"),
+			      get_param(cmd, "cwmax_VI"),
+			      get_param(cmd, "AIFS_VI"),
+			      get_param(cmd, "TXOP_VI"),
+			      get_param(cmd, "ACM_VI")) ||
+	    !parse_qos_params(dut, conn, &dut->ap_sta_qos[AP_AC_BE],
+			      get_param(cmd, "cwmin_BE"),
+			      get_param(cmd, "cwmax_BE"),
+			      get_param(cmd, "AIFS_BE"),
+			      get_param(cmd, "TXOP_BE"),
+			      get_param(cmd, "ACM_BE")) ||
+	    !parse_qos_params(dut, conn, &dut->ap_sta_qos[AP_AC_BK],
+			      get_param(cmd, "cwmin_BK"),
+			      get_param(cmd, "cwmax_BK"),
+			      get_param(cmd, "AIFS_BK"),
+			      get_param(cmd, "TXOP_BK"),
+			      get_param(cmd, "ACM_BK")))
+		return 0;
+
 	return 1;
 }
 
@@ -5641,6 +5735,14 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_interworking = 0;
 		dut->ap_gas_cb_delay = 0;
 		dut->ap_msnt_type = 0;
+	}
+
+	if (dut->program == PROGRAM_MBO) {
+		dut->ap_mbo = 1;
+		dut->ap_interworking = 1;
+		dut->ap_ne_class = 0;
+		dut->ap_ne_op_ch = 0;
+		dut->ap_set_bssidpref = 1;
 	}
 
 	if (kill_process(dut, "(hostapd)", 1, SIGTERM) == 0 ||
@@ -6185,6 +6287,71 @@ static int ath_ap_send_frame_loc(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int ath_ap_send_frame_mbo(struct sigma_dut *dut, struct sigma_conn *conn,
+				 struct sigma_cmd *cmd)
+{
+	const char *val;
+	char *ifname;
+	char buf[100];
+	int disassoc_timer = 0;
+	int apchanrpt = 0;
+	int req_ssid = 0;
+
+	ifname = get_main_ifname();
+
+	val = get_param(cmd, "FrameName");
+	if (!val)
+		return -1;
+
+	if (strcasecmp(val, "BTMReq") == 0) {
+		val = get_param(cmd, "Disassoc_Timer");
+		if (val)
+			disassoc_timer = atoi(val);
+		snprintf(buf, sizeof(buf),
+			 "wifitool %s sendbstmreq %s %s %d 3 %d %d",
+			 ifname, cmd->values[3], cmd->values[5], disassoc_timer,
+			 dut->ap_btmreq_disassoc_imnt, dut->ap_btmreq_term_bit);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"wifitool btmreq failed!");
+		}
+	} else if (strcasecmp(val, "BcnRptReq") == 0) {
+		val = get_param(cmd, "APChanRpt");
+		if (val)
+			apchanrpt = atoi(val);
+		val = get_param(cmd, "SSID");
+		req_ssid = strcasecmp(val, "") != 0;
+		if (apchanrpt != 0) {
+			snprintf(buf, sizeof(buf),
+				 "wifitool %s sendbcnrpt %s %s %s %s %s %s %d %s %s 1 1 %s",
+				 ifname, cmd->values[4], cmd->values[5],
+				 cmd->values[6], cmd->values[7], cmd->values[8],
+				 cmd->values[9], req_ssid,
+				 cmd->values[12], cmd->values[13],
+				 cmd->values[10]);
+			if (system(buf) != 0) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"wifitool btmreq failed!");
+			}
+		} else {
+			snprintf(buf, sizeof(buf),
+				 "wifitool %s sendbcnrpt %s %s %s %s %s %s %d %s %s 1 0 %s",
+				 ifname, cmd->values[4], cmd->values[5],
+				 cmd->values[6], cmd->values[7], cmd->values[8],
+				 cmd->values[9], req_ssid,
+				 cmd->values[12], cmd->values[13],
+				 cmd->values[10]);
+			if (system(buf) != 0) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"wifitool btmreq failed!");
+			}
+		}
+	}
+
+	return 1;
+}
+
+
 static int ap_send_frame_vht(struct sigma_dut *dut, struct sigma_conn *conn,
 			     struct sigma_cmd *cmd)
 {
@@ -6232,6 +6399,29 @@ static int ap_send_frame_loc(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int ap_send_frame_mbo(struct sigma_dut *dut, struct sigma_conn *conn,
+			     struct sigma_cmd *cmd)
+{
+	switch (get_driver_type()) {
+	case DRIVER_ATHEROS:
+		return ath_ap_send_frame_mbo(dut, conn, cmd);
+	case DRIVER_OPENWRT:
+		switch (get_openwrt_driver_type()) {
+		case OPENWRT_DRIVER_ATHEROS:
+			return ath_ap_send_frame_mbo(dut, conn, cmd);
+		default:
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported ap_send_frame with the current openwrt driver");
+			return 0;
+		}
+	default:
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Unsupported ap_send_frame with the current driver");
+		return 0;
+	}
+}
+
+
 int cmd_ap_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 		      struct sigma_cmd *cmd)
 {
@@ -6251,6 +6441,8 @@ int cmd_ap_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 			return ap_send_frame_vht(dut, conn, cmd);
 		if (strcasecmp(val, "LOC") == 0)
 			return ap_send_frame_loc(dut, conn, cmd);
+		if (strcasecmp(val, "MBO") == 0)
+			return ap_send_frame_mbo(dut, conn, cmd);
 	}
 
 	val = get_param(cmd, "PMFFrameType");
@@ -7246,6 +7438,66 @@ void novap_reset(struct sigma_dut *dut, const char *ifname)
 }
 
 
+static void ath_set_assoc_disallow(struct sigma_dut *dut, const char *ifname,
+				   const char *val)
+{
+	char buf[80];
+
+	if (strcasecmp(val, "enable") == 0) {
+		snprintf(buf, sizeof(buf), "iwpriv %s mbo_asoc_dis 1", ifname);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"iwpriv mbo_asoc_dis enable failed");
+		}
+	} else if (strcasecmp(val, "disable") == 0) {
+		snprintf(buf, sizeof(buf), "iwpriv %s mbo_asoc_dis 0", ifname);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"iwpriv mbo_asoc_dis disable failed");
+		}
+	} else {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Unsupported assoc_disallow");
+	}
+}
+
+
+static int ath_set_nebor_bssid(struct sigma_dut *dut, const char *ifname,
+			       const char *val)
+{
+	char buf[80];
+	unsigned char mac_addr[6];
+
+	if (parse_mac_address(dut, val, mac_addr) < 0)
+		return -1;
+
+	if (dut->ap_set_bssidpref) {
+		snprintf(buf, sizeof(buf),
+			 "wifitool %s setbssidpref 00:00:00:00:00:00 0 00 00",
+			 ifname);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"wifitool clear bssidpref failed");
+		}
+	}
+
+	if (dut->ap_ne_class && dut->ap_ne_op_ch) {
+		snprintf(buf, sizeof(buf),
+			 "wifitool %s setbssidpref %02x:%02x:%02x:%02x:%02x:%02x 1 %d %d",
+			 ifname, mac_addr[0], mac_addr[1], mac_addr[2],
+			 mac_addr[3], mac_addr[4], mac_addr[5],
+			 dut->ap_ne_class, dut->ap_ne_op_ch);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"wifitool setbssidpref failed");
+		}
+		dut->ap_set_bssidpref = 1;
+	}
+
+	return 0;
+}
+
+
 static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 			       struct sigma_cmd *cmd)
 {
@@ -7290,6 +7542,30 @@ static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 	val = get_param(cmd, "txBandwidth");
 	if (val && ath_set_width(dut, conn, ifname, val) < 0)
 		return -1;
+
+	val = get_param(cmd, "Assoc_Disallow");
+	if (val)
+		ath_set_assoc_disallow(dut, ifname, val);
+
+	val = get_param(cmd, "Nebor_Op_Class");
+	if (val)
+		dut->ap_ne_class = atoi(val);
+
+	val = get_param(cmd, "Nebor_Op_Ch");
+	if (val)
+		dut->ap_ne_op_ch = atoi(val);
+
+	val = get_param(cmd, "Nebor_BSSID");
+	if (val && ath_set_nebor_bssid(dut, ifname, val) < 0)
+		return -1;
+
+	val = get_param(cmd, "BTMReq_DisAssoc_Imnt");
+	if (val)
+		dut->ap_btmreq_disassoc_imnt = atoi(val);
+
+	val = get_param(cmd, "BTMReq_Term_Bit");
+	if (val)
+		dut->ap_btmreq_term_bit = atoi(val);
 
 	return 1;
 }
