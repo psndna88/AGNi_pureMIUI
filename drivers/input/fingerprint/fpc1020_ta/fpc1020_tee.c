@@ -96,26 +96,20 @@ static int fpc1020_fb_notifier_cb(struct notifier_block *self,
 		if (event == FB_EVENT_BLANK) {
 			transition = evdata->data;
 			if (*transition == FB_BLANK_POWERDOWN) {
-				if ((0 == fpc1020->wakeup_enabled)) {
-					if (true == fpc1020->irq_enabled) {
-						/*
-						dev_info(fpc1020->dev, "%s POWERDOWN disable irq!\n", __func__);
-						*/
-						disable_irq(gpio_to_irq(fpc1020->irq_gpio));
-						fpc1020->irq_enabled = false;
+				if ((true == fpc1020->irq_enabled)) {
+					if (0 == fpc1020->wakeup_enabled) {
+						dev_info(fpc1020->dev, "%s POWERDOWN wakeup enabled!\n", __func__);
+						fpc1020->wakeup_enabled = 1;
 					}
 				}
 			}
 		} else if (event == FB_EARLY_EVENT_BLANK) {
 			transition = evdata->data;
 			if (*transition == FB_BLANK_UNBLANK) {
-				if (0 == fpc1020->wakeup_enabled) {
-					if (false == fpc1020->irq_enabled) {
-						/*
-						dev_info(fpc1020->dev, "%s UNBLANK enable irq!\n", __func__);
-						*/
-						enable_irq(gpio_to_irq(fpc1020->irq_gpio));
-						fpc1020->irq_enabled = true;
+				if (true == fpc1020->irq_enabled) {
+					if (1 == fpc1020->wakeup_enabled) {
+						dev_info(fpc1020->dev, "%s UNBLANK wakeup disabled!\n", __func__);
+						fpc1020->wakeup_enabled = 0;
 					}
 				}
 			}
@@ -294,7 +288,7 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *handle)
 }
 
 /* -------------------------------------------------------------------- */
-static int fpc1020_get_fp_id_tee(struct fpc1020_data *fpc1020)
+static int __maybe_unused fpc1020_get_fp_id_tee(struct fpc1020_data *fpc1020)
 {
 	struct device *dev = fpc1020->dev;
 	struct device_node *np = dev->of_node;
@@ -384,7 +378,6 @@ static int fpc1020_tee_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	int rc = 0;
 	int irqf;
-	int fp_id = FP_ID_UNKNOWN;
 	struct device_node *np = dev->of_node;
 
 	struct fpc1020_data *fpc1020 = devm_kzalloc(dev, sizeof(*fpc1020),
@@ -407,7 +400,7 @@ static int fpc1020_tee_probe(struct platform_device *pdev)
 		goto exit;
 	}
 
-	fpc1020->wakeup_enabled = 0;
+	fpc1020->wakeup_enabled = 1;
 
 	rc = fpc1020_request_named_gpio(fpc1020, "fpc,irq-gpio",
 			&fpc1020->irq_gpio);
@@ -475,11 +468,6 @@ static int fpc1020_tee_probe(struct platform_device *pdev)
 
 	gpio_set_value(fpc1020->rst_gpio, 1);
 	udelay(FPC1020_RESET_HIGH2_US);
-
-	fp_id = fpc1020_get_fp_id_tee(fpc1020);
-	dev_info(fpc1020->dev,
-		"fpc vendor fp_id is %d (0:low 1:high 2:float 3:unknown)\n", fp_id);
-
 #ifdef CONFIG_FB
 	fpc1020->fb_notifier.notifier_call = fpc1020_fb_notifier_cb;
 	rc = fb_register_client(&fpc1020->fb_notifier);

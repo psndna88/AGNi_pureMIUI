@@ -96,5 +96,7 @@ signing_key.x509
 x509.genkey
 
 # Built kernel directories
+BUILT_kenzo-miuiMM/
+BUILT_kenzo-cmMM/
 BUILT_kenzo-cmN/
 BUILT_kenzo-cmNwm/
