@@ -2519,12 +2519,18 @@ static void ath_sta_set_11nrates(struct sigma_dut *dut, const char *intf,
 				 const char *val)
 {
 	char buf[100];
-	int rate_code;
+	int rate_code, v;
 
 	/* Disable Tx Beam forming when using a fixed rate */
 	ath_disable_txbf(dut, intf);
 
-	rate_code = 0x80 + atoi(val);
+	v = atoi(val);
+	if (v < 0 || v > 32) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Invalid Fixed MCS rate: %d", v);
+		return;
+	}
+	rate_code = 0x80 + v;
 
 	snprintf(buf, sizeof(buf), "iwpriv %s set11NRates 0x%x",
 		 intf, rate_code);
@@ -4108,6 +4114,12 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 		wpa_command(intf, "SET tdls_disabled 0");
 		wpa_command(intf, "SET tdls_testing 0");
 		dut->no_tpk_expiration = 0;
+		if (get_driver_type() == DRIVER_WCN) {
+			/* Enable the WCN driver in TDLS Explicit trigger mode
+			 */
+			wpa_command(intf, "SET tdls_external_control 0");
+			wpa_command(intf, "SET tdls_trigger_control 0");
+		}
 	}
 
 	switch (get_driver_type()) {
