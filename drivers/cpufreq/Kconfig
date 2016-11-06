@@ -144,6 +144,13 @@ config CPU_FREQ_DEFAULT_GOV_ZZMOOVE
 	  frequency lookup tables and optimized scaling triggers instead of
 	  % frequency steps to get smooth up/downscaling dependant on CPU load.
 
+config CPU_FREQ_DEFAULT_GOV_IRONACTIVE
+	bool "ironactive"
+	select CPU_FREQ_GOV_IRONACTIVE
+	help
+	  Use the CPUFreq governor 'ironactive' as default. This cpugovernor
+	  is based on the 'interactive' governor with many changes made by CAF.
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -264,6 +271,23 @@ config CPU_FREQ_GOV_ZZMOOVE
 	  'zzmoove' - based on cpufreq_conservative, using predefined
 	  frequency lookup tables and optimized scaling triggers instead of
 	  % frequency steps to get smooth up/downscaling dependant on CPU load.
+	  If in doubt, say N.
+
+config CPU_FREQ_GOV_IRONACTIVE
+	tristate "'ironactive' cpufreq policy governor"
+	help
+	  'ironactive' - This driver adds a dynamic cpufreq policy governor
+	  designed for latency-sensitive workloads.
+
+	  This governor attempts to reduce the latency of clock
+	  increases so that the system is more responsive to
+	  ironactive workloads. Based on 'interactive' governor
+	  with many changes compared to our stock 'interactive'
+	  governor we have from samsung. Mainly CAF changes.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called cpufreq_ironactive.
+
 	  If in doubt, say N.
 
 config CPU_BOOST
