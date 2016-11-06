@@ -113,6 +113,10 @@ config IOSCHED_TRIPNDROID
  	---help---
  	  The Trip N Droid scheduler
 
+config IOSCHED_MAPLE
+	tristate "Maple I/O scheduler"
+	default y 	  
+
 config IOSCHED_SIOPLUS
 	tristate "Simple I/O scheduler plus"
 	default y
@@ -159,6 +163,9 @@ choice
 	config DEFAULT_TRIPNDROID
  		bool "TRIPNDROID" if IOSCHED_TRIPNDROID=y
 
+	config DEFAULT_MAPLE
+		bool "Maple" if IOSCHED_MAPLE=y
+
 	config DEFAULT_SIOPLUS
 		bool "SIOPLUS" if IOSCHED_SIOPLUS=y
 
@@ -188,6 +195,7 @@ config DEFAULT_IOSCHED
 	default "zen" if DEFAULT_ZEN
 	default "sioplus" if DEFAULT_SIOPLUS
 	default "tripndroid" if DEFAULT_TRIPNDROID
+	default "maple" if DEFAULT_MAPLE
 
 endmenu
 
