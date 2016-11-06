@@ -1156,8 +1156,6 @@ void msm_isp_axi_stream_update(struct vfe_device *vfe_dev,
 	unsigned long flags;
 	struct msm_vfe_axi_shared_data *axi_data = &vfe_dev->axi_data;
 
-	spin_lock_irqsave(&vfe_dev->common_data->common_dev_axi_lock,
-		flags);
 	for (i = 0; i < VFE_AXI_SRC_MAX; i++) {
 		if (SRC_TO_INTF(axi_data->stream_info[i].stream_src) !=
 			frame_src) {
@@ -1183,8 +1181,7 @@ void msm_isp_axi_stream_update(struct vfe_device *vfe_dev,
 				ACTIVE : INACTIVE;
 		}
 	}
-	spin_unlock_irqrestore(&vfe_dev->common_data->common_dev_axi_lock,
-		flags);
+
 	spin_lock_irqsave(&vfe_dev->shared_data_lock, flags);
 	if (vfe_dev->axi_data.stream_update[frame_src]) {
 		vfe_dev->axi_data.stream_update[frame_src]--;
@@ -1233,8 +1230,6 @@ void msm_isp_axi_cfg_update(struct vfe_device *vfe_dev,
 	struct msm_vfe_axi_stream *stream_info;
 	int num_stream = 0;
 
-	spin_lock_irqsave(&vfe_dev->common_data->
-		common_dev_axi_lock, flags);
 	for (i = 0; i < VFE_AXI_SRC_MAX; i++) {
 		if (SRC_TO_INTF(axi_data->stream_info[i].stream_src) !=
 			frame_src) {
@@ -1266,8 +1261,7 @@ void msm_isp_axi_cfg_update(struct vfe_device *vfe_dev,
 		}
 		spin_unlock_irqrestore(&stream_info->lock, flags);
 	}
-	spin_unlock_irqrestore(&vfe_dev->common_data->
-		common_dev_axi_lock, flags);
+
 	if (num_stream)
 		update_state = atomic_dec_return(
 			&axi_data->axi_cfg_update[frame_src]);
@@ -1690,10 +1684,8 @@ static void msm_isp_process_done_buf(struct vfe_device *vfe_dev,
 				/* Update the framedrop count and flag only for
 					controllable_output */
 				num_bufq = buf->bufq_handle & 0xFF;
-				if (num_bufq < BUF_MGR_NUM_BUF_Q) {
-					vfe_dev->error_info.
-						stream_framedrop_count[num_bufq]++;
-				}
+				vfe_dev->error_info.
+					stream_framedrop_count[num_bufq]++;
 				vfe_dev->error_info.framedrop_flag = 1;
 				return;
 			}
