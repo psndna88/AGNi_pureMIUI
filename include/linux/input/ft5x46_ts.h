@@ -98,6 +98,7 @@ struct ft5x46_ts_platform_data {
 };
 
 struct ft5x46_data *ft5x46_probe(struct device *dev, const struct ft5x46_bus_ops *bops);
+void ft5x46_keypad_switch(struct ft5x46_data *ft5x46, bool plugin);
 void ft5x46_remove(struct ft5x46_data *ft5x46);
 int ft5x46_pm_suspend(struct device *dev);
 int ft5x46_pm_resume(struct device *dev);

@@ -267,6 +267,7 @@ struct ft5x46_data {
 	u8 config_info[FT5X46_CONFIG_INFO_SIZE];
 	bool wakeup_mode;
 	bool cover_mode;
+	bool keypad_mode_enable;
 
 	struct pinctrl *ts_pinctrl;
 	struct pinctrl_state *gpio_state_active;
@@ -1053,6 +1054,39 @@ static void ft5x46_report_value(struct ft5x46_data *ft5x46)
 
 	input_sync(ft5x46->input);
 }
+
+void ft5x46_keypad_switch(struct ft5x46_data *ft5x46, bool plugin)
+{
+
+	if (ft5x46 == NULL) {
+		printk("[ft5x46][Touch] %s : ft5x46 is null, skip \n", __func__);
+		return;
+	}
+
+	mutex_lock(&ft5x46->mutex);
+
+	if (plugin) {
+		// Enable keypad
+		set_bit(KEY_BACK, ft5x46->input->keybit);
+		set_bit(KEY_HOME, ft5x46->input->keybit);
+		set_bit(KEY_MENU, ft5x46->input->keybit);
+
+		ft5x46->keypad_mode_enable = true;
+	} else {
+		// Disable keypad
+		clear_bit(KEY_BACK, ft5x46->input->keybit);
+		clear_bit(KEY_HOME, ft5x46->input->keybit);
+		clear_bit(KEY_MENU, ft5x46->input->keybit);
+
+		ft5x46->keypad_mode_enable = false;
+		}
+
+	input_sync(ft5x46->input);
+
+	mutex_unlock(&ft5x46->mutex);
+
+}
+
 
 static int ft5x46_read_gesture(struct ft5x46_data *ft5x46)
 {
@@ -1857,6 +1891,29 @@ static ssize_t ft5x46_panel_color_show(struct device *dev,
 	return count;
 }
 
+static ssize_t ft5x46_switch_keypad_mode_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct ft5x46_data *ft5x46 = dev_get_drvdata(dev);
+	int tmp = 0;
+	tmp = buf[0] - 48;
+
+	if (tmp == 0) {
+		ft5x46_keypad_switch(ft5x46, 0);
+		printk("[ft5x46][Touch] keypad_mode_disable ! \n");
+	} else if (tmp == 1) {
+		ft5x46_keypad_switch(ft5x46, 1);
+		printk("[ft5x46][Touch] keypad_mode_enable ! \n");
+	}
+
+	return count;
+}
+
+static ssize_t ft5x46_switch_keypad_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct ft5x46_data *ft5x46 = dev_get_drvdata(dev);
+	return sprintf(buf, "%d\n", ft5x46->keypad_mode_enable);
+}
+
 /* sysfs */
 #ifdef FT5X46_DEBUG_PERMISSION
 static DEVICE_ATTR(tpfwver, 0666, ft5x46_tpfwver_show, NULL);
@@ -1869,6 +1926,7 @@ static DEVICE_ATTR(lockdown_info, 0666, ft5x46_lockdown_info_show, ft5x46_lockdo
 static DEVICE_ATTR(config_info, 0666, ft5x46_config_info_show, NULL);
 static DEVICE_ATTR(wakeup_mode, 0666, ft5x46_wakeup_mode_show, ft5x46_wakeup_mode_store);
 static DEVICE_ATTR(panel_color, 0666, ft5x46_panel_color_show, NULL);
+static DEVICE_ATTR(keypad_mode, 0666, ft5x46_switch_keypad_mode_show, ft5x46_switch_keypad_mode_store);
 #else
 static DEVICE_ATTR(tpfwver, 0644, ft5x46_tpfwver_show, NULL);
 static DEVICE_ATTR(object, 0644, ft5x46_object_show, ft5x46_object_store);
@@ -1880,6 +1938,7 @@ static DEVICE_ATTR(lockdown_info, 0644, ft5x46_lockdown_info_show, ft5x46_lockdo
 static DEVICE_ATTR(config_info, 0644, ft5x46_config_info_show, NULL);
 static DEVICE_ATTR(wakeup_mode, 0644, ft5x46_wakeup_mode_show, ft5x46_wakeup_mode_store);
 static DEVICE_ATTR(panel_color, 0444, ft5x46_panel_color_show, NULL);
+static DEVICE_ATTR(keypad_mode, 0644, ft5x46_switch_keypad_mode_show, ft5x46_switch_keypad_mode_store);
 #endif
 
 static struct attribute *ft5x46_attrs[] = {
@@ -1893,6 +1952,7 @@ static struct attribute *ft5x46_attrs[] = {
 	&dev_attr_config_info.attr,
 	&dev_attr_wakeup_mode.attr,
 	&dev_attr_panel_color.attr,
+	&dev_attr_keypad_mode.attr,
 	NULL
 };
 
@@ -2729,6 +2789,7 @@ struct ft5x46_data *ft5x46_probe(struct device *dev,
 	set_bit(EV_ABS, ft5x46->input->evbit);
 	set_bit(BTN_TOUCH, ft5x46->input->keybit);
 
+	ft5x46->keypad_mode_enable = true;
 	set_bit(KEY_HOME, ft5x46->input->keybit);
 	set_bit(KEY_MENU, ft5x46->input->keybit);
 	set_bit(KEY_BACK, ft5x46->input->keybit);
