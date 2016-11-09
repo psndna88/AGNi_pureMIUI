@@ -726,8 +726,8 @@ static struct dsi_cmd_desc set_col_page_addr_cmd[] = {
 
 /* pack into one frame before sent */
 static struct dsi_cmd_desc set_dual_col_page_addr_cmd[] = {	/*packed*/
-	{{DTYPE_DCS_LWRITE, 0, 0, 0, 1, sizeof(caset_dual)}, caset_dual},
-	{{DTYPE_DCS_LWRITE, 1, 0, 0, 1, sizeof(paset_dual)}, paset_dual},
+	{{DTYPE_DCS_LWRITE, 0, 0, 0, 0, sizeof(caset_dual)}, caset_dual},
+	{{DTYPE_DCS_LWRITE, 1, 0, 0, 0, sizeof(paset_dual)}, paset_dual},
 };
 
 
