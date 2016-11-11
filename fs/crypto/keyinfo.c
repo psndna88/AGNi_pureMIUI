@@ -75,10 +75,8 @@ static int derive_key_aes(u8 deriving_key[FS_AES_128_ECB_KEY_SIZE],
 		res = ecr.res;
 	}
 out:
-	if (req)
-		ablkcipher_request_free(req);
-	if (tfm)
-		crypto_free_ablkcipher(tfm);
+	ablkcipher_request_free(req);
+	crypto_free_ablkcipher(tfm);
 	return res;
 }
 
@@ -143,13 +141,44 @@ out:
 	return res;
 }
 
+static int determine_cipher_type(struct fscrypt_info *ci, struct inode *inode,
+				 const char **cipher_str_ret, int *keysize_ret)
+{
+	if (S_ISREG(inode->i_mode)) {
+		if (ci->ci_data_mode == FS_ENCRYPTION_MODE_AES_256_XTS) {
+			*cipher_str_ret = "xts(aes)";
+			*keysize_ret = FS_AES_256_XTS_KEY_SIZE;
+			return 0;
+		}
+		pr_warn_once("fscrypto: unsupported contents encryption mode "
+			     "%d for inode %lu\n",
+			     ci->ci_data_mode, inode->i_ino);
+		return -ENOKEY;
+	}
+
+	if (S_ISDIR(inode->i_mode) || S_ISLNK(inode->i_mode)) {
+		if (ci->ci_filename_mode == FS_ENCRYPTION_MODE_AES_256_CTS) {
+			*cipher_str_ret = "cts(cbc(aes))";
+			*keysize_ret = FS_AES_256_CTS_KEY_SIZE;
+			return 0;
+		}
+		pr_warn_once("fscrypto: unsupported filenames encryption mode "
+			     "%d for inode %lu\n",
+			     ci->ci_filename_mode, inode->i_ino);
+		return -ENOKEY;
+	}
+
+	pr_warn_once("fscrypto: unsupported file type %d for inode %lu\n",
+		     (inode->i_mode & S_IFMT), inode->i_ino);
+	return -ENOKEY;
+}
+
 static void put_crypt_info(struct fscrypt_info *ci)
 {
 	if (!ci)
 		return;
 
-	if (ci->ci_keyring_key)
-		key_put(ci->ci_keyring_key);
+	key_put(ci->ci_keyring_key);
 	crypto_free_ablkcipher(ci->ci_ctfm);
 	kmem_cache_free(fscrypt_info_cachep, ci);
 }
@@ -160,8 +189,8 @@ int get_crypt_info(struct inode *inode)
 	struct fscrypt_context ctx;
 	struct crypto_ablkcipher *ctfm;
 	const char *cipher_str;
+	int keysize;
 	u8 raw_key[FS_MAX_KEY_SIZE];
-	u8 mode;
 	int res;
 
 	res = fscrypt_initialize();
@@ -184,13 +213,19 @@ retry:
 	if (res < 0) {
 		if (!fscrypt_dummy_context_enabled(inode))
 			return res;
+		ctx.format = FS_ENCRYPTION_CONTEXT_FORMAT_V1;
 		ctx.contents_encryption_mode = FS_ENCRYPTION_MODE_AES_256_XTS;
 		ctx.filenames_encryption_mode = FS_ENCRYPTION_MODE_AES_256_CTS;
 		ctx.flags = 0;
 	} else if (res != sizeof(ctx)) {
 		return -EINVAL;
 	}
-	res = 0;
+
+	if (ctx.format != FS_ENCRYPTION_CONTEXT_FORMAT_V1)
+		return -EINVAL;
+
+	if (ctx.flags & ~FS_POLICY_FLAGS_VALID)
+		return -EINVAL;
 
 	crypt_info = kmem_cache_alloc(fscrypt_info_cachep, GFP_NOFS);
 	if (!crypt_info)
@@ -203,27 +238,11 @@ retry:
 	crypt_info->ci_keyring_key = NULL;
 	memcpy(crypt_info->ci_master_key, ctx.master_key_descriptor,
 				sizeof(crypt_info->ci_master_key));
-	if (S_ISREG(inode->i_mode))
-		mode = crypt_info->ci_data_mode;
-	else if (S_ISDIR(inode->i_mode) || S_ISLNK(inode->i_mode))
-		mode = crypt_info->ci_filename_mode;
-	else
-		BUG();
 
-	switch (mode) {
-	case FS_ENCRYPTION_MODE_AES_256_XTS:
-		cipher_str = "xts(aes)";
-		break;
-	case FS_ENCRYPTION_MODE_AES_256_CTS:
-		cipher_str = "cts(cbc(aes))";
-		break;
-	default:
-		printk_once(KERN_WARNING
-			    "%s: unsupported key mode %d (ino %u)\n",
-			    __func__, mode, (unsigned) inode->i_ino);
-		res = -ENOKEY;
+	res = determine_cipher_type(crypt_info, inode, &cipher_str, &keysize);
+	if (res)
 		goto out;
-	}
+
 	if (fscrypt_dummy_context_enabled(inode)) {
 		memset(raw_key, 0x42, FS_AES_256_XTS_KEY_SIZE);
 		goto got_key;
@@ -259,7 +278,7 @@ got_key:
 	crypto_ablkcipher_clear_flags(ctfm, ~0);
 	crypto_tfm_set_flags(crypto_ablkcipher_tfm(ctfm),
 					CRYPTO_TFM_REQ_WEAK_KEY);
-	res = crypto_ablkcipher_setkey(ctfm, raw_key, fscrypt_key_size(mode));
+	res = crypto_ablkcipher_setkey(ctfm, raw_key, keysize);
 	if (res)
 		goto out;
 
