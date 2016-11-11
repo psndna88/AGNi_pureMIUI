@@ -92,6 +92,7 @@
 #define QSEECOM_ICE_FDE_KEY_INDEX 0
 
 #define PHY_ADDR_4G	(1ULL<<32)
+#define PRELOADED_APP_ARCH  100
 
 enum qseecom_clk_definitions {
 	CLK_DFAB = 0,
@@ -2863,7 +2864,8 @@ static int __qseecom_update_cmd_buf(void *msg, bool cleanup,
 			if (__boundary_checks_offset(req, lstnr_resp, data, i))
 				goto err;
 			if ((data->type == QSEECOM_CLIENT_APP &&
-				(data->client.app_arch == ELFCLASS32 ||
+				(data->client.app_arch == PRELOADED_APP_ARCH ||
+                                 data->client.app_arch == ELFCLASS32 ||
 				data->client.app_arch == ELFCLASS64)) ||
 				(data->type == QSEECOM_LISTENER_SERVICE)) {
 				/*
@@ -2917,7 +2919,8 @@ static int __qseecom_update_cmd_buf(void *msg, bool cleanup,
 				}
 			}
 			if ((data->type == QSEECOM_CLIENT_APP &&
-				(data->client.app_arch == ELFCLASS32 ||
+				(data->client.app_arch == PRELOADED_APP_ARCH ||
+                                data->client.app_arch == ELFCLASS32 ||
 				data->client.app_arch == ELFCLASS64)) ||
 				(data->type == QSEECOM_LISTENER_SERVICE)) {
 				update = (struct qseecom_sg_entry *)field;
@@ -4761,8 +4764,10 @@ static int qseecom_query_app_loaded(struct qseecom_dev_handle *data,
 			data->client.app_arch = app_arch;
 			query_req.app_arch = app_arch;
 		} else {
-			data->client.app_arch = 0;
-			query_req.app_arch = 0;
+			pr_warn("Found preloaded app %d [%s] - don't know app_arch\n",
+					ret, (char *)query_req.app_name);
+			data->client.app_arch = PRELOADED_APP_ARCH;
+			query_req.app_arch = PRELOADED_APP_ARCH;
 		}
 		strlcpy(data->client.app_name, query_req.app_name,
 				MAX_APP_NAME_SIZE);
