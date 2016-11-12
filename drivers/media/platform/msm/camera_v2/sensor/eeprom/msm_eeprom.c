@@ -23,10 +23,6 @@
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
 
 DEFINE_MSM_MUTEX(msm_eeprom_mutex);
-#ifdef CONFIG_COMPAT
-static struct v4l2_file_operations msm_eeprom_v4l2_subdev_fops;
-#endif
-
 uint8_t g_s5k3p3_otp_module_id = 0;
 uint8_t g_s5k3p3_otp_vcm_id = 0;
 uint8_t g_ov16880_otp_module_id = 0;
@@ -34,6 +30,12 @@ uint8_t g_ov5670_otp_module_id = 0;
 uint8_t g_s5k5e8_otp_month = 0;
 uint8_t g_s5k5e8_otp_day = 0;
 uint8_t g_s5k5e8_otp_lens_id = 0;
+
+#ifdef CONFIG_COMPAT
+static struct v4l2_file_operations msm_eeprom_v4l2_subdev_fops;
+static long msm_eeprom_subdev_fops_ioctl32(struct file *file,
+	unsigned int cmd,unsigned long arg);
+#endif
 
 /**
   * msm_get_read_mem_size - Get the total size for allocation
@@ -853,6 +855,14 @@ static int msm_eeprom_i2c_probe(struct i2c_client *client,
 	e_ctrl->msm_sd.sd.entity.type = MEDIA_ENT_T_V4L2_SUBDEV;
 	e_ctrl->msm_sd.sd.entity.group_id = MSM_CAMERA_SUBDEV_EEPROM;
 	msm_sd_register(&e_ctrl->msm_sd);
+
+#ifdef CONFIG_COMPAT
+	msm_eeprom_v4l2_subdev_fops = v4l2_subdev_fops;
+	msm_eeprom_v4l2_subdev_fops.compat_ioctl32 =
+		msm_eeprom_subdev_fops_ioctl32;
+	e_ctrl->msm_sd.sd.devnode->fops = &msm_eeprom_v4l2_subdev_fops;
+#endif
+
 	CDBG("%s success result=%d X\n", __func__, rc);
 	return rc;
 

@@ -387,8 +387,9 @@ static void msm_vfe47_process_error_status(struct vfe_device *vfe_dev)
 	uint32_t error_status1 = vfe_dev->error_info.error_mask1;
 
 	if (error_status1 & (1 << 0)) {
-		pr_err("%s: camif error status = 0x%x\n",
+		pr_err("%s: camif error status: 0x%x\n",
 			__func__, vfe_dev->error_info.camif_status);
+		/* dump camif registers on camif error */
 		msm_camera_io_dump_2(vfe_dev->vfe_base + 0x478, 0x30);
 	}
 	if (error_status1 & (1 << 1))
@@ -443,6 +444,18 @@ static void msm_vfe47_process_error_status(struct vfe_device *vfe_dev)
 		pr_err("%s: status dsp error\n", __func__);
 }
 
+static void msm_vfe47_enable_camif_error(struct vfe_device *vfe_dev,
+			int enable)
+{
+	uint32_t val;
+
+	val = msm_camera_io_r(vfe_dev->vfe_base + 0x60);
+	if (enable)
+		msm_camera_io_w_mb(val | BIT(0), vfe_dev->vfe_base + 0x60);
+	else
+		msm_camera_io_w_mb(val & ~(BIT(0)), vfe_dev->vfe_base + 0x60);
+}
+
 static void msm_vfe47_read_irq_status(struct vfe_device *vfe_dev,
 	uint32_t *irq_status0, uint32_t *irq_status1)
 {
@@ -459,9 +472,14 @@ static void msm_vfe47_read_irq_status(struct vfe_device *vfe_dev,
 	*irq_status0 &= irq_mask0;
 	*irq_status1 &= irq_mask1;
 
-	if (*irq_status1 & (1 << 0))
+	if (!(irq_mask1 & 0x1))
+		pr_err("camif error is masked\n");
+	if (*irq_status1 & (1 << 0)) {
 		vfe_dev->error_info.camif_status =
 		msm_camera_io_r(vfe_dev->vfe_base + 0x4A4);
+		/* mask off camif error after first occurrance */
+		msm_vfe47_enable_camif_error(vfe_dev, 0);
+	}
 
 	if (*irq_status1 & (1 << 7))
 		vfe_dev->error_info.violation_status =
@@ -2056,6 +2074,7 @@ struct msm_vfe_hardware_info vfe47_hw_info = {
 			.process_axi_irq = msm_isp_process_axi_irq,
 			.process_stats_irq = msm_isp_process_stats_irq,
 			.process_epoch_irq = msm_vfe47_process_epoch_irq,
+			.enable_camif_err = msm_vfe47_enable_camif_error,
 		},
 		.axi_ops = {
 			.reload_wm = msm_vfe47_axi_reload_wm,
