@@ -1342,15 +1342,15 @@ static int expand_inode_data(struct inode *inode, loff_t offset,
 	pgoff_t pg_end;
 	loff_t new_size = i_size_read(inode);
 	loff_t off_end;
-	int ret;
+	int err;
 
-	ret = inode_newsize_ok(inode, (len + offset));
-	if (ret)
-		return ret;
+	err = inode_newsize_ok(inode, (len + offset));
+	if (err)
+		return err;
 
-	ret = f2fs_convert_inline_inode(inode);
-	if (ret)
-		return ret;
+	err = f2fs_convert_inline_inode(inode);
+	if (err)
+		return err;
 
 	f2fs_balance_fs(sbi, true);
 
@@ -1362,12 +1362,12 @@ static int expand_inode_data(struct inode *inode, loff_t offset,
 	if (off_end)
 		map.m_len++;
 
-	ret = f2fs_map_blocks(inode, &map, 1, F2FS_GET_BLOCK_PRE_AIO);
-	if (ret) {
+	err = f2fs_map_blocks(inode, &map, 1, F2FS_GET_BLOCK_PRE_AIO);
+	if (err) {
 		pgoff_t last_off;
 
 		if (!map.m_len)
-			return ret;
+			return err;
 
 		last_off = map.m_lblk + map.m_len - 1;
 
@@ -1381,7 +1381,7 @@ static int expand_inode_data(struct inode *inode, loff_t offset,
 	if (!(mode & FALLOC_FL_KEEP_SIZE) && i_size_read(inode) < new_size)
 		f2fs_i_size_write(inode, new_size);
 
-	return ret;
+	return err;
 }
 
 #ifndef FALLOC_FL_COLLAPSE_RANGE
@@ -2296,14 +2296,16 @@ static ssize_t f2fs_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 	inode_lock(inode);
 	ret = generic_write_checks(file, &pos, &count, S_ISBLK(inode->i_mode));
 	if (!ret) {
-		ret = f2fs_preallocate_blocks(inode, pos, count,
+		int err = f2fs_preallocate_blocks(inode, pos, count,
 				iocb->ki_filp->f_flags & O_DIRECT);
-		if (!ret) {
-			blk_start_plug(&plug);
-			ret = __generic_file_aio_write(iocb, iov, nr_segs,
-								&iocb->ki_pos);
-			blk_finish_plug(&plug);
+		if (err) {
+			inode_unlock(inode);
+			return err;
 		}
+		blk_start_plug(&plug);
+		ret = __generic_file_aio_write(iocb, iov, nr_segs,
+							&iocb->ki_pos);
+		blk_finish_plug(&plug);
 	}
 	inode_unlock(inode);
 
