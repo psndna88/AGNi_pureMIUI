@@ -1,9 +1,9 @@
 #!/bin/sh
 export KERNELDIR=`readlink -f .`
 . ~/AGNi_stamp_MIUI.sh
-. ~/gcc-4.9-uber_aarch64.sh
+#. ~/gcc-4.9-uber_aarch64.sh
 #. ~/gcc-5.x-uber_aarch64.sh
-#. ~/gcc-6.x-uber_aarch64.sh
+. ~/gcc-6.x-uber_aarch64.sh
 #. ~/gcc-7.x-uber_aarch64.sh
 
 export ARCH=arm64
