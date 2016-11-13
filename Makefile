@@ -390,7 +390,11 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -Wno-maybe-u
 		   -Wno-shift-overflow \
 		   -Wno-bool-compare \
 		   -Wno-memset-transposed-args \
-		   -Wno-discarded-array-qualifiers -std=gnu89
+		   -Wno-discarded-array-qualifiers -std=gnu89 \
+		   -Wno-tautological-compare -Wno-array-bounds \
+		   -Wno-duplicate-decl-specifier \
+		   -Wno-memset-elt-size -Wno-switch-unreachable \
+		   
 
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
