@@ -590,6 +590,14 @@ config TCP_CONG_ILLINOIS
 	For further details see:
 	  http://www.ews.uiuc.edu/~shaoliu/tcpillinois/index.html
 
+config TCP_CONG_SOCIOPATH
+        tristate "TCP Sociopath"
+        default n
+        ---help---
+        This is basically TCP Reno with no slow start and a much more
+        aggressive ssthresh recalculation (lowers it by 5% instead of 50%).
+        Use responsibly!
+
 choice
 	prompt "Default TCP congestion control"
 	default DEFAULT_CUBIC
@@ -618,6 +626,9 @@ choice
 	config DEFAULT_WESTWOOD
 		bool "Westwood" if TCP_CONG_WESTWOOD=y
 
+	config DEFAULT_SOCIOPATH
+		bool "Sociopath" if TCP_CONG_SOCIOPATH=y
+
 	config DEFAULT_RENO
 		bool "Reno"
 
@@ -640,6 +651,7 @@ config DEFAULT_TCP_CONG
 	default "westwood" if DEFAULT_WESTWOOD
 	default "veno" if DEFAULT_VENO
 	default "reno" if DEFAULT_RENO
+    default "sociopath" if DEFAULT_SOCIOPATH
 	default "cubic"
 
 config TCP_MD5SIG
