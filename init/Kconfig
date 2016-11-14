@@ -28,6 +28,34 @@ config BUILDTIME_EXTABLE_SORT
 
 menu "General setup"
 
+config ZEN_INTERACTIVE
+	bool "Tune kernel for interactivity"
+	default y
+	help
+	  Tunes the kernel for responsiveness at the cost of throughput and power usage.
+
+	  --- Virtual Memory Subsystem ---------------------------
+
+	    Mem dirty before bg writeback..:  10 %  ->  20 %
+	    Mem dirty before sync writeback:  20 %  ->  30 %
+
+	  --- Block Layer ----------------------------------------
+
+	    NCQ Queue Depth................:  31    ->   8
+	    Block Layer Queue Depth........: 128    ->  16
+
+	  --- CPU Scheduler --------------------------------------
+
+	    Scheduling latency.............:   6    ->   3    ms
+	    Minimal granularity............:   0.75 ->   0.3  ms
+	    Wakeup granularity.............:   1    ->   0.5  ms
+	    CPU migration cost.............:   0.5  ->   0.25 ms
+	    Bandwidth slice size...........:   5    ->   3    ms
+
+	  --- CPU Frequency Scaling ------------------------------
+
+	    Ondemand down scaling factor...:   1    ->  10
+
 config BROKEN
 	bool
 
