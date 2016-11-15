@@ -1162,7 +1162,8 @@ static int set_wpa_common(struct sigma_dut *dut, struct sigma_conn *conn,
 		   strcasecmp(val, "wpa2-sha256") == 0) {
 		if (set_network(ifname, id, "proto", "WPA2") < 0)
 			return -2;
-	} else if (strcasecmp(val, "wpa2-wpa-psk") == 0) {
+	} else if (strcasecmp(val, "wpa2-wpa-psk") == 0 ||
+		   strcasecmp(val, "wpa2-wpa-ent") == 0) {
 		if (set_network(ifname, id, "proto", "WPA WPA2") < 0)
 			return -2;
 	} else {
