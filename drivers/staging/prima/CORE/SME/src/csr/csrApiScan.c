@@ -3253,36 +3253,42 @@ eHalStatus csrScanningStateMsgProcessor( tpAniSirGlobal pMac, void *pMsgBuf )
             smsLog( pMac, LOG1,
                 FL("eWNI_SME_DISCONNECT_DONE_IND RC:%d"),
                     pDisConDoneInd->reasonCode);
-            if( CSR_IS_SESSION_VALID(pMac, pDisConDoneInd->sessionId))
+            pSession = CSR_GET_SESSION(pMac,pDisConDoneInd->sessionId);
+            if (pSession)
             {
-                roamInfo.reasonCode = pDisConDoneInd->reasonCode;
-                roamInfo.statusCode = eSIR_SME_STA_DISASSOCIATED;
-                vos_mem_copy(roamInfo.peerMac, pDisConDoneInd->peerMacAddr,
-                             sizeof(tSirMacAddr));
-                status = csrRoamCallCallback(pMac,
-                                 pDisConDoneInd->sessionId,
-                                &roamInfo, 0,
-                                 eCSR_ROAM_LOSTLINK,
-                                 eCSR_ROAM_RESULT_DISASSOC_IND);
-                pSession = CSR_GET_SESSION(pMac,
+                if( CSR_IS_SESSION_VALID(pMac, pDisConDoneInd->sessionId))
+                {
+                    roamInfo.reasonCode = pDisConDoneInd->reasonCode;
+                    roamInfo.statusCode = eSIR_SME_STA_DISASSOCIATED;
+                    vos_mem_copy(roamInfo.peerMac, pDisConDoneInd->peerMacAddr,
+                                 sizeof(tSirMacAddr));
+                    status = csrRoamCallCallback(pMac,
+                                    pDisConDoneInd->sessionId,
+                                    &roamInfo, 0,
+                                    eCSR_ROAM_LOSTLINK,
+                                    eCSR_ROAM_RESULT_DISASSOC_IND);
+                    /*
+                     * Update the previous state if
+                     * previous state was eCSR_ROAMING_STATE_JOINED
+                     * as we are disconnected and
+                     * currunt state is scanning
+                     */
+                    if (!CSR_IS_INFRA_AP(&pSession->connectedProfile)
+                        && (eCSR_ROAMING_STATE_IDLE !=
+                        pMac->roam.prev_state[pDisConDoneInd->sessionId]))
+                        pMac->roam.prev_state[pDisConDoneInd->sessionId] =
+                                  eCSR_ROAMING_STATE_IDLE;
+                }
+                else
+                {
+                    smsLog(pMac, LOGE, FL("Inactive session %d"),
                            pDisConDoneInd->sessionId);
-                /*
-                 * Update the previous state if
-                 * previous state was eCSR_ROAMING_STATE_JOINED
-                 * as we are disconnected and
-                 * currunt state is scanning
-                 */
-                if (pSession &&
-                   !CSR_IS_INFRA_AP(&pSession->connectedProfile)
-                   && (eCSR_ROAMING_STATE_IDLE !=
-                   pMac->roam.prev_state[pDisConDoneInd->sessionId]))
-                     pMac->roam.prev_state[pDisConDoneInd->sessionId] =
-                               eCSR_ROAMING_STATE_IDLE;
+                    status = eHAL_STATUS_FAILURE;
+                }
             }
             else
             {
-                smsLog(pMac, LOGE, FL("Inactive session %d"),
-                        pDisConDoneInd->sessionId);
+                smsLog(pMac, LOGE, FL("Invalid session"));
                 status = eHAL_STATUS_FAILURE;
             }
             break;

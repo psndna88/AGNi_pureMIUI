@@ -276,11 +276,13 @@
 #define QWLAN_HAL_CFG_EXT_SCAN_CONC_MODE                     218
 #define QWLAN_HAL_CFG_BAR_WAKEUP_HOST_DISABLE                219
 #define QWLAN_HAL_CFG_SAR_BOFFSET_CORRECTION_ENABLE          220
+#define QWLAN_HAL_CFG_UNITS_OF_BCN_WAIT_TIME                 221
+#define QWLAN_HAL_CFG_CONS_BCNMISS_COUNT                     222
 
-#define QWLAN_HAL_CFG_MAX_PARAMS                             221
+#define QWLAN_HAL_CFG_MAX_PARAMS                             223
 
 /* Total number of Integer CFGs. This is used while allocating the memory for TLV */
-#define QWLAN_HAL_CFG_INTEGER_PARAM                     221
+#define QWLAN_HAL_CFG_INTEGER_PARAM                     223
 
 /*-------------------------------------------------------------------------
   Configuration Parameter min, max, defaults

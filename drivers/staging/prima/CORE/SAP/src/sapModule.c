@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -2211,36 +2211,31 @@ VOS_STATUS WLANSAP_CancelRemainOnChannel( v_PVOID_t pvosGCtx )
     v_PVOID_t hHal = NULL;
     eHalStatus halStatus = eHAL_STATUS_FAILURE;
 
-    if( VOS_STA_SAP_MODE == vos_get_conparam ( ) )
+    pSapCtx = VOS_GET_SAP_CB(pvosGCtx);
+    if (NULL == pSapCtx)
     {
-        pSapCtx = VOS_GET_SAP_CB( pvosGCtx );
-        if (NULL == pSapCtx)
-        {
-            VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
-                       "%s: Invalid SAP pointer from pvosGCtx", __func__);
-            return VOS_STATUS_E_FAULT;
-        }
-        hHal = VOS_GET_HAL_CB(pSapCtx->pvosGCtx);
-        if( ( NULL == hHal ) || ( eSAP_TRUE != pSapCtx->isSapSessionOpen ) )
-        {
-            VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
-                       "%s: HAL pointer (%p) NULL OR SME session is not open (%d)",
-                       __func__, hHal, pSapCtx->isSapSessionOpen );
-            return VOS_STATUS_E_FAULT;
-        }
-
-        halStatus = sme_CancelRemainOnChannel( hHal, pSapCtx->sessionId );
-
-        if( eHAL_STATUS_SUCCESS == halStatus )
-        {
-            return VOS_STATUS_SUCCESS;
-        }
+        VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
+                "%s: Invalid SAP pointer from pvosGCtx", __func__);
+        return VOS_STATUS_E_FAULT;
+    }
+    hHal = VOS_GET_HAL_CB(pSapCtx->pvosGCtx);
+    if ((NULL == hHal) || (eSAP_TRUE != pSapCtx->isSapSessionOpen))
+    {
+        VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
+                "%s: HAL pointer (%p) NULL OR SME session is not open (%d)",
+                __func__, hHal, pSapCtx->isSapSessionOpen );
+        return VOS_STATUS_E_FAULT;
     }
 
-    VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
-                    "Failed to Cancel Remain on Channel");
+    halStatus = sme_CancelRemainOnChannel(hHal, pSapCtx->sessionId);
 
-    return VOS_STATUS_E_FAULT;
+    if (eHAL_STATUS_SUCCESS != halStatus)
+    {
+        VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
+                "Failed to Cancel Remain on Channel");
+        return VOS_STATUS_E_FAULT;
+    }
+    return VOS_STATUS_SUCCESS;
 }
 
 /*==========================================================================
