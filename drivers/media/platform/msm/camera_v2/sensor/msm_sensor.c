@@ -22,6 +22,16 @@
 #undef CDBG
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
 
+#ifdef CONFIG_MACH_XIAOMI_KENZO
+extern uint8_t g_s5k3p3_otp_module_id;
+extern uint8_t g_s5k3p3_otp_vcm_id;
+extern uint8_t g_ov16880_otp_module_id;
+extern uint8_t g_ov5670_otp_module_id;
+extern uint8_t g_s5k5e8_otp_month;
+extern uint8_t g_s5k5e8_otp_day;
+extern uint8_t g_s5k5e8_otp_lens_id;
+#endif
+
 static struct v4l2_file_operations msm_sensor_v4l2_subdev_fops;
 static void msm_sensor_adjust_mclk(struct msm_camera_power_ctrl_t *ctrl)
 {
@@ -1620,9 +1630,72 @@ int msm_sensor_check_id(struct msm_sensor_ctrl_t *s_ctrl)
 		rc = s_ctrl->func_tbl->sensor_match_id(s_ctrl);
 	else
 		rc = msm_sensor_match_id(s_ctrl);
+
+#ifdef CONFIG_MACH_XIAOMI_KENZO
+	if (rc < 0)
+	{
+		pr_err("%s:%d match id failed rc %d\n", __func__, __LINE__, rc);
+		return rc;
+	}
+
+	if (strcmp(s_ctrl->sensordata->sensor_name, "s5k3p3_omida01") == 0) {
+		if(g_s5k3p3_otp_module_id == 2)
+			CDBG("%s: It is ofilm s5k3p3\n", __func__);
+		else
+			goto sensor_error;
+	} else if (strcmp(s_ctrl->sensordata->sensor_name, "s5k3p3_f16s01c") == 0) {
+		if(g_s5k3p3_otp_module_id == 1)
+			CDBG("%s: It is sunny s5k3p3\n", __func__);
+		else
+			goto sensor_error;
+	} else if (strcmp(s_ctrl->sensordata->sensor_name, "s5k3p3_f3p3man") == 0) {
+		if(g_s5k3p3_otp_vcm_id)
+			CDBG("%s: It is quitai s5k3p3 meituosi VCM\n", __func__);
+		else
+			goto sensor_error;
+	} else if (strcmp(s_ctrl->sensordata->sensor_name, "ov16880_f16v01a") == 0) {
+		if (g_ov16880_otp_module_id == 1)
+			CDBG("%s: It is sunny ov16880\n", __func__);
+		else
+			goto sensor_error;
+	} else if (strcmp(s_ctrl->sensordata->sensor_name, "ov16880_omida05") == 0) {
+		if(g_ov16880_otp_module_id == 7)
+			CDBG("%s: It is ofilm ov16880\n", __func__);
+		else
+			goto sensor_error;
+	} else if (strcmp(s_ctrl->sensordata->sensor_name, "ov5670_d5v01g") == 0) {
+		if (g_ov5670_otp_module_id == 1)
+			CDBG("%s: It is sunny ov5670\n", __func__);
+		else
+			goto sensor_error;
+	} else if (strcmp(s_ctrl->sensordata->sensor_name, "ov5670_omi5f06") == 0) {
+		if (g_ov5670_otp_module_id == 7)
+			CDBG("%s: It is ofilm ov5670\n", __func__);
+		else
+			goto sensor_error;
+	} else if (strcmp(s_ctrl->sensordata->sensor_name, "s5k5e8_z5e8yab") == 0) {
+		if(g_s5k5e8_otp_lens_id == 0 &&
+				(g_s5k5e8_otp_day == 16 || g_s5k5e8_otp_month != 9))
+			CDBG("%s: It is old s5k5e8 lens\n", __func__);
+		else
+			goto sensor_error;
+	} else if (strcmp(s_ctrl->sensordata->sensor_name, "s5k5e8_yx13") == 0) {
+		if(g_s5k5e8_otp_lens_id)
+			CDBG("%s: It is new s5k5e8 lens\n", __func__);
+		else
+			goto sensor_error;
+	}
+
+	return rc;
+
+sensor_error:
+	CDBG("%s: This sensor is not %s", __func__, s_ctrl->sensordata->sensor_name);
+	return -1;
+#else
 	if (rc < 0)
 		pr_err("%s:%d match id failed rc %d\n", __func__, __LINE__, rc);
 	return rc;
+#endif
 }
 
 static int msm_sensor_power(struct v4l2_subdev *sd, int on)

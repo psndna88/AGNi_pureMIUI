@@ -54,6 +54,15 @@ static char hydrogen_front_sensor_name[32];
 static struct v4l2_file_operations msm_eeprom_v4l2_subdev_fops;
 #endif
 
+#ifdef CONFIG_MACH_XIAOMI_KENZO
+uint8_t g_s5k3p3_otp_module_id = 0;
+uint8_t g_s5k3p3_otp_vcm_id = 0;
+uint8_t g_ov16880_otp_module_id = 0;
+uint8_t g_ov5670_otp_module_id = 0;
+uint8_t g_s5k5e8_otp_month = 0;
+uint8_t g_s5k5e8_otp_day = 0;
+uint8_t g_s5k5e8_otp_lens_id = 0;
+#endif
 /**
   * msm_get_read_mem_size - Get the total size for allocation
   * @eeprom_map_array:	mem map
@@ -1676,6 +1685,60 @@ static long msm_eeprom_subdev_fops_ioctl32(struct file *file, unsigned int cmd,
 
 #endif
 
+#ifdef CONFIG_MACH_XIAOMI_KENZO
+static void s5k3p3_set_otp_module_id(struct msm_eeprom_ctrl_t *e_ctrl)
+{
+	if (e_ctrl->cal_data.mapdata[0] == 1) {
+		g_s5k3p3_otp_module_id = (uint8_t)(e_ctrl->cal_data.mapdata[11]);
+		if (g_s5k3p3_otp_module_id != 0x02) {
+			g_s5k3p3_otp_module_id = (uint8_t)(e_ctrl->cal_data.mapdata[2]);
+			if(g_s5k3p3_otp_module_id == 0x0f || g_s5k3p3_otp_module_id == 0x11)
+				g_s5k3p3_otp_vcm_id = (uint8_t)(e_ctrl->cal_data.mapdata[6]);
+		}
+	}
+}
+
+static void ov16880_set_otp_module_id(struct msm_eeprom_ctrl_t *e_ctrl)
+{
+	if (e_ctrl->cal_data.mapdata[0] == 1) {
+		g_ov16880_otp_module_id = (uint8_t)(e_ctrl->cal_data.mapdata[4]);
+		if (g_ov16880_otp_module_id != 0x01)
+			g_ov16880_otp_module_id = (uint8_t)(e_ctrl->cal_data.mapdata[12]);
+	}
+}
+
+static void ov5670_set_otp_module_id(struct msm_eeprom_ctrl_t *e_ctrl)
+{
+	uint8_t mid = (uint8_t)(e_ctrl->cal_data.mapdata[0]);
+	uint8_t group_index = -1;
+
+	if ((mid & 0xC0) == 0x40)
+		group_index = 0;
+	else if ((mid & 0x30) == 0x10)
+		group_index = 1;
+	else if ((mid & 0x0C) == 0x04)
+		group_index = 2;
+
+	if (group_index == -1)
+	{
+		pr_err("%s: Invalid ov5670 group index\n", __func__);
+		return;
+	}
+
+	g_ov5670_otp_module_id = (uint8_t)(e_ctrl->cal_data.mapdata[5 * group_index + 1]);
+}
+
+static void s5k5e8_set_otp_module_id(struct msm_eeprom_ctrl_t *e_ctrl)
+{
+	if (e_ctrl->cal_data.mapdata[0] == 1)
+	{
+		g_s5k5e8_otp_month = (uint8_t)(e_ctrl->cal_data.mapdata[3]);
+		g_s5k5e8_otp_day = (uint8_t)(e_ctrl->cal_data.mapdata[4]);
+		g_s5k5e8_otp_lens_id = (uint8_t)(e_ctrl->cal_data.mapdata[5]);
+	}
+}
+#endif
+
 static int msm_eeprom_platform_probe(struct platform_device *pdev)
 {
 	int rc = 0;
@@ -1815,6 +1878,25 @@ static int msm_eeprom_platform_probe(struct platform_device *pdev)
 		for (j = 0; j < e_ctrl->cal_data.num_data; j++)
 			CDBG("memory_data[%d] = 0x%X\n", j,
 				e_ctrl->cal_data.mapdata[j]);
+
+#ifdef CONFIG_MACH_XIAOMI_KENZO
+		if (eb_info->eeprom_name != NULL)
+		{
+			if (strcmp(eb_info->eeprom_name, "s5k3p3_omida01") == 0 ||
+					strcmp(eb_info->eeprom_name, "s5k3p3_gt24c64") == 0 ||
+					strcmp(eb_info->eeprom_name, "s5k3p3_f16s01c") == 0) {
+				s5k3p3_set_otp_module_id(e_ctrl);
+			} else if (strcmp(eb_info->eeprom_name, "ov16880_f16v01a") == 0 ||
+					strcmp(eb_info->eeprom_name, "ov16880_omida05") == 0) {
+				ov16880_set_otp_module_id(e_ctrl);
+			} else if (strcmp(eb_info->eeprom_name, "sunny_omi5f06") == 0) {
+				ov5670_set_otp_module_id(e_ctrl);
+			} else if (strcmp(eb_info->eeprom_name, "s5k5e8_z5e8yab") == 0 ||
+					strcmp(eb_info->eeprom_name, "s5k5e8_yx13") == 0) {
+				s5k5e8_set_otp_module_id(e_ctrl);
+			}
+		}
+#endif
 
 		e_ctrl->is_supported |= msm_eeprom_match_crc(&e_ctrl->cal_data);
 
