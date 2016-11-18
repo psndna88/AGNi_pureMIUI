@@ -41,6 +41,10 @@
 #include <linux/ktime.h>
 #include "pmic-voter.h"
 
+#ifdef CONFIG_MACH_XIAOMI_KENZO
+int FG_charger_status = 0;
+#endif
+
 /* Mask/Bit helpers */
 #define _SMB_MASK(BITS, POS) \
 	((unsigned char)(((1 << (BITS)) - 1) << (POS)))
@@ -4172,8 +4176,14 @@ reschedule:
 static int smbchg_charging_status_change(struct smbchg_chip *chip)
 {
 	smbchg_vfloat_adjust_check(chip);
+#ifdef CONFIG_MACH_XIAOMI_KENZO
+	FG_charger_status = get_prop_batt_status(chip);
+	set_property_on_fg(chip, POWER_SUPPLY_PROP_STATUS,
+			FG_charger_status);
+#else
 	set_property_on_fg(chip, POWER_SUPPLY_PROP_STATUS,
 			get_prop_batt_status(chip));
+#endif
 	return 0;
 }
 
@@ -4646,8 +4656,14 @@ void update_usb_status(struct smbchg_chip *chip, bool usb_present, bool force)
 	}
 
 	/* update FG */
+#ifdef CONFIG_MACH_XIAOMI_KENZO
+	FG_charger_status = get_prop_batt_status(chip);
+	set_property_on_fg(chip, POWER_SUPPLY_PROP_STATUS,
+			FG_charger_status);
+#else
 	set_property_on_fg(chip, POWER_SUPPLY_PROP_STATUS,
 			get_prop_batt_status(chip));
+#endif
 unlock:
 	mutex_unlock(&chip->usb_status_lock);
 }
@@ -6306,8 +6322,14 @@ static irqreturn_t usbid_change_handler(int irq, void *_chip)
 		pr_smb(PR_STATUS, "OTG detected\n");
 
 	/* update FG */
+#ifdef CONFIG_MACH_XIAOMI_KENZO
+	FG_charger_status = get_prop_batt_status(chip);
+	set_property_on_fg(chip, POWER_SUPPLY_PROP_STATUS,
+			FG_charger_status);
+#else
 	set_property_on_fg(chip, POWER_SUPPLY_PROP_STATUS,
 			get_prop_batt_status(chip));
+#endif
 
 	return IRQ_HANDLED;
 }
