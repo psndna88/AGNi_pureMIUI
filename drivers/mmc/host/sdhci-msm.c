@@ -4239,6 +4239,7 @@ static int sdhci_msm_suspend(struct device *dev)
 	struct sdhci_host *host = dev_get_drvdata(dev);
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct sdhci_msm_host *msm_host = pltfm_host->priv;
+	int ret = 0;
 
 	if (gpio_is_valid(msm_host->pdata->status_gpio))
 		mmc_gpio_free_cd(msm_host->mmc);
@@ -4249,10 +4250,10 @@ static int sdhci_msm_suspend(struct device *dev)
 		goto out;
 	}
 
-	sdhci_msm_runtime_suspend(dev);
+	return sdhci_msm_runtime_suspend(dev);
 out:
 	sdhci_msm_disable_controller_clock(host);
-	return 0;
+	return ret;
 }
 
 static int sdhci_msm_resume(struct device *dev)
