@@ -52,6 +52,12 @@
 #define DAPM_MICBIAS3_STANDALONE "MIC BIAS3 Standalone"
 #define DAPM_MICBIAS4_STANDALONE "MIC BIAS4 Standalone"
 
+#ifdef CONFIG_SOUND_CONTROL
+#define SOUND_CONTROL_MAJOR_VERSION	3
+#define SOUND_CONTROL_MINOR_VERSION	6
+int snd_ctrl_enabled = 0;
+#endif
+
 #define TASHA_RX_PORT_START_NUMBER  16
 
 #define WCD9335_RATES_MASK (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000 |\
@@ -3350,8 +3356,10 @@ static int tasha_set_compander(struct snd_kcontrol *kcontrol,
 	int value = ucontrol->value.integer.value[0];
 
 #ifdef CONFIG_SOUND_CONTROL
+	if (snd_ctrl_enabled) {
 	if (comp == COMPANDER_1 || comp == COMPANDER_2)
 		value = 0;
+	}
 #endif
 
 	pr_debug("%s: Compander %d enable current %d, new %d\n",
@@ -12365,6 +12373,9 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%d %d", &input_l, &input_r);
 
+	if (!snd_ctrl_enabled)
+		return count;
+
 	if (input_l < -84 || input_l > 20)
 		input_l = 0;
 
@@ -12403,6 +12414,9 @@ static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%d %d", &input_l, &input_r);
 
+	if (!snd_ctrl_enabled)
+		return count;
+
 	if (input_l < 1 || input_l > 20)
 		input_l = 1;
 
@@ -12438,6 +12452,9 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%d", &input);
 
+	if (!snd_ctrl_enabled)
+		return count;
+
 	if (input < -10 || input > 10)
 		input = 0;
 
@@ -12465,6 +12482,9 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%d", &input);
 
+	if (!snd_ctrl_enabled)
+		return count;
+
 	if (input < -10 || input > 10)
 		input = 0;
 
@@ -12479,11 +12499,46 @@ static struct kobj_attribute speaker_gain_attribute =
 		speaker_gain_show,
 		speaker_gain_store);
 
+static ssize_t sound_control_version_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "version: %u.%u\n",
+			SOUND_CONTROL_MAJOR_VERSION,
+			SOUND_CONTROL_MINOR_VERSION);
+}
+
+static struct kobj_attribute sound_control_version_attribute =
+	__ATTR(gpl_sound_control_version,
+		0444,
+		sound_control_version_show, NULL);
+
+static ssize_t sound_control_enabled_store(struct kobject *kobj,
+                struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	sscanf(buf, "%d", &snd_ctrl_enabled);
+
+	return count;
+}
+
+static ssize_t sound_control_enabled_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+        return sprintf(buf, "%d\n", snd_ctrl_enabled);
+}
+
+static struct kobj_attribute sound_control_enabled_attribute =
+	__ATTR(gpl_sound_control_enabled,
+		0666,
+		sound_control_enabled_show,
+		sound_control_enabled_store);
+
 static struct attribute *sound_control_attrs[] = {
 		&headphone_gain_attribute.attr,
 		&mic_gain_attribute.attr,
 		&headphone_pa_gain_attribute.attr,
 		&speaker_gain_attribute.attr,
+		&sound_control_version_attribute.attr,
+		&sound_control_enabled_attribute.attr,
 		NULL,
 };
 
@@ -13200,7 +13255,7 @@ static int tasha_probe(struct platform_device *pdev)
 	tasha_get_codec_ver(tasha);
 
 #ifdef CONFIG_SOUND_CONTROL
-	sound_control_kobj = kobject_create_and_add("sound_control", kernel_kobj);
+	sound_control_kobj = kobject_create_and_add("sound_control_3", kernel_kobj);
 	if (sound_control_kobj == NULL) {
 		pr_warn("%s kobject create failed!\n", __func__);
         }
