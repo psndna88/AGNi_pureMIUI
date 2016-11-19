@@ -47,6 +47,14 @@ static int mmap_is_legacy(void)
 	return sysctl_legacy_va_layout;
 }
 
+/*
+* Since get_random_int() returns the same value within a 1 jiffy window, we
+* will almost always get the same randomisation for the stack and mmap
+* region. This will mean the relative distance between stack and mmap will be
+* the same.
+*
+* To avoid this we can shift the randomness by 1 bit.
+*/
 static unsigned long mmap_rnd(void)
 {
 	unsigned long rnd = 0;
