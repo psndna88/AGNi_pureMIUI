@@ -27,6 +27,17 @@ menuconfig MSMB_CAMERA
 	  adds support for the camera driver stack including sensor, isp
 	  and postprocessing drivers.
 
+config MSMB_CAMERA_MM
+	bool "Qualcomm MSM camera and video capture 2.0 support (MM)"
+	depends on ARCH_MSM && VIDEO_V4L2 && I2C
+	select MSMB_CAMERA
+	default y
+	---help---
+	  Say Y here to enable selecting the video adapters for
+	  Qualcomm msm camera and video capture 2.0, enabling this
+	  adds support for the camera driver stack including sensor, isp
+	  and postprocessing drivers.
+
 config MSMB_CAMERA_DEBUG
 	bool "Qualcomm MSM camera 2.0 debugging with printk"
 	depends on MSMB_CAMERA
