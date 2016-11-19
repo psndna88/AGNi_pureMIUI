@@ -13020,7 +13020,11 @@ static int tasha_probe(struct platform_device *pdev)
 	tasha->swr_plat_data.handle_irq = tasha_swrm_handle_irq;
 
 	/* Register for Clock */
+#ifdef CONFIG_MACH_XIAOMI_KENZO
+	wcd_ext_clk = clk_get(tasha->wcd9xxx->dev, "wcd_pmi_clk");
+#else
 	wcd_ext_clk = clk_get(tasha->wcd9xxx->dev, "wcd_clk");
+#endif
 	if (IS_ERR(wcd_ext_clk)) {
 		dev_err(tasha->wcd9xxx->dev, "%s: clk get %s failed\n",
 			__func__, "wcd_ext_clk");
