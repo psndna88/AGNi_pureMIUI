@@ -38,7 +38,9 @@ struct sdhci_msm_reg_data {
 	/* is low power mode setting required for this regulator? */
 	bool lpm_sup;
 	bool set_voltage_sup;
+#ifdef CONFIG_MACH_XIAOMI_KENZO
 	bool is_sd_vdd;
+#endif
 };
 
 /*

@@ -15,8 +15,6 @@
 #include <linux/hrtimer.h>
 #include <linux/module.h>
 #include <linux/of.h>
-#include <linux/gpio.h>
-#include <linux/of_gpio.h>
 #include <linux/platform_device.h>
 #include <linux/pwm.h>
 #include <linux/regulator/consumer.h>
@@ -24,19 +22,6 @@
 #include <linux/slab.h>
 #include <media/pwm-ir.h>
 #include <media/rc-core.h>
-#include <linux/uaccess.h>
-
-#define IR_VDD_MIN_UV 2600000
-#define IR_VDD_MAX_UV 3300000
-
-#define IR_DEBUG_FS 1
-#if IR_DEBUG_FS
-#include <linux/slab.h>
-#include <linux/proc_fs.h>
-static struct proc_dir_entry *g_lct_ir_debug_proc;
-#define LCT_IR_DEBUG_PROC_FILE "pwm_ir_fs"
-#endif
-
 
 struct pwm_ir_dev {
 	struct mutex            lock;
@@ -44,7 +29,6 @@ struct pwm_ir_dev {
 	struct rc_dev          *rdev;
 	struct regulator       *reg;
 	struct pwm_device      *pwm;
-	int     pwm_enable_gpio;
 	u32                     carrier;
 	u32                     duty_cycle;
 };
@@ -59,10 +43,6 @@ struct pwm_ir_packet {
 	unsigned int       next;
 };
 
-#if IR_DEBUG_FS
-struct pwm_ir_dev *g_ir_dev = NULL;
-#endif
-
 #define __devexit
 #define __devinitdata
 #define __devinit
@@ -75,7 +55,7 @@ static int pwm_ir_tx_config(struct pwm_ir_dev *dev, u32 carrier, u32 duty_cycle)
 
 	period_ns = NSEC_PER_SEC / carrier;
 	duty_ns = period_ns * duty_cycle / 100;
-	printk("pwm_ir_tx_config period_ns = %d,duty_ns = %d \n", period_ns, duty_ns);
+
 	rc = pwm_config(dev->pwm, duty_ns, period_ns);
 	if (rc == 0) {
 		dev->carrier = carrier;
@@ -153,6 +133,7 @@ static int pwm_ir_tx_transmit_with_timer(struct pwm_ir_packet *pkt)
 	return pkt->next ? : -ERESTARTSYS;
 }
 
+
 static long pwm_ir_tx_work(void *arg)
 {
 	struct pwm_ir_packet *pkt = arg;
@@ -164,41 +145,25 @@ static long pwm_ir_tx_work(void *arg)
 	for (; pkt->next < pkt->length; pkt->next++) {
 		if (signal_pending(current))
 			break;
-		if (pkt->next & 0x01)
+		if (pkt->next & 0x01) {
 			pwm_disable(pkt->pwm);
-		else /* pulse */
+			/* pwm_disable will cost 30us,but the off time turn to on should submit enable delay*/
+			if (pkt->buffer[pkt->next] > 60000)
+				pkt->buffer[pkt->next] -= 60000;
+			else
+				pkt->buffer[pkt->next] = 0;
+		} else {/* pulse */
 			pwm_enable(pkt->pwm);
-
-		ndelay(pkt->buffer[pkt->next]%1000);
-		udelay(pkt->buffer[pkt->next]/1000);
-	}
-
-	pwm_disable(pkt->pwm);
-	local_irq_restore(flags);
-
-	return pkt->next ? : -ERESTARTSYS;
-}
-
-static long pwm_ir_tx_work_factoryTest(void *arg)
-{
-	struct pwm_ir_packet *pkt = arg;
-	unsigned long flags;
-
-	/* disable irq for acurracy timing */
-	local_irq_save(flags);
-
-	for (; pkt->next < pkt->length; pkt->next++) {
-		if (signal_pending(current))
-			break;
-		if (pkt->next & 0x01)
-			pwm_disable(pkt->pwm);
-		else {
-			pwm_enable(pkt->pwm);
-			usleep(26);
+			/* pwm_enable will cost 60us, remove this delay out */
+			if (pkt->buffer[pkt->next] > 30000)
+				pkt->buffer[pkt->next] -= 30000;
+			else
+				pkt->buffer[pkt->next] = 0;
 		}
-
-		ndelay(pkt->buffer[pkt->next]%1000);
-		udelay(pkt->buffer[pkt->next]/1000);
+		if (pkt->buffer[pkt->next] > 0) {
+			ndelay(pkt->buffer[pkt->next]%1000);
+			udelay(pkt->buffer[pkt->next]/1000);
+		}
 	}
 
 	pwm_disable(pkt->pwm);
@@ -207,38 +172,23 @@ static long pwm_ir_tx_work_factoryTest(void *arg)
 	return pkt->next ? : -ERESTARTSYS;
 }
 
-
-static int pwm_ir_tx_transmit_with_delay(struct pwm_ir_packet *pkt, u32 carrier)
+static int pwm_ir_tx_transmit_with_delay(struct pwm_ir_packet *pkt)
 {
 	int cpu, rc = -ENODEV;
-	if (carrier == 38111) {
-		for_each_online_cpu(cpu) {
-			/* select one auxilliary cpu to run */
-			if (cpu != 0) {
-				rc = work_on_cpu(cpu, pwm_ir_tx_work_factoryTest, pkt);
-				break;
-			}
+
+	for_each_online_cpu(cpu) {
+		/* select one auxilliary cpu to run */
+		if (cpu != 0) {
+			rc = work_on_cpu(cpu, pwm_ir_tx_work, pkt);
+			break;
 		}
-
-		if (rc == -ENODEV) {
-			pr_warn("pwm-ir: can't run on the auxilliary cpu\n");
-			rc = pwm_ir_tx_work_factoryTest(pkt);
-		}
-
-	} else {
-			for_each_online_cpu(cpu) {
-				/* select one auxilliary cpu to run */
-				if (cpu != 0) {
-					rc = work_on_cpu(cpu, pwm_ir_tx_work, pkt);
-					break;
-					}
-				}
-
-			if (rc == -ENODEV) {
-				pr_warn("pwm-ir: can't run on the auxilliary cpu\n");
-				rc = pwm_ir_tx_work(pkt);
-			}
 	}
+
+	if (rc == -ENODEV) {
+		pr_warn("pwm-ir: can't run on the auxilliary cpu\n");
+		rc = pwm_ir_tx_work(pkt);
+	}
+
 	return rc;
 }
 
@@ -247,16 +197,33 @@ static int pwm_ir_tx_transmit(struct rc_dev *rdev, unsigned *txbuf, unsigned n)
 	struct pwm_ir_dev *dev = rdev->priv;
 	struct pwm_ir_data *data = dev->pdev->dev.platform_data;
 	struct pwm_ir_packet pkt = {};
-	int i, rc = 0;
+	int i = 0, rc = 0;
+	unsigned int temp = 0, temp2 = 0;
 
 	for (i = 0; i < n; i++) {
-		if (((i+1) % 2) == 0) {
-			if ((txbuf[i] > 500) && (txbuf[i] < 1000))
-				txbuf[i] = txbuf[i] - 70;
-			else if (txbuf[i] > 1000)
-				txbuf[i] = txbuf[i] - 100;
-		}
 		txbuf[i] *= NSEC_PER_USEC;
+		temp  = txbuf[i] / 26666;
+		temp2 = txbuf[i] % 26666;
+
+		if (((i+1) % 2) == 0) {
+			if ((txbuf[i] > 53332) && (txbuf[i] < 280000))
+				txbuf[i] = temp * 26666  - 16000;
+			else if ((txbuf[i] > 280000) && (txbuf[i] < 620000)) {
+				if (txbuf[i] > 53332) {
+					if (temp2 < 8000)
+						txbuf[i] = temp * 26666;
+					else
+						txbuf[i] = temp * 26666 + 16000;
+				}
+			}
+		} else {
+			if (txbuf[i] > 53332) {
+				if (temp2 < 8000)
+					txbuf[i] = temp * 26666;
+				else
+					txbuf[i] = (temp + 1) * 26666;
+			}
+		}
 	}
 
 	mutex_lock(&dev->lock);
@@ -274,7 +241,7 @@ static int pwm_ir_tx_transmit(struct rc_dev *rdev, unsigned *txbuf, unsigned n)
 	if (data->use_timer)
 		rc = pwm_ir_tx_transmit_with_timer(&pkt);
 	else
-		rc = pwm_ir_tx_transmit_with_delay(&pkt, dev->carrier);
+		rc = pwm_ir_tx_transmit_with_delay(&pkt);
 
 	if (dev->reg)
 		regulator_disable(dev->reg);
@@ -299,16 +266,6 @@ static int __devinit pwm_ir_tx_probe(struct pwm_ir_dev *dev)
 		}
 	}
 
-	if (regulator_count_voltages(dev->reg) > 0) {
-		rc = regulator_set_voltage(dev->reg, IR_VDD_MIN_UV,
-					IR_VDD_MAX_UV);
-		if (rc) {
-			dev_err(&dev->pdev->dev,
-				"Regulator set_vtg failed vdd rc=%d\n",
-					rc);
-			goto err_regulator_put;
-		}
-	}
 
 	dev->pwm = of_pwm_get(pdev->dev.of_node, NULL);
 	if (IS_ERR(dev->pwm)) {
@@ -321,7 +278,11 @@ static int __devinit pwm_ir_tx_probe(struct pwm_ir_dev *dev)
 	}
 
 	if (data->low_active) {
+#if 0 /* need the latest kernel */
+		rc = pwm_set_polarity(dev->pwm, PWM_POLARITY_INVERSED);
+#else
 		rc = -ENOSYS;
+#endif
 		if (rc != 0) {
 			dev_err(&dev->pdev->dev, "failed to change polarity\n");
 			goto err_pwm_free;
@@ -355,100 +316,6 @@ static void pwm_ir_tx_remove(struct pwm_ir_dev *dev)
 	pwm_free(dev->pwm);
 }
 
-#if IR_DEBUG_FS
-static ssize_t lct_ir_debug_proc_write(struct file *file, const char __user *buf, size_t size, loff_t *ppos)
-{
-	char data[256] = {0};
-	char tmp_data[256] = {0};
-	char *operation = NULL;
-	char *value = NULL;
-	char *tmpValue1 = NULL;
-	char *tmpValue2 = NULL;
-	int time[256] = {0};
-	int time_count = 0;
-	int frequency_HZ = 0;
-	int duty_percent = 0;
-	int rc;
-
-	if (copy_from_user(tmp_data, buf, size)) {
-		printk("copy_from_user() fail.\n");
-		return -EFAULT;
-	}
-
-	if (g_ir_dev == NULL) {
-		printk("lct_ir_debug_proc_write Please check probe func \n");
-		return -EFAULT;
-	}
-	printk("lct_ir_debug_proc_write tmp_data = %s \n", tmp_data);
-
-	strcpy(data, tmp_data);
-	value = strchr(tmp_data, ':');
-	if (value != NULL) {
-		data[value-tmp_data] = '\0';
-		operation = data;
-		value++;
-	}
-
-	printk("lct_ir_debug_proc_write operation = %s \n", operation);
-	if (strcmp(operation, "sf") == 0) {
-		frequency_HZ = simple_strtoul(value, NULL, 10);
-		printk("lct_ir_debug_proc_write frequency_HZ=%d \n", frequency_HZ);
-		rc = pwm_ir_tx_carrier(g_ir_dev->rdev, (u32)frequency_HZ);
-		printk("lct_ir_debug_proc_write set frequency_HZ rc=%d \n", rc);
-
-	} else if (strcmp(operation, "sd") == 0) {
-		duty_percent = simple_strtoul(value, NULL, 10);
-		printk("lct_ir_debug_proc_write duty_percent=%d \n", duty_percent);
-		rc = pwm_ir_tx_duty_cycle(g_ir_dev->rdev, (u32)duty_percent);
-		printk("lct_ir_debug_proc_write set duty_percent rc=%d \n", rc);
-	} else if (strcmp(operation, "dispwm") == 0) {
-		printk("lct_ir_debug_proc_write stop PWM output \n");
-		pwm_disable(g_ir_dev->pwm);
-	} else if (strcmp(operation, "enpwm") == 0) {
-		printk("lct_ir_debug_proc_write stop PWM output \n");
-		rc = pwm_enable(g_ir_dev->pwm);
-		printk("lct_ir_debug_proc_write pwm_enable result = %d \n", rc);
-	} else if (strcmp(operation, "tx") == 0) {
-		printk("lct_ir_debug_proc_write time value = %s \n", operation);
-		tmpValue2 = value;
-		while (((tmpValue1 = strchr(tmpValue2, ':')) != NULL) || (time_count >= 50)) {
-			printk("lct_ir_debug_proc_write time tmpValue1 = %s \n", tmpValue1);
-			value[tmpValue1 - tmpValue2] = '\0';
-			time[time_count++] = simple_strtoul(value, NULL, 10);
-			tmpValue1++;
-			tmpValue2 = tmpValue1;
-			value = tmpValue2;;
-		}
-		if (time_count < 50) {
-			time[time_count++] = simple_strtoul(value, NULL, 10);
-		}
-		rc = pwm_ir_tx_transmit(g_ir_dev->rdev, (unsigned *)time, (unsigned)time_count);
-		printk("lct_ir_debug_proc_write tx result = %d \n", rc);
-	} else {
-		printk("lct_ir_debug_proc_write invalid operation = %s \n", operation);
-		return -EFAULT;
-	}
-	return size;
-}
-
-static ssize_t lct_ir_debug_proc_read(struct file *file, char __user *buf, size_t size, loff_t *ppos)
-{
-	int cnt = 0;
-	char *page = NULL;
-	page = kzalloc(128, GFP_KERNEL);
-	cnt = sprintf(page, "%s", "usage: echo \"1:38000:50\" > proc/pwm_ir_fs\n");
-	cnt = simple_read_from_buffer(buf, size, ppos, page, cnt);
-	kfree(page);
-	return cnt;
-}
-
-static const struct file_operations lct_ir_debug_proc_fops = {
-	.read		= lct_ir_debug_proc_read,
-	.write		= lct_ir_debug_proc_write,
-};
-#endif
-
-
 /* code for probe and remove */
 static int __devinit pwm_ir_probe(struct platform_device *pdev)
 {
@@ -462,12 +329,13 @@ static int __devinit pwm_ir_probe(struct platform_device *pdev)
 				struct pwm_ir_data *data = pdev->dev.platform_data;
 
 				of_property_read_string(pdev->dev.of_node, "reg-id", &data->reg_id);
+
 				data->low_active = of_property_read_bool(pdev->dev.of_node, "low-active");
 				data->use_timer = of_property_read_bool(pdev->dev.of_node, "use-timer");
 
 				dev_info(&pdev->dev,
-						"reg-id = %s, low-active = %d, use-timer = %d\n",
-						data->reg_id,  data->low_active, data->use_timer);
+					 "reg-id = %s, low-active = %d, use-timer = %d\n",
+					  data->reg_id,  data->low_active, data->use_timer);
 			}
 		} else {
 			dev_err(&pdev->dev, "failed to alloc platform data\n");
@@ -511,17 +379,6 @@ static int __devinit pwm_ir_probe(struct platform_device *pdev)
 		goto err_rc_register_device;
 	}
 
-
-#if IR_DEBUG_FS
-	g_lct_ir_debug_proc = proc_create_data(LCT_IR_DEBUG_PROC_FILE, 0660, NULL, &lct_ir_debug_proc_fops, NULL);
-	if (IS_ERR_OR_NULL(g_lct_ir_debug_proc)) {
-		printk("pwm_ir_probe create_proc_entry g_lct_ir_debug_proc failed\n");
-	} else {
-		printk("pwm_ir_probe create_proc_entry g_lct_ir_debug_proc success\n");
-	}
-	g_ir_dev = dev;
-#endif
-
 	return rc;
 
 err_rc_register_device:
@@ -550,7 +407,6 @@ static const struct of_device_id of_pwm_ir_match[] = {
 	{},
 };
 
-
 static struct platform_driver pwm_ir_driver = {
 	.probe  = pwm_ir_probe,
 	.remove = __devexit_p(pwm_ir_remove),
@@ -574,5 +430,5 @@ static void __exit pwm_ir_exit(void)
 module_exit(pwm_ir_exit);
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("lct <lct@loncheer.com>");
+MODULE_AUTHOR("Xiang Xiao <xiaoxiang@xiaomi.com>");
 MODULE_DESCRIPTION("PWM IR driver");

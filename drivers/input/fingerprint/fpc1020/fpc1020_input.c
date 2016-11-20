@@ -221,7 +221,7 @@ static int fpc1020_wait_finger_present_lpm(fpc1020_data_t *fpc1020)
 				wakeup_center = (zone_raw & zmask_5) ||
 						(zone_raw & zmask_6);
 
-				/* Todo: refined extended processing ? */
+			/* Todo: refined extended processing ? */
 				wakeup_ext = ((zone_raw & zmask_ext) == zmask_ext);
 
 			} else {

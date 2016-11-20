@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2015, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2016 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -585,24 +586,6 @@ static int aw2013_led_probe(struct i2c_client *client,
 
 	mutex_init(&led_array->lock);
 
-	ret = aw2013_power_init(led_array, true);
-	if (ret) {
-		dev_err(&client->dev, "power init failed");
-		goto free_led_arry;
-	}
-
-	ret = aw2013_power_on(led_array, true);
-	if (ret) {
-	    dev_err(&client->dev, "power on fail\n");
-		goto free_led_arry;
-	}
-
-	ret = aw_2013_check_chipid(led_array);
-	if (ret) {
-		dev_err(&client->dev, "Check chip id error\n");
-		goto free_led_arry;
-	}
-
 	ret = aw2013_led_parse_child_node(led_array, node);
 	if (ret) {
 		dev_err(&client->dev, "parsed node error\n");
@@ -611,14 +594,29 @@ static int aw2013_led_probe(struct i2c_client *client,
 
 	i2c_set_clientdata(client, led_array);
 
-	ret = aw2013_power_on(led_array, false);
+	ret = aw2013_power_init(led_array, true);
 	if (ret) {
-	    dev_err(&client->dev, "power off fail\n");
+		dev_err(&client->dev, "power init failed");
 		goto fail_parsed_node;
+	}
+	ret = aw2013_power_on(led_array, true);
+	if (ret) {
+		dev_err(&client->dev, "power on failed");
+		goto fail_power_on;
+	}
+
+	ret = aw_2013_check_chipid(led_array);
+	if (ret) {
+		dev_err(&client->dev, "Check chip id error\n");
+		goto fail_check_chipid;
 	}
 
 	return 0;
 
+fail_check_chipid:
+	aw2013_power_on(led_array, false);
+fail_power_on:
+	aw2013_power_init(led_array, false);
 fail_parsed_node:
 	aw2013_led_err_handle(led_array, num_leds);
 free_led_arry:

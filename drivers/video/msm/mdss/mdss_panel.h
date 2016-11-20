@@ -494,7 +494,9 @@ struct mdss_panel_info {
 	bool ulps_suspend_enabled;
 	bool panel_ack_disabled;
 	bool esd_check_enabled;
+#ifdef CONFIG_MACH_XIAOMI_KENZO
 	bool sharp_panel_module;
+#endif
 	char dfps_update;
 	int new_fps;
 	int panel_max_fps;

@@ -1997,9 +1997,12 @@ static int qpnp_parse_dt_config(struct spmi_device *spmi,
 	}
 
 	_pwm_change_mode(chip, enable);
-
+#ifdef CONFIG_MACH_XIAOMI_KENZO
 	if (chip->dtest_line != 1)
 		_pwm_enable(chip);
+#else
+	_pwm_enable(chip);
+#endif
 
 read_opt_props:
 	/* Initialize optional config parameters from DT if provided */

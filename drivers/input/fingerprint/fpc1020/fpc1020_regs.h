@@ -113,7 +113,7 @@ typedef enum {
 	((reg) == FPC102X_REG_FPC_STATUS) ?			1 : \
 	((reg) == FPC102X_REG_FPC_DEBUG) ?			1 : 0)
 
-#define FPC1020_REG_TO_ACTUAL(reg) (				\
+#define FPC1020_REG_TO_ACTUAL(reg) ( 				\
 	((reg) >= FPC1022_REG_OFFSET) ? ((reg) - FPC1022_REG_OFFSET) : \
 	((reg) >= FPC1150_REG_OFFSET) ? ((reg) - FPC1150_REG_OFFSET) : (reg))
 

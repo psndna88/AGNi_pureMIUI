@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2016 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -879,7 +880,7 @@ int tasha_set_spkr_mode(struct snd_soc_codec *codec, int mode)
 }
 EXPORT_SYMBOL(tasha_set_spkr_mode);
 
-static enum codec_variant codec_ver;
+static enum codec_variant codec_ver = WCD9326;
 
 static void tasha_enable_sido_buck(struct snd_soc_codec *codec)
 {
@@ -901,10 +902,12 @@ void tasha_spk_ext_pa_cb(int (*spk_ext_pa)(struct snd_soc_codec *codec,
 {
 	struct tasha_priv *tasha = snd_soc_codec_get_drvdata(codec);
 
+	printk("%s: Enter\n", __func__);
 	tasha->spk_ext_pa_cb = spk_ext_pa;
 }
 EXPORT_SYMBOL(tasha_spk_ext_pa_cb);
 #endif
+
 static void tasha_cdc_sido_ccl_enable(struct tasha_priv *tasha, bool ccl_flag)
 {
 	struct snd_soc_codec *codec = tasha->codec;
@@ -3867,6 +3870,7 @@ static int tasha_codec_enable_lineout_pa(struct snd_soc_dapm_widget *w,
 #if defined(CONFIG_SPEAKER_EXT_PA)
 	struct tasha_priv *tasha = snd_soc_codec_get_drvdata(codec);
 #endif
+
 	u16 lineout_vol_reg, lineout_mix_vol_reg;
 	int ret = 0;
 
@@ -3907,6 +3911,11 @@ static int tasha_codec_enable_lineout_pa(struct snd_soc_dapm_widget *w,
 			snd_soc_update_bits(codec,
 					    lineout_mix_vol_reg,
 					    0x10, 0x00);
+#if defined(CONFIG_SPEAKER_EXT_PA)
+		if (tasha->spk_ext_pa_cb)
+			tasha->spk_ext_pa_cb(codec, true);
+#endif
+
 		tasha_codec_override(codec, CLS_AB, event);
 
 #if defined(CONFIG_SPEAKER_EXT_PA)
@@ -5316,6 +5325,10 @@ static int tasha_codec_enable_dec(struct snd_soc_dapm_widget *w,
 			      snd_soc_read(codec, tx_gain_ctl_reg));
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
+		snd_soc_write(codec, WCD9335_MBHC_ZDET_RAMP_CTL, 0x83);
+		snd_soc_write(codec, WCD9335_MBHC_ZDET_RAMP_CTL, 0xA3);
+		snd_soc_write(codec, WCD9335_MBHC_ZDET_RAMP_CTL, 0x83);
+		snd_soc_write(codec, WCD9335_MBHC_ZDET_RAMP_CTL, 0x03);
 		snd_soc_update_bits(codec, tx_vol_ctl_reg, 0x10, 0x10);
 		snd_soc_update_bits(codec, dec_cfg_reg, 0x08, 0x00);
 		cancel_delayed_work_sync(&tasha->tx_hpf_work[decimator].dwork);
@@ -10932,8 +10945,9 @@ static struct snd_soc_dai_driver tasha_dai[] = {
 		.id = AIF4_MAD_TX,
 		.capture = {
 			.stream_name = "AIF4 MAD TX",
-			.rates = SNDRV_PCM_RATE_16000,
-			.formats = TASHA_FORMATS_S16_S24_LE,
+			.rates = SNDRV_PCM_RATE_16000 | SNDRV_PCM_RATE_48000 |
+				 SNDRV_PCM_RATE_192000 | SNDRV_PCM_RATE_384000,
+			.formats = TASHA_FORMATS_S16_S24_S32_LE,
 			.rate_min = 16000,
 			.rate_max = 384000,
 			.channels_min = 1,
@@ -13231,10 +13245,10 @@ static int tasha_probe(struct platform_device *pdev)
 	tasha->swr_plat_data.handle_irq = tasha_swrm_handle_irq;
 
 	/* Register for Clock */
-#if defined(CONFIG_WCD9335_CODEC_MCLK_USE_MSM_GPIO)
-	wcd_ext_clk = clk_get(tasha->wcd9xxx->dev, "wcd_ap_clk");
-#else
+#ifdef CONFIG_MACH_XIAOMI_KENZO
 	wcd_ext_clk = clk_get(tasha->wcd9xxx->dev, "wcd_pmi_clk");
+#else
+	wcd_ext_clk = clk_get(tasha->wcd9xxx->dev, "wcd_clk");
 #endif
 	if (IS_ERR(wcd_ext_clk)) {
 		dev_err(tasha->wcd9xxx->dev, "%s: clk get %s failed\n",

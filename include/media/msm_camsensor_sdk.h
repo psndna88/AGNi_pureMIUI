@@ -155,8 +155,10 @@ enum msm_actuator_write_type {
 	MSM_ACTUATOR_WRITE_DIR_REG,
 	MSM_ACTUATOR_POLL,
 	MSM_ACTUATOR_READ_WRITE,
+#ifdef CONFIG_MACH_XIAOMI_KENZO
 	MSM_ACTUATOR_WRITE_DAC_DW9718S,
 	MSM_ACTUATOR_WRITE_DAC_DW9761B,
+#endif
 };
 
 enum msm_actuator_i2c_operation {

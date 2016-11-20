@@ -11,7 +11,6 @@ static struct kobject *msm_tp_device;
 static u16 tp_ver_show;
 static char tp_ver_show_str[80] = {0x00};
 static char module_name[80] = {0x00};
-static bool started = false;
 
 static ssize_t msm_tp_module_id_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -105,11 +104,9 @@ int init_tp_fm_info(u16 version_info_num, char *version_info_str, char *name)
 	if (NULL != name)
 		strcpy(module_name, name);
 
-	if (!started) {
-		tp_fm_creat_sys_entry();
-		tp_fm_creat_proc_entry();
-		started = true;
-	}
+	tp_fm_creat_sys_entry();
+	tp_fm_creat_proc_entry();
+
 	return 0;
 }
 

@@ -1,4 +1,5 @@
 /* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2016 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -818,9 +819,8 @@ static void wcd_mbhc_find_plug_and_report(struct wcd_mbhc *mbhc,
 			/* Disable HW FSM and current source */
 			WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_FSM_EN, 0);
 			WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_BTN_ISRC_CTL, 0);
-			mbhc->mbhc_cb->mbhc_micbias_control(mbhc->codec,
-				mbhc->mbhc_cfg->anc_micbias,
-				MICB_PULLUP_DISABLE);
+			mbhc->mbhc_cb->mbhc_micbias_control(mbhc->codec, MIC_BIAS_2,
+							MICB_PULLUP_DISABLE);
 			/* Setup for insertion detection */
 			WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_ELECT_DETECTION_TYPE,
 						 1);
@@ -996,9 +996,8 @@ static void wcd_mbhc_update_fsm_source(struct wcd_mbhc *mbhc,
 	case MBHC_PLUG_TYPE_HEADSET:
 	case MBHC_PLUG_TYPE_ANC_HEADPHONE:
 		WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_BTN_ISRC_CTL, 0);
-		mbhc->mbhc_cb->mbhc_micbias_control(mbhc->codec,
-			mbhc->mbhc_cfg->anc_micbias,
-			MICB_PULLUP_ENABLE);
+		mbhc->mbhc_cb->mbhc_micbias_control(mbhc->codec, MIC_BIAS_2,
+						MICB_PULLUP_ENABLE);
 		break;
 	default:
 		WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_BTN_ISRC_CTL, 0);
@@ -1363,6 +1362,8 @@ report:
 	wcd_mbhc_find_plug_and_report(mbhc, plug_type);
 	WCD_MBHC_RSC_UNLOCK(mbhc);
 enable_supply:
+	if (plug_type == MBHC_PLUG_TYPE_HEADSET)
+		mbhc->micbias_enable = true;
 	if (mbhc->mbhc_cb->mbhc_micbias_control)
 		wcd_mbhc_update_fsm_source(mbhc, plug_type);
 	else
@@ -1485,9 +1486,8 @@ static void wcd_mbhc_swch_irq_handler(struct wcd_mbhc *mbhc)
 		/* Disable HW FSM */
 		WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_FSM_EN, 0);
 		WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_BTN_ISRC_CTL, 0);
-		mbhc->mbhc_cb->mbhc_micbias_control(mbhc->codec,
-			mbhc->mbhc_cfg->anc_micbias,
-			MICB_PULLUP_DISABLE);
+		mbhc->mbhc_cb->mbhc_micbias_control(mbhc->codec, MIC_BIAS_2,
+						MICB_PULLUP_DISABLE);
 		if (mbhc->mbhc_cb->mbhc_common_micb_ctrl)
 			mbhc->mbhc_cb->mbhc_common_micb_ctrl(codec,
 					MBHC_COMMON_MICB_TAIL_CURR, false);

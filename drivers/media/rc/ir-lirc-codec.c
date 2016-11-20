@@ -113,14 +113,14 @@ static ssize_t ir_lirc_transmit_ir(struct file *file, const char __user *buf,
 	unsigned int *txbuf; /* buffer with values to transmit */
 	ssize_t ret = -EINVAL;
 	size_t count;
-	#ifndef CONFIG_IR_PWM
+#ifndef CONFIG_IR_PWM
 	ktime_t start;
 	s64 towait;
 	unsigned int duration = 0; /* signal duration in us */
 	int i;
 
 	start = ktime_get();
-	#endif
+#endif
 	lirc = lirc_get_pdata(file);
 	if (!lirc)
 		return -EFAULT;
@@ -146,17 +146,26 @@ static ssize_t ir_lirc_transmit_ir(struct file *file, const char __user *buf,
 		ret = -ENOSYS;
 		goto out;
 	}
+#ifndef CONFIG_IR_PWM
+	for (i = 0; i < count; i++) {
+		if (txbuf[i] > IR_MAX_DURATION / 1000 - duration || !txbuf[i]) {
+			ret = -EINVAL;
+			goto out;
+		}
 
+		duration += txbuf[i];
+	}
+#endif
 	ret = dev->tx_ir(dev, txbuf, count);
 	if (ret < 0)
 		goto out;
-	#ifndef CONFIG_IR_PWM
-	for (i = 0; i < ret; i++)
-		duration += txbuf[i];
-	#endif
-	ret *= sizeof(unsigned int);
 
-	#ifndef CONFIG_IR_PWM
+#ifndef CONFIG_IR_PWM
+	for (duration = i = 0; i < ret; i++)
+		duration += txbuf[i];
+#endif
+	ret *= sizeof(unsigned int);
+#ifndef CONFIG_IR_PWM
 	/*
 	 * The lircd gap calculation expects the write function to
 	 * wait for the actual IR signal to be transmitted before
@@ -167,8 +176,7 @@ static ssize_t ir_lirc_transmit_ir(struct file *file, const char __user *buf,
 		set_current_state(TASK_INTERRUPTIBLE);
 		schedule_timeout(usecs_to_jiffies(towait));
 	}
-	#endif
-
+#endif
 out:
 	kfree(txbuf);
 	return ret;

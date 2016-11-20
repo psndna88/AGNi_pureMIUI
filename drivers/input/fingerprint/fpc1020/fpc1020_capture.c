@@ -265,15 +265,12 @@ int fpc1020_write_cb_test_setup(fpc1020_data_t *fpc1020, bool invert)
 	case FPC1020_CHIP_1022X:
 		error = fpc1020_write_cb_test_setup_1022(fpc1020, invert);
 		break;
-
 	case FPC1020_CHIP_1155X:
 		error = fpc1020_write_cb_test_setup_1155(fpc1020, invert);
 		break;
-
 	case FPC1020_CHIP_1145X:
 		error = fpc1020_write_cb_test_setup_1145(fpc1020, invert);
 		break;
-
 	default:
 		error = fpc1020_write_cb_test_setup_102x(fpc1020, invert);
 		break;

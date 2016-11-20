@@ -21,4 +21,10 @@ menu "Xiaomi board selection"
 		help
 		  Support for Xiaomi Redmi Note 3 variant
 
+	config MACH_XIAOMI_HYDROGEN
+		bool "XIAOMI_HYDROGEN board"
+		select MACH_XIAOMI_MSM8956
+		help
+		  Support for Xiaomi Mi Max variant
+
 endmenu

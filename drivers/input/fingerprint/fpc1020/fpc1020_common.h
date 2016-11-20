@@ -46,7 +46,7 @@ extern const bool target_little_endian;
 
 #define FPC1020_STATUS_REG_RESET_VALUE 0x1e
 
-#define FPC1020_STATUS_REG_MODE_MASK (\
+#define FPC1020_STATUS_REG_MODE_MASK ( \
 		FPC_1020_STATUS_REG_BIT_MAIN_IDLE_CMD | \
 		FPC_1020_STATUS_REG_BIT_SYNC_PWR_IDLE | \
 		FPC_1020_STATUS_REG_BIT_PWR_DWN_OSC_HIN)
@@ -55,7 +55,7 @@ extern const bool target_little_endian;
 
 #define FPC1020_STATUS_REG_IN_SLEEP_MODE	0
 
-#define FPC1020_STATUS_REG_IN_IDLE_MODE (\
+#define FPC1020_STATUS_REG_IN_IDLE_MODE ( \
 		FPC_1020_STATUS_REG_BIT_MAIN_IDLE_CMD | \
 		FPC_1020_STATUS_REG_BIT_SYNC_PWR_IDLE | \
 		FPC_1020_STATUS_REG_BIT_PWR_DWN_OSC_HIN)
@@ -190,7 +190,6 @@ typedef struct {
 	fpc1020_chip_info_t    chip;
 	u32                    cs_gpio;
 	u32                    reset_gpio;
-	u32                    fp_id_gpio;
 	u32                    irq_gpio;
 	int                    irq;
 	wait_queue_head_t      wq_irq_return;

@@ -318,7 +318,9 @@ struct msm_otg_platform_data {
 	int usb_id_gpio;
 	int hub_reset_gpio;
 	int switch_sel_gpio;
+#ifdef CONFIG_MACH_XIAOMI_KENZO
 	int usbid_switch;
+#endif
 	bool phy_dvdd_always_on;
 	bool emulation;
 	bool enable_streaming;

@@ -19,7 +19,7 @@
  * msm8976.dtsi file.
  */
 
-#include "msm8976.dtsi"
+#include "hydrogen/msm8976-hydrogen.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. MSM 8976v1.1";

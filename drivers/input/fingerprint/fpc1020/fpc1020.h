@@ -12,7 +12,6 @@
 #define LINUX_SPI_FPC1020_H
 
 struct fpc1020_platform_data {
-	int fp_id_gpio;
 	int irq_gpio;
 	int reset_gpio;
 	int cs_gpio;
@@ -25,7 +24,7 @@ struct fpc1020_platform_data {
 };
 
 typedef enum {
-	FPC1020_MODE_IDLE			= 0,
+	FPC1020_MODE_IDLE = 0,
 	FPC1020_MODE_WAIT_AND_CAPTURE,
 	FPC1020_MODE_SINGLE_CAPTURE,
 	FPC1020_MODE_CHECKERBOARD_TEST_NORM,
@@ -39,10 +38,11 @@ typedef enum {
 } fpc1020_capture_mode_t;
 
 typedef enum {
-	FPC1020_CHIP_NONE  = 0,
+	FPC1020_CHIP_NONE = 0,
 	FPC1020_CHIP_1020A,
 	FPC1020_CHIP_1021A,
 	FPC1020_CHIP_1021B,
+	FPC1020_CHIP_1021D,
 	FPC1020_CHIP_1021E,
 	FPC1020_CHIP_1021F,
 	FPC1020_CHIP_1150A,

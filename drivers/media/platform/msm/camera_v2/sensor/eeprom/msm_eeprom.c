@@ -23,13 +23,32 @@
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
 
 DEFINE_MSM_MUTEX(msm_eeprom_mutex);
-uint8_t g_s5k3p3_otp_module_id = 0;
-uint8_t g_s5k3p3_otp_vcm_id = 0;
-uint8_t g_ov16880_otp_module_id = 0;
-uint8_t g_ov5670_otp_module_id = 0;
-uint8_t g_s5k5e8_otp_month = 0;
-uint8_t g_s5k5e8_otp_day = 0;
-uint8_t g_s5k5e8_otp_lens_id = 0;
+#ifdef CONFIG_MACH_XIAOMI_HYDROGEN
+#define HYDROGEN_BACK_MODULE_ID_OFFSET 0x1
+#define HYDROGEN_BACK_MODULE_ID_OFILM 0x07
+#define HYDROGEN_BACK_MODULE_ID_QTEC  0x06
+#define HYDROGEN_BACK_MODULE_OFILM "ov16880"
+#define HYDROGEN_BACK_MODULE_QTEC "ov16880_qtec"
+#define HYDROGEN_BACK_MODULE_OFILM_S5K3P3 "s5k3p3sm"
+#define HYDROGEN_BACK_SENSOR_EEPROM_NAME "dw9763"
+#define HYDROGEN_BACK_OFILM_SID_OFFSET 0x0C
+#define HYDROGEN_BAKC_OFILM_SID_S5K3P3 0x07
+#define HYDROGEN_BACK_OFILM_SID_OV16880 0x08
+
+#define HYDROGEN_FRONT_MODULE_ID_OFFSET_1 2
+#define HYDROGEN_FRONT_MODULE_ID_OFFSET_2 25
+#define HYDROGEN_FRONT_MODULE_ID_OFFSET_3 48
+#define HYDROGEN_FRONT_MODULE_ID_OFILM 0x07
+#define HYDROGEN_FRONT_MODULE_ID_QTEC  0x06
+#define HYDROGEN_FRONT_MODULE_OFILM "s5k5e8_ofilm"
+#define HYDROGEN_FRONT_MODULE_QTEC "s5k5e8_qtec"
+#define HYDROGEN_FRONT_SENSOR_EEPROM_NAME "s5k5e8"
+
+static int hydrogen_set_back_sensor_name;
+static char hydrogen_back_sensor_name[32];
+static int hydrogen_set_front_sensor_name;
+static char hydrogen_front_sensor_name[32];
+#endif
 
 #ifdef CONFIG_COMPAT
 static struct v4l2_file_operations msm_eeprom_v4l2_subdev_fops;
@@ -37,6 +56,15 @@ static long msm_eeprom_subdev_fops_ioctl32(struct file *file,
 	unsigned int cmd,unsigned long arg);
 #endif
 
+#ifdef CONFIG_MACH_XIAOMI_KENZO
+uint8_t g_s5k3p3_otp_module_id = 0;
+uint8_t g_s5k3p3_otp_vcm_id = 0;
+uint8_t g_ov16880_otp_module_id = 0;
+uint8_t g_ov5670_otp_module_id = 0;
+uint8_t g_s5k5e8_otp_month = 0;
+uint8_t g_s5k5e8_otp_day = 0;
+uint8_t g_s5k5e8_otp_lens_id = 0;
+#endif
 /**
   * msm_get_read_mem_size - Get the total size for allocation
   * @eeprom_map_array:	mem map
@@ -99,6 +127,108 @@ static int msm_eeprom_verify_sum(const char *mem, uint32_t size, uint32_t sum)
 	CDBG("%s: checksum pass 0x%x\n", __func__, sum);
 	return 0;
 }
+
+#ifdef CONFIG_MACH_XIAOMI_HYDROGEN
+static void set_hydrogen_back_sensor_name(struct msm_eeprom_ctrl_t *e_ctrl,
+		char *mapdata)
+{
+	uint8_t *memptr;
+
+	if (hydrogen_set_back_sensor_name)
+		return;
+
+	memptr = mapdata;
+
+	if (memptr[HYDROGEN_BACK_MODULE_ID_OFFSET] == HYDROGEN_BACK_MODULE_ID_OFILM) {
+		pr_err("SID = 0x%x\n", memptr[HYDROGEN_BACK_OFILM_SID_OFFSET]);
+		if (memptr[HYDROGEN_BACK_OFILM_SID_OFFSET] == HYDROGEN_BACK_OFILM_SID_OV16880)
+			strcpy(hydrogen_back_sensor_name, HYDROGEN_BACK_MODULE_OFILM);
+		else if (memptr[HYDROGEN_BACK_OFILM_SID_OFFSET] == HYDROGEN_BAKC_OFILM_SID_S5K3P3) {
+			strcpy(hydrogen_back_sensor_name, HYDROGEN_BACK_MODULE_OFILM_S5K3P3);
+		}
+		hydrogen_set_back_sensor_name = 1;
+		pr_err("hydrogen back sensor name = %s, line = %d\n", hydrogen_back_sensor_name, __LINE__);
+		return;
+	} else if (memptr[HYDROGEN_BACK_MODULE_ID_OFFSET] == HYDROGEN_BACK_MODULE_ID_QTEC) {
+		strcpy(hydrogen_back_sensor_name, HYDROGEN_BACK_MODULE_QTEC);
+		hydrogen_set_back_sensor_name = 1;
+		pr_err("hydrogen back sensor name = %s, line = %d\n", hydrogen_back_sensor_name, __LINE__);
+		return;
+	} else {
+		pr_err("hydrogen back sensor name not match!\n");
+	}
+}
+
+int hydrogen_get_back_sensor_name(char *sensor_name)
+{
+	if (hydrogen_set_back_sensor_name) {
+		strcpy(sensor_name, hydrogen_back_sensor_name);
+		return 0;
+	} else
+		return -EINVAL;
+}
+EXPORT_SYMBOL(hydrogen_get_back_sensor_name);
+
+static void set_hydrogen_front_sensor_name(struct msm_eeprom_ctrl_t *e_ctrl,
+	char *mapdata)
+{
+	uint8_t *memptr;
+
+	if (hydrogen_set_front_sensor_name)
+		return;
+
+	memptr = mapdata;
+
+	if ((memptr[HYDROGEN_FRONT_MODULE_ID_OFFSET_1] == HYDROGEN_FRONT_MODULE_ID_OFILM) ||
+		(memptr[HYDROGEN_FRONT_MODULE_ID_OFFSET_2] == HYDROGEN_FRONT_MODULE_ID_OFILM) ||
+		(memptr[HYDROGEN_FRONT_MODULE_ID_OFFSET_3] == HYDROGEN_FRONT_MODULE_ID_OFILM)) {
+		strcpy(hydrogen_front_sensor_name, HYDROGEN_FRONT_MODULE_OFILM);
+		hydrogen_set_front_sensor_name = 1;
+		pr_err("hydrogen front sensor name = %s, line = %d\n", hydrogen_front_sensor_name, __LINE__);
+		return;
+	} else if ((memptr[HYDROGEN_FRONT_MODULE_ID_OFFSET_1] == HYDROGEN_FRONT_MODULE_ID_QTEC) ||
+		(memptr[HYDROGEN_FRONT_MODULE_ID_OFFSET_2] == HYDROGEN_FRONT_MODULE_ID_QTEC) ||
+		(memptr[HYDROGEN_FRONT_MODULE_ID_OFFSET_3] == HYDROGEN_FRONT_MODULE_ID_QTEC)) {
+		strcpy(hydrogen_front_sensor_name, HYDROGEN_FRONT_MODULE_QTEC);
+		hydrogen_set_front_sensor_name = 1;
+		pr_err("hydrogen front sensor name = %s, line = %d\n", hydrogen_front_sensor_name, __LINE__);
+		return;
+	} else {
+		pr_err("hydrogen front sensor name not match!\n");
+		return;
+	}
+}
+
+int hydrogen_get_front_sensor_name(char *sensor_name)
+{
+	if (hydrogen_set_front_sensor_name) {
+		strcpy(sensor_name, hydrogen_front_sensor_name);
+		return 0;
+	} else
+		return -EINVAL;
+}
+EXPORT_SYMBOL(hydrogen_get_front_sensor_name);
+
+static void hydrogen_set_sensor_name(struct msm_eeprom_ctrl_t *e_ctrl, char *mapdata)
+{
+	struct msm_eeprom_board_info *eb_info;
+
+	eb_info = e_ctrl->eboard_info;
+
+	if (e_ctrl->eboard_info->eeprom_name == NULL || mapdata == NULL)
+		return;
+
+	if (!strncmp(eb_info->eeprom_name, HYDROGEN_BACK_SENSOR_EEPROM_NAME,
+				strlen(HYDROGEN_BACK_SENSOR_EEPROM_NAME))) {
+		set_hydrogen_back_sensor_name(e_ctrl, mapdata);
+	} else if (!strncmp(eb_info->eeprom_name, HYDROGEN_FRONT_SENSOR_EEPROM_NAME,
+				strlen(HYDROGEN_FRONT_SENSOR_EEPROM_NAME))) {
+		set_hydrogen_front_sensor_name(e_ctrl, mapdata);
+	} else {
+		pr_err("hydrogen sensor name check failed\n");
+	}
+}
+#endif
 
 /**
   * msm_eeprom_match_crc - verify multiple regions using crc
@@ -235,6 +365,9 @@ static int read_eeprom_memory(struct msm_eeprom_ctrl_t *e_ctrl,
 			}
 		}
 	}
+#ifdef CONFIG_MACH_XIAOMI_HYDROGEN
+	hydrogen_set_sensor_name(e_ctrl, block->mapdata);
+#endif
 	return rc;
 }
 /**
@@ -1562,6 +1695,7 @@ static long msm_eeprom_subdev_fops_ioctl32(struct file *file, unsigned int cmd,
 
 #endif
 
+#ifdef CONFIG_MACH_XIAOMI_KENZO
 static void s5k3p3_set_otp_module_id(struct msm_eeprom_ctrl_t *e_ctrl)
 {
 	if (e_ctrl->cal_data.mapdata[0] == 1) {
@@ -1613,6 +1747,7 @@ static void s5k5e8_set_otp_module_id(struct msm_eeprom_ctrl_t *e_ctrl)
 		g_s5k5e8_otp_lens_id = (uint8_t)(e_ctrl->cal_data.mapdata[5]);
 	}
 }
+#endif
 
 static int msm_eeprom_platform_probe(struct platform_device *pdev)
 {
@@ -1754,6 +1889,7 @@ static int msm_eeprom_platform_probe(struct platform_device *pdev)
 			CDBG("memory_data[%d] = 0x%X\n", j,
 				e_ctrl->cal_data.mapdata[j]);
 
+#ifdef CONFIG_MACH_XIAOMI_KENZO
 		if (eb_info->eeprom_name != NULL)
 		{
 			if ((strcmp(eb_info->eeprom_name, "s5k3p3_omida01") == 0) ||
@@ -1766,10 +1902,12 @@ static int msm_eeprom_platform_probe(struct platform_device *pdev)
 				ov16880_set_otp_module_id(e_ctrl);
 			} else if (strcmp(eb_info->eeprom_name, "sunny_omi5f06") == 0) {
 				ov5670_set_otp_module_id(e_ctrl);
-			} else if (strcmp(eb_info->eeprom_name, "s5k5e8_z5e8yab") == 0) {
+			} else if (strcmp(eb_info->eeprom_name, "s5k5e8_z5e8yab") == 0 ||
+					strcmp(eb_info->eeprom_name, "s5k5e8_yx13") == 0) {
 				s5k5e8_set_otp_module_id(e_ctrl);
 			}
 		}
+#endif
 
 		e_ctrl->is_supported |= msm_eeprom_match_crc(&e_ctrl->cal_data);
 

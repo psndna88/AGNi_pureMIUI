@@ -73,29 +73,31 @@ struct chip_struct {
 
 static const char *chip_text[] = {
 	"N/A",		/* FPC1020_CHIP_NONE */
-	"fpc1020a",	/* FPC1020_CHIP_1020A */
-	"fpc1021a",	/* FPC1020_CHIP_1021A */
-	"fpc1021b",	/* FPC1020_CHIP_1021B */
-	"fpc1021e",	/* FPC1020_CHIP_1021E */
-	"fpc1021f",	/* FPC1020_CHIP_1021F */
-	"fpc1150a",	/* FPC1020_CHIP_1150A */
-	"fpc1150b",	/* FPC1020_CHIP_1150B */
-	"fpc1150f",	/* FPC1020_CHIP_1150F */
-	"fpc1155x",	/* FPC1020_CHIP_1155X */
-	"fpc1140a",	/* FPC1020_CHIP_1140A */
-	"fpc1145x",	/* FPC1020_CHIP_1145X */
-	"fpc1140b",	/* FPC1020_CHIP_1140B */
-	"fpc1140c",	/* FPC1020_CHIP_1140C */
-	"fpc11401",	/* FPC1020_CHIP_11401 */
-	"fpc1025x",	/* FPC1020_CHIP_1025X */
-	"fpc1022x",	/* FPC1020_CHIP_1022X */
-	"fpc1035x",	/* FPC1020_CHIP_1035X */
+	"fpc1020a", 	/* FPC1020_CHIP_1020A */
+	"fpc1021a", 	/* FPC1020_CHIP_1021A */
+	"fpc1021b", 	/* FPC1020_CHIP_1021B */
+	"fpc1021d", 	/* FPC1020_CHIP_1021D */
+	"fpc1021e", 	/* FPC1020_CHIP_1021E */
+	"fpc1021f", 	/* FPC1020_CHIP_1021F */
+	"fpc1150a", 	/* FPC1020_CHIP_1150A */
+	"fpc1150b", 	/* FPC1020_CHIP_1150B */
+	"fpc1150f", 	/* FPC1020_CHIP_1150F */
+	"fpc1155x", 	/* FPC1020_CHIP_1155X */
+	"fpc1140a", 	/* FPC1020_CHIP_1140A */
+	"fpc1145x", 	/* FPC1020_CHIP_1145X */
+	"fpc1140b", 	/* FPC1020_CHIP_1140B */
+	"fpc1140c", 	/* FPC1020_CHIP_1140C */
+	"fpc11401", 	/* FPC1020_CHIP_11401 */
+	"fpc1025x", 	/* FPC1020_CHIP_1025X */
+	"fpc1022x", 	/* FPC1020_CHIP_1022X */
+	"fpc1035x", 	/* FPC1020_CHIP_1035X */
 };
 
 static const struct chip_struct chip_data[] = {
 	{FPC1020_CHIP_1020A, 0x020a, 0, FPC1020_ROWS, FPC1020_COLUMNS, FPC102X_ADC_GROUP_SIZE, 8000},
 	{FPC1020_CHIP_1021A, 0x021a, 2, FPC1021_ROWS, FPC1021_COLUMNS, FPC102X_ADC_GROUP_SIZE, 8000},
 	{FPC1020_CHIP_1021B, 0x021b, 1, FPC1021_ROWS, FPC1021_COLUMNS, FPC102X_ADC_GROUP_SIZE, 8000},
+	{FPC1020_CHIP_1021D, 0x021d, 1, FPC1021_ROWS, FPC1021_COLUMNS, FPC102X_ADC_GROUP_SIZE, 8000},
 	{FPC1020_CHIP_1021E, 0x021e, 1, FPC1021_ROWS, FPC1021_COLUMNS, FPC102X_ADC_GROUP_SIZE, 8000},
 	{FPC1020_CHIP_1021F, 0x021f, 1, FPC1021_ROWS, FPC1021_COLUMNS, FPC102X_ADC_GROUP_SIZE, 8000},
 	{FPC1020_CHIP_1150A, 0x150a, 1, FPC1150_ROWS, FPC1150_COLUMNS, FPC102X_ADC_GROUP_SIZE, 8000},
@@ -202,7 +204,7 @@ const fpc1020_setup_t fpc1020_setup_default_1150_a1b1f1 = {
 	.capture_finger_down_threshold	= 7,
 	.finger_detect_threshold	= 0x50,
 	.wakeup_detect_rows		= {72, 128},
-	.wakeup_detect_cols		= {32, 32},
+	.wakeup_detect_cols 		= {32, 32},
 };
 
 const fpc1020_setup_t fpc1020_setup_default_1155 = {
@@ -220,7 +222,7 @@ const fpc1020_setup_t fpc1020_setup_default_1155 = {
 	.capture_finger_down_threshold	= 7,
 	.finger_detect_threshold	= 0x50,
 	.wakeup_detect_rows		= {72, 128},
-	.wakeup_detect_cols		= {32, 32},
+	.wakeup_detect_cols 		= {32, 32},
 };
 
 const fpc1020_setup_t fpc1020_setup_default_1140 = {
@@ -238,7 +240,7 @@ const fpc1020_setup_t fpc1020_setup_default_1140 = {
 	.capture_finger_down_threshold	= 7,
 	.finger_detect_threshold	= 0x50,
 	.wakeup_detect_rows		= {66, 118},
-	.wakeup_detect_cols		= {24, 24},
+	.wakeup_detect_cols 		= {24, 24},
 };
 
 const fpc1020_setup_t fpc1020_setup_default_1145 = {
@@ -256,7 +258,7 @@ const fpc1020_setup_t fpc1020_setup_default_1145 = {
 	.capture_finger_down_threshold	= 7,
 	.finger_detect_threshold	= 0x50,
 	.wakeup_detect_rows		= {66, 118},
-	.wakeup_detect_cols		= {24, 24},
+	.wakeup_detect_cols 		= {24, 24},
 };
 
 const fpc1020_setup_t fpc1020_setup_default_1022 = {
@@ -415,6 +417,7 @@ int fpc1020_setup_defaults(fpc1020_data_t *fpc1020)
 		break;
 
 	case FPC1020_CHIP_1021B:
+	case FPC1020_CHIP_1021D:
 	case FPC1020_CHIP_1021E:
 	case FPC1020_CHIP_1021F:
 		ptr = (fpc1020->chip.revision == 1) ? &fpc1020_setup_default_1021_a2b1 :
@@ -752,20 +755,19 @@ static int fpc1020_hwid_1020a(fpc1020_data_t *fpc1020)
 	m2 /= count;
 
 	if (fpc1020_check_in_range_u64(m1, 181, 219) &&
-		fpc1020_check_in_range_u64(m2, 101, 179)) {
+			fpc1020_check_in_range_u64(m2, 101, 179))
 		fpc1020->chip.revision = 1;
-	} else if (fpc1020_check_in_range_u64(m1, 181, 219) &&
-		fpc1020_check_in_range_u64(m2, 181, 219)) {
+	else if (fpc1020_check_in_range_u64(m1, 181, 219) &&
+			fpc1020_check_in_range_u64(m2, 181, 219))
 		fpc1020->chip.revision = 2;
-	} else if (fpc1020_check_in_range_u64(m1, 101, 179) &&
-		fpc1020_check_in_range_u64(m2, 151, 179)) {
+	else if (fpc1020_check_in_range_u64(m1, 101, 179) &&
+			fpc1020_check_in_range_u64(m2, 151, 179))
 		fpc1020->chip.revision = 3;
-	} else if (fpc1020_check_in_range_u64(m1, 0, 99) &&
-		fpc1020_check_in_range_u64(m2, 0, 99)) {
+	else if (fpc1020_check_in_range_u64(m1, 0, 99) &&
+			fpc1020_check_in_range_u64(m2, 0, 99))
 		fpc1020->chip.revision = 4;
-	} else {
+	else
 		fpc1020->chip.revision = 0;
-	}
 
 	dev_dbg(&fpc1020->spi->dev, "%s m1,m2 = %d,%d %s rev=%d \n", __func__,
 		m1, m2,
@@ -817,6 +819,7 @@ int fpc1020_write_sensor_setup(fpc1020_data_t *fpc1020)
 
 	case FPC1020_CHIP_1021A:
 	case FPC1020_CHIP_1021B:
+	case FPC1020_CHIP_1021D:
 	case FPC1020_CHIP_1021E:
 	case FPC1020_CHIP_1021F:
 		return fpc1020_write_sensor_1021_setup(fpc1020);
@@ -860,11 +863,9 @@ static int fpc1020_write_sensor_1020a_setup(fpc1020_data_t *fpc1020)
 	case 1:
 	case 2:
 		return fpc1020_write_sensor_1020a_a1a2_setup(fpc1020);
-
 	case 3:
 	case 4:
 		return fpc1020_write_sensor_1020a_a3a4_setup(fpc1020);
-
 	default:
 		break;
 	}
@@ -896,7 +897,7 @@ static int fpc1020_write_sensor_1020a_a1a2_setup(fpc1020_data_t *fpc1020)
 	if (error)
 		goto out;
 
-	temp_u8 = (rev == 1) ?	0x33 :	0x0f;
+	temp_u8 = (rev == 1) ?	0x33 : 	0x0f;
 	FPC1020_MK_REG_WRITE(reg, FPC102X_REG_PXL_RST_DLY, &temp_u8);
 	error = fpc1020_reg_access(fpc1020, &reg);
 	if (error)
@@ -1160,11 +1161,10 @@ static int fpc1020_write_sensor_1025_setup(fpc1020_data_t *fpc1020)
 	if (error)
 		goto out;
 
-	if (fpc1020->under_glass) {
+	if (fpc1020->under_glass)
 		temp_u64 = 0x2D2D2D2D3D3D3D3D;
-	} else {
+	else
 		temp_u64 = 0x313131313D3D3D3D;
-	}
 	FPC1020_MK_REG_WRITE(reg, FPC102X_REG_SAMPLE_PX_DLY, &temp_u64);
 	error = fpc1020_reg_access(fpc1020, &reg);
 	if (error)
@@ -1322,11 +1322,10 @@ static int fpc1020_write_sensor_1155_setup(fpc1020_data_t *fpc1020)
 	if (error)
 		goto out;
 
-	if (fpc1020->under_glass) {
+	if (fpc1020->under_glass)
 		temp_u64 = 0x2F2F2F2F3F3F3F3F;
-	} else {
+	else
 		temp_u64 = 0x333333333F3F3F3F;
-	}
 	FPC1020_MK_REG_WRITE(reg, FPC102X_REG_SAMPLE_PX_DLY, &temp_u64);
 	error = fpc1020_reg_access(fpc1020, &reg);
 	if (error)
@@ -1501,11 +1500,10 @@ static int fpc1020_write_sensor_1145_setup(fpc1020_data_t *fpc1020)
 	if (error)
 		goto out;
 
-	if (fpc1020->under_glass) {
+	if (fpc1020->under_glass)
 		temp_u64 = 0x2F2F2F2F3F3F3F3F;
-	} else {
+	else
 		temp_u64 = 0x333333333F3F3F3F;
-	}
 	FPC1020_MK_REG_WRITE(reg, FPC102X_REG_SAMPLE_PX_DLY, &temp_u64);
 	error = fpc1020_reg_access(fpc1020, &reg);
 	if (error)
@@ -1600,11 +1598,10 @@ static int fpc1020_write_sensor_1022_setup(fpc1020_data_t *fpc1020)
 
 	if (fpc1020->use_fpc2050) {
 		/* This is in fact a 1035 sensor */
-		if (fpc1020->under_glass) {
+		if (fpc1020->under_glass)
 			temp_u64 = 0x3030303000000000;
-		} else {
+		else
 			temp_u64 = 0x3434343400000000;
-		}
 		FPC1020_MK_REG_WRITE(reg, FPC1022_REG_FINGER_DRIVE_DLY, &temp_u64);
 		error = fpc1020_reg_access(fpc1020, &reg);
 		if (error)
@@ -2246,6 +2243,12 @@ int fpc1020_sleep(fpc1020_data_t *fpc1020, bool deep_sleep)
 			retries--;
 		}
 	}
+
+	/* Optional: Also disable power supplies in sleep */
+/*
+	if (deep_sleep && sleep_ok)
+		error = fpc1020_regulator_set(fpc1020, false);
+*/
 
 	if (sleep_ok) {
 		dev_dbg(&fpc1020->spi->dev,

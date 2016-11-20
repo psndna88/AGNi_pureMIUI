@@ -132,8 +132,6 @@ static int fpc1020_supply_init(fpc1020_data_t *fpc1020);
 
 static int fpc1020_reset_init(fpc1020_data_t *fpc1020,
 					struct fpc1020_platform_data *pdata);
-static int fpc1020_get_fp_id(fpc1020_data_t *fpc1020,
-					struct fpc1020_platform_data *pdata);
 static int fpc1020_irq_init(fpc1020_data_t *fpc1020,
 					struct fpc1020_platform_data *pdata);
 
@@ -365,7 +363,6 @@ static int fpc1020_probe(struct spi_device *spi)
 	int error = 0;
 	fpc1020_data_t *fpc1020 = NULL;
 	size_t buffer_size;
-	int fp_id = FP_ID_UNKNOWN;
 
 	fpc1020 = kzalloc(sizeof(*fpc1020), GFP_KERNEL);
 	if (!fpc1020) {
@@ -387,7 +384,6 @@ static int fpc1020_probe(struct spi_device *spi)
 	fpc1020->spi_freq_khz = 1000u;
 
 	fpc1020->reset_gpio   = -EINVAL;
-	fpc1020->fp_id_gpio   = -EINVAL;
 	fpc1020->irq_gpio     = -EINVAL;
 	fpc1020->cs_gpio      = -EINVAL;
 
@@ -439,10 +435,6 @@ static int fpc1020_probe(struct spi_device *spi)
 	error = fpc1020_reset_init(fpc1020, fpc1020_pdata);
 	if (error)
 		goto err;
-
-	fp_id = fpc1020_get_fp_id(fpc1020, fpc1020_pdata);
-	dev_info(&spi->dev,
-		"fpc vendor fp_id is %d\n", fp_id);
 
 	error = fpc1020_irq_init(fpc1020, fpc1020_pdata);
 	if (error)
@@ -733,7 +725,7 @@ static unsigned int fpc1020_poll(struct file *file, poll_table *wait)
 		ret |= (POLLIN | POLLRDNORM);
 	else if (fpc1020->capture.read_pending_eof)
 		ret |= POLLHUP;
-	else { /* available_bytes == 0 && !pending_eof */
+	else {
 
 		blocking_op =
 			(mode == FPC1020_MODE_WAIT_AND_CAPTURE) ? true : false;
@@ -797,9 +789,6 @@ static int fpc1020_cleanup(fpc1020_data_t *fpc1020, struct spi_device *spidev)
 		disable_irq_wake(fpc1020->irq);
 		free_irq(fpc1020->irq, fpc1020);
 	}
-
-	if (gpio_is_valid(fpc1020->fp_id_gpio))
-		gpio_free(fpc1020->fp_id_gpio);
 
 	if (gpio_is_valid(fpc1020->irq_gpio))
 		gpio_free(fpc1020->irq_gpio);
@@ -972,50 +961,6 @@ static int fpc1020_reset_init(fpc1020_data_t *fpc1020,
 	}
 
 	return error;
-}
-
-/* -------------------------------------------------------------------- */
-static int fpc1020_get_fp_id(fpc1020_data_t *fpc1020,
-					struct fpc1020_platform_data *pdata)
-{
-	int error = 0;
-	int fp_id = FP_ID_UNKNOWN;
-	int pull_up_value = 0;
-	int pull_down_value = 0;
-
-	if (gpio_is_valid(pdata->fp_id_gpio)) {
-		error = devm_gpio_request_one(&fpc1020->spi->dev, pdata->fp_id_gpio,
-					      GPIOF_IN, "fpc1020_fp_id");
-		if (error < 0) {
-			dev_err(&fpc1020->spi->dev,
-				"Failed to request fpc fp_id_gpio %d, error %d\n",
-				pdata->fp_id_gpio, error);
-			return fp_id;
-		}
-
-		gpio_set_value(pdata->fp_id_gpio, 0);
-		usleep_range(1000, 2000); /* Keep enable down at least 1ms */
-		pull_down_value = gpio_get_value(pdata->fp_id_gpio);
-
-		gpio_set_value(pdata->fp_id_gpio, 1);
-		usleep_range(1000, 2000); /* 500us abs min. */
-		pull_up_value = gpio_get_value(pdata->fp_id_gpio);
-
-		if ((pull_up_value == pull_down_value) && (pull_up_value == 0))
-			fp_id = FP_ID_LOW_0;
-		else if ((pull_up_value == pull_down_value) && (pull_up_value == 1))
-			fp_id = FP_ID_HIGH_1;
-		else
-			fp_id = FP_ID_FLOAT_2;
-
-	} else {
-		dev_err(&fpc1020->spi->dev,
-				"fpc vendor id FP_GPIO is invalid !!!\n");
-		fp_id = FP_ID_UNKNOWN;
-	}
-
-	return fp_id;
-
 }
 
 /* -------------------------------------------------------------------- */
@@ -1192,13 +1137,6 @@ static int fpc1020_get_of_pdata(struct device *dev,
 
 	/* required properties */
 
-	pdata->fp_id_gpio = of_get_named_gpio_flags(node,
-			"fpc,fp-id-gpio", 0, NULL);
-	if (pdata->fp_id_gpio < 0) {
-		dev_err(dev, "%s: Could not find fp_id_gpio\n", __func__);
-		goto of_err;
-	}
-
 	pdata->irq_gpio = of_get_named_gpio_flags(node,
 			"fpc,irq-gpio", 0, NULL);
 	if (pdata->irq_gpio < 0) {
@@ -1234,7 +1172,6 @@ static int fpc1020_get_of_pdata(struct device *dev,
 
 of_err:
 	pdata->reset_gpio   = -EINVAL;
-	pdata->fp_id_gpio   = -EINVAL;
 	pdata->irq_gpio     = -EINVAL;
 	pdata->cs_gpio      = -EINVAL;
 	pdata->force_hwid   = -EINVAL;
@@ -1250,7 +1187,6 @@ static int fpc1020_get_of_pdata(struct device *dev,
 					struct fpc1020_platform_data *pdata)
 {
 	pdata->reset_gpio   = -EINVAL;
-	pdata->fp_id_gpio   = -EINVAL;
 	pdata->irq_gpio     = -EINVAL;
 	pdata->cs_gpio      = -EINVAL;
 	pdata->force_hwid   = -EINVAL;

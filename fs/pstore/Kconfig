@@ -72,3 +72,11 @@ config PSTORE_RAM_ANNOTATION_APPEND
 	  the function before pstore is initialized. Content will be buffered
 	  and merged to annotation-ramoops file.
 	  If unsure, say N.
+
+config PSTORE_LAST_KMSG
+	bool "export /proc/last_kmsg"
+	default y
+	depends on PSTORE
+	help
+	  When the option is enabled, pstore will export a proc filesystem
+	  interface /proc/last_kmsg.
