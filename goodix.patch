@@ -1,8 +1,8 @@
-diff --git a/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi b/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi
-index d323265..9dbdbd3 100644
---- a/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi
-+++ b/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi
-@@ -192,17 +192,6 @@
+diff --git a/arch/arm/boot/dts/qcom/kenzo/kenzo-msm8956-mtp.dtsi b/arch/arm/boot/dts/qcom/kenzo/kenzo-msm8956-mtp.dtsi
+index 1e190cc..d963cde 100644
+--- a/arch/arm/boot/dts/qcom/kenzo/kenzo-msm8956-mtp.dtsi
++++ b/arch/arm/boot/dts/qcom/kenzo/kenzo-msm8956-mtp.dtsi
+@@ -186,17 +186,6 @@
  		vdd-supply = <&pm8950_l10>;
  	};
  
