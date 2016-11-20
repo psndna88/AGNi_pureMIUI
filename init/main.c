@@ -475,19 +475,11 @@ static void __init mm_init(void)
 	vmalloc_init();
 }
 
-#ifdef CONFIG_MSMB_CAMERA_MM
-int lct_hardwareid = 2;
-#endif
-
 asmlinkage void __init start_kernel(void)
 {
 	char * command_line;
 	extern const struct kernel_param __start___param[], __stop___param[];
-#ifdef CONFIG_MSMB_CAMERA_MM
-	char * board_id_ptr = NULL;
-#else
 	char * board_id_ptr;
-#endif
 
 	/*
 	 * Need to run as early as possible, to initialize the
@@ -525,26 +517,11 @@ asmlinkage void __init start_kernel(void)
 	page_alloc_init();
 
 	pr_notice("Kernel command line: %s\n", boot_command_line);
-#ifdef CONFIG_MSMB_CAMERA_MM
-	board_id_ptr = strstr(boot_command_line, "androidboot.boardID=0");
-	if (board_id_ptr) {
-		lct_hardwareid = 0;
-	}
-	board_id_ptr = NULL;
-	board_id_ptr = strstr(boot_command_line, "androidboot.boardID=2");
-	if (board_id_ptr) {
-		lct_hardwareid = 2;
-	}
-	board_id_ptr = NULL;
-	board_id_ptr = strstr(boot_command_line, "androidboot.boardID=3");
-	if (board_id_ptr) {
-		lct_hardwareid = 3;
-	}
-#else
+
 	board_id_ptr = strstr(boot_command_line, "androidboot.boardID=");
 	if (board_id_ptr)
 		kenzo_boardid = simple_strtoul(&board_id_ptr[strlen("androidboot.boardID=")], NULL, 10);
-#endif
+
 	parse_early_param();
 	parse_args("Booting kernel", static_command_line, __start___param,
 		   __stop___param - __start___param,
