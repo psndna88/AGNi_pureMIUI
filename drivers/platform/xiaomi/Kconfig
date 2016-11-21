@@ -28,3 +28,26 @@ menu "Xiaomi board selection"
 		  Support for Xiaomi Mi Max variant
 
 endmenu
+
+menu "AGNi variant selection"
+
+	config MACH_XIAOMI_KENZO_AGNI_CM_N
+		bool "XIAOMI KENZO AGNi for cm-N"
+		select MACH_XIAOMI_MSM8956
+		help
+		  Support for Xiaomi Redmi Note 3 AGNi cyanogenmod 14.x
+
+	config MACH_XIAOMI_KENZO_AGNI_CM_MM
+		bool "XIAOMI KENZO AGNi for cm-MM"
+		select MACH_XIAOMI_MSM8956
+		help
+		  Support for Xiaomi Redmi Note 3 AGNi cyanogenmod 13.1
+
+	config MACH_XIAOMI_KENZO_AGNI_MIUI_MM
+		bool "XIAOMI KENZO AGNi for miui-MM"
+		select MACH_XIAOMI_MSM8956
+		help
+		  Support for Xiaomi Redmi Note 3 AGNi MIUI MM
+
+endmenu
+
