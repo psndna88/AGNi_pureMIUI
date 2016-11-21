@@ -3279,6 +3279,27 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 	if (val) {
 		switch (get_driver_type()) {
 		case DRIVER_WCN:
+			if (strcasecmp(val, "enable") == 0) {
+				snprintf(buf, sizeof(buf),
+					 "iwpriv %s cwmenable 1", intf);
+				if (system(buf) != 0) {
+					sigma_dut_print(dut, DUT_MSG_ERROR,
+							"iwpriv cwmenable 1 failed");
+					return 0;
+				}
+			} else if (strcasecmp(val, "disable") == 0) {
+				snprintf(buf, sizeof(buf),
+					 "iwpriv %s cwmenable 0", intf);
+				if (system(buf) != 0) {
+					sigma_dut_print(dut, DUT_MSG_ERROR,
+							"iwpriv cwmenable 0 failed");
+					return 0;
+				}
+			} else {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"Unsupported DYN_BW_SGL");
+			}
+
 			snprintf(buf, sizeof(buf), "iwpriv %s cts_cbw 3", intf);
 			if (system(buf) != 0) {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
