@@ -1750,6 +1750,7 @@ int cmd_sta_p2p_reset(struct sigma_dut *dut, struct sigma_conn *conn,
 	wpa_command(get_station_ifname(), "P2P_SET ps 98");
 	wpa_command(get_station_ifname(), "P2P_SET ps 96");
 	wpa_command(get_station_ifname(), "P2P_SET ps 0");
+	wpa_command(intf, "P2P_SET ps 0");
 	wpa_command(intf, "SET persistent_reconnect 1");
 	wpa_command(intf, "SET ampdu 1");
 	run_system(dut, "iptables -F INPUT");
