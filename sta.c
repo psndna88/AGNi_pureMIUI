@@ -2685,6 +2685,21 @@ static int wcn_sta_set_sp_stream(struct sigma_dut *dut, const char *intf,
 }
 
 
+static void wcn_sta_set_stbc(struct sigma_dut *dut, const char *intf,
+			     const char *val)
+{
+	char buf[60];
+
+	snprintf(buf, sizeof(buf), "iwpriv %s tx_stbc %s", intf, val);
+	if (system(buf) != 0)
+		sigma_dut_print(dut, DUT_MSG_ERROR, "iwpriv tx_stbc failed");
+
+	snprintf(buf, sizeof(buf), "iwpriv %s rx_stbc %s", intf, val);
+	if (system(buf) != 0)
+		sigma_dut_print(dut, DUT_MSG_ERROR, "iwpriv rx_stbc failed");
+}
+
+
 static int cmd_sta_preset_testparameters(struct sigma_dut *dut,
 					 struct sigma_conn *conn,
 					 struct sigma_cmd *cmd)
@@ -3198,6 +3213,9 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 		switch (get_driver_type()) {
 		case DRIVER_ATHEROS:
 			ath_sta_set_stbc(dut, intf, val);
+			break;
+		case DRIVER_WCN:
+			wcn_sta_set_stbc(dut, intf, val);
 			break;
 		default:
 			send_resp(dut, conn, SIGMA_ERROR,
