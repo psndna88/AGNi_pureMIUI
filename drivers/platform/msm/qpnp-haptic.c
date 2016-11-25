@@ -299,6 +299,7 @@ struct qpnp_hap {
 	spinlock_t td_lock;
 	struct work_struct td_work;
 	struct completion completion;
+	struct workqueue_struct *wq;
 	enum qpnp_hap_mode play_mode;
 	enum qpnp_hap_auto_res_mode auto_res_mode;
 	enum qpnp_hap_high_z lra_high_z;
@@ -1724,7 +1725,7 @@ void qpnp_hap_td_enable(struct timed_output_dev *dev, int value)
 	if (!value && prev_value == 30)
 		return;
 
-	schedule_work(&hap->td_work);
+	queue_work(hap->wq, &hap->td_work);
 }
 
 void set_vibrate(int value)
@@ -2432,6 +2433,12 @@ static int qpnp_haptic_probe(struct spmi_device *spmi)
 	rc = qpnp_hap_config(hap);
 	if (rc) {
 		dev_err(&spmi->dev, "hap config failed\n");
+		return rc;
+	}
+
+	hap->wq = alloc_workqueue("qpnp_haptics", WQ_HIGHPRI, 0);
+	if (!hap->wq) {
+		dev_err(&spmi->dev, "Failed to allocate workqueue\n");
 		return rc;
 	}
 
