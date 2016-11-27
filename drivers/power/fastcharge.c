@@ -22,9 +22,9 @@ static ssize_t force_fast_charge_show(struct kobject *kobj, struct kobj_attribut
 
 static ssize_t force_fast_charge_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
 {
-	if (buf[0] >= '0' && buf[0] <= '1' && buf[1] == '\n')
-                if (force_fast_charge != buf[0] - '0')
-		        force_fast_charge = buf[0] - '0';
+	sscanf(buf, "%d ", &force_fast_charge);
+	if (force_fast_charge < 0 || force_fast_charge > 1)
+		force_fast_charge = 0;
 
 	return count;
 }
