@@ -1107,6 +1107,9 @@ static int xpad_init_input(struct usb_xpad *xpad)
 	struct input_dev *input_dev;
 	int i, error;
 
+	if (intf->cur_altsetting->desc.bNumEndpoints != 2)
+		return -ENODEV;
+
 	input_dev = input_allocate_device();
 	if (!input_dev)
 		return -ENOMEM;
