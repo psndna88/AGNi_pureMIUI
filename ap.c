@@ -2274,13 +2274,15 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 		owrt_ap_set_vap(dut, vap_id, "interworking", "1");
 
 		if (dut->ap_lci == 1 && strlen(dut->ap2_ssid) == 0) {
-			sprintf(anqpval, "'265:0010%s%s060101'",
+			snprintf(anqpval, sizeof(anqpval),
+				"'265:0010%s%s060101'",
 				dut->ap_val_lci, dut->ap_infoz);
 			owrt_ap_set_list_vap(dut, vap_id, "anqp_elem", anqpval);
 		}
 
 		if (dut->ap_lcr == 1) {
-			sprintf(anqpval, "'266:0000b2555302ae%s'",
+			snprintf(anqpval, sizeof(anqpval),
+				"'266:0000b2555302ae%s'",
 				dut->ap_val_lcr);
 			owrt_ap_set_list_vap(dut, vap_id, "anqp_elem", anqpval);
 		}
