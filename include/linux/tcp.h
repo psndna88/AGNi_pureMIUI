@@ -440,4 +440,6 @@ static inline void tcp_saved_syn_free(struct tcp_sock *tp)
 int tcp_skb_shift(struct sk_buff *to, struct sk_buff *from, int pcount,
 		  int shiftlen);
 
+struct sk_buff *tcp_get_timestamping_opt_stats(const struct sock *sk);
+
 #endif	/* _LINUX_TCP_H */
