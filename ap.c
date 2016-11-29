@@ -3757,7 +3757,7 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 	}
 
 	if (dut->ap_ldpc == 1) {
-		snprintf(buf, sizeof(buf), "iwpriv %s ldpc 1", ifname);
+		snprintf(buf, sizeof(buf), "iwpriv %s ldpc 3", ifname);
 		if (system(buf) != 0) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"iwpriv ldpc 1 failed");
