@@ -215,6 +215,12 @@ struct sigma_stream {
 #define AP_AC_VI 2
 #define AP_AC_VO 3
 
+enum value_not_set_enabled_disabled {
+	VALUE_NOT_SET,
+	VALUE_ENABLED,
+	VALUE_DISABLED
+};
+
 struct sigma_dut {
 	int s; /* server TCP socket */
 	int debug_level;
@@ -314,23 +320,19 @@ struct sigma_dut {
 		int txop;
 		int acm;
 	} ap_qos[NUM_AP_AC], ap_sta_qos[NUM_AP_AC];
-	enum ap_noack_values {
-		AP_NOACK_NOT_SET,
-		AP_NOACK_ENABLED,
-		AP_NOACK_DISABLED
-	} ap_noack;
-	int ap_ampdu;
-	int ap_amsdu;
-	int ap_rx_amsdu;
+	enum value_not_set_enabled_disabled ap_noack;
+	enum value_not_set_enabled_disabled ap_ampdu;
+	enum value_not_set_enabled_disabled ap_amsdu;
+	enum value_not_set_enabled_disabled ap_rx_amsdu;
 	int ap_ampdu_exp;
-	int ap_addba_reject;
+	enum value_not_set_enabled_disabled ap_addba_reject;
 	int ap_fixed_rate;
 	int ap_mcs;
 	int ap_rx_streams;
 	int ap_tx_streams;
 	unsigned int ap_vhtmcs_map;
-	int ap_ldpc;
-	int ap_sig_rts;
+	enum value_not_set_enabled_disabled ap_ldpc;
+	enum value_not_set_enabled_disabled ap_sig_rts;
 	enum ap_chwidth {
 		AP_20,
 		AP_40,
@@ -340,11 +342,7 @@ struct sigma_dut {
 	} ap_chwidth;
 	enum ap_chwidth default_ap_chwidth;
 	int ap_tx_stbc;
-	enum ap_dyn_bw_sig_values {
-		AP_DYN_BW_SGNL_NOT_SET,
-		AP_DYN_BW_SGNL_ENABLED,
-		AP_DYN_BW_SGNL_DISABLED
-	} ap_dyn_bw_sig;
+	enum value_not_set_enabled_disabled ap_dyn_bw_sig;
 	int ap_sgi80;
 	int ap_p2p_mgmt;
 	enum ap_key_mgmt {
