@@ -1705,7 +1705,7 @@ static void s5k3p3_set_otp_module_id(struct msm_eeprom_ctrl_t *e_ctrl)
 		g_s5k3p3_otp_module_id = (uint8_t)(e_ctrl->cal_data.mapdata[11]);
 		if (g_s5k3p3_otp_module_id != 0x02) {
 			g_s5k3p3_otp_module_id = (uint8_t)(e_ctrl->cal_data.mapdata[2]);
-			if(g_s5k3p3_otp_module_id == 0x0f || g_s5k3p3_otp_module_id == 0x11)
+			if(g_s5k3p3_otp_module_id == 0x0f || g_s5k3p3_otp_module_id == 0x11 || g_s5k3p3_otp_module_id == 0x10)
 				g_s5k3p3_otp_vcm_id = (uint8_t)(e_ctrl->cal_data.mapdata[6]);
 		}
 	}
@@ -1897,7 +1897,8 @@ static int msm_eeprom_platform_probe(struct platform_device *pdev)
 		{
 			if (strcmp(eb_info->eeprom_name, "s5k3p3_omida01") == 0 ||
 					strcmp(eb_info->eeprom_name, "s5k3p3_gt24c64") == 0 ||
-					strcmp(eb_info->eeprom_name, "s5k3p3_f16s01c") == 0) {
+					strcmp(eb_info->eeprom_name, "s5k3p3_f16s01c") == 0 ||
+					strcmp(eb_info->eeprom_name, "s5k3p3_f3p3man") == 0 ) {
 				s5k3p3_set_otp_module_id(e_ctrl);
 			} else if (strcmp(eb_info->eeprom_name, "ov16880_f16v01a") == 0 ||
 					strcmp(eb_info->eeprom_name, "ov16880_omida05") == 0) {
