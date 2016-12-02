@@ -1960,6 +1960,51 @@ static const struct attribute_group ft5x46_attr_group = {
 	.attrs = ft5x46_attrs
 };
 
+static int ft5x46_proc_init(struct ft5x46_data *ft5x46)
+{
+	int ret = 0;
+	char *buf, *path = NULL;
+	char *double_tap_sysfs_node, *key_disabler_sysfs_node;
+	struct proc_dir_entry *proc_entry_tp = NULL;
+	struct proc_dir_entry *proc_symlink_tmp  = NULL;
+
+	buf = kzalloc(sizeof(struct ft5x46_data), GFP_KERNEL);
+	if (buf)
+		path = "/devices/soc.0/78b8000.i2c/i2c-4/4-0038";
+
+	proc_entry_tp = proc_mkdir("touchpanel", NULL);
+	if (proc_entry_tp == NULL) {
+		dev_err(ft5x46->dev, "Couldn't create touchpanel dir in procfs\n");
+		ret = -ENOMEM;
+	}
+
+	double_tap_sysfs_node = kzalloc(sizeof(struct ft5x46_data), GFP_KERNEL);
+	if (double_tap_sysfs_node)
+		sprintf(double_tap_sysfs_node, "/sys%s/%s", path, "wakeup_mode");
+	proc_symlink_tmp = proc_symlink("double_tap_enable",
+			proc_entry_tp, double_tap_sysfs_node);
+	if (proc_symlink_tmp == NULL) {
+		dev_err(ft5x46->dev, "Couldn't create double_tap_enable symlink\n");
+		ret = -ENOMEM;
+	}
+
+	key_disabler_sysfs_node = kzalloc(sizeof(struct ft5x46_data), GFP_KERNEL);
+	if (key_disabler_sysfs_node)
+		sprintf(key_disabler_sysfs_node, "/sys%s/%s", path, "keypad_mode");
+	proc_symlink_tmp = proc_symlink("capacitive_keys_enable",
+			proc_entry_tp, key_disabler_sysfs_node);
+	if (proc_symlink_tmp == NULL) {
+		dev_err(ft5x46->dev, "Couldn't create capacitive_keys_enable symlink\n");
+		ret = -ENOMEM;
+	}
+
+	kfree(buf);
+	kfree(double_tap_sysfs_node);
+	kfree(key_disabler_sysfs_node);
+
+	return ret;
+}
+
 static int ft5x46_power_on(struct ft5x46_data *data, bool on)
 {
 	int rc = 0;
@@ -2864,6 +2909,8 @@ struct ft5x46_data *ft5x46_probe(struct device *dev,
 		dev_err(dev, "Failed to create board_properties entry\n");
 		goto err_configure_sleep;
 	}
+
+	ft5x46_proc_init(ft5x46);
 
 	sysfs_attr_init(&ft5x46->vkeys_attr.attr);
 	ft5x46->vkeys_attr.attr.name = "virtualkeys.ft5x46";
