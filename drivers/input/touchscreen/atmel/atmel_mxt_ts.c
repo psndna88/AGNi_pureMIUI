@@ -92,6 +92,7 @@
 2 Add MTK supprot without test
 */
 #include <linux/module.h>
+#include <linux/proc_fs.h>
 #include <linux/init.h>
 #include <linux/completion.h>
 #include <linux/delay.h>
@@ -5187,6 +5188,51 @@ static const struct attribute_group mxt_attr_group = {
 	.attrs = mxt_attrs,
 };
 
+static int mxt_proc_init(struct mxt_data *data)
+{
+	int ret = 0;
+	char *buf, *path = NULL;
+	char *double_tap_sysfs_node, *key_disabler_sysfs_node;
+	struct proc_dir_entry *proc_entry_tp = NULL;
+	struct proc_dir_entry *proc_symlink_tmp  = NULL;
+
+	buf = kzalloc(sizeof(struct mxt_data), GFP_KERNEL);
+	if (buf)
+		path = "/devices/soc.0/78b8000.i2c/i2c-4/4-004a";
+
+	proc_entry_tp = proc_mkdir("touchpanel", NULL);
+	if (proc_entry_tp == NULL) {
+		dev_err(&data->client->dev, "atmel_mxt_ts: Couldn't create touchpanel dir in procfs\n");
+		ret = -ENOMEM;
+	}
+
+	double_tap_sysfs_node = kzalloc(sizeof(struct mxt_data), GFP_KERNEL);
+	if (double_tap_sysfs_node)
+		sprintf(double_tap_sysfs_node, "/sys%s/%s", path, "wakeup_mode");
+	proc_symlink_tmp = proc_symlink("double_tap_enable",
+			proc_entry_tp, double_tap_sysfs_node);
+	if (proc_symlink_tmp == NULL) {
+		dev_err(&data->client->dev, "atmel_mxt_ts: Couldn't create double_tap_enable symlink\n");
+		ret = -ENOMEM;
+	}
+
+	key_disabler_sysfs_node = kzalloc(sizeof(struct mxt_data), GFP_KERNEL);
+	if (key_disabler_sysfs_node)
+		sprintf(key_disabler_sysfs_node, "/sys%s/%s", path, "keypad_mode");
+	proc_symlink_tmp = proc_symlink("capacitive_keys_enable",
+			proc_entry_tp, key_disabler_sysfs_node);
+	if (proc_symlink_tmp == NULL) {
+		dev_err(&data->client->dev, "atmel_mxt_ts: Couldn't create capacitive_keys_enable symlink\n");
+		ret = -ENOMEM;
+	}
+
+	kfree(buf);
+	kfree(double_tap_sysfs_node);
+	kfree(key_disabler_sysfs_node);
+
+	return ret;
+}
+
 static void mxt_reset_slots(struct mxt_data *data)
 {
 	struct input_dev *input_dev = data->input_dev;
@@ -5796,6 +5842,9 @@ static int  mxt_probe(struct i2c_client *client,
 		dev_info(&client->dev, "Mxt probe   finished172\n");
 		goto err_free_irq;
 	}
+
+	mxt_proc_init(data);
+
 	dev_info(&client->dev, "Mxt probe finished18\n");
 	error = sysfs_create_group(&client->dev.kobj, &mxt_attr_group);
 	if (error) {

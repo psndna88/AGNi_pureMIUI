@@ -18,6 +18,7 @@
  */
 
 #include <linux/i2c.h>
+#include <linux/proc_fs.h>
 #include <linux/input.h>
 #include <linux/input/mt.h>
 #include <linux/slab.h>
@@ -55,7 +56,6 @@
 
 #define FT_PROC_DEBUG
 #if defined(FT_PROC_DEBUG)
-#include <linux/proc_fs.h>
 #define FTS_FACTORYMODE_VALUE		0x40
 #define FTS_WORKMODE_VALUE		0x00
 #endif
@@ -2290,6 +2290,42 @@ static const struct attribute_group ft5x06_ts_attr_group = {
 	.attrs = ft5x06_ts_attrs,
 };
 
+static int ft5x06_proc_init(struct ft5x06_ts_data *data)
+{
+	struct i2c_client *client = data->client;
+
+	int ret = 0;
+	char *buf, *path = NULL;
+	char *key_disabler_sysfs_node;
+	struct proc_dir_entry *proc_entry_tp = NULL;
+	struct proc_dir_entry *proc_symlink_tmp  = NULL;
+
+	buf = kzalloc(sizeof(struct ft5x06_ts_data), GFP_KERNEL);
+	if (buf)
+		path = "/devices/soc.0/78b8000.i2c/i2c-4/4-0038";
+
+	proc_entry_tp = proc_mkdir("touchpanel", NULL);
+	if (proc_entry_tp == NULL) {
+		dev_err(&client->dev, "Couldn't create touchpanel dir in procfs\n");
+		ret = -ENOMEM;
+	}
+
+	key_disabler_sysfs_node = kzalloc(sizeof(struct ft5x06_ts_data), GFP_KERNEL);
+	if (key_disabler_sysfs_node)
+		sprintf(key_disabler_sysfs_node, "/sys%s/%s", path, "keypad_mode");
+	proc_symlink_tmp = proc_symlink("capacitive_keys_enable",
+			proc_entry_tp, key_disabler_sysfs_node);
+	if (proc_symlink_tmp == NULL) {
+		dev_err(&client->dev, "Couldn't create capacitive_keys_enable symlink\n");
+		ret = -ENOMEM;
+	}
+
+	kfree(buf);
+	kfree(key_disabler_sysfs_node);
+
+	return ret;
+}
+
 static bool ft5x06_debug_addr_is_valid(int addr)
 {
 	if (addr < 0 || addr > 0xFF) {
@@ -3132,6 +3168,8 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 		dev_err(&client->dev, "Failure %d creating sysfs group\n",err);
 		goto free_reset_gpio;
     }
+
+    ft5x06_proc_init(data);
 
 	data->dir = debugfs_create_dir(FT_DEBUG_DIR_NAME, NULL);
 	if (data->dir == NULL || IS_ERR(data->dir)) {
