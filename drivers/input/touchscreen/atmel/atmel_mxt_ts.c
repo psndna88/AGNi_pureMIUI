@@ -349,6 +349,7 @@ struct mxt_data {
 	u8 tchcfg[4];
 
 	struct bin_attribute mem_access_attr;
+	bool keypad_mode;
 	bool debug_enabled;
 	bool debug_v2_enabled;
 	u8 *debug_msg_data;
@@ -2051,6 +2052,9 @@ static void mxt_proc_t15_messages(struct mxt_data *data, u8 *msg)
 #endif
 
 	if (!data->pdata->keymap || !data->pdata->num_keys)
+		return;
+
+	if(data->keypad_mode)
 		return;
 
 	num_keys = data->pdata->num_keys[T15_T97_KEY];
@@ -4949,6 +4953,35 @@ out:
 	return ret;
 }
 
+static ssize_t mxt_ts_keypad_mode_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct mxt_data *data = dev_get_drvdata(dev);
+	int count;
+	char c = data->keypad_mode ? '0' : '1';
+
+	count = sprintf(buf, "%c\n", c);
+
+	return count;
+
+}
+
+static ssize_t mxt_ts_keypad_mode_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct mxt_data *data = dev_get_drvdata(dev);
+	int i;
+
+	if (sscanf(buf, "%u", &i) == 1 && i < 2) {
+		data->keypad_mode = (i == 0);
+
+		return count;
+	} else {
+		dev_dbg(dev, "keypad_mode write error\n");
+		return -EINVAL;
+	}
+}
+
 static ssize_t mxt_debug_enable_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
@@ -5106,6 +5139,8 @@ static DEVICE_ATTR(cmd, S_IWUSR, NULL,
 			mxt_cmd_store);
 static DEVICE_ATTR(depth, S_IWUSR | S_IRUSR, mxt_irq_depth_show,
 			mxt_irq_depth_store);
+static DEVICE_ATTR(keypad_mode, S_IWUSR | S_IRUSR, mxt_ts_keypad_mode_show,
+			mxt_ts_keypad_mode_store);
 #if defined(CONFIG_MXT_PLUGIN_SUPPORT)
 static DEVICE_ATTR(plugin, S_IRWXUGO /*S_IWUSR | S_IRUSR*/, mxt_plugin_show,
 			mxt_plugin_store);
@@ -5153,6 +5188,7 @@ static struct attribute *mxt_attrs[] = {
 	&dev_attr_t25.attr,
 	&dev_attr_cmd.attr,
 	&dev_attr_depth.attr,
+	&dev_attr_keypad_mode.attr,
 #if defined(CONFIG_MXT_PLUGIN_SUPPORT)
 	&dev_attr_plugin.attr,
 	&dev_attr_plugin_tag.attr,
