@@ -809,16 +809,6 @@ int soc_new_compress(struct snd_soc_pcm_runtime *rtd, int num)
 	capture = capture && cpu_dai->driver->capture.channels_min;
 	playback = playback && cpu_dai->driver->playback.channels_min;
 
-	/*
-	 * Compress devices are unidirectional so only one of the directions
-	 * should be set, check for that (xor)
-	 */
-	if (playback + capture != 1) {
-		dev_err(rtd->card->dev, "Invalid direction for compress P %d, C %d\n",
-				playback, capture);
-		return -EINVAL;
-	}
-
 	if(playback)
 		direction = SND_COMPRESS_PLAYBACK;
 	else
