@@ -694,7 +694,8 @@ static irqreturn_t smb349_chg_stat_handler(int irq, void *dev_id)
 	struct smb349_dual_charger *chip = dev_id;
 
 	smb349_pm_stay_awake(chip, PM_SMB349_IRQ_HANDLING);
-	schedule_delayed_work(&chip->irq_handler_dwork,
+	queue_delayed_work(system_power_efficient_wq,
+		&chip->irq_handler_dwork,
 		round_jiffies_relative(msecs_to_jiffies(DELAY_IRQ_LEVEL_MS)));
 
 	return IRQ_HANDLED;
@@ -830,7 +831,7 @@ static inline void handle_dc_inout(struct smb349_dual_charger *chip,
 			dev_dbg(chip->dev, "DC IN\n");
 			smb349_hw_init(chip);
 			smb349_pm_stay_awake(chip, PM_SMB349_DC_INSERTED);
-			schedule_delayed_work(
+			queue_delayed_work(system_power_efficient_wq,
 				&chip->periodic_charge_handler_dwork,
 				round_jiffies_relative(
 					msecs_to_jiffies(PERIODIC_DELAY_MS)));
@@ -927,7 +928,8 @@ static void periodic_charge_work(struct work_struct *work)
 	}
 
 resched:
-	schedule_delayed_work(&chip->periodic_charge_handler_dwork,
+	queue_delayed_work(system_power_efficient_wq,
+		&chip->periodic_charge_handler_dwork,
 		round_jiffies_relative(msecs_to_jiffies(PERIODIC_DELAY_MS)));
 	return;
 }
