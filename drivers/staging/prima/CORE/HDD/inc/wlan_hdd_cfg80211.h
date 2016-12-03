@@ -102,6 +102,12 @@
 
 #define MAX_CHANNEL NUM_2_4GHZ_CHANNELS + NUM_5GHZ_CHANNELS
 
+#ifdef WLAN_FEATURE_LINK_LAYER_STATS
+/* Number of Radios */
+#define NUM_RADIOS  0x1
+#endif /* WLAN_FEATURE_LINK_LAYER_STATS */
+
+
 typedef struct {
    u8 element_id;
    u8 len;

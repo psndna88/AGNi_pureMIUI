@@ -440,7 +440,7 @@ tSirRetStatus limFTPrepareAddBssReq( tpAniSirGlobal pMac,
 
     limExtractApCapabilities( pMac,
         (tANI_U8 *) bssDescription->ieFields,
-        limGetIElenFromBssDescription( bssDescription ), pBeaconStruct );
+        GET_IE_LEN_IN_BSS(bssDescription->length), pBeaconStruct);
 
     if (pMac->lim.gLimProtectionControl != WNI_CFG_FORCE_POLICY_PROTECTION_DISABLE)
         limDecideStaProtectionOnAssoc(pMac, pBeaconStruct, pftSessionEntry);
@@ -734,7 +734,7 @@ tpPESession limFillFTSession(tpAniSirGlobal pMac,
 
     limExtractApCapabilities( pMac,
                             (tANI_U8 *) pbssDescription->ieFields,
-                            limGetIElenFromBssDescription( pbssDescription ),
+                            GET_IE_LEN_IN_BSS(pbssDescription->length),
                             pBeaconStruct );
 
     pftSessionEntry->rateSet.numRates = pBeaconStruct->supportedRates.numRates;
@@ -856,8 +856,8 @@ tpPESession limFillFTSession(tpAniSirGlobal pMac,
 
     regMax = cfgGetRegulatoryMaxTransmitPower( pMac, pftSessionEntry->currentOperChannel ); 
     localPowerConstraint = regMax;
-    limExtractApCapability( pMac, (tANI_U8 *) pbssDescription->ieFields, 
-        limGetIElenFromBssDescription(pbssDescription),
+    limExtractApCapability(pMac, (tANI_U8 *) pbssDescription->ieFields,
+        GET_IE_LEN_IN_BSS(pbssDescription->length),
         &pftSessionEntry->limCurrentBssQosCaps,
         &pftSessionEntry->limCurrentBssPropCap,
         &currentBssUapsd , &localPowerConstraint, psessionEntry);

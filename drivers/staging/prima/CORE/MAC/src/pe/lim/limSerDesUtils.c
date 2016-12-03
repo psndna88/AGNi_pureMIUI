@@ -404,7 +404,7 @@ limCopyBssDescription(tpAniSirGlobal pMac, tANI_U8 *pBuf, tSirBssDescription *pB
     len++;
 
     vos_mem_copy( pBuf, (tANI_U8 *) &(pBssDescription->ieFields),
-                  limGetIElenFromBssDescription(pBssDescription));
+                  GET_IE_LEN_IN_BSS(pBssDescription->length));
 
     return (len + sizeof(tANI_U16));
 } /*** end limCopyBssDescription() ***/
