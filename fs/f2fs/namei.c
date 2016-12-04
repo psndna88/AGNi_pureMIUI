@@ -92,23 +92,18 @@ static int is_multimedia_file(const unsigned char *s, const char *sub)
 {
 	size_t slen = strlen(s);
 	size_t sublen = strlen(sub);
-	int i;
 
 	/*
 	 * filename format of multimedia file should be defined as:
-	 * "filename + '.' + extension + (optional: '.' + temp extension)".
+	 * "filename + '.' + extension".
 	 */
 	if (slen < sublen + 2)
 		return 0;
 
-	for (i = 1; i < slen - sublen; i++) {
-		if (s[i] != '.')
-			continue;
-		if (!strncasecmp(s + i + 1, sub, sublen))
-			return 1;
-	}
+	if (s[slen - sublen - 1] != '.')
+		return 0;
 
-	return 0;
+	return !strncasecmp(s + slen - sublen, sub, sublen);
 }
 
 /*
@@ -756,6 +751,7 @@ static void *f2fs_encrypted_follow_link(struct dentry *dentry,
 	struct fscrypt_str pstr = FSTR_INIT(NULL, 0);
 	struct fscrypt_symlink_data *sd;
 	struct inode *inode = d_inode(dentry);
+	loff_t size = min_t(loff_t, i_size_read(inode), PAGE_SIZE - 1);
 	u32 max_size = inode->i_sb->s_blocksize;
 	int res;
 
@@ -765,8 +761,9 @@ static void *f2fs_encrypted_follow_link(struct dentry *dentry,
 
 	cpage = read_mapping_page(inode->i_mapping, 0, NULL);
 	if (IS_ERR(cpage))
-		return ERR_CAST(cpage);
+		return cpage;
 	caddr = kmap(cpage);
+	caddr[size] = 0;
 
 	/* Symlink is encrypted */
 	sd = (struct fscrypt_symlink_data *)caddr;
