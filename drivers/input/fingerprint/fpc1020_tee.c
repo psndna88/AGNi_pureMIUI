@@ -280,9 +280,10 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *handle)
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
 
 //	if (!is_display_on()) {
+	if (fp_bigcore_boost) {
 		sched_set_boost(1);
 		sched_set_boost(0);
-//	}
+	}
 
 	return IRQ_HANDLED;
 }
