@@ -62,11 +62,7 @@ obj-$(CONFIG_BATTERY_BQ28400)	+= bq28400_battery.o
 obj-$(CONFIG_SMB137C_CHARGER)	+= smb137c-charger.o
 obj-$(CONFIG_QPNP_BMS)		+= qpnp-bms.o batterydata-lib.o
 obj-$(CONFIG_QPNP_VM_BMS)	+= qpnp-vm-bms.o batterydata-lib.o batterydata-interface.o
-ifeq ($(CONFIG_MACH_XIAOMI_KENZO_AGNI_CM_N),y)
 obj-$(CONFIG_QPNP_FG)		+= qpnp-fg.o
-else
-obj-$(CONFIG_QPNP_FG)		+= qpnp-fg_miui.o
-endif
 obj-$(CONFIG_QPNP_CHARGER)	+= qpnp-charger.o
 obj-$(CONFIG_QPNP_LINEAR_CHARGER)	+= qpnp-linear-charger.o
 obj-$(CONFIG_QPNP_SMBCHARGER)	+= qpnp-smbcharger.o pmic-voter.o
