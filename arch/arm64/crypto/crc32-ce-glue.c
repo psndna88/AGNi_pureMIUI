@@ -8,6 +8,7 @@
  * published by the Free Software Foundation.
  */
 
+#include <crypto/sha1_base.h>
 #include <linux/cpufeature.h>
 #include <linux/crc32.h>
 #include <linux/init.h>
