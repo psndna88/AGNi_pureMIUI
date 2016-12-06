@@ -332,7 +332,6 @@ config SND_SOC_MSM8994
 	select QTI_PP
 	select DTS_SRS_TM
 	select SND_SOC_CPE
-	select MSM_ULTRASOUND
 	select DOLBY_DS2
 	select SND_HWDEP
         select DTS_EAGLE
