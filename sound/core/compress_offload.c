@@ -51,6 +51,13 @@
 #define COMPR_CODEC_CAPS_OVERFLOW
 #endif
 
+/* struct snd_compr_codec_caps overflows the ioctl bit size for some
+ * architectures, so we need to disable the relevant ioctls.
+ */
+#if _IOC_SIZEBITS < 14
+#define COMPR_CODEC_CAPS_OVERFLOW
+#endif
+
 /* TODO:
  * - add substream support for multiple devices in case of
  *	SND_DYNAMIC_MINORS is not used
@@ -849,6 +856,7 @@ static long snd_compr_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 
 	mutex_lock(&stream->device->lock);
 	switch (_IOC_NR(cmd)) {
+
 	case _IOC_NR(SNDRV_COMPRESS_SET_PARAMS):
 		retval = snd_compr_set_params(stream, arg);
 		break;
