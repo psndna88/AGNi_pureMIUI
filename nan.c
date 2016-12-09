@@ -33,6 +33,8 @@ struct sigma_dut *global_dut = NULL;
 static char global_nan_mac_addr[ETH_ALEN];
 static char global_event_resp_buf[1024];
 
+extern wifi_interface_handle wifi_get_iface_handle(wifi_handle handle, char *name);
+
 static int nan_further_availability_tx(struct sigma_dut *dut,
 				       struct sigma_conn *conn,
 				       struct sigma_cmd *cmd);
@@ -772,6 +774,7 @@ void nan_notify_response(transaction_id id, NanResponseMsg *rsp_data)
 }
 
 
+#if QTI_BSP
 /* Events Callback */
 void nan_event_publish_replied(NanPublishRepliedInd *event)
 {
@@ -785,6 +788,7 @@ void nan_event_publish_replied(NanPublishRepliedInd *event)
 		 (event->requestor_instance_id >> 24),
 		 MAC_ADDR_ARRAY(event->addr));
 }
+#endif
 
 
 /* Events Callback */
@@ -1004,7 +1008,9 @@ void * my_thread_function(void *ptr)
 
 static NanCallbackHandler callbackHandler = {
 	.NotifyResponse = nan_notify_response,
+#if QTI_BSP
 	.EventPublishReplied = nan_event_publish_replied,
+#endif
 	.EventPublishTerminated = nan_event_publish_terminated,
 	.EventMatch = nan_event_match,
 	.EventMatchExpired = nan_event_match_expired,

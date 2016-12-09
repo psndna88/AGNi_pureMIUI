@@ -27,6 +27,10 @@ CFLAGS += -DCONFIG_WLANTEST
 OBJS += wlantest.c
 endif
 
+ifneq ($(TARGET_USES_AOSP),true)
+CFLAGS += -DQTI_BSP=1
+endif
+
 CFLAGS += -DCONFIG_CTRL_IFACE_CLIENT_DIR=\"/data/misc/wifi/sockets\"
 CFLAGS += -DSIGMA_TMPDIR=\"/data\"
 
@@ -56,8 +60,8 @@ LOCAL_C_INCLUDES += \
 	frameworks/base/cmds/keystore \
 	system/security/keystore \
 	hardware/qcom/wlan/qcwcn/wifi_hal \
-	hardware/libhardware_legacy/include/hardware_legacy \
-	frameworks/opt/net/wifi/libwifi_hal/include
+	frameworks/opt/net/wifi/libwifi_hal/include \
+	hardware/libhardware_legacy/include/hardware_legacy
 LOCAL_SHARED_LIBRARIES := libc libcutils
 LOCAL_SHARED_LIBRARIES += libhardware_legacy
 ifneq ($(wildcard hardware/qcom/wlan/qcwcn/wifi_hal/nan_cert.h),)
@@ -74,7 +78,7 @@ LOCAL_SHARED_LIBRARIES += libkeystore_binder
 endif
 LOCAL_SRC_FILES := $(OBJS)
 LOCAL_CFLAGS := $(CFLAGS)
-include $(BUILD_EXECUTABLE)
+#include $(BUILD_EXECUTABLE)
 
 # Add building of e_loop
 include $(CLEAR_VARS)
