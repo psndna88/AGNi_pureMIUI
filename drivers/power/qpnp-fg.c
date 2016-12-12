@@ -1688,10 +1688,12 @@ static int get_prop_capacity(struct fg_chip *chip)
 
 	if (chip->battery_missing)
 		return MISSING_CAPACITY;
+#ifndef CONFIG_MACH_XIAOMI_KENZO
 	if (!chip->profile_loaded && !chip->use_otp_profile) {
 		pr_info("loading batt profile, return last soc\n");
 		return chip->last_soc;
 	}
+#endif
 	if (chip->charge_full)
 		return FULL_CAPACITY;
 	if (chip->soc_empty) {
