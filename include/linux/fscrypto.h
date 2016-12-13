@@ -344,7 +344,7 @@ static inline int fscrypt_notsupp_zeroout_range(struct inode *i, pgoff_t p,
 }
 
 /* policy.c */
-static inline int fscrypt_notsupp_process_policy(struct inode *i,
+static inline int fscrypt_notsupp_process_policy(struct file *f,
 				const struct fscrypt_policy *p)
 {
 	return -EOPNOTSUPP;
