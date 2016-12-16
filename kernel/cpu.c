@@ -8,6 +8,7 @@
 #include <linux/init.h>
 #include <linux/notifier.h>
 #include <linux/sched.h>
+#include <linux/sched/rt.h>
 #include <linux/unistd.h>
 #include <linux/cpu.h>
 #include <linux/oom.h>
@@ -449,9 +450,41 @@ out:
 	return ret;
 }
 
+static int switch_to_rt_policy(void)
+{
+	struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
+	unsigned int policy = current->policy;
+	int err;
+
+	/* Nobody should be attempting hotplug from these policy contexts. */
+	if (policy == SCHED_BATCH || policy == SCHED_IDLE ||
+					policy == SCHED_DEADLINE)
+		return -EPERM;
+
+	if (policy == SCHED_FIFO || policy == SCHED_RR)
+		return 1;
+
+	/* Only SCHED_NORMAL left. */
+	err = sched_setscheduler_nocheck(current, SCHED_FIFO, &param);
+	return err;
+
+}
+
+static int switch_to_fair_policy(void)
+{
+	struct sched_param param = { .sched_priority = 0 };
+
+	return sched_setscheduler_nocheck(current, SCHED_NORMAL, &param);
+}
+
 int __cpuinit cpu_up(unsigned int cpu)
 {
 	int err = 0;
+	int switch_err = 0;
+
+	switch_err = switch_to_rt_policy();
+	if (switch_err < 0)
+		return switch_err;
 
 #ifdef	CONFIG_MEMORY_HOTPLUG
 	int nid;
@@ -508,6 +541,13 @@ int __cpuinit cpu_up(unsigned int cpu)
 
 out:
 	cpu_maps_update_done();
+
+	if (!switch_err) {
+		switch_err = switch_to_fair_policy();
+		pr_err("Hotplug policy switch err. Task %s pid=%d\n",
+					current->comm, current->pid);
+	}
+
 	return err;
 }
 EXPORT_SYMBOL_GPL(cpu_up);
