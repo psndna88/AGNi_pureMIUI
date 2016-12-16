@@ -1364,7 +1364,8 @@ config DEBUG_BLK_CGROUP
 
 config CGROUP_BPF
         bool "Support for eBPF programs attached to cgroups"
-        depends on BPF_SYSCALL && SOCK_CGROUP_DATA
+        depends on BPF_SYSCALL
+        select SOCK_CGROUP_DATA
         help
           Allow attaching eBPF programs to a cgroup using the bpf(2)
           syscall command BPF_PROG_ATTACH.
