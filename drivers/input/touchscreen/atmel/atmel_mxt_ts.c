@@ -5192,7 +5192,7 @@ static int mxt_proc_init(struct mxt_data *data)
 {
 	int ret = 0;
 	char *buf, *path = NULL;
-	char *double_tap_sysfs_node, *key_disabler_sysfs_node;
+	char *key_disabler_sysfs_node;
 	struct proc_dir_entry *proc_entry_tp = NULL;
 	struct proc_dir_entry *proc_symlink_tmp  = NULL;
 
@@ -5203,16 +5203,6 @@ static int mxt_proc_init(struct mxt_data *data)
 	proc_entry_tp = proc_mkdir("touchpanel", NULL);
 	if (proc_entry_tp == NULL) {
 		dev_err(&data->client->dev, "atmel_mxt_ts: Couldn't create touchpanel dir in procfs\n");
-		ret = -ENOMEM;
-	}
-
-	double_tap_sysfs_node = kzalloc(sizeof(struct mxt_data), GFP_KERNEL);
-	if (double_tap_sysfs_node)
-		sprintf(double_tap_sysfs_node, "/sys%s/%s", path, "wakeup_mode");
-	proc_symlink_tmp = proc_symlink("double_tap_enable",
-			proc_entry_tp, double_tap_sysfs_node);
-	if (proc_symlink_tmp == NULL) {
-		dev_err(&data->client->dev, "atmel_mxt_ts: Couldn't create double_tap_enable symlink\n");
 		ret = -ENOMEM;
 	}
 
@@ -5227,7 +5217,6 @@ static int mxt_proc_init(struct mxt_data *data)
 	}
 
 	kfree(buf);
-	kfree(double_tap_sysfs_node);
 	kfree(key_disabler_sysfs_node);
 
 	return ret;
