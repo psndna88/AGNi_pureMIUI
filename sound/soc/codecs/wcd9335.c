@@ -12743,7 +12743,7 @@ static ssize_t earpiece_boost_store(struct kobject *kobj,
 }
 
 static struct kobj_attribute earpiece_boost_attribute =
-	__ATTR(gpl_earpiece_boost, 0664,
+	__ATTR(earpiece_boost, 0664,
 		earpiece_boost_show,
 		earpiece_boost_store);
 
@@ -12781,7 +12781,7 @@ static ssize_t earpiece_gain_store(struct kobject *kobj,
 }
 
 static struct kobj_attribute earpiece_gain_attribute =
-	__ATTR(earpiece_gain, 0664,
+	__ATTR(gpl_earpiece_gain, 0664,
 		earpiece_gain_show,
 		earpiece_gain_store);
 
