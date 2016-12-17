@@ -246,7 +246,7 @@ static struct dentry *__sdcardfs_lookup(struct dentry *dentry,
 		struct dentry *match = NULL;
 		mutex_lock(&lower_dir_dentry->d_inode->i_mutex);
 		spin_lock(&lower_dir_dentry->d_lock);
-		list_for_each_entry(child, &lower_dir_dentry->d_subdirs, d_u.d_child) {
+		list_for_each_entry(child, &lower_dir_dentry->d_subdirs, d_child) {
 			if (child && child->d_inode) {
 				if (strcasecmp(child->d_name.name, name)==0) {
 					match = dget(child);
