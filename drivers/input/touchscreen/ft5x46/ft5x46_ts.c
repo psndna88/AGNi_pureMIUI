@@ -2172,7 +2172,7 @@ static int fb_notifier_cb(struct notifier_block *self,
 
 	if (evdata && evdata->data && event == FB_EVENT_BLANK && ft5x46) {
 		blank = evdata->data;
-		if (*blank == FB_BLANK_UNBLANK) {
+		if (*blank == FB_BLANK_UNBLANK || *blank == FB_BLANK_NORMAL) {
 			dev_dbg(ft5x46->dev, "##### UNBLANK SCREEN #####\n");
 			ft5x46_input_enable(ft5x46->input);
 		} else if (*blank == FB_BLANK_POWERDOWN) {
