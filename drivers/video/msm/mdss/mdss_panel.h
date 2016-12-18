@@ -547,11 +547,10 @@ struct mdss_panel_info {
 	struct edp_panel_info edp;
 
 	bool is_dba_panel;
-
-	struct mdss_livedisplay_ctx *livedisplay;
-
 	/* debugfs structure for the panel */
 	struct mdss_panel_debugfs_info *debugfs_info;
+
+	struct mdss_livedisplay_ctx *livedisplay;
 };
 
 struct mdss_panel_data {
