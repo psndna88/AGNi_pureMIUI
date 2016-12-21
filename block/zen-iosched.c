@@ -26,7 +26,7 @@ struct zen_data {
 	/* Requests are only present on fifo_list */
 	struct list_head fifo_list[2];
 
-        unsigned int batching;          /* number of sequential requests made */
+	unsigned int batching;		/* number of sequential requests made */
 
 	/* tunables */
 	int fifo_expire[2];
@@ -41,17 +41,17 @@ zen_get_data(struct request_queue *q) {
 static void zen_dispatch(struct zen_data *, struct request *);
 
 static void
-zen_merged_requests(struct request_queue *q, struct request *rq,
+zen_merged_requests(struct request_queue *q, struct request *req,
                     struct request *next)
 {
 	/*
 	 * if next expires before rq, assign its expire time to arq
 	 * and move into next position (next will be deleted) in fifo
 	 */
-	if (!list_empty(&rq->queuelist) && !list_empty(&next->queuelist)) {
-		if (time_before(rq_fifo_time(next), rq_fifo_time(rq))) {
-			list_move(&rq->queuelist, &next->queuelist);
-			rq_set_fifo_time(rq, rq_fifo_time(next));
+	if (!list_empty(&req->queuelist) && !list_empty(&next->queuelist)) {
+		if (time_before(rq_fifo_time(next), rq_fifo_time(req))) {
+			list_move(&req->queuelist, &next->queuelist);
+			rq_set_fifo_time(req, rq_fifo_time(next));
 		}
 	}
 
@@ -62,11 +62,11 @@ zen_merged_requests(struct request_queue *q, struct request *rq,
 static void zen_add_request(struct request_queue *q, struct request *rq)
 {
 	struct zen_data *zdata = zen_get_data(q);
-	const int dir = rq_data_dir(rq);
+	const int sync = rq_is_sync(rq);
 
-	if (zdata->fifo_expire[dir]) {
-		rq_set_fifo_time(rq, jiffies + zdata->fifo_expire[dir]);
-		list_add_tail(&rq->queuelist, &zdata->fifo_list[dir]);
+	if (zdata->fifo_expire[sync]) {
+		rq_set_fifo_time(rq, jiffies + zdata->fifo_expire[sync]);
+		list_add_tail(&rq->queuelist, &zdata->fifo_list[sync]);
 	}
 }
 
@@ -92,7 +92,7 @@ zen_expired_request(struct zen_data *zdata, int ddir)
                 return NULL;
 
         rq = rq_entry_fifo(zdata->fifo_list[ddir].next);
-        if (time_after(jiffies, rq_fifo_time(rq)))
+        if (time_after_eq(jiffies, rq_fifo_time(rq)))
                 return rq;
 
         return NULL;
@@ -287,4 +287,4 @@ module_exit(zen_exit);
 MODULE_AUTHOR("Brandon Berhent");
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Zen IO scheduler");
-MODULE_VERSION("1.0");
+MODULE_VERSION("1.1");
