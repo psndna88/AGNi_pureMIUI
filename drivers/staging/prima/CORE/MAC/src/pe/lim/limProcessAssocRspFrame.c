@@ -877,10 +877,10 @@ limProcessAssocRspFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tANI_U8 sub
     limUpdateAssocStaDatas(pMac, pStaDs, pAssocRsp,psessionEntry);
     // Extract the AP capabilities from the beacon that was received earlier
     // TODO - Watch out for an error response!
-    limExtractApCapabilities( pMac,
-                            (tANI_U8 *) psessionEntry->pLimJoinReq->bssDescription.ieFields,
-                            limGetIElenFromBssDescription( &psessionEntry->pLimJoinReq->bssDescription ),
-                            pBeaconStruct );
+    limExtractApCapabilities(pMac,
+      (tANI_U8 *) psessionEntry->pLimJoinReq->bssDescription.ieFields,
+      GET_IE_LEN_IN_BSS(psessionEntry->pLimJoinReq->bssDescription.length),
+      pBeaconStruct);
 
     if(pMac->lim.gLimProtectionControl != WNI_CFG_FORCE_POLICY_PROTECTION_DISABLE)
         limDecideStaProtectionOnAssoc(pMac, pBeaconStruct, psessionEntry);
