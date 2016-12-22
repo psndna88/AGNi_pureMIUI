@@ -5412,20 +5412,6 @@ v_BOOL_t hdd_update_config_dat( hdd_context_t *pHddCtx )
       fStatus = FALSE;
       hddLog(LOGE, "Could not pass on WNI_CFG_ENABLE_LPWR_IMG_TRANSITION to CCM");
    }
-   if(ccmCfgSetInt(pHddCtx->hHal, WNI_CFG_ENABLE_CONC_BMISS,
-                   pConfig->enable_conc_bmiss, NULL, eANI_BOOLEAN_FALSE)
-       ==eHAL_STATUS_FAILURE)
-   {
-      fStatus = FALSE;
-      hddLog(LOGE, "Could not pass on WNI_CFG_ENABLE_CONC_BMISS to CCM");
-   }
-   if(ccmCfgSetInt(pHddCtx->hHal, WNI_CFG_ENABLE_UNITS_BWAIT,
-                   pConfig->enable_units_bwait, NULL, eANI_BOOLEAN_FALSE)
-       ==eHAL_STATUS_FAILURE)
-   {
-      fStatus = FALSE;
-      hddLog(LOGE, "Could not pass on WNI_CFG_ENABLE_UNITS_BWAIT to CCM");
-   }
 
    if (ccmCfgSetInt(pHddCtx->hHal, WNI_CFG_ENABLE_MCC_ADAPTIVE_SCHED, pConfig->enableMCCAdaptiveScheduler,
       NULL, eANI_BOOLEAN_FALSE)==eHAL_STATUS_FAILURE)
@@ -5894,6 +5880,20 @@ v_BOOL_t hdd_update_config_dat( hdd_context_t *pHddCtx )
    {
        fStatus = FALSE;
        hddLog(LOGE, "Could not pass on WNI_CFG_DISABLE_BAR_WAKE_UP_HOST to CCM");
+   }
+   if(ccmCfgSetInt(pHddCtx->hHal, WNI_CFG_ENABLE_CONC_BMISS,
+                   pConfig->enable_conc_bmiss, NULL, eANI_BOOLEAN_FALSE)
+       ==eHAL_STATUS_FAILURE)
+   {
+      fStatus = FALSE;
+      hddLog(LOGE, "Could not pass on WNI_CFG_ENABLE_CONC_BMISS to CCM");
+   }
+   if(ccmCfgSetInt(pHddCtx->hHal, WNI_CFG_ENABLE_UNITS_BWAIT,
+                   pConfig->enable_units_bwait, NULL, eANI_BOOLEAN_FALSE)
+       ==eHAL_STATUS_FAILURE)
+   {
+      fStatus = FALSE;
+      hddLog(LOGE, "Could not pass on WNI_CFG_ENABLE_UNITS_BWAIT to CCM");
    }
 
    if (ccmCfgSetInt(pHddCtx->hHal, WNI_CFG_SAR_BOFFSET_SET_CORRECTION,

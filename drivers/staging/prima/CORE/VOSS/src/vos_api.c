@@ -269,8 +269,6 @@ VOS_STATUS vos_open( v_CONTEXT_t *pVosContext, void *devHandle )
    /* Initialize the timer module */
    vos_timer_module_init();
 
-   vos_wdthread_init_timer_work(vos_process_wd_timer);
-
    /* Initialize the probe event */
    if (vos_event_init(&gpVosContext->ProbeEvent) != VOS_STATUS_SUCCESS)
    {
@@ -1748,7 +1746,8 @@ void vos_send_fatal_event_done(void)
      */
     if ((WLAN_LOG_INDICATOR_HOST_DRIVER == indicator) &&
         (WLAN_LOG_REASON_SME_COMMAND_STUCK == reason_code ||
-         WLAN_LOG_REASON_SME_OUT_OF_CMD_BUF == reason_code))
+         WLAN_LOG_REASON_SME_OUT_OF_CMD_BUF == reason_code ||
+         WLAN_LOG_REASON_SCAN_NOT_ALLOWED == reason_code))
     {
          VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
            "Do SSR for reason_code=%d", reason_code);

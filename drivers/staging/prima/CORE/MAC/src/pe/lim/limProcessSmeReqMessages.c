@@ -1863,9 +1863,7 @@ __limProcessSmeJoinReq(tpAniSirGlobal pMac, tANI_U32 *pMsgBuf)
         psessionEntry->bWPSAssociation = pSmeJoinReq->bWPSAssociation;
 
         /* Store vendor specfic IE for CISCO AP */
-        ieLen = (pSmeJoinReq->bssDescription.length +
-                    sizeof( pSmeJoinReq->bssDescription.length ) -
-                    GET_FIELD_OFFSET( tSirBssDescription, ieFields ));
+        ieLen = GET_IE_LEN_IN_BSS(pSmeJoinReq->bssDescription.length);
 
         vendorIE = limGetVendorIEOuiPtr(pMac, SIR_MAC_CISCO_OUI,
                     SIR_MAC_CISCO_OUI_SIZE,
@@ -2070,15 +2068,14 @@ __limProcessSmeJoinReq(tpAniSirGlobal pMac, tANI_U32 *pMsgBuf)
 
         regMax = cfgGetRegulatoryMaxTransmitPower( pMac, psessionEntry->currentOperChannel ); 
         localPowerConstraint = regMax;
-        limExtractApCapability( pMac,
-           (tANI_U8 *) psessionEntry->pLimJoinReq->bssDescription.ieFields,
-           limGetIElenFromBssDescription(&psessionEntry->pLimJoinReq->bssDescription),
-           &psessionEntry->limCurrentBssQosCaps,
-           &psessionEntry->limCurrentBssPropCap,
-           &pMac->lim.gLimCurrentBssUapsd //TBD-RAJESH  make gLimCurrentBssUapsd this session specific
-           , &localPowerConstraint,
-           psessionEntry
-           );
+        limExtractApCapability(pMac,
+          (tANI_U8 *) psessionEntry->pLimJoinReq->bssDescription.ieFields,
+          GET_IE_LEN_IN_BSS(psessionEntry->pLimJoinReq->bssDescription.length),
+          &psessionEntry->limCurrentBssQosCaps,
+          &psessionEntry->limCurrentBssPropCap,
+          &pMac->lim.gLimCurrentBssUapsd,
+          &localPowerConstraint,
+          psessionEntry);
 
 #ifdef FEATURE_WLAN_ESE
             psessionEntry->maxTxPower = limGetMaxTxPower(regMax, localPowerConstraint, pMac->roam.configParam.nTxPowerCap);
@@ -2352,16 +2349,15 @@ __limProcessSmeReassocReq(tpAniSirGlobal pMac, tANI_U32 *pMsgBuf)
                 psessionEntry->pLimReAssocReq->bssDescription.capabilityInfo;
     regMax = cfgGetRegulatoryMaxTransmitPower( pMac, psessionEntry->currentOperChannel ); 
     localPowerConstraint = regMax;
-    limExtractApCapability( pMac,
-              (tANI_U8 *) psessionEntry->pLimReAssocReq->bssDescription.ieFields,
-              limGetIElenFromBssDescription(
-                     &psessionEntry->pLimReAssocReq->bssDescription),
-              &psessionEntry->limReassocBssQosCaps,
-              &psessionEntry->limReassocBssPropCap,
-              &pMac->lim.gLimCurrentBssUapsd //TBD-RAJESH make gLimReassocBssUapsd session specific
-              , &localPowerConstraint,
-              psessionEntry
-              );
+    limExtractApCapability(pMac,
+        (tANI_U8 *) psessionEntry->pLimReAssocReq->bssDescription.ieFields,
+        GET_IE_LEN_IN_BSS(
+        psessionEntry->pLimReAssocReq->bssDescription.length),
+        &psessionEntry->limReassocBssQosCaps,
+        &psessionEntry->limReassocBssPropCap,
+        &pMac->lim.gLimCurrentBssUapsd,
+        &localPowerConstraint,
+        psessionEntry);
 
     psessionEntry->maxTxPower = VOS_MIN( regMax, (localPowerConstraint) );
     if (!psessionEntry->maxTxPower)

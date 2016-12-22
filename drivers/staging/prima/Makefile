@@ -1,9 +1,12 @@
-default: all
-
-KBUILD_OPTIONS := WLAN_ROOT=$(PWD)
-KBUILD_OPTIONS += MODNAME=wlan
-
+# These are provided in Android-based builds
+# Need to explicitly define for Kernel-based builds
+MODNAME := wlan
 WLAN_ROOT := drivers/staging/prima
+
+# To enable CONFIG_QCOM_ESE_UPLOAD, dependent config
+# CONFIG_QCOM_ESE must be enabled.
+CONFIG_QCOM_ESE := n
+CONFIG_QCOM_ESE_UPLOAD := n
 
 # Feature flags which are not (currently) configurable via Kconfig
 
@@ -151,6 +154,7 @@ MAC_LIM_OBJS := $(MAC_SRC_DIR)/pe/lim/limAIDmgmt.o \
 		$(MAC_SRC_DIR)/pe/lim/limProcessProbeRspFrame.o \
 		$(MAC_SRC_DIR)/pe/lim/limProcessSmeReqMessages.o \
 		$(MAC_SRC_DIR)/pe/lim/limPropExtsUtils.o \
+		$(MAC_SRC_DIR)/pe/lim/limRMC.o \
 		$(MAC_SRC_DIR)/pe/lim/limRoamingAlgo.o \
 		$(MAC_SRC_DIR)/pe/lim/limScanResultUtils.o \
 		$(MAC_SRC_DIR)/pe/lim/limSecurityUtils.o \
@@ -502,16 +506,20 @@ CDEFINES :=	-DANI_BUS_TYPE_PLATFORM=1 \
 		-DWLAN_FEATURE_GTK_OFFLOAD \
 		-DWLAN_WAKEUP_EVENTS \
 	        -DWLAN_KD_READY_NOTIFIER \
+		-DWLAN_FEATURE_RMC \
 		-DWLAN_NL80211_TESTMODE \
 		-DFEATURE_WLAN_BATCH_SCAN \
 		-DFEATURE_WLAN_LPHB \
                 -DFEATURE_WLAN_PAL_TIMER_DISABLE \
                 -DFEATURE_WLAN_PAL_MEM_DISABLE \
+                -DFEATURE_WLAN_CH144 \
                 -DWLAN_BUG_ON_SKB_ERROR \
                 -DWLAN_DXE_LOW_RESOURCE_TIMER \
                 -DWLAN_LOGGING_SOCK_SVC_ENABLE \
                 -DWLAN_FEATURE_LINK_LAYER_STATS \
-                -DWLAN_FEATURE_EXTSCAN
+                -DWLAN_FEATURE_EXTSCAN \
+                -DFEATURE_EXT_LL_STAT \
+                -DWLAN_VOWIFI_DEBUG
 
 ifneq ($(CONFIG_PRONTO_WLAN),)
 CDEFINES += -DWCN_PRONTO
@@ -525,6 +533,7 @@ CDEFINES +=	-DWLAN_DEBUG \
 		-DSME_TRACE_RECORD \
 		-DPE_DEBUG_LOGW \
 		-DPE_DEBUG_LOGE \
+                -DDXE_TRACE \
 		-DDEBUG
 endif
 
@@ -592,13 +601,7 @@ ifeq ($(RE_ENABLE_WIFI_ON_WDI_TIMEOUT),1)
 CDEFINES += -DWDI_RE_ENABLE_WIFI_ON_WDI_TIMEOUT
 endif
 
-ifeq ($(KERNEL_BUILD),1)
 CDEFINES += -DWLAN_OPEN_SOURCE
-endif
-
-ifeq ($(findstring opensource, $(WLAN_ROOT)), opensource)
-CDEFINES += -DWLAN_OPEN_SOURCE
-endif
 
 ifeq ($(CONFIG_ENABLE_LINUX_REG), y)
 CDEFINES += -DCONFIG_ENABLE_LINUX_REG
@@ -610,16 +613,20 @@ CDEFINES += -DWLAN_FEATURE_AP_HT40_24G
 # Some kernel include files are being moved.  Check to see if
 # the old version of the files are present
 
-ifneq ($(wildcard $(srctree)/arch/$(SRCARCH)/mach-msm/include/mach/msm_smd.h),)
+ifeq ($(EXISTS_MSM_SMD),1)
 CDEFINES += -DEXISTS_MSM_SMD
 endif
 
-ifneq ($(wildcard $(srctree)/arch/$(SRCARCH)/mach-msm/include/mach/msm_smsm.h),)
+ifeq ($(EXISTS_MSM_SMSM),1)
 CDEFINES += -DEXISTS_MSM_SMSM
 endif
 
 # Fix build for GCC 4.7
 EXTRA_CFLAGS += -Wno-maybe-uninitialized -Wno-unused-function
+
+ifeq ($(CONFIG_WLAN_OFFLOAD_PACKETS),y)
+CDEFINES += -DWLAN_FEATURE_OFFLOAD_PACKETS
+endif
 
 KBUILD_CPPFLAGS += $(CDEFINES)
 
@@ -627,14 +634,3 @@ KBUILD_CPPFLAGS += $(CDEFINES)
 obj-$(CONFIG_PRIMA_WLAN) += $(MODNAME).o
 obj-$(CONFIG_PRONTO_WLAN) += $(MODNAME).o
 $(MODNAME)-y := $(OBJS)
-
-all::
-	$(MAKE) -C $(KERNEL_SOURCE) $(KBUILD_OPTIONS) $(EXTRA_CFLAGS) ARCH=$(ARCH) \
-		SUBDIRS=$(CURDIR) CC=${CC} modules
-
-modules_install:
-	$(MAKE) INSTALL_MOD_STRIP=1 -C $(KERNEL_SRC) M=$(shell pwd) modules_install
-
-clean::
-	rm -f *.o *.ko *.mod.c *.mod.o *~ .*.cmd Module.symvers
-	rm -rf .tmp_versions

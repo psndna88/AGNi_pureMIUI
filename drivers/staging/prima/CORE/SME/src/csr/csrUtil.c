@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2015 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -2064,7 +2064,7 @@ eHalStatus csrParseBssDescriptionIEs(tHalHandle hHal, tSirBssDescription *pBssDe
 {
     eHalStatus status = eHAL_STATUS_FAILURE;
     tpAniSirGlobal pMac = PMAC_STRUCT( hHal );
-    int ieLen = (int)(pBssDesc->length + sizeof( pBssDesc->length ) - GET_FIELD_OFFSET( tSirBssDescription, ieFields ));
+    int ieLen = (int)GET_IE_LEN_IN_BSS(pBssDesc->length);
 
     if(ieLen > 0 && pIEStruct)
     {

@@ -3263,8 +3263,8 @@ typedef struct
    v_BOOL_t                    fEnableActiveModeOffload;
 #endif
    v_U32_t                     enableLpwrImgTransition;
-   v_U8_t                      enable_conc_bmiss;
-   v_U8_t                      enable_units_bwait;
+   v_U32_t                     enable_conc_bmiss;
+   v_U32_t                     enable_units_bwait;
    v_U8_t                      scanAgingTimeout;
    v_BOOL_t                    enableTxLdpc;
    v_U8_t                      disableLDPCWithTxbfAP;
