@@ -47,7 +47,6 @@
 /* Timeout in ms for peer info request commpletion */
 #define IBSS_PEER_INFO_REQ_TIMOEUT 1000
 #endif
-#define SCAN_ABORT_THRESHOLD 35
 typedef enum 
 {
    /** Not associated in Infra or participating in an IBSS / Ad-hoc network.*/
