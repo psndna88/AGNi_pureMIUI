@@ -2074,7 +2074,6 @@ struct msm_vfe_hardware_info vfe47_hw_info = {
 			.process_axi_irq = msm_isp_process_axi_irq,
 			.process_stats_irq = msm_isp_process_stats_irq,
 			.process_epoch_irq = msm_vfe47_process_epoch_irq,
-			.enable_camif_err = msm_vfe47_enable_camif_error,
 		},
 		.axi_ops = {
 			.reload_wm = msm_vfe47_axi_reload_wm,

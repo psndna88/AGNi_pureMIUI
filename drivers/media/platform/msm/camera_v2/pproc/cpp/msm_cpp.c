@@ -2540,6 +2540,10 @@ long msm_cpp_subdev_ioctl(struct v4l2_subdev *sd,
 		pr_err("cpp_dev is null\n");
 		return -EINVAL;
 	}
+	if (_IOC_DIR(cmd) == _IOC_NONE) {
+		pr_err("Invalid ioctl/subdev cmd %u", cmd);
+		return -EINVAL;
+	}
 	rc = msm_cpp_validate_input(cmd, arg, &ioctl_ptr);
 	if (rc != 0) {
 		pr_err("input validation failed\n");
@@ -2761,8 +2765,7 @@ STREAM_BUFF_END:
 		uint32_t identity;
 		struct msm_cpp_buff_queue_info_t *buff_queue_info;
 		CPP_DBG("VIDIOC_MSM_CPP_DEQUEUE_STREAM_BUFF_INFO\n");
-		if ((ioctl_ptr->len == 0) ||
-		    (ioctl_ptr->len > sizeof(uint32_t))) {
+		if (ioctl_ptr->len != sizeof(uint32_t)) {
 			mutex_unlock(&cpp_dev->mutex);
 			return -EINVAL;
 		}

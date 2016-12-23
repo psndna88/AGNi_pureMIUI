@@ -891,13 +891,6 @@ static int32_t msm_actuator_bivcm_init_step_table(
 	uint32_t qvalue = 0;
 	CDBG("Enter\n");
 
-	/* validate the actuator state */
-	if (a_ctrl->actuator_state != ACT_OPS_ACTIVE) {
-		pr_err("%s:%d invalid actuator_state %d\n"
-			, __func__, __LINE__, a_ctrl->actuator_state);
-		return -EINVAL;
-	}
-
 	for (; data_size > 0; data_size--) {
 		max_code_size *= 2;
 		mask |= (1 << i++);
