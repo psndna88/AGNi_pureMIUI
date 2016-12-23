@@ -118,13 +118,13 @@
 #define DEFAULT_MIN_CPUS_ONLINE         2
 #define DEFAULT_MAX_CPUS_ONLINE         LITTLE_CORES
 #define DEFAULT_MAX_CPUS_ONLINE_SUSP    2
-#define DEFAULT_OFFLINE_LOAD            0
+#define DEFAULT_OFFLINE_LOAD            5
 #define DEFAULT_MIN_CPUS_ONLINE_BIG     1
 #define DEFAULT_MAX_CPUS_ONLINE_BIG     BIG_CORES
 #define DEFAULT_OFFLINE_LOAD_BIG        20
-#define DEFAULT_ONLINE_LOAD_BIG         80
+#define DEFAULT_ONLINE_LOAD_BIG         70
 #define DEFAULT_KICK_IN_LOAD_BIG        70
-#define DEFAULT_FAST_LANE_LOAD          95
+#define DEFAULT_FAST_LANE_LOAD          90
 #define DEFAULT_BIG_CORE_UP_DELAY       200
 #define DEFAULT_IO_IS_BUSY              false
 
