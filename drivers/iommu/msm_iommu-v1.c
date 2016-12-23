@@ -943,10 +943,10 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 		goto unlock;
 	}
 
-	if (ctx_drvdata->attach_count >= 1) {
-		++ctx_drvdata->attach_count;
+	++ctx_drvdata->attach_count;
+
+	if (ctx_drvdata->attach_count > 1)
 		goto already_attached;
-	}
 
 	spin_lock_irqsave(&msm_iommu_spin_lock, flags);
 	if (!list_empty(&ctx_drvdata->attached_elm)) {
@@ -1020,7 +1020,6 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 
 	ctx_drvdata->attached_domain = domain;
 	++iommu_drvdata->ctx_attach_count;
-	++ctx_drvdata->attach_count;
 
 already_attached:
 	mutex_unlock(&msm_iommu_lock);
