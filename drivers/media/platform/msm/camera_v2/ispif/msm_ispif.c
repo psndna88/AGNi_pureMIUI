@@ -381,6 +381,11 @@ static int msm_ispif_clk_ahb_enable(struct ispif_device *ispif, int enable)
 {
 	int rc = 0;
 
+	if (ispif->csid_version < CSID_VERSION_V30) {
+		/* Older ISPIF versions don't need ahb clock */
+		return 0;
+	}
+
 	rc = msm_cam_clk_enable(&ispif->pdev->dev,
 		ispif_ahb_clk_info, ispif->ahb_clk,
 		ispif->num_ahb_clk, enable);
@@ -469,23 +474,23 @@ static void msm_ispif_sel_csid_core(struct ispif_device *ispif,
 	switch (intftype) {
 	case PIX0:
 		data &= ~(BIT(1) | BIT(0));
-		data |= csid;
+		data |= (uint32_t)csid;
 		break;
 	case RDI0:
 		data &= ~(BIT(5) | BIT(4));
-		data |= (csid << 4);
+		data |= (uint32_t)(csid << 4);
 		break;
 	case PIX1:
 		data &= ~(BIT(9) | BIT(8));
-		data |= (csid << 8);
+		data |= (uint32_t)(csid << 8);
 		break;
 	case RDI1:
 		data &= ~(BIT(13) | BIT(12));
-		data |= (csid << 12);
+		data |= (uint32_t)(csid << 12);
 		break;
 	case RDI2:
 		data &= ~(BIT(21) | BIT(20));
-		data |= (csid << 20);
+		data |= (uint32_t)(csid << 20);
 		break;
 	}
 
@@ -561,9 +566,9 @@ static void msm_ispif_enable_intf_cids(struct ispif_device *ispif,
 
 	data = msm_camera_io_r(ispif->base + intf_addr);
 	if (enable)
-		data |= cid_mask;
+		data |= (uint32_t)cid_mask;
 	else
-		data &= ~cid_mask;
+		data &= ~((uint32_t)cid_mask);
 	msm_camera_io_w_mb(data, ispif->base + intf_addr);
 }
 
@@ -667,7 +672,7 @@ static uint16_t msm_ispif_get_cids_mask_from_cfg(
 
 	BUG_ON(!entry);
 
-	for (i = 0; i < entry->num_cids; i++)
+	for (i = 0; i < entry->num_cids && i < MAX_CID_CH_V2; i++)
 		cids_mask |= (1 << entry->cids[i]);
 
 	return cids_mask;
@@ -802,7 +807,7 @@ static void msm_ispif_intf_cmd(struct ispif_device *ispif, uint32_t cmd_bits,
 			pr_err("%s: invalid interface type\n", __func__);
 			return;
 		}
-		if (params->entries[i].num_cids > MAX_CID_CH) {
+		if (params->entries[i].num_cids > MAX_CID_CH_V2) {
 			pr_err("%s: out of range of cid_num %d\n",
 				__func__, params->entries[i].num_cids);
 			return;
