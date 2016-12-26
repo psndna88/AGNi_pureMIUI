@@ -59,7 +59,7 @@
 #define SWEEP_X_FINAL           270
 #define SWEEP_Y_NEXT            135
 #define DT2W_FEATHER		150
-#define DT2W_TIME 		500
+#define DT2W_TIME 		300
 
 /* Wake Gestures */
 #define SWEEP_TIMEOUT		300
@@ -69,7 +69,7 @@
 #define SWEEP_LEFT		0x02
 #define SWEEP_UP		0x04
 #define SWEEP_DOWN		0x08
-#define VIB_STRENGTH 		75
+#define VIB_STRENGTH 		30
 
 #define WAKE_GESTURES_ENABLED	1
 
