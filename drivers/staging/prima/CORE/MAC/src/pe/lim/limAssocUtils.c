@@ -4028,7 +4028,7 @@ tSirRetStatus limStaSendAddBssPreAssoc( tpAniSirGlobal pMac, tANI_U8 updateEntry
 
     limExtractApCapabilities( pMac,
                             (tANI_U8 *) bssDescription->ieFields,
-                            GET_IE_LEN_IN_BSS(bssDescription->length),
+                            limGetIElenFromBssDescription( bssDescription ),
                             pBeaconStruct );
 
     if(pMac->lim.gLimProtectionControl != WNI_CFG_FORCE_POLICY_PROTECTION_DISABLE)
