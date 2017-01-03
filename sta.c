@@ -10,6 +10,8 @@
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #ifdef __linux__
+#include <regex.h>
+#include <dirent.h>
 #include <sys/time.h>
 #include <netpacket/packet.h>
 #include <linux/if_ether.h>
@@ -195,6 +197,44 @@ set_power_save:
 	return -1;
 #endif /* __linux__ */
 }
+
+
+#ifdef __linux__
+static int wil6210_get_debugfs_dir(struct sigma_dut *dut, char *path,
+				   size_t len)
+{
+	DIR *dir, *wil_dir;
+	struct dirent *entry;
+	int ret = -1;
+	const char *root_path = "/sys/kernel/debug/ieee80211";
+
+	dir = opendir(root_path);
+	if (!dir)
+		return -2;
+
+	while ((entry = readdir(dir))) {
+		if (strcmp(entry->d_name, ".") == 0 ||
+		    strcmp(entry->d_name, "..") == 0)
+			continue;
+
+		if (snprintf(path, len, "%s/%s/wil6210",
+			     root_path, entry->d_name) >= (int) len) {
+			ret = -3;
+			break;
+		}
+
+		wil_dir = opendir(path);
+		if (wil_dir) {
+			closedir(wil_dir);
+			ret = 0;
+			break;
+		}
+	}
+
+	closedir(dir);
+	return ret;
+}
+#endif /* __linux__ */
 
 
 static void static_ip_file(int proto, const char *addr, const char *mask,
@@ -3887,6 +3927,81 @@ static void hs2_clear_credentials(const char *intf)
 }
 
 
+#ifdef __linux__
+static int wil6210_get_aid(struct sigma_dut *dut, const char *bssid,
+			   unsigned int *aid)
+{
+	char buf[128], fname[128];
+	FILE *f;
+	regex_t re;
+	regmatch_t m[2];
+	int rc, ret = -1;
+
+	if (wil6210_get_debugfs_dir(dut, buf, sizeof(buf))) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"failed to get wil6210 debugfs dir");
+		return -1;
+	}
+
+	snprintf(fname, sizeof(fname), "%s/stations", buf);
+	f = fopen(fname, "r");
+	if (!f) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"failed to open: %s", fname);
+		return -1;
+	}
+
+	if (regcomp(&re, "AID[ \t]+([0-9]+)", REG_EXTENDED)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"regcomp failed");
+		goto out;
+	}
+
+	/*
+	 * find the entry for the mac address
+	 * line is of the form: [n] 11:22:33:44:55:66 state AID aid
+	 */
+	while (fgets(buf, sizeof(buf), f)) {
+		if (strstr(buf, bssid)) {
+			/* extract the AID */
+			rc = regexec(&re, buf, 2, m, 0);
+			if (!rc && (m[1].rm_so >= 0)) {
+				buf[m[1].rm_eo] = 0;
+				*aid = atoi(&buf[m[1].rm_so]);
+				ret = 0;
+				break;
+			}
+		}
+	}
+
+	regfree(&re);
+	if (ret)
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"could not extract AID");
+
+out:
+	fclose(f);
+
+	return ret;
+}
+#endif /* __linux__ */
+
+
+static int sta_get_aid_60g(struct sigma_dut *dut, const char *bssid,
+			   unsigned int *aid)
+{
+	switch (get_driver_type()) {
+#ifdef __linux__
+	case DRIVER_WIL6210:
+		return wil6210_get_aid(dut, bssid, aid);
+#endif /* __linux__ */
+	default:
+		sigma_dut_print(dut, DUT_MSG_ERROR, "get AID not supported");
+		return -1;
+	}
+}
+
+
 static int sta_get_parameter_60g(struct sigma_dut *dut, struct sigma_conn *conn,
 				 struct sigma_cmd *cmd)
 {
@@ -3896,6 +4011,26 @@ static int sta_get_parameter_60g(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	if (parameter == NULL)
 		return -1;
+
+	if (strcasecmp(parameter, "AID") == 0) {
+		unsigned int aid = 0;
+		char bssid[20];
+
+		if (get_wpa_status(get_station_ifname(), "bssid",
+				   bssid, sizeof(bssid)) < 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"could not get bssid");
+			return -2;
+		}
+
+		if (sta_get_aid_60g(dut, bssid, &aid))
+			return -2;
+
+		snprintf(buf, sizeof(buf), "aid,%d", aid);
+		sigma_dut_print(dut, DUT_MSG_INFO, "%s", buf);
+		send_resp(dut, conn, SIGMA_COMPLETE, buf);
+		return 0;
+	}
 
 	if (strcasecmp(parameter, "DiscoveredDevList") == 0) {
 		char *bss_line;
