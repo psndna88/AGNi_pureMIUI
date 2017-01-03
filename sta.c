@@ -3653,10 +3653,51 @@ static int sta_pcp_start(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int wil6210_set_abft_len(struct sigma_dut *dut, int abft_len)
+{
+	char buf[128], fname[128];
+	FILE *f;
+
+	if (wil6210_get_debugfs_dir(dut, buf, sizeof(buf))) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"failed to get wil6210 debugfs dir");
+		return -1;
+	}
+
+	snprintf(fname, sizeof(fname), "%s/abft_len", buf);
+	f = fopen(fname, "w");
+	if (!f) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"failed to open: %s", fname);
+		return -1;
+	}
+
+	fprintf(f, "%d\n", abft_len);
+	fclose(f);
+
+	return 0;
+}
+
+
+static int sta_set_60g_abft_len(struct sigma_dut *dut, struct sigma_conn *conn,
+				int abft_len)
+{
+	switch (get_driver_type()) {
+	case DRIVER_WIL6210:
+		return wil6210_set_abft_len(dut, abft_len);
+	default:
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"set abft_len not supported");
+		return -1;
+	}
+}
+
+
 static int sta_set_60g_pcp(struct sigma_dut *dut, struct sigma_conn *conn,
 			    struct sigma_cmd *cmd)
 {
 	const char *val;
+	unsigned int abft_len = 1; /* default is one slot */
 
 	if (dut->dev_role != DEVROLE_PCP) {
 		send_resp(dut, conn, SIGMA_INVALID,
@@ -3764,7 +3805,15 @@ static int sta_set_60g_pcp(struct sigma_dut *dut, struct sigma_conn *conn,
 	val = get_param(cmd, "ABFTLRang");
 	if (val) {
 		sigma_dut_print(dut, DUT_MSG_DEBUG,
-				"Ignoring ABFTLRang parameter since FW default is greater than 1");
+				"ABFTLRang parameter %s", val);
+		if (strcmp(val, "Gt1") == 0)
+			abft_len = 2; /* 2 slots in this case */
+	}
+
+	if (sta_set_60g_abft_len(dut, conn, abft_len)) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "ErrorCode, Can't set ABFT length");
+		return -1;
 	}
 
 	if (sta_pcp_start(dut, conn, cmd) < 0) {
