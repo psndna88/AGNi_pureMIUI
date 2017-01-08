@@ -72,6 +72,14 @@ config SECURITY_SELINUX_FORCE_PERMISSIVE
 	help
 	  This option sets SELINUX mode as permissive permanently
 
+config SECURITY_SELINUX_AVC_STRICT
+	bool "NSA SELinux Strict Access Vector Cache"
+	depends on SECURITY_SELINUX_DEVELOP
+	default n
+	help
+	  This option sets SELINUX AVC to be strict and not allow access
+	  even in permissive mode
+
 config SECURITY_SELINUX_AVC_STATS
 	bool "NSA SELinux AVC Statistics"
 	depends on SECURITY_SELINUX

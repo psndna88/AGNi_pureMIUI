@@ -141,10 +141,10 @@ static inline int avc_audit(u32 ssid, u32 tsid,
 			      a, flags);
 }
 
-#ifdef CONFIG_SECURITY_SELINUX_FORCE_PERMISSIVE
-#define AVC_STRICT 0
-#else
+#ifdef CONFIG_SECURITY_SELINUX_AVC_STRICT
 #define AVC_STRICT 1 /* Ignore permissive mode. */
+#else
+#define AVC_STRICT 0
 #endif
 
 #define AVC_EXTENDED_PERMS 2	/* update extended permissions */
