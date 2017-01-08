@@ -710,6 +710,11 @@ config SERIAL_NUM
 	help
 	  Provide a interface for reading CPU serial number
 
+config INTELLI_HOTPLUG
+	bool "Enable intelli-plug cpu hotplug driver"
+	default y
+	help
+	  Generic Intelli-plug cpu hotplug driver for ARM SOCs
 
 config MSM_HOTPLUG
 	bool "MSM hotplug driver"
