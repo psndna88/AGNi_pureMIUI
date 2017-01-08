@@ -46,6 +46,9 @@ static DEFINE_MUTEX(selinux_status_lock);
  */
 struct page *selinux_kernel_status_page(void)
 {
+#ifdef CONFIG_SECURITY_SELINUX_FAKE_ENFORCE
+	int selinux_enforcing = 1;
+#endif
 	struct selinux_kernel_status   *status;
 	struct page		       *result = NULL;
 

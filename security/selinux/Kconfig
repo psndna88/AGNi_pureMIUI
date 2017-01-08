@@ -80,6 +80,14 @@ config SECURITY_SELINUX_AVC_STRICT
 	  This option sets SELINUX AVC to be strict and not allow access
 	  even in permissive mode
 
+config SECURITY_SELINUX_FAKE_ENFORCE
+	bool "NSA SELinux Fake Enforcing"
+	depends on SECURITY_SELINUX_DEVELOP && !SECURITY_SELINUX_ALWAYS_ENFORCE
+	default n
+	help
+	  This option will cause the kernel to always report the SELinux status
+	  as Enforcing to the userspace.
+
 config SECURITY_SELINUX_AVC_STATS
 	bool "NSA SELinux AVC Statistics"
 	depends on SECURITY_SELINUX
