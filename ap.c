@@ -447,15 +447,21 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	val = get_param(cmd, "RADIO");
 	if (val) {
+		enum driver_type drv = get_driver_type();
+
 		if (strcasecmp(val, "on") == 0) {
-			enum driver_type drv = get_driver_type();
 			if (drv == DRIVER_ATHEROS)
 				ath_ap_start_hostapd(dut);
 			else if (cmd_ap_config_commit(dut, conn, cmd) <= 0)
 				return 0;
 		} else if (strcasecmp(val, "off") == 0) {
-			if (kill_process(dut, "(hostapd)", 1, SIGTERM) == 0 ||
-			    system("killall hostapd") == 0) {
+			if (drv == DRIVER_OPENWRT) {
+				run_system(dut, "wifi down");
+				sigma_dut_print(dut, DUT_MSG_INFO,
+						"wifi down on radio,off");
+			} else if (kill_process(dut, "(hostapd)", 1,
+						SIGTERM) == 0 ||
+				   system("killall hostapd") == 0) {
 				sigma_dut_print(dut, DUT_MSG_INFO,
 						"Killed hostapd on radio,off");
 			}
