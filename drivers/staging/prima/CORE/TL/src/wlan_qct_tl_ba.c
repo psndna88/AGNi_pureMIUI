@@ -1156,7 +1156,8 @@ VOS_STATUS WLANTL_MSDUReorder
          break;
 
       case WLANTL_OPCODE_QCUR_FWDBUF:
-         if (currentReorderInfo->LastSN > CSN)
+         if ((currentReorderInfo->LastSN > CSN) &&
+              !(currentReorderInfo->set_data_filter))
          {
              if ((currentReorderInfo->LastSN - CSN) < CSN_WRAP_AROUND_THRESHOLD)
              {
@@ -1299,7 +1300,8 @@ VOS_STATUS WLANTL_MSDUReorder
          break;
 
       case WLANTL_OPCODE_QCUR:
-        if (currentReorderInfo->LastSN > CSN)
+        if ((currentReorderInfo->LastSN > CSN) &&
+            !(currentReorderInfo->set_data_filter))
         {
             if ((currentReorderInfo->LastSN - CSN) < CSN_WRAP_AROUND_THRESHOLD)
             {
