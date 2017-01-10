@@ -2853,6 +2853,30 @@ static void wcn_sta_set_stbc(struct sigma_dut *dut, const char *intf,
 }
 
 
+static int mbo_set_cellular_data_capa(struct sigma_dut *dut,
+				      struct sigma_conn *conn,
+				      const char *intf, int capa)
+{
+	char buf[32];
+
+	if (capa > 0 && capa < 4) {
+		snprintf(buf, sizeof(buf), "SET mbo_cell_capa %d", capa);
+		if (wpa_command(intf, buf) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode, Failed to set cellular data capability");
+			return 0;
+		}
+		return 1;
+	}
+
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"Invalid Cellular data capability: %d", capa);
+	send_resp(dut, conn, SIGMA_INVALID,
+		  "ErrorCode,Invalid cellular data capability");
+	return 0;
+}
+
+
 static int cmd_sta_preset_testparameters(struct sigma_dut *dut,
 					 struct sigma_conn *conn,
 					 struct sigma_cmd *cmd)
@@ -2880,6 +2904,14 @@ static int cmd_sta_preset_testparameters(struct sigma_dut *dut,
 		    strcasecmp(val, "DisplayR2") == 0))
 		return miracast_preset_testparameters(dut, conn, cmd);
 #endif /* MIRACAST */
+
+	if (val && strcasecmp(val, "MBO") == 0) {
+		val = get_param(cmd, "Cellular_Data_Cap");
+		if (val &&
+		    mbo_set_cellular_data_capa(dut, conn, intf, atoi(val)) == 0)
+			return 0;
+		return 1;
+	}
 
 #if 0
 	val = get_param(cmd, "Supplicant");
@@ -7072,6 +7104,7 @@ static int cmd_sta_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *prog = get_param(cmd, "Prog");
+	const char *val;
 
 	if (intf == NULL || prog == NULL)
 		return -1;
@@ -7081,6 +7114,14 @@ static int cmd_sta_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	if (strcasecmp(prog, "VHT") == 0)
 		return cmd_sta_set_rfeature_vht(intf, dut, conn, cmd);
+
+	if (strcasecmp(prog, "MBO") == 0) {
+		val = get_param(cmd, "Cellular_Data_Cap");
+		if (val &&
+		    mbo_set_cellular_data_capa(dut, conn, intf, atoi(val)) == 0)
+			return 0;
+		return 1;
+	}
 
 	send_resp(dut, conn, SIGMA_ERROR, "errorCode,Unsupported Prog");
 	return 0;
