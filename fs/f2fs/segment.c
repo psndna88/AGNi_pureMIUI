@@ -26,6 +26,7 @@
 #define __reverse_ffz(x) __reverse_ffs(~(x))
 
 static struct kmem_cache *discard_entry_slab;
+static struct kmem_cache *bio_entry_slab;
 static struct kmem_cache *sit_entry_set_slab;
 static struct kmem_cache *inmem_entry_slab;
 
@@ -681,6 +682,162 @@ static void locate_dirty_segment(struct f2fs_sb_info *sbi, unsigned int segno)
 	mutex_unlock(&dirty_i->seglist_lock);
 }
 
+static struct bio_entry *__add_bio_entry(struct f2fs_sb_info *sbi,
+							struct bio *bio)
+{
+	struct list_head *wait_list = &(SM_I(sbi)->wait_list);
+	struct bio_entry *be = f2fs_kmem_cache_alloc(bio_entry_slab, GFP_NOFS);
+
+	INIT_LIST_HEAD(&be->list);
+	be->bio = bio;
+	init_completion(&be->event);
+	list_add_tail(&be->list, wait_list);
+
+	return be;
+}
+
+void f2fs_wait_all_discard_bio(struct f2fs_sb_info *sbi)
+{
+	struct list_head *wait_list = &(SM_I(sbi)->wait_list);
+	struct bio_entry *be, *tmp;
+
+	list_for_each_entry_safe(be, tmp, wait_list, list) {
+		struct bio *bio = be->bio;
+		int err;
+
+		wait_for_completion_io(&be->event);
+		err = be->error;
+		if (err == -EOPNOTSUPP)
+			err = 0;
+
+		if (err)
+			f2fs_msg(sbi->sb, KERN_INFO,
+				"Issue discard failed, ret: %d", err);
+
+		bio_put(bio);
+		list_del(&be->list);
+		kmem_cache_free(bio_entry_slab, be);
+	}
+}
+
+static void f2fs_submit_bio_wait_endio(struct bio *bio, int err)
+{
+	struct bio_entry *be = (struct bio_entry *)bio->bi_private;
+
+	be->error = err;
+	complete(&be->event);
+}
+
+/* copied from block/blk-lib.c in 4.10-rc1 */
+static int __blkdev_issue_discard(struct block_device *bdev, sector_t sector,
+		sector_t nr_sects, gfp_t gfp_mask, int flags,
+		struct bio **biop)
+{
+	struct request_queue *q = bdev_get_queue(bdev);
+	struct bio *bio = *biop;
+	unsigned int granularity;
+	int op = REQ_WRITE | REQ_DISCARD;
+	int alignment;
+	sector_t bs_mask;
+
+	if (!q)
+		return -ENXIO;
+
+	if (!blk_queue_discard(q))
+		return -EOPNOTSUPP;
+
+	if (flags & BLKDEV_DISCARD_SECURE) {
+		if (!blk_queue_secdiscard(q))
+			return -EOPNOTSUPP;
+		op |= REQ_SECURE;
+	}
+
+	bs_mask = (bdev_logical_block_size(bdev) >> 9) - 1;
+	if ((sector | nr_sects) & bs_mask)
+		return -EINVAL;
+
+	/* Zero-sector (unknown) and one-sector granularities are the same.  */
+	granularity = max(q->limits.discard_granularity >> 9, 1U);
+	alignment = (bdev_discard_alignment(bdev) >> 9) % granularity;
+
+	while (nr_sects) {
+		unsigned int req_sects;
+		sector_t end_sect, tmp;
+
+		/* Make sure bi_size doesn't overflow */
+		req_sects = min_t(sector_t, nr_sects, UINT_MAX >> 9);
+
+		/**
+		 * If splitting a request, and the next starting sector would be
+		 * misaligned, stop the discard at the previous aligned sector.
+		 */
+		end_sect = sector + req_sects;
+		tmp = end_sect;
+		if (req_sects < nr_sects &&
+		    sector_div(tmp, granularity) != alignment) {
+			end_sect = end_sect - alignment;
+			sector_div(end_sect, granularity);
+			end_sect = end_sect * granularity + alignment;
+			req_sects = end_sect - sector;
+		}
+
+		if (bio) {
+			int ret = submit_bio_wait(0, bio);
+			bio_put(bio);
+			if (ret)
+				return ret;
+		}
+		bio = f2fs_bio_alloc(0);
+		bio->bi_sector = sector;
+		bio->bi_bdev = bdev;
+		bio_set_op_attrs(bio, op, 0);
+
+		bio->bi_size = req_sects << 9;
+		nr_sects -= req_sects;
+		sector = end_sect;
+
+		/*
+		 * We can loop for a long time in here, if someone does
+		 * full device discards (like mkfs). Be nice and allow
+		 * us to schedule out to avoid softlocking if preempt
+		 * is disabled.
+		 */
+		cond_resched();
+	}
+
+	*biop = bio;
+	return 0;
+}
+
+/* this function is copied from blkdev_issue_discard from block/blk-lib.c */
+static int __f2fs_issue_discard_async(struct f2fs_sb_info *sbi,
+		struct block_device *bdev, block_t blkstart, block_t blklen)
+{
+	struct bio *bio = NULL;
+	int err;
+
+	trace_f2fs_issue_discard(sbi->sb, blkstart, blklen);
+
+	if (sbi->s_ndevs) {
+		int devi = f2fs_target_device_index(sbi, blkstart);
+
+		blkstart -= FDEV(devi).start_blk;
+	}
+	err = __blkdev_issue_discard(bdev,
+				SECTOR_FROM_BLOCK(blkstart),
+				SECTOR_FROM_BLOCK(blklen),
+				GFP_NOFS, 0, &bio);
+	if (!err && bio) {
+		struct bio_entry *be = __add_bio_entry(sbi, bio);
+
+		bio->bi_private = be;
+		bio->bi_end_io = f2fs_submit_bio_wait_endio;
+		submit_bio(REQ_SYNC, bio);
+	}
+
+	return err;
+}
+
 #ifdef CONFIG_BLK_DEV_ZONED
 static int __f2fs_issue_discard_zone(struct f2fs_sb_info *sbi,
 		struct block_device *bdev, block_t blkstart, block_t blklen)
@@ -714,8 +871,7 @@ static int __f2fs_issue_discard_zone(struct f2fs_sb_info *sbi,
 	case BLK_ZONE_TYPE_CONVENTIONAL:
 		if (!blk_queue_discard(bdev_get_queue(bdev)))
 			return 0;
-		return blkdev_issue_discard(bdev, sector, nr_sects,
-						GFP_NOFS, 0);
+		return __f2fs_issue_discard_async(sbi, bdev, blkstart, blklen);
 	case BLK_ZONE_TYPE_SEQWRITE_REQ:
 	case BLK_ZONE_TYPE_SEQWRITE_PREF:
 		trace_f2fs_issue_reset_zone(sbi->sb, blkstart);
@@ -731,15 +887,12 @@ static int __f2fs_issue_discard_zone(struct f2fs_sb_info *sbi,
 static int __issue_discard_async(struct f2fs_sb_info *sbi,
 		struct block_device *bdev, block_t blkstart, block_t blklen)
 {
-	sector_t start = SECTOR_FROM_BLOCK(blkstart);
-	sector_t len = SECTOR_FROM_BLOCK(blklen);
-
 #ifdef CONFIG_BLK_DEV_ZONED
 	if (f2fs_sb_mounted_blkzoned(sbi->sb) &&
 				bdev_zoned_model(bdev) != BLK_ZONED_NONE)
 		return __f2fs_issue_discard_zone(sbi, bdev, blkstart, blklen);
 #endif
-	return blkdev_issue_discard(bdev, start, len, GFP_NOFS, 0);
+	return __f2fs_issue_discard_async(sbi, bdev, blkstart, blklen);
 }
 
 static int f2fs_issue_discard(struct f2fs_sb_info *sbi,
@@ -779,8 +932,6 @@ static int f2fs_issue_discard(struct f2fs_sb_info *sbi,
 
 	if (len)
 		err = __issue_discard_async(sbi, bdev, start, len);
-
-	trace_f2fs_issue_discard(sbi->sb, blkstart, blklen);
 	return err;
 }
 
@@ -881,10 +1032,13 @@ void clear_prefree_segments(struct f2fs_sb_info *sbi, struct cp_control *cpc)
 	struct list_head *head = &(SM_I(sbi)->discard_list);
 	struct discard_entry *entry, *this;
 	struct dirty_seglist_info *dirty_i = DIRTY_I(sbi);
+	struct blk_plug plug;
 	unsigned long *prefree_map = dirty_i->dirty_segmap[PRE];
 	unsigned int start = 0, end = -1;
 	unsigned int secno, start_segno;
 	bool force = (cpc->reason == CP_DISCARD);
+
+	blk_start_plug(&plug);
 
 	mutex_lock(&dirty_i->seglist_lock);
 
@@ -934,6 +1088,8 @@ skip:
 		SM_I(sbi)->nr_discards -= entry->len;
 		kmem_cache_free(discard_entry_slab, entry);
 	}
+
+	blk_finish_plug(&plug);
 }
 
 static bool __mark_sit_entry_dirty(struct f2fs_sb_info *sbi, unsigned int segno)
@@ -2610,6 +2766,7 @@ int build_segment_manager(struct f2fs_sb_info *sbi)
 	sm_info->min_fsync_blocks = DEF_MIN_FSYNC_BLOCKS;
 
 	INIT_LIST_HEAD(&sm_info->discard_list);
+	INIT_LIST_HEAD(&sm_info->wait_list);
 	sm_info->nr_discards = 0;
 	sm_info->max_discards = 0;
 
@@ -2753,10 +2910,15 @@ int __init create_segment_manager_caches(void)
 	if (!discard_entry_slab)
 		goto fail;
 
+	bio_entry_slab = f2fs_kmem_cache_create("bio_entry",
+			sizeof(struct bio_entry));
+	if (!bio_entry_slab)
+		goto destroy_discard_entry;
+
 	sit_entry_set_slab = f2fs_kmem_cache_create("sit_entry_set",
 			sizeof(struct sit_entry_set));
 	if (!sit_entry_set_slab)
-		goto destory_discard_entry;
+		goto destroy_bio_entry;
 
 	inmem_entry_slab = f2fs_kmem_cache_create("inmem_page_entry",
 			sizeof(struct inmem_pages));
@@ -2766,7 +2928,9 @@ int __init create_segment_manager_caches(void)
 
 destroy_sit_entry_set:
 	kmem_cache_destroy(sit_entry_set_slab);
-destory_discard_entry:
+destroy_bio_entry:
+	kmem_cache_destroy(bio_entry_slab);
+destroy_discard_entry:
 	kmem_cache_destroy(discard_entry_slab);
 fail:
 	return -ENOMEM;
@@ -2775,6 +2939,7 @@ fail:
 void destroy_segment_manager_caches(void)
 {
 	kmem_cache_destroy(sit_entry_set_slab);
+	kmem_cache_destroy(bio_entry_slab);
 	kmem_cache_destroy(discard_entry_slab);
 	kmem_cache_destroy(inmem_entry_slab);
 }
