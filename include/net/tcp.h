@@ -601,7 +601,6 @@ void tcp_send_loss_probe(struct sock *sk);
 bool tcp_schedule_loss_probe(struct sock *sk);
 
 /* tcp_input.c */
-void tcp_resume_early_retransmit(struct sock *sk);
 void tcp_rearm_rto(struct sock *sk);
 void tcp_synack_rtt_meas(struct sock *sk, struct request_sock *req);
 void tcp_reset(struct sock *sk);
@@ -1054,22 +1053,6 @@ static inline bool tcp_is_fack(const struct tcp_sock *tp)
 static inline void tcp_enable_fack(struct tcp_sock *tp)
 {
 	tp->rx_opt.sack_ok |= TCP_FACK_ENABLED;
-}
-
-/* TCP early-retransmit (ER) is similar to but more conservative than
- * the thin-dupack feature.  Enable ER only if thin-dupack is disabled.
- */
-static inline void tcp_enable_early_retrans(struct tcp_sock *tp)
-{
-	tp->do_early_retrans = sysctl_tcp_early_retrans &&
-		sysctl_tcp_early_retrans < 4 && !sysctl_tcp_thin_dupack &&
-		sysctl_tcp_reordering == 3;
-		!(sysctl_tcp_recovery & TCP_RACK_LOSS_DETECTION) &&
-}
-
-static inline void tcp_disable_early_retrans(struct tcp_sock *tp)
-{
-	tp->do_early_retrans = 0;
 }
 
 static inline unsigned int tcp_left_out(const struct tcp_sock *tp)
