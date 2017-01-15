@@ -52,6 +52,7 @@ static unsigned int sync_threshold;
 module_param(sync_threshold, uint, 0644);
 
 static bool input_boost_enabled;
+module_param(input_boost_enabled, bool, 0644);
 
 static unsigned int input_boost_ms = 40;
 module_param(input_boost_ms, uint, 0644);
