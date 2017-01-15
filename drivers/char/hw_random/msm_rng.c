@@ -141,10 +141,10 @@ int msm_rng_direct_read(struct msm_rng_device *msm_rng_dev,
 		while (!(readl_relaxed(base + PRNG_STATUS_OFFSET)
 					& 0x00000001)) {
 			if (failed == 10) {
-				pr_err("Data not available after retry\n");
+				pr_debug("Data not available after retry\n");
 				break;
 			}
-			pr_err("msm_rng:Data not available!\n");
+			pr_debug("msm_rng:Data not available!\n");
 			msleep_interruptible(10);
 			failed++;
 		}
