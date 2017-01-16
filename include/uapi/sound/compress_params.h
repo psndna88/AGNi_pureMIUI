@@ -95,7 +95,10 @@
 #define SND_AUDIOCODEC_EAC3                  ((__u32) 0x00000018)
 #define SND_AUDIOCODEC_ALAC                  ((__u32) 0x00000019)
 #define SND_AUDIOCODEC_APE                   ((__u32) 0x00000020)
-#define SND_AUDIOCODEC_MAX                   SND_AUDIOCODEC_APE
+#define SND_AUDIOCODEC_DSD                   ((__u32) 0x00000021)
+#define SND_AUDIOCODEC_APTX                  ((__u32) 0x00000022)
+#define SND_AUDIOCODEC_MAX                   SND_AUDIOCODEC_APTX
+
 /*
  * Profile and modes are listed with bit masks. This allows for a
  * more compact representation of fields that will not evolve
@@ -386,6 +389,12 @@ struct snd_dec_ape {
 	__u32 seek_table_present;
 };
 
+struct snd_dec_aptx {
+	__u32 lap;
+	__u32 uap;
+	__u32 nap;
+};
+
 union snd_codec_options {
 	struct snd_enc_wma wma;
 	struct snd_enc_vorbis vorbis;
@@ -397,7 +406,8 @@ union snd_codec_options {
 	struct snd_dec_vorbis vorbis_dec;
 	struct snd_dec_alac alac;
 	struct snd_dec_ape ape;
-};
+	struct snd_dec_aptx aptx_dec;
+} __attribute__((packed, aligned(4)));
 
 /** struct snd_codec_desc - description of codec capabilities
  * @max_ch: Maximum number of audio channels
