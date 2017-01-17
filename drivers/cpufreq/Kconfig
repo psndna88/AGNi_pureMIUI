@@ -163,6 +163,18 @@ config CPU_FREQ_DEFAULT_GOV_IRONACTIVE
 	  Use the CPUFreq governor 'ironactive' as default. This cpugovernor
 	  is based on the 'interactive' governor with many changes made by CAF.
 
+config CPU_FREQ_DEFAULT_GOV_RELAXED
+	bool "relaxed"
+	select CPU_FREQ_GOV_RELAXED
+	select CPU_FREQ_GOV_INTERACTIVE
+	help
+	  Use the CPUFreq governor 'relaxed' as default. This allows
+	  you to get a full dynamic frequency capable system by simply
+	  loading your cpufreq low-level hardware driver.
+	  Be aware that not all cpufreq drivers support the conservative
+	  governor. If unsure have a look at the help section of the
+	  driver. Fallback governor will be the interactive governor.
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -310,6 +322,15 @@ config CPU_FREQ_GOV_IRONACTIVE
 	  module will be called cpufreq_ironactive.
 
 	  If in doubt, say N.
+
+config CPU_FREQ_GOV_RELAXED
+	tristate "'relaxed' cpufreq governor"
+	depends on CPU_FREQ
+	select CPU_FREQ_GOV_COMMON
+	default y
+	help
+	  'relaxed' - similar to 'conservative', but optimized for devices
+	  that go into suspended or display off states often.
 
 config CPU_BOOST
 	tristate "Event base short term CPU freq boost"
