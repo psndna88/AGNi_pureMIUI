@@ -18,7 +18,7 @@
 
 /* Relaxed version macros */
 #define RELAXED_VERSION_MAJOR			(1)
-#define RELAXED_VERSION_MINOR			(0)
+#define RELAXED_VERSION_MINOR			(1)
 
 /* Relaxed governor macros */
 #define DEF_FREQUENCY_UP_THRESHOLD		(85)
@@ -135,7 +135,7 @@ static void cs_check_cpu(int cpu, unsigned int load)
 		if (cs_tuners->boost_enabled && boost_counter >= cs_tuners->boost_count) {
 			int boost_level = cs_tuners->boost_ceiling - boost_counter;
 			dbs_info->requested_freq = policy->max - boost_level;
-			if (boost_level = 0)
+			if (boost_level == 0)
 				boost_counter = 0;
 		} else {
 			dbs_info->requested_freq += get_freq_target(cs_tuners, policy);
