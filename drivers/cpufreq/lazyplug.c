@@ -72,12 +72,13 @@
 #include <linux/slab.h>
 #include <linux/input.h>
 #include <linux/cpufreq.h>
+#include <linux/display_state.h>
 
 //#define DEBUG_LAZYPLUG
 #undef DEBUG_LAZYPLUG
 
 #define LAZYPLUG_MAJOR_VERSION	1
-#define LAZYPLUG_MINOR_VERSION	1
+#define LAZYPLUG_MINOR_VERSION	2
 
 #define DEF_SAMPLING_MS			(268)
 #define DEF_IDLE_COUNT			(19) /* 268 * 19 = 5092, almost equals to 5 seconds */
@@ -111,7 +112,8 @@ static unsigned int __read_mostly sampling_time = DEF_SAMPLING_MS;
 
 static int persist_count = 0;
 
-static bool __read_mostly suspended = false;
+static bool __read_mostly suspended;
+static bool __read_mostly last_state;
 
 struct ip_cpu_info {
 	unsigned int sys_max;
@@ -319,13 +321,39 @@ static void unplug_cpu(int min_active_cpu)
 	}
 }
 
+static void lazy_suspend_handler(void)
+{
+	if (last_state) {
+		if (lazyplug_active) {
+			pr_info("lazyplug: screen-on, turn on cores\n");
+			mutex_lock(&lazyplug_mutex);
+			/* keep cores awake long enough for faster wake up */
+			persist_count = BUSY_PERSISTENCE;
+			mutex_unlock(&lazyplug_mutex);
+		}
+		queue_delayed_work_on(0, lazyplug_wq, &lazyplug_work,
+			msecs_to_jiffies(10));
+	} else {
+		if (lazyplug_active) {
+			pr_info("lazyplug: screen-off, turn off cores\n");
+			flush_workqueue(lazyplug_wq);
+			mutex_lock(&lazyplug_mutex);
+			mutex_unlock(&lazyplug_mutex);
+			// put rest of the cores to sleep unconditionally!
+			cpu_all_ctrl(false);
+		}
+	}
+}
+
 static void lazyplug_work_fn(struct work_struct *work)
 {
 	unsigned int nr_run_stat;
 	unsigned int cpu_count = 0;
 	unsigned int nr_cpus = 0;
+	suspended = !is_display_on();
 
 	if (lazyplug_active) {
+		lazy_suspend_handler();
 		nr_run_stat = calculate_thread_stats();
 		update_per_cpu_stat();
 #ifdef DEBUG_LAZYPLUG
@@ -335,6 +363,11 @@ static void lazyplug_work_fn(struct work_struct *work)
 		nr_cpus = num_online_cpus();
 
 		if (!suspended) {
+			if (suspended != last_state) {
+				lazy_suspend_handler();
+				last_state = suspended;
+			}
+
 			if (persist_count > 0)
 				persist_count--;
 
@@ -372,10 +405,15 @@ static void lazyplug_work_fn(struct work_struct *work)
 #endif
 			}
 		}
+		else {
 #ifdef DEBUG_LAZYPLUG
-		else
 			pr_info("lazyplug is suspended!\n");
 #endif
+			if (suspended != last_state) {
+				lazy_suspend_handler();
+				last_state = suspended;
+			}
+		}
 	}
 	queue_delayed_work_on(0, lazyplug_wq, &lazyplug_work,
 		msecs_to_jiffies(sampling_time));
@@ -515,6 +553,8 @@ int __init lazyplug_init(void)
 	}
 
 	rc = input_register_handler(&lazyplug_input_handler);
+
+	last_state = is_display_on();	
 
 	lazyplug_wq = alloc_workqueue("lazyplug",
 				WQ_HIGHPRI | WQ_UNBOUND, 1);
