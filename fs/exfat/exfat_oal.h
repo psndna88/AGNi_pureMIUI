@@ -16,38 +16,59 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+/************************************************************************/
+/*                                                                      */
+/*  PROJECT : exFAT & FAT12/16/32 File System                           */
+/*  FILE    : exfat_oal.h                                               */
+/*  PURPOSE : Header File for exFAT OS Adaptation Layer                 */
+/*            (Semaphore Functions & Real-Time Clock Functions)         */
+/*                                                                      */
+/*----------------------------------------------------------------------*/
+/*  NOTES                                                               */
+/*                                                                      */
+/*----------------------------------------------------------------------*/
+/*  REVISION HISTORY (Ver 0.9)                                          */
+/*                                                                      */
+/*  - 2010.11.15 [Joosun Hahn] : first writing                          */
+/*                                                                      */
+/************************************************************************/
+
 #ifndef _EXFAT_OAL_H
 #define _EXFAT_OAL_H
 
+#include <linux/semaphore.h>
 #include "exfat_config.h"
-#include "exfat_global.h"
 #include <linux/version.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+/*----------------------------------------------------------------------*/
+/*  Constant & Macro Definitions (Configurable)                         */
+/*----------------------------------------------------------------------*/
 
-	typedef struct {
-		UINT16      sec;
-		UINT16      min;
-		UINT16      hour;
-		UINT16      day;
-		UINT16      mon;
-		UINT16      year;
-	} TIMESTAMP_T;
+/*----------------------------------------------------------------------*/
+/*  Constant & Macro Definitions (Non-Configurable)                     */
+/*----------------------------------------------------------------------*/
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
-#define DECLARE_MUTEX(m) DEFINE_SEMAPHORE(m)
-#endif
+/*----------------------------------------------------------------------*/
+/*  Type Definitions                                                    */
+/*----------------------------------------------------------------------*/
 
-	INT32 sm_init(struct semaphore *sm);
-	INT32 sm_P(struct semaphore *sm);
-	void  sm_V(struct semaphore *sm);
+typedef struct {
+	u16      sec;        /* 0 ~ 59               */
+	u16      min;        /* 0 ~ 59               */
+	u16      hour;       /* 0 ~ 23               */
+	u16      day;        /* 1 ~ 31               */
+	u16      mon;        /* 1 ~ 12               */
+	u16      year;       /* 0 ~ 127 (since 1980) */
+} TIMESTAMP_T;
 
-	TIMESTAMP_T *tm_current(TIMESTAMP_T *tm, UINT8 tz_utc);
+/*----------------------------------------------------------------------*/
+/*  External Function Declarations                                      */
+/*----------------------------------------------------------------------*/
 
-#ifdef __cplusplus
-}
-#endif
+s32 sm_init(struct semaphore *sm);
+s32 sm_P(struct semaphore *sm);
+void  sm_V(struct semaphore *sm);
 
-#endif
+TIMESTAMP_T *tm_current(TIMESTAMP_T *tm);
+
+#endif /* _EXFAT_OAL_H */
