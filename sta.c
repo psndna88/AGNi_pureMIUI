@@ -5002,12 +5002,93 @@ static int ath_sta_send_addba(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+#ifdef __linux__
+
+static int wil6210_send_addba(struct sigma_dut *dut, const char *dest_mac,
+			      int agg_size)
+{
+	char dir[128], buf[128];
+	FILE *f;
+	regex_t re;
+	regmatch_t m[2];
+	int rc, ret = -1, vring_id, found;
+
+	if (wil6210_get_debugfs_dir(dut, dir, sizeof(dir))) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"failed to get wil6210 debugfs dir");
+		return -1;
+	}
+
+	snprintf(buf, sizeof(buf), "%s/vrings", dir);
+	f = fopen(buf, "r");
+	if (!f) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "failed to open: %s", buf);
+		return -1;
+	}
+
+	if (regcomp(&re, "VRING tx_[ \t]*([0-9]+)", REG_EXTENDED)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "regcomp failed");
+		goto out;
+	}
+
+	/* find TX VRING for the mac address */
+	found = 0;
+	while (fgets(buf, sizeof(buf), f)) {
+		if (strcasestr(buf, dest_mac)) {
+			found = 1;
+			break;
+		}
+	}
+
+	if (!found) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"no TX VRING for %s", dest_mac);
+		goto out;
+	}
+
+	/* extract VRING ID, "VRING tx_<id> = {" */
+	if (!fgets(buf, sizeof(buf), f)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"no VRING start line for %s", dest_mac);
+		goto out;
+	}
+
+	rc = regexec(&re, buf, 2, m, 0);
+	regfree(&re);
+	if (rc || m[1].rm_so < 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"no VRING TX ID for %s", dest_mac);
+		goto out;
+	}
+	buf[m[1].rm_eo] = 0;
+	vring_id = atoi(&buf[m[1].rm_so]);
+
+	/* send the addba command */
+	fclose(f);
+	snprintf(buf, sizeof(buf), "%s/back", dir);
+	f = fopen(buf, "w");
+	if (!f) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"failed to open: %s", buf);
+		return -1;
+	}
+
+	fprintf(f, "add %d %d\n", vring_id, agg_size);
+
+	ret = 0;
+
+out:
+	fclose(f);
+
+	return ret;
+}
+
+
 static int send_addba_60g(struct sigma_dut *dut, struct sigma_conn *conn,
 			  struct sigma_cmd *cmd)
 {
 	const char *val;
 	int tid = 0;
-	char buf[100];
 
 	val = get_param(cmd, "TID");
 	if (val) {
@@ -5026,18 +5107,13 @@ static int send_addba_60g(struct sigma_dut *dut, struct sigma_conn *conn,
 		return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
 	}
 
-	snprintf(buf, sizeof(buf), "wil6210_addba_req.py %s %d",
-		 val, dut->back_rcv_buf);
-	sigma_dut_print(dut, DUT_MSG_INFO, "Run: %s", buf);
-
-	if (system(buf) != 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-			"Failed to send addba");
+	if (wil6210_send_addba(dut, val, dut->back_rcv_buf))
 		return -1;
-	}
 
 	return 1;
 }
+
+#endif /* __linux__ */
 
 
 static int cmd_sta_send_addba(struct sigma_dut *dut, struct sigma_conn *conn,
@@ -5046,8 +5122,10 @@ static int cmd_sta_send_addba(struct sigma_dut *dut, struct sigma_conn *conn,
 	switch (get_driver_type()) {
 	case DRIVER_ATHEROS:
 		return ath_sta_send_addba(dut, conn, cmd);
+#ifdef __linux__
 	case DRIVER_WIL6210:
 		return send_addba_60g(dut, conn, cmd);
+#endif /* __linux__ */
 	default:
 		/*
 		 * There is no driver specific implementation for other drivers.

@@ -9,6 +9,10 @@
 #ifndef SIGMA_DUT_H
 #define SIGMA_DUT_H
 
+#ifdef __GNUC__
+#define _GNU_SOURCE	1
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
