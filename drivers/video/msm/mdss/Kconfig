@@ -69,3 +69,9 @@ config FB_MSM_MDSS_KCAL_CTRL
 	---help---
 	  Enable sysfs for post-processing control of mdss-mdp5 display
 	  controllers in MDSS.
+
+config STATE_NOTIFIER
+	bool "State Notifier driver"
+	default y
+	---help---
+	  Monitor and notify device suspend states
