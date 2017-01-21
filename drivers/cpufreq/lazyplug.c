@@ -78,14 +78,10 @@
 #undef DEBUG_LAZYPLUG
 
 #define LAZYPLUG_MAJOR_VERSION	1
-#define LAZYPLUG_MINOR_VERSION	3
+#define LAZYPLUG_MINOR_VERSION	4
 
 #define DEF_SAMPLING_MS			(268)
 #define DEF_IDLE_COUNT			(19) /* 268 * 19 = 5092, almost equals to 5 seconds */
-
-#define DUAL_PERSISTENCE		(2500 / DEF_SAMPLING_MS)
-#define TRI_PERSISTENCE			(1700 / DEF_SAMPLING_MS)
-#define QUAD_PERSISTENCE		(1000 / DEF_SAMPLING_MS)
 
 #define BUSY_PERSISTENCE		(3500 / DEF_SAMPLING_MS)
 
@@ -98,10 +94,10 @@ static struct delayed_work lazyplug_boost;
 static struct workqueue_struct *lazyplug_wq;
 static struct workqueue_struct *lazyplug_boost_wq;
 
-static unsigned int __read_mostly lazyplug_active = 0;
+static unsigned int __read_mostly lazyplug_active = 1;
 module_param(lazyplug_active, uint, 0664);
 
-static unsigned int __read_mostly touch_boost_active = 1;
+static unsigned int __read_mostly touch_boost_active = 0;
 module_param(touch_boost_active, uint, 0664);
 
 static unsigned int __read_mostly nr_run_profile_sel = 0;
@@ -188,6 +184,7 @@ static unsigned int __read_mostly *nr_run_profiles[] = {
 };
 
 #define NR_RUN_ECO_MODE_PROFILE	3
+#define NR_RUN_HYSTERESIS_OCTA	12
 #define NR_RUN_HYSTERESIS_QUAD	8
 #define NR_RUN_HYSTERESIS_DUAL	4
 
@@ -199,7 +196,7 @@ module_param(nr_possible_cores, uint, 0444);
 static unsigned int __read_mostly cpu_nr_run_threshold = CPU_NR_THRESHOLD;
 module_param(cpu_nr_run_threshold, uint, 0664);
 
-static unsigned int __read_mostly nr_run_hysteresis = NR_RUN_HYSTERESIS_QUAD;
+static unsigned int __read_mostly nr_run_hysteresis = NR_RUN_HYSTERESIS_OCTA;
 module_param(nr_run_hysteresis, uint, 0664);
 
 #ifdef DEBUG_LAZYPLUG
@@ -530,7 +527,10 @@ int __init lazyplug_init(void)
 		 LAZYPLUG_MAJOR_VERSION,
 		 LAZYPLUG_MINOR_VERSION);
 
-	if (nr_possible_cores > 2) {
+	if (nr_possible_cores > 4) {
+		nr_run_hysteresis = NR_RUN_HYSTERESIS_OCTA;
+		nr_run_profile_sel = 0;
+	} else if (nr_possible_cores > 2) {
 		nr_run_hysteresis = NR_RUN_HYSTERESIS_QUAD;
 		nr_run_profile_sel = 0;
 	} else {
