@@ -555,7 +555,7 @@
 			label = "flash";
 			qcom,headroom = <500>;
 			qcom,startup-dly = <128>;
-			qcom,clamp-curr = <200>;
+			qcom,clamp-curr = <75>;
 			qcom,pmic-charger-support;
 			qcom,self-check-enabled;
 			qcom,thermal-derate-enabled;
@@ -614,7 +614,7 @@
 
 			pmi8950_switch: qcom,switch {
 				label = "switch";
-				qcom,led-name = "flashlight";
+				qcom,led-name = "led:switch";
 				qcom,default-led-trigger =
 						"switch_trigger";
 				qcom,max-current = <1000>;
