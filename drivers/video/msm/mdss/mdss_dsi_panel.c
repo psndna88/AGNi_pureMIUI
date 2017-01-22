@@ -50,6 +50,10 @@ static char rc_range_max_qp[] = {4, 4, 5, 6, 7, 7, 7, 8, 9, 10, 11, 12,
 static char rc_range_bpg_offset[] = {2, 0, 0, -2, -4, -6, -8, -8, -8, -10, -10,
 	-12, -12, -12, -12};
 
+#ifdef CONFIG_LAZYPLUG
+extern void lazyplug_enter_lazy(bool enter);
+#endif
+
 bool display_on = true;
 
 bool is_display_on()
@@ -748,6 +752,9 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	}
 
 	display_on = true;
+#ifdef CONFIG_LAZYPLUG
+	lazyplug_enter_lazy(false); 
+#endif
 
 	pinfo = &pdata->panel_info;
 	ctrl = container_of(pdata, struct mdss_dsi_ctrl_pdata,
@@ -852,6 +859,11 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 	}
 
 	display_on = false;
+
+#ifdef CONFIG_LAZYPLUG
+	lazyplug_enter_lazy(true);
+#endif
+
 end:
 	pr_debug("%s:-\n", __func__);
 	return 0;
