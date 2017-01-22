@@ -6030,7 +6030,7 @@ eHalStatus sme_DHCPStartInd( tHalHandle hHal,
             sme_ReleaseGlobalLock( &pMac->sme );
             return eHAL_STATUS_FAILURE;
         }
-
+        pSession->dhcp_done = false;
         pMsg = (tAniDHCPInd*)vos_mem_malloc(sizeof(tAniDHCPInd));
         if (NULL == pMsg)
         {
@@ -6098,7 +6098,7 @@ eHalStatus sme_DHCPStopInd( tHalHandle hHal,
             sme_ReleaseGlobalLock( &pMac->sme );
             return eHAL_STATUS_FAILURE;
         }
-
+        pSession->dhcp_done = true;
         pMsg = (tAniDHCPInd*)vos_mem_malloc(sizeof(tAniDHCPInd));
         if (NULL == pMsg)
         {
@@ -8215,6 +8215,70 @@ eHalStatus sme_ConfigureRxpFilter( tHalHandle hHal,
            status = eHAL_STATUS_FAILURE;
         }
         sme_ReleaseGlobalLock( &pMac->sme );
+    }
+    return(status);
+}
+
+/* ---------------------------------------------------------------------------
+
+  \fn    sme_update_hal_int_param
+
+  \brief
+    SME will pass this request to lower mac to indicate that the host needs to
+    update the cfg item
+
+  \param
+
+    hHal - The handle returned by macOpen.
+
+    cfg_id- cfg param id
+
+
+  \return eHalStatus
+
+
+--------------------------------------------------------------------------- */
+
+eHalStatus sme_update_cfg_int_param(tHalHandle hHal,
+               tANI_U32 cfg_id)
+{
+    eHalStatus status = eHAL_STATUS_SUCCESS;
+    VOS_STATUS vosStatus = VOS_STATUS_SUCCESS;
+    tpAniSirGlobal pMac = PMAC_STRUCT(hHal);
+    vos_msg_t vosMessage;
+    tpSirUpdateCfgIntParam updateCfgIntParam =
+        vos_mem_malloc(sizeof(tSirUpdateCfgIntParam));
+
+    if (updateCfgIntParam == NULL)
+    {
+        VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
+            "%s: vos_mem_alloc  for updateCfgIntParam", __func__);
+        return eHAL_STATUS_FAILURE;
+    }
+
+    updateCfgIntParam->cfgId = cfg_id;
+    /*
+     * This API expect user must have updated cfg item using cfg API's.
+     * Hence it just need the cfg param id not the cfg value.
+     */
+    status = sme_AcquireGlobalLock(&pMac->sme);
+    if (eHAL_STATUS_SUCCESS == status)
+    {
+        /* serialize the req through MC thread */
+        vosMessage.bodyptr = updateCfgIntParam;
+        vosMessage.type    = WDA_UPDATE_CFG_INT_PARAM;
+        vosStatus = vos_mq_post_message(VOS_MQ_ID_WDA, &vosMessage);
+        if (!VOS_IS_STATUS_SUCCESS(vosStatus))
+        {
+           status = eHAL_STATUS_FAILURE;
+           vos_mem_free(updateCfgIntParam);
+        }
+        sme_ReleaseGlobalLock(&pMac->sme);
+    }
+    else
+    {
+        status = eHAL_STATUS_FAILURE;
+        vos_mem_free(updateCfgIntParam);
     }
     return(status);
 }

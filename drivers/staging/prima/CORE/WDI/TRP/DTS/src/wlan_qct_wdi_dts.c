@@ -602,10 +602,6 @@ static void WDTS_RxPacketDump(vos_pkt_t *pFrame,
                               WDI_DS_RxMetaInfoType *pRxMetadata)
 {
     tpSirMacMgmtHdr pHdr;
-    struct sk_buff *skb = NULL;
-    uint8_t proto_type;
-    uint8_t flag = 0x0F;
-    wpt_status status;
 
     if (NULL == pRxMetadata) {
         VOS_TRACE(VOS_MODULE_ID_WDI, VOS_TRACE_LEVEL_ERROR,
@@ -632,35 +628,18 @@ static void WDTS_RxPacketDump(vos_pkt_t *pFrame,
                  "%s: Management subtype:%d SA:"MAC_ADDRESS_STR" DA:"
                  MAC_ADDRESS_STR, __func__, pRxMetadata->subtype,
                  MAC_ADDR_ARRAY(pHdr->sa), MAC_ADDR_ARRAY(pHdr->da));
+        vos_set_rx_wow_dump(false);
     } else if (WDI_MAC_CTRL_FRAME == pRxMetadata->type) {
         VOS_TRACE(VOS_MODULE_ID_WDI, VOS_TRACE_LEVEL_ERROR,
                   "%s: Control subtype:%d SA:"MAC_ADDRESS_STR" DA:"
                   MAC_ADDRESS_STR, __func__, pRxMetadata->subtype,
                   MAC_ADDR_ARRAY(pHdr->sa), MAC_ADDR_ARRAY(pHdr->da));
+        vos_set_rx_wow_dump(false);
     } else if (WDI_MAC_DATA_FRAME == pRxMetadata->type) {
         VOS_TRACE(VOS_MODULE_ID_WDI, VOS_TRACE_LEVEL_ERROR,
                   "%s: Data subtype:%d SA:"MAC_ADDRESS_STR" DA:"
                   MAC_ADDRESS_STR, __func__, pRxMetadata->subtype,
                   MAC_ADDR_ARRAY(pHdr->sa), MAC_ADDR_ARRAY(pHdr->da));
-
-        status = vos_pkt_get_os_packet(pFrame, (v_VOID_t **)&skb, 0);
-        if (eWLAN_PAL_STATUS_SUCCESS != status) {
-            VOS_TRACE(VOS_MODULE_ID_WDI, VOS_TRACE_LEVEL_ERROR,
-                      "%s: Failure extracting skb from vos pkt", __func__);
-            return;
-        }
-
-        proto_type = vos_pkt_get_proto_type(skb, flag);
-        if (VOS_PKT_PROTO_TYPE_EAPOL & proto_type)
-           VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
-                     "%s: RX frame is EAPOL", __func__);
-        else if (VOS_PKT_PROTO_TYPE_DHCP & proto_type)
-           VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
-                     "%s: RX frame is DHCP", __func__);
-        else if (VOS_PKT_PROTO_TYPE_ARP & proto_type)
-           VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
-                     "%s: RX frame is ARP", __func__);
-
     } else
         VOS_TRACE(VOS_MODULE_ID_WDI, VOS_TRACE_LEVEL_ERROR,
                   "%s: Unknown frame SA:"MAC_ADDRESS_STR,
@@ -977,10 +956,8 @@ wpt_status WDTS_RxPacket (void *pContext, wpt_packet *pFrame, WDTS_ChannelType c
       }
 
       /* Dump first Rx packet after host wakeup */
-      if (vos_get_rx_wow_dump()) {
+      if (vos_get_rx_wow_dump())
           WDTS_RxPacketDump((vos_pkt_t*)pFrame, pRxMetadata);
-          vos_set_rx_wow_dump(false);
-      }
 
       /* Invoke Rx complete callback */
       pClientData->receiveFrameCB(pClientData->pCallbackContext, pFrame);

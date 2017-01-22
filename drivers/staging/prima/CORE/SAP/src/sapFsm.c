@@ -1337,7 +1337,8 @@ sapconvertToCsrProfile(tsap_Config_t *pconfig_params, eCsrRoamBssType bssType, t
            VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR, " %s Fail to alloc memory", __func__);
            return eSAP_STATUS_FAILURE;
         }
-        vos_mem_copy(profile->pRSNReqIE, pconfig_params->pRSNWPAReqIE, pconfig_params->RSNWPAReqIELength);
+        vos_mem_copy(profile->pRSNReqIE, pconfig_params->RSNWPAReqIE,
+                     pconfig_params->RSNWPAReqIELength);
         profile->nRSNReqIELength = pconfig_params->RSNWPAReqIELength;
     }
 

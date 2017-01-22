@@ -16764,6 +16764,12 @@ WDI_ProcessInitScanRsp
                "Error returned WDI_ProcessInitScanRspi:%d BMPS%d",
                wdiStatus, pWDICtx->bInBmps);
   }
+  else
+  {
+     WPAL_TRACE(eWLAN_MODULE_DAL_CTRL, eWLAN_PAL_TRACE_LEVEL_ERROR,
+               "Error returned WDI_ProcessInitScanRspi:%d BMPS%d",
+               wdiStatus, pWDICtx->bInBmps);
+  }
 
   /*Notify UMAC*/
   wdiInitScanRspCb( wdiStatus, pWDICtx->pRspCBUserData);

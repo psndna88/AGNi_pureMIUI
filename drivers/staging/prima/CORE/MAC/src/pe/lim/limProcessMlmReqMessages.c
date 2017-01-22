@@ -734,6 +734,14 @@ void limSetDFSChannelList(tpAniSirGlobal pMac,tANI_U8 channelNum, tSirDFSChannel
              limLog(pMac, LOG1, FL("Received first beacon on DFS channel: %d"), channelNum);
              limCovertChannelScanType(pMac,channelNum, passiveToActive);
           }
+
+          if (!pMac->fActiveScanOnDFSChannels &&
+             dfsChannelList->timeStamp[channelNum] &&
+             !limActiveScanAllowed(pMac, channelNum))
+               limLog(pMac, LOGE,
+                 FL("Received beacon on DFS channel %d with dfs time stamp %lu, but channel is still DFS"),
+                 channelNum, dfsChannelList->timeStamp[channelNum]);
+
           dfsChannelList->timeStamp[channelNum] = vos_timer_get_system_time();
        }
        else

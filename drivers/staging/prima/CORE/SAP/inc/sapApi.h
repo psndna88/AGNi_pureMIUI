@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013, 2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -427,8 +427,8 @@ typedef struct sap_Config {
     v_U8_t          dtim_period;     /* dtim interval */
     v_U8_t          num_accept_mac;
     v_U8_t          num_deny_mac;
-    v_U8_t          *pRSNWPAReqIE;   //If not null, it has the IE byte stream for RSN /WPA
-
+    /* Max ie length 255 * 2(WPA+RSN) + 2 bytes(vendor specific ID) * 2 */
+    v_U8_t          RSNWPAReqIE[(SIR_MAC_MAX_IE_LENGTH * 2) + 4];
     v_U8_t          countryCode[WNI_CFG_COUNTRY_CODE_LEN];  //it is ignored if [0] is 0.
     v_U8_t          RSNAuthType;
     v_U8_t          RSNEncryptType;

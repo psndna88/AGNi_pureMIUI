@@ -1436,4 +1436,19 @@ struct cfg80211_bss* wlan_hdd_cfg80211_update_bss_list(
 
 struct cfg80211_bss *wlan_hdd_cfg80211_inform_bss_frame(hdd_adapter_t *pAdapter,
 		tSirBssDescription *bss_desc);
+#ifdef CFG80211_DEL_STA_V2
+int wlan_hdd_cfg80211_del_station(struct wiphy *wiphy,
+                                  struct net_device *dev,
+                                  struct station_del_parameters *param);
+#else
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,16,0)) || defined(WITH_BACKPORTS)
+int wlan_hdd_cfg80211_del_station(struct wiphy *wiphy,
+                                  struct net_device *dev, const u8 *mac);
+#else
+int wlan_hdd_cfg80211_del_station(struct wiphy *wiphy,
+                                  struct net_device *dev, u8 *mac);
+#endif
+#endif
+
+int wlan_hdd_cfg80211_update_apies(hdd_adapter_t *pHostapdAdapter);
 #endif

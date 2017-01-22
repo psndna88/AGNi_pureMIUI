@@ -87,6 +87,26 @@ int hdd_softap_unpackIE( tHalHandle halHandle,
                 u_int16_t gen_ie_len,
                 u_int8_t *gen_ie );
 
+/**
+ * hdd_change_ch_avoidance_status() - update is_ch_avoid_in_progress flag
+ *
+ * @hdd_ctx: pointer to hdd context
+ * @value: value to set
+ *
+ * This function will change the value of is_ch_avoid_in_progress
+ *
+ * Return: none
+ */
+static inline void
+hdd_change_ch_avoidance_status(hdd_context_t *hdd_ctx,
+                               bool value)
+{
+    vos_spin_lock_acquire(&hdd_ctx->sap_update_info_lock);
+    hdd_ctx->is_ch_avoid_in_progress = value;
+    vos_spin_lock_release(&hdd_ctx->sap_update_info_lock);
+}
+
+
 VOS_STATUS hdd_hostapd_SAPEventCB( tpSap_Event pSapEvent, v_PVOID_t usrDataForCallback);
 VOS_STATUS hdd_init_ap_mode( hdd_adapter_t *pAdapter );
 void hdd_set_ap_ops( struct net_device *pWlanHostapdDev );

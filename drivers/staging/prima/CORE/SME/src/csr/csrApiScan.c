@@ -2208,7 +2208,7 @@ static tANI_S32 csrFindCongestionScore (tpAniSirGlobal pMac, tCsrScanResult *pBs
         return -1;
     }
 
-    if (bssInfo->rssi < PER_BAD_RSSI) {
+    if (bssInfo->rssi < pMac->roam.configParam.PERMinRssiThresholdForRoam) {
         smsLog(pMac, LOG1,
                FL("discrarding candidate due to low rssi=%d bssid "
                MAC_ADDRESS_STR), bssInfo->rssi,
@@ -4057,8 +4057,6 @@ void csrApplyChannelPowerCountryInfo( tpAniSirGlobal pMac, tCsrChannel *pChannel
         // extend scan capability
         //  build a scan list based on the channel list : channel# + active/passive scan
         csrSetCfgScanControlList(pMac, countryCode, &ChannelList);
-        /*Send msg to Lim to clear DFS channel list */
-        csrClearDfsChannelList(pMac);
 #ifdef FEATURE_WLAN_SCAN_PNO
         if (updateRiva)
         {
@@ -8517,7 +8515,6 @@ void csrSetCfgScanControlList( tpAniSirGlobal pMac, tANI_U8 *countryCode, tCsrCh
                     }
                 }
             }
-
             smsLog(pMac, LOG1, FL("fEnableDFSChnlScan %d"),
                                        pMac->scan.fEnableDFSChnlScan);
             VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_INFO,
@@ -8529,6 +8526,10 @@ void csrSetCfgScanControlList( tpAniSirGlobal pMac, tANI_U8 *countryCode, tCsrCh
         }//Successfully getting scan control list
         vos_mem_free(pControlList);
     }//AllocateMemory
+
+    /* Send msg to Lim to clear DFS channel list */
+    smsLog(pMac, LOG1, FL("csrClearDfsChannelList"));
+    csrClearDfsChannelList(pMac);
 }
 
 //if bgPeriod is 0, background scan is disabled. It is in millisecond units
