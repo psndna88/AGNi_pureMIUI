@@ -184,7 +184,7 @@ static unsigned int __read_mostly *nr_run_profiles[] = {
 };
 
 #define NR_RUN_ECO_MODE_PROFILE	3
-#define NR_RUN_HYSTERESIS_OCTA	12
+#define NR_RUN_HYSTERESIS_HEXA	12
 #define NR_RUN_HYSTERESIS_QUAD	8
 #define NR_RUN_HYSTERESIS_DUAL	4
 
@@ -196,7 +196,7 @@ module_param(nr_possible_cores, uint, 0444);
 static unsigned int __read_mostly cpu_nr_run_threshold = CPU_NR_THRESHOLD;
 module_param(cpu_nr_run_threshold, uint, 0664);
 
-static unsigned int __read_mostly nr_run_hysteresis = NR_RUN_HYSTERESIS_OCTA;
+static unsigned int __read_mostly nr_run_hysteresis = NR_RUN_HYSTERESIS_HEXA;
 module_param(nr_run_hysteresis, uint, 0664);
 
 #ifdef DEBUG_LAZYPLUG
@@ -528,7 +528,7 @@ int __init lazyplug_init(void)
 		 LAZYPLUG_MINOR_VERSION);
 
 	if (nr_possible_cores > 4) {
-		nr_run_hysteresis = NR_RUN_HYSTERESIS_OCTA;
+		nr_run_hysteresis = NR_RUN_HYSTERESIS_HEXA;
 		nr_run_profile_sel = 0;
 	} else if (nr_possible_cores > 2) {
 		nr_run_hysteresis = NR_RUN_HYSTERESIS_QUAD;
