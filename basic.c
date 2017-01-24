@@ -75,9 +75,9 @@ static int cmd_device_get_info(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *version = "N/A";
 #ifdef __linux__
 	char model_buf[128];
-	char ver_buf[128];
+	char ver_buf[256];
 #endif /* __linux__ */
-	char resp[200];
+	char resp[512];
 
 #ifdef __linux__
 	{
@@ -87,6 +87,7 @@ static int cmd_device_get_info(struct sigma_dut *dut, struct sigma_conn *conn,
 		char compat_ver[128];
 		char wpa_supplicant_ver[128];
 		char hostapd_ver[128];
+		char host_fw_ver[128];
 
 		snprintf(path, sizeof(path), "/sys/class/net/%s/phy80211",
 			 get_main_ifname());
@@ -142,13 +143,22 @@ static int cmd_device_get_info(struct sigma_dut *dut, struct sigma_conn *conn,
 			get_ver("wpa_supplicant -v", wpa_supplicant_ver,
 				sizeof(wpa_supplicant_ver));
 
+		if (get_driver_type() == DRIVER_WCN ||
+		    get_driver_type() == DRIVER_LINUX_WCN)
+			get_ver("iwpriv wlan0 version", host_fw_ver,
+				sizeof(host_fw_ver));
+		else
+			host_fw_ver[0] = '\0';
+
 		snprintf(ver_buf, sizeof(ver_buf),
-			 "drv=%s%s%s%s%s/sigma=" SIGMA_DUT_VER "%s%s",
+			 "drv=%s%s%s%s%s%s%s/sigma=" SIGMA_DUT_VER "%s%s",
 			 compat_ver,
 			 wpa_supplicant_ver[0] ? "/wpas=" : "",
 			 wpa_supplicant_ver,
 			 hostapd_ver[0] ? "/hapd=" : "",
 			 hostapd_ver,
+			 host_fw_ver[0] ? "/wlan=" : "",
+			 host_fw_ver,
 			 dut->version ? "@" : "",
 			 dut->version ? dut->version : "");
 		version = ver_buf;
