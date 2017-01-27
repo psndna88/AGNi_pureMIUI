@@ -945,7 +945,7 @@ struct lpm_cluster *parse_cluster(struct device_node *node,
 		c->last_level = c->nlevels-1;
 
 	for (i = 0; i < c->nlevels; i++) {
-		for (j = 0; j < c->nlevels; j++) {
+		for (j = 1; j < c->nlevels; j++) {
 			if (i >= j) {
 				c->levels[i].pwr.residencies[j] = 0;
 				continue;
