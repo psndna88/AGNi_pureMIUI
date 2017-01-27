@@ -2588,8 +2588,8 @@ static void mass_storage_function_enable(struct android_usb_function *f)
 			if (lun_type)
 				number_of_luns =
 					mass_storage_lun_init(f, lun_type);
-				if (number_of_luns <= 0)
-					return;
+			if (number_of_luns <= 0)
+				return;
 		}
 	} else {
 		pr_debug("No extra msc lun required.\n");
