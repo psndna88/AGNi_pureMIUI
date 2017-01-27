@@ -139,7 +139,7 @@ static void tcp_cdg_hystart_update(struct sock *sk)
 {
 	struct cdg *ca = inet_csk_ca(sk);
 	struct tcp_sock *tp = tcp_sk(sk);
-	u32 in_flight;
+	u32 in_flight = 0;
 	ca->delay_min = min_not_zero(ca->delay_min, ca->rtt.min);
 	if (ca->delay_min == 0)
 		return;
