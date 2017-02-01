@@ -15,6 +15,7 @@
 #include <linux/completion.h>
 #include <linux/kobject.h>
 #include <linux/notifier.h>
+#include <linux/pid_namespace.h>
 #include <linux/sysfs.h>
 #include <asm/cputime.h>
 
@@ -546,8 +547,14 @@ static inline int cpufreq_generic_exit(struct cpufreq_policy *policy)
 
 #ifdef CONFIG_CPU_FREQ_STAT
 void acct_update_power(struct task_struct *p, cputime_t cputime);
+void cpufreq_task_stats_init(struct task_struct *p);
+void cpufreq_task_stats_exit(struct task_struct *p);
+int  proc_time_in_state_show(struct seq_file *m, struct pid_namespace *ns,
+			     struct pid *pid, struct task_struct *p);
 #else
 static inline void acct_update_power(struct task_struct *p, cputime_t cputime) {}
+static inline void cpufreq_task_stats_init(struct task_struct *p) {}
+static inline void cpufreq_task_stats_exit(struct task_struct *p) {}
 #endif
 
 #ifdef CONFIG_TASK_CPUFREQ_STATS
