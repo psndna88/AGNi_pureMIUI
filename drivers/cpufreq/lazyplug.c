@@ -78,7 +78,7 @@
 #undef DEBUG_LAZYPLUG
 
 #define LAZYPLUG_MAJOR_VERSION	1
-#define LAZYPLUG_MINOR_VERSION	4
+#define LAZYPLUG_MINOR_VERSION	6
 
 #define DEF_SAMPLING_MS			(268)
 #define DEF_IDLE_COUNT			(19) /* 268 * 19 = 5092, almost equals to 5 seconds */
@@ -174,6 +174,13 @@ static unsigned int __read_mostly nr_run_thresholds_disable[] = {
 	0,  0,  0,  UINT_MAX
 };
 
+static unsigned int __read_mostly nr_run_thresholds_lazy[] = {
+	(THREAD_CAPACITY * 995 * MULT_FACTOR) / DIV_FACTOR,
+	(THREAD_CAPACITY * 1875 * MULT_FACTOR) / DIV_FACTOR,
+	(THREAD_CAPACITY * 2350 * MULT_FACTOR) / DIV_FACTOR,
+	UINT_MAX
+};
+
 static unsigned int __read_mostly *nr_run_profiles[] = {
 	nr_run_thresholds_balance,
 	nr_run_thresholds_performance,
@@ -181,6 +188,7 @@ static unsigned int __read_mostly *nr_run_profiles[] = {
 	nr_run_thresholds_eco,
 	nr_run_thresholds_eco_extreme,
 	nr_run_thresholds_disable,
+	nr_run_thresholds_lazy,
 };
 
 #define NR_RUN_ECO_MODE_PROFILE	3
@@ -426,7 +434,7 @@ void lazyplug_enter_lazy(bool enter)
 		pr_info("lazyplug: entering lazy mode\n");
 		Lnr_run_profile_sel = nr_run_profile_sel;
 		Ltouch_boost_active = touch_boost_active;
-		nr_run_profile_sel = 2; /* conversative profile */
+		nr_run_profile_sel = 6; /* lazy profile */
 		touch_boost_active = false;
 		Lprevious_state = true;
 	} else if (!enter && Lprevious_state) {
