@@ -451,6 +451,15 @@ extern struct cpufreq_governor cpufreq_gov_ironactive;
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_CHILL)
 extern struct cpufreq_governor cpufreq_gov_chill;
 #define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_chill)
+#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_RELAXED)
+extern struct cpufreq_governor cpufreq_gov_relaxed;
+#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_relaxed)
+#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_DESPAIR)
+extern struct cpufreq_governor cpufreq_gov_despair;
+#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_despair)
+#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_BIOSHOCK)
+extern struct cpufreq_governor cpufreq_gov_bioshock;
+#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_bioshock)
 #endif
 
 /*********************************************************************
