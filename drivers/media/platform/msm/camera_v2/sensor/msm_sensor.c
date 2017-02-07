@@ -628,6 +628,7 @@ int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 	rc = sensor_i2c_client->i2c_func_tbl->i2c_read(
 		sensor_i2c_client, slave_info->sensor_id_reg_addr,
 		&chipid, MSM_CAMERA_I2C_WORD_DATA);
+
 	if (rc < 0) {
 #ifdef CONFIG_MACH_XIAOMI_HYDROGEN
 		if ((strcmp(sensor_name, "ov16880") == 0) ||
@@ -1692,9 +1693,8 @@ sensor_error:
 	return -1;
 #else
 	if (rc < 0)
-	{
 		pr_err("%s:%d match id failed rc %d\n", __func__, __LINE__, rc);
-		return rc;
+	return rc;
 #endif
 }
 

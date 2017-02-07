@@ -468,18 +468,6 @@ static void msm_vfe44_process_error_status(struct vfe_device *vfe_dev)
 	}
 }
 
-static void msm_vfe44_enable_camif_error(struct vfe_device *vfe_dev,
-			int enable)
-{
-	uint32_t val;
-
-	val = msm_camera_io_r(vfe_dev->vfe_base + 0x2C);
-	if (enable)
-		msm_camera_io_w_mb(val | BIT(0), vfe_dev->vfe_base + 0x2C);
-	else
-		msm_camera_io_w_mb(val & ~(BIT(0)), vfe_dev->vfe_base + 0x2C);
-}
-
 static void msm_vfe44_read_irq_status(struct vfe_device *vfe_dev,
 	uint32_t *irq_status0, uint32_t *irq_status1)
 {
@@ -500,11 +488,9 @@ static void msm_vfe44_read_irq_status(struct vfe_device *vfe_dev,
 		*irq_status0 &= ~(0x10000000);
 	}
 
-	if (*irq_status1 & (1 << 0)) {
+	if (*irq_status1 & (1 << 0))
 		vfe_dev->error_info.camif_status =
 		msm_camera_io_r(vfe_dev->vfe_base + 0x31C);
-		msm_vfe44_enable_camif_error(vfe_dev, 0);
-	}
 
 	if (*irq_status1 & (1 << 7))
 		vfe_dev->error_info.violation_status =

@@ -510,8 +510,7 @@ int msm_camera_get_dt_power_setting_data(struct device_node *of_node,
 			&seq_name);
 #else
 		rc = of_property_read_string_index(of_node,
-			(is_back_camera == true && kenzo_boardid == 0) ?
-				"qcom,cam-power-seq-type-boardid0" : "qcom,cam-power-seq-type", i,
+			"qcom,cam-power-seq-type", i,
 			&seq_name);
 #endif
 		CDBG("%s seq_name[%d] = %s\n", __func__, i,
@@ -552,8 +551,7 @@ int msm_camera_get_dt_power_setting_data(struct device_node *of_node,
 			&seq_name);
 #else
 		rc = of_property_read_string_index(of_node,
-			(is_back_camera == true && kenzo_boardid == 0) ?
-				"qcom,cam-power-seq-val-boardid0" : "qcom,cam-power-seq-val", i,
+			"qcom,cam-power-seq-val", i,
 			&seq_name);
 #endif
 		CDBG("%s seq_name[%d] = %s\n", __func__, i,

@@ -2500,14 +2500,14 @@ static int msm_cpp_validate_input(unsigned int cmd, void *arg,
 		break;
 	default:
 		if (ioctl_ptr == NULL) {
-			pr_err("Wrong ioctl_ptr %p\n", ioctl_ptr);
+			pr_err("Wrong ioctl_ptr for cmd %u\n", cmd);
 			return -EINVAL;
 		}
 
 		*ioctl_ptr = arg;
 		if ((*ioctl_ptr == NULL) ||
-			((*ioctl_ptr)->ioctl_ptr == NULL)) {
-			pr_err("Wrong arg %p\n", arg);
+			(*ioctl_ptr)->ioctl_ptr == NULL) {
+			pr_err("Error invalid ioctl argument cmd %u\n", cmd);
 			return -EINVAL;
 		}
 		break;
