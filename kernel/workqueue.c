@@ -1497,8 +1497,6 @@ static void __queue_delayed_work(int cpu, struct workqueue_struct *wq,
 		return;
 	}
 
-	timer_stats_timer_set_start_info(&dwork->timer);
-
 	dwork->wq = wq;
 	/* timer isn't guaranteed to run in this cpu, record earlier */
 	if (cpu == WORK_CPU_UNBOUND)
