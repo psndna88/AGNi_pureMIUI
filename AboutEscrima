@@ -1,0 +1,6 @@
+This is Escrima Kernel. This is based on the Stock LienageOS Kernel for msm8956 devices maintained by @TheStrix This kernel is featured in my builds. And as its open sourced anyone is free to use it just don't forget about my credits and as well as of @TheStrix
+
+What is the aim of my kernel?
+Well what I wanted was a stock like kernel like LOS but at the same time I needed a kernel with features like Sound Control, Wake features, KCAL, USB Support etc but there were none. So thats what I did, added features what I used and included some fixes but no other stuffs like adding  governors etc.
+
+Amol Amrit
