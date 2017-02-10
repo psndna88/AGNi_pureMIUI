@@ -788,7 +788,7 @@ void inet6_ifa_finish_destroy(struct inet6_ifaddr *ifp)
 	in6_dev_put(ifp->idev);
 
 	if (cancel_delayed_work(&ifp->dad_work))
-		pr_notice("delayed DAD work was pending while freeing ifa=%p\n",
+		pr_notice("delayed DAD work was pending while freeing ifa=%pK\n",
 			  ifp);
 
 	if (ifp->state != INET6_IFADDR_STATE_DEAD) {
