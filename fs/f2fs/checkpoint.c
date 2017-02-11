@@ -1001,8 +1001,6 @@ out:
 static void unblock_operations(struct f2fs_sb_info *sbi)
 {
 	up_write(&sbi->node_write);
-
-	build_free_nids(sbi, false);
 	f2fs_unlock_all(sbi);
 }
 
