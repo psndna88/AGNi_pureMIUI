@@ -762,6 +762,7 @@ static ssize_t store_governor(struct device *dev, struct device_attribute *attr,
 		strncmp(str_governor, "performance", DEVFREQ_NAME_LEN) &&
 		strncmp(str_governor, "powersave", DEVFREQ_NAME_LEN) &&
 		strncmp(str_governor, "mem_latency", DEVFREQ_NAME_LEN) &&
+		strncmp(str_governor, "simple_ondemand", DEVFREQ_NAME_LEN) &&
 		strncmp(str_governor, "msm-adreno-tz", DEVFREQ_NAME_LEN))
 		return -EINVAL;
 
