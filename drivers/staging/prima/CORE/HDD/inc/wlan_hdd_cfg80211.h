@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -102,11 +102,13 @@
 
 #define MAX_CHANNEL NUM_2_4GHZ_CHANNELS + NUM_5GHZ_CHANNELS
 
+#define IS_CHANNEL_VALID(channel) ((channel >= 0 && channel < 15) \
+                     || (channel >= 36 && channel <= 184))
+
 #ifdef WLAN_FEATURE_LINK_LAYER_STATS
 /* Number of Radios */
 #define NUM_RADIOS  0x1
 #endif /* WLAN_FEATURE_LINK_LAYER_STATS */
-
 
 typedef struct {
    u8 element_id;

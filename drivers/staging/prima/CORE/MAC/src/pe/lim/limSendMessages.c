@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -799,6 +799,7 @@ tSirRetStatus limSendBeaconFilterInfo(tpAniSirGlobal pMac,tpPESession psessionEn
     tANI_U32           i;
     tANI_U32           msgSize;
     tANI_BOOLEAN       ignore_secchannel_bcn_filter = false;
+    bool filter_skipped = false;
     tpBeaconFilterIe   pIe;
     tpDphHashNode      pStaDs;
 
@@ -874,6 +875,7 @@ tSirRetStatus limSendBeaconFilterInfo(tpAniSirGlobal pMac,tpPESession psessionEn
         {
             limLog( pMac, LOGW,
                 FL("Skip Secondary Channel bcn filter when channel is 20Mhz"));
+            filter_skipped = true;
             continue;
         }
         pIe = (tpBeaconFilterIe) ptr;
@@ -885,6 +887,9 @@ tSirRetStatus limSendBeaconFilterInfo(tpAniSirGlobal pMac,tpPESession psessionEn
         pIe->byte.ref =  beaconFilterTable[i].byte.ref; 
         ptr += sizeof(tBeaconFilterIe);
     }
+    if (filter_skipped)
+       pBeaconFilterMsg->ieNum--;
+
     msgQ.type = WDA_BEACON_FILTER_IND;
     msgQ.reserved = 0;
     msgQ.bodyptr = pBeaconFilterMsg;

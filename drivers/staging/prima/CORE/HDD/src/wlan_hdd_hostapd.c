@@ -1291,7 +1291,19 @@ stopbss :
 
         /* Stop the pkts from n/w stack as we are going to free all of
          * the TX WMM queues for all STAID's */
-        hdd_hostapd_stop(dev);
+
+        /*
+         * If channel avoidance is in progress means driver is performing SAP
+         * restart. So don't do carrier off, which may lead framework to do
+         * driver reload.
+         */
+        hddLog(LOG1, FL("ch avoid in progress: %d"),
+                        pHddCtx->is_ch_avoid_in_progress);
+        if (pHddCtx->is_ch_avoid_in_progress &&
+            pHddCtx->cfg_ini->sap_restrt_ch_avoid)
+            netif_tx_disable(dev);
+        else
+            hdd_hostapd_stop(dev);
 
         /* reclaim all resources allocated to the BSS */
         vos_status = hdd_softap_stop_bss(pHostapdAdapter);
@@ -1528,11 +1540,13 @@ static void hdd_unsafe_channel_restart_sap(hdd_adapter_t *adapter,
       adapter->sessionCtx.ap.sapConfig.channel =
                               AUTO_CHANNEL_SELECT;
 
-      netif_tx_disable(adapter->dev);
 
-      if (hdd_ctx->cfg_ini->sap_restrt_ch_avoid)
-              schedule_work(
-              &hdd_ctx->sap_start_work);
+      if (hdd_ctx->cfg_ini->sap_restrt_ch_avoid) {
+          netif_tx_disable(adapter->dev);
+          schedule_work(&hdd_ctx->sap_start_work);
+      } else {
+          hdd_hostapd_stop(adapter->dev);
+      }
 
       return;
    }
