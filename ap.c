@@ -823,8 +823,18 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_txBF = strcasecmp(val, "enable") == 0;
 
 	val = get_param(cmd, "MU_TxBF");
-	if (val)
-		dut->ap_mu_txBF = strcasecmp(val, "enable") == 0;
+	if (val) {
+		if (strcasecmp(val, "enable") == 0) {
+			dut->ap_txBF = 1;
+			dut->ap_mu_txBF = 1;
+		} else if (strcasecmp(val, "disable") == 0) {
+			dut->ap_txBF = 0;
+			dut->ap_mu_txBF = 0;
+		} else {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Unsupported MU_TxBF");
+		}
+	}
 
 	/* UNSUPPORTED: tx_lgi_rate */
 
