@@ -340,7 +340,8 @@ struct sigma_dut {
 		AP_160,
 		AP_AUTO
 	} ap_chwidth;
-	enum ap_chwidth default_ap_chwidth;
+	enum ap_chwidth default_11na_ap_chwidth;
+	enum ap_chwidth default_11ng_ap_chwidth;
 	int ap_tx_stbc;
 	enum value_not_set_enabled_disabled ap_dyn_bw_sig;
 	int ap_sgi80;

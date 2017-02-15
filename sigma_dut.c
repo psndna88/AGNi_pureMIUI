@@ -688,7 +688,8 @@ static void set_defaults(struct sigma_dut *dut)
 {
 	dut->ap_p2p_cross_connect = -1;
 	dut->ap_chwidth = AP_AUTO;
-	dut->default_ap_chwidth = AP_AUTO;
+	dut->default_11na_ap_chwidth = AP_AUTO;
+	dut->default_11ng_ap_chwidth = AP_AUTO;
 	/* by default, enable writing of traffic stream stats */
 	dut->write_stats = 1;
 }
@@ -827,7 +828,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'r':
 			if (strcmp(optarg, "HT40") == 0) {
-				sigma_dut.default_ap_chwidth = AP_40;
+				sigma_dut.default_11na_ap_chwidth = AP_40;
+			} else if (strcmp(optarg, "2.4_HT40") == 0) {
+				sigma_dut.default_11ng_ap_chwidth = AP_40;
 			} else {
 				printf("Unsupported -r value\n");
 				exit(1);
@@ -940,7 +943,7 @@ int main(int argc, char *argv[])
 			       "       [-N <device_get_info vendor>] \\\n"
 			       "       [-o <device_get_info model>] \\\n"
 			       "       [-O <device_get_info version>] \\\n"
-			       "       [-r <HT40>]\n");
+			       "       [-r <HT40 or 2.4_HT40>]\n");
 			printf("local command: sigma_dut [-p<port>] "
 			       "<-l<cmd>>\n");
 			exit(0);

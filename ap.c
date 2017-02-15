@@ -4865,7 +4865,10 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 	    (dut->ap_mode == AP_11ng || dut->ap_mode == AP_11na)) {
 		fprintf(f, "ieee80211n=1\n");
 		fprintf(f, "ht_capab=");
-		if (dut->ap_mode == AP_11ng && dut->ap_chwidth == AP_40) {
+		if (dut->ap_mode == AP_11ng &&
+		    (dut->ap_chwidth == AP_40 ||
+		     (dut->ap_chwidth == AP_AUTO &&
+		      dut->default_11ng_ap_chwidth == AP_40))) {
 			if (dut->ap_channel >= 1 && dut->ap_channel <= 7)
 				fprintf(f, "[HT40+]");
 			else if (dut->ap_channel >= 8 && dut->ap_channel <= 11)
@@ -4876,7 +4879,7 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		if (dut->ap_mode == AP_11na &&
 		    (dut->ap_chwidth == AP_40 ||
 		     (dut->ap_chwidth == AP_AUTO &&
-		      dut->default_ap_chwidth == AP_40))) {
+		      dut->default_11na_ap_chwidth == AP_40))) {
 			if (is_ht40plus_chan(dut->ap_channel))
 				fprintf(f, "[HT40+]");
 			else if (is_ht40minus_chan(dut->ap_channel))
