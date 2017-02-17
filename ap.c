@@ -2557,9 +2557,10 @@ static int kill_process(struct sigma_dut *dut, char *proc_name,
 	FILE *fp;
 	char *pid, *temp;
 	char *saveptr;
+	int ret = -1;
 
 	if (dir == NULL)
-		return -1;
+		return ret;
 
 	while ((dp = readdir(dir)) != NULL) {
 		if (dp->d_type != DT_DIR)
@@ -2590,6 +2591,7 @@ static int kill_process(struct sigma_dut *dut, char *proc_name,
 			snprintf(buf, sizeof(buf), "kill -%d %d", sig,
 				 atoi(pid));
 			run_system(dut, buf);
+			ret = 0;
 			if (is_proc_instance_one)
 				break;
 		}
@@ -2597,7 +2599,7 @@ static int kill_process(struct sigma_dut *dut, char *proc_name,
 
 	closedir(dir);
 
-	return 0;
+	return ret;
 #else /* __linux__ */
 	return -1;
 #endif /* __linux__ */
@@ -2704,7 +2706,13 @@ static int cmd_wcn_ap_config_commit(struct sigma_dut *dut,
 	struct stat s;
 	int num_tries = 0, ret;
 
-	kill_process(dut, "(netd)", 1, SIGKILL);
+	if (kill_process(dut, "(netd)", 1, SIGKILL) == 0 ||
+	    system("killall netd") == 0) {
+		/* Avoid Error: Error connecting (Connection refused)
+		 * Wait some time to allow netd to reinitialize.
+		 */
+		usleep(1500000);
+	}
 
 	while (num_tries < 10) {
 		ret = run_ndc(dut, "ndc softap stopap");
