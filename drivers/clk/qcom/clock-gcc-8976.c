@@ -1305,29 +1305,6 @@ static struct clk_freq_tbl ftbl_gfx3d_clk_src[] = {
 	F( 480000000,    gpll4_gfx3d,  2.5,    0,     0),
 	F( 550000000,          gpll3,    2,    0,     0),
 	F( 600000000,    gpll4_gfx3d,    2,    0,     0),
-	F( 621330000,    gpll2_gfx3d,  1.5,    0,     0),
-	F_END
-};
-
-static struct clk_freq_tbl ftbl_gfx3d_clk_src_v1[] = {
-	F(  19200000,             xo,    1,    0,     0),
-	F(  50000000,          gpll0,   16,    0,     0),
-	F(  80000000,          gpll0,   10,    0,     0),
-	F( 100000000,          gpll0,    8,    0,     0),
-	F( 133333333,          gpll0,    6,    0,     0),
-	F( 160000000,          gpll0,    5,    0,     0),
-	F( 200000000,          gpll0,    4,    0,     0),
-	F( 228571429,          gpll0,  3.5,    0,     0),
-	F( 240000000,    gpll6_gfx3d,  4.5,    0,     0),
-	F( 266666667,          gpll0,    3,    0,     0),
-	F( 300000000,    gpll4_gfx3d,    4,    0,     0),
-	F( 366670000,          gpll3,    3,    0,     0),
-	F( 400000000,          gpll0,    2,    0,     0),
-	F( 432000000,    gpll6_gfx3d,  2.5,    0,     0),
-	F( 480000000,    gpll4_gfx3d,  2.5,    0,     0),
-	F( 550000000,          gpll3,    2,    0,     0),
-	F( 600000000,    gpll4_gfx3d,    2,    0,     0),
-	F( 621330000,    gpll2_gfx3d,  1.5,    0,     0),
 	F_END
 };
 
@@ -2588,7 +2565,7 @@ static struct branch_clk gcc_oxili_gfx3d_clk = {
 		.parent = &gfx3d_clk_src.c,
 		VDD_DIG_FMAX_MAP5(LOWER, 300000000, LOW, 366670000,
 				NOMINAL, 432000000, NOM_PLUS, 480000000,
-				HIGH, 621330000),
+				HIGH, 600000000),
 		.ops = &clk_ops_branch,
 		CLK_INIT(gcc_oxili_gfx3d_clk.c),
 	},
@@ -3851,36 +3828,6 @@ static struct clk_lookup msm_clocks_gcc_gfx[] = {
 	CLK_LIST(gcc_gtcu_ahb_clk),
 };
 
-static void get_gfx_version(struct platform_device *pdev, int *version)
-{
-	struct resource *res;
-	void __iomem *base;
-	u32 efuse;
-
-	*version = 0;
-
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "fuse");
-	if (!res) {
-		dev_err(&pdev->dev,
-			 "No version available. Defaulting to 0.\n");
-		return;
-	}
-
-	base = devm_ioremap(&pdev->dev, res->start, resource_size(res));
-	if (!base) {
-		dev_warn(&pdev->dev,
-			 "Unable to read fuse data. Defaulting to 0.\n");
-		return;
-	}
-
-	efuse = readl_relaxed(base);
-	devm_iounmap(&pdev->dev, base);
-
-	*version = (efuse >> 20) & 0x1;
-
-	dev_info(&pdev->dev, "GFX-Version: %d\n", *version);
-}
-
 static int of_get_fmax_vdd_class(struct platform_device *pdev, struct clk *c,
 								char *prop_name)
 {
@@ -4008,8 +3955,7 @@ static void populate_gpu_opp_table(struct platform_device *pdev)
 static int msm_gcc_gfx_probe(struct platform_device *pdev)
 {
 	struct resource *res;
-	char prop_name[] = "qcom,gfxfreq-corner-vX";
-	int ret, version;
+	int ret;
 	u32 regval;
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "cc_base");
@@ -4032,20 +3978,11 @@ static int msm_gcc_gfx_probe(struct platform_device *pdev)
 		return PTR_ERR(vdd_gfx.regulator[0]);
 	}
 
-	get_gfx_version(pdev, &version);
-
-	snprintf(prop_name, ARRAY_SIZE(prop_name), "qcom,gfxfreq-corner-v%d",
-					version);
-
-	ret = of_get_fmax_vdd_class(pdev, &gfx3d_clk_src.c, prop_name);
+	ret = of_get_fmax_vdd_class(pdev, &gfx3d_clk_src.c,
+					"qcom,gfxfreq-corner");
 	if (ret) {
 		dev_err(&pdev->dev, "Unable to get gfx freq-corner mapping info\n");
 		return ret;
-	}
-
-	if (version) {
-		gfx3d_clk_src.freq_tbl = ftbl_gfx3d_clk_src_v1;
-		gcc_oxili_gfx3d_clk.c.fmax[VDD_DIG_HIGH] = 621330000;
 	}
 
 	ret = of_msm_clock_register(pdev->dev.of_node, msm_clocks_gcc_gfx,
