@@ -3,7 +3,11 @@
 # based on V4L2.
 #
 
+ifeq ($(CONFIG_MSMB_CAMERA_MM),y)
+obj-$(CONFIG_MSM_VIDC_V4L2)     += vidc_mm/
+else
 obj-$(CONFIG_MSM_VIDC_V4L2)     += vidc/
+endif
 obj-$(CONFIG_MSM_WFD) += wfd/
 obj-y += broadcast/
 obj-$(CONFIG_DVB_MPQ) += dvb/
