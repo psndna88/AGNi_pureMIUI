@@ -2193,8 +2193,7 @@ out:
 	if (!list_empty(&clp->cl_revoked))
 		seq->status_flags |= SEQ4_STATUS_RECALLABLE_STATE_REVOKED;
 out_no_session:
-	if (conn)
-		free_conn(conn);
+	kfree(conn);
 	spin_unlock(&nn->client_lock);
 	return status;
 out_put_session:
