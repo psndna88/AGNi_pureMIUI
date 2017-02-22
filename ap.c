@@ -429,7 +429,16 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 					"Unsupported WME value: %s", val);
 	}
 
-	/* TODO: WMMPS */
+	val = get_param(cmd, "WMMPS");
+	if (val) {
+		if (strcasecmp(val, "on") == 0)
+			dut->ap_wmmps = AP_WMMPS_ON;
+		else if (strcasecmp(val, "off") == 0)
+			dut->ap_wmmps = AP_WMMPS_OFF;
+		else
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Unsupported WMMPS value: %s", val);
+	}
 
 	val = get_param(cmd, "RTS");
 	if (val)
@@ -5049,6 +5058,9 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (dut->ap_wme)
 		fprintf(f, "wmm_enabled=1\n");
 
+	if (dut->ap_wmmps == AP_WMMPS_ON)
+		fprintf(f, "uapsd_advertisement_enabled=1\n");
+
 	if (dut->ap_hs2) {
 		if (dut->ap_bss_load) {
 			char *bss_load;
@@ -5635,10 +5647,13 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	dut->ap_regulatory_mode = AP_80211D_MODE_DISABLED;
 	dut->ap_dfs_mode = AP_DFS_MODE_DISABLED;
 
-	if (dut->program == PROGRAM_HT || dut->program == PROGRAM_VHT)
+	if (dut->program == PROGRAM_HT || dut->program == PROGRAM_VHT) {
 		dut->ap_wme = AP_WME_ON;
-	else
+		dut->ap_wmmps = AP_WMMPS_ON;
+	} else {
 		dut->ap_wme = AP_WME_OFF;
+		dut->ap_wmmps = AP_WMMPS_OFF;
+	}
 
 	if (dut->program == PROGRAM_HS2 || dut->program == PROGRAM_HS2_R2) {
 		int i;
