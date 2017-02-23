@@ -1216,7 +1216,7 @@ void *msm_vidc_open(int core_id, int session_type)
 		goto err_invalid_core;
 	}
 
-	pr_info(VIDC_DBG_TAG "Opening video instance: %p, %d\n",
+	pr_debug(VIDC_DBG_TAG "Opening video instance: %p, %d\n",
 		VIDC_INFO, inst, session_type);
 	mutex_init(&inst->sync_lock);
 	mutex_init(&inst->bufq[CAPTURE_PORT].lock);
@@ -1408,7 +1408,7 @@ int msm_vidc_close(void *instance)
 	msm_comm_session_clean(inst);
 
 	msm_smem_delete_client(inst->mem_client);
-	pr_info(VIDC_DBG_TAG "Closed video instance: %p\n", VIDC_INFO, inst);
+	pr_debug(VIDC_DBG_TAG "Closed video instance: %p\n", VIDC_INFO, inst);
 	kfree(inst);
 
 	return 0;
