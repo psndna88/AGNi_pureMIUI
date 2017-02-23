@@ -5018,6 +5018,9 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		break;
 	}
 
+	if (dut->ap_rsn_preauth)
+		fprintf(f, "rsn_preauth=1\n");
+
 	switch (dut->ap_pmf) {
 	case AP_PMF_DISABLED:
 		break;
