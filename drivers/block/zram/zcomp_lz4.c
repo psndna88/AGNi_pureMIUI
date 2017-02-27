@@ -46,7 +46,7 @@ static int zcomp_lz4_compress(const unsigned char *src, unsigned char *dst,
 		size_t *dst_len, void *private)
 {
 	/* return  : Success if return 0 */
-	return lz4_compress(src, PAGE_SIZE, dst, dst_len, private);
+	return LZ4_compress_default(src, dst, PAGE_SIZE, *dst_len, private);
 }
 
 static int zcomp_lz4_decompress(const unsigned char *src, size_t src_len,
@@ -54,7 +54,7 @@ static int zcomp_lz4_decompress(const unsigned char *src, size_t src_len,
 {
 	size_t dst_len = PAGE_SIZE;
 	/* return  : Success if return 0 */
-	return lz4_decompress_unknownoutputsize(src, src_len, dst, &dst_len);
+	return LZ4_decompress_safe(src, dst, src_len, dst_len);
 }
 
 struct zcomp_backend zcomp_lz4 = {
