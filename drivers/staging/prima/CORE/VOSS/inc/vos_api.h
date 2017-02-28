@@ -208,6 +208,17 @@ enum log_event_host_reason_code {
 	WLAN_LOG_REASON_SCAN_NOT_ALLOWED,
 };
 
+/**
+ * vos_wdi_trace_event_type: Trace type for WDI Write/Read
+ * VOS_WDI_READ: Log the WDI read event
+ * VOS_WDI_WRITE: Log the WDI write event
+ */
+typedef enum
+{
+   VOS_WDI_READ,
+   VOS_WDI_WRITE,
+} vos_wdi_trace_event_type;
+
 /*------------------------------------------------------------------------- 
   Function declarations and documenation
   ------------------------------------------------------------------------*/
@@ -512,5 +523,7 @@ void vos_updatePktStatsInfo(void * pktStat);
 bool vos_is_wlan_logging_enabled(void);
 
 v_BOOL_t vos_is_probe_rsp_offload_enabled(void);
-
+void vos_smd_dump_stats(void);
+void vos_log_wdi_event(uint16 msg, vos_wdi_trace_event_type event);
+void vos_dump_wdi_events(void);
 #endif // if !defined __VOS_NVITEM_H

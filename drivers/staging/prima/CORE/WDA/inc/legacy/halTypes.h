@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013, 2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -348,8 +348,11 @@ typedef enum
 
 #define HAL_MAX_TXPOWER_INVALID       127
 
-#define MIN_STA_PWR_CAP_DBM         13
-#define MAX_STA_PWR_CAP_DBM         19 
+/* These are the min/max tx power (non virtual rates) range
+ * supported by rome/prima hardware
+ */
+#define MIN_TX_PWR_CAP    8
+#define MAX_TX_PWR_CAP    30
 
 /* Moving the miscellaneous defination required by UMAC are moved here from 
  * volansdefs.h */

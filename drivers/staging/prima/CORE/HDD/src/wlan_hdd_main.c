@@ -9437,7 +9437,18 @@ VOS_STATUS hdd_reset_all_adapters( hdd_context_t *pHddCtx )
       pAdapter = pAdapterNode->pAdapter;
       hddLog(VOS_TRACE_LEVEL_INFO, FL("Disabling queues"));
       netif_tx_disable(pAdapter->dev);
-      netif_carrier_off(pAdapter->dev);
+
+      if (pHddCtx->cfg_ini->sap_internal_restart &&
+              pAdapter->device_mode == WLAN_HDD_SOFTAP) {
+          hddLog(LOG1, FL("driver supports sap restart"));
+          vos_flush_work(&pHddCtx->sap_start_work);
+          hdd_sap_indicate_disconnect_for_sta(pAdapter);
+          hdd_cleanup_actionframe(pHddCtx, pAdapter);
+          hdd_softap_deinit_tx_rx(pAdapter);
+          hdd_sap_destroy_events(pAdapter);
+      } else {
+          netif_carrier_off(pAdapter->dev);
+      }
 
       pAdapter->sessionCtx.station.hdd_ReassocScenario = VOS_FALSE;
 
@@ -9657,7 +9668,15 @@ VOS_STATUS hdd_start_all_adapters( hdd_context_t *pHddCtx )
             break;
 
          case WLAN_HDD_SOFTAP:
-            /* softAP can handle SSR */
+            if (pHddCtx->cfg_ini->sap_internal_restart) {
+                hdd_init_ap_mode(pAdapter);
+                status = hdd_sta_id_hash_attach(pAdapter);
+                if (VOS_STATUS_SUCCESS != status)
+                {
+                    hddLog(VOS_TRACE_LEVEL_FATAL,
+                         FL("failed to attach hash for"));
+                }
+            }
             break;
 
          case WLAN_HDD_P2P_GO:
@@ -14824,6 +14843,69 @@ void hdd_initialize_adapter_common(hdd_adapter_t *pAdapter)
         return;
 }
 
+
+/**
+ * wlan_hdd_start_sap() - This function starts bss of SAP.
+ * @ap_adapter: SAP adapter
+ *
+ * This function will process the starting of sap adapter.
+ *
+ * Return: void.
+ */
+void wlan_hdd_start_sap(hdd_adapter_t *ap_adapter)
+{
+	hdd_ap_ctx_t *hdd_ap_ctx;
+	hdd_hostapd_state_t *hostapd_state;
+	VOS_STATUS vos_status;
+	hdd_context_t *hdd_ctx;
+	tsap_Config_t *pConfig;
+
+	if (NULL == ap_adapter) {
+		VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+		FL("ap_adapter is NULL here"));
+		return;
+	}
+
+	hdd_ctx = WLAN_HDD_GET_CTX(ap_adapter);
+	hdd_ap_ctx = WLAN_HDD_GET_AP_CTX_PTR(ap_adapter);
+	hostapd_state = WLAN_HDD_GET_HOSTAP_STATE_PTR(ap_adapter);
+	pConfig = &ap_adapter->sessionCtx.ap.sapConfig;
+
+	mutex_lock(&hdd_ctx->sap_lock);
+	if (test_bit(SOFTAP_BSS_STARTED, &ap_adapter->event_flags))
+		goto end;
+
+	if (0 != wlan_hdd_cfg80211_update_apies(ap_adapter)) {
+		hddLog(LOGE, FL("SAP Not able to set AP IEs"));
+		goto end;
+	}
+
+	vos_event_reset(&hostapd_state->vosEvent);
+	if (WLANSAP_StartBss(hdd_ctx->pvosContext, hdd_hostapd_SAPEventCB,
+			&hdd_ap_ctx->sapConfig, (v_PVOID_t)ap_adapter->dev)
+			!= VOS_STATUS_SUCCESS) {
+		goto end;
+	}
+
+	VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO_HIGH,
+		FL("Waiting for SAP to start"));
+	vos_status = vos_wait_single_event(&hostapd_state->vosEvent, 10000);
+	if (!VOS_IS_STATUS_SUCCESS(vos_status)) {
+		VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+			FL("SAP Start failed"));
+		goto end;
+	}
+	VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO_HIGH,
+		FL("SAP Start Success"));
+	set_bit(SOFTAP_BSS_STARTED, &ap_adapter->event_flags);
+
+	wlan_hdd_incr_active_session(hdd_ctx, ap_adapter->device_mode);
+	hostapd_state->bCommit = TRUE;
+
+end:
+	mutex_unlock(&hdd_ctx->sap_lock);
+	return;
+}
 
 //Register the module init/exit functions
 module_init(hdd_module_init);
