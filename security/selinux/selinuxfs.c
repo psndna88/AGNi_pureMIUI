@@ -129,7 +129,7 @@ static unsigned long sel_last_ino = SEL_INO_NEXT - 1;
 static ssize_t sel_read_enforce(struct file *filp, char __user *buf,
 				size_t count, loff_t *ppos)
 {
-#ifdef CONFIG_SECURITY_SELINUX_FAKE_ENFORCE
+#if defined(CONFIG_SECURITY_SELINUX_FAKE_ENFORCE) && !defined (CONFIG_SECURITY_SELINUX_FORCE_PERMISSIVE)
 	int selinux_enforcing = 1;
 #endif
 	char tmpbuf[TMPBUFLEN];
