@@ -4793,6 +4793,12 @@ static int is_ht40minus_chan(int chan)
 }
 
 
+static int get_5g_channel_freq(int chan)
+{
+	return 5000 + chan * 5;
+}
+
+
 static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 				struct sigma_cmd *cmd)
 {
@@ -7668,6 +7674,67 @@ static int wcn_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int mac80211_vht_chnum_band(struct sigma_dut *dut, const char *ifname,
+				   const char *val)
+{
+	char *token, *result;
+	int channel = 36, chwidth = 80, center_freq_idx, center_freq,
+		channel_freq;
+	char buf[100];
+	char *saveptr;
+
+	/* Extract the channel info */
+	token = strdup(val);
+	if (!token)
+		return -1;
+	result = strtok_r(token, ";", &saveptr);
+	if (result)
+		channel = atoi(result);
+
+	/* Extract the channel width info */
+	result = strtok_r(NULL, ";", &saveptr);
+	if (result)
+		chwidth = atoi(result);
+
+	center_freq_idx = get_oper_centr_freq_seq_idx(chwidth, channel);
+	if (center_freq_idx < 0) {
+		free(token);
+		return -1;
+	}
+
+	center_freq = get_5g_channel_freq(center_freq_idx);
+	channel_freq = get_5g_channel_freq(channel);
+
+	/* Issue the channel switch command */
+	snprintf(buf, sizeof(buf),
+		 " -i %s chan_switch 10 %d sec_channel_offset=1 center_freq1=%d bandwidth=%d blocktx vht",
+		 ifname, channel_freq, center_freq, chwidth);
+	if (run_hostapd_cli(dut,buf) != 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"hostapd_cli chan_switch failed");
+	}
+
+	free(token);
+	return 0;
+}
+
+
+static int mac80211_ap_set_rfeature(struct sigma_dut *dut,
+				    struct sigma_conn *conn,
+				    struct sigma_cmd *cmd)
+{
+	const char *val;
+	char *ifname;
+
+	ifname = get_main_ifname();
+	val = get_param(cmd, "chnum_band");
+	if (val && mac80211_vht_chnum_band(dut, ifname, val) < 0)
+		return -1;
+
+	return 1;
+}
+
+
 static int cmd_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 			       struct sigma_cmd *cmd)
 {
@@ -7689,6 +7756,8 @@ static int cmd_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 	case DRIVER_LINUX_WCN:
 	case DRIVER_WCN:
 		return wcn_ap_set_rfeature(dut, conn, cmd);
+	case DRIVER_MAC80211:
+		return mac80211_ap_set_rfeature(dut, conn, cmd);
 	default:
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Unsupported ap_set_rfeature with the current driver");
