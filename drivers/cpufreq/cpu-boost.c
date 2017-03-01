@@ -1,6 +1,9 @@
 /*
  * Copyright (c) 2013-2015,2017, The Linux Foundation. All rights reserved.
  * Copyright (C) 2020 XiaoMi, Inc.
+ * Copyright (c) 2017, Paranoid Android.
+ * Copyright (C) 2017, Razer Inc.
+ * Copyright (c) 2020, The XPerience Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -18,11 +21,15 @@
 #include <linux/init.h>
 #include <linux/cpufreq.h>
 #include <linux/cpu.h>
+#include <linux/kthread.h>
 #include <linux/sched.h>
 #include <linux/moduleparam.h>
 #include <linux/slab.h>
 #include <linux/input.h>
 #include <linux/time.h>
+#include <uapi/linux/sched/types.h>
+
+#include <linux/sched/rt.h>
 
 struct cpu_sync {
 	int cpu;
@@ -37,10 +44,10 @@ enum input_boost_type {
 };
 
 static DEFINE_PER_CPU(struct cpu_sync, sync_info);
-static struct workqueue_struct *cpu_boost_wq;
 
-static struct work_struct input_boost_work;
-static struct work_struct powerkey_input_boost_work;
+static struct kthread_work input_boost_work;
+static struct kthread_work powerkey_input_boost_work;
+
 static bool input_boost_enabled;
 
 static unsigned int input_boost_ms = 40;
@@ -59,6 +66,10 @@ static bool sched_boost_active;
 
 static struct delayed_work input_boost_rem;
 static u64 last_input_time;
+
+static struct kthread_worker cpu_boost_worker;
+static struct task_struct *cpu_boost_worker_thread;
+
 #define MIN_INPUT_INTERVAL (150 * USEC_PER_MSEC)
 
 static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
@@ -227,7 +238,7 @@ static void do_input_boost_rem(struct work_struct *work)
 	}
 }
 
-static void do_input_boost(struct work_struct *work)
+static void do_input_boost(struct kthread_work *work)
 {
 	unsigned int i, ret;
 	struct cpu_sync *i_sync_info;
@@ -257,11 +268,10 @@ static void do_input_boost(struct work_struct *work)
 			sched_boost_active = true;
 	}
 
-	queue_delayed_work(cpu_boost_wq, &input_boost_rem,
-					msecs_to_jiffies(input_boost_ms));
+	schedule_delayed_work(&input_boost_rem, msecs_to_jiffies(input_boost_ms));
 }
 
-static void do_powerkey_input_boost(struct work_struct *work)
+static void do_powerkey_input_boost(struct kthread_work *work)
 {
 
 	unsigned int i, ret;
@@ -291,8 +301,7 @@ static void do_powerkey_input_boost(struct work_struct *work)
 			sched_boost_active = true;
 	}
 
-	queue_delayed_work(cpu_boost_wq, &input_boost_rem,
-					msecs_to_jiffies(powerkey_input_boost_ms));
+	 schedule_delayed_work(&input_boost_rem, msecs_to_jiffies(powerkey_input_boost_ms));
 }
 
 static void cpuboost_input_event(struct input_handle *handle,
@@ -307,13 +316,13 @@ static void cpuboost_input_event(struct input_handle *handle,
 	if (now - last_input_time < MIN_INPUT_INTERVAL)
 		return;
 
-	if (work_pending(&input_boost_work))
+	if (queuing_blocked(&cpu_boost_worker, &input_boost_work))
 		return;
 
 	if (type == EV_KEY && code == KEY_POWER) {
-		queue_work(cpu_boost_wq, &powerkey_input_boost_work);
+		 kthread_queue_work(&cpu_boost_worker, &powerkey_input_boost_work);
 	} else {
-		queue_work(cpu_boost_wq, &input_boost_work);
+		 kthread_queue_work(&cpu_boost_worker, &input_boost_work);
 	}
 	last_input_time = ktime_to_us(ktime_get());
 }
@@ -393,13 +402,17 @@ static int cpu_boost_init(void)
 {
 	int cpu, ret;
 	struct cpu_sync *s;
+	struct sched_param param = { .sched_priority = MAX_RT_PRIO - 2 };
 
-	cpu_boost_wq = alloc_workqueue("cpuboost_wq", WQ_HIGHPRI, 0);
-	if (!cpu_boost_wq)
+	kthread_init_worker(&cpu_boost_worker);
+	cpu_boost_worker_thread = kthread_run(kthread_worker_fn,
+		&cpu_boost_worker, "cpu_boost_worker_thread");
+	if (IS_ERR(cpu_boost_worker_thread))
 		return -EFAULT;
 
-	INIT_WORK(&input_boost_work, do_input_boost);
-	INIT_WORK(&powerkey_input_boost_work, do_powerkey_input_boost);
+	sched_setscheduler(cpu_boost_worker_thread, SCHED_FIFO, &param);
+	kthread_init_work(&input_boost_work, do_input_boost);
+        kthread_init_work(&powerkey_input_boost_work, do_powerkey_input_boost);
 	INIT_DELAYED_WORK(&input_boost_rem, do_input_boost_rem);
 
 	for_each_possible_cpu(cpu) {
