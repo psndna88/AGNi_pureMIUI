@@ -27,6 +27,7 @@ struct gf_key_map {
 #define  GF_IOC_ENABLE_IRQ	_IO(GF_IOC_MAGIC, 1)
 #define  GF_IOC_SETSPEED    _IOW(GF_IOC_MAGIC, 2, unsigned int)
 #define  GF_IOC_RESET       _IO(GF_IOC_MAGIC, 3)
+#define  GF_IOC_RESET_NEW   _IOW(GF_IOC_MAGIC, 3, unsigned int)
 #define  GF_IOC_COOLBOOT    _IO(GF_IOC_MAGIC, 4)
 #define  GF_IOC_SENDKEY    _IOW(GF_IOC_MAGIC, 5, struct gf_key)
 #define  GF_IOC_CLK_READY  _IO(GF_IOC_MAGIC, 6)
