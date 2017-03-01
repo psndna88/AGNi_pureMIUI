@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -16764,6 +16764,12 @@ WDI_ProcessInitScanRsp
                "Error returned WDI_ProcessInitScanRspi:%d BMPS%d",
                wdiStatus, pWDICtx->bInBmps);
   }
+  else
+  {
+     WPAL_TRACE(eWLAN_MODULE_DAL_CTRL, eWLAN_PAL_TRACE_LEVEL_ERROR,
+               "Error returned WDI_ProcessInitScanRspi:%d BMPS%d",
+               wdiStatus, pWDICtx->bInBmps);
+  }
 
   /*Notify UMAC*/
   wdiInitScanRspCb( wdiStatus, pWDICtx->pRspCBUserData);
@@ -22645,6 +22651,7 @@ WDI_RXMsgCTSCB
   }
 
   wdiEventData.wdiResponse = HAL_2_WDI_RSP_TYPE( pHalMsgHeader->msgType );
+  vos_log_wdi_event(wdiEventData.wdiResponse, VOS_WDI_READ);
 
   /*The message itself starts after the header*/
   wdiEventData.pEventData     = (wpt_uint8*)pMsg + sizeof(tHalMsgHeader);

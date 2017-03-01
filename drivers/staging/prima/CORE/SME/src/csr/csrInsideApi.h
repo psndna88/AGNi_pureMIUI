@@ -1103,5 +1103,7 @@ void csr_remove_bssid_from_scan_list(tpAniSirGlobal pMac,
 #ifdef WLAN_FEATURE_AP_HT40_24G
 eHalStatus csrSetHT2040Mode(tpAniSirGlobal pMac, tANI_U32 sessionId, tANI_U8 cbMode);
 #endif
+void csrValidateScanChannels(tpAniSirGlobal pMac, tCsrScanRequest *pDstReq,
+               tCsrScanRequest *pSrcReq, int new_index, tANI_U8 ch144_support);
 #endif
 

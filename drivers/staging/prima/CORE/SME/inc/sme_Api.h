@@ -3960,4 +3960,5 @@ eHalStatus sme_remove_bssid_from_scan_list(tHalHandle hal,
 	tSirMacAddr bssid);
 void sme_set_mgmt_frm_via_wq5(tHalHandle hHal,
         tANI_BOOLEAN sendMgmtPktViaWQ5);
+eHalStatus sme_update_cfg_int_param(tHalHandle hHal, tANI_U32 cfg_id);
 #endif //#if !defined( __SME_API_H )

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016  The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017  The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -537,6 +537,6 @@ void vos_ssr_unprotect(const char *caller_func);
 void vos_wd_reset_thread_stuck_count(int threadId);
 bool vos_is_wd_thread(int threadId);
 void vos_dump_stack(uint8_t value);
-
+void vos_dump_thread_stacks(int threadId);
 
 #endif // #if !defined __VOSS_SCHED_H

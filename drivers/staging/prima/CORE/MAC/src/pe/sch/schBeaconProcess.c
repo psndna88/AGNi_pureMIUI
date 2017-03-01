@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -469,7 +469,8 @@ static void __schBeaconProcessForSession( tpAniSirGlobal      pMac,
             sendProbeReq = TRUE;
     }
 
-    if ( psessionEntry->htCapability && pBeacon->HTInfo.present )
+    if ( psessionEntry->htCapability && pBeacon->HTInfo.present &&
+                                  (!LIM_IS_IBSS_ROLE(psessionEntry)))
     {
         limUpdateStaRunTimeHTSwitchChnlParams( pMac, &pBeacon->HTInfo, bssIdx,psessionEntry);
     }
@@ -655,7 +656,8 @@ static void __schBeaconProcessForSession( tpAniSirGlobal      pMac,
         {
             localRRMConstraint = 0;
         }
-        maxTxPower = VOS_MIN(regMax,(regMax - localRRMConstraint));
+        maxTxPower =  limGetMaxTxPower(regMax, regMax - localRRMConstraint,
+                                     pMac->roam.configParam.nTxPowerCap);
     }
 #elif defined FEATURE_WLAN_ESE
     maxTxPower = regMax;

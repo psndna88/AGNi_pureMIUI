@@ -922,7 +922,6 @@ VOS_STATUS hdd_hostapd_SAPEventCB( tpSap_Event pSapEvent, v_PVOID_t usrDataForCa
                           VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
                              "%s: WLANSAP_SetKeySta failed idx %d", __func__, i);
                     }
-                    pHddApCtx->wepKey[i].keyLength = 0;
                 }
            }
             //Fill the params for sending IWEVCUSTOM Event with SOFTAP.enabled
@@ -1065,21 +1064,28 @@ VOS_STATUS hdd_hostapd_SAPEventCB( tpSap_Event pSapEvent, v_PVOID_t usrDataForCa
 #endif
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38))
             {
-                struct station_info staInfo;
+                struct station_info *staInfo;
                 v_U16_t iesLen =  pSapEvent->sapevt.sapStationAssocReassocCompleteEvent.iesLen;
 
-                memset(&staInfo, 0, sizeof(staInfo));
+                staInfo = vos_mem_malloc(sizeof(*staInfo));
+                if (staInfo == NULL) {
+                    hddLog(LOGE, FL("alloc station_info failed"));
+                    return VOS_STATUS_E_NOMEM;
+                }
+
+                memset(staInfo, 0, sizeof(*staInfo));
                 if (iesLen <= MAX_ASSOC_IND_IE_LEN )
                 {
-                    staInfo.assoc_req_ies =
+                    staInfo->assoc_req_ies =
                         (const u8 *)&pSapEvent->sapevt.sapStationAssocReassocCompleteEvent.ies[0];
-                    staInfo.assoc_req_ies_len = iesLen;
+                    staInfo->assoc_req_ies_len = iesLen;
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,31))
-                    staInfo.filled |= STATION_INFO_ASSOC_REQ_IES;
+                    staInfo->filled |= STATION_INFO_ASSOC_REQ_IES;
 #endif
                     cfg80211_new_sta(dev,
                                  (const u8 *)&pSapEvent->sapevt.sapStationAssocReassocCompleteEvent.staMac.bytes[0],
-                                 &staInfo, GFP_KERNEL);
+                                 staInfo, GFP_KERNEL);
+                    vos_mem_free(staInfo);
                 }
                 else
                 {
@@ -1285,7 +1291,19 @@ stopbss :
 
         /* Stop the pkts from n/w stack as we are going to free all of
          * the TX WMM queues for all STAID's */
-        hdd_hostapd_stop(dev);
+
+        /*
+         * If channel avoidance is in progress means driver is performing SAP
+         * restart. So don't do carrier off, which may lead framework to do
+         * driver reload.
+         */
+        hddLog(LOG1, FL("ch avoid in progress: %d"),
+                        pHddCtx->is_ch_avoid_in_progress);
+        if (pHddCtx->is_ch_avoid_in_progress &&
+            pHddCtx->cfg_ini->sap_internal_restart)
+            netif_tx_disable(dev);
+        else
+            hdd_hostapd_stop(dev);
 
         /* reclaim all resources allocated to the BSS */
         vos_status = hdd_softap_stop_bss(pHostapdAdapter);
@@ -1486,6 +1504,56 @@ void hdd_hostapd_update_unsafe_channel_list(hdd_context_t *pHddCtx,
    return;
 }
 
+/**
+ * hdd_unsafe_channel_restart_sap - restart sap if sap is on unsafe channel
+ * @adapter: hdd ap adapter
+ *
+ * hdd_unsafe_channel_restart_sap check all unsafe channel list
+ * and if ACS is enabled, driver will ask userspace to restart the
+ * sap. User space on LTE coex indication restart driver.
+ *
+ * Return - none
+ */
+static void hdd_unsafe_channel_restart_sap(hdd_adapter_t *adapter,
+                                           hdd_context_t *hdd_ctx)
+{
+
+   if (!(adapter && (WLAN_HDD_SOFTAP == adapter->device_mode))) {
+      return;
+   }
+
+   hddLog(LOG1, FL("Current operation channel %d"),
+           adapter->sessionCtx.ap.operatingChannel);
+   if (false == hdd_ctx->is_ch_avoid_in_progress) {
+      hdd_change_ch_avoidance_status(hdd_ctx, true);
+
+      vos_flush_work(
+              &hdd_ctx->sap_start_work);
+
+      /*
+       * current operating channel
+       * is un-safe channel, restart SAP
+       */
+      hddLog(LOG1,
+              FL("Restarting SAP due to unsafe channel"));
+
+      adapter->sessionCtx.ap.sapConfig.channel =
+                              AUTO_CHANNEL_SELECT;
+
+
+      if (hdd_ctx->cfg_ini->sap_internal_restart) {
+          netif_tx_disable(adapter->dev);
+          schedule_work(&hdd_ctx->sap_start_work);
+      } else {
+          hdd_hostapd_stop(adapter->dev);
+      }
+
+      return;
+   }
+   return;
+}
+
+
 /**---------------------------------------------------------------------------
 
   \brief hdd_hostapd_ch_avoid_cb() -
@@ -1502,7 +1570,7 @@ void hdd_hostapd_update_unsafe_channel_list(hdd_context_t *pHddCtx,
   --------------------------------------------------------------------------*/
 void hdd_hostapd_ch_avoid_cb
 (
-   void *pAdapter,
+   void *context,
    void *indParam
 )
 {
@@ -1528,14 +1596,14 @@ void hdd_hostapd_ch_avoid_cb
 #endif
 
    /* Basic sanity */
-   if ((NULL == pAdapter) || (NULL == indParam))
+   if ((NULL == context) || (NULL == indParam))
    {
       VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
                 "%s : Invalid arguments", __func__);
       return;
    }
 
-   hddCtxt     = (hdd_context_t *)pAdapter;
+   hddCtxt     = (hdd_context_t *)context;
    chAvoidInd  = (tSirChAvoidIndType *)indParam;
    pVosContext = hddCtxt->pvosContext;
 
@@ -1660,7 +1728,7 @@ void hdd_hostapd_ch_avoid_cb
               {
                   /* current operating channel is un-safe channel
                    * restart driver */
-                   hdd_hostapd_stop(pHostapdAdapter->dev);
+                   hdd_unsafe_channel_restart_sap(pHostapdAdapter, hddCtxt);
                    /* On LE, this event is handled by wlan-services to
                     * restart SAP. On android, this event would be
                     * ignored.
@@ -4802,4 +4870,108 @@ VOS_STATUS hdd_unregister_hostapd(hdd_adapter_t *pAdapter, tANI_U8 rtnl_held)
    }
    EXIT();
    return 0;
+}
+
+/**
+ * hdd_sap_indicate_disconnect_for_sta() - Indicate disconnect indication
+ * to supplicant, if there any clients connected to SAP interface.
+ * @adapter: sap adapter context
+ *
+ * Return:   nothing
+ */
+void hdd_sap_indicate_disconnect_for_sta(hdd_adapter_t *adapter)
+{
+	tSap_Event sap_event;
+	int staId;
+	hdd_context_t *hdd_ctx;
+	v_CONTEXT_t vos_ctx;
+	ptSapContext sap_ctx;
+
+	ENTER();
+
+	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	if (0 != wlan_hdd_validate_context(hdd_ctx)) {
+		return;
+	}
+
+	vos_ctx = hdd_ctx->pvosContext;
+	if (NULL == vos_ctx) {
+		VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+			"%s: VOS context is not valid",__func__);
+		return;
+	}
+
+	sap_ctx = VOS_GET_SAP_CB(vos_ctx);
+	if (!sap_ctx) {
+		hddLog(LOGE, FL("invalid sap context"));
+		return;
+	}
+
+	for (staId = 0; staId < WLAN_MAX_STA_COUNT; staId++) {
+		if (sap_ctx->aStaInfo[staId].isUsed) {
+			hddLog(LOG1, FL("staId: %d isUsed: %d %p"),
+					staId, sap_ctx->aStaInfo[staId].isUsed,
+					sap_ctx);
+
+			if (vos_is_macaddr_broadcast(
+				&sap_ctx->aStaInfo[staId].macAddrSTA))
+				continue;
+
+			sap_event.sapHddEventCode = eSAP_STA_DISASSOC_EVENT;
+			vos_mem_copy(
+				&sap_event.sapevt.
+				sapStationDisassocCompleteEvent.staMac,
+				&sap_ctx->aStaInfo[staId].macAddrSTA,
+				sizeof(v_MACADDR_t));
+			sap_event.sapevt.sapStationDisassocCompleteEvent.
+			reason =
+				eSAP_MAC_INITATED_DISASSOC;
+			sap_event.sapevt.sapStationDisassocCompleteEvent.
+			statusCode =
+				eSIR_SME_RESOURCES_UNAVAILABLE;
+			hdd_hostapd_SAPEventCB(&sap_event,
+					sap_ctx->pUsrContext);
+		}
+	}
+
+	clear_bit(SOFTAP_BSS_STARTED, &adapter->event_flags);
+
+	EXIT();
+}
+
+/**
+ * hdd_sap_destroy_events() - Destroy sap evets
+ * @adapter: sap adapter context
+ *
+ * Return:   nothing
+ */
+void hdd_sap_destroy_events(hdd_adapter_t *adapter)
+{
+	hdd_context_t *hdd_ctx;
+	v_CONTEXT_t vos_ctx;
+	ptSapContext sap_ctx;
+
+	ENTER();
+
+	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	if (0 != wlan_hdd_validate_context(hdd_ctx)) {
+		return;
+	}
+
+	vos_ctx = hdd_ctx->pvosContext;
+	if (NULL == vos_ctx) {
+		VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+			"%s: VOS context is not valid",__func__);
+		return;
+	}
+
+	sap_ctx = VOS_GET_SAP_CB(vos_ctx);
+	if (!sap_ctx) {
+		hddLog(LOGE, FL("invalid sap context"));
+		return;
+	}
+
+	if (!VOS_IS_STATUS_SUCCESS(vos_lock_destroy(&sap_ctx->SapGlobalLock)))
+		VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
+			FL("WLANSAP_Stop failed destroy lock"));
 }

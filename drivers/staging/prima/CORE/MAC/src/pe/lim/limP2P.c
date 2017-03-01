@@ -504,9 +504,9 @@ void limProcessInsertSingleShotNOATimeout(tpAniSirGlobal pMac)
  *------------------------------------------------------------------*/
 void limConvertActiveChannelToPassiveChannel(tpAniSirGlobal pMac )
 {
-    tANI_U32 currentTime;
-    tANI_U32 lastTime = 0;
-    tANI_U32 timeDiff;
+    v_TIME_t currentTime;
+    v_TIME_t lastTime = 0;
+    v_TIME_t timeDiff;
     tANI_U8 i;
     currentTime = vos_timer_get_system_time();
     for (i = 1; i < SIR_MAX_24G_5G_CHANNEL_RANGE ; i++)

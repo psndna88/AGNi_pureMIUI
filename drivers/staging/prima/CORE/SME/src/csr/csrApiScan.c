@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -2208,10 +2208,11 @@ static tANI_S32 csrFindCongestionScore (tpAniSirGlobal pMac, tCsrScanResult *pBs
         return -1;
     }
 
-    if (bssInfo->rssi < PER_BAD_RSSI) {
+    if (bssInfo->rssi < pMac->roam.configParam.PERMinRssiThresholdForRoam) {
         smsLog(pMac, LOG1,
-               FL("discrarding candidate due to low rssi=%d bssid "
+               FL("discarding candidate due to low rssi=%d than %d, bssid "
                MAC_ADDRESS_STR), bssInfo->rssi,
+               pMac->roam.configParam.PERMinRssiThresholdForRoam,
                MAC_ADDR_ARRAY(pBss->Result.BssDescriptor.bssId));
         return 0;
     }
@@ -2689,6 +2690,14 @@ eHalStatus csrScanGetResult(tpAniSirGlobal pMac, tCsrScanResultFilter *pFilter, 
                                         LL_ACCESS_NOLOCK);
                     }
                 }
+                /* bssid hint AP should be on head */
+                else if (pFilter &&
+                     vos_mem_compare(pResult->Result.BssDescriptor.bssId,
+                     pFilter->bssid_hint, VOS_MAC_ADDR_SIZE))
+                {
+                     csrLLInsertHead(&pRetList->List,
+                            &pResult->Link, LL_ACCESS_NOLOCK);
+                }
                 else
                 {
                     //To sort the list
@@ -2699,6 +2708,14 @@ eHalStatus csrScanGetResult(tpAniSirGlobal pMac, tCsrScanResultFilter *pFilter, 
                     while(pTmpEntry)
                     {
                         pTmpResult = GET_BASE_ADDR( pTmpEntry, tCsrScanResult, Link );
+                        /* Skip the bssid hint AP, as it should be on head */
+                        if (pFilter && vos_mem_compare(
+                           pTmpResult->Result.BssDescriptor.bssId,
+                           pFilter->bssid_hint, VOS_MAC_ADDR_SIZE)) {
+                           pTmpEntry = csrLLNext(&pRetList->List,
+                                                  pTmpEntry, LL_ACCESS_NOLOCK);
+                           continue;
+                        }
 #ifdef WLAN_FEATURE_ROAM_SCAN_OFFLOAD
                         if (pFilter && pFilter->isPERRoamScan) {
                             csrFindCongestionScore(pMac, pResult);
@@ -4057,8 +4074,6 @@ void csrApplyChannelPowerCountryInfo( tpAniSirGlobal pMac, tCsrChannel *pChannel
         // extend scan capability
         //  build a scan list based on the channel list : channel# + active/passive scan
         csrSetCfgScanControlList(pMac, countryCode, &ChannelList);
-        /*Send msg to Lim to clear DFS channel list */
-        csrClearDfsChannelList(pMac);
 #ifdef FEATURE_WLAN_SCAN_PNO
         if (updateRiva)
         {
@@ -6824,98 +6839,60 @@ eHalStatus csrScanCopyRequest(tpAniSirGlobal pMac, tCsrScanRequest *pDstReq, tCs
                         new_index = 0;
                         pMac->roam.numValidChannels = len;
 
-                     /* Since in CsrScanRequest,value of pMac->scan.nextScanID
-                      * is incremented before calling CsrScanCopyRequest, as a
-                      * result pMac->scan.nextScanID is equal to ONE for the
-                      * first scan. If number of channels is less than
-                      * max chan for dwell time no need to skip dfs
-                      * in first scan as anyway few channels will be scanned and
-                      * it will not take much time to display results on GUI.
-                      */
-                     if (((pSrcReq->ChannelInfo.numOfChannels >=
-                          pMac->roam.configParam.max_chan_for_dwell_time_cfg) &&
-                         (pMac->roam.configParam.initialScanSkipDFSCh &&
-                           1 == pMac->scan.nextScanID)) ||(pMac->miracast_mode))
-                     {
-                       smsLog(pMac, LOG1,
-                              FL("Initial scan, scan only non-DFS channels"));
-
-                       for (index = 0; index < pSrcReq->ChannelInfo.
-                                             numOfChannels ; index++ )
-                      {
-                        if((csrRoamIsValidChannel(pMac, pSrcReq->ChannelInfo.
-                                                  ChannelList[index])))
+                        /* Since in CsrScanRequest,value of pMac->scan.
+                         * nextScanID is incremented before calling
+                         * CsrScanCopyRequest, as a result pMac->scan.
+                         * nextScanID is equal to ONE for the first scan.
+                         * If number of channels is less than max chan
+                         * for dwell time no need to skip dfs in first
+                         * scan as anyway few channels will be scanned
+                         * and it will not take much time to display
+                         * results on GUI.
+                         */
+                        if (((pSrcReq->ChannelInfo.numOfChannels >=
+                                     pMac->roam.configParam.
+                                     max_chan_for_dwell_time_cfg) &&
+                                    (pMac->roam.configParam.
+                                    initialScanSkipDFSCh &&
+                                     1 == pMac->scan.nextScanID)) ||
+                                    (pMac->miracast_mode))
                         {
-                        /*Skiipping DFS Channels for 1st scan */
-                          if(NV_CHANNEL_DFS ==
-                             vos_nv_getChannelEnabledState(pSrcReq->ChannelInfo.
-                             ChannelList[index]))
-                                   continue ;
+                            smsLog(pMac, LOG1,
+                                FL("Initial scan, scan only non-DFS channels"));
 
-                          pDstReq->ChannelInfo.ChannelList[new_index] =
-                                     pSrcReq->ChannelInfo.ChannelList[index];
-                          new_index++;
-
-                         }
-                       }
-                       pMac->roam.configParam.initialScanSkipDFSCh = 0;
-                     }
-                     else
-                     {
-                       for ( index = 0; index < pSrcReq->ChannelInfo.
-                                             numOfChannels ; index++ )
-                        {
-                            /* Skip CH 144 if firmware support not present */
-                            if (pSrcReq->ChannelInfo.ChannelList[index] == 144 && !ch144_support)
-                                continue;
-
-                            /* Allow scan on valid channels only.
-                             */
-                            if ( ( csrRoamIsValidChannel(pMac, pSrcReq->ChannelInfo.ChannelList[index]) ) )
+                            for (index = 0; index < pSrcReq->ChannelInfo.
+                                    numOfChannels ; index++ )
                             {
-                                if( ((pSrcReq->skipDfsChnlInP2pSearch ||
-                                     (pMac->scan.fEnableDFSChnlScan ==
-                                     DFS_CHNL_SCAN_DISABLED)) &&
-                                    (NV_CHANNEL_DFS == vos_nv_getChannelEnabledState(pSrcReq->ChannelInfo.ChannelList[index])) )
-#ifdef FEATURE_WLAN_LFR
-                                     /* 
-                                      * If LFR is requesting a contiguous scan
-                                      * (i.e. numOfChannels > 1), then ignore 
-                                      * DFS channels.
-                                      * TODO: vos_nv_getChannelEnabledState is returning
-                                      * 120, 124 and 128 as non-DFS channels. Hence, the
-                                      * use of direct check for channels below.
-                                      */
-                                     || ((eCSR_SCAN_HO_BG_SCAN == pSrcReq->requestType) &&
-                                         (pSrcReq->ChannelInfo.numOfChannels > 1) &&
-                                         (CSR_IS_CHANNEL_DFS(pSrcReq->ChannelInfo.ChannelList[index])) &&
-                                          !pMac->roam.configParam.allowDFSChannelRoam)
-#endif
-                                  )
+                                if((csrRoamIsValidChannel(pMac,
+                                                pSrcReq->ChannelInfo.
+                                                ChannelList[index])))
                                 {
-#ifdef FEATURE_WLAN_LFR
-                                 smsLog(pMac, LOG2,
-                                        FL(" reqType=%s (%d), numOfChannels=%d,"
-                                        " ignoring DFS channel %d"),
-                                        sme_requestTypetoString(pSrcReq->requestType),
-                                        pSrcReq->requestType,
-                                        pSrcReq->ChannelInfo.numOfChannels,
-                                        pSrcReq->ChannelInfo.ChannelList[index]);
-#endif
-                                continue;
-                                }
+                                    /*Skiipping DFS Channels for 1st scan */
+                                    if(NV_CHANNEL_DFS ==
+                                            vos_nv_getChannelEnabledState(
+                                                pSrcReq->ChannelInfo.
+                                                ChannelList[index]))
+                                        continue ;
 
-                                pDstReq->ChannelInfo.ChannelList[new_index] =
-                                    pSrcReq->ChannelInfo.ChannelList[index];
-                                new_index++;
+                                     pDstReq->ChannelInfo.
+                                        ChannelList[new_index] =
+                                        pSrcReq->ChannelInfo.ChannelList[index];
+                                    new_index++;
+
+                                }
                             }
+                            pMac->roam.configParam.initialScanSkipDFSCh = 0;
                         }
-                      }
+                        else
+                            csrValidateScanChannels(pMac, pDstReq, pSrcReq,
+                                                    new_index, ch144_support);
                         pDstReq->ChannelInfo.numOfChannels = new_index;
 #ifdef FEATURE_WLAN_LFR
-                        if ( ( ( eCSR_SCAN_HO_BG_SCAN == pSrcReq->requestType ) ||
-                               ( eCSR_SCAN_P2P_DISCOVERY == pSrcReq->requestType ) ) &&
-                                ( 0 == pDstReq->ChannelInfo.numOfChannels ) )
+                        if ( ( ( eCSR_SCAN_HO_BG_SCAN ==
+                                  pSrcReq->requestType ) ||
+                                 ( eCSR_SCAN_P2P_DISCOVERY ==
+                                   pSrcReq->requestType ) ) &&
+                                 ( 0 == pDstReq->ChannelInfo.numOfChannels ) )
                         {
                             /*
                              * No valid channels found in the request.
@@ -6926,16 +6903,17 @@ eHalStatus csrScanCopyRequest(tpAniSirGlobal pMac, tCsrScanRequest *pDstReq, tCs
                              * all valid channels which is not desirable.
                              */
                             smsLog(pMac, LOGE, FL(" no valid channels found"
-                                    " (request=%d)"), pSrcReq->requestType);
-                            for ( index = 0; index < pSrcReq->ChannelInfo.numOfChannels ; index++ )
+                                        " (request=%d)"), pSrcReq->requestType);
+                            for ( index = 0; index < pSrcReq->ChannelInfo.
+                                    numOfChannels ; index++ )
                             {
                                 smsLog(pMac, LOGE, FL("pSrcReq index=%d"
-                                        " channel=%d"), index,
-                                        pSrcReq->ChannelInfo.ChannelList[index]);
+                                            " channel=%d"), index,
+                                       pSrcReq->ChannelInfo.ChannelList[index]);
                             }
                             status = eHAL_STATUS_FAILURE;
                             break;
-                    }
+                        }
 #endif
                     }
                     else
@@ -6945,8 +6923,9 @@ eHalStatus csrScanCopyRequest(tpAniSirGlobal pMac, tCsrScanRequest *pDstReq, tCs
                         vos_mem_copy(pDstReq->ChannelInfo.ChannelList,
                                      pSrcReq->ChannelInfo.ChannelList,
                                      pSrcReq->ChannelInfo.numOfChannels
-                                     * sizeof(*pDstReq->ChannelInfo.ChannelList));
-                        pDstReq->ChannelInfo.numOfChannels = pSrcReq->ChannelInfo.numOfChannels;
+                                   * sizeof(*pDstReq->ChannelInfo.ChannelList));
+                        pDstReq->ChannelInfo.numOfChannels =
+                                            pSrcReq->ChannelInfo.numOfChannels;
                     }
                 }//Allocate memory for Channel List
             }
@@ -8517,7 +8496,6 @@ void csrSetCfgScanControlList( tpAniSirGlobal pMac, tANI_U8 *countryCode, tCsrCh
                     }
                 }
             }
-
             smsLog(pMac, LOG1, FL("fEnableDFSChnlScan %d"),
                                        pMac->scan.fEnableDFSChnlScan);
             VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_INFO,
@@ -8529,6 +8507,10 @@ void csrSetCfgScanControlList( tpAniSirGlobal pMac, tANI_U8 *countryCode, tCsrCh
         }//Successfully getting scan control list
         vos_mem_free(pControlList);
     }//AllocateMemory
+
+    /* Send msg to Lim to clear DFS channel list */
+    smsLog(pMac, LOG1, FL("csrClearDfsChannelList"));
+    csrClearDfsChannelList(pMac);
 }
 
 //if bgPeriod is 0, background scan is disabled. It is in millisecond units
@@ -9381,3 +9363,62 @@ void UpdateCCKMTSF(tANI_U32 *timeStamp0, tANI_U32 *timeStamp1, tANI_U32 *incr)
     *timeStamp1 = (tANI_U32)((timeStamp64 >> 32) & 0xffffffff);
 }
 #endif
+
+void csrValidateScanChannels(tpAniSirGlobal pMac, tCsrScanRequest *pDstReq,
+        tCsrScanRequest *pSrcReq, int new_index, tANI_U8 ch144_support)
+{
+
+    int index;
+    for ( index = 0; index < pSrcReq->ChannelInfo.
+            numOfChannels ; index++ )
+    {
+        /* Skip CH 144 if firmware support not present */
+        if (pSrcReq->ChannelInfo.ChannelList[index] == 144 && !ch144_support)
+            continue;
+
+        /* Allow scan on valid channels only.
+         */
+        if ( ( csrRoamIsValidChannel(pMac,
+                        pSrcReq->ChannelInfo.ChannelList[index]) ) )
+        {
+            if( ((pSrcReq->skipDfsChnlInP2pSearch ||
+                            (pMac->scan.fEnableDFSChnlScan ==
+                             DFS_CHNL_SCAN_DISABLED)) &&
+                        (NV_CHANNEL_DFS == vos_nv_getChannelEnabledState(
+                              pSrcReq->ChannelInfo.ChannelList[index])) &&
+                        (pSrcReq->ChannelInfo.numOfChannels > 1))
+#ifdef FEATURE_WLAN_LFR
+                    /*
+                     * If LFR is requesting a contiguous scan
+                     * (i.e. numOfChannels > 1), then ignore
+                     * DFS channels.
+                     * TODO: vos_nv_getChannelEnabledState is returning
+                     * 120, 124 and 128 as non-DFS channels. Hence, the
+                     * use of direct check for channels below.
+                     */
+                    || ((eCSR_SCAN_HO_BG_SCAN == pSrcReq->requestType) &&
+                        (pSrcReq->ChannelInfo.numOfChannels > 1) &&
+                        (CSR_IS_CHANNEL_DFS(
+                            pSrcReq->ChannelInfo.ChannelList[index])) &&
+                        !pMac->roam.configParam.allowDFSChannelRoam)
+#endif
+                        )
+                        {
+#ifdef FEATURE_WLAN_LFR
+                            smsLog(pMac, LOG1,
+                                  FL(" reqType=%s (%d), numOfChannels=%d,"
+                                      " ignoring DFS channel:%d"),
+                                  sme_requestTypetoString(pSrcReq->requestType),
+                                  pSrcReq->requestType,
+                                  pSrcReq->ChannelInfo.numOfChannels,
+                                  pSrcReq->ChannelInfo.ChannelList[index]);
+#endif
+                            continue;
+                        }
+
+            pDstReq->ChannelInfo.ChannelList[new_index] =
+                pSrcReq->ChannelInfo.ChannelList[index];
+            new_index++;
+        }
+    }
+}

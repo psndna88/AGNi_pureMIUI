@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -405,6 +405,7 @@ typedef struct tagCsrScanResultFilter
 #ifdef WLAN_FEATURE_ROAM_SCAN_OFFLOAD
     tANI_BOOLEAN isPERRoamScan;
 #endif
+    tCsrBssid bssid_hint;
 }tCsrScanResultFilter;
 
 
@@ -958,7 +959,7 @@ typedef struct tagCsrRoamProfile
     tCsrMobilityDomainInfo MDID;
 #endif
     tVOS_CON_MODE csrPersona;
-
+    tCsrBssid bssid_hint;
 }tCsrRoamProfile;
 
 
@@ -1191,6 +1192,7 @@ typedef struct tagCsrConfigParam
     v_BOOL_t isPERRoamEnabled;
     v_BOOL_t isPERRoamCCAEnabled;
     v_S15_t PERRoamFullScanThreshold;
+    v_S15_t PERMinRssiThresholdForRoam;
     v_U32_t rateUpThreshold;
     v_U32_t rateDownThreshold;
     v_U32_t waitPeriodForNextPERScan;

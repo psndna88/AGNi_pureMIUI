@@ -2680,6 +2680,13 @@ VOS_STATUS hdd_rx_packet_cbk( v_VOID_t *vosContext,
          }
       }
 
+      if (pHddCtx->rx_wow_dump) {
+          if (!(VOS_PKT_PROTO_TYPE_ARP & proto_type) &&
+              !(VOS_PKT_PROTO_TYPE_EAPOL & proto_type))
+             hdd_log_ip_addr(skb);
+          pHddCtx->rx_wow_dump = false;
+      }
+
       if (pHddCtx->cfg_ini->gEnableRoamDelayStats)
       {
           vos_record_roam_event(e_HDD_RX_PKT_CBK_TIME, (void *)skb, 0);
