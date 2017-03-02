@@ -294,8 +294,10 @@ static int add_del_listener(pid_t pid, const struct cpumask *mask, int isadd)
 	if (!cpumask_subset(mask, cpu_possible_mask))
 		return -EINVAL;
 
+#ifdef CONFIG_USER_NS
 	if (current_user_ns() != &init_user_ns)
 		return -EINVAL;
+#endif
 
 	if (task_active_pid_ns(current) != &init_pid_ns)
 		return -EINVAL;
