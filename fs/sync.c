@@ -186,10 +186,14 @@ int vfs_fsync_range(struct file *file, loff_t start, loff_t end, int datasync)
 #ifdef CONFIG_DYNAMIC_FSYNC
 	if (likely(dyn_fsync_active && suspend_active))
 		return 0;
+	else {
 #endif
 	if (!file->f_op || !file->f_op->fsync)
 		return -EINVAL;
 	return file->f_op->fsync(file, start, end, datasync);
+#ifdef CONFIG_DYNAMIC_FSYNC
+	}
+#endif
 }
 EXPORT_SYMBOL(vfs_fsync_range);
 
@@ -227,6 +231,7 @@ SYSCALL_DEFINE1(fsync, unsigned int, fd)
 #ifdef CONFIG_DYNAMIC_FSYNC
 	if (likely(dyn_fsync_active && suspend_active))
 		return 0;
+	else
 #endif
 	return do_fsync(fd, 0);
 }
@@ -236,6 +241,7 @@ SYSCALL_DEFINE1(fdatasync, unsigned int, fd)
 #ifdef CONFIG_DYNAMIC_FSYNC
 	if (likely(dyn_fsync_active && suspend_active))
 		return 0;
+	else
 #endif
 	return do_fsync(fd, 1);
 }
@@ -307,16 +313,16 @@ EXPORT_SYMBOL(generic_write_sync);
 SYSCALL_DEFINE4(sync_file_range, int, fd, loff_t, offset, loff_t, nbytes,
 				unsigned int, flags)
 {
+#ifdef CONFIG_DYNAMIC_FSYNC
+	if (likely(dyn_fsync_active && suspend_active))
+		return 0;
+	else {
+#endif
 	int ret;
 	struct fd f;
 	struct address_space *mapping;
 	loff_t endbyte;			/* inclusive */
 	umode_t i_mode;
-
-#ifdef CONFIG_DYNAMIC_FSYNC
-	if (likely(dyn_fsync_active && suspend_active))
-		return 0;
-#endif
 
 	ret = -EINVAL;
 	if (flags & ~VALID_FLAGS)
@@ -391,6 +397,9 @@ out_put:
 	fdput(f);
 out:
 	return ret;
+#ifdef CONFIG_DYNAMIC_FSYNC
+	}
+#endif
 }
 
 /* It would be nice if people remember that not all the world's an i386
@@ -401,6 +410,7 @@ SYSCALL_DEFINE4(sync_file_range2, int, fd, unsigned int, flags,
 #ifdef CONFIG_DYNAMIC_FSYNC
 	if (likely(dyn_fsync_active && suspend_active))
 		return 0;
+	else
 #endif
 	return sys_sync_file_range(fd, offset, nbytes, flags);
 }
