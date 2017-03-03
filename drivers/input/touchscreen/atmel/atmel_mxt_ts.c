@@ -119,6 +119,7 @@
 #include "plug.h"
 #ifdef CONFIG_WAKE_GESTURES
 #include <linux/wake_gestures.h>
+#include <linux/qdsp6v2/apr.h>
 #endif
 
 #include "../lct_tp_fm_info.h"
@@ -5373,7 +5374,7 @@ static void mxt_stop(struct mxt_data *data, bool suspend)
 		mxt_regulator_disable(data);
 	else {
 #ifdef CONFIG_WAKE_GESTURES
-		if (s2w_switch || dt2w_switch) {
+		if ((s2w_switch || dt2w_switch) && !q6voice_voice_call_active()) {
 			board_enable_irq_wake(data->pdata, data->irq);
 			mxt_set_t7_power_cfg(data, MXT_POWER_CFG_WAKE_GESTURES);
 		} else

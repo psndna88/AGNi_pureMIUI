@@ -53,6 +53,7 @@
 
 #ifdef CONFIG_WAKE_GESTURES
 #include <linux/wake_gestures.h>
+#include <linux/qdsp6v2/apr.h>
 #endif
 
 #if defined(CONFIG_TOUCHSCREEN_GESTURE)
@@ -937,7 +938,7 @@ static int ft5x06_ts_suspend(struct device *dev)
 	}
 
 #ifdef CONFIG_WAKE_GESTURES
-	if (device_may_wakeup(dev) && (s2w_switch || dt2w_switch)) {
+	if (device_may_wakeup(dev) && (s2w_switch || dt2w_switch) && !q6voice_voice_call_active()) {
 		ft5x0x_write_reg(data->client, 0xD0, 1);
 		err = enable_irq_wake(data->client->irq);
 		if (err)
@@ -1004,7 +1005,7 @@ static int ft5x06_ts_resume(struct device *dev)
 	}
 
 #ifdef CONFIG_WAKE_GESTURES
-	if (device_may_wakeup(dev) && (s2w_switch || dt2w_switch)) {
+	if (device_may_wakeup(dev) && (s2w_switch || dt2w_switch) && !q6voice_voice_call_active()) {
 		ft5x0x_write_reg(data->client, 0xD0, 0);
 
 		for (i = 0; i < data->pdata->num_max_touches; i++) {
