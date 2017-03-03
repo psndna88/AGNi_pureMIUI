@@ -192,4 +192,5 @@ uint16_t apr_get_reset_domain(uint16_t proc);
 int apr_get_v2_ops(struct apr_func_dsp *ops);
 int apr_get_v3_ops(struct apr_func_dsp *ops);
 const char *apr_get_adsp_subsys_name(void);
+bool q6voice_voice_call_active(void);
 #endif
