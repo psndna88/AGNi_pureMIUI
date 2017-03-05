@@ -1,0 +1,17 @@
+config RTL8192EU
+	tristate "Realtek RTL8192EU Wireless LAN NIC driver"
+	depends on WLAN && USB
+	select WIRELESS_EXT
+	select WEXT_PRIV
+	select CRYPTO
+	default n
+	---help---
+	  Suports Realtek RTL8192EU chipset USB 2.0 WLAN
+	     (802.11 b/g/n 300Mbps)
+	  Supported devices:
+	  	TP-LINK TL-WN823N
+	  	D-Link DWA-131 rev E1
+	  	Rosewill RNX-N180UBE v2 N300 Wireless Adapter
+
+	  Source: https://github.com/Mange/rtl8192eu-linux-driver
+
