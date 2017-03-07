@@ -4886,16 +4886,18 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 	if ((drv == DRIVER_MAC80211 || drv == DRIVER_QNXNTO ||
 	     drv == DRIVER_LINUX_WCN) &&
 	    (dut->ap_mode == AP_11ng || dut->ap_mode == AP_11na)) {
+		int ht40plus = 0, ht40minus = 0, tx_stbc = 0;
+
 		fprintf(f, "ieee80211n=1\n");
-		fprintf(f, "ht_capab=");
 		if (dut->ap_mode == AP_11ng &&
 		    (dut->ap_chwidth == AP_40 ||
 		     (dut->ap_chwidth == AP_AUTO &&
 		      dut->default_11ng_ap_chwidth == AP_40))) {
 			if (dut->ap_channel >= 1 && dut->ap_channel <= 7)
-				fprintf(f, "[HT40+]");
+				ht40plus = 1;
 			else if (dut->ap_channel >= 8 && dut->ap_channel <= 11)
-				fprintf(f, "[HT40-]");
+				ht40minus = 1;
+			fprintf(f, "obss_interval=300\n");
 		}
 
 		/* configure ht_capab based on channel width */
@@ -4904,15 +4906,18 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		     (dut->ap_chwidth == AP_AUTO &&
 		      dut->default_11na_ap_chwidth == AP_40))) {
 			if (is_ht40plus_chan(dut->ap_channel))
-				fprintf(f, "[HT40+]");
+				ht40plus = 1;
 			else if (is_ht40minus_chan(dut->ap_channel))
-				fprintf(f, "[HT40-]");
+				ht40minus = 1;
 		}
 
 		if (dut->ap_tx_stbc)
-			fprintf(f, "[TX-STBC]");
+			tx_stbc = 1;
 
-		fprintf(f, "\n");
+		fprintf(f, "ht_capab=%s%s%s\n",
+			ht40plus ? "[HT40+]" : "",
+			ht40minus ? "[HT40-]" : "",
+			tx_stbc ? "[TX-STBC]" : "");
 	}
 
 	if ((drv == DRIVER_MAC80211 || drv == DRIVER_QNXNTO ||
