@@ -652,6 +652,8 @@ void ath_set_cts_width(struct sigma_dut *dut, const char *ifname,
 		       const char *val);
 int ath_set_width(struct sigma_dut *dut, struct sigma_conn *conn,
 		  const char *intf, const char *val);
+int wil6210_send_frame_60g(struct sigma_dut *dut, struct sigma_conn *conn,
+			   struct sigma_cmd *cmd);
 
 /* p2p.c */
 int p2p_cmd_sta_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,

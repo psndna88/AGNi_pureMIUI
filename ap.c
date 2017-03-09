@@ -6485,6 +6485,23 @@ static int ap_send_frame_mbo(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int ap_send_frame_60g(struct sigma_dut *dut,
+			     struct sigma_conn *conn,
+			     struct sigma_cmd *cmd)
+{
+	switch (get_driver_type()) {
+#ifdef __linux__
+	case DRIVER_WIL6210:
+		return wil6210_send_frame_60g(dut, conn, cmd);
+#endif /* __linux__ */
+	default:
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Unsupported sta_set_frame(60G) with the current driver");
+		return 0;
+	}
+}
+
+
 int cmd_ap_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 		      struct sigma_cmd *cmd)
 {
@@ -6506,6 +6523,8 @@ int cmd_ap_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 			return ap_send_frame_loc(dut, conn, cmd);
 		if (strcasecmp(val, "MBO") == 0)
 			return ap_send_frame_mbo(dut, conn, cmd);
+		if (strcasecmp(val, "60GHz") == 0)
+			return ap_send_frame_60g(dut, conn, cmd);
 	}
 
 	val = get_param(cmd, "PMFFrameType");
