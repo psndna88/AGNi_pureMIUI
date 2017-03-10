@@ -69,7 +69,7 @@
 #define SWEEP_LEFT		0x02
 #define SWEEP_UP		0x04
 #define SWEEP_DOWN		0x08
-#define VIB_STRENGTH 		75
+#define VIB_STRENGTH 		30
 
 #define WAKE_GESTURES_ENABLED	1
 
@@ -576,7 +576,7 @@ static ssize_t sweep2wake_dump(struct device *dev,
 	sscanf(buf, "%d ", &s2w_switch_temp);
 	if (s2w_switch_temp < 0 || s2w_switch_temp > 15)
 		s2w_switch_temp = 0;
-		
+
 	if (!is_suspended())
 		s2w_switch = s2w_switch_temp;
 	else
@@ -588,26 +588,26 @@ static ssize_t sweep2wake_dump(struct device *dev,
 static DEVICE_ATTR(sweep2wake, (S_IWUSR|S_IRUGO),
 	sweep2wake_show, sweep2wake_dump);
 
-/* static ssize_t sweep2sleep_show(struct device *dev,
+static ssize_t sweep2sleep_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	size_t count = 0;
 	count += sprintf(buf, "%d\n", s2s_switch);
 	return count;
-} */
+}
 
-/* static ssize_t sweep2sleep_dump(struct device *dev,
+static ssize_t sweep2sleep_dump(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
 	sscanf(buf, "%d ", &s2s_switch);
 	if (s2s_switch < 0 || s2s_switch > 3)
 		s2s_switch = 0;				
-				
+
 	return count;
 }
 
 static DEVICE_ATTR(sweep2sleep, (S_IWUSR|S_IRUGO),
-	sweep2sleep_show, sweep2sleep_dump); */
+	sweep2sleep_show, sweep2sleep_dump);
 
 static ssize_t doubletap2wake_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -625,7 +625,7 @@ static ssize_t doubletap2wake_dump(struct device *dev,
 	sscanf(buf, "%d ", &dt2w_switch_temp);
 	if (dt2w_switch_temp < 0 || dt2w_switch_temp > 1)
 		dt2w_switch_temp = 0;
-		
+
 	if (!is_suspended())
 		dt2w_switch = dt2w_switch_temp;
 	else
@@ -636,7 +636,7 @@ static ssize_t doubletap2wake_dump(struct device *dev,
 
 static DEVICE_ATTR(doubletap2wake, (S_IWUSR|S_IRUGO),
 	doubletap2wake_show, doubletap2wake_dump);
-	
+
 #if (WAKE_GESTURES_ENABLED)
 static ssize_t wake_gestures_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -679,7 +679,7 @@ static ssize_t vib_wake_switch_dump(struct device *dev,
 
 static DEVICE_ATTR(vib_wake, (S_IWUSR|S_IRUGO),
 	vib_wake_switch_show, vib_wake_switch_dump);
-#endif	
+#endif
 
 static ssize_t vib_strength_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -740,21 +740,21 @@ static int __init wake_gestures_init(void)
 		return -EFAULT;
 	}
 	INIT_WORK(&s2w_input_work, s2w_input_callback);
-		
+
 	dt2w_input_wq = create_workqueue("dt2wiwq");
 	if (!dt2w_input_wq) {
 		pr_err("%s: Failed to create dt2wiwq workqueue\n", __func__);
 		return -EFAULT;
 	}
 	INIT_WORK(&dt2w_input_work, dt2w_input_callback);
-		
+
 #if (WAKE_GESTURES_ENABLED)
 	gesture_dev = input_allocate_device();
 	if (!gesture_dev) {
 		pr_err("Failed to allocate gesture_dev\n");
 		goto err_alloc_dev;
 	}
-	
+
 	gesture_dev->name = "wake_gesture";
 	gesture_dev->phys = "wake_gesture/input0";
 	input_set_capability(gesture_dev, EV_REL, WAKE_GESTURE);
@@ -774,10 +774,10 @@ static int __init wake_gestures_init(void)
 	if (rc) {
 		pr_warn("%s: sysfs_create_file failed for sweep2wake\n", __func__);
 	}
-/*	rc = sysfs_create_file(android_touch_kobj, &dev_attr_sweep2sleep.attr);
+	rc = sysfs_create_file(android_touch_kobj, &dev_attr_sweep2sleep.attr);
 	if (rc) {
 		pr_warn("%s: sysfs_create_file failed for sweep2sleep\n", __func__);
-	} */
+	}
 		rc = sysfs_create_file(android_touch_kobj, &dev_attr_doubletap2wake.attr);
 	if (rc) {
 		pr_warn("%s: sysfs_create_file failed for doubletap2wake\n", __func__);
@@ -826,4 +826,3 @@ static void __exit wake_gestures_exit(void)
 
 module_init(wake_gestures_init);
 module_exit(wake_gestures_exit);
-

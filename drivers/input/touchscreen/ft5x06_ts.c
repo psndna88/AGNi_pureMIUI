@@ -330,13 +330,13 @@ struct ft5x06_ts_data {
 
 struct ft5x06_ts_data *ft5x06_ts = NULL;
 
+extern int is_tp_driver_loaded;
+
 #ifdef CONFIG_WAKE_GESTURES
 bool scr_suspended_ft(void) {
 	return ft5x06_ts->suspended;
 }
 #endif
-
-extern int is_tp_driver_loaded;
 
 static DEFINE_MUTEX(i2c_rw_access);
 
@@ -645,13 +645,13 @@ static irqreturn_t ft5x06_ts_interrupt(int irq, void *dev_id)
 		if (!num_touches && !status && !id)
 			break;
 
+		if (y == 2100 && data->keypad_mode)
+			break;
+
 #ifdef CONFIG_WAKE_GESTURES
 		if (data->suspended)
 			x += 5000;
 #endif
-
-		if (y == 2100 && data->keypad_mode)
-			break;
 
 		input_mt_slot(ip_dev, id);
 		if (status == FT_TOUCH_DOWN || status == FT_TOUCH_CONTACT) {
@@ -998,7 +998,11 @@ static int ft5x06_ts_resume(struct device *dev)
 {
 	struct ft5x06_ts_data *data = dev_get_drvdata(dev);
 	int err;
+
+#ifdef CONFIG_WAKE_GESTURES
 	int i;
+#endif
+
 	if (!data->suspended) {
 		dev_dbg(dev, "Already in awake state\n");
 		return 0;
@@ -3196,6 +3200,7 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 	}
 
 #ifdef CONFIG_WAKE_GESTURES
+	ft5x06_ts = data;
 	device_init_wakeup(&client->dev, 1);
 #endif
 
