@@ -42,6 +42,7 @@
 #define PUMP_DEC_STEP				1
 
 static DEFINE_PER_CPU(struct ac_cpu_dbs_info_s, ac_cpu_dbs_info);
+static DEFINE_PER_CPU(struct ac_dbs_tuners *, cached_tuners);
 
 static struct ac_ops ac_ops;
 
@@ -628,17 +629,31 @@ static struct attribute_group ac_attr_group_gov_pol = {
 
 /************************** sysfs end ************************/
 
-static int ac_init(struct dbs_data *dbs_data)
+static void save_tuners(struct cpufreq_policy *policy,
+			  struct ac_dbs_tuners *tuners)
+{
+	int cpu;
+
+	if (have_governor_per_policy())
+		cpu = cpumask_first(policy->related_cpus);
+	else
+		cpu = 0;
+
+	WARN_ON(per_cpu(cached_tuners, cpu) &&
+		per_cpu(cached_tuners, cpu) != tuners);
+	per_cpu(cached_tuners, cpu) = tuners;
+}
+
+static struct ac_dbs_tuners *alloc_tuners(struct cpufreq_policy *policy)
 {
 	struct ac_dbs_tuners *tuners;
 
 	tuners = kzalloc(sizeof(struct ac_dbs_tuners), GFP_KERNEL);
 	if (!tuners) {
 		pr_err("%s: kzalloc failed\n", __func__);
-		return -ENOMEM;
+		return ERR_PTR(-ENOMEM);
 	}
 
-	dbs_data->min_sampling_rate = MIN_SAMPLING_RATE;
 	tuners->sampling_rate = DEF_SAMPLING_RATE;
 	tuners->ignore_nice_load = 0;
 	tuners->inc_cpu_load_at_min_freq = INC_CPU_LOAD_AT_MIN_FREQ;
@@ -652,7 +667,35 @@ static int ac_init(struct dbs_data *dbs_data)
 	tuners->pump_inc_step = PUMP_INC_STEP;
 	tuners->pump_dec_step = PUMP_DEC_STEP;
 	tuners->pump_dec_step_at_min_freq = PUMP_DEC_STEP_AT_MIN_FREQ;
+	save_tuners(policy, tuners);
 
+	return tuners;
+}
+
+static struct ac_dbs_tuners *restore_tuners(struct cpufreq_policy *policy)
+{
+	int cpu;
+
+	if (have_governor_per_policy())
+		cpu = cpumask_first(policy->related_cpus);
+	else
+		cpu = 0;
+
+	return per_cpu(cached_tuners, cpu);
+}
+
+static int ac_init(struct dbs_data *dbs_data, struct cpufreq_policy *policy)
+{
+	struct ac_dbs_tuners *tuners;
+
+	tuners = restore_tuners(policy);
+	if (!tuners) {
+		tuners = alloc_tuners(policy);
+		if (IS_ERR(tuners))
+			return PTR_ERR(tuners);
+	}
+
+	dbs_data->min_sampling_rate = MIN_SAMPLING_RATE;
 	dbs_data->tuners = tuners;
 	mutex_init(&dbs_data->mutex);
 	return 0;
@@ -660,7 +703,7 @@ static int ac_init(struct dbs_data *dbs_data)
 
 static void ac_exit(struct dbs_data *dbs_data)
 {
-	kfree(dbs_data->tuners);
+	//nothing to do
 }
 
 define_get_cpu_dbs_routines(ac_cpu_dbs_info);
@@ -706,7 +749,12 @@ static int __init cpufreq_gov_dbs_init(void)
 
 static void __exit cpufreq_gov_dbs_exit(void)
 {
+	int cpu;
 	cpufreq_unregister_governor(&cpufreq_gov_alucard);
+	for_each_possible_cpu(cpu) {
+		kfree(per_cpu(cached_tuners, cpu));
+		per_cpu(cached_tuners, cpu) = NULL;
+	}
 }
 
 MODULE_AUTHOR("Alucard24@XDA");

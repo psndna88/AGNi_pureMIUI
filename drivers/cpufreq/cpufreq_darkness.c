@@ -24,6 +24,7 @@
 #define MIN_SAMPLING_RATE			(20000)
 
 static DEFINE_PER_CPU(struct dk_cpu_dbs_info_s, dk_cpu_dbs_info);
+static DEFINE_PER_CPU(struct dk_dbs_tuners *, cached_tuners);
 
 static struct dk_ops dk_ops;
 
@@ -262,20 +263,63 @@ static struct attribute_group dk_attr_group_gov_pol = {
 
 /************************** sysfs end ************************/
 
-static int dk_init(struct dbs_data *dbs_data)
+static void save_tuners(struct cpufreq_policy *policy,
+			  struct dk_dbs_tuners *tuners)
+{
+	int cpu;
+
+	if (have_governor_per_policy())
+		cpu = cpumask_first(policy->related_cpus);
+	else
+		cpu = 0;
+
+	WARN_ON(per_cpu(cached_tuners, cpu) &&
+		per_cpu(cached_tuners, cpu) != tuners);
+	per_cpu(cached_tuners, cpu) = tuners;
+}
+
+static struct dk_dbs_tuners *alloc_tuners(struct cpufreq_policy *policy)
 {
 	struct dk_dbs_tuners *tuners;
 
 	tuners = kzalloc(sizeof(struct dk_dbs_tuners), GFP_KERNEL);
 	if (!tuners) {
 		pr_err("%s: kzalloc failed\n", __func__);
-		return -ENOMEM;
+		return ERR_PTR(-ENOMEM);
 	}
 
-	dbs_data->min_sampling_rate = MIN_SAMPLING_RATE;
 	tuners->sampling_rate = DEF_SAMPLING_RATE;
 	tuners->ignore_nice_load = 0;
 
+	save_tuners(policy, tuners);
+
+	return tuners;
+}
+
+static struct dk_dbs_tuners *restore_tuners(struct cpufreq_policy *policy)
+{
+	int cpu;
+
+	if (have_governor_per_policy())
+		cpu = cpumask_first(policy->related_cpus);
+	else
+		cpu = 0;
+
+	return per_cpu(cached_tuners, cpu);
+}
+
+static int dk_init(struct dbs_data *dbs_data, struct cpufreq_policy *policy)
+{
+	struct dk_dbs_tuners *tuners;
+
+	tuners = restore_tuners(policy);
+	if (!tuners) {
+		tuners = alloc_tuners(policy);
+		if (IS_ERR(tuners))
+			return PTR_ERR(tuners);
+	}
+
+	dbs_data->min_sampling_rate = MIN_SAMPLING_RATE;
 	dbs_data->tuners = tuners;
 	mutex_init(&dbs_data->mutex);
 	return 0;
@@ -283,7 +327,7 @@ static int dk_init(struct dbs_data *dbs_data)
 
 static void dk_exit(struct dbs_data *dbs_data)
 {
-	kfree(dbs_data->tuners);
+	//nothing to do
 }
 
 define_get_cpu_dbs_routines(dk_cpu_dbs_info);
@@ -328,7 +372,12 @@ static int __init cpufreq_gov_dbs_init(void)
 
 static void __exit cpufreq_gov_dbs_exit(void)
 {
+	int cpu;
 	cpufreq_unregister_governor(&cpufreq_gov_darkness);
+	for_each_possible_cpu(cpu) {
+		kfree(per_cpu(cached_tuners, cpu));
+		per_cpu(cached_tuners, cpu) = NULL;
+	}
 }
 
 MODULE_AUTHOR("Alucard24@XDA");
