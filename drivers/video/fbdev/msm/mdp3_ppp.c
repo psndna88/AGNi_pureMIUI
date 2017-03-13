@@ -1590,7 +1590,7 @@ int mdp3_ppp_parse_req(void __user *p,
 		ppp_stat->wait_for_pop = true;
 		mutex_unlock(&ppp_stat->req_mutex);
 		rc = wait_for_completion_timeout(
-		   &ppp_stat->pop_q_comp, 5 * HZ);
+		   &ppp_stat->pop_q_comp, msecs_to_jiffies(5000));
 		if (rc == 0) {
 			/* This will only occur if there is serious problem */
 			pr_err("%s: timeout exiting queuing request\n",
