@@ -1922,7 +1922,8 @@ static void ul_wakeup(void)
 		}
 		if (wait_for_dfab) {
 			ret = wait_for_completion_timeout(
-					&dfab_unvote_completion, HZ);
+					&dfab_unvote_completion,
+					msecs_to_jiffies(1000));
 			BUG_ON(ret == 0);
 		}
 		if (likely(do_vote_dfab))

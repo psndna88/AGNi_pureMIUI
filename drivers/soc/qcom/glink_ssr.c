@@ -25,7 +25,7 @@
 #include <soc/qcom/subsystem_restart.h>
 #include "glink_private.h"
 
-#define GLINK_SSR_REPLY_TIMEOUT	(HZ / 2)
+#define GLINK_SSR_REPLY_TIMEOUT	1000
 #define GLINK_SSR_EVENT_INIT ~0
 
 /* Global restart counter */
@@ -524,7 +524,7 @@ int notify_for_subsystem(struct subsys_info *ss_info)
 
 	wait_ret = wait_event_timeout(waitqueue,
 			atomic_read(&responses_remaining) == 0,
-			GLINK_SSR_REPLY_TIMEOUT);
+			msecs_to_jiffies(GLINK_SSR_REPLY_TIMEOUT));
 
 	list_for_each_entry(ss_leaf_entry, &ss_info->notify_list,
 			notify_list_node) {
@@ -688,7 +688,8 @@ bool glink_ssr_wait_cleanup_done(unsigned ssr_timeout_multiplier)
 {
 	int wait_ret =
 		wait_for_completion_timeout(&notifications_successful_complete,
-			ssr_timeout_multiplier * GLINK_SSR_REPLY_TIMEOUT);
+			ssr_timeout_multiplier *
+			msecs_to_jiffies(GLINK_SSR_REPLY_TIMEOUT));
 	reinit_completion(&notifications_successful_complete);
 
 	if (!notifications_successful || !wait_ret)

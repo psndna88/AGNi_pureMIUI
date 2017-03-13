@@ -184,7 +184,7 @@ struct apr_svc_ch_dev *apr_tal_open(uint32_t svc, uint32_t dest,
 		return NULL;
 	}
 	rc = wait_event_timeout(apr_svc_ch[dl][dest][svc].wait,
-		(apr_svc_ch[dl][dest][svc].smd_state == 1), 5 * HZ);
+		(apr_svc_ch[dl][dest][svc].smd_state == 1), msecs_to_jiffies(5000));
 	if (rc == 0) {
 		pr_err("apr_tal:TIMEOUT for OPEN event\n");
 		mutex_unlock(&apr_svc_ch[dl][dest][svc].m_lock);
