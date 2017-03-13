@@ -563,8 +563,11 @@ static int context_alloc(struct fastrpc_file *fl, uint32_t kernel,
 			goto bail;
 	}
 	ctx->sc = invoke->sc;
-	if (bufs)
-		context_build_overlap(ctx);
+	if (bufs) {
+		VERIFY(err, 0 == context_build_overlap(ctx));
+		if (err)
+			goto bail;
+	}
 	ctx->retval = -1;
 	ctx->pid = current->pid;
 	ctx->tgid = current->tgid;
