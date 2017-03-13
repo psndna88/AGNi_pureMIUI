@@ -470,7 +470,7 @@ static int p2p_discover_peer(struct sigma_dut *dut, const char *ifname,
 	if (p2p_peer_known(ifname, peer, full))
 		return 0;
 	printf("Peer not yet discovered - start discovery\n");
-	if (wpa_command(ifname, "P2P_FIND") < 0) {
+	if (wpa_command(ifname, "P2P_FIND type=progressive") < 0) {
 		printf("Failed to start discovery\n");
 		return -1;
 	}
