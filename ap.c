@@ -526,8 +526,15 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 
 	/* TODO: GREENFIELD */
-	/* TODO: OFFSET */
 	/* TODO: MCS_32 */
+
+	val = get_param(cmd, "OFFSET");
+	if (val) {
+		if (strcasecmp(val, "Above") == 0)
+			dut->ap_chwidth_offset = SEC_CH_40ABOVE;
+		else if (strcasecmp(val, "Below") == 0)
+			dut->ap_chwidth_offset = SEC_CH_40BELOW;
+	}
 
 	val = get_param(cmd, "MCS_FIXEDRATE");
 	if (val) {
@@ -4914,6 +4921,17 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		if (dut->ap_tx_stbc)
 			tx_stbc = 1;
 
+		/* Overwrite the ht_capab with offset value if configured */
+		if (dut->ap_chwidth == AP_40 &&
+		    dut->ap_chwidth_offset == SEC_CH_40ABOVE) {
+			ht40plus = 1;
+			ht40minus = 0;
+		} else if (dut->ap_chwidth == AP_40 &&
+			   dut->ap_chwidth_offset == SEC_CH_40BELOW) {
+			ht40minus = 1;
+			ht40plus = 0;
+		}
+
 		fprintf(f, "ht_capab=%s%s%s\n",
 			ht40plus ? "[HT40+]" : "",
 			ht40minus ? "[HT40-]" : "",
@@ -5660,6 +5678,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	dut->ap_regulatory_mode = AP_80211D_MODE_DISABLED;
 	dut->ap_dfs_mode = AP_DFS_MODE_DISABLED;
+	dut->ap_chwidth_offset = SEC_CH_NO;
 
 	if (dut->program == PROGRAM_HT || dut->program == PROGRAM_VHT) {
 		dut->ap_wme = AP_WME_ON;

@@ -6743,13 +6743,6 @@ static int iwpriv_tdlsoffchnmode(struct sigma_dut *dut,
 }
 
 
-enum sec_ch_offset {
-	SEC_CH_NO,
-	SEC_CH_40ABOVE,
-	SEC_CH_40BELOW
-};
-
-
 static int off_chan_val(enum sec_ch_offset off)
 {
 	switch (off) {

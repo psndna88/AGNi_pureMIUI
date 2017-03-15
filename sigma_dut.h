@@ -225,6 +225,12 @@ enum value_not_set_enabled_disabled {
 	VALUE_DISABLED
 };
 
+enum sec_ch_offset {
+	SEC_CH_NO,
+	SEC_CH_40ABOVE,
+	SEC_CH_40BELOW
+};
+
 struct sigma_dut {
 	int s; /* server TCP socket */
 	int debug_level;
@@ -502,6 +508,8 @@ struct sigma_dut {
 		AP_WMMPS_OFF,
 		AP_WMMPS_ON,
 	} ap_wmmps;
+
+	enum sec_ch_offset ap_chwidth_offset;
 
 #ifdef CONFIG_SNIFFER
 	pid_t sniffer_pid;
