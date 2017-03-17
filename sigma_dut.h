@@ -668,6 +668,10 @@ int p2p_cmd_sta_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
 			      struct sigma_cmd *cmd);
 void p2p_create_event_thread(struct sigma_dut *dut);
 void stop_event_thread(void);
+void start_dhcp(struct sigma_dut *dut, const char *group_ifname, int go);
+void stop_dhcp(struct sigma_dut *dut, const char *group_ifname, int go);
+int p2p_discover_peer(struct sigma_dut *dut, const char *ifname,
+		      const char *peer, int full);
 
 /* utils.c */
 enum sigma_program sigma_program_to_enum(const char *prog);

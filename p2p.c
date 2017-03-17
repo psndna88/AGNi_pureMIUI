@@ -56,7 +56,7 @@ static int get_60g_freq(int chan)
 #define END_IP_RANGE "192.168.43.100"
 #define FLUSH_IP_ADDR "0.0.0.0"
 
-static void start_dhcp(struct sigma_dut *dut, const char *group_ifname, int go)
+void start_dhcp(struct sigma_dut *dut, const char *group_ifname, int go)
 {
 #ifdef __linux__
 	char buf[200];
@@ -93,7 +93,7 @@ static void start_dhcp(struct sigma_dut *dut, const char *group_ifname, int go)
 }
 
 
-static void stop_dhcp(struct sigma_dut *dut, const char *group_ifname, int go)
+void stop_dhcp(struct sigma_dut *dut, const char *group_ifname, int go)
 {
 #ifdef __linux__
 	char path[128];
@@ -462,8 +462,8 @@ static int p2p_peer_known(const char *ifname, const char *peer, int full)
 }
 
 
-static int p2p_discover_peer(struct sigma_dut *dut, const char *ifname,
-			     const char *peer, int full)
+int p2p_discover_peer(struct sigma_dut *dut, const char *ifname,
+		      const char *peer, int full)
 {
 	unsigned int count;
 
