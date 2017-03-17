@@ -539,10 +539,10 @@ void fscache_object_lookup_negative(struct fscache_object *object)
 		set_bit(FSCACHE_COOKIE_PENDING_FILL, &cookie->flags);
 		set_bit(FSCACHE_COOKIE_NO_DATA_YET, &cookie->flags);
 
-		_debug("wake up lookup %p", &cookie->flags);
-		smp_mb__before_clear_bit();
+		_debug("wake up lookup %pK", &cookie->flags);
+		smp_mb__before_atomic();
 		clear_bit(FSCACHE_COOKIE_LOOKING_UP, &cookie->flags);
-		smp_mb__after_clear_bit();
+		smp_mb__after_atomic();
 		wake_up_bit(&cookie->flags, FSCACHE_COOKIE_LOOKING_UP);
 		set_bit(FSCACHE_OBJECT_EV_REQUEUE, &object->events);
 	} else {
@@ -582,9 +582,9 @@ void fscache_obtained_object(struct fscache_object *object)
 		object->state = FSCACHE_OBJECT_AVAILABLE;
 		spin_unlock(&object->lock);
 
-		smp_mb__before_clear_bit();
+		smp_mb__before_atomic();
 		clear_bit(FSCACHE_COOKIE_LOOKING_UP, &cookie->flags);
-		smp_mb__after_clear_bit();
+		smp_mb__after_atomic();
 		wake_up_bit(&cookie->flags, FSCACHE_COOKIE_LOOKING_UP);
 		set_bit(FSCACHE_OBJECT_EV_REQUEUE, &object->events);
 	} else {

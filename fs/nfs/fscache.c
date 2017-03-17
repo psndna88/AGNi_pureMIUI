@@ -286,7 +286,7 @@ static inline void nfs_fscache_inode_unlock(struct inode *inode)
 
 	smp_mb__before_atomic();
 	clear_bit(NFS_INO_FSCACHE_LOCK, &nfsi->flags);
-	smp_mb__after_clear_bit();
+	smp_mb__after_atomic();
 	wake_up_bit(&nfsi->flags, NFS_INO_FSCACHE_LOCK);
 }
 
