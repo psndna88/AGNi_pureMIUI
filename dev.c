@@ -1,16 +1,25 @@
 /*
  * Sigma Control API DUT (station/AP/sniffer)
- * Copyright (c) 2011-2013, Qualcomm Atheros, Inc.
+ * Copyright (c) 2011-2013, 2017, Qualcomm Atheros, Inc.
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
 
 #include "sigma_dut.h"
+#include "miracast.h"
 
 
 static int cmd_dev_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 			      struct sigma_cmd *cmd)
 {
+#ifdef MIRACAST
+	const char *program = get_param(cmd, "Program");
+
+	if (program && (strcasecmp(program, "WFD") == 0 ||
+			strcasecmp(program, "DisplayR2") == 0))
+		return miracast_dev_send_frame(dut, conn, cmd);
+#endif /* MIRACAST */
+
 	if (dut->mode == SIGMA_MODE_STATION ||
 	    dut->mode == SIGMA_MODE_UNKNOWN) {
 		sigma_dut_print(dut, DUT_MSG_DEBUG, "Convert "
@@ -51,6 +60,21 @@ static int cmd_dev_set_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int cmd_dev_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
+			       struct sigma_cmd *cmd)
+{
+#ifdef MIRACAST
+	const char *program = get_param(cmd, "Program");
+
+	if (program && (strcasecmp(program, "WFD") == 0 ||
+			strcasecmp(program, "DisplayR2") == 0))
+		return miracast_dev_exec_action(dut, conn, cmd);
+#endif /* MIRACAST */
+
+       return -2;
+}
+
+
 static int req_intf_prog(struct sigma_cmd *cmd)
 {
 	if (get_param(cmd, "interface") == NULL)
@@ -66,4 +90,6 @@ void dev_register_cmds(void)
 	sigma_dut_reg_cmd("dev_send_frame", req_intf_prog, cmd_dev_send_frame);
 	sigma_dut_reg_cmd("dev_set_parameter", req_intf_prog,
 			  cmd_dev_set_parameter);
+	sigma_dut_reg_cmd("dev_exec_action", req_intf_prog,
+			  cmd_dev_exec_action);
 }

@@ -53,4 +53,9 @@ void sigma_dut_register_cmds(void)
 	void server_register_cmds(void);
 	server_register_cmds();
 #endif /* CONFIG_SERVER */
+
+#ifdef MIRACAST
+	void miracast_register_cmds(void);
+	miracast_register_cmds();
+#endif /* MIRACAST */
 }

@@ -1,7 +1,7 @@
 /*
  * Sigma Control API DUT (station/AP)
  * Copyright (c) 2010-2011, Atheros Communications, Inc.
- * Copyright (c) 2011-2015, Qualcomm Atheros, Inc.
+ * Copyright (c) 2011-2017, Qualcomm Atheros, Inc.
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
@@ -13,6 +13,7 @@
 #endif /* __linux__ */
 #include "wpa_ctrl.h"
 #include "wpa_helpers.h"
+#include "miracast.h"
 
 #define SIGMA_DUT_PORT 9000
 #define MAX_CONNECTIONS 4
@@ -764,7 +765,7 @@ int main(int argc, char *argv[])
 
 	for (;;) {
 		c = getopt(argc, argv,
-			   "aAb:Bc:C:dDE:e:fghH:i:Ik:l:L:m:M:nN:o:O:p:P:qr:R:s:S:tT:uv:VWw:");
+			   "aAb:Bc:C:dDE:e:fghH:i:Ik:l:L:m:M:nN:o:O:p:P:qr:R:s:S:tT:uv:VWw:x:y:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -920,6 +921,22 @@ int main(int argc, char *argv[])
 		case 'A':
 			sigma_dut.sim_no_username = 1;
 			break;
+#ifdef MIRACAST
+		case 'x':
+			if (strcmp(optarg, "sink") == 0) {
+				sigma_dut.wfd_device_type = 1;
+				sigma_dut_print(&sigma_dut, DUT_MSG_INFO,
+						"Device Type is SINK");
+			} else if (strcmp(optarg, "source") == 0) {
+				sigma_dut.wfd_device_type = 0;
+				sigma_dut_print(&sigma_dut, DUT_MSG_INFO,
+						"Device Type is SOURCE");
+			}
+			break;
+		case 'y':
+			sigma_dut.miracast_lib_path = optarg;
+			break;
+#endif /* MIRACAST */
 		case 'h':
 		default:
 			printf("usage: sigma_dut [-aABdfqDIntuVW] [-p<port>] "
@@ -943,6 +960,10 @@ int main(int argc, char *argv[])
 			       "       [-N <device_get_info vendor>] \\\n"
 			       "       [-o <device_get_info model>] \\\n"
 			       "       [-O <device_get_info version>] \\\n"
+#ifdef MIRACAST
+			       "       [-x <sink|source>] \\\n"
+			       "       [-y <Miracast library path>] \\\n"
+#endif /* MIRACAST */
 			       "       [-r <HT40 or 2.4_HT40>]\n");
 			printf("local command: sigma_dut [-p<port>] "
 			       "<-l<cmd>>\n");
@@ -952,6 +973,9 @@ int main(int argc, char *argv[])
 	}
 
 	sigma_dut.p2p_ifname = determine_sigma_p2p_ifname();
+#ifdef MIRACAST
+	miracast_init(&sigma_dut);
+#endif /* MIRACAST */
 	if (local_cmd)
 		return run_local_cmd(port, local_cmd);
 
@@ -1022,6 +1046,9 @@ int main(int argc, char *argv[])
 
 	free(sigma_p2p_ifname_buf);
 	close_socket(&sigma_dut);
+#ifdef MIRACAST
+	miracast_deinit(&sigma_dut);
+#endif /* MIRACAST */
 	sigma_dut_unreg_cmds(&sigma_dut);
 
 	return 0;

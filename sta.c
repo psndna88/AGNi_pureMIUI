@@ -29,6 +29,7 @@
 #endif /* __QNXNTO__ */
 #include "wpa_ctrl.h"
 #include "wpa_helpers.h"
+#include "miracast.h"
 
 /* Temporary files for sta_send_addba */
 #define VI_QOS_TMP_FILE     "/tmp/vi-qos.tmp"
@@ -2937,6 +2938,11 @@ static int cmd_sta_preset_testparameters(struct sigma_dut *dut,
 	if (val && strcasecmp(val, "NAN") == 0)
 		return nan_cmd_sta_preset_testparameters(dut, conn, cmd);
 #endif /* ANDROID_NAN */
+#ifdef MIRACAST
+	if (val && (strcasecmp(val, "WFD") == 0 ||
+		    strcasecmp(val, "DisplayR2") == 0))
+		return miracast_preset_testparameters(dut, conn, cmd);
+#endif /* MIRACAST */
 
 #if 0
 	val = get_param(cmd, "Supplicant");
@@ -4300,6 +4306,12 @@ static int cmd_sta_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
 		return nan_cmd_sta_get_parameter(dut, conn, cmd);
 #endif /* ANDROID_NAN */
 
+#ifdef MIRACAST
+	if (strcasecmp(program, "WFD") == 0 ||
+	    strcasecmp(program, "DisplayR2") == 0)
+		return miracast_cmd_sta_get_parameter(dut, conn, cmd);
+#endif /* MIRACAST */
+
 	send_resp(dut, conn, SIGMA_ERROR, "ErrorCode,Unsupported parameter");
 	return 0;
 }
@@ -4450,8 +4462,11 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 			      struct sigma_cmd *cmd);
 	const char *intf = get_param(cmd, "Interface");
 	const char *type;
+	const char *program = get_param(cmd, "program");
 
-	dut->program = sigma_program_to_enum(get_param(cmd, "prog"));
+	if (!program)
+		program = get_param(cmd, "prog");
+	dut->program = sigma_program_to_enum(program);
 	dut->device_type = STA_unknown;
 	type = get_param(cmd, "type");
 	if (type && strcasecmp(type, "Testbed") == 0)
@@ -4471,6 +4486,12 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 			wpa_command(intf, "SET tdls_trigger_control 0");
 		}
 	}
+
+#ifdef MIRACAST
+	if (dut->program == PROGRAM_WFD ||
+	    dut->program == PROGRAM_DISPLAYR2)
+		miracast_sta_reset_default(dut, conn, cmd);
+#endif /* MIRACAST */
 
 	switch (get_driver_type()) {
 	case DRIVER_ATHEROS:

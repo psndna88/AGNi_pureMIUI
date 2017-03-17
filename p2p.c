@@ -1,7 +1,7 @@
 /*
  * Sigma Control API DUT (station/AP)
  * Copyright (c) 2010-2011, Atheros Communications, Inc.
- * Copyright (c) 2011-2014, Qualcomm Atheros, Inc.
+ * Copyright (c) 2011-2017, Qualcomm Atheros, Inc.
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include "wpa_ctrl.h"
 #include "wpa_helpers.h"
+#include "miracast.h"
 
 
 int run_system(struct sigma_dut *dut, const char *cmd)
@@ -795,6 +796,9 @@ static int cmd_sta_start_autonomous_go(struct sigma_dut *dut,
 	const char *intf = get_param(cmd, "Interface");
 	const char *oper_chn = get_param(cmd, "OPER_CHN");
 	const char *ssid_param = get_param(cmd, "SSID");
+#ifdef MIRACAST
+	const char *rtsp = get_param(cmd, "RTSP");
+#endif /* MIRACAST */
 	int freq, chan, res;
 	char buf[256], grpid[100], resp[200];
 	struct wpa_ctrl *ctrl;
@@ -916,6 +920,14 @@ static int cmd_sta_start_autonomous_go(struct sigma_dut *dut,
 	p2p_group_add(dut, ifname, strcmp(gtype, "GO") == 0, grpid, ssid);
 
 	snprintf(resp, sizeof(resp), "GroupID,%s", grpid);
+
+#ifdef MIRACAST
+	if (rtsp && atoi(rtsp) == 1) {
+		/* Start RTSP Thread for incoming connections */
+		miracast_start_autonomous_go(dut, conn, cmd, ifname);
+	}
+#endif /* MIRACAST */
+
 	send_resp(dut, conn, SIGMA_COMPLETE, resp);
 	return 0;
 }
@@ -1057,10 +1069,14 @@ static int cmd_sta_p2p_start_group_formation(struct sigma_dut *dut,
 	int freq = 0, chan = 0, init;
 	char buf[256];
 	struct wpa_ctrl *ctrl;
+	int intent;
 
 	if (devid == NULL || intent_val == NULL)
 		return -1;
 
+	intent = atoi(intent_val);
+	if (intent > 15)
+		intent = 1;
 	if (init_go_neg)
 		init = atoi(init_go_neg);
 	else
@@ -1134,7 +1150,7 @@ static int cmd_sta_p2p_start_group_formation(struct sigma_dut *dut,
 		   " keypad" )),
 		 dut->persistent ? " persistent" : "",
 		 init ? "" : " auth",
-		 atoi(intent_val));
+		 intent);
 	if (freq > 0) {
 		snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
 			 " freq=%d", freq);
@@ -1711,6 +1727,12 @@ int cmd_sta_p2p_reset(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *intf = get_param(cmd, "interface");
 	struct wfa_cs_p2p_group *grp, *prev;
 	char buf[256];
+
+#ifdef MIRACAST
+	if (dut->program == PROGRAM_WFD ||
+	    dut->program == PROGRAM_DISPLAYR2)
+		miracast_sta_reset_default(dut, conn, cmd);
+#endif /* MIRACAST */
 
 	dut->go = 0;
 	dut->p2p_client = 0;

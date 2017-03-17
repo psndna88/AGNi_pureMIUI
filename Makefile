@@ -60,6 +60,12 @@ CFLAGS += -DCONFIG_SERVER
 OBJS += server.o
 endif
 
+ifdef MIRACAST
+OBJS += miracast.o
+CFLAGS += -DMIRACAST -DMIRACAST_DHCP_M
+LIBS += -ldl
+endif
+
 sigma_dut: $(OBJS)
 	$(LDO) $(LDFLAGS) -o sigma_dut $(OBJS) $(LIBS)
 

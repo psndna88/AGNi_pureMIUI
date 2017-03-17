@@ -1,7 +1,7 @@
 /*
  * Sigma Control API DUT (station/AP)
  * Copyright (c) 2010-2011, Atheros Communications, Inc.
- * Copyright (c) 2011-2015, Qualcomm Atheros, Inc.
+ * Copyright (c) 2011-2017, Qualcomm Atheros, Inc.
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
@@ -517,6 +517,14 @@ struct sigma_dut {
 #endif /* CONFIG_SNIFFER */
 
 	int last_set_ip_config_ipv6;
+#ifdef MIRACAST
+	pthread_t rtsp_thread_handle;
+	int wfd_device_type; /* 0 for source, 1 for sink */
+	char peer_mac_address[32];
+	void *miracast_lib;
+	const char *miracast_lib_path;
+	char mdns_instance_name[64];
+#endif /* MIRACAST */
 
 	int tid_to_handle[8]; /* Mapping of TID to handle */
 	int dialog_token; /* Used for generating unique handle for an addTs */
