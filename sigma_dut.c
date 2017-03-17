@@ -212,7 +212,7 @@ static void close_socket(struct sigma_dut *dut)
 
 
 void send_resp(struct sigma_dut *dut, struct sigma_conn *conn,
-	       enum sigma_status status, char *buf)
+	       enum sigma_status status, const char *buf)
 {
 	struct msghdr msg;
 	struct iovec iov[4];
@@ -246,7 +246,7 @@ void send_resp(struct sigma_dut *dut, struct sigma_conn *conn,
 				  (char *) iov[1].iov_base, buf ? buf : "");
 	}
 	if (buf) {
-		iov[2].iov_base = buf;
+		iov[2].iov_base = (void *) buf;
 		iov[2].iov_len = strlen(buf);
 		iov[3].iov_base = "\r\n";
 		iov[3].iov_len = 2;

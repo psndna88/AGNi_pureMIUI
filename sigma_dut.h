@@ -587,7 +587,7 @@ enum sigma_status {
 };
 
 void send_resp(struct sigma_dut *dut, struct sigma_conn *conn,
-	       enum sigma_status status, char *buf);
+	       enum sigma_status status, const char *buf);
 
 const char * get_param(struct sigma_cmd *cmd, const char *name);
 
