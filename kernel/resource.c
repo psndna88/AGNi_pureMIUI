@@ -227,6 +227,14 @@ static int __release_resource(struct resource *old)
 {
 	struct resource *tmp, **p;
 
+	if (old->child) {
+		static int warned;
+		if (warned < 5) {
+			warned++;
+			WARN_ON(1);
+		}
+	}
+
 	p = &old->parent->child;
 	for (;;) {
 		tmp = *p;
