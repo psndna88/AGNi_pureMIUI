@@ -1,6 +1,6 @@
 /*
  * Sigma Control API DUT (station/AP)
- * Copyright (c) 2014-2015, Qualcomm Atheros, Inc.
+ * Copyright (c) 2014-2017, Qualcomm Atheros, Inc.
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
@@ -97,6 +97,8 @@ enum sigma_program sigma_program_to_enum(const char *prog)
 		return PROGRAM_HS2_R2;
 	if (strcasecmp(prog, "WFD") == 0)
 		return PROGRAM_WFD;
+	if (strcasecmp(prog, "DisplayR2") == 0)
+		return PROGRAM_DISPLAYR2;
 	if (strcasecmp(prog, "PMF") == 0)
 		return PROGRAM_PMF;
 	if (strcasecmp(prog, "WPS") == 0)
