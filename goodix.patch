@@ -21,18 +21,20 @@ index 4783739..7c10b8f 100644
  		compatible = "goodix,fingerprint";
  		vcc_spi-supply  = <&pm8950_l10>;
 diff --git a/arch/arm64/configs/agni_kenzo-cmMM_defconfig b/arch/arm64/configs/agni_kenzo-cmMM_defconfig
-index 40aa842..fec57bf 100644
+index 011569c..fec57bf 100644
 --- a/arch/arm64/configs/agni_kenzo-cmMM_defconfig
 +++ b/arch/arm64/configs/agni_kenzo-cmMM_defconfig
-@@ -1712,7 +1712,7 @@ CONFIG_SENSORS_MC3430=y
+@@ -1712,8 +1712,8 @@ CONFIG_SENSORS_MC3430=y
  # CONFIG_HALL is not set
  CONFIG_SENSORS_ISL29044A=y
  CONFIG_INPUT_FINGERPRINT=y
 -CONFIG_INPUT_FPC1020=y
+-# CONFIG_FINGERPRINT_GOODIX_GF318M is not set
 +# CONFIG_INPUT_FPC1020 is not set
- CONFIG_FINGERPRINT_GOODIX_GF318M=y
++CONFIG_FINGERPRINT_GOODIX_GF318M=y
  # CONFIG_FINGERPRINT_FPC1020 is not set
  # CONFIG_FINGERPRINT_FPC1020_TA is not set
+ 
 @@ -4018,9 +4018,9 @@ CONFIG_SECURITY_SELINUX=y
  # CONFIG_SECURITY_SELINUX_BOOTPARAM is not set
  # CONFIG_SECURITY_SELINUX_DISABLE is not set
@@ -46,18 +48,20 @@ index 40aa842..fec57bf 100644
  CONFIG_SECURITY_SELINUX_CHECKREQPROT_VALUE=1
  # CONFIG_SECURITY_SELINUX_POLICYDB_VERSION_MAX is not set
 diff --git a/arch/arm64/configs/agni_kenzo-cmN_defconfig b/arch/arm64/configs/agni_kenzo-cmN_defconfig
-index 4624eb5..ce5811a 100644
+index cd901db..ce5811a 100644
 --- a/arch/arm64/configs/agni_kenzo-cmN_defconfig
 +++ b/arch/arm64/configs/agni_kenzo-cmN_defconfig
-@@ -1711,7 +1711,7 @@ CONFIG_SENSORS_MC3430=y
+@@ -1711,8 +1711,8 @@ CONFIG_SENSORS_MC3430=y
  # CONFIG_HALL is not set
  CONFIG_SENSORS_ISL29044A=y
  CONFIG_INPUT_FINGERPRINT=y
 -CONFIG_INPUT_FPC1020=y
+-# CONFIG_FINGERPRINT_GOODIX_GF318M is not set
 +# CONFIG_INPUT_FPC1020 is not set
- CONFIG_FINGERPRINT_GOODIX_GF318M=y
++CONFIG_FINGERPRINT_GOODIX_GF318M=y
  # CONFIG_FINGERPRINT_FPC1020 is not set
  # CONFIG_FINGERPRINT_FPC1020_TA is not set
+ 
 @@ -4017,9 +4017,9 @@ CONFIG_SECURITY_SELINUX=y
  # CONFIG_SECURITY_SELINUX_BOOTPARAM is not set
  # CONFIG_SECURITY_SELINUX_DISABLE is not set
@@ -71,18 +75,20 @@ index 4624eb5..ce5811a 100644
  CONFIG_SECURITY_SELINUX_CHECKREQPROT_VALUE=1
  # CONFIG_SECURITY_SELINUX_POLICYDB_VERSION_MAX is not set
 diff --git a/arch/arm64/configs/agni_kenzo-cmNwm_defconfig b/arch/arm64/configs/agni_kenzo-cmNwm_defconfig
-index f6050d0..9b300c6 100644
+index f1318af..9b300c6 100644
 --- a/arch/arm64/configs/agni_kenzo-cmNwm_defconfig
 +++ b/arch/arm64/configs/agni_kenzo-cmNwm_defconfig
-@@ -1711,7 +1711,7 @@ CONFIG_SENSORS_MC3430=y
+@@ -1711,8 +1711,8 @@ CONFIG_SENSORS_MC3430=y
  # CONFIG_HALL is not set
  CONFIG_SENSORS_ISL29044A=y
  CONFIG_INPUT_FINGERPRINT=y
 -CONFIG_INPUT_FPC1020=y
+-# CONFIG_FINGERPRINT_GOODIX_GF318M is not set
 +# CONFIG_INPUT_FPC1020 is not set
- CONFIG_FINGERPRINT_GOODIX_GF318M=y
++CONFIG_FINGERPRINT_GOODIX_GF318M=y
  # CONFIG_FINGERPRINT_FPC1020 is not set
  # CONFIG_FINGERPRINT_FPC1020_TA is not set
+ 
 @@ -4017,9 +4017,9 @@ CONFIG_SECURITY_SELINUX=y
  # CONFIG_SECURITY_SELINUX_BOOTPARAM is not set
  # CONFIG_SECURITY_SELINUX_DISABLE is not set
@@ -96,18 +102,20 @@ index f6050d0..9b300c6 100644
  CONFIG_SECURITY_SELINUX_CHECKREQPROT_VALUE=1
  # CONFIG_SECURITY_SELINUX_POLICYDB_VERSION_MAX is not set
 diff --git a/arch/arm64/configs/agni_kenzo-miuiMM_defconfig b/arch/arm64/configs/agni_kenzo-miuiMM_defconfig
-index d21c22b..fcc574f 100644
+index 233d64c..fcc574f 100644
 --- a/arch/arm64/configs/agni_kenzo-miuiMM_defconfig
 +++ b/arch/arm64/configs/agni_kenzo-miuiMM_defconfig
-@@ -1708,7 +1708,7 @@ CONFIG_SENSORS_MC3430=y
+@@ -1708,8 +1708,8 @@ CONFIG_SENSORS_MC3430=y
  # CONFIG_HALL is not set
  CONFIG_SENSORS_ISL29044A=y
  CONFIG_INPUT_FINGERPRINT=y
 -CONFIG_INPUT_FPC1020=y
+-# CONFIG_FINGERPRINT_GOODIX_GF318M is not set
 +# CONFIG_INPUT_FPC1020 is not set
- CONFIG_FINGERPRINT_GOODIX_GF318M=y
++CONFIG_FINGERPRINT_GOODIX_GF318M=y
  # CONFIG_FINGERPRINT_FPC1020 is not set
  # CONFIG_FINGERPRINT_FPC1020_TA is not set
+ 
 @@ -4014,9 +4014,9 @@ CONFIG_SECURITY_SELINUX=y
  # CONFIG_SECURITY_SELINUX_BOOTPARAM is not set
  # CONFIG_SECURITY_SELINUX_DISABLE is not set
