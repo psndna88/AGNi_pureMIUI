@@ -32,6 +32,7 @@
 #include <linux/input.h>
 #include <linux/hrtimer.h>
 #include <asm-generic/cputime.h>
+#include <linux/qdsp6v2/apr.h>
 /*
 #include <linux/wakelock.h>
 */
@@ -134,6 +135,20 @@ static void report_gesture(int gest)
 }
 #endif
 
+/* Wake Gestures - call detect and temporarily disable */
+static void wake_guesture_q6voice_detect(void) {
+	if (q6voice_voice_session_active()) {
+		dt2w_switch = 0;
+		s2w_switch = 0;
+	} else {
+		dt2w_switch = dt2w_switch_temp;
+		s2w_switch = s2w_switch_temp;
+	}
+	
+	return;
+}
+
+
 /* PowerKey work func */
 static void wake_presspwr(struct work_struct * wake_presspwr_work) {
 	if (!mutex_trylock(&pwrkeyworklock))
@@ -206,6 +221,8 @@ static void detect_doubletap2wake(int x, int y, bool st)
 	if (y < SWEEP_EDGE || y > sweep_y_limit)
 		return;
 
+	wake_guesture_q6voice_detect();
+
 	if ((single_touch) && (dt2w_switch) && (exec_count) && (touch_cnt)) {
 		touch_cnt = false;
 		if (touch_nr == 0) {
@@ -271,6 +288,8 @@ static void detect_sweep2wake_v(int x, int y, bool st)
         pr_info(LOGTAG"s2w vert  x,y(%4d,%4d) single:%s\n",
                 x, y, (single_touch) ? "true" : "false");
 #endif
+
+	wake_guesture_q6voice_detect();
 
 	//sweep up
 	if (firsty > SWEEP_Y_START && single_touch && s2w_switch & SWEEP_UP) {
