@@ -267,6 +267,7 @@ static int gfspi_ioctl_clk_uninit(struct gf_dev *data)
 #endif
 
 int recurs = 0;
+unsigned int delay = 0;
 
 static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
@@ -280,8 +281,6 @@ static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 #endif
 
 	pr_warn("GOODIX gf_ioctl start %i\n", cmd);
-
-	unsigned int delay = 0;
 
 	if (_IOC_TYPE(cmd) != GF_IOC_MAGIC) {
 		return -ENODEV;
