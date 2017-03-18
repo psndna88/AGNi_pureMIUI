@@ -19,17 +19,17 @@
 #include <linux/slab.h>
 #include <linux/display_state.h>
 
-#define MAPLE_IOSCHED_PATCHLEVEL	(7)
+#define MAPLE_IOSCHED_PATCHLEVEL	(8)
 
 enum { ASYNC, SYNC };
 
 /* Tunables */
-static const int sync_read_expire = 100;	/* max time before a read sync is submitted. */
-static const int sync_write_expire = 350;	/* max time before a write sync is submitted. */
-static const int async_read_expire = 200;	/* ditto for read async, these limits are SOFT! */
-static const int async_write_expire = 500;	/* ditto for write async, these limits are SOFT! */
+static const int sync_read_expire = 350;	/* max time before a read sync is submitted. */
+static const int sync_write_expire = 550;	/* max time before a write sync is submitted. */
+static const int async_read_expire = 250;	/* ditto for read async, these limits are SOFT! */
+static const int async_write_expire = 450;	/* ditto for write async, these limits are SOFT! */
 static const int fifo_batch = 16;		/* # of sequential requests treated as one by the above parameters. */
-static const int writes_starved = 3;		/* max times reads can starve a write */
+static const int writes_starved = 4;		/* max times reads can starve a write */
 static const int sleep_latency_multiple = 5;	/* multple for expire time when device is asleep */
 
 /* Elevator data */
@@ -119,12 +119,13 @@ static struct request *
 maple_choose_expired_request(struct maple_data *mdata)
 {
 	/* Reset (non-expired-)batch-counter */
-	mdata->batched = 0;
 
 	struct request *rq_sync_read = maple_expired_request(mdata, SYNC, READ);
 	struct request *rq_sync_write = maple_expired_request(mdata, SYNC, WRITE);
 	struct request *rq_async_read = maple_expired_request(mdata, ASYNC, READ);
 	struct request *rq_async_write = maple_expired_request(mdata, ASYNC, WRITE);
+
+	mdata->batched = 0;
 
 	/*
 	 * Check expired requests.
@@ -157,10 +158,11 @@ static struct request *
 maple_choose_request(struct maple_data *mdata, int data_dir)
 {
 	/* Increase (non-expired-)batch-counter */
-	mdata->batched++;
 
 	struct list_head *sync = mdata->fifo_list[SYNC];
 	struct list_head *async = mdata->fifo_list[ASYNC];
+
+	mdata->batched++;
 
 	/*
 	 * Retrieve request from available fifo list.
