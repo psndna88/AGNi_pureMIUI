@@ -966,8 +966,8 @@ first_try:
 	mutex_unlock(&epfile->mutex);
 error:
 	kfree(data);
-	if (ret < 0)
-		pr_err("Error: returning %zd value\n", ret);
+/*	if (ret < 0)
+		pr_err("Error: returning %zd value\n", ret); */
 	return ret;
 }
 
