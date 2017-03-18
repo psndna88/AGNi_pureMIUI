@@ -766,7 +766,7 @@ noinline int slow_avc_audit(u32 ssid, u32 tsid, u16 tclass,
 	sad.ssid = ssid;
 	sad.tsid = tsid;
 	sad.audited = audited;
-#ifdef CONFIG_SECURITY_SELINUX_FORCE_PERMISSIVE
+#if defined(CONFIG_SECURITY_SELINUX_FORCE_PERMISSIVE) || defined(CONFIG_SECURITY_SELINUX_FAKE_ENFORCE)
 	sad.denied = 0;
 #else
 	sad.denied = denied;
