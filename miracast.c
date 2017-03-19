@@ -33,6 +33,22 @@ static int session_management_control_port = 7236;
 /* Followingng stores p2p interface name after P2P group formation */
 static char wfd_ifname[32];
 
+#ifndef MIRACAST_DHCP_M
+extern void get_dhcp_info(uint32_t *ipaddr, uint32_t *gateway,
+			  uint32_t *prefixLength, uint32_t *dns1,
+			  uint32_t *dns2, uint32_t *server,
+			  uint32_t *lease);
+
+extern int do_dhcp(char *);
+
+const char *ipaddr (in_addr_t addr)
+{
+	struct in_addr in_addr;
+	in_addr.s_addr = addr;
+	return inet_ntoa(in_addr);
+}
+#endif /* MIRACAST_DHCP_M */
+
 
 #ifndef ANDROID
 
@@ -306,21 +322,6 @@ static int get_peer_ip_p2p_client(struct sigma_dut *dut, char *ip_addr,
 }
 
 #else /* MIRACAST_DHCP_M */
-
-extern void get_dhcp_info(uint32_t *ipaddr, uint32_t *gateway,
-			  uint32_t *prefixLength, uint32_t *dns1,
-			  uint32_t *dns2, uint32_t *server,
-			  uint32_t *lease);
-
-extern int do_dhcp(char *);
-
-const char *ipaddr (in_addr_t addr)
-{
-	struct in_addr in_addr;
-	in_addr.s_addr = addr;
-	return inet_ntoa(in_addr);
-}
-
 
 static int get_peer_ip_p2p_client(struct sigma_dut *dut, char *ipAddr,
 				  const char *intf, unsigned int wait_limit)
