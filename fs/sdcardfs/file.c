@@ -216,13 +216,16 @@ static int sdcardfs_open(struct inode *inode, struct file *file)
 		goto out_err;
 	}
 
-	if(!check_caller_access_to_name(parent->d_inode, &dentry->d_name)) {
+	if(!check_caller_access_to_name(parent->d_inode, dentry->d_name.name)) {
+		printk(KERN_INFO "%s: need to check the caller's gid in packages.list\n"
+                         "	dentry: %s, task:%s\n",
+						 __func__, dentry->d_name.name, current->comm);
 		err = -EACCES;
 		goto out_err;
 	}
 
 	/* save current_cred and override it */
-	OVERRIDE_CRED(sbi, saved_cred, SDCARDFS_I(inode));
+	OVERRIDE_CRED(sbi, saved_cred);
 
 	file->private_data =
 		kzalloc(sizeof(struct sdcardfs_file_info), GFP_KERNEL);
