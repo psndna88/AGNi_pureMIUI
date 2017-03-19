@@ -81,6 +81,19 @@ struct fpc1020_data {
 	bool wakeup_enabled;
 };
 
+#ifdef CONFIG_MACH_XIAOMI_KENZO
+int kenzo_fpsensor = 0;
+static int __init setup_kenzo_fpsensor(char *str)
+{
+	if (!strcmp(str, "fpc"))
+		kenzo_fpsensor = 1;
+	else if (!strcmp(str, "gdx"))
+		kenzo_fpsensor = 2;
+	return 1;
+}
+__setup("androidboot.fpsensor=", setup_kenzo_fpsensor);
+#endif
+
 static int vreg_setup(struct fpc1020_data *fpc1020, const char *name,
 		      bool enable)
 {
@@ -304,8 +317,16 @@ static int fpc1020_probe(struct platform_device* pdev)
 	int rc = 0;
 	int irqf;
 	struct device_node *np = dev->of_node;
+	struct fpc1020_data *fpc1020;
 
-	struct fpc1020_data *fpc1020 = devm_kzalloc(dev, sizeof(*fpc1020),
+#ifdef CONFIG_MACH_XIAOMI_KENZO
+	if (kenzo_fpsensor != 1) {
+		pr_err("board no fpc fpsensor\n");
+		return -ENODEV;
+	}
+#endif
+
+	fpc1020 = devm_kzalloc(dev, sizeof(*fpc1020),
 						    GFP_KERNEL);
 	if (!fpc1020) {
 		dev_err(dev,
