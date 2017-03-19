@@ -206,6 +206,28 @@ out:
 	return err;
 }
 
+struct sdcardfs_name_data {
+	struct dir_context ctx;
+	const struct qstr *to_find;
+	char *name;
+	bool found;
+};
+
+static int sdcardfs_name_match(void *__buf, const char *name, int namelen,
+		loff_t offset, u64 ino, unsigned int d_type)
+{
+	struct sdcardfs_name_data *buf = (struct sdcardfs_name_data *) __buf;
+	struct qstr candidate = QSTR_INIT(name, namelen);
+
+	if (qstr_case_eq(buf->to_find, &candidate)) {
+		memcpy(buf->name, name, namelen);
+		buf->name[namelen] = 0;
+		buf->found = true;
+		return 1;
+	}
+	return 0;
+}
+
 /*
  * Main driver function for sdcardfs's lookup.
  *
@@ -219,9 +241,9 @@ static struct dentry *__sdcardfs_lookup(struct dentry *dentry,
 	struct vfsmount *lower_dir_mnt;
 	struct dentry *lower_dir_dentry = NULL;
 	struct dentry *lower_dentry;
-	const char *name;
+	const struct qstr *name;
 	struct path lower_path;
-	struct qstr this;
+	struct qstr dname;
 	struct sdcardfs_sb_info *sbi;
 
 	sbi = SDCARDFS_SB(dentry->d_sb);
@@ -231,15 +253,51 @@ static struct dentry *__sdcardfs_lookup(struct dentry *dentry,
 	if (IS_ROOT(dentry))
 		goto out;
 
-	name = dentry->d_name.name;
+	name = &dentry->d_name;
 
 	/* now start the actual lookup procedure */
 	lower_dir_dentry = lower_parent_path->dentry;
 	lower_dir_mnt = lower_parent_path->mnt;
 
 	/* Use vfs_path_lookup to check if the dentry exists or not */
-	err = vfs_path_lookup(lower_dir_dentry, lower_dir_mnt, name, 0,
+	err = vfs_path_lookup(lower_dir_dentry, lower_dir_mnt, name->name, 0,
 				&lower_path);
+	/* check for other cases */
+	if (err == -ENOENT) {
+		struct file *file;
+		const struct cred *cred = current_cred();
+
+		struct sdcardfs_name_data buffer = {
+			.ctx.actor = sdcardfs_name_match,
+			.to_find = name,
+			.name = __getname(),
+			.found = false,
+		};
+
+		if (!buffer.name) {
+			err = -ENOMEM;
+			goto out;
+		}
+		file = dentry_open(lower_parent_path, O_RDONLY, cred);
+		if (IS_ERR(file)) {
+			err = PTR_ERR(file);
+			goto put_name;
+		}
+		err = iterate_dir(file, &buffer.ctx);
+		fput(file);
+		if (err)
+			goto put_name;
+
+		if (buffer.found)
+			err = vfs_path_lookup(lower_dir_dentry,
+						lower_dir_mnt,
+						buffer.name, 0,
+						&lower_path);
+		else
+			err = -ENOENT;
+put_name:
+		__putname(buffer.name);
+	}
 
 	/* no error: handle positive dentries */
 	if (!err) {
@@ -283,14 +341,14 @@ static struct dentry *__sdcardfs_lookup(struct dentry *dentry,
 		goto out;
 
 	/* instatiate a new negative dentry */
-	this.name = name;
-	this.len = strlen(name);
-	this.hash = full_name_hash(this.name, this.len);
-	lower_dentry = d_lookup(lower_dir_dentry, &this);
+	dname.name = name->name;
+	dname.len = name->len;
+	dname.hash = full_name_hash(dname.name, dname.len);
+	lower_dentry = d_lookup(lower_dir_dentry, &dname);
 	if (lower_dentry)
 		goto setup_lower;
 
-	lower_dentry = d_alloc(lower_dir_dentry, &this);
+	lower_dentry = d_alloc(lower_dir_dentry, &dname);
 	if (!lower_dentry) {
 		err = -ENOMEM;
 		goto out;
@@ -335,16 +393,13 @@ struct dentry *sdcardfs_lookup(struct inode *dir, struct dentry *dentry,
 
 	parent = dget_parent(dentry);
 
-	if(!check_caller_access_to_name(parent->d_inode, dentry->d_name.name)) {
+	if(!check_caller_access_to_name(parent->d_inode, &dentry->d_name)) {
 		ret = ERR_PTR(-EACCES);
-		printk(KERN_INFO "%s: need to check the caller's gid in packages.list\n"
-                         "	dentry: %s, task:%s\n",
-						 __func__, dentry->d_name.name, current->comm);
 		goto out_err;
         }
 
 	/* save current_cred and override it */
-	OVERRIDE_CRED_PTR(SDCARDFS_SB(dir->i_sb), saved_cred);
+	OVERRIDE_CRED_PTR(SDCARDFS_SB(dir->i_sb), saved_cred, SDCARDFS_I(dir));
 
 	sdcardfs_get_lower_path(parent, &lower_parent_path);
 
@@ -365,11 +420,10 @@ struct dentry *sdcardfs_lookup(struct inode *dir, struct dentry *dentry,
 	if (dentry->d_inode) {
 		fsstack_copy_attr_times(dentry->d_inode,
 					sdcardfs_lower_inode(dentry->d_inode));
-		/* get drived permission */
-		mutex_lock(&dentry->d_inode->i_mutex);
+		/* get derived permission */
 		get_derived_permission(parent, dentry);
-		fix_derived_permission(dentry->d_inode);
-		mutex_unlock(&dentry->d_inode->i_mutex);
+		fixup_tmp_permissions(dentry->d_inode);
+		fixup_lower_ownership(dentry, dentry->d_name.name);
 	}
 	/* update parent directory's atime */
 	fsstack_copy_attr_atime(parent->d_inode,
