@@ -42,6 +42,13 @@
 #include <linux/fb.h>
 #include <linux/pm_qos.h>
 #include <linux/cpufreq.h>
+#include <linux/display_state.h>
+
+#ifdef CONFIG_MSM_HOTPLUG
+#include <linux/msm_hotplug.h>
+#include <linux/workqueue.h>
+#include <linux/init.h>
+#endif
 
 #include "gf_spi.h"
 
@@ -62,6 +69,9 @@
 #define SPIDEV_MAJOR		154	/* assigned */
 #define N_SPI_MINORS		32	/* ... up to 256 */
 
+#ifdef CONFIG_MSM_HOTPLUG
+extern void msm_hotplug_resume_timeout(void);
+#endif
 
 struct gf_key_map key_map[] = {
 	{  "POWER",  KEY_POWER  },
@@ -505,6 +515,14 @@ static struct notifier_block goodix_noti_block = {
 	.notifier_call = goodix_fb_state_chg_callback,
 };
 
+#ifdef CONFIG_MSM_HOTPLUG
+static void __cpuinit msm_hotplug_resume_call(struct work_struct *msm_hotplug_resume_call_work)
+{
+	msm_hotplug_resume_timeout();
+}
+static __refdata DECLARE_WORK(msm_hotplug_resume_call_work, msm_hotplug_resume_call);
+#endif
+
 static int driver_init_partial(struct gf_dev *gf_dev)
 {
 	int ret = 0;
@@ -571,8 +589,19 @@ static int driver_init_partial(struct gf_dev *gf_dev)
 	/*power the sensor*/
 	gf_power_on(gf_dev);
 	gf_hw_reset(gf_dev, 360);
+#ifdef CONFIG_MSM_HOTPLUG
+		if (msm_enabled && msm_hotplug_scr_suspended &&
+		   !msm_hotplug_fingerprint_called) {
+			msm_hotplug_fingerprint_called = true;
+			schedule_work(&msm_hotplug_resume_call_work);
+		}
+#endif
 	gf_dev->device_available = 1;
 
+	if (fp_bigcore_boost) {
+		sched_set_boost(1);
+		sched_set_boost(0);
+	}
 
 	return 0;
 
