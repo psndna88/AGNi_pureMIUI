@@ -61,5 +61,9 @@ obj-$(CONFIG_ZCACHE)		+= zcache/
 obj-$(CONFIG_GOLDFISH)		+= goldfish/
 obj-$(CONFIG_USB_DWC2)		+= dwc2/
 obj-$(CONFIG_PRIMA_WLAN)	+= prima/
+ifeq ($(CONFIG_MACH_XIAOMI_KENZO_AGNI_CM_N),y)
 obj-$(CONFIG_PRONTO_WLAN)	+= prima/
+else
+obj-$(CONFIG_PRONTO_WLAN)	+= prima_mm/
+endif
 obj-$(CONFIG_VNSWAP)		+= vnswap/
