@@ -2139,6 +2139,12 @@ void usb_disconnect(struct usb_device **pdev)
 	}
 #endif
 
+	/*
+	 * Ensure that the pm runtime code knows that the USB device
+	 * is in the process of being disconnected.
+	 */
+	pm_runtime_barrier(&udev->dev);
+
 	usb_lock_device(udev);
 
 	/* Free up all the children before we remove this device */
