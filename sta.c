@@ -1424,6 +1424,9 @@ static int cmd_sta_set_psk(struct sigma_dut *dut, struct sigma_conn *conn,
 	} else if (alg && strcasecmp(alg, "SHA-1") == 0) {
 		if (set_network(ifname, id, "key_mgmt", "WPA-PSK") < 0)
 			return -2;
+	} else if (val && strcasecmp(val, "wpa2-ft") == 0) {
+		if (set_network(ifname, id, "key_mgmt", "FT-PSK") < 0)
+			return -2;
 	} else if ((val && strcasecmp(val, "wpa2-sha256") == 0) ||
 		   dut->sta_pmf == STA_PMF_REQUIRED) {
 		if (set_network(ifname, id, "key_mgmt",
