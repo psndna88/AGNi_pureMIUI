@@ -422,17 +422,23 @@ error_out:
 
 static void cpufreq_stats_update_policy_cpu(struct cpufreq_policy *policy)
 {
-	struct cpufreq_stats *stat = per_cpu(cpufreq_stats_table,
-			policy->last_cpu);
+	struct cpufreq_stats *last_stat, *new_stat;
 
-	if (!stat)
+	last_stat = per_cpu(cpufreq_stats_table, policy->last_cpu);
+	if (!last_stat)
 		return;
 	pr_debug("Updating stats_table for new_cpu %u from last_cpu %u\n",
 			policy->cpu, policy->last_cpu);
+	new_stat = per_cpu(cpufreq_stats_table, policy->cpu);
+	if (new_stat) {
+		kfree(new_stat->time_in_state);
+		kfree(new_stat);
+	}
+
 	per_cpu(cpufreq_stats_table, policy->cpu) = per_cpu(cpufreq_stats_table,
 			policy->last_cpu);
 	per_cpu(cpufreq_stats_table, policy->last_cpu) = NULL;
-	stat->cpu = policy->cpu;
+	last_stat->cpu = policy->cpu;
 }
 
 static void cpufreq_powerstats_create(unsigned int cpu,
