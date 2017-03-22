@@ -7766,11 +7766,9 @@ static const struct snd_kcontrol_new tasha_snd_controls[] = {
 	SOC_SINGLE_SX_TLV("RX8 Digital Volume", WCD9335_CDC_RX8_RX_VOL_CTL,
 		0, -84, 40, digital_gain),
 
-#ifndef CONFIG_SOUND_CONTROL
 	SOC_SINGLE_SX_TLV("RX0 Mix Digital Volume",
 			  WCD9335_CDC_RX0_RX_VOL_MIX_CTL,
 			  0, -84, 40, digital_gain), /* -84dB min - 40dB max */
-#endif
 	SOC_SINGLE_SX_TLV("RX1 Mix Digital Volume",
 			  WCD9335_CDC_RX1_RX_VOL_MIX_CTL,
 			  0, -84, 40, digital_gain), /* -84dB min - 40dB max */
@@ -12448,6 +12446,11 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 }
 
 static struct kobj_attribute headphone_gain_attribute =
+	__ATTR(headphone_gain, 0664,
+		headphone_gain_show,
+		headphone_gain_store);
+
+static struct kobj_attribute gpl_headphone_gain_attribute =
 	__ATTR(gpl_headphone_gain, 0664,
 		headphone_gain_show,
 		headphone_gain_store);
@@ -12530,6 +12533,11 @@ static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 }
 
 static struct kobj_attribute headphone_pa_gain_attribute =
+	__ATTR(headphone_pa_gain, 0664,
+		headphone_pa_gain_show,
+		headphone_pa_gain_store);
+
+static struct kobj_attribute gpl_headphone_pa_gain_attribute =
 	__ATTR(gpl_headphone_pa_gain, 0664,
 		headphone_pa_gain_show,
 		headphone_pa_gain_store);
@@ -12590,6 +12598,11 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 }
 
 static struct kobj_attribute mic_gain_attribute =
+	__ATTR(mic_gain, 0664,
+		mic_gain_show,
+		mic_gain_store);
+
+static struct kobj_attribute gpl_mic_gain_attribute =
 	__ATTR(gpl_mic_gain, 0664,
 		mic_gain_show,
 		mic_gain_store);
@@ -12652,6 +12665,11 @@ static ssize_t speaker_boost_store(struct kobject *kobj,
 }
 
 static struct kobj_attribute speaker_gain_attribute =
+	__ATTR(speaker_gain, 0664,
+		speaker_gain_show,
+		speaker_gain_store);
+
+static struct kobj_attribute gpl_speaker_gain_attribute =
 	__ATTR(gpl_speaker_gain, 0664,
 		speaker_gain_show,
 		speaker_gain_store);
@@ -12682,8 +12700,13 @@ static struct kobj_attribute soundcontrol_version_attribute =
 		0444,
 		soundcontrol_version_show, NULL);
 
-static struct kobj_attribute sound_control_version_attribute =
+static struct kobj_attribute gpl_sound_control_version_attribute =
 	__ATTR(gpl_sound_control_version,
+		0444,
+		sound_control_version_show, NULL);
+
+static struct kobj_attribute sound_control_version_attribute =
+	__ATTR(sound_control_version,
 		0444,
 		sound_control_version_show, NULL);
 
@@ -12721,8 +12744,14 @@ static struct kobj_attribute soundcontrol_enabled_attribute =
 		soundcontrol_enabled_show,
 		soundcontrol_enabled_store);
 
-static struct kobj_attribute sound_control_enabled_attribute =
+static struct kobj_attribute gpl_sound_control_enabled_attribute =
 	__ATTR(gpl_sound_control_enabled,
+		0666,
+		sound_control_enabled_show,
+		sound_control_enabled_store);
+
+static struct kobj_attribute sound_control_enabled_attribute =
+	__ATTR(sound_control_enabled,
 		0666,
 		sound_control_enabled_show,
 		sound_control_enabled_store);
@@ -12788,9 +12817,25 @@ static ssize_t earpiece_gain_store(struct kobject *kobj,
 }
 
 static struct kobj_attribute earpiece_gain_attribute =
+	__ATTR(earpiece_gain, 0664,
+		earpiece_gain_show,
+		earpiece_gain_store);
+
+static struct kobj_attribute gpl_earpiece_gain_attribute =
 	__ATTR(gpl_earpiece_gain, 0664,
 		earpiece_gain_show,
 		earpiece_gain_store);
+
+static struct attribute *sound_control_3_attrs[] = {
+		&gpl_headphone_gain_attribute.attr,
+		&gpl_mic_gain_attribute.attr,
+		&gpl_headphone_pa_gain_attribute.attr,
+		&gpl_speaker_gain_attribute.attr,
+		&gpl_earpiece_gain_attribute.attr,
+		&gpl_sound_control_version_attribute.attr,
+		&gpl_sound_control_enabled_attribute.attr,
+		NULL,
+};
 
 static struct attribute *sound_control_attrs[] = {
 		&headphone_gain_attribute.attr,
@@ -12812,7 +12857,13 @@ static struct attribute_group sound_control_attr_group = {
 		.attrs = sound_control_attrs,
 };
 
+static struct attribute_group sound_control_3_attr_group = {
+		.attrs = sound_control_3_attrs,
+};
+
 static struct kobject *sound_control_kobj;
+
+static struct kobject *sound_control_3_kobj;
 
 static struct miscdevice soundcontrol_device =
 {
@@ -13528,7 +13579,18 @@ static int tasha_probe(struct platform_device *pdev)
 	tasha_get_codec_ver(tasha);
 
 #ifdef CONFIG_SOUND_CONTROL
-	sound_control_kobj = kobject_create_and_add("sound_control_3", kernel_kobj);
+	sound_control_3_kobj = kobject_create_and_add("sound_control_3", kernel_kobj);
+
+	if (sound_control_3_kobj == NULL) {
+		pr_warn("%s kobject create failed!\n", __func__);
+        }
+
+	ret = sysfs_create_group(sound_control_3_kobj, &sound_control_3_attr_group);
+        if (ret) {
+		pr_warn("%s sysfs file create failed!\n", __func__);
+	}
+
+	sound_control_kobj = kobject_create_and_add("sound_control", kernel_kobj);
 	if (sound_control_kobj == NULL) {
 		pr_warn("%s kobject create failed!\n", __func__);
         }
