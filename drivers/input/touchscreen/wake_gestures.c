@@ -41,7 +41,7 @@
 #define WG_DEBUG		0
 #define WG_DEFAULT		0
 #define DT2W_DEFAULT		0
-#define S2W_DEFAULT		1
+#define S2W_DEFAULT		0
 #define S2S_DEFAULT		0
 #define WG_PWRKEY_DUR           60
 
@@ -137,7 +137,7 @@ static void report_gesture(int gest)
 #endif
 
 /* Wake Gestures - call detect and temporarily disable */
-static void wake_guesture_q6voice_detect(void) {
+static void wake_gesture_q6voice_detect(void) {
 	if (q6voice_voice_session_active()) {
 		dt2w_switch = 0;
 		s2w_switch = 0;
@@ -145,7 +145,7 @@ static void wake_guesture_q6voice_detect(void) {
 		dt2w_switch = dt2w_switch_temp;
 		s2w_switch = s2w_switch_temp;
 	}
-	
+
 	return;
 }
 
@@ -224,8 +224,6 @@ static void detect_doubletap2wake(int x, int y, bool st)
 	if (y < SWEEP_EDGE || y > sweep_y_limit)
 		return;
 
-	wake_guesture_q6voice_detect();
-
 	if ((single_touch) && (dt2w_switch) && (exec_count) && (touch_cnt)) {
 		touch_cnt = false;
 		if (touch_nr == 0) {
@@ -291,8 +289,6 @@ static void detect_sweep2wake_v(int x, int y, bool st)
         pr_info(LOGTAG"s2w vert  x,y(%4d,%4d) single:%s\n",
                 x, y, (single_touch) ? "true" : "false");
 #endif
-
-	wake_guesture_q6voice_detect();
 
 	//sweep up
 	if (firsty > SWEEP_Y_START && single_touch && s2w_switch & SWEEP_UP) {
@@ -446,16 +442,20 @@ static void detect_sweep2wake_h(int x, int y, bool st, bool scr_suspended)
 
 static void s2w_input_callback(struct work_struct *unused)
 {
+	wake_gesture_q6voice_detect();
+	if (s2w_switch) {
 	detect_sweep2wake_h(touch_x, touch_y, true, is_suspended());
-	if (is_suspended())
-		detect_sweep2wake_v(touch_x, touch_y, true);
-
+		if (is_suspended()) {
+			detect_sweep2wake_v(touch_x, touch_y, true);
+		}
+	}
 	return;
 }
 
 static void dt2w_input_callback(struct work_struct *unused)
 {
 
+	wake_gesture_q6voice_detect();
 	if (is_suspended() && dt2w_switch)
 		detect_doubletap2wake(touch_x, touch_y, true);
 	return;
