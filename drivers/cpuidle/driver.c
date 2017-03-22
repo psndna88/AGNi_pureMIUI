@@ -13,6 +13,7 @@
 #include <linux/cpuidle.h>
 #include <linux/cpumask.h>
 #include <linux/clockchips.h>
+#include <trace/events/power.h>
 
 #include "cpuidle.h"
 

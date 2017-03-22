@@ -18,7 +18,7 @@
 #include <linux/notifier.h>
 #include <linux/smp.h>
 #include <asm/processor.h>
-
+#include <asm/relaxed.h>
 
 static DEFINE_PER_CPU(struct llist_head, raised_list);
 static DEFINE_PER_CPU(struct llist_head, lazy_list);
@@ -38,12 +38,13 @@ static bool irq_work_claim(struct irq_work *work)
 	for (;;) {
 		nflags = flags | IRQ_WORK_FLAGS;
 		oflags = cmpxchg(&work->flags, flags, nflags);
+		cpu_relaxed_read_long(&work->flags);
 		if (oflags == flags)
 			break;
 		if (oflags & IRQ_WORK_PENDING)
 			return false;
 		flags = oflags;
-		cpu_relax();
+		cpu_read_relax();
 	}
 
 	return true;
@@ -177,7 +178,7 @@ void irq_work_sync(struct irq_work *work)
 {
 	WARN_ON_ONCE(irqs_disabled());
 
-	while (work->flags & IRQ_WORK_BUSY)
-		cpu_relax();
+	while (cpu_relaxed_read_long(&work->flags) & IRQ_WORK_BUSY)
+		cpu_read_relax();
 }
 EXPORT_SYMBOL_GPL(irq_work_sync);
