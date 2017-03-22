@@ -110,10 +110,6 @@ static LIST_HEAD(device_list);
 static DEFINE_MUTEX(device_list_lock);
 static struct gf_dev gf;
 
-#ifdef CONFIG_MACH_XIAOMI_KENZO
-extern int kenzo_fpsensor;
-#endif
-
 static int driver_init_partial(struct gf_dev *gf_dev);
 
 
@@ -760,13 +756,6 @@ static int gf_probe(struct platform_device *pdev)
 #endif
 	pr_info("%s: enter\n", __func__);
 	FUNC_ENTRY();
-
-#ifdef CONFIG_MACH_XIAOMI_KENZO
-	if (kenzo_fpsensor != 2) {
-		pr_err("board no gdx fpsensor\n");
-		return -ENODEV;
-	}
-#endif
 
 	/* Initialize the driver data */
 	INIT_LIST_HEAD(&gf_dev->device_entry);
