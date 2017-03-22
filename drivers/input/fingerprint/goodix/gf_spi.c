@@ -597,6 +597,7 @@ static int driver_init_partial(struct gf_dev *gf_dev)
 #endif
 	if (!ret) {
 		enable_irq_wake(gf_dev->irq);
+		gf_dev->irq_enabled = 1;
 		gf_disable_irq(gf_dev);
 	}
 
