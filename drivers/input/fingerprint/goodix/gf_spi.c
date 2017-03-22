@@ -111,9 +111,21 @@ static DEFINE_MUTEX(device_list_lock);
 static struct gf_dev gf;
 
 #ifdef CONFIG_MACH_XIAOMI_KENZO
+#ifdef CONFIG_INPUT_FPC1020
 extern int kenzo_fpsensor;
+#else
+int kenzo_fpsensor = 0;
+static int __init setup_kenzo_fpsensor(char *str)
+{
+	if (!strcmp(str, "fpc"))
+		kenzo_fpsensor = 1;
+	else if (!strcmp(str, "gdx"))
+		kenzo_fpsensor = 2;
+	return 1;
+}
+__setup("androidboot.fpsensor=", setup_kenzo_fpsensor);
 #endif
-
+#endif
 static int driver_init_partial(struct gf_dev *gf_dev);
 
 
