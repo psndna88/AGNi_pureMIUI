@@ -48,6 +48,7 @@ mv .git-halt .git
 mv $KERNELDIR/arch/arm64/boot/Image.gz-dtb $KERNELDIR/BUILT_kenzo-cmN/Image.gz-dtb_goodix
 git apply -R goodix.patch && echo "   Goodix Patch Cleaned UP."
 rm $KERNELDIR/arch/arm/boot/dts/*.dtb
+rm $KERNELDIR/drivers/staging/prima/wlan.ko
 rm $KERNELDIR/arch/arm64/boot/Image
 rm $KERNELDIR/arch/arm64/boot/Image.gz
 
