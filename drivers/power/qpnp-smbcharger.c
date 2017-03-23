@@ -5679,14 +5679,14 @@ static int lct_get_prop_batt_temp(struct smbchg_chip *chip)
 			}
 		}
 	}
-	pr_info("chip->ntc_vadc=%p \n", chip->ntc_vadc);
+//	pr_info("chip->ntc_vadc=%p \n", chip->ntc_vadc);
 	rc = qpnp_vadc_read(chip->ntc_vadc, P_MUX4_1_1, &results);
 	if (rc) {
 		pr_info("Unable to read batt temperature rc=%d\n", rc);
 		return DEFAULT_TEMP;
 	}
-	pr_info("get_bat_temp %d, %lld , %lld\n", results.adc_code,
-					results.physical, results.measurement);
+//	pr_info("get_bat_temp %d, %lld , %lld\n", results.adc_code,
+//					results.physical, results.measurement);
 	return (int)results.physical;
 }
 
