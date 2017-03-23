@@ -53,13 +53,6 @@
 #define DAPM_MICBIAS3_STANDALONE "MIC BIAS3 Standalone"
 #define DAPM_MICBIAS4_STANDALONE "MIC BIAS4 Standalone"
 
-#ifdef CONFIG_SOUND_CONTROL
-#include <linux/miscdevice.h>
-#define SOUND_CONTROL_MAJOR_VERSION	3
-#define SOUND_CONTROL_MINOR_VERSION	6
-int snd_ctrl_enabled = 0;
-#endif
-
 #define TASHA_RX_PORT_START_NUMBER  16
 
 #define WCD9335_RATES_MASK (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000 |\
@@ -3360,10 +3353,8 @@ static int tasha_set_compander(struct snd_kcontrol *kcontrol,
 	int value = ucontrol->value.integer.value[0];
 
 #ifdef CONFIG_SOUND_CONTROL
-	if (snd_ctrl_enabled) {
 	if (comp == COMPANDER_1 || comp == COMPANDER_2)
 		value = 0;
-	}
 #endif
 
 	pr_debug("%s: Compander %d enable current %d, new %d\n",
@@ -12377,15 +12368,6 @@ static struct regulator *tasha_codec_find_ondemand_regulator(
 #ifdef CONFIG_SOUND_CONTROL
 struct snd_soc_codec *sound_control_codec_ptr;
 
-static ssize_t headphones_boost_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "%d %d\n",
-		snd_soc_read(sound_control_codec_ptr, WCD9335_CDC_RX1_RX_VOL_CTL),
-		snd_soc_read(sound_control_codec_ptr, WCD9335_CDC_RX2_RX_VOL_CTL)
-	);
-}
-
 static ssize_t headphone_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -12395,31 +12377,6 @@ static ssize_t headphone_gain_show(struct kobject *kobj,
 	);
 }
 
-static ssize_t headphones_boost_store(struct kobject *kobj,
-		struct kobj_attribute *attr, const char *buf, size_t count)
-{
-
-	int input_l, input_r;
-
-	sscanf(buf, "%d %d", &input_l, &input_r);
-
-	if (!snd_ctrl_enabled)
-		return count;
-
-	if (input_l < -84 || input_l > 20)
-		input_l = 0;
-
-	if (input_r < -84 || input_r > 20)
-		input_r = 0;
-
-	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_RX1_RX_VOL_MIX_CTL, input_l);
-	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_RX2_RX_VOL_MIX_CTL, input_r);
-	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_RX1_RX_VOL_CTL, input_l);
-	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_RX2_RX_VOL_CTL, input_r);
-
-	return count;
-}
-
 static ssize_t headphone_gain_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
@@ -12427,9 +12384,6 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 	int input_l, input_r;
 
 	sscanf(buf, "%d %d", &input_l, &input_r);
-
-	if (!snd_ctrl_enabled)
-		return count;
 
 	if (input_l < -84 || input_l > 20)
 		input_l = 0;
@@ -12450,26 +12404,6 @@ static struct kobj_attribute headphone_gain_attribute =
 		headphone_gain_show,
 		headphone_gain_store);
 
-static struct kobj_attribute gpl_headphone_gain_attribute =
-	__ATTR(gpl_headphone_gain, 0664,
-		headphone_gain_show,
-		headphone_gain_store);
-
-static struct kobj_attribute volume_boost_attribute =
-	__ATTR(volume_boost, 0664,
-		headphones_boost_show,
-		headphones_boost_store);
-
-static ssize_t headphones_pa_boost_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-	u8 hph_l_gain = snd_soc_read(sound_control_codec_ptr, WCD9335_HPH_L_EN);
-	u8 hph_r_gain = snd_soc_read(sound_control_codec_ptr, WCD9335_HPH_R_EN);
-
-	return snprintf(buf, PAGE_SIZE, "%d %d\n",
-		hph_l_gain & 0x1F, hph_r_gain & 0x1F);
-}
-
 static ssize_t headphone_pa_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -12480,32 +12414,6 @@ static ssize_t headphone_pa_gain_show(struct kobject *kobj,
 		hph_l_gain & 0x1F, hph_r_gain & 0x1F);
 }
 
-static ssize_t headphones_pa_boost_store(struct kobject *kobj,
-		struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	unsigned int input_l, input_r;
-	struct tasha_priv *tasha = snd_soc_codec_get_drvdata(sound_control_codec_ptr);
-
-	sscanf(buf, "%d %d", &input_l, &input_r);
-
-	if (!snd_ctrl_enabled)
-		return count;
-
-	if (input_l < 1 || input_l > 20)
-		input_l = 1;
-
-	if (input_r < 1 || input_r > 20)
-		input_r = 1;
-
-	snd_soc_update_bits(sound_control_codec_ptr, WCD9335_HPH_L_EN, 0x1f, input_l);
-	snd_soc_update_bits(sound_control_codec_ptr, WCD9335_HPH_R_EN, 0x1f, input_r);
-
-	tasha->hph_l_gain = input_l;
-	tasha->hph_r_gain = input_r;
-
-	return count;
-}
-
 static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
@@ -12513,9 +12421,6 @@ static ssize_t headphone_pa_gain_store(struct kobject *kobj,
 	struct tasha_priv *tasha = snd_soc_codec_get_drvdata(sound_control_codec_ptr);
 
 	sscanf(buf, "%d %d", &input_l, &input_r);
-
-	if (!snd_ctrl_enabled)
-		return count;
 
 	if (input_l < 1 || input_l > 20)
 		input_l = 1;
@@ -12537,23 +12442,6 @@ static struct kobj_attribute headphone_pa_gain_attribute =
 		headphone_pa_gain_show,
 		headphone_pa_gain_store);
 
-static struct kobj_attribute gpl_headphone_pa_gain_attribute =
-	__ATTR(gpl_headphone_pa_gain, 0664,
-		headphone_pa_gain_show,
-		headphone_pa_gain_store);
-
-static struct kobj_attribute volume_pa_boost_attribute =
-	__ATTR(volume_pa_boost, 0664,
-		headphones_pa_boost_show,
-		headphones_pa_boost_store);
-
-
-static ssize_t mic_boost_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "%d\n",
-		snd_soc_read(sound_control_codec_ptr, WCD9335_CDC_RX0_RX_VOL_CTL));
-}
 
 static ssize_t mic_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -12562,32 +12450,12 @@ static ssize_t mic_gain_show(struct kobject *kobj,
 		snd_soc_read(sound_control_codec_ptr, WCD9335_CDC_RX0_RX_VOL_CTL));
 }
 
-static ssize_t mic_boost_store(struct kobject *kobj,
-		struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	int input;
-
-	sscanf(buf, "%d", &input);
-
-	if (!snd_ctrl_enabled)
-		return count;
-
-	if (input < -10 || input > 20)
-		input = 0;
-
-	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_RX0_RX_VOL_CTL, input);
-
-	return count;
-}
 static ssize_t mic_gain_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	int input;
 
 	sscanf(buf, "%d", &input);
-
-	if (!snd_ctrl_enabled)
-		return count;
 
 	if (input < -10 || input > 20)
 		input = 0;
@@ -12601,23 +12469,6 @@ static struct kobj_attribute mic_gain_attribute =
 	__ATTR(mic_gain, 0664,
 		mic_gain_show,
 		mic_gain_store);
-
-static struct kobj_attribute gpl_mic_gain_attribute =
-	__ATTR(gpl_mic_gain, 0664,
-		mic_gain_show,
-		mic_gain_store);
-
-static struct kobj_attribute mic_boost_attribute =
-	__ATTR(mic_boost, 0664,
-		mic_boost_show,
-		mic_boost_store);
-
-static ssize_t speaker_boost_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "%d\n",
-		snd_soc_read(sound_control_codec_ptr, WCD9335_CDC_RX6_RX_VOL_CTL));
-}
 
 static ssize_t speaker_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -12633,28 +12484,6 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%d", &input);
 
-	if (!snd_ctrl_enabled)
-		return count;
-
-	if (input < -10 || input > 20)
-		input = 0;
-
-	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_RX6_RX_VOL_CTL, input);
-	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_RX6_RX_VOL_MIX_CTL, input);
-
-	return count;
-}
-
-static ssize_t speaker_boost_store(struct kobject *kobj,
-		struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	int input;
-
-	sscanf(buf, "%d", &input);
-
-	if (!snd_ctrl_enabled)
-		return count;
-
 	if (input < -10 || input > 20)
 		input = 0;
 
@@ -12669,207 +12498,20 @@ static struct kobj_attribute speaker_gain_attribute =
 		speaker_gain_show,
 		speaker_gain_store);
 
-static struct kobj_attribute gpl_speaker_gain_attribute =
-	__ATTR(gpl_speaker_gain, 0664,
-		speaker_gain_show,
-		speaker_gain_store);
-
-static struct kobj_attribute speaker_boost_attribute =
-	__ATTR(speaker_boost, 0664,
-		speaker_boost_show,
-		speaker_boost_store);
-
-static ssize_t sound_control_version_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-	return sprintf(buf, "version: %u.%u\n",
-			SOUND_CONTROL_MAJOR_VERSION,
-			SOUND_CONTROL_MINOR_VERSION);
-}
-
-static ssize_t soundcontrol_version_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-	return sprintf(buf, "version: %u.%u\n",
-			SOUND_CONTROL_MAJOR_VERSION,
-			SOUND_CONTROL_MINOR_VERSION);
-}
-
-static struct kobj_attribute soundcontrol_version_attribute =
-	__ATTR(soundcontrol_version,
-		0444,
-		soundcontrol_version_show, NULL);
-
-static struct kobj_attribute gpl_sound_control_version_attribute =
-	__ATTR(gpl_sound_control_version,
-		0444,
-		sound_control_version_show, NULL);
-
-static struct kobj_attribute sound_control_version_attribute =
-	__ATTR(sound_control_version,
-		0444,
-		sound_control_version_show, NULL);
-
-static ssize_t soundcontrol_enabled_store(struct kobject *kobj,
-                struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	sscanf(buf, "%d", &snd_ctrl_enabled);
-
-	return count;
-}
-
-static ssize_t sound_control_enabled_store(struct kobject *kobj,
-                struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	sscanf(buf, "%d", &snd_ctrl_enabled);
-
-	return count;
-}
-
-static ssize_t soundcontrol_enabled_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-        return sprintf(buf, "%d\n", snd_ctrl_enabled);
-}
-
-static ssize_t sound_control_enabled_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-        return sprintf(buf, "%d\n", snd_ctrl_enabled);
-}
-
-static struct kobj_attribute soundcontrol_enabled_attribute =
-	__ATTR(soundcontrol_enabled,
-		0666,
-		soundcontrol_enabled_show,
-		soundcontrol_enabled_store);
-
-static struct kobj_attribute gpl_sound_control_enabled_attribute =
-	__ATTR(gpl_sound_control_enabled,
-		0666,
-		sound_control_enabled_show,
-		sound_control_enabled_store);
-
-static struct kobj_attribute sound_control_enabled_attribute =
-	__ATTR(sound_control_enabled,
-		0666,
-		sound_control_enabled_show,
-		sound_control_enabled_store);
-
-static ssize_t earpiece_boost_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "%d\n",
-		snd_soc_read(sound_control_codec_ptr, WCD9335_CDC_RX0_RX_VOL_MIX_CTL));
-}
-
-static ssize_t earpiece_boost_store(struct kobject *kobj,
-		struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	int input;
-
-	sscanf(buf, "%d", &input);
-
-	if (input < -10 || input > 20)
-		input = 0;
-
-	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_RX0_RX_VOL_MIX_CTL, input);
-
-	return count;
-}
-
-static struct kobj_attribute earpiece_boost_attribute =
-	__ATTR(earpiece_boost, 0664,
-		earpiece_boost_show,
-		earpiece_boost_store);
-
-static struct attribute *soundcontrol_attributes[] = {
-		&volume_boost_attribute.attr,
-		&mic_boost_attribute.attr,
-		&volume_pa_boost_attribute.attr,
-		&speaker_boost_attribute.attr,
-		&earpiece_boost_attribute.attr,
-		&soundcontrol_version_attribute.attr,
-		&soundcontrol_enabled_attribute.attr,
-		NULL,
-};
-
-static ssize_t earpiece_gain_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "%d\n",
-		snd_soc_read(sound_control_codec_ptr, WCD9335_CDC_RX0_RX_VOL_MIX_CTL));
-}
-
-static ssize_t earpiece_gain_store(struct kobject *kobj,
-		struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	int input;
-
-	sscanf(buf, "%d", &input);
-
-	if (input < -10 || input > 20)
-		input = 0;
-
-	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_RX0_RX_VOL_MIX_CTL, input);
-
-	return count;
-}
-
-static struct kobj_attribute earpiece_gain_attribute =
-	__ATTR(earpiece_gain, 0664,
-		earpiece_gain_show,
-		earpiece_gain_store);
-
-static struct kobj_attribute gpl_earpiece_gain_attribute =
-	__ATTR(gpl_earpiece_gain, 0664,
-		earpiece_gain_show,
-		earpiece_gain_store);
-
-static struct attribute *sound_control_3_attrs[] = {
-		&gpl_headphone_gain_attribute.attr,
-		&gpl_mic_gain_attribute.attr,
-		&gpl_headphone_pa_gain_attribute.attr,
-		&gpl_speaker_gain_attribute.attr,
-		&gpl_earpiece_gain_attribute.attr,
-		&gpl_sound_control_version_attribute.attr,
-		&gpl_sound_control_enabled_attribute.attr,
-		NULL,
-};
 
 static struct attribute *sound_control_attrs[] = {
 		&headphone_gain_attribute.attr,
 		&mic_gain_attribute.attr,
 		&headphone_pa_gain_attribute.attr,
 		&speaker_gain_attribute.attr,
-		&earpiece_gain_attribute.attr,
-		&sound_control_version_attribute.attr,
-		&sound_control_enabled_attribute.attr,
 		NULL,
-};
-
-static struct attribute_group soundcontrol_group =
-{
-	.attrs  = soundcontrol_attributes,
 };
 
 static struct attribute_group sound_control_attr_group = {
 		.attrs = sound_control_attrs,
 };
 
-static struct attribute_group sound_control_3_attr_group = {
-		.attrs = sound_control_3_attrs,
-};
-
 static struct kobject *sound_control_kobj;
-
-static struct kobject *sound_control_3_kobj;
-
-static struct miscdevice soundcontrol_device =
-{
-	.minor = MISC_DYNAMIC_MINOR,
-	.name = "soundcontrol",
-};
 #endif
 
 static int tasha_codec_probe(struct snd_soc_codec *codec)
@@ -13487,7 +13129,6 @@ EXPORT_SYMBOL(tasha_get_codec_ver);
 static int tasha_probe(struct platform_device *pdev)
 {
 	int ret = 0;
-	int retn;
 	struct tasha_priv *tasha;
 	struct clk *wcd_ext_clk;
 	struct wcd9xxx_resmgr_v2 *resmgr;
@@ -13579,17 +13220,6 @@ static int tasha_probe(struct platform_device *pdev)
 	tasha_get_codec_ver(tasha);
 
 #ifdef CONFIG_SOUND_CONTROL
-	sound_control_3_kobj = kobject_create_and_add("sound_control_3", kernel_kobj);
-
-	if (sound_control_3_kobj == NULL) {
-		pr_warn("%s kobject create failed!\n", __func__);
-        }
-
-	ret = sysfs_create_group(sound_control_3_kobj, &sound_control_3_attr_group);
-        if (ret) {
-		pr_warn("%s sysfs file create failed!\n", __func__);
-	}
-
 	sound_control_kobj = kobject_create_and_add("sound_control", kernel_kobj);
 	if (sound_control_kobj == NULL) {
 		pr_warn("%s kobject create failed!\n", __func__);
@@ -13599,26 +13229,6 @@ static int tasha_probe(struct platform_device *pdev)
         if (ret) {
 		pr_warn("%s sysfs file create failed!\n", __func__);
 	}
-
-	pr_info("%s misc_register(%s)\n", __FUNCTION__,
-		soundcontrol_device.name);
-
-	retn = misc_register(&soundcontrol_device);
-
-	if (retn) {
-		pr_err("%s misc_register(%s) fail\n", __FUNCTION__,
-			soundcontrol_device.name);
-		return -EINVAL;
-	}
-
-	if (sysfs_create_group(&soundcontrol_device.this_device->kobj,
-			&soundcontrol_group) < 0) {
-		pr_err("%s sysfs_create_group fail\n", __FUNCTION__);
-		pr_err("Failed to create sysfs group for device (%s)!\n",
-			soundcontrol_device.name);
-	}
-
-	return 0;
 #endif
 
 	return ret;
