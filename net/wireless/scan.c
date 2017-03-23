@@ -74,8 +74,8 @@ static void bss_free(struct cfg80211_internal_bss *bss)
 {
 	struct cfg80211_bss_ies *ies;
 
-	if (WARN_ON(atomic_read(&bss->hold)))
-		return;
+	/* if (WARN_ON(atomic_read(&bss->hold)))
+		return; */
 
 	ies = (void *)rcu_access_pointer(bss->pub.beacon_ies);
 	if (ies && !bss->pub.hidden_beacon_bss)
