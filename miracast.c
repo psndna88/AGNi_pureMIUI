@@ -614,7 +614,7 @@ static void miracast_generate_string_cmd(struct sigma_cmd *cmd, char *strcmd,
 	for (i = 0; i < cmd->count; i++) {
 		ret = snprintf(pos, end - pos, "%s,%s,", cmd->params[i],
 			       cmd->values[i]);
-		if (ret < 0 || ret < end - pos)
+		if (ret < 0 || ret >= end - pos)
 			break;
 		pos += ret;
 	}
