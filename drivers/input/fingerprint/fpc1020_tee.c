@@ -86,7 +86,7 @@ struct fpc1020_data {
 };
 
 #ifdef CONFIG_MACH_XIAOMI_KENZO
-int kenzo_fpsensor = 0;
+int kenzo_fpsensor = 2;
 static int __init setup_kenzo_fpsensor(char *str)
 {
 	if (!strcmp(str, "fpc"))
