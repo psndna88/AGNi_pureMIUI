@@ -661,5 +661,20 @@ config MSM_RDBG
           Implements a shared memory based transport mechanism that allows
           for a debugger running on a host PC to communicate with a remote
 	  stub running on peripheral subsystems such as the ADSP, MODEM etc.
+
+config FRANDOM
+	tristate "Frandom RNG driver"
+	help
+	  Frandom is a Linux kernel random number generator, which
+	  is 10-50 times faster than what you get from Linux' built-in
+	  /dev/urandom. And it uses very little (/dev/frandom) or none
+	  (/dev/erandom) of the kernel's entropy pool, so it is very
+	  useful for applications that require a handy source for lots
+	  of random data.
+
+	  http://www.billauer.co.il/frandom.html
+
+	  If unsure here, select N.
+
 endmenu
 
