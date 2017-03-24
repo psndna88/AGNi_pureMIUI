@@ -580,6 +580,7 @@ config SND_SOC_MSM_HDMI_CODEC_RX
         supports hdmi panel.
 
 config SOUND_CONTROL
-	bool "Sound control for wcd9335"
-	depends on WCD9335_CODEC
-	default y
+	tristate "sound control"
+	default n
+	help
+ 		Franco sound mod adapted for wcd9335
