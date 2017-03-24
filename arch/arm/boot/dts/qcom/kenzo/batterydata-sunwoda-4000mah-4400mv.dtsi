@@ -9,7 +9,7 @@ qcom,2162464_longcheer_ct865sunwoda_4000mah_averaged_masterslave_oct12th2015 {
 	qcom,chg-rslow-comp-c2 = <3467482>;
 	qcom,chg-rs-to-rslow = <911611>;
 	qcom,chg-rslow-comp-thr = <0x99>;
-	qcom,fastchg-current-ma = <2000>;
+	qcom,fastchg-current-ma = <2400>;
 	qcom,checksum = <0x43DE>;
 	qcom,gui-version = "PMI8950GUI - 2.0.0.14";
 	qcom,fg-profile-data = [

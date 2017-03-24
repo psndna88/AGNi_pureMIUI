@@ -9,7 +9,7 @@ qcom,ct865_coslight_4000mah_averaged_masterslave_oct2nd2015 {
 	qcom,chg-rslow-comp-c2 = <3185429>;
 	qcom,chg-rs-to-rslow = <896437>;
 	qcom,chg-rslow-comp-thr = <0x99>;
-	qcom,fastchg-current-ma = <2000>;
+	qcom,fastchg-current-ma = <2400>;
 	qcom,checksum = <0xA7BE>;
 	qcom,gui-version = "PMI8950GUI - 2.0.0.14";
 	qcom,fg-profile-data = [
