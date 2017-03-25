@@ -44,6 +44,12 @@ struct gf_key_map {
 #define  USE_PLATFORM_BUS    1
 
 #define GF_FASYNC   1	/*If support fasync mechanism.*/
+
+#define GF_NETLINK_ENABLE 1
+#define GF_NET_EVENT_IRQ 0
+#define GF_NET_EVENT_FB_BLACK 1
+#define GF_NET_EVENT_FB_UNBLACK 2
+
 struct gf_dev {
 	dev_t devt;
 	struct list_head device_entry;
@@ -81,4 +87,7 @@ int gf_power_off(struct gf_dev *gf_dev);
 int gf_hw_reset(struct gf_dev *gf_dev, unsigned int delay_ms);
 int gf_irq_num(struct gf_dev *gf_dev);
 
+void sendnlmsg(char *message);
+int netlink_init(void);
+void netlink_exit(void);
 #endif /*__GF_SPI_H*/

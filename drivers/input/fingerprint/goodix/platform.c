@@ -20,7 +20,6 @@ int gf_parse_dts(struct gf_dev *gf_dev)
 {
 	int rc = 0;
 
-	pr_info("GOODIX %s: enter\n", __func__);
 	/*get pwr resource*/
 	gf_dev->pwr_gpio = of_get_named_gpio(gf_dev->spi->dev.of_node, "goodix,gpio_pwr", 0);
 	if (!gpio_is_valid(gf_dev->pwr_gpio)) {
@@ -60,7 +59,6 @@ void gf_cleanup(struct gf_dev *gf_dev)
 int gf_power_on(struct gf_dev *gf_dev)
 {
 	int rc = 0;
-	pr_info("%s: enter\n", __func__);
 	if (gpio_is_valid(gf_dev->pwr_gpio)) {
 		gpio_set_value(gf_dev->pwr_gpio, 1);
 	}
@@ -84,7 +82,6 @@ int gf_power_off(struct gf_dev *gf_dev)
  ********************************************************************/
 int gf_hw_reset(struct gf_dev *gf_dev, unsigned int delay_ms)
 {
-	pr_info("%s: enter\n", __func__);
 	if (gf_dev == NULL) {
 		pr_info("Input Device is NULL.\n");
 		return -EPERM;
@@ -99,7 +96,6 @@ int gf_hw_reset(struct gf_dev *gf_dev, unsigned int delay_ms)
 
 int gf_irq_num(struct gf_dev *gf_dev)
 {
-	pr_info("%s: enter\n", __func__);
 	if (gf_dev == NULL) {
 		pr_info("Input Device is NULL.\n");
 		return -EPERM;
