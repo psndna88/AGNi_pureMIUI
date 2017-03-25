@@ -639,11 +639,21 @@ config QCOM_LIQUID_DOCK
 	  This option enables support for the USB and Ethernet ports found on
 	  the docking station of various models of Qualcomm Technology's
 	  LiQUID Mobile Development Platforms.
+
 config UID_CPUTIME
 	tristate "Per-UID cpu time statistics"
 	depends on PROFILING
 	help
 	  Per UID based cpu time statistics exported to /proc/uid_cputime
+
+config MIUI_8_QCRYPTO_MODULES_HACK
+	bool "QCRYPTO modules hack for MIUI ROMS"
+	depends on MODULES
+	default n
+	help
+	  Dirty hack to allow loading qcrypto_module.ko and qdrbg_module.ko 
+	  shipped in stock kernels of MIUI 8 roms - psndna88@xda
+	  (Experimental. May cause system instability)
 
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
