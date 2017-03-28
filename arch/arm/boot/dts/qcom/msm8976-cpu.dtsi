@@ -57,7 +57,7 @@
 			device_type = "cpu";
 			compatible = "arm,armv8";
 			reg = <0x0>;
-			clock-frequency = <1401600000>;
+			clock-frequency = <1440000000>;
 			enable-method = "psci";
 			qcom,limits-info = <&mitigation_profile0>;
 			efficiency = <1024>;
@@ -75,7 +75,7 @@
 			device_type = "cpu";
 			compatible = "arm,armv8";
 			reg = <0x1>;
-			clock-frequency = <1401600000>;
+			clock-frequency = <1440000000>;
 			enable-method = "psci";
 			qcom,limits-info = <&mitigation_profile0>;
 			efficiency = <1024>;
@@ -88,7 +88,7 @@
 			device_type = "cpu";
 			compatible = "arm,armv8";
 			reg = <0x2>;
-			clock-frequency = <1401600000>;
+			clock-frequency = <1440000000>;
 			enable-method = "psci";
 			qcom,limits-info = <&mitigation_profile0>;
 			efficiency = <1024>;
@@ -101,7 +101,7 @@
 			device_type = "cpu";
 			compatible = "arm,armv8";
 			reg = <0x3>;
-			clock-frequency = <1401600000>;
+			clock-frequency = <1440000000>;
 			enable-method = "psci";
 			qcom,limits-info = <&mitigation_profile0>;
 			efficiency = <1024>;
