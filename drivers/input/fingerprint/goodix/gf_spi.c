@@ -340,9 +340,11 @@ recurs_l:
 #endif
 		break;
 	case GF_IOC_RESET:
+		gf_dev->new_driver = 0;
 		gf_hw_reset(gf_dev, 70);
 		break;
 	case GF_IOC_RESET_NEW:
+		gf_dev->new_driver = 1;
 		retval = __get_user(delay, (u32 __user *) arg);
 		if (retval == 0)
 			gf_hw_reset(gf_dev, delay);
@@ -361,6 +363,9 @@ recurs_l:
 			retval = -EFAULT;
 			break;
 		}
+
+		if (gf_dev->new_driver)
+			break;
 
 		for (i = 0; i < ARRAY_SIZE(key_map); i++) {
 			if (key_map[i].val == gf_key.key) {
@@ -770,6 +775,7 @@ static int gf_probe(struct platform_device *pdev)
 	gf_dev->pwr_gpio = -EINVAL;
 	gf_dev->device_available = 0;
 	gf_dev->fb_black = 0;
+	gf_dev->new_driver = 0;
 
 	if (gf_parse_dts(gf_dev))
 		goto error;
