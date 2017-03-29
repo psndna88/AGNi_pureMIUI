@@ -121,6 +121,9 @@
 		coresight-child-list = <&funnel_in0>;
 		coresight-child-ports = <4>;
 
+		/* Enable POPP */
+		qcom,popp-enable;
+
 		/* Power level configuration */
 		qcom,gpu-fuse-numconfigs = <2>;
 		qcom,gpu-fuse-config =
