@@ -2093,15 +2093,15 @@ static int is_ext_spk_gpio_support(struct platform_device *pdev,
 	struct msm8952_pinctrl_info *pctrl = &pdata->spk_ext_pa_pinctrl_info;
 	int ret = 0;
 
-	printk("%s:Enter\n", __func__);
+	pr_debug("%s:Enter\n", __func__);
 
 	pdata->spk_ext_pa_gpio = of_get_named_gpio(pdev->dev.of_node, spk_ext_pa, 0);
 
 	if (pdata->spk_ext_pa_gpio < 0) {
-		printk("%s: missing %s in dt node\n", __func__, spk_ext_pa);
+		pr_debug("%s: missing %s in dt node\n", __func__, spk_ext_pa);
 	return -EINVAL;
 	} else {
-		printk("%s, spk_ext_pa_gpio=%d\n", __func__, pdata->spk_ext_pa_gpio);
+		pr_debug("%s, spk_ext_pa_gpio=%d\n", __func__, pdata->spk_ext_pa_gpio);
 		if (!gpio_is_valid(pdata->spk_ext_pa_gpio)) {
 			pr_err("%s: Invalid external speaker gpio: %d",	__func__, pdata->spk_ext_pa_gpio);
 			return -EINVAL;
@@ -2162,7 +2162,7 @@ static int enable_spk_ext_pa(struct snd_soc_codec *codec, int enable)
 			return ret;
 		}
 
-		printk("%s, set pa\n", __func__);
+		pr_debug("%s, set pa\n", __func__);
 
 		gpio_set_value_cansleep(pdata->spk_ext_pa_gpio, false);
 		msleep(1);
@@ -2783,7 +2783,7 @@ static int msm8952_asoc_machine_probe(struct platform_device *pdev)
 #if defined(CONFIG_SPEAKER_EXT_PA)
 	ret = is_ext_spk_gpio_support(pdev, pdata);
 	if (ret < 0)
-		printk("%s:  doesn't support external speaker pa\n",
+		pr_debug("%s:  doesn't support external speaker pa\n",
 				__func__);
 #endif
 	return 0;
