@@ -353,6 +353,7 @@ int sigma_nan_config_enable(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *master_pref = get_param(cmd, "MasterPref");
 	const char *rand_fac = get_param(cmd, "RandFactor");
 	const char *hop_count = get_param(cmd, "HopCount");
+	wifi_error ret;
 	struct timespec abstime;
 	NanConfigRequest req;
 
@@ -381,7 +382,9 @@ int sigma_nan_config_enable(struct sigma_dut *dut, struct sigma_conn *conn,
 		req.hop_count_force_val = hop_count_val;
 	}
 
-	nan_config_request(0, global_interface_handle, &req);
+	ret = nan_config_request(0, global_interface_handle, &req);
+	if (ret != WIFI_SUCCESS)
+		send_resp(dut, conn, SIGMA_ERROR, "NAN config request failed");
 
 	abstime.tv_sec = 4;
 	abstime.tv_nsec = 0;
@@ -409,6 +412,7 @@ static int sigma_nan_subscribe_request(struct sigma_dut *dut,
 	int filter_len_rx = 0, filter_len_tx = 0;
 	u8 input_rx[NAN_MAX_MATCH_FILTER_LEN];
 	u8 input_tx[NAN_MAX_MATCH_FILTER_LEN];
+	wifi_error ret;
 
 	memset(&req, 0, sizeof(NanSubscribeRequest));
 	req.ttl = 0;
@@ -429,8 +433,12 @@ static int sigma_nan_subscribe_request(struct sigma_dut *dut,
 			NanSubscribeCancelRequest req;
 
 			memset(&req, 0, sizeof(NanSubscribeCancelRequest));
-			nan_subscribe_cancel_request(0, global_interface_handle,
-						     &req);
+			ret = nan_subscribe_cancel_request(
+				0, global_interface_handle, &req);
+			if (ret != WIFI_SUCCESS) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "NAN subscribe cancel request failed");
+			}
 			return 0;
 		}
 	}
@@ -502,13 +510,19 @@ static int sigma_nan_subscribe_request(struct sigma_dut *dut,
 		req.service_name_len = strlen(service_name);
 	}
 
-	nan_subscribe_request(0, global_interface_handle, &req);
+	ret = nan_subscribe_request(0, global_interface_handle, &req);
+	if (ret != WIFI_SUCCESS) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "NAN subscribe request failed");
+	}
+
 	return 0;
 }
 
 
 int config_post_disc_attr(void)
 {
+	wifi_error ret;
 	NanConfigRequest configReq;
 
 	memset(&configReq, 0, sizeof(NanConfigRequest));
@@ -522,7 +536,12 @@ int config_post_disc_attr(void)
 	configReq.discovery_attr_val[0].duration = 0;
 	configReq.discovery_attr_val[0].avail_interval_bitmap = 0x00000008;
 
-	nan_config_request(0, global_interface_handle, &configReq);
+	ret = nan_config_request(0, global_interface_handle, &configReq);
+	if (ret != WIFI_SUCCESS) {
+		sigma_dut_print(global_dut, DUT_MSG_INFO,
+				"NAN config request failed while configuring post discovery attribute");
+	}
+
 	return 0;
 }
 
@@ -541,6 +560,7 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 	int filter_len_rx = 0, filter_len_tx = 0;
 	u8 input_rx[NAN_MAX_MATCH_FILTER_LEN];
 	u8 input_tx[NAN_MAX_MATCH_FILTER_LEN];
+	wifi_error ret;
 
 	memset(&req, 0, sizeof(NanPublishRequest));
 	req.ttl = 0;
@@ -563,8 +583,12 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 			NanPublishCancelRequest req;
 
 			memset(&req, 0, sizeof(NanPublishCancelRequest));
-			nan_publish_cancel_request(0, global_interface_handle,
-						   &req);
+			ret = nan_publish_cancel_request(
+				0, global_interface_handle, &req);
+			if (ret != WIFI_SUCCESS) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "Unable to cancel nan publish request");
+			}
 			return 0;
 		}
 	}
@@ -615,7 +639,9 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 		req.service_name_len = strlen(service_name);
 	}
 
-	nan_publish_request(0, global_interface_handle, &req);
+	ret = nan_publish_request(0, global_interface_handle, &req);
+	if (ret != WIFI_SUCCESS)
+		send_resp(dut, conn, SIGMA_ERROR, "Unable to publish");
 
 	return 0;
 }
@@ -628,6 +654,7 @@ static int nan_further_availability_rx(struct sigma_dut *dut,
 	const char *master_pref = get_param(cmd, "MasterPref");
 	const char *rand_fac = get_param(cmd, "RandFactor");
 	const char *hop_count = get_param(cmd, "HopCount");
+	wifi_error ret;
 	struct timespec abstime;
 
 	NanEnableRequest req;
@@ -654,7 +681,11 @@ static int nan_further_availability_rx(struct sigma_dut *dut,
 		req.hop_count_force_val = hop_count_val;
 	}
 
-	nan_enable_request(0, global_interface_handle, &req);
+	ret = nan_enable_request(0, global_interface_handle, &req);
+	if (ret != WIFI_SUCCESS) {
+		send_resp(dut, conn, SIGMA_ERROR, "Unable to enable nan");
+		return 0;
+	}
 
 	abstime.tv_sec = 4;
 	abstime.tv_nsec = 0;
@@ -671,6 +702,8 @@ static int nan_further_availability_tx(struct sigma_dut *dut,
 	const char *master_pref = get_param(cmd, "MasterPref");
 	const char *rand_fac = get_param(cmd, "RandFactor");
 	const char *hop_count = get_param(cmd, "HopCount");
+	wifi_error ret;
+
 	NanEnableRequest req;
 	NanConfigRequest configReq;
 
@@ -696,7 +729,11 @@ static int nan_further_availability_tx(struct sigma_dut *dut,
 		req.hop_count_force_val = hop_count_val;
 	}
 
-	nan_enable_request(0, global_interface_handle, &req);
+	ret = nan_enable_request(0, global_interface_handle, &req);
+	if (ret != WIFI_SUCCESS) {
+		send_resp(dut, conn, SIGMA_ERROR, "Unable to enable nan");
+		return 0;
+	}
 
 	/* Start the config of fam */
 
@@ -710,7 +747,9 @@ static int nan_further_availability_tx(struct sigma_dut *dut,
 	configReq.fam_val.famchan[0].mapid = 0;
 	configReq.fam_val.famchan[0].avail_interval_bitmap = 0x7ffffffe;
 
-	nan_config_request(0, global_interface_handle, &configReq);
+	ret = nan_config_request(0, global_interface_handle, &configReq);
+	if (ret != WIFI_SUCCESS)
+		send_resp(dut, conn, SIGMA_ERROR, "Nan config request failed");
 
 	return 0;
 }
@@ -724,6 +763,7 @@ int sigma_nan_transmit_followup(struct sigma_dut *dut,
 	const char *requestor_id = get_param(cmd, "RemoteInstanceId");
 	const char *local_id = get_param(cmd, "LocalInstanceId");
 	const char *service_name = get_param(cmd, "servicename");
+	wifi_error ret;
 	NanTransmitFollowupRequest req;
 
 	memset(&req, 0, sizeof(NanTransmitFollowupRequest));
@@ -758,10 +798,15 @@ int sigma_nan_transmit_followup(struct sigma_dut *dut,
 	if (requestor_id)
 		req.requestor_instance_id = strtoul(requestor_id, NULL, 0);
 
+	ret = nan_transmit_followup_request(0, global_interface_handle, &req);
+	if (ret != WIFI_SUCCESS) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "Unable to complete nan transmit followup");
+	}
 
-	nan_transmit_followup_request(0, global_interface_handle, &req);
 	return 0;
 }
+
 
 /* NotifyResponse invoked to notify the status of the Request */
 void nan_notify_response(transaction_id id, NanResponseMsg *rsp_data)
