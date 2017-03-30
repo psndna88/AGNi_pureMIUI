@@ -190,10 +190,13 @@ int nan_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 				      struct sigma_conn *conn,
 				      struct sigma_cmd *cmd)
 {
-	const char *oper_chan = get_param(cmd, "oper_chan");
+	const char *oper_chan = get_param(cmd, "oper_chn");
 
-	if (oper_chan)
+	if (oper_chan) {
+		sigma_dut_print(dut, DUT_MSG_INFO, "Operating Channel: %s",
+				oper_chan);
 		dut->sta_channel = atoi(oper_chan);
+	}
 
 	send_resp(dut, conn, SIGMA_COMPLETE, NULL);
 	return 0;
