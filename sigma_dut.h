@@ -577,6 +577,8 @@ struct sigma_dut {
 	const char *model_name; /* device_get_info model override */
 	const char *version_name; /* device_get_info version override */
 
+	int ndp_enable; /* Flag which is set once the NDP is setup */
+
 	/* Length of nan_pmk in octets */
 	u8 nan_pmk_len;
 

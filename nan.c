@@ -37,6 +37,7 @@ uint32_t global_match_handle = 0;
 
 struct sigma_dut *global_dut = NULL;
 static char global_nan_mac_addr[ETH_ALEN];
+static char global_peer_mac_addr[ETH_ALEN];
 static char global_event_resp_buf[1024];
 
 static int nan_further_availability_tx(struct sigma_dut *dut,
@@ -600,6 +601,150 @@ static int sigma_ndp_configure_band(struct sigma_dut *dut,
 }
 
 
+static int sigma_nan_data_request(struct sigma_dut *dut,
+				  struct sigma_conn *conn,
+				  struct sigma_cmd *cmd)
+{
+	const char *ndp_security = get_param(cmd, "DataPathSecurity");
+	const char *ndp_resp_mac = get_param(cmd, "RespNanMac");
+	const char *include_immutable = get_param(cmd, "includeimmutable");
+	const char *avoid_channel = get_param(cmd, "avoidchannel");
+	const char *invalid_nan_schedule = get_param(cmd, "InvalidNANSchedule");
+	const char *map_order = get_param(cmd, "maporder");
+	wifi_error ret;
+	NanDataPathInitiatorRequest init_req;
+	NanDebugParams cfg_debug;
+	int size;
+
+	memset(&init_req, 0, sizeof(NanDataPathInitiatorRequest));
+
+	if (ndp_security) {
+		if (strcasecmp(ndp_security, "open") == 0)
+			init_req.ndp_cfg.security_cfg =
+				NAN_DP_CONFIG_NO_SECURITY;
+		else if (strcasecmp(ndp_security, "secure") == 0)
+			init_req.ndp_cfg.security_cfg = NAN_DP_CONFIG_SECURITY;
+	}
+
+	if (include_immutable) {
+		int include_immutable_val = 0;
+
+		memset(&cfg_debug, 0, sizeof(NanDebugParams));
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_NDP_INCLUDE_IMMUTABLE;
+		include_immutable_val = atoi(include_immutable);
+		memcpy(cfg_debug.debug_cmd_data, &include_immutable_val,
+		       sizeof(int));
+		size = sizeof(u32) + sizeof(int);
+		nan_debug_command_config(0, global_interface_handle,
+		cfg_debug, size);
+	}
+
+	if (avoid_channel) {
+		int avoid_channel_freq = 0;
+
+		memset(&cfg_debug, 0, sizeof(NanDebugParams));
+		avoid_channel_freq = channel_to_freq(atoi(avoid_channel));
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_NDP_AVOID_CHANNEL;
+		memcpy(cfg_debug.debug_cmd_data, &avoid_channel_freq,
+		       sizeof(int));
+		size = sizeof(u32) + sizeof(int);
+		nan_debug_command_config(0, global_interface_handle,
+					 cfg_debug, size);
+	}
+
+	if (invalid_nan_schedule) {
+		int invalid_nan_schedule_type = 0;
+
+		memset(&cfg_debug, 0, sizeof(NanDebugParams));
+		invalid_nan_schedule_type = atoi(invalid_nan_schedule);
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_NAN_SCHED_TYPE;
+		memcpy(cfg_debug.debug_cmd_data,
+		       &invalid_nan_schedule_type, sizeof(int));
+		size = sizeof(u32) + sizeof(int);
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"%s: invalid schedule type: cmd type = %d and command data = %d",
+				__func__, cfg_debug.cmd,
+				invalid_nan_schedule_type);
+		nan_debug_command_config(0, global_interface_handle,
+					 cfg_debug, size);
+	}
+
+	if (map_order) {
+		int map_order_val = 0;
+
+		memset(&cfg_debug, 0, sizeof(NanDebugParams));
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_NAN_AVAILABILITY_MAP_ORDER;
+		map_order_val = atoi(map_order);
+		memcpy(cfg_debug.debug_cmd_data, &map_order_val, sizeof(int));
+		size = sizeof(u32) + sizeof(int);
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"%s: map order: cmd type = %d and command data = %d",
+				__func__,
+				cfg_debug.cmd, invalid_nan_schedule_type);
+		nan_debug_command_config(0, global_interface_handle,
+					 cfg_debug, size);
+	}
+
+	/*
+	 * Setting this flag, so that interface for ping6 command
+	 * is set appropriately in traffic_send_ping().
+	 */
+	dut->ndp_enable = 1;
+
+	/*
+	 * Intended sleep after NAN data interface create
+	 * before the NAN data request
+	 */
+	sleep(4);
+
+	init_req.requestor_instance_id = global_match_handle;
+	strlcpy((char *) init_req.ndp_iface, "nan0",
+		sizeof(init_req.ndp_iface));
+
+	if (ndp_resp_mac) {
+		nan_parse_mac_address(dut, ndp_resp_mac,
+				      init_req.peer_disc_mac_addr);
+		sigma_dut_print(
+			dut, DUT_MSG_INFO, "PEER MAC ADDR: " MAC_ADDR_STR,
+			MAC_ADDR_ARRAY(init_req.peer_disc_mac_addr));
+	} else {
+		memcpy(init_req.peer_disc_mac_addr, global_peer_mac_addr,
+		       sizeof(init_req.peer_disc_mac_addr));
+	}
+
+	/* Not requesting the channel and letting FW decide */
+	if (dut->sta_channel == 0) {
+		init_req.channel_request_type = NAN_DP_CHANNEL_NOT_REQUESTED;
+		init_req.channel = 0;
+	} else {
+		init_req.channel_request_type = NAN_DP_FORCE_CHANNEL_SETUP;
+		init_req.channel = channel_to_freq(dut->sta_channel);
+	}
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"%s: Initiator Request: Channel = %d  Channel Request Type = %d",
+			__func__, init_req.channel,
+			init_req.channel_request_type);
+
+	if (dut->nan_pmk_len == NAN_PMK_INFO_LEN) {
+		memcpy(&init_req.key_info.body.pmk_info.pmk[0],
+		       &dut->nan_pmk[0], NAN_PMK_INFO_LEN);
+		init_req.key_info.body.pmk_info.pmk_len = NAN_PMK_INFO_LEN;
+		sigma_dut_print(dut, DUT_MSG_INFO, "%s: pmk len = %d",
+				__func__,
+				init_req.key_info.body.pmk_info.pmk_len);
+	}
+
+	ret = nan_data_request_initiator(0, global_interface_handle, &init_req);
+	if (ret != WIFI_SUCCESS) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "Unable to initiate nan data request");
+		return 0;
+	}
+
+	return 0;
+}
+
+
 int config_post_disc_attr(void)
 {
 	wifi_error ret;
@@ -962,6 +1107,7 @@ void nan_event_match(NanMatchInd *event)
 	event_anyresponse = 1;
 	global_header_handle = event->publish_subscribe_id;
 	global_match_handle = event->requestor_instance_id;
+	memcpy(global_peer_mac_addr, event->addr, sizeof(global_peer_mac_addr));
 
 	/* memset(event_resp_buf, 0, sizeof(event_resp_buf)); */
 	/* global_pub_sub_handle = event->header.handle; */
@@ -1325,6 +1471,10 @@ int nan_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 			}
 			if (strcasecmp(method_type, "Followup") == 0) {
 				sigma_nan_transmit_followup(dut, conn, cmd);
+				send_resp(dut, conn, SIGMA_COMPLETE, "NULL");
+			}
+			if (strcasecmp(method_type, "DataRequest") == 0) {
+				sigma_nan_data_request(dut, conn, cmd);
 				send_resp(dut, conn, SIGMA_COMPLETE, "NULL");
 			}
 		} else {
