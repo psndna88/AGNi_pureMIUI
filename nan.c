@@ -520,6 +520,30 @@ static int sigma_nan_subscribe_request(struct sigma_dut *dut,
 }
 
 
+static int sigma_ndp_configure_band(struct sigma_dut *dut,
+				    struct sigma_conn *conn,
+				    struct sigma_cmd *cmd,
+				    NdpSupportedBand band_config_val)
+{
+	wifi_error ret;
+	NanDebugParams cfg_debug;
+	int size;
+
+	memset(&cfg_debug, 0, sizeof(NanDebugParams));
+	cfg_debug.cmd = NAN_TEST_MODE_CMD_NAN_SUPPORTED_BANDS;
+	memcpy(cfg_debug.debug_cmd_data, &band_config_val, sizeof(int));
+	sigma_dut_print(dut, DUT_MSG_INFO, "%s:setting debug cmd=0x%x",
+			__func__, cfg_debug.cmd);
+	size = sizeof(u32) + sizeof(int);
+	ret = nan_debug_command_config(0, global_interface_handle, cfg_debug,
+				       size);
+	if (ret != WIFI_SUCCESS)
+		send_resp(dut, conn, SIGMA_ERROR, "Nan config request failed");
+
+	return 0;
+}
+
+
 int config_post_disc_attr(void)
 {
 	wifi_error ret;
@@ -1146,6 +1170,7 @@ void nan_cmd_sta_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	is_fam = 0;
 	event_anyresponse = 0;
 	global_dut = dut;
+	dut->sta_channel = 0;
 	memset(global_event_resp_buf, 0, sizeof(global_event_resp_buf));
 
 	nan_data_interface_delete(0, global_interface_handle, (char *) "nan0");
@@ -1159,6 +1184,7 @@ int nan_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *program = get_param(cmd, "Prog");
 	const char *nan_op = get_param(cmd, "NANOp");
 	const char *method_type = get_param(cmd, "MethodType");
+	const char *band = get_param(cmd, "band");
 	char resp_buf[100];
 	wifi_error ret;
 
@@ -1194,6 +1220,19 @@ int nan_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "NAN_ENABLE_FAILED");
 				return -1;
+			}
+
+			if (band && strcasecmp(band, "24g") == 0) {
+				sigma_dut_print(dut, DUT_MSG_INFO,
+						"%s: Setting band to 2G Only",
+						__func__);
+				sigma_ndp_configure_band(
+					dut, conn, cmd,
+					NAN_DATA_PATH_SUPPORTED_BAND_2G);
+			} else if (band && dut->sta_channel > 12) {
+				sigma_ndp_configure_band(
+					dut, conn, cmd,
+					NAN_DATA_PATH_SUPPORT_DUAL_BAND);
 			}
 		} else if (strcasecmp(nan_op, "Off") == 0) {
 			sigma_nan_disable(dut, conn, cmd);
