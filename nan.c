@@ -259,6 +259,7 @@ int sigma_nan_enable(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *further_avail_ind = get_param(cmd, "FurtherAvailInd");
 	const char *band = get_param(cmd, "Band");
 	const char *only_5g = get_param(cmd, "5GOnly");
+	const char *nan_availability = get_param(cmd, "NANAvailability");
 	struct timespec abstime;
 	NanEnableRequest req;
 
@@ -356,6 +357,26 @@ int sigma_nan_enable(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 
 	nan_enable_request(0, global_interface_handle, &req);
+
+	if (nan_availability) {
+		int cmd_len, size;
+		NanDebugParams cfg_debug;
+
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"%s given string nan_availability: %s",
+				__func__, nan_availability);
+		memset(&cfg_debug, 0, sizeof(NanDebugParams));
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_NAN_AVAILABILITY;
+		size = NAN_MAX_DEBUG_MESSAGE_DATA_LEN;
+		nan_parse_hex_string(dut, &nan_availability[2],
+				     &cfg_debug.debug_cmd_data[0], &size);
+		sigma_dut_print(dut, DUT_MSG_INFO, "%s:hex nan_availability",
+				__func__);
+		nan_hex_dump(dut, &cfg_debug.debug_cmd_data[0], size);
+		cmd_len = size + sizeof(u32);
+		nan_debug_command_config(0, global_interface_handle,
+					 cfg_debug, cmd_len);
+	}
 
 	/* To ensure sta_get_events to get the events
 	 * only after joining the NAN cluster. */
