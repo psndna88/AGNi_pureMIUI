@@ -686,6 +686,8 @@ int p2p_discover_peer(struct sigma_dut *dut, const char *ifname,
 enum sigma_program sigma_program_to_enum(const char *prog);
 int parse_mac_address(struct sigma_dut *dut, const char *arg,
 		      unsigned char *addr);
+unsigned int channel_to_freq(unsigned int channel);
+unsigned int freq_to_channel(unsigned int freq);
 
 /* uapsd_stream.c */
 void receive_uapsd(struct sigma_stream *s);

@@ -178,3 +178,28 @@ fail:
 			arg);
 	return -1;
 }
+
+
+unsigned int channel_to_freq(unsigned int channel)
+{
+	if (channel >= 1 && channel <= 13)
+		return 2407 + 5 * channel;
+	if (channel == 14)
+		return 2484;
+	if (channel >= 36 && channel <= 165)
+		return 5000 + 5 * channel;
+
+	return 0;
+}
+
+
+unsigned int freq_to_channel(unsigned int freq)
+{
+	if (freq >= 2412 && freq <= 2472)
+		return (freq - 2407) / 5;
+	if (freq == 2484)
+		return 14;
+	if (freq >= 5180 && freq <= 5825)
+		return (freq - 5000) / 5;
+	return 0;
+}
