@@ -457,9 +457,18 @@ void oom_kill_process(struct task_struct *p, gfp_t gfp_mask, int order,
 	for_each_thread(p, t) {
 		list_for_each_entry(child, &t->children, sibling) {
 			unsigned int child_points;
+			enum oom_scan_t scan_result;
 
 			if (child->mm == p->mm)
 				continue;
+
+			/* Make sure no objections to killing the child */
+			scan_result = oom_scan_process_thread(child, totalpages,
+				nodemask, false);
+			if (scan_result == OOM_SCAN_CONTINUE ||
+			    scan_result == OOM_SCAN_ABORT)
+				continue;
+
 			/*
 			 * oom_badness() returns 0 if the thread is unkillable
 			 */
