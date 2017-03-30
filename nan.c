@@ -1036,6 +1036,7 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *ndp_enable = get_param(cmd, "DataPathFlag");
 	const char *ndp_type = get_param(cmd, "DataPathType");
 	const char *data_path_security = get_param(cmd, "datapathsecurity");
+	const char *range_required = get_param(cmd, "rangerequired");
 	NanPublishRequest req;
 	int filter_len_rx = 0, filter_len_tx = 0;
 	u8 input_rx[NAN_MAX_MATCH_FILTER_LEN];
@@ -1149,6 +1150,10 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 			sigma_dut_print(dut, DUT_MSG_INFO, "%s: pmk len = %d",
 			__func__, req.key_info.body.pmk_info.pmk_len);
 		}
+	}
+	if (range_required && strcasecmp(range_required, "enable") == 0) {
+		req.sdea_params.ranging_state = NAN_RANGING_ENABLE;
+		req.sdea_params.range_report = NAN_ENABLE_RANGE_REPORT;
 	}
 
 	ret = nan_publish_request(0, global_interface_handle, &req);
