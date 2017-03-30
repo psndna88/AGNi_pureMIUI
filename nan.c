@@ -22,6 +22,7 @@ static int nan_state = 0;
 static int event_anyresponse = 0;
 static int is_fam = 0;
 
+static uint16_t global_ndp_instance_id = 0;
 uint16_t global_header_handle = 0;
 uint32_t global_match_handle = 0;
 
@@ -1005,6 +1006,44 @@ void nan_event_disabled(NanDisabledInd *event)
 }
 
 
+/* Events callback */
+static void ndp_event_data_indication(NanDataPathRequestInd *event)
+{
+	sigma_dut_print(global_dut, DUT_MSG_INFO,
+			"%s: Service Instance Id: %d  Peer Discovery MAC ADDR "
+			MAC_ADDR_STR
+			" NDP Instance Id: %d App Info  len %d App Info %s",
+			__func__,
+			event->service_instance_id,
+			MAC_ADDR_ARRAY(event->peer_disc_mac_addr),
+			event->ndp_instance_id,
+			event->app_info.ndp_app_info_len,
+			event->app_info.ndp_app_info);
+
+	global_ndp_instance_id = event->ndp_instance_id;
+}
+
+
+/* Events callback */
+static void ndp_event_data_confirm(NanDataPathConfirmInd *event)
+{
+	sigma_dut_print(global_dut, DUT_MSG_INFO,
+			"Received NDP Confirm Indication");
+
+	global_ndp_instance_id = event->ndp_instance_id;
+	if (system("ifconfig nan0 up") != 0) {
+		sigma_dut_print(global_dut, DUT_MSG_ERROR,
+				"Failed to set nan interface up");
+		return;
+	}
+	if (system("ip -6 route add fe80::/64 dev nan0 table local") != 0) {
+		sigma_dut_print(global_dut, DUT_MSG_ERROR,
+				"Failed to run:ip -6 route replace fe80::/64 dev nan0 table local");
+		return;
+	}
+}
+
+
 void * my_thread_function(void *ptr)
 {
 	wifi_event_loop(global_wifi_handle);
@@ -1023,6 +1062,8 @@ static NanCallbackHandler callbackHandler = {
 	.EventFollowup = nan_event_followup,
 	.EventDiscEngEvent = nan_event_disceng_event,
 	.EventDisabled = nan_event_disabled,
+	.EventDataRequest = ndp_event_data_indication,
+	.EventDataConfirm = ndp_event_data_confirm,
 };
 
 
