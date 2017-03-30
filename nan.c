@@ -927,6 +927,76 @@ static int sigma_nan_cancel_range(struct sigma_dut *dut,
 }
 
 
+static int sigma_nan_schedule_update(struct sigma_dut *dut,
+				     struct sigma_cmd *cmd)
+{
+	const char *schedule_update_type = get_param(cmd, "type");
+	const char *channel_availability = get_param(cmd,
+						     "ChannelAvailability");
+	const char *responder_nmi_mac = get_param(cmd, "ResponderNMI");
+	NanDebugParams cfg_debug;
+	int size = 0;
+
+	memset(&cfg_debug, 0, sizeof(NanDebugParams));
+
+	if (!schedule_update_type)
+		return 0;
+
+	if (strcasecmp(schedule_update_type, "ULWnotify") == 0) {
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_NAN_SCHED_UPDATE_ULW_NOTIFY;
+		size = sizeof(u32);
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"%s: Schedule Update cmd type = %d", __func__,
+				cfg_debug.cmd);
+		if (channel_availability) {
+			int channel_availability_val;
+
+			channel_availability_val = atoi(channel_availability);
+			size += sizeof(int);
+			memcpy(cfg_debug.debug_cmd_data,
+			       &channel_availability_val, sizeof(int));
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"%s: Schedule Update cmd data = %d size = %d",
+					__func__, channel_availability_val,
+					size);
+		}
+	} else if (strcasecmp(schedule_update_type, "NDLnegotiate") == 0) {
+		cfg_debug.cmd =
+			NAN_TEST_MODE_CMD_NAN_SCHED_UPDATE_NDL_NEGOTIATE;
+		size = sizeof(u32);
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"%s: Schedule Update cmd type = %d", __func__,
+				cfg_debug.cmd);
+		if (responder_nmi_mac) {
+			u8 responder_nmi_mac_addr[NAN_MAC_ADDR_LEN];
+
+			nan_parse_mac_address(dut, responder_nmi_mac,
+					      responder_nmi_mac_addr);
+			size += NAN_MAC_ADDR_LEN;
+			memcpy(cfg_debug.debug_cmd_data, responder_nmi_mac_addr,
+			       NAN_MAC_ADDR_LEN);
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"%s: RESPONDER NMI MAC: "MAC_ADDR_STR,
+					__func__,
+					MAC_ADDR_ARRAY(responder_nmi_mac_addr));
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"%s: Schedule Update: cmd size = %d",
+					__func__, size);
+		}
+	} else if (strcasecmp(schedule_update_type, "NDLnotify") == 0) {
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_NAN_SCHED_UPDATE_NDL_NOTIFY;
+		size = sizeof(u32);
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"%s: Schedule Update cmd type = %d", __func__,
+				cfg_debug.cmd);
+	}
+
+	nan_debug_command_config(0, global_interface_handle, cfg_debug, size);
+
+	return 0;
+}
+
+
 int config_post_disc_attr(void)
 {
 	wifi_error ret;
@@ -1683,6 +1753,13 @@ int nan_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 						"%s: method_type is cancelrange",
 						__func__);
 				sigma_nan_cancel_range(dut, cmd);
+				send_resp(dut, conn, SIGMA_COMPLETE, "NULL");
+			}
+			if (strcasecmp(method_type, "SchedUpdate") == 0) {
+				sigma_dut_print(dut, DUT_MSG_INFO,
+						"%s: method_type is SchedUpdate",
+						__func__);
+				sigma_nan_schedule_update(dut, cmd);
 				send_resp(dut, conn, SIGMA_COMPLETE, "NULL");
 			}
 		} else {
