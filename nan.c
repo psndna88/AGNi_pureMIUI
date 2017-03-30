@@ -745,6 +745,82 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 }
 
 
+static int sigma_nan_data_response(struct sigma_dut *dut,
+				   struct sigma_conn *conn,
+				   struct sigma_cmd *cmd)
+{
+	const char *ndl_response = get_param(cmd, "NDLresponse");
+	const char *m4_response_type = get_param(cmd, "M4ResponseType");
+	wifi_error ret;
+	NanDebugParams cfg_debug;
+	int size;
+
+	if (ndl_response) {
+		int auto_responder_mode_val = 0;
+
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"%s: ndl_response = (%s) is passed",
+				__func__, ndl_response);
+		memset(&cfg_debug, 0, sizeof(NanDebugParams));
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_AUTO_RESPONDER_MODE;
+		if (strcasecmp(ndl_response, "Auto") == 0) {
+			auto_responder_mode_val = NAN_DATA_RESPONDER_MODE_AUTO;
+		} else if (strcasecmp(ndl_response, "Reject") == 0) {
+			auto_responder_mode_val =
+				NAN_DATA_RESPONDER_MODE_REJECT;
+		} else if (strcasecmp(ndl_response, "Accept") == 0) {
+			auto_responder_mode_val =
+				NAN_DATA_RESPONDER_MODE_ACCEPT;
+		} else if (strcasecmp(ndl_response, "Counter") == 0) {
+			auto_responder_mode_val =
+				NAN_DATA_RESPONDER_MODE_COUNTER;
+		} else {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"%s: Invalid ndl_response",
+					__func__);
+			return 0;
+		}
+		memcpy(cfg_debug.debug_cmd_data, &auto_responder_mode_val,
+		       sizeof(int));
+		size = sizeof(u32) + sizeof(int);
+		ret = nan_debug_command_config(0, global_interface_handle,
+					       cfg_debug, size);
+		if (ret != WIFI_SUCCESS) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "Nan config request failed");
+		}
+	}
+
+	if (m4_response_type) {
+		int m4_response_type_val = 0;
+
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"%s: m4_response_type = (%s) is passed",
+				__func__, m4_response_type);
+		memset(&cfg_debug, 0, sizeof(NanDebugParams));
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_M4_RESPONSE_TYPE;
+		if (strcasecmp(m4_response_type, "Accept") == 0)
+			m4_response_type_val = NAN_DATA_PATH_M4_RESPONSE_ACCEPT;
+		else if (strcasecmp(m4_response_type, "Reject") == 0)
+			m4_response_type_val = NAN_DATA_PATH_M4_RESPONSE_REJECT;
+		else if (strcasecmp(m4_response_type, "BadMic") == 0)
+			m4_response_type_val = NAN_DATA_PATH_M4_RESPONSE_BADMIC;
+
+		memcpy(cfg_debug.debug_cmd_data, &m4_response_type_val,
+		       sizeof(int));
+		size = sizeof(u32) + sizeof(int);
+		ret = nan_debug_command_config(0, global_interface_handle,
+					       cfg_debug, size);
+		if (ret != WIFI_SUCCESS) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "Nan config request failed");
+		}
+	}
+
+	return 0;
+}
+
+
 int config_post_disc_attr(void)
 {
 	wifi_error ret;
@@ -1475,6 +1551,13 @@ int nan_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 			}
 			if (strcasecmp(method_type, "DataRequest") == 0) {
 				sigma_nan_data_request(dut, conn, cmd);
+				send_resp(dut, conn, SIGMA_COMPLETE, "NULL");
+			}
+			if (strcasecmp(method_type, "DataResponse") == 0) {
+				sigma_dut_print(dut, DUT_MSG_INFO,
+						"%s: method_type is DataResponse",
+						__func__);
+				sigma_nan_data_response(dut, conn, cmd);
 				send_resp(dut, conn, SIGMA_COMPLETE, "NULL");
 			}
 		} else {
