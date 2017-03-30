@@ -1,6 +1,6 @@
 /*
  * Sigma Control API DUT (NAN functionality)
- * Copyright (c) 2014-2015, Qualcomm Atheros, Inc.
+ * Copyright (c) 2014-2017, Qualcomm Atheros, Inc.
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
@@ -11,6 +11,8 @@
 #include "wpa_helpers.h"
 #include "wifi_hal.h"
 #include "nan_cert.h"
+
+#if NAN_CERT_VERSION >= 2
 
 pthread_cond_t gCondition;
 pthread_mutex_t gMutex;
@@ -1215,3 +1217,43 @@ int nan_cmd_sta_get_events(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 	return 0;
 }
+
+#else /* #if NAN_CERT_VERSION */
+
+int nan_cmd_sta_preset_testparameters(struct sigma_dut *dut,
+				      struct sigma_conn *conn,
+				      struct sigma_cmd *cmd)
+{
+	return 1;
+}
+
+
+int nan_cmd_sta_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
+			      struct sigma_cmd *cmd)
+{
+	return 0;
+
+}
+
+
+void nan_cmd_sta_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
+			       struct sigma_cmd *cmd)
+{
+	return;
+}
+
+
+int nan_cmd_sta_get_events(struct sigma_dut *dut, struct sigma_conn *conn,
+			   struct sigma_cmd *cmd)
+{
+	return 0;
+}
+
+
+int nan_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
+			    struct sigma_cmd *cmd)
+{
+	return 0;
+}
+
+#endif /* #if NAN_CERT_VERSION */
