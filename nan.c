@@ -625,6 +625,7 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 	req.publish_type = NAN_PUBLISH_TYPE_UNSOLICITED;
 	req.tx_type = NAN_TX_TYPE_BROADCAST;
 	req.publish_count = 0;
+	req.service_responder_policy = NAN_SERVICE_ACCEPT_POLICY_ALL;
 
 	if (service_name) {
 		strlcpy((char *) req.service_name, service_name,
