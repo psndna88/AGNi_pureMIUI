@@ -1057,6 +1057,8 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (publish_type) {
 		if (strcasecmp(publish_type, "Solicited") == 0) {
 			req.publish_type = NAN_PUBLISH_TYPE_SOLICITED;
+		} else if (strcasecmp(publish_type, "Unsolicited") == 0) {
+			req.publish_type = NAN_PUBLISH_TYPE_UNSOLICITED;
 		} else if (strcasecmp(publish_type, "Cancel") == 0) {
 			NanPublishCancelRequest req;
 
