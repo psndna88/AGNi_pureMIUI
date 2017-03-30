@@ -29,6 +29,7 @@ static uint16_t global_subscribe_id = 0;
 uint16_t global_header_handle = 0;
 uint32_t global_match_handle = 0;
 
+#define DEFAULT_SVC "QNanCluster"
 #define MAC_ADDR_ARRAY(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
 #define MAC_ADDR_STR "%02x:%02x:%02x:%02x:%02x:%02x"
 #ifndef ETH_ALEN
@@ -857,6 +858,75 @@ static int sigma_nan_data_end(struct sigma_dut *dut, struct sigma_cmd *cmd)
 }
 
 
+static int sigma_nan_range_request(struct sigma_dut *dut,
+				   struct sigma_cmd *cmd)
+{
+	const char *dest_mac = get_param(cmd, "destmac");
+	NanSubscribeRequest req;
+
+	memset(&req, 0, sizeof(NanSubscribeRequest));
+	req.period = 1;
+	req.subscribe_type = NAN_SUBSCRIBE_TYPE_ACTIVE;
+	req.serviceResponseFilter = NAN_SRF_ATTR_BLOOM_FILTER;
+	req.serviceResponseInclude = NAN_SRF_INCLUDE_RESPOND;
+	req.ssiRequiredForMatchIndication = NAN_SSI_NOT_REQUIRED_IN_MATCH_IND;
+	req.subscribe_match_indicator = NAN_MATCH_ALG_MATCH_CONTINUOUS;
+	req.subscribe_count = 0;
+	strlcpy((char *) req.service_name, DEFAULT_SVC,
+		NAN_MAX_SERVICE_NAME_LEN);
+	req.service_name_len = strlen((char *) req.service_name);
+
+	req.subscribe_id = global_subscribe_id;
+	req.sdea_params.ranging_state = 1;
+	req.sdea_params.range_report = NAN_ENABLE_RANGE_REPORT;
+	req.range_response_cfg.requestor_instance_id = global_match_handle;
+	req.range_response_cfg.ranging_response = NAN_RANGE_REQUEST_ACCEPT;
+	req.ranging_cfg.config_ranging_indications =
+		NAN_RANGING_INDICATE_CONTINUOUS_MASK;
+	if (dest_mac) {
+		nan_parse_mac_address(dut, dest_mac,
+				      req.range_response_cfg.peer_addr);
+		sigma_dut_print(
+			dut, DUT_MSG_INFO, "peer mac addr: " MAC_ADDR_STR,
+			MAC_ADDR_ARRAY(req.range_response_cfg.peer_addr));
+	}
+	nan_subscribe_request(0, global_interface_handle, &req);
+
+	return 0;
+}
+
+
+static int sigma_nan_cancel_range(struct sigma_dut *dut,
+				  struct sigma_cmd *cmd)
+{
+	const char *dest_mac = get_param(cmd, "destmac");
+	NanPublishRequest req;
+
+	memset(&req, 0, sizeof(NanPublishRequest));
+	req.ttl = 0;
+	req.period = 1;
+	req.publish_match_indicator = 1;
+	req.publish_type = NAN_PUBLISH_TYPE_UNSOLICITED;
+	req.tx_type = NAN_TX_TYPE_BROADCAST;
+	req.publish_count = 0;
+	strlcpy((char *) req.service_name, DEFAULT_SVC,
+		NAN_MAX_SERVICE_NAME_LEN);
+	req.service_name_len = strlen((char *) req.service_name);
+	req.publish_id = global_publish_id;
+	req.range_response_cfg.ranging_response = NAN_RANGE_REQUEST_CANCEL;
+	if (dest_mac) {
+		nan_parse_mac_address(dut, dest_mac,
+				      req.range_response_cfg.peer_addr);
+		sigma_dut_print(
+			dut, DUT_MSG_INFO, "peer mac addr: " MAC_ADDR_STR,
+			MAC_ADDR_ARRAY(req.range_response_cfg.peer_addr));
+	}
+	nan_publish_request(0, global_interface_handle, &req);
+
+	return 0;
+}
+
+
 int config_post_disc_attr(void)
 {
 	wifi_error ret;
@@ -1599,6 +1669,20 @@ int nan_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 			}
 			if (strcasecmp(method_type, "DataEnd") == 0) {
 				sigma_nan_data_end(dut, cmd);
+				send_resp(dut, conn, SIGMA_COMPLETE, "NULL");
+			}
+			if (strcasecmp(method_type, "rangerequest") == 0) {
+				sigma_dut_print(dut, DUT_MSG_INFO,
+						"%s: method_type is rangerequest",
+						__func__);
+				sigma_nan_range_request(dut, cmd);
+				send_resp(dut, conn, SIGMA_COMPLETE, "NULL");
+			}
+			if (strcasecmp(method_type, "cancelrange") == 0) {
+				sigma_dut_print(dut, DUT_MSG_INFO,
+						"%s: method_type is cancelrange",
+						__func__);
+				sigma_nan_cancel_range(dut, cmd);
 				send_resp(dut, conn, SIGMA_COMPLETE, "NULL");
 			}
 		} else {
