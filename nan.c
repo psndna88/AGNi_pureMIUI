@@ -24,6 +24,8 @@ static int event_anyresponse = 0;
 static int is_fam = 0;
 
 static uint16_t global_ndp_instance_id = 0;
+static uint16_t global_publish_id = 0;
+static uint16_t global_subscribe_id = 0;
 uint16_t global_header_handle = 0;
 uint32_t global_match_handle = 0;
 
@@ -886,6 +888,19 @@ void nan_notify_response(transaction_id id, NanResponseMsg *rsp_data)
 		memcpy(&global_nan_sync_stats, pSyncStats,
 		       sizeof(NanSyncStats));
 		pthread_cond_signal(&gCondition);
+	} else if (rsp_data->response_type == NAN_RESPONSE_PUBLISH) {
+		sigma_dut_print(global_dut, DUT_MSG_INFO,
+				"%s: publish_id %d\n",
+				__func__,
+				rsp_data->body.publish_response.publish_id);
+		global_publish_id = rsp_data->body.publish_response.publish_id;
+	} else if (rsp_data->response_type == NAN_RESPONSE_SUBSCRIBE) {
+		sigma_dut_print(global_dut, DUT_MSG_INFO,
+				"%s: subscribe_id %d\n",
+				__func__,
+				rsp_data->body.subscribe_response.subscribe_id);
+		global_subscribe_id =
+			rsp_data->body.subscribe_response.subscribe_id;
 	}
 }
 
