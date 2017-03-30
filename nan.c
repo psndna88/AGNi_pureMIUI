@@ -191,11 +191,28 @@ int nan_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 				      struct sigma_cmd *cmd)
 {
 	const char *oper_chan = get_param(cmd, "oper_chn");
+	const char *pmk = get_param(cmd, "PMK");
 
 	if (oper_chan) {
 		sigma_dut_print(dut, DUT_MSG_INFO, "Operating Channel: %s",
 				oper_chan);
 		dut->sta_channel = atoi(oper_chan);
+	}
+
+	if (pmk) {
+		int pmk_len;
+
+		sigma_dut_print(dut, DUT_MSG_INFO, "%s given string pmk: %s",
+				__func__, pmk);
+		memset(dut->nan_pmk, 0, NAN_PMK_INFO_LEN);
+		dut->nan_pmk_len = 0;
+		pmk_len = NAN_PMK_INFO_LEN;
+		nan_parse_hex_string(dut, &pmk[2], &dut->nan_pmk[0], &pmk_len);
+		dut->nan_pmk_len = pmk_len;
+		sigma_dut_print(dut, DUT_MSG_INFO, "%s: pmk len = %d",
+				__func__, dut->nan_pmk_len);
+		sigma_dut_print(dut, DUT_MSG_INFO, "%s:hex pmk", __func__);
+		nan_hex_dump(dut, &dut->nan_pmk[0], dut->nan_pmk_len);
 	}
 
 	send_resp(dut, conn, SIGMA_COMPLETE, NULL);
@@ -1174,6 +1191,8 @@ void nan_cmd_sta_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	is_fam = 0;
 	event_anyresponse = 0;
 	global_dut = dut;
+	memset(&dut->nan_pmk[0], 0, NAN_PMK_INFO_LEN);
+	dut->nan_pmk_len = 0;
 	dut->sta_channel = 0;
 	memset(global_event_resp_buf, 0, sizeof(global_event_resp_buf));
 

@@ -576,6 +576,15 @@ struct sigma_dut {
 	const char *vendor_name; /* device_get_info vendor override */
 	const char *model_name; /* device_get_info model override */
 	const char *version_name; /* device_get_info version override */
+
+	/* Length of nan_pmk in octets */
+	u8 nan_pmk_len;
+
+	/*
+	 * PMK: Info is optional in Discovery phase. PMK info can
+	 *  be passed during the NDP session.
+	 */
+	u8 nan_pmk[32];
 };
 
 
