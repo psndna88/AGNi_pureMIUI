@@ -448,7 +448,7 @@ static int sigma_nan_subscribe_request(struct sigma_dut *dut,
 
 	memset(&req, 0, sizeof(NanSubscribeRequest));
 	req.ttl = 0;
-	req.period =  1000;
+	req.period = 1;
 	req.subscribe_type = 1;
 	req.serviceResponseFilter = 1; /* MAC */
 	req.serviceResponseInclude = 0;
@@ -620,7 +620,7 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	memset(&req, 0, sizeof(NanPublishRequest));
 	req.ttl = 0;
-	req.period = 500;
+	req.period = 1;
 	req.publish_match_indicator = 1;
 	req.publish_type = NAN_PUBLISH_TYPE_UNSOLICITED;
 	req.tx_type = NAN_TX_TYPE_BROADCAST;
