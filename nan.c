@@ -1033,6 +1033,9 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *tx_match_filter = get_param(cmd, "txMatchFilter");
 	const char *sdftx_dw = get_param(cmd, "SDFTxDW");
 	const char *discrange_ltd = get_param(cmd, "DiscRangeLtd");
+	const char *ndp_enable = get_param(cmd, "DataPathFlag");
+	const char *ndp_type = get_param(cmd, "DataPathType");
+	const char *data_path_security = get_param(cmd, "datapathsecurity");
 	NanPublishRequest req;
 	int filter_len_rx = 0, filter_len_tx = 0;
 	u8 input_rx[NAN_MAX_MATCH_FILTER_LEN];
@@ -1119,9 +1122,41 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 		req.service_name_len = strlen(service_name);
 	}
 
+	if (ndp_enable) {
+		if (strcasecmp(ndp_enable, "enable") == 0)
+			req.sdea_params.config_nan_data_path = 1;
+		else
+			req.sdea_params.config_nan_data_path = 0;
+
+		if (ndp_type)
+			req.sdea_params.ndp_type = atoi(ndp_type);
+
+		if (data_path_security) {
+			if (strcasecmp(data_path_security, "secure") == 0) {
+				req.sdea_params.security_cfg =
+					NAN_DP_CONFIG_SECURITY;
+			} else if (strcasecmp(data_path_security, "open") ==
+				   0) {
+				req.sdea_params.security_cfg =
+					NAN_DP_CONFIG_NO_SECURITY;
+			}
+		}
+
+		if (dut->nan_pmk_len == NAN_PMK_INFO_LEN) {
+			memcpy(&req.key_info.body.pmk_info.pmk[0],
+				&dut->nan_pmk[0], NAN_PMK_INFO_LEN);
+			req.key_info.body.pmk_info.pmk_len = NAN_PMK_INFO_LEN;
+			sigma_dut_print(dut, DUT_MSG_INFO, "%s: pmk len = %d",
+			__func__, req.key_info.body.pmk_info.pmk_len);
+		}
+	}
+
 	ret = nan_publish_request(0, global_interface_handle, &req);
 	if (ret != WIFI_SUCCESS)
 		send_resp(dut, conn, SIGMA_ERROR, "Unable to publish");
+
+	if (ndp_enable)
+		dut->ndp_enable = 1;
 
 	return 0;
 }
