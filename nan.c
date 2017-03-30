@@ -872,10 +872,8 @@ int sigma_nan_transmit_followup(struct sigma_dut *dut,
 void nan_notify_response(transaction_id id, NanResponseMsg *rsp_data)
 {
 	sigma_dut_print(global_dut, DUT_MSG_INFO,
-			"%s: status %d value %d response_type %d",
-			__func__,
-			rsp_data->status, rsp_data->value,
-			rsp_data->response_type);
+			"%s: status %d response_type %d",
+			__func__, rsp_data->status, rsp_data->response_type);
 	if (rsp_data->response_type == NAN_RESPONSE_STATS &&
 	    rsp_data->body.stats_response.stats_type ==
 	    NAN_STATS_ID_DE_TIMING_SYNC) {
