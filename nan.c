@@ -821,6 +821,42 @@ static int sigma_nan_data_response(struct sigma_dut *dut,
 }
 
 
+static int sigma_nan_data_end(struct sigma_dut *dut, struct sigma_cmd *cmd)
+{
+	const char *nmf_security_config = get_param(cmd, "Security");
+	NanDataPathEndRequest req;
+	NanDebugParams cfg_debug;
+	int size;
+
+	memset(&req, 0, sizeof(NanDataPathEndRequest));
+	memset(&cfg_debug, 0, sizeof(NanDebugParams));
+	if (nmf_security_config) {
+		int nmf_security_config_val = 0;
+
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_NAN_NMF_CLEAR_CONFIG;
+		if (strcasecmp(nmf_security_config, "open") == 0)
+			nmf_security_config_val = NAN_NMF_CLEAR_ENABLE;
+		else if (strcasecmp(nmf_security_config, "secure") == 0)
+			nmf_security_config_val = NAN_NMF_CLEAR_DISABLE;
+		memcpy(cfg_debug.debug_cmd_data,
+			&nmf_security_config_val, sizeof(int));
+		size = sizeof(u32) + sizeof(int);
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"%s: nmf_security_config_val -- cmd type = %d and command data = %d",
+				__func__, cfg_debug.cmd,
+				nmf_security_config_val);
+		nan_debug_command_config(0, global_interface_handle,
+					 cfg_debug, size);
+	}
+
+	req.num_ndp_instances = 1;
+	req.ndp_instance_id[0] = global_ndp_instance_id;
+
+	nan_data_end(0, global_interface_handle, &req);
+	return 0;
+}
+
+
 int config_post_disc_attr(void)
 {
 	wifi_error ret;
@@ -1469,6 +1505,7 @@ void nan_cmd_sta_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	memset(global_event_resp_buf, 0, sizeof(global_event_resp_buf));
 	memset(&global_nan_sync_stats, 0, sizeof(global_nan_sync_stats));
 
+	sigma_nan_data_end(dut, cmd);
 	nan_data_interface_delete(0, global_interface_handle, (char *) "nan0");
 	sigma_nan_disable(dut, conn, cmd);
 }
@@ -1558,6 +1595,10 @@ int nan_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 						"%s: method_type is DataResponse",
 						__func__);
 				sigma_nan_data_response(dut, conn, cmd);
+				send_resp(dut, conn, SIGMA_COMPLETE, "NULL");
+			}
+			if (strcasecmp(method_type, "DataEnd") == 0) {
+				sigma_nan_data_end(dut, cmd);
 				send_resp(dut, conn, SIGMA_COMPLETE, "NULL");
 			}
 		} else {
