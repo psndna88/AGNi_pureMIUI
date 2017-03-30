@@ -878,11 +878,6 @@ void nan_notify_response(transaction_id id, NanResponseMsg *rsp_data)
 				__func__,
 				rsp_data->body.stats_response.stats_type);
 	}
-#if 0
-	if (rsp_data->response_type == NAN_RESPONSE_CONFIG &&
-	    rsp_data->status == 0)
-		pthread_cond_signal(&gCondition);
-#endif
 }
 
 
