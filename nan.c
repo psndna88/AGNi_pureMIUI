@@ -1101,7 +1101,18 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	if (is_fam == 1) {
 		config_post_disc_attr();
-		/* TODO: Add comments regarding this step */
+		/*
+		 * 8-bit bitmap which allows the Host to associate this publish
+		 * with a particular Post-NAN Connectivity attribute which has
+		 * been sent down in a NanConfigureRequest/NanEnableRequest
+		 * message. If the DE fails to find a configured Post-NAN
+		 * connectivity attributes referenced by the bitmap, the DE will
+		 * return an error code to the Host. If the Publish is
+		 * configured to use a Post-NAN Connectivity attribute and the
+		 * Host does not refresh the Post-NAN Connectivity attribute the
+		 * Publish will be canceled and the Host will be sent a
+		 * PublishTerminatedIndication message.
+		 */
 		req.connmap = 0x10;
 	}
 
