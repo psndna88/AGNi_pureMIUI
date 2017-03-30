@@ -1147,6 +1147,8 @@ void nan_cmd_sta_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	event_anyresponse = 0;
 	global_dut = dut;
 	memset(global_event_resp_buf, 0, sizeof(global_event_resp_buf));
+
+	nan_data_interface_delete(0, global_interface_handle, (char *) "nan0");
 	sigma_nan_disable(dut, conn, cmd);
 }
 
@@ -1158,6 +1160,7 @@ int nan_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *nan_op = get_param(cmd, "NANOp");
 	const char *method_type = get_param(cmd, "MethodType");
 	char resp_buf[100];
+	wifi_error ret;
 
 	if (program == NULL)
 		return -1;
@@ -1175,6 +1178,14 @@ int nan_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 		*/
 		if (strcasecmp(nan_op, "On") == 0) {
 			if (sigma_nan_enable(dut, conn, cmd) == 0) {
+				ret = nan_data_interface_create(
+					0, global_interface_handle,
+					(char *) "nan0");
+				if (ret != WIFI_SUCCESS) {
+					sigma_dut_print(
+						global_dut, DUT_MSG_ERROR,
+						"Unable to create NAN data interface");
+				}
 				snprintf(resp_buf, sizeof(resp_buf), "mac,"
 					 MAC_ADDR_STR,
 					 MAC_ADDR_ARRAY(global_nan_mac_addr));
