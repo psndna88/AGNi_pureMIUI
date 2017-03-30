@@ -297,18 +297,29 @@ int sigma_nan_enable(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"%s: Setting dual band 2.4 GHz and 5 GHz by default",
+			__func__);
+	/* Enable 2.4 GHz support */
+	req.config_2dot4g_support = 1;
+	req.support_2dot4g_val = 1;
+	req.config_2dot4g_beacons = 1;
+	req.beacon_2dot4g_val = 1;
+	req.config_2dot4g_sdf = 1;
+	req.sdf_2dot4g_val = 1;
+
+	/* Enable 5 GHz support */
+	req.config_support_5g = 1;
+	req.support_5g_val = 1;
+	req.config_5g_beacons = 1;
+	req.beacon_5g_val = 1;
+	req.config_5g_sdf = 1;
+	req.sdf_5g_val = 1;
+
 	if (band) {
 		if (strcasecmp(band, "24G") == 0) {
 			sigma_dut_print(dut, DUT_MSG_INFO,
-					"Band 2.4GHz selected");
-			/* Enable 2.4G support */
-			req.config_2dot4g_support = 1;
-			req.support_2dot4g_val = 1;
-			req.config_2dot4g_beacons = 1;
-			req.beacon_2dot4g_val = 1;
-			req.config_2dot4g_sdf = 1;
-			req.sdf_2dot4g_val = 1;
-
+					"Band 2.4 GHz selected, disable 5 GHz");
 			/* Disable 5G support */
 			req.config_support_5g = 1;
 			req.support_5g_val = 0;
