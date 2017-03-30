@@ -195,6 +195,7 @@ int nan_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 	if (oper_chan)
 		dut->sta_channel = atoi(oper_chan);
 
+	send_resp(dut, conn, SIGMA_COMPLETE, NULL);
 	return 0;
 }
 
