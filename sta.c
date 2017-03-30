@@ -384,8 +384,10 @@ static int wil6210_get_cid(struct sigma_dut *dut, const char *bssid,
 static int wil6210_send_brp_rx(struct sigma_dut *dut, const char *mac,
 			       int l_rx)
 {
-	struct wil_wmi_bf_trig_cmd cmd = {0};
+	struct wil_wmi_bf_trig_cmd cmd;
 	unsigned int cid;
+
+	memset(&cmd, 0, sizeof(cmd));
 
 	if (wil6210_get_cid(dut, mac, &cid))
 		return -1;
@@ -400,7 +402,9 @@ static int wil6210_send_brp_rx(struct sigma_dut *dut, const char *mac,
 
 static int wil6210_send_sls(struct sigma_dut *dut, const char *mac)
 {
-	struct wil_wmi_bf_trig_cmd cmd = {0};
+	struct wil_wmi_bf_trig_cmd cmd;
+
+	memset(&cmd, 0, sizeof(cmd));
 
 	if (parse_mac_address(dut, mac, (unsigned char *)&cmd.dest_mac))
 		return -1;

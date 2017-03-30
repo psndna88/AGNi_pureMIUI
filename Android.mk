@@ -61,6 +61,7 @@ LOCAL_MODULE := sigma_dut
 LOCAL_MODULE_TAGS := optional
 LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH) frameworks/base/cmds/keystore system/security/keystore \
+	$(LOCAL_PATH) frameworks/opt/net/wifi/libwifi_hal/include/ \
 	$(LOCAL_PATH) hardware/qcom/wlan/qcwcn/wifi_hal \
 	$(LOCAL_PATH) system/core/include/cutils \
 	$(LOCAL_PATH) hardware/libhardware_legacy/include/hardware_legacy \
@@ -78,22 +79,11 @@ OBJS += nan.c
 CFLAGS += -DANDROID_NAN
 endif
 endif
-ver = $(filter 4.3%,$(PLATFORM_VERSION))
-ver += $(filter 4.4%,$(PLATFORM_VERSION))
-ver += $(filter 5.0%,$(PLATFORM_VERSION))
-ver += $(filter 5.1%,$(PLATFORM_VERSION))
-ver += $(filter L%,$(PLATFORM_VERSION))
-ver += $(filter M%,$(PLATFORM_VERSION))
-ver += $(filter 6.0%,$(PLATFORM_VERSION))
-ver += $(filter N%,$(PLATFORM_VERSION))
-ver += $(filter 7.%,$(PLATFORM_VERSION))
-ifneq (,$(strip $(ver)))
 CFLAGS += -DANDROID43
 CFLAGS += -Wno-unused-parameter
 LOCAL_C_INCLUDES += system/security/keystore/include/keystore
 LOCAL_SHARED_LIBRARIES += liblog
 LOCAL_SHARED_LIBRARIES += libkeystore_binder
-endif
 LOCAL_SRC_FILES := $(OBJS)
 LOCAL_CFLAGS := $(CFLAGS)
 include $(BUILD_EXECUTABLE)
