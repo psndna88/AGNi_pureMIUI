@@ -18,6 +18,7 @@ pthread_cond_t gCondition;
 pthread_mutex_t gMutex;
 wifi_handle global_wifi_handle;
 wifi_interface_handle global_interface_handle;
+static NanSyncStats global_nan_sync_stats;
 static int nan_state = 0;
 static int event_anyresponse = 0;
 static int is_fam = 0;
@@ -873,10 +874,18 @@ void nan_notify_response(transaction_id id, NanResponseMsg *rsp_data)
 			__func__,
 			rsp_data->status, rsp_data->value,
 			rsp_data->response_type);
-	if (rsp_data->response_type == NAN_RESPONSE_STATS) {
-		sigma_dut_print(global_dut, DUT_MSG_INFO, "%s: stats_type %d",
-				__func__,
+	if (rsp_data->response_type == NAN_RESPONSE_STATS &&
+	    rsp_data->body.stats_response.stats_type ==
+	    NAN_STATS_ID_DE_TIMING_SYNC) {
+		NanSyncStats *pSyncStats;
+
+		sigma_dut_print(global_dut, DUT_MSG_INFO,
+				"%s: stats_type %d", __func__,
 				rsp_data->body.stats_response.stats_type);
+		pSyncStats = &rsp_data->body.stats_response.data.sync_stats;
+		memcpy(&global_nan_sync_stats, pSyncStats,
+		       sizeof(NanSyncStats));
+		pthread_cond_signal(&gCondition);
 	}
 }
 
@@ -1202,6 +1211,7 @@ void nan_cmd_sta_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	dut->nan_pmk_len = 0;
 	dut->sta_channel = 0;
 	memset(global_event_resp_buf, 0, sizeof(global_event_resp_buf));
+	memset(&global_nan_sync_stats, 0, sizeof(global_nan_sync_stats));
 
 	nan_data_interface_delete(0, global_interface_handle, (char *) "nan0");
 	sigma_nan_disable(dut, conn, cmd);
@@ -1303,7 +1313,15 @@ int nan_cmd_sta_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *program = get_param(cmd, "Program");
 	const char *parameter = get_param(cmd, "Parameter");
 	char resp_buf[100];
-	NanStaParameter rsp;
+	NanStatsRequest req;
+	struct timespec abstime;
+	u64 master_rank;
+	u8 master_pref;
+	u8 random_factor;
+	u8 hop_count;
+	u32 beacon_transmit_time;
+	u32 ndp_channel_freq;
+	u32 ndp_channel_freq2;
 
 	if (program == NULL) {
 		sigma_dut_print(dut, DUT_MSG_ERROR, "Invalid Program Name");
@@ -1319,34 +1337,69 @@ int nan_cmd_sta_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
 		sigma_dut_print(dut, DUT_MSG_ERROR, "Invalid Parameter");
 		return -1;
 	}
-	memset(&rsp, 0, sizeof(NanStaParameter));
 
-	nan_get_sta_parameter(0, global_interface_handle, &rsp);
+	memset(&req, 0, sizeof(NanStatsRequest));
+	req.stats_type = (NanStatsType) NAN_STATS_ID_DE_TIMING_SYNC;
+	nan_stats_request(0, global_interface_handle, &req);
+	/*
+	 * To ensure sta_get_events to get the events
+	 * only after joining the NAN cluster
+	 */
+	abstime.tv_sec = 4;
+	abstime.tv_nsec = 0;
+	wait(abstime);
+
+	master_rank = global_nan_sync_stats.myRank;
+	master_pref = (global_nan_sync_stats.myRank & 0xFF00000000000000) >> 56;
+	random_factor = (global_nan_sync_stats.myRank & 0x00FF000000000000) >>
+		48;
+	hop_count = global_nan_sync_stats.currAmHopCount;
+	beacon_transmit_time = global_nan_sync_stats.currAmBTT;
+	ndp_channel_freq = global_nan_sync_stats.ndpChannelFreq;
+	ndp_channel_freq2 = global_nan_sync_stats.ndpChannelFreq2;
+
 	sigma_dut_print(dut, DUT_MSG_INFO,
-			"%s: NanStaparameter Master_pref:%02x, Random_factor:%02x, hop_count:%02x beacon_transmit_time:%d",
-			__func__, rsp.master_pref, rsp.random_factor,
-			rsp.hop_count, rsp.beacon_transmit_time);
+			"%s: NanStatsRequest Master_pref:%02x, Random_factor:%02x, hop_count:%02x beacon_transmit_time:%d ndp_channel_freq:%d ndp_channel_freq2:%d",
+			__func__, master_pref, random_factor,
+			hop_count, beacon_transmit_time,
+			ndp_channel_freq, ndp_channel_freq2);
 
 	if (strcasecmp(parameter, "MasterPref") == 0) {
 		snprintf(resp_buf, sizeof(resp_buf), "MasterPref,0x%x",
-			 rsp.master_pref);
+			 master_pref);
 	} else if (strcasecmp(parameter, "MasterRank") == 0) {
 		snprintf(resp_buf, sizeof(resp_buf), "MasterRank,0x%lx",
-			 rsp.master_rank);
+			 master_rank);
 	} else if (strcasecmp(parameter, "RandFactor") == 0) {
 		snprintf(resp_buf, sizeof(resp_buf), "RandFactor,0x%x",
-			 rsp.random_factor);
+			 random_factor);
 	} else if (strcasecmp(parameter, "HopCount") == 0) {
 		snprintf(resp_buf, sizeof(resp_buf), "HopCount,0x%x",
-			 rsp.hop_count);
+			 hop_count);
 	} else if (strcasecmp(parameter, "BeaconTransTime") == 0) {
 		snprintf(resp_buf, sizeof(resp_buf), "BeaconTransTime 0x%x",
-			 rsp.beacon_transmit_time);
+			 beacon_transmit_time);
 	} else if (strcasecmp(parameter, "NANStatus") == 0) {
 		if (nan_state == 1)
 			snprintf(resp_buf, sizeof(resp_buf), "On");
 		else
 			snprintf(resp_buf, sizeof(resp_buf), "Off");
+	} else if (strcasecmp(parameter, "NDPChannel") == 0) {
+		if (ndp_channel_freq != 0 && ndp_channel_freq2 != 0) {
+			snprintf(resp_buf, sizeof(resp_buf),
+				 "ndpchannel,%d,ndpchannel,%d",
+				 freq_to_channel(ndp_channel_freq),
+				 freq_to_channel(ndp_channel_freq2));
+		} else if (ndp_channel_freq != 0) {
+			snprintf(resp_buf, sizeof(resp_buf), "ndpchannel,%d",
+				 freq_to_channel(ndp_channel_freq));
+		} else if (ndp_channel_freq2 != 0) {
+			snprintf(resp_buf, sizeof(resp_buf), "ndpchannel,%d",
+				 freq_to_channel(ndp_channel_freq2));
+		} else {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: No Negotiated NDP Channels", __func__);
+		}
 	} else {
 		send_resp(dut, conn, SIGMA_ERROR, "Invalid Parameter");
 		return 0;
