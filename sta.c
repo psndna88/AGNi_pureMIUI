@@ -89,7 +89,6 @@ static int add_ipv6_rule(struct sigma_dut *dut, const char *ifname);
 
 static int android_keystore_get(char cmd, const char *key, unsigned char *val)
 {
-#ifdef ANDROID43
 	/* Android 4.3 changed keystore design, so need to use keystore_get() */
 #ifndef KEYSTORE_MESSAGE_SIZE
 #define KEYSTORE_MESSAGE_SIZE 65535
@@ -114,72 +113,6 @@ static int android_keystore_get(char cmd, const char *key, unsigned char *val)
 	memcpy(val, value, len);
 	free(value);
 	return len;
-#else /* ANDROID43 */
-	int s, res, reslen = -1, received;
-	size_t keylen;
-	unsigned char hdr[3];
-
-	__android_log_print(ANDROID_LOG_DEBUG, "sigma_dut",
-			    "keystore command '%c' key '%s'", cmd, key);
-	keylen = strlen(key);
-	if (keylen > KEYSTORE_MESSAGE_SIZE)
-		return -1;
-
-	s = socket_local_client("keystore", ANDROID_SOCKET_NAMESPACE_RESERVED,
-				SOCK_STREAM);
-	if (s < 0) {
-		__android_log_print(ANDROID_LOG_DEBUG, "sigma_dut",
-				    "could not connect to keystore");
-		return -1;
-	}
-
-	hdr[0] = cmd;
-	hdr[1] = keylen >> 8;
-	hdr[2] = keylen & 0xff;
-
-	if (send(s, hdr, sizeof(hdr), MSG_NOSIGNAL) != sizeof(hdr) ||
-	    send(s, key, keylen, MSG_NOSIGNAL) != (int) keylen ||
-	    shutdown(s, SHUT_WR) != 0) {
-		__android_log_print(ANDROID_LOG_DEBUG, "sigma_dut",
-				    "could not send keystore command");
-		goto fail;
-	}
-
-	if (recv(s, hdr, 1, 0) != 1)
-		goto fail;
-	if (hdr[0] != 1) {
-		__android_log_print(ANDROID_LOG_DEBUG, "sigma_dut",
-				    "unexpected keystore response %u", hdr[0]);
-		goto fail;
-	}
-	if (recv(s, hdr + 1, 2, 0) != 2)
-		goto fail;
-	reslen = hdr[1] * 256 + hdr[2];
-	__android_log_print(ANDROID_LOG_DEBUG, "sigma_dut",
-			    "keystore response length %d", reslen);
-	if (reslen > KEYSTORE_MESSAGE_SIZE) {
-		reslen = -1;
-		goto fail;
-	}
-
-	received = 0;
-	while (received < reslen) {
-		res = recv(s, val + received, reslen - received, 0);
-		__android_log_print(ANDROID_LOG_DEBUG, "sigma_dut",
-				    "keystore recv -> %d", res);
-		if (res <= 0) {
-			reslen = -1;
-			break;
-		}
-		received += res;
-	}
-
-fail:
-	close(s);
-	__android_log_print(ANDROID_LOG_DEBUG, "sigma_dut",
-			    "keystore get -> %d", reslen);
-	return reslen;
-#endif /* ANDROID43 */
 }
 #endif /* ANDROID */
 

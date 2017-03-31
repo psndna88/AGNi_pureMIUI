@@ -79,7 +79,6 @@ OBJS += nan.c
 CFLAGS += -DANDROID_NAN
 endif
 endif
-CFLAGS += -DANDROID43
 CFLAGS += -Wno-unused-parameter
 LOCAL_C_INCLUDES += system/security/keystore/include/keystore
 LOCAL_SHARED_LIBRARIES += liblog
