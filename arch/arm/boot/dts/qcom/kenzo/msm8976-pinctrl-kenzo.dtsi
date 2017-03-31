@@ -124,12 +124,8 @@
 			qcom,pins = <&gp 107>;
 			qcom,pin-func = <0>;
 			qcom,num-grp-pins = <1>;
-			label = "hall_int_pin";
-			hall_int_active: active {
-				drive-strength = <6>;
-				bias-pull-up;
-			};
-			hall_int_suspend: suspend {
+			label = "hall-irq";
+			hall_sensor_int_default: hall_sensor_int_default {
 				drive-strength = <6>;
 				bias-pull-up;
 			};
