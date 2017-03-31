@@ -2143,7 +2143,7 @@ static int enable_spk_ext_pa(struct snd_soc_codec *codec, int enable)
 	int ret;
 	unsigned long flags;
 
-	printk("%s: %s external speaker PA %d\n", __func__,
+	pr_debug("%s: %s external speaker PA %d\n", __func__,
 		enable ? "Enable" : "Disable", pdata->spk_ext_pa_gpio);
 
 	if (!gpio_is_valid(pdata->spk_ext_pa_gpio)) {
