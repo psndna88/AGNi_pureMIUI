@@ -444,7 +444,7 @@ static void s2w_input_callback(struct work_struct *unused)
 {
 	wake_gesture_q6voice_detect();
 	if (s2w_switch) {
-	detect_sweep2wake_h(touch_x, touch_y, true, is_suspended());
+		detect_sweep2wake_h(touch_x, touch_y, true, is_suspended());
 		if (is_suspended()) {
 			detect_sweep2wake_v(touch_x, touch_y, true);
 		}
@@ -607,15 +607,15 @@ static ssize_t sweep2wake_dump(struct device *dev,
 static DEVICE_ATTR(sweep2wake, (S_IWUSR|S_IRUGO),
 	sweep2wake_show, sweep2wake_dump);
 
-static ssize_t sweep2sleep_show(struct device *dev,
+/* static ssize_t sweep2sleep_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	size_t count = 0;
 	count += sprintf(buf, "%d\n", s2s_switch);
 	return count;
-}
+} */
 
-static ssize_t sweep2sleep_dump(struct device *dev,
+/* static ssize_t sweep2sleep_dump(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
 	sscanf(buf, "%d ", &s2s_switch);
@@ -626,7 +626,7 @@ static ssize_t sweep2sleep_dump(struct device *dev,
 }
 
 static DEVICE_ATTR(sweep2sleep, (S_IWUSR|S_IRUGO),
-	sweep2sleep_show, sweep2sleep_dump);
+	sweep2sleep_show, sweep2sleep_dump); */
 
 static ssize_t doubletap2wake_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -793,10 +793,10 @@ static int __init wake_gestures_init(void)
 	if (rc) {
 		pr_warn("%s: sysfs_create_file failed for sweep2wake\n", __func__);
 	}
-	rc = sysfs_create_file(android_touch_kobj, &dev_attr_sweep2sleep.attr);
+/*	rc = sysfs_create_file(android_touch_kobj, &dev_attr_sweep2sleep.attr);
 	if (rc) {
 		pr_warn("%s: sysfs_create_file failed for sweep2sleep\n", __func__);
-	}
+	} */
 		rc = sysfs_create_file(android_touch_kobj, &dev_attr_doubletap2wake.attr);
 	if (rc) {
 		pr_warn("%s: sysfs_create_file failed for doubletap2wake\n", __func__);
