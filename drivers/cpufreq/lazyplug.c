@@ -431,14 +431,18 @@ void lazyplug_enter_lazy(bool enter)
 {
 	mutex_lock(&lazymode_mutex);
 	if (enter && !Lprevious_state) {
+#ifdef DEBUG_LAZYPLUG
 		pr_info("lazyplug: entering lazy mode\n");
+#endif
 		Lnr_run_profile_sel = nr_run_profile_sel;
 		Ltouch_boost_active = touch_boost_active;
 		nr_run_profile_sel = 6; /* lazy profile */
 		touch_boost_active = false;
 		Lprevious_state = true;
 	} else if (!enter && Lprevious_state) {
+#ifdef DEBUG_LAZYPLUG
 		pr_info("lazyplug: exiting lazy mode\n");
+#endif
 		touch_boost_active = Ltouch_boost_active;
 		nr_run_profile_sel = Lnr_run_profile_sel;
 		Lprevious_state = false;
