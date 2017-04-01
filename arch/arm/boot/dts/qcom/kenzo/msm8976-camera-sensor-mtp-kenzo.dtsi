@@ -298,7 +298,7 @@
 		compatible = "qcom,eeprom";
 		qcom,slave-addr = <0x20>;
 		qcom,cci-master = <0>;
-		qcom,num-blocks = <7>;
+		qcom,num-blocks = <22>;
 
 		qcom,page0 = <1 0x0a00 2 0x04 1 1>;
 		qcom,poll0 = <0 0x0 2 0 1 1>;
@@ -327,6 +327,66 @@
 		qcom,page6 = <0 0x0A02 2 0x05 1 1>;
 		qcom,poll6 = <0 0x0 2 0 1 1>;
 		qcom,mem6 = <64 0x0A04 2 0 1 0>;
+
+		qcom,page7 = <1 0x0A02 2 0x06 1 1>;
+		qcom,poll7 = <0 0x0 2 0 1 1>;
+		qcom,mem7 = <0 0x0 2 0 1 0>;
+
+		qcom,page8 = <1 0x0A00 2 0x01 1 1>;
+		qcom,poll8 = <0 0x0 2 0 1 1>;
+		qcom,mem8 = <0 0x0 2 0 1 0>;
+
+		qcom,page9 = <0 0x0A02 2 0x06 1 1>;
+		qcom,poll9 = <0 0x0 2 0 1 1>;
+		qcom,mem9 = <64 0x0A04 2 0 1 0>;
+
+		qcom,page10 = <1 0x0A02 2 0x07 1 1>;
+		qcom,poll10 = <0 0x0 2 0 1 1>;
+		qcom,mem10 = <0 0x0 2 0 1 0>;
+
+		qcom,page11 = <1 0x0A00 2 0x01 1 1>;
+		qcom,poll11 = <0 0x0 2 0 1 1>;
+		qcom,mem11 = <0 0x0 2 0 1 0>;
+
+		qcom,page12 = <0 0x0A02 2 0x07 1 1>;
+		qcom,poll12 = <0 0x0 2 0 1 1>;
+		qcom,mem12 = <64 0x0A04 2 0 1 0>;
+
+		qcom,page13 = <1 0x0A02 2 0x08 1 1>;
+		qcom,poll13 = <0 0x0 2 0 1 1>;
+		qcom,mem13 = <0 0x0 2 0 1 0>;
+
+		qcom,page14 = <1 0x0A00 2 0x01 1 1>;
+		qcom,poll14 = <0 0x0 2 0 1 1>;
+		qcom,mem14 = <0 0x0 2 0 1 0>;
+
+		qcom,page15 = <0 0x0A02 2 0x08 1 1>;
+		qcom,poll15 = <0 0x0 2 0 1 1>;
+		qcom,mem15 = <64 0x0A04 2 0 1 0>;
+
+		qcom,page16 = <1 0x0A02 2 0x09 1 1>;
+		qcom,poll16 = <0 0x0 2 0 1 1>;
+		qcom,mem16 = <0 0x0 2 0 1 0>;
+
+		qcom,page17 = <1 0x0A00 2 0x01 1 1>;
+		qcom,poll17 = <0 0x0 2 0 1 1>;
+		qcom,mem17 = <0 0x0 2 0 1 0>;
+
+		qcom,page18 = <0 0x0A02 2 0x09 1 1>;
+		qcom,poll18 = <0 0x0 2 0 1 1>;
+		qcom,mem18 = <64 0x0A04 2 0 1 0>;
+
+		qcom,page19 = <1 0x0A02 2 0x0A 1 1>;
+		qcom,poll19 = <0 0x0 2 0 1 1>;
+		qcom,mem19 = <0 0x0 2 0 1 0>;
+
+		qcom,page20 = <1 0x0A00 2 0x01 1 1>;
+		qcom,poll20 = <0 0x0 2 0 1 1>;
+		qcom,mem20 = <0 0x0 2 0 1 0>;
+
+		qcom,page21 = <0 0x0A02 2 0x0A 1 1>;
+		qcom,poll21 = <0 0x0 2 0 1 1>;
+		qcom,mem21 = <64 0x0A04 2 0 1 0>;
 
 		cam_vdig-supply = <&pm8950_l23>;
 		cam_vana-supply = <&pm8950_l22>;
