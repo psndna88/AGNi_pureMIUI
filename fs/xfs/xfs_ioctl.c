@@ -1264,11 +1264,12 @@ xfs_ioc_getbmap(
 	unsigned int		cmd,
 	void			__user *arg)
 {
-	struct getbmapx		bmx;
+	struct getbmapx		bmx = { 0 };
 	int			error;
 
-	if (copy_from_user(&bmx, arg, sizeof(struct getbmapx)))
-		return -XFS_ERROR(EFAULT);
+	/* struct getbmap is a strict subset of struct getbmapx. */
+	if (copy_from_user(&bmx, arg, offsetof(struct getbmapx, bmv_iflags)))
+		return -EFAULT;
 
 	if (bmx.bmv_count < 2)
 		return -XFS_ERROR(EINVAL);
