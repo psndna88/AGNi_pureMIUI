@@ -1130,11 +1130,21 @@ static int fb_notifier_callback(struct notifier_block *self,
 			ft5x06_ts_resume(&ft5x06_data->client->dev);
 #ifdef CONFIG_WAKE_GESTURES
 			wake_display_ft5x06_on = true;
+			if ((dt2w_switch_temp) || (s2w_switch_temp)) {
+				if (debug_wake_timer)
+					pr_info("wake gesture: display on detected...\n");
+           		wake_gesture_resume_triggers();
+			}
 #endif
 		} else if (*blank == FB_BLANK_POWERDOWN) {
 			ft5x06_ts_suspend(&ft5x06_data->client->dev);
 #ifdef CONFIG_WAKE_GESTURES
 			wake_display_ft5x06_on = false;
+			if ((dt2w_switch_temp) || (s2w_switch_temp)) {
+				if (debug_wake_timer)
+					pr_info("wake gesture: display off detected...\n");
+            	wake_gesture_suspend_triggers();
+			}
 #endif
 		}
 	}

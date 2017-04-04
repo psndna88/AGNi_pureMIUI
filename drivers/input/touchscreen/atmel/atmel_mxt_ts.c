@@ -6105,12 +6105,22 @@ static int fb_notifier_callback(struct notifier_block *self,
 			if (*blank == FB_BLANK_UNBLANK || *blank == FB_BLANK_NORMAL) {
 #ifdef CONFIG_WAKE_GESTURES
 				wake_display_atmel_on = true;
+				if ((dt2w_switch_temp) || (s2w_switch_temp)) {
+					if (debug_wake_timer)
+						pr_info("wake gesture: display on detected...\n");
+	            	wake_gesture_resume_triggers();
+				}
 #endif
 				if (mxt_resume(&mxt->client->dev) != 0)
 					dev_err(&mxt->client->dev, "%s: failed\n", __func__);
 			} else if (*blank == FB_BLANK_POWERDOWN) {
 #ifdef CONFIG_WAKE_GESTURES
 				wake_display_atmel_on = false;
+				if ((dt2w_switch_temp) || (s2w_switch_temp)) {
+					if (debug_wake_timer)
+						pr_info("wake gesture: display off detected...\n");
+            		wake_gesture_suspend_triggers();
+				}
 #endif
 				if (mxt_suspend(&mxt->client->dev) != 0)
 					dev_err(&mxt->client->dev, "%s: failed\n", __func__);

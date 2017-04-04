@@ -36,6 +36,7 @@
 #include <linux/qpnp-revid.h>
 #ifdef CONFIG_WAKE_GESTURES
 #include <linux/wake_gestures.h>
+#include <linux/qdsp6v2/apr.h>
 bool wake_is_charging;
 #endif
 
@@ -3260,6 +3261,14 @@ static void status_change_work(struct work_struct *work)
 			chip->status == POWER_SUPPLY_STATUS_CHARGING) {
 #ifdef CONFIG_WAKE_GESTURES
 		wake_is_charging = true;
+		if ((dt2w_switch_temp) || (s2w_switch_temp)) {
+			if (debug_wake_timer)
+				pr_info("wake gesture: qpnp-fg: charging detected\n");
+			if (wake_duration)
+				wake_gesture_delayed_shut_destroy();
+			if (!q6voice_voice_session_active())
+				wake_gesture_switches_resume();
+		}
 #endif
 		if (!chip->vbat_low_irq_enabled) {
 			enable_irq(chip->batt_irq[VBATT_LOW].irq);
@@ -3271,6 +3280,14 @@ static void status_change_work(struct work_struct *work)
 	} else if (chip->status == POWER_SUPPLY_STATUS_DISCHARGING) {
 #ifdef CONFIG_WAKE_GESTURES
 		wake_is_charging = false;
+		if ((dt2w_switch_temp) || (s2w_switch_temp)) {
+			if (debug_wake_timer)
+				pr_info("wake gesture:  qpnp-fg: charging not detected\n");
+			if (wake_duration)
+				wake_gesture_delayed_shut_destroy();
+			if (!q6voice_voice_session_active())
+				wake_gesture_switches_resume();
+		}
 #endif
 		if (chip->vbat_low_irq_enabled) {
 			disable_irq_wake(chip->batt_irq[VBATT_LOW].irq);

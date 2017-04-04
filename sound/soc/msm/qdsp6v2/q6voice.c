@@ -26,6 +26,9 @@
 #include "sound/q6afe-v2.h"
 #include <sound/audio_cal_utils.h>
 #include "q6voice.h"
+#ifdef CONFIG_WAKE_GESTURES
+#include <linux/wake_gestures.h>
+#endif
 
 #define TIMEOUT_MS 300
 
@@ -458,10 +461,8 @@ static bool is_voc_state_active(int voc_state)
 	if ((voc_state == VOC_RUN) ||
 		(voc_state == VOC_CHANGE) ||
 		(voc_state == VOC_STANDBY)) {
-		voice_session_active = true;
 		return true;
 	} else {
-		voice_session_active = false;
 		return false;
 	}
 }
@@ -5342,6 +5343,17 @@ int voc_end_voice_call(uint32_t session_id)
 	if (common.ec_ref_ext)
 		voc_set_ext_ec_ref(AFE_PORT_INVALID, false);
 
+	voice_session_active = false;
+#ifdef CONFIG_WAKE_GESTURES
+	if ((dt2w_switch_temp) || (s2w_switch_temp)) {
+		if (debug_wake_timer)
+			pr_info("wake gesture: q6voice: voice call not detected\n");
+		if (wake_duration)
+			wake_gesture_delayed_shut_destroy();
+		wake_gesture_switches_resume();
+	}
+#endif
+
 	mutex_unlock(&v->lock);
 	return ret;
 }
@@ -5662,6 +5674,16 @@ int voc_start_voice_call(uint32_t session_id)
 		ret = -EINVAL;
 		goto fail;
 	}
+	voice_session_active = true;
+#ifdef CONFIG_WAKE_GESTURES
+	if ((dt2w_switch_temp) || (s2w_switch_temp)) {
+		if (debug_wake_timer)
+			pr_info("wake gesture: q6voice: voice call detected\n");
+		if (wake_duration)
+			wake_gesture_delayed_shut_destroy();
+		wake_gesture_switches_shut();
+	}
+#endif
 fail:
 	mutex_unlock(&v->lock);
 	return ret;
