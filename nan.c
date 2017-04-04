@@ -681,7 +681,7 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 		sigma_dut_print(dut, DUT_MSG_INFO,
 				"%s: map order: cmd type = %d and command data = %d",
 				__func__,
-				cfg_debug.cmd, invalid_nan_schedule_type);
+				cfg_debug.cmd, map_order_val);
 		nan_debug_command_config(0, global_interface_handle,
 					 cfg_debug, size);
 	}
