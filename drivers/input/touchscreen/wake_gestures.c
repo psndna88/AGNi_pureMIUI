@@ -83,7 +83,6 @@ int gestures_switch = WG_DEFAULT;
 int vib_wake_switch = 0;
 unsigned int wake_duration = 10;
 int debug_wake_timer = 0;
-bool wake_display_suspended;
 bool wake_gesture_switches_are_shut;
 static struct input_dev *gesture_dev;
 #endif
@@ -174,13 +173,7 @@ void wake_gesture_delayed_shut_destroy(void) {
 /* Wake Gestures - delayed shut worker */
 static void wake_gesture_delayed_shut(struct work_struct * wake_gesture_delayed_shut_work) {
 
-	if ((is_display_on()) || (wake_gesture_display_detect_atmel_mxt_ts()) || (wake_gesture_display_detect_ft5x06_ts())) {
-		wake_display_suspended = false;
-	} else {
-		wake_display_suspended = true;
-	}
-
-	if ((wake_display_suspended) && (wake_duration) && (!wake_gesture_switches_are_shut)) {
+	if ((!is_display_on()) && (wake_duration) && (!wake_gesture_switches_are_shut)) {
 		if ((dt2w_switch_temp) || (s2w_switch_temp)) {
 			wake_gesture_switches_shut();
 			set_vibrate(vib_strength);
@@ -263,7 +256,7 @@ void wake_gesture_suspend_triggers(void) {
 /* Wake Gestures - display resume call/charging worker */
 void wake_gesture_resume_triggers(void) {
 	wake_gesture_delayed_shut_destroy();
-	if (wake_duration)
+	if ((wake_duration) && (debug_wake_timer))
 		pr_info("wake gesture: wake timer deactivated !\n");
 	if (q6voice_voice_session_active()) {
 		if (debug_wake_timer)

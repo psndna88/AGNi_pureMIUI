@@ -34,8 +34,6 @@ bool scr_suspended(void);
 bool scr_suspended_ft(void);
 void set_vibrate(int value);
 bool wake_gesture_charging_detect(void);
-bool wake_gesture_display_detect_atmel_mxt_ts(void);
-bool wake_gesture_display_detect_ft5x06_ts(void);
 extern int debug_wake_timer;
 extern unsigned int wake_duration;
 extern void wake_gesture_suspend_triggers(void);

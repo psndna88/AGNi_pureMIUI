@@ -26,6 +26,9 @@
 #include "mdss_dba_utils.h"
 
 #include "mdss_livedisplay.h"
+#ifdef CONFIG_WAKE_GESTURES
+#include <linux/wake_gestures.h>
+#endif
 
 #define DT_CMD_HDR 6
 #define MIN_REFRESH_RATE 48
@@ -752,6 +755,13 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	}
 
 	display_on = true;
+#ifdef CONFIG_WAKE_GESTURES
+	if ((dt2w_switch_temp) || (s2w_switch_temp)) {
+		if (debug_wake_timer)
+			pr_info("wake gesture: display on detected...\n");
+       		wake_gesture_resume_triggers();
+	}
+#endif
 #ifdef CONFIG_LAZYPLUG
 	lazyplug_enter_lazy(false); 
 #endif
@@ -860,6 +870,13 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 
 	display_on = false;
 
+#ifdef CONFIG_WAKE_GESTURES
+	if ((dt2w_switch_temp) || (s2w_switch_temp)) {
+		if (debug_wake_timer)
+			pr_info("wake gesture: display off detected...\n");
+	       	wake_gesture_suspend_triggers();
+	}
+#endif
 #ifdef CONFIG_LAZYPLUG
 	lazyplug_enter_lazy(true);
 #endif

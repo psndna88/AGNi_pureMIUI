@@ -53,7 +53,6 @@
 
 #ifdef CONFIG_WAKE_GESTURES
 #include <linux/wake_gestures.h>
-bool wake_display_ft5x06_on;
 #endif
 
 #if defined(CONFIG_TOUCHSCREEN_GESTURE)
@@ -333,10 +332,6 @@ struct ft5x06_ts_data *ft5x06_ts = NULL;
 #ifdef CONFIG_WAKE_GESTURES
 bool scr_suspended_ft(void) {
 	return ft5x06_ts->suspended;
-}
-bool wake_gesture_display_detect_ft5x06_ts(void)
-{
-	return wake_display_ft5x06_on;
 }
 #endif
 
@@ -1126,27 +1121,10 @@ static int fb_notifier_callback(struct notifier_block *self,
 	if (evdata && evdata->data && event == FB_EVENT_BLANK &&
 			ft5x06_data && ft5x06_data->client) {
 		blank = evdata->data;
-		if (*blank == FB_BLANK_UNBLANK || *blank == FB_BLANK_NORMAL) {
+		if (*blank == FB_BLANK_UNBLANK || *blank == FB_BLANK_NORMAL)
 			ft5x06_ts_resume(&ft5x06_data->client->dev);
-#ifdef CONFIG_WAKE_GESTURES
-			wake_display_ft5x06_on = true;
-			if ((dt2w_switch_temp) || (s2w_switch_temp)) {
-				if (debug_wake_timer)
-					pr_info("wake gesture: display on detected...\n");
-           		wake_gesture_resume_triggers();
-			}
-#endif
-		} else if (*blank == FB_BLANK_POWERDOWN) {
+		else if (*blank == FB_BLANK_POWERDOWN)
 			ft5x06_ts_suspend(&ft5x06_data->client->dev);
-#ifdef CONFIG_WAKE_GESTURES
-			wake_display_ft5x06_on = false;
-			if ((dt2w_switch_temp) || (s2w_switch_temp)) {
-				if (debug_wake_timer)
-					pr_info("wake gesture: display off detected...\n");
-            	wake_gesture_suspend_triggers();
-			}
-#endif
-		}
 	}
 
 	return 0;

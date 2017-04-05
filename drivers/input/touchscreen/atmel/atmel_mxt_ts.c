@@ -107,7 +107,7 @@
 
 #include "atmel_mxt_ts.h"
 #include "atmel_mxt_ts_platform.h"
-#if defined(CONFIG_FB)
+#if defined(CONFIG_FB_PM)
 #include <linux/notifier.h>
 #include <linux/fb.h>
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
@@ -119,7 +119,6 @@
 #include "plug.h"
 #ifdef CONFIG_WAKE_GESTURES
 #include <linux/wake_gestures.h>
-bool wake_display_atmel_on;
 #endif
 
 #include "../lct_tp_fm_info.h"
@@ -490,7 +489,7 @@ struct mxt_data {
 #define MXT_EVENT_IRQ_FLAG 5
 	unsigned long busy;
 
-#if defined(CONFIG_FB)
+#if defined(CONFIG_FB_PM)
 	struct notifier_block fb_notif;
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
 	struct early_suspend early_suspend;
@@ -513,13 +512,9 @@ bool scr_suspended(void)
 {
 	return gl_data->suspended;
 }
-bool wake_gesture_display_detect_atmel_mxt_ts(void)
-{
-	return wake_display_atmel_on;
-}
 #endif
 
-#if defined(CONFIG_FB)
+#if defined(CONFIG_FB_PM)
 static int fb_notifier_callback(struct notifier_block *self,
 				 unsigned long event, void *data);
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
@@ -5311,7 +5306,7 @@ static void mxt_start(struct mxt_data *data, bool resume)
 				mxt_process_messages_until_invalid(data);
 				if (!test_bit(MXT_WK_DETECTED, &data->enable_wakeup)) {
 					dev_info(dev, "detect a invalid wakeup signal\n");
-#if !(defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_FB))
+#if !(defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_FB_PM))
 					return;
 #endif
 				}
@@ -5921,7 +5916,7 @@ static int  mxt_probe(struct i2c_client *client,
 		goto err_remove_sysfs_group;
 	}
 
-#if defined(CONFIG_FB)
+#if defined(CONFIG_FB_PM)
 	data->fb_notif.notifier_call = fb_notifier_callback;
 	error = fb_register_client(&data->fb_notif);
 	if (error) {
@@ -5945,7 +5940,7 @@ static int  mxt_probe(struct i2c_client *client,
 
 	return 0;
 
-#if defined(CONFIG_FB)
+#if defined(CONFIG_FB_PM)
 err_remove_mem_access_attr:
 	sysfs_remove_bin_file(&client->dev.kobj,
 				  &data->mem_access_attr);
@@ -6004,7 +5999,7 @@ static int  mxt_remove(struct i2c_client *client)
 {
 	struct mxt_data *data = i2c_get_clientdata(client);
 
-#if defined(CONFIG_FB)
+#if defined(CONFIG_FB_PM)
 	fb_unregister_client(&data->fb_notif);
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
 	unregister_early_suspend(&data->early_suspend);
@@ -6090,7 +6085,7 @@ static int mxt_resume(struct device *dev)
 	return 0;
 }
 
-#if defined(CONFIG_FB)
+#if defined(CONFIG_FB_PM)
 static int fb_notifier_callback(struct notifier_block *self,
 				 unsigned long event, void *data)
 {
@@ -6103,25 +6098,9 @@ static int fb_notifier_callback(struct notifier_block *self,
 				mxt && mxt->client) {
 			blank = evdata->data;
 			if (*blank == FB_BLANK_UNBLANK || *blank == FB_BLANK_NORMAL) {
-#ifdef CONFIG_WAKE_GESTURES
-				wake_display_atmel_on = true;
-				if ((dt2w_switch_temp) || (s2w_switch_temp)) {
-					if (debug_wake_timer)
-						pr_info("wake gesture: display on detected...\n");
-	            	wake_gesture_resume_triggers();
-				}
-#endif
 				if (mxt_resume(&mxt->client->dev) != 0)
 					dev_err(&mxt->client->dev, "%s: failed\n", __func__);
 			} else if (*blank == FB_BLANK_POWERDOWN) {
-#ifdef CONFIG_WAKE_GESTURES
-				wake_display_atmel_on = false;
-				if ((dt2w_switch_temp) || (s2w_switch_temp)) {
-					if (debug_wake_timer)
-						pr_info("wake gesture: display off detected...\n");
-            		wake_gesture_suspend_triggers();
-				}
-#endif
 				if (mxt_suspend(&mxt->client->dev) != 0)
 					dev_err(&mxt->client->dev, "%s: failed\n", __func__);
 			}
@@ -6193,7 +6172,7 @@ static struct i2c_driver mxt_driver = {
 		.name	= "atmel_mxt_ts",
 		.owner	= THIS_MODULE,
 		.of_match_table = mxt_match_table,
-#if !(defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_FB))
+#if !(defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_FB_PM))
 		.pm	= &mxt_pm_ops,
 #endif
 	},
