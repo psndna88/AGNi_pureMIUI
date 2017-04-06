@@ -91,8 +91,8 @@ static int ncp_file_mmap_fault(struct vm_area_struct *area,
 	 * fetches from the network, here the analogue of disk.
 	 * -- nyc
 	 */
-	count_vm_event(PGMAJFAULT);
-	mem_cgroup_count_vm_event(area->vm_mm, PGMAJFAULT);
+	count_vm_event(PGMAJFAULT_F);
+	mem_cgroup_count_vm_event(area->vm_mm, PGMAJFAULT_F);
 	return VM_FAULT_MAJOR;
 }
 

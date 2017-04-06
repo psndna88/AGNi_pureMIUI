@@ -1371,8 +1371,8 @@ static int shmem_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 		return ((error == -ENOMEM) ? VM_FAULT_OOM : VM_FAULT_SIGBUS);
 
 	if (ret & VM_FAULT_MAJOR) {
-		count_vm_event(PGMAJFAULT);
-		mem_cgroup_count_vm_event(vma->vm_mm, PGMAJFAULT);
+		count_vm_event(PGMAJFAULT_S);
+		mem_cgroup_count_vm_event(vma->vm_mm, PGMAJFAULT_S);
 	}
 	return ret;
 }
