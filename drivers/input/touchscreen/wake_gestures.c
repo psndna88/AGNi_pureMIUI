@@ -80,7 +80,6 @@
 
 #if (WAKE_GESTURES_ENABLED)
 int gestures_switch = WG_DEFAULT;
-int vib_wake_switch = 0;
 unsigned int wake_duration = 10;
 int debug_wake_timer = 0;
 bool wake_gesture_switches_are_shut;
@@ -184,38 +183,41 @@ static void wake_gesture_delayed_shut(struct work_struct * wake_gesture_delayed_
 	return;
 }
 
-/* Wake Gestures - display suspend call/charging conditional worker */
+/* Wake Gestures - call detect worker */
+static void wake_gesture_q6voice_detect(void) {
+	if ((dt2w_switch_temp) || (s2w_switch_temp)) {
+		if (q6voice_voice_session_active()) {
+			if (debug_wake_timer)
+				pr_info("wake gesture: voice call detected... !\n");
+			wake_gesture_switches_shut();
+		} else {
+			if (debug_wake_timer)
+				pr_info("wake gesture: voice not call detected... !\n");
+			if ((!is_display_on()) && (!wake_duration))
+				wake_gesture_switches_resume();
+		}
+	}
+	return;
+}
+
+/* Wake Gestures - display suspend charging conditional worker */
 void wake_gesture_suspend_triggers(void) {
 
 	if (wake_duration) {
 		/* wake_duration > 0 */
-		if ((!wake_gesture_charging_detect()) && (!q6voice_voice_session_active())) {
+		if (!wake_gesture_charging_detect()) {
 			if ((debug_wake_timer) && (!wake_gesture_switches_are_shut))
 				pr_info("wake gesture: wake_duration acknowledged\n");
 			if (debug_wake_timer)
-				pr_info("wake gesture: charging & call not detected...\n");
+				pr_info("wake gesture: charging not detected...\n");
 			queue_delayed_work_on(0, wake_gesture_delayed_shut_wq, &wake_gesture_delayed_shut_work, msecs_to_jiffies(wake_duration * 1000));
 			if (debug_wake_timer)
 				pr_info("wake gesture: switch shut timer scheduled to wake_duration !\n");
 		} else {
 			wake_gesture_delayed_shut_destroy();
-			if ((wake_gesture_charging_detect()) && (!q6voice_voice_session_active())) {
-				if (debug_wake_timer) {
-					pr_info("wake gesture: charging detected... !\n");
-					pr_info("wake gesture: voice call not detected... !\n");
-				}
-				wake_gesture_switches_resume();
-			} else if ((!wake_gesture_charging_detect()) && (q6voice_voice_session_active())) {
-				if (debug_wake_timer) {
-					pr_info("wake gesture: charging not detected... !\n");
-					pr_info("wake gesture: voice call detected... !\n");
-				}
-				wake_gesture_switches_shut();
-		} else if ((wake_gesture_charging_detect()) && (q6voice_voice_session_active())) {
-				if (debug_wake_timer)
-					pr_info("wake gesture: charging & call detected... !\n");
-				wake_gesture_switches_shut();
-			}
+			if (debug_wake_timer)
+				pr_info("wake gesture: charging detected... !\n");
+			wake_gesture_switches_resume();
 		}
 	} else {
 		/* wake_duration = 0 */
@@ -224,49 +226,24 @@ void wake_gesture_suspend_triggers(void) {
 			pr_info("wake gesture: wake_duration not set\n");
 			pr_info("wake gesture: switch shut timer stopped !\n");
 		}
-		if ((wake_gesture_charging_detect()) && (!q6voice_voice_session_active())) {
-			if (debug_wake_timer) {
+		wake_gesture_switches_resume();
+		if (wake_gesture_charging_detect()) {
+			if (debug_wake_timer)
 				pr_info("wake gesture: charging detected... !\n");
-				pr_info("wake gesture: voice call not detected... !\n");
-			}
-			wake_gesture_switches_resume();
-		} else if ((wake_gesture_charging_detect()) && (q6voice_voice_session_active())) {
-			if (debug_wake_timer) {
-				pr_info("wake gesture: charging detected... !\n");
-				pr_info("wake gesture: voice call detected... !\n");
-			}
-			wake_gesture_switches_shut();
-		} else if ((!wake_gesture_charging_detect()) && (q6voice_voice_session_active())) {
-		if (debug_wake_timer) {
+		} else {
+			if (debug_wake_timer)
 				pr_info("wake gesture: charging not detected... !\n");
-				pr_info("wake gesture: voice call detected... !\n");
-			}
-			wake_gesture_switches_shut();
-		} else if ((!wake_gesture_charging_detect()) && (!q6voice_voice_session_active())) {
-			if (debug_wake_timer) {
-				pr_info("wake gesture: charging not detected... !\n");
-				pr_info("wake gesture: voice call not detected... !\n");
-			}
-			wake_gesture_switches_resume();
 		}
 	}
 	return;
 }
 
-/* Wake Gestures - display resume call/charging worker */
+/* Wake Gestures - display resume charging worker */
 void wake_gesture_resume_triggers(void) {
 	wake_gesture_delayed_shut_destroy();
 	if ((wake_duration) && (debug_wake_timer))
 		pr_info("wake gesture: wake timer deactivated !\n");
-	if (q6voice_voice_session_active()) {
-		if (debug_wake_timer)
-			pr_info("wake gesture: voice call detected...\n");
-		wake_gesture_switches_shut();
-	} else {
-		if (debug_wake_timer)
-			pr_info("wake gesture: voice call not detected...\n");
-		wake_gesture_switches_resume();
-	}
+	wake_gesture_switches_resume();
 	if (wake_gesture_charging_detect()) {
 		if (debug_wake_timer)
 			pr_info("wake gesture: charging detected... !\n");
@@ -291,9 +268,7 @@ static void wake_presspwr(struct work_struct * wake_presspwr_work) {
 	msleep(WG_PWRKEY_DUR);
 	mutex_unlock(&pwrkeyworklock);
 
-	if (vib_wake_switch) {
 	set_vibrate(vib_strength);
-	}
 
 	return;
 }
@@ -570,6 +545,7 @@ static void detect_sweep2wake_h(int x, int y, bool st, bool scr_suspended)
 
 static void s2w_input_callback(struct work_struct *unused)
 {
+	wake_gesture_q6voice_detect();
 	if (s2w_switch) {
 		detect_sweep2wake_h(touch_x, touch_y, true, is_suspended());
 		if (is_suspended()) {
@@ -581,6 +557,7 @@ static void s2w_input_callback(struct work_struct *unused)
 
 static void dt2w_input_callback(struct work_struct *unused)
 {
+	wake_gesture_q6voice_detect();
 	if (is_suspended() && dt2w_switch)
 		detect_doubletap2wake(touch_x, touch_y, true);
 	return;
@@ -811,29 +788,6 @@ static ssize_t wake_gestures_dump(struct device *dev,
 static DEVICE_ATTR(wake_gestures, (S_IWUSR|S_IRUGO),
 	wake_gestures_show, wake_gestures_dump);
 
-static ssize_t vib_wake_switch_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	size_t count = 0;
-	count += sprintf(buf, "%d\n", vib_wake_switch);
-	return count;
-}
-static ssize_t vib_wake_switch_dump(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
-{
-	int val;
-	sscanf(buf, "%d ", &val);
-
-	if (val < 0 || val > 1)
-        return -EINVAL;
-
-	vib_wake_switch = val;
-	return count;
-}
-
-static DEVICE_ATTR(vib_wake, (S_IWUSR|S_IRUGO),
-	vib_wake_switch_show, vib_wake_switch_dump);
-
 static ssize_t wake_duration_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -1001,10 +955,6 @@ static int __init wake_gestures_init(void)
 	rc = sysfs_create_file(android_touch_kobj, &dev_attr_wake_gestures.attr);
 	if (rc) {
 		pr_warn("%s: sysfs_create_file failed for wake_gestures\n", __func__);
-	}
-	rc = sysfs_create_file(android_touch_kobj, &dev_attr_vib_wake.attr);
-	if (rc) {
-		pr_warn("%s: sysfs_create_file failed for vib_wake\n", __func__);
 	}
 	rc = sysfs_create_file(android_touch_kobj, &dev_attr_wake_duration.attr);
 	if (rc) {
