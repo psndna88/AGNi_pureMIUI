@@ -1,8 +1,8 @@
 diff --git a/arch/arm/boot/dts/qcom/kenzo/kenzo-msm8956-mtp.dtsi b/arch/arm/boot/dts/qcom/kenzo/kenzo-msm8956-mtp.dtsi
-index 4783739..7c10b8f 100644
+index 71cf5d6..c66cb7e 100644
 --- a/arch/arm/boot/dts/qcom/kenzo/kenzo-msm8956-mtp.dtsi
 +++ b/arch/arm/boot/dts/qcom/kenzo/kenzo-msm8956-mtp.dtsi
-@@ -190,17 +190,6 @@
+@@ -189,17 +189,6 @@
  		vdd-supply = <&pm8950_l10>;
  	};
  
@@ -21,11 +21,11 @@ index 4783739..7c10b8f 100644
  		compatible = "goodix,fingerprint";
  		vcc_spi-supply  = <&pm8950_l10>;
 diff --git a/arch/arm64/configs/agni_kenzo-cmMM_defconfig b/arch/arm64/configs/agni_kenzo-cmMM_defconfig
-index 83c704e5..fe20850 100644
+index 1e4e21e..87261c5 100644
 --- a/arch/arm64/configs/agni_kenzo-cmMM_defconfig
 +++ b/arch/arm64/configs/agni_kenzo-cmMM_defconfig
-@@ -1720,8 +1720,8 @@ CONFIG_SENSORS_MC3430=y
- # CONFIG_HALL is not set
+@@ -1720,8 +1720,8 @@ CONFIG_SENSORS_BMA2X2=y
+ CONFIG_SENSORS_MC3430=y
  CONFIG_SENSORS_ISL29044A=y
  CONFIG_INPUT_FINGERPRINT=y
 -CONFIG_INPUT_FPC1020=y
@@ -45,11 +45,11 @@ index 83c704e5..fe20850 100644
  # CONFIG_SECURITY_SELINUX_FAKE_ENFORCE is not set
  CONFIG_SECURITY_SELINUX_AVC_STATS=y
 diff --git a/arch/arm64/configs/agni_kenzo-cmN_defconfig b/arch/arm64/configs/agni_kenzo-cmN_defconfig
-index 1b3dd25..13c0f43 100644
+index 9c1179b..3c2c850 100644
 --- a/arch/arm64/configs/agni_kenzo-cmN_defconfig
 +++ b/arch/arm64/configs/agni_kenzo-cmN_defconfig
-@@ -1719,8 +1719,8 @@ CONFIG_SENSORS_MC3430=y
- # CONFIG_HALL is not set
+@@ -1719,8 +1719,8 @@ CONFIG_SENSORS_BMA2X2=y
+ CONFIG_SENSORS_MC3430=y
  CONFIG_SENSORS_ISL29044A=y
  CONFIG_INPUT_FINGERPRINT=y
 -CONFIG_INPUT_FPC1020=y
@@ -69,11 +69,11 @@ index 1b3dd25..13c0f43 100644
  # CONFIG_SECURITY_SELINUX_FAKE_ENFORCE is not set
  CONFIG_SECURITY_SELINUX_AVC_STATS=y
 diff --git a/arch/arm64/configs/agni_kenzo-cmNwm_defconfig b/arch/arm64/configs/agni_kenzo-cmNwm_defconfig
-index c061841..45abdc2 100644
+index a9994c6..d30f7b6 100644
 --- a/arch/arm64/configs/agni_kenzo-cmNwm_defconfig
 +++ b/arch/arm64/configs/agni_kenzo-cmNwm_defconfig
-@@ -1719,8 +1719,8 @@ CONFIG_SENSORS_MC3430=y
- # CONFIG_HALL is not set
+@@ -1719,8 +1719,8 @@ CONFIG_SENSORS_BMA2X2=y
+ CONFIG_SENSORS_MC3430=y
  CONFIG_SENSORS_ISL29044A=y
  CONFIG_INPUT_FINGERPRINT=y
 -CONFIG_INPUT_FPC1020=y
@@ -93,11 +93,11 @@ index c061841..45abdc2 100644
  # CONFIG_SECURITY_SELINUX_FAKE_ENFORCE is not set
  CONFIG_SECURITY_SELINUX_AVC_STATS=y
 diff --git a/arch/arm64/configs/agni_kenzo-miuiMM_defconfig b/arch/arm64/configs/agni_kenzo-miuiMM_defconfig
-index 21162b1..1cadc3b 100644
+index f39f1e6..6fd1477 100644
 --- a/arch/arm64/configs/agni_kenzo-miuiMM_defconfig
 +++ b/arch/arm64/configs/agni_kenzo-miuiMM_defconfig
-@@ -1716,8 +1716,8 @@ CONFIG_SENSORS_MC3430=y
- # CONFIG_HALL is not set
+@@ -1716,8 +1716,8 @@ CONFIG_SENSORS_BMA2X2=y
+ CONFIG_SENSORS_MC3430=y
  CONFIG_SENSORS_ISL29044A=y
  CONFIG_INPUT_FINGERPRINT=y
 -CONFIG_INPUT_FPC1020=y
