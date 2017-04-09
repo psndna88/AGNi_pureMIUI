@@ -622,6 +622,13 @@ static int ltr553_init_device(struct ltr553_data *ltr)
 		return rc;
 	}
 
+	rc = regmap_write(ltr->regmap, LTR553_REG_PS_LED, ltr->ps_led);
+	if (rc) {
+		dev_err(&ltr->i2c->dev, "write %d register failed\n",
+				LTR553_REG_PS_LED);
+		return rc;
+	}
+
 	rc = regmap_write(ltr->regmap, LTR553_REG_PS_N_PULSES, ltr->ps_pulses);
 	if (rc) {
 		dev_err(&ltr->i2c->dev, "write %d register failed\n",
