@@ -437,7 +437,7 @@ static int ltr553_parse_dt(struct device *dev, struct ltr553_data *ltr)
 		dev_err(dev, "read liteon,ps-pulses failed\n");
 		return rc;
 	}
-	if (value > 0x7) {
+	if (value > 0xf) {
 		dev_err(dev, "liteon,ps-pulses out of range\n");
 		return -EINVAL;
 	}
