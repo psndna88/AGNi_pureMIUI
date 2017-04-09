@@ -85,7 +85,6 @@ struct csiphy_device {
 	uint32_t csiphy_clk_index;
 	uint32_t csiphy_max_clk;
 	uint32_t csiphy_sof_debug;
-	uint32_t is_combo_mode;
 };
 
 #define VIDIOC_MSM_CSIPHY_RELEASE \

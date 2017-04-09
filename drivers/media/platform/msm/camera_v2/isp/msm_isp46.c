@@ -408,6 +408,18 @@ static void msm_vfe46_process_error_status(struct vfe_device *vfe_dev)
 		pr_err("%s: status bf scale bus overflow\n", __func__);
 }
 
+static void msm_vfe46_enable_camif_error(struct vfe_device *vfe_dev,
+			int enable)
+{
+	uint32_t val;
+
+	val = msm_camera_io_r(vfe_dev->vfe_base + 0x60);
+	if (enable)
+		msm_camera_io_w_mb(val | BIT(0), vfe_dev->vfe_base + 0x60);
+	else
+		msm_camera_io_w_mb(val & ~(BIT(0)), vfe_dev->vfe_base + 0x60);
+}
+
 static void msm_vfe46_read_irq_status(struct vfe_device *vfe_dev,
 	uint32_t *irq_status0, uint32_t *irq_status1)
 {
@@ -424,9 +436,11 @@ static void msm_vfe46_read_irq_status(struct vfe_device *vfe_dev,
 	*irq_status0 &= irq_mask0;
 	*irq_status1 &= irq_mask1;
 
-	if (*irq_status1 & (1 << 0))
+	if (*irq_status1 & (1 << 0)) {
 		vfe_dev->error_info.camif_status =
 		msm_camera_io_r(vfe_dev->vfe_base + 0x3D0);
+		msm_vfe46_enable_camif_error(vfe_dev, 0);
+	}
 
 	if (*irq_status1 & (1 << 7))
 		vfe_dev->error_info.violation_status =
@@ -2066,6 +2080,7 @@ struct msm_vfe_hardware_info vfe46_hw_info = {
 			.process_axi_irq = msm_isp_process_axi_irq,
 			.process_stats_irq = msm_isp_process_stats_irq,
 			.process_epoch_irq = msm_vfe46_process_epoch_irq,
+			.enable_camif_err = msm_vfe46_enable_camif_error,
 		},
 		.axi_ops = {
 			.reload_wm = msm_vfe46_axi_reload_wm,

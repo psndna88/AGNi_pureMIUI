@@ -198,7 +198,11 @@ static int32_t msm_isp_stats_configure(struct vfe_device *vfe_dev,
 	uint32_t comp_stats_type_mask = 0;
 
 	memset(&buf_event, 0, sizeof(struct msm_isp_event_data));
+#ifdef CONFIG_MACH_XIAOMI_KENZO_AGNI_CM_N
 	buf_event.timestamp = ts->buf_time;
+#else
+	buf_event.timestamp = ts->event_time;
+#endif
 	buf_event.frame_id = vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id;
 	pingpong_status = vfe_dev->hw_info->
 		vfe_ops.stats_ops.get_pingpong_status(vfe_dev);
