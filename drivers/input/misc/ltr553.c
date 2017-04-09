@@ -513,12 +513,12 @@ static int ltr553_parse_dt(struct device *dev, struct ltr553_data *ltr)
 	if (rc)
 		dev_warn(dev, "read liteon,als-equation-0 failed. Drop to default\n");
 
-	rc = of_property_read_u32_array(dp, "liteon,als-equation-0",
+	rc = of_property_read_u32_array(dp, "liteon,als-equation-1",
 			&eqtn_map[1].ch0_coeff_i, 6);
 	if (rc)
 		dev_warn(dev, "read liteon,als-equation-1 failed. Drop to default\n");
 
-	rc = of_property_read_u32_array(dp, "liteon,als-equation-0",
+	rc = of_property_read_u32_array(dp, "liteon,als-equation-2",
 			&eqtn_map[2].ch0_coeff_i, 6);
 	if (rc)
 		dev_warn(dev, "read liteon,als-equation-2 failed. Drop to default\n");
