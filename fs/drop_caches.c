@@ -37,6 +37,12 @@ static void drop_pagecache_sb(struct super_block *sb, void *unused)
 	iput(toput_inode);
 }
 
+/* For TuxOnIce */
+void drop_pagecache(void)
+{
+	iterate_supers(drop_pagecache_sb, NULL);
+}
+
 static void drop_slab(void)
 {
 	int nr_objects;
