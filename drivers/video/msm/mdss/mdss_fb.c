@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2007 Google Incorporated
  * Copyright (c) 2008-2017, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2015 XiaoMi, Inc.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -60,6 +61,7 @@
 #include "mdss_debug.h"
 
 #include "mdss_livedisplay.h"
+#include "mdss_mdp.h"
 
 #ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
 #define MDSS_FB_NUM 3
@@ -3831,7 +3833,11 @@ int mdss_fb_do_ioctl(struct fb_info *info, unsigned int cmd,
 	int ret = -ENOSYS;
 	struct mdp_buf_sync buf_sync;
 	struct msm_sync_pt_data *sync_pt_data = NULL;
+	struct mdss_overlay_private *mdp5_data = NULL;
+	struct mdss_mdp_ctl *color_ctl = NULL;
 	unsigned int dsi_mode = 0;
+	unsigned int Color_mode = 0;
+	unsigned int CE_mode = 0;
 	struct mdss_panel_data *pdata = NULL;
 
 	if (!info || !info->par)
@@ -3857,6 +3863,10 @@ int mdss_fb_do_ioctl(struct fb_info *info, unsigned int cmd,
 		goto exit;
 
 	__ioctl_transition_dyn_mode_state(mfd, cmd);
+
+	mdp5_data = mfd->mdp.private1;
+	color_ctl = mdp5_data->ctl;
+	pdata = color_ctl->panel_data;
 
 	switch (cmd) {
 	case MSMFB_CURSOR:
@@ -3909,6 +3919,23 @@ int mdss_fb_do_ioctl(struct fb_info *info, unsigned int cmd,
 		}
 
 		ret = mdss_fb_mode_switch(mfd, dsi_mode);
+		break;
+
+	case MSMFB_ENHANCE_SET_GAMMA:
+		if (copy_from_user(&Color_mode, argp, sizeof(Color_mode))) {
+			pr_err("%s: MSMFB_ENHANCE_SET_GAMMA ioctl failed\n", __func__);
+			goto exit;
+		}
+		ret = mdss_panel_set_gamma(pdata, Color_mode);
+
+		break;
+
+	case MSMFB_ENHANCE_SET_CE:
+		if (copy_from_user(&CE_mode, argp, sizeof(CE_mode))) {
+			pr_err("%s: MSMFB_ENHANCE_SET_CE ioctl failed\n", __func__);
+			goto exit;
+		}
+		ret = mdss_panel_set_ce(pdata, CE_mode);
 		break;
 
 	default:
