@@ -4,6 +4,7 @@
  * Copyright (c) 2003 Patrick Mochel
  * Copyright (c) 2003 Open Source Development Lab
  * Copyright (c) 2009 Rafael J. Wysocki <rjw@sisk.pl>, Novell Inc.
+ * Copyright (C) 2016 XiaoMi, Inc.
  *
  * This file is released under the GPLv2.
  */
@@ -28,8 +29,12 @@
 #include <linux/rtc.h>
 #include <trace/events/power.h>
 #include <linux/wakeup_reason.h>
+#include <linux/moduleparam.h>
 
 #include "power.h"
+
+bool drop_caches_suspend = true;
+module_param_named(drop_caches_on_suspend, drop_caches_suspend, bool, 0664);
 
 struct pm_sleep_state pm_states[PM_SUSPEND_MAX] = {
 	[PM_SUSPEND_FREEZE] = { .label = "freeze", .state = PM_SUSPEND_FREEZE },
@@ -263,6 +268,9 @@ int suspend_devices_and_enter(suspend_state_t state)
 
 	if (need_suspend_ops(state) && !suspend_ops)
 		return -ENOSYS;
+
+	if (drop_caches_suspend)
+		drop_pagecache();
 
 	trace_machine_suspend(state);
 	if (need_suspend_ops(state) && suspend_ops->begin) {
