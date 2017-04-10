@@ -53,7 +53,7 @@
 
 #ifdef	__KERNEL__
 struct lis3dh_acc_platform_data {
-	int init_interval;
+	int poll_interval;
 	int min_interval;
 
 	u8 g_range;
@@ -65,7 +65,6 @@ struct lis3dh_acc_platform_data {
 	u8 negate_x;
 	u8 negate_y;
 	u8 negate_z;
-	bool enable_int;
 
 	int (*init)(void);
 	void (*exit)(void);
