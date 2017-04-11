@@ -517,6 +517,7 @@ static void __cpufreq_interactive_timer(unsigned long data, bool is_notif)
 	cpu_load = loadadjfreq / ppol->target_freq;
 	tunables->boosted = tunables->boost_val || now < tunables->boostpulse_endtime;
 	this_hispeed_freq = max(tunables->hispeed_freq, ppol->policy->min);
+	this_hispeed_freq = min(this_hispeed_freq, ppol->policy->max);
 
 	skip_hispeed_logic = tunables->ignore_hispeed_on_notif && is_notif;
 	skip_min_sample_time = tunables->fast_ramp_down && is_notif;
