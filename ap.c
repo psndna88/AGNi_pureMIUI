@@ -12,6 +12,7 @@
 #include <sys/utsname.h>
 #include <sys/ioctl.h>
 #ifdef __linux__
+#include <limits.h>
 #include <dirent.h>
 #include <string.h>
 #include <sys/types.h>
@@ -586,6 +587,48 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 			dut->ap_tx_streams = 4;
 		}
 	}
+
+	val = get_param(cmd, "BSS_max_idle");
+	if (val) {
+		if (strncasecmp(val, "Enable", 7) == 0) {
+			dut->wnm_bss_max_feature = VALUE_ENABLED;
+		} else if (strncasecmp(val, "Disable", 8) == 0) {
+			dut->wnm_bss_max_feature = VALUE_DISABLED;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Invalid value for BSS_max_Feature");
+			return 0;
+		}
+	}
+
+	val = get_param(cmd, "BSS_Idle_Protection_options");
+	if (val) {
+		int protection = (int) strtol(val, (char **) NULL, 10);
+
+		if (protection != 1 && protection != 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Invalid value for BSS_Idle_Protection_options");
+			return 0;
+		}
+		dut->wnm_bss_max_protection = protection ?
+			VALUE_ENABLED : VALUE_DISABLED;
+	}
+
+	val = get_param(cmd, "BSS_max_Idle_period");
+	if (val) {
+		int idle_time = (int) strtol(val, (char **) NULL, 10);
+
+		if (idle_time == LONG_MIN || idle_time == LONG_MAX) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Invalid value for BSS_max_Idle_period");
+			return 0;
+		}
+		dut->wnm_bss_max_idle_time = idle_time;
+	}
+
+	val = get_param(cmd, "PROXY_ARP");
+	if (val)
+		dut->ap_proxy_arp = (int) strtol(val, (char **) NULL, 10);
 
 	val = get_param(cmd, "nss_mcs_cap");
 	if (val) {
@@ -4288,6 +4331,33 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 					"wifitool clear bssidpref failed");
 		}
 	}
+
+	if (dut->wnm_bss_max_feature != VALUE_NOT_SET) {
+		int feature_enable;
+
+		feature_enable = dut->wnm_bss_max_feature == VALUE_ENABLED;
+		snprintf(buf, sizeof(buf), "iwpriv %s wnm %d",
+			 ifname, feature_enable);
+		run_system(dut, buf);
+		snprintf(buf, sizeof(buf), "iwpriv %s wnm_bss %d",
+			 ifname, feature_enable);
+		run_system(dut, buf);
+		if (feature_enable) {
+			const char *extra = "";
+
+			if (dut->wnm_bss_max_protection != VALUE_NOT_SET) {
+				if (dut->wnm_bss_max_protection ==
+				    VALUE_ENABLED)
+					extra = " 1";
+				else
+					extra = " 0";
+			}
+			snprintf(buf, sizeof(buf),
+				 "wlanconfig %s wnm setbssmax %d%s",
+				 ifname, dut->wnm_bss_max_idle_time, extra);
+			run_system(dut, buf);
+		}
+	}
 }
 
 
@@ -5688,7 +5758,8 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_wmmps = AP_WMMPS_OFF;
 	}
 
-	if (dut->program == PROGRAM_HS2 || dut->program == PROGRAM_HS2_R2) {
+	if (dut->program == PROGRAM_HS2 || dut->program == PROGRAM_HS2_R2 ||
+	    dut->program == PROGRAM_IOTLP) {
 		int i;
 
 		if (drv == DRIVER_ATHEROS)
@@ -5744,7 +5815,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_add_sha256 = 0;
 	}
 
-	if (dut->program == PROGRAM_HS2_R2) {
+	if (dut->program == PROGRAM_HS2_R2 || dut->program == PROGRAM_IOTLP) {
 		int i;
 		const char hessid[] = "50:6f:9a:00:11:22";
 
@@ -5797,6 +5868,21 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 			dut->ap_dfs_mode = AP_DFS_MODE_ENABLED;
 		if (get_driver_type() == DRIVER_ATHEROS)
 			ath_reset_vht_defaults(dut);
+	}
+
+	if (dut->program == PROGRAM_IOTLP) {
+		dut->wnm_bss_max_feature = VALUE_DISABLED;
+		dut->wnm_bss_max_idle_time = 0;
+		dut->wnm_bss_max_protection = VALUE_NOT_SET;
+		dut->ap_proxy_arp = 1;
+	} else {
+		/*
+		 * Do not touch the BSS-MAX Idle time feature
+		 * if the program is not IOTLP.
+		 */
+		dut->wnm_bss_max_feature = VALUE_NOT_SET;
+		dut->wnm_bss_max_idle_time = 0;
+		dut->wnm_bss_max_protection = VALUE_NOT_SET;
 	}
 
 	if (dut->program == PROGRAM_LOC) {
@@ -6534,7 +6620,8 @@ int cmd_ap_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 	val = get_param(cmd, "Program");
 	if (val) {
 		if (strcasecmp(val, "HS2") == 0 ||
-		    strcasecmp(val, "HS2-R2") == 0)
+		    strcasecmp(val, "HS2-R2") == 0 ||
+		    strcasecmp(val, "IOTLP") == 0)
 			return ap_send_frame_hs2(dut, conn, cmd);
 		if (strcasecmp(val, "VHT") == 0)
 			return ap_send_frame_vht(dut, conn, cmd);

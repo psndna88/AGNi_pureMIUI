@@ -543,7 +543,8 @@ struct sigma_dut {
 		PROGRAM_VHT,
 		PROGRAM_NAN,
 		PROGRAM_LOC,
-		PROGRAM_MBO
+		PROGRAM_MBO,
+		PROGRAM_IOTLP
 	} program;
 
 	enum device_type {
@@ -587,6 +588,10 @@ struct sigma_dut {
 	 *  be passed during the NDP session.
 	 */
 	u8 nan_pmk[32];
+
+	enum value_not_set_enabled_disabled wnm_bss_max_feature;
+	int wnm_bss_max_idle_time;
+	enum value_not_set_enabled_disabled wnm_bss_max_protection;
 };
 
 
