@@ -1045,6 +1045,29 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
+	val = get_param(cmd, "NAME");
+	if (val) {
+		if (strcasecmp(val, "ap1mbo") == 0)
+			dut->ap_name = 1;
+		else if (strcasecmp(val, "ap2mbo") == 0)
+			dut->ap_name = 2;
+		else
+			dut->ap_name = 0;
+	}
+
+	val = get_param(cmd, "FT_OA");
+	if (val) {
+		if (strcasecmp(val, "Enable") == 0) {
+			dut->ap_ft_oa = 1;
+		} else if (strcasecmp(val, "Disable") == 0) {
+			dut->ap_ft_oa = 0;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Wrong value for FT_OA");
+			return 0;
+		}
+	}
+
 	val = get_param(cmd, "Cellular_Cap_Pref");
 	if (val)
 		dut->ap_cell_cap_pref = atoi(val);
@@ -1058,6 +1081,43 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 		snprintf(dut->ap_mobility_domain,
 			 sizeof(dut->ap_mobility_domain), "%s", val);
+	}
+
+	val = get_param(cmd, "ft_bss_list");
+	if (val) {
+		char *mac_str;
+		int i;
+		char *saveptr;
+		char *mac_list_str;
+
+		mac_list_str = strdup(val);
+		if (!mac_list_str)
+			return -1;
+		mac_str = strtok_r(mac_list_str, " ", &saveptr);
+		for (i = 0; mac_str && i < MAX_FT_BSS_LIST; i++) {
+			if (parse_mac_address(dut, mac_str,
+					      dut->ft_bss_mac_list[i]) < 0) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"MAC Address not in proper format");
+				break;
+			}
+			dut->ft_bss_mac_cnt++;
+			mac_str = strtok_r(NULL, " ", &saveptr);
+		}
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Storing the following FT BSS MAC List");
+		for (i = 0; i < dut->ft_bss_mac_cnt; i++) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"MAC[%d] %02x:%02x:%02x:%02x:%02x:%02x",
+					i,
+					dut->ft_bss_mac_list[i][0],
+					dut->ft_bss_mac_list[i][1],
+					dut->ft_bss_mac_list[i][2],
+					dut->ft_bss_mac_list[i][3],
+					dut->ft_bss_mac_list[i][4],
+					dut->ft_bss_mac_list[i][5]);
+		}
+		free(mac_list_str);
 	}
 
 	return 1;
@@ -2529,6 +2589,49 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 				     "'272:34108cfdf0020df1f7000000733000030101'");
 		snprintf(buf, sizeof(buf), "%d", dut->ap_gas_cb_delay);
 		owrt_ap_set_vap(dut, vap_id, "gas_comeback_delay", buf);
+	}
+
+	if (dut->ap_ft_oa == 1) {
+		unsigned char self_mac[ETH_ALEN];
+		char mac_str[20];
+
+		owrt_ap_set_vap(dut, vap_id, "ft_over_ds", "0");
+		owrt_ap_set_vap(dut, vap_id, "ieee80211r", "1");
+		get_hwaddr(sigma_radio_ifname[0], self_mac);
+		snprintf(mac_str, sizeof(mac_str),
+			 "%02x:%02x:%02x:%02x:%02x:%02x",
+			 self_mac[0], self_mac[1], self_mac[2],
+			 self_mac[3], self_mac[4], self_mac[5]);
+		owrt_ap_set_vap(dut, vap_id, "ap_macaddr", mac_str);
+		owrt_ap_set_vap(dut, vap_id, "ft_psk_generate_local", "1");
+		owrt_ap_set_vap(dut, vap_id, "kh_key_hex",
+				"000102030405060708090a0b0c0d0e0f");
+		snprintf(mac_str, sizeof(mac_str),
+			 "%02x:%02x:%02x:%02x:%02x:%02x",
+			 dut->ft_bss_mac_list[0][0],
+			 dut->ft_bss_mac_list[0][1],
+			 dut->ft_bss_mac_list[0][2],
+			 dut->ft_bss_mac_list[0][3],
+			 dut->ft_bss_mac_list[0][4],
+			 dut->ft_bss_mac_list[0][5]);
+		owrt_ap_set_vap(dut, vap_id, "ap2_macaddr", mac_str);
+	}
+
+	if ((dut->ap_ft_oa == 1 && dut->ap_name == 0) ||
+	    (dut->ap_ft_oa == 1 && dut->ap_name == 2)) {
+		owrt_ap_set_vap(dut, vap_id, "ap2_r1_key_holder",
+				"00:01:02:03:04:06");
+		owrt_ap_set_vap(dut, vap_id, "nasid2", "nas2.example.com");
+		owrt_ap_set_vap(dut, vap_id, "nasid", "nas1.example.com");
+		owrt_ap_set_vap(dut, vap_id, "r1_key_holder", "000102030405");
+	}
+
+	if (dut->ap_ft_oa == 1 && dut->ap_name == 1) {
+		owrt_ap_set_vap(dut, vap_id, "ap2_r1_key_holder",
+				"00:01:02:03:04:05");
+		owrt_ap_set_vap(dut, vap_id, "nasid2", "nas1.example.com");
+		owrt_ap_set_vap(dut, vap_id, "nasid", "nas2.example.com");
+		owrt_ap_set_vap(dut, vap_id, "r1_key_holder", "000102030406");
 	}
 
 	if (dut->ap_mobility_domain[0])
@@ -6032,6 +6135,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	dut->ap_chwidth_offset = SEC_CH_NO;
 
 	dut->mbo_pref_ap_cnt = 0;
+	dut->ft_bss_mac_cnt = 0;
 
 	if (dut->program == PROGRAM_HT || dut->program == PROGRAM_VHT) {
 		dut->ap_wme = AP_WME_ON;
@@ -6184,6 +6288,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_gas_cb_delay = 0;
 		dut->ap_msnt_type = 0;
 	}
+	dut->ap_ft_oa = 0;
 	dut->ap_reg_domain = REG_DOMAIN_NOT_SET;
 	dut->ap_mobility_domain[0] = '\0';
 

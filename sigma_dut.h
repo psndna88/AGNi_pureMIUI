@@ -221,6 +221,7 @@ struct sigma_stream {
 
 #define MAX_WLAN_TAGS 3
 #define MBO_MAX_PREF_BSSIDS 10
+#define MAX_FT_BSS_LIST 10
 
 enum value_not_set_enabled_disabled {
 	VALUE_NOT_SET,
@@ -497,9 +498,14 @@ struct sigma_dut {
 	} ap_reg_domain;
 	char ap_mobility_domain[10];
 	unsigned char ap_cell_cap_pref;
+	int ap_ft_oa;
+	int ap_name;
+
 	struct mbo_pref_ap mbo_pref_aps[MBO_MAX_PREF_BSSIDS];
 	struct mbo_pref_ap mbo_self_ap_tuple;
 	int mbo_pref_ap_cnt;
+	unsigned char ft_bss_mac_list[MAX_FT_BSS_LIST][ETH_ALEN];
+	int ft_bss_mac_cnt;
 
 	const char *hostapd_debug_log;
 
