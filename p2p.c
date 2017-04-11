@@ -27,6 +27,31 @@ int run_system(struct sigma_dut *dut, const char *cmd)
 }
 
 
+int run_system_wrapper(struct sigma_dut *dut, const char *cmd, ...)
+{
+	va_list ap;
+	char *buf;
+	int bytes_required;
+	int res;
+
+	va_start(ap, cmd);
+	bytes_required = vsnprintf(NULL, 0, cmd, ap);
+	bytes_required += 1;
+	va_end(ap);
+	buf = malloc(bytes_required);
+	if (!buf) {
+		printf("ERROR!! No memory\n");
+		return -1;
+	}
+	va_start(ap, cmd);
+	vsnprintf(buf, bytes_required, cmd, ap);
+	va_end(ap);
+	res = run_system(dut, buf);
+	free(buf);
+	return res;
+}
+
+
 static int get_60g_freq(int chan)
 {
 	int freq = 0;
