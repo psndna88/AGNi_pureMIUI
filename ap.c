@@ -2494,7 +2494,7 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 		owrt_ap_set_vap(dut, vap_id, "interworking", "1");
 		owrt_ap_set_vap(dut, vap_id, "mbo", "1");
 		owrt_ap_set_vap(dut, vap_id, "rrm", "1");
-		owrt_ap_set_vap(dut, vap_id, "mbo_cellular_pref", "1");
+		owrt_ap_set_vap(dut, vap_id, "mbo_cell_conn_pref", "1");
 
 		owrt_ap_set_list_vap(dut, vap_id, "anqp_elem",
 				     "'272:34108cfdf0020df1f7000000733000030101'");
