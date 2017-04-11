@@ -7965,20 +7965,10 @@ void novap_reset(struct sigma_dut *dut, const char *ifname)
 static void ath_set_assoc_disallow(struct sigma_dut *dut, const char *ifname,
 				   const char *val)
 {
-	char buf[80];
-
 	if (strcasecmp(val, "enable") == 0) {
-		snprintf(buf, sizeof(buf), "iwpriv %s mbo_asoc_dis 1", ifname);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv mbo_asoc_dis enable failed");
-		}
+		run_system_wrapper(dut, "iwpriv %s mbo_asoc_dis 1", ifname);
 	} else if (strcasecmp(val, "disable") == 0) {
-		snprintf(buf, sizeof(buf), "iwpriv %s mbo_asoc_dis 0", ifname);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv mbo_asoc_dis disable failed");
-		}
+		run_system_wrapper(dut, "iwpriv %s mbo_asoc_dis 0", ifname);
 	} else {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Unsupported assoc_disallow");
