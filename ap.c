@@ -2070,6 +2070,24 @@ static int owrt_ap_config_vap_hs2(struct sigma_dut *dut, int vap_id)
 }
 
 
+static void set_anqp_elem_value(struct sigma_dut *dut, const char *ifname,
+				char *anqp_string, size_t str_size)
+{
+	unsigned char bssid[ETH_ALEN];
+	unsigned char dummy_mac[] = { 0x00, 0x10, 0x20, 0x30, 0x40, 0x50 };
+	int preference = 0xff;
+
+	get_hwaddr(ifname, bssid);
+	snprintf(anqp_string, str_size,
+		 "272:3410%02x%02x%02x%02x%02x%02xf70000007330000301%02x3410%02x%02x%02x%02x%02x%02xf70000007330000301%02x",
+		 bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5],
+		 preference,
+		 dummy_mac[0], dummy_mac[1], dummy_mac[2],
+		 dummy_mac[3], dummy_mac[4], dummy_mac[5],
+		 preference - 1);
+}
+
+
 static void get_if_name(struct sigma_dut *dut, char *ifname_str,
 			size_t str_size, int wlan_tag)
 {
@@ -2182,6 +2200,17 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 				owrt_ap_set_vap(dut, vap_count + 1,
 						"ieee80211w", buf);
 			}
+		}
+
+		/* Now set anqp_elem for wlan_tag = 1 */
+		if (dut->program == PROGRAM_MBO &&
+		    get_driver_type() == DRIVER_OPENWRT) {
+			char anqp_string[200];
+
+			set_anqp_elem_value(dut, sigma_radio_ifname[0],
+					    anqp_string, sizeof(anqp_string));
+			owrt_ap_set_list_vap(dut, vap_count, "anqp_elem",
+					     anqp_string);
 		}
 
 		/* SSID */
@@ -2616,9 +2645,13 @@ static int cmd_owrt_ap_config_commit(struct sigma_dut *dut,
 
 	/* Start AP */
 	run_system(dut, "wifi up");
-
-	if (dut->ap_lci == 1 && dut->ap_interworking &&
+	if (dut->program != PROGRAM_MBO &&
+	    dut->ap_lci == 1 && dut->ap_interworking &&
 	    strlen(dut->ap_tag_ssid[0]) > 0) {
+		/*
+		 * MBO has a different ANQP element value which is set in
+		 * owrt_ap_config_vap().
+		 */
 		owrt_ap_config_vap_anqp(dut);
 		run_system(dut, "uci commit");
 		run_system(dut, "wifi");
