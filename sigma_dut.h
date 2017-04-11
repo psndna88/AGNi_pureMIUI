@@ -220,6 +220,7 @@ struct sigma_stream {
 #define AP_AC_VO 3
 
 #define MAX_WLAN_TAGS 3
+#define MBO_MAX_PREF_BSSIDS 10
 
 enum value_not_set_enabled_disabled {
 	VALUE_NOT_SET,
@@ -231,6 +232,13 @@ enum sec_ch_offset {
 	SEC_CH_NO,
 	SEC_CH_40ABOVE,
 	SEC_CH_40BELOW
+};
+
+struct mbo_pref_ap {
+	int ap_ne_class;
+	int ap_ne_op_ch;
+	int ap_ne_pref;
+	unsigned char mac_addr[ETH_ALEN];
 };
 
 struct sigma_dut {
@@ -489,6 +497,9 @@ struct sigma_dut {
 	} ap_reg_domain;
 	char ap_mobility_domain[10];
 	unsigned char ap_cell_cap_pref;
+	struct mbo_pref_ap mbo_pref_aps[MBO_MAX_PREF_BSSIDS];
+	struct mbo_pref_ap mbo_self_ap_tuple;
+	int mbo_pref_ap_cnt;
 
 	const char *hostapd_debug_log;
 

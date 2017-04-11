@@ -3918,6 +3918,79 @@ static void ath_set_assoc_disallow(struct sigma_dut *dut, const char *ifname,
 }
 
 
+static void apply_mbo_pref_ap_list(struct sigma_dut *dut)
+{
+	int i;
+	int least_pref = 1 << 8;
+	char ifname[20];
+	uint8_t self_mac[ETH_ALEN];
+	char buf[200];
+	int ap_ne_class, ap_ne_pref, ap_ne_op_ch;
+
+	get_if_name(dut, ifname, sizeof(ifname), 1);
+	get_hwaddr(ifname, self_mac);
+
+	/* Clear off */
+	snprintf(buf, sizeof(buf),
+		 "wifitool %s setbssidpref 00:00:00:00:00:00 0 0 0",
+		 ifname);
+	run_system(dut, buf);
+
+	/* Find the least preference number */
+	for (i = 0; i < dut->mbo_pref_ap_cnt; i++) {
+		unsigned char *mac_addr = dut->mbo_pref_aps[i].mac_addr;
+
+		ap_ne_class = 1;
+		ap_ne_pref = 255;
+		ap_ne_op_ch = 1;
+		if (dut->mbo_pref_aps[i].ap_ne_pref != -1)
+			ap_ne_pref = dut->mbo_pref_aps[i].ap_ne_pref;
+		if (dut->mbo_pref_aps[i].ap_ne_class != -1)
+			ap_ne_class = dut->mbo_pref_aps[i].ap_ne_class;
+		if (dut->mbo_pref_aps[i].ap_ne_op_ch != -1)
+			ap_ne_op_ch = dut->mbo_pref_aps[i].ap_ne_op_ch;
+
+		if (ap_ne_pref < least_pref)
+			least_pref = ap_ne_pref;
+		snprintf(buf, sizeof(buf),
+			 "wifitool %s setbssidpref %02x:%02x:%02x:%02x:%02x:%02x %d %d %d",
+			 ifname, mac_addr[0], mac_addr[1], mac_addr[2],
+			 mac_addr[3], mac_addr[4], mac_addr[5],
+			 ap_ne_pref, ap_ne_class, ap_ne_op_ch);
+		run_system(dut, buf);
+	}
+
+	/* Now add the self AP Address */
+	if (dut->mbo_self_ap_tuple.ap_ne_class == -1) {
+		if (dut->ap_channel <= 11)
+			ap_ne_class = 81;
+		else
+			ap_ne_class = 115;
+	} else {
+		ap_ne_class = dut->mbo_self_ap_tuple.ap_ne_class;
+	}
+
+	if (dut->mbo_self_ap_tuple.ap_ne_op_ch == -1)
+		ap_ne_op_ch = dut->ap_channel;
+	else
+		ap_ne_op_ch = dut->mbo_self_ap_tuple.ap_ne_op_ch;
+
+	if (dut->mbo_self_ap_tuple.ap_ne_pref == -1)
+		ap_ne_pref = least_pref - 1;
+	else
+		ap_ne_pref = dut->mbo_self_ap_tuple.ap_ne_pref;
+
+	snprintf(buf, sizeof(buf),
+		 "wifitool %s setbssidpref %02x:%02x:%02x:%02x:%02x:%02x %d %d %d",
+		 ifname, self_mac[0], self_mac[1], self_mac[2],
+		 self_mac[3], self_mac[4], self_mac[5],
+		 ap_ne_pref,
+		 ap_ne_class,
+		 ap_ne_op_ch);
+	run_system(dut, buf);
+}
+
+
 static void ath_ap_set_params(struct sigma_dut *dut)
 {
 	const char *basedev = "wifi1";
@@ -4545,6 +4618,8 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 	}
 
 	if (dut->program == PROGRAM_MBO) {
+		apply_mbo_pref_ap_list(dut);
+
 		snprintf(buf, sizeof(buf), "iwpriv %s mbo_cel_pref %d",
 			 ifname, dut->ap_cell_cap_pref);
 		run_system(dut, buf);
@@ -5956,6 +6031,8 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	dut->ap_dfs_mode = AP_DFS_MODE_DISABLED;
 	dut->ap_chwidth_offset = SEC_CH_NO;
 
+	dut->mbo_pref_ap_cnt = 0;
+
 	if (dut->program == PROGRAM_HT || dut->program == PROGRAM_VHT) {
 		dut->ap_wme = AP_WME_ON;
 		dut->ap_wmmps = AP_WMMPS_ON;
@@ -6124,6 +6201,10 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_chwidth = AP_20;
 		dut->ap_cell_cap_pref = 0;
 		dut->ap_gas_cb_delay = 0;
+		dut->mbo_self_ap_tuple.ap_ne_class = -1;
+		dut->mbo_self_ap_tuple.ap_ne_pref = -1; /* Not set */
+		dut->mbo_self_ap_tuple.ap_ne_op_ch = -1;
+
 	}
 
 	if (kill_process(dut, "(hostapd)", 1, SIGTERM) == 0 ||
@@ -8030,38 +8111,96 @@ void novap_reset(struct sigma_dut *dut, const char *ifname)
 }
 
 
-static int ath_set_nebor_bssid(struct sigma_dut *dut, const char *ifname,
-			       const char *val)
+struct mbo_pref_ap * mbo_find_nebor_ap_entry(struct sigma_dut *dut,
+					     const uint8_t *mac_addr)
 {
-	char buf[80];
-	unsigned char mac_addr[6];
+	int i;
 
-	if (parse_mac_address(dut, val, mac_addr) < 0)
+	for (i = 0; i < dut->mbo_pref_ap_cnt; i++) {
+		if (memcmp(mac_addr, dut->mbo_pref_aps[i].mac_addr,
+			   ETH_ALEN) == 0)
+			return &dut->mbo_pref_aps[i];
+	}
+	return NULL;
+}
+
+
+static void mbo_add_nebor_entry(struct sigma_dut *dut, const uint8_t *mac_addr,
+				int ap_ne_class, int ap_ne_op_ch,
+				int ap_ne_pref)
+{
+	struct mbo_pref_ap *entry;
+	uint8_t self_mac[ETH_ALEN];
+	char ifname[50];
+
+	get_if_name(dut, ifname, sizeof(ifname), 1);
+	get_hwaddr(ifname, self_mac);
+
+	if (memcmp(mac_addr, self_mac, ETH_ALEN) == 0)
+		entry = &dut->mbo_self_ap_tuple;
+	else
+		entry = mbo_find_nebor_ap_entry(dut, mac_addr);
+
+	if (!entry) {
+		if (dut->mbo_pref_ap_cnt >= MBO_MAX_PREF_BSSIDS) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Nebor AP List is full. Not adding");
+			return;
+		}
+		entry = &dut->mbo_pref_aps[dut->mbo_pref_ap_cnt];
+		dut->mbo_pref_ap_cnt++;
+		memcpy(entry->mac_addr, mac_addr, ETH_ALEN);
+		entry->ap_ne_class = -1;
+		entry->ap_ne_op_ch = -1;
+		entry->ap_ne_pref = -1;
+	}
+	if (ap_ne_class != -1)
+		entry->ap_ne_class = ap_ne_class;
+	if (ap_ne_op_ch != -1)
+		entry->ap_ne_op_ch = ap_ne_op_ch;
+	if (ap_ne_pref != -1)
+		entry->ap_ne_pref = ap_ne_pref;
+}
+
+
+static int ath_set_nebor_bssid(struct sigma_dut *dut, const char *ifname,
+			       struct sigma_cmd *cmd)
+{
+	unsigned char mac_addr[ETH_ALEN];
+	const char *val;
+	/*
+	 * -1 is invalid value for the following
+	 *  to differentiate between unset and set values
+	 *  -1 => implies not set by CAPI
+	 */
+	int ap_ne_class = -1, ap_ne_op_ch = -1, ap_ne_pref = -1;
+	int list_offset = dut->mbo_pref_ap_cnt;
+
+	if (list_offset >= MBO_MAX_PREF_BSSIDS) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"AP Pref Entry list is full");
+		return -1;
+	}
+
+	val = get_param(cmd, "Nebor_Op_Class");
+	if (val)
+		ap_ne_class = atoi(val);
+
+	val = get_param(cmd, "Nebor_Op_Ch");
+	if (val)
+		ap_ne_op_ch = atoi(val);
+
+	val = get_param(cmd, "Nebor_Pref");
+	if (val)
+		ap_ne_pref = atoi(val);
+
+	val = get_param(cmd, "Nebor_BSSID");
+	if (!val || parse_mac_address(dut, val, mac_addr) < 0)
 		return -1;
 
-	if (dut->ap_set_bssidpref) {
-		snprintf(buf, sizeof(buf),
-			 "wifitool %s setbssidpref 00:00:00:00:00:00 0 00 00",
-			 ifname);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"wifitool clear bssidpref failed");
-		}
-	}
-
-	if (dut->ap_ne_class && dut->ap_ne_op_ch) {
-		snprintf(buf, sizeof(buf),
-			 "wifitool %s setbssidpref %02x:%02x:%02x:%02x:%02x:%02x 1 %d %d",
-			 ifname, mac_addr[0], mac_addr[1], mac_addr[2],
-			 mac_addr[3], mac_addr[4], mac_addr[5],
-			 dut->ap_ne_class, dut->ap_ne_op_ch);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"wifitool setbssidpref failed");
-		}
-		dut->ap_set_bssidpref = 1;
-	}
-
+	mbo_add_nebor_entry(dut, mac_addr, ap_ne_class, ap_ne_op_ch,
+			    ap_ne_pref);
+	apply_mbo_pref_ap_list(dut);
 	return 0;
 }
 
@@ -8115,18 +8254,8 @@ static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (val)
 		ath_set_assoc_disallow(dut, ifname, val);
 
-	val = get_param(cmd, "Nebor_Op_Class");
-	if (val)
-		dut->ap_ne_class = atoi(val);
 
-	val = get_param(cmd, "Nebor_Op_Ch");
-	if (val)
-		dut->ap_ne_op_ch = atoi(val);
-
-	val = get_param(cmd, "Nebor_BSSID");
-	if (val && ath_set_nebor_bssid(dut, ifname, val) < 0)
-		return -1;
-
+	ath_set_nebor_bssid(dut, ifname, cmd);
 	val = get_param(cmd, "BTMReq_DisAssoc_Imnt");
 	if (val)
 		dut->ap_btmreq_disassoc_imnt = atoi(val);
