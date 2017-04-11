@@ -86,14 +86,13 @@ struct fpc1020_data {
 };
 
 #ifdef CONFIG_MACH_XIAOMI_KENZO
-int kenzo_fpsensor = 2;
+unsigned int kenzo_fpsensor = 1;
 static int __init setup_kenzo_fpsensor(char *str)
 {
-	if (!strcmp(str, "fpc"))
-		kenzo_fpsensor = 1;
-	else if (!strcmp(str, "gdx"))
+	if (!strncmp(str, "gdx", strlen(str)))
 		kenzo_fpsensor = 2;
-	return 1;
+
+	return kenzo_fpsensor;
 }
 __setup("androidboot.fpsensor=", setup_kenzo_fpsensor);
 #endif
