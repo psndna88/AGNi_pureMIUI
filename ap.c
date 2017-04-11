@@ -311,7 +311,11 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 	val = get_param(cmd, "WLAN_TAG");
 	if (val) {
 		wlan_tag = atoi(val);
-		if (wlan_tag != 1 && wlan_tag != 2) {
+		if (wlan_tag < 1 || wlan_tag > 3) {
+			/*
+			 * The only valid WLAN Tags as of now as per the latest
+			 * WFA scripts are 1, 2, and 3.
+			 */
 			send_resp(dut, conn, SIGMA_INVALID,
 				  "errorCode,Invalid WLAN_TAG");
 			return 0;
@@ -338,11 +342,21 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 			return -1;
 
 		if (wlan_tag == 1) {
+			/*
+			 * If tag is not specified, it is deemed to be 1.
+			 * Hence tag of 1 is a special case and the values
+			 * corresponding to wlan-tag=1 are stored separately
+			 * from the values corresponding tags 2 and 3.
+			 * This approach minimises the changes to existing code
+			 * since most of the sigma_dut code does not deal with
+			 * WLAN-TAG CAPI variable.
+			 */
 			snprintf(dut->ap_ssid,
 				 sizeof(dut->ap_ssid), "%s", val);
-		} else if (wlan_tag == 2) {
-			snprintf(dut->ap2_ssid,
-				 sizeof(dut->ap2_ssid), "%s", val);
+		} else {
+			snprintf(dut->ap_tag_ssid[wlan_tag - 2],
+				 sizeof(dut->ap_tag_ssid[wlan_tag - 2]),
+				 "%s", val);
 		}
 	}
 
@@ -1228,14 +1242,21 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (val)
 		wlan_tag = atoi(val);
 
-	if (wlan_tag == 2) {
+	if (wlan_tag > 1) {
 		val = get_param(cmd, "KEYMGNT");
 		if (val) {
-			if (strcasecmp(val, "NONE") == 0)
-				dut->ap2_key_mgmt = AP2_OPEN;
-			else if (strcasecmp(val, "OSEN") == 0)
-				dut->ap2_key_mgmt = AP2_OSEN;
-			else {
+			if (strcasecmp(val, "NONE") == 0) {
+				dut->ap_tag_key_mgmt[wlan_tag - 2] = AP2_OPEN;
+			} else if (strcasecmp(val, "OSEN") == 0 &&
+				   wlan_tag == 2) {
+				/*
+				 * OSEN only supported on WLAN_TAG = 2 for now
+				 */
+				dut->ap_tag_key_mgmt[wlan_tag - 2] = AP2_OSEN;
+			} else if (strcasecmp(val, "WPA2-PSK") == 0) {
+				dut->ap_tag_key_mgmt[wlan_tag - 2] =
+					AP2_WPA2_PSK;
+			} else {
 				send_resp(dut, conn, SIGMA_INVALID,
 					  "errorCode,Unsupported KEYMGNT");
 				return 0;
@@ -1969,8 +1990,9 @@ static int owrt_ap_config_vap_hs2(struct sigma_dut *dut, int vap_id)
 		}
 
 		if (strlen(dut->ap_osu_ssid)) {
-			if (strcmp(dut->ap2_ssid, dut->ap_osu_ssid) != 0 &&
-			    strcmp(dut->ap2_ssid, osu_ssid) != 0) {
+			if (strcmp(dut->ap_tag_ssid[0],
+				   dut->ap_osu_ssid) != 0 &&
+			    strcmp(dut->ap_tag_ssid[0], osu_ssid) != 0) {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
 						"OSU_SSID and WLAN_TAG2 SSID differ");
 				return -2;
@@ -2014,13 +2036,54 @@ static int owrt_ap_config_vap_hs2(struct sigma_dut *dut, int vap_id)
 }
 
 
+static void get_if_name(struct sigma_dut *dut, char *ifname_str,
+			size_t str_size, int wlan_tag)
+{
+	char *ifname;
+	enum driver_type drv;
+
+	drv = get_driver_type();
+	if (drv == DRIVER_ATHEROS) {
+		if ((dut->ap_mode == AP_11a || dut->ap_mode == AP_11na ||
+		     dut->ap_mode == AP_11ac) &&
+		    if_nametoindex("ath1") > 0)
+			ifname = "ath1";
+		else
+			ifname = "ath0";
+	} else if (drv == DRIVER_OPENWRT) {
+		if (sigma_radio_ifname[0] &&
+		    strcmp(sigma_radio_ifname[0], "wifi2") == 0)
+			ifname = "ath2";
+		else if (sigma_radio_ifname[0] &&
+			 strcmp(sigma_radio_ifname[0], "wifi1") == 0)
+			ifname = "ath1";
+		else
+			ifname = "ath0";
+	} else {
+		if ((dut->ap_mode == AP_11a || dut->ap_mode == AP_11na ||
+		     dut->ap_mode == AP_11ac) &&
+		    if_nametoindex("wlan1") > 0)
+			ifname = "wlan1";
+		else
+			ifname = "wlan0";
+	}
+
+	if (drv == DRIVER_OPENWRT && wlan_tag > 1) {
+		/* Handle tagged-ifname only on OPENWRT for now */
+		snprintf(ifname_str, str_size, "%s%d", ifname, wlan_tag - 1);
+	} else {
+		snprintf(ifname_str, str_size, "%s", ifname);
+	}
+}
+
+
 static int owrt_ap_config_vap(struct sigma_dut *dut)
 {
 	char buf[256], *temp;
-	int vap_id = 0, vap_count, i;
+	int vap_id = 0, vap_count, i, j;
 
 	for (vap_count = 0; vap_count < OPENWRT_MAX_NUM_RADIOS; vap_count++) {
-		snprintf(buf, sizeof(buf), "%s%d", "wifi", vap_count);
+		snprintf(buf, sizeof(buf), "wifi%d", vap_count);
 
 		for (vap_id = 0; vap_id < MAX_RADIO; vap_id++) {
 			if (sigma_radio_ifname[vap_id] &&
@@ -2034,15 +2097,31 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 		if (!dut->ap_is_dual)
 			vap_id = vap_count;
 
-		if (strlen(dut->ap2_ssid)) {
-			owrt_ap_add_vap(dut, vap_count + 1, "device", buf);
-			/* SSID */
-			snprintf(buf, sizeof(buf), "\"%s\"", dut->ap2_ssid);
-			owrt_ap_set_vap(dut, vap_count + 1, "ssid", buf);
+		for (j = 0; j < MAX_WLAN_TAGS - 1; j++) {
+			/*
+			 * We keep a separate array of ap_tag_ssid and
+			 * ap_tag_key_mgmt for tags starting from WLAN_TAG=2.
+			 * So j=0 => WLAN_TAG = 2
+			 */
+			int wlan_tag = j + 2;
 
-			if (dut->ap2_key_mgmt == AP2_OSEN) {
-				owrt_ap_set_vap(dut, vap_count + 1,
-						"osen", "1");
+			if (dut->ap_tag_ssid[j][0] == '\0')
+				continue;
+
+			snprintf(buf, sizeof(buf), "%s%d", "wifi", vap_count);
+			owrt_ap_add_vap(dut, vap_count + (wlan_tag - 1),
+					"device", buf);
+			/* SSID */
+			snprintf(buf, sizeof(buf), "\"%s\"",
+				 dut->ap_tag_ssid[j]);
+			owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
+					"ssid", buf);
+
+			if (dut->ap_tag_key_mgmt[j] == AP2_OSEN &&
+			    wlan_tag == 2) {
+				/* Only supported for WLAN_TAG=2 */
+				owrt_ap_set_vap(dut, vap_count + 1, "osen",
+						"1");
 				snprintf(buf, sizeof(buf), "wpa2");
 				owrt_ap_set_vap(dut, vap_count + 1,
 						"encryption", buf);
@@ -2055,9 +2134,19 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 				owrt_ap_set_vap(dut, vap_count + 1,
 						"auth_port", buf);
 				snprintf(buf, sizeof(buf), "%s",
-						dut->ap2_radius_password);
+					 dut->ap2_radius_password);
 				owrt_ap_set_vap(dut, vap_count + 1,
 						"auth_secret", buf);
+			} else if (dut->ap_tag_key_mgmt[j] == AP2_WPA2_PSK) {
+				owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
+						"encryption", "psk2+ccmp");
+				snprintf(buf, sizeof(buf), "\"%s\"",
+					 dut->ap_passphrase);
+				owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
+						"key", buf);
+				snprintf(buf, sizeof(buf), "%d", dut->ap_pmf);
+				owrt_ap_set_vap(dut, vap_count + 1,
+						"ieee80211w", buf);
 			}
 		}
 
@@ -2348,7 +2437,7 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 
 		owrt_ap_set_vap(dut, vap_id, "interworking", "1");
 
-		if (dut->ap_lci == 1 && strlen(dut->ap2_ssid) == 0) {
+		if (dut->ap_lci == 1 && strlen(dut->ap_tag_ssid[0]) == 0) {
 			snprintf(anqpval, sizeof(anqpval),
 				"'265:0010%s%s060101'",
 				dut->ap_val_lci, dut->ap_infoz);
@@ -2433,7 +2522,16 @@ static int owrt_ap_post_config_commit(struct sigma_dut *dut,
 				      struct sigma_conn *conn,
 				      struct sigma_cmd *cmd)
 {
-	if (dut->ap_key_mgmt != AP_OPEN) {
+	int ap_security = 0;
+	int i;
+
+	for (i = 0; i < MAX_WLAN_TAGS - 1; i++) {
+		if (dut->ap_tag_key_mgmt[i] != AP2_OPEN)
+			ap_security = 1;
+	}
+	if (dut->ap_key_mgmt != AP_OPEN)
+		ap_security = 1;
+	if (ap_security) {
 		/* allow some time for hostapd to start before returning
 		 * success */
 		usleep(500000);
@@ -2480,7 +2578,7 @@ static int cmd_owrt_ap_config_commit(struct sigma_dut *dut,
 	run_system(dut, "wifi up");
 
 	if (dut->ap_lci == 1 && dut->ap_interworking &&
-	    strlen(dut->ap2_ssid) > 0) {
+	    strlen(dut->ap_tag_ssid[0]) > 0) {
 		owrt_ap_config_vap_anqp(dut);
 		run_system(dut, "uci commit");
 		run_system(dut, "wifi");
@@ -3161,8 +3259,8 @@ static int append_hostapd_conf_hs2(struct sigma_dut *dut, FILE *f)
 		}
 
 		if (strlen(dut->ap_osu_ssid)) {
-			if (strcmp(dut->ap2_ssid, dut->ap_osu_ssid) &&
-			    strcmp(dut->ap2_ssid, osu_ssid)) {
+			if (strcmp(dut->ap_tag_ssid[0], dut->ap_osu_ssid) &&
+			    strcmp(dut->ap_tag_ssid[0], osu_ssid)) {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
 						"OSU_SSID and "
 						"WLAN_TAG2 SSID differ");
@@ -3352,7 +3450,7 @@ static int ath_ap_append_hostapd_conf(struct sigma_dut *dut)
 
 static int ath_ap_start_hostapd(struct sigma_dut *dut)
 {
-	if (dut->ap2_key_mgmt == AP2_OSEN)
+	if (dut->ap_tag_key_mgmt[0] == AP2_OSEN)
 		run_system(dut, "hostapd -B /tmp/secath0 /tmp/secath1 -e /etc/wpa2/entropy");
 	else
 		run_system(dut, "hostapd -B /tmp/secath0 -e /etc/wpa2/entropy");
@@ -4626,12 +4724,12 @@ static int cmd_ath_ap_config_commit(struct sigma_dut *dut,
 	else
 		run_system(dut, "cfg -r AP_HOTSPOT_DISABLE_DGAF");
 
-	if (strlen(dut->ap2_ssid)) {
+	if (strlen(dut->ap_tag_ssid[0])) {
 		snprintf(buf, sizeof(buf),
-			 "cfg -a AP_SSID_2=%s", dut->ap2_ssid);
+			 "cfg -a AP_SSID_2=%s", dut->ap_tag_ssid[0]);
 		run_system(dut, buf);
 
-		if (dut->ap2_key_mgmt == AP2_OSEN) {
+		if (dut->ap_tag_key_mgmt[0] == AP2_OSEN) {
 			run_system(dut, "cfg -a AP_SECMODE_2=WPA");
 			run_system(dut, "cfg -a AP_SECFILE_2=OSEN");
 
@@ -5206,7 +5304,7 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		return -2;
 	}
 
-	if (dut->ap_hs2 && strlen(dut->ap2_ssid)) {
+	if (dut->ap_hs2 && strlen(dut->ap_tag_ssid[0])) {
 		unsigned char bssid[6];
 		char ifname2[50];
 
@@ -5218,14 +5316,14 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 
 		snprintf(ifname2, sizeof(ifname2), "%s_1", ifname);
 		fprintf(f, "bss=%s_1\n", ifname2);
-		fprintf(f, "ssid=%s\n", dut->ap2_ssid);
+		fprintf(f, "ssid=%s\n", dut->ap_tag_ssid[0]);
 		if (dut->bridge)
 			fprintf(f, "bridge=%s\n", dut->bridge);
 		fprintf(f, "bssid=%02x:%02x:%02x:%02x:%02x:%02x\n",
 			bssid[0], bssid[1], bssid[2], bssid[3],
 			bssid[4], bssid[5]);
 
-		if (dut->ap2_key_mgmt == AP2_OSEN) {
+		if (dut->ap_tag_key_mgmt[0] == AP2_OSEN) {
 			fprintf(f, "osen=1\n");
 			if (strlen(dut->ap2_radius_ipaddr))
 				fprintf(f, "auth_server_addr=%s\n",
@@ -5705,6 +5803,16 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 {
 	const char *type;
 	enum driver_type drv;
+	int i;
+
+	for (i = 0; i < MAX_WLAN_TAGS - 1; i++) {
+		/*
+		 * Reset all tagged SSIDs to NULL-string and all key management
+		 * to open.
+		 */
+		dut->ap_tag_ssid[i][0] = '\0';
+		dut->ap_tag_key_mgmt[i] = AP2_OPEN;
+	}
 
 	drv = get_driver_type();
 	dut->program = sigma_program_to_enum(get_param(cmd, "PROGRAM"));
@@ -5821,7 +5929,6 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 
 		memcpy(dut->ap_hessid, hessid, strlen(hessid) + 1);
 		dut->ap_osu_ssid[0] = '\0';
-		dut->ap2_ssid[0] = '\0';
 		dut->ap_pmf = 1;
 		dut->ap_osu_provider_list = 0;
 		for (i = 0; i < 10; i++) {
@@ -5829,7 +5936,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 			dut->ap_osu_method[i] = 0xFF;
 		}
 		dut->ap_qos_map_set = 0;
-		dut->ap2_key_mgmt = AP2_OPEN;
+		dut->ap_tag_key_mgmt[0] = AP2_OPEN;
 		dut->ap2_proxy_arp = 0;
 		dut->ap_osu_icon_tag = 0;
 	}
@@ -5896,7 +6003,6 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_neighap = 0;
 		dut->ap_opchannel = 0;
 		dut->ap_scan = 0;
-		dut->ap2_ssid[0] = '\0';
 		dut->ap_fqdn_held = 0;
 		dut->ap_fqdn_supl = 0;
 		dut->ap_interworking = 0;
@@ -6708,37 +6814,26 @@ static int cmd_ap_get_mac_address(struct sigma_dut *dut,
 	/* const char *ifname = get_param(cmd, "INTERFACE"); */
 	char resp[50];
 	unsigned char addr[6];
-	char *ifname;
+	char ifname[50];
 	struct ifreq ifr;
-	int s;
-	enum driver_type drv;
+	int s, wlan_tag = 1;
+	const char *val;
 
-	drv = get_driver_type();
-
-	if (drv == DRIVER_ATHEROS) {
-		if ((dut->ap_mode == AP_11a || dut->ap_mode == AP_11na ||
-		     dut->ap_mode == AP_11ac) &&
-		    if_nametoindex("ath1") > 0)
-			ifname = "ath1";
-		else
-			ifname = "ath0";
-	} else if (drv == DRIVER_OPENWRT) {
-		if (sigma_radio_ifname[0] &&
-		    strcmp(sigma_radio_ifname[0], "wifi2") == 0)
-			ifname = "ath2";
-		else if (sigma_radio_ifname[0] &&
-			 strcmp(sigma_radio_ifname[0], "wifi1") == 0)
-			ifname = "ath1";
-		else
-			ifname = "ath0";
-	} else {
-		if ((dut->ap_mode == AP_11a || dut->ap_mode == AP_11na ||
-		     dut->ap_mode == AP_11ac) &&
-		    if_nametoindex("wlan1") > 0)
-			ifname = "wlan1";
-		else
-			ifname = "wlan0";
+	val = get_param(cmd, "WLAN_TAG");
+	if (val) {
+		wlan_tag = atoi(val);
+		if (wlan_tag < 1 || wlan_tag > 3) {
+			/*
+			 * The only valid WLAN Tags as of now as per the latest
+			 * WFA scripts are 1, 2, and 3.
+			 */
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Unsupported WLAN_TAG");
+			return 0;
+		}
 	}
+
+	get_if_name(dut, ifname, sizeof(ifname), wlan_tag);
 
 	s = socket(AF_INET, SOCK_DGRAM, 0);
 	if (s < 0)

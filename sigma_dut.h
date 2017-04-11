@@ -219,6 +219,8 @@ struct sigma_stream {
 #define AP_AC_VI 2
 #define AP_AC_VO 3
 
+#define MAX_WLAN_TAGS 3
+
 enum value_not_set_enabled_disabled {
 	VALUE_NOT_SET,
 	VALUE_ENABLED,
@@ -308,7 +310,11 @@ struct sigma_dut {
 
 	/* AP configuration */
 	char ap_ssid[33];
-	char ap2_ssid[33];
+	/*
+	 * WLAN-TAG of 1 will use 'ap_' variables;
+	 * tag higher than 1 will use 'ap_tag_' variables.
+	 */
+	char ap_tag_ssid[MAX_WLAN_TAGS - 1][33];
 	enum ap_mode {
 		AP_11a,
 		AP_11g,
@@ -365,10 +371,11 @@ struct sigma_dut {
 		AP_WPA2_EAP_MIXED,
 		AP_WPA2_PSK_MIXED
 	} ap_key_mgmt;
-	enum ap2_key_mgmt {
+	enum ap_tag_key_mgmt {
 		AP2_OPEN,
-		AP2_OSEN
-	} ap2_key_mgmt;
+		AP2_OSEN,
+		AP2_WPA2_PSK
+	} ap_tag_key_mgmt[MAX_WLAN_TAGS - 1];
 	int ap_add_sha256;
 	int ap_rsn_preauth;
 	enum ap_pmf {
