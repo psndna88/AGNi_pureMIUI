@@ -495,6 +495,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 	spin_lock_irqsave(&ppol->target_freq_lock, flags);
 	cpu_load = loadadjfreq / ppol->target_freq;
 	this_hispeed_freq = max(tunables->hispeed_freq, ppol->policy->min);
+	this_hispeed_freq = min(this_hispeed_freq, ppol->policy->max);
 
 	if (cpu_load >= tunables->go_hispeed_load) {
 		if (ppol->target_freq < this_hispeed_freq &&
