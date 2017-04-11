@@ -8081,6 +8081,11 @@ static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (val)
 		dut->ap_btmreq_term_bit = atoi(val);
 
+	val = get_param(cmd, "Assoc_Delay");
+	if (val)
+		run_system_wrapper(dut, "iwpriv %s mbo_asoc_ret %s",
+				   ifname, val);
+
 	val = get_param(cmd, "Disassoc_Timer");
 	if (val)
 		dut->ap_disassoc_timer = atoi(val);
