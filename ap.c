@@ -4515,6 +4515,10 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 		snprintf(buf, sizeof(buf), "iwpriv %s mbo_cel_pref %d",
 			 ifname, dut->ap_cell_cap_pref);
 		run_system(dut, buf);
+
+		snprintf(buf, sizeof(buf), "iwpriv %s mbocap 0x40", ifname);
+		run_system(dut, buf);
+
 		ath_set_assoc_disallow(dut, ifname, "disable");
 	}
 }
@@ -6083,6 +6087,8 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_btmreq_term_bit = 0;
 		dut->ap_disassoc_timer = 0;
 		dut->ap_btmreq_bss_term_dur = 0;
+		dut->ap_channel = 36;
+		dut->ap_chwidth = AP_20;
 		dut->ap_cell_cap_pref = 0;
 		dut->ap_gas_cb_delay = 0;
 	}
