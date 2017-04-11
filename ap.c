@@ -3865,6 +3865,20 @@ void ath_disable_txbf(struct sigma_dut *dut, const char *intf)
 }
 
 
+static void ath_set_assoc_disallow(struct sigma_dut *dut, const char *ifname,
+				   const char *val)
+{
+	if (strcasecmp(val, "enable") == 0) {
+		run_system_wrapper(dut, "iwpriv %s mbo_asoc_dis 1", ifname);
+	} else if (strcasecmp(val, "disable") == 0) {
+		run_system_wrapper(dut, "iwpriv %s mbo_asoc_dis 0", ifname);
+	} else {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Unsupported assoc_disallow");
+	}
+}
+
+
 static void ath_ap_set_params(struct sigma_dut *dut)
 {
 	const char *basedev = "wifi1";
@@ -4490,6 +4504,9 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 			run_system(dut, buf);
 		}
 	}
+
+	if (dut->program == PROGRAM_MBO)
+		ath_set_assoc_disallow(dut, ifname, "disable");
 }
 
 
@@ -7958,20 +7975,6 @@ void novap_reset(struct sigma_dut *dut, const char *ifname)
 	if (system(buf) != 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"disabling novap reset failed");
-	}
-}
-
-
-static void ath_set_assoc_disallow(struct sigma_dut *dut, const char *ifname,
-				   const char *val)
-{
-	if (strcasecmp(val, "enable") == 0) {
-		run_system_wrapper(dut, "iwpriv %s mbo_asoc_dis 1", ifname);
-	} else if (strcasecmp(val, "disable") == 0) {
-		run_system_wrapper(dut, "iwpriv %s mbo_asoc_dis 0", ifname);
-	} else {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"Unsupported assoc_disallow");
 	}
 }
 
