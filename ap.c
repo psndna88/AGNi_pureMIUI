@@ -1045,6 +1045,17 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
+	val = get_param(cmd, "DOMAIN");
+	if (val) {
+		if (strlen(val) >= sizeof(dut->ap_mobility_domain)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Too long DOMAIN");
+			return 0;
+		}
+		snprintf(dut->ap_mobility_domain,
+			 sizeof(dut->ap_mobility_domain), "%s", val);
+	}
+
 	return 1;
 }
 
@@ -2484,6 +2495,10 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 		owrt_ap_set_list_vap(dut, vap_id, "anqp_elem",
 				     "'272:34108cfdf0020df1f7000000733000030101'");
 	}
+
+	if (dut->ap_mobility_domain[0])
+		owrt_ap_set_vap(dut, vap_id, "mobility_domain",
+				dut->ap_mobility_domain);
 
 	return 1;
 }
@@ -6029,6 +6044,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_msnt_type = 0;
 	}
 	dut->ap_reg_domain = REG_DOMAIN_NOT_SET;
+	dut->ap_mobility_domain[0] = '\0';
 
 	if (dut->program == PROGRAM_MBO) {
 		dut->ap_mbo = 1;
