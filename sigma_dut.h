@@ -480,6 +480,8 @@ struct sigma_dut {
 	int ap_set_bssidpref;
 	int ap_btmreq_disassoc_imnt;
 	int ap_btmreq_term_bit;
+	int ap_disassoc_timer;
+	int ap_btmreq_bss_term_dur;
 	enum reg_domain {
 		REG_DOMAIN_NOT_SET,
 		REG_DOMAIN_LOCAL,

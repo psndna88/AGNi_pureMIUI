@@ -6052,6 +6052,10 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_ne_class = 0;
 		dut->ap_ne_op_ch = 0;
 		dut->ap_set_bssidpref = 1;
+		dut->ap_btmreq_disassoc_imnt = 0;
+		dut->ap_btmreq_term_bit = 0;
+		dut->ap_disassoc_timer = 0;
+		dut->ap_btmreq_bss_term_dur = 0;
 	}
 
 	if (kill_process(dut, "(hostapd)", 1, SIGTERM) == 0 ||
@@ -6596,15 +6600,255 @@ static int ath_ap_send_frame_loc(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+/*
+ * The following functions parse_send_frame_params_int(),
+ * parse_send_frame_params_str(), and parse_send_frame_params_mac()
+ * are used by ath_ap_send_frame_bcn_rpt_req().
+ * Beacon Report Request is a frame used as part of the MBO program.
+ * The command for sending beacon report has a lot of
+ * arguments and having these functions reduces code size.
+ *
+ */
+static int parse_send_frame_params_int(char *param, struct sigma_cmd *cmd,
+				       struct sigma_dut *dut,
+				       char *buf, size_t buf_size)
+{
+	const char *str_val;
+	int int_val;
+	char temp[100];
+
+	str_val = get_param(cmd, param);
+	if (!str_val) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "%s not given", param);
+		return -1;
+	}
+	int_val = atoi(str_val);
+	snprintf(temp, sizeof(temp), " %d", int_val);
+	strncat(buf, temp, buf_size - strlen(buf) - 1);
+	return 0;
+}
+
+
+static int parse_send_frame_params_str(char *param, struct sigma_cmd *cmd,
+				       struct sigma_dut *dut,
+				       char *buf, size_t buf_size)
+{
+	const char *str_val;
+	char temp[100];
+
+	str_val = get_param(cmd, param);
+	if (!str_val) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "%s not given", param);
+		return -1;
+	}
+	snprintf(temp, sizeof(temp), " %s", str_val);
+	temp[sizeof(temp) - 1] = '\0';
+	strncat(buf, temp, buf_size - strlen(buf) - 1);
+	return 0;
+}
+
+
+static int parse_send_frame_params_mac(char *param, struct sigma_cmd *cmd,
+				       struct sigma_dut *dut,
+				       char *buf, size_t buf_size)
+{
+	const char *str_val;
+	unsigned char mac[6];
+	char temp[100];
+
+	str_val = get_param(cmd, param);
+	if (!str_val) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "%s not given", param);
+		return -1;
+	}
+
+	if (parse_mac_address(dut, str_val, mac) < 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"MAC Address not in proper format");
+		return -1;
+	}
+	snprintf(temp, sizeof(temp), " %02x:%02x:%02x:%02x:%02x:%02x",
+		 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+	strncat(buf, temp, buf_size - strlen(temp) - 1);
+	return 0;
+}
+
+
+static void fill_1_or_0_based_on_presence(struct sigma_cmd *cmd, char *param,
+					  char *buf, size_t buf_size)
+{
+	const char *str_val;
+	char *value = " 1";
+
+	str_val = get_param(cmd, param);
+	if (!str_val || str_val[0] == '\0')
+		value = " 0";
+	strncat(buf, value, buf_size - strlen(buf) - 1);
+
+}
+
+
+/*
+ * wifitool athN sendbcnrpt
+ * <STA MAC        - Plugs in from Dest_MAC>
+ * <regclass       - Plugs in from RegClass - int>
+ * <channum        - Plugs in from Channel PARAM of dev_send_frame - int>
+ * <rand_ivl       - Plugs in from RandInt - string>
+ * <duration       - Plugs in from MeaDur - integer>
+ * <mode           - Plugs in from MeaMode - string>
+ * <req_ssid       - Plugs in from SSID PARAM of dev_send_frame - string>
+ * <rep_cond       - Plugs in from RptCond - integer>
+ * <rpt_detail     - Plugs in from RptDet - integer>
+ * <req_ie         - Plugs in from ReqInfo PARAM of dev_send_frame - string>
+ * <chanrpt_mode   - Plugs in from APChanRpt - integer>
+ * <specific_bssid - Plugs in from BSSID PARAM of dev_send_frame>
+ * [AP channel numbers]
+ */
+static int ath_ap_send_frame_bcn_rpt_req(struct sigma_dut *dut,
+					 struct sigma_cmd *cmd,
+					 const char *ifname)
+{
+	char buf[100];
+	int rpt_det;
+	const char *str_val;
+	const char *mea_mode;
+
+	snprintf(buf, sizeof(buf), "wifitool %s sendbcnrpt", ifname);
+
+	if (parse_send_frame_params_mac("Dest_MAC", cmd, dut, buf, sizeof(buf)))
+		return -1;
+	if (parse_send_frame_params_int("RegClass", cmd, dut, buf, sizeof(buf)))
+		return -1;
+	if (parse_send_frame_params_int("Channel", cmd, dut, buf, sizeof(buf)))
+		return -1;
+	if (parse_send_frame_params_str("RandInt", cmd, dut, buf, sizeof(buf)))
+		return -1;
+	if (parse_send_frame_params_int("MeaDur", cmd, dut, buf, sizeof(buf)))
+		return -1;
+
+	str_val = get_param(cmd, "MeaMode");
+	if (!str_val) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"MeaMode parameter not present in send bcn-rpt-req");
+		return -1;
+	}
+	if (strcasecmp(str_val, "passive") == 0) {
+		mea_mode = " 0";
+	} else if (strcasecmp(str_val, "active") == 0) {
+		mea_mode = " 1";
+	} else if (strcasecmp(str_val, "table") == 0) {
+		mea_mode = " 2";
+	} else {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"MEA-MODE Value not correctly given");
+		return -1;
+	}
+	strncat(buf, mea_mode, sizeof(buf) - strlen(buf) - 1);
+
+	fill_1_or_0_based_on_presence(cmd, "SSID", buf, sizeof(buf));
+
+	if (parse_send_frame_params_int("RptCond", cmd, dut, buf, sizeof(buf)))
+		return -1;
+
+	if (parse_send_frame_params_int("RptDet", cmd, dut, buf, sizeof(buf)))
+		return -1;
+	str_val = get_param(cmd, "RptDet");
+	rpt_det = str_val ? atoi(str_val) : 0;
+
+	if (rpt_det)
+		fill_1_or_0_based_on_presence(cmd, "ReqInfo", buf, sizeof(buf));
+	else
+		strncat(buf, " 0", sizeof(buf) - strlen(buf) - 1);
+
+	if (rpt_det)
+		fill_1_or_0_based_on_presence(cmd, "APChanRpt", buf,
+					      sizeof(buf));
+	else
+		strncat(buf, " 0", sizeof(buf) - strlen(buf) - 1);
+
+	if (parse_send_frame_params_mac("BSSID", cmd, dut, buf, sizeof(buf)))
+		return -1;
+
+	run_system(dut, buf);
+	return 0;
+}
+
+
+static void inform_and_sleep(struct sigma_dut *dut, int seconds)
+{
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "sleeping for %d seconds", seconds);
+	sleep(seconds);
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "woke up after %d seconds",
+			seconds);
+}
+
+
+static int ath_ap_send_frame_btm_req(struct sigma_dut *dut,
+				     struct sigma_cmd *cmd, const char *ifname)
+{
+	unsigned char mac_addr[ETH_ALEN];
+	int disassoc_timer;
+	char buf[100];
+	const char *val;
+	int cand_list = 1;
+	int tsf = 2;
+
+	val = get_param(cmd, "Dest_MAC");
+	if (!val || parse_mac_address(dut, val, mac_addr) < 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"MAC Address not in proper format");
+		return -1;
+	}
+
+	val = get_param(cmd, "Disassoc_Timer");
+	if (val)
+		disassoc_timer = atoi(val);
+	else
+		disassoc_timer = dut->ap_disassoc_timer;
+
+	val = get_param(cmd, "Cand_List");
+	if (val && val[0])
+		cand_list = atoi(val);
+
+	val = get_param(cmd, "BTMQuery_Reason_Code");
+	if (val) {
+		snprintf(buf, sizeof(buf), "iwpriv %s mbo_trans_rs %s",
+			 ifname, val);
+		run_system(dut, buf);
+	}
+
+	snprintf(buf, sizeof(buf),
+		 "wifitool %s sendbstmreq %02x:%02x:%02x:%02x:%02x:%02x %d %d 3 %d %d %d %d",
+		 ifname, mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3],
+		 mac_addr[4], mac_addr[5], cand_list, disassoc_timer,
+		 dut->ap_btmreq_disassoc_imnt,
+		 dut->ap_btmreq_term_bit,
+		 tsf,
+		 dut->ap_btmreq_bss_term_dur);
+	run_system(dut, buf);
+
+	if (dut->ap_btmreq_term_bit) {
+		inform_and_sleep(dut, 3);
+		run_system_wrapper(dut, "ifconfig %s down", ifname);
+		inform_and_sleep(dut, dut->ap_btmreq_bss_term_dur * 60);
+		run_system_wrapper(dut, "ifconfig %s up", ifname);
+	} else if (dut->ap_btmreq_disassoc_imnt) {
+		inform_and_sleep(dut, (disassoc_timer / 1000) + 1);
+		run_system_wrapper(dut,
+				   "iwpriv %s kickmac %02x:%02x:%02x:%02x:%02x:%02x",
+				   ifname,
+				   mac_addr[0], mac_addr[1], mac_addr[2],
+				   mac_addr[3], mac_addr[4], mac_addr[5]);
+	}
+	return 0;
+}
+
+
 static int ath_ap_send_frame_mbo(struct sigma_dut *dut, struct sigma_conn *conn,
 				 struct sigma_cmd *cmd)
 {
 	const char *val;
 	char *ifname;
-	char buf[100];
-	int disassoc_timer = 0;
-	int apchanrpt = 0;
-	int req_ssid = 0;
 
 	ifname = get_main_ifname();
 
@@ -6612,51 +6856,12 @@ static int ath_ap_send_frame_mbo(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (!val)
 		return -1;
 
-	if (strcasecmp(val, "BTMReq") == 0) {
-		val = get_param(cmd, "Disassoc_Timer");
-		if (val)
-			disassoc_timer = atoi(val);
-		snprintf(buf, sizeof(buf),
-			 "wifitool %s sendbstmreq %s %s %d 3 %d %d",
-			 ifname, cmd->values[3], cmd->values[5], disassoc_timer,
-			 dut->ap_btmreq_disassoc_imnt, dut->ap_btmreq_term_bit);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"wifitool btmreq failed!");
-		}
-	} else if (strcasecmp(val, "BcnRptReq") == 0) {
-		val = get_param(cmd, "APChanRpt");
-		if (val)
-			apchanrpt = atoi(val);
-		val = get_param(cmd, "SSID");
-		if (val)
-			req_ssid = strcasecmp(val, "") != 0;
-		if (apchanrpt != 0) {
-			snprintf(buf, sizeof(buf),
-				 "wifitool %s sendbcnrpt %s %s %s %s %s %s %d %s %s 1 1 %s",
-				 ifname, cmd->values[4], cmd->values[5],
-				 cmd->values[6], cmd->values[7], cmd->values[8],
-				 cmd->values[9], req_ssid,
-				 cmd->values[12], cmd->values[13],
-				 cmd->values[10]);
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"wifitool btmreq failed!");
-			}
-		} else {
-			snprintf(buf, sizeof(buf),
-				 "wifitool %s sendbcnrpt %s %s %s %s %s %s %d %s %s 1 0 %s",
-				 ifname, cmd->values[4], cmd->values[5],
-				 cmd->values[6], cmd->values[7], cmd->values[8],
-				 cmd->values[9], req_ssid,
-				 cmd->values[12], cmd->values[13],
-				 cmd->values[10]);
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"wifitool btmreq failed!");
-			}
-		}
-	}
+	if (strcasecmp(val, "BTMReq") == 0)
+		ath_ap_send_frame_btm_req(dut, cmd, ifname);
+	else if (strcasecmp(val, "BcnRptReq") == 0)
+		ath_ap_send_frame_bcn_rpt_req(dut, cmd, ifname);
+	else
+		return -1;
 
 	return 1;
 }
@@ -7885,6 +8090,14 @@ static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 	val = get_param(cmd, "BTMReq_Term_Bit");
 	if (val)
 		dut->ap_btmreq_term_bit = atoi(val);
+
+	val = get_param(cmd, "Disassoc_Timer");
+	if (val)
+		dut->ap_disassoc_timer = atoi(val);
+
+	val = get_param(cmd, "BSS_Term_Duration");
+	if (val)
+		dut->ap_btmreq_bss_term_dur = atoi(val);
 
 	return 1;
 }
