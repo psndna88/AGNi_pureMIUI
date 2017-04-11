@@ -488,6 +488,7 @@ struct sigma_dut {
 		REG_DOMAIN_GLOBAL
 	} ap_reg_domain;
 	char ap_mobility_domain[10];
+	unsigned char ap_cell_cap_pref;
 
 	const char *hostapd_debug_log;
 

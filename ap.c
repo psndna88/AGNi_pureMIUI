@@ -1045,6 +1045,10 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
+	val = get_param(cmd, "Cellular_Cap_Pref");
+	if (val)
+		dut->ap_cell_cap_pref = atoi(val);
+
 	val = get_param(cmd, "DOMAIN");
 	if (val) {
 		if (strlen(val) >= sizeof(dut->ap_mobility_domain)) {
@@ -4507,8 +4511,12 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 		}
 	}
 
-	if (dut->program == PROGRAM_MBO)
+	if (dut->program == PROGRAM_MBO) {
+		snprintf(buf, sizeof(buf), "iwpriv %s mbo_cel_pref %d",
+			 ifname, dut->ap_cell_cap_pref);
+		run_system(dut, buf);
 		ath_set_assoc_disallow(dut, ifname, "disable");
+	}
 }
 
 
@@ -6075,6 +6083,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_btmreq_term_bit = 0;
 		dut->ap_disassoc_timer = 0;
 		dut->ap_btmreq_bss_term_dur = 0;
+		dut->ap_cell_cap_pref = 0;
 		dut->ap_gas_cb_delay = 0;
 	}
 
