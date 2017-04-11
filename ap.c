@@ -1032,6 +1032,19 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
+	val = get_param(cmd, "Reg_Domain");
+	if (val) {
+		if (strcasecmp(val, "Local") == 0) {
+			dut->ap_reg_domain = REG_DOMAIN_LOCAL;
+		} else if (strcasecmp(val, "Global") == 0) {
+			dut->ap_reg_domain = REG_DOMAIN_GLOBAL;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Wrong value for Reg_Domain");
+			return 0;
+		}
+	}
+
 	return 1;
 }
 
@@ -1668,10 +1681,16 @@ static void owrt_ap_config_radio(struct sigma_dut *dut)
 		owrt_ap_set_radio(dut, radio_id[1], "channel", buf);
 	}
 
-	if (dut->ap_countrycode[0]) {
-		/* Country Code */
-		snprintf(buf, sizeof(buf), "%s", dut->ap_countrycode);
+	/* Country Code */
+	if (dut->ap_reg_domain == REG_DOMAIN_GLOBAL) {
+		const char *country;
+
+		country = dut->ap_countrycode[0] ? dut->ap_countrycode : "US";
+		snprintf(buf, sizeof(buf), "%s4", country);
 		owrt_ap_set_radio(dut, radio_id[0], "country", buf);
+	} else if (dut->ap_countrycode[0]) {
+		owrt_ap_set_radio(dut, radio_id[0], "country",
+				  dut->ap_countrycode);
 	}
 
 	if (dut->ap_disable_protection == 1) {
@@ -6009,6 +6028,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_gas_cb_delay = 0;
 		dut->ap_msnt_type = 0;
 	}
+	dut->ap_reg_domain = REG_DOMAIN_NOT_SET;
 
 	if (dut->program == PROGRAM_MBO) {
 		dut->ap_mbo = 1;

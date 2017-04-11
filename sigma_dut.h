@@ -480,6 +480,11 @@ struct sigma_dut {
 	int ap_set_bssidpref;
 	int ap_btmreq_disassoc_imnt;
 	int ap_btmreq_term_bit;
+	enum reg_domain {
+		REG_DOMAIN_NOT_SET,
+		REG_DOMAIN_LOCAL,
+		REG_DOMAIN_GLOBAL
+	} ap_reg_domain;
 
 	const char *hostapd_debug_log;
 
