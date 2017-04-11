@@ -2494,6 +2494,8 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 
 		owrt_ap_set_list_vap(dut, vap_id, "anqp_elem",
 				     "'272:34108cfdf0020df1f7000000733000030101'");
+		snprintf(buf, sizeof(buf), "%d", dut->ap_gas_cb_delay);
+		owrt_ap_set_vap(dut, vap_id, "gas_comeback_delay", buf);
 	}
 
 	if (dut->ap_mobility_domain[0])
@@ -6073,6 +6075,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_btmreq_term_bit = 0;
 		dut->ap_disassoc_timer = 0;
 		dut->ap_btmreq_bss_term_dur = 0;
+		dut->ap_gas_cb_delay = 0;
 	}
 
 	if (kill_process(dut, "(hostapd)", 1, SIGTERM) == 0 ||
