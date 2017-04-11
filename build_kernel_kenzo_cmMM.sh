@@ -1,8 +1,6 @@
 #!/bin/sh
 export KERNELDIR=`readlink -f .`
 . ~/AGNi_stamp_CM.sh
-#. ~/gcc-4.9-uber_aarch64.sh
-#. ~/gcc-5.x-uber_aarch64.sh
 . ~/gcc-6.x-uber_aarch64.sh
 #. ~/gcc-7.x-uber_aarch64.sh
 
@@ -30,26 +28,7 @@ mkdir -p $KERNELDIR/BUILT_kenzo-cmMM/system/lib/modules/
 
 find -name '*.ko' -exec mv -v {} $KERNELDIR/BUILT_kenzo-cmMM/system/lib/modules/ \;
 
-# Goodix X
 mv $KERNELDIR/arch/arm64/boot/Image.gz-dtb $KERNELDIR/BUILT_kenzo-cmMM/
-
-# Goodix V
-echo ""
-git apply goodix.patch && echo "   Goodix Patch applied ..."
-mv .git .git-halt
-rm $KERNELDIR/arch/arm/boot/dts/*.dtb
-mv .config .config-fpc
-make agni_kenzo-cmMM_defconfig
-make -j3 || exit 1
-rm .config
-mv .config-fpc .config
-mv .git-halt .git
-mv $KERNELDIR/arch/arm64/boot/Image.gz-dtb $KERNELDIR/BUILT_kenzo-cmMM/Image.gz-dtb_goodix
-git apply -R goodix.patch && echo "   Goodix Patch Cleaned UP."
-rm $KERNELDIR/arch/arm/boot/dts/*.dtb
-rm $KERNELDIR/drivers/staging/prima/wlan.ko
-rm $KERNELDIR/arch/arm64/boot/Image
-rm $KERNELDIR/arch/arm64/boot/Image.gz
 
 echo ""
 echo "AGNi pureCM-MM has been built for kenzo !!!"
