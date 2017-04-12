@@ -259,9 +259,9 @@
 				qcom,fast-avg-setup = <0>;
 			};
 
-			chan@11 {
+			chan@77 {
 				label = "pa_therm1";
-				reg = <0x11>;
+				reg = <0x77>;
 				qcom,decimation = <0>;
 				qcom,pre-div-channel-scaling = <0>;
 				qcom,calibration-type = "ratiometric";
