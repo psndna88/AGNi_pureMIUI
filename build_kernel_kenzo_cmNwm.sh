@@ -4,8 +4,6 @@ export KERNELDIR=`readlink -f .`
 . ~/gcc-6.x-uber_aarch64.sh
 #. ~/gcc-7.x-uber_aarch64.sh
 
-export ARCH=arm64
-
 echo ""
 echo " Cross-compiling AGNi pureCM-Nwm kernel ..."
 echo ""
