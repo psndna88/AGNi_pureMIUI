@@ -2407,6 +2407,7 @@ static int ice40_spi_probe(struct spi_device *spi)
 	mutex_init(&ihcd->wlock);
 	mutex_init(&ihcd->rlock);
 
+#ifdef CONFIG_EVENT_TRACING
 	/*
 	 * Enable all our trace points. Useful in debugging card
 	 * enumeration issues.
@@ -2414,6 +2415,7 @@ static int ice40_spi_probe(struct spi_device *spi)
 	ret = trace_set_clr_event(__stringify(TRACE_SYSTEM), NULL, 1);
 	if (ret < 0)
 		pr_err("fail to enable trace points with %d\n", ret);
+#endif
 
 	ihcd->wq = create_singlethread_workqueue("ice40_wq");
 	if (!ihcd->wq) {
