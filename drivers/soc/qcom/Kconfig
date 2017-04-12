@@ -642,7 +642,6 @@ config MSM_TEST_PACMAN
 
 config MSM_CORE_CTL_HELPER
 	tristate "Core control helper functions for dynamically hotplug CPUs"
-    depends on !THUNDERPLUG_CONTROL
 	help
 	  Provide helper functions for core control driver. Core control
 	  driver dynamically hotplugs CPUs from kernel based on current
