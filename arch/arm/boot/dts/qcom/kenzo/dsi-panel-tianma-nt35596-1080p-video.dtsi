@@ -20,7 +20,7 @@
 		qcom,mdss-dsi-panel-width = <1080>;
 		qcom,mdss-dsi-panel-height = <1920>;
 		qcom,mdss-dsi-h-front-porch = <98>;
-		qcom,mdss-dsi-h-back-porch = <98>;
+		qcom,mdss-dsi-h-back-porch = <200>;
 		qcom,mdss-dsi-h-pulse-width = <8>;
 		qcom,mdss-dsi-h-sync-skew = <0>;
 		qcom,mdss-dsi-v-back-porch = <8>;
@@ -41,10 +41,10 @@
 		qcom,mdss-dsi-lane-1-state;
 		qcom,mdss-dsi-lane-2-state;
 		qcom,mdss-dsi-lane-3-state;
-		qcom,mdss-dsi-panel-timings = [E6 38 26 00 68 6C 2A 3C 2C 03 04 00];
+		qcom,mdss-dsi-panel-timings = [f8 3c 28 00 6e 72 2e 40 30 03 04 00];
 		qcom,mdss-dsi-t-clk-post = <0x02>;
 		qcom,mdss-dsi-t-clk-pre = <0x2d>;
-		qcom,mdss-dsi-bl-min-level = <16>;
+		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
 		qcom,mdss-dsi-dma-trigger = "trigger_sw";
 		qcom,mdss-dsi-mdp-trigger = "none";
@@ -446,6 +446,6 @@
 		qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
 		qcom,mdss-dsi-panel-status-check-mode = "reg_read";
 		qcom,mdss-dsi-panel-status-value = <0x9c>;
-		qcom,esd-check-enabled;
+		qcom,mdss-dsi-hbp-power-mode;
 	};
 };

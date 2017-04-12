@@ -46,16 +46,24 @@
 				];
 		qcom,mdss-dsi-t-clk-post = <0x02>;
 		qcom,mdss-dsi-t-clk-pre = <0x2d>;
-		qcom,mdss-dsi-bl-min-level = <16>;
+		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
 		qcom,mdss-dsi-dma-trigger = "trigger_sw";
 		qcom,mdss-dsi-mdp-trigger = "none";
 		qcom,mdss-dsi-on-command = [
-				29 01 00 00 00 00 02 D6 01
-				29 01 00 00 00 00 02 35 00
-				29 01 00 00 00 00 02 55 00
-				05 01 00 00 14 00 02 29 00
-				05 01 00 00 78 00 02 11 00
+				29 01 00 00 00 00 02 b0 00 
+				29 01 00 00 00 00 1f c7 05 
+				14 1e 2a 3b 4a 54 62 47 50 
+				5d 69 70 74 77 07 16 20 2a 
+				3b 4a 54 62 47 4f 5a 66 6d 
+				70 73 29 01 00 00 00 00 14 
+				c8 01 00 00 fd 02 fc 00 00 
+				ff 01 ff fc 00 00 01 f5 f6 
+				fc 00 29 01 00 00 00 00 02 
+				35 00 29 01 00 00 00 00 02 
+				55 00 05 01 00 00 14 00 02 
+				29 00 05 01 00 00 78 00 02 
+				11 00
 				];
 		qcom,mdss-dsi-off-command = [05 01 00 00 96 00 02 28 00
 				05 01 00 00 96 00 02 10 00];
@@ -73,6 +81,5 @@
 		qcom,mdss-dsi-panel-status-check-mode = "reg_read";
 		qcom,mdss-dsi-panel-status-value = <0x1c>;
 		qcom,esd-check-enabled;
-		qcom,sharp-panel;
 	};
 };
