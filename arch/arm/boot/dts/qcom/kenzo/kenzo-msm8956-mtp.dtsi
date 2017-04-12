@@ -121,7 +121,9 @@
 };
 
 &soc {
-       hall {
+
+    hall {
+
 		compatible = "hall-switch";
 		interrupt-parent = <&msm_gpio>;
 		interrupts = <107 0x2003>;
