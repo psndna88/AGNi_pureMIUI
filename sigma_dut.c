@@ -1051,6 +1051,8 @@ int main(int argc, char *argv[])
 #endif /* MIRACAST */
 	free(sigma_dut.non_pref_ch_list);
 	sigma_dut.non_pref_ch_list = NULL;
+	free(sigma_dut.btm_query_cand_list);
+	sigma_dut.btm_query_cand_list = NULL;
 	sigma_dut_unreg_cmds(&sigma_dut);
 
 	return 0;

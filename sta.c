@@ -48,6 +48,9 @@
 #endif
 
 #define NON_PREF_CH_LIST_SIZE 100
+#define NEIGHBOR_REPORT_SIZE 1000
+#define DEFAULT_NEIGHBOR_BSSID_INFO "17"
+#define DEFAULT_NEIGHBOR_PHY_TYPE "1"
 
 extern char *sigma_wpas_ctrl;
 extern char *sigma_cert_path;
@@ -395,14 +398,32 @@ static int send_neighbor_request(struct sigma_dut *dut, const char *intf,
 
 
 static int send_trans_mgmt_query(struct sigma_dut *dut, const char *intf,
-				 const char *ssid)
+				 struct sigma_cmd *cmd)
 {
+	const char *val;
+	int reason_code = 0;
+	char buf[1024];
+
 	/*
 	 * In the earlier builds we used WNM_QUERY and in later
 	 * builds used WNM_BSS_QUERY.
 	 */
 
-	if (wpa_command(intf, "WNM_BSS_QUERY 0") != 0) {
+	val = get_param(cmd, "BTMQuery_Reason_Code");
+	if (val)
+		reason_code = atoi(val);
+
+	val = get_param(cmd, "Cand_List");
+	if (val && atoi(val) == 1 && dut->btm_query_cand_list) {
+		snprintf(buf, sizeof(buf), "WNM_BSS_QUERY %d%s", reason_code,
+			 dut->btm_query_cand_list);
+		free(dut->btm_query_cand_list);
+		dut->btm_query_cand_list = NULL;
+	} else {
+		snprintf(buf, sizeof(buf), "WNM_BSS_QUERY %d", reason_code);
+	}
+
+	if (wpa_command(intf, buf) != 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"transition management query failed");
 		return -1;
@@ -4648,6 +4669,8 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 	if (dut->program == PROGRAM_MBO) {
 		free(dut->non_pref_ch_list);
 		dut->non_pref_ch_list = NULL;
+		free(dut->btm_query_cand_list);
+		dut->btm_query_cand_list = NULL;
 	}
 
 	if (dut->program != PROGRAM_VHT)
@@ -6719,12 +6742,12 @@ int cmd_sta_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 
 		return 1;
-	} else if (strcasecmp(val, "transmgmtquery") == 0) {
+	} else if (strcasecmp(val, "transmgmtquery") == 0 ||
+		   strcasecmp(val, "BTMQuery") == 0) {
 		sigma_dut_print(dut, DUT_MSG_DEBUG,
 				"Got Transition Management Query");
 
-		val = get_param(cmd, "ssid");
-		res = send_trans_mgmt_query(dut, intf, val);
+		res = send_trans_mgmt_query(dut, intf, cmd);
 		if (res) {
 			send_resp(dut, conn, SIGMA_ERROR, "errorCode,"
 				  "Failed to send Transition Management Query");
@@ -7258,6 +7281,102 @@ static int cmd_sta_set_rfeature_vht(const char *intf, struct sigma_dut *dut,
 }
 
 
+static int btm_query_candidate_list(struct sigma_dut *dut,
+				    struct sigma_conn *conn,
+				    struct sigma_cmd *cmd)
+{
+	const char *bssid, *info, *op_class, *ch, *phy_type, *pref;
+	int len, ret;
+	char buf[10];
+
+	/*
+	 * Neighbor Report elements format:
+	 * neighbor=<BSSID>,<BSSID Information>,<Operating Class>,
+	 * <Channel Number>,<PHY Type>[,<hexdump of Optional Subelements>]
+	 * eg: neighbor=aa:bb:cc:dd:ee:ff,17,81,6,1,030101
+	 */
+
+	bssid = get_param(cmd, "Nebor_BSSID");
+	if (!bssid) {
+		send_resp(dut, conn, SIGMA_INVALID,
+			  "errorCode,Nebor_BSSID is missing");
+		return 0;
+	}
+
+	info = get_param(cmd, "Nebor_Bssid_Info");
+	if (!info) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Using default value for Nebor_Bssid_Info: %s",
+				DEFAULT_NEIGHBOR_BSSID_INFO);
+		info = DEFAULT_NEIGHBOR_BSSID_INFO;
+	}
+
+	op_class = get_param(cmd, "Nebor_Op_Class");
+	if (!op_class) {
+		send_resp(dut, conn, SIGMA_INVALID,
+			  "errorCode,Nebor_Op_Class is missing");
+		return 0;
+	}
+
+	ch = get_param(cmd, "Nebor_Op_Ch");
+	if (!ch) {
+		send_resp(dut, conn, SIGMA_INVALID,
+			  "errorCode,Nebor_Op_Ch is missing");
+		return 0;
+	}
+
+	phy_type = get_param(cmd, "Nebor_Phy_Type");
+	if (!phy_type) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Using default value for Nebor_Phy_Type: %s",
+				DEFAULT_NEIGHBOR_PHY_TYPE);
+		phy_type = DEFAULT_NEIGHBOR_PHY_TYPE;
+	}
+
+	/* Parse optional subelements */
+	buf[0] = '\0';
+	pref = get_param(cmd, "Nebor_Pref");
+	if (pref) {
+		/* hexdump for preferrence subelement */
+		ret = snprintf(buf, sizeof(buf), ",0301%02x", atoi(pref));
+		if (ret < 0 || ret >= (int) sizeof(buf)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"snprintf failed for optional subelement ret: %d",
+					ret);
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,snprintf failed for subelement");
+			return 0;
+		}
+	}
+
+	if (!dut->btm_query_cand_list) {
+		dut->btm_query_cand_list = calloc(1, NEIGHBOR_REPORT_SIZE);
+		if (!dut->btm_query_cand_list) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to allocate memory for btm_query_cand_list");
+			return 0;
+		}
+	}
+
+	len = strlen(dut->btm_query_cand_list);
+	ret = snprintf(dut->btm_query_cand_list + len,
+		       NEIGHBOR_REPORT_SIZE - len, " neighbor=%s,%s,%s,%s,%s%s",
+		       bssid, info, op_class, ch, phy_type, buf);
+	if (ret < 0 || ret >= NEIGHBOR_REPORT_SIZE - len) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"snprintf failed for neighbor report list ret: %d",
+				ret);
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,snprintf failed for neighbor report");
+		free(dut->btm_query_cand_list);
+		dut->btm_query_cand_list = NULL;
+		return 0;
+	}
+
+	return 1;
+}
+
+
 static int cmd_sta_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 				struct sigma_cmd *cmd)
 {
@@ -7267,6 +7386,11 @@ static int cmd_sta_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	if (intf == NULL || prog == NULL)
 		return -1;
+
+	/* BSS Transition candidate list for BTM query */
+	val = get_param(cmd, "Nebor_BSSID");
+	if (val && btm_query_candidate_list(dut, conn, cmd) == 0)
+		return 0;
 
 	if (strcasecmp(prog, "TDLS") == 0)
 		return cmd_sta_set_rfeature_tdls(intf, dut, conn, cmd);

@@ -627,6 +627,7 @@ struct sigma_dut {
 	enum value_not_set_enabled_disabled wnm_bss_max_protection;
 
 	char *non_pref_ch_list; /* MBO: non-preferred channel report */
+	char *btm_query_cand_list; /* Candidate list for BTM Query */
 };
 
 
