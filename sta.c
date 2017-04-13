@@ -2900,6 +2900,36 @@ static int mbo_set_cellular_data_capa(struct sigma_dut *dut,
 }
 
 
+static int mbo_set_assoc_disallow(struct sigma_dut *dut,
+				  struct sigma_conn *conn,
+				  const char *intf, const char *val)
+{
+	if (strcasecmp(val, "Disable") == 0) {
+		if (wpa_command(intf, "SET ignore_assoc_disallow 1") < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to disable Assoc_disallow");
+			return 0;
+		}
+		return 1;
+	}
+
+	if (strcasecmp(val, "Enable") == 0) {
+		if (wpa_command(intf, "SET ignore_assoc_disallow 0") < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to enable Assoc_disallow");
+			return 0;
+		}
+		return 1;
+	}
+
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"Invalid value provided for Assoc_disallow: %s", val);
+	send_resp(dut, conn, SIGMA_INVALID,
+		  "ErrorCode,Unknown value provided for Assoc_disallow");
+	return 0;
+}
+
+
 static int mbo_set_bss_trans_req(struct sigma_dut *dut, struct sigma_conn *conn,
 				 const char *intf, const char *val)
 {
@@ -3055,6 +3085,10 @@ static int cmd_sta_preset_testparameters(struct sigma_dut *dut,
 
 		val = get_param(cmd, "BSS_Transition");
 		if (val && mbo_set_bss_trans_req(dut, conn, intf, val) == 0)
+			return 0;
+
+		val = get_param(cmd, "Assoc_Disallow");
+		if (val && mbo_set_assoc_disallow(dut, conn, intf, val) == 0)
 			return 0;
 
 		return 1;
@@ -4705,6 +4739,7 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 		free(dut->btm_query_cand_list);
 		dut->btm_query_cand_list = NULL;
 		wpa_command(intf, "SET reject_btm_req_reason 0");
+		wpa_command(intf, "SET ignore_assoc_disallow 0");
 	}
 
 	if (dut->program != PROGRAM_VHT)
