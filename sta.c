@@ -2900,6 +2900,35 @@ static int mbo_set_cellular_data_capa(struct sigma_dut *dut,
 }
 
 
+static int mbo_set_roaming(struct sigma_dut *dut, struct sigma_conn *conn,
+			   const char *intf, const char *val)
+{
+	if (strcasecmp(val, "Disable") == 0) {
+		if (wpa_command(intf, "SET roaming 0") < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to disable roaming");
+			return 0;
+		}
+		return 1;
+	}
+
+	if (strcasecmp(val, "Enable") == 0) {
+		if (wpa_command(intf, "SET roaming 1") < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to enable roaming");
+			return 0;
+		}
+		return 1;
+	}
+
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"Invalid value provided for roaming: %s", val);
+	send_resp(dut, conn, SIGMA_INVALID,
+		  "ErrorCode,Unknown value provided for Roaming");
+	return 0;
+}
+
+
 static int mbo_set_assoc_disallow(struct sigma_dut *dut,
 				  struct sigma_conn *conn,
 				  const char *intf, const char *val)
@@ -3089,6 +3118,10 @@ static int cmd_sta_preset_testparameters(struct sigma_dut *dut,
 
 		val = get_param(cmd, "Assoc_Disallow");
 		if (val && mbo_set_assoc_disallow(dut, conn, intf, val) == 0)
+			return 0;
+
+		val = get_param(cmd, "Roaming");
+		if (val && mbo_set_roaming(dut, conn, intf, val) == 0)
 			return 0;
 
 		return 1;
@@ -4741,6 +4774,7 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 		wpa_command(intf, "SET reject_btm_req_reason 0");
 		wpa_command(intf, "SET ignore_assoc_disallow 0");
 		wpa_command(intf, "SET gas_address3 0");
+		wpa_command(intf, "SET roaming 1");
 	}
 
 	if (dut->program != PROGRAM_VHT)
