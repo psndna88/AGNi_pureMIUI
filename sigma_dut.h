@@ -625,6 +625,8 @@ struct sigma_dut {
 	enum value_not_set_enabled_disabled wnm_bss_max_feature;
 	int wnm_bss_max_idle_time;
 	enum value_not_set_enabled_disabled wnm_bss_max_protection;
+
+	char *non_pref_ch_list; /* MBO: non-preferred channel report */
 };
 
 

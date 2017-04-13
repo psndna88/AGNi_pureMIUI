@@ -47,6 +47,8 @@
 #define IEEE80211_SNAP_LEN_DMG 8
 #endif
 
+#define NON_PREF_CH_LIST_SIZE 100
+
 extern char *sigma_wpas_ctrl;
 extern char *sigma_cert_path;
 extern enum driver_type wifi_chip_type;
@@ -2877,6 +2879,92 @@ static int mbo_set_cellular_data_capa(struct sigma_dut *dut,
 }
 
 
+static int mbo_set_non_pref_ch_list(struct sigma_dut *dut,
+				    struct sigma_conn *conn,
+				    const char *intf,
+				    struct sigma_cmd *cmd)
+{
+	const char *ch, *pref, *op_class, *reason;
+	char buf[120];
+	int len, ret;
+
+	pref = get_param(cmd, "Ch_Pref");
+	if (!pref)
+		return 1;
+
+	if (strcasecmp(pref, "clear") == 0) {
+		free(dut->non_pref_ch_list);
+		dut->non_pref_ch_list = NULL;
+	} else {
+		op_class = get_param(cmd, "Ch_Op_Class");
+		if (!op_class) {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "ErrorCode,Ch_Op_Class not provided");
+			return 0;
+		}
+
+		ch = get_param(cmd, "Ch_Pref_Num");
+		if (!ch) {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "ErrorCode,Ch_Pref_Num not provided");
+			return 0;
+		}
+
+		reason = get_param(cmd, "Ch_Reason_Code");
+		if (!reason) {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "ErrorCode,Ch_Reason_Code not provided");
+			return 0;
+		}
+
+		if (!dut->non_pref_ch_list) {
+			dut->non_pref_ch_list =
+				calloc(1, NON_PREF_CH_LIST_SIZE);
+			if (!dut->non_pref_ch_list) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "ErrorCode,Failed to allocate memory for non_pref_ch_list");
+				return 0;
+			}
+		}
+		len = strlen(dut->non_pref_ch_list);
+		ret = snprintf(dut->non_pref_ch_list + len,
+			       NON_PREF_CH_LIST_SIZE - len,
+			       " %s:%s:%s:%s", op_class, ch, pref, reason);
+		if (ret > 0 && ret < NON_PREF_CH_LIST_SIZE - len) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG, "non_pref_list: %s",
+					dut->non_pref_ch_list);
+		} else {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"snprintf failed for non_pref_list, ret = %d",
+					ret);
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,snprintf failed");
+			free(dut->non_pref_ch_list);
+			dut->non_pref_ch_list = NULL;
+			return 0;
+		}
+	}
+
+	ret = snprintf(buf, sizeof(buf), "SET non_pref_chan%s",
+		       dut->non_pref_ch_list ? dut->non_pref_ch_list : " ");
+	if (ret < 0 || ret >= (int) sizeof(buf)) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"snprintf failed for set non_pref_chan, ret: %d",
+				ret);
+		send_resp(dut, conn, SIGMA_ERROR, "ErrorCode,snprint failed");
+		return 0;
+	}
+
+	if (wpa_command(intf, buf) < 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "ErrorCode,Failed to set non-preferred channel list");
+		return 0;
+	}
+
+	return 1;
+}
+
+
 static int cmd_sta_preset_testparameters(struct sigma_dut *dut,
 					 struct sigma_conn *conn,
 					 struct sigma_cmd *cmd)
@@ -2910,6 +2998,11 @@ static int cmd_sta_preset_testparameters(struct sigma_dut *dut,
 		if (val &&
 		    mbo_set_cellular_data_capa(dut, conn, intf, atoi(val)) == 0)
 			return 0;
+
+		val = get_param(cmd, "Ch_Pref");
+		if (val && mbo_set_non_pref_ch_list(dut, conn, intf, cmd) == 0)
+			return 0;
+
 		return 1;
 	}
 
@@ -4550,6 +4643,11 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 	if (dut->program == PROGRAM_LOC) {
 		/* Disable Interworking by default */
 		wpa_command(get_station_ifname(), "SET interworking 0");
+	}
+
+	if (dut->program == PROGRAM_MBO) {
+		free(dut->non_pref_ch_list);
+		dut->non_pref_ch_list = NULL;
 	}
 
 	if (dut->program != PROGRAM_VHT)
@@ -7120,6 +7218,11 @@ static int cmd_sta_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 		if (val &&
 		    mbo_set_cellular_data_capa(dut, conn, intf, atoi(val)) == 0)
 			return 0;
+
+		val = get_param(cmd, "Ch_Pref");
+		if (val && mbo_set_non_pref_ch_list(dut, conn, intf, cmd) == 0)
+			return 0;
+
 		return 1;
 	}
 
