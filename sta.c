@@ -6543,6 +6543,62 @@ static int cmd_sta_send_frame_60g(struct sigma_dut *dut,
 }
 
 
+static int mbo_send_anqp_query(struct sigma_dut *dut, struct sigma_conn *conn,
+			       const char *intf, struct sigma_cmd *cmd)
+{
+	const char *val, *addr;
+	char buf[100];
+
+	addr = get_param(cmd, "DestMac");
+	if (!addr) {
+		send_resp(dut, conn, SIGMA_INVALID,
+			  "ErrorCode,AP MAC address is missing");
+		return 0;
+	}
+
+	val = get_param(cmd, "ANQPQuery_ID");
+	if (!val) {
+		send_resp(dut, conn, SIGMA_INVALID,
+			  "ErrorCode,Missing ANQPQuery_ID");
+		return 0;
+	}
+
+	if (strcasecmp(val, "NeighborReportReq") == 0) {
+		snprintf(buf, sizeof(buf), "ANQP_GET %s 272", addr);
+	} else if (strcasecmp(val, "QueryListWithCellPref") == 0) {
+		snprintf(buf, sizeof(buf), "ANQP_GET %s 272,mbo:2", addr);
+	} else {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "Invalid ANQPQuery_ID: %s",
+				val);
+		send_resp(dut, conn, SIGMA_INVALID,
+			  "ErrorCode,Invalid ANQPQuery_ID");
+		return 0;
+	}
+
+	if (wpa_command(intf, buf) < 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "ErrorCode,Failed to send ANQP query");
+		return 0;
+	}
+
+	return 1;
+}
+
+
+static int mbo_cmd_sta_send_frame(struct sigma_dut *dut,
+				  struct sigma_conn *conn,
+				  const char *intf,
+				  struct sigma_cmd *cmd)
+{
+	const char *val = get_param(cmd, "FrameName");
+
+	if (val && strcasecmp(val, "ANQPQuery") == 0)
+		return mbo_send_anqp_query(dut, conn, intf, cmd);
+
+	return 2;
+}
+
+
 int cmd_sta_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 		       struct sigma_cmd *cmd)
 {
@@ -6568,6 +6624,11 @@ int cmd_sta_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 		return loc_cmd_sta_send_frame(dut, conn, cmd);
 	if (val && strcasecmp(val, "60GHz") == 0)
 		return cmd_sta_send_frame_60g(dut, conn, cmd);
+	if (val && strcasecmp(val, "MBO") == 0) {
+		res = mbo_cmd_sta_send_frame(dut, conn, intf, cmd);
+		if (res != 2)
+			return res;
+	}
 
 	val = get_param(cmd, "TD_DISC");
 	if (val) {
