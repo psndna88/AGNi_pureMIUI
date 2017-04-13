@@ -4740,6 +4740,7 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 		dut->btm_query_cand_list = NULL;
 		wpa_command(intf, "SET reject_btm_req_reason 0");
 		wpa_command(intf, "SET ignore_assoc_disallow 0");
+		wpa_command(intf, "SET gas_address3 0");
 	}
 
 	if (dut->program != PROGRAM_VHT)
@@ -6664,6 +6665,16 @@ static int mbo_send_anqp_query(struct sigma_dut *dut, struct sigma_conn *conn,
 				val);
 		send_resp(dut, conn, SIGMA_INVALID,
 			  "ErrorCode,Invalid ANQPQuery_ID");
+		return 0;
+	}
+
+	/* Set gas_address3 field to IEEE 802.11-2012 standard compliant form
+	 * (Address3 = Wildcard BSSID when sent to not-associated AP;
+	 * if associated, AP BSSID).
+	 */
+	if (wpa_command(intf, "SET gas_address3 1") < 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "ErrorCode,Failed to set gas_address3");
 		return 0;
 	}
 
