@@ -2900,6 +2900,35 @@ static int mbo_set_cellular_data_capa(struct sigma_dut *dut,
 }
 
 
+static int mbo_set_bss_trans_req(struct sigma_dut *dut, struct sigma_conn *conn,
+				 const char *intf, const char *val)
+{
+	if (strcasecmp(val, "Reject") == 0) {
+		if (wpa_command(intf, "SET reject_btm_req_reason 1") < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to Reject BTM Request");
+			return 0;
+		}
+		return 1;
+	}
+
+	if (strcasecmp(val, "Accept") == 0) {
+		if (wpa_command(intf, "SET reject_btm_req_reason 0") < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to Accept BTM Request");
+			return 0;
+		}
+		return 1;
+	}
+
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"Invalid value provided for BSS_Transition: %s", val);
+	send_resp(dut, conn, SIGMA_INVALID,
+		  "ErrorCode,Unknown value provided for BSS_Transition");
+	return 0;
+}
+
+
 static int mbo_set_non_pref_ch_list(struct sigma_dut *dut,
 				    struct sigma_conn *conn,
 				    const char *intf,
@@ -3022,6 +3051,10 @@ static int cmd_sta_preset_testparameters(struct sigma_dut *dut,
 
 		val = get_param(cmd, "Ch_Pref");
 		if (val && mbo_set_non_pref_ch_list(dut, conn, intf, cmd) == 0)
+			return 0;
+
+		val = get_param(cmd, "BSS_Transition");
+		if (val && mbo_set_bss_trans_req(dut, conn, intf, val) == 0)
 			return 0;
 
 		return 1;
@@ -4671,6 +4704,7 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 		dut->non_pref_ch_list = NULL;
 		free(dut->btm_query_cand_list);
 		dut->btm_query_cand_list = NULL;
+		wpa_command(intf, "SET reject_btm_req_reason 0");
 	}
 
 	if (dut->program != PROGRAM_VHT)
