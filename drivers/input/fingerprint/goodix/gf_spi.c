@@ -110,7 +110,7 @@ static LIST_HEAD(device_list);
 static DEFINE_MUTEX(device_list_lock);
 static struct gf_dev gf;
 
-#ifdef CONFIG_MACH_XIAOMI_KENZO
+#ifdef CONFIG_MACH_XIAOMI_KENZO_AGNI_MIUI_MM
 extern int kenzo_fpsensor;
 #endif
 
@@ -767,7 +767,7 @@ static int gf_probe(struct platform_device *pdev)
 #endif
 	FUNC_ENTRY();
 
-#ifdef CONFIG_MACH_XIAOMI_KENZO
+#ifdef CONFIG_MACH_XIAOMI_KENZO_AGNI_MIUI_MM
 	if (kenzo_fpsensor != 2) {
 		pr_err("board no gdx fpsensor\n");
 		return -ENODEV;
