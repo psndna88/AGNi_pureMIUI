@@ -85,7 +85,7 @@ struct fpc1020_data {
 	struct input_dev *input_dev;
 };
 
-#ifdef CONFIG_MACH_XIAOMI_KENZO
+#ifdef CONFIG_MACH_XIAOMI_KENZO_AGNI_MIUI_MM
 unsigned int kenzo_fpsensor = 1;
 static int __init setup_kenzo_fpsensor(char *str)
 {
@@ -368,7 +368,7 @@ static int fpc1020_probe(struct platform_device* pdev)
 	struct device_node *np = dev->of_node;
 	struct fpc1020_data *fpc1020;
 
-#ifdef CONFIG_MACH_XIAOMI_KENZO
+#ifdef CONFIG_MACH_XIAOMI_KENZO_AGNI_MIUI_MM
 	if (kenzo_fpsensor != 1) {
 		pr_err("board no fpc fpsensor\n");
 		return -ENODEV;
