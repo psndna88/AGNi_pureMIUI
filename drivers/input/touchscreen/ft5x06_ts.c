@@ -99,6 +99,8 @@ extern void ctp_set_gesture_data(int value);
 char tp_lockdown_info[128];
 u8 uc_tp_vendor_id;
 
+#define FT_CHARGING_STATUS
+
 #if defined(FT_CHARGING_STATUS)
 int charging_flag = 0;
 extern int FG_charger_status;
