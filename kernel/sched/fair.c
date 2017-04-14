@@ -1812,6 +1812,7 @@ done:
 	mutex_unlock(&boost_mutex);
 	return ret;
 }
+EXPORT_SYMBOL(sched_set_boost);
 
 /*
  * Task will fit on a cpu if it's bandwidth consumption on that cpu

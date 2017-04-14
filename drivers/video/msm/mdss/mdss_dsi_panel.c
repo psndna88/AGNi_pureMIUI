@@ -64,6 +64,7 @@ bool is_display_on()
 {
 	return display_on;
 }
+EXPORT_SYMBOL(is_display_on);
 
 void mdss_dsi_panel_pwm_cfg(struct mdss_dsi_ctrl_pdata *ctrl)
 {
