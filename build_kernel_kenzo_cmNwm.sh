@@ -23,8 +23,12 @@ mv .git-halt .git
 
 rm -rf $KERNELDIR/BUILT_kenzo-cmNwm
 mkdir -p $KERNELDIR/BUILT_kenzo-cmNwm/system/lib/modules/
+mkdir -p $KERNELDIR/BUILT_kenzo-cmNwm/lib/modules/
 
 find -name '*.ko' -exec mv -v {} $KERNELDIR/BUILT_kenzo-cmNwm/system/lib/modules/ \;
+mv $KERNELDIR/BUILT_kenzo-cmNwm/system/lib/modules/fpc1020_tee.ko $KERNELDIR/BUILT_kenzo-cmNwm/lib/modules/
+mv $KERNELDIR/BUILT_kenzo-cmNwm/system/lib/modules/gf.ko $KERNELDIR/BUILT_kenzo-cmNwm/lib/modules/
+
 
 mv $KERNELDIR/arch/arm64/boot/Image.gz-dtb $KERNELDIR/BUILT_kenzo-cmNwm/
 

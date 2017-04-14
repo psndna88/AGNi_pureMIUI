@@ -22,10 +22,10 @@ make -j3 || exit 1
 mv .git-halt .git
 
 rm -rf $KERNELDIR/BUILT_kenzo-cmN
-mkdir -p $KERNELDIR/BUILT_kenzo-cmN
-#mkdir -p $KERNELDIR/BUILT_kenzo-cmNwm/system/lib/modules/
+mkdir -p $KERNELDIR/BUILT_kenzo-cmN/lib/modules/
+#mkdir -p $KERNELDIR/BUILT_kenzo-cmN/system/lib/modules/
 
-find -name '*.ko' -exec mv -v {} $KERNELDIR/BUILT_kenzo-cmN/ \;
+find -name '*.ko' -exec mv -v {} $KERNELDIR/BUILT_kenzo-cmN/lib/modules/ \;
 #find -name '*.ko' -exec mv -v {} $KERNELDIR/BUILT_kenzo-cmN/system/lib/modules/ \;
 
 mv $KERNELDIR/arch/arm64/boot/Image.gz-dtb $KERNELDIR/BUILT_kenzo-cmN/
