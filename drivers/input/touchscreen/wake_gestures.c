@@ -201,7 +201,7 @@ bool wake_gesture_proximity_detect(void) {
 /* Wake Gestures - call detect worker */
 static void wake_gesture_q6voice_detect(void) {
 	if ((dt2w_switch_temp) || (s2w_switch_temp)) {
-		if ((q6voice_voice_session_active()) && (wake_gesture_proximity_detect())) {
+		if ((q6voice_voice_session_active()) || (wake_gesture_proximity_detect())) {
 			if (debug_wake_timer)
 				pr_info("wake gesture: voice call detected... !\n");
 			wake_gesture_switches_shut();
