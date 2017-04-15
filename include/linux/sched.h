@@ -26,7 +26,7 @@ struct sched_param {
 
 #include <asm/page.h>
 #include <asm/ptrace.h>
-#include <linux/cputime.h>
+#include <asm/cputime.h>
 
 #include <linux/smp.h>
 #include <linux/sem.h>
