@@ -2188,8 +2188,10 @@ int cpufreq_update_policy(unsigned int cpu)
 	struct cpufreq_policy new_policy;
 	int ret;
 
-	if (!policy)
-		return -ENODEV;
+	if (!policy) {
+		ret = -ENODEV;
+		goto no_policy;
+	}
 
 	down_write(&policy->rwsem);
 
@@ -2208,7 +2210,7 @@ int cpufreq_update_policy(unsigned int cpu)
 		new_policy.cur = cpufreq_driver->get(cpu);
 		if (WARN_ON(!new_policy.cur)) {
 			ret = -EIO;
-			goto unlock;
+			goto no_policy;
 		}
 
 		if (!policy->cur) {
@@ -2223,10 +2225,10 @@ int cpufreq_update_policy(unsigned int cpu)
 
 	ret = cpufreq_set_policy(policy, &new_policy);
 
-unlock:
 	up_write(&policy->rwsem);
 
 	cpufreq_cpu_put(policy);
+no_policy:
 	return ret;
 }
 EXPORT_SYMBOL(cpufreq_update_policy);
