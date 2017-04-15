@@ -17,7 +17,7 @@
 #include <linux/err.h>
 #include <linux/of.h>
 #include <linux/sched.h>
-#include <linux/cputime.h>
+#include <asm/cputime.h>
 
 static spinlock_t cpufreq_stats_lock;
 
