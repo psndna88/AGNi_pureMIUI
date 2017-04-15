@@ -198,28 +198,22 @@
 			#address-cells = <1>;
 			#size-cells = <1>;
 
-			qcom,iterm-ma = <200>;
-			qcom,float-voltage-mv = <4400>;
+			qcom,iterm-ma = <100>;
+			qcom,float-voltage-mv = <4200>;
 			qcom,resume-delta-mv = <200>;
-			qcom,fastchg-current-ma = <2400>; 
+			qcom,fastchg-current-ma = <2400>;
 			qcom,chg-inhibit-fg;
 			qcom,rparasitic-uohm = <100000>;
 			qcom,bms-psy-name = "bms";
-			qcom,thermal-mitigation = <2400 1800 1000 600 0>;
-			qcom,fastchg-current-comp = <900>;
+			qcom,thermal-mitigation = <2400 2200 1800 800 0>;
 			qcom,parallel-usb-min-current-ma = <1400>;
 			qcom,parallel-usb-9v-min-current-ma = <900>;
 			qcom,parallel-allowed-lowering-ma = <500>;
-			qcom,float-voltage-comp = <11>;
-			/*11 for 4.2V, 16 for 4.1V*/
-
-			qcom,force-aicl-rerun;
-			qcom,aicl-rerun-period-s = <180>;
 			qcom,autoadjust-vfloat;
 			qcom,pmic-revid = <&pmi8950_revid>;
 			qcom,charge-unknown-battery;
-			qcom,board_ntc-vadc = <&pm8950_vadc>;
-			ntc_vdd-supply = <&pm8950_l16>;
+			qcom,force-aicl-rerun;
+			qcom,aicl-rerun-period-s = <180>;
 
 			qcom,chgr@1000 {
 				reg = <0x1000 0x100>;
@@ -317,18 +311,18 @@
 			compatible = "qcom,qpnp-fg";
 			#address-cells = <1>;
 			#size-cells = <1>;
-			qcom,resume-soc = <99>;
+			qcom,resume-soc = <95>;
 			qcom,fg-delta-soc = <1>;
 			qcom,vbat-estimate-diff-mv = <100>;
 			status = "okay";
 			qcom,bcl-lm-threshold-ma = <127>;
 			qcom,bcl-mh-threshold-ma = <405>;
-			qcom,fg-iterm-ma = <200>;
-			qcom,fg-chg-iterm-ma = <200>;
+			qcom,fg-iterm-ma = <150>;
+			qcom,fg-chg-iterm-ma = <100>;
 			qcom,pmic-revid = <&pmi8950_revid>;
 			qcom,cycle-counter-en;
 			qcom,capacity-learning-on;
-			qcom,fg-cutoff-voltage-mv = <3400>;
+			qcom,fg-cutoff-voltage-mv = <3500>;
 			qcom,cold-bat-decidegc = <0>;
 			qcom,cool-bat-decidegc = <100>;
 			qcom,warm-bat-decidegc = <450>;
