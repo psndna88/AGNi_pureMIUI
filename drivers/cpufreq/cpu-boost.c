@@ -23,6 +23,9 @@
 #include <linux/slab.h>
 #include <linux/input.h>
 #include <linux/time.h>
+#ifdef CONFIG_STATE_NOTIFIER
+#include <linux/state_notifier.h>
+#endif
 
 struct cpu_sync {
 	int cpu;
@@ -34,6 +37,10 @@ static DEFINE_PER_CPU(struct cpu_sync, sync_info);
 static struct workqueue_struct *cpu_boost_wq;
 
 static struct work_struct input_boost_work;
+
+#ifdef CONFIG_STATE_NOTIFIER
+static struct notifier_block notif;
+#endif
 
 static bool input_boost_enabled;
 module_param(input_boost_enabled, bool, 0644);
@@ -244,6 +251,11 @@ static void cpuboost_input_event(struct input_handle *handle,
 	u64 now;
 	unsigned int min_interval;
 
+#ifdef CONFIG_STATE_NOTIFIER
+	if (state_suspended)
+		return;
+#endif
+
 	if (!input_boost_enabled || work_pending(&input_boost_work))
 		return;
 
@@ -332,6 +344,11 @@ static struct input_handler cpuboost_input_handler = {
 static int cpuboost_cpu_callback(struct notifier_block *cpu_nb,
 				 unsigned long action, void *hcpu)
 {
+#ifdef CONFIG_STATE_NOTIFIER
+	if (state_suspended)
+		return NOTIFY_OK;
+#endif
+
 	switch (action & ~CPU_TASKS_FROZEN) {
 		case CPU_ONLINE:
 			if (!hotplug_boost || !input_boost_enabled ||
@@ -350,6 +367,32 @@ static int cpuboost_cpu_callback(struct notifier_block *cpu_nb,
 static struct notifier_block __refdata cpu_nblk = {
         .notifier_call = cpuboost_cpu_callback,
 };
+
+#ifdef CONFIG_STATE_NOTIFIER
+static void __wakeup_boost(void)
+{
+	if (!wakeup_boost || !input_boost_enabled ||
+	     work_pending(&input_boost_work))
+		return;
+	pr_debug("Wakeup boost for display on event.\n");
+	queue_work(cpu_boost_wq, &input_boost_work);
+	last_input_time = ktime_to_us(ktime_get());
+}
+
+static int state_notifier_callback(struct notifier_block *this,
+				unsigned long event, void *data)
+{
+	switch (event) {
+		case STATE_NOTIFIER_ACTIVE:
+			__wakeup_boost();
+			break;
+		default:
+			break;
+	}
+
+	return NOTIFY_OK;
+}
+#endif
 
 static int cpu_boost_init(void)
 {
@@ -376,6 +419,12 @@ static int cpu_boost_init(void)
 	ret = register_hotcpu_notifier(&cpu_nblk);
 	if (ret)
 		pr_err("Cannot register cpuboost hotplug handler.\n");
+
+#ifdef CONFIG_STATE_NOTIFIER
+	notif.notifier_call = state_notifier_callback;
+	if (state_register_client(&notif))
+		pr_err("Cannot register State notifier callback for cpuboost.\n");
+#endif
 
 	return ret;
 }
