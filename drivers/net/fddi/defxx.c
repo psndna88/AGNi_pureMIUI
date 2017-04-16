@@ -228,7 +228,7 @@
 #define DRV_VERSION "v1.10"
 #define DRV_RELDATE "2006/12/14"
 
-static char version[] =
+static const char version[] =
 	DRV_NAME ": " DRV_VERSION " " DRV_RELDATE
 	"  Lawrence V. Stefani and others\n";
 
