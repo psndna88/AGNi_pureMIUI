@@ -211,6 +211,13 @@ config CPU_FREQ_DEFAULT_GOV_CAFACTIVE
 	  loading your cpufreq low-level hardware driver, using the
 	  'cafactive' governor for latency-sensitive workloads.
 
+config CPU_FREQ_DEFAULT_GOV_WHEATLEY
+	bool "wheatley"
+	select CPU_FREQ_GOV_WHEATLEY
+	select CPU_FREQ_GOV_PERFORMANCE
+	---help---
+	  Use the CPUFreq governor 'wheatley' as default.
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -414,6 +421,10 @@ config CPU_FREQ_GOV_BLU_ACTIVE
 	  module will be called cpufreq_blu_active.
 
 	  If in doubt, say N.
+
+config CPU_FREQ_GOV_WHEATLEY
+	tristate "'wheatley' cpufreq governor"
+	depends on CPU_FREQ
 
 config CPU_BOOST
 	tristate "Event base short term CPU freq boost"
