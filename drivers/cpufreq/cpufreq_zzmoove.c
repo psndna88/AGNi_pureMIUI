@@ -87,7 +87,7 @@
 #define SNAP_NATIVE_HOTPLUGGING
 
 // ZZ: enable for sources with backported cpufreq implementation of 3.10 kernel
-// #define CPU_IDLE_TIME_IN_CPUFREQ
+#define CPU_IDLE_TIME_IN_CPUFREQ
 
 // ZZ: enable/disable music limits
 #define ENABLE_MUSIC_LIMITS
