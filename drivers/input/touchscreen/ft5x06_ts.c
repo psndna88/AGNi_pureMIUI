@@ -3199,6 +3199,7 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 	}
 
 #ifdef CONFIG_WAKE_GESTURES
+	ft5x06_ts = data;
 	device_init_wakeup(&client->dev, 1);
 #endif
 
