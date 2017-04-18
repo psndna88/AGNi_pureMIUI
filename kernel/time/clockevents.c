@@ -467,10 +467,8 @@ int clockevents_notify(unsigned long reason, void *arg)
 		break;
 
 	case CLOCK_EVT_NOTIFY_BROADCAST_ENTER:
-		tick_broadcast_enter();
-		break;
 	case CLOCK_EVT_NOTIFY_BROADCAST_EXIT:
-		tick_broadcast_exit();
+		ret = tick_broadcast_oneshot_control(reason);
 		break;
 
 	case CLOCK_EVT_NOTIFY_CPU_DYING:
