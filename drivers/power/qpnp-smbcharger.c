@@ -3407,7 +3407,7 @@ static int smbchg_config_chg_battery_type(struct smbchg_chip *chip)
 		ret = rc;
 	} else {
 		if (chip->vfloat_mv != (max_voltage_uv / 1000)) {
-			pr_info("Vfloat changed from %dmV to %dmV for battery-type %s\n",
+			pr_debug("Vfloat changed from %dmV to %dmV for battery-type %s\n",
 				chip->vfloat_mv, (max_voltage_uv / 1000),
 				chip->battery_type);
 			rc = smbchg_float_voltage_set(chip,
@@ -3429,7 +3429,7 @@ static int smbchg_config_chg_battery_type(struct smbchg_chip *chip)
 	} else if (!rc) {
 		if (chip->iterm_ma != (iterm_ua / 1000)
 				&& !chip->iterm_disabled) {
-			pr_info("Term current changed from %dmA to %dmA for battery-type %s\n",
+			pr_debug("Term current changed from %dmA to %dmA for battery-type %s\n",
 				chip->iterm_ma, (iterm_ua / 1000),
 				chip->battery_type);
 			rc = smbchg_iterm_set(chip,
@@ -4150,16 +4150,16 @@ static void smbchg_vfloat_adjust_work(struct work_struct *work)
 		goto reschedule;
 	}
 
-	pr_smb(PR_STATUS, "sample number = %d vbat_mv = %d ibat_ua = %d\n",
+/*	pr_smb(PR_STATUS, "sample number = %d vbat_mv = %d ibat_ua = %d\n",
 		chip->n_vbat_samples,
 		vbat_mv,
-		ibat_ua);
+		ibat_ua); */
 
 	chip->max_vbat_sample = max(chip->max_vbat_sample, vbat_mv);
 	chip->n_vbat_samples += 1;
 	if (chip->n_vbat_samples < vf_adjust_n_samples) {
-		pr_smb(PR_STATUS, "Skip %d samples; max = %d\n",
-			chip->n_vbat_samples, chip->max_vbat_sample);
+/*		pr_smb(PR_STATUS, "Skip %d samples; max = %d\n",
+			chip->n_vbat_samples, chip->max_vbat_sample); */
 		goto reschedule;
 	}
 	/* if max vbat > target vfloat, delta_vfloat_mv could be negative */
@@ -5665,14 +5665,14 @@ static int lct_get_prop_batt_temp(struct smbchg_chip *chip)
 			}
 		}
 	}
-//	pr_info("chip->ntc_vadc=%p \n", chip->ntc_vadc);
+	pr_debug("chip->ntc_vadc=%p \n", chip->ntc_vadc);
 	rc = qpnp_vadc_read(chip->ntc_vadc, P_MUX4_1_1, &results);
 	if (rc) {
-		pr_info("Unable to read batt temperature rc=%d\n", rc);
+		pr_debug("Unable to read batt temperature rc=%d\n", rc);
 		return DEFAULT_TEMP;
 	}
-//	pr_info("get_bat_temp %d, %lld , %lld\n", results.adc_code,
-//					results.physical, results.measurement);
+	pr_debug("get_bat_temp %d, %lld , %lld\n", results.adc_code,
+					results.physical, results.measurement);
 	return (int)results.physical;
 }
 
@@ -5831,7 +5831,7 @@ void runin_work(struct smbchg_chip *chip, int batt_capacity)
 		return;
 	}
 	is_oldtest = true;
-	pr_info("%s:BatteryTestStatus_enable = %d chip->usb_present = %d \n", __func__, BatteryTestStatus_enable, chip->usb_present);
+	pr_debug("%s:BatteryTestStatus_enable = %d chip->usb_present = %d \n", __func__, BatteryTestStatus_enable, chip->usb_present);
 	if (batt_capacity > 80) {
 		pr_debug("smbcharge_get_prop_batt_capacity > 80\n");
 		rc = vote(chip->usb_suspend_votable,  BATTCHG_USER_EN_VOTER, false, 0);
