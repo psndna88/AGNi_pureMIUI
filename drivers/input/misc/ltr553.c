@@ -67,7 +67,7 @@
 
 #define LTR553_PART_ID			0x92
 
-#define LTR553_ALS_SENSITIVITY		70
+#define LTR553_ALS_SENSITIVITY		80
 
 #define LTR553_BOOT_TIME_MS		120
 #define LTR553_WAKE_TIME_MS		10
@@ -1986,7 +1986,7 @@ static int ltr553_probe(struct i2c_client *client,
 		device_init_wakeup(&client->dev, 1);
 
 		ltr->workqueue = alloc_workqueue("ltr553_workqueue",
-				WQ_NON_REENTRANT | WQ_FREEZABLE, 0);
+				WQ_HIGHPRI | WQ_FREEZABLE, 0);
 		INIT_WORK(&ltr->report_work, ltr553_report_work);
 		INIT_WORK(&ltr->als_enable_work, ltr553_als_enable_work);
 		INIT_WORK(&ltr->als_disable_work, ltr553_als_disable_work);
