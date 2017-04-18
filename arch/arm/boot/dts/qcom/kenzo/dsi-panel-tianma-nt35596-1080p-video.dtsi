@@ -44,7 +44,7 @@
 		qcom,mdss-dsi-panel-timings = [f8 3c 28 00 6e 72 2e 40 30 03 04 00];
 		qcom,mdss-dsi-t-clk-post = <0x02>;
 		qcom,mdss-dsi-t-clk-pre = <0x2d>;
-		qcom,mdss-dsi-bl-min-level = <1>;
+		qcom,mdss-dsi-bl-min-level = <16>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
 		qcom,mdss-dsi-dma-trigger = "trigger_sw";
 		qcom,mdss-dsi-mdp-trigger = "none";
