@@ -2,7 +2,6 @@
  * MPU6050 6-axis gyroscope + accelerometer driver
  *
  * Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
- * Copyright (C) 2016 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -32,9 +31,6 @@
 #include <linux/of_gpio.h>
 #include <linux/sensors.h>
 #include "mpu6050.h"
-#include <linux/miscdevice.h>
-#include <linux/uaccess.h>
-#include <asm/uaccess.h>
 #include <linux/kthread.h>
 
 #define DEBUG_NODE
@@ -77,61 +73,6 @@
 #define MPU6050_PINCTRL_DEFAULT	"mpu_default"
 #define MPU6050_PINCTRL_SUSPEND	"mpu_sleep"
 
-#define GS_GET_RAW_DATA_FOR_CALI	_IOW('c', 9, int *)
-#define GS_REC_DATA_FOR_PER	_IOW('c', 10, int *)
-#define GYRO_GET_RAW_DATA_FOR_CALI	_IOW('c', 9, int *)
-#define GYRO_REC_DATA_FOR_CALI	_IOW('c', 10, int *)
-
-#define MPU6050_AXIS_X		  0
-#define MPU6050_AXIS_Y		  1
-#define MPU6050_AXIS_Z		  2
-
-#define MPU6050_AXES_NUM		3
-
-#define MPU6050_RANGE_2G			(0x00 << 3)
-#define MPU6050_RANGE_4G			(0x01 << 3)
-#define MPU6050_RANGE_8G			(0x02 << 3)
-#define MPU6050_RANGE_16G			(0x03 << 3)
-
-#define MPU6050_REG_DATA_FORMAT		0x1C
-
-#define MPU6050_RANGE_PN250dps			(0x00 << 3)
-#define MPU6050_RANGE_PN500dps			(0x01 << 3)
-#define MPU6050_RANGE_PN1000dps			(0x02 << 3)
-#define MPU6050_RANGE_PN2000dps			(0x03 << 3)
-#define MPU6050_REG_Gyro_DATA_FORMAT		0x1B
-
-/* Gyro Offset Max Value (dps) */
-#define DEF_GYRO_OFFSET_MAX			 120
-#define DEF_ST_PRECISION				1000
-#define DEF_SELFTEST_GYRO_SENS_250		  (32768 / 250)
-#define DEF_SELFTEST_GYRO_SENS_500		  (32768 / 500)
-#define DEF_SELFTEST_GYRO_SENS_1000		  (32768 / 1000)
-#define DEF_SELFTEST_GYRO_SENS_2000		  (32768 / 2000)
-
-
-#ifdef DEBUG
-#define wing_info(fmt, ...) \
-	printk(pr_fmt(fmt), ##__VA_ARGS__)
-#else
-#define wing_info(fmt, ...) \
-	no_printk(KERN_INFO pr_fmt(fmt), ##__VA_ARGS__)
-#endif
-
-static int g_has_initconfig;
-
-#ifdef GYRO_DATA_FILTER
-struct mpu6050_sensor *globe_sensor;
-#define C_MAX_FIR_LENGTH (32)
-struct data_filter {
-	s16 raw[C_MAX_FIR_LENGTH][3];
-	int sum[3];
-	int num;
-	int idx;
-	int firlen;
-};
-struct data_filter  gyro_fir;
-#endif
 #define CAL_SKIP_COUNT	5
 #define MPU_ACC_CAL_COUNT	15
 #define MPU_ACC_CAL_NUM	(MPU_ACC_CAL_COUNT - CAL_SKIP_COUNT)
@@ -167,17 +108,6 @@ struct axis_data {
 	s16 rz;
 };
 
-struct cali_data {
-	int x;
-	int y;
-	int z;
-	int offset;
-	int rx;
-	int ry;
-	int rz;
-	int roffset;
-};
-
 /**
  *  struct mpu6050_sensor - Cached chip configuration data
  *  @client:		I2C client
@@ -189,8 +119,6 @@ struct cali_data {
  *  @pdata:	device platform dependent data
  *  @op_lock:	device operation mutex
  *  @chip_type:	sensor hardware model
- *  @accel_poll_work:	accelerometer delay work structur
- *  @gyro_poll_work:	gyroscope delay work structure
  *  @fifo_flush_work:	work structure to flush sensor fifo
  *  @reg:		notable slave registers
  *  @cfg:		cached chip configuration data
@@ -234,13 +162,10 @@ struct mpu6050_sensor {
 	enum inv_devices chip_type;
 	struct workqueue_struct *data_wq;
 	struct work_struct resume_work;
-	struct delayed_work accel_poll_work;
-	struct delayed_work gyro_poll_work;
 	struct delayed_work fifo_flush_work;
 	struct mpu_reg_map reg;
 	struct mpu_chip_config cfg;
 	struct axis_data axis;
-	struct cali_data cali;
 	u32 gyro_poll_ms;
 	u32 accel_poll_ms;
 	u32 accel_latency_ms;
@@ -280,8 +205,6 @@ struct mpu6050_sensor {
 	wait_queue_head_t	gyro_wq;
 	wait_queue_head_t	accel_wq;
 };
-struct mpu6050_sensor *mpu_info;
-static int mpu6050_init_config(struct mpu6050_sensor *sensor);
 
 /* Accelerometer information read by HAL */
 static struct sensors_classdev mpu6050_acc_cdev = {
@@ -332,7 +255,6 @@ static struct sensors_classdev mpu6050_gyro_cdev = {
 	.sensors_set_latency = NULL,
 	.sensors_flush = NULL,
 };
-static char selftestRes[8] = {0};
 
 struct sensor_axis_remap {
 	/* src means which source will be mapped to target x, y, z axis */
@@ -637,54 +559,6 @@ static int mpu6050_read_reg(struct i2c_client *client, u8 start_addr,
 	return i2c_transfer(client->adapter, msg, 2);
 }
 
-/* I2C Write */
-static int8_t I2C_Write(uint8_t *txData, uint8_t length)
-{
-	int8_t index;
-
-	struct mpu6050_sensor *self_info = mpu_info;
-	struct i2c_msg data[] = {
-		{
-			.addr = self_info->client->addr,
-			.flags = 0,
-			.len = length,
-			.buf = txData,
-		},
-	};
-
-	for (index = 0; index < 5; index++) {
-		if (i2c_transfer(self_info->client->adapter, data, 1) > 0)
-			break;
-
-		usleep(10000);
-	}
-
-	if (index >= 5) {
-		pr_alert("%s I2C Write Fail !!!!\n", __func__);
-		return -EIO;
-	}
-
-	return 0;
-}
-
-static int mpu6050_write_reg(struct i2c_client *client, u8 start_addr,
-				   u8 data, int length)
-{
-	int ret = 0;
-	u8 buf[2];
-
-	buf[0] = start_addr;
-	buf[1] = data;
-
-	ret = I2C_Write(buf, 2);
-	if (ret < 0) {
-		dev_err(&client->dev, "%s | 0x%02X", __func__, buf[0]);
-		return -EIO;
-	}
-
-		return 0;
-}
-
 /**
  * mpu6050_read_accel_data() - get accelerometer data from device
  * @sensor: sensor device instance
@@ -715,46 +589,12 @@ static void mpu6050_read_gyro_data(struct mpu6050_sensor *sensor,
 			     struct axis_data *data)
 {
 	u16 buffer[3];
-#ifdef GYRO_DATA_FILTER
-	int k;
-#endif
 
 	mpu6050_read_reg(sensor->client, sensor->reg.raw_gyro,
 		(u8 *)buffer, MPU6050_RAW_GYRO_DATA_LEN);
 	data->rx = be16_to_cpu(buffer[0]);
 	data->ry = be16_to_cpu(buffer[1]);
 	data->rz = be16_to_cpu(buffer[2]);
-
-#ifdef GYRO_DATA_FILTER
-
-	gyro_fir.raw[gyro_fir.idx][0] = be16_to_cpu(buffer[0]);
-	gyro_fir.raw[gyro_fir.idx][1] = be16_to_cpu(buffer[1]);
-	gyro_fir.raw[gyro_fir.idx][2] = be16_to_cpu(buffer[2]);
-
-	if (gyro_fir.idx >= gyro_fir.firlen-1) {
-		gyro_fir.idx = 0;
-	} else {
-		gyro_fir.idx++;
-	}
-
-	if (gyro_fir.num < gyro_fir.firlen) {
-		gyro_fir.num++;
-	}
-
-	gyro_fir.sum[0]  = 0;
-	gyro_fir.sum[1]  = 0;
-	gyro_fir.sum[2]  = 0;
-
-	for (k = 0; k < gyro_fir.num; k++) {
-		gyro_fir.sum[0] += gyro_fir.raw[k][0];
-		gyro_fir.sum[1] += gyro_fir.raw[k][1];
-		gyro_fir.sum[2] += gyro_fir.raw[k][2];
-	}
-
-	data->rx = gyro_fir.sum[0] / gyro_fir.num;
-	data->ry = gyro_fir.sum[1] / gyro_fir.num;
-	data->rz = gyro_fir.sum[2] / gyro_fir.num;
-#endif
 }
 
 /**
@@ -987,11 +827,11 @@ static int gyro_poll_thread(void *data)
 		mpu6050_remap_gyro_data(&sensor->axis, sensor->pdata->place);
 		shift = mpu_gyro_fs_shift[sensor->cfg.fsr];
 		input_report_abs(sensor->gyro_dev, ABS_RX,
-			((sensor->axis.rx  - sensor->cali.rx) >> shift));
+			(sensor->axis.rx >> shift));
 		input_report_abs(sensor->gyro_dev, ABS_RY,
-			((sensor->axis.ry  - sensor->cali.ry) >> shift));
+			(sensor->axis.ry >> shift));
 		input_report_abs(sensor->gyro_dev, ABS_RZ,
-			((sensor->axis.rz  - sensor->cali.rz) >> shift));
+			(sensor->axis.rz >> shift));
 		input_event(sensor->gyro_dev,
 				EV_SYN, SYN_TIME_SEC,
 				ktime_to_timespec(timestamp).tv_sec);
@@ -1032,11 +872,11 @@ static int accel_poll_thread(void *data)
 		mpu6050_acc_data_process(sensor);
 		shift = mpu_accel_fs_shift[sensor->cfg.accel_fs];
 		input_report_abs(sensor->accel_dev, ABS_X,
-			((sensor->axis.x - sensor->cali.x) << shift));
+			(sensor->axis.x << shift));
 		input_report_abs(sensor->accel_dev, ABS_Y,
-			((sensor->axis.y - sensor->cali.y) << shift));
+			(sensor->axis.y << shift));
 		input_report_abs(sensor->accel_dev, ABS_Z,
-			((sensor->axis.z -  sensor->cali.z) << shift));
+			(sensor->axis.z << shift));
 		input_event(sensor->accel_dev,
 				EV_SYN, SYN_TIME_SEC,
 				ktime_to_timespec(timestamp).tv_sec);
@@ -2031,255 +1871,6 @@ static ssize_t mpu6050_gyro_attr_set_polling_delay(struct device *dev,
 	return ret ? -EBUSY : size;
 }
 
-static int MPU6050_SetPowerMode(struct i2c_client *iclient)
-{
-	int i = 0;
-	u8  temp_data;
-	struct mpu6050_sensor *self_info = mpu_info;
-	for (; i <= 107; i++) {
-		mpu6050_read_reg(self_info->client, i, &temp_data, 1);
-		wing_info("wlg_set_self_test----read 0x%d, %X\n", i, temp_data);
-	}
-	mpu6050_write_reg(self_info->client, 0X38, 0X00, 1);
-	mpu6050_write_reg(self_info->client, 0X23, 0X00, 1);
-	mpu6050_write_reg(self_info->client, 0X6A, 0X00, 1);
-	mpu6050_write_reg(self_info->client, 0X6A, 0X04, 1);
-	mpu6050_write_reg(self_info->client, 0X1A, 0X02, 1);
-	mpu6050_write_reg(self_info->client, 0X1D, 0X02, 1);
-	mpu6050_write_reg(self_info->client, 0X19, 0X00, 1);
-	mpu6050_write_reg(self_info->client, 0X1B, 0X00, 1);
-	mpu6050_write_reg(self_info->client, 0X1C, 0X00, 1);
-	mpu6050_write_reg(self_info->client, 0X6A, 0X40, 1);
-	mpu6050_write_reg(self_info->client, 0X6B, 0X0, 1);
-	mpu6050_write_reg(self_info->client, 0X6C, 0X0, 1);
-	mpu6050_write_reg(self_info->client, 0X23, 0X78, 1);
-	mpu6050_write_reg(self_info->client, 0X23, 0X00, 1);
-
-
-	return 0;
-
-}
-
-static int MPU6050_JudgeTestResult(struct i2c_client *client, s32 prv[MPU6050_AXES_NUM], s32 nxt[MPU6050_AXES_NUM])
-{
-	struct criteria {
-		int min;
-		int max;
-	};
-
-
-
-	struct criteria gyro_offset[4][3] = {
-
-		{{1000, (DEF_GYRO_OFFSET_MAX * DEF_SELFTEST_GYRO_SENS_250)}, {1000, (DEF_GYRO_OFFSET_MAX * DEF_SELFTEST_GYRO_SENS_250)}, {1000, (DEF_GYRO_OFFSET_MAX * DEF_SELFTEST_GYRO_SENS_250)} },
-		{{1000, (DEF_GYRO_OFFSET_MAX * DEF_SELFTEST_GYRO_SENS_500)}, {1000, (DEF_GYRO_OFFSET_MAX * DEF_SELFTEST_GYRO_SENS_500)}, {1000, (DEF_GYRO_OFFSET_MAX * DEF_SELFTEST_GYRO_SENS_500)} },
-		{{1000, (DEF_GYRO_OFFSET_MAX * DEF_SELFTEST_GYRO_SENS_1000)}, {1000, (DEF_GYRO_OFFSET_MAX * DEF_SELFTEST_GYRO_SENS_1000)}, {1000, (DEF_GYRO_OFFSET_MAX * DEF_SELFTEST_GYRO_SENS_1000)} },
-		{{1000, (DEF_GYRO_OFFSET_MAX * DEF_SELFTEST_GYRO_SENS_2000)}, {1000, (DEF_GYRO_OFFSET_MAX * DEF_SELFTEST_GYRO_SENS_2000)}, {1000, (DEF_GYRO_OFFSET_MAX * DEF_SELFTEST_GYRO_SENS_2000)} },
-	};
-	struct criteria (*ptr)[3] = NULL;
-	u8 format;
-	int res;
-
-
-	if ((res = mpu6050_read_reg(client, MPU6050_REG_Gyro_DATA_FORMAT, &format, 1)) < 0) {
-		return res;
-	} else {
-		res = 0;
-	}
-
-	format = format & MPU6050_RANGE_PN2000dps;
-
-	switch (format) {
-	case MPU6050_RANGE_PN250dps:
-		wing_info("format use gyro_offset[0]\n");
-		ptr = &gyro_offset[0];
-		break;
-
-	case MPU6050_RANGE_PN500dps:
-		wing_info("format use gyro_offset[1]\n");
-		ptr = &gyro_offset[1];
-		break;
-
-	case MPU6050_RANGE_PN1000dps:
-		wing_info("format use gyro_offset[2]\n");
-		ptr = &gyro_offset[2];
-		break;
-
-	case MPU6050_RANGE_PN2000dps:
-		wing_info("format use gyro_offset[3]\n");
-		ptr = &gyro_offset[3];
-		break;
-
-	default:
-		wing_info("format unknow use \n");
-		break;
-	}
-
-	if (!ptr) {
-		wing_info("null pointer\n");
-		return -EINVAL;
-	}
-	wing_info("format=0x%x\n", format);
-
-	wing_info("X diff is %ld\n", abs(nxt[MPU6050_AXIS_X] - prv[MPU6050_AXIS_X]));
-	wing_info("Y diff is %ld\n", abs(nxt[MPU6050_AXIS_Y] - prv[MPU6050_AXIS_Y]));
-	wing_info("Z diff is %ld\n", abs(nxt[MPU6050_AXIS_Z] - prv[MPU6050_AXIS_Z]));
-
-	if (abs(prv[MPU6050_AXIS_X]) > (*ptr)[MPU6050_AXIS_X].max) {
-		wing_info("gyro X offset[%X] is over range\n", prv[MPU6050_AXIS_X]);
-		res = -EINVAL;
-	}
-
-	if (abs(prv[MPU6050_AXIS_Y]) > (*ptr)[MPU6050_AXIS_Y].max) {
-		wing_info("gyro Y offset[%X] is over range\n", prv[MPU6050_AXIS_Y]);
-		res = -EINVAL;
-	}
-
-	if (abs(prv[MPU6050_AXIS_Z]) > (*ptr)[MPU6050_AXIS_Z].max) {
-		wing_info("gyro Z offset[%X] is over range\n", prv[MPU6050_AXIS_Z]);
-		res = -EINVAL;
-	}
-#if 1
-
-	if ((abs(nxt[MPU6050_AXIS_X] - prv[MPU6050_AXIS_X]) < (*ptr)[MPU6050_AXIS_X].min)) {
-		wing_info("X is out of work\n");
-		res = -EINVAL;
-	}
-	if ((abs(nxt[MPU6050_AXIS_Y] - prv[MPU6050_AXIS_Y]) < (*ptr)[MPU6050_AXIS_Y].min)) {
-		wing_info("Y is out of work\n");
-		res = -EINVAL;
-	}
-	if ((abs(nxt[MPU6050_AXIS_Z] - prv[MPU6050_AXIS_Z]) < (*ptr)[MPU6050_AXIS_Z].min)) {
-		wing_info("Z is out of work\n");
-		res = -EINVAL;
-	}
-
-#endif
-	return res;
-}
-
-static ssize_t show_self_value(struct device *dev, struct device_attribute *attr, char *buf)
-{
-	struct mpu6050_sensor *self_info = mpu_info;
-
-
-	if (NULL == self_info) {
-		wing_info("show_self_value is null!!\n");
-		return 0;
-	}
-
-	return snprintf(buf, 8, "%s\n", selftestRes);
-}
-
-/**
- * mpu6050_gyro_attr_set_enable -
- *	Set/get enable function is just needed by sensor HAL.
- */
-static ssize_t store_self_value(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
-{
-	u8 temp_data;
-	struct axis_data *self_data;
-	struct axis_data *self_data2;
-	struct mpu6050_sensor *self_info = mpu_info;
-	int idx, num;
-	int ret = 0;
-
-	s32 avg_prv[MPU6050_AXES_NUM] = {0, 0, 0};
-	s32 avg_nxt[MPU6050_AXES_NUM] = {0, 0, 0};
-
-	if (1 != sscanf(buf, "%d", &num)) {
-		wing_info("parse number fail\n");
-		return count;
-	} else if (num == 0) {
-		wing_info("invalid data count\n");
-		return count;
-	}
-	self_data = kzalloc(sizeof(*self_data) * num, GFP_KERNEL);
-	self_data2 = kzalloc(sizeof(*self_data2) * num, GFP_KERNEL);
-	if (!self_data || !self_data2) {
-		goto exit;
-	}
-
-	wing_info("NORMAL:\n");
-	MPU6050_SetPowerMode(self_info->client);
-	msleep(50);
-
-	for (idx = 0; idx < num; idx++) {
-
-		mpu6050_read_gyro_data(self_info, self_data);
-
-		wing_info("x = %d, y = %d, z= %d\n", self_data->rx, self_data->ry, self_data->rz);
-		avg_prv[MPU6050_AXIS_X] += self_data->rx;
-		avg_prv[MPU6050_AXIS_Y] += self_data->ry;
-		avg_prv[MPU6050_AXIS_Z] += self_data->rz;
-		wing_info("[%5d %5d %5d]\n", self_data->rx, self_data->ry, self_data->rz);
-	}
-
-	avg_prv[MPU6050_AXIS_X] /= num;
-	avg_prv[MPU6050_AXIS_Y] /= num;
-	avg_prv[MPU6050_AXIS_Z] /= num;
-
-	/*initial setting for self test*/
-	wing_info("SELFTEST:\n");
-
-	mpu6050_read_reg(self_info->client, 0X1B, &temp_data, 1);
-	wing_info("wlg_set_self_test----read 0x1B	%d\n", temp_data);
-	temp_data |= 0xE0;
-	ret = i2c_smbus_write_byte_data(self_info->client,
-			0X1B, temp_data);
-	if (ret < 0)
-		return ret;
-
-	msleep(50);
-
-	for (idx = 0; idx < num; idx++) {
-
-		mpu6050_read_gyro_data(self_info, self_data2);
-
-		wing_info("xx = %d, yy = %d, zz= %d\n", self_data2->rx, self_data2->ry, self_data2->rz);
-		avg_nxt[MPU6050_AXIS_X] += self_data2->rx;
-		avg_nxt[MPU6050_AXIS_Y] += self_data2->ry;
-		avg_nxt[MPU6050_AXIS_Z] += self_data2->rz;
-		wing_info("[%5d %5d %5d]\n", self_data2->rx, self_data2->ry, self_data2->rz);
-	}
-
-	avg_nxt[MPU6050_AXIS_X] /= num;
-	avg_nxt[MPU6050_AXIS_Y] /= num;
-	avg_nxt[MPU6050_AXIS_Z] /= num;
-
-	wing_info("X: %5d - %5d = %5d \n", avg_nxt[MPU6050_AXIS_X], avg_prv[MPU6050_AXIS_X], avg_nxt[MPU6050_AXIS_X] - avg_prv[MPU6050_AXIS_X]);
-	wing_info("Y: %5d - %5d = %5d \n", avg_nxt[MPU6050_AXIS_Y], avg_prv[MPU6050_AXIS_Y], avg_nxt[MPU6050_AXIS_Y] - avg_prv[MPU6050_AXIS_Y]);
-	wing_info("Z: %5d - %5d = %5d \n", avg_nxt[MPU6050_AXIS_Z], avg_prv[MPU6050_AXIS_Z], avg_nxt[MPU6050_AXIS_Z] - avg_prv[MPU6050_AXIS_Z]);
-
-	if (!MPU6050_JudgeTestResult(self_info->client, avg_prv, avg_nxt)) {
-		wing_info("SELFTEST : PASS\n");
-		strcpy(selftestRes, "y");
-	} else {
-		wing_info("SELFTEST : FAIL\n");
-		strcpy(selftestRes, "n");
-	}
-
-	exit:
-
-	mpu6050_read_reg(self_info->client, 0X1B, &temp_data, 1);
-	temp_data &= 0x1F;
-	ret = i2c_smbus_write_byte_data(self_info->client,
-			0X1B, temp_data);
-	if (ret < 0)
-		return ret;
-
-	/*restore the setting*/
-	kfree(self_data);
-	kfree(self_data2);
-	ret = mpu6050_init_config(self_info);
-	if (ret) {
-		dev_err(self_info->dev, "Failed to set default config\n");
-		return ret;
-	}
-	mpu6050_gyro_enable(self_info, true);
-	return count;
-}
-
 static ssize_t mpu6050_gyro_attr_get_enable(struct device *dev,
 			struct device_attribute *attr, char *buf)
 {
@@ -2318,10 +1909,6 @@ static struct device_attribute gyro_attr[] = {
 	__ATTR(enable, S_IRUGO | S_IWUSR,
 		mpu6050_gyro_attr_get_enable,
 		mpu6050_gyro_attr_set_enable),
-};
-
-static struct device_attribute gyro_self_attr[] = {
-	__ATTR(selftest, S_IRUGO | S_IWUSR, show_self_value , store_self_value),
 };
 
 static int create_gyro_sysfs_interfaces(struct device *dev)
@@ -3294,174 +2881,6 @@ static int mpu6050_parse_dt(struct device *dev,
 }
 #endif
 
-
-
-/* GS open fops */
-static int gs_open(struct inode *inode, struct file *file)
-{
-
-	file->private_data = mpu_info;
-	return nonseekable_open(inode, file);
-}
-
-/* GS release fops */
-static int gs_release(struct inode *inode, struct file *file)
-{
-
-
-	return 0;
-}
-
-/* GS IOCTL */
-static long gs_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
-{
-
-	int rc = 0;
-	void __user *argp = (void __user *)arg;
-	struct mpu6050_sensor *sensor = file->private_data;
-
-	struct cali_data rawdata;
-	struct cali_data calidata;
-
-	switch (cmd) {
-
-	case GS_REC_DATA_FOR_PER:
-		if (copy_from_user(&calidata, argp, sizeof(calidata)))
-			return -EFAULT;
-		if (calidata.x < MPU6050_ACCEL_MIN_VALUE || calidata.x > MPU6050_ACCEL_MAX_VALUE)
-			calidata.x = 0;
-		if (calidata.y < MPU6050_ACCEL_MIN_VALUE || calidata.y > MPU6050_ACCEL_MAX_VALUE)
-			calidata.y = 0;
-		if (calidata.z < MPU6050_ACCEL_MIN_VALUE || calidata.z > MPU6050_ACCEL_MAX_VALUE)
-			calidata.z = 0;
-		sensor->cali.x = calidata.x;
-		sensor->cali.y = calidata.y;
-		sensor->cali.z = calidata.z;
-		printk("xmm gsensor nv cali x=%d, y=%d, z=%d\n", sensor->cali.x, sensor->cali.y, sensor->cali.z);
-		break;
-	case GS_GET_RAW_DATA_FOR_CALI:
-		rawdata.x = sensor->axis.x;
-		rawdata.y = sensor->axis.y;
-		rawdata.z = sensor->axis.z;
-		rawdata.offset = 16384;
-		printk("xmm gsensor fastmmi read x=%d, y=%d, z=%d\n", rawdata.x, rawdata.y, rawdata.z);
-		if (copy_to_user(argp, &rawdata, sizeof(rawdata))) {
-			dev_err(&sensor->client->dev, "copy_to_user failed.");
-			return -EFAULT;
-		}
-		break;
-
-	default:
-		pr_err("%s: INVALID COMMAND %d\n",
-				__func__, _IOC_NR(cmd));
-		rc = -EINVAL;
-	}
-
-	return rc;
-}
-
-static const struct file_operations gs_fops = {
-	.owner = THIS_MODULE,
-	.open = gs_open,
-	.release = gs_release,
-	.unlocked_ioctl = gs_ioctl
-};
-
-static struct miscdevice gs_misc = {
-	.minor = MISC_DYNAMIC_MINOR,
-	.name = "gsensor",
-	.fops = &gs_fops
-};
-
-# if 1
-static int gyro_open(struct inode *inode, struct file *file)
-{
-
-	file->private_data = mpu_info;
-	return nonseekable_open(inode, file);
-}
-
-
-/* GS release fops */
-static int gyro_release(struct inode *inode, struct file *file)
-{
-
-
-	return 0;
-}
-
-/* GS IOCTL */
-static long gyro_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
-{
-
-	int rc = 0;
-
-	void __user *argp = (void __user *)arg;
-	struct mpu6050_sensor *sensor = file->private_data;
-	struct cali_data gyrorawdata;
-	struct cali_data calidata;
-
-	switch (cmd) {
-
-	case GYRO_REC_DATA_FOR_CALI:
-
-		if (copy_from_user(&calidata, argp, sizeof(calidata)))
-			return -EFAULT;
-		if (calidata.rx < MPU6050_GYRO_MIN_VALUE || calidata.rx > MPU6050_GYRO_MAX_VALUE)
-			calidata.rx = 0;
-		if (calidata.ry < MPU6050_GYRO_MIN_VALUE || calidata.ry > MPU6050_GYRO_MAX_VALUE)
-			calidata.ry = 0;
-		if (calidata.rz < MPU6050_GYRO_MIN_VALUE || calidata.rz > MPU6050_GYRO_MAX_VALUE)
-			calidata.rz = 0;
-		sensor->cali.rx = calidata.rx;
-		sensor->cali.ry = calidata.ry;
-		sensor->cali.rz = calidata.rz;
-		printk("xmm gyro nv cali x=%d, y=%d, z=%d\n", sensor->cali.rx, sensor->cali.ry, sensor->cali.rz);
-		break;
-
-	case GYRO_GET_RAW_DATA_FOR_CALI:
-		gyrorawdata.rx = sensor->axis.rx;
-		gyrorawdata.ry = sensor->axis.ry;
-		gyrorawdata.rz = sensor->axis.rz;
-		gyrorawdata.roffset = 938;
-
-		if (g_has_initconfig == 0) {
-			g_has_initconfig = 1;
-			mpu6050_restore_context(mpu_info);
-			msleep(20);
-		}
-
-		printk("xmm gyro fastmmi read x=%d, y=%d, z=%d\n", gyrorawdata.rx, gyrorawdata.ry, gyrorawdata.rz);
-		if (copy_to_user(argp, &gyrorawdata, sizeof(gyrorawdata))) {
-			dev_err(&sensor->client->dev, "copy_to_user failed.");
-			return -EFAULT;
-		}
-		break;
-
-	default:
-		pr_err("%s: INVALID COMMAND %d\n",
-				__func__, _IOC_NR(cmd));
-		rc = -EINVAL;
-	}
-
-	return rc;
-}
-
-static const struct file_operations gyro_fops = {
-	.owner = THIS_MODULE,
-	.open = gyro_open,
-	.release = gyro_release,
-	.unlocked_ioctl = gyro_ioctl
-};
-
-static struct miscdevice gyro_misc = {
-	.minor = MISC_DYNAMIC_MINOR,
-	.name = "gyro",
-	.fops = &gyro_fops
-};
-
-#endif
-
 /**
  * mpu6050_probe() - device detection callback
  * @client: i2c client of found device
@@ -3478,11 +2897,6 @@ static int mpu6050_probe(struct i2c_client *client,
 	struct mpu6050_sensor *sensor;
 	struct mpu6050_platform_data *pdata;
 	int ret;
-
-#ifdef GYRO_DATA_FILTER
-	memset(&gyro_fir, 0, sizeof(gyro_fir));
-	gyro_fir.firlen = 12;
-#endif
 
 	ret = i2c_check_functionality(client->adapter,
 					 I2C_FUNC_SMBUS_BYTE |
@@ -3527,8 +2941,6 @@ static int mpu6050_probe(struct i2c_client *client,
 		ret = -EINVAL;
 		goto err_free_devmem;
 	}
-
-	mpu_info = sensor;
 
 	mutex_init(&sensor->op_lock);
 	sensor->pdata = pdata;
@@ -3714,7 +3126,6 @@ static int mpu6050_probe(struct i2c_client *client,
 		goto err_destroy_workqueue;
 	}
 	ret = create_gyro_sysfs_interfaces(&sensor->gyro_dev->dev);
-	device_create_file(&sensor->gyro_dev->dev, gyro_self_attr);
 	if (ret < 0) {
 		dev_err(&client->dev, "failed to create sysfs for gyro\n");
 		goto err_remove_accel_sysfs;
@@ -3763,16 +3174,6 @@ static int mpu6050_probe(struct i2c_client *client,
 			"create accel class device file failed!\n");
 		ret = -EINVAL;
 		goto err_remove_accel_cdev;
-	}
-
-	ret = misc_register(&gs_misc);
-	if (ret < 0) {
-		return ret;
-	}
-
-	ret = misc_register(&gyro_misc);
-	if (ret < 0) {
-		return ret;
 	}
 
 	ret = mpu6050_power_ctl(sensor, false);
@@ -4013,93 +3414,15 @@ static int mpu6050_resume(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct mpu6050_sensor *sensor = i2c_get_clientdata(client);
-	int ret = 0;
 
 	mutex_lock(&sensor->op_lock);
 
 	if (sensor->cfg.gyro_enable || sensor->cfg.accel_enable)
 		queue_work(sensor->data_wq, &sensor->resume_work);
 
-	if ((sensor->batch_accel) || (sensor->batch_gyro)) {
-		mpu6050_set_interrupt(sensor,
-				BIT_FIFO_OVERFLOW, true);
-		mpu6050_sche_next_flush(sensor);
-	}
-
-	if (sensor->cfg.mot_det_on) {
-		/* keep accel on and config motion detection wakeup */
-		irq_set_irq_wake(client->irq, 0);
-		mpu6050_set_motion_det(sensor, false);
-		mpu6050_set_interrupt(sensor,
-				BIT_DATA_RDY_EN, true);
-		dev_dbg(&client->dev, "Disable motion detection success\n");
-		goto exit;
-	}
-
-	/* Keep sensor power on to prevent bad power state */
-	ret = mpu6050_power_ctl(sensor, true);
-	if (ret < 0) {
-		dev_err(&client->dev, "Power on mpu6050 failed\n");
-		goto exit;
-	}
-	/* Reset sensor to recovery from unexpected state */
-	mpu6050_reset_chip(sensor);
-
-	ret = mpu6050_restore_context(sensor);
-	if (ret < 0) {
-		dev_err(&client->dev, "Failed to restore context\n");
-		goto exit;
-	}
-
-	/* Enter sleep mode if both accel and gyro are not enabled */
-	ret = mpu6050_set_power_mode(sensor, sensor->cfg.enable);
-	if (ret < 0) {
-		dev_err(&client->dev, "Failed to set power mode enable=%d\n",
-					sensor->cfg.enable);
-		goto exit;
-	}
-
-	if (sensor->cfg.gyro_enable) {
-		ret = mpu6050_gyro_enable(sensor, true);
-		if (ret < 0) {
-			dev_err(&client->dev, "Failed to enable gyro\n");
-			goto exit;
-		}
-
-		if (sensor->use_poll) {
-			ktime_t ktime;
-			ktime = ktime_set(0,
-					sensor->gyro_poll_ms * NSEC_PER_MSEC);
-			hrtimer_start(&sensor->gyro_timer, ktime,
-					HRTIMER_MODE_REL);
-
-		}
-	}
-
-	if (sensor->cfg.accel_enable) {
-		ret = mpu6050_accel_enable(sensor, true);
-		if (ret < 0) {
-			dev_err(&client->dev, "Failed to enable accel\n");
-			goto exit;
-		}
-
-		if (sensor->use_poll) {
-			ktime_t ktime;
-			ktime = ktime_set(0,
-					sensor->accel_poll_ms * NSEC_PER_MSEC);
-			hrtimer_start(&sensor->accel_timer, ktime,
-					HRTIMER_MODE_REL);
-		}
-	}
-
-	if (!sensor->use_poll)
-		enable_irq(client->irq);
-
-exit:
 	mutex_unlock(&sensor->op_lock);
 
-	dev_dbg(&client->dev, "Resume complete, ret = %d\n", ret);
-	return ret;
+	return 0;
 }
 #endif
 
