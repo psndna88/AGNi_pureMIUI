@@ -1,8 +1,8 @@
 #!/bin/sh
 export KERNELDIR=`readlink -f .`
-. ~/AGNi_stamp_CM.sh
-. ~/gcc-6.x-uber_aarch64.sh
-#. ~/gcc-7.x-uber_aarch64.sh
+. ~/WORKING_DIRECTORY/AGNi_stamp_CM.sh
+. ~/WORKING_DIRECTORY/gcc-6.x-uber_aarch64.sh
+#. ~/WORKING_DIRECTORY/gcc-7.x-uber_aarch64.sh
 
 echo ""
 echo " Cross-compiling AGNi pureCM-N kernel ..."

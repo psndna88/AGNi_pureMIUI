@@ -5,7 +5,20 @@ cd $KERNELDIR;
 TEMP_DIR=$KERNELDIR/../TEMP_KENZO_BUILDS_RUN_STORE
 mkdir -p $TEMP_DIR
 rm -rf BUILT_kenzo-miuiMM BUILT_kenzo-cmMM BUILT_kenzo-cmN .config
-
+echo "-----------------------------------------------------------------------"
+echo " "
+echo "          BATCH MODE: Building all AGNi N variants..."
+# AGNI pureCM-N
+rm drivers/staging/prima/wlan.ko
+./build_kernel_kenzo_cmN.sh
+mv -f $KERNELDIR/BUILT_kenzo-cmN $TEMP_DIR
+rm .config
+mv -f $TEMP_DIR/* $KERNELDIR
+rm -rf $TEMP_DIR
+echo " "
+echo "          BATCH MODE: Built all AGNi N variants !!!"
+echo "-----------------------------------------------------------------------"
+echo " "
 echo " "
 echo "-----------------------------------------------------------------------"
 echo " "
@@ -28,20 +41,6 @@ rm .config
 
 echo " "
 echo "          BATCH MODE: Built all AGNi MM variants !!!"
-echo "-----------------------------------------------------------------------"
-echo " "
-echo "          BATCH MODE: Building all AGNi N variants..."
-
-# AGNI pureCM-N
-rm drivers/staging/prima/wlan.ko
-./build_kernel_kenzo_cmN.sh
-mv -f $KERNELDIR/BUILT_kenzo-cmN $TEMP_DIR
-rm .config
-
-mv -f $TEMP_DIR/* $KERNELDIR
-rm -rf $TEMP_DIR
-echo " "
-echo "          BATCH MODE: Built all AGNi N variants !!!"
 echo "-----------------------------------------------------------------------"
 echo " "
 
