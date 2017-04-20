@@ -884,6 +884,13 @@ static void __cpuinit msm_hotplug_resume(void)
 {
     int required_reschedule = 0, required_wakeup = 0, online_cpus, online_cpus_big;
 
+	bool resume_hotplug_disabled;
+    if ((hotplug.min_cpus_online_big != BIG_CORES) && (hotplug.min_cpus_online != LITTLE_CORES)) {
+    	resume_hotplug_disabled = true;
+	} else {
+    	resume_hotplug_disabled = false;
+	}
+
     if (hotplug.suspended) {
         mutex_lock(&hotplug.msm_hotplug_mutex);
         hotplug.suspended = 0;
@@ -891,7 +898,8 @@ static void __cpuinit msm_hotplug_resume(void)
         required_wakeup = 1;
         /* Initiate hotplug work if it was cancelled */
         required_reschedule = 1;
-        INIT_DELAYED_WORK(&hotplug_work, msm_hotplug_work);
+        if (!resume_hotplug_disabled)
+        	INIT_DELAYED_WORK(&hotplug_work, msm_hotplug_work);
     }
 
     if (required_wakeup) {
@@ -919,10 +927,14 @@ static void __cpuinit msm_hotplug_resume(void)
     }
 
     /* Resume hotplug workqueue if required */
-    if (required_reschedule)
+    if ((required_reschedule) && (!resume_hotplug_disabled))
         reschedule_hotplug_work();
 
-    pr_info("%s: resumed.\n", MSM_HOTPLUG);
+    if (!resume_hotplug_disabled) {
+    	pr_info("%s: resumed.\n", MSM_HOTPLUG);
+    } else {
+    	pr_info("%s: resumed without hotplug functions.\n", MSM_HOTPLUG);
+    }
 
     return;
 }
