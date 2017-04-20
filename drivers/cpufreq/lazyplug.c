@@ -229,14 +229,14 @@ static void __ref cpu_all_ctrl(bool online) {
 	unsigned int cpu;
 
 	if (online) {
-		for_each_cpu_not(cpu, cpu_online_mask) {
-			if (cpu == 0)
+		for_each_possible_cpu(cpu) {
+			if (cpu_online(cpu))
 				continue;
 			cpu_up(cpu);
 		}
 	} else {
-		for_each_online_cpu(cpu) {
-			if (cpu == 0)
+		for_each_possible_cpu(cpu) {
+			if (!cpu_online(cpu) || cpu == 0)
 				continue;
 			cpu_down(cpu);
 		}
@@ -298,6 +298,7 @@ static void update_per_cpu_stat(void)
 	unsigned int cpu;
 	struct ip_cpu_info *l_ip_info;
 
+	get_online_cpus();
 	for_each_online_cpu(cpu) {
 		l_ip_info = &per_cpu(ip_info, cpu);
 		l_ip_info->cpu_nr_running = avg_cpu_nr_running(cpu);
@@ -306,6 +307,7 @@ static void update_per_cpu_stat(void)
 			l_ip_info->cpu_nr_running);
 #endif
 	}
+	put_online_cpus();
 }
 
 static void unplug_cpu(int min_active_cpu)
@@ -314,10 +316,10 @@ static void unplug_cpu(int min_active_cpu)
 	struct ip_cpu_info *l_ip_info;
 	int l_nr_threshold;
 
-	for_each_online_cpu(cpu) {
+	for_each_possible_cpu(cpu) {
 		l_nr_threshold =
 			cpu_nr_run_threshold << 1 / (num_online_cpus());
-		if (cpu == 0)
+		if (!cpu_online() || cpu == 0)
 			continue;
 		l_ip_info = &per_cpu(ip_info, cpu);
 		if (cpu > min_active_cpu)
