@@ -1194,6 +1194,6 @@ int mdss_mdp_cmd_set_autorefresh_mode(struct mdss_mdp_ctl *ctl,
 int mdss_mdp_ctl_cmd_autorefresh_enable(struct mdss_mdp_ctl *ctl,
 		int frame_cnt);
 int mdss_mdp_user_pcc_config(struct mdp_pcc_cfg_data *config);
-extern int mdss_min_brightness;
+extern u32 mdss_min_brightness;
 
 #endif /* MDSS_MDP_H */

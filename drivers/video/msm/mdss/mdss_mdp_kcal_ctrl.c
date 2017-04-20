@@ -27,7 +27,6 @@
 #define DEF_PA 0xff
 #define PCC_ADJ 0x80
 
-int mdss_min_brightness = 0;
 struct kcal_lut_data {
 	int red;
 	int green;
@@ -459,10 +458,11 @@ static ssize_t kcal_val_show(struct device *dev,
 static ssize_t kcal_min_brightness_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
-	int val, r;
+	u32 val;
+	int r;
 
 	r = kstrtoint(buf, 10, &val);
-	if ((r) || (val < 0 || val > 1))
+	if ((r) || (val < 0 || val > 50))
 		return -EINVAL;
 
 	mdss_min_brightness = val;
