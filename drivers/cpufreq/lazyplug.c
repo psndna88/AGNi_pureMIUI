@@ -338,7 +338,7 @@ static void lazy_suspend_handler(void)
 			persist_count = BUSY_PERSISTENCE;
 			mutex_unlock(&lazyplug_mutex);
 		}
-		queue_delayed_work_on(0, lazyplug_wq, &lazyplug_work,
+		queue_delayed_work(lazyplug_wq, &lazyplug_work,
 			msecs_to_jiffies(10));
 	} else {
 		if (lazyplug_active) {
@@ -422,7 +422,7 @@ static void lazyplug_work_fn(struct work_struct *work)
 			}
 		}
 	}
-	queue_delayed_work_on(0, lazyplug_wq, &lazyplug_work,
+	queue_delayed_work(lazyplug_wq, &lazyplug_work,
 		msecs_to_jiffies(sampling_time));
 }
 
@@ -562,7 +562,7 @@ int __init lazyplug_init(void)
 				WQ_HIGHPRI | WQ_UNBOUND, 1);
 	INIT_DELAYED_WORK(&lazyplug_work, lazyplug_work_fn);
 	INIT_DELAYED_WORK(&lazyplug_boost, lazyplug_boost_fn);
-	queue_delayed_work_on(0, lazyplug_wq, &lazyplug_work,
+	queue_delayed_work(lazyplug_wq, &lazyplug_work,
 		msecs_to_jiffies(10));
 
 	return 0;
