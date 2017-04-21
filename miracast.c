@@ -1114,6 +1114,10 @@ static int cmd_start_wfd_connection(struct sigma_dut *dut,
 		break;
 	}
 
+	if (dut->persistent) {
+		snprintf(cmd_buf + strlen(cmd_buf),
+			 sizeof(cmd_buf) - strlen(cmd_buf), " persistent");
+	}
 	snprintf(cmd_buf + strlen(cmd_buf), sizeof(cmd_buf) - strlen(cmd_buf),
 		 " go_intent=%d", go_intent);
 
@@ -1498,6 +1502,18 @@ static int cmd_reinvoke_wfd_session(struct sigma_dut *dut,
 	const char *peer_address = get_param(cmd, "peeraddress");
 	const char *invitation_action = get_param(cmd, "InvitationAction");
 	char buf[256];
+	struct wpa_ctrl *ctrl;
+	int res, id;
+	char *ssid, *pos;
+	unsigned int wait_limit;
+	char peer_ip_address[32];
+	char rtsp_session_id[12];
+	int (*extn_start_wfd_connection)(const char *,
+					 const char *, /* Peer IP */
+					 int, /* RTSP port number */
+					 int, /* WFD Device Type; 0-Source,
+						 1-P-Sink, 2-Secondary Sink */
+					 char *); /* for returning session ID */
 
 	/* All are compulsory parameters */
 	if (!intf || !grp_id || !invitation_action || !peer_address) {
@@ -1530,9 +1546,97 @@ static int cmd_reinvoke_wfd_session(struct sigma_dut *dut,
 		return 1;
 	}
 
-	send_resp(dut, conn, SIGMA_INVALID,
-		  "errorCode,Unsupported Invitation Action");
-	return 0;
+	ssid = strchr(grp_id, ' ');
+	if (!ssid) {
+		sigma_dut_print(dut, DUT_MSG_INFO, "Invalid grpid");
+		return -1;
+	}
+	ssid++;
+	sigma_dut_print(dut, DUT_MSG_DEBUG,
+			"Search for persistent group credentials based on SSID: '%s'",
+			ssid);
+	if (wpa_command_resp(intf, "LIST_NETWORKS", buf, sizeof(buf)) < 0)
+		return -2;
+	pos = strstr(buf, ssid);
+	if (!pos || pos == buf || pos[-1] != '\t' ||
+	    pos[strlen(ssid)] != '\t') {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "ErrorCode,Persistent group credentials not found");
+		return 0;
+	}
+	while (pos > buf && pos[-1] != '\n')
+		pos--;
+	id = atoi(pos);
+	snprintf(buf, sizeof(buf), "P2P_INVITE persistent=%d peer=%s",
+		 id, peer_address);
+
+	sigma_dut_print(dut, DUT_MSG_DEBUG,
+			"Trying to discover peer %s for invitation",
+			peer_address);
+	if (p2p_discover_peer(dut, intf, peer_address, 0) < 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "ErrorCode,Could not discover the requested peer");
+		return 0;
+	}
+
+	ctrl = open_wpa_mon(intf);
+	if (!ctrl) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to open wpa_supplicant monitor connection");
+		return -2;
+	}
+
+	if (wpa_command(intf, buf) < 0) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Failed to send invitation request");
+		wpa_ctrl_detach(ctrl);
+		wpa_ctrl_close(ctrl);
+		return -2;
+	}
+
+	res = get_wpa_cli_event(dut, ctrl, "P2P-INVITATION-RESULT",
+				buf, sizeof(buf));
+	wpa_ctrl_detach(ctrl);
+	wpa_ctrl_close(ctrl);
+	if (res < 0)
+		return -2;
+
+	miracast_load(dut);
+
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "Waiting to start DHCP");
+
+	/* Calling Miracast multimedia APIs */
+	if (dut->wfd_device_type != 0)
+		wait_limit = HUNDRED_SECOND_TIMEOUT;
+	else
+		wait_limit = 500;
+
+	stop_dhcp(dut, intf, 1);
+	/* For GO read the DHCP lease file */
+	sigma_dut_print(dut, DUT_MSG_INFO, "Waiting to start DHCP server");
+	start_dhcp(dut, intf, 1);
+	sleep(5);
+	if (get_peer_ip_p2p_go(dut, peer_ip_address, dut->peer_mac_address,
+			       wait_limit) < 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "Could not get peer IP");
+		return -2;
+	}
+
+	extn_start_wfd_connection = dlsym(dut->miracast_lib,
+					  "start_wfd_connection");
+	if (extn_start_wfd_connection) {
+		extn_start_wfd_connection(NULL, peer_ip_address,
+					  session_management_control_port,
+					  1 - dut->wfd_device_type,
+					  rtsp_session_id);
+	} else {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"dlsym seems to have error %p %p",
+				dut->miracast_lib,
+				extn_start_wfd_connection);
+	}
+
+	return 1;
 }
 
 
