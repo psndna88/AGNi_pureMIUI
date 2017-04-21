@@ -311,7 +311,7 @@
 			compatible = "qcom,qpnp-fg";
 			#address-cells = <1>;
 			#size-cells = <1>;
-			qcom,resume-soc = <95>;
+			qcom,resume-soc = <99>;
 			qcom,fg-delta-soc = <1>;
 			qcom,vbat-estimate-diff-mv = <100>;
 			status = "okay";
