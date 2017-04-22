@@ -93,12 +93,6 @@ config INPUT_BMA150
 	  To compile this driver as a module, choose M here: the
 	  module will be called bma150.
 
-config INPUT_FPC1020
-	tristate "Fpc1020 fingerprint sensor support"
-	depends on SPI
-	help
-	  Say Y here if you have Fpc1020 sensor hooked to an SPI bus.
-
 config INPUT_HBTP_INPUT
 	tristate "HBTP input driver support"
 	help
