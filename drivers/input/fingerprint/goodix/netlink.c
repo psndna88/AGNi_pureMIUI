@@ -6,7 +6,7 @@
 #include <net/sock.h>
 #include <net/netlink.h>
 
-#define NETLINK_TEST 29
+#define NETLINK_TEST 30
 #define MAX_MSGSIZE (4*1024)
 int stringlength(char *s);
 void sendnlmsg(char *message);
