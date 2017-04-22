@@ -55,11 +55,11 @@
 #define GF_SPIDEV_NAME      "goodix,fingerprint"
 /*device name after register in charater*/
 #define GF_DEV_NAME         "goodix_fp"
-#define	GF_INPUT_NAME	    "qwerty"	/*"goodix_fp" */
+#define	GF_INPUT_NAME	    "gf318m"	/*"goodix_fp" */
 
 #define	CHRD_DRIVER_NAME	"goodix_fp_spi"
 #define	CLASS_NAME		    "goodix_fp"
-#define SPIDEV_MAJOR		225	/* assigned */
+#define SPIDEV_MAJOR		154	/* assigned */
 #define N_SPI_MINORS		32	/* ... up to 256 */
 
 
@@ -99,6 +99,8 @@ static DECLARE_BITMAP(minors, N_SPI_MINORS);
 static LIST_HEAD(device_list);
 static DEFINE_MUTEX(device_list_lock);
 static struct gf_dev gf;
+
+extern int kenzo_fpsensor;
 
 static int driver_init_partial(struct gf_dev *gf_dev);
 
@@ -259,15 +261,20 @@ static int gfspi_ioctl_clk_uninit(struct gf_dev *data)
 }
 #endif
 
+int recurs = 0;
+
 static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct gf_dev *gf_dev = &gf;
 	struct gf_key gf_key = { 0 };
 	int retval = 0;
 	int i;
+	long rc;
 #ifdef AP_CONTROL_CLK
 	unsigned int speed = 0;
 #endif
+	unsigned int delay = 0;
+
 	if (_IOC_TYPE(cmd) != GF_IOC_MAGIC) {
 		return -ENODEV;
 	}
@@ -282,10 +289,20 @@ static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		return -EFAULT;
 	}
 
+recurs_l:
 	if (gf_dev->device_available == 0) {
 		if ((cmd == GF_IOC_POWER_ON) || (cmd == GF_IOC_POWER_OFF) || (cmd == GF_IOC_ENABLE_GPIO) || (cmd == GF_IOC_DISABLE_GPIO)) {
 			pr_info("power cmd\n");
 		} else{
+			if (recurs == 0) {
+				recurs = 1;
+				rc = gf_ioctl(filp, GF_IOC_ENABLE_GPIO, cmd);
+				pr_debug("GOODIX gf_ioctl recur GF_ENABLE_GPIO %i %li\n", GF_IOC_ENABLE_GPIO, rc);
+				rc = gf_ioctl(filp, GF_IOC_POWER_ON, cmd);
+				pr_debug("GOODIX gf_ioctl recur GF_POWER_ON %i %li\n", GF_IOC_POWER_ON, rc);
+				recurs = 0;
+				goto recurs_l;
+			}
 			pr_info("Sensor is power off currently. \n");
 			return -ENODEV;
 		}
@@ -315,7 +332,16 @@ static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 #endif
 		break;
 	case GF_IOC_RESET:
+		gf_dev->new_driver = 0;
 		gf_hw_reset(gf_dev, 70);
+		break;
+	case GF_IOC_RESET_NEW:
+		gf_dev->new_driver = 1;
+		retval = __get_user(delay, (u32 __user *) arg);
+		if (retval == 0)
+			gf_hw_reset(gf_dev, delay);
+		else
+			pr_warn("Failed to get reset delay from user. retval = %d\n", retval);
 		break;
 	case GF_IOC_COOLBOOT:
 		gf_power_off(gf_dev);
@@ -329,6 +355,9 @@ static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			retval = -EFAULT;
 			break;
 		}
+
+		if (gf_dev->new_driver)
+			break;
 
 		for (i = 0; i < ARRAY_SIZE(key_map); i++) {
 			if (key_map[i].val == gf_key.key) {
@@ -409,10 +438,19 @@ static long gf_compat_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 
 static irqreturn_t gf_irq(int irq, void *handle)
 {
-	struct gf_dev *gf_dev = &gf;
 #ifdef GF_FASYNC
-	if (gf_dev->async)
-		kill_fasync(&gf_dev->async, SIGIO, POLL_IN);
+	{
+		struct gf_dev *gf_dev = &gf;
+		if (gf_dev->async)
+			kill_fasync(&gf_dev->async, SIGIO, POLL_IN);
+	}
+#endif
+
+#ifdef GF_NETLINK_ENABLE
+	{
+		char msg[2] = { GF_NET_EVENT_IRQ, 0 };
+		sendnlmsg(msg);
+	}
 #endif
 
 	return IRQ_HANDLED;
@@ -424,6 +462,9 @@ static int goodix_fb_state_chg_callback(struct notifier_block *nb,
 	struct gf_dev *gf_dev;
 	struct fb_event *evdata = data;
 	unsigned int blank;
+#ifdef GF_NETLINK_ENABLE
+	char msg[2];
+#endif
 
 	if (val != FB_EARLY_EVENT_BLANK)
 		return 0;
@@ -441,6 +482,11 @@ static int goodix_fb_state_chg_callback(struct notifier_block *nb,
 					kill_fasync(&gf_dev->async, SIGIO, POLL_IN);
 				}
 #endif
+#ifdef GF_NETLINK_ENABLE
+				msg[0] = GF_NET_EVENT_FB_BLACK;
+				msg[1] = 0;
+				sendnlmsg(msg);
+#endif
 				/*device unavailable */
 			}
 			break;
@@ -451,6 +497,11 @@ static int goodix_fb_state_chg_callback(struct notifier_block *nb,
 				if (gf_dev->async) {
 					kill_fasync(&gf_dev->async, SIGIO, POLL_IN);
 				}
+#endif
+#ifdef GF_NETLINK_ENABLE
+				msg[0] = GF_NET_EVENT_FB_UNBLACK;
+				msg[1] = 0;
+				sendnlmsg(msg);
 #endif
 				/*device available */
 			}
@@ -525,6 +576,7 @@ static int driver_init_partial(struct gf_dev *gf_dev)
 #endif
 	if (!ret) {
 		enable_irq_wake(gf_dev->irq);
+		gf_dev->irq_enabled = 1;
 		gf_disable_irq(gf_dev);
 	}
 
@@ -684,6 +736,11 @@ static int gf_probe(struct platform_device *pdev)
 #endif
 	FUNC_ENTRY();
 
+	if (kenzo_fpsensor != 2) {
+		pr_err("board no gdx fpsensor\n");
+		return -ENODEV;
+	}
+
 	/* Initialize the driver data */
 	INIT_LIST_HEAD(&gf_dev->device_entry);
 #if defined(USE_SPI_BUS)
@@ -696,6 +753,7 @@ static int gf_probe(struct platform_device *pdev)
 	gf_dev->pwr_gpio = -EINVAL;
 	gf_dev->device_available = 0;
 	gf_dev->fb_black = 0;
+	gf_dev->new_driver = 0;
 
 	if (gf_parse_dts(gf_dev))
 		goto error;
@@ -885,6 +943,10 @@ static int __init gf_init(void)
 		pr_warn("Failed to register SPI driver.\n");
 	}
 
+#ifdef GF_NETLINK_ENABLE
+	netlink_init();
+#endif
+
 	pr_info(" status = 0x%x\n", status);
 	FUNC_EXIT();
 	return 0;
@@ -894,6 +956,9 @@ module_init(gf_init);
 static void __exit gf_exit(void)
 {
 	FUNC_ENTRY();
+#ifdef GF_NETLINK_ENABLE
+	netlink_exit();
+#endif
 #if defined(USE_PLATFORM_BUS)
 	platform_driver_unregister(&gf_driver);
 #elif defined(USE_SPI_BUS)

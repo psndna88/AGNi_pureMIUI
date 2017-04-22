@@ -70,6 +70,16 @@ struct fpc1020_data {
 	bool wakeup_enabled;
 };
 
+unsigned int kenzo_fpsensor = 1;
+static int __init setup_kenzo_fpsensor(char *str)
+{
+	if (!strncmp(str, "gdx", strlen(str)))
+		kenzo_fpsensor = 2;
+
+	return kenzo_fpsensor;
+}
+__setup("androidboot.fpsensor=", setup_kenzo_fpsensor);
+
 static int vreg_setup(struct fpc1020_data *fpc1020, const char *name,
 		      bool enable)
 {
@@ -272,8 +282,14 @@ static int fpc1020_probe(struct platform_device* pdev)
 	int rc = 0;
 	int irqf;
 	struct device_node *np = dev->of_node;
+	struct fpc1020_data *fpc1020;
 
-	struct fpc1020_data *fpc1020 = devm_kzalloc(dev, sizeof(*fpc1020),
+	if (kenzo_fpsensor != 1) {
+		pr_err("board no fpc fpsensor\n");
+		return -ENODEV;
+	}
+
+	fpc1020 = devm_kzalloc(dev, sizeof(*fpc1020),
 						    GFP_KERNEL);
 	if (!fpc1020) {
 		dev_err(dev,

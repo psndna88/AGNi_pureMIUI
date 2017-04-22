@@ -27,6 +27,7 @@ struct gf_key_map {
 #define  GF_IOC_ENABLE_IRQ	_IO(GF_IOC_MAGIC, 1)
 #define  GF_IOC_SETSPEED    _IOW(GF_IOC_MAGIC, 2, unsigned int)
 #define  GF_IOC_RESET       _IO(GF_IOC_MAGIC, 3)
+#define  GF_IOC_RESET_NEW   _IOW(GF_IOC_MAGIC, 3, unsigned int)
 #define  GF_IOC_COOLBOOT    _IO(GF_IOC_MAGIC, 4)
 #define  GF_IOC_SENDKEY    _IOW(GF_IOC_MAGIC, 5, struct gf_key)
 #define  GF_IOC_CLK_READY  _IO(GF_IOC_MAGIC, 6)
@@ -43,6 +44,12 @@ struct gf_key_map {
 #define  USE_PLATFORM_BUS    1
 
 #define GF_FASYNC   1	/*If support fasync mechanism.*/
+
+#define GF_NETLINK_ENABLE 1
+#define GF_NET_EVENT_IRQ 0
+#define GF_NET_EVENT_FB_BLACK 1
+#define GF_NET_EVENT_FB_UNBLACK 2
+
 struct gf_dev {
 	dev_t devt;
 	struct list_head device_entry;
@@ -69,6 +76,7 @@ struct gf_dev {
 	struct notifier_block notifier;
 	char device_available;
 	char fb_black;
+	int new_driver;
 };
 
 int gf_parse_dts(struct gf_dev *gf_dev);
@@ -80,4 +88,7 @@ int gf_power_off(struct gf_dev *gf_dev);
 int gf_hw_reset(struct gf_dev *gf_dev, unsigned int delay_ms);
 int gf_irq_num(struct gf_dev *gf_dev);
 
+void sendnlmsg(char *message);
+int netlink_init(void);
+void netlink_exit(void);
 #endif /*__GF_SPI_H*/

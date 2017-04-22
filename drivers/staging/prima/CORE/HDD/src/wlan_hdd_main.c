@@ -207,7 +207,11 @@ static VOS_STATUS hdd_parse_ese_beacon_req(tANI_U8 *pValue,
 #define NUM_OF_STA_DATA_TO_PRINT 16
 
 #ifdef WLAN_FEATURE_RMC
+#ifdef CONFIG_MACH_XIAOMI_KENZO
+#define WLAN_NLINK_CESIUM 29
+#else
 #define WLAN_NLINK_CESIUM 30
+#endif
 #endif
 
 //wait time for beacon miss rate.
