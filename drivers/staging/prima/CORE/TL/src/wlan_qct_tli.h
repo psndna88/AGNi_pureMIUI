@@ -967,6 +967,8 @@ typedef struct
   WLANTL_RoamMonitorType gDsRxRoamStats;
 #endif
 
+  uint8_t track_arp;
+  uint32_t txbd_token;
 }WLANTL_CbType;
 
 

@@ -5519,6 +5519,57 @@ static void lim_register_mgmt_frame_ind_cb(tpAniSirGlobal pMac,
       limLog(pMac, LOGE, FL("sme_req->callback is null"));
 }
 
+static void lim_delba_con_status(tpAniSirGlobal pMac,
+                            void *msg_buf)
+{
+   tpSmeDelBAPeerInd  delba_params;
+   tpDphHashNode       pSta;
+   tANI_U16            aid;
+   tLimBAState         curBaState;
+   tpPESession         psessionEntry;
+   tANI_U8             sessionId;
+
+   delba_params = (tpSmeDelBAPeerInd)msg_buf;
+
+   psessionEntry = peFindSessionByBssid(pMac, delba_params->bssId, &sessionId);
+   if (!psessionEntry)
+   {
+      PELOGE(limLog(pMac, LOGE,FL("session does not exist for given BSSId"));)
+      return;
+   }
+
+   pSta = dphLookupHashEntry(pMac, delba_params->bssId, &aid,
+                             &psessionEntry->dph.dphHashTable);
+   if(!pSta)
+   {
+      limLog(pMac, LOGE,
+      FL("STA context not found - ignoring BA Delete IND from HAL"));
+      return;
+   }
+
+   LIM_GET_STA_BA_STATE(pSta, delba_params->baTID, &curBaState);
+   if( eLIM_BA_STATE_IDLE != curBaState )
+   {
+      limLog(pMac, LOGE,
+             FL("Received unexpected BA Delete IND when STA BA state is %d"),
+             curBaState);
+      return;
+   }
+
+   if(eSIR_SUCCESS != limPostMlmDelBAReq(pMac, pSta,
+                                        delba_params->baDirection,
+                                        delba_params->baTID,
+                                        eSIR_MAC_PEER_REJECT_MECHANISIM_REASON,
+                                        psessionEntry)) {
+      limLog(pMac, LOGE, FL("Post DEL BA request failed"));
+   }
+   else
+   {
+      limLog(pMac, LOG1, FL(" Delete BA session StaId %d on tid %d"),
+             delba_params->staIdx, delba_params->baTID);
+   }
+}
+
 /**
  * limProcessSmeReqMessages()
  *
@@ -5864,6 +5915,9 @@ limProcessSmeReqMessages(tpAniSirGlobal pMac, tpSirMsgQ pMsg)
             break ;
         case eWNI_SME_REGISTER_MGMT_FRAME_CB:
             lim_register_mgmt_frame_ind_cb(pMac, pMsgBuf);
+            break;
+        case eWNI_SME_DEL_TEST_BA:
+            lim_delba_con_status(pMac, pMsgBuf);
             break;
         default:
             vos_mem_free((v_VOID_t*)pMsg->bodyptr);

@@ -14421,3 +14421,167 @@ void sme_set_mgmt_frm_via_wq5(tHalHandle hHal, tANI_BOOLEAN sendMgmtPktViaWQ5)
     }
     return;
 }
+
+/* ARP DEBUG STATS */
+
+/**
+ * sme_set_nud_debug_stats() - sme api to set nud debug stats
+ * @hHal: handle to hal
+ * @pSetStatsParam: pointer to set stats param
+ */
+eHalStatus sme_set_nud_debug_stats(tHalHandle hHal,
+                         setArpStatsParams *pSetStatsParam)
+{
+   setArpStatsParams *arp_set_param;
+   vos_msg_t msg;
+
+   arp_set_param = vos_mem_malloc(sizeof(*arp_set_param));
+   if (arp_set_param == NULL) {
+       VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
+               FL("Memory allocation failure"));
+       return VOS_STATUS_E_NOMEM;
+   }
+
+   vos_mem_copy(arp_set_param, pSetStatsParam, sizeof(*arp_set_param));
+
+   msg.type = WDA_SET_ARP_STATS_REQ;
+   msg.reserved = 0;
+   msg.bodyptr = arp_set_param;
+
+   if (VOS_STATUS_SUCCESS != vos_mq_post_message(VOS_MODULE_ID_WDA, &msg)) {
+       VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
+               FL("Not able to post message to WDA"));
+       vos_mem_free(arp_set_param);
+       return VOS_STATUS_E_FAILURE;
+   }
+
+   return VOS_STATUS_SUCCESS;
+}
+
+/**
+ * sme_get_nud_debug_stats() - sme api to get nud debug stats
+ * @hHal: handle to hal
+ * @pGetStatsParam: pointer to set stats param
+ */
+eHalStatus sme_get_nud_debug_stats(tHalHandle hHal,
+                         getArpStatsParams *pGetStatsParam)
+{
+   getArpStatsParams *arpGetParams;
+   vos_msg_t msg;
+
+   arpGetParams = vos_mem_malloc(sizeof(*arpGetParams));
+   if (arpGetParams == NULL) {
+       VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
+               FL("Memory allocation failure"));
+       return VOS_STATUS_E_NOMEM;
+   }
+
+   vos_mem_copy(arpGetParams, pGetStatsParam, sizeof(*arpGetParams));
+
+   msg.type = WDA_GET_ARP_STATS_REQ;
+   msg.reserved = 0;
+   msg.bodyptr = arpGetParams;
+
+   if (VOS_STATUS_SUCCESS != vos_mq_post_message(VOS_MODULE_ID_WDA, &msg)) {
+       VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
+               FL("Not able to post message to WDA"));
+       vos_mem_free(arpGetParams);
+       return VOS_STATUS_E_FAILURE;
+   }
+
+   return VOS_STATUS_SUCCESS;
+}
+
+eHalStatus sme_test_con_alive(tHalHandle hHal)
+{
+   vos_msg_t wdaMsg = {0};
+
+   wdaMsg.type = WDA_TRIGGER_ADD_BA_REQ;
+   wdaMsg.bodyptr = NULL;
+   wdaMsg.reserved = 0;
+
+   if (VOS_STATUS_SUCCESS != vos_mq_post_message(VOS_MQ_ID_WDA, &wdaMsg))
+      return  VOS_STATUS_E_FAILURE;
+
+   return VOS_STATUS_SUCCESS;
+}
+
+
+eHalStatus sme_get_con_alive(tHalHandle hHal,
+                             pgetConStatusParams conStatusParams)
+{
+   vos_msg_t wdaMsg = {0};
+   pgetConStatusParams statusParams;
+   VOS_STATUS vosStatus;
+
+   statusParams = vos_mem_malloc(sizeof(getConStatusParams));
+   if (NULL == statusParams) {
+      VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
+                FL("Memory allocation failure"));
+       return VOS_STATUS_E_NOMEM;
+   }
+
+   vos_mem_copy(statusParams, conStatusParams, sizeof(getConStatusParams));
+   wdaMsg.type = WDA_GET_CON_STATUS;
+   wdaMsg.bodyptr = statusParams;
+   wdaMsg.reserved = 0;
+
+   vosStatus = vos_mq_post_message(VOS_MQ_ID_WDA, &wdaMsg);
+   if (!VOS_IS_STATUS_SUCCESS(vosStatus)) {
+      VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
+                FL(" Not able to post message"));
+      vos_mem_free(statusParams);
+      return  VOS_STATUS_E_FAILURE;
+   }
+
+   return VOS_STATUS_SUCCESS;
+}
+
+eHalStatus sme_test_con_delba(tHalHandle hHal, uint8_t sta_id,
+                              uint8_t session_id)
+{
+   tpSmeDelBAPeerInd msg;
+   tpAniSirGlobal pMac = PMAC_STRUCT(hHal);
+   tCsrRoamSession *pSession = CSR_GET_SESSION(pMac, session_id);
+   eHalStatus status = eHAL_STATUS_FAILURE;
+
+   if (!CSR_IS_SESSION_VALID(pMac, session_id))
+   {
+      VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
+                FL("Session is invalid"));
+      return status;
+   }
+
+   if (!pMac->lim.test_status_bainfo.tx_aggr)
+   {
+      VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
+                FL("BA session not established"));
+      return status;
+   }
+
+   if (eHAL_STATUS_SUCCESS == sme_AcquireGlobalLock(&pMac->sme))
+   {
+      msg = vos_mem_malloc(sizeof(tSmeDelBAPeerInd));
+      if (NULL == msg)
+      {
+         VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
+                FL("Memory allocation failure"));
+          return VOS_STATUS_E_NOMEM;
+      }
+
+      msg->staIdx = sta_id;
+      msg->baTID = pMac->lim.test_status_bainfo.tid;
+      vos_mem_copy(msg->bssId, pSession->connectedProfile.bssid,
+                   sizeof(tSirMacAddr));
+      msg->baDirection = eBA_INITIATOR;
+
+      msg->mesgType = eWNI_SME_DEL_TEST_BA;
+      msg->mesgLen = sizeof(tSmeDelBAPeerInd);
+
+      status = palSendMBMessage(pMac->hHdd, msg);
+
+      sme_ReleaseGlobalLock(&pMac->sme);
+   }
+
+   return status;
+}

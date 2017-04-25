@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -53,6 +53,16 @@
 #define VOS_PKT_PROTO_TYPE_EAPOL   0x02
 #define VOS_PKT_PROTO_TYPE_DHCP    0x04
 #define VOS_PKT_PROTO_TYPE_ARP     0x08
+
+/* ARP packet offset values */
+#define VOS_PKT_ARP_OPCODE_OFFSET 20
+#define VOS_PKT_ARPOP_REQUEST 1
+#define VOS_PKT_ARPOP_REPLY 2
+#define VOS_ARP_TARGET_IP_OFFSET 38
+#define VOS_ARP_SRC_IP_OFFSET 28
+
+#define VOS_80211_8023_HEADER_OFFSET 20
+
 /*-------------------------------------------------------------------------- 
   Type declarations
   ------------------------------------------------------------------------*/
@@ -1169,5 +1179,17 @@ v_PVOID_t vos_get_pkt_end(vos_pkt_t *pPacket);
 
 */
 v_VOID_t vos_recover_tail(vos_pkt_t *pPacket);
+
+/**
+  @breaf vos_is_arp_pkt() - Check the packet is ARP or not.
+
+  @param
+        pskb - pointer to skb
+        is_translated - header translation check
+  @return
+         TRUE - if packet is ARP
+         FALSE -if packet is not ARP
+*/
+bool vos_is_arp_pkt(void *pskb, bool is_translated);
 
 #endif  // !defined( __VOS_PKT_H )

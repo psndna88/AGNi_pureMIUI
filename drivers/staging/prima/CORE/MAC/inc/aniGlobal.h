@@ -260,6 +260,12 @@ typedef struct {
     v_TIME_t failed_timestamp[MAX_TIDS];
 } tLimStaBAInfo;
 
+typedef struct {
+   bool tx_aggr;
+   uint8_t sta_id;
+   uint8_t tid;
+} t_test_status_bainfo;
+
 typedef struct sAniSirLim
 {
     //////////////////////////////////////     TIMER RELATED START ///////////////////////////////////////////
@@ -914,6 +920,7 @@ tLimMlmOemDataRsp       *gpLimMlmOemDataRsp;
     tANI_U32 txBdToken;
     tANI_U32 EnableTdls2040BSSCoexIE;
     tLimStaBAInfo staBaInfo[WLAN_MAX_STA_COUNT];
+    t_test_status_bainfo test_status_bainfo;
 } tAniSirLim, *tpAniSirLim;
 
 typedef struct sLimMgmtFrameRegistration

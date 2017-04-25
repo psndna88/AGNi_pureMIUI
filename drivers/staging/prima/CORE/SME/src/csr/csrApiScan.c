@@ -2281,6 +2281,18 @@ static tANI_S32 csrFindSelfCongestionScore(tpAniSirGlobal pMac,
     if (pSession == NULL)
         return -1;
 
+    if (bssInfo->rssi < pMac->roam.configParam.PERMinRssiThresholdForRoam) {
+        smsLog(pMac, LOG1,
+               FL("Current AP has low rssi=%d than %d"), bssInfo->rssi,
+               pMac->roam.configParam.PERMinRssiThresholdForRoam);
+        /*
+         * Make Current candidate score as zero which will cause roaming
+         * in low RSSI scenarios
+         */
+        pMac->currentBssScore = 0;
+        return 0;
+    }
+
     for (i = 0; i <= pMac->PERroamCandidatesCnt; i++)
         if (pMac->candidateChannelInfo[i].channelNumber == bssInfo->channelId)
             break;

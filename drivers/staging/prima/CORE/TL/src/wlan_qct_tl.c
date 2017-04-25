@@ -2752,8 +2752,8 @@ WLANTL_TxBAPFrm
                     ucWDSEnabled, extraHeadSpace, pMetaInfo->ucType,
                             &pTLCb->atlSTAClients[ucStaId]->wSTADesc.vSelfMACAddress,
                     pMetaInfo->ucTID, 0 /* No ACK */, pMetaInfo->usTimeStamp,
-                    pMetaInfo->ucIsEapol || pMetaInfo->ucIsWai, pMetaInfo->ucUP,
-                    pMetaInfo->ucTxBdToken);
+                    pMetaInfo->ucIsEapol || pMetaInfo->ucIsWai, pMetaInfo->ucIsArp,
+                    pMetaInfo->ucUP, pMetaInfo->ucTxBdToken);
 
   if ( VOS_STATUS_SUCCESS != vosStatus )
   {
@@ -3694,7 +3694,7 @@ WLANTL_TxMgmtFrm
     vosStatus = WDA_DS_BuildTxPacketInfo( pvosGCtx, vosFrmBuf , &vDestMacAddr, 
                    1 /* always 802.11 frames*/, &usPktLen, uQosHdr /*qos not enabled !!!*/, 
                    0 /* WDS off */, 0, wFrmType, pvAddr2MacAddr, ucTid,
-                   ucAckResponse, usTimeStamp, 0, 0, ucTxBdToken);
+                   ucAckResponse, usTimeStamp, 0, 0, 0, ucTxBdToken);
 
 
     if ( !VOS_IS_STATUS_SUCCESS(vosStatus) )
@@ -7887,8 +7887,8 @@ WLANTL_STATxConn
                           extraHeadSpace,
                           ucTypeSubtype, &pClientSTA->wSTADesc.vSelfMACAddress,
                           ucTid, txFlag,
-                          tlMetaInfo.usTimeStamp, tlMetaInfo.ucIsEapol || tlMetaInfo.ucIsWai, tlMetaInfo.ucUP,
-                          tlMetaInfo.ucTxBdToken);
+                          tlMetaInfo.usTimeStamp, tlMetaInfo.ucIsEapol || tlMetaInfo.ucIsWai,
+                          tlMetaInfo.ucIsArp, tlMetaInfo.ucUP, tlMetaInfo.ucTxBdToken);
 
   if ( VOS_STATUS_SUCCESS != vosStatus )
   {
@@ -8307,6 +8307,18 @@ WLANTL_STATxAuth
 #endif /* FEATURE_WLAN_TDLS */
   if( tlMetaInfo.ucIsArp )
   {
+    if (pTLCb->track_arp)
+    {
+       if (vos_check_arp_req_target_ip(vosDataBuff->pSkb, true))
+       {
+          ucTxFlag |= HAL_USE_FW_IN_TX_PATH;
+          ucTxFlag |= HAL_TXCOMP_REQUESTED_MASK;
+          tlMetaInfo.ucTxBdToken = ++ pTLCb->txbd_token;
+          TLLOG1(VOS_TRACE(VOS_MODULE_ID_TL, VOS_TRACE_LEVEL_INFO,
+                          "%s: ARP packet FW in data path", __func__));
+       }
+    }
+
     if (pStaClient->arpOnWQ5)
     {
         ucTxFlag |= HAL_USE_FW_IN_TX_PATH;
@@ -8331,7 +8343,7 @@ WLANTL_STATxAuth
                      extraHeadSpace,
                      ucTypeSubtype, &pStaClient->wSTADesc.vSelfMACAddress,
                      ucTid, ucTxFlag, tlMetaInfo.usTimeStamp, 
-                     tlMetaInfo.ucIsEapol, tlMetaInfo.ucUP,
+                     tlMetaInfo.ucIsEapol, tlMetaInfo.ucIsArp, tlMetaInfo.ucUP,
                      tlMetaInfo.ucTxBdToken);
 
   if(!VOS_IS_STATUS_SUCCESS(vosStatus))
@@ -13814,6 +13826,29 @@ void WLANTL_ResetRxSSN(v_PVOID_t pvosGCtx, uint8_t ucSTAId)
            "WLAN TL: Last RxSSN reset to zero for tid %d", i));
      pClientSTA->atlBAReorderInfo[i].LastSN = 0;
   }
+}
+
+/**
+ * WLANTL_SetARPFWDatapath() - keep or remove FW in data path for ARP
+ *
+ * @flag: value to keep or remove FW from data path
+ *
+ * Return: void
+ */
+void WLANTL_SetARPFWDatapath(void * pvosGCtx, bool flag)
+{
+
+   WLANTL_CbType*  pTLCb = NULL;
+
+   pTLCb = VOS_GET_TL_CB(pvosGCtx);
+   if (NULL == pTLCb) {
+      TLLOGE(VOS_TRACE( VOS_MODULE_ID_TL, VOS_TRACE_LEVEL_ERROR,
+             "%s: Invalid TL pointer from pvosGCtx", __func__));
+      return;
+   }
+
+   pTLCb->track_arp = flag;
+
 }
 
 #ifdef WLAN_FEATURE_RMC
