@@ -4102,9 +4102,12 @@ static void apply_mbo_pref_ap_list(struct sigma_dut *dut)
 static void ath_ap_set_params(struct sigma_dut *dut)
 {
 	const char *basedev = "wifi1";
-	const char *ifname = dut->ap_is_dual ? "ath1" : "ath0";
+	const char *ifname = get_main_ifname();
 	int i;
 	char buf[300];
+
+	if (sigma_radio_ifname[0])
+		basedev = sigma_radio_ifname[0];
 
 	if (dut->ap_countrycode[0]) {
 		snprintf(buf, sizeof(buf), "iwpriv %s setCountry %s",
