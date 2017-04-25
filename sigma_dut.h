@@ -368,6 +368,7 @@ struct sigma_dut {
 	enum ap_chwidth default_11na_ap_chwidth;
 	enum ap_chwidth default_11ng_ap_chwidth;
 	int ap_tx_stbc;
+	int ap_rx_stbc;
 	enum value_not_set_enabled_disabled ap_dyn_bw_sig;
 	int ap_sgi80;
 	int ap_p2p_mgmt;
@@ -466,6 +467,7 @@ struct sigma_dut {
 		AP_DFS_MODE_ENABLED,
 	} ap_dfs_mode;
 	int ap_ndpa_frame;
+	int ap_opmode_notify;
 
 	int ap_lci;
 	char ap_val_lci[33];
