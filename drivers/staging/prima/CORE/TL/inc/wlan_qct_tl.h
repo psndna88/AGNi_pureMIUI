@@ -3376,4 +3376,13 @@ void WLANTL_ResetRxSSN(v_PVOID_t pvosGCtx, uint8_t ucSTAId);
  * Return: none
  */
 void WLANTL_SetDataPktFilter(v_PVOID_t pvosGCtx, uint8_t ucSTAId, bool flag);
+
+/**
+ * WLANTL_SetARPFWDatapath() - keep or remove FW in data path for ARP
+ * @pvosGCtx: global vos context
+ * @flag: value to keep or remove FW from data path
+ *
+ * Return: void
+ */
+void WLANTL_SetARPFWDatapath(void * pvosGCtx, bool flag);
 #endif /* #ifndef WLAN_QCT_WLANTL_H */

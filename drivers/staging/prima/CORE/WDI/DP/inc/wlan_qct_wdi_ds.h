@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, 2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013, 2016-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -53,11 +53,12 @@ typedef struct
    wpt_uint32 txFlags;
    wpt_uint8 ac;
    wpt_uint8 isEapol:1; //0 - not eapol 1 - eapol
-   wpt_uint8 isWai:1;   //WAPI 0 - not WAI 1 WAI 
+   wpt_uint8 isWai:1;   //WAPI 0 - not WAI 1 WAI
+   wpt_uint8 isArp:1;   //0 - not ARP 1 - ARP
    wpt_uint8 fdisableFrmXlt:1;   //0 - Let ADU do FT. 1 - bypass ADU FT
    wpt_uint8 qosEnabled:1; //0 - non-Qos 1 - Qos
    wpt_uint8 fenableWDS:1; //0 - not WDS 1 WDS
-   wpt_uint8 reserved1:3;
+   wpt_uint8 reserved1:2;
    wpt_uint8 typeSubtype;
    wpt_uint8 fUP;
    wpt_uint8 fSTAMACAddress[6];

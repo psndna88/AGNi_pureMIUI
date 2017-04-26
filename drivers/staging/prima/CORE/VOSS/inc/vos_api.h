@@ -526,4 +526,11 @@ v_BOOL_t vos_is_probe_rsp_offload_enabled(void);
 void vos_smd_dump_stats(void);
 void vos_log_wdi_event(uint16 msg, vos_wdi_trace_event_type event);
 void vos_dump_wdi_events(void);
+
+bool vos_check_arp_target_ip(void *pSkb, bool conversion);
+bool vos_check_arp_req_target_ip(void *pSkb, bool conversion);
+bool vos_check_arp_src_ip(void *pSkb, bool conversion);
+bool vos_check_arp_rsp_src_ip(void *pSkb, bool conversion);
+void vos_update_arp_fw_tx_delivered(void);
+void vos_update_arp_rx_drop_reorder(void);
 #endif // if !defined __VOS_NVITEM_H

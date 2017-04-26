@@ -8449,6 +8449,9 @@ typedef void  (*WDI_WifiConfigSetRspCb) (WDI_WifconfigSetRsp *wdiRsp, void *pUse
 typedef void (*WDI_AntennaDivSelRspCb)(WDI_Status status,
               void *resp, void *pUserData);
 
+typedef void (*wdi_nud_set_arp_rsp_cb)(void *event_data,void *user_data);
+typedef void (*wdi_nud_get_arp_rsp_cb)(void *event_data,void *user_data);
+
 /*========================================================================
  *     Function Declarations and Documentation
  ==========================================================================*/
@@ -12237,4 +12240,54 @@ WDI_SetAllowedActionFramesInd(
 );
 
 void WDI_SetMgmtPktViaWQ5(wpt_boolean sendMgmtPktViaWQ5);
+
+/* ARP DEBUG STATS */
+typedef struct
+{
+   wpt_uint8 flag;
+   wpt_uint8 pkt_type;
+   wpt_uint32 ip_addr;
+} WDI_SetARPStatsParamsInfoType;
+
+typedef struct
+{
+  wpt_uint32 status;
+} WDI_SetARPStatsRspParamsType;
+
+typedef void (*WDI_SetARPStatsRspCb)(WDI_SetARPStatsRspParamsType* StatsRsp,
+                                     void* pUserData);
+
+WDI_Status
+WDI_SetARPStatsReq
+(
+  WDI_SetARPStatsParamsInfoType *pwdiSetStatsReqParams,
+  WDI_SetARPStatsRspCb          wdiSetARPStatsRspCb,
+  void*                      pUserData
+);
+
+/* ARP DEBUG STATS */
+typedef struct
+{
+   wpt_uint8 pkt_type;
+} WDI_GetARPStatsParamsInfoType;
+
+typedef struct
+{
+  wpt_uint32 status;
+  wpt_uint16 dad;
+  wpt_uint16 tx_fw_cnt;
+  wpt_uint16 rx_fw_cnt;
+  wpt_uint16 tx_ack_cnt;
+} WDI_GetARPStatsRspParamsType;
+
+typedef void (*WDI_GetARPStatsRspCb)(WDI_GetARPStatsRspParamsType* StatsRsp,
+                                     void* pUserData);
+
+WDI_Status
+WDI_GetARPStatsReq
+(
+  WDI_GetARPStatsParamsInfoType *pwdiGetStatsReqParams,
+  WDI_GetARPStatsRspCb          wdiGetARPStatsRspCb,
+  void*                      pUserData
+);
 #endif /* #ifndef WLAN_QCT_WDI_H */
