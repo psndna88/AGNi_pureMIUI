@@ -199,13 +199,13 @@
 			#size-cells = <1>;
 
 			qcom,iterm-ma = <100>;
+			qcom,fastchg-current-ma = <3000>;
 			qcom,float-voltage-mv = <4200>;
 			qcom,resume-delta-mv = <200>;
-			qcom,fastchg-current-ma = <2400>;
 			qcom,chg-inhibit-fg;
 			qcom,rparasitic-uohm = <100000>;
 			qcom,bms-psy-name = "bms";
-			qcom,thermal-mitigation = <2400 2200 1800 800 0>;
+			qcom,thermal-mitigation = <1500 700 600 325>;
 			qcom,parallel-usb-min-current-ma = <1400>;
 			qcom,parallel-usb-9v-min-current-ma = <900>;
 			qcom,parallel-allowed-lowering-ma = <500>;
@@ -214,6 +214,7 @@
 			qcom,charge-unknown-battery;
 			qcom,force-aicl-rerun;
 			qcom,aicl-rerun-period-s = <180>;
+			qcom,float-voltage-comp = <11>;
 
 			qcom,chgr@1000 {
 				reg = <0x1000 0x100>;
