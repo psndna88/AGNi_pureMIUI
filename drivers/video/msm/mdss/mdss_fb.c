@@ -207,7 +207,7 @@ static void mdss_fb_input_event_handler(struct input_handle *handle,
 {
 	struct msm_fb_data_type *mfd = handle->handler->private;
 
-	if (type != EV_ABS)
+	if ((type != EV_ABS) && (type != EV_KEY))
 		return;
 
 	if (!mfd) {
@@ -283,6 +283,11 @@ static const struct input_device_id mdss_fb_input_ids[] = {
 				BIT_MASK(ABS_MT_POSITION_X) |
 				BIT_MASK(ABS_MT_POSITION_Y) },
 	},
+	{
+		.flags = INPUT_DEVICE_ID_MATCH_EVBIT,
+		.evbit = { BIT_MASK(EV_KEY) },
+	},
+	{ },
 };
 
 static int mdss_fb_register_input_handler(struct msm_fb_data_type *mfd)
