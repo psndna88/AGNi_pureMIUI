@@ -2044,6 +2044,8 @@ int mdss_mdp_overlay_kickoff(struct msm_fb_data_type *mfd,
 	ATRACE_END("sspp_programming");
 	mutex_unlock(&mdp5_data->list_lock);
 
+	mdss_mdp_ctl_wait_fps(ctl);
+
 	mdp5_data->kickoff_released = false;
 
 	if (mfd->panel.type == WRITEBACK_PANEL) {
