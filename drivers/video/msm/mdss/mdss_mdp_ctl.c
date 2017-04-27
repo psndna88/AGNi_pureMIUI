@@ -920,8 +920,13 @@ static u32 mdss_mdp_get_vbp_factor(struct mdss_mdp_ctl *ctl)
 		return 0;
 
 	pinfo = &ctl->panel_data->panel_info;
-	fps = mdss_panel_get_framerate(pinfo);
-	v_total = mdss_panel_get_vtotal(pinfo);
+	if (pinfo->type == MIPI_VIDEO_PANEL) {
+		fps = pinfo->panel_max_fps;
+		v_total = pinfo->panel_max_vtotal;
+	} else {
+		fps = mdss_panel_get_framerate(pinfo);
+		v_total = mdss_panel_get_vtotal(pinfo);
+	}
 	vbp = pinfo->lcdc.v_back_porch + pinfo->lcdc.v_pulse_width;
 	vbp += ctl->prg_fet;
 
