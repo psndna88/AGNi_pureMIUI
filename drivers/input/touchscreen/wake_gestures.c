@@ -118,6 +118,7 @@ static struct workqueue_struct *wake_gesture_delayed_shut_wq;
 static struct work_struct s2w_input_work;
 static struct work_struct dt2w_input_work;
 static struct delayed_work wake_gesture_delayed_shut_work;
+static DEFINE_MUTEX(wakegesturedelay);
 
 static bool is_suspended(void)
 {
@@ -144,21 +145,29 @@ static void report_gesture(int gest)
 
 /* Wake Gestures - shut switch */
 void wake_gesture_switches_shut(void) {
+   	if (!mutex_trylock(&wakegesturedelay))
+		return;
+
 	dt2w_switch = 0;
 	s2w_switch = 0;
 	wake_gesture_switches_are_shut = true;
 	if (debug_wake_timer)
 		pr_info("wake gesture: switches are shut !\n");
+	mutex_unlock(&wakegesturedelay);
 	return;
 }
 
 /* Wake Gestures - resume switch */
 void wake_gesture_switches_resume(void) {
+   	if (!mutex_trylock(&wakegesturedelay))
+		return;
+
 	dt2w_switch = dt2w_switch_temp;
 	s2w_switch = s2w_switch_temp;
 	wake_gesture_switches_are_shut = false;
 	if (debug_wake_timer)
     	pr_info("wake gesture: switches resumed !\n");
+	mutex_unlock(&wakegesturedelay);
 	return;
 }
 

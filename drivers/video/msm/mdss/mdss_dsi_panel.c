@@ -766,7 +766,7 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	if ((dt2w_switch_temp) || (s2w_switch_temp)) {
 		if (debug_wake_timer)
 			pr_info("wake gesture: display on detected...\n");
-       		wake_gesture_resume_triggers();
+       	wake_gesture_resume_triggers();
 	}
 #endif
 #ifdef CONFIG_LAZYPLUG
@@ -894,7 +894,7 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 	if ((dt2w_switch_temp) || (s2w_switch_temp)) {
 		if (debug_wake_timer)
 			pr_info("wake gesture: display off detected...\n");
-	       	wake_gesture_suspend_triggers();
+	    wake_gesture_suspend_triggers();
 	}
 #endif
 #ifdef CONFIG_LAZYPLUG
