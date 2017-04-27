@@ -1294,16 +1294,38 @@ static void yield_task_rt(struct rq *rq)
 static int find_lowest_rq(struct task_struct *task);
 
 /*
+ * Determine if destination CPU explicity disable softirqs,
+ * this is different from CPUs which are running softirqs.
+ * pc is the preempt count to check.
+ */
+static bool softirq_masked(int pc)
+{
+	return !!((pc & SOFTIRQ_MASK)>= SOFTIRQ_DISABLE_OFFSET);
+}
+
+/*
  * Return whether the task on the given cpu is currently non-preemptible
- * while handling a softirq or is likely to block preemptions soon because
- * it is a ksoftirq thread.
+ * while handling a potentially long softint, or if the task is likely
+ * to block preemptions soon because it is a ksoftirq thread that is
+ * handling slow softints.
  */
 bool
 task_may_not_preempt(struct task_struct *task, int cpu)
 {
+	__u32 softirqs = per_cpu(active_softirqs, cpu) |
+			 __IRQ_STAT(cpu, __softirq_pending);
 	struct task_struct *cpu_ksoftirqd = per_cpu(ksoftirqd, cpu);
-	return (task_thread_info(task)->preempt_count & SOFTIRQ_MASK) ||
-	       task == cpu_ksoftirqd;
+	int task_pc = 0;
+
+	if (task)
+		task_pc = task_preempt_count(task);
+
+	if (softirq_masked(task_pc))
+		return true;
+
+	return ((softirqs & LONG_SOFTIRQ_MASK) &&
+		(task == cpu_ksoftirqd ||
+		 task_pc & SOFTIRQ_MASK));
 }
 
 static int
@@ -1490,10 +1512,10 @@ static struct task_struct *_pick_next_task_rt(struct rq *rq)
 	 * put_prev_task. A stale value can cause us to over-charge execution
 	 * time to real-time task, that could trigger throttling unnecessarily
 	 */
-	if (rq->skip_clock_update > 0)
+	if (rq->skip_clock_update > 0) {
 		rq->skip_clock_update = 0;
-
-	update_rq_clock(rq);
+		update_rq_clock(rq);
+	}
 	p = rt_task_of(rt_se);
 	p->se.exec_start = rq_clock_task(rq);
 
