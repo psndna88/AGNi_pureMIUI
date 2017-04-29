@@ -239,10 +239,10 @@ static struct fg_mem_setting settings[FG_MEM_SETTING_MAX] = {
 	SETTING(BCL_MH_THRESHOLD, 0x47C,   3,      752),
 	SETTING(TERM_CURRENT,	 0x40C,   2,      250),
 	SETTING(CHG_TERM_CURRENT, 0x4F8,   2,      250),
-	SETTING(IRQ_VOLT_EMPTY,	 0x458,   3,      3350),
+	SETTING(IRQ_VOLT_EMPTY,	 0x458,   3,      3100),
 	SETTING(CUTOFF_VOLTAGE,	 0x40C,   0,      3400),
 	SETTING(VBAT_EST_DIFF,	 0x000,   0,      30),
-	SETTING(DELTA_SOC,	 0x450,   3,      2),
+	SETTING(DELTA_SOC,	 0x450,   3,      1),
 	SETTING(SOC_MAX,	 0x458,   1,      85),
 	SETTING(SOC_MIN,	 0x458,   2,      15),
 	SETTING(BATT_LOW,	 0x458,   0,      4200),
@@ -2938,9 +2938,10 @@ static int fg_cap_learning_process_full_data(struct fg_chip *chip)
 			100);
 	chip->learning_data.cc_uah = delta_cc_uah + chip->learning_data.cc_uah;
 
-	pr_info("current cc_soc=%d cc_soc_pc=%lld total_cc_uah = %lld delta_cc_uah = %lld\n",
-		cc_pc_val, cc_soc_delta_pc,
-		chip->learning_data.cc_uah, delta_cc_uah);
+	if (fg_debug_mask & FG_AGING)
+		pr_info("current cc_soc=%d cc_soc_pc=%lld total_cc_uah = %lld delta_cc_uah = %lld\n",
+				cc_pc_val, cc_soc_delta_pc,
+				chip->learning_data.cc_uah, delta_cc_uah);
 
 	return 0;
 
@@ -3060,9 +3061,10 @@ static void fg_cap_learning_post_process(struct fg_chip *chip)
 			chip->learning_data.cc_uah;
 
 	fg_cap_learning_save_data(chip);
-	pr_info("final cc_uah = %lld, learned capacity %lld -> %lld uah\n",
-		chip->learning_data.cc_uah,
-		old_cap, chip->learning_data.learned_cc_uah);
+	if (fg_debug_mask & FG_AGING)
+		pr_info("final cc_uah = %lld, learned capacity %lld -> %lld uah\n",
+				chip->learning_data.cc_uah,
+				old_cap, chip->learning_data.learned_cc_uah);
 }
 
 static int get_vbat_est_diff(struct fg_chip *chip)
@@ -3142,7 +3144,8 @@ static int fg_cap_learning_check(struct fg_chip *chip)
 
 			chip->learning_data.init_cc_pc_val = cc_pc_val;
 			chip->learning_data.active = true;
-			pr_info("SW_CC_SOC based learning init_CC_SOC=%d\n",
+			if (fg_debug_mask & FG_AGING)
+				pr_info("SW_CC_SOC based learning init_CC_SOC=%d\n",
 					chip->learning_data.init_cc_pc_val);
 		} else {
 			rc = fg_mem_masked_write(chip, CBITS_INPUT_FILTER_REG,

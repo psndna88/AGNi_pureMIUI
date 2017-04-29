@@ -421,7 +421,7 @@ module_param_named(
 	int, S_IRUSR | S_IWUSR
 );
 
-static int smbchg_default_hvdcp_icl_ma = 1500;
+static int smbchg_default_hvdcp_icl_ma = 2000;
 module_param_named(
 	default_hvdcp_icl_ma, smbchg_default_hvdcp_icl_ma,
 	int, S_IRUSR | S_IWUSR
@@ -1025,7 +1025,7 @@ static int get_prop_batt_capacity(struct smbchg_chip *chip)
 
 	if (is_usb_present(chip)
 			&& (POWER_SUPPLY_STATUS_FULL == get_prop_batt_status(chip))
-			&& get_prop_batt_voltage_now(chip) > 4300000)
+			&& get_prop_batt_voltage_now(chip) > 4400000)
 		capacity = 100;
 
 	return capacity;
@@ -1634,7 +1634,7 @@ static int smbchg_set_usb_current_max(struct smbchg_chip *chip,
 				chip->cfg_override_usb_current, current_ma);
 		}
 
-		if (current_ma < CURRENT_150_MA) {
+		else if (current_ma < CURRENT_150_MA) {
 			/* force 100mA */
 			rc = smbchg_sec_masked_write(chip,
 					chip->usb_chgpth_base + CHGPTH_CFG,
@@ -1654,7 +1654,7 @@ static int smbchg_set_usb_current_max(struct smbchg_chip *chip,
 			chip->usb_max_current_ma = 100;
 		}
 		/* specific current values */
-		if (current_ma == CURRENT_150_MA) {
+		else if (current_ma == CURRENT_150_MA) {
 			rc = smbchg_sec_masked_write(chip,
 					chip->usb_chgpth_base + CHGPTH_CFG,
 					CFG_USB_2_3_SEL_BIT, CFG_USB_2);
@@ -1671,8 +1671,7 @@ static int smbchg_set_usb_current_max(struct smbchg_chip *chip,
 				goto out;
 			}
 			chip->usb_max_current_ma = 150;
-		}
-		if (current_ma == CURRENT_500_MA) {
+		} else if (current_ma == CURRENT_500_MA) {
 			rc = smbchg_sec_masked_write(chip,
 					chip->usb_chgpth_base + CHGPTH_CFG,
 					CFG_USB_2_3_SEL_BIT, CFG_USB_2);
@@ -1689,8 +1688,7 @@ static int smbchg_set_usb_current_max(struct smbchg_chip *chip,
 				goto out;
 			}
 			chip->usb_max_current_ma = 500;
-		}
-		if (current_ma == CURRENT_900_MA) {
+		} else if (current_ma == CURRENT_900_MA) {
 			rc = smbchg_sec_masked_write(chip,
 					chip->usb_chgpth_base + CHGPTH_CFG,
 					CFG_USB_2_3_SEL_BIT, CFG_USB_3);
@@ -1818,7 +1816,13 @@ static int smbchg_set_fastchg_current_raw(struct smbchg_chip *chip,
 #define USBIN_ACTIVE_PWR_SRC_BIT	BIT(1)
 #define DCIN_ACTIVE_PWR_SRC_BIT		BIT(0)
 #define PARALLEL_REENABLE_TIMER_MS	1000
-#define PARALLEL_CHG_THRESHOLD_CURRENT	2400
+#define PARALLEL_CHG_THRESHOLD_CURRENT	2000
+int smbchg_parallel_chg_threshold_ma = PARALLEL_CHG_THRESHOLD_CURRENT;
+module_param_named(
+	default_parallel_chg_threshold, smbchg_parallel_chg_threshold_ma,
+	int, S_IRUSR | S_IWUSR
+);
+
 static bool smbchg_is_usbin_active_pwr_src(struct smbchg_chip *chip)
 {
 	int rc;
