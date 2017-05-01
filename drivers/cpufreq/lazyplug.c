@@ -78,7 +78,7 @@
 #undef DEBUG_LAZYPLUG
 
 #define LAZYPLUG_MAJOR_VERSION	1
-#define LAZYPLUG_MINOR_VERSION	6
+#define LAZYPLUG_MINOR_VERSION	7
 
 #define DEF_SAMPLING_MS			(268)
 #define DEF_IDLE_COUNT			(19) /* 268 * 19 = 5092, almost equals to 5 seconds */
@@ -199,7 +199,7 @@ static unsigned int __read_mostly *nr_run_profiles[] = {
 #define CPU_NR_THRESHOLD	((THREAD_CAPACITY << 1) + (THREAD_CAPACITY / 2))
 
 static unsigned int __read_mostly nr_possible_cores;
-module_param(nr_possible_cores, uint, 0444);
+module_param(nr_possible_cores, uint, 0644);
 
 static unsigned int __read_mostly cpu_nr_run_threshold = CPU_NR_THRESHOLD;
 module_param(cpu_nr_run_threshold, uint, 0664);
