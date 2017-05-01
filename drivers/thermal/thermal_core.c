@@ -753,10 +753,6 @@ static void handle_thermal_trip(struct thermal_zone_device *tz, int trip)
 {
 	enum thermal_trip_type type;
 
-	/* Ignore disabled trip points */
-	if (test_bit(trip, &tz->trips_disabled))
-		return;
-
 	tz->ops->get_trip_type(tz, trip, &type);
 
 	if (type == THERMAL_TRIP_CRITICAL || type == THERMAL_TRIP_HOT ||
@@ -2066,7 +2062,6 @@ struct thermal_zone_device *thermal_zone_device_register(const char *type,
 {
 	struct thermal_zone_device *tz;
 	enum thermal_trip_type trip_type;
-	int trip_temp;
 	int result;
 	int count;
 	int passive = 0;
@@ -2135,15 +2130,9 @@ struct thermal_zone_device *thermal_zone_device_register(const char *type,
 		goto unregister;
 
 	for (count = 0; count < trips; count++) {
-		if (tz->ops->get_trip_type(tz, count, &trip_type))
-			set_bit(count, &tz->trips_disabled);
+		tz->ops->get_trip_type(tz, count, &trip_type);
 		if (trip_type == THERMAL_TRIP_PASSIVE)
 			passive = 1;
-		if (tz->ops->get_trip_temp(tz, count, &trip_temp))
-			set_bit(count, &tz->trips_disabled);
-		/* Check for bogus trip points */
-		if (trip_temp == 0)
-			set_bit(count, &tz->trips_disabled);
 	}
 
 	if (!passive) {
