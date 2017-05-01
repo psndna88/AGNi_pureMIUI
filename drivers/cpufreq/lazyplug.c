@@ -75,7 +75,7 @@
 #undef DEBUG_LAZYPLUG
 
 #define LAZYPLUG_MAJOR_VERSION	1
-#define LAZYPLUG_MINOR_VERSION	9
+#define LAZYPLUG_MINOR_VERSION	10
 
 #define DEF_SAMPLING_MS			(268)
 #define DEF_IDLE_COUNT			(19) /* 268 * 19 = 5092, almost equals to 5 seconds */
@@ -322,6 +322,14 @@ static void unplug_cpu(int min_active_cpu)
 	}
 }
 
+static void cpu_all_up(struct work_struct *work);
+static DECLARE_WORK(cpu_all_up_work, cpu_all_up);
+
+static void cpu_all_up(struct work_struct *work)
+{
+	cpu_all_ctrl(true);
+}
+
 static void lazy_suspend_handler(void)
 {
 	if (last_state) {
@@ -330,6 +338,7 @@ static void lazy_suspend_handler(void)
 		/* keep cores awake long enough for faster wake up */
 		persist_count = BUSY_PERSISTENCE;
 		mutex_unlock(&lazyplug_mutex);
+		schedule_work(&cpu_all_up_work);
 		queue_delayed_work(lazyplug_wq, &lazyplug_work,
 			msecs_to_jiffies(10));
 	} else {
