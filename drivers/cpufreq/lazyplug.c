@@ -75,7 +75,7 @@
 #undef DEBUG_LAZYPLUG
 
 #define LAZYPLUG_MAJOR_VERSION	1
-#define LAZYPLUG_MINOR_VERSION	10
+#define LAZYPLUG_MINOR_VERSION	11
 
 #define DEF_SAMPLING_MS			(268)
 #define DEF_IDLE_COUNT			(19) /* 268 * 19 = 5092, almost equals to 5 seconds */
@@ -313,7 +313,7 @@ static void unplug_cpu(int min_active_cpu)
 	for_each_possible_cpu(cpu) {
 		l_nr_threshold =
 			cpu_nr_run_threshold << 1 / (num_online_cpus());
-		if (!cpu_online() || cpu == 0)
+		if (!cpu_online(cpu) || cpu == 0)
 			continue;
 		l_ip_info = &per_cpu(ip_info, cpu);
 		if (cpu > min_active_cpu)
