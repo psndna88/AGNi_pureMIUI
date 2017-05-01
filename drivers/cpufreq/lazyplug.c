@@ -75,7 +75,7 @@
 #undef DEBUG_LAZYPLUG
 
 #define LAZYPLUG_MAJOR_VERSION	1
-#define LAZYPLUG_MINOR_VERSION	8
+#define LAZYPLUG_MINOR_VERSION	9
 
 #define DEF_SAMPLING_MS			(268)
 #define DEF_IDLE_COUNT			(19) /* 268 * 19 = 5092, almost equals to 5 seconds */
@@ -325,24 +325,20 @@ static void unplug_cpu(int min_active_cpu)
 static void lazy_suspend_handler(void)
 {
 	if (last_state) {
-		if (lazyplug_active) {
-			pr_info("lazyplug: screen-on, turn on cores\n");
-			mutex_lock(&lazyplug_mutex);
-			/* keep cores awake long enough for faster wake up */
-			persist_count = BUSY_PERSISTENCE;
-			mutex_unlock(&lazyplug_mutex);
-		}
+		pr_info("lazyplug: screen-on, turn on cores\n");
+		mutex_lock(&lazyplug_mutex);
+		/* keep cores awake long enough for faster wake up */
+		persist_count = BUSY_PERSISTENCE;
+		mutex_unlock(&lazyplug_mutex);
 		queue_delayed_work(lazyplug_wq, &lazyplug_work,
 			msecs_to_jiffies(10));
 	} else {
-		if (lazyplug_active) {
-			pr_info("lazyplug: screen-off, turn off cores\n");
-			flush_workqueue(lazyplug_wq);
-			mutex_lock(&lazyplug_mutex);
-			mutex_unlock(&lazyplug_mutex);
-			// put rest of the cores to sleep unconditionally!
-			cpu_all_ctrl(false);
-		}
+		pr_info("lazyplug: screen-off, turn off cores\n");
+		flush_workqueue(lazyplug_wq);
+		mutex_lock(&lazyplug_mutex);
+		mutex_unlock(&lazyplug_mutex);
+		// put rest of the cores to sleep unconditionally!
+		cpu_all_ctrl(false);
 	}
 }
 
