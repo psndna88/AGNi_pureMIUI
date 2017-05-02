@@ -26,6 +26,9 @@
 #include "sound/q6afe-v2.h"
 #include <sound/audio_cal_utils.h>
 #include "q6voice.h"
+#ifdef CONFIG_WAKE_GESTURES
+#include <linux/wake_gestures.h>
+#endif
 
 #define TIMEOUT_MS 300
 
@@ -44,7 +47,7 @@ enum {
 
 static struct common_data common;
 static bool module_initialized;
-static bool voice_session_active;
+static bool voice_session_active = false;
 
 static int voice_send_enable_vocproc_cmd(struct voice_data *v);
 static int voice_send_netid_timing_cmd(struct voice_data *v);
@@ -458,10 +461,8 @@ static bool is_voc_state_active(int voc_state)
 	if ((voc_state == VOC_RUN) ||
 		(voc_state == VOC_CHANGE) ||
 		(voc_state == VOC_STANDBY)) {
-		voice_session_active = true;
 		return true;
 	} else {
-		voice_session_active = false;
 		return false;
 	}
 }
@@ -5344,6 +5345,9 @@ int voc_end_voice_call(uint32_t session_id)
 
 	voice_session_active = false;
 	mutex_unlock(&v->lock);
+#ifdef CONFIG_WAKE_GESTURES
+	wake_gesture_main();
+#endif
 	return ret;
 }
 
@@ -5664,6 +5668,9 @@ int voc_start_voice_call(uint32_t session_id)
 		goto fail;
 	}
 	voice_session_active = true;
+#ifdef CONFIG_WAKE_GESTURES
+	wake_gesture_main();
+#endif
 fail:
 	mutex_unlock(&v->lock);
 	return ret;

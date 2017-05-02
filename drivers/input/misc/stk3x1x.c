@@ -185,7 +185,7 @@
 #define STK_FIR_LEN 16
 #define MAX_FIR_LEN 32
 
-static bool stk_prox_near;
+static bool stk_prox_near = false;
 bool prox_near_stk3x1x(void)
 {
 	return stk_prox_near;
@@ -1347,20 +1347,6 @@ static ssize_t stk_ps_distance_show(struct device *dev, struct device_attribute 
 		return ret;
 	}
     dist = (ret & STK_FLG_NF_MASK)?1:0;
-
-	if (dist) {
-#ifdef CONFIG_WAKE_GESTURES
-		if (debug_wake_timer)
-			pr_info("stk3x1x: proximity near not detected !\n");
-#endif
-		stk_prox_near = false;
-	} else {
-#ifdef CONFIG_WAKE_GESTURES
-		if (debug_wake_timer)
-			pr_info("stk3x1x: proximity near detected !\n");
-#endif
-		stk_prox_near = true;
-	}
     ps_data->ps_distance_last = dist;
 	input_report_abs(ps_data->ps_input_dev, ABS_DISTANCE, dist);
 	input_sync(ps_data->ps_input_dev);
@@ -1895,7 +1881,11 @@ static void stk_work_func(struct work_struct *work)
     {
 		disable_flag |= STK_FLG_PSINT_MASK;
 		near_far_state = (org_flag_reg & STK_FLG_NF_MASK)?1:0;
-
+	if (near_far_state == 0) {
+		stk_prox_near = true;
+	} else {
+		stk_prox_near = false;
+	}
 		ps_data->ps_distance_last = near_far_state;
 		input_report_abs(ps_data->ps_input_dev, ABS_DISTANCE, near_far_state);
 		input_sync(ps_data->ps_input_dev);
@@ -1917,6 +1907,9 @@ static void stk_work_func(struct work_struct *work)
 	msleep(1);
     enable_irq(ps_data->irq);
     mutex_unlock(&ps_data->io_lock);
+#ifdef CONFIG_WAKE_GESTURES
+ 	wake_gesture_main();
+#endif
 	return;
 
 err_i2c_rw:

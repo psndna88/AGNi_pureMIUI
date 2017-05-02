@@ -190,7 +190,7 @@ static struct regulator_map power_config[] = {
 	{.supply = "vio", .min_uv = 1750000, .max_uv = 1950000, },
 };
 
-static bool ltr_prox_near;
+static bool ltr_prox_near = false;
 bool prox_near_ltr55x(void)
 {
 	return ltr_prox_near;
@@ -972,9 +972,10 @@ static int ltr553_process_data(struct ltr553_data *ltr, int als_ps)
 				ps_data[0], ps_data[1]);
 
 		tmp = (ps_data[1] << 8) | ps_data[0];
-		if (tmp & LTR553_PS_SATURATE_MASK)
+		if (tmp & LTR553_PS_SATURATE_MASK) {
 			distance = 0;
-		else {
+			ltr_prox_near = true;
+		} else {
 			for (i = 0; i < ARRAY_SIZE(ps_distance_table); i++) {
 				if (tmp > ps_distance_table[i]) {
 					distance = i;
@@ -982,6 +983,7 @@ static int ltr553_process_data(struct ltr553_data *ltr, int als_ps)
 				}
 			}
 			distance = i;
+			ltr_prox_near = false;
 		}
 
 		if (distance != ltr->last_ps) {
@@ -997,20 +999,6 @@ static int ltr553_process_data(struct ltr553_data *ltr, int als_ps)
 		}
 
 		ltr->last_ps = distance;
-
-		if (distance) {
-			ltr_prox_near = false;
-#ifdef CONFIG_WAKE_GESTURES
-			if (debug_wake_timer)
-				pr_info("ltr55x: proximity near not detected !\n");
-#endif
-		} else {
-			ltr_prox_near = true;
-#ifdef CONFIG_WAKE_GESTURES
-			if (debug_wake_timer)
-				pr_info("ltr55x: proximity near detected !\n");
-#endif
-		}
 
 		/* lower threshold */
 		if (distance < ARRAY_SIZE(ps_distance_table))
@@ -1101,6 +1089,9 @@ static void ltr553_report_work(struct work_struct *work)
 		dev_dbg(&ltr->i2c->dev, "process ps data done!\n");
 		pm_wakeup_event(&ltr->input_proximity->dev, 200);
 	}
+#ifdef CONFIG_WAKE_GESTURES
+   	wake_gesture_main();
+#endif
 
 exit:
 	if (atomic_dec_and_test(&ltr->wake_count)) {
