@@ -193,6 +193,15 @@ config INPUT_KEYCOMBO
 	  To compile this driver as a module, choose M here: the
 	  module will be called keycombo.
 
+config INPUT_FINGERPRINT
+	tristate "Fingerprint FPC"
+	depends on INPUT
+	---help---
+	  Say Y here to enable support for fingerprint.
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here.
+
 config SENSORS_HALL
 	bool "Hall sensor"
 	depends on INPUT
@@ -214,7 +223,11 @@ source "drivers/input/touchscreen/Kconfig"
 
 source "drivers/input/misc/Kconfig"
 
-source "drivers/input/fingerprint/Kconfig"
+source "drivers/input/fingerprint/fpc1020_hydrogen/Kconfig"
+
+source "drivers/input/fingerprint/fpc1020_kenzo/Kconfig"
+
+source "drivers/input/fingerprint/goodix/Kconfig"
 
 endif
 

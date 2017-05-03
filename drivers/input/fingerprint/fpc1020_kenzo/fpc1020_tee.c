@@ -522,3 +522,4 @@ MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("Aleksej Makarov");
 MODULE_AUTHOR("Henrik Tillman <henrik.tillman@fingerprints.com>");
 MODULE_DESCRIPTION("FPC1020 Fingerprint sensor device driver.");
+

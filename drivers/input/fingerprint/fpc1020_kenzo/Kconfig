@@ -1,0 +1,8 @@
+config FINGERPRINT_FPC1020_KENZO
+	tristate "Finger print card FPC"
+	depends on INPUT_FINGERPRINT
+	---help---
+	  Say Y here to enable support for FPC1020 fingerprint sensor.
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here.
