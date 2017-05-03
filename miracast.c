@@ -924,9 +924,9 @@ static int get_p2p_peers(char *respbuf, size_t bufsize)
 	end = respbuf + bufsize;
 
 	if (wpa_command_resp(intf, "P2P_PEER FIRST", addr, 128) >= 0) {
-		strlcpy(respbuf, addr, bufsize);
-		respbuf[17] = '\0';
 		addr[17] = '\0';
+		strlcpy(respbuf, addr, bufsize);
+		pos += strlen(respbuf);
 		snprintf(cmd, sizeof(cmd), "P2P_PEER NEXT-%s", addr);
 		memset(addr, 0, sizeof(addr));
 		while (wpa_command_resp(intf, cmd, addr, sizeof(addr)) >= 0) {
