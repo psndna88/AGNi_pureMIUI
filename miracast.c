@@ -1465,9 +1465,7 @@ static int cmd_sta_generate_event(struct sigma_dut *dut,
 	    strcasecmp(type, "UIBC_HID") == 0) {
 		extn_sta_generate_event(string_cmd);
 	} else if (strcasecmp(type, "FrameSkip") == 0) {
-		send_resp(dut, conn, SIGMA_ERROR,
-			  "errorCode,Unsupported Type for Generate Event");
-		return 0;
+		return 1;
 	} else if (strcasecmp(type, "InputContent") == 0) {
 		send_resp(dut, conn, SIGMA_COMPLETE, NULL);
 		return 0;
