@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014, 2016-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2014, 2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -436,7 +436,6 @@ WDA_DS_BuildTxPacketInfo
   v_U32_t          txFlag,
   v_U32_t         timeStamp,
   v_U8_t          ucIsEapol,
-  v_U8_t          ucIsArp,
   v_U8_t          ucUP,
   v_U32_t         ucTxBdToken
 )
@@ -498,7 +497,6 @@ WDA_DS_BuildTxPacketInfo
   pTxMetaInfo->ac         = ucUP;
   pTxMetaInfo->fUP        = uTid;
   pTxMetaInfo->isEapol    = ucIsEapol;
-  pTxMetaInfo->isArp      = ucIsArp;
   pTxMetaInfo->fdisableFrmXlt = ucDisableFrmXtl;
   pTxMetaInfo->frmType     = ( ( typeSubtype & 0x30 ) >> 4 );
   pTxMetaInfo->typeSubtype = typeSubtype;

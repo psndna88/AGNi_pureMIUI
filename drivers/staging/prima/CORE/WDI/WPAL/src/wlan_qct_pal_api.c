@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012,2014-2015,2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012,2014-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -542,20 +542,3 @@ int  wpalIsDxeSSREnable(void)
    return vos_get_dxeSSREnable();
 }
 
-bool wpalIsArpPkt(void *pPacket)
-{
-   vos_pkt_t *pkt = (vos_pkt_t*)pPacket;
-
-   if (vos_is_arp_pkt(pkt->pSkb, true))
-   {
-      if (vos_check_arp_req_target_ip(pkt->pSkb, true))
-         return true;
-   }
-
-   return false;
-}
-
-void wpalUpdateTXArpFWdeliveredStats(void)
-{
-   vos_update_arp_fw_tx_delivered();
-}

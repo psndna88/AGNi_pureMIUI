@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -493,9 +493,6 @@ typedef enum
   WDI_PER_ROAM_SCAN_OFFLOAD_REQ                  = 116,
   WDI_PER_ROAM_SCAN_TRIGGER_REQ                  = 117,
 #endif
-/* ARP DEBUG STATS */
-  WDI_FW_ARP_STATS_REQ                           = 118,
-  WDI_FW_GET_ARP_STATS_REQ                       = 119,
 
   WDI_MAX_REQ,
 
@@ -873,8 +870,6 @@ typedef enum
   WDI_PER_ROAM_SCAN_OFFLOAD_RSP                  = 116,
   WDI_PER_ROAM_SCAN_TRIGGER_RSP                  = 117,
 #endif
-  WDI_FW_ARP_STATS_RSP                           = 118,
-  WDI_FW_GET_ARP_STATS_RSP                       = 119,
 
   /*-------------------------------------------------------------------------
     Indications
@@ -6677,34 +6672,6 @@ WDI_ProcessBcnMissPenaltyCount
  */
 WDI_Status
 WDI_ProcessSetAllowedActionFramesInd
-(
-  WDI_ControlBlockType*  pWDICtx,
-  WDI_EventInfoType*     pEventData
-);
-
-WDI_Status
-WDI_ProcessSetArpStatsReq
-(
-  WDI_ControlBlockType*  pWDICtx,
-  WDI_EventInfoType*     pEventData
-);
-
-WDI_Status
-WDI_ProcessSetArpStatsResp
-(
-  WDI_ControlBlockType*  pWDICtx,
-  WDI_EventInfoType*     pEventData
-);
-
-WDI_Status
-WDI_ProcessGetArpStatsReq
-(
-  WDI_ControlBlockType*  pWDICtx,
-  WDI_EventInfoType*     pEventData
-);
-
-WDI_Status
-WDI_ProcessGetArpStatsResp
 (
   WDI_ControlBlockType*  pWDICtx,
   WDI_EventInfoType*     pEventData
