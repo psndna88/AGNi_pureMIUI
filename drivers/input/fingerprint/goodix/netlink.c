@@ -6,7 +6,20 @@
 #include <net/sock.h>
 #include <net/netlink.h>
 
-#define NETLINK_TEST 30
+unsigned int netlink_test = 29; /* non-LOS mode default(MM builds) */
+#ifdef CONFIG_MACH_XIAOMI_KENZO_AGNI_CM_N
+static int __init setup_netlink_test(char *str)
+{
+	if (!strncmp(str, "los", strlen(str))) {
+		netlink_test = 30; /* LOS mode */
+    } else {
+        netlink_test = 29; /* non-LOS mode */
+    }
+
+	return netlink_test;
+}
+__setup("android.gdx.netlink=", setup_netlink_test);
+#endif
 #define MAX_MSGSIZE (4*1024)
 int stringlength(char *s);
 void sendnlmsg(char *message);
@@ -78,11 +91,11 @@ int netlink_init(void)
 	netlink_cfg.cb_mutex = NULL;
 
 /*
-nl_sk = netlink_kernel_create(&init_net, NETLINK_TEST, 1,
+nl_sk = netlink_kernel_create(&init_net, netlink_test, 1,
 nl_data_ready, NULL, THIS_MODULE);
 */
 
-	nl_sk = netlink_kernel_create(&init_net, NETLINK_TEST, &netlink_cfg);
+	nl_sk = netlink_kernel_create(&init_net, netlink_test, &netlink_cfg);
 
 	if (!nl_sk) {
 		pr_err("my_net_link: create netlink socket error.\n");
