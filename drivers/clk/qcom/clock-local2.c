@@ -113,7 +113,7 @@ static void rcg_update_config(struct rcg_clk *rcg)
 		udelay(1);
 	}
 
-	CLK_WARN(&rcg->c, count == 0, "rcg didn't update its configuration.");
+	// CLK_WARN(&rcg->c, count == 0, "rcg didn't update its configuration.");
 }
 
 static void rcg_on_check(struct rcg_clk *rcg)
