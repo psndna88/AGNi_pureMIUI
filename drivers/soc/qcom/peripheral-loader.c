@@ -482,9 +482,6 @@ static int pil_init_mmap(struct pil_desc *desc, const struct pil_mdt *mdt)
 	if (ret)
 		return ret;
 
-	pil_info(desc, "loading from %pa to %pa\n", &priv->region_start,
-							&priv->region_end);
-
 	for (i = 0; i < mdt->hdr.e_phnum; i++) {
 		phdr = &mdt->phdr[i];
 		if (!segment_is_loadable(phdr))
@@ -757,7 +754,6 @@ int pil_boot(struct pil_desc *desc)
 		pil_err(desc, "Failed to bring out of reset\n");
 		goto err_deinit_image;
 	}
-	pil_info(desc, "Brought out of reset\n");
 err_deinit_image:
 	if (ret && desc->ops->deinit_image)
 		desc->ops->deinit_image(desc);
