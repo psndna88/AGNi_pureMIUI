@@ -526,7 +526,7 @@ static void __iomem *rcg_mnd_clk_list_registers(struct clk *c, int n,
 static void branch_clk_halt_check(struct clk *c, u32 halt_check,
 			void __iomem *cbcr_reg, enum branch_state br_status)
 {
-	char *status_str = (br_status == BRANCH_ON) ? "off" : "on";
+	// char *status_str = (br_status == BRANCH_ON) ? "off" : "on";
 
 	/*
 	 * Use a memory barrier since some halt status registers are
@@ -558,7 +558,7 @@ static void branch_clk_halt_check(struct clk *c, u32 halt_check,
 			};
 			udelay(1);
 		}
-		CLK_WARN(c, count == 0, "status stuck %s", status_str);
+		// CLK_WARN(c, count == 0, "status stuck %s", status_str);
 	}
 }
 
