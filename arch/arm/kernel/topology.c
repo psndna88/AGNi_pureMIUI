@@ -192,7 +192,7 @@ void update_cpu_power(unsigned int cpu)
 
 	set_power_scale(cpu, cpu_capacity(cpu) / middle_capacity);
 
-	printk(KERN_INFO "CPU%u: update cpu_power %lu\n",
+	printk(KERN_DEBUG "CPU%u: update cpu_power %lu\n",
 		cpu, arch_scale_freq_power(NULL, cpu));
 }
 
