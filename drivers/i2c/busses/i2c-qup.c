@@ -1030,7 +1030,8 @@ qup_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 	pm_runtime_get_sync(dev->dev);
 	/* if runtime PM callback was not invoked */
 	if (dev->pwr_state != MSM_I2C_PM_ACTIVE) {
-		dev_info(dev->dev, "Runtime PM-callback was not invoked.\n");
+		dev_printk(KERN_DEBUG, dev->dev,
+			"Runtime PM-callback was not invoked.\n");
 		i2c_qup_resume(dev);
 	}
 
