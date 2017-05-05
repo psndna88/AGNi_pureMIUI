@@ -448,8 +448,6 @@ void lazyplug_enter_lazy(bool enter)
 
 int __init lazyplug_init(void)
 {
-	int rc;
-
 	nr_possible_cores = num_possible_cpus();
 
 	pr_info("lazyplug: version %d.%d by arter97\n"
