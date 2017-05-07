@@ -39,6 +39,7 @@ extern unsigned int wake_duration;
 extern void wake_gesture_suspend_triggers(void);
 extern void wake_gesture_resume_triggers(void);
 extern void wake_gesture_delayed_shut_destroy(void);
+extern void wake_gesture_delayed_resume_destroy(void);
 extern void wake_gesture_switches_resume(void);
 extern void wake_gesture_switches_shut(void);
 extern void wake_gesture_main(void);

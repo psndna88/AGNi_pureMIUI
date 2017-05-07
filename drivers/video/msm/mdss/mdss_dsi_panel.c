@@ -758,6 +758,7 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 
 	display_on = true;
 #ifdef CONFIG_WAKE_GESTURES
+	wake_gesture_delayed_resume_destroy();
 	wake_gesture_main();
 #endif
 #ifdef CONFIG_LAZYPLUG
