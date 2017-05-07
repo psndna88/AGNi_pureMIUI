@@ -1630,7 +1630,7 @@ static int smbchg_set_usb_current_max(struct smbchg_chip *chip,
 				chip->cfg_override_usb_current, current_ma);
 		}
 
-		else if (current_ma < CURRENT_150_MA) {
+		if (current_ma < CURRENT_150_MA) {
 			/* force 100mA */
 			rc = smbchg_sec_masked_write(chip,
 					chip->usb_chgpth_base + CHGPTH_CFG,
@@ -1650,7 +1650,7 @@ static int smbchg_set_usb_current_max(struct smbchg_chip *chip,
 			chip->usb_max_current_ma = 100;
 		}
 		/* specific current values */
-		else if (current_ma == CURRENT_150_MA) {
+		if (current_ma == CURRENT_150_MA) {
 			rc = smbchg_sec_masked_write(chip,
 					chip->usb_chgpth_base + CHGPTH_CFG,
 					CFG_USB_2_3_SEL_BIT, CFG_USB_2);
@@ -1667,7 +1667,8 @@ static int smbchg_set_usb_current_max(struct smbchg_chip *chip,
 				goto out;
 			}
 			chip->usb_max_current_ma = 150;
-		} else if (current_ma == CURRENT_500_MA) {
+		}
+		if (current_ma == CURRENT_500_MA) {
 			rc = smbchg_sec_masked_write(chip,
 					chip->usb_chgpth_base + CHGPTH_CFG,
 					CFG_USB_2_3_SEL_BIT, CFG_USB_2);
@@ -1684,7 +1685,8 @@ static int smbchg_set_usb_current_max(struct smbchg_chip *chip,
 				goto out;
 			}
 			chip->usb_max_current_ma = 500;
-		} else if (current_ma == CURRENT_900_MA) {
+		}
+		if (current_ma == CURRENT_900_MA) {
 			rc = smbchg_sec_masked_write(chip,
 					chip->usb_chgpth_base + CHGPTH_CFG,
 					CFG_USB_2_3_SEL_BIT, CFG_USB_3);
