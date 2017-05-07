@@ -886,9 +886,9 @@ static void __cpuinit msm_hotplug_resume(void)
 
 	bool resume_hotplug_disabled;
     if ((hotplug.min_cpus_online_big != BIG_CORES) && (hotplug.min_cpus_online != LITTLE_CORES)) {
-    	resume_hotplug_disabled = true;
-	} else {
     	resume_hotplug_disabled = false;
+	} else {
+    	resume_hotplug_disabled = true;
 	}
 
     if (hotplug.suspended) {
@@ -933,6 +933,7 @@ static void __cpuinit msm_hotplug_resume(void)
     if (!resume_hotplug_disabled) {
     	pr_info("%s: resumed.\n", MSM_HOTPLUG);
     } else {
+    	big_up();
     	pr_info("%s: resumed without hotplug functions.\n", MSM_HOTPLUG);
     }
 
