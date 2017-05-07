@@ -29,8 +29,8 @@ static const int sync_write_expire = 350;	/* max time before a write sync is sub
 static const int async_read_expire = 200;	/* ditto for read async, these limits are SOFT! */
 static const int async_write_expire = 500;	/* ditto for write async, these limits are SOFT! */
 static const int fifo_batch = 16;		/* # of sequential requests treated as one by the above parameters. */
-static const int writes_starved = 3;		/* max times reads can starve a write */
-static const int sleep_latency_multiple = 5;	/* multple for expire time when device is asleep */
+static const int writes_starved = 4;		/* max times reads can starve a write */
+static const int sleep_latency_multiple = 10;	/* multple for expire time when device is asleep */
 
 /* Elevator data */
 struct maple_data {
