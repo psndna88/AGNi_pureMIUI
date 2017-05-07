@@ -451,8 +451,5 @@
 		qcom,mdss-dsi-panel-status-check-mode = "reg_read";
 		qcom,mdss-dsi-panel-status-value = <0x9c>;
 		qcom,esd-check-enabled;
-		qcom,mdss-dsi-pan-enable-dynamic-fps;
-		qcom,mdss-dsi-pan-fps-update = "dfps_immediate_porch_mode_hfp";
-		qcom,mdss-dsi-min-refresh-rate = <30>;
 	};
 };
