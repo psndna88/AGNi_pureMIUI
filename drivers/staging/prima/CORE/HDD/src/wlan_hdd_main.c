@@ -212,14 +212,10 @@ unsigned int wlan_nlink_cesium = 30; /* non-LOS mode default(MM builds) */
 static int __init setup_wlan_nlink_cesium(char *str)
 {
 	if (!strncmp(str, "los", strlen(str))) {
-		pr_info("WLAN: android.gdx.netlink=los found..\n");
 		wlan_nlink_cesium = 29; /* LOS mode  */
-	} else if (!strncmp(str, "old", strlen(str))) {
-		pr_info("WLAN: android.gdx.netlink=old found..\n");
+	} else {
         wlan_nlink_cesium = 30; /* non-LOS mode */
     }
-
-    pr_info("WLAN: prima netlink set at %d\n", wlan_nlink_cesium);
 
 	return wlan_nlink_cesium;
 }

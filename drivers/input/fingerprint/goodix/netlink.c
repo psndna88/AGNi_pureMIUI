@@ -11,14 +11,10 @@ unsigned int netlink_test = 29; /* non-LOS mode default(MM builds) */
 static int __init setup_netlink_test(char *str)
 {
 	if (!strncmp(str, "los", strlen(str))) {
-		pr_info("GOODIX: android.gdx.netlink=los found..\n");
 		netlink_test = 30; /* LOS mode */
-    } else if (!strncmp(str, "old", strlen(str))) {
-		pr_info("GOODIX: android.gdx.netlink=old found..\n");
+    } else {
         netlink_test = 29; /* non-LOS mode */
     }
-
-	pr_info("GOODIX netlink set at %d\n", netlink_test);
 
 	return netlink_test;
 }
