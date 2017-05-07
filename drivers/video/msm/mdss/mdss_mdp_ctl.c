@@ -3805,27 +3805,6 @@ exit:
 	return ret;
 }
 
-int mdss_mdp_ctl_wait_fps(struct mdss_mdp_ctl *ctl)
-{
-	struct mdss_panel_info *pinfo;
-	int ret;
-
-	pinfo = &ctl->panel_data->panel_info;
-	if (!pinfo)
-		return -ENODEV;
-
-	if (!pinfo->dynamic_fps || !ctl->ops.wait_fps_fnc)
-		return 0;
-
-	ret = ctl->ops.wait_fps_fnc(ctl);
-	if (!ret) {
-		pr_debug("%s: wait FPS config done\n", __func__);
-	} else {
-		pr_err("Failed to wait FPS config done. rc = %d\n", ret);
-	}
-	return ret;
-}
-
 int mdss_mdp_display_wakeup_time(struct mdss_mdp_ctl *ctl,
 				 ktime_t *wakeup_time)
 {
