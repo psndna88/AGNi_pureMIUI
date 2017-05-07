@@ -207,19 +207,10 @@ static VOS_STATUS hdd_parse_ese_beacon_req(tANI_U8 *pValue,
 #define NUM_OF_STA_DATA_TO_PRINT 16
 
 #ifdef WLAN_FEATURE_RMC
-unsigned int wlan_nlink_cesium = 30; /* non-LOS mode default(MM builds) */
-#ifdef CONFIG_MACH_XIAOMI_KENZO_AGNI_CM_N
-static int __init setup_wlan_nlink_cesium(char *str)
-{
-	if (!strncmp(str, "los", strlen(str))) {
-		wlan_nlink_cesium = 29; /* LOS mode  */
-	} else {
-        wlan_nlink_cesium = 30; /* non-LOS mode */
-    }
-
-	return wlan_nlink_cesium;
-}
-__setup("android.gdx.netlink=", setup_wlan_nlink_cesium);
+#ifdef CONFIG_MACH_XIAOMI_KENZO
+#define WLAN_NLINK_CESIUM 29
+#else
+#define WLAN_NLINK_CESIUM 30
 #endif
 #endif
 
@@ -7590,13 +7581,13 @@ static int hdd_open_cesium_nl_sock()
    int ret = 0;
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0))
-   cesium_nl_srv_sock = netlink_kernel_create(&init_net, wlan_nlink_cesium,
+   cesium_nl_srv_sock = netlink_kernel_create(&init_net, WLAN_NLINK_CESIUM,
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0))
                                               THIS_MODULE,
 #endif
                                               &cfg);
 #else
-   cesium_nl_srv_sock = netlink_kernel_create(&init_net, wlan_nlink_cesium,
+   cesium_nl_srv_sock = netlink_kernel_create(&init_net, WLAN_NLINK_CESIUM,
                                         WLAN_NLINK_MCAST_GRP_ID, NULL, NULL, THIS_MODULE);
 #endif
 
