@@ -1,5 +1,5 @@
 config FINGERPRINT_FPC1020_HYDROGEN
-	tristate "Finger print card FPC"
+	tristate "Finger print card FPC HYDROGEN"
 	depends on INPUT_FINGERPRINT
 	---help---
 	  Say Y here to enable support for FPC1020 fingerprint sensor.
