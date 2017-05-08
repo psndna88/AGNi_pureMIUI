@@ -1755,7 +1755,8 @@ static void qpnp_lbc_parallel_work(struct work_struct *work)
 		pr_debug("ichg_now increased to %d\n", chip->ichg_now);
 	}
 
-	schedule_delayed_work(&chip->parallel_work, VINMIN_DELAY);
+	queue_delayed_work(system_power_efficient_wq,
+		&chip->parallel_work, VINMIN_DELAY);
 
 	return;
 
@@ -1774,7 +1775,8 @@ static int qpnp_lbc_parallel_charging_config(struct qpnp_lbc_chip *chip,
 		qpnp_lbc_ibatmax_set(chip, chip->ichg_now);
 		qpnp_lbc_charger_enable(chip, PARALLEL, 1);
 		pm_stay_awake(chip->dev);
-		schedule_delayed_work(&chip->parallel_work, VINMIN_DELAY);
+		queue_delayed_work(system_power_efficient_wq,
+			&chip->parallel_work, VINMIN_DELAY);
 	} else {
 		cancel_delayed_work_sync(&chip->parallel_work);
 		pm_relax(chip->dev);
@@ -2448,7 +2450,8 @@ static irqreturn_t qpnp_lbc_chg_gone_irq_handler(int irq, void *_chip)
 			 * charger is being used, or charger has been
 			 * removed.
 			 */
-			schedule_delayed_work(&chip->collapsible_detection_work,
+			queue_delayed_work(system_power_efficient_wq,
+				&chip->collapsible_detection_work,
 				msecs_to_jiffies(CHG_REMOVAL_DETECT_DLY_MS));
 		}
 	}
