@@ -123,9 +123,10 @@ static int gpio_chip_hwgpio(const struct gpio_desc *desc)
  */
 static struct gpio_desc *gpio_to_desc(unsigned gpio)
 {
-	if (WARN(!gpio_is_valid(gpio), "invalid GPIO %d\n", gpio))
+	if (!gpio_is_valid(gpio)) {
+		pr_err("invalid GPIO %d\n", gpio);
 		return NULL;
-	else
+	} else
 		return &gpio_desc[gpio];
 }
 
