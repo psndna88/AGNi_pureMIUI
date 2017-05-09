@@ -3085,12 +3085,9 @@ static int cmd_sta_preset_testparameters(struct sigma_dut *dut,
 	const char *val;
 
 	val = get_param(cmd, "Program");
-	if (val && strcasecmp(val, "HS2-R2") == 0) {
-		if (intf == NULL)
-			return -1;
+	if (val && strcasecmp(val, "HS2-R2") == 0)
 		return cmd_sta_preset_testparameters_hs2_r2(dut, conn, intf,
 							    cmd);
-	}
 
 	if (val && strcasecmp(val, "LOC") == 0)
 		return loc_cmd_sta_preset_testparameters(dut, conn, cmd);

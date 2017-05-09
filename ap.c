@@ -6960,7 +6960,7 @@ static int parse_send_frame_params_mac(char *param, struct sigma_cmd *cmd,
 	}
 	snprintf(temp, sizeof(temp), " %02x:%02x:%02x:%02x:%02x:%02x",
 		 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-	strncat(buf, temp, buf_size - strlen(temp) - 1);
+	strncat(buf, temp, buf_size - strlen(buf) - 1);
 	return 0;
 }
 
