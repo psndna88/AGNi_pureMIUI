@@ -26,6 +26,8 @@
 		reg-names = "csiphy", "csiphy_clk_mux";
 		interrupts = <0 78 0>;
 		interrupt-names = "csiphy";
+		qcom,csi-vdd-voltage = <1800000>;
+		qcom,mipi-csi-vdd-supply = <&pm8950_l6>;
 		clocks = <&clock_gcc clk_gcc_camss_top_ahb_clk>,
 			<&clock_gcc clk_gcc_camss_ispif_ahb_clk>,
 			<&clock_gcc clk_csi0phytimer_clk_src>,
@@ -48,6 +50,8 @@
 		reg-names = "csiphy", "csiphy_clk_mux";
 		interrupts = <0 79 0>;
 		interrupt-names = "csiphy";
+		qcom,csi-vdd-voltage = <1800000>;
+		qcom,mipi-csi-vdd-supply = <&pm8950_l6>;
 		clocks = <&clock_gcc clk_gcc_camss_top_ahb_clk>,
 			<&clock_gcc clk_gcc_camss_ispif_ahb_clk>,
 			<&clock_gcc clk_csi1phytimer_clk_src>,
