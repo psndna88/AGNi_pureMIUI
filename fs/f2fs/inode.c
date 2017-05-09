@@ -373,8 +373,10 @@ void f2fs_evict_inode(struct inode *inode)
 		goto no_delete;
 
 #ifdef CONFIG_F2FS_FAULT_INJECTION
-	if (time_to_inject(sbi, FAULT_EVICT_INODE))
+	if (time_to_inject(sbi, FAULT_EVICT_INODE)) {
+		f2fs_show_injection_info(FAULT_EVICT_INODE);
 		goto no_delete;
+	}
 #endif
 
 	remove_ino_entry(sbi, inode->i_ino, APPEND_INO);
@@ -409,7 +411,10 @@ no_delete:
 	stat_dec_inline_dir(inode);
 	stat_dec_inline_inode(inode);
 
-	invalidate_mapping_pages(NODE_MAPPING(sbi), inode->i_ino, inode->i_ino);
+	/* ino == 0, if f2fs_new_inode() was failed t*/
+	if (inode->i_ino)
+		invalidate_mapping_pages(NODE_MAPPING(sbi), inode->i_ino,
+							inode->i_ino);
 	if (xnid)
 		invalidate_mapping_pages(NODE_MAPPING(sbi), xnid, xnid);
 	if (inode->i_nlink) {

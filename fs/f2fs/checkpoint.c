@@ -64,14 +64,15 @@ static struct page *__get_meta_page(struct f2fs_sb_info *sbi, pgoff_t index,
 	struct f2fs_io_info fio = {
 		.sbi = sbi,
 		.type = META,
-		.rw = READ_SYNC | REQ_META | REQ_PRIO,
+		.op = REQ_OP_READ,
+		.op_flags = REQ_SYNC | REQ_META | REQ_PRIO,
 		.old_blkaddr = index,
 		.new_blkaddr = index,
 		.encrypted_page = NULL,
 	};
 
 	if (unlikely(!is_meta))
-		fio.rw &= ~REQ_META;
+		fio.op_flags &= ~REQ_META;
 repeat:
 	page = f2fs_grab_cache_page(mapping, index, false);
 	if (!page) {
@@ -159,13 +160,15 @@ int ra_meta_pages(struct f2fs_sb_info *sbi, block_t start, int nrpages,
 	struct f2fs_io_info fio = {
 		.sbi = sbi,
 		.type = META,
-		.rw = sync ? (READ_SYNC | REQ_META | REQ_PRIO) : READA,
+		.op = REQ_OP_READ,
+		.op_flags = sync ? (REQ_SYNC | REQ_META | REQ_PRIO) :
+					REQ_RAHEAD,
 		.encrypted_page = NULL,
 	};
 	struct blk_plug plug;
 
 	if (unlikely(type == META_POR))
-		fio.rw &= ~REQ_META;
+		fio.op_flags &= ~REQ_META;
 
 	blk_start_plug(&plug);
 	for (; nrpages-- > 0; blkno++) {
@@ -248,7 +251,8 @@ static int f2fs_write_meta_page(struct page *page,
 	dec_page_count(sbi, F2FS_DIRTY_META);
 
 	if (wbc->for_reclaim)
-		f2fs_submit_merged_bio_cond(sbi, NULL, page, 0, META, WRITE);
+		f2fs_submit_merged_bio_cond(sbi, page->mapping->host,
+						0, page->index, META, WRITE);
 
 	unlock_page(page);
 
@@ -384,6 +388,9 @@ const struct address_space_operations f2fs_meta_aops = {
 	.set_page_dirty	= f2fs_set_meta_page_dirty,
 	.invalidatepage = f2fs_invalidate_page,
 	.releasepage	= f2fs_release_page,
+#ifdef CONFIG_F2FS_MIGRATION
+	.migratepage    = f2fs_migrate_page,
+#endif
 };
 
 static void __add_ino_entry(struct f2fs_sb_info *sbi, nid_t ino, int type)
@@ -489,6 +496,7 @@ int acquire_orphan_inode(struct f2fs_sb_info *sbi)
 #ifdef CONFIG_F2FS_FAULT_INJECTION
 	if (time_to_inject(sbi, FAULT_ORPHAN)) {
 		spin_unlock(&im->ino_lock);
+		f2fs_show_injection_info(FAULT_ORPHAN);
 		return -ENOSPC;
 	}
 #endif
@@ -677,8 +685,7 @@ static int get_checkpoint_version(struct f2fs_sb_info *sbi, block_t cp_addr,
 		return -EINVAL;
 	}
 
-	crc = le32_to_cpu(*((__le32 *)((unsigned char *)*cp_block
-							+ crc_offset)));
+	crc = cur_cp_crc(*cp_block);
 	if (!f2fs_crc_valid(sbi, crc, *cp_block, crc_offset)) {
 		f2fs_msg(sbi->sb, KERN_WARNING, "invalid crc value");
 		return -EINVAL;
@@ -887,7 +894,7 @@ retry:
 				F2FS_DIRTY_DENTS : F2FS_DIRTY_DATA));
 		return 0;
 	}
-	fi = list_entry(head->next, struct f2fs_inode_info, dirty_list);
+	fi = list_first_entry(head, struct f2fs_inode_info, dirty_list);
 	inode = igrab(&fi->vfs_inode);
 	spin_unlock(&sbi->inode_lock[type]);
 	if (inode) {
@@ -920,7 +927,7 @@ int f2fs_sync_inode_meta(struct f2fs_sb_info *sbi)
 			spin_unlock(&sbi->inode_lock[DIRTY_META]);
 			return 0;
 		}
-		fi = list_entry(head->next, struct f2fs_inode_info,
+		fi = list_first_entry(head, struct f2fs_inode_info,
 							gdirty_list);
 		inode = igrab(&fi->vfs_inode);
 		spin_unlock(&sbi->inode_lock[DIRTY_META]);
@@ -994,8 +1001,6 @@ out:
 static void unblock_operations(struct f2fs_sb_info *sbi)
 {
 	up_write(&sbi->node_write);
-
-	build_free_nids(sbi, false);
 	f2fs_unlock_all(sbi);
 }
 
@@ -1020,6 +1025,10 @@ static void update_ckpt_flags(struct f2fs_sb_info *sbi, struct cp_control *cpc)
 	struct f2fs_checkpoint *ckpt = F2FS_CKPT(sbi);
 
 	spin_lock(&sbi->cp_lock);
+
+	if (cpc->reason == CP_UMOUNT && ckpt->cp_pack_total_block_count >
+			sbi->blocks_per_seg - NM_I(sbi)->nat_bits_blocks)
+		disable_nat_bits(sbi, false);
 
 	if (cpc->reason == CP_UMOUNT)
 		__set_ckpt_flags(ckpt, CP_UMOUNT_FLAG);
@@ -1133,6 +1142,28 @@ static int do_checkpoint(struct f2fs_sb_info *sbi, struct cp_control *cpc)
 
 	start_blk = __start_cp_next_addr(sbi);
 
+	/* write nat bits */
+	if (enabled_nat_bits(sbi, cpc)) {
+		__u64 cp_ver = cur_cp_version(ckpt);
+		unsigned int i;
+		block_t blk;
+
+		cp_ver |= ((__u64)crc32 << 32);
+		*(__le64 *)nm_i->nat_bits = cpu_to_le64(cp_ver);
+
+		blk = start_blk + sbi->blocks_per_seg - nm_i->nat_bits_blocks;
+		for (i = 0; i < nm_i->nat_bits_blocks; i++)
+			update_meta_page(sbi, nm_i->nat_bits +
+					(i << F2FS_BLKSIZE_BITS), blk + i);
+
+		/* Flush all the NAT BITS pages */
+		while (get_pages(sbi, F2FS_DIRTY_META)) {
+			sync_meta_pages(sbi, META, LONG_MAX);
+			if (unlikely(f2fs_cp_error(sbi)))
+				return -EIO;
+		}
+	}
+
 	/* need to wait for end_io results */
 	wait_on_all_pages_writeback(sbi);
 	if (unlikely(f2fs_cp_error(sbi)))
@@ -1244,14 +1275,20 @@ int write_checkpoint(struct f2fs_sb_info *sbi, struct cp_control *cpc)
 	f2fs_flush_merged_bios(sbi);
 
 	/* this is the case of multiple fstrims without any changes */
-	if (cpc->reason == CP_DISCARD && !is_sbi_flag_set(sbi, SBI_IS_DIRTY)) {
-		f2fs_bug_on(sbi, NM_I(sbi)->dirty_nat_cnt);
-		f2fs_bug_on(sbi, SIT_I(sbi)->dirty_sentries);
-		f2fs_bug_on(sbi, prefree_segments(sbi));
-		flush_sit_entries(sbi, cpc);
-		clear_prefree_segments(sbi, cpc);
-		unblock_operations(sbi);
-		goto out;
+	if (cpc->reason == CP_DISCARD) {
+		if (!exist_trim_candidates(sbi, cpc)) {
+			unblock_operations(sbi);
+			goto out;
+		}
+
+		if (NM_I(sbi)->dirty_nat_cnt == 0 &&
+				SIT_I(sbi)->dirty_sentries == 0 &&
+				prefree_segments(sbi) == 0) {
+			flush_sit_entries(sbi, cpc);
+			clear_prefree_segments(sbi, cpc);
+			unblock_operations(sbi);
+			goto out;
+		}
 	}
 
 	/*
@@ -1263,12 +1300,11 @@ int write_checkpoint(struct f2fs_sb_info *sbi, struct cp_control *cpc)
 	ckpt->checkpoint_ver = cpu_to_le64(++ckpt_ver);
 
 	/* write cached NAT/SIT entries to NAT/SIT area */
-	flush_nat_entries(sbi);
+	flush_nat_entries(sbi, cpc);
 	flush_sit_entries(sbi, cpc);
 
 	/* unlock all the fs_lock[] in do_checkpoint() */
 	err = do_checkpoint(sbi, cpc);
-
 	if (err)
 		release_discard_addrs(sbi);
 	else

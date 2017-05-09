@@ -8,13 +8,9 @@
  * Written by Michael Halcrow, Ildar Muslukhov, and Uday Savagaonkar, 2015.
  */
 
-#include <keys/encrypted-type.h>
 #include <keys/user-type.h>
-#include <linux/random.h>
 #include <linux/scatterlist.h>
-#include <uapi/linux/keyctl.h>
-#include <crypto/hash.h>
-#include <linux/fscrypto.h>
+#include "fscrypt_private.h"
 
 static void derive_crypt_complete(struct crypto_async_request *req, int rc)
 {
@@ -43,8 +39,7 @@ static int derive_key_aes(u8 deriving_key[FS_AES_128_ECB_KEY_SIZE],
 	struct ablkcipher_request *req = NULL;
 	DECLARE_FS_COMPLETION_RESULT(ecr);
 	struct scatterlist src_sg, dst_sg;
-	struct crypto_ablkcipher *tfm = crypto_alloc_ablkcipher("ecb(aes)", 0,
-								0);
+	struct crypto_ablkcipher *tfm = crypto_alloc_ablkcipher("ecb(aes)", 0, 0);
 
 	if (IS_ERR(tfm)) {
 		res = PTR_ERR(tfm);
@@ -82,26 +77,33 @@ out:
 
 static int validate_user_key(struct fscrypt_info *crypt_info,
 			struct fscrypt_context *ctx, u8 *raw_key,
-			u8 *prefix, int prefix_size)
+			const char *prefix)
 {
-	u8 *full_key_descriptor;
+	char *description;
 	struct key *keyring_key;
 	struct fscrypt_key *master_key;
 	const struct user_key_payload *ukp;
+	int prefix_size = strlen(prefix);
 	int full_key_len = prefix_size + (FS_KEY_DESCRIPTOR_SIZE * 2) + 1;
 	int res;
 
-	full_key_descriptor = kmalloc(full_key_len, GFP_NOFS);
-	if (!full_key_descriptor)
+	/* FIXME: 3.18 causes kernel panic.
+	 description = kasprintf(GFP_NOFS, "%s%*phN", prefix,
+				FS_KEY_DESCRIPTOR_SIZE,
+				ctx->master_key_descriptor);
+	 */
+	description = kmalloc(full_key_len, GFP_NOFS);
+	if (!description)
 		return -ENOMEM;
 
-	memcpy(full_key_descriptor, prefix, prefix_size);
-	sprintf(full_key_descriptor + prefix_size,
+	memcpy(description, prefix, prefix_size);
+	sprintf(description + prefix_size,
 			"%*phN", FS_KEY_DESCRIPTOR_SIZE,
 			ctx->master_key_descriptor);
-	full_key_descriptor[full_key_len - 1] = '\0';
-	keyring_key = request_key(&key_type_logon, full_key_descriptor, NULL);
-	kfree(full_key_descriptor);
+	description[full_key_len - 1] = '\0';
+
+	keyring_key = request_key(&key_type_logon, description, NULL);
+	kfree(description);
 	if (IS_ERR(keyring_key))
 		return PTR_ERR(keyring_key);
 
@@ -112,7 +114,7 @@ static int validate_user_key(struct fscrypt_info *crypt_info,
 		goto out;
 	}
 	down_read(&keyring_key->sem);
-	ukp = ((struct user_key_payload *)keyring_key->payload.data);
+	ukp = user_key_payload(keyring_key);
 	if (ukp->datalen != sizeof(struct fscrypt_key)) {
 		res = -EINVAL;
 		up_read(&keyring_key->sem);
@@ -183,17 +185,17 @@ static void put_crypt_info(struct fscrypt_info *ci)
 	kmem_cache_free(fscrypt_info_cachep, ci);
 }
 
-int get_crypt_info(struct inode *inode)
+int fscrypt_get_crypt_info(struct inode *inode)
 {
 	struct fscrypt_info *crypt_info;
 	struct fscrypt_context ctx;
 	struct crypto_ablkcipher *ctfm;
 	const char *cipher_str;
 	int keysize;
-	u8 raw_key[FS_MAX_KEY_SIZE];
+	u8 *raw_key = NULL;
 	int res;
 
-	res = fscrypt_initialize();
+	res = fscrypt_initialize(inode->i_sb->s_cop->flags);
 	if (res)
 		return res;
 
@@ -211,12 +213,15 @@ retry:
 
 	res = inode->i_sb->s_cop->get_context(inode, &ctx, sizeof(ctx));
 	if (res < 0) {
-		if (!fscrypt_dummy_context_enabled(inode))
+		if (!fscrypt_dummy_context_enabled(inode) ||
+		    inode->i_sb->s_cop->is_encrypted(inode))
 			return res;
+		/* Fake up a context for an unencrypted directory */
+		memset(&ctx, 0, sizeof(ctx));
 		ctx.format = FS_ENCRYPTION_CONTEXT_FORMAT_V1;
 		ctx.contents_encryption_mode = FS_ENCRYPTION_MODE_AES_256_XTS;
 		ctx.filenames_encryption_mode = FS_ENCRYPTION_MODE_AES_256_CTS;
-		ctx.flags = 0;
+		memset(ctx.master_key_descriptor, 0x42, FS_KEY_DESCRIPTOR_SIZE);
 	} else if (res != sizeof(ctx)) {
 		return -EINVAL;
 	}
@@ -243,20 +248,19 @@ retry:
 	if (res)
 		goto out;
 
-	if (fscrypt_dummy_context_enabled(inode)) {
-		memset(raw_key, 0x42, FS_AES_256_XTS_KEY_SIZE);
-		goto got_key;
-	}
+	/*
+	 * This cannot be a stack buffer because it is passed to the scatterlist
+	 * crypto API as part of key derivation.
+	 */
+	res = -ENOMEM;
+	raw_key = kmalloc(FS_MAX_KEY_SIZE, GFP_NOFS);
+	if (!raw_key)
+		goto out;
 
-	res = validate_user_key(crypt_info, &ctx, raw_key,
-			FS_KEY_DESC_PREFIX, FS_KEY_DESC_PREFIX_SIZE);
+	res = validate_user_key(crypt_info, &ctx, raw_key, FS_KEY_DESC_PREFIX);
 	if (res && inode->i_sb->s_cop->key_prefix) {
-		u8 *prefix = NULL;
-		int prefix_size, res2;
-
-		prefix_size = inode->i_sb->s_cop->key_prefix(inode, &prefix);
-		res2 = validate_user_key(crypt_info, &ctx, raw_key,
-							prefix, prefix_size);
+		int res2 = validate_user_key(crypt_info, &ctx, raw_key,
+					     inode->i_sb->s_cop->key_prefix);
 		if (res2) {
 			if (res2 == -ENOKEY)
 				res = -ENOKEY;
@@ -265,7 +269,6 @@ retry:
 	} else if (res) {
 		goto out;
 	}
-got_key:
 	ctfm = crypto_alloc_ablkcipher(cipher_str, 0, 0);
 	if (!ctfm || IS_ERR(ctfm)) {
 		res = ctfm ? PTR_ERR(ctfm) : -ENOMEM;
@@ -276,13 +279,13 @@ got_key:
 	}
 	crypt_info->ci_ctfm = ctfm;
 	crypto_ablkcipher_clear_flags(ctfm, ~0);
-	crypto_tfm_set_flags(crypto_ablkcipher_tfm(ctfm),
-					CRYPTO_TFM_REQ_WEAK_KEY);
+	crypto_ablkcipher_set_flags(ctfm, CRYPTO_TFM_REQ_WEAK_KEY);
 	res = crypto_ablkcipher_setkey(ctfm, raw_key, keysize);
 	if (res)
 		goto out;
 
-	memzero_explicit(raw_key, sizeof(raw_key));
+	kzfree(raw_key);
+	raw_key = NULL;
 	if (cmpxchg(&inode->i_crypt_info, NULL, crypt_info) != NULL) {
 		put_crypt_info(crypt_info);
 		goto retry;
@@ -293,7 +296,7 @@ out:
 	if (res == -ENOKEY)
 		res = 0;
 	put_crypt_info(crypt_info);
-	memzero_explicit(raw_key, sizeof(raw_key));
+	kzfree(raw_key);
 	return res;
 }
 
@@ -323,7 +326,7 @@ int fscrypt_get_encryption_info(struct inode *inode)
 		 (ci->ci_keyring_key->flags & ((1 << KEY_FLAG_INVALIDATED) |
 					       (1 << KEY_FLAG_REVOKED) |
 					       (1 << KEY_FLAG_DEAD)))))
-		return get_crypt_info(inode);
+		return fscrypt_get_crypt_info(inode);
 	return 0;
 }
 EXPORT_SYMBOL(fscrypt_get_encryption_info);
