@@ -85,6 +85,8 @@ struct csiphy_device {
 	uint32_t csiphy_clk_index;
 	uint32_t csiphy_max_clk;
 	uint32_t csiphy_sof_debug;
+	struct regulator *csi_vdd;
+	struct regulator *reg_ptr;
 };
 
 #define VIDIOC_MSM_CSIPHY_RELEASE \
