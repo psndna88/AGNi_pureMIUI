@@ -239,7 +239,7 @@ void wake_gesture_suspend_triggers(void) {
 				pr_info("wake gesture: switch shut timer scheduled to wake_duration !\n");
 		} else {
 			wake_gesture_delayed_shut_destroy();
-			queue_delayed_work_on(0, wake_gesture_delayed_wq, &wake_gesture_delayed_resume_work, msecs_to_jiffies(1200));
+			queue_delayed_work_on(0, wake_gesture_delayed_wq, &wake_gesture_delayed_resume_work, msecs_to_jiffies(2000));
 		}
 	} else {
 		/* wake_duration = 0 */
@@ -248,7 +248,7 @@ void wake_gesture_suspend_triggers(void) {
 			pr_info("wake gesture: wake_duration not set\n");
 			pr_info("wake gesture: switch shut timer stopped !\n");
 		}
-		queue_delayed_work_on(0, wake_gesture_delayed_wq, &wake_gesture_delayed_resume_work, msecs_to_jiffies(1200));
+		queue_delayed_work_on(0, wake_gesture_delayed_wq, &wake_gesture_delayed_resume_work, msecs_to_jiffies(2000));
 	}
 	return;
 }
@@ -258,7 +258,7 @@ void wake_gesture_resume_triggers(void) {
 	wake_gesture_delayed_shut_destroy();
 	if ((wake_duration) && (debug_wake_timer))
 		pr_info("wake gesture: wake timer deactivated !\n");
-	queue_delayed_work_on(0, wake_gesture_delayed_wq, &wake_gesture_delayed_resume_work, msecs_to_jiffies(1200));
+	queue_delayed_work_on(0, wake_gesture_delayed_wq, &wake_gesture_delayed_resume_work, msecs_to_jiffies(2000));
 	return;
 }
 
@@ -270,11 +270,11 @@ void wake_gesture_main(void) {
 		if (wake_gesture_proximity_detect()) {
 			if (debug_wake_timer)
 				pr_info("wake gesture: proximity near detected\n");
-//			queue_delayed_work_on(0, wake_gesture_delayed_wq, &wake_gesture_delayed_resume_work, msecs_to_jiffies(1200));
+//			queue_delayed_work_on(0, wake_gesture_delayed_wq, &wake_gesture_delayed_resume_work, msecs_to_jiffies(2000));
 		} else {
 			if (debug_wake_timer)
 				pr_info("wake gesture: proximity not near detected\n");
-//			queue_delayed_work_on(0, wake_gesture_delayed_wq, &wake_gesture_delayed_resume_work, msecs_to_jiffies(1200));
+//			queue_delayed_work_on(0, wake_gesture_delayed_wq, &wake_gesture_delayed_resume_work, msecs_to_jiffies(2000));
 		}
 
 		if (q6voice_voice_session_active()) {
@@ -285,7 +285,7 @@ void wake_gesture_main(void) {
 			if (debug_wake_timer)
 				pr_info("wake gesture: call not active detected\n");
 			if (is_display_on())
-				queue_delayed_work_on(0, wake_gesture_delayed_wq, &wake_gesture_delayed_resume_work, msecs_to_jiffies(1200));
+				queue_delayed_work_on(0, wake_gesture_delayed_wq, &wake_gesture_delayed_resume_work, msecs_to_jiffies(2000));
 		}
 
 		if (wake_gesture_charging_detect()) {
@@ -294,7 +294,7 @@ void wake_gesture_main(void) {
 			if (wake_duration)
 				wake_gesture_delayed_shut_destroy();
 			if (!q6voice_voice_session_active())
-				queue_delayed_work_on(0, wake_gesture_delayed_wq, &wake_gesture_delayed_resume_work, msecs_to_jiffies(1200));
+				queue_delayed_work_on(0, wake_gesture_delayed_wq, &wake_gesture_delayed_resume_work, msecs_to_jiffies(2000));
 		} else {
 			if (debug_wake_timer)
 				pr_info("wake gesture: charging not detected\n");
