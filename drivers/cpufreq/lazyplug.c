@@ -472,6 +472,7 @@ void lazyplug_enter_lazy(bool enter)
 	} else if (!enter && Lprevious_state) {
 #ifdef DEBUG_LAZYPLUG
 		pr_info("lazyplug: exiting lazy mode\n");
+
 #endif
 		touch_boost_active = Ltouch_boost_active;
 		nr_run_profile_sel = Lnr_run_profile_sel;
@@ -486,7 +487,10 @@ static void lazyplug_input_event(struct input_handle *handle,
 	if (lazyplug_active && touch_boost_active && suspended && !touched) {
 		idle_count = 0;
 		pr_info("lazyplug touched!\n");
-		queue_work_on(0, lazyplug_wq, &lazyplug_boost);
+
+		queue_delayed_work(lazyplug_wq, &lazyplug_boost,
+			msecs_to_jiffies(10));
+
 		touched = true;
 	}
 }
@@ -569,9 +573,11 @@ int __init lazyplug_init(void)
 
 	rc = input_register_handler(&lazyplug_input_handler);
 
+
 	state_notifier_hook.notifier_call = state_notifier_call;
-	//if (state_register_client(&state_notifier_hook))
-		//pr_info("%s state_notifier hook create failed!\n", __FUNCTION__);
+	if (state_register_client(&state_notifier_hook))
+		pr_info("%s state_notifier hook create failed!\n", __FUNCTION__);
+
 
 	lazyplug_wq = alloc_workqueue("lazyplug",
 				WQ_HIGHPRI | WQ_UNBOUND, 1);
