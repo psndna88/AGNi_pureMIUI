@@ -744,6 +744,12 @@ int parse_mac_address(struct sigma_dut *dut, const char *arg,
 unsigned int channel_to_freq(unsigned int channel);
 unsigned int freq_to_channel(unsigned int freq);
 
+#ifndef ANDROID
+size_t strlcpy(char *dest, const char *src, size_t siz);
+size_t strlcat(char *dst, const char *str, size_t size);
+#endif /* ANDROID */
+
+
 /* uapsd_stream.c */
 void receive_uapsd(struct sigma_stream *s);
 void send_uapsd_console(struct sigma_stream *s);

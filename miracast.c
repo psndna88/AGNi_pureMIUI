@@ -50,54 +50,6 @@ const char *ipaddr (in_addr_t addr)
 #endif /* MIRACAST_DHCP_M */
 
 
-#ifndef ANDROID
-
-static size_t strlcpy(char *dest, const char *src, size_t siz)
-{
-	const char *s = src;
-	size_t left = siz;
-
-	if (left) {
-		/* Copy string up to the maximum size of the dest buffer */
-		while (--left != 0) {
-			if ((*dest++ = *s++) == '\0')
-				break;
-		}
-	}
-
-	if (left == 0) {
-		/* Not enough room for the string; force NUL-termination */
-		if (siz != 0)
-			*dest = '\0';
-		while (*s++)
-			; /* determine total src string length */
-	}
-
-	return s - src - 1;
-}
-
-
-static size_t strlcat(char *dst, const char *str, size_t size)
-{
-	char *pos;
-	size_t dstlen, srclen, copy;
-
-	srclen = strlen(str);
-	for (pos = dst; pos - dst < size && *dst; pos++)
-		;
-	dstlen = pos - dst;
-	if (*dst)
-		return dstlen + srclen;
-	if (dstlen + srclen + 1 > size)
-		copy = size - dstlen - 1;
-	else
-		copy = srclen;
-	memcpy(pos, str, copy);
-	pos[copy] = '\0';
-	return dstlen + srclen;
-}
-
-#endif /* ANDROID */
 
 
 static int miracast_load(struct sigma_dut *dut)
