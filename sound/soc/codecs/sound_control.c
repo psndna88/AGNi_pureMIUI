@@ -18,15 +18,18 @@ extern void update_mic_gain(int vol_boost);
 
 //Headphones
 int headphones_boost = 0;
+int headphones_boost_min = -20;
 int headphones_boost_limit = 20;
 
 //Speakers
 
 int speaker_boost = 0;
+int speaker_boost_min = -20;
 int speaker_boost_limit = 20;
 
 //Micrphone/Earpiece
 int mic_boost = 0;
+int mic_boost_min = -20;
 int mic_boost_limit = 20;
 
 static ssize_t headphones_boost_show(struct device *dev,
@@ -43,8 +46,9 @@ static ssize_t headphones_boost_store(struct device *dev,
 	sscanf(buf, "%d", &new_val);
 
 	if (new_val != headphones_boost) {
-		if (new_val >= headphones_boost_limit)
-			new_val = headphones_boost_limit;
+		if (new_val < headphones_boost_min || new_val > headphones_boost_limit)
+			new_val = 0;
+
 		pr_info("New headphones_boost: %d\n", new_val);
 
 		headphones_boost = new_val;
@@ -68,8 +72,8 @@ static ssize_t speaker_boost_store(struct device *dev,
 	sscanf(buf, "%d", &new_val);
 
 	if (new_val != speaker_boost) {
-		if (new_val >= speaker_boost_limit)
-			new_val = speaker_boost_limit;
+		if (new_val < speaker_boost_min || new_val > speaker_boost_limit)
+			new_val = 0;
 
 		pr_info("New speaker_boost: %d\n", new_val);
 
@@ -94,12 +98,12 @@ static ssize_t mic_boost_store(struct device *dev,
 	sscanf(buf, "%d", &new_val);
 
 	if (new_val != mic_boost) {
-		if (new_val >= mic_boost_limit)
-			new_val = mic_boost_limit;
+		if (new_val < mic_boost_min || new_val > mic_boost_limit)
+			new_val = 0;
 
 		pr_info("New mic_boost: %d\n", new_val);
 
-		speaker_boost = new_val;
+		mic_boost = new_val;
 		update_mic_gain(mic_boost);
 	}
 

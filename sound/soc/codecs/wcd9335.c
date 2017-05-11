@@ -12420,7 +12420,7 @@ void update_mic_gain(int vol_boost)
 	int default_val = soundcontrol.default_mic_value;
 	int boosted_val = default_val + vol_boost;
 
-	pr_info("Sound Control: Speaker default value %d\n", default_val);
+	pr_info("Sound Control: Mic default value %d\n", default_val);
 
 	snd_soc_write(soundcontrol.snd_control_codec,
  		WCD9335_CDC_RX0_RX_VOL_CTL, boosted_val);
