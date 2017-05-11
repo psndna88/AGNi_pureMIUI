@@ -101,7 +101,7 @@ static int open_wlantest(void)
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sun_family = AF_UNIX;
-	strncpy(addr.sun_path + 1, WLANTEST_SOCK_NAME,
+	strlcpy(addr.sun_path + 1, WLANTEST_SOCK_NAME,
 		sizeof(addr.sun_path) - 1);
 	if (connect(s, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
 		perror("connect");

@@ -126,8 +126,7 @@ static int cmd_traffic_agent_config(struct sigma_dut *dut,
 
 	val = get_param(cmd, "tagName");
 	if (val) {
-		strncpy(s->test_name, val, sizeof(s->test_name));
-		s->test_name[sizeof(s->test_name) - 1] = '\0';
+		strlcpy(s->test_name, val, sizeof(s->test_name));
 		sigma_dut_print(dut, DUT_MSG_DEBUG,
 				"Traffic agent: U-APSD console tagname %s",
 				s->test_name);
@@ -469,7 +468,7 @@ static void send_file(struct sigma_stream *s)
 	if (pkt == NULL)
 		return;
 	memset(pkt, 1, s->payload_size);
-	strncpy(pkt, "1345678", s->payload_size);
+	strlcpy(pkt, "1345678", s->payload_size);
 
 	if (s->frame_rate == 0 && s->no_timestamps) {
 		send_file_fast(s, pkt);
@@ -577,7 +576,7 @@ static void send_transaction(struct sigma_stream *s)
 		return;
 	}
 	memset(pkt, 1, s->payload_size);
-	strncpy(pkt, "1345678", s->payload_size);
+	strlcpy(pkt, "1345678", s->payload_size);
 
 	gettimeofday(&stop, NULL);
 	stop.tv_sec += s->duration;
@@ -1193,9 +1192,8 @@ static int cmd_traffic_agent_receive_start(struct sigma_dut *dut,
 		 */
 		s->dut = dut;
 		val = get_param(cmd, "Interface");
-		strncpy(s->ifname, (val ? val : get_station_ifname()),
+		strlcpy(s->ifname, (val ? val : get_station_ifname()),
 			sizeof(s->ifname));
-		s->ifname[sizeof(s->ifname) - 1] = '\0';
 
 		sigma_dut_print(dut, DUT_MSG_DEBUG, "Traffic agent: start "
 				"receive for stream %d", streams[i]);

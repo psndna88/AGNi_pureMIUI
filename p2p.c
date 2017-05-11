@@ -318,10 +318,10 @@ static int p2p_group_add(struct sigma_dut *dut, const char *ifname,
 	if (grp == NULL)
 		return -1;
 	memset(grp, 0, sizeof(*grp));
-	strncpy(grp->ifname, ifname, IFNAMSIZ);
+	strlcpy(grp->ifname, ifname, IFNAMSIZ);
 	grp->go = go;
-	strncpy(grp->grpid, grpid, P2P_GRP_ID_LEN);
-	strncpy(grp->ssid, ssid, sizeof(grp->ssid));
+	strlcpy(grp->grpid, grpid, P2P_GRP_ID_LEN);
+	strlcpy(grp->ssid, ssid, sizeof(grp->ssid));
 
 	grp->next = dut->groups;
 	dut->groups = grp;
@@ -378,7 +378,7 @@ static struct wfa_cs_p2p_group * p2p_group_get(struct sigma_dut *dut,
 		return NULL;
 	memcpy(go_dev_addr, grpid, pos - grpid);
 	go_dev_addr[pos - grpid] = '\0';
-	strncpy(ssid, pos + 1, sizeof(ssid));
+	strlcpy(ssid, pos + 1, sizeof(ssid));
 	ssid[sizeof(ssid) - 1] = '\0';
 	printf("Trying to find suitable interface for group: go_dev_addr='%s' "
 	       "grpid='%s'\n", go_dev_addr, grpid);
@@ -1637,7 +1637,7 @@ static int cmd_sta_wps_read_pin(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
-	strncpy(dut->wps_pin, pin, sizeof(dut->wps_pin));
+	strlcpy(dut->wps_pin, pin, sizeof(dut->wps_pin));
 	dut->wps_method = WFA_CS_WPS_PIN_DISPLAY;
 done:
 	snprintf(resp, sizeof(resp), "PIN,%s", pin);
@@ -1669,7 +1669,7 @@ static int cmd_sta_wps_read_label(struct sigma_dut *dut,
 		}
 	}
 
-	strncpy(dut->wps_pin, pin, sizeof(dut->wps_pin));
+	strlcpy(dut->wps_pin, pin, sizeof(dut->wps_pin));
 	dut->wps_method = WFA_CS_WPS_PIN_LABEL;
 	snprintf(resp, sizeof(resp), "LABEL,%s", pin);
 	send_resp(dut, conn, SIGMA_COMPLETE, resp);
@@ -1702,7 +1702,7 @@ static int cmd_sta_wps_enter_pin(struct sigma_dut *dut,
 		}
 	}
 
-	strncpy(dut->wps_pin, pin, sizeof(dut->wps_pin));
+	strlcpy(dut->wps_pin, pin, sizeof(dut->wps_pin));
 	dut->wps_pin[sizeof(dut->wps_pin) - 1] = '\0';
 	dut->wps_method = WFA_CS_WPS_PIN_KEYPAD;
 

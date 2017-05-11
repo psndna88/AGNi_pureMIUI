@@ -287,7 +287,7 @@ static int get_peer_ip_p2p_client(struct sigma_dut *dut, char *ipAddr,
 		sigma_dut_print(dut, DUT_MSG_INFO, "Peer IP: %u", ipaddress);
 		if (strlen(ipaddr(serveraddr)) > 8) {
 			/* connected */
-			strncpy(ipAddr, ipaddr(serveraddr), 16);
+			strlcpy(ipAddr, ipaddr(serveraddr), 16);
 			break;
 		}
 		sleep(1);
@@ -627,8 +627,7 @@ static void * auto_go_thread_entry(void *ptr)
 	}
 
 	peer++;
-	strncpy(macaddress, peer, 17 /* Size of MAC */);
-	macaddress[17] = '\0';
+	strlcpy(macaddress, peer, sizeof(macaddress));
 	if (get_peer_ip_p2p_go(dut, peer_ip_address, macaddress, 30) < 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR, "Could not get peer IP");
 		goto THR_EXIT;

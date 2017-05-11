@@ -84,7 +84,7 @@ static int get_hwaddr(const char *ifname, unsigned char *hwaddr)
 	if (s < 0)
 		return -1;
 	memset(&ifr, 0, sizeof(ifr));
-	strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+	strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
 	if (ioctl(s, SIOCGIFHWADDR, &ifr) < 0) {
 		perror("ioctl");
 		close(s);
@@ -2665,7 +2665,7 @@ static int owrt_ap_config_vap_anqp(struct sigma_dut *dut)
 
 	memset(&ifr, 0, sizeof(ifr));
 	ifname = "ath0";
-	strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+	strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
 	if (ioctl(s, SIOCGIFHWADDR, &ifr) < 0) {
 		perror("ioctl");
 		close(s);
@@ -2675,7 +2675,7 @@ static int owrt_ap_config_vap_anqp(struct sigma_dut *dut)
 
 	memset(&ifr, 0, sizeof(ifr));
 	ifname = "ath01";
-	strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+	strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
 	if (ioctl(s, SIOCGIFHWADDR, &ifr) < 0) {
 		perror("ioctl");
 		close(s);
@@ -6558,7 +6558,7 @@ static int ap_inject_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (s < 0)
 		return -1;
 	memset(&ifr, 0, sizeof(ifr));
-	strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+	strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
 	if (ioctl(s, SIOCGIFHWADDR, &ifr) < 0) {
 		perror("ioctl");
 		close(s);
@@ -7371,7 +7371,7 @@ static int cmd_ap_get_mac_address(struct sigma_dut *dut,
 	if (s < 0)
 		return -1;
 	memset(&ifr, 0, sizeof(ifr));
-	strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+	strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
 	if (ioctl(s, SIOCGIFHWADDR, &ifr) < 0) {
 		perror("ioctl");
 		close(s);
@@ -7656,7 +7656,7 @@ static int cmd_ap_set_hs2(struct sigma_dut *dut, struct sigma_conn *conn,
 				  "errorCode,PLMN_MCC too long");
 			return 0;
 		}
-		strncpy(mcc, val, sizeof(mcc));
+		strlcpy(mcc, val, sizeof(mcc));
 		start = mcc;
 		while ((end = strchr(start, ';'))) {
 			/* process all except the last */
@@ -7695,7 +7695,7 @@ static int cmd_ap_set_hs2(struct sigma_dut *dut, struct sigma_conn *conn,
 				  "errorCode,PLMN_MNC too long");
 			return 0;
 		}
-		strncpy(mnc, val, sizeof(mnc));
+		strlcpy(mnc, val, sizeof(mnc));
 		start = mnc;
 		while ((end = strchr(start, ';'))) {
 			*end = '\0';
@@ -7814,7 +7814,7 @@ static int cmd_ap_set_hs2(struct sigma_dut *dut, struct sigma_conn *conn,
 	val = get_param(cmd, "OSU_SSID");
 	if (val) {
 		if (strlen(val) > 0 && strlen(val) <= 32) {
-			strncpy(dut->ap_osu_ssid, val,
+			strlcpy(dut->ap_osu_ssid, val,
 				sizeof(dut->ap_osu_ssid));
 			sigma_dut_print(dut, DUT_MSG_INFO,
 					"ap_osu_ssid %s",
