@@ -2301,16 +2301,12 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 				snprintf(buf, sizeof(buf), "psk");
 			}
 
-			if (dut->ap_cipher == AP_CCMP_TKIP) {
-				strncat(buf, "+ccmp+tkip",
-					sizeof(buf) - strlen(buf) - 1);
-			} else if (dut->ap_cipher == AP_TKIP) {
-				strncat(buf, "+tkip",
-					sizeof(buf) - strlen(buf) - 1);
-			} else {
-				strncat(buf, "+ccmp",
-					sizeof(buf) - strlen(buf) - 1);
-			}
+			if (dut->ap_cipher == AP_CCMP_TKIP)
+				strlcat(buf, "+ccmp+tkip", sizeof(buf));
+			else if (dut->ap_cipher == AP_TKIP)
+				strlcat(buf, "+tkip", sizeof(buf));
+			else
+				strlcat(buf, "+ccmp", sizeof(buf));
 
 			owrt_ap_set_vap(dut, vap_count, "encryption", buf);
 			snprintf(buf, sizeof(buf), "\"%s\"",
@@ -2328,16 +2324,13 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 				snprintf(buf, sizeof(buf), "wpa");
 			}
 
-			if (dut->ap_cipher == AP_CCMP_TKIP) {
-				strncat(buf, "+ccmp+tkip",
-					sizeof(buf) - strlen(buf) - 1);
-			} else if (dut->ap_cipher == AP_TKIP) {
-				strncat(buf, "+tkip",
-					sizeof(buf) - strlen(buf) - 1);
-			} else {
-				strncat(buf, "+ccmp",
-					sizeof(buf) - strlen(buf) - 1);
-			}
+			if (dut->ap_cipher == AP_CCMP_TKIP)
+				strlcat(buf, "+ccmp+tkip", sizeof(buf));
+			else if (dut->ap_cipher == AP_TKIP)
+				strlcat(buf, "+tkip", sizeof(buf));
+			else
+				strlcat(buf, "+ccmp", sizeof(buf));
+
 			owrt_ap_set_vap(dut, vap_count, "encryption", buf);
 			snprintf(buf, sizeof(buf), "%s", dut->ap_radius_ipaddr);
 			owrt_ap_set_vap(dut, vap_count, "auth_server", buf);
@@ -6915,7 +6908,7 @@ static int parse_send_frame_params_int(char *param, struct sigma_cmd *cmd,
 	}
 	int_val = atoi(str_val);
 	snprintf(temp, sizeof(temp), " %d", int_val);
-	strncat(buf, temp, buf_size - strlen(buf) - 1);
+	strlcat(buf, temp, buf_size);
 	return 0;
 }
 
@@ -6934,7 +6927,7 @@ static int parse_send_frame_params_str(char *param, struct sigma_cmd *cmd,
 	}
 	snprintf(temp, sizeof(temp), " %s", str_val);
 	temp[sizeof(temp) - 1] = '\0';
-	strncat(buf, temp, buf_size - strlen(buf) - 1);
+	strlcat(buf, temp, buf_size);
 	return 0;
 }
 
@@ -6960,7 +6953,7 @@ static int parse_send_frame_params_mac(char *param, struct sigma_cmd *cmd,
 	}
 	snprintf(temp, sizeof(temp), " %02x:%02x:%02x:%02x:%02x:%02x",
 		 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-	strncat(buf, temp, buf_size - strlen(buf) - 1);
+	strlcat(buf, temp, buf_size);
 	return 0;
 }
 
@@ -6974,7 +6967,7 @@ static void fill_1_or_0_based_on_presence(struct sigma_cmd *cmd, char *param,
 	str_val = get_param(cmd, param);
 	if (!str_val || str_val[0] == '\0')
 		value = " 0";
-	strncat(buf, value, buf_size - strlen(buf) - 1);
+	strlcat(buf, value, buf_size);
 
 }
 
@@ -7034,7 +7027,7 @@ static int ath_ap_send_frame_bcn_rpt_req(struct sigma_dut *dut,
 				"MEA-MODE Value not correctly given");
 		return -1;
 	}
-	strncat(buf, mea_mode, sizeof(buf) - strlen(buf) - 1);
+	strlcat(buf, mea_mode, sizeof(buf));
 
 	fill_1_or_0_based_on_presence(cmd, "SSID", buf, sizeof(buf));
 
@@ -7049,13 +7042,13 @@ static int ath_ap_send_frame_bcn_rpt_req(struct sigma_dut *dut,
 	if (rpt_det)
 		fill_1_or_0_based_on_presence(cmd, "ReqInfo", buf, sizeof(buf));
 	else
-		strncat(buf, " 0", sizeof(buf) - strlen(buf) - 1);
+		strlcat(buf, " 0", sizeof(buf));
 
 	if (rpt_det)
 		fill_1_or_0_based_on_presence(cmd, "APChanRpt", buf,
 					      sizeof(buf));
 	else
-		strncat(buf, " 0", sizeof(buf) - strlen(buf) - 1);
+		strlcat(buf, " 0", sizeof(buf));
 
 	if (parse_send_frame_params_mac("BSSID", cmd, dut, buf, sizeof(buf)))
 		return -1;
