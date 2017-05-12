@@ -932,6 +932,7 @@ int miracast_mdns_start_wfd_connection(struct sigma_dut *dut,
 	const char *init_wfd = get_param(cmd, "init_wfd");
 	int int_init_wfd = -1;
 	char rtsp_session_id[12];
+	char cmd_response[128];
 	int (*extn_start_wfd_connection)(const char *,
 					 const char *, /* Peer IP */
 					 int, /* RTSP port number */
@@ -957,9 +958,10 @@ int miracast_mdns_start_wfd_connection(struct sigma_dut *dut,
 			count++;
 			sleep(1);
 		}
-		if (count == 60)
-			strlcpy(rtsp_session_id, "-1", 12);
-		sig_resp = rtsp_session_id;
+		snprintf(cmd_response, sizeof(cmd_response),
+			 "result,NULL,GroupID,NULL,WFDSessionID,%s",
+			 count == 60 ? "NULL" : rtsp_session_id);
+		sig_resp = cmd_response;
 	} else {
 		extn_start_wfd_connection(NULL, NULL, -100,
 					  1 - dut->wfd_device_type, NULL);
