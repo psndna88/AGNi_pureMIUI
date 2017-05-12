@@ -530,6 +530,89 @@ static struct clk_lookup cpu_clocks_8976[] = {
 static struct mux_div_clk *cpussmux[] = { &a53ssmux, &a72ssmux, &ccissmux };
 static struct cpu_clk_8976 *cpuclk[] = { &a53_clk, &a72_clk, &cci_clk};
 
+#ifdef CONFIG_MACH_XIAOMI_KENZO
+extern int cpr_regulator_get_corner_voltage(struct regulator *regulator,
+		int corner);
+extern int cpr_regulator_set_corner_voltage(struct regulator *regulator,
+		int corner, int volt);
+
+ssize_t cpu_clock_get_vdd(char *buf)
+{
+	ssize_t count = 0;
+	int i, uv;
+
+	if (!buf)
+		return 0;
+
+	for (i = 1; i < a53_clk.c.num_fmax; i++) {
+		uv = cpr_regulator_get_corner_voltage(
+					a53_clk.c.vdd_class->regulator[0],
+					a53_clk.c.vdd_class->vdd_uv[i]);
+		if (uv < 0)
+			return 0;
+		count += sprintf(buf + count, "%lumhz: %d mV\n",
+					a53_clk.c.fmax[i] / 1000000,
+					uv / 1000);
+	}
+
+	for (i = 1; i < a72_clk.c.num_fmax; i++) {
+		uv = cpr_regulator_get_corner_voltage(
+					a72_clk.c.vdd_class->regulator[0],
+					a72_clk.c.vdd_class->vdd_uv[i]);
+		if (uv < 0)
+			return 0;
+		count += sprintf(buf + count, "%lumhz: %d mV\n",
+					a72_clk.c.fmax[i] / 1000000,
+					uv / 1000);
+	}
+
+	return count;
+}
+
+ssize_t cpu_clock_set_vdd(const char *buf, size_t count)
+{
+	int i, mv, ret;
+	char line[32];
+
+	if (!buf)
+		return -EINVAL;
+
+	for (i = 1; i < a53_clk.c.num_fmax; i++) {
+		ret = sscanf(buf, "%d", &mv);
+		if (ret != 1)
+			return -EINVAL;
+
+		ret = cpr_regulator_set_corner_voltage(
+					a53_clk.c.vdd_class->regulator[0],
+					a53_clk.c.vdd_class->vdd_uv[i],
+					mv * 1000);
+        if (ret < 0)
+			return ret;
+
+        ret = sscanf(buf, "%s", line);
+		buf += strlen(line) + 1;
+	}
+
+	for (i = 1; i < a72_clk.c.num_fmax; i++) {
+		ret = sscanf(buf, "%d", &mv);
+		if (ret != 1)
+			return -EINVAL;
+
+		ret = cpr_regulator_set_corner_voltage(
+					a72_clk.c.vdd_class->regulator[0],
+					a72_clk.c.vdd_class->vdd_uv[i],
+					mv * 1000);
+        if (ret < 0)
+			return ret;
+
+        ret = sscanf(buf, "%s", line);
+		buf += strlen(line) + 1;
+	}
+
+	return count;
+}
+#endif
+
 static struct clk *logical_cpu_to_clk(int cpu)
 {
 	struct device_node *cpu_node = of_get_cpu_node(cpu, NULL);
