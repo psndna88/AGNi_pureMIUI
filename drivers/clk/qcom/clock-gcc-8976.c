@@ -3851,6 +3851,62 @@ static struct clk_lookup msm_clocks_gcc_gfx[] = {
 	CLK_LIST(gcc_gtcu_ahb_clk),
 };
 
+#ifdef CONFIG_MACH_XIAOMI_KENZO
+extern int cpr2_gfx_regulator_get_corner_voltage(struct regulator *regulator,
+		int corner);
+extern int cpr2_gfx_regulator_set_corner_voltage(struct regulator *regulator,
+		int corner, int volt);
+
+ssize_t gpu_clock_get_vdd(char *buf)
+{
+	ssize_t count = 0;
+	int i, uv;
+
+	if (!buf)
+		return 0;
+
+	for (i = 1; i < gfx3d_clk_src.c.num_fmax; i++) {
+		uv = cpr2_gfx_regulator_get_corner_voltage(
+					gfx3d_clk_src.c.vdd_class->regulator[0],
+					gfx3d_clk_src.c.vdd_class->vdd_uv[i]);
+		if (uv < 0)
+			return 0;
+		count += sprintf(buf + count, "%lumhz: %d mV\n",
+					gfx3d_clk_src.c.fmax[i] / 1000000,
+					uv / 1000);
+	}
+
+	return count;
+}
+
+ssize_t gpu_clock_set_vdd(const char *buf, size_t count)
+{
+	int i, mv, ret;
+	char line[32];
+
+	if (!buf)
+		return -EINVAL;
+
+	for (i = 1; i < gfx3d_clk_src.c.num_fmax; i++) {
+		ret = sscanf(buf, "%d", &mv);
+		if (ret != 1)
+			return -EINVAL;
+
+		ret = cpr2_gfx_regulator_set_corner_voltage(
+					gfx3d_clk_src.c.vdd_class->regulator[0],
+					gfx3d_clk_src.c.vdd_class->vdd_uv[i],
+					mv * 1000);
+        if (ret < 0)
+			return ret;
+
+        ret = sscanf(buf, "%s", line);
+		buf += strlen(line) + 1;
+	}
+
+	return count;
+}
+#endif
+
 static void get_gfx_version(struct platform_device *pdev, int *version)
 {
 	struct resource *res;
