@@ -698,6 +698,20 @@ static ssize_t store_UV_mV_table(struct cpufreq_policy *policy,
 {
 	return cpu_clock_set_vdd(buf, count);
 }
+
+extern ssize_t gpu_clock_get_vdd(char *buf);
+extern ssize_t gpu_clock_set_vdd(const char *buf, size_t count);
+
+static ssize_t show_GPU_mV_table(struct cpufreq_policy *policy, char *buf)
+{
+	return gpu_clock_get_vdd(buf);
+}
+
+static ssize_t store_GPU_mV_table(struct cpufreq_policy *policy,
+	const char *buf, size_t count)
+{
+	return gpu_clock_set_vdd(buf, count);
+}
 #endif
 
 cpufreq_freq_attr_ro_perm(cpuinfo_cur_freq, 0400);
@@ -716,6 +730,7 @@ cpufreq_freq_attr_rw(scaling_governor);
 cpufreq_freq_attr_rw(scaling_setspeed);
 #ifdef CONFIG_MACH_XIAOMI_KENZO
 cpufreq_freq_attr_rw(UV_mV_table);
+cpufreq_freq_attr_rw(GPU_mV_table);
 #endif
 
 static struct attribute *default_attrs[] = {
@@ -732,6 +747,7 @@ static struct attribute *default_attrs[] = {
 	&scaling_setspeed.attr,
 #ifdef CONFIG_MACH_XIAOMI_KENZO
 	&UV_mV_table.attr,
+	&GPU_mV_table.attr,
 #endif
 	NULL
 };
