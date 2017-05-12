@@ -488,9 +488,8 @@ static void lazyplug_input_event(struct input_handle *handle,
 		idle_count = 0;
 		pr_info("lazyplug touched!\n");
 
-		queue_delayed_work(lazyplug_wq, &lazyplug_boost,
-			msecs_to_jiffies(10));
 
+		queue_work_on(0, lazyplug_wq, &lazyplug_boost);
 		touched = true;
 	}
 }
