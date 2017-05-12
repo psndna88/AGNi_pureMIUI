@@ -8412,8 +8412,8 @@ static int cmd_sta_er_config(struct sigma_dut *dut, struct sigma_conn *conn,
 		return 0;
 	}
 
-	if (strlen(ssid) >= 2 * sizeof(ssid_hex) ||
-	    strlen(passphrase) >= 2 * sizeof(passphrase_hex)) {
+	if (2 * strlen(ssid) >= sizeof(ssid_hex) ||
+	    2 * strlen(passphrase) >= sizeof(passphrase_hex)) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "ErrorCode,Too long SSID/passphrase");
 		return 0;

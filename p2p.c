@@ -2480,8 +2480,8 @@ static int nfc_wps_read_passwd(struct sigma_dut *dut,
 	run_system(dut, "killall wps-nfc.py");
 	run_system(dut, "killall p2p-nfc.py");
 
-	if ((ssid && strlen(ssid) >= 2 * sizeof(ssid_hex)) ||
-	    (passphrase && strlen(passphrase) >= 2 * sizeof(passphrase_hex))) {
+	if ((ssid && 2 * strlen(ssid) >= sizeof(ssid_hex)) ||
+	    (passphrase && 2 * strlen(passphrase) >= sizeof(passphrase_hex))) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "ErrorCode,Too long SSID/passphrase");
 		return 0;
