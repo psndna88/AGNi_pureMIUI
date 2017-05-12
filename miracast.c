@@ -1333,9 +1333,6 @@ static int cmd_connect_go_start_wfd(struct sigma_dut *dut,
 		return 0;
 	}
 
-	snprintf(sig_resp_buf + strlen(sig_resp_buf),
-		 sizeof(sig_resp_buf) - strlen(sig_resp_buf), "WFDSessionId,");
-
 	miracast_start_dhcp_client(dut, output_ifname);
 
 	if (get_peer_ip_p2p_client(dut, peer_ip_address, output_ifname,
@@ -1380,11 +1377,14 @@ static int cmd_connect_go_start_wfd(struct sigma_dut *dut,
 					  "connect_go_start_wfd");
 	if (!extn_connect_go_start_wfd)
 		return -1;
+	rtsp_session_id[0] = '\0';
 	extn_connect_go_start_wfd(NULL, peer_ip_address,
 				  session_management_control_port,
 				  1 - dut->wfd_device_type, rtsp_session_id);
-	strlcat(sig_resp_buf, rtsp_session_id,
-		sizeof(sig_resp_buf) - strlen(sig_resp_buf));
+	/* Null terminating regardless of what was returned */
+	rtsp_session_id[sizeof(rtsp_session_id) - 1] = '\0';
+	snprintf(sig_resp_buf, sizeof(sig_resp_buf), "WFDSessionId,%s",
+		 rtsp_session_id);
 
 	send_resp(dut, conn, SIGMA_COMPLETE, sig_resp_buf);
 	return 0;
