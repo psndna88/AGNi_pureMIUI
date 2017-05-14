@@ -408,7 +408,7 @@ static u64 update_load(int cpu)
 }
 
 #define MAX_LOCAL_LOAD 100
-static void cpufreq_interactive_timer(unsigned long data)
+static void __cpufreq_interactive_timer(unsigned long data, bool is_notif)
 {
 	u64 now;
 	unsigned int delta_time;
@@ -539,7 +539,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 
 	new_freq = ppol->freq_table[index].frequency;
 
-	if (new_freq < ppol->target_freq &&
+	if (!is_notif && new_freq < ppol->target_freq &&
 	    now - ppol->max_freq_hyst_start_time <
 	    tunables->max_freq_hysteresis) {
 		trace_cpufreq_interactive_notyet(max_cpu, cpu_load,
@@ -552,7 +552,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 	 * Do not scale below floor_freq unless we have been at or above the
 	 * floor frequency for the minimum sample time since last validated.
 	 */
-	if (new_freq < ppol->floor_freq) {
+	if (!is_notif && new_freq < ppol->floor_freq) {
 		if (now - ppol->floor_validate_time <
 				tunables->min_sample_time) {
 			trace_cpufreq_interactive_notyet(
@@ -606,6 +606,10 @@ exit:
 	return;
 }
 
+static void cpufreq_interactive_timer(unsigned long data)
+{
+	__cpufreq_interactive_timer(data, false);
+}
 
 static int cpufreq_interactive_speedchange_task(void *data)
 {
@@ -684,7 +688,7 @@ static int load_change_callback(struct notifier_block *nb, unsigned long val,
 	trace_cpufreq_interactive_load_change(cpu);
 	del_timer(&ppol->policy_timer);
 	del_timer(&ppol->policy_slack_timer);
-	cpufreq_interactive_timer(cpu);
+	__cpufreq_interactive_timer(cpu, true);
 
 	up_read(&ppol->enable_sem);
 	return 0;
