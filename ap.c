@@ -653,7 +653,7 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 
 		if (strlen(val) >= sizeof(token))
 			return -1;
-		strcpy(token, val);
+		strlcpy(token, val, sizeof(token));
 		result = strtok_r(token, ";", &saveptr);
 		if (!result) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
