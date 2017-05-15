@@ -277,6 +277,7 @@ static int run_hostapd_cli(struct sigma_dut *dut, char *buf)
 	char command[1000];
 	const char *bin;
 	enum driver_type drv = get_driver_type();
+	char *sigma_hapd_file = sigma_hapd_ctrl;
 
 	if (file_exists("hostapd_cli"))
 		bin = "./hostapd_cli";
@@ -286,19 +287,19 @@ static int run_hostapd_cli(struct sigma_dut *dut, char *buf)
 		bin = "hostapd_cli";
 
 	if (drv == DRIVER_OPENWRT && sigma_hapd_ctrl == NULL) {
-		sigma_hapd_ctrl = "/var/run/hostapd-wifi0";
+		sigma_hapd_file = "/var/run/hostapd-wifi0";
 
 		if (sigma_radio_ifname[0] &&
 		    strcmp(sigma_radio_ifname[0], "wifi1") == 0)
-			sigma_hapd_ctrl = "/var/run/hostapd-wifi1";
+			sigma_hapd_file = "/var/run/hostapd-wifi1";
 		else if (sigma_radio_ifname[0] &&
 			 strcmp(sigma_radio_ifname[0], "wifi2") == 0)
-			sigma_hapd_ctrl = "/var/run/hostapd-wifi2";
+			sigma_hapd_file = "/var/run/hostapd-wifi2";
 	}
 
-	if (sigma_hapd_ctrl)
+	if (sigma_hapd_file)
 		snprintf(command, sizeof(command), "%s -p %s %s",
-			 bin, sigma_hapd_ctrl, buf);
+			 bin, sigma_hapd_file, buf);
 	else
 		snprintf(command, sizeof(command), "%s %s", bin, buf);
 	return run_system(dut, command);
