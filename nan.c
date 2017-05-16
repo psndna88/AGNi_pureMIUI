@@ -1767,19 +1767,45 @@ static void ndp_event_data_indication(NanDataPathRequestInd *event)
 /* Events callback */
 static void ndp_event_data_confirm(NanDataPathConfirmInd *event)
 {
+	char cmd[200];
+	char ipv6_buf[100];
+
 	sigma_dut_print(global_dut, DUT_MSG_INFO,
 			"Received NDP Confirm Indication");
 
+	memset(cmd, 0, sizeof(cmd));
+	memset(ipv6_buf, 0, sizeof(ipv6_buf));
+
 	global_ndp_instance_id = event->ndp_instance_id;
-	if (system("ifconfig nan0 up") != 0) {
-		sigma_dut_print(global_dut, DUT_MSG_ERROR,
-				"Failed to set nan interface up");
-		return;
-	}
-	if (system("ip -6 route add fe80::/64 dev nan0 table local") != 0) {
-		sigma_dut_print(global_dut, DUT_MSG_ERROR,
-				"Failed to run:ip -6 route replace fe80::/64 dev nan0 table local");
-		return;
+
+	if (event->rsp_code == NAN_DP_REQUEST_ACCEPT) {
+		if (system("ifconfig nan0 up") != 0) {
+			sigma_dut_print(global_dut, DUT_MSG_ERROR,
+					"Failed to set nan interface up");
+			return;
+		}
+		if (system("ip -6 route add fe80::/64 dev nan0 table local") !=
+		    0) {
+			sigma_dut_print(global_dut, DUT_MSG_ERROR,
+					"Failed to run:ip -6 route replace fe80::/64 dev nan0 table local");
+		}
+		convert_mac_addr_to_ipv6_lladdr(event->peer_ndi_mac_addr,
+						ipv6_buf, sizeof(ipv6_buf));
+		snprintf(cmd, sizeof(cmd),
+			 "ip -6 neighbor replace %s lladdr %02x:%02x:%02x:%02x:%02x:%02x nud permanent dev nan0",
+			 ipv6_buf, event->peer_ndi_mac_addr[0],
+			 event->peer_ndi_mac_addr[1],
+			 event->peer_ndi_mac_addr[2],
+			 event->peer_ndi_mac_addr[3],
+			 event->peer_ndi_mac_addr[4],
+			 event->peer_ndi_mac_addr[5]);
+		sigma_dut_print(global_dut, DUT_MSG_INFO,
+				"neighbor replace cmd = %s", cmd);
+		if (system(cmd) != 0) {
+			sigma_dut_print(global_dut, DUT_MSG_ERROR,
+					"Failed to run: ip -6 neighbor replace");
+			return;
+		}
 	}
 }
 

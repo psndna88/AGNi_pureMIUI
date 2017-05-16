@@ -743,6 +743,8 @@ int parse_mac_address(struct sigma_dut *dut, const char *arg,
 		      unsigned char *addr);
 unsigned int channel_to_freq(unsigned int channel);
 unsigned int freq_to_channel(unsigned int freq);
+void convert_mac_addr_to_ipv6_lladdr(u8 *mac_addr, char *ipv6_buf,
+				     size_t buf_len);
 
 #ifndef ANDROID
 size_t strlcpy(char *dest, const char *src, size_t siz);

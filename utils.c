@@ -207,6 +207,17 @@ unsigned int freq_to_channel(unsigned int freq)
 }
 
 
+void convert_mac_addr_to_ipv6_lladdr(u8 *mac_addr, char *ipv6_buf,
+				     size_t buf_len)
+{
+	u8 temp = mac_addr[0] ^ 0x02;
+
+	snprintf(ipv6_buf, buf_len, "fe80::%02x%02x:%02xff:fe%02x:%02x%02x",
+		 temp, mac_addr[1], mac_addr[2],
+		 mac_addr[3], mac_addr[4], mac_addr[5]);
+}
+
+
 #ifndef ANDROID
 
 size_t strlcpy(char *dest, const char *src, size_t siz)
