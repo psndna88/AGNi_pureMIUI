@@ -2049,6 +2049,9 @@ int nan_cmd_sta_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
 	u32 beacon_transmit_time;
 	u32 ndp_channel_freq;
 	u32 ndp_channel_freq2;
+#if NAN_CERT_VERSION >= 3
+	u32 sched_update_channel_freq;
+#endif
 
 	if (program == NULL) {
 		sigma_dut_print(dut, DUT_MSG_ERROR, "Invalid Program Name");
@@ -2066,6 +2069,7 @@ int nan_cmd_sta_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 
 	memset(&req, 0, sizeof(NanStatsRequest));
+	memset(resp_buf, 0, sizeof(resp_buf));
 	req.stats_type = (NanStatsType) NAN_STATS_ID_DE_TIMING_SYNC;
 	nan_stats_request(0, global_interface_handle, &req);
 	/*
@@ -2084,12 +2088,23 @@ int nan_cmd_sta_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
 	beacon_transmit_time = global_nan_sync_stats.currAmBTT;
 	ndp_channel_freq = global_nan_sync_stats.ndpChannelFreq;
 	ndp_channel_freq2 = global_nan_sync_stats.ndpChannelFreq2;
+#if NAN_CERT_VERSION >= 3
+	sched_update_channel_freq =
+		global_nan_sync_stats.schedUpdateChannelFreq;
 
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"%s: NanStatsRequest Master_pref:%02x, Random_factor:%02x, hop_count:%02x beacon_transmit_time:%d ndp_channel_freq:%d ndp_channel_freq2:%d sched_update_channel_freq:%d",
+			__func__, master_pref, random_factor,
+			hop_count, beacon_transmit_time,
+			ndp_channel_freq, ndp_channel_freq2,
+			sched_update_channel_freq);
+#else /* #if NAN_CERT_VERSION >= 3 */
 	sigma_dut_print(dut, DUT_MSG_INFO,
 			"%s: NanStatsRequest Master_pref:%02x, Random_factor:%02x, hop_count:%02x beacon_transmit_time:%d ndp_channel_freq:%d ndp_channel_freq2:%d",
 			__func__, master_pref, random_factor,
 			hop_count, beacon_transmit_time,
 			ndp_channel_freq, ndp_channel_freq2);
+#endif /* #if NAN_CERT_VERSION >= 3 */
 
 	if (strcasecmp(parameter, "MasterPref") == 0) {
 		snprintf(resp_buf, sizeof(resp_buf), "MasterPref,0x%x",
@@ -2127,6 +2142,11 @@ int nan_cmd_sta_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 				"%s: No Negotiated NDP Channels", __func__);
 		}
+#if NAN_CERT_VERSION >= 3
+	} else if (strcasecmp(parameter, "SchedUpdateChannel") == 0) {
+		snprintf(resp_buf, sizeof(resp_buf), "schedupdatechannel,%d",
+			 freq_to_channel(sched_update_channel_freq));
+#endif
 	} else {
 		send_resp(dut, conn, SIGMA_ERROR, "Invalid Parameter");
 		return 0;
