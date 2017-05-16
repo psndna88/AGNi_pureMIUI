@@ -800,6 +800,7 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 			init_req.channel_request_type);
 
 	if (dut->nan_pmk_len == NAN_PMK_INFO_LEN) {
+		init_req.key_info.key_type = NAN_SECURITY_KEY_INPUT_PMK;
 		memcpy(&init_req.key_info.body.pmk_info.pmk[0],
 		       &dut->nan_pmk[0], NAN_PMK_INFO_LEN);
 		init_req.key_info.body.pmk_info.pmk_len = NAN_PMK_INFO_LEN;
@@ -1249,6 +1250,7 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 
 		if (dut->nan_pmk_len == NAN_PMK_INFO_LEN) {
+			req.key_info.key_type = NAN_SECURITY_KEY_INPUT_PMK;
 			memcpy(&req.key_info.body.pmk_info.pmk[0],
 				&dut->nan_pmk[0], NAN_PMK_INFO_LEN);
 			req.key_info.body.pmk_info.pmk_len = NAN_PMK_INFO_LEN;
