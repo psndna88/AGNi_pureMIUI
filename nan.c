@@ -40,6 +40,8 @@ struct sigma_dut *global_dut = NULL;
 static char global_nan_mac_addr[ETH_ALEN];
 static char global_peer_mac_addr[ETH_ALEN];
 static char global_event_resp_buf[1024];
+static u8 global_publish_service_name[NAN_MAX_SERVICE_NAME_LEN];
+static u32 global_publish_service_name_len = 0;
 
 static int nan_further_availability_tx(struct sigma_dut *dut,
 				       struct sigma_conn *conn,
@@ -1052,10 +1054,25 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 	req.publish_count = 0;
 	req.service_responder_policy = NAN_SERVICE_ACCEPT_POLICY_ALL;
 
+	if (global_publish_service_name_len &&
+	    service_name &&
+	    strcasecmp((char *) global_publish_service_name,
+		       service_name) == 0 &&
+	    global_publish_id) {
+		req.publish_id = global_publish_id;
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"%s: updating publish_id = %d in publish request",
+				__func__, req.publish_id);
+	}
+
 	if (service_name) {
 		strlcpy((char *) req.service_name, service_name,
-			strlen(service_name) + 1);
-		req.service_name_len = strlen(service_name);
+			sizeof(req.service_name));
+		req.service_name_len = strlen((char *) req.service_name);
+		strlcpy((char *) global_publish_service_name, service_name,
+			sizeof(global_publish_service_name));
+		global_publish_service_name_len =
+			strlen((char *) global_publish_service_name);
 	}
 
 	if (publish_type) {
@@ -1697,6 +1714,10 @@ void nan_cmd_sta_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	dut->sta_channel = 0;
 	memset(global_event_resp_buf, 0, sizeof(global_event_resp_buf));
 	memset(&global_nan_sync_stats, 0, sizeof(global_nan_sync_stats));
+	memset(global_publish_service_name, 0,
+	       sizeof(global_publish_service_name));
+	global_publish_service_name_len = 0;
+	global_publish_id = 0;
 
 	sigma_nan_data_end(dut, cmd);
 	nan_data_interface_delete(0, global_interface_handle, (char *) "nan0");
@@ -1762,6 +1783,10 @@ int nan_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 			}
 		} else if (strcasecmp(nan_op, "Off") == 0) {
 			sigma_nan_disable(dut, conn, cmd);
+			memset(global_publish_service_name, 0,
+			       sizeof(global_publish_service_name));
+			global_publish_service_name_len = 0;
+			global_publish_id = 0;
 			send_resp(dut, conn, SIGMA_COMPLETE, "NULL");
 		}
 	}
