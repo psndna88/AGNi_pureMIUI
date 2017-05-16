@@ -665,6 +665,9 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 	const char *avoid_channel = get_param(cmd, "avoidchannel");
 	const char *invalid_nan_schedule = get_param(cmd, "InvalidNANSchedule");
 	const char *map_order = get_param(cmd, "maporder");
+#if NAN_CERT_VERSION >= 3
+	const char *qos_config = get_param(cmd, "QoS");
+#endif
 	wifi_error ret;
 	NanDataPathInitiatorRequest init_req;
 	NanDebugParams cfg_debug;
@@ -738,6 +741,23 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 		nan_debug_command_config(0, global_interface_handle,
 					 cfg_debug, size);
 	}
+
+#if NAN_CERT_VERSION >= 3
+	if (qos_config) {
+		u32 qos_config_val = 0;
+
+		memset(&cfg_debug, 0, sizeof(NanDebugParams));
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_CONFIG_QOS;
+		qos_config_val = atoi(qos_config);
+		memcpy(cfg_debug.debug_cmd_data, &qos_config_val, sizeof(u32));
+		size = sizeof(u32) + sizeof(u32);
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"%s: qos config: cmd type = %d and command data = %d",
+				__func__, cfg_debug.cmd, qos_config_val);
+		nan_debug_command_config(0, global_interface_handle,
+					 cfg_debug, size);
+	}
+#endif
 
 	/*
 	 * Setting this flag, so that interface for ping6 command
@@ -1091,6 +1111,9 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *data_path_security = get_param(cmd, "datapathsecurity");
 	const char *range_required = get_param(cmd, "rangerequired");
 	const char *awake_dw_interval = get_param(cmd, "awakeDWint");
+#if NAN_CERT_VERSION >= 3
+	const char *qos_config = get_param(cmd, "QoS");
+#endif
 	NanPublishRequest req;
 	NanConfigRequest config_req;
 	int filter_len_rx = 0, filter_len_tx = 0;
@@ -1285,6 +1308,11 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 			return -2;
 		}
 	}
+
+#if NAN_CERT_VERSION >= 3
+	if (qos_config)
+		req.sdea_params.qos_cfg = (NanQosCfgStatus) atoi(qos_config);
+#endif
 
 	ret = nan_publish_request(0, global_interface_handle, &req);
 	if (ret != WIFI_SUCCESS)
