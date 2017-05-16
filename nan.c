@@ -468,13 +468,16 @@ static int sigma_nan_subscribe_request(struct sigma_dut *dut,
 	const char *include_bit = get_param(cmd, "IncludeBit");
 	const char *mac = get_param(cmd, "MAC");
 	const char *srf_type = get_param(cmd, "SRFType");
+	const char *awake_dw_interval = get_param(cmd, "awakeDWint");
 	NanSubscribeRequest req;
+	NanConfigRequest config_req;
 	int filter_len_rx = 0, filter_len_tx = 0;
 	u8 input_rx[NAN_MAX_MATCH_FILTER_LEN];
 	u8 input_tx[NAN_MAX_MATCH_FILTER_LEN];
 	wifi_error ret;
 
 	memset(&req, 0, sizeof(NanSubscribeRequest));
+	memset(&config_req, 0, sizeof(NanConfigRequest));
 	req.ttl = 0;
 	req.period = 1;
 	req.subscribe_type = 1;
@@ -568,6 +571,54 @@ static int sigma_nan_subscribe_request(struct sigma_dut *dut,
 		strlcpy((char *) req.service_name, service_name,
 			strlen(service_name) + 1);
 		req.service_name_len = strlen(service_name);
+	}
+
+	if (awake_dw_interval) {
+		int input_dw_interval_val = atoi(awake_dw_interval);
+		int awake_dw_int = 0;
+
+		if (input_dw_interval_val > NAN_MAX_ALLOWED_DW_AWAKE_INTERVAL) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"%s: input active dw interval = %d overwritting dw interval to Max allowed dw interval 16",
+					__func__, input_dw_interval_val);
+			input_dw_interval_val =
+				NAN_MAX_ALLOWED_DW_AWAKE_INTERVAL;
+		}
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"%s: input active DW interval = %d",
+				__func__, input_dw_interval_val);
+		/*
+		 * Indicates the interval for Sync beacons and SDF's in 2.4 GHz
+		 * or 5 GHz band. Valid values of DW Interval are: 1, 2, 3, 4,
+		 * and 5; 0 is reserved. The SDF includes in OTA when enabled.
+		 * The publish/subscribe period values don't override the device
+		 * level configurations.
+		 * input_dw_interval_val is provided by the user are in the
+		 * format 2^n-1 = 1/2/4/8/16. Internal implementation expects n
+		 * to be passed to indicate the awake_dw_interval.
+		 */
+		if (input_dw_interval_val == 1 ||
+		    input_dw_interval_val % 2 == 0) {
+			while (input_dw_interval_val > 0) {
+				input_dw_interval_val >>= 1;
+				awake_dw_int++;
+			}
+		}
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"%s:converted active DW interval = %d",
+				__func__, awake_dw_int);
+		config_req.config_dw.config_2dot4g_dw_band = 1;
+		config_req.config_dw.dw_2dot4g_interval_val = awake_dw_int;
+		config_req.config_dw.config_5g_dw_band = 1;
+		config_req.config_dw.dw_5g_interval_val = awake_dw_int;
+		ret = nan_config_request(0, global_interface_handle,
+					 &config_req);
+		if (ret != WIFI_SUCCESS) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"%s:NAN config request failed",
+					__func__);
+			return -2;
+		}
 	}
 
 	ret = nan_subscribe_request(0, global_interface_handle, &req);
@@ -1039,13 +1090,16 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *ndp_type = get_param(cmd, "DataPathType");
 	const char *data_path_security = get_param(cmd, "datapathsecurity");
 	const char *range_required = get_param(cmd, "rangerequired");
+	const char *awake_dw_interval = get_param(cmd, "awakeDWint");
 	NanPublishRequest req;
+	NanConfigRequest config_req;
 	int filter_len_rx = 0, filter_len_tx = 0;
 	u8 input_rx[NAN_MAX_MATCH_FILTER_LEN];
 	u8 input_tx[NAN_MAX_MATCH_FILTER_LEN];
 	wifi_error ret;
 
 	memset(&req, 0, sizeof(NanPublishRequest));
+	memset(&config_req, 0, sizeof(NanConfigRequest));
 	req.ttl = 0;
 	req.period = 1;
 	req.publish_match_indicator = 1;
@@ -1182,6 +1236,54 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (range_required && strcasecmp(range_required, "enable") == 0) {
 		req.sdea_params.ranging_state = NAN_RANGING_ENABLE;
 		req.sdea_params.range_report = NAN_ENABLE_RANGE_REPORT;
+	}
+
+	if (awake_dw_interval) {
+		int input_dw_interval_val = atoi(awake_dw_interval);
+		int awake_dw_int = 0;
+
+		if (input_dw_interval_val > NAN_MAX_ALLOWED_DW_AWAKE_INTERVAL) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"%s: input active dw interval = %d overwritting dw interval to Max allowed dw interval 16",
+					__func__, input_dw_interval_val);
+			input_dw_interval_val =
+				NAN_MAX_ALLOWED_DW_AWAKE_INTERVAL;
+		}
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"%s: input active DW interval = %d",
+				__func__, input_dw_interval_val);
+		/*
+		 * Indicates the interval for Sync beacons and SDF's in 2.4 GHz
+		 * or 5 GHz band. Valid values of DW Interval are: 1, 2, 3, 4,
+		 * and 5; 0 is reserved. The SDF includes in OTA when enabled.
+		 * The publish/subscribe period. values don't override the
+		 * device level configurations.
+		 * input_dw_interval_val is provided by the user are in the
+		 * format 2^n-1 = 1/2/4/8/16. Internal implementation expects n
+		 * to be passed to indicate the awake_dw_interval.
+		 */
+		if (input_dw_interval_val == 1 ||
+		    input_dw_interval_val % 2 == 0) {
+			while (input_dw_interval_val > 0) {
+				input_dw_interval_val >>= 1;
+				awake_dw_int++;
+			}
+		}
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"%s:converted active DW interval = %d",
+				__func__, awake_dw_int);
+		config_req.config_dw.config_2dot4g_dw_band = 1;
+		config_req.config_dw.dw_2dot4g_interval_val = awake_dw_int;
+		config_req.config_dw.config_5g_dw_band = 1;
+		config_req.config_dw.dw_5g_interval_val = awake_dw_int;
+		ret = nan_config_request(0, global_interface_handle,
+					 &config_req);
+		if (ret != WIFI_SUCCESS) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"%s:NAN config request failed",
+					__func__);
+			return -2;
+		}
 	}
 
 	ret = nan_publish_request(0, global_interface_handle, &req);
