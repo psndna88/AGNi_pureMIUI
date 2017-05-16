@@ -1904,6 +1904,26 @@ int nan_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 
 	if (nan_op) {
+#if NAN_CERT_VERSION >= 3
+		int size = 0;
+		u32 device_type_val = 0;
+		NanDebugParams cfg_debug;
+
+		memset(&cfg_debug, 0, sizeof(NanDebugParams));
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_DEVICE_TYPE;
+		if (dut->device_type == STA_testbed)
+			device_type_val = NAN_DEVICE_TYPE_TEST_BED;
+		else if (dut->device_type == STA_dut)
+			device_type_val = NAN_DEVICE_TYPE_DUT;
+
+		memcpy(cfg_debug.debug_cmd_data, &device_type_val, sizeof(u32));
+		size = sizeof(u32) + sizeof(u32);
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"%s: Device Type: cmd type = %d and command data = %u",
+				__func__, cfg_debug.cmd, device_type_val);
+		nan_debug_command_config(0, global_interface_handle,
+					 cfg_debug, size);
+#endif
 		/*
 		 * NANOp has been specified.
 		 * We will build a nan_enable or nan_disable command.
