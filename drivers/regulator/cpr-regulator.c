@@ -1632,6 +1632,7 @@ int cpr_regulator_set_corner_voltage(struct regulator *regulator,
 		mutex_lock(&cpr_vreg->cpr_mutex);
 		cpr_vreg->last_volt[corner] = volt;
 		cpr_vreg->ceiling_volt[corner] = volt;
+		cpr_vreg->floor_volt[corner] = volt - 200000;
 		mutex_unlock(&cpr_vreg->cpr_mutex);
 		return 0;
 	}
