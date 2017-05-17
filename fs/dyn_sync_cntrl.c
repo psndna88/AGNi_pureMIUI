@@ -85,8 +85,7 @@ static ssize_t dyn_fsync_suspend_show(struct kobject *kobj,
 
 static void dyn_fsync_force_flush(void)
 {
-	sync_filesystems(0);
-	sync_filesystems(1);
+	emergency_sync();
 }
 
 
