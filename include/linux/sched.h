@@ -2095,7 +2095,7 @@ struct sched_load {
 #if defined(CONFIG_SCHED_FREQ_INPUT)
 extern int sched_set_window(u64 window_start, unsigned int window_size);
 extern unsigned long sched_get_busy(int cpu);
-extern void sched_get_cpus_busy(struct sched_load *busy,
+extern void sched_get_cpus_busy(unsigned long *busy,
 				const struct cpumask *query_cpus);
 extern void sched_set_io_is_busy(int val);
 #ifdef CONFIG_SCHED_QHMP
@@ -2115,8 +2115,8 @@ static inline unsigned long sched_get_busy(int cpu)
 {
 	return 0;
 }
-static inline void sched_get_cpus_busy(struct sched_load *busy,
-				       const struct cpumask *query_cpus) {};
+static inline void sched_get_cpus_busy(unsigned long *busy,
+				const struct cpumask *query_cpus) {};
 static inline void sched_set_io_is_busy(int val) {};
 
 static inline int sched_update_freq_max_load(const cpumask_t *cpumask)
