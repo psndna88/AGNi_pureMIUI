@@ -1718,6 +1718,7 @@ void nan_cmd_sta_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	       sizeof(global_publish_service_name));
 	global_publish_service_name_len = 0;
 	global_publish_id = 0;
+	global_subscribe_id = 0;
 
 	sigma_nan_data_end(dut, cmd);
 	nan_data_interface_delete(0, global_interface_handle, (char *) "nan0");
@@ -1787,6 +1788,7 @@ int nan_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 			       sizeof(global_publish_service_name));
 			global_publish_service_name_len = 0;
 			global_publish_id = 0;
+			global_subscribe_id = 0;
 			send_resp(dut, conn, SIGMA_COMPLETE, "NULL");
 		}
 	}
