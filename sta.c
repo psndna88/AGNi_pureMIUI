@@ -2770,7 +2770,9 @@ static int wcn_sta_set_cts_width(struct sigma_dut *dut, const char *intf,
 {
 	char buf[60];
 
-	if (strcmp(val, "80") == 0) {
+	if (strcmp(val, "160") == 0) {
+		snprintf(buf, sizeof(buf), "iwpriv %s cts_cbw 5", intf);
+	} else if (strcmp(val, "80") == 0) {
 		snprintf(buf, sizeof(buf), "iwpriv %s cts_cbw 3", intf);
 	} else if (strcmp(val, "40") == 0) {
 		snprintf(buf, sizeof(buf), "iwpriv %s cts_cbw 2", intf);
