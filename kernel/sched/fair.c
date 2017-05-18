@@ -7850,7 +7850,24 @@ more_balance:
 		/* All tasks on this runqueue were pinned by CPU affinity */
 		if (unlikely(env.flags & LBF_ALL_PINNED)) {
 			cpumask_clear_cpu(cpu_of(busiest), cpus);
-			if (!cpumask_empty(cpus)) {
+			/*
+			 * dst_cpu is not a valid busiest cpu in the following
+			 * check since load cannot be pulled from dst_cpu to be
+			 * put on dst_cpu.
+			 */
+			cpumask_clear_cpu(env.dst_cpu, cpus);
+			/*
+			 * Go back to "redo" iff the load-balance cpumask
+			 * contains other potential busiest cpus for the
+			 * current sched domain.
+			 */
+			if (cpumask_intersects(cpus, sched_domain_span(env.sd))) {
+				/*
+				 * Now that the check has passed, reenable
+				 * dst_cpu so that load can be calculated on
+				 * it in the redo path.
+				 */
+				cpumask_set_cpu(env.dst_cpu, cpus);
 				env.loop = 0;
 				env.loop_break = sched_nr_migrate_break;
 				goto redo;
