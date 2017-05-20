@@ -1602,7 +1602,7 @@ out_reg:
 		}
 		ret = regulator_disable(ice_dev->reg);
 		if (ret) {
-			pr_err("%s:%pK: Could not disable regulator\n",
+			pr_err("%s:%p: Could not disable regulator\n",
 					__func__, ice_dev);
 			goto out;
 		}
