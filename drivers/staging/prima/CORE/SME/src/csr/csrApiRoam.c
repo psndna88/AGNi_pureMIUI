@@ -6345,22 +6345,35 @@ static tANI_BOOLEAN csrRoamProcessResults( tpAniSirGlobal pMac, tSmeCmd *pComman
                 case eCsrForcedDisassocSta:
                 case eCsrForcedDeauthSta:
                    csrRoamStateChange( pMac, eCSR_ROAMING_STATE_JOINED, sessionId);
-                   if( CSR_IS_SESSION_VALID(pMac, sessionId) )
-                   {                    
-                       pSession = CSR_GET_SESSION(pMac, sessionId);
-
-                       if ( CSR_IS_INFRA_AP(&pSession->connectedProfile) )
+                   pSession = CSR_GET_SESSION(pMac, sessionId);
+                   if (pSession)
+                   {
+                       if( CSR_IS_SESSION_VALID(pMac, sessionId) )
                        {
-                           roamInfo.u.pConnectedProfile = &pSession->connectedProfile;
-                           vos_mem_copy(roamInfo.peerMac,
-                                        pCommand->u.roamCmd.peerMac,
-                                        sizeof(tSirMacAddr));
-                           roamInfo.reasonCode = eCSR_ROAM_RESULT_FORCED;
-                           roamInfo.statusCode = eSIR_SME_SUCCESS;
-                           status = csrRoamCallCallback(pMac, sessionId, 
-                                       &roamInfo, pCommand->u.roamCmd.roamId, 
-                                       eCSR_ROAM_LOSTLINK, eCSR_ROAM_RESULT_FORCED);
+                           if ( CSR_IS_INFRA_AP(&pSession->connectedProfile) )
+                           {
+                                roamInfo.u.pConnectedProfile = &pSession->connectedProfile;
+                                vos_mem_copy(roamInfo.peerMac,
+                                                 pCommand->u.roamCmd.peerMac,
+                                                 sizeof(tSirMacAddr));
+                                roamInfo.reasonCode = eCSR_ROAM_RESULT_FORCED;
+                                roamInfo.statusCode = eSIR_SME_SUCCESS;
+                                status = csrRoamCallCallback(pMac, sessionId,
+                                         &roamInfo, pCommand->u.roamCmd.roamId,
+                                         eCSR_ROAM_LOSTLINK, eCSR_ROAM_RESULT_FORCED);
+                           }
                        }
+                       else
+                       {
+                           smsLog(pMac, LOGE, FL("Inactive session %d"),
+                                              sessionId);
+                           return eHAL_STATUS_FAILURE;
+                      }
+                   }
+                   else
+                   {
+                       smsLog(pMac, LOGE, FL("Invalid session"));
+                       return eHAL_STATUS_FAILURE;
                    }
                    break;
                 case eCsrLostLink1:
