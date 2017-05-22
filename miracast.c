@@ -722,7 +722,9 @@ int miracast_dev_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 		return -1;
 	sigma_dut_print(dut, DUT_MSG_DEBUG, "miracast_dev_send_frame 1");
 	miracast_generate_string_cmd(cmd, string_cmd, sizeof(string_cmd));
-	if (frame_name && strcasecmp(frame_name, "RTSP") != 0)
+	if (!frame_name)
+		return 0;
+	if (strcasecmp(frame_name, "RTSP") != 0)
 		return 0;
 
 	if (!rtsp_msg_type)
