@@ -404,9 +404,6 @@ static void * miracast_rtsp_thread_entry(void *ptr)
 						 1-P-Sink, 2-Secondary Sink */
 					 char *); /* for returning session ID */
 
-	if (!dut)
-		goto EXIT;
-
 	miracast_load(dut);
 
 	if (sigma_main_ifname) {
@@ -591,9 +588,6 @@ static void * auto_go_thread_entry(void *ptr)
 					 int, /* WFD Device Type; 0-Source,
 						1-P-Sink, 2-Secondary Sink */
 					 char *); /* for returning session ID */
-
-	if (!dut)
-		goto THR_EXIT;
 
 	stop_dhcp(dut, wfd_ifname, 1);
 	/* For auto-GO, start the DHCP server and wait for 5 seconds */
