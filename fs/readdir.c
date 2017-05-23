@@ -37,9 +37,9 @@ int iterate_dir(struct file *file, struct dir_context *ctx)
 
 	res = -ENOENT;
 	if (!IS_DEADDIR(inode)) {
+		ctx->romnt = (inode->i_sb->s_flags & MS_RDONLY);
 		if (file->f_op->iterate) {
 			ctx->pos = file->f_pos;
-			ctx->romnt = (inode->i_sb->s_flags & MS_RDONLY);
 			res = file->f_op->iterate(file, ctx);
 			file->f_pos = ctx->pos;
 		} else {
