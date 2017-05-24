@@ -256,7 +256,7 @@ restart:
 				       " exited with %08x?\n", vec_nr,
 				       softirq_to_name[vec_nr], h->action,
 				       prev_count, preempt_count());
-				preempt_count_set(prev_count);
+				preempt_count() = prev_count;
 			}
 
 			rcu_bh_qs(cpu);

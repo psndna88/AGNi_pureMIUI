@@ -14,20 +14,18 @@
   extern void add_preempt_count(int val);
   extern void sub_preempt_count(int val);
 #else
-# define add_preempt_count(val)	do { *preempt_count_ptr() += (val); } while (0)
-# define sub_preempt_count(val)	do { *preempt_count_ptr() -= (val); } while (0)
+# define add_preempt_count(val)	do { preempt_count() += (val); } while (0)
+# define sub_preempt_count(val)	do { preempt_count() -= (val); } while (0)
 #endif
 
 #define inc_preempt_count() add_preempt_count(1)
 #define dec_preempt_count() sub_preempt_count(1)
-
 
 #define preempt_count()	(current_thread_info()->preempt_count)
 
 #ifndef TJK_HMP
 #define set_preempt_need_resched()
 #endif
-
 
 #ifdef CONFIG_PREEMPT
 
@@ -87,9 +85,9 @@ do { \
 
 /* For debugging and tracer internals only! */
 #define add_preempt_count_notrace(val)			\
-	do { *preempt_count_ptr() += (val); } while (0)
+	do { preempt_count() += (val); } while (0)
 #define sub_preempt_count_notrace(val)			\
-	do { *preempt_count_ptr() -= (val); } while (0)
+	do { preempt_count() -= (val); } while (0)
 #define inc_preempt_count_notrace() add_preempt_count_notrace(1)
 #define dec_preempt_count_notrace() sub_preempt_count_notrace(1)
 
