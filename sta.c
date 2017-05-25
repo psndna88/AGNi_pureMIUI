@@ -4272,6 +4272,46 @@ static int cmd_sta_reassoc(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	if (wifi_chip_type == DRIVER_WCN) {
 #ifdef ANDROID
+		if (chan) {
+			unsigned int freq;
+
+			freq = channel_to_freq(chan);
+			if (!freq) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"Invalid channel number provided: %d",
+						chan);
+				send_resp(dut, conn, SIGMA_INVALID,
+					  "ErrorCode,Invalid channel number");
+				goto close_mon_conn;
+			}
+			res = snprintf(buf, sizeof(buf),
+				       "SCAN TYPE=ONLY freq=%d", freq);
+		} else {
+			res = snprintf(buf, sizeof(buf), "SCAN TYPE=ONLY");
+		}
+		if (res < 0 || res >= (int) sizeof(buf)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,snprintf failed");
+			goto close_mon_conn;
+		}
+		if (wpa_command(intf, buf) < 0) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Failed to start scan");
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,scan failed");
+			goto close_mon_conn;
+		}
+
+		res = get_wpa_cli_event(dut, ctrl, "CTRL-EVENT-SCAN-RESULTS",
+					buf, sizeof(buf));
+		if (res < 0) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Scan did not complete");
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,scan did not complete");
+			goto close_mon_conn;
+		}
+
 		if (set_network(intf, dut->infra_network_id, "bssid", "any")
 		    < 0) {
 			sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to set "
