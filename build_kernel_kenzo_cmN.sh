@@ -12,7 +12,7 @@ cd $KERNELDIR/
 
 if [ ! -f $KERNELDIR/.config ];
 then
-make agni_kenzo-cmN_defconfig
+    make agni_kenzo-cmN_defconfig
 fi
 
 mv .git .git-halt

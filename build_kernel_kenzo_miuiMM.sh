@@ -12,7 +12,7 @@ cd $KERNELDIR/
 
 if [ ! -f $KERNELDIR/.config ];
 then
-make agni_kenzo-miuiMM_defconfig
+    make agni_kenzo-miuiMM_defconfig
 fi
 
 mv .git .git-halt
