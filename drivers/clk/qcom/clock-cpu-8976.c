@@ -1151,43 +1151,6 @@ static struct platform_driver msm_clock_spm_driver = {
 	},
 };
 
-ssize_t vc_get_vdd(char *buf)
-{
-	struct opp *opppoop;
-        struct clk *c5;
-        int i, len = 0, levels;
-
-        c5 = &a53_clk.c;
-        levels = c5->vdd_class->num_levels;
-
-	rcu_read_lock();
-        if (buf) {
-                for(i=1; i < levels; i++) {
-			opppoop = dev_pm_opp_find_freq_exact(get_cpu_device(0),
-				c5->fmax[i], true);
-                        len += sprintf(buf + len, "%umhz: %d mV\n",
-                                (unsigned int)c5->fmax[i]/1000000,
-                                (int)dev_pm_opp_get_voltage(opppoop)/1000 );
-                }
-        }
-
-        c5 = &a72_clk.c;
-        levels = c5->vdd_class->num_levels;
-
-        if (buf) {
-                for(i=1; i < levels; i++) {
-			opppoop = dev_pm_opp_find_freq_exact(get_cpu_device(4),
-				c5->fmax[i], true);
-                        len += sprintf(buf + len, "%umhz: %d mV\n",
-                                (unsigned int)c5->fmax[i]/1000000,
-                                (int)dev_pm_opp_get_voltage(opppoop)/1000 );
-                }
-        }
-	rcu_read_unlock();
-
-        return len;
-}
-
 static int __init clock_cpu_init(void)
 {
 	int ret = 0;
