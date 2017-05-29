@@ -608,6 +608,10 @@ KBUILD_CFLAGS   += $(call cc-option,-fno-store-merging,)
 
 KBUILD_CFLAGS   += $(call cc-disable-warning,misleading-indentation,)
 
+# Disable all buggy detection warnings
+KBUILD_CFLAGS   += $(call cc-disable-warning,incompatible-pointer-types,)
+KBUILD_CFLAGS   += $(call cc-disable-warning,unused-const-variable,)
+
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS	+= -Os $(call cc-disable-warning,maybe-uninitialized,)
 else
