@@ -26,9 +26,6 @@
 #include "sound/q6afe-v2.h"
 #include <sound/audio_cal_utils.h>
 #include "q6voice.h"
-#ifdef CONFIG_WAKE_GESTURES
-#include <linux/wake_gestures.h>
-#endif
 
 #define TIMEOUT_MS 300
 
@@ -5345,9 +5342,6 @@ int voc_end_voice_call(uint32_t session_id)
 
 	voice_session_active = false;
 	mutex_unlock(&v->lock);
-#ifdef CONFIG_WAKE_GESTURES
-	wake_gesture_main();
-#endif
 	return ret;
 }
 
@@ -5668,9 +5662,6 @@ int voc_start_voice_call(uint32_t session_id)
 		goto fail;
 	}
 	voice_session_active = true;
-#ifdef CONFIG_WAKE_GESTURES
-	wake_gesture_main();
-#endif
 fail:
 	mutex_unlock(&v->lock);
 	return ret;

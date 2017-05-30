@@ -52,9 +52,6 @@
 #include <linux/earlysuspend.h>
 #endif
 #include <linux/proximity_state.h>
-#ifdef CONFIG_WAKE_GESTURES
-#include <linux/wake_gestures.h>
-#endif
 #include "linux/stk3x1x.h"
 
 #define DRIVER_VERSION  "3.4.4ts"
@@ -1907,9 +1904,6 @@ static void stk_work_func(struct work_struct *work)
 	msleep(1);
     enable_irq(ps_data->irq);
     mutex_unlock(&ps_data->io_lock);
-#ifdef CONFIG_WAKE_GESTURES
- 	wake_gesture_main();
-#endif
 	return;
 
 err_i2c_rw:

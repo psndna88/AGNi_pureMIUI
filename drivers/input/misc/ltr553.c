@@ -35,9 +35,6 @@
 #include <linux/uaccess.h>
 #include <linux/atomic.h>
 #include <linux/proximity_state.h>
-#ifdef CONFIG_WAKE_GESTURES
-#include <linux/wake_gestures.h>
-#endif
 
 
 #define LTR553_I2C_NAME			"ltr553"
@@ -1096,9 +1093,6 @@ static void ltr553_report_work(struct work_struct *work)
 		dev_dbg(&ltr->i2c->dev, "process ps data done!\n");
 		pm_wakeup_event(&ltr->input_proximity->dev, 200);
 	}
-#ifdef CONFIG_WAKE_GESTURES
-   	wake_gesture_main();
-#endif
 
 exit:
 	if (atomic_dec_and_test(&ltr->wake_count)) {

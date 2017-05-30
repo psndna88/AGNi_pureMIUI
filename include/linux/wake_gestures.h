@@ -33,14 +33,5 @@ extern bool gestures_enabled;
 bool scr_suspended(void);
 bool scr_suspended_ft(void);
 void set_vibrate(int value);
-bool wake_gesture_charging_detect(void);
-extern int debug_wake_timer;
-extern unsigned int wake_duration;
-extern void wake_gesture_suspend_triggers(void);
-extern void wake_gesture_resume_triggers(void);
-extern void wake_gesture_delayed_shut_destroy(void);
-extern void wake_gesture_switches_resume(void);
-extern void wake_gesture_switches_shut(void);
-extern void wake_gesture_main(void);
 
 #endif	/* _LINUX_WAKE_GESTURES_H */
