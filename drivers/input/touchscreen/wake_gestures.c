@@ -32,6 +32,8 @@
 #include <linux/input.h>
 #include <linux/hrtimer.h>
 #include <asm-generic/cputime.h>
+#include <linux/qdsp6v2/apr.h>
+#include <linux/proximity_state.h>
 /*
 #include <linux/wakelock.h>
 */
@@ -424,15 +426,20 @@ static void detect_sweep2wake_h(int x, int y, bool st, bool scr_suspended)
 
 static void s2w_input_callback(struct work_struct *unused)
 {
-	detect_sweep2wake_h(touch_x, touch_y, true, is_suspended());
-	if (is_suspended())
-		detect_sweep2wake_v(touch_x, touch_y, true);
+	if (((!prox_near_ltr55x()) || (!prox_near_stk3x1x())) &&
+		(!q6voice_voice_session_active()) && (s2w_switch)) {
+		detect_sweep2wake_h(touch_x, touch_y, true, is_suspended());
+		if (is_suspended()) {
+			detect_sweep2wake_v(touch_x, touch_y, true);
+		}
+	}
 	return;
 }
 
 static void dt2w_input_callback(struct work_struct *unused)
 {
-	if (is_suspended() && dt2w_switch)
+	if (((!prox_near_ltr55x()) || (!prox_near_stk3x1x())) &&
+		(!q6voice_voice_session_active()) && (is_suspended() && dt2w_switch))
 		detect_doubletap2wake(touch_x, touch_y, true);
 	return;
 }
