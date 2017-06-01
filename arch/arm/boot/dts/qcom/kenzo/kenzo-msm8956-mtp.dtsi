@@ -77,7 +77,7 @@
 };
 
 &i2c_6 {
-	aw2013@45 { /* Breath Light-Driven */
+	awinic@45 { /* Breath Light-Driven */
 		compatible = "awinic,aw2013";
 		reg = <0x45>;
 		vdd-supply = <&pm8950_l10>;
