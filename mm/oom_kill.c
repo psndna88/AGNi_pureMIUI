@@ -287,10 +287,10 @@ enum oom_scan_t oom_scan_process_thread(struct task_struct *task,
 				       last_victim + msecs_to_jiffies(100))) {
 				pr_warn("Task %s:%d refused to die\n",
 					task->comm, task->pid);
-				return OOM_SCAN_CONTINUE;
-			} else {
-				return OOM_SCAN_ABORT;
+				if (task->state != TASK_RUNNING)
+					return OOM_SCAN_CONTINUE;
 			}
+			return OOM_SCAN_ABORT;
 		}
 	}
 	if (!task->mm)
