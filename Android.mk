@@ -84,5 +84,6 @@ LOCAL_CFLAGS := $(CFLAGS)
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES:= e_loop.c
 LOCAL_MODULE := e_loop
+LOCAL_VENDOR_MODULE := true
 LOCAL_CFLAGS := -DWITHOUT_IFADDRS -Wno-sign-compare
 include $(BUILD_EXECUTABLE)
