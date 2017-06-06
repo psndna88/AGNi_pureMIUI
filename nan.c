@@ -468,7 +468,9 @@ static int sigma_nan_subscribe_request(struct sigma_dut *dut,
 	const char *include_bit = get_param(cmd, "IncludeBit");
 	const char *mac = get_param(cmd, "MAC");
 	const char *srf_type = get_param(cmd, "SRFType");
+#if NAN_CERT_VERSION >= 3
 	const char *awake_dw_interval = get_param(cmd, "awakeDWint");
+#endif
 	NanSubscribeRequest req;
 	NanConfigRequest config_req;
 	int filter_len_rx = 0, filter_len_tx = 0;
@@ -573,6 +575,7 @@ static int sigma_nan_subscribe_request(struct sigma_dut *dut,
 		req.service_name_len = strlen(service_name);
 	}
 
+#if NAN_CERT_VERSION >= 3
 	if (awake_dw_interval) {
 		int input_dw_interval_val = atoi(awake_dw_interval);
 		int awake_dw_int = 0;
@@ -620,6 +623,7 @@ static int sigma_nan_subscribe_request(struct sigma_dut *dut,
 			return -2;
 		}
 	}
+#endif
 
 	ret = nan_subscribe_request(0, global_interface_handle, &req);
 	if (ret != WIFI_SUCCESS) {
@@ -1111,8 +1115,8 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *ndp_type = get_param(cmd, "DataPathType");
 	const char *data_path_security = get_param(cmd, "datapathsecurity");
 	const char *range_required = get_param(cmd, "rangerequired");
-	const char *awake_dw_interval = get_param(cmd, "awakeDWint");
 #if NAN_CERT_VERSION >= 3
+	const char *awake_dw_interval = get_param(cmd, "awakeDWint");
 	const char *qos_config = get_param(cmd, "QoS");
 #endif
 	NanPublishRequest req;
@@ -1263,6 +1267,7 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 		req.sdea_params.range_report = NAN_ENABLE_RANGE_REPORT;
 	}
 
+#if NAN_CERT_VERSION >= 3
 	if (awake_dw_interval) {
 		int input_dw_interval_val = atoi(awake_dw_interval);
 		int awake_dw_int = 0;
@@ -1311,7 +1316,6 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
-#if NAN_CERT_VERSION >= 3
 	if (qos_config)
 		req.sdea_params.qos_cfg = (NanQosCfgStatus) atoi(qos_config);
 #endif
