@@ -62,6 +62,7 @@ static void __vsync_retire_signal(struct msm_fb_data_type *mfd, int val);
 static int __vsync_set_vsync_handler(struct msm_fb_data_type *mfd);
 static int mdss_mdp_update_panel_info(struct msm_fb_data_type *mfd,
 		int mode, int dest_ctrl);
+static int mdss_mdp_input_event_handler(struct msm_fb_data_type *mfd);
 
 static inline bool is_ov_right_blend(struct mdp_rect *left_blend,
 	struct mdp_rect *right_blend, u32 left_lm_w)
@@ -4507,6 +4508,8 @@ static int mdss_mdp_overlay_ioctl_handler(struct msm_fb_data_type *mfd,
 	case MSMFB_VSYNC_CTRL:
 	case MSMFB_OVERLAY_VSYNC_CTRL:
 		if (!copy_from_user(&val, argp, sizeof(val))) {
+			if (val)
+				mdss_mdp_input_event_handler(mfd);
 			ret = mdss_mdp_overlay_vsync_ctrl(mfd, val);
 		} else {
 			pr_err("MSMFB_OVERLAY_VSYNC_CTRL failed (%d)\n", ret);
