@@ -3303,7 +3303,7 @@ static int fb_notifier_callback(struct notifier_block *self,
 	if (evdata && evdata->data && event == FB_EVENT_BLANK &&
 		rmi4_data && rmi4_data->i2c_client) {
 		blank = evdata->data;
-		if (*blank == FB_BLANK_UNBLANK)
+		if (*blank == FB_BLANK_UNBLANK || *blank == FB_BLANK_NORMAL)
 			synaptics_rmi4_resume(&(rmi4_data->input_dev->dev));
 		else if (*blank == FB_BLANK_POWERDOWN)
 			synaptics_rmi4_suspend(&(rmi4_data->input_dev->dev));
