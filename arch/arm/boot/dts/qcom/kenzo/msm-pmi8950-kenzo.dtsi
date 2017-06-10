@@ -324,6 +324,7 @@
 			qcom,bcl-mh-threshold-ma = <405>;
 			qcom,fg-iterm-ma = <200>;
 			qcom,fg-chg-iterm-ma = <150>;
+			qcom,nom-batt-capacity-mah = <4050>;
 			qcom,pmic-revid = <&pmi8950_revid>;
 			qcom,cycle-counter-en;
 			qcom,capacity-learning-on;
