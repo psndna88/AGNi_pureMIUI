@@ -63,6 +63,20 @@
 			efficiency = <1024>;
 			qcom,acc = <&acc0>;
 			next-level-cache = <&L2_0>;
+			sched-energy-costs = <&CPU_COST_0 &CLUSTER_COST_0>;
+			// The currents(uA) correspond to the frequencies in the
+ 			// frequency table.
+ 			current = < 24140 //384000 kHZ
+ 			            27200 //460800 kHZ
+ 			            32300 //600000 kHZ
+ 			            36940 //672000 kHz
+ 			            41570 //768000 kHZ
+ 			            49870 //864000 kHZ
+ 			            57840 //960000 kHZ
+ 			            79800 //1248000 kHZ
+ 			            88810 //1344000 kHZ
+ 			            102400 //1478400 kHZ
+ 			            110900>; //1555200 kHZ
 			qcom,sleep-status = <&cpu0_slp_sts>;
 			L2_0: l2-cache {
 			      compatible = "arm,arch-cache";
@@ -81,6 +95,20 @@
 			efficiency = <1024>;
 			qcom,acc = <&acc1>;
 			next-level-cache = <&L2_0>;
+			sched-energy-costs = <&CPU_COST_0 &CLUSTER_COST_0>;
+			// The currents(uA) correspond to the frequencies in the
+ 			// frequency table.
+ 			current = < 24140 //384000 kHZ
+ 			            27200 //460800 kHZ
+ 			            32300 //600000 kHZ
+ 			            36940 //672000 kHz
+ 			            41570 //768000 kHZ
+ 			            49870 //864000 kHZ
+ 			            57840 //960000 kHZ
+ 			            79800 //1248000 kHZ
+ 			            88810 //1344000 kHZ
+ 			            102400 //1478400 kHZ
+ 			            110900>; //1555200 kHZ
 			qcom,sleep-status = <&cpu1_slp_sts>;
 		};
 
@@ -94,6 +122,20 @@
 			efficiency = <1024>;
 			qcom,acc = <&acc2>;
 			next-level-cache = <&L2_0>;
+			sched-energy-costs = <&CPU_COST_0 &CLUSTER_COST_0>;
+			// The currents(uA) correspond to the frequencies in the
+ 			// frequency table.
+ 			current = < 24140 //384000 kHZ
+ 			            27200 //460800 kHZ
+ 			            32300 //600000 kHZ
+ 			            36940 //672000 kHz
+ 			            41570 //768000 kHZ
+ 			            49870 //864000 kHZ
+ 			            57840 //960000 kHZ
+ 			            79800 //1248000 kHZ
+ 			            88810 //1344000 kHZ
+ 			            102400 //1478400 kHZ
+ 			            110900>; //1555200 kHZ
 			qcom,sleep-status = <&cpu2_slp_sts>;
 		};
 
@@ -107,6 +149,20 @@
 			efficiency = <1024>;
 			qcom,acc = <&acc3>;
 			next-level-cache = <&L2_0>;
+			sched-energy-costs = <&CPU_COST_0 &CLUSTER_COST_0>;
+			// The currents(uA) correspond to the frequencies in the
+ 			// frequency table.
+ 			current = < 24140 //384000 kHZ
+ 			            27200 //460800 kHZ
+ 			            32300 //600000 kHZ
+ 			            36940 //672000 kHz
+ 			            41570 //768000 kHZ
+ 			            49870 //864000 kHZ
+ 			            57840 //960000 kHZ
+ 			            79800 //1248000 kHZ
+ 			            88810 //1344000 kHZ
+ 			            102400 //1478400 kHZ
+ 			            110900>; //1555200 kHZ
 			qcom,sleep-status = <&cpu3_slp_sts>;
 		};
 
@@ -154,6 +210,23 @@
 			qcom,acc = <&acc6>;
 			qcom,ldo = <&ldo6>;
 			next-level-cache = <&L2_1>;
+			sched-energy-costs = <&CPU_COST_1 &CLUSTER_COST_1>;
+			// The currents(uA) correspond to the frequencies in the
+ 			// frequency table.
+ 			current = < 59913 //384000 kHZ
+ 			            71236 //480000 kHZ
+ 			            89272 //633600 kHZ
+ 			            107240 //768000 kHZ
+ 			            122813 //864000 kHZ
+ 			            134930 //960000 kHZ
+ 			            182912 //1248000 kHZ
+ 			            202011 //1344000 kHZ
+ 			            222270 //1440000 kHZ
+ 			            240251 //1536000 kHZ
+ 			            255424 //1632000 kHZ
+ 			            279802 //1728000 kHZ
+ 			            302110 //1824000 kHZ
+ 			            331938>; //1958400 kHZ
 			qcom,sleep-status = <&cpu6_slp_sts>;
 		};
 
@@ -168,6 +241,23 @@
 			qcom,acc = <&acc7>;
 			qcom,ldo = <&ldo7>;
 			next-level-cache = <&L2_1>;
+			sched-energy-costs = <&CPU_COST_1 &CLUSTER_COST_1>;
+			// The currents(uA) correspond to the frequencies in the
+ 			// frequency table.
+ 			current = < 59913 //384000 kHZ
+ 			            71236 //480000 kHZ
+ 			            89272 //633600 kHZ
+ 			            107240 //768000 kHZ
+ 			            122813 //864000 kHZ
+ 			            134930 //960000 kHZ
+ 			            182912 //1248000 kHZ
+ 			            202011 //1344000 kHZ
+ 			            222270 //1440000 kHZ
+ 			            240251 //1536000 kHZ
+ 			            255424 //1632000 kHZ
+ 			            279802 //1728000 kHZ
+ 			            302110 //1824000 kHZ
+ 			            331938>; //1958400 kHZ
 			qcom,sleep-status = <&cpu7_slp_sts>;
 		};
 	};
