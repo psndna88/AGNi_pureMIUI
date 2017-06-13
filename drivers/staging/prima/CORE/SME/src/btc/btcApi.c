@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -2064,6 +2064,20 @@ eHalStatus btcHandleCoexInd(tHalHandle hHal, void* pMsg)
          smsLog(pMac, LOG1, FL("ENABLE UAPSD BT Event received"));
          vos_timer_start(&pMac->btc.enableUapsdTimer,
                          (pMac->fBtcEnableIndTimerVal * 1000));
+     }
+     else if (pSmeCoexInd->coexIndType ==
+             SIR_COEX_IND_TYPE_HID_CONNECTED_WLAN_CONNECTED_IN_2p4)
+     {
+         smsLog(pMac, LOG1,
+                FL("SIR_COEX_IND_TYPE_HID_CONNECTED_WLAN_CONNECTED_IN_2p4"));
+         vos_set_snoc_high_freq_voting(true);
+     }
+     else if (pSmeCoexInd->coexIndType ==
+             SIR_COEX_IND_TYPE_HID_DISCONNECTED_WLAN_CONNECTED_IN_2p4)
+     {
+         smsLog(pMac, LOG1,
+                FL("SIR_COEX_IND_TYPE_HID_DISCONNECTED_WLAN_CONNECTED_IN_2p4"));
+         vos_set_snoc_high_freq_voting(false);
      }
      else // unknown indication type
      {

@@ -365,6 +365,8 @@ typedef struct _VosContextType
    struct list_head wdthread_timer_work_list;
    struct work_struct wdthread_work;
    spinlock_t wdthread_work_lock;
+   bool snoc_high_freq_voting;
+   spinlock_t freq_voting_lock;
 } VosContextType, *pVosContextType;
 
 

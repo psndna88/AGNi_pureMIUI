@@ -1211,6 +1211,17 @@ eHalStatus csrNeighborRoamPreauthRspHandler(tpAniSirGlobal pMac, tSirRetStatus l
            goto abort_preauth;
         }
 
+        if (pMac->roam.pending_roam_disable)
+        {
+            smsLog(pMac, LOG1, FL("process pending roam disable"));
+            pMac->roam.configParam.isFastRoamIniFeatureEnabled = FALSE;
+            pMac->roam.pending_roam_disable = FALSE;
+            csrNeighborRoamUpdateFastRoamingEnabled(pMac, FALSE);
+            CSR_NEIGHBOR_ROAM_STATE_TRANSITION(
+                                   eCSR_NEIGHBOR_ROAM_STATE_CONNECTED);
+            goto DEQ_PREAUTH;
+        }
+
         /* Issue preauth request for the same/next entry */
         if (eHAL_STATUS_SUCCESS == csrNeighborRoamIssuePreauthReq(pMac))
         goto DEQ_PREAUTH; 
@@ -4630,6 +4641,13 @@ eHalStatus csrNeighborRoamIndicateConnect(tpAniSirGlobal pMac, tANI_U8 sessionId
                                 pNeighborRoamInfo->isESEAssoc, init_ft_flag);
                             
 #endif
+
+            if (pMac->roam.pending_roam_disable)
+            {
+                smsLog(pMac, LOG1, FL("process pending roam disable"));
+                pMac->roam.configParam.isFastRoamIniFeatureEnabled = FALSE;
+                pMac->roam.pending_roam_disable = FALSE;
+            }
 
 #ifdef FEATURE_WLAN_LFR
             // If "Legacy Fast Roaming" is enabled 

@@ -10287,6 +10287,16 @@ eHalStatus sme_UpdateIsFastRoamIniFeatureEnabled(tHalHandle hHal,
                       isFastRoamIniFeatureEnabled);
       return eHAL_STATUS_SUCCESS;
   }
+  if (smeNeighborMiddleOfRoaming(hHal))
+  {
+      VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_INFO,
+                "%s: In middle of roaming isFastRoamIniFeatureEnabled %d",
+                __func__, isFastRoamIniFeatureEnabled);
+      if (!isFastRoamIniFeatureEnabled)
+          pMac->roam.pending_roam_disable = TRUE;
+
+      return eHAL_STATUS_SUCCESS;
+  }
 
   VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_INFO,
                      "%s: FastRoamEnabled is changed from %d to %d", __func__,

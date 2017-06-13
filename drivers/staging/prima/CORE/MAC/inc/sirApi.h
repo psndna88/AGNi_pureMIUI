@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -3702,6 +3702,8 @@ typedef enum DFSChanScanType
 #define SIR_COEX_IND_TYPE_CXM_FEATURES_NOTIFICATION (8)
 #define SIR_COEX_IND_TYPE_TDLS_ENABLE  (6)
 #define SIR_COEX_IND_TYPE_TDLS_DISABLE (7)
+#define SIR_COEX_IND_TYPE_HID_CONNECTED_WLAN_CONNECTED_IN_2p4 (9)
+#define SIR_COEX_IND_TYPE_HID_DISCONNECTED_WLAN_CONNECTED_IN_2p4 (10)
 
 typedef struct sSirSmeCoexInd
 {

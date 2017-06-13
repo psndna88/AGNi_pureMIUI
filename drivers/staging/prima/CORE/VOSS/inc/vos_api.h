@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -533,4 +533,5 @@ bool vos_check_arp_src_ip(void *pSkb, bool conversion);
 bool vos_check_arp_rsp_src_ip(void *pSkb, bool conversion);
 void vos_update_arp_fw_tx_delivered(void);
 void vos_update_arp_rx_drop_reorder(void);
+void vos_set_snoc_high_freq_voting(bool enable);
 #endif // if !defined __VOS_NVITEM_H

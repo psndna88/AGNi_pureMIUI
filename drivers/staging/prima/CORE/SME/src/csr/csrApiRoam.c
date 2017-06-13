@@ -16727,6 +16727,26 @@ tANI_BOOLEAN CsrIsRSOCommandAllowed(tpAniSirGlobal pMac, tANI_U8 command)
     return ( desiredMask & ( 1 << pNeighborRoamInfo->lastSentCmd) );
 }
 
+eCsrBand GetCurrentBand(tANI_U8 channel)
+{
+    tSirRFBand Rfband;
+    eCsrBand band;
+
+    Rfband = GetRFBand(channel);
+
+    if (Rfband == SIR_BAND_5_GHZ)
+        band = eCSR_BAND_5G;
+    else if (Rfband == SIR_BAND_2_4_GHZ)
+         band = eCSR_BAND_24;
+    else if (Rfband == SIR_BAND_UNKNOWN)
+         band = eCSR_BAND_MAX;
+
+    VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_INFO,
+              "channel %d Rfband %d band %d", channel, Rfband, band);
+
+    return band;
+}
+
 eHalStatus csrRoamOffloadScan(tpAniSirGlobal pMac, tANI_U8 command, tANI_U8 reason)
 {
    vos_msg_t msg;
@@ -16742,7 +16762,7 @@ eHalStatus csrRoamOffloadScan(tpAniSirGlobal pMac, tANI_U8 command, tANI_U8 reas
    tpCsrChannelInfo    currChannelListInfo;
    tANI_U32 host_channels = 0;
    tANI_U8 ChannelCacheStr[128] = {0};
-   eCsrBand eBand;
+   eCsrBand eBand, Rfband = eCSR_BAND_ALL;
    tSirBssDescription *pBssDesc = NULL;
    tDot11fBeaconIEs *pIes = NULL;
    tANI_U8 minRate = 0, dataRate;
@@ -16817,6 +16837,10 @@ eHalStatus csrRoamOffloadScan(tpAniSirGlobal pMac, tANI_U8 command, tANI_U8 reas
               "%s: pBssDesc not found for current session", __func__);
           return eHAL_STATUS_FAILURE;
       }
+
+       operationChannel = pSession->connectedProfile.operationChannel;
+       VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_INFO,
+                 "operationChannel %d", operationChannel);
    }
    pRequestBuf = vos_mem_malloc(sizeof(tSirRoamOffloadScanReq));
    if (NULL == pRequestBuf)
@@ -16869,7 +16893,6 @@ eHalStatus csrRoamOffloadScan(tpAniSirGlobal pMac, tANI_U8 command, tANI_U8 reas
     else
     {
        VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_INFO, "Calculate Adaptive Threshold");
-       operationChannel = pSession->connectedProfile.operationChannel;
 
        if (!HAL_STATUS_SUCCESS(csrGetParsedBssDescriptionIEs(pMac, pBssDesc, &pIes)))
        {
@@ -17047,6 +17070,14 @@ eHalStatus csrRoamOffloadScan(tpAniSirGlobal pMac, tANI_U8 command, tANI_U8 reas
              vos_mem_free(pRequestBuf);
              return eHAL_STATUS_FAILURE;
           }
+
+          if (pMac->roam.configParam.nRoamIntraBand)
+          {
+             eBand = GetCurrentBand(operationChannel);
+             VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_INFO,
+                       "Current Band %d", eBand);
+          }
+
           for (i=0; i<pNeighborRoamInfo->cfgParams.channelInfo.numOfChannels; i++)
           {
             if(((eCSR_BAND_24 == eBand) && CSR_IS_CHANNEL_24GHZ(*ChannelList)) ||
@@ -17069,15 +17100,32 @@ eHalStatus csrRoamOffloadScan(tpAniSirGlobal pMac, tANI_U8 command, tANI_U8 reas
        else
        {
           ChannelList = pMac->scan.occupiedChannels.channelList;
+
+          if (pMac->roam.configParam.nRoamIntraBand)
+          {
+              Rfband = GetCurrentBand(operationChannel);
+              VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_INFO,
+                        "Current Band %d", Rfband);
+          }
+
           for(i=0; i<pMac->scan.occupiedChannels.numChannels; i++)
           {
-             /*Allow DFS channels only if the DFS channel roam flag is enabled */
-             if(*ChannelList && ((pMac->roam.configParam.allowDFSChannelRoam) ||
-                (!CSR_IS_CHANNEL_DFS(*ChannelList))) &&
-                (num_channels < SIR_ROAM_MAX_CHANNELS))
-             {
-                pRequestBuf->ConnectedNetwork.ChannelCache[num_channels++] = *ChannelList;
-             }
+              if(((eCSR_BAND_24 == Rfband) &&
+                                          CSR_IS_CHANNEL_24GHZ(*ChannelList)) ||
+                 ((eCSR_BAND_5G == Rfband) && CSR_IS_CHANNEL_5GHZ(*ChannelList))
+                                          || (eCSR_BAND_ALL == Rfband))
+              {
+                  /* Allow DFS channels only if the DFS channel roam flag is
+                   * enabled
+                   */
+                 if(*ChannelList && ((pMac->roam.configParam.
+                    allowDFSChannelRoam) || (!CSR_IS_CHANNEL_DFS(*ChannelList)))
+                    && (num_channels < SIR_ROAM_MAX_CHANNELS))
+                 {
+                     pRequestBuf->ConnectedNetwork.ChannelCache[num_channels++]
+                                                                = *ChannelList;
+                 }
+              }
              ChannelList++;
           }
           pRequestBuf->ConnectedNetwork.ChannelCount = num_channels;
@@ -17087,10 +17135,13 @@ eHalStatus csrRoamOffloadScan(tpAniSirGlobal pMac, tANI_U8 command, tANI_U8 reas
           if (reason == REASON_FLUSH_CHANNEL_LIST)
               pRequestBuf->ChannelCacheType = CHANNEL_LIST_DYNAMIC_FLUSH;
           else {
-                 if (csrNeighborRoamIsNewConnectedProfile(pMac))
-                     pRequestBuf->ChannelCacheType = CHANNEL_LIST_DYNAMIC_INIT;
+                 if ((csrNeighborRoamIsNewConnectedProfile(pMac)) ||
+                      (pMac->roam.configParam.nRoamIntraBand))
+                       pRequestBuf->ChannelCacheType =
+                                                   CHANNEL_LIST_DYNAMIC_INIT;
                  else
-                     pRequestBuf->ChannelCacheType = CHANNEL_LIST_DYNAMIC_UPDATE;
+                       pRequestBuf->ChannelCacheType =
+                                                   CHANNEL_LIST_DYNAMIC_UPDATE;
           }
        }
     }
@@ -17103,18 +17154,35 @@ eHalStatus csrRoamOffloadScan(tpAniSirGlobal pMac, tANI_U8 command, tANI_U8 reas
        if (currChannelListInfo->numOfChannels != 0)
        {
           ChannelList = currChannelListInfo->ChannelList;
+
+          if (pMac->roam.configParam.nRoamIntraBand)
+          {
+              Rfband = GetCurrentBand(operationChannel);
+              VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_INFO,
+                        "Current Band %d", Rfband);
+          }
+
           for (i=0;i<currChannelListInfo->numOfChannels;i++)
           {
-             if(*ChannelList && ((pMac->roam.configParam.allowDFSChannelRoam) ||
-                (!CSR_IS_CHANNEL_DFS(*ChannelList))))
-             {
-                pRequestBuf->ConnectedNetwork.ChannelCache[num_channels++] =
+              if(((eCSR_BAND_24 == Rfband) &&
+                                          CSR_IS_CHANNEL_24GHZ(*ChannelList)) ||
+                 ((eCSR_BAND_5G == Rfband) && CSR_IS_CHANNEL_5GHZ(*ChannelList))
+                                          || (eCSR_BAND_ALL == Rfband))
+              {
+                if(*ChannelList && ((pMac->roam.configParam.
+                   allowDFSChannelRoam) || (!CSR_IS_CHANNEL_DFS(*ChannelList))))
+                {
+                   pRequestBuf->ConnectedNetwork.ChannelCache[num_channels++] =
                                                                 *ChannelList;
-             }
+                }
+              }
              ChannelList++;
           }
           pRequestBuf->ConnectedNetwork.ChannelCount = num_channels;
-          pRequestBuf->ChannelCacheType = CHANNEL_LIST_DYNAMIC_UPDATE;
+          if (pMac->roam.configParam.nRoamIntraBand)
+              pRequestBuf->ChannelCacheType = CHANNEL_LIST_DYNAMIC_INIT;
+          else
+              pRequestBuf->ChannelCacheType = CHANNEL_LIST_DYNAMIC_UPDATE;
        }
      }
 #endif
@@ -17153,12 +17221,25 @@ eHalStatus csrRoamOffloadScan(tpAniSirGlobal pMac, tANI_U8 command, tANI_U8 reas
         vos_mem_free(pRequestBuf);
         return eHAL_STATUS_FAILURE;
     }
+
+    if (pMac->roam.configParam.nRoamIntraBand)
+    {
+        Rfband = GetCurrentBand(operationChannel);
+        VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_INFO, "Current Band %d",
+                  Rfband);
+    }
+
     for(i=0; i<pMac->roam.numValidChannels; i++)
     {
-        if(*ChannelList && ((pMac->roam.configParam.allowDFSChannelRoam) ||
-            (!CSR_IS_CHANNEL_DFS(*ChannelList))))
+        if(((eCSR_BAND_24 == Rfband) && CSR_IS_CHANNEL_24GHZ(*ChannelList)) ||
+           ((eCSR_BAND_5G == Rfband) && CSR_IS_CHANNEL_5GHZ(*ChannelList)) ||
+            (eCSR_BAND_ALL == Rfband))
         {
-            pRequestBuf->ValidChannelList[num_channels++] = *ChannelList;
+           if(*ChannelList && ((pMac->roam.configParam.allowDFSChannelRoam) ||
+              (!CSR_IS_CHANNEL_DFS(*ChannelList))))
+           {
+               pRequestBuf->ValidChannelList[num_channels++] = *ChannelList;
+           }
         }
         ChannelList++;
     }

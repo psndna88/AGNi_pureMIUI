@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -209,6 +209,7 @@ typedef struct {
     tANI_S8         ap_rssi;
     struct _hddTdlsPeer_t  *curr_candidate;
     struct work_struct implicit_setup;
+    bool is_tdls_disabled_bmps;
     v_U32_t            magic;
 } tdlsCtx_t;
 

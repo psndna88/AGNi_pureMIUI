@@ -225,6 +225,9 @@ static placeHolderInCapBitmap supportEnabledFeatures[] =
    ,FEATURE_NOT_SUPPORTED          //66
    ,FEATURE_NOT_SUPPORTED          //67
    ,NUD_DEBUG                      //68
+   ,FEATURE_NOT_SUPPORTED          //69 reserved for FATAL_EVENT_LOGGING
+   ,FEATURE_NOT_SUPPORTED          //70 reserved for WIFI_DUAL_BAND_ENABLE
+   ,PROBE_RSP_TEMPLATE_VER1        //71
 };
 
 /*-------------------------------------------------------------------------- 
@@ -1740,6 +1743,11 @@ void WDI_TraceHostFWCapabilities(tANI_U32 *capabilityBitmap)
                           snprintf(pCapStr, sizeof("NUD_DEBUG"),
                                          "%s", "NUD_DEBUG");
                           pCapStr += strlen("NUD_DEEBUG");
+                          break;
+                     case PROBE_RSP_TEMPLATE_VER1:
+                          snprintf(pCapStr, sizeof("PROBE_RSP_TEMPLATE_VER1"),
+                                         "%s", "PROBE_RSP_TEMPLATE_VER1");
+                          pCapStr += strlen("PROBE_RSP_TEMPLATE_VER1");
                           break;
                  }
                  *pCapStr++ = ',';
@@ -13800,7 +13808,9 @@ WDI_ProcessUpdateProbeRspTemplateReq
   wpt_uint8*                             pSendBuffer         = NULL;
   wpt_uint16                             usDataOffset        = 0;
   wpt_uint16                             usSendSize          = 0;
-  tSendProbeRespReqParams                halUpdateProbeRspTmplParams;
+  wpt_uint16                             uMsgSize            = 0;
+  tSendProbeRespReqParams                *halProbeRespTmplParams = NULL;
+  tSendProbeRespReqParams_V1             *halProbeRespTmplParams_V1 = NULL;
   /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
   /*-------------------------------------------------------------------------
@@ -13820,13 +13830,22 @@ WDI_ProcessUpdateProbeRspTemplateReq
     (WDI_UpdateProbeRspTemplateParamsType*)pEventData->pEventData;
   wdiUpdateProbeRespTmplRspCb =
     (WDI_UpdateProbeRspTemplateRspCb)pEventData->pCBfnc;
+
+  if (WDI_getFwWlanFeatCaps(PROBE_RSP_TEMPLATE_VER1))
+     uMsgSize = sizeof(tSendProbeRespReqParams_V1) +
+        pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.
+        uProbeRespTemplateLen -
+        sizeof(halProbeRespTmplParams_V1->pProbeRespTemplate);
+  else
+     uMsgSize = sizeof(tSendProbeRespReqParams);
+
   /*-----------------------------------------------------------------------
     Get message buffer
   -----------------------------------------------------------------------*/
   if (( WDI_STATUS_SUCCESS != WDI_GetMessageBuffer( pWDICtx, WDI_UPD_PROBE_RSP_TEMPLATE_REQ,
-                        sizeof(halUpdateProbeRspTmplParams),
+                        uMsgSize,
                         &pSendBuffer, &usDataOffset, &usSendSize))||
-      ( usSendSize < (usDataOffset + sizeof(halUpdateProbeRspTmplParams) )))
+      ( usSendSize < (usDataOffset + uMsgSize)))
   {
      WPAL_TRACE( eWLAN_MODULE_DAL_CTRL,  eWLAN_PAL_TRACE_LEVEL_WARN,
               "Unable to get send buffer in set bss key req %p %p %p",
@@ -13835,29 +13854,62 @@ WDI_ProcessUpdateProbeRspTemplateReq
      return WDI_STATUS_E_FAILURE;
   }
 
-  wpalMemoryCopy(halUpdateProbeRspTmplParams.bssId,
-                 pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.macBSSID,
-                 WDI_MAC_ADDR_LEN);
+  if (WDI_getFwWlanFeatCaps(PROBE_RSP_TEMPLATE_VER1))
+  {
+     halProbeRespTmplParams_V1 =
+        (tSendProbeRespReqParams_V1 *)(pSendBuffer + usDataOffset);
 
-  halUpdateProbeRspTmplParams.probeRespTemplateLen =
-    pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.uProbeRespTemplateLen;
+     wpalMemoryCopy(halProbeRespTmplParams_V1->bssId,
+        pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.macBSSID,
+        WDI_MAC_ADDR_LEN);
 
-  wpalMemoryCopy(halUpdateProbeRspTmplParams.pProbeRespTemplate,
-    pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.pProbeRespTemplate,
-                 BEACON_TEMPLATE_SIZE);
+     halProbeRespTmplParams_V1->probeRespTemplateLen =
+        pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.
+        uProbeRespTemplateLen;
 
+     wpalMemoryCopy(halProbeRespTmplParams_V1->ucProxyProbeReqValidIEBmap,
+        pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.
+        uaProxyProbeReqValidIEBmap,
+        WDI_PROBE_REQ_BITMAP_IE_LEN);
 
-  wpalMemoryCopy(halUpdateProbeRspTmplParams.ucProxyProbeReqValidIEBmap,
-           pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.uaProxyProbeReqValidIEBmap,
-                 WDI_PROBE_REQ_BITMAP_IE_LEN);
+     wpalMemoryCopy(halProbeRespTmplParams_V1->pProbeRespTemplate,
+        pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.
+        pProbeRespTemplate,
+        halProbeRespTmplParams_V1->probeRespTemplateLen);
+  }
+  else
+  {
+     halProbeRespTmplParams =
+       (tSendProbeRespReqParams *)(pSendBuffer + usDataOffset);
 
-  wpalMemoryCopy( pSendBuffer+usDataOffset,
-                  &halUpdateProbeRspTmplParams,
-                  sizeof(halUpdateProbeRspTmplParams));
+     wpalMemoryCopy(halProbeRespTmplParams->bssId,
+        pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.macBSSID,
+        WDI_MAC_ADDR_LEN);
+
+     if (BEACON_TEMPLATE_SIZE <
+       pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.
+       uProbeRespTemplateLen)
+        halProbeRespTmplParams->probeRespTemplateLen = BEACON_TEMPLATE_SIZE;
+     else
+        halProbeRespTmplParams->probeRespTemplateLen =
+            pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.
+            uProbeRespTemplateLen;
+
+     wpalMemoryCopy(halProbeRespTmplParams->ucProxyProbeReqValidIEBmap,
+        pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.
+        uaProxyProbeReqValidIEBmap,
+        WDI_PROBE_REQ_BITMAP_IE_LEN);
+     wpalMemoryCopy(halProbeRespTmplParams->pProbeRespTemplate,
+        pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.
+        pProbeRespTemplate,
+        BEACON_TEMPLATE_SIZE);
+  }
 
   pWDICtx->wdiReqStatusCB     = pwdiUpdateProbeRespTmplParams->wdiReqStatusCB;
   pWDICtx->pReqStatusUserData = pwdiUpdateProbeRespTmplParams->pUserData;
 
+  vos_mem_free(pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.
+       pProbeRespTemplate);
   /*-------------------------------------------------------------------------
     Send Update Probe Resp Template Request to HAL
   -------------------------------------------------------------------------*/
@@ -16860,15 +16912,15 @@ WDI_ProcessInitScanRsp
   }
   else if (WDI_STATUS_SUCCESS != wdiStatus)
   {
-//     WPAL_TRACE(eWLAN_MODULE_DAL_CTRL, eWLAN_PAL_TRACE_LEVEL_ERROR,
-//               "Error returned WDI_ProcessInitScanRspi:%d BMPS%d",
-//               wdiStatus, pWDICtx->bInBmps);
+     WPAL_TRACE(eWLAN_MODULE_DAL_CTRL, eWLAN_PAL_TRACE_LEVEL_ERROR,
+               "Error returned WDI_ProcessInitScanRspi:%d BMPS%d",
+               wdiStatus, pWDICtx->bInBmps);
   }
   else
   {
-//     WPAL_TRACE(eWLAN_MODULE_DAL_CTRL, eWLAN_PAL_TRACE_LEVEL_ERROR,
-//               "Error returned WDI_ProcessInitScanRspi:%d BMPS%d",
-//               wdiStatus, pWDICtx->bInBmps);
+     WPAL_TRACE(eWLAN_MODULE_DAL_CTRL, eWLAN_PAL_TRACE_LEVEL_ERROR,
+               "Error returned WDI_ProcessInitScanRspi:%d BMPS%d",
+               wdiStatus, pWDICtx->bInBmps);
   }
 
   /*Notify UMAC*/

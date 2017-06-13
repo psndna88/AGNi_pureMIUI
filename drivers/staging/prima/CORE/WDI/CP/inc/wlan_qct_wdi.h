@@ -3564,14 +3564,14 @@ typedef struct
   /*BSSID for which the Probe Template is to be used*/
   wpt_macAddr     macBSSID;
 
-  /*Probe response template*/
-  wpt_uint8      *pProbeRespTemplate[WDI_PROBE_RSP_TEMPLATE_SIZE];
-
   /*Template Len*/
   wpt_uint32      uProbeRespTemplateLen;
 
   /*Bitmap for the IEs that are to be handled at SLM level*/
   wpt_uint32      uaProxyProbeReqValidIEBmap[WDI_PROBE_REQ_BITMAP_IE_LEN];
+
+  /*Probe response template*/
+  wpt_uint8      *pProbeRespTemplate;
 
 }WDI_UpdateProbeRspTemplateInfoType;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -454,6 +454,8 @@ VOS_STATUS vos_open( v_CONTEXT_t *pVosContext, void *devHandle )
    VOS_TRACE( VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_INFO_HIGH,
                "%s: VOSS successfully Opened", __func__);
 
+   gpVosContext->snoc_high_freq_voting = false;
+   spin_lock_init(&gpVosContext->freq_voting_lock);
    *pVosContext = gpVosContext;
 
    return VOS_STATUS_SUCCESS;
@@ -3929,3 +3931,42 @@ void vos_update_arp_rx_drop_reorder(void)
 
    pAdapter->hdd_stats.hddArpStats.rx_host_drop_reorder++;
 }
+
+/**
+ * vos_set_snoc_high_freq_voting() - enable/disable high freq voting
+ * @enable: true if need to be enabled
+ *
+ * enable/disable high freq voting
+ *
+ * Return: Void
+ */
+#ifdef HAVE_WCNSS_SNOC_HIGH_FREQ_VOTING
+void vos_set_snoc_high_freq_voting(bool enable)
+{
+   VosContextType *vos_ctx = NULL;
+
+   /* Get the Global VOSS Context */
+   vos_ctx = vos_get_global_context(VOS_MODULE_ID_SYS, NULL);
+
+   if (!vos_ctx) {
+      VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
+            "%s: vos context is NULL", __func__);
+      return;
+   }
+
+   spin_lock(&vos_ctx->freq_voting_lock);
+   if (vos_ctx->snoc_high_freq_voting != enable)
+   {
+      vos_ctx->snoc_high_freq_voting = enable;
+      spin_unlock(&vos_ctx->freq_voting_lock);
+      wcnss_snoc_vote(enable);
+      return;
+   }
+   spin_unlock(&vos_ctx->freq_voting_lock);
+}
+#else
+void vos_set_snoc_high_freq_voting(bool enable)
+{
+   return;
+}
+#endif
