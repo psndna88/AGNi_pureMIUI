@@ -5854,6 +5854,18 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		return 0;
 	}
 
+	if (drv == DRIVER_LINUX_WCN) {
+		sigma_dut_print(dut, DUT_MSG_INFO, "setting ip addr %s mask %s",
+				ap_inet_addr, ap_inet_mask);
+		snprintf(buf, sizeof(buf), "ifconfig %s %s netmask %s up",
+			 ifname, ap_inet_addr, ap_inet_mask);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to initialize the interface");
+			return -1;
+		}
+	}
+
 	if (dut->ap_l2tif) {
 		snprintf(path, sizeof(path),
 			 "/sys/class/net/%s/brport/hairpin_mode",
