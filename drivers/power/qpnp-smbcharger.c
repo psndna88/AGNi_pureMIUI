@@ -3355,6 +3355,8 @@ static int smbchg_icl_loop_disable_check(struct smbchg_chip *chip)
 
 #define UNKNOWN_BATT_TYPE	"Unknown Battery"
 #define LOADING_BATT_TYPE	"Loading Battery Data"
+int smb_fastchg_ma = 2000;
+module_param_named(fastchg_current_ma, smb_fastchg_ma, int, S_IRUSR | S_IWUSR);
 static int smbchg_config_chg_battery_type(struct smbchg_chip *chip)
 {
 	int rc = 0, max_voltage_uv = 0, fastchg_ma = 0, ret = 0, iterm_ua = 0;
@@ -3439,26 +3441,31 @@ static int smbchg_config_chg_battery_type(struct smbchg_chip *chip)
 	 * Only configure from profile if fastchg-ma is not defined in the
 	 * charger device node.
 	 */
-	if (!of_find_property(chip->spmi->dev.of_node,
+/*	if (!of_find_property(chip->spmi->dev.of_node,
 				"qcom,fastchg-current-ma", NULL)) {
 		rc = of_property_read_u32(profile_node,
 				"qcom,fastchg-current-ma", &fastchg_ma);
 		if (rc) {
 			ret = rc;
-		} else {
-			pr_smb(PR_MISC,
-				"fastchg-ma changed from to %dma for battery-type %s\n",
-				fastchg_ma, chip->battery_type);
-			rc = vote(chip->fcc_votable, BATT_TYPE_FCC_VOTER, true,
-							fastchg_ma);
-			if (rc < 0) {
-				dev_err(chip->dev,
-					"Couldn't vote for fastchg current rc=%d\n",
-					rc);
-				return rc;
-			}
-		}
+		} else { */
+	if (smb_fastchg_ma > 2400) {
+		smb_fastchg_ma = 2400;
+	} else if (smb_fastchg_ma < 900) {
+		smb_fastchg_ma = 900;
 	}
+	fastchg_ma = smb_fastchg_ma;
+	pr_smb(PR_MISC,
+		"fastchg-ma changed from to %dma for battery-type %s\n",
+		fastchg_ma, chip->battery_type);
+	rc = vote(chip->fcc_votable, BATT_TYPE_FCC_VOTER, true,
+					fastchg_ma);
+	if (rc < 0) {
+		dev_err(chip->dev,
+			"Couldn't vote for fastchg current rc=%d\n", rc);
+		return rc;
+	}
+//		}
+//	}
 
 	return ret;
 }
@@ -7506,7 +7513,7 @@ static int smb_parse_dt(struct smbchg_chip *chip)
 				chip->thermal_mitigation, chip->thermal_levels);
 		if (rc) {
 			dev_err(chip->dev,
-				"Couldn't read threm limits rc = %d\n", rc);
+				"Couldn't read thermal limits rc = %d\n", rc);
 			return rc;
 		}
 	}
