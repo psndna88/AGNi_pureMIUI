@@ -990,10 +990,11 @@ int main(int argc, char *argv[])
 	if (local_cmd)
 		return run_local_cmd(port, local_cmd);
 
-	if (wifi_chip_type == DRIVER_QNXNTO &&
+	if ((wifi_chip_type == DRIVER_QNXNTO ||
+	     wifi_chip_type == DRIVER_LINUX_WCN) &&
 	    (sigma_main_ifname == NULL || sigma_station_ifname == NULL)) {
 		sigma_dut_print(&sigma_dut, DUT_MSG_ERROR,
-				"Interface should be provided for QNX driver check option M and S");
+				"Interface should be provided for QNX/LINUX-WCN driver - check option M and S");
 	}
 
 	sigma_dut_register_cmds();

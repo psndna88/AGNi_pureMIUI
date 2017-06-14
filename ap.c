@@ -5357,21 +5357,21 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 	case AP_11g:
 	case AP_11b:
 	case AP_11ng:
-		ifname = (drv == DRIVER_MAC80211 || drv == DRIVER_LINUX_WCN) ?
-			"wlan0" : "ath0";
-		if (drv == DRIVER_QNXNTO && sigma_main_ifname)
+		ifname = (drv == DRIVER_MAC80211) ? "wlan0" : "ath0";
+		if ((drv == DRIVER_QNXNTO || drv == DRIVER_LINUX_WCN) &&
+		    sigma_main_ifname)
 			ifname = sigma_main_ifname;
 		fprintf(f, "hw_mode=g\n");
 		break;
 	case AP_11a:
 	case AP_11na:
 	case AP_11ac:
-		if (drv == DRIVER_QNXNTO) {
+		if (drv == DRIVER_QNXNTO || drv == DRIVER_LINUX_WCN) {
 			if (sigma_main_ifname)
 				ifname = sigma_main_ifname;
 			else
 				ifname = "wlan0";
-		} else if (drv == DRIVER_MAC80211 || drv == DRIVER_LINUX_WCN) {
+		} else if (drv == DRIVER_MAC80211) {
 			if (if_nametoindex("wlan1") > 0)
 				ifname = "wlan1";
 			else
