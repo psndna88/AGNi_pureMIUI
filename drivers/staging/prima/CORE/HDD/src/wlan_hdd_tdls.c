@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -2620,6 +2620,7 @@ void wlan_hdd_tdls_check_bmps(hdd_adapter_t *pAdapter)
     tdlsCtx_t *pHddTdlsCtx = NULL;
     hdd_context_t *pHddCtx = NULL;
     hddTdlsPeer_t *curr_peer;
+    VOS_STATUS status;
 
     if ((NULL == pAdapter) || (WLAN_HDD_ADAPTER_MAGIC != pAdapter->magic))
     {
@@ -2666,7 +2667,10 @@ void wlan_hdd_tdls_check_bmps(hdd_adapter_t *pAdapter)
             VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_WARN,
                        "%s: No TDLS peer connected/discovery sent. Enable BMPS",
                        __func__);
-            hdd_enable_bmps_imps(pHddCtx);
+            status = hdd_enable_bmps_imps(pHddCtx);
+
+            if (status == VOS_STATUS_SUCCESS)
+                pHddTdlsCtx->is_tdls_disabled_bmps = false;
         }
     }
     else
@@ -2676,7 +2680,10 @@ void wlan_hdd_tdls_check_bmps(hdd_adapter_t *pAdapter)
         {
             VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
                        "%s: TDLS peer connected. Disable BMPS", __func__);
-            hdd_disable_bmps_imps(pHddCtx, WLAN_HDD_INFRA_STATION);
+            status = hdd_disable_bmps_imps(pHddCtx, WLAN_HDD_INFRA_STATION);
+
+            if (status == VOS_STATUS_SUCCESS)
+                pHddTdlsCtx->is_tdls_disabled_bmps = true;
         }
     }
     return;
@@ -2862,6 +2869,18 @@ void wlan_hdd_tdls_set_mode(hdd_context_t *pHddCtx,
            {
                set_bit((unsigned long)source, &pHddCtx->tdls_source_bitmap);
                wlan_hdd_tdls_implicit_disable(pHddTdlsCtx);
+               if (pHddTdlsCtx->is_tdls_disabled_bmps) {
+                   if (FALSE == sme_IsPmcBmps(pHddCtx->hHal)) {
+                       VOS_TRACE( VOS_MODULE_ID_HDD,
+                               VOS_TRACE_LEVEL_DEBUG,
+                               "%s: TDLS is disabled. Enable BMPS",
+                               __func__);
+                       status = hdd_enable_bmps_imps(pHddCtx);
+
+                       if (status == VOS_STATUS_SUCCESS)
+                           pHddTdlsCtx->is_tdls_disabled_bmps = false;
+                   }
+               }
            }
            else if ((eTDLS_SUPPORT_EXPLICIT_TRIGGER_ONLY == tdls_mode))
            {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -1085,8 +1085,8 @@ sme_process_cmd:
                             {
                                csrReleaseCommand(pMac, pCommand);
                             }
+                            pMac->max_power_cmd_pending = false;
                             break;
-
 #ifdef FEATURE_OEM_DATA_SUPPORT
                         case eSmeCommandOemDataReq:
                             csrLLUnlock(&pMac->sme.smeCmdActiveList);
@@ -9565,6 +9565,13 @@ eHalStatus sme_SetMaxTxPower(tHalHandle hHal, tSirMacAddr bssid,
    eHalStatus status = eHAL_STATUS_SUCCESS;
    tSmeCmd *set_max_tx_pwr;
 
+   if (pMac->max_power_cmd_pending)
+   {
+      smsLog(pMac, LOG1,
+        FL("set max tx power already in progress"));
+      return eHAL_STATUS_RESOURCES;
+   }
+
    MTRACE(vos_trace(VOS_MODULE_ID_SME,
        TRACE_CODE_SME_RX_HDD_SET_MAXTXPOW, NO_SESSION, 0));
    smsLog(pMac, LOG1,
@@ -9583,11 +9590,13 @@ eHalStatus sme_SetMaxTxPower(tHalHandle hHal, tSirMacAddr bssid,
            vos_mem_copy(set_max_tx_pwr->u.set_tx_max_pwr.self_sta_mac_addr,
                  self_mac_addr, SIR_MAC_ADDR_LENGTH);
            set_max_tx_pwr->u.set_tx_max_pwr.power = db;
+           pMac->max_power_cmd_pending = true;
            status = csrQueueSmeCommand(pMac, set_max_tx_pwr, eANI_BOOLEAN_TRUE);
            if ( !HAL_STATUS_SUCCESS( status ) )
            {
                smsLog( pMac, LOGE, FL("fail to send msg status = %d"), status );
                csrReleaseCommandScan(pMac, set_max_tx_pwr);
+               pMac->max_power_cmd_pending = false;
            }
        }
        else
@@ -10276,6 +10285,16 @@ eHalStatus sme_UpdateIsFastRoamIniFeatureEnabled(tHalHandle hHal,
                      "%s: FastRoam is already enabled or disabled, nothing to do (returning) old(%d) new(%d)", __func__,
                       pMac->roam.configParam.isFastRoamIniFeatureEnabled,
                       isFastRoamIniFeatureEnabled);
+      return eHAL_STATUS_SUCCESS;
+  }
+  if (smeNeighborMiddleOfRoaming(hHal))
+  {
+      VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_INFO,
+                "%s: In middle of roaming isFastRoamIniFeatureEnabled %d",
+                __func__, isFastRoamIniFeatureEnabled);
+      if (!isFastRoamIniFeatureEnabled)
+          pMac->roam.pending_roam_disable = TRUE;
+
       return eHAL_STATUS_SUCCESS;
   }
 
@@ -14420,4 +14439,168 @@ void sme_set_mgmt_frm_via_wq5(tHalHandle hHal, tANI_BOOLEAN sendMgmtPktViaWQ5)
         sme_ReleaseGlobalLock(&pMac->sme);
     }
     return;
+}
+
+/* ARP DEBUG STATS */
+
+/**
+ * sme_set_nud_debug_stats() - sme api to set nud debug stats
+ * @hHal: handle to hal
+ * @pSetStatsParam: pointer to set stats param
+ */
+eHalStatus sme_set_nud_debug_stats(tHalHandle hHal,
+                         setArpStatsParams *pSetStatsParam)
+{
+   setArpStatsParams *arp_set_param;
+   vos_msg_t msg;
+
+   arp_set_param = vos_mem_malloc(sizeof(*arp_set_param));
+   if (arp_set_param == NULL) {
+       VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
+               FL("Memory allocation failure"));
+       return VOS_STATUS_E_NOMEM;
+   }
+
+   vos_mem_copy(arp_set_param, pSetStatsParam, sizeof(*arp_set_param));
+
+   msg.type = WDA_SET_ARP_STATS_REQ;
+   msg.reserved = 0;
+   msg.bodyptr = arp_set_param;
+
+   if (VOS_STATUS_SUCCESS != vos_mq_post_message(VOS_MODULE_ID_WDA, &msg)) {
+       VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
+               FL("Not able to post message to WDA"));
+       vos_mem_free(arp_set_param);
+       return VOS_STATUS_E_FAILURE;
+   }
+
+   return VOS_STATUS_SUCCESS;
+}
+
+/**
+ * sme_get_nud_debug_stats() - sme api to get nud debug stats
+ * @hHal: handle to hal
+ * @pGetStatsParam: pointer to set stats param
+ */
+eHalStatus sme_get_nud_debug_stats(tHalHandle hHal,
+                         getArpStatsParams *pGetStatsParam)
+{
+   getArpStatsParams *arpGetParams;
+   vos_msg_t msg;
+
+   arpGetParams = vos_mem_malloc(sizeof(*arpGetParams));
+   if (arpGetParams == NULL) {
+       VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
+               FL("Memory allocation failure"));
+       return VOS_STATUS_E_NOMEM;
+   }
+
+   vos_mem_copy(arpGetParams, pGetStatsParam, sizeof(*arpGetParams));
+
+   msg.type = WDA_GET_ARP_STATS_REQ;
+   msg.reserved = 0;
+   msg.bodyptr = arpGetParams;
+
+   if (VOS_STATUS_SUCCESS != vos_mq_post_message(VOS_MODULE_ID_WDA, &msg)) {
+       VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
+               FL("Not able to post message to WDA"));
+       vos_mem_free(arpGetParams);
+       return VOS_STATUS_E_FAILURE;
+   }
+
+   return VOS_STATUS_SUCCESS;
+}
+
+eHalStatus sme_test_con_alive(tHalHandle hHal)
+{
+   vos_msg_t wdaMsg = {0};
+
+   wdaMsg.type = WDA_TRIGGER_ADD_BA_REQ;
+   wdaMsg.bodyptr = NULL;
+   wdaMsg.reserved = 0;
+
+   if (VOS_STATUS_SUCCESS != vos_mq_post_message(VOS_MQ_ID_WDA, &wdaMsg))
+      return  VOS_STATUS_E_FAILURE;
+
+   return VOS_STATUS_SUCCESS;
+}
+
+
+eHalStatus sme_get_con_alive(tHalHandle hHal,
+                             pgetConStatusParams conStatusParams)
+{
+   vos_msg_t wdaMsg = {0};
+   pgetConStatusParams statusParams;
+   VOS_STATUS vosStatus;
+
+   statusParams = vos_mem_malloc(sizeof(getConStatusParams));
+   if (NULL == statusParams) {
+      VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
+                FL("Memory allocation failure"));
+       return VOS_STATUS_E_NOMEM;
+   }
+
+   vos_mem_copy(statusParams, conStatusParams, sizeof(getConStatusParams));
+   wdaMsg.type = WDA_GET_CON_STATUS;
+   wdaMsg.bodyptr = statusParams;
+   wdaMsg.reserved = 0;
+
+   vosStatus = vos_mq_post_message(VOS_MQ_ID_WDA, &wdaMsg);
+   if (!VOS_IS_STATUS_SUCCESS(vosStatus)) {
+      VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
+                FL(" Not able to post message"));
+      vos_mem_free(statusParams);
+      return  VOS_STATUS_E_FAILURE;
+   }
+
+   return VOS_STATUS_SUCCESS;
+}
+
+eHalStatus sme_test_con_delba(tHalHandle hHal, uint8_t sta_id,
+                              uint8_t session_id)
+{
+   tpSmeDelBAPeerInd msg;
+   tpAniSirGlobal pMac = PMAC_STRUCT(hHal);
+   tCsrRoamSession *pSession = CSR_GET_SESSION(pMac, session_id);
+   eHalStatus status = eHAL_STATUS_FAILURE;
+
+   if (!CSR_IS_SESSION_VALID(pMac, session_id))
+   {
+      VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
+                FL("Session is invalid"));
+      return status;
+   }
+
+   if (!pMac->lim.test_status_bainfo.tx_aggr)
+   {
+      VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
+                FL("BA session not established"));
+      return status;
+   }
+
+   if (eHAL_STATUS_SUCCESS == sme_AcquireGlobalLock(&pMac->sme))
+   {
+      msg = vos_mem_malloc(sizeof(tSmeDelBAPeerInd));
+      if (NULL == msg)
+      {
+         VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
+                FL("Memory allocation failure"));
+          return VOS_STATUS_E_NOMEM;
+      }
+
+      msg->staIdx = sta_id;
+      msg->baTID = pMac->lim.test_status_bainfo.tid;
+      vos_mem_copy(msg->bssId, pSession->connectedProfile.bssid,
+                   sizeof(tSirMacAddr));
+      msg->baDirection = eBA_INITIATOR;
+
+      msg->mesgType = eWNI_SME_DEL_TEST_BA;
+      msg->mesgLen = sizeof(tSmeDelBAPeerInd);
+
+      status = palSendMBMessage(pMac->hHdd, msg);
+
+      sme_ReleaseGlobalLock(&pMac->sme);
+   }
+
+   return status;
 }

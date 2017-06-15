@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -132,9 +132,8 @@ static void hdd_sendMgmtFrameOverMonitorIface( hdd_adapter_t *pMonAdapter,
                                                tANI_U8* pbFrames,
                                                tANI_U8 frameType );
 
-static v_BOOL_t hdd_p2p_is_action_type_rsp( const u8 *buf )
+static v_BOOL_t wlan_hdd_is_type_p2p_action( const u8 *buf )
 {
-    tActionFrmType actionFrmType;
     const u8 *ouiPtr;
 
     if ( buf[WLAN_HDD_PUBLIC_ACTION_FRAME_CATEGORY_OFFSET] !=
@@ -158,14 +157,23 @@ static v_BOOL_t hdd_p2p_is_action_type_rsp( const u8 *buf )
         return VOS_FALSE;
     }
 
-    actionFrmType = buf[WLAN_HDD_PUBLIC_ACTION_FRAME_SUB_TYPE_OFFSET];
-    if ( actionFrmType != WLAN_HDD_INVITATION_REQ &&
-        actionFrmType != WLAN_HDD_GO_NEG_REQ &&
-        actionFrmType != WLAN_HDD_DEV_DIS_REQ &&
-        actionFrmType != WLAN_HDD_PROV_DIS_REQ )
-        return VOS_TRUE;
-    else
-        return VOS_FALSE;
+    return VOS_TRUE;
+}
+
+static bool hdd_p2p_is_action_type_rsp( const u8 *buf )
+{
+    tActionFrmType actionFrmType;
+
+    if ( wlan_hdd_is_type_p2p_action(buf) )
+    {
+        actionFrmType = buf[WLAN_HDD_PUBLIC_ACTION_FRAME_SUB_TYPE_OFFSET];
+        if ( actionFrmType != WLAN_HDD_INVITATION_REQ &&
+            actionFrmType != WLAN_HDD_GO_NEG_REQ &&
+            actionFrmType != WLAN_HDD_DEV_DIS_REQ &&
+            actionFrmType != WLAN_HDD_PROV_DIS_REQ )
+            return VOS_TRUE;
+    }
+    return VOS_FALSE;
 }
 
 eHalStatus wlan_hdd_remain_on_channel_callback( tHalHandle hHal, void* pCtx,
@@ -1293,7 +1301,7 @@ int __wlan_hdd_mgmt_tx( struct wiphy *wiphy, struct net_device *dev,
 
     if ((type == SIR_MAC_MGMT_FRAME) &&
             (subType == SIR_MAC_MGMT_ACTION) &&
-            (buf[WLAN_HDD_PUBLIC_ACTION_FRAME_OFFSET] == WLAN_HDD_PUBLIC_ACTION_FRAME))
+            wlan_hdd_is_type_p2p_action(&buf[WLAN_HDD_PUBLIC_ACTION_FRAME_BODY_OFFSET]))
     {
         actionFrmType = buf[WLAN_HDD_PUBLIC_ACTION_FRAME_TYPE_OFFSET];
 #ifdef WLAN_FEATURE_P2P_DEBUG

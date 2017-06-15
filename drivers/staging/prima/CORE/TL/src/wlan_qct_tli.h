@@ -484,6 +484,7 @@ typedef struct
   WLANTL_REORDER_BUFFER_T     *reorderBuffer;
 
   v_U16_t            LastSN;
+  bool               set_data_filter;
 }WLANTL_BAReorderType;
 
 
@@ -966,6 +967,8 @@ typedef struct
   WLANTL_RoamMonitorType gDsRxRoamStats;
 #endif
 
+  uint8_t track_arp;
+  uint32_t txbd_token;
 }WLANTL_CbType;
 
 

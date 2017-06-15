@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -3961,4 +3961,15 @@ eHalStatus sme_remove_bssid_from_scan_list(tHalHandle hal,
 void sme_set_mgmt_frm_via_wq5(tHalHandle hHal,
         tANI_BOOLEAN sendMgmtPktViaWQ5);
 eHalStatus sme_update_cfg_int_param(tHalHandle hHal, tANI_U32 cfg_id);
+
+/* ARP DEBUG STATS */
+eHalStatus sme_set_nud_debug_stats(tHalHandle hHal,
+                               psetArpStatsParams pSetStatsParam);
+eHalStatus sme_get_nud_debug_stats(tHalHandle hHal,
+                               pgetArpStatsParams pGetStatsParam);
+eHalStatus sme_test_con_alive(tHalHandle hHal);
+eHalStatus sme_get_con_alive(tHalHandle hHal,
+                             pgetConStatusParams conStatusParams);
+eHalStatus sme_test_con_delba(tHalHandle hHal, uint8_t sta_id,
+                              uint8_t session_id);
 #endif //#if !defined( __SME_API_H )

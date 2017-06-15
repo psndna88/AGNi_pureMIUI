@@ -2281,6 +2281,18 @@ static tANI_S32 csrFindSelfCongestionScore(tpAniSirGlobal pMac,
     if (pSession == NULL)
         return -1;
 
+    if (bssInfo->rssi < pMac->roam.configParam.PERMinRssiThresholdForRoam) {
+        smsLog(pMac, LOG1,
+               FL("Current AP has low rssi=%d than %d"), bssInfo->rssi,
+               pMac->roam.configParam.PERMinRssiThresholdForRoam);
+        /*
+         * Make Current candidate score as zero which will cause roaming
+         * in low RSSI scenarios
+         */
+        pMac->currentBssScore = 0;
+        return 0;
+    }
+
     for (i = 0; i <= pMac->PERroamCandidatesCnt; i++)
         if (pMac->candidateChannelInfo[i].channelNumber == bssInfo->channelId)
             break;
@@ -6885,7 +6897,7 @@ eHalStatus csrScanCopyRequest(tpAniSirGlobal pMac, tCsrScanRequest *pDstReq, tCs
                         }
                         else
                             csrValidateScanChannels(pMac, pDstReq, pSrcReq,
-                                                    new_index, ch144_support);
+                                                    &new_index, ch144_support);
                         pDstReq->ChannelInfo.numOfChannels = new_index;
 #ifdef FEATURE_WLAN_LFR
                         if ( ( ( eCSR_SCAN_HO_BG_SCAN ==
@@ -9365,7 +9377,7 @@ void UpdateCCKMTSF(tANI_U32 *timeStamp0, tANI_U32 *timeStamp1, tANI_U32 *incr)
 #endif
 
 void csrValidateScanChannels(tpAniSirGlobal pMac, tCsrScanRequest *pDstReq,
-        tCsrScanRequest *pSrcReq, int new_index, tANI_U8 ch144_support)
+        tCsrScanRequest *pSrcReq, tANI_U32 *new_index, tANI_U8 ch144_support)
 {
 
     int index;
@@ -9416,9 +9428,9 @@ void csrValidateScanChannels(tpAniSirGlobal pMac, tCsrScanRequest *pDstReq,
                             continue;
                         }
 
-            pDstReq->ChannelInfo.ChannelList[new_index] =
+            pDstReq->ChannelInfo.ChannelList[*new_index] =
                 pSrcReq->ChannelInfo.ChannelList[index];
-            new_index++;
+            (*new_index)++;
         }
     }
 }

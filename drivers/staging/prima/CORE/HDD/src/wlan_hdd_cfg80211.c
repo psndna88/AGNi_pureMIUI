@@ -7464,6 +7464,455 @@ static int wlan_hdd_cfg80211_wifi_configuration_set(struct wiphy *wiphy,
 
     return ret;
 }
+
+/*
+ * define short names for the global vendor params
+ * used by wlan_hdd_cfg80211_setarp_stats_cmd()
+ */
+#define STATS_SET_INVALID \
+    QCA_ATTR_NUD_STATS_SET_INVALID
+#define STATS_SET_START \
+    QCA_ATTR_NUD_STATS_SET_START
+#define STATS_GW_IPV4 \
+    QCA_ATTR_NUD_STATS_GW_IPV4
+#define STATS_SET_MAX \
+    QCA_ATTR_NUD_STATS_SET_MAX
+
+const struct nla_policy
+qca_wlan_vendor_set_nud_stats[STATS_SET_MAX +1] =
+{
+    [STATS_SET_START] = {.type = NLA_FLAG },
+    [STATS_GW_IPV4] = {.type = NLA_U32 },
+};
+
+/**
+ * hdd_test_con_alive() - check connection alive
+ * @adapter: pointer to adapter
+ *
+ * Return: true if SME command is sent of false otherwise
+ */
+static bool hdd_test_con_alive(hdd_adapter_t *adapter)
+{
+   hdd_context_t *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+
+   if (eHAL_STATUS_SUCCESS != sme_test_con_alive(hdd_ctx->hHal)) {
+      hddLog(LOGE, FL("could not send  ADDBA"));
+      return false;
+   }
+
+   return true;
+}
+
+/**
+ * hdd_set_nud_stats_cb() - hdd callback api to get status
+ * @data: pointer to adapter
+ * @rsp: status
+ *
+ * Return: None
+ */
+static void hdd_set_nud_stats_cb(void *data, VOS_STATUS rsp)
+{
+
+   hdd_adapter_t *adapter = (hdd_adapter_t *)data;
+
+   if (NULL == adapter)
+      return;
+
+   if (VOS_STATUS_SUCCESS == rsp) {
+      VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
+                "%s success received STATS_SET_START", __func__);
+      if (adapter->nud_set_arp_stats)
+         hdd_test_con_alive(adapter);
+   } else {
+      VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                "%s STATS_SET_START Failed!!", __func__);
+   }
+   return;
+}
+
+/**
+ * __wlan_hdd_cfg80211_set_nud_stats() - set arp stats command to firmware
+ * @wiphy: pointer to wireless wiphy structure.
+ * @wdev: pointer to wireless_dev structure.
+ * @data: pointer to apfind configuration data.
+ * @data_len: the length in byte of apfind data.
+ *
+ * This is called when wlan driver needs to send arp stats to
+ * firmware.
+ *
+ * Return: An error code or 0 on success.
+ */
+static int __wlan_hdd_cfg80211_set_nud_stats(struct wiphy *wiphy,
+        struct wireless_dev *wdev,
+        const void *data, int data_len)
+{
+    struct nlattr *tb[STATS_SET_MAX + 1];
+    struct net_device   *dev = wdev->netdev;
+    hdd_adapter_t       *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
+    hdd_context_t *hdd_ctx = wiphy_priv(wiphy);
+    v_CONTEXT_t pVosContext = (WLAN_HDD_GET_CTX(adapter))->pvosContext;
+    setArpStatsParams arp_stats_params;
+    int err = 0;
+
+    ENTER();
+
+    err = wlan_hdd_validate_context(hdd_ctx);
+    if (0 != err)
+        return err;
+
+    if (!sme_IsFeatureSupportedByFW(NUD_DEBUG)) {
+        VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                  "%s NUD_DEBUG feature not supported by firmware!!", __func__);
+        return -EINVAL;
+    }
+
+    err = nla_parse(tb, STATS_SET_MAX, data, data_len,
+                    qca_wlan_vendor_set_nud_stats);
+    if (err)
+    {
+        VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                  "%s STATS_SET_START ATTR", __func__);
+        return err;
+    }
+
+    if (tb[STATS_SET_START])
+    {
+        if (!tb[STATS_GW_IPV4]) {
+            VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                      "%s STATS_SET_START CMD", __func__);
+            return -EINVAL;
+        }
+        arp_stats_params.flag = true;
+        adapter->nud_set_arp_stats = true;
+        arp_stats_params.ip_addr = nla_get_u32(tb[STATS_GW_IPV4]);
+    } else {
+        arp_stats_params.flag = false;
+        adapter->nud_set_arp_stats = false;
+    }
+    if (!arp_stats_params.flag) {
+        VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
+                  "%s STATS_SET_START Cleared!!", __func__);
+        hdd_ctx->track_arp_ip = 0;
+        vos_mem_zero(&adapter->hdd_stats.hddArpStats, sizeof(adapter->hdd_stats.hddArpStats));
+    }
+
+    arp_stats_params.pkt_type = 1; // ARP packet type
+
+    if (arp_stats_params.flag) {
+       hdd_ctx->track_arp_ip = arp_stats_params.ip_addr;
+       WLANTL_SetARPFWDatapath(pVosContext, true);
+       VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
+                 "%s Set FW in data path for ARP with tgt IP :%d",
+                 __func__,  hdd_ctx->track_arp_ip);
+    }
+    else {
+       WLANTL_SetARPFWDatapath(pVosContext, false);
+       VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
+                 "%s Remove FW from data path", __func__);
+    }
+
+    arp_stats_params.rsp_cb_fn = hdd_set_nud_stats_cb;
+    arp_stats_params.data_ctx = adapter;
+
+    if (eHAL_STATUS_SUCCESS !=
+        sme_set_nud_debug_stats(hdd_ctx->hHal, &arp_stats_params)) {
+        VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                  "%s STATS_SET_START CMD Failed!!", __func__);
+        return -EINVAL;
+    }
+
+    EXIT();
+
+    return err;
+}
+
+/**
+ * wlan_hdd_cfg80211_set_nud_stats() - set arp stats command to firmware
+ * @wiphy: pointer to wireless wiphy structure.
+ * @wdev: pointer to wireless_dev structure.
+ * @data: pointer to apfind configuration data.
+ * @data_len: the length in byte of apfind data.
+ *
+ * This is called when wlan driver needs to send arp stats to
+ * firmware.
+ *
+ * Return: An error code or 0 on success.
+ */
+static int wlan_hdd_cfg80211_set_nud_stats(struct wiphy *wiphy,
+        struct wireless_dev *wdev,
+        const void *data, int data_len)
+{
+    int ret;
+
+    vos_ssr_protect(__func__);
+    ret = __wlan_hdd_cfg80211_set_nud_stats(wiphy, wdev, data, data_len);
+    vos_ssr_unprotect(__func__);
+
+    return ret;
+}
+#undef STATS_SET_INVALID
+#undef STATS_SET_START
+#undef STATS_GW_IPV4
+#undef STATS_SET_MAX
+
+/*
+ * define short names for the global vendor params
+ * used by wlan_hdd_cfg80211_setarp_stats_cmd()
+ */
+#define STATS_GET_INVALID \
+    QCA_ATTR_NUD_STATS_SET_INVALID
+#define COUNT_FROM_NETDEV \
+    QCA_ATTR_NUD_STATS_ARP_REQ_COUNT_FROM_NETDEV
+#define COUNT_TO_LOWER_MAC \
+    QCA_ATTR_NUD_STATS_ARP_REQ_COUNT_TO_LOWER_MAC
+#define RX_COUNT_BY_LOWER_MAC \
+    QCA_ATTR_NUD_STATS_ARP_REQ_RX_COUNT_BY_LOWER_MAC
+#define COUNT_TX_SUCCESS \
+    QCA_ATTR_NUD_STATS_ARP_REQ_COUNT_TX_SUCCESS
+#define RSP_RX_COUNT_BY_LOWER_MAC \
+    QCA_ATTR_NUD_STATS_ARP_RSP_RX_COUNT_BY_LOWER_MAC
+#define RSP_RX_COUNT_BY_UPPER_MAC \
+    QCA_ATTR_NUD_STATS_ARP_RSP_RX_COUNT_BY_UPPER_MAC
+#define RSP_COUNT_TO_NETDEV \
+    QCA_ATTR_NUD_STATS_ARP_RSP_COUNT_TO_NETDEV
+#define RSP_COUNT_OUT_OF_ORDER_DROP \
+    QCA_ATTR_NUD_STATS_ARP_RSP_COUNT_OUT_OF_ORDER_DROP
+#define AP_LINK_ACTIVE \
+    QCA_ATTR_NUD_STATS_AP_LINK_ACTIVE
+#define AP_LINK_DAD \
+    QCA_ATTR_NUD_STATS_AP_LINK_DAD
+#define STATS_GET_MAX \
+    QCA_ATTR_NUD_STATS_GET_MAX
+
+const struct nla_policy
+qca_wlan_vendor_get_nud_stats[STATS_GET_MAX +1] =
+{
+    [COUNT_FROM_NETDEV] = {.type = NLA_U16 },
+    [COUNT_TO_LOWER_MAC] = {.type = NLA_U16 },
+    [RX_COUNT_BY_LOWER_MAC] = {.type = NLA_U16 },
+    [COUNT_TX_SUCCESS] = {.type = NLA_U16 },
+    [RSP_RX_COUNT_BY_LOWER_MAC] = {.type = NLA_U16 },
+    [RSP_RX_COUNT_BY_UPPER_MAC] = {.type = NLA_U16 },
+    [RSP_COUNT_TO_NETDEV] = {.type = NLA_U16 },
+    [RSP_COUNT_OUT_OF_ORDER_DROP] = {.type = NLA_U16 },
+    [AP_LINK_ACTIVE] = {.type = NLA_FLAG },
+    [AP_LINK_DAD] = {.type = NLA_FLAG },
+};
+
+/**
+ * hdd_con_alive_cb() - Call back to get the connection status
+ * @context: pointer to adapter
+ *
+ * Return: None
+ */
+static void hdd_con_alive_cb(void *context, bool status)
+{
+   hdd_adapter_t *adapter = (hdd_adapter_t *)context;
+   adapter->con_status = status;
+}
+
+/**
+ * hdd_get_con_alive() - get the connection status
+ * @adapter: pointer to adapter
+ *
+ * Return: true if SME command is sent of false otherwise
+ */
+static bool hdd_get_con_alive(hdd_adapter_t *adapter)
+{
+   hdd_context_t *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+   getConStatusParams conStatusParams;
+
+   conStatusParams.rsp_cb_fn = hdd_con_alive_cb;
+   conStatusParams.data_ctx = adapter;
+
+   if (eHAL_STATUS_SUCCESS != sme_get_con_alive(hdd_ctx->hHal,
+                                                &conStatusParams))
+   {
+      hddLog(LOGE, FL("could not get connection status"));
+      return false;
+   }
+
+   return true;
+}
+
+/**
+ * hdd_con_test_DELBA() - delete the BA session
+ * @adapter: pointer to adapter
+ *
+ * Return: true if SME command is sent of false otherwise
+ */
+static bool hdd_con_test_DELBA(hdd_adapter_t *adapter)
+{
+   hdd_context_t *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+   hdd_station_ctx_t *pHddStaCtx = &adapter->sessionCtx.station;
+   uint8_t sta_id = pHddStaCtx->conn_info.staId[0];
+
+   ENTER();
+
+   if (eHAL_STATUS_SUCCESS != sme_test_con_delba((hdd_ctx->hHal), sta_id,
+                                  adapter->sessionId)) {
+      hddLog(LOGE, FL("could not send DELBA "));
+      return false;
+   }
+
+   return true;
+}
+
+static void hdd_get_nud_stats_cb(void *data, rsp_stats *rsp)
+{
+
+    hdd_adapter_t *adapter = (hdd_adapter_t *)data;
+    hdd_context_t *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+    struct hdd_nud_stats_context *context;
+    int status;
+
+    ENTER();
+
+    if (NULL == adapter)
+        return;
+
+    status = wlan_hdd_validate_context(hdd_ctx);
+    if (0 != status) {
+        return;
+    }
+
+    if (!rsp) {
+        hddLog(LOGE, FL("data is null"));
+        return;
+    }
+
+    adapter->hdd_stats.hddArpStats.tx_fw_cnt = rsp->tx_fw_cnt;
+    adapter->hdd_stats.hddArpStats.rx_fw_cnt = rsp->rx_fw_cnt;
+    adapter->hdd_stats.hddArpStats.tx_ack_cnt = rsp->tx_ack_cnt;
+    adapter->dad |= rsp->dad;
+
+    spin_lock(&hdd_context_lock);
+    context = &hdd_ctx->nud_stats_context;
+    complete(&context->response_event);
+    spin_unlock(&hdd_context_lock);
+
+    return;
+}
+static int __wlan_hdd_cfg80211_get_nud_stats(struct wiphy *wiphy,
+        struct wireless_dev *wdev,
+        const void *data, int data_len)
+{
+    int err = 0;
+    unsigned long rc;
+    struct hdd_nud_stats_context *context;
+    struct net_device   *dev = wdev->netdev;
+    hdd_adapter_t       *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
+    hdd_context_t *hdd_ctx = wiphy_priv(wiphy);
+    getArpStatsParams arp_stats_params;
+    struct sk_buff *skb;
+
+    ENTER();
+
+    err = wlan_hdd_validate_context(hdd_ctx);
+    if (0 != err)
+        return err;
+
+    hdd_get_con_alive(adapter);
+
+    arp_stats_params.pkt_type = WLAN_NUD_STATS_ARP_PKT_TYPE;
+    arp_stats_params.get_rsp_cb_fn = hdd_get_nud_stats_cb;
+    arp_stats_params.data_ctx = adapter;
+
+    spin_lock(&hdd_context_lock);
+    context = &hdd_ctx->nud_stats_context;
+    INIT_COMPLETION(context->response_event);
+    spin_unlock(&hdd_context_lock);
+
+    if (!sme_IsFeatureSupportedByFW(NUD_DEBUG)) {
+        VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                  "%s NUD_DEBUG feature not supported by firmware!!", __func__);
+        return -EINVAL;
+    }
+
+    if (eHAL_STATUS_SUCCESS !=
+        sme_get_nud_debug_stats(hdd_ctx->hHal, &arp_stats_params)) {
+        VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                  "%s STATS_SET_START CMD Failed!!", __func__);
+        return -EINVAL;
+    }
+
+    rc = wait_for_completion_timeout(&context->response_event,
+            msecs_to_jiffies(WLAN_WAIT_TIME_NUD_STATS));
+    if (!rc)
+    {
+        hddLog(LOGE,
+            FL("Target response timed out request "));
+        return -ETIMEDOUT;
+    }
+
+    skb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy,
+            WLAN_NUD_STATS_LEN);
+    if (!skb)
+    {
+        hddLog(VOS_TRACE_LEVEL_ERROR,
+                "%s: cfg80211_vendor_cmd_alloc_reply_skb failed",
+                __func__);
+        return -ENOMEM;
+    }
+
+    if (nla_put_u16(skb, COUNT_FROM_NETDEV,
+            adapter->hdd_stats.hddArpStats.tx_arp_req_count) ||
+            nla_put_u16(skb, COUNT_TO_LOWER_MAC,
+            adapter->hdd_stats.hddArpStats.tx_host_fw_sent) ||
+            nla_put_u16(skb, RX_COUNT_BY_LOWER_MAC,
+            adapter->hdd_stats.hddArpStats.tx_fw_cnt) ||
+            nla_put_u16(skb, COUNT_TX_SUCCESS,
+            adapter->hdd_stats.hddArpStats.tx_ack_cnt) ||
+            nla_put_u16(skb, RSP_RX_COUNT_BY_LOWER_MAC,
+            adapter->hdd_stats.hddArpStats.rx_fw_cnt) ||
+            nla_put_u16(skb, RSP_RX_COUNT_BY_UPPER_MAC,
+            adapter->hdd_stats.hddArpStats.rx_arp_rsp_count) ||
+            nla_put_u16(skb, RSP_COUNT_TO_NETDEV,
+            adapter->hdd_stats.hddArpStats.rxDelivered) ||
+            nla_put_u16(skb, RSP_COUNT_OUT_OF_ORDER_DROP,
+            adapter->hdd_stats.hddArpStats.rx_host_drop_reorder)) {
+            hddLog(LOGE, FL("nla put fail"));
+            kfree_skb(skb);
+            return -EINVAL;
+    }
+    if (adapter->con_status) {
+        nla_put_flag(skb, AP_LINK_ACTIVE);
+        adapter->con_status = false;
+        hdd_con_test_DELBA(adapter);
+    }
+    if (adapter->dad)
+        nla_put_flag(skb, AP_LINK_DAD);
+
+    hdd_ctx->track_arp_ip = 0;
+    cfg80211_vendor_cmd_reply(skb);
+    return err;
+}
+
+static int wlan_hdd_cfg80211_get_nud_stats(struct wiphy *wiphy,
+        struct wireless_dev *wdev,
+        const void *data, int data_len)
+{
+    int ret;
+
+    vos_ssr_protect(__func__);
+    ret = __wlan_hdd_cfg80211_get_nud_stats(wiphy, wdev, data, data_len);
+    vos_ssr_unprotect(__func__);
+
+    return ret;
+}
+
+#undef QCA_ATTR_NUD_STATS_SET_INVALID
+#undef QCA_ATTR_NUD_STATS_ARP_REQ_COUNT_FROM_NETDEV
+#undef QCA_ATTR_NUD_STATS_ARP_REQ_COUNT_TO_LOWER_MAC
+#undef QCA_ATTR_NUD_STATS_ARP_REQ_RX_COUNT_BY_LOWER_MAC
+#undef QCA_ATTR_NUD_STATS_ARP_REQ_COUNT_TX_SUCCESS
+#undef QCA_ATTR_NUD_STATS_ARP_RSP_RX_COUNT_BY_LOWER_MAC
+#undef QCA_ATTR_NUD_STATS_ARP_RSP_RX_COUNT_BY_UPPER_MAC
+#undef QCA_ATTR_NUD_STATS_ARP_RSP_COUNT_TO_NETDEV
+#undef QCA_ATTR_NUD_STATS_ARP_RSP_COUNT_OUT_OF_ORDER_DROP
+#undef QCA_ATTR_NUD_STATS_AP_LINK_ACTIVE
+#undef QCA_ATTR_NUD_STATS_GET_MAX
+
 const struct wiphy_vendor_command hdd_wiphy_vendor_commands[] =
 {
     {
@@ -7709,7 +8158,23 @@ const struct wiphy_vendor_command hdd_wiphy_vendor_commands[] =
                  WIPHY_VENDOR_CMD_NEED_NETDEV |
                  WIPHY_VENDOR_CMD_NEED_RUNNING,
         .doit = wlan_hdd_cfg80211_wifi_configuration_set
-    }
+    },
+    {
+        .info.vendor_id = QCA_NL80211_VENDOR_ID,
+        .info.subcmd = QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_SET,
+        .flags = WIPHY_VENDOR_CMD_NEED_WDEV |
+            WIPHY_VENDOR_CMD_NEED_NETDEV |
+            WIPHY_VENDOR_CMD_NEED_RUNNING,
+        .doit = wlan_hdd_cfg80211_set_nud_stats
+    },
+    {
+        .info.vendor_id = QCA_NL80211_VENDOR_ID,
+        .info.subcmd = QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_GET,
+        .flags = WIPHY_VENDOR_CMD_NEED_WDEV |
+            WIPHY_VENDOR_CMD_NEED_NETDEV |
+            WIPHY_VENDOR_CMD_NEED_RUNNING,
+        .doit = wlan_hdd_cfg80211_get_nud_stats
+    },
 };
 
 /* vendor specific events */
@@ -7840,7 +8305,10 @@ struct nl80211_vendor_cmd_info wlan_hdd_cfg80211_vendor_events[] =
         .vendor_id = QCA_NL80211_VENDOR_ID,
         .subcmd = QCA_NL80211_VENDOR_SUBCMD_EXTSCAN_HOTLIST_AP_LOST
     },
-
+    [QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_GET_INDEX] = {
+        .vendor_id = QCA_NL80211_VENDOR_ID,
+        .subcmd = QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_GET,
+    },
 };
 
 /*
@@ -9235,7 +9703,7 @@ static int wlan_hdd_cfg80211_start_bss(hdd_adapter_t *pHostapdAdapter,
     eCsrAuthType RSNAuthType;
     eCsrEncryptionType RSNEncryptType;
     eCsrEncryptionType mcRSNEncryptType;
-    int status = VOS_STATUS_SUCCESS;
+    int status = VOS_STATUS_SUCCESS, ret = 0;
     tpWLAN_SAPEventCB pSapEventCallback;
     hdd_hostapd_state_t *pHostapdState;
     v_CONTEXT_t pVosContext = (WLAN_HDD_GET_CTX(pHostapdAdapter))->pvosContext;
@@ -9680,12 +10148,15 @@ static int wlan_hdd_cfg80211_start_bss(hdd_adapter_t *pHostapdAdapter,
     }
     pConfig->acsBandSwitchThreshold = iniConfig->acsBandSwitchThreshold;
 
+    set_bit(SOFTAP_INIT_DONE, &pHostapdAdapter->event_flags);
+
     pSapEventCallback = hdd_hostapd_SAPEventCB;
     if(WLANSAP_StartBss(pVosContext, pSapEventCallback, pConfig,
                  (v_PVOID_t)pHostapdAdapter->dev) != VOS_STATUS_SUCCESS)
     {
         hddLog(LOGE,FL("SAP Start Bss fail"));
-        return -EINVAL;
+        ret = -EINVAL;
+        goto error;
     }
 
     hddLog(LOG1,
@@ -9728,6 +10199,9 @@ static int wlan_hdd_cfg80211_start_bss(hdd_adapter_t *pHostapdAdapter,
     EXIT();
 
    return 0;
+error:
+   clear_bit(SOFTAP_INIT_DONE, &pHostapdAdapter->event_flags);
+   return ret;
 }
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0))
@@ -10007,6 +10481,8 @@ static int __wlan_hdd_cfg80211_stop_ap (struct wiphy *wiphy,
         // Reset WNI_CFG_PROBE_RSP Flags
         wlan_hdd_reset_prob_rspies(pAdapter);
 
+        clear_bit(SOFTAP_INIT_DONE, &pAdapter->event_flags);
+
         pAdapter->sessionCtx.ap.beacon = NULL;
         kfree(old);
 #ifdef WLAN_FEATURE_P2P_DEBUG
@@ -10085,6 +10561,8 @@ static int __wlan_hdd_cfg80211_start_ap(struct wiphy *wiphy,
                    "%s: HDD adapter magic is invalid", __func__);
         return -ENODEV;
     }
+
+    clear_bit(SOFTAP_INIT_DONE, &pAdapter->event_flags);
 
     pHddCtx = WLAN_HDD_GET_CTX(pAdapter);
     status = wlan_hdd_validate_context(pHddCtx);
@@ -10582,7 +11060,7 @@ int __wlan_hdd_cfg80211_change_iface( struct wiphy *wiphy,
                          return -EINVAL;
                     }
                 }
-                status = hdd_init_ap_mode(pAdapter);
+                status = hdd_init_ap_mode(pAdapter, false);
                 if(status != VOS_STATUS_SUCCESS)
                 {
                     hddLog(VOS_TRACE_LEVEL_FATAL,
@@ -11132,6 +11610,15 @@ static int __wlan_hdd_change_station(struct wiphy *wiphy,
                     }
                 }
                 StaParams.supported_channels_len = j;
+            }
+            if (params->supported_oper_classes_len >
+                SIR_MAC_MAX_SUPP_OPER_CLASSES) {
+                VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
+                          "received oper classes:%d, resetting it to max supported %d",
+                          params->supported_oper_classes_len,
+                          SIR_MAC_MAX_SUPP_OPER_CLASSES);
+                params->supported_oper_classes_len =
+                    SIR_MAC_MAX_SUPP_OPER_CLASSES;
             }
             vos_mem_copy(StaParams.supported_oper_classes,
                          params->supported_oper_classes,
@@ -14681,6 +15168,11 @@ static int wlan_hdd_try_disconnect( hdd_adapter_t *pAdapter )
       (eConnectionState_Connecting == pHddStaCtx->conn_info.connState) ||
       (eConnectionState_IbssConnected == pHddStaCtx->conn_info.connState))
     {
+        /* Indicate disconnect to SME so that in-progress connection or preauth
+         * can be aborted
+         */
+        sme_abortConnection(WLAN_HDD_GET_HAL_CTX(pAdapter),
+                            pAdapter->sessionId);
         spin_lock_bh(&pAdapter->lock_for_active_session);
         if (eConnectionState_Associated ==  pHddStaCtx->conn_info.connState)
         {
@@ -17611,6 +18103,7 @@ static int __wlan_hdd_cfg80211_tdls_mgmt(struct wiphy *wiphy,
 #endif
     tANI_U16 numCurrTdlsPeers;
     hdd_station_ctx_t *pHddStaCtx = NULL;
+    tdlsCtx_t *pHddTdlsCtx;
 
     pAdapter = WLAN_HDD_GET_PRIV_PTR(dev);
     if (NULL == pAdapter)
@@ -17647,6 +18140,12 @@ static int __wlan_hdd_cfg80211_tdls_mgmt(struct wiphy *wiphy,
         VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
                   "%s: Unloading/Loading in Progress. Ignore!!!", __func__);
         return -EAGAIN;
+    }
+
+    pHddTdlsCtx = WLAN_HDD_GET_TDLS_CTX_PTR(pAdapter);
+    if (!pHddTdlsCtx) {
+        VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                  "%s: pHddTdlsCtx not valid.", __func__);
     }
 
     if (eTDLS_SUPPORT_NOT_ENABLED == pHddCtx->tdls_mode)
@@ -17816,13 +18315,15 @@ static int __wlan_hdd_cfg80211_tdls_mgmt(struct wiphy *wiphy,
         (SIR_MAC_TDLS_DIS_RSP == action_code) ||
         (SIR_MAC_TDLS_DIS_REQ == action_code))
     {
-        if (TRUE == sme_IsPmcBmps(WLAN_HDD_GET_HAL_CTX(pAdapter)))
-        {
+        if (TRUE == sme_IsPmcBmps(WLAN_HDD_GET_HAL_CTX(pAdapter))) {
             VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
-                       "%s: Sending frame action_code %u.Disable BMPS", __func__, action_code);
+                    "%s: Sending frame action_code %u.Disable BMPS", __func__,
+                    action_code);
             status = hdd_disable_bmps_imps(pHddCtx, WLAN_HDD_INFRA_STATION);
             if (status != VOS_STATUS_SUCCESS) {
                 hddLog(VOS_TRACE_LEVEL_ERROR, FL("Failed to set BMPS/IMPS"));
+            } else {
+                pHddTdlsCtx->is_tdls_disabled_bmps = true;
             }
         }
         if (SIR_MAC_TDLS_DIS_REQ != action_code) {
@@ -19274,6 +19775,12 @@ static int __wlan_hdd_cfg80211_testmode(struct wiphy *wiphy, void *data, int len
 
             buf = nla_data(tb[WLAN_HDD_TM_ATTR_DATA]);
             buf_len = nla_len(tb[WLAN_HDD_TM_ATTR_DATA]);
+
+            if (buf_len > sizeof(*hb_params)) {
+                hddLog(LOGE, FL("buf_len=%d exceeded hb_params size limit"),
+                       buf_len);
+                return -ERANGE;
+            }
 
             hb_params_temp =(tSirLPHBReq *)buf;
             if ((hb_params_temp->cmd == LPHB_SET_TCP_PARAMS_INDID) &&

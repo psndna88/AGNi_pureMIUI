@@ -103,6 +103,13 @@ void limStopTxAndSwitchChannel(tpAniSirGlobal pMac, tANI_U8 sessionId)
       return;
     }
 
+    if(pMac->ft.ftPEContext.pFTPreAuthReq)
+    {
+        limLog(pMac, LOGE,
+           FL("Avoid Switch Channel req during pre auth"));
+        return;
+    }
+
     limLog(pMac, LOG1, FL("Channel switch Mode == %d"),
                        psessionEntry->gLimChannelSwitch.switchMode);
 

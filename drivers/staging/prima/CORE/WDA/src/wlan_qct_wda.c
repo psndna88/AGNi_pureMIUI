@@ -165,7 +165,12 @@ void WDA_lowLevelIndCallback(WDI_LowLevelIndType *wdiLowLevelInd,
 static VOS_STATUS wdaCreateTimers(tWDA_CbContext *pWDA) ;
 static VOS_STATUS wdaDestroyTimers(tWDA_CbContext *pWDA);
 bool WDA_AllowAddBA(tpAniSirGlobal pMAc, tANI_U8 staId, tANI_U8 tid);
-void WDA_BaCheckActivity(tWDA_CbContext *pWDA) ;
+void WDA_BaCheckActivity(tWDA_CbContext *pWDA, bool test_con);
+
+/* check connection status */
+void WDA_GetConnectionStatus(tWDA_CbContext *pWDA,
+                              getConStatusParams *conStatusParams);
+
 void WDA_TimerTrafficStatsInd(tWDA_CbContext *pWDA);
 void WDA_HALDumpCmdCallback(WDI_HALDumpCmdRspParamsType *wdiRspParams, void* pUserData);
 #ifdef WLAN_FEATURE_VOWIFI_11R
@@ -8169,15 +8174,24 @@ VOS_STATUS WDA_ProcessUpdateProbeRspTemplate(tWDA_CbContext *pWDA,
                               pSendProbeRspParams->bssId, sizeof(tSirMacAddr));
    wdiSendProbeRspParam->wdiProbeRspTemplateInfo.uProbeRespTemplateLen =
                               pSendProbeRspParams->probeRespTemplateLen;
-   /* Copy the Probe Response template to local buffer */
-   vos_mem_copy(
-           wdiSendProbeRspParam->wdiProbeRspTemplateInfo.pProbeRespTemplate,
-           pSendProbeRspParams->pProbeRespTemplate, 
-           pSendProbeRspParams->probeRespTemplateLen);
    vos_mem_copy(
      wdiSendProbeRspParam->wdiProbeRspTemplateInfo.uaProxyProbeReqValidIEBmap,
      pSendProbeRspParams->ucProxyProbeReqValidIEBmap,
      WDI_PROBE_REQ_BITMAP_IE_LEN);
+   /* Copy the Probe Response template to local buffer */
+   wdiSendProbeRspParam->wdiProbeRspTemplateInfo.pProbeRespTemplate =
+      vos_mem_malloc(wdiSendProbeRspParam->wdiProbeRspTemplateInfo.
+      uProbeRespTemplateLen);
+   if(!wdiSendProbeRspParam->wdiProbeRspTemplateInfo.pProbeRespTemplate)
+   {
+      status = WDI_STATUS_MEM_FAILURE;
+      goto free_mem;
+   }
+
+   vos_mem_copy(
+           wdiSendProbeRspParam->wdiProbeRspTemplateInfo.pProbeRespTemplate,
+           pSendProbeRspParams->pProbeRespTemplate,
+           pSendProbeRspParams->probeRespTemplateLen);
    
    wdiSendProbeRspParam->wdiReqStatusCB = NULL ;
    
@@ -8187,7 +8201,10 @@ VOS_STATUS WDA_ProcessUpdateProbeRspTemplate(tWDA_CbContext *pWDA,
    {
       VOS_TRACE( VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_ERROR,
           "Failure in SEND Probe RSP Params WDI API" );
+      vos_mem_free(wdiSendProbeRspParam->wdiProbeRspTemplateInfo.
+      pProbeRespTemplate);
    }
+free_mem:
    vos_mem_free(pSendProbeRspParams);
    vos_mem_free(wdiSendProbeRspParam);
    return CONVERT_WDI2VOS_STATUS(status);
@@ -15302,6 +15319,266 @@ VOS_STATUS WDA_ProcessTLPauseInd(tWDA_CbContext *pWDA, v_U32_t params)
     return WLANTL_SuspendDataTx(pWDA->pVosContext, &staId, NULL);
 }
 
+/**
+ * WDA_SetARPStatsParamsRspCallback() - WDA callback api to set/reset arp stats
+ * @wdiSetStatsRsp: pointer to set stats response
+ * @user_data: user data
+ *
+ * Return: None
+ */
+void WDA_SetARPStatsParamsRspCallback(
+                              WDI_SetARPStatsRspParamsType *wdiSetStatsRsp,
+                              void *user_data)
+{
+    tWDA_ReqParams *wda_params = (tWDA_ReqParams *)user_data;
+    setArpStatsParams *arpStatsParams;
+
+    VOS_TRACE(VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_ERROR,
+              "ENTER <------ %s " ,__func__);
+
+    if(NULL == wda_params)
+    {
+        VOS_TRACE(VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_ERROR,
+                  "%s: wda_params received NULL", __func__);
+        VOS_ASSERT(0);
+        return;
+    }
+
+    if(NULL == wda_params->wdaMsgParam)
+    {
+        VOS_TRACE(VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_ERROR,
+                  "%s: wda_params->wdaMsgParam is NULL", __func__);
+        VOS_ASSERT(0);
+        vos_mem_free(wda_params->wdaWdiApiMsgParam);
+        vos_mem_free(wda_params);
+        return;
+    }
+
+    arpStatsParams = (setArpStatsParams *)wda_params->wdaMsgParam;
+    if(arpStatsParams->rsp_cb_fn)
+    {
+        arpStatsParams->rsp_cb_fn(arpStatsParams->data_ctx,
+                            CONVERT_WDI2VOS_STATUS(wdiSetStatsRsp->status));
+    }
+    else
+    {
+        VOS_TRACE(VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_ERROR,
+                  "%s: ARP stats callback is NULL", __func__);
+    }
+
+    vos_mem_free(wda_params->wdaWdiApiMsgParam);
+    vos_mem_free(wda_params->wdaMsgParam);
+    vos_mem_free(wda_params);
+    VOS_TRACE(VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_ERROR,
+              "EXIT <------ %s " ,__func__);
+    return;
+}
+
+/**
+ * WDA_GetARPStatsParamsRspCallback() - WDA callback api to get arp stats
+ * @wdiGetStatsRsp: pointer to get stats response
+ * @user_data: user data
+ *
+ * Return: None
+ */
+void WDA_GetARPStatsParamsRspCallback(
+                              WDI_GetARPStatsRspParamsType *wdiGetStatsRsp,
+                              void *user_data)
+{
+    tWDA_ReqParams *wda_params = (tWDA_ReqParams *)user_data;
+    getArpStatsParams *arpStatsParams;
+
+    VOS_TRACE(VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_ERROR,
+              "ENTER <------ %s " ,__func__);
+
+    if(NULL == wda_params)
+    {
+        VOS_TRACE(VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_ERROR,
+                  "%s: wda_params received NULL", __func__);
+        VOS_ASSERT(0);
+        return;
+    }
+
+    if(NULL == wda_params->wdaMsgParam)
+    {
+        VOS_TRACE(VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_ERROR,
+                  "%s: wda_params->wdaMsgParam is NULL", __func__);
+        VOS_ASSERT(0);
+        vos_mem_free(wda_params->wdaWdiApiMsgParam);
+        vos_mem_free(wda_params);
+        return;
+    }
+
+    arpStatsParams = (getArpStatsParams *)wda_params->wdaMsgParam;
+    if(arpStatsParams->get_rsp_cb_fn)
+    {
+        arpStatsParams->get_rsp_cb_fn(arpStatsParams->data_ctx,
+                        (rsp_stats *)wdiGetStatsRsp);
+    }
+    else
+    {
+        VOS_TRACE(VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_ERROR,
+                  "%s: ARP stats callback is NULL", __func__);
+    }
+
+    vos_mem_free(wda_params->wdaWdiApiMsgParam);
+    vos_mem_free(wda_params->wdaMsgParam);
+    vos_mem_free(wda_params);
+    VOS_TRACE(VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_ERROR,
+              "EXIT <------ %s " ,__func__);
+    return;
+}
+
+/**
+ * WDA_ProcessSetARPStatsReq() - WDA api to process set arp stats command
+ * @pWDA: wda handle
+ * @pSetStatsParams: pointer to set arp stats
+ *
+ * Return: VOS_STATUS
+ *   0 Success else failure
+ */
+VOS_STATUS WDA_ProcessSetARPStatsReq(tWDA_CbContext *pWDA,
+                                     setArpStatsParams *pSetStatsParams)
+{
+    WDI_SetARPStatsParamsInfoType *wdiSetStatsParam;
+    tWDA_ReqParams *wda_params;
+    WDI_Status wdi_status = WDI_STATUS_SUCCESS;
+
+    VOS_TRACE(VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_INFO,
+              FL("---> %s"), __func__);
+
+    if(NULL == pSetStatsParams)
+    {
+        VOS_TRACE(VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_ERROR,
+                  "%s: pSetStatsParams received NULL",
+                  __func__);
+        VOS_ASSERT(0) ;
+        return VOS_STATUS_E_FAULT;
+    }
+
+    wdiSetStatsParam = (WDI_SetARPStatsParamsInfoType *)
+        vos_mem_malloc(sizeof(*wdiSetStatsParam));
+    if (!wdiSetStatsParam) {
+        VOS_TRACE(VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_ERROR,
+                  "Failed to allocate buffer to send "
+                  "set_dhcp_server_offload cmd");
+        vos_mem_free(pSetStatsParams);
+        return VOS_STATUS_E_NOMEM;
+    }
+
+    vos_mem_zero(wdiSetStatsParam, sizeof(*wdiSetStatsParam));
+
+    wda_params = (tWDA_ReqParams *)vos_mem_malloc(sizeof(tWDA_ReqParams)) ;
+    if(NULL == wda_params)
+    {
+        VOS_TRACE(VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_ERROR,
+                  "%s: VOS MEM Alloc Failure", __func__);
+        VOS_ASSERT(0);
+        vos_mem_free(wdiSetStatsParam);
+        vos_mem_free(pSetStatsParams);
+        return VOS_STATUS_E_NOMEM;
+    }
+
+    wdiSetStatsParam->flag = pSetStatsParams->flag;
+    wdiSetStatsParam->pkt_type = pSetStatsParams->pkt_type;
+    wdiSetStatsParam->ip_addr = pSetStatsParams->ip_addr;
+
+    /* Store Params pass it to WDI */
+    wda_params->wdaWdiApiMsgParam = (void *)wdiSetStatsParam;
+    wda_params->pWdaContext = pWDA;
+    /* Store param pointer as passed in by caller */
+    wda_params->wdaMsgParam = pSetStatsParams;
+
+    wdi_status = WDI_SetARPStatsReq(wdiSetStatsParam,
+                 (WDI_SetARPStatsRspCb)WDA_SetARPStatsParamsRspCallback,
+                  wda_params);
+
+    if(IS_WDI_STATUS_FAILURE(wdi_status))
+    {
+        VOS_TRACE(VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_ERROR,
+                  "%s: Failure, free all the memory", __func__);
+        vos_mem_free(wda_params->wdaWdiApiMsgParam) ;
+        vos_mem_free(wda_params->wdaMsgParam);
+        vos_mem_free(wda_params);
+    }
+
+    return wdi_status;
+}
+
+/**
+ * WDA_ProcessGetARPStatsReq() - WDA api to process get arp stats command
+ * @pWDA: wda handle
+ * @pGetStatsParams: pointer to get arp stats
+ *
+ * Return: VOS_STATUS
+ *   0 Success else failure
+ */
+VOS_STATUS WDA_ProcessGetARPStatsReq(tWDA_CbContext *pWDA,
+                                     getArpStatsParams *pGetStatsParams)
+{
+    WDI_GetARPStatsParamsInfoType *wdiGetStatsParam;
+    tWDA_ReqParams *wda_params;
+    WDI_Status wdi_status = WDI_STATUS_SUCCESS;
+
+    VOS_TRACE(VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_INFO,
+              FL("---> %s"), __func__);
+
+    if(NULL == pGetStatsParams)
+    {
+        VOS_TRACE(VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_ERROR,
+                  "%s: pGetStatsParams received NULL",
+                  __func__);
+        VOS_ASSERT(0) ;
+        return VOS_STATUS_E_FAULT;
+    }
+
+    wdiGetStatsParam = (WDI_GetARPStatsParamsInfoType *)
+        vos_mem_malloc(sizeof(*wdiGetStatsParam));
+    if (!wdiGetStatsParam) {
+        VOS_TRACE(VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_ERROR,
+                  "Failed to allocate buffer to send "
+                  "set_dhcp_server_offload cmd");
+        vos_mem_free(pGetStatsParams);
+        return VOS_STATUS_E_NOMEM;
+    }
+
+    vos_mem_zero(wdiGetStatsParam, sizeof(*wdiGetStatsParam));
+
+    wda_params = (tWDA_ReqParams *)vos_mem_malloc(sizeof(tWDA_ReqParams)) ;
+    if(NULL == wda_params)
+    {
+        VOS_TRACE(VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_ERROR,
+                  "%s: VOS MEM Alloc Failure", __func__);
+        VOS_ASSERT(0);
+        vos_mem_free(wdiGetStatsParam);
+        vos_mem_free(pGetStatsParams);
+        return VOS_STATUS_E_NOMEM;
+    }
+
+    wdiGetStatsParam->pkt_type = pGetStatsParams->pkt_type;
+
+    /* Store Params pass it to WDI */
+    wda_params->wdaWdiApiMsgParam = (void *)wdiGetStatsParam;
+    wda_params->pWdaContext = pWDA;
+    /* Store param pointer as passed in by caller */
+    wda_params->wdaMsgParam = pGetStatsParams;
+
+    wdi_status = WDI_GetARPStatsReq(wdiGetStatsParam,
+                 (WDI_GetARPStatsRspCb)WDA_GetARPStatsParamsRspCallback,
+                  wda_params);
+
+    if(IS_WDI_STATUS_FAILURE(wdi_status))
+    {
+         VOS_TRACE(VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_ERROR,
+                   "%s: Failure, free all the memory", __func__);
+         vos_mem_free(wda_params->wdaWdiApiMsgParam) ;
+         vos_mem_free(wda_params->wdaMsgParam);
+         vos_mem_free(wda_params);
+    }
+
+    return wdi_status;
+}
+
 /*
  * FUNCTION: WDA_McProcessMsg
  * Trigger DAL-AL to start CFG download 
@@ -15924,14 +16201,24 @@ VOS_STATUS WDA_McProcessMsg( v_CONTEXT_t pVosContext, vos_msg_t *pMsg )
       /* timer related messages */
       case WDA_TIMER_BA_ACTIVITY_REQ:
       {
-         WDA_BaCheckActivity(pWDA) ;
+         WDA_BaCheckActivity(pWDA, false);
          break ;
       }
-
       /* timer related messages */
       case WDA_TIMER_TRAFFIC_STATS_IND:
       {
          WDA_TimerTrafficStatsInd(pWDA);
+         break;
+      }
+      /* Connection status related messages */
+      case WDA_TRIGGER_ADD_BA_REQ:
+      {
+         WDA_BaCheckActivity(pWDA, true);
+         break;
+      }
+      case WDA_GET_CON_STATUS:
+      {
+         WDA_GetConnectionStatus(pWDA, (getConStatusParams *)pMsg->bodyptr);
          break;
       }
 #ifdef WLAN_FEATURE_VOWIFI_11R
@@ -16288,6 +16575,16 @@ VOS_STATUS WDA_McProcessMsg( v_CONTEXT_t pVosContext, vos_msg_t *pMsg )
       case WDA_PAUSE_TL_IND:
       {
          WDA_ProcessTLPauseInd(pWDA, pMsg->bodyval);
+         break;
+      }
+      case WDA_SET_ARP_STATS_REQ:
+      {
+         WDA_ProcessSetARPStatsReq(pWDA, (setArpStatsParams *)pMsg->bodyptr);
+         break;
+      }
+      case WDA_GET_ARP_STATS_REQ:
+      {
+         WDA_ProcessGetARPStatsReq(pWDA, (getArpStatsParams *)pMsg->bodyptr);
          break;
       }
       default:
@@ -17639,10 +17936,45 @@ bool WDA_AllowAddBA(tpAniSirGlobal pMac, tANI_U8 staId, tANI_U8 tid)
    return true;
 }
 
+void WDA_GetConnectionStatus(tWDA_CbContext *pWDA,
+                               getConStatusParams *conStatusParams)
+{
+   tpAniSirGlobal pMac;
+   uint8_t sta_id, tid;
+   bool tx_aggr;
+   bool status = false;
+
+   pMac = (tpAniSirGlobal)VOS_GET_MAC_CTXT(pWDA->pVosContext);
+   if (NULL == pMac)
+   {
+      VOS_TRACE(VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_ERROR,
+                          "%s: pMac is NULL",__func__);
+      return;
+   }
+
+   tx_aggr= pMac->lim.test_status_bainfo.tx_aggr;
+   sta_id = pMac->lim.test_status_bainfo.sta_id;
+   tid = pMac->lim.test_status_bainfo.tid;
+
+   if (tx_aggr && WDA_GET_BA_TXFLAG(pWDA, sta_id, tid))
+      status = true;
+
+   if (conStatusParams->rsp_cb_fn)
+      conStatusParams->rsp_cb_fn(conStatusParams->data_ctx, status);
+}
+
+static void WDA_StoreTestBAInfo(tpAniSirGlobal pMac, bool tx_aggr,
+                                uint8_t sta_id, uint8_t tid)
+{
+   pMac->lim.test_status_bainfo.tx_aggr = tx_aggr;
+   pMac->lim.test_status_bainfo.sta_id= sta_id;
+   pMac->lim.test_status_bainfo.tid = tid;
+}
+
 /*
  * BA Activity check timer handler
  */
-void WDA_BaCheckActivity(tWDA_CbContext *pWDA)
+void WDA_BaCheckActivity(tWDA_CbContext *pWDA, bool test_con)
 {
    tANI_U8 curSta = 0 ;
    tANI_U8 tid = 0 ;
@@ -17652,6 +17984,7 @@ void WDA_BaCheckActivity(tWDA_CbContext *pWDA)
    tANI_U32 val;
    WDI_TriggerBAReqCandidateType baCandidate[WDA_MAX_STA] = {{0}} ;
    tpAniSirGlobal pMac;
+   bool found = false;
 
    if (NULL == pWDA)
    {
@@ -17695,6 +18028,12 @@ void WDA_BaCheckActivity(tWDA_CbContext *pWDA)
    for(curSta = 0 ; curSta < pWDA->wdaMaxSta ; curSta++)
    {
       tANI_U32 currentOperChan = pWDA->wdaStaInfo[curSta].currentOperChan;
+      WLANTL_STAStateType tlSTAState;
+      tANI_U8 validStaIndex = pWDA->wdaStaInfo[curSta].ucValidStaIndex;
+
+      if (found)
+         break;
+
 #ifdef WLAN_SOFTAP_VSTA_FEATURE
       // We can only do BA on "hard" STAs.
       if (!(IS_HWSTA_IDX(curSta)))
@@ -17702,41 +18041,47 @@ void WDA_BaCheckActivity(tWDA_CbContext *pWDA)
           continue;
       }
 #endif //WLAN_SOFTAP_VSTA_FEATURE
+
+      if (!((WDA_VALID_STA_INDEX == validStaIndex) &&
+            (VOS_STATUS_SUCCESS == WDA_TL_GET_STA_STATE(pWDA->pVosContext,
+                                                curSta, &tlSTAState))))
+         continue;
+
+      if (WLANTL_STA_AUTHENTICATED != tlSTAState)
+         continue;
+
+      if(val && ((currentOperChan >= SIR_11B_CHANNEL_BEGIN) &&
+                 (currentOperChan <= SIR_11B_CHANNEL_END))) {
+         VOS_TRACE(VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_INFO,
+                   "%s: BTC disabled aggregation - dont start"
+                   "TX ADDBA req",__func__);
+         continue;
+      }
+
       for(tid = 0 ; tid < STACFG_MAX_TC ; tid++)
       {
-         WLANTL_STAStateType tlSTAState ;
          tANI_U32 txPktCount = 0 ;
-         tANI_U8 validStaIndex = pWDA->wdaStaInfo[curSta].ucValidStaIndex ;
-         if((WDA_VALID_STA_INDEX == validStaIndex) &&
-            (VOS_STATUS_SUCCESS == WDA_TL_GET_STA_STATE( pWDA->pVosContext,
-                                                    curSta, &tlSTAState)) &&
-            (VOS_STATUS_SUCCESS == WDA_TL_GET_TX_PKTCOUNT( pWDA->pVosContext,
-                                                    curSta, tid, &txPktCount)))
+         if (VOS_STATUS_SUCCESS == WDA_TL_GET_TX_PKTCOUNT( pWDA->pVosContext,
+                                                    curSta, tid, &txPktCount))
          {
-#if 0
-            VOS_TRACE( VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_INFO_LOW,
-             "************* %d:%d, %d ",curSta, txPktCount,
-                                    pWDA->wdaStaInfo[curSta].framesTxed[tid]);
-#endif
-            if(val && ( (currentOperChan >= SIR_11B_CHANNEL_BEGIN) &&
-                                (currentOperChan <= SIR_11B_CHANNEL_END)))
-            {
-                 VOS_TRACE( VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_INFO,
-                        "%s: BTC disabled aggregation - dont start "
-                         "TX ADDBA req",__func__);
-            }
-            else if(!WDA_GET_BA_TXFLAG(pWDA, curSta, tid)
-                   && (WLANTL_STA_AUTHENTICATED == tlSTAState)
-                   && WDA_AllowAddBA(pMac, curSta, tid)
-                   && (((eSYSTEM_STA_IN_IBSS_ROLE ==
-                            pWDA->wdaGlobalSystemRole) && txPktCount )
-                   || (txPktCount >= WDA_LAST_POLLED_THRESHOLD(pWDA,
-                                                         curSta, tid))))
+            if(!WDA_GET_BA_TXFLAG(pWDA, curSta, tid) &&
+               WDA_AllowAddBA(pMac, curSta, tid) &&
+               (((eSYSTEM_STA_IN_IBSS_ROLE == pWDA->wdaGlobalSystemRole)
+                  && txPktCount) ||
+                (txPktCount >= WDA_LAST_POLLED_THRESHOLD(pWDA, curSta, tid)) ||
+                 test_con))
             {
                /* get prepare for sending message to HAL */
                //baCandidate[baCandidateCount].staIdx = curSta ;
                baCandidate[baCandidateCount].ucTidBitmap |= 1 << tid ;
                newBaCandidate = WDA_ENABLE_BA ;
+
+               /* Trigger only one BA request to check connection status */
+               if (test_con) {
+                  WDA_StoreTestBAInfo(pMac, true, curSta, tid);
+                  found = true;
+                  break;
+               }
             }
             pWDA->wdaStaInfo[curSta].framesTxed[tid] = txPktCount ;
          }
@@ -17805,6 +18150,14 @@ void WDA_BaCheckActivity(tWDA_CbContext *pWDA)
    }
    else
    {
+      if (test_con)
+      {
+         WDA_StoreTestBAInfo(pMac, false, pWDA->wdaMaxSta, STACFG_MAX_TC);
+         VOS_TRACE(VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_INFO,
+                   "%s: ADDBA to test connection status no valid Tid found",
+                   __func__);
+      }
+
       VOS_TRACE( VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_INFO_LOW,
                               "There is no TID for initiating BA");
    }
@@ -17824,6 +18177,7 @@ void WDA_BaCheckActivity(tWDA_CbContext *pWDA)
    }
    return ;
 }
+
 /*
  * WDA common routine to create timer used by WDA.
  */
@@ -17907,6 +18261,7 @@ static VOS_STATUS wdaCreateTimers(tWDA_CbContext *pWDA)
    }
    return VOS_STATUS_SUCCESS ;
 }
+
 /*
  * WDA common routine to destroy timer used by WDA.
  */
@@ -19398,6 +19753,8 @@ void WDA_ReceiveFilterClearFilterRespCallback(
                         void * pUserData)
 {
    tWDA_ReqParams *pWdaParams = (tWDA_ReqParams *)pUserData;
+   tSirRcvFltPktClearParam *pktClearParam;
+
    VOS_TRACE( VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_INFO,
                                           "<------ %s " ,__func__);
 /*   WDA_VOS_ASSERT(NULL != pWdaParams); */
@@ -19408,7 +19765,14 @@ void WDA_ReceiveFilterClearFilterRespCallback(
       VOS_ASSERT(0) ;
       return ;
    }
-   
+
+   pktClearParam = (tSirRcvFltPktClearParam *)pWdaParams->wdaMsgParam;
+   if(pktClearParam->pktFilterCallback)
+   {
+       pktClearParam->pktFilterCallback(
+            pktClearParam->cbCtx,
+            CONVERT_WDI2SIR_STATUS(pwdiRcvFltPktClearRspParamsType->wdiStatus));
+   }
    vos_mem_free(pWdaParams->wdaMsgParam) ;
    vos_mem_free(pWdaParams->wdaWdiApiMsgParam);
    vos_mem_free(pWdaParams) ;
@@ -19425,6 +19789,7 @@ void WDA_ReceiveFilterClearFilterRespCallback(
 void WDA_ReceiveFilterClearFilterReqCallback(WDI_Status wdiStatus, void* pUserData)
 {
    tWDA_ReqParams *pWdaParams = (tWDA_ReqParams *)pUserData;
+   tSirRcvFltPktClearParam *pktClearParam;
 
    VOS_TRACE( VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_INFO,
               "<------ %s, wdiStatus: %d", __func__, wdiStatus);
@@ -19439,6 +19804,13 @@ void WDA_ReceiveFilterClearFilterReqCallback(WDI_Status wdiStatus, void* pUserDa
 
    if(IS_WDI_STATUS_FAILURE(wdiStatus))
    {
+      pktClearParam = (tSirRcvFltPktClearParam *)pWdaParams->wdaMsgParam;
+      if(pktClearParam->pktFilterCallback)
+      {
+          pktClearParam->pktFilterCallback(
+              pktClearParam->cbCtx,
+              CONVERT_WDI2SIR_STATUS(wdiStatus));
+      }
       vos_mem_free(pWdaParams->wdaWdiApiMsgParam);
       vos_mem_free(pWdaParams->wdaMsgParam);
       vos_mem_free(pWdaParams);
@@ -19496,6 +19868,12 @@ VOS_STATUS WDA_ProcessReceiveFilterClearFilterReq (tWDA_CbContext *pWDA,
    {
       VOS_TRACE( VOS_MODULE_ID_WDA, VOS_TRACE_LEVEL_ERROR,
               "Failure in WDA_ProcessReceiveFilterClearFilterReq(), free all the memory " );
+      if(pRcvFltPktClearParam->pktFilterCallback)
+      {
+          pRcvFltPktClearParam->pktFilterCallback(
+                pRcvFltPktClearParam->cbCtx,
+                CONVERT_WDI2SIR_STATUS(status));
+      }
       vos_mem_free(pWdaParams->wdaWdiApiMsgParam) ;
       vos_mem_free(pWdaParams->wdaMsgParam);
       vos_mem_free(pWdaParams);

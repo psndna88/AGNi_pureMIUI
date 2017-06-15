@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -2157,6 +2157,7 @@ VOS_STATUS hdd_wlan_shutdown(void)
       return VOS_STATUS_E_FAILURE;
    }
 
+   vos_set_snoc_high_freq_voting(false);
    //Stop the traffic monitor timer
    if ((pHddCtx->cfg_ini->dynSplitscan)&& (VOS_TIMER_STATE_RUNNING ==
                         vos_timer_getCurrentState(&pHddCtx->tx_rx_trafficTmr)))
@@ -2335,9 +2336,10 @@ static void hdd_ssr_restart_sap(hdd_context_t *hdd_ctx)
 	while (NULL != adapter_node && VOS_STATUS_SUCCESS == status) {
 		adapter = adapter_node->pAdapter;
 		if (adapter && adapter->device_mode == WLAN_HDD_SOFTAP) {
-			hddLog(VOS_TRACE_LEVEL_INFO, FL("in sap mode %p"),
-				adapter);
-			wlan_hdd_start_sap(adapter);
+			if (test_bit(SOFTAP_INIT_DONE, &adapter->event_flags)) {
+				hddLog(VOS_TRACE_LEVEL_INFO, FL("Restart prev SAP session"));
+				wlan_hdd_start_sap(adapter);
+			}
 		}
 		status = hdd_get_next_adapter(hdd_ctx, adapter_node, &next);
 		adapter_node = next;

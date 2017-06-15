@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, 2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013, 2016-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -1113,10 +1113,13 @@ typedef struct
         This is filled by Host in Virgo 1.0 but it gets filled by ADU in
         Virgo2.0/Libra. Queue ID */
         wpt_uint32 queueId:5;
-    
-        wpt_uint32 reserved5:7;
+
+        wpt_uint32 isArp:1;
+
+        wpt_uint32 reserved5:6;
 #else
-        wpt_uint32 reserved5:7;
+        wpt_uint32 reserved5:6;
+        wpt_uint32 isArp:1;
         wpt_uint32 queueId:5;
         wpt_uint32 bdRate:2;
         wpt_uint32 ap:2;

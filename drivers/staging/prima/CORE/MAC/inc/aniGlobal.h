@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014, 2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2014, 2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -259,6 +259,12 @@ typedef struct {
     tANI_U32 failed_count[MAX_TIDS];
     v_TIME_t failed_timestamp[MAX_TIDS];
 } tLimStaBAInfo;
+
+typedef struct {
+   bool tx_aggr;
+   uint8_t sta_id;
+   uint8_t tid;
+} t_test_status_bainfo;
 
 typedef struct sAniSirLim
 {
@@ -914,6 +920,7 @@ tLimMlmOemDataRsp       *gpLimMlmOemDataRsp;
     tANI_U32 txBdToken;
     tANI_U32 EnableTdls2040BSSCoexIE;
     tLimStaBAInfo staBaInfo[WLAN_MAX_STA_COUNT];
+    t_test_status_bainfo test_status_bainfo;
 } tAniSirLim, *tpAniSirLim;
 
 typedef struct sLimMgmtFrameRegistration
@@ -1086,6 +1093,7 @@ typedef struct sAniSirGlobal
     v_U32_t PERroamTimeout;
     v_U32_t currentBssScore;
 #endif
+   bool max_power_cmd_pending;
 } tAniSirGlobal;
 
 #ifdef FEATURE_WLAN_TDLS

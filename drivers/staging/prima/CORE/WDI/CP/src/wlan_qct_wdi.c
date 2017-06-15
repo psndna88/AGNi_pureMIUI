@@ -220,6 +220,14 @@ static placeHolderInCapBitmap supportEnabledFeatures[] =
    ,WIFI_CONFIG                    //61
    ,ANTENNA_DIVERSITY_SELECTION    //62
    ,PER_BASED_ROAMING              //63
+   ,FEATURE_NOT_SUPPORTED          //64
+   ,FEATURE_NOT_SUPPORTED          //65
+   ,FEATURE_NOT_SUPPORTED          //66
+   ,FEATURE_NOT_SUPPORTED          //67
+   ,NUD_DEBUG                      //68
+   ,FEATURE_NOT_SUPPORTED          //69 reserved for FATAL_EVENT_LOGGING
+   ,FEATURE_NOT_SUPPORTED          //70 reserved for WIFI_DUAL_BAND_ENABLE
+   ,PROBE_RSP_TEMPLATE_VER1        //71
 };
 
 /*-------------------------------------------------------------------------- 
@@ -516,6 +524,10 @@ WDI_ReqProcFuncType  pfnReqProcTbl[WDI_MAX_UMAC_IND] =
   NULL,
   NULL,
 #endif /* WLAN_FEATURE_ROAM_SCAN_OFFLOAD */
+
+   WDI_ProcessSetArpStatsReq,          /* WDI_FW_ARP_STATS_REQ */
+   WDI_ProcessGetArpStatsReq,          /* WDI_FW_GET_ARP_STATS_REQ */
+
   /*-------------------------------------------------------------------------
     Indications
   -------------------------------------------------------------------------*/
@@ -837,6 +849,9 @@ WDI_RspProcFuncType  pfnRspProcTbl[WDI_MAX_RESP] =
     NULL,
     NULL,
 #endif
+/* ARP Debug Stats*/
+   WDI_ProcessSetArpStatsResp,          /* WDI_FW_ARP_STATS_RSP */
+   WDI_ProcessGetArpStatsResp,          /* WDI_FW_GET_ARP_STATS_RSP */
   /*---------------------------------------------------------------------
     Indications
   ---------------------------------------------------------------------*/
@@ -1297,12 +1312,95 @@ static char *WDI_getReqMsgString(wpt_uint16 wdiReqMsgId)
     CASE_RETURN_STRING( WDI_ANTENNA_DIVERSITY_SELECTION_REQ );
     CASE_RETURN_STRING( WDI_MODIFY_ROAM_PARAMS_IND );
     CASE_RETURN_STRING( WDI_SET_ALLOWED_ACTION_FRAMES_IND );
+    CASE_RETURN_STRING( WDI_FW_ARP_STATS_REQ );
+    CASE_RETURN_STRING( WDI_FW_GET_ARP_STATS_REQ );
+#ifdef WLAN_FEATURE_APFIND
+    CASE_RETURN_STRING( WDI_SET_AP_FIND_IND );
+#endif
     default:
         return "Unknown WDI MessageId";
   }
 }
 
 
+
+/**
+ * WDI_ProcessSetArpStatsResp() - WDI api to process set arp stats response
+ * @wdi_ctx: wdi context
+ * @event_data: event data
+ *
+ * Return: WDI_Status
+ */
+WDI_Status
+WDI_ProcessSetArpStatsResp
+(
+    WDI_ControlBlockType *wdi_ctx,
+    WDI_EventInfoType *event_data
+)
+{
+    wdi_nud_set_arp_rsp_cb nud_set_arp_rsp_callback;
+
+    WPAL_TRACE(eWLAN_MODULE_DAL_CTRL, eWLAN_PAL_TRACE_LEVEL_INFO,
+               "%s: Enter ", __func__);
+       /*-------------------------------------------------------------------
+         Sanity check
+         -----------------------------------------------------------------*/
+    if ((NULL == wdi_ctx) || (NULL == event_data) ||
+        (NULL == event_data->pEventData))
+    {
+         WPAL_TRACE(eWLAN_MODULE_DAL_CTRL, eWLAN_PAL_TRACE_LEVEL_WARN,
+                    "%s: Invalid parameters", __func__);
+         WDI_ASSERT(0);
+        return WDI_STATUS_E_FAILURE;
+    }
+
+    nud_set_arp_rsp_callback =
+            (wdi_nud_set_arp_rsp_cb)wdi_ctx->pfncRspCB;
+
+    nud_set_arp_rsp_callback((void *) event_data->pEventData,
+                                      wdi_ctx->pRspCBUserData);
+
+    return WDI_STATUS_SUCCESS;
+}
+
+/**
+ * WDI_ProcessGetArpStatsResp() - WDI api to process get arp stats response
+ * @wdi_ctx: wdi context
+ * @event_data: event data
+ *
+ * Return: WDI_Status
+ */
+WDI_Status
+WDI_ProcessGetArpStatsResp
+(
+    WDI_ControlBlockType *wdi_ctx,
+    WDI_EventInfoType *event_data
+)
+{
+    wdi_nud_get_arp_rsp_cb nud_get_arp_rsp_callback;
+
+    WPAL_TRACE(eWLAN_MODULE_DAL_CTRL, eWLAN_PAL_TRACE_LEVEL_INFO,
+               "%s: Enter ", __func__);
+    /*-------------------------------------------------------------------
+      Sanity check
+     -----------------------------------------------------------------*/
+    if ((NULL == wdi_ctx) || (NULL == event_data) ||
+        (NULL == event_data->pEventData))
+    {
+        WPAL_TRACE(eWLAN_MODULE_DAL_CTRL, eWLAN_PAL_TRACE_LEVEL_WARN,
+                   "%s: Invalid parameters", __func__);
+        WDI_ASSERT(0);
+        return WDI_STATUS_E_FAILURE;
+    }
+
+    nud_get_arp_rsp_callback =
+        (wdi_nud_get_arp_rsp_cb)wdi_ctx->pfncRspCB;
+
+    nud_get_arp_rsp_callback((void *) event_data->pEventData,
+        wdi_ctx->pRspCBUserData);
+
+    return WDI_STATUS_SUCCESS;
+}
 
 /**
  @brief WDI_getRespMsgString prints the WDI resonse message in string.
@@ -1640,6 +1738,16 @@ void WDI_TraceHostFWCapabilities(tANI_U32 *capabilityBitmap)
                           snprintf(pCapStr, sizeof("PER_BASED_ROAMING"),
                                          "%s", "PER_BASED_ROAMING");
                           pCapStr += strlen("PER_BASED_ROAMING");
+                          break;
+                     case NUD_DEBUG:
+                          snprintf(pCapStr, sizeof("NUD_DEBUG"),
+                                         "%s", "NUD_DEBUG");
+                          pCapStr += strlen("NUD_DEEBUG");
+                          break;
+                     case PROBE_RSP_TEMPLATE_VER1:
+                          snprintf(pCapStr, sizeof("PROBE_RSP_TEMPLATE_VER1"),
+                                         "%s", "PROBE_RSP_TEMPLATE_VER1");
+                          pCapStr += strlen("PROBE_RSP_TEMPLATE_VER1");
                           break;
                  }
                  *pCapStr++ = ',';
@@ -13700,7 +13808,9 @@ WDI_ProcessUpdateProbeRspTemplateReq
   wpt_uint8*                             pSendBuffer         = NULL;
   wpt_uint16                             usDataOffset        = 0;
   wpt_uint16                             usSendSize          = 0;
-  tSendProbeRespReqParams                halUpdateProbeRspTmplParams;
+  wpt_uint16                             uMsgSize            = 0;
+  tSendProbeRespReqParams                *halProbeRespTmplParams = NULL;
+  tSendProbeRespReqParams_V1             *halProbeRespTmplParams_V1 = NULL;
   /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
   /*-------------------------------------------------------------------------
@@ -13720,13 +13830,22 @@ WDI_ProcessUpdateProbeRspTemplateReq
     (WDI_UpdateProbeRspTemplateParamsType*)pEventData->pEventData;
   wdiUpdateProbeRespTmplRspCb =
     (WDI_UpdateProbeRspTemplateRspCb)pEventData->pCBfnc;
+
+  if (WDI_getFwWlanFeatCaps(PROBE_RSP_TEMPLATE_VER1))
+     uMsgSize = sizeof(tSendProbeRespReqParams_V1) +
+        pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.
+        uProbeRespTemplateLen -
+        sizeof(halProbeRespTmplParams_V1->pProbeRespTemplate);
+  else
+     uMsgSize = sizeof(tSendProbeRespReqParams);
+
   /*-----------------------------------------------------------------------
     Get message buffer
   -----------------------------------------------------------------------*/
   if (( WDI_STATUS_SUCCESS != WDI_GetMessageBuffer( pWDICtx, WDI_UPD_PROBE_RSP_TEMPLATE_REQ,
-                        sizeof(halUpdateProbeRspTmplParams),
+                        uMsgSize,
                         &pSendBuffer, &usDataOffset, &usSendSize))||
-      ( usSendSize < (usDataOffset + sizeof(halUpdateProbeRspTmplParams) )))
+      ( usSendSize < (usDataOffset + uMsgSize)))
   {
      WPAL_TRACE( eWLAN_MODULE_DAL_CTRL,  eWLAN_PAL_TRACE_LEVEL_WARN,
               "Unable to get send buffer in set bss key req %p %p %p",
@@ -13735,29 +13854,62 @@ WDI_ProcessUpdateProbeRspTemplateReq
      return WDI_STATUS_E_FAILURE;
   }
 
-  wpalMemoryCopy(halUpdateProbeRspTmplParams.bssId,
-                 pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.macBSSID,
-                 WDI_MAC_ADDR_LEN);
+  if (WDI_getFwWlanFeatCaps(PROBE_RSP_TEMPLATE_VER1))
+  {
+     halProbeRespTmplParams_V1 =
+        (tSendProbeRespReqParams_V1 *)(pSendBuffer + usDataOffset);
 
-  halUpdateProbeRspTmplParams.probeRespTemplateLen =
-    pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.uProbeRespTemplateLen;
+     wpalMemoryCopy(halProbeRespTmplParams_V1->bssId,
+        pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.macBSSID,
+        WDI_MAC_ADDR_LEN);
 
-  wpalMemoryCopy(halUpdateProbeRspTmplParams.pProbeRespTemplate,
-    pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.pProbeRespTemplate,
-                 BEACON_TEMPLATE_SIZE);
+     halProbeRespTmplParams_V1->probeRespTemplateLen =
+        pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.
+        uProbeRespTemplateLen;
 
+     wpalMemoryCopy(halProbeRespTmplParams_V1->ucProxyProbeReqValidIEBmap,
+        pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.
+        uaProxyProbeReqValidIEBmap,
+        WDI_PROBE_REQ_BITMAP_IE_LEN);
 
-  wpalMemoryCopy(halUpdateProbeRspTmplParams.ucProxyProbeReqValidIEBmap,
-           pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.uaProxyProbeReqValidIEBmap,
-                 WDI_PROBE_REQ_BITMAP_IE_LEN);
+     wpalMemoryCopy(halProbeRespTmplParams_V1->pProbeRespTemplate,
+        pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.
+        pProbeRespTemplate,
+        halProbeRespTmplParams_V1->probeRespTemplateLen);
+  }
+  else
+  {
+     halProbeRespTmplParams =
+       (tSendProbeRespReqParams *)(pSendBuffer + usDataOffset);
 
-  wpalMemoryCopy( pSendBuffer+usDataOffset,
-                  &halUpdateProbeRspTmplParams,
-                  sizeof(halUpdateProbeRspTmplParams));
+     wpalMemoryCopy(halProbeRespTmplParams->bssId,
+        pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.macBSSID,
+        WDI_MAC_ADDR_LEN);
+
+     if (BEACON_TEMPLATE_SIZE <
+       pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.
+       uProbeRespTemplateLen)
+        halProbeRespTmplParams->probeRespTemplateLen = BEACON_TEMPLATE_SIZE;
+     else
+        halProbeRespTmplParams->probeRespTemplateLen =
+            pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.
+            uProbeRespTemplateLen;
+
+     wpalMemoryCopy(halProbeRespTmplParams->ucProxyProbeReqValidIEBmap,
+        pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.
+        uaProxyProbeReqValidIEBmap,
+        WDI_PROBE_REQ_BITMAP_IE_LEN);
+     wpalMemoryCopy(halProbeRespTmplParams->pProbeRespTemplate,
+        pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.
+        pProbeRespTemplate,
+        BEACON_TEMPLATE_SIZE);
+  }
 
   pWDICtx->wdiReqStatusCB     = pwdiUpdateProbeRespTmplParams->wdiReqStatusCB;
   pWDICtx->pReqStatusUserData = pwdiUpdateProbeRespTmplParams->pUserData;
 
+  vos_mem_free(pwdiUpdateProbeRespTmplParams->wdiProbeRspTemplateInfo.
+       pProbeRespTemplate);
   /*-------------------------------------------------------------------------
     Send Update Probe Resp Template Request to HAL
   -------------------------------------------------------------------------*/
@@ -24750,6 +24902,10 @@ WDI_2_HAL_REQ_TYPE
   case WDI_PER_ROAM_SCAN_TRIGGER_REQ:
       return WLAN_HAL_PER_ROAM_SCAN_TRIGGER_REQ;
 #endif
+  case WDI_FW_ARP_STATS_REQ:
+      return WLAN_HAL_FW_SET_CLEAR_ARP_STATS_REQ;
+  case WDI_FW_GET_ARP_STATS_REQ:
+      return WLAN_HAL_FW_GET_ARP_STATS_REQ;
   default:
     return WLAN_HAL_MSG_MAX;
   }
@@ -25119,6 +25275,10 @@ case WLAN_HAL_DEL_STA_SELF_RSP:
   case WLAN_HAL_PER_ROAM_SCAN_TRIGGER_RSP:
        return WDI_PER_ROAM_SCAN_TRIGGER_RSP;
 #endif
+  case WLAN_HAL_FW_SET_CLEAR_ARP_STATS_RSP:
+       return WDI_FW_ARP_STATS_RSP;
+  case WLAN_HAL_FW_GET_ARP_STATS_RSP:
+       return WDI_FW_GET_ARP_STATS_RSP;
   default:
     return eDRIVER_TYPE_MAX;
   }
@@ -38195,3 +38355,211 @@ WDI_Status WDI_SetAllowedActionFramesInd(
 
     return WDI_PostMainEvent(&gWDICb, WDI_REQUEST_EVENT, &wdiEventData);
 }
+
+/**
+ * WDI_ProcessSetArpStatsReq() - WDI api to process arp stats request
+ * @pWDICtx: wdi context
+ * @pEventData: event data
+ *
+ * Return: WDI_Status
+ */
+WDI_Status
+WDI_ProcessSetArpStatsReq
+(
+  WDI_ControlBlockType*  pWDICtx,
+  WDI_EventInfoType*     pEventData
+)
+{
+   WDI_SetARPStatsParamsInfoType  *pSetARPStatsReqParams;
+   WDI_SetARPStatsRspCb  wdiSetARPStatsRspCb;
+   wpt_uint8*            pSendBuffer;
+   wpt_uint16            usDataOffset;
+   wpt_uint16            usSendSize;
+   WDI_Status wdi_status;
+   tHalStatsArpReqMsg statsReqParams;
+
+   VOS_TRACE(VOS_MODULE_ID_WDI, VOS_TRACE_LEVEL_INFO,
+             "%s: %d Enter",__func__, __LINE__);
+
+  if (( NULL == pEventData ) || ( NULL == pEventData->pEventData) ||
+      ( NULL == pWDICtx ) )
+  {
+     WPAL_TRACE( eWLAN_MODULE_DAL_CTRL, eWLAN_PAL_TRACE_LEVEL_WARN,
+                 "%s: Invalid parameters", __func__);
+     WDI_ASSERT(0);
+     return WDI_STATUS_E_FAILURE;
+  }
+
+  pSetARPStatsReqParams =
+       (WDI_SetARPStatsParamsInfoType *)pEventData->pEventData;
+  wdiSetARPStatsRspCb   = (WDI_SetARPStatsRspCb)pEventData->pCBfnc;
+
+  if ((WDI_STATUS_SUCCESS != WDI_GetMessageBuffer(pWDICtx, WDI_FW_ARP_STATS_REQ,
+                        sizeof(statsReqParams.statsArpReqParams),
+                        &pSendBuffer, &usDataOffset, &usSendSize))||
+      ( usSendSize < (usDataOffset + sizeof(statsReqParams.statsArpReqParams))))
+  {
+     WPAL_TRACE( eWLAN_MODULE_DAL_CTRL,  eWLAN_PAL_TRACE_LEVEL_WARN,
+              "Unable to get send buffer in set bss key req %p %p %p",
+                pEventData, pSetARPStatsReqParams, wdiSetARPStatsRspCb);
+     WDI_ASSERT(0);
+     return WDI_STATUS_E_FAILURE;
+  }
+
+  statsReqParams.statsArpReqParams.set_clr = pSetARPStatsReqParams->flag;
+  statsReqParams.statsArpReqParams.pkt_type =
+                      pSetARPStatsReqParams->pkt_type;
+  statsReqParams.statsArpReqParams.ip_addr = pSetARPStatsReqParams->ip_addr;
+
+  wpalMemoryCopy( pSendBuffer+usDataOffset,
+                  &statsReqParams.statsArpReqParams,
+                  sizeof(statsReqParams.statsArpReqParams));
+
+  wdi_status = WDI_SendMsg(pWDICtx, pSendBuffer, usSendSize,
+                      wdiSetARPStatsRspCb, pEventData->pUserData,
+                      WDI_FW_ARP_STATS_RSP);
+
+  VOS_TRACE(VOS_MODULE_ID_WDI, VOS_TRACE_LEVEL_INFO,
+            "%s: %d Exit",__func__, __LINE__);
+  return wdi_status;
+}
+
+/**
+ * WDI_SetARPStatsReq() - WDI api to process set arp stats request
+ * @pwdiSetStatsReqParams: pointer to set stats params
+ * @wdiSetStatsRspCb: pointer to set response callback
+ * @pUserData: user data
+ *
+ * Return: WDI_Status
+ */
+WDI_Status
+WDI_SetARPStatsReq
+(
+  WDI_SetARPStatsParamsInfoType* pwdiSetStatsReqParams,
+  WDI_SetARPStatsRspCb          wdiSetStatsRspCb,
+  void*                      pUserData
+)
+{
+  WDI_EventInfoType      wdiEventData;
+
+  if (eWLAN_PAL_FALSE == gWDIInitialized )
+  {
+    WPAL_TRACE(eWLAN_MODULE_DAL_CTRL, eWLAN_PAL_TRACE_LEVEL_ERROR,
+              "WDI API call before module is initialized - Fail request");
+
+    return WDI_STATUS_E_NOT_ALLOWED;
+  }
+
+  wdiEventData.wdiRequest      = WDI_FW_ARP_STATS_REQ;
+  wdiEventData.pEventData      = pwdiSetStatsReqParams;
+  wdiEventData.uEventDataSize  = sizeof(*pwdiSetStatsReqParams);
+  wdiEventData.pCBfnc          = wdiSetStatsRspCb;
+  wdiEventData.pUserData       = pUserData;
+
+  return WDI_PostMainEvent(&gWDICb, WDI_REQUEST_EVENT, &wdiEventData);
+
+}/*WDI_GetARPStatsReq*/
+
+/**
+ * WDI_ProcessGetArpStatsReq() - WDI api to process get arp stats request
+ * @pWDICtx: wdi context
+ * @pEventData: event data
+ *
+ * Return: WDI_Status
+ */
+WDI_Status
+WDI_ProcessGetArpStatsReq
+(
+  WDI_ControlBlockType*  pWDICtx,
+  WDI_EventInfoType*     pEventData
+)
+{
+   WDI_GetARPStatsParamsInfoType  *pGetARPStatsReqParams;
+   WDI_GetARPStatsRspCb  wdiGetARPStatsRspCb;
+   wpt_uint8*            pSendBuffer;
+   wpt_uint16            usDataOffset;
+   wpt_uint16            usSendSize;
+   WDI_Status wdi_status;
+   tHalStatsGetArpReqMsg statsReqParams;
+
+   VOS_TRACE(VOS_MODULE_ID_WDI, VOS_TRACE_LEVEL_INFO,
+             "%s: %d Enter",__func__, __LINE__);
+
+  if (( NULL == pEventData ) || ( NULL == pEventData->pEventData) ||
+      ( NULL == pWDICtx ) )
+  {
+     WPAL_TRACE( eWLAN_MODULE_DAL_CTRL, eWLAN_PAL_TRACE_LEVEL_WARN,
+                 "%s: Invalid parameters", __func__);
+     WDI_ASSERT(0);
+     return WDI_STATUS_E_FAILURE;
+  }
+
+  pGetARPStatsReqParams =
+     (WDI_GetARPStatsParamsInfoType *)pEventData->pEventData;
+  wdiGetARPStatsRspCb   = (WDI_GetARPStatsRspCb)pEventData->pCBfnc;
+
+  if ((WDI_STATUS_SUCCESS != WDI_GetMessageBuffer(pWDICtx,
+                        WDI_FW_GET_ARP_STATS_REQ,
+                        sizeof(statsReqParams.statsGetArpReqParams),
+                        &pSendBuffer, &usDataOffset, &usSendSize))||
+      ( usSendSize < (usDataOffset +
+                      sizeof(statsReqParams.statsGetArpReqParams))))
+  {
+     WPAL_TRACE( eWLAN_MODULE_DAL_CTRL,  eWLAN_PAL_TRACE_LEVEL_WARN,
+              "Unable to get send buffer in set bss key req %p %p %p",
+                pEventData, pGetARPStatsReqParams, wdiGetARPStatsRspCb);
+     WDI_ASSERT(0);
+     return WDI_STATUS_E_FAILURE;
+  }
+
+  statsReqParams.statsGetArpReqParams.pkt_type =
+                      pGetARPStatsReqParams->pkt_type;
+
+  wpalMemoryCopy( pSendBuffer+usDataOffset,
+                  &statsReqParams.statsGetArpReqParams,
+                  sizeof(statsReqParams.statsGetArpReqParams));
+
+  wdi_status = WDI_SendMsg(pWDICtx, pSendBuffer, usSendSize,
+                      wdiGetARPStatsRspCb, pEventData->pUserData,
+                      WDI_FW_GET_ARP_STATS_RSP);
+
+  VOS_TRACE(VOS_MODULE_ID_WDI, VOS_TRACE_LEVEL_INFO,
+            "%s: %d Exit",__func__, __LINE__);
+  return wdi_status;
+}
+
+/**
+ * WDI_GetARPStatsReq() - WDI api to process get arp stats request
+ * @pwdiGetStatsReqParams: pointer to get stats params
+ * @wdiGetStatsRspCb: pointer to get response callback
+ * @pUserData: user data
+ *
+ * Return: WDI_Status
+ */
+WDI_Status
+WDI_GetARPStatsReq
+(
+  WDI_GetARPStatsParamsInfoType* pwdiGetStatsReqParams,
+  WDI_GetARPStatsRspCb          wdiGetStatsRspCb,
+  void*                      pUserData
+)
+{
+  WDI_EventInfoType      wdiEventData;
+
+  if (eWLAN_PAL_FALSE == gWDIInitialized )
+  {
+    WPAL_TRACE(eWLAN_MODULE_DAL_CTRL, eWLAN_PAL_TRACE_LEVEL_ERROR,
+              "WDI API call before module is initialized - Fail request");
+
+    return WDI_STATUS_E_NOT_ALLOWED;
+  }
+
+  wdiEventData.wdiRequest      = WDI_FW_GET_ARP_STATS_REQ;
+  wdiEventData.pEventData      = pwdiGetStatsReqParams;
+  wdiEventData.uEventDataSize  = sizeof(*pwdiGetStatsReqParams);
+  wdiEventData.pCBfnc          = wdiGetStatsRspCb;
+  wdiEventData.pUserData       = pUserData;
+
+  return WDI_PostMainEvent(&gWDICb, WDI_REQUEST_EVENT, &wdiEventData);
+
+}/*WDI_GetARPStatsReq*/
