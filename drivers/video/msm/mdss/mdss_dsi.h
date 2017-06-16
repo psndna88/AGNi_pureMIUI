@@ -57,6 +57,9 @@
 
 #define NONE_PANEL "none"
 
+/* KCAL SCREEN MODES by psndna88@xda */
+extern bool backlight_dimmer;
+
 enum {		/* mipi dsi panel */
 	DSI_VIDEO_MODE,
 	DSI_CMD_MODE,
