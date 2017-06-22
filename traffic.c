@@ -129,7 +129,9 @@ static int cmd_traffic_send_ping(struct sigma_dut *dut,
 	if (rate != 1)
 		snprintf(int_arg, sizeof(int_arg), " -i %f", interval);
 	intf_arg[0] = '\0';
-	if (type == 2)
+	if (dut->ndp_enable)
+		strlcpy(intf_arg, " -I nan0", sizeof(intf_arg));
+	else if (type == 2)
 		snprintf(intf_arg, sizeof(intf_arg), " -I %s",
 			 get_station_ifname());
 	fprintf(f, "#!" SHELL "\n"
