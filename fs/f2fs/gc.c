@@ -734,7 +734,7 @@ retry:
 
 		err = do_write_data_page(&fio);
 		if (err == -ENOMEM && is_dirty) {
-			congestion_wait(BLK_RW_ASYNC, HZ/50);
+			congestion_wait(BLK_RW_ASYNC, msecs_to_jiffies(20));
 			goto retry;
 		}
 	}

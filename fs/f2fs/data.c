@@ -1318,7 +1318,7 @@ retry_encrypt:
 	/* flush pending IOs and wait for a while in the ENOMEM case */
 	if (PTR_ERR(fio->encrypted_page) == -ENOMEM) {
 		f2fs_flush_merged_bios(fio->sbi);
-		congestion_wait(BLK_RW_ASYNC, HZ/50);
+		congestion_wait(BLK_RW_ASYNC, msecs_to_jiffies(20));
 		gfp_flags |= __GFP_NOFAIL;
 		goto retry_encrypt;
 	}

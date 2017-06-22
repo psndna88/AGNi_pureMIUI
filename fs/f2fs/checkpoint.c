@@ -1044,7 +1044,7 @@ static void wait_on_all_pages_writeback(struct f2fs_sb_info *sbi)
 		if (!get_pages(sbi, F2FS_WB_CP_DATA))
 			break;
 
-		io_schedule_timeout(5*HZ);
+		io_schedule_timeout(msecs_to_jiffies(5000));
 	}
 	finish_wait(&sbi->cp_wait, &wait);
 }

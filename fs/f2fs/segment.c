@@ -1205,7 +1205,7 @@ repeat:
 	__issue_discard_cmd(sbi, true);
 	__wait_discard_cmd(sbi, true);
 
-	congestion_wait(BLK_RW_SYNC, HZ/50);
+	congestion_wait(BLK_RW_SYNC, msecs_to_jiffies(20));
 
 	wait_event_interruptible(*q, kthread_should_stop() ||
 				atomic_read(&dcc->discard_cmd_cnt));
