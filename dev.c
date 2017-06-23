@@ -75,6 +75,34 @@ static int cmd_dev_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int cmd_dev_configure_ie(struct sigma_dut *dut, struct sigma_conn *conn,
+				struct sigma_cmd *cmd)
+{
+	const char *ie_name = get_param(cmd, "IE_Name");
+	const char *contents = get_param(cmd, "Contents");
+
+	if (!ie_name || !contents)
+		return -1;
+
+	if (strcasecmp(ie_name, "RSNE") != 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Unsupported IE_Name value");
+		return 0;
+	}
+
+	free(dut->rsne_override);
+	dut->rsne_override = strdup(contents);
+
+	return dut->rsne_override ? 1 : -1;
+}
+
+
+static int req_intf(struct sigma_cmd *cmd)
+{
+	return get_param(cmd, "interface") == NULL ? -1 : 0;
+}
+
+
 static int req_intf_prog(struct sigma_cmd *cmd)
 {
 	if (get_param(cmd, "interface") == NULL)
@@ -92,4 +120,5 @@ void dev_register_cmds(void)
 			  cmd_dev_set_parameter);
 	sigma_dut_reg_cmd("dev_exec_action", req_intf_prog,
 			  cmd_dev_exec_action);
+	sigma_dut_reg_cmd("dev_configure_ie", req_intf, cmd_dev_configure_ie);
 }

@@ -5530,6 +5530,9 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		break;
 	}
 
+	if (dut->rsne_override)
+		fprintf(f, "own_ie_override=%s\n", dut->rsne_override);
+
 	if (dut->ap_p2p_mgmt)
 		fprintf(f, "manage_p2p=1\n");
 
@@ -6341,6 +6344,9 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->mbo_self_ap_tuple.ap_ne_op_ch = -1;
 
 	}
+
+	free(dut->rsne_override);
+	dut->rsne_override = NULL;
 
 	if (kill_process(dut, "(hostapd)", 1, SIGTERM) == 0 ||
 	    system("killall hostapd") == 0) {

@@ -630,6 +630,8 @@ struct sigma_dut {
 
 	char *non_pref_ch_list; /* MBO: non-preferred channel report */
 	char *btm_query_cand_list; /* Candidate list for BTM Query */
+
+	char *rsne_override;
 };
 
 
