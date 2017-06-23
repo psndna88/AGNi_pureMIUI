@@ -2248,8 +2248,9 @@ static int cmd_sta_associate(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *ssid = get_param(cmd, "ssid");
 	const char *wps_param = get_param(cmd, "WPS");
 	const char *bssid = get_param(cmd, "bssid");
+	const char *chan = get_param(cmd, "channel");
 	int wps = 0;
-	char buf[100];
+	char buf[100], extra[50];
 
 	if (ssid == NULL)
 		return -1;
@@ -2290,8 +2291,12 @@ static int cmd_sta_associate(struct sigma_dut *dut, struct sigma_conn *conn,
 			return 0;
 		}
 
-		snprintf(buf, sizeof(buf), "SELECT_NETWORK %d",
-			 dut->infra_network_id);
+		extra[0] = '\0';
+		if (chan)
+			snprintf(extra, sizeof(extra), " freq=%u",
+				 channel_to_freq(atoi(chan)));
+		snprintf(buf, sizeof(buf), "SELECT_NETWORK %d%s",
+			 dut->infra_network_id, extra);
 		if (wpa_command(get_station_ifname(), buf) < 0) {
 			sigma_dut_print(dut, DUT_MSG_INFO, "Failed to select "
 					"network id %d on %s",
