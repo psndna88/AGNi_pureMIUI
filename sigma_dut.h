@@ -632,6 +632,9 @@ struct sigma_dut {
 	char *btm_query_cand_list; /* Candidate list for BTM Query */
 
 	char *rsne_override;
+	const char *hostapd_bin;
+	int use_hostapd_pid_file;
+	const char *hostapd_ifname;
 };
 
 

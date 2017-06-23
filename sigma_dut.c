@@ -765,7 +765,7 @@ int main(int argc, char *argv[])
 
 	for (;;) {
 		c = getopt(argc, argv,
-			   "aAb:Bc:C:dDE:e:fghH:i:Ik:l:L:m:M:nN:o:O:p:P:qr:R:s:S:tT:uv:VWw:x:y:");
+			   "aAb:Bc:C:dDE:e:fF:gGhH:j:i:Ik:l:L:m:M:nN:o:O:p:P:qr:R:s:S:tT:uv:VWw:x:y:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -800,10 +800,16 @@ int main(int argc, char *argv[])
 			/* Disable writing stats */
 			sigma_dut.write_stats = 0;
 			break;
+		case 'F':
+			sigma_dut.hostapd_bin = optarg;
+			break;
 		case 'g':
 			/* Enable internal processing of P2P group formation
 			 * events to start/stop DHCP server/client. */
 			internal_dhcp_enabled = 1;
+			break;
+		case 'G':
+			sigma_dut.use_hostapd_pid_file = 1;
 			break;
 		case 'H':
 			sigma_dut.hostapd_debug_log = optarg;
@@ -811,6 +817,9 @@ int main(int argc, char *argv[])
 		case 'I':
 			print_license();
 			exit(0);
+			break;
+		case 'j':
+			sigma_dut.hostapd_ifname = optarg;
 			break;
 		case 'l':
 			local_cmd = optarg;
@@ -939,7 +948,7 @@ int main(int argc, char *argv[])
 #endif /* MIRACAST */
 		case 'h':
 		default:
-			printf("usage: sigma_dut [-aABdfqDIntuVW] [-p<port>] "
+			printf("usage: sigma_dut [-aABdfGqDIntuVW] [-p<port>] "
 			       "[-s<sniffer>] [-m<set_maccaddr.sh>] \\\n"
 				"       [-M<main ifname>] [-R<radio ifname>] "
 			       "[-S<station ifname>] [-P<p2p_ifname>]\\\n"
@@ -947,6 +956,8 @@ int main(int argc, char *argv[])
 			       "       [-w<wpa_supplicant/hostapd ctrl_iface "
 			       "dir>] \\\n"
 			       "       [-H <hostapd log file>] \\\n"
+			       "       [-F <hostapd binary path>] \\\n"
+			       "       [-j <hostapd ifname>] \\\n"
 			       "       [-C <certificate path>] \\\n"
 			       "       [-v <version string>] \\\n"
 			       "       [-L <summary log>] \\\n"

@@ -40,6 +40,10 @@
 /* Maximum length of the line in the configuration file */
 #define MAX_CONF_LINE_LEN  		(156)
 
+#ifndef SIGMA_DUT_HOSTAPD_PID_FILE
+#define SIGMA_DUT_HOSTAPD_PID_FILE "/tmp/sigma_dut-ap-hostapd.pid"
+#endif /* SIGMA_DUT_HOSTAPD_PID_FILE */
+
 /* The following is taken from Hotspot 2.0 testplan Appendix B.1 */
 #define ANQP_VENUE_NAME_1 "02019c0002083d656e6757692d466920416c6c69616e63650a3239383920436f7070657220526f61640a53616e746120436c6172612c2043412039353035312c205553415b63686957692d4669e88194e79b9fe5ae9ee9aa8ce5aea40ae4ba8ce4b99de585abe4b99de5b9b4e5ba93e69f8fe8b7af0ae59ca3e5858be68b89e68b892c20e58aa0e588a9e7a68fe5b0bce4ba9a39353035312c20e7be8ee59bbd"
 #define ANQP_VENUE_NAME_1_CHI "P\"\x63\x68\x69\x3a\x57\x69\x2d\x46\x69\xe8\x81\x94\xe7\x9b\x9f\xe5\xae\x9e\xe9\xaa\x8c\xe5\xae\xa4\\n\xe4\xba\x8c\xe4\xb9\x9d\xe5\x85\xab\xe4\xb9\x9d\xe5\xb9\xb4\xe5\xba\x93\xe6\x9f\x8f\xe8\xb7\xaf\\n\xe5\x9c\xa3\xe5\x85\x8b\xe6\x8b\x89\xe6\x8b\x89\x2c\x20\xe5\x8a\xa0\xe5\x88\xa9\xe7\xa6\x8f\xe5\xb0\xbc\xe4\xba\x9a\x39\x35\x30\x35\x31\x2c\x20\xe7\xbe\x8e\xe5\x9b\xbd\""
@@ -71,6 +75,28 @@ static int cmd_ap_ca_version(struct sigma_dut *dut, struct sigma_conn *conn,
 	/* const char *name = get_param(cmd, "NAME"); */
 	send_resp(dut, conn, SIGMA_COMPLETE, "version,1.0");
 	return 0;
+}
+
+
+static void kill_hostapd_process_pid(struct sigma_dut *dut)
+{
+	FILE *f;
+	int pid, res;
+	char path[100];
+	int count;
+
+	f = fopen(SIGMA_DUT_HOSTAPD_PID_FILE, "r");
+	if (!f)
+		return;
+	res = fscanf(f, "%d", &pid);
+	fclose(f);
+	if (res != 1)
+		return;
+	sigma_dut_print(dut, DUT_MSG_INFO, "Killing hostapd pid %d", pid);
+	kill(pid, SIGTERM);
+	snprintf(path, sizeof(path), "/proc/%d", pid);
+	for (count = 0; count < 20 && file_exists(path); count++)
+		usleep(100000);
 }
 
 
@@ -254,6 +280,8 @@ static int run_hostapd_cli(struct sigma_dut *dut, char *buf)
 
 	if (file_exists("hostapd_cli"))
 		bin = "./hostapd_cli";
+	else if (file_exists("../../hostapd/hostapd_cli"))
+		bin = "../../hostapd/hostapd_cli";
 	else
 		bin = "hostapd_cli";
 
@@ -483,6 +511,8 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 				run_system(dut, "wifi down");
 				sigma_dut_print(dut, DUT_MSG_INFO,
 						"wifi down on radio,off");
+			} else if (dut->use_hostapd_pid_file) {
+				kill_hostapd_process_pid(dut);
 			} else if (kill_process(dut, "(hostapd)", 1,
 						SIGTERM) == 0 ||
 				   system("killall hostapd") == 0) {
@@ -5355,6 +5385,8 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		fclose(f);
 		return -1;
 	}
+	if (dut->hostapd_ifname)
+		ifname = dut->hostapd_ifname;
 
 	if (drv == DRIVER_MAC80211 || drv == DRIVER_LINUX_WCN)
 		fprintf(f, "driver=nl80211\n");
@@ -5735,11 +5767,14 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 
 	fclose(f);
+	if (dut->use_hostapd_pid_file)
+		kill_hostapd_process_pid(dut);
 #ifdef __QNXNTO__
 	if (system("slay hostapd") == 0)
 #else /* __QNXNTO__ */
-	if (kill_process(dut, "(hostapd)", 1, SIGTERM) == 0 ||
-	    system("killall hostapd") == 0)
+	if (!dut->use_hostapd_pid_file &&
+	    (kill_process(dut, "(hostapd)", 1, SIGTERM) == 0 ||
+	     system("killall hostapd") == 0))
 #endif /* __QNXNTO__ */
 	{
 		int i;
@@ -5790,16 +5825,21 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 			sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to remove "
 					"monitor interface");
 
-		snprintf(buf, sizeof(buf), "%shostapd -B%s%s%s%s " SIGMA_TMPDIR
+		snprintf(path, sizeof(path), "%shostapd",
+			 file_exists("hostapd") ? "./" : "");
+		snprintf(buf, sizeof(buf), "%s -B%s%s%s%s%s " SIGMA_TMPDIR
 			 "/sigma_dut-ap.conf",
-			 file_exists("hostapd") ? "./" : "",
+			 dut->hostapd_bin ? dut->hostapd_bin : path,
 			 dut->hostapd_debug_log ? " -ddKt -f" : "",
 			 dut->hostapd_debug_log ? dut->hostapd_debug_log : "",
 			 dut->hostapd_entropy_log ? " -e" : "",
 			 dut->hostapd_entropy_log ? dut->hostapd_entropy_log :
-			 "");
+			 "",
+			 dut->use_hostapd_pid_file ?
+			 " -P " SIGMA_DUT_HOSTAPD_PID_FILE : "");
 	}
 
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "hostapd command: %s", buf);
 	if (system(buf) != 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Failed to start hostapd");
@@ -6348,8 +6388,10 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	free(dut->rsne_override);
 	dut->rsne_override = NULL;
 
-	if (kill_process(dut, "(hostapd)", 1, SIGTERM) == 0 ||
-	    system("killall hostapd") == 0) {
+	if (dut->use_hostapd_pid_file) {
+		kill_hostapd_process_pid(dut);
+	} else if (kill_process(dut, "(hostapd)", 1, SIGTERM) == 0 ||
+		   system("killall hostapd") == 0) {
 		int i;
 		/* Wait some time to allow hostapd to complete cleanup before
 		 * starting a new process */
