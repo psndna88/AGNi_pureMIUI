@@ -525,6 +525,8 @@ static int msm_dcvs_check_supported(struct msm_vidc_inst *inst)
 			(inst->fmts[OUTPUT_PORT]->fourcc ==
 				V4L2_PIX_FMT_VP8) ||
 			(inst->fmts[OUTPUT_PORT]->fourcc ==
+				V4L2_PIX_FMT_VP9) ||
+			(inst->fmts[OUTPUT_PORT]->fourcc ==
 				V4L2_PIX_FMT_H264_NO_SC);
 		if (!is_codec_supported ||
 			!IS_VALID_DCVS_SESSION(num_mbs_per_frame,
