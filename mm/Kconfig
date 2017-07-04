@@ -628,11 +628,3 @@ config KSM_THREAD_SLEEPMS
 	  This sets the default milliseconds range when ksm should sleep between
 	  batches. The implementatiion of this config is done to provide a window
 	  configurable via defconfig. If left untouched it defaults to stock 20ms.
-
-config FORCE_RECLAIM
-	bool "Enable forced process reclaim"
-	depends on PROC_FS && PROCESS_RECLAIM
-	default n
-	help
-	 It allows to force reclaim pages of all processes by /proc/pid/reclaim.
-
