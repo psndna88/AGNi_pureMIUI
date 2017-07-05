@@ -1,12 +1,12 @@
 #!/bin/sh
 export KERNELDIR=`readlink -f .`
-. ~/WORKING_DIRECTORY/AGNi_stamp_CM.sh
+. ~/WORKING_DIRECTORY/AGNi_stamp_LOS.sh
 #. ~/WORKING_DIRECTORY/gcc-4.9-google_arm.sh
 . ~/WORKING_DIRECTORY/gcc-4.9-uber_arm-eabi.sh
 #. ~/WORKING_DIRECTORY/gcc-6.x-uber_arm-eabi.sh
 
 echo ""
-echo " Cross-compiling AGNi dior pureCM-N kernel ..."
+echo " Cross-compiling AGNi dior pureLOS-N kernel ..."
 echo ""
 
 cd $KERNELDIR/
@@ -40,5 +40,5 @@ echo "Generating Device Tree image (dt.img) ..."
 $KERNELDIR/tools/dtbtool/dtbTool -o $KERNELDIR/BUILT_dior-cmN/dt.img -s 2048 -p $KERNELDIR/scripts/dtc/ $KERNELDIR/arch/arm/boot/
 
 echo ""
-echo "AGNi pureCM-N has been built for dior !!!"
+echo "AGNi pureLOS-N has been built for dior !!!"
 
