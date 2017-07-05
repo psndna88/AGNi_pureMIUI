@@ -622,11 +622,7 @@ static inline int mxt_obj_instances(const struct mxt_object *obj)
 
 static bool mxt_object_readable(unsigned int type)
 {
-	switch (type) {
-		return true;
-	default:
 		return false;
-	}
 }
 
 static void mxt_dump_message(struct mxt_data *data, u8 *message)

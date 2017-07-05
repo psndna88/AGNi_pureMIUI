@@ -239,7 +239,7 @@ static struct pll_clk cci_sr_pll = {
 
 DEFINE_FIXED_DIV_CLK(cci_sr_pll_main, 2, &cci_sr_pll.c);
 
-static const char const *mux_names[] = {"c0", "c1", "cci"};
+static const char *mux_names[] = {"c0", "c1", "cci"};
 
 #define SAFE_NUM	2
 

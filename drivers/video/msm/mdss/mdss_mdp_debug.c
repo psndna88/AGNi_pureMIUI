@@ -152,7 +152,7 @@ static void __print_buf(struct seq_file *s, struct mdss_mdp_data *buf,
 		bool show_pipe)
 {
 	char tmpbuf[20];
-	const char const *stmap[] = {
+	const char *stmap[] = {
 		[MDP_BUF_STATE_UNUSED]  = "UNUSED ",
 		[MDP_BUF_STATE_READY]   = "READY  ",
 		[MDP_BUF_STATE_ACTIVE]  = "ACTIVE ",

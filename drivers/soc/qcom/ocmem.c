@@ -641,8 +641,12 @@ static int ocmem_zone_init(struct platform_device *pdev)
 		struct ocmem_partition *part = &pdata->parts[i];
 		zone = get_zone(part->id);
 		if (!zone) {
-			pr_err("Unable to get zone for client %s\n",
-						client_names[part->id]);
+			if (check_id(part->id))
+				pr_err("Unable to get zone for client %s\n",
+						       client_names[part->id]);
+			else
+				pr_err("Invalid id!\n");
+
 			return -EBUSY;
 		}
 		zone->active = false;
