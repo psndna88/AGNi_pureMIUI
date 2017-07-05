@@ -1,8 +1,8 @@
 #!/bin/sh
 export KERNELDIR=`readlink -f .`
 . ~/WORKING_DIRECTORY/AGNi_stamp_CM.sh
-. ~/WORKING_DIRECTORY/gcc-4.9-google_arm.sh
-#. ~/WORKING_DIRECTORY/gcc-4.9-uber_arm-eabi.sh
+#. ~/WORKING_DIRECTORY/gcc-4.9-google_arm.sh
+. ~/WORKING_DIRECTORY/gcc-4.9-uber_arm-eabi.sh
 #. ~/WORKING_DIRECTORY/gcc-6.x-uber_arm-eabi.sh
 
 echo ""
