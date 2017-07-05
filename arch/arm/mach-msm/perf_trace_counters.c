@@ -14,6 +14,7 @@
 #include <linux/debugfs.h>
 #define CREATE_TRACE_POINTS
 #include "perf_trace_counters.h"
+#include <linux/cpu.h>
 
 static unsigned int tp_pid_state;
 

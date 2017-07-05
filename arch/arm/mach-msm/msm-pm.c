@@ -42,6 +42,8 @@
 #include "spm.h"
 #include "pm-boot.h"
 #include "clock.h"
+#include <asm/system_misc.h>
+#include <linux/sched.h>
 
 #define CREATE_TRACE_POINTS
 #include <mach/trace_msm_low_power.h>

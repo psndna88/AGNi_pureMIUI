@@ -87,7 +87,7 @@ typedef VibeInt32	VibeStatus;
 #define DBL_INFO                        3
 #define DBL_VERBOSE                     4
 #define DBL_OVERKILL                    5
-#pragma message "************ __KERNEL__ ************"
+//#pragma message "************ __KERNEL__ ************"
 #endif
 
 /* Device parameters sent to the kernel module, tspdrv.ko */
