@@ -1,6 +1,6 @@
 #!/bin/sh
 export KERNELDIR=`readlink -f .`
-. ~/WORKING_DIRECTORY/AGNi_stamp_CM.sh
+. ~/WORKING_DIRECTORY/AGNi_stamp_LOS.sh
 . ~/WORKING_DIRECTORY/gcc-6.x-uber_aarch64.sh
 #. ~/WORKING_DIRECTORY/gcc-7.x-uber_aarch64.sh
 
