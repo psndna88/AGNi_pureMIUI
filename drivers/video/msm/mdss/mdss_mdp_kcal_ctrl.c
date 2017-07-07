@@ -13,7 +13,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * KCAL SCREEN MODES by psndna88@xda (16-June-2017)
+ * KCAL SCREEN MODES v1.1 by psndna88@xda (07-July-2017)
  *
  * all modes use individual parameters independent from tunables values
  *
@@ -97,7 +97,8 @@ static void kcal_apply_mode(struct device *dev) {
 
     kcal_mode_save_prev(dev);
 
-    if (kcal_custom_mode == 0) {
+    switch (kcal_custom_mode) {
+  	case 0:
     	/* USER MODE */
 		mode_kcal_r = user_kcal_r;
         mode_kcal_g = user_kcal_g;
@@ -107,7 +108,8 @@ static void kcal_apply_mode(struct device *dev) {
         mode_kcal_val = user_kcal_val;
         mode_kcal_cont = user_kcal_cont;
         mode_backlight_dimmer = prev_backlight_dimmer;
-    } else if (kcal_custom_mode == 1) {
+		break;
+  	case 1:
         /* STANDARD MODE */
         mode_kcal_r = 256;
         mode_kcal_g = 256;
@@ -117,7 +119,8 @@ static void kcal_apply_mode(struct device *dev) {
         mode_kcal_val = 255;
         mode_kcal_cont = 255;
         mode_backlight_dimmer = prev_backlight_dimmer;
-    } else if (kcal_custom_mode == 2) {
+		break;
+	case 2:
         /* NIGHT MODE */
         mode_kcal_r = 228;
         mode_kcal_g = 168;
@@ -127,7 +130,8 @@ static void kcal_apply_mode(struct device *dev) {
         mode_kcal_val = 255;
         mode_kcal_cont = 255;
         mode_backlight_dimmer = true;
-    } else if (kcal_custom_mode == 3) {
+		break;
+	case 3:
         /* WARM MODE */
         mode_kcal_r = 256;
         mode_kcal_g = 240;
@@ -137,7 +141,8 @@ static void kcal_apply_mode(struct device *dev) {
         mode_kcal_val = 251;
         mode_kcal_cont = 258;
         mode_backlight_dimmer = prev_backlight_dimmer;
-    } else if (kcal_custom_mode == 4) {
+		break;
+	case 4:
         /* VIVID MODE */
         mode_kcal_r = 256;
         mode_kcal_g = 256;
@@ -147,7 +152,8 @@ static void kcal_apply_mode(struct device *dev) {
         mode_kcal_val = 257;
         mode_kcal_cont = 265;
         mode_backlight_dimmer = prev_backlight_dimmer;
-    } else if (kcal_custom_mode == 5) {
+		break;
+	case 5:
         /* READING MODE */
         mode_kcal_r = 256;
         mode_kcal_g = 256;
@@ -157,6 +163,9 @@ static void kcal_apply_mode(struct device *dev) {
         mode_kcal_val = 255;
         mode_kcal_cont = 255;
         mode_backlight_dimmer = prev_backlight_dimmer;
+		break;
+	default:
+		break;
     }
 
     kcal_mode_save_mode(dev);
