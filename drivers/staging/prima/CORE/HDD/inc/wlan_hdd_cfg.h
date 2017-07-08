@@ -2876,6 +2876,19 @@ This feature requires the dependent cfg.ini "gRoamPrefer5GHz" set to 1 */
 #define CFG_SAP_INTERNAL_RESTART_MAX     (1)
 #define CFG_SAP_INTERNAL_RESTART_DEFAULT (1)
 
+/*
+ * gDisableScanDuringSco is used to disable/enable scan during SCO call
+ * This can be useful to avoid glitches because of EXIT_IMPS invoked by scan
+ * when SCO call in progress
+ * 0: Enable scan
+ * 1: Disable scan
+ */
+#define CFG_DISABLE_SCAN_DURING_SCO         "gDisableScanDuringSco"
+#define CFG_DISABLE_SCAN_DURING_SCO_MIN     (0)
+#define CFG_DISABLE_SCAN_DURING_SCO_MAX     (1)
+#define CFG_DISABLE_SCAN_DURING_SCO_DEFAULT (0)
+
+
 /*--------------------------------------------------------------------------- 
   Type declarations
   -------------------------------------------------------------------------*/ 
@@ -3437,6 +3450,7 @@ typedef struct
    v_BOOL_t                    sendMgmtPktViaWQ5;
    v_BOOL_t                    sap_probe_resp_offload;
    v_BOOL_t                    sap_internal_restart;
+   v_BOOL_t                    disable_scan_during_sco;
 } hdd_config_t;
 
 /*--------------------------------------------------------------------------- 
