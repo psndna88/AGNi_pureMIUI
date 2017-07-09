@@ -67,21 +67,22 @@ static int mmap_is_legacy(void)
 
 static unsigned long mmap_rnd(void)
 {
-	unsigned long rnd;
+	unsigned long rnd = 0;
 
-	/*
-	 *  8 bits of randomness in 32bit mmaps, 20 address space bits
-	 * 28 bits of randomness in 64bit mmaps, 40 address space bits
-	 */
-	if (mmap_is_ia32())
-		rnd = (unsigned long)get_random_int() % (1<<8);
-	else
-		rnd = (unsigned long)get_random_int() % (1<<28);
-
+	if (current->flags & PF_RANDOMIZE) {
+		if (mmap_is_ia32())
+#ifdef CONFIG_COMPAT
+			rnd = get_random_long() & ((1UL << mmap_rnd_compat_bits) - 1);
+#else
+			rnd = get_random_long() & ((1UL << mmap_rnd_bits) - 1);
+#endif
+		else
+			rnd = get_random_long() & ((1UL << mmap_rnd_bits) - 1);
+	}
 	return rnd << PAGE_SHIFT;
 }
 
-static unsigned long mmap_base(unsigned long rnd)
+static unsigned long mmap_base(void)
 {
 	unsigned long gap = rlimit(RLIMIT_STACK);
 
@@ -90,7 +91,19 @@ static unsigned long mmap_base(unsigned long rnd)
 	else if (gap > MAX_GAP)
 		gap = MAX_GAP;
 
-	return PAGE_ALIGN(TASK_SIZE - gap - rnd);
+	return PAGE_ALIGN(TASK_SIZE - gap - mmap_rnd());
+}
+
+/*
+ * Bottom-up (legacy) layout on X86_32 did not support randomization, X86_64
+ * does, but not when emulating X86_32
+ */
+static unsigned long mmap_legacy_base(void)
+{
+	if (mmap_is_ia32())
+		return TASK_UNMAPPED_BASE;
+	else
+		return TASK_UNMAPPED_BASE + mmap_rnd();
 }
 
 /*
@@ -99,20 +112,13 @@ static unsigned long mmap_base(unsigned long rnd)
  */
 void arch_pick_mmap_layout(struct mm_struct *mm)
 {
-	unsigned long random_factor = 0UL;
-
-	if (current->flags & PF_RANDOMIZE)
-		random_factor = mmap_rnd();
-
-	mm->mmap_legacy_base = TASK_UNMAPPED_BASE + random_factor;
+	mm->mmap_legacy_base = mmap_legacy_base();
+	mm->mmap_base = mmap_base();
 
 	if (mmap_is_legacy()) {
 		mm->mmap_base = mm->mmap_legacy_base;
 		mm->get_unmapped_area = arch_get_unmapped_area;
-		mm->unmap_area = arch_unmap_area;
 	} else {
-		mm->mmap_base = mmap_base(random_factor);
 		mm->get_unmapped_area = arch_get_unmapped_area_topdown;
-		mm->unmap_area = arch_unmap_area_topdown;
 	}
 }
