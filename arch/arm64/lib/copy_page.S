@@ -32,10 +32,12 @@ ENTRY(copy_page)
 alternative_if_not ARM64_HAS_NO_HW_PREFETCH
 	nop
 	nop
+	nop
 alternative_else
-	# Prefetch two cache lines ahead.
+	# Prefetch three cache lines ahead.
 	prfm    pldl1strm, [x1, #128]
 	prfm    pldl1strm, [x1, #256]
+	prfm	pldl1strm, [x1, #384]
 alternative_endif
 
 	ldp	x2, x3, [x1]
