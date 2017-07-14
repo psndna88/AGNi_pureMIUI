@@ -136,6 +136,7 @@ static int do_cpu_boost(struct notifier_block *nb,
 
 static struct notifier_block do_cpu_boost_nb = {
 	.notifier_call = do_cpu_boost,
+	.priority = INT_MAX,
 };
 
 static void cpu_fp_input_event(struct input_handle *handle, unsigned int type,
