@@ -768,7 +768,12 @@ static ssize_t mdss_fb_change_dfps_mode(struct device *dev,
 		return len;
 	}
 
+#ifdef CONFIG_MACH_XIAOMI_KENZO_AGNI_CM_N
 	pinfo->dynamic_fps = true;
+#else
+	pinfo->dynamic_fps = false;
+#endif
+
 	pinfo->dfps_update = dfps_mode;
 
 	return len;
@@ -795,7 +800,7 @@ static ssize_t mdss_fb_get_dfps_mode(struct device *dev,
 
 	return ret;
 }
-extern  void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
+extern void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
 			struct dsi_panel_cmds *pcmds);
 
 #ifdef CONFIG_MACH_XIAOMI_KENZO
