@@ -834,6 +834,7 @@ static void volume_control_quirks(struct usb_mixer_elem_info *cval,
 	case USB_ID(0x046d, 0x0807): /* Logitech Webcam C500 */
 	case USB_ID(0x046d, 0x0808):
 	case USB_ID(0x046d, 0x0809):
+	case USB_ID(0x046d, 0x0819): /* Logitech Webcam C210 */
 	case USB_ID(0x046d, 0x081b): /* HD Webcam c310 */
 	case USB_ID(0x046d, 0x081d): /* HD Webcam c510 */
 	case USB_ID(0x046d, 0x0825): /* HD Webcam c270 */
@@ -1209,6 +1210,8 @@ static void build_feature_ctl(struct mixer_build *state, void *raw_desc,
 				sizeof(kctl->id.name));
 		break;
 	}
+
+	snd_usb_mixer_fu_apply_quirk(state->mixer, cval, unitid, kctl);
 
 	range = (cval->max - cval->min) / cval->res;
 	/* Are there devices with volume range more than 255? I use a bit more

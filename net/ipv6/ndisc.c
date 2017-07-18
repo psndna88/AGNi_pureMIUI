@@ -1737,11 +1737,11 @@ static int ndisc_netdev_event(struct notifier_block *this, unsigned long event, 
 	switch (event) {
 	case NETDEV_CHANGEADDR:
 		neigh_changeaddr(&nd_tbl, dev);
-		fib6_run_gc(~0UL, net);
+		fib6_run_gc(0, net, false);
 		break;
 	case NETDEV_DOWN:
 		neigh_ifdown(&nd_tbl, dev);
-		fib6_run_gc(~0UL, net);
+		fib6_run_gc(0, net, false);
 		break;
 	case NETDEV_NOTIFY_PEERS:
 		ndisc_send_unsol_na(dev);
@@ -1867,24 +1867,28 @@ int __init ndisc_init(void)
 	if (err)
 		goto out_unregister_pernet;
 #endif
-	err = register_netdevice_notifier(&ndisc_netdev_notifier);
-	if (err)
-		goto out_unregister_sysctl;
 out:
 	return err;
 
-out_unregister_sysctl:
 #ifdef CONFIG_SYSCTL
-	neigh_sysctl_unregister(&nd_tbl.parms);
 out_unregister_pernet:
-#endif
 	unregister_pernet_subsys(&ndisc_net_ops);
 	goto out;
+#endif
+}
+
+int __init ndisc_late_init(void)
+{
+	return register_netdevice_notifier(&ndisc_netdev_notifier);
+}
+
+void ndisc_late_cleanup(void)
+{
+	unregister_netdevice_notifier(&ndisc_netdev_notifier);
 }
 
 void ndisc_cleanup(void)
 {
-	unregister_netdevice_notifier(&ndisc_netdev_notifier);
 #ifdef CONFIG_SYSCTL
 	neigh_sysctl_unregister(&nd_tbl.parms);
 #endif

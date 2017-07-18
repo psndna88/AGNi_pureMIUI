@@ -173,6 +173,7 @@ static rx_handler_result_t macvlan_handle_frame(struct sk_buff **pskb)
 		skb = ip_check_defrag(skb, IP_DEFRAG_MACVLAN);
 		if (!skb)
 			return RX_HANDLER_CONSUMED;
+		*pskb = skb;
 		eth = eth_hdr(skb);
 		src = macvlan_hash_lookup(port, eth->h_source);
 		if (!src)
@@ -222,6 +223,7 @@ static rx_handler_result_t macvlan_handle_frame(struct sk_buff **pskb)
 	if (!skb)
 		goto out;
 
+	*pskb = skb;
 	skb->dev = dev;
 	skb->pkt_type = PACKET_HOST;
 
@@ -455,6 +457,7 @@ static int macvlan_init(struct net_device *dev)
 				  (lowerdev->state & MACVLAN_STATE_MASK);
 	dev->features 		= lowerdev->features & MACVLAN_FEATURES;
 	dev->features		|= NETIF_F_LLTX;
+	dev->vlan_features	= lowerdev->vlan_features & MACVLAN_FEATURES;
 	dev->gso_max_size	= lowerdev->gso_max_size;
 	dev->iflink		= lowerdev->ifindex;
 	dev->hard_header_len	= lowerdev->hard_header_len;

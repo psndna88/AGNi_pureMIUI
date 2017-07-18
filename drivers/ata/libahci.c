@@ -1139,7 +1139,7 @@ static void ahci_dev_config(struct ata_device *dev)
 	}
 }
 
-static unsigned int ahci_dev_classify(struct ata_port *ap)
+unsigned int ahci_dev_classify(struct ata_port *ap)
 {
 	void __iomem *port_mmio = ahci_port_base(ap);
 	struct ata_taskfile tf;
@@ -1153,6 +1153,7 @@ static unsigned int ahci_dev_classify(struct ata_port *ap)
 
 	return ata_dev_classify(&tf);
 }
+EXPORT_SYMBOL_GPL(ahci_dev_classify);
 
 void ahci_fill_cmd_slot(struct ahci_port_priv *pp, unsigned int tag,
 			u32 opts)
@@ -1226,6 +1227,15 @@ static int ahci_exec_polled_cmd(struct ata_port *ap, int pmp,
 	/* prep the command */
 	ata_tf_to_fis(tf, pmp, is_cmd, fis);
 	ahci_fill_cmd_slot(pp, 0, cmd_fis_len | flags | (pmp << 12));
+
+	/* set port value for softreset of Port Multiplier */
+	if (pp->fbs_enabled && pp->fbs_last_dev != pmp) {
+		tmp = readl(port_mmio + PORT_FBS);
+		tmp &= ~(PORT_FBS_DEV_MASK | PORT_FBS_DEC);
+		tmp |= pmp << PORT_FBS_DEV_OFFSET;
+		writel(tmp, port_mmio + PORT_FBS);
+		pp->fbs_last_dev = pmp;
+	}
 
 	/* issue & wait */
 	writel(1, port_mmio + PORT_CMD_ISSUE);
@@ -1670,8 +1680,7 @@ static void ahci_port_intr(struct ata_port *ap)
 	if (unlikely(resetting))
 		status &= ~PORT_IRQ_BAD_PMP;
 
-	/* if LPM is enabled, PHYRDY doesn't mean anything */
-	if (ap->link.lpm_policy > ATA_LPM_MAX_POWER) {
+	if (sata_lpm_ignore_phy_events(&ap->link)) {
 		status &= ~PORT_IRQ_PHYRDY;
 		ahci_scr_write(&ap->link, SCR_ERROR, SERR_PHYRDY_CHG);
 	}
