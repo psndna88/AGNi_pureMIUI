@@ -484,7 +484,8 @@ static void purge_requests(struct ibmvscsi_host_data *hostdata, int error_code)
 				       evt->hostdata->dev);
 			if (evt->cmnd_done)
 				evt->cmnd_done(evt->cmnd);
-		} else if (evt->done)
+		} else if (evt->done && evt->crq.format != VIOSRP_MAD_FORMAT &&
+			   evt->iu.srp.login_req.opcode != SRP_LOGIN_REQ)
 			evt->done(evt);
 		free_event_struct(&evt->hostdata->pool, evt);
 		spin_lock_irqsave(hostdata->host->host_lock, flags);
@@ -1540,6 +1541,9 @@ static int ibmvscsi_do_host_config(struct ibmvscsi_host_data *hostdata,
 			  info_timeout);
 
 	host_config = &evt_struct->iu.mad.host_config;
+
+	/* The transport length field is only 16-bit */
+	length = min(0xffff, length);
 
 	/* Set up a lun reset SRP command */
 	memset(host_config, 0x00, sizeof(*host_config));

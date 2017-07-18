@@ -203,6 +203,27 @@ cifs_strtoUTF16(__le16 *to, const char *from, int len,
 	int i;
 	wchar_t wchar_to; /* needed to quiet sparse */
 
+	/* special case for utf8 to handle no plane0 chars */
+	if (!strcmp(codepage->charset, "utf8")) {
+		/*
+		 * convert utf8 -> utf16, we assume we have enough space
+		 * as caller should have assumed conversion does not overflow
+		 * in destination len is length in wchar_t units (16bits)
+		 */
+		i  = utf8s_to_utf16s(from, len, UTF16_LITTLE_ENDIAN,
+				       (wchar_t *) to, len);
+
+		/* if success terminate and exit */
+		if (i >= 0)
+			goto success;
+		/*
+		 * if fails fall back to UCS encoding as this
+		 * function should not return negative values
+		 * currently can fail only if source contains
+		 * invalid encoded characters
+		 */
+	}
+
 	for (i = 0; len && *from; i++, from += charlen, len -= charlen) {
 		charlen = codepage->char2uni(from, len, &wchar_to);
 		if (charlen < 1) {
@@ -215,6 +236,7 @@ cifs_strtoUTF16(__le16 *to, const char *from, int len,
 		put_unaligned_le16(wchar_to, &to[i]);
 	}
 
+success:
 	put_unaligned_le16(0, &to[i]);
 	return i;
 }
@@ -268,7 +290,8 @@ int
 cifsConvertToUTF16(__le16 *target, const char *source, int srclen,
 		 const struct nls_table *cp, int mapChars)
 {
-	int i, j, charlen;
+	int i, charlen;
+	int j = 0;
 	char src_char;
 	__le16 dst_char;
 	wchar_t tmp;
@@ -276,12 +299,11 @@ cifsConvertToUTF16(__le16 *target, const char *source, int srclen,
 	if (!mapChars)
 		return cifs_strtoUTF16(target, source, PATH_MAX, cp);
 
-	for (i = 0, j = 0; i < srclen; j++) {
+	for (i = 0; i < srclen; j++) {
 		src_char = source[i];
 		charlen = 1;
 		switch (src_char) {
 		case 0:
-			put_unaligned(0, &target[j]);
 			goto ctoUTF16_out;
 		case ':':
 			dst_char = cpu_to_le16(UNI_COLON);
@@ -328,6 +350,7 @@ cifsConvertToUTF16(__le16 *target, const char *source, int srclen,
 	}
 
 ctoUTF16_out:
-	return i;
+	put_unaligned(0, &target[j]); /* Null terminate target unicode string */
+	return j;
 }
 

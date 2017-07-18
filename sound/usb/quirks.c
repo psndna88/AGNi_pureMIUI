@@ -387,11 +387,13 @@ static int snd_usb_fasttrackpro_boot_quirk(struct usb_device *dev)
 		 * rules
 		 */
 		err = usb_driver_set_configuration(dev, 2);
-		if (err < 0) {
+		if (err < 0)
 			snd_printdd("error usb_driver_set_configuration: %d\n",
 				    err);
-			return -ENODEV;
-		}
+		/* Always return an error, so that we stop creating a device
+		   that will just be destroyed and recreated with a new
+		   configuration */
+		return -ENODEV;
 	} else
 		snd_printk(KERN_INFO "usb-audio: Fast Track Pro config OK\n");
 
@@ -484,7 +486,7 @@ static int snd_usb_nativeinstruments_boot_quirk(struct usb_device *dev)
 {
 	int ret = usb_control_msg(dev, usb_sndctrlpipe(dev, 0),
 				  0xaf, USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-				  cpu_to_le16(1), 0, NULL, 0, 1000);
+				  1, 0, NULL, 0, 1000);
 
 	if (ret < 0)
 		return ret;
@@ -746,6 +748,7 @@ static void set_format_emu_quirk(struct snd_usb_substream *subs,
 		break;
 	}
 	snd_emuusb_set_samplerate(subs->stream->chip, emu_samplerate_id);
+	subs->pkt_offset_adj = (emu_samplerate_id >= EMU_QUIRK_SR_176400HZ) ? 4 : 0;
 }
 
 void snd_usb_set_format_quirk(struct snd_usb_substream *subs,

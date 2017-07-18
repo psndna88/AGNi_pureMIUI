@@ -59,12 +59,14 @@ struct kthread_worker {
 	spinlock_t		lock;
 	struct list_head	work_list;
 	struct task_struct	*task;
+	struct kthread_work	*current_work;
 };
 
 struct kthread_work {
 	struct list_head	node;
 	kthread_work_func_t	func;
 	wait_queue_head_t	done;
+	struct kthread_worker	*worker;
 	atomic_t		flushing;
 	int			queue_seq;
 	int			done_seq;

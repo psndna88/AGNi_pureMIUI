@@ -1453,8 +1453,6 @@ static int irda_recvmsg_stream(struct kiocb *iocb, struct socket *sock,
 	target = sock_rcvlowat(sk, flags & MSG_WAITALL, size);
 	timeo = sock_rcvtimeo(sk, noblock);
 
-	msg->msg_namelen = 0;
-
 	do {
 		int chunk;
 		struct sk_buff *skb = skb_dequeue(&sk->sk_receive_queue);
@@ -2587,8 +2585,10 @@ bed:
 				    NULL, NULL, NULL);
 
 		/* Check if the we got some results */
-		if (!self->cachedaddr)
-			return -EAGAIN;		/* Didn't find any devices */
+		if (!self->cachedaddr) {
+			err = -EAGAIN;		/* Didn't find any devices */
+			goto out;
+		}
 		daddr = self->cachedaddr;
 		/* Cleanup */
 		self->cachedaddr = 0;

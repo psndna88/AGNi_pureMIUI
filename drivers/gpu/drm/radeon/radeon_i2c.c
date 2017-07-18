@@ -39,7 +39,7 @@ extern u32 radeon_atom_hw_i2c_func(struct i2c_adapter *adap);
  * radeon_ddc_probe
  *
  */
-bool radeon_ddc_probe(struct radeon_connector *radeon_connector)
+bool radeon_ddc_probe(struct radeon_connector *radeon_connector, bool use_aux)
 {
 	u8 out = 0x0;
 	u8 buf[8];
@@ -63,7 +63,13 @@ bool radeon_ddc_probe(struct radeon_connector *radeon_connector)
 	if (radeon_connector->router.ddc_valid)
 		radeon_router_select_ddc_port(radeon_connector);
 
-	ret = i2c_transfer(&radeon_connector->ddc_bus->adapter, msgs, 2);
+	if (use_aux) {
+		struct radeon_connector_atom_dig *dig = radeon_connector->con_priv;
+		ret = i2c_transfer(&dig->dp_i2c_bus->adapter, msgs, 2);
+	} else {
+		ret = i2c_transfer(&radeon_connector->ddc_bus->adapter, msgs, 2);
+	}
+
 	if (ret != 2)
 		/* Couldn't find an accessible DDC on this connector */
 		return false;
@@ -1014,6 +1020,9 @@ void radeon_i2c_destroy(struct radeon_i2c_chan *i2c)
 /* Add the default buses */
 void radeon_i2c_init(struct radeon_device *rdev)
 {
+	if (radeon_hw_i2c)
+		DRM_INFO("hw_i2c forced on, you may experience display detection problems!\n");
+
 	if (rdev->is_atom_bios)
 		radeon_atombios_i2c_init(rdev);
 	else

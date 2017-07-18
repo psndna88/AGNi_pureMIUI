@@ -566,6 +566,8 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			UART at the specified I/O port or MMIO address,
 			switching to the matching ttyS device later.  The
 			options are the same as for ttyS, above.
+		hvc<n>	Use the hypervisor console device <n>. This is for
+			both Xen and PowerPC hypervisors.
 
                 If the device connected to the port is not a TTY but a braille
                 device, prepend "brl," before the device type, for instance
@@ -751,6 +753,7 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 
 	earlyprintk=	[X86,SH,BLACKFIN]
 			earlyprintk=vga
+			earlyprintk=xen
 			earlyprintk=serial[,ttySn[,baudrate]]
 			earlyprintk=ttySn[,baudrate]
 			earlyprintk=dbgp[debugController#]
@@ -768,6 +771,8 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			The VGA output is eventually overwritten by the real
 			console.
 
+			The xen output can only be used by Xen PV guests.
+
 	ekgdboc=	[X86,KGDB] Allow early kernel console debugging
 			ekgdboc=kbd
 
@@ -776,6 +781,12 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 
 	edd=		[EDD]
 			Format: {"off" | "on" | "skip[mbr]"}
+
+	efi_no_storage_paranoia [EFI; X86]
+			Using this parameter you can use more than 50% of
+			your efi variable storage. Use this parameter only if
+			you are really sure that your UEFI does sane gc and
+			fulfills the spec otherwise your board may brick.
 
 	eisa_irq_edge=	[PARISC,HW]
 			See header of drivers/parisc/eisa.c.
@@ -990,6 +1001,20 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			(disabled by default)
 	i8k.restricted	[HW] Allow controlling fans only if SYS_ADMIN
 			capability is set.
+
+	i915.invert_brightness=
+			[DRM] Invert the sense of the variable that is used to
+			set the brightness of the panel backlight. Normally a
+			brightness value of 0 indicates backlight switched off,
+			and the maximum of the brightness value sets the backlight
+			to maximum brightness. If this parameter is set to 0
+			(default) and the machine requires it, or this parameter
+			is set to 1, a brightness value of 0 sets the backlight
+			to maximum brightness, and the maximum of the brightness
+			value switches the backlight off.
+			-1 -- never invert brightness
+			 0 -- machine default
+			 1 -- force brightness inversion
 
 	icn=		[HW,ISDN]
 			Format: <io>[,<membase>[,<icn_id>[,<icn_id2>]]]

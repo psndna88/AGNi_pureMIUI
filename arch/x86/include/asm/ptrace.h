@@ -205,21 +205,14 @@ static inline bool user_64bit_mode(struct pt_regs *regs)
 }
 #endif
 
-/*
- * X86_32 CPUs don't save ss and esp if the CPU is already in kernel mode
- * when it traps.  The previous stack will be directly underneath the saved
- * registers, and 'sp/ss' won't even have been saved. Thus the '&regs->sp'.
- *
- * This is valid only for kernel mode traps.
- */
+#ifdef CONFIG_X86_32
+extern unsigned long kernel_stack_pointer(struct pt_regs *regs);
+#else
 static inline unsigned long kernel_stack_pointer(struct pt_regs *regs)
 {
-#ifdef CONFIG_X86_32
-	return (unsigned long)(&regs->sp);
-#else
 	return regs->sp;
-#endif
 }
+#endif
 
 #define GET_IP(regs) ((regs)->ip)
 #define GET_FP(regs) ((regs)->bp)
@@ -292,6 +285,22 @@ static inline unsigned long regs_get_kernel_stack_nth(struct pt_regs *regs,
 #endif
 
 #define ARCH_HAS_USER_SINGLE_STEP_INFO
+
+/*
+ * When hitting ptrace_stop(), we cannot return using SYSRET because
+ * that does not restore the full CPU state, only a minimal set.  The
+ * ptracer can change arbitrary register values, which is usually okay
+ * because the usual ptrace stops run off the signal delivery path which
+ * forces IRET; however, ptrace_event() stops happen in arbitrary places
+ * in the kernel and don't force IRET path.
+ *
+ * So force IRET path after a ptrace stop.
+ */
+#define arch_ptrace_stop_needed(code, info)				\
+({									\
+	set_thread_flag(TIF_NOTIFY_RESUME);				\
+	false;								\
+})
 
 struct user_desc;
 extern int do_get_thread_area(struct task_struct *p, int idx,

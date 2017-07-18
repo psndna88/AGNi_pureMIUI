@@ -1404,7 +1404,9 @@ static bool ath9k_hw_chip_reset(struct ath_hw *ah,
 			reset_type = ATH9K_RESET_POWER_ON;
 		else
 			reset_type = ATH9K_RESET_COLD;
-	}
+	} else if (ah->chip_fullsleep || REG_READ(ah, AR_Q_TXE) ||
+		   (REG_READ(ah, AR_CR) & AR_CR_RXE))
+		reset_type = ATH9K_RESET_COLD;
 
 	if (!ath9k_hw_set_reset_reg(ah, reset_type))
 		return false;
@@ -1626,7 +1628,8 @@ int ath9k_hw_reset(struct ath_hw *ah, struct ath9k_channel *chan,
 	if (caldata &&
 	    (chan->channel != caldata->channel ||
 	     (chan->channelFlags & ~CHANNEL_CW_INT) !=
-	     (caldata->channelFlags & ~CHANNEL_CW_INT))) {
+	     (caldata->channelFlags & ~CHANNEL_CW_INT) ||
+	     chan->chanmode != caldata->chanmode)) {
 		/* Operating channel changed, reset channel calibration data */
 		memset(caldata, 0, sizeof(*caldata));
 		ath9k_init_nfcal_hist_buffer(ah, chan);

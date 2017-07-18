@@ -638,9 +638,9 @@ static void srp_reset_req(struct srp_target_port *target, struct srp_request *re
 	struct scsi_cmnd *scmnd = srp_claim_req(target, req, NULL);
 
 	if (scmnd) {
+		srp_free_req(target, req, scmnd, 0);
 		scmnd->result = DID_RESET << 16;
 		scmnd->scsi_done(scmnd);
-		srp_free_req(target, req, scmnd, 0);
 	}
 }
 
@@ -1371,6 +1371,12 @@ err_unmap:
 err_iu:
 	srp_put_tx_iu(target, iu, SRP_IU_CMD);
 
+	/*
+	 * Avoid that the loops that iterate over the request ring can
+	 * encounter a dangling SCSI command pointer.
+	 */
+	req->scmnd = NULL;
+
 	spin_lock_irqsave(&target->lock, flags);
 	list_add(&req->list, &target->free_reqs);
 
@@ -1687,6 +1693,7 @@ static int srp_abort(struct scsi_cmnd *scmnd)
 			  SRP_TSK_ABORT_TASK);
 	srp_free_req(target, req, scmnd, 0);
 	scmnd->result = DID_ABORT << 16;
+	scmnd->scsi_done(scmnd);
 
 	return SUCCESS;
 }

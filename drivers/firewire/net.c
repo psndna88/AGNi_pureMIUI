@@ -861,8 +861,8 @@ static void fwnet_receive_broadcast(struct fw_iso_context *context,
 	if (specifier_id == IANA_SPECIFIER_ID && ver == RFC2734_SW_VERSION) {
 		buf_ptr += 2;
 		length -= IEEE1394_GASP_HDR_SIZE;
-		fwnet_incoming_packet(dev, buf_ptr, length,
-				      source_node_id, -1, true);
+		fwnet_incoming_packet(dev, buf_ptr, length, source_node_id,
+				      context->card->generation, true);
 	}
 
 	packet.payload_length = dev->rcv_buffer_size;
@@ -958,7 +958,12 @@ static void fwnet_transmit_packet_done(struct fwnet_packet_task *ptask)
 			break;
 		}
 
-		skb_pull(skb, ptask->max_payload);
+		if (ptask->dest_node == IEEE1394_ALL_NODES) {
+			skb_pull(skb,
+				 ptask->max_payload + IEEE1394_GASP_HDR_SIZE);
+		} else {
+			skb_pull(skb, ptask->max_payload);
+		}
 		if (ptask->outstanding_pkts > 1) {
 			fwnet_make_sf_hdr(&ptask->hdr, RFC2374_HDR_INTFRAG,
 					  dg_size, fg_off, datagram_label);
@@ -1009,8 +1014,6 @@ static void fwnet_write_complete(struct fw_card *card, int rcode,
 	if (rcode == RCODE_COMPLETE) {
 		fwnet_transmit_packet_done(ptask);
 	} else {
-		fwnet_transmit_packet_failed(ptask);
-
 		if (printk_timed_ratelimit(&j,  1000) || rcode != last_rcode) {
 			dev_err(&ptask->dev->netdev->dev,
 				"fwnet_write_complete failed: %x (skipped %d)\n",
@@ -1018,8 +1021,10 @@ static void fwnet_write_complete(struct fw_card *card, int rcode,
 
 			errors_skipped = 0;
 			last_rcode = rcode;
-		} else
+		} else {
 			errors_skipped++;
+		}
+		fwnet_transmit_packet_failed(ptask);
 	}
 }
 
@@ -1062,7 +1067,7 @@ static int fwnet_send_packet(struct fwnet_packet_task *ptask)
 		smp_rmb();
 		node_id = dev->card->node_id;
 
-		p = skb_push(ptask->skb, 8);
+		p = skb_push(ptask->skb, IEEE1394_GASP_HDR_SIZE);
 		put_unaligned_be32(node_id << 16 | IANA_SPECIFIER_ID >> 8, p);
 		put_unaligned_be32((IANA_SPECIFIER_ID & 0xff) << 24
 						| RFC2734_SW_VERSION, &p[4]);

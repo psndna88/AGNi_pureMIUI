@@ -747,6 +747,12 @@ sctp_disposition_t sctp_sf_do_5_1D_ce(const struct sctp_endpoint *ep,
 		struct sctp_chunk auth;
 		sctp_ierror_t ret;
 
+		/* Make sure that we and the peer are AUTH capable */
+		if (!sctp_auth_enable || !new_asoc->peer.auth_capable) {
+			sctp_association_free(new_asoc);
+			return sctp_sf_pdiscard(ep, asoc, type, arg, commands);
+		}
+
 		/* set-up our fake chunk so that we can process it */
 		auth.skb = chunk->auth_chunk;
 		auth.asoc = chunk->asoc;
@@ -757,10 +763,6 @@ sctp_disposition_t sctp_sf_do_5_1D_ce(const struct sctp_endpoint *ep,
 		auth.transport = chunk->transport;
 
 		ret = sctp_sf_authenticate(ep, new_asoc, type, &auth);
-
-		/* We can now safely free the auth_chunk clone */
-		kfree_skb(chunk->auth_chunk);
-
 		if (ret != SCTP_IERROR_NO_ERROR) {
 			sctp_association_free(new_asoc);
 			return sctp_sf_pdiscard(ep, asoc, type, arg, commands);
@@ -2044,7 +2046,7 @@ sctp_disposition_t sctp_sf_do_5_2_4_dupcook(const struct sctp_endpoint *ep,
 	}
 
 	/* Delete the tempory new association. */
-	sctp_add_cmd_sf(commands, SCTP_CMD_NEW_ASOC, SCTP_ASOC(new_asoc));
+	sctp_add_cmd_sf(commands, SCTP_CMD_SET_ASOC, SCTP_ASOC(new_asoc));
 	sctp_add_cmd_sf(commands, SCTP_CMD_DELETE_TCB, SCTP_NULL());
 
 	/* Restore association pointer to provide SCTP command interpeter
