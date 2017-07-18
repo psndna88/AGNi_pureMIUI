@@ -571,6 +571,7 @@ static int device_resume(struct device *dev, pm_message_t state, bool async)
 	pm_callback_t callback = NULL;
 	char *info = NULL;
 	int error = 0;
+	bool put = false;
 
 	TRACE_DEVICE(dev);
 	TRACE_RESUME(0);
@@ -588,6 +589,7 @@ static int device_resume(struct device *dev, pm_message_t state, bool async)
 		goto Unlock;
 
 	pm_runtime_enable(dev);
+	put = true;
 
 	if (dev->pm_domain) {
 		info = "power domain ";
@@ -639,6 +641,9 @@ static int device_resume(struct device *dev, pm_message_t state, bool async)
 	complete_all(&dev->power.completion);
 
 	TRACE_RESUME(error);
+
+	if (put)
+		pm_runtime_put_sync(dev);
 
 	return error;
 }
@@ -1077,10 +1082,12 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 	 * for it, this is equivalent to the device signaling wakeup, so the
 	 * system suspend operation should be aborted.
 	 */
+	pm_runtime_get_noresume(dev);
 	if (pm_runtime_barrier(dev) && device_may_wakeup(dev))
 		pm_wakeup_event(dev, 0);
 
 	if (pm_wakeup_pending()) {
+		pm_runtime_put_sync(dev);
 		async_error = -EBUSY;
 		goto Complete;
 	}
@@ -1154,10 +1161,12 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
  Complete:
 	complete_all(&dev->power.completion);
 
-	if (error)
+	if (error) {
+		pm_runtime_put_sync(dev);
 		async_error = error;
-	else if (dev->power.is_suspended)
+	} else if (dev->power.is_suspended) {
 		__pm_runtime_disable(dev, false);
+	}
 
 	return error;
 }

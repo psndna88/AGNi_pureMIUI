@@ -2217,9 +2217,7 @@ static int neigh_dump_table(struct neigh_table *tbl, struct sk_buff *skb,
 	rcu_read_lock_bh();
 	nht = rcu_dereference_bh(tbl->nht);
 
-	for (h = 0; h < (1 << nht->hash_shift); h++) {
-		if (h < s_h)
-			continue;
+	for (h = s_h; h < (1 << nht->hash_shift); h++) {
 		if (h > s_h)
 			s_idx = 0;
 		for (n = rcu_dereference_bh(nht->hash_buckets[h]), idx = 0;
@@ -2258,9 +2256,7 @@ static int pneigh_dump_table(struct neigh_table *tbl, struct sk_buff *skb,
 
 	read_lock_bh(&tbl->lock);
 
-	for (h = 0; h <= PNEIGH_HASHMASK; h++) {
-		if (h < s_h)
-			continue;
+	for (h = s_h; h <= PNEIGH_HASHMASK; h++) {
 		if (h > s_h)
 			s_idx = 0;
 		for (n = tbl->phash_buckets[h], idx = 0; n; n = n->next) {
@@ -2295,7 +2291,7 @@ static int neigh_dump_info(struct sk_buff *skb, struct netlink_callback *cb)
 	struct neigh_table *tbl;
 	int t, family, s_t;
 	int proxy = 0;
-	int err = 0;
+	int err;
 
 	read_lock(&neigh_tbl_lock);
 	family = ((struct rtgenmsg *) nlmsg_data(cb->nlh))->rtgen_family;
@@ -2309,7 +2305,7 @@ static int neigh_dump_info(struct sk_buff *skb, struct netlink_callback *cb)
 
 	s_t = cb->args[0];
 
-	for (tbl = neigh_tables, t = 0; tbl && (err >= 0);
+	for (tbl = neigh_tables, t = 0; tbl;
 	     tbl = tbl->next, t++) {
 		if (t < s_t || (family && tbl->family != family))
 			continue;
@@ -2320,6 +2316,8 @@ static int neigh_dump_info(struct sk_buff *skb, struct netlink_callback *cb)
 			err = pneigh_dump_table(tbl, skb, cb);
 		else
 			err = neigh_dump_table(tbl, skb, cb);
+		if (err < 0)
+			break;
 	}
 	read_unlock(&neigh_tbl_lock);
 
