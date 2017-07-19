@@ -97,8 +97,17 @@ static void set_boost_bit(struct boost_policy *b, uint32_t state);
 static void clear_boost_bit(struct boost_policy *b, uint32_t state);
 static void unboost_all_cpus(struct boost_policy *b);
 static void update_online_cpu_policy(void);
-static bool validate_cpu_freq(struct cpufreq_frequency_table *pos,
-		uint32_t *freq);
+static bool validate_cpu_freq(unsigned int cpu, uint32_t *freq);
+
+static inline bool cpufreq_next_valid(struct cpufreq_frequency_table **pos)
+{
+	while ((*pos)->frequency != CPUFREQ_TABLE_END)
+		if ((*pos)->frequency != CPUFREQ_ENTRY_INVALID)
+			return true;
+		else
+			(*pos)++;
+	return false;
+}
 
 static void ib_boost_main(struct work_struct *work)
 {
@@ -264,7 +273,7 @@ static int do_cpu_boost(struct notifier_block *nb,
 		 * (validate_cpu_freq() returns true), then update the
 		 * input-boost freq array with the validated frequency.
 		 */
-		ret = validate_cpu_freq(policy->freq_table, &boost_freq);
+		ret = validate_cpu_freq(policy->cpu, &boost_freq);
 		if (ret)
 			set_boost_freq(b, policy->cpu, boost_freq);
 		policy->min = min(policy->max, boost_freq);
@@ -524,10 +533,12 @@ static void update_online_cpu_policy(void)
 	put_online_cpus();
 }
 
-static bool validate_cpu_freq(struct cpufreq_frequency_table *pos,
-		uint32_t *freq)
+static bool validate_cpu_freq(unsigned int cpu, uint32_t *freq)
 {
 	struct cpufreq_frequency_table *next;
+	struct cpufreq_frequency_table *pos;
+
+	pos = cpufreq_frequency_get_table(cpu);
 
 	/* Set the cursor to the first valid freq */
 	cpufreq_next_valid(&pos);
