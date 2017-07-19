@@ -22,7 +22,7 @@ DEFINE_MSM_MUTEX(msm_actuator_mutex);
 
 /*#define MSM_ACUTUATOR_DEBUG*/
 #undef CDBG
-#ifdef MSM_ACUTUATOR_DEBUG
+#ifdef MSM_ACTUATOR_DEBUG
 #define CDBG(fmt, args...) pr_err(fmt, ##args)
 #else
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
