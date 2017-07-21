@@ -42,8 +42,8 @@ static struct work_struct input_boost_work;
 static struct notifier_block notif;
 #endif
 
-static bool input_boost_enabled;
-module_param(input_boost_enabled, bool, 0644);
+static unsigned int input_boost_enabled = 0;
+module_param(input_boost_enabled, uint, 0644);
 
 static unsigned int input_boost_ms = 40;
 module_param(input_boost_ms, uint, 0644);
@@ -70,7 +70,6 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 	int i, ntokens = 0;
 	unsigned int val, cpu;
 	const char *cp = buf;
-	bool enabled = false;
 
 	while ((cp = strpbrk(cp + 1, " :")))
 		ntokens++;
@@ -81,7 +80,7 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 			return -EINVAL;
 		for_each_possible_cpu(i)
 			per_cpu(sync_info, i).input_boost_freq = val;
-		goto check_enable;
+		goto out;
 	}
 
 	/* CPU:value pair */
@@ -100,15 +99,7 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 		cp++;
 	}
 
-check_enable:
-	for_each_possible_cpu(i) {
-		if (per_cpu(sync_info, i).input_boost_freq) {
-			enabled = true;
-			break;
-		}
-	}
-	input_boost_enabled = enabled;
-
+out:
 	return 0;
 }
 
@@ -249,20 +240,20 @@ static void cpuboost_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
 	u64 now;
-	unsigned int min_interval;
 
 #ifdef CONFIG_STATE_NOTIFIER
 	if (state_suspended)
 		return;
 #endif
 
-	if (!input_boost_enabled || work_pending(&input_boost_work))
+	if (!input_boost_enabled)
 		return;
 
 	now = ktime_to_us(ktime_get());
-	min_interval = max(min_input_interval, input_boost_ms);
+	if (now - last_input_time < (input_boost_ms * USEC_PER_MSEC))
+		return;
 
-	if (now - last_input_time < min_interval * USEC_PER_MSEC)
+	if (work_pending(&input_boost_work))
 		return;
 
 	pr_debug("Input boost for input event.\n");
