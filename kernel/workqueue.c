@@ -287,7 +287,7 @@ static bool wq_power_efficient = true;
 static bool wq_power_efficient;
 #endif
 
-module_param_named(power_efficient, wq_power_efficient, bool, 0444);
+module_param_named(power_efficient, wq_power_efficient, bool, 0664);
 
 static bool wq_numa_enabled;		/* unbound NUMA affinity enabled */
 
