@@ -1837,12 +1837,8 @@ static void mdss_dsi_parse_dfps_config(struct device_node *pan_node,
 	bool dynamic_fps;
 	struct mdss_panel_info *pinfo = &(ctrl_pdata->panel_data.panel_info);
 
-#ifdef CONFIG_MACH_XIAOMI_KENZO_AGNI_CM_N
 	dynamic_fps = of_property_read_bool(pan_node,
 			"qcom,mdss-dsi-pan-enable-dynamic-fps");
-#else
-	dynamic_fps = false;
-#endif
 
 	if (!dynamic_fps)
 		return;
