@@ -5057,13 +5057,13 @@ static ssize_t cpu_governor_store(struct kobject *kobj,
 }
 UKSM_ATTR(cpu_governor);
 
-static ssize_t run_always_show(struct kobject *kobj, struct kobj_attribute *attr,
+static ssize_t run_show(struct kobject *kobj, struct kobj_attribute *attr,
 			char *buf)
 {
-	return sprintf(buf, "%u\n", uksm_run_user);
+	return sprintf(buf, "%u\n", uksm_run);
 }
 
-static ssize_t run_always_store(struct kobject *kobj, struct kobj_attribute *attr,
+static ssize_t run_store(struct kobject *kobj, struct kobj_attribute *attr,
 			 const char *buf, size_t count)
 {
 	int err;
@@ -5075,21 +5075,18 @@ static ssize_t run_always_store(struct kobject *kobj, struct kobj_attribute *att
 	if (flags > UKSM_RUN_MERGE)
 		return -EINVAL;
 
-	if (uksm_run_user != flags) {
+	mutex_lock(&uksm_thread_mutex);
+	if (uksm_run != flags) {
+		uksm_run = flags;
 		uksm_run_user = flags;
-		uksm_charging_switcher();
+		if (flags & UKSM_RUN_MERGE)
+			wake_up_interruptible(&uksm_thread_wait);
 	}
+	mutex_unlock(&uksm_thread_mutex);
 
 	return count;
 }
-UKSM_ATTR(run_always);
-
-static ssize_t run_show(struct kobject *kobj, struct kobj_attribute *attr,
-			char *buf)
-{
-	return sprintf(buf, "%u\n", uksm_run);
-}
-UKSM_ATTR_RO(run);
+UKSM_ATTR(run);
 
 static ssize_t run_charging_show(struct kobject *kobj, struct kobj_attribute *attr,
 			char *buf)
@@ -5464,7 +5461,6 @@ static struct attribute *uksm_attrs[] = {
 	&sleep_millisecs_attr.attr,
 	&cpu_governor_attr.attr,
 	&run_attr.attr,
-	&run_always_attr.attr,
 	&run_charging_attr.attr,
 	&ema_per_page_time_attr.attr,
 	&pages_shared_attr.attr,
