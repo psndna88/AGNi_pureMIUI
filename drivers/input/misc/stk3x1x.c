@@ -356,7 +356,7 @@ static uint32_t stk_get_lux_interval_index(uint16_t alscode)
     return LUX_THD_TABLE_SIZE;
 }
 #else
-inline void stk_als_set_new_thd(struct stk3x1x_data *ps_data, uint16_t alscode)
+inline static void stk_als_set_new_thd(struct stk3x1x_data *ps_data, uint16_t alscode)
 {
     int32_t high_thd,low_thd;
     high_thd = alscode + stk_lux2alscode(ps_data, STK_ALS_CHANGE_THD);

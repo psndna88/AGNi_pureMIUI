@@ -380,7 +380,7 @@ LINUXINCLUDE    := \
 
 KBUILD_CPPFLAGS := -D__KERNEL__
 
-KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -Wno-maybe-uninitialized \
+KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -fno-strict-aliasing -fno-common \
 		   -Werror-implicit-function-declaration \
 		   -g0 -DNDEBUG -fmodulo-sched -fivopts \
@@ -392,7 +392,6 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -Wno-maybe-u
 		   -fno-delete-null-pointer-checks \
 		   -Wno-deprecated-declarations \
 		   -Wno-misleading-indentation \
-		   -Wno-unused-const-variable \
 		   -Wno-shift-overflow \
 		   -Wno-bool-compare \
 		   -Wno-memset-transposed-args \
@@ -605,12 +604,29 @@ KBUILD_CFLAGS	+= $(call cc-disable-warning,maybe-uninitialized,)
 
 # Needed to unbreak GCC 7.x and above
 KBUILD_CFLAGS   += $(call cc-option,-fno-store-merging,)
+KBUILD_CFLAGS   += $(call cc-option,-fno-code-hoisting,)
+KBUILD_CFLAGS   += $(call cc-option,-fno-fp-int-builtin-inexact,)
+KBUILD_CFLAGS   += $(call cc-option,-fno-ipa-bit-cp,)
+KBUILD_CFLAGS   += $(call cc-option,-fno-ipa-icf-variables,)
+KBUILD_CFLAGS   += $(call cc-option,-fno-ipa-vrp,)
+KBUILD_CFLAGS   += $(call cc-option,-fno-printf-return-value,)
+KBUILD_CFLAGS   += $(call cc-option,-fno-shrink-wrap-separate,)
+KBUILD_CFLAGS   += $(call cc-option,-fno-peel-loops,)
+KBUILD_CFLAGS   += $(call cc-option,-fno-split-loops,)
 
+# Disable all GCC 6.x+ buggy detection warnings
 KBUILD_CFLAGS   += $(call cc-disable-warning,misleading-indentation,)
-
-# Disable all buggy detection warnings
 KBUILD_CFLAGS   += $(call cc-disable-warning,incompatible-pointer-types,)
 KBUILD_CFLAGS   += $(call cc-disable-warning,unused-const-variable,)
+KBUILD_CFLAGS   += $(call cc-disable-warning,memset-elt-size,)
+KBUILD_CFLAGS   += $(call cc-disable-warning,duplicate-decl-specifier,)
+KBUILD_CFLAGS   += $(call cc-disable-warning,shift-overflow,)
+KBUILD_CFLAGS   += $(call cc-disable-warning,discarded-array-qualifiers,)
+KBUILD_CFLAGS   += $(call cc-disable-warning,switch-unreachable,)
+KBUILD_CFLAGS   += $(call cc-disable-warning,int-in-bool-context,)
+KBUILD_CFLAGS   += $(call cc-disable-warning,array-bounds,)
+KBUILD_CFLAGS   += $(call cc-disable-warning,bool-operation,)
+KBUILD_CFLAGS   += $(call cc-disable-warning,format-overflow,)
 
 # Kill format truncation warnings
 KBUILD_CFLAGS   += $(call cc-disable-warning,format-truncation,)
@@ -712,9 +728,6 @@ CHECKFLAGS     += $(NOSTDINC_FLAGS)
 
 # warn about C99 declaration after statement
 KBUILD_CFLAGS += $(call cc-option,-Wdeclaration-after-statement,)
-
-# Disable unused constant variable warning
-KBUILD_CFLAGS += $(call cc-disable-warning, unused-const-variable)
 
 # disable pointer signed / unsigned warnings in gcc 4.0
 KBUILD_CFLAGS += $(call cc-disable-warning, pointer-sign)
