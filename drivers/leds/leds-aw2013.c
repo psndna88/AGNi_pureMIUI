@@ -338,6 +338,41 @@ static ssize_t aw2013_show_blink(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%d\n", led->blinking ? 1 : 0);
 }
 
+static ssize_t aw2013_show_brightness(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);
+	struct aw2013_led *led =
+			container_of(led_cdev, struct aw2013_led, cdev);
+
+	return snprintf(buf, PAGE_SIZE, "%d\n",	led->pdata->max_current);
+}
+
+static ssize_t aw2013_store_brightness(struct device *dev,
+			     struct device_attribute *attr,
+			     const char *buf, size_t len)
+{
+	unsigned long prev, val;
+	ssize_t ret = -EINVAL;
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);
+	struct aw2013_led *led =
+			container_of(led_cdev, struct aw2013_led, cdev);
+
+	prev = led->pdata->max_current;
+
+	ret = kstrtoul(buf, 10, &val);
+	if (ret || val > 3 || val < 1)
+		return ret;
+
+	if (val != prev) {
+		mutex_lock(&led->pdata->led->lock);
+		led->pdata->max_current = val;
+		mutex_unlock(&led->pdata->led->lock);
+	}
+
+	return len;
+}
+
 static ssize_t aw2013_led_time_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
@@ -385,10 +420,12 @@ static ssize_t aw2013_led_time_store(struct device *dev,
 }
 
 static DEVICE_ATTR(blink, 0664, aw2013_show_blink, aw2013_store_blink);
+static DEVICE_ATTR(bright, 0664, aw2013_show_brightness, aw2013_store_brightness);
 static DEVICE_ATTR(led_time, 0664, aw2013_led_time_show, aw2013_led_time_store);
 
 static struct attribute *aw2013_led_attributes[] = {
 	&dev_attr_blink.attr,
+	&dev_attr_bright.attr,
 	&dev_attr_led_time.attr,
 	NULL,
 };
