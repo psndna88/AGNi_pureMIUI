@@ -41,11 +41,6 @@
 #include <linux/ktime.h>
 #include "pmic-voter.h"
 
-#if defined (CONFIG_BOARDTEMP_WORK) || defined (CONFIG_TEMP_CHARGE_DISABLE)
-#include <linux/thermal.h>
-#include <linux/device.h>
-#endif
-
 #ifdef CONFIG_FORCE_FAST_CHARGE
 #include <linux/fastcharge.h>
 #endif
@@ -157,16 +152,6 @@ struct smbchg_chip {
 	struct delayed_work		parallel_en_work;
 	struct dentry			*debug_root;
 	struct smbchg_version_tables	tables;
-
-#if defined (CONFIG_TEMP_CHARGE_DISABLE)
-	struct delayed_work 		temp_work;
-#endif
-#if defined(CONFIG_BOARDTEMP_WORK)
-	struct delayed_work		boardtemp_work;
-	struct thermal_zone_device *tzd;
-	struct regulator *ntc_vdd;
-	struct qpnp_vadc_chip		*ntc_vadc;
-#endif
 
 	/* wipower params */
 	struct ilim_map			wipower_default;
@@ -280,8 +265,6 @@ struct smbchg_chip {
 	int				pulse_cnt;
 	struct led_classdev		led_cdev;
 	bool				skip_usb_notification;
-	const int			*aicl_rerun_period_table;
-	int				aicl_rerun_period_len;
 
 	/* voters */
 	struct votable			*fcc_votable;
@@ -419,19 +402,19 @@ module_param_named(
 	int, S_IRUSR | S_IWUSR
 );
 
-static int smbchg_default_hvdcp_icl_ma = 2000;
+static int smbchg_default_hvdcp_icl_ma = 2400;
 module_param_named(
 	default_hvdcp_icl_ma, smbchg_default_hvdcp_icl_ma,
 	int, S_IRUSR | S_IWUSR
 );
 
-static int smbchg_default_hvdcp3_icl_ma = 2000;
+static int smbchg_default_hvdcp3_icl_ma = 2400;
 module_param_named(
 	default_hvdcp3_icl_ma, smbchg_default_hvdcp3_icl_ma,
 	int, S_IRUSR | S_IWUSR
 );
 
-static int smbchg_default_dcp_icl_ma = 2000;
+static int smbchg_default_dcp_icl_ma = 2400;
 module_param_named(
 	default_dcp_icl_ma, smbchg_default_dcp_icl_ma,
 	int, S_IRUSR | S_IWUSR
@@ -456,8 +439,21 @@ module_param_named(
 	int, S_IRUSR | S_IWUSR
 );
 
-#define pr_smb(reason, fmt, ...)
-#define pr_smb_rt(reason, fmt, ...)
+#define pr_smb(reason, fmt, ...)				\
+	do {							\
+		if (smbchg_debug_mask & (reason))		\
+			pr_info_ratelimited(fmt, ##__VA_ARGS__);		\
+		else						\
+			pr_debug_ratelimited(fmt, ##__VA_ARGS__);		\
+	} while (0)
+
+#define pr_smb_rt(reason, fmt, ...)					\
+	do {								\
+		if (smbchg_debug_mask & (reason))			\
+			pr_info_ratelimited(fmt, ##__VA_ARGS__);	\
+		else							\
+			pr_debug_ratelimited(fmt, ##__VA_ARGS__);	\
+	} while (0)
 
 static int smbchg_read(struct smbchg_chip *chip, u8 *val,
 			u16 addr, int count)
@@ -912,7 +908,7 @@ static int get_prop_batt_status(struct smbchg_chip *chip)
 	else
 		status = POWER_SUPPLY_STATUS_CHARGING;
 out:
-//	pr_smb_rt(PR_MISC, "CHGR_STS = 0x%02x\n", reg);
+	pr_smb_rt(PR_MISC, "CHGR_STS = 0x%02x\n", reg);
 	return status;
 }
 
@@ -1816,13 +1812,7 @@ static int smbchg_set_fastchg_current_raw(struct smbchg_chip *chip,
 #define USBIN_ACTIVE_PWR_SRC_BIT	BIT(1)
 #define DCIN_ACTIVE_PWR_SRC_BIT		BIT(0)
 #define PARALLEL_REENABLE_TIMER_MS	1000
-#define PARALLEL_CHG_THRESHOLD_CURRENT	2000
-int smbchg_parallel_chg_threshold_ma = PARALLEL_CHG_THRESHOLD_CURRENT;
-module_param_named(
-	default_parallel_chg_threshold, smbchg_parallel_chg_threshold_ma,
-	int, S_IRUSR | S_IWUSR
-);
-
+#define PARALLEL_CHG_THRESHOLD_CURRENT	1800
 static bool smbchg_is_usbin_active_pwr_src(struct smbchg_chip *chip)
 {
 	int rc;
@@ -3354,8 +3344,6 @@ static int smbchg_icl_loop_disable_check(struct smbchg_chip *chip)
 
 #define UNKNOWN_BATT_TYPE	"Unknown Battery"
 #define LOADING_BATT_TYPE	"Loading Battery Data"
-int smb_fastchg_ma = 2000;
-module_param_named(fastchg_current_ma, smb_fastchg_ma, int, S_IRUSR | S_IWUSR);
 static int smbchg_config_chg_battery_type(struct smbchg_chip *chip)
 {
 	int rc = 0, max_voltage_uv = 0, fastchg_ma = 0, ret = 0, iterm_ua = 0;
@@ -3440,31 +3428,26 @@ static int smbchg_config_chg_battery_type(struct smbchg_chip *chip)
 	 * Only configure from profile if fastchg-ma is not defined in the
 	 * charger device node.
 	 */
-/*	if (!of_find_property(chip->spmi->dev.of_node,
+	if (!of_find_property(chip->spmi->dev.of_node,
 				"qcom,fastchg-current-ma", NULL)) {
 		rc = of_property_read_u32(profile_node,
 				"qcom,fastchg-current-ma", &fastchg_ma);
 		if (rc) {
 			ret = rc;
-		} else { */
-	if (smb_fastchg_ma > 2400) {
-		smb_fastchg_ma = 2400;
-	} else if (smb_fastchg_ma < 900) {
-		smb_fastchg_ma = 900;
+		} else {
+			pr_smb(PR_MISC,
+				"fastchg-ma changed from to %dma for battery-type %s\n",
+				fastchg_ma, chip->battery_type);
+			rc = vote(chip->fcc_votable, BATT_TYPE_FCC_VOTER, true,
+							fastchg_ma);
+			if (rc < 0) {
+				dev_err(chip->dev,
+					"Couldn't vote for fastchg current rc=%d\n",
+					rc);
+				return rc;
+			}
+		}
 	}
-	fastchg_ma = smb_fastchg_ma;
-	pr_smb(PR_MISC,
-		"fastchg-ma changed from to %dma for battery-type %s\n",
-		fastchg_ma, chip->battery_type);
-	rc = vote(chip->fcc_votable, BATT_TYPE_FCC_VOTER, true,
-					fastchg_ma);
-	if (rc < 0) {
-		dev_err(chip->dev,
-			"Couldn't vote for fastchg current rc=%d\n", rc);
-		return rc;
-	}
-//		}
-//	}
 
 	return ret;
 }
@@ -4148,16 +4131,16 @@ static void smbchg_vfloat_adjust_work(struct work_struct *work)
 		goto reschedule;
 	}
 
-/*	pr_smb(PR_STATUS, "sample number = %d vbat_mv = %d ibat_ua = %d\n",
+	pr_smb(PR_STATUS, "sample number = %d vbat_mv = %d ibat_ua = %d\n",
 		chip->n_vbat_samples,
 		vbat_mv,
-		ibat_ua); */
+		ibat_ua);
 
 	chip->max_vbat_sample = max(chip->max_vbat_sample, vbat_mv);
 	chip->n_vbat_samples += 1;
 	if (chip->n_vbat_samples < vf_adjust_n_samples) {
-/*		pr_smb(PR_STATUS, "Skip %d samples; max = %d\n",
-			chip->n_vbat_samples, chip->max_vbat_sample); */
+		pr_smb(PR_STATUS, "Skip %d samples; max = %d\n",
+			chip->n_vbat_samples, chip->max_vbat_sample);
 		goto reschedule;
 	}
 	/* if max vbat > target vfloat, delta_vfloat_mv could be negative */
@@ -5605,239 +5588,6 @@ static int smbchg_battery_is_writeable(struct power_supply *psy,
 	return rc;
 }
 
-static int BatteryTestStatus_enable;
-
-static ssize_t smb_battery_test_status_show(struct device *dev,
-					struct device_attribute *attr, char *buf)
-{
-	return sprintf(buf, "%d\n", BatteryTestStatus_enable);
-}
-
-static ssize_t smb_battery_test_status_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
-{
-	int retval;
-	unsigned int input;
-
-	if (sscanf(buf, "%u", &input) != 1) {
-		retval = -EINVAL;
-		BatteryTestStatus_enable = 0;
-		goto exit;
-	}
-	if (input != 1) {
-		retval = -EINVAL;
-		BatteryTestStatus_enable = 0;
-		goto exit;
-	}
-	BatteryTestStatus_enable = 1;
-exit:
-	return retval;
-}
-
-#if defined(CONFIG_BOARDTEMP_WORK)
-#define DEFAULT_TEMP		250
-static int lct_get_prop_batt_temp(struct smbchg_chip *chip)
-{
-	int rc = 0;
-	struct qpnp_vadc_result results;
-	if (NULL == chip->ntc_vadc || IS_ERR(chip->ntc_vadc)) {
-		if (of_find_property(chip->dev->of_node, "qcom,board_ntc-vadc", NULL)) {
-			chip->ntc_vadc = qpnp_get_vadc(chip->dev, "board_ntc");
-			if (IS_ERR(chip->ntc_vadc)) {
-				rc = PTR_ERR(chip->vadc_dev);
-				if (rc != -EPROBE_DEFER)
-					dev_err(chip->dev, "Couldn't get vadc rc=%d\n", rc);
-				return rc;
-			}
-		}
-	}
-	pr_debug("chip->ntc_vadc=%p \n", chip->ntc_vadc);
-	rc = qpnp_vadc_read(chip->ntc_vadc, P_MUX4_1_1, &results);
-	if (rc) {
-		pr_debug("Unable to read batt temperature rc=%d\n", rc);
-		return DEFAULT_TEMP;
-	}
-	pr_debug("get_bat_temp %d, %lld , %lld\n", results.adc_code,
-					results.physical, results.measurement);
-	return (int)results.physical;
-}
-
-static ssize_t smb_battery_pmic_thermal_temp(struct device *dev,
-					struct device_attribute *attr, char *buf)
-{
-	int temp;
-	struct smbchg_chip *chip = dev_get_drvdata(dev);
-	if (NULL == chip)
-		pr_err("__zhb:chip is NULL\n");
-	temp = lct_get_prop_batt_temp(chip);
-	return sprintf(buf, "%d\n", temp);
-}
-
-void lct_charging_adjust(struct smbchg_chip *chip)
-{
-	int board_temp;
-	bool is_temp_rise = true;
-	static int backup_temp;
-	static int level_change;
-	if (!chip->usb_present) {
-		if (level_change != 0) {
-			level_change = 0;
-			smbchg_system_temp_level_set(chip, level_change);
-		}
-		return;
-	}
-	return;
-	board_temp = lct_get_prop_batt_temp(chip);
-	if (board_temp < 500)
-		queue_delayed_work(system_power_efficient_wq,
-			&chip->boardtemp_work, msecs_to_jiffies(30000));
-	else if (board_temp < 540)
-		queue_delayed_work(system_power_efficient_wq,
-			&chip->boardtemp_work, msecs_to_jiffies(10000));
-	else
-		queue_delayed_work(system_power_efficient_wq,
-			&chip->boardtemp_work, msecs_to_jiffies(3000));
-
-	is_temp_rise = (board_temp - backup_temp) > 0 ? true : false;
-	backup_temp = board_temp;
-	pr_debug("board_temp:%d\n", board_temp);
-	if (is_temp_rise) {
-		if (board_temp >= 560) {
-			if (level_change != 2) {
-				level_change = 2;
-				smbchg_system_temp_level_set(chip, level_change);
-			}
-		} else if (board_temp >= 520) {
-			if (level_change != 1) {
-				level_change = 1;
-				smbchg_system_temp_level_set(chip, level_change);
-			}
-		} else {
-			return;
-		}
-	} else {
-		if (board_temp <= 500) {
-			if (level_change != 0) {
-				level_change = 0;
-				smbchg_system_temp_level_set(chip, level_change);
-			}
-		} else if (board_temp <= 540) {
-			if (level_change != 1) {
-				level_change = 1;
-				smbchg_system_temp_level_set(chip, level_change);
-			}
-		} else {
-			return;
-		}
-	}
-
-}
-
-static void smb_boardtemp_work_fn(struct work_struct *work)
-{
-	struct delayed_work *dwork = to_delayed_work(work);
-	struct smbchg_chip *chip = container_of(dwork, struct smbchg_chip, boardtemp_work);
-	lct_charging_adjust(chip);
-}
-
-static int boardtemp_read_temp(struct thermal_zone_device *tzd,
-		unsigned long *temp)
-{
-	struct smbchg_chip *chip;
-	WARN_ON(tzd == NULL);
-	chip = tzd->devdata;
-	if (NULL == chip) {
-		pr_err("_rubin chip is NULL \n");
-		return -EPERM;
-	}
-	*temp = lct_get_prop_batt_temp(chip);
-	return 0;
-}
-
-static struct thermal_zone_device_ops boardsensor_tzd_ops = {
-	.get_temp = boardtemp_read_temp,
-};
-int ntc_regulator_init(struct smbchg_chip *chip)
-{
-	int rc;
-	chip->ntc_vdd = regulator_get(chip->dev, "ntc_vdd");
-	if (IS_ERR(chip->ntc_vdd)) {
-		rc = PTR_ERR(chip->ntc_vdd);
-		dev_err(chip->dev,
-			"Regulator get failed ntc_vdd rc=%d\n", rc);
-		goto deinit_vregs;
-	}
-
-	if (regulator_count_voltages(chip->ntc_vdd) > 0) {
-		rc = regulator_set_voltage(chip->ntc_vdd , 1800000,
-					   1800000);
-		if (rc) {
-			dev_err(chip->dev,
-			"Regulator set_vtg failed ntc_vdd rc=%d\n", rc);
-			goto deinit_vregs;
-		}
-	}
-	if (!IS_ERR_OR_NULL(chip->ntc_vdd)) {
-		rc = regulator_enable(chip->ntc_vdd);
-		if (rc) {
-			dev_err(chip->dev,
-				"Regulator ntc_vdd enable failed rc=%d\n", rc);
-			regulator_disable(chip->ntc_vdd);
-		}
-	}
-	return 0;
-deinit_vregs:
-	pr_err("__huanbin__ regualtor init failed.\n");
-	if (regulator_count_voltages(chip->ntc_vdd) > 0)
-		regulator_set_voltage(chip->ntc_vdd, 0, 1800000);
-	return rc;
-}
-
-#endif
-
-static struct device_attribute attrs[] = {
-	__ATTR(BatteryTestStatus, S_IRUGO | S_IWUSR | S_IWGRP,
-			smb_battery_test_status_show,
-			smb_battery_test_status_store),
-#if defined(CONFIG_BOARDTEMP_WORK)
-	__ATTR(pmic_thermal_temp, S_IRUGO | S_IWUSR | S_IWGRP,
-			smb_battery_pmic_thermal_temp,
-			NULL),
-#endif
-};
-bool is_oldtest = false;
-void runin_work(struct smbchg_chip *chip, int batt_capacity)
-{
-	int rc;
-
-	if (!chip->usb_present || !BatteryTestStatus_enable) {
-		if (is_oldtest) {
-			rc = vote(chip->usb_suspend_votable,  BATTCHG_USER_EN_VOTER, true, 0);
-			if (rc)
-				dev_err(chip->dev, "Couldn't enable charge rc=%d\n", rc);
-			is_oldtest = false;
-		}
-		return;
-	}
-	is_oldtest = true;
-	pr_debug("%s:BatteryTestStatus_enable = %d chip->usb_present = %d \n", __func__, BatteryTestStatus_enable, chip->usb_present);
-	if (batt_capacity > 80) {
-		pr_debug("smbcharge_get_prop_batt_capacity > 80\n");
-		rc = vote(chip->usb_suspend_votable,  BATTCHG_USER_EN_VOTER, false, 0);
-		if (rc)
-			dev_err(chip->dev,
-				"Couldn't disenable charge rc=%d\n", rc);
-	} else {
-		if (batt_capacity < 60) {
-		pr_debug("smbcharge_get_prop_batt_capacity < 60\n");
-		rc = vote(chip->usb_suspend_votable,  BATTCHG_USER_EN_VOTER, true, 0);
-		if (rc)
-			dev_err(chip->dev,
-				"Couldn't enable charge rc=%d\n", rc);
-		}
-	}
-}
-
 static int smbchg_battery_get_property(struct power_supply *psy,
 				       enum power_supply_property prop,
 				       union power_supply_propval *val)
@@ -5892,7 +5642,6 @@ static int smbchg_battery_get_property(struct power_supply *psy,
 	/* properties from fg */
 	case POWER_SUPPLY_PROP_CAPACITY:
 		val->intval = get_prop_batt_capacity(chip);
-		runin_work(chip, val->intval);
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
 		val->intval = get_prop_batt_current_now(chip);
@@ -6020,84 +5769,6 @@ static int smbchg_dc_is_writeable(struct power_supply *psy,
 	}
 	return rc;
 }
-
-#if defined(CONFIG_TEMP_CHARGE_DISABLE)
-static int up_temp = 600;
-static int up_temp_resume = 520;
-static int low_temp = -150;
-static int low_temp_resume = -140;
-
-module_param(up_temp , int , 0755);
-module_param(low_temp , int , 0755);
-module_param(up_temp_resume , int , 0755);
-module_param(low_temp_resume , int , 0755);
-
-static int smb_for_batt_temp_too_high_too_low(struct smbchg_chip *chip,
-		int temp)
-{
-	static int is_charging ;
-	bool noused;
-	pr_debug("[batt temp func]chip->usb_present = %d, temp = %d\n",
-			chip->usb_present, temp);
-	if (!chip->usb_present)
-		is_charging = 0;
-	if (temp >= up_temp) {
-		pr_debug("temp too high , disable charging \n");
-		if (is_charging) {
-			pr_debug("temp too high, disable charging \n");
-			vote(chip->usb_suspend_votable,  BATTCHG_USER_EN_VOTER, false, 0);
-			power_supply_changed(&chip->batt_psy);
-			power_supply_changed(chip->usb_psy);
-			is_charging = 0;
-		}
-		return 1;
-	} else if (temp <= low_temp) {
-		pr_debug("temp too low , disable charging \n");
-		if (is_charging) {
-			pr_debug("temp too low , disable charging \n");
-			vote(chip->usb_suspend_votable,  BATTCHG_USER_EN_VOTER, false, 0);
-			power_supply_changed(&chip->batt_psy);
-			power_supply_changed(chip->usb_psy);
-			is_charging = 0;
-		}
-		return 1;
-	} else if (temp >= low_temp_resume
-			&& temp <= up_temp_resume) {
-		pr_debug("temp is well, charging is enable \n");
-		if (!is_charging) {
-			pr_debug("temp is well, charging is enable \n");
-			vote(chip->usb_suspend_votable,  BATTCHG_USER_EN_VOTER, true, 0);
-			power_supply_changed(&chip->batt_psy);
-			power_supply_changed(chip->usb_psy);
-			is_charging = 1;
-		}
-		return 0;
-	}
-	return 0;
-}
-
-static void smb_temp_work_fn(struct work_struct *work)
-{
-	int temp;
-	struct delayed_work *dwork = to_delayed_work(work);
-	struct smbchg_chip *chip = container_of(dwork, struct smbchg_chip,
-			temp_work);
-
-	temp = get_prop_batt_temp(chip);
-	smb_for_batt_temp_too_high_too_low(chip, temp);
-	if (chip->usb_present) {
-		if (temp < 450)
-			queue_delayed_work(system_power_efficient_wq,
-				&chip->temp_work, msecs_to_jiffies(30000));
-		else if (temp < 500)
-			queue_delayed_work(system_power_efficient_wq,
-				&chip->temp_work, msecs_to_jiffies(10000));
-		else
-			queue_delayed_work(system_power_efficient_wq,
-				&chip->temp_work, msecs_to_jiffies(3000));
-	}
-}
-#endif
 
 #define HOT_BAT_HARD_BIT	BIT(0)
 #define HOT_BAT_SOFT_BIT	BIT(1)
@@ -6369,15 +6040,6 @@ static irqreturn_t dcin_uv_handler(int irq, void *_chip)
 		chip->vbat_above_headroom = false;
 	}
 
-#if defined (CONFIG_TEMP_CHARGE_DISABLE)
-	queue_delayed_work(system_power_efficient_wq,
-		&chip->temp_work, msecs_to_jiffies(1000));
-#endif
-#if defined(CONFIG_BOARDTEMP_WORK)
-	queue_delayed_work(system_power_efficient_wq,
-		&chip->boardtemp_work, msecs_to_jiffies(3000));
-#endif
-
 	smbchg_wipower_check(chip);
 	return IRQ_HANDLED;
 }
@@ -6616,9 +6278,9 @@ static irqreturn_t aicl_done_handler(int irq, void *_chip)
 {
 	struct smbchg_chip *chip = _chip;
 	bool usb_present = is_usb_present(chip);
-/*	int aicl_level = smbchg_get_aicl_level_ma(chip);
+	int aicl_level = smbchg_get_aicl_level_ma(chip);
 
-	pr_smb(PR_INTERRUPT, "triggered, aicl: %d\n", aicl_level); */
+	pr_smb(PR_INTERRUPT, "triggered, aicl: %d\n", aicl_level);
 
 	increment_aicl_count(chip);
 
@@ -8160,46 +7822,6 @@ static int smbchg_probe(struct spmi_device *spmi)
 
 	schedule_delayed_work(&chip->reg_work, 60 * HZ);
 	create_debugfs_entries(chip);
-
-	rc = sysfs_create_file(&chip->dev->kobj, &attrs[0].attr);
-	if (rc < 0) {
-		dev_err(chip->dev,
-				"%s: Failed to create sysfs attributes\n",
-				__func__);
-	sysfs_remove_file(&chip->dev->kobj, &attrs[0].attr);
-	}
-
-#if defined(CONFIG_BOARDTEMP_WORK)
-	rc = sysfs_create_file(&chip->dev->kobj,
-				&attrs[1].attr);
-	if (rc < 0) {
-		dev_err(chip->dev,
-				"%s: Failed to create sysfs attributes 1\n",
-				__func__);
-	sysfs_remove_file(&chip->dev->kobj,
-				&attrs[1].attr);
-	}
-
-	rc = ntc_regulator_init(chip);
-
-	chip->tzd = thermal_zone_device_register("boardtemp", 0, 0,
-					chip, &boardsensor_tzd_ops, NULL, 0, 0);
-	if (IS_ERR(chip->tzd))
-		pr_err("thermal_zone_device_register error!\n");
-	INIT_DELAYED_WORK(&chip->boardtemp_work, smb_boardtemp_work_fn);
-	queue_delayed_work(system_power_efficient_wq,
-		&chip->boardtemp_work, msecs_to_jiffies(30000));
-
-#endif
-#if defined(CONFIG_TEMP_CHARGE_DISABLE)
-	{
-		pr_debug("support lct temp high func, init");
-		INIT_DELAYED_WORK(&chip->temp_work, smb_temp_work_fn);
-		queue_delayed_work(system_power_efficient_wq,
-			&chip->temp_work, msecs_to_jiffies(5000));
-	}
-#endif
-
 	dev_info(chip->dev,
 		"SMBCHG successfully probe Charger version=%s Revision DIG:%d.%d ANA:%d.%d batt=%d dc=%d usb=%d\n",
 			version_str[chip->schg_version],
@@ -8216,13 +7838,6 @@ unregister_dc_psy:
 	power_supply_unregister(&chip->dc_psy);
 unregister_batt_psy:
 	power_supply_unregister(&chip->batt_psy);
-	sysfs_remove_file(&chip->dev->kobj,
-				&attrs[0].attr);
-
-#if defined(CONFIG_BOARDTEMP_WORK)
-	sysfs_remove_file(&chip->dev->kobj,
-				&attrs[1].attr);
-#endif
 free_regulator:
 	smbchg_regulator_deinit(chip);
 	handle_usb_removal(chip);

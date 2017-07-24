@@ -2901,7 +2901,7 @@ static int fg_get_cc_soc(struct fg_chip *chip, int *cc_soc)
 static int fg_cap_learning_process_full_data(struct fg_chip *chip)
 {
 	int cc_pc_val, rc = -EINVAL;
-	int64_t cc_soc_delta_pc;
+	unsigned int cc_soc_delta_pc;
 	int64_t delta_cc_uah;
 
 	if (!chip->learning_data.active)
@@ -2929,9 +2929,9 @@ static int fg_cap_learning_process_full_data(struct fg_chip *chip)
 	chip->learning_data.cc_uah = delta_cc_uah + chip->learning_data.cc_uah;
 
 	if (fg_debug_mask & FG_AGING)
-		pr_info("current cc_soc=%d cc_soc_pc=%lld total_cc_uah = %lld delta_cc_uah = %lld\n",
+		pr_info("current cc_soc=%d cc_soc_pc=%d total_cc_uah = %lld\n",
 				cc_pc_val, cc_soc_delta_pc,
-				chip->learning_data.cc_uah, delta_cc_uah);
+				chip->learning_data.cc_uah);
 
 	return 0;
 

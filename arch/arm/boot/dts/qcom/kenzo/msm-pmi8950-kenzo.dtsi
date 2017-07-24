@@ -199,13 +199,13 @@
 			#size-cells = <1>;
 
 			qcom,iterm-ma = <150>;
-			/*qcom,fastchg-current-ma = <2400>;*/
+			qcom,fastchg-current-ma = <2400>;
 			qcom,float-voltage-mv = <4400>;
 			qcom,resume-delta-mv = <200>;
 			qcom,chg-inhibit-fg;
 			qcom,rparasitic-uohm = <100000>;
 			qcom,bms-psy-name = "bms";
-			qcom,thermal-mitigation = <2000 1500 700 600 0>;
+			qcom,thermal-mitigation = <2400 1800 1000 600 0>;
 			qcom,fastchg-current-comp = <900>;
 			qcom,float-voltage-comp = <11>;
 			/*11 for 4.2V, 16 for 4.1V*/
@@ -213,7 +213,6 @@
 			qcom,force-aicl-rerun;
 			qcom,aicl-rerun-period-s = <180>;
 			qcom,autoadjust-vfloat;
-			qcom,enable-hvdcp-9v;
 			qcom,pmic-revid = <&pmi8950_revid>;
 			qcom,charge-unknown-battery;
 			qcom,board_ntc-vadc = <&pm8950_vadc>;
@@ -324,7 +323,6 @@
 			qcom,bcl-mh-threshold-ma = <405>;
 			qcom,fg-iterm-ma = <200>;
 			qcom,fg-chg-iterm-ma = <150>;
-			qcom,nom-batt-capacity-mah = <4050>;
 			qcom,pmic-revid = <&pmi8950_revid>;
 			qcom,cycle-counter-en;
 			qcom,capacity-learning-on;
