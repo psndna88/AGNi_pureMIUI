@@ -15,6 +15,13 @@ CPPFLAGS_vmlinux.lds = -DTEXT_OFFSET=$(TEXT_OFFSET)
 OBJCOPYFLAGS	:=-O binary -R .note -R .note.gnu.build-id -R .comment -S
 GZFLAGS		:=-9
 
+ifeq ($(CONFIG_KERNEL_GZIP),y)
+COMP_TYPE=gz
+endif
+ifeq ($(CONFIG_KERNEL_LZ4),y)
+COMP_TYPE=lz4
+endif
+
 KBUILD_DEFCONFIG := defconfig
 
 KBUILD_CFLAGS	+= -mgeneral-regs-only
@@ -49,9 +56,9 @@ libs-y		:= arch/arm64/lib/ $(libs-y)
 
 # Default target when executing plain make
 ifeq ($(CONFIG_BUILD_ARM64_APPENDED_DTB_IMAGE),y)
-KBUILD_IMAGE	:= Image.gz-dtb
+KBUILD_IMAGE	:= Image.$(COMP_TYPE)-dtb
 else
-KBUILD_IMAGE	:= Image.gz
+KBUILD_IMAGE	:= Image.$(COMP_TYPE)
 endif
 
 KBUILD_DTBS	:= dtbs
@@ -61,7 +68,7 @@ all:	$(KBUILD_IMAGE) $(KBUILD_DTBS)
 boot32 := arch/arm/boot
 boot := arch/arm64/boot
 
-Image Image.gz: vmlinux
+Image Image.$(COMP_TYPE): vmlinux
 	$(Q)$(MAKE) $(build)=$(boot) $(boot)/$@
 
 zinstall install: vmlinux
@@ -78,7 +85,7 @@ PHONY += vdso_install
 vdso_install:
 	$(Q)$(MAKE) $(build)=arch/arm64/kernel/vdso $@
 
-Image.gz-dtb: vmlinux scripts dtbs
+Image.$(COMP_TYPE)-dtb: vmlinux scripts dtbs
 	$(Q)$(MAKE) $(build)=$(boot) $(boot)/$@
 
 # We use MRPROPER_FILES and CLEAN_FILES now
