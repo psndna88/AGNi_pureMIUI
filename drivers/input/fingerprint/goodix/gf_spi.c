@@ -613,11 +613,6 @@ static int driver_init_partial(struct gf_dev *gf_dev)
 #endif
 	gf_dev->device_available = 1;
 
-	if (fp_bigcore_boost) {
-		sched_set_boost(1);
-		sched_set_boost(0);
-	}
-
 	return 0;
 
 error:

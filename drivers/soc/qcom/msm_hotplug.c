@@ -149,9 +149,6 @@ EXPORT_SYMBOL(msm_hotplug_fingerprint_called);
 
 static void msm_hotplug_suspend(void);
 
-unsigned int fp_bigcore_boost = 0;
-EXPORT_SYMBOL(fp_bigcore_boost);
-
 static unsigned int debug = 0;
 module_param_named(debug_mask, debug, uint, 0644);
 
@@ -1098,35 +1095,6 @@ static ssize_t __cpuinit store_enable_hotplug(struct device *dev,
     return count;
 }
 
-static ssize_t show_bigcore_boost(struct device *dev,
-                   struct device_attribute *msm_hotplug_attrs,
-                   char *buf)
-{
-    return sprintf(buf, "%u\n", fp_bigcore_boost);
-}
-
-static ssize_t store_bigcore_boost(struct device *dev,
-                    struct device_attribute *msm_hotplug_attrs,
-                    const char *buf, size_t count)
-{
-    int ret;
-    unsigned int val;
-
-    ret = sscanf(buf, "%u", &val);
-    if (ret != 1)
-        return -EINVAL;
-
-    if (val < 0 || val > 1)
-        return -EINVAL;
-
-    if (val == fp_bigcore_boost)
-        return count;
-
-    fp_bigcore_boost = val;
-
-    return count;
-}
-
 static ssize_t show_update_rate(struct device *dev,
                 struct device_attribute *msm_hotplug_attrs,
                 char *buf)
@@ -1563,7 +1531,6 @@ static ssize_t show_version(struct device *dev,
 }
 
 static __refdata DEVICE_ATTR(msm_enabled, (S_IWUGO|S_IRUGO), show_enable_hotplug, store_enable_hotplug);
-static DEVICE_ATTR(bigcore_boost, (S_IWUGO|S_IRUGO), show_bigcore_boost, store_bigcore_boost);
 static DEVICE_ATTR(update_rate, (S_IWUGO|S_IRUGO), show_update_rate, store_update_rate);
 static DEVICE_ATTR(load_levels, (S_IWUGO|S_IRUGO), show_load_levels, store_load_levels);
 static DEVICE_ATTR(min_cpus_online, (S_IWUGO|S_IRUGO), show_min_cpus_online,
@@ -1595,7 +1562,6 @@ static DEVICE_ATTR(version, S_IRUGO, show_version, NULL);
 
 static struct attribute *msm_hotplug_attrs[] = {
     &dev_attr_msm_enabled.attr,
-    &dev_attr_bigcore_boost.attr,
     &dev_attr_update_rate.attr,
     &dev_attr_load_levels.attr,
     &dev_attr_min_cpus_online.attr,

@@ -315,27 +315,14 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *handle)
 
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
 
-/* On touch the fp sensor, boost the cpu even if screen is on */
-#ifdef CONFIG_MSM_HOTPLUG
-	if (fp_bigcore_boost) {
-#endif
-		sched_set_boost(1);
-#ifdef CONFIG_MSM_HOTPLUG
-	}
-#endif
 	if (!is_display_on()) {
+		sched_set_boost(1);
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
 		input_sync(fpc1020->input_dev);
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
 		input_sync(fpc1020->input_dev);
-	}
-#ifdef CONFIG_MSM_HOTPLUG
-	if (fp_bigcore_boost) {
-#endif
 		sched_set_boost(0);
-#ifdef CONFIG_MSM_HOTPLUG
 	}
-#endif
 
 	return IRQ_HANDLED;
 }
