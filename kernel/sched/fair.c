@@ -7890,7 +7890,6 @@ void idle_balance(int this_cpu, struct rq *this_rq)
 			continue;
 
 		if (sd->flags & SD_BALANCE_NEWIDLE) {
-			/* If we've pulled tasks over stop searching: */
 			pulled_task = load_balance(balance_cpu, balance_rq,
 					sd, CPU_NEWLY_IDLE, &balance);
 		}
@@ -7898,7 +7897,11 @@ void idle_balance(int this_cpu, struct rq *this_rq)
 		interval = msecs_to_jiffies(sd->balance_interval);
 		if (time_after(next_balance, sd->last_balance + interval))
 			next_balance = sd->last_balance + interval;
-		if (pulled_task) {
+			/*
+			* Stop searching for tasks to pull if there are
+			* now runnable tasks on this rq.
+			*/
+ 			if (pulled_task || this_rq->nr_running > 0) {
 			balance_rq->idle_stamp = 0;
 			break;
 		}
