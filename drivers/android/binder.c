@@ -773,7 +773,7 @@ static struct binder_buffer *binder_alloc_buf(struct binder_proc *proc,
 	size_t size, data_offsets_size;
 
 	if (proc->vma == NULL) {
-		pr_err("%d: binder_alloc_buf, no vma\n",
+		pr_debug("%d: binder_alloc_buf, no vma\n",
 		       proc->pid);
 		return NULL;
 	}
