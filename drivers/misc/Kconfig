@@ -587,6 +587,12 @@ config TEST_IRQ_REQUESTER
 
 	  If in doubt, say N.
 
+config FORCE_FAST_CHARGE
+	bool "Force faster charge rate for USB"
+	default n
+	help
+	  This allows users to override default charge rate for USB
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/aw8624_haptic/Kconfig"
 source "drivers/misc/drv2624_haptic/Kconfig"
