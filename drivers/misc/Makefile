@@ -99,3 +99,4 @@ obj-$(CONFIG_OKL4_USER_VIPC)    += okl4-vipc.o
 obj-$(CONFIG_OKL4_GUEST)        += okl4-panic.o
 obj-$(CONFIG_OKL4_LINK_SHBUF)    += okl4-link-shbuf.o
 obj-$(CONFIG_GPIO_TESTING_MODE)    += gpio-testing-mode.o
+obj-$(CONFIG_FORCE_FAST_CHARGE) += fastchg.o

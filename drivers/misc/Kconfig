@@ -650,6 +650,12 @@ config GPIO_TESTING_MODE
     help
       Enable driver for a simple testing mode detection
 
+config FORCE_FAST_CHARGE
+	bool "Force faster charge rate for USB"
+	default n
+	help
+	  This allows users to override default charge rate for USB
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/xiaomi/Kconfig"
