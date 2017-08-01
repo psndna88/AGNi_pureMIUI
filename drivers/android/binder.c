@@ -451,7 +451,13 @@ static long task_close_fd(struct binder_proc *proc, unsigned int fd)
 	if (proc->files == NULL)
 		return -ESRCH;
 
+	/* Enabling preemption as during filp_close a call to flush can
+	 * happen. This depends on implementation of flush operation for
+	 * file, which may expect preemption to be enabled.
+         */
+	preempt_enable_no_resched();
 	retval = __close_fd(proc->files, fd);
+	preempt_disable();
 	/* can't restart close syscall because file table entry was cleared */
 	if (unlikely(retval == -ERESTARTSYS ||
 		     retval == -ERESTARTNOINTR ||
