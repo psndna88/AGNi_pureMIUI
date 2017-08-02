@@ -8,6 +8,7 @@
 #include <linux/stop_machine.h>
 #include <linux/tick.h>
 #include <linux/slab.h>
+#include <linux/jump_label.h>
 
 #include "cpupri.h"
 #include "cpudeadline.h"
@@ -697,7 +698,7 @@ DECLARE_PER_CPU_SHARED_ALIGNED(struct rq, runqueues);
 #define this_rq()		this_cpu_ptr(&runqueues)
 #define task_rq(p)		cpu_rq(task_cpu(p))
 #define cpu_curr(cpu)		(cpu_rq(cpu)->curr)
-#define raw_rq()		raw_cpu_ptr(&runqueues)
+#define raw_rq()		(&__raw_get_cpu_var(runqueues))
 
 static inline u64 __rq_clock_broken(struct rq *rq)
 {
@@ -738,16 +739,6 @@ struct nr_stats_s {
 
 DECLARE_PER_CPU(struct nr_stats_s, runqueue_stats);
 #endif
-
-static inline u64 rq_clock(struct rq *rq)
-{
-	return rq->clock;
-}
-
-static inline u64 rq_clock_task(struct rq *rq)
-{
-	return rq->clock_task;
-}
 
 #ifdef CONFIG_SMP
 
@@ -1181,8 +1172,8 @@ static const u32 prio_to_wmult[40] = {
 #else
 #define ENQUEUE_WAKING		0
 #endif
-#define ENQUEUE_REPLENISH	8
-#define ENQUEUE_WAKEUP_NEW	16
+#define ENQUEUE_MIGRATING	8
+#define ENQUEUE_REPLENISH	16
 
 #define DEQUEUE_SLEEP		1
 #define DEQUEUE_MIGRATING	2

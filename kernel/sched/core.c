@@ -96,7 +96,37 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/sched.h>
 
+static atomic_t __su_instances;
 
+int su_instances(void)
+{
+	return atomic_read(&__su_instances);
+}
+
+bool su_running(void)
+{
+	return su_instances() > 0;
+}
+
+bool su_visible(void)
+{
+	kuid_t uid = current_uid();
+	if (su_running())
+		return true;
+	if (uid_eq(uid, GLOBAL_ROOT_UID) || uid_eq(uid, GLOBAL_SYSTEM_UID))
+		return true;
+	return false;
+}
+
+void su_exec(void)
+{
+	atomic_inc(&__su_instances);
+}
+
+void su_exit(void)
+{
+	atomic_dec(&__su_instances);
+}
 
 void start_bandwidth_timer(struct hrtimer *period_timer, ktime_t period)
 {
@@ -689,7 +719,9 @@ static int _get_nohz_timer_target_hmp(void)
 	return best_cpu;
 }
 
-#else
+/* #else
+ * disabled for compatability
+ */
 
 static int _get_nohz_timer_target_hmp(void)
 {
@@ -713,17 +745,8 @@ static int _get_nohz_timer_target_hmp(void)
 int get_nohz_timer_target(void)
 {
 	int cpu = smp_processor_id();
-	int i, lower_power_cpu;
+	int i;
 	struct sched_domain *sd;
-
-	if (sched_enable_hmp) {
-		lower_power_cpu =  _get_nohz_timer_target_hmp();
-		if (lower_power_cpu < nr_cpu_ids)
-			return lower_power_cpu;
-	}
-
-	if (!idle_cpu(cpu))
-		return cpu;
 
 	rcu_read_lock();
 	for_each_domain(cpu, sd) {
@@ -2452,7 +2475,7 @@ void wake_up_new_task(struct task_struct *p)
 #endif
 
 	rq = __task_rq_lock(p);
-	activate_task(rq, p, ENQUEUE_WAKEUP_NEW);
+	activate_task(rq, p, 0);
 	p->on_rq = TASK_ON_RQ_QUEUED;
 	trace_sched_wakeup_new(p, true);
 	check_preempt_curr(rq, p, WF_FORK);
