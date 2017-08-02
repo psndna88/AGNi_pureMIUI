@@ -8967,7 +8967,7 @@ sched_set_cpu_cstate(int cpu, int cstate, struct cpuidle_state *cpuidle,
 
 	idle_set_state_idx(rq, cstate);
 	idle_set_state(rq, cpuidle);
-
+	/*
 	if ((cstate == 0 && wakeup_energy == 0 && wakeup_latency == 0) ||
 	    (cstate == 1 && cpu < 4 && wakeup_energy == 5800 && wakeup_latency == 50) ||
 	    (cstate == 1 && cpu >= 4 && wakeup_energy == 24120 && wakeup_latency == 60) ||
@@ -8977,4 +8977,5 @@ sched_set_cpu_cstate(int cpu, int cstate, struct cpuidle_state *cpuidle,
 	} else {
 		pr_info("TJK: CPU%d ->cstate=%d  nrg=%d latency=%d\n", cpu, cstate, wakeup_energy, wakeup_latency);
 	}
+	*/
 }
