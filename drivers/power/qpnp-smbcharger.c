@@ -402,19 +402,19 @@ module_param_named(
 	int, S_IRUSR | S_IWUSR
 );
 
-static int smbchg_default_hvdcp_icl_ma = 2400;
+static int smbchg_default_hvdcp_icl_ma = 2000;
 module_param_named(
 	default_hvdcp_icl_ma, smbchg_default_hvdcp_icl_ma,
 	int, S_IRUSR | S_IWUSR
 );
 
-static int smbchg_default_hvdcp3_icl_ma = 2400;
+static int smbchg_default_hvdcp3_icl_ma = 2000;
 module_param_named(
 	default_hvdcp3_icl_ma, smbchg_default_hvdcp3_icl_ma,
 	int, S_IRUSR | S_IWUSR
 );
 
-static int smbchg_default_dcp_icl_ma = 2400;
+static int smbchg_default_dcp_icl_ma = 2000;
 module_param_named(
 	default_dcp_icl_ma, smbchg_default_dcp_icl_ma,
 	int, S_IRUSR | S_IWUSR
@@ -1813,6 +1813,12 @@ static int smbchg_set_fastchg_current_raw(struct smbchg_chip *chip,
 #define DCIN_ACTIVE_PWR_SRC_BIT		BIT(0)
 #define PARALLEL_REENABLE_TIMER_MS	1000
 #define PARALLEL_CHG_THRESHOLD_CURRENT	1800
+int smbchg_parallel_chg_threshold_ma = PARALLEL_CHG_THRESHOLD_CURRENT;
+module_param_named(
+	default_parallel_chg_threshold, smbchg_parallel_chg_threshold_ma,
+	int, S_IRUSR | S_IWUSR
+);
+
 static bool smbchg_is_usbin_active_pwr_src(struct smbchg_chip *chip)
 {
 	int rc;
@@ -3344,6 +3350,8 @@ static int smbchg_icl_loop_disable_check(struct smbchg_chip *chip)
 
 #define UNKNOWN_BATT_TYPE	"Unknown Battery"
 #define LOADING_BATT_TYPE	"Loading Battery Data"
+int smb_fastchg_ma = 2000;
+module_param_named(default_fastchg_current_ma, smb_fastchg_ma, int, S_IRUSR | S_IWUSR);
 static int smbchg_config_chg_battery_type(struct smbchg_chip *chip)
 {
 	int rc = 0, max_voltage_uv = 0, fastchg_ma = 0, ret = 0, iterm_ua = 0;
@@ -3428,26 +3436,28 @@ static int smbchg_config_chg_battery_type(struct smbchg_chip *chip)
 	 * Only configure from profile if fastchg-ma is not defined in the
 	 * charger device node.
 	 */
-	if (!of_find_property(chip->spmi->dev.of_node,
+/*	if (!of_find_property(chip->spmi->dev.of_node,
 				"qcom,fastchg-current-ma", NULL)) {
 		rc = of_property_read_u32(profile_node,
 				"qcom,fastchg-current-ma", &fastchg_ma);
 		if (rc) {
 			ret = rc;
-		} else {
-			pr_smb(PR_MISC,
-				"fastchg-ma changed from to %dma for battery-type %s\n",
-				fastchg_ma, chip->battery_type);
-			rc = vote(chip->fcc_votable, BATT_TYPE_FCC_VOTER, true,
-							fastchg_ma);
-			if (rc < 0) {
-				dev_err(chip->dev,
-					"Couldn't vote for fastchg current rc=%d\n",
-					rc);
-				return rc;
-			}
-		}
+		} else { */
+	if (smb_fastchg_ma > 2400)
+		smb_fastchg_ma = 2400;
+	fastchg_ma = smb_fastchg_ma;
+	pr_smb(PR_MISC,
+		"fastchg-ma changed from to %dma for battery-type %s\n",
+		fastchg_ma, chip->battery_type);
+	rc = vote(chip->fcc_votable, BATT_TYPE_FCC_VOTER, true,
+					fastchg_ma);
+	if (rc < 0) {
+		dev_err(chip->dev,
+			"Couldn't vote for fastchg current rc=%d\n", rc);
+		return rc;
 	}
+//		}
+//	}
 
 	return ret;
 }
