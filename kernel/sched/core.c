@@ -100,8 +100,8 @@
 
 #define DLOG_SIZE 15000
 #define MAX_CTXSW_LATENCY 1000000000
-static DEFINE_PER_CPU(char[DLOG_SIZE], dbuf);
-static DEFINE_PER_CPU(char *, dptr);
+//static DEFINE_PER_CPU(char[DLOG_SIZE], dbuf);
+//static DEFINE_PER_CPU(char *, dptr);
 
 #define dlog(x...)					\
 do {							\
