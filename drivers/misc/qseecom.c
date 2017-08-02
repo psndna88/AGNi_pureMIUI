@@ -96,7 +96,7 @@
 
 #define PHY_ADDR_4G	(1ULL<<32)
 
-#define PRELOADED_APP_ARCH	1000
+#define PRELOADED_APP_ARCH  100
 
 enum qseecom_clk_definitions {
 	CLK_DFAB = 0,
