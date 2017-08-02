@@ -41,7 +41,7 @@ zen_get_data(struct request_queue *q) {
 static void zen_dispatch(struct zen_data *, struct request *);
 
 static void
-zen_merged_requests(struct request_queue *q, struct request *req,
+zen_merged_requests(struct request_queue *q, struct request *rq,
                     struct request *next)
 {
 	/*
@@ -64,9 +64,9 @@ static void zen_add_request(struct request_queue *q, struct request *rq)
 	struct zen_data *zdata = zen_get_data(q);
 	const int sync = rq_is_sync(rq);
 
-	if (zdata->fifo_expire[dir]) {
-		rq->fifo_time = jiffies + zdata->fifo_expire[dir];
-		list_add_tail(&rq->queuelist, &zdata->fifo_list[dir]);
+	if (zdata->fifo_expire[sync]) {
+		rq->fifo_time = jiffies + zdata->fifo_expire[sync];
+		list_add_tail(&rq->queuelist, &zdata->fifo_list[sync]);
 	}
 }
 
