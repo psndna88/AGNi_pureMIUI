@@ -319,15 +319,15 @@ int rt_mutex_getprio(struct task_struct *task)
 	return min(task_top_pi_waiter(task)->prio,
 		   task->normal_prio);
 }
-
-struct task_struct *rt_mutex_get_top_task(struct task_struct *task)
-{
-	if (likely(!task_has_pi_waiters(task)))
-		return NULL;
-
-	return task_top_pi_waiter(task)->task;
-}
-
+/*
+ *struct task_struct *rt_mutex_get_top_task(struct task_struct *task)
+ *{
+ *	if (likely(!task_has_pi_waiters(task)))
+ *		return NULL;
+ *
+ *	return task_top_pi_waiter(task)->task;
+ *}
+ */
 /*
  * Adjust the priority of a task, after its pi_waiters got modified.
  *

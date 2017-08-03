@@ -772,8 +772,8 @@ static void update_stats_enqueue(struct cfs_rq *cfs_rq, struct sched_entity *se,
 	if (se != cfs_rq->curr)
 		update_stats_wait_start(cfs_rq, se, migrating);
 }
-
-#ifdef CONFIG_SCHEDSTATS
+/*
+#ifdef CONFIG_SCHEDSTATS 
 int sched_max_latency_sysctl(struct ctl_table *table, int write,
 			     void __user *buffer, size_t *lenp, loff_t *ppos)
 {
@@ -821,7 +821,6 @@ int sched_max_latency_sysctl(struct ctl_table *table, int write,
 
 	return ret;
 }
-
 static inline void check_for_high_latency(struct task_struct *p, u64 latency_us)
 {
 	int do_warn, do_panic;
@@ -845,6 +844,7 @@ static inline void check_for_high_latency(struct task_struct *p, u64 latency)
 {
 }
 #endif
+*/
 
 static void
 update_stats_wait_end(struct cfs_rq *cfs_rq, struct sched_entity *se,
@@ -4140,7 +4140,7 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 {
 	struct cfs_rq *cfs_rq;
 	struct sched_entity *se = &p->se;
-	int task_new = flags & ENQUEUE_WAKEUP_NEW;
+	int task_new = flags & 0;
 	int task_wakeup = flags & ENQUEUE_WAKEUP;
 
 	for_each_sched_entity(se) {

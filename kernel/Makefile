@@ -20,9 +20,9 @@ obj-y     = fork.o exec_domain.o panic.o printk.o \
 	    cpu.o exit.o itimer.o time.o softirq.o resource.o \
 	    sysctl.o sysctl_binary.o capability.o ptrace.o timer.o user.o \
 	    signal.o sys.o kmod.o workqueue.o pid.o task_work.o \
-	    rcupdate.o extable.o params.o posix-timers.o \
-	    kthread.o sys_ni.o posix-cpu-timers.o mutex.o \
-	    hrtimer.o rwsem.o nsproxy.o srcu.o semaphore.o \
+	    extable.o params.o posix-timers.o \
+	    kthread.o sys_ni.o posix-cpu-timers.o \
+	    hrtimer.o nsproxy.o \
 	    notifier.o ksysfs.o cred.o \
 	    async.o range.o groups.o smpboot.o
 
