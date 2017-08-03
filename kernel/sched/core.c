@@ -97,7 +97,7 @@
 #include <trace/events/sched.h>
 
 #include <soc/qcom/watchdog.h>
-
+/*
 #define DLOG_SIZE 15000
 #define MAX_CTXSW_LATENCY 1000000000
 static DEFINE_PER_CPU(char[DLOG_SIZE], dbuf);
@@ -119,7 +119,7 @@ do {							\
 	per_cpu(dptr, dcpu) = ptr;			\
 	local_irq_restore(dflags);			\
 } while (0)
-
+*/
 static atomic_t __su_instances;
 
 int su_instances(void)
