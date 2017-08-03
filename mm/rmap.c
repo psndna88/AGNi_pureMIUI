@@ -526,7 +526,7 @@ __vma_address(struct page *page, struct vm_area_struct *vma)
 }
 
 inline unsigned long
-static vma_address(struct page *page, struct vm_area_struct *vma)
+vma_address(struct page *page, struct vm_area_struct *vma)
 {
 	unsigned long address = __vma_address(page, vma);
 

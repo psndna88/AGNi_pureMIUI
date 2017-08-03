@@ -1886,19 +1886,6 @@ static inline struct pid *task_tgid(struct task_struct *task)
 	return task->group_leader->pids[PIDTYPE_PID].pid;
 }
 
-#ifdef CONFIG_TASK_CPUFREQ_STATS
-static inline void task_update_time_in_state(struct task_struct *task, int cpu)
-{
-	update_time_in_state(task, cpu);
-}
-
-static inline void task_update_cumulative_time_in_state(struct task_struct *task,
-						 struct task_struct *parent,
-						 int cpu)
-{
-	update_cumulative_time_in_state(task, parent, cpu);
-}
-#endif
 /*
  * Without tasklist or rcu lock it is not safe to dereference
  * the result of task_pgrp/task_session even if task == current,

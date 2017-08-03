@@ -57,13 +57,7 @@ unsigned int __read_mostly sysctl_sched_wake_to_idle = 0;
 unsigned int sysctl_sched_latency = 5000000ULL;
 unsigned int normalized_sysctl_sched_latency = 5000000ULL;
 
-unsigned int sysctl_sched_is_big_little = 0;
-unsigned int sysctl_sched_sync_hint_enable = 1;
-
-unsigned int sysctl_sched_is_big_little = 0;
-unsigned int sysctl_sched_sync_hint_enable = 1;
-
-unsigned int sysctl_sched_is_big_little = 0;
+unsigned int sysctl_sched_is_big_little = 1;
 unsigned int sysctl_sched_sync_hint_enable = 1;
 
 /*

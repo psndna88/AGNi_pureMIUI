@@ -162,6 +162,7 @@ void cpufreq_sched_set_cap(int cpu, unsigned long capacity)
 	struct cpufreq_policy *policy;
 	struct gov_data *gd;
 	unsigned long capacity_max = 0;
+	ktime_t throttle;
 
 	if (!per_cpu(governor_started, cpu))
 		return;
@@ -179,7 +180,7 @@ void cpufreq_sched_set_cap(int cpu, unsigned long capacity)
 
 	gd = policy->governor_data;
 
-	ktime_t throttle = gd->freq < policy->cur ?
+	throttle = gd->freq < policy->cur ?
 		gd->down_throttle : gd->up_throttle;
 
 	/* bail early if we are throttled */
