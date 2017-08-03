@@ -351,8 +351,6 @@ static int cpufreq_sched_policy_exit(struct cpufreq_policy *policy)
 
 	clear_sched_energy_freq();
 
-	sysfs_remove_group(get_governor_parent_kobj(policy), get_sysfs_attr());
-
 	policy->governor_data = NULL;
 	mutex_lock(&gov_list_lock);
 	list_del(&gd->gov_list);
