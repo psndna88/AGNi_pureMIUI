@@ -5,7 +5,7 @@ export KERNELDIR=`readlink -f .`
 #. ~/WORKING_DIRECTORY/gcc-7.x-uber_aarch64.sh
 
 echo ""
-echo " Cross-compiling AGNi pureCM-N kernel ..."
+echo " Cross-compiling AGNi pureLOS-N kernel ..."
 echo ""
 
 cd $KERNELDIR/
@@ -29,5 +29,5 @@ find -name '*.ko' -exec mv -v {} $KERNELDIR/BUILT_kenzo-cmN/ \;
 mv $KERNELDIR/arch/arm64/boot/Image.*-dtb $KERNELDIR/BUILT_kenzo-cmN/
 
 echo ""
-echo "AGNi pureCM-N has been built for kenzo !!!"
+echo "AGNi pureLOS-N has been built for kenzo !!!"
 
