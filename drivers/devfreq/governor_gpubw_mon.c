@@ -66,9 +66,6 @@ static int devfreq_gpubw_get_target(struct devfreq *df,
 	if (priv == NULL)
 		return 0;
 
-	if (priv == NULL)
-		return 0;
-
 	stats.private_data = &b;
 
 	result = df->profile->get_dev_status(df->dev.parent, &stats);
