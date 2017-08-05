@@ -1201,9 +1201,6 @@ static void qpnp_flash_led_work(struct work_struct *work)
 	int total_curr_ma = 0;
 	int i;
 	u8 val;
-#ifdef CONFIG_MACH_XIAOMI_KENZO
-	pr_err("current_ma qpnp_flash_led_work brightness %d\n", brightness);
-#endif
 
 	mutex_lock(&led->flash_led_lock);
 
@@ -1290,9 +1287,6 @@ static void qpnp_flash_led_work(struct work_struct *work)
 			val = (u8)(flash_node->prgm_current *
 						FLASH_TORCH_MAX_LEVEL
 						/ flash_node->max_current);
-#ifdef CONFIG_MACH_XIAOMI_KENZO
-			pr_err("led1_torch current_ma = %d,value= %d\n", flash_node->prgm_current, val);
-#endif
 			rc = qpnp_led_masked_write(led->spmi_dev,
 						led->current_addr,
 						FLASH_CURRENT_MASK, val);
@@ -1305,9 +1299,6 @@ static void qpnp_flash_led_work(struct work_struct *work)
 			val = (u8)(flash_node->prgm_current2 *
 						FLASH_TORCH_MAX_LEVEL
 						/ flash_node->max_current);
-#ifdef CONFIG_MACH_XIAOMI_KENZO
-			pr_err("led2_torch current_ma = %d,value= %d\n", flash_node->prgm_current2, val);
-#endif
 			rc = qpnp_led_masked_write(led->spmi_dev,
 					led->current2_addr,
 					FLASH_CURRENT_MASK, val);
@@ -1490,9 +1481,6 @@ static void qpnp_flash_led_work(struct work_struct *work)
 
 			val = (u8)(flash_node->prgm_current *
 				FLASH_MAX_LEVEL / flash_node->max_current);
-#ifdef CONFIG_MACH_XIAOMI_KENZO
-			pr_err("led1_flash current_ma = %d,value= %d\n", flash_node->prgm_current, val);
-#endif
 			rc = qpnp_led_masked_write(led->spmi_dev,
 				led->current_addr, FLASH_CURRENT_MASK, val);
 			if (rc) {
@@ -1503,9 +1491,6 @@ static void qpnp_flash_led_work(struct work_struct *work)
 
 			val = (u8)(flash_node->prgm_current2 *
 				FLASH_MAX_LEVEL / flash_node->max_current);
-#ifdef CONFIG_MACH_XIAOMI_KENZO
-			pr_err("led2_flash current_ma = %d,value= %d\n", flash_node->prgm_current2, val);
-#endif
 			rc = qpnp_led_masked_write(led->spmi_dev,
 				led->current2_addr, FLASH_CURRENT_MASK, val);
 			if (rc) {
@@ -1748,11 +1733,10 @@ static void qpnp_flashlight_led_brightness_set(struct led_classdev *led_cdev,
 		return;
 	}
 
-	pr_err("current_ma qpnp_flashlight_led_brightness_set value %d\n", value);
+	pr_debug("current_ma qpnp_flashlight_led_brightness_set value %d\n", value);
 
 	if (value == 1 || value == 0) {
 		queue_work(led->ordered_workq, &flash_node->work);
-		return;
 	} else {
 		if (value > flash_node->cdev.max_brightness)
 			value = flash_node->cdev.max_brightness;
@@ -1800,8 +1784,6 @@ static void qpnp_flashlight_led_brightness_set(struct led_classdev *led_cdev,
 		}
 
 		queue_work(led->ordered_workq, &flash_node->work);
-
-	return;
 	}
 }
 #endif
