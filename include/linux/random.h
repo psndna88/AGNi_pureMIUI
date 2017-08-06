@@ -45,6 +45,7 @@ static inline unsigned long get_random_long(void)
 #endif
 }
 
+unsigned long randomize_range(unsigned long start, unsigned long end, unsigned long len);
 unsigned long randomize_page(unsigned long start, unsigned long range);
 
 u32 prandom_u32(void);
