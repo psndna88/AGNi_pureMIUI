@@ -39,7 +39,6 @@
 #if defined(CONFIG_TOUCHSCREEN_GESTURE_FT)
 #include "lct_ctp_gesture.h"
 #endif
-#include "lct_ctp_selftest.h"
 
 #if defined(CONFIG_FB)
 #include <linux/notifier.h>
@@ -56,6 +55,7 @@
 #endif
 
 #if defined(CONFIG_TOUCHSCREEN_GESTURE_FT)
+#define FT_GESTURE
 #endif
 
 #define FT_PROC_DEBUG
@@ -90,11 +90,6 @@ unsigned short coordinate_x[150] = {0};
 unsigned short coordinate_y[150] = {0};
 #endif
 
-#if defined(CONFIG_TOUCHSCREEN_GESTURE_FT)
-extern int ctp_get_gesture_data(void);
-extern void ctp_set_gesture_data(int value);
-#endif
-
 #define CTP_PROC_LOCKDOWN_FILE "tp_lockdown_info"
 char tp_lockdown_info[128];
 u8 uc_tp_vendor_id;
@@ -113,11 +108,6 @@ static unsigned char firmware_data_mutton[] = {
 static unsigned char firmware_data_ofilm[] = {
 #include "FT5346_LQ_L8650_Ofilm0x51_V02_D01_20151228_app.i"
 };
-
-
-#ifdef FTS_SCAP_TEST
-#include "ft5x06_mcap_test_lib.h"
-#endif
 
 #define FT_DRIVER_VERSION	0x02
 
@@ -315,20 +305,17 @@ struct ft5x06_ts_data {
 #if defined(CONFIG_TOUCHSCREEN_GESTURE_FT)
 	int gesture_value;
 #endif
-#if defined(FTS_SCAP_TEST)
-	struct mutex selftest_lock;
-#endif
 };
 
 struct ft5x06_ts_data *ft5x06_ts = NULL;
+
+int is_tp_driver_loaded = 0;
 
 #ifdef CONFIG_WAKE_GESTURES
 bool scr_suspended_ft(void) {
 	return ft5x06_ts->suspended;
 }
 #endif
-
-extern int is_tp_driver_loaded;
 
 static DEFINE_MUTEX(i2c_rw_access);
 
@@ -510,9 +497,9 @@ static int check_gesture(struct input_dev *dev, int gesture_id)
 		ctp_set_gesture_data(report_data);
 
 		input_report_key(pdev, BTN_TOUCH, 0);
-		input_report_key(pdev, KEY_GESTURE, 1);
+		input_report_key(pdev, KEY_VENDOR, 1);
 		input_sync(pdev);
-		input_report_key(pdev, KEY_GESTURE, 0);
+		input_report_key(pdev, KEY_VENDOR, 0);
 		input_sync(pdev);
 	}
 
@@ -644,6 +631,80 @@ static irqreturn_t ft5x06_ts_interrupt(int irq, void *dev_id)
 	}
 
 	return IRQ_HANDLED;
+}
+
+static int ft5x06_gpio_configure(struct ft5x06_ts_data *data, bool on)
+{
+	int err = 0;
+
+	if (on) {
+		if (gpio_is_valid(data->pdata->irq_gpio)) {
+			err = gpio_request(data->pdata->irq_gpio,
+						"ft5x06_irq_gpio");
+			if (err) {
+				dev_err(&data->client->dev,
+					"irq gpio request failed");
+				goto err_irq_gpio_req;
+			}
+
+			err = gpio_direction_input(data->pdata->irq_gpio);
+			if (err) {
+				dev_err(&data->client->dev,
+					"set_direction for irq gpio failed\n");
+				goto err_irq_gpio_dir;
+			}
+		}
+
+		if (gpio_is_valid(data->pdata->reset_gpio)) {
+			err = gpio_request(data->pdata->reset_gpio,
+						"ft5x06_reset_gpio");
+			if (err) {
+				dev_err(&data->client->dev,
+					"reset gpio request failed");
+				goto err_irq_gpio_dir;
+			}
+
+			err = gpio_direction_output(data->pdata->reset_gpio, 0);
+			if (err) {
+				dev_err(&data->client->dev,
+				"set_direction for reset gpio failed\n");
+				goto err_reset_gpio_dir;
+			}
+			msleep(data->pdata->hard_rst_dly);
+			gpio_set_value_cansleep(data->pdata->reset_gpio, 1);
+		}
+
+		return 0;
+	} else {
+		if (gpio_is_valid(data->pdata->irq_gpio))
+			gpio_free(data->pdata->irq_gpio);
+		if (gpio_is_valid(data->pdata->reset_gpio)) {
+			/*
+			 * This is intended to save leakage current
+			 * only. Even if the call(gpio_direction_input)
+			 * fails, only leakage current will be more but
+			 * functionality will not be affected.
+			 */
+			err = gpio_direction_input(data->pdata->reset_gpio);
+			if (err) {
+				dev_err(&data->client->dev,
+					"unable to set direction for gpio "
+					"[%d]\n", data->pdata->irq_gpio);
+			}
+			gpio_free(data->pdata->reset_gpio);
+		}
+
+		return 0;
+	}
+
+err_reset_gpio_dir:
+	if (gpio_is_valid(data->pdata->reset_gpio))
+		gpio_free(data->pdata->reset_gpio);
+err_irq_gpio_dir:
+	if (gpio_is_valid(data->pdata->irq_gpio))
+		gpio_free(data->pdata->irq_gpio);
+err_irq_gpio_req:
+	return err;
 }
 
 static int ft5x06_power_on(struct ft5x06_ts_data *data, bool on)
@@ -888,42 +949,76 @@ int ft5x05_gesture_mode_exit(struct i2c_client *client)
 }
 
 #ifdef CONFIG_PM
-static int ft5x06_ts_suspend(struct device *dev)
+static int ft5x06_ts_start(struct device *dev)
 {
 	struct ft5x06_ts_data *data = dev_get_drvdata(dev);
-	char txbuf[2], i;
 	int err;
 
-#ifdef FT_GESTURE
-	if (ctp_get_gesture_control()) {
-		ft5x05_gesture_mode_enter(data->client);
-		data->suspended = true;
-		return 0;
-	}
-#endif
-
-	if (data->loading_fw) {
-		dev_info(dev, "Firmware loading in process...\n");
-		return 0;
-	}
-
-	if (data->suspended) {
-		dev_info(dev, "Already in suspend state\n");
-		return 0;
+	if (data->pdata->power_on) {
+		err = data->pdata->power_on(true);
+		if (err) {
+			dev_err(dev, "power on failed");
+			return err;
+		}
+	} else {
+		err = ft5x06_power_on(data, true);
+		if (err) {
+			dev_err(dev, "power on failed");
+			return err;
+		}
 	}
 
-#ifdef CONFIG_WAKE_GESTURES
-	if (device_may_wakeup(dev) && (s2w_switch || dt2w_switch)) {
-		ft5x0x_write_reg(data->client, 0xD0, 1);
-		err = enable_irq_wake(data->client->irq);
+	if (data->ts_pinctrl) {
+		err = pinctrl_select_state(data->ts_pinctrl,
+				data->pinctrl_state_active);
+		if (err < 0)
+			dev_err(dev, "Cannot get active pinctrl state\n");
+	}
+
+	err = ft5x06_gpio_configure(data, true);
+	if (err < 0) {
+		dev_err(&data->client->dev,
+			"failed to put gpios in resue state\n");
+		goto err_gpio_configuration;
+	}
+
+	if (gpio_is_valid(data->pdata->reset_gpio)) {
+		gpio_set_value_cansleep(data->pdata->reset_gpio, 0);
+		msleep(data->pdata->hard_rst_dly);
+		gpio_set_value_cansleep(data->pdata->reset_gpio, 1);
+	}
+
+	msleep(data->pdata->soft_rst_dly);
+
+	enable_irq(data->client->irq);
+	data->suspended = false;
+
+	return 0;
+
+err_gpio_configuration:
+	if (data->ts_pinctrl) {
+		err = pinctrl_select_state(data->ts_pinctrl,
+					data->pinctrl_state_suspend);
+		if (err < 0)
+			dev_err(dev, "Cannot get suspend pinctrl state\n");
+	}
+	if (data->pdata->power_on) {
+		err = data->pdata->power_on(false);
 		if (err)
-			dev_err(&data->client->dev,
-				"%s: set_irq_wake failed\n", __func__);
-		data->suspended = true;
-
-		return err;
+			dev_err(dev, "power off failed");
+	} else {
+		err = ft5x06_power_on(data, false);
+		if (err)
+			dev_err(dev, "power off failed");
 	}
-#endif
+	return err;
+}
+
+static int ft5x06_ts_stop(struct device *dev)
+{
+	struct ft5x06_ts_data *data = dev_get_drvdata(dev);
+	char txbuf[2];
+	int i, err;
 
 	disable_irq(data->client->irq);
 
@@ -955,10 +1050,40 @@ static int ft5x06_ts_suspend(struct device *dev)
 		}
 	}
 
+	if (data->ts_pinctrl) {
+		err = pinctrl_select_state(data->ts_pinctrl,
+					data->pinctrl_state_suspend);
+		if (err < 0)
+			dev_err(dev, "Cannot get suspend pinctrl state\n");
+	}
+
+	err = ft5x06_gpio_configure(data, false);
+	if (err < 0) {
+		dev_err(&data->client->dev,
+			"failed to put gpios in suspend state\n");
+		goto gpio_configure_fail;
+	}
+
 	data->suspended = true;
 
 	return 0;
 
+gpio_configure_fail:
+	if (data->ts_pinctrl) {
+		err = pinctrl_select_state(data->ts_pinctrl,
+					data->pinctrl_state_active);
+		if (err < 0)
+			dev_err(dev, "Cannot get active pinctrl state\n");
+	}
+	if (data->pdata->power_on) {
+		err = data->pdata->power_on(true);
+		if (err)
+			dev_err(dev, "power on failed");
+	} else {
+		err = ft5x06_power_on(data, true);
+		if (err)
+			dev_err(dev, "power on failed");
+	}
 pwr_off_fail:
 	if (gpio_is_valid(data->pdata->reset_gpio)) {
 		gpio_set_value_cansleep(data->pdata->reset_gpio, 0);
@@ -967,6 +1092,45 @@ pwr_off_fail:
 	}
 	enable_irq(data->client->irq);
 	return err;
+}
+
+static int ft5x06_ts_suspend(struct device *dev)
+{
+	struct ft5x06_ts_data *data = dev_get_drvdata(dev);
+	int err;
+
+#ifdef FT_GESTURE
+	if (ctp_get_gesture_control()) {
+		ft5x05_gesture_mode_enter(data->client);
+		data->suspended = true;
+		return 0;
+	}
+#endif
+
+
+	if (data->loading_fw) {
+		dev_info(dev, "Firmware loading in process...\n");
+		return 0;
+	}
+
+	if (data->suspended) {
+		dev_info(dev, "Already in suspend state\n");
+		return 0;
+	}
+
+#ifdef CONFIG_WAKE_GESTURES
+	if (device_may_wakeup(dev) && (s2w_switch || dt2w_switch)) {
+		ft5x0x_write_reg(data->client, 0xD0, 1);
+		err = enable_irq_wake(data->client->irq);
+		if (err)
+			dev_err(&data->client->dev,
+				"%s: set_irq_wake failed\n", __func__);
+		data->suspended = true;
+		return err;
+	}
+#endif
+
+	return ft5x06_ts_stop(dev);
 }
 
 static int ft5x06_ts_resume(struct device *dev)
@@ -1011,37 +1175,20 @@ static int ft5x06_ts_resume(struct device *dev)
 
 		return err;
 	}
+
+	if (dt2w_switch_changed) {
+		dt2w_switch = dt2w_switch_temp;
+		dt2w_switch_changed = false;
+	}
+	if (s2w_switch_changed) {
+		s2w_switch = s2w_switch_temp;
+		s2w_switch_changed = false;
+	}
 #endif
 
-	if (gpio_is_valid(data->pdata->reset_gpio)) {
-		gpio_set_value_cansleep(data->pdata->reset_gpio, 0);
-
-
-	udelay(100);
-	if (data->pdata->power_on) {
-		err = data->pdata->power_on(true);
-		if (err) {
-			dev_err(dev, "power on failed");
-			return err;
-		}
-	} else {
-		err = ft5x06_power_on(data, true);
-		if (err) {
-			dev_err(dev, "power on failed");
-			return err;
-		}
-	}
-		 udelay(500);
-		 udelay(500);
-		  udelay(500);
-		gpio_set_value_cansleep(data->pdata->reset_gpio, 1);
-	}
-
-	msleep(data->pdata->soft_rst_dly);
-
-	enable_irq(data->client->irq);
-	data->suspended = false;
-
+	err = ft5x06_ts_start(dev);
+	if (err < 0)
+		return err;
 
 /* release all touches */
 	for (i = 0; i < data->pdata->num_max_touches; i++) {
@@ -1053,8 +1200,6 @@ static int ft5x06_ts_resume(struct device *dev)
 
 	return 0;
 }
-
-
 
 static const struct dev_pm_ops ft5x06_ts_pm_ops = {
 #if (!defined(CONFIG_FB) && !defined(CONFIG_HAS_EARLYSUSPEND))
@@ -1130,6 +1275,7 @@ static int lct_ctp_gesture_mode_switch(int enable)
 }
 #endif
 
+#if defined(CONFIG_TOUCHSCREEN_COVER)
 int ft5x06_set_cover_mode(int enable)
 {
 	int ret = 0, val = enable;
@@ -1143,7 +1289,6 @@ int ft5x06_set_cover_mode(int enable)
 	return ret;
 }
 
-#if defined(CONFIG_TOUCHSCREEN_COVER)
 static int lct_ctp_cover_state_switch(int enable)
 {
 	int val = enable, ret = 0;
@@ -1152,141 +1297,6 @@ static int lct_ctp_cover_state_switch(int enable)
 
 	return ret;
 }
-#endif
-
-#if defined(FTS_SCAP_TEST)
-
-#define FT5X0X_INI_FILEPATH "/system/etc/firmware/"
-
-static int ft5x0x_GetInISize(char *config_name)
-{
-	struct file *pfile = NULL;
-	struct inode *inode;
-	unsigned long magic;
-	off_t fsize = 0;
-	char filepath[128];
-	memset(filepath, 0, sizeof(filepath));
-
-	sprintf(filepath, "%s%s", FT5X0X_INI_FILEPATH, config_name);
-
-	if (NULL == pfile)
-		pfile = filp_open(filepath, O_RDONLY, 0);
-
-	if (IS_ERR(pfile)) {
-		pr_err("error occured while opening file %s.\n", filepath);
-		return -EIO;
-	}
-
-	inode = pfile->f_dentry->d_inode;
-	magic = inode->i_sb->s_magic;
-	fsize = inode->i_size;
-	filp_close(pfile, NULL);
-	return fsize;
-}
-
-static int ft5x0x_ReadInIData(char *config_name,
-			      char *config_buf)
-{
-	struct file *pfile = NULL;
-	struct inode *inode;
-	unsigned long magic;
-	off_t fsize;
-	char filepath[128];
-	loff_t pos;
-	mm_segment_t old_fs;
-
-	memset(filepath, 0, sizeof(filepath));
-	sprintf(filepath, "%s%s", FT5X0X_INI_FILEPATH, config_name);
-	if (NULL == pfile)
-		pfile = filp_open(filepath, O_RDONLY, 0);
-	if (IS_ERR(pfile)) {
-		pr_err("error occured while opening file %s.\n", filepath);
-		return -EIO;
-	}
-
-	inode = pfile->f_dentry->d_inode;
-	magic = inode->i_sb->s_magic;
-	fsize = inode->i_size;
-	old_fs = get_fs();
-	set_fs(KERNEL_DS);
-	pos = 0;
-	vfs_read(pfile, config_buf, fsize, &pos);
-	filp_close(pfile, NULL);
-	set_fs(old_fs);
-
-	return 0;
-}
-static int ft5x0x_get_testparam_from_ini(char *config_name)
-{
-	char *filedata = NULL;
-
-	int inisize = ft5x0x_GetInISize(config_name);
-
-	pr_info("inisize = %d \n ", inisize);
-	if (inisize <= 0) {
-		pr_err("%s ERROR:Get firmware size failed\n",
-					__func__);
-		return -EIO;
-	}
-
-	filedata = kmalloc(inisize + 1, GFP_ATOMIC);
-
-	if (ft5x0x_ReadInIData(config_name, filedata)) {
-		pr_err("%s() - ERROR: request_firmware failed\n",
-					__func__);
-		kfree(filedata);
-		return -EIO;
-	} else {
-		pr_info("ft5x0x_ReadInIData successful\n");
-	}
-
-	SetParamData(filedata);
-	return 0;
-}
-
-int focal_i2c_Read(unsigned char *writebuf,
-			int writelen, unsigned char *readbuf, int readlen)
-{
-	unsigned char *p_w_buf = writebuf, *p_r_buf = readbuf;
-	int w_len = writelen, r_len = readlen;
-
-	return ft5x06_i2c_read(ft5x06_ts->client, p_w_buf, w_len, p_r_buf, r_len);
-}
-
-int focal_i2c_Write(unsigned char *writebuf, int writelen)
-{
-	unsigned char *pbuf = writebuf;
-	int len = writelen;
-
-	return ft5x06_i2c_write(ft5x06_ts->client, pbuf, len);
-}
-
-int ft5x06_self_test(void)
-{
-	int pf_value = 0x00;
-	char cfgname[] = "ft5x06_selftest.ini";
-
-	printk("%s\n", __func__);
-	mutex_lock(&ft5x06_ts->selftest_lock);
-
-	Init_I2C_Write_Func(focal_i2c_Write);
-	Init_I2C_Read_Func(focal_i2c_Read);
-	if (ft5x0x_get_testparam_from_ini(cfgname) < 0)
-		printk("get testparam from ini failure\n");
-	else {
-		if (true == StartTestTP()) {
-			printk("tp test pass\n");
-			pf_value = 0x0;
-		} else {
-			pf_value = 0x1;
-			printk("tp test failure\n");
-		}
-		FreeTestParamData();
-	}
-	mutex_unlock(&ft5x06_ts->selftest_lock);
-	return pf_value;
-}
-
 #endif
 
 static int ft5x06_auto_cal(struct i2c_client *client)
@@ -3010,7 +3020,7 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 	data->tch_data_len = FT_TCH_LEN(pdata->num_max_touches);
 	data->tch_data = devm_kzalloc(&client->dev,
 				data->tch_data_len, GFP_KERNEL);
-	if (!data) {
+	if (!data->tch_data) {
 		dev_err(&client->dev, "Not enough memory\n");
 		return -ENOMEM;
 	}
@@ -3093,48 +3103,15 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 		if (err < 0) {
 			dev_err(&client->dev,
 				"failed to select pin to active state");
-			goto pinctrl_deinit;
-		}
-	} else {
-		goto pwr_off;
-
-	}
-
-
-
-
-	if (gpio_is_valid(pdata->irq_gpio)) {
-		err = gpio_request(pdata->irq_gpio, "ft5x06_irq_gpio");
-		if (err) {
-			dev_err(&client->dev, "irq gpio request failed");
-			goto err_gpio_req;
-		}
-		err = gpio_direction_input(pdata->irq_gpio);
-		if (err) {
-			dev_err(&client->dev,
-				"set_direction for irq gpio failed\n");
-			goto free_irq_gpio;
 		}
 	}
 
-	if (gpio_is_valid(pdata->reset_gpio)) {
-		err = gpio_request(pdata->reset_gpio, "ft5x06_reset_gpio");
-		if (err) {
-			dev_err(&client->dev, "reset gpio request failed");
-			goto free_irq_gpio;
-		}
-
-		err = gpio_direction_output(pdata->reset_gpio, 0);
-		if (err) {
-			dev_err(&client->dev,
-				"set_direction for reset gpio failed\n");
-			goto free_reset_gpio;
-		}
-		msleep(data->pdata->hard_rst_dly);
-		gpio_set_value_cansleep(data->pdata->reset_gpio, 1);
+	err = ft5x06_gpio_configure(data, true);
+	if (err < 0) {
+		dev_err(&client->dev,
+			"Failed to configure the gpios\n");
+		goto err_gpio_req;
 	}
-
-
 
 	/* make sure CTP already finish startup process */
 	msleep(data->pdata->soft_rst_dly);
@@ -3144,14 +3121,14 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 	err = ft5x06_i2c_read(client, &reg_addr, 1, &reg_value, 1);
 	if (err < 0) {
 		dev_err(&client->dev, "version read failed");
-		goto free_reset_gpio;
+		goto free_gpio;
 	}
 
 	dev_info(&client->dev, "Device ID = 0x%x\n", reg_value);
 
 	if ((pdata->family_id != reg_value) && (!pdata->ignore_id_check)) {
 		dev_err(&client->dev, "%s:Unsupported controller\n", __func__);
-		goto free_reset_gpio;
+		goto free_gpio;
 	}
 
 	data->family_id = pdata->family_id;
@@ -3162,11 +3139,10 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 				client->dev.driver->name, data);
 	if (err) {
 		dev_err(&client->dev, "request irq failed\n");
-		goto free_reset_gpio;
+		goto free_gpio;
 	}
 
 #ifdef CONFIG_WAKE_GESTURES
-	ft5x06_ts = data;
 	device_init_wakeup(&client->dev, 1);
 #endif
 
@@ -3197,7 +3173,7 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 	 err = sysfs_create_group(&client->dev.kobj, &ft5x06_ts_attr_group);
 	 if (err) {
 		dev_err(&client->dev, "Failure %d creating sysfs group\n",err);
-		goto free_reset_gpio;
+		goto free_gpio;
     }
 
     ft5x06_proc_init(data);
@@ -3331,11 +3307,6 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 	register_early_suspend(&data->early_suspend);
 #endif
 
-#if defined(FTS_SCAP_TEST)
-	mutex_init(&data->selftest_lock);
-	lct_ctp_selftest_int(ft5x06_self_test);
-#endif
-
 #if defined(FT_PROC_DEBUG)
 		if (ft5x0x_create_apk_debug_channel(client) < 0)
 			ft5x0x_release_apk_debug_channel();
@@ -3366,14 +3337,12 @@ free_fw_name_sys:
 	device_remove_file(&client->dev, &dev_attr_fw_name);
 irq_free:
 	free_irq(client->irq, data);
-free_reset_gpio:
+free_gpio:
 	if (gpio_is_valid(pdata->reset_gpio))
 		gpio_free(pdata->reset_gpio);
-free_irq_gpio:
 	if (gpio_is_valid(pdata->irq_gpio))
 		gpio_free(pdata->irq_gpio);
 err_gpio_req:
-pinctrl_deinit:
 	if (data->ts_pinctrl) {
 		if (IS_ERR_OR_NULL(data->pinctrl_state_release)) {
 			devm_pinctrl_put(data->ts_pinctrl);
@@ -3385,7 +3354,6 @@ pinctrl_deinit:
 				pr_err("failed to select relase pinctrl state\n");
 		}
 	}
-pwr_off:
 	if (pdata->power_on)
 		pdata->power_on(false);
 	else
@@ -3409,9 +3377,6 @@ static int ft5x06_ts_remove(struct i2c_client *client)
 	struct ft5x06_ts_data *data = i2c_get_clientdata(client);
 	int retval;
 
-#if defined(FTS_SCAP_TEST)
-	mutex_destroy(&data->selftest_lock);
-#endif
 	debugfs_remove_recursive(data->dir);
 	device_remove_file(&client->dev, &dev_attr_force_update_fw);
 	device_remove_file(&client->dev, &dev_attr_update_fw);
