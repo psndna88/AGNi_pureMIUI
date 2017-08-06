@@ -486,19 +486,6 @@ config TOUCHSCREEN_PENMOUNT
 	  To compile this driver as a module, choose M here: the
 	  module will be called penmount.
 
-config TOUCHSCREEN_EDT_FT5X06
-	tristate "EDT FocalTech FT5x06 I2C Touchscreen support"
-	depends on I2C
-	help
-	  Say Y here if you have an EDT "Polytouch" touchscreen based
-	  on the FocalTech FT5x06 family of controllers connected to
-	  your system.
-
-	  If unsure, say N.
-
-	  To compile this driver as a module, choose M here: the
-	  module will be called edt-ft5x06.
-
 config TOUCHSCREEN_MIGOR
 	tristate "Renesas MIGO-R touchscreen"
 	depends on SH_MIGOR && I2C
@@ -936,8 +923,23 @@ config TOUCHSCREEN_TPS6507X
 	  To compile this driver as a module, choose M here: the
 	  module will be called tps6507x_ts.
 
+menu "FocalTech touchscreens"
+
+config TOUCHSCREEN_EDT_FT5X06
+	tristate "EDT FocalTech FT5x06 I2C Touchscreen support"
+	depends on I2C
+	help
+	  Say Y here if you have an EDT "Polytouch" touchscreen based
+	  on the FocalTech FT5x06 family of controllers connected to
+	  your system.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called edt-ft5x06.
+
 config TOUCHSCREEN_FT5X06
-       tristate "FocalTech touchscreens"
+       tristate "FocalTech FT5X06 touchscreens"
        depends on I2C
        help
          Say Y here if you have a ft5X06 touchscreen.
@@ -950,7 +952,7 @@ config TOUCHSCREEN_FT5X06
          module will be called ft5x06_ts.
 
 config TOUCHSCREEN_FT5X06_PSENSOR
-       tristate "FocalTech proximity feature support"
+       tristate "FocalTech FT5X06 proximity feature support"
        depends on TOUCHSCREEN_FT5X06 && SENSORS
        help
          Say Y here if you want to support ft5x06's proximity
@@ -958,14 +960,31 @@ config TOUCHSCREEN_FT5X06_PSENSOR
 
          If unsure, say N.
 
-config TOUCHSCREEN_FT5X06_GESTURE
-       tristate "FocalTech gesture feature support"
-       depends on TOUCHSCREEN_FT5X06
+config TOUCHSCREEN_FT5346
+       tristate "FocalTech FT5346 touchscreens"
+       depends on I2C && !TOUCHSCREEN_FT5X06
        help
-         Say Y here if you want to support ft5x06's gesture
+         Say Y here if you have a ft5346 touchscreen.
+	 Ft5346 controllers are multi touch controllers which can
+	 report 5 touches at a time.
+
+         If unsure, say N.
+
+         To compile this driver as a module, choose M here: the
+         module will be called ft5346_ts.
+
+config TOUCHSCREEN_GESTURE_FT
+       tristate "FocalTech FT5X06/FT5346 gesture feature support"
+       depends on TOUCHSCREEN_FT5X06 || TOUCHSCREEN_FT5346
+       help
+         Say Y here if you want to support ft5X06/ft5346 gesture
          feature.
 
          If unsure, say N.
+
+source "drivers/input/touchscreen/ft5x46/Kconfig"
+
+endmenu
 
 config TOUCHSCREEN_GEN_VKEYS
        tristate "Touchscreen Virtual Keys Driver"
@@ -1050,8 +1069,6 @@ config TOUCHSCREEN_GT9XX
           If unsure, say N.
 
 source "drivers/input/touchscreen/gt9xx/Kconfig"
-
-source "drivers/input/touchscreen/ft5x46/Kconfig"
 
 config TOUCHSCREEN_BU21150
 	tristate "JDI AFE BU21150"
