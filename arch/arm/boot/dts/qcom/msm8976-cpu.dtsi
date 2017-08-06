@@ -44,18 +44,12 @@
 				core1 {
 					cpu = <&CPU5>;
 				};
-				core2 {
-					cpu = <&CPU6>;
-				};
-				core3 {
-					cpu = <&CPU7>;
-				};
 			};
 		};
 
 		CPU0: cpu@0 {
 			device_type = "cpu";
-			compatible = "arm,cortex-a53";
+			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x0>;
 			clock-frequency = <1440000000>;
 			enable-method = "psci";
@@ -66,15 +60,15 @@
 			sched-energy-costs = <&CPU_COST_0 &CLUSTER_COST_0>;
 			// The currents(uA) correspond to the frequencies in the
 			// frequency table.
-			current = < 18250 //384000 kHZ
-			            24330 //460800 kHZ
-			            26920 //600000 kHZ
-			            34600 //672000 kHz
-			            38150 //787200 kHZ
-			            46880 //864000 kHZ
-			            55940 //960000 kHZ
-			            81740 //1248000 kHZ
-			            105870>; //1440000 kHZ
+			current = < 18250 // 	 400000 kHZ
+			            24330 // 	 691200 kHZ
+			            26920 // 	 806400 kHZ
+			            34600 //	1017600 kHz
+			            38150 //	1190400 kHZ
+			            46880 //	1305600 kHZ
+			            55940 //	1382400 kHZ
+			            81740 //	1401600 kHZ
+			            105870>; //	1440000 kHZ
 			qcom,sleep-status = <&cpu0_slp_sts>;
 			L2_0: l2-cache {
 			      compatible = "arm,arch-cache";
@@ -85,7 +79,7 @@
 
 		CPU1: cpu@1 {
 			device_type = "cpu";
-			compatible = "arm,cortex-a53";
+			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x1>;
 			clock-frequency = <1440000000>;
 			enable-method = "psci";
@@ -96,21 +90,21 @@
 			sched-energy-costs = <&CPU_COST_0 &CLUSTER_COST_0>;
 			// The currents(uA) correspond to the frequencies in the
 			// frequency table.
-			current = < 18250 //384000 kHZ
-			            24330 //460800 kHZ
-			            26920 //600000 kHZ
-			            34600 //672000 kHz
-			            38150 //787200 kHZ
-			            46880 //864000 kHZ
-			            55940 //960000 kHZ
-			            81740 //1248000 kHZ
-			            105870>; //1440000 kHZ
+			current = < 18250 // 	 400000 kHZ
+			            24330 // 	 691200 kHZ
+			            26920 // 	 806400 kHZ
+			            34600 //	1017600 kHz
+			            38150 //	1190400 kHZ
+			            46880 //	1305600 kHZ
+			            55940 //	1382400 kHZ
+			            81740 //	1401600 kHZ
+			            105870>; //	1440000 kHZ
 			qcom,sleep-status = <&cpu1_slp_sts>;
 		};
 
 		CPU2: cpu@2 {
 			device_type = "cpu";
-			compatible = "arm,cortex-a53";
+			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x2>;
 			clock-frequency = <1440000000>;
 			enable-method = "psci";
@@ -121,21 +115,21 @@
 			sched-energy-costs = <&CPU_COST_0 &CLUSTER_COST_0>;
 			// The currents(uA) correspond to the frequencies in the
 			// frequency table.
-			current = < 18250 //384000 kHZ
-			            24330 //460800 kHZ
-			            26920 //600000 kHZ
-			            34600 //672000 kHz
-			            38150 //787200 kHZ
-			            46880 //864000 kHZ
-			            55940 //960000 kHZ
-			            81740 //1248000 kHZ
-			            105870>; //1440000 kHZ
+			current = < 18250 // 	 400000 kHZ
+			            24330 // 	 691200 kHZ
+			            26920 // 	 806400 kHZ
+			            34600 //	1017600 kHz
+			            38150 //	1190400 kHZ
+			            46880 //	1305600 kHZ
+			            55940 //	1382400 kHZ
+			            81740 //	1401600 kHZ
+			            105870>; //	1440000 kHZ
 			qcom,sleep-status = <&cpu2_slp_sts>;
 		};
 
 		CPU3: cpu@3 {
 			device_type = "cpu";
-			compatible = "arm,cortex-a53";
+			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x3>;
 			clock-frequency = <1440000000>;
 			enable-method = "psci";
@@ -146,21 +140,21 @@
 			sched-energy-costs = <&CPU_COST_0 &CLUSTER_COST_0>;
 			// The currents(uA) correspond to the frequencies in the
 			// frequency table.
-			current = < 18250 //384000 kHZ
-			            24330 //460800 kHZ
-			            26920 //600000 kHZ
-			            34600 //672000 kHz
-			            38150 //787200 kHZ
-			            46880 //864000 kHZ
-			            55940 //960000 kHZ
-			            81740 //1248000 kHZ
-			            105870>; //1440000 kHZ
+			current = < 18250 // 	 400000 kHZ
+			            24330 // 	 691200 kHZ
+			            26920 // 	 806400 kHZ
+			            34600 //	1017600 kHz
+			            38150 //	1190400 kHZ
+			            46880 //	1305600 kHZ
+			            55940 //	1382400 kHZ
+			            81740 //	1401600 kHZ
+			            105870>; //	1440000 kHZ
 			qcom,sleep-status = <&cpu3_slp_sts>;
 		};
 
 		CPU4: cpu@100 {
 			device_type = "cpu";
-			compatible = "arm,cortex-a72";
+			compatible = "arm,cortex-a72","arm,armv8";
 			reg = <0x100>;
 			clock-frequency = <1804800000>;
 			enable-method = "psci";
@@ -172,19 +166,19 @@
 			sched-energy-costs = <&CPU_COST_1 &CLUSTER_COST_1>;
 			// The currents(uA) correspond to the frequencies in the
 			// frequency table.
-			current = < 67740 //384000 kHZ
-			            82960 //480000 kHZ
-			            105870 //633600 kHZ
-			            133160 //768000 kHZ
-			            150160 //864000 kHZ
-			            167180 //960000 kHZ
-			            230040 //1248000 kHZ
-			            261430 //1344000 kHZ
-			            290460 //1440000 kHZ
-			            317200 //1536000 kHZ
-			            352870 //1632000 kHZ
-			            374360 //1689600 kHZ
-			            443880>; //1824000 kHZ
+			current = < 67740 // 	 400000 kHZ
+			            82960 // 	 883200 kHZ
+			            105870 // 	 940800 kHZ
+			            133160 // 	 998400 kHZ
+			            150160 //	1056000 kHZ
+			            167180 //	1113600 kHZ
+			            230040 //	1190400 kHZ
+			            261430 //	1248000 kHZ
+			            290460 //	1305600 kHZ
+			            317200 //	1382400 kHZ
+			            352870 //	1612800 kHZ
+			            374360 //	1747200 kHZ
+			            443880>; //	1804800 kHZ
 			qcom,sleep-status = <&cpu4_slp_sts>;
 			L2_1: l2-cache {
 			      compatible = "arm,arch-cache";
@@ -195,7 +189,7 @@
 
 		CPU5: cpu@101 {
 			device_type = "cpu";
-			compatible = "arm,cortex-a72";
+			compatible = "arm,cortex-a72","arm,armv8";
 			reg = <0x101>;
 			clock-frequency = <1804800000>;
 			enable-method = "psci";
@@ -207,25 +201,25 @@
 			sched-energy-costs = <&CPU_COST_1 &CLUSTER_COST_1>;
 			// The currents(uA) correspond to the frequencies in the
 			// frequency table.
-			current = < 67740 //384000 kHZ
-			            82960 //480000 kHZ
-			            105870 //633600 kHZ
-			            133160 //768000 kHZ
-			            150160 //864000 kHZ
-			            167180 //960000 kHZ
-			            230040 //1248000 kHZ
-			            261430 //1344000 kHZ
-			            290460 //1440000 kHZ
-			            317200 //1536000 kHZ
-			            352870 //1632000 kHZ
-			            374360 //1689600 kHZ
-			            443880>; //1824000 kHZ
+			current = < 67740 // 	 400000 kHZ
+			            82960 // 	 883200 kHZ
+			            105870 // 	 940800 kHZ
+			            133160 // 	 998400 kHZ
+			            150160 //	1056000 kHZ
+			            167180 //	1113600 kHZ
+			            230040 //	1190400 kHZ
+			            261430 //	1248000 kHZ
+			            290460 //	1305600 kHZ
+			            317200 //	1382400 kHZ
+			            352870 //	1612800 kHZ
+			            374360 //	1747200 kHZ
+			            443880>; //	1804800 kHZ
 			qcom,sleep-status = <&cpu5_slp_sts>;
 		};
 
 		CPU6: cpu@102 {
 			device_type = "cpu";
-			compatible = "arm,cortex-a72";
+			compatible = "arm,cortex-a72","arm,armv8";
 			reg = <0x102>;
 			clock-frequency = <1804800000>;
 			enable-method = "psci";
@@ -237,25 +231,25 @@
 			sched-energy-costs = <&CPU_COST_1 &CLUSTER_COST_1>;
 			// The currents(uA) correspond to the frequencies in the
 			// frequency table.
-			current = < 67740 //384000 kHZ
-			            82960 //480000 kHZ
-			            105870 //633600 kHZ
-			            133160 //768000 kHZ
-			            150160 //864000 kHZ
-			            167180 //960000 kHZ
-			            230040 //1248000 kHZ
-			            261430 //1344000 kHZ
-			            290460 //1440000 kHZ
-			            317200 //1536000 kHZ
-			            352870 //1632000 kHZ
-			            374360 //1689600 kHZ
-			            443880>; //1824000 kHZ
+			current = < 67740 // 	 400000 kHZ
+			            82960 // 	 883200 kHZ
+			            105870 // 	 940800 kHZ
+			            133160 // 	 998400 kHZ
+			            150160 //	1056000 kHZ
+			            167180 //	1113600 kHZ
+			            230040 //	1190400 kHZ
+			            261430 //	1248000 kHZ
+			            290460 //	1305600 kHZ
+			            317200 //	1382400 kHZ
+			            352870 //	1612800 kHZ
+			            374360 //	1747200 kHZ
+			            443880>; //	1804800 kHZ
 			qcom,sleep-status = <&cpu6_slp_sts>;
 		};
 
 		CPU7: cpu@103 {
 			device_type = "cpu";
-			compatible = "arm,cortex-a72";
+			compatible = "arm,cortex-a72","arm,armv8";
 			reg = <0x103>;
 			clock-frequency = <1804800000>;
 			enable-method = "psci";
@@ -267,25 +261,26 @@
 			sched-energy-costs = <&CPU_COST_1 &CLUSTER_COST_1>;
 			// The currents(uA) correspond to the frequencies in the
 			// frequency table.
-			current = < 67740 //384000 kHZ
-			            82960 //480000 kHZ
-			            105870 //633600 kHZ
-			            133160 //768000 kHZ
-			            150160 //864000 kHZ
-			            167180 //960000 kHZ
-			            230040 //1248000 kHZ
-			            261430 //1344000 kHZ
-			            290460 //1440000 kHZ
-			            317200 //1536000 kHZ
-			            352870 //1632000 kHZ
-			            374360 //1689600 kHZ
-			            443880>; //1824000 kHZ
+			current = < 67740 // 	 400000 kHZ
+			            82960 // 	 883200 kHZ
+			            105870 // 	 940800 kHZ
+			            133160 // 	 998400 kHZ
+			            150160 //	1056000 kHZ
+			            167180 //	1113600 kHZ
+			            230040 //	1190400 kHZ
+			            261430 //	1248000 kHZ
+			            290460 //	1305600 kHZ
+			            317200 //	1382400 kHZ
+			            352870 //	1612800 kHZ
+			            374360 //	1747200 kHZ
+			            443880>; //	1804800 kHZ
 			qcom,sleep-status = <&cpu7_slp_sts>;
 		};
-		
+
 		energy-costs {
 			CPU_COST_0: core-cost0 {
 				busy-cost-data = <
+					112     4
 					136     7
 					174    16
 					212    26
@@ -302,6 +297,7 @@
 			};
 			CPU_COST_1: core-cost1 {
 				busy-cost-data = <
+					 180   294
 					 220   306
 					 290   320
 					 360   334
@@ -309,12 +305,12 @@
 					 490   533
 					 599   721
 					 708   917
-		       			 762  1058
-		       			 817  1203
+ 					 762  1058
+ 					 817  1203
 					 871  1410
-		       			 926  1612
-		       			 975  1868
-		       			1024  2126
+ 					 926  1612
+ 					 975  1868
+ 					1024  2126
 				>;
 				idle-cost-data = <
 			  		65 60 28 21
@@ -322,6 +318,7 @@
 			};
 			CLUSTER_COST_0: cluster-cost0 {
 				busy-cost-data = <
+					112    7
 					136    14
 					174    27
 					212    39
@@ -333,11 +330,12 @@
 					509   165
 				>;
 				idle-cost-data = <
-			 		0 0 0 0
+			 		56 56 56 17
 				>;
 			};
 			CLUSTER_COST_1: cluster-cost1 {
 				busy-cost-data = <
+					 180   80
 					 220   80
 					 290   80
 					 360   80
@@ -345,15 +343,15 @@
 					 490   80
 					 599   80
 					 708   80
-		       			 762   80
-		       			 817   80
+ 					 762   80
+ 					 817   80
 					 871   80
-		       			 926   80
-		       			 975   80
-		       			1024   80
+ 					 926   80
+ 					 975   80
+ 					1024   80
 				>;
 				idle-cost-data = <
-			 		0 0 0 0
+			 		65 65 65 24
 				>;
 			};
 		};
