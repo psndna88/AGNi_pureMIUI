@@ -2143,6 +2143,8 @@ static void msm_otg_start_host(struct usb_otg *otg, int on)
 				motg->inputs, otg->phy->state);
 
 		wake_up(&motg->host_suspend_wait);
+		pm_runtime_disable(&hcd->self.root_hub->dev);
+		pm_runtime_barrier(&hcd->self.root_hub->dev);
 		usb_remove_hcd(hcd);
 
 		if (pdata->enable_axi_prefetch)
