@@ -44,12 +44,6 @@
 				core1 {
 					cpu = <&CPU5>;
 				};
-				core2 {
-					cpu = <&CPU6>;
-				};
-				core3 {
-					cpu = <&CPU7>;
-				};
 			};
 		};
 
