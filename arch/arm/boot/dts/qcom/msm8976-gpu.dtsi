@@ -50,7 +50,7 @@
 
 		qcom,chipid = <0x05010000>;
 
-		qcom,initial-pwrlevel = <6>;
+		qcom,initial-pwrlevel = <8>;
 
 		qcom,idle-timeout = <80>; //msecs
 		qcom,strtstp-sleepwake;
@@ -242,7 +242,7 @@
 		qcom,gpu-speed-config@1 {
 			compatible = "gpu-speed-config@1";
 
-			qcom,initial-pwrlevel = <6>;
+			qcom,initial-pwrlevel = <8>;
 
 			/* Power levels */
 			qcom,gpu-pwrlevels {
