@@ -2189,8 +2189,9 @@ wlan_hdd_extscan_config_policy
 
     [QCA_WLAN_VENDOR_ATTR_EXTSCAN_GET_CACHED_SCAN_RESULTS_CONFIG_PARAM_MAX] =
                                                             { .type = NLA_U32 },
-    [QCA_WLAN_VENDOR_ATTR_EXTSCAN_AP_THRESHOLD_PARAM_BSSID] =
-                                                        { .type = NLA_UNSPEC },
+    [QCA_WLAN_VENDOR_ATTR_EXTSCAN_AP_THRESHOLD_PARAM_BSSID] = {
+        .type = NLA_UNSPEC,
+        .len = HDD_MAC_ADDR_LEN},
     [QCA_WLAN_VENDOR_ATTR_EXTSCAN_AP_THRESHOLD_PARAM_RSSI_LOW] =
                                                             { .type = NLA_S32 },
     [QCA_WLAN_VENDOR_ATTR_EXTSCAN_AP_THRESHOLD_PARAM_RSSI_HIGH] =
@@ -3811,8 +3812,9 @@ static int hdd_extscan_start_fill_bucket_channel_spec(
     nla_for_each_nested(buckets,
             tb[QCA_WLAN_VENDOR_ATTR_EXTSCAN_BUCKET_SPEC], rem1) {
         if (nla_parse(bucket,
-            QCA_WLAN_VENDOR_ATTR_EXTSCAN_SUBCMD_CONFIG_PARAM_MAX,
-            nla_data(buckets), nla_len(buckets), NULL)) {
+                      QCA_WLAN_VENDOR_ATTR_EXTSCAN_SUBCMD_CONFIG_PARAM_MAX,
+                      nla_data(buckets), nla_len(buckets),
+                      wlan_hdd_extscan_config_policy)) {
             hddLog(LOGE, FL("nla_parse failed"));
             return -EINVAL;
         }
@@ -4449,7 +4451,9 @@ static int wlan_hdd_cfg80211_extscan_reset_bssid_hotlist(struct wiphy *wiphy,
 static const struct nla_policy
 wlan_hdd_tdls_config_enable_policy[QCA_WLAN_VENDOR_ATTR_TDLS_ENABLE_MAX +1] =
 {
-    [QCA_WLAN_VENDOR_ATTR_TDLS_ENABLE_MAC_ADDR] = {.type = NLA_UNSPEC },
+    [QCA_WLAN_VENDOR_ATTR_TDLS_ENABLE_MAC_ADDR] = {
+        .type = NLA_UNSPEC,
+        .len = HDD_MAC_ADDR_LEN},
     [QCA_WLAN_VENDOR_ATTR_TDLS_ENABLE_CHANNEL] = {.type = NLA_S32 },
     [QCA_WLAN_VENDOR_ATTR_TDLS_ENABLE_GLOBAL_OPERATING_CLASS] =
                                                        {.type = NLA_S32 },
@@ -4461,7 +4465,9 @@ wlan_hdd_tdls_config_enable_policy[QCA_WLAN_VENDOR_ATTR_TDLS_ENABLE_MAX +1] =
 static const struct nla_policy
 wlan_hdd_tdls_config_disable_policy[QCA_WLAN_VENDOR_ATTR_TDLS_DISABLE_MAX +1] =
 {
-    [QCA_WLAN_VENDOR_ATTR_TDLS_DISABLE_MAC_ADDR] = {.type = NLA_UNSPEC },
+    [QCA_WLAN_VENDOR_ATTR_TDLS_DISABLE_MAC_ADDR] = {
+        .type = NLA_UNSPEC,
+        .len = HDD_MAC_ADDR_LEN},
 
 };
 
@@ -4469,7 +4475,9 @@ static const struct nla_policy
 wlan_hdd_tdls_config_state_change_policy[
                     QCA_WLAN_VENDOR_ATTR_TDLS_STATE_MAX +1] =
 {
-    [QCA_WLAN_VENDOR_ATTR_TDLS_STATE_MAC_ADDR] = {.type = NLA_UNSPEC },
+    [QCA_WLAN_VENDOR_ATTR_TDLS_STATE_MAC_ADDR] = {
+        .type = NLA_UNSPEC,
+        .len = HDD_MAC_ADDR_LEN},
     [QCA_WLAN_VENDOR_ATTR_TDLS_NEW_STATE] = {.type = NLA_S32 },
     [QCA_WLAN_VENDOR_ATTR_TDLS_STATE_REASON] = {.type = NLA_S32 },
     [QCA_WLAN_VENDOR_ATTR_TDLS_STATE_CHANNEL] = {.type = NLA_S32 },
@@ -4482,7 +4490,9 @@ static const struct nla_policy
 wlan_hdd_tdls_config_get_status_policy[
                      QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_MAX +1] =
 {
-    [QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_MAC_ADDR] = {.type = NLA_UNSPEC },
+    [QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_MAC_ADDR] = {
+        .type = NLA_UNSPEC,
+        .len = HDD_MAC_ADDR_LEN},
     [QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_STATE] = {.type = NLA_S32 },
     [QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_REASON] = {.type = NLA_S32 },
     [QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_CHANNEL] = {.type = NLA_S32 },
@@ -4494,7 +4504,9 @@ wlan_hdd_tdls_config_get_status_policy[
 static const struct nla_policy
 wlan_hdd_mac_config[QCA_WLAN_VENDOR_ATTR_SET_SCANNING_MAC_OUI_MAX+1] =
 {
-    [QCA_WLAN_VENDOR_ATTR_SET_SCANNING_MAC_OUI] = {.type = NLA_UNSPEC },
+    [QCA_WLAN_VENDOR_ATTR_SET_SCANNING_MAC_OUI] = {
+        .type = NLA_UNSPEC,
+        .len = VOS_MAC_ADDR_FIRST_3_BYTES},
 };
 
 static int __wlan_hdd_cfg80211_set_spoofed_mac_oui(struct wiphy *wiphy,
@@ -5544,7 +5556,9 @@ const struct
 nla_policy qca_wlan_vendor_attr[QCA_WLAN_VENDOR_ATTR_MAX+1] =
 {
     [QCA_WLAN_VENDOR_ATTR_ROAMING_POLICY] = { .type = NLA_U32 },
-    [QCA_WLAN_VENDOR_ATTR_MAC_ADDR]       = { .type = NLA_UNSPEC },
+    [QCA_WLAN_VENDOR_ATTR_MAC_ADDR]       = {
+        .type = NLA_UNSPEC,
+        .len = HDD_MAC_ADDR_LEN},
 };
 
 static int __wlan_hdd_cfg80211_firmware_roaming(struct wiphy *wiphy,
@@ -6534,7 +6548,9 @@ static int wlan_hdd_cfg80211_offloaded_packets(struct wiphy *wiphy,
 static const struct
 nla_policy
 qca_wlan_vendor_attr_policy[QCA_WLAN_VENDOR_ATTR_MAX+1] = {
-    [QCA_WLAN_VENDOR_ATTR_MAC_ADDR] = { .type = NLA_UNSPEC },
+    [QCA_WLAN_VENDOR_ATTR_MAC_ADDR] = {
+        .type = NLA_BINARY,
+        .len = HDD_MAC_ADDR_LEN},
 };
 
 /**
@@ -6586,6 +6602,13 @@ static int wlan_hdd_cfg80211_get_link_properties(struct wiphy *wiphy,
                 FL("Attribute peerMac not provided for mode=%d"),
                 adapter->device_mode);
         return -EINVAL;
+    }
+
+    if (nla_len(tb[QCA_WLAN_VENDOR_ATTR_MAC_ADDR]) < sizeof(peer_mac)) {
+            hddLog(VOS_TRACE_LEVEL_ERROR,
+                    FL("Attribute peerMac is invalid=%d"),
+                    adapter->device_mode);
+            return -EINVAL;
     }
 
     memcpy(peer_mac, nla_data(tb[QCA_WLAN_VENDOR_ATTR_MAC_ADDR]),
@@ -13102,13 +13125,24 @@ int __wlan_hdd_cfg80211_scan( struct wiphy *wiphy,
             pHddCtx->last_scan_reject_session_id = curr_session_id;
             pHddCtx->last_scan_reject_reason = curr_reason;
             pHddCtx->last_scan_reject_timestamp = jiffies_to_msecs(jiffies);
+            pHddCtx->scan_reject_cnt = 0;
         }
-        else {
-            if ((jiffies_to_msecs(jiffies) -
-                 pHddCtx->last_scan_reject_timestamp) >=
-                SCAN_REJECT_THRESHOLD_TIME)
+        else
+        {
+            pHddCtx->scan_reject_cnt++;
+
+            hddLog(LOGE, FL("Reject cnt %d time delta %lu ms"), pHddCtx->scan_reject_cnt,
+               (jiffies_to_msecs(jiffies) -
+               pHddCtx->last_scan_reject_timestamp));
+
+            if ((pHddCtx->scan_reject_cnt >=
+               SCAN_REJECT_THRESHOLD) &&
+               (jiffies_to_msecs(jiffies) -
+               pHddCtx->last_scan_reject_timestamp) >=
+               SCAN_REJECT_THRESHOLD_TIME)
             {
                 pHddCtx->last_scan_reject_timestamp = 0;
+                pHddCtx->scan_reject_cnt = 0;
                 if (pHddCtx->cfg_ini->enableFatalEvent)
                     vos_fatal_event_logs_req(WLAN_LOG_TYPE_FATAL,
                           WLAN_LOG_INDICATOR_HOST_DRIVER,
@@ -13126,6 +13160,7 @@ int __wlan_hdd_cfg80211_scan( struct wiphy *wiphy,
     pHddCtx->last_scan_reject_timestamp = 0;
     pHddCtx->last_scan_reject_session_id = 0xFF;
     pHddCtx->last_scan_reject_reason = 0;
+    pHddCtx->scan_reject_cnt = 0;
 
     vos_mem_zero( &scanRequest, sizeof(scanRequest));
 

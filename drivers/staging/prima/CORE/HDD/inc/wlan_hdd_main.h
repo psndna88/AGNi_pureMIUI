@@ -241,6 +241,8 @@ typedef v_U8_t tWlanHddMacAddr[HDD_MAC_ADDR_LEN];
 
 #endif
 #define SCAN_REJECT_THRESHOLD_TIME 300000 /* Time is in msec, equal to 5 mins */
+#define SCAN_REJECT_THRESHOLD 15
+
 
 #define WLAN_WAIT_TIME_EXTSCAN  1000
 
@@ -1686,6 +1688,7 @@ struct hdd_context_s
     v_U8_t last_scan_reject_session_id;
     scan_reject_states last_scan_reject_reason;
     v_TIME_t last_scan_reject_timestamp;
+    v_U8_t scan_reject_cnt;
 
     uint32_t track_arp_ip;
 };
