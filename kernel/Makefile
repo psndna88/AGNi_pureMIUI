@@ -1,6 +1,20 @@
 #
 # Makefile for the linux kernel.
 #
+CFLAGS_fork.o := -fno-unsafe-math-optimizations -fno-strict-aliasing
+CFLAGS_exit.o := -fno-unsafe-math-optimizations -fno-strict-aliasing
+CFLAGS_sysctl_binary.o := -fno-unsafe-math-optimizations -fno-strict-aliasing
+CFLAGS_sysctl.o := -fno-unsafe-math-optimizations -fno-strict-aliasing
+CFLAGS_pid.o := -fno-unsafe-math-optimizations -fno-strict-aliasing
+CFLAGS_signal.o := -fno-unsafe-math-optimizations -fno-strict-aliasing
+CFLAGS_workqueue.o := -fno-unsafe-math-optimizations -fno-strict-aliasing
+CFLAGS_cred.o := -fno-unsafe-math-optimizations -fno-strict-aliasing
+CFLAGS_nsproxy.o := -fno-unsafe-math-optimizations -fno-strict-aliasing
+CFLAGS_audit.o := -fno-unsafe-math-optimizations -fno-strict-aliasing
+CFLAGS_auditfilter.o := -fno-unsafe-math-optimizations -fno-strict-aliasing
+CFLAGS_cgroup.o := -fno-unsafe-math-optimizations -fno-strict-aliasing
+CFLAGS_audit.o := -Wno-tautological-compare
+CFLAGS_workqueue.o := -Wno-error=implicit-function-declaration -Wno-implicit-function-declaration
 
 obj-y     = fork.o exec_domain.o panic.o printk.o \
 	    cpu.o exit.o itimer.o time.o softirq.o resource.o \
