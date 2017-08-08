@@ -48,6 +48,7 @@
 #include <linux/suspend.h>
 #include <soc/qcom/msm-core.h>
 #include <linux/cpumask.h>
+#include <linux/charging_state.h>
 
 #define CREATE_TRACE_POINTS
 #define TRACE_MSM_THERMAL
@@ -3384,10 +3385,15 @@ static void check_temp(struct work_struct *work)
 	do_freq_control(temp);
 
 reschedule:
-	//if (polling_enabled)
-		queue_delayed_work(system_power_efficient_wq,
-			&check_temp_work,
-			msecs_to_jiffies(msm_thermal_info.poll_ms));
+	if (charging_detected()) {
+		schedule_delayed_work(&check_temp_work,
+				msecs_to_jiffies(msm_thermal_info.poll_ms));
+	} else {
+		if (polling_enabled)
+			queue_delayed_work(system_power_efficient_wq,
+				&check_temp_work,
+				msecs_to_jiffies(msm_thermal_info.poll_ms));
+	}
 }
 
 static int __ref msm_thermal_cpu_callback(struct notifier_block *nfb,
