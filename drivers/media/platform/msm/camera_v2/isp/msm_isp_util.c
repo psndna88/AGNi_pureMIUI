@@ -1261,7 +1261,7 @@ static int msm_isp_send_hw_cmd(struct vfe_device *vfe_dev,
 			reg_cfg_cmd->u.rw_info.len) >
 			resource_size(vfe_dev->vfe_mem)) ||
 			(reg_cfg_cmd->u.rw_info.reg_offset & 0x3)) {
-			pr_err("%s:%d reg_offset %d len %d res %d\n",
+			pr_err_ratelimited("%s:%d reg_offset %d len %d res %d\n",
 				__func__, __LINE__,
 				reg_cfg_cmd->u.rw_info.reg_offset,
 				reg_cfg_cmd->u.rw_info.len,
@@ -1273,7 +1273,7 @@ static int msm_isp_send_hw_cmd(struct vfe_device *vfe_dev,
 			(UINT_MAX - reg_cfg_cmd->u.rw_info.len)) ||
 			((reg_cfg_cmd->u.rw_info.cmd_data_offset +
 			reg_cfg_cmd->u.rw_info.len) > cmd_len)) {
-			pr_err("%s:%d cmd_data_offset %d len %d cmd_len %d\n",
+			pr_err_ratelimited("%s:%d cmd_data_offset %d len %d cmd_len %d\n",
 				__func__, __LINE__,
 				reg_cfg_cmd->u.rw_info.cmd_data_offset,
 				reg_cfg_cmd->u.rw_info.len, cmd_len);
@@ -1295,14 +1295,14 @@ static int msm_isp_send_hw_cmd(struct vfe_device *vfe_dev,
 				(reg_cfg_cmd->u.dmi_info.hi_tbl_offset -
 				reg_cfg_cmd->u.dmi_info.lo_tbl_offset !=
 				(sizeof(uint32_t)))) {
-				pr_err("%s:%d hi %d lo %d\n",
+				pr_err_ratelimited("%s:%d hi %d lo %d\n",
 					__func__, __LINE__,
 					reg_cfg_cmd->u.dmi_info.hi_tbl_offset,
 					reg_cfg_cmd->u.dmi_info.lo_tbl_offset);
 				return -EINVAL;
 			}
 			if (reg_cfg_cmd->u.dmi_info.len <= sizeof(uint32_t)) {
-				pr_err("%s:%d len %d\n",
+				pr_err_ratelimited("%s:%d len %d\n",
 					__func__, __LINE__,
 					reg_cfg_cmd->u.dmi_info.len);
 				return -EINVAL;
@@ -1314,7 +1314,7 @@ static int msm_isp_send_hw_cmd(struct vfe_device *vfe_dev,
 				((reg_cfg_cmd->u.dmi_info.hi_tbl_offset +
 				reg_cfg_cmd->u.dmi_info.len -
 				sizeof(uint32_t)) > cmd_len)) {
-				pr_err("%s:%d hi_tbl_offset %d len %d cmd %d\n",
+				pr_err_ratelimited("%s:%d hi_tbl_offset %d len %d cmd %d\n",
 					__func__, __LINE__,
 					reg_cfg_cmd->u.dmi_info.hi_tbl_offset,
 					reg_cfg_cmd->u.dmi_info.len, cmd_len);
@@ -1325,7 +1325,7 @@ static int msm_isp_send_hw_cmd(struct vfe_device *vfe_dev,
 			(UINT_MAX - reg_cfg_cmd->u.dmi_info.len)) ||
 			((reg_cfg_cmd->u.dmi_info.lo_tbl_offset +
 			reg_cfg_cmd->u.dmi_info.len) > cmd_len)) {
-			pr_err("%s:%d lo_tbl_offset %d len %d cmd_len %d\n",
+			pr_err_ratelimited("%s:%d lo_tbl_offset %d len %d cmd_len %d\n",
 				__func__, __LINE__,
 				reg_cfg_cmd->u.dmi_info.lo_tbl_offset,
 				reg_cfg_cmd->u.dmi_info.len, cmd_len);
