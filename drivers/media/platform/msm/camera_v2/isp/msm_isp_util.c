@@ -28,7 +28,6 @@ static struct msm_isp_bandwidth_mgr isp_bandwidth_mgr;
 
 static uint64_t msm_isp_cpp_clk_rate;
 
-#define VFE40_8974V2_VERSION 0x1001001A
 static struct msm_bus_vectors msm_isp_init_vectors[] = {
 	{
 		.src = MSM_BUS_MASTER_VFE,
@@ -898,6 +897,8 @@ static int msm_isp_proc_cmd_list_unlocked(struct vfe_device *vfe_dev, void *arg)
 			rc = -EINVAL;
 			break;
 		}
+		if (cmd.next == NULL)
+			break;
 		if (copy_from_user(&cmd_next, (void __user *)cmd.next,
 			sizeof(struct msm_vfe_cfg_cmd_list))) {
 			rc = -EFAULT;
