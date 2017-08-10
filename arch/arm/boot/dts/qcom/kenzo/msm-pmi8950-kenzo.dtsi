@@ -199,13 +199,12 @@
 			#size-cells = <1>;
 
 			qcom,iterm-ma = <150>;
-			/*qcom,fastchg-current-ma = <2400>;*/
 			qcom,float-voltage-mv = <4400>;
 			qcom,resume-delta-mv = <200>;
 			qcom,chg-inhibit-fg;
 			qcom,rparasitic-uohm = <100000>;
 			qcom,bms-psy-name = "bms";
-			qcom,thermal-mitigation = <2400 1800 1000 600 0>;
+			qcom,thermal-mitigation = <2000 1700 1200 600 0>;
 			qcom,fastchg-current-comp = <900>;
 			qcom,float-voltage-comp = <11>;
 			/*11 for 4.2V, 16 for 4.1V*/
