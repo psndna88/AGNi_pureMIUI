@@ -232,7 +232,8 @@ static int vmpressure_notifier(struct notifier_block *nb,
 		return 0;
 
 	if ((pressure >= pressure_min) && (pressure < pressure_max))
-		queue_work(system_unbound_wq, &swap_work);
+		if (!work_pending(&swap_work))
+			queue_work(system_unbound_wq, &swap_work);
 
 	return 0;
 }
