@@ -368,8 +368,10 @@ static int msm_csid_init(struct csid_device *csid_dev, uint32_t *csid_version)
 	csid_dev->reg_ptr = regulator_get(&(csid_dev->pdev->dev),
 					 "qcom,gdscr-vdd");
 	if (IS_ERR_OR_NULL(csid_dev->reg_ptr)) {
+#ifndef CONFIG_ARCH_MSM8916
 		pr_err(" %s: Failed in getting TOP gdscr regulator handle",
 			__func__);
+#endif
 	} else {
 		rc = regulator_enable(csid_dev->reg_ptr);
 		if (rc) {

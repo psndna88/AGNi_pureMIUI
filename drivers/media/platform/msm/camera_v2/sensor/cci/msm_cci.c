@@ -1283,8 +1283,10 @@ static int32_t msm_cci_init(struct v4l2_subdev *sd,
 	cci_dev->reg_ptr = regulator_get(&(cci_dev->pdev->dev),
 					 "qcom,gdscr-vdd");
 	if (IS_ERR_OR_NULL(cci_dev->reg_ptr)) {
+#ifndef CONFIG_ARCH_MSM8916
 		pr_err(" %s: Failed in getting TOP gdscr regulator handle",
 			__func__);
+#endif
 	} else {
 		rc = regulator_enable(cci_dev->reg_ptr);
 		if (rc) {
