@@ -303,6 +303,69 @@
 			};
 		};
 
+		pmx_sdc3_clk {
+			qcom,pins = <&gp 44>;
+			qcom,num-grp-pins = <1>;
+			qcom,pin-func = <2>;
+			label = "sdc3_clk";
+			sdc3_clk_on: clk_on {
+				bias-disable;
+				drive-strength = <16>;
+			};
+			sdc3_clk_off: clk_off {
+				bias-disable;
+				drive-strength = <2>;
+			};
+		};
+
+		pmx_sdc3_cmd {
+			qcom,pins = <&gp 43>;
+			qcom,num-grp-pins = <1>;
+			qcom,pin-func = <2>;
+			label = "sdc3_cmd";
+			sdc3_cmd_on: cmd_on {
+				bias-pull-up;
+				drive-strength = <10>;
+			};
+			sdc3_cmd_off: cmd_off {
+				bias-pull-up;
+				drive-strength = <2>;
+			};
+		};
+
+		pmx_sdc3_dat {
+			qcom,pins = <&gp 39>, <&gp 40>, <&gp 41>, <&gp 42>;
+			qcom,num-grp-pins = <4>;
+			qcom,pin-func = <2>;
+			label = "sdc3_dat";
+			sdc3_dat_on: dat_on {
+				bias-pull-up;
+				drive-strength = <10>;
+			};
+			sdc3_dat_off: dat_off {
+				bias-pull-up;
+				drive-strength = <2>;
+			};
+		};
+
+		sdc3_wlan_gpio {
+			qcom,pins = <&gp 34>;
+			qcom,num-grp-pins = <1>;
+			qcom,pin-func = <0>;
+			label = "wlan_en_gpio";
+			sdc3_wlan_gpio_active: sdc3_wlan_gpio_active {
+				output-high;
+				drive-strength = <8>;
+				bias-pull-up;
+			};
+			sdc3_wlan_gpio_sleep: sdc3_wlan_gpio_sleep {
+				output-low;
+				drive-strength = <2>;
+				bias-disable;
+			};
+
+		};
+
 		pmx_mdss: pmx_mdss {
 			label = "mdss-pins";
 			qcom,pin-func = <0>;
@@ -906,6 +969,30 @@
 			qdsd_data0_spmi: data0_spmi {
 				bias-pull-down; /* pull down */
 				drive-strength = <0>; /* 0 MA */
+			};
+		};
+
+		uicc-active {
+			qcom,pins = <&gp 49>, <&gp 50>;
+			qcom,num-grp-pins = <2>;
+			qcom,pin-func = <1>;
+			label = "uicc-active-pins";
+
+			uicc_active: active {
+				drive-strength = <8>;
+				bias-pull-down;
+			};
+		};
+
+		uicc-sleep {
+			qcom,pins = <&gp 49>, <&gp 50>;
+			qcom,num-grp-pins = <2>;
+			qcom,pin-func = <0>;
+			label = "uicc-sleep-pins";
+
+			uicc_sleep: sleep {
+				drive-strength = <2>;
+				bias-pull-down;
 			};
 		};
 
