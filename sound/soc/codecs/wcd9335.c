@@ -12419,10 +12419,15 @@ void update_mic_gain(int vol_boost)
 	pr_info("Sound Control: Mic default value %d\n", default_val);
 
 	snd_soc_write(soundcontrol.snd_control_codec,
+ 		WCD9335_CDC_TX0_TX_VOL_CTL, boosted_val);
+	snd_soc_write(soundcontrol.snd_control_codec,
  		WCD9335_CDC_TX6_TX_VOL_CTL, boosted_val);
  	snd_soc_write(soundcontrol.snd_control_codec,
  		WCD9335_CDC_TX7_TX_VOL_CTL, boosted_val);
 
+ 	pr_info("Sound Control: Boosted External Wired Mic TX0 value %d\n",
+ 		snd_soc_read(soundcontrol.snd_control_codec,
+ 		WCD9335_CDC_TX0_TX_VOL_CTL));
  	pr_info("Sound Control: Boosted Primary Mic TX6 value %d\n",
  		snd_soc_read(soundcontrol.snd_control_codec,
  		WCD9335_CDC_TX6_TX_VOL_CTL));
