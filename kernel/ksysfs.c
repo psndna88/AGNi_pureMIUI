@@ -18,6 +18,7 @@
 #include <linux/stat.h>
 #include <linux/sched.h>
 #include <linux/capability.h>
+#include <linux/arch_power.h>
 
 #define KERNEL_ATTR_RO(_name) \
 static struct kobj_attribute _name##_attr = __ATTR_RO(_name)
@@ -205,10 +206,10 @@ static struct attribute_group kernel_attr_group = {
 };
 
 static unsigned int Lgentle_fair_sleepers = 0;
-static unsigned int Larch_power = 0;
+unsigned int Larch_power = 0;
+unsigned int user_arch_power = 0;
 
 extern void relay_gfs(unsigned int gfs);
-extern void relay_ap(unsigned int ap);
 
 static ssize_t gentle_fair_sleepers_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
@@ -243,6 +244,7 @@ static ssize_t arch_power_store(struct kobject *kobj, struct kobj_attribute *att
 		input = 0;
 	
 	Larch_power = input;
+	user_arch_power = input;
 	relay_ap(Larch_power);
 	return count;
 }
