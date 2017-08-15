@@ -12,10 +12,10 @@
  * busy      NULL, 2 -> {free, claimed} : callback in progress, can be claimed
  */
 
-#define IRQ_WORK_PENDING	1UL
-#define IRQ_WORK_BUSY		2UL
-#define IRQ_WORK_FLAGS		3UL
-#define IRQ_WORK_LAZY		4UL /* Doesn't want IPI, wait for tick */
+#define IRQ_WORK_PENDING	BIT(0)
+#define IRQ_WORK_BUSY		BIT(1)
+#define IRQ_WORK_FLAGS		(IRQ_WORK_PENDING | IRQ_WORK_BUSY)
+#define IRQ_WORK_LAZY		BIT(2) /* Doesn't want IPI, wait for tick */
 
 struct irq_work {
 	unsigned long flags;
