@@ -961,7 +961,7 @@ static int sigma_nan_range_request(struct sigma_dut *dut,
 
 	memset(&req, 0, sizeof(NanSubscribeRequest));
 	req.period = 1;
-	req.subscribe_type = NAN_SUBSCRIBE_TYPE_ACTIVE;
+	req.subscribe_type = NAN_SUBSCRIBE_TYPE_PASSIVE;
 	req.serviceResponseFilter = NAN_SRF_ATTR_BLOOM_FILTER;
 	req.serviceResponseInclude = NAN_SRF_INCLUDE_RESPOND;
 	req.ssiRequiredForMatchIndication = NAN_SSI_NOT_REQUIRED_IN_MATCH_IND;
