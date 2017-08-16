@@ -42,6 +42,8 @@ static char global_peer_mac_addr[ETH_ALEN];
 static char global_event_resp_buf[1024];
 static u8 global_publish_service_name[NAN_MAX_SERVICE_NAME_LEN];
 static u32 global_publish_service_name_len = 0;
+static u8 global_subscribe_service_name[NAN_MAX_SERVICE_NAME_LEN];
+static u32 global_subscribe_service_name_len = 0;
 
 static int nan_further_availability_tx(struct sigma_dut *dut,
 				       struct sigma_conn *conn,
@@ -489,6 +491,17 @@ static int sigma_nan_subscribe_request(struct sigma_dut *dut,
 	req.subscribe_match_indicator = NAN_MATCH_ALG_MATCH_CONTINUOUS;
 	req.subscribe_count = 0;
 
+	if (global_subscribe_service_name_len &&
+	    service_name &&
+	    strcasecmp((char *) global_subscribe_service_name,
+		       service_name) == 0 &&
+	    global_subscribe_id) {
+		req.subscribe_id = global_subscribe_id;
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"%s: updating subscribe_id = %d in subscribe request",
+				__func__, req.subscribe_id);
+	}
+
 	if (subscribe_type) {
 		if (strcasecmp(subscribe_type, "Active") == 0) {
 			req.subscribe_type = 1;
@@ -573,6 +586,10 @@ static int sigma_nan_subscribe_request(struct sigma_dut *dut,
 		strlcpy((char *) req.service_name, service_name,
 			strlen(service_name) + 1);
 		req.service_name_len = strlen(service_name);
+		strlcpy((char *) global_subscribe_service_name, service_name,
+			sizeof(global_subscribe_service_name));
+		global_subscribe_service_name_len =
+			strlen((char *) global_subscribe_service_name);
 	}
 
 #if NAN_CERT_VERSION >= 3
