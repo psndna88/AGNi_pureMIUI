@@ -1992,6 +1992,8 @@ int nan_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 					NAN_DATA_PATH_SUPPORT_DUAL_BAND);
 			}
 		} else if (strcasecmp(nan_op, "Off") == 0) {
+			nan_data_interface_delete(0,
+				global_interface_handle, (char *) "nan0");
 			sigma_nan_disable(dut, conn, cmd);
 			memset(global_publish_service_name, 0,
 			       sizeof(global_publish_service_name));
