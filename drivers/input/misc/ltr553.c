@@ -1978,7 +1978,7 @@ static int ltr553_probe(struct i2c_client *client,
 		device_init_wakeup(&client->dev, 1);
 
 		ltr->workqueue = alloc_workqueue("ltr553_workqueue",
-				WQ_HIGHPRI | WQ_FREEZABLE, 0);
+				WQ_FREEZABLE, 0);
 		INIT_WORK(&ltr->report_work, ltr553_report_work);
 		INIT_WORK(&ltr->als_enable_work, ltr553_als_enable_work);
 		INIT_WORK(&ltr->als_disable_work, ltr553_als_disable_work);
