@@ -2423,14 +2423,14 @@ static int stk3x1x_probe(struct i2c_client *client,
 	input_set_drvdata(ps_data->ps_input_dev, ps_data);
 
 #ifdef STK_POLL_ALS
-	ps_data->stk_als_wq = alloc_workqueue("stk_als_wq", WQ_HIGHPRI | WQ_FREEZABLE, 0);
+	ps_data->stk_als_wq = alloc_workqueue("stk_als_wq", WQ_FREEZABLE, 0);
 	INIT_WORK(&ps_data->stk_als_work, stk_als_work_func);
 	hrtimer_init(&ps_data->als_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	ps_data->als_poll_delay = ns_to_ktime(110 * NSEC_PER_MSEC);
 	ps_data->als_timer.function = stk_als_timer_func;
 #endif
 
-	ps_data->stk_ps_wq = alloc_workqueue("stk_ps_wq", WQ_HIGHPRI | WQ_FREEZABLE, 0);
+	ps_data->stk_ps_wq = alloc_workqueue("stk_ps_wq", WQ_FREEZABLE, 0);
 	INIT_WORK(&ps_data->stk_ps_work, stk_ps_work_func);
 	hrtimer_init(&ps_data->ps_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	ps_data->ps_poll_delay = ns_to_ktime(110 * NSEC_PER_MSEC);
