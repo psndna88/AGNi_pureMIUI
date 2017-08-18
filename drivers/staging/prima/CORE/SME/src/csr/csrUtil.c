@@ -2083,7 +2083,9 @@ eHalStatus csrParseBssDescriptionIEs(tHalHandle hHal, tSirBssDescription *pBssDe
 eHalStatus csrGetParsedBssDescriptionIEs(tHalHandle hHal, tSirBssDescription *pBssDesc, tDot11fBeaconIEs **ppIEStruct)
 {
     eHalStatus status = eHAL_STATUS_INVALID_PARAMETER;
+#ifdef TRACE_RECORD
     tpAniSirGlobal pMac = PMAC_STRUCT( hHal );
+#endif
 
     if(pBssDesc && ppIEStruct)
     {
