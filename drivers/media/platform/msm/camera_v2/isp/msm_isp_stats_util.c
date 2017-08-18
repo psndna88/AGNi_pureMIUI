@@ -198,7 +198,7 @@ static int32_t msm_isp_stats_configure(struct vfe_device *vfe_dev,
 	uint32_t comp_stats_type_mask = 0;
 
 	memset(&buf_event, 0, sizeof(struct msm_isp_event_data));
-#ifdef CONFIG_MACH_XIAOMI_KENZO_AGNI_CM_N
+#if defined CONFIG_MACH_XIAOMI_KENZO_AGNI_CM_N || defined CONFIG_MACH_XIAOMI_KENZO_AGNI_MIUI_N
 	buf_event.timestamp = ts->buf_time;
 #else
 	buf_event.timestamp = ts->event_time;

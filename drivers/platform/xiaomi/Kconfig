@@ -49,5 +49,11 @@ menu "AGNi variant selection"
 		help
 		  Support for Xiaomi Redmi Note 3 AGNi MIUI MM
 
+	config MACH_XIAOMI_KENZO_AGNI_MIUI_N
+		bool "XIAOMI KENZO AGNi for miui-N"
+		select MACH_XIAOMI_MSM8956
+		help
+		  Support for Xiaomi Redmi Note 3 AGNi MIUI N
+
 endmenu
 
