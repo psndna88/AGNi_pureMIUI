@@ -380,7 +380,9 @@ eHalStatus pmcClose (tHalHandle hHal)
 ******************************************************************************/
 eHalStatus pmcSignalPowerEvent (tHalHandle hHal, tPmcPowerEvent event)
 {
+#ifdef TRACE_RECORD
     tpAniSirGlobal pMac = PMAC_STRUCT(hHal);
+#endif
 #ifndef GEN6_ONWARDS
     tSirMacHTMIMOPowerSaveState  htMimoPowerSaveState;
 #endif

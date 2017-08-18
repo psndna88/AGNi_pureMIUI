@@ -1469,7 +1469,9 @@ eHalStatus sme_Open(tHalHandle hHal)
 eHalStatus sme_set11dinfo(tHalHandle hHal,  tpSmeConfigParams pSmeConfigParams)
 {
    eHalStatus status = eHAL_STATUS_FAILURE;
+#ifdef TRACE_RECORD
    tpAniSirGlobal pMac = PMAC_STRUCT( hHal );
+#endif
 
    MTRACE(vos_trace(VOS_MODULE_ID_SME,
                       TRACE_CODE_SME_RX_HDD_MSG_SET_11DINFO, NO_SESSION, 0));
@@ -1524,8 +1526,9 @@ eHalStatus sme_getSoftApDomain(tHalHandle hHal,  v_REGDOMAIN_t *domainIdSoftAp)
 eHalStatus sme_setRegInfo(tHalHandle hHal,  tANI_U8 *apCntryCode)
 {
    eHalStatus status = eHAL_STATUS_FAILURE;
+#ifdef TRACE_RECORD
    tpAniSirGlobal pMac = PMAC_STRUCT( hHal );
-
+#endif
    MTRACE(vos_trace(VOS_MODULE_ID_SME,
              TRACE_CODE_SME_RX_HDD_MSG_SET_REGINFO, NO_SESSION, 0));
    if (NULL == apCntryCode ) {
@@ -13034,7 +13037,9 @@ eHalStatus sme_GetValidChannelsByBand (tHalHandle hHal, tANI_U8 wifiBand,
 {
     eHalStatus status                                   = eHAL_STATUS_SUCCESS;
     tANI_U8 chanList[WNI_CFG_VALID_CHANNEL_LIST_LEN]    = {0};
+#ifdef TRACE_RECORD
     tpAniSirGlobal pMac                                 = PMAC_STRUCT(hHal);
+#endif
     tANI_U8 numChannels                                 = 0;
     tANI_U8 i                                           = 0;
     tANI_U32 totValidChannels                 = WNI_CFG_VALID_CHANNEL_LIST_LEN;

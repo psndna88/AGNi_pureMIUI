@@ -2290,7 +2290,9 @@ int __wlan_hdd_del_virtual_intf( struct wiphy *wiphy, struct net_device *dev )
     struct net_device *dev = wdev->netdev;
 #endif
     hdd_context_t *pHddCtx = (hdd_context_t*) wiphy_priv(wiphy);
+#ifdef TRACE_RECORD
     hdd_adapter_t *pAdapter = WLAN_HDD_GET_PRIV_PTR( dev );
+#endif
     hdd_adapter_t *pVirtAdapter = WLAN_HDD_GET_PRIV_PTR(dev);
     int status;
 

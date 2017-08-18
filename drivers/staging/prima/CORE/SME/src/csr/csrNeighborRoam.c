@@ -1824,7 +1824,9 @@ static VOS_STATUS csrNeighborRoamHandleEmptyScanResult(tpAniSirGlobal pMac)
 {
     VOS_STATUS  vosStatus = VOS_STATUS_SUCCESS;
     tpCsrNeighborRoamControlInfo    pNeighborRoamInfo = &pMac->roam.neighborRoamInfo;
+#ifdef TRACE_RECORD
     eHalStatus  status = eHAL_STATUS_SUCCESS;
+#endif
 #ifdef FEATURE_WLAN_LFR
     tANI_BOOLEAN performPeriodicScan =
         (pNeighborRoamInfo->cfgParams.emptyScanRefreshPeriod) ? TRUE : FALSE;
@@ -4172,7 +4174,9 @@ VOS_STATUS  csrNeighborRoamNeighborLookupDownEvent(tpAniSirGlobal pMac)
 {
     tpCsrNeighborRoamControlInfo    pNeighborRoamInfo = &pMac->roam.neighborRoamInfo;
     VOS_STATUS  vosStatus = VOS_STATUS_SUCCESS;
+#ifdef TRACE_RECORD
     eHalStatus  status = eHAL_STATUS_SUCCESS;
+#endif
 
     switch (pNeighborRoamInfo->neighborRoamState)
     {
@@ -5334,7 +5338,7 @@ eHalStatus csrNeighborRoamCandidateFoundIndHdlr(tpAniSirGlobal pMac, void* pMsg)
          * purge non-P2P results from the past */
         csrScanFlushSelectiveResult(pMac, VOS_FALSE);
         /* Once it gets the candidates found indication from PE, will issue a scan
-         - req to PE with “freshScan” in scanreq structure set as follows:
+         - req to PE with \93freshScan\94 in scanreq structure set as follows:
          0x42 - Return & purge LFR scan results
         */
         status = csrScanRequestLfrResult(pMac, pNeighborRoamInfo->csrSessionId,
