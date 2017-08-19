@@ -124,6 +124,7 @@ static ssize_t write_enabled_perftp_file_bool(struct file *file,
 	char buf[32];
 	size_t buf_size;
 
+	buf[0] = 0;
 	buf_size = min(count, (sizeof(buf)-1));
 	if (copy_from_user(buf, user_buf, buf_size))
 		return -EFAULT;
