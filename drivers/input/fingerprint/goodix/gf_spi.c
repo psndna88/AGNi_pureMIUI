@@ -895,13 +895,31 @@ static int gf_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static void set_gx_fpd_nice(int nice)
+ {
+ 	struct task_struct *p;
+ 
+ 	read_lock(&tasklist_lock);
+ 	for_each_process(p) {
+ 		if (!memcmp(p->comm, "gx_fpd", 13)) {
+ 			set_user_nice(p, nice);
+ 			break;
+ 		}
+ 	}
+ 	read_unlock(&tasklist_lock);
+ }
+
 #if defined(USE_SPI_BUS)
 static int gf_suspend(struct spi_device *spi, pm_message_t mesg)
 #elif defined(USE_PLATFORM_BUS)
 static int gf_suspend(struct platform_device *pdev, pm_message_t state)
 #endif
 {
-	pr_info(KERN_ERR "gf_suspend_test.\n");
+	pr_debug(KERN_ERR "gf_suspend_test.\n");
+
+	/* Escalate gx_fpd priority when screen is off */
+	set_gx_fpd_nice(-1);
+
 	return 0;
 }
 
@@ -911,7 +929,7 @@ static int gf_resume(struct spi_device *spi)
 static int gf_resume(struct platform_device *pdev)
 #endif
 {
-	pr_info(KERN_ERR "gf_resume_test.\n");
+	pr_debug(KERN_ERR "gf_resume_test.\n");
 	return 0;
 }
 

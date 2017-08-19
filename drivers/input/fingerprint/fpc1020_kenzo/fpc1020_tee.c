@@ -458,8 +458,25 @@ static int fpc1020_remove(struct platform_device* pdev)
 	return 0;
 }
 
+static void set_fingerprintd_nice(int nice)
+ {
+ 	struct task_struct *p;
+ 
+ 	read_lock(&tasklist_lock);
+ 	for_each_process(p) {
+ 		if (!memcmp(p->comm, "fingerprintd", 13)) {
+ 			set_user_nice(p, nice);
+ 			break;
+ 		}
+ 	}
+ 	read_unlock(&tasklist_lock);
+ }
+
 static int fpc1020_suspend(struct platform_device* pdev, pm_message_t mesg)
 {
+	/* Escalate fingerprintd priority when screen is off */
+	set_fingerprintd_nice(-1);
+
 	return 0;
 }
 
