@@ -834,8 +834,8 @@
 		compatible = "qcom,bcl";
 		qcom,bcl-enable;
 		qcom,bcl-framework-interface;
-		qcom,bcl-freq-control-list = <&CPU4 &CPU5 &CPU6 &CPU7>;
-		qcom,bcl-soc-hotplug-list = <&CPU4 &CPU5 &CPU6 &CPU7>;
+		qcom,bcl-freq-control-list = <&CPU4 &CPU5>;
+		qcom,bcl-soc-hotplug-list = <&CPU4 &CPU5>;
 		qcom,ibat-monitor {
 			qcom,high-threshold-uamp = <4200000>;
 			qcom,low-threshold-uamp = <3400000>;
@@ -925,7 +925,6 @@
 		interrupts = <0 123 0>, <0 138 0>;
 		interrupt-names = "hc_irq", "pwr_irq";
 
-		qcom,large-address-bus;
 		qcom,bus-width = <8>;
 		qcom,large-address-bus;
 
@@ -971,7 +970,6 @@
 		interrupts = <0 125 0>, <0 221 0>;
 		interrupt-names = "hc_irq", "pwr_irq";
 
-		qcom,large-address-bus;
 		qcom,bus-width = <4>;
 		qcom,large-address-bus;
 
