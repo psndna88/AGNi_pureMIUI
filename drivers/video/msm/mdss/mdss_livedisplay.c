@@ -144,7 +144,7 @@ static int mdss_livedisplay_set_rgb_locked(struct msm_fb_data_type *mfd)
 	if (mlc == NULL)
 		return -ENODEV;
 
-	pr_info("%s: r=%d g=%d b=%d\n", __func__, mlc->r, mlc->g, mlc->b);
+	pr_debug("%s: r=%d g=%d b=%d\n", __func__, mlc->r, mlc->g, mlc->b);
 
 	memset(&pcc_cfg, 0, sizeof(struct mdp_pcc_cfg_data));
 
