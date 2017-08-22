@@ -379,7 +379,9 @@ struct sigma_dut {
 		AP_WPA2_EAP,
 		AP_WPA_EAP,
 		AP_WPA2_EAP_MIXED,
-		AP_WPA2_PSK_MIXED
+		AP_WPA2_PSK_MIXED,
+		AP_WPA2_SAE,
+		AP_WPA2_PSK_SAE,
 	} ap_key_mgmt;
 	enum ap_tag_key_mgmt {
 		AP2_OPEN,
@@ -400,6 +402,7 @@ struct sigma_dut {
 		AP_PLAIN,
 		AP_CCMP_TKIP
 	} ap_cipher;
+	int ap_sae_group;
 	char ap_passphrase[65];
 	char ap_wepkey[27];
 	char ap_radius_ipaddr[20];

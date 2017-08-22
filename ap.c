@@ -1406,12 +1406,28 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 		} else if (strcasecmp(val, "WPA2-PSK-Mixed") == 0) {
 			dut->ap_key_mgmt = AP_WPA2_PSK_MIXED;
 			dut->ap_cipher = AP_CCMP_TKIP;
+		} else if (strcasecmp(val, "WPA2-SAE") == 0) {
+			dut->ap_key_mgmt = AP_WPA2_SAE;
+			dut->ap_cipher = AP_CCMP;
+		} else if (strcasecmp(val, "WPA2-PSK-SAE") == 0) {
+			dut->ap_key_mgmt = AP_WPA2_PSK_SAE;
+			dut->ap_cipher = AP_CCMP;
 		} else if (strcasecmp(val, "NONE") == 0) {
 			dut->ap_key_mgmt = AP_OPEN;
 			dut->ap_cipher = AP_PLAIN;
 		} else {
 			send_resp(dut, conn, SIGMA_INVALID,
 				  "errorCode,Unsupported KEYMGNT");
+			return 0;
+		}
+	}
+
+	val = get_param(cmd, "ECGroupID");
+	if (val) {
+		dut->ap_sae_group = atoi(val);
+		if (dut->ap_sae_group == 0) {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Invalid ECGroupID");
 			return 0;
 		}
 	}
@@ -2324,6 +2340,9 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 		case AP_WPA2_PSK:
 		case AP_WPA2_PSK_MIXED:
 		case AP_WPA_PSK:
+		case AP_WPA2_SAE:
+		case AP_WPA2_PSK_SAE:
+			/* TODO: SAE configuration */
 			if (dut->ap_key_mgmt == AP_WPA2_PSK) {
 				snprintf(buf, sizeof(buf), "psk2");
 			} else if (dut->ap_key_mgmt == AP_WPA2_PSK_MIXED) {
@@ -3176,6 +3195,8 @@ static int cmd_wcn_ap_config_commit(struct sigma_dut *dut,
 			run_ndc(dut, "ndc softap qccmd set wpa_pairwise="
 				"CCMP &");
 		break;
+	case AP_WPA2_SAE:
+	case AP_WPA2_PSK_SAE:
 	case AP_WPA2_EAP:
 	case AP_WPA2_EAP_MIXED:
 	case AP_WPA_EAP:
@@ -4833,12 +4854,17 @@ static int cmd_ath_ap_config_commit(struct sigma_dut *dut,
 	case AP_WPA2_PSK:
 	case AP_WPA2_PSK_MIXED:
 	case AP_WPA_PSK:
-		if (dut->ap_key_mgmt == AP_WPA2_PSK)
+		case AP_WPA2_SAE:
+		case AP_WPA2_PSK_SAE:
+		if (dut->ap_key_mgmt == AP_WPA2_PSK ||
+		    dut->ap_key_mgmt == AP_WPA2_SAE ||
+		    dut->ap_key_mgmt == AP_WPA2_PSK_SAE)
 			run_system(dut, "cfg -a AP_WPA=2");
 		else if (dut->ap_key_mgmt == AP_WPA2_PSK_MIXED)
 			run_system(dut, "cfg -a AP_WPA=3");
 		else
 			run_system(dut, "cfg -a AP_WPA=1");
+		/* TODO: SAE configuration */
 		run_system(dut, "cfg -a AP_SECMODE=WPA");
 		run_system(dut, "cfg -a AP_SECFILE=PSK");
 		snprintf(buf, sizeof(buf), "cfg -a 'PSK_KEY=%s'",
@@ -4909,13 +4935,18 @@ static int cmd_ath_ap_config_commit(struct sigma_dut *dut,
 		case AP_WPA2_PSK:
 		case AP_WPA2_PSK_MIXED:
 		case AP_WPA_PSK:
-			if (dut->ap_key_mgmt == AP_WPA2_PSK)
+		case AP_WPA2_SAE:
+		case AP_WPA2_PSK_SAE:
+			if (dut->ap_key_mgmt == AP_WPA2_PSK ||
+			    dut->ap_key_mgmt == AP_WPA2_SAE ||
+			    dut->ap_key_mgmt == AP_WPA2_PSK_SAE)
 				run_system(dut, "cfg -a AP_WPA_2=2");
 			else if (dut->ap_key_mgmt == AP_WPA2_PSK_MIXED)
 				run_system(dut, "cfg -a AP_WPA_2=3");
 			else
 				run_system(dut, "cfg -a AP_WPA_2=1");
 			// run_system(dut, "cfg -a AP_WPA_2=2");
+			/* TODO: SAE configuration */
 			run_system(dut, "cfg -a AP_SECMODE_2=WPA");
 			run_system(dut, "cfg -a AP_SECFILE_2=PSK");
 			snprintf(buf, sizeof(buf), "cfg -a 'PSK_KEY_2=%s'",
@@ -5315,6 +5346,7 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 	char buf[500];
 	char path[100];
 	enum driver_type drv;
+	const char *key_mgmt;
 
 	drv = get_driver_type();
 
@@ -5483,24 +5515,39 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 	case AP_WPA2_PSK:
 	case AP_WPA2_PSK_MIXED:
 	case AP_WPA_PSK:
-		if (dut->ap_key_mgmt == AP_WPA2_PSK)
+	case AP_WPA2_SAE:
+	case AP_WPA2_PSK_SAE:
+		if (dut->ap_key_mgmt == AP_WPA2_PSK ||
+		    dut->ap_key_mgmt == AP_WPA2_SAE ||
+		    dut->ap_key_mgmt == AP_WPA2_PSK_SAE)
 			fprintf(f, "wpa=2\n");
 		else if (dut->ap_key_mgmt == AP_WPA2_PSK_MIXED)
 			fprintf(f, "wpa=3\n");
 		else
 			fprintf(f, "wpa=1\n");
-		fprintf(f, "wpa_key_mgmt=WPA-PSK\n");
+		if (dut->ap_key_mgmt == AP_WPA2_SAE)
+			key_mgmt = "SAE";
+		else if (dut->ap_key_mgmt == AP_WPA2_PSK_SAE)
+			key_mgmt = "WPA-PSK SAE";
+		else
+			key_mgmt = "WPA-PSK";
 		switch (dut->ap_pmf) {
 		case AP_PMF_DISABLED:
-			fprintf(f, "wpa_key_mgmt=WPA-PSK%s\n",
+			fprintf(f, "wpa_key_mgmt=%s%s\n", key_mgmt,
 				dut->ap_add_sha256 ? " WPA-PSK-SHA256" : "");
 			break;
 		case AP_PMF_OPTIONAL:
-			fprintf(f, "wpa_key_mgmt=WPA-PSK%s\n",
+			fprintf(f, "wpa_key_mgmt=%s%s\n", key_mgmt,
 				dut->ap_add_sha256 ? " WPA-PSK-SHA256" : "");
 			break;
 		case AP_PMF_REQUIRED:
-			fprintf(f, "wpa_key_mgmt=WPA-PSK-SHA256\n");
+			if (dut->ap_key_mgmt == AP_WPA2_SAE)
+				key_mgmt = "SAE";
+			else if (dut->ap_key_mgmt == AP_WPA2_PSK_SAE)
+				key_mgmt = "WPA-PSK-SHA256 SAE";
+			else
+				key_mgmt = "WPA-PSK-SHA256";
+			fprintf(f, "wpa_key_mgmt=%s\n", key_mgmt);
 			break;
 		}
 		if (dut->ap_cipher == AP_CCMP_TKIP)
@@ -5565,6 +5612,9 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	if (dut->rsne_override)
 		fprintf(f, "own_ie_override=%s\n", dut->rsne_override);
+
+	if (dut->ap_sae_group)
+		fprintf(f, "sae_groups=%d\n", dut->ap_sae_group);
 
 	if (dut->ap_p2p_mgmt)
 		fprintf(f, "manage_p2p=1\n");
@@ -6400,6 +6450,8 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	free(dut->rsne_override);
 	dut->rsne_override = NULL;
+
+	dut->ap_sae_group = 0;
 
 	if (dut->use_hostapd_pid_file) {
 		kill_hostapd_process_pid(dut);
