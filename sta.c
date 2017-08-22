@@ -1390,6 +1390,7 @@ static int cmd_sta_set_psk(struct sigma_dut *dut, struct sigma_conn *conn,
 			   struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
+	const char *type = get_param(cmd, "Type");
 	const char *ifname, *val, *alg;
 	int id;
 
@@ -1408,7 +1409,20 @@ static int cmd_sta_set_psk(struct sigma_dut *dut, struct sigma_conn *conn,
 	val = get_param(cmd, "keyMgmtType");
 	alg = get_param(cmd, "micAlg");
 
-	if (alg && strcasecmp(alg, "SHA-256") == 0) {
+	if (type && strcasecmp(type, "SAE") == 0) {
+		if (val && strcasecmp(val, "wpa2-ft") == 0) {
+			if (set_network(ifname, id, "key_mgmt", "FT-SAE") < 0)
+				return -2;
+		} else {
+			if (set_network(ifname, id, "key_mgmt", "SAE") < 0)
+				return -2;
+		}
+		if (wpa_command(ifname, "SET sae_groups ") != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to clear sae_groups to default");
+			return -2;
+		}
+	} else if (alg && strcasecmp(alg, "SHA-256") == 0) {
 		if (set_network(ifname, id, "key_mgmt", "WPA-PSK-SHA256") < 0)
 			return -2;
 	} else if (alg && strcasecmp(alg, "SHA-1") == 0) {
@@ -1436,6 +1450,18 @@ static int cmd_sta_set_psk(struct sigma_dut *dut, struct sigma_conn *conn,
 		return -1;
 	if (set_network_quoted(ifname, id, "psk", val) < 0)
 		return -2;
+
+	val = get_param(cmd, "ECGroupID");
+	if (val) {
+		char buf[50];
+
+		snprintf(buf, sizeof(buf), "SET sae_groups %u", atoi(val));
+		if (wpa_command(ifname, buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to clear sae_groups");
+			return -2;
+		}
+	}
 
 	return 1;
 }
@@ -1898,7 +1924,8 @@ static int cmd_sta_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	if (strcasecmp(type, "OPEN") == 0)
 		return sta_set_open(dut, conn, cmd);
-	if (strcasecmp(type, "PSK") == 0)
+	if (strcasecmp(type, "PSK") == 0 ||
+	    strcasecmp(type, "SAE") == 0)
 		return cmd_sta_set_psk(dut, conn, cmd);
 	if (strcasecmp(type, "EAPTLS") == 0)
 		return cmd_sta_set_eaptls(dut, conn, cmd);
