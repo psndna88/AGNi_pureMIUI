@@ -1452,6 +1452,13 @@ static int set_wpa_common(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 
 	dut->sta_pmf = STA_PMF_DISABLED;
+
+	if (dut->program == PROGRAM_OCE) {
+		dut->sta_pmf = STA_PMF_OPTIONAL;
+		if (set_network(ifname, id, "ieee80211w", "1") < 0)
+			return -2;
+	}
+
 	val = get_param(cmd, "PMF");
 	if (val) {
 		if (strcasecmp(val, "Required") == 0 ||
@@ -1587,7 +1594,7 @@ static int set_eap_common(struct sigma_dut *dut, struct sigma_conn *conn,
 			  const char *ifname, int username_identity,
 			  struct sigma_cmd *cmd)
 {
-	const char *val, *alg;
+	const char *val, *alg, *akm;
 	int id;
 	char buf[200];
 #ifdef ANDROID
@@ -1601,6 +1608,7 @@ static int set_eap_common(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	val = get_param(cmd, "keyMgmtType");
 	alg = get_param(cmd, "micAlg");
+	akm = get_param(cmd, "AKMSuiteType");
 
 	if (val && strcasecmp(val, "SuiteB") == 0) {
 		if (set_network(ifname, id, "key_mgmt", "WPA-EAP-SUITE-B-192") <
@@ -1619,6 +1627,34 @@ static int set_eap_common(struct sigma_dut *dut, struct sigma_conn *conn,
 		   dut->sta_pmf == STA_PMF_REQUIRED) {
 		if (set_network(ifname, id, "key_mgmt",
 				"WPA-EAP WPA-EAP-SHA256") < 0)
+			return -2;
+	} else if (akm && atoi(akm) == 14) {
+		if (dut->sta_pmf == STA_PMF_OPTIONAL ||
+		    dut->sta_pmf == STA_PMF_REQUIRED) {
+			if (set_network(ifname, id, "key_mgmt",
+					"WPA-EAP-SHA256 FILS-SHA256") < 0)
+				return -2;
+		} else {
+			if (set_network(ifname, id, "key_mgmt",
+					"WPA-EAP FILS-SHA256") < 0)
+				return -2;
+		}
+
+		if (set_network(ifname, id, "erp", "1") < 0)
+			return -2;
+	} else if (akm && atoi(akm) == 15) {
+		if (dut->sta_pmf == STA_PMF_OPTIONAL ||
+		    dut->sta_pmf == STA_PMF_REQUIRED) {
+			if (set_network(ifname, id, "key_mgmt",
+					"WPA-EAP-SHA256 FILS-SHA384") < 0)
+				return -2;
+		} else {
+			if (set_network(ifname, id, "key_mgmt",
+					"WPA-EAP FILS-SHA384") < 0)
+				return -2;
+		}
+
+		if (set_network(ifname, id, "erp", "1") < 0)
 			return -2;
 	} else if (dut->sta_pmf == STA_PMF_OPTIONAL) {
 		if (set_network(ifname, id, "key_mgmt",
@@ -5076,6 +5112,7 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 
 	wpa_command(intf, "WPS_ER_STOP");
 	wpa_command(intf, "FLUSH");
+	wpa_command(intf, "ERP_FLUSH");
 	wpa_command(intf, "SET radio_disabled 0");
 
 	if (dut->tmp_mac_addr && dut->set_macaddr) {
