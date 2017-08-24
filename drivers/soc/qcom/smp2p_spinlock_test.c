@@ -89,7 +89,7 @@ static void smp2p_ut_remote_spinlock_core(struct seq_file *s, int remote_pid,
 		UT_ASSERT_INT(ret, ==, 0);
 		UT_ASSERT_INT(
 			(int)wait_for_completion_timeout(
-					&cb_out.cb_completion, HZ * 2),
+					&cb_out.cb_completion, msecs_to_jiffies(2000)),
 			>, 0);
 		UT_ASSERT_INT(cb_out.cb_count, ==, 1);
 		UT_ASSERT_INT(cb_out.event_open, ==, 1);
@@ -100,7 +100,7 @@ static void smp2p_ut_remote_spinlock_core(struct seq_file *s, int remote_pid,
 		UT_ASSERT_INT(ret, ==, 0);
 		UT_ASSERT_INT(
 			(int)wait_for_completion_timeout(
-					&cb_in.cb_completion, HZ * 2),
+					&cb_in.cb_completion, msecs_to_jiffies(2000)),
 			>, 0);
 		UT_ASSERT_INT(cb_in.cb_count, ==, 1);
 		UT_ASSERT_INT(cb_in.event_open, ==, 1);
@@ -117,7 +117,7 @@ static void smp2p_ut_remote_spinlock_core(struct seq_file *s, int remote_pid,
 
 		UT_ASSERT_INT(
 			(int)wait_for_completion_timeout(
-					&cb_in.cb_completion, HZ * 2),
+					&cb_in.cb_completion, msecs_to_jiffies(2000)),
 			>, 0);
 		UT_ASSERT_INT(cb_in.cb_count, ==, 1);
 		UT_ASSERT_INT(cb_in.event_entry_update, ==, 1);
@@ -150,7 +150,7 @@ static void smp2p_ut_remote_spinlock_core(struct seq_file *s, int remote_pid,
 		spinlock_owner = 0;
 		test_request = 0x0;
 		SMP2P_SET_RMT_CMD_TYPE_REQ(test_request);
-		end = jiffies + (ut_remote_spinlock_run_time * HZ);
+		end = jiffies + (ut_remote_spinlock_run_time * msecs_to_jiffies(1000));
 		if (ut_remote_spinlock_run_time < 300) {
 				seq_printf(s, "\tRunning test for %u seconds; ",
 					ut_remote_spinlock_run_time);
@@ -233,7 +233,7 @@ static void smp2p_ut_remote_spinlock_core(struct seq_file *s, int remote_pid,
 		do {
 			UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_in.cb_completion, HZ * 2),
+					&cb_in.cb_completion, msecs_to_jiffies(2000)),
 				>, 0);
 			INIT_COMPLETION(cb_in.cb_completion);
 			ret = msm_smp2p_in_read(remote_pid,
@@ -537,7 +537,7 @@ static void smp2p_ut_remote_spinlock_ssr(struct seq_file *s)
 		queue_work(ws, &work_item.work);
 		UT_ASSERT_INT(
 			(int)wait_for_completion_timeout(
-					&work_item.try_lock, HZ * 2), >, 0);
+					&work_item.try_lock, msecs_to_jiffies(2000)), >, 0);
 		UT_ASSERT_INT((int)work_item.has_locked, ==, 0);
 		spinlock_owner = remote_spin_owner(smem_spinlock);
 		UT_ASSERT_INT(spinlock_owner, ==, SMEM_APPS);
@@ -545,7 +545,7 @@ static void smp2p_ut_remote_spinlock_ssr(struct seq_file *s)
 
 		UT_ASSERT_INT(
 			(int)wait_for_completion_timeout(
-					&work_item.locked, HZ * 2), >, 0);
+					&work_item.locked, msecs_to_jiffies(2000)), >, 0);
 
 		if (!failed)
 			seq_puts(s, "\tOK\n");
@@ -598,7 +598,7 @@ static void smp2p_ut_remote_spinlock_track_core(struct seq_file *s,
 		UT_ASSERT_INT(ret, ==, 0);
 		UT_ASSERT_INT(
 			(int)wait_for_completion_timeout(
-					&cb_out.cb_completion, HZ * 2),
+					&cb_out.cb_completion, msecs_to_jiffies(2000)),
 			>, 0);
 		UT_ASSERT_INT(cb_out.cb_count, ==, 1);
 		UT_ASSERT_INT(cb_out.event_open, ==, 1);
@@ -609,7 +609,7 @@ static void smp2p_ut_remote_spinlock_track_core(struct seq_file *s,
 		UT_ASSERT_INT(ret, ==, 0);
 		UT_ASSERT_INT(
 			(int)wait_for_completion_timeout(
-					&cb_in.cb_completion, HZ * 2),
+					&cb_in.cb_completion, msecs_to_jiffies(2000)),
 			>, 0);
 		UT_ASSERT_INT(cb_in.cb_count, ==, 1);
 		UT_ASSERT_INT(cb_in.event_open, ==, 1);
@@ -626,7 +626,7 @@ static void smp2p_ut_remote_spinlock_track_core(struct seq_file *s,
 
 		UT_ASSERT_INT(
 			(int)wait_for_completion_timeout(
-					&cb_in.cb_completion, HZ * 2),
+					&cb_in.cb_completion, msecs_to_jiffies(2000)),
 			>, 0);
 		UT_ASSERT_INT(cb_in.cb_count, ==, 1);
 		UT_ASSERT_INT(cb_in.event_entry_update, ==, 1);
