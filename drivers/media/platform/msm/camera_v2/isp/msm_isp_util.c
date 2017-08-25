@@ -338,7 +338,7 @@ int msm_isp_get_clk_info(struct vfe_device *vfe_dev,
 void msm_isp_get_timestamp(struct msm_isp_timestamp *time_stamp)
 {
 	struct timespec ts;
-#ifdef CONFIG_MACH_XIAOMI_KENZO_AGNI_CM_N
+#if defined CONFIG_MACH_XIAOMI_KENZO_AGNI_CM_N || defined CONFIG_MACH_XIAOMI_KENZO_AGNI_MIUI_N
 	get_monotonic_boottime(&ts);
 #else
 	ktime_get_ts(&ts);
