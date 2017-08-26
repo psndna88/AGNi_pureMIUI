@@ -77,11 +77,16 @@
 #define BLANK_FLAG_ULP	FB_BLANK_VSYNC_SUSPEND
 
 #define MDSS_BRIGHT_TO_BL_DIMMER(out, v) do {\
+					out = ((v) * (v) * 255  / 4095 + (v) * (255 - (v)) / 32);\
+					} while (0)
+#define MDSS_BRIGHT_TO_BL_DIMMER_LOW(out, v) do {\
 					out = (((v) - 2) * 255 / 250);\
 					} while (0)
 
 bool backlight_dimmer = false;
 module_param(backlight_dimmer, bool, 0755);
+bool backlight_low_dimmer = false;
+module_param(backlight_low_dimmer, bool, 0755);
 
 static struct fb_info *fbi_list[MAX_FBI_LIST];
 static int fbi_list_index;
@@ -143,10 +148,14 @@ static void mdss_fb_set_bl_brightness(struct led_classdev *led_cdev,
 		value = mfd->panel_info->brightness_max;
 
 	if (backlight_dimmer) {
-		if (value < 3)
-			bl_lvl = 1;
-		else
+		if (backlight_low_dimmer) {
+			if (value < 3)
+				bl_lvl = 1;
+			else
+				MDSS_BRIGHT_TO_BL_DIMMER_LOW(bl_lvl, value);
+		} else {
 			MDSS_BRIGHT_TO_BL_DIMMER(bl_lvl, value);
+		}
 	} else {
 		/* This maps android backlight level 0 to 255 into
 		   driver backlight level 0 to bl_max with rounding */
