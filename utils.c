@@ -117,6 +117,8 @@ enum sigma_program sigma_program_to_enum(const char *prog)
 		return PROGRAM_MBO;
 	if (strcasecmp(prog, "IoTLP") == 0)
 		return PROGRAM_IOTLP;
+	if (strcasecmp(prog, "DPP") == 0)
+		return PROGRAM_DPP;
 
 	return PROGRAM_UNKNOWN;
 }

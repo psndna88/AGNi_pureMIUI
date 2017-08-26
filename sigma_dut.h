@@ -586,7 +586,8 @@ struct sigma_dut {
 		PROGRAM_NAN,
 		PROGRAM_LOC,
 		PROGRAM_MBO,
-		PROGRAM_IOTLP
+		PROGRAM_IOTLP,
+		PROGRAM_DPP,
 	} program;
 
 	enum device_type {
