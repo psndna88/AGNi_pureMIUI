@@ -595,6 +595,10 @@ static void dpm_resume_early(pm_message_t state)
 {
 	ktime_t starttime = ktime_get();
 
+#ifdef CONFIG_BOEFFLA_WL_BLOCKER
+	pm_print_active_wakeup_sources();
+#endif
+
 	mutex_lock(&dpm_list_mtx);
 	while (!list_empty(&dpm_late_early_list)) {
 		struct device *dev = to_device(dpm_late_early_list.next);

@@ -320,3 +320,9 @@ config PM_SYNC_BEFORE_SUSPEND
 	bool "Sync file systems before suspend"
 	depends on PM
 	default y
+
+config BOEFFLA_WL_BLOCKER
+	bool "Boeffla generic wakelock blocker driver"
+	depends on PM
+	default N
+
