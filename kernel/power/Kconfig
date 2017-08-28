@@ -327,3 +327,7 @@ config ENERGY_MODEL
 config DEBUG_POWER_MI
 		bool "POWER debug config"
 		default n
+config	BOEFFLA_WL_BLOCKER
+		bool "Boeffla generic wakelock blocker driver"
+		depends on PM
+		default y
