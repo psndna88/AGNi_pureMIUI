@@ -764,6 +764,7 @@ int main(int argc, char *argv[])
 	sigma_dut.debug_level = DUT_MSG_INFO;
 	sigma_dut.default_timeout = 120;
 	sigma_dut.dialog_token = 0;
+	sigma_dut.dpp_conf_id = -1;
 	set_defaults(&sigma_dut);
 
 	for (;;) {

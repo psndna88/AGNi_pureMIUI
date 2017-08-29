@@ -644,6 +644,11 @@ struct sigma_dut {
 	const char *hostapd_bin;
 	int use_hostapd_pid_file;
 	const char *hostapd_ifname;
+	int hostapd_running;
+
+	int dpp_peer_bootstrap;
+	int dpp_local_bootstrap;
+	int dpp_conf_id;
 };
 
 
@@ -800,5 +805,10 @@ int loc_cmd_sta_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 int loc_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 				      struct sigma_conn *conn,
 				      struct sigma_cmd *cmd);
+
+/* dpp.c */
+int dpp_dev_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
+			struct sigma_cmd *cmd);
+
 
 #endif /* SIGMA_DUT_H */

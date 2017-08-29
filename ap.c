@@ -5891,6 +5891,7 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 #endif /* __QNXNTO__ */
 		}
 	}
+	dut->hostapd_running = 0;
 
 #ifdef ANDROID
 	/* Set proper conf file permissions so that hostapd process
@@ -6041,6 +6042,7 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		return 0;
 	}
 
+	dut->hostapd_running = 1;
 	return 1;
 }
 
@@ -6509,6 +6511,9 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	dut->sae_anti_clogging_threshold = -1;
 	dut->sae_reflection = 0;
 
+	dut->dpp_conf_id = -1;
+
+	dut->hostapd_running = 0;
 	if (dut->use_hostapd_pid_file) {
 		kill_hostapd_process_pid(dut);
 	} else if (kill_process(dut, "(hostapd)", 1, SIGTERM) == 0 ||

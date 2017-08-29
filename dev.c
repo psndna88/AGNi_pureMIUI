@@ -63,15 +63,21 @@ static int cmd_dev_set_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
 static int cmd_dev_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 			       struct sigma_cmd *cmd)
 {
-#ifdef MIRACAST
 	const char *program = get_param(cmd, "Program");
 
+#ifdef MIRACAST
 	if (program && (strcasecmp(program, "WFD") == 0 ||
-			strcasecmp(program, "DisplayR2") == 0))
+			strcasecmp(program, "DisplayR2") == 0)) {
+		if (get_param(cmd, "interface") == NULL)
+			return -1;
 		return miracast_dev_exec_action(dut, conn, cmd);
+	}
 #endif /* MIRACAST */
 
-       return -2;
+	if (program && strcasecmp(program, "DPP") == 0)
+		return dpp_dev_exec_action(dut, conn, cmd);
+
+	return -2;
 }
 
 
@@ -113,12 +119,20 @@ static int req_intf_prog(struct sigma_cmd *cmd)
 }
 
 
+static int req_prog(struct sigma_cmd *cmd)
+{
+	if (get_param(cmd, "program") == NULL)
+		return -1;
+	return 0;
+}
+
+
 void dev_register_cmds(void)
 {
 	sigma_dut_reg_cmd("dev_send_frame", req_intf_prog, cmd_dev_send_frame);
 	sigma_dut_reg_cmd("dev_set_parameter", req_intf_prog,
 			  cmd_dev_set_parameter);
-	sigma_dut_reg_cmd("dev_exec_action", req_intf_prog,
+	sigma_dut_reg_cmd("dev_exec_action", req_prog,
 			  cmd_dev_exec_action);
 	sigma_dut_reg_cmd("dev_configure_ie", req_intf, cmd_dev_configure_ie);
 }

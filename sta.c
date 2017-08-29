@@ -4952,6 +4952,8 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 	free(dut->sae_commit_override);
 	dut->sae_commit_override = NULL;
 
+	dut->dpp_conf_id = -1;
+
 	if (dut->program != PROGRAM_VHT)
 		return cmd_sta_p2p_reset(dut, conn, cmd);
 	return 1;
