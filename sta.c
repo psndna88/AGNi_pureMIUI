@@ -2477,6 +2477,28 @@ static int cmd_sta_set_wmm(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int find_network(struct sigma_dut *dut, const char *ssid)
+{
+	char list[4096];
+	char *pos;
+
+	sigma_dut_print(dut, DUT_MSG_DEBUG,
+			"Search for profile based on SSID: '%s'", ssid);
+	if (wpa_command_resp(get_station_ifname(), "LIST_NETWORKS",
+			     list, sizeof(list)) < 0)
+		return -1;
+	pos = strstr(list, ssid);
+	if (!pos || pos == list || pos[-1] != '\t' || pos[strlen(ssid)] != '\t')
+		return -1;
+
+	while (pos > list && pos[-1] != '\n')
+		pos--;
+	dut->infra_network_id = atoi(pos);
+	snprintf(dut->infra_ssid, sizeof(dut->infra_ssid), "%s", ssid);
+	return 0;
+}
+
+
 static int cmd_sta_associate(struct sigma_dut *dut, struct sigma_conn *conn,
 			     struct sigma_cmd *cmd)
 {
@@ -2531,11 +2553,14 @@ static int cmd_sta_associate(struct sigma_dut *dut, struct sigma_conn *conn,
 				return -2;
 		}
 	} else {
-		if (strcmp(ssid, dut->infra_ssid) != 0) {
-			printf("No network parameters known for network "
-			       "(ssid='%s')", ssid);
-			send_resp(dut, conn, SIGMA_ERROR, "ErrorCode,"
-				  "No network parameters known for network");
+		if (strcmp(ssid, dut->infra_ssid) == 0) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"sta_associate for the most recently added network");
+		} else if (find_network(dut, ssid) < 0) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"sta_associate for a previously stored network profile");
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Profile not found");
 			return 0;
 		}
 
