@@ -17,6 +17,7 @@
 		{ META_FLUSH,	"META_FLUSH" },				\
 		{ INMEM,	"INMEM" },				\
 		{ INMEM_DROP,	"INMEM_DROP" },				\
+		{ INMEM_INVALIDATE,	"INMEM_INVALIDATE" },		\
 		{ INMEM_REVOKE,	"INMEM_REVOKE" },			\
 		{ IPU,		"IN-PLACE" },				\
 		{ OPU,		"OUT-OF-PLACE" })
@@ -81,7 +82,8 @@
 		{ CP_FASTBOOT,	"Fastboot" },				\
 		{ CP_SYNC,	"Sync" },				\
 		{ CP_RECOVERY,	"Recovery" },				\
-		{ CP_DISCARD,	"Discard" })
+		{ CP_DISCARD,	"Discard" },				\
+		{ CP_UMOUNT | CP_TRIMMED,	"Umount,Trimmed" })
 
 struct victim_sel_policy;
 struct f2fs_map_blocks;
@@ -1078,7 +1080,7 @@ TRACE_EVENT(f2fs_write_checkpoint,
 		__entry->msg)
 );
 
-TRACE_EVENT(f2fs_issue_discard,
+DECLARE_EVENT_CLASS(f2fs_discard,
 
 	TP_PROTO(struct block_device *dev, block_t blkstart, block_t blklen),
 
@@ -1100,6 +1102,20 @@ TRACE_EVENT(f2fs_issue_discard,
 		show_dev(__entry->dev),
 		(unsigned long long)__entry->blkstart,
 		(unsigned long long)__entry->blklen)
+);
+
+DEFINE_EVENT(f2fs_discard, f2fs_queue_discard,
+
+	TP_PROTO(struct block_device *dev, block_t blkstart, block_t blklen),
+
+	TP_ARGS(dev, blkstart, blklen)
+);
+
+DEFINE_EVENT(f2fs_discard, f2fs_issue_discard,
+
+	TP_PROTO(struct block_device *dev, block_t blkstart, block_t blklen),
+
+	TP_ARGS(dev, blkstart, blklen)
 );
 
 TRACE_EVENT(f2fs_issue_reset_zone,
@@ -1126,26 +1142,29 @@ TRACE_EVENT(f2fs_issue_reset_zone,
 TRACE_EVENT(f2fs_issue_flush,
 
 	TP_PROTO(struct block_device *dev, unsigned int nobarrier,
-					unsigned int flush_merge),
+				unsigned int flush_merge, int ret),
 
-	TP_ARGS(dev, nobarrier, flush_merge),
+	TP_ARGS(dev, nobarrier, flush_merge, ret),
 
 	TP_STRUCT__entry(
 		__field(dev_t,	dev)
 		__field(unsigned int, nobarrier)
 		__field(unsigned int, flush_merge)
+		__field(int,  ret)
 	),
 
 	TP_fast_assign(
 		__entry->dev	= dev->bd_dev;
 		__entry->nobarrier = nobarrier;
 		__entry->flush_merge = flush_merge;
+		__entry->ret = ret;
 	),
 
-	TP_printk("dev = (%d,%d), %s %s",
+	TP_printk("dev = (%d,%d), %s %s, ret = %d",
 		show_dev(__entry->dev),
 		__entry->nobarrier ? "skip (nobarrier)" : "issue",
-		__entry->flush_merge ? " with flush_merge" : "")
+		__entry->flush_merge ? " with flush_merge" : "",
+		__entry->ret)
 );
 
 TRACE_EVENT(f2fs_lookup_extent_tree_start,
