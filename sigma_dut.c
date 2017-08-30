@@ -1066,6 +1066,7 @@ int main(int argc, char *argv[])
 	free(sigma_dut.btm_query_cand_list);
 	sigma_dut.btm_query_cand_list = NULL;
 	free(sigma_dut.rsne_override);
+	free(sigma_dut.ap_sae_groups);
 	sigma_dut_unreg_cmds(&sigma_dut);
 
 	return 0;

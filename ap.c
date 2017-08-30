@@ -1424,12 +1424,8 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	val = get_param(cmd, "ECGroupID");
 	if (val) {
-		dut->ap_sae_group = atoi(val);
-		if (dut->ap_sae_group == 0) {
-			send_resp(dut, conn, SIGMA_INVALID,
-				  "errorCode,Invalid ECGroupID");
-			return 0;
-		}
+		free(dut->ap_sae_groups);
+		dut->ap_sae_groups = strdup(val);
 	}
 
 	val = get_param(cmd, "ENCRYPT");
@@ -5613,8 +5609,8 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (dut->rsne_override)
 		fprintf(f, "own_ie_override=%s\n", dut->rsne_override);
 
-	if (dut->ap_sae_group)
-		fprintf(f, "sae_groups=%d\n", dut->ap_sae_group);
+	if (dut->ap_sae_groups)
+		fprintf(f, "sae_groups=%s\n", dut->ap_sae_groups);
 
 	if (dut->ap_p2p_mgmt)
 		fprintf(f, "manage_p2p=1\n");
@@ -6451,7 +6447,8 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	free(dut->rsne_override);
 	dut->rsne_override = NULL;
 
-	dut->ap_sae_group = 0;
+	free(dut->ap_sae_groups);
+	dut->ap_sae_groups = NULL;
 
 	if (dut->use_hostapd_pid_file) {
 		kill_hostapd_process_pid(dut);

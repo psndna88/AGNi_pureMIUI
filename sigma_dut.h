@@ -402,7 +402,7 @@ struct sigma_dut {
 		AP_PLAIN,
 		AP_CCMP_TKIP
 	} ap_cipher;
-	int ap_sae_group;
+	char *ap_sae_groups;
 	char ap_passphrase[65];
 	char ap_wepkey[27];
 	char ap_radius_ipaddr[20];
