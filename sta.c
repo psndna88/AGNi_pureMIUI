@@ -1422,6 +1422,21 @@ static int cmd_sta_set_psk(struct sigma_dut *dut, struct sigma_conn *conn,
 					"Failed to clear sae_groups to default");
 			return -2;
 		}
+	} else if (type && strcasecmp(type, "PSK-SAE") == 0) {
+		if (val && strcasecmp(val, "wpa2-ft") == 0) {
+			if (set_network(ifname, id, "key_mgmt",
+					"FT-SAE FT-PSK") < 0)
+				return -2;
+		} else {
+			if (set_network(ifname, id, "key_mgmt",
+					"SAE WPA-PSK") < 0)
+				return -2;
+		}
+		if (wpa_command(ifname, "SET sae_groups ") != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to clear sae_groups to default");
+			return -2;
+		}
 	} else if (alg && strcasecmp(alg, "SHA-256") == 0) {
 		if (set_network(ifname, id, "key_mgmt", "WPA-PSK-SHA256") < 0)
 			return -2;
@@ -1925,6 +1940,7 @@ static int cmd_sta_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (strcasecmp(type, "OPEN") == 0)
 		return sta_set_open(dut, conn, cmd);
 	if (strcasecmp(type, "PSK") == 0 ||
+	    strcasecmp(type, "PSK-SAE") == 0 ||
 	    strcasecmp(type, "SAE") == 0)
 		return cmd_sta_set_psk(dut, conn, cmd);
 	if (strcasecmp(type, "EAPTLS") == 0)
