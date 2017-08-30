@@ -1469,7 +1469,9 @@ eHalStatus sme_Open(tHalHandle hHal)
 eHalStatus sme_set11dinfo(tHalHandle hHal,  tpSmeConfigParams pSmeConfigParams)
 {
    eHalStatus status = eHAL_STATUS_FAILURE;
+#ifdef TRACE_RECORD
    tpAniSirGlobal pMac = PMAC_STRUCT( hHal );
+#endif
 
    MTRACE(vos_trace(VOS_MODULE_ID_SME,
                       TRACE_CODE_SME_RX_HDD_MSG_SET_11DINFO, NO_SESSION, 0));
@@ -1524,8 +1526,9 @@ eHalStatus sme_getSoftApDomain(tHalHandle hHal,  v_REGDOMAIN_t *domainIdSoftAp)
 eHalStatus sme_setRegInfo(tHalHandle hHal,  tANI_U8 *apCntryCode)
 {
    eHalStatus status = eHAL_STATUS_FAILURE;
+#ifdef TRACE_RECORD
    tpAniSirGlobal pMac = PMAC_STRUCT( hHal );
-
+#endif
    MTRACE(vos_trace(VOS_MODULE_ID_SME,
              TRACE_CODE_SME_RX_HDD_MSG_SET_REGINFO, NO_SESSION, 0));
    if (NULL == apCntryCode ) {
@@ -3073,7 +3076,25 @@ eHalStatus sme_ScanRequest(tHalHandle hHal, tANI_U8 sessionId, tCsrScanRequest *
     tpAniSirGlobal pMac = PMAC_STRUCT( hHal );
     MTRACE(vos_trace(VOS_MODULE_ID_SME,
            TRACE_CODE_SME_RX_HDD_MSG_SCAN_REQ, sessionId, pscanReq->scanType));
-    smsLog(pMac, LOG2, FL("enter"));
+
+    smsLog(pMac, LOG1,
+           FL("isCoexScoIndSet %d disable_scan_during_sco %d is_disconnected %d"),
+           pMac->isCoexScoIndSet,
+           pMac->scan.disable_scan_during_sco,
+           csrIsConnStateDisconnected(pMac, sessionId));
+
+    if (pMac->isCoexScoIndSet && pMac->scan.disable_scan_during_sco &&
+        csrIsConnStateDisconnected(pMac, sessionId)) {
+        csrScanFlushResult(pMac);
+        pMac->scan.disable_scan_during_sco_timer_info.callback = callback;
+        pMac->scan.disable_scan_during_sco_timer_info.dev = pContext;
+        pMac->scan.disable_scan_during_sco_timer_info.scan_id= *pScanRequestID;
+
+        vos_timer_start(&pMac->scan.disable_scan_during_sco_timer,
+                                                CSR_DISABLE_SCAN_DURING_SCO);
+        return eHAL_STATUS_SUCCESS;
+    }
+
     do
     {
         if(pMac->scan.fScanEnable &&
@@ -13016,7 +13037,9 @@ eHalStatus sme_GetValidChannelsByBand (tHalHandle hHal, tANI_U8 wifiBand,
 {
     eHalStatus status                                   = eHAL_STATUS_SUCCESS;
     tANI_U8 chanList[WNI_CFG_VALID_CHANNEL_LIST_LEN]    = {0};
+#ifdef TRACE_RECORD
     tpAniSirGlobal pMac                                 = PMAC_STRUCT(hHal);
+#endif
     tANI_U8 numChannels                                 = 0;
     tANI_U8 i                                           = 0;
     tANI_U32 totValidChannels                 = WNI_CFG_VALID_CHANNEL_LIST_LEN;
@@ -13399,117 +13422,6 @@ eHalStatus sme_ResetBssHotlist (tHalHandle hHal,
     }
     return(status);
 }
-
-/**
- * sme_set_ssid_hotlist() - Set the SSID hotlist
- * @hal: SME handle
- * @request: set ssid hotlist request
- *
- * Return: eHalStatus
- */
-eHalStatus
-sme_set_ssid_hotlist(tHalHandle hal,
-             tSirEXTScanSetSsidHotListReqParams *request)
-{
-    eHalStatus status;
-    VOS_STATUS vstatus;
-    tpAniSirGlobal mac = PMAC_STRUCT(hal);
-    vos_msg_t vos_message;
-    tSirEXTScanSetSsidHotListReqParams *set_req;
-    int i;
-
-    set_req = vos_mem_malloc(sizeof(*set_req));
-    if (!set_req) {
-        VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
-              "%s: Not able to allocate memory for WDA_EXTSCAN_SET_SSID_HOTLIST_REQ",
-              __func__);
-        return eHAL_STATUS_FAILURE;
-    }
-
-    *set_req = *request;
-
-
-
-   for( i = 0; i < set_req->ssid_count; i++){
-
-        VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
-         "%s: SSID %s \n length: %d",
-              __func__, set_req->ssid[i].ssid.ssId, set_req->ssid[i].ssid.length);
-  }
-
-     MTRACE(vos_trace(VOS_MODULE_ID_SME,
-            TRACE_CODE_SME_RX_HDD_EXTSCAN_SET_SSID_HOTLIST, NO_SESSION, 0));
-
-    status = sme_AcquireGlobalLock(&mac->sme);
-    if (eHAL_STATUS_SUCCESS == status) {
-        /* Serialize the req through MC thread */
-        vos_message.bodyptr = set_req;
-        vos_message.type    = WDA_EXTSCAN_SET_SSID_HOTLIST_REQ;
-        vstatus = vos_mq_post_message(VOS_MQ_ID_WDA, &vos_message);
-        sme_ReleaseGlobalLock(&mac->sme);
-        if (!VOS_IS_STATUS_SUCCESS(vstatus)) {
-            vos_mem_free(set_req);
-            status = eHAL_STATUS_FAILURE;
-        }
-    } else {
-      VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
-            "%s: sme_AcquireGlobalLock error", __func__);
-        vos_mem_free(set_req);
-        status = eHAL_STATUS_FAILURE;
-    }
-    return status;
-}
-
-/**
- * sme_reset_ssid_hotlist() - Set the SSID hotlist
- * @hal: SME handle
- * @request: reset ssid hotlist request
- *
- * Return: eHalStatus
- */
-eHalStatus
-sme_reset_ssid_hotlist(tHalHandle hal,
-        tSirEXTScanResetSsidHotlistReqParams *request)
-{
-    eHalStatus status;
-    VOS_STATUS vstatus;
-    tpAniSirGlobal mac = PMAC_STRUCT(hal);
-    vos_msg_t vos_message;
-    tSirEXTScanResetSsidHotlistReqParams *set_req;
-
-    set_req = vos_mem_malloc(sizeof(*set_req));
-    if (!set_req) {
-        VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
-                "%s: Not able to allocate memory for WDA_EXTSCAN_SET_SSID_HOTLIST_REQ",
-                __func__);
-        return eHAL_STATUS_FAILURE;
-    }
-
-    *set_req = *request;
-
-    MTRACE(vos_trace(VOS_MODULE_ID_SME,
-            TRACE_CODE_SME_RX_HDD_EXTSCAN_RESET_SSID_HOTLIST, NO_SESSION, 0));
-
-    status = sme_AcquireGlobalLock(&mac->sme);
-    if (eHAL_STATUS_SUCCESS == status) {
-        /* Serialize the req through MC thread */
-        vos_message.bodyptr = set_req;
-        vos_message.type    = WDA_EXTSCAN_RESET_SSID_HOTLIST_REQ;
-        vstatus = vos_mq_post_message(VOS_MQ_ID_WDA, &vos_message);
-        sme_ReleaseGlobalLock(&mac->sme);
-        if (!VOS_IS_STATUS_SUCCESS(vstatus)) {
-            vos_mem_free(set_req);
-            status = eHAL_STATUS_FAILURE;
-        }
-    } else {
-        VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
-                 "%s: sme_AcquireGlobalLock error", __func__);
-        vos_mem_free(set_req);
-        status = eHAL_STATUS_FAILURE;
-    }
-    return status;
-}
-
 
 /* ---------------------------------------------------------------------------
     \fn sme_getCachedResults

@@ -465,8 +465,6 @@ typedef enum
   WDI_EXTSCAN_GET_CAPABILITIES_REQ               = 98,
   WDI_EXTSCAN_SET_BSSID_HOTLIST_REQ              = 99,
   WDI_EXTSCAN_RESET_BSSID_HOTLIST_REQ            = 100,
-  WDI_EXTSCAN_SET_SSID_HOTLIST_REQ               = 101,
-  WDI_EXTSCAN_RESET_SSID_HOTLIST_REQ             = 102,
 #endif
 
   WDI_SPOOF_MAC_ADDR_REQ                         = 103,
@@ -847,8 +845,6 @@ typedef enum
   WDI_EXTSCAN_GET_CAPABILITIES_RSP               = 98,
   WDI_EXTSCAN_SET_HOTLIST_BSSID_RSP              = 99,
   WDI_EXTSCAN_RESET_HOTLIST_BSSID_RSP            = 100,
-  WDI_EXTSCAN_SET_HOTLIST_SSID_RSP               = 101,
-  WDI_EXTSCAN_RESET_HOTLIST_SSID_RSP             = 102,
 #endif
   WDI_SPOOF_MAC_ADDR_RSP                         = 103,
   WDI_GET_FW_STATS_RSP                           = 104,
@@ -958,7 +954,6 @@ typedef enum
   WDI_HAL_EXTSCAN_SCAN_AVAILABLE_IND = WDI_HAL_IND_MIN + 24,
   WDI_HAL_EXTSCAN_RESULT_IND         = WDI_HAL_IND_MIN + 25,
   WDI_HAL_EXTSCAN_BSSID_HOTLIST_RESULT_IND    = WDI_HAL_IND_MIN + 26,
-  WDI_HAL_EXTSCAN_SSID_HOTLIST_RESULT_IND    = WDI_HAL_IND_MIN + 27,
 #endif
   WDI_TDLS_CHAN_SWITCH_REQ_RESP      = WDI_HAL_IND_MIN + 28,
   WDI_HAL_DEL_BA_IND                 = WDI_HAL_IND_MIN + 29,
@@ -6197,34 +6192,6 @@ WDI_ProcessEXTScanResetHotlistBSSIDRsp
 );
 
 WDI_Status
-WDI_ProcessEXTScanSetSSIDHotlistReq
-(
-  WDI_ControlBlockType*  pWDICtx,
-  WDI_EventInfoType*     pEventData
-);
-
-WDI_Status
-WDI_ProcessEXTScanSetHotlistSSIDRsp
-(
-  WDI_ControlBlockType*  pWDICtx,
-  WDI_EventInfoType*     pEventData
-);
-
-WDI_Status
-WDI_ProcessEXTScanResetSSIDHotlistReq
-(
-  WDI_ControlBlockType*  pWDICtx,
-  WDI_EventInfoType*     pEventData
-);
-
-WDI_Status
-WDI_ProcessEXTScanResetHotlistSSIDRsp
-(
-  WDI_ControlBlockType*  pWDICtx,
-  WDI_EventInfoType*     pEventData
-);
-
-WDI_Status
 WDI_ProcessHighPriorityDataInfoInd
 (
   WDI_ControlBlockType*  pWDICtx,
@@ -6251,14 +6218,6 @@ WDI_ProcessEXTScanBssidHotListResultInd
    WDI_ControlBlockType*  pWDICtx,
    WDI_EventInfoType*     pEventData
 );
-
-WDI_Status
-WDI_ProcessEXTScanSsidHotListResultInd
-(
-   WDI_ControlBlockType*  pWDICtx,
-   WDI_EventInfoType*     pEventData
-);
-
 
 #endif /* WLAN_FEATURE_EXTSCAN */
 

@@ -74,7 +74,7 @@
 #include "vos_packet.h"
 #include "wlan_qct_tl.h"
 #include "sysStartup.h"
-
+#include "macTrace.h"
 
 static void __limInitScanVars(tpAniSirGlobal pMac)
 {

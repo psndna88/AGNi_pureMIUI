@@ -1851,7 +1851,7 @@ void wlan_process_done_indication(uint8 type, uint32 reason_code)
             if ((type == WLAN_FW_LOGS) &&
                 (wlan_is_log_report_in_progress() == TRUE))
             {
-                pr_info("%s: Setting LOGGER_FATAL_EVENT %d\n",
+                pr_debug("%s: Setting LOGGER_FATAL_EVENT %d\n",
                          __func__, reason_code);
                 set_bit(LOGGER_FATAL_EVENT_POST, &gwlan_logging.event_flag);
                 wake_up_interruptible(&gwlan_logging.wait_queue);
@@ -1865,7 +1865,7 @@ void wlan_process_done_indication(uint8 type, uint32 reason_code)
 	{
 		if(wlan_is_log_report_in_progress() == TRUE)
 		{
-                        pr_info("%s: Setting LOGGER_FATAL_EVENT %d\n",
+                        pr_debug("%s: Setting LOGGER_FATAL_EVENT %d\n",
                                  __func__, reason_code);
 			set_bit(LOGGER_FATAL_EVENT_POST, &gwlan_logging.event_flag);
 			wake_up_interruptible(&gwlan_logging.wait_queue);

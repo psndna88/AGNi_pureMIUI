@@ -297,7 +297,6 @@ VOS_STATUS vos_watchdog_open
   }
   vos_mem_zero(pWdContext, sizeof(VosWatchdogContext));
   pWdContext->pVContext = pVosContext;
-  gpVosWatchdogContext = pWdContext;
 
   //Initialize the helper events and event queues
   init_completion(&pWdContext->WdStartEvent);
@@ -320,6 +319,7 @@ VOS_STATUS vos_watchdog_open
   }  
   else
   {
+     gpVosWatchdogContext = pWdContext;
      wake_up_process(pWdContext->WdThread);
   }
  /*
