@@ -1428,6 +1428,10 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_sae_groups = strdup(val);
 	}
 
+	val = get_param(cmd, "AntiCloggingThreshold");
+	if (val)
+		dut->sae_anti_clogging_threshold = atoi(val);
+
 	val = get_param(cmd, "ENCRYPT");
 	if (val) {
 		if (strcasecmp(val, "WEP") == 0) {
@@ -5612,6 +5616,10 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (dut->ap_sae_groups)
 		fprintf(f, "sae_groups=%s\n", dut->ap_sae_groups);
 
+	if (dut->sae_anti_clogging_threshold >= 0)
+		fprintf(f, "sae_anti_clogging_threshold=%d\n",
+			dut->sae_anti_clogging_threshold);
+
 	if (dut->ap_p2p_mgmt)
 		fprintf(f, "manage_p2p=1\n");
 
@@ -6449,6 +6457,8 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	free(dut->ap_sae_groups);
 	dut->ap_sae_groups = NULL;
+
+	dut->sae_anti_clogging_threshold = -1;
 
 	if (dut->use_hostapd_pid_file) {
 		kill_hostapd_process_pid(dut);

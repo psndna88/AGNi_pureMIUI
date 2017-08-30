@@ -403,6 +403,7 @@ struct sigma_dut {
 		AP_CCMP_TKIP
 	} ap_cipher;
 	char *ap_sae_groups;
+	int sae_anti_clogging_threshold;
 	char ap_passphrase[65];
 	char ap_wepkey[27];
 	char ap_radius_ipaddr[20];
