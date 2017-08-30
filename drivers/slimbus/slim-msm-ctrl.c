@@ -23,8 +23,8 @@
 #include <linux/pm_runtime.h>
 #include <linux/of.h>
 #include <linux/of_slimbus.h>
-#include <mach/sps.h>
-#include <mach/qdsp6v2/apr.h>
+#include <linux/msm-sps.h>
+#include <linux/qdsp6v2/apr.h>
 #include "slim-msm.h"
 
 #define MSM_SLIM_NAME	"msm_slim_ctrl"
@@ -207,7 +207,7 @@ static irqreturn_t msm_slim_interrupt(int irq, void *d)
 		 * signalling completion/exiting ISR
 		 */
 		mb();
-		msm_slim_manage_tx_msgq(dev, false, NULL);
+		msm_slim_manage_tx_msgq(dev, false, NULL, 0);
 	}
 	if (stat & MGR_INT_RX_MSG_RCVD) {
 		u32 rx_buf[10];
