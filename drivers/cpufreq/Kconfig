@@ -164,6 +164,12 @@ config CPU_FREQ_DEFAULT_GOV_CAFACTIVE
 	  loading your cpufreq low-level hardware driver, using the
 	  'cafactive' governor for latency-sensitive workloads.
 
+config CPU_FREQ_DEFAULT_GOV_DARKNESS
+	bool "darkness"
+	select CPU_FREQ_GOV_DARKNESS
+	help
+	Use the CPUFreq governor 'darkness' as default.
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -299,6 +305,26 @@ config CPU_FREQ_GOV_CONSERVATIVE
 	  For details, take a look at linux/Documentation/cpu-freq.
 
 	  If in doubt, say N.
+
+
+config CPU_FREQ_GOV_DARKNESS
+	tristate "'darkness' cpufreq governor"
+	depends on CPU_FREQ
+	help
+	  'darkness' - This driver adds a dynamic cpufreq policy governor
+	  designed for latency-sensitive workloads.
+
+	  This governor attempts to reduce the latency of clock
+	  increases so that the system is more responsive to
+	  darkness workloads.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called cpufreq_darkness.
+
+	  For details, take a look at linux/Documentation/cpu-freq.
+
+	  If in doubt, say N.
+
 
 config CPU_BOOST
 	tristate "Event base short term CPU freq boost"
@@ -449,3 +475,4 @@ config LAZYPLUG
 
 endif
 endmenu
+
