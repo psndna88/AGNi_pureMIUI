@@ -82,7 +82,6 @@ struct boost_policy {
 	spinlock_t lock;
 	struct fb_policy fb;
 	struct ib_config ib;
-	struct workqueue_struct *wq;
 	uint32_t state;
 };
 
@@ -203,7 +202,7 @@ static void ib_reboost_main(struct work_struct *work)
 
 	/* Only keep CPU0 boosted (more efficient) */
 	if (cancel_delayed_work_sync(&pcpu->unboost_work))
-		queue_delayed_work(b->wq, &pcpu->unboost_work,
+		queue_delayed_work(system_power_efficient_wq, &pcpu->unboost_work,
 			msecs_to_jiffies(ib->adj_duration_ms));
 
 	/* Clear reboost bit */
@@ -221,7 +220,7 @@ static void fb_boost_main(struct work_struct *work)
 	/* Immediately boost the online CPUs */
 	update_online_cpu_policy();
 
-	queue_delayed_work(b->wq, &fb->unboost_work,
+	queue_delayed_work(system_power_efficient_wq, &fb->unboost_work,
 				msecs_to_jiffies(fb->fb_duration_ms));
 }
 
@@ -335,7 +334,7 @@ static int fb_notifier_callback(struct notifier_block *nb,
 	if (state & WAKE_BOOST)
 		return NOTIFY_OK;
 
-	queue_work(b->wq, &fb->boost_work);
+	queue_work(system_power_efficient_wq, &fb->boost_work);
 
 	return NOTIFY_OK;
 }
@@ -363,12 +362,12 @@ static void cpu_ib_input_event(struct input_handle *handle, unsigned int type,
 	/* Continuous boosting (from constant user input) */
 	if (state & INPUT_BOOST) {
 		set_boost_bit(b, INPUT_REBOOST);
-		queue_work(b->wq, &ib->reboost_work);
+		queue_work(system_power_efficient_wq, &ib->reboost_work);
 		return;
 	}
 
 	set_boost_bit(b, INPUT_BOOST);
-	queue_work(b->wq, &ib->boost_work);
+	queue_work(system_power_efficient_wq, &ib->boost_work);
 }
 
 static int cpu_ib_input_connect(struct input_handler *handler,
@@ -459,7 +458,7 @@ static void ib_boost_cpus(struct boost_policy *b)
 			cpufreq_update_policy(cpu);
 
 		pcpu = per_cpu_ptr(ib->boost_info, cpu);
-		queue_delayed_work(b->wq, &pcpu->unboost_work,
+		queue_delayed_work(system_power_efficient_wq, &pcpu->unboost_work,
 				msecs_to_jiffies(ib->adj_duration_ms));
 	}
 }
@@ -763,22 +762,14 @@ static struct boost_policy *alloc_boost_policy(void)
 	if (!b)
 		return NULL;
 
-	b->wq = alloc_workqueue("cpu_ib_wq", WQ_HIGHPRI, 0);
-	if (!b->wq) {
-		pr_err("Failed to allocate workqueue\n");
-		goto free_b;
-	}
-
 	b->ib.boost_info = alloc_percpu(typeof(*b->ib.boost_info));
 	if (!b->ib.boost_info) {
 		pr_err("Failed to allocate percpu definition\n");
-		goto destroy_wq;
+		goto free_b;
 	}
 
 	return b;
 
-destroy_wq:
-	destroy_workqueue(b->wq);
 free_b:
 	kfree(b);
 	return NULL;
