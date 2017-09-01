@@ -31,7 +31,7 @@
 #include <linux/workqueue.h>
 #include <linux/kthread.h>
 #include <linux/slab.h>
-#include <linux/state_notifier.h>
+#include <linux/display_state.h>
 
 /* darkness version */
 #define DARKNESS_VERSION_MAJOR	(1)
@@ -63,21 +63,18 @@ struct cpufreq_darkness_cpuinfo {
 
 static DEFINE_PER_CPU(struct cpufreq_darkness_cpuinfo, cpuinfo);
 
-/* Realtime thread handles frequency scaling */
+/* realtime thread handles frequency scaling */
 static struct task_struct *speedchange_task;
 static cpumask_t speedchange_cpumask;
 static spinlock_t speedchange_cpumask_lock;
 static struct mutex gov_lock;
 
-/* State Notifier Support */
-static struct notifier_block darkness_state_notif;
-static bool suspended = false;
-
 /* Target load.  Lower values result in higher CPU speeds. */
 #define DEFAULT_TARGET_LOAD 90
 static unsigned int default_target_loads[] = {DEFAULT_TARGET_LOAD};
 
-#define DEFAULT_TIMER_RATE (20000)
+#define DEFAULT_TIMER_RATE (20 * USEC_PER_MSEC)
+#define SCREEN_OFF_TIMER_RATE (50 * USEC_PER_MSEC)
 #define DEFAULT_ABOVE_HISPEED_DELAY DEFAULT_TIMER_RATE
 static unsigned int default_above_hispeed_delay[] = {
 	DEFAULT_ABOVE_HISPEED_DELAY };
@@ -105,7 +102,7 @@ struct cpufreq_darkness_tunables {
 	 * The minimum amount of time to spend at a frequency before we can ramp
 	 * down.
 	 */
-#define DEFAULT_MIN_SAMPLE_TIME (80000)
+#define DEFAULT_MIN_SAMPLE_TIME (80 * USEC_PER_MSEC)
 	unsigned long min_sample_time;
 
 	/*
@@ -113,7 +110,7 @@ struct cpufreq_darkness_tunables {
 	 */
 	unsigned long timer_rate;
 	unsigned long prev_timer_rate;
-#define DEFAULT_TIMER_RATE_SCREENOFF (50000)
+#define DEFAULT_TIMER_RATE_SCREENOFF (50 * USEC_PER_MSEC)
 	unsigned long timer_rate_screenoff;
 
 	/*
@@ -128,7 +125,7 @@ struct cpufreq_darkness_tunables {
 	 * Max additional time to wait in idle, beyond timer_rate, at speeds
 	 * above minimum before wakeup to reduce speed, or -1 if unnecessary.
 	 */
-#define DEFAULT_TIMER_SLACK (40000)
+#define DEFAULT_TIMER_SLACK (4 * DEFAULT_TIMER_RATE)
 	int timer_slack_val;
 	bool io_is_busy;
 
@@ -151,10 +148,6 @@ struct cpufreq_darkness_tunables {
 
 	/* Improves frequency selection for more energy */
 	bool powersave_bias;
-
-	/* Maximum frequency while the screen is off */
-#define DEFAULT_SCREEN_OFF_MAX 1382400
-	unsigned long screen_off_max;
 };
 
 /* For cases where we have single governor instance for system */
@@ -164,7 +157,7 @@ static struct attribute_group *get_sysfs_attr(void);
 
 /* Round to starting jiffy of next evaluation window */
 static u64 round_to_nw_start(u64 jif,
-	struct cpufreq_darkness_tunables *tunables)
+			     struct cpufreq_darkness_tunables *tunables)
 {
 	unsigned long step = usecs_to_jiffies(tunables->timer_rate);
 	u64 ret;
@@ -190,15 +183,15 @@ static void cpufreq_darkness_timer_resched(
 	spin_lock_irqsave(&pcpu->load_lock, flags);
 	pcpu->time_in_idle =
 		get_cpu_idle_time(smp_processor_id(),
-			&pcpu->time_in_idle_timestamp,
-			tunables->io_is_busy);
+				  &pcpu->time_in_idle_timestamp,
+				  tunables->io_is_busy);
 	pcpu->cputime_speedadj = 0;
 	pcpu->cputime_speedadj_timestamp = pcpu->time_in_idle_timestamp;
 	expires = round_to_nw_start(pcpu->last_evaluated_jiffy, tunables);
 	mod_timer_pinned(&pcpu->cpu_timer, expires);
 
 	if (tunables->timer_slack_val >= 0 &&
-		pcpu->target_freq > pcpu->policy->min) {
+	    pcpu->target_freq > pcpu->policy->min) {
 		expires += usecs_to_jiffies(tunables->timer_slack_val);
 		mod_timer_pinned(&pcpu->cpu_slack_timer, expires);
 	}
@@ -220,7 +213,7 @@ static void cpufreq_darkness_timer_start(
 	pcpu->cpu_timer.expires = expires;
 	add_timer_on(&pcpu->cpu_timer, cpu);
 	if (tunables->timer_slack_val >= 0 &&
-		pcpu->target_freq > pcpu->policy->min) {
+	    pcpu->target_freq > pcpu->policy->min) {
 		expires += usecs_to_jiffies(tunables->timer_slack_val);
 		pcpu->cpu_slack_timer.expires = expires;
 		add_timer_on(&pcpu->cpu_slack_timer, cpu);
@@ -229,7 +222,7 @@ static void cpufreq_darkness_timer_start(
 	spin_lock_irqsave(&pcpu->load_lock, flags);
 	pcpu->time_in_idle =
 		get_cpu_idle_time(cpu, &pcpu->time_in_idle_timestamp,
-			tunables->io_is_busy);
+				  tunables->io_is_busy);
 	pcpu->cputime_speedadj = 0;
 	pcpu->cputime_speedadj_timestamp = pcpu->time_in_idle_timestamp;
 	spin_unlock_irqrestore(&pcpu->load_lock, flags);
@@ -246,7 +239,8 @@ static unsigned int freq_to_above_hispeed_delay(
 	spin_lock_irqsave(&tunables->above_hispeed_delay_lock, flags);
 
 	for (i = 0; i < tunables->nabove_hispeed_delay - 1 &&
-		freq >= tunables->above_hispeed_delay[i+1]; i += 2);
+			freq >= tunables->above_hispeed_delay[i+1]; i += 2)
+		;
 
 	ret = tunables->above_hispeed_delay[i];
 	spin_unlock_irqrestore(&tunables->above_hispeed_delay_lock, flags);
@@ -263,7 +257,8 @@ static unsigned int freq_to_targetload(
 	spin_lock_irqsave(&tunables->target_loads_lock, flags);
 
 	for (i = 0; i < tunables->ntarget_loads - 1 &&
-		freq >= tunables->target_loads[i+1]; i += 2);
+		    freq >= tunables->target_loads[i+1]; i += 2)
+		;
 
 	ret = tunables->target_loads[i];
 	spin_unlock_irqrestore(&tunables->target_loads_lock, flags);
@@ -276,7 +271,7 @@ static unsigned int freq_to_targetload(
  * target load given the current load.
  */
 static unsigned int choose_freq(struct cpufreq_darkness_cpuinfo *pcpu,
-	unsigned int loadadjfreq)
+		unsigned int loadadjfreq)
 {
 	unsigned int freq = pcpu->policy->cur;
 	unsigned int prevfreq, freqmin, freqmax;
@@ -296,8 +291,8 @@ static unsigned int choose_freq(struct cpufreq_darkness_cpuinfo *pcpu,
 		 */
 
 		if (cpufreq_frequency_table_target(
-			pcpu->policy, pcpu->freq_table, loadadjfreq / tl,
-			CPUFREQ_RELATION_L, &index))
+			    pcpu->policy, pcpu->freq_table, loadadjfreq / tl,
+			    CPUFREQ_RELATION_L, &index))
 			break;
 		freq = pcpu->freq_table[index].frequency;
 
@@ -311,9 +306,9 @@ static unsigned int choose_freq(struct cpufreq_darkness_cpuinfo *pcpu,
 				 * than freqmax.
 				 */
 				if (cpufreq_frequency_table_target(
-					pcpu->policy, pcpu->freq_table,
-					freqmax - 1, CPUFREQ_RELATION_H,
-					&index))
+					    pcpu->policy, pcpu->freq_table,
+					    freqmax - 1, CPUFREQ_RELATION_H,
+					    &index))
 					break;
 				freq = pcpu->freq_table[index].frequency;
 
@@ -338,9 +333,9 @@ static unsigned int choose_freq(struct cpufreq_darkness_cpuinfo *pcpu,
 				 * than freqmin.
 				 */
 				if (cpufreq_frequency_table_target(
-					pcpu->policy, pcpu->freq_table,
-					freqmin + 1, CPUFREQ_RELATION_L,
-					&index))
+					    pcpu->policy, pcpu->freq_table,
+					    freqmin + 1, CPUFREQ_RELATION_L,
+					    &index))
 					break;
 				freq = pcpu->freq_table[index].frequency;
 
@@ -361,7 +356,7 @@ static unsigned int choose_freq(struct cpufreq_darkness_cpuinfo *pcpu,
 }
 
 static unsigned int fastlane_freq(struct cpufreq_darkness_cpuinfo *pcpu,
-	unsigned int cpu_load)
+		unsigned int cpu_load)
 {
 	unsigned int freq;
 
@@ -413,6 +408,7 @@ static void cpufreq_darkness_timer(unsigned long data)
 	unsigned long flags;
 	u64 max_fvtime;
 	struct cpufreq_govinfo int_info;
+	bool display_on = is_display_on();
 	unsigned int this_hispeed_freq;
 
 	if (!down_read_trylock(&pcpu->enable_sem))
@@ -439,12 +435,12 @@ static void cpufreq_darkness_timer(unsigned long data)
 	int_info.load = loadadjfreq / pcpu->policy->max;
 	int_info.sampling_rate_us = tunables->timer_rate;
 	atomic_notifier_call_chain(&cpufreq_govinfo_notifier_list,
-		CPUFREQ_LOAD_CHANGE, &int_info);
+					CPUFREQ_LOAD_CHANGE, &int_info);
 
-	if (!suspended &&
+	if (display_on &&
 		tunables->timer_rate != tunables->prev_timer_rate)
 		tunables->timer_rate = tunables->prev_timer_rate;
-	else if (suspended &&
+	else if (!display_on &&
 		tunables->timer_rate != tunables->timer_rate_screenoff) {
 		tunables->prev_timer_rate = tunables->timer_rate;
 		tunables->timer_rate
@@ -460,34 +456,34 @@ static void cpufreq_darkness_timer(unsigned long data)
 	if (cpu_load <= tunables->go_lowspeed_load) {
 		new_freq = pcpu->policy->cpuinfo.min_freq;
 	} else {
-		if (cpu_load >= tunables->go_hispeed_load) {
-			if (pcpu->policy->cur < this_hispeed_freq) {
-				new_freq = this_hispeed_freq;
-			} else {
-				if (tunables->fastlane && cpu_load > tunables->fastlane_threshold)
-					new_freq = fastlane_freq(pcpu, cpu_load);
-				else
-					new_freq = choose_freq(pcpu, loadadjfreq);
-
-				if (new_freq < this_hispeed_freq)
-					new_freq = this_hispeed_freq;
-			}
-		} else {
-			if (tunables->fastlane && cpu_load > tunables->fastlane_threshold)
+	    if (cpu_load >= tunables->go_hispeed_load) {
+		    if (pcpu->policy->cur < this_hispeed_freq) {
+			    new_freq = this_hispeed_freq;
+		    } else {
+			    if (tunables->fastlane && cpu_load > tunables->fastlane_threshold)
 				new_freq = fastlane_freq(pcpu, cpu_load);
-			else
+			    else
 				new_freq = choose_freq(pcpu, loadadjfreq);
 
-			if (new_freq > this_hispeed_freq &&
-				pcpu->policy->cur < this_hispeed_freq)
+			    if (new_freq < this_hispeed_freq)
 				new_freq = this_hispeed_freq;
-		}
+		    }
+	    } else {
+		    if (tunables->fastlane && cpu_load > tunables->fastlane_threshold)
+			new_freq = fastlane_freq(pcpu, cpu_load);
+		    else
+			new_freq = choose_freq(pcpu, loadadjfreq);
+
+		    if (new_freq > this_hispeed_freq &&
+				pcpu->policy->cur < this_hispeed_freq)
+			new_freq = this_hispeed_freq;
+	    }
 	}
 
 	if (pcpu->policy->cur >= this_hispeed_freq &&
-		new_freq > pcpu->policy->cur &&
-		now - pcpu->pol_hispeed_val_time <
-		freq_to_above_hispeed_delay(tunables, pcpu->policy->cur)) {
+	    new_freq > pcpu->policy->cur &&
+	    now - pcpu->pol_hispeed_val_time <
+	    freq_to_above_hispeed_delay(tunables, pcpu->policy->cur)) {
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm;
 	}
@@ -495,8 +491,8 @@ static void cpufreq_darkness_timer(unsigned long data)
 	pcpu->loc_hispeed_val_time = now;
 
 	if (cpufreq_frequency_table_target(pcpu->policy, pcpu->freq_table,
-		new_freq, CPUFREQ_RELATION_L,
-		&index)) {
+					   new_freq, CPUFREQ_RELATION_L,
+					   &index)) {
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm;
 	}
@@ -504,9 +500,9 @@ static void cpufreq_darkness_timer(unsigned long data)
 	new_freq = pcpu->freq_table[index].frequency;
 
 	if (pcpu->target_freq >= pcpu->policy->max
-		&& new_freq < pcpu->target_freq
-		&& now - pcpu->max_freq_hyst_start_time <
-		tunables->max_freq_hysteresis) {
+	    && new_freq < pcpu->target_freq
+	    && now - pcpu->max_freq_hyst_start_time <
+	    tunables->max_freq_hysteresis) {
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm;
 	}
@@ -517,7 +513,7 @@ static void cpufreq_darkness_timer(unsigned long data)
 	 */
 	max_fvtime = max(pcpu->pol_floor_val_time, pcpu->loc_floor_val_time);
 	if (new_freq < pcpu->floor_freq &&
-		pcpu->target_freq >= pcpu->policy->cur) {
+	    pcpu->target_freq >= pcpu->policy->cur) {
 		if (now - max_fvtime < tunables->min_sample_time) {
 			spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 			goto rearm;
@@ -531,12 +527,12 @@ static void cpufreq_darkness_timer(unsigned long data)
 	if (new_freq > this_hispeed_freq) {
 		pcpu->floor_freq = new_freq;
 		if (pcpu->target_freq >= pcpu->policy->cur ||
-			new_freq >= pcpu->policy->cur)
+		    new_freq >= pcpu->policy->cur)
 			pcpu->loc_floor_val_time = now;
 	}
 
 	if (pcpu->target_freq == new_freq &&
-		pcpu->target_freq <= pcpu->policy->cur) {
+			pcpu->target_freq <= pcpu->policy->cur) {
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm;
 	}
@@ -590,6 +586,7 @@ static int cpufreq_darkness_speedchange_task(void *data)
 	unsigned long flags;
 	struct cpufreq_darkness_cpuinfo *pcpu;
 	struct cpufreq_darkness_tunables *tunables;
+	bool display_on = is_display_on();
 
 	while (1) {
 		set_current_state(TASK_INTERRUPTIBLE);
@@ -597,7 +594,7 @@ static int cpufreq_darkness_speedchange_task(void *data)
 
 		if (cpumask_empty(&speedchange_cpumask)) {
 			spin_unlock_irqrestore(&speedchange_cpumask_lock,
-				flags);
+					       flags);
 			schedule();
 
 			if (kthread_should_stop())
@@ -625,11 +622,6 @@ static int cpufreq_darkness_speedchange_task(void *data)
 				continue;
 			}
 
-			if (unlikely(suspended)) {
-				if (pcpu->target_freq > tunables->screen_off_max)
-				pcpu->target_freq = tunables->screen_off_max;
-			}
-
 			for_each_cpu(j, pcpu->policy->cpus) {
 				pjcpu = &per_cpu(cpuinfo, j);
 
@@ -643,14 +635,14 @@ static int cpufreq_darkness_speedchange_task(void *data)
 
 			if (max_freq != pcpu->policy->cur) {
 				tunables = pcpu->policy->governor_data;
-				if (tunables->powersave_bias || suspended)
+				if (tunables->powersave_bias || !display_on)
 					__cpufreq_driver_target(pcpu->policy,
-						max_freq,
-						CPUFREQ_RELATION_C);
+								max_freq,
+								CPUFREQ_RELATION_C);
 				else
 					__cpufreq_driver_target(pcpu->policy,
-						max_freq,
-						CPUFREQ_RELATION_H);
+								max_freq,
+								CPUFREQ_RELATION_H);
 				for_each_cpu(j, pcpu->policy->cpus) {
 					pjcpu = &per_cpu(cpuinfo, j);
 					pjcpu->pol_hispeed_val_time = hvt;
@@ -661,6 +653,32 @@ static int cpufreq_darkness_speedchange_task(void *data)
 		}
 	}
 
+	return 0;
+}
+
+static int load_change_callback(struct notifier_block *nb, unsigned long val,
+				void *data)
+{
+	unsigned long cpu = (unsigned long) data;
+	struct cpufreq_darkness_cpuinfo *pcpu = &per_cpu(cpuinfo, cpu);
+	struct cpufreq_darkness_tunables *tunables;
+
+	if (speedchange_task == current)
+		return 0;
+
+	if (!down_read_trylock(&pcpu->enable_sem))
+		return 0;
+	if (!pcpu->governor_enabled) {
+		up_read(&pcpu->enable_sem);
+		return 0;
+	}
+	tunables = pcpu->policy->governor_data;
+
+	del_timer(&pcpu->cpu_timer);
+	del_timer(&pcpu->cpu_slack_timer);
+	cpufreq_darkness_timer(cpu);
+
+	up_read(&pcpu->enable_sem);
 	return 0;
 }
 
@@ -765,7 +783,7 @@ static ssize_t show_target_loads(
 
 	for (i = 0; i < tunables->ntarget_loads; i++)
 		ret += sprintf(buf + ret, "%u%s", tunables->target_loads[i],
-			i & 0x1 ? ":" : " ");
+			       i & 0x1 ? ":" : " ");
 
 	sprintf(buf + ret - 1, "\n");
 	spin_unlock_irqrestore(&tunables->target_loads_lock, flags);
@@ -804,8 +822,8 @@ static ssize_t show_above_hispeed_delay(
 
 	for (i = 0; i < tunables->nabove_hispeed_delay; i++)
 		ret += sprintf(buf + ret, "%u%s",
-			tunables->above_hispeed_delay[i],
-			i & 0x1 ? ":" : " ");
+			       tunables->above_hispeed_delay[i],
+			       i & 0x1 ? ":" : " ");
 
 	sprintf(buf + ret - 1, "\n");
 	spin_unlock_irqrestore(&tunables->above_hispeed_delay_lock, flags);
@@ -844,13 +862,13 @@ static ssize_t store_above_hispeed_delay(
 }
 
 static ssize_t show_hispeed_freq(struct cpufreq_darkness_tunables *tunables,
-	char *buf)
+		char *buf)
 {
 	return sprintf(buf, "%u\n", tunables->hispeed_freq);
 }
 
 static ssize_t store_hispeed_freq(struct cpufreq_darkness_tunables *tunables,
-	const char *buf, size_t count)
+		const char *buf, size_t count)
 {
 	int ret;
 	long unsigned int val;
@@ -869,8 +887,8 @@ static ssize_t show_##file_name(					\
 	return snprintf(buf, PAGE_SIZE, "%u\n", tunables->file_name);	\
 }									\
 static ssize_t store_##file_name(					\
-	struct cpufreq_darkness_tunables *tunables,		\
-	const char *buf, size_t count)				\
+		struct cpufreq_darkness_tunables *tunables,		\
+		const char *buf, size_t count)				\
 {									\
 	int ret;							\
 	unsigned long int val;						\
@@ -884,13 +902,13 @@ static ssize_t store_##file_name(					\
 show_store_one(max_freq_hysteresis);
 
 static ssize_t show_go_hispeed_load(struct cpufreq_darkness_tunables
-	*tunables, char *buf)
+		*tunables, char *buf)
 {
 	return sprintf(buf, "%lu\n", tunables->go_hispeed_load);
 }
 
 static ssize_t store_go_hispeed_load(struct cpufreq_darkness_tunables
-	*tunables, const char *buf, size_t count)
+		*tunables, const char *buf, size_t count)
 {
 	int ret;
 	unsigned long val;
@@ -903,13 +921,13 @@ static ssize_t store_go_hispeed_load(struct cpufreq_darkness_tunables
 }
 
 static ssize_t show_min_sample_time(struct cpufreq_darkness_tunables
-	*tunables, char *buf)
+		*tunables, char *buf)
 {
 	return sprintf(buf, "%lu\n", tunables->min_sample_time);
 }
 
 static ssize_t store_min_sample_time(struct cpufreq_darkness_tunables
-	*tunables, const char *buf, size_t count)
+		*tunables, const char *buf, size_t count)
 {
 	int ret;
 	unsigned long val;
@@ -922,13 +940,13 @@ static ssize_t store_min_sample_time(struct cpufreq_darkness_tunables
 }
 
 static ssize_t show_timer_rate(struct cpufreq_darkness_tunables *tunables,
-	char *buf)
+		char *buf)
 {
 	return sprintf(buf, "%lu\n", tunables->timer_rate);
 }
 
 static ssize_t store_timer_rate(struct cpufreq_darkness_tunables *tunables,
-	const char *buf, size_t count)
+		const char *buf, size_t count)
 {
 	int ret;
 	unsigned long val, val_round;
@@ -948,13 +966,13 @@ static ssize_t store_timer_rate(struct cpufreq_darkness_tunables *tunables,
 }
 
 static ssize_t show_timer_slack(struct cpufreq_darkness_tunables *tunables,
-	char *buf)
+		char *buf)
 {
 	return sprintf(buf, "%d\n", tunables->timer_slack_val);
 }
 
 static ssize_t store_timer_slack(struct cpufreq_darkness_tunables *tunables,
-	const char *buf, size_t count)
+		const char *buf, size_t count)
 {
 	int ret;
 	unsigned long val;
@@ -968,13 +986,13 @@ static ssize_t store_timer_slack(struct cpufreq_darkness_tunables *tunables,
 }
 
 static ssize_t show_io_is_busy(struct cpufreq_darkness_tunables *tunables,
-	char *buf)
+		char *buf)
 {
 	return sprintf(buf, "%u\n", tunables->io_is_busy);
 }
 
 static ssize_t store_io_is_busy(struct cpufreq_darkness_tunables *tunables,
-	const char *buf, size_t count)
+		const char *buf, size_t count)
 {
 	int ret;
 	unsigned long val;
@@ -987,13 +1005,13 @@ static ssize_t store_io_is_busy(struct cpufreq_darkness_tunables *tunables,
 }
 
 static ssize_t show_align_windows(struct cpufreq_darkness_tunables *tunables,
-	char *buf)
+		char *buf)
 {
 	return sprintf(buf, "%u\n", tunables->align_windows);
 }
 
 static ssize_t store_align_windows(struct cpufreq_darkness_tunables *tunables,
-	const char *buf, size_t count)
+		const char *buf, size_t count)
 {
 	int ret;
 	unsigned long val;
@@ -1006,14 +1024,14 @@ static ssize_t store_align_windows(struct cpufreq_darkness_tunables *tunables,
 }
 
 static ssize_t show_fastlane(
-	struct cpufreq_darkness_tunables *tunables, char *buf)
+		struct cpufreq_darkness_tunables *tunables, char *buf)
 {
 	return snprintf(buf, PAGE_SIZE, "%d\n", tunables->fastlane);
 }
 
 static ssize_t store_fastlane(
-	struct cpufreq_darkness_tunables *tunables,
-	const char *buf, size_t count)
+			struct cpufreq_darkness_tunables *tunables,
+			const char *buf, size_t count)
 {
 	int ret;
 	unsigned long val;
@@ -1026,14 +1044,14 @@ static ssize_t store_fastlane(
 }
 
 static ssize_t show_fastlane_threshold(
-	struct cpufreq_darkness_tunables *tunables, char *buf)
+		struct cpufreq_darkness_tunables *tunables, char *buf)
 {
 	return snprintf(buf, PAGE_SIZE, "%d\n", tunables->fastlane_threshold);
 }
 
 static ssize_t store_fastlane_threshold(
-	struct cpufreq_darkness_tunables *tunables,
-	const char *buf, size_t count)
+			struct cpufreq_darkness_tunables *tunables,
+			const char *buf, size_t count)
 {
 	int ret;
 	unsigned long val;
@@ -1046,39 +1064,39 @@ static ssize_t store_fastlane_threshold(
 }
 
 static ssize_t show_timer_rate_screenoff(struct cpufreq_darkness_tunables
-	*tunables, char *buf)
+               *tunables, char *buf)
 {
-	return sprintf(buf, "%lu\n", tunables->timer_rate_screenoff);
+       return sprintf(buf, "%lu\n", tunables->timer_rate_screenoff);
 }
 
 static ssize_t store_timer_rate_screenoff(struct cpufreq_darkness_tunables
-	*tunables, const char *buf, size_t count)
+               *tunables, const char *buf, size_t count)
 {
-	int ret;
-	unsigned long val, val_round;
+       int ret;
+       unsigned long val, val_round;
 
-	ret = kstrtoul(buf, 0, &val);
-	if (ret < 0)
-		return ret;
+       ret = kstrtoul(buf, 0, &val);
+       if (ret < 0)
+               return ret;
 
-	val_round = jiffies_to_usecs(usecs_to_jiffies(val));
-	if (val != val_round)
-		pr_warn("timer_rate_screenoff not aligned to jiffy. Rounded up to %lu\n",
-			val_round);
+       val_round = jiffies_to_usecs(usecs_to_jiffies(val));
+       if (val != val_round)
+               pr_warn("timer_rate_screenoff not aligned to jiffy. Rounded up to %lu\n",
+                       val_round);
 
-	tunables->timer_rate_screenoff = val_round;
+       tunables->timer_rate_screenoff = val_round;
 
-	return count;
+       return count;
 }
 
 static ssize_t show_powersave_bias(struct cpufreq_darkness_tunables *tunables,
-	char *buf)
+		char *buf)
 {
 	return sprintf(buf, "%u\n", tunables->powersave_bias);
 }
 
 static ssize_t store_powersave_bias(struct cpufreq_darkness_tunables *tunables,
-	const char *buf, size_t count)
+		const char *buf, size_t count)
 {
 	int ret;
 	unsigned long val;
@@ -1091,13 +1109,13 @@ static ssize_t store_powersave_bias(struct cpufreq_darkness_tunables *tunables,
 }
 
 static ssize_t show_go_lowspeed_load(struct cpufreq_darkness_tunables
-	*tunables, char *buf)
+		*tunables, char *buf)
 {
 	return sprintf(buf, "%lu\n", tunables->go_lowspeed_load);
 }
 
 static ssize_t store_go_lowspeed_load(struct cpufreq_darkness_tunables
-	*tunables, const char *buf, size_t count)
+		*tunables, const char *buf, size_t count)
 {
 	int ret;
 	unsigned long val;
@@ -1106,32 +1124,6 @@ static ssize_t store_go_lowspeed_load(struct cpufreq_darkness_tunables
 	if (ret < 0)
 		return ret;
 	tunables->go_lowspeed_load = val;
-	return count;
-}
-
-static ssize_t show_screen_off_maxfreq(
-	struct cpufreq_darkness_tunables *tunables,
-	char *buf)
-{
-	return sprintf(buf, "%lu\n", tunables->screen_off_max);
-}
-
-static ssize_t store_screen_off_maxfreq(
-	struct cpufreq_darkness_tunables *tunables,
-	const char *buf, size_t count)
-{
-	int ret;
-	unsigned long val;
-
-	ret = strict_strtoul(buf, 0, &val);
-	if (ret < 0)
-		return ret;
-
-	if (val < 1190400)
-		tunables->screen_off_max = DEFAULT_SCREEN_OFF_MAX;
-	else
-		tunables->screen_off_max = val;
-
 	return count;
 }
 
@@ -1186,7 +1178,6 @@ show_store_gov_pol_sys(max_freq_hysteresis);
 show_store_gov_pol_sys(fastlane);
 show_store_gov_pol_sys(fastlane_threshold);
 show_store_gov_pol_sys(powersave_bias);
-show_store_gov_pol_sys(screen_off_maxfreq);
 
 #define gov_sys_attr_rw(_name)						\
 static struct global_attr _name##_gov_sys =				\
@@ -1215,7 +1206,6 @@ gov_sys_pol_attr_rw(max_freq_hysteresis);
 gov_sys_pol_attr_rw(fastlane);
 gov_sys_pol_attr_rw(fastlane_threshold);
 gov_sys_pol_attr_rw(powersave_bias);
-gov_sys_pol_attr_rw(screen_off_maxfreq);
 
 /* One Governor instance for entire system */
 static struct attribute *darkness_attributes_gov_sys[] = {
@@ -1234,7 +1224,6 @@ static struct attribute *darkness_attributes_gov_sys[] = {
 	&fastlane_gov_sys.attr,
 	&fastlane_threshold_gov_sys.attr,
 	&powersave_bias_gov_sys.attr,
-	&screen_off_maxfreq_gov_sys.attr,
 	NULL,
 };
 
@@ -1260,7 +1249,6 @@ static struct attribute *darkness_attributes_gov_pol[] = {
 	&fastlane_gov_pol.attr,
 	&fastlane_threshold_gov_pol.attr,
 	&powersave_bias_gov_pol.attr,
-	&screen_off_maxfreq_gov_pol.attr,
 	NULL,
 };
 
@@ -1278,8 +1266,8 @@ static struct attribute_group *get_sysfs_attr(void)
 }
 
 static int cpufreq_darkness_idle_notifier(struct notifier_block *nb,
-	unsigned long val,
-	void *data)
+					     unsigned long val,
+					     void *data)
 {
 	if (val == IDLE_END)
 		cpufreq_darkness_idle_end();
@@ -1292,7 +1280,7 @@ static struct notifier_block cpufreq_darkness_idle_nb = {
 };
 
 static void save_tunables(struct cpufreq_policy *policy,
-	struct cpufreq_darkness_tunables *tunables)
+			  struct cpufreq_darkness_tunables *tunables)
 {
 	int cpu;
 	struct cpufreq_darkness_cpuinfo *pcpu;
@@ -1308,7 +1296,7 @@ static void save_tunables(struct cpufreq_policy *policy,
 }
 
 static struct cpufreq_darkness_tunables *alloc_tunable(
-	struct cpufreq_policy *policy)
+					struct cpufreq_policy *policy)
 {
 	struct cpufreq_darkness_tunables *tunables;
 
@@ -1332,7 +1320,6 @@ static struct cpufreq_darkness_tunables *alloc_tunable(
 	tunables->timer_slack_val = DEFAULT_TIMER_SLACK;
 	tunables->fastlane = false;
 	tunables->fastlane_threshold = 50;
-	tunables->screen_off_max = DEFAULT_SCREEN_OFF_MAX;
 
 	spin_lock_init(&tunables->target_loads_lock);
 	spin_lock_init(&tunables->above_hispeed_delay_lock);
@@ -1342,7 +1329,7 @@ static struct cpufreq_darkness_tunables *alloc_tunable(
 }
 
 static struct cpufreq_darkness_tunables *restore_tunables(
-	struct cpufreq_policy *policy)
+						struct cpufreq_policy *policy)
 {
 	int cpu;
 
@@ -1355,7 +1342,7 @@ static struct cpufreq_darkness_tunables *restore_tunables(
 }
 
 static int cpufreq_governor_darkness(struct cpufreq_policy *policy,
-	unsigned int event)
+		unsigned int event)
 {
 	int rc;
 	unsigned int j;
@@ -1406,7 +1393,7 @@ static int cpufreq_governor_darkness(struct cpufreq_policy *policy,
 		if (!policy->governor->initialized) {
 			idle_notifier_register(&cpufreq_darkness_idle_nb);
 			cpufreq_register_notifier(&cpufreq_notifier_block,
-				CPUFREQ_TRANSITION_NOTIFIER);
+					CPUFREQ_TRANSITION_NOTIFIER);
 		}
 
 		break;
@@ -1415,12 +1402,12 @@ static int cpufreq_governor_darkness(struct cpufreq_policy *policy,
 		if (!--tunables->usage_count) {
 			if (policy->governor->initialized == 1) {
 				cpufreq_unregister_notifier(&cpufreq_notifier_block,
-					CPUFREQ_TRANSITION_NOTIFIER);
+						CPUFREQ_TRANSITION_NOTIFIER);
 				idle_notifier_unregister(&cpufreq_darkness_idle_nb);
 			}
 
 			sysfs_remove_group(get_governor_parent_kobj(policy),
-				get_sysfs_attr());
+					get_sysfs_attr());
 			common_tunables = NULL;
 		}
 
@@ -1473,7 +1460,7 @@ static int cpufreq_governor_darkness(struct cpufreq_policy *policy,
 
 	case CPUFREQ_GOV_LIMITS:
 		__cpufreq_driver_target(policy,
-			policy->cur, CPUFREQ_RELATION_L);
+				policy->cur, CPUFREQ_RELATION_L);
 		for_each_cpu(j, policy->cpus) {
 			pcpu = &per_cpu(cpuinfo, j);
 
@@ -1511,26 +1498,6 @@ static void cpufreq_darkness_nop_timer(unsigned long data)
 {
 }
 
-static int state_notifier_callback(struct notifier_block *this,
-	unsigned long event, void *data)
-{
-	if (!suspended)
-		return NOTIFY_OK;
-
-	switch (event) {
-		case STATE_NOTIFIER_ACTIVE:
-			suspended = false;
-			break;
-		case STATE_NOTIFIER_SUSPEND:
-			suspended = true;
-			break;
-		default:
-			break;
-	}
-
-	return NOTIFY_OK;
-}
-
 static int __init cpufreq_darkness_init(void)
 {
 	unsigned int i;
@@ -1554,14 +1521,9 @@ static int __init cpufreq_darkness_init(void)
 	mutex_init(&gov_lock);
 	speedchange_task =
 		kthread_create(cpufreq_darkness_speedchange_task, NULL,
-			"cfdarkness");
+			       "cfdarkness");
 	if (IS_ERR(speedchange_task))
 		return PTR_ERR(speedchange_task);
-
-	/* Register Darkness to State Notifier */
-	darkness_state_notif.notifier_call = state_notifier_callback;
-	if (state_register_client(&darkness_state_notif))
-		pr_err("Failed to register State notifier callback\n");
 
 	sched_setscheduler_nocheck(speedchange_task, SCHED_FIFO, &param);
 	get_task_struct(speedchange_task);
@@ -1586,9 +1548,6 @@ static void __exit cpufreq_darkness_exit(void)
 	cpufreq_unregister_governor(&cpufreq_gov_darkness);
 	kthread_stop(speedchange_task);
 	put_task_struct(speedchange_task);
-
-	/* Unregister Darkness to State Notifier */
-	state_unregister_client(&darkness_state_notif);
 
 	for_each_possible_cpu(cpu) {
 		pcpu = &per_cpu(cpuinfo, cpu);
