@@ -638,6 +638,7 @@ struct sigma_dut {
 	char *non_pref_ch_list; /* MBO: non-preferred channel report */
 	char *btm_query_cand_list; /* Candidate list for BTM Query */
 
+	char *sae_commit_override;
 	char *rsne_override;
 	const char *hostapd_bin;
 	int use_hostapd_pid_file;

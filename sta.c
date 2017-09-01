@@ -1539,6 +1539,12 @@ static int cmd_sta_set_psk(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
+	val = get_param(cmd, "InvalidSAEElement");
+	if (val) {
+		free(dut->sae_commit_override);
+		dut->sae_commit_override = strdup(val);
+	}
+
 	return 1;
 }
 
@@ -2369,6 +2375,16 @@ static int cmd_sta_associate(struct sigma_dut *dut, struct sigma_conn *conn,
 		if (wpa_command(get_station_ifname(), buf) < 0) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,Failed to set DEV_CONFIGURE_IE RSNE override");
+			return 0;
+		}
+	}
+
+	if (dut->sae_commit_override) {
+		snprintf(buf, sizeof(buf), "SET sae_commit_override %s",
+			 dut->sae_commit_override);
+		if (wpa_command(get_station_ifname(), buf) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to set SAE commit override");
 			return 0;
 		}
 	}
@@ -4932,6 +4948,9 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 
 	free(dut->rsne_override);
 	dut->rsne_override = NULL;
+
+	free(dut->sae_commit_override);
+	dut->sae_commit_override = NULL;
 
 	if (dut->program != PROGRAM_VHT)
 		return cmd_sta_p2p_reset(dut, conn, cmd);

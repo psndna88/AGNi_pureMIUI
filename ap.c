@@ -1439,6 +1439,12 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (val)
 		dut->sae_reflection = strcasecmp(val, "SAE") == 0;
 
+	val = get_param(cmd, "InvalidSAEElement");
+	if (val) {
+		free(dut->sae_commit_override);
+		dut->sae_commit_override = strdup(val);
+	}
+
 	val = get_param(cmd, "ENCRYPT");
 	if (val) {
 		if (strcasecmp(val, "WEP") == 0) {
@@ -5648,6 +5654,10 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (dut->rsne_override)
 		fprintf(f, "own_ie_override=%s\n", dut->rsne_override);
 
+	if (dut->sae_commit_override)
+		fprintf(f, "sae_commit_override=%s\n",
+			dut->sae_commit_override);
+
 	if (dut->ap_sae_groups)
 		fprintf(f, "sae_groups=%s\n", dut->ap_sae_groups);
 
@@ -6491,6 +6501,9 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	free(dut->rsne_override);
 	dut->rsne_override = NULL;
+
+	free(dut->sae_commit_override);
+	dut->sae_commit_override = NULL;
 
 	free(dut->ap_sae_groups);
 	dut->ap_sae_groups = NULL;
