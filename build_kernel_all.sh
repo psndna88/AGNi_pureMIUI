@@ -2,7 +2,7 @@
 export KERNELDIR=`readlink -f .`
 cd $KERNELDIR;
 
-TEMP_DIR=$KERNELDIR/TEMP_KENZO_BUILDS_RUN_STORE
+TEMP_DIR=$KERNELDIR/../TEMP_KENZO_BUILDS_RUN_STORE
 mkdir -p $TEMP_DIR
 rm -rf BUILT_kenzo-miuiMM BUILT_kenzo-miuiN BUILT_kenzo-cmMM BUILT_kenzo-cmN .config .config.old
 
