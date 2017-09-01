@@ -382,6 +382,7 @@ struct sigma_dut {
 		AP_WPA2_PSK_MIXED,
 		AP_WPA2_SAE,
 		AP_WPA2_PSK_SAE,
+		AP_SUITEB,
 	} ap_key_mgmt;
 	enum ap_tag_key_mgmt {
 		AP2_OPEN,
@@ -400,7 +401,8 @@ struct sigma_dut {
 		AP_TKIP,
 		AP_WEP,
 		AP_PLAIN,
-		AP_CCMP_TKIP
+		AP_CCMP_TKIP,
+		AP_GCMP_256,
 	} ap_cipher;
 	char *ap_sae_groups;
 	int sae_anti_clogging_threshold;

@@ -1393,6 +1393,9 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 			   strcasecmp(val, "WPA2-Ent") == 0) {
 			dut->ap_key_mgmt = AP_WPA2_EAP;
 			dut->ap_cipher = AP_CCMP;
+		} else if (strcasecmp(val, "SuiteB") == 0) {
+			dut->ap_key_mgmt = AP_SUITEB;
+			dut->ap_cipher = AP_GCMP_256;
 		} else if (strcasecmp(val, "WPA-PSK") == 0) {
 			dut->ap_key_mgmt = AP_WPA_PSK;
 			dut->ap_cipher = AP_TKIP;
@@ -2390,6 +2393,11 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 				 dut->ap_radius_password);
 			owrt_ap_set_vap(dut, vap_count, "auth_secret", buf);
 			break;
+		case AP_SUITEB:
+			/* TODO */
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"SuiteB not supported");
+			break;
 		}
 
 		if (!dut->ap_is_dual)
@@ -3200,6 +3208,7 @@ static int cmd_wcn_ap_config_commit(struct sigma_dut *dut,
 	case AP_WPA2_EAP:
 	case AP_WPA2_EAP_MIXED:
 	case AP_WPA_EAP:
+	case AP_SUITEB:
 		/* Not supported */
 		break;
 	}
@@ -4904,6 +4913,10 @@ static int cmd_ath_ap_config_commit(struct sigma_dut *dut,
 			 dut->ap_radius_password);
 		run_system(dut, buf);
 		break;
+	case AP_SUITEB:
+		/* TODO */
+		sigma_dut_print(dut, DUT_MSG_ERROR, "SuiteB not supported");
+		break;
 	}
 
 	if (dut->ap_is_dual) {
@@ -4986,6 +4999,11 @@ static int cmd_ath_ap_config_commit(struct sigma_dut *dut,
 			snprintf(buf, sizeof(buf), "cfg -a AP_AUTH_SECRET_2=%s",
 				 dut->ap_radius_password);
 			run_system(dut, buf);
+			break;
+		case AP_SUITEB:
+			/* TODO */
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"SuiteB not supported");
 			break;
 		}
 
@@ -5587,6 +5605,19 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 			fprintf(f, "wpa_pairwise=TKIP\n");
 		else
 			fprintf(f, "wpa_pairwise=CCMP\n");
+		fprintf(f, "auth_server_addr=%s\n", dut->ap_radius_ipaddr);
+		if (dut->ap_radius_port)
+			fprintf(f, "auth_server_port=%d\n",
+				dut->ap_radius_port);
+		fprintf(f, "auth_server_shared_secret=%s\n",
+			dut->ap_radius_password);
+		break;
+	case AP_SUITEB:
+		fprintf(f, "ieee8021x=1\n");
+		fprintf(f, "wpa=2\n");
+		fprintf(f, "wpa_key_mgmt=WPA-EAP-SUITE-B-192\n");
+		fprintf(f, "wpa_pairwise=GCMP-256\n");
+		fprintf(f, "group_mgmt_cipher=BIP-GMAC-256\n");
 		fprintf(f, "auth_server_addr=%s\n", dut->ap_radius_ipaddr);
 		if (dut->ap_radius_port)
 			fprintf(f, "auth_server_port=%d\n",
