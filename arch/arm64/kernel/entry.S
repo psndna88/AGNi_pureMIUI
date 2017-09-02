@@ -508,6 +508,7 @@ el0_inv:
 	mov	x1, #BAD_SYNC
 	mrs	x2, esr_el1
 	bl	bad_el0_sync
+	b	ret_to_user
 ENDPROC(el0_sync)
 
 	.align	6
