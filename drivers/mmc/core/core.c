@@ -31,6 +31,7 @@
 #include <linux/pm.h>
 #include <linux/jiffies.h>
 
+#define CREATE_TRACE_POINTS
 #include <trace/events/mmc.h>
 
 #include <linux/mmc/card.h>
