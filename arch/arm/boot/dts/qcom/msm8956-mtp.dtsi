@@ -116,12 +116,13 @@
  	};
 };
 
+#if 0
 &blsp1_uart2 {
 	status = "ok";
 	pinctrl-names = "default";
 	pinctrl-0 = <&uart_console_sleep>;
 };
-
+#endif
 
 &spmi_bus {
 	qcom,pmi8950@3 {
