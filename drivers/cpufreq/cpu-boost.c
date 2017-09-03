@@ -390,7 +390,10 @@ static int cpu_boost_init(void)
 	int cpu, ret;
 	struct cpu_sync *s;
 
-	cpu_boost_wq = alloc_workqueue("cpuboost_wq", WQ_HIGHPRI, 0);
+	cpu_boost_wq =
+	    alloc_workqueue("cpuboost_wq",
+			    WQ_HIGHPRI | WQ_UNBOUND, 0);
+
 	if (!cpu_boost_wq)
 		return -EFAULT;
 
