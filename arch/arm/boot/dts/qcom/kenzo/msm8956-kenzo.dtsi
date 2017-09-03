@@ -22,7 +22,7 @@
 	interrupt-parent = <&intc>;
 
 	chosen {
-		bootargs = "boot_cpus=0,1,2,3,4,5 sched_enable_hmp=1";
+		bootargs = "boot_cpus=0,1,2,3,4,5 sched_enable_hmp=1 sched_enable_power_aware=1";
 	};
 
 	aliases {
@@ -793,7 +793,7 @@
 		qcom,sensor-id = <9>;
 		qcom,poll-ms = <250>;
 		qcom,limit-temp = <60>;
-		qcom,temp-hysteresis = <10>;
+		qcom,temp-hysteresis = <100>;
 		qcom,freq-step = <2>;
 		qcom,core-limit-temp = <80>;
 		qcom,core-temp-hysteresis = <10>;
@@ -807,7 +807,7 @@
 		qcom,online-hotplug-core;
 		qcom,synchronous-cluster-id = <0 1>;
 		qcom,synchronous-cluster-map = <0 4 &CPU0 &CPU1 &CPU2 &CPU3>,
-						<1 4 &CPU4 &CPU5 &CPU6 &CPU7>;
+						<1 4 &CPU4 &CPU5>;
 		qcom,disable-cx-phase-ctrl;
 		qcom,disable-gfx-phase-ctrl;
 		qcom,disable-psm;
@@ -846,9 +846,9 @@
 		compatible = "qcom,bcl";
 		qcom,bcl-enable;
 		qcom,bcl-framework-interface;
-		qcom,bcl-freq-control-list = <&CPU4 &CPU5 &CPU6 &CPU7>;
-		qcom,bcl-hotplug-list = <&CPU4 &CPU5 &CPU6 &CPU7>;
-		qcom,bcl-soc-hotplug-list = <&CPU4 &CPU5 &CPU6 &CPU7>;
+		qcom,bcl-freq-control-list = <&CPU4 &CPU5>;
+		/delete-property/ qcom,bcl-hotplug-list;
+		/delete-property/ qcom,bcl-soc-hotplug-list;
 		qcom,ibat-monitor {
 			qcom,high-threshold-uamp = <4200000>;
 			qcom,low-threshold-uamp = <3400000>;
