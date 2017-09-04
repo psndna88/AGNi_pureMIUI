@@ -753,6 +753,7 @@ int p2p_discover_peer(struct sigma_dut *dut, const char *ifname,
 
 /* utils.c */
 enum sigma_program sigma_program_to_enum(const char *prog);
+int parse_hexstr(const char *hex, unsigned char *buf, size_t buflen);
 int parse_mac_address(struct sigma_dut *dut, const char *arg,
 		      unsigned char *addr);
 unsigned int channel_to_freq(unsigned int channel);

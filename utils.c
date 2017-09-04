@@ -150,6 +150,27 @@ static int hex_byte(const char *str)
 }
 
 
+int parse_hexstr(const char *hex, unsigned char *buf, size_t buflen)
+{
+	size_t i;
+	const char *pos = hex;
+
+	for (i = 0; i < buflen; i++) {
+		int val;
+
+		if (*pos == '\0')
+			break;
+		val = hex_byte(pos);
+		if (val < 0)
+			return -1;
+		buf[i] = val;
+		pos += 2;
+	}
+
+	return i;
+}
+
+
 int parse_mac_address(struct sigma_dut *dut, const char *arg,
 		      unsigned char *addr)
 {
