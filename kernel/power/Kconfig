@@ -327,3 +327,8 @@ config PM_SYNC_BEFORE_SUSPEND
 	bool "Sync file systems before suspend"
 	depends on PM
 	default y
+
+config QUICK_THAW_FINGERPRINTD
+	bool "Quickly resume fingerprintd"
+	depends on SUSPEND
+	default y
