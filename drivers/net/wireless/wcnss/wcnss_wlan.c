@@ -404,6 +404,7 @@ static struct {
 	int	fw_vbatt_state;
 	char	wlan_nv_macAddr[WLAN_MAC_ADDR_SIZE];
 	int	ctrl_device_opened;
+	struct mutex config_lock;
 	struct mutex dev_lock;
 	struct mutex ctrl_lock;
 	wait_queue_head_t read_wait;
@@ -2589,90 +2590,6 @@ static struct notifier_block wcnss_pm_notifier = {
 	.notifier_call = wcnss_pm_notify,
 };
 
-static int wcnss_ctrl_open(struct inode *inode, struct file *file)
-{
-	int rc = 0;
-
-	if (!penv || penv->ctrl_device_opened)
-		return -EFAULT;
-
-	penv->ctrl_device_opened = 1;
-
-	return rc;
-}
-
-
-void process_usr_ctrl_cmd(u8 *buf, size_t len)
-{
-	u16 cmd = buf[0] << 8 | buf[1];
-
-	switch (cmd) {
-
-	case WCNSS_USR_SERIAL_NUM:
-		if (WCNSS_MIN_SERIAL_LEN > len) {
-			pr_err("%s: Invalid serial number\n", __func__);
-			return;
-		}
-		penv->serial_number = buf[2] << 24 | buf[3] << 16
-			| buf[4] << 8 | buf[5];
-		break;
-
-	case WCNSS_USR_HAS_CAL_DATA:
-		if (1 < buf[2])
-			pr_err("%s: Invalid data for cal %d\n", __func__,
-				buf[2]);
-		has_calibrated_data = buf[2];
-		break;
-
-	case WCNSS_USR_WLAN_MAC_ADDR:
-		memcpy(&penv->wlan_nv_macAddr,  &buf[2],
-				sizeof(penv->wlan_nv_macAddr));
-
-		pr_debug("%s: MAC Addr:" MAC_ADDRESS_STR "\n", __func__,
-			penv->wlan_nv_macAddr[0], penv->wlan_nv_macAddr[1],
-			penv->wlan_nv_macAddr[2], penv->wlan_nv_macAddr[3],
-			penv->wlan_nv_macAddr[4], penv->wlan_nv_macAddr[5]);
-		break;
-
-	default:
-		pr_err("%s: Invalid command %d\n", __func__, cmd);
-		break;
-	}
-}
-
-static ssize_t wcnss_ctrl_write(struct file *fp, const char __user
-			*user_buffer, size_t count, loff_t *position)
-{
-	int rc = 0;
-	u8 buf[WCNSS_MAX_CMD_LEN];
-
-	if (!penv || !penv->ctrl_device_opened || WCNSS_MAX_CMD_LEN < count
-			|| WCNSS_MIN_CMD_LEN > count)
-		return -EFAULT;
-
-	mutex_lock(&penv->ctrl_lock);
-	rc = copy_from_user(buf, user_buffer, count);
-	if (0 == rc)
-		process_usr_ctrl_cmd(buf, count);
-
-	mutex_unlock(&penv->ctrl_lock);
-
-	return rc;
-}
-
-
-static const struct file_operations wcnss_ctrl_fops = {
-	.owner = THIS_MODULE,
-	.open = wcnss_ctrl_open,
-	.write = wcnss_ctrl_write,
-};
-
-static struct miscdevice wcnss_usr_ctrl = {
-	.minor = MISC_DYNAMIC_MINOR,
-	.name = CTRL_DEVICE,
-	.fops = &wcnss_ctrl_fops,
-};
-
 static int
 wcnss_dt_parse_vreg_level(struct device *dev, int index,
 			const char *current_vreg_name, const char *vreg_name,
@@ -3207,6 +3124,103 @@ fail:
 	return ret;
 }
 
+static int wcnss_ctrl_open(struct inode *inode, struct file *file)
+{
+	struct platform_device *pdev;
+	int rc = 0;
+
+	if (!penv || penv->ctrl_device_opened)
+		return -EFAULT;
+
+	penv->ctrl_device_opened = 1;
+
+	mutex_lock(&penv->config_lock);
+
+	if (!penv->triggered) {
+		pr_info(DEVICE " triggered by userspace\n");
+		pdev = penv->pdev;
+		rc = wcnss_trigger_config(pdev);
+		if (rc)
+			rc = -EFAULT;
+	}
+
+	mutex_unlock(&penv->config_lock);
+
+	return rc;
+}
+
+
+void process_usr_ctrl_cmd(u8 *buf, size_t len)
+{
+	u16 cmd = buf[0] << 8 | buf[1];
+
+	switch (cmd) {
+
+	case WCNSS_USR_SERIAL_NUM:
+		if (WCNSS_MIN_SERIAL_LEN > len) {
+			pr_err("%s: Invalid serial number\n", __func__);
+			return;
+		}
+		penv->serial_number = buf[2] << 24 | buf[3] << 16
+			| buf[4] << 8 | buf[5];
+		break;
+
+	case WCNSS_USR_HAS_CAL_DATA:
+		if (1 < buf[2])
+			pr_err("%s: Invalid data for cal %d\n", __func__,
+				buf[2]);
+		has_calibrated_data = buf[2];
+		break;
+
+	case WCNSS_USR_WLAN_MAC_ADDR:
+		memcpy(&penv->wlan_nv_macAddr,  &buf[2],
+				sizeof(penv->wlan_nv_macAddr));
+
+		pr_debug("%s: MAC Addr:" MAC_ADDRESS_STR "\n", __func__,
+			penv->wlan_nv_macAddr[0], penv->wlan_nv_macAddr[1],
+			penv->wlan_nv_macAddr[2], penv->wlan_nv_macAddr[3],
+			penv->wlan_nv_macAddr[4], penv->wlan_nv_macAddr[5]);
+		break;
+
+	default:
+		pr_err("%s: Invalid command %d\n", __func__, cmd);
+		break;
+	}
+}
+
+static ssize_t wcnss_ctrl_write(struct file *fp, const char __user
+			*user_buffer, size_t count, loff_t *position)
+{
+	int rc = 0;
+	u8 buf[WCNSS_MAX_CMD_LEN];
+
+	if (!penv || !penv->ctrl_device_opened || WCNSS_MAX_CMD_LEN < count
+			|| WCNSS_MIN_CMD_LEN > count)
+		return -EFAULT;
+
+	mutex_lock(&penv->ctrl_lock);
+	rc = copy_from_user(buf, user_buffer, count);
+	if (0 == rc)
+		process_usr_ctrl_cmd(buf, count);
+
+	mutex_unlock(&penv->ctrl_lock);
+
+	return rc;
+}
+
+
+static const struct file_operations wcnss_ctrl_fops = {
+	.owner = THIS_MODULE,
+	.open = wcnss_ctrl_open,
+	.write = wcnss_ctrl_write,
+};
+
+static struct miscdevice wcnss_usr_ctrl = {
+	.minor = MISC_DYNAMIC_MINOR,
+	.name = CTRL_DEVICE,
+	.fops = &wcnss_ctrl_fops,
+};
+
 /* wlan prop driver cannot invoke cancel_work_sync
  * function directly, so to invoke this function it
  * call wcnss_flush_work function
@@ -3271,13 +3285,17 @@ static int wcnss_node_open(struct inode *inode, struct file *file)
 	if (!penv)
 		return -EFAULT;
 
+	mutex_lock(&penv->config_lock);
+
 	if (!penv->triggered) {
 		pr_info(DEVICE " triggered by userspace\n");
 		pdev = penv->pdev;
 		rc = wcnss_trigger_config(pdev);
 		if (rc)
-			return -EFAULT;
+			rc = -EFAULT;
 	}
+
+	mutex_unlock(&penv->config_lock);
 
 	return rc;
 }
@@ -3491,6 +3509,7 @@ wcnss_wlan_probe(struct platform_device *pdev)
 		return PTR_ERR(penv->wcnss_notif_hdle);
 	}
 
+	mutex_init(&penv->config_lock);
 	mutex_init(&penv->dev_lock);
 	mutex_init(&penv->ctrl_lock);
 	mutex_init(&penv->vbat_monitor_mutex);
