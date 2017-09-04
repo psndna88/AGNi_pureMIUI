@@ -100,7 +100,7 @@ static void kill_hostapd_process_pid(struct sigma_dut *dut)
 }
 
 
-static int get_hwaddr(const char *ifname, unsigned char *hwaddr)
+int get_hwaddr(const char *ifname, unsigned char *hwaddr)
 {
 #ifndef __QNXNTO__
 	struct ifreq ifr;
