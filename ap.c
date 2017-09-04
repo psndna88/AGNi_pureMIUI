@@ -3125,8 +3125,9 @@ static int cmd_wcn_ap_config_commit(struct sigma_dut *dut,
 
 #ifdef ANDROID
 	/* Unload/Load driver to cleanup the state of the driver */
-	wifi_unload_driver();
-	wifi_load_driver();
+	system("rmmod -f wlan");
+	usleep(500000);
+	system("insmod /system/lib/modules/wlan.ko");
 #else /* ANDROID */
 	run_ndc(dut, "ndc softap qccmd set enable_softap=0");
 	run_ndc(dut, "ndc softap qccmd set enable_softap=1");
