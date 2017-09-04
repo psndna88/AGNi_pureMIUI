@@ -219,6 +219,9 @@ void send_resp(struct sigma_dut *dut, struct sigma_conn *conn,
 	struct iovec iov[4];
 	size_t elems;
 
+	if (!conn)
+		return;
+
 	sigma_dut_print(dut, DUT_MSG_INFO, "resp: status=%d buf=%s",
 			status, buf ? buf : "N/A");
 

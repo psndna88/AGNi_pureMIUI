@@ -61,8 +61,6 @@ extern char *ap_inet_addr;
 extern char *ap_inet_mask;
 extern char *sigma_radio_ifname[];
 
-static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
-				struct sigma_cmd *cmd);
 static int ath_ap_start_hostapd(struct sigma_dut *dut);
 static void ath_ap_set_params(struct sigma_dut *dut);
 static int kill_process(struct sigma_dut *dut, char *proc_name,
@@ -5365,8 +5363,8 @@ static int get_5g_channel_freq(int chan)
 }
 
 
-static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
-				struct sigma_cmd *cmd)
+int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
+			 struct sigma_cmd *cmd)
 {
 	/* const char *name = get_param(cmd, "NAME"); */
 	FILE *f;

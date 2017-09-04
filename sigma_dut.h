@@ -731,6 +731,8 @@ void ath_config_dyn_bw_sig(struct sigma_dut *dut, const char *ifname,
 			   const char *val);
 void novap_reset(struct sigma_dut *dut, const char *ifname);
 int get_hwaddr(const char *ifname, unsigned char *hwaddr);
+int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
+			 struct sigma_cmd *cmd);
 
 /* sta.c */
 int set_ps(const char *intf, struct sigma_dut *dut, int enabled);
