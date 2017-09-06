@@ -216,7 +216,6 @@ int freeze_kernel_threads(void)
 void thaw_fingerprintd(void)
 {
 	struct task_struct *g, *p;
-	struct task_struct *curr = current;
 
 	pm_freezing = false;
 	pm_nosig_freezing = false;
@@ -224,6 +223,8 @@ void thaw_fingerprintd(void)
 	read_lock(&tasklist_lock);
 	for_each_process_thread(g, p) {
 		if (!memcmp(p->comm, "fingerprintd", 13))
+			__thaw_task(p);
+		if (!memcmp(p->comm, "gx_fpd", 13))
 			__thaw_task(p);
 	}
 	read_unlock(&tasklist_lock);
