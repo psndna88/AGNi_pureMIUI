@@ -349,7 +349,7 @@ static int mmc_ext_csd_open(struct inode *inode, struct file *filp)
 	char *buf;
 	ssize_t n = 0;
 	u8 *ext_csd;
-	int err, i;
+	int err = 0, i;
 
 	buf = kmalloc(EXT_CSD_STR_LEN + 1, GFP_KERNEL);
 	if (!buf)
@@ -370,13 +370,13 @@ static int mmc_ext_csd_open(struct inode *inode, struct file *filp)
 			pr_err("%s: halt failed while doing %s err (%d)\n",
 					mmc_hostname(card->host), __func__,
 					err);
-			goto out_free_halt;
+			goto out_free_release;
 		}
 	}
 
 	err = mmc_send_ext_csd(card, ext_csd);
 	if (err)
-		goto out_free;
+		goto out_free_unhalt;
 
 	for (i = 0; i < 512; i++)
 		n += sprintf(buf + n, "%02x", ext_csd[i]);
@@ -385,24 +385,19 @@ static int mmc_ext_csd_open(struct inode *inode, struct file *filp)
 
 	filp->private_data = buf;
 
+out_free_unhalt:
 	if (mmc_card_cmdq(card)) {
 		if (mmc_cmdq_halt(card->host, false))
 			pr_err("%s: %s: cmdq unhalt failed\n",
 			       mmc_hostname(card->host), __func__);
 	}
-
+out_free_release:
 	mmc_release_host(card->host);
 	mmc_rpm_release(card->host, &card->dev);
-	kfree(ext_csd);
-	return 0;
-
-out_free_halt:
-	kfree(ext_csd);
 out_free:
-	kfree(buf);
 	kfree(ext_csd);
-	mmc_release_host(card->host);
-	mmc_rpm_release(card->host, &card->dev);
+	if (err)
+		kfree(buf);
 	return err;
 }
 
@@ -678,6 +673,16 @@ static ssize_t mmc_bkops_stats_read(struct file *filp, char __user *ubuf,
 		 mmc_hostname(card->host), bkops_stats->suspend);
 	strlcat(ubuf, temp_buf, cnt);
 
+	snprintf(temp_buf, TEMP_BUF_SIZE,
+			"%s: BKOPS: sent AUTO_EN set to 1: %u\n",
+			mmc_hostname(card->host), bkops_stats->auto_start);
+	strlcat(ubuf, temp_buf, cnt);
+
+	snprintf(temp_buf, TEMP_BUF_SIZE,
+			"%s: BKOPS: sent AUTO_EN set to 0: %u\n",
+			mmc_hostname(card->host), bkops_stats->auto_stop);
+	strlcat(ubuf, temp_buf, cnt);
+
 	spin_unlock(&bkops_stats->lock);
 
 	kfree(temp_buf);
@@ -766,7 +771,8 @@ void mmc_add_card_debugfs(struct mmc_card *card)
 			goto err;
 
 	if (mmc_card_mmc(card) && (card->ext_csd.rev >= 5) &&
-	    (mmc_card_get_bkops_en_manual(card)))
+	    (mmc_card_support_auto_bkops(card) ||
+	     mmc_card_get_bkops_en_manual(card)))
 		if (!debugfs_create_file("bkops_stats", S_IRUSR, root, card,
 					 &mmc_dbg_bkops_stats_fops))
 			goto err;
