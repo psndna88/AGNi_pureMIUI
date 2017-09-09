@@ -248,9 +248,9 @@
 				qcom,fast-avg-setup = <0>;
 			};
 
-			chan@75 {
+			chan@36 {
 				label = "pa_therm0";
-				reg = <0x75>;
+				reg = <0x36>;
 				qcom,decimation = <0>;
 				qcom,pre-div-channel-scaling = <0>;
 				qcom,calibration-type = "ratiometric";
@@ -295,9 +295,9 @@
 				qcom,vadc-thermal-node;
 			};
 
-			chan@36 {
+			chan@13 {
 				label = "case_therm";
-				reg = <0x36>;
+				reg = <0x13>;
 				qcom,decimation = <0>;
 				qcom,pre-div-channel-scaling = <0>;
 				qcom,calibration-type = "ratiometric";
@@ -324,9 +324,9 @@
 			qcom,adc_tm-vadc = <&pm8950_vadc>;
 			qcom,pmic-revid = <&pm8950_revid>;
 
-			chan@75 {
+			chan@36 {
 				label = "pa_therm0";
-				reg = <0x75>;
+				reg = <0x36>;
 				qcom,decimation = <0>;
 				qcom,pre-div-channel-scaling = <0>;
 				qcom,calibration-type = "ratiometric";
