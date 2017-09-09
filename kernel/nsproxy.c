@@ -51,6 +51,11 @@ static inline struct nsproxy *create_nsproxy(void)
 	return nsproxy;
 }
 
+inline struct nsproxy *task_nsproxy(struct task_struct *tsk)
+{
+	return rcu_dereference(tsk->nsproxy);
+}
+
 /*
  * Create new nsproxy and all of its the associated namespaces.
  * Return the newly created nsproxy.  Do not attach this to the task,

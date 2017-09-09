@@ -57,10 +57,7 @@ extern struct nsproxy init_nsproxy;
  *
  */
 
-static inline struct nsproxy *task_nsproxy(struct task_struct *tsk)
-{
-	return rcu_dereference(tsk->nsproxy);
-}
+extern struct nsproxy *task_nsproxy(struct task_struct *tsk);
 
 int copy_namespaces(unsigned long flags, struct task_struct *tsk);
 void exit_task_namespaces(struct task_struct *tsk);
