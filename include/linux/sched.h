@@ -1676,6 +1676,10 @@ static inline struct pid *task_tgid(struct task_struct *task)
 }
 
 #ifdef CONFIG_TASK_CPUFREQ_STATS
+void update_time_in_state(struct task_struct *p, int cpu);
+void update_cumulative_time_in_state(struct task_struct *p,
+				     struct task_struct *parent,
+				     int cpu);
 static inline void task_update_time_in_state(struct task_struct *task, int cpu)
 {
 	update_time_in_state(task, cpu);
