@@ -213,6 +213,7 @@ int freeze_kernel_threads(void)
 }
 
 #ifdef CONFIG_QUICK_THAW_FINGERPRINTD
+extern int kenzo_fpsensor;
 void thaw_fingerprintd(void)
 {
 	struct task_struct *g, *p;
@@ -222,10 +223,13 @@ void thaw_fingerprintd(void)
 
 	read_lock(&tasklist_lock);
 	for_each_process_thread(g, p) {
-		if (!memcmp(p->comm, "fingerprintd", 13))
-			__thaw_task(p);
-		if (!memcmp(p->comm, "gx_fpd", 13))
-			__thaw_task(p);
+		if (kenzo_fpsensor == 1) {
+			if (!memcmp(p->comm, "fingerprintd", 13))
+				__thaw_task(p);
+		} else {
+			if (!memcmp(p->comm, "gx_fpd", 13))
+				__thaw_task(p);
+		}
 	}
 	read_unlock(&tasklist_lock);
 
