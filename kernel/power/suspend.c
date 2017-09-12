@@ -50,6 +50,7 @@ static bool suspend_freeze_wake;
 #ifdef CONFIG_QUICK_THAW_FINGERPRINTD
 #include <linux/display_state.h>
 extern void thaw_fingerprintd(void);
+extern int fasterfp;
 #endif
 
 static void freeze_begin(void)
@@ -249,7 +250,7 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 		suspend_ops->wake();
 
 #ifdef CONFIG_QUICK_THAW_FINGERPRINTD
-	if (!is_display_on())
+	if ((fasterfp) && (!is_display_on()))
 		thaw_fingerprintd();
 #endif
 
