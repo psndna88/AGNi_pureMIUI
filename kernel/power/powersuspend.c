@@ -141,6 +141,7 @@ abort_resume:
 }
 
 bool power_suspended = false;
+int fasterfp = 0;
 
 void set_power_suspend_state(int new_state)
 {
@@ -255,11 +256,38 @@ static struct kobj_attribute power_suspend_version_attribute =
 		power_suspend_version_show,
 		NULL);
 
+static ssize_t fasterfp_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+        return sprintf(buf, "%u\n", fasterfp);
+}
+
+static ssize_t fasterfp_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int new_state;
+
+	sscanf(buf, "%d\n", &new_state);
+
+	if (new_state > 1 || new_state < 0)
+		return -EINVAL;
+
+	if (new_state != fasterfp)
+	    fasterfp = new_state;
+
+	return count;
+}
+
+static struct kobj_attribute fasterfp_attribute =
+	__ATTR(fasterfp, 0666,
+		fasterfp_show, fasterfp_store);
+
 static struct attribute *power_suspend_attrs[] =
 {
 	&power_suspend_state_attribute.attr,
 	&power_suspend_mode_attribute.attr,
 	&power_suspend_version_attribute.attr,
+	&fasterfp_attribute.attr,
 	NULL,
 };
 
