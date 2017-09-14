@@ -1,13 +1,17 @@
 /*
  * Sigma Control API DUT (station/AP)
  * Copyright (c) 2010-2011, Atheros Communications, Inc.
- * Copyright (c) 2011-2015, Qualcomm Atheros, Inc.
+ * Copyright (c) 2011-2017, Qualcomm Atheros, Inc.
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
 
 #ifndef SIGMA_DUT_H
 #define SIGMA_DUT_H
+
+#ifdef __GNUC__
+#define _GNU_SOURCE	1
+#endif
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -17,7 +21,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <sys/time.h>
-#include <sys/types.h> 
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <net/if.h>
 #ifdef __QNXNTO__
@@ -215,6 +219,29 @@ struct sigma_stream {
 #define AP_AC_VI 2
 #define AP_AC_VO 3
 
+#define MAX_WLAN_TAGS 3
+#define MBO_MAX_PREF_BSSIDS 10
+#define MAX_FT_BSS_LIST 10
+
+enum value_not_set_enabled_disabled {
+	VALUE_NOT_SET,
+	VALUE_ENABLED,
+	VALUE_DISABLED
+};
+
+enum sec_ch_offset {
+	SEC_CH_NO,
+	SEC_CH_40ABOVE,
+	SEC_CH_40BELOW
+};
+
+struct mbo_pref_ap {
+	int ap_ne_class;
+	int ap_ne_op_ch;
+	int ap_ne_pref;
+	unsigned char mac_addr[ETH_ALEN];
+};
+
 struct sigma_dut {
 	int s; /* server TCP socket */
 	int debug_level;
@@ -292,7 +319,11 @@ struct sigma_dut {
 
 	/* AP configuration */
 	char ap_ssid[33];
-	char ap2_ssid[33];
+	/*
+	 * WLAN-TAG of 1 will use 'ap_' variables;
+	 * tag higher than 1 will use 'ap_tag_' variables.
+	 */
+	char ap_tag_ssid[MAX_WLAN_TAGS - 1][33];
 	enum ap_mode {
 		AP_11a,
 		AP_11g,
@@ -314,23 +345,19 @@ struct sigma_dut {
 		int txop;
 		int acm;
 	} ap_qos[NUM_AP_AC], ap_sta_qos[NUM_AP_AC];
-	enum ap_noack_values {
-		AP_NOACK_NOT_SET,
-		AP_NOACK_ENABLED,
-		AP_NOACK_DISABLED
-	} ap_noack;
-	int ap_ampdu;
-	int ap_amsdu;
-	int ap_rx_amsdu;
+	enum value_not_set_enabled_disabled ap_noack;
+	enum value_not_set_enabled_disabled ap_ampdu;
+	enum value_not_set_enabled_disabled ap_amsdu;
+	enum value_not_set_enabled_disabled ap_rx_amsdu;
 	int ap_ampdu_exp;
-	int ap_addba_reject;
+	enum value_not_set_enabled_disabled ap_addba_reject;
 	int ap_fixed_rate;
 	int ap_mcs;
 	int ap_rx_streams;
 	int ap_tx_streams;
 	unsigned int ap_vhtmcs_map;
-	int ap_ldpc;
-	int ap_sig_rts;
+	enum value_not_set_enabled_disabled ap_ldpc;
+	enum value_not_set_enabled_disabled ap_sig_rts;
 	enum ap_chwidth {
 		AP_20,
 		AP_40,
@@ -338,13 +365,10 @@ struct sigma_dut {
 		AP_160,
 		AP_AUTO
 	} ap_chwidth;
-	enum ap_chwidth default_ap_chwidth;
+	enum ap_chwidth default_11na_ap_chwidth;
+	enum ap_chwidth default_11ng_ap_chwidth;
 	int ap_tx_stbc;
-	enum ap_dyn_bw_sig_values {
-		AP_DYN_BW_SGNL_NOT_SET,
-		AP_DYN_BW_SGNL_ENABLED,
-		AP_DYN_BW_SGNL_DISABLED
-	} ap_dyn_bw_sig;
+	enum value_not_set_enabled_disabled ap_dyn_bw_sig;
 	int ap_sgi80;
 	int ap_p2p_mgmt;
 	enum ap_key_mgmt {
@@ -354,12 +378,16 @@ struct sigma_dut {
 		AP_WPA2_EAP,
 		AP_WPA_EAP,
 		AP_WPA2_EAP_MIXED,
-		AP_WPA2_PSK_MIXED
+		AP_WPA2_PSK_MIXED,
+		AP_WPA2_SAE,
+		AP_WPA2_PSK_SAE,
+		AP_SUITEB,
 	} ap_key_mgmt;
-	enum ap2_key_mgmt {
+	enum ap_tag_key_mgmt {
 		AP2_OPEN,
-		AP2_OSEN
-	} ap2_key_mgmt;
+		AP2_OSEN,
+		AP2_WPA2_PSK
+	} ap_tag_key_mgmt[MAX_WLAN_TAGS - 1];
 	int ap_add_sha256;
 	int ap_rsn_preauth;
 	enum ap_pmf {
@@ -372,8 +400,12 @@ struct sigma_dut {
 		AP_TKIP,
 		AP_WEP,
 		AP_PLAIN,
-		AP_CCMP_TKIP
+		AP_CCMP_TKIP,
+		AP_GCMP_256,
 	} ap_cipher;
+	char *ap_sae_groups;
+	int sae_anti_clogging_threshold;
+	int sae_reflection;
 	char ap_passphrase[65];
 	char ap_wepkey[27];
 	char ap_radius_ipaddr[20];
@@ -464,6 +496,23 @@ struct sigma_dut {
 	int ap_set_bssidpref;
 	int ap_btmreq_disassoc_imnt;
 	int ap_btmreq_term_bit;
+	int ap_disassoc_timer;
+	int ap_btmreq_bss_term_dur;
+	enum reg_domain {
+		REG_DOMAIN_NOT_SET,
+		REG_DOMAIN_LOCAL,
+		REG_DOMAIN_GLOBAL
+	} ap_reg_domain;
+	char ap_mobility_domain[10];
+	unsigned char ap_cell_cap_pref;
+	int ap_ft_oa;
+	int ap_name;
+
+	struct mbo_pref_ap mbo_pref_aps[MBO_MAX_PREF_BSSIDS];
+	struct mbo_pref_ap mbo_self_ap_tuple;
+	int mbo_pref_ap_cnt;
+	unsigned char ft_bss_mac_list[MAX_FT_BSS_LIST][ETH_ALEN];
+	int ft_bss_mac_cnt;
 
 	const char *hostapd_debug_log;
 
@@ -495,12 +544,27 @@ struct sigma_dut {
 		AP_WME_ON,
 	} ap_wme;
 
+	enum ap_wmmps {
+		AP_WMMPS_OFF,
+		AP_WMMPS_ON,
+	} ap_wmmps;
+
+	enum sec_ch_offset ap_chwidth_offset;
+
 #ifdef CONFIG_SNIFFER
 	pid_t sniffer_pid;
 	char sniffer_filename[200];
 #endif /* CONFIG_SNIFFER */
 
 	int last_set_ip_config_ipv6;
+#ifdef MIRACAST
+	pthread_t rtsp_thread_handle;
+	int wfd_device_type; /* 0 for source, 1 for sink */
+	char peer_mac_address[32];
+	void *miracast_lib;
+	const char *miracast_lib_path;
+	char mdns_instance_name[64];
+#endif /* MIRACAST */
 
 	int tid_to_handle[8]; /* Mapping of TID to handle */
 	int dialog_token; /* Used for generating unique handle for an addTs */
@@ -511,6 +575,7 @@ struct sigma_dut {
 		PROGRAM_HS2,
 		PROGRAM_HS2_R2,
 		PROGRAM_WFD,
+		PROGRAM_DISPLAYR2,
 		PROGRAM_PMF,
 		PROGRAM_WPS,
 		PROGRAM_60GHZ,
@@ -518,7 +583,9 @@ struct sigma_dut {
 		PROGRAM_VHT,
 		PROGRAM_NAN,
 		PROGRAM_LOC,
-		PROGRAM_MBO
+		PROGRAM_MBO,
+		PROGRAM_IOTLP,
+		PROGRAM_DPP,
 	} program;
 
 	enum device_type {
@@ -551,6 +618,35 @@ struct sigma_dut {
 	const char *vendor_name; /* device_get_info vendor override */
 	const char *model_name; /* device_get_info model override */
 	const char *version_name; /* device_get_info version override */
+
+	int ndp_enable; /* Flag which is set once the NDP is setup */
+
+	/* Length of nan_pmk in octets */
+	u8 nan_pmk_len;
+
+	/*
+	 * PMK: Info is optional in Discovery phase. PMK info can
+	 *  be passed during the NDP session.
+	 */
+	u8 nan_pmk[32];
+
+	enum value_not_set_enabled_disabled wnm_bss_max_feature;
+	int wnm_bss_max_idle_time;
+	enum value_not_set_enabled_disabled wnm_bss_max_protection;
+
+	char *non_pref_ch_list; /* MBO: non-preferred channel report */
+	char *btm_query_cand_list; /* Candidate list for BTM Query */
+
+	char *sae_commit_override;
+	char *rsne_override;
+	const char *hostapd_bin;
+	int use_hostapd_pid_file;
+	const char *hostapd_ifname;
+	int hostapd_running;
+
+	int dpp_peer_bootstrap;
+	int dpp_local_bootstrap;
+	int dpp_conf_id;
 };
 
 
@@ -570,7 +666,7 @@ enum sigma_status {
 };
 
 void send_resp(struct sigma_dut *dut, struct sigma_conn *conn,
-	       enum sigma_status status, char *buf);
+	       enum sigma_status status, const char *buf);
 
 const char * get_param(struct sigma_cmd *cmd, const char *name);
 
@@ -627,6 +723,7 @@ int get_ip_config(struct sigma_dut *dut, const char *ifname, char *buf,
 int ath6kl_client_uapsd(struct sigma_dut *dut, const char *intf, int uapsd);
 int is_ip_addr(const char *str);
 int run_system(struct sigma_dut *dut, const char *cmd);
+int run_system_wrapper(struct sigma_dut *dut, const char *cmd, ...);
 int cmd_wlantest_set_channel(struct sigma_dut *dut, struct sigma_conn *conn,
 			     struct sigma_cmd *cmd);
 void sniffer_close(struct sigma_dut *dut);
@@ -636,6 +733,9 @@ void ath_disable_txbf(struct sigma_dut *dut, const char *intf);
 void ath_config_dyn_bw_sig(struct sigma_dut *dut, const char *ifname,
 			   const char *val);
 void novap_reset(struct sigma_dut *dut, const char *ifname);
+int get_hwaddr(const char *ifname, unsigned char *hwaddr);
+int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
+			 struct sigma_cmd *cmd);
 
 /* sta.c */
 int set_ps(const char *intf, struct sigma_dut *dut, int enabled);
@@ -644,17 +744,34 @@ void ath_set_cts_width(struct sigma_dut *dut, const char *ifname,
 		       const char *val);
 int ath_set_width(struct sigma_dut *dut, struct sigma_conn *conn,
 		  const char *intf, const char *val);
+int wil6210_send_frame_60g(struct sigma_dut *dut, struct sigma_conn *conn,
+			   struct sigma_cmd *cmd);
 
 /* p2p.c */
 int p2p_cmd_sta_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
 			      struct sigma_cmd *cmd);
 void p2p_create_event_thread(struct sigma_dut *dut);
 void stop_event_thread(void);
+void start_dhcp(struct sigma_dut *dut, const char *group_ifname, int go);
+void stop_dhcp(struct sigma_dut *dut, const char *group_ifname, int go);
+int p2p_discover_peer(struct sigma_dut *dut, const char *ifname,
+		      const char *peer, int full);
 
 /* utils.c */
 enum sigma_program sigma_program_to_enum(const char *prog);
+int parse_hexstr(const char *hex, unsigned char *buf, size_t buflen);
 int parse_mac_address(struct sigma_dut *dut, const char *arg,
 		      unsigned char *addr);
+unsigned int channel_to_freq(unsigned int channel);
+unsigned int freq_to_channel(unsigned int freq);
+void convert_mac_addr_to_ipv6_lladdr(u8 *mac_addr, char *ipv6_buf,
+				     size_t buf_len);
+
+#ifndef ANDROID
+size_t strlcpy(char *dest, const char *src, size_t siz);
+size_t strlcat(char *dst, const char *str, size_t size);
+#endif /* ANDROID */
+
 
 /* uapsd_stream.c */
 void receive_uapsd(struct sigma_stream *s);
@@ -686,5 +803,10 @@ int loc_cmd_sta_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 int loc_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 				      struct sigma_conn *conn,
 				      struct sigma_cmd *cmd);
+
+/* dpp.c */
+int dpp_dev_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
+			struct sigma_cmd *cmd);
+
 
 #endif /* SIGMA_DUT_H */

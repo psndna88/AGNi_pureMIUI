@@ -13,6 +13,7 @@ OBJS += ap.c
 OBJS += powerswitch.c
 OBJS += atheros.c
 OBJS += ftm.c
+OBJS += dpp.c
 
 # Initialize CFLAGS to limit to local module
 CFLAGS =
@@ -27,10 +28,14 @@ CFLAGS += -DCONFIG_WLANTEST
 OBJS += wlantest.c
 endif
 
-ifneq ($(TARGET_USES_AOSP),true)
-CFLAGS += -DQTI_BSP=1
+### MIRACAST ###
+OBJS += miracast.c
+CFLAGS += -DMIRACAST
+dhcpver = $(filter N%,$(PLATFORM_VERSION))
+dhcpver += $(filter 7.%,$(PLATFORM_VERSION))
+ifeq (,$(strip $(dhcpver)))
+ CFLAGS += -DMIRACAST_DHCP_M
 endif
-
 CFLAGS += -DCONFIG_CTRL_IFACE_CLIENT_DIR=\"/data/misc/wifi/sockets\"
 CFLAGS += -DSIGMA_TMPDIR=\"/data\"
 
@@ -56,29 +61,32 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := sigma_dut
 LOCAL_MODULE_TAGS := optional
 LOCAL_C_INCLUDES += \
-	$(LOCAL_PATH) \
-	frameworks/base/cmds/keystore \
-	system/security/keystore \
-	hardware/qcom/wlan/qcwcn/wifi_hal \
-	frameworks/opt/net/wifi/libwifi_hal/include \
-	hardware/libhardware_legacy/include/hardware_legacy
+	$(LOCAL_PATH) frameworks/base/cmds/keystore system/security/keystore \
+	$(LOCAL_PATH) frameworks/opt/net/wifi/libwifi_hal/include/ \
+	$(LOCAL_PATH) hardware/qcom/wlan/qcwcn/wifi_hal \
+	$(LOCAL_PATH) system/core/include/cutils \
+	$(LOCAL_PATH) hardware/libhardware_legacy/include/hardware_legacy \
+	$(TARGET_OUT_HEADERS)/common/inc
 LOCAL_SHARED_LIBRARIES := libc libcutils
+ifneq (,$(strip $(dhcpver)))
+LOCAL_SHARED_LIBRARIES += libnetutils
+LOCAL_C_INCLUDES += $(LOCAL_PATH) system/core/include/netutils
+endif
 LOCAL_SHARED_LIBRARIES += libhardware_legacy
+ifeq ($(BOARD_WLAN_DEVICE),qcwcn)
 ifneq ($(wildcard hardware/qcom/wlan/qcwcn/wifi_hal/nan_cert.h),)
 LOCAL_SHARED_LIBRARIES += libwifi-hal-qcom
 OBJS += nan.c
 CFLAGS += -DANDROID_NAN
 endif
-ifeq ($(call is-platform-sdk-version-at-least,16),true)
-CFLAGS += -DANDROID43
+endif
 CFLAGS += -Wno-unused-parameter
 LOCAL_C_INCLUDES += system/security/keystore/include/keystore
 LOCAL_SHARED_LIBRARIES += liblog
 LOCAL_SHARED_LIBRARIES += libkeystore_binder
-endif
 LOCAL_SRC_FILES := $(OBJS)
 LOCAL_CFLAGS := $(CFLAGS)
-#include $(BUILD_EXECUTABLE)
+include $(BUILD_EXECUTABLE)
 
 # Add building of e_loop
 include $(CLEAR_VARS)

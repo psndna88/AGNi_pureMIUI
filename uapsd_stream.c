@@ -29,7 +29,7 @@
 static void sigma_uapsd_reset(struct sigma_stream *s);
 static void sigma_uapsd_stop(struct sigma_stream *s);
 static void create_apts_hello_pkt(int msg, unsigned int *txbuf,
-				  int tx_hello_cnt);
+				  size_t txbuf_len, int tx_hello_cnt);
 
 
 /* WMM-PS Test Case IDs */
@@ -907,7 +907,7 @@ struct uapsd_console_state_table uapsd_console_state_tbl[LAST_TC + 1][10] = {
 };
 
 
-static void create_apts_pkt(int msg, unsigned int txbuf[],
+static void create_apts_pkt(int msg, unsigned int txbuf[], size_t txbuf_len,
 			    u32 uapsd_dscp, struct sigma_stream *s)
 {
 	struct apts_pkt *t;
@@ -925,7 +925,8 @@ static void create_apts_pkt(int msg, unsigned int txbuf[],
 	txbuf[5] = 0;
 	txbuf[9] = s->sta_id;
 	txbuf[10] = t->cmd;
-	strcpy((char *) &txbuf[11], t->name);
+	strlcpy((char *) &txbuf[11], t->name,
+		txbuf_len - sizeof(txbuf[0]) * 11);
 }
 
 
@@ -955,7 +956,8 @@ static int uapsd_tx_start(struct sigma_stream *s,
 			memset(tpkt, 0, s->payload_size);
 			/* if test is for WMM-AC set APTS HELLO to 39 */
 			msgid = sigma_wmm_ac ? WMMAC_APTS_HELLO : APTS_HELLO;
-			create_apts_hello_pkt(msgid, tpkt, s->tx_hello_cnt);
+			create_apts_hello_pkt(msgid, tpkt, s->payload_size,
+					      s->tx_hello_cnt);
 			if (send(s->sock, tpkt, pktlen, 0) <= 0) {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
 						"send_uapsd: Send failed");
@@ -1005,7 +1007,7 @@ static int uapsd_tx_confirm(struct sigma_stream *s,
 	memset(tpkt, 0, s->payload_size);
 	/* if test is for WMM-AC set APTS CONFIRM to 41 */
 	msgid = sigma_wmm_ac ? WMMAC_APTS_CONFIRM : APTS_CONFIRM;
-	create_apts_pkt(msgid, tpkt, usr_priority, s);
+	create_apts_pkt(msgid, tpkt, s->payload_size, usr_priority, s);
 	setsockopt(s->sock, IPPROTO_IP, IP_TOS, &usr_priority,
 		   sizeof(usr_priority));
 	if (send(s->sock, tpkt, pktlen, 0) > 0) {
@@ -1045,7 +1047,7 @@ static int uapsd_tx_data(struct sigma_stream *s,
 	memset(tpkt, 0, s->payload_size);
 	/* if test is for WMM-AC set APTS DEFAULT to 38 */
 	msgid = sigma_wmm_ac ? WMMAC_APTS_DEFAULT : APTS_DEFAULT;
-	create_apts_pkt(msgid, tpkt, usr_priority, s);
+	create_apts_pkt(msgid, tpkt, s->payload_size, usr_priority, s);
 	setsockopt(s->sock, IPPROTO_IP, IP_TOS, &usr_priority,
 		   sizeof(usr_priority));
 	if (send(s->sock, tpkt, pktlen, 0) > 0) {
@@ -1086,7 +1088,7 @@ static int uapsd_tx_data_twice(struct sigma_stream *s,
 	memset(tpkt, 0, s->payload_size);
 	/* if test is for WMM-AC set APTS DEFAULT to 38 */
 	msgid = sigma_wmm_ac ? WMMAC_APTS_DEFAULT : APTS_DEFAULT;
-	create_apts_pkt(msgid, tpkt, usr_priority, s);
+	create_apts_pkt(msgid, tpkt, s->payload_size, usr_priority, s);
 	setsockopt(s->sock, IPPROTO_IP, IP_TOS, &usr_priority,
 		   sizeof(usr_priority));
 	for(i = 0; i < 2; i++) {
@@ -1130,7 +1132,7 @@ static int uapsd_tx_cyclic(struct sigma_stream *s,
 		memset(tpkt, 0, s->payload_size);
 		/* if test is for WMM-AC set APTS DEFAULT to 38 */
 		msgid = sigma_wmm_ac ? WMMAC_APTS_DEFAULT : APTS_DEFAULT;
-		create_apts_pkt(msgid, tpkt, usr_priority, s);
+		create_apts_pkt(msgid, tpkt, s->payload_size, usr_priority, s);
 		setsockopt(s->sock, IPPROTO_IP, IP_TOS, &usr_priority,
 			   sizeof(usr_priority));
 		if (send(s->sock, tpkt, pktlen, 0) <= 0) {
@@ -1173,7 +1175,7 @@ static int uapsd_tx_stop(struct sigma_stream *s,
 	memset(tpkt, 0, s->payload_size);
 	/* if test is for WMM-AC set APTS STOP to 42 */
 	msgid = sigma_wmm_ac ? WMMAC_APTS_STOP : APTS_STOP;
-	create_apts_pkt(msgid, tpkt, usr_priority, s);
+	create_apts_pkt(msgid, tpkt, s->payload_size, usr_priority, s);
 	setsockopt(s->sock, IPPROTO_IP, IP_TOS, &usr_priority,
 		   sizeof(usr_priority));
 	if (send(s->sock, tpkt, pktlen, 0) <= 0) {
@@ -1327,7 +1329,7 @@ static int uapsd_rx_cyclic_vo(struct sigma_stream *s,
 
 
 static void create_apts_hello_pkt(int msg, unsigned int *txbuf,
-				  int tx_hello_cnt)
+				  size_t txbuf_len, int tx_hello_cnt)
 {
 	struct apts_pkt *t;
 
@@ -1347,7 +1349,8 @@ static void create_apts_hello_pkt(int msg, unsigned int *txbuf,
 	txbuf[8] = t->param2;
 	txbuf[9] = t->param3;
 	txbuf[10] = t->cmd;
-	strcpy((char *) &txbuf[11], t->name);
+	strlcpy((char *) &txbuf[11], t->name,
+		txbuf_len - sizeof(txbuf[0]) * 11);
 	printf("create_apts_hello_pkt (%s) %d\n", t->name, t->cmd);
 }
 
@@ -1398,7 +1401,7 @@ static void sigma_uapsd_reset(struct sigma_stream *s)
 	if (s->num_retry > MAX_RETRY) {
 		/* if test is for WMM-AC set APTS RESET STOP to 49 */
 		msgid = sigma_wmm_ac ? WMMAC_APTS_RESET_STOP : APTS_RESET_STOP;
-		create_apts_pkt(msgid, reset_pkt, tos, s);
+		create_apts_pkt(msgid, reset_pkt, s->payload_size, tos, s);
 		setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
 		send(s->sock, reset_pkt, s->payload_size, 0);
 		sigma_dut_print(dut, DUT_MSG_ERROR,
@@ -1409,13 +1412,13 @@ static void sigma_uapsd_reset(struct sigma_stream *s)
 	if (!(s->reset_rx)) {
 		/* if test is for WMM-AC set APTS RESET to 47 */
 		msgid = sigma_wmm_ac ? WMMAC_APTS_RESET : APTS_RESET;
-		create_apts_pkt(msgid, reset_pkt, tos, s);
+		create_apts_pkt(msgid, reset_pkt, s->payload_size, tos, s);
 		setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
 		send(s->sock, reset_pkt, s->payload_size, 0);
 	} else {
 		/* if test is for WMM-AC set APTS RESET RESP to 48 */
 		msgid = sigma_wmm_ac ? WMMAC_APTS_RESET_RESP : APTS_RESET_RESP;
-		create_apts_pkt(msgid, reset_pkt, tos, s);
+		create_apts_pkt(msgid, reset_pkt, s->payload_size, tos, s);
 		setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
 		send(s->sock, reset_pkt, s->payload_size, 0);
 		s->reset_rx = 0;
@@ -1648,7 +1651,7 @@ static int console_send(struct sigma_stream *s, u32 pkt_type, u32 tos)
 		return 0;
 	}
 	memset(tpkt, 0, s->payload_size);
-	create_apts_pkt(pkt_type, tpkt, tos, s);
+	create_apts_pkt(pkt_type, tpkt, s->payload_size, tos, s);
 	if (pkt_type == APTS_DEFAULT || pkt_type == APTS_STOP)
 		tpkt[0] = ++(s->rx_cookie);
 	tpkt[1] = tos;
@@ -2421,7 +2424,7 @@ static int console_rx_vo_tx_vo_cyclic(struct sigma_stream *s,
 		tpkt[0] = s->rx_cookie;
 		tos = TOS_BE;
 		setsockopt(s->sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
-		create_apts_pkt(APTS_STOP, tpkt, tos, s);
+		create_apts_pkt(APTS_STOP, tpkt, s->payload_size, tos, s);
 		tpkt[1] = tos;
 		if (s->can_quit) {
 			const char *stop_cmd = "APTSL1 STOP";
