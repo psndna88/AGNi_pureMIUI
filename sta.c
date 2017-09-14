@@ -1417,7 +1417,7 @@ static int set_wpa_common(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
-	val = get_param(cmd, "GroupMgmtCipher");
+	val = get_param(cmd, "GroupMgntCipher");
 	if (val) {
 		/* TODO */
 	}
