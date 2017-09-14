@@ -402,7 +402,16 @@ struct sigma_dut {
 		AP_PLAIN,
 		AP_CCMP_TKIP,
 		AP_GCMP_256,
+		AP_GCMP_128,
+		AP_CCMP_256,
 	} ap_cipher;
+	enum ap_group_mgmt_cipher {
+		AP_NO_GROUP_MGMT_CIPHER_SET,
+		AP_BIP_GMAC_256,
+		AP_BIP_CMAC_256,
+		AP_BIP_GMAC_128,
+		AP_BIP_CMAC_128,
+	} ap_group_mgmt_cipher;
 	char *ap_sae_groups;
 	int sae_anti_clogging_threshold;
 	int sae_reflection;

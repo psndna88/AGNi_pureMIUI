@@ -1452,9 +1452,45 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 		} else if (strcasecmp(val, "AES") == 0 ||
 			   strcasecmp(val, "AES-CCMP") == 0) {
 			dut->ap_cipher = AP_CCMP;
+		} else if (strcasecmp(val, "AES-GCMP") == 0) {
+			dut->ap_cipher = AP_GCMP_128;
 		} else {
 			send_resp(dut, conn, SIGMA_INVALID,
 				  "errorCode,Unsupported ENCRYPT");
+			return 0;
+		}
+	}
+
+	val = get_param(cmd, "PairwiseCipher");
+	if (val) {
+		if (strcasecmp(val, "AES-GCMP-256") == 0) {
+			dut->ap_cipher = AP_GCMP_256;
+		} else if (strcasecmp(val, "AES-CCMP-256") == 0) {
+			dut->ap_cipher = AP_CCMP_256;
+		} else if (strcasecmp(val, "AES-GCMP-128") == 0) {
+			dut->ap_cipher = AP_GCMP_128;
+		} else if (strcasecmp(val, "AES-CCMP-128") == 0) {
+			dut->ap_cipher = AP_CCMP;
+		} else {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Unsupported PairwiseCipher");
+			return 0;
+		}
+	}
+
+	val = get_param(cmd, "GroupMgntCipher");
+	if (val) {
+		if (strcasecmp(val, "BIP-GMAC-256") == 0) {
+			dut->ap_group_mgmt_cipher = AP_BIP_GMAC_256;
+		} else if (strcasecmp(val, "BIP-CMAC-256") == 0) {
+			dut->ap_group_mgmt_cipher = AP_BIP_CMAC_256;
+		} else if (strcasecmp(val, "BIP-GMAC-128") == 0) {
+			dut->ap_group_mgmt_cipher = AP_BIP_GMAC_128;
+		} else if (strcasecmp(val, "BIP-CMAC-128") == 0) {
+			dut->ap_group_mgmt_cipher = AP_BIP_CMAC_128;
+		} else {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Unsupported GroupMgntCipher");
 			return 0;
 		}
 	}
@@ -5335,6 +5371,45 @@ static int get_5g_channel_freq(int chan)
 }
 
 
+static const char * hostapd_cipher_name(enum ap_cipher cipher)
+{
+	switch (cipher) {
+	case AP_CCMP:
+		return "CCMP";
+	case AP_TKIP:
+		return "TKIP";
+	case AP_CCMP_TKIP:
+		return "CCMP TKIP";
+	case AP_GCMP_256:
+		return "GCMP-256";
+	case AP_GCMP_128:
+		return "GCMP";
+	case AP_CCMP_256:
+		return "CCMP-256";
+	default:
+		return "UNKNOWN";
+	}
+}
+
+
+static const char *
+hostapd_group_mgmt_cipher_name(enum ap_group_mgmt_cipher cipher)
+{
+	switch (cipher) {
+	case AP_BIP_GMAC_256:
+		return "BIP-GMAC-128";
+	case AP_BIP_CMAC_256:
+		return "BIP-CMAC-256";
+	case AP_BIP_GMAC_128:
+		return "BIP-GMAC-128";
+	case AP_BIP_CMAC_128:
+		return "AES-128-CMAC";
+	default:
+		return "UNKNOWN";
+	}
+}
+
+
 int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 			 struct sigma_cmd *cmd)
 {
@@ -5596,8 +5671,12 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		fprintf(f, "ieee8021x=1\n");
 		fprintf(f, "wpa=2\n");
 		fprintf(f, "wpa_key_mgmt=WPA-EAP-SUITE-B-192\n");
-		fprintf(f, "wpa_pairwise=GCMP-256\n");
-		fprintf(f, "group_mgmt_cipher=BIP-GMAC-256\n");
+		fprintf(f, "wpa_pairwise=%s\n",
+			hostapd_cipher_name(dut->ap_cipher));
+		if (dut->ap_group_mgmt_cipher != AP_NO_GROUP_MGMT_CIPHER_SET)
+			fprintf(f, "group_mgmt_cipher=%s\n",
+				hostapd_group_mgmt_cipher_name(
+					dut->ap_group_mgmt_cipher));
 		fprintf(f, "auth_server_addr=%s\n", dut->ap_radius_ipaddr);
 		if (dut->ap_radius_port)
 			fprintf(f, "auth_server_port=%d\n",
@@ -6477,6 +6556,9 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	dut->sae_anti_clogging_threshold = -1;
 	dut->sae_reflection = 0;
+
+	dut->ap_cipher = AP_CCMP;
+	dut->ap_group_mgmt_cipher = AP_NO_GROUP_MGMT_CIPHER_SET;
 
 	dut->dpp_conf_id = -1;
 
