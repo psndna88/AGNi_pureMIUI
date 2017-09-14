@@ -4362,10 +4362,9 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 	}
 
 	if (dut->ap_amsdu == VALUE_ENABLED) {
-		snprintf(buf, sizeof(buf), "iwpriv %s amsdu 3", ifname);
+		snprintf(buf, sizeof(buf), "iwpriv %s amsdu 2", ifname);
 		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv amsdu 3 failed");
+			sigma_dut_print(dut, DUT_MSG_ERROR, "iwpriv amsdu 2 failed");
 		}
 	} else if (dut->ap_amsdu == VALUE_DISABLED) {
 		snprintf(buf, sizeof(buf), "iwpriv %s amsdu 1", ifname);
@@ -4386,29 +4385,6 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 		}
 	}
 
-	if (dut->ap_rx_stbc == 1) {
-		snprintf(buf, sizeof(buf), "iwpriv %s rx_stbc 1", ifname);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv rx_stbc 1 failed");
-		}
-	}
-
-	if (dut->ap_opmode_notify == 1) {
-		snprintf(buf, sizeof(buf), "iwpriv %s opmode_notify 0", ifname);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv opmode_notify 0 failed");
-		}
-	}
-
-	if (dut->ap_sgi80 == 1) {
-		snprintf(buf, sizeof(buf), "iwpriv %s shortgi 1", ifname);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv shortgi 1 failed");
-		}
-	}
 	/* Command sequence to generate single VHT AMSDU and MPDU */
 	if (dut->ap_addba_reject != VALUE_NOT_SET &&
 	    dut->ap_ampdu == VALUE_DISABLED &&
@@ -6415,9 +6391,6 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 			dut->ap_rx_amsdu = VALUE_DISABLED;
 			dut->ap_sgi80 = 0;
 			dut->ap_txBF = 2;
-			dut->ap_rx_stbc = 1;
-			dut->ap_opmode_notify = 1;
-			dut->ap_txBF = 1;
 		} else {
 			dut->ap_amsdu = VALUE_ENABLED;
 			/*
@@ -6996,7 +6969,7 @@ static int ath_ap_send_frame_vht(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 
 	/* Send the opmode notification */
-	snprintf(buf, sizeof(buf), "iwpriv %s opmode_notify 0", ifname);
+	snprintf(buf, sizeof(buf), "iwpriv %s opmode_notify 1", ifname);
 	if (system(buf) != 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"iwpriv opmode_notify failed!");
@@ -8261,7 +8234,7 @@ static int ath_vht_op_mode_notif(struct sigma_dut *dut, const char *ifname,
 	}
 
 	/* Send the opmode notification */
-	snprintf(buf, sizeof(buf), "iwpriv %s opmode_notify 0", ifname);
+	snprintf(buf, sizeof(buf), "iwpriv %s opmode_notify 1", ifname);
 	if (system(buf) != 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"iwpriv opmode_notify failed!");
