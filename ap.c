@@ -2597,17 +2597,12 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 	if (dut->ap_disable_protection == 1)
 		owrt_ap_set_vap(dut, vap_id, "enablertscts", "0");
 
-	if (dut->ap_txBF == 1) {
+	if (dut->ap_txBF) {
 		owrt_ap_set_vap(dut, vap_id, "vhtsubfee", "1");
 		owrt_ap_set_vap(dut, vap_id, "vhtsubfer", "1");
-		owrt_ap_set_vap(dut, vap_id, "vhtmubfer", "0");
-	} else if (dut->ap_txBF == 2) {
-		owrt_ap_set_vap(dut, vap_id, "vhtsubfer", "0");
-		owrt_ap_set_vap(dut, vap_id, "vhtmubfer", "0");
 	}
 
 	if (dut->ap_mu_txBF)
-		owrt_ap_set_vap(dut, vap_id, "vhtsubfer", "1");
 		owrt_ap_set_vap(dut, vap_id, "vhtmubfer", "1");
 
 	if (dut->ap_tx_stbc) {
@@ -6384,13 +6379,11 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_channel = 36;
 		dut->ap_ampdu = VALUE_NOT_SET;
 		dut->ap_ndpa_frame = 1;
-		dut->ap_txBF = 1;
 		if (dut->device_type == AP_testbed) {
 			dut->ap_amsdu = VALUE_DISABLED;
 			dut->ap_ldpc = VALUE_DISABLED;
 			dut->ap_rx_amsdu = VALUE_DISABLED;
 			dut->ap_sgi80 = 0;
-			dut->ap_txBF = 2;
 		} else {
 			dut->ap_amsdu = VALUE_ENABLED;
 			/*
