@@ -871,6 +871,7 @@ struct lpm_cluster *parse_cluster(struct device_node *node,
 	if (ret)
 		goto failed_parse_params;
 
+	INIT_LIST_HEAD(&c->list);
 	INIT_LIST_HEAD(&c->child);
 	c->parent = parent;
 	spin_lock_init(&c->sync_lock);
