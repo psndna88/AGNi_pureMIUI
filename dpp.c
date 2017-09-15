@@ -183,6 +183,12 @@ static int dpp_hostapd_conf_update(struct sigma_dut *dut,
 {
 	int res;
 	char buf[2000], buf2[2500], *pos, *pos2;
+	const char *conf_data_events[] = {
+		"DPP-CONNECTOR",
+		"DPP-CONFOBJ-PASS",
+		"DPP-CONFOBJ-PSK",
+		NULL
+	};
 
 	sigma_dut_print(dut, DUT_MSG_INFO,
 			"Update hostapd configuration based on DPP Config Object");
@@ -215,13 +221,55 @@ static int dpp_hostapd_conf_update(struct sigma_dut *dut,
 		goto out;
 	}
 
-	res = get_wpa_cli_event(dut, ctrl, "DPP-CONNECTOR",
-				buf, sizeof(buf));
+	res = get_wpa_cli_events(dut, ctrl, conf_data_events, buf, sizeof(buf));
 	if (res < 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
-			  "errorCode,No DPP-CONNECTOR");
+			  "errorCode,No DPP-CONNECTOR/DPP-CONFOBJ-PASS/PSK");
 		goto out;
 	}
+
+	if (!strstr(buf, "DPP-CONNECTOR")) {
+		if (wpa_command(ifname, "SET wpa_key_mgmt WPA-PSK") < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to update AP security parameters");
+			goto out;
+		}
+
+		pos = strchr(buf, ' ');
+		if (!pos)
+			return -2;
+		pos++;
+		if (strstr(buf, "DPP-CONFOBJ-PASS")) {
+			char pass[64];
+			int pass_len;
+
+			pass_len = parse_hexstr(pos, (u8 *) pass, sizeof(pass));
+			if (pass_len < 0 || pass_len >= sizeof(pass))
+				return -2;
+			pass[pass_len] = '\0';
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"DPP: Passphrase: %s", pass);
+			snprintf(buf2, sizeof(buf2), "SET wpa_passphrase %s",
+				 pass);
+			if (wpa_command(ifname, buf2) < 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to set passphrase");
+				goto out;
+			}
+		} else if (strstr(buf, "DPP-CONFOBJ-PSK")) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"DPP: PSK: %s", pos);
+			snprintf(buf2, sizeof(buf2), "SET wpa_psk %s", pos);
+			if (wpa_command(ifname, buf2) < 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to set PSK");
+				goto out;
+			}
+		}
+
+		goto skip_dpp_akm;
+	}
+
 	pos = strchr(buf, ' ');
 	if (!pos)
 		return -2;
@@ -298,6 +346,7 @@ static int dpp_hostapd_conf_update(struct sigma_dut *dut,
 			goto out;
 		}
 	}
+skip_dpp_akm:
 
 	if (wpa_command(ifname, "DISABLE") < 0 ||
 	    wpa_command(ifname, "ENABLE") < 0) {
