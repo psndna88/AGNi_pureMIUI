@@ -533,7 +533,8 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	case 2:
 		ascii2hexstr("DPPNET01", buf);
 		snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
-		/* TODO: raw PSK */
+		snprintf(conf_pass, sizeof(conf_pass),
+			 "psk=10506e102ad1e7f95112f6b127675bb8344dacacea60403f3fa4055aec85b0fc");
 		if (val && strcasecmp(val, "AP") == 0)
 			conf_role = "ap-psk";
 		else
