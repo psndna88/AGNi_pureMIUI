@@ -594,7 +594,7 @@
 
 			pmi8950_switch: qcom,switch {
 				label = "switch";
-				qcom,led-name = "led:switch";
+				qcom,led-name = "flashlight";
 				qcom,default-led-trigger =
 						"switch_trigger";
 				qcom,max-current = <1000>;
