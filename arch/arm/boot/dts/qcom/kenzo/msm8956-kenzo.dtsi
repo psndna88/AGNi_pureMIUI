@@ -846,7 +846,7 @@
 		compatible = "qcom,bcl";
 		qcom,bcl-enable;
 		qcom,bcl-framework-interface;
-		qcom,bcl-freq-control-list = <&CPU4 &CPU5>;
+		/delete-property/ qcom,bcl-freq-control-list;
 		/delete-property/ qcom,bcl-hotplug-list;
 		/delete-property/ qcom,bcl-soc-hotplug-list;
 		qcom,ibat-monitor {
