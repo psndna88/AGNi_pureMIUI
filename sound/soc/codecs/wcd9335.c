@@ -12472,11 +12472,17 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%d %d", &input_l, &input_r);
 
-	if (input_l < -84 || input_l > 20)
-		input_l = 0;
+	if (input_l < -10)
+		input_l = -10;
 
-	if (input_r < -84 || input_r > 20)
-		input_r = 0;
+    if (input_l > 20)
+		input_l = 20;
+
+	if (input_r < -10)
+		input_r = -10;
+
+	if (input_r > 20)
+		input_r = 20;
 
 	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_RX1_RX_VOL_CTL, input_l);
 	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_RX2_RX_VOL_CTL, input_r);
@@ -12513,8 +12519,11 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%d", &input);
 
-	if (input < -10 || input > 20)
-		input = 0;
+	if (input < -10)
+		input = -10;
+
+	if (input > 20)
+		input = 20;
 
 	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_TX6_TX_VOL_CTL, input);
 	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_TX7_TX_VOL_CTL, input);
@@ -12552,8 +12561,11 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%d", &input);
 
-	if (input < -10 || input > 20)
-		input = 0;
+	if (input < -10 && input != -84)
+		input = -10;
+
+	if (input > 20)
+		input = 20;
 
 	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_RX6_RX_VOL_CTL, input);
 	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_RX6_RX_VOL_MIX_CTL, input);
@@ -12584,8 +12596,11 @@ static ssize_t earpiece_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%d", &input);
 
-	if (input < -10 || input > 20)
-		input = 0;
+	if (input < -10)
+		input = -10;
+
+	if (input > 20)
+		input = 20;
 
 	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_RX0_RX_VOL_CTL, input);
 	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_RX0_RX_VOL_MIX_CTL, input);
