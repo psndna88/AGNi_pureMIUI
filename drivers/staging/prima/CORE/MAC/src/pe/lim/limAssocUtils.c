@@ -3374,6 +3374,9 @@ limCheckAndAnnounceJoinSuccess(tpAniSirGlobal pMac,
         mlmJoinCnf.sessionId = psessionEntry->peSessionId;
         limPostSmeMessage(pMac, LIM_MLM_JOIN_CNF, (tANI_U32 *) &mlmJoinCnf);
     } // if ((pMac->lim.gLimSystemRole == IBSS....
+
+     /* Update HS 2.0 Information Element */
+    sir_copy_hs20_ie(&psessionEntry->hs20vendor_ie, &pBPR->hs20vendor_ie);
 }
 
 /**
