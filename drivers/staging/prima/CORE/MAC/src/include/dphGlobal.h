@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2013, 2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2013, 2016-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -320,6 +320,27 @@ typedef struct sCfgTrafficClass {
 } tCfgTrafficClass;
 
 
+/**
+ * struct parsed_ies: Parsed IE's of BSS capability
+ * @ht_caps: HT caps IE
+ * @vht_caps: VHT caps IE
+ * @ht_operation: HT operation IE
+ * @vht_operation: VHT operation IE
+ * @hs20vendor_ie: HS2.0 vendor IE
+ *
+ * This structure holds the parsed IE of connected BSS
+ * and this is not the intersection of BSS and STA
+ * capability. For example, if BSS supports 80 MHz
+ * and STA connects to BSS in 20 MHz, this structure
+ * holds 80 MHz as peer capability.
+ */
+struct parsed_ies {
+    tDot11fIEHTCaps ht_caps;
+    tDot11fIEVHTCaps vht_caps;
+    tDot11fIEHTInfo ht_operation;
+    tDot11fIEVHTOperation vht_operation;
+    tDot11fIEhs20vendor_ie hs20vendor_ie;
+};
 
 /// STA state node
 
@@ -639,6 +660,7 @@ typedef struct sDphHashNode
      */
     tANI_U8 isDisassocDeauthInProgress;
     bool sta_deletion_in_progress;
+    struct parsed_ies parsed_ies;
     struct sDphHashNode  *next;
 
 
