@@ -771,13 +771,13 @@ out:
 	up_read(&pil_pm_rwsem);
 	if (ret) {
 		if (priv->region) {
+			if (desc->clear_fw_region && priv->region_start)
+				pil_clear_segment(desc);
 			dma_free_attrs(desc->dev, priv->region_size,
 					priv->region, priv->region_start,
 					&desc->attrs);
 			priv->region = NULL;
 		}
-		if (desc->clear_fw_region && priv->region_start)
-			pil_clear_segment(desc);
 		pil_release_mmap(desc);
 	}
 	return ret;
