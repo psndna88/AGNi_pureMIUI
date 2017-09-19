@@ -8478,8 +8478,9 @@ static int cmd_sta_scan(struct sigma_dut *dut, struct sigma_conn *conn,
 			struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
-	const char *val;
+	const char *val, *bssid, *ssid;
 	char buf[100];
+	char ssid_hex[65];
 	int res;
 
 	val = get_param(cmd, "HESSID");
@@ -8499,7 +8500,27 @@ static int cmd_sta_scan(struct sigma_dut *dut, struct sigma_conn *conn,
 		wpa_command(intf, buf);
 	}
 
-	if (wpa_command(intf, "SCAN")) {
+	bssid = get_param(cmd, "Bssid");
+	ssid = get_param(cmd, "Ssid");
+
+	if (ssid) {
+		if (2 * strlen(ssid) >= sizeof(ssid_hex)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Too long SSID");
+			return 0;
+		}
+		ascii2hexstr(ssid, ssid_hex);
+	}
+
+	res = snprintf(buf, sizeof(buf), "SCAN%s%s%s%s",
+			bssid ? " bssid=": "",
+			bssid ? bssid : "",
+			ssid ? " ssid " : "",
+			ssid ? ssid_hex : "");
+	if (res < 0 || res >= (int) sizeof(buf))
+		return -1;
+
+	if (wpa_command(intf, buf)) {
 		send_resp(dut, conn, SIGMA_ERROR, "errorCode,Could not start "
 			  "scan");
 		return 0;
