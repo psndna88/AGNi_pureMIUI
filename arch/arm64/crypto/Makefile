@@ -45,7 +45,7 @@ CFLAGS_aes-glue-ce.o	:= -DUSE_V8_CRYPTO_EXTENSIONS
 
 obj-$(CONFIG_CRYPTO_CRC32_ARM64) += crc32-arm64.o
 
-CFLAGS_crc32-arm64.o	:= -mcpu=generic+crc
+CFLAGS_crc32-arm64.o	:= -mcpu=cortex-a72.cortex-a53+crc+crypto
 
 ccflags-y := -O3
 
