@@ -8905,6 +8905,86 @@ static int cmd_sta_wps_connect_pw_token(struct sigma_dut *dut,
 }
 
 
+static int cmd_start_wps_registration(struct sigma_dut *dut,
+				      struct sigma_conn *conn,
+				      struct sigma_cmd *cmd)
+{
+	struct wpa_ctrl *ctrl;
+	const char *intf = get_param(cmd, "Interface");
+	const char *role, *method;
+	int res;
+	char buf[256];
+	const char *events[] = {
+		"CTRL-EVENT-CONNECTED",
+		"WPS-OVERLAP-DETECTED",
+		"WPS-TIMEOUT",
+		"WPS-FAIL",
+		NULL
+	};
+
+	ctrl = open_wpa_mon(intf);
+	if (!ctrl) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to open wpa_supplicant monitor connection");
+		return -2;
+	}
+
+	role = get_param(cmd, "WpsRole");
+	if (!role) {
+		send_resp(dut, conn, SIGMA_INVALID,
+			  "ErrorCode,WpsRole not provided");
+		goto fail;
+	}
+
+	if (strcasecmp(role, "Enrollee") == 0) {
+		method = get_param(cmd, "WpsConfigMethod");
+		if (!method) {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "ErrorCode,WpsConfigMethod not provided");
+			goto fail;
+		}
+		if (strcasecmp(method, "PBC") == 0) {
+			if (wpa_command(intf, "WPS_PBC") < 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "ErrorCode,Failed to enable PBC");
+				goto fail;
+			}
+		} else {
+			/* TODO: PIN method */
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Unsupported WpsConfigMethod value");
+			goto fail;
+		}
+		res = get_wpa_cli_events(dut, ctrl, events, buf, sizeof(buf));
+		if (res < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,WPS connection did not complete");
+			goto fail;
+		}
+		if (strstr(buf, "WPS-TIMEOUT")) {
+			send_resp(dut, conn, SIGMA_ERROR, "ErrorCode,NoPeer");
+		} else if (strstr(buf, "WPS-OVERLAP-DETECTED")) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,OverlapSession");
+		} else if (strstr(buf, "CTRL-EVENT-CONNECTED")) {
+			send_resp(dut, conn, SIGMA_COMPLETE, "Successful");
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,WPS operation failed");
+		}
+	} else {
+		/* TODO: Registrar role */
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "ErrorCode,Unsupported WpsRole value");
+	}
+
+fail:
+	wpa_ctrl_detach(ctrl);
+	wpa_ctrl_close(ctrl);
+	return 0;
+}
+
+
 static int req_intf(struct sigma_cmd *cmd)
 {
 	return get_param(cmd, "interface") == NULL ? -1 : 0;
@@ -8977,4 +9057,6 @@ void sta_register_cmds(void)
 	sigma_dut_reg_cmd("sta_exec_action", req_intf, cmd_sta_exec_action);
 	sigma_dut_reg_cmd("sta_get_events", req_intf, cmd_sta_get_events);
 	sigma_dut_reg_cmd("sta_get_parameter", req_intf, cmd_sta_get_parameter);
+	sigma_dut_reg_cmd("start_wps_registration", req_intf,
+			  cmd_start_wps_registration);
 }
