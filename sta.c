@@ -4577,6 +4577,12 @@ static int cmd_sta_disconnect(struct sigma_dut *dut, struct sigma_conn *conn,
 			      struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
+
+	if (dut->program == PROGRAM_OCE) {
+		wpa_command(intf, "DISCONNECT");
+		return 1;
+	}
+
 	disconnect_station(dut);
 	/* Try to ignore old scan results to avoid HS 2.0R2 test case failures
 	 * due to cached results. */
