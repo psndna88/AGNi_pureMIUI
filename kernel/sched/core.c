@@ -2892,7 +2892,7 @@ EXPORT_PER_CPU_SYMBOL(kernel_cpustat);
  *
  * Called with task_rq_lock() held on @rq.
  */
-static u64 do_task_delta_exec(struct task_struct *p, struct rq *rq)
+/* static u64 do_task_delta_exec(struct task_struct *p, struct rq *rq)
 {
 	u64 ns = 0;
 
@@ -2904,7 +2904,7 @@ static u64 do_task_delta_exec(struct task_struct *p, struct rq *rq)
 	}
 
 	return ns;
-}
+} */
 
 /*
  * Return accounted runtime for the task.
