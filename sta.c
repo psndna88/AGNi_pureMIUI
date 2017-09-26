@@ -1419,7 +1419,26 @@ static int set_wpa_common(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	val = get_param(cmd, "GroupMgntCipher");
 	if (val) {
-		/* TODO */
+		const char *cipher;
+
+		if (strcasecmp(val, "BIP-GMAC-256") == 0) {
+			cipher = "BIP-GMAC-256";
+		} else if (strcasecmp(val, "BIP-CMAC-256") == 0) {
+			cipher = "BIP-CMAC-256";
+		} else if (strcasecmp(val, "BIP-GMAC-128") == 0) {
+			cipher = "BIP-GMAC-128";
+		} else if (strcasecmp(val, "BIP-CMAC-128") == 0) {
+			cipher = "AES-128-CMAC";
+		} else {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Unsupported GroupMgntCipher");
+			return 0;
+		}
+		if (set_network(ifname, id, "group_mgmt", cipher) < 0) {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Failed to set GroupMgntCipher");
+			return 0;
+		}
 	}
 
 	dut->sta_pmf = STA_PMF_DISABLED;
