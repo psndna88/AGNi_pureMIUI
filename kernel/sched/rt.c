@@ -1318,7 +1318,7 @@ task_may_not_preempt(struct task_struct *task, int cpu)
 	int task_pc = 0;
 
 	if (task)
-		task_pc = task_preempt_count(task);
+		task_pc = task_thread_info(task)->preempt_count;
 
 	if (softirq_masked(task_pc))
 		return true;
