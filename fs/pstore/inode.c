@@ -40,6 +40,7 @@
 #ifdef CONFIG_PSTORE_LAST_KMSG
 #include <linux/proc_fs.h>
 #endif
+#include <linux/vmalloc.h>
 
 #include "internal.h"
 
@@ -219,7 +220,7 @@ static void pstore_evict_inode(struct inode *inode)
 		spin_lock_irqsave(&allpstore_lock, flags);
 		list_del(&p->list);
 		spin_unlock_irqrestore(&allpstore_lock, flags);
-		kfree(p);
+		vfree(p);
 	}
 }
 
@@ -349,7 +350,7 @@ int pstore_mkfile(enum pstore_type_id type, char *psname, u64 id, int count,
 		goto fail;
 	inode->i_mode = S_IFREG | 0444;
 	inode->i_fop = &pstore_file_operations;
-	private = kmalloc(sizeof *private + size, GFP_KERNEL);
+	private = vmalloc(sizeof *private + size);
 	if (!private)
 		goto fail_alloc;
 	private->type = type;
@@ -429,7 +430,7 @@ int pstore_mkfile(enum pstore_type_id type, char *psname, u64 id, int count,
 
 fail_lockedalloc:
 	mutex_unlock(&d_inode(root)->i_mutex);
-	kfree(private);
+	vfree(private);
 fail_alloc:
 	iput(inode);
 
