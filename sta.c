@@ -1664,6 +1664,33 @@ ca_cert_selected:
 }
 
 
+static int set_tls_cipher(const char *ifname, int id, const char *cipher)
+{
+	const char *val;
+
+	if (!cipher)
+		return 0;
+
+	if (strcasecmp(cipher, "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384") == 0)
+		val = "ECDHE-ECDSA-AES256-GCM-SHA384";
+	else if (strcasecmp(cipher,
+			    "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384") == 0)
+		val = "ECDHE-RSA-AES256-GCM-SHA384";
+	else if (strcasecmp(cipher, "TLS_DHE_RSA_WITH_AES_256_GCM_SHA384") == 0)
+		val = "DHE-RSA-AES256-GCM-SHA384";
+	else if (strcasecmp(cipher,
+			    "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256") == 0)
+		val = "ECDHE-ECDSA-AES128-GCM-SHA256";
+	else
+		return -1;
+
+	/* Need to clear phase1="tls_suiteb=1" to allow cipher enforcement */
+	set_network_quoted(ifname, id, "phase1", "");
+
+	return set_network_quoted(ifname, id, "openssl_ciphers", val);
+}
+
+
 static int cmd_sta_set_eaptls(struct sigma_dut *dut, struct sigma_conn *conn,
 			      struct sigma_cmd *cmd)
 {
@@ -1764,6 +1791,27 @@ static int cmd_sta_set_eaptls(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	if (set_network_quoted(ifname, id, "private_key_passwd", "wifi") < 0)
 		return -2;
+
+	val = get_param(cmd, "keyMgmtType");
+	if (val && strcasecmp(val, "SuiteB") == 0) {
+		val = get_param(cmd, "CertType");
+		if (val && strcasecmp(val, "RSA") == 0) {
+			if (set_network_quoted(ifname, id, "phase1",
+					       "tls_suiteb=1") < 0)
+				return -2;
+		} else {
+			if (set_network_quoted(ifname, id, "openssl_ciphers",
+					       "SUITEB192") < 0)
+				return -2;
+		}
+
+		val = get_param(cmd, "TLSCipher");
+		if (set_tls_cipher(ifname, id, val) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Unsupported TLSCipher value");
+			return -3;
+		}
+	}
 
 	return 1;
 }
