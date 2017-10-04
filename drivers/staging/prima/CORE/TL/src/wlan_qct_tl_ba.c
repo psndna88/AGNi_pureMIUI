@@ -1166,10 +1166,7 @@ VOS_STATUS WLANTL_MSDUReorder
                           "(QCUR_FWDBUF) dropping old frame, SN=%d LastSN=%d",
                           CSN, currentReorderInfo->LastSN));
                  if (vos_is_arp_pkt((*vosDataBuff)->pSkb, true))
-                 {
-                    if (vos_check_arp_rsp_src_ip((*vosDataBuff)->pSkb, true))
-                       vos_update_arp_rx_drop_reorder();
-                 }
+                    vos_update_arp_rx_drop_reorder();
 
                  status = vos_pkt_return_packet(*vosDataBuff);
                  if (!VOS_IS_STATUS_SUCCESS(status))

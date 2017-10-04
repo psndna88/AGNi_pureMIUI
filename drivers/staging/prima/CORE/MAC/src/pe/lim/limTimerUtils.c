@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -63,6 +63,10 @@
 /* This timer is a periodic timer which expires at every 1 sec to
    convert  ACTIVE DFS channel to DFS channels */
 #define ACTIVE_TO_PASSIVE_CONVERISON_TIMEOUT     1000
+
+#ifdef WLAN_FEATURE_LFR_MBB
+#define PREAUTH_REASSOC_TIMEOUT     500
+#endif
 
 /**
  * limCreateTimers()
@@ -624,6 +628,34 @@ limCreateTimers(tpAniSirGlobal pMac)
     }
 #endif
 
+#ifdef WLAN_FEATURE_LFR_MBB
+    cfgValue = PREAUTH_REASSOC_TIMEOUT;
+    cfgValue = SYS_MS_TO_TICKS(cfgValue);
+
+    if (tx_timer_create(&pMac->lim.limTimers.glim_pre_auth_mbb_rsp_timer,
+                        "PREAUTH MBB RSP TIMEOUT",
+                        limTimerHandler, SIR_LIM_PREAUTH_MBB_RSP_TIMEOUT,
+                        cfgValue, 0,
+                        TX_NO_ACTIVATE) != TX_SUCCESS)
+    {
+        limLog(pMac, LOGP, FL("could not create PREAUTH_MBB_RSP timer"));
+        goto err_timer;
+    }
+
+    cfgValue = PREAUTH_REASSOC_TIMEOUT;
+    cfgValue = SYS_MS_TO_TICKS(cfgValue);
+
+    if (tx_timer_create(&pMac->lim.limTimers.glim_reassoc_mbb_rsp_timer,
+                        "REASSOC MBB RSP TIMEOUT",
+                        limTimerHandler, SIR_LIM_REASSOC_MBB_RSP_TIMEOUT,
+                        cfgValue, 0,
+                        TX_NO_ACTIVATE) != TX_SUCCESS)
+    {
+        limLog(pMac, LOGP, FL("could not create REASSOC_MBB_RSP timer"));
+        goto err_timer;
+    }
+#endif
+
 #if defined(FEATURE_WLAN_ESE) && !defined(FEATURE_WLAN_ESE_UPLOAD)
     cfgValue = 5000;
     cfgValue = SYS_MS_TO_TICKS(cfgValue);
@@ -712,6 +744,10 @@ limCreateTimers(tpAniSirGlobal pMac)
         tx_timer_delete(&pMac->lim.limTimers.gLimEseTsmTimer);
 #endif /* FEATURE_WLAN_ESE && !FEATURE_WLAN_ESE_UPLOAD */
         tx_timer_delete(&pMac->lim.limTimers.gLimFTPreAuthRspTimer);
+#ifdef WLAN_FEATURE_LFR_MBB
+        tx_timer_delete(&pMac->lim.limTimers.glim_pre_auth_mbb_rsp_timer);
+        tx_timer_delete(&pMac->lim.limTimers.glim_reassoc_mbb_rsp_timer);
+#endif
         tx_timer_delete(&pMac->lim.limTimers.gLimUpdateOlbcCacheTimer);
         while(((tANI_S32)--i) >= 0)
         {
@@ -1730,6 +1766,30 @@ limDeactivateAndChangeTimer(tpAniSirGlobal pMac, tANI_U32 timerId)
             }
             break;
 #endif
+
+#ifdef WLAN_FEATURE_LFR_MBB
+        case eLIM_PREAUTH_MBB_RSP_TIMER:
+            MTRACE(macTrace(pMac, TRACE_CODE_TIMER_DEACTIVATE,
+                                  NO_SESSION, eLIM_PREAUTH_MBB_RSP_TIMER));
+            if (tx_timer_deactivate(&pMac->lim.limTimers.
+                          glim_pre_auth_mbb_rsp_timer) != TX_SUCCESS) {
+                limLog(pMac, LOGP,
+                       FL("Unable to deactivate preauth response mbb timer"));
+                return;
+            }
+            break;
+        case eLIM_REASSOC_MBB_RSP_TIMER:
+            MTRACE(macTrace(pMac, TRACE_CODE_TIMER_DEACTIVATE,
+                                  NO_SESSION, eLIM_REASSOC_MBB_RSP_TIMER));
+            if (tx_timer_deactivate(&pMac->lim.limTimers.
+                          glim_reassoc_mbb_rsp_timer) != TX_SUCCESS) {
+                limLog(pMac, LOGP,
+                       FL("Unable to deactivate reassoc response mbb timer"));
+                return;
+            }
+            break;
+#endif
+
 #if defined(FEATURE_WLAN_ESE) && !defined(FEATURE_WLAN_ESE_UPLOAD)
          case eLIM_TSM_TIMER:
              if (tx_timer_deactivate(&pMac->lim.limTimers.gLimEseTsmTimer)

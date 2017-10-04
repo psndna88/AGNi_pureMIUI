@@ -110,6 +110,7 @@
 #define NUM_RADIOS  0x1
 #endif /* WLAN_FEATURE_LINK_LAYER_STATS */
 
+
 typedef struct {
    u8 element_id;
    u8 len;
@@ -172,6 +173,7 @@ enum qca_nl80211_vendor_subcmds {
 
     /* Get Concurrency Matrix */
     QCA_NL80211_VENDOR_SUBCMD_GET_CONCURRENCY_MATRIX = 42,
+    QCA_NL80211_VENDOR_SUBCMD_APFIND = 52,
     /* Start Wifi Logger */
     QCA_NL80211_VENDOR_SUBCMD_WIFI_LOGGER_START = 62,
 
@@ -438,7 +440,7 @@ enum qca_attr_nud_stats_get {
     QCA_ATTR_NUD_STATS_GET_LAST,
     QCA_ATTR_NUD_STATS_GET_MAX =
             QCA_ATTR_NUD_STATS_GET_LAST - 1,
-};
+ };
 
 enum qca_wlan_vendor_attr
 {
@@ -1309,6 +1311,10 @@ enum qca_wlan_vendor_config {
     QCA_WLAN_VENDOR_ATTR_CONFIG_FINE_TIME_MEASUREMENT,
     QCA_WLAN_VENDOR_ATTR_CONFIG_TX_RATE,
     QCA_WLAN_VENDOR_ATTR_CONFIG_PENALIZE_AFTER_NCONS_BEACON_MISS,
+    /* 8-bit unsigned value to set the beacon miss threshold in 2.4 GHz */
+    QCA_WLAN_VENDOR_ATTR_CONFIG_BEACON_MISS_THRESHOLD_24 = 37,
+    /* 8-bit unsigned value to set the beacon miss threshold in 5 GHz */
+    QCA_WLAN_VENDOR_ATTR_CONFIG_BEACON_MISS_THRESHOLD_5 = 38,
     /* keep last */
     QCA_WLAN_VENDOR_ATTR_CONFIG_LAST,
     QCA_WLAN_VENDOR_ATTR_CONFIG_MAX =
@@ -1655,4 +1661,5 @@ int wlan_hdd_cfg80211_del_station(struct wiphy *wiphy,
 #endif
 
 int wlan_hdd_cfg80211_update_apies(hdd_adapter_t *pHostapdAdapter);
+int wlan_hdd_try_disconnect(hdd_adapter_t *pAdapter);
 #endif

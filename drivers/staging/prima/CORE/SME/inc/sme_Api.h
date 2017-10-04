@@ -337,6 +337,15 @@ typedef enum
     eSME_ROAM_TRIGGER_MAX
 } tSmeFastRoamTrigger;
 
+#ifdef WLAN_FEATURE_APFIND
+struct sme_ap_find_request_req
+{
+    u_int16_t request_data_len;
+    const u_int8_t* request_data;
+};
+#endif /* WLAN_FEATURE_APFIND */
+
+
 /*------------------------------------------------------------------------- 
   Function declarations and documentation.
   ------------------------------------------------------------------------*/
@@ -2722,15 +2731,19 @@ eHalStatus sme_p2pGetResultFilter(tHalHandle hHal, tANI_U8 HDDSessionId,
 eHalStatus sme_SetMaxTxPower(tHalHandle hHal, tSirMacAddr pBssid, 
                              tSirMacAddr pSelfMacAddress, v_S7_t dB);
 
-/* ---------------------------------------------------------------------------
-    \fn sme_SetMaxTxPowerPerBand
-    \brief  Used to set the Maximum Transmit Power for
-    specific band dynamically. Note: this setting will not persist over reboots
-    \param band
-    \param power to set in dB
-    \- return eHalStatus
-    -------------------------------------------------------------------------*/
-eHalStatus sme_SetMaxTxPowerPerBand(eCsrBand band, v_S7_t db);
+/**
+ * sme_SetMaxTxPowerPerBand() - Set the Maximum Transmit Power
+ * specific to band dynamically
+ * @band: Band for which power needs to be applied
+ * @dB: power to set in dB
+ * @hal: HAL handle
+ *
+ * Set the maximum transmit power dynamically per band
+ *
+ * Return: eHalStatus
+ */
+eHalStatus sme_SetMaxTxPowerPerBand(eCsrBand band, v_S7_t dB,
+                 tHalHandle hal);
 
 /* ---------------------------------------------------------------------------
 
@@ -3941,14 +3954,59 @@ void sme_set_mgmt_frm_via_wq5(tHalHandle hHal,
         tANI_BOOLEAN sendMgmtPktViaWQ5);
 eHalStatus sme_update_cfg_int_param(tHalHandle hHal, tANI_U32 cfg_id);
 
+#ifdef WLAN_FEATURE_APFIND
+VOS_STATUS sme_apfind_set_cmd(struct sme_ap_find_request_req *input);
+#endif /* WLAN_FEATURE_APFIND */
+
+#ifdef SAP_AUTH_OFFLOAD
+/**
+ * sme_set_sap_auth_offload() enable/disable SAP Auth Offload
+ * @hHal: hal layer handler
+ * @sap_auth_offload_info: the information of  SAP Auth Offload
+ *
+ * This function provide enable/disable SAP authenticaiton offload
+ * feature on target firmware
+ *
+ * Return: eHalStatus.
+ */
+eHalStatus sme_set_sap_auth_offload(tHalHandle hHal,
+        struct tSirSapOffloadInfo *sap_auth_offload_info);
+
+#endif /* SAP_AUTH_OFFLOAD */
+#ifdef DHCP_SERVER_OFFLOAD
+eHalStatus sme_set_dhcp_srv_offload(tHalHandle hal,
+                                   sir_dhcp_srv_offload_info_t *dhcp_srv_info);
+#endif /* DHCP_SERVER_OFFLOAD */
+
+#ifdef MDNS_OFFLOAD
+eHalStatus sme_set_mdns_offload(tHalHandle hal,
+                                 sir_mdns_offload_info_t *mdns_info);
+
+eHalStatus sme_set_mdns_fqdn(tHalHandle hal,
+                             sir_mdns_fqdn_info_t *mdns_fqdn);
+
+eHalStatus sme_set_mdns_resp(tHalHandle hal,
+                             sir_mdns_resp_info_t *mdns_resp);
+#endif /* MDNS_OFFLOAD */
+
+eHalStatus sme_update_hb_threshold(tHalHandle hHal, tANI_U32 cfgId,
+                       tANI_U8 hbThresh, eCsrBand eBand);
+
+eHalStatus sme_capture_tsf_req(tHalHandle hHal,
+                               tSirCapTsfParams capTsfParams);
+
+eHalStatus sme_get_tsf_req(tHalHandle hHal,
+                           tSirCapTsfParams capTsfParams);
+
+eHalStatus sme_set_tsfcb(tHalHandle hHal,
+                         tsf_rsp_cb rsp_cb, struct stsf *pTsf,
+                         void *pcallbackcontext);
+
 /* ARP DEBUG STATS */
 eHalStatus sme_set_nud_debug_stats(tHalHandle hHal,
                                psetArpStatsParams pSetStatsParam);
 eHalStatus sme_get_nud_debug_stats(tHalHandle hHal,
                                pgetArpStatsParams pGetStatsParam);
-eHalStatus sme_test_con_alive(tHalHandle hHal);
-eHalStatus sme_get_con_alive(tHalHandle hHal,
-                             pgetConStatusParams conStatusParams);
-eHalStatus sme_test_con_delba(tHalHandle hHal, uint8_t sta_id,
-                              uint8_t session_id);
+eHalStatus sme_del_sta_ba_session_req(tHalHandle hHal,
+                                      tDelBaParams sta_del_params);
 #endif //#if !defined( __SME_API_H )

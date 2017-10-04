@@ -53,16 +53,6 @@
 #define VOS_PKT_PROTO_TYPE_EAPOL   0x02
 #define VOS_PKT_PROTO_TYPE_DHCP    0x04
 #define VOS_PKT_PROTO_TYPE_ARP     0x08
-
-/* ARP packet offset values */
-#define VOS_PKT_ARP_OPCODE_OFFSET 20
-#define VOS_PKT_ARPOP_REQUEST 1
-#define VOS_PKT_ARPOP_REPLY 2
-#define VOS_ARP_TARGET_IP_OFFSET 38
-#define VOS_ARP_SRC_IP_OFFSET 28
-
-#define VOS_80211_8023_HEADER_OFFSET 20
-
 /*-------------------------------------------------------------------------- 
   Type declarations
   ------------------------------------------------------------------------*/

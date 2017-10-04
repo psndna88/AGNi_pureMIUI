@@ -997,6 +997,12 @@ tSirRetStatus ValidateAndRectifyIEs(tpAniSirGlobal pMac,
                                     tANI_U8 *pMgmtFrame,
                                     tANI_U32 nFrameBytes,
                                     tANI_U32 *nMissingRsnBytes);
+#ifdef SAP_AUTH_OFFLOAD
+void
+sap_auth_offload_update_rsn_ie(tpAniSirGlobal pmac,
+        tDot11fIERSNOpaque *pdot11f);
+#endif /* SAP_AUTH_OFFLOAD */
+
 /**
  * sir_copy_hs20_ie() - Update HS 2.0 Information Element.
  * @dest: dest HS IE buffer to be updated
