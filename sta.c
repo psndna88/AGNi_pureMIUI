@@ -6459,28 +6459,28 @@ static int cmd_sta_send_frame_hs2_arpannounce(struct sigma_dut *dut,
 	char buf[200];
 	char ip[16];
 	int s;
+	struct ifreq ifr;
+	struct sockaddr_in saddr;
 
 	s = socket(PF_INET, SOCK_DGRAM, 0);
-	if (s >= 0) {
-		struct ifreq ifr;
-		struct sockaddr_in saddr;
-
-		memset(&ifr, 0, sizeof(ifr));
-		strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
-		if (ioctl(s, SIOCGIFADDR, &ifr) < 0) {
-			sigma_dut_print(dut, DUT_MSG_INFO, "Failed to get "
-					"%s IP address: %s",
-					ifname, strerror(errno));
-			close(s);
-			return -1;
-		} else {
-			memcpy(&saddr, &ifr.ifr_addr,
-			       sizeof(struct sockaddr_in));
-			strlcpy(ip, inet_ntoa(saddr.sin_addr), sizeof(ip));
-		}
-		close(s);
-
+	if (s < 0) {
+		perror("socket");
+		return -1;
 	}
+
+	memset(&ifr, 0, sizeof(ifr));
+	strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+	if (ioctl(s, SIOCGIFADDR, &ifr) < 0) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Failed to get %s IP address: %s",
+				ifname, strerror(errno));
+		close(s);
+		return -1;
+	}
+	close(s);
+
+	memcpy(&saddr, &ifr.ifr_addr, sizeof(struct sockaddr_in));
+	strlcpy(ip, inet_ntoa(saddr.sin_addr), sizeof(ip));
 
 	snprintf(buf, sizeof(buf), "arping -I %s -s %s %s -c 4", ifname, ip,
 		 ip);
