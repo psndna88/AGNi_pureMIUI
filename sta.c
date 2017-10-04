@@ -6512,6 +6512,8 @@ static int cmd_sta_send_frame_hs2_arpreply(struct sigma_dut *dut,
 	val = get_param(cmd, "DestIP");
 	if (val)
 		inet_aton(val, &taddr.sin_addr);
+	else
+		return -2;
 
 	if (get_wpa_status(get_station_ifname(), "address", addr,
 			   sizeof(addr)) < 0)
