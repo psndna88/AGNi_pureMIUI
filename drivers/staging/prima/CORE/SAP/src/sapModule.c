@@ -532,7 +532,52 @@ v_U8_t WLANSAP_getState
     }
     return pSapCtx->sapsMachine;
 }
+/*==========================================================================
+  FUNCTION    WLANSAP_get_sessionId
 
+  DESCRIPTION
+    This api returns the current SAP sessionId to the caller.
+
+  DEPENDENCIES
+
+  PARAMETERS
+
+    IN
+    pContext            : Pointer to Sap Context structure
+    v_U8_t              : Pointer to sessionID
+
+  RETURN VALUE
+    VOS_STATUS_SUCCESS on success.
+
+    VOS_STATUS_E_INVAL: Pointer to SAP cb is NULL ; access would cause a page
+                         fault
+============================================================================*/
+VOS_STATUS WLANSAP_get_sessionId
+(
+    v_PVOID_t  pvosGCtx, v_U8_t *sessionId
+)
+{
+    ptSapContext  pSapCtx = NULL;
+    VOS_STATUS status = VOS_STATUS_SUCCESS;
+
+    pSapCtx = VOS_GET_SAP_CB(pvosGCtx);
+
+    if ( NULL == pSapCtx )
+    {
+        VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO_HIGH,
+                   "%s: Invalid SAP pointer from pvosGCtx", __func__);
+        status = VOS_STATUS_E_INVAL;
+    }
+
+    if (pSapCtx->sapsMachine == eSAP_STARTED) {
+       *sessionId = pSapCtx->sessionId;
+        status = VOS_STATUS_SUCCESS;
+     }
+    else
+        status = VOS_STATUS_E_FAILURE;
+
+    return status;
+}
 /*==========================================================================
   FUNCTION    WLANSAP_StartBss
 

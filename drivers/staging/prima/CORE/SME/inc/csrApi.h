@@ -666,8 +666,6 @@ typedef enum
     eCSR_ASSOC_STATE_TYPE_INFRA_DISCONNECTED,
     // Participating in a Infra network and connected to a peer
     eCSR_ASSOC_STATE_TYPE_INFRA_CONNECTED,
-    /* Disconnecting with AP or stop connecting process */
-    eCSR_ASSOC_STATE_TYPE_INFRA_DISCONNECTING,
 
 }eCsrConnectState;
 
@@ -959,6 +957,7 @@ typedef struct tagCsrRoamProfile
     tCsrMobilityDomainInfo MDID;
 #endif
     tVOS_CON_MODE csrPersona;
+    bool force_24ghz_in_ht20;
     tCsrBssid bssid_hint;
 }tCsrRoamProfile;
 
@@ -1033,6 +1032,7 @@ typedef struct tagCsrNeighborRoamConfigParams
     tANI_U16       nNeighborResultsRefreshPeriod;
     tANI_U16       nEmptyScanRefreshPeriod;
     tANI_U8        nNeighborInitialForcedRoamTo5GhEnable;
+    tANI_U8        nWeakZoneRssiThresholdForRoam;
 }tCsrNeighborRoamConfigParams;
 #endif
 
@@ -1199,6 +1199,11 @@ typedef struct tagCsrConfigParam
     v_U32_t PERtimerThreshold;
     v_U32_t PERroamTriggerPercent;
 #endif
+
+#ifdef WLAN_FEATURE_LFR_MBB
+    tANI_BOOLEAN enable_lfr_mbb;
+#endif
+
 #endif
 
     tANI_BOOLEAN ignorePeerErpInfo;
@@ -1239,6 +1244,7 @@ typedef struct tagCsrConfigParam
     uint32_t edca_bk_aifs;
     uint32_t edca_be_aifs;
     tANI_BOOLEAN disable_scan_during_sco;
+    uint32_t sta_auth_retries_for_code17;
 }tCsrConfigParam;
 
 //Tush
@@ -1560,6 +1566,18 @@ struct tagCsrDelStaParams
     u8 subtype;
 };
 
+
+/**
+ * struct csr_set_tx_max_pwr_per_band - Req params to
+ * set max tx power per band
+ * @band: band for which power to be set
+ * @power: power to set in dB
+ */
+struct csr_set_tx_max_pwr_per_band {
+    eCsrBand band;
+    tPowerdBm power;
+};
+
 ////////////////////////////////////////////Common SCAN starts
 
 //void *p2 -- the second context pass in for the caller
@@ -1759,7 +1777,6 @@ eHalStatus csrSetBand(tHalHandle hHal, eCsrBand eBand);
 
 ---------------------------------------------------------------------------*/
 eCsrBand csrGetCurrentBand (tHalHandle hHal);
-
 
 #endif
 

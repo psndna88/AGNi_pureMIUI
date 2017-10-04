@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -573,9 +573,15 @@ extern tANI_U32 limGetMaxRateFlags(tpDphHashNode pStaDs,
 void limDecrementPendingMgmtCount (tpAniSirGlobal pMac);
 
 eHalStatus limTxBdComplete(tpAniSirGlobal pMac, void *pData);
+eHalStatus limAssocRspTxCompleteCnf(tpAniSirGlobal pMac, void *pData);
 bool lim_is_robust_mgmt_action_frame(uint8 action_catagory);
 tANI_U8 lim_compute_ext_cap_ie_length (tDot11fIEExtCap *ext_cap);
 void lim_update_caps_info_for_bss(tpAniSirGlobal mac_ctx,
                              uint16_t *caps, uint16_t bss_caps);
-
+#ifdef SAP_AUTH_OFFLOAD
+void lim_sap_offload_add_sta(tpAniSirGlobal pmac,
+        tSapOfldAddStaIndMsg *lim_msgq);
+void lim_sap_offload_del_sta(tpAniSirGlobal pmac,
+        tSapOfldDelStaIndMsg *lim_msgq);
+#endif
 #endif /* __LIM_UTILS_H */

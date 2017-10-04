@@ -3644,4 +3644,42 @@ void wlan_hdd_start_stop_tdls_source_timer(hdd_context_t *pHddCtx,
     return;
 }
 
+void wlan_hdd_get_tdls_stats(hdd_adapter_t *pAdapter)
+{
+    hdd_context_t *pHddCtx = NULL;
+    tdlsCtx_t *pHddTdlsCtx = NULL;
+    tANI_U16 numConnectedTdlsPeers = 0;
+    tANI_U16 numDiscoverySentCnt = 0;
+
+    pHddCtx = WLAN_HDD_GET_CTX(pAdapter);
+
+    ENTER();
+    if (0 != (wlan_hdd_validate_context(pHddCtx)))
+    {
+        return;
+    }
+
+    pHddTdlsCtx = WLAN_HDD_GET_TDLS_CTX_PTR(pAdapter);
+
+    mutex_lock(&pHddCtx->tdls_lock);
+    if (NULL == pHddTdlsCtx)
+    {
+        mutex_unlock(&pHddCtx->tdls_lock);
+        VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
+                FL("pHddTdlsCtx points to NULL"));
+        return;
+    }
+    numConnectedTdlsPeers = pHddCtx->connected_peer_count;
+    numDiscoverySentCnt = pHddTdlsCtx->discovery_sent_cnt;
+    mutex_unlock(&pHddCtx->tdls_lock);
+
+    hddLog( LOGE, "%s: TDLS Mode: %d TDLS connected peer count %d"
+                  " DiscoverySentCnt=%d", __func__, pHddCtx->tdls_mode,
+                   numConnectedTdlsPeers, numDiscoverySentCnt);
+    EXIT();
+
+    return;
+}
+
+
 /*EXT TDLS*/

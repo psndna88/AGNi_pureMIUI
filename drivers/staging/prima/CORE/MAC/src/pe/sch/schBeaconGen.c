@@ -386,6 +386,13 @@ tSirRetStatus schSetFixedBeaconFields(tpAniSirGlobal pMac,tpPESession psessionEn
                        &pBcn2->WPA );
           PopulateDot11fRSNOpaque( pMac, &psessionEntry->pLimStartBssReq->rsnIE,
                        &pBcn2->RSNOpaque );
+#ifdef SAP_AUTH_OFFLOAD
+          /* Software AP Authentication Offload feature
+           * only support WPA2-PSK AES and we
+           * need to update RSNIE for beacon
+           */
+          sap_auth_offload_update_rsn_ie(pMac, &pBcn2->RSNOpaque);
+#endif
     }
 
     if(psessionEntry->limWmeEnabled)

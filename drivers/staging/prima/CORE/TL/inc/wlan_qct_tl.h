@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -721,7 +721,16 @@ typedef VOS_STATUS (*WLANTL_STARxCBType)( v_PVOID_t              pvosGCtx,
                                           vos_pkt_t*             vosDataBuff,
                                           v_U8_t                 ucSTAId,
                                           WLANTL_RxMetaInfoType* pRxMetaInfo);
-
+/**
+ * WLANTL_FwdEapolCBType() - Call back to forward Eapol packet
+ * @pvosGCtx : pointer to vos global context
+ * @vosDataBuff: pointer to vos packet
+ *
+ * Return: None
+ *
+ */
+typedef void (*WLANTL_FwdEapolCBType) (v_PVOID_t pvosGCtx,
+                                             vos_pkt_t* vosDataBuff);
 
 /*----------------------------------------------------------------------------
     INTERACTION WITH BAP
@@ -3376,6 +3385,39 @@ void WLANTL_ResetRxSSN(v_PVOID_t pvosGCtx, uint8_t ucSTAId);
  * Return: none
  */
 void WLANTL_SetDataPktFilter(v_PVOID_t pvosGCtx, uint8_t ucSTAId, bool flag);
+
+/**
+ * WLANTL_SampleTx() - collect tx samples
+ * @data: TL context pointer
+ *
+ * This function records the frames fetched from stations
+ * during TX sample interval
+ *
+ * Return: void
+ */
+void WLANTL_SampleTx(void *data);
+
+/*
+ * WLANTL_EnablePreAssocCaching - Enable caching during pre-assoc
+ * @staid: sta client where frames are cached
+ *
+ * Return: none
+ */
+void WLANTL_EnablePreAssocCaching(void);
+
+/*
+ * WLANTL_PreAssocForward - Forward the cached packets
+ *
+ * This function forwards or flushes the packets after
+ * pre assoc success/failure.
+ *
+ * Return: none
+ */
+void WLANTL_PreAssocForward(bool flag);
+
+/* make before break */
+void WLANTL_RegisterFwdEapol(v_PVOID_t pvosGCtx,
+                             WLANTL_FwdEapolCBType pfnFwdEapol);
 
 /**
  * WLANTL_SetARPFWDatapath() - keep or remove FW in data path for ARP

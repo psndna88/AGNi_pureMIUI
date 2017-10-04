@@ -884,6 +884,30 @@ typedef VOS_STATUS (*tpWLAN_SAPEventCB)( tpSap_Event pSapEvent, v_PVOID_t  pUsrC
 v_U8_t WLANSAP_getState ( v_PVOID_t  pvosGCtx);
 
 /*==========================================================================
+  FUNCTION    WLANSAP_get_sessionId
+
+  DESCRIPTION
+     This api returns the current SAP sessionId to the caller.
+
+  DEPENDENCIES
+
+  PARAMETERS
+
+    IN
+    pContext            : Pointer to Sap Context structure
+    v_U8_t              : Pointer to sessionID
+
+  RETURN VALUE
+     VOS_STATUS_SUCCESS on success.
+
+     VOS_STATUS_E_INVAL: Pointer to SAP cb is NULL ; access would cause a page
+                         fault
+============================================================================*/
+VOS_STATUS WLANSAP_get_sessionId
+(
+    v_PVOID_t  pvosGCtx, v_U8_t *sessionId
+);
+/*==========================================================================
   FUNCTION    WLANSAP_StartBss
 
   DESCRIPTION 

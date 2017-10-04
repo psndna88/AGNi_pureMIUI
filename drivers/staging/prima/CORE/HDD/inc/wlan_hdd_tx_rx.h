@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, 2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -399,5 +399,15 @@ static inline void wlan_hdd_log_eapol(struct sk_buff *skb,
 {
 }
 #endif /* FEATURE_WLAN_DIAG_SUPPORT */
+
+/**
+ * hdd_rx_fwd_eapol() - forward cached eapol frames
+ * @vosContext : pointer to vos global context
+ * @pVosPacket: pointer to vos packet
+ *
+ * Return: None
+ *
+ */
+void hdd_rx_fwd_eapol(v_VOID_t *vosContext, vos_pkt_t *pVosPacket);
 
 #endif    // end #if !defined( WLAN_HDD_TX_RX_H )

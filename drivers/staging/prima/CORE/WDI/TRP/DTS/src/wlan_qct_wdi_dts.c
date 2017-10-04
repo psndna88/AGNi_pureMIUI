@@ -668,6 +668,7 @@ wpt_status WDTS_RxPacket (void *pContext, wpt_packet *pFrame, WDTS_ChannelType c
   wpt_uint8                  isFcBd = 0;
   WDI_DS_LoggingSessionType *pLoggingSession;
   tPerPacketStats             rxStats = {0};
+  wpt_uint8 indType = 0;
 
   tpSirMacFrameCtl  pMacFrameCtl;
   // Do Sanity checks
@@ -724,6 +725,7 @@ wpt_status WDTS_RxPacket (void *pContext, wpt_packet *pFrame, WDTS_ChannelType c
   bFSF = WDI_RX_BD_GET_ESF(pBDHeader);
   bLSF = WDI_RX_BD_GET_LSF(pBDHeader);
   isFcBd = WDI_RX_FC_BD_GET_FC(pBDHeader);
+  indType = WDI_RX_BD_GET_PER_SAPOFFLOAD(pBDHeader);
 
   DTI_TRACE( DTI_TRACE_LEVEL_INFO,
       "WLAN TL:BD header processing data: HO %d DO %d Len %d HLen %d"
@@ -733,7 +735,6 @@ wpt_status WDTS_RxPacket (void *pContext, wpt_packet *pFrame, WDTS_ChannelType c
 
   pRxMetadata = WDI_DS_ExtractRxMetaData(pFrame);
 
-  // Special handling for frames which contain logging information
   if (WDTS_CHANNEL_RX_LOG == channel)
   {
       if (VPKT_SIZE_BUFFER_ALIGNED < (usMPDULen+ucMPDUHOffset))
@@ -768,10 +769,20 @@ wpt_status WDTS_RxPacket (void *pContext, wpt_packet *pFrame, WDTS_ChannelType c
       wpalPacketSetRxLength(pFrame, usMPDULen+ucMPDUHOffset);
       wpalPacketRawTrimHead(pFrame, ucMPDUHOffset);
 
-      // Invoke Rx complete callback
-      wpalLogPktSerialize(pFrame);
-
-      return eWLAN_PAL_STATUS_SUCCESS;
+      if(indType) {
+          DTI_TRACE(DTI_TRACE_LEVEL_INFO, "indtype is %d size of pacekt is %lu",
+                  indType, sizeof(WDI_RxBdType));
+         if (WDI_RXBD_SAP_TX_STATS == indType) {
+            pRxMetadata->fc = 1;
+            pClientData->receiveFrameCB(pClientData->pCallbackContext, pFrame);
+            return eWLAN_PAL_STATUS_SUCCESS;
+         }
+      }
+      else {
+          // Invoke Rx complete callback
+          wpalLogPktSerialize(pFrame);
+          return eWLAN_PAL_STATUS_SUCCESS;
+      }
   }
   else
   {
@@ -780,7 +791,9 @@ wpt_status WDTS_RxPacket (void *pContext, wpt_packet *pFrame, WDTS_ChannelType c
 
   if(!isFcBd)
   {
-      if(usMPDUDOffset <= ucMPDUHOffset || usMPDULen < ucMPDUHLen) {
+      /* When channel is WDTS_CHANNEL_RX_LOG firmware doesn't send MPDU header*/
+      if ((usMPDUDOffset <= ucMPDUHOffset || usMPDULen < ucMPDUHLen) &&
+              (WDTS_CHANNEL_RX_LOG != channel)) {
         DTI_TRACE( DTI_TRACE_LEVEL_ERROR,
             "WLAN TL:BD header corrupted - dropping packet");
         /* Drop packet ???? */ 
@@ -866,6 +879,30 @@ wpt_status WDTS_RxPacket (void *pContext, wpt_packet *pFrame, WDTS_ChannelType c
       pRxMetadata->roamCandidateInd = WDI_RX_BD_GET_ROAMCANDIDATEIND(pBDHeader);
       pRxMetadata->perRoamCndInd = WDI_RX_BD_GET_PER_ROAMCANDIDATEIND(pBDHeader);
 #endif
+#ifdef SAP_AUTH_OFFLOAD
+      /* Currently firmware use WDTS_CHANNEL_RX_LOG channel for two purpose.
+       * 1) For firmare logging information: driver will do special handling
+       * for those message.
+       * 2) When SAP offload is enabled: In this case, indication type is stored
+       * in pRxMetadata which will be used by LIM later.
+       */
+      if (WDTS_CHANNEL_RX_LOG == channel)
+      {
+          pRxMetadata->indType =
+              (wpt_uint32)WDI_RX_BD_GET_PER_SAPOFFLOAD(pBDHeader);
+          if (pRxMetadata->indType == WDI_RXBD_MLME_STA_STATUS)
+          {
+              DTI_TRACE( DTI_TRACE_LEVEL_INFO, "%s: Indtype is %d\n",
+                      __func__, pRxMetadata->indType);
+              pRxMetadata->type    = WDI_MAC_MGMT_FRAME;
+          }
+      }
+      else
+      {
+          pRxMetadata->indType = 0;
+      }
+#endif
+
 #ifdef WLAN_FEATURE_EXTSCAN
       pRxMetadata->extscanBuffer = WDI_RX_BD_GET_EXTSCANFULLSCANRESIND(pBDHeader);
 #endif

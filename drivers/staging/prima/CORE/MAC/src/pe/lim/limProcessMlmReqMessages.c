@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -58,6 +58,9 @@
 #endif
 #ifdef FEATURE_WLAN_DIAG_SUPPORT_LIM
 #include "vos_diag_core_log.h"
+#endif
+#ifdef WLAN_FEATURE_LFR_MBB
+#include "lim_mbb.h"
 #endif
 
 
@@ -154,6 +157,14 @@ limProcessMlmReqMessages(tpAniSirGlobal pMac, tpSirMsgQ Msg)
         case SIR_LIM_ASSOC_FAIL_TIMEOUT:    limProcessAssocFailureTimeout(pMac, Msg->bodyval);  break;
 #ifdef WLAN_FEATURE_VOWIFI_11R
         case SIR_LIM_FT_PREAUTH_RSP_TIMEOUT:limProcessFTPreauthRspTimeout(pMac); break;
+#endif
+#ifdef WLAN_FEATURE_LFR_MBB
+        case SIR_LIM_PREAUTH_MBB_RSP_TIMEOUT:
+             lim_process_preauth_mbb_rsp_timeout(pMac);
+             break;
+        case SIR_LIM_REASSOC_MBB_RSP_TIMEOUT:
+             lim_process_reassoc_mbb_rsp_timeout(pMac);
+             break;
 #endif
         case SIR_LIM_REMAIN_CHN_TIMEOUT:    limProcessRemainOnChnTimeout(pMac); break;
         case SIR_LIM_INSERT_SINGLESHOT_NOA_TIMEOUT:   
@@ -762,8 +773,41 @@ void limSetDFSChannelList(tpAniSirGlobal pMac,tANI_U8 channelNum, tSirDFSChannel
     return;
 }
 
+void limDoSendAuthMgmtFrame(tpAniSirGlobal pMac, tpPESession psessionEntry)
+{
+        tSirMacAuthFrameBody    authFrameBody;
 
-
+        //Prepare & send Authentication frame
+        authFrameBody.authAlgoNumber =
+                        (tANI_U8) pMac->lim.gpLimMlmAuthReq->authType;
+        authFrameBody.authTransactionSeqNumber = SIR_MAC_AUTH_FRAME_1;
+        authFrameBody.authStatusCode = 0;
+        pMac->authAckStatus = LIM_AUTH_ACK_NOT_RCD;
+        limSendAuthMgmtFrame(pMac,
+                        &authFrameBody,
+                        pMac->lim.gpLimMlmAuthReq->peerMacAddr,
+                        LIM_NO_WEP_IN_FC, psessionEntry, eSIR_TRUE);
+        if (tx_timer_activate(&pMac->lim.limTimers.gLimAuthFailureTimer)
+                        != TX_SUCCESS) {
+                //Could not start Auth failure timer.
+                //Log error
+                limLog(pMac, LOGP,
+                FL("could not start Auth failure timer"));
+                //Cleanup as if auth timer expired
+                limProcessAuthFailureTimeout(pMac);
+        } else {
+                MTRACE(macTrace(pMac, TRACE_CODE_TIMER_ACTIVATE,
+                        psessionEntry->peSessionId, eLIM_AUTH_RETRY_TIMER));
+                //Activate Auth Retry timer
+                if (tx_timer_activate
+                        (&pMac->lim.limTimers.gLimPeriodicAuthRetryTimer)
+                                            != TX_SUCCESS) {
+                        limLog(pMac, LOGP,
+                                  FL("could not activate Auth Retry timer"));
+                }
+        }
+        return;
+}
 
 /*
 * Creates a Raw frame to be sent before every Scan, if required.
@@ -2386,7 +2430,6 @@ limProcessMlmAuthReq(tpAniSirGlobal pMac, tANI_U32 *pMsgBuf)
 {
     tANI_U32                numPreAuthContexts;
     tSirMacAddr             currentBssId;
-    tSirMacAuthFrameBody    authFrameBody;
     tLimMlmAuthCnf          mlmAuthCnf;
     struct tLimPreAuthNode  *preAuthNode;
     tpDphHashNode           pStaDs;
@@ -2513,17 +2556,6 @@ limProcessMlmAuthReq(tpAniSirGlobal pMac, tANI_U32 *pMsgBuf)
         psessionEntry->limMlmState = eLIM_MLM_WT_AUTH_FRAME2_STATE;
         MTRACE(macTrace(pMac, TRACE_CODE_MLM_STATE, psessionEntry->peSessionId, psessionEntry->limMlmState));
 
-        /// Prepare & send Authentication frame
-        authFrameBody.authAlgoNumber =
-                                  (tANI_U8) pMac->lim.gpLimMlmAuthReq->authType;
-        authFrameBody.authTransactionSeqNumber = SIR_MAC_AUTH_FRAME_1;
-        authFrameBody.authStatusCode = 0;
-        pMac->authAckStatus = LIM_AUTH_ACK_NOT_RCD;
-        limSendAuthMgmtFrame(pMac,
-                             &authFrameBody,
-                             pMac->lim.gpLimMlmAuthReq->peerMacAddr,
-                             LIM_NO_WEP_IN_FC, psessionEntry, eSIR_TRUE);
-
         //assign appropriate sessionId to the timer object
         pMac->lim.limTimers.gLimAuthFailureTimer.sessionId = sessionId;
         /* assign appropriate sessionId to the timer object */
@@ -2531,27 +2563,8 @@ limProcessMlmAuthReq(tpAniSirGlobal pMac, tANI_U32 *pMsgBuf)
         limDeactivateAndChangeTimer(pMac, eLIM_AUTH_RETRY_TIMER);
         // Activate Auth failure timer
         MTRACE(macTrace(pMac, TRACE_CODE_TIMER_ACTIVATE, psessionEntry->peSessionId, eLIM_AUTH_FAIL_TIMER));
-        if (tx_timer_activate(&pMac->lim.limTimers.gLimAuthFailureTimer)
-                                       != TX_SUCCESS)
-        {
-            /// Could not start Auth failure timer.
-            // Log error
-            limLog(pMac, LOGP,
-                   FL("could not start Auth failure timer"));
-            // Cleanup as if auth timer expired
-            limProcessAuthFailureTimeout(pMac);
-        }
-        else
-        {
-            MTRACE(macTrace(pMac, TRACE_CODE_TIMER_ACTIVATE,
-                    psessionEntry->peSessionId, eLIM_AUTH_RETRY_TIMER));
-            // Activate Auth Retry timer
-            if (tx_timer_activate(&pMac->lim.limTimers.gLimPeriodicAuthRetryTimer)
-                                                                   != TX_SUCCESS)
-            {
-               limLog(pMac, LOGP, FL("could not activate Auth Retry timer"));
-            }
-        }
+
+        limDoSendAuthMgmtFrame(pMac, psessionEntry);
         return;
     }
     else

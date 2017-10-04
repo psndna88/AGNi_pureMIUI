@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -1384,7 +1384,8 @@ limSendAssocRspMgmtFrame(tpAniSirGlobal pMac,
                          tANI_U16       aid,
                          tSirMacAddr    peerMacAddr,
                          tANI_U8        subType,
-                         tpDphHashNode  pSta,tpPESession psessionEntry)
+                         tpDphHashNode  pSta,tpPESession psessionEntry,
+                         assoc_rsp_tx_context *tx_complete_context)
 {
     static tDot11fAssocResponse frm;
     tANI_U8             *pFrame, *macAddr;
@@ -1763,14 +1764,29 @@ limSendAssocRspMgmtFrame(tpAniSirGlobal pMac,
 
     if (IS_FEATURE_SUPPORTED_BY_FW(ENHANCED_TXBD_COMPLETION))
     {
-        limLog(pMac, LOG1, FL("Re/AssocRsp - txBdToken %u"), pMac->lim.txBdToken);
+        limLog(pMac, LOG1, FL("Re/AssocRsp - txBdToken %u"),
+               pMac->lim.txBdToken);
         /// Queue Association Response frame in high priority WQ
-        halstatus = halTxFrameWithTxComplete( pMac, pPacket, ( tANI_U16 ) nBytes,
+        if (tx_complete_context)
+        {
+            tx_complete_context->txBdToken = pMac->lim.txBdToken;
+            halstatus = halTxFrameWithTxComplete(pMac, pPacket,
+                (tANI_U16) nBytes,
+                HAL_TXRX_FRM_802_11_MGMT,
+                ANI_TXDIR_TODS,
+                7,//SMAC_SWBD_TX_TID_MGMT_HIGH,
+                limTxComplete, pFrame, limAssocRspTxCompleteCnf,
+                txFlag, pMac->lim.txBdToken);
+        }
+        else
+            halstatus = halTxFrameWithTxComplete(pMac, pPacket,
+                (tANI_U16) nBytes,
                 HAL_TXRX_FRM_802_11_MGMT,
                 ANI_TXDIR_TODS,
                 7,//SMAC_SWBD_TX_TID_MGMT_HIGH,
                 limTxComplete, pFrame, limTxBdComplete,
-                txFlag, pMac->lim.txBdToken );
+                txFlag, pMac->lim.txBdToken);
+
         pMac->lim.txBdToken++;
     }
     else
@@ -3714,7 +3730,7 @@ void
 limSendAuthMgmtFrame(tpAniSirGlobal pMac,
                      tpSirMacAuthFrameBody pAuthFrameBody,
                      tSirMacAddr           peerMacAddr,
-                     tANI_U8               wepBit,
+                     tANI_U8               wep_challenge_len,
                      tpPESession           psessionEntry,
                      tAniBool              waitForAck
                                                        )
@@ -3739,7 +3755,7 @@ limSendAuthMgmtFrame(tpAniSirGlobal pMac,
            pAuthFrameBody->authStatusCode,
            (pAuthFrameBody->authStatusCode == eSIR_MAC_SUCCESS_STATUS),
             MAC_ADDR_ARRAY(peerMacAddr));
-    if (wepBit == LIM_WEP_IN_FC)
+    if (wep_challenge_len)
     {
         /// Auth frame3 to be sent with encrypted framebody
         /**
@@ -3749,10 +3765,8 @@ limSendAuthMgmtFrame(tpAniSirGlobal pMac,
          * 128 bytes for challenge text and 4 bytes each for
          * IV & ICV.
          */
-
-        frameLen = sizeof(tSirMacMgmtHdr) + LIM_ENCR_AUTH_BODY_LEN;
-
-        bodyLen = LIM_ENCR_AUTH_BODY_LEN;
+        bodyLen = wep_challenge_len + LIM_ENCR_AUTH_INFO_LEN;
+        frameLen = sizeof(tSirMacMgmtHdr) + bodyLen;
     } // if (wepBit == LIM_WEP_IN_FC)
     else
     {
@@ -3817,9 +3831,11 @@ limSendAuthMgmtFrame(tpAniSirGlobal pMac,
                      * for challenge text.
                      */
 
+                    bodyLen  = SIR_MAC_AUTH_FRAME_INFO_LEN +
+                               SIR_MAC_SAP_AUTH_CHALLENGE_LENGTH +
+                               SIR_MAC_CHALLENGE_ID_LEN;
                     frameLen = sizeof(tSirMacMgmtHdr) +
-                               sizeof(tSirMacAuthFrame);
-                    bodyLen  = sizeof(tSirMacAuthFrameBody);
+                               bodyLen;
                 }
 
                 break;
@@ -3880,7 +3896,10 @@ limSendAuthMgmtFrame(tpAniSirGlobal pMac,
     }
 
     pMacHdr = ( tpSirMacMgmtHdr ) pFrame;
-    pMacHdr->fc.wep = wepBit;
+    if (wep_challenge_len)
+        pMacHdr->fc.wep = LIM_WEP_IN_FC;
+    else
+        pMacHdr->fc.wep = LIM_NO_WEP_IN_FC;
 
     // Prepare BSSId
     if(  (psessionEntry->limSystemRole == eLIM_AP_ROLE)|| (psessionEntry->limSystemRole == eLIM_BT_AMP_AP_ROLE) )
@@ -3893,7 +3912,7 @@ limSendAuthMgmtFrame(tpAniSirGlobal pMac,
     /// Prepare Authentication frame body
     pBody    = pFrame + sizeof(tSirMacMgmtHdr);
 
-    if (wepBit == LIM_WEP_IN_FC)
+    if (wep_challenge_len)
     {
         vos_mem_copy(pBody, (tANI_U8 *) pAuthFrameBody, bodyLen);
 

@@ -98,7 +98,7 @@ static eHalStatus g_full_pwr_status;
 static eHalStatus g_standby_status;
 
 extern VOS_STATUS hdd_post_voss_start_config(hdd_context_t* pHddCtx);
-extern void hdd_wlan_initial_scan(hdd_context_t *pHddCtx);
+extern void hdd_wlan_initial_scan(hdd_adapter_t *pAdapter);
 
 extern struct notifier_block hdd_netdev_notifier;
 extern tVOS_CON_MODE hdd_get_conparam ( void );
@@ -489,7 +489,7 @@ VOS_STATUS hdd_exit_deep_sleep(hdd_context_t *pHddCtx, hdd_adapter_t *pAdapter)
    pHddCtx->hdd_ps_state = eHDD_SUSPEND_NONE;
 
    //Trigger the initial scan
-   hdd_wlan_initial_scan(pHddCtx);
+   hdd_wlan_initial_scan(pAdapter);
 
    return VOS_STATUS_SUCCESS;
 
@@ -643,12 +643,16 @@ void hdd_conf_hostoffload(hdd_adapter_t *pAdapter, v_BOOL_t fenable)
     }
 
     if ((WLAN_HDD_INFRA_STATION == pAdapter->device_mode) ||
-           (WLAN_HDD_P2P_CLIENT == pAdapter->device_mode))
+       (WLAN_HDD_P2P_CLIENT == pAdapter->device_mode) ||
+       ((WLAN_HDD_SOFTAP == pAdapter->device_mode) &&
+       (pHddCtx->is_ap_mode_wow_supported)))
     {
         if (fenable)
         {
-            if (eConnectionState_Associated ==
-                    (WLAN_HDD_GET_STATION_CTX_PTR(pAdapter))->conn_info.connState)
+            if (((WLAN_HDD_INFRA_STATION == pAdapter->device_mode) &&
+                (eConnectionState_Associated ==
+                (WLAN_HDD_GET_STATION_CTX_PTR(pAdapter))->conn_info.connState))
+                || (WLAN_HDD_SOFTAP == pAdapter->device_mode))
             {
                 if ((pHddCtx->cfg_ini->fhostArpOffload))
                 {
@@ -1471,6 +1475,26 @@ void hdd_mc_addr_list_cfg_config(hdd_context_t* pHddCtx, bool action)
     }
 }
 
+/**
+ * hdd_suspend_ind_callback: This API will set completion event for suspend
+ * @pAdapter: hdd_adapter_t
+ * @status: suspend status
+ *
+ * Return: none
+ */
+static void hdd_suspend_ind_callback(void *context, VOS_STATUS status)
+{
+    hdd_adapter_t *adapter = (hdd_adapter_t *)context;
+    if (NULL == adapter)
+    {
+        hddLog(VOS_TRACE_LEVEL_ERROR,
+               "%s: HDD adapter is NULL",__func__);
+        return;
+    }
+    hddLog(VOS_TRACE_LEVEL_INFO, FL("suspend status %d"), status);
+    complete(&adapter->wlan_suspend_comp_var);
+}
+
 static void hdd_conf_suspend_ind(hdd_context_t* pHddCtx,
                                  hdd_adapter_t *pAdapter)
 {
@@ -1516,6 +1540,8 @@ static void hdd_conf_suspend_ind(hdd_context_t* pHddCtx,
         wlanSuspendParam->configuredMcstBcstFilterSetting =
             pHddCtx->configuredMcastBcastFilter;
 
+        wlanSuspendParam->wlan_sus_callback = hdd_suspend_ind_callback;
+        wlanSuspendParam->context = pAdapter;
         /* mc add list cfg item configuration in fwr */
         hdd_mc_addr_list_cfg_config(pHddCtx, true);
 
@@ -1592,7 +1618,7 @@ void hdd_suspend_wlan(void)
 {
    hdd_context_t *pHddCtx = NULL;
    v_CONTEXT_t pVosContext = NULL;
-
+   long ret;
    VOS_STATUS status;
    hdd_adapter_t *pAdapter = NULL;
    hdd_adapter_list_node_t *pAdapterNode = NULL, *pNext = NULL;
@@ -1676,9 +1702,17 @@ void hdd_suspend_wlan(void)
        }
 #endif
 
+       INIT_COMPLETION(pAdapter->wlan_suspend_comp_var);
        /*Suspend notification sent down to driver*/
        hdd_conf_suspend_ind(pHddCtx, pAdapter);
-
+       ret = wait_for_completion_interruptible_timeout(
+                   &pAdapter->wlan_suspend_comp_var,
+                   msecs_to_jiffies(WLAN_WAIT_TIME_FULL_PWR));
+       if (0 >= ret)
+       {
+          hddLog(VOS_TRACE_LEVEL_ERROR, "%s:wait on suspend failed %ld",
+                 __func__, ret);
+       }
        status = hdd_get_next_adapter ( pHddCtx, pAdapterNode, &pNext );
        pAdapterNode = pNext;
    }
@@ -2156,6 +2190,30 @@ static void hdd_ssr_timer_start(int msec)
     ssr_timer_started = true;
 }
 
+#ifdef FEATURE_WLAN_DIAG_SUPPORT
+/**
+ * hdd_wlan_ssr_shutdown_event()- send ssr shutdown state
+ *
+ * This Function send send ssr shutdown state diag event
+ *
+ * Return: void.
+ */
+static void hdd_wlan_ssr_shutdown_event(void)
+{
+	WLAN_VOS_DIAG_EVENT_DEF(ssr_shutdown,
+				struct host_event_wlan_ssr_shutdown);
+	vos_mem_zero(&ssr_shutdown, sizeof(ssr_shutdown));
+	ssr_shutdown.status = SSR_SUB_SYSTEM_SHUTDOWN;
+	WLAN_VOS_DIAG_EVENT_REPORT(&ssr_shutdown,
+				EVENT_WLAN_SSR_SHUTDOWN_SUBSYSTEM);
+}
+#else
+static inline void hdd_wlan_ssr_shutdown_event(void)
+{
+
+};
+#endif
+
 /* the HDD interface to WLAN driver shutdown,
  * the primary shutdown function in SSR
  */
@@ -2192,7 +2250,6 @@ VOS_STATUS hdd_wlan_shutdown(void)
    {
         vos_timer_stop(&pHddCtx->tx_rx_trafficTmr);
    }
-
    vos_flush_delayed_work(&pHddCtx->spoof_mac_addr_work);
    vos_flush_work(&pHddCtx->sap_start_work);
    hdd_reset_all_adapters(pHddCtx);
@@ -2341,9 +2398,79 @@ VOS_STATUS hdd_wlan_shutdown(void)
       hddLog(VOS_TRACE_LEVEL_ERROR, "%s: failed to free power on lock",
                                            __func__);
    }
+   hdd_wlan_ssr_shutdown_event();
    hddLog(VOS_TRACE_LEVEL_FATAL, "%s: WLAN driver shutdown complete"
                                    ,__func__);
    return VOS_STATUS_SUCCESS;
+}
+
+int hdd_dhcp_mdns_offload(hdd_adapter_t *adapter)
+{
+    hdd_config_t *config;
+    int status = VOS_STATUS_SUCCESS;
+    hdd_context_t *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+
+    config = hdd_ctx->cfg_ini;
+    if (NULL == config) {
+        VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                  ("cfg_ini is NULL!!"));
+        return -EINVAL;
+    }
+#ifdef DHCP_SERVER_OFFLOAD
+    /* set dhcp server offload */
+    if (config->enable_dhcp_srv_offload &&
+        sme_IsFeatureSupportedByFW(SAP_OFFLOADS)) {
+        vos_event_reset(&adapter->dhcp_status.vos_event);
+        status = wlan_hdd_set_dhcp_server_offload(adapter, true);
+        if (!VOS_IS_STATUS_SUCCESS(status))
+        {
+            VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                      ("HDD DHCP Server Offload Failed!!"));
+            return -EINVAL;
+        }
+        status = vos_wait_single_event(&adapter->dhcp_status.vos_event, 2000);
+        if (!VOS_IS_STATUS_SUCCESS(status) ||
+            adapter->dhcp_status.dhcp_offload_status)
+        {
+            VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                     ("ERROR: DHCP HDD vos wait for single_event failed!! %d"),
+                     adapter->dhcp_status.dhcp_offload_status);
+            return -EINVAL;
+        }
+#ifdef MDNS_OFFLOAD
+        if (config->enable_mdns_offload) {
+            vos_event_reset(&adapter->mdns_status.vos_event);
+            status = wlan_hdd_set_mdns_offload(adapter);
+            if (VOS_IS_STATUS_SUCCESS(status))
+            {
+                VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                          ("HDD MDNS Server Offload Failed!!"));
+                return -EINVAL;
+            }
+            status = vos_wait_single_event(&adapter->
+                                           mdns_status.vos_event, 2000);
+            if (!VOS_IS_STATUS_SUCCESS(status) ||
+                adapter->mdns_status.mdns_enable_status ||
+                adapter->mdns_status.mdns_fqdn_status ||
+                adapter->mdns_status.mdns_resp_status)
+            {
+                VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                          ("MDNS HDD vos wait for single_event failed!! enable %d fqdn %d resp %d"),
+                          adapter->mdns_status.mdns_enable_status,
+                          adapter->mdns_status.mdns_fqdn_status,
+                          adapter->mdns_status.mdns_resp_status);
+                return -EINVAL;
+            }
+        }
+#endif /* MDNS_OFFLOAD */
+    } else {
+        VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
+                  ("DHCP Disabled ini %d, FW %d"),
+                  config->enable_dhcp_srv_offload,
+                  sme_IsFeatureSupportedByFW(SAP_OFFLOADS));
+    }
+#endif /* DHCP_SERVER_OFFLOAD */
+    return status;
 }
 
 /**
@@ -2357,6 +2484,7 @@ static void hdd_ssr_restart_sap(hdd_context_t *hdd_ctx)
 	VOS_STATUS       status;
 	hdd_adapter_list_node_t *adapter_node = NULL, *next = NULL;
 	hdd_adapter_t *adapter;
+	hdd_hostapd_state_t *hostapd_state;
 
 	ENTER();
 
@@ -2365,8 +2493,29 @@ static void hdd_ssr_restart_sap(hdd_context_t *hdd_ctx)
 		adapter = adapter_node->pAdapter;
 		if (adapter && adapter->device_mode == WLAN_HDD_SOFTAP) {
 			if (test_bit(SOFTAP_INIT_DONE, &adapter->event_flags)) {
+				hostapd_state =
+					WLAN_HDD_GET_HOSTAP_STATE_PTR(adapter);
 				hddLog(VOS_TRACE_LEVEL_INFO, FL("Restart prev SAP session"));
 				wlan_hdd_start_sap(adapter);
+				if (!VOS_IS_STATUS_SUCCESS(
+					hdd_dhcp_mdns_offload(adapter))) {
+					vos_event_reset(
+						&hostapd_state->vosEvent);
+					hddLog(VOS_TRACE_LEVEL_ERROR,
+						FL("DHCP/MDNS offload Failed!!"));
+					if (VOS_STATUS_SUCCESS ==
+					    WLANSAP_StopBss(
+					      hdd_ctx->pvosContext)) {
+						status = vos_wait_single_event(
+							&hostapd_state->vosEvent
+								, 10000);
+						if (!VOS_IS_STATUS_SUCCESS(
+								status)) {
+							hddLog(LOGE, FL("SAP Stop Failed"));
+							return;
+						}
+					}
+				}
 			}
 		}
 		status = hdd_get_next_adapter(hdd_ctx, adapter_node, &next);
@@ -2375,6 +2524,29 @@ static void hdd_ssr_restart_sap(hdd_context_t *hdd_ctx)
 
 	EXIT();
 }
+
+#ifdef FEATURE_WLAN_DIAG_SUPPORT
+/**
+* hdd_wlan_ssr_reinit_event()- send ssr reinit state
+*
+* This Function send send ssr reinit state diag event
+*
+* Return: void.
+*/
+static void hdd_wlan_ssr_reinit_event(void)
+{
+	WLAN_VOS_DIAG_EVENT_DEF(ssr_reinit, struct host_event_wlan_ssr_reinit);
+	vos_mem_zero(&ssr_reinit, sizeof(ssr_reinit));
+	ssr_reinit.status = SSR_SUB_SYSTEM_REINIT;
+	WLAN_VOS_DIAG_EVENT_REPORT(&ssr_reinit,
+					EVENT_WLAN_SSR_REINIT_SUBSYSTEM);
+}
+#else
+static inline void hdd_wlan_ssr_reinit_event(void)
+{
+
+}
+#endif
 
 /* the HDD interface to WLAN driver re-init.
  * This is called to initialize/start WLAN driver after a shutdown.
@@ -2674,6 +2846,7 @@ err_re_init:
    return -EPERM;
 
 success:
+   hdd_wlan_ssr_reinit_event();
    /* Trigger replay of BTC events */
    send_btc_nlink_msg(WLAN_MODULE_DOWN_IND, 0);
 

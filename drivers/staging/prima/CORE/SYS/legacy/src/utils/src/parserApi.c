@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -49,6 +49,30 @@
 #if defined WLAN_FEATURE_VOWIFI
 #include "rrmApi.h"
 #endif
+
+#define DOT11F_RSN_VERSION 1    /* current supported version */
+#define DOT11F_RSN_OUI_SIZE 4
+#define DOT11F_RSN_CSE_NULL 0x00
+#define DOT11F_RSN_CSE_WEP40 0x01
+#define DOT11F_RSN_CSE_TKIP 0x02
+#define DOT11F_RSN_CSE_WRAP 0x03
+#define DOT11F_RSN_CSE_CCMP 0x04
+#define DOT11F_RSN_CSE_WEP104 0x05
+#define DOT11F_RSN_CSE_AES_CMAC 0x06
+
+static const tANI_U8 sirRSNOui[][ DOT11F_RSN_OUI_SIZE ] = {
+    { 0x00, 0x0F, 0xAC, 0x00 }, /* group cipher */
+    { 0x00, 0x0F, 0xAC, 0x01 }, /* WEP-40 or RSN */
+    { 0x00, 0x0F, 0xAC, 0x02 }, /* TKIP or RSN-PSK */
+    { 0x00, 0x0F, 0xAC, 0x03 }, /* Reserved */
+    { 0x00, 0x0F, 0xAC, 0x04 }, /* AES-CCMP */
+    { 0x00, 0x0F, 0xAC, 0x05 }, /* WEP-104 */
+    { 0x00, 0x40, 0x96, 0x00 }, /* CCKM */
+    /* BIP (encryption type) or RSN-PSK-SHA256 (authentication type) */
+    { 0x00, 0x0F, 0xAC, 0x06 },
+    /* RSN-8021X-SHA256 (authentication type) */
+    { 0x00, 0x0F, 0xAC, 0x05 }
+};
 
 
 
@@ -2709,7 +2733,7 @@ sirConvertAssocRespFrame2Struct(tpAniSirGlobal pMac,
 #endif
 
 #ifdef WLAN_FEATURE_VOWIFI_11R
-    if (ar.num_RICDataDesc <= 2) {
+    if (ar.num_RICDataDesc && ar.num_RICDataDesc <= 2) {
         for (cnt=0; cnt < ar.num_RICDataDesc; cnt++) {
             if (ar.RICDataDesc[cnt].present) {
                 vos_mem_copy( &pAssocRsp->RICData[cnt], &ar.RICDataDesc[cnt],
@@ -5460,6 +5484,116 @@ void PopulateDot11fTimeoutInterval( tpAniSirGlobal pMac,
    pDot11f->timeoutType = type;
    pDot11f->timeoutValue = value;
 }
+#ifdef SAP_AUTH_OFFLOAD
+tSirRetStatus
+sap_auth_offload_construct_rsn_opaque( tDot11fIERSN *pdot11f_rsn,
+        tDot11fIERSNOpaque *pdot11f)
+{
+    tANI_U32 data_len=0;
+    tANI_U8 *ptr;
+    tANI_U32 element_len=0;
+    tANI_U32 count=0;
+    ptr = (tANI_U8 *)pdot11f->data;
+    if (pdot11f_rsn->present)
+    {
+        pdot11f->present = pdot11f_rsn->present;
+        element_len = sizeof(pdot11f_rsn->version);
+        vos_mem_copy(ptr, &pdot11f_rsn->version, element_len);
+        ptr += element_len;
+        data_len += element_len;
+        element_len = sizeof(pdot11f_rsn->gp_cipher_suite);
+        vos_mem_copy(ptr, pdot11f_rsn->gp_cipher_suite, element_len);
+        ptr += element_len;
+        data_len += element_len;
+
+        if (pdot11f_rsn->pwise_cipher_suite_count)
+        {
+            element_len = sizeof(pdot11f_rsn->pwise_cipher_suite_count);
+            vos_mem_copy(ptr,
+                    &pdot11f_rsn->pwise_cipher_suite_count,
+                    element_len);
+            ptr += element_len;
+            data_len += element_len;
+            for (count = 0; count < pdot11f_rsn->pwise_cipher_suite_count;
+                    count++)
+            {
+                element_len = DOT11F_RSN_OUI_SIZE;
+                vos_mem_copy(ptr,
+                        &pdot11f_rsn->pwise_cipher_suites[count][0],
+                        element_len);
+                ptr += element_len;
+                data_len += element_len;
+            }
+        }
+
+        if (pdot11f_rsn->akm_suite_count)
+        {
+            element_len = sizeof(pdot11f_rsn->akm_suite_count);
+            vos_mem_copy(ptr, &pdot11f_rsn->akm_suite_count, element_len);
+            ptr += element_len;
+            data_len += element_len;
+            for (count = 0; count < pdot11f_rsn->akm_suite_count; count++)
+            {
+                element_len = DOT11F_RSN_OUI_SIZE;
+                vos_mem_copy(ptr,
+                        &pdot11f_rsn->akm_suites[count][0],
+                        element_len);
+                ptr += element_len;
+                data_len += element_len;
+            }
+        }
+
+        element_len = sizeof(pdot11f_rsn->RSN_Cap);
+        vos_mem_copy(ptr, pdot11f_rsn->RSN_Cap, element_len);
+        ptr += element_len;
+        data_len += element_len;
+    }
+    pdot11f->num_data = data_len;
+    return eSIR_SUCCESS;
+}
+
+void
+sap_auth_offload_update_rsn_ie( tpAniSirGlobal pmac,
+        tDot11fIERSNOpaque *pdot11f)
+{
+    tDot11fIERSN *pdot11f_rsn;
+    pdot11f_rsn = vos_mem_malloc(sizeof(tDot11fIERSN));
+    vos_mem_set(pdot11f_rsn, sizeof(tDot11fIERSN), 0);
+    /* Assign RSN IE for Software AP Authentication offload security */
+    if (pmac->sap_auth_offload && pmac->sap_auth_offload_sec_type)
+    {
+        switch (pmac->sap_auth_offload_sec_type)
+        {
+            case eSIR_OFFLOAD_WPA2PSK_CCMP:
+                /* Only Support one kind of Cipher Suit for
+                 * Software AP authentication offload
+                 */
+                pdot11f_rsn->present = 1;
+                pdot11f_rsn->version = 1;
+                vos_mem_copy(pdot11f_rsn->gp_cipher_suite,
+                        &sirRSNOui[DOT11F_RSN_CSE_CCMP][0],
+                        DOT11F_RSN_OUI_SIZE);
+                pdot11f_rsn->pwise_cipher_suite_count = 1;
+                vos_mem_copy(&(pdot11f_rsn->pwise_cipher_suites[0][0]),
+                        &sirRSNOui[DOT11F_RSN_CSE_CCMP][0],
+                        DOT11F_RSN_OUI_SIZE);
+                pdot11f_rsn->akm_suite_count = 1;
+                vos_mem_copy(&(pdot11f_rsn->akm_suites[0][0]),
+                        &sirRSNOui[DOT11F_RSN_CSE_TKIP][0],
+                        DOT11F_RSN_OUI_SIZE);
+                pdot11f_rsn->pmkid_count = 0;
+                /* Construct RSN IE into RSNOpaque*/
+                sap_auth_offload_construct_rsn_opaque(pdot11f_rsn, pdot11f);
+                break;
+            default:
+                dot11fLog( pmac, LOGE,
+                        FL("The security type is not definied for "
+                            "Software AP authentication offload!\n"));
+                break;
+        }
+    }
+}
+#endif /* SAP_AUTH_OFFLOAD */
 
 /**
  * sir_copy_hs20_ie() - Update HS 2.0 Information Element.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -840,11 +840,9 @@ int __hdd_hard_start_xmit(struct sk_buff *skb, struct net_device *dev)
 
    if (arp_pkt)
    {
-      if (pHddCtx->track_arp_ip && vos_check_arp_req_target_ip(skb, false)) {
-         ++pAdapter->hdd_stats.hddArpStats.tx_arp_req_count;
-         VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
-                   "%s :ARP packet received form net_dev", __func__);
-      }
+       ++pAdapter->hdd_stats.hddArpStats.txCount;
+       VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
+                 "%s :ARP packet received form net_dev", __func__);
    }
 
    //Get TL Q index corresponding to Qdisc queue index/AC.
@@ -933,6 +931,24 @@ int __hdd_hard_start_xmit(struct sk_buff *skb, struct net_device *dev)
          return NETDEV_TX_OK;
       }
    }
+
+   if (pHddCtx->bad_sta[STAId]) {
+      hdd_list_node_t *anchor = NULL;
+      skb_list_node_t *pktNode = NULL;
+      struct sk_buff *fskb = NULL;
+
+      if (pAdapter->wmm_tx_queue[qid].count >=
+          pAdapter->wmm_tx_queue[qid].max_size / 2) {
+         hdd_list_remove_front(&pAdapter->wmm_tx_queue[qid],
+                               &anchor);
+         pktNode = list_entry(anchor, skb_list_node_t, anchor);
+         fskb = pktNode->skb;
+         kfree_skb(fskb);
+         ++pAdapter->stats.tx_dropped;
+         ++pAdapter->hdd_stats.hddTxRxStats.txXmitDropped;
+      }
+   }
+
    //If we have already reached the max queue size, disable the TX queue
    if ( pAdapter->wmm_tx_queue[qid].count == pAdapter->wmm_tx_queue[qid].max_size)
    {
@@ -2676,9 +2692,8 @@ VOS_STATUS hdd_rx_packet_cbk( v_VOID_t *vosContext,
    struct sk_buff *skb = NULL;
    vos_pkt_t* pVosPacket;
    vos_pkt_t* pNextVosPacket;
-   v_U8_t proto_type;
+   v_U8_t proto_type = 0;
    v_BOOL_t arp_pkt;
-   bool track_arp_resp = false;
 
    //Sanity check on inputs
    if ( ( NULL == vosContext ) || 
@@ -2811,12 +2826,9 @@ VOS_STATUS hdd_rx_packet_cbk( v_VOID_t *vosContext,
 
       if (arp_pkt)
       {
-         if (pHddCtx->track_arp_ip && vos_check_arp_rsp_src_ip(skb, false)) {
-            ++pAdapter->hdd_stats.hddArpStats.rx_arp_rsp_count;
-            track_arp_resp = true;
-            VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
-                     "%s :STA RX ARP received",__func__);
-         }
+         ++pAdapter->hdd_stats.hddArpStats.rxCount;
+         VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
+                   "%s :STA RX ARP received",__func__);
       }
 
       if (pHddCtx->rx_wow_dump) {
@@ -2844,7 +2856,12 @@ VOS_STATUS hdd_rx_packet_cbk( v_VOID_t *vosContext,
       pAdapter->stats.rx_bytes += skb->len;
 
       if (arp_pkt)
-         pAdapter->dad |= hdd_is_duplicate_ip_arp(skb);
+      {
+         pAdapter->dad = hdd_is_duplicate_ip_arp(skb);
+         if(pAdapter->dad)
+         VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                   "%s :Duplicate IP detected",__func__);
+      }
 #ifdef WLAN_FEATURE_HOLD_RX_WAKELOCK
        vos_wake_lock_timeout_release(&pHddCtx->rx_wake_lock,
                           HDD_WAKE_LOCK_DURATION,
@@ -2864,11 +2881,9 @@ VOS_STATUS hdd_rx_packet_cbk( v_VOID_t *vosContext,
 
         if (arp_pkt)
         {
-           if (track_arp_resp) {
-              ++pAdapter->hdd_stats.hddArpStats.rxDelivered;
-              VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
-                        "STA RX ARP packet Delivered to net stack");
-           }
+           ++pAdapter->hdd_stats.hddArpStats.rxDelivered;
+           VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
+                     "STA RX ARP packet Delivered to net stack");
         }
 
          ++pAdapter->hdd_stats.hddTxRxStats.rxDelivered;
@@ -3038,6 +3053,74 @@ void hdd_tx_rx_pkt_cnt_stat_timer_handler( void *phddctx)
     }
     EXIT();
     return;
+}
+
+/**
+ * hdd_rx_fwd_eapol() - forward cached eapol frames
+ * @vosContext : pointer to vos global context
+ * @pVosPacket: pointer to vos packet
+ *
+ * Return: None
+ *
+ */
+void hdd_rx_fwd_eapol(v_VOID_t *vosContext, vos_pkt_t *pVosPacket)
+{
+   hdd_context_t *pHddCtx = NULL;
+   hdd_adapter_t * pAdapter;
+   hdd_adapter_list_node_t *pAdapterNode = NULL, *pNext = NULL;
+   struct sk_buff *skb = NULL;
+   uint8_t proto_type;
+   uint8_t status;
+
+   if ((NULL == vosContext) || (NULL == pVosPacket))
+   {
+      VOS_TRACE(VOS_MODULE_ID_HDD_DATA, VOS_TRACE_LEVEL_ERROR,
+                        "%s: Null global context", __func__);
+      return;
+   }
+
+   pHddCtx = (hdd_context_t *)vos_get_context(VOS_MODULE_ID_HDD, vosContext);
+   if (NULL == pHddCtx)
+   {
+      VOS_TRACE( VOS_MODULE_ID_HDD_DATA, VOS_TRACE_LEVEL_ERROR,
+                           "%s: HDD adapter context is Null", __func__);
+      return;
+   }
+
+   status = hdd_get_front_adapter ( pHddCtx, &pAdapterNode );
+
+   while ( NULL != pAdapterNode && 0 == status )
+   {
+      pAdapter = pAdapterNode->pAdapter;
+
+      if (pAdapter->device_mode == WLAN_HDD_INFRA_STATION)
+         break;
+
+      status = hdd_get_next_adapter (pHddCtx, pAdapterNode, &pNext);
+      pAdapterNode = pNext;
+   }
+
+   if (NULL == pAdapter)
+   {
+      VOS_TRACE(VOS_MODULE_ID_HDD_DATA, VOS_TRACE_LEVEL_ERROR,
+                        "%s: No adapter", __func__);
+      return;
+   }
+
+   vos_pkt_get_os_packet(pVosPacket, (v_VOID_t **)&skb, VOS_FALSE);
+   proto_type = vos_pkt_get_proto_type(skb,
+                                       pHddCtx->cfg_ini->gEnableDebugLog);
+   if (VOS_PKT_PROTO_TYPE_EAPOL & proto_type)
+   {
+      VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                   "STA RX EAPOL");
+   }
+
+   skb->dev = pAdapter->dev;
+   skb->protocol = eth_type_trans(skb, skb->dev);
+   skb->ip_summed = CHECKSUM_NONE;
+
+   netif_rx_ni(skb);
 }
 
 #ifdef FEATURE_WLAN_DIAG_SUPPORT

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -67,6 +67,10 @@
 #include "eseApi.h"
 #endif
 #include "wlan_qct_wda.h"
+
+#ifdef WLAN_FEATURE_LFR_MBB
+#include "lim_mbb.h"
+#endif
 
 
 #define BA_DEFAULT_TX_BUFFER_SIZE 64
@@ -176,7 +180,16 @@ void limStopTxAndSwitchChannel(tpAniSirGlobal pMac, tANI_U8 sessionId)
 tSirRetStatus limStartChannelSwitch(tpAniSirGlobal pMac, tpPESession psessionEntry)
 {
     limLog(pMac, LOG1, FL(" ENTER"));
-    
+
+#ifdef WLAN_FEATURE_LFR_MBB
+    if (lim_is_mbb_reassoc_in_progress(pMac, psessionEntry))
+    {
+        limLog(pMac, LOGE,
+             FL("Ignore channel switch as LFR MBB in progress"));
+        return eSIR_SUCCESS;
+    }
+#endif
+
     /*If channel switch is already running and it is on a different session, just return*/  
     /*This need to be removed for MCC */
     if( limIsChanSwitchRunning (pMac) &&
@@ -923,7 +936,8 @@ __limProcessQosMapConfigureFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
          return;
      }
      limSendSmeMgmtFrameInd(pMac, psessionEntry->smeSessionId,
-                                        pRxPacketInfo, psessionEntry, 0);
+                                        pRxPacketInfo, psessionEntry,
+                                        WDA_GET_RX_RSSI_DB(pRxPacketInfo));
 }
 
 #ifdef ANI_SUPPORT_11H
@@ -1230,6 +1244,9 @@ __limValidateDelBAParameterSet( tpAniSirGlobal pMac,
     if (!(baParameterSet.tid < STACFG_MAX_TC))
         return statusCode;
 
+	  if (!(baParameterSet.tid < STACFG_MAX_TC))
+		return statusCode;
+
   // Validate if a BA is active for the requested TID
     if( pSta->tcCfg[baParameterSet.tid].fUseBATx ||
         pSta->tcCfg[baParameterSet.tid].fUseBARx )
@@ -1267,7 +1284,7 @@ __limProcessAddBAReq( tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,tpPESession ps
     tpDphHashNode pSta;
     tSirMacStatusCodes status = eSIR_MAC_SUCCESS_STATUS;
     tANI_U16 aid;
-    tANI_U32 frameLen, nStatus,val;
+    tANI_U32 frameLen, nStatus,val, val1;
     tANI_U8 *pBody;
     tANI_U8 delBAFlag =0;
 
@@ -1275,6 +1292,7 @@ __limProcessAddBAReq( tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,tpPESession ps
     pBody = WDA_GET_RX_MPDU_DATA( pRxPacketInfo );
     frameLen = WDA_GET_RX_PAYLOAD_LEN( pRxPacketInfo );
     val = 0;
+    val1 = 0;
 
     // Unpack the received frame
     nStatus = dot11fUnpackAddBAReq( pMac, pBody, frameLen, &frmAddBAReq );
@@ -1335,6 +1353,20 @@ __limProcessAddBAReq( tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,tpPESession ps
         goto returnAfterError;
     }
 #endif //WLAN_SOFTAP_VSTA_FEATURE
+
+    if (wlan_cfgGetInt(pMac, WNI_CFG_ENABLE_TX_RX_AGGREGATION, &val1) !=
+                    eSIR_SUCCESS)
+    {
+        limLog(pMac, LOGE,
+               FL("Unable to get WNI_CFG_ENABLE_TX_RX_AGGREGATION"));
+        val1 = 1;
+    }
+    if (!val1)
+    {
+        limLog(pMac, LOGE,
+               FL("aggregation disabled - ignoring ADDBA"));
+        goto returnAfterError;
+    }
 
     if (wlan_cfgGetInt(pMac, WNI_CFG_DEL_ALL_RX_TX_BA_SESSIONS_2_4_G_BTC, &val) !=
                     eSIR_SUCCESS)
@@ -2154,7 +2186,8 @@ static void __limProcessSAQueryResponseActionFrame(tpAniSirGlobal pMac, tANI_U8 
     if (eLIM_STA_ROLE == psessionEntry->limSystemRole)
     {
         limSendSmeMgmtFrameInd(pMac, psessionEntry->smeSessionId,
-                                    pRxPacketInfo, psessionEntry, 0);
+                                    pRxPacketInfo, psessionEntry,
+                                    WDA_GET_RX_RSSI_DB(pRxPacketInfo));
         return;
     }
 
@@ -2592,7 +2625,8 @@ limProcessActionFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,tpPESession ps
                  // type is ACTION
                  limSendSmeMgmtFrameInd(pMac, psessionEntry->smeSessionId,
                                         pRxPacketInfo,
-                                        psessionEntry, 0);
+                                        psessionEntry,
+                                        WDA_GET_RX_RSSI_DB(pRxPacketInfo));
               }
               else
               {
@@ -2727,7 +2761,8 @@ limProcessActionFrameNoSession(tpAniSirGlobal pMac, tANI_U8 *pBd)
                 {
                   /* Forward to the SME to HDD to wpa_supplicant */
                   // type is ACTION
-                  limSendSmeMgmtFrameInd(pMac, 0, pBd, NULL, 0);
+                  limSendSmeMgmtFrameInd(pMac, 0, pBd, NULL,
+                                         WDA_GET_RX_RSSI_DB(pBd));
                 }
                 else
                 {

@@ -132,9 +132,13 @@ static void hdd_sendMgmtFrameOverMonitorIface( hdd_adapter_t *pMonAdapter,
                                                tANI_U8* pbFrames,
                                                tANI_U8 frameType );
 
-static v_BOOL_t wlan_hdd_is_type_p2p_action( const u8 *buf )
+static v_BOOL_t wlan_hdd_is_type_p2p_action( const u8 *buf, uint32_t len )
 {
     const u8 *ouiPtr;
+
+    if (len < WLAN_HDD_PUBLIC_ACTION_FRAME_SUB_TYPE_OFFSET + 1) {
+        return VOS_FALSE;
+    }
 
     if ( buf[WLAN_HDD_PUBLIC_ACTION_FRAME_CATEGORY_OFFSET] !=
                WLAN_HDD_PUBLIC_ACTION_FRAME ) {
@@ -160,11 +164,11 @@ static v_BOOL_t wlan_hdd_is_type_p2p_action( const u8 *buf )
     return VOS_TRUE;
 }
 
-static bool hdd_p2p_is_action_type_rsp( const u8 *buf )
+static bool hdd_p2p_is_action_type_rsp( const u8 *buf, uint32_t len )
 {
     tActionFrmType actionFrmType;
 
-    if ( wlan_hdd_is_type_p2p_action(buf) )
+    if ( wlan_hdd_is_type_p2p_action(buf, len) )
     {
         actionFrmType = buf[WLAN_HDD_PUBLIC_ACTION_FRAME_SUB_TYPE_OFFSET];
         if ( actionFrmType != WLAN_HDD_INVITATION_REQ &&
@@ -1274,17 +1278,27 @@ int __wlan_hdd_mgmt_tx( struct wiphy *wiphy, struct net_device *dev,
     hdd_cfg80211_state_t *cfgState = WLAN_HDD_GET_CFG_STATE_PTR( pAdapter );
     hdd_remain_on_chan_ctx_t *pRemainChanCtx = NULL;
     hdd_context_t *pHddCtx = WLAN_HDD_GET_CTX( pAdapter );
-    tANI_U8 type = WLAN_HDD_GET_TYPE_FRM_FC(buf[0]);
-    tANI_U8 subType = WLAN_HDD_GET_SUBTYPE_FRM_FC(buf[0]);
+    tANI_U8 type;
+    tANI_U8 subType;
     tActionFrmType actionFrmType = WLAN_HDD_ACTION_FRM_TYPE_MAX;
     bool noack = 0;
     int status;
+    uint32_t mgmt_hdr_len = sizeof(struct ieee80211_hdr_3addr);
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38))
     uint8_t home_ch = 0;
 #endif
 
     ENTER();
+
+    if (len < mgmt_hdr_len + 1) {
+        hddLog(VOS_TRACE_LEVEL_ERROR,"Invalid Length");
+        return -EINVAL;
+    }
+
+    type = WLAN_HDD_GET_TYPE_FRM_FC(buf[0]);
+    subType = WLAN_HDD_GET_SUBTYPE_FRM_FC(buf[0]);
+
     MTRACE(vos_trace(VOS_MODULE_ID_HDD,
                       TRACE_CODE_HDD_ACTION, pAdapter->sessionId,
                       pAdapter->device_mode ));
@@ -1301,7 +1315,8 @@ int __wlan_hdd_mgmt_tx( struct wiphy *wiphy, struct net_device *dev,
 
     if ((type == SIR_MAC_MGMT_FRAME) &&
             (subType == SIR_MAC_MGMT_ACTION) &&
-            wlan_hdd_is_type_p2p_action(&buf[WLAN_HDD_PUBLIC_ACTION_FRAME_BODY_OFFSET]))
+            wlan_hdd_is_type_p2p_action(
+            &buf[WLAN_HDD_PUBLIC_ACTION_FRAME_BODY_OFFSET], len - mgmt_hdr_len))
     {
         actionFrmType = buf[WLAN_HDD_PUBLIC_ACTION_FRAME_TYPE_OFFSET];
 #ifdef WLAN_FEATURE_P2P_DEBUG
@@ -1600,7 +1615,9 @@ bypass_lock:
 
         if ((type == SIR_MAC_MGMT_FRAME) &&
                 (subType == SIR_MAC_MGMT_ACTION) &&
-                (buf[WLAN_HDD_PUBLIC_ACTION_FRAME_OFFSET] == WLAN_HDD_PUBLIC_ACTION_FRAME))
+            wlan_hdd_is_type_p2p_action(
+             &buf[WLAN_HDD_PUBLIC_ACTION_FRAME_BODY_OFFSET],
+             len - mgmt_hdr_len))
         {
             actionFrmType = buf[WLAN_HDD_PUBLIC_ACTION_FRAME_TYPE_OFFSET];
             hddLog(LOG1, "Tx Action Frame %u.", actionFrmType);
@@ -2463,7 +2480,9 @@ void __hdd_indicate_mgmt_frame(hdd_adapter_t *pAdapter,
 
     /* Get pAdapter from Destination mac address of the frame */
     if ((type == SIR_MAC_MGMT_FRAME) &&
-            (subType != SIR_MAC_MGMT_PROBE_REQ))
+        (subType != SIR_MAC_MGMT_PROBE_REQ) &&
+        !vos_is_macaddr_broadcast(
+         (v_MACADDR_t *)&pbFrames[WLAN_HDD_80211_FRM_DA_OFFSET]))
     {
          pAdapter = hdd_get_adapter_by_macaddr( WLAN_HDD_GET_CTX(pAdapter),
                             &pbFrames[WLAN_HDD_80211_FRM_DA_OFFSET]);
@@ -2712,17 +2731,17 @@ void __hdd_indicate_mgmt_frame(hdd_adapter_t *pAdapter,
     //Indicate Frame Over Normal Interface
     hddLog( LOG1, FL("Indicate Frame over NL80211 Interface"));
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0))
-    cfg80211_rx_mgmt(pAdapter->dev->ieee80211_ptr, freq, 0, pbFrames,
+    cfg80211_rx_mgmt(pAdapter->dev->ieee80211_ptr, freq, rxRssi * 100, pbFrames,
                      nFrameLength, NL80211_RXMGMT_FLAG_ANSWERED);
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,12,0))
-    cfg80211_rx_mgmt(pAdapter->dev->ieee80211_ptr, freq, 0, pbFrames,
+    cfg80211_rx_mgmt(pAdapter->dev->ieee80211_ptr, freq, rxRssi * 100, pbFrames,
                      nFrameLength, NL80211_RXMGMT_FLAG_ANSWERED, GFP_ATOMIC);
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0))
-    cfg80211_rx_mgmt( pAdapter->dev->ieee80211_ptr, freq, 0,
+    cfg80211_rx_mgmt( pAdapter->dev->ieee80211_ptr, freq, rxRssi * 100,
                       pbFrames, nFrameLength,
                       GFP_ATOMIC );
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0))
-    cfg80211_rx_mgmt( pAdapter->dev, freq, 0,
+    cfg80211_rx_mgmt( pAdapter->dev, freq, rxRssi * 100,
                       pbFrames, nFrameLength,
                       GFP_ATOMIC );
 #else
