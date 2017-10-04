@@ -64,7 +64,8 @@ void nan_hex_dump(struct sigma_dut *dut, uint8_t *data, size_t len)
 	ptr = data;
 	pos = 0;
 	for (index = 0; index < len; index++) {
-		pos += sprintf(&(buf[pos]), "%02x ", *ptr++);
+		pos += snprintf(&(buf[pos]), sizeof(buf) - pos,
+				"%02x ", *ptr++);
 		if (pos > 508)
 			break;
 	}
