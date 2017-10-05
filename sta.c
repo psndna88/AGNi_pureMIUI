@@ -6412,6 +6412,9 @@ static int cmd_sta_send_frame_hs2_neighsolreq(struct sigma_dut *dut,
 	char buf[200];
 	const char *ip = get_param(cmd, "SenderIP");
 
+	if (!ip)
+		return 0;
+
 	snprintf(buf, sizeof(buf), "ndisc6 -nm %s %s -r 4", ip, intf);
 	sigma_dut_print(dut, DUT_MSG_DEBUG, "Run: %s", buf);
 	if (system(buf) == 0) {
