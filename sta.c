@@ -2299,7 +2299,7 @@ static int cmd_sta_set_wmm(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *sba = get_param(cmd, "Sba");
 	int direction;
 	int handle;
-	float sba_fv;
+	float sba_fv = 0;
 	int fixed_int;
 	int psb_ts;
 
@@ -2352,7 +2352,8 @@ static int cmd_sta_set_wmm(struct sigma_dut *dut, struct sigma_conn *conn,
 			fixed_int = 0;
 		}
 
-		sba_fv = atof(sba);
+		if (sba)
+			sba_fv = atof(sba);
 
 		dut->dialog_token++;
 		handle = 7000 + dut->dialog_token;
