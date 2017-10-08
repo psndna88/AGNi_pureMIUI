@@ -52,6 +52,7 @@ struct inet6_ifaddr {
 
 	int			state;
 
+	__u8			probes;
 	__u8			dad_probes;
 	__u8			flags;
 
@@ -61,6 +62,7 @@ struct inet6_ifaddr {
 	unsigned long		tstamp; /* updated timestamp */
 
 	struct delayed_work	dad_work;
+	struct timer_list	timer;
 
 	struct inet6_dev	*idev;
 	struct rt6_info		*rt;
@@ -200,6 +202,7 @@ struct inet6_dev {
 
 	struct timer_list	rs_timer;
 	__u8			rs_probes;
+	__s32			rs_interval;	/* in jiffies */
 
 	unsigned long		tstamp; /* ipv6InterfaceTable update timestamp */
 	struct rcu_head		rcu;

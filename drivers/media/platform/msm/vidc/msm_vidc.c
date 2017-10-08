@@ -501,6 +501,7 @@ int map_and_register_buf(struct msm_vidc_inst *inst, struct v4l2_buffer *b)
 			binfo, b->m.planes[0].reserved[0], b->type);
 
 	for (i = 0; i < b->length; ++i) {
+		rc = 0;
 		if (EXTRADATA_IDX(b->length) &&
 			(i == EXTRADATA_IDX(b->length)) &&
 			!b->m.planes[i].length) {
@@ -511,7 +512,9 @@ int map_and_register_buf(struct msm_vidc_inst *inst, struct v4l2_buffer *b)
 		if (temp && !is_dynamic_output_buffer_mode(b, inst)) {
 			dprintk(VIDC_DBG,
 				"This memory region has already been prepared\n");
-			rc = -EINVAL;
+			rc = 0;
+			mutex_unlock(&inst->registeredbufs.lock);
+			goto exit;
 		}
 
 		if (temp && is_dynamic_output_buffer_mode(b, inst) &&
@@ -529,17 +532,28 @@ int map_and_register_buf(struct msm_vidc_inst *inst, struct v4l2_buffer *b)
 				&inst->registeredbufs.list, list) {
 				if (iterator == temp) {
 					rc = buf_ref_get(inst, temp);
-					if (rc > 0) {
-						save_v4l2_buffer(b, temp);
-						rc = -EEXIST;
-					}
+					save_v4l2_buffer(b, temp);
 					break;
 				}
 			}
 		}
 		mutex_unlock(&inst->registeredbufs.lock);
-		if (rc < 0)
+		/*
+		 * rc == 1,
+		 * buffer is mapped, fw has released all reference, so skip
+		 * mapping and queue it immediately.
+		 *
+		 * rc == 2,
+		 * buffer is mapped and fw is holding a reference, hold it in
+		 * the driver and queue it later when fw has released
+		 */
+		if (rc == 1) {
+			rc = 0;
 			goto exit;
+		} else if (rc == 2) {
+			rc = -EEXIST;
+			goto exit;
+		}
 
 		//if (!is_dynamic_output_buffer_mode(b, inst))
                 if (check_same_fd_handle)
