@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -25,7 +25,7 @@
 #define DEFINE_MSM_MUTEX(mutexname) \
 	static struct mutex mutexname = __MUTEX_INITIALIZER(mutexname)
 
-#define	MSM_ACTUATOT_MAX_VREGS (10)
+#define	MSM_ACTUATOR_MAX_VREGS (10)
 #define	ACTUATOR_MAX_POLL_COUNT 10
 
 struct msm_actuator_ctrl_t;
@@ -68,7 +68,7 @@ struct msm_actuator {
 
 struct msm_actuator_vreg {
 	struct camera_vreg_t *cam_vreg;
-	void *data[MSM_ACTUATOT_MAX_VREGS];
+	void *data[MSM_ACTUATOR_MAX_VREGS];
 	int num_vreg;
 };
 
