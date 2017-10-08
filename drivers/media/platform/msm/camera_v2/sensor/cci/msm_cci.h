@@ -90,7 +90,7 @@ struct msm_camera_cci_gpio_cfg {
 };
 
 struct msm_camera_cci_i2c_read_cfg {
-	uint16_t addr;
+	uint32_t addr;
 	enum msm_camera_i2c_reg_addr_type addr_type;
 	uint8_t *data;
 	uint16_t num_byte;
@@ -158,7 +158,7 @@ struct cci_device {
 	uint32_t hw_version;
 	uint8_t ref_count;
 	enum msm_cci_state_t cci_state;
-	uint32_t num_clk;
+	size_t num_clk;
 	struct mutex mutex;
 	uint32_t num_clk_cases;
 

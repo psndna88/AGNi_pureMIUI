@@ -208,7 +208,9 @@
 			qcom,fastchg-current-comp = <900>;
 			qcom,float-voltage-comp = <11>;
 			/*11 for 4.2V, 16 for 4.1V*/
-
+			qcom,parallel-usb-min-current-ma = <1400>;
+			qcom,parallel-usb-9v-min-current-ma = <900>;
+			qcom,parallel-allowed-lowering-ma = <500>;
 			qcom,force-aicl-rerun;
 			qcom,aicl-rerun-period-s = <180>;
 			qcom,autoadjust-vfloat;

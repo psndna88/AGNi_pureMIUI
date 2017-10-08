@@ -16,31 +16,20 @@
 #include <linux/init.h>
 #include <linux/slab.h>
 #include <linux/device.h>
+#include <linux/notifier.h>
 #include <linux/err.h>
 #include <linux/power_supply.h>
 #include <linux/thermal.h>
-#include <linux/notifier.h>
 #include "power_supply.h"
 
 /* exported for the APM Power driver, APM emulation */
 struct class *power_supply_class;
 EXPORT_SYMBOL_GPL(power_supply_class);
 
+ATOMIC_NOTIFIER_HEAD(power_supply_notifier);
+EXPORT_SYMBOL_GPL(power_supply_notifier);
+
 static struct device_type power_supply_dev_type;
-
-static BLOCKING_NOTIFIER_HEAD(power_supply_chain);
-
-int register_power_supply_notifier(struct notifier_block *nb)
-{
-	return blocking_notifier_chain_register(&power_supply_chain, nb);
-}
-EXPORT_SYMBOL(register_power_supply_notifier);
-
-int unregister_power_supply_notifier(struct notifier_block *nb)
-{
-	return blocking_notifier_chain_unregister(&power_supply_chain, nb);
-}
-EXPORT_SYMBOL(unregister_power_supply_notifier);
 
 static bool __power_supply_is_supplied_by(struct power_supply *supplier,
 					 struct power_supply *supply)
@@ -328,7 +317,8 @@ static void power_supply_changed_work(struct work_struct *work)
 				      __power_supply_changed_work);
 
 		power_supply_update_leds(psy);
-		blocking_notifier_call_chain(&power_supply_chain, 0, NULL);
+		atomic_notifier_call_chain(&power_supply_notifier,
+				PSY_EVENT_PROP_CHANGED, psy);
 
 		kobject_uevent(&psy->dev->kobj, KOBJ_CHANGE);
 		spin_lock_irqsave(&psy->changed_lock, flags);
@@ -587,6 +577,18 @@ static void power_supply_dev_release(struct device *dev)
 	pr_debug("device: '%s': %s\n", dev_name(dev), __func__);
 	kfree(dev);
 }
+
+int power_supply_reg_notifier(struct notifier_block *nb)
+{
+	return atomic_notifier_chain_register(&power_supply_notifier, nb);
+}
+EXPORT_SYMBOL_GPL(power_supply_reg_notifier);
+
+void power_supply_unreg_notifier(struct notifier_block *nb)
+{
+	atomic_notifier_chain_unregister(&power_supply_notifier, nb);
+}
+EXPORT_SYMBOL_GPL(power_supply_unreg_notifier);
 
 #ifdef CONFIG_THERMAL
 static int power_supply_read_temp(struct thermal_zone_device *tzd,

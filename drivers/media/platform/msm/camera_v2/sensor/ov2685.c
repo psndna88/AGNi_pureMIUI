@@ -19,6 +19,7 @@
 #define OV2685_SENSOR_NAME "ov2685"
 #define PLATFORM_DRIVER_NAME "msm_camera_ov2685"
 #define ov2685_obj ov2685_##obj
+#define CCI_I2C_MAX_WRITE 8192
 
 #undef CDBG
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
@@ -817,7 +818,7 @@ int32_t ov2685_sensor_config(struct msm_sensor_ctrl_t *s_ctrl,
 		}
 
 		if (!conf_array.size ||
-			conf_array.size > I2C_REG_DATA_MAX) {
+			conf_array.size > CCI_I2C_MAX_WRITE) {
 			pr_err("%s:%d failed\n", __func__, __LINE__);
 			rc = -EFAULT;
 			break;
@@ -1099,7 +1100,7 @@ int32_t ov2685_sensor_config32(struct msm_sensor_ctrl_t *s_ctrl,
 		conf_array.reg_setting = compat_ptr(conf_array32.reg_setting);
 
 		if (!conf_array.size ||
-			conf_array.size > I2C_REG_DATA_MAX) {
+			conf_array.size > CCI_I2C_MAX_WRITE) {
 			pr_err("%s:%d failed\n", __func__, __LINE__);
 			rc = -EFAULT;
 			break;

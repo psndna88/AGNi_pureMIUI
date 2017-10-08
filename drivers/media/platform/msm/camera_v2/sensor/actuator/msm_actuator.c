@@ -738,6 +738,11 @@ static int32_t msm_actuator_bivcm_move_focus(
 	int dir = move_params->dir;
 	int32_t num_steps = move_params->num_steps;
 
+	if (a_ctrl->step_position_table == NULL) {
+		pr_err("Step Position Table is NULL");
+		return -EFAULT;
+	}
+
 	CDBG("called, dir %d, num_steps %d\n", dir, num_steps);
 
 	if (dest_step_pos == a_ctrl->curr_step_pos)
@@ -801,8 +806,10 @@ static int32_t msm_actuator_bivcm_move_focus(
 				[a_ctrl->curr_region_index],
 				sign_dir,
 				target_lens_pos);
-			if (rc < 0)
+			if (rc < 0) {
+				kfree(ringing_params_kernel);
 				return rc;
+			}
 			curr_lens_pos = target_lens_pos;
 		} else {
 			target_step_pos = step_boundary;
@@ -1116,7 +1123,7 @@ static int32_t msm_actuator_vreg_control(struct msm_actuator_ctrl_t *a_ctrl,
 	if (!cnt)
 		return 0;
 
-	if (cnt >= MSM_ACTUATOT_MAX_VREGS) {
+	if (cnt >= MSM_ACTUATOR_MAX_VREGS) {
 		pr_err("%s failed %d cnt %d\n", __func__, __LINE__, cnt);
 		return -EINVAL;
 	}
@@ -1206,13 +1213,24 @@ static int32_t msm_actuator_set_position(
 		return -EFAULT;
 	}
 
+	if (!a_ctrl || !a_ctrl->func_tbl ||
+		!a_ctrl->func_tbl->actuator_parse_i2c_params) {
+		pr_err("failed. NULL actuator pointers.");
+		return -EFAULT;
+	}
+
+	if (a_ctrl->actuator_state != ACT_OPS_ACTIVE) {
+		pr_err("failed. Invalid actuator state.");
+		return -EFAULT;
+	}
+
 	a_ctrl->i2c_tbl_index = 0;
 	hw_params = set_pos->hw_params;
 	for (index = 0; index < set_pos->number_of_steps; index++) {
 		next_lens_position = set_pos->pos[index];
 		delay = set_pos->delay[index];
 		a_ctrl->func_tbl->actuator_parse_i2c_params(a_ctrl,
-		next_lens_position, hw_params, delay);
+			next_lens_position, hw_params, delay);
 
 		reg_setting.reg_setting = a_ctrl->i2c_reg_tbl;
 		reg_setting.size = a_ctrl->i2c_tbl_index;
@@ -1246,6 +1264,16 @@ static int32_t msm_actuator_bivcm_set_position(
 		set_pos->number_of_steps > MAX_NUMBER_OF_STEPS) {
 		pr_err("num_steps out of range = %d\n",
 			set_pos->number_of_steps);
+		return -EFAULT;
+	}
+
+	if (!a_ctrl) {
+		pr_err("failed. NULL actuator pointers.");
+		return -EFAULT;
+	}
+
+	if (a_ctrl->actuator_state != ACT_OPS_ACTIVE) {
+		pr_err("failed. Invalid actuator state.");
 		return -EFAULT;
 	}
 
@@ -1489,25 +1517,21 @@ static int32_t msm_actuator_config(struct msm_actuator_ctrl_t *a_ctrl,
 		break;
 
 	case CFG_SET_DEFAULT_FOCUS:
-		if (a_ctrl && a_ctrl->func_tbl) {
-		rc = a_ctrl->func_tbl->actuator_set_default_focus(a_ctrl,
-			&cdata->cfg.move);
+		if (a_ctrl->func_tbl &&
+			a_ctrl->func_tbl->actuator_set_default_focus)
+			rc = a_ctrl->func_tbl->actuator_set_default_focus(
+				a_ctrl, &cdata->cfg.move);
 		if (rc < 0)
 			pr_err("move focus failed %d\n", rc);
-		} else
-			pr_err("%s:CFG_SET_DEFAULT_FOCUS failed!\n", __func__);
-
 		break;
 
 	case CFG_MOVE_FOCUS:
-	if (a_ctrl && a_ctrl->func_tbl) {
-		rc = a_ctrl->func_tbl->actuator_move_focus(a_ctrl,
-			&cdata->cfg.move);
+		if (a_ctrl->func_tbl &&
+			a_ctrl->func_tbl->actuator_move_focus)
+			rc = a_ctrl->func_tbl->actuator_move_focus(a_ctrl,
+				&cdata->cfg.move);
 		if (rc < 0)
 			pr_err("move focus failed %d\n", rc);
-	} else
-		pr_err("%s:CFG_MOVE_FOCUS failed!\n", __func__);
-
 		break;
 	case CFG_ACTUATOR_POWERDOWN:
 		rc = msm_actuator_power_down(a_ctrl);
@@ -1516,12 +1540,10 @@ static int32_t msm_actuator_config(struct msm_actuator_ctrl_t *a_ctrl,
 		break;
 
 	case CFG_SET_POSITION:
-		if (a_ctrl != NULL && a_ctrl->func_tbl != NULL)
+		if (a_ctrl->func_tbl &&
+			a_ctrl->func_tbl->actuator_set_position)
 			rc = a_ctrl->func_tbl->actuator_set_position(a_ctrl,
 				&cdata->cfg.setpos);
-		else
-			rc = -EFAULT;
-
 		if (rc < 0)
 			pr_err("actuator_set_position failed %d\n", rc);
 		break;
@@ -1626,6 +1648,8 @@ static long msm_actuator_subdev_ioctl(struct v4l2_subdev *sd,
 	case VIDIOC_MSM_ACTUATOR_CFG:
 		return msm_actuator_config(a_ctrl, argp);
 	case MSM_SD_NOTIFY_FREEZE:
+		return 0;
+	case MSM_SD_UNNOTIFY_FREEZE:
 		return 0;
 	case MSM_SD_SHUTDOWN:
 		if (!a_ctrl->i2c_client.i2c_func_tbl) {
