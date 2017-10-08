@@ -40,6 +40,8 @@
 #define PANEL_DATA_NODE_LEN 80
 
 static DEFINE_MUTEX(mdss_debug_lock);
+/* Hex number + whitespace */
+#define NEXT_VALUE_OFFSET 3
 
 /* Hex number + whitespace */
 #define NEXT_VALUE_OFFSET 3

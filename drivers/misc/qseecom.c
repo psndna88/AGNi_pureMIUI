@@ -1846,6 +1846,7 @@ static int __qseecom_reentrancy_process_incomplete_cmd(
 				return ret;
 			}
 		}
+
 		if (lstnr == RPMB_SERVICE) {
 			ret = __qseecom_enable_clk(CLK_QSEE);
 			if (ret)
@@ -2639,6 +2640,15 @@ static int qseecom_send_service_cmd(struct qseecom_dev_handle *data,
 		if (ret) {
 			pr_err("process_incomplete_cmd fail: err: %d\n",
 				ret);
+		}
+		if (req.cmd_id == QSEOS_RPMB_CHECK_PROV_STATUS_COMMAND) {
+			pr_warn("RPMB key status is 0x%x\n", resp.result);
+			if (put_user(resp.result,
+				(uint32_t __user *)req.resp_buf)) {
+				ret = -EINVAL;
+				goto exit;
+			}
+			ret = 0;
 		}
 		break;
 	case QSEOS_RESULT_FAILURE:
@@ -4930,6 +4940,7 @@ static int qseecom_load_external_elf(struct qseecom_dev_handle *data,
 		pr_err("cache operation failed %d\n", ret);
 		goto exit_disable_clock;
 	}
+
 	/*  SCM_CALL to load the external elf */
 	ret = qseecom_scm_call(SCM_SVC_TZSCHEDULER, 1, cmd_buf, cmd_len,
 			&resp, sizeof(resp));

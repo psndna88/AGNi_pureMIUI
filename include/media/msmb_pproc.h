@@ -1,5 +1,7 @@
 #ifndef __MSMB_PPROC_H
 #define __MSMB_PPROC_H
+#define MSM_OUTPUT_BUF_CNT 8
+
 
 #ifdef MSM_CAMERA_BIONIC
 #include <sys/types.h>

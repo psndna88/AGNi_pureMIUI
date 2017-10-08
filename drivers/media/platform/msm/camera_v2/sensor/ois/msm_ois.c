@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2015, 2017 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -444,6 +444,12 @@ static long msm_ois_subdev_ioctl(struct v4l2_subdev *sd,
 			mutex_unlock(o_ctrl->ois_mutex);
 			return msm_ois_close(sd, NULL);
 		}
+		rc = msm_ois_power_down(o_ctrl);
+		if (rc < 0) {
+			pr_err("%s:%d OIS Power down failed\n",
+				__func__, __LINE__);
+		}
+		return msm_ois_close(sd, NULL);
 	default:
 		return -ENOIOCTLCMD;
 	}
@@ -568,11 +574,10 @@ static long msm_ois_subdev_do_ioctl(
 	u32 = (struct msm_ois_cfg_data32 *)arg;
 	parg = arg;
 
-	ois_data.cfgtype = u32->cfgtype;
-
 	switch (cmd) {
 	case VIDIOC_MSM_OIS_CFG32:
 		cmd = VIDIOC_MSM_OIS_CFG;
+		ois_data.cfgtype = u32->cfgtype;
 
 		switch (u32->cfgtype) {
 		case CFG_OIS_CONTROL:
@@ -606,7 +611,6 @@ static long msm_ois_subdev_do_ioctl(
 			settings.reg_setting =
 				compat_ptr(settings32.reg_setting);
 
-			ois_data.cfgtype = u32->cfgtype;
 			ois_data.cfg.settings = &settings;
 			parg = &ois_data;
 			break;
