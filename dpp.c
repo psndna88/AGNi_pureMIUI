@@ -293,25 +293,12 @@ static int dpp_hostapd_conf_update(struct sigma_dut *dut,
 	if (!pos)
 		return -2;
 	pos++;
-	pos2 = strchr(pos, ' ');
-	if (pos2)
-		*pos2++ = '\0';
 	sigma_dut_print(dut, DUT_MSG_INFO, "DPP: C-sign-key: %s", pos);
 	snprintf(buf2, sizeof(buf2), "SET dpp_csign %s", pos);
 	if (wpa_command(ifname, buf2) < 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Failed to update AP C-sign-key");
 		goto out;
-	}
-	if (pos2) {
-		sigma_dut_print(dut, DUT_MSG_INFO, "DPP: C-sign-key expiry: %s",
-				pos2);
-		snprintf(buf2, sizeof(buf2), "SET dpp_csign_expiry %s", pos2);
-		if (wpa_command(ifname, buf2) < 0) {
-			send_resp(dut, conn, SIGMA_ERROR,
-				  "errorCode,Failed to update AP C-sign-key expiry");
-			goto out;
-		}
 	}
 
 	res = get_wpa_cli_event(dut, ctrl, "DPP-NET-ACCESS-KEY",
