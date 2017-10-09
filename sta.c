@@ -1309,12 +1309,18 @@ static int set_wpa_common(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *val;
 	int id;
 	int cipher_set = 0;
+	int owe;
 
 	id = add_network_common(dut, conn, ifname, cmd);
 	if (id < 0)
 		return id;
 
+	val = get_param(cmd, "Type");
+	owe = val && strcasecmp(val, "OWE") == 0;
+
 	val = get_param(cmd, "keyMgmtType");
+	if (!val && owe)
+		val = "OWE";
 	if (val == NULL) {
 		send_resp(dut, conn, SIGMA_INVALID, "errorCode,Missing keyMgmtType");
 		return 0;
@@ -1336,6 +1342,7 @@ static int set_wpa_common(struct sigma_dut *dut, struct sigma_conn *conn,
 	} else if (strcasecmp(val, "SuiteB") == 0) {
 		if (set_network(ifname, id, "proto", "WPA2") < 0)
 			return -2;
+	} else if (strcasecmp(val, "OWE") == 0) {
 	} else {
 		send_resp(dut, conn, SIGMA_INVALID, "errorCode,Unrecognized keyMgmtType value");
 		return 0;
@@ -1390,7 +1397,7 @@ static int set_wpa_common(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
-	if (!cipher_set) {
+	if (!cipher_set && !owe) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Missing encpType and PairwiseCipher");
 		return 0;
@@ -2064,6 +2071,39 @@ static int sta_set_open(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int sta_set_owe(struct sigma_dut *dut, struct sigma_conn *conn,
+		       struct sigma_cmd *cmd)
+{
+	const char *intf = get_param(cmd, "Interface");
+	const char *ifname, *val;
+	int id;
+
+	if (intf == NULL)
+		return -1;
+
+	if (strcmp(intf, get_main_ifname()) == 0)
+		ifname = get_station_ifname();
+	else
+		ifname = intf;
+
+	id = set_wpa_common(dut, conn, ifname, cmd);
+	if (id < 0)
+		return id;
+
+	if (set_network(ifname, id, "key_mgmt", "OWE") < 0)
+		return -2;
+
+	val = get_param(cmd, "ECGroupID");
+	if (val && set_network(ifname, id, "owe_group", val) < 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to clear owe_group");
+		return -2;
+	}
+
+	return 1;
+}
+
+
 static int cmd_sta_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 				struct sigma_cmd *cmd)
 {
@@ -2077,6 +2117,8 @@ static int cmd_sta_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	if (strcasecmp(type, "OPEN") == 0)
 		return sta_set_open(dut, conn, cmd);
+	if (strcasecmp(type, "OWE") == 0)
+		return sta_set_owe(dut, conn, cmd);
 	if (strcasecmp(type, "PSK") == 0 ||
 	    strcasecmp(type, "PSK-SAE") == 0 ||
 	    strcasecmp(type, "SAE") == 0)
