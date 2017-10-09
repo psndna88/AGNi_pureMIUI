@@ -1413,6 +1413,9 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 		} else if (strcasecmp(val, "WPA2-PSK-SAE") == 0) {
 			dut->ap_key_mgmt = AP_WPA2_PSK_SAE;
 			dut->ap_cipher = AP_CCMP;
+		} else if (strcasecmp(val, "OWE") == 0) {
+			dut->ap_key_mgmt = AP_WPA2_OWE;
+			dut->ap_cipher = AP_CCMP;
 		} else if (strcasecmp(val, "NONE") == 0) {
 			dut->ap_key_mgmt = AP_OPEN;
 			dut->ap_cipher = AP_PLAIN;
@@ -2442,6 +2445,11 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"SuiteB not supported");
 			break;
+		case AP_WPA2_OWE:
+			/* TODO */
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"OWE not supported");
+			break;
 		}
 
 		if (!dut->ap_is_dual)
@@ -3249,6 +3257,7 @@ static int cmd_wcn_ap_config_commit(struct sigma_dut *dut,
 	case AP_WPA2_EAP_MIXED:
 	case AP_WPA_EAP:
 	case AP_SUITEB:
+	case AP_WPA2_OWE:
 		/* Not supported */
 		break;
 	}
@@ -4933,6 +4942,10 @@ static int cmd_ath_ap_config_commit(struct sigma_dut *dut,
 		/* TODO */
 		sigma_dut_print(dut, DUT_MSG_ERROR, "SuiteB not supported");
 		break;
+	case AP_WPA2_OWE:
+		/* TODO */
+		sigma_dut_print(dut, DUT_MSG_ERROR, "OWE not supported");
+		break;
 	}
 
 	if (dut->ap_is_dual) {
@@ -5020,6 +5033,11 @@ static int cmd_ath_ap_config_commit(struct sigma_dut *dut,
 			/* TODO */
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"SuiteB not supported");
+			break;
+		case AP_WPA2_OWE:
+			/* TODO */
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"OWE not supported");
 			break;
 		}
 
@@ -5683,6 +5701,12 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 				dut->ap_radius_port);
 		fprintf(f, "auth_server_shared_secret=%s\n",
 			dut->ap_radius_password);
+		break;
+	case AP_WPA2_OWE:
+		fprintf(f, "wpa=2\n");
+		fprintf(f, "wpa_key_mgmt=OWE\n");
+		fprintf(f, "rsn_pairwise=%s\n",
+			hostapd_cipher_name(dut->ap_cipher));
 		break;
 	}
 

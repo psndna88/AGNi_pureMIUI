@@ -382,6 +382,7 @@ struct sigma_dut {
 		AP_WPA2_SAE,
 		AP_WPA2_PSK_SAE,
 		AP_SUITEB,
+		AP_WPA2_OWE,
 	} ap_key_mgmt;
 	enum ap_tag_key_mgmt {
 		AP2_OPEN,
