@@ -1021,7 +1021,12 @@ static int get_property_from_fg(struct smbchg_chip *chip,
 }
 
 static int get_prop_batt_voltage_now(struct smbchg_chip *chip);
-#define DEFAULT_BATT_CAPACITY	1
+#define DEFAULT_BATT_CAPACITY	50
+#ifdef CONFIG_MACH_XIAOMI_KENZO
+#define DEFAULT_BATT_VOLTAGE_MAX	4200000
+#else
+#define DEFAULT_BATT_VOLTAGE_MAX	4300000
+#endif
 static int get_prop_batt_capacity(struct smbchg_chip *chip)
 {
 	int capacity, rc;
@@ -1037,13 +1042,13 @@ static int get_prop_batt_capacity(struct smbchg_chip *chip)
 
 	if (is_usb_present(chip)
 			&& (POWER_SUPPLY_STATUS_FULL == get_prop_batt_status(chip))
-			&& get_prop_batt_voltage_now(chip) > 4300000)
+			&& get_prop_batt_voltage_now(chip) > DEFAULT_BATT_VOLTAGE_MAX)
 		capacity = 100;
 
 	return capacity;
 }
 
-#define DEFAULT_BATT_TEMP		-200
+#define DEFAULT_BATT_TEMP		200
 static int get_prop_batt_temp(struct smbchg_chip *chip)
 {
 	int temp, rc;
@@ -1060,7 +1065,7 @@ static int get_prop_batt_temp(struct smbchg_chip *chip)
 }
 
 #ifdef CONFIG_MACH_XIAOMI_KENZO
-#define DEFAULT_BATT_CAPACITY_FULL	4050000
+#define DEFAULT_BATT_CAPACITY_FULL	4000000
 #else
 #define DEFAULT_BATT_CAPACITY_FULL	4850000
 #endif
@@ -5754,6 +5759,11 @@ static void smbchg_external_power_changed(struct power_supply *psy)
 	if (usb_supply_type != POWER_SUPPLY_TYPE_USB)
 		goto  skip_current_for_non_sdp;
 
+#ifdef CONFIG_FORCE_FAST_CHARGE
+	if (force_fast_charge)
+		current_limit = 900;
+#endif
+
 	pr_smb(PR_MISC, "usb type = %s current_limit = %d\n",
 			usb_type_name, current_limit);
 
@@ -5784,6 +5794,7 @@ static enum power_supply_property smbchg_battery_properties[] = {
 	POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN,
 	POWER_SUPPLY_PROP_CURRENT_NOW,
 	POWER_SUPPLY_PROP_TEMP,
+	POWER_SUPPLY_PROP_CHARGE_FULL,
 	POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN,
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
 	POWER_SUPPLY_PROP_SAFETY_TIMER_ENABLE,
@@ -6161,7 +6172,7 @@ static int smbchg_battery_get_property(struct power_supply *psy,
 		val->intval = get_prop_batt_health(chip);
 		break;
 	case POWER_SUPPLY_PROP_TECHNOLOGY:
-		val->intval = POWER_SUPPLY_TECHNOLOGY_LION;
+		val->intval = POWER_SUPPLY_TECHNOLOGY_LIPO;
 		break;
 	case POWER_SUPPLY_PROP_FLASH_CURRENT_MAX:
 		val->intval = smbchg_calc_max_flash_current(chip);
@@ -6195,6 +6206,7 @@ static int smbchg_battery_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_TEMP:
 		val->intval = get_prop_batt_temp(chip);
 		break;
+	case POWER_SUPPLY_PROP_CHARGE_FULL:
 	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
 		val->intval = get_prop_batt_capacity_full(chip);
 		break;
