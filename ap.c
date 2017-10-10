@@ -5415,7 +5415,7 @@ hostapd_group_mgmt_cipher_name(enum ap_group_mgmt_cipher cipher)
 {
 	switch (cipher) {
 	case AP_BIP_GMAC_256:
-		return "BIP-GMAC-128";
+		return "BIP-GMAC-256";
 	case AP_BIP_CMAC_256:
 		return "BIP-CMAC-256";
 	case AP_BIP_GMAC_128:
