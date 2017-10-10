@@ -5707,6 +5707,8 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		fprintf(f, "wpa_key_mgmt=OWE\n");
 		fprintf(f, "rsn_pairwise=%s\n",
 			hostapd_cipher_name(dut->ap_cipher));
+		if (dut->ap_sae_groups)
+			fprintf(f, "owe_groups=%s\n", dut->ap_sae_groups);
 		break;
 	}
 
