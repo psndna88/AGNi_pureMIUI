@@ -2094,7 +2094,14 @@ static int sta_set_owe(struct sigma_dut *dut, struct sigma_conn *conn,
 		return -2;
 
 	val = get_param(cmd, "ECGroupID");
-	if (val && set_network(ifname, id, "owe_group", val) < 0) {
+	if (val && strcmp(val, "0") == 0) {
+		if (wpa_command(ifname,
+				"VENDOR_ELEM_ADD 13 ff23200000783590fb7440e03d5b3b33911f86affdcc6b4411b707846ac4ff08ddc8831ccd") != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to set OWE DH Param element override");
+			return -2;
+		}
+	} else if (val && set_network(ifname, id, "owe_group", val) < 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Failed to clear owe_group");
 		return -2;
@@ -5062,6 +5069,8 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 	dut->sae_commit_override = NULL;
 
 	dut->dpp_conf_id = -1;
+
+	wpa_command(intf, "VENDOR_ELEM_REMOVE 13 *");
 
 	if (dut->program != PROGRAM_VHT)
 		return cmd_sta_p2p_reset(dut, conn, cmd);
