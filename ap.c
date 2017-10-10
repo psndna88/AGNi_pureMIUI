@@ -5943,6 +5943,47 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
+	if (dut->ap_key_mgmt == AP_WPA2_OWE && dut->ap_tag_ssid[0][0] &&
+	    dut->ap_tag_key_mgmt[0] == AP2_OPEN) {
+		/* OWE transition mode */
+		unsigned char bssid[6];
+		char ifname2[50];
+		unsigned long val;
+		FILE *f2;
+
+		snprintf(ifname2, sizeof(ifname2), "%s_1", ifname);
+
+		fprintf(f, "owe_transition_ifname=%s\n", ifname2);
+		val = 0x12345678; /* default to something */
+		f2 = fopen("/dev/urandom", "r");
+		if (f2) {
+			if (fread(&val, 1, sizeof(val), f2) != sizeof(val)) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"Could not read /dev/urandom");
+			}
+			fclose(f2);
+		}
+		fprintf(f, "ssid=owe-%lx\n", val);
+
+		if (get_hwaddr(ifname, bssid)) {
+			fclose(f);
+			return -2;
+		}
+		if (bssid[0] & 0x02)
+			bssid[5] ^= 0x01;
+		else
+			bssid[0] |= 0x02;
+
+		fprintf(f, "bss=%s\n", ifname2);
+		fprintf(f, "ssid=%s\n", dut->ap_ssid);
+		if (dut->bridge)
+			fprintf(f, "bridge=%s\n", dut->bridge);
+		fprintf(f, "bssid=%02x:%02x:%02x:%02x:%02x:%02x\n",
+			bssid[0], bssid[1], bssid[2], bssid[3],
+			bssid[4], bssid[5]);
+		fprintf(f, "owe_transition_ifname=%s\n", ifname);
+	}
+
 	fclose(f);
 	if (dut->use_hostapd_pid_file)
 		kill_hostapd_process_pid(dut);
