@@ -2250,11 +2250,13 @@ static void set_anqp_elem_value(struct sigma_dut *dut, const char *ifname,
 static void get_if_name(struct sigma_dut *dut, char *ifname_str,
 			size_t str_size, int wlan_tag)
 {
-	char *ifname;
+	const char *ifname;
 	enum driver_type drv;
 
 	drv = get_driver_type();
-	if (drv == DRIVER_ATHEROS) {
+	if (dut->hostapd_ifname && if_nametoindex(dut->hostapd_ifname) > 0) {
+		ifname = dut->hostapd_ifname;
+	} else if (drv == DRIVER_ATHEROS) {
 		if ((dut->ap_mode == AP_11a || dut->ap_mode == AP_11na ||
 		     dut->ap_mode == AP_11ac) &&
 		    if_nametoindex("ath1") > 0)
@@ -2282,6 +2284,8 @@ static void get_if_name(struct sigma_dut *dut, char *ifname_str,
 	if (drv == DRIVER_OPENWRT && wlan_tag > 1) {
 		/* Handle tagged-ifname only on OPENWRT for now */
 		snprintf(ifname_str, str_size, "%s%d", ifname, wlan_tag - 1);
+	} else if (drv == DRIVER_MAC80211 && wlan_tag == 2) {
+		snprintf(ifname_str, str_size, "%s_1", ifname);
 	} else {
 		snprintf(ifname_str, str_size, "%s", ifname);
 	}
@@ -7632,7 +7636,7 @@ static int cmd_ap_get_mac_address(struct sigma_dut *dut,
 #if defined( __linux__)
 	/* const char *name = get_param(cmd, "NAME"); */
 	/* const char *ifname = get_param(cmd, "INTERFACE"); */
-	char resp[50];
+	char resp[100];
 	unsigned char addr[6];
 	char ifname[50];
 	struct ifreq ifr;
@@ -7647,7 +7651,7 @@ static int cmd_ap_get_mac_address(struct sigma_dut *dut,
 			 * The only valid WLAN Tags as of now as per the latest
 			 * WFA scripts are 1, 2, and 3.
 			 */
-			send_resp(dut, conn, SIGMA_INVALID,
+			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Unsupported WLAN_TAG");
 			return 0;
 		}
@@ -7663,7 +7667,10 @@ static int cmd_ap_get_mac_address(struct sigma_dut *dut,
 	if (ioctl(s, SIOCGIFHWADDR, &ifr) < 0) {
 		perror("ioctl");
 		close(s);
-		return -1;
+		snprintf(resp, sizeof(resp),
+			 "errorCode,Could not find interface %s", ifname);
+		send_resp(dut, conn, SIGMA_ERROR, resp);
+		return 0;
 	}
 	close(s);
 	memcpy(addr, ifr.ifr_hwaddr.sa_data, 6);
