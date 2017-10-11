@@ -1518,6 +1518,8 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	val = get_param(cmd, "PSK");
 	if (val) {
+		if (dut->ap_key_mgmt != AP_WPA2_SAE && strlen(val) > 64)
+			return -1;
 		if (strlen(val) > sizeof(dut->ap_passphrase) - 1)
 			return -1;
 		snprintf(dut->ap_passphrase, sizeof(dut->ap_passphrase),
@@ -5647,7 +5649,10 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 			fprintf(f, "wpa_pairwise=TKIP\n");
 		else
 			fprintf(f, "wpa_pairwise=CCMP\n");
-		fprintf(f, "wpa_passphrase=%s\n", dut->ap_passphrase);
+		if (dut->ap_key_mgmt == AP_WPA2_SAE)
+			fprintf(f, "sae_password=%s\n", dut->ap_passphrase);
+		else
+			fprintf(f, "wpa_passphrase=%s\n", dut->ap_passphrase);
 		break;
 	case AP_WPA2_EAP:
 	case AP_WPA2_EAP_MIXED:

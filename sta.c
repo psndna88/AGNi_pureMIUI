@@ -1550,8 +1550,13 @@ static int cmd_sta_set_psk(struct sigma_dut *dut, struct sigma_conn *conn,
 	val = get_param(cmd, "passPhrase");
 	if (val == NULL)
 		return -1;
-	if (set_network_quoted(ifname, id, "psk", val) < 0)
-		return -2;
+	if (type && strcasecmp(type, "SAE") == 0) {
+		if (set_network_quoted(ifname, id, "sae_password", val) < 0)
+			return -2;
+	} else {
+		if (set_network_quoted(ifname, id, "psk", val) < 0)
+			return -2;
+	}
 
 	val = get_param(cmd, "ECGroupID");
 	if (val) {
