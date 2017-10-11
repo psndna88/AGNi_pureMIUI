@@ -537,6 +537,10 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		else
 			conf_role = "sta-psk";
 		break;
+	default:
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Unsupported DPPConfIndex");
+		goto out;
 	}
 
 	if (strcasecmp(auth_role, "Initiator") == 0) {
