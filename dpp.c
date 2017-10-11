@@ -569,6 +569,10 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			snprintf(buf, sizeof(buf),
 				 "DPP_PKEX_ADD own=%d init=1 role=%s %scode=%s",
 				 own_pkex_id, role, pkex_identifier, pkex_code);
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported DPPBS");
+			goto out;
 		}
 		if (wpa_command(ifname, buf) < 0) {
 			send_resp(dut, conn, SIGMA_ERROR,
