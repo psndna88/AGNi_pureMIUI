@@ -374,7 +374,7 @@ static struct wfa_cs_p2p_group * p2p_group_get(struct sigma_dut *dut,
 	pos = strchr(grpid, ' ');
 	if (pos == NULL)
 		return NULL;
-	if (pos - grpid > (int) sizeof(go_dev_addr))
+	if (pos - grpid >= (int) sizeof(go_dev_addr))
 		return NULL;
 	memcpy(go_dev_addr, grpid, pos - grpid);
 	go_dev_addr[pos - grpid] = '\0';
