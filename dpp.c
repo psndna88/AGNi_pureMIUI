@@ -629,8 +629,10 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		}
 
 		if (!sigma_dut_is_ap(dut)) {
-			snprintf(buf, sizeof(buf), "DPP_LISTEN %d role=%s",
-				 freq, role);
+			snprintf(buf, sizeof(buf), "DPP_LISTEN %d role=%s%s",
+				 freq, role,
+				 (strcasecmp(bs, "QR") == 0 && mutual) ?
+				 " qr=mutual" : "");
 			if (wpa_command(ifname, buf) < 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "errorCode,Failed to start DPP listen");
