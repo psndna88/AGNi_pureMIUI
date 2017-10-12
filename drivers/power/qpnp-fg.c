@@ -1893,7 +1893,12 @@ static void fg_handle_battery_insertion(struct fg_chip *chip)
 	INIT_COMPLETION(chip->fg_reset_done);
 	schedule_work(&chip->batt_profile_init);
 	cancel_delayed_work(&chip->update_sram_data);
-	schedule_delayed_work(&chip->update_sram_data, msecs_to_jiffies(0));
+	if (charging_detected()) {
+		schedule_delayed_work(&chip->update_sram_data, msecs_to_jiffies(0));
+	} else {
+		queue_delayed_work(system_power_efficient_wq, &chip->update_sram_data,
+			msecs_to_jiffies(0));
+	}
 }
 
 
@@ -2541,9 +2546,15 @@ try_again:
 		chip->last_beat_count = beat_count;
 	}
 resched:
-	schedule_delayed_work(
-		&chip->check_sanity_work,
-		msecs_to_jiffies(SANITY_CHECK_PERIOD_MS));
+	if (charging_detected()) {
+		schedule_delayed_work(
+			&chip->check_sanity_work,
+			msecs_to_jiffies(SANITY_CHECK_PERIOD_MS));
+	} else {
+		queue_delayed_work(system_power_efficient_wq,
+			&chip->check_sanity_work,
+			msecs_to_jiffies(SANITY_CHECK_PERIOD_MS));
+	}
 out:
 	fg_relax(&chip->sanity_wakeup_source);
 }
@@ -4367,8 +4378,14 @@ static irqreturn_t fg_vbatt_low_handler(int irq, void *_chip)
 			disable_irq_nosync(chip->batt_irq[VBATT_LOW].irq);
 			chip->vbat_low_irq_enabled = false;
 			fg_stay_awake(&chip->empty_check_wakeup_source);
-			schedule_delayed_work(&chip->check_empty_work,
-				msecs_to_jiffies(FG_EMPTY_DEBOUNCE_MS));
+			if (charging_detected()) {
+				schedule_delayed_work(&chip->check_empty_work,
+					msecs_to_jiffies(FG_EMPTY_DEBOUNCE_MS));
+			} else {
+				queue_delayed_work(system_power_efficient_wq,
+					&chip->check_empty_work,
+					msecs_to_jiffies(FG_EMPTY_DEBOUNCE_MS));
+			}
 		} else {
 			if (fg_debug_mask & FG_IRQS)
 				pr_info("Vbatt is high\n");
@@ -4475,8 +4492,13 @@ static irqreturn_t fg_soc_irq_handler(int irq, void *_chip)
 		msoc = get_monotonic_soc_raw(chip);
 		if (msoc == 0 || chip->soc_empty) {
 			fg_stay_awake(&chip->empty_check_wakeup_source);
-			schedule_delayed_work(&chip->check_empty_work,
-				msecs_to_jiffies(FG_EMPTY_DEBOUNCE_MS));
+			if (charging_detected()) {
+				schedule_delayed_work(&chip->check_empty_work,
+					msecs_to_jiffies(FG_EMPTY_DEBOUNCE_MS));
+			} else {
+				queue_delayed_work(system_power_efficient_wq,
+					&chip->check_empty_work, msecs_to_jiffies(FG_EMPTY_DEBOUNCE_MS));
+			}
 		}
 	}
 
@@ -6949,8 +6971,13 @@ out:
 	fg_enable_irqs(chip, true);
 	update_sram_data_work(&chip->update_sram_data.work);
 	update_temp_data(&chip->update_temp_work.work);
-	schedule_delayed_work(&chip->check_sanity_work,
-		msecs_to_jiffies(1000));
+	if (charging_detected()) {
+		schedule_delayed_work(&chip->check_sanity_work,
+			msecs_to_jiffies(1000));
+	} else {
+		queue_delayed_work(system_power_efficient_wq,
+			&chip->check_sanity_work, msecs_to_jiffies(1000));
+	}
 	chip->ima_error_handling = false;
 	mutex_unlock(&chip->ima_recovery_lock);
 	fg_relax(&chip->fg_reset_wakeup_source);
@@ -7091,9 +7118,15 @@ static void delayed_init_work(struct work_struct *work)
 	if (!chip->use_otp_profile)
 		schedule_work(&chip->batt_profile_init);
 
-	if (chip->ima_supported && fg_reset_on_lockup)
-		schedule_delayed_work(&chip->check_sanity_work,
-			msecs_to_jiffies(1000));
+	if (chip->ima_supported && fg_reset_on_lockup) {
+		if (charging_detected()) {
+			schedule_delayed_work(&chip->check_sanity_work,
+				msecs_to_jiffies(1000));
+		} else {
+			queue_delayed_work(system_power_efficient_wq,
+				&chip->check_sanity_work, msecs_to_jiffies(1000));
+		}
+	}
 
 	if (chip->wa_flag & IADC_GAIN_COMP_WA) {
 		rc = fg_init_iadc_config(chip);
@@ -7503,8 +7536,13 @@ static int fg_reset_lockup_set(const char *val, const struct kernel_param *kp)
 		pr_info("fg_reset_on_lockup set to %d\n", fg_reset_on_lockup);
 
 	if (fg_reset_on_lockup)
-		schedule_delayed_work(&chip->check_sanity_work,
-			msecs_to_jiffies(1000));
+		if (charging_detected()) {
+			schedule_delayed_work(&chip->check_sanity_work,
+				msecs_to_jiffies(1000));
+		} else {
+			queue_delayed_work(system_power_efficient_wq,
+				&chip->check_sanity_work, msecs_to_jiffies(1000));
+		}
 	else
 		cancel_delayed_work_sync(&chip->check_sanity_work);
 

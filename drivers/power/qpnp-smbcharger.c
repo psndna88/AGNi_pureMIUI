@@ -40,6 +40,7 @@
 #include <linux/msm_bcl.h>
 #include <linux/ktime.h>
 #include "pmic-voter.h"
+#include <linux/charging_state.h>
 #if defined (CONFIG_BOARDTEMP_WORK) || defined (CONFIG_TEMP_CHARGE_DISABLE)
 #include <linux/thermal.h>
 #include <linux/device.h>
@@ -2452,7 +2453,12 @@ static void smbchg_parallel_usb_en_work(struct work_struct *work)
 	return;
 
 recheck:
-	schedule_delayed_work(&chip->parallel_en_work, 0);
+	if (charging_detected()) {
+		schedule_delayed_work(&chip->parallel_en_work, 0);
+	} else {
+		queue_delayed_work(system_power_efficient_wq,
+			&chip->parallel_en_work, 0);
+	}
 }
 
 static void smbchg_parallel_usb_check_ok(struct smbchg_chip *chip)
@@ -2463,7 +2469,12 @@ static void smbchg_parallel_usb_check_ok(struct smbchg_chip *chip)
 		return;
 
 	smbchg_stay_awake(chip, PM_PARALLEL_CHECK);
-	schedule_delayed_work(&chip->parallel_en_work, 0);
+	if (charging_detected()) {
+		schedule_delayed_work(&chip->parallel_en_work, 0);
+	} else {
+		queue_delayed_work(system_power_efficient_wq,
+			&chip->parallel_en_work, 0);
+	}
 }
 
 static int charging_suspend_vote_cb(struct device *dev, int suspend,
@@ -3274,7 +3285,12 @@ static void smbchg_vfloat_adjust_check(struct smbchg_chip *chip)
 
 	smbchg_stay_awake(chip, PM_REASON_VFLOAT_ADJUST);
 	pr_smb(PR_STATUS, "Starting vfloat adjustments\n");
-	schedule_delayed_work(&chip->vfloat_adjust_work, 0);
+	if (charging_detected()) {
+		schedule_delayed_work(&chip->vfloat_adjust_work, 0);
+	} else {
+		queue_delayed_work(system_power_efficient_wq,
+			&chip->vfloat_adjust_work, 0);
+	}
 }
 
 #define FV_STS_REG			0xC
@@ -4322,8 +4338,14 @@ stop:
 	return;
 
 reschedule:
-	schedule_delayed_work(&chip->vfloat_adjust_work,
+	if (charging_detected()) {
+		schedule_delayed_work(&chip->vfloat_adjust_work,
 			msecs_to_jiffies(VFLOAT_RESAMPLE_DELAY_MS));
+	} else {
+		queue_delayed_work(system_power_efficient_wq,
+			&chip->vfloat_adjust_work,
+			msecs_to_jiffies(VFLOAT_RESAMPLE_DELAY_MS));
+	}
 	return;
 }
 
@@ -4767,8 +4789,14 @@ static void handle_usb_insertion(struct smbchg_chip *chip)
 	schedule_work(&chip->usb_set_online_work);
 
 	if (usb_supply_type == POWER_SUPPLY_TYPE_USB_DCP) {
-		schedule_delayed_work(&chip->hvdcp_det_work,
-					msecs_to_jiffies(HVDCP_NOTIFY_MS));
+		if (charging_detected()) {
+			schedule_delayed_work(&chip->hvdcp_det_work,
+				msecs_to_jiffies(HVDCP_NOTIFY_MS));
+		} else {
+			queue_delayed_work(system_power_efficient_wq,
+				&chip->hvdcp_det_work,
+				msecs_to_jiffies(HVDCP_NOTIFY_MS));
+		}
 		if (chip->parallel.use_parallel_aicl) {
 			INIT_COMPLETION(chip->hvdcp_det_done);
 			pr_smb(PR_MISC, "init hvdcp_det_done\n");
@@ -5101,8 +5129,14 @@ static void smbchg_handle_hvdcp3_disable(struct smbchg_chip *chip)
 		read_usb_type(chip, &usb_type_name, &usb_supply_type);
 		smbchg_change_usb_supply_type(chip, usb_supply_type);
 		if (usb_supply_type == POWER_SUPPLY_TYPE_USB_DCP) {
-			schedule_delayed_work(&chip->hvdcp_det_work,
-				msecs_to_jiffies(HVDCP_NOTIFY_MS));
+			if (charging_detected()) {
+				schedule_delayed_work(&chip->hvdcp_det_work,
+					msecs_to_jiffies(HVDCP_NOTIFY_MS));
+			} else {
+				queue_delayed_work(system_power_efficient_wq,
+					&chip->hvdcp_det_work,
+					msecs_to_jiffies(HVDCP_NOTIFY_MS));
+			}
 			if (chip->parallel.use_parallel_aicl) {
 				INIT_COMPLETION(chip->hvdcp_det_done);
 				pr_smb(PR_MISC, "init hvdcp_det_done\n");
@@ -5746,8 +5780,14 @@ static void smbchg_external_power_changed(struct power_supply *psy)
 
 		read_usb_type(chip, &usb_type_name, &usb_supply_type);
 		if (usb_supply_type == POWER_SUPPLY_TYPE_USB_DCP) {
-			schedule_delayed_work(&chip->hvdcp_det_work,
-				msecs_to_jiffies(HVDCP_NOTIFY_MS));
+			if (charging_detected()) {
+				schedule_delayed_work(&chip->hvdcp_det_work,
+					msecs_to_jiffies(HVDCP_NOTIFY_MS));
+			} else {
+				queue_delayed_work(system_power_efficient_wq,
+					&chip->hvdcp_det_work,
+					msecs_to_jiffies(HVDCP_NOTIFY_MS));
+			}
 			if (chip->parallel.use_parallel_aicl) {
 				INIT_COMPLETION(chip->hvdcp_det_done);
 				pr_smb(PR_MISC, "init hvdcp_det_done\n");
