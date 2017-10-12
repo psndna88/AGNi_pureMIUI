@@ -509,6 +509,9 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		conf_index = atoi(val);
 	val = get_param(cmd, "DPPConfEnrolleeRole");
 	switch (conf_index) {
+	case -1:
+		conf_role = NULL;
+		break;
 	case 1:
 		ascii2hexstr("DPPNET01", buf);
 		snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
@@ -553,6 +556,11 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			own_txt[0] = '\0';
 		if (strcasecmp(bs, "QR") == 0 &&
 		    strcasecmp(prov_role, "Configurator") == 0) {
+			if (!conf_role) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Missing DPPConfIndex");
+				goto out;
+			}
 			snprintf(buf, sizeof(buf),
 				 "DPP_AUTH_INIT peer=%d%s role=%s conf=%s %s %s configurator=%d",
 				 dut->dpp_peer_bootstrap, own_txt, role,
@@ -564,6 +572,11 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 				 dut->dpp_peer_bootstrap, own_txt, role);
 		} else if (strcasecmp(bs, "PKEX") == 0 &&
 			   strcasecmp(prov_role, "Configurator") == 0) {
+			if (!conf_role) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Missing DPPConfIndex");
+				goto out;
+			}
 			snprintf(buf, sizeof(buf),
 				 "DPP_PKEX_ADD own=%d init=1 role=%s conf=%s %s %s configurator=%d %scode=%s",
 				 own_pkex_id, role, conf_role,
@@ -587,6 +600,11 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		int freq = 2462;
 
 		if (strcasecmp(prov_role, "Configurator") == 0) {
+			if (!conf_role) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Missing DPPConfIndex");
+				goto out;
+			}
 			snprintf(buf, sizeof(buf),
 				 "SET dpp_configurator_params  conf=%s %s %s configurator=%d",
 				 conf_role, conf_ssid, conf_pass,
