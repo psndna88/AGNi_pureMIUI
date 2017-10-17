@@ -825,6 +825,10 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 				return 0;
 			}
 			break;
+		case DRIVER_WCN:
+		case DRIVER_LINUX_WCN:
+			ath_config_dyn_bw_sig(dut, ifname, val);
+			break;
 		default:
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Unsupported DYN_BW_SGL with the current driver");
