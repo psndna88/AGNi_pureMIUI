@@ -159,5 +159,7 @@ struct security_class_mapping secclass_map[] = {
 		      NULL } },
 	{ "can_socket",
 	  { COMMON_SOCK_PERMS, NULL } },
+	{ "bpf",
+	  {"map_create", "map_read", "map_write", "prog_load", "prog_run"} },
 	{ NULL }
   };
