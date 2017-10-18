@@ -363,8 +363,7 @@ static void usb_set_lpm_parameters(struct usb_device *udev)
 }
 
 /* USB 2.0 spec Section 11.24.4.5 */
-static int get_hub_descriptor(struct usb_device *hdev,
-		struct usb_hub_descriptor *desc)
+static int get_hub_descriptor(struct usb_device *hdev, void *data)
 {
 	int i, ret, size;
 	unsigned dtype;
@@ -380,18 +379,10 @@ static int get_hub_descriptor(struct usb_device *hdev,
 	for (i = 0; i < 3; i++) {
 		ret = usb_control_msg(hdev, usb_rcvctrlpipe(hdev, 0),
 			USB_REQ_GET_DESCRIPTOR, USB_DIR_IN | USB_RT_HUB,
-			dtype << 8, 0, desc, size,
+			dtype << 8, 0, data, size,
 			USB_CTRL_GET_TIMEOUT);
-		if (hub_is_superspeed(hdev)) {
-			if (ret == size)
-				return ret;
-		} else if (ret >= USB_DT_HUB_NONVAR_SIZE + 2) {
-			/* Make sure we have the DeviceRemovable field. */
-			size = USB_DT_HUB_NONVAR_SIZE + desc->bNbrPorts / 8 + 1;
-			if (ret < size)
-				return -EMSGSIZE;
+		if (ret >= (USB_DT_HUB_NONVAR_SIZE + 2))
 			return ret;
-		}
 	}
 	return -EINVAL;
 }
@@ -1089,7 +1080,7 @@ static void hub_activate(struct usb_hub *hub, enum hub_activation_type type)
 			if (hdev->bus->is_b_host)
 				goto init2;
 #endif
-			INIT_DELAYED_WORK(&hub->init_work, hub_init_func2);
+			PREPARE_DELAYED_WORK(&hub->init_work, hub_init_func2);
 			queue_delayed_work(system_power_efficient_wq,
 					&hub->init_work,
 					msecs_to_jiffies(delay));
@@ -1252,11 +1243,11 @@ static void hub_activate(struct usb_hub *hub, enum hub_activation_type type)
 
 		/* Don't do a long sleep inside a workqueue routine */
 		if (type == HUB_INIT2) {
-			INIT_DELAYED_WORK(&hub->init_work, hub_init_func3);
+			PREPARE_DELAYED_WORK(&hub->init_work, hub_init_func3);
 			queue_delayed_work(system_power_efficient_wq,
 					&hub->init_work,
 					msecs_to_jiffies(delay));
-			device_unlock(hub->intfdev);
+                        device_unlock(hub->intfdev);
 			return;		/* Continues at init3: below */
 		} else {
 			msleep(delay);
@@ -1308,9 +1299,11 @@ static void hub_quiesce(struct usb_hub *hub, enum hub_quiescing_type type)
 {
 	struct usb_device *hdev = hub->hdev;
 	int i;
-        
-        /* hub_wq and related activity won't re-trigger */
-  	hub->quiescing = 1;
+
+	cancel_delayed_work_sync(&hub->init_work);
+
+	/* khubd and related activity won't re-trigger */
+	hub->quiescing = 1;
 
 	if (type != HUB_SUSPEND) {
 		/* Disconnect all the children */
@@ -1381,7 +1374,7 @@ static int hub_configure(struct usb_hub *hub,
 
 	/* Request the entire hub descriptor.
 	 * hub->descriptor can handle USB_MAXCHILDREN ports,
-	 * but a (non-SS) hub can/will return fewer bytes here.
+	 * but the hub can/will return fewer bytes here.
 	 */
 	ret = get_hub_descriptor(hdev, hub->descriptor);
 	if (ret < 0) {

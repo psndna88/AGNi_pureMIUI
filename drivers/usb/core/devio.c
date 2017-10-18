@@ -830,8 +830,11 @@ static int usbdev_open(struct inode *inode, struct file *file)
 	INIT_LIST_HEAD(&ps->async_pending);
 	INIT_LIST_HEAD(&ps->async_completed);
 	init_waitqueue_head(&ps->wait);
+	ps->discsignr = 0;
 	ps->disc_pid = get_pid(task_pid(current));
 	ps->cred = get_current_cred();
+	ps->disccontext = NULL;
+	ps->ifclaimed = 0;
 	security_task_getsecid(current, &ps->secid);
 	smp_wmb();
 	list_add_tail(&ps->list, &dev->filelist);
