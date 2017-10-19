@@ -212,32 +212,6 @@ int freeze_kernel_threads(void)
 	return error;
 }
 
-#ifdef CONFIG_QUICK_THAW_FINGERPRINTD
-extern int kenzo_fpsensor;
-void thaw_fingerprintd(void)
-{
-	struct task_struct *g, *p;
-
-	pm_freezing = false;
-	pm_nosig_freezing = false;
-
-	read_lock(&tasklist_lock);
-	for_each_process_thread(g, p) {
-		if (kenzo_fpsensor == 1) {
-			if (!memcmp(p->comm, "fingerprintd", 13))
-				__thaw_task(p);
-		} else {
-			if (!memcmp(p->comm, "gx_fpd", 13))
-				__thaw_task(p);
-		}
-	}
-	read_unlock(&tasklist_lock);
-
-	pm_freezing = true;
-	pm_nosig_freezing = true;
-}
-#endif
-
 void thaw_processes(void)
 {
 	struct task_struct *g, *p;

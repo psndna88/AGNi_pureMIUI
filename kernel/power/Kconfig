@@ -26,20 +26,6 @@ config WAKELOCK
 	bool
 	default y
 
-config POWERSUSPEND
-	bool "Power suspend"
-	default y
-	---help---
-	  Call early suspend handlers when the user requested sleep state
-	  changes.
-
-config POWERSUSPEND_DEBUG
-	bool "Powersuspend driver debugging code"
-	default n
-	depends on POWERSUSPEND
-	help
-	  Output debugging info in dmesg [POWERSUSPEND] (Yank555.lu)
-
 config HIBERNATE_CALLBACKS
 	bool
 
@@ -326,9 +312,4 @@ config SUSPEND_TIME
 config PM_SYNC_BEFORE_SUSPEND
 	bool "Sync file systems before suspend"
 	depends on PM
-	default y
-
-config QUICK_THAW_FINGERPRINTD
-	bool "Quickly resume fingerprintd"
-	depends on SUSPEND
 	default y
