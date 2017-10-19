@@ -5162,7 +5162,7 @@ static int fg_init_irqs(struct fg_chip *chip)
 				return rc;
 			}
 
-			enable_irq(chip->soc_irq[DELTA_SOC].irq);
+			enable_irq_wake(chip->soc_irq[DELTA_SOC].irq);
 			enable_irq_wake(chip->soc_irq[FULL_SOC].irq);
 			enable_irq_wake(chip->soc_irq[EMPTY_SOC].irq);
 			break;
