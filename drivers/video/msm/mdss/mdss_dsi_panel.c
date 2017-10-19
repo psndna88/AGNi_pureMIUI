@@ -24,7 +24,6 @@
 #include <linux/display_state.h>
 #include "mdss_dsi.h"
 #include "mdss_dba_utils.h"
-#include <linux/arch_power.h>
 
 #include "mdss_livedisplay.h"
 
@@ -754,8 +753,6 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	}
 
 	display_on = true;
-	Larch_power = user_arch_power;
-	relay_ap(Larch_power);
 
 #ifdef CONFIG_LAZYPLUG
 	lazyplug_enter_lazy(false); 
@@ -864,8 +861,6 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 	}
 
 	display_on = false;
-	Larch_power = 0;
-	relay_ap(Larch_power);
 
 #ifdef CONFIG_LAZYPLUG
 	lazyplug_enter_lazy(true);
