@@ -12421,15 +12421,10 @@ void update_mic_gain(int vol_boost)
 	pr_info("Sound Control: Mic default value %d\n", default_val);
 
 	snd_soc_write(soundcontrol.snd_control_codec,
- 		WCD9335_CDC_TX0_TX_VOL_CTL, boosted_val);
-	snd_soc_write(soundcontrol.snd_control_codec,
  		WCD9335_CDC_TX6_TX_VOL_CTL, boosted_val);
  	snd_soc_write(soundcontrol.snd_control_codec,
  		WCD9335_CDC_TX7_TX_VOL_CTL, boosted_val);
 
- 	pr_info("Sound Control: Boosted External Wired Mic TX0 value %d\n",
- 		snd_soc_read(soundcontrol.snd_control_codec,
- 		WCD9335_CDC_TX0_TX_VOL_CTL));
  	pr_info("Sound Control: Boosted Primary Mic TX6 value %d\n",
  		snd_soc_read(soundcontrol.snd_control_codec,
  		WCD9335_CDC_TX6_TX_VOL_CTL));
@@ -12527,7 +12522,6 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 
 	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_TX6_TX_VOL_CTL, input);
 	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_TX7_TX_VOL_CTL, input);
-	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_TX0_TX_VOL_CTL, input);
 
  	pr_info("Sound Control: Boosted Primary Mic TX6 value %d\n",
  		snd_soc_read(sound_control_codec_ptr,
@@ -12535,9 +12529,6 @@ static ssize_t mic_gain_store(struct kobject *kobj,
  	pr_info("Sound Control: Boosted Secondary Mic TX7 value %d\n",
  		snd_soc_read(sound_control_codec_ptr,
  		WCD9335_CDC_TX7_TX_VOL_CTL));
-	pr_info("Sound Control: Boosted External Wired Mic TX0 value %d\n",
- 		snd_soc_read(sound_control_codec_ptr,
- 		WCD9335_CDC_TX0_TX_VOL_CTL));
 
 	return count;
 }
@@ -12546,6 +12537,40 @@ static struct kobj_attribute mic_gain_attribute =
 	__ATTR(mic_gain, 0664,
 		mic_gain_show,
 		mic_gain_store);
+
+static ssize_t ext_mic_gain_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return snprintf(buf, PAGE_SIZE, "%d\n",
+		snd_soc_read(sound_control_codec_ptr, WCD9335_CDC_TX0_TX_VOL_CTL));
+}
+
+static ssize_t ext_mic_gain_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int input;
+
+	sscanf(buf, "%d", &input);
+
+	if (input < -10)
+		input = -10;
+
+	if (input > 20)
+		input = 20;
+
+	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_TX0_TX_VOL_CTL, input);
+
+	pr_info("Sound Control: Boosted External Wired Mic TX0 value %d\n",
+ 		snd_soc_read(sound_control_codec_ptr,
+ 		WCD9335_CDC_TX0_TX_VOL_CTL));
+
+	return count;
+}
+
+static struct kobj_attribute ext_mic_gain_attribute =
+	__ATTR(ext_mic_gain, 0664,
+		ext_mic_gain_show,
+		ext_mic_gain_store);
 
 static ssize_t speaker_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -12620,6 +12645,7 @@ static struct kobj_attribute earpiece_gain_attribute =
 static struct attribute *sound_control_attrs[] = {
 		&headphone_gain_attribute.attr,
 		&mic_gain_attribute.attr,
+		&ext_mic_gain_attribute.attr,
 		&speaker_gain_attribute.attr,
 		&earpiece_gain_attribute.attr,
 		NULL,
