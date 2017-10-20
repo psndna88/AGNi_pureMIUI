@@ -481,7 +481,7 @@ repeat:
 	 * and the original buffer whose contents we are shadowing or
 	 * copying is moved to the transaction's shadow queue.
 	 */
-	JBUFFER_TRACE(jh_in, "file as BJ_Shadow");
+//	JBUFFER_TRACE(jh_in, "file as BJ_Shadow");
 	spin_lock(&journal->j_list_lock);
 	__jbd2_journal_file_buffer(jh_in, transaction, BJ_Shadow);
 	spin_unlock(&journal->j_list_lock);
@@ -832,7 +832,7 @@ struct buffer_head *jbd2_journal_get_descriptor_buffer(journal_t *journal)
 	memset(bh->b_data, 0, journal->j_blocksize);
 	set_buffer_uptodate(bh);
 	unlock_buffer(bh);
-	BUFFER_TRACE(bh, "return this buffer");
+//	BUFFER_TRACE(bh, "return this buffer");
 	return bh;
 }
 
@@ -2484,7 +2484,7 @@ repeat:
 		bh->b_private = jh;
 		jh->b_bh = bh;
 		get_bh(bh);
-		BUFFER_TRACE(bh, "added journal_head");
+//		BUFFER_TRACE(bh, "added journal_head");
 	}
 	jh->b_jcount++;
 	jbd_unlock_bh_journal_head(bh);
@@ -2521,7 +2521,7 @@ static void __journal_remove_journal_head(struct buffer_head *bh)
 	J_ASSERT_JH(jh, jh->b_jlist == BJ_None);
 	J_ASSERT_BH(bh, buffer_jbd(bh));
 	J_ASSERT_BH(bh, jh2bh(jh) == bh);
-	BUFFER_TRACE(bh, "remove journal_head");
+//	BUFFER_TRACE(bh, "remove journal_head");
 	if (jh->b_frozen_data) {
 		printk(KERN_WARNING "%s: freeing b_frozen_data\n", __func__);
 		jbd2_free(jh->b_frozen_data, bh->b_size);

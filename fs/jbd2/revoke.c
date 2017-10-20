@@ -335,8 +335,8 @@ int jbd2_journal_revoke(handle_t *handle, unsigned long long blocknr,
 	int err;
 
 	might_sleep();
-	if (bh_in)
-		BUFFER_TRACE(bh_in, "enter");
+//	if (bh_in)
+//		BUFFER_TRACE(bh_in, "enter");
 
 	journal = handle->h_transaction->t_journal;
 	if (!jbd2_journal_set_features(journal, 0, 0, JBD2_FEATURE_INCOMPAT_REVOKE)){
@@ -349,8 +349,8 @@ int jbd2_journal_revoke(handle_t *handle, unsigned long long blocknr,
 
 	if (!bh) {
 		bh = __find_get_block(bdev, blocknr, journal->j_blocksize);
-		if (bh)
-			BUFFER_TRACE(bh, "found on hash");
+//		if (bh)
+//			BUFFER_TRACE(bh, "found on hash");
 	}
 #ifdef JBD2_EXPENSIVE_CHECKING
 	else {
@@ -387,10 +387,10 @@ int jbd2_journal_revoke(handle_t *handle, unsigned long long blocknr,
 		set_buffer_revoked(bh);
 		set_buffer_revokevalid(bh);
 		if (bh_in) {
-			BUFFER_TRACE(bh_in, "call jbd2_journal_forget");
+//			BUFFER_TRACE(bh_in, "call jbd2_journal_forget");
 			jbd2_journal_forget(handle, bh_in);
 		} else {
-			BUFFER_TRACE(bh, "call brelse");
+//			BUFFER_TRACE(bh, "call brelse");
 			__brelse(bh);
 		}
 	}
@@ -398,7 +398,7 @@ int jbd2_journal_revoke(handle_t *handle, unsigned long long blocknr,
 	jbd_debug(2, "insert revoke for block %llu, bh_in=%p\n",blocknr, bh_in);
 	err = insert_revoke_hash(journal, blocknr,
 				handle->h_transaction->t_tid);
-	BUFFER_TRACE(bh_in, "exit");
+//	BUFFER_TRACE(bh_in, "exit");
 	return err;
 }
 
@@ -612,7 +612,7 @@ static void write_one_revoke_record(journal_t *journal,
 		header->h_sequence  = cpu_to_be32(transaction->t_tid);
 
 		/* Record it so that we can wait for IO completion later */
-		BUFFER_TRACE(descriptor, "file in log_bufs");
+//		BUFFER_TRACE(descriptor, "file in log_bufs");
 		jbd2_file_log_bh(log_bufs, descriptor);
 
 		offset = sizeof(jbd2_journal_revoke_header_t);
@@ -671,7 +671,7 @@ static void flush_descriptor(journal_t *journal,
 	jbd2_revoke_csum_set(journal, descriptor);
 
 	set_buffer_jwrite(descriptor);
-	BUFFER_TRACE(descriptor, "write");
+//	BUFFER_TRACE(descriptor, "write");
 	set_buffer_dirty(descriptor);
 	write_dirty_buffer(descriptor, write_op);
 }

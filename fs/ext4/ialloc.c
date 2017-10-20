@@ -290,7 +290,7 @@ void ext4_free_inode(handle_t *handle, struct inode *inode)
 	if (unlikely(EXT4_MB_GRP_IBITMAP_CORRUPT(grp)) || !bitmap_bh)
 		goto error_return;
 
-	BUFFER_TRACE(bitmap_bh, "get_write_access");
+//	BUFFER_TRACE(bitmap_bh, "get_write_access");
 	fatal = ext4_journal_get_write_access(handle, bitmap_bh);
 	if (fatal)
 		goto error_return;
@@ -298,7 +298,7 @@ void ext4_free_inode(handle_t *handle, struct inode *inode)
 	fatal = -ESRCH;
 	gdp = ext4_get_group_desc(sb, block_group, &bh2);
 	if (gdp) {
-		BUFFER_TRACE(bh2, "get_write_access");
+//		BUFFER_TRACE(bh2, "get_write_access");
 		fatal = ext4_journal_get_write_access(handle, bh2);
 	}
 	ext4_lock_group(sb, block_group);
@@ -328,11 +328,11 @@ void ext4_free_inode(handle_t *handle, struct inode *inode)
 		if (is_directory)
 			atomic_dec(&sbi->s_flex_groups[f].used_dirs);
 	}
-	BUFFER_TRACE(bh2, "call ext4_handle_dirty_metadata");
+//	BUFFER_TRACE(bh2, "call ext4_handle_dirty_metadata");
 	fatal = ext4_handle_dirty_metadata(handle, NULL, bh2);
 out:
 	if (cleared) {
-		BUFFER_TRACE(bitmap_bh, "call ext4_handle_dirty_metadata");
+//		BUFFER_TRACE(bitmap_bh, "call ext4_handle_dirty_metadata");
 		err = ext4_handle_dirty_metadata(handle, NULL, bitmap_bh);
 		if (!fatal)
 			fatal = err;
@@ -858,7 +858,7 @@ repeat_in_this_group:
 				goto out;
 			}
 		}
-		BUFFER_TRACE(inode_bitmap_bh, "get_write_access");
+//		BUFFER_TRACE(inode_bitmap_bh, "get_write_access");
 		err = ext4_journal_get_write_access(handle, inode_bitmap_bh);
 		if (err) {
 			ext4_std_error(sb, err);
@@ -881,14 +881,14 @@ next_group:
 	goto out;
 
 got:
-	BUFFER_TRACE(inode_bitmap_bh, "call ext4_handle_dirty_metadata");
+//	BUFFER_TRACE(inode_bitmap_bh, "call ext4_handle_dirty_metadata");
 	err = ext4_handle_dirty_metadata(handle, NULL, inode_bitmap_bh);
 	if (err) {
 		ext4_std_error(sb, err);
 		goto out;
 	}
 
-	BUFFER_TRACE(group_desc_bh, "get_write_access");
+//	BUFFER_TRACE(group_desc_bh, "get_write_access");
 	err = ext4_journal_get_write_access(handle, group_desc_bh);
 	if (err) {
 		ext4_std_error(sb, err);
@@ -905,7 +905,7 @@ got:
 			err = -EIO;
 			goto out;
 		}
-		BUFFER_TRACE(block_bitmap_bh, "get block bitmap access");
+//		BUFFER_TRACE(block_bitmap_bh, "get block bitmap access");
 		err = ext4_journal_get_write_access(handle, block_bitmap_bh);
 		if (err) {
 			brelse(block_bitmap_bh);
@@ -913,7 +913,7 @@ got:
 			goto out;
 		}
 
-		BUFFER_TRACE(block_bitmap_bh, "dirty block bitmap");
+//		BUFFER_TRACE(block_bitmap_bh, "dirty block bitmap");
 		err = ext4_handle_dirty_metadata(handle, NULL, block_bitmap_bh);
 
 		/* recheck and clear flag under lock if we still need to */
@@ -977,7 +977,7 @@ got:
 	}
 	ext4_unlock_group(sb, group);
 
-	BUFFER_TRACE(group_desc_bh, "call ext4_handle_dirty_metadata");
+//	BUFFER_TRACE(group_desc_bh, "call ext4_handle_dirty_metadata");
 	err = ext4_handle_dirty_metadata(handle, NULL, group_desc_bh);
 	if (err) {
 		ext4_std_error(sb, err);
@@ -1307,7 +1307,7 @@ int ext4_init_inode_table(struct super_block *sb, ext4_group_t group,
 	blk = ext4_inode_table(sb, gdp) + used_blks;
 	num = sbi->s_itb_per_group - used_blks;
 
-	BUFFER_TRACE(group_desc_bh, "get_write_access");
+//	BUFFER_TRACE(group_desc_bh, "get_write_access");
 	ret = ext4_journal_get_write_access(handle,
 					    group_desc_bh);
 	if (ret)
@@ -1335,8 +1335,8 @@ skip_zeroout:
 	ext4_group_desc_csum_set(sb, group, gdp);
 	ext4_unlock_group(sb, group);
 
-	BUFFER_TRACE(group_desc_bh,
-		     "call ext4_handle_dirty_metadata");
+//	BUFFER_TRACE(group_desc_bh,
+//		     "call ext4_handle_dirty_metadata");
 	ret = ext4_handle_dirty_metadata(handle, NULL,
 					 group_desc_bh);
 

@@ -4694,7 +4694,7 @@ static int ext4_commit_super(struct super_block *sb, int sync)
 		es->s_free_inodes_count =
 			cpu_to_le32(percpu_counter_sum_positive(
 				&EXT4_SB(sb)->s_freeinodes_counter));
-	BUFFER_TRACE(sbh, "marking dirty");
+//	BUFFER_TRACE(sbh, "marking dirty");
 	ext4_superblock_csum_set(sb);
 	mark_buffer_dirty(sbh);
 	if (sync) {
@@ -5538,7 +5538,7 @@ static ssize_t ext4_quota_write(struct super_block *sb, int type,
 		return PTR_ERR(bh);
 	if (!bh)
 		goto out;
-	BUFFER_TRACE(bh, "get write access");
+//	BUFFER_TRACE(bh, "get write access");
 	err = ext4_journal_get_write_access(handle, bh);
 	if (err) {
 		brelse(bh);

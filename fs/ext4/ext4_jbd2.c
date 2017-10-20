@@ -138,8 +138,8 @@ static void ext4_journal_abort_handle(const char *caller, unsigned int line,
 
 	BUG_ON(!ext4_handle_valid(handle));
 
-	if (bh)
-		BUFFER_TRACE(bh, "abort");
+//	if (bh)
+//		BUFFER_TRACE(bh, "abort");
 
 	if (!handle->h_err)
 		handle->h_err = err;
@@ -190,7 +190,7 @@ int __ext4_forget(const char *where, unsigned int line, handle_t *handle,
 	might_sleep();
 
 	trace_ext4_forget(inode, is_metadata, blocknr);
-	BUFFER_TRACE(bh, "enter");
+//	BUFFER_TRACE(bh, "enter");
 
 	jbd_debug(4, "forgetting bh %p: is_metadata = %d, mode %o, "
 		  "data mode %x\n",
@@ -211,7 +211,7 @@ int __ext4_forget(const char *where, unsigned int line, handle_t *handle,
 	if (test_opt(inode->i_sb, DATA_FLAGS) == EXT4_MOUNT_JOURNAL_DATA ||
 	    (!is_metadata && !ext4_should_journal_data(inode))) {
 		if (bh) {
-			BUFFER_TRACE(bh, "call jbd2_journal_forget");
+//			BUFFER_TRACE(bh, "call jbd2_journal_forget");
 			err = jbd2_journal_forget(handle, bh);
 			if (err)
 				ext4_journal_abort_handle(where, line, __func__,
@@ -224,7 +224,7 @@ int __ext4_forget(const char *where, unsigned int line, handle_t *handle,
 	/*
 	 * data!=journal && (is_metadata || should_journal_data(inode))
 	 */
-	BUFFER_TRACE(bh, "call jbd2_journal_revoke");
+//	BUFFER_TRACE(bh, "call jbd2_journal_revoke");
 	err = jbd2_journal_revoke(handle, blocknr, bh);
 	if (err) {
 		ext4_journal_abort_handle(where, line, __func__,
@@ -232,7 +232,7 @@ int __ext4_forget(const char *where, unsigned int line, handle_t *handle,
 		__ext4_abort(inode->i_sb, where, line,
 			   "error %d when attempting revoke", err);
 	}
-	BUFFER_TRACE(bh, "exit");
+//	BUFFER_TRACE(bh, "exit");
 	return err;
 }
 

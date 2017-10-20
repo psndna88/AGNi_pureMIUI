@@ -36,7 +36,7 @@ static void journal_end_buffer_io_sync(struct buffer_head *bh, int uptodate)
 {
 	struct buffer_head *orig_bh = bh->b_private;
 
-	BUFFER_TRACE(bh, "");
+//	BUFFER_TRACE(bh, "");
 	if (uptodate)
 		set_buffer_uptodate(bh);
 	else
@@ -150,7 +150,7 @@ static int journal_submit_commit_record(journal_t *journal,
 	}
 	jbd2_commit_block_csum_set(journal, bh);
 
-	BUFFER_TRACE(bh, "submit commit block");
+//	BUFFER_TRACE(bh, "submit commit block");
 	lock_buffer(bh);
 	clear_buffer_dirty(bh);
 	set_buffer_uptodate(bh);
@@ -488,7 +488,7 @@ void jbd2_journal_commit_transaction(journal_t *journal)
 	 */
 	while (commit_transaction->t_reserved_list) {
 		jh = commit_transaction->t_reserved_list;
-		JBUFFER_TRACE(jh, "reserved, unused: refile");
+//		JBUFFER_TRACE(jh, "reserved, unused: refile");
 		/*
 		 * A jbd2_journal_get_undo_access()+jbd2_journal_release_buffer() may
 		 * leave undo-committed data.
@@ -595,7 +595,7 @@ void jbd2_journal_commit_transaction(journal_t *journal)
 
 		if (is_journal_aborted(journal)) {
 			clear_buffer_jbddirty(jh2bh(jh));
-			JBUFFER_TRACE(jh, "journal is aborting: refile");
+//			JBUFFER_TRACE(jh, "journal is aborting: refile");
 			jbd2_buffer_abort_trigger(jh,
 						  jh->b_frozen_data ?
 						  jh->b_frozen_triggers :
@@ -642,7 +642,7 @@ void jbd2_journal_commit_transaction(journal_t *journal)
 
 			/* Record it so that we can wait for IO
                            completion later */
-			BUFFER_TRACE(descriptor, "ph3: file as descriptor");
+//			BUFFER_TRACE(descriptor, "ph3: file as descriptor");
 			jbd2_file_log_bh(&log_bufs, descriptor);
 		}
 
@@ -674,7 +674,7 @@ void jbd2_journal_commit_transaction(journal_t *journal)
 		 * (this will requeue the metadata buffer to BJ_Shadow).
 		 */
 		set_bit(BH_JWrite, &jh2bh(jh)->b_state);
-		JBUFFER_TRACE(jh, "ph3: write metadata");
+//		JBUFFER_TRACE(jh, "ph3: write metadata");
 		flags = jbd2_journal_write_metadata_buffer(commit_transaction,
 						jh, &wbuf[bufs], blocknr);
 		if (flags < 0) {
@@ -836,7 +836,7 @@ start_journal_io:
 		 * The list contains temporary buffer heads created by
 		 * jbd2_journal_write_metadata_buffer().
 		 */
-		BUFFER_TRACE(bh, "dumping temporary bh");
+//		BUFFER_TRACE(bh, "dumping temporary bh");
 		__brelse(bh);
 		J_ASSERT_BH(bh, atomic_read(&bh->b_count) == 0);
 		free_buffer_head(bh);
@@ -852,9 +852,9 @@ start_journal_io:
                    to remember it against this transaction so that when
                    we finally commit, we can do any checkpointing
                    required. */
-		JBUFFER_TRACE(jh, "file as BJ_Forget");
+//		JBUFFER_TRACE(jh, "file as BJ_Forget");
 		jbd2_journal_file_buffer(jh, commit_transaction, BJ_Forget);
-		JBUFFER_TRACE(jh, "brelse shadowed buffer");
+//		JBUFFER_TRACE(jh, "brelse shadowed buffer");
 		__brelse(bh);
 	}
 
@@ -873,7 +873,7 @@ start_journal_io:
 		if (unlikely(!buffer_uptodate(bh)))
 			err = -EIO;
 
-		BUFFER_TRACE(bh, "ph5: control buffer writeout done: unfile");
+//		BUFFER_TRACE(bh, "ph5: control buffer writeout done: unfile");
 		clear_buffer_jwrite(bh);
 		jbd2_unfile_log_bh(bh);
 		__brelse(bh);		/* One for getblk */
@@ -979,7 +979,7 @@ restart_loop:
 		spin_lock(&journal->j_list_lock);
 		cp_transaction = jh->b_cp_transaction;
 		if (cp_transaction) {
-			JBUFFER_TRACE(jh, "remove from old cp transaction");
+//			JBUFFER_TRACE(jh, "remove from old cp transaction");
 			cp_transaction->t_chp_stats.cs_dropped++;
 			__jbd2_journal_remove_checkpoint(jh);
 		}
@@ -1022,7 +1022,7 @@ restart_loop:
 		}
 
 		if (buffer_jbddirty(bh)) {
-			JBUFFER_TRACE(jh, "add to new checkpointing trans");
+//			JBUFFER_TRACE(jh, "add to new checkpointing trans");
 			__jbd2_journal_insert_checkpoint(jh, commit_transaction);
 			if (is_journal_aborted(journal))
 				clear_buffer_jbddirty(bh);
@@ -1040,7 +1040,7 @@ restart_loop:
 			if (!jh->b_next_transaction)
 				try_to_free = 1;
 		}
-		JBUFFER_TRACE(jh, "refile or unfile buffer");
+//		JBUFFER_TRACE(jh, "refile or unfile buffer");
 		__jbd2_journal_refile_buffer(jh);
 		jbd_unlock_bh_state(bh);
 		if (try_to_free)

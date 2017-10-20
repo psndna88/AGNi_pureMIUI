@@ -96,7 +96,7 @@ static int __try_to_free_cp_buf(struct journal_head *jh)
 
 	if (jh->b_transaction == NULL && !buffer_locked(bh) &&
 	    !buffer_dirty(bh) && !buffer_write_io_error(bh)) {
-		JBUFFER_TRACE(jh, "remove from checkpoint list");
+//		JBUFFER_TRACE(jh, "remove from checkpoint list");
 		ret = __jbd2_journal_remove_checkpoint(jh) + 1;
 	}
 	return ret;
@@ -191,7 +191,7 @@ __flush_batch(journal_t *journal, int *batch_count)
 
 	for (i = 0; i < *batch_count; i++) {
 		struct buffer_head *bh = journal->j_chkpt_bhs[i];
-		BUFFER_TRACE(bh, "brelse");
+//		BUFFER_TRACE(bh, "brelse");
 		__brelse(bh);
 	}
 	*batch_count = 0;
@@ -258,7 +258,7 @@ restart:
 			get_bh(bh);
 			wait_on_buffer(bh);
 			/* the journal_head may have gone by now */
-			BUFFER_TRACE(bh, "brelse");
+//			BUFFER_TRACE(bh, "brelse");
 			__brelse(bh);
 			goto retry;
 		}
@@ -286,7 +286,7 @@ restart:
 		if (!buffer_dirty(bh)) {
 			if (unlikely(buffer_write_io_error(bh)) && !result)
 				result = -EIO;
-			BUFFER_TRACE(bh, "remove from checkpoint");
+//			BUFFER_TRACE(bh, "remove from checkpoint");
 			if (__jbd2_journal_remove_checkpoint(jh))
 				/* The transaction was released; we're done */
 				goto out;
@@ -300,7 +300,7 @@ restart:
 		 * we write it to disk, as that would break
 		 * recoverability.
 		 */
-		BUFFER_TRACE(bh, "queue");
+//		BUFFER_TRACE(bh, "queue");
 		get_bh(bh);
 		J_ASSERT_BH(bh, !buffer_jwrite(bh));
 		journal->j_chkpt_bhs[batch_count++] = bh;
@@ -340,7 +340,7 @@ restart2:
 			get_bh(bh);
 			wait_on_buffer(bh);
 			/* the journal_head may have gone by now */
-			BUFFER_TRACE(bh, "brelse");
+//			BUFFER_TRACE(bh, "brelse");
 			__brelse(bh);
 			spin_lock(&journal->j_list_lock);
 			goto restart2;
@@ -530,15 +530,15 @@ int __jbd2_journal_remove_checkpoint(struct journal_head *jh)
 	journal_t *journal;
 	int ret = 0;
 
-	JBUFFER_TRACE(jh, "entry");
+//	JBUFFER_TRACE(jh, "entry");
 
 	if ((transaction = jh->b_cp_transaction) == NULL) {
-		JBUFFER_TRACE(jh, "not on transaction");
+//		JBUFFER_TRACE(jh, "not on transaction");
 		goto out;
 	}
 	journal = transaction->t_journal;
 
-	JBUFFER_TRACE(jh, "removing from transaction");
+//	JBUFFER_TRACE(jh, "removing from transaction");
 	__buffer_unlink(jh);
 	jh->b_cp_transaction = NULL;
 	jbd2_journal_put_journal_head(jh);
@@ -586,7 +586,7 @@ out:
 void __jbd2_journal_insert_checkpoint(struct journal_head *jh,
 			       transaction_t *transaction)
 {
-	JBUFFER_TRACE(jh, "entry");
+//	JBUFFER_TRACE(jh, "entry");
 	J_ASSERT_JH(jh, buffer_dirty(jh2bh(jh)) || buffer_jbddirty(jh2bh(jh)));
 	J_ASSERT_JH(jh, jh->b_cp_transaction == NULL);
 

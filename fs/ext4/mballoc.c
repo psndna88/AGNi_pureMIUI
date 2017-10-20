@@ -2898,7 +2898,7 @@ ext4_mb_mark_diskspace_used(struct ext4_allocation_context *ac,
 	if (!bitmap_bh)
 		goto out_err;
 
-	BUFFER_TRACE(bitmap_bh, "getting write access");
+//	BUFFER_TRACE(bitmap_bh, "getting write access");
 	err = ext4_journal_get_write_access(handle, bitmap_bh);
 	if (err)
 		goto out_err;
@@ -2911,7 +2911,7 @@ ext4_mb_mark_diskspace_used(struct ext4_allocation_context *ac,
 	ext4_debug("using block group %u(%d)\n", ac->ac_b_ex.fe_group,
 			ext4_free_group_clusters(sb, gdp));
 
-	BUFFER_TRACE(gdp_bh, "get_write_access");
+//	BUFFER_TRACE(gdp_bh, "get_write_access");
 	err = ext4_journal_get_write_access(handle, gdp_bh);
 	if (err)
 		goto out_err;
@@ -4777,7 +4777,7 @@ do_more:
 		goto error_return;
 	}
 
-	BUFFER_TRACE(bitmap_bh, "getting write access");
+//	BUFFER_TRACE(bitmap_bh, "getting write access");
 	err = ext4_journal_get_write_access(handle, bitmap_bh);
 	if (err)
 		goto error_return;
@@ -4787,7 +4787,7 @@ do_more:
 	 * to unshare ->b_data if a currently-committing transaction is
 	 * using it
 	 */
-	BUFFER_TRACE(gd_bh, "get_write_access");
+//	BUFFER_TRACE(gd_bh, "get_write_access");
 	err = ext4_journal_get_write_access(handle, gd_bh);
 	if (err)
 		goto error_return;
@@ -4865,11 +4865,11 @@ do_more:
 	ext4_mb_unload_buddy(&e4b);
 
 	/* We dirtied the bitmap block */
-	BUFFER_TRACE(bitmap_bh, "dirtied bitmap block");
+//	BUFFER_TRACE(bitmap_bh, "dirtied bitmap block");
 	err = ext4_handle_dirty_metadata(handle, NULL, bitmap_bh);
 
 	/* And the group descriptor block */
-	BUFFER_TRACE(gd_bh, "dirtied group descriptor block");
+//	BUFFER_TRACE(gd_bh, "dirtied group descriptor block");
 	ret = ext4_handle_dirty_metadata(handle, NULL, gd_bh);
 	if (!err)
 		err = ret;
@@ -4950,7 +4950,7 @@ int ext4_group_add_blocks(handle_t *handle, struct super_block *sb,
 		goto error_return;
 	}
 
-	BUFFER_TRACE(bitmap_bh, "getting write access");
+//	BUFFER_TRACE(bitmap_bh, "getting write access");
 	err = ext4_journal_get_write_access(handle, bitmap_bh);
 	if (err)
 		goto error_return;
@@ -4960,17 +4960,17 @@ int ext4_group_add_blocks(handle_t *handle, struct super_block *sb,
 	 * to unshare ->b_data if a currently-committing transaction is
 	 * using it
 	 */
-	BUFFER_TRACE(gd_bh, "get_write_access");
+//	BUFFER_TRACE(gd_bh, "get_write_access");
 	err = ext4_journal_get_write_access(handle, gd_bh);
 	if (err)
 		goto error_return;
 
 	for (i = 0, blocks_freed = 0; i < count; i++) {
-		BUFFER_TRACE(bitmap_bh, "clear bit");
+//		BUFFER_TRACE(bitmap_bh, "clear bit");
 		if (!mb_test_bit(bit + i, bitmap_bh->b_data)) {
 			ext4_error(sb, "bit already cleared for block %llu",
 				   (ext4_fsblk_t)(block + i));
-			BUFFER_TRACE(bitmap_bh, "bit already cleared");
+//			BUFFER_TRACE(bitmap_bh, "bit already cleared");
 		} else {
 			blocks_freed++;
 		}
@@ -5005,11 +5005,11 @@ int ext4_group_add_blocks(handle_t *handle, struct super_block *sb,
 	ext4_mb_unload_buddy(&e4b);
 
 	/* We dirtied the bitmap block */
-	BUFFER_TRACE(bitmap_bh, "dirtied bitmap block");
+//	BUFFER_TRACE(bitmap_bh, "dirtied bitmap block");
 	err = ext4_handle_dirty_metadata(handle, NULL, bitmap_bh);
 
 	/* And the group descriptor block */
-	BUFFER_TRACE(gd_bh, "dirtied group descriptor block");
+//	BUFFER_TRACE(gd_bh, "dirtied group descriptor block");
 	ret = ext4_handle_dirty_metadata(handle, NULL, gd_bh);
 	if (!err)
 		err = ret;

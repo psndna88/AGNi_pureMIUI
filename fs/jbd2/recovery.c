@@ -631,10 +631,10 @@ static int do_one_pass(journal_t *journal,
 						cpu_to_be32(JBD2_MAGIC_NUMBER);
 					}
 
-					BUFFER_TRACE(nbh, "marking dirty");
+//					BUFFER_TRACE(nbh, "marking dirty");
 					set_buffer_uptodate(nbh);
 					mark_buffer_dirty(nbh);
-					BUFFER_TRACE(nbh, "marking uptodate");
+//					BUFFER_TRACE(nbh, "marking uptodate");
 					++info->nr_replays;
 					/* ll_rw_block(WRITE, 1, &nbh); */
 					unlock_buffer(nbh);

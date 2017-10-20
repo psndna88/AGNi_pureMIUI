@@ -350,7 +350,7 @@ static int ext4_alloc_branch(handle_t *handle,
 			goto failed;
 		}
 		lock_buffer(bh);
-		BUFFER_TRACE(bh, "call get_create_access");
+//		BUFFER_TRACE(bh, "call get_create_access");
 		err = ext4_journal_get_create_access(handle, bh);
 		if (err) {
 			unlock_buffer(bh);
@@ -366,11 +366,11 @@ static int ext4_alloc_branch(handle_t *handle,
 		for (j = 0; j < len; j++)
 			*p++ = cpu_to_le32(b++);
 
-		BUFFER_TRACE(bh, "marking uptodate");
+//		BUFFER_TRACE(bh, "marking uptodate");
 		set_buffer_uptodate(bh);
 		unlock_buffer(bh);
 
-		BUFFER_TRACE(bh, "call ext4_handle_dirty_metadata");
+//		BUFFER_TRACE(bh, "call ext4_handle_dirty_metadata");
 		err = ext4_handle_dirty_metadata(handle, ar->inode, bh);
 		if (err)
 			goto failed;
@@ -422,7 +422,7 @@ static int ext4_splice_branch(handle_t *handle,
 	 * before the splice.
 	 */
 	if (where->bh) {
-		BUFFER_TRACE(where->bh, "get_write_access");
+//		BUFFER_TRACE(where->bh, "get_write_access");
 		err = ext4_journal_get_write_access(handle, where->bh);
 		if (err)
 			goto err_out;
@@ -453,7 +453,7 @@ static int ext4_splice_branch(handle_t *handle,
 		 * generic_commit_write->__mark_inode_dirty->ext4_dirty_inode.
 		 */
 		jbd_debug(5, "splicing indirect only\n");
-		BUFFER_TRACE(where->bh, "call ext4_handle_dirty_metadata");
+//		BUFFER_TRACE(where->bh, "call ext4_handle_dirty_metadata");
 		err = ext4_handle_dirty_metadata(handle, ar->inode, where->bh);
 		if (err)
 			goto err_out;
@@ -622,7 +622,7 @@ got_it:
 	partial = chain + depth - 1;	/* the whole chain */
 cleanup:
 	while (partial > chain) {
-		BUFFER_TRACE(partial->bh, "call brelse");
+//		BUFFER_TRACE(partial->bh, "call brelse");
 		brelse(partial->bh);
 		partial--;
 	}
@@ -947,7 +947,7 @@ static int ext4_clear_blocks(handle_t *handle, struct inode *inode,
 
 	if (try_to_extend_transaction(handle, inode)) {
 		if (bh) {
-			BUFFER_TRACE(bh, "call ext4_handle_dirty_metadata");
+//			BUFFER_TRACE(bh, "call ext4_handle_dirty_metadata");
 			err = ext4_handle_dirty_metadata(handle, inode, bh);
 			if (unlikely(err))
 				goto out_err;
@@ -960,7 +960,7 @@ static int ext4_clear_blocks(handle_t *handle, struct inode *inode,
 		if (unlikely(err))
 			goto out_err;
 		if (bh) {
-			BUFFER_TRACE(bh, "retaking write access");
+//			BUFFER_TRACE(bh, "retaking write access");
 			err = ext4_journal_get_write_access(handle, bh);
 			if (unlikely(err))
 				goto out_err;
@@ -1011,7 +1011,7 @@ static void ext4_free_data(handle_t *handle, struct inode *inode,
 	int err = 0;
 
 	if (this_bh) {				/* For indirect block */
-		BUFFER_TRACE(this_bh, "get_write_access");
+//		BUFFER_TRACE(this_bh, "get_write_access");
 		err = ext4_journal_get_write_access(handle, this_bh);
 		/* Important: if we can't update the indirect pointers
 		 * to the blocks, we can't free them. */
@@ -1050,7 +1050,7 @@ static void ext4_free_data(handle_t *handle, struct inode *inode,
 		return;
 
 	if (this_bh) {
-		BUFFER_TRACE(this_bh, "call ext4_handle_dirty_metadata");
+//		BUFFER_TRACE(this_bh, "call ext4_handle_dirty_metadata");
 
 		/*
 		 * The buffer head should have an attached journal head at this
@@ -1123,7 +1123,7 @@ static void ext4_free_branches(handle_t *handle, struct inode *inode,
 			}
 
 			/* This zaps the entire block.  Bottom up. */
-			BUFFER_TRACE(bh, "free child branches");
+//			BUFFER_TRACE(bh, "free child branches");
 			ext4_free_branches(handle, inode, bh,
 					(__le32 *) bh->b_data,
 					(__le32 *) bh->b_data + addr_per_block,
@@ -1174,12 +1174,12 @@ static void ext4_free_branches(handle_t *handle, struct inode *inode,
 				 * The block which we have just freed is
 				 * pointed to by an indirect block: journal it
 				 */
-				BUFFER_TRACE(parent_bh, "get_write_access");
+//				BUFFER_TRACE(parent_bh, "get_write_access");
 				if (!ext4_journal_get_write_access(handle,
 								   parent_bh)){
 					*p = 0;
-					BUFFER_TRACE(parent_bh,
-					"call ext4_handle_dirty_metadata");
+//					BUFFER_TRACE(parent_bh,
+//					"call ext4_handle_dirty_metadata");
 					ext4_handle_dirty_metadata(handle,
 								   inode,
 								   parent_bh);
@@ -1188,7 +1188,7 @@ static void ext4_free_branches(handle_t *handle, struct inode *inode,
 		}
 	} else {
 		/* We have reached the bottom of the tree. */
-		BUFFER_TRACE(parent_bh, "free data blocks");
+//		BUFFER_TRACE(parent_bh, "free data blocks");
 		ext4_free_data(handle, inode, parent_bh, first, last);
 	}
 }
@@ -1254,7 +1254,7 @@ void ext4_ind_truncate(handle_t *handle, struct inode *inode)
 			 */
 		} else {
 			/* Shared branch grows from an indirect block */
-			BUFFER_TRACE(partial->bh, "get_write_access");
+//			BUFFER_TRACE(partial->bh, "get_write_access");
 			ext4_free_branches(handle, inode, partial->bh,
 					partial->p,
 					partial->p+1, (chain+n-1) - partial);
@@ -1265,7 +1265,7 @@ void ext4_ind_truncate(handle_t *handle, struct inode *inode)
 		ext4_free_branches(handle, inode, partial->bh, partial->p + 1,
 				   (__le32*)partial->bh->b_data+addr_per_block,
 				   (chain+n-1) - partial);
-		BUFFER_TRACE(partial->bh, "call brelse");
+//		BUFFER_TRACE(partial->bh, "call brelse");
 		brelse(partial->bh);
 		partial--;
 	}
@@ -1364,7 +1364,7 @@ int ext4_ind_remove_space(handle_t *handle, struct inode *inode,
 				*partial->p = 0;
 			} else {
 				/* Shared branch grows from an indirect block */
-				BUFFER_TRACE(partial->bh, "get_write_access");
+//				BUFFER_TRACE(partial->bh, "get_write_access");
 				ext4_free_branches(handle, inode, partial->bh,
 					partial->p,
 					partial->p+1, (chain+n-1) - partial);
@@ -1380,7 +1380,7 @@ int ext4_ind_remove_space(handle_t *handle, struct inode *inode,
 				partial->p + 1,
 				(__le32 *)partial->bh->b_data+addr_per_block,
 				(chain+n-1) - partial);
-			BUFFER_TRACE(partial->bh, "call brelse");
+//			BUFFER_TRACE(partial->bh, "call brelse");
 			brelse(partial->bh);
 			partial--;
 		}
@@ -1419,7 +1419,7 @@ end_range:
 					   (__le32 *)partial2->bh->b_data,
 					   partial2->p,
 					   (chain2+n2-1) - partial2);
-			BUFFER_TRACE(partial2->bh, "call brelse");
+//			BUFFER_TRACE(partial2->bh, "call brelse");
 			brelse(partial2->bh);
 			partial2--;
 		}
@@ -1445,9 +1445,9 @@ end_range:
 						   partial->p + 1,
 						   partial2->p,
 						   (chain+n-1) - partial);
-				BUFFER_TRACE(partial->bh, "call brelse");
+//				BUFFER_TRACE(partial->bh, "call brelse");
 				brelse(partial->bh);
-				BUFFER_TRACE(partial2->bh, "call brelse");
+//				BUFFER_TRACE(partial2->bh, "call brelse");
 				brelse(partial2->bh);
 			}
 			return 0;
@@ -1461,7 +1461,7 @@ end_range:
 				   partial->p + 1,
 				   (__le32 *)partial->bh->b_data+addr_per_block,
 				   (chain+n-1) - partial);
-			BUFFER_TRACE(partial->bh, "call brelse");
+//			BUFFER_TRACE(partial->bh, "call brelse");
 			brelse(partial->bh);
 			partial--;
 		}
@@ -1474,7 +1474,7 @@ end_range:
 					   (__le32 *)partial2->bh->b_data,
 					   partial2->p,
 					   (chain2+n-1) - partial2);
-			BUFFER_TRACE(partial2->bh, "call brelse");
+//			BUFFER_TRACE(partial2->bh, "call brelse");
 			brelse(partial2->bh);
 			partial2--;
 		}
