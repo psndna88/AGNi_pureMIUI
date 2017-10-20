@@ -921,7 +921,7 @@ int register_bw_hwmon(struct device *dev, struct bw_hwmon *hwmon)
 		node->attr_grp = &dev_attr_group;
 	}
 
-	node->guard_band_mbps = 100;
+	node->guard_band_mbps = 70;
 	node->decay_rate = 90;
 	node->io_percent = 16;
 	node->low_power_ceil_mbps = 0;
