@@ -139,7 +139,7 @@ static void dump_backtrace(struct pt_regs *regs, struct task_struct *tsk)
 	struct stackframe frame;
 	const register unsigned long current_sp asm ("sp");
 
-	pr_debug("%s(regs = %pP tsk = %pP)\n", __func__, regs, tsk);
+	pr_debug("%s(regs = %pK tsk = %pK)\n", __func__, regs, tsk);
 
 	if (!tsk)
 		tsk = current;
@@ -207,7 +207,7 @@ static int __die(const char *str, int err, struct thread_info *thread,
 
 	print_modules();
 	__show_regs(regs);
-	pr_emerg("Process %.*s (pid: %d, stack limit = 0x%pP)\n",
+	pr_emerg("Process %.*s (pid: %d, stack limit = 0x%pK)\n",
 		 TASK_COMM_LEN, tsk->comm, task_pid_nr(tsk), thread + 1);
 
 	if (!user_mode(regs) || in_interrupt()) {
@@ -368,7 +368,7 @@ die_sig:
 
 	if (user_mode(regs) && show_unhandled_signals &&
 		unhandled_signal(current, SIGILL) && printk_ratelimit()) {
-		pr_info("%s[%d]: undefined instruction: pc=%p\n",
+		pr_info("%s[%d]: undefined instruction: pc=%pK\n",
 			current->comm, task_pid_nr(current), pc);
 		dump_instr(KERN_INFO, regs);
 	}

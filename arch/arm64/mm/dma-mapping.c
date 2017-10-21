@@ -113,7 +113,7 @@ static bool __in_atomic_pool(void *start, size_t size)
 	if (end <= pool_end)
 		return true;
 
-	WARN(1, "Wrong coherent size(%p-%p) from atomic pool(%p-%p)\n",
+	WARN(1, "Wrong coherent size(%pK-%pK) from atomic pool(%pK-%pK)\n",
 		start, end - 1, pool_start, pool_end - 1);
 
 	return false;
@@ -502,7 +502,7 @@ static void arm64_dma_unremap(struct device *dev, void *remapped_addr,
 
 	area = find_vm_area(remapped_addr);
 	if (!area) {
-		WARN(1, "trying to free invalid coherent area: %p\n",
+		WARN(1, "trying to free invalid coherent area: %pK\n",
 			remapped_addr);
 		return;
 	}
@@ -1039,7 +1039,7 @@ void arm_iommu_free_attrs(struct device *dev, size_t size, void *cpu_addr,
 
 	pages = __iommu_get_pages(cpu_addr, attrs);
 	if (!pages) {
-		WARN(1, "trying to free invalid coherent area: %p\n", cpu_addr);
+		WARN(1, "trying to free invalid coherent area: %pK\n", cpu_addr);
 		return;
 	}
 

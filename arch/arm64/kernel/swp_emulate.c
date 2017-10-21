@@ -163,7 +163,7 @@ static int swp_handler(struct pt_regs *regs, unsigned int instr)
 
 	/* Check access in reasonable access range for both SWP and SWPB */
 	if (!access_ok(VERIFY_WRITE, (address & ~3), 4)) {
-		pr_debug("SWP{B} emulation: access to %p not allowed!\n",
+		pr_debug("SWP{B} emulation: access to %pK not allowed!\n",
 			 (void *)address);
 		res = -EFAULT;
 	}

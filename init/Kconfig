@@ -104,6 +104,7 @@ config HAVE_KERNEL_LZ4
 choice
 	prompt "Kernel compression mode"
 	default KERNEL_GZIP
+	depends on HAVE_KERNEL_GZIP || HAVE_KERNEL_BZIP2 || HAVE_KERNEL_LZMA || HAVE_KERNEL_XZ || HAVE_KERNEL_LZO || HAVE_KERNEL_LZ4
 	help
 	  The linux kernel is a kind of self-extracting executable.
 	  Several compression algorithms are available, which differ
@@ -124,14 +125,14 @@ choice
 
 config KERNEL_GZIP
 	bool "Gzip"
-	select HAVE_KERNEL_GZIP
+	depends on HAVE_KERNEL_GZIP
 	help
 	  The old and tried gzip compression. It provides a good balance
 	  between compression ratio and decompression speed.
 
 config KERNEL_BZIP2
 	bool "Bzip2"
-	select HAVE_KERNEL_BZIP2
+	depends on HAVE_KERNEL_BZIP2
 	help
 	  Its compression ratio and speed is intermediate.
 	  Decompression speed is slowest among the choices.  The kernel
@@ -141,7 +142,7 @@ config KERNEL_BZIP2
 
 config KERNEL_LZMA
 	bool "LZMA"
-	select HAVE_KERNEL_LZMA
+	depends on HAVE_KERNEL_LZMA
 	help
 	  This compression algorithm's ratio is best.  Decompression speed
 	  is between gzip and bzip2.  Compression is slowest.
@@ -149,7 +150,7 @@ config KERNEL_LZMA
 
 config KERNEL_XZ
 	bool "XZ"
-	select HAVE_KERNEL_XZ
+	depends on HAVE_KERNEL_XZ
 	help
 	  XZ uses the LZMA2 algorithm and instruction set specific
 	  BCJ filters which can improve compression ratio of executable
@@ -164,7 +165,7 @@ config KERNEL_XZ
 
 config KERNEL_LZO
 	bool "LZO"
-	select HAVE_KERNEL_LZO
+	depends on HAVE_KERNEL_LZO
 	help
 	  Its compression ratio is the poorest among the choices. The kernel
 	  size is about 10% bigger than gzip; however its speed
@@ -172,7 +173,7 @@ config KERNEL_LZO
 
 config KERNEL_LZ4
 	bool "LZ4"
-	select HAVE_KERNEL_LZ4
+	depends on HAVE_KERNEL_LZ4
 	help
 	  LZ4 is an LZ77-type compressor with a fixed, byte-oriented encoding.
 	  A preliminary version of LZ4 de/compression tool is available at
@@ -445,6 +446,7 @@ choice
 config TREE_RCU
 	bool "Tree-based hierarchical RCU"
 	depends on !PREEMPT && SMP
+	select IRQ_WORK
 	help
 	  This option selects the RCU implementation that is
 	  designed for very large SMP system with hundreds or
@@ -700,7 +702,7 @@ choice
 
 config RCU_NOCB_CPU_NONE
 	bool "No build_forced no-CBs CPUs"
-	depends on RCU_NOCB_CPU
+	depends on RCU_NOCB_CPU && !NO_HZ_FULL
 	help
 	  This option does not force any of the CPUs to be no-CBs CPUs.
 	  Only CPUs designated by the rcu_nocbs= boot parameter will be
@@ -708,7 +710,7 @@ config RCU_NOCB_CPU_NONE
 
 config RCU_NOCB_CPU_ZERO
 	bool "CPU 0 is a build_forced no-CBs CPU"
-	depends on RCU_NOCB_CPU
+	depends on RCU_NOCB_CPU && !NO_HZ_FULL
 	help
 	  This option forces CPU 0 to be a no-CBs CPU.  Additional CPUs
 	  may be designated as no-CBs CPUs using the rcu_nocbs= boot
@@ -1609,6 +1611,17 @@ config SLOB
 	   does not perform as well on large systems.
 
 endchoice
+
+config SLUB_CPU_PARTIAL
+	default y
+	depends on SLUB
+	bool "SLUB per cpu partial cache"
+	help
+	  Per cpu partial caches accellerate objects allocation and freeing
+	  that is local to a processor at the price of more indeterminism
+	  in the latency of the free. On overflow these caches will be cleared
+	  which requires the taking of locks that may cause latency spikes.
+	  Typically one would choose no for a realtime system.
 
 config MMAP_ALLOW_UNINITIALIZED
 	bool "Allow mmapped anonymous memory to be uninitialized"

@@ -15,13 +15,6 @@ CPPFLAGS_vmlinux.lds = -DTEXT_OFFSET=$(TEXT_OFFSET)
 OBJCOPYFLAGS	:=-O binary -R .note -R .note.gnu.build-id -R .comment -S
 GZFLAGS		:=-9
 
-ifeq ($(CONFIG_KERNEL_GZIP),y)
-COMP_TYPE=gz
-endif
-ifeq ($(CONFIG_KERNEL_LZ4),y)
-COMP_TYPE=lz4
-endif
-
 KBUILD_DEFCONFIG := defconfig
 
 KBUILD_CFLAGS	+= -mgeneral-regs-only
@@ -54,11 +47,14 @@ core-$(CONFIG_KVM) += arch/arm64/kvm/
 core-$(CONFIG_CRYPTO) += arch/arm64/crypto/
 libs-y		:= arch/arm64/lib/ $(libs-y)
 
+suffix_$(CONFIG_KERNEL_GZIP) = gz
+suffix_$(CONFIG_KERNEL_LZ4)  = lz4
+
 # Default target when executing plain make
 ifeq ($(CONFIG_BUILD_ARM64_APPENDED_DTB_IMAGE),y)
-KBUILD_IMAGE	:= Image.$(COMP_TYPE)-dtb
+KBUILD_IMAGE	:= Image.$(suffix_y)-dtb
 else
-KBUILD_IMAGE	:= Image.$(COMP_TYPE)
+KBUILD_IMAGE	:= Image.$(suffix_y)
 endif
 
 KBUILD_DTBS	:= dtbs
@@ -68,10 +64,13 @@ all:	$(KBUILD_IMAGE) $(KBUILD_DTBS)
 boot32 := arch/arm/boot
 boot := arch/arm64/boot
 
-Image Image.$(COMP_TYPE): vmlinux
+Image: vmlinux
 	$(Q)$(MAKE) $(build)=$(boot) $(boot)/$@
 
-zinstall install: vmlinux
+Image.%: vmlinux
+	$(Q)$(MAKE) $(build)=$(boot) $(boot)/$@
+
+zinstall install:
 	$(Q)$(MAKE) $(build)=$(boot) $@
 
 %.dtb: scripts
@@ -85,7 +84,7 @@ PHONY += vdso_install
 vdso_install:
 	$(Q)$(MAKE) $(build)=arch/arm64/kernel/vdso $@
 
-Image.$(COMP_TYPE)-dtb: vmlinux scripts dtbs
+Image.gz-dtb Image.lz4-dtb: vmlinux scripts dtbs
 	$(Q)$(MAKE) $(build)=$(boot) $(boot)/$@
 
 # We use MRPROPER_FILES and CLEAN_FILES now
@@ -94,6 +93,7 @@ archclean:
 
 define archhelp
   echo  '* Image.gz      - Compressed kernel image (arch/$(ARCH)/boot/Image.gz)'
+  echo  '* Image.lz4      - Compressed kernel image (arch/$(ARCH)/boot/Image.lz4)'
   echo  '  Image         - Uncompressed kernel image (arch/$(ARCH)/boot/Image)'
   echo  '* dtbs          - Build device tree blobs for enabled boards'
   echo  '  install       - Install uncompressed kernel'

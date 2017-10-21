@@ -114,7 +114,7 @@ static int __init vdso_init(void)
 	}
 
 	vdso_pages = (&vdso_end - &vdso_start) >> PAGE_SHIFT;
-	pr_info("vdso: %ld pages (%ld code, %ld data) at base %p\n",
+	pr_info("vdso: %ld pages (%ld code, %ld data) at base %pK\n",
 		vdso_pages + 1, vdso_pages, 1L, &vdso_start);
 
 	/* Allocate the vDSO pagelist, plus a page for the data. */

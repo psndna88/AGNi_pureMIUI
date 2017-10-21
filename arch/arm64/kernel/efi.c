@@ -355,7 +355,7 @@ static int __init remap_region(efi_memory_desc_t *md, void **new)
 		vaddr = (__force u64)ioremap(paddr, size);
 
 	if (!vaddr) {
-		pr_err("Unable to remap 0x%llx pages @ %p\n",
+		pr_err("Unable to remap 0x%llx pages @ %pK\n",
 		       npages, (void *)paddr);
 		return 0;
 	}
@@ -364,7 +364,7 @@ static int __init remap_region(efi_memory_desc_t *md, void **new)
 	md->virt_addr = vaddr + (md->phys_addr - paddr);
 
 	if (uefi_debug)
-		pr_info("  EFI remap 0x%012llx => %p\n",
+		pr_info("  EFI remap 0x%012llx => %pK\n",
 			md->phys_addr, (void *)md->virt_addr);
 
 	memcpy(*new, md, memmap.desc_size);

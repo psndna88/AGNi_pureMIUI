@@ -11,6 +11,8 @@ config ARM64
 	select ARM64_CPU_SUSPEND
 	select ARM_AMBA
 	select ARM_ARCH_TIMER
+	select HAVE_KERNEL_GZIP
+	select HAVE_KERNEL_LZ4
 	select ARM_GIC
 	select BUILDTIME_EXTABLE_SORT
 	select AUDIT_ARCH_COMPAT_GENERIC
@@ -162,7 +164,7 @@ if ARM64_DMA_USE_IOMMU
 config ARM64_DMA_IOMMU_ALIGNMENT
 	int "Maximum PAGE_SIZE order of alignment for DMA IOMMU buffers"
 	range 4 9
-	default 8
+	default 9
 	help
 	  DMA mapping framework by default aligns all buffers to the smallest
 	  PAGE_SIZE order which is greater than or equal to the requested buffer
@@ -251,6 +253,7 @@ config ARCH_MSM
 	select DEVFREQ_GOV_MSM_BW_HWMON
 	select DEVFREQ_GOV_MSM_CACHE_HWMON
 	select DEVFREQ_SIMPLE_DEV
+	select ARCH_SUPPORTS_MSI
 	help
 	  This enables support for the ARMv8 based Qualcomm chipsets.
 

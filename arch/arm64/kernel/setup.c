@@ -329,7 +329,7 @@ static void __init setup_machine_fdt(phys_addr_t dt_phys)
 
 	if (!dt_phys || !early_init_dt_scan(phys_to_virt(dt_phys))) {
 		early_print("\n"
-			"Error: invalid device tree blob at physical address 0x%p (virtual address 0x%p)\n"
+			"Error: invalid device tree blob at physical address 0x%pK (virtual address 0x%pK)\n"
 			"The dtb must be 8-byte aligned and passed in the first 512MB of memory\n"
 			"\nPlease check your bootloader.\n",
 			dt_phys, phys_to_virt(dt_phys));

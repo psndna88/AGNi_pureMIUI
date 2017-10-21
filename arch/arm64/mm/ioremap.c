@@ -161,7 +161,7 @@ void __init early_ioremap_init(void)
 
 	if (pmd != early_ioremap_pmd(fix_to_virt(FIX_BTMAP_END))) {
 		WARN_ON(1);
-		pr_warn("pmd %p != %p\n",
+		pr_warn("pmd %pK != %pK\n",
 			pmd, early_ioremap_pmd(fix_to_virt(FIX_BTMAP_END)));
 		pr_warn("fix_to_virt(FIX_BTMAP_BEGIN): %08lx\n",
 			fix_to_virt(FIX_BTMAP_BEGIN));

@@ -295,9 +295,9 @@ void __init mem_init(void)
 #endif
 		  "    modules : 0x%16lx - 0x%16lx   (%6ld MB)\n"
 		  "    memory  : 0x%16lx - 0x%16lx   (%6ld MB)\n"
-		  "      .init : 0x%p" " - 0x%p" "   (%6ld kB)\n"
-		  "      .text : 0x%p" " - 0x%p" "   (%6ld kB)\n"
-		  "      .data : 0x%p" " - 0x%p" "   (%6ld kB)\n",
+		  "      .init : 0x%pK" " - 0x%pK" "   (%6ld kB)\n"
+		  "      .text : 0x%pK" " - 0x%pK" "   (%6ld kB)\n"
+		  "      .data : 0x%pK" " - 0x%pK" "   (%6ld kB)\n",
 		  MLM(VMALLOC_START, VMALLOC_END),
 #ifdef CONFIG_SPARSEMEM_VMEMMAP
 		  MLM((unsigned long)virt_to_page(PAGE_OFFSET),
