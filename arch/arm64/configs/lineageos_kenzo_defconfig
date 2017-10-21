@@ -1,4 +1,4 @@
-CONFIG_LOCALVERSION="-Escrima-X11-Kamui-LightningBlade"
+CONFIG_LOCALVERSION="-Escrima-X12-Kamui-LightningBlade-PurpleElectricity"
 CONFIG_SYSVIPC=y
 CONFIG_AUDIT=y
 CONFIG_NO_HZ=y
