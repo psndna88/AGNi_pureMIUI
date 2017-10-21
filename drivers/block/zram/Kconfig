@@ -13,11 +13,3 @@ config ZRAM
 	  disks and maybe many more.
 
 	  See zram.txt for more information.
-
-config ZRAM_DEBUG
-	bool "Compressed RAM block device debug support"
-	depends on ZRAM
-	default n
-	help
-	  This option adds additional debugging code to the compressed
-	  RAM block device driver.

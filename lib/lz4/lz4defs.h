@@ -55,6 +55,7 @@ typedef uintptr_t uptrval;
 /*-************************************
  *	Architecture specifics
  **************************************/
+#define ARM_EFFICIENT_UNALIGNED_ACCESS
 #if defined(CONFIG_64BIT)
 #define LZ4_ARCH64 1
 #else
