@@ -405,6 +405,7 @@ config SND_SOC_WCD_MBHC
 
 config SND_SOC_WCD_DSP_MGR
 	tristate
+	default y if SND_SOC_MSM8X16_WCD=y
 
 config SND_SOC_WCD_SPI
 	depends on CONFIG_SPI
