@@ -72,9 +72,50 @@ static inline void decrement_wakelocks_number(void)
 	number_of_wakelocks--;
 }
 #else /* CONFIG_PM_WAKELOCKS_LIMIT = 0 */
+#ifdef CONFIG_PDESIRE_WAKELOCK_DYNAMIC_LIMITER
+static unsigned int number_of_wakelocks;
+
+static inline bool wakelocks_in_blocked_range(void)
+{
+	unsigned int range;
+
+	range = CONFIG_PDESIRE_WAKELOCK_LIMIT + CONFIG_PDESIRE_WAKELOCK_LIMIT_RANGE;
+
+	/* Null check if a Config is not set */
+	if (!range)
+		goto finish;
+
+	if (number_of_wakelocks > range) {
+		number_of_wakelocks = 0;
+		goto finish;
+	}
+
+	if (number_of_wakelocks > CONFIG_PDESIRE_WAKELOCK_LIMIT)
+		return true;
+
+finish:
+	return false;
+}
+
+static inline bool wakelocks_limit_exceeded(void)
+{
+	return wakelocks_in_blocked_range();
+}
+
+static inline void increment_wakelocks_number(void)
+{
+	number_of_wakelocks++;
+}
+
+static inline void decrement_wakelocks_number(void)
+{
+	number_of_wakelocks--;
+}
+#else
 static inline bool wakelocks_limit_exceeded(void) { return false; }
 static inline void increment_wakelocks_number(void) {}
 static inline void decrement_wakelocks_number(void) {}
+#endif
 #endif /* CONFIG_PM_WAKELOCKS_LIMIT */
 
 #ifdef CONFIG_PM_WAKELOCKS_GC
