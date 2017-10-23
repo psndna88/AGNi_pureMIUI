@@ -50,32 +50,22 @@ inline struct block_device *I_BDEV(struct inode *inode)
 EXPORT_SYMBOL(I_BDEV);
 
 /*
- * Move the inode from its current bdi to a new bdi. If the inode is dirty we
- * need to move it onto the dirty list of @dst so that the inode is always on
- * the right list.
+ * Move the inode from its current bdi to a new bdi.  Make sure the inode
+ * is clean before moving so that it doesn't linger on the old bdi.
  */
 static void bdev_inode_switch_bdi(struct inode *inode,
 			struct backing_dev_info *dst)
 {
-	struct backing_dev_info *old = inode->i_data.backing_dev_info;
-	bool wakeup_bdi = false;
-
-	if (unlikely(dst == old))		/* deadlock avoidance */
-		return;
-	bdi_lock_two(&old->wb, &dst->wb);
-	spin_lock(&inode->i_lock);
-	inode->i_data.backing_dev_info = dst;
-	if (inode->i_state & I_DIRTY) {
-		if (bdi_cap_writeback_dirty(dst) && !wb_has_dirty_io(&dst->wb))
-			wakeup_bdi = true;
-		list_move(&inode->i_wb_list, &dst->wb.b_dirty);
+	while (true) {
+		spin_lock(&inode->i_lock);
+		if (!(inode->i_state & I_DIRTY)) {
+			inode->i_data.backing_dev_info = dst;
+			spin_unlock(&inode->i_lock);
+			return;
+		}
+		spin_unlock(&inode->i_lock);
+		WARN_ON_ONCE(write_inode_now(inode, true));
 	}
-	spin_unlock(&inode->i_lock);
-	spin_unlock(&old->wb.list_lock);
-	spin_unlock(&dst->wb.list_lock);
-
-	if (wakeup_bdi)
-		bdi_wakeup_thread_delayed(dst);
 }
 
 /* Kill _all_ buffers and pagecache , dirty or not.. */
@@ -96,12 +86,11 @@ void invalidate_bdev(struct block_device *bdev)
 {
 	struct address_space *mapping = bdev->bd_inode->i_mapping;
 
-	if (mapping->nrpages == 0)
-		return;
-
-	invalidate_bh_lrus();
-	lru_add_drain_all();	/* make sure all lru add caches are flushed */
-	invalidate_mapping_pages(mapping, 0, -1);
+	if (mapping->nrpages) {
+		invalidate_bh_lrus();
+		lru_add_drain_all();	/* make sure all lru add caches are flushed */
+		invalidate_mapping_pages(mapping, 0, -1);
+	}
 	/* 99% of the time, we don't need to flush the cleancache on the bdev.
 	 * But, for the strange corners, lets be cautious
 	 */
@@ -389,6 +378,69 @@ int blkdev_fsync(struct file *filp, loff_t start, loff_t end, int datasync)
 	return error;
 }
 EXPORT_SYMBOL(blkdev_fsync);
+
+/**
+ * bdev_read_page() - Start reading a page from a block device
+ * @bdev: The device to read the page from
+ * @sector: The offset on the device to read the page to (need not be aligned)
+ * @page: The page to read
+ *
+ * On entry, the page should be locked.  It will be unlocked when the page
+ * has been read.  If the block driver implements rw_page synchronously,
+ * that will be true on exit from this function, but it need not be.
+ *
+ * Errors returned by this function are usually "soft", eg out of memory, or
+ * queue full; callers should try a different route to read this page rather
+ * than propagate an error back up the stack.
+ *
+ * Return: negative errno if an error occurs, 0 if submission was successful.
+ */
+int bdev_read_page(struct block_device *bdev, sector_t sector,
+			struct page *page)
+{
+	const struct block_device_operations *ops = bdev->bd_disk->fops;
+	if (!ops->rw_page)
+		return -EOPNOTSUPP;
+	return ops->rw_page(bdev, sector + get_start_sect(bdev), page, READ);
+}
+EXPORT_SYMBOL_GPL(bdev_read_page);
+
+/**
+ * bdev_write_page() - Start writing a page to a block device
+ * @bdev: The device to write the page to
+ * @sector: The offset on the device to write the page to (need not be aligned)
+ * @page: The page to write
+ * @wbc: The writeback_control for the write
+ *
+ * On entry, the page should be locked and not currently under writeback.
+ * On exit, if the write started successfully, the page will be unlocked and
+ * under writeback.  If the write failed already (eg the driver failed to
+ * queue the page to the device), the page will still be locked.  If the
+ * caller is a ->writepage implementation, it will need to unlock the page.
+ *
+ * Errors returned by this function are usually "soft", eg out of memory, or
+ * queue full; callers should try a different route to write this page rather
+ * than propagate an error back up the stack.
+ *
+ * Return: negative errno if an error occurs, 0 if submission was successful.
+ */
+int bdev_write_page(struct block_device *bdev, sector_t sector,
+			struct page *page, struct writeback_control *wbc)
+{
+	int result;
+	int rw = (wbc->sync_mode == WB_SYNC_ALL) ? WRITE_SYNC : WRITE;
+	const struct block_device_operations *ops = bdev->bd_disk->fops;
+	if (!ops->rw_page)
+		return -EOPNOTSUPP;
+	set_page_writeback(page);
+	result = ops->rw_page(bdev, sector + get_start_sect(bdev), page, rw);
+	if (result)
+		end_page_writeback(page);
+	else
+		unlock_page(page);
+	return result;
+}
+EXPORT_SYMBOL_GPL(bdev_write_page);
 
 /*
  * pseudo-fs

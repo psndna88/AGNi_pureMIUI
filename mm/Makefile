@@ -19,7 +19,7 @@ obj-y			:= filemap.o mempool.o oom_kill.o fadvise.o \
 			   readahead.o swap.o truncate.o vmscan.o shmem.o \
 			   util.o mmzone.o vmstat.o backing-dev.o \
 			   mm_init.o mmu_context.o percpu.o slab_common.o \
-			   compaction.o balloon_compaction.o \
+			   compaction.o balloon_compaction.o vmacache.o \
 			   interval_tree.o $(mmu-y) \
 			   showmem.o vmpressure.o
 
@@ -37,6 +37,7 @@ obj-$(CONFIG_BOUNCE)	+= bounce.o
 obj-$(CONFIG_SWAP)	+= page_io.o swap_state.o swapfile.o
 obj-$(CONFIG_FRONTSWAP)	+= frontswap.o
 obj-$(CONFIG_ZSWAP)	+= zswap.o
+obj-$(CONFIG_ZCACHE)	+= zcache.o
 obj-$(CONFIG_HAS_DMA)	+= dmapool.o
 obj-$(CONFIG_HUGETLBFS)	+= hugetlb.o
 obj-$(CONFIG_NUMA) 	+= mempolicy.o
@@ -67,6 +68,7 @@ obj-$(CONFIG_CLEANCACHE) += cleancache.o
 obj-$(CONFIG_MEMORY_ISOLATION) += page_isolation.o
 obj-$(CONFIG_PAGE_OWNER) += pageowner.o
 obj-$(CONFIG_ZBUD)	+= zbud.o
+obj-$(CONFIG_Z3FOLD)	+= z3fold.o
 obj-$(CONFIG_GENERIC_EARLY_IOREMAP) += early_ioremap.o
 obj-$(CONFIG_MEMTEST)		+= memtest.o
 obj-$(CONFIG_PROCESS_RECLAIM)	+= process_reclaim.o

@@ -272,11 +272,11 @@ void dma_pool_destroy(struct dma_pool *pool)
 		if (is_page_busy(page)) {
 			if (pool->dev)
 				dev_err(pool->dev,
-					"dma_pool_destroy %s, %p busy\n",
+					"dma_pool_destroy %s, %pK busy\n",
 					pool->name, page->vaddr);
 			else
 				printk(KERN_ERR
-				       "dma_pool_destroy %s, %p busy\n",
+				       "dma_pool_destroy %s, %pK busy\n",
 				       pool->name, page->vaddr);
 			/* leak the still-in-use consistent memory */
 			list_del(&page->page_list);
@@ -341,10 +341,10 @@ void *dma_pool_alloc(struct dma_pool *pool, gfp_t mem_flags,
 				continue;
 			if (pool->dev)
 				dev_err(pool->dev,
-					"dma_pool_alloc %s, %p (corruped)\n",
+					"dma_pool_alloc %s, %pK (corruped)\n",
 					pool->name, retval);
 			else
-				pr_err("dma_pool_alloc %s, %p (corruped)\n",
+				pr_err("dma_pool_alloc %s, %pK (corruped)\n",
 					pool->name, retval);
 
 			/*
@@ -397,10 +397,10 @@ void dma_pool_free(struct dma_pool *pool, void *vaddr, dma_addr_t dma)
 		spin_unlock_irqrestore(&pool->lock, flags);
 		if (pool->dev)
 			dev_err(pool->dev,
-				"dma_pool_free %s, %p/%lx (bad dma)\n",
+				"dma_pool_free %s, %pK/%lx (bad dma)\n",
 				pool->name, vaddr, (unsigned long)dma);
 		else
-			printk(KERN_ERR "dma_pool_free %s, %p/%lx (bad dma)\n",
+			printk(KERN_ERR "dma_pool_free %s, %pK/%lx (bad dma)\n",
 			       pool->name, vaddr, (unsigned long)dma);
 		return;
 	}
@@ -411,11 +411,11 @@ void dma_pool_free(struct dma_pool *pool, void *vaddr, dma_addr_t dma)
 		spin_unlock_irqrestore(&pool->lock, flags);
 		if (pool->dev)
 			dev_err(pool->dev,
-				"dma_pool_free %s, %p (bad vaddr)/%Lx\n",
+				"dma_pool_free %s, %pK (bad vaddr)/%Lx\n",
 				pool->name, vaddr, (unsigned long long)dma);
 		else
 			printk(KERN_ERR
-			       "dma_pool_free %s, %p (bad vaddr)/%Lx\n",
+			       "dma_pool_free %s, %pK (bad vaddr)/%Lx\n",
 			       pool->name, vaddr, (unsigned long long)dma);
 		return;
 	}

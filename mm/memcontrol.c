@@ -2459,7 +2459,7 @@ static void drain_stock(struct memcg_stock_pcp *stock)
  */
 static void drain_local_stock(struct work_struct *dummy)
 {
-	struct memcg_stock_pcp *stock = &__get_cpu_var(memcg_stock);
+	struct memcg_stock_pcp *stock = this_cpu_ptr(&memcg_stock);
 	drain_stock(stock);
 	clear_bit(FLUSHING_CACHED_CHARGE, &stock->flags);
 }
@@ -2583,7 +2583,7 @@ static void mem_cgroup_drain_pcp_counter(struct mem_cgroup *memcg, int cpu)
 	spin_unlock(&memcg->pcp_counter_lock);
 }
 
-static int __cpuinit memcg_cpu_hotplug_callback(struct notifier_block *nb,
+static int memcg_cpu_hotplug_callback(struct notifier_block *nb,
 					unsigned long action,
 					void *hcpu)
 {
@@ -3221,8 +3221,8 @@ int memcg_update_cache_size(struct kmem_cache *s, int num_groups)
 	return 0;
 }
 
-int memcg_register_cache(struct mem_cgroup *memcg, struct kmem_cache *s,
-			 struct kmem_cache *root_cache)
+int memcg_alloc_cache_params(struct mem_cgroup *memcg, struct kmem_cache *s,
+			     struct kmem_cache *root_cache)
 {
 	size_t size = sizeof(struct memcg_cache_params);
 
@@ -3245,6 +3245,11 @@ int memcg_register_cache(struct mem_cgroup *memcg, struct kmem_cache *s,
 		s->memcg_params->is_root_cache = true;
 
 	return 0;
+}
+
+void memcg_free_cache_params(struct kmem_cache *s)
+{
+	kfree(s->memcg_params);
 }
 
 void memcg_release_cache(struct kmem_cache *s)
@@ -3275,7 +3280,7 @@ void memcg_release_cache(struct kmem_cache *s)
 
 	mem_cgroup_put(memcg);
 out:
-	kfree(s->memcg_params);
+	memcg_free_cache_params(s);
 }
 
 /*
@@ -4619,7 +4624,7 @@ void mem_cgroup_print_bad_page(struct page *page)
 
 	pc = lookup_page_cgroup_used(page);
 	if (pc) {
-		pr_alert("pc:%p pc->flags:%lx pc->mem_cgroup:%p\n",
+		pr_alert("pc:%pK pc->flags:%lx pc->mem_cgroup:%pK\n",
 			 pc, pc->flags, pc->mem_cgroup);
 	}
 }
@@ -6979,6 +6984,11 @@ static void mem_cgroup_move_task(struct cgroup *cont,
 #else	/* !CONFIG_MMU */
 static int mem_cgroup_can_attach(struct cgroup *cgroup,
 				 struct cgroup_taskset *tset)
+{
+	return 0;
+}
+static int mem_cgroup_allow_attach(struct cgroup *cgroup,
+				   struct cgroup_taskset *tset)
 {
 	return 0;
 }

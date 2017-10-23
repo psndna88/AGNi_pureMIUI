@@ -19,6 +19,7 @@
 #include <asm/tlbflush.h>
 #include <asm/page.h>
 #include <linux/memcontrol.h>
+#include <trace/events/kmem.h>
 
 #include "slab.h"
 
@@ -26,6 +27,43 @@ enum slab_state slab_state;
 LIST_HEAD(slab_caches);
 DEFINE_MUTEX(slab_mutex);
 struct kmem_cache *kmem_cache;
+
+/*
+ * Set of flags that will prevent slab merging
+ */
+#define SLAB_NEVER_MERGE (SLAB_RED_ZONE | SLAB_POISON | SLAB_STORE_USER | \
+		SLAB_TRACE | SLAB_DESTROY_BY_RCU | SLAB_NOLEAKTRACE | \
+		SLAB_FAILSLAB)
+
+#define SLAB_MERGE_SAME (SLAB_DEBUG_FREE | SLAB_RECLAIM_ACCOUNT | \
+		SLAB_CACHE_DMA | SLAB_NOTRACK)
+
+/*
+ * Merge control. If this is set then no merging of slab caches will occur.
+ * (Could be removed. This was introduced to pacify the merge skeptics.)
+ */
+static int slab_nomerge;
+
+static int __init setup_slab_nomerge(char *str)
+{
+	slab_nomerge = 1;
+	return 1;
+}
+
+#ifdef CONFIG_SLUB
+__setup_param("slub_nomerge", slub_nomerge, setup_slab_nomerge, 0);
+#endif
+
+__setup("slab_nomerge", setup_slab_nomerge);
+
+/*
+ * Determine the size of a slab object
+ */
+unsigned int kmem_cache_size(struct kmem_cache *s)
+{
+	return s->object_size;
+}
+EXPORT_SYMBOL(kmem_cache_size);
 
 #ifdef CONFIG_DEBUG_VM
 static int kmem_cache_sanity_check(struct mem_cgroup *memcg, const char *name,
@@ -83,6 +121,29 @@ static inline int kmem_cache_sanity_check(struct mem_cgroup *memcg,
 }
 #endif
 
+void __kmem_cache_free_bulk(struct kmem_cache *s, size_t nr, void **p)
+{
+	size_t i;
+
+	for (i = 0; i < nr; i++)
+		kmem_cache_free(s, p[i]);
+}
+
+bool __kmem_cache_alloc_bulk(struct kmem_cache *s, gfp_t flags, size_t nr,
+								void **p)
+{
+	size_t i;
+
+	for (i = 0; i < nr; i++) {
+		void *x = p[i] = kmem_cache_alloc(s, flags);
+		if (!x) {
+			__kmem_cache_free_bulk(s, i, p);
+			return false;
+		}
+	}
+	return true;
+}
+
 #ifdef CONFIG_MEMCG_KMEM
 int memcg_update_all_caches(int num_memcgs)
 {
@@ -110,6 +171,69 @@ out:
 	return ret;
 }
 #endif
+
+/*
+ * Find a mergeable slab cache
+ */
+int slab_unmergeable(struct kmem_cache *s)
+{
+	if (slab_nomerge || (s->flags & SLAB_NEVER_MERGE))
+		return 1;
+
+	if (!is_root_cache(s))
+		return 1;
+
+	if (s->ctor)
+		return 1;
+
+	/*
+	 * We may have set a slab to be unmergeable during bootstrap.
+	 */
+	if (s->refcount < 0)
+		return 1;
+
+	return 0;
+}
+
+struct kmem_cache *find_mergeable(size_t size, size_t align,
+		unsigned long flags, const char *name, void (*ctor)(void *))
+{
+	struct kmem_cache *s;
+
+	if (slab_nomerge || (flags & SLAB_NEVER_MERGE))
+		return NULL;
+
+	if (ctor)
+		return NULL;
+
+	size = ALIGN(size, sizeof(void *));
+	align = calculate_alignment(flags, align, size);
+	size = ALIGN(size, align);
+	flags = kmem_cache_flags(size, flags, name, NULL);
+
+	list_for_each_entry(s, &slab_caches, list) {
+		if (slab_unmergeable(s))
+			continue;
+
+		if (size > s->size)
+			continue;
+
+		if ((flags & SLAB_MERGE_SAME) != (s->flags & SLAB_MERGE_SAME))
+			continue;
+		/*
+		 * Check if alignment is compatible.
+		 * Courtesy of Adrian Drzewiecki
+		 */
+		if ((s->size & ~(align - 1)) != s->size)
+			continue;
+
+		if (s->size - size >= sizeof(void *))
+			continue;
+
+		return s;
+	}
+	return NULL;
+}
 
 /*
  * Figure out what the alignment of the objects will be given a set of
@@ -170,13 +294,14 @@ kmem_cache_create_memcg(struct mem_cgroup *memcg, const char *name, size_t size,
 			struct kmem_cache *parent_cache)
 {
 	struct kmem_cache *s = NULL;
-	int err = 0;
+	int err;
 
 	get_online_cpus();
 	mutex_lock(&slab_mutex);
 
-	if (!kmem_cache_sanity_check(memcg, name, size) == 0)
-		goto out_locked;
+	err = kmem_cache_sanity_check(memcg, name, size);
+	if (err)
+		goto out_unlock;
 
 	/*
 	 * Some allocators will constraint the set of valid flags to a subset
@@ -186,46 +311,51 @@ kmem_cache_create_memcg(struct mem_cgroup *memcg, const char *name, size_t size,
 	 */
 	flags &= CACHE_CREATE_MASK;
 
-	s = __kmem_cache_alias(memcg, name, size, align, flags, ctor);
-	if (s)
-		goto out_locked;
+	if (!memcg) {
+		s = __kmem_cache_alias(name, size, align, flags, ctor);
+		if (s)
+			goto out_unlock;
+	}
 
+	err = -ENOMEM;
 	s = kmem_cache_zalloc(kmem_cache, GFP_KERNEL);
-	if (s) {
-		s->object_size = s->size = size;
-		s->align = calculate_alignment(flags, align, size);
-		s->ctor = ctor;
+	if (!s)
+		goto out_unlock;
 
-		if (memcg_register_cache(memcg, s, parent_cache)) {
-			kmem_cache_free(kmem_cache, s);
-			err = -ENOMEM;
-			goto out_locked;
-		}
+	s->object_size = s->size = size;
+	s->align = calculate_alignment(flags, align, size);
+	s->ctor = ctor;
 
-		s->name = kstrdup(name, GFP_KERNEL);
-		if (!s->name) {
-			kmem_cache_free(kmem_cache, s);
-			err = -ENOMEM;
-			goto out_locked;
-		}
+	s->name = kstrdup(name, GFP_KERNEL);
+	if (!s->name)
+		goto out_free_cache;
 
-		err = __kmem_cache_create(s, flags);
-		if (!err) {
-			s->refcount = 1;
-			list_add(&s->list, &slab_caches);
-			memcg_cache_list_add(memcg, s);
-		} else {
-			kfree(s->name);
-			kmem_cache_free(kmem_cache, s);
-		}
-	} else
-		err = -ENOMEM;
+	err = memcg_alloc_cache_params(memcg, s, parent_cache);
+	if (err)
+		goto out_free_cache;
 
-out_locked:
+	err = __kmem_cache_create(s, flags);
+	if (err)
+		goto out_free_cache;
+
+	s->refcount = 1;
+	list_add(&s->list, &slab_caches);
+	memcg_cache_list_add(memcg, s);
+
+out_unlock:
 	mutex_unlock(&slab_mutex);
 	put_online_cpus();
 
 	if (err) {
+		/*
+		 * There is no point in flooding logs with warnings or
+		 * especially crashing the system if we fail to create a cache
+		 * for a memcg. In this case we will be accounting the memcg
+		 * allocation to the root cgroup until we succeed to create its
+		 * own cache, but it isn't that critical.
+		 */
+		if (!memcg)
+			return NULL;
 
 		if (flags & SLAB_PANIC)
 			panic("kmem_cache_create: Failed to create slab '%s'. Error %d\n",
@@ -235,11 +365,15 @@ out_locked:
 				name, err);
 			dump_stack();
 		}
-
 		return NULL;
 	}
-
 	return s;
+
+out_free_cache:
+	memcg_free_cache_params(s);
+	kfree(s->name);
+	kmem_cache_free(kmem_cache, s);
+	goto out_unlock;
 }
 
 struct kmem_cache *
@@ -324,7 +458,7 @@ struct kmem_cache *__init create_kmalloc_cache(const char *name, size_t size,
 struct kmem_cache *kmalloc_caches[KMALLOC_SHIFT_HIGH + 1];
 EXPORT_SYMBOL(kmalloc_caches);
 
-#if defined(CONFIG_ZONE_DMA) && !defined(CONFIG_FORCE_KMALLOC_FROM_DMA_ZONE)
+#ifdef CONFIG_ZONE_DMA
 struct kmem_cache *kmalloc_dma_caches[KMALLOC_SHIFT_HIGH + 1];
 EXPORT_SYMBOL(kmalloc_dma_caches);
 #endif
@@ -388,7 +522,7 @@ struct kmem_cache *kmalloc_slab(size_t size, gfp_t flags)
 	} else
 		index = fls(size - 1);
 
-#if defined(CONFIG_ZONE_DMA) && !defined(CONFIG_FORCE_KMALLOC_FROM_DMA_ZONE)
+#ifdef CONFIG_ZONE_DMA
 	if (unlikely((flags & GFP_DMA)))
 		return kmalloc_dma_caches[index];
 
@@ -447,10 +581,6 @@ void __init create_kmalloc_caches(unsigned long flags)
 			size_index[size_index_elem(i)] = 8;
 	}
 	for (i = KMALLOC_SHIFT_LOW; i <= KMALLOC_SHIFT_HIGH; i++) {
-
-		if (IS_ENABLED(CONFIG_FORCE_KMALLOC_FROM_DMA_ZONE))
-			flags |= SLAB_CACHE_DMA;
-
 		if (!kmalloc_caches[i]) {
 			kmalloc_caches[i] = create_kmalloc_cache(NULL,
 							1 << i, flags);
@@ -483,7 +613,7 @@ void __init create_kmalloc_caches(unsigned long flags)
 		}
 	}
 
-#if defined(CONFIG_ZONE_DMA) && !defined(CONFIG_FORCE_KMALLOC_FROM_DMA_ZONE)
+#ifdef CONFIG_ZONE_DMA
 	for (i = 0; i <= KMALLOC_SHIFT_HIGH; i++) {
 		struct kmem_cache *s = kmalloc_caches[i];
 
@@ -500,6 +630,16 @@ void __init create_kmalloc_caches(unsigned long flags)
 #endif
 }
 #endif /* !CONFIG_SLOB */
+
+#ifdef CONFIG_TRACING
+void *kmalloc_order_trace(size_t size, gfp_t flags, unsigned int order)
+{
+	void *ret = kmalloc_order(size, flags, order);
+	trace_kmalloc(_RET_IP_, ret, size, PAGE_SIZE << order, flags);
+	return ret;
+}
+EXPORT_SYMBOL(kmalloc_order_trace);
+#endif
 
 #ifdef CONFIG_SLABINFO
 void print_slabinfo_header(struct seq_file *m)
@@ -557,7 +697,7 @@ memcg_accumulate_slabinfo(struct kmem_cache *s, struct slabinfo *info)
 		return;
 
 	for_each_memcg_cache_index(i) {
-		c = cache_from_memcg(s, i);
+		c = cache_from_memcg_idx(s, i);
 		if (!c)
 			continue;
 

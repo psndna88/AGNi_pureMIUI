@@ -15,6 +15,7 @@
 
 #include <linux/export.h>
 #include <linux/mm.h>
+#include <linux/vmacache.h>
 #include <linux/mman.h>
 #include <linux/swap.h>
 #include <linux/file.h>
@@ -625,7 +626,7 @@ static void free_page_series(unsigned long from, unsigned long to)
 		kdebug("- free %lx", from);
 		atomic_long_dec(&mmap_pages_allocated);
 		if (page_count(page) != 1)
-			kdebug("free page %p: refcount not one: %d",
+			kdebug("free page %pK: refcount not one: %d",
 			       page, page_count(page));
 		put_page(page);
 	}
@@ -640,7 +641,7 @@ static void free_page_series(unsigned long from, unsigned long to)
 static void __put_nommu_region(struct vm_region *region)
 	__releases(nommu_region_sem)
 {
-	kenter("%p{%d}", region, region->vm_usage);
+	kenter("%pK{%d}", region, region->vm_usage);
 
 	BUG_ON(!nommu_region_tree.rb_node);
 
@@ -701,7 +702,7 @@ static void add_vma_to_mm(struct mm_struct *mm, struct vm_area_struct *vma)
 	struct address_space *mapping;
 	struct rb_node **p, *parent, *rb_prev;
 
-	kenter(",%p", vma);
+	kenter(",%pK", vma);
 
 	BUG_ON(!vma->vm_region);
 
@@ -765,16 +766,23 @@ static void add_vma_to_mm(struct mm_struct *mm, struct vm_area_struct *vma)
  */
 static void delete_vma_from_mm(struct vm_area_struct *vma)
 {
+	int i;
 	struct address_space *mapping;
 	struct mm_struct *mm = vma->vm_mm;
+	struct task_struct *curr = current;
 
-	kenter("%p", vma);
+	kenter("%pK", vma);
 
 	protect_vma(vma, 0);
 
 	mm->map_count--;
-	if (mm->mmap_cache == vma)
-		mm->mmap_cache = NULL;
+	for (i = 0; i < VMACACHE_SIZE; i++) {
+		/* if the vma is cached, invalidate the entire cache */
+		if (curr->vmacache[i] == vma) {
+			vmacache_invalidate(curr->mm);
+			break;
+		}
+	}
 
 	/* remove the VMA from the mapping */
 	if (vma->vm_file) {
@@ -804,7 +812,7 @@ static void delete_vma_from_mm(struct vm_area_struct *vma)
  */
 static void delete_vma(struct mm_struct *mm, struct vm_area_struct *vma)
 {
-	kenter("%p", vma);
+	kenter("%pK", vma);
 	if (vma->vm_ops && vma->vm_ops->close)
 		vma->vm_ops->close(vma);
 	if (vma->vm_file)
@@ -822,8 +830,8 @@ struct vm_area_struct *find_vma(struct mm_struct *mm, unsigned long addr)
 	struct vm_area_struct *vma;
 
 	/* check the cache first */
-	vma = ACCESS_ONCE(mm->mmap_cache);
-	if (vma && vma->vm_start <= addr && vma->vm_end > addr)
+	vma = vmacache_find(mm, addr);
+	if (likely(vma))
 		return vma;
 
 	/* trawl the list (there may be multiple mappings in which addr
@@ -832,7 +840,7 @@ struct vm_area_struct *find_vma(struct mm_struct *mm, unsigned long addr)
 		if (vma->vm_start > addr)
 			return NULL;
 		if (vma->vm_end > addr) {
-			mm->mmap_cache = vma;
+			vmacache_update(addr, vma);
 			return vma;
 		}
 	}
@@ -871,8 +879,8 @@ static struct vm_area_struct *find_vma_exact(struct mm_struct *mm,
 	unsigned long end = addr + len;
 
 	/* check the cache first */
-	vma = mm->mmap_cache;
-	if (vma && vma->vm_start == addr && vma->vm_end == end)
+	vma = vmacache_find_exact(mm, addr, end);
+	if (vma)
 		return vma;
 
 	/* trawl the list (there may be multiple mappings in which addr
@@ -883,7 +891,7 @@ static struct vm_area_struct *find_vma_exact(struct mm_struct *mm,
 		if (vma->vm_start > addr)
 			return NULL;
 		if (vma->vm_end == end) {
-			mm->mmap_cache = vma;
+			vmacache_update(addr, vma);
 			return vma;
 		}
 	}

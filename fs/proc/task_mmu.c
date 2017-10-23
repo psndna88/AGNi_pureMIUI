@@ -1,4 +1,5 @@
 #include <linux/mm.h>
+#include <linux/vmacache.h>
 #include <linux/hugetlb.h>
 #include <linux/huge_mm.h>
 #include <linux/mount.h>
@@ -202,7 +203,7 @@ static void *m_start(struct seq_file *m, loff_t *pos)
 
 	/*
 	 * We remember last_addr rather than next_addr to hit with
-	 * mmap_cache most of the time. We have zero last_addr at
+	 * vmacache most of the time. We have zero last_addr at
 	 * the beginning and also after lseek. We will have -1 last_addr
 	 * after the end of the vmas.
 	 */
@@ -219,7 +220,7 @@ static void *m_start(struct seq_file *m, loff_t *pos)
 		return mm;
 	down_read(&mm->mmap_sem);
 
-	tail_vma = get_gate_vma(mm);
+	tail_vma = get_gate_vma(priv->task->mm);
 	priv->tail_vma = tail_vma;
 	hold_task_mempolicy(priv);
 	/* Start with last addr hint */
@@ -396,11 +397,12 @@ static int show_map(struct seq_file *m, void *v, int is_pid)
 {
 	struct vm_area_struct *vma = v;
 	struct proc_maps_private *priv = m->private;
+	struct task_struct *task = priv->task;
 
 	show_map_vma(m, vma, is_pid);
 
 	if (m->count < m->size)  /* vma is copied successfully */
-		m->version = (vma != priv->tail_vma)
+		m->version = (vma != get_gate_vma(task->mm))
 			? vma->vm_start : 0;
 	return 0;
 }
@@ -637,6 +639,7 @@ static void show_smap_vma_flags(struct seq_file *m, struct vm_area_struct *vma)
 static int show_smap(struct seq_file *m, void *v, int is_pid)
 {
 	struct proc_maps_private *priv = m->private;
+	struct task_struct *task = priv->task;
 	struct vm_area_struct *vma = v;
 	struct mem_size_stats mss;
 	struct mm_walk smaps_walk = {
@@ -699,7 +702,7 @@ static int show_smap(struct seq_file *m, void *v, int is_pid)
 	}
 
 	if (m->count < m->size)  /* vma is copied successfully */
-		m->version = (vma != priv->tail_vma)
+		m->version = (vma != get_gate_vma(task->mm))
 			? vma->vm_start : 0;
 	return 0;
 }
@@ -1341,7 +1344,7 @@ static ssize_t reclaim_write(struct file *file, const char __user *buf,
 	else if (isdigit(*type_buf))
 		type = RECLAIM_RANGE;
 	else
-		goto out_err;
+		type = RECLAIM_ALL;
 
 	if (type == RECLAIM_RANGE) {
 		char *token;
@@ -1582,8 +1585,8 @@ static int show_numa_map(struct seq_file *m, void *v, int is_pid)
 	struct mm_struct *mm = vma->vm_mm;
 	struct mm_walk walk = {};
 	struct mempolicy *pol;
-	int n;
-	char buffer[50];
+	char buffer[64];
+	int nid;
 
 	if (!mm)
 		return 0;
@@ -1653,9 +1656,9 @@ static int show_numa_map(struct seq_file *m, void *v, int is_pid)
 	if (md->writeback)
 		seq_printf(m, " writeback=%lu", md->writeback);
 
-	for_each_node_state(n, N_MEMORY)
-		if (md->node[n])
-			seq_printf(m, " N%d=%lu", n, md->node[n]);
+	for_each_node_state(nid, N_MEMORY)
+		if (md->node[nid])
+			seq_printf(m, " N%d=%lu", nid, md->node[nid]);
 out:
 	seq_putc(m, '\n');
 

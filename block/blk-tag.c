@@ -314,7 +314,7 @@ int blk_queue_start_tag(struct request_queue *q, struct request *rq)
 
 	if (unlikely((rq->cmd_flags & REQ_QUEUED))) {
 		printk(KERN_ERR
-		       "%s: request %p for device [%s] already tagged %d",
+		       "%s: request %pK for device [%s] already tagged %d",
 		       __func__, rq,
 		       rq->rq_disk ? rq->rq_disk->disk_name : "?", rq->tag);
 		BUG();

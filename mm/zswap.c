@@ -77,7 +77,7 @@ static u64 zswap_duplicate_entry;
 **********************************/
 
 /* Enable/disable zswap (disabled by default) */
-static bool zswap_enabled;
+static bool zswap_enabled = false;
 module_param_named(enabled, zswap_enabled, bool, 0644);
 
 /* Crypto compressor to use */
@@ -94,7 +94,7 @@ module_param_cb(compressor, &zswap_compressor_param_ops,
 		&zswap_compressor, 0644);
 
 /* Compressed storage zpool to use */
-#define ZSWAP_ZPOOL_DEFAULT "zsmalloc"
+#define ZSWAP_ZPOOL_DEFAULT "z3fold"
 static char *zswap_zpool_type = ZSWAP_ZPOOL_DEFAULT;
 static int zswap_zpool_param_set(const char *, const struct kernel_param *);
 static struct kernel_param_ops zswap_zpool_param_ops = {
@@ -188,7 +188,7 @@ static int zswap_writeback_entry(struct zpool *pool, unsigned long handle);
 static int zswap_pool_get(struct zswap_pool *pool);
 static void zswap_pool_put(struct zswap_pool *pool);
 
-static const struct zpool_ops zswap_zpool_ops = {
+static struct zpool_ops zswap_zpool_ops = {
 	.evict = zswap_writeback_entry
 };
 
@@ -1030,6 +1030,7 @@ static int zswap_frontswap_store(unsigned type, pgoff_t offset,
 	struct zswap_tree *tree = zswap_trees[type];
 	struct zswap_entry *entry, *dupentry;
 	struct crypto_comp *tfm;
+	gfp_t gfp = __GFP_NORETRY | __GFP_NOWARN;
 	int ret;
 	unsigned int dlen = PAGE_SIZE, len;
 	unsigned long handle;
@@ -1053,7 +1054,7 @@ static int zswap_frontswap_store(unsigned type, pgoff_t offset,
 	}
 
 	/* allocate entry */
-	entry = zswap_entry_cache_alloc(GFP_KERNEL);
+	entry = zswap_entry_cache_alloc(gfp);
 	if (!entry) {
 		zswap_reject_kmemcache_fail++;
 		ret = -ENOMEM;
@@ -1081,8 +1082,7 @@ static int zswap_frontswap_store(unsigned type, pgoff_t offset,
 
 	/* store */
 	len = dlen + sizeof(struct zswap_header);
-	ret = zpool_malloc(entry->pool->zpool, len,
-			   __GFP_NORETRY | __GFP_NOWARN, &handle);
+	ret = zpool_malloc(entry->pool->zpool, len, gfp, &handle);
 	if (ret == -ENOSPC) {
 		zswap_reject_compress_poor++;
 		goto put_dstmem;

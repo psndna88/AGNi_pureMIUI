@@ -73,9 +73,9 @@ static inline bool mmc_cmdq_should_pull_reqs(struct mmc_host *host,
 		return false;
 
 	if (!ret)
-		pr_debug("%s: %s: skip pulling reqs: state: %lu, cmd_flags: 0x%x\n",
-			 mmc_hostname(host), __func__,
-			 ctx->curr_state, req->cmd_flags);
+		pr_debug("%s: %s: skip pulling reqs: state: %lu, cmd_flags: 0x%llx\n",
+			  mmc_hostname(host), __func__,
+			 ctx->curr_state, (unsigned long long) req->cmd_flags);
 	return ret;
 }
 
@@ -660,8 +660,8 @@ enum blk_eh_timer_return mmc_cmdq_rq_timed_out(struct request *req)
 {
 	struct mmc_queue *mq = req->q->queuedata;
 
-	pr_err("%s: request with tag: %d flags: 0x%x timed out\n",
-	       mmc_hostname(mq->card->host), req->tag, req->cmd_flags);
+	pr_err("%s: request with tag: %d flags: 0x%llx timed out\n",
+	       mmc_hostname(mq->card->host), req->tag, (unsigned long long) req->cmd_flags);
 
 	return mq->cmdq_req_timed_out(req);
 }

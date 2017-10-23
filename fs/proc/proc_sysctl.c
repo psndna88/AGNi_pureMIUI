@@ -574,12 +574,12 @@ out:
 	return ret;
 }
 
-static bool proc_sys_fill_cache(struct file *file,
-				struct dir_context *ctx,
+static int proc_sys_fill_cache(struct file *filp, void *dirent,
+				filldir_t filldir,
 				struct ctl_table_header *head,
 				struct ctl_table *table)
 {
-	struct dentry *child, *dir = file->f_path.dentry;
+	struct dentry *child, *dir = filp->f_path.dentry;
 	struct inode *inode;
 	struct qstr qname;
 	ino_t ino = 0;
@@ -596,38 +596,38 @@ static bool proc_sys_fill_cache(struct file *file,
 			inode = proc_sys_make_inode(dir->d_sb, head, table);
 			if (!inode) {
 				dput(child);
-				return false;
+				return -ENOMEM;
 			} else {
 				d_set_d_op(child, &proc_sys_dentry_operations);
 				d_add(child, inode);
 			}
 		} else {
-			return false;
+			return -ENOMEM;
 		}
 	}
 	inode = child->d_inode;
 	ino  = inode->i_ino;
 	type = inode->i_mode >> 12;
 	dput(child);
-	return dir_emit(ctx, qname.name, qname.len, ino, type);
+	return !!filldir(dirent, qname.name, qname.len, filp->f_pos, ino, type);
 }
 
-static bool proc_sys_link_fill_cache(struct file *file,
-				    struct dir_context *ctx,
+static int proc_sys_link_fill_cache(struct file *filp, void *dirent,
+				    filldir_t filldir,
 				    struct ctl_table_header *head,
 				    struct ctl_table *table)
 {
-	bool ret = true;
+	int err, ret = 0;
 	head = sysctl_head_grab(head);
 
 	if (S_ISLNK(table->mode)) {
 		/* It is not an error if we can not follow the link ignore it */
-		int err = sysctl_follow_link(&head, &table, current->nsproxy);
+		err = sysctl_follow_link(&head, &table, current->nsproxy);
 		if (err)
 			goto out;
 	}
 
-	ret = proc_sys_fill_cache(file, ctx, head, table);
+	ret = proc_sys_fill_cache(filp, dirent, filldir, head, table);
 out:
 	sysctl_head_finish(head);
 	return ret;
@@ -635,51 +635,67 @@ out:
 
 static int scan(struct ctl_table_header *head, ctl_table *table,
 		unsigned long *pos, struct file *file,
-		struct dir_context *ctx)
+		void *dirent, filldir_t filldir)
 {
-	bool res;
+	int res;
 
-	if ((*pos)++ < ctx->pos)
-		return true;
+	if ((*pos)++ < file->f_pos)
+		return 0;
 
 	if (unlikely(S_ISLNK(table->mode)))
-		res = proc_sys_link_fill_cache(file, ctx, head, table);
+		res = proc_sys_link_fill_cache(file, dirent, filldir, head, table);
 	else
-		res = proc_sys_fill_cache(file, ctx, head, table);
+		res = proc_sys_fill_cache(file, dirent, filldir, head, table);
 
-	if (res)
-		ctx->pos = *pos;
+	if (res == 0)
+		file->f_pos = *pos;
 
 	return res;
 }
 
-static int proc_sys_readdir(struct file *file, struct dir_context *ctx)
+static int proc_sys_readdir(struct file *filp, void *dirent, filldir_t filldir)
 {
-	struct ctl_table_header *head = grab_header(file_inode(file));
+	struct dentry *dentry = filp->f_path.dentry;
+	struct inode *inode = dentry->d_inode;
+	struct ctl_table_header *head = grab_header(inode);
 	struct ctl_table_header *h = NULL;
 	struct ctl_table *entry;
 	struct ctl_dir *ctl_dir;
 	unsigned long pos;
+	int ret = -EINVAL;
 
 	if (IS_ERR(head))
 		return PTR_ERR(head);
 
 	ctl_dir = container_of(head, struct ctl_dir, header);
 
-	if (!dir_emit_dots(file, ctx))
-		goto out;
-
+	ret = 0;
+	/* Avoid a switch here: arm builds fail with missing __cmpdi2 */
+	if (filp->f_pos == 0) {
+		if (filldir(dirent, ".", 1, filp->f_pos,
+				inode->i_ino, DT_DIR) < 0)
+			goto out;
+		filp->f_pos++;
+	}
+	if (filp->f_pos == 1) {
+		if (filldir(dirent, "..", 2, filp->f_pos,
+				parent_ino(dentry), DT_DIR) < 0)
+			goto out;
+		filp->f_pos++;
+	}
 	pos = 2;
 
 	for (first_entry(ctl_dir, &h, &entry); h; next_entry(&h, &entry)) {
-		if (!scan(h, entry, &pos, file, ctx)) {
+		ret = scan(h, entry, &pos, filp, dirent, filldir);
+		if (ret) {
 			sysctl_head_finish(h);
 			break;
 		}
 	}
+	ret = 1;
 out:
 	sysctl_head_finish(head);
-	return 0;
+	return ret;
 }
 
 static int proc_sys_permission(struct inode *inode, int mask)
@@ -754,7 +770,7 @@ static const struct file_operations proc_sys_file_operations = {
 
 static const struct file_operations proc_sys_dir_file_operations = {
 	.read		= generic_read_dir,
-	.iterate	= proc_sys_readdir,
+	.readdir	= proc_sys_readdir,
 	.llseek		= generic_file_llseek,
 };
 

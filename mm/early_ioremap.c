@@ -172,16 +172,16 @@ void __init early_iounmap(void __iomem *addr, unsigned long size)
 		}
 	}
 
-	if (WARN(slot < 0, "early_iounmap(%p, %08lx) not found slot\n",
+	if (WARN(slot < 0, "early_iounmap(%pK, %08lx) not found slot\n",
 		 addr, size))
 		return;
 
 	if (WARN(prev_size[slot] != size,
-		 "early_iounmap(%p, %08lx) [%d] size not consistent %08lx\n",
+		 "early_iounmap(%pK, %08lx) [%d] size not consistent %08lx\n",
 		 addr, size, slot, prev_size[slot]))
 		return;
 
-	WARN(early_ioremap_debug, "early_iounmap(%p, %08lx) [%d]\n",
+	WARN(early_ioremap_debug, "early_iounmap(%pK, %08lx) [%d]\n",
 	     addr, size, slot);
 
 	virt_addr = (unsigned long)addr;

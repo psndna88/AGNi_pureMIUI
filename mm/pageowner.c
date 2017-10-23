@@ -85,7 +85,7 @@ read_page_owner(struct file *file, char __user *buf, size_t count, loff_t *ppos)
 	if (!kbuf)
 		return -ENOMEM;
 
-	//printk("page: %p\n", page);
+	//printk("page: %pK\n", page);
 	ret = snprintf(kbuf, count, "Page allocated via order %d, mask 0x%x\n",
 			page->order, page->gfp_mask);
 	if (ret >= count) {

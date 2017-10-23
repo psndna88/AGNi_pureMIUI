@@ -91,7 +91,6 @@ static inline struct mempolicy *mpol_dup(struct mempolicy *pol)
 }
 
 #define vma_policy(vma) ((vma)->vm_policy)
-#define vma_set_policy(vma, pol) ((vma)->vm_policy = (pol))
 
 static inline void mpol_get(struct mempolicy *pol)
 {
@@ -123,9 +122,10 @@ struct sp_node {
 
 struct shared_policy {
 	struct rb_root root;
-	spinlock_t lock;
+	rwlock_t lock;
 };
 
+int vma_dup_policy(struct vm_area_struct *src, struct vm_area_struct *dst);
 void mpol_shared_policy_init(struct shared_policy *sp, struct mempolicy *mpol);
 int mpol_set_shared_policy(struct shared_policy *info,
 				struct vm_area_struct *vma,
@@ -142,7 +142,6 @@ extern void numa_policy_init(void);
 extern void mpol_rebind_task(struct task_struct *tsk, const nodemask_t *new,
 				enum mpol_rebind_step step);
 extern void mpol_rebind_mm(struct mm_struct *mm, nodemask_t *new);
-extern void mpol_fix_fork_child_flag(struct task_struct *p);
 
 extern struct zonelist *huge_zonelist(struct vm_area_struct *vma,
 				unsigned long addr, gfp_t gfp_flags,
@@ -150,7 +149,7 @@ extern struct zonelist *huge_zonelist(struct vm_area_struct *vma,
 extern bool init_nodemask_of_mempolicy(nodemask_t *mask);
 extern bool mempolicy_nodemask_intersects(struct task_struct *tsk,
 				const nodemask_t *mask);
-extern unsigned slab_node(void);
+extern unsigned int mempolicy_slab_node(void);
 
 extern enum zone_type policy_zone;
 
@@ -168,7 +167,7 @@ int do_migrate_pages(struct mm_struct *mm, const nodemask_t *from,
 extern int mpol_parse_str(char *str, struct mempolicy **mpol);
 #endif
 
-extern int mpol_to_str(char *buffer, int maxlen, struct mempolicy *pol);
+extern void mpol_to_str(char *buffer, int maxlen, struct mempolicy *pol);
 
 /* Check if a vma is migratable */
 static inline int vma_migratable(struct vm_area_struct *vma)
@@ -240,7 +239,12 @@ mpol_shared_policy_lookup(struct shared_policy *sp, unsigned long idx)
 }
 
 #define vma_policy(vma) NULL
-#define vma_set_policy(vma, pol) do {} while(0)
+
+static inline int
+vma_dup_policy(struct vm_area_struct *src, struct vm_area_struct *dst)
+{
+	return 0;
+}
 
 static inline void numa_policy_init(void)
 {
@@ -301,9 +305,8 @@ static inline int mpol_parse_str(char *str, struct mempolicy **mpol)
 }
 #endif
 
-static inline int mpol_to_str(char *buffer, int maxlen, struct mempolicy *pol)
+static inline void mpol_to_str(char *buffer, int maxlen, struct mempolicy *pol)
 {
-	return 0;
 }
 
 static inline int mpol_misplaced(struct page *page, struct vm_area_struct *vma,

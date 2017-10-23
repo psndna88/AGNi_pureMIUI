@@ -51,14 +51,10 @@ DEFINE_MUTEX(mem_hotplug_mutex);
 void lock_memory_hotplug(void)
 {
 	mutex_lock(&mem_hotplug_mutex);
-
-	/* for exclusive hibernation if CONFIG_HIBERNATION=y */
-	lock_system_sleep();
 }
 
 void unlock_memory_hotplug(void)
 {
-	unlock_system_sleep();
 	mutex_unlock(&mem_hotplug_mutex);
 }
 
@@ -254,7 +250,7 @@ static void grow_zone_span(struct zone *zone, unsigned long start_pfn,
 
 	zone_span_writelock(zone);
 
-	old_zone_end_pfn = zone->zone_start_pfn + zone->spanned_pages;
+	old_zone_end_pfn = zone_end_pfn(zone);
 	if (!zone->spanned_pages || start_pfn < zone->zone_start_pfn)
 		zone->zone_start_pfn = start_pfn;
 
@@ -539,8 +535,9 @@ static int find_biggest_section_pfn(int nid, struct zone *zone,
 static void shrink_zone_span(struct zone *zone, unsigned long start_pfn,
 			     unsigned long end_pfn)
 {
-	unsigned long zone_start_pfn =  zone->zone_start_pfn;
-	unsigned long zone_end_pfn = zone->zone_start_pfn + zone->spanned_pages;
+	unsigned long zone_start_pfn = zone->zone_start_pfn;
+	unsigned long z = zone_end_pfn(zone); /* zone_end_pfn namespace clash */
+	unsigned long zone_end_pfn = z;
 	unsigned long pfn;
 	struct mem_section *ms;
 	int nid = zone_to_nid(zone);
@@ -951,19 +948,22 @@ int __ref online_pages(unsigned long pfn, unsigned long nr_pages, int online_typ
 	 */
 	zone = page_zone(pfn_to_page(pfn));
 
-	if ((zone_idx(zone) > ZONE_NORMAL || online_type == ONLINE_MOVABLE) &&
+	if ((zone_idx(zone) > ZONE_NORMAL ||
+	    online_type == MMOP_ONLINE_MOVABLE) &&
 	    !can_online_high_movable(zone)) {
 		unlock_memory_hotplug();
 		return -1;
 	}
 
-	if (online_type == ONLINE_KERNEL && zone_idx(zone) == ZONE_MOVABLE) {
+	if (online_type == MMOP_ONLINE_KERNEL &&
+	    zone_idx(zone) == ZONE_MOVABLE) {
 		if (move_pfn_range_left(zone - 1, zone, pfn, pfn + nr_pages)) {
 			unlock_memory_hotplug();
 			return -1;
 		}
 	}
-	if (online_type == ONLINE_MOVABLE && zone_idx(zone) == ZONE_MOVABLE - 1) {
+	if (online_type == MMOP_ONLINE_MOVABLE &&
+	    zone_idx(zone) == ZONE_MOVABLE - 1) {
 		if (move_pfn_range_right(zone, zone + 1, pfn, pfn + nr_pages)) {
 			unlock_memory_hotplug();
 			return -1;
@@ -1770,7 +1770,7 @@ static int walk_memory_range(unsigned long start_pfn, unsigned long end_pfn,
 static int offline_memory_block_cb(struct memory_block *mem, void *arg)
 {
 	int *ret = arg;
-	int error = offline_memory_block(mem);
+	int error = device_offline(&mem->dev);
 
 	if (error != 0 && *ret == 0)
 		*ret = error;
