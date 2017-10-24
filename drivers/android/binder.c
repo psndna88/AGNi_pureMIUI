@@ -40,6 +40,7 @@
 #include <linux/pid_namespace.h>
 #include <linux/security.h>
 #include <linux/ratelimit.h>
+#include <linux/moduleparam.h>
 
 #ifdef CONFIG_ANDROID_BINDER_IPC_32BIT
 #define BINDER_IPC_32BIT 1
@@ -53,6 +54,9 @@ static HLIST_HEAD(binder_devices);
 static struct dentry *binder_debugfs_dir_entry_root;
 static struct dentry *binder_debugfs_dir_entry_proc;
 atomic_t binder_last_id;
+
+bool android_binder_security = true;
+module_param_named(secure_binder, android_binder_security, bool, 0444);
 
 #define BINDER_DEBUG_ENTRY(name) \
 static int binder_##name##_open(struct inode *inode, struct file *file) \
@@ -1668,8 +1672,10 @@ static int binder_translate_binder(struct flat_binder_object *fp,
 				  (u64)node->cookie);
 		return -EINVAL;
 	}
-	if (security_binder_transfer_binder(proc->tsk, target_proc->tsk))
-		return -EPERM;
+	if (android_binder_security) {
+		if (security_binder_transfer_binder(proc->tsk, target_proc->tsk))
+			return -EPERM;
+	}
 
 	ref = binder_get_ref_for_node(target_proc, node);
 	if (!ref)
@@ -1708,8 +1714,10 @@ static int binder_translate_handle(struct flat_binder_object *fp,
 				  proc->pid, thread->pid, fp->handle);
 		return -EINVAL;
 	}
-	if (security_binder_transfer_binder(proc->tsk, target_proc->tsk))
-		return -EPERM;
+	if (android_binder_security) {
+		if (security_binder_transfer_binder(proc->tsk, target_proc->tsk))
+			return -EPERM;
+	}
 
 	if (ref->node->proc == target_proc) {
 		if (fp->hdr.type == BINDER_TYPE_HANDLE)
@@ -1779,10 +1787,12 @@ static int binder_translate_fd(int fd,
 		goto err_fget;
 	}
 
-	ret = security_binder_transfer_file(proc->tsk, target_proc->tsk, file);
-	if (ret < 0) {
-		ret = -EPERM;
-		goto err_security;
+	if (android_binder_security) {
+		ret = security_binder_transfer_file(proc->tsk, target_proc->tsk, file);
+		if (ret < 0) {
+			ret = -EPERM;
+			goto err_security;
+		}
 	}
 
 	target_fd = task_get_unused_fd_flags(target_proc, O_CLOEXEC);
@@ -2004,9 +2014,11 @@ static void binder_transaction(struct binder_proc *proc,
 			return_error = BR_DEAD_REPLY;
 			goto err_dead_binder;
 		}
-		if (security_binder_transaction(proc->tsk, target_proc->tsk) < 0) {
-			return_error = BR_FAILED_REPLY;
-			goto err_invalid_target_handle;
+		if (android_binder_security) {
+			if (security_binder_transaction(proc->tsk, target_proc->tsk) < 0) {
+				return_error = BR_FAILED_REPLY;
+				goto err_invalid_target_handle;
+			}
 		}
 		if (!(tr->flags & TF_ONE_WAY) && thread->transaction_stack) {
 			struct binder_transaction *tmp;
@@ -3304,9 +3316,11 @@ static int binder_ioctl_set_ctx_mgr(struct file *filp)
 		ret = -EBUSY;
 		goto out;
 	}
-	ret = security_binder_set_context_mgr(proc->tsk);
-	if (ret < 0)
-		goto out;
+	if (android_binder_security) {
+		ret = security_binder_set_context_mgr(proc->tsk);
+		if (ret < 0)
+			goto out;
+	}
 	if (uid_valid(context->binder_context_mgr_uid)) {
 		if (!uid_eq(context->binder_context_mgr_uid, curr_euid)) {
 			pr_err("BINDER_SET_CONTEXT_MGR bad uid %d != %d\n",
