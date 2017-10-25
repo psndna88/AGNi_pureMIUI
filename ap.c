@@ -1609,6 +1609,18 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+int sta_cfon_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
+			  struct sigma_cmd *cmd)
+{
+	int status;
+
+	status = cmd_ap_set_wireless(dut, conn, cmd);
+	if (status != 1)
+		return status;
+	return cmd_ap_config_commit(dut, conn, cmd);
+}
+
+
 static int cmd_ap_set_radius(struct sigma_dut *dut, struct sigma_conn *conn,
 			     struct sigma_cmd *cmd)
 {
@@ -6029,6 +6041,10 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		fprintf(f, "owe_transition_ifname=%s\n", ifname);
 	}
 
+	if (dut->program == PROGRAM_OCE) {
+		fprintf(f, "oce=%d\n",
+			dut->dev_role == DEVROLE_STA_CFON ? 2 : 1);
+	}
 	fclose(f);
 	if (dut->use_hostapd_pid_file)
 		kill_hostapd_process_pid(dut);
@@ -6422,7 +6438,7 @@ static void ath_reset_vht_defaults(struct sigma_dut *dut)
 static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 				struct sigma_cmd *cmd)
 {
-	const char *type;
+	const char *type, *program;
 	enum driver_type drv;
 	int i;
 
@@ -6436,7 +6452,11 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 
 	drv = get_driver_type();
-	dut->program = sigma_program_to_enum(get_param(cmd, "PROGRAM"));
+
+	program = get_param(cmd, "program");
+	if (!program)
+		program = get_param(cmd, "prog");
+	dut->program = sigma_program_to_enum(program);
 	dut->device_type = AP_unknown;
 	type = get_param(cmd, "type");
 	if (type && strcasecmp(type, "Testbed") == 0)
@@ -6698,6 +6718,13 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 				"monitor interface");
 
 	return 1;
+}
+
+
+int sta_cfon_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
+			   struct sigma_cmd *cmd)
+{
+	return cmd_ap_reset_default(dut, conn, cmd);
 }
 
 
@@ -7741,6 +7768,13 @@ static int cmd_ap_get_mac_address(struct sigma_dut *dut,
 		  "yet supported");
 	return 0;
 #endif /* __linux__ */
+}
+
+
+int sta_cfon_get_mac_address(struct sigma_dut *dut, struct sigma_conn *conn,
+			     struct sigma_cmd *cmd)
+{
+	return cmd_ap_get_mac_address(dut, conn, cmd);
 }
 
 

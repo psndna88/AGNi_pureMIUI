@@ -616,6 +616,7 @@ struct sigma_dut {
 		DEVROLE_UNKNOWN = 0,
 		DEVROLE_STA,
 		DEVROLE_PCP,
+		DEVROLE_STA_CFON
 	} dev_role;
 
 	const char *version;
@@ -700,6 +701,12 @@ int cmd_ap_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 		      struct sigma_cmd *cmd);
 int cmd_wlantest_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 			    struct sigma_cmd *cmd);
+int sta_cfon_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
+			  struct sigma_cmd *cmd);
+int sta_cfon_get_mac_address(struct sigma_dut *dut, struct sigma_conn *conn,
+			     struct sigma_cmd *cmd);
+int sta_cfon_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
+			   struct sigma_cmd *cmd);
 
 enum driver_type {
 	DRIVER_NOT_SET,

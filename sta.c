@@ -1102,6 +1102,9 @@ static int cmd_sta_get_mac_address(struct sigma_dut *dut,
 	/* const char *intf = get_param(cmd, "Interface"); */
 	char addr[20], resp[50];
 
+	if (dut->dev_role == DEVROLE_STA_CFON)
+		return sta_cfon_get_mac_address(dut, conn, cmd);
+
 	if (get_wpa_status(get_station_ifname(), "address", addr, sizeof(addr))
 	    < 0)
 		return -2;
@@ -4991,6 +4994,7 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 	const char *intf = get_param(cmd, "Interface");
 	const char *type;
 	const char *program = get_param(cmd, "program");
+	const char *dev_role = get_param(cmd, "DevRole");
 
 	if (!program)
 		program = get_param(cmd, "prog");
@@ -5137,6 +5141,11 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 
 	if (dut->program == PROGRAM_OCE)
 		wpa_command(intf, "SET oce 1");
+
+	if (dev_role && strcasecmp(dev_role, "STA-CFON") == 0) {
+		dut->dev_role = DEVROLE_STA_CFON;
+		return sta_cfon_reset_default(dut, conn, cmd);
+	}
 
 	if (dut->program != PROGRAM_VHT)
 		return cmd_sta_p2p_reset(dut, conn, cmd);
@@ -5576,6 +5585,22 @@ static int sta_set_wireless_60g(struct sigma_dut *dut,
 }
 
 
+static int sta_set_wireless_oce(struct sigma_dut *dut, struct sigma_conn *conn,
+				struct sigma_cmd *cmd)
+{
+	int status;
+	const char *intf = get_param(cmd, "Interface");
+	const char *val = get_param(cmd, "DevRole");
+
+	if (val && strcasecmp(val, "STA-CFON") == 0) {
+		status = sta_cfon_set_wireless(dut, conn, cmd);
+		if (status)
+			return status;
+	}
+	return cmd_sta_set_wireless_common(intf, dut, conn, cmd);
+}
+
+
 static int cmd_sta_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 				struct sigma_cmd *cmd)
 {
@@ -5589,6 +5614,8 @@ static int cmd_sta_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 			return cmd_sta_set_wireless_vht(dut, conn, cmd);
 		if (strcasecmp(val, "60ghz") == 0)
 			return sta_set_wireless_60g(dut, conn, cmd);
+		if (strcasecmp(val, "OCE") == 0)
+			return sta_set_wireless_oce(dut, conn, cmd);
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "ErrorCode,Program value not supported");
 	} else {
