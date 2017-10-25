@@ -35,18 +35,6 @@ config PDESIRE_WAKELOCK_DYNAMIC_LIMITER
 	  sometimes pushes too many wakelocks (which is unneccesarry)
 	  Tristan Marsell <tristan.marsell@t-online.de>
 
-config PDESIRE_WAKELOCK_LIMIT
-	int "wakelock limit"
-	range 50 200
-	depends on PDESIRE_WAKELOCK_DYNAMIC_LIMITER
-	default 100
-
-config PDESIRE_WAKELOCK_LIMIT_RANGE
-	int "wakelock limit range"
-	range 40 100
-	depends on PDESIRE_WAKELOCK_DYNAMIC_LIMITER
-	default 60
-
 config HIBERNATE_CALLBACKS
 	bool
 
