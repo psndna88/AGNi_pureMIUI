@@ -2873,6 +2873,32 @@ static int cmd_sta_preset_testparameters_hs2_r2(struct sigma_dut *dut,
 }
 
 
+static int cmd_sta_preset_testparameters_oce(struct sigma_dut *dut,
+					     struct sigma_conn *conn,
+					     const char *intf,
+					     struct sigma_cmd *cmd)
+{
+	const char *val;
+
+	val = get_param(cmd, "OCESupport");
+	if (val && strcasecmp(val, "Disable") == 0) {
+		if (wpa_command(intf, "SET oce 0") < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to disable OCE");
+			return 0;
+		}
+	} else if (val && strcasecmp(val, "Enable") == 0) {
+		if (wpa_command(intf, "SET oce 1") < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to enable OCE");
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+
 static void ath_sta_set_noack(struct sigma_dut *dut, const char *intf,
 			      const char *val)
 {
@@ -3379,6 +3405,9 @@ static int cmd_sta_preset_testparameters(struct sigma_dut *dut,
 
 		return 1;
 	}
+
+	if (val && strcasecmp(val, "OCE") == 0)
+		return cmd_sta_preset_testparameters_oce(dut, conn, intf, cmd);
 
 #if 0
 	val = get_param(cmd, "Supplicant");
@@ -5079,6 +5108,9 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 	dut->dpp_peer_uri = NULL;
 
 	wpa_command(intf, "VENDOR_ELEM_REMOVE 13 *");
+
+	if (dut->program == PROGRAM_OCE)
+		wpa_command(intf, "SET oce 1");
 
 	if (dut->program != PROGRAM_VHT)
 		return cmd_sta_p2p_reset(dut, conn, cmd);

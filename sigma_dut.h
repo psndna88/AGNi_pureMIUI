@@ -599,6 +599,7 @@ struct sigma_dut {
 		PROGRAM_MBO,
 		PROGRAM_IOTLP,
 		PROGRAM_DPP,
+		PROGRAM_OCE,
 	} program;
 
 	enum device_type {
