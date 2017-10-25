@@ -27,6 +27,7 @@
 #include <linux/threads.h>
 #include <linux/cpumask.h>
 #include <linux/seqlock.h>
+#include <linux/irq_work.h>
 
 /*
  * Define shape of hierarchy based on NR_CPUS, CONFIG_RCU_FANOUT, and
@@ -163,11 +164,6 @@ struct rcu_node {
 				/*  queued on this rcu_node structure that */
 				/*  are blocking the current grace period, */
 				/*  there can be no such task. */
-	struct completion boost_completion;
-				/* Used to ensure that the rt_mutex used */
-				/*  to carry out the boosting is fully */
-				/*  released with no future boostee accesses */
-				/*  before that rt_mutex is re-initialized. */
 	unsigned long boost_time;
 				/* When to start boosting (jiffies). */
 	struct task_struct *boost_kthread_task;
@@ -313,7 +309,6 @@ struct rcu_data {
 	unsigned long n_rp_cpu_needs_gp;
 	unsigned long n_rp_gp_completed;
 	unsigned long n_rp_gp_started;
-	unsigned long n_rp_nocb_defer_wakeup;
 	unsigned long n_rp_need_nothing;
 
 	/* 6) _rcu_barrier() and OOM callbacks. */
@@ -328,29 +323,10 @@ struct rcu_data {
 	struct rcu_head **nocb_tail;
 	atomic_long_t nocb_q_count;	/* # CBs waiting for kthread */
 	atomic_long_t nocb_q_count_lazy; /*  (approximate). */
-	struct rcu_head *nocb_follower_head; /* CBs ready to invoke. */
-	struct rcu_head **nocb_follower_tail;
-	atomic_long_t nocb_follower_count; /* # CBs ready to invoke. */
-	atomic_long_t nocb_follower_count_lazy; /*  (approximate). */
 	int nocb_p_count;		/* # CBs being invoked by kthread */
 	int nocb_p_count_lazy;		/*  (approximate). */
 	wait_queue_head_t nocb_wq;	/* For nocb kthreads to sleep on. */
 	struct task_struct *nocb_kthread;
-	int nocb_defer_wakeup;		/* Defer wakeup of nocb_kthread. */
-
-	/* The following fields are used by the leader, hence own cacheline. */
-	struct rcu_head *nocb_gp_head ____cacheline_internodealigned_in_smp;
-					/* CBs waiting for GP. */
-	struct rcu_head **nocb_gp_tail;
-	long nocb_gp_count;
-	long nocb_gp_count_lazy;
-	bool nocb_leader_sleep;		/* Is the nocb leader thread asleep? */
-	struct rcu_data *nocb_next_follower;
-					/* Next follower in wakeup chain. */
-
-	/* The following fields are used by the follower, hence new cachline. */
-	struct rcu_data *nocb_leader ____cacheline_internodealigned_in_smp;
-					/* Leader CPU takes GP-end wakeups. */
 #endif /* #ifdef CONFIG_RCU_NOCB_CPU */
 
 	/* 8) RCU CPU stall data. */
@@ -370,11 +346,6 @@ struct rcu_data {
 #define RCU_SIGNAL_INIT		RCU_SAVE_DYNTICK
 
 #define RCU_JIFFIES_TILL_FORCE_QS	 3	/* for rsp->jiffies_force_qs */
-
-/* Values for nocb_defer_wakeup field in struct rcu_data. */
-#define RCU_NOGP_WAKE_NOT	0
-#define RCU_NOGP_WAKE		1
-#define RCU_NOGP_WAKE_FORCE	2
 
 #define RCU_STALL_RAT_DELAY		2	/* Allow other CPUs time */
 						/*  to take at least one */
@@ -553,7 +524,6 @@ static void rcu_preempt_do_callbacks(void);
 static int __cpuinit rcu_spawn_one_boost_kthread(struct rcu_state *rsp,
 						 struct rcu_node *rnp);
 #endif /* #ifdef CONFIG_RCU_BOOST */
-static void __init rcu_spawn_boost_kthreads(void);
 static void __cpuinit rcu_prepare_kthreads(int cpu);
 static void rcu_cleanup_after_idle(int cpu);
 static void rcu_prepare_for_idle(int cpu);
@@ -567,20 +537,12 @@ static void rcu_nocb_gp_set(struct rcu_node *rnp, int nrq);
 static void rcu_nocb_gp_cleanup(struct rcu_state *rsp, struct rcu_node *rnp);
 static void rcu_init_one_nocb(struct rcu_node *rnp);
 static bool __call_rcu_nocb(struct rcu_data *rdp, struct rcu_head *rhp,
-			    bool lazy, unsigned long flags);
+			    bool lazy);
 static bool rcu_nocb_adopt_orphan_cbs(struct rcu_state *rsp,
-				      struct rcu_data *rdp,
-				      unsigned long flags);
-static int rcu_nocb_need_deferred_wakeup(struct rcu_data *rdp);
-static void do_nocb_deferred_wakeup(struct rcu_data *rdp);
+				      struct rcu_data *rdp);
 static void rcu_boot_init_nocb_percpu_data(struct rcu_data *rdp);
+static void rcu_spawn_nocb_kthreads(struct rcu_state *rsp);
 static void rcu_kick_nohz_cpu(int cpu);
-static void rcu_spawn_all_nocb_kthreads(int cpu);
-static void __init rcu_spawn_nocb_kthreads(void);
-#ifdef CONFIG_RCU_NOCB_CPU
-static void __init rcu_organize_nocb_kthreads(struct rcu_state *rsp);
-#endif /* #ifdef CONFIG_RCU_NOCB_CPU */
-static void __maybe_unused rcu_kick_nohz_cpu(int cpu);
 static bool init_nocb_callback_list(struct rcu_data *rdp);
 static void rcu_bind_gp_kthread(void);
 #endif /* #ifndef RCU_TREE_NONCORE */
@@ -590,14 +552,8 @@ static void rcu_bind_gp_kthread(void);
 /* Sum up queue lengths for tracing. */
 static inline void rcu_nocb_q_lengths(struct rcu_data *rdp, long *ql, long *qll)
 {
-	*ql = atomic_long_read(&rdp->nocb_q_count) +
-	      rdp->nocb_p_count +
-	      atomic_long_read(&rdp->nocb_follower_count) +
-	      rdp->nocb_p_count + rdp->nocb_gp_count;
-	*qll = atomic_long_read(&rdp->nocb_q_count_lazy) +
-	       rdp->nocb_p_count_lazy +
-	       atomic_long_read(&rdp->nocb_follower_count_lazy) +
-	       rdp->nocb_p_count_lazy + rdp->nocb_gp_count_lazy;
+	*ql = atomic_long_read(&rdp->nocb_q_count) + rdp->nocb_p_count;
+	*qll = atomic_long_read(&rdp->nocb_q_count_lazy) + rdp->nocb_p_count_lazy;
 }
 #else /* #ifdef CONFIG_RCU_NOCB_CPU */
 static inline void rcu_nocb_q_lengths(struct rcu_data *rdp, long *ql, long *qll)
