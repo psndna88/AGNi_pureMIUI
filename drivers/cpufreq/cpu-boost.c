@@ -143,7 +143,7 @@ static int boost_adjust_notify(struct notifier_block *nb, unsigned long val,
 	if (!ib_min)
 		return NOTIFY_OK;
 
-	min = min(min, policy->max);
+	min = min(ib_min, policy->max);
 
 	pr_debug("CPU%u policy min before boost: %u kHz\n",
 		 cpu, policy->min);
@@ -240,20 +240,20 @@ static void cpuboost_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
 	u64 now;
+	unsigned int min_interval;
 
 #ifdef CONFIG_STATE_NOTIFIER
 	if (state_suspended)
 		return;
 #endif
 
-	if (!input_boost_enabled)
+	if (!input_boost_enabled || work_pending(&input_boost_work))
 		return;
 
 	now = ktime_to_us(ktime_get());
-	if (now - last_input_time < (input_boost_ms * USEC_PER_MSEC))
-		return;
+	min_interval = max(min_input_interval, input_boost_ms);
 
-	if (work_pending(&input_boost_work))
+	if (now - last_input_time < min_interval * USEC_PER_MSEC)
 		return;
 
 	pr_debug("Input boost for input event.\n");
