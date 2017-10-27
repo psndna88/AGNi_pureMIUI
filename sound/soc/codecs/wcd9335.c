@@ -74,7 +74,8 @@ struct sound_control {
 #define WCD9335_FRAC_RATES_MASK (SNDRV_PCM_RATE_44100)
 
 #define WCD9335_MIX_RATES_MASK (SNDRV_PCM_RATE_48000 |\
-				SNDRV_PCM_RATE_96000 | SNDRV_PCM_RATE_192000)
+				SNDRV_PCM_RATE_96000 | SNDRV_PCM_RATE_192000 |\
+			    SNDRV_PCM_RATE_384000)
 
 #define TASHA_FORMATS_S16_S24_LE (SNDRV_PCM_FMTBIT_S16_LE | \
 				  SNDRV_PCM_FMTBIT_S24_LE | \
@@ -175,12 +176,12 @@ enum tasha_sido_voltage {
 	SIDO_VOLTAGE_NOMINAL_MV = 1100,
 };
 
-static int pdesireaudio_uhqa_mode = 1;
+static int pdesireaudio_uhqa_mode = 0;
 module_param(pdesireaudio_uhqa_mode, int,
 		S_IRUGO | S_IWUSR | S_IWGRP);
 MODULE_PARM_DESC(pdesireaudio_uhqa_mode, "enable/disable PDesireAudio UHQA Mode");
 
-static int pdesireaudio_class_ab_mode = 1;
+static int pdesireaudio_class_ab_mode = 0;
 module_param(pdesireaudio_class_ab_mode, int,
 		S_IRUGO | S_IWUSR | S_IWGRP);
 MODULE_PARM_DESC(pdesireaudio_class_ab_mode, "enable/disable PDesireAudio Class AB Mode");
