@@ -3,7 +3,7 @@
 # We use an ordered list of conditional defaults to pick the appropriate
 # setting - SPI can't be modular so that case doesn't need to be covered.
 config SND_SOC_I2C_AND_SPI
-	tristate
+	tristate "SND_SOC_I2C_AND_SPI"
 	default m if I2C=m
 	default y if I2C=y
 	default y if SPI_MASTER=y
@@ -367,14 +367,11 @@ config SND_SOC_WCD9306
 config SND_SOC_WCD9330
         tristate
 
-config SND_SOC_WSA881X
-        tristate
-
 config SND_SOC_WCD9335
         tristate
 
 config SND_SOC_WSA881X
-        tristate
+    tristate "SND_SOC_WSA881X"
 	select REGMAP_SWR
 
 config SND_SOC_WCD9XXX
@@ -386,7 +383,7 @@ config SND_SOC_MSM8X10_WCD
 	tristate
 
 config SND_SOC_MSM8X16_WCD
-	tristate
+	tristate "SND_SOC_MSM8X16_WCD"
 
 config SND_SOC_WCD_CPE
 	tristate
@@ -396,20 +393,20 @@ config SND_SOC_MSM8909_WCD
 	tristate
 
 config AUDIO_EXT_CLK
-	tristate
+	tristate "AUDIO_EXT_CLK"
 	default y if SND_SOC_WCD9335=y || SND_SOC_WCD9330=y || SND_SOC_MSM8X16_WCD=y
 
 config SND_SOC_WCD_MBHC
-	tristate
+	tristate "SND_SOC_WCD_MBHC"
 	default y if SND_SOC_MSM8909_WCD=y || SND_SOC_MSM8X16_WCD=y
 
 config SND_SOC_WCD_DSP_MGR
-	tristate
+	tristate "SND_SOC_WCD_DSP_MGR"
 	default y if SND_SOC_MSM8X16_WCD=y
 
 config SND_SOC_WCD_SPI
+	tristate "SND_SOC_WCD_SPI"
 	depends on CONFIG_SPI
-	tristate
 
 config SND_SOC_WL1273
 	tristate
@@ -578,7 +575,7 @@ config SND_SOC_TPA6130A2
 	tristate
 
 config SND_SOC_MSM_STUB
-	tristate
+	tristate "SND_SOC_MSM_STUB"
 
 config SND_SOC_MSM_HDMI_CODEC_RX
 	bool "HDMI Audio Playback"
