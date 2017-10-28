@@ -65,6 +65,7 @@ int wcd_fake_removal_min_period_ms = 100;
 int fake_rem_retry_attempts = 10;
 int wcd_mbhc_spl_hs_cnt = 1;
 int wcd_mbhc_btn_press_compl_timeout_ms = 50;
+uint32_t impedence_hph_left, impedence_hph_right;
 module_param_named(hs_detect_plug_time_ms, hs_detect_plug_time_ms, int, 0664);
 module_param_named(mbhc_button_press_threshold_min_ms, mbhc_button_press_threshold_min, int, 0664);
 module_param_named(wcd_fake_removal_min_period_ms, wcd_fake_removal_min_period_ms, int, 0664);
@@ -72,6 +73,8 @@ module_param_named(fake_remove_retry_attempts, fake_rem_retry_attempts, int, 066
 module_param_named(special_hs_detect_time_ms, special_hs_detect_time_ms, int, 0664);
 module_param_named(wcd_mbhc_spl_hs_cnt, wcd_mbhc_spl_hs_cnt, int, 0664);
 module_param_named(wcd_mbhc_btn_press_compl_timeout_ms, wcd_mbhc_btn_press_compl_timeout_ms, int, 0664);
+module_param(impedence_hph_left, int, S_IRUGO);
+module_param(impedence_hph_right, int, S_IRUGO);
 
 enum wcd_mbhc_cs_mb_en_flag {
 	WCD_MBHC_EN_CS = 0,
@@ -87,7 +90,7 @@ static struct switch_dev accdet_data;
 static void wcd_mbhc_jack_report(struct wcd_mbhc *mbhc,
 				struct snd_soc_jack *jack, int status, int mask)
 {
-	printk("[%s]===========status[%d]type[%d]\n", __FUNCTION__, status, jack->jack->type);
+	pr_debug("[%s]==> status[%d]type[%d]\n", __FUNCTION__, status, jack->jack->type);
 	if (!status && (jack->jack->type&WCD_MBHC_JACK_MASK)) {
 		switch_set_state(&accdet_data, 0);
 	} else if (jack->jack->type&WCD_MBHC_JACK_MASK) {
@@ -637,6 +640,8 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 		hphlocp_off_report(mbhc, SND_JACK_OC_HPHL);
 		mbhc->current_plug = MBHC_PLUG_TYPE_NONE;
 		jack_connected = false;
+		impedence_hph_left = 0;
+		impedence_hph_right = 0;
 	} else {
 		/*
 		 * Report removal of current jack type.
@@ -675,6 +680,8 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 			wcd_mbhc_jack_report(mbhc, &mbhc->headset_jack,
 					    0, WCD_MBHC_JACK_MASK);
 			jack_connected = false;
+			impedence_hph_left = 0;
+			impedence_hph_right = 0;
 
 			if (mbhc->hph_status == SND_JACK_LINEOUT) {
 
@@ -725,6 +732,8 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 						&mbhc->zl, &mbhc->zr);
 				pr_info("%s: impedance L:%d R:%d\n", __func__,
 					 mbhc->zl, mbhc->zr);
+				impedence_hph_left = mbhc->zl;
+				impedence_hph_right = mbhc->zr;
 			} else {
 				pr_debug("%s: skip impedance detection\n",
 					__func__);
@@ -767,6 +776,8 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 		if (!skip_report) {
 			pr_info("%s: Reporting insertion %d(%x)\n", __func__,
 				 jack_type, mbhc->hph_status);
+			pr_info("%s: Reporting plug type: %x\n", __func__,
+				 mbhc->current_plug);
 			wcd_mbhc_jack_report(mbhc, &mbhc->headset_jack,
 					    (mbhc->hph_status |
 						SND_JACK_MECHANICAL),
