@@ -32,7 +32,7 @@
 		};
 
 		cdc-reset-line {
-			qcom,pins = <&gp 68>;
+			qcom,pins = <&gp 133>;
 			qcom,num-grp-pins = <1>;
 			qcom,pin-func = <0>;
 			label = "cdc-reset-line";

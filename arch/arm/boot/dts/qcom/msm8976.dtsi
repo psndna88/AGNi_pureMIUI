@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2016 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -138,6 +139,14 @@
 			linux,memory-limit = <0xffffffff>;
 			reg = <0x0 0x0 0x0 0x400000>;
 			label = "adsp_mem";
+		};
+
+		tzapp_mem: tzapp_region@0 {
+			linux,reserve-contiguous-region;
+			linux,reserve-region;
+			linux,remove-completely;
+			reg = <0 0x8DD00000 0 0x1900000>;
+			label = "tzapp_mem";
 		};
 	};
 };
@@ -2929,10 +2938,10 @@
 		status = "ok";
 		qcom,mode = <1>;
 		qcom,pull = <5>;
-		qcom,vin-sel = <0>;
+		qcom,vin-sel = <3>;
 		qcom,src-sel = <2>;
 		qcom,master-en = <1>;
-		qcom,out-strength = <2>;
+		qcom,out-strength = <3>;
 	};
 	gpio@c600 {
 		status = "ok";
@@ -2949,6 +2958,16 @@
 		qcom,src-sel = <2>;
 		qcom,master-en = <1>;
 		status = "okay";
+	};
+};
+&pmi8950_gpios {
+	gpio@c000 {
+			status = "okay";
+			qcom,mode = <1>;		/*DIGITAL OUT*/
+			qcom,pull = <5>;		/*NO PULL*/
+			qcom,src-sel = <6>; 		/*DTEST1 OUT*/
+			qcom,master-en = <1>;		/*ENABLE GPIO*/
+			qcom,out-strength = <2>;	/*Medium strength current*/
 	};
 };
 

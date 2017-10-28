@@ -185,6 +185,7 @@
 	vdd-supply = <&pm8950_l11>;
 	qcom,vdd-voltage-level = <2950000 2950000>;
 	qcom,vdd-current-level = <15000 800000>;
+	qcom,vdd-is-sd-vdd;
 
 	vdd-io-supply = <&pm8950_l12>;
 	qcom,vdd-io-voltage-level = <1800000 2950000>;

@@ -164,9 +164,9 @@
 			vcc_pon-supply = <&pon_perph_reg>;
 			qcom,play-mode = "direct";
 			qcom,wave-play-rate-us = <5263>;
-			qcom,actuator-type = "lra";
+			qcom,actuator-type = "erm";
 			qcom,wave-shape = "square";
-			qcom,vmax-mv = <2000>;
+			qcom,vmax-mv = <2800>;
 			qcom,ilim-ma = <800>;
 			qcom,sc-deb-cycles = <8>;
 			qcom,int-pwm-freq-khz = <505>;
@@ -210,6 +210,7 @@
 	vdd-supply = <&pm8950_l11>;
 	qcom,vdd-voltage-level = <2950000 2950000>;
 	qcom,vdd-current-level = <15000 800000>;
+	qcom,vdd-is-sd-vdd;
 
 	vdd-io-supply = <&pm8950_l12>;
 	qcom,vdd-io-voltage-level = <1800000 2950000>;
