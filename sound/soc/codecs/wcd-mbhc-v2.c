@@ -730,10 +730,22 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 			if (!skip_impdet_retry) {
 				mbhc->mbhc_cb->compute_impedance(mbhc,
 						&mbhc->zl, &mbhc->zr);
-				pr_info("%s: impedance L:%d R:%d\n", __func__,
+				pr_debug("%s: measured impedance L:%d R:%d\n", __func__,
 					 mbhc->zl, mbhc->zr);
 				impedence_hph_left = mbhc->zl;
 				impedence_hph_right = mbhc->zr;
+				/* handle infinite impedance reporting in case of
+				 * extension cable */
+				if ((impedence_hph_left > 500) || (impedence_hph_right > 500)) {
+					impedence_hph_left = 0;
+					impedence_hph_right = 0;
+				}
+				/* impedance report only for headphone/headset */
+				if ((mbhc->current_plug == MBHC_PLUG_TYPE_HEADPHONE) ||
+					(mbhc->current_plug == MBHC_PLUG_TYPE_HEADSET)) {
+					pr_info("AGNi=> Impedance (Z) = L:%dΩ R:%dΩ \n",
+						impedence_hph_left, impedence_hph_right);
+				}
 			} else {
 				pr_debug("%s: skip impedance detection\n",
 					__func__);
