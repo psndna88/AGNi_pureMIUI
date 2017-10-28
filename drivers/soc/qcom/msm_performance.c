@@ -1055,14 +1055,9 @@ device_param_cb(iowait_ceiling_pct, &param_ops_iowait_ceiling_pct, NULL, 0644);
 
 static int set_workload_detect(const char *buf, const struct kernel_param *kp)
 {
-#if 0
 	unsigned int val, i;
 	struct cluster *i_cl;
 	unsigned long flags;
-	int msm_perf = strcmp(current->comm, "perfd");
-
-       if (msm_perf == 0)
-               return -EINVAL;
 
 	if (!clusters_inited)
 		return -EINVAL;
@@ -1101,8 +1096,6 @@ static int set_workload_detect(const char *buf, const struct kernel_param *kp)
 	}
 
 	wake_up_process(notify_thread);
-#endif
-
 	return 0;
 }
 
