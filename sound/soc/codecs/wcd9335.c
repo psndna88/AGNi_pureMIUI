@@ -17,6 +17,7 @@
 #include <linux/firmware.h>
 #include <linux/slab.h>
 #include <linux/platform_device.h>
+#include <linux/jack_state.h>
 #include <linux/device.h>
 #include <linux/printk.h>
 #include <linux/ratelimit.h>
@@ -185,6 +186,9 @@ static int pdesireaudio_class_ab_mode = 0;
 module_param(pdesireaudio_class_ab_mode, int,
 		S_IRUGO | S_IWUSR | S_IWGRP);
 MODULE_PARM_DESC(pdesireaudio_class_ab_mode, "enable/disable PDesireAudio Class AB Mode");
+
+int sound_control_spk_priv = 0;
+int sound_control_spk_gain = 0;
 
 static int dig_core_collapse_enable = 1;
 module_param(dig_core_collapse_enable, int,
@@ -4212,12 +4216,14 @@ static int tasha_codec_hphr_dac_event(struct snd_soc_dapm_widget *w,
 					 WCD_CLSH_STATE_HPHR,
 					 ((hph_mode == CLS_H_LOHIFI) ?
 					   CLS_H_HIFI : hph_mode));
+			pr_info("%s: SND_SOC_DAPM_PRE_PMU CLS_H_HIFI mode \n", __func__);
 		} else {
 			wcd_clsh_fsm(codec, &tasha->clsh_d,
 					 WCD_CLSH_EVENT_PRE_DAC,
 					 WCD_CLSH_STATE_HPHR,
 					 ((hph_mode == CLS_H_LOHIFI) ?
 					   CLS_AB : hph_mode));
+			pr_info("%s: SND_SOC_DAPM_PRE_PMU PDesire Audio forced CLS_AB mode \n", __func__);
 		}
 
 		tasha_codec_hph_mode_config(codec, event, hph_mode);
@@ -4257,12 +4263,14 @@ static int tasha_codec_hphr_dac_event(struct snd_soc_dapm_widget *w,
 					 WCD_CLSH_STATE_HPHR,
 					 ((hph_mode == CLS_H_LOHIFI) ?
 					   CLS_H_HIFI : hph_mode));
+			pr_info("%s: SND_SOC_DAPM_POST_PMD CLS_H_HIFI mode \n", __func__);
 		} else {
 			wcd_clsh_fsm(codec, &tasha->clsh_d,
 					 WCD_CLSH_EVENT_POST_PA,
 					 WCD_CLSH_STATE_HPHR,
 					 ((hph_mode == CLS_H_LOHIFI) ?
 					   CLS_AB : hph_mode));
+			pr_info("%s: SND_SOC_DAPM_POST_PMD PDesire Audio forced CLS_AB mode \n", __func__);
 		}
 		break;
 	};
@@ -4308,12 +4316,14 @@ static int tasha_codec_hphl_dac_event(struct snd_soc_dapm_widget *w,
 					 WCD_CLSH_STATE_HPHL,
 					 ((hph_mode == CLS_H_LOHIFI) ?
 					   CLS_H_HIFI : hph_mode));
+			pr_info("%s: SND_SOC_DAPM_PRE_PMU CLS_H_HIFI mode \n", __func__);
 		} else {
 			wcd_clsh_fsm(codec, &tasha->clsh_d,
 					 WCD_CLSH_EVENT_PRE_DAC,
 					 WCD_CLSH_STATE_HPHL,
 					 ((hph_mode == CLS_H_LOHIFI) ?
 					   CLS_AB : hph_mode));
+			pr_info("%s: SND_SOC_DAPM_PRE_PMU PDesire Audio forced CLS_AB mode \n", __func__);
 		}
 
 		tasha_codec_hph_mode_config(codec, event, hph_mode);
@@ -4352,12 +4362,14 @@ static int tasha_codec_hphl_dac_event(struct snd_soc_dapm_widget *w,
 					 WCD_CLSH_STATE_HPHL,
 					 ((hph_mode == CLS_H_LOHIFI) ?
 					   CLS_H_HIFI : hph_mode));
+			pr_info("%s: SND_SOC_DAPM_POST_PMD CLS_H_HIFI mode \n", __func__);
 		} else {
 			wcd_clsh_fsm(codec, &tasha->clsh_d,
 			     WCD_CLSH_EVENT_POST_PA,
 			     WCD_CLSH_STATE_HPHL,
 				 ((hph_mode == CLS_H_LOHIFI) ?
 				   CLS_AB : hph_mode));
+			pr_info("%s: SND_SOC_DAPM_POST_PMD PDesire Audio forced CLS_AB mode \n", __func__);
 		}
 
 		break;
@@ -12728,6 +12740,7 @@ static ssize_t speaker_gain_store(struct kobject *kobj,
 	if (input > 20)
 		input = 20;
 
+	sound_control_spk_gain = input;
 	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_RX6_RX_VOL_CTL, input);
 	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_RX6_RX_VOL_MIX_CTL, input);
 
@@ -12742,6 +12755,52 @@ static struct kobj_attribute speaker_gain_attribute =
 	__ATTR(speaker_gain, 0664,
 		speaker_gain_show,
 		speaker_gain_store);
+
+static ssize_t speaker_privacy_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return snprintf(buf, PAGE_SIZE, "%d\n", sound_control_spk_priv);
+}
+
+void spk_priv_enable(void)
+{
+	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_RX6_RX_VOL_CTL, -84);
+	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_RX6_RX_VOL_MIX_CTL, -84);
+	pr_info("Sound Control: speaker private mode in effect, speaker muted");
+}
+
+void spk_priv_disable(void)
+{
+	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_RX6_RX_VOL_CTL, sound_control_spk_gain);
+	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_RX6_RX_VOL_MIX_CTL, sound_control_spk_gain);
+	pr_info("Sound Control: speaker private mode disabled");
+}
+
+static ssize_t speaker_privacy_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int input;
+
+	sscanf(buf, "%d", &input);
+
+	if (input < 0 || input > 1)
+		input = 0;
+
+	sound_control_spk_priv = input;
+
+	if ((jack_detect()) && (sound_control_spk_priv)) {
+		spk_priv_enable();
+	} else {
+		spk_priv_disable();
+	}
+
+	return count;
+}
+
+static struct kobj_attribute speaker_privacy_attribute =
+	__ATTR(speaker_privacy, 0664,
+		speaker_privacy_show,
+		speaker_privacy_store);
 
 static ssize_t earpiece_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -12783,6 +12842,7 @@ static struct attribute *sound_control_attrs[] = {
 		&mic_gain_attribute.attr,
 		&ext_mic_gain_attribute.attr,
 		&speaker_gain_attribute.attr,
+		&speaker_privacy_attribute.attr,
 		&earpiece_gain_attribute.attr,
 		NULL,
 };

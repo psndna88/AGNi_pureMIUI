@@ -160,3 +160,7 @@ extern int tasha_codec_enable_standalone_micbias(struct snd_soc_codec *codec,
 extern int tasha_set_spkr_mode(struct snd_soc_codec *codec, int mode);
 extern int tasha_set_spkr_gain_offset(struct snd_soc_codec *codec, int offset);
 #endif
+extern int sound_control_spk_priv;
+extern struct snd_soc_codec *codec;
+extern void spk_priv_enable(void);
+extern void spk_priv_disable(void);
