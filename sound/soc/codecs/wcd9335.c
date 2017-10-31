@@ -176,7 +176,7 @@ enum tasha_sido_voltage {
 	SIDO_VOLTAGE_NOMINAL_MV = 1100,
 };
 
-static int pdesireaudio_uhqa_mode = 0;
+static int pdesireaudio_uhqa_mode = 1;
 module_param(pdesireaudio_uhqa_mode, int,
 		S_IRUGO | S_IWUSR | S_IWGRP);
 MODULE_PARM_DESC(pdesireaudio_uhqa_mode, "enable/disable PDesireAudio UHQA Mode");
@@ -3711,7 +3711,7 @@ static void tasha_codec_hph_post_pa_config(struct tasha_priv *tasha,
 			if (!pdesireaudio_uhqa_mode)
 				scale_val = 0x1;
 			else
-				scale_val = 0x3;
+				scale_val = 0x2;
 			break;
 		}
 		break;
