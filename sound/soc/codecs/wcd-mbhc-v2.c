@@ -762,7 +762,7 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 				/* impedance report only for headphone/headset */
 				if ((mbhc->current_plug == MBHC_PLUG_TYPE_HEADPHONE) ||
 					(mbhc->current_plug == MBHC_PLUG_TYPE_HEADSET)) {
-					pr_info("AGNi=> Impedance (Z) = L:%dΩ R:%dΩ \n",
+					pr_info("mbhc: AGNi=> Impedance (Z) = L:%dΩ R:%dΩ \n",
 						impedence_hph_left, impedence_hph_right);
 				}
 			} else {
