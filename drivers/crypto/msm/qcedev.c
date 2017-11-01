@@ -228,7 +228,7 @@ static int qcedev_release(struct inode *inode, struct file *file)
 	handle =  file->private_data;
 	podev =  handle->cntl;
 	if (podev != NULL && podev->magic != QCEDEV_MAGIC) {
-		pr_err("%s: invalid handle %p\n",
+		pr_err("%s: invalid handle %pK\n",
 					__func__, podev);
 	}
 	kzfree(handle);
@@ -300,8 +300,6 @@ void qcedev_sha_req_cb(void *cookie, unsigned char *digest,
 	if (authdata) {
 		handle->sha_ctxt.auth_data[0] = auth32[0];
 		handle->sha_ctxt.auth_data[1] = auth32[1];
-		handle->sha_ctxt.auth_data[2] = auth32[2];
-		handle->sha_ctxt.auth_data[3] = auth32[3];
 	}
 
 	tasklet_schedule(&pdev->done_tasklet);
@@ -1248,7 +1246,7 @@ static int qcedev_vbuf_ablk_cipher(struct qcedev_async_req *areq,
 	k_buf_src = kmalloc(QCE_MAX_OPER_DATA + CACHE_LINE_SIZE * 2,
 				GFP_KERNEL);
 	if (k_buf_src == NULL) {
-		pr_err("%s: Can't Allocate memory: k_buf_src 0x%lx\n",
+		pr_debug("%s: Can't Allocate memory: k_buf_src 0x%lx\n",
 					__func__, (uintptr_t)k_buf_src);
 		return -ENOMEM;
 	}
@@ -1640,7 +1638,7 @@ long qcedev_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 	podev =  handle->cntl;
 	qcedev_areq.handle = handle;
 	if (podev == NULL || podev->magic != QCEDEV_MAGIC) {
-		pr_err("%s: invalid handle %p\n",
+		pr_err("%s: invalid handle %pK\n",
 			__func__, podev);
 		return -ENOENT;
 	}
