@@ -1019,7 +1019,7 @@ static void hdd_SendNewAPChannelInfo(struct net_device *dev, hdd_adapter_t *pAda
     if (descriptor == NULL)
     {
         hddLog(LOGE,
-            "%s: pCsrRoamInfo->pBssDesc=%p",
+            "%s: pCsrRoamInfo->pBssDesc=%pK",
             __func__, descriptor);
         return;
     }
@@ -3747,7 +3747,7 @@ void iw_full_power_cbfn (void *pContext, eHalStatus status)
     if ((NULL == pAdapter) || (WLAN_HDD_ADAPTER_MAGIC != pAdapter->magic))
     {
         hddLog(VOS_TRACE_LEVEL_ERROR,
-             "%s: Bad param, pAdapter [%p]",
+             "%s: Bad param, pAdapter [%pK]",
                __func__, pAdapter);
         return;
     }

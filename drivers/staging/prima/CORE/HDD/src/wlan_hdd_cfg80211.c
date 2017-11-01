@@ -13540,7 +13540,7 @@ static eHalStatus hdd_cfg80211_scan_done_callback(tHalHandle halHandle,
     pScanInfo = &pHddCtx->scan_info;
 
     hddLog(VOS_TRACE_LEVEL_INFO,
-            "%s called with halHandle = %p, pContext = %p,"
+            "%s called with halHandle = %p, pContext = %pK,"
             "scanID = %d, returned status = %d",
             __func__, halHandle, pContext, (int) scanId, (int) status);
 
@@ -13734,7 +13734,7 @@ v_BOOL_t hdd_isConnectionInProgress(hdd_context_t *pHddCtx, v_U8_t *session_id,
                 (WLAN_HDD_GET_STATION_CTX_PTR(pAdapter))->conn_info.connState))
             {
                 hddLog(LOG1,
-                       "%s: %p(%d) Connection is in progress", __func__,
+                       "%s: %pK(%d) Connection is in progress", __func__,
                        WLAN_HDD_GET_STATION_CTX_PTR(pAdapter), pAdapter->sessionId);
                 if (session_id && reason)
                 {
@@ -13747,7 +13747,7 @@ v_BOOL_t hdd_isConnectionInProgress(hdd_context_t *pHddCtx, v_U8_t *session_id,
                  smeNeighborMiddleOfRoaming(WLAN_HDD_GET_HAL_CTX(pAdapter)))
             {
                 hddLog(LOG1,
-                       "%s: %p(%d) Reassociation is in progress", __func__,
+                       "%s: %pK(%d) Reassociation is in progress", __func__,
                        WLAN_HDD_GET_STATION_CTX_PTR(pAdapter), pAdapter->sessionId);
                 if (session_id && reason)
                 {
@@ -16764,9 +16764,27 @@ static void wlan_hdd_fill_summary_stats(tCsrSummaryStatsInfo *stats,
 			STATION_INFO_RX_PACKETS;
 }
 
+ /**
++ * wlan_hdd_sap_get_sta_rssi() - get RSSI of the SAP client
++ * @adapter: sap adapter pointer
++ * @staid: station id of the client
++ * @rssi: rssi value to fill
++ *
++ * Return: None
++ */
+static void
+wlan_hdd_sap_get_sta_rssi(hdd_adapter_t *adapter, uint8_t staid, s8 *rssi)
+{
+	v_CONTEXT_t pVosContext =  (WLAN_HDD_GET_CTX(adapter))->pvosContext;
+
+	WLANTL_GetSAPStaRSSi(pVosContext, staid, rssi);
+}
+
+
 /**
  * wlan_hdd_get_sap_stats() - get aggregate SAP stats
  * @adapter: sap adapter to get stats for
+ * @mac: mac address of the station
  * @info: kernel station_info struct to populate
  *
  * Fetch the vdev-level aggregate stats for the given SAP adapter. This is to
@@ -16776,15 +16794,34 @@ static void wlan_hdd_fill_summary_stats(tCsrSummaryStatsInfo *stats,
  * Return: errno
  */
 static int
-wlan_hdd_get_sap_stats(hdd_adapter_t *adapter, struct station_info *info)
+wlan_hdd_get_sap_stats(hdd_adapter_t *adapter,
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0))
+		       const u8* mac,
+#else
+		       u8* mac,
+#endif
+		       struct station_info *info)
 {
+	v_MACADDR_t *peerMacAddr;
+	uint8_t staid;
 	VOS_STATUS status;
+	bool bc_mac_addr;
 
 	status = wlan_hdd_get_station_stats(adapter);
 	if (!VOS_IS_STATUS_SUCCESS(status)) {
 		hddLog(VOS_TRACE_LEVEL_ERROR,
 			"Failed to get SAP stats; status:%d", status);
 		return 0;
+	}
+	
+	peerMacAddr = (v_MACADDR_t *)mac;
+	bc_mac_addr = vos_is_macaddr_broadcast(peerMacAddr);
+	staid = hdd_sta_id_find_from_mac_addr(adapter, peerMacAddr);
+	hddLog(VOS_TRACE_LEVEL_INFO, "Get SAP stats for sta id:%d", staid);
+
+	if (staid < WLAN_MAX_STA_COUNT && !bc_mac_addr) {
+		wlan_hdd_sap_get_sta_rssi(adapter, staid, &info->signal);
+		info->filled |= STATION_INFO_SIGNAL;
 	}
 
 	wlan_hdd_fill_summary_stats(&adapter->hdd_stats.summary_stat, info);
@@ -16839,7 +16876,7 @@ static int __wlan_hdd_cfg80211_get_station(struct wiphy *wiphy, struct net_devic
     }
 
     if (pAdapter->device_mode == WLAN_HDD_SOFTAP)
-        return wlan_hdd_get_sap_stats(pAdapter, sinfo);
+        return wlan_hdd_get_sap_stats(pAdapter, mac, sinfo);
 
     if ((eConnectionState_Associated != pHddStaCtx->conn_info.connState) ||
             (0 == ssidlen))
@@ -17683,7 +17720,7 @@ static int __wlan_hdd_cfg80211_set_pmksa(struct wiphy *wiphy, struct net_device 
     }
 
     if (!pmksa->bssid || !pmksa->pmkid) {
-       hddLog(LOGE, FL("pmksa->bssid(%p) or pmksa->pmkid(%p) is NULL"),
+       hddLog(LOGE, FL("pmksa->bssid(%pK) or pmksa->pmkid(%pK) is NULL"),
               pmksa->bssid, pmksa->pmkid);
        return -EINVAL;
     }

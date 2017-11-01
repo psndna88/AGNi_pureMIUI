@@ -1110,7 +1110,7 @@ void csrAbortCommand( tpAniSirGlobal pMac, tSmeCmd *pCommand, tANI_BOOLEAN fStop
         {
         case eSmeCommandScan:
             // We need to inform the requester before dropping the scan command
-            smsLog( pMac, LOGW, "%s: Drop scan reason %d callback %p",
+            smsLog( pMac, LOGW, "%s: Drop scan reason %d callback %pK",
                     __func__, pCommand->u.scanCmd.reason,
                     pCommand->u.scanCmd.callback);
             if (NULL != pCommand->u.scanCmd.callback)
@@ -10811,7 +10811,7 @@ void csrRoamCheckForLinkStatusChange( tpAniSirGlobal pMac, tSirSmeRsp *pSirMsg )
                                                  operationChannel,
                                                  IS_HT40_OBSS_SCAN_FEATURE_ENABLE);
                                          smsLog( pMac, LOG1,FL("connectState %d"
-                                                 "pCurRoamProfile %p"),
+                                                 "pCurRoamProfile %pK"),
                                                  pSession->connectState,
                                                  pSession->pCurRoamProfile);
                                     }
@@ -19643,7 +19643,7 @@ void csrGetStaticUapsdMask(tpAniSirGlobal pMac, tANI_U8 *staticUapsdMask)
 
     if(!pSession || !pSession->pCurRoamProfile)
        smsLog(pMac, LOGE, FL("Either pSession or Roam profile is NULL,"
-           " pSession:%p"), pSession);
+           " pSession:%pK"), pSession);
     else
        *staticUapsdMask = pSession->pCurRoamProfile->uapsd_mask;
 }

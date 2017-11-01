@@ -285,7 +285,7 @@ eHalStatus wlan_hdd_remain_on_channel_callback( tHalHandle hHal, void* pCtx,
             vos_mem_free(pRemainChanCtx->action_pkt_buff.frame_ptr);
         }
         hddLog( LOG1, FL(
-                    "Freeing ROC ctx cfgState->remain_on_chan_ctx=%p"),
+                    "Freeing ROC ctx cfgState->remain_on_chan_ctx=%pK"),
                 cfgState->remain_on_chan_ctx);
         vos_mem_free( pRemainChanCtx );
         pRemainChanCtx = NULL;
@@ -492,7 +492,7 @@ void wlan_hdd_remain_on_chan_timeout(void *data)
 
     if ((NULL == pAdapter) || (WLAN_HDD_ADAPTER_MAGIC != pAdapter->magic))
     {
-        hddLog( LOGE, FL("pAdapter is invalid %p !!!"), pAdapter);
+        hddLog( LOGE, FL("pAdapter is invalid %pK !!!"), pAdapter);
         return;
     }
     pHddCtx = WLAN_HDD_GET_CTX( pAdapter );
@@ -599,7 +599,7 @@ static int wlan_hdd_p2p_start_remain_on_channel(
         hddLog(VOS_TRACE_LEVEL_ERROR,
                 FL("Not able to initalize remain_on_chan timer"));
         hddLog( LOG1, FL(
-                    "Freeing ROC ctx cfgState->remain_on_chan_ctx=%p"),
+                    "Freeing ROC ctx cfgState->remain_on_chan_ctx=%pK"),
                 cfgState->remain_on_chan_ctx);
         cfgState->remain_on_chan_ctx = NULL;
         vos_mem_free(pRemainChanCtx);
@@ -643,7 +643,7 @@ static int wlan_hdd_p2p_start_remain_on_channel(
             mutex_lock(&pHddCtx->roc_lock);
             pRemainChanCtx = cfgState->remain_on_chan_ctx;
             hddLog( LOG1, FL(
-                        "Freeing ROC ctx cfgState->remain_on_chan_ctx=%p"),
+                        "Freeing ROC ctx cfgState->remain_on_chan_ctx=%pK"),
                          cfgState->remain_on_chan_ctx);
             if (pRemainChanCtx)
             {
@@ -687,7 +687,7 @@ static int wlan_hdd_p2p_start_remain_on_channel(
             mutex_lock(&pHddCtx->roc_lock);
             pRemainChanCtx = cfgState->remain_on_chan_ctx;
             hddLog( LOG1, FL(
-                        "Freeing ROC ctx cfgState->remain_on_chan_ctx=%p"),
+                        "Freeing ROC ctx cfgState->remain_on_chan_ctx=%pK"),
                          cfgState->remain_on_chan_ctx);
             if (pRemainChanCtx)
             {
@@ -852,7 +852,7 @@ static int wlan_hdd_request_remain_on_channel( struct wiphy *wiphy,
 
                 schedule_delayed_work(&pAdapter->roc_work,
                         msecs_to_jiffies(pHddCtx->cfg_ini->gP2PListenDeferInterval));
-                hddLog(VOS_TRACE_LEVEL_INFO, "Defer interval is %hu, pAdapter %p",
+                hddLog(VOS_TRACE_LEVEL_INFO, "Defer interval is %hu, pAdapter %pK",
                         pHddCtx->cfg_ini->gP2PListenDeferInterval, pAdapter);
                 return 0;
             }
@@ -2398,7 +2398,7 @@ void hdd_sendMgmtFrameOverMonitorIface( hdd_adapter_t *pMonAdapter,
      {
          VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_FATAL,
                    "HDD [%d]: Insufficient headroom, "
-                   "head[%p], data[%p], req[%d]",
+                   "head[%pK], data[%pK], req[%d]",
                    __LINE__, skb->head, skb->data, nFrameLength);
          kfree_skb(skb);
          return ;

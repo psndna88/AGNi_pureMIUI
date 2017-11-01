@@ -2698,6 +2698,8 @@ limDelSta(
     tpDeleteStaParams pDelStaParams = NULL;
     tSirMsgQ msgQ;
     tSirRetStatus     retCode = eSIR_SUCCESS;
+	tANI_U8 channelNum = 0;
+    tANI_U32 cfgValue = 0;
 
     pDelStaParams = vos_mem_malloc(sizeof( tDeleteStaParams ));
     if (NULL == pDelStaParams)
@@ -2707,6 +2709,18 @@ limDelSta(
     }
 
     vos_mem_set((tANI_U8 *) pDelStaParams, sizeof(tDeleteStaParams), 0);
+
+    wlan_cfgGetInt(pMac, WNI_CFG_ACTIVE_PASSIVE_CON, &cfgValue);
+
+    channelNum = limGetCurrentOperatingChannel(pMac);
+    limLog(pMac, LOG1, FL("Current Operating channel is %d"), channelNum);
+    if (!cfgValue && (eLIM_STA_ROLE == GET_LIM_SYSTEM_ROLE(psessionEntry)) &&
+         limIsconnectedOnDFSChannel(channelNum))
+    {
+        limCovertChannelScanType(pMac, channelNum, false);
+        pMac->lim.dfschannelList.timeStamp[channelNum] = 0;
+    }
+
 
   //
   // DPH contains the STA index only for "peer" STA entries.

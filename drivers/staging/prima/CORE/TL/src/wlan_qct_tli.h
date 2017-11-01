@@ -257,6 +257,9 @@ when        who    what, where, why
    (WLANTL_BT_AMP_TYPE_LS_REQ == usType) || (WLANTL_BT_AMP_TYPE_LS_REP == usType))
 
 #define WLANTL_CACHE_TRACE_WATERMARK 100
+
+#define WLANTL_RSSI_SAMPLE_CNT 20
+
 /*---------------------------------------------------------------------------
   TL signals for TX thread
 ---------------------------------------------------------------------------*/
@@ -746,6 +749,11 @@ typedef struct
   uint16_t queue;
   uint16_t trate;
 
+/* RSSI sample avg */
+  s8 rssi_sample[WLANTL_RSSI_SAMPLE_CNT];
+  s16 rssi_sample_sum;
+  uint8_t rssi_sample_cnt;
+  uint8_t rssi_stale_idx;
 }WLANTL_STAClientType;
 
 /*---------------------------------------------------------------------------

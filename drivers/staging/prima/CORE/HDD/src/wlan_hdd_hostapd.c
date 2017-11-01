@@ -662,7 +662,7 @@ void hdd_hostapd_inactivity_timer_cb(v_PVOID_t usrDataForCallback)
     if ((NULL == pHostapdAdapter) ||
         (WLAN_HDD_ADAPTER_MAGIC != pHostapdAdapter->magic))
     {
-         hddLog(LOGE, FL("invalid adapter: %p"), pHostapdAdapter);
+         hddLog(LOGE, FL("invalid adapter: %pK"), pHostapdAdapter);
          return;
     }
     pHddCtx = WLAN_HDD_GET_CTX(pHostapdAdapter);
@@ -5286,7 +5286,7 @@ void hdd_sap_indicate_disconnect_for_sta(hdd_adapter_t *adapter)
 
 	for (staId = 0; staId < WLAN_MAX_STA_COUNT; staId++) {
 		if (sap_ctx->aStaInfo[staId].isUsed) {
-			hddLog(LOG1, FL("staId: %d isUsed: %d %p"),
+			hddLog(LOG1, FL("staId: %d isUsed: %d %pK"),
 					staId, sap_ctx->aStaInfo[staId].isUsed,
 					sap_ctx);
 

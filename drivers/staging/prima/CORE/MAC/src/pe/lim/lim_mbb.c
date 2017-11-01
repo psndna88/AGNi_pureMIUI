@@ -919,7 +919,7 @@ void lim_handle_pre_auth_mbb_rsp(tpAniSirGlobal mac,
 
         ft_session_entry->limSmeState = eLIM_SME_WT_REASSOC_STATE;
         mac->ft.ftPEContext.pftSessionEntry = ft_session_entry;
-        limLog(mac, LOG1,"%s:created session (%p) with id = %d",
+        limLog(mac, LOG1,"%s:created session (%pK) with id = %d",
                __func__, ft_session_entry, ft_session_entry->peSessionId);
 
         /* Update the ReAssoc BSSID of the current session */
@@ -986,7 +986,7 @@ void lim_process_preauth_mbb_rsp_timeout(tpAniSirGlobal mac)
     if (eANI_BOOLEAN_TRUE ==
          mac->ft.ftPEContext.pFTPreAuthReq->bPreAuthRspProcessed) {
          limLog(mac, LOGE,
-                FL("Auth rsp already posted to SME session %p"), session_entry);
+                FL("Auth rsp already posted to SME session %pK"), session_entry);
          return;
     } else {
     /*
@@ -998,7 +998,7 @@ void lim_process_preauth_mbb_rsp_timeout(tpAniSirGlobal mac)
      * limProcessAuthFrameNoSession.
      */
      limLog(mac,LOG1,
-            FL("Auth rsp not yet posted to SME session %p)"), session_entry);
+            FL("Auth rsp not yet posted to SME session %pK)"), session_entry);
             mac->ft.ftPEContext.pFTPreAuthReq->bPreAuthRspProcessed =
            eANI_BOOLEAN_TRUE;
      }
@@ -1197,7 +1197,7 @@ void lim_process_pre_auth_reassoc_req(tpAniSirGlobal mac, tpSirMsgQ msg)
      * can be in power save for connected AP.
      */
     limLog(mac, LOG1,
-           FL("pre-auth on channel %d (session %p) currentOperChannel %d"),
+           FL("pre-auth on channel %d (session %pK) currentOperChannel %d"),
            mac->ft.ftPEContext.pFTPreAuthReq->preAuthchannelNum,
            session_entry, session_entry->currentOperChannel);
     limSuspendLink(mac, eSIR_CHECK_ROAMING_SCAN,
@@ -1677,7 +1677,7 @@ void lim_perform_post_add_sta_rsp(tpAniSirGlobal mac,
 
     /* Freeup the cached preauth request */
     if (mac->ft.ftPEContext.pFTPreAuthReq) {
-        limLog(mac, LOG1, FL("Freeing pFTPreAuthReq= %p"),
+        limLog(mac, LOG1, FL("Freeing pFTPreAuthReq= %pK"),
                              mac->ft.ftPEContext.pFTPreAuthReq);
         if (mac->ft.ftPEContext.pFTPreAuthReq->pbssDescription) {
             vos_mem_free(mac->ft.ftPEContext.pFTPreAuthReq->pbssDescription);
