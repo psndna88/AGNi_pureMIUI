@@ -195,6 +195,7 @@ static int dpp_hostapd_conf_update(struct sigma_dut *dut,
 
 	if (wpa_command(ifname, "SET wpa 2") < 0 ||
 	    wpa_command(ifname, "SET wpa_key_mgmt DPP") < 0 ||
+	    wpa_command(ifname, "SET ieee80211w 1") < 0 ||
 	    wpa_command(ifname, "SET rsn_pairwise CCMP") < 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Failed to update AP security parameters");
