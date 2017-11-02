@@ -407,6 +407,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		"CTRL-EVENT-CONNECTED",
 		NULL
 	};
+	const char *groups_override = NULL;
 
 	if (!wait_conn)
 		wait_conn = "no";
@@ -516,10 +517,13 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	case 1:
 		ascii2hexstr("DPPNET01", buf);
 		snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
-		if (val && strcasecmp(val, "AP") == 0)
+		if (val && strcasecmp(val, "AP") == 0) {
 			conf_role = "ap-dpp";
-		else
+			groups_override = "[{\"groupId\":\"DPPGROUP_DPP_INFRA\",\"netRole\":\"ap\"}]";
+		} else {
 			conf_role = "sta-dpp";
+			groups_override = "[{\"groupId\":\"DPPGROUP_DPP_INFRA\",\"netRole\":\"sta\"}]";
+		}
 		break;
 	case 2:
 		ascii2hexstr("DPPNET01", buf);
@@ -541,10 +545,31 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		else
 			conf_role = "sta-psk";
 		break;
+	case 4:
+		ascii2hexstr("DPPNET01", buf);
+		snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		if (val && strcasecmp(val, "AP") == 0) {
+			conf_role = "ap-dpp";
+			groups_override = "[{\"groupId\":\"DPPGROUP_DPP_INFRA2\",\"netRole\":\"ap\"}]";
+		} else {
+			conf_role = "sta-dpp";
+			groups_override = "[{\"groupId\":\"DPPGROUP_DPP_INFRA2\",\"netRole\":\"sta\"}]";
+		}
+		break;
 	default:
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Unsupported DPPConfIndex");
 		goto out;
+	}
+
+	if (groups_override) {
+		snprintf(buf, sizeof(buf), "SET dpp_groups_override %s",
+			 groups_override);
+		if (wpa_command(ifname, buf) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to set cred:groups");
+			goto out;
+		}
 	}
 
 	if (strcasecmp(auth_role, "Initiator") == 0) {
