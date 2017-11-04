@@ -31,6 +31,13 @@ config ANDROID_BINDER_DEVICES
 	  created. Each binder device has its own context manager, and is
 	  therefore logically separated from the other devices.
 
+config ANDROID_BINDER_SECURITY
+	bool "Android Binder Enhanced Security using SElinux"
+	depends on ANDROID_BINDER_IPC && SECURITY_SELINUX
+	default n
+	---help---
+	  Enable SElinux Security enhanced binder for Android 8+ Oreo
+
 config ANDROID_BINDER_IPC_32BIT
 	bool
 	depends on !64BIT && ANDROID_BINDER_IPC

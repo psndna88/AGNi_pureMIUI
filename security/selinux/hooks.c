@@ -1887,6 +1887,7 @@ static inline u32 open_file_to_av(struct file *file)
 
 /* Hook functions begin here. */
 
+#ifdef CONFIG_ANDROID_BINDER_SECURITY
 static int selinux_binder_set_context_mgr(struct task_struct *mgr)
 {
 	u32 mysid = current_sid();
@@ -1947,6 +1948,7 @@ static int selinux_binder_transfer_file(struct task_struct *from, struct task_st
 	return avc_has_perm(sid, isec->sid, isec->sclass, file_to_av(file),
 			    &ad);
 }
+#endif
 
 static int selinux_ptrace_access_check(struct task_struct *child,
 				     unsigned int mode)
@@ -5794,10 +5796,12 @@ static int selinux_key_getsecurity(struct key *key, char **_buffer)
 static struct security_operations selinux_ops = {
 	.name =				"selinux",
 
+#ifdef CONFIG_ANDROID_BINDER_SECURITY
 	.binder_set_context_mgr =	selinux_binder_set_context_mgr,
 	.binder_transaction =		selinux_binder_transaction,
 	.binder_transfer_binder =	selinux_binder_transfer_binder,
 	.binder_transfer_file =		selinux_binder_transfer_file,
+#endif
 
 	.ptrace_access_check =		selinux_ptrace_access_check,
 	.ptrace_traceme =		selinux_ptrace_traceme,

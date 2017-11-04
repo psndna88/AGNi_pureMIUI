@@ -38,7 +38,9 @@
 #include <linux/vmalloc.h>
 #include <linux/slab.h>
 #include <linux/pid_namespace.h>
+#ifdef CONFIG_ANDROID_BINDER_SECURITY
 #include <linux/security.h>
+#endif
 #include <linux/ratelimit.h>
 
 #ifdef CONFIG_ANDROID_BINDER_IPC_32BIT
@@ -1668,8 +1670,10 @@ static int binder_translate_binder(struct flat_binder_object *fp,
 				  (u64)node->cookie);
 		return -EINVAL;
 	}
+#ifdef CONFIG_ANDROID_BINDER_SECURITY
 	if (security_binder_transfer_binder(proc->tsk, target_proc->tsk))
 		return -EPERM;
+#endif
 
 	ref = binder_get_ref_for_node(target_proc, node);
 	if (!ref)
@@ -1708,8 +1712,10 @@ static int binder_translate_handle(struct flat_binder_object *fp,
 				  proc->pid, thread->pid, fp->handle);
 		return -EINVAL;
 	}
+#ifdef CONFIG_ANDROID_BINDER_SECURITY
 	if (security_binder_transfer_binder(proc->tsk, target_proc->tsk))
 		return -EPERM;
+#endif
 
 	if (ref->node->proc == target_proc) {
 		if (fp->hdr.type == BINDER_TYPE_HANDLE)
@@ -1779,11 +1785,13 @@ static int binder_translate_fd(int fd,
 		goto err_fget;
 	}
 
+#ifdef CONFIG_ANDROID_BINDER_SECURITY
 	ret = security_binder_transfer_file(proc->tsk, target_proc->tsk, file);
 	if (ret < 0) {
 		ret = -EPERM;
 		goto err_security;
 	}
+#endif
 
 	target_fd = task_get_unused_fd_flags(target_proc, O_CLOEXEC);
 	if (target_fd < 0) {
@@ -1798,8 +1806,10 @@ static int binder_translate_fd(int fd,
 	return target_fd;
 
 err_get_unused_fd:
+#ifdef CONFIG_ANDROID_BINDER_SECURITY
 err_security:
 	fput(file);
+#endif
 err_fget:
 err_fd_not_accepted:
 	return ret;
@@ -2004,10 +2014,12 @@ static void binder_transaction(struct binder_proc *proc,
 			return_error = BR_DEAD_REPLY;
 			goto err_dead_binder;
 		}
+#ifdef CONFIG_ANDROID_BINDER_SECURITY
 		if (security_binder_transaction(proc->tsk, target_proc->tsk) < 0) {
 			return_error = BR_FAILED_REPLY;
 			goto err_invalid_target_handle;
 		}
+#endif
 		if (!(tr->flags & TF_ONE_WAY) && thread->transaction_stack) {
 			struct binder_transaction *tmp;
 
@@ -3304,9 +3316,11 @@ static int binder_ioctl_set_ctx_mgr(struct file *filp)
 		ret = -EBUSY;
 		goto out;
 	}
+#ifdef CONFIG_ANDROID_BINDER_SECURITY
 	ret = security_binder_set_context_mgr(proc->tsk);
 	if (ret < 0)
 		goto out;
+#endif
 	if (uid_valid(context->binder_context_mgr_uid)) {
 		if (!uid_eq(context->binder_context_mgr_uid, curr_euid)) {
 			pr_err("BINDER_SET_CONTEXT_MGR bad uid %d != %d\n",
