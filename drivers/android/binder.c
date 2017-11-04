@@ -55,7 +55,7 @@ static struct dentry *binder_debugfs_dir_entry_root;
 static struct dentry *binder_debugfs_dir_entry_proc;
 atomic_t binder_last_id;
 
-bool android_binder_security = false;
+bool android_binder_security = true;
 module_param_named(secure_binder, android_binder_security, bool, 0444);
 
 #define BINDER_DEBUG_ENTRY(name) \
@@ -1647,7 +1647,7 @@ static void binder_transaction_buffer_release(struct binder_proc *proc,
 	}
 }
 
-int binder_translate_binder(struct flat_binder_object *fp,
+static int binder_translate_binder(struct flat_binder_object *fp,
 				   struct binder_transaction *t,
 				   struct binder_thread *thread)
 {
@@ -1699,7 +1699,7 @@ int binder_translate_binder(struct flat_binder_object *fp,
 	return 0;
 }
 
-int binder_translate_handle(struct flat_binder_object *fp,
+static int binder_translate_handle(struct flat_binder_object *fp,
 				   struct binder_transaction *t,
 				   struct binder_thread *thread)
 {
@@ -1754,7 +1754,7 @@ int binder_translate_handle(struct flat_binder_object *fp,
 	return 0;
 }
 
-int binder_translate_fd(int fd,
+static int binder_translate_fd(int fd,
 			       struct binder_transaction *t,
 			       struct binder_thread *thread,
 			       struct binder_transaction *in_reply_to)
@@ -1919,7 +1919,7 @@ static int binder_fixup_parent(struct binder_transaction *t,
 	return 0;
 }
 
-void binder_transaction(struct binder_proc *proc,
+static void binder_transaction(struct binder_proc *proc,
 			       struct binder_thread *thread,
 			       struct binder_transaction_data *tr, int reply,
 			       binder_size_t extra_buffers_size)
@@ -3303,7 +3303,7 @@ out:
 	return ret;
 }
 
-int binder_ioctl_set_ctx_mgr(struct file *filp)
+static int binder_ioctl_set_ctx_mgr(struct file *filp)
 {
 	int ret = 0;
 	struct binder_proc *proc = filp->private_data;
