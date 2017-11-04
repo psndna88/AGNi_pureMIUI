@@ -87,20 +87,10 @@ struct fpc1020_data {
 
 #ifdef CONFIG_MACH_XIAOMI_KENZO
 unsigned int kenzo_fpsensor = 1;
-extern bool android_binder_security;
 static int __init setup_kenzo_fpsensor(char *str)
 {
-	if (!strncmp(str, "gdx", strlen(str))) {
+	if (!strncmp(str, "gdx", strlen(str)))
 		kenzo_fpsensor = 2;
-		android_binder_security = false;
-		/*
-		 *   Enabling this can break goodix
-		 *   so we disable automatically on detection
-		 */
-		pr_info("%s goodix detected, binder security disabled !\n", __func__);
-	} else {
-		pr_info("%s fpc detected, binder security enabled by default !\n", __func__);
-	}
 
 	return kenzo_fpsensor;
 }
