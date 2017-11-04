@@ -468,6 +468,23 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 
 	pkex_identifier[0] = '\0';
 	if (strcasecmp(bs, "PKEX") == 0) {
+		if (sigma_dut_is_ap(dut) && dut->ap_channel != 6) {
+			/* For now, have to make operating channel match DPP
+			 * listen channel. This should be removed once hostapd
+			 * has support for DPP listen on non-operating channel.
+			 */
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Update hostapd operating channel to match listen needs");
+			dut->ap_channel = 6;
+			if (wpa_command(ifname, "SET channel 6") < 0 ||
+			    wpa_command(ifname, "DISABLE") < 0 ||
+			    wpa_command(ifname, "ENABLE") < 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to update channel");
+				return 0;
+			}
+		}
+
 		if (!pkex_code) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Missing DPPPKEXCode");
