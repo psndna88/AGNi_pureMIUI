@@ -355,6 +355,117 @@ out:
 }
 
 
+struct dpp_test_info {
+	const char *step;
+	const char *frame;
+	const char *attr;
+	int value;
+};
+
+static const struct dpp_test_info dpp_tests[] = {
+	{ "InvalidValue", "AuthenticationRequest", "WrappedData", 1 },
+	{ "InvalidValue", "AuthenticationResponse", "WrappedData", 2 },
+	{ "InvalidValue", "AuthenticationConfirm", "WrappedData", 3 },
+	{ "InvalidValue", "PKEXCRRequest", "WrappedData", 4 },
+	{ "InvalidValue", "PKEXCRResponse", "WrappedData", 5 },
+	{ "InvalidValue", "ConfigurationRequest", "WrappedData", 6 },
+	{ "InvalidValue", "ConfigurationResponse", "WrappedData", 7 },
+	{ "InvalidValue", "AuthenticationRequest", "InitCapabilities", 8 },
+	{ "InvalidValue", "AuthenticationResponse", "RespCapabilities", 9 },
+	{ "MissingAttribute", "AuthenticationRequest", "RespBSKeyHash", 10 },
+	{ "MissingAttribute", "AuthenticationRequest", "InitBSKeyHash", 11 },
+	{ "MissingAttribute", "AuthenticationRequest", "InitProtocolKey", 12 },
+	{ "MissingAttribute", "AuthenticationRequest", "InitNonce", 13 },
+	{ "MissingAttribute", "AuthenticationRequest", "InitCapabilities", 14 },
+	{ "MissingAttribute", "AuthenticationRequest", "WrappedData", 15 },
+	{ "MissingAttribute", "AuthenticationResponse", "DPPStatus", 16 },
+	{ "MissingAttribute", "AuthenticationResponse", "RespBSKeyHash", 17 },
+	{ "MissingAttribute", "AuthenticationResponse", "InitBSKeyHash", 18 },
+	{ "MissingAttribute", "AuthenticationResponse", "RespProtocolKey", 19 },
+	{ "MissingAttribute", "AuthenticationResponse", "RespNonce", 20 },
+	{ "MissingAttribute", "AuthenticationResponse", "InitNonce", 21 },
+	{ "MissingAttribute", "AuthenticationResponse", "RespCapabilities",
+	  22 },
+	{ "MissingAttribute", "AuthenticationResponse", "RespAuthTag", 23 },
+	{ "MissingAttribute", "AuthenticationResponse", "WrappedData", 24 },
+	{ "MissingAttribute", "AuthenticationConfirm", "DPPStatus", 25 },
+	{ "MissingAttribute", "AuthenticationConfirm", "RespBSKeyHash", 26 },
+	{ "MissingAttribute", "AuthenticationConfirm", "InitBSKeyHash", 27 },
+	{ "MissingAttribute", "AuthenticationConfirm", "InitAuthTag", 28 },
+	{ "MissingAttribute", "AuthenticationConfirm", "WrappedData", 29 },
+	{ "InvalidValue", "AuthenticationResponse", "InitNonce", 30 },
+	{ "InvalidValue", "AuthenticationResponse", "RespCapabilities", 31 },
+	{ "InvalidValue", "AuthenticationResponse", "RespAuthTag", 32 },
+	{ "InvalidValue", "AuthenticationConfirm", "InitAuthTag", 33 },
+	{ "MissingAttribute", "PKEXExchangeRequest", "FiniteCyclicGroup", 34 },
+	{ "MissingAttribute", "PKEXExchangeRequest", "EncryptedKey", 35 },
+	{ "MissingAttribute", "PKEXExchangeResponse", "DPPStatus", 36 },
+	{ "MissingAttribute", "PKEXExchangeResponse", "EncryptedKey", 37 },
+	{ "MissingAttribute", "PKEXCRRequest", "BSKey", 38 },
+	{ "MissingAttribute", "PKEXCRRequest", "InitAuthTag", 39 },
+	{ "MissingAttribute", "PKEXCRRequest", "WrappedData", 40 },
+	{ "MissingAttribute", "PKEXCRResponse", "BSKey", 41 },
+	{ "MissingAttribute", "PKEXCRResponse", "RespAuthTag", 42 },
+	{ "MissingAttribute", "PKEXCRResponse", "WrappedData", 43 },
+	{ "InvalidValue", "PKEXExchangeRequest", "EncryptedKey", 44 },
+	{ "InvalidValue", "PKEXExchangeResponse", "EncryptedKey", 45 },
+	{ "InvalidValue", "PKEXExchangeResponse", "DPPStatus", 46 },
+	{ "InvalidValue", "PKEXCRRequest", "BSKey", 47 },
+	{ "InvalidValue", "PKEXCRResponse", "BSKey", 48 },
+	{ "InvalidValue", "PKEXCRRequest", "InitAuthTag", 49 },
+	{ "InvalidValue", "PKEXCRResponse", "RespAuthTag", 50 },
+	{ "MissingAttribute", "ConfigurationRequest", "EnrolleeNonce", 51 },
+	{ "MissingAttribute", "ConfigurationRequest", "ConfigAttr", 52 },
+	{ "MissingAttribute", "ConfigurationRequest", "WrappedData", 53 },
+	{ "MissingAttribute", "ConfigurationResponse", "EnrolleeNonce", 54 },
+	{ "MissingAttribute", "ConfigurationResponse", "ConfigObj", 55 },
+	{ "MissingAttribute", "ConfigurationResponse", "DPPStatus", 56 },
+	{ "MissingAttribute", "ConfigurationResponse", "WrappedData", 57 },
+	{ "InvalidValue", "ConfigurationResponse", "DPPStatus", 58 },
+	{ "InvalidValue", "ConfigurationResponse", "EnrolleeNonce", 59 },
+	{ NULL, NULL, NULL, 0 }
+};
+
+
+static int dpp_get_test(const char *step, const char *frame, const char *attr)
+{
+	int i;
+
+	for (i = 0; dpp_tests[i].step; i++) {
+		if (strcasecmp(step, dpp_tests[i].step) == 0 &&
+		    strcasecmp(frame, dpp_tests[i].frame) == 0 &&
+		    strcasecmp(attr, dpp_tests[i].attr) == 0)
+			return dpp_tests[i].value;
+	}
+
+	return -1;
+}
+
+
+static int dpp_wait_tx_status(struct sigma_dut *dut, struct wpa_ctrl *ctrl,
+			      int frame_type)
+{
+	char buf[200], tmp[20];
+	int res;
+
+	snprintf(tmp, sizeof(tmp), "type=%d", frame_type);
+	for (;;) {
+		res = get_wpa_cli_event(dut, ctrl, "DPP-TX", buf, sizeof(buf));
+		if (res < 0)
+			return -1;
+		if (strstr(buf, tmp) != NULL)
+			break;
+	}
+
+	res = get_wpa_cli_event(dut, ctrl, "DPP-TX-STATUS",
+				buf, sizeof(buf));
+	if (res < 0 || strstr(buf, "result=FAILED") != NULL)
+		return -1;
+
+	return 0;
+}
+
+
 static int dpp_manual_dpp(struct sigma_dut *dut,
 			  struct sigma_conn *conn,
 			  struct sigma_cmd *cmd)
@@ -375,6 +486,9 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	const char *pkex_code_id = get_param(cmd, "DPPPKEXCodeIdentifier");
 	const char *wait_conn = get_param(cmd, "DPPWaitForConnect");
 	const char *self_conf = get_param(cmd, "DPPSelfConfigure");
+	const char *step = get_param(cmd, "DPPStep");
+	const char *frametype = get_param(cmd, "DPPFrameType");
+	const char *attr = get_param(cmd, "DPPIEAttribute");
 	const char *role;
 	const char *val;
 	const char *conf_role;
@@ -408,6 +522,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		NULL
 	};
 	const char *groups_override = NULL;
+	const char *result;
 
 	if (!wait_conn)
 		wait_conn = "no";
@@ -428,6 +543,12 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 
 	val = get_param(cmd, "DPPAuthDirection");
 	mutual = val && strcasecmp(val, "Mutual") == 0;
+
+	if ((step || frametype || attr) && (!step || !frametype || !attr)) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Invalid DPPStep,DPPFrameType,DPPIEAttribute combination");
+		return 0;
+	}
 
 	if (sigma_dut_is_ap(dut)) {
 		if (!dut->hostapd_ifname) {
@@ -589,6 +710,26 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		}
 	}
 
+	if (step) {
+		int test;
+
+		test = dpp_get_test(step, frametype, attr);
+		if (test <= 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported DPPStep/DPPFrameType/DPPIEAttribute");
+			goto out;
+		}
+
+		snprintf(buf, sizeof(buf), "SET dpp_test %d", test);
+		if (wpa_command(ifname, buf) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to set dpp_test");
+			goto out;
+		}
+	} else {
+		wpa_command(ifname, "SET dpp_test 0");
+	}
+
 	if (strcasecmp(auth_role, "Initiator") == 0) {
 		char own_txt[20];
 
@@ -686,6 +827,69 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		goto out;
 	}
 
+	if (frametype && strcasecmp(frametype, "PKEXExchangeRequest") == 0) {
+		if (dpp_wait_tx_status(dut, ctrl, 7) < 0)
+			result = "BootstrapResult,Timeout";
+		else
+			result = "BootstrapResult,Errorsent";
+		send_resp(dut, conn, SIGMA_COMPLETE, result);
+		goto out;
+	}
+
+	if (frametype && strcasecmp(frametype, "PKEXExchangeResponse") == 0) {
+		if (dpp_wait_tx_status(dut, ctrl, 8) < 0)
+			result = "BootstrapResult,Timeout";
+		else
+			result = "BootstrapResult,Errorsent";
+		send_resp(dut, conn, SIGMA_COMPLETE, result);
+		goto out;
+	}
+
+	if (frametype && strcasecmp(frametype, "PKEXCRRequest") == 0) {
+		if (dpp_wait_tx_status(dut, ctrl, 9) < 0)
+			result = "BootstrapResult,Timeout";
+		else
+			result = "BootstrapResult,Errorsent";
+		send_resp(dut, conn, SIGMA_COMPLETE, result);
+		goto out;
+	}
+
+	if (frametype && strcasecmp(frametype, "PKEXCRResponse") == 0) {
+		if (dpp_wait_tx_status(dut, ctrl, 10) < 0)
+			result = "BootstrapResult,Timeout";
+		else
+			result = "BootstrapResult,Errorsent";
+		send_resp(dut, conn, SIGMA_COMPLETE, result);
+		goto out;
+	}
+
+	if (frametype && strcasecmp(frametype, "AuthenticationRequest") == 0) {
+		if (dpp_wait_tx_status(dut, ctrl, 0) < 0)
+			result = "BootstrapResult,OK,AuthResult,Timeout";
+		else
+			result = "BootstrapResult,OK,AuthResult,Errorsent";
+		send_resp(dut, conn, SIGMA_COMPLETE, result);
+		goto out;
+	}
+
+	if (frametype && strcasecmp(frametype, "AuthenticationResponse") == 0) {
+		if (dpp_wait_tx_status(dut, ctrl, 1) < 0)
+			result = "BootstrapResult,OK,AuthResult,Timeout";
+		else
+			result = "BootstrapResult,OK,AuthResult,Errorsent";
+		send_resp(dut, conn, SIGMA_COMPLETE, result);
+		goto out;
+	}
+
+	if (frametype && strcasecmp(frametype, "AuthenticationConfirm") == 0) {
+		if (dpp_wait_tx_status(dut, ctrl, 2) < 0)
+			result = "BootstrapResult,OK,AuthResult,Timeout";
+		else
+			result = "BootstrapResult,OK,AuthResult,Errorsent";
+		send_resp(dut, conn, SIGMA_COMPLETE, result);
+		goto out;
+	}
+
 	res = get_wpa_cli_events(dut, ctrl, auth_events, buf, sizeof(buf));
 	if (res < 0) {
 		send_resp(dut, conn, SIGMA_COMPLETE,
@@ -703,6 +907,28 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	if (!strstr(buf, "DPP-AUTH-SUCCESS")) {
 		send_resp(dut, conn, SIGMA_COMPLETE,
 			  "BootstrapResult,OK,AuthResult,FAILED");
+		goto out;
+	}
+
+	if (frametype && strcasecmp(frametype, "ConfigurationRequest") == 0) {
+		res = get_wpa_cli_event(dut, ctrl, "GAS-QUERY-DONE",
+					buf, sizeof(buf));
+		if (res < 0)
+			result = "BootstrapResult,OK,AuthResult,OK,ConfResult,Timeout";
+		else
+			result = "BootstrapResult,OK,AuthResult,OK,ConfResult,Errorsent";
+		send_resp(dut, conn, SIGMA_COMPLETE, result);
+		goto out;
+	}
+
+	if (frametype && strcasecmp(frametype, "ConfigurationResponse") == 0) {
+		res = get_wpa_cli_event(dut, ctrl, "DPP-CONF-SENT",
+					buf, sizeof(buf));
+		if (res < 0)
+			result = "BootstrapResult,OK,AuthResult,OK,ConfResult,Timeout";
+		else
+			result = "BootstrapResult,OK,AuthResult,OK,ConfResult,Errorsent";
+		send_resp(dut, conn, SIGMA_COMPLETE, result);
 		goto out;
 	}
 
