@@ -278,7 +278,7 @@ static void start_fault_timer(struct adreno_device *adreno_dev)
 static void _retire_marker(struct kgsl_cmdbatch *cmdbatch)
 {
 	struct kgsl_context *context = cmdbatch->context;
-	struct adreno_context *drawctxt = ADRENO_CONTEXT(cmdbatch->context);
+//	struct adreno_context *drawctxt = ADRENO_CONTEXT(cmdbatch->context);
 	struct kgsl_device *device = context->device;
 
 	/*
@@ -297,7 +297,7 @@ static void _retire_marker(struct kgsl_cmdbatch *cmdbatch)
 	/* Retire pending GPU events for the object */
 	kgsl_process_event_group(device, &context->events);
 
-	trace_adreno_cmdbatch_retired(cmdbatch, -1, 0, 0, drawctxt->rb);
+//	trace_adreno_cmdbatch_retired(cmdbatch, -1, 0, 0, drawctxt->rb);
 	kgsl_cmdbatch_destroy(cmdbatch);
 }
 
@@ -539,7 +539,7 @@ static void  dispatcher_queue_context(struct adreno_device *adreno_dev,
 	if (plist_node_empty(&drawctxt->pending)) {
 		/* Get a reference to the context while it sits on the list */
 		if (_kgsl_context_get(&drawctxt->base)) {
-			trace_dispatch_queue_context(drawctxt);
+//			trace_dispatch_queue_context(drawctxt);
 			plist_add(&drawctxt->pending, &dispatcher->pending);
 		}
 	}
@@ -559,7 +559,7 @@ static int sendcmd(struct adreno_device *adreno_dev,
 {
 	struct kgsl_device *device = &adreno_dev->dev;
 	struct adreno_dispatcher *dispatcher = &adreno_dev->dispatcher;
-	struct adreno_context *drawctxt = ADRENO_CONTEXT(cmdbatch->context);
+//	struct adreno_context *drawctxt = ADRENO_CONTEXT(cmdbatch->context);
 	struct adreno_dispatcher_cmdqueue *dispatch_q =
 				ADRENO_CMDBATCH_DISPATCH_CMDQUEUE(cmdbatch);
 	struct adreno_submit_time time;
@@ -644,8 +644,8 @@ static int sendcmd(struct adreno_device *adreno_dev,
 	secs = time.ktime;
 	nsecs = do_div(secs, 1000000000);
 
-	trace_adreno_cmdbatch_submitted(cmdbatch, (int) dispatcher->inflight,
-		time.ticks, (unsigned long) secs, nsecs / 1000, drawctxt->rb);
+//	trace_adreno_cmdbatch_submitted(cmdbatch, (int) dispatcher->inflight,
+//		time.ticks, (unsigned long) secs, nsecs / 1000, drawctxt->rb);
 
 	cmdbatch->submit_ticks = time.ticks;
 
@@ -1020,8 +1020,8 @@ static void __adreno_dispatcher_preempt_trig_state(
 		if (val && rbbase == adreno_dev->next_rb->buffer_desc.gpuaddr) {
 			KGSL_DEV_ERR_ONCE(device,
 			"Preemption completed w/o interrupt\n");
-			trace_adreno_hw_preempt_trig_to_comp(adreno_dev->cur_rb,
-					adreno_dev->next_rb);
+//			trace_adreno_hw_preempt_trig_to_comp(adreno_dev->cur_rb,
+//					adreno_dev->next_rb);
 			atomic_set(&dispatcher->preemption_state,
 				ADRENO_DISPATCHER_PREEMPT_COMPLETE);
 			return adreno_dispatcher_schedule(device);
@@ -1068,8 +1068,8 @@ static void __adreno_dispatcher_preempt_trig_state(
 		BUG();
 	dispatcher->preempt_token_submit = 1;
 	adreno_dev->cur_rb->wptr_preempt_end = adreno_dev->cur_rb->wptr;
-	trace_adreno_hw_preempt_token_submit(adreno_dev->cur_rb,
-						adreno_dev->next_rb);
+//	trace_adreno_hw_preempt_token_submit(adreno_dev->cur_rb,
+//						adreno_dev->next_rb);
 
 	return;
 }
@@ -1214,8 +1214,8 @@ static void __adreno_dispatcher_preempt_clear_state(
 	mod_timer(&dispatcher->preempt_timer, jiffies +
 		msecs_to_jiffies(ADRENO_DISPATCH_PREEMPT_TIMEOUT));
 
-	trace_adreno_hw_preempt_clear_to_trig(adreno_dev->cur_rb,
-						adreno_dev->next_rb);
+//	trace_adreno_hw_preempt_clear_to_trig(adreno_dev->cur_rb,
+//						adreno_dev->next_rb);
 	/* issue PREEMPT trigger */
 	adreno_writereg(adreno_dev, ADRENO_REG_CP_PREEMPT, 1);
 	/*
@@ -1298,8 +1298,8 @@ static void __adreno_dispatcher_preempt_complete_state(
 
 	dispatch_q = &(adreno_dev->cur_rb->dispatch_q);
 	/* new RB is the current RB */
-	trace_adreno_hw_preempt_comp_to_clear(adreno_dev->next_rb,
-						adreno_dev->cur_rb);
+//	trace_adreno_hw_preempt_comp_to_clear(adreno_dev->next_rb,
+//						adreno_dev->cur_rb);
 	adreno_dev->prev_rb = adreno_dev->cur_rb;
 	adreno_dev->cur_rb = adreno_dev->next_rb;
 	adreno_dev->cur_rb->preempted_midway = 0;
@@ -1490,7 +1490,7 @@ int adreno_dispatcher_queue_cmd(struct adreno_device *adreno_dev,
 	/* Wait for room in the context queue */
 
 	while (drawctxt->queued >= _context_cmdqueue_size) {
-		trace_adreno_drawctxt_sleep(drawctxt);
+//		trace_adreno_drawctxt_sleep(drawctxt);
 		spin_unlock(&drawctxt->lock);
 
 		ret = wait_event_interruptible_timeout(drawctxt->wq,
@@ -1498,7 +1498,7 @@ int adreno_dispatcher_queue_cmd(struct adreno_device *adreno_dev,
 			msecs_to_jiffies(_context_queue_wait));
 
 		spin_lock(&drawctxt->lock);
-		trace_adreno_drawctxt_wake(drawctxt);
+//		trace_adreno_drawctxt_wake(drawctxt);
 
 		if (ret <= 0) {
 			spin_unlock(&drawctxt->lock);
@@ -1536,8 +1536,8 @@ int adreno_dispatcher_queue_cmd(struct adreno_device *adreno_dev,
 
 		if (!drawctxt->queued && kgsl_check_timestamp(cmdbatch->device,
 			cmdbatch->context, drawctxt->queued_timestamp)) {
-			trace_adreno_cmdbatch_queued(cmdbatch,
-				drawctxt->queued);
+//			trace_adreno_cmdbatch_queued(cmdbatch,
+//				drawctxt->queued);
 
 			_retire_marker(cmdbatch);
 			spin_unlock(&drawctxt->lock);
@@ -1598,7 +1598,7 @@ int adreno_dispatcher_queue_cmd(struct adreno_device *adreno_dev,
 	}
 
 	drawctxt->queued++;
-	trace_adreno_cmdbatch_queued(cmdbatch, drawctxt->queued);
+//	trace_adreno_cmdbatch_queued(cmdbatch, drawctxt->queued);
 
 	_track_context(dispatch_q, drawctxt->base.id);
 
@@ -1820,7 +1820,7 @@ static void adreno_fault_header(struct adreno_ringbuffer *rb,
 {
 	struct kgsl_device *device = rb->device;
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
-	struct adreno_context *drawctxt = ADRENO_CONTEXT(cmdbatch->context);
+//	struct adreno_context *drawctxt = ADRENO_CONTEXT(cmdbatch->context);
 	unsigned int status, rptr, wptr, ib1sz, ib2sz;
 	uint64_t ib1base, ib2base;
 
@@ -1834,9 +1834,9 @@ static void adreno_fault_header(struct adreno_ringbuffer *rb,
 					   ADRENO_REG_CP_IB2_BASE_HI, &ib2base);
 	adreno_readreg(adreno_dev, ADRENO_REG_CP_IB2_BUFSZ, &ib2sz);
 
-	trace_adreno_gpu_fault(cmdbatch->context->id, cmdbatch->timestamp,
-		status, rptr, wptr, ib1base, ib1sz,
-		ib2base, ib2sz, drawctxt->rb->id);
+//	trace_adreno_gpu_fault(cmdbatch->context->id, cmdbatch->timestamp,
+//		status, rptr, wptr, ib1base, ib1sz,
+//		ib2base, ib2sz, drawctxt->rb->id);
 
 	pr_fault(device, cmdbatch,
 		"gpu fault ctx %d ts %d status %8.8X rb %4.4x/%4.4x ib1 %16.16llX/%4.4x ib2 %16.16llX/%4.4x\n",
@@ -1973,7 +1973,7 @@ void process_cmdbatch_fault(struct kgsl_device *device,
 
 	/* Replay the hanging command batch again */
 	if (test_and_clear_bit(KGSL_FT_REPLAY, &cmdbatch->fault_policy)) {
-		trace_adreno_cmdbatch_recovery(cmdbatch, BIT(KGSL_FT_REPLAY));
+//		trace_adreno_cmdbatch_recovery(cmdbatch, BIT(KGSL_FT_REPLAY));
 		set_bit(KGSL_FT_REPLAY, &cmdbatch->fault_recovery);
 		return;
 	}
@@ -1987,7 +1987,7 @@ void process_cmdbatch_fault(struct kgsl_device *device,
 	 */
 
 	if (test_and_clear_bit(KGSL_FT_SKIPIB, &cmdbatch->fault_policy)) {
-		trace_adreno_cmdbatch_recovery(cmdbatch, BIT(KGSL_FT_SKIPIB));
+//		trace_adreno_cmdbatch_recovery(cmdbatch, BIT(KGSL_FT_SKIPIB));
 		set_bit(KGSL_FT_SKIPIB, &cmdbatch->fault_recovery);
 
 		for (i = 0; i < count; i++) {
@@ -2001,7 +2001,7 @@ void process_cmdbatch_fault(struct kgsl_device *device,
 
 	/* Skip the faulted command batch submission */
 	if (test_and_clear_bit(KGSL_FT_SKIPCMD, &cmdbatch->fault_policy)) {
-		trace_adreno_cmdbatch_recovery(cmdbatch, BIT(KGSL_FT_SKIPCMD));
+//		trace_adreno_cmdbatch_recovery(cmdbatch, BIT(KGSL_FT_SKIPCMD));
 
 		/* Skip faulting command batch */
 		cmdbatch_skip_cmd(cmdbatch, replay, count);
@@ -2010,8 +2010,8 @@ void process_cmdbatch_fault(struct kgsl_device *device,
 	}
 
 	if (test_and_clear_bit(KGSL_FT_SKIPFRAME, &cmdbatch->fault_policy)) {
-		trace_adreno_cmdbatch_recovery(cmdbatch,
-			BIT(KGSL_FT_SKIPFRAME));
+//		trace_adreno_cmdbatch_recovery(cmdbatch,
+//			BIT(KGSL_FT_SKIPFRAME));
 		set_bit(KGSL_FT_SKIPFRAME, &cmdbatch->fault_recovery);
 
 		/*
@@ -2240,7 +2240,7 @@ static int dispatcher_do_fault(struct kgsl_device *device)
 
 	if (dispatch_q && (dispatch_q->tail != dispatch_q->head)) {
 		cmdbatch = dispatch_q->cmd_q[dispatch_q->head];
-		trace_adreno_cmdbatch_fault(cmdbatch, fault);
+//		trace_adreno_cmdbatch_fault(cmdbatch, fault);
 	}
 
 	/* Set pagefault if it occurred */
@@ -2392,9 +2392,9 @@ static int adreno_dispatch_process_cmdqueue(struct adreno_device *adreno_dev,
 				cmdbatch_profile_ticks(adreno_dev, cmdbatch,
 					&start_ticks, &retire_ticks);
 
-			trace_adreno_cmdbatch_retired(cmdbatch,
-				(int) dispatcher->inflight, start_ticks,
-				retire_ticks, ADRENO_CMDBATCH_RB(cmdbatch));
+//			trace_adreno_cmdbatch_retired(cmdbatch,
+//				(int) dispatcher->inflight, start_ticks,
+//				retire_ticks, ADRENO_CMDBATCH_RB(cmdbatch));
 
 			/* Record the delta between submit and retire ticks */
 			drawctxt->submit_retire_ticks[drawctxt->ticks_index] =
@@ -2937,8 +2937,8 @@ void adreno_dispatcher_preempt_callback(struct adreno_device *adreno_dev,
 			"Preemption interrupt generated w/o trigger!\n");
 		return;
 	}
-	trace_adreno_hw_preempt_trig_to_comp(adreno_dev->cur_rb,
-			      adreno_dev->next_rb);
+//	trace_adreno_hw_preempt_trig_to_comp(adreno_dev->cur_rb,
+//			      adreno_dev->next_rb);
 	atomic_set(&dispatcher->preemption_state,
 			ADRENO_DISPATCHER_PREEMPT_COMPLETE);
 	adreno_dispatcher_schedule(device);

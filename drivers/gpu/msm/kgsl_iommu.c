@@ -371,9 +371,9 @@ static int kgsl_iommu_fault_handler(struct iommu_domain *domain,
 
 	}
 
-	trace_kgsl_mmu_pagefault(ctx->kgsldev, addr,
-			kgsl_mmu_get_ptname_from_ptbase(mmu, ptbase),
-			write ? "write" : "read");
+//	trace_kgsl_mmu_pagefault(ctx->kgsldev, addr,
+//			kgsl_mmu_get_ptname_from_ptbase(mmu, ptbase),
+//			write ? "write" : "read");
 
 	/*
 	 * We do not want the h/w to resume fetching data from an iommu
@@ -493,14 +493,14 @@ static phys_addr_t kgsl_iommu_get_ptbase(struct kgsl_pagetable *pt)
 static void kgsl_iommu_destroy_pagetable(struct kgsl_pagetable *pt)
 {
 	struct kgsl_iommu_pt *iommu_pt = pt->priv;
-	struct kgsl_mmu *mmu = pt->mmu;
+//	struct kgsl_mmu *mmu = pt->mmu;
 
 	BUG_ON(!list_empty(&pt->list));
 
 	if (iommu_pt->domain) {
-		phys_addr_t domain_ptbase =
-					kgsl_iommu_get_pt_base_addr(mmu, pt);
-		trace_kgsl_pagetable_destroy(domain_ptbase, pt->name);
+//		phys_addr_t domain_ptbase =
+//					kgsl_iommu_get_pt_base_addr(mmu, pt);
+//		trace_kgsl_pagetable_destroy(domain_ptbase, pt->name);
 
 		iommu_domain_free(iommu_pt->domain);
 	}

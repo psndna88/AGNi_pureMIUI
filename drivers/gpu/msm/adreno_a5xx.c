@@ -723,7 +723,7 @@ static void a5xx_enable_pc(struct adreno_device *adreno_dev)
 	kgsl_regwrite(device, A5XX_GPMU_PWR_COL_INTER_FRAME_HYST, 0x000A0080);
 	kgsl_regwrite(device, A5XX_GPMU_PWR_COL_STAGGER_DELAY, 0x00600040);
 
-	trace_adreno_sp_tp((unsigned long) __builtin_return_address(0));
+//	trace_adreno_sp_tp((unsigned long) __builtin_return_address(0));
 };
 
 /*

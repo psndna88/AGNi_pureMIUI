@@ -356,7 +356,7 @@ static void a4xx_enable_pc(struct adreno_device *adreno_dev)
 		return;
 
 	kgsl_regwrite(device, A4XX_CP_POWER_COLLAPSE_CNTL, 0x00400010);
-	trace_adreno_sp_tp((unsigned long) __builtin_return_address(0));
+//	trace_adreno_sp_tp((unsigned long) __builtin_return_address(0));
 };
 
 /*
