@@ -4243,11 +4243,11 @@ static int sdhci_msm_resume(struct device *dev)
 		if (ret)
 			pr_err("%s: %s: Failed to request card detection IRQ %d\n",
 					mmc_hostname(host->mmc), __func__, ret);
-		}
+	}
 
 #ifdef CONFIG_MACH_XIAOMI_KENZO
-		if ((sd_slot_plugoutt == 1) && (mmc_hostname(host->mmc) != NULL) && (!strcmp(mmc_hostname(host->mmc), "mmc1")))
-			sd_slot_plugoutt = gpio_get_value_cansleep(msm_host->pdata->status_gpio);
+	if ((sd_slot_plugoutt == 1) && (mmc_hostname(host->mmc) != NULL) && (!strcmp(mmc_hostname(host->mmc), "mmc1")))
+		sd_slot_plugoutt = gpio_get_value_cansleep(msm_host->pdata->status_gpio);
 #endif
 
 	if (pm_runtime_suspended(dev)) {

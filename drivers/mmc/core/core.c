@@ -287,7 +287,7 @@ void mmc_request_done(struct mmc_host *host, struct mmc_request *mrq)
 			pr_debug("%s:     %d bytes transferred: %d\n",
 				mmc_hostname(host),
 				mrq->data->bytes_xfered, mrq->data->error);
-			trace_mmc_blk_rw_end(cmd->opcode, cmd->arg, mrq->data);
+//			trace_mmc_blk_rw_end(cmd->opcode, cmd->arg, mrq->data);
 		}
 
 		if (mrq->stop) {
@@ -1152,9 +1152,9 @@ struct mmc_async_req *mmc_start_req(struct mmc_host *host,
 		}
 	}
 	if (!err && areq) {
-		trace_mmc_blk_rw_start(areq->mrq->cmd->opcode,
-				       areq->mrq->cmd->arg,
-				       areq->mrq->data);
+//		trace_mmc_blk_rw_start(areq->mrq->cmd->opcode,
+//				       areq->mrq->cmd->arg,
+//				       areq->mrq->data);
 		/* urgent notification may come again */
 		spin_lock_irqsave(&host->context_info.lock, flags);
 		is_urgent = host->context_info.is_urgent;
@@ -1716,7 +1716,7 @@ void mmc_set_ios(struct mmc_host *host)
 				mmc_hostname(host), ios->old_rate / 1000,
 				ios->clock / 1000, jiffies_to_msecs(
 					(long)jiffies - (long)ios->clk_ts));
-			trace_mmc_clk(trace_info);
+//			trace_mmc_clk(trace_info);
 		}
 		ios->old_rate = ios->clock;
 		ios->clk_ts = jiffies;
@@ -2689,7 +2689,7 @@ static int mmc_cmdq_do_erase(struct mmc_cmdq_req *cmdq_req,
 
 	fr = from;
 	nr = to - from + 1;
-	trace_mmc_blk_erase_start(arg, fr, nr);
+//	trace_mmc_blk_erase_start(arg, fr, nr);
 
 	qty = mmc_get_erase_qty(card, from, to);
 
@@ -2739,7 +2739,7 @@ static int mmc_cmdq_do_erase(struct mmc_cmdq_req *cmdq_req,
 	} while (!(cmd->resp[0] & R1_READY_FOR_DATA) ||
 		 (R1_CURRENT_STATE(cmd->resp[0]) == R1_STATE_PRG));
 out:
-	trace_mmc_blk_erase_end(arg, fr, nr);
+//	trace_mmc_blk_erase_end(arg, fr, nr);
 	return err;
 }
 
@@ -2754,7 +2754,7 @@ static int mmc_do_erase(struct mmc_card *card, unsigned int from,
 
 	fr = from;
 	nr = to - from + 1;
-	trace_mmc_blk_erase_start(arg, fr, nr);
+//	trace_mmc_blk_erase_start(arg, fr, nr);
 
 	qty = mmc_get_erase_qty(card, from, to);
 
@@ -2837,7 +2837,7 @@ static int mmc_do_erase(struct mmc_card *card, unsigned int from,
 		 (R1_CURRENT_STATE(cmd.resp[0]) == R1_STATE_PRG));
 out:
 
-	trace_mmc_blk_erase_end(arg, fr, nr);
+//	trace_mmc_blk_erase_end(arg, fr, nr);
 	return err;
 }
 
@@ -4065,7 +4065,7 @@ int mmc_suspend_host(struct mmc_host *host)
 {
 	int err = 0;
 	bool remove_pm_vote = false;
-	ktime_t start = ktime_get();
+//	ktime_t start = ktime_get();
 
 	if (mmc_bus_needs_resume(host))
 		return 0;
@@ -4147,8 +4147,8 @@ int mmc_suspend_host(struct mmc_host *host)
 
 	if (err && mmc_can_scale_clk(host))
 		mmc_init_clk_scaling(host);
-	trace_mmc_suspend_host(mmc_hostname(host), err,
-			ktime_to_us(ktime_sub(ktime_get(), start)));
+//	trace_mmc_suspend_host(mmc_hostname(host), err,
+//			ktime_to_us(ktime_sub(ktime_get(), start)));
 	if (host->ops->notify_pm_status)
 		host->ops->notify_pm_status(host,
 			remove_pm_vote ? DEV_ERROR : DEV_SUSPENDED);
@@ -4174,7 +4174,7 @@ int mmc_resume_host(struct mmc_host *host)
 {
 	int err = 0;
 	bool remove_pm_vote = false;
-	ktime_t start = ktime_get();
+//	ktime_t start = ktime_get();
 
 	mmc_bus_get(host);
 	if (mmc_bus_manual_resume(host)) {
@@ -4218,8 +4218,8 @@ int mmc_resume_host(struct mmc_host *host)
 	host->pm_flags &= ~MMC_PM_WAKE_SDIO_IRQ;
 	mmc_bus_put(host);
 
-	trace_mmc_resume_host(mmc_hostname(host), err,
-			ktime_to_us(ktime_sub(ktime_get(), start)));
+//	trace_mmc_resume_host(mmc_hostname(host), err,
+//			ktime_to_us(ktime_sub(ktime_get(), start)));
 	if (host->ops->notify_pm_status)
 		host->ops->notify_pm_status(host,
 			remove_pm_vote ? DEV_ERROR : DEV_RESUMED);

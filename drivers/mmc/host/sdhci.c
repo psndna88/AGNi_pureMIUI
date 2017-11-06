@@ -765,9 +765,9 @@ static void sdhci_adma_table_post(struct sdhci_host *host,
 	char *buffer;
 	unsigned long flags;
 	bool has_unaligned = false;
-	u32 command = SDHCI_GET_CMD(sdhci_readw(host, SDHCI_COMMAND));
+//	u32 command = SDHCI_GET_CMD(sdhci_readw(host, SDHCI_COMMAND));
 
-	trace_mmc_adma_table_post(command, data->sg_len);
+//	trace_mmc_adma_table_post(command, data->sg_len);
 
 	if (!(host->quirks2 & SDHCI_QUIRK2_ADMA_SKIP_DATA_ALIGNMENT)
 			&& (data->flags & MMC_DATA_READ)) {
@@ -1002,7 +1002,7 @@ static void sdhci_prepare_data(struct sdhci_host *host, struct mmc_command *cmd)
 
 	if (host->flags & SDHCI_REQ_USE_DMA) {
 		if (host->flags & SDHCI_USE_ADMA) {
-			trace_mmc_adma_table_pre(cmd->opcode, data->sg_len);
+//			trace_mmc_adma_table_pre(cmd->opcode, data->sg_len);
 			ret = sdhci_adma_table_pre(host, data);
 			if (ret) {
 				/*
@@ -1263,7 +1263,7 @@ static void sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
 
 	if (cmd->data)
 		host->data_start_time = ktime_get();
-	trace_mmc_cmd_rw_start(cmd->opcode, cmd->arg, cmd->flags);
+//	trace_mmc_cmd_rw_start(cmd->opcode, cmd->arg, cmd->flags);
 	sdhci_writew(host, SDHCI_MAKE_CMD(cmd->opcode, flags), SDHCI_COMMAND);
 }
 
@@ -3062,8 +3062,8 @@ static void sdhci_cmd_irq(struct sdhci_host *host, u32 intmask)
 		return;
 	}
 
-	trace_mmc_cmd_rw_end(host->cmd->opcode, intmask,
-				sdhci_readl(host, SDHCI_RESPONSE));
+//	trace_mmc_cmd_rw_end(host->cmd->opcode, intmask,
+//				sdhci_readl(host, SDHCI_RESPONSE));
 
 	if (intmask & SDHCI_INT_TIMEOUT)
 		host->cmd->error = -ETIMEDOUT;
@@ -3163,7 +3163,7 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 	BUG_ON(intmask == 0);
 
 	command = SDHCI_GET_CMD(sdhci_readw(host, SDHCI_COMMAND));
-	trace_mmc_data_rw_end(command, intmask);
+//	trace_mmc_data_rw_end(command, intmask);
 
 	/* CMD19 generates _only_ Buffer Read Ready interrupt */
 	if (intmask & SDHCI_INT_DATA_AVAIL) {

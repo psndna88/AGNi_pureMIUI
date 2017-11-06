@@ -48,7 +48,7 @@ static int mmc_host_runtime_suspend(struct device *dev)
 {
 	struct mmc_host *host = cls_dev_to_mmc_host(dev);
 	int ret = 0;
-	ktime_t start = ktime_get();
+//	ktime_t start = ktime_get();
 
 	if (!mmc_use_core_runtime_pm(host))
 		return 0;
@@ -107,8 +107,8 @@ static int mmc_host_runtime_suspend(struct device *dev)
 	if (ret == -ENOMEDIUM)
 		ret = 0;
 out:
-	trace_mmc_host_runtime_suspend(mmc_hostname(host), ret,
-			ktime_to_us(ktime_sub(ktime_get(), start)));
+//	trace_mmc_host_runtime_suspend(mmc_hostname(host), ret,
+//			ktime_to_us(ktime_sub(ktime_get(), start)));
 	return ret;
 }
 
@@ -116,7 +116,7 @@ static int mmc_host_runtime_resume(struct device *dev)
 {
 	struct mmc_host *host = cls_dev_to_mmc_host(dev);
 	int ret = 0;
-	ktime_t start = ktime_get();
+//	ktime_t start = ktime_get();
 
 	if (!mmc_use_core_runtime_pm(host))
 		return 0;
@@ -141,8 +141,8 @@ static int mmc_host_runtime_resume(struct device *dev)
 	}
 
 out:
-	trace_mmc_host_runtime_resume(mmc_hostname(host), ret,
-			ktime_to_us(ktime_sub(ktime_get(), start)));
+//	trace_mmc_host_runtime_resume(mmc_hostname(host), ret,
+//			ktime_to_us(ktime_sub(ktime_get(), start)));
 	return ret;
 }
 #endif
