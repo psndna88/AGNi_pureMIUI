@@ -423,6 +423,11 @@ static const struct dpp_test_info dpp_tests[] = {
 	{ "MissingAttribute", "ConfigurationResponse", "WrappedData", 57 },
 	{ "InvalidValue", "ConfigurationResponse", "DPPStatus", 58 },
 	{ "InvalidValue", "ConfigurationResponse", "EnrolleeNonce", 59 },
+	{ "MissingAttribute", "PeerDiscoveryRequest", "TransactionID", 60 },
+	{ "MissingAttribute", "PeerDiscoveryRequest", "Connector", 61 },
+	{ "MissingAttribute", "PeerDiscoveryResponse", "TransactionID", 62 },
+	{ "MissingAttribute", "PeerDiscoveryResponse", "DPPStatus", 63 },
+	{ "MissingAttribute", "PeerDiscoveryResponse", "Connector", 64 },
 	{ NULL, NULL, NULL, 0 }
 };
 
@@ -961,6 +966,16 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	if (strcasecmp(wait_conn, "Yes") == 0 &&
 	    !sigma_dut_is_ap(dut) &&
 	    strcasecmp(prov_role, "Enrollee") == 0) {
+		if (frametype && strcasecmp(frametype,
+					    "PeerDiscoveryRequest") == 0) {
+			if (dpp_wait_tx_status(dut, ctrl, 5) < 0)
+				result = "BootstrapResult,OK,AuthResult,OK,ConfResult,OK,NetworkIntroResult,Timeout";
+			else
+				result = "BootstrapResult,OK,AuthResult,OK,ConfResult,OK,NetworkIntroResult,Errorsent";
+			send_resp(dut, conn, SIGMA_COMPLETE, result);
+			goto out;
+		}
+
 		res = get_wpa_cli_events(dut, ctrl, conn_events,
 					 buf, sizeof(buf));
 		if (res < 0) {
@@ -992,6 +1007,16 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 
 		send_resp(dut, conn, SIGMA_COMPLETE,
 			  "BootstrapResult,OK,AuthResult,OK,ConfResult,OK,NetworkConnectResult,OK");
+		goto out;
+	}
+
+	if (strcasecmp(wait_conn, "Yes") == 0 &&
+	    frametype && strcasecmp(frametype, "PeerDiscoveryResponse") == 0) {
+		if (dpp_wait_tx_status(dut, ctrl, 6) < 0)
+			result = "BootstrapResult,OK,AuthResult,OK,ConfResult,OK,NetworkIntroResult,Timeout";
+		else
+			result = "BootstrapResult,OK,AuthResult,OK,ConfResult,OK,NetworkIntroResult,Errorsent";
+		send_resp(dut, conn, SIGMA_COMPLETE, result);
 		goto out;
 	}
 
