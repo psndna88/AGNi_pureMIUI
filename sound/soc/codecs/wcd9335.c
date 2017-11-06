@@ -3420,10 +3420,10 @@ static int tasha_set_compander(struct snd_kcontrol *kcontrol,
 		snd_soc_update_bits(codec, WCD9335_SE_LO_LO3_GAIN, 0x20,
 				(value ? 0x00:0x20));
 		break;
-	case COMPANDER_6:
+/*	case COMPANDER_6:
 		snd_soc_update_bits(codec, WCD9335_SE_LO_LO4_GAIN, 0x20,
 				(value ? 0x00:0x20));
-		break;
+		break; */
 	case COMPANDER_7:
 		break;
 	case COMPANDER_8:
@@ -8070,7 +8070,7 @@ static const struct snd_kcontrol_new tasha_snd_controls[] = {
 		       tasha_get_compander, tasha_set_compander),
 	SOC_SINGLE_EXT("COMP5 Switch", SND_SOC_NOPM, COMPANDER_5, 1, 0,
 		       tasha_get_compander, tasha_set_compander),
-	SOC_SINGLE_EXT("COMP6 Switch", SND_SOC_NOPM, COMPANDER_6, 1, 0,
+	SOC_SINGLE_EXT("COMP6 Switch", SND_SOC_NOPM, COMPANDER_8, 1, 0,
 		       tasha_get_compander, tasha_set_compander),
 	SOC_SINGLE_EXT("COMP7 Switch", SND_SOC_NOPM, COMPANDER_7, 1, 0,
 		       tasha_get_compander, tasha_set_compander),
