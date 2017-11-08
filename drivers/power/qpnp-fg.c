@@ -243,7 +243,7 @@ static struct fg_mem_setting settings[FG_MEM_SETTING_MAX] = {
 	SETTING(DELTA_SOC,	 0x450,   3,      1),
 	SETTING(SOC_MAX,	 0x458,   1,      85),
 	SETTING(SOC_MIN,	 0x458,   2,      15),
-	SETTING(BATT_LOW,	 0x458,   0,      4200),
+	SETTING(BATT_LOW,	 0x458,   0,      3400),
 };
 
 #define DATA(_idx, _address, _offset, _length,  _value)	\
