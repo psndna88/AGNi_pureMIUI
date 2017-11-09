@@ -210,6 +210,7 @@ extern void add_timer_on(struct timer_list *timer, int cpu);
 extern int del_timer(struct timer_list * timer);
 extern int mod_timer(struct timer_list *timer, unsigned long expires);
 extern int mod_timer_pending(struct timer_list *timer, unsigned long expires);
+extern int timer_reduce(struct timer_list *timer, unsigned long expires);
 #ifdef CONFIG_SMP
 extern bool check_pending_deferrable_timers(int cpu);
 #endif
