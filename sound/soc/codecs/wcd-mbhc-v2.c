@@ -66,6 +66,7 @@ int wcd_fake_removal_min_period_ms = 100;
 int fake_rem_retry_attempts = 10;
 int wcd_mbhc_spl_hs_cnt = 1;
 int wcd_mbhc_btn_press_compl_timeout_ms = 50;
+bool zdet_high_indicate = false;
 uint32_t impedence_hph_left, impedence_hph_right;
 module_param_named(hs_detect_plug_time_ms, hs_detect_plug_time_ms, int, 0664);
 module_param_named(mbhc_button_press_threshold_min_ms, mbhc_button_press_threshold_min, int, 0664);
@@ -76,6 +77,7 @@ module_param_named(wcd_mbhc_spl_hs_cnt, wcd_mbhc_spl_hs_cnt, int, 0664);
 module_param_named(wcd_mbhc_btn_press_compl_timeout_ms, wcd_mbhc_btn_press_compl_timeout_ms, int, 0664);
 module_param(impedence_hph_left, int, S_IRUGO);
 module_param(impedence_hph_right, int, S_IRUGO);
+module_param(zdet_high_indicate, bool, S_IRUGO);
 
 enum wcd_mbhc_cs_mb_en_flag {
 	WCD_MBHC_EN_CS = 0,
@@ -765,6 +767,11 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 					pr_info("mbhc: AGNi=> Impedance (Z) = L:%dΩ R:%dΩ \n",
 						impedence_hph_left, impedence_hph_right);
 				}
+				/* High/Low Impedance Reporting */
+				if ((impedence_hph_left >= 28) || (impedence_hph_right >= 28))
+					zdet_high_indicate = true;
+				else
+					zdet_high_indicate = false;
 			} else {
 				pr_debug("%s: skip impedance detection\n",
 					__func__);
