@@ -1398,7 +1398,8 @@ void mdss_fb_update_backlight(struct msm_fb_data_type *mfd)
 
 static int mdss_fb_start_disp_thread(struct msm_fb_data_type *mfd)
 {
-	int ret = 0;
+	const unsigned long allowed_cpus = 0xF;
+	int ret;
 
 	pr_debug("%pS: start display thread fb%d\n",
 		__builtin_return_address(0), mfd->index);
@@ -1407,17 +1408,24 @@ static int mdss_fb_start_disp_thread(struct msm_fb_data_type *mfd)
 	mdss_fb_get_split(mfd);
 
 	atomic_set(&mfd->commits_pending, 0);
-	mfd->disp_thread = kthread_run(__mdss_fb_display_thread,
+	mfd->disp_thread = kthread_create(__mdss_fb_display_thread,
 				mfd, "mdss_fb%d", mfd->index);
 
 	if (IS_ERR(mfd->disp_thread)) {
-		pr_err("ERROR: unable to start display thread %d\n",
+		pr_err("ERROR: unable to create display thread %d\n",
 				mfd->index);
 		ret = PTR_ERR(mfd->disp_thread);
 		mfd->disp_thread = NULL;
+		return ret;
 	}
 
-	return ret;
+	/* Restrict the display thread to the power cluster to save power */
+	do_set_cpus_allowed(mfd->disp_thread, to_cpumask(&allowed_cpus));
+	mfd->disp_thread->flags |= PF_NO_SETAFFINITY;
+
+	wake_up_process(mfd->disp_thread);
+
+	return 0;
 }
 
 static void mdss_fb_stop_disp_thread(struct msm_fb_data_type *mfd)
