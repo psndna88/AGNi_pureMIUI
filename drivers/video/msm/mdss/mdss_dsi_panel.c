@@ -2302,12 +2302,18 @@ static int msm_lcd_write_reg_create_sysfs(void)
 
 #endif
 #ifdef LCM_SUPPORT_READ_VERSION
+
+int boe_panel = 0;
 static int mdss_panel_parse_panel_name(struct device_node *node)
 {
 	const char *name;
 
 	name = of_get_property(node,
 				"qcom,mdss-dsi-panel-name", NULL);
+
+        if(!strcmp(name, "boe nt35532 1080p video mode dsi panel"))
+                boe_panel = 1;
+
 	strcpy(g_lcm_id, name);
 	return 0;
 }
