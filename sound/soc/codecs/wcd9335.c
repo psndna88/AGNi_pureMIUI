@@ -3707,11 +3707,7 @@ static void tasha_codec_hph_post_pa_config(struct tasha_priv *tasha,
 			scale_val = 0x3;
 			break;
 		case CLS_H_LOHIFI:
-			// Force HIFI 
-			if (!pdesireaudio_uhqa_mode)
-				scale_val = 0x1;
-			else
-				scale_val = 0x2;
+			scale_val = 0x1;
 			break;
 		}
 		break;
