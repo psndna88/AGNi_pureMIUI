@@ -757,10 +757,14 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 				impedence_hph_right = mbhc->zr;
 				/* handle infinite impedance reporting in case of
 				 * extension cable */
-				if ((impedence_hph_left > 500) || (impedence_hph_right > 500)) {
+				if ((impedence_hph_left > 1000) || (impedence_hph_right > 1000)) {
 					impedence_hph_left = 0;
 					impedence_hph_right = 0;
 				}
+				if ((impedence_hph_left != 0) && (impedence_hph_right == 0))
+					impedence_hph_right = impedence_hph_left;
+				else if ((impedence_hph_right != 0) && (impedence_hph_left == 0))
+					impedence_hph_left = impedence_hph_right;
 				/* impedance report only for headphone/headset */
 				if ((mbhc->current_plug == MBHC_PLUG_TYPE_HEADPHONE) ||
 					(mbhc->current_plug == MBHC_PLUG_TYPE_HEADSET)) {
