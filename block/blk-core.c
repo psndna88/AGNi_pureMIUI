@@ -1033,7 +1033,7 @@ out:
 	if (ioc_batching(q, ioc))
 		ioc->nr_batch_requests--;
 
-	trace_block_getrq(q, bio, rw_flags & 1);
+//	trace_block_getrq(q, bio, rw_flags & 1);
 	return rq;
 
 fail_elvpriv:
@@ -1115,7 +1115,7 @@ retry:
 	prepare_to_wait_exclusive(&rl->wait[is_sync], &wait,
 				  TASK_UNINTERRUPTIBLE);
 
-	trace_block_sleeprq(q, bio, rw_flags & 1);
+//	trace_block_sleeprq(q, bio, rw_flags & 1);
 
 	spin_unlock_irq(q->queue_lock);
 	io_schedule();
@@ -1237,7 +1237,7 @@ void blk_requeue_request(struct request_queue *q, struct request *rq)
 {
 	blk_delete_timer(rq);
 	blk_clear_rq_complete(rq);
-	trace_block_rq_requeue(q, rq);
+//	trace_block_rq_requeue(q, rq);
 
 	if (blk_rq_tagged(rq))
 		blk_queue_end_tag(q, rq);
@@ -1275,7 +1275,7 @@ int blk_reinsert_request(struct request_queue *q, struct request *rq)
 
 	blk_delete_timer(rq);
 	blk_clear_rq_complete(rq);
-	trace_block_rq_requeue(q, rq);
+//	trace_block_rq_requeue(q, rq);
 
 	if (blk_rq_tagged(rq))
 		blk_queue_end_tag(q, rq);
@@ -1455,7 +1455,7 @@ static bool bio_attempt_back_merge(struct request_queue *q, struct request *req,
 	if (!ll_back_merge_fn(q, req, bio))
 		return false;
 
-	trace_block_bio_backmerge(q, req, bio);
+//	trace_block_bio_backmerge(q, req, bio);
 
 	if ((req->cmd_flags & REQ_FAILFAST_MASK) != ff)
 		blk_rq_set_mixed_merge(req);
@@ -1477,7 +1477,7 @@ static bool bio_attempt_front_merge(struct request_queue *q,
 	if (!ll_front_merge_fn(q, req, bio))
 		return false;
 
-	trace_block_bio_frontmerge(q, req, bio);
+//	trace_block_bio_frontmerge(q, req, bio);
 
 	if ((req->cmd_flags & REQ_FAILFAST_MASK) != ff)
 		blk_rq_set_mixed_merge(req);
@@ -1658,12 +1658,12 @@ get_rq:
 		 * if we have multiple devices in this plug. If so, make a
 		 * note to sort the list before dispatch.
 		 */
-		if (list_empty(&plug->list))
-			trace_block_plug(q);
-		else {
+//		if (list_empty(&plug->list))
+//			trace_block_plug(q);
+		if (!list_empty(&plug->list)) {
 			if (request_count >= BLK_MAX_REQUEST_COUNT) {
 				blk_flush_plug_list(plug, false);
-				trace_block_plug(q);
+//				trace_block_plug(q);
 			}
 		}
 		list_add_tail(&req->queuelist, &plug->list);
@@ -1691,9 +1691,9 @@ static inline void blk_partition_remap(struct bio *bio)
 		bio->bi_sector += p->start_sect;
 		bio->bi_bdev = bdev->bd_contains;
 
-		trace_block_bio_remap(bdev_get_queue(bio->bi_bdev), bio,
-				      bdev->bd_dev,
-				      bio->bi_sector - p->start_sect);
+//		trace_block_bio_remap(bdev_get_queue(bio->bi_bdev), bio,
+//				      bdev->bd_dev,
+//				      bio->bi_sector - p->start_sect);
 	}
 }
 
@@ -1859,7 +1859,7 @@ generic_make_request_checks(struct bio *bio)
 	if (blk_throtl_bio(q, bio))
 		return false;	/* throttled, will be resubmitted later */
 
-	trace_block_bio_queue(q, bio);
+//	trace_block_bio_queue(q, bio);
 	return true;
 
 end_io:
@@ -2252,7 +2252,7 @@ struct request *blk_peek_request(struct request_queue *q)
 				WARN_ON(q->dispatched_urgent);
 				q->dispatched_urgent = true;
 			}
-			trace_block_rq_issue(q, rq);
+//			trace_block_rq_issue(q, rq);
 		}
 
 		if (!q->boundary_rq || q->boundary_rq == rq) {
@@ -2421,7 +2421,7 @@ bool blk_update_request(struct request *req, int error, unsigned int nr_bytes)
 	if (!req->bio)
 		return false;
 
-	trace_block_rq_complete(req->q, req, nr_bytes);
+//	trace_block_rq_complete(req->q, req, nr_bytes);
 
 	/*
 	 * For fs requests, rq is just carrier of independent bio's
@@ -3043,7 +3043,7 @@ static void queue_unplugged(struct request_queue *q, unsigned int depth,
 			    bool from_schedule)
 	__releases(q->queue_lock)
 {
-	trace_block_unplug(q, depth, !from_schedule);
+//	trace_block_unplug(q, depth, !from_schedule);
 
 	if (from_schedule)
 		blk_run_queue_async(q);
