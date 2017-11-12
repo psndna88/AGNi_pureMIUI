@@ -441,10 +441,12 @@
 
 	qcom,cpu-bwmon@408000 {
 		compatible = "qcom,bimc-bwmon2";
+		governor = "cpufreq";
 		reg = <0x408000 0x300>, <0x401000 0x200>;
 		reg-names = "base", "global_base";
 		interrupts = <0 183 4>;
 		qcom,mport = <0>;
+		qcom,hw-timer-hz = <19200000>;
 		qcom,target-dev = <&cpubw>;
 	};
 
@@ -797,7 +799,7 @@
 		qcom,sensor-id = <9>;
 		qcom,poll-ms = <250>;
 		qcom,limit-temp = <60>;
-		qcom,temp-hysteresis = <100>;
+		qcom,temp-hysteresis = <10>;
 		qcom,freq-step = <2>;
 		qcom,core-limit-temp = <80>;
 		qcom,core-temp-hysteresis = <10>;
@@ -811,7 +813,7 @@
 		qcom,online-hotplug-core;
 		qcom,synchronous-cluster-id = <0 1>;
 		qcom,synchronous-cluster-map = <0 4 &CPU0 &CPU1 &CPU2 &CPU3>,
-						<1 4 &CPU4 &CPU5>;
+						<1 2 &CPU4 &CPU5>;
 		qcom,disable-cx-phase-ctrl;
 		qcom,disable-gfx-phase-ctrl;
 		qcom,disable-psm;
@@ -1021,6 +1023,8 @@
 		reg-names = "hc_mem", "core_mem";
 
 		qcom,bus-width = <4>;
+		qcom,large-address-bus;
+
 		gpios = <&msm_gpio 44 0>, /* CLK */
 			<&msm_gpio 43 0>, /* CMD */
 			<&msm_gpio 42 0>, /* DATA0 */
