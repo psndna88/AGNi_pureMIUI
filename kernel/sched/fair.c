@@ -86,7 +86,7 @@ unsigned int sysctl_sched_child_runs_first __read_mostly;
  * per-task flag PF_WAKE_UP_IDLE can still cause a task to go to an
  * idle CPU upon being woken.
  */
-unsigned int __read_mostly sysctl_sched_wake_to_idle;
+unsigned int __read_mostly sysctl_sched_wake_to_idle = 1;
 
 /*
  * SCHED_OTHER wake-up granularity.
@@ -4919,6 +4919,7 @@ static enum hrtimer_restart sched_cfs_period_timer(struct hrtimer *timer)
 	int overrun;
 	int idle = 0;
 
+	raw_spin_lock(&cfs_b->lock);
 	for (;;) {
 		now = hrtimer_cb_get_time(timer);
 		overrun = hrtimer_forward(timer, now, cfs_b->period);
@@ -4928,6 +4929,7 @@ static enum hrtimer_restart sched_cfs_period_timer(struct hrtimer *timer)
 
 		idle = do_sched_cfs_period_timer(cfs_b, overrun);
 	}
+	raw_spin_unlock(&cfs_b->lock);
 
 	return idle ? HRTIMER_NORESTART : HRTIMER_RESTART;
 }
