@@ -808,7 +808,17 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			goto out;
 		}
 	} else if (strcasecmp(auth_role, "Responder") == 0) {
-		int freq = 2462;
+		int freq = 2462; /* default: channel 11 */
+
+		val = get_param(cmd, "DPPListenChannel");
+		if (val) {
+			freq = channel_to_freq(atoi(val));
+			if (freq == 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Unsupported DPPListenChannel value");
+				goto out;
+			}
+		}
 
 		if (strcasecmp(prov_role, "Configurator") == 0) {
 			if (!conf_role) {
