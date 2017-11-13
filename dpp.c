@@ -155,9 +155,8 @@ static int dpp_set_peer_bootstrap(struct sigma_dut *dut,
 				  struct sigma_cmd *cmd)
 {
 	const char *val = get_param(cmd, "DPPBootstrappingdata");
-	char uri[1000], buf[1200];
+	char uri[1000];
 	int res;
-	const char *ifname = get_station_ifname();
 
 	if (!val) {
 		send_resp(dut, conn, SIGMA_ERROR,
@@ -170,30 +169,8 @@ static int dpp_set_peer_bootstrap(struct sigma_dut *dut,
 		return -2;
 	uri[res] = '\0';
 	sigma_dut_print(dut, DUT_MSG_DEBUG, "URI: %s", uri);
-
-	snprintf(buf, sizeof(buf), "DPP_QR_CODE %s", uri);
-
-	if (sigma_dut_is_ap(dut)) {
-		if (!dut->hostapd_ifname) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"hostapd ifname not specified (-j)");
-			return -2;
-		}
-		ifname = dut->hostapd_ifname;
-
-		if (dpp_hostapd_run(dut) < 0) {
-			send_resp(dut, conn, SIGMA_ERROR,
-				  "errorCode,Failed to start hostapd");
-			return 0;
-		}
-	}
-
-	if (wpa_command_resp(ifname, buf, buf, sizeof(buf)) < 0) {
-		send_resp(dut, conn, SIGMA_ERROR,
-			  "errorCode,Failed to parse URI");
-		return 0;
-	}
-	dut->dpp_peer_bootstrap = atoi(buf);
+	free(dut->dpp_peer_uri);
+	dut->dpp_peer_uri = strdup(uri);
 
 	return 1;
 }
@@ -516,6 +493,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	const char *step = get_param(cmd, "DPPStep");
 	const char *frametype = get_param(cmd, "DPPFrameType");
 	const char *attr = get_param(cmd, "DPPIEAttribute");
+	const char *delay_qr_resp = get_param(cmd, "DPPDelayQRResponse");
 	const char *role;
 	const char *val;
 	const char *conf_role;
@@ -759,6 +737,25 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 
 	if (strcasecmp(auth_role, "Initiator") == 0) {
 		char own_txt[20];
+		int dpp_peer_bootstrap = -1;
+
+		if (strcasecmp(bs, "QR") == 0) {
+			if (!dut->dpp_peer_uri) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Missing peer bootstrapping info");
+				goto out;
+			}
+
+			snprintf(buf, sizeof(buf), "DPP_QR_CODE %s",
+				 dut->dpp_peer_uri);
+			if (wpa_command_resp(ifname, buf, buf,
+					     sizeof(buf)) < 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to parse URI");
+				goto out;
+			}
+			dpp_peer_bootstrap = atoi(buf);
+		}
 
 		if (mutual)
 			snprintf(own_txt, sizeof(own_txt), " own=%d",
@@ -774,13 +771,13 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			}
 			snprintf(buf, sizeof(buf),
 				 "DPP_AUTH_INIT peer=%d%s role=%s conf=%s %s %s configurator=%d",
-				 dut->dpp_peer_bootstrap, own_txt, role,
+				 dpp_peer_bootstrap, own_txt, role,
 				 conf_role, conf_ssid, conf_pass,
 				 dut->dpp_conf_id);
 		} else if (strcasecmp(bs, "QR") == 0) {
 			snprintf(buf, sizeof(buf),
 				 "DPP_AUTH_INIT peer=%d%s role=%s",
-				 dut->dpp_peer_bootstrap, own_txt, role);
+				 dpp_peer_bootstrap, own_txt, role);
 		} else if (strcasecmp(bs, "PKEX") == 0 &&
 			   strcasecmp(prov_role, "Configurator") == 0) {
 			if (!conf_role) {
@@ -816,6 +813,17 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			if (freq == 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "errorCode,Unsupported DPPListenChannel value");
+				goto out;
+			}
+		}
+
+		if (!delay_qr_resp && dut->dpp_peer_uri) {
+			snprintf(buf, sizeof(buf), "DPP_QR_CODE %s",
+				 dut->dpp_peer_uri);
+			if (wpa_command_resp(ifname, buf, buf,
+					     sizeof(buf)) < 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to parse URI");
 				goto out;
 			}
 		}
@@ -857,6 +865,38 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Failed to start DPP listen");
 			goto out;
+		}
+
+		if (delay_qr_resp && mutual && dut->dpp_peer_uri) {
+			int wait_time = atoi(delay_qr_resp);
+
+			res = get_wpa_cli_events(dut, ctrl, auth_events,
+						 buf, sizeof(buf));
+			if (res < 0) {
+				send_resp(dut, conn, SIGMA_COMPLETE,
+					  "BootstrapResult,OK,AuthResult,Timeout");
+				goto out;
+			}
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"DPP auth result: %s", buf);
+			if (strstr(buf, "DPP-SCAN-PEER-QR-CODE") == NULL) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,No scan request for peer QR Code seen");
+				goto out;
+			}
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Waiting %d second(s) before processing peer URI",
+					wait_time);
+			sleep(wait_time);
+
+			snprintf(buf, sizeof(buf), "DPP_QR_CODE %s",
+				 dut->dpp_peer_uri);
+			if (wpa_command_resp(ifname, buf, buf,
+					     sizeof(buf)) < 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to parse URI");
+				goto out;
+			}
 		}
 	} else {
 		send_resp(dut, conn, SIGMA_ERROR,

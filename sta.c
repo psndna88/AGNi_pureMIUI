@@ -5075,6 +5075,8 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 	dut->sae_commit_override = NULL;
 
 	dut->dpp_conf_id = -1;
+	free(dut->dpp_peer_uri);
+	dut->dpp_peer_uri = NULL;
 
 	wpa_command(intf, "VENDOR_ELEM_REMOVE 13 *");
 

@@ -654,7 +654,7 @@ struct sigma_dut {
 	const char *hostapd_ifname;
 	int hostapd_running;
 
-	int dpp_peer_bootstrap;
+	char *dpp_peer_uri;
 	int dpp_local_bootstrap;
 	int dpp_conf_id;
 };
