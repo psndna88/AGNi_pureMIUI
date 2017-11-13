@@ -295,8 +295,8 @@ static void mdss_mdp_kcal_update_pcc(struct kcal_lut_data *lut_data)
 	memset(&pcc_config, 0, sizeof(struct mdp_pcc_cfg_data));
 
 	if(boe_panel) {
-		lut_data->red += (-31); //225
-		lut_data->green += (-31); //225
+		lut_data->red += (-10); //246
+		lut_data->green += (-10); //246
 	}
 
 	lut_data->red = lut_data->red < lut_data->minimum ?
@@ -433,8 +433,8 @@ static ssize_t kcal_show(struct device *dev, struct device_attribute *attr,
 
 	mdss_mdp_kcal_read_pcc(lut_data);
 	if (boe_panel) {
-		lut_data->red += 31;
-		lut_data->green += 31;
+		lut_data->red += 10;
+		lut_data->green += 10;
 	}
 
 	return scnprintf(buf, PAGE_SIZE, "%d %d %d\n",
