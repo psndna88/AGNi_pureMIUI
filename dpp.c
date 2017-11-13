@@ -58,7 +58,8 @@ static int dpp_get_local_bootstrap(struct sigma_dut *dut,
 {
 	const char *curve = dpp_get_curve(cmd, "DPPCryptoIdentifier");
 	const char *bs = get_param(cmd, "DPPBS");
-	char *pos, mac[50], buf[100], resp[1000], hex[2000];
+	const char *chan_list = get_param(cmd, "DPPChannelList");
+	char *pos, mac[50], buf[200], resp[1000], hex[2000];
 	const char *ifname = get_station_ifname();
 
 	if (strcasecmp(bs, "QR") != 0) {
@@ -98,14 +99,35 @@ static int dpp_get_local_bootstrap(struct sigma_dut *dut,
 			pos++;
 	}
 
-	snprintf(buf, sizeof(buf),
-		 "DPP_BOOTSTRAP_GEN type=qrcode curve=%s chan=81/11 mac=%s",
-		 curve, mac);
-
 	if (sigma_dut_is_ap(dut) && dpp_hostapd_run(dut) < 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Failed to start hostapd");
 		return 0;
+	}
+
+	if (chan_list &&
+	    (strcmp(chan_list, "0/0") == 0 || chan_list[0] == '\0')) {
+		/* No channel list */
+		snprintf(buf, sizeof(buf),
+			 "DPP_BOOTSTRAP_GEN type=qrcode curve=%s mac=%s",
+			 curve, mac);
+	} else if (chan_list) {
+		/* Channel list override (CTT case) - space separated tuple(s)
+		 * of OperatingClass/Channel; convert to wpa_supplicant/hostapd
+		 * format: comma separated tuples */
+		strlcpy(resp, chan_list, sizeof(resp));
+		for (pos = resp; *pos; pos++) {
+			if (*pos == ' ')
+				*pos = ',';
+		}
+		snprintf(buf, sizeof(buf),
+			 "DPP_BOOTSTRAP_GEN type=qrcode curve=%s chan=%s mac=%s",
+			 curve, resp, mac);
+	} else {
+		/* Default channel list (normal DUT case) */
+		snprintf(buf, sizeof(buf),
+			 "DPP_BOOTSTRAP_GEN type=qrcode curve=%s chan=81/11 mac=%s",
+			 curve, mac);
 	}
 
 	if (wpa_command_resp(ifname, buf, resp, sizeof(resp)) < 0)
