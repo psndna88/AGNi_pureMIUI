@@ -3399,22 +3399,16 @@ static int tasha_set_compander(struct snd_kcontrol *kcontrol,
 	switch (comp) {
 	case COMPANDER_1:
 		/* Set Gain Source Select based on compander enable/disable */
-/*		snd_soc_update_bits(codec, WCD9335_HPH_L_EN, 0x16,
-				(value ? 0x00:0x16)); */
+		snd_soc_update_bits(codec, WCD9335_HPH_L_EN, 0x20,
+				(value ? 0x00:0x20));
 		break;
 	case COMPANDER_2:
-/*		snd_soc_update_bits(codec, WCD9335_HPH_R_EN, 0x16,
-				(value ? 0x00:0x16)); */
+		snd_soc_update_bits(codec, WCD9335_HPH_R_EN, 0x20,
+				(value ? 0x00:0x20));
 		break;
 	case COMPANDER_3:
-		/* Direct idle COMP3 to HPH_L */
-		snd_soc_update_bits(codec, WCD9335_HPH_L_EN, 0x18,
-				(value ? 0x00:0x18));
 		break;
 	case COMPANDER_4:
-		/* Direct idle COMP4 to HPH_R */
-		snd_soc_update_bits(codec, WCD9335_HPH_R_EN, 0x18,
-				(value ? 0x00:0x18));
 		break;
 	case COMPANDER_5:
 		snd_soc_update_bits(codec, WCD9335_SE_LO_LO3_GAIN, 0x20,
@@ -3726,23 +3720,14 @@ static void tasha_codec_hph_post_pa_config(struct tasha_priv *tasha,
 		snd_soc_update_bits(tasha->codec, WCD9335_HPH_PA_CTL1, 0x0E,
 				    scale_val << 1);
 	if (SND_SOC_DAPM_EVENT_ON(event)) {
-/*		if (tasha->comp_enabled[COMPANDER_1] ||
+		if (tasha->comp_enabled[COMPANDER_1] ||
 		    tasha->comp_enabled[COMPANDER_2]) {
 			snd_soc_update_bits(tasha->codec, WCD9335_HPH_L_EN,
-					    0x16, 0x00);
+					    0x20, 0x00);
 			snd_soc_update_bits(tasha->codec, WCD9335_HPH_R_EN,
-					    0x16, 0x00);
+					    0x20, 0x00);
 			snd_soc_update_bits(tasha->codec, WCD9335_HPH_AUTO_CHOP,
-					    0x16, 0x16);
-		} */
-		if (tasha->comp_enabled[COMPANDER_3] ||
-		    tasha->comp_enabled[COMPANDER_4]) {
-			snd_soc_update_bits(tasha->codec, WCD9335_HPH_L_EN,
-					    0x18, 0x00);
-			snd_soc_update_bits(tasha->codec, WCD9335_HPH_R_EN,
-					    0x18, 0x00);
-			snd_soc_update_bits(tasha->codec, WCD9335_HPH_AUTO_CHOP,
-					    0x18, 0x18);
+					    0x20, 0x20);
 		}
 		snd_soc_update_bits(tasha->codec, WCD9335_HPH_L_EN, 0x1F,
 				    tasha->hph_l_gain);
@@ -3751,7 +3736,7 @@ static void tasha_codec_hph_post_pa_config(struct tasha_priv *tasha,
 	}
 
 	if (SND_SOC_DAPM_EVENT_OFF(event)) {
-		snd_soc_update_bits(tasha->codec, WCD9335_HPH_AUTO_CHOP, 0x18,
+		snd_soc_update_bits(tasha->codec, WCD9335_HPH_AUTO_CHOP, 0x20,
 				    0x00);
 	}
 }
@@ -4172,10 +4157,7 @@ static void tasha_codec_hph_mode_config(struct snd_soc_codec *codec,
 			tasha_codec_hph_hifi_config(codec, event);
 		break;
 	case CLS_H_LOHIFI:
-		if (!pdesireaudio_uhqa_mode)
-			tasha_codec_hph_lohifi_config(codec, event);
-		else
-			tasha_codec_hph_hifi_config(codec, event);
+		tasha_codec_hph_lohifi_config(codec, event);
 		break;
 	case CLS_H_HIFI:
 		tasha_codec_hph_hifi_config(codec, event);
@@ -7896,9 +7878,9 @@ static const struct snd_kcontrol_new tasha_snd_controls[] = {
 	SOC_SINGLE_SX_TLV("RX0 Digital Volume", WCD9335_CDC_RX0_RX_VOL_CTL,
 		0, -84, 40, digital_gain), /* -84dB min - 40dB max */
 	SOC_SINGLE_SX_TLV("RX1 Digital Volume", WCD9335_CDC_RX1_RX_VOL_CTL,
-		-2, -84, 40, digital_gain),
+		0, -84, 40, digital_gain),
 	SOC_SINGLE_SX_TLV("RX2 Digital Volume", WCD9335_CDC_RX2_RX_VOL_CTL,
-		-2, -84, 40, digital_gain),
+		0, -84, 40, digital_gain),
 	SOC_SINGLE_SX_TLV("RX3 Digital Volume", WCD9335_CDC_RX3_RX_VOL_CTL,
 		0, -84, 40, digital_gain),
 	SOC_SINGLE_SX_TLV("RX4 Digital Volume", WCD9335_CDC_RX4_RX_VOL_CTL,
@@ -12451,6 +12433,8 @@ static int tasha_post_reset_cb(struct wcd9xxx *wcd9xxx)
 	tasha_update_reg_defaults(tasha);
 
 	tasha->codec = codec;
+//	for (i = 0; i < COMPANDER_MAX; i++)
+//		tasha->comp_enabled[i] = 0;
 
 	dev_dbg(codec->dev, "%s: MCLK Rate = %x\n",
 		__func__, control->mclk_rate);
