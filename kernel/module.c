@@ -971,7 +971,7 @@ void __module_get(struct module *module)
 	if (module) {
 		preempt_disable();
 		__this_cpu_inc(module->refptr->incs);
-		trace_module_get(module, _RET_IP_);
+//		trace_module_get(module, _RET_IP_);
 		preempt_enable();
 	}
 }
@@ -986,7 +986,7 @@ bool try_module_get(struct module *module)
 
 		if (likely(module_is_live(module))) {
 			__this_cpu_inc(module->refptr->incs);
-			trace_module_get(module, _RET_IP_);
+//			trace_module_get(module, _RET_IP_);
 		} else
 			ret = false;
 
@@ -1003,7 +1003,7 @@ void module_put(struct module *module)
 		smp_wmb(); /* see comment in module_refcount */
 		__this_cpu_inc(module->refptr->decs);
 
-		trace_module_put(module, _RET_IP_);
+//		trace_module_put(module, _RET_IP_);
 		/* Maybe they're waiting for us to drop reference? */
 		if (unlikely(!module_is_live(module)))
 			wake_up_process(module->waiter);
@@ -1875,7 +1875,7 @@ void __weak module_arch_cleanup(struct module *mod)
 /* Free a module, remove from lists, etc. */
 static void free_module(struct module *mod)
 {
-	trace_module_free(mod);
+//	trace_module_free(mod);
 
 	mod_sysfs_teardown(mod);
 
@@ -3346,7 +3346,7 @@ static int load_module(struct load_info *info, const char __user *uargs,
 	free_copy(info);
 
 	/* Done! */
-	trace_module_load(mod);
+//	trace_module_load(mod);
 
 	return do_init_module(mod);
 

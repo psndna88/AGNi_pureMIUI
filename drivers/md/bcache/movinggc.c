@@ -94,7 +94,7 @@ static void write_moving(struct closure *cl)
 	struct moving_io *io = container_of(s, struct moving_io, s);
 
 	if (!s->error) {
-		trace_bcache_write_moving(&io->bio.bio);
+//		trace_bcache_write_moving(&io->bio.bio);
 
 		moving_init(io);
 
@@ -122,7 +122,7 @@ static void read_moving_submit(struct closure *cl)
 	struct moving_io *io = container_of(s, struct moving_io, s);
 	struct bio *bio = &io->bio.bio;
 
-	trace_bcache_read_moving(bio);
+//	trace_bcache_read_moving(bio);
 	bch_submit_bbio(bio, s->op.c, &io->w->key, 0);
 
 	continue_at(cl, write_moving, bch_gc_wq);

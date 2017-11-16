@@ -343,7 +343,7 @@ int bdi_register(struct backing_dev_info *bdi, struct device *parent,
 	list_add_tail_rcu(&bdi->bdi_list, &bdi_list);
 	spin_unlock_bh(&bdi_lock);
 
-	trace_writeback_bdi_register(bdi);
+//	trace_writeback_bdi_register(bdi);
 	return 0;
 }
 EXPORT_SYMBOL(bdi_register);
@@ -410,7 +410,7 @@ void bdi_unregister(struct backing_dev_info *bdi)
 
 	if (dev) {
 		bdi_set_min_ratio(bdi, 0);
-		trace_writeback_bdi_unregister(bdi);
+//		trace_writeback_bdi_unregister(bdi);
 		bdi_prune_sb(bdi);
 
 		bdi_wb_shutdown(bdi);
@@ -591,7 +591,7 @@ EXPORT_SYMBOL(set_bdi_congested);
 long congestion_wait(int sync, long timeout)
 {
 	long ret;
-	unsigned long start = jiffies;
+//	unsigned long start = jiffies;
 	DEFINE_WAIT(wait);
 	wait_queue_head_t *wqh = &congestion_wqh[sync];
 
@@ -599,8 +599,8 @@ long congestion_wait(int sync, long timeout)
 	ret = io_schedule_timeout(timeout);
 	finish_wait(wqh, &wait);
 
-	trace_writeback_congestion_wait(jiffies_to_usecs(timeout),
-					jiffies_to_usecs(jiffies - start));
+//	trace_writeback_congestion_wait(jiffies_to_usecs(timeout),
+//					jiffies_to_usecs(jiffies - start));
 
 	return ret;
 }
@@ -654,8 +654,8 @@ long wait_iff_congested(struct zone *zone, int sync, long timeout)
 	finish_wait(wqh, &wait);
 
 out:
-	trace_writeback_wait_iff_congested(jiffies_to_usecs(timeout),
-					jiffies_to_usecs(jiffies - start));
+//	trace_writeback_wait_iff_congested(jiffies_to_usecs(timeout),
+//					jiffies_to_usecs(jiffies - start));
 
 	return ret;
 }

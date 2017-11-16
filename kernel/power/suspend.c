@@ -272,7 +272,7 @@ int suspend_devices_and_enter(suspend_state_t state)
 	if (drop_caches_suspend)
 		drop_pagecache();
 
-	trace_machine_suspend(state);
+//	trace_machine_suspend(state);
 	if (need_suspend_ops(state) && suspend_ops->begin) {
 		error = suspend_ops->begin(state);
 		if (error)
@@ -305,7 +305,7 @@ int suspend_devices_and_enter(suspend_state_t state)
  Close:
 	if (need_suspend_ops(state) && suspend_ops->end)
 		suspend_ops->end();
-	trace_machine_suspend(PWR_EVENT_EXIT);
+//	trace_machine_suspend(PWR_EVENT_EXIT);
 	return error;
 
  Recover_platform:

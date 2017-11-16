@@ -153,7 +153,7 @@ asmlinkage void __cpuinit secondary_start_kernel(void)
 	flush_tlb_all();
 
 	preempt_disable();
-	trace_hardirqs_off();
+//	trace_hardirqs_off();
 
 	if (cpu_ops[cpu]->cpu_postboot)
 		cpu_ops[cpu]->cpu_postboot();

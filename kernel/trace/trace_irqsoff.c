@@ -151,7 +151,7 @@ irqsoff_tracer_call(unsigned long ip, unsigned long parent_ip,
 	if (!func_prolog_dec(tr, &data, &flags))
 		return;
 
-	trace_function(tr, ip, parent_ip, flags, preempt_count());
+//	trace_function(tr, ip, parent_ip, flags, preempt_count());
 
 	atomic_dec(&data->disabled);
 }

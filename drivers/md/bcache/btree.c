@@ -263,7 +263,7 @@ void bch_btree_read(struct btree *b)
 	bch_bio_map(b->bio, b->sets[0].data);
 
 	pr_debug("%s", pbtree(b));
-	trace_bcache_btree_read(b->bio);
+//	trace_bcache_btree_read(b->bio);
 	bch_submit_bbio(b->bio, b->c, &b->key, 0);
 
 	continue_at(&b->io.cl, bch_btree_read_done, system_wq);
@@ -357,7 +357,7 @@ static void do_btree_write(struct btree *b)
 			memcpy(page_address(bv->bv_page),
 			       base + j * PAGE_SIZE, PAGE_SIZE);
 
-		trace_bcache_btree_write(b->bio);
+//		trace_bcache_btree_write(b->bio);
 		bch_submit_bbio(b->bio, b->c, &k.key, 0);
 
 		continue_at(cl, btree_write_done, NULL);
@@ -365,7 +365,7 @@ static void do_btree_write(struct btree *b)
 		b->bio->bi_vcnt = 0;
 		bch_bio_map(b->bio, i);
 
-		trace_bcache_btree_write(b->bio);
+//		trace_bcache_btree_write(b->bio);
 		bch_submit_bbio(b->bio, b->c, &k.key, 0);
 
 		closure_sync(cl);
@@ -1527,7 +1527,7 @@ static void bch_btree_gc(struct closure *cl)
 	struct btree_op op;
 
 	uint64_t start_time = local_clock();
-	trace_bcache_gc_start(c->sb.set_uuid);
+//	trace_bcache_gc_start(c->sb.set_uuid);
 	blktrace_msg_all(c, "Starting gc");
 
 	memset(&stats, 0, sizeof(struct gc_stat));
@@ -1563,7 +1563,7 @@ static void bch_btree_gc(struct closure *cl)
 	memcpy(&c->gc_stats, &stats, sizeof(struct gc_stat));
 	blktrace_msg_all(c, "Finished gc");
 
-	trace_bcache_gc_end(c->sb.set_uuid);
+//	trace_bcache_gc_end(c->sb.set_uuid);
 	wake_up(&c->alloc_wait);
 
 	continue_at(cl, bch_moving_gc, bch_gc_wq);
@@ -2261,7 +2261,7 @@ static int submit_partial_cache_hit(struct btree *b, struct btree_op *op,
 		n->bi_end_io	= bch_cache_read_endio;
 		n->bi_private	= &s->cl;
 
-		trace_bcache_cache_hit(n);
+//		trace_bcache_cache_hit(n);
 		__bch_submit_bbio(n, b->c);
 	}
 

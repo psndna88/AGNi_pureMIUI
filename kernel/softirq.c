@@ -108,12 +108,12 @@ static void __local_bh_disable(unsigned long ip, unsigned int cnt)
 	/*
 	 * Were softirqs turned off above:
 	 */
-	if (softirq_count() == cnt)
-		trace_softirqs_off(ip);
+//	if (softirq_count() == cnt)
+//		trace_softirqs_off(ip);
 	raw_local_irq_restore(flags);
 
-	if (preempt_count() == cnt)
-		trace_preempt_off(CALLER_ADDR0, get_parent_ip(CALLER_ADDR1));
+//	if (preempt_count() == cnt)
+//		trace_preempt_off(CALLER_ADDR0, get_parent_ip(CALLER_ADDR1));
 }
 #else /* !CONFIG_TRACE_IRQFLAGS */
 static inline void __local_bh_disable(unsigned long ip, unsigned int cnt)
@@ -136,8 +136,8 @@ static void __local_bh_enable(unsigned int cnt)
 	WARN_ON_ONCE(in_irq());
 	WARN_ON_ONCE(!irqs_disabled());
 
-	if (softirq_count() == cnt)
-		trace_softirqs_on((unsigned long)__builtin_return_address(0));
+//	if (softirq_count() == cnt)
+//		trace_softirqs_on((unsigned long)__builtin_return_address(0));
 	sub_preempt_count(cnt);
 }
 
@@ -162,8 +162,8 @@ static inline void _local_bh_enable_ip(unsigned long ip)
 	/*
 	 * Are softirqs going to be turned on now:
 	 */
-	if (softirq_count() == SOFTIRQ_DISABLE_OFFSET)
-		trace_softirqs_on(ip);
+//	if (softirq_count() == SOFTIRQ_DISABLE_OFFSET)
+//		trace_softirqs_on(ip);
 	/*
 	 * Keep preemption disabled until we are done with
 	 * softirq processing:
@@ -247,9 +247,9 @@ restart:
 
 			kstat_incr_softirqs_this_cpu(vec_nr);
 
-			trace_softirq_entry(vec_nr);
+//			trace_softirq_entry(vec_nr);
 			h->action(h);
-			trace_softirq_exit(vec_nr);
+//			trace_softirq_exit(vec_nr);
 			if (unlikely(prev_count != preempt_count())) {
 				printk(KERN_ERR "huh, entered softirq %u %s %p"
 				       "with preempt_count %08x,"
@@ -366,7 +366,7 @@ void irq_exit(void)
 #endif
 
 	account_irq_exit_time(current);
-	trace_hardirq_exit();
+//	trace_hardirq_exit();
 	sub_preempt_count(HARDIRQ_OFFSET);
 	if (!in_interrupt() && local_softirq_pending())
 		invoke_softirq();
@@ -406,7 +406,7 @@ void raise_softirq(unsigned int nr)
 
 void __raise_softirq_irqoff(unsigned int nr)
 {
-	trace_softirq_raise(nr);
+//	trace_softirq_raise(nr);
 	or_softirq_pending(1UL << nr);
 }
 

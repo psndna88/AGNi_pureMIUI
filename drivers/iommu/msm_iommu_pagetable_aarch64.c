@@ -559,9 +559,9 @@ static int __msm_iommu_pagetable_map_range(struct msm_iommu_pt *pt,
 		else if (is_fully_aligned(va_to_map, pa, chunk_left, SZ_64K))
 			chunk_size = SZ_64K;
 
-		trace_iommu_map_range(va_to_map, pa,
-				ops->get_length(cookie, len),
-				chunk_size);
+//		trace_iommu_map_range(va_to_map, pa,
+//				ops->get_length(cookie, len),
+//				chunk_size);
 
 		if (iommu_max_va_size == 48) {
 			/* First level */

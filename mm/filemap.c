@@ -116,7 +116,7 @@ void __delete_from_page_cache(struct page *page)
 {
 	struct address_space *mapping = page->mapping;
 
-	trace_mm_filemap_delete_from_page_cache(page);
+//	trace_mm_filemap_delete_from_page_cache(page);
 	/*
 	 * if we're uptodate, flush out into the cleancache, otherwise
 	 * invalidate any existing cleancache entries.  We can't leave
@@ -481,7 +481,7 @@ int add_to_page_cache_locked(struct page *page, struct address_space *mapping,
 			mapping->nrpages++;
 			__inc_zone_page_state(page, NR_FILE_PAGES);
 			spin_unlock_irq(&mapping->tree_lock);
-			trace_mm_filemap_add_to_page_cache(page);
+//			trace_mm_filemap_add_to_page_cache(page);
 		} else {
 			page->mapping = NULL;
 			/* Leave page->index set: truncation relies upon it */
@@ -1216,7 +1216,7 @@ static void do_generic_file_read(struct file *filp, loff_t *ppos,
 	unsigned int prev_offset;
 	int error;
 
-	trace_mm_filemap_do_generic_file_read(filp, *ppos, desc->count, 1);
+//	trace_mm_filemap_do_generic_file_read(filp, *ppos, desc->count, 1);
 
 	index = *ppos >> PAGE_CACHE_SHIFT;
 	prev_index = ra->prev_pos >> PAGE_CACHE_SHIFT;
@@ -2429,7 +2429,7 @@ static ssize_t generic_perform_write(struct file *file,
 	ssize_t written = 0;
 	unsigned int flags = 0;
 
-	trace_mm_filemap_generic_perform_write(file, pos, iov_iter_count(i), 0);
+//	trace_mm_filemap_generic_perform_write(file, pos, iov_iter_count(i), 0);
 
 	/*
 	 * Copies from kernel address space cannot fail (NFSD is a big user).

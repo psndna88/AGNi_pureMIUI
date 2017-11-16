@@ -258,9 +258,9 @@ static u32 mdss_mdp_perf_calc_pipe_prefill_video(struct mdss_mdp_prefill_params
 	}
 	prefill_bytes += fbc_bytes;
 
-	trace_mdp_perf_prefill_calc(params->pnum, latency_buf_bytes,
-		prefill->ot_bytes, y_buf_bytes, y_scaler_bytes, pp_lines,
-		pp_bytes, post_scaler_bytes, fbc_bytes, prefill_bytes);
+//	trace_mdp_perf_prefill_calc(params->pnum, latency_buf_bytes,
+//		prefill->ot_bytes, y_buf_bytes, y_scaler_bytes, pp_lines,
+//		pp_bytes, post_scaler_bytes, fbc_bytes, prefill_bytes);
 
 	pr_debug("ot=%d y_buf=%d pp_lines=%d pp=%d post_sc=%d fbc_bytes=%d\n",
 		prefill->ot_bytes, y_buf_bytes, pp_lines, pp_bytes,
@@ -1529,7 +1529,7 @@ void mdss_mdp_ctl_perf_release_bw(struct mdss_mdp_ctl *ctl)
 		struct mdss_mdp_ctl *ctl_local =
 			mdss_mdp_get_main_ctl(ctl) ? : ctl;
 
-		trace_mdp_cmd_release_bw(ctl_local->num);
+//		trace_mdp_cmd_release_bw(ctl_local->num);
 		ctl_local->cur_perf.bw_ctl = 0;
 		ctl_local->new_perf.bw_ctl = 0;
 		pr_debug("Release BW ctl=%d\n", ctl_local->num);
@@ -3245,7 +3245,7 @@ static void mdss_mdp_mixer_setup(struct mdss_mdp_ctl *master_ctl,
 	if (!ctl->valid_roi)
 		return;
 
-	trace_mdp_mixer_update(mixer->num);
+//	trace_mdp_mixer_update(mixer->num);
 	pr_debug("setup mixer=%d\n", mixer->num);
 	screen_state = ctl->force_screen_state;
 
@@ -3407,7 +3407,7 @@ static void mdss_mdp_mixer_setup(struct mdss_mdp_ctl *master_ctl,
 				mixercfg_extn |= BIT(14);
 		}
 
-		trace_mdp_sspp_change(pipe);
+//		trace_mdp_sspp_change(pipe);
 
 		pr_debug("stg=%d op=%x fg_alpha=%x bg_alpha=%x\n", stage,
 					blend_op, fg_alpha, bg_alpha);
@@ -3890,7 +3890,7 @@ int mdss_mdp_display_wait4comp(struct mdss_mdp_ctl *ctl)
 		ret = ctl->ops.wait_fnc(ctl, NULL);
 	ATRACE_END("wait_fnc");
 
-	trace_mdp_commit(ctl);
+//	trace_mdp_commit(ctl);
 
 	mdss_mdp_ctl_perf_update(ctl, 0);
 

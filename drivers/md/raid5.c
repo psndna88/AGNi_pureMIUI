@@ -188,8 +188,8 @@ static void return_io(struct bio *return_bi)
 		return_bi = bi->bi_next;
 		bi->bi_next = NULL;
 		bi->bi_size = 0;
-		trace_block_bio_complete(bdev_get_queue(bi->bi_bdev),
-					 bi, 0);
+//		trace_block_bio_complete(bdev_get_queue(bi->bi_bdev),
+//					 bi, 0);
 		bio_endio(bi, 0);
 		bi = return_bi;
 	}
@@ -681,10 +681,10 @@ static void ops_run_io(struct stripe_head *sh, struct stripe_head_state *s)
 			if (rrdev)
 				set_bit(R5_DOUBLE_LOCKED, &sh->dev[i].flags);
 
-			if (conf->mddev->gendisk)
-				trace_block_bio_remap(bdev_get_queue(bi->bi_bdev),
-						      bi, disk_devt(conf->mddev->gendisk),
-						      sh->dev[i].sector);
+//			if (conf->mddev->gendisk)
+//				trace_block_bio_remap(bdev_get_queue(bi->bi_bdev),
+//						      bi, disk_devt(conf->mddev->gendisk),
+//						      sh->dev[i].sector);
 			generic_make_request(bi);
 		}
 		if (rrdev) {
@@ -722,10 +722,10 @@ static void ops_run_io(struct stripe_head *sh, struct stripe_head_state *s)
 			 */
 			if (rw & REQ_DISCARD)
 				rbi->bi_vcnt = 0;
-			if (conf->mddev->gendisk)
-				trace_block_bio_remap(bdev_get_queue(rbi->bi_bdev),
-						      rbi, disk_devt(conf->mddev->gendisk),
-						      sh->dev[i].sector);
+//			if (conf->mddev->gendisk)
+//				trace_block_bio_remap(bdev_get_queue(rbi->bi_bdev),
+//						      rbi, disk_devt(conf->mddev->gendisk),
+//						      sh->dev[i].sector);
 			generic_make_request(rbi);
 		}
 		if (!rdev && !rrdev) {
@@ -3959,8 +3959,8 @@ static void raid5_align_endio(struct bio *bi, int error)
 	rdev_dec_pending(rdev, conf->mddev);
 
 	if (!error && uptodate) {
-		trace_block_bio_complete(bdev_get_queue(raid_bi->bi_bdev),
-					 raid_bi, 0);
+//		trace_block_bio_complete(bdev_get_queue(raid_bi->bi_bdev),
+//					 raid_bi, 0);
 		bio_endio(raid_bi, 0);
 		if (atomic_dec_and_test(&conf->active_aligned_reads))
 			wake_up(&conf->wait_for_stripe);
@@ -4065,10 +4065,10 @@ static int chunk_aligned_read(struct mddev *mddev, struct bio * raid_bio)
 		atomic_inc(&conf->active_aligned_reads);
 		spin_unlock_irq(&conf->device_lock);
 
-		if (mddev->gendisk)
-			trace_block_bio_remap(bdev_get_queue(align_bi->bi_bdev),
-					      align_bi, disk_devt(mddev->gendisk),
-					      raid_bio->bi_sector);
+//		if (mddev->gendisk)
+//			trace_block_bio_remap(bdev_get_queue(align_bi->bi_bdev),
+//					      align_bi, disk_devt(mddev->gendisk),
+//					      raid_bio->bi_sector);
 		generic_make_request(align_bi);
 		return 1;
 	} else {
@@ -4162,8 +4162,8 @@ static void raid5_unplug(struct blk_plug_cb *blk_cb, bool from_schedule)
 		}
 		spin_unlock_irq(&conf->device_lock);
 	}
-	if (mddev->queue)
-		trace_block_unplug(mddev->queue, cnt, !from_schedule);
+//	if (mddev->queue)
+//		trace_block_unplug(mddev->queue, cnt, !from_schedule);
 	kfree(cb);
 }
 
@@ -4429,8 +4429,8 @@ static void make_request(struct mddev *mddev, struct bio * bi)
 		if ( rw == WRITE )
 			md_write_end(mddev);
 
-		trace_block_bio_complete(bdev_get_queue(bi->bi_bdev),
-					 bi, 0);
+//		trace_block_bio_complete(bdev_get_queue(bi->bi_bdev),
+//					 bi, 0);
 		bio_endio(bi, 0);
 	}
 }
@@ -4809,8 +4809,8 @@ static int  retry_aligned_read(struct r5conf *conf, struct bio *raid_bio)
 	}
 	remaining = raid5_dec_bi_active_stripes(raid_bio);
 	if (remaining == 0) {
-		trace_block_bio_complete(bdev_get_queue(raid_bio->bi_bdev),
-					 raid_bio, 0);
+//		trace_block_bio_complete(bdev_get_queue(raid_bio->bi_bdev),
+//					 raid_bio, 0);
 		bio_endio(raid_bio, 0);
 	}
 	if (atomic_dec_and_test(&conf->active_aligned_reads))

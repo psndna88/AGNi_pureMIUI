@@ -1003,7 +1003,7 @@ static void enqueue_task(struct rq *rq, struct task_struct *p, int flags)
 	update_rq_clock(rq);
 	sched_info_queued(p);
 	p->sched_class->enqueue_task(rq, p, flags);
-	trace_sched_enq_deq_task(p, 1, cpumask_bits(&p->cpus_allowed)[0]);
+//	trace_sched_enq_deq_task(p, 1, cpumask_bits(&p->cpus_allowed)[0]);
 }
 
 static void dequeue_task(struct rq *rq, struct task_struct *p, int flags)
@@ -1011,7 +1011,7 @@ static void dequeue_task(struct rq *rq, struct task_struct *p, int flags)
 	update_rq_clock(rq);
 	sched_info_dequeued(p);
 	p->sched_class->dequeue_task(rq, p, flags);
-	trace_sched_enq_deq_task(p, 0, cpumask_bits(&p->cpus_allowed)[0]);
+//	trace_sched_enq_deq_task(p, 0, cpumask_bits(&p->cpus_allowed)[0]);
 }
 
 void activate_task(struct rq *rq, struct task_struct *p, int flags)
@@ -1397,7 +1397,7 @@ static void _set_preferred_cluster(struct related_thread_group *grp)
 
 	grp->preferred_cluster = best_cluster(grp, combined_demand);
 	grp->last_update = sched_ktime_clock();
-	trace_sched_set_preferred_cluster(grp, combined_demand);
+//	trace_sched_set_preferred_cluster(grp, combined_demand);
 }
 
 static void set_preferred_cluster(struct related_thread_group *grp)
@@ -1921,7 +1921,7 @@ void check_for_freq_change(struct rq *rq)
 	if (!send_notification(rq))
 		return;
 
-	trace_sched_freq_alert(cpu, rq->old_busy_time, rq->prev_runnable_sum);
+//	trace_sched_freq_alert(cpu, rq->old_busy_time, rq->prev_runnable_sum);
 
 	atomic_notifier_call_chain(
 		&load_alert_notifier_head, 0,
@@ -2216,8 +2216,8 @@ static void update_history(struct rq *rq, struct task_struct *p,
 	u64 sum = 0;
 
 	/* Ignore windows where task had no activity */
-	if (!runtime || is_idle_task(p) || exiting_task(p) || !samples)
-			goto done;
+//	if (!runtime || is_idle_task(p) || exiting_task(p) || !samples)
+//			goto done;
 
 	/* Push new 'runtime' value onto stack */
 	widx = sched_ravg_hist_size - 1;
@@ -2262,8 +2262,8 @@ static void update_history(struct rq *rq, struct task_struct *p,
 	if (p->on_rq && (!task_has_dl_policy(p) || !p->dl.dl_throttled))
 		p->sched_class->inc_hmp_sched_stats(rq, p);
 
-done:
-	trace_sched_update_history(rq, p, runtime, samples, event);
+//done:
+//	trace_sched_update_history(rq, p, runtime, samples, event);
 }
 
 static void add_to_task_demand(struct rq *rq, struct task_struct *p,
@@ -2395,7 +2395,7 @@ static void update_task_ravg(struct task_struct *p, struct rq *rq,
 	update_cpu_busy_time(p, rq, event, wallclock, irqtime);
 
 done:
-	trace_sched_update_task_ravg(p, rq, event, wallclock, irqtime);
+//	trace_sched_update_task_ravg(p, rq, event, wallclock, irqtime);
 
 	p->ravg.mark_start = wallclock;
 }
@@ -2587,7 +2587,7 @@ void reset_all_window_stats(u64 window_start, unsigned int window_size)
 {
 	int cpu;
 	unsigned long flags;
-	u64 start_ts = sched_ktime_clock();
+//	u64 start_ts = sched_ktime_clock();
 	int reason = WINDOW_CHANGE;
 	unsigned int old = 0, new = 0;
 	unsigned int old_window_size = sched_ravg_window;
@@ -2667,8 +2667,8 @@ void reset_all_window_stats(u64 window_start, unsigned int window_size)
 
 	local_irq_restore(flags);
 
-	trace_sched_reset_all_window_stats(window_start, window_size,
-		sched_ktime_clock() - start_ts, reason, old, new);
+//	trace_sched_reset_all_window_stats(window_start, window_size,
+//		sched_ktime_clock() - start_ts, reason, old, new);
 }
 
 #ifdef CONFIG_SCHED_FREQ_INPUT
@@ -2721,7 +2721,7 @@ unsigned long sched_get_busy(int cpu)
 
 	raw_spin_unlock_irqrestore(&rq->lock, flags);
 
-	trace_sched_get_busy(cpu, load);
+//	trace_sched_get_busy(cpu, load);
 
 	return load;
 }
@@ -2828,8 +2828,8 @@ static void fixup_busy_time(struct task_struct *p, int new_cpu)
 	BUG_ON((s64)src_rq->prev_runnable_sum < 0);
 	BUG_ON((s64)src_rq->curr_runnable_sum < 0);
 
-	trace_sched_migration_update_sum(src_rq, p);
-	trace_sched_migration_update_sum(dest_rq, p);
+//	trace_sched_migration_update_sum(src_rq, p);
+//	trace_sched_migration_update_sum(dest_rq, p);
 
 done:
 	if (p->state == TASK_WAKING)
@@ -3254,7 +3254,7 @@ void set_task_cpu(struct task_struct *p, unsigned int new_cpu)
 #endif
 #endif
 
-	trace_sched_migrate_task(p, new_cpu, pct_task_load(p));
+//	trace_sched_migrate_task(p, new_cpu, pct_task_load(p));
 
 	note_run_start(p, sched_ktime_clock());
 
@@ -3341,7 +3341,7 @@ unsigned long wait_task_inactive(struct task_struct *p, long match_state)
 		 * just go back and repeat.
 		 */
 		rq = task_rq_lock(p, &flags);
-		trace_sched_wait_task(p);
+//		trace_sched_wait_task(p);
 		running = task_running(rq, p);
 		on_rq = p->on_rq;
 		ncsw = 0;
@@ -3583,7 +3583,7 @@ static void
 ttwu_do_wakeup(struct rq *rq, struct task_struct *p, int wake_flags)
 {
 	check_preempt_curr(rq, p, wake_flags);
-	trace_sched_wakeup(p, true);
+//	trace_sched_wakeup(p, true);
 
 	p->state = TASK_RUNNING;
 #ifdef CONFIG_SMP
@@ -4317,7 +4317,7 @@ void wake_up_new_task(struct task_struct *p)
 	mark_task_starting(p);
 	activate_task(rq, p, 0);
 	p->on_rq = 1;
-	trace_sched_wakeup_new(p, true);
+//	trace_sched_wakeup_new(p, true);
 	check_preempt_curr(rq, p, WF_FORK);
 #ifdef CONFIG_SMP
 	if (p->sched_class->task_woken)
@@ -4399,7 +4399,7 @@ static inline void
 prepare_task_switch(struct rq *rq, struct task_struct *prev,
 		    struct task_struct *next)
 {
-	trace_sched_switch(prev, next);
+//	trace_sched_switch(prev, next);
 #ifdef CONFIG_ARCH_WANTS_CTXSW_LOGGING
 	dlog("%s: end trace at %llu\n", __func__, sched_clock());
 #endif
@@ -5468,8 +5468,8 @@ void __kprobes add_preempt_count(int val)
 	DEBUG_LOCKS_WARN_ON((preempt_count() & PREEMPT_MASK) >=
 				PREEMPT_MASK - 10);
 #endif
-	if (preempt_count() == val)
-		trace_preempt_off(CALLER_ADDR0, get_parent_ip(CALLER_ADDR1));
+//	if (preempt_count() == val)
+//		trace_preempt_off(CALLER_ADDR0, get_parent_ip(CALLER_ADDR1));
 }
 EXPORT_SYMBOL(add_preempt_count);
 
@@ -5489,8 +5489,8 @@ void __kprobes sub_preempt_count(int val)
 		return;
 #endif
 
-	if (preempt_count() == val)
-		trace_preempt_on(CALLER_ADDR0, get_parent_ip(CALLER_ADDR1));
+//	if (preempt_count() == val)
+//		trace_preempt_on(CALLER_ADDR0, get_parent_ip(CALLER_ADDR1));
 	sub_preempt_count_notrace(val);
 }
 EXPORT_SYMBOL(sub_preempt_count);
@@ -5510,8 +5510,8 @@ static noinline void __schedule_bug(struct task_struct *prev)
 
 	debug_show_held_locks(prev);
 	print_modules();
-	if (irqs_disabled())
-		print_irqtrace_events(prev);
+//	if (irqs_disabled())
+//		print_irqtrace_events(prev);
 	dump_stack();
 	add_taint(TAINT_WARN, LOCKDEP_STILL_OK);
 }
@@ -6318,7 +6318,7 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
 		goto out_unlock;
 	}
 
-	trace_sched_pi_setprio(p, prio);
+//	trace_sched_pi_setprio(p, prio);
 	p->pi_top_task = rt_mutex_get_top_task(p);
 	oldprio = p->prio;
 	prev_class = p->sched_class;

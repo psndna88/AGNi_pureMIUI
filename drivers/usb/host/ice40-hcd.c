@@ -270,8 +270,8 @@ static void ice40_spi_reg_write(struct ice40_hcd *ihcd, u8 val, u8 addr)
 	if (ret < 0) /* should not happen */
 		pr_err("failed. val = %d addr = %d\n", val, addr);
 
-	trace_ice40_reg_write(addr, val, ihcd->w_tx_buf[0],
-			ihcd->w_tx_buf[1], ret);
+//	trace_ice40_reg_write(addr, val, ihcd->w_tx_buf[0],
+//			ihcd->w_tx_buf[1], ret);
 
 	mutex_unlock(&ihcd->wlock);
 }
@@ -298,7 +298,7 @@ static int ice40_spi_reg_read(struct ice40_hcd *ihcd, u8 addr)
 	else
 		ret = ihcd->r_rx_buf[2];
 
-	trace_ice40_reg_read(addr, ihcd->r_tx_buf[0], ret);
+//	trace_ice40_reg_read(addr, ihcd->r_tx_buf[0], ret);
 
 	mutex_unlock(&ihcd->rlock);
 
@@ -538,7 +538,7 @@ static int ice40_xfer_setup(struct ice40_hcd *ihcd, struct urb *urb)
 	}
 
 out:
-	trace_ice40_setup(xfr_status_string(status), ret);
+//	trace_ice40_setup(xfr_status_string(status), ret);
 	return ret;
 }
 
@@ -558,7 +558,7 @@ static int ice40_xfer_in(struct ice40_hcd *ihcd, struct urb *urb)
 	int buf_num = 0;
 	bool first = true;
 	bool last = false;
-	u32 actual_len = urb->actual_length;
+//	u32 actual_len = urb->actual_length;
 
 	if (epnum == 0 && ihcd->ep0_state == STATUS_PHASE) {
 		expected_len = 0;
@@ -765,9 +765,9 @@ check_status:
 			last = false;
 	}
 
-	trace_ice40_in(epnum, xfr_status_string(status),
-			urb->actual_length - actual_len,
-			total_len - actual_len, ret);
+//	trace_ice40_in(epnum, xfr_status_string(status),
+//			urb->actual_length - actual_len,
+//			total_len - actual_len, ret);
 	return ret;
 }
 
@@ -784,7 +784,7 @@ static int ice40_xfer_out(struct ice40_hcd *ihcd, struct urb *urb)
 	void *buf;
 	int ret, buf_num = 0;
 	bool first = true;
-	u32 actual_len = urb->actual_length;
+//	u32 actual_len = urb->actual_length;
 
 	if (epnum == 0 && ihcd->ep0_state == STATUS_PHASE) {
 		len = 0;
@@ -941,8 +941,8 @@ check_status:
 			break; /* End while loop if ack is not recievied */
 		}
 	}
-	trace_ice40_out(epnum, xfr_status_string(status),
-			urb->actual_length - actual_len, ret);
+//	trace_ice40_out(epnum, xfr_status_string(status),
+//			urb->actual_length - actual_len, ret);
 	return ret;
 }
 
@@ -972,7 +972,7 @@ static int ice40_process_urb(struct ice40_hcd *ihcd, struct urb *urb)
 	case PIPE_CONTROL:
 		switch (ihcd->ep0_state) {
 		case SETUP_PHASE:
-			trace_ice40_ep0("SETUP");
+//			trace_ice40_ep0("SETUP");
 			ret = ice40_xfer_setup(ihcd, urb);
 			if (ret)
 				break;
@@ -989,7 +989,7 @@ static int ice40_process_urb(struct ice40_hcd *ihcd, struct urb *urb)
 			}
 			/* fall through */
 		case DATA_PHASE:
-			trace_ice40_ep0("DATA");
+//			trace_ice40_ep0("DATA");
 			if (is_out)
 				ret = ice40_xfer_out(ihcd, urb);
 			else
@@ -1001,7 +1001,7 @@ static int ice40_process_urb(struct ice40_hcd *ihcd, struct urb *urb)
 			/* fall through */
 		case STATUS_PHASE:
 do_status:
-			trace_ice40_ep0("STATUS");
+//			trace_ice40_ep0("STATUS");
 			/* zero len DATA transfers have IN status */
 			if (!total_len || is_out)
 				ret = ice40_xfer_in(ihcd, urb);
@@ -1055,7 +1055,7 @@ static void ice40_complete_urb(struct usb_hcd *hcd, struct urb *urb, int status)
 
 	usb_hcd_unlink_urb_from_ep(hcd, urb);
 	spin_unlock(&ihcd->lock);
-	trace_ice40_urb_done(urb, status);
+//	trace_ice40_urb_done(urb, status);
 	usb_hcd_giveback_urb(ihcd->hcd, urb, status);
 	spin_lock(&ihcd->lock);
 
@@ -1196,7 +1196,7 @@ ice40_urb_enqueue(struct usb_hcd *hcd, struct urb *urb, gfp_t mem_flags)
 	if (ret)
 		goto rel_lock;
 
-	trace_ice40_urb_enqueue(urb);
+//	trace_ice40_urb_enqueue(urb);
 
 	iep = ep->hcpriv;
 	if (!iep) {
@@ -1253,7 +1253,7 @@ ice40_urb_dequeue(struct usb_hcd *hcd, struct urb *urb, int status)
 	if (ret)
 		goto rel_lock;
 
-	trace_ice40_urb_dequeue(urb);
+//	trace_ice40_urb_dequeue(urb);
 	iep = ep->hcpriv;
 
 	/*
@@ -1429,7 +1429,7 @@ error:
 		ret = -EPIPE;
 	}
 
-	trace_ice40_hub_control(typeReq, wValue, wIndex, wLength, ret);
+//	trace_ice40_hub_control(typeReq, wValue, wIndex, wLength, ret);
 	return ret;
 }
 
@@ -1440,12 +1440,12 @@ static int ice40_bus_suspend(struct usb_hcd *hcd)
 	struct ice40_hcd *ihcd = hcd_to_ihcd(hcd);
 	struct pinctrl_state *s;
 
-	trace_ice40_bus_suspend(0); /* start */
+//	trace_ice40_bus_suspend(0); /* start */
 
 	/* This happens only during debugging */
 	if (!ihcd->devnum) {
 		pr_debug("device still not connected. abort suspend\n");
-		trace_ice40_bus_suspend(2); /* failure */
+//		trace_ice40_bus_suspend(2); /* failure */
 		return -EAGAIN;
 	}
 	/*
@@ -1475,7 +1475,7 @@ static int ice40_bus_suspend(struct usb_hcd *hcd)
 		ihcd->pm_qos_voted = false;
 	}
 
-	trace_ice40_bus_suspend(1); /* successful */
+//	trace_ice40_bus_suspend(1); /* successful */
 	pm_relax(&ihcd->spi->dev);
 	return 0;
 }
@@ -1489,7 +1489,7 @@ static int ice40_bus_resume(struct usb_hcd *hcd)
 	int ret, i;
 
 	pm_stay_awake(&ihcd->spi->dev);
-	trace_ice40_bus_resume(0); /* start */
+//	trace_ice40_bus_resume(0); /* start */
 
 	s = pinctrl_lookup_state(ihcd->pinctrl, PINCTRL_STATE_DEFAULT);
 	if (!IS_ERR(s))
@@ -1524,21 +1524,21 @@ static int ice40_bus_resume(struct usb_hcd *hcd)
 	ret = ice40_handshake(ihcd, CTRL0_REG, RESUME_CTRL, 0, 5000);
 	if (ret) {
 		pr_err("resume failed\n");
-		trace_ice40_bus_resume(2); /* failure */
+//		trace_ice40_bus_resume(2); /* failure */
 		return -ENODEV;
 	}
 
 	ctrl0 = ice40_spi_reg_read(ihcd, CTRL0_REG);
 	if (!(ctrl0 & SOFEN_CTRL)) {
 		pr_err("SOFs are not transmitted after resume\n");
-		trace_ice40_bus_resume(3); /* failure */
+//		trace_ice40_bus_resume(3); /* failure */
 		return -ENODEV;
 	}
 
 	ihcd->port_flags &= ~USB_PORT_STAT_SUSPEND;
 	ihcd->ctrl0 |= SOFEN_CTRL;
 
-	trace_ice40_bus_resume(1); /* success */
+//	trace_ice40_bus_resume(1); /* success */
 	return 0;
 }
 

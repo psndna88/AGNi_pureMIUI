@@ -1043,7 +1043,7 @@ int migrate_pages(struct list_head *from, new_page_t get_new_page,
 	int swapwrite = current->flags & PF_SWAPWRITE;
 	int rc;
 
-	trace_migrate_pages_start(mode);
+//	trace_migrate_pages_start(mode);
 	if (!swapwrite)
 		current->flags |= PF_SWAPWRITE;
 
@@ -1061,7 +1061,7 @@ int migrate_pages(struct list_head *from, new_page_t get_new_page,
 				goto out;
 			case -EAGAIN:
 				retry++;
-				trace_migrate_retry(retry);
+//				trace_migrate_retry(retry);
 				break;
 			case MIGRATEPAGE_SUCCESS:
 				nr_succeeded++;
@@ -1079,12 +1079,12 @@ out:
 		count_vm_events(PGMIGRATE_SUCCESS, nr_succeeded);
 	if (nr_failed)
 		count_vm_events(PGMIGRATE_FAIL, nr_failed);
-	trace_mm_migrate_pages(nr_succeeded, nr_failed, mode, reason);
+//	trace_mm_migrate_pages(nr_succeeded, nr_failed, mode, reason);
 
 	if (!swapwrite)
 		current->flags &= ~PF_SWAPWRITE;
 
-	trace_migrate_pages_end(mode);
+//	trace_migrate_pages_end(mode);
 	return rc;
 }
 

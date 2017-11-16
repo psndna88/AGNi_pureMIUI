@@ -317,7 +317,7 @@ isolate_fail:
 
 	}
 
-	trace_mm_compaction_isolate_freepages(nr_scanned, total_isolated);
+//	trace_mm_compaction_isolate_freepages(nr_scanned, total_isolated);
 
 	/*
 	 * If strict isolation is requested by CMA then check that all the
@@ -665,7 +665,7 @@ next_pageblock:
 	if (low_pfn == end_pfn)
 		update_pageblock_skip(cc, valid_page, nr_isolated, true);
 
-	trace_mm_compaction_isolate_migratepages(nr_scanned, nr_isolated);
+//	trace_mm_compaction_isolate_migratepages(nr_scanned, nr_isolated);
 
 	count_compact_events(COMPACTMIGRATE_SCANNED, nr_scanned);
 	if (nr_isolated)
@@ -1032,8 +1032,8 @@ static int compact_zone(struct zone *zone, struct compact_control *cc)
 		update_nr_listpages(cc);
 		nr_remaining = cc->nr_migratepages;
 
-		trace_mm_compaction_migratepages(nr_migrate - nr_remaining,
-						nr_remaining);
+//		trace_mm_compaction_migratepages(nr_migrate - nr_remaining,
+//						nr_remaining);
 
 		/* Release isolated pages not migrated */
 		if (err) {

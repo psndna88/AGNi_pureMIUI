@@ -56,8 +56,8 @@ void hold_module_trace_bprintk_format(const char **start, const char **end)
 	char *fmt;
 
 	/* allocate the trace_printk per cpu buffers */
-	if (start != end)
-		trace_printk_init_buffers();
+//	if (start != end)
+//		trace_printk_init_buffers();
 
 	mutex_lock(&btrace_mutex);
 	for (iter = start; iter < end; iter++) {
@@ -338,8 +338,8 @@ static __init int init_trace_printk_function_export(void)
 	if (!d_tracer)
 		return 0;
 
-	trace_create_file("printk_formats", 0444, d_tracer,
-				    NULL, &ftrace_formats_fops);
+//	trace_create_file("printk_formats", 0444, d_tracer,
+//				    NULL, &ftrace_formats_fops);
 
 	return 0;
 }

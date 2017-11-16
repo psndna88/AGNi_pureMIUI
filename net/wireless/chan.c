@@ -469,7 +469,7 @@ bool cfg80211_reg_can_beacon(struct wiphy *wiphy,
 {
 	bool res;
 
-	trace_cfg80211_reg_can_beacon(wiphy, chandef);
+//	trace_cfg80211_reg_can_beacon(wiphy, chandef);
 
 	res = cfg80211_chandef_usable(wiphy, chandef,
 				      IEEE80211_CHAN_DISABLED |
@@ -477,7 +477,7 @@ bool cfg80211_reg_can_beacon(struct wiphy *wiphy,
 				      IEEE80211_CHAN_NO_IBSS |
 				      IEEE80211_CHAN_RADAR);
 
-	trace_cfg80211_return_bool(res);
+//	trace_cfg80211_return_bool(res);
 	return res;
 }
 EXPORT_SYMBOL(cfg80211_reg_can_beacon);

@@ -365,9 +365,9 @@ unsigned long shrink_slab(struct shrink_control *shrinkctl,
 		if (total_scan > max_pass * 2)
 			total_scan = max_pass * 2;
 
-		trace_mm_shrink_slab_start(shrinker, shrinkctl, nr,
-					nr_pages_scanned, lru_pages,
-					max_pass, delta, total_scan);
+//		trace_mm_shrink_slab_start(shrinker, shrinkctl, nr,
+//					nr_pages_scanned, lru_pages,
+//					max_pass, delta, total_scan);
 
 		while (total_scan > min_cache_size) {
 
@@ -412,7 +412,7 @@ unsigned long shrink_slab(struct shrink_control *shrinkctl,
 		else
 			new_nr = atomic_long_read(&shrinker->nr_in_batch);
 
-		trace_mm_shrink_slab_end(shrinker, freed, nr, new_nr);
+//		trace_mm_shrink_slab_end(shrinker, freed, nr, new_nr);
 	}
 	up_read(&shrinker_rwsem);
 out:
@@ -542,7 +542,7 @@ static pageout_t pageout(struct page *page, struct address_space *mapping,
 			/* synchronous write or broken a_ops? */
 			ClearPageReclaim(page);
 		}
-		trace_mm_vmscan_writepage(page, trace_reclaim_flags(page));
+//		trace_mm_vmscan_writepage(page, trace_reclaim_flags(page));
 		inc_zone_page_state(page, NR_VMSCAN_WRITE);
 		return PAGE_SUCCESS;
 	}
@@ -1358,8 +1358,8 @@ static unsigned long isolate_lru_pages(unsigned long nr_to_scan,
 	}
 
 	*nr_scanned = scan;
-	trace_mm_vmscan_lru_isolate(sc->order, nr_to_scan, scan,
-				    nr_taken, mode, is_file_lru(lru));
+//	trace_mm_vmscan_lru_isolate(sc->order, nr_to_scan, scan,
+//				    nr_taken, mode, is_file_lru(lru));
 	return nr_taken;
 }
 
@@ -1678,11 +1678,11 @@ shrink_inactive_list(unsigned long nr_to_scan, struct lruvec *lruvec,
 	if (!sc->hibernation_mode && !current_is_kswapd())
 		wait_iff_congested(zone, BLK_RW_ASYNC, HZ/10);
 
-	trace_mm_vmscan_lru_shrink_inactive(zone->zone_pgdat->node_id,
-		zone_idx(zone),
-		nr_scanned, nr_reclaimed,
-		sc->priority,
-		trace_shrink_flags(file));
+//	trace_mm_vmscan_lru_shrink_inactive(zone->zone_pgdat->node_id,
+//		zone_idx(zone),
+//		nr_scanned, nr_reclaimed,
+//		sc->priority,
+//		trace_shrink_flags(file));
 	return nr_reclaimed;
 }
 
@@ -2783,13 +2783,13 @@ unsigned long try_to_free_pages(struct zonelist *zonelist, int order,
 	if (throttle_direct_reclaim(gfp_mask, zonelist, nodemask))
 		return 1;
 
-	trace_mm_vmscan_direct_reclaim_begin(order,
-				sc.may_writepage,
-				gfp_mask);
+//	trace_mm_vmscan_direct_reclaim_begin(order,
+//				sc.may_writepage,
+//				gfp_mask);
 
 	nr_reclaimed = do_try_to_free_pages(zonelist, &sc, &shrink);
 
-	trace_mm_vmscan_direct_reclaim_end(nr_reclaimed);
+//	trace_mm_vmscan_direct_reclaim_end(nr_reclaimed);
 
 	return nr_reclaimed;
 }
@@ -2816,9 +2816,9 @@ unsigned long mem_cgroup_shrink_node_zone(struct mem_cgroup *memcg,
 	sc.gfp_mask = (gfp_mask & GFP_RECLAIM_MASK) |
 			(GFP_HIGHUSER_MOVABLE & ~GFP_RECLAIM_MASK);
 
-	trace_mm_vmscan_memcg_softlimit_reclaim_begin(sc.order,
-						      sc.may_writepage,
-						      sc.gfp_mask);
+//	trace_mm_vmscan_memcg_softlimit_reclaim_begin(sc.order,
+//						      sc.may_writepage,
+//						      sc.gfp_mask);
 
 	/*
 	 * NOTE: Although we can get the priority field, using it
@@ -2829,7 +2829,7 @@ unsigned long mem_cgroup_shrink_node_zone(struct mem_cgroup *memcg,
 	 */
 	shrink_lruvec(lruvec, &sc);
 
-	trace_mm_vmscan_memcg_softlimit_reclaim_end(sc.nr_reclaimed);
+//	trace_mm_vmscan_memcg_softlimit_reclaim_end(sc.nr_reclaimed);
 
 	*nr_scanned = sc.nr_scanned;
 	return sc.nr_reclaimed;
@@ -2867,13 +2867,13 @@ unsigned long try_to_free_mem_cgroup_pages(struct mem_cgroup *memcg,
 
 	zonelist = NODE_DATA(nid)->node_zonelists;
 
-	trace_mm_vmscan_memcg_reclaim_begin(0,
-					    sc.may_writepage,
-					    sc.gfp_mask);
+//	trace_mm_vmscan_memcg_reclaim_begin(0,
+//					    sc.may_writepage,
+//					    sc.gfp_mask);
 
 	nr_reclaimed = do_try_to_free_pages(zonelist, &sc, &shrink);
 
-	trace_mm_vmscan_memcg_reclaim_end(nr_reclaimed);
+//	trace_mm_vmscan_memcg_reclaim_end(nr_reclaimed);
 
 	return nr_reclaimed;
 }
@@ -3325,7 +3325,7 @@ static void kswapd_try_to_sleep(pg_data_t *pgdat, int order, int classzone_idx)
 	 * go fully to sleep until explicitly woken up.
 	 */
 	if (prepare_kswapd_sleep(pgdat, order, remaining, classzone_idx)) {
-		trace_mm_vmscan_kswapd_sleep(pgdat->node_id);
+//		trace_mm_vmscan_kswapd_sleep(pgdat->node_id);
 
 		/*
 		 * vmstat counters are not perfectly accurate and the estimated
@@ -3453,7 +3453,7 @@ static int kswapd(void *p)
 		 * after returning from the refrigerator
 		 */
 		if (!ret) {
-			trace_mm_vmscan_kswapd_wake(pgdat->node_id, order);
+//			trace_mm_vmscan_kswapd_wake(pgdat->node_id, order);
 			balanced_classzone_idx = classzone_idx;
 			balanced_order = balance_pgdat(pgdat, order,
 						&balanced_classzone_idx);
@@ -3489,7 +3489,7 @@ void wakeup_kswapd(struct zone *zone, int order, enum zone_type classzone_idx)
 	if (zone_balanced(zone, order, 0, 0))
 		return;
 
-	trace_mm_vmscan_wakeup_kswapd(pgdat->node_id, zone_idx(zone), order);
+//	trace_mm_vmscan_wakeup_kswapd(pgdat->node_id, zone_idx(zone), order);
 	wake_up_interruptible(&pgdat->kswapd_wait);
 }
 

@@ -235,7 +235,7 @@ bounce:
 		}
 	}
 
-	trace_block_bio_bounce(q, *bio_orig);
+//	trace_block_bio_bounce(q, *bio_orig);
 
 	bio->bi_flags |= (1 << BIO_BOUNCED);
 

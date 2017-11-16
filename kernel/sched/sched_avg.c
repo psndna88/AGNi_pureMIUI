@@ -88,7 +88,7 @@ void sched_get_nr_running_avg(int *avg, int *iowait_avg, int *big_avg)
 	*big_avg = (int)div64_u64(tmp_big_avg * 100, diff);
 	*iowait_avg = (int)div64_u64(tmp_iowait * 100, diff);
 
-	trace_sched_get_nr_running_avg(*avg, *big_avg, *iowait_avg);
+//	trace_sched_get_nr_running_avg(*avg, *big_avg, *iowait_avg);
 
 	BUG_ON(*avg < 0 || *big_avg < 0 || *iowait_avg < 0);
 	pr_debug("%s - avg:%d big_avg:%d iowait_avg:%d\n",

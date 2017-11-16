@@ -135,7 +135,7 @@ void sync_timeline_signal(struct sync_timeline *obj)
 	LIST_HEAD(signaled_pts);
 	struct list_head *pos, *n;
 
-	trace_sync_timeline(obj);
+//	trace_sync_timeline(obj);
 
 	spin_lock_irqsave(&obj->active_list_lock, flags);
 
@@ -677,11 +677,11 @@ EXPORT_SYMBOL(sync_fence_log);
 int sync_fence_wait(struct sync_fence *fence, long timeout)
 {
 	int err = 0;
-	struct sync_pt *pt;
+//	struct sync_pt *pt;
 
-	trace_sync_wait(fence, 1);
-	list_for_each_entry(pt, &fence->pt_list_head, pt_list)
-		trace_sync_pt(pt);
+//	trace_sync_wait(fence, 1);
+//	list_for_each_entry(pt, &fence->pt_list_head, pt_list)
+//		trace_sync_pt(pt);
 
 	if (timeout > 0) {
 		timeout = msecs_to_jiffies(timeout);
@@ -692,7 +692,7 @@ int sync_fence_wait(struct sync_fence *fence, long timeout)
 		err = wait_event_interruptible(fence->wq,
 					       sync_fence_check(fence));
 	}
-	trace_sync_wait(fence, 0);
+//	trace_sync_wait(fence, 0);
 
 	if (err < 0)
 		return err;

@@ -594,17 +594,17 @@ static struct ion_handle *__ion_alloc(struct ion_client *client, size_t len,
 		/* if the caller didn't specify this heap id */
 		if (!((1 << heap->id) & heap_id_mask))
 			continue;
-		trace_ion_alloc_buffer_start(client->name, heap->name, len,
-					     heap_id_mask, flags);
+//		trace_ion_alloc_buffer_start(client->name, heap->name, len,
+//					     heap_id_mask, flags);
 		buffer = ion_buffer_create(heap, dev, len, align, flags);
-		trace_ion_alloc_buffer_end(client->name, heap->name, len,
-					   heap_id_mask, flags);
+//		trace_ion_alloc_buffer_end(client->name, heap->name, len,
+//					   heap_id_mask, flags);
 		if (!IS_ERR(buffer))
 			break;
 
-		trace_ion_alloc_buffer_fallback(client->name, heap->name, len,
-					    heap_id_mask, flags,
-					    PTR_ERR(buffer));
+//		trace_ion_alloc_buffer_fallback(client->name, heap->name, len,
+//					    heap_id_mask, flags,
+//					    PTR_ERR(buffer));
 		if (dbg_str_idx < MAX_DBG_STR_LEN) {
 			unsigned int len_left = MAX_DBG_STR_LEN-dbg_str_idx-1;
 			int ret_value = snprintf(&dbg_str[dbg_str_idx],
@@ -624,15 +624,15 @@ static struct ion_handle *__ion_alloc(struct ion_client *client, size_t len,
 	up_read(&dev->lock);
 
 	if (buffer == NULL) {
-		trace_ion_alloc_buffer_fail(client->name, dbg_str, len,
-					    heap_id_mask, flags, -ENODEV);
+//		trace_ion_alloc_buffer_fail(client->name, dbg_str, len,
+//					    heap_id_mask, flags, -ENODEV);
 		return ERR_PTR(-ENODEV);
 	}
 
 	if (IS_ERR(buffer)) {
-		trace_ion_alloc_buffer_fail(client->name, dbg_str, len,
-					    heap_id_mask, flags,
-					    PTR_ERR(buffer));
+//		trace_ion_alloc_buffer_fail(client->name, dbg_str, len,
+//					    heap_id_mask, flags,
+//					    PTR_ERR(buffer));
 		pr_debug("ION is unable to allocate 0x%zx bytes (alignment: 0x%zx) from heap(s) %sfor client %s\n",
 			len, align, dbg_str, client->name);
 		return ERR_PTR(PTR_ERR(buffer));

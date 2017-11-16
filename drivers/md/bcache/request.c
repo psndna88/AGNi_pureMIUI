@@ -539,7 +539,7 @@ static void bch_insert_data_loop(struct closure *cl)
 		pr_debug("%s", pkey(k));
 		bch_keylist_push(&op->keys);
 
-		trace_bcache_cache_insert(n, n->bi_sector, n->bi_bdev);
+//		trace_bcache_cache_insert(n, n->bi_sector, n->bi_bdev);
 		n->bi_rw |= REQ_WRITE;
 		bch_submit_bbio(n, op->c, k, 0);
 	} while (n != bio);
@@ -676,7 +676,7 @@ static void bio_complete(struct search *s)
 		part_stat_add(cpu, &s->d->disk->part0, ticks[rw], duration);
 		part_stat_unlock();
 
-		trace_bcache_request_end(s, s->orig_bio);
+//		trace_bcache_request_end(s, s->orig_bio);
 		bio_endio(s->orig_bio, s->error);
 		s->orig_bio = NULL;
 	}
@@ -812,7 +812,7 @@ static void request_read_error(struct closure *cl)
 
 		/* XXX: invalidate cache */
 
-		trace_bcache_read_retry(&s->bio.bio);
+//		trace_bcache_read_retry(&s->bio.bio);
 		closure_bio_submit(&s->bio.bio, &s->cl, s->d);
 	}
 
@@ -975,7 +975,7 @@ static int cached_dev_cache_miss(struct btree *b, struct search *s,
 	s->cache_miss = miss;
 	bio_get(s->op.cache_bio);
 
-	trace_bcache_cache_miss(s->orig_bio);
+//	trace_bcache_cache_miss(s->orig_bio);
 	closure_bio_submit(s->op.cache_bio, &s->cl, s->d);
 
 	return ret;
@@ -1050,10 +1050,10 @@ static void request_write(struct cached_dev *dc, struct search *s)
 		s->op.cache_bio = bio_clone_bioset(bio, GFP_NOIO,
 						   dc->disk.bio_split);
 
-		trace_bcache_writethrough(s->orig_bio);
+//		trace_bcache_writethrough(s->orig_bio);
 		closure_bio_submit(bio, cl, s->d);
 	} else {
-		trace_bcache_writeback(s->orig_bio);
+//		trace_bcache_writeback(s->orig_bio);
 		bch_writeback_add(dc, bio_sectors(bio));
 		s->op.cache_bio = bio;
 
@@ -1077,7 +1077,7 @@ skip:
 	s->op.skip = true;
 	s->op.cache_bio = s->orig_bio;
 	bio_get(s->op.cache_bio);
-	trace_bcache_write_skip(s->orig_bio);
+//	trace_bcache_write_skip(s->orig_bio);
 
 	if ((bio->bi_rw & REQ_DISCARD) &&
 	    !blk_queue_discard(bdev_get_queue(dc->bdev)))
@@ -1243,7 +1243,7 @@ static void cached_dev_make_request(struct request_queue *q, struct bio *bio)
 
 	if (cached_dev_get(dc)) {
 		s = search_alloc(bio, d);
-		trace_bcache_request_start(s, bio);
+//		trace_bcache_request_start(s, bio);
 
 		if (!bio_has_data(bio))
 			request_nodata(dc, s);
@@ -1351,7 +1351,7 @@ static void flash_dev_make_request(struct request_queue *q, struct bio *bio)
 	cl = &s->cl;
 	bio = &s->bio.bio;
 
-	trace_bcache_request_start(s, bio);
+//	trace_bcache_request_start(s, bio);
 
 	if (bio_has_data(bio) && !rw) {
 		closure_call(&s->op.cl, btree_read_async, NULL, cl);

@@ -63,7 +63,7 @@ static ssize_t perf_trace_write(struct file *file,
 	/* Disable all the counters that were enabled */
 	asm volatile("msr pmcntenclr_el0, %0" : : "r" (cnten_val));
 
-	trace_perf_trace_user(buf, cnten_val);
+//	trace_perf_trace_user(buf, cnten_val);
 
 	/* Enable all the counters that were disabled */
 	asm volatile("msr pmcntenset_el0, %0" : : "r" (cnten_val));

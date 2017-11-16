@@ -732,7 +732,7 @@ static void update_curr(struct cfs_rq *cfs_rq)
 	if (entity_is_task(curr)) {
 		struct task_struct *curtask = task_of(curr);
 
-		trace_sched_stat_runtime(curtask, delta_exec, curr->vruntime);
+//		trace_sched_stat_runtime(curtask, delta_exec, curr->vruntime);
 		cpuacct_charge(curtask, delta_exec);
 		account_group_exec_runtime(curtask, delta_exec);
 	}
@@ -859,7 +859,7 @@ update_stats_wait_end(struct cfs_rq *cfs_rq, struct sched_entity *se,
 		struct sched_max_latency *max;
 
 		delta = rq_clock(rq_of(cfs_rq)) - se->statistics.wait_start;
-		trace_sched_stat_wait(task_of(se), delta);
+//		trace_sched_stat_wait(task_of(se), delta);
 
 		delta = delta >> 10;
 		max = this_cpu_ptr(&sched_max_latency);
@@ -1785,7 +1785,7 @@ int sched_set_boost(int enable)
 	if (!old_refcount && boost_refcount)
 		boost_kick_cpus();
 
-	trace_sched_set_boost(boost_refcount);
+//	trace_sched_set_boost(boost_refcount);
 	spin_unlock_irqrestore(&boost_lock, flags);
 
 	return ret;
@@ -1996,13 +1996,13 @@ static int best_small_task_cpu(struct task_struct *p, int sync)
 	do {
 		rq = cpu_rq(i);
 
-		trace_sched_cpu_load(rq, idle_cpu(i),
-				     mostly_idle_cpu_sync(i,
-						  cpu_load_sync(i, sync), sync),
-				     sched_irqload(i),
-				     power_cost(scale_load_to_cpu(task_load(p),
-						i), i),
-				     cpu_temp(i));
+//		trace_sched_cpu_load(rq, idle_cpu(i),
+//				     mostly_idle_cpu_sync(i,
+//						  cpu_load_sync(i, sync), sync),
+//				     sched_irqload(i),
+//				     power_cost(scale_load_to_cpu(task_load(p),
+//						i), i),
+//				     cpu_temp(i));
 
 		if (cpu_max_possible_capacity(i) == max_possible_capacity &&
 		    hmp_capable) {
@@ -2282,13 +2282,13 @@ static int select_best_cpu(struct task_struct *p, int target, int reason,
 	for_each_cpu(i, &search_cpus) {
 		struct rq *rq = cpu_rq(i);
 
-		trace_sched_cpu_load(cpu_rq(i), idle_cpu(i),
-				     mostly_idle_cpu_sync(i,
-						  cpu_load_sync(i, sync), sync),
-				     sched_irqload(i),
-				     power_cost(scale_load_to_cpu(task_load(p),
-						i), i),
-				     cpu_temp(i));
+//		trace_sched_cpu_load(cpu_rq(i), idle_cpu(i),
+//				     mostly_idle_cpu_sync(i,
+//						  cpu_load_sync(i, sync), sync),
+//				     sched_irqload(i),
+//				     power_cost(scale_load_to_cpu(task_load(p),
+//						i), i),
+//				     cpu_temp(i));
 
 		if (skip_freq_domain(task_cpu(p), i, reason, pref_cluster)) {
 			cpumask_andnot(&search_cpus, &search_cpus,
@@ -2448,7 +2448,7 @@ done:
 	 * tracepoint towards end to capture prefer_idle flag used for this
 	 * instance of wakeup.
 	 */
-	trace_sched_task_load(p, small_task, boost, reason, sync, prefer_idle);
+//	trace_sched_task_load(p, small_task, boost, reason, sync, prefer_idle);
 
 	return best_cpu;
 }
@@ -3834,7 +3834,7 @@ static void enqueue_sleeper(struct cfs_rq *cfs_rq, struct sched_entity *se)
 
 		if (tsk) {
 			account_scheduler_latency(tsk, delta >> 10, 1);
-			trace_sched_stat_sleep(tsk, delta);
+//			trace_sched_stat_sleep(tsk, delta);
 		}
 	}
 	if (se->statistics.block_start) {
@@ -3853,11 +3853,11 @@ static void enqueue_sleeper(struct cfs_rq *cfs_rq, struct sched_entity *se)
 			if (tsk->in_iowait) {
 				se->statistics.iowait_sum += delta;
 				se->statistics.iowait_count++;
-				trace_sched_stat_iowait(tsk, delta);
+//				trace_sched_stat_iowait(tsk, delta);
 			}
 
-			trace_sched_stat_blocked(tsk, delta);
-			trace_sched_blocked_reason(tsk);
+//			trace_sched_stat_blocked(tsk, delta);
+//			trace_sched_blocked_reason(tsk);
 
 			/*
 			 * Blocking time is in units of nanosecs, so shift by
@@ -4555,11 +4555,11 @@ static void throttle_cfs_rq(struct cfs_rq *cfs_rq)
 	raw_spin_unlock(&cfs_b->lock);
 
 	/* Log effect on hmp stats after throttling */
-	trace_sched_cpu_load(rq, idle_cpu(cpu_of(rq)),
-			     mostly_idle_cpu(cpu_of(rq)),
-			     sched_irqload(cpu_of(rq)),
-			     power_cost_at_freq(cpu_of(rq), 0),
-			     cpu_temp(cpu_of(rq)));
+//	trace_sched_cpu_load(rq, idle_cpu(cpu_of(rq)),
+//			     mostly_idle_cpu(cpu_of(rq)),
+//			     sched_irqload(cpu_of(rq)),
+//			     power_cost_at_freq(cpu_of(rq), 0),
+//			     cpu_temp(cpu_of(rq)));
 }
 
 void unthrottle_cfs_rq(struct cfs_rq *cfs_rq)
@@ -4612,11 +4612,11 @@ void unthrottle_cfs_rq(struct cfs_rq *cfs_rq)
 		resched_task(rq->curr);
 
 	/* Log effect on hmp stats after un-throttling */
-	trace_sched_cpu_load(rq, idle_cpu(cpu_of(rq)),
-			     mostly_idle_cpu(cpu_of(rq)),
-			     sched_irqload(cpu_of(rq)),
-			     power_cost_at_freq(cpu_of(rq), 0),
-			     cpu_temp(cpu_of(rq)));
+//	trace_sched_cpu_load(rq, idle_cpu(cpu_of(rq)),
+//			     mostly_idle_cpu(cpu_of(rq)),
+//			     sched_irqload(cpu_of(rq)),
+//			     power_cost_at_freq(cpu_of(rq), 0),
+//			     cpu_temp(cpu_of(rq)));
 }
 
 static u64 distribute_cfs_runtime(struct cfs_bandwidth *cfs_b,
@@ -6881,11 +6881,11 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 	for_each_cpu_and(i, sched_group_cpus(group), env->cpus) {
 		struct rq *rq = cpu_rq(i);
 
-		trace_sched_cpu_load(cpu_rq(i), idle_cpu(i),
-				     mostly_idle_cpu(i),
-				     sched_irqload(i),
-				     power_cost_at_freq(i, 0),
-				     cpu_temp(i));
+//		trace_sched_cpu_load(cpu_rq(i), idle_cpu(i),
+//				     mostly_idle_cpu(i),
+//				     sched_irqload(i),
+//				     power_cost_at_freq(i, 0),
+//				     cpu_temp(i));
 		nr_running = rq->nr_running;
 
 		/* Bias balancing toward cpus of our domain */
@@ -7862,11 +7862,11 @@ out_one_pinned:
 
 	ld_moved = 0;
 out:
-	trace_sched_load_balance(this_cpu, idle, *balance,
-				 group ? group->cpumask[0] : 0,
-				 busiest ? busiest->nr_running : 0,
-				 env.imbalance, env.flags, ld_moved,
-				 sd->balance_interval);
+//	trace_sched_load_balance(this_cpu, idle, *balance,
+//				 group ? group->cpumask[0] : 0,
+//				 busiest ? busiest->nr_running : 0,
+//				 env.imbalance, env.flags, ld_moved,
+//				 sd->balance_interval);
 	return ld_moved;
 }
 

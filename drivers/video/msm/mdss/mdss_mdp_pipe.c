@@ -381,9 +381,9 @@ static void mdss_mdp_smp_set_wm_levels(struct mdss_mdp_pipe *pipe,
 		wm[0] = wm[1] - val;
 	}
 
-	trace_mdp_perf_set_wm_levels(pipe->num, useable_space, latency_bytes,
-			wm[0], wm[1], wm[2], (useable_space / SMP_MB_SIZE),
-			SMP_MB_SIZE);
+//	trace_mdp_perf_set_wm_levels(pipe->num, useable_space, latency_bytes,
+//			wm[0], wm[1], wm[2], (useable_space / SMP_MB_SIZE),
+//			SMP_MB_SIZE);
 
 	pr_debug("pnum=%d useable_space=%u watermarks %u,%u,%u\n", pipe->num,
 			useable_space, wm[0], wm[1], wm[2]);

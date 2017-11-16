@@ -80,8 +80,8 @@ void tracectr_notifier(void *ignore, struct task_struct *prev,
 			per_cpu(hotplug_flag, cpu) = 0;
 			setup_prev_cnts(cpu, cnten_val);
 		} else {
-			trace_sched_switch_with_ctrs(per_cpu(old_pid, cpu),
-						     current_pid);
+//			trace_sched_switch_with_ctrs(per_cpu(old_pid, cpu),
+//						     current_pid);
 		}
 
 		/* Enable all the counters that were disabled */

@@ -659,8 +659,8 @@ static int msm_iommu_sec_ptbl_map_range(struct msm_iommu_drvdata *iommu_drvdata,
 		flush_va = pa_list;
 	}
 
-	trace_iommu_sec_ptbl_map_range_start(map.info.id, map.info.ctx_id, va,
-								pa, len);
+//	trace_iommu_sec_ptbl_map_range_start(map.info.id, map.info.ctx_id, va,
+//								pa, len);
 
 	/*
 	 * Ensure that the buffer is in RAM by the time it gets to TZ
@@ -672,8 +672,8 @@ static int msm_iommu_sec_ptbl_map_range(struct msm_iommu_drvdata *iommu_drvdata,
 	ret = msm_iommu_sec_map2(&map);
 	kfree(pa_list);
 
-	trace_iommu_sec_ptbl_map_range_end(map.info.id, map.info.ctx_id, va, pa,
-									len);
+//	trace_iommu_sec_ptbl_map_range_end(map.info.id, map.info.ctx_id, va, pa,
+//									len);
 
 	return ret;
 }

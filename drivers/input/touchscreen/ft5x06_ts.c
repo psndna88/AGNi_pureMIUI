@@ -58,7 +58,7 @@
 #if defined(CONFIG_TOUCHSCREEN_GESTURE_FT)
 #endif
 
-#define FT_PROC_DEBUG
+#undef FT_PROC_DEBUG
 #if defined(FT_PROC_DEBUG)
 #define FTS_FACTORYMODE_VALUE		0x40
 #define FTS_WORKMODE_VALUE		0x00

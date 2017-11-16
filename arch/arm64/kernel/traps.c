@@ -364,7 +364,7 @@ asmlinkage void __exception do_undefinstr(struct pt_regs *regs)
 		return;
 
 die_sig:
-	trace_undef_instr(regs, (void *)pc);
+//	trace_undef_instr(regs, (void *)pc);
 
 	if (user_mode(regs) && show_unhandled_signals &&
 		unhandled_signal(current, SIGILL) && printk_ratelimit()) {

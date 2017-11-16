@@ -427,7 +427,7 @@ int kthread_stop(struct task_struct *k)
 	struct kthread *kthread;
 	int ret;
 
-	trace_sched_kthread_stop(k);
+//	trace_sched_kthread_stop(k);
 
 	get_task_struct(k);
 	kthread = to_live_kthread(k);
@@ -440,7 +440,7 @@ int kthread_stop(struct task_struct *k)
 	ret = k->exit_code;
 	put_task_struct(k);
 
-	trace_sched_kthread_stop_ret(ret);
+//	trace_sched_kthread_stop_ret(ret);
 	return ret;
 }
 EXPORT_SYMBOL(kthread_stop);

@@ -190,10 +190,10 @@ static void swap_fn(struct work_struct *work)
 
 		rp = reclaim_task_anon(selected[si].p, nr_to_reclaim);
 
-		trace_process_reclaim(selected[si].tasksize,
-				selected[si].oom_score_adj, rp.nr_scanned,
-				rp.nr_reclaimed, per_swap_size, total_sz,
-				nr_to_reclaim);
+//		trace_process_reclaim(selected[si].tasksize,
+//				selected[si].oom_score_adj, rp.nr_scanned,
+//				rp.nr_reclaimed, per_swap_size, total_sz,
+//				nr_to_reclaim);
 		total_scan += rp.nr_scanned;
 		total_reclaimed += rp.nr_reclaimed;
 		put_task_struct(selected[si].p);
@@ -213,7 +213,7 @@ static void swap_fn(struct work_struct *work)
 
 		reclaim_avg_efficiency =
 			(efficiency + reclaim_avg_efficiency) / 2;
-		trace_process_reclaim_eff(efficiency, reclaim_avg_efficiency);
+//		trace_process_reclaim_eff(efficiency, reclaim_avg_efficiency);
 	}
 }
 
