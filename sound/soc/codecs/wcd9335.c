@@ -177,21 +177,20 @@ enum tasha_sido_voltage {
 };
 
 static int pdesireaudio_uhqa_mode = 1;
-module_param(pdesireaudio_uhqa_mode, int,
+/* module_param(pdesireaudio_uhqa_mode, int,
 		S_IRUGO | S_IWUSR | S_IWGRP);
-MODULE_PARM_DESC(pdesireaudio_uhqa_mode, "enable/disable PDesireAudio UHQA Mode");
+MODULE_PARM_DESC(pdesireaudio_uhqa_mode, "enable/disable PDesireAudio UHQA Mode"); */
 
 static int pdesireaudio_class_ab_mode = 0;
-module_param(pdesireaudio_class_ab_mode, int,
+/* module_param(pdesireaudio_class_ab_mode, int,
 		S_IRUGO | S_IWUSR | S_IWGRP);
-MODULE_PARM_DESC(pdesireaudio_class_ab_mode, "enable/disable PDesireAudio Class AB Mode");
+MODULE_PARM_DESC(pdesireaudio_class_ab_mode, "enable/disable PDesireAudio Class AB Mode"); */
 
 int sound_control_spk_priv = 0;
 int sound_control_spk_gain = 0;
 
 static int dig_core_collapse_enable = 0;
-module_param(dig_core_collapse_enable, int,
-		S_IRUGO | S_IWUSR | S_IWGRP);
+module_param(dig_core_collapse_enable, int,	S_IRUGO);
 MODULE_PARM_DESC(dig_core_collapse_enable, "enable/disable power gating");
 
 /* dig_core_collapse timer in seconds */
@@ -933,7 +932,7 @@ void tasha_spk_ext_pa_cb(int (*spk_ext_pa)(struct snd_soc_codec *codec,
 {
 	struct tasha_priv *tasha = snd_soc_codec_get_drvdata(codec);
 
-	printk("%s: Enter\n", __func__);
+	pr_debug("%s: Enter\n", __func__);
 	tasha->spk_ext_pa_cb = spk_ext_pa;
 }
 EXPORT_SYMBOL(tasha_spk_ext_pa_cb);
