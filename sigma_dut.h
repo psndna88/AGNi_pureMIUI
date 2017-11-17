@@ -405,6 +405,7 @@ struct sigma_dut {
 		AP_GCMP_256,
 		AP_GCMP_128,
 		AP_CCMP_256,
+		AP_CCMP_128_GCMP_256,
 	} ap_cipher;
 	enum ap_group_mgmt_cipher {
 		AP_NO_GROUP_MGMT_CIPHER_SET,

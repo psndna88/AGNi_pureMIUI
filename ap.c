@@ -1478,6 +1478,9 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 			dut->ap_cipher = AP_GCMP_128;
 		} else if (strcasecmp(val, "AES-CCMP-128") == 0) {
 			dut->ap_cipher = AP_CCMP;
+		} else if (strcasecmp(val, "AES-CCMP-128 AES-GCMP-256") == 0 ||
+			   strcasecmp(val, "AES-GCMP-256 AES-CCMP-128") == 0) {
+			dut->ap_cipher = AP_CCMP_128_GCMP_256;
 		} else {
 			send_resp(dut, conn, SIGMA_INVALID,
 				  "errorCode,Unsupported PairwiseCipher");
@@ -5414,6 +5417,8 @@ static const char * hostapd_cipher_name(enum ap_cipher cipher)
 		return "GCMP";
 	case AP_CCMP_256:
 		return "CCMP-256";
+	case AP_CCMP_128_GCMP_256:
+		return "CCMP GCMP-256";
 	default:
 		return "UNKNOWN";
 	}
