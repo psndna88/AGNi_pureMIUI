@@ -735,7 +735,28 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		wpa_command(ifname, "SET dpp_test 0");
 	}
 
-	if (strcasecmp(auth_role, "Initiator") == 0) {
+	if (strcasecmp(self_conf, "Yes") == 0) {
+		if (strcasecmp(prov_role, "Configurator") != 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Invalid DPPSelfConfigure use - only allowed for Configurator role");
+			goto out;
+		}
+		if (!conf_role) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Missing DPPConfIndex");
+			goto out;
+		}
+
+		snprintf(buf, sizeof(buf),
+			 "DPP_CONFIGURATOR_SIGN  conf=%s %s %s configurator=%d",
+			 conf_role, conf_ssid, conf_pass, dut->dpp_conf_id);
+		if (wpa_command(ifname, buf) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to initiate DPP self-configuration");
+			goto out;
+		}
+		goto wait_connect;
+	} else if (strcasecmp(auth_role, "Initiator") == 0) {
 		char own_txt[20];
 		int dpp_peer_bootstrap = -1;
 
@@ -1038,6 +1059,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	if (strcasecmp(wait_conn, "Yes") == 0 &&
 	    !sigma_dut_is_ap(dut) &&
 	    strcasecmp(prov_role, "Enrollee") == 0) {
+	wait_connect:
 		if (frametype && strcasecmp(frametype,
 					    "PeerDiscoveryRequest") == 0) {
 			if (dpp_wait_tx_status(dut, ctrl, 5) < 0)
