@@ -1488,6 +1488,23 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
+	val = get_param(cmd, "GroupCipher");
+	if (val) {
+		if (strcasecmp(val, "AES-GCMP-256") == 0) {
+			dut->ap_group_cipher = AP_GCMP_256;
+		} else if (strcasecmp(val, "AES-CCMP-256") == 0) {
+			dut->ap_group_cipher = AP_CCMP_256;
+		} else if (strcasecmp(val, "AES-GCMP-128") == 0) {
+			dut->ap_group_cipher = AP_GCMP_128;
+		} else if (strcasecmp(val, "AES-CCMP-128") == 0) {
+			dut->ap_group_cipher = AP_CCMP;
+		} else {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Unsupported GroupCipher");
+			return 0;
+		}
+	}
+
 	val = get_param(cmd, "GroupMgntCipher");
 	if (val) {
 		if (strcasecmp(val, "BIP-GMAC-256") == 0) {
@@ -5656,12 +5673,11 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 			fprintf(f, "wpa_key_mgmt=%s\n", key_mgmt);
 			break;
 		}
-		if (dut->ap_cipher == AP_CCMP_TKIP)
-			fprintf(f, "wpa_pairwise=CCMP TKIP\n");
-		else if (dut->ap_cipher == AP_TKIP)
-			fprintf(f, "wpa_pairwise=TKIP\n");
-		else
-			fprintf(f, "wpa_pairwise=CCMP\n");
+		fprintf(f, "wpa_pairwise=%s\n",
+			hostapd_cipher_name(dut->ap_cipher));
+		if (dut->ap_group_cipher != AP_NO_GROUP_CIPHER_SET)
+			fprintf(f, "group_cipher=%s\n",
+				hostapd_cipher_name(dut->ap_group_cipher));
 		if (dut->ap_key_mgmt == AP_WPA2_SAE)
 			fprintf(f, "sae_password=%s\n", dut->ap_passphrase);
 		else
@@ -5690,12 +5706,11 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 			fprintf(f, "wpa_key_mgmt=WPA-EAP-SHA256\n");
 			break;
 		}
-		if (dut->ap_cipher == AP_CCMP_TKIP)
-			fprintf(f, "wpa_pairwise=CCMP TKIP\n");
-		else if (dut->ap_cipher == AP_TKIP)
-			fprintf(f, "wpa_pairwise=TKIP\n");
-		else
-			fprintf(f, "wpa_pairwise=CCMP\n");
+		fprintf(f, "wpa_pairwise=%s\n",
+			hostapd_cipher_name(dut->ap_cipher));
+		if (dut->ap_group_cipher != AP_NO_GROUP_CIPHER_SET)
+			fprintf(f, "group_cipher=%s\n",
+				hostapd_cipher_name(dut->ap_group_cipher));
 		fprintf(f, "auth_server_addr=%s\n", dut->ap_radius_ipaddr);
 		if (dut->ap_radius_port)
 			fprintf(f, "auth_server_port=%d\n",
@@ -5709,6 +5724,9 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		fprintf(f, "wpa_key_mgmt=WPA-EAP-SUITE-B-192\n");
 		fprintf(f, "wpa_pairwise=%s\n",
 			hostapd_cipher_name(dut->ap_cipher));
+		if (dut->ap_group_cipher != AP_NO_GROUP_CIPHER_SET)
+			fprintf(f, "group_cipher=%s\n",
+				hostapd_cipher_name(dut->ap_group_cipher));
 		if (dut->ap_group_mgmt_cipher != AP_NO_GROUP_MGMT_CIPHER_SET)
 			fprintf(f, "group_mgmt_cipher=%s\n",
 				hostapd_group_mgmt_cipher_name(
@@ -6643,6 +6661,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	dut->sae_reflection = 0;
 
 	dut->ap_cipher = AP_CCMP;
+	dut->ap_group_cipher = AP_NO_GROUP_CIPHER_SET;
 	dut->ap_group_mgmt_cipher = AP_NO_GROUP_MGMT_CIPHER_SET;
 
 	dut->dpp_conf_id = -1;

@@ -397,6 +397,7 @@ struct sigma_dut {
 		AP_PMF_REQUIRED
 	} ap_pmf;
 	enum ap_cipher {
+		AP_NO_GROUP_CIPHER_SET,
 		AP_CCMP,
 		AP_TKIP,
 		AP_WEP,
@@ -406,7 +407,7 @@ struct sigma_dut {
 		AP_GCMP_128,
 		AP_CCMP_256,
 		AP_CCMP_128_GCMP_256,
-	} ap_cipher;
+	} ap_cipher, ap_group_cipher;
 	enum ap_group_mgmt_cipher {
 		AP_NO_GROUP_MGMT_CIPHER_SET,
 		AP_BIP_GMAC_256,
