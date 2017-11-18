@@ -1550,6 +1550,13 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 			 "%s", val);
 	}
 
+	val = get_param(cmd, "PSKHEX");
+	if (val) {
+		if (strlen(val) != 64)
+			return -1;
+		strlcpy(dut->ap_psk, val, sizeof(dut->ap_psk));
+	}
+
 	val = get_param(cmd, "PMF");
 	if (val) {
 		if (strcasecmp(val, "Disabled") == 0) {
@@ -5680,6 +5687,8 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 				hostapd_cipher_name(dut->ap_group_cipher));
 		if (dut->ap_key_mgmt == AP_WPA2_SAE)
 			fprintf(f, "sae_password=%s\n", dut->ap_passphrase);
+		else if (!dut->ap_passphrase[0] && dut->ap_psk[0])
+			fprintf(f, "wpa_psk=%s", dut->ap_psk);
 		else
 			fprintf(f, "wpa_passphrase=%s\n", dut->ap_passphrase);
 		break;
@@ -6663,6 +6672,8 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	dut->ap_cipher = AP_CCMP;
 	dut->ap_group_cipher = AP_NO_GROUP_CIPHER_SET;
 	dut->ap_group_mgmt_cipher = AP_NO_GROUP_MGMT_CIPHER_SET;
+	dut->ap_passphrase[0] = '\0';
+	dut->ap_psk[0] = '\0';
 
 	dut->dpp_conf_id = -1;
 
