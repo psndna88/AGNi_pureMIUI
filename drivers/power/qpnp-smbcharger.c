@@ -6031,15 +6031,27 @@ void lct_charging_adjust(struct smbchg_chip *chip)
 	}
 	return;
 	board_temp = lct_get_prop_batt_temp(chip);
-	if (board_temp < 500)
-		queue_delayed_work(system_power_efficient_wq,
-			&chip->boardtemp_work, msecs_to_jiffies(30000));
-	else if (board_temp < 540)
-		queue_delayed_work(system_power_efficient_wq,
-			&chip->boardtemp_work, msecs_to_jiffies(10000));
-	else
-		queue_delayed_work(system_power_efficient_wq,
-			&chip->boardtemp_work, msecs_to_jiffies(3000));
+	if (charging_detected()) {
+		if (board_temp < 500)
+			schedule_delayed_work(&chip->boardtemp_work,
+				msecs_to_jiffies(30000));
+		else if (board_temp < 540)
+			schedule_delayed_work(&chip->boardtemp_work,
+				msecs_to_jiffies(10000));
+		else
+			schedule_delayed_work(&chip->boardtemp_work,
+				msecs_to_jiffies(3000));
+	} else {
+		if (board_temp < 500)
+			queue_delayed_work(system_power_efficient_wq,
+				&chip->boardtemp_work, msecs_to_jiffies(30000));
+		else if (board_temp < 540)
+			queue_delayed_work(system_power_efficient_wq,
+				&chip->boardtemp_work, msecs_to_jiffies(10000));
+		else
+			queue_delayed_work(system_power_efficient_wq,
+				&chip->boardtemp_work, msecs_to_jiffies(3000));
+	}
 
 	is_temp_rise = (board_temp - backup_temp) > 0 ? true : false;
 	backup_temp = board_temp;
@@ -6433,15 +6445,27 @@ static void smb_temp_work_fn(struct work_struct *work)
 	temp = get_prop_batt_temp(chip);
 	smb_for_batt_temp_too_high_too_low(chip, temp);
 	if (chip->usb_present) {
-		if (temp < 450)
-			queue_delayed_work(system_power_efficient_wq,
-				&chip->temp_work, msecs_to_jiffies(30000));
-		else if (temp < 500)
-			queue_delayed_work(system_power_efficient_wq,
-				&chip->temp_work, msecs_to_jiffies(10000));
-		else
-			queue_delayed_work(system_power_efficient_wq,
-				&chip->temp_work, msecs_to_jiffies(3000));
+		if (charging_detected()) {
+			if (temp < 450)
+				schedule_delayed_work(&chip->temp_work,
+					msecs_to_jiffies(30000));
+			else if (temp < 500)
+				schedule_delayed_work(&chip->temp_work,
+					msecs_to_jiffies(10000));
+			else
+				schedule_delayed_work(&chip->temp_work,
+					msecs_to_jiffies(3000));
+		} else {
+			if (temp < 450)
+				queue_delayed_work(system_power_efficient_wq,
+					&chip->temp_work, msecs_to_jiffies(30000));
+			else if (temp < 500)
+				queue_delayed_work(system_power_efficient_wq,
+					&chip->temp_work, msecs_to_jiffies(10000));
+			else
+				queue_delayed_work(system_power_efficient_wq,
+					&chip->temp_work, msecs_to_jiffies(3000));
+		}
 	}
 }
 #endif
@@ -6717,12 +6741,22 @@ static irqreturn_t dcin_uv_handler(int irq, void *_chip)
 	}
 
 #if defined (CONFIG_TEMP_CHARGE_DISABLE)
-	queue_delayed_work(system_power_efficient_wq,
-		&chip->temp_work, msecs_to_jiffies(1000));
+	if (charging_detected()) {
+		schedule_delayed_work(&chip->temp_work,
+			msecs_to_jiffies(1000));
+	} else {
+		queue_delayed_work(system_power_efficient_wq,
+			&chip->temp_work, msecs_to_jiffies(1000));
+	}
 #endif
 #if defined(CONFIG_BOARDTEMP_WORK)
-	queue_delayed_work(system_power_efficient_wq,
-		&chip->boardtemp_work, msecs_to_jiffies(3000));
+	if (charging_detected()) {
+		schedule_delayed_work(&chip->boardtemp_work,
+			msecs_to_jiffies(3000));
+	} else {
+		queue_delayed_work(system_power_efficient_wq,
+			&chip->boardtemp_work, msecs_to_jiffies(3000));
+	}
 #endif
 
 	smbchg_wipower_check(chip);
