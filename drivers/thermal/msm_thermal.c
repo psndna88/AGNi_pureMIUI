@@ -975,13 +975,13 @@ static void update_cpu_freq(int cpu)
 			cpumask_or(&throttling_mask, &mask, &throttling_mask);
 			set_cpu_throttled(&mask, true);
 		}
-		trace_thermal_pre_frequency_mit(cpu,
-			cpus[cpu].limited_max_freq,
-			cpus[cpu].limited_min_freq);
+//		trace_thermal_pre_frequency_mit(cpu,
+//			cpus[cpu].limited_max_freq,
+//			cpus[cpu].limited_min_freq);
 		ret = cpufreq_update_policy(cpu);
-		trace_thermal_post_frequency_mit(cpu,
-			cpufreq_quick_get_max(cpu),
-			cpus[cpu].limited_min_freq);
+//		trace_thermal_post_frequency_mit(cpu,
+//			cpufreq_quick_get_max(cpu),
+//			cpus[cpu].limited_min_freq);
 		if (ret)
 			pr_err("Unable to update policy for cpu:%d. err:%d\n",
 				cpu, ret);
@@ -2725,13 +2725,13 @@ static void __ref do_core_control(long temp)
 			pr_info("Set Offline: CPU%d Temp: %ld\n",
 					i, temp);
 			if (cpu_online(i)) {
-				trace_thermal_pre_core_offline(i);
+//				trace_thermal_pre_core_offline(i);
 				ret = cpu_down(i);
 				if (ret)
 					pr_err("Error %d offline core %d\n",
 					       ret, i);
-				trace_thermal_post_core_offline(i,
-					cpumask_test_cpu(i, cpu_online_mask));
+//				trace_thermal_post_core_offline(i,
+//					cpumask_test_cpu(i, cpu_online_mask));
 			}
 			cpus_offlined |= BIT(i);
 			break;
@@ -2755,13 +2755,13 @@ static void __ref do_core_control(long temp)
 			   online */
 			if (!(cpumask_test_cpu(i, cpus_previously_online)))
 				continue;
-			trace_thermal_pre_core_online(i);
+//			trace_thermal_pre_core_online(i);
 			ret = cpu_up(i);
 			if (ret)
 				pr_err("Error %d online core %d\n",
 						ret, i);
-			trace_thermal_post_core_online(i,
-				cpumask_test_cpu(i, cpu_online_mask));
+//			trace_thermal_post_core_online(i,
+//				cpumask_test_cpu(i, cpu_online_mask));
 			break;
 		}
 	}
@@ -2785,7 +2785,7 @@ static int __ref update_offline_cores(int val)
 		if (cpus_offlined & BIT(cpu)) {
 			if (!cpu_online(cpu))
 				continue;
-			trace_thermal_pre_core_offline(cpu);
+//			trace_thermal_pre_core_offline(cpu);
 			ret = cpu_down(cpu);
 			if (ret) {
 				pr_err_ratelimited(
@@ -2795,8 +2795,8 @@ static int __ref update_offline_cores(int val)
 			} else {
 				pr_debug("Offlined CPU%d\n", cpu);
 			}
-			trace_thermal_post_core_offline(cpu,
-				cpumask_test_cpu(cpu, cpu_online_mask));
+//			trace_thermal_post_core_offline(cpu,
+//				cpumask_test_cpu(cpu, cpu_online_mask));
 		} else if (online_core && (previous_cpus_offlined & BIT(cpu))) {
 			if (cpu_online(cpu))
 				continue;
@@ -2804,7 +2804,7 @@ static int __ref update_offline_cores(int val)
 			   online */
 			if (!(cpumask_test_cpu(cpu, cpus_previously_online)))
 				continue;
-			trace_thermal_pre_core_online(cpu);
+//			trace_thermal_pre_core_online(cpu);
 			ret = cpu_up(cpu);
 			if (ret && ret == notifier_to_errno(NOTIFY_BAD)) {
 				pr_debug("Onlining CPU%d is vetoed\n", cpu);
@@ -2817,8 +2817,8 @@ static int __ref update_offline_cores(int val)
 			} else {
 				pr_debug("Onlined CPU%d\n", cpu);
 			}
-			trace_thermal_post_core_online(cpu,
-				cpumask_test_cpu(cpu, cpu_online_mask));
+//			trace_thermal_post_core_online(cpu,
+//				cpumask_test_cpu(cpu, cpu_online_mask));
 		}
 	}
 
@@ -3283,9 +3283,9 @@ static void do_prog_freq_control(struct thermal_progressive_rule *prog,
 		temp, ret);
 		return;
 	}
-	trace_thermal_progressive_mitigate(prog->sensor_info->name,
-		cluster_ptr ? cluster_ptr->cluster_id : 0,
-		freq_table[idx].frequency);
+//	trace_thermal_progressive_mitigate(prog->sensor_info->name,
+//		cluster_ptr ? cluster_ptr->cluster_id : 0,
+//		freq_table[idx].frequency);
 	pr_debug("Sensor:%s Limiting Cluster%d max frequency to %u. Temp:%ld\n",
 		prog->sensor_info->name, cluster_ptr->cluster_id,
 		freq_table[idx].frequency, temp);
@@ -3995,9 +3995,9 @@ static void msm_prog_freq_notify(struct therm_threshold *trig_thresh)
 		if (prog->cur_freq_idx == prog->freq_idx_high) {
 			prog->overall_prog_state =
 				MSM_THERM_PROGRESSIVE_PAUSED;
-			trace_thermal_progressive_state(
-				prog->sensor_info->name, OVERALL_TYPE,
-				prog->overall_prog_state);
+//			trace_thermal_progressive_state(
+//				prog->sensor_info->name, OVERALL_TYPE,
+//				prog->overall_prog_state);
 			pr_debug("sensor=%s type=%s curr_state=%s\n",
 				prog->sensor_info->name, OVERALL_TYPE,
 				prog->overall_prog_state ?
@@ -4010,9 +4010,9 @@ static void msm_prog_freq_notify(struct therm_threshold *trig_thresh)
 		if (prog->cur_freq_idx != prog->freq_idx_high) {
 			prog->overall_prog_state =
 				MSM_THERM_PROGRESSIVE_SAMPLING;
-			trace_thermal_progressive_state(
-				prog->sensor_info->name, OVERALL_TYPE,
-				prog->overall_prog_state);
+//			trace_thermal_progressive_state(
+//				prog->sensor_info->name, OVERALL_TYPE,
+//				prog->overall_prog_state);
 			pr_debug("sensor=%s type=%s curr_state=%s\n",
 				prog->sensor_info->name, OVERALL_TYPE,
 				prog->overall_prog_state ?
@@ -4184,8 +4184,8 @@ static void msm_progressive_monitor(struct work_struct *work)
 		pr_debug("Sensor:%d temp:%ld polling_delay_ms:%d\n",
 			sensor_data->sensor_id, temp, prog->polling_delay_ms);
 
-		trace_thermal_progressive_sampling(prog->sensor_info->name,
-			temp);
+//		trace_thermal_progressive_sampling(prog->sensor_info->name,
+//			temp);
 
 		switch (sensor_data->prog_state) {
 		case MSM_THERM_PROGRESSIVE_SAMPLING:
@@ -4217,9 +4217,9 @@ static void msm_progressive_monitor(struct work_struct *work)
 				sensor_data->sensor_id);
 			break;
 		}
-		trace_thermal_progressive_state(
-			prog->sensor_info->name, INDIVIDUAL_TYPE,
-				sensor_data->prog_state);
+//		trace_thermal_progressive_state(
+//			prog->sensor_info->name, INDIVIDUAL_TYPE,
+//				sensor_data->prog_state);
 
 		if (sensor_data->prog_trip_clear) {
 			sensor_mgr_set_threshold(sensor_data->sensor_id,
@@ -4239,8 +4239,8 @@ static void msm_progressive_monitor(struct work_struct *work)
 		new_prog_state = MSM_THERM_PROGRESSIVE_PAUSED;
 
 start_sampling:
-	trace_thermal_progressive_state(
-		prog->sensor_info->name, OVERALL_TYPE, new_prog_state);
+//	trace_thermal_progressive_state(
+//		prog->sensor_info->name, OVERALL_TYPE, new_prog_state);
 	pr_debug("sensor=%s type=%s curr_state=%s\n",
 		prog->sensor_info->name, OVERALL_TYPE, new_prog_state ?
 		(new_prog_state == 1 ? "paused" : "monitor") : "sampling");
