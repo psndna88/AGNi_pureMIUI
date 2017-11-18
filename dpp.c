@@ -427,6 +427,21 @@ static const struct dpp_test_info dpp_tests[] = {
 	{ "MissingAttribute", "PeerDiscoveryResponse", "TransactionID", 62 },
 	{ "MissingAttribute", "PeerDiscoveryResponse", "DPPStatus", 63 },
 	{ "MissingAttribute", "PeerDiscoveryResponse", "Connector", 64 },
+	{ "InvalidValue", "AuthenticationRequest", "InitProtocolKey", 66 },
+	{ "InvalidValue", "AuthenticationResponse", "RespProtocolKey", 67 },
+	{ "InvalidValue", "AuthenticationRequest", "RespBSKeyHash", 68 },
+	{ "InvalidValue", "AuthenticationRequest", "InitBSKeyHash", 69 },
+	{ "InvalidValue", "AuthenticationResponse", "RespBSKeyHash", 70 },
+	{ "InvalidValue", "AuthenticationResponse", "InitBSKeyHash", 71 },
+	{ "InvalidValue", "AuthenticationConfirm", "RespBSKeyHash", 72 },
+	{ "InvalidValue", "AuthenticationConfirm", "InitBSKeyHash", 73 },
+	{ "InvalidValue", "AuthenticationResponse", "DPPStatus", 74 },
+	{ "InvalidValue", "AuthenticationConfirm", "DPPStatus", 75 },
+	{ "InvalidValue", "ConfigurationRequest", "ConfigAttr", 76 },
+	{ "InvalidValue", "PeerDiscoveryResponse", "TransactionID", 77 },
+	{ "InvalidValue", "PeerDiscoveryResponse", "DPPStatus", 78 },
+	{ "InvalidValue", "PeerDiscoveryResponse", "Connector", 79 },
+	{ "InvalidValue", "PeerDiscoveryRequest", "Connector", 80 },
 	{ NULL, NULL, NULL, 0 }
 };
 
