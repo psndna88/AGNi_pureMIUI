@@ -34,17 +34,10 @@
 #define RCU_KTHREAD_PRIO 1
 
 #ifdef CONFIG_RCU_BOOST
-
-/*
- * Control variables for per-CPU and per-rcu_node kthreads.  These
- * handle all flavors of RCU.
- */
-static DEFINE_PER_CPU(struct task_struct *, rcu_cpu_kthread_task);
-DEFINE_PER_CPU(unsigned int, rcu_cpu_kthread_status);
-DEFINE_PER_CPU(unsigned int, rcu_cpu_kthread_loops);
-DEFINE_PER_CPU(char, rcu_cpu_has_work);
-
-#endif /* #ifdef CONFIG_RCU_BOOST */
+#define RCU_BOOST_PRIO CONFIG_RCU_BOOST_PRIO
+#else
+#define RCU_BOOST_PRIO RCU_KTHREAD_PRIO
+#endif
 
 #ifdef CONFIG_RCU_NOCB_CPU
 static cpumask_var_t rcu_nocb_mask; /* CPUs to have callbacks offloaded. */
@@ -92,10 +85,29 @@ static void __init rcu_bootup_announce_oddness(void)
 	if (rcu_fanout_leaf != CONFIG_RCU_FANOUT_LEAF)
 		printk(KERN_INFO "\tExperimental boot-time adjustment of leaf fanout to %d.\n", rcu_fanout_leaf);
 	if (nr_cpu_ids != NR_CPUS)
-		pr_info("\tRCU restricting CPUs from NR_CPUS=%d to nr_cpu_ids=%d.\n", NR_CPUS, nr_cpu_ids);
-#ifdef CONFIG_RCU_BOOST
-	pr_info("\tRCU kthread priority: %d.\n", kthread_prio);
-#endif
+		printk(KERN_INFO "\tRCU restricting CPUs from NR_CPUS=%d to nr_cpu_ids=%d.\n", NR_CPUS, nr_cpu_ids);
+#ifdef CONFIG_RCU_NOCB_CPU
+#ifndef CONFIG_RCU_NOCB_CPU_NONE
+	if (!have_rcu_nocb_mask) {
+		zalloc_cpumask_var(&rcu_nocb_mask, GFP_KERNEL);
+		have_rcu_nocb_mask = true;
+	}
+#ifdef CONFIG_RCU_NOCB_CPU_ZERO
+	pr_info("\tExperimental no-CBs CPU 0\n");
+	cpumask_set_cpu(0, rcu_nocb_mask);
+#endif /* #ifdef CONFIG_RCU_NOCB_CPU_ZERO */
+#ifdef CONFIG_RCU_NOCB_CPU_ALL
+	pr_info("\tExperimental no-CBs for all CPUs\n");
+	cpumask_setall(rcu_nocb_mask);
+#endif /* #ifdef CONFIG_RCU_NOCB_CPU_ALL */
+#endif /* #ifndef CONFIG_RCU_NOCB_CPU_NONE */
+	if (have_rcu_nocb_mask) {
+		cpulist_scnprintf(nocb_buf, sizeof(nocb_buf), rcu_nocb_mask);
+		pr_info("\tExperimental no-CBs CPUs: %s.\n", nocb_buf);
+		if (rcu_nocb_poll)
+			pr_info("\tExperimental polled no-CBs CPUs.\n");
+	}
+#endif /* #ifdef CONFIG_RCU_NOCB_CPU */
 }
 
 #ifdef CONFIG_TREE_PREEMPT_RCU
@@ -134,6 +146,15 @@ long rcu_batches_completed(void)
 	return rcu_batches_completed_preempt();
 }
 EXPORT_SYMBOL_GPL(rcu_batches_completed);
+
+/*
+ * Force a quiescent state for preemptible RCU.
+ */
+void rcu_force_quiescent_state(void)
+{
+	force_quiescent_state(&rcu_preempt_state);
+}
+EXPORT_SYMBOL_GPL(rcu_force_quiescent_state);
 
 /*
  * Record a preemptible-RCU quiescent state for the specified CPU.  Note
@@ -407,10 +428,8 @@ void rcu_read_unlock_special(struct task_struct *t)
 
 #ifdef CONFIG_RCU_BOOST
 		/* Unboost if we were boosted. */
-		if (rbmp) {
+		if (rbmp)
 			rt_mutex_unlock(rbmp);
-			complete(&rnp->boost_completion);
-		}
 #endif /* #ifdef CONFIG_RCU_BOOST */
 
 		/*
@@ -658,6 +677,20 @@ void call_rcu(struct rcu_head *head, void (*func)(struct rcu_head *rcu))
 	__call_rcu(head, func, &rcu_preempt_state, -1, 0);
 }
 EXPORT_SYMBOL_GPL(call_rcu);
+
+/*
+ * Queue an RCU callback for lazy invocation after a grace period.
+ * This will likely be later named something like "call_rcu_lazy()",
+ * but this change will require some way of tagging the lazy RCU
+ * callbacks in the list of pending callbacks.  Until then, this
+ * function may only be called from __kfree_rcu().
+ */
+void kfree_call_rcu(struct rcu_head *head,
+		    void (*func)(struct rcu_head *rcu))
+{
+	__call_rcu(head, func, &rcu_preempt_state, -1, 1);
+}
+EXPORT_SYMBOL_GPL(kfree_call_rcu);
 
 /**
  * synchronize_rcu - wait until a grace period has elapsed.
@@ -924,6 +957,16 @@ long rcu_batches_completed(void)
 EXPORT_SYMBOL_GPL(rcu_batches_completed);
 
 /*
+ * Force a quiescent state for RCU, which, because there is no preemptible
+ * RCU, becomes the same as rcu-sched.
+ */
+void rcu_force_quiescent_state(void)
+{
+	rcu_sched_force_quiescent_state();
+}
+EXPORT_SYMBOL_GPL(rcu_force_quiescent_state);
+
+/*
  * Because preemptible RCU does not exist, we never have to check for
  * CPUs being in quiescent states.
  */
@@ -1001,6 +1044,22 @@ static int rcu_preempt_offline_tasks(struct rcu_state *rsp,
 static void rcu_preempt_check_callbacks(int cpu)
 {
 }
+
+/*
+ * Queue an RCU callback for lazy invocation after a grace period.
+ * This will likely be later named something like "call_rcu_lazy()",
+ * but this change will require some way of tagging the lazy RCU
+ * callbacks in the list of pending callbacks.  Until then, this
+ * function may only be called from __kfree_rcu().
+ *
+ * Because there is no preemptible RCU, we use RCU-sched instead.
+ */
+void kfree_call_rcu(struct rcu_head *head,
+		    void (*func)(struct rcu_head *rcu))
+{
+	__call_rcu(head, func, &rcu_sched_state, -1, 1);
+}
+EXPORT_SYMBOL_GPL(kfree_call_rcu);
 
 /*
  * Wait for an rcu-preempt grace period, but make it happen quickly.
@@ -1101,8 +1160,7 @@ static int rcu_boost(struct rcu_node *rnp)
 	struct task_struct *t;
 	struct list_head *tb;
 
-	if (ACCESS_ONCE(rnp->exp_tasks) == NULL &&
-	    ACCESS_ONCE(rnp->boost_tasks) == NULL)
+	if (rnp->exp_tasks == NULL && rnp->boost_tasks == NULL)
 		return 0;  /* Nothing left to boost. */
 
 	raw_spin_lock_irqsave(&rnp->lock, flags);
@@ -1150,13 +1208,9 @@ static int rcu_boost(struct rcu_node *rnp)
 	t = container_of(tb, struct task_struct, rcu_node_entry);
 	rt_mutex_init_proxy_locked(&mtx, t);
 	t->rcu_boost_mutex = &mtx;
-	init_completion(&rnp->boost_completion);
 	raw_spin_unlock_irqrestore(&rnp->lock, flags);
 	rt_mutex_lock(&mtx);  /* Side effect: boosts task t's priority. */
 	rt_mutex_unlock(&mtx);  /* Keep lockdep happy. */
-
-	/* Wait until boostee is done accessing mtx before reinitializing. */
-	wait_for_completion(&rnp->boost_completion);
 
 	return ACCESS_ONCE(rnp->exp_tasks) != NULL ||
 	       ACCESS_ONCE(rnp->boost_tasks) != NULL;
@@ -1298,7 +1352,7 @@ static int __cpuinit rcu_spawn_one_boost_kthread(struct rcu_state *rsp,
 	raw_spin_lock_irqsave(&rnp->lock, flags);
 	rnp->boost_kthread_task = t;
 	raw_spin_unlock_irqrestore(&rnp->lock, flags);
-	sp.sched_priority = kthread_prio;
+	sp.sched_priority = RCU_BOOST_PRIO;
 	sched_setscheduler_nocheck(t, SCHED_FIFO, &sp);
 	wake_up_process(t); /* get to TASK_INTERRUPTIBLE quickly. */
 	return 0;
@@ -1315,7 +1369,7 @@ static void rcu_cpu_kthread_setup(unsigned int cpu)
 {
 	struct sched_param sp;
 
-	sp.sched_priority = kthread_prio;
+	sp.sched_priority = RCU_KTHREAD_PRIO;
 	sched_setscheduler_nocheck(current, SCHED_FIFO, &sp);
 }
 
@@ -1388,8 +1442,12 @@ static void rcu_boost_kthread_setaffinity(struct rcu_node *rnp, int outgoingcpu)
 	for (cpu = rnp->grplo; cpu <= rnp->grphi; cpu++, mask >>= 1)
 		if ((mask & 0x1) && cpu != outgoingcpu)
 			cpumask_set_cpu(cpu, cm);
-	if (cpumask_weight(cm) == 0)
+	if (cpumask_weight(cm) == 0) {
 		cpumask_setall(cm);
+		for (cpu = rnp->grplo; cpu <= rnp->grphi; cpu++)
+			cpumask_clear_cpu(cpu, cm);
+		WARN_ON_ONCE(cpumask_weight(cm) == 0);
+	}
 	set_cpus_allowed_ptr(t, cm);
 	free_cpumask_var(cm);
 }
@@ -1404,13 +1462,14 @@ static struct smp_hotplug_thread rcu_cpu_thread_spec = {
 };
 
 /*
- * Spawn boost kthreads -- called as soon as the scheduler is running.
+ * Spawn all kthreads -- called as soon as the scheduler is running.
  */
-static void __init rcu_spawn_boost_kthreads(void)
+static int __init rcu_spawn_kthreads(void)
 {
 	struct rcu_node *rnp;
 	int cpu;
 
+	rcu_scheduler_fully_active = 1;
 	for_each_possible_cpu(cpu)
 		per_cpu(rcu_cpu_has_work, cpu) = 0;
 	BUG_ON(smpboot_register_percpu_thread(&rcu_cpu_thread_spec));
@@ -1420,7 +1479,9 @@ static void __init rcu_spawn_boost_kthreads(void)
 		rcu_for_each_leaf_node(rcu_state, rnp)
 			(void)rcu_spawn_one_boost_kthread(rcu_state, rnp);
 	}
+	return 0;
 }
+early_initcall(rcu_spawn_kthreads);
 
 static void __cpuinit rcu_prepare_kthreads(int cpu)
 {
@@ -1457,9 +1518,12 @@ static void rcu_boost_kthread_setaffinity(struct rcu_node *rnp, int outgoingcpu)
 {
 }
 
-static void __init rcu_spawn_boost_kthreads(void)
+static int __init rcu_scheduler_really_started(void)
 {
+	rcu_scheduler_fully_active = 1;
+	return 0;
 }
+early_initcall(rcu_scheduler_really_started);
 
 static void __cpuinit rcu_prepare_kthreads(int cpu)
 {
@@ -1993,22 +2057,6 @@ bool rcu_is_nocb_cpu(int cpu)
 }
 
 /*
- * Kick the leader kthread for this NOCB group.
- */
-static void wake_nocb_leader(struct rcu_data *rdp, bool force)
-{
-	struct rcu_data *rdp_leader = rdp->nocb_leader;
-
-	if (!ACCESS_ONCE(rdp_leader->nocb_kthread))
-		return;
-	if (ACCESS_ONCE(rdp_leader->nocb_leader_sleep) || force) {
-		/* Prior xchg orders against prior callback enqueue. */
-		ACCESS_ONCE(rdp_leader->nocb_leader_sleep) = false;
-		wake_up(&rdp_leader->nocb_wq);
-	}
-}
-
-/*
  * Enqueue the specified string of rcu_head structures onto the specified
  * CPU's no-CBs lists.  The CPU is specified by rdp, the head of the
  * string by rhp, and the tail of the string by rhtp.  The non-lazy/lazy
@@ -2019,8 +2067,7 @@ static void wake_nocb_leader(struct rcu_data *rdp, bool force)
 static void __call_rcu_nocb_enqueue(struct rcu_data *rdp,
 				    struct rcu_head *rhp,
 				    struct rcu_head **rhtp,
-				    int rhcount, int rhcount_lazy,
-				    unsigned long flags)
+				    int rhcount, int rhcount_lazy)
 {
 	int len;
 	struct rcu_head **old_rhpp;
@@ -2034,35 +2081,14 @@ static void __call_rcu_nocb_enqueue(struct rcu_data *rdp,
 
 	/* If we are not being polled and there is a kthread, awaken it ... */
 	t = ACCESS_ONCE(rdp->nocb_kthread);
-	if (rcu_nocb_poll | !t) {
-		trace_rcu_nocb_wake(rdp->rsp->name, rdp->cpu,
-				    TPS("WakeNotPoll"));
+	if (rcu_nocb_poll | !t)
 		return;
-	}
 	len = atomic_long_read(&rdp->nocb_q_count);
 	if (old_rhpp == &rdp->nocb_head) {
-		if (!irqs_disabled_flags(flags)) {
-			/* ... if queue was empty ... */
-			wake_nocb_leader(rdp, false);
-			trace_rcu_nocb_wake(rdp->rsp->name, rdp->cpu,
-					    TPS("WakeEmpty"));
-		} else {
-			rdp->nocb_defer_wakeup = RCU_NOGP_WAKE;
-			trace_rcu_nocb_wake(rdp->rsp->name, rdp->cpu,
-					    TPS("WakeEmptyIsDeferred"));
-		}
+		wake_up(&rdp->nocb_wq); /* ... only if queue was empty ... */
 		rdp->qlen_last_fqs_check = 0;
 	} else if (len > rdp->qlen_last_fqs_check + qhimark) {
-		/* ... or if many callbacks queued. */
-		if (!irqs_disabled_flags(flags)) {
-			wake_nocb_leader(rdp, true);
-			trace_rcu_nocb_wake(rdp->rsp->name, rdp->cpu,
-					    TPS("WakeOvf"));
-		} else {
-			rdp->nocb_defer_wakeup = RCU_NOGP_WAKE_FORCE;
-			trace_rcu_nocb_wake(rdp->rsp->name, rdp->cpu,
-					    TPS("WakeOvfIsDeferred"));
-		}
+		wake_up_process(t); /* ... or if many callbacks queued. */
 		rdp->qlen_last_fqs_check = LONG_MAX / 2;
 	}
 	return;
@@ -2078,12 +2104,12 @@ static void __call_rcu_nocb_enqueue(struct rcu_data *rdp,
  * "rcuo" kthread can find it.
  */
 static bool __call_rcu_nocb(struct rcu_data *rdp, struct rcu_head *rhp,
-			    bool lazy, unsigned long flags)
+			    bool lazy)
 {
 
 	if (!rcu_is_nocb_cpu(rdp->cpu))
 		return 0;
-	__call_rcu_nocb_enqueue(rdp, rhp, &rhp->next, 1, lazy, flags);
+	__call_rcu_nocb_enqueue(rdp, rhp, &rhp->next, 1, lazy);
 	if (__is_kfree_rcu_offset((unsigned long)rhp->func))
 		trace_rcu_kfree_callback(rdp->rsp->name, rhp,
 					 (unsigned long)rhp->func,
@@ -2099,8 +2125,7 @@ static bool __call_rcu_nocb(struct rcu_data *rdp, struct rcu_head *rhp,
  * not a no-CBs CPU.
  */
 static bool __maybe_unused rcu_nocb_adopt_orphan_cbs(struct rcu_state *rsp,
-						     struct rcu_data *rdp,
-						     unsigned long flags)
+						     struct rcu_data *rdp)
 {
 	long ql = rsp->qlen;
 	long qll = rsp->qlen_lazy;
@@ -2114,14 +2139,14 @@ static bool __maybe_unused rcu_nocb_adopt_orphan_cbs(struct rcu_state *rsp,
 	/* First, enqueue the donelist, if any.  This preserves CB ordering. */
 	if (rsp->orphan_donelist != NULL) {
 		__call_rcu_nocb_enqueue(rdp, rsp->orphan_donelist,
-					rsp->orphan_donetail, ql, qll, flags);
+					rsp->orphan_donetail, ql, qll);
 		ql = qll = 0;
 		rsp->orphan_donelist = NULL;
 		rsp->orphan_donetail = &rsp->orphan_donelist;
 	}
 	if (rsp->orphan_nxtlist != NULL) {
 		__call_rcu_nocb_enqueue(rdp, rsp->orphan_nxtlist,
-					rsp->orphan_nxttail, ql, qll, flags);
+					rsp->orphan_nxttail, ql, qll);
 		ql = qll = 0;
 		rsp->orphan_nxtlist = NULL;
 		rsp->orphan_nxttail = &rsp->orphan_nxtlist;
@@ -2166,146 +2191,8 @@ static void rcu_nocb_wait_gp(struct rcu_data *rdp)
 }
 
 /*
- * Leaders come here to wait for additional callbacks to show up.
- * This function does not return until callbacks appear.
- */
-static void nocb_leader_wait(struct rcu_data *my_rdp)
-{
-	bool firsttime = true;
-	bool gotcbs;
-	struct rcu_data *rdp;
-	struct rcu_head **tail;
-
-wait_again:
-
-	/* Wait for callbacks to appear. */
-	if (!rcu_nocb_poll) {
-		trace_rcu_nocb_wake(my_rdp->rsp->name, my_rdp->cpu, "Sleep");
-		wait_event_interruptible(my_rdp->nocb_wq,
-				!ACCESS_ONCE(my_rdp->nocb_leader_sleep));
-		/* Memory barrier handled by smp_mb() calls below and repoll. */
-	} else if (firsttime) {
-		firsttime = false; /* Don't drown trace log with "Poll"! */
-		trace_rcu_nocb_wake(my_rdp->rsp->name, my_rdp->cpu, "Poll");
-	}
-
-	/*
-	 * Each pass through the following loop checks a follower for CBs.
-	 * We are our own first follower.  Any CBs found are moved to
-	 * nocb_gp_head, where they await a grace period.
-	 */
-	gotcbs = false;
-	for (rdp = my_rdp; rdp; rdp = rdp->nocb_next_follower) {
-		rdp->nocb_gp_head = ACCESS_ONCE(rdp->nocb_head);
-		if (!rdp->nocb_gp_head)
-			continue;  /* No CBs here, try next follower. */
-
-		/* Move callbacks to wait-for-GP list, which is empty. */
-		ACCESS_ONCE(rdp->nocb_head) = NULL;
-		rdp->nocb_gp_tail = xchg(&rdp->nocb_tail, &rdp->nocb_head);
-		rdp->nocb_gp_count = atomic_long_xchg(&rdp->nocb_q_count, 0);
-		rdp->nocb_gp_count_lazy =
-			atomic_long_xchg(&rdp->nocb_q_count_lazy, 0);
-		gotcbs = true;
-	}
-
-	/*
-	 * If there were no callbacks, sleep a bit, rescan after a
-	 * memory barrier, and go retry.
-	 */
-	if (unlikely(!gotcbs)) {
-		if (!rcu_nocb_poll)
-			trace_rcu_nocb_wake(my_rdp->rsp->name, my_rdp->cpu,
-					    "WokeEmpty");
-		flush_signals(current);
-		schedule_timeout_interruptible(1);
-
-		/* Rescan in case we were a victim of memory ordering. */
-		my_rdp->nocb_leader_sleep = true;
-		smp_mb();  /* Ensure _sleep true before scan. */
-		for (rdp = my_rdp; rdp; rdp = rdp->nocb_next_follower)
-			if (ACCESS_ONCE(rdp->nocb_head)) {
-				/* Found CB, so short-circuit next wait. */
-				my_rdp->nocb_leader_sleep = false;
-				break;
-			}
-		goto wait_again;
-	}
-
-	/* Wait for one grace period. */
-	rcu_nocb_wait_gp(my_rdp);
-
-	/*
-	 * We left ->nocb_leader_sleep unset to reduce cache thrashing.
-	 * We set it now, but recheck for new callbacks while
-	 * traversing our follower list.
-	 */
-	my_rdp->nocb_leader_sleep = true;
-	smp_mb(); /* Ensure _sleep true before scan of ->nocb_head. */
-
-	/* Each pass through the following loop wakes a follower, if needed. */
-	for (rdp = my_rdp; rdp; rdp = rdp->nocb_next_follower) {
-		if (ACCESS_ONCE(rdp->nocb_head))
-			my_rdp->nocb_leader_sleep = false;/* No need to sleep.*/
-		if (!rdp->nocb_gp_head)
-			continue; /* No CBs, so no need to wake follower. */
-
-		/* Append callbacks to follower's "done" list. */
-		tail = xchg(&rdp->nocb_follower_tail, rdp->nocb_gp_tail);
-		*tail = rdp->nocb_gp_head;
-		atomic_long_add(rdp->nocb_gp_count, &rdp->nocb_follower_count);
-		atomic_long_add(rdp->nocb_gp_count_lazy,
-				&rdp->nocb_follower_count_lazy);
-		if (rdp != my_rdp && tail == &rdp->nocb_follower_head) {
-			/*
-			 * List was empty, wake up the follower.
-			 * Memory barriers supplied by atomic_long_add().
-			 */
-			wake_up(&rdp->nocb_wq);
-		}
-	}
-
-	/* If we (the leader) don't have CBs, go wait some more. */
-	if (!my_rdp->nocb_follower_head)
-		goto wait_again;
-}
-
-/*
- * Followers come here to wait for additional callbacks to show up.
- * This function does not return until callbacks appear.
- */
-static void nocb_follower_wait(struct rcu_data *rdp)
-{
-	bool firsttime = true;
-
-	for (;;) {
-		if (!rcu_nocb_poll) {
-			trace_rcu_nocb_wake(rdp->rsp->name, rdp->cpu,
-					    "FollowerSleep");
-			wait_event_interruptible(rdp->nocb_wq,
-						 ACCESS_ONCE(rdp->nocb_follower_head));
-		} else if (firsttime) {
-			/* Don't drown trace log with "Poll"! */
-			firsttime = false;
-			trace_rcu_nocb_wake(rdp->rsp->name, rdp->cpu, "Poll");
-		}
-		if (smp_load_acquire(&rdp->nocb_follower_head)) {
-			/* ^^^ Ensure CB invocation follows _head test. */
-			return;
-		}
-		if (!rcu_nocb_poll)
-			trace_rcu_nocb_wake(rdp->rsp->name, rdp->cpu,
-					    "WokeEmpty");
-		flush_signals(current);
-		schedule_timeout_interruptible(1);
-	}
-}
-
-/*
  * Per-rcu_data kthread, but only for no-CBs CPUs.  Each kthread invokes
- * callbacks queued by the corresponding no-CBs CPU, however, there is
- * an optional leader-follower relationship so that the grace-period
- * kthreads don't have to do quite so many wakeups.
+ * callbacks queued by the corresponding no-CBs CPU.
  */
 static int rcu_nocb_kthread(void *arg)
 {
@@ -2317,22 +2204,27 @@ static int rcu_nocb_kthread(void *arg)
 
 	/* Each pass through this loop invokes one batch of callbacks */
 	for (;;) {
-		/* Wait for callbacks. */
-		if (rdp->nocb_leader == rdp)
-			nocb_leader_wait(rdp);
-		else
-			nocb_follower_wait(rdp);
+		/* If not polling, wait for next batch of callbacks. */
+		if (!rcu_nocb_poll)
+			wait_event_interruptible(rdp->nocb_wq, rdp->nocb_head);
+		list = ACCESS_ONCE(rdp->nocb_head);
+		if (!list) {
+			schedule_timeout_interruptible(1);
+			flush_signals(current);
+			continue;
+		}
 
-		/* Pull the ready-to-invoke callbacks onto local list. */
-		list = ACCESS_ONCE(rdp->nocb_follower_head);
-		BUG_ON(!list);
-		trace_rcu_nocb_wake(rdp->rsp->name, rdp->cpu, "WokeNonEmpty");
-		ACCESS_ONCE(rdp->nocb_follower_head) = NULL;
-		tail = xchg(&rdp->nocb_follower_tail, &rdp->nocb_follower_head);
-		c = atomic_long_xchg(&rdp->nocb_follower_count, 0);
-		cl = atomic_long_xchg(&rdp->nocb_follower_count_lazy, 0);
-		rdp->nocb_p_count += c;
-		rdp->nocb_p_count_lazy += cl;
+		/*
+		 * Extract queued callbacks, update counts, and wait
+		 * for a grace period to elapse.
+		 */
+		ACCESS_ONCE(rdp->nocb_head) = NULL;
+		tail = xchg(&rdp->nocb_tail, &rdp->nocb_head);
+		c = atomic_long_xchg(&rdp->nocb_q_count, 0);
+		cl = atomic_long_xchg(&rdp->nocb_q_count_lazy, 0);
+		ACCESS_ONCE(rdp->nocb_p_count) += c;
+		ACCESS_ONCE(rdp->nocb_p_count_lazy) += cl;
+		rcu_nocb_wait_gp(rdp);
 
 		/* Each pass through the following loop invokes a callback. */
 		trace_rcu_batch_start(rdp->rsp->name, cl, c, -1);
@@ -2361,210 +2253,28 @@ static int rcu_nocb_kthread(void *arg)
 	return 0;
 }
 
-/* Is a deferred wakeup of rcu_nocb_kthread() required? */
-static int rcu_nocb_need_deferred_wakeup(struct rcu_data *rdp)
-{
-	return ACCESS_ONCE(rdp->nocb_defer_wakeup);
-}
-
-/* Do a deferred wakeup of rcu_nocb_kthread(). */
-static void do_nocb_deferred_wakeup(struct rcu_data *rdp)
-{
-	int ndw;
-
-	if (!rcu_nocb_need_deferred_wakeup(rdp))
-		return;
-	ndw = ACCESS_ONCE(rdp->nocb_defer_wakeup);
-	ACCESS_ONCE(rdp->nocb_defer_wakeup) = RCU_NOGP_WAKE_NOT;
-	wake_nocb_leader(rdp, ndw == RCU_NOGP_WAKE_FORCE);
-	trace_rcu_nocb_wake(rdp->rsp->name, rdp->cpu, TPS("DeferredWake"));
-}
-
-void __init rcu_init_nohz(void)
-{
-	int cpu;
-	bool need_rcu_nocb_mask = true;
-	struct rcu_state *rsp;
-
-#ifdef CONFIG_RCU_NOCB_CPU_NONE
-	need_rcu_nocb_mask = false;
-#endif /* #ifndef CONFIG_RCU_NOCB_CPU_NONE */
-
-#if defined(CONFIG_NO_HZ_FULL)
-	if (tick_nohz_full_running && cpumask_weight(tick_nohz_full_mask))
-		need_rcu_nocb_mask = true;
-#endif /* #if defined(CONFIG_NO_HZ_FULL) */
-
-	if (!have_rcu_nocb_mask && need_rcu_nocb_mask) {
-		zalloc_cpumask_var(&rcu_nocb_mask, GFP_KERNEL);
-		have_rcu_nocb_mask = true;
-	}
-	if (!have_rcu_nocb_mask)
-		return;
-
-#ifdef CONFIG_RCU_NOCB_CPU_ZERO
-	pr_info("\tOffload RCU callbacks from CPU 0\n");
-	cpumask_set_cpu(0, rcu_nocb_mask);
-#endif /* #ifdef CONFIG_RCU_NOCB_CPU_ZERO */
-#ifdef CONFIG_RCU_NOCB_CPU_ALL
-	pr_info("\tOffload RCU callbacks from all CPUs\n");
-	cpumask_copy(rcu_nocb_mask, cpu_possible_mask);
-#endif /* #ifdef CONFIG_RCU_NOCB_CPU_ALL */
-#if defined(CONFIG_NO_HZ_FULL)
-	if (tick_nohz_full_running)
-		cpumask_or(rcu_nocb_mask, rcu_nocb_mask, tick_nohz_full_mask);
-#endif /* #if defined(CONFIG_NO_HZ_FULL) */
-
-	if (!cpumask_subset(rcu_nocb_mask, cpu_possible_mask)) {
-		pr_info("\tNote: kernel parameter 'rcu_nocbs=' contains nonexistent CPUs.\n");
-		cpumask_and(rcu_nocb_mask, cpu_possible_mask,
-			    rcu_nocb_mask);
-	}
-	cpulist_scnprintf(nocb_buf, sizeof(nocb_buf), rcu_nocb_mask);
-	pr_info("\tOffload RCU callbacks from CPUs: %s.\n", nocb_buf);
-	if (rcu_nocb_poll)
-		pr_info("\tPoll for callbacks from no-CBs CPUs.\n");
-
-	for_each_rcu_flavor(rsp) {
-		for_each_cpu(cpu, rcu_nocb_mask) {
-			struct rcu_data *rdp = per_cpu_ptr(rsp->rda, cpu);
-
-			/*
-			 * If there are early callbacks, they will need
-			 * to be moved to the nocb lists.
-			 */
-			WARN_ON_ONCE(rdp->nxttail[RCU_NEXT_TAIL] !=
-				     &rdp->nxtlist &&
-				     rdp->nxttail[RCU_NEXT_TAIL] != NULL);
-			init_nocb_callback_list(rdp);
-		}
-		rcu_organize_nocb_kthreads(rsp);
-	}
-}
-
 /* Initialize per-rcu_data variables for no-CBs CPUs. */
 static void __init rcu_boot_init_nocb_percpu_data(struct rcu_data *rdp)
 {
 	rdp->nocb_tail = &rdp->nocb_head;
 	init_waitqueue_head(&rdp->nocb_wq);
-	rdp->nocb_follower_tail = &rdp->nocb_follower_head;
 }
 
-/*
- * If the specified CPU is a no-CBs CPU that does not already have its
- * rcuo kthread for the specified RCU flavor, spawn it.  If the CPUs are
- * brought online out of order, this can require re-organizing the
- * leader-follower relationships.
- */
-static void rcu_spawn_one_nocb_kthread(struct rcu_state *rsp, int cpu)
+/* Create a kthread for each RCU flavor for each no-CBs CPU. */
+static void __init rcu_spawn_nocb_kthreads(struct rcu_state *rsp)
 {
+	int cpu;
 	struct rcu_data *rdp;
-	struct rcu_data *rdp_last;
-	struct rcu_data *rdp_old_leader;
-	struct rcu_data *rdp_spawn = per_cpu_ptr(rsp->rda, cpu);
 	struct task_struct *t;
-
-	/*
-	 * If this isn't a no-CBs CPU or if it already has an rcuo kthread,
-	 * then nothing to do.
-	 */
-	if (!rcu_is_nocb_cpu(cpu) || rdp_spawn->nocb_kthread)
-		return;
-
-	/* If we didn't spawn the leader first, reorganize! */
-	rdp_old_leader = rdp_spawn->nocb_leader;
-	if (rdp_old_leader != rdp_spawn && !rdp_old_leader->nocb_kthread) {
-		rdp_last = NULL;
-		rdp = rdp_old_leader;
-		do {
-			rdp->nocb_leader = rdp_spawn;
-			if (rdp_last && rdp != rdp_spawn)
-				rdp_last->nocb_next_follower = rdp;
-			if (rdp == rdp_spawn) {
-				rdp = rdp->nocb_next_follower;
-			} else {
-				rdp_last = rdp;
-				rdp = rdp->nocb_next_follower;
-				rdp_last->nocb_next_follower = NULL;
-			}
-		} while (rdp);
-		rdp_spawn->nocb_next_follower = rdp_old_leader;
-	}
-
-	/* Spawn the kthread for this CPU and RCU flavor. */
-	t = kthread_run(rcu_nocb_kthread, rdp_spawn,
-			"rcuo%c/%d", rsp->abbr, cpu);
-	BUG_ON(IS_ERR(t));
-	ACCESS_ONCE(rdp_spawn->nocb_kthread) = t;
-}
-
-/*
- * If the specified CPU is a no-CBs CPU that does not already have its
- * rcuo kthreads, spawn them.
- */
-static void rcu_spawn_all_nocb_kthreads(int cpu)
-{
-	struct rcu_state *rsp;
-
-	if (rcu_scheduler_fully_active)
-		for_each_rcu_flavor(rsp)
-			rcu_spawn_one_nocb_kthread(rsp, cpu);
-}
-
-/*
- * Once the scheduler is running, spawn rcuo kthreads for all online
- * no-CBs CPUs.  This assumes that the early_initcall()s happen before
- * non-boot CPUs come online -- if this changes, we will need to add
- * some mutual exclusion.
- */
-static void __init rcu_spawn_nocb_kthreads(void)
-{
-	int cpu;
-
-	for_each_online_cpu(cpu)
-		rcu_spawn_all_nocb_kthreads(cpu);
-}
-
-/* How many follower CPU IDs per leader?  Default of -1 for sqrt(nr_cpu_ids). */
-static int rcu_nocb_leader_stride = -1;
-module_param(rcu_nocb_leader_stride, int, 0444);
-
-/*
- * Initialize leader-follower relationships for all no-CBs CPU.
- */
-static void __init rcu_organize_nocb_kthreads(struct rcu_state *rsp)
-{
-	int cpu;
-	int ls = rcu_nocb_leader_stride;
-	int nl = 0;  /* Next leader. */
-	struct rcu_data *rdp;
-	struct rcu_data *rdp_leader = NULL;  /* Suppress misguided gcc warn. */
-	struct rcu_data *rdp_prev = NULL;
 
 	if (rcu_nocb_mask == NULL)
 		return;
-	if (ls == -1) {
-		ls = int_sqrt(nr_cpu_ids);
-		rcu_nocb_leader_stride = ls;
-	}
-
-	/*
-	 * Each pass through this loop sets up one rcu_data structure and
-	 * spawns one rcu_nocb_kthread().
-	 */
 	for_each_cpu(cpu, rcu_nocb_mask) {
 		rdp = per_cpu_ptr(rsp->rda, cpu);
-		if (rdp->cpu >= nl) {
-			/* New leader, set up for followers & next leader. */
-			nl = DIV_ROUND_UP(rdp->cpu + 1, ls) * ls;
-			rdp->nocb_leader = rdp;
-			rdp_leader = rdp;
-		} else {
-			/* Another follower, link to previous leader. */
-			rdp->nocb_leader = rdp_leader;
-			rdp_prev->nocb_next_follower = rdp;
-		}
-		rdp_prev = rdp;
+		t = kthread_run(rcu_nocb_kthread, rdp,
+				"rcuo%c/%d", rsp->abbr, cpu);
+		BUG_ON(IS_ERR(t));
+		ACCESS_ONCE(rdp->nocb_kthread) = t;
 	}
 }
 
@@ -2593,14 +2303,13 @@ static void rcu_init_one_nocb(struct rcu_node *rnp)
 }
 
 static bool __call_rcu_nocb(struct rcu_data *rdp, struct rcu_head *rhp,
-			    bool lazy, unsigned long flags)
+			    bool lazy)
 {
 	return 0;
 }
 
 static bool __maybe_unused rcu_nocb_adopt_orphan_cbs(struct rcu_state *rsp,
-						     struct rcu_data *rdp,
-						     unsigned long flags)
+						     struct rcu_data *rdp)
 {
 	return 0;
 }
@@ -2609,20 +2318,7 @@ static void __init rcu_boot_init_nocb_percpu_data(struct rcu_data *rdp)
 {
 }
 
-static int rcu_nocb_need_deferred_wakeup(struct rcu_data *rdp)
-{
-	return false;
-}
-
-static void do_nocb_deferred_wakeup(struct rcu_data *rdp)
-{
-}
-
-static void rcu_spawn_all_nocb_kthreads(int cpu)
-{
-}
-
-static void __init rcu_spawn_nocb_kthreads(void)
+static void __init rcu_spawn_nocb_kthreads(struct rcu_state *rsp)
 {
 }
 
