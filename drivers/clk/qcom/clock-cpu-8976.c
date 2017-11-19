@@ -261,6 +261,7 @@ static struct mux_div_clk a72ssmux = {
 	},
 	.c = {
 		.dbg_name = "a72ssmux",
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_mux_div_clk,
 		CLK_INIT(a72ssmux.c),
 	},
@@ -285,6 +286,7 @@ static struct mux_div_clk a53ssmux = {
 	},
 	.c = {
 		.dbg_name = "a53ssmux",
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_mux_div_clk,
 		CLK_INIT(a53ssmux.c),
 	},
