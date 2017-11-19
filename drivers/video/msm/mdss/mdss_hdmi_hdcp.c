@@ -617,7 +617,7 @@ static int hdmi_hdcp_authentication_part1(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 	INIT_COMPLETION(hdcp_ctrl->r0_checked);
 	DSS_REG_W(io, HDMI_HDCP_RCVPORT_DATA2_0, (((u32)buf[1]) << 8) | buf[0]);
 	timeout_count = wait_for_completion_timeout(
-		&hdcp_ctrl->r0_checked, HZ*2);
+		&hdcp_ctrl->r0_checked, msecs_to_jiffies(2000));
 	link0_status = DSS_REG_R(io, HDMI_HDCP_LINK0_STATUS);
 	is_match = link0_status & BIT(12);
 	if (!is_match) {
@@ -1321,7 +1321,7 @@ int hdmi_hdcp_reauthenticate(void *input)
 	hdcp_ctrl->hdcp_state = HDCP_STATE_AUTHENTICATING;
 	mutex_unlock(hdcp_ctrl->init_data.mutex);
 	queue_delayed_work(hdcp_ctrl->init_data.workq,
-		&hdcp_ctrl->hdcp_auth_work, HZ/2);
+		&hdcp_ctrl->hdcp_auth_work, msecs_to_jiffies(500));
 
 	return ret;
 } /* hdmi_hdcp_reauthenticate */

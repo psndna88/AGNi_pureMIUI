@@ -3373,7 +3373,7 @@ static int hdmi_tx_sysfs_enable_hpd(struct hdmi_tx_ctrl *hdmi_ctrl, int on)
 
 			INIT_COMPLETION(hdmi_ctrl->hpd_off_done);
 			timeout = wait_for_completion_timeout(
-				&hdmi_ctrl->hpd_off_done, HZ);
+				&hdmi_ctrl->hpd_off_done, msecs_to_jiffies(1000));
 			if (!timeout) {
 				hdmi_ctrl->hpd_off_pending = false;
 				DEV_ERR("%s: hpd off still pending\n",
@@ -3755,7 +3755,7 @@ static int hdmi_tx_panel_event_handler(struct mdss_panel_data *panel_data,
 			hdmi_ctrl->panel_suspend = false;
 
 			timeout = wait_for_completion_timeout(
-				&hdmi_ctrl->hpd_int_done, HZ/10);
+				&hdmi_ctrl->hpd_int_done, msecs_to_jiffies(100));
 			if (!timeout && !hdmi_ctrl->hpd_state) {
 				DEV_INFO("%s: cable removed during suspend\n",
 					__func__);
