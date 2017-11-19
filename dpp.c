@@ -996,6 +996,18 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	}
 	sigma_dut_print(dut, DUT_MSG_DEBUG, "DPP auth result: %s", buf);
 
+	if (strstr(buf, "DPP-RESPONSE-PENDING")) {
+		/* Wait for the actual result after the peer has scanned the
+		 * QR Code. */
+		res = get_wpa_cli_events(dut, ctrl, auth_events,
+					 buf, sizeof(buf));
+		if (res < 0) {
+			send_resp(dut, conn, SIGMA_COMPLETE,
+				  "BootstrapResult,OK,AuthResult,Timeout");
+			goto out;
+		}
+	}
+
 	if (strstr(buf, "DPP-NOT-COMPATIBLE")) {
 		send_resp(dut, conn, SIGMA_COMPLETE,
 			  "BootstrapResult,OK,AuthResult,ROLES_NOT_COMPATIBLE");
