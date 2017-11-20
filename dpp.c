@@ -778,6 +778,34 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	} else if (strcasecmp(auth_role, "Initiator") == 0) {
 		char own_txt[20];
 		int dpp_peer_bootstrap = -1;
+		char neg_freq[30];
+
+		neg_freq[0] = '\0';
+		val = get_param(cmd, "DPPSubsequentChannel");
+		if (val) {
+			int opclass, channel, freq;
+
+			opclass = atoi(val);
+			val = strchr(val, '/');
+			if (opclass == 0 || !val) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Invalid DPPSubsequentChannel");
+				goto out;
+			}
+			val++;
+			channel = atoi(val);
+
+			/* Ignoring opclass for now; could use it here for more
+			 * robust frequency determination. */
+			freq = channel_to_freq(channel);
+			if (!freq) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Unsupported DPPSubsequentChannel channel");
+				goto out;
+			}
+			snprintf(neg_freq, sizeof(neg_freq), " neg_freq=%d",
+				 freq);
+		}
 
 		if (strcasecmp(bs, "QR") == 0) {
 			if (!dut->dpp_peer_uri) {
@@ -811,14 +839,14 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 				goto out;
 			}
 			snprintf(buf, sizeof(buf),
-				 "DPP_AUTH_INIT peer=%d%s role=%s conf=%s %s %s configurator=%d",
+				 "DPP_AUTH_INIT peer=%d%s role=%s conf=%s %s %s configurator=%d%s",
 				 dpp_peer_bootstrap, own_txt, role,
 				 conf_role, conf_ssid, conf_pass,
-				 dut->dpp_conf_id);
+				 dut->dpp_conf_id, neg_freq);
 		} else if (strcasecmp(bs, "QR") == 0) {
 			snprintf(buf, sizeof(buf),
-				 "DPP_AUTH_INIT peer=%d%s role=%s",
-				 dpp_peer_bootstrap, own_txt, role);
+				 "DPP_AUTH_INIT peer=%d%s role=%s%s",
+				 dpp_peer_bootstrap, own_txt, role, neg_freq);
 		} else if (strcasecmp(bs, "PKEX") == 0 &&
 			   (strcasecmp(prov_role, "Configurator") == 0 ||
 			    strcasecmp(prov_role, "Both") == 0)) {
