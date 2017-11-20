@@ -31,20 +31,6 @@ EXPORT_SYMBOL_GPL(power_supply_notifier);
 
 static struct device_type power_supply_dev_type;
 
-static BLOCKING_NOTIFIER_HEAD(power_supply_chain);
-
-int register_power_supply_notifier(struct notifier_block *nb)
-{
-	return blocking_notifier_chain_register(&power_supply_chain, nb);
-}
-EXPORT_SYMBOL(register_power_supply_notifier);
-
-int unregister_power_supply_notifier(struct notifier_block *nb)
-{
-	return blocking_notifier_chain_unregister(&power_supply_chain, nb);
-}
-EXPORT_SYMBOL(unregister_power_supply_notifier);
-
 static bool __power_supply_is_supplied_by(struct power_supply *supplier,
 					 struct power_supply *supply)
 {
@@ -331,7 +317,6 @@ static void power_supply_changed_work(struct work_struct *work)
 				      __power_supply_changed_work);
 
 		power_supply_update_leds(psy);
-		blocking_notifier_call_chain(&power_supply_chain, 0, NULL);
 		atomic_notifier_call_chain(&power_supply_notifier,
 				PSY_EVENT_PROP_CHANGED, psy);
 
