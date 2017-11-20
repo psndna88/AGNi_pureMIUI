@@ -585,7 +585,8 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		}
 	}
 
-	if (strcasecmp(prov_role, "Configurator") == 0) {
+	if (strcasecmp(prov_role, "Configurator") == 0 ||
+	    strcasecmp(prov_role, "Both") == 0) {
 		if (dut->dpp_conf_id < 0) {
 			snprintf(buf, sizeof(buf),
 				 "DPP_CONFIGURATOR_ADD curve=%s",
@@ -598,7 +599,10 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			}
 			dut->dpp_conf_id = atoi(buf);
 		}
-		role = "configurator";
+		if (strcasecmp(prov_role, "Configurator") == 0)
+			role = "configurator";
+		else
+			role = "either";
 	} else if (strcasecmp(prov_role, "Enrollee") == 0) {
 		role = "enrollee";
 	} else {
@@ -799,7 +803,8 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		else
 			own_txt[0] = '\0';
 		if (strcasecmp(bs, "QR") == 0 &&
-		    strcasecmp(prov_role, "Configurator") == 0) {
+		    (strcasecmp(prov_role, "Configurator") == 0 ||
+		     strcasecmp(prov_role, "Both") == 0)) {
 			if (!conf_role) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "errorCode,Missing DPPConfIndex");
@@ -815,7 +820,8 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 				 "DPP_AUTH_INIT peer=%d%s role=%s",
 				 dpp_peer_bootstrap, own_txt, role);
 		} else if (strcasecmp(bs, "PKEX") == 0 &&
-			   strcasecmp(prov_role, "Configurator") == 0) {
+			   (strcasecmp(prov_role, "Configurator") == 0 ||
+			    strcasecmp(prov_role, "Both") == 0)) {
 			if (!conf_role) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "errorCode,Missing DPPConfIndex");
