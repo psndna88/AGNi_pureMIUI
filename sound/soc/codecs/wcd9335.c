@@ -3381,6 +3381,21 @@ static int tasha_get_compander(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int tasha_set_compander_dummy(struct snd_kcontrol *kcontrol,
+			       struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct tasha_priv *tasha = snd_soc_codec_get_drvdata(codec);
+	int comp = ((struct soc_multi_mixer_control *)
+		    kcontrol->private_value)->shift;
+	int value = ucontrol->value.integer.value[0];
+
+	pr_debug("%s: Compander %d faked-enable current %d, new %d\n",
+		 __func__, comp + 1, tasha->comp_enabled[comp], value);
+
+	return 0;
+}
+
 static int tasha_set_compander(struct snd_kcontrol *kcontrol,
 			       struct snd_ctl_elem_value *ucontrol)
 {
@@ -3398,25 +3413,31 @@ static int tasha_set_compander(struct snd_kcontrol *kcontrol,
 	switch (comp) {
 	case COMPANDER_1:
 		/* Set Gain Source Select based on compander enable/disable */
-		snd_soc_update_bits(codec, WCD9335_HPH_L_EN, 0x20,
-				(value ? 0x00:0x20));
+/*		snd_soc_update_bits(codec, WCD9335_HPH_L_EN, 0x20,
+				(value ? 0x00:0x20)); */
 		break;
 	case COMPANDER_2:
-		snd_soc_update_bits(codec, WCD9335_HPH_R_EN, 0x20,
-				(value ? 0x00:0x20));
+/*		snd_soc_update_bits(codec, WCD9335_HPH_R_EN, 0x20,
+				(value ? 0x00:0x20)); */
 		break;
 	case COMPANDER_3:
+		/* Direct idle COMP3 to HPH_L */
+		snd_soc_update_bits(codec, WCD9335_HPH_L_EN, 0x16,
+				(value ? 0x00:0x16));
 		break;
 	case COMPANDER_4:
+		/* Direct idle COMP4 to HPH_R */
+		snd_soc_update_bits(codec, WCD9335_HPH_R_EN, 0x16,
+				(value ? 0x00:0x16));
 		break;
 	case COMPANDER_5:
 		snd_soc_update_bits(codec, WCD9335_SE_LO_LO3_GAIN, 0x20,
 				(value ? 0x00:0x20));
 		break;
-/*	case COMPANDER_6:
-		snd_soc_update_bits(codec, WCD9335_SE_LO_LO4_GAIN, 0x20,
-				(value ? 0x00:0x20));
-		break; */
+	case COMPANDER_6:
+/*		snd_soc_update_bits(codec, WCD9335_SE_LO_LO4_GAIN, 0x20,
+				(value ? 0x00:0x20)); */
+		break;
 	case COMPANDER_7:
 		break;
 	case COMPANDER_8:
@@ -3719,12 +3740,12 @@ static void tasha_codec_hph_post_pa_config(struct tasha_priv *tasha,
 		snd_soc_update_bits(tasha->codec, WCD9335_HPH_PA_CTL1, 0x0E,
 				    scale_val << 1);
 	if (SND_SOC_DAPM_EVENT_ON(event)) {
-		if (tasha->comp_enabled[COMPANDER_1] ||
-		    tasha->comp_enabled[COMPANDER_2]) {
+		if (tasha->comp_enabled[COMPANDER_3] ||
+		    tasha->comp_enabled[COMPANDER_4]) {
 			snd_soc_update_bits(tasha->codec, WCD9335_HPH_L_EN,
-					    0x20, 0x00);
+					    0x16, 0x00);
 			snd_soc_update_bits(tasha->codec, WCD9335_HPH_R_EN,
-					    0x20, 0x00);
+					    0x16, 0x00);
 			snd_soc_update_bits(tasha->codec, WCD9335_HPH_AUTO_CHOP,
 					    0x20, 0x20);
 		}
@@ -7877,9 +7898,9 @@ static const struct snd_kcontrol_new tasha_snd_controls[] = {
 	SOC_SINGLE_SX_TLV("RX0 Digital Volume", WCD9335_CDC_RX0_RX_VOL_CTL,
 		0, -84, 40, digital_gain), /* -84dB min - 40dB max */
 	SOC_SINGLE_SX_TLV("RX1 Digital Volume", WCD9335_CDC_RX1_RX_VOL_CTL,
-		0, -84, 40, digital_gain),
+		-2, -84, 40, digital_gain),
 	SOC_SINGLE_SX_TLV("RX2 Digital Volume", WCD9335_CDC_RX2_RX_VOL_CTL,
-		0, -84, 40, digital_gain),
+		-2, -84, 40, digital_gain),
 	SOC_SINGLE_SX_TLV("RX3 Digital Volume", WCD9335_CDC_RX3_RX_VOL_CTL,
 		0, -84, 40, digital_gain),
 	SOC_SINGLE_SX_TLV("RX4 Digital Volume", WCD9335_CDC_RX4_RX_VOL_CTL,
@@ -8042,21 +8063,21 @@ static const struct snd_kcontrol_new tasha_snd_controls[] = {
 	tasha_get_iir_band_audio_mixer, tasha_put_iir_band_audio_mixer),
 
 	SOC_SINGLE_EXT("COMP1 Switch", SND_SOC_NOPM, COMPANDER_1, 1, 0,
-		       tasha_get_compander, tasha_set_compander),
+		       tasha_get_compander, tasha_set_compander_dummy),
 	SOC_SINGLE_EXT("COMP2 Switch", SND_SOC_NOPM, COMPANDER_2, 1, 0,
-		       tasha_get_compander, tasha_set_compander),
+		       tasha_get_compander, tasha_set_compander_dummy),
 	SOC_SINGLE_EXT("COMP3 Switch", SND_SOC_NOPM, COMPANDER_3, 1, 0,
 		       tasha_get_compander, tasha_set_compander),
 	SOC_SINGLE_EXT("COMP4 Switch", SND_SOC_NOPM, COMPANDER_4, 1, 0,
 		       tasha_get_compander, tasha_set_compander),
 	SOC_SINGLE_EXT("COMP5 Switch", SND_SOC_NOPM, COMPANDER_5, 1, 0,
 		       tasha_get_compander, tasha_set_compander),
-	SOC_SINGLE_EXT("COMP6 Switch", SND_SOC_NOPM, COMPANDER_8, 1, 0,
-		       tasha_get_compander, tasha_set_compander),
+	SOC_SINGLE_EXT("COMP6 Switch", SND_SOC_NOPM, COMPANDER_6, 1, 0,
+		       tasha_get_compander, tasha_set_compander_dummy),
 	SOC_SINGLE_EXT("COMP7 Switch", SND_SOC_NOPM, COMPANDER_7, 1, 0,
-		       tasha_get_compander, tasha_set_compander),
+		       tasha_get_compander, tasha_set_compander_dummy),
 	SOC_SINGLE_EXT("COMP8 Switch", SND_SOC_NOPM, COMPANDER_8, 1, 0,
-		       tasha_get_compander, tasha_set_compander),
+		       tasha_get_compander, tasha_set_compander_dummy),
 
 	SOC_ENUM_EXT("RX HPH Mode", rx_hph_mode_mux_enum,
 		       tasha_rx_hph_mode_get, tasha_rx_hph_mode_put),
