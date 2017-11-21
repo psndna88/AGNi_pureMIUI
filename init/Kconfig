@@ -909,7 +909,7 @@ menu "Scheduler features"
 
 choice
 	bool "Configure PELT speed for load/utilization tracking"
-	default PELT_HALFLIFE_32
+	default PELT_HALFLIFE_16
 	help
 	  Allows to choose one of the possible values for the PELT half-life to
 	  be used for the update of the load and utilization of tasks and CPUs.
