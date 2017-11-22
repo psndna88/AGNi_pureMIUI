@@ -44,7 +44,7 @@ enum {
 
 static struct common_data common;
 static bool module_initialized;
-bool voice_session_active = false;
+static bool voice_session_active = false;
 
 static int voice_send_enable_vocproc_cmd(struct voice_data *v);
 static int voice_send_netid_timing_cmd(struct voice_data *v);
@@ -6642,7 +6642,6 @@ int voc_send_cvp_start_vocpcm(uint32_t session_id,
 		goto done;
 	}
 
-	voice_session_active = true;
 done:
 	return ret;
 }
@@ -6655,7 +6654,6 @@ int voc_send_cvp_stop_vocpcm(uint32_t session_id)
 	u16 cvp_handle;
 	struct voice_data *v = voice_get_session(session_id);
 
-	voice_session_active = false;
 	if (v == NULL) {
 		pr_err("%s: v is NULL\n", __func__);
 		ret = -EINVAL;
