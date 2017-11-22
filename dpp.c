@@ -445,6 +445,7 @@ static const struct dpp_test_info dpp_tests[] = {
 	{ "InvalidValue", "PeerDiscoveryResponse", "DPPStatus", 78 },
 	{ "InvalidValue", "PeerDiscoveryResponse", "Connector", 79 },
 	{ "InvalidValue", "PeerDiscoveryRequest", "Connector", 80 },
+	{ "InvalidValue", "AuthenticationRequest", "InitNonce", 81 },
 	{ NULL, NULL, NULL, 0 }
 };
 
