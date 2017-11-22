@@ -371,7 +371,6 @@ static const struct dpp_test_info dpp_tests[] = {
 	{ "InvalidValue", "ConfigurationRequest", "WrappedData", 6 },
 	{ "InvalidValue", "ConfigurationResponse", "WrappedData", 7 },
 	{ "InvalidValue", "AuthenticationRequest", "InitCapabilities", 8 },
-	{ "InvalidValue", "AuthenticationResponse", "RespCapabilities", 9 },
 	{ "MissingAttribute", "AuthenticationRequest", "RespBSKeyHash", 10 },
 	{ "MissingAttribute", "AuthenticationRequest", "InitBSKeyHash", 11 },
 	{ "MissingAttribute", "AuthenticationRequest", "InitProtocolKey", 12 },
