@@ -2761,7 +2761,7 @@ static void qce_sps_exit(struct qce_device *pce_dev)
 
 static void print_notify_debug(struct sps_event_notify *notify)
 {
-	phys_addr_t addr = DESC_FULL_ADDR(notify->data.transfer.iovec.flags,
+phys_addr_t addr = DESC_FULL_ADDR(notify->data.transfer.iovec.flags,
 					  notify->data.transfer.iovec.addr);
 	pr_debug("sps ev_id=%d, addr=0x%pa, size=0x%x, flags=0x%x user=0x%pK\n",
 			notify->event_id, &addr,
