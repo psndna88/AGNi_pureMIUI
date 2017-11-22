@@ -364,6 +364,7 @@ struct dpp_test_info {
 static const struct dpp_test_info dpp_tests[] = {
 	{ "InvalidValue", "AuthenticationRequest", "WrappedData", 1 },
 	{ "InvalidValue", "AuthenticationResponse", "WrappedData", 2 },
+	{ "InvalidValue", "AuthenticationResponse", "PrimaryWrappedData", 2 },
 	{ "InvalidValue", "AuthenticationConfirm", "WrappedData", 3 },
 	{ "InvalidValue", "PKEXCRRequest", "WrappedData", 4 },
 	{ "InvalidValue", "PKEXCRResponse", "WrappedData", 5 },
@@ -387,6 +388,8 @@ static const struct dpp_test_info dpp_tests[] = {
 	  22 },
 	{ "MissingAttribute", "AuthenticationResponse", "RespAuthTag", 23 },
 	{ "MissingAttribute", "AuthenticationResponse", "WrappedData", 24 },
+	{ "MissingAttribute", "AuthenticationResponse", "PrimaryWrappedData",
+	  24 },
 	{ "MissingAttribute", "AuthenticationConfirm", "DPPStatus", 25 },
 	{ "MissingAttribute", "AuthenticationConfirm", "RespBSKeyHash", 26 },
 	{ "MissingAttribute", "AuthenticationConfirm", "InitBSKeyHash", 27 },
