@@ -75,7 +75,7 @@ static inline void decrement_wakelocks_number(void)
 #else /* CONFIG_PM_WAKELOCKS_LIMIT = 0 */
 #ifdef CONFIG_PDESIRE_WAKELOCK_DYNAMIC_LIMITER
 static unsigned int number_of_wakelocks;
-bool psesire_wakelock_enable = true;
+bool psesire_wakelock_enable = false;
 unsigned int pdesire_wakelock_limit = 100;
 unsigned int pdesire_wakelock_limit_range = 60;
 module_param_named(psesire_wakelock_enable, psesire_wakelock_enable, bool, 0664);
