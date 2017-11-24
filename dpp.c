@@ -511,7 +511,6 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	const char *step = get_param(cmd, "DPPStep");
 	const char *frametype = get_param(cmd, "DPPFrameType");
 	const char *attr = get_param(cmd, "DPPIEAttribute");
-	const char *delay_qr_resp = get_param(cmd, "DPPDelayQRResponse");
 	const char *role;
 	const char *val;
 	const char *conf_role;
@@ -874,8 +873,11 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			goto out;
 		}
 	} else if (strcasecmp(auth_role, "Responder") == 0) {
+		const char *delay_qr_resp;
 		int mutual;
 		int freq = 2462; /* default: channel 11 */
+
+		delay_qr_resp = get_param(cmd, "DPPDelayQRResponse");
 
 		val = get_param(cmd, "DPPAuthDirection");
 		mutual = val && strcasecmp(val, "Mutual") == 0;
