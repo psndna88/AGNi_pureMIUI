@@ -5106,6 +5106,7 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 	dut->dpp_conf_id = -1;
 	free(dut->dpp_peer_uri);
 	dut->dpp_peer_uri = NULL;
+	dut->dpp_local_bootstrap = -1;
 
 	wpa_command(intf, "VENDOR_ELEM_REMOVE 13 *");
 

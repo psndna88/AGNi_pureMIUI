@@ -515,7 +515,6 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	const char *role;
 	const char *val;
 	const char *conf_role;
-	int mutual;
 	int conf_index = -1;
 	char buf[2000];
 	char conf_ssid[100];
@@ -563,9 +562,6 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			  "errorCode,Missing DPPProvisioningRole");
 		return 0;
 	}
-
-	val = get_param(cmd, "DPPAuthDirection");
-	mutual = val && strcasecmp(val, "Mutual") == 0;
 
 	if ((step || frametype || attr) && (!step || !frametype || !attr)) {
 		send_resp(dut, conn, SIGMA_ERROR,
@@ -828,7 +824,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			dpp_peer_bootstrap = atoi(buf);
 		}
 
-		if (mutual)
+		if (dut->dpp_local_bootstrap >= 0)
 			snprintf(own_txt, sizeof(own_txt), " own=%d",
 				 dut->dpp_local_bootstrap);
 		else
@@ -878,7 +874,11 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			goto out;
 		}
 	} else if (strcasecmp(auth_role, "Responder") == 0) {
+		int mutual;
 		int freq = 2462; /* default: channel 11 */
+
+		val = get_param(cmd, "DPPAuthDirection");
+		mutual = val && strcasecmp(val, "Mutual") == 0;
 
 		val = get_param(cmd, "DPPListenChannel");
 		if (val) {
