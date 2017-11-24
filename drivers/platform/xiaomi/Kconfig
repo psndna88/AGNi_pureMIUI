@@ -29,19 +29,27 @@ menu "Xiaomi board selection"
 
 endmenu
 
-menu "AGNi variant selection"
+choice
+	prompt "AGNi variant selection"
+	depends on MACH_XIAOMI_KENZO
 
-	config MACH_XIAOMI_KENZO_AGNI_CM_N
-		bool "XIAOMI KENZO AGNi for cm-N"
+	config MACH_XIAOMI_KENZO_AGNI_LOS_O
+		bool "XIAOMI KENZO AGNi for LineageOS-Oreo"
 		select MACH_XIAOMI_MSM8956
 		help
-		  Support for Xiaomi Redmi Note 3 AGNi cyanogenmod 14.x
+		  Support for Xiaomi Redmi Note 3 AGNi LineageOS 15.x
 
-	config MACH_XIAOMI_KENZO_AGNI_CM_MM
-		bool "XIAOMI KENZO AGNi for cm-MM"
+	config MACH_XIAOMI_KENZO_AGNI_LOS_N
+		bool "XIAOMI KENZO AGNi for LineageOS-Nougat"
 		select MACH_XIAOMI_MSM8956
 		help
-		  Support for Xiaomi Redmi Note 3 AGNi cyanogenmod 13.1
+		  Support for Xiaomi Redmi Note 3 AGNi LineageOS 14.x
+
+	config MACH_XIAOMI_KENZO_AGNI_LOS_MM
+		bool "XIAOMI KENZO AGNi for LineageOS-MarshMallow"
+		select MACH_XIAOMI_MSM8956
+		help
+		  Support for Xiaomi Redmi Note 3 AGNi LineageOS 13.1
 
 	config MACH_XIAOMI_KENZO_AGNI_MIUI_MM
 		bool "XIAOMI KENZO AGNi for miui-MM"
@@ -55,5 +63,5 @@ menu "AGNi variant selection"
 		help
 		  Support for Xiaomi Redmi Note 3 AGNi MIUI N
 
-endmenu
+endchoice
 

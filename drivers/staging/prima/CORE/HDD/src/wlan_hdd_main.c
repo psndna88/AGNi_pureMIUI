@@ -207,10 +207,10 @@ static VOS_STATUS hdd_parse_ese_beacon_req(tANI_U8 *pValue,
 #define NUM_OF_STA_DATA_TO_PRINT 16
 
 #ifdef WLAN_FEATURE_RMC
-#ifdef CONFIG_MACH_XIAOMI_KENZO_AGNI_CM_N
-#define WLAN_NLINK_CESIUM 29 /* CM-N */
+#ifdef CONFIG_MACH_XIAOMI_KENZO_AGNI_LOS_N
+#define WLAN_NLINK_CESIUM 29 /* LOS-N */
 #else
-#define WLAN_NLINK_CESIUM 30 /* MIUI-MM & CM-MM & */
+#define WLAN_NLINK_CESIUM 30 /* MIUI-N, MIUI-MM, LOS-MM, LOS-O */
 #endif
 #endif
 

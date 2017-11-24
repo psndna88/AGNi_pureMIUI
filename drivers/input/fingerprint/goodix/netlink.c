@@ -6,10 +6,10 @@
 #include <net/sock.h>
 #include <net/netlink.h>
 
-#ifdef CONFIG_MACH_XIAOMI_KENZO_AGNI_CM_N
-#define NETLINK_TEST 30
+#ifdef CONFIG_MACH_XIAOMI_KENZO_AGNI_LOS_N
+#define NETLINK_TEST 30 /* LOS-N */
 #else
-#define NETLINK_TEST 29 /* MIUI-MM & CM-MM */
+#define NETLINK_TEST 29 /* MIUI-N, MIUI-MM, LOS-MM, LOS-O */
 #endif
 #define MAX_MSGSIZE (4*1024)
 int stringlength(char *s);

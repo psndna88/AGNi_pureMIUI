@@ -86,6 +86,9 @@ static struct lock_class_key rcu_fqs_class[RCU_NUM_LVLS];
 	.abbr = sabbr, \
 }
 
+bool limc = true;
+module_param(limc, bool, 0444);
+
 struct rcu_state rcu_sched_state =
 	RCU_STATE_INITIALIZER(rcu_sched, 's', call_rcu_sched);
 DEFINE_PER_CPU(struct rcu_data, rcu_sched_data);

@@ -4,18 +4,31 @@ cd $KERNELDIR;
 
 TEMP_DIR=$KERNELDIR/../TEMP_KENZO_BUILDS_RUN_STORE
 mkdir -p $TEMP_DIR
-rm -rf BUILT_kenzo-miuiMM BUILT_kenzo-miuiN BUILT_kenzo-cmMM BUILT_kenzo-cmN .config .config.old
+rm -rf BUILT_kenzo-miuiMM BUILT_kenzo-miuiN BUILT_kenzo-losMM BUILT_kenzo-losN BUILT_kenzo-losO .config .config.old
 
 echo "-----------------------------------------------------------------------"
 echo " "
-echo "          BATCH MODE: Building AGNi LOS-N-O variant..."
-# AGNI pureLOS-N
+echo "          BATCH MODE: Building AGNi LOS-O variant..."
+# AGNI pureLOS-O
 rm drivers/staging/prima/wlan.ko
-./build_kernel_kenzo_cmN.sh
-mv -f $KERNELDIR/BUILT_kenzo-cmN $TEMP_DIR/
+./build_kernel_kenzo_losO.sh
+mv -f $KERNELDIR/BUILT_kenzo-losO $TEMP_DIR/
 rm .config
 echo " "
-echo "          BATCH MODE: Built AGNi LOS-N-O variant!!!"
+echo "          BATCH MODE: Built AGNi LOS-O variant!!!"
+echo "-----------------------------------------------------------------------"
+echo " "
+
+echo "-----------------------------------------------------------------------"
+echo " "
+echo "          BATCH MODE: Building AGNi LOS-N variant..."
+# AGNI pureLOS-N
+rm drivers/staging/prima/wlan.ko
+./build_kernel_kenzo_losN.sh
+mv -f $KERNELDIR/BUILT_kenzo-losN $TEMP_DIR/
+rm .config
+echo " "
+echo "          BATCH MODE: Built AGNi LOS-N variant!!!"
 echo "-----------------------------------------------------------------------"
 echo " "
 
@@ -33,19 +46,19 @@ echo "          BATCH MODE: Built AGNi MIUI-N variant!!!"
 echo "-----------------------------------------------------------------------"
 echo " "
 
-echo " "
-echo "-----------------------------------------------------------------------"
-echo " "
-echo "          BATCH MODE: Building AGNi LOS-MM variant..."
+#echo " "
+#echo "-----------------------------------------------------------------------"
+#echo " "
+#echo "          BATCH MODE: Building AGNi LOS-MM variant..."
 # AGNI pureLOS-MM
-rm drivers/staging/prima/wlan.ko
-./build_kernel_kenzo_cmMM.sh
-mv -f $KERNELDIR/BUILT_kenzo-cmMM $TEMP_DIR/
-rm .config
-echo " "
-echo "          BATCH MODE: Built AGNi LOS-MM variant!!!"
-echo "-----------------------------------------------------------------------"
-echo " "
+#rm drivers/staging/prima/wlan.ko
+#./build_kernel_kenzo_losMM.sh
+#mv -f $KERNELDIR/BUILT_kenzo-losMM $TEMP_DIR/
+#rm .config
+#echo " "
+#echo "          BATCH MODE: Built AGNi LOS-MM variant!!!"
+#echo "-----------------------------------------------------------------------"
+#echo " "
 
 echo " "
 echo "-----------------------------------------------------------------------"

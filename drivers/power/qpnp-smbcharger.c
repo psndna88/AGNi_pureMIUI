@@ -4398,6 +4398,8 @@ static int smbchg_set_optimal_charging_mode(struct smbchg_chip *chip, int type)
 
 #define DEFAULT_SDP_MA		100
 #define DEFAULT_CDP_MA		1500
+#define MAX_DCP_MA			2100
+extern bool limc;
 static int smbchg_change_usb_supply_type(struct smbchg_chip *chip,
 						enum power_supply_type type)
 {
@@ -4418,10 +4420,17 @@ static int smbchg_change_usb_supply_type(struct smbchg_chip *chip,
 	else if (type == POWER_SUPPLY_TYPE_USB_CDP)
 		current_limit_ma = DEFAULT_CDP_MA;
 	else if (type == POWER_SUPPLY_TYPE_USB_HVDCP
-			|| type == POWER_SUPPLY_TYPE_USB_HVDCP_3)
-		current_limit_ma = smbchg_default_hvdcp_icl_ma;
-	else
-		current_limit_ma = smbchg_default_dcp_icl_ma;
+			|| type == POWER_SUPPLY_TYPE_USB_HVDCP_3) {
+		if ((limc) && (smbchg_default_hvdcp_icl_ma > MAX_DCP_MA))
+			current_limit_ma = MAX_DCP_MA;
+		else
+			current_limit_ma = smbchg_default_hvdcp_icl_ma;
+	} else {
+		if ((limc) && (smbchg_default_dcp_icl_ma > MAX_DCP_MA))
+			current_limit_ma = MAX_DCP_MA;
+		else
+			current_limit_ma = smbchg_default_dcp_icl_ma;
+	}
 
 	pr_smb(PR_STATUS, "Type %d: setting mA = %d\n",
 		type, current_limit_ma);
