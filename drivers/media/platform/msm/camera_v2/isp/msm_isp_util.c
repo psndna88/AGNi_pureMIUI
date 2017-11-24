@@ -13,6 +13,7 @@
 #include <linux/io.h>
 #include <media/v4l2-subdev.h>
 #include <linux/ratelimit.h>
+#include <linux/moduleparam.h>
 
 #include "msm.h"
 #include "msm_isp_util.h"
@@ -27,6 +28,14 @@ static DEFINE_MUTEX(bandwidth_mgr_mutex);
 static struct msm_isp_bandwidth_mgr isp_bandwidth_mgr;
 
 static uint64_t msm_isp_cpp_clk_rate;
+
+#if defined(CONFIG_MACH_XIAOMI_KENZO_AGNI_LOS_N) || defined(CONFIG_MACH_XIAOMI_KENZO_AGNI_LOS_O)
+bool buffer_timestamp_new_mode = true;
+#else
+bool buffer_timestamp_new_mode = false;
+#endif
+module_param(buffer_timestamp_new_mode, bool,
+		S_IRUGO | S_IWUSR | S_IWGRP);
 
 #define VFE40_8974V2_VERSION 0x1001001A
 static struct msm_bus_vectors msm_isp_init_vectors[] = {
@@ -338,11 +347,11 @@ int msm_isp_get_clk_info(struct vfe_device *vfe_dev,
 void msm_isp_get_timestamp(struct msm_isp_timestamp *time_stamp)
 {
 	struct timespec ts;
-#if defined CONFIG_MACH_XIAOMI_KENZO_AGNI_CM_N
-	get_monotonic_boottime(&ts);
-#else
-	ktime_get_ts(&ts);
-#endif
+	if (buffer_timestamp_new_mode) {
+		get_monotonic_boottime(&ts);
+	} else {
+		ktime_get_ts(&ts);
+	}
 	time_stamp->buf_time.tv_sec    = ts.tv_sec;
 	time_stamp->buf_time.tv_usec   = ts.tv_nsec/1000;
 	do_gettimeofday(&(time_stamp->event_time));
