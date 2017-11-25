@@ -338,6 +338,7 @@ static ssize_t aw2013_show_blink(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%d\n", led->blinking ? 1 : 0);
 }
 
+#ifndef CONFIG_MACH_XIAOMI_KENZO_AGNI_MIUI_N
 static ssize_t aw2013_show_brightness(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
@@ -372,6 +373,7 @@ static ssize_t aw2013_store_brightness(struct device *dev,
 
 	return len;
 }
+#endif
 
 static ssize_t aw2013_led_time_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
@@ -420,12 +422,16 @@ static ssize_t aw2013_led_time_store(struct device *dev,
 }
 
 static DEVICE_ATTR(blink, 0664, aw2013_show_blink, aw2013_store_blink);
+#ifndef CONFIG_MACH_XIAOMI_KENZO_AGNI_MIUI_N
 static DEVICE_ATTR(bright, 0664, aw2013_show_brightness, aw2013_store_brightness);
+#endif
 static DEVICE_ATTR(led_time, 0664, aw2013_led_time_show, aw2013_led_time_store);
 
 static struct attribute *aw2013_led_attributes[] = {
 	&dev_attr_blink.attr,
+#ifndef CONFIG_MACH_XIAOMI_KENZO_AGNI_MIUI_N
 	&dev_attr_bright.attr,
+#endif
 	&dev_attr_led_time.attr,
 	NULL,
 };
