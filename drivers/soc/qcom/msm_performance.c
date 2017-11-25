@@ -194,17 +194,11 @@ static const struct kernel_param_ops param_ops_num_clusters = {
 };
 device_param_cb(num_clusters, &param_ops_num_clusters, NULL, 0644);
 
-#ifdef CONFIG_MSM_PERFORMANCE_HOTPLUG_ON
 static int set_max_cpus(const char *buf, const struct kernel_param *kp)
 {
-#if 0
 	unsigned int i, ntokens = 0;
 	const char *cp = buf;
 	int val;
-	int msm_perf = strcmp(current->comm, "perfd");
-
-	if (msm_perf == 0)
-		return -EINVAL;
 
 	if (!clusters_inited)
 		return -EINVAL;
@@ -232,7 +226,6 @@ static int set_max_cpus(const char *buf, const struct kernel_param *kp)
 	}
 
 	schedule_delayed_work(&evaluate_hotplug_work, 0);
-#endif
 
 	return 0;
 }
@@ -257,6 +250,7 @@ static const struct kernel_param_ops param_ops_max_cpus = {
 	.get = get_max_cpus,
 };
 
+#ifdef CONFIG_MSM_PERFORMANCE_HOTPLUG_ON
 device_param_cb(max_cpus, &param_ops_max_cpus, NULL, 0644);
 #endif
 
@@ -310,7 +304,6 @@ static const struct kernel_param_ops param_ops_managed_cpus = {
 };
 device_param_cb(managed_cpus, &param_ops_managed_cpus, NULL, 0644);
 
-#ifdef CONFIG_MSM_PERFORMANCE_HOTPLUG_ON
 /* Read-only node: To display all the online managed CPUs */
 static int get_managed_online_cpus(char *buf, const struct kernel_param *kp)
 {
@@ -343,6 +336,7 @@ static const struct kernel_param_ops param_ops_managed_online_cpus = {
 	.get = get_managed_online_cpus,
 };
 
+#ifdef CONFIG_MSM_PERFORMANCE_HOTPLUG_ON
 device_param_cb(managed_online_cpus, &param_ops_managed_online_cpus,
 							NULL, 0444);
 #endif
@@ -352,7 +346,6 @@ device_param_cb(managed_online_cpus, &param_ops_managed_online_cpus,
  */
 static int set_cpu_min_freq(const char *buf, const struct kernel_param *kp)
 {
-#if 0
 	int i, j, ntokens = 0;
 	unsigned int val, cpu;
 	const char *cp = buf;
@@ -360,9 +353,10 @@ static int set_cpu_min_freq(const char *buf, const struct kernel_param *kp)
 	struct cpufreq_policy policy;
 	cpumask_var_t limit_mask;
 	int ret;
+	const char *reset = "0:0 4:0";
 
-	if (!touchboost)
-		return 0;
+	if (touchboost == 0)
+		cp = reset;
 
 	while ((cp = strpbrk(cp + 1, " :")))
 		ntokens++;
@@ -371,7 +365,11 @@ static int set_cpu_min_freq(const char *buf, const struct kernel_param *kp)
 	if (!(ntokens % 2))
 		return -EINVAL;
 
-	cp = buf;
+	if (touchboost == 0)
+		cp = reset;
+	else
+		cp = buf;
+
 	cpumask_clear(limit_mask);
 	for (i = 0; i < ntokens; i += 2) {
 		if (sscanf(cp, "%u:%u", &cpu, &val) != 2)
@@ -411,7 +409,6 @@ static int set_cpu_min_freq(const char *buf, const struct kernel_param *kp)
 			cpumask_clear_cpu(j, limit_mask);
 	}
 	put_online_cpus();
-#endif
 
 	return 0;
 }
@@ -440,7 +437,6 @@ module_param_cb(cpu_min_freq, &param_ops_cpu_min_freq, NULL, 0644);
  */
 static int set_cpu_max_freq(const char *buf, const struct kernel_param *kp)
 {
-#if 0
 	int i, j, ntokens = 0;
 	unsigned int val, cpu;
 	const char *cp = buf;
@@ -451,11 +447,6 @@ static int set_cpu_max_freq(const char *buf, const struct kernel_param *kp)
 
 	if (!touchboost)
 		return 0;
-
-	int msm_perf = strcmp(current->comm, "perfd");
-
-	if (msm_perf == 0)
-		return ret;
 
 	while ((cp = strpbrk(cp + 1, " :")))
 		ntokens++;
@@ -496,7 +487,6 @@ static int set_cpu_max_freq(const char *buf, const struct kernel_param *kp)
 			cpumask_clear_cpu(j, limit_mask);
 	}
 	put_online_cpus();
-#endif
 
 	return 0;
 }
