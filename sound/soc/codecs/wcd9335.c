@@ -189,8 +189,9 @@ MODULE_PARM_DESC(pdesireaudio_class_ab_mode, "enable/disable PDesireAudio Class 
 int sound_control_spk_priv = 0;
 int sound_control_spk_gain = 0;
 
-static int dig_core_collapse_enable = 0;
-module_param(dig_core_collapse_enable, int,	S_IRUGO);
+int dig_core_collapse_enable = 1;
+module_param(dig_core_collapse_enable, int,
+		S_IRUGO | S_IWUSR | S_IWGRP);
 MODULE_PARM_DESC(dig_core_collapse_enable, "enable/disable power gating");
 
 /* dig_core_collapse timer in seconds */
@@ -11202,7 +11203,7 @@ static int tasha_dig_core_remove_power_collapse(struct snd_soc_codec *codec)
 	return 0;
 }
 
-static int tasha_dig_core_power_collapse(struct tasha_priv *tasha,
+int tasha_dig_core_power_collapse(struct tasha_priv *tasha,
 					 int req_state)
 {
 	struct snd_soc_codec *codec;
@@ -11263,7 +11264,7 @@ unlock_mutex:
 	return 0;
 }
 
-static int __tasha_cdc_mclk_enable_locked(struct tasha_priv *tasha,
+int __tasha_cdc_mclk_enable_locked(struct tasha_priv *tasha,
 					  bool enable)
 {
 	int ret = 0;
