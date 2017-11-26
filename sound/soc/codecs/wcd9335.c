@@ -3423,13 +3423,13 @@ static int tasha_set_compander(struct snd_kcontrol *kcontrol,
 		break;
 	case COMPANDER_3:
 		/* Direct idle COMP3 to HPH_L */
-		snd_soc_update_bits(codec, WCD9335_HPH_L_EN, 0x16,
-				(value ? 0x00:0x16));
+/*		snd_soc_update_bits(codec, WCD9335_HPH_L_EN, 0x16,
+				(value ? 0x00:0x16)); */
 		break;
 	case COMPANDER_4:
 		/* Direct idle COMP4 to HPH_R */
-		snd_soc_update_bits(codec, WCD9335_HPH_R_EN, 0x16,
-				(value ? 0x00:0x16));
+/*		snd_soc_update_bits(codec, WCD9335_HPH_R_EN, 0x16,
+				(value ? 0x00:0x16)); */
 		break;
 	case COMPANDER_5:
 		snd_soc_update_bits(codec, WCD9335_SE_LO_LO3_GAIN, 0x20,
@@ -3741,12 +3741,12 @@ static void tasha_codec_hph_post_pa_config(struct tasha_priv *tasha,
 		snd_soc_update_bits(tasha->codec, WCD9335_HPH_PA_CTL1, 0x0E,
 				    scale_val << 1);
 	if (SND_SOC_DAPM_EVENT_ON(event)) {
-		if (tasha->comp_enabled[COMPANDER_3] ||
-		    tasha->comp_enabled[COMPANDER_4]) {
+		if (tasha->comp_enabled[COMPANDER_1] ||
+		    tasha->comp_enabled[COMPANDER_2]) {
 			snd_soc_update_bits(tasha->codec, WCD9335_HPH_L_EN,
-					    0x16, 0x00);
+					    0x20, 0x00);
 			snd_soc_update_bits(tasha->codec, WCD9335_HPH_R_EN,
-					    0x16, 0x00);
+					    0x20, 0x00);
 			snd_soc_update_bits(tasha->codec, WCD9335_HPH_AUTO_CHOP,
 					    0x20, 0x20);
 		}
@@ -7275,6 +7275,20 @@ static int tasha_rx_hph_mode_get(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int tasha_rx_hph_mode_put_dummy(struct snd_kcontrol *kcontrol,
+				 struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	u32 mode_val;
+
+	mode_val = ucontrol->value.enumerated.item[0];
+
+	dev_dbg(codec->dev, "%s: fake mode: %d\n",
+		__func__, mode_val);
+
+	return 0;
+}
+
 static int tasha_rx_hph_mode_put(struct snd_kcontrol *kcontrol,
 				 struct snd_ctl_elem_value *ucontrol)
 {
@@ -7899,9 +7913,9 @@ static const struct snd_kcontrol_new tasha_snd_controls[] = {
 	SOC_SINGLE_SX_TLV("RX0 Digital Volume", WCD9335_CDC_RX0_RX_VOL_CTL,
 		0, -84, 40, digital_gain), /* -84dB min - 40dB max */
 	SOC_SINGLE_SX_TLV("RX1 Digital Volume", WCD9335_CDC_RX1_RX_VOL_CTL,
-		-2, -84, 40, digital_gain),
+		-5, -84, 40, digital_gain),
 	SOC_SINGLE_SX_TLV("RX2 Digital Volume", WCD9335_CDC_RX2_RX_VOL_CTL,
-		-2, -84, 40, digital_gain),
+		-5, -84, 40, digital_gain),
 	SOC_SINGLE_SX_TLV("RX3 Digital Volume", WCD9335_CDC_RX3_RX_VOL_CTL,
 		0, -84, 40, digital_gain),
 	SOC_SINGLE_SX_TLV("RX4 Digital Volume", WCD9335_CDC_RX4_RX_VOL_CTL,
@@ -7909,7 +7923,7 @@ static const struct snd_kcontrol_new tasha_snd_controls[] = {
 	SOC_SINGLE_SX_TLV("RX5 Digital Volume", WCD9335_CDC_RX5_RX_VOL_CTL,
 		0, -84, 40, digital_gain),
 	SOC_SINGLE_SX_TLV("RX6 Digital Volume", WCD9335_CDC_RX6_RX_VOL_CTL,
-		0, -84, 40, digital_gain),
+		-2, -84, 40, digital_gain),
 	SOC_SINGLE_SX_TLV("RX7 Digital Volume", WCD9335_CDC_RX7_RX_VOL_CTL,
 		0, -84, 40, digital_gain),
 	SOC_SINGLE_SX_TLV("RX8 Digital Volume", WCD9335_CDC_RX8_RX_VOL_CTL,
@@ -8068,9 +8082,9 @@ static const struct snd_kcontrol_new tasha_snd_controls[] = {
 	SOC_SINGLE_EXT("COMP2 Switch", SND_SOC_NOPM, COMPANDER_2, 1, 0,
 		       tasha_get_compander, tasha_set_compander_dummy),
 	SOC_SINGLE_EXT("COMP3 Switch", SND_SOC_NOPM, COMPANDER_3, 1, 0,
-		       tasha_get_compander, tasha_set_compander),
+		       tasha_get_compander, tasha_set_compander_dummy),
 	SOC_SINGLE_EXT("COMP4 Switch", SND_SOC_NOPM, COMPANDER_4, 1, 0,
-		       tasha_get_compander, tasha_set_compander),
+		       tasha_get_compander, tasha_set_compander_dummy),
 	SOC_SINGLE_EXT("COMP5 Switch", SND_SOC_NOPM, COMPANDER_5, 1, 0,
 		       tasha_get_compander, tasha_set_compander),
 	SOC_SINGLE_EXT("COMP6 Switch", SND_SOC_NOPM, COMPANDER_6, 1, 0,
@@ -8081,6 +8095,8 @@ static const struct snd_kcontrol_new tasha_snd_controls[] = {
 		       tasha_get_compander, tasha_set_compander_dummy),
 
 	SOC_ENUM_EXT("RX HPH Mode", rx_hph_mode_mux_enum,
+		       tasha_rx_hph_mode_get, tasha_rx_hph_mode_put_dummy),
+	SOC_ENUM_EXT("RX HPH Mode AGNi", rx_hph_mode_mux_enum,
 		       tasha_rx_hph_mode_get, tasha_rx_hph_mode_put),
 
 	SOC_ENUM_EXT("MAD Input", tasha_conn_mad_enum,
@@ -8541,9 +8557,13 @@ static const struct snd_kcontrol_new tasha_analog_gain_controls[] = {
 	SOC_ENUM_EXT("EAR PA Gain", tasha_ear_pa_gain_enum,
 		tasha_ear_pa_gain_get, tasha_ear_pa_gain_put),
 
-	SOC_SINGLE_TLV("HPHL Volume", WCD9335_HPH_L_EN, 0, 20, 1,
+	SOC_SINGLE_TLV("HPHL Volume", WCD9335_SE_LO_LO3_GAIN, 0, 20, 1,
 		line_gain),
-	SOC_SINGLE_TLV("HPHR Volume", WCD9335_HPH_R_EN, 0, 20, 1,
+	SOC_SINGLE_TLV("HPHR Volume", WCD9335_SE_LO_LO3_GAIN, 0, 20, 1,
+		line_gain),
+	SOC_SINGLE_TLV("HPHL Volume AGNi", WCD9335_HPH_L_EN, 0, 20, 1,
+		line_gain),
+	SOC_SINGLE_TLV("HPHR Volume AGNi", WCD9335_HPH_R_EN, 0, 20, 1,
 		line_gain),
 	SOC_SINGLE_TLV("LINEOUT1 Volume", WCD9335_DIFF_LO_LO1_COMPANDER,
 			3, 16, 1, line_gain),
@@ -8551,7 +8571,9 @@ static const struct snd_kcontrol_new tasha_analog_gain_controls[] = {
 			3, 16, 1, line_gain),
 	SOC_SINGLE_TLV("LINEOUT3 Volume", WCD9335_SE_LO_LO3_GAIN, 0, 20, 1,
 			line_gain),
-	SOC_SINGLE_TLV("LINEOUT4 Volume", WCD9335_SE_LO_LO4_GAIN, 0, 20, 1,
+	SOC_SINGLE_TLV("LINEOUT4 Volume", WCD9335_SE_LO_LO3_GAIN, 0, 20, 1,
+			line_gain),
+	SOC_SINGLE_TLV("LINEOUT4 Volume AGNi", WCD9335_SE_LO_LO4_GAIN, 0, 20, 1,
 			line_gain),
 
 	SOC_SINGLE_TLV("ADC1 Volume", WCD9335_ANA_AMIC1, 0, 20, 0,
