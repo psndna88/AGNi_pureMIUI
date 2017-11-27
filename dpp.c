@@ -772,6 +772,8 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 				  "errorCode,Failed to initiate DPP self-configuration");
 			goto out;
 		}
+		if (sigma_dut_is_ap(dut))
+			goto update_ap;
 		goto wait_connect;
 	} else if (strcasecmp(auth_role, "Initiator") == 0) {
 		char own_txt[20];
@@ -1113,6 +1115,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 
 	if (sigma_dut_is_ap(dut) &&
 	    strcasecmp(prov_role, "Enrollee") == 0) {
+	update_ap:
 		res = dpp_hostapd_conf_update(dut, conn, ifname, ctrl);
 		if (res == 0)
 			goto out;
