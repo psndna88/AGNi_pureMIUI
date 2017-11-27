@@ -1358,13 +1358,18 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 	/* const char *name = get_param(cmd, "NAME"); */
 	const char *val;
 	unsigned int wlan_tag = 1;
+	const char *security;
 
 	val = get_param(cmd, "WLAN_TAG");
 	if (val)
 		wlan_tag = atoi(val);
 
+	security = get_param(cmd, "Security");
+
 	if (wlan_tag > 1) {
 		val = get_param(cmd, "KEYMGNT");
+		if (!val)
+			val = get_param(cmd, "KeyMgmtType");
 		if (val) {
 			if (strcasecmp(val, "NONE") == 0) {
 				dut->ap_tag_key_mgmt[wlan_tag - 2] = AP2_OPEN;
@@ -1374,7 +1379,10 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 				 * OSEN only supported on WLAN_TAG = 2 for now
 				 */
 				dut->ap_tag_key_mgmt[wlan_tag - 2] = AP2_OSEN;
-			} else if (strcasecmp(val, "WPA2-PSK") == 0) {
+			} else if (strcasecmp(val, "WPA2-PSK") == 0 ||
+				   (security &&
+				    strcasecmp(security, "PSK") == 0 &&
+				    strcasecmp(val, "WPA2") == 0)) {
 				dut->ap_tag_key_mgmt[wlan_tag - 2] =
 					AP2_WPA2_PSK;
 			} else {
@@ -1387,8 +1395,12 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 
 	val = get_param(cmd, "KEYMGNT");
+	if (!val)
+		val = get_param(cmd,"KeyMgmtType");
 	if (val) {
-		if (strcasecmp(val, "WPA2-PSK") == 0) {
+		if (strcasecmp(val, "WPA2-PSK") == 0 ||
+		    (security && strcasecmp(security, "PSK") == 0 &&
+		     strcasecmp(val, "WPA2") == 0)) {
 			dut->ap_key_mgmt = AP_WPA2_PSK;
 			dut->ap_cipher = AP_CCMP;
 		} else if (strcasecmp(val, "WPA2-EAP") == 0 ||
@@ -1451,6 +1463,8 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 
 	val = get_param(cmd, "ENCRYPT");
+	if (!val)
+		val = get_param(cmd, "EncpType");
 	if (val) {
 		if (strcasecmp(val, "WEP") == 0) {
 			dut->ap_cipher = AP_WEP;
@@ -1541,6 +1555,8 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 
 	val = get_param(cmd, "PSK");
+	if (!val)
+		val = get_param(cmd, "passphrase");
 	if (val) {
 		if (dut->ap_key_mgmt != AP_WPA2_SAE && strlen(val) > 64)
 			return -1;
@@ -1556,6 +1572,9 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 			return -1;
 		strlcpy(dut->ap_psk, val, sizeof(dut->ap_psk));
 	}
+
+	if (dut->program == PROGRAM_OCE && dut->dev_role == DEVROLE_STA_CFON)
+		dut->ap_pmf = AP_PMF_OPTIONAL;
 
 	val = get_param(cmd, "PMF");
 	if (val) {
@@ -1615,6 +1634,9 @@ int sta_cfon_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 	int status;
 
 	status = cmd_ap_set_wireless(dut, conn, cmd);
+	if (status != 1)
+		return status;
+	status = cmd_ap_set_security(dut, conn, cmd);
 	if (status != 1)
 		return status;
 	return cmd_ap_config_commit(dut, conn, cmd);
