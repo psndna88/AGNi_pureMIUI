@@ -1769,8 +1769,9 @@ static struct worker *create_worker(struct worker_pool *pool)
 	set_user_nice(worker->task, pool->attrs->nice);
 	set_cpus_allowed_ptr(worker->task, pool->attrs->cpumask);
 
-	/* prevent userland from meddling with cpumask of workqueue workers */
+	/* prevent anyone from meddling with cpumask of workqueue workers */
 	worker->task->flags |= PF_NO_SETAFFINITY;
+	worker->task->kthread_per_cpu = true;
 
 	/*
 	 * The caller is responsible for ensuring %POOL_DISASSOCIATED
