@@ -5449,7 +5449,7 @@ out:
 	return ret;
 }
 
-/* static u32 tasha_get_dmic_sample_rate(struct snd_soc_codec *codec,
+static u32 tasha_get_dmic_sample_rate(struct snd_soc_codec *codec,
 				unsigned int dmic, struct wcd9xxx_pdata *pdata)
 {
 	u8 tx_stream_fs;
@@ -5489,7 +5489,7 @@ out:
 	}
 
 	return dmic_fs;
-} */
+}
 
 static u8 tasha_get_dmic_clk_val(struct snd_soc_codec *codec,
 				 u32 mclk_rate, u32 dmic_clk_rate)
@@ -11907,7 +11907,7 @@ static int tasha_handle_pdata(struct tasha_priv *tasha,
 	struct snd_soc_codec *codec = tasha->codec;
 	u8 dmic_ctl_val, mad_dmic_ctl_val;
 	u8 anc_ctl_value;
-	u32 def_dmic_rate;
+	u32 def_dmic_rate, dmic_clk_drv;
 	int vout_ctl_1, vout_ctl_2, vout_ctl_3, vout_ctl_4;
 	int rc = 0;
 
