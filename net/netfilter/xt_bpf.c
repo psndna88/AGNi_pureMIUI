@@ -58,6 +58,9 @@ static int __bpf_mt_check_path(const char *path, struct bpf_prog **ret)
 	mm_segment_t oldfs = get_fs();
 	int retval, fd;
 
+	if (strnlen(path, XT_BPF_PATH_MAX) == XT_BPF_PATH_MAX)
+		return -EINVAL;
+
 	set_fs(KERNEL_DS);
 	fd = bpf_obj_get_user(path);
 	set_fs(oldfs);
