@@ -46,7 +46,7 @@
 /* Number of times to try hard reset */
 #define NUM_TIMES_RESET_RETRY 5
 
-#define KGSL_LOG_LEVEL_DEFAULT 3
+#define KGSL_LOG_LEVEL_DEFAULT 0
 
 #define SECVID_PROGRAM_PATH_UNKNOWN	0x0
 #define SECVID_PROGRAM_PATH_GPU		0x1
