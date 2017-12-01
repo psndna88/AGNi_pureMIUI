@@ -54,6 +54,9 @@
 
 static void adreno_input_work(struct work_struct *work);
 
+/* pwrctrl_input_disable - To disable GPU wakeup on touch input event */
+static bool pwrctrl_input_disable = true;
+
 static struct devfreq_msm_adreno_tz_data adreno_tz_data = {
 	.bus = {
 		.max = 350,
@@ -1353,15 +1356,18 @@ int adreno_probe(struct platform_device *pdev)
 
 	kgsl_pwrscale_init(&pdev->dev, CONFIG_MSM_ADRENO_DEFAULT_GOVERNOR);
 
-	adreno_input_handler.private = device;
+	if (!pwrctrl_input_disable)
+		adreno_input_handler.private = device;
 
 #ifdef CONFIG_INPUT
 	/*
 	 * It isn't fatal if we cannot register the input handler.  Sad,
 	 * perhaps, but not fatal
 	 */
-	if (input_register_handler(&adreno_input_handler))
-		KGSL_DRV_ERR(device, "Unable to register the input handler\n");
+	if (!pwrctrl_input_disable) {
+		if (input_register_handler(&adreno_input_handler))
+			KGSL_DRV_ERR(device, "Unable to register the input handler\n");
+	}
 #endif
 out:
 	if (status) {
@@ -1387,7 +1393,9 @@ static int adreno_remove(struct platform_device *pdev)
 		kgsl_free_global(&adreno_dev->cmdbatch_profile_buffer);
 
 #ifdef CONFIG_INPUT
-	input_unregister_handler(&adreno_input_handler);
+	if (!pwrctrl_input_disable) {
+		input_unregister_handler(&adreno_input_handler);
+	}
 #endif
 	adreno_sysfs_close(device);
 
