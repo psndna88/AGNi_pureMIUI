@@ -296,8 +296,6 @@ static struct msm_hs_port *msm_hs_get_hs_port(int port_index);
 static void msm_hs_queue_rx_desc(struct msm_hs_port *msm_uport);
 static int disconnect_rx_endpoint(struct msm_hs_port *msm_uport);
 static int msm_hs_pm_resume(struct device *dev);
-static void msm_hs_pm_suspend(struct device *dev);
-
 
 #define UARTDM_TO_MSM(uart_port) \
 	container_of((uart_port), struct msm_hs_port, uport)
