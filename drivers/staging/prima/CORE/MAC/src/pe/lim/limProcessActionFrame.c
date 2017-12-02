@@ -1244,9 +1244,6 @@ __limValidateDelBAParameterSet( tpAniSirGlobal pMac,
     if (!(baParameterSet.tid < STACFG_MAX_TC))
         return statusCode;
 
-	  if (!(baParameterSet.tid < STACFG_MAX_TC))
-		return statusCode;
-
   // Validate if a BA is active for the requested TID
     if( pSta->tcCfg[baParameterSet.tid].fUseBATx ||
         pSta->tcCfg[baParameterSet.tid].fUseBARx )
