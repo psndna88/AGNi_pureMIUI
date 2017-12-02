@@ -648,7 +648,7 @@ struct adreno_gpudev {
 	int num_prio_levels;
 	unsigned int vbif_xin_halt_ctrl0_mask;
 	/* GPU specific function hooks */
-	void (*irq_trace)(struct adreno_device *, unsigned int status);
+//	void (*irq_trace)(struct adreno_device *, unsigned int status);
 	void (*snapshot)(struct adreno_device *, struct kgsl_snapshot *);
 	void (*gpudev_init)(struct adreno_device *);
 	int (*rb_init)(struct adreno_device *, struct adreno_ringbuffer *);
