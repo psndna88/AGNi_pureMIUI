@@ -688,7 +688,7 @@ static irqreturn_t adreno_irq_handler(struct kgsl_device *device)
 		tmp >>= 1;
 	}
 
-	gpudev->irq_trace(adreno_dev, status);
+//	gpudev->irq_trace(adreno_dev, status);
 
 	/*
 	 * Clear ADRENO_INT_RBBM_AHB_ERROR bit after this interrupt has been
