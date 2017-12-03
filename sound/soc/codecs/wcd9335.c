@@ -12468,6 +12468,9 @@ static int tasha_post_reset_cb(struct wcd9xxx *wcd9xxx)
 
 	tasha->codec = codec;
 
+	for (i = 0; i < COMPANDER_MAX; i++)
+		tasha->comp_enabled[i] = 0;
+
 	dev_dbg(codec->dev, "%s: MCLK Rate = %x\n",
 		__func__, control->mclk_rate);
 
