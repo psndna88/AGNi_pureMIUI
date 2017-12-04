@@ -170,8 +170,8 @@ static void rcu_preempt_qs(int cpu)
 {
 	struct rcu_data *rdp = &per_cpu(rcu_preempt_data, cpu);
 
-	if (rdp->passed_quiesce == 0)
-		trace_rcu_grace_period("rcu_preempt", rdp->gpnum, "cpuqs");
+//	if (rdp->passed_quiesce == 0)
+//		trace_rcu_grace_period("rcu_preempt", rdp->gpnum, "cpuqs");
 	rdp->passed_quiesce = 1;
 	current->rcu_read_unlock_special &= ~RCU_READ_UNLOCK_NEED_QS;
 }
@@ -238,11 +238,11 @@ static void rcu_preempt_note_context_switch(int cpu)
 			if (rnp->qsmask & rdp->grpmask)
 				rnp->gp_tasks = &t->rcu_node_entry;
 		}
-		trace_rcu_preempt_task(rdp->rsp->name,
-				       t->pid,
-				       (rnp->qsmask & rdp->grpmask)
-				       ? rnp->gpnum
-				       : rnp->gpnum + 1);
+//		trace_rcu_preempt_task(rdp->rsp->name,
+//				       t->pid,
+//				       (rnp->qsmask & rdp->grpmask)
+//				       ? rnp->gpnum
+//				       : rnp->gpnum + 1);
 		raw_spin_unlock_irqrestore(&rnp->lock, flags);
 	} else if (t->rcu_read_lock_nesting < 0 &&
 		   t->rcu_read_unlock_special) {
@@ -390,8 +390,8 @@ void rcu_read_unlock_special(struct task_struct *t)
 		np = rcu_next_node_entry(t, rnp);
 		list_del_init(&t->rcu_node_entry);
 		t->rcu_blocked_node = NULL;
-		trace_rcu_unlock_preempted_task("rcu_preempt",
-						rnp->gpnum, t->pid);
+//		trace_rcu_unlock_preempted_task("rcu_preempt",
+//						rnp->gpnum, t->pid);
 		if (&t->rcu_node_entry == rnp->gp_tasks)
 			rnp->gp_tasks = np;
 		if (&t->rcu_node_entry == rnp->exp_tasks)
@@ -414,13 +414,13 @@ void rcu_read_unlock_special(struct task_struct *t)
 		 */
 		empty_exp_now = !rcu_preempted_readers_exp(rnp);
 		if (!empty && !rcu_preempt_blocked_readers_cgp(rnp)) {
-			trace_rcu_quiescent_state_report("preempt_rcu",
-							 rnp->gpnum,
-							 0, rnp->qsmask,
-							 rnp->level,
-							 rnp->grplo,
-							 rnp->grphi,
-							 !!rnp->gp_tasks);
+//			trace_rcu_quiescent_state_report("preempt_rcu",
+//							 rnp->gpnum,
+//							 0, rnp->qsmask,
+//							 rnp->level,
+//							 rnp->grplo,
+//							 rnp->grphi,
+//							 !!rnp->gp_tasks);
 			rcu_report_unblock_qs_rnp(rnp, flags);
 		} else {
 			raw_spin_unlock_irqrestore(&rnp->lock, flags);
@@ -1226,12 +1226,12 @@ static int rcu_boost_kthread(void *arg)
 	int spincnt = 0;
 	int more2boost;
 
-	trace_rcu_utilization("Start boost kthread@init");
+//	trace_rcu_utilization("Start boost kthread@init");
 	for (;;) {
 		rnp->boost_kthread_status = RCU_KTHREAD_WAITING;
-		trace_rcu_utilization("End boost kthread@rcu_wait");
+//		trace_rcu_utilization("End boost kthread@rcu_wait");
 		rcu_wait(rnp->boost_tasks || rnp->exp_tasks);
-		trace_rcu_utilization("Start boost kthread@rcu_wait");
+//		trace_rcu_utilization("Start boost kthread@rcu_wait");
 		rnp->boost_kthread_status = RCU_KTHREAD_RUNNING;
 		more2boost = rcu_boost(rnp);
 		if (more2boost)
@@ -1240,14 +1240,14 @@ static int rcu_boost_kthread(void *arg)
 			spincnt = 0;
 		if (spincnt > 10) {
 			rnp->boost_kthread_status = RCU_KTHREAD_YIELDING;
-			trace_rcu_utilization("End boost kthread@rcu_yield");
+//			trace_rcu_utilization("End boost kthread@rcu_yield");
 			schedule_timeout_interruptible(2);
-			trace_rcu_utilization("Start boost kthread@rcu_yield");
+//			trace_rcu_utilization("Start boost kthread@rcu_yield");
 			spincnt = 0;
 		}
 	}
 	/* NOTREACHED */
-	trace_rcu_utilization("End boost kthread@notreached");
+//	trace_rcu_utilization("End boost kthread@notreached");
 	return 0;
 }
 
@@ -1395,7 +1395,7 @@ static void rcu_cpu_kthread(unsigned int cpu)
 	int spincnt;
 
 	for (spincnt = 0; spincnt < 10; spincnt++) {
-		trace_rcu_utilization("Start CPU kthread@rcu_wait");
+//		trace_rcu_utilization("Start CPU kthread@rcu_wait");
 		local_bh_disable();
 		*statusp = RCU_KTHREAD_RUNNING;
 		this_cpu_inc(rcu_cpu_kthread_loops);
@@ -1407,15 +1407,15 @@ static void rcu_cpu_kthread(unsigned int cpu)
 			rcu_kthread_do_work();
 		local_bh_enable();
 		if (*workp == 0) {
-			trace_rcu_utilization("End CPU kthread@rcu_wait");
+//			trace_rcu_utilization("End CPU kthread@rcu_wait");
 			*statusp = RCU_KTHREAD_WAITING;
 			return;
 		}
 	}
 	*statusp = RCU_KTHREAD_YIELDING;
-	trace_rcu_utilization("Start CPU kthread@rcu_yield");
+//	trace_rcu_utilization("Start CPU kthread@rcu_yield");
 	schedule_timeout_interruptible(2);
-	trace_rcu_utilization("End CPU kthread@rcu_yield");
+//	trace_rcu_utilization("End CPU kthread@rcu_yield");
 	*statusp = RCU_KTHREAD_WAITING;
 }
 
@@ -2110,13 +2110,13 @@ static bool __call_rcu_nocb(struct rcu_data *rdp, struct rcu_head *rhp,
 	if (!rcu_is_nocb_cpu(rdp->cpu))
 		return 0;
 	__call_rcu_nocb_enqueue(rdp, rhp, &rhp->next, 1, lazy);
-	if (__is_kfree_rcu_offset((unsigned long)rhp->func))
-		trace_rcu_kfree_callback(rdp->rsp->name, rhp,
-					 (unsigned long)rhp->func,
-					 rdp->qlen_lazy, rdp->qlen);
-	else
-		trace_rcu_callback(rdp->rsp->name, rhp,
-				   rdp->qlen_lazy, rdp->qlen);
+//	if (__is_kfree_rcu_offset((unsigned long)rhp->func))
+//		trace_rcu_kfree_callback(rdp->rsp->name, rhp,
+//					 (unsigned long)rhp->func,
+//					 rdp->qlen_lazy, rdp->qlen);
+//	else
+//		trace_rcu_callback(rdp->rsp->name, rhp,
+//				   rdp->qlen_lazy, rdp->qlen);
 	return 1;
 }
 
@@ -2176,7 +2176,7 @@ static void rcu_nocb_wait_gp(struct rcu_data *rdp)
 	 * Wait for the grace period.  Do so interruptibly to avoid messing
 	 * up the load average.
 	 */
-	trace_rcu_future_gp(rnp, rdp, c, "StartWait");
+//	trace_rcu_future_gp(rnp, rdp, c, "StartWait");
 	for (;;) {
 		wait_event_interruptible(
 			rnp->nocb_gp_wq[c & 0x1],
@@ -2184,9 +2184,9 @@ static void rcu_nocb_wait_gp(struct rcu_data *rdp)
 		if (likely(d))
 			break;
 		flush_signals(current);
-		trace_rcu_future_gp(rnp, rdp, c, "ResumeWait");
+//		trace_rcu_future_gp(rnp, rdp, c, "ResumeWait");
 	}
-	trace_rcu_future_gp(rnp, rdp, c, "EndWait");
+//	trace_rcu_future_gp(rnp, rdp, c, "EndWait");
 	smp_mb(); /* Ensure that CB invocation happens after GP end. */
 }
 
@@ -2227,7 +2227,7 @@ static int rcu_nocb_kthread(void *arg)
 		rcu_nocb_wait_gp(rdp);
 
 		/* Each pass through the following loop invokes a callback. */
-		trace_rcu_batch_start(rdp->rsp->name, cl, c, -1);
+//		trace_rcu_batch_start(rdp->rsp->name, cl, c, -1);
 		c = cl = 0;
 		while (list) {
 			next = list->next;
@@ -2245,7 +2245,7 @@ static int rcu_nocb_kthread(void *arg)
 			cond_resched();
 			list = next;
 		}
-		trace_rcu_batch_end(rdp->rsp->name, c, !!list, 0, 0, 1);
+//		trace_rcu_batch_end(rdp->rsp->name, c, !!list, 0, 0, 1);
 		ACCESS_ONCE(rdp->nocb_p_count) -= c;
 		ACCESS_ONCE(rdp->nocb_p_count_lazy) -= cl;
 		rdp->n_nocbs_invoked += c;
