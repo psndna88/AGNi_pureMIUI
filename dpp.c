@@ -573,6 +573,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	};
 	const char *groups_override = NULL;
 	const char *result;
+	int check_mutual = 0;
 
 	if (!wait_conn)
 		wait_conn = "no";
@@ -808,6 +809,9 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		char own_txt[20];
 		int dpp_peer_bootstrap = -1;
 		char neg_freq[30];
+
+		val = get_param(cmd, "DPPAuthDirection");
+		check_mutual = val && strcasecmp(val, "Mutual") == 0;
 
 		neg_freq[0] = '\0';
 		val = get_param(cmd, "DPPSubsequentChannel");
@@ -1119,6 +1123,23 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			result = "BootstrapResult,OK,AuthResult,Errorsent";
 		send_resp(dut, conn, SIGMA_COMPLETE, result);
 		goto out;
+	}
+
+	if (check_mutual) {
+		res = get_wpa_cli_event(dut, ctrl, "DPP-AUTH-DIRECTION",
+					buf, sizeof(buf));
+		if (res < 0) {
+			send_resp(dut, conn, SIGMA_COMPLETE,
+				  "BootstrapResult,OK,AuthResult,Timeout");
+			goto out;
+		}
+		sigma_dut_print(dut, DUT_MSG_DEBUG, "DPP auth direction: %s",
+				buf);
+		if (strstr(buf, "mutual=1") == NULL) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Peer did not use mutual authentication");
+			goto out;
+		}
 	}
 
 	if (frametype && strcasecmp(frametype, "AuthenticationConfirm") == 0) {
