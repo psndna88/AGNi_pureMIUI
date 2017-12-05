@@ -2959,6 +2959,21 @@ static int cmd_sta_preset_testparameters_oce(struct sigma_dut *dut,
 		}
 	}
 
+	val = get_param(cmd, "FILScap");
+	if (val && (atoi(val) == 1)) {
+		if (wpa_command(intf, "SET disable_fils 0") < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to enable FILS");
+			return 0;
+		}
+	} else if (val && (atoi(val) == 0)) {
+		if (wpa_command(intf, "SET disable_fils 1") < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to disable FILS");
+			return 0;
+		}
+	}
+
 	return 1;
 }
 
@@ -5183,8 +5198,10 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 
 	wpa_command(intf, "VENDOR_ELEM_REMOVE 13 *");
 
-	if (dut->program == PROGRAM_OCE)
+	if (dut->program == PROGRAM_OCE) {
 		wpa_command(intf, "SET oce 1");
+		wpa_command(intf, "SET disable_fils 0");
+	}
 
 	if (dev_role && strcasecmp(dev_role, "STA-CFON") == 0) {
 		dut->dev_role = DEVROLE_STA_CFON;
