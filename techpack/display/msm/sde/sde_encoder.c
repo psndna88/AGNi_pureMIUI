@@ -1681,6 +1681,8 @@ end:
 	if (!sde_enc->delay_kickoff)
 		_sde_encoder_rc_kickoff_delayed(sde_enc, sw_event);
 
+	msm_idle_set_state(drm_enc, false);
+
 	mutex_unlock(&sde_enc->rc_lock);
 	return ret;
 }
@@ -1690,6 +1692,8 @@ static int _sde_encoder_rc_pre_stop(struct drm_encoder *drm_enc,
 {
 	/* cancel delayed off work, if any */
 	_sde_encoder_rc_cancel_delayed(sde_enc, sw_event);
+
+	msm_idle_set_state(drm_enc, true);
 
 	mutex_lock(&sde_enc->rc_lock);
 
