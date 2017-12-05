@@ -447,6 +447,13 @@ static const struct dpp_test_info dpp_tests[] = {
 	{ "InvalidValue", "AuthenticationRequest", "InitNonce", 81 },
 	{ "InvalidValue", "PeerDiscoveryRequest", "TransactionID", 82 },
 	{ "InvalidValue", "ConfigurationRequest", "EnrolleeNonce", 83 },
+	{ "Timeout", "PKEXExchangeResponse", NULL, 84 },
+	{ "Timeout", "PKEXCRRequest", NULL, 85 },
+	{ "Timeout", "PKEXCRResponse", NULL, 86 },
+	{ "Timeout", "AuthenticationRequest", NULL, 87 },
+	{ "Timeout", "AuthenticationResponse", NULL, 88 },
+	{ "Timeout", "AuthenticationConfirm", NULL, 89 },
+	{ "Timeout", "ConfigurationRequest", NULL, 90 },
 	{ NULL, NULL, NULL, 0 }
 };
 
@@ -458,7 +465,8 @@ static int dpp_get_test(const char *step, const char *frame, const char *attr)
 	for (i = 0; dpp_tests[i].step; i++) {
 		if (strcasecmp(step, dpp_tests[i].step) == 0 &&
 		    strcasecmp(frame, dpp_tests[i].frame) == 0 &&
-		    strcasecmp(attr, dpp_tests[i].attr) == 0)
+		    ((!attr && dpp_tests[i].attr == NULL) ||
+		     (attr && strcasecmp(attr, dpp_tests[i].attr) == 0)))
 			return dpp_tests[i].value;
 	}
 
@@ -485,6 +493,25 @@ static int dpp_wait_tx_status(struct sigma_dut *dut, struct wpa_ctrl *ctrl,
 				buf, sizeof(buf));
 	if (res < 0 || strstr(buf, "result=FAILED") != NULL)
 		return -1;
+
+	return 0;
+}
+
+
+static int dpp_wait_rx(struct sigma_dut *dut, struct wpa_ctrl *ctrl,
+		       int frame_type)
+{
+	char buf[200], tmp[20];
+	int res;
+
+	snprintf(tmp, sizeof(tmp), "type=%d", frame_type);
+	for (;;) {
+		res = get_wpa_cli_event(dut, ctrl, "DPP-RX", buf, sizeof(buf));
+		if (res < 0)
+			return -1;
+		if (strstr(buf, tmp) != NULL)
+			break;
+	}
 
 	return 0;
 }
@@ -564,7 +591,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		return 0;
 	}
 
-	if ((step || frametype || attr) && (!step || !frametype || !attr)) {
+	if ((step || frametype) && (!step || !frametype)) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Invalid DPPStep,DPPFrameType,DPPIEAttribute combination");
 		return 0;
@@ -980,6 +1007,63 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	} else {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Unknown DPPAuthRole");
+		goto out;
+	}
+
+	if (step && strcasecmp(step, "Timeout") == 0) {
+		result = "errorCode,Unexpected state";
+
+		if (strcasecmp(frametype, "PKEXExchangeResponse") == 0) {
+			if (dpp_wait_rx(dut, ctrl, 8) < 0)
+				result = "BootstrapResult,Timeout";
+			else
+				result = "BootstrapResult,Errorsent";
+		}
+
+		if (strcasecmp(frametype, "PKEXCRRequest") == 0) {
+			if (dpp_wait_rx(dut, ctrl, 9) < 0)
+				result = "BootstrapResult,Timeout";
+			else
+				result = "BootstrapResult,Errorsent";
+		}
+
+		if (strcasecmp(frametype, "PKEXCRResponse") == 0) {
+			if (dpp_wait_rx(dut, ctrl, 10) < 0)
+				result = "BootstrapResult,Timeout";
+			else
+				result = "BootstrapResult,Errorsent";
+		}
+
+		if (strcasecmp(frametype, "AuthenticationRequest") == 0) {
+			if (dpp_wait_rx(dut, ctrl, 0) < 0)
+				result = "BootstrapResult,OK,AuthResult,Timeout";
+			else
+				result = "BootstrapResult,OK,AuthResult,Errorsent";
+		}
+
+		if (strcasecmp(frametype, "AuthenticationResponse") == 0) {
+			if (dpp_wait_rx(dut, ctrl, 1) < 0)
+				result = "BootstrapResult,OK,AuthResult,Timeout";
+			else
+				result = "BootstrapResult,OK,AuthResult,Errorsent";
+		}
+
+		if (strcasecmp(frametype, "AuthenticationConfirm") == 0) {
+			if (dpp_wait_rx(dut, ctrl, 2) < 0)
+				result = "BootstrapResult,OK,AuthResult,Timeout";
+			else
+				result = "BootstrapResult,OK,AuthResult,Errorsent";
+		}
+
+		if (strcasecmp(frametype, "ConfigurationRequest") == 0) {
+			if (get_wpa_cli_event(dut, ctrl, "DPP-CONF-FAILED",
+					      buf, sizeof(buf)) < 0)
+				result = "BootstrapResult,OK,AuthResult,OK,ConfResult,Timeout";
+			else
+				result = "BootstrapResult,OK,AuthResult,OK,ConfResult,Errorsent";
+		}
+
+		send_resp(dut, conn, SIGMA_COMPLETE, result);
 		goto out;
 	}
 
