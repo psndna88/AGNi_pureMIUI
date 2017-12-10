@@ -118,7 +118,7 @@ static inline void skb_reset_tc(struct sk_buff *skb)
 }
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 11, 0)
+/* #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 11, 0)
 #include <linux/siphash.h>
 static inline u32 get_random_u32(void)
 {
@@ -135,7 +135,7 @@ static inline u32 get_random_u32(void)
 #endif
 	return siphash_2u32(counter++, get_random_int(), &key);
 }
-#endif
+#endif */
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 18, 0) && !defined(ISRHEL7)
 static inline void netif_keep_dst(struct net_device *dev)
@@ -206,9 +206,13 @@ static inline void skb_scrub_packet(struct sk_buff *skb, bool xnet)
 }
 #endif
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 12, 0) || defined(ISUBUNTU1404)) && !defined(ISRHEL7)
+/* #if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 12, 0) || defined(ISUBUNTU1404)) && !defined(ISRHEL7)
 #include <linux/random.h>
-#endif
+static inline u32 prandom_u32_max(u32 ep_ro)
+{
+	return (u32)(((u64) prandom_u32() * ep_ro) >> 32);
+}
+#endif */
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 75) && !defined(ISRHEL7)
 #define U8_MAX ((u8)~0U)
