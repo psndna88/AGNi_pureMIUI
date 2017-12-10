@@ -705,8 +705,12 @@ static ssize_t wil_write_file_txmgmt(struct file *file, const char __user *buf,
 	struct wiphy *wiphy = wil_to_wiphy(wil);
 	struct wireless_dev *wdev = wil_to_wdev(wil);
 	int rc;
-	void *frame = kmalloc(len, GFP_KERNEL);
+	void *frame;
 
+	if (!len)
+		return -EINVAL;
+
+	frame = kmalloc(len, GFP_KERNEL);
 	if (!frame)
 		return -ENOMEM;
 

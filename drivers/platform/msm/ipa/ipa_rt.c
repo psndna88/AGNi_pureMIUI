@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -53,7 +53,7 @@ int __ipa_generate_rt_hw_rule_v2(enum ipa_ip_type ip,
 	int pipe_idx;
 
 	if (buf == NULL) {
-		memset(tmp, 0, IPA_RT_FLT_HW_RULE_BUF_SIZE);
+		memset(tmp, 0, (IPA_RT_FLT_HW_RULE_BUF_SIZE/4));
 		buf = (u8 *)tmp;
 	}
 
@@ -75,8 +75,15 @@ int __ipa_generate_rt_hw_rule_v2(enum ipa_ip_type ip,
 	rule_hdr->u.hdr.pipe_dest_idx = pipe_idx;
 	rule_hdr->u.hdr.system = !ipa_ctx->hdr_tbl_lcl;
 	if (entry->hdr) {
-		rule_hdr->u.hdr.hdr_offset =
-			entry->hdr->offset_entry->offset >> 2;
+		if (entry->hdr->cookie == IPA_HDR_COOKIE) {
+			rule_hdr->u.hdr.hdr_offset =
+				entry->hdr->offset_entry->offset >> 2;
+		} else {
+			IPAERR("Entry hdr deleted by user = %d cookie = %u\n",
+				 entry->hdr->user_deleted, entry->hdr->cookie);
+			WARN_ON(1);
+			rule_hdr->u.hdr.hdr_offset = 0;
+		}
 	} else {
 		rule_hdr->u.hdr.hdr_offset = 0;
 	}
@@ -916,7 +923,7 @@ static int __ipa_del_rt_tbl(struct ipa_rt_tbl *entry)
 	u32 id;
 
 	if (entry == NULL || (entry->cookie != IPA_RT_TBL_COOKIE)) {
-		IPAERR("bad parms\n");
+		IPAERR_RL("bad parms\n");
 		return -EINVAL;
 	}
 	id = entry->id;
@@ -1098,7 +1105,7 @@ int __ipa_del_rt_rule(u32 rule_hdl)
 	}
 
 	if (entry->cookie != IPA_RT_RULE_COOKIE) {
-		IPAERR("bad params\n");
+		IPAERR_RL("bad params\n");
 		return -EINVAL;
 	}
 
@@ -1374,7 +1381,7 @@ int ipa_put_rt_tbl(u32 rt_tbl_hdl)
 	}
 
 	if ((entry->cookie != IPA_RT_TBL_COOKIE) || entry->ref_cnt == 0) {
-		IPAERR("bad parms\n");
+		IPAERR_RL("bad parms\n");
 		result = -EINVAL;
 		goto ret;
 	}
@@ -1416,7 +1423,7 @@ static int __ipa_mdfy_rt_rule(struct ipa_rt_rule_mdfy *rtrule)
 	if (rtrule->rule.hdr_hdl) {
 		hdr = ipa_id_find(rtrule->rule.hdr_hdl);
 		if ((hdr == NULL) || (hdr->cookie != IPA_HDR_COOKIE)) {
-			IPAERR("rt rule does not point to valid hdr\n");
+			IPAERR_RL("rt rule does not point to valid hdr\n");
 			goto error;
 		}
 	}
@@ -1428,7 +1435,7 @@ static int __ipa_mdfy_rt_rule(struct ipa_rt_rule_mdfy *rtrule)
 	}
 
 	if (entry->cookie != IPA_RT_RULE_COOKIE) {
-		IPAERR("bad params\n");
+		IPAERR_RL("bad params\n");
 		goto error;
 	}
 
