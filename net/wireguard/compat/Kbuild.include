@@ -1,7 +1,13 @@
+# SPDX-License-Identifier: GPL-2.0
+#
+# Copyright (C) 2015-2017 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+
 ifeq ($(wildcard $(src)/compat/compat.h),)
 ccflags-y += -include $(srctree)/$(src)/compat/compat.h
+asflags-y += -include $(srctree)/$(src)/compat/compat-asm.h
 else
 ccflags-y += -include $(src)/compat/compat.h
+asflags-y += -include $(src)/compat/compat-asm.h
 endif
 
 ifeq ($(wildcard $(srctree)/include/linux/ptr_ring.h),)
@@ -16,6 +22,10 @@ endif
 ifeq ($(wildcard $(srctree)/include/net/dst_cache.h),)
 ccflags-y += -I$(src)/compat/dst_cache/include
 wireguard-y += compat/dst_cache/dst_cache.o
+endif
+
+ifeq ($(wildcard $(srctree)/arch/x86/include/asm/intel-family.h),)
+ccflags-y += -I$(src)/compat/intel-family/include
 endif
 
 ifeq ($(wildcard $(srctree)/arch/x86/include/asm/fpu/api.h),)

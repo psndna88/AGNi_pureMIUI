@@ -1,6 +1,8 @@
-/* Original author: Samuel Neves <sneves@dei.uc.pt>
+/* SPDX-License-Identifier: GPL-2.0
  *
  * Copyright (C) 2015-2017 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ *
+ * Original author: Samuel Neves <sneves@dei.uc.pt>
  */
 
 #include "blake2s.h"
@@ -119,7 +121,7 @@ void __init blake2s_fpu_init(void)
 {
 	blake2s_use_avx = boot_cpu_has(X86_FEATURE_AVX) && cpu_has_xfeatures(XFEATURE_MASK_SSE | XFEATURE_MASK_YMM, NULL);
 #ifndef COMPAT_CANNOT_USE_AVX512
-	blake2s_use_avx512 = boot_cpu_has(X86_FEATURE_AVX) && boot_cpu_has(X86_FEATURE_AVX2) && boot_cpu_has(X86_FEATURE_AVX512F) && boot_cpu_has(X86_FEATURE_AVX512VL) && cpu_has_xfeatures(XFEATURE_MASK_SSE | XFEATURE_MASK_YMM | XFEATURE_MASK_ZMM_Hi256, NULL);
+	blake2s_use_avx512 = boot_cpu_has(X86_FEATURE_AVX) && boot_cpu_has(X86_FEATURE_AVX2) && boot_cpu_has(X86_FEATURE_AVX512F) && boot_cpu_has(X86_FEATURE_AVX512VL) && cpu_has_xfeatures(XFEATURE_MASK_SSE | XFEATURE_MASK_YMM | XFEATURE_MASK_AVX512, NULL);
 #endif
 }
 #ifdef CONFIG_AS_AVX

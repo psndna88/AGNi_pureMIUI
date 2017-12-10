@@ -1,5 +1,5 @@
 config WIREGUARD
-	bool "IP: WireGuard secure network tunnel"
+	tristate "IP: WireGuard secure network tunnel"
 	depends on NET && INET
 	select NET_UDP_TUNNEL
 	select CRYPTO_BLKCIPHER
@@ -7,7 +7,7 @@ config WIREGUARD
 	select VFPv3
 	select NEON
 	select KERNEL_MODE_NEON
-	default y
+	default m
 	---help---
 	  WireGuard is a secure, fast, and easy to use replacement for IPSec
 	  that uses modern cryptography and clever networking tricks. It's
