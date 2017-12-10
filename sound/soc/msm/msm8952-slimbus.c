@@ -88,16 +88,16 @@ enum btsco_rates {
 static int slim0_rx_sample_rate = SAMPLING_RATE_48KHZ;
 static int slim0_tx_sample_rate = SAMPLING_RATE_48KHZ;
 static int slim1_tx_sample_rate = SAMPLING_RATE_48KHZ;
-static int slim0_rx_bit_format = SNDRV_PCM_FORMAT_S16_LE;
-static int slim0_tx_bit_format = SNDRV_PCM_FORMAT_S16_LE;
-static int slim1_tx_bit_format = SNDRV_PCM_FORMAT_S16_LE;
+static int slim0_rx_bit_format = SNDRV_PCM_FORMAT_S24_LE;
+static int slim0_tx_bit_format = SNDRV_PCM_FORMAT_S24_LE;
+static int slim1_tx_bit_format = SNDRV_PCM_FORMAT_S24_LE;
 static int msm_slim_0_rx_ch = 1;
 static int msm_slim_0_tx_ch = 1;
 static int msm_slim_1_tx_ch = 1;
 static int msm_vi_feed_tx_ch = 2;
 static int msm_slim_5_rx_ch = 1;
 static int slim5_rx_sample_rate = SAMPLING_RATE_48KHZ;
-static int slim5_rx_bit_format = SNDRV_PCM_FORMAT_S16_LE;
+static int slim5_rx_bit_format = SNDRV_PCM_FORMAT_S24_LE;
 static int msm8952_auxpcm_rate = SAMPLING_RATE_8KHZ;
 
 static int msm_btsco_rate = SAMPLING_RATE_8KHZ;
@@ -106,7 +106,7 @@ static int msm8952_spk_control = 1;
 
 static bool codec_reg_done;
 
-static int mi2s_rx_bit_format = SNDRV_PCM_FORMAT_S16_LE;
+static int mi2s_rx_bit_format = SNDRV_PCM_FORMAT_S24_LE;
 
 static int msm_proxy_rx_ch = 2;
 static void *adsp_state_notifier;
