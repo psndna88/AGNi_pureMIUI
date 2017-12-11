@@ -574,6 +574,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	const char *groups_override = NULL;
 	const char *result;
 	int check_mutual = 0;
+	int enrollee_ap;
 
 	if (!wait_conn)
 		wait_conn = "no";
@@ -591,6 +592,12 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			  "errorCode,Missing DPPProvisioningRole");
 		return 0;
 	}
+
+	val = get_param(cmd, "DPPConfEnrolleeRole");
+	if (val)
+		enrollee_ap = strcasecmp(val, "AP") == 0;
+	else
+		enrollee_ap = sigma_dut_is_ap(dut);
 
 	if ((step || frametype) && (!step || !frametype)) {
 		send_resp(dut, conn, SIGMA_ERROR,
@@ -699,7 +706,6 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	val = get_param(cmd, "DPPConfIndex");
 	if (val)
 		conf_index = atoi(val);
-	val = get_param(cmd, "DPPConfEnrolleeRole");
 	switch (conf_index) {
 	case -1:
 		conf_role = NULL;
@@ -707,7 +713,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	case 1:
 		ascii2hexstr("DPPNET01", buf);
 		snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
-		if (val && strcasecmp(val, "AP") == 0) {
+		if (enrollee_ap) {
 			conf_role = "ap-dpp";
 			groups_override = "[{\"groupId\":\"DPPGROUP_DPP_INFRA\",\"netRole\":\"ap\"}]";
 		} else {
@@ -720,7 +726,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
 		snprintf(conf_pass, sizeof(conf_pass),
 			 "psk=10506e102ad1e7f95112f6b127675bb8344dacacea60403f3fa4055aec85b0fc");
-		if (val && strcasecmp(val, "AP") == 0)
+		if (enrollee_ap)
 			conf_role = "ap-psk";
 		else
 			conf_role = "sta-psk";
@@ -730,7 +736,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
 		ascii2hexstr("ThisIsDppPassphrase", buf);
 		snprintf(conf_pass, sizeof(conf_pass), "pass=%s", buf);
-		if (val && strcasecmp(val, "AP") == 0)
+		if (enrollee_ap)
 			conf_role = "ap-psk";
 		else
 			conf_role = "sta-psk";
@@ -738,7 +744,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	case 4:
 		ascii2hexstr("DPPNET01", buf);
 		snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
-		if (val && strcasecmp(val, "AP") == 0) {
+		if (enrollee_ap) {
 			conf_role = "ap-dpp";
 			groups_override = "[{\"groupId\":\"DPPGROUP_DPP_INFRA2\",\"netRole\":\"ap\"}]";
 		} else {
