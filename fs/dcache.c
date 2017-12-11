@@ -243,18 +243,19 @@ void take_dentry_name_snapshot(struct name_snapshot *name, struct dentry *dentry
 	spin_lock(&dentry->d_lock);
 	if (unlikely(dname_external(dentry))) {
 		u32 len;
-		char *p;
+		char *p = NULL;
 
 		for (;;) {
 			len = dentry->d_name.len;
 			spin_unlock(&dentry->d_lock);
 
+			if (p)
+				kfree(p);
 			p = kmalloc(len + 1, GFP_KERNEL | __GFP_NOFAIL);
 
 			spin_lock(&dentry->d_lock);
 			if (dentry->d_name.len <= len)
 				break;
-			kfree(p);
 		}
 		memcpy(p, dentry->d_name.name, dentry->d_name.len + 1);
 		spin_unlock(&dentry->d_lock);
