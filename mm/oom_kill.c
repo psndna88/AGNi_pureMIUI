@@ -289,6 +289,13 @@ enum oom_scan_t oom_scan_process_thread(struct task_struct *task,
 					task->comm, task->pid);
 				if (task->state != TASK_RUNNING)
 					return OOM_SCAN_CONTINUE;
+
+				/*
+				 * We just printed that we refused to die; delay
+				 * printing (or checking for another victim)
+				 * for another 100 ms.
+				 */
+				last_victim = jiffies;
 			}
 			return OOM_SCAN_ABORT;
 		}
