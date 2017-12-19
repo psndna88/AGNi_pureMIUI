@@ -277,12 +277,6 @@ endif # NETWORK_FILESYSTEMS
 source "fs/nls/Kconfig"
 source "fs/dlm/Kconfig"
 
-config DYNAMIC_FSYNC
-	bool "dynamic file sync control"
-	default n
-	help
-	  An experimental file sync control using Android's early suspend / late resume drivers
-
 config RESTRICT_ROOTFS_SLAVE
 	bool "Android: Restrict rootfs slave mountspace to /storage"
 	help
