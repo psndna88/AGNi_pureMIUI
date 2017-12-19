@@ -133,3 +133,4 @@ obj-$(CONFIG_EFIVAR_FS)		+= efivarfs/
 
 # Patched by YAFFS
 obj-$(CONFIG_YAFFS_FS)		+= yaffs2/
+obj-$(CONFIG_REBOOT_AUTO_FSYNC)  += reboot_auto_fsync.o
