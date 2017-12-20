@@ -251,6 +251,36 @@ static void ath_config_rts_force(struct sigma_dut *dut, const char *ifname,
 }
 
 
+static void ath_radio(struct sigma_dut *dut, const char *val)
+{
+	if (strcasecmp(val, "on") == 0) {
+		if (dut->ap_interface_5g == 1) {
+			run_system(dut, "uci set wireless.wifi0.disabled=0");
+		} else if (dut->ap_interface_2g == 1) {
+			run_system(dut, "uci set wireless.wifi1.disabled=0");
+		} else {
+			run_system(dut, "uci set wireless.wifi0.disabled=0");
+			run_system(dut, "uci set wireless.wifi1.disabled=0");
+		}
+		run_system(dut, "uci commit");
+		run_system(dut, "wifi down");
+		run_system(dut, "wifi up");
+	} else if (strcasecmp(val, "off") == 0) {
+		if (dut->ap_interface_5g == 1) {
+			run_system(dut, "uci set wireless.wifi0.disabled=1");
+		} else if (dut->ap_interface_2g == 1) {
+			run_system(dut, "uci set wireless.wifi1.disabled=1");
+		} else {
+			run_system(dut, "uci set wireless.wifi0.disabled=1");
+			run_system(dut, "uci set wireless.wifi1.disabled=1");
+		}
+		run_system(dut, "uci commit");
+		run_system(dut, "wifi down");
+		run_system(dut, "wifi up");
+	}
+}
+
+
 static enum ap_mode get_mode(const char *str)
 {
 	if (strcasecmp(str, "11a") == 0)
@@ -347,6 +377,17 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 				  "errorCode,Invalid WLAN_TAG");
 			return 0;
 		}
+	}
+
+	val = get_param(cmd, "Interface");
+	if (val) {
+		if (strcasecmp(val, "5G") == 0)
+			dut->ap_interface_5g = 1;
+		else
+			dut->ap_interface_2g = 1;
+
+		if (dut->ap_interface_5g && dut->ap_interface_2g)
+			dut->ap_is_dual = 1;
 	}
 
 	val = get_param(cmd, "CountryCode");
@@ -501,15 +542,15 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 		enum driver_type drv = get_driver_type();
 
 		if (strcasecmp(val, "on") == 0) {
+			if (drv == DRIVER_OPENWRT)
+				ath_radio(dut, val);
 			if (drv == DRIVER_ATHEROS)
 				ath_ap_start_hostapd(dut);
 			else if (cmd_ap_config_commit(dut, conn, cmd) <= 0)
 				return 0;
 		} else if (strcasecmp(val, "off") == 0) {
 			if (drv == DRIVER_OPENWRT) {
-				run_system(dut, "wifi down");
-				sigma_dut_print(dut, DUT_MSG_INFO,
-						"wifi down on radio,off");
+				ath_radio(dut, val);
 			} else if (dut->use_hostapd_pid_file) {
 				kill_hostapd_process_pid(dut);
 			} else if (kill_process(dut, "(hostapd)", 1,
@@ -6523,6 +6564,8 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	dut->mbo_pref_ap_cnt = 0;
 	dut->ft_bss_mac_cnt = 0;
+	dut->ap_interface_5g = 0;
+	dut->ap_interface_2g = 0;
 
 	if (dut->program == PROGRAM_HT || dut->program == PROGRAM_VHT) {
 		dut->ap_wme = AP_WME_ON;

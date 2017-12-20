@@ -520,6 +520,8 @@ struct sigma_dut {
 	unsigned char ap_cell_cap_pref;
 	int ap_ft_oa;
 	int ap_name;
+	int ap_interface_5g;
+	int ap_interface_2g;
 
 	struct mbo_pref_ap mbo_pref_aps[MBO_MAX_PREF_BSSIDS];
 	struct mbo_pref_ap mbo_self_ap_tuple;
