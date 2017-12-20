@@ -6739,7 +6739,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->mbo_self_ap_tuple.ap_ne_class = -1;
 		dut->mbo_self_ap_tuple.ap_ne_pref = -1; /* Not set */
 		dut->mbo_self_ap_tuple.ap_ne_op_ch = -1;
-
+		dut->ap_assoc_delay = 0;
 	}
 
 	free(dut->rsne_override);
@@ -7531,8 +7531,13 @@ static int ath_ap_send_frame_btm_req(struct sigma_dut *dut,
 		run_system(dut, buf);
 	}
 
+	if (dut->ap_btmreq_disassoc_imnt && !dut->ap_assoc_delay) {
+		snprintf(buf, sizeof(buf), "iwpriv %s mbo_asoc_ret 1", ifname);
+		run_system(dut, buf);
+	}
+
 	snprintf(buf, sizeof(buf),
-		 "wifitool %s sendbstmreq %02x:%02x:%02x:%02x:%02x:%02x %d %d 3 %d %d %d %d",
+		 "wifitool %s sendbstmreq %02x:%02x:%02x:%02x:%02x:%02x %d %d 15 %d %d %d %d",
 		 ifname, mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3],
 		 mac_addr[4], mac_addr[5], cand_list, disassoc_timer,
 		 dut->ap_btmreq_disassoc_imnt,
@@ -7543,8 +7548,14 @@ static int ath_ap_send_frame_btm_req(struct sigma_dut *dut,
 
 	if (dut->ap_btmreq_term_bit) {
 		inform_and_sleep(dut, 3);
+		run_system_wrapper(
+			dut, "iwpriv %s kickmac %02x:%02x:%02x:%02x:%02x:%02x",
+			ifname,
+			mac_addr[0], mac_addr[1], mac_addr[2],
+			mac_addr[3], mac_addr[4], mac_addr[5]);
+		inform_and_sleep(dut, 2);
 		run_system_wrapper(dut, "ifconfig %s down", ifname);
-		inform_and_sleep(dut, dut->ap_btmreq_bss_term_dur * 60);
+		inform_and_sleep(dut, 5);
 		run_system_wrapper(dut, "ifconfig %s up", ifname);
 	} else if (dut->ap_btmreq_disassoc_imnt) {
 		inform_and_sleep(dut, (disassoc_timer / 1000) + 1);
@@ -8832,17 +8843,21 @@ static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	ath_set_nebor_bssid(dut, ifname, cmd);
 	val = get_param(cmd, "BTMReq_DisAssoc_Imnt");
-	if (val)
+	if (val) {
 		dut->ap_btmreq_disassoc_imnt = atoi(val);
+		dut->ap_disassoc_timer = 1000;
+	}
 
 	val = get_param(cmd, "BTMReq_Term_Bit");
 	if (val)
 		dut->ap_btmreq_term_bit = atoi(val);
 
 	val = get_param(cmd, "Assoc_Delay");
-	if (val)
+	if (val) {
+		dut->ap_assoc_delay = 1;
 		run_system_wrapper(dut, "iwpriv %s mbo_asoc_ret %s",
 				   ifname, val);
+	}
 
 	val = get_param(cmd, "Disassoc_Timer");
 	if (val)
