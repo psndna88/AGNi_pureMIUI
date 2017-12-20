@@ -6739,6 +6739,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->mbo_self_ap_tuple.ap_ne_class = -1;
 		dut->mbo_self_ap_tuple.ap_ne_pref = -1; /* Not set */
 		dut->mbo_self_ap_tuple.ap_ne_op_ch = -1;
+		dut->ap_btmreq_bss_term_tsf = 0;
 		dut->ap_assoc_delay = 0;
 	}
 
@@ -7505,7 +7506,6 @@ static int ath_ap_send_frame_btm_req(struct sigma_dut *dut,
 	char buf[100];
 	const char *val;
 	int cand_list = 1;
-	int tsf = 2;
 
 	val = get_param(cmd, "Dest_MAC");
 	if (!val || parse_mac_address(dut, val, mac_addr) < 0) {
@@ -7542,12 +7542,13 @@ static int ath_ap_send_frame_btm_req(struct sigma_dut *dut,
 		 mac_addr[4], mac_addr[5], cand_list, disassoc_timer,
 		 dut->ap_btmreq_disassoc_imnt,
 		 dut->ap_btmreq_term_bit,
-		 tsf,
+		 dut->ap_btmreq_bss_term_tsf,
 		 dut->ap_btmreq_bss_term_dur);
 	run_system(dut, buf);
 
 	if (dut->ap_btmreq_term_bit) {
-		inform_and_sleep(dut, 3);
+		if (dut->ap_btmreq_bss_term_tsf >= 2)
+			inform_and_sleep(dut, dut->ap_btmreq_bss_term_tsf - 2);
 		run_system_wrapper(
 			dut, "iwpriv %s kickmac %02x:%02x:%02x:%02x:%02x:%02x",
 			ifname,
@@ -8866,6 +8867,10 @@ static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 	val = get_param(cmd, "BSS_Term_Duration");
 	if (val)
 		dut->ap_btmreq_bss_term_dur = atoi(val);
+
+	val = get_param(cmd, "BSS_Term_TSF");
+	if (val)
+		dut->ap_btmreq_bss_term_tsf = atoi(val);
 
 	return 1;
 }

@@ -523,6 +523,7 @@ struct sigma_dut {
 	int ap_interface_5g;
 	int ap_interface_2g;
 	int ap_assoc_delay;
+	int ap_btmreq_bss_term_tsf;
 
 	struct mbo_pref_ap mbo_pref_aps[MBO_MAX_PREF_BSSIDS];
 	struct mbo_pref_ap mbo_self_ap_tuple;
