@@ -49,8 +49,7 @@
 			SNDRV_PCM_RATE_32000 | SNDRV_PCM_RATE_48000)
 #define MSM8X16_WCD_FORMATS (SNDRV_PCM_FMTBIT_S16_LE |\
 		SNDRV_PCM_FMTBIT_S24_LE |\
-		SNDRV_PCM_FMTBIT_S24_3LE |\
-		SNDRV_PCM_FMTBIT_S32_LE)
+		SNDRV_PCM_FMTBIT_S24_3LE)
 
 #define NUM_INTERPOLATORS	3
 #define BITS_PER_REG		8
@@ -4425,9 +4424,6 @@ static int msm8x16_wcd_hw_params(struct snd_pcm_substream *substream,
 	case 192000:
 		tx_fs_rate = 0x05;
 		rx_fs_rate = 0xA0;
-	case 384000:
-		tx_fs_rate = 0x06;
-		rx_fs_rate = 0xC0;
 		break;
 	default:
 		dev_err(dai->codec->dev,
@@ -4470,7 +4466,6 @@ static int msm8x16_wcd_hw_params(struct snd_pcm_substream *substream,
 		break;
 	case SNDRV_PCM_FORMAT_S24_LE:
 	case SNDRV_PCM_FORMAT_S24_3LE:
-	case SNDRV_PCM_FORMAT_S32_LE:
 		snd_soc_update_bits(dai->codec,
 				MSM8X16_WCD_A_CDC_CLK_RX_I2S_CTL, 0x20, 0x00);
 		break;
@@ -4550,7 +4545,7 @@ static struct snd_soc_dai_driver msm8x16_wcd_i2s_dai[] = {
 			.stream_name = "AIF1 Playback",
 			.rates = MSM8X16_WCD_RATES,
 			.formats = MSM8X16_WCD_FORMATS,
-			.rate_max = 384000,
+			.rate_max = 192000,
 			.rate_min = 8000,
 			.channels_min = 1,
 			.channels_max = 3,
