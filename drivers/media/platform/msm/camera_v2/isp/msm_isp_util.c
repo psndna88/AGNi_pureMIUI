@@ -29,7 +29,7 @@ static struct msm_isp_bandwidth_mgr isp_bandwidth_mgr;
 
 static uint64_t msm_isp_cpp_clk_rate;
 
-#if defined(CONFIG_MACH_XIAOMI_KENZO_AGNI_MIUI_N) || defined(CONFIG_MACH_XIAOMI_KENZO_AGNI_LOS_N) || defined(CONFIG_MACH_XIAOMI_KENZO_AGNI_LOS_O)
+#if defined(CONFIG_MACH_XIAOMI_KENZO_AGNI_LOS_N) || defined(CONFIG_MACH_XIAOMI_KENZO_AGNI_LOS_O)
 bool buffer_timestamp_new_mode = true;
 #else
 bool buffer_timestamp_new_mode = false;
