@@ -53,7 +53,7 @@ void prandom_seed_full_state(struct rnd_state __percpu *pcpu_state);
 	DO_ONCE(prandom_seed_full_state, (pcpu_state))
 
 /**
- * prandom_u32_max - returns a pseudo-random number in interval [0, ep_ro)
+ * prandom_u32_max_backport - returns a pseudo-random number in interval [0, ep_ro)
  * @ep_ro: right open interval endpoint
  *
  * Returns a pseudo-random number that is in interval [0, ep_ro). Note
@@ -64,7 +64,7 @@ void prandom_seed_full_state(struct rnd_state __percpu *pcpu_state);
  *
  * Returns: pseudo-random number in interval [0, ep_ro)
  */
-static inline u32 prandom_u32_max(u32 ep_ro)
+static inline u32 prandom_u32_max_backport(u32 ep_ro)
 {
 	return (u32)(((u64) prandom_u32() * ep_ro) >> 32);
 }
