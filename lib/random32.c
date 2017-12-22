@@ -226,7 +226,7 @@ static void __prandom_timer(unsigned long dontcare)
 	prandom_seed(entropy);
 
 	/* reseed every ~60 seconds, in [40 .. 80) interval with slack */
-	expires = 40 + prandom_u32_max(40);
+	expires = 40 + prandom_u32_max_backport(40);
 	seed_timer.expires = jiffies + msecs_to_jiffies(expires * MSEC_PER_SEC);
 
 	add_timer(&seed_timer);
