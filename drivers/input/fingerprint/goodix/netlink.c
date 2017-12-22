@@ -6,10 +6,10 @@
 #include <net/sock.h>
 #include <net/netlink.h>
 
-#ifdef CONFIG_MACH_XIAOMI_KENZO_AGNI_LOS_N
-unsigned int netlink_test = 30; /* LOS-N */
+#if defined(CONFIG_MACH_XIAOMI_KENZO_AGNI_LOS_N) || defined(CONFIG_MACH_XIAOMI_KENZO_AGNI_LOS_O)
+unsigned int netlink_test = 30; /* LOS-N, LOS-O */
 #else
-unsigned int netlink_test = 29; /* MIUI-N, MIUI-MM, LOS-MM, LOS-O */
+unsigned int netlink_test = 29; /* MIUI-N, MIUI-MM, LOS-MM */
 #endif
 
 static int __init setup_netlink_test(char *str)
