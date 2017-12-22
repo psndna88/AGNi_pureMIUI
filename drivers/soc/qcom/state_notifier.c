@@ -20,7 +20,6 @@
  * debug = 1 will print all
  */
 static unsigned int debug;
-module_param_named(debug_mask, debug, uint, 0644);
 
 #define dprintk(msg...)		\
 do {				\
@@ -29,7 +28,6 @@ do {				\
 } while (0)
 
 static bool enabled = true;
-module_param_named(enabled, enabled, bool, 0664);
 static unsigned int suspend_defer_time = DEFAULT_SUSPEND_DEFER_TIME;
 module_param_named(suspend_defer_time, suspend_defer_time, uint, 0664);
 static struct delayed_work suspend_work;
