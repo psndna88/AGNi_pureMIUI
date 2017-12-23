@@ -25,6 +25,7 @@
 #include <linux/slab.h>
 #include <linux/input.h>
 #include <linux/time.h>
+#include <linux/sched.h>
 
 struct cpu_sync {
 	struct task_struct *thread;
@@ -227,6 +228,8 @@ static void do_input_boost_rem(struct work_struct *work)
 	/* Update policies for all online CPUs */
 	update_policy_online();
 
+	sched_set_shadow_active(false);
+
 	if (sched_boost_active) {
 		ret = sched_set_boost(0);
 		if (ret)
@@ -367,6 +370,8 @@ static void do_input_boost(struct work_struct *work)
 
 	/* Update policies for all online CPUs */
 	update_policy_online();
+
+	sched_set_shadow_active(true);
 
 	/* Enable scheduler boost to migrate tasks to big cluster */
 	if (sched_boost_on_input) {

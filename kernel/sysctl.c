@@ -393,6 +393,27 @@ static struct ctl_table kern_table[] = {
 		.proc_handler	= sched_hmp_proc_update_handler,
 	},
 	{
+		.procname	= "sched_use_shadow_scheduling",
+		.data		= &sysctl_sched_use_shadow_scheduling,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= sched_hmp_proc_update_handler,
+	},
+	{
+		.procname	= "sched_shadow_upmigrate",
+		.data		= &sysctl_sched_shadow_upmigrate_pct,
+		.maxlen		= sizeof(unsigned int),
+		.mode		= 0644,
+		.proc_handler	= sched_hmp_proc_update_handler,
+	},
+	{
+		.procname	= "sched_shadow_downmigrate",
+		.data		= &sysctl_sched_shadow_downmigrate_pct,
+		.maxlen		= sizeof(unsigned int),
+		.mode		= 0644,
+		.proc_handler	= sched_hmp_proc_update_handler,
+	},
+	{
 		.procname	= "sched_min_runtime",
 		.data		= &sysctl_sched_min_runtime,
 		.maxlen		= sizeof(unsigned int),
