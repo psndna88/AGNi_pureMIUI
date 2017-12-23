@@ -946,14 +946,12 @@ static struct kgsl_process_private *kgsl_process_private_new(
 	/* Allocate a pagetable for the new process object */
 	if (kgsl_mmu_enabled()) {
 		private->pagetable = kgsl_mmu_getpagetable(&device->mmu, tgid);
-		if (IS_ERR(private->pagetable)) {
-			int err = PTR_ERR(private->pagetable);
-
+		if (private->pagetable == NULL) {
 			idr_destroy(&private->mem_idr);
 			idr_destroy(&private->syncsource_idr);
 
 			kfree(private);
-			private = ERR_PTR(err);
+			private = ERR_PTR(-ENOMEM);
 		}
 	}
 
@@ -2241,23 +2239,21 @@ static int kgsl_setup_dmabuf_useraddr(struct kgsl_device *device,
 		if (fd != 0)
 			dmabuf = dma_buf_get(fd - 1);
 	}
+	up_read(&current->mm->mmap_sem);
 
-	if (IS_ERR_OR_NULL(dmabuf)) {
-		up_read(&current->mm->mmap_sem);
-		return dmabuf ? PTR_ERR(dmabuf) : -ENODEV;
-	}
+	if (dmabuf == NULL)
+		return -ENODEV;
 
 	ret = kgsl_setup_dma_buf(device, pagetable, entry, dmabuf);
 	if (ret) {
 		dma_buf_put(dmabuf);
-		up_read(&current->mm->mmap_sem);
 		return ret;
 	}
 
 	/* Setup the user addr/cache mode for cache operations */
 	entry->memdesc.useraddr = hostptr;
 	_setup_cache_mode(entry, vma);
-	up_read(&current->mm->mmap_sem);
+
 	return 0;
 }
 #else
@@ -2535,8 +2531,6 @@ static int kgsl_setup_dma_buf(struct kgsl_device *device,
 	meta->dmabuf = dmabuf;
 	meta->attach = attach;
 
-	attach->priv = entry;
-
 	entry->priv_data = meta;
 	entry->memdesc.pagetable = pagetable;
 	entry->memdesc.size = 0;
@@ -2586,45 +2580,6 @@ out:
 	}
 
 	return ret;
-}
-#endif
-
-#ifdef CONFIG_DMA_SHARED_BUFFER
-void kgsl_get_egl_counts(struct kgsl_mem_entry *entry,
-		int *egl_surface_count, int *egl_image_count)
-{
-	struct kgsl_dma_buf_meta *meta = entry->priv_data;
-	struct dma_buf *dmabuf = meta->dmabuf;
-	struct dma_buf_attachment *mem_entry_buf_attachment = meta->attach;
-	struct device *buf_attachment_dev = mem_entry_buf_attachment->dev;
-	struct dma_buf_attachment *attachment = NULL;
-
-	mutex_lock(&dmabuf->lock);
-	list_for_each_entry(attachment, &dmabuf->attachments, node) {
-		struct kgsl_mem_entry *scan_mem_entry = NULL;
-
-		if (attachment->dev != buf_attachment_dev)
-			continue;
-
-		scan_mem_entry = attachment->priv;
-		if (!scan_mem_entry)
-			continue;
-
-		switch (kgsl_memdesc_get_memtype(&scan_mem_entry->memdesc)) {
-		case KGSL_MEMTYPE_EGL_SURFACE:
-			(*egl_surface_count)++;
-			break;
-		case KGSL_MEMTYPE_EGL_IMAGE:
-			(*egl_image_count)++;
-			break;
-		}
-	}
-	mutex_unlock(&dmabuf->lock);
-}
-#else
-void kgsl_get_egl_counts(struct kgsl_mem_entry *entry,
-		int *egl_surface_count, int *egl_image_count)
-{
 }
 #endif
 
@@ -3433,7 +3388,7 @@ kgsl_mmap_memstore(struct kgsl_device *device, struct vm_area_struct *vma)
 static void kgsl_gpumem_vm_open(struct vm_area_struct *vma)
 {
 	struct kgsl_mem_entry *entry = vma->vm_private_data;
-	if (!kgsl_mem_entry_get(entry))
+	if (kgsl_mem_entry_get(entry) == 0)
 		vma->vm_private_data = NULL;
 }
 
@@ -3962,9 +3917,9 @@ static int kgsl_mmap(struct file *file, struct vm_area_struct *vma)
 		break;
 	case KGSL_CACHEMODE_WRITETHROUGH:
 		vma->vm_page_prot = pgprot_writethroughcache(vma->vm_page_prot);
-#ifdef CONFIG_ARM64
-		WARN_ONCE(1, "WRITETHROUGH is deprecated for arm64");
-#endif
+		if (vma->vm_page_prot ==
+			pgprot_writebackcache(vma->vm_page_prot))
+			WARN_ONCE(1, "WRITETHROUGH is deprecated for arm64");
 		break;
 	case KGSL_CACHEMODE_WRITEBACK:
 		vma->vm_page_prot = pgprot_writebackcache(vma->vm_page_prot);
@@ -4200,9 +4155,8 @@ int kgsl_device_platform_probe(struct kgsl_device *device)
 	disable_irq(device->pwrctrl.interrupt_num);
 
 	KGSL_DRV_INFO(device,
-		"dev_id %d regs phys 0x%08lx size 0x%08x virt %p\n",
-		device->id, device->reg_phys, device->reg_len,
-		device->reg_virt);
+		"dev_id %d regs phys 0x%08lx size 0x%08x\n",
+		device->id, device->reg_phys, device->reg_len);
 
 	rwlock_init(&device->context_lock);
 

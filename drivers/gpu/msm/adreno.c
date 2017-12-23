@@ -2134,16 +2134,6 @@ static int adreno_getproperty(struct kgsl_device *device,
 			status = 0;
 		}
 		break;
-	case KGSL_PROP_UNKNOWN:
-		{
-			int val = 0;
-			if (copy_to_user(value, &val, sizeof(int))) {
-				status = -EFAULT;
-				break;
-			}
-			status = 0;
-		}
-		break;
 	case KGSL_PROP_UCHE_GMEM_VADDR:
 		{
 			uint64_t gmem_vaddr = 0;
@@ -2397,7 +2387,7 @@ static int adreno_setproperty(struct kgsl_device_private *dev_priv,
  *
  * Returns true if interrupts are pending from device else 0.
  */
-static inline unsigned int adreno_irq_pending(struct adreno_device *adreno_dev)
+inline unsigned int adreno_irq_pending(struct adreno_device *adreno_dev)
 {
 	struct adreno_gpudev *gpudev = ADRENO_GPU_DEVICE(adreno_dev);
 	unsigned int status;
