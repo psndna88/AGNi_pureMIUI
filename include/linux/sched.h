@@ -2099,6 +2099,8 @@ extern int
 sched_set_cpu_mostly_idle_freq(int cpu, unsigned int mostly_idle_freq);
 extern unsigned int sched_get_cpu_mostly_idle_freq(int cpu);
 
+void sched_set_shadow_active(bool active);
+
 #else
 static inline int sched_set_boost(int enable)
 {
