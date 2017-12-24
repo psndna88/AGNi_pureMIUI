@@ -6,25 +6,7 @@
 #include <net/sock.h>
 #include <net/netlink.h>
 
-#if defined(CONFIG_MACH_XIAOMI_KENZO_AGNI_LOS_N) || defined(CONFIG_MACH_XIAOMI_KENZO_AGNI_LOS_O)
-unsigned int netlink_test = 30; /* LOS-N, LOS-O */
-#else
-unsigned int netlink_test = 29; /* MIUI-N, MIUI-MM, LOS-MM */
-#endif
-
-static int __init setup_netlink_test(char *str)
-{
-	if (!strncmp(str, "los", strlen(str))) {
-		netlink_test = 30; /* LOS mode */
-		pr_info("GOODIX: android.gdx.netlink=los found..\n");
-    } else if (!strncmp(str, "old", strlen(str))) {
-        netlink_test = 29; /* non-LOS mode */
-        pr_info("GOODIX: android.gdx.netlink=old found..\n");
-    }
-
-	return netlink_test;
-}
-__setup("android.gdx.netlink=", setup_netlink_test);
+extern unsigned int netlink_test;
 
 #define MAX_MSGSIZE (4*1024)
 int stringlength(char *s);

@@ -207,24 +207,7 @@ static VOS_STATUS hdd_parse_ese_beacon_req(tANI_U8 *pValue,
 #define NUM_OF_STA_DATA_TO_PRINT 16
 
 #ifdef WLAN_FEATURE_RMC
-#if defined(CONFIG_MACH_XIAOMI_KENZO_AGNI_LOS_N) || defined(CONFIG_MACH_XIAOMI_KENZO_AGNI_LOS_O)
-unsigned int wlan_nlink_cesium = 29; /* LOS-N, LOS-O */
-#else
-unsigned int wlan_nlink_cesium = 30; /* MIUI-N, MIUI-MM, LOS-MM */
-#endif
-static int __init setup_wlan_nlink_cesium(char *str)
-{
-	if (!strncmp(str, "los", strlen(str))) {
-		wlan_nlink_cesium = 29; /* LOS mode  */
-		pr_info("WLAN: android.gdx.netlink=los found..\n");
-	} else if (!strncmp(str, "old", strlen(str))) {
-        wlan_nlink_cesium = 30; /* non-LOS mode */
-        pr_info("WLAN: android.gdx.netlink=old found..\n");
-    }
-
-	return wlan_nlink_cesium;
-}
-__setup("android.gdx.netlink=", setup_wlan_nlink_cesium);
+extern unsigned int wlan_nlink_cesium;
 #endif
 
 //wait time for beacon miss rate.
@@ -349,7 +332,7 @@ static int __hdd_netdev_notifier_call(struct notifier_block * nb,
    if (NULL == pHddCtx)
    {
       hddLog(VOS_TRACE_LEVEL_FATAL,"%s: HDD Context Null Pointer", __func__);
-      VOS_ASSERT(0);
+//    VOS_ASSERT(0);
       return NOTIFY_DONE;
    }
    if (pHddCtx->isLogpInProgress)
