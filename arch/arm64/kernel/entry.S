@@ -514,7 +514,6 @@ el0_sp_pc:
 	mrs	x26, far_el1
 	// enable interrupts before calling the main handler
 	enable_dbg_and_irq
-	ct_user_exit
 	mov	x0, x26
 	mov	x1, x25
 	mov	x2, sp
@@ -549,7 +548,7 @@ el0_inv:
 	mov	x1, #BAD_SYNC
 	mrs	x2, esr_el1
 	adr	lr, ret_to_user
-	bl	bad_el0_sync
+	b	bad_el0_sync
 ENDPROC(el0_sync)
 
 	.align	6
