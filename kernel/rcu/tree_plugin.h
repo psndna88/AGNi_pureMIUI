@@ -2266,18 +2266,14 @@ static void __init rcu_spawn_nocb_kthreads(struct rcu_state *rsp)
 	int cpu;
 	struct rcu_data *rdp;
 	struct task_struct *t;
-	const unsigned long allowed_cpus = 0x3;
 
 	if (rcu_nocb_mask == NULL)
 		return;
 	for_each_cpu(cpu, rcu_nocb_mask) {
 		rdp = per_cpu_ptr(rsp->rda, cpu);
-		t = kthread_create(rcu_nocb_kthread, rdp,
+		t = kthread_run(rcu_nocb_kthread, rdp,
 				"rcuo%c/%d", rsp->abbr, cpu);
 		BUG_ON(IS_ERR(t));
-		do_set_cpus_allowed(t, to_cpumask(&allowed_cpus));
-		t->flags |= PF_NO_SETAFFINITY;
-		wake_up_process(t);
 		ACCESS_ONCE(rdp->nocb_kthread) = t;
 	}
 }
