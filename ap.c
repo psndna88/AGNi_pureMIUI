@@ -2438,6 +2438,53 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 			owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
 					"ssid", buf);
 
+			if (dut->ap_ft_oa == 1) {
+				unsigned char self_mac[ETH_ALEN];
+				char mac_str[20];
+
+				owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
+						"mobility_domain",
+						dut->ap_mobility_domain);
+				owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
+						"ft_over_ds", "0");
+				owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
+						"ieee80211r", "1");
+				owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
+						"nasid", "nas1.example.com");
+				get_hwaddr(sigma_radio_ifname[0], self_mac);
+				snprintf(mac_str, sizeof(mac_str),
+					 "%02x:%02x:%02x:%02x:%02x:%02x",
+					 self_mac[0], self_mac[1], self_mac[2],
+					 self_mac[3], self_mac[4], self_mac[5]);
+				owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
+						"ap_macaddr", mac_str);
+				snprintf(mac_str, sizeof(mac_str),
+					 "%02x%02x%02x%02x%02x%02x",
+					 self_mac[0], self_mac[1], self_mac[2],
+					 self_mac[3], self_mac[4], self_mac[5]);
+				owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
+						"r1_key_holder", mac_str);
+				owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
+						"ft_psk_generate_local", "1");
+				owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
+						"kh_key_hex",
+						"000102030405060708090a0b0c0d0e0f");
+				snprintf(mac_str, sizeof(mac_str),
+					 "%02x:%02x:%02x:%02x:%02x:%02x",
+					 dut->ft_bss_mac_list[0][0],
+					 dut->ft_bss_mac_list[0][1],
+					 dut->ft_bss_mac_list[0][2],
+					 dut->ft_bss_mac_list[0][3],
+					 dut->ft_bss_mac_list[0][4],
+					 dut->ft_bss_mac_list[0][5]);
+				owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
+						"ap2_macaddr", mac_str);
+				owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
+						"ap2_r1_key_holder", mac_str);
+				owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
+						"nasid2", "nas2.example.com");
+			}
+
 			if (dut->ap_tag_key_mgmt[j] == AP2_OSEN &&
 			    wlan_tag == 2) {
 				/* Only supported for WLAN_TAG=2 */
@@ -2466,20 +2513,66 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 				owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
 						"key", buf);
 				snprintf(buf, sizeof(buf), "%d", dut->ap_pmf);
-				owrt_ap_set_vap(dut, vap_count + 1,
+				owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
 						"ieee80211w", buf);
 			}
 		}
 
-		/* Now set anqp_elem for wlan_tag = 1 */
+		/* Now set anqp_elem and ft_oa for wlan_tag = 1 */
 		if (dut->program == PROGRAM_MBO &&
 		    get_driver_type() == DRIVER_OPENWRT) {
+			unsigned char self_mac[ETH_ALEN];
+			char mac_str[20];
 			char anqp_string[200];
 
 			set_anqp_elem_value(dut, sigma_radio_ifname[0],
 					    anqp_string, sizeof(anqp_string));
 			owrt_ap_set_list_vap(dut, vap_count, "anqp_elem",
 					     anqp_string);
+
+			if (dut->ap_ft_oa == 1) {
+				owrt_ap_set_vap(dut, vap_count,
+						"mobility_domain",
+						dut->ap_mobility_domain);
+				owrt_ap_set_vap(dut, vap_count,
+						"ft_over_ds", "0");
+				owrt_ap_set_vap(dut, vap_count,
+						"ieee80211r", "1");
+				owrt_ap_set_vap(dut, vap_count,
+						"nasid", "nas1.example.com");
+				get_hwaddr(sigma_radio_ifname[0], self_mac);
+				snprintf(mac_str, sizeof(mac_str),
+					 "%02x:%02x:%02x:%02x:%02x:%02x",
+					 self_mac[0], self_mac[1], self_mac[2],
+					 self_mac[3], self_mac[4], self_mac[5]);
+				owrt_ap_set_vap(dut, vap_count,
+						"ap_macaddr", mac_str);
+				snprintf(mac_str, sizeof(mac_str),
+					 "%02x%02x%02x%02x%02x%02x",
+					 self_mac[0], self_mac[1], self_mac[2],
+					 self_mac[3], self_mac[4], self_mac[5]);
+				owrt_ap_set_vap(dut, vap_count,
+						"r1_key_holder", mac_str);
+				owrt_ap_set_vap(dut, vap_count,
+						"ft_psk_generate_local", "1");
+				owrt_ap_set_vap(dut, vap_count,
+						"kh_key_hex",
+						"000102030405060708090a0b0c0d0e0f");
+				snprintf(mac_str, sizeof(mac_str),
+					 "%02x:%02x:%02x:%02x:%02x:%02x",
+					 dut->ft_bss_mac_list[0][0],
+					 dut->ft_bss_mac_list[0][1],
+					 dut->ft_bss_mac_list[0][2],
+					 dut->ft_bss_mac_list[0][3],
+					 dut->ft_bss_mac_list[0][4],
+					 dut->ft_bss_mac_list[0][5]);
+				owrt_ap_set_vap(dut, vap_count,
+						"ap2_macaddr", mac_str);
+				owrt_ap_set_vap(dut, vap_count,
+						"ap2_r1_key_holder", mac_str);
+				owrt_ap_set_vap(dut, vap_count,
+						"nasid2", "nas2.example.com");
+			}
 		}
 
 		/* SSID */
@@ -2818,6 +2911,11 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 			 self_mac[0], self_mac[1], self_mac[2],
 			 self_mac[3], self_mac[4], self_mac[5]);
 		owrt_ap_set_vap(dut, vap_id, "ap_macaddr", mac_str);
+		snprintf(mac_str, sizeof(mac_str),
+			 "%02x:%02x:%02x:%02x:%02x:%02x",
+			 self_mac[0], self_mac[1], self_mac[2],
+			 self_mac[3], self_mac[4], self_mac[5]);
+		owrt_ap_set_vap(dut, vap_id, "r1_key_holder", mac_str);
 		owrt_ap_set_vap(dut, vap_id, "ft_psk_generate_local", "1");
 		owrt_ap_set_vap(dut, vap_id, "kh_key_hex",
 				"000102030405060708090a0b0c0d0e0f");
@@ -2830,28 +2928,21 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 			 dut->ft_bss_mac_list[0][4],
 			 dut->ft_bss_mac_list[0][5]);
 		owrt_ap_set_vap(dut, vap_id, "ap2_macaddr", mac_str);
+		owrt_ap_set_vap(dut, vap_id, "mobility_domain",
+				dut->ap_mobility_domain);
+		owrt_ap_set_vap(dut, vap_id, "ap2_r1_key_holder", mac_str);
 	}
 
 	if ((dut->ap_ft_oa == 1 && dut->ap_name == 0) ||
 	    (dut->ap_ft_oa == 1 && dut->ap_name == 2)) {
-		owrt_ap_set_vap(dut, vap_id, "ap2_r1_key_holder",
-				"00:01:02:03:04:06");
 		owrt_ap_set_vap(dut, vap_id, "nasid2", "nas2.example.com");
 		owrt_ap_set_vap(dut, vap_id, "nasid", "nas1.example.com");
-		owrt_ap_set_vap(dut, vap_id, "r1_key_holder", "000102030405");
 	}
 
 	if (dut->ap_ft_oa == 1 && dut->ap_name == 1) {
-		owrt_ap_set_vap(dut, vap_id, "ap2_r1_key_holder",
-				"00:01:02:03:04:05");
 		owrt_ap_set_vap(dut, vap_id, "nasid2", "nas1.example.com");
 		owrt_ap_set_vap(dut, vap_id, "nasid", "nas2.example.com");
-		owrt_ap_set_vap(dut, vap_id, "r1_key_holder", "000102030406");
 	}
-
-	if (dut->ap_mobility_domain[0])
-		owrt_ap_set_vap(dut, vap_id, "mobility_domain",
-				dut->ap_mobility_domain);
 
 	return 1;
 }
