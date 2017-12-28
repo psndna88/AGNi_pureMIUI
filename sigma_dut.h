@@ -363,6 +363,7 @@ struct sigma_dut {
 		AP_40,
 		AP_80,
 		AP_160,
+		AP_80_80,
 		AP_AUTO
 	} ap_chwidth;
 	enum ap_chwidth default_11na_ap_chwidth;
@@ -541,6 +542,7 @@ struct sigma_dut {
 	int ap_akm;
 	int ap_pmksa;
 	int ap_pmksa_caching;
+	int ap_80plus80;
 
 	struct mbo_pref_ap mbo_pref_aps[MBO_MAX_PREF_BSSIDS];
 	struct mbo_pref_ap mbo_self_ap_tuple;

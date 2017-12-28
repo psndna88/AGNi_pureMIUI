@@ -507,7 +507,7 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 			free(str);
 			return 0;
 		}
-		if (dut->ap_mode == AP_11ac)
+		if (dut->ap_mode == AP_11ac && dut->ap_80plus80 != 1)
 			dut->ap_chwidth = AP_80;
 
 		if (pos) {
@@ -850,7 +850,10 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 			dut->ap_chwidth = AP_80;
 		else if (strcasecmp(val, "160") == 0)
 			dut->ap_chwidth = AP_160;
-		else if (strcasecmp(val, "Auto") == 0)
+		else if (strcasecmp(val, "80plus80") == 0) {
+			dut->ap_80plus80 = 1;
+			dut->ap_chwidth = AP_80_80;
+		} else if (strcasecmp(val, "Auto") == 0)
 			dut->ap_chwidth = AP_AUTO;
 		else {
 			send_resp(dut, conn, SIGMA_INVALID,
@@ -2144,6 +2147,9 @@ static void owrt_ap_config_radio(struct sigma_dut *dut)
 		case AP_160:
 			owrt_ap_set_radio(dut, radio_id[0], "htmode", "HT160");
 			break;
+		case AP_80_80:
+			owrt_ap_set_radio(dut, radio_id[0], "htmode", "HT80_80");
+			break;
 		case AP_AUTO:
 		default:
 			break;
@@ -2782,6 +2788,9 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 			owrt_ap_set_vap(dut, vap_id, "oce", "1");
 			owrt_ap_set_vap(dut, vap_id, "qbssload", "1");
 			owrt_ap_set_vap(dut, vap_id, "bpr_enable", "1");
+
+			if (dut->ap_80plus80 == 1)
+				owrt_ap_set_vap(dut, vap_id, "cfreq2", "5775");
 
 			if (dut->ap_akm == 1) {
 				owrt_ap_set_vap(dut, vap_id, "wpa_group_rekey",
@@ -5000,6 +5009,9 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 			chwidth = 2;
 			break;
 		case AP_160:
+			chwidth = 3;
+			break;
+		case AP_80_80:
 			chwidth = 3;
 			break;
 		default:
@@ -7333,6 +7345,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_add_sha384 = 0;
 		dut->ap_pmksa = 0;
 		dut->ap_pmksa_caching = 0;
+		dut->ap_80plus80 = 0;
 	}
 
 	free(dut->rsne_override);
