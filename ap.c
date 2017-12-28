@@ -2172,6 +2172,8 @@ static void owrt_ap_config_radio(struct sigma_dut *dut)
 		country = dut->ap_countrycode[0] ? dut->ap_countrycode : "US";
 		snprintf(buf, sizeof(buf), "%s4", country);
 		owrt_ap_set_radio(dut, radio_id[0], "country", buf);
+		if (dut->ap_is_dual)
+			owrt_ap_set_radio(dut, radio_id[1], "country", buf);
 	} else if (dut->ap_countrycode[0]) {
 		owrt_ap_set_radio(dut, radio_id[0], "country",
 				  dut->ap_countrycode);
