@@ -524,12 +524,30 @@ struct sigma_dut {
 	int ap_interface_2g;
 	int ap_assoc_delay;
 	int ap_btmreq_bss_term_tsf;
+	int ap_fils_dscv_int;
+	int ap_nairealm_int;
+	char ap_nairealm[33];
+	int ap_blechanutil;
+	int ap_ble_admit_cap;
+	int ap_datappdudura;
+	int ap_airtimefract;
+	char ap_dhcpserv_ipaddr[20];
+	int ap_dhcp_stop;
+	int ap_bawinsize;
+	int ap_blestacnt;
 
 	struct mbo_pref_ap mbo_pref_aps[MBO_MAX_PREF_BSSIDS];
 	struct mbo_pref_ap mbo_self_ap_tuple;
 	int mbo_pref_ap_cnt;
 	unsigned char ft_bss_mac_list[MAX_FT_BSS_LIST][ETH_ALEN];
 	int ft_bss_mac_cnt;
+
+	enum value_not_set_enabled_disabled ap_oce;
+	enum value_not_set_enabled_disabled ap_filsdscv;
+	enum value_not_set_enabled_disabled ap_filshlp;
+	enum value_not_set_enabled_disabled ap_broadcast_ssid;
+	enum value_not_set_enabled_disabled ap_rnr;
+	enum value_not_set_enabled_disabled ap_esp;
 
 	const char *hostapd_debug_log;
 

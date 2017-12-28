@@ -281,6 +281,21 @@ static void ath_radio(struct sigma_dut *dut, const char *val)
 }
 
 
+static void deauth_disassoc(struct sigma_dut *dut, const char *ifname,
+			    const char *val)
+{
+	char buf[60];
+
+	if (strcasecmp(val, "disable") == 0) {
+		snprintf(buf, sizeof(buf), "iwpriv %s stealthdown 1", ifname);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"disable deauthdisassoctx failed");
+		}
+	}
+}
+
+
 static enum ap_mode get_mode(const char *str)
 {
 	if (strcasecmp(str, "11a") == 0)
@@ -1194,6 +1209,141 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 		free(mac_list_str);
 	}
 
+	val = get_param(cmd, "OCESupport");
+	if (val) {
+		if (strcasecmp(val, "enable") == 0) {
+			dut->ap_oce = VALUE_ENABLED;
+		} else if (strcasecmp(val, "disable") == 0) {
+			dut->ap_oce = VALUE_DISABLED;
+			dut->ap_filsdscv = VALUE_DISABLED;
+		} else {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Unsupported OCE");
+			return 0;
+		}
+	}
+
+	val = get_param(cmd, "FILSDscvInterval");
+	if (val)
+		dut->ap_fils_dscv_int = atoi(val);
+
+	val = get_param(cmd, "BroadcastSSID");
+	if (val) {
+		if (strcasecmp(val, "enable") == 0) {
+			dut->ap_broadcast_ssid = VALUE_ENABLED;
+		} else if (strcasecmp(val, "disable") == 0) {
+			dut->ap_broadcast_ssid = VALUE_DISABLED;
+		} else {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Unsupported hidden SSID");
+			return 0;
+		}
+	}
+
+	val = get_param(cmd, "FILSDscv");
+	if (val) {
+		if (strcasecmp(val, "enable") == 0) {
+			dut->ap_filsdscv = VALUE_ENABLED;
+		} else if (strcasecmp(val, "disable") == 0) {
+			dut->ap_filsdscv = VALUE_DISABLED;
+		} else {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Unsupported FILSDscv");
+			return 0;
+		}
+	}
+
+	val = get_param(cmd, "FILSHLP");
+	if (val) {
+		if (strcasecmp(val, "enable") == 0) {
+			dut->ap_filshlp = VALUE_ENABLED;
+		} else if (strcasecmp(val, "disable") == 0) {
+			dut->ap_filshlp = VALUE_DISABLED;
+		} else {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Unsupported FILSHLP");
+			return 0;
+		}
+	}
+
+	val = get_param(cmd, "NAIRealm");
+	if (val) {
+		dut->ap_nairealm_int = 1;
+		if (strlen(val) > sizeof(dut->ap_nairealm) - 1)
+			return -1;
+		snprintf(dut->ap_nairealm, sizeof(dut->ap_nairealm), "%s", val);
+	}
+
+	val = get_param(cmd, "DeauthDisassocTx");
+	if (val) {
+		if (strcasecmp(val, "disable") == 0) {
+			deauth_disassoc(dut, ifname, val);
+		} else {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Unsupported DeauthDisassocTx");
+			return 0;
+		}
+	}
+
+	val = get_param(cmd, "RNR");
+	if (val) {
+		if (strcasecmp(val, "enable") == 0) {
+			dut->ap_rnr = VALUE_ENABLED;
+		} else if (strcasecmp(val, "disable") == 0) {
+			dut->ap_rnr = VALUE_DISABLED;
+		} else {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Unsupported RNR");
+			return 0;
+		}
+	}
+
+	val = get_param(cmd, "BLEChannelUtil");
+	if (val)
+		dut->ap_blechanutil = atoi(val);
+
+	val = get_param(cmd, "BLEAvailAdminCap");
+	if (val)
+		dut->ap_ble_admit_cap = atoi(val);
+
+	val = get_param(cmd, "DataPPDUDuration");
+	if (val)
+		dut->ap_datappdudura = atoi(val);
+
+	val = get_param(cmd, "AirTimeFract");
+	if (val)
+		dut->ap_airtimefract = atoi(val);
+
+	val = get_param(cmd, "dhcpServIPADDR");
+	if (val) {
+		if (strlen(val) > sizeof(dut->ap_dhcpserv_ipaddr) - 1)
+			return -1;
+		snprintf(dut->ap_dhcpserv_ipaddr,
+			 sizeof(dut->ap_dhcpserv_ipaddr), "%s", val);
+		dut->ap_dhcp_stop = 1;
+	}
+
+	val = get_param(cmd, "ESP_IE");
+	if (val) {
+		if (strcasecmp(val, "enable") == 0) {
+			dut->ap_esp = VALUE_ENABLED;
+		} else if (strcasecmp(val, "disable") == 0) {
+			dut->ap_esp = VALUE_DISABLED;
+		} else {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Unsupported ESP_IE");
+			return 0;
+		}
+	}
+
+	val = get_param(cmd, "BAWinSize");
+	if (val)
+		dut->ap_bawinsize = atoi(val);
+
+	val = get_param(cmd, "BLEStaCount");
+	if (val)
+		dut->ap_blestacnt = atoi(val);
+
 	return 1;
 }
 
@@ -1979,6 +2129,10 @@ static void owrt_ap_config_radio(struct sigma_dut *dut)
 		owrt_ap_set_list_radio(dut, radio_id[0], "aggr_burst", "'2 0'");
 		owrt_ap_set_list_radio(dut, radio_id[0], "aggr_burst", "'3 0'");
 	}
+
+	if (dut->ap_oce == VALUE_ENABLED &&
+	    get_driver_type() == DRIVER_OPENWRT)
+		owrt_ap_set_radio(dut, radio_id[0], "bcnburst", "1");
 }
 
 
@@ -2575,6 +2729,88 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 			}
 		}
 
+		if (dut->ap_oce == VALUE_ENABLED &&
+		    get_driver_type() == DRIVER_OPENWRT) {
+			owrt_ap_set_vap(dut, vap_id, "oce", "1");
+			owrt_ap_set_vap(dut, vap_id, "qbssload", "1");
+			owrt_ap_set_vap(dut, vap_id, "bpr_enable", "1");
+
+			if (dut->ap_filshlp == VALUE_ENABLED) {
+				struct ifreq ifr;
+				char *ifname;
+				int s;
+				struct sockaddr_in *ipaddr;
+
+				s = socket(AF_INET, SOCK_DGRAM, 0);
+				if (s < 0) {
+					sigma_dut_print(dut, DUT_MSG_ERROR,
+							"Failed to open socket");
+					return -1;
+				}
+				ifr.ifr_addr.sa_family = AF_INET;
+
+				memset(&ifr, 0, sizeof(ifr));
+				ifname = "br-lan";
+				strlcpy(ifr.ifr_name, ifname,
+					sizeof(ifr.ifr_name));
+				if (ioctl(s, SIOCGIFADDR, &ifr) < 0) {
+					perror("ioctl");
+					close(s);
+					return -1;
+				}
+
+				ipaddr = (struct sockaddr_in*)&ifr.ifr_addr;
+				snprintf(buf, sizeof(buf), "%s",
+					 inet_ntoa(ipaddr->sin_addr));
+				owrt_ap_set_vap(dut, vap_id, "own_ip_addr",
+						buf);
+				snprintf(buf, sizeof(buf), "%s",
+					 dut->ap_dhcpserv_ipaddr);
+				owrt_ap_set_vap(dut, vap_id, "dhcp_server",
+						buf);
+				owrt_ap_set_vap(dut, vap_id,
+						"dhcp_rapid_commit_proxy", "1");
+				owrt_ap_set_vap(dut, vap_id,
+						"fils_hlp_wait_time", "300");
+			}
+
+			if (dut->ap_filsdscv == VALUE_ENABLED) {
+				owrt_ap_set_vap(dut, vap_id, "ieee80211ai",
+						"1");
+				owrt_ap_set_vap(dut, vap_id, "fils_fd_period",
+						"20");
+			}
+		}
+
+		if (dut->ap_filsdscv == VALUE_DISABLED) {
+			owrt_ap_set_vap(dut, vap_id, "ieee80211ai", "0");
+			owrt_ap_set_vap(dut, vap_id, "fils_fd_period", "0");
+		}
+
+		if (dut->ap_oce == VALUE_DISABLED &&
+		    get_driver_type() == DRIVER_OPENWRT) {
+			owrt_ap_set_vap(dut, vap_id, "oce", "0");
+			owrt_ap_set_vap(dut, vap_id, "qbssload", "0");
+			owrt_ap_set_vap(dut, vap_id, "bpr_enable", "0");
+
+			if (dut->ap_filsdscv == VALUE_DISABLED) {
+				owrt_ap_set_vap(dut, vap_id, "ieee80211ai",
+						"0");
+				owrt_ap_set_vap(dut, vap_id, "fils_fd_period",
+						"0");
+			}
+
+			if (dut->device_type == AP_testbed)
+				owrt_ap_set_vap(dut, vap_id, "mbo", "1");
+		}
+
+		/* NAIRealm */
+		if (dut->ap_nairealm_int == 1) {
+			snprintf(buf, sizeof(buf), "\"%s\"", dut->ap_nairealm);
+			owrt_ap_set_vap(dut, vap_id, "fils_realm", buf);
+			owrt_ap_set_vap(dut, vap_id, "erp_domain", buf);
+		}
+
 		/* SSID */
 		snprintf(buf, sizeof(buf), "\"%s\"", dut->ap_ssid);
 		owrt_ap_set_vap(dut, vap_count, "ssid", buf);
@@ -2943,6 +3179,9 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 		owrt_ap_set_vap(dut, vap_id, "nasid2", "nas1.example.com");
 		owrt_ap_set_vap(dut, vap_id, "nasid", "nas2.example.com");
 	}
+
+	if (dut->ap_broadcast_ssid == VALUE_DISABLED)
+		owrt_ap_set_vap(dut, vap_id, "hidden", "1");
 
 	return 1;
 }
@@ -4407,13 +4646,28 @@ static void apply_mbo_pref_ap_list(struct sigma_dut *dut)
 
 static void ath_ap_set_params(struct sigma_dut *dut)
 {
-	const char *basedev = "wifi1";
-	const char *ifname = get_main_ifname();
+	const char *basedev = "wifi0";
+	const char *basedev_radio = "wifi1";
+	char *ifname = get_main_ifname();
+	char *ifname_dual;
 	int i;
 	char buf[300];
 
 	if (sigma_radio_ifname[0])
 		basedev = sigma_radio_ifname[0];
+
+	if (dut->ap_is_dual == 1) {
+		basedev = sigma_radio_ifname[0];
+		basedev_radio = sigma_radio_ifname[1];
+		if (sigma_radio_ifname[0] &&
+		    strcmp(sigma_radio_ifname[0], "wifi0") == 0) {
+			ifname = "ath0";
+			ifname_dual = "ath1";
+		} else {
+			ifname = "ath1";
+			ifname_dual = "ath0";
+		}
+	}
 
 	if (dut->ap_countrycode[0]) {
 		snprintf(buf, sizeof(buf), "iwpriv %s setCountry %s",
@@ -5045,6 +5299,153 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 		run_system(dut, buf);
 
 		ath_set_assoc_disallow(dut, ifname, "disable");
+	}
+
+	if (dut->ap_oce == VALUE_ENABLED) {
+		snprintf(buf, sizeof(buf), "iwpriv %s set_bpr_enable 1",
+			 ifname);
+		run_system(dut, buf);
+	}
+
+	if (dut->ap_oce == VALUE_ENABLED && dut->ap_channel <= 11) {
+		snprintf(buf, sizeof(buf), "iwpriv %s prb_rate 5500", ifname);
+		run_system(dut, buf);
+		snprintf(buf, sizeof(buf), "iwpriv %s set_bcn_rate 5500",
+			 ifname);
+		run_system(dut, buf);
+	}
+
+	if (dut->ap_oce == VALUE_DISABLED) {
+		snprintf(buf, sizeof(buf), "iwpriv %s set_bpr_enable 0",
+			 ifname);
+		run_system(dut, buf);
+	}
+
+	if (dut->ap_oce == VALUE_DISABLED && dut->ap_channel <= 11) {
+		snprintf(buf, sizeof(buf), "iwpriv %s mgmt_rate 1000", ifname);
+		run_system(dut, buf);
+		snprintf(buf, sizeof(buf), "iwpriv %s set_bcn_rate 1000",
+			 ifname);
+		run_system(dut, buf);
+	}
+
+	if (dut->ap_bcnint) {
+		snprintf(buf, sizeof(buf), "iwpriv %s bintval %d", ifname,
+			 dut->ap_bcnint);
+		run_system(dut, buf);
+	}
+
+	if (dut->ap_filsdscv == VALUE_DISABLED) {
+		snprintf(buf, sizeof(buf), "iwpriv %s enable_fils 0 0", ifname);
+		run_system(dut, buf);
+	}
+
+	if (dut->ap_filshlp == VALUE_ENABLED) {
+		snprintf(buf, sizeof(buf), "iwpriv %s oce_hlp 1", ifname);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"iwpriv filshlp enable failed");
+		}
+	} else if (dut->ap_filshlp == VALUE_DISABLED) {
+		snprintf(buf, sizeof(buf), "iwpriv %s oce_hlp 0", ifname);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"iwpriv filshlp disable failed");
+		}
+	}
+
+	/*  When RNR is enabled, also enable apchannelreport, background scan */
+	if (dut->ap_rnr == VALUE_ENABLED) {
+		snprintf(buf, sizeof(buf), "iwpriv %s rnr 1", ifname);
+		run_system(dut, buf);
+		snprintf(buf, sizeof(buf), "iwpriv %s rnr_tbtt 1", ifname);
+		run_system(dut, buf);
+		snprintf(buf, sizeof(buf), "iwpriv %s apchanrpt 1", ifname);
+		run_system(dut, buf);
+		snprintf(buf, sizeof(buf), "iwpriv %s acs_ctrlflags 0x4",
+			 basedev);
+		run_system(dut, buf);
+		snprintf(buf, sizeof(buf), "iwpriv %s acs_scanintvl 60",
+			 basedev);
+		run_system(dut, buf);
+		snprintf(buf, sizeof(buf), "iwpriv %s acs_bkscanen 1", basedev);
+		run_system(dut, buf);
+		if (dut->ap_is_dual == 1) {
+			snprintf(buf, sizeof(buf), "iwpriv %s rnr 1",
+				 ifname_dual);
+			run_system(dut, buf);
+			snprintf(buf, sizeof(buf), "iwpriv %s rnr_tbtt 1",
+				 ifname_dual);
+			run_system(dut, buf);
+			snprintf(buf, sizeof(buf), "iwpriv %s apchanrpt 1",
+				 ifname_dual);
+			run_system(dut, buf);
+			snprintf(buf, sizeof(buf),
+				 "iwpriv %s acs_ctrlflags 0x4", basedev_radio);
+			run_system(dut, buf);
+			snprintf(buf, sizeof(buf), "iwpriv %s acs_scanintvl 60",
+				 basedev_radio);
+			run_system(dut, buf);
+			snprintf(buf, sizeof(buf), "iwpriv %s acs_bkscanen 1",
+				 basedev_radio);
+			run_system(dut, buf);
+		}
+	}
+
+	if (dut->ap_blechanutil || dut->ap_ble_admit_cap || dut->ap_blestacnt) {
+		snprintf(buf, sizeof(buf), "iwpriv %s qbssload 0", ifname);
+		run_system(dut, buf);
+		snprintf(buf, sizeof(buf),
+			 "wlanconfig %s addie ftype 0 len 7 data 0b05%02x%02x%02x%02x%02x ",
+			 ifname, dut->ap_blestacnt & 0xFF,
+			 dut->ap_blestacnt >> 8, dut->ap_blechanutil,
+			 dut->ap_ble_admit_cap & 0xFF,
+			 dut->ap_ble_admit_cap >> 8);
+		run_system(dut, buf);
+		snprintf(buf, sizeof(buf),
+			 "wlanconfig %s addie ftype 2 len 7 data 0b05%02x%02x%02x%02x%02x ",
+			 ifname, dut->ap_blestacnt & 0xFF,
+			 dut->ap_blestacnt >> 8, dut->ap_blechanutil,
+			 dut->ap_ble_admit_cap & 0xFF,
+			 dut->ap_ble_admit_cap >> 8);
+		run_system(dut, buf);
+	}
+
+	if (dut->ap_esp == VALUE_ENABLED) {
+		snprintf(buf, sizeof(buf), "iwpriv %s esp_period 5", basedev);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"iwpriv esp enable failed");
+		}
+	} else if (dut->ap_esp == VALUE_DISABLED) {
+		snprintf(buf, sizeof(buf), "iwpriv %s esp_period 0", basedev);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"iwpriv esp disable failed");
+		}
+	}
+
+	if (dut->ap_datappdudura) {
+		snprintf(buf, sizeof(buf), "iwpriv %s esp_ppdu_dur %d", basedev,
+			 dut->ap_datappdudura);
+		run_system(dut, buf);
+	}
+
+	if (dut->ap_airtimefract) {
+		snprintf(buf, sizeof(buf), "iwpriv %s esp_airtime %d", basedev,
+			 dut->ap_airtimefract);
+		run_system(dut, buf);
+	}
+
+	if (dut->ap_dhcp_stop) {
+		snprintf(buf, sizeof(buf), "/etc/init.d/dnsmasq stop");
+		run_system(dut, buf);
+	}
+
+	if (dut->ap_bawinsize) {
+		snprintf(buf, sizeof(buf), "iwpriv %s esp_ba_window %d",
+			 basedev, dut->ap_bawinsize);
+		run_system(dut, buf);
 	}
 }
 
@@ -6832,6 +7233,27 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->mbo_self_ap_tuple.ap_ne_op_ch = -1;
 		dut->ap_btmreq_bss_term_tsf = 0;
 		dut->ap_assoc_delay = 0;
+	}
+
+	if (dut->program == PROGRAM_OCE) {
+		if (dut->ap_dhcp_stop)
+			run_system(dut, "/etc/init.d/dnsmasq start");
+
+		dut->ap_dhcp_stop = 0;
+		dut->ap_oce = VALUE_ENABLED;
+		dut->ap_broadcast_ssid = VALUE_ENABLED;
+		dut->ap_fils_dscv_int = 20;
+		dut->ap_filsdscv = VALUE_ENABLED;
+		dut->ap_filshlp = VALUE_DISABLED;
+		dut->ap_rnr = VALUE_DISABLED;
+		dut->ap_nairealm[0] = '\0';
+		dut->ap_nairealm_int = 0;
+		dut->ap_blechanutil = 0;
+		dut->ap_ble_admit_cap = 0;
+		dut->ap_esp = VALUE_ENABLED;
+		dut->ap_datappdudura = 0;
+		dut->ap_airtimefract = 0;
+		dut->ap_blestacnt = 0;
 	}
 
 	free(dut->rsne_override);
