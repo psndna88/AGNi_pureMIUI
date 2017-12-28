@@ -1832,6 +1832,37 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
+	val = get_param(cmd, "AKMSuiteType");
+	if (val) {
+		unsigned int akmsuitetype = 0;
+
+		dut->ap_akm = 1;
+		akmsuitetype = atoi(val);
+		if (akmsuitetype == 14) {
+			dut->ap_add_sha256 = 1;
+		} else if (akmsuitetype == 15) {
+			dut->ap_add_sha384 = 1;
+		} else {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Unsupported AKMSuitetype");
+			return 0;
+		}
+	}
+
+	val = get_param(cmd, "PMKSACaching");
+	if (val) {
+		dut->ap_pmksa = 1;
+		if (strcasecmp(val, "disabled") == 0) {
+			dut->ap_pmksa_caching = 1;
+		} else if (strcasecmp(val, "enabled") == 0) {
+			dut->ap_pmksa_caching = 0;
+		} else {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Unsupported PMKSACaching value");
+			return 0;
+		}
+	}
+
 	return 1;
 }
 
@@ -2752,6 +2783,18 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 			owrt_ap_set_vap(dut, vap_id, "qbssload", "1");
 			owrt_ap_set_vap(dut, vap_id, "bpr_enable", "1");
 
+			if (dut->ap_akm == 1) {
+				owrt_ap_set_vap(dut, vap_id, "wpa_group_rekey",
+						"3600");
+				owrt_ap_set_vap(dut, vap_id, "key", "12345678");
+				owrt_ap_set_vap(dut, vap_id, "ieee80211ai",
+						"1");
+				owrt_ap_set_vap(dut, vap_id, "fils_cache_id",
+						"1234");
+				owrt_ap_set_vap(dut, vap_id,
+						"erp_send_reauth_start", "1");
+			}
+
 			if (dut->ap_filshlp == VALUE_ENABLED) {
 				struct ifreq ifr;
 				char *ifname;
@@ -2924,6 +2967,12 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 	/* Add SHA256 */
 	snprintf(buf, sizeof(buf), "%d", dut->ap_add_sha256);
 	owrt_ap_set_vap(dut, vap_id, "add_sha256", buf);
+
+	/* Add SHA384 for akmsuitetype 15 */
+	if (dut->ap_akm == 1) {
+		snprintf(buf, sizeof(buf), "%d", dut->ap_add_sha384);
+		owrt_ap_set_vap(dut, vap_id, "add_sha384", buf);
+	}
 
 	/* Enable RSN preauthentication, if asked to */
 	snprintf(buf, sizeof(buf), "%d", dut->ap_rsn_preauth);
@@ -3199,6 +3248,12 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 
 	if (dut->ap_broadcast_ssid == VALUE_DISABLED)
 		owrt_ap_set_vap(dut, vap_id, "hidden", "1");
+
+	/* Enable/disable PMKSA caching, if asked to */
+	if (dut->ap_pmksa == 1) {
+		snprintf(buf, sizeof(buf), "%d", dut->ap_pmksa_caching);
+		owrt_ap_set_vap(dut, vap_id, "disable_pmksa_caching", buf);
+	}
 
 	return 1;
 }
@@ -7273,6 +7328,11 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_blestacnt = 0;
 		dut->ap_ul_availcap = 0;
 		dut->ap_dl_availcap = 0;
+		dut->ap_akm = 0;
+		dut->ap_add_sha256 = 0;
+		dut->ap_add_sha384 = 0;
+		dut->ap_pmksa = 0;
+		dut->ap_pmksa_caching = 0;
 	}
 
 	free(dut->rsne_override);

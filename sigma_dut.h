@@ -390,6 +390,7 @@ struct sigma_dut {
 		AP2_WPA2_PSK
 	} ap_tag_key_mgmt[MAX_WLAN_TAGS - 1];
 	int ap_add_sha256;
+	int ap_add_sha384;
 	int ap_rsn_preauth;
 	enum ap_pmf {
 		AP_PMF_DISABLED,
@@ -537,6 +538,9 @@ struct sigma_dut {
 	int ap_blestacnt;
 	int ap_ul_availcap;
 	int ap_dl_availcap;
+	int ap_akm;
+	int ap_pmksa;
+	int ap_pmksa_caching;
 
 	struct mbo_pref_ap mbo_pref_aps[MBO_MAX_PREF_BSSIDS];
 	struct mbo_pref_ap mbo_self_ap_tuple;
