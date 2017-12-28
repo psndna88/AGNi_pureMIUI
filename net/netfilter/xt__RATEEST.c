@@ -16,7 +16,7 @@
 #include <net/netlink.h>
 
 #include <linux/netfilter/x_tables.h>
-#include <linux/netfilter/xt_RATEEST.h>
+#include <linux/netfilter/xt__RATEEST.h>
 #include <net/netfilter/xt_rateest.h>
 
 static DEFINE_MUTEX(xt_rateest_mutex);

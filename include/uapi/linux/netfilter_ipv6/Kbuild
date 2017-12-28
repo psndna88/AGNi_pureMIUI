@@ -1,6 +1,6 @@
 # UAPI Header export list
 header-y += ip6_tables.h
-header-y += ip6t_HL.h
+header-y += ip6t__HL.h
 header-y += ip6t_LOG.h
 header-y += ip6t_NPT.h
 header-y += ip6t_REJECT.h
