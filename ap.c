@@ -7575,6 +7575,29 @@ static int ath_ap_send_frame_bcn_rpt_req(struct sigma_dut *dut,
 	if (parse_send_frame_params_mac("BSSID", cmd, dut, buf, sizeof(buf)))
 		return -1;
 
+	str_val = get_param(cmd, "APChanRpt");
+	if (str_val) {
+		const char *pos;
+		int ap_chanrpt;
+		int ap_chanrpt_2 = 0;
+		char chanrpt[100];
+
+		ap_chanrpt = atoi(str_val);
+		pos = strchr(str_val, '_');
+		if (pos) {
+			pos++;
+			ap_chanrpt_2 = atoi(pos);
+		}
+		if (ap_chanrpt) {
+			snprintf(chanrpt, sizeof(chanrpt), " %d", ap_chanrpt);
+			strlcat(buf, chanrpt, sizeof(buf));
+		}
+		if (ap_chanrpt_2) {
+			snprintf(chanrpt, sizeof(chanrpt), " %d", ap_chanrpt_2);
+			strlcat(buf, chanrpt, sizeof(buf));
+		}
+	}
+
 	run_system(dut, buf);
 	return 0;
 }
@@ -7661,6 +7684,27 @@ static int ath_ap_send_frame_btm_req(struct sigma_dut *dut,
 }
 
 
+static int ath_ap_send_frame_disassoc(struct sigma_dut *dut,
+				      struct sigma_cmd *cmd, const char *ifname)
+{
+	unsigned char mac_addr[ETH_ALEN];
+	const char *val;
+
+	val = get_param(cmd, "Dest_MAC");
+	if (!val || parse_mac_address(dut, val, mac_addr) < 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"MAC Address not in proper format");
+		return -1;
+	}
+
+	run_system_wrapper(dut,
+			   "iwpriv %s kickmac %02x:%02x:%02x:%02x:%02x:%02x",
+			   ifname, mac_addr[0], mac_addr[1], mac_addr[2],
+			   mac_addr[3], mac_addr[4], mac_addr[5]);
+	return 0;
+}
+
+
 static int ath_ap_send_frame_mbo(struct sigma_dut *dut, struct sigma_conn *conn,
 				 struct sigma_cmd *cmd)
 {
@@ -7677,6 +7721,8 @@ static int ath_ap_send_frame_mbo(struct sigma_dut *dut, struct sigma_conn *conn,
 		ath_ap_send_frame_btm_req(dut, cmd, ifname);
 	else if (strcasecmp(val, "BcnRptReq") == 0)
 		ath_ap_send_frame_bcn_rpt_req(dut, cmd, ifname);
+	else if (strcasecmp(val, "disassoc") == 0)
+		ath_ap_send_frame_disassoc(dut, cmd, ifname);
 	else
 		return -1;
 
