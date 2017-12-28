@@ -296,6 +296,23 @@ static void deauth_disassoc(struct sigma_dut *dut, const char *ifname,
 }
 
 
+static void ath_set_txpower(struct sigma_dut *dut, const char *ifname,
+			    const char *val)
+{
+	char buf[60];
+
+	if (strcasecmp(val, "high") == 0)
+		snprintf(buf, sizeof(buf), "iwconfig %s txpower 29", ifname);
+	else if (strcasecmp(val, "low") == 0)
+		snprintf(buf, sizeof(buf), "iwconfig %s txpower 1", ifname);
+	else
+		sigma_dut_print(dut, DUT_MSG_ERROR, "Unsupported txpower");
+
+	if (system(buf) != 0)
+		sigma_dut_print(dut, DUT_MSG_ERROR, "setting txpower failed");
+}
+
+
 static enum ap_mode get_mode(const char *str)
 {
 	if (strcasecmp(str, "11a") == 0)
@@ -7254,6 +7271,8 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_datappdudura = 0;
 		dut->ap_airtimefract = 0;
 		dut->ap_blestacnt = 0;
+		dut->ap_ul_availcap = 0;
+		dut->ap_dl_availcap = 0;
 	}
 
 	free(dut->rsne_override);
@@ -9430,6 +9449,41 @@ static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 	val = get_param(cmd, "BSS_Term_TSF");
 	if (val)
 		dut->ap_btmreq_bss_term_tsf = atoi(val);
+
+	val = get_param(cmd, "TxPower");
+	if (val)
+		ath_set_txpower(dut, ifname, val);
+
+	val = get_param(cmd, "DownlinkAvailCap");
+	if (val)
+		dut->ap_dl_availcap = atoi(val);
+
+	val = get_param(cmd, "UplinkAvailCap");
+	if (val) {
+		dut->ap_ul_availcap = atoi(val);
+		run_system_wrapper(dut, "iwpriv %s oce_wan_mtr %d %d", ifname,
+				   dut->ap_dl_availcap, dut->ap_ul_availcap);
+	}
+
+	val = get_param(cmd, "RSSIthreshold");
+	if (val) {
+		int rssithreshold;
+
+		run_system_wrapper(dut, "iwpriv %s oce_asoc_rej 1", ifname);
+		rssithreshold = atoi(val);
+		run_system_wrapper(dut, "iwpriv %s oce_asoc_rssi %d", ifname,
+				   rssithreshold);
+	}
+
+	val = get_param(cmd, "RetryDelay");
+	if (val) {
+		int retrydelay;
+
+		run_system_wrapper(dut, "iwpriv %s oce_asoc_rej 1", ifname);
+		retrydelay = atoi(val);
+		run_system_wrapper(dut, "iwpriv %s oce_asoc_dly %d", ifname,
+				   retrydelay);
+	}
 
 	return 1;
 }

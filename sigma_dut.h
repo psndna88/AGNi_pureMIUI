@@ -535,6 +535,8 @@ struct sigma_dut {
 	int ap_dhcp_stop;
 	int ap_bawinsize;
 	int ap_blestacnt;
+	int ap_ul_availcap;
+	int ap_dl_availcap;
 
 	struct mbo_pref_ap mbo_pref_aps[MBO_MAX_PREF_BSSIDS];
 	struct mbo_pref_ap mbo_self_ap_tuple;
