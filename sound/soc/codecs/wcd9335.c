@@ -69,14 +69,12 @@ struct sound_control {
 
 #define WCD9335_RATES_MASK (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000 |\
 			    SNDRV_PCM_RATE_32000 | SNDRV_PCM_RATE_48000 |\
-			    SNDRV_PCM_RATE_96000 | SNDRV_PCM_RATE_192000 |\
-			    SNDRV_PCM_RATE_384000)
+			    SNDRV_PCM_RATE_96000 | SNDRV_PCM_RATE_192000)
 /* Fractional Rates */
 #define WCD9335_FRAC_RATES_MASK (SNDRV_PCM_RATE_44100)
 
 #define WCD9335_MIX_RATES_MASK (SNDRV_PCM_RATE_48000 |\
-				SNDRV_PCM_RATE_96000 | SNDRV_PCM_RATE_192000 |\
-			    SNDRV_PCM_RATE_384000)
+				SNDRV_PCM_RATE_96000 | SNDRV_PCM_RATE_192000)
 
 #define TASHA_FORMATS_S16_S24_LE (SNDRV_PCM_FMTBIT_S16_LE | \
 				  SNDRV_PCM_FMTBIT_S24_LE | \
@@ -179,7 +177,7 @@ enum tasha_sido_voltage {
 int sound_control_spk_priv = 0;
 int sound_control_spk_gain = 0;
 
-int dig_core_collapse_enable = 1;
+static int dig_core_collapse_enable = 1;
 module_param(dig_core_collapse_enable, int,
 		S_IRUGO | S_IWUSR | S_IWGRP);
 MODULE_PARM_DESC(dig_core_collapse_enable, "enable/disable power gating");
@@ -203,7 +201,7 @@ module_param(sido_buck_svs_voltage, int,
 MODULE_PARM_DESC(sido_buck_svs_voltage,
 			"setting for SVS voltage for SIDO BUCK");
 
-#define TASHA_TX_UNMUTE_DELAY_MS	25
+#define TASHA_TX_UNMUTE_DELAY_MS	50
 
 static int tx_unmute_delay = TASHA_TX_UNMUTE_DELAY_MS;
 module_param(tx_unmute_delay, int,
@@ -447,7 +445,6 @@ static struct interp_sample_rate int_mix_sample_rate_val[] = {
 	{48000, 0x4},	/* 48K */
 	{96000, 0x5},	/* 96K */
 	{192000, 0x6},	/* 192K */
-	{384000, 0x7},	/* 384K */
 };
 
 static const struct wcd9xxx_ch tasha_rx_chs[TASHA_RX_MAX] = {
@@ -1476,10 +1473,8 @@ static int tasha_mbhc_request_micbias(struct snd_soc_codec *codec,
 	 * If micbias is requested, make sure that there
 	 * is vote to enable mclk
 	 */
-#ifndef CONFIG_WCD9335_CODEC_MCLK_USE_MSM_GPIO
 	if (req == MICB_ENABLE)
 		tasha_cdc_mclk_enable(codec, true, false);
-#endif
 
 	ret = tasha_micbias_control(codec, micb_num, req, false);
 
@@ -1487,10 +1482,8 @@ static int tasha_mbhc_request_micbias(struct snd_soc_codec *codec,
 	 * Release vote for mclk while requesting for
 	 * micbias disable
 	 */
-#ifndef CONFIG_WCD9335_CODEC_MCLK_USE_MSM_GPIO
 	if (req == MICB_DISABLE)
 		tasha_cdc_mclk_enable(codec, false, false);
-#endif
 
 	return ret;
 }
@@ -1784,7 +1777,7 @@ static void tasha_wcd_mbhc_calc_impedance(struct wcd_mbhc *mbhc, uint32_t *zl,
 		{4, 0, 4, 0x08, 0x14, 0x18}, /* < 32ohm */
 		{2, 0, 3, 0x18, 0x7C, 0x90}, /* 32ohm < Z < 400ohm */
 		{1, 4, 5, 0x18, 0x7C, 0x90}, /* 400ohm < Z < 1200ohm */
-		{2, 6, 7, 0x18, 0x7C, 0x90}, /* >1200ohm */
+		{1, 6, 7, 0x18, 0x7C, 0x90}, /* >1200ohm */
 	};
 	struct tasha_mbhc_zdet_param *zdet_param_ptr = NULL;
 	s16 d1_a[][4] = {
@@ -2905,7 +2898,6 @@ static int tasha_codec_enable_slimrx(struct snd_soc_dapm_widget *w,
 		}
 		break;
 	case SND_SOC_DAPM_POST_PMD:
-		tasha_codec_vote_max_bw(codec, true);
 		ret = wcd9xxx_disconnect_port(core, &dai->wcd9xxx_ch_list,
 					      dai->grph);
 		dev_dbg(codec->dev, "%s: Disconnect RX port, ret = %d\n",
@@ -2919,7 +2911,6 @@ static int tasha_codec_enable_slimrx(struct snd_soc_dapm_widget *w,
 				__func__);
 		ret = wcd9xxx_close_slim_sch_rx(core, &dai->wcd9xxx_ch_list,
 						dai->grph);
-		tasha_codec_vote_max_bw(codec, false);
 		break;
 	}
 	return ret;
@@ -3781,17 +3772,6 @@ static int tasha_codec_enable_hphr_pa(struct snd_soc_dapm_widget *w,
 		set_bit(HPH_PA_DELAY, &tasha->status_mask);
 		break;
 	case SND_SOC_DAPM_POST_PMU:
-
-		if (!(strcmp(w->name, "ANC HPHR PA"))) {
-			if ((snd_soc_read(codec, WCD9335_ANA_HPH) & 0xC0)
-							!= 0xC0)
-				/*
-				 * If PA_EN is not set (potentially in ANC case)
-				 * then do nothing for POST_PMU and let left
-				 * channel handle everything.
-				 */
-				break;
-		}
 		/*
 		 * 7ms sleep is required after PA is enabled as per
 		 * HW requirement
@@ -3854,17 +3834,6 @@ static int tasha_codec_enable_hphl_pa(struct snd_soc_dapm_widget *w,
 		set_bit(HPH_PA_DELAY, &tasha->status_mask);
 		break;
 	case SND_SOC_DAPM_POST_PMU:
-
-		if (!(strcmp(w->name, "ANC HPHL PA"))) {
-			if ((snd_soc_read(codec, WCD9335_ANA_HPH) & 0xC0)
-								!= 0xC0)
-				/*
-				 * If PA_EN is not set (potentially in ANC case)
-				 * then do nothing for POST_PMU and let right
-				 * channel handle everything.
-				 */
-				break;
-		}
 		/*
 		 * 7ms sleep is required after PA is enabled as per
 		 * HW requirement
@@ -5388,48 +5357,6 @@ out:
 	kfree(wname);
 	return ret;
 }
-
-/* static u32 tasha_get_dmic_sample_rate(struct snd_soc_codec *codec,
-				unsigned int dmic, struct wcd9xxx_pdata *pdata)
-{
-	u8 tx_stream_fs;
-	u8 adc_mux_index = 0, adc_mux_sel = 0;
-	bool dec_found = false;
-	u16 adc_mux_ctl_reg, tx_fs_reg;
-	u32 dmic_fs;
-
-	while (dec_found == 0 && adc_mux_index < WCD9335_MAX_VALID_ADC_MUX) {
-		if (adc_mux_index < 4) {
-			adc_mux_ctl_reg = WCD9335_CDC_TX_INP_MUX_ADC_MUX0_CFG0 +
-						(adc_mux_index * 2);
-			adc_mux_sel = ((snd_soc_read(codec, adc_mux_ctl_reg) &
-						0x78) >> 3) - 1;
-		} else if (adc_mux_index < 9) {
-			adc_mux_ctl_reg = WCD9335_CDC_TX_INP_MUX_ADC_MUX4_CFG0 +
-						((adc_mux_index - 4) * 1);
-			adc_mux_sel = ((snd_soc_read(codec, adc_mux_ctl_reg) &
-						0x38) >> 3) - 1;
-		} else if (adc_mux_index == 9) {
-			++adc_mux_index;
-			continue;
-		}
-		if (adc_mux_sel == dmic)
-			dec_found = true;
-		else
-			++adc_mux_index;
-	}
-
-	if (dec_found == true && adc_mux_index <= 8) {
-		tx_fs_reg = WCD9335_CDC_TX0_TX_PATH_CTL + (16 * adc_mux_index);
-		tx_stream_fs = snd_soc_read(codec, tx_fs_reg) & 0x0F;
-		dmic_fs = tx_stream_fs <= 4 ? WCD9XXX_DMIC_SAMPLE_RATE_2P4MHZ :
-					WCD9XXX_DMIC_SAMPLE_RATE_4P8MHZ;
-	} else {
-		dmic_fs = pdata->dmic_sample_rate;
-	}
-
-	return dmic_fs;
-} */
 
 static u8 tasha_get_dmic_clk_val(struct snd_soc_codec *codec,
 				 u32 mclk_rate, u32 dmic_clk_rate)
@@ -8022,17 +7949,17 @@ static const struct snd_kcontrol_new tasha_snd_controls[] = {
 	SOC_SINGLE_EXT("COMP2 Switch", SND_SOC_NOPM, COMPANDER_2, 1, 0,
 		       tasha_get_compander, tasha_set_compander_dummy),
 	SOC_SINGLE_EXT("COMP3 Switch", SND_SOC_NOPM, COMPANDER_3, 1, 0,
-		       tasha_get_compander, tasha_set_compander_dummy),
+		       tasha_get_compander, tasha_set_compander),
 	SOC_SINGLE_EXT("COMP4 Switch", SND_SOC_NOPM, COMPANDER_4, 1, 0,
-		       tasha_get_compander, tasha_set_compander_dummy),
+		       tasha_get_compander, tasha_set_compander),
 	SOC_SINGLE_EXT("COMP5 Switch", SND_SOC_NOPM, COMPANDER_5, 1, 0,
 		       tasha_get_compander, tasha_set_compander),
 	SOC_SINGLE_EXT("COMP6 Switch", SND_SOC_NOPM, COMPANDER_6, 1, 0,
 		       tasha_get_compander, tasha_set_compander_dummy),
 	SOC_SINGLE_EXT("COMP7 Switch", SND_SOC_NOPM, COMPANDER_7, 1, 0,
-		       tasha_get_compander, tasha_set_compander_dummy),
+		       tasha_get_compander, tasha_set_compander),
 	SOC_SINGLE_EXT("COMP8 Switch", SND_SOC_NOPM, COMPANDER_8, 1, 0,
-		       tasha_get_compander, tasha_set_compander_dummy),
+		       tasha_get_compander, tasha_set_compander),
 
 	SOC_ENUM_EXT("RX HPH Mode", rx_hph_mode_mux_enum,
 		       tasha_rx_hph_mode_get, tasha_rx_hph_mode_put_dummy),
@@ -8497,9 +8424,9 @@ static const struct snd_kcontrol_new tasha_analog_gain_controls[] = {
 	SOC_ENUM_EXT("EAR PA Gain", tasha_ear_pa_gain_enum,
 		tasha_ear_pa_gain_get, tasha_ear_pa_gain_put),
 
-	SOC_SINGLE_TLV("HPHL Volume", WCD9335_SE_LO_LO3_GAIN, 0, 20, 1,
+	SOC_SINGLE_TLV("HPHL Volume", WCD9335_DUMMY_REG, 0, 20, 1,
 		line_gain),
-	SOC_SINGLE_TLV("HPHR Volume", WCD9335_SE_LO_LO3_GAIN, 0, 20, 1,
+	SOC_SINGLE_TLV("HPHR Volume", WCD9335_DUMMY_REG, 0, 20, 1,
 		line_gain),
 	SOC_SINGLE_TLV("HPHL Volume AGNi", WCD9335_HPH_L_EN, 0, 20, 1,
 		line_gain),
@@ -8511,7 +8438,7 @@ static const struct snd_kcontrol_new tasha_analog_gain_controls[] = {
 			3, 16, 1, line_gain),
 	SOC_SINGLE_TLV("LINEOUT3 Volume", WCD9335_SE_LO_LO3_GAIN, 0, 20, 1,
 			line_gain),
-	SOC_SINGLE_TLV("LINEOUT4 Volume", WCD9335_SE_LO_LO3_GAIN, 0, 20, 1,
+	SOC_SINGLE_TLV("LINEOUT4 Volume", WCD9335_DUMMY_REG, 0, 20, 1,
 			line_gain),
 	SOC_SINGLE_TLV("LINEOUT4 Volume AGNi", WCD9335_SE_LO_LO4_GAIN, 0, 20, 1,
 			line_gain),
@@ -10851,9 +10778,6 @@ static int tasha_hw_params(struct snd_pcm_substream *substream,
 		case SNDRV_PCM_FORMAT_S24_3LE:
 			tasha->dai[dai->id].bit_width = 24;
 			break;
-		case SNDRV_PCM_FORMAT_S32_LE:
-			tasha->dai[dai->id].bit_width = 32;
-			break;
 		}
 		tasha->dai[dai->id].rate = params_rate(params);
 		break;
@@ -11165,7 +11089,7 @@ static int tasha_dig_core_remove_power_collapse(struct snd_soc_codec *codec)
 	return 0;
 }
 
-int tasha_dig_core_power_collapse(struct tasha_priv *tasha,
+static int tasha_dig_core_power_collapse(struct tasha_priv *tasha,
 					 int req_state)
 {
 	struct snd_soc_codec *codec;
@@ -11226,7 +11150,7 @@ unlock_mutex:
 	return 0;
 }
 
-int __tasha_cdc_mclk_enable_locked(struct tasha_priv *tasha,
+static int __tasha_cdc_mclk_enable_locked(struct tasha_priv *tasha,
 					  bool enable)
 {
 	int ret = 0;
@@ -11613,6 +11537,7 @@ static const struct tasha_reg_mask_val tasha_codec_reg_init_1_x_val[] = {
 	{WCD9335_DIFF_LO_CORE_OUT_PROG, 0xFC, 0xD8},
 	{WCD9335_CDC_RX5_RX_PATH_SEC3, 0xBD, 0xBD},
 	{WCD9335_CDC_RX6_RX_PATH_SEC3, 0xBD, 0xBD},
+	{WCD9335_DUMMY_REG, 0x20, 0x20},
 };
 
 static void tasha_update_reg_reset_values(struct snd_soc_codec *codec)
