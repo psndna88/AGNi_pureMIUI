@@ -1246,7 +1246,6 @@ static int msm_lsm_ioctl_compat(struct snd_pcm_substream *substream,
 				"%s: %s: not supported if using topology\n",
 				__func__, "SET_PARAMS_32");
 			err = -EINVAL;
-			goto done;
 		}
 
 		if (copy_from_user(&det_params32, arg,
@@ -1453,7 +1452,7 @@ static int msm_lsm_ioctl(struct snd_pcm_substream *substream,
 			dev_err(rtd->dev,
 				"%s REG_SND_MODEL failed err %d\n",
 				__func__, err);
-		goto done;
+		return err;
 		}
 		break;
 	case SNDRV_LSM_SET_PARAMS: {

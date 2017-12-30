@@ -876,7 +876,7 @@ void ipa_sps_irq_control_all(bool enable)
 		}
 		ep = &ipa_ctx->ep[ipa_ep_idx];
 		if (!ep->valid) {
-			IPAERR_RL("EP (%d) not allocated.\n", ipa_ep_idx);
+			IPAERR("EP (%d) not allocated.\n", ipa_ep_idx);
 			continue;
 		}
 		ipa_sps_irq_control(ep->sys, enable);

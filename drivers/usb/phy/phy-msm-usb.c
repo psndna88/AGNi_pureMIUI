@@ -5555,10 +5555,10 @@ struct msm_otg_platform_data *msm_otg_dt_to_pdata(struct platform_device *pdev)
 #ifdef CONFIG_MACH_XIAOMI_KENZO
 	pdata->usbid_switch = of_get_named_gpio(node, "qcom,usbid-switch", 0);
 	if (pdata->usbid_switch < 0)
-			pr_debug("Macle usbid_switch is not available\n");
+		pr_debug("Macle usbid_switch is not available\n");
 	else {
-			gpio_request(pdata->usbid_switch, "USB_ID_SWITCH");
-			gpio_direction_output(pdata->usbid_switch, 1);
+		gpio_request(pdata->usbid_switch, "USB_ID_SWITCH");
+		gpio_direction_output(pdata->usbid_switch, 1);
 	}
 #endif
 
@@ -6557,15 +6557,9 @@ static int msm_otg_pm_resume(struct device *dev)
 
 	motg->pm_done = 0;
 
-	/*
-	 * Flush pending requests and wait for all runtime PM operations
-	 * involving the device in progress to complete.
-	 */
-	pm_runtime_barrier(dev);
-	/* Process msm_otg_resume only if USB is in lpm */
-	if (atomic_read(&motg->in_lpm) && (motg->async_int ||
-			motg->sm_work_pending || motg->phy_irq_pending ||
-			!pm_runtime_suspended(dev))) {
+	if (motg->async_int || motg->sm_work_pending ||
+			motg->phy_irq_pending ||
+			!pm_runtime_suspended(dev)) {
 		msm_otg_dbg_log_event(&motg->phy, "PM RESUME BY USB",
 				motg->async_int, motg->phy_irq_pending);
 		pm_runtime_get_noresume(dev);

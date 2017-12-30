@@ -40,8 +40,6 @@
 
 #include <asm/current.h>
 
-#include "peripheral-loader.h"
-
 #define DISABLE_SSR 0x9889deed
 /* If set to 0x9889deed, call to subsystem_restart_dev() returns immediately */
 static uint disable_restart_work;
@@ -580,8 +578,7 @@ static int wait_for_err_ready(struct subsys_device *subsys)
 {
 	int ret;
 
-	if (!subsys->desc->err_ready_irq
-		|| enable_debug == 1 || is_timeout_disabled())
+	if (!subsys->desc->err_ready_irq || enable_debug == 1)
 		return 0;
 
 	ret = wait_for_completion_timeout(&subsys->err_ready,
