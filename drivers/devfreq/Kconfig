@@ -80,6 +80,12 @@ config DEVFREQ_GOV_CPUFREQ
 	  CPU frequency to device frequency mapping table(s). This governor
 	  can be useful for controlling devices such as DDR, cache, CCI, etc.
 
+config SIMPLE_GPU_ALGORITHM
+	bool "Simple GPU algorithm"
+	depends on DEVFREQ_GOV_QCOM_ADRENO_TZ
+	help
+	  Simple user configurable GPU controlling algorithm
+
 config QCOM_BIMC_BWMON
 	tristate "QCOM BIMC Bandwidth monitor hardware"
 	depends on ARCH_QCOM
