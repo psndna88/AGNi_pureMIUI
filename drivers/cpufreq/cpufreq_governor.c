@@ -49,6 +49,18 @@ void dbs_check_cpu(struct dbs_data *dbs_data, int cpu)
 	struct cpufreq_govinfo govinfo;
 
 	if (dbs_data->cdata->governor == GOV_ONDEMAND) {
+		struct od_cpu_dbs_info_s *od_dbs_info =
+				dbs_data->cdata->get_cpu_dbs_info_s(cpu);
+
+		/*
+		 * Sometimes, the ondemand governor uses an additional
+		 * multiplier to give long delays. So apply this multiplier to
+		 * the 'sampling_rate', so as to keep the wake-up-from-idle
+		 * detection logic a bit conservative.
+		 */
+		sampling_rate = od_tuners->sampling_rate;
+		sampling_rate *= od_dbs_info->rate_mult;
+
 		ignore_nice = od_tuners->ignore_nice_load;
 	} else if (dbs_data->cdata->governor == GOV_ELEMENTALX) {
 		sampling_rate = ex_tuners->sampling_rate;
@@ -66,8 +78,10 @@ void dbs_check_cpu(struct dbs_data *dbs_data, int cpu)
 		sampling_rate = nm_tuners->sampling_rate;
 		ignore_nice = nm_tuners->ignore_nice_load;
 	} else {
+		sampling_rate = cs_tuners->sampling_rate;
 		ignore_nice = cs_tuners->ignore_nice_load;
 	}
+
 	policy = cdbs->cur_policy;
 
 	/* Get Absolute Load */
