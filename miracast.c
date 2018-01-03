@@ -1137,6 +1137,11 @@ static int cmd_start_wfd_connection(struct sigma_dut *dut,
 
 	memset(resp_buf, 0, sizeof(resp_buf));
 	res = wpa_command_resp(intf, cmd_buf, resp_buf, sizeof(resp_buf));
+	if (res < 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"wpa_command_resp failed");
+		return 1;
+	}
 	if (strncmp(resp_buf, "FAIL", 4) == 0) {
 		sigma_dut_print(dut, DUT_MSG_INFO,
 				"wpa_command: Command failed (FAIL received)");
@@ -1315,6 +1320,11 @@ static int cmd_connect_go_start_wfd(struct sigma_dut *dut,
 	}
 
 	res = wpa_command_resp(intf, cmd_buf, resp_buf, sizeof(resp_buf));
+	if (res < 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"wpa_command_resp failed");
+		return 1;
+	}
 	if (strncmp(resp_buf, "FAIL", 4) == 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,failed P2P connection");
