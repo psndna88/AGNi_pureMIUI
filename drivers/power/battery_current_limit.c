@@ -206,7 +206,7 @@ static DEFINE_MUTEX(bcl_hotplug_mutex);
 static bool bcl_hotplug_enabled;
 static uint32_t battery_soc_val = 100;
 static uint32_t soc_low_threshold = 1;
-module_param_named(low_battery_value, soc_low_threshold, int, 0664);
+//module_param_named(low_battery_value, soc_low_threshold, int, 0664);
 static struct power_supply bcl_psy;
 static const char bcl_psy_name[] = "bcl";
 
