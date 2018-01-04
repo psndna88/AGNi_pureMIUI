@@ -311,6 +311,7 @@ void calculate_vmpressure_win(void)
 
 	x = global_page_state(NR_FILE_PAGES) -
 			global_page_state(NR_SHMEM) -
+			global_page_state(NR_UNEVICTABLE) -
 			total_swapcache_pages() +
 			global_page_state(NR_FREE_PAGES);
 	if (x < 1)
