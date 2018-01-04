@@ -8149,6 +8149,12 @@ static int ath_ap_send_frame_btm_req(struct sigma_dut *dut,
 		disassoc_timer = atoi(val);
 	else
 		disassoc_timer = dut->ap_disassoc_timer;
+	if (disassoc_timer < 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Invalid Disassoc_Timer value %d",
+				disassoc_timer);
+		return -1;
+	}
 
 	val = get_param(cmd, "Cand_List");
 	if (val && val[0])
