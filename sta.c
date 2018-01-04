@@ -1477,6 +1477,10 @@ static int set_wpa_common(struct sigma_dut *dut, struct sigma_conn *conn,
 			send_resp(dut, conn, SIGMA_INVALID, "errorCode,Unrecognized PMF value");
 			return 0;
 		}
+	} else if (owe) {
+		dut->sta_pmf = STA_PMF_REQUIRED;
+		if (set_network(ifname, id, "ieee80211w", "2") < 0)
+			return -2;
 	}
 
 	return id;
@@ -1488,6 +1492,7 @@ static int cmd_sta_set_psk(struct sigma_dut *dut, struct sigma_conn *conn,
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *type = get_param(cmd, "Type");
+	const char *pmf = get_param(cmd, "PMF");
 	const char *ifname, *val, *alg;
 	int id;
 
@@ -1519,6 +1524,11 @@ static int cmd_sta_set_psk(struct sigma_dut *dut, struct sigma_conn *conn,
 					"Failed to clear sae_groups to default");
 			return -2;
 		}
+		if (!pmf) {
+			dut->sta_pmf = STA_PMF_REQUIRED;
+			if (set_network(ifname, id, "ieee80211w", "2") < 0)
+				return -2;
+		}
 	} else if (type && strcasecmp(type, "PSK-SAE") == 0) {
 		if (val && strcasecmp(val, "wpa2-ft") == 0) {
 			if (set_network(ifname, id, "key_mgmt",
@@ -1533,6 +1543,11 @@ static int cmd_sta_set_psk(struct sigma_dut *dut, struct sigma_conn *conn,
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Failed to clear sae_groups to default");
 			return -2;
+		}
+		if (!pmf) {
+			dut->sta_pmf = STA_PMF_OPTIONAL;
+			if (set_network(ifname, id, "ieee80211w", "1") < 0)
+				return -2;
 		}
 	} else if (alg && strcasecmp(alg, "SHA-256") == 0) {
 		if (set_network(ifname, id, "key_mgmt", "WPA-PSK-SHA256") < 0)

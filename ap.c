@@ -1637,12 +1637,15 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 		} else if (strcasecmp(val, "WPA2-SAE") == 0) {
 			dut->ap_key_mgmt = AP_WPA2_SAE;
 			dut->ap_cipher = AP_CCMP;
+			dut->ap_pmf = AP_PMF_REQUIRED;
 		} else if (strcasecmp(val, "WPA2-PSK-SAE") == 0) {
 			dut->ap_key_mgmt = AP_WPA2_PSK_SAE;
 			dut->ap_cipher = AP_CCMP;
+			dut->ap_pmf = AP_PMF_OPTIONAL;
 		} else if (strcasecmp(val, "OWE") == 0) {
 			dut->ap_key_mgmt = AP_WPA2_OWE;
 			dut->ap_cipher = AP_CCMP;
+			dut->ap_pmf = AP_PMF_REQUIRED;
 		} else if (strcasecmp(val, "NONE") == 0) {
 			dut->ap_key_mgmt = AP_OPEN;
 			dut->ap_cipher = AP_PLAIN;
@@ -6418,6 +6421,8 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		break;
 	case AP_PMF_OPTIONAL:
 		fprintf(f, "ieee80211w=1\n");
+		if (dut->ap_key_mgmt == AP_WPA2_PSK_SAE)
+			fprintf(f, "sae_require_mfp=1\n");
 		break;
 	case AP_PMF_REQUIRED:
 		fprintf(f, "ieee80211w=2\n");
