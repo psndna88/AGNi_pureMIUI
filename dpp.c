@@ -9,6 +9,8 @@
 #include "wpa_ctrl.h"
 #include "wpa_helpers.h"
 
+char *dpp_qrcode_file = "/sdcard/wpadebug_qrdata.txt";
+
 
 static int sigma_dut_is_ap(struct sigma_dut *dut)
 {
@@ -54,7 +56,8 @@ static const char * dpp_get_curve(struct sigma_cmd *cmd, const char *arg)
 
 static int dpp_get_local_bootstrap(struct sigma_dut *dut,
 				   struct sigma_conn *conn,
-				   struct sigma_cmd *cmd)
+				   struct sigma_cmd *cmd, int send_result,
+				   int *success)
 {
 	const char *curve = dpp_get_curve(cmd, "DPPCryptoIdentifier");
 	const char *bs = get_param(cmd, "DPPBS");
@@ -62,6 +65,8 @@ static int dpp_get_local_bootstrap(struct sigma_dut *dut,
 	char *pos, mac[50], buf[200], resp[1000], hex[2000];
 	const char *ifname = get_station_ifname();
 
+	if (success)
+		*success = 0;
 	if (strcasecmp(bs, "QR") != 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Unsupported DPPBS");
@@ -143,9 +148,15 @@ static int dpp_get_local_bootstrap(struct sigma_dut *dut,
 		return -2;
 
 	sigma_dut_print(dut, DUT_MSG_DEBUG, "URI: %s", resp);
-	ascii2hexstr(resp, hex);
-	snprintf(resp, sizeof(resp), "BootstrappingData,%s", hex);
-	send_resp(dut, conn, SIGMA_COMPLETE, resp);
+
+	if (send_result) {
+		ascii2hexstr(resp, hex);
+		snprintf(resp, sizeof(resp), "BootstrappingData,%s", hex);
+		send_resp(dut, conn, SIGMA_COMPLETE, resp);
+	}
+
+	if (success)
+		*success = 1;
 	return 0;
 }
 
@@ -517,12 +528,98 @@ static int dpp_wait_rx(struct sigma_dut *dut, struct wpa_ctrl *ctrl,
 }
 
 
-static int dpp_manual_dpp(struct sigma_dut *dut,
-			  struct sigma_conn *conn,
-			  struct sigma_cmd *cmd)
+static int dpp_scan_peer_qrcode(struct sigma_dut *dut)
 {
-	/* TODO */
-	return -1;
+	char buf[100];
+	char *buf2 = NULL;
+	FILE *fp = NULL;
+	uint32_t length;
+	unsigned int count;
+
+	unlink(dpp_qrcode_file);
+
+	snprintf(buf, sizeof(buf),
+		 "am start -n w1.fi.wpadebug/w1.fi.wpadebug.QrCodeScannerActivity");
+	if (system(buf) != 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to launch Scanner");
+		return -1;
+	}
+
+	count = 0;
+	while (!(fp = fopen(dpp_qrcode_file, "r"))) {
+		if (count > dut->default_timeout) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to open dpp_qrcode_file - QR Code scanning timed out");
+			return -1;
+		}
+
+		sleep(1);
+		count++;
+	}
+
+	if (fseek(fp, 0, SEEK_END) < 0 || (length = ftell(fp)) <= 0 ||
+	    fseek(fp, 0, SEEK_SET) < 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to get QR Code result file length");
+		fclose(fp);
+		return -1;
+	}
+
+	buf2 = malloc(length + 1);
+	if (!buf2) {
+		fclose(fp);
+		return -1;
+	}
+
+	if (fread(buf2, 1, length, fp) != length) {
+		fclose(fp);
+		free(buf2);
+		return -1;
+	}
+
+	fclose(fp);
+	buf2[length] = '\0';
+
+	free(dut->dpp_peer_uri);
+	dut->dpp_peer_uri = strdup(buf2);
+	free(buf2);
+	return 0;
+}
+
+
+static int dpp_display_own_qrcode(struct sigma_dut *dut)
+{
+	char buf[200], resp[2000];
+	const char *ifname = get_station_ifname();
+	FILE *fp;
+
+	snprintf(buf, sizeof(buf), "DPP_BOOTSTRAP_GET_URI %d",
+		 dut->dpp_local_bootstrap);
+	if (wpa_command_resp(ifname, buf, resp, sizeof(resp)) < 0 ||
+	    strncmp(resp, "FAIL", 4) == 0)
+		return -2;
+
+	unlink(dpp_qrcode_file);
+
+	fp = fopen(dpp_qrcode_file, "w");
+	if (!fp) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to open file %s",
+				dpp_qrcode_file);
+		return -2;
+	}
+
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "Own bootstrap URI: %s", resp);
+	fwrite(resp, 1, strlen(resp), fp);
+	fclose(fp);
+
+	snprintf(buf, sizeof(buf),
+		 "am start -n w1.fi.wpadebug/w1.fi.wpadebug.QrCodeDisplayActivity");
+	if (system(buf) != 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to display QR Code");
+		return -1;
+	}
+
+	return 0;
 }
 
 
@@ -540,6 +637,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	const char *step = get_param(cmd, "DPPStep");
 	const char *frametype = get_param(cmd, "DPPFrameType");
 	const char *attr = get_param(cmd, "DPPIEAttribute");
+	const char *action_type = get_param(cmd, "DPPActionType");
 	const char *role;
 	const char *val;
 	const char *conf_role;
@@ -558,6 +656,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		"DPP-NOT-COMPATIBLE",
 		"DPP-RESPONSE-PENDING",
 		"DPP-SCAN-PEER-QR-CODE",
+		"DPP-AUTH-DIRECTION",
 		NULL
 	};
 	const char *conf_events[] = {
@@ -1013,6 +1112,37 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 					  "errorCode,Failed to parse URI");
 				goto out;
 			}
+		} else if (mutual && action_type &&
+			   strcasecmp(action_type, "ManualDPP") == 0) {
+			res = get_wpa_cli_events(dut, ctrl, auth_events,
+						 buf, sizeof(buf));
+			if (res < 0) {
+				send_resp(dut, conn, SIGMA_COMPLETE,
+					  "BootstrapResult,OK,AuthResult,Timeout");
+				goto out;
+			}
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"DPP auth result: %s", buf);
+			if (strstr(buf, "DPP-SCAN-PEER-QR-CODE") == NULL) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,No scan request for peer QR Code seen");
+				goto out;
+			}
+
+			if (dpp_scan_peer_qrcode(dut) < 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to scan peer QR Code");
+				goto out;
+			}
+
+			snprintf(buf, sizeof(buf), "DPP_QR_CODE %s",
+				 dut->dpp_peer_uri);
+			if (wpa_command_resp(ifname, buf, buf,
+					     sizeof(buf)) < 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to parse URI");
+				goto out;
+			}
 		}
 	} else {
 		send_resp(dut, conn, SIGMA_ERROR,
@@ -1131,14 +1261,43 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		goto out;
 	}
 
-	if (check_mutual) {
-		res = get_wpa_cli_event(dut, ctrl, "DPP-AUTH-DIRECTION",
-					buf, sizeof(buf));
+	res = get_wpa_cli_events(dut, ctrl, auth_events, buf, sizeof(buf));
+	if (res < 0) {
+		send_resp(dut, conn, SIGMA_COMPLETE,
+			  "BootstrapResult,OK,AuthResult,Timeout");
+		goto out;
+	}
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "DPP auth result: %s", buf);
+
+	if (strstr(buf, "DPP-RESPONSE-PENDING")) {
+		/* Display own QR code in manual mode */
+		if (action_type && strcasecmp(action_type, "ManualDPP") == 0 &&
+		    dpp_display_own_qrcode(dut) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to display own QR code");
+			goto out;
+		}
+
+		/* Wait for the actual result after the peer has scanned the
+		 * QR Code. */
+		res = get_wpa_cli_events(dut, ctrl, auth_events,
+					 buf, sizeof(buf));
 		if (res < 0) {
 			send_resp(dut, conn, SIGMA_COMPLETE,
 				  "BootstrapResult,OK,AuthResult,Timeout");
 			goto out;
 		}
+
+		sigma_dut_print(dut, DUT_MSG_DEBUG, "DPP auth result: %s", buf);
+	}
+
+	if (check_mutual) {
+		if (!strstr(buf, "DPP-AUTH-DIRECTION")) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,No event for auth direction seen");
+			goto out;
+		}
+
 		sigma_dut_print(dut, DUT_MSG_DEBUG, "DPP auth direction: %s",
 				buf);
 		if (strstr(buf, "mutual=1") == NULL) {
@@ -1157,17 +1316,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		goto out;
 	}
 
-	res = get_wpa_cli_events(dut, ctrl, auth_events, buf, sizeof(buf));
-	if (res < 0) {
-		send_resp(dut, conn, SIGMA_COMPLETE,
-			  "BootstrapResult,OK,AuthResult,Timeout");
-		goto out;
-	}
-	sigma_dut_print(dut, DUT_MSG_DEBUG, "DPP auth result: %s", buf);
-
-	if (strstr(buf, "DPP-RESPONSE-PENDING")) {
-		/* Wait for the actual result after the peer has scanned the
-		 * QR Code. */
+	if (strstr(buf, "DPP-AUTH-DIRECTION")) {
 		res = get_wpa_cli_events(dut, ctrl, auth_events,
 					 buf, sizeof(buf));
 		if (res < 0) {
@@ -1175,6 +1324,8 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 				  "BootstrapResult,OK,AuthResult,Timeout");
 			goto out;
 		}
+
+		sigma_dut_print(dut, DUT_MSG_DEBUG, "DPP auth result: %s", buf);
 	}
 
 	if (strstr(buf, "DPP-NOT-COMPATIBLE")) {
@@ -1306,6 +1457,59 @@ out:
 }
 
 
+static int dpp_manual_dpp(struct sigma_dut *dut,
+			  struct sigma_conn *conn,
+			  struct sigma_cmd *cmd)
+{
+	const char *auth_role = get_param(cmd, "DPPAuthRole");
+	int res = -1, success;
+	const char *val;
+	unsigned int old_timeout;
+
+	if (!auth_role) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Missing DPPAuthRole");
+		return 0;
+	}
+
+	old_timeout = dut->default_timeout;
+	val = get_param(cmd, "DPPTimeout");
+	if (val && atoi(val) > 0) {
+		dut->default_timeout = atoi(val);
+		sigma_dut_print(dut, DUT_MSG_DEBUG, "DPP timeout: %u",
+				dut->default_timeout);
+	}
+
+	res = dpp_get_local_bootstrap(dut, conn, cmd, 0, &success);
+	if (res || !success)
+		goto out;
+
+	if (strcasecmp(auth_role, "Responder") == 0) {
+		res = dpp_display_own_qrcode(dut);
+		if (res < 0)
+			goto out;
+
+		res = dpp_automatic_dpp(dut, conn, cmd);
+		goto out;
+	}
+
+	if (strcasecmp(auth_role, "Initiator") == 0) {
+		res = dpp_scan_peer_qrcode(dut);
+		if (res < 0)
+			goto out;
+
+		res = dpp_automatic_dpp(dut, conn, cmd);
+		goto out;
+	}
+
+	send_resp(dut, conn, SIGMA_ERROR, "errorCode,Unknown DPPAuthRole");
+	res = 0;
+out:
+	dut->default_timeout = old_timeout;
+	return res;
+}
+
+
 int dpp_dev_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 			struct sigma_cmd *cmd)
 {
@@ -1325,7 +1529,7 @@ int dpp_dev_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 
 	if (strcasecmp(type, "GetLocalBootstrap") == 0)
-		return dpp_get_local_bootstrap(dut, conn, cmd);
+		return dpp_get_local_bootstrap(dut, conn, cmd, 1, NULL);
 	if (strcasecmp(type, "SetPeerBootstrap") == 0)
 		return dpp_set_peer_bootstrap(dut, conn, cmd);
 	if (strcasecmp(type, "ManualDPP") == 0)
