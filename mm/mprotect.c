@@ -148,12 +148,12 @@ static inline unsigned long change_pmd_range(struct vm_area_struct *vma,
 						 prot_numa)) {
 				pages += HPAGE_PMD_NR;
 				nr_huge_updates++;
-				continue;
+				goto next;
 			}
 			/* fall through */
 		}
 		if (pmd_none_or_clear_bad(pmd))
-			continue;
+			goto next;
 		pages += change_pte_range(vma, pmd, addr, next, newprot,
 				 dirty_accountable, prot_numa, &all_same_node);
 
@@ -165,6 +165,8 @@ static inline unsigned long change_pmd_range(struct vm_area_struct *vma,
 		 */
 		if (prot_numa && all_same_node)
 			change_pmd_protnuma(vma->vm_mm, addr, pmd);
+next:
+		cond_resched();
 	} while (pmd++, addr = next, addr != end);
 
 	if (nr_huge_updates)
