@@ -6,10 +6,13 @@
  */
 
 #include "sigma_dut.h"
+#include <sys/wait.h>
 #include "wpa_ctrl.h"
 #include "wpa_helpers.h"
 
+#ifdef ANDROID
 char *dpp_qrcode_file = "/sdcard/wpadebug_qrdata.txt";
+#endif /* ANDROID */
 
 
 static int sigma_dut_is_ap(struct sigma_dut *dut)
@@ -530,6 +533,7 @@ static int dpp_wait_rx(struct sigma_dut *dut, struct wpa_ctrl *ctrl,
 
 static int dpp_scan_peer_qrcode(struct sigma_dut *dut)
 {
+#ifdef ANDROID
 	char buf[100];
 	char *buf2 = NULL;
 	FILE *fp = NULL;
@@ -584,6 +588,81 @@ static int dpp_scan_peer_qrcode(struct sigma_dut *dut)
 	dut->dpp_peer_uri = strdup(buf2);
 	free(buf2);
 	return 0;
+#else /* ANDROID */
+	pid_t pid;
+	int pid_status;
+	int pipe_out[2];
+	char buf[4000], *pos;
+	ssize_t len;
+	int res = -1, ret;
+	struct timeval tv;
+	fd_set rfd;
+
+	if (pipe(pipe_out) != 0) {
+		perror("pipe");
+		return -1;
+	}
+
+	pid = fork();
+	if (pid < 0) {
+		perror("fork");
+		close(pipe_out[0]);
+		close(pipe_out[1]);
+		return -1;
+	}
+
+	if (pid == 0) {
+		char *argv[4] = { "zbarcam", "--raw", "--prescale=320x240",
+				  NULL };
+
+		dup2(pipe_out[1], STDOUT_FILENO);
+		close(pipe_out[0]);
+		close(pipe_out[1]);
+		execv("/usr/bin/zbarcam", argv);
+		perror("execv");
+		exit(0);
+		return -1;
+	}
+
+	close(pipe_out[1]);
+
+	FD_ZERO(&rfd);
+	FD_SET(pipe_out[0], &rfd);
+	tv.tv_sec = dut->default_timeout;
+	tv.tv_usec = 0;
+
+	ret = select(pipe_out[0] + 1, &rfd, NULL, NULL, &tv);
+	if (ret < 0) {
+		perror("select");
+		goto out;
+	}
+	if (ret == 0) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"QR Code scanning timed out");
+		goto out;
+	}
+
+	len = read(pipe_out[0], buf, sizeof(buf));
+	if (len <= 0)
+		goto out;
+	if (len == sizeof(buf))
+		len--;
+	buf[len] = '\0';
+	pos = strchr(buf, '\n');
+	if (pos)
+		*pos = '\0';
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "URI from QR scanner: %s", buf);
+
+	free(dut->dpp_peer_uri);
+	dut->dpp_peer_uri = strdup(buf);
+	res = 0;
+out:
+	close(pipe_out[0]);
+	kill(pid, SIGTERM);
+	waitpid(pid, &pid_status, 0);
+
+	return res;
+#endif /* ANDROID */
 }
 
 
@@ -591,14 +670,21 @@ static int dpp_display_own_qrcode(struct sigma_dut *dut)
 {
 	char buf[200], resp[2000];
 	const char *ifname = get_station_ifname();
+#ifdef ANDROID
 	FILE *fp;
+#else /* ANDROID */
+	pid_t pid;
+	int pid_status;
+#endif /* ANDROID */
 
 	snprintf(buf, sizeof(buf), "DPP_BOOTSTRAP_GET_URI %d",
 		 dut->dpp_local_bootstrap);
 	if (wpa_command_resp(ifname, buf, resp, sizeof(resp)) < 0 ||
 	    strncmp(resp, "FAIL", 4) == 0)
 		return -2;
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "Own bootstrap URI: %s", resp);
 
+#ifdef ANDROID
 	unlink(dpp_qrcode_file);
 
 	fp = fopen(dpp_qrcode_file, "w");
@@ -608,7 +694,6 @@ static int dpp_display_own_qrcode(struct sigma_dut *dut)
 		return -2;
 	}
 
-	sigma_dut_print(dut, DUT_MSG_DEBUG, "Own bootstrap URI: %s", resp);
 	fwrite(resp, 1, strlen(resp), fp);
 	fclose(fp);
 
@@ -618,6 +703,24 @@ static int dpp_display_own_qrcode(struct sigma_dut *dut)
 		sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to display QR Code");
 		return -1;
 	}
+#else /* ANDROID */
+	pid = fork();
+	if (pid < 0) {
+		perror("fork");
+		return -1;
+	}
+
+	if (pid == 0) {
+		char *argv[3] = { "qr", resp, NULL };
+
+		execv("/usr/bin/qr", argv);
+		perror("execv");
+		exit(0);
+		return -1;
+	}
+
+	waitpid(pid, &pid_status, 0);
+#endif /* ANDROID */
 
 	return 0;
 }
@@ -1495,8 +1598,12 @@ static int dpp_manual_dpp(struct sigma_dut *dut,
 
 	if (strcasecmp(auth_role, "Initiator") == 0) {
 		res = dpp_scan_peer_qrcode(dut);
-		if (res < 0)
+		if (res < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to scan peer QR Code");
+			res = 0;
 			goto out;
+		}
 
 		res = dpp_automatic_dpp(dut, conn, cmd);
 		goto out;
