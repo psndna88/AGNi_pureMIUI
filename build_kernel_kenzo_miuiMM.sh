@@ -1,7 +1,7 @@
 #!/bin/sh
 export KERNELDIR=`readlink -f .`
 . ~/WORKING_DIRECTORY/AGNi_stamp.sh
-. ~/WORKING_DIRECTORY/gcc-6.x-uber_aarch64.sh
+. ~/WORKING_DIRECTORY/gcc-8.x-uber_aarch64.sh
 
 echo ""
 echo " Cross-compiling AGNi pureMIUI-MM kernel ..."
