@@ -417,8 +417,8 @@ static int __msm_iommu_pagetable_map_range(struct msm_iommu_pt *pt,
 			chunk_size = SZ_1M;
 		/* 64k or 4k determined later */
 
-//		trace_iommu_map_range(va, pa, ops->get_length(cookie, len),
-//					chunk_size);
+		trace_iommu_map_range(va, pa, ops->get_length(cookie, len),
+					chunk_size);
 
 		/* for 1M and 16M, only first level entries are required */
 		if (chunk_size >= SZ_1M) {
@@ -483,8 +483,8 @@ static int __msm_iommu_pagetable_map_range(struct msm_iommu_pt *pt,
 			else
 				chunk_size = SZ_4K;
 
-//			trace_iommu_map_range(va, pa,
-//				ops->get_length(cookie, len), chunk_size);
+			trace_iommu_map_range(va, pa,
+				ops->get_length(cookie, len), chunk_size);
 
 			if (chunk_size == SZ_4K) {
 				ret = sl_4k(&sl_table[sl_offset], pa, pgprot4k);

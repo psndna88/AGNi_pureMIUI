@@ -572,7 +572,7 @@ s32 msm_iommu_pagetable_map_range(struct msm_iommu_pt *pt, unsigned long va,
 		else if (is_fully_aligned(va, pa, chunk_left, SZ_64K))
 			chunk_size = SZ_64K;
 
-//		trace_iommu_map_range(va, pa, sg->length, chunk_size);
+		trace_iommu_map_range(va, pa, sg->length, chunk_size);
 
 		ret = handle_1st_lvl(pt, fl_offset, pa, chunk_size,
 				     up_at, lo_at);
