@@ -1,6 +1,7 @@
 /*
  * Sigma Control API DUT (station/AP/sniffer)
  * Copyright (c) 2017, Qualcomm Atheros, Inc.
+ * Copyright (c) 2018, The Linux Foundation
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
