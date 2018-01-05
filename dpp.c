@@ -258,7 +258,7 @@ static int dpp_hostapd_conf_update(struct sigma_dut *dut,
 			int pass_len;
 
 			pass_len = parse_hexstr(pos, (u8 *) pass, sizeof(pass));
-			if (pass_len < 0 || pass_len >= sizeof(pass))
+			if (pass_len < 0 || (size_t) pass_len >= sizeof(pass))
 				return -2;
 			pass[pass_len] = '\0';
 			sigma_dut_print(dut, DUT_MSG_INFO,
