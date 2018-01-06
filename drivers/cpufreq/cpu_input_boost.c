@@ -25,8 +25,8 @@
  * For MSM8996 (big.LITTLE). CPU0 and CPU1 are LITTLE CPUs; CPU2 and CPU3 are
  * big CPUs.
  */
-#define LITTLE_CPU_MASK (CPU_MASK(0) | CPU_MASK(1))
-#define BIG_CPU_MASK    (CPU_MASK(2) | CPU_MASK(3))
+#define LITTLE_CPU_MASK (CPU_MASK(0) | CPU_MASK(1) | CPU_MASK(2) | CPU_MASK(3))
+#define BIG_CPU_MASK    (CPU_MASK(4) | CPU_MASK(5))
 
 /* Available bits for boost_policy state */
 #define DRIVER_ENABLED        (1U << 0)
