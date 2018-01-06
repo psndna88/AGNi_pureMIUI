@@ -45,7 +45,7 @@
 static uint disable_restart_work;
 module_param(disable_restart_work, uint, S_IRUGO | S_IWUSR);
 
-static int enable_debug;
+static int enable_debug = 0;
 module_param(enable_debug, int, S_IRUGO | S_IWUSR);
 
 /* The maximum shutdown timeout is the product of MAX_LOOPS and DELAY_MS. */

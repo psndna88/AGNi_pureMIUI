@@ -23,8 +23,8 @@
 #define GET_BUF_TYPE(d)		((d & 0x00FF00) >> 8)
 #define GET_BUF_NUM(n)		((n & 0x0000FF))
 
-#define CHK_OVERFLOW(bufStart, start, end, length) \
-	((((bufStart) <= (start)) && ((end) - (start) >= (length))) ? 1 : 0)
+#define CHK_OVERFLOW(start, end, length) \
+	((((end) - (start) >= (length))) ? 1 : 0)
 
 int diagfwd_init(void);
 void diagfwd_exit(void);

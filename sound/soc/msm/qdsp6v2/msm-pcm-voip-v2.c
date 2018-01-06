@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -503,7 +503,7 @@ static void voip_process_ul_pkt(uint8_t *voc_pkt,
 		snd_pcm_period_elapsed(prtd->capture_substream);
 	} else {
 		spin_unlock_irqrestore(&prtd->dsp_ul_lock, dsp_flags);
-		pr_err("UL data dropped\n");
+//		pr_err("UL data dropped\n");
 	}
 
 	wake_up(&prtd->out_wait);
@@ -670,7 +670,7 @@ static void voip_process_dl_pkt(uint8_t *voc_pkt, void *private_data)
 	} else {
 		*((uint32_t *)voc_pkt) = 0;
 		spin_unlock_irqrestore(&prtd->dsp_lock, dsp_flags);
-		pr_err("DL data not available\n");
+//		pr_err("DL data not available\n");
 	}
 	wake_up(&prtd->in_wait);
 }
@@ -818,19 +818,24 @@ static int msm_pcm_playback_copy(struct snd_pcm_substream *substream, int a,
 			if (prtd->mode == MODE_PCM) {
 				ret = copy_from_user(&buf_node->frame.voc_pkt,
 							buf, count);
+				if (ret) {
+					pr_err("%s: copy from user failed %d\n",
+					       __func__, ret);
+					return -EFAULT;
+				}
 				buf_node->frame.pktlen = count;
 			} else {
 				ret = copy_from_user(&buf_node->frame,
 							buf, count);
+				if (ret) {
+					pr_err("%s: copy from user failed %d\n",
+					       __func__, ret);
+					return -EFAULT;
+				}
 				if (buf_node->frame.pktlen >= count)
 					buf_node->frame.pktlen = count -
 					(sizeof(buf_node->frame.frm_hdr) +
 					 sizeof(buf_node->frame.pktlen));
-			}
-			if (ret) {
-				pr_err("%s: copy from user failed %d\n",
-				       __func__, ret);
-				return -EFAULT;
 			}
 			spin_lock_irqsave(&prtd->dsp_lock, dsp_flags);
 			list_add_tail(&buf_node->list, &prtd->in_queue);
