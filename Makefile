@@ -240,10 +240,11 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 	  else if [ -x /bin/bash ]; then echo /bin/bash; \
 	  else echo sh; fi ; fi)
 
+O3_OPTS := -funswitch-loops -fpredictive-commoning -fgcse-after-reload -ftree-loop-vectorize -ftree-loop-distribution -ftree-loop-distribute-patterns -ftree-slp-vectorize -fvect-cost-model -ftree-partial-pre -fpeel-loops
 HOSTCC       = $(CCACHE) gcc
 HOSTCXX      = $(CCACHE) g++
-HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O3 -fomit-frame-pointer -std=gnu89
-HOSTCXXFLAGS = -O3
+HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 $(O3_OPTS) -fomit-frame-pointer -std=gnu89
+HOSTCXXFLAGS = -O2 $(O3_OPTS)
 
 # Decide whether to build built-in, modular, or both.
 # Normally, just do built-in.
@@ -383,19 +384,18 @@ KBUILD_CPPFLAGS := -D__KERNEL__
 KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -fno-strict-aliasing -fno-common \
 		   -Werror-implicit-function-declaration \
-		   -g0 -DNDEBUG -fmodulo-sched -fivopts \
-		   -fmodulo-sched-allow-regmoves \
+		   -Wno-format-security \
 		   -fno-asynchronous-unwind-tables \
+		   -fno-delete-null-pointer-checks \
+		   -std=gnu89 \
 		   -mfix-cortex-a53-843419 \
 		   -mcpu=cortex-a72.cortex-a53+crc+crypto \
-		   -Wno-format-security \
-		   -fno-delete-null-pointer-checks \
 		   -Wno-deprecated-declarations \
 		   -Wno-misleading-indentation \
 		   -Wno-shift-overflow \
 		   -Wno-bool-compare \
 		   -Wno-memset-transposed-args \
-		   -Wno-discarded-array-qualifiers -std=gnu89 \
+		   -Wno-discarded-array-qualifiers \
 		   -Wno-tautological-compare -Wno-array-bounds \
 		   -Wno-duplicate-decl-specifier \
 		   -Wno-memset-elt-size -Wno-switch-unreachable \
@@ -629,6 +629,7 @@ KBUILD_CFLAGS   += $(call cc-disable-warning,bool-operation,)
 KBUILD_CFLAGS   += $(call cc-disable-warning,format-overflow,)
 KBUILD_CFLAGS	+= $(call cc-disable-warning,frame-address,)
 KBUILD_CFLAGS	+= $(call cc-disable-warning,maybe-uninitialized,)
+KBUILD_CFLAGS	+= $(call cc-disable-warning,packed-not-aligned,)
 
 # Kill format truncation warnings
 KBUILD_CFLAGS   += $(call cc-disable-warning,format-truncation,)
@@ -639,7 +640,7 @@ KBUILD_CFLAGS	+= $(call cc-option,--param=allow-store-data-races=0)
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS	+= -Os
 else
-KBUILD_CFLAGS	+= -O3
+KBUILD_CFLAGS	+= -O2 $(O3_OPTS)
 endif
 
 include $(srctree)/arch/$(SRCARCH)/Makefile
