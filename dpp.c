@@ -955,6 +955,26 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			groups_override = "[{\"groupId\":\"DPPGROUP_DPP_INFRA2\",\"netRole\":\"sta\"}]";
 		}
 		break;
+	case 5:
+		ascii2hexstr("DPPNET01", buf);
+		snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		ascii2hexstr("ThisIsDppPassphrase", buf);
+		snprintf(conf_pass, sizeof(conf_pass), "pass=%s", buf);
+		if (enrollee_ap)
+			conf_role = "ap-sae";
+		else
+			conf_role = "sta-sae";
+		break;
+	case 6:
+		ascii2hexstr("DPPNET01", buf);
+		snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		ascii2hexstr("ThisIsDppPassphrase", buf);
+		snprintf(conf_pass, sizeof(conf_pass), "pass=%s", buf);
+		if (enrollee_ap)
+			conf_role = "ap-psk-sae";
+		else
+			conf_role = "sta-psk-sae";
+		break;
 	default:
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Unsupported DPPConfIndex");
