@@ -66,6 +66,7 @@ struct sigma_dut;
 #define VHT_DEFAULT_OPER_CHWIDTH AP_80_VHT_OPER_CHWIDTH
 
 typedef unsigned int u32;
+typedef uint16_t u16;
 typedef unsigned char u8;
 
 #define WPA_GET_BE32(a) ((((u32) (a)[0]) << 24) | (((u32) (a)[1]) << 16) | \
@@ -693,6 +694,9 @@ struct sigma_dut {
 	char *dpp_peer_uri;
 	int dpp_local_bootstrap;
 	int dpp_conf_id;
+
+	u8 fils_hlp;
+	pthread_t hlp_thread;
 };
 
 
@@ -798,6 +802,10 @@ int ath_set_width(struct sigma_dut *dut, struct sigma_conn *conn,
 		  const char *intf, const char *val);
 int wil6210_send_frame_60g(struct sigma_dut *dut, struct sigma_conn *conn,
 			   struct sigma_cmd *cmd);
+int hwaddr_aton(const char *txt, unsigned char *addr);
+int set_ipv4_addr(struct sigma_dut *dut, const char *ifname,
+		  const char *ip, const char *mask);
+int set_ipv4_gw(struct sigma_dut *dut, const char *gw);
 
 /* p2p.c */
 int p2p_cmd_sta_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
@@ -823,6 +831,7 @@ void convert_mac_addr_to_ipv6_lladdr(u8 *mac_addr, char *ipv6_buf,
 size_t strlcpy(char *dest, const char *src, size_t siz);
 size_t strlcat(char *dst, const char *str, size_t size);
 #endif /* ANDROID */
+void hex_dump(struct sigma_dut *dut, u8 *data, size_t len);
 
 
 /* uapsd_stream.c */
@@ -860,5 +869,8 @@ int loc_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 int dpp_dev_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 			struct sigma_cmd *cmd);
 
+/* dhcp.c */
+void process_fils_hlp(struct sigma_dut *dut);
+void hlp_thread_cleanup(struct sigma_dut *dut);
 
 #endif /* SIGMA_DUT_H */

@@ -910,6 +910,38 @@ static int add_ipv6_rule(struct sigma_dut *dut, const char *ifname)
 #endif /* ANDROID */
 
 
+int set_ipv4_addr(struct sigma_dut *dut, const char *ifname,
+		  const char *ip, const char *mask)
+{
+	char buf[200];
+
+	snprintf(buf, sizeof(buf), "ifconfig %s %s netmask %s",
+		 ifname, ip, mask);
+	return system(buf) == 0;
+}
+
+
+int set_ipv4_gw(struct sigma_dut *dut, const char *gw)
+{
+	char buf[200];
+
+	if (!is_ip_addr(gw)) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG, "Invalid gw addr - %s", gw);
+		return -1;
+	}
+
+	snprintf(buf, sizeof(buf), "route add default gw %s", gw);
+	if (!dut->no_ip_addr_set && system(buf) != 0) {
+		snprintf(buf, sizeof(buf), "ip ro re default via %s",
+			 gw);
+		if (system(buf) != 0)
+			return 0;
+	}
+
+	return 1;
+}
+
+
 static int cmd_sta_set_ip_config(struct sigma_dut *dut,
 				 struct sigma_conn *conn,
 				 struct sigma_cmd *cmd)
@@ -937,7 +969,7 @@ static int cmd_sta_set_ip_config(struct sigma_dut *dut,
 	val = get_param(cmd, "Type");
 	if (val) {
 		type = atoi(val);
-		if (type != 1 && type != 2) {
+		if (type < 1 || type > 3) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,Unsupported address type");
 			return 0;
@@ -967,10 +999,15 @@ static int cmd_sta_set_ip_config(struct sigma_dut *dut,
 			/* Assume this happens by default */
 			return 1;
 		}
+		if (type != 3) {
+			kill_dhcp_client(dut, ifname);
+			if (start_dhcp_client(dut, ifname) < 0)
+				return -2;
+		} else {
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"Using FILS HLP DHCPv4 Rapid Commit");
+		}
 
-		kill_dhcp_client(dut, ifname);
-		if (start_dhcp_client(dut, ifname) < 0)
-			return -2;
 		return 1;
 #endif /* __linux__ */
 		return -2;
@@ -1040,9 +1077,7 @@ static int cmd_sta_set_ip_config(struct sigma_dut *dut,
 	kill_dhcp_client(dut, ifname);
 
 	if (!dut->no_ip_addr_set) {
-		snprintf(buf, sizeof(buf), "ifconfig %s %s netmask %s",
-			 ifname, ip, mask);
-		if (system(buf) != 0) {
+		if (!set_ipv4_addr(dut, ifname, ip, mask)) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,Failed to set IP address");
 			return 0;
@@ -1051,18 +1086,10 @@ static int cmd_sta_set_ip_config(struct sigma_dut *dut,
 
 	gw = get_param(cmd, "defaultGateway");
 	if (gw) {
-		if (!is_ip_addr(gw))
-			return -1;
-		snprintf(buf, sizeof(buf), "route add default gw %s", gw);
-		if (!dut->no_ip_addr_set && system(buf) != 0) {
-			snprintf(buf, sizeof(buf), "ip ro re default via %s",
-				 gw);
-			if (system(buf) != 0) {
-				send_resp(dut, conn, SIGMA_ERROR,
-					  "ErrorCode,Failed "
-					  "to set default gateway");
-				return 0;
-			}
+		if (set_ipv4_gw(dut, gw) < 1) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to set default gateway");
+			return 0;
 		}
 	}
 
@@ -2589,6 +2616,10 @@ static int cmd_sta_associate(struct sigma_dut *dut, struct sigma_conn *conn,
 			return 0;
 		}
 	}
+#ifdef ANDROID
+	if (dut->fils_hlp)
+		process_fils_hlp(dut);
+#endif /* ANDROID */
 
 	if (wps_param &&
 	    (strcmp(wps_param, "1") == 0 || strcasecmp(wps_param, "On") == 0))
@@ -2961,6 +2992,9 @@ static int cmd_sta_preset_testparameters_oce(struct sigma_dut *dut,
 					     struct sigma_cmd *cmd)
 {
 	const char *val;
+	char buf[1000];
+	char text[20];
+	unsigned char addr[ETH_ALEN];
 
 	val = get_param(cmd, "OCESupport");
 	if (val && strcasecmp(val, "Disable") == 0) {
@@ -2990,6 +3024,37 @@ static int cmd_sta_preset_testparameters_oce(struct sigma_dut *dut,
 				  "ErrorCode,Failed to disable FILS");
 			return 0;
 		}
+	}
+
+	val = get_param(cmd, "FILSHLP");
+	if (val && strcasecmp(val, "Enable") == 0) {
+		if (get_wpa_status(get_station_ifname(), "address", text,
+				   sizeof(text)) < 0)
+			return -2;
+		hwaddr_aton(text, addr);
+		snprintf(buf, sizeof(buf),
+			 "FILS_HLP_REQ_ADD ff:ff:ff:ff:ff:ff "
+			 "080045100140000040004011399e00000000ffffffff00440043"
+			 "012cb30001010600fd4f46410000000000000000000000000000"
+			 "000000000000"
+			 "%02x%02x%02x%02x%02x%02x"
+			 "0000000000000000000000000000000000000000000000000000"
+			 "0000000000000000000000000000000000000000000000000000"
+			 "0000000000000000000000000000000000000000000000000000"
+			 "0000000000000000000000000000000000000000000000000000"
+			 "0000000000000000000000000000000000000000000000000000"
+			 "0000000000000000000000000000000000000000000000000000"
+			 "0000000000000000000000000000000000000000000000000000"
+			 "0000000000000000000000000000000000000000638253633501"
+			 "013d0701000af549d29b390205dc3c12616e64726f69642d6468"
+			 "63702d382e302e30370a0103060f1a1c333a3b2b5000ff00",
+			 addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+		if (wpa_command(intf, buf)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to add HLP");
+			return 0;
+		}
+		dut->fils_hlp = 1;
 	}
 
 	return 1;
@@ -5222,6 +5287,11 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 	if (dut->program == PROGRAM_OCE) {
 		wpa_command(intf, "SET oce 1");
 		wpa_command(intf, "SET disable_fils 0");
+		wpa_command(intf, "FILS_HLP_REQ_FLUSH");
+		dut->fils_hlp = 0;
+#ifdef ANDROID
+		hlp_thread_cleanup(dut);
+#endif /* ANDROID */
 	}
 
 	if (dev_role && strcasecmp(dev_role, "STA-CFON") == 0) {

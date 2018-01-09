@@ -1076,6 +1076,9 @@ int main(int argc, char *argv[])
 	free(sigma_dut.ap_sae_groups);
 	free(sigma_dut.dpp_peer_uri);
 	sigma_dut_unreg_cmds(&sigma_dut);
+#ifdef ANDROID
+	hlp_thread_cleanup(&sigma_dut);
+#endif /* ANDROID */
 
 	return 0;
 }

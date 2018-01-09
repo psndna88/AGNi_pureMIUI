@@ -1,6 +1,7 @@
 /*
  * Sigma Control API DUT (station/AP)
  * Copyright (c) 2014-2017, Qualcomm Atheros, Inc.
+ * Copyright (c) 2018, The Linux Foundation
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
@@ -291,3 +292,24 @@ size_t strlcat(char *dst, const char *str, size_t size)
 }
 
 #endif /* ANDROID */
+
+
+void hex_dump(struct sigma_dut *dut, u8 *data, size_t len)
+{
+	char buf[1024];
+	size_t index;
+	u8 *ptr;
+	int pos;
+
+	memset(buf, 0, sizeof(buf));
+	ptr = data;
+	pos = 0;
+	for (index = 0; index < len; index++) {
+		pos += snprintf(&(buf[pos]), sizeof(buf) - pos,
+				"%02x ", *ptr++);
+		if (pos > 1020)
+			break;
+	}
+	sigma_dut_print(dut, DUT_MSG_INFO, "HEXDUMP len=[%d]", (int) len);
+	sigma_dut_print(dut, DUT_MSG_INFO, "buf:%s", buf);
+}

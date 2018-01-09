@@ -7610,7 +7610,6 @@ static int cmd_ap_deauth_sta(struct sigma_dut *dut, struct sigma_conn *conn,
 #ifdef __linux__
 int inject_frame(int s, const void *data, size_t len, int encrypt);
 int open_monitor(const char *ifname);
-int hwaddr_aton(const char *txt, unsigned char *addr);
 #endif /* __linux__ */
 
 enum send_frame_type {
