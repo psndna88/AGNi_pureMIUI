@@ -1635,7 +1635,8 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 		} else if (strcasecmp(val, "WPA2-PSK-Mixed") == 0) {
 			dut->ap_key_mgmt = AP_WPA2_PSK_MIXED;
 			dut->ap_cipher = AP_CCMP_TKIP;
-		} else if (strcasecmp(val, "WPA2-SAE") == 0) {
+		} else if (strcasecmp(val, "WPA2-SAE") == 0 ||
+			   strcasecmp(val, "SAE") == 0) {
 			dut->ap_key_mgmt = AP_WPA2_SAE;
 			dut->ap_cipher = AP_CCMP;
 			dut->ap_pmf = AP_PMF_REQUIRED;
