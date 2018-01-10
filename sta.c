@@ -8661,6 +8661,85 @@ static int cmd_sta_scan(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int cmd_sta_scan_bss(struct sigma_dut *dut, struct sigma_conn *conn,
+			    struct sigma_cmd *cmd)
+{
+	const char *intf = get_param(cmd, "Interface");
+	const char *bssid;
+	char buf[4096], *pos;
+	int freq, chan;
+	char *ssid;
+	char resp[100];
+	int res;
+	struct wpa_ctrl *ctrl;
+
+	bssid = get_param(cmd, "BSSID");
+	if (!bssid) {
+		send_resp(dut, conn, SIGMA_INVALID,
+			  "errorCode,BSSID argument is missing");
+		return 0;
+	}
+
+	ctrl = open_wpa_mon(intf);
+	if (!ctrl) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to open wpa_supplicant monitor connection");
+		return -1;
+	}
+
+	if (wpa_command(intf, "SCAN TYPE=ONLY")) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Could not start scan");
+		wpa_ctrl_detach(ctrl);
+		wpa_ctrl_close(ctrl);
+		return 0;
+	}
+
+	res = get_wpa_cli_event(dut, ctrl, "CTRL-EVENT-SCAN-RESULTS",
+				buf, sizeof(buf));
+
+	wpa_ctrl_detach(ctrl);
+	wpa_ctrl_close(ctrl);
+
+	if (res < 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Scan did not complete");
+		return 0;
+	}
+
+	snprintf(buf, sizeof(buf), "BSS %s", bssid);
+	if (wpa_command_resp(intf, buf, buf, sizeof(buf)) < 0 ||
+	    strncmp(buf, "id=", 3) != 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Specified BSSID not found");
+		return 0;
+	}
+
+	pos = strstr(buf, "\nfreq=");
+	if (!pos) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Channel not found");
+		return 0;
+	}
+	freq = atoi(pos + 6);
+	chan = freq_to_channel(freq);
+
+	pos = strstr(buf, "\nssid=");
+	if (!pos) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,SSID not found");
+		return 0;
+	}
+	ssid = pos + 6;
+	pos = strchr(ssid, '\n');
+	if (pos)
+		*pos = '\0';
+	snprintf(resp, sizeof(resp), "ssid,%s,bsschannel,%d", ssid, chan);
+	send_resp(dut, conn, SIGMA_COMPLETE, resp);
+	return 0;
+}
+
+
 static int cmd_sta_set_systime(struct sigma_dut *dut, struct sigma_conn *conn,
 			       struct sigma_cmd *cmd)
 {
@@ -9127,6 +9206,7 @@ void sta_register_cmds(void)
 	sigma_dut_reg_cmd("sta_add_credential", req_intf,
 			  cmd_sta_add_credential);
 	sigma_dut_reg_cmd("sta_scan", req_intf, cmd_sta_scan);
+	sigma_dut_reg_cmd("sta_scan_bss", req_intf, cmd_sta_scan_bss);
 	sigma_dut_reg_cmd("sta_set_systime", NULL, cmd_sta_set_systime);
 	sigma_dut_reg_cmd("sta_osu", req_intf, cmd_sta_osu);
 	sigma_dut_reg_cmd("sta_policy_update", req_intf, cmd_sta_policy_update);
