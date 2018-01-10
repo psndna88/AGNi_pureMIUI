@@ -514,20 +514,55 @@ static int dpp_wait_tx_status(struct sigma_dut *dut, struct wpa_ctrl *ctrl,
 
 
 static int dpp_wait_rx(struct sigma_dut *dut, struct wpa_ctrl *ctrl,
-		       int frame_type)
+		       int frame_type, int max_wait)
 {
 	char buf[200], tmp[20];
 	int res;
+	unsigned int old_timeout;
+
+	old_timeout = dut->default_timeout;
+	if (max_wait > 0 && dut->default_timeout > max_wait)
+		dut->default_timeout = max_wait;
 
 	snprintf(tmp, sizeof(tmp), "type=%d", frame_type);
 	for (;;) {
 		res = get_wpa_cli_event(dut, ctrl, "DPP-RX", buf, sizeof(buf));
-		if (res < 0)
+		if (res < 0) {
+			dut->default_timeout = old_timeout;
 			return -1;
+		}
 		if (strstr(buf, tmp) != NULL)
 			break;
 	}
 
+	dut->default_timeout = old_timeout;
+	return 0;
+}
+
+
+static int dpp_wait_rx_conf_req(struct sigma_dut *dut, struct wpa_ctrl *ctrl,
+				int max_wait)
+{
+	char buf[200];
+	int res;
+	unsigned int old_timeout;
+
+	old_timeout = dut->default_timeout;
+	if (max_wait > 0 && dut->default_timeout > max_wait)
+		dut->default_timeout = max_wait;
+
+	for (;;) {
+		res = get_wpa_cli_event(dut, ctrl, "DPP-CONF-REQ-RX",
+					buf, sizeof(buf));
+		if (res < 0) {
+			dut->default_timeout = old_timeout;
+			return -1;
+		}
+
+		break;
+	}
+
+	dut->default_timeout = old_timeout;
 	return 0;
 }
 
@@ -1278,42 +1313,42 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		result = "errorCode,Unexpected state";
 
 		if (strcasecmp(frametype, "PKEXExchangeResponse") == 0) {
-			if (dpp_wait_rx(dut, ctrl, 8) < 0)
+			if (dpp_wait_rx(dut, ctrl, 8, -1) < 0)
 				result = "BootstrapResult,Timeout";
 			else
 				result = "BootstrapResult,Errorsent";
 		}
 
 		if (strcasecmp(frametype, "PKEXCRRequest") == 0) {
-			if (dpp_wait_rx(dut, ctrl, 9) < 0)
+			if (dpp_wait_rx(dut, ctrl, 9, -1) < 0)
 				result = "BootstrapResult,Timeout";
 			else
 				result = "BootstrapResult,Errorsent";
 		}
 
 		if (strcasecmp(frametype, "PKEXCRResponse") == 0) {
-			if (dpp_wait_rx(dut, ctrl, 10) < 0)
+			if (dpp_wait_rx(dut, ctrl, 10, -1) < 0)
 				result = "BootstrapResult,Timeout";
 			else
 				result = "BootstrapResult,Errorsent";
 		}
 
 		if (strcasecmp(frametype, "AuthenticationRequest") == 0) {
-			if (dpp_wait_rx(dut, ctrl, 0) < 0)
+			if (dpp_wait_rx(dut, ctrl, 0, -1) < 0)
 				result = "BootstrapResult,OK,AuthResult,Timeout";
 			else
 				result = "BootstrapResult,OK,AuthResult,Errorsent";
 		}
 
 		if (strcasecmp(frametype, "AuthenticationResponse") == 0) {
-			if (dpp_wait_rx(dut, ctrl, 1) < 0)
+			if (dpp_wait_rx(dut, ctrl, 1, -1) < 0)
 				result = "BootstrapResult,OK,AuthResult,Timeout";
 			else
 				result = "BootstrapResult,OK,AuthResult,Errorsent";
 		}
 
 		if (strcasecmp(frametype, "AuthenticationConfirm") == 0) {
-			if (dpp_wait_rx(dut, ctrl, 2) < 0)
+			if (dpp_wait_rx(dut, ctrl, 2, -1) < 0)
 				result = "BootstrapResult,OK,AuthResult,Timeout";
 			else
 				result = "BootstrapResult,OK,AuthResult,Errorsent";
@@ -1368,19 +1403,31 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	}
 
 	if (frametype && strcasecmp(frametype, "AuthenticationRequest") == 0) {
-		if (dpp_wait_tx_status(dut, ctrl, 0) < 0)
-			result = "BootstrapResult,OK,AuthResult,Timeout";
+		if (dpp_wait_tx_status(dut, ctrl, 0) < 0) {
+			send_resp(dut, conn, SIGMA_COMPLETE,
+				  "BootstrapResult,OK,AuthResult,Timeout");
+			goto out;
+		}
+
+		if (dpp_wait_rx(dut, ctrl, 1, 5) < 0)
+			result = "BootstrapResult,OK,AuthResult,Errorsent,LastFrameReceived,None";
 		else
-			result = "BootstrapResult,OK,AuthResult,Errorsent";
+			result = "BootstrapResult,OK,AuthResult,Errorsent,LastFrameReceived,AuthenticationResponse";
 		send_resp(dut, conn, SIGMA_COMPLETE, result);
 		goto out;
 	}
 
 	if (frametype && strcasecmp(frametype, "AuthenticationResponse") == 0) {
-		if (dpp_wait_tx_status(dut, ctrl, 1) < 0)
-			result = "BootstrapResult,OK,AuthResult,Timeout";
+		if (dpp_wait_tx_status(dut, ctrl, 1) < 0) {
+			send_resp(dut, conn, SIGMA_COMPLETE,
+				  "BootstrapResult,OK,AuthResult,Timeout");
+			goto out;
+		}
+
+		if (dpp_wait_rx(dut, ctrl, 2, 5) < 0)
+			result = "BootstrapResult,OK,AuthResult,Errorsent,LastFrameReceived,AuthenticationRequest";
 		else
-			result = "BootstrapResult,OK,AuthResult,Errorsent";
+			result = "BootstrapResult,OK,AuthResult,Errorsent,LastFrameReceived,AuthenticationConfirm";
 		send_resp(dut, conn, SIGMA_COMPLETE, result);
 		goto out;
 	}
@@ -1432,10 +1479,16 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	}
 
 	if (frametype && strcasecmp(frametype, "AuthenticationConfirm") == 0) {
-		if (dpp_wait_tx_status(dut, ctrl, 2) < 0)
-			result = "BootstrapResult,OK,AuthResult,Timeout";
+		if (dpp_wait_tx_status(dut, ctrl, 2) < 0) {
+			send_resp(dut, conn, SIGMA_COMPLETE,
+				  "BootstrapResult,OK,AuthResult,Timeout");
+			goto out;
+		}
+
+		if (dpp_wait_rx_conf_req(dut, ctrl, 5) < 0)
+			result = "BootstrapResult,OK,AuthResult,Errorsent,LastFrameReceived,AuthenticationResponse";
 		else
-			result = "BootstrapResult,OK,AuthResult,Errorsent";
+			result = "BootstrapResult,OK,AuthResult,Errorsent,LastFrameReceived,ConfigurationRequest";
 		send_resp(dut, conn, SIGMA_COMPLETE, result);
 		goto out;
 	}
