@@ -4608,8 +4608,10 @@ static int cmd_sta_disconnect(struct sigma_dut *dut, struct sigma_conn *conn,
 			      struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
+	const char *val = get_param(cmd, "maintain_profile");
 
-	if (dut->program == PROGRAM_OCE) {
+	if (dut->program == PROGRAM_OCE ||
+	    (val && atoi(val) == 1)) {
 		wpa_command(intf, "DISCONNECT");
 		return 1;
 	}
