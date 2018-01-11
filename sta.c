@@ -1314,6 +1314,7 @@ static int set_wpa_common(struct sigma_dut *dut, struct sigma_conn *conn,
 	int id;
 	int cipher_set = 0;
 	int owe;
+	int suite_b = 0;
 
 	id = add_network_common(dut, conn, ifname, cmd);
 	if (id < 0)
@@ -1344,6 +1345,7 @@ static int set_wpa_common(struct sigma_dut *dut, struct sigma_conn *conn,
 		if (set_network(ifname, id, "proto", "WPA WPA2") < 0)
 			return -2;
 	} else if (strcasecmp(val, "SuiteB") == 0) {
+		suite_b = 1;
 		if (set_network(ifname, id, "proto", "WPA2") < 0)
 			return -2;
 	} else if (strcasecmp(val, "OWE") == 0) {
@@ -1478,7 +1480,7 @@ static int set_wpa_common(struct sigma_dut *dut, struct sigma_conn *conn,
 			send_resp(dut, conn, SIGMA_INVALID, "errorCode,Unrecognized PMF value");
 			return 0;
 		}
-	} else if (owe) {
+	} else if (owe || suite_b) {
 		dut->sta_pmf = STA_PMF_REQUIRED;
 		if (set_network(ifname, id, "ieee80211w", "2") < 0)
 			return -2;
