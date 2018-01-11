@@ -1176,6 +1176,11 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		int mutual;
 		int freq = 2462; /* default: channel 11 */
 
+		if (strcasecmp(bs, "PKEX") == 0) {
+			/* default: channel 6 for PKEX */
+			freq = 2437;
+		}
+
 		delay_qr_resp = get_param(cmd, "DPPDelayQRResponse");
 
 		val = get_param(cmd, "DPPAuthDirection");
@@ -1219,8 +1224,6 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			}
 		}
 		if (strcasecmp(bs, "PKEX") == 0) {
-			freq = 2437;
-
 			snprintf(buf, sizeof(buf),
 				 "DPP_PKEX_ADD own=%d role=%s %scode=%s",
 				 own_pkex_id, role, pkex_identifier, pkex_code);
