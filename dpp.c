@@ -813,6 +813,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	const char *result;
 	int check_mutual = 0;
 	int enrollee_ap;
+	int force_gas_fragm = 0;
 
 	if (!wait_conn)
 		wait_conn = "no";
@@ -1010,6 +1011,18 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		else
 			conf_role = "sta-psk-sae";
 		break;
+	case 7:
+		ascii2hexstr("DPPNET01", buf);
+		snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		if (enrollee_ap) {
+			conf_role = "ap-dpp";
+			groups_override = "[{\"groupId\":\"DPPGROUP_DPP_INFRA\",\"netRole\":\"ap\"}]";
+		} else {
+			conf_role = "sta-dpp";
+			groups_override = "[{\"groupId\":\"DPPGROUP_DPP_INFRA\",\"netRole\":\"sta\"}]";
+		}
+		force_gas_fragm = 1;
+		break;
 	default:
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Unsupported DPPConfIndex");
@@ -1017,8 +1030,17 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	}
 
 	if (groups_override) {
-		snprintf(buf, sizeof(buf), "SET dpp_groups_override %s",
-			 groups_override);
+		const char *extra = "";
+		char spaces[1500];
+
+		if (force_gas_fragm) {
+			memset(spaces, ' ', sizeof(spaces));
+			spaces[sizeof(spaces) - 1] = '\0';
+			extra = spaces;
+		}
+
+		snprintf(buf, sizeof(buf), "SET dpp_groups_override %s%s",
+			 groups_override, extra);
 		if (wpa_command(ifname, buf) < 0) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Failed to set cred:groups");
