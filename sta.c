@@ -4700,9 +4700,11 @@ static int cmd_sta_reassoc(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *val = get_param(cmd, "CHANNEL");
 	struct wpa_ctrl *ctrl;
 	char buf[100];
+	char result[32];
 	int res;
 	int chan = 0;
 	int status = 0;
+	int fastreassoc = 1;
 
 	if (bssid == NULL) {
 		send_resp(dut, conn, SIGMA_ERROR, "errorCode,Missing bssid "
@@ -4730,7 +4732,15 @@ static int cmd_sta_reassoc(struct sigma_dut *dut, struct sigma_conn *conn,
 		return -1;
 	}
 
-	if (wifi_chip_type == DRIVER_WCN) {
+	if (get_wpa_status(get_station_ifname(), "wpa_state", result,
+			   sizeof(result)) < 0 ||
+	    strncmp(result, "COMPLETED", 9) != 0) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"sta_reassoc: Not connected");
+		fastreassoc = 0;
+	}
+
+	if (wifi_chip_type == DRIVER_WCN && fastreassoc) {
 #ifdef ANDROID
 		if (chan) {
 			unsigned int freq;
