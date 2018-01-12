@@ -42,9 +42,9 @@ edit [linux]/fs/Kconfig
   source "fs/fat/Kconfig"
  +source "fs/exfat/Kconfig"
   source "fs/ntfs/Kconfig"
-```
-
   endmenu
+```
+  
 
 edit [linux]/fs/Makefile
 ```
@@ -69,6 +69,30 @@ Go to:
 build your kernel
 
 Have fun.
+
+
+Installing as a DKMS module:
+=================================
+
+You can have even more fun with exfat-nofuse by installing it as a DKMS module has the main advantage of being auto-compiled (and thus, possibly surviving) between kernel upgrades.
+
+First, get dkms. On Ubuntu this should be:
+
+	sudo apt install dkms
+
+Then copy the root of this repository to /usr/share:
+
+	sudo cp -R . /usr/src/exfat-1.2.8 (or whatever version number declared on dkms.conf is)
+	sudo dkms add -m exfat -v 1.2.8
+
+Build and load the module:
+
+	sudo dkms build -m exfat -v 1.2.8
+	sudo dkms install -m exfat -v 1.2.8
+
+Now you have a proper dkms module that will work for a long time... hopefully.
+
+
 
 Free Software for the Free Minds!
 =================================

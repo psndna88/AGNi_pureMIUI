@@ -66,8 +66,11 @@ s32 bdev_init(void);
 s32 bdev_shutdown(void);
 s32 bdev_open(struct super_block *sb);
 s32 bdev_close(struct super_block *sb);
-s32 bdev_read(struct super_block *sb, u32 secno, struct buffer_head **bh, u32 num_secs, s32 read);
-s32 bdev_write(struct super_block *sb, u32 secno, struct buffer_head *bh, u32 num_secs, s32 sync);
+s32 bdev_read(struct super_block *sb, sector_t secno, struct buffer_head **bh, u32 num_secs, s32 read);
+s32 bdev_write(struct super_block *sb, sector_t secno, struct buffer_head *bh, u32 num_secs, s32 sync);
 s32 bdev_sync(struct super_block *sb);
+void bdev_end_buffer_write(struct buffer_head *bh, int uptodate, int sync);
+s32 bdev_sync_dirty_buffer(struct buffer_head *bh,
+				struct super_block *sb, int sync);
 
 #endif /* _EXFAT_BLKDEV_H */

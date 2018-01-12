@@ -91,6 +91,9 @@ struct exfat_sb_info {
 #ifdef CONFIG_EXFAT_KERNEL_DEBUG
 	long debug_flags;
 #endif /* CONFIG_EXFAT_KERNEL_DEBUG */
+	struct super_block *sb;
+	struct work_struct uevent_work;
+	int disable_uevent;
 };
 
 /*
@@ -115,6 +118,11 @@ struct exfat_inode_info {
 static inline struct exfat_inode_info *EXFAT_I(struct inode *inode)
 {
 	return container_of(inode, struct exfat_inode_info, vfs_inode);
+}
+
+static inline bool exfat_readonly(struct super_block *sb)
+{
+	return sb->s_flags & MS_RDONLY;
 }
 
 /*
