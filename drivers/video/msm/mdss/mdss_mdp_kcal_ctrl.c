@@ -13,7 +13,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * KCAL SCREEN MODES v1.1 by psndna88@xda (07-July-2017)
+ * KCAL SCREEN MODES v1.2 by psndna88@xda (12-January-2018)
  *
  * all modes use individual parameters independent from tunables values
  *
@@ -164,6 +164,17 @@ static void kcal_apply_mode(struct device *dev) {
         mode_kcal_sat = 255;
         mode_kcal_val = 255;
         mode_kcal_cont = 255;
+        mode_backlight_dimmer = prev_backlight_dimmer;
+		break;
+	case 6:
+        /* VIVID 2 MODE */
+        mode_kcal_r = 256;
+        mode_kcal_g = 256;
+        mode_kcal_b = 256;
+        mode_kcal_min = 35;
+        mode_kcal_sat = 255;
+        mode_kcal_val = 257;
+        mode_kcal_cont = 265;
         mode_backlight_dimmer = prev_backlight_dimmer;
 		break;
 	default:
@@ -531,7 +542,7 @@ static ssize_t kcal_mode_store(struct device *dev,
     struct kcal_lut_data *lut_data = dev_get_drvdata(dev);
 
 	r = kstrtoint(buf, 10, &kcal_modes);
-	if ((r) || (kcal_modes < 0) || (kcal_modes > 5) || (kcal_custom_mode == kcal_modes))
+	if ((r) || (kcal_modes < 0) || (kcal_modes > 6) || (kcal_custom_mode == kcal_modes))
 		return -EINVAL;
 
 	kcal_custom_mode = kcal_modes;
