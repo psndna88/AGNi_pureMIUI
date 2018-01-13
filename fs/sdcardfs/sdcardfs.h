@@ -218,7 +218,6 @@ struct sdcardfs_mount_options {
 	gid_t fs_low_gid;
 	userid_t fs_user_id;
 	bool multiuser;
-	bool gid_derivation;
 	unsigned int reserved_mb;
 };
 
@@ -499,6 +498,7 @@ extern appid_t get_appid(const char *app_name);
 extern appid_t get_ext_gid(const char *app_name);
 extern appid_t is_excluded(const char *app_name, userid_t userid);
 extern int check_caller_access_to_name(struct inode *parent_node, const struct qstr *name);
+extern int open_flags_to_access_mode(int open_flags);
 extern int packagelist_init(void);
 extern void packagelist_exit(void);
 
