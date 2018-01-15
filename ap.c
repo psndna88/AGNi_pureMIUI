@@ -3493,6 +3493,12 @@ static int cmd_owrt_ap_config_commit(struct sigma_dut *dut,
 				     struct sigma_conn *conn,
 				     struct sigma_cmd *cmd)
 {
+	if (dut->program == PROGRAM_DPP &&
+	    get_driver_type() == DRIVER_OPENWRT) {
+		wpa_command(dut->hostapd_ifname, "DPP_BOOTSTRAP_REMOVE *");
+		wpa_command(dut->hostapd_ifname, "DPP_PKEX_REMOVE *");
+	}
+
 	/* Stop the AP */
 	run_system(dut, "wifi down");
 
@@ -5670,6 +5676,25 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 		snprintf(buf, sizeof(buf), "iwpriv %s esp_ba_window %d",
 			 basedev, dut->ap_bawinsize);
 		run_system(dut, buf);
+	}
+
+	if (dut->program == PROGRAM_DPP) {
+		if (dut->ap_interface_2g == 1) {
+			snprintf(buf, sizeof(buf),
+				 "iwpriv %s set_bcn_rate  5500", ifname);
+			run_system(dut, buf);
+			snprintf(buf, sizeof(buf),
+				 "iwpriv %s prb_rate  5500", ifname);
+			run_system(dut, buf);
+			snprintf(buf, sizeof(buf),
+				 "iwpriv %s mgmt_rate 5500", ifname);
+			run_system(dut, buf);
+		}
+
+		snprintf(buf, sizeof(buf), "iwpriv %s set_rxfilter 0xffffffff",
+			 basedev);
+		run_system(dut, buf);
+		dut->hostapd_running = 1;
 	}
 }
 

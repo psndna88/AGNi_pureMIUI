@@ -895,6 +895,14 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			sigma_dut_print(dut, DUT_MSG_INFO,
 					"Update hostapd operating channel to match listen needs");
 			dut->ap_channel = 6;
+
+			if (get_driver_type() == DRIVER_OPENWRT) {
+				snprintf(buf, sizeof(buf),
+					 "iwconfig %s channel %d",
+					 dut->hostapd_ifname, dut->ap_channel);
+				run_system(dut, buf);
+			}
+
 			if (wpa_command(ifname, "SET channel 6") < 0 ||
 			    wpa_command(ifname, "DISABLE") < 0 ||
 			    wpa_command(ifname, "ENABLE") < 0) {
@@ -1264,6 +1272,12 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Failed to start DPP listen");
 			goto out;
+		}
+
+		if (get_driver_type() == DRIVER_OPENWRT) {
+			snprintf(buf, sizeof(buf), "iwconfig %s channel %d",
+				 dut->hostapd_ifname, freq_to_channel(freq));
+			run_system(dut, buf);
 		}
 
 		if (delay_qr_resp && mutual && dut->dpp_peer_uri) {
