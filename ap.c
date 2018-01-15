@@ -2992,9 +2992,20 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 			owrt_ap_set_vap(dut, vap_count, "auth_secret", buf);
 			break;
 		case AP_SUITEB:
-			/* TODO */
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"SuiteB not supported");
+			owrt_ap_set_vap(dut, vap_count, "suite_b", "192");
+			snprintf(buf, sizeof(buf), "gcmp");
+			owrt_ap_set_vap(dut, vap_count, "encryption", buf);
+			snprintf(buf, sizeof(buf), "%s", dut->ap_radius_ipaddr);
+			owrt_ap_set_vap(dut, vap_count, "auth_server", buf);
+			snprintf(buf, sizeof(buf), "%d", dut->ap_radius_port);
+			owrt_ap_set_vap(dut, vap_count, "auth_port", buf);
+			snprintf(buf, sizeof(buf), "%s",
+				 dut->ap_radius_password);
+			owrt_ap_set_vap(dut, vap_count, "auth_secret", buf);
+			snprintf(buf, sizeof(buf), "%d",
+				 dut->ap_group_mgmt_cipher);
+			owrt_ap_set_vap(dut, vap_count, "group_mgmt_cipher",
+					buf);
 			break;
 		case AP_WPA2_OWE:
 			/* TODO */
