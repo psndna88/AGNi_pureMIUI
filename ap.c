@@ -7562,6 +7562,8 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_80plus80 = 0;
 	}
 
+	dut->ap_oper_chn = 0;
+
 	free(dut->rsne_override);
 	dut->rsne_override = NULL;
 
@@ -9926,6 +9928,22 @@ static int cmd_accesspoint(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int cmd_ap_preset_testparameters(struct sigma_dut *dut,
+					struct sigma_conn *conn,
+					struct sigma_cmd *cmd)
+{
+	const char *val;
+
+	val = get_param(cmd, "Oper_Chn");
+	if (val) {
+		dut->ap_oper_chn = 1;
+		dut->ap_channel = atoi(val);
+	}
+
+	return 1;
+}
+
+
 void ap_register_cmds(void)
 {
 	sigma_dut_reg_cmd("ap_ca_version", NULL, cmd_ap_ca_version);
@@ -9952,4 +9970,6 @@ void ap_register_cmds(void)
 	sigma_dut_reg_cmd("ap_nfc_action", NULL, cmd_ap_nfc_action);
 	sigma_dut_reg_cmd("ap_wps_read_pin", NULL, cmd_ap_wps_read_pin);
 	sigma_dut_reg_cmd("AccessPoint", NULL, cmd_accesspoint);
+	sigma_dut_reg_cmd("ap_preset_testparameters", NULL,
+			  cmd_ap_preset_testparameters);
 }

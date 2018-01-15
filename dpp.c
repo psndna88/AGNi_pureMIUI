@@ -32,7 +32,8 @@ static int dpp_hostapd_run(struct sigma_dut *dut)
 	sigma_dut_print(dut, DUT_MSG_INFO,
 			"Starting hostapd in unconfigured state for DPP");
 	snprintf(dut->ap_ssid, sizeof(dut->ap_ssid), "unconfigured");
-	dut->ap_channel = 11;
+	if (!dut->ap_oper_chn)
+		dut->ap_channel = 11;
 	dut->ap_is_dual = 0;
 	dut->ap_mode = AP_11ng;
 	dut->ap_key_mgmt = AP_OPEN;

@@ -545,6 +545,7 @@ struct sigma_dut {
 	int ap_pmksa;
 	int ap_pmksa_caching;
 	int ap_80plus80;
+	int ap_oper_chn;
 
 	struct mbo_pref_ap mbo_pref_aps[MBO_MAX_PREF_BSSIDS];
 	struct mbo_pref_ap mbo_self_ap_tuple;
