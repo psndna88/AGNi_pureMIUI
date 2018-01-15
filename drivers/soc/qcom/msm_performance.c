@@ -141,7 +141,7 @@ static struct task_struct *notify_thread;
 
 /**************************sysfs start********************************/
 
-static int set_touchboost(const char *buf, const struct kernel_param *kp)
+/* static int set_touchboost(const char *buf, const struct kernel_param *kp)
 {
 	int val;
 
@@ -162,7 +162,7 @@ static const struct kernel_param_ops param_ops_touchboost = {
 	.set = set_touchboost,
 	.get = get_touchboost,
 };
-device_param_cb(touchboost, &param_ops_touchboost, NULL, 0644);
+device_param_cb(touchboost, &param_ops_touchboost, NULL, 0644); */
 
 static int set_num_clusters(const char *buf, const struct kernel_param *kp)
 {

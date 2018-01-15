@@ -54,29 +54,29 @@ static struct notifier_block notif;
 #endif
 
 static bool input_boost_enabled = false;
-module_param(input_boost_enabled, bool, 0644);
+//module_param(input_boost_enabled, bool, 0644);
 
 static unsigned int input_boost_ms = 40;
-module_param(input_boost_ms, uint, 0644);
+//module_param(input_boost_ms, uint, 0644);
 
-static bool sched_boost_on_input;
-module_param(sched_boost_on_input, bool, 0644);
+static bool sched_boost_on_input = true;
+//module_param(sched_boost_on_input, bool, 0644);
 
 static bool sched_boost_active;
 
 static bool hotplug_boost;
-module_param(hotplug_boost, bool, 0644);
+//module_param(hotplug_boost, bool, 0644);
 
 static bool wakeup_boost;
-module_param(wakeup_boost, bool, 0644);
+//module_param(wakeup_boost, bool, 0644);
 
 static struct delayed_work input_boost_rem;
 static u64 last_input_time;
 
 static unsigned int min_input_interval = 150;
-module_param(min_input_interval, uint, 0644);
+//module_param(min_input_interval, uint, 0644);
 
-static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
+/* static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 {
 	int i, ntokens = 0;
 	unsigned int val, cpu;
@@ -86,7 +86,7 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 	while ((cp = strpbrk(cp + 1, " :")))
 		ntokens++;
 
-	/* single number: apply to all CPUs */
+	// single number: apply to all CPUs
 	if (!ntokens) {
 		if (sscanf(buf, "%u\n", &val) != 1)
 			return -EINVAL;
@@ -95,7 +95,7 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 		goto check_enable;
 	}
 
-	/* CPU:value pair */
+	// CPU:value pair
 	if (!(ntokens % 2))
 		return -EINVAL;
 
@@ -141,7 +141,7 @@ static const struct kernel_param_ops param_ops_input_boost_freq = {
 	.set = set_input_boost_freq,
 	.get = get_input_boost_freq,
 };
-module_param_cb(input_boost_freq, &param_ops_input_boost_freq, NULL, 0644);
+module_param_cb(input_boost_freq, &param_ops_input_boost_freq, NULL, 0644); */
 
 /*
  * The CPUFREQ_ADJUST notifier is used to override the current policy min to
