@@ -2622,6 +2622,8 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 {
 	char buf[256], *temp;
 	int vap_id = 0, vap_count, i, j;
+	const char *ifname;
+	char ifname2[50];
 
 	for (vap_count = 0; vap_count < OPENWRT_MAX_NUM_RADIOS; vap_count++) {
 		snprintf(buf, sizeof(buf), "wifi%d", vap_count);
@@ -2657,6 +2659,25 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 				 dut->ap_tag_ssid[j]);
 			owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
 					"ssid", buf);
+
+			if (dut->ap_key_mgmt == AP_WPA2_OWE &&
+			    dut->ap_tag_ssid[0][0] &&
+			    dut->ap_tag_key_mgmt[0] == AP2_OPEN) {
+				/* OWE transition mode */
+				snprintf(buf, sizeof(buf), "%s", ifname);
+				owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
+						"owe_transition_ifname", buf);
+			}
+
+			if (dut->ap_key_mgmt == AP_OPEN &&
+			    dut->ap_tag_key_mgmt[0] == AP2_WPA2_OWE) {
+				/* OWE transition mode */
+				snprintf(buf, sizeof(buf), "%s", ifname);
+				owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
+						"owe_transition_ifname", buf);
+				owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
+						"hidden", "1");
+			}
 
 			if (dut->ap_ft_oa == 1) {
 				unsigned char self_mac[ETH_ALEN];
@@ -2735,6 +2756,21 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 				snprintf(buf, sizeof(buf), "%d", dut->ap_pmf);
 				owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
 						"ieee80211w", buf);
+			} else if (dut->ap_tag_key_mgmt[0] == AP2_WPA2_OWE) {
+				owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
+						"owe", "1");
+				snprintf(buf, sizeof(buf), "ccmp");
+				owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
+						"encryption", buf);
+				owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
+						"ieee80211w", "2");
+				if (dut->ap_sae_groups) {
+					snprintf(buf, sizeof(buf), "\'%s\'",
+						 dut->ap_sae_groups);
+					owrt_ap_set_vap(dut, vap_count +
+							(wlan_tag - 1),
+							"owe_groups", buf);
+				}
 			}
 		}
 
@@ -2908,6 +2944,15 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 				owrt_ap_set_vap(dut, vap_count, "encryption",
 						"none");
 			}
+			if (dut->ap_key_mgmt == AP_OPEN &&
+			    dut->ap_tag_key_mgmt[0] == AP2_WPA2_OWE) {
+				/* OWE transition mode */
+				snprintf(ifname2, sizeof(ifname2), "%s1",
+					 ifname);
+				owrt_ap_set_vap(dut, vap_count,
+						"owe_transition_ifname",
+						ifname2);
+			}
 			break;
 		case AP_WPA2_PSK:
 		case AP_WPA2_PSK_MIXED:
@@ -3008,9 +3053,27 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 					buf);
 			break;
 		case AP_WPA2_OWE:
-			/* TODO */
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"OWE not supported");
+			owrt_ap_set_vap(dut, vap_count, "owe", "1");
+			snprintf(buf, sizeof(buf), "ccmp");
+			owrt_ap_set_vap(dut, vap_count, "encryption", buf);
+			if (dut->ap_sae_groups) {
+				snprintf(buf, sizeof(buf), "\'%s\'",
+					 dut->ap_sae_groups);
+				owrt_ap_set_vap(dut, vap_count, "owe_groups",
+						buf);
+			}
+
+			if (dut->ap_key_mgmt == AP_WPA2_OWE &&
+			    dut->ap_tag_ssid[0][0] &&
+			    dut->ap_tag_key_mgmt[0] == AP2_OPEN) {
+				/* OWE transition mode */
+				snprintf(ifname2, sizeof(ifname2), "%s1",
+					 ifname);
+				owrt_ap_set_vap(dut, vap_count,
+						"owe_transition_ifname",
+						ifname2);
+				owrt_ap_set_vap(dut, vap_count, "hidden", "1");
+			}
 			break;
 		}
 
