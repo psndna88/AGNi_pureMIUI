@@ -3113,7 +3113,4 @@ static inline unsigned long rlimit_max(unsigned int limit)
 	return task_rlimit_max(current, limit);
 }
 
-extern bool set_fsync(void);
-extern bool fsync_enabled_on_input_boost;
-
 #endif
