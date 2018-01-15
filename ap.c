@@ -2914,26 +2914,55 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 		case AP_WPA_PSK:
 		case AP_WPA2_SAE:
 		case AP_WPA2_PSK_SAE:
-			/* TODO: SAE configuration */
-			if (dut->ap_key_mgmt == AP_WPA2_PSK) {
+			if (dut->ap_key_mgmt == AP_WPA2_PSK ||
+			    dut->ap_key_mgmt == AP_WPA2_PSK_SAE) {
 				snprintf(buf, sizeof(buf), "psk2");
 			} else if (dut->ap_key_mgmt == AP_WPA2_PSK_MIXED) {
 				snprintf(buf, sizeof(buf), "psk-mixed");
+			} else if (dut->ap_key_mgmt == AP_WPA2_SAE) {
+				snprintf(buf, sizeof(buf), "ccmp");
 			} else {
 				snprintf(buf, sizeof(buf), "psk");
 			}
 
-			if (dut->ap_cipher == AP_CCMP_TKIP)
-				strlcat(buf, "+ccmp+tkip", sizeof(buf));
-			else if (dut->ap_cipher == AP_TKIP)
-				strlcat(buf, "+tkip", sizeof(buf));
-			else
-				strlcat(buf, "+ccmp", sizeof(buf));
+			if (dut->ap_key_mgmt != AP_WPA2_SAE) {
+				if (dut->ap_cipher == AP_CCMP_TKIP)
+					strlcat(buf, "+ccmp+tkip", sizeof(buf));
+				else if (dut->ap_cipher == AP_TKIP)
+					strlcat(buf, "+tkip", sizeof(buf));
+				else
+					strlcat(buf, "+ccmp", sizeof(buf));
+			}
 
 			owrt_ap_set_vap(dut, vap_count, "encryption", buf);
-			snprintf(buf, sizeof(buf), "\"%s\"",
-				 dut->ap_passphrase);
-			owrt_ap_set_vap(dut, vap_count, "key", buf);
+
+			if (!dut->ap_passphrase[0] && dut->ap_psk[0]) {
+				snprintf(buf, sizeof(buf), "\"%s\"",
+					 dut->ap_psk);
+				owrt_ap_set_vap(dut, vap_count, "key", buf);
+			} else {
+				snprintf(buf, sizeof(buf), "\"%s\"",
+					 dut->ap_passphrase);
+				owrt_ap_set_vap(dut, vap_count, "key", buf);
+			}
+
+			if (dut->ap_key_mgmt == AP_WPA2_SAE ||
+			    dut->ap_key_mgmt == AP_WPA2_PSK_SAE)
+				owrt_ap_set_vap(dut, vap_count, "sae", "1");
+			else
+				owrt_ap_set_vap(dut, vap_count, "sae", "0");
+
+			if (dut->ap_key_mgmt == AP_WPA2_SAE) {
+				snprintf(buf, sizeof(buf), "%s",
+					 dut->ap_passphrase);
+				owrt_ap_set_vap(dut, vap_count, "sae_password",
+						buf);
+			} else {
+				snprintf(buf, sizeof(buf), "%s",
+					 dut->ap_passphrase);
+				owrt_ap_set_vap(dut, vap_count,
+						"wpa_passphrase", buf);
+			}
 			break;
 		case AP_WPA2_EAP:
 		case AP_WPA2_EAP_MIXED:
@@ -3275,6 +3304,31 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 		snprintf(buf, sizeof(buf), "%d", dut->ap_pmksa_caching);
 		owrt_ap_set_vap(dut, vap_id, "disable_pmksa_caching", buf);
 	}
+
+	if (dut->rsne_override) {
+		snprintf(buf, sizeof(buf), "%s", dut->rsne_override);
+		owrt_ap_set_vap(dut, vap_count, "own_ie_override", buf);
+	}
+
+	if (dut->sae_commit_override) {
+		snprintf(buf, sizeof(buf), "%s", dut->sae_commit_override);
+		owrt_ap_set_vap(dut, vap_count, "sae_commit_override", buf);
+	}
+
+	if (dut->ap_sae_groups) {
+		snprintf(buf, sizeof(buf), "\'%s\'", dut->ap_sae_groups);
+		owrt_ap_set_vap(dut, vap_count, "sae_groups", buf);
+	}
+
+	if (dut->sae_anti_clogging_threshold >= 0) {
+		snprintf(buf, sizeof(buf), "%d",
+			 dut->sae_anti_clogging_threshold);
+		owrt_ap_set_vap(dut, vap_count, "sae_anti_clogging_threshold",
+				buf);
+	}
+
+	if (dut->sae_reflection)
+		owrt_ap_set_vap(dut, vap_count, "sae_reflection_attack", "1");
 
 	return 1;
 }
