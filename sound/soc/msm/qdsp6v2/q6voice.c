@@ -44,6 +44,7 @@ enum {
 
 static struct common_data common;
 static bool module_initialized;
+static bool voice_session_active = false;
 
 static int voice_send_enable_vocproc_cmd(struct voice_data *v);
 static int voice_send_netid_timing_cmd(struct voice_data *v);
@@ -111,6 +112,11 @@ static int voice_send_get_sound_focus_cmd(struct voice_data *v,
 				struct sound_focus_param *soundFocusData);
 static int voice_send_get_source_tracking_cmd(struct voice_data *v,
 			struct source_tracking_param *sourceTrackingData);
+
+bool q6voice_voice_session_active(void)
+{
+	return voice_session_active;
+}
 
 static void voice_itr_init(struct voice_session_itr *itr,
 			   u32 session_id)
@@ -451,10 +457,11 @@ static bool is_voc_state_active(int voc_state)
 {
 	if ((voc_state == VOC_RUN) ||
 		(voc_state == VOC_CHANGE) ||
-		(voc_state == VOC_STANDBY))
+		(voc_state == VOC_STANDBY)) {
 		return true;
-
-	return false;
+	} else {
+		return false;
+	}
 }
 
 static void voc_set_error_state(uint16_t reset_proc)
@@ -5333,6 +5340,7 @@ int voc_end_voice_call(uint32_t session_id)
 	if (common.ec_ref_ext)
 		voc_set_ext_ec_ref(AFE_PORT_INVALID, false);
 
+	voice_session_active = false;
 	mutex_unlock(&v->lock);
 	return ret;
 }
@@ -5653,6 +5661,7 @@ int voc_start_voice_call(uint32_t session_id)
 		ret = -EINVAL;
 		goto fail;
 	}
+	voice_session_active = true;
 fail:
 	mutex_unlock(&v->lock);
 	return ret;

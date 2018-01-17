@@ -51,6 +51,7 @@
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 #endif
+#include <linux/proximity_state.h>
 #include "linux/stk3x1x.h"
 
 #define DRIVER_VERSION  "3.4.4ts"
@@ -180,6 +181,12 @@
 
 #define STK_FIR_LEN 16
 #define MAX_FIR_LEN 32
+
+static bool stk_prox_near = false;
+bool prox_near_stk3x1x(void)
+{
+	return stk_prox_near;
+}
 
 static struct sensors_classdev sensors_light_cdev = {
 	.name = "stk3x1x-light",
@@ -349,7 +356,7 @@ static uint32_t stk_get_lux_interval_index(uint16_t alscode)
     return LUX_THD_TABLE_SIZE;
 }
 #else
-inline void stk_als_set_new_thd(struct stk3x1x_data *ps_data, uint16_t alscode)
+inline static void stk_als_set_new_thd(struct stk3x1x_data *ps_data, uint16_t alscode)
 {
     int32_t high_thd,low_thd;
     high_thd = alscode + stk_lux2alscode(ps_data, STK_ALS_CHANGE_THD);
@@ -1337,7 +1344,6 @@ static ssize_t stk_ps_distance_show(struct device *dev, struct device_attribute 
 		return ret;
 	}
     dist = (ret & STK_FLG_NF_MASK)?1:0;
-
     ps_data->ps_distance_last = dist;
 	input_report_abs(ps_data->ps_input_dev, ABS_DISTANCE, dist);
 	input_sync(ps_data->ps_input_dev);
@@ -1872,7 +1878,11 @@ static void stk_work_func(struct work_struct *work)
     {
 		disable_flag |= STK_FLG_PSINT_MASK;
 		near_far_state = (org_flag_reg & STK_FLG_NF_MASK)?1:0;
-
+	if (near_far_state == 0) {
+		stk_prox_near = true;
+	} else {
+		stk_prox_near = false;
+	}
 		ps_data->ps_distance_last = near_far_state;
 		input_report_abs(ps_data->ps_input_dev, ABS_DISTANCE, near_far_state);
 		input_sync(ps_data->ps_input_dev);
