@@ -1331,6 +1331,12 @@ struct vidc_hal_session_init_done {
 	struct msm_vidc_capability capability;
 };
 
+#ifndef CONFIG_MACH_XIAOMI_KENZO_AGNI_LOS_O
+struct vidc_hal_session_flush_done {
+	enum hal_flush flush_type;
+};
+#endif
+
 enum msm_vidc_hfi_type {
 	VIDC_HFI_VENUS,
 	VIDC_HFI_Q6,

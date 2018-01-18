@@ -1217,6 +1217,9 @@ static void hfi_process_session_flush_done(msm_vidc_callback callback,
 		struct hfi_msg_session_flush_done_packet *pkt)
 {
 	struct msm_vidc_cb_cmd_done cmd_done = {0};
+#ifndef CONFIG_MACH_XIAOMI_KENZO_AGNI_LOS_O
+	struct vidc_hal_session_flush_done session_flush_done;
+#endif
 
 	dprintk(VIDC_DBG, "RECEIVED: SESSION_FLUSH_DONE[%pK]\n", session);
 
@@ -1227,12 +1230,36 @@ static void hfi_process_session_flush_done(msm_vidc_callback callback,
 		return;
 	}
 
+#ifndef CONFIG_MACH_XIAOMI_KENZO_AGNI_LOS_O
+	cmd_done.session_id = session->session_id;
+	cmd_done.status = hfi_map_err_status(pkt->error_type);
+	cmd_done.size = sizeof(session_flush_done);
+
+	switch (pkt->flush_type) {
+	case HFI_FLUSH_OUTPUT:
+		 session_flush_done.flush_type = HAL_FLUSH_OUTPUT;
+		break;
+	case HFI_FLUSH_INPUT:
+		 session_flush_done.flush_type = HAL_FLUSH_INPUT;
+		break;
+	case HFI_FLUSH_ALL:
+		 session_flush_done.flush_type = HAL_FLUSH_ALL;
+		break;
+	default:
+		dprintk(VIDC_ERR,
+				"%s: invalid flush type!", __func__);
+		return;
+	}
+        cmd_done.data = &session_flush_done;
+        callback(SESSION_FLUSH_DONE, &cmd_done);
+#else
 	cmd_done.device_id = device_id;
 	cmd_done.session_id = session->session_id;
 	cmd_done.status = hfi_map_err_status(pkt->error_type);
 	cmd_done.data = (void *)(unsigned long)pkt->flush_type;
 	cmd_done.size = sizeof(u32);
 	callback(SESSION_FLUSH_DONE, &cmd_done);
+#endif
 }
 
 static void hfi_process_session_etb_done(msm_vidc_callback callback,
