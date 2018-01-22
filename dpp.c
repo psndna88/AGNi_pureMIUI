@@ -514,7 +514,7 @@ static int dpp_wait_tx_status(struct sigma_dut *dut, struct wpa_ctrl *ctrl,
 
 
 static int dpp_wait_rx(struct sigma_dut *dut, struct wpa_ctrl *ctrl,
-		       int frame_type, int max_wait)
+		       int frame_type, unsigned int max_wait)
 {
 	char buf[200], tmp[20];
 	int res;
@@ -541,7 +541,7 @@ static int dpp_wait_rx(struct sigma_dut *dut, struct wpa_ctrl *ctrl,
 
 
 static int dpp_wait_rx_conf_req(struct sigma_dut *dut, struct wpa_ctrl *ctrl,
-				int max_wait)
+				unsigned int max_wait)
 {
 	char buf[200];
 	int res;
