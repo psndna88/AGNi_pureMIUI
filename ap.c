@@ -7363,6 +7363,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	dut->ft_bss_mac_cnt = 0;
 	dut->ap_interface_5g = 0;
 	dut->ap_interface_2g = 0;
+	dut->ap_pmf = AP_PMF_DISABLED;
 
 	if (dut->program == PROGRAM_HT || dut->program == PROGRAM_VHT) {
 		dut->ap_wme = AP_WME_ON;
