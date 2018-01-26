@@ -7592,6 +7592,10 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	dut->dpp_conf_id = -1;
 
 	dut->hostapd_running = 0;
+
+	if (get_openwrt_driver_type() == OPENWRT_DRIVER_ATHEROS)
+		return 1;
+
 	if (dut->use_hostapd_pid_file) {
 		kill_hostapd_process_pid(dut);
 	} else if (kill_process(dut, "(hostapd)", 1, SIGTERM) == 0 ||
