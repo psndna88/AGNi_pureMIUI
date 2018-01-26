@@ -122,6 +122,8 @@ enum sigma_program sigma_program_to_enum(const char *prog)
 		return PROGRAM_DPP;
 	if (strcasecmp(prog, "OCE") == 0)
 		return PROGRAM_OCE;
+	if (strcasecmp(prog, "WPA3") == 0)
+		return PROGRAM_WPA3;
 
 	return PROGRAM_UNKNOWN;
 }

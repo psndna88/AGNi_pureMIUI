@@ -2648,6 +2648,13 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 			 */
 			int wlan_tag = j + 2;
 
+			if (wlan_tag == 2 && dut->program == PROGRAM_WPA3 &&
+			   (dut->ap_interface_5g || dut->ap_interface_2g)) {
+				snprintf(dut->ap_tag_ssid[wlan_tag - 2],
+					 sizeof(dut->ap_tag_ssid[wlan_tag - 2]),
+					 "%s-owe", dut->ap_ssid);
+			}
+
 			if (dut->ap_tag_ssid[j][0] == '\0')
 				continue;
 
