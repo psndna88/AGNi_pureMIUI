@@ -172,9 +172,9 @@ static void kcal_apply_mode(struct device *dev) {
         mode_kcal_g = 256;
         mode_kcal_b = 256;
         mode_kcal_min = 35;
-        mode_kcal_sat = 255;
+        mode_kcal_sat = 265;
         mode_kcal_val = 257;
-        mode_kcal_cont = 265;
+        mode_kcal_cont = 255;
         mode_backlight_dimmer = prev_backlight_dimmer;
 		break;
 	default:
