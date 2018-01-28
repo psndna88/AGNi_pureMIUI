@@ -45,7 +45,14 @@ struct mdss_livedisplay_ctx {
 	unsigned int presets_len[MAX_PRESETS];
 
 	const uint8_t *cabc_cmds;
+	const uint8_t *cabc_ui_cmds;
+	const uint8_t *cabc_image_cmds;
+	const uint8_t *cabc_video_cmds;
 	unsigned int cabc_cmds_len;
+	unsigned int cabc_ui_cmds_len;
+	unsigned int cabc_image_cmds_len;
+	unsigned int cabc_video_cmds_len;
+	bool unified_cabc_cmds;
 
 	const uint8_t *post_cmds;
 	unsigned int post_cmds_len;
