@@ -38,10 +38,6 @@
 #include "../codecs/wcd-mbhc-v2.h"
 #include "../codecs/wsa881x.h"
 
-#if defined(CONFIG_SPEAKER_EXT_PA)
-#include <linux/delay.h>
-#endif
-
 #define DRV_NAME "msm8952-slimbus-wcd"
 
 #define BTSCO_RATE_8KHZ         8000
@@ -52,7 +48,11 @@
 #define SAMPLING_RATE_48KHZ     48000
 #define SAMPLING_RATE_96KHZ     96000
 #define SAMPLING_RATE_192KHZ    192000
+#define SAMPLING_RATE_384KHZ    384000
+
 #define SAMPLING_RATE_44P1KHZ   44100
+#define SAMPLING_RATE_176P4KHZ  176400
+#define SAMPLING_RATE_352P8KHZ  352800
 
 #define MSM8952_SPK_ON     1
 #define MSM8952_SPK_OFF    0
@@ -501,7 +501,19 @@ static int slim5_rx_sample_rate_get(struct snd_kcontrol *kcontrol,
 	int sample_rate_val = 0;
 
 	switch (slim5_rx_sample_rate) {
+	case SAMPLING_RATE_352P8KHZ:
+		sample_rate_val = 6;
+		break;
+	
+	case SAMPLING_RATE_176P4KHZ:
+		sample_rate_val = 5;
+		break;
+	
 	case SAMPLING_RATE_44P1KHZ:
+		sample_rate_val = 4;
+		break;
+
+	case SAMPLING_RATE_384KHZ:
 		sample_rate_val = 3;
 		break;
 
@@ -533,8 +545,17 @@ static int slim5_rx_sample_rate_put(struct snd_kcontrol *kcontrol,
 		 ucontrol->value.integer.value[0]);
 
 	switch (ucontrol->value.integer.value[0]) {
-	case 3:
+	case 6:
+		slim5_rx_sample_rate = SAMPLING_RATE_352P8KHZ;
+		break;	
+	case 5:
+		slim5_rx_sample_rate = SAMPLING_RATE_176P4KHZ;
+		break;	
+	case 4:
 		slim5_rx_sample_rate = SAMPLING_RATE_44P1KHZ;
+		break;	
+	case 3:
+		slim5_rx_sample_rate = SAMPLING_RATE_384KHZ;
 		break;
 	case 2:
 		slim5_rx_sample_rate = SAMPLING_RATE_192KHZ;
@@ -558,6 +579,10 @@ static int mi2s_rx_bit_format_get(struct snd_kcontrol *kcontrol,
 {
 
 	switch (mi2s_rx_bit_format) {
+	case SNDRV_PCM_FORMAT_S32_LE:
+		ucontrol->value.integer.value[0] = 3;
+		break;
+			
 	case SNDRV_PCM_FORMAT_S24_3LE:
 		ucontrol->value.integer.value[0] = 2;
 		break;
@@ -583,6 +608,9 @@ static int mi2s_rx_bit_format_put(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	switch (ucontrol->value.integer.value[0]) {
+	case 3:
+		mi2s_rx_bit_format = SNDRV_PCM_FORMAT_S32_LE;
+		break;	
 	case 2:
 		mi2s_rx_bit_format = SNDRV_PCM_FORMAT_S24_3LE;
 		break;
@@ -603,7 +631,20 @@ static int slim0_rx_sample_rate_get(struct snd_kcontrol *kcontrol,
 	int sample_rate_val = 0;
 
 	switch (slim0_rx_sample_rate) {
+	
+	case SAMPLING_RATE_352P8KHZ:
+		sample_rate_val = 6;
+		break;
+	
+	case SAMPLING_RATE_176P4KHZ:
+		sample_rate_val = 5;
+		break;
+	
 	case SAMPLING_RATE_44P1KHZ:
+		sample_rate_val = 4;
+		break;
+
+	case SAMPLING_RATE_384KHZ:
 		sample_rate_val = 3;
 		break;
 
@@ -635,8 +676,17 @@ static int slim0_rx_sample_rate_put(struct snd_kcontrol *kcontrol,
 			ucontrol->value.integer.value[0]);
 
 	switch (ucontrol->value.integer.value[0]) {
-	case 3:
+	case 6:
+		slim0_rx_sample_rate = SAMPLING_RATE_352P8KHZ;
+		break;	
+	case 5:
+		slim0_rx_sample_rate = SAMPLING_RATE_176P4KHZ;
+		break;	
+	case 4:
 		slim0_rx_sample_rate = SAMPLING_RATE_44P1KHZ;
+		break;	
+	case 3:
+		slim0_rx_sample_rate = SAMPLING_RATE_384KHZ;
 		break;
 	case 2:
 		slim0_rx_sample_rate = SAMPLING_RATE_192KHZ;
@@ -660,6 +710,10 @@ static int slim5_rx_bit_format_get(struct snd_kcontrol *kcontrol,
 {
 
 	switch (slim5_rx_bit_format) {
+	case SNDRV_PCM_FORMAT_S32_LE:
+		ucontrol->value.integer.value[0] = 3;
+		break;
+			
 	case SNDRV_PCM_FORMAT_S24_3LE:
 		ucontrol->value.integer.value[0] = 2;
 		break;
@@ -685,6 +739,9 @@ static int slim5_rx_bit_format_put(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	switch (ucontrol->value.integer.value[0]) {
+	case 3:
+		slim5_rx_bit_format = SNDRV_PCM_FORMAT_S32_LE;
+		break;	
 	case 2:
 		slim5_rx_bit_format = SNDRV_PCM_FORMAT_S24_3LE;
 		break;
@@ -704,6 +761,10 @@ static int slim0_rx_bit_format_get(struct snd_kcontrol *kcontrol,
 {
 
 	switch (slim0_rx_bit_format) {
+	case SNDRV_PCM_FORMAT_S32_LE:
+		ucontrol->value.integer.value[0] = 3;
+		break;	
+		
 	case SNDRV_PCM_FORMAT_S24_3LE:
 		ucontrol->value.integer.value[0] = 2;
 		break;
@@ -729,6 +790,9 @@ static int slim0_rx_bit_format_put(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	switch (ucontrol->value.integer.value[0]) {
+	case 3:
+		slim0_rx_bit_format = SNDRV_PCM_FORMAT_S32_LE;
+		break;			
 	case 2:
 		slim0_rx_bit_format = SNDRV_PCM_FORMAT_S24_3LE;
 		break;
@@ -985,13 +1049,13 @@ static const char *const slim0_tx_ch_text[] = {"One", "Two", "Three", "Four",
 						"Five", "Six", "Seven",
 						"Eight"};
 static const char *const vi_feed_ch_text[] = {"One", "Two"};
-static char const *rx_bit_format_text[] = {"S16_LE", "S24_LE", "S24_3LE"};
+static char const *rx_bit_format_text[] = {"S16_LE", "S24_LE", "S24_3LE", "S32_LE"};
 static char const *slim0_rx_sample_rate_text[] = {"KHZ_48", "KHZ_96",
-					"KHZ_192", "KHZ_44P1"};
+					"KHZ_192", "KHZ_358", "KHZ_44P1", "KHZ_176P4", "KHZ_352P8"};
 static const char *const slim5_rx_ch_text[] = {"One", "Two"};
 static char const *slim5_rx_sample_rate_text[] = {"KHZ_48", "KHZ_96",
-	"KHZ_192", "KHZ_44P1"};
-static char const *slim5_rx_bit_format_text[] = {"S16_LE", "S24_LE", "S24_3LE"};
+					"KHZ_192", "KHZ_358", "KHZ_44P1", "KHZ_176P4", "KHZ_352P8"};
+static char const *slim5_rx_bit_format_text[] = {"S16_LE", "S24_LE", "S24_3LE", "S32_LE"};
 static const char *const proxy_rx_ch_text[] = {"One", "Two", "Three", "Four",
 	"Five", "Six", "Seven", "Eight"};
 
@@ -1571,7 +1635,8 @@ static void msm_afe_clear_config(void)
 
 static uint32_t get_mi2s_rx_clk_val(void)
 {
-	if (mi2s_rx_bit_format == SNDRV_PCM_FORMAT_S24_LE)
+	if (mi2s_rx_bit_format == (SNDRV_PCM_FORMAT_S24_LE || SNDRV_PCM_FORMAT_S24_3LE || 
+							   SNDRV_PCM_FORMAT_S32_LE))
 		return Q6AFE_LPASS_IBIT_CLK_3_P072_MHZ;
 	else
 		return Q6AFE_LPASS_IBIT_CLK_1_P536_MHZ;
