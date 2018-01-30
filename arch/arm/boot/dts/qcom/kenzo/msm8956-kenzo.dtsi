@@ -2733,6 +2733,11 @@
 		qcom,clk_div = <27>;
 	};
 
+	audio_amplifier {
+		compatible = "aw,aw8738";
+		ext-spk-amp-gpio = <&msm_gpio 101 0>;
+	};
+
 	mcd {
 		compatible = "qcom,mcd";
 		qcom,ce-hw-instance = <0>;
