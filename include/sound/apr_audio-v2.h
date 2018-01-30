@@ -1399,7 +1399,11 @@ struct afe_port_data_cmd_rt_proxy_port_read_v2 {
 #define AFE_PORT_SAMPLE_RATE_16K          16000
 #define AFE_PORT_SAMPLE_RATE_48K          48000
 #define AFE_PORT_SAMPLE_RATE_96K          96000
+#define AFE_PORT_SAMPLE_RATE_176P4K       176400
 #define AFE_PORT_SAMPLE_RATE_192K         192000
+#define AFE_PORT_SAMPLE_RATE_352P8K       352800
+#define AFE_PORT_SAMPLE_RATE_384K         384000
+
 #define AFE_LINEAR_PCM_DATA				0x0
 #define AFE_NON_LINEAR_DATA				0x1
 #define AFE_LINEAR_PCM_DATA_PACKED_60958 0x2

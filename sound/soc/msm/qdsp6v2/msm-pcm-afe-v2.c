@@ -47,13 +47,12 @@ static struct snd_pcm_hardware msm_afe_hardware_playback = {
 				SNDRV_PCM_INFO_BLOCK_TRANSFER |
 				SNDRV_PCM_INFO_MMAP_VALID |
 				SNDRV_PCM_INFO_INTERLEAVED),
-	.formats =              SNDRV_PCM_FMTBIT_S16_LE|
-				SNDRV_PCM_FMTBIT_S24_LE,
-	.rates =                (SNDRV_PCM_RATE_8000 |
-				SNDRV_PCM_RATE_16000 |
-				SNDRV_PCM_RATE_48000),
+	.formats =              SNDRV_PCM_FMTBIT_S16_LE |
+					SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S24_3LE |
+					SNDRV_PCM_FMTBIT_S32_LE,
+	.rates =    SNDRV_PCM_RATE_8000_384000 ,
 	.rate_min =             8000,
-	.rate_max =             48000,
+	.rate_max =             384000,
 	.channels_min =         1,
 	.channels_max =         6,
 	.buffer_bytes_max =     MAX_PLAYBACK_PERIOD_SIZE *
@@ -71,12 +70,10 @@ static struct snd_pcm_hardware msm_afe_hardware_capture = {
 				SNDRV_PCM_INFO_MMAP_VALID |
 				SNDRV_PCM_INFO_INTERLEAVED),
 	.formats =              SNDRV_PCM_FMTBIT_S16_LE|
-				SNDRV_PCM_FMTBIT_S24_LE,
-	.rates =                (SNDRV_PCM_RATE_8000 |
-				SNDRV_PCM_RATE_16000 |
-				SNDRV_PCM_RATE_48000),
+				SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S24_3LE, 
+	.rates =          SNDRV_PCM_RATE_8000_192000,
 	.rate_min =             8000,
-	.rate_max =             48000,
+	.rate_max =             192000,
 	.channels_min =         1,
 	.channels_max =         6,
 	.buffer_bytes_max =     MAX_CAPTURE_PERIOD_SIZE *
@@ -367,7 +364,8 @@ static int msm_afe_capture_prepare(struct snd_pcm_substream *substream)
 
 /* Conventional and unconventional sample rate supported */
 static unsigned int supported_sample_rates[] = {
-	8000, 16000, 48000
+	8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000,
+	88200, 96000, 176400, 192000, 352800, 384000
 };
 
 static struct snd_pcm_hw_constraint_list constraints_sample_rates = {

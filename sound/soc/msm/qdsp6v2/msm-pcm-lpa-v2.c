@@ -61,11 +61,12 @@ static struct snd_pcm_hardware msm_pcm_hardware = {
 				SNDRV_PCM_INFO_INTERLEAVED |
 				SNDRV_PCM_INFO_PAUSE | SNDRV_PCM_INFO_RESUME),
 	.formats =              SNDRV_PCM_FMTBIT_S16_LE |
-					SNDRV_PCM_FMTBIT_S24_LE,
-	.rates =                SNDRV_PCM_RATE_8000_192000 |
+					SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S24_3LE |
+					SNDRV_PCM_FMTBIT_S32_LE,
+	.rates =                SNDRV_PCM_RATE_8000_384000 |
 					SNDRV_PCM_RATE_KNOT,
 	.rate_min =             8000,
-	.rate_max =             192000,
+	.rate_max =             384000,
 	.channels_min =         1,
 	.channels_max =         2,
 	.buffer_bytes_max =     1024 * 1024,
@@ -79,7 +80,7 @@ static struct snd_pcm_hardware msm_pcm_hardware = {
 /* Conventional and unconventional sample rate supported */
 static unsigned int supported_sample_rates[] = {
 	8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000,
-	96000, 192000
+	88200, 96000, 176400, 192000, 352800, 384000
 };
 
 static struct snd_pcm_hw_constraint_list constraints_sample_rates = {
@@ -255,6 +256,14 @@ static int msm_pcm_playback_prepare(struct snd_pcm_substream *substream)
 
 	case SNDRV_PCM_FORMAT_S24_LE:
 		bits_per_sample = 24;
+		break;
+
+	case SNDRV_PCM_FORMAT_S24_3LE:
+		bits_per_sample = 24;
+		break;
+
+	case SNDRV_PCM_FORMAT_S32_LE:
+		bits_per_sample = 32;
 		break;
 	}
 
@@ -579,6 +588,9 @@ static int msm_pcm_hw_params(struct snd_pcm_substream *substream,
 
 	prtd->audio_client->perf_mode = false;
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		if (params_format(params) == SNDRV_PCM_FORMAT_S32_LE)
+			bits_per_sample = 32;
+		else	
 		if (params_format(params) == SNDRV_PCM_FORMAT_S24_LE)
 			bits_per_sample = 24;
 		ret = q6asm_open_write_v2(prtd->audio_client,
