@@ -651,6 +651,7 @@ struct sigma_dut {
 		PROGRAM_DPP,
 		PROGRAM_OCE,
 		PROGRAM_WPA3,
+		PROGRAM_HE,
 	} program;
 
 	enum device_type {
