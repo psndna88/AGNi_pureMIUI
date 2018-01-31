@@ -8123,6 +8123,114 @@ static int cmd_sta_set_rfeature_vht(const char *intf, struct sigma_dut *dut,
 }
 
 
+static int wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
+				   struct sigma_conn *conn,
+				   struct sigma_cmd *cmd)
+{
+	const char *val;
+	char *token = NULL, *result;
+	char buf[60];
+
+	val = get_param(cmd, "nss_mcs_opt");
+	if (val) {
+		/* String (nss_operating_mode; mcs_operating_mode) */
+		int nss, mcs, ratecode;
+		char *saveptr;
+
+		token = strdup(val);
+		if (!token)
+			return -2;
+
+		result = strtok_r(token, ";", &saveptr);
+		if (!result) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"HE NSS not specified");
+			goto failed;
+		}
+		nss = 1;
+		if (strcasecmp(result, "def") != 0)
+			nss = atoi(result);
+
+		result = strtok_r(NULL, ";", &saveptr);
+		if (!result) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"HE MCS not specified");
+			goto failed;
+		}
+		mcs = 7;
+		if (strcasecmp(result, "def") != 0)
+			mcs = atoi(result);
+
+		ratecode = 0x400; /* for nss:1 MCS 0 */
+		if (nss == 2) {
+			ratecode = 0x420; /* for nss:2 MCS 0 */
+		} else if (nss > 2) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"HE NSS %d not supported", nss);
+			goto failed;
+		}
+
+		/* Add the MCS to the ratecode */
+		if (mcs >= 0 && mcs <= 11) {
+			ratecode += mcs;
+		} else {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"HE MCS %d not supported", mcs);
+			goto failed;
+		}
+		snprintf(buf, sizeof(buf), "iwpriv %s set_11ax_rate 0x%03x",
+			 intf, ratecode);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"iwpriv setting of 11ax rates failed");
+			goto failed;
+		}
+		free(token);
+	}
+
+	val = get_param(cmd, "GI");
+	if (val) {
+		if (strcmp(val, "0.8") == 0) {
+			snprintf(buf, sizeof(buf), "iwpriv %s shortgi 0", intf);
+		} else if (strcmp(val, "1.6") == 0) {
+			snprintf(buf, sizeof(buf), "iwpriv %s shortgi 2", intf);
+		} else if (strcmp(val, "3.2") == 0) {
+			snprintf(buf, sizeof(buf), "iwpriv %s shortgi 3", intf);
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,GI value not supported");
+			return 0;
+		}
+		if (system(buf) != 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to set shortgi");
+			return 0;
+		}
+	}
+
+	return 1;
+
+failed:
+	free(token);
+	return -2;
+}
+
+
+static int cmd_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
+				   struct sigma_conn *conn,
+				   struct sigma_cmd *cmd)
+{
+	switch (get_driver_type()) {
+	case DRIVER_WCN:
+		return wcn_sta_set_rfeature_he(intf, dut, conn, cmd);
+	default:
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Unsupported sta_set_rfeature(HE) with the current driver");
+		return 0;
+	}
+}
+
+
 static int btm_query_candidate_list(struct sigma_dut *dut,
 				    struct sigma_conn *conn,
 				    struct sigma_cmd *cmd)
@@ -8239,6 +8347,9 @@ static int cmd_sta_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	if (strcasecmp(prog, "VHT") == 0)
 		return cmd_sta_set_rfeature_vht(intf, dut, conn, cmd);
+
+	if (strcasecmp(prog, "HE") == 0)
+		return cmd_sta_set_rfeature_he(intf, dut, conn, cmd);
 
 	if (strcasecmp(prog, "MBO") == 0) {
 		val = get_param(cmd, "Cellular_Data_Cap");
