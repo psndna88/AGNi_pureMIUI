@@ -3687,6 +3687,34 @@ static int cmd_sta_preset_testparameters(struct sigma_dut *dut,
 				  "ErrorCode,Setting Mode not supported");
 			return 0;
 		}
+
+		/* Change the mode only in case of testbed for HE program
+		 * and for 11a and 11g modes only. */
+		if (dut->program == PROGRAM_HE &&
+		    dut->device_type == STA_testbed) {
+			int phymode;
+			char buf[60];
+
+			if (strcmp(val, "11a") == 0) {
+				phymode = 1;
+			} else if (strcmp (val, "11g") == 0) {
+				phymode = 3;
+			} else {
+				sigma_dut_print(dut, DUT_MSG_DEBUG,
+						"Ignoring mode change for mode: %s",
+						val);
+				phymode = -1;
+			}
+			if (phymode != -1) {
+				snprintf(buf, sizeof(buf),
+					 "iwpriv %s setphymode %d",
+					 intf, phymode);
+				if (system(buf) != 0) {
+					sigma_dut_print(dut, DUT_MSG_ERROR,
+							"iwpriv setting of phymode failed");
+				}
+			}
+		}
 	}
 
 	val = get_param(cmd, "wmm");
