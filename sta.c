@@ -5638,6 +5638,20 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		}
 	}
 
+	val = get_param(cmd, "BCC");
+	if (val) {
+		int bcc;
+
+		bcc = strcmp(val, "1") == 0 || strcasecmp(val, "Enable") == 0;
+		/* use LDPC iwpriv itself to set bcc coding, bcc coding
+		 * is mutually exclusive to bcc */
+		snprintf(buf, sizeof(buf), "iwpriv %s ldpc %d", intf, !bcc);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Enabling/Disabling of BCC failed");
+		}
+	}
+
 	val = get_param(cmd, "opt_md_notif_ie");
 	if (val) {
 		char *result = NULL;
