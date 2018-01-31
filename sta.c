@@ -3679,7 +3679,8 @@ static int cmd_sta_preset_testparameters(struct sigma_dut *dut,
 		    strcmp(val, "11AC") == 0 ||
 		    strcmp(val, "11ac") == 0 ||
 		    strcmp(val, "11na") == 0 ||
-		    strcmp(val, "11an") == 0) {
+		    strcmp(val, "11an") == 0 ||
+		    strcmp(val, "11ax") == 0) {
 			/* STA supports all modes by default */
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
