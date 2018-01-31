@@ -5875,6 +5875,13 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 	 val = get_param(cmd, "txBandwidth");
 	 if (val) {
 		 switch (get_driver_type()) {
+		 case DRIVER_WCN:
+			 if (wcn_sta_set_width(dut, intf, val) < 0) {
+				 send_resp(dut, conn, SIGMA_ERROR,
+					   "ErrorCode,Failed to set txBandwidth");
+				 return 0;
+			 }
+			 break;
 		 case DRIVER_ATHEROS:
 			 if (ath_set_width(dut, conn, intf, val) < 0) {
 				 send_resp(dut, conn, SIGMA_ERROR,
@@ -5940,7 +5947,7 @@ static int cmd_sta_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (val) {
 		if (strcasecmp(val, "11n") == 0)
 			return cmd_sta_set_11n(dut, conn, cmd);
-		if (strcasecmp(val, "VHT") == 0)
+		if (strcasecmp(val, "VHT") == 0 || strcasecmp(val, "HE") == 0)
 			return cmd_sta_set_wireless_vht(dut, conn, cmd);
 		if (strcasecmp(val, "60ghz") == 0)
 			return sta_set_wireless_60g(dut, conn, cmd);
