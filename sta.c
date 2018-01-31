@@ -2233,6 +2233,8 @@ static int cmd_sta_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 		return cmd_sta_set_eapaka(dut, conn, cmd);
 	if (strcasecmp(type, "EAPAKAPRIME") == 0)
 		return cmd_sta_set_eapakaprime(dut, conn, cmd);
+	if (strcasecmp(type, "wep") == 0)
+		return cmd_sta_set_encryption(dut, conn, cmd);
 
 	send_resp(dut, conn, SIGMA_ERROR,
 		  "ErrorCode,Unsupported Type value");
