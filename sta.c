@@ -5260,6 +5260,25 @@ static void sta_reset_default_ath(struct sigma_dut *dut, const char *intf,
 }
 
 
+static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
+				  const char *type)
+{
+	char buf[60];
+
+	if (dut->program == PROGRAM_HE) {
+		/* resetting phymode to auto in case of HE program */
+		snprintf(buf, sizeof(buf), "iwpriv %s setphymode 0", intf);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"iwpriv %s setphymode failed", intf);
+		}
+
+		/* remove all network profiles */
+		remove_wpa_networks(intf);
+	}
+}
+
+
 static int cmd_sta_reset_default(struct sigma_dut *dut,
 				 struct sigma_conn *conn,
 				 struct sigma_cmd *cmd)
@@ -5303,6 +5322,9 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 	switch (get_driver_type()) {
 	case DRIVER_ATHEROS:
 		sta_reset_default_ath(dut, intf, type);
+		break;
+	case DRIVER_WCN:
+		sta_reset_default_wcn(dut, intf, type);
 		break;
 	default:
 		break;
