@@ -4784,6 +4784,7 @@ static int cmd_sta_disconnect(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *val = get_param(cmd, "maintain_profile");
 
 	if (dut->program == PROGRAM_OCE ||
+	    dut->program == PROGRAM_HE ||
 	    (val && atoi(val) == 1)) {
 		wpa_command(intf, "DISCONNECT");
 		return 1;
