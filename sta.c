@@ -4047,6 +4047,37 @@ void ath_set_zero_crc(struct sigma_dut *dut, const char *val)
 }
 
 
+static int wcn_sta_set_width(struct sigma_dut *dut, const char *intf,
+			     const char *val)
+{
+	char buf[60];
+
+	if (strcmp(val, "20") == 0) {
+		snprintf(buf, sizeof(buf), "iwpriv %s chwidth 0", intf);
+		dut->chwidth = 0;
+	} else if (strcmp(val, "40") == 0) {
+		snprintf(buf, sizeof(buf), "iwpriv %s chwidth 1", intf);
+		dut->chwidth = 1;
+	} else if (strcmp(val, "80") == 0) {
+		snprintf(buf, sizeof(buf), "iwpriv %s chwidth 2", intf);
+		dut->chwidth = 2;
+	} else if (strcmp(val, "Auto") == 0) {
+		buf[0] = '\0';
+	} else {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "WIDTH %s not supported",
+				val);
+		return -1;
+	}
+
+	if (buf[0] != '\0' && system(buf) != 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "iwpriv chwidth failed");
+		return -1;
+	}
+
+	return 0;
+}
+
+
 static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 				       struct sigma_conn *conn,
 				       struct sigma_cmd *cmd)
@@ -4151,7 +4182,7 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 	if (val) {
 		switch (get_driver_type()) {
 		case DRIVER_WCN:
-			if (wcn_sta_set_cts_width(dut, intf, val) < 0) {
+			if (wcn_sta_set_width(dut, intf, val) < 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "ErrorCode,Failed to set WIDTH");
 				return 0;
