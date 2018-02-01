@@ -40,6 +40,10 @@ endif
 CFLAGS += -DCONFIG_CTRL_IFACE_CLIENT_DIR=\"/data/misc/wifi/sockets\"
 CFLAGS += -DSIGMA_TMPDIR=\"/data\"
 
+ifdef NL80211_SUPPORT
+CFLAGS += -DNL80211_SUPPORT
+endif
+
 LOCAL_PATH := $(call my-dir)
 FRAMEWORK_GIT_VER := $(shell cd $(ANDROID_BUILD_TOP/)frameworks/base && git describe)
 SIGMA_GIT_VER := $(shell cd $(LOCAL_PATH) && git describe --dirty=+)
@@ -68,8 +72,10 @@ LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH) system/core/include/cutils \
 	$(LOCAL_PATH) hardware/libhardware_legacy/include/hardware_legacy \
 	$(LOCAL_PATH) external/libpcap \
-	$(TARGET_OUT_HEADERS)/common/inc
-LOCAL_SHARED_LIBRARIES := libc libcutils
+	$(TARGET_OUT_HEADERS)/common/inc \
+	$(LOCAL_PATH) external/libnl/include
+
+LOCAL_SHARED_LIBRARIES := libc libcutils libnl
 LOCAL_STATIC_LIBRARIES := libpcap
 ifneq (,$(strip $(dhcpver)))
 LOCAL_SHARED_LIBRARIES += libnetutils

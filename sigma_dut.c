@@ -1004,6 +1004,9 @@ int main(int argc, char *argv[])
 				"Interface should be provided for QNX/LINUX-WCN driver - check option M and S");
 	}
 
+#ifdef NL80211_SUPPORT
+	sigma_dut.nl_ctx = nl80211_init(&sigma_dut);
+#endif /* NL80211_SUPPORT */
 	sigma_dut_register_cmds();
 
 #ifdef __QNXNTO__
@@ -1075,6 +1078,9 @@ int main(int argc, char *argv[])
 	free(sigma_dut.rsne_override);
 	free(sigma_dut.ap_sae_groups);
 	free(sigma_dut.dpp_peer_uri);
+#ifdef NL80211_SUPPORT
+	nl80211_deinit(&sigma_dut, sigma_dut.nl_ctx);
+#endif /* NL80211_SUPPORT */
 	sigma_dut_unreg_cmds(&sigma_dut);
 #ifdef ANDROID
 	hlp_thread_cleanup(&sigma_dut);

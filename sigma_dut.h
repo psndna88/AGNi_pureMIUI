@@ -33,6 +33,13 @@
 #ifdef CONFIG_TRAFFIC_AGENT
 #include <pthread.h>
 #endif /* CONFIG_TRAFFIC_AGENT */
+#ifdef NL80211_SUPPORT
+#include <netlink/genl/family.h>
+#include <netlink/genl/ctrl.h>
+#include <netlink/genl/genl.h>
+#include "qca-vendor_copy.h"
+#include "nl80211_copy.h"
+#endif /* NL80211_SUPPORT */
 
 
 #ifdef __GNUC__
@@ -242,6 +249,16 @@ struct mbo_pref_ap {
 	int ap_ne_pref;
 	unsigned char mac_addr[ETH_ALEN];
 };
+
+#ifdef NL80211_SUPPORT
+#define SOCK_BUF_SIZE (32 * 1024)
+struct nl80211_ctx {
+	struct nl_sock *sock;
+	int netlink_familyid;
+	int nlctrl_familyid;
+	size_t sock_buf_size;
+};
+#endif /* NL80211_SUPPORT */
 
 struct sigma_dut {
 	int s; /* server TCP socket */
@@ -699,6 +716,10 @@ struct sigma_dut {
 
 	u8 fils_hlp;
 	pthread_t hlp_thread;
+
+#ifdef NL80211_SUPPORT
+	struct nl80211_ctx *nl_ctx;
+#endif /* NL80211_SUPPORT */
 };
 
 
@@ -874,5 +895,17 @@ int dpp_dev_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 /* dhcp.c */
 void process_fils_hlp(struct sigma_dut *dut);
 void hlp_thread_cleanup(struct sigma_dut *dut);
+
+#ifdef NL80211_SUPPORT
+struct nl80211_ctx * nl80211_init(struct sigma_dut *dut);
+void nl80211_deinit(struct sigma_dut *dut, struct nl80211_ctx *ctx);
+struct nl_msg * nl80211_drv_msg(struct sigma_dut *dut, struct nl80211_ctx *ctx,
+				int ifindex, int flags,
+				uint8_t cmd);
+int send_and_recv_msgs(struct sigma_dut *dut, struct nl80211_ctx *ctx,
+		       struct nl_msg *nlmsg,
+		       int (*valid_handler)(struct nl_msg *, void *),
+		       void *valid_data);
+#endif /* NL80211_SUPPORT */
 
 #endif /* SIGMA_DUT_H */
