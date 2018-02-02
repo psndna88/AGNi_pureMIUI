@@ -429,6 +429,22 @@ enum qca_radiotap_vendor_ids {
  * @QCA_NL80211_VENDOR_SUBCMD_SET_QDEPTH_THRESH: Set MSDU queue depth threshold
  *	per peer per TID. Attributes for this command are define in
  *	enum qca_wlan_set_qdepth_thresh_attr.
+ * @QCA_NL80211_VENDOR_SUBCMD_THERMAL_CMD: Provides the thermal shutdown action
+ *	guide for WLAN driver. Request to suspend of driver and FW if the
+ *	temperature is higher than the suspend threshold; resume action is
+ *	requested to driver if the temperature is lower than the resume
+ *	threshold. In user poll mode, request temperature data by user. For test
+ *	purpose, getting thermal shutdown configuration parameters is needed.
+ *	Attributes for this interface are defined in
+ *	enum qca_wlan_vendor_attr_thermal_cmd.
+ * @QCA_NL80211_VENDOR_SUBCMD_THERMAL_EVENT: Thermal events reported from
+ *	driver. Thermal temperature and indication of resume completion are
+ *	reported as thermal events. The attributes for this command are defined
+ *	in enum qca_wlan_vendor_attr_thermal_event.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION: Sub command to set WiFi
+ * 	test configuration. Attributes for this command are defined in
+ * 	enum qca_wlan_vendor_attr_wifi_test_config.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -581,6 +597,11 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_GET_SAR_LIMITS = 164,
 	QCA_NL80211_VENDOR_SUBCMD_WLAN_MAC_INFO = 165,
 	QCA_NL80211_VENDOR_SUBCMD_SET_QDEPTH_THRESH = 166,
+	/* Thermal shutdown commands to protect wifi chip */
+	QCA_NL80211_VENDOR_SUBCMD_THERMAL_CMD = 167,
+	QCA_NL80211_VENDOR_SUBCMD_THERMAL_EVENT = 168,
+	/* Wi-Fi test configuration subcommand */
+	QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION = 169,
 };
 
 
@@ -4848,11 +4869,33 @@ enum qca_wlan_vendor_attr_nd_offload {
 };
 
 /**
- * enum packet_filter_sub_cmd - Packet filter sub command
+ * enum packet_filter_sub_cmd - Packet filter sub commands
  */
 enum packet_filter_sub_cmd {
+	/**
+	 * Write packet filter program and/or data. The driver/firmware should
+	 * disable APF before writing into local buffer and re-enable APF after
+	 * writing is done.
+	 */
 	QCA_WLAN_SET_PACKET_FILTER = 1,
+	/* Get packet filter feature capabilities from driver */
 	QCA_WLAN_GET_PACKET_FILTER = 2,
+	/**
+	 * Write packet filter program and/or data. User space will send the
+	 * %QCA_WLAN_DISABLE_PACKET_FILTER command before issuing this command
+	 * and will send the %QCA_WLAN_ENABLE_PACKET_FILTER afterwards. The key
+	 * difference from that %QCA_WLAN_SET_PACKET_FILTER is the control over
+	 * enable/disable is given to user space with this command. Also,
+	 * user space sends the length of program portion in the buffer within
+	 * %QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_PROG_LENGTH.
+	 */
+	QCA_WLAN_WRITE_PACKET_FILTER = 3,
+	/* Read packet filter program and/or data */
+	QCA_WLAN_READ_PACKET_FILTER = 4,
+	/* Enable APF feature */
+	QCA_WLAN_ENABLE_PACKET_FILTER = 5,
+	/* Disable APF feature */
+	QCA_WLAN_DISABLE_PACKET_FILTER = 6,
 };
 
 /**
@@ -4867,12 +4910,20 @@ enum qca_wlan_vendor_attr_packet_filter {
 	QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_VERSION,
 	/* Unsigned 32-bit value indicating the packet filter id */
 	QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_ID,
-	/* Unsigned 32-bit value indicating the packet filter size */
+	/**
+	 * Unsigned 32-bit value indicating the packet filter size including
+	 * program + data.
+	 */
 	QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_SIZE,
 	/* Unsigned 32-bit value indicating the packet filter current offset */
 	QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_CURRENT_OFFSET,
-	/* Unsigned 32-bit value indicating length of BPF instructions */
+	/* Program and/or data in bytes */
 	QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_PROGRAM,
+	/* Unsigned 32-bit value of the length of the program section in packet
+	 * filter buffer.
+	 */
+	QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_PROG_LENGTH = 7,
+
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_MAX =
@@ -4952,6 +5003,257 @@ enum qca_wlan_vendor_attr_wake_stats {
 	QCA_WLAN_VENDOR_GET_WAKE_STATS_AFTER_LAST,
 	QCA_WLAN_VENDOR_GET_WAKE_STATS_MAX =
 		QCA_WLAN_VENDOR_GET_WAKE_STATS_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_thermal_cmd - Vendor subcmd attributes to set
+ * cmd value. Used for NL attributes for data used by
+ * QCA_NL80211_VENDOR_SUBCMD_THERMAL_CMD sub command.
+ */
+enum qca_wlan_vendor_attr_thermal_cmd {
+	QCA_WLAN_VENDOR_ATTR_THERMAL_CMD_INVALID = 0,
+	/* The value of command, driver will implement different operations
+	 * according to this value. It uses values defined in
+	 * enum qca_wlan_vendor_attr_thermal_cmd_type.
+	 * u32 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_THERMAL_CMD_VALUE = 1,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_THERMAL_CMD_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_THERMAL_CMD_MAX =
+	QCA_WLAN_VENDOR_ATTR_THERMAL_CMD_AFTER_LAST - 1
+};
+
+/**
+ * qca_wlan_vendor_attr_thermal_cmd_type: Attribute values for
+ * QCA_WLAN_VENDOR_ATTR_THERMAL_CMD_VALUE to the vendor subcmd
+ * QCA_NL80211_VENDOR_SUBCMD_THERMAL_CMD. This represents the
+ * thermal command types sent to driver.
+ * @QCA_WLAN_VENDOR_ATTR_THERMAL_CMD_TYPE_GET_PARAMS: Request to
+ * get thermal shutdown configuration parameters for display. Parameters
+ * responded from driver are defined in
+ * enum qca_wlan_vendor_attr_get_thermal_params_rsp.
+ * @QCA_WLAN_VENDOR_ATTR_THERMAL_CMD_TYPE_GET_TEMPERATURE: Request to
+ * get temperature. Host should respond with a temperature data. It is defined
+ * in enum qca_wlan_vendor_attr_thermal_get_temperature.
+ * @QCA_WLAN_VENDOR_ATTR_THERMAL_CMD_TYPE_SUSPEND: Request to execute thermal
+ * suspend action.
+ * @QCA_WLAN_VENDOR_ATTR_THERMAL_CMD_TYPE_RESUME: Request to execute thermal
+ * resume action.
+ */
+enum qca_wlan_vendor_attr_thermal_cmd_type {
+	QCA_WLAN_VENDOR_ATTR_THERMAL_CMD_TYPE_GET_PARAMS,
+	QCA_WLAN_VENDOR_ATTR_THERMAL_CMD_TYPE_GET_TEMPERATURE,
+	QCA_WLAN_VENDOR_ATTR_THERMAL_CMD_TYPE_SUSPEND,
+	QCA_WLAN_VENDOR_ATTR_THERMAL_CMD_TYPE_RESUME,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_thermal_get_temperature - vendor subcmd attributes
+ * to get chip temperature by user.
+ * enum values are used for NL attributes for data used by
+ * QCA_WLAN_VENDOR_ATTR_THERMAL_CMD_TYPE_GET_TEMPERATURE command for data used
+ * by QCA_NL80211_VENDOR_SUBCMD_THERMAL_CMD sub command.
+ */
+enum qca_wlan_vendor_attr_thermal_get_temperature {
+	QCA_WLAN_VENDOR_ATTR_THERMAL_GET_TEMPERATURE_INVALID = 0,
+	/* Temperature value (degree Celsius) from driver.
+	 * u32 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_THERMAL_GET_TEMPERATURE_DATA,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_THERMAL_GET_TEMPERATURE_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_THERMAL_GET_TEMPERATURE_MAX =
+	QCA_WLAN_VENDOR_ATTR_THERMAL_GET_TEMPERATURE_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_get_thermal_params_rsp - vendor subcmd attributes
+ * to get configuration parameters of thermal shutdown feature. Enum values are
+ * used by QCA_WLAN_VENDOR_ATTR_THERMAL_CMD_TYPE_GET_PARAMS command for data
+ * used by QCA_NL80211_VENDOR_SUBCMD_THERMAL_CMD sub command.
+ */
+enum qca_wlan_vendor_attr_get_thermal_params_rsp {
+	QCA_WLAN_VENDOR_ATTR_GET_THERMAL_PARAMS_RSP_INVALID = 0,
+	/* Indicate if the thermal shutdown feature is enabled.
+	 * NLA_FLAG attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GET_THERMAL_PARAMS_RSP_SHUTDOWN_EN,
+	/* Indicate if the auto mode is enabled.
+	 * Enable: Driver triggers the suspend/resume action.
+	 * Disable: User space triggers the suspend/resume action.
+	 * NLA_FLAG attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GET_THERMAL_PARAMS_RSP_SHUTDOWN_AUTO_EN,
+	/* Thermal resume threshold (degree Celsius). Issue the resume command
+	 * if the temperature value is lower than this threshold.
+	 * u16 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GET_THERMAL_PARAMS_RSP_RESUME_THRESH,
+	/* Thermal warning threshold (degree Celsius). FW reports temperature
+	 * to driver if it's higher than this threshold.
+	 * u16 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GET_THERMAL_PARAMS_RSP_WARNING_THRESH,
+	/* Thermal suspend threshold (degree Celsius). Issue the suspend command
+	 * if the temperature value is higher than this threshold.
+	 * u16 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GET_THERMAL_PARAMS_RSP_SUSPEND_THRESH,
+	/* FW reports temperature data periodically at this interval (ms).
+	 * u16 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GET_THERMAL_PARAMS_RSP_SAMPLE_RATE,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_GET_THERMAL_PARAMS_RSP_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_GET_THERMAL_PARAMS_RSP_MAX =
+	QCA_WLAN_VENDOR_ATTR_GET_THERMAL_PARAMS_RSP_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_thermal_event - vendor subcmd attributes to
+ * report thermal events from driver to user space.
+ * enum values are used for NL attributes for data used by
+ * QCA_NL80211_VENDOR_SUBCMD_THERMAL_EVENT sub command.
+ */
+enum qca_wlan_vendor_attr_thermal_event {
+	QCA_WLAN_VENDOR_ATTR_THERMAL_EVENT_INVALID = 0,
+	/* Temperature value (degree Celsius) from driver.
+	 * u32 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_THERMAL_EVENT_TEMPERATURE,
+	/* Indication of resume completion from power save mode.
+	 * NLA_FLAG attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_THERMAL_EVENT_RESUME_COMPLETE,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_THERMAL_EVENT_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_THERMAL_EVENT_MAX =
+	QCA_WLAN_VENDOR_ATTR_THERMAL_EVENT_AFTER_LAST - 1,
+};
+
+/**
+ * enum he_fragmentation_val - HE fragmentation support values
+ * Indicates level of dynamic fragmentation that is supported by
+ * a STA as a recipient.
+ * HE fragmentation values are defined in IEEE P802.11ax/D2.0, 9.4.2.237.2
+ * (HE MAC Capabilities Information field) and are used in HE Capabilities
+ * element to advertise the support. These values are validated in the driver
+ * to check the device capability and advertised in the HE Capabilities
+ * element. These values are used to configure testbed device to allow the
+ * advertised hardware capabilities to be downgraded for testing purposes.
+ *
+ * @HE_FRAG_DISABLE: no support for dynamic fragmentation
+ * @HE_FRAG_LEVEL1: support for dynamic fragments that are
+ * 	contained within an MPDU or S-MPDU, no support for dynamic fragments
+ * 	within an A-MPDU that is not an S-MPDU.
+ * @HE_FRAG_LEVEL2: support for dynamic fragments that are
+ * 	contained within an MPDU or S-MPDU and support for up to one dynamic
+ * 	fragment for each MSDU, each A-MSDU if supported by the recipient, and
+ * 	each MMPDU within an A-MPDU or multi-TID A-MPDU that is not an
+ * 	MPDU or S-MPDU.
+ * @HE_FRAG_LEVEL3: support for dynamic fragments that are
+ * 	contained within an MPDU or S-MPDU and support for multiple dynamic
+ * 	fragments for each MSDU and for each A-MSDU if supported by the
+ * 	recipient within an A-MPDU or multi-TID AMPDU and up to one dynamic
+ * 	fragment for each MMPDU in a multi-TID A-MPDU that is not an S-MPDU.
+ */
+enum he_fragmentation_val {
+	HE_FRAG_DISABLE,
+	HE_FRAG_LEVEL1,
+	HE_FRAG_LEVEL2,
+	HE_FRAG_LEVEL3,
+};
+
+/**
+ * enum he_mcs_config - HE MCS support configuration
+ *
+ * Configures the HE Tx/Rx MCS map in HE capability IE for given bandwidth.
+ * These values are used in driver to configure the HE MCS map to advertise
+ * Tx/Rx MCS map in HE capability and these values are applied for all the
+ * streams supported by the device. To configure MCS for different bandwidths,
+ * vendor command needs to be sent using this attribute with appropriate value.
+ * For example, to configure HE_80_MCS_0_7, send vendor command using HE MCS
+ * attribute with HE_80_MCS0_7. And to configure HE MCS for HE_160_MCS0_11
+ * send this command using HE MCS config attribute with value HE_160_MCS0_11.
+ * These values are used to configure testbed device to allow the advertised
+ * hardware capabilities to be downgraded for testing purposes. The enum values
+ * are defined such that BIT[1:0] indicates the MCS map value. Values 3,7 and
+ * 11 are not used as BIT[1:0] value is 3 which is used to disable MCS map.
+ * These values are validated in the driver before setting the MCS map and
+ * driver returns error if the input is other than these enum values.
+ *
+ * @HE_80_MCS0_7: support for HE 80/40/20 MHz MCS 0 to 7
+ * @HE_80_MCS0_9: support for HE 80/40/20 MHz MCS 0 to 9
+ * @HE_80_MCS0_11: support for HE 80/40/20 MHz MCS 0 to 11
+ * @HE_160_MCS0_7: support for HE 160 MHz MCS 0 to 7
+ * @HE_160_MCS0_9: support for HE 160 MHz MCS 0 to 9
+ * @HE_160_MCS0_11: support for HE 160 MHz MCS 0 to 11
+ * @HE_80P80_MCS0_7: support for HE 80p80 MHz MCS 0 to 7
+ * @HE_80P80_MCS0_9: support for HE 80p80 MHz MCS 0 to 9
+ * @HE_80P80_MCS0_11: support for HE 80p80 MHz MCS 0 to 11
+ */
+enum he_mcs_config {
+	HE_80_MCS0_7 = 0,
+	HE_80_MCS0_9 = 1,
+	HE_80_MCS0_11 = 2,
+	HE_160_MCS0_7 = 4,
+	HE_160_MCS0_9 = 5,
+	HE_160_MCS0_11 = 6,
+	HE_80P80_MCS0_7 = 8,
+	HE_80P80_MCS0_9 = 9,
+	HE_80P80_MCS0_11 = 10,
+};
+
+/* Attributes for data used by
+ * QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION
+ */
+enum qca_wlan_vendor_attr_wifi_test_config {
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_INVALID = 0,
+	/* 8-bit unsigned value to configure the driver to enable/disable
+	 * WMM feature. This attribute is used to configure testbed device.
+	 * 1-enable, 0-disable
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_WMM_ENABLE = 1,
+
+	/* 8-bit unsigned value to configure the driver to accept/reject
+	 * the addba request from peer. This attribute is used to configure
+	 * the testbed device.
+	 * 1-accept addba, 0-reject addba
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_ACCEPT_ADDBA_REQ = 2,
+
+	/* 8-bit unsigned value to configure the driver to send or not to
+	 * send the addba request to peer.
+	 * This attribute is used to configure the testbed device.
+	 * 1-send addba, 0-do not send addba
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_SEND_ADDBA_REQ = 3,
+
+	/* 8-bit unsigned value to indicate the HE fragmentation support.
+	 * Uses enum he_fragmentation_val values.
+	 * This attribute is used to configure the testbed device to
+	 * allow the advertised hardware capabilities to be downgraded
+	 * for testing purposes.
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_FRAGMENTATION = 4,
+
+	/* 8-bit unsigned value to indicate the HE MCS support.
+	 * Uses enum he_mcs_config values.
+	 * This attribute is used to configure the testbed device to
+	 * allow the advertised hardware capabilities to be downgraded
+	 * for testing purposes.
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_MCS = 5,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_MAX =
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_AFTER_LAST - 1,
 };
 
 #endif /* QCA_VENDOR_H */
