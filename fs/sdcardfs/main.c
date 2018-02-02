@@ -32,6 +32,8 @@ enum {
 	Opt_multiuser,
 	Opt_userid,
 	Opt_reserved_mb,
+	Opt_gid_derivation,
+	Opt_default_normal,
 	Opt_err,
 };
 
@@ -43,6 +45,8 @@ static const match_table_t sdcardfs_tokens = {
 	{Opt_mask, "mask=%u"},
 	{Opt_userid, "userid=%d"},
 	{Opt_multiuser, "multiuser"},
+	{Opt_gid_derivation, "derive_gid"},
+	{Opt_default_normal, "default_normal"},
 	{Opt_reserved_mb, "reserved_mb=%u"},
 	{Opt_err, NULL}
 };
@@ -64,6 +68,9 @@ static int parse_options(struct super_block *sb, char *options, int silent,
 	vfsopts->gid = 0;
 	/* by default, 0MB is reserved */
 	opts->reserved_mb = 0;
+	/* by default, gid derivation is off */
+	opts->gid_derivation = false;
+	opts->default_normal = false;
 
 	*debug = 0;
 
@@ -114,6 +121,12 @@ static int parse_options(struct super_block *sb, char *options, int silent,
 			if (match_int(&args[0], &option))
 				return 0;
 			opts->reserved_mb = option;
+			break;
+		case Opt_gid_derivation:
+			opts->gid_derivation = true;
+			break;
+		case Opt_default_normal:
+			opts->default_normal = true;
 			break;
 		/* unknown option */
 		default:
@@ -168,6 +181,7 @@ int parse_options_remount(struct super_block *sb, char *options, int silent,
 				return 0;
 			vfsopts->mask = option;
 			break;
+		case Opt_default_normal:
 		case Opt_multiuser:
 		case Opt_userid:
 		case Opt_fsuid:
@@ -281,6 +295,13 @@ static int sdcardfs_read_super(struct vfsmount *mnt, struct super_block *sb,
 	atomic_inc(&lower_sb->s_active);
 	sdcardfs_set_lower_super(sb, lower_sb);
 
+	sb->s_stack_depth = lower_sb->s_stack_depth + 1;
+	if (sb->s_stack_depth > FILESYSTEM_MAX_STACK_DEPTH) {
+		pr_err("sdcardfs: maximum fs stacking depth exceeded\n");
+		err = -EINVAL;
+		goto out_sput;
+	}
+
 	/* inherit maxbytes from lower file system */
 	sb->s_maxbytes = lower_sb->s_maxbytes;
 
@@ -364,41 +385,34 @@ out:
 	return err;
 }
 
-/* A feature which supports mount_nodev() with options */
-static struct dentry *mount_nodev_with_options(struct vfsmount *mnt,
-			struct file_system_type *fs_type, int flags,
-			const char *dev_name, void *data,
-			int (*fill_super)(struct vfsmount *, struct super_block *,
-						const char *, void *, int))
+struct sdcardfs_mount_private {
+	struct vfsmount *mnt;
+	const char *dev_name;
+	void *raw_data;
+};
 
+static int __sdcardfs_fill_super(
+	struct super_block *sb,
+	void *_priv, int silent)
 {
-	int error;
-	struct super_block *s = sget(fs_type, NULL, set_anon_super, flags, NULL);
+	struct sdcardfs_mount_private *priv = _priv;
 
-	if (IS_ERR(s))
-		return ERR_CAST(s);
-
-	s->s_flags = flags;
-
-	error = fill_super(mnt, s, dev_name, data, flags & MS_SILENT ? 1 : 0);
-	if (error) {
-		deactivate_locked_super(s);
-		return ERR_PTR(error);
-	}
-	s->s_flags |= MS_ACTIVE;
-	return dget(s->s_root);
+	return sdcardfs_read_super(priv->mnt,
+		sb, priv->dev_name, priv->raw_data, silent);
 }
 
 static struct dentry *sdcardfs_mount(struct vfsmount *mnt,
 		struct file_system_type *fs_type, int flags,
 			    const char *dev_name, void *raw_data)
 {
-	/*
-	 * dev_name is a lower_path_name,
-	 * raw_data is a option string.
-	 */
-	return mount_nodev_with_options(mnt, fs_type, flags, dev_name,
-						raw_data, sdcardfs_read_super);
+	struct sdcardfs_mount_private priv = {
+		.mnt = mnt,
+		.dev_name = dev_name,
+		.raw_data = raw_data
+	};
+
+	return mount_nodev(fs_type, flags,
+		&priv, __sdcardfs_fill_super);
 }
 
 static struct dentry *sdcardfs_mount_wrn(struct file_system_type *fs_type,
@@ -423,7 +437,7 @@ void sdcardfs_kill_sb(struct super_block *sb)
 		list_del(&sbi->list);
 		mutex_unlock(&sdcardfs_super_list_lock);
 	}
-	generic_shutdown_super(sb);
+	kill_anon_super(sb);
 }
 
 static struct file_system_type sdcardfs_fs_type = {

@@ -218,6 +218,8 @@ struct sdcardfs_mount_options {
 	gid_t fs_low_gid;
 	userid_t fs_user_id;
 	bool multiuser;
+	bool gid_derivation;
+	bool default_normal;
 	unsigned int reserved_mb;
 };
 
@@ -411,11 +413,13 @@ static inline void set_top(struct sdcardfs_inode_info *info,
 }
 
 static inline int get_gid(struct vfsmount *mnt,
+		struct super_block *sb,
 		struct sdcardfs_inode_data *data)
 {
-	struct sdcardfs_vfsmount_options *opts = mnt->data;
+	struct sdcardfs_vfsmount_options *vfsopts = mnt->data;
+	struct sdcardfs_sb_info *sbi = SDCARDFS_SB(sb);
 
-	if (opts->gid == AID_SDCARD_RW)
+	if (vfsopts->gid == AID_SDCARD_RW && !sbi->options.default_normal)
 		/* As an optimization, certain trusted system components only run
 		 * as owner but operate across all users. Since we're now handing
 		 * out the sdcard_rw GID only to trusted apps, we're okay relaxing
@@ -424,7 +428,7 @@ static inline int get_gid(struct vfsmount *mnt,
 		 */
 		return AID_SDCARD_RW;
 	else
-		return multiuser_get_uid(data->userid, opts->gid);
+		return multiuser_get_uid(data->userid, vfsopts->gid);
 }
 
 static inline int get_mode(struct vfsmount *mnt,
@@ -498,7 +502,6 @@ extern appid_t get_appid(const char *app_name);
 extern appid_t get_ext_gid(const char *app_name);
 extern appid_t is_excluded(const char *app_name, userid_t userid);
 extern int check_caller_access_to_name(struct inode *parent_node, const struct qstr *name);
-extern int open_flags_to_access_mode(int open_flags);
 extern int packagelist_init(void);
 extern void packagelist_exit(void);
 
