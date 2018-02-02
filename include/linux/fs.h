@@ -2146,6 +2146,7 @@ static inline int sb_is_blkdev_sb(struct super_block *sb)
 #endif
 extern int sync_filesystem(struct super_block *);
 extern const struct file_operations def_blk_fops;
+extern void sync_filesystems(int wait);
 extern const struct file_operations def_chr_fops;
 extern const struct file_operations bad_sock_fops;
 #ifdef CONFIG_BLOCK

@@ -35,6 +35,8 @@
 
 #include "sched.h"
 
+static void fsync_auto(struct work_struct *fsync_auto_work);
+
 /*
  * Targeted preemption latency for CPU-bound tasks:
  * (default: 6ms * (1 + ilog(ncpus)), units: nanoseconds)
@@ -1776,7 +1778,14 @@ static int boost_refcount;
 static DEFINE_SPINLOCK(boost_lock);
 static DEFINE_MUTEX(boost_mutex);
 
-static void boost_kick_cpus(void)
+static void fsync_auto(struct work_struct *fsync_auto_work)
+{
+	sync_filesystems(0);
+	sync_filesystems(1);
+}
+static DECLARE_DELAYED_WORK(fsync_auto_work, fsync_auto);
+
+static inline void boost_kick_cpus(void)
 {
 	int i;
 
@@ -1786,12 +1795,12 @@ static void boost_kick_cpus(void)
 	}
 }
 
-int sched_boost(void)
+inline int sched_boost(void)
 {
 	return boost_refcount > 0;
 }
 
-int sched_set_boost(int enable)
+inline int sched_set_boost(int enable)
 {
 	unsigned long flags;
 	int ret = 0;
@@ -1817,6 +1826,11 @@ int sched_set_boost(int enable)
 
 	if (!old_refcount && boost_refcount)
 		boost_kick_cpus();
+
+	if (enable == 0 && !boost_refcount){
+		if (!delayed_work_pending(&fsync_auto_work))
+			schedule_delayed_work(&fsync_auto_work, msecs_to_jiffies(5000));
+	}
 
 //	trace_sched_set_boost(boost_refcount);
 	spin_unlock_irqrestore(&boost_lock, flags);
