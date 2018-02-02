@@ -15,14 +15,10 @@
 #include <linux/pagemap.h>
 #include <linux/quotaops.h>
 #include <linux/backing-dev.h>
-#include <linux/moduleparam.h>
 #include "internal.h"
 
 #define VALID_FLAGS (SYNC_FILE_RANGE_WAIT_BEFORE|SYNC_FILE_RANGE_WRITE| \
 			SYNC_FILE_RANGE_WAIT_AFTER)
-
-bool fsync_enabled_on_input_boost = true;
-module_param(fsync_enabled_on_input_boost, bool, 0644);
 
 /*
  * Do the filesystem syncing work. For simple filesystems
@@ -156,9 +152,6 @@ SYSCALL_DEFINE1(syncfs, int, fd)
 	struct super_block *sb;
 	int ret;
 
-	if (!set_fsync())
-		return 0;
-
 	f = fdget(fd);
 
 	if (!f.file)
@@ -186,9 +179,6 @@ SYSCALL_DEFINE1(syncfs, int, fd)
  */
 int vfs_fsync_range(struct file *file, loff_t start, loff_t end, int datasync)
 {
-	if (!set_fsync())
-		return 0;
-
 	if (!file->f_op || !file->f_op->fsync)
 		return -EINVAL;
 
@@ -206,9 +196,6 @@ EXPORT_SYMBOL(vfs_fsync_range);
  */
 int vfs_fsync(struct file *file, int datasync)
 {
-	if (!set_fsync())
-		return 0;
-
 	return vfs_fsync_range(file, 0, LLONG_MAX, datasync);
 }
 EXPORT_SYMBOL(vfs_fsync);
@@ -217,9 +204,6 @@ static int do_fsync(unsigned int fd, int datasync)
 {
 	struct fd f;
 	int ret = -EBADF;
-
-	if (!set_fsync())
-		return 0;
 
 	f = fdget(fd);
 
@@ -233,17 +217,11 @@ static int do_fsync(unsigned int fd, int datasync)
 
 SYSCALL_DEFINE1(fsync, unsigned int, fd)
 {
-	if (!set_fsync())
-		return 0;
-
 	return do_fsync(fd, 0);
 }
 
 SYSCALL_DEFINE1(fdatasync, unsigned int, fd)
 {
-	if (!set_fsync())
-		return 0;
-
 	return do_fsync(fd, 1);
 }
 
@@ -257,9 +235,6 @@ SYSCALL_DEFINE1(fdatasync, unsigned int, fd)
  */
 int generic_write_sync(struct file *file, loff_t pos, loff_t count)
 {
-	if (!set_fsync())
-		return 0;
-
 	if (!(file->f_flags & O_DSYNC) && !IS_SYNC(file->f_mapping->host))
 		return 0;
 	return vfs_fsync_range(file, pos, pos + count - 1,
@@ -322,9 +297,6 @@ SYSCALL_DEFINE4(sync_file_range, int, fd, loff_t, offset, loff_t, nbytes,
 	struct address_space *mapping;
 	loff_t endbyte;			/* inclusive */
 	umode_t i_mode;
-
-	if (!set_fsync())
-		return 0;
 
 	ret = -EINVAL;
 	if (flags & ~VALID_FLAGS)

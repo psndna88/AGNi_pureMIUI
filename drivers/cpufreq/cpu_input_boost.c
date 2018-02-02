@@ -18,7 +18,6 @@
 #include <linux/fb.h>
 #include <linux/input.h>
 #include <linux/slab.h>
-#include <linux/sched.h>
 
 #define CPU_MASK(cpu) (1U << (cpu))
 
@@ -38,16 +37,6 @@
 
 /* The duration in milliseconds for the wake boost */
 #define FB_BOOST_MS (2000)
-
-bool __read_mostly fsync_enabled = false;
-
-bool __read_mostly set_fsync(void)
-{
-	if (fsync_enabled_on_input_boost)
-		return fsync_enabled;
-	else
-		return true;
-}
 
 /*
  * "fb" = "framebuffer". This is the boost that occurs on framebuffer unblank,
@@ -181,8 +170,6 @@ static void ib_boost_main(struct work_struct *work)
 	ib_boost_cpus(b);
 
 	put_online_cpus();
-
-	fsync_enabled = false;
 }
 
 static void ib_unboost_main(struct work_struct *work)
@@ -207,8 +194,6 @@ static void ib_unboost_main(struct work_struct *work)
 	 */
 	if (!ib->cpus_to_boost)
 		clear_boost_bit(b, INPUT_BOOST);
-
-	fsync_enabled = true;
 }
 
 static void ib_reboost_main(struct work_struct *work)
@@ -224,7 +209,6 @@ static void ib_reboost_main(struct work_struct *work)
 
 	/* Clear reboost bit */
 	clear_boost_bit(b, INPUT_REBOOST);
-	fsync_enabled = false;
 }
 
 static void fb_boost_main(struct work_struct *work)
