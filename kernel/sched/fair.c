@@ -1780,8 +1780,11 @@ static DEFINE_MUTEX(boost_mutex);
 
 static void fsync_auto(struct work_struct *fsync_auto_work)
 {
+	fsync_block = false;
 	sync_filesystems(0);
 	sync_filesystems(1);
+	fsync_block = true;
+	fsync_pending_flag = false;
 }
 static DECLARE_DELAYED_WORK(fsync_auto_work, fsync_auto);
 
@@ -1827,7 +1830,7 @@ inline int sched_set_boost(int enable)
 	if (!old_refcount && boost_refcount)
 		boost_kick_cpus();
 
-	if (enable == 0 && !boost_refcount){
+	if (enable == 0 && fsync_pending_flag){
 		if (!delayed_work_pending(&fsync_auto_work))
 			schedule_delayed_work(&fsync_auto_work, msecs_to_jiffies(5000));
 	}

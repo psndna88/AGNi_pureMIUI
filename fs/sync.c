@@ -22,6 +22,7 @@
 			SYNC_FILE_RANGE_WAIT_AFTER)
 
 bool __read_mostly fsync_block = true;
+bool __read_mostly fsync_pending_flag = false;
 module_param(fsync_block, bool, 0644);
 
 /*
@@ -97,15 +98,13 @@ static void fdatawait_one_bdev(struct block_device *bdev, void *arg)
  * Sync all the data for all the filesystems
  * Called by fsync_auto dwork
  */
-void sync_filesystems(int wait)
+inline void sync_filesystems(int wait)
 {
-	fsync_block = false;
 	iterate_supers(sync_inodes_one_sb, NULL);
 	iterate_supers(sync_fs_one_sb, &wait);
 	iterate_supers(sync_fs_one_sb, &wait);
 	iterate_bdevs(fdatawrite_one_bdev, NULL);
 	iterate_bdevs(fdatawait_one_bdev, NULL);
-	fsync_block = true;
 }
 
 /*
@@ -171,8 +170,10 @@ SYSCALL_DEFINE1(syncfs, int, fd)
 	struct super_block *sb;
 	int ret;
 
-	if (fsync_block)
+	if (fsync_block) {
+		fsync_pending_flag = true;
 		return 0;
+	}
 
 	f = fdget(fd);
 
@@ -201,8 +202,10 @@ SYSCALL_DEFINE1(syncfs, int, fd)
  */
 int vfs_fsync_range(struct file *file, loff_t start, loff_t end, int datasync)
 {
-	if (fsync_block)
+	if (fsync_block) {
+		fsync_pending_flag = true;
 		return 0;
+	}
 
 	if (!file->f_op || !file->f_op->fsync)
 		return -EINVAL;
@@ -233,8 +236,10 @@ static int do_fsync(unsigned int fd, int datasync)
 	struct fd f;
 	int ret = -EBADF;
 
-	if (fsync_block)
+	if (fsync_block) {
+		fsync_pending_flag = true;
 		return 0;
+	}
 
 	f = fdget(fd);
 
