@@ -5260,6 +5260,51 @@ static void sta_reset_default_ath(struct sigma_dut *dut, const char *intf,
 }
 
 
+#ifdef NL80211_SUPPORT
+static int sta_set_he_mcs(struct sigma_dut *dut, const char *intf,
+			  enum he_mcs_config mcs)
+{
+	struct nl_msg *msg;
+	int ret = 0;
+	struct nlattr *params;
+	int ifindex;
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s failed",
+				__func__, intf);
+		return -1;
+	}
+
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+				    NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
+	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_MCS,
+		       mcs)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding vendor_cmd and vendor_data",
+				__func__);
+		nlmsg_free(msg);
+		return -1;
+	}
+	nla_nest_end(msg, params);
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in send_and_recv_msgs, ret=%d",
+				__func__, ret);
+	}
+	return ret;
+}
+#endif /* NL80211_SUPPORT */
+
+
 static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 				  const char *type)
 {
@@ -5275,6 +5320,28 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 
 		/* remove all network profiles */
 		remove_wpa_networks(intf);
+
+		/* Set nss to 1 and MCS 0-7 in case of testbed */
+		if (type && strcasecmp(type, "Testbed") == 0) {
+#ifdef NL80211_SUPPORT
+			int ret;
+#endif /* NL80211_SUPPORT */
+
+			snprintf(buf, sizeof(buf), "iwpriv %s nss 1", intf);
+			if (system(buf) != 0) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"iwpriv %s nss failed", intf);
+			}
+
+#ifdef NL80211_SUPPORT
+			ret = sta_set_he_mcs(dut, intf, HE_80_MCS0_7);
+			if (ret) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"Setting of MCS failed, ret:%d",
+						ret);
+			}
+#endif /* NL80211_SUPPORT */
+		}
 	}
 }
 
