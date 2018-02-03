@@ -43,6 +43,7 @@ struct pm_sleep_state pm_states[PM_SUSPEND_MAX] = {
 };
 
 static const struct platform_suspend_ops *suspend_ops;
+extern void cancel_fsync_auto_work(void);
 
 static bool need_suspend_ops(suspend_state_t state)
 {
@@ -357,7 +358,8 @@ static int enter_state(suspend_state_t state)
 		freeze_begin();
 
 #ifdef CONFIG_PM_SYNC_BEFORE_SUSPEND
-	printk(KERN_INFO "PM: Syncing filesystems ... ");
+	cancel_fsync_auto_work();
+	pr_debug(KERN_INFO "PM: Syncing filesystems ... ");
 	sys_sync();
 	printk("done.\n");
 #endif

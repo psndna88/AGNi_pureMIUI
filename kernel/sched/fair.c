@@ -30,6 +30,7 @@
 #include <linux/migrate.h>
 #include <linux/task_work.h>
 #include <linux/ratelimit.h>
+#include <linux/display_state.h>
 
 #include <trace/events/sched.h>
 
@@ -1785,10 +1786,17 @@ static void fsync_auto(struct work_struct *fsync_auto_work)
 	sync_filesystems(1);
 	fsync_block = true;
 	fsync_pending_flag = false;
+	pr_debug("Sched-fSync: Auto delayed Syncing filesystems done.");
 }
 static DECLARE_DELAYED_WORK(fsync_auto_work, fsync_auto);
 
-static inline void boost_kick_cpus(void)
+void cancel_fsync_auto_work(void)
+{
+	if (delayed_work_pending(&fsync_auto_work))
+		cancel_delayed_work(&fsync_auto_work);
+}
+
+static void boost_kick_cpus(void)
 {
 	int i;
 
@@ -1798,12 +1806,12 @@ static inline void boost_kick_cpus(void)
 	}
 }
 
-inline int sched_boost(void)
+int sched_boost(void)
 {
 	return boost_refcount > 0;
 }
 
-inline int sched_set_boost(int enable)
+int sched_set_boost(int enable)
 {
 	unsigned long flags;
 	int ret = 0;
@@ -1831,8 +1839,14 @@ inline int sched_set_boost(int enable)
 		boost_kick_cpus();
 
 	if (enable == 0 && fsync_pending_flag){
-		if (!delayed_work_pending(&fsync_auto_work))
-			schedule_delayed_work(&fsync_auto_work, msecs_to_jiffies(5000));
+		if (!delayed_work_pending(&fsync_auto_work) && is_display_on()) {
+			if (auto_fsync_delay_sec < 5)
+				auto_fsync_delay_sec = 5;
+			else if (auto_fsync_delay_sec > 300)
+				auto_fsync_delay_sec = 300;
+			schedule_delayed_work(&fsync_auto_work,
+				msecs_to_jiffies(auto_fsync_delay_sec * 1000));
+		}
 	}
 
 //	trace_sched_set_boost(boost_refcount);

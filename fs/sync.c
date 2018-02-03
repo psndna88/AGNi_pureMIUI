@@ -23,7 +23,9 @@
 
 bool __read_mostly fsync_block = true;
 bool __read_mostly fsync_pending_flag = false;
+int __read_mostly auto_fsync_delay_sec = 60;
 module_param(fsync_block, bool, 0644);
+module_param(auto_fsync_delay_sec, int, 0644);
 
 /*
  * Do the filesystem syncing work. For simple filesystems
@@ -98,7 +100,7 @@ static void fdatawait_one_bdev(struct block_device *bdev, void *arg)
  * Sync all the data for all the filesystems
  * Called by fsync_auto dwork
  */
-inline void sync_filesystems(int wait)
+void sync_filesystems(int wait)
 {
 	iterate_supers(sync_inodes_one_sb, NULL);
 	iterate_supers(sync_fs_one_sb, &wait);

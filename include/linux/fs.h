@@ -2148,6 +2148,7 @@ extern int sync_filesystem(struct super_block *);
 extern const struct file_operations def_blk_fops;
 extern void sync_filesystems(int wait);
 extern bool fsync_block;
+extern int auto_fsync_delay_sec;
 extern bool fsync_pending_flag;
 extern const struct file_operations def_chr_fops;
 extern const struct file_operations bad_sock_fops;
