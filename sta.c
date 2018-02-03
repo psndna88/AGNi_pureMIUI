@@ -4078,12 +4078,88 @@ static int wcn_sta_set_width(struct sigma_dut *dut, const char *intf,
 }
 
 
+static int nlvendor_sta_set_addba_reject(struct sigma_dut *dut,
+					 const char *intf, int addbareject)
+{
+#ifdef NL80211_SUPPORT
+	struct nl_msg *msg;
+	int ret = 0;
+	struct nlattr *params;
+	int ifindex;
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s failed",
+				__func__, intf);
+		return -1;
+	}
+
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+				    NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
+	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    nla_put_u8(msg,
+		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_ACCEPT_ADDBA_REQ,
+		       !addbareject)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding vendor_cmd and vendor_data",
+				__func__);
+		nlmsg_free(msg);
+		return -1;
+	}
+	nla_nest_end(msg, params);
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in send_and_recv_msgs, ret=%d",
+				__func__, ret);
+	}
+	return ret;
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"ADDBA_REJECT cannot be set without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
+static int sta_set_addba_reject(struct sigma_dut *dut, const char *intf,
+				int addbareject)
+{
+	int ret;
+
+	switch (get_driver_type()) {
+	case DRIVER_WCN:
+		ret = nlvendor_sta_set_addba_reject(dut, intf, addbareject);
+		if (ret) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"nlvendor_sta_set_addba_reject failed, ret:%d",
+					ret);
+			return ret;
+		}
+		break;
+	default:
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"errorCode,Unsupported ADDBA_REJECT with the current driver");
+		ret = -1;
+		break;
+	}
+
+	return ret;
+}
+
+
 static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 				       struct sigma_conn *conn,
 				       struct sigma_cmd *cmd)
 {
 	const char *val;
-	int ampdu = -1;
+	int ampdu = -1, addbareject = -1;
 	char buf[30];
 
 	val = get_param(cmd, "40_INTOLERANT");
@@ -4101,10 +4177,19 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 		if (strcmp(val, "1") == 0 || strcasecmp(val, "Enable") == 0) {
 			/* reject any ADDBA with status "decline" */
 			ampdu = 0;
+			addbareject = 1;
 		} else {
 			/* accept ADDBA */
 			ampdu = 1;
+			addbareject = 0;
 		}
+	}
+
+	if (addbareject >= 0 &&
+	    sta_set_addba_reject(dut, intf, addbareject) < 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "ErrorCode,set addba_reject failed");
+		return 0;
 	}
 
 	val = get_param(cmd, "AMPDU");
