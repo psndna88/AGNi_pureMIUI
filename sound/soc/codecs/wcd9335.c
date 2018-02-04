@@ -12465,15 +12465,15 @@ void update_mic_gain(int vol_boost)
 
 	snd_soc_write(soundcontrol.snd_control_codec,
  		WCD9335_CDC_TX6_TX_VOL_CTL, boosted_val);
- 	snd_soc_write(soundcontrol.snd_control_codec,
- 		WCD9335_CDC_TX7_TX_VOL_CTL, boosted_val);
+// 	snd_soc_write(soundcontrol.snd_control_codec,
+// 		WCD9335_CDC_TX7_TX_VOL_CTL, boosted_val);
 
  	pr_info("Sound Control: Boosted Primary Mic TX6 value %d\n",
  		snd_soc_read(soundcontrol.snd_control_codec,
  		WCD9335_CDC_TX6_TX_VOL_CTL));
- 	pr_info("Sound Control: Boosted Secondary Mic TX7 value %d\n",
- 		snd_soc_read(soundcontrol.snd_control_codec,
- 		WCD9335_CDC_TX7_TX_VOL_CTL));
+// 	pr_info("Sound Control: Boosted Secondary Mic TX7 value %d\n",
+// 		snd_soc_read(soundcontrol.snd_control_codec,
+// 		WCD9335_CDC_TX7_TX_VOL_CTL));
 }
 
 void update_earpiece_gain(int vol_boost)
@@ -12566,14 +12566,14 @@ static ssize_t mic_gain_store(struct kobject *kobj,
 		input = 20;
 
 	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_TX6_TX_VOL_CTL, input);
-	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_TX7_TX_VOL_CTL, input);
+//	snd_soc_write(sound_control_codec_ptr, WCD9335_CDC_TX7_TX_VOL_CTL, input);
 
  	pr_info("Sound Control: Boosted Primary Mic TX6 value %d\n",
  		snd_soc_read(sound_control_codec_ptr,
  		WCD9335_CDC_TX6_TX_VOL_CTL));
- 	pr_info("Sound Control: Boosted Secondary Mic TX7 value %d\n",
- 		snd_soc_read(sound_control_codec_ptr,
- 		WCD9335_CDC_TX7_TX_VOL_CTL));
+// 	pr_info("Sound Control: Boosted Secondary Mic TX7 value %d\n",
+// 		snd_soc_read(sound_control_codec_ptr,
+// 		WCD9335_CDC_TX7_TX_VOL_CTL));
 
 	return count;
 }
