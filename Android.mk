@@ -40,9 +40,7 @@ endif
 CFLAGS += -DCONFIG_CTRL_IFACE_CLIENT_DIR=\"/data/misc/wifi/sockets\"
 CFLAGS += -DSIGMA_TMPDIR=\"/data\"
 
-ifdef NL80211_SUPPORT
 CFLAGS += -DNL80211_SUPPORT
-endif
 
 LOCAL_PATH := $(call my-dir)
 FRAMEWORK_GIT_VER := $(shell cd $(ANDROID_BUILD_TOP/)frameworks/base && git describe)
