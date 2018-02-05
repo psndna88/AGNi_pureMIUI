@@ -5127,6 +5127,44 @@ static void sta_reset_default_ath(struct sigma_dut *dut, const char *intf,
 }
 
 
+#ifdef NL80211_SUPPORT
+static int sta_config_rsnie(struct sigma_dut *dut, int val)
+{
+	struct nl_msg *msg;
+	int ret;
+	struct nlattr *params;
+	int ifindex;
+
+	ifindex = if_nametoindex("wlan0");
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+				    NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_SET_WIFI_CONFIGURATION) ||
+	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_CONFIG_RSN_IE, val)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding vendor_cmd and vendor_data",
+				__func__);
+		nlmsg_free(msg);
+		return -1;
+	}
+	nla_nest_end(msg, params);
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in send_and_recv_msgs, ret=%d",
+				__func__, ret);
+		return ret;
+	}
+
+	return 0;
+}
+#endif /* NL80211_SUPPORT */
+
+
 static int cmd_sta_reset_default(struct sigma_dut *dut,
 				 struct sigma_conn *conn,
 				 struct sigma_cmd *cmd)
@@ -5301,6 +5339,20 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 
 	if (dut->program != PROGRAM_VHT)
 		return cmd_sta_p2p_reset(dut, conn, cmd);
+
+#ifdef NL80211_SUPPORT
+	if (get_driver_type() == DRIVER_WCN) {
+		if (dut->program == PROGRAM_WPA3 &&
+		    dut->device_type == STA_testbed) {
+			sta_config_rsnie(dut, 1);
+			dut->config_rsnie = 1;
+		} else if (dut->config_rsnie == 1) {
+			dut->config_rsnie = 0;
+			sta_config_rsnie(dut, 0);
+		}
+	}
+#endif /* NL80211_SUPPORT */
+
 	return 1;
 }
 
