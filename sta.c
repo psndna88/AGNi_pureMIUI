@@ -5544,6 +5544,9 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 						ret);
 			}
 #endif /* NL80211_SUPPORT */
+
+			/* Disable STBC as default */
+			wcn_sta_set_stbc(dut, intf, "0");
 		}
 	}
 }
