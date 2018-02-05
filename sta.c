@@ -3166,6 +3166,60 @@ static void ath_sta_set_wmm(struct sigma_dut *dut, const char *intf,
 }
 
 
+static int wcn_sta_set_wmm(struct sigma_dut *dut, const char *intf,
+			   const char *val)
+{
+#ifdef NL80211_SUPPORT
+	struct nl_msg *msg;
+	int ret = 0;
+	struct nlattr *params;
+	int ifindex;
+	int wmmenable = 1;
+
+	if (val &&
+	    (strcasecmp(val, "off") == 0 || strcmp(val, "0") == 0))
+		wmmenable = 0;
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s failed",
+				__func__, intf);
+		return -1;
+	}
+
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+				    NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
+	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_WMM_ENABLE,
+		       wmmenable)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding vendor_cmd and vendor_data",
+				__func__);
+		nlmsg_free(msg);
+		return -1;
+	}
+	nla_nest_end(msg, params);
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in send_and_recv_msgs, ret=%d",
+				__func__, ret);
+	}
+	return ret;
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"WMM cannot be changed without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
 static void ath_sta_set_sgi(struct sigma_dut *dut, const char *intf,
 			    const char *val)
 {
@@ -3722,6 +3776,9 @@ static int cmd_sta_preset_testparameters(struct sigma_dut *dut,
 		switch (get_driver_type()) {
 		case DRIVER_ATHEROS:
 			ath_sta_set_wmm(dut, intf, val);
+			break;
+		case DRIVER_WCN:
+			wcn_sta_set_wmm(dut, intf, val);
 			break;
 		default:
 			sigma_dut_print(dut, DUT_MSG_DEBUG,
