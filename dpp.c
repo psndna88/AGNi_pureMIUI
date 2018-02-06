@@ -1503,6 +1503,12 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	}
 
 	if (check_mutual) {
+		if (strstr(buf, "DPP-NOT-COMPATIBLE")) {
+			send_resp(dut, conn, SIGMA_COMPLETE,
+				  "BootstrapResult,OK,AuthResult,ROLES_NOT_COMPATIBLE");
+			goto out;
+		}
+
 		if (!strstr(buf, "DPP-AUTH-DIRECTION")) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,No event for auth direction seen");
