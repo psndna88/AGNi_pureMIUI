@@ -20,6 +20,7 @@
 #include "diagfwd_cntl.h"
 #include "diag_masks.h"
 #include "diagfwd_peripheral.h"
+#include "diag_ipc_logging.h"
 
 #define ALL_EQUIP_ID		100
 #define ALL_SSID		-1
@@ -1464,6 +1465,16 @@ int diag_copy_to_user_msg_mask(char __user *buf, size_t count)
 
 	if (!buf || count == 0)
 		return -EINVAL;
+
+	mutex_lock(&driver->diag_maskclear_mutex);
+	if (driver->mask_clear) {
+		DIAG_LOG(DIAG_DEBUG_USERSPACE,
+		"diag:%s: count = %zu\n", __func__, count);
+		mutex_unlock(&driver->diag_maskclear_mutex);
+		return -EIO;
+	}
+	mutex_unlock(&driver->diag_maskclear_mutex);
+
 	mutex_lock(&driver->msg_mask_lock);
 	mutex_lock(&msg_mask.lock);
 	mask = (struct diag_msg_mask_t *)(msg_mask.ptr);

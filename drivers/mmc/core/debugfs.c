@@ -251,6 +251,33 @@ out:
 DEFINE_SIMPLE_ATTRIBUTE(mmc_max_clock_fops, mmc_max_clock_get,
 		mmc_max_clock_set, "%llu\n");
 
+static int mmc_err_state_get(void *data, u64 *val)
+{
+	struct mmc_host *host = data;
+
+	if (!host)
+		return -EINVAL;
+
+	*val = host->err_occurred ? 1 : 0;
+
+	return 0;
+}
+
+static int mmc_err_state_clear(void *data, u64 val)
+{
+	struct mmc_host *host = data;
+
+	if (!host)
+		return -EINVAL;
+
+	host->err_occurred = false;
+
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(mmc_err_state, mmc_err_state_get,
+		mmc_err_state_clear, "%llu\n");
+
 void mmc_add_host_debugfs(struct mmc_host *host)
 {
 	struct dentry *root;
@@ -275,6 +302,10 @@ void mmc_add_host_debugfs(struct mmc_host *host)
 
 	if (!debugfs_create_file("max_clock", S_IRUSR | S_IWUSR, root, host,
 		&mmc_max_clock_fops))
+		goto err_node;
+
+	if (!debugfs_create_file("err_state", S_IRUSR | S_IWUSR, root, host,
+		&mmc_err_state))
 		goto err_node;
 
 #ifdef CONFIG_MMC_CLKGATE

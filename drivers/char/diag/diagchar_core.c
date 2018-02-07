@@ -354,6 +354,27 @@ fail:
 	return -ENOMEM;
 }
 
+void diag_clear_masks(void)
+{
+	int ret;
+	char cmd_disable_log_mask[] = { 0x73, 0, 0, 0, 0, 0, 0, 0};
+	char cmd_disable_msg_mask[] = { 0x7D, 0x05, 0, 0, 0, 0, 0, 0};
+	char cmd_disable_event_mask[] = { 0x60, 0};
+
+	DIAG_LOG(DIAG_DEBUG_USERSPACE,
+	"diag: %s: masks clear request upon USB Disconnection\n",
+	__func__);
+
+	ret = diag_process_apps_masks(cmd_disable_log_mask,
+			sizeof(cmd_disable_log_mask));
+	ret = diag_process_apps_masks(cmd_disable_msg_mask,
+			sizeof(cmd_disable_msg_mask));
+	ret = diag_process_apps_masks(cmd_disable_event_mask,
+			sizeof(cmd_disable_event_mask));
+	DIAG_LOG(DIAG_DEBUG_USERSPACE,
+	"diag:%s: masks cleared successfully\n", __func__);
+}
+
 static void diag_close_logging_process(int pid)
 {
 	uint8_t i;
@@ -426,6 +447,11 @@ static void diag_close_logging_process(int pid)
 			break;
 		}
 	}
+	diag_clear_masks();
+
+	mutex_lock(&driver->diag_maskclear_mutex);
+	driver->mask_clear = 1;
+	mutex_unlock(&driver->diag_maskclear_mutex);
 
 	if (switch_flag) {
 		diag_switch_logging(USB_MODE);
@@ -502,8 +528,15 @@ static int diag_remove_client_entry(struct file *file)
 }
 static int diagchar_close(struct inode *inode, struct file *file)
 {
-	DIAG_LOG(DIAG_DEBUG_USERSPACE, "diag: process exit %s\n", current->comm);
-	return diag_remove_client_entry(file);
+	int ret;
+
+	DIAG_LOG(DIAG_DEBUG_USERSPACE, "diag: process exit %s\n",
+		current->comm);
+	ret = diag_remove_client_entry(file);
+	mutex_lock(&driver->diag_maskclear_mutex);
+	driver->mask_clear = 0;
+	mutex_unlock(&driver->diag_maskclear_mutex);
+	return ret;
 }
 
 void diag_record_stats(int type, int flag)
@@ -3022,6 +3055,7 @@ static int __init diagchar_init(void)
 	non_hdlc_data.len = 0;
 	mutex_init(&driver->hdlc_disable_mutex);
 	mutex_init(&driver->diagchar_mutex);
+	mutex_init(&driver->diag_maskclear_mutex);
 	mutex_init(&driver->diag_file_mutex);
 	mutex_init(&driver->delayed_rsp_mutex);
 	mutex_init(&apps_data_mutex);
