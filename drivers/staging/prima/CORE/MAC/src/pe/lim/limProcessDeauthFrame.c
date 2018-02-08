@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014, 2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2014 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -36,9 +36,6 @@
 #include "limSerDesUtils.h"
 #include "schApi.h"
 #include "limSendMessages.h"
-#ifdef WLAN_FEATURE_LFR_MBB
-#include "lim_mbb.h"
-#endif
 
 
 
@@ -79,6 +76,7 @@ limProcessDeauthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession p
     pHdr = WDA_GET_RX_MAC_HEADER(pRxPacketInfo);
 
     pBody = WDA_GET_RX_MPDU_DATA(pRxPacketInfo);
+
 
     if ((eLIM_STA_ROLE == psessionEntry->limSystemRole) && (eLIM_SME_WT_DEAUTH_STATE == psessionEntry->limSmeState))
     {
@@ -231,14 +229,6 @@ limProcessDeauthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession p
     {
         pRoamSessionEntry = peFindSessionByBssid(pMac, psessionEntry->limReAssocbssId, &roamSessionId);
     }
-
-#ifdef WLAN_FEATURE_LFR_MBB
-    if (lim_is_mbb_reassoc_in_progress(pMac, psessionEntry)) {
-        limLog(pMac, LOGE, FL("Ignore Deauth frame as LFR MBB in progress"));
-        return;
-    }
-#endif
-
     if (limIsReassocInProgress(pMac,psessionEntry) || limIsReassocInProgress(pMac,pRoamSessionEntry)) {
         if (!IS_REASSOC_BSSID(pMac,pHdr->sa,psessionEntry)) {
             PELOGE(limLog(pMac, LOGE, FL("Rcv Deauth from unknown/different "

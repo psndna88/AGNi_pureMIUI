@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -385,47 +385,6 @@ struct vos_event_wlan_log_complete {
     uint32_t reserved;
 };
 
-/*-------------------------------------------------------------------------
-  Event ID: EVENT_WLAN_SSR_REINIT_SUBSYSTEM
-  ------------------------------------------------------------------------*/
-/**
- * struct host_event_wlan_css - Holds diag event details
- * @status: Indicates the status of event
- *
- * This structure holds the host diag event related information
- */
-
-struct host_event_wlan_ssr_reinit {
-	uint32_t status;
-};
-
-/*-------------------------------------------------------------------------
-  Event ID: EVENT_WLAN_SSR_SHUTDOWN_SUBSYSTEM
-  ------------------------------------------------------------------------*/
-/**
- * struct host_event_wlan_ssr_shutdown - Holds diag event details
- * @status: Indicates the status of event
- *
- * This structure holds the host diag event related information
- */
-
-struct host_event_wlan_ssr_shutdown {
-	uint32_t status;
-};
-
-/*-------------------------------------------------------------------------
-  Function declarations and documenation
-  ------------------------------------------------------------------------*/
-/**
- * enum host_ssr_events - Enum containing ssr subtype
- * @SSR_SUB_SYSTEM_REINIT: Indicate ssr reinit state
- * @SSR_SUB_SYSTEM_SHUTDOWN: Indicate ssr shutdown state
- *
- */
-enum host_ssr_events {
-	SSR_SUB_SYSTEM_REINIT,
-	SSR_SUB_SYSTEM_SHUTDOWN,
-};
 
 /*------------------------------------------------------------------------- 
   Function declarations and documenation
@@ -454,7 +413,6 @@ enum wake_lock_reason {
        WIFI_POWER_EVENT_WAKELOCK_ROC,
        WIFI_POWER_EVENT_WAKELOCK_HOLD_RX,
        WIFI_POWER_EVENT_WAKELOCK_SAP,
-       WIFI_POWER_EVENT_WAKELOCK_FIND_AP_INDICATION,
 };
 
 #ifdef __cplusplus

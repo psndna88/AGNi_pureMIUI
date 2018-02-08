@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -1922,7 +1922,6 @@ static VOS_STATUS hdd_roamRegisterSTA( hdd_adapter_t *pAdapter,
    staDesc.ucIsEseSta = pRoamInfo->isESEAssoc;
 #endif //FEATURE_WLAN_ESE
 
-#ifdef VOLANS_ENABLE_SW_REPLAY_CHECK
    /* check whether replay check is valid for the station or not */
    if( (eCSR_ENCRYPT_TYPE_TKIP == connectedCipherAlgo) || (eCSR_ENCRYPT_TYPE_AES == connectedCipherAlgo))
    {
@@ -1933,7 +1932,6 @@ static VOS_STATUS hdd_roamRegisterSTA( hdd_adapter_t *pAdapter,
        VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
                  "HDD register TL ucIsReplayCheckValid %d: Replay check is needed for station", staDesc.ucIsReplayCheckValid);
    }
-
    else
    {
       /* For other encryption modes replay check is
@@ -1942,7 +1940,6 @@ static VOS_STATUS hdd_roamRegisterSTA( hdd_adapter_t *pAdapter,
         VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
                  "HDD register TL ucIsReplayCheckValid %d", staDesc.ucIsReplayCheckValid);
    }
-#endif
 
 #ifdef FEATURE_WLAN_WAPI
    hddLog(LOG1, "%s: WAPI STA Registered: %d", __func__, pAdapter->wapi_info.fIsWapiSta);
@@ -2506,11 +2503,12 @@ static eHalStatus hdd_AssociationCompletionHandler( hdd_adapter_t *pAdapter, tCs
                    "wlan: connection failed with " MAC_ADDRESS_STR " result:%d and Status:%d",
                     MAC_ADDR_ARRAY(pWextState->req_bssId),
                     roamResult, roamStatus);
-        if (!pHddStaCtx->get_mgmt_log_sent) {
-            pHddStaCtx->get_mgmt_log_sent = TRUE;
+
+        if (( eCSR_ROAM_ASSOCIATION_FAILURE == roamStatus) ||
+            ((roamResult != eCSR_ROAM_RESULT_ASSOCIATED) &&
+             (eCSR_ROAM_ASSOCIATION_COMPLETION == roamStatus)))
             wlan_hdd_get_frame_logs(pAdapter,
                                 WLAN_HDD_GET_FRAME_LOG_CMD_SEND_AND_CLEAR);
-        }
 
         if ((eCSR_ROAM_RESULT_SCAN_FOR_SSID_FAILURE == roamResult) ||
            (pRoamInfo &&
@@ -2663,10 +2661,6 @@ static eHalStatus hdd_AssociationCompletionHandler( hdd_adapter_t *pAdapter, tCs
                        "and STA channel is %d", pHostapdAdapter->sessionCtx.ap.operatingChannel,
                        (int)pRoamInfo->pBssDesc->channelId);
                 hdd_hostapd_stop(pHostapdAdapter->dev);
-                if (pHddCtx->cfg_ini->enable_sap_auth_offload)
-                  hdd_force_scc_restart_sap(pHostapdAdapter,
-                      pHddCtx, (int)pRoamInfo->pBssDesc->channelId);
-
              }
         }
     }
@@ -3424,12 +3418,10 @@ VOS_STATUS hdd_roamRegisterTDLSSTA(hdd_adapter_t *pAdapter,
     /* tdls Direct Link do not need bcastSig */
     staDesc.ucBcastSig  = 0 ;
 
-#ifdef VOLANS_ENABLE_SW_REPLAY_CHECK
     if(staDesc.ucProtectedFrame)
         staDesc.ucIsReplayCheckValid = VOS_TRUE;
     else
         staDesc.ucIsReplayCheckValid = VOS_FALSE;
-#endif
 
     staDesc.ucInitState = WLANTL_STA_CONNECTED ;
 
@@ -4326,6 +4318,7 @@ static tANI_S32 hdd_ProcessGENIE(hdd_adapter_t *pAdapter,
     tDot11fIERSN dot11RSNIE;
     tDot11fIEWPA dot11WPAIE;
     tANI_U32 i;
+    tANI_U32 status;
     tANI_U8 *pRsnIe;
     tANI_U16 RSNIeLen;
     tPmkidCacheInfo PMKIDCache[4]; // Local transfer memory
@@ -4351,10 +4344,17 @@ static tANI_S32 hdd_ProcessGENIE(hdd_adapter_t *pAdapter,
         pRsnIe = gen_ie + 2;
         RSNIeLen = gen_ie_len - 2;
         // Unpack the RSN IE
-        dot11fUnpackIeRSN((tpAniSirGlobal) halHandle,
+        status = dot11fUnpackIeRSN((tpAniSirGlobal) halHandle,
                             pRsnIe,
                             RSNIeLen,
                             &dot11RSNIE);
+        if (DOT11F_FAILED(status))
+        {
+            hddLog(LOGE,
+                       FL("Parse failure in hdd_ProcessGENIE (0x%08x)"),
+                       status);
+            return -EINVAL;
+        }
         // Copy out the encryption and authentication types
         hddLog(LOG1, FL("%s: pairwise cipher suite count: %d"),
                 __func__, dot11RSNIE.pwise_cipher_suite_count );
@@ -4633,19 +4633,6 @@ int hdd_set_csr_auth_type ( hdd_adapter_t  *pAdapter, eCsrAuthType RSNAuthType)
     return 0;
 }
 
-/**
- * hdd_rx_fwd_eapol() - forward cached eapol frames
- * @vosContext : pointer to vos global context
- * @pVosPacket: pointer to vos packet
- *
- * Return: None
- *
- */
-void hdd_assoc_registerFwdEapolCB(void *pContext)
-{
-     WLANTL_RegisterFwdEapol(pContext, hdd_rx_fwd_eapol);
-}
-
 /**---------------------------------------------------------------------------
 
   \brief __iw_set_essid() -
@@ -4670,6 +4657,7 @@ int __iw_set_essid(struct net_device *dev,
     hdd_context_t *pHddCtx;
     v_U32_t roamId;
     tCsrRoamProfile          *pRoamProfile;
+    eMib_dot11DesiredBssType connectedBssType;
     eCsrAuthType RSNAuthType;
     tHalHandle hHal;
     hdd_station_ctx_t *pHddStaCtx;
@@ -4719,14 +4707,25 @@ int __iw_set_essid(struct net_device *dev,
     if( SIR_MAC_MAX_SSID_LENGTH < wrqu->essid.length )
         return -EINVAL;
     pRoamProfile = &pWextState->roamProfile;
-
-    /*Try disconnecting if already in connected state*/
-    status = wlan_hdd_try_disconnect(pAdapter);
-    if (0 > status)
+    if (pRoamProfile)
     {
-      hddLog(VOS_TRACE_LEVEL_ERROR, FL("Failed to disconnect the existing"
-            " connection"));
-      return -EALREADY;
+        if ( hdd_connGetConnectedBssType( pHddStaCtx, &connectedBssType ) ||
+             ( eMib_dot11DesiredBssType_independent == pHddStaCtx->conn_info.connDot11DesiredBssType ))
+        {
+            VOS_STATUS vosStatus;
+            // need to issue a disconnect to CSR.
+            INIT_COMPLETION(pAdapter->disconnect_comp_var);
+            vosStatus = sme_RoamDisconnect( hHal, pAdapter->sessionId, eCSR_DISCONNECT_REASON_UNSPECIFIED );
+
+            if(VOS_STATUS_SUCCESS == vosStatus)
+               wait_for_completion_interruptible_timeout(&pAdapter->disconnect_comp_var,
+                     msecs_to_jiffies(WLAN_WAIT_TIME_DISCONNECT));
+        }
+    }
+    /** wpa_supplicant 0.8.x, wext driver uses */
+    else
+    {
+        return -EINVAL;
     }
     /** wpa_supplicant 0.8.x, wext driver uses */
     /** when cfg80211 defined, wpa_supplicant wext driver uses

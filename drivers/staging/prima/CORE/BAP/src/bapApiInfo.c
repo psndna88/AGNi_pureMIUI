@@ -526,7 +526,7 @@ WLAN_BAPDisconnect
     VOS_STATUS  vosStatus;
     /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
-    VOS_TRACE( VOS_MODULE_ID_BAP, VOS_TRACE_LEVEL_FATAL, "%s: btampHandle value: %p", __func__,  btampHandle);
+    VOS_TRACE( VOS_MODULE_ID_BAP, VOS_TRACE_LEVEL_FATAL, "%s: btampHandle value: %pK", __func__,  btampHandle);
 
     /* Validate params */ 
     if (btampHandle == NULL) 

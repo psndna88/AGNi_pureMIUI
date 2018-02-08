@@ -539,6 +539,4 @@ tdlsConnInfo_t *wlan_hdd_get_conn_info(hdd_context_t *pHddCtx,
 
 v_VOID_t wlan_hdd_tdls_initiator_wait_cb(v_PVOID_t userData);
 
-void wlan_hdd_get_tdls_stats(hdd_adapter_t *pAdapter);
-
 #endif // __HDD_TDSL_H

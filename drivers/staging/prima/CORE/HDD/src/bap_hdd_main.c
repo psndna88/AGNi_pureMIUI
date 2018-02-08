@@ -4168,7 +4168,7 @@ static int BSL_Write(struct sk_buff *skb)
                   bslWriteFinish);
 
         VOS_TRACE(VOS_MODULE_ID_BAP, VOS_TRACE_LEVEL_INFO_HIGH,
-                  "%s: Scheduling work for skb %p, BT-AMP Client context %pK, work %pK",
+                  "%s: Scheduling work for skb %pK, BT-AMP Client context %pK, work %pK",
                   __func__, skb, pctx, pHciContext);
 
         status = schedule_work(&pHciContext->hciInterfaceProcessing);
@@ -4299,7 +4299,7 @@ static void bslWriteFinish(struct work_struct *work)
     };
 
     VOS_TRACE(VOS_MODULE_ID_BAP, VOS_TRACE_LEVEL_INFO_HIGH,
-              "%s: Freeing skb %p",
+              "%s: Freeing skb %pK",
               __func__, skb);
 
     consume_skb(skb);

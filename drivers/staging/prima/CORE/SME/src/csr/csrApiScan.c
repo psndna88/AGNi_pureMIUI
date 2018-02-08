@@ -479,7 +479,7 @@ eHalStatus csrQueueScanRequest( tpAniSirGlobal pMac, tSmeCmd *pScanCmd )
             pChnInfo->numOfChannels = pScanCmd->u.scanCmd.u.scanRequest.ChannelInfo.numOfChannels - nNumChanCombinedConc;
 
             VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_WARN,
-                    FL(" &channelToScan %p pScanCmd(%p) pScanCmd->u.scanCmd.u.scanRequest.ChannelInfo.ChannelList(%p)numChn(%d)"),
+                    FL(" &channelToScan %pK pScanCmd(%pK) pScanCmd->u.scanCmd.u.scanRequest.ChannelInfo.ChannelList(%pK)numChn(%d)"),
                     &channelToScan[0], pScanCmd,
                     pScanCmd->u.scanCmd.u.scanRequest.ChannelInfo.ChannelList, numChn);
 
@@ -1728,8 +1728,13 @@ eHalStatus csrScanHandleSearchForSSID(tpAniSirGlobal pMac, tSmeCmd *pCommand)
             smsLog(pMac, LOGE, FL("session %d not found"), sessionId);
             break;
         }
-        /* If Disconnect is already issued from HDD no need to issue connect */
-        if (pSession->abortConnection)
+        /* If Disconnect is already issued from HDD no need to issue connect
+         * pSession->abortConnection will not be set in case of try
+         * disconnect or hdd stop adaptor use connectState for these cases.
+         */
+        if (pSession->abortConnection ||
+            (pMac->roam.roamSession[sessionId].connectState ==
+            eCSR_ASSOC_STATE_TYPE_INFRA_DISCONNECTING))
         {
            smsLog(pMac, LOGE,
               FL("Disconnect in progress, no need to issue connect"));
@@ -9213,25 +9218,6 @@ eHalStatus csrScanSavePreferredNetworkFound(tpAniSirGlobal pMac,
    pBssDescr->capabilityInfo = *((tANI_U16 *)&pParsedFrame->capabilityInfo);
    vos_mem_copy((tANI_U8 *) &pBssDescr->bssId, (tANI_U8 *) macHeader->bssId, sizeof(tSirMacAddr));
    pBssDescr->nReceivedTime = vos_timer_get_system_time();
-
-#ifdef WLAN_FEATURE_VOWIFI_11R
-    // MobilityDomain
-    pBssDescr->mdie[0] = 0;
-    pBssDescr->mdie[1] = 0;
-    pBssDescr->mdie[2] = 0;
-    pBssDescr->mdiePresent = FALSE;
-    // If mdie is present in the probe resp we fill it in the bss description
-    if(pParsedFrame->mdiePresent)
-    {
-        pBssDescr->mdiePresent = TRUE;
-        pBssDescr->mdie[0] = pParsedFrame->mdie[0];
-        pBssDescr->mdie[1] = pParsedFrame->mdie[1];
-        pBssDescr->mdie[2] = pParsedFrame->mdie[2];
-    }
-    smsLog(pMac, LOG1, FL("mdie=%02x%02x%02x"),
-           (unsigned int)pBssDescr->mdie[0], (unsigned int)pBssDescr->mdie[1],
-           (unsigned int)pBssDescr->mdie[2]);
-#endif
 
    smsLog( pMac, LOG1, FL("Bssid= "MAC_ADDRESS_STR
                        " chan= %d, rssi = %d "),

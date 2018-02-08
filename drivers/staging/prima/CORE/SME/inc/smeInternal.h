@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -76,8 +76,6 @@ typedef enum eSmeCommandType
     eSmeCommandMacSpoofRequest,
     eSmeCommandGetFrameLogRequest,
     eSmeCommandSetMaxTxPower,
-    eSmeCommandSetMaxTxPowerPerBand,
-    eSmeCommandUpdateChannelList,
 #ifdef FEATURE_WLAN_TDLS
     //eSmeTdlsCommandMask = 0x80000,  //To identify TDLS commands <TODO>
     //These can be considered as csr commands. 
@@ -189,10 +187,7 @@ typedef struct tagSmeStruct
    void (*pOemDataIndCb) (void *, const tANI_U16, void *, tANI_U32);
    void *pOemDataCallbackContext;
 #endif /* FEATURE_OEM_DATA_SUPPORT */
-#ifdef WLAN_FEATURE_LFR_MBB
-   void (*roaming_mbb_callback)(void* mac, tANI_U32 session_id,
-          void* bss_description, void *reassoc_req, tANI_U32 csr_roam_op_code);
-#endif
+
 } tSmeStruct, *tpSmeStruct;
 
 

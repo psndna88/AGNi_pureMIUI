@@ -1584,38 +1584,7 @@ void pmcDoDeviceStateUpdateCallbacks (tHalHandle hHal, tPmcState state)
 eHalStatus pmcRequestEnterWowlState(tHalHandle hHal, tpSirSmeWowlEnterParams wowlEnterParams)
 {
    tpAniSirGlobal pMac = PMAC_STRUCT(hHal);
-   tpPESession pSessionEntry;
-   tANI_U8  peSessionId = 0;
-
-   pSessionEntry = peFindSessionByBssid(pMac, wowlEnterParams->bssId,
-                                         &peSessionId);
-    if (NULL == pSessionEntry)
-    {
-        pmcLog(pMac, LOGE,
-               FL("session does not exist for given BSSId"));
-
-        if (wowlEnterParams != NULL)
-          vos_mem_free(wowlEnterParams);
-
-        return eHAL_STATUS_FAILURE;
-    }
-
-    pmcLog(pMac, LOG1, FL("Enter. PMC State is %d"),pMac->pmc.pmcState);
-
-   /* Incase of SAP send command directly */
-   if ((pSessionEntry->operMode == BSS_OPERATIONAL_MODE_AP))
-   {
-       if (pmcIssueCommand(hHal, eSmeCommandEnterWowl, wowlEnterParams,
-            sizeof(tSirSmeWowlEnterParams), FALSE) != eHAL_STATUS_SUCCESS)
-         {
-            pmcLog(pMac, LOGE,
-                   FL("PMC: failure to send message eWNI_PMC_ENTER_WOWL_REQ"));
-            if (wowlEnterParams != NULL)
-               vos_mem_free(wowlEnterParams);
-            return eHAL_STATUS_FAILURE;
-         }
-       return eHAL_STATUS_SUCCESS;
-   }
+   pmcLog(pMac, LOG1, FL("Enter. PMC State is %d"),pMac->pmc.pmcState);
 
    switch (pMac->pmc.pmcState)
    {
@@ -2100,9 +2069,6 @@ eHalStatus pmcIssueCommand( tpAniSirGlobal pMac, eSmeCommandType cmdType, void *
 tANI_BOOLEAN pmcProcessCommand( tpAniSirGlobal pMac, tSmeCmd *pCommand )
 {
     eHalStatus status = eHAL_STATUS_SUCCESS;
-    tpPESession pSessionEntry;
-    tANI_U8  peSessionId = 0;
-
     tANI_BOOLEAN fRemoveCmd = eANI_BOOLEAN_TRUE;
     pmcLog(pMac, LOG1, FL("PMC command is 0x%x"), pCommand->command);
     do
@@ -2289,13 +2255,7 @@ tANI_BOOLEAN pmcProcessCommand( tpAniSirGlobal pMac, tSmeCmd *pCommand )
         case eSmeCommandEnterWowl:
            {
                tPmcState origState = pMac->pmc.pmcState;
-               pSessionEntry = peFindSessionByBssid(pMac,
-                                      pCommand->u.pmcCmd.u.enterWowlInfo.bssId,
-                                      &peSessionId);
-               if (( BMPS == pMac->pmc.pmcState ) ||
-                   ( WOWL == pMac->pmc.pmcState ) ||
-                   ((pSessionEntry != NULL) &&
-                     (pSessionEntry->operMode == BSS_OPERATIONAL_MODE_AP)))
+               if( ( BMPS == pMac->pmc.pmcState ) || ( WOWL == pMac->pmc.pmcState ) )
                {
                    pMac->pmc.pmcState = REQUEST_ENTER_WOWL;
                    status = pmcSendMessage(pMac, eWNI_PMC_ENTER_WOWL_REQ,

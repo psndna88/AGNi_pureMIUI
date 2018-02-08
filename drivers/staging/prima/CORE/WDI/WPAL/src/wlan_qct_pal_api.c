@@ -546,7 +546,13 @@ bool wpalIsArpPkt(void *pPacket)
 {
    vos_pkt_t *pkt = (vos_pkt_t*)pPacket;
 
-   return vos_is_arp_pkt(pkt->pSkb, true);
+   if (vos_is_arp_pkt(pkt->pSkb, true))
+   {
+      if (vos_check_arp_req_target_ip(pkt->pSkb, true))
+         return true;
+   }
+
+   return false;
 }
 
 void wpalUpdateTXArpFWdeliveredStats(void)

@@ -224,11 +224,6 @@ typedef struct sLimTimers
     TX_TIMER           gLimFTPreAuthRspTimer;
 #endif
 
-#ifdef WLAN_FEATURE_LFR_MBB
-    TX_TIMER           glim_pre_auth_mbb_rsp_timer;
-    TX_TIMER           glim_reassoc_mbb_rsp_timer;
-#endif
-
 #ifdef FEATURE_WLAN_ESE
     TX_TIMER           gLimEseTsmTimer;
 #endif
@@ -258,6 +253,12 @@ typedef struct {
     tANI_U32 failed_count[MAX_TIDS];
     v_TIME_t failed_timestamp[MAX_TIDS];
 } tLimStaBAInfo;
+
+typedef struct {
+   bool tx_aggr;
+   uint8_t sta_id;
+   uint8_t tid;
+} t_test_status_bainfo;
 
 typedef struct sAniSirLim
 {
@@ -913,6 +914,7 @@ tLimMlmOemDataRsp       *gpLimMlmOemDataRsp;
     tANI_U32 txBdToken;
     tANI_U32 EnableTdls2040BSSCoexIE;
     tLimStaBAInfo staBaInfo[WLAN_MAX_STA_COUNT];
+    t_test_status_bainfo test_status_bainfo;
 } tAniSirLim, *tpAniSirLim;
 
 typedef struct sLimMgmtFrameRegistration
@@ -939,14 +941,6 @@ typedef struct sFTContext
   tftPEContext  ftPEContext; 
 } tftContext, *tpFTContext;
 #endif
-
-typedef struct assoc_rsp_tx_context
-{
-  vos_list_node_t node;
-  tANI_U8 psessionID;
-  tANI_U16 staId;
-  tANI_U32 txBdToken;
-} assoc_rsp_tx_context;
 
 //Check if this definition can actually move here even for Volans. In that case
 //this featurization can be removed.
@@ -1052,7 +1046,7 @@ typedef struct sAniSirGlobal
 #if defined WLAN_FEATURE_VOWIFI_11R
     tftContext   ft;
 #endif
-    vos_list_t assoc_rsp_completion_list;
+
     tANI_U32     gCurrentLogSize;
     tANI_U32     menuCurrent;
     /* logDump specific */
@@ -1093,12 +1087,7 @@ typedef struct sAniSirGlobal
     v_U32_t PERroamTimeout;
     v_U32_t currentBssScore;
 #endif
-#ifdef SAP_AUTH_OFFLOAD
-    bool sap_auth_offload;
-    uint32_t sap_auth_offload_sec_type;
-#endif /* SAP_AUTH_OFFLOAD */
    bool max_power_cmd_pending;
-   uint32_t sta_auth_retries_for_code17;
 } tAniSirGlobal;
 
 #ifdef FEATURE_WLAN_TDLS

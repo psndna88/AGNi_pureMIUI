@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -54,7 +54,7 @@
 #include "limSendSmeRspMessages.h"
 #include "limIbssPeerMgmt.h"
 #include "limSessionUtils.h"
-#include "lim_mbb.h"
+
 
 /**
  * limSendSmeRsp()
@@ -2839,8 +2839,10 @@ void limHandleDeleteBssRsp(tpAniSirGlobal pMac,tpSirMsgQ MsgQ)
     {
          limProcessSmeDelBssRsp(pMac, MsgQ->bodyval,psessionEntry);
     }
+           
     else
          limProcessMlmDelBssRsp(pMac,MsgQ,psessionEntry);
+    
 }
 
 #ifdef WLAN_FEATURE_VOWIFI_11R

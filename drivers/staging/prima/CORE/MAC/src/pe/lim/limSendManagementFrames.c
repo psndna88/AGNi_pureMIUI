@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -1384,8 +1384,7 @@ limSendAssocRspMgmtFrame(tpAniSirGlobal pMac,
                          tANI_U16       aid,
                          tSirMacAddr    peerMacAddr,
                          tANI_U8        subType,
-                         tpDphHashNode  pSta,tpPESession psessionEntry,
-                         assoc_rsp_tx_context *tx_complete_context)
+                         tpDphHashNode  pSta,tpPESession psessionEntry)
 {
     static tDot11fAssocResponse frm;
     tANI_U8             *pFrame, *macAddr;
@@ -1764,29 +1763,14 @@ limSendAssocRspMgmtFrame(tpAniSirGlobal pMac,
 
     if (IS_FEATURE_SUPPORTED_BY_FW(ENHANCED_TXBD_COMPLETION))
     {
-        limLog(pMac, LOG1, FL("Re/AssocRsp - txBdToken %u"),
-               pMac->lim.txBdToken);
+        limLog(pMac, LOG1, FL("Re/AssocRsp - txBdToken %u"), pMac->lim.txBdToken);
         /// Queue Association Response frame in high priority WQ
-        if (tx_complete_context)
-        {
-            tx_complete_context->txBdToken = pMac->lim.txBdToken;
-            halstatus = halTxFrameWithTxComplete(pMac, pPacket,
-                (tANI_U16) nBytes,
-                HAL_TXRX_FRM_802_11_MGMT,
-                ANI_TXDIR_TODS,
-                7,//SMAC_SWBD_TX_TID_MGMT_HIGH,
-                limTxComplete, pFrame, limAssocRspTxCompleteCnf,
-                txFlag, pMac->lim.txBdToken);
-        }
-        else
-            halstatus = halTxFrameWithTxComplete(pMac, pPacket,
-                (tANI_U16) nBytes,
+        halstatus = halTxFrameWithTxComplete( pMac, pPacket, ( tANI_U16 ) nBytes,
                 HAL_TXRX_FRM_802_11_MGMT,
                 ANI_TXDIR_TODS,
                 7,//SMAC_SWBD_TX_TID_MGMT_HIGH,
                 limTxComplete, pFrame, limTxBdComplete,
-                txFlag, pMac->lim.txBdToken);
-
+                txFlag, pMac->lim.txBdToken );
         pMac->lim.txBdToken++;
     }
     else
