@@ -46,20 +46,6 @@ echo "          BATCH MODE: Built AGNi MIUI-N variant!!!"
 echo "-----------------------------------------------------------------------"
 echo " "
 
-#echo " "
-#echo "-----------------------------------------------------------------------"
-#echo " "
-#echo "          BATCH MODE: Building AGNi LOS-MM variant..."
-# AGNI pureLOS-MM
-#rm drivers/staging/prima/wlan.ko
-#./build_kernel_kenzo_losMM.sh
-#mv -f $KERNELDIR/BUILT_kenzo-losMM $TEMP_DIR/
-#rm .config
-#echo " "
-#echo "          BATCH MODE: Built AGNi LOS-MM variant!!!"
-#echo "-----------------------------------------------------------------------"
-#echo " "
-
 echo " "
 echo "-----------------------------------------------------------------------"
 echo " "

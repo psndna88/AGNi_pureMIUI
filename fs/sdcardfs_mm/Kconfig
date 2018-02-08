@@ -1,7 +1,0 @@
-config SDCARD_FS_MM
-	tristate "sdcard file system MM"
-	depends on CONFIGFS_FS
-	default n
-	help
-	  Sdcardfs is based on Wrapfs file system.
-
