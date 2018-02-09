@@ -101,8 +101,8 @@ do_gc:
 		if (f2fs_gc(sbi, test_opt(sbi, FORCE_FG_GC), true, NULL_SEGNO))
 			wait_ms = gc_th->no_gc_sleep_time;
 
-		trace_f2fs_background_gc(sbi->sb, wait_ms,
-				prefree_segments(sbi), free_segments(sbi));
+//		trace_f2fs_background_gc(sbi->sb, wait_ms,
+//				prefree_segments(sbi), free_segments(sbi));
 
 		/* balancing f2fs's metadata periodically */
 		f2fs_balance_fs_bg(sbi);
@@ -409,9 +409,9 @@ got_it:
 		}
 		*result = (p.min_segno / p.ofs_unit) * p.ofs_unit;
 
-		trace_f2fs_get_victim(sbi->sb, type, gc_type, &p,
-				sbi->cur_victim_sec,
-				prefree_segments(sbi), free_segments(sbi));
+//		trace_f2fs_get_victim(sbi->sb, type, gc_type, &p,
+//				sbi->cur_victim_sec,
+//				prefree_segments(sbi), free_segments(sbi));
 	}
 out:
 	mutex_unlock(&dirty_i->seglist_lock);
@@ -995,14 +995,14 @@ int f2fs_gc(struct f2fs_sb_info *sbi, bool sync,
 		.iroot = RADIX_TREE_INIT(GFP_NOFS),
 	};
 
-	trace_f2fs_gc_begin(sbi->sb, sync, background,
+/*	trace_f2fs_gc_begin(sbi->sb, sync, background,
 				get_pages(sbi, F2FS_DIRTY_NODES),
 				get_pages(sbi, F2FS_DIRTY_DENTS),
 				get_pages(sbi, F2FS_DIRTY_IMETA),
 				free_sections(sbi),
 				free_segments(sbi),
 				reserved_segments(sbi),
-				prefree_segments(sbi));
+				prefree_segments(sbi)); */
 
 	cpc.reason = __get_cp_reason(sbi);
 gc_more:
@@ -1061,14 +1061,14 @@ stop:
 	SIT_I(sbi)->last_victim[ALLOC_NEXT] = 0;
 	SIT_I(sbi)->last_victim[FLUSH_DEVICE] = init_segno;
 
-	trace_f2fs_gc_end(sbi->sb, ret, total_freed, sec_freed,
+/*	trace_f2fs_gc_end(sbi->sb, ret, total_freed, sec_freed,
 				get_pages(sbi, F2FS_DIRTY_NODES),
 				get_pages(sbi, F2FS_DIRTY_DENTS),
 				get_pages(sbi, F2FS_DIRTY_IMETA),
 				free_sections(sbi),
 				free_segments(sbi),
 				reserved_segments(sbi),
-				prefree_segments(sbi));
+				prefree_segments(sbi)); */
 
 	mutex_unlock(&sbi->gc_mutex);
 

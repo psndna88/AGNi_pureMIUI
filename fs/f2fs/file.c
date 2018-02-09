@@ -102,7 +102,7 @@ static int f2fs_vm_page_mkwrite(struct vm_area_struct *vma,
 
 	f2fs_update_iostat(sbi, APP_MAPPED_IO, F2FS_BLKSIZE);
 
-	trace_f2fs_vm_page_mkwrite(page, DATA);
+//	trace_f2fs_vm_page_mkwrite(page, DATA);
 mapped:
 	/* fill the page */
 	f2fs_wait_on_page_writeback(page, DATA, false);
@@ -204,7 +204,7 @@ static int f2fs_do_sync_file(struct file *file, loff_t start, loff_t end,
 	if (unlikely(f2fs_readonly(inode->i_sb)))
 		return 0;
 
-	trace_f2fs_sync_file_enter(inode);
+//	trace_f2fs_sync_file_enter(inode);
 
 	/* if fdatasync is triggered, let's do in-place-update */
 	if (datasync || get_dirty_pages(inode) <= SM_I(sbi)->min_fsync_blocks)
@@ -213,7 +213,7 @@ static int f2fs_do_sync_file(struct file *file, loff_t start, loff_t end,
 	clear_inode_flag(inode, FI_NEED_IPU);
 
 	if (ret) {
-		trace_f2fs_sync_file_exit(inode, need_cp, datasync, ret);
+//		trace_f2fs_sync_file_exit(inode, need_cp, datasync, ret);
 		return ret;
 	}
 
@@ -301,7 +301,7 @@ flush_out:
 		ret = f2fs_issue_flush(sbi);
 	f2fs_update_time(sbi, REQ_TIME);
 out:
-	trace_f2fs_sync_file_exit(inode, need_cp, datasync, ret);
+//	trace_f2fs_sync_file_exit(inode, need_cp, datasync, ret);
 	f2fs_trace_ios(NULL, 1);
 	return ret;
 }
@@ -535,8 +535,8 @@ int truncate_data_blocks_range(struct dnode_of_data *dn, int count)
 	dn->ofs_in_node = ofs;
 
 	f2fs_update_time(sbi, REQ_TIME);
-	trace_f2fs_truncate_data_blocks_range(dn->inode, dn->nid,
-					 dn->ofs_in_node, nr_free);
+//	trace_f2fs_truncate_data_blocks_range(dn->inode, dn->nid,
+//					 dn->ofs_in_node, nr_free);
 	return nr_free;
 }
 
@@ -589,7 +589,7 @@ int truncate_blocks(struct inode *inode, u64 from, bool lock)
 	struct page *ipage;
 	bool truncate_page = false;
 
-	trace_f2fs_truncate_blocks_enter(inode, from);
+//	trace_f2fs_truncate_blocks_enter(inode, from);
 
 	free_from = (pgoff_t)F2FS_BYTES_TO_BLK(from + blocksize - 1);
 
@@ -641,7 +641,7 @@ free_partial:
 	if (!err)
 		err = truncate_partial_data_page(inode, from, truncate_page);
 
-	trace_f2fs_truncate_blocks_exit(inode, err);
+//	trace_f2fs_truncate_blocks_exit(inode, err);
 	return err;
 }
 
@@ -653,7 +653,7 @@ int f2fs_truncate(struct inode *inode)
 				S_ISLNK(inode->i_mode)))
 		return 0;
 
-	trace_f2fs_truncate(inode);
+//	trace_f2fs_truncate(inode);
 
 #ifdef CONFIG_F2FS_FAULT_INJECTION
 	if (time_to_inject(F2FS_I_SB(inode), FAULT_TRUNCATE)) {
@@ -1495,7 +1495,7 @@ static long f2fs_fallocate(struct file *file, int mode,
 out:
 	inode_unlock(inode);
 
-	trace_f2fs_fallocate(inode, mode, offset, len, ret);
+//	trace_f2fs_fallocate(inode, mode, offset, len, ret);
 	return ret;
 }
 

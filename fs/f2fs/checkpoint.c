@@ -238,7 +238,7 @@ static int __f2fs_write_meta_page(struct page *page,
 {
 	struct f2fs_sb_info *sbi = F2FS_P_SB(page);
 
-	trace_f2fs_writepage(page, META);
+//	trace_f2fs_writepage(page, META);
 
 	if (unlikely(is_sbi_flag_set(sbi, SBI_POR_DOING)))
 		goto redirty_out;
@@ -290,7 +290,7 @@ static int f2fs_write_meta_pages(struct address_space *mapping,
 	if (!mutex_trylock(&sbi->cp_mutex))
 		goto skip_write;
 
-	trace_f2fs_writepages(mapping->host, wbc, META);
+//	trace_f2fs_writepages(mapping->host, wbc, META);
 	diff = nr_pages_to_write(sbi, META, wbc);
 	written = sync_meta_pages(sbi, META, wbc->nr_to_write, FS_META_IO);
 	mutex_unlock(&sbi->cp_mutex);
@@ -299,7 +299,7 @@ static int f2fs_write_meta_pages(struct address_space *mapping,
 
 skip_write:
 	wbc->pages_skipped += get_pages(sbi, F2FS_DIRTY_META);
-	trace_f2fs_writepages(mapping->host, wbc, META);
+//	trace_f2fs_writepages(mapping->host, wbc, META);
 	return 0;
 }
 
@@ -378,7 +378,7 @@ stop:
 
 static int f2fs_set_meta_page_dirty(struct page *page)
 {
-	trace_f2fs_set_page_dirty(page, META);
+//	trace_f2fs_set_page_dirty(page, META);
 
 	if (!PageUptodate(page))
 		SetPageUptodate(page);
@@ -910,9 +910,9 @@ int sync_dirty_inodes(struct f2fs_sb_info *sbi, enum inode_type type)
 	bool is_dir = (type == DIR_INODE);
 	unsigned long ino = 0;
 
-	trace_f2fs_sync_dirty_inodes_enter(sbi->sb, is_dir,
-				get_pages(sbi, is_dir ?
-				F2FS_DIRTY_DENTS : F2FS_DIRTY_DATA));
+//	trace_f2fs_sync_dirty_inodes_enter(sbi->sb, is_dir,
+//				get_pages(sbi, is_dir ?
+//				F2FS_DIRTY_DENTS : F2FS_DIRTY_DATA));
 retry:
 	if (unlikely(f2fs_cp_error(sbi)))
 		return -EIO;
@@ -922,9 +922,9 @@ retry:
 	head = &sbi->inode_list[type];
 	if (list_empty(head)) {
 		spin_unlock(&sbi->inode_lock[type]);
-		trace_f2fs_sync_dirty_inodes_exit(sbi->sb, is_dir,
-				get_pages(sbi, is_dir ?
-				F2FS_DIRTY_DENTS : F2FS_DIRTY_DATA));
+//		trace_f2fs_sync_dirty_inodes_exit(sbi->sb, is_dir,
+//				get_pages(sbi, is_dir ?
+//				F2FS_DIRTY_DENTS : F2FS_DIRTY_DATA));
 		return 0;
 	}
 	fi = list_first_entry(head, struct f2fs_inode_info, dirty_list);
@@ -1336,13 +1336,13 @@ int write_checkpoint(struct f2fs_sb_info *sbi, struct cp_control *cpc)
 		goto out;
 	}
 
-	trace_f2fs_write_checkpoint(sbi->sb, cpc->reason, "start block_ops");
+//	trace_f2fs_write_checkpoint(sbi->sb, cpc->reason, "start block_ops");
 
 	err = block_operations(sbi);
 	if (err)
 		goto out;
 
-	trace_f2fs_write_checkpoint(sbi->sb, cpc->reason, "finish block_ops");
+//	trace_f2fs_write_checkpoint(sbi->sb, cpc->reason, "finish block_ops");
 
 	f2fs_flush_merged_writes(sbi);
 
@@ -1391,7 +1391,7 @@ int write_checkpoint(struct f2fs_sb_info *sbi, struct cp_control *cpc)
 
 	/* do checkpoint periodically */
 	f2fs_update_time(sbi, CP_TIME);
-	trace_f2fs_write_checkpoint(sbi->sb, cpc->reason, "finish checkpoint");
+//	trace_f2fs_write_checkpoint(sbi->sb, cpc->reason, "finish checkpoint");
 out:
 	mutex_unlock(&sbi->cp_mutex);
 	return err;

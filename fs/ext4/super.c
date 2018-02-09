@@ -924,7 +924,7 @@ static int ext4_drop_inode(struct inode *inode)
 {
 	int drop = generic_drop_inode(inode);
 
-	trace_ext4_drop_inode(inode, drop);
+//	trace_ext4_drop_inode(inode, drop);
 	return drop;
 }
 
@@ -4802,7 +4802,7 @@ static int ext4_sync_fs(struct super_block *sb, int wait)
 	bool needs_barrier = false;
 	struct ext4_sb_info *sbi = EXT4_SB(sb);
 
-	trace_ext4_sync_fs(sb, wait);
+//	trace_ext4_sync_fs(sb, wait);
 	flush_workqueue(sbi->rsv_conversion_wq);
 	/*
 	 * Writeback quota in non-journalled quota case - journalled quota has

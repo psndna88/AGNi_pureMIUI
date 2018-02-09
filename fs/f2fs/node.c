@@ -714,7 +714,7 @@ static void truncate_node(struct dnode_of_data *dn)
 			dn->node_page->index, dn->node_page->index);
 
 	dn->node_page = NULL;
-	trace_f2fs_truncate_node(dn->inode, dn->nid, ni.blk_addr);
+//	trace_f2fs_truncate_node(dn->inode, dn->nid, ni.blk_addr);
 }
 
 static int truncate_dnode(struct dnode_of_data *dn)
@@ -753,11 +753,11 @@ static int truncate_nodes(struct dnode_of_data *dn, unsigned int nofs,
 	if (dn->nid == 0)
 		return NIDS_PER_BLOCK + 1;
 
-	trace_f2fs_truncate_nodes_enter(dn->inode, dn->nid, dn->data_blkaddr);
+//	trace_f2fs_truncate_nodes_enter(dn->inode, dn->nid, dn->data_blkaddr);
 
 	page = get_node_page(F2FS_I_SB(dn->inode), dn->nid);
 	if (IS_ERR(page)) {
-		trace_f2fs_truncate_nodes_exit(dn->inode, PTR_ERR(page));
+//		trace_f2fs_truncate_nodes_exit(dn->inode, PTR_ERR(page));
 		return PTR_ERR(page);
 	}
 
@@ -805,12 +805,12 @@ static int truncate_nodes(struct dnode_of_data *dn, unsigned int nofs,
 	} else {
 		f2fs_put_page(page, 1);
 	}
-	trace_f2fs_truncate_nodes_exit(dn->inode, freed);
+//	trace_f2fs_truncate_nodes_exit(dn->inode, freed);
 	return freed;
 
 out_err:
 	f2fs_put_page(page, 1);
-	trace_f2fs_truncate_nodes_exit(dn->inode, ret);
+//	trace_f2fs_truncate_nodes_exit(dn->inode, ret);
 	return ret;
 }
 
@@ -869,7 +869,7 @@ fail:
 	for (i = idx; i >= 0; i--)
 		f2fs_put_page(pages[i], 1);
 
-	trace_f2fs_truncate_partial_nodes(dn->inode, nid, depth, err);
+//	trace_f2fs_truncate_partial_nodes(dn->inode, nid, depth, err);
 
 	return err;
 }
@@ -887,7 +887,7 @@ int truncate_inode_blocks(struct inode *inode, pgoff_t from)
 	struct dnode_of_data dn;
 	struct page *page;
 
-	trace_f2fs_truncate_inode_blocks_enter(inode, from);
+//	trace_f2fs_truncate_inode_blocks_enter(inode, from);
 
 	level = get_node_path(inode, from, offset, noffset);
 	if (level < 0)
@@ -895,7 +895,7 @@ int truncate_inode_blocks(struct inode *inode, pgoff_t from)
 
 	page = get_node_page(sbi, inode->i_ino);
 	if (IS_ERR(page)) {
-		trace_f2fs_truncate_inode_blocks_exit(inode, PTR_ERR(page));
+//		trace_f2fs_truncate_inode_blocks_exit(inode, PTR_ERR(page));
 		return PTR_ERR(page);
 	}
 
@@ -968,7 +968,7 @@ skip_partial:
 	}
 fail:
 	f2fs_put_page(page, 0);
-	trace_f2fs_truncate_inode_blocks_exit(inode, err);
+//	trace_f2fs_truncate_inode_blocks_exit(inode, err);
 	return err > 0 ? 0 : err;
 }
 
@@ -1370,7 +1370,7 @@ static int __write_node_page(struct page *page, bool atomic, bool *submitted,
 		.io_type = io_type,
 	};
 
-	trace_f2fs_writepage(page, NODE);
+//	trace_f2fs_writepage(page, NODE);
 
 	if (unlikely(is_sbi_flag_set(sbi, SBI_POR_DOING)))
 		goto redirty_out;
@@ -1729,7 +1729,7 @@ static int f2fs_write_node_pages(struct address_space *mapping,
 	if (get_pages(sbi, F2FS_DIRTY_NODES) < nr_pages_to_skip(sbi, NODE))
 		goto skip_write;
 
-	trace_f2fs_writepages(mapping->host, wbc, NODE);
+//	trace_f2fs_writepages(mapping->host, wbc, NODE);
 
 	diff = nr_pages_to_write(sbi, NODE, wbc);
 	wbc->sync_mode = WB_SYNC_NONE;
@@ -1741,13 +1741,13 @@ static int f2fs_write_node_pages(struct address_space *mapping,
 
 skip_write:
 	wbc->pages_skipped += get_pages(sbi, F2FS_DIRTY_NODES);
-	trace_f2fs_writepages(mapping->host, wbc, NODE);
+//	trace_f2fs_writepages(mapping->host, wbc, NODE);
 	return 0;
 }
 
 static int f2fs_set_node_page_dirty(struct page *page)
 {
-	trace_f2fs_set_page_dirty(page, NODE);
+//	trace_f2fs_set_page_dirty(page, NODE);
 
 	if (!PageUptodate(page))
 		SetPageUptodate(page);

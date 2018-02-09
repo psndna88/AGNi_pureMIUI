@@ -104,18 +104,18 @@ static struct inode *f2fs_new_inode(struct inode *dir, umode_t mode)
 	if (F2FS_I(inode)->i_flags & FS_PROJINHERIT_FL)
 		set_inode_flag(inode, FI_PROJ_INHERIT);
 
-	trace_f2fs_new_inode(inode, 0);
+//	trace_f2fs_new_inode(inode, 0);
 	return inode;
 
 fail:
-	trace_f2fs_new_inode(inode, err);
+//	trace_f2fs_new_inode(inode, err);
 	make_bad_inode(inode);
 	if (nid_free)
 		set_inode_flag(inode, FI_FREE_NID);
 	iput(inode);
 	return ERR_PTR(err);
 fail_drop:
-	trace_f2fs_new_inode(inode, err);
+//	trace_f2fs_new_inode(inode, err);
 	dquot_drop(inode);
 	inode->i_flags |= S_NOQUOTA;
 	if (nid_free)
@@ -395,7 +395,7 @@ static int f2fs_unlink(struct inode *dir, struct dentry *dentry)
 	struct page *page;
 	int err = -ENOENT;
 
-	trace_f2fs_unlink_enter(dir, dentry);
+//	trace_f2fs_unlink_enter(dir, dentry);
 
 	dquot_initialize(dir);
 
@@ -422,7 +422,7 @@ static int f2fs_unlink(struct inode *dir, struct dentry *dentry)
 	if (IS_DIRSYNC(dir))
 		f2fs_sync_fs(sbi->sb, 1);
 fail:
-	trace_f2fs_unlink_exit(inode, err);
+//	trace_f2fs_unlink_exit(inode, err);
 	return err;
 }
 

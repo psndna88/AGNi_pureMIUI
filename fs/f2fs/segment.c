@@ -266,7 +266,7 @@ void register_inmem_page(struct inode *inode, struct page *page)
 	inc_page_count(F2FS_I_SB(inode), F2FS_INMEM_PAGES);
 	mutex_unlock(&fi->inmem_lock);
 
-	trace_f2fs_register_inmem_page(page, INMEM);
+//	trace_f2fs_register_inmem_page(page, INMEM);
 }
 
 static int __revoke_inmem_pages(struct inode *inode,
@@ -279,8 +279,8 @@ static int __revoke_inmem_pages(struct inode *inode,
 	list_for_each_entry_safe(cur, tmp, head, list) {
 		struct page *page = cur->page;
 
-		if (drop)
-			trace_f2fs_commit_inmem_page(page, INMEM_DROP);
+//		if (drop)
+//			trace_f2fs_commit_inmem_page(page, INMEM_DROP);
 
 		lock_page(page);
 
@@ -288,7 +288,7 @@ static int __revoke_inmem_pages(struct inode *inode,
 			struct dnode_of_data dn;
 			struct node_info ni;
 
-			trace_f2fs_commit_inmem_page(page, INMEM_REVOKE);
+//			trace_f2fs_commit_inmem_page(page, INMEM_REVOKE);
 retry:
 			set_new_dnode(&dn, inode, NULL, NULL, 0);
 			err = get_dnode_of_data(&dn, page->index, LOOKUP_NODE);
@@ -361,7 +361,7 @@ void drop_inmem_page(struct inode *inode, struct page *page)
 	ClearPagePrivate(page);
 	f2fs_put_page(page, 0);
 
-	trace_f2fs_commit_inmem_page(page, INMEM_INVALIDATE);
+//	trace_f2fs_commit_inmem_page(page, INMEM_INVALIDATE);
 }
 
 static int __commit_inmem_pages(struct inode *inode,
@@ -385,7 +385,7 @@ static int __commit_inmem_pages(struct inode *inode,
 
 		lock_page(page);
 		if (page->mapping == inode->i_mapping) {
-			trace_f2fs_commit_inmem_page(page, INMEM);
+//			trace_f2fs_commit_inmem_page(page, INMEM);
 
 			set_page_dirty(page);
 			f2fs_wait_on_page_writeback(page, DATA, true);
@@ -539,8 +539,8 @@ static int __submit_flush_wait(struct f2fs_sb_info *sbi,
 	ret = submit_bio_wait(WRITE_FLUSH, bio);
 	bio_put(bio);
 
-	trace_f2fs_issue_flush(bdev, test_opt(sbi, NOBARRIER),
-				test_opt(sbi, FLUSH_MERGE), ret);
+//	trace_f2fs_issue_flush(bdev, test_opt(sbi, NOBARRIER),
+//				test_opt(sbi, FLUSH_MERGE), ret);
 	return ret;
 }
 
@@ -993,7 +993,7 @@ static void __submit_discard_cmd(struct f2fs_sb_info *sbi,
 	if (dc->state != D_PREP)
 		return;
 
-	trace_f2fs_issue_discard(dc->bdev, dc->start, dc->len);
+//	trace_f2fs_issue_discard(dc->bdev, dc->start, dc->len);
 
 	dc->error = __blkdev_issue_discard(dc->bdev,
 				SECTOR_FROM_BLOCK(dc->start),
@@ -1182,7 +1182,7 @@ static int __queue_discard_cmd(struct f2fs_sb_info *sbi,
 {
 	block_t lblkstart = blkstart;
 
-	trace_f2fs_queue_discard(bdev, blkstart, blklen);
+//	trace_f2fs_queue_discard(bdev, blkstart, blklen);
 
 	if (sbi->s_ndevs) {
 		int devi = f2fs_target_device_index(sbi, blkstart);
@@ -1446,7 +1446,7 @@ static int __f2fs_issue_discard_zone(struct f2fs_sb_info *sbi,
 				blkstart, blklen);
 			return -EIO;
 		}
-		trace_f2fs_issue_reset_zone(bdev, blkstart);
+//		trace_f2fs_issue_reset_zone(bdev, blkstart);
 		return blkdev_reset_zones(bdev, sector,
 					  nr_sects, GFP_NOFS);
 	default:

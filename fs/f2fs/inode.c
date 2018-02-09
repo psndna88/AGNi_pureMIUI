@@ -275,7 +275,7 @@ struct inode *f2fs_iget(struct super_block *sb, unsigned long ino)
 		return ERR_PTR(-ENOMEM);
 
 	if (!(inode->i_state & I_NEW)) {
-		trace_f2fs_iget(inode);
+//		trace_f2fs_iget(inode);
 		return inode;
 	}
 	if (ino == F2FS_NODE_INO(sbi) || ino == F2FS_META_INO(sbi))
@@ -317,12 +317,12 @@ make_now:
 	}
 	f2fs_set_inode_flags(inode);
 	unlock_new_inode(inode);
-	trace_f2fs_iget(inode);
+//	trace_f2fs_iget(inode);
 	return inode;
 
 bad_inode:
 	iget_failed(inode);
-	trace_f2fs_iget_exit(inode, ret);
+//	trace_f2fs_iget_exit(inode, ret);
 	return ERR_PTR(ret);
 }
 
@@ -461,7 +461,7 @@ void f2fs_evict_inode(struct inode *inode)
 	if (f2fs_is_atomic_file(inode))
 		drop_inmem_pages(inode);
 
-	trace_f2fs_evict_inode(inode);
+//	trace_f2fs_evict_inode(inode);
 	truncate_inode_pages(&inode->i_data, 0);
 
 	if (inode->i_ino == F2FS_NODE_INO(sbi) ||
