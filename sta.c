@@ -5342,14 +5342,6 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 #endif /* ANDROID */
 	}
 
-	if (dev_role && strcasecmp(dev_role, "STA-CFON") == 0) {
-		dut->dev_role = DEVROLE_STA_CFON;
-		return sta_cfon_reset_default(dut, conn, cmd);
-	}
-
-	if (dut->program != PROGRAM_VHT)
-		return cmd_sta_p2p_reset(dut, conn, cmd);
-
 #ifdef NL80211_SUPPORT
 	if (get_driver_type() == DRIVER_WCN) {
 		if (dut->program == PROGRAM_WPA3 &&
@@ -5362,6 +5354,14 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 		}
 	}
 #endif /* NL80211_SUPPORT */
+
+	if (dev_role && strcasecmp(dev_role, "STA-CFON") == 0) {
+		dut->dev_role = DEVROLE_STA_CFON;
+		return sta_cfon_reset_default(dut, conn, cmd);
+	}
+
+	if (dut->program != PROGRAM_VHT)
+		return cmd_sta_p2p_reset(dut, conn, cmd);
 
 	return 1;
 }
