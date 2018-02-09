@@ -317,7 +317,9 @@ static int sdcardfs_fsync(struct file *file, loff_t start, loff_t end,
 
 	lower_file = sdcardfs_lower_file(file);
 	sdcardfs_get_lower_path(dentry, &lower_path);
+	vfs_fsync_range_sdcardfs = true;
 	err = vfs_fsync_range(lower_file, start, end, datasync);
+	vfs_fsync_range_sdcardfs = false;
 	sdcardfs_put_lower_path(dentry, &lower_path);
 out:
 	return err;

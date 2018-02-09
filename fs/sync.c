@@ -24,6 +24,7 @@
 bool __read_mostly fsync_unblockable = true;
 bool __read_mostly fsync_block = true;
 bool __read_mostly fsync_pending_flag = false;
+bool __read_mostly vfs_fsync_range_sdcardfs = false;
 int __read_mostly auto_fsync_delay_sec = 60;
 module_param_named(fsync_enabled, fsync_unblockable, bool, 0755);
 module_param(fsync_block, bool, 0644);
@@ -206,7 +207,7 @@ SYSCALL_DEFINE1(syncfs, int, fd)
  */
 int vfs_fsync_range(struct file *file, loff_t start, loff_t end, int datasync)
 {
-	if (!fsync_unblockable && fsync_block) {
+	if (!fsync_unblockable && fsync_block && !vfs_fsync_range_sdcardfs) {
 		fsync_pending_flag = true;
 		return 0;
 	}
