@@ -97,9 +97,11 @@ static void * process_dhcp_ack(void *ptr)
 
 	/* creates a session for sniffing */
 	pcap = pcap_open_live(ifname, 2500, 0, 10, pcap_err);
-	if (!pcap)
+	if (!pcap) {
 		sigma_dut_print(dut, DUT_MSG_INFO, "pcap_open_live: %s",
 				pcap_err);
+		goto exit;
+	}
 
 	snprintf(pcap_filter, sizeof(pcap_filter),
 		 "ip proto 0x%x and udp src port 0x%x",
