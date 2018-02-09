@@ -201,7 +201,7 @@ module_param(sido_buck_svs_voltage, int,
 MODULE_PARM_DESC(sido_buck_svs_voltage,
 			"setting for SVS voltage for SIDO BUCK");
 
-#define TASHA_TX_UNMUTE_DELAY_MS	50
+#define TASHA_TX_UNMUTE_DELAY_MS	25
 
 static int tx_unmute_delay = TASHA_TX_UNMUTE_DELAY_MS;
 module_param(tx_unmute_delay, int,
@@ -3724,12 +3724,6 @@ static void tasha_codec_hph_post_pa_config(struct tasha_priv *tasha,
 
 	if (SND_SOC_DAPM_EVENT_OFF(event)) {
 		snd_soc_update_bits(tasha->codec, WCD9335_HPH_AUTO_CHOP, 0x20,
-				    0x15);
-		snd_soc_update_bits(tasha->codec, WCD9335_HPH_AUTO_CHOP, 0x20,
-				    0x10);
-		snd_soc_update_bits(tasha->codec, WCD9335_HPH_AUTO_CHOP, 0x20,
-				    0x05);
-        snd_soc_update_bits(tasha->codec, WCD9335_HPH_AUTO_CHOP, 0x20,
 				    0x00);
 	}
 }
@@ -7142,20 +7136,6 @@ static int tasha_rx_hph_mode_get(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static int tasha_rx_hph_mode_put_dummy(struct snd_kcontrol *kcontrol,
-				 struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
-	u32 mode_val;
-
-	mode_val = ucontrol->value.enumerated.item[0];
-
-	dev_dbg(codec->dev, "%s: fake mode: %d\n",
-		__func__, mode_val);
-
-	return 0;
-}
-
 static int tasha_rx_hph_mode_put(struct snd_kcontrol *kcontrol,
 				 struct snd_ctl_elem_value *ucontrol)
 {
@@ -7169,14 +7149,11 @@ static int tasha_rx_hph_mode_put(struct snd_kcontrol *kcontrol,
 		__func__, mode_val);
 
 	if (mode_val == 0) {
-		dev_warn(codec->dev, "%s:Invalid HPH Mode\n",
+		dev_warn(codec->dev, "%s:Invalid HPH Mode, default to Cls-H HiFi\n",
 			__func__);
-		return 0;
+		mode_val = CLS_H_HIFI;
 	}
-
-	if (mode_val != tasha->hph_mode)
-		tasha->hph_mode = mode_val;
-
+	tasha->hph_mode = mode_val;
 	return 0;
 }
 
@@ -7945,9 +7922,9 @@ static const struct snd_kcontrol_new tasha_snd_controls[] = {
 	tasha_get_iir_band_audio_mixer, tasha_put_iir_band_audio_mixer),
 
 	SOC_SINGLE_EXT("COMP1 Switch", SND_SOC_NOPM, COMPANDER_1, 1, 0,
-		       tasha_get_compander, tasha_set_compander_dummy),
+		       tasha_get_compander, tasha_set_compander),
 	SOC_SINGLE_EXT("COMP2 Switch", SND_SOC_NOPM, COMPANDER_2, 1, 0,
-		       tasha_get_compander, tasha_set_compander_dummy),
+		       tasha_get_compander, tasha_set_compander),
 	SOC_SINGLE_EXT("COMP3 Switch", SND_SOC_NOPM, COMPANDER_3, 1, 0,
 		       tasha_get_compander, tasha_set_compander),
 	SOC_SINGLE_EXT("COMP4 Switch", SND_SOC_NOPM, COMPANDER_4, 1, 0,
@@ -7962,8 +7939,6 @@ static const struct snd_kcontrol_new tasha_snd_controls[] = {
 		       tasha_get_compander, tasha_set_compander),
 
 	SOC_ENUM_EXT("RX HPH Mode", rx_hph_mode_mux_enum,
-		       tasha_rx_hph_mode_get, tasha_rx_hph_mode_put_dummy),
-	SOC_ENUM_EXT("RX HPH Mode AGNi", rx_hph_mode_mux_enum,
 		       tasha_rx_hph_mode_get, tasha_rx_hph_mode_put),
 
 	SOC_ENUM_EXT("MAD Input", tasha_conn_mad_enum,
@@ -8424,13 +8399,9 @@ static const struct snd_kcontrol_new tasha_analog_gain_controls[] = {
 	SOC_ENUM_EXT("EAR PA Gain", tasha_ear_pa_gain_enum,
 		tasha_ear_pa_gain_get, tasha_ear_pa_gain_put),
 
-	SOC_SINGLE_TLV("HPHL Volume", WCD9335_DUMMY_REG, 0, 20, 1,
+	SOC_SINGLE_TLV("HPHL Volume", WCD9335_HPH_L_EN, 0, 20, 1,
 		line_gain),
-	SOC_SINGLE_TLV("HPHR Volume", WCD9335_DUMMY_REG, 0, 20, 1,
-		line_gain),
-	SOC_SINGLE_TLV("HPHL Volume AGNi", WCD9335_HPH_L_EN, 0, 20, 1,
-		line_gain),
-	SOC_SINGLE_TLV("HPHR Volume AGNi", WCD9335_HPH_R_EN, 0, 20, 1,
+	SOC_SINGLE_TLV("HPHR Volume", WCD9335_HPH_R_EN, 0, 20, 1,
 		line_gain),
 	SOC_SINGLE_TLV("LINEOUT1 Volume", WCD9335_DIFF_LO_LO1_COMPANDER,
 			3, 16, 1, line_gain),
@@ -8440,7 +8411,7 @@ static const struct snd_kcontrol_new tasha_analog_gain_controls[] = {
 			line_gain),
 	SOC_SINGLE_TLV("LINEOUT4 Volume", WCD9335_DUMMY_REG, 0, 20, 1,
 			line_gain),
-	SOC_SINGLE_TLV("LINEOUT4 Volume AGNi", WCD9335_SE_LO_LO4_GAIN, 0, 20, 1,
+	SOC_SINGLE_TLV("LINEOUT4 Volume AGNi", WCD9335_SE_LO_LO4_GAIN, 20, 20, 1,
 			line_gain),
 
 	SOC_SINGLE_TLV("ADC1 Volume", WCD9335_ANA_AMIC1, 0, 20, 0,
@@ -12332,8 +12303,6 @@ static int tasha_post_reset_cb(struct wcd9xxx *wcd9xxx)
 
 	/* Class-H Init*/
 	wcd_clsh_init(&tasha->clsh_d);
-	/* Default HPH Mode to Class-H LP */
-	tasha->hph_mode = CLS_H_LP;
 
 	for (i = 0; i < TASHA_MAX_MICBIAS; i++)
 		tasha->micb_ref[i] = 0;
@@ -12791,15 +12760,12 @@ static int tasha_codec_probe(struct snd_soc_codec *codec)
 	}
 	/* Class-H Init*/
 	wcd_clsh_init(&tasha->clsh_d);
-	/* Default HPH Mode to Class-H LP */
-	tasha->hph_mode = CLS_H_LP;
+	/* Default HPH Mode to Class-H HiFi */
+	tasha->hph_mode = CLS_H_HIFI;
 
 	tasha->codec = codec;
 	for (i = 0; i < COMPANDER_MAX; i++)
 		tasha->comp_enabled[i] = 0;
-
-	tasha->comp_enabled[0] = 1;
-	tasha->comp_enabled[1] = 1;
 
 	tasha->spkr_gain_offset = RX_GAIN_OFFSET_0_DB;
 	tasha->intf_type = wcd9xxx_get_intf_type();
