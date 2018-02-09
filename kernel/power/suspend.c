@@ -44,6 +44,7 @@ struct pm_sleep_state pm_states[PM_SUSPEND_MAX] = {
 
 static const struct platform_suspend_ops *suspend_ops;
 extern void cancel_fsync_auto_work(void);
+extern bool fsync_unblockable;
 
 static bool need_suspend_ops(suspend_state_t state)
 {
@@ -358,10 +359,12 @@ static int enter_state(suspend_state_t state)
 		freeze_begin();
 
 #ifdef CONFIG_PM_SYNC_BEFORE_SUSPEND
-	cancel_fsync_auto_work();
-	pr_debug(KERN_INFO "PM: Syncing filesystems ... ");
-	sys_sync();
-	printk("done.\n");
+	if (!fsync_unblockable) {
+		cancel_fsync_auto_work();
+		pr_debug(KERN_INFO "PM: Syncing filesystems ... ");
+		sys_sync();
+		printk("done.\n");
+	}
 #endif
 
 	pr_debug("PM: Preparing system for %s sleep\n", pm_states[state].label);

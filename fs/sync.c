@@ -21,9 +21,11 @@
 #define VALID_FLAGS (SYNC_FILE_RANGE_WAIT_BEFORE|SYNC_FILE_RANGE_WRITE| \
 			SYNC_FILE_RANGE_WAIT_AFTER)
 
+bool __read_mostly fsync_unblockable = true;
 bool __read_mostly fsync_block = true;
 bool __read_mostly fsync_pending_flag = false;
 int __read_mostly auto_fsync_delay_sec = 60;
+module_param_named(fsync_enabled, fsync_unblockable, bool, 0755);
 module_param(fsync_block, bool, 0644);
 module_param(auto_fsync_delay_sec, int, 0644);
 
@@ -172,7 +174,7 @@ SYSCALL_DEFINE1(syncfs, int, fd)
 	struct super_block *sb;
 	int ret;
 
-	if (fsync_block) {
+	if (!fsync_unblockable && fsync_block) {
 		fsync_pending_flag = true;
 		return 0;
 	}
@@ -204,7 +206,7 @@ SYSCALL_DEFINE1(syncfs, int, fd)
  */
 int vfs_fsync_range(struct file *file, loff_t start, loff_t end, int datasync)
 {
-	if (fsync_block) {
+	if (!fsync_unblockable && fsync_block) {
 		fsync_pending_flag = true;
 		return 0;
 	}
@@ -226,7 +228,7 @@ EXPORT_SYMBOL(vfs_fsync_range);
  */
 int vfs_fsync(struct file *file, int datasync)
 {
-//	if (fsync_block)
+//	if (!fsync_unblockable && fsync_block) {
 //		return 0;
 
 	return vfs_fsync_range(file, 0, LLONG_MAX, datasync);
@@ -238,7 +240,7 @@ static int do_fsync(unsigned int fd, int datasync)
 	struct fd f;
 	int ret = -EBADF;
 
-	if (fsync_block) {
+	if (!fsync_unblockable && fsync_block) {
 		fsync_pending_flag = true;
 		return 0;
 	}
@@ -255,7 +257,7 @@ static int do_fsync(unsigned int fd, int datasync)
 
 SYSCALL_DEFINE1(fsync, unsigned int, fd)
 {
-//	if (fsync_block)
+//	if (!fsync_unblockable && fsync_block) {
 //		return 0;
 
 	return do_fsync(fd, 0);
@@ -263,7 +265,7 @@ SYSCALL_DEFINE1(fsync, unsigned int, fd)
 
 SYSCALL_DEFINE1(fdatasync, unsigned int, fd)
 {
-//	if (fsync_block)
+//	if (!fsync_unblockable && fsync_block) {
 //		return 0;
 
 	return do_fsync(fd, 1);
@@ -279,7 +281,7 @@ SYSCALL_DEFINE1(fdatasync, unsigned int, fd)
  */
 int generic_write_sync(struct file *file, loff_t pos, loff_t count)
 {
-//	if (fsync_block)
+//	if (!fsync_unblockable && fsync_block) {
 //		return 0;
 
 	if (!(file->f_flags & O_DSYNC) && !IS_SYNC(file->f_mapping->host))
@@ -345,7 +347,7 @@ SYSCALL_DEFINE4(sync_file_range, int, fd, loff_t, offset, loff_t, nbytes,
 	loff_t endbyte;			/* inclusive */
 	umode_t i_mode;
 
-//	if (fsync_block)
+//	if (!fsync_unblockable && fsync_block) {
 //		return 0;
 
 	ret = -EINVAL;

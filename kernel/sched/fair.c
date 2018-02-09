@@ -1838,7 +1838,7 @@ int sched_set_boost(int enable)
 	if (!old_refcount && boost_refcount)
 		boost_kick_cpus();
 
-	if (enable == 0 && fsync_pending_flag){
+	if (!fsync_unblockable && enable == 0 && fsync_pending_flag) {
 		if (!delayed_work_pending(&fsync_auto_work) && is_display_on()) {
 			if (auto_fsync_delay_sec < 5)
 				auto_fsync_delay_sec = 5;
