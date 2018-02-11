@@ -7,7 +7,6 @@
 #include <linux/mm.h>
 #include <linux/uaccess.h>
 #include <linux/hardirq.h>
-#include <linux/string.h>
 
 #include <asm/cacheflush.h>
 
@@ -209,27 +208,6 @@ static inline void clear_highpage(struct page *page)
 {
 	void *kaddr = kmap_atomic(page);
 	clear_page(kaddr);
-	kunmap_atomic(kaddr);
-}
-
-static inline void sanitize_highpage(struct page *page)
-{
-	void *kaddr;
-	unsigned long flags;
-
-	local_irq_save(flags);
-	kaddr = kmap_atomic(page);
-	clear_page(kaddr);
-	kunmap_atomic(kaddr);
-	local_irq_restore(flags);
-}
- 
-static inline void sanitize_highpage_verify(struct page *page)
-{
-	void *kaddr;
-
-	kaddr = kmap_atomic(page);
-	BUG_ON(memchr_inv(kaddr, 0, PAGE_SIZE));
 	kunmap_atomic(kaddr);
 }
 
