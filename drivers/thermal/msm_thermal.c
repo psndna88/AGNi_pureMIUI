@@ -15,6 +15,7 @@
 
 #include <linux/kernel.h>
 #include <linux/init.h>
+#include <linux/uaccess.h>
 #include <linux/module.h>
 #include <linux/kthread.h>
 #include <linux/mutex.h>
