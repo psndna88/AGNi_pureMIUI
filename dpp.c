@@ -490,6 +490,25 @@ static int dpp_get_test(const char *step, const char *frame, const char *attr)
 }
 
 
+static int dpp_wait_tx(struct sigma_dut *dut, struct wpa_ctrl *ctrl,
+		       int frame_type)
+{
+	char buf[200], tmp[20];
+	int res;
+
+	snprintf(tmp, sizeof(tmp), "type=%d", frame_type);
+	for (;;) {
+		res = get_wpa_cli_event(dut, ctrl, "DPP-TX", buf, sizeof(buf));
+		if (res < 0)
+			return -1;
+		if (strstr(buf, tmp) != NULL)
+			break;
+	}
+
+	return 0;
+}
+
+
 static int dpp_wait_tx_status(struct sigma_dut *dut, struct wpa_ctrl *ctrl,
 			      int frame_type)
 {
@@ -1447,6 +1466,24 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			result = "BootstrapResult,Errorsent";
 		send_resp(dut, conn, SIGMA_COMPLETE, result);
 		goto out;
+	}
+
+	if (!frametype && strcasecmp(bs, "PKEX") == 0 &&
+	    strcasecmp(auth_role, "Responder") == 0) {
+		if (dpp_wait_tx_status(dut, ctrl, 10) < 0) {
+			send_resp(dut, conn, SIGMA_COMPLETE,
+				  "BootstrapResult,Timeout");
+			goto out;
+		}
+	}
+
+	if (!frametype && strcasecmp(bs, "PKEX") == 0 &&
+	    strcasecmp(auth_role, "Initiator") == 0) {
+		if (dpp_wait_tx(dut, ctrl, 0) < 0) {
+			send_resp(dut, conn, SIGMA_COMPLETE,
+				  "BootstrapResult,Timeout");
+			goto out;
+		}
 	}
 
 	if (frametype && strcasecmp(frametype, "AuthenticationRequest") == 0) {
