@@ -1039,20 +1039,27 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	}
 
 	if (groups_override) {
-		const char *extra = "";
-		char spaces[1500];
-
-		if (force_gas_fragm) {
-			memset(spaces, ' ', sizeof(spaces));
-			spaces[sizeof(spaces) - 1] = '\0';
-			extra = spaces;
-		}
-
-		snprintf(buf, sizeof(buf), "SET dpp_groups_override %s%s",
-			 groups_override, extra);
+		snprintf(buf, sizeof(buf), "SET dpp_groups_override %s",
+			 groups_override);
 		if (wpa_command(ifname, buf) < 0) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Failed to set cred:groups");
+			goto out;
+		}
+	}
+
+	if (force_gas_fragm) {
+		char spaces[1500];
+
+		memset(spaces, ' ', sizeof(spaces));
+		spaces[sizeof(spaces) - 1] = '\0';
+
+		snprintf(buf, sizeof(buf),
+			 "SET dpp_discovery_override {\"ssid\":\"DPPNET01\"}%s",
+			 spaces);
+		if (wpa_command(ifname, buf) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to set discovery override");
 			goto out;
 		}
 	}
