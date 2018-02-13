@@ -114,12 +114,6 @@ static void msm_actuator_parse_i2c_params(struct msm_actuator_ctrl_t *a_ctrl,
 	i2c_tbl = a_ctrl->i2c_reg_tbl;
 
 	for (i = 0; i < size; i++) {
-		/* check that the index into i2c_tbl cannot grow larger that
-		the allocated size of i2c_tbl */
-		if ((a_ctrl->total_steps + 1) < (a_ctrl->i2c_tbl_index)) {
-			break;
-		}
-
 		if (write_arr[i].reg_write_type == MSM_ACTUATOR_WRITE_DAC) {
 			value = (next_lens_position <<
 				write_arr[i].data_shift) |
@@ -459,7 +453,7 @@ static int32_t msm_actuator_init_focus(struct msm_actuator_ctrl_t *a_ctrl,
 			break;
 		}
 
-		if (0 != settings[i].delay)
+		if (settings[i].delay != 0)
 			msleep(settings[i].delay);
 
 		if (rc < 0) {
@@ -1285,16 +1279,6 @@ static int32_t msm_actuator_bivcm_set_position(
 		set_pos->number_of_steps > MAX_NUMBER_OF_STEPS) {
 		pr_err("num_steps out of range = %d\n",
 			set_pos->number_of_steps);
-		return -EFAULT;
-	}
-
-	if (!a_ctrl) {
-		pr_err("failed. NULL actuator pointers.");
-		return -EFAULT;
-	}
-
-	if (a_ctrl->actuator_state != ACT_OPS_ACTIVE) {
-		pr_err("failed. Invalid actuator state.");
 		return -EFAULT;
 	}
 
