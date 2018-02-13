@@ -33,7 +33,7 @@
 
 #include "power.h"
 
-bool drop_caches_suspend = true;
+bool drop_caches_suspend = false;
 module_param_named(drop_caches_on_suspend, drop_caches_suspend, bool, 0664);
 
 struct pm_sleep_state pm_states[PM_SUSPEND_MAX] = {
