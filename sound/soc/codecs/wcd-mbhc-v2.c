@@ -9,6 +9,8 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
+ *
+ * AGNi Audio Jack Testing & Debuging (psndna88@gmail.com) Rev 1.1
  */
 #include <linux/module.h>
 #include <linux/init.h>
@@ -27,8 +29,6 @@
 #include <linux/firmware.h>
 #include <linux/completion.h>
 #include <glink_private.h>
-#include <linux/switch.h>
-#include <linux/moduleparam.h>
 #include <linux/jack_state.h>
 #include <sound/soc.h>
 #include <sound/jack.h>
@@ -46,31 +46,36 @@
 				  SND_JACK_BTN_4 | SND_JACK_BTN_5 | \
 				  SND_JACK_BTN_6 | SND_JACK_BTN_7)
 #define OCP_ATTEMPT 1
+#define HS_DETECT_PLUG_TIME_MS (1 * 1000)
+#define SPECIAL_HS_DETECT_TIME_MS (2 * 1000)
+#define MBHC_BUTTON_PRESS_THRESHOLD_MIN 250
 #define GND_MIC_SWAP_THRESHOLD 4
+#define WCD_FAKE_REMOVAL_MIN_PERIOD_MS 100
 #define HS_VREF_MIN_VAL 1400
 #define FW_READ_ATTEMPTS 15
 #define FW_READ_TIMEOUT 4000000
+#define FAKE_REM_RETRY_ATTEMPTS 3
 #define MAX_IMPED 60000
 
+#define WCD_MBHC_BTN_PRESS_COMPL_TIMEOUT_MS  50
 #define ANC_DETECT_RETRY_CNT 7
+#define WCD_MBHC_SPL_HS_CNT  1
 
 static int det_extn_cable_en;
 module_param(det_extn_cable_en, int,
 		S_IRUGO | S_IWUSR | S_IWGRP);
 MODULE_PARM_DESC(det_extn_cable_en, "enable/disable extn cable detect");
 
-/* AGNi Audio Jack Testing & Debuging (psndna88@gmail.com) */
-static int __read_mostly hs_detect_plug_time_ms = (1 * 1000);
-static int __read_mostly special_hs_detect_time_ms = (2 * 1000);
-static int __read_mostly mbhc_button_press_threshold_min = 250;
-static int __read_mostly wcd_fake_removal_min_period_ms = 100;
-static int __read_mostly fake_rem_retry_attempts = 3;
-static int __read_mostly wcd_mbhc_spl_hs_cnt = 1;
-static int __read_mostly wcd_mbhc_btn_press_compl_timeout_ms = 50;
 bool zdet_high_indicate = false;
 uint32_t impedence_hph_left, impedence_hph_right;
-static bool __read_mostly jack_mode_stock = false;
+static bool skip_impdet_retry, lineout_detected;
+bool jack_connected = false;
+static bool jack_mode_stock = false; /* default to modified jack-stuck fix mode */
+module_param(zdet_high_indicate, bool, S_IRUGO);
+module_param(impedence_hph_left, int, S_IRUGO);
+module_param(impedence_hph_right, int, S_IRUGO);
 
+/* Change Operation Mode based on cmdline */
 static bool __init setup_jack_mode_stock(char *str)
 {
 	if (!strncmp(str, "stock", strlen(str))) {
@@ -82,17 +87,6 @@ static bool __init setup_jack_mode_stock(char *str)
 }
 __setup("android.audiojackmode=", setup_jack_mode_stock);
 
-module_param_named(hs_detect_plug_time_ms, hs_detect_plug_time_ms, int, 0664);
-module_param_named(mbhc_button_press_threshold_min_ms, mbhc_button_press_threshold_min, int, 0664);
-module_param_named(wcd_fake_removal_min_period_ms, wcd_fake_removal_min_period_ms, int, 0664);
-module_param_named(fake_remove_retry_attempts, fake_rem_retry_attempts, int, 0664);
-module_param_named(special_hs_detect_time_ms, special_hs_detect_time_ms, int, 0664);
-module_param_named(wcd_mbhc_spl_hs_cnt, wcd_mbhc_spl_hs_cnt, int, 0664);
-module_param_named(wcd_mbhc_btn_press_compl_timeout_ms, wcd_mbhc_btn_press_compl_timeout_ms, int, 0664);
-module_param(impedence_hph_left, int, S_IRUGO);
-module_param(impedence_hph_right, int, S_IRUGO);
-module_param(zdet_high_indicate, bool, S_IRUGO);
-
 enum wcd_mbhc_cs_mb_en_flag {
 	WCD_MBHC_EN_CS = 0,
 	WCD_MBHC_EN_MB,
@@ -100,25 +94,11 @@ enum wcd_mbhc_cs_mb_en_flag {
 	WCD_MBHC_EN_NONE,
 };
 
-static bool skip_impdet_retry;
-static bool lineout_detected;
-static struct switch_dev accdet_data;
-
 static void wcd_mbhc_jack_report(struct wcd_mbhc *mbhc,
 				struct snd_soc_jack *jack, int status, int mask)
 {
-	if (!jack_mode_stock) {
-		pr_debug("[%s]==> status[%d]type[%d]\n", __FUNCTION__, status, jack->jack->type);
-		if (!status && (jack->jack->type&WCD_MBHC_JACK_MASK)) {
-			switch_set_state(&accdet_data, 0);
-		} else if (jack->jack->type&WCD_MBHC_JACK_MASK) {
-			switch_set_state(&accdet_data, status);
-		}
-	}
 	snd_soc_jack_report(jack, status, mask);
 }
-
-bool jack_connected = false;
 
 bool jack_detect(void)
 {
@@ -1222,7 +1202,7 @@ static bool wcd_is_special_headset(struct wcd_mbhc *mbhc)
 						__func__, (delay * 2));
 				is_spl_hs = true;
 			}
-			if (delay == special_hs_detect_time_ms) {
+			if (delay == SPECIAL_HS_DETECT_TIME_MS) {
 				pr_debug("%s: Spl headset didnt get detect in 4 sec\n",
 						__func__);
 				break;
@@ -1256,7 +1236,7 @@ static bool wcd_is_special_headset(struct wcd_mbhc *mbhc)
 						__func__, (delay * 2));
 				is_spl_hs = true;
 			}
-			if (delay == special_hs_detect_time_ms) {
+			if (delay == SPECIAL_HS_DETECT_TIME_MS) {
 				pr_debug("%s: Spl headset didnt get detect in 4 sec\n",
 						__func__);
 				break;
@@ -1412,7 +1392,7 @@ static bool wcd_mbhc_check_for_spl_headset(struct wcd_mbhc *mbhc,
 		*spl_hs_cnt += 1;
 
 	/* MB2 back to 1.8v */
-	if (*spl_hs_cnt != wcd_mbhc_spl_hs_cnt) {
+	if (*spl_hs_cnt != WCD_MBHC_SPL_HS_CNT) {
 		mbhc->mbhc_cb->mbhc_micb_ctrl_thr_mic(mbhc->codec,
 				mbhc->mbhc_cfg->mbhc_micbias, false);
 		WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_FSM_EN, 0);
@@ -1474,7 +1454,7 @@ static void wcd_correct_swch_plug(struct work_struct *work)
 	 * loop.
 	 */
 	rc = wait_for_completion_timeout(&mbhc->btn_press_compl,
-			msecs_to_jiffies(wcd_mbhc_btn_press_compl_timeout_ms));
+			msecs_to_jiffies(WCD_MBHC_BTN_PRESS_COMPL_TIMEOUT_MS));
 
 	WCD_MBHC_REG_READ(WCD_MBHC_BTN_RESULT, btn_result);
 	WCD_MBHC_REG_READ(WCD_MBHC_HS_COMP_RESULT, hs_comp_res);
@@ -1511,18 +1491,27 @@ static void wcd_correct_swch_plug(struct work_struct *work)
 		goto correct_plug_type;
 	}
 
-	if ((plug_type == MBHC_PLUG_TYPE_HEADSET ||
-	     plug_type == MBHC_PLUG_TYPE_HEADPHONE) &&
-	    (!wcd_swch_level_remove(mbhc)) &&
-	    (!mbhc->btn_press_intr)) {
-		WCD_MBHC_RSC_LOCK(mbhc);
-		wcd_mbhc_find_plug_and_report(mbhc, plug_type);
-		WCD_MBHC_RSC_UNLOCK(mbhc);
+	if (!jack_mode_stock) {
+		if ((plug_type == MBHC_PLUG_TYPE_HEADSET ||
+		     plug_type == MBHC_PLUG_TYPE_HEADPHONE) &&
+	    	(!wcd_swch_level_remove(mbhc)) &&
+		    (!mbhc->btn_press_intr)) {
+			WCD_MBHC_RSC_LOCK(mbhc);
+			wcd_mbhc_find_plug_and_report(mbhc, plug_type);
+			WCD_MBHC_RSC_UNLOCK(mbhc);
+		}
+	} else {
+		if (plug_type == MBHC_PLUG_TYPE_HEADSET &&
+	    	(!wcd_swch_level_remove(mbhc))) {
+			WCD_MBHC_RSC_LOCK(mbhc);
+			wcd_mbhc_find_plug_and_report(mbhc, plug_type);
+			WCD_MBHC_RSC_UNLOCK(mbhc);
+		}
 	}
 
 correct_plug_type:
 
-	timeout = jiffies + msecs_to_jiffies(hs_detect_plug_time_ms);
+	timeout = jiffies + msecs_to_jiffies(HS_DETECT_PLUG_TIME_MS);
 	while (!time_after(jiffies, timeout)) {
 		if (mbhc->hs_detect_work_stop) {
 			pr_debug("%s: stop requested: %d\n", __func__,
@@ -1592,12 +1581,16 @@ correct_plug_type:
 		 * instead of hogging system by contineous polling, wait for
 		 * sometime and re-check stop request again.
 		 */
-		msleep(180);
-		if (hs_comp_res && (spl_hs_count < wcd_mbhc_spl_hs_cnt)) {
+		if (!jack_mode_stock)
+			msleep(180);
+		else
+			msleep(80);
+
+		if (hs_comp_res && (spl_hs_count < WCD_MBHC_SPL_HS_CNT)) {
 			spl_hs = wcd_mbhc_check_for_spl_headset(mbhc,
 								&spl_hs_count);
 
-			if (spl_hs_count == wcd_mbhc_spl_hs_cnt) {
+			if (spl_hs_count == WCD_MBHC_SPL_HS_CNT) {
 				hs_comp_res = 0;
 				spl_hs = true;
 				mbhc->micbias_enable = true;
@@ -1634,7 +1627,7 @@ correct_plug_type:
 				plug_type = MBHC_PLUG_TYPE_HEADSET;
 				if ((no_gnd_mic_swap_cnt <
 				    GND_MIC_SWAP_THRESHOLD) &&
-				    (spl_hs_count != wcd_mbhc_spl_hs_cnt)) {
+				    (spl_hs_count != WCD_MBHC_SPL_HS_CNT)) {
 					continue;
 				} else {
 					no_gnd_mic_swap_cnt = 0;
@@ -1681,7 +1674,7 @@ correct_plug_type:
 						pr_debug("%s: cable is %sheadset\n",
 							__func__,
 							((spl_hs_count ==
-								wcd_mbhc_spl_hs_cnt) ?
+								WCD_MBHC_SPL_HS_CNT) ?
 								"special ":""));
 						goto report;
 					}
@@ -1694,7 +1687,7 @@ correct_plug_type:
 						pr_debug("%s: cable is %sheadset\n",
 							__func__,
 							((spl_hs_count ==
-								wcd_mbhc_spl_hs_cnt) ?
+								WCD_MBHC_SPL_HS_CNT) ?
 								"special ":""));
 						goto report;
 					}
@@ -1765,7 +1758,7 @@ report:
 	wcd_mbhc_find_plug_and_report(mbhc, plug_type);
 	WCD_MBHC_RSC_UNLOCK(mbhc);
 enable_supply:
-	if (plug_type == MBHC_PLUG_TYPE_HEADSET)
+	if ((plug_type == MBHC_PLUG_TYPE_HEADSET) && (!jack_mode_stock))
 		mbhc->micbias_enable = true;
 	if (mbhc->mbhc_cb->mbhc_micbias_control)
 		wcd_mbhc_update_fsm_source(mbhc, plug_type);
@@ -1915,10 +1908,12 @@ static void wcd_mbhc_swch_irq_handler(struct wcd_mbhc *mbhc)
 		if (!jack_mode_stock)
 			mbhc->is_btn_press = false;
 		if (mbhc->current_plug == MBHC_PLUG_TYPE_HEADPHONE) {
-			wcd_mbhc_hs_elec_irq(mbhc, WCD_MBHC_ELEC_HS_REM, false);
-			wcd_mbhc_hs_elec_irq(mbhc, WCD_MBHC_ELEC_HS_INS, false);
-			WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_ELECT_DETECTION_TYPE, 1);
-			WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_ELECT_SCHMT_ISRC, 0);
+			if (!jack_mode_stock) {
+				wcd_mbhc_hs_elec_irq(mbhc, WCD_MBHC_ELEC_HS_REM, false);
+				wcd_mbhc_hs_elec_irq(mbhc, WCD_MBHC_ELEC_HS_INS, false);
+				WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_ELECT_DETECTION_TYPE, 1);
+				WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_ELECT_SCHMT_ISRC, 0);
+			}
 			wcd_mbhc_report_plug(mbhc, 0, SND_JACK_HEADPHONE);
 		} else if (mbhc->current_plug == MBHC_PLUG_TYPE_GND_MIC_SWAP) {
 			wcd_mbhc_report_plug(mbhc, 0, SND_JACK_UNSUPPORTED);
@@ -1948,10 +1943,19 @@ static void wcd_mbhc_swch_irq_handler(struct wcd_mbhc *mbhc)
 			WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_ELECT_SCHMT_ISRC, 0);
 			wcd_mbhc_report_plug(mbhc, 0, SND_JACK_LINEOUT);
 		} else if (mbhc->current_plug == MBHC_PLUG_TYPE_ANC_HEADPHONE) {
-			wcd_mbhc_hs_elec_irq(mbhc, WCD_MBHC_ELEC_HS_REM,
-					     false);
-			wcd_mbhc_hs_elec_irq(mbhc, WCD_MBHC_ELEC_HS_INS,
-					     false);
+			if (!jack_mode_stock) {
+				wcd_mbhc_hs_elec_irq(mbhc, WCD_MBHC_ELEC_HS_REM,
+						     false);
+				wcd_mbhc_hs_elec_irq(mbhc, WCD_MBHC_ELEC_HS_INS,
+						     false);
+			} else {
+				mbhc->mbhc_cb->irq_control(codec,
+						mbhc->intr_ids->mbhc_hs_rem_intr,
+						false);
+				mbhc->mbhc_cb->irq_control(codec,
+						mbhc->intr_ids->mbhc_hs_ins_intr,
+						false);
+			}
 			WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_ELECT_DETECTION_TYPE,
 						 0);
 			WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_ELECT_SCHMT_ISRC, 0);
@@ -1964,8 +1968,10 @@ static void wcd_mbhc_swch_irq_handler(struct wcd_mbhc *mbhc)
 		/* Disable HW FSM */
 		WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_FSM_EN, 0);
 		WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_BTN_ISRC_CTL, 0);
-		wcd_mbhc_hs_elec_irq(mbhc, WCD_MBHC_ELEC_HS_INS, false);
-		wcd_mbhc_hs_elec_irq(mbhc, WCD_MBHC_ELEC_HS_REM, false);
+		if (!jack_mode_stock) {
+			wcd_mbhc_hs_elec_irq(mbhc, WCD_MBHC_ELEC_HS_INS, false);
+			wcd_mbhc_hs_elec_irq(mbhc, WCD_MBHC_ELEC_HS_REM, false);
+		}
 
 	}
 
@@ -2131,7 +2137,7 @@ static irqreturn_t wcd_mbhc_hs_rem_irq(int irq, void *data)
 	WCD_MBHC_RSC_LOCK(mbhc);
 
 	timeout = jiffies +
-		  msecs_to_jiffies(wcd_fake_removal_min_period_ms);
+		  msecs_to_jiffies(WCD_FAKE_REMOVAL_MIN_PERIOD_MS);
 	do {
 		retry++;
 		/*
@@ -2143,7 +2149,7 @@ static irqreturn_t wcd_mbhc_hs_rem_irq(int irq, void *data)
 		pr_debug("%s: Check result reg for fake removal: hs_comp_res %x\n",
 			 __func__, hs_comp_result);
 		if ((!hs_comp_result) &&
-		    retry > fake_rem_retry_attempts) {
+		    retry > FAKE_REM_RETRY_ATTEMPTS) {
 			removed = false;
 			break;
 		}
@@ -2300,7 +2306,7 @@ static irqreturn_t wcd_mbhc_btn_press_handler(int irq, void *data)
 
 	msec_val = jiffies_to_msecs(jiffies - mbhc->jiffies_atreport);
 	pr_debug("%s: msec_val = %ld\n", __func__, msec_val);
-	if (msec_val < mbhc_button_press_threshold_min) {
+	if (msec_val < MBHC_BUTTON_PRESS_THRESHOLD_MIN) {
 		pr_debug("%s: Too short, ignore button press\n", __func__);
 		goto done;
 	} else {
@@ -2473,7 +2479,7 @@ static void wcd_mbhc_moisture_config(struct wcd_mbhc *mbhc)
 		return;
 
 	/* Donot enable moisture detection if jack type is NC */
-	if (!mbhc->hphl_swh) {
+	if (!mbhc->hphl_swh && !jack_mode_stock) {
 		pr_debug("%s: disable moisture detection for NC\n", __func__);
 		return;
 	}
@@ -2514,11 +2520,13 @@ static int wcd_mbhc_initialise(struct wcd_mbhc *mbhc)
 	/* Button Debounce set to 16ms */
 	WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_BTN_DBNC, 2);
 
+#ifndef CONFIG_MACH_XIAOMI
 	if (!jack_mode_stock) {
 		/* Enable micbias ramp */
 		if (mbhc->mbhc_cb->mbhc_micb_ramp_control)
 			mbhc->mbhc_cb->mbhc_micb_ramp_control(codec, true);
 	}
+#endif
 
 	/* enable bias */
 	mbhc->mbhc_cb->mbhc_bias(codec, true);
@@ -2760,14 +2768,6 @@ int wcd_mbhc_init(struct wcd_mbhc *mbhc, struct snd_soc_codec *codec,
 
 	pr_debug("%s: enter\n", __func__);
 
-	accdet_data.name = "h2w";
-	accdet_data.index = 0;
-	accdet_data.state = 0;
-	ret = switch_dev_register(&accdet_data);
-	if (ret) {
-		dev_err(card->dev, "[Accdet]switch_dev_register returned:%d!\n", ret);
-		return -EPERM;
-	}
 	ret = of_property_read_u32(card->dev->of_node, hph_switch, &hph_swh);
 	if (ret) {
 		dev_err(card->dev,
@@ -2966,7 +2966,6 @@ err_mbhc_sw_irq:
 		mbhc->mbhc_cb->register_notifier(codec, &mbhc->nblock, false);
 	mutex_destroy(&mbhc->codec_resource_lock);
 err:
-	switch_dev_unregister(&accdet_data);
 	pr_debug("%s: leave ret %d\n", __func__, ret);
 	return ret;
 }
@@ -2988,7 +2987,6 @@ void wcd_mbhc_deinit(struct wcd_mbhc *mbhc)
 	if (mbhc->mbhc_cb && mbhc->mbhc_cb->register_notifier)
 		mbhc->mbhc_cb->register_notifier(codec, &mbhc->nblock, false);
 	mutex_destroy(&mbhc->codec_resource_lock);
-	switch_dev_unregister(&accdet_data);
 }
 EXPORT_SYMBOL(wcd_mbhc_deinit);
 

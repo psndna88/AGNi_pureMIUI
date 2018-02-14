@@ -5333,10 +5333,6 @@ static int tasha_codec_enable_dec(struct snd_soc_dapm_widget *w,
 			      snd_soc_read(codec, tx_gain_ctl_reg));
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
-		snd_soc_write(codec, WCD9335_MBHC_ZDET_RAMP_CTL, 0x83);
-		snd_soc_write(codec, WCD9335_MBHC_ZDET_RAMP_CTL, 0xA3);
-		snd_soc_write(codec, WCD9335_MBHC_ZDET_RAMP_CTL, 0x83);
-		snd_soc_write(codec, WCD9335_MBHC_ZDET_RAMP_CTL, 0x03);
 		snd_soc_update_bits(codec, tx_vol_ctl_reg, 0x10, 0x10);
 		snd_soc_update_bits(codec, dec_cfg_reg, 0x08, 0x00);
 		cancel_delayed_work_sync(&tasha->tx_hpf_work[decimator].dwork);
