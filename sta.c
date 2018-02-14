@@ -4743,7 +4743,7 @@ static int cmd_sta_reassoc(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *bssid = get_param(cmd, "bssid");
 	const char *val = get_param(cmd, "CHANNEL");
 	struct wpa_ctrl *ctrl;
-	char buf[100];
+	char buf[1000];
 	char result[32];
 	int res;
 	int chan = 0;
@@ -4782,6 +4782,22 @@ static int cmd_sta_reassoc(struct sigma_dut *dut, struct sigma_conn *conn,
 		sigma_dut_print(dut, DUT_MSG_DEBUG,
 				"sta_reassoc: Not connected");
 		fastreassoc = 0;
+	}
+
+	if (dut->rsne_override) {
+#ifdef NL80211_SUPPORT
+		if (get_driver_type() == DRIVER_WCN && dut->config_rsnie == 0) {
+			sta_config_rsnie(dut, 1);
+			dut->config_rsnie = 1;
+		}
+#endif /* NL80211_SUPPORT */
+		snprintf(buf, sizeof(buf), "TEST_ASSOC_IE %s",
+			 dut->rsne_override);
+		if (wpa_command(intf, buf) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to set DEV_CONFIGURE_IE RSNE override");
+			return 0;
+		}
 	}
 
 	if (wifi_chip_type == DRIVER_WCN && fastreassoc) {
