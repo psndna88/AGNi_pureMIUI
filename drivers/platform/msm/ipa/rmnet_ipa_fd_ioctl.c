@@ -57,7 +57,7 @@ static dev_t device;
 
 static long wan_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
-	int retval = 0, rc = 0;
+	int retval = 0;
 	u32 pyld_sz;
 	u8 *param = NULL;
 
@@ -182,14 +182,10 @@ static long wan_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			retval = -EFAULT;
 			break;
 		}
-		rc = rmnet_ipa_set_data_quota(
-				(struct wan_ioctl_set_data_quota *)param);
-		if (rc != 0) {
+		if (rmnet_ipa_set_data_quota(
+		(struct wan_ioctl_set_data_quota *)param)) {
 			IPAWANERR("WAN_IOC_SET_DATA_QUOTA failed\n");
-			if (rc == -ENODEV)
-				retval = -ENODEV;
-			else
-				retval = -EFAULT;
+			retval = -EFAULT;
 			break;
 		}
 		if (copy_to_user((u8 *)arg, param, pyld_sz)) {

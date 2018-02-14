@@ -1241,18 +1241,6 @@ static long ipa_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			break;
 		}
 		break;
-	case IPA_IOC_GET_HW_VERSION:
-		pyld_sz = sizeof(enum ipa_hw_type);
-		param = kzalloc(pyld_sz, GFP_KERNEL);
-		if (!param) {
-			retval = -ENOMEM;
-			break;
-		}
-		memcpy(param, &ipa_ctx->ipa_hw_type, pyld_sz);
-		if (copy_to_user((u8 *)arg, param, pyld_sz)) {
-			retval = -EFAULT;
-			break;
-		}
 
 	default:        /* redundant, as cmd was checked against MAXNR */
 		ipa_dec_client_disable_clks();
@@ -1392,7 +1380,7 @@ bail:
 static int ipa_init_smem_region(int memory_region_size,
 				int memory_region_offset)
 {
-	struct ipa_hw_imm_cmd_dma_shared_mem *cmd = NULL;
+	struct ipa_hw_imm_cmd_dma_shared_mem cmd;
 	struct ipa_desc desc;
 	struct ipa_mem_buffer mem;
 	int rc;
@@ -1401,6 +1389,7 @@ static int ipa_init_smem_region(int memory_region_size,
 		return 0;
 
 	memset(&desc, 0, sizeof(desc));
+	memset(&cmd, 0, sizeof(cmd));
 	memset(&mem, 0, sizeof(mem));
 
 	mem.size = memory_region_size;
@@ -1412,22 +1401,13 @@ static int ipa_init_smem_region(int memory_region_size,
 	}
 
 	memset(mem.base, 0, mem.size);
-
-	cmd = kzalloc(sizeof(*cmd),
-		GFP_KERNEL);
-	if (cmd == NULL) {
-		IPAERR("Failed to alloc immediate command object\n");
-		rc = -ENOMEM;
-		goto fail_send_cmd;
-	}
-
-	cmd->size = mem.size;
-	cmd->system_addr = mem.phys_base;
-	cmd->local_addr = ipa_ctx->smem_restricted_bytes +
+	cmd.size = mem.size;
+	cmd.system_addr = mem.phys_base;
+	cmd.local_addr = ipa_ctx->smem_restricted_bytes +
 		memory_region_offset;
 	desc.opcode = IPA_DMA_SHARED_MEM;
-	desc.pyld = cmd;
-	desc.len = sizeof(*cmd);
+	desc.pyld = &cmd;
+	desc.len = sizeof(cmd);
 	desc.type = IPA_IMM_CMD_DESC;
 
 	rc = ipa_send_cmd(1, &desc);
@@ -1436,8 +1416,6 @@ static int ipa_init_smem_region(int memory_region_size,
 		rc = -EFAULT;
 	}
 
-	kfree(cmd);
-fail_send_cmd:
 	dma_free_coherent(ipa_ctx->pdev, mem.size, mem.base,
 		mem.phys_base);
 
@@ -1507,7 +1485,7 @@ static void ipa_free_buffer(void *user1, int user2)
 	kfree(user1);
 }
 
-static int ipa_q6_pipe_delay(bool zip_pipes)
+int ipa_q6_pipe_delay(bool zip_pipes)
 {
 	u32 reg_val = 0;
 	int client_idx;
@@ -1648,7 +1626,7 @@ static int ipa_q6_clean_q6_tables(void)
 	u32 max_cmds = ipa_get_max_flt_rt_cmds(ipa_ctx->ipa_num_pipes);
 
 	mem.base = dma_alloc_coherent(ipa_ctx->pdev, 4, &mem.phys_base,
-		GFP_KERNEL);
+		GFP_ATOMIC);
 	if (!mem.base) {
 		IPAERR("failed to alloc DMA buff of size 4\n");
 		return -ENOMEM;
@@ -1892,14 +1870,14 @@ int ipa_q6_pre_shutdown_cleanup(void)
 		BUG();
 
 	ipa_inc_client_enable_clks();
+
 	/*
-	 * pipe delay and holb discard for ZIP pipes are handled
-	 * in post shutdown callback.
-	 */
-	if (ipa_q6_pipe_delay(false)) {
-		IPAERR("Failed to delay Q6 pipes\n");
-		BUG();
-	}
+	 * Do not delay Q6 pipes here. This may result in IPA reading a
+	 * DMA_TASK with lock bit set and then Q6 pipe delay is set. In this
+	 * situation IPA will be remain locked as the DMA_TASK with unlock
+	 * bit will not be read by IPA as pipe delay is enabled. IPA uC will
+	 * wait for pipe to be empty before issuing a BAM pipe reset.
+	*/
 
 	if (ipa_q6_monitor_holb_mitigation(false)) {
 		IPAERR("Failed to disable HOLB monitroing on Q6 pipes\n");
@@ -1938,13 +1916,13 @@ int ipa_q6_post_shutdown_cleanup(void)
 	int res;
 
 	/*
-	 * pipe delay and holb discard for ZIP pipes are handled in
-	 * post shutdown.
-	 */
-	if (ipa_q6_pipe_delay(true)) {
-		IPAERR("Failed to delay Q6 ZIP pipes\n");
-		BUG();
-	}
+	 * Do not delay Q6 pipes here. This may result in IPA reading a
+	 * DMA_TASK with lock bit set and then Q6 pipe delay is set. In this
+	 * situation IPA will be remain locked as the DMA_TASK with unlock
+	 * bit will not be read by IPA as pipe delay is enabled. IPA uC will
+	 * wait for pipe to be empty before issuing a BAM pipe reset.
+	*/
+
 	if (ipa_q6_avoid_holb(true)) {
 		IPAERR("Failed to set HOLB on Q6 ZIP pipes\n");
 		BUG();
@@ -1972,7 +1950,7 @@ int _ipa_init_sram_v2(void)
 {
 	u32 *ipa_sram_mmio;
 	unsigned long phys_addr;
-	struct ipa_hw_imm_cmd_dma_shared_mem *cmd = NULL;
+	struct ipa_hw_imm_cmd_dma_shared_mem cmd = {0};
 	struct ipa_desc desc = {0};
 	struct ipa_mem_buffer mem;
 	int rc = 0;
@@ -2012,19 +1990,11 @@ int _ipa_init_sram_v2(void)
 	}
 	memset(mem.base, 0, mem.size);
 
-	cmd = kzalloc(sizeof(*cmd),
-		GFP_KERNEL);
-	if (cmd == NULL) {
-		IPAERR("Failed to alloc immediate command object\n");
-		rc = -ENOMEM;
-		goto fail_send_cmd;
-	}
-
-	cmd->size = mem.size;
-	cmd->system_addr = mem.phys_base;
-	cmd->local_addr = IPA_STATUS_CLEAR_OFST;
+	cmd.size = mem.size;
+	cmd.system_addr = mem.phys_base;
+	cmd.local_addr = IPA_STATUS_CLEAR_OFST;
 	desc.opcode = IPA_DMA_SHARED_MEM;
-	desc.pyld = (void *)cmd;
+	desc.pyld = &cmd;
 	desc.len = sizeof(struct ipa_hw_imm_cmd_dma_shared_mem);
 	desc.type = IPA_IMM_CMD_DESC;
 
@@ -2033,8 +2003,6 @@ int _ipa_init_sram_v2(void)
 		rc = -EFAULT;
 	}
 
-	kfree(cmd);
-fail_send_cmd:
 	dma_free_coherent(ipa_ctx->pdev, mem.size, mem.base, mem.phys_base);
 	return rc;
 }
@@ -2123,7 +2091,7 @@ int _ipa_init_hdr_v2(void)
 {
 	struct ipa_desc desc = { 0 };
 	struct ipa_mem_buffer mem;
-	struct ipa_hdr_init_local *cmd = NULL;
+	struct ipa_hdr_init_local cmd;
 	int rc = 0;
 
 	mem.size = IPA_MEM_PART(modem_hdr_size) + IPA_MEM_PART(apps_hdr_size);
@@ -2135,20 +2103,13 @@ int _ipa_init_hdr_v2(void)
 	}
 	memset(mem.base, 0, mem.size);
 
-	cmd = kzalloc(sizeof(*cmd), GFP_KERNEL);
-	if (cmd == NULL) {
-		IPAERR("Failed to alloc header init command object\n");
-		rc = -ENOMEM;
-		goto fail_send_cmd;
-	}
-
-	cmd->hdr_table_src_addr = mem.phys_base;
-	cmd->size_hdr_table = mem.size;
-	cmd->hdr_table_dst_addr = ipa_ctx->smem_restricted_bytes +
+	cmd.hdr_table_src_addr = mem.phys_base;
+	cmd.size_hdr_table = mem.size;
+	cmd.hdr_table_dst_addr = ipa_ctx->smem_restricted_bytes +
 		IPA_MEM_PART(modem_hdr_ofst);
 
 	desc.opcode = IPA_HDR_INIT_LOCAL;
-	desc.pyld = (void *)cmd;
+	desc.pyld = &cmd;
 	desc.len = sizeof(struct ipa_hdr_init_local);
 	desc.type = IPA_IMM_CMD_DESC;
 	IPA_DUMP_BUFF(mem.base, mem.phys_base, mem.size);
@@ -2158,8 +2119,6 @@ int _ipa_init_hdr_v2(void)
 		rc = -EFAULT;
 	}
 
-	kfree(cmd);
-fail_send_cmd:
 	dma_free_coherent(ipa_ctx->pdev, mem.size, mem.base, mem.phys_base);
 	return rc;
 }
@@ -2168,8 +2127,8 @@ int _ipa_init_hdr_v2_5(void)
 {
 	struct ipa_desc desc = { 0 };
 	struct ipa_mem_buffer mem;
-	struct ipa_hdr_init_local *cmd = NULL;
-	struct ipa_hw_imm_cmd_dma_shared_mem *dma_cmd = NULL;
+	struct ipa_hdr_init_local cmd = { 0 };
+	struct ipa_hw_imm_cmd_dma_shared_mem dma_cmd = { 0 };
 
 	mem.size = IPA_MEM_PART(modem_hdr_size) + IPA_MEM_PART(apps_hdr_size);
 	mem.base = dma_alloc_coherent(ipa_ctx->pdev, mem.size, &mem.phys_base,
@@ -2180,35 +2139,25 @@ int _ipa_init_hdr_v2_5(void)
 	}
 	memset(mem.base, 0, mem.size);
 
-	cmd = kzalloc(sizeof(*cmd), GFP_KERNEL);
-	if (cmd == NULL) {
-		IPAERR("Failed to alloc header init command object\n");
-		dma_free_coherent(ipa_ctx->pdev, mem.size, mem.base,
-			mem.phys_base);
-		return -ENOMEM;
-	}
-	memset(cmd, 0, sizeof(struct ipa_hdr_init_local));
-
-	cmd->hdr_table_src_addr = mem.phys_base;
-	cmd->size_hdr_table = mem.size;
-	cmd->hdr_table_dst_addr = ipa_ctx->smem_restricted_bytes +
+	cmd.hdr_table_src_addr = mem.phys_base;
+	cmd.size_hdr_table = mem.size;
+	cmd.hdr_table_dst_addr = ipa_ctx->smem_restricted_bytes +
 		IPA_MEM_PART(modem_hdr_ofst);
 
 	desc.opcode = IPA_HDR_INIT_LOCAL;
-	desc.pyld = (void *)cmd;
+	desc.pyld = &cmd;
 	desc.len = sizeof(struct ipa_hdr_init_local);
 	desc.type = IPA_IMM_CMD_DESC;
 	IPA_DUMP_BUFF(mem.base, mem.phys_base, mem.size);
 
 	if (ipa_send_cmd(1, &desc)) {
 		IPAERR("fail to send immediate command\n");
-		kfree(cmd);
-		dma_free_coherent(ipa_ctx->pdev, mem.size, mem.base,
+		dma_free_coherent(ipa_ctx->pdev,
+			mem.size, mem.base,
 			mem.phys_base);
 		return -EFAULT;
 	}
 
-	kfree(cmd);
 	dma_free_coherent(ipa_ctx->pdev, mem.size, mem.base, mem.phys_base);
 
 	mem.size = IPA_MEM_PART(modem_hdr_proc_ctx_size) +
@@ -2222,29 +2171,18 @@ int _ipa_init_hdr_v2_5(void)
 	memset(mem.base, 0, mem.size);
 	memset(&desc, 0, sizeof(desc));
 
-	dma_cmd = kzalloc(sizeof(*dma_cmd), GFP_KERNEL);
-	if (dma_cmd == NULL) {
-		IPAERR("Failed to alloc immediate command object\n");
-		dma_free_coherent(ipa_ctx->pdev,
-			mem.size,
-			mem.base,
-			mem.phys_base);
-		return -ENOMEM;
-	}
-
-	dma_cmd->system_addr = mem.phys_base;
-	dma_cmd->local_addr = ipa_ctx->smem_restricted_bytes +
+	dma_cmd.system_addr = mem.phys_base;
+	dma_cmd.local_addr = ipa_ctx->smem_restricted_bytes +
 		IPA_MEM_PART(modem_hdr_proc_ctx_ofst);
-	dma_cmd->size = mem.size;
+	dma_cmd.size = mem.size;
 	desc.opcode = IPA_DMA_SHARED_MEM;
-	desc.pyld = (void *)dma_cmd;
+	desc.pyld = &dma_cmd;
 	desc.len = sizeof(struct ipa_hw_imm_cmd_dma_shared_mem);
 	desc.type = IPA_IMM_CMD_DESC;
 	IPA_DUMP_BUFF(mem.base, mem.phys_base, mem.size);
 
 	if (ipa_send_cmd(1, &desc)) {
 		IPAERR("fail to send immediate command\n");
-		kfree(dma_cmd);
 		dma_free_coherent(ipa_ctx->pdev,
 			mem.size,
 			mem.base,
@@ -2254,9 +2192,8 @@ int _ipa_init_hdr_v2_5(void)
 
 	ipa_write_reg(ipa_ctx->mmio,
 		IPA_LOCAL_PKT_PROC_CNTXT_BASE_OFST,
-		dma_cmd->local_addr);
+		dma_cmd.local_addr);
 
-	kfree(dma_cmd);
 	dma_free_coherent(ipa_ctx->pdev, mem.size, mem.base, mem.phys_base);
 
 	return 0;
@@ -2272,7 +2209,7 @@ int _ipa_init_rt4_v2(void)
 {
 	struct ipa_desc desc = { 0 };
 	struct ipa_mem_buffer mem;
-	struct ipa_ip_v4_routing_init *v4_cmd = NULL;
+	struct ipa_ip_v4_routing_init v4_cmd;
 	u32 *entry;
 	int i;
 	int rc = 0;
@@ -2297,22 +2234,15 @@ int _ipa_init_rt4_v2(void)
 		entry++;
 	}
 
-	v4_cmd = kzalloc(sizeof(*v4_cmd), GFP_KERNEL);
-	if (v4_cmd == NULL) {
-		IPAERR("Failed to alloc v4 routing init command object\n");
-		rc = -ENOMEM;
-		goto fail_send_cmd;
-	}
-
 	desc.opcode = IPA_IP_V4_ROUTING_INIT;
-	v4_cmd->ipv4_rules_addr = mem.phys_base;
-	v4_cmd->size_ipv4_rules = mem.size;
-	v4_cmd->ipv4_addr = ipa_ctx->smem_restricted_bytes +
+	v4_cmd.ipv4_rules_addr = mem.phys_base;
+	v4_cmd.size_ipv4_rules = mem.size;
+	v4_cmd.ipv4_addr = ipa_ctx->smem_restricted_bytes +
 		IPA_MEM_PART(v4_rt_ofst);
 	IPADBG("putting Routing IPv4 rules to phys 0x%x",
-				v4_cmd->ipv4_addr);
+				v4_cmd.ipv4_addr);
 
-	desc.pyld = (void *)v4_cmd;
+	desc.pyld = &v4_cmd;
 	desc.len = sizeof(struct ipa_ip_v4_routing_init);
 	desc.type = IPA_IMM_CMD_DESC;
 	IPA_DUMP_BUFF(mem.base, mem.phys_base, mem.size);
@@ -2322,8 +2252,6 @@ int _ipa_init_rt4_v2(void)
 		rc = -EFAULT;
 	}
 
-	kfree(v4_cmd);
-fail_send_cmd:
 	dma_free_coherent(ipa_ctx->pdev, mem.size, mem.base, mem.phys_base);
 	return rc;
 }
@@ -2332,7 +2260,7 @@ int _ipa_init_rt6_v2(void)
 {
 	struct ipa_desc desc = { 0 };
 	struct ipa_mem_buffer mem;
-	struct ipa_ip_v6_routing_init *v6_cmd = NULL;
+	struct ipa_ip_v6_routing_init v6_cmd;
 	u32 *entry;
 	int i;
 	int rc = 0;
@@ -2357,22 +2285,15 @@ int _ipa_init_rt6_v2(void)
 		entry++;
 	}
 
-	v6_cmd = kzalloc(sizeof(*v6_cmd), GFP_KERNEL);
-	if (v6_cmd == NULL) {
-		IPAERR("Failed to alloc v6 routing init command object\n");
-		rc = -ENOMEM;
-		goto fail_send_cmd;
-	}
-
 	desc.opcode = IPA_IP_V6_ROUTING_INIT;
-	v6_cmd->ipv6_rules_addr = mem.phys_base;
-	v6_cmd->size_ipv6_rules = mem.size;
-	v6_cmd->ipv6_addr = ipa_ctx->smem_restricted_bytes +
+	v6_cmd.ipv6_rules_addr = mem.phys_base;
+	v6_cmd.size_ipv6_rules = mem.size;
+	v6_cmd.ipv6_addr = ipa_ctx->smem_restricted_bytes +
 		IPA_MEM_PART(v6_rt_ofst);
 	IPADBG("putting Routing IPv6 rules to phys 0x%x",
-				v6_cmd->ipv6_addr);
+				v6_cmd.ipv6_addr);
 
-	desc.pyld = (void *)v6_cmd;
+	desc.pyld = &v6_cmd;
 	desc.len = sizeof(struct ipa_ip_v6_routing_init);
 	desc.type = IPA_IMM_CMD_DESC;
 	IPA_DUMP_BUFF(mem.base, mem.phys_base, mem.size);
@@ -2382,8 +2303,6 @@ int _ipa_init_rt6_v2(void)
 		rc = -EFAULT;
 	}
 
-	kfree(v6_cmd);
-fail_send_cmd:
 	dma_free_coherent(ipa_ctx->pdev, mem.size, mem.base, mem.phys_base);
 	return rc;
 }
@@ -2392,7 +2311,7 @@ int _ipa_init_flt4_v2(void)
 {
 	struct ipa_desc desc = { 0 };
 	struct ipa_mem_buffer mem;
-	struct ipa_ip_v4_filter_init *v4_cmd = NULL;
+	struct ipa_ip_v4_filter_init v4_cmd;
 	u32 *entry;
 	int i;
 	int rc = 0;
@@ -2415,22 +2334,15 @@ int _ipa_init_flt4_v2(void)
 		entry++;
 	}
 
-	v4_cmd = kzalloc(sizeof(*v4_cmd), GFP_KERNEL);
-	if (v4_cmd == NULL) {
-		IPAERR("Failed to alloc v4 fliter init command object\n");
-		rc = -ENOMEM;
-		goto fail_send_cmd;
-	}
-
 	desc.opcode = IPA_IP_V4_FILTER_INIT;
-	v4_cmd->ipv4_rules_addr = mem.phys_base;
-	v4_cmd->size_ipv4_rules = mem.size;
-	v4_cmd->ipv4_addr = ipa_ctx->smem_restricted_bytes +
+	v4_cmd.ipv4_rules_addr = mem.phys_base;
+	v4_cmd.size_ipv4_rules = mem.size;
+	v4_cmd.ipv4_addr = ipa_ctx->smem_restricted_bytes +
 		IPA_MEM_PART(v4_flt_ofst);
 	IPADBG("putting Filtering IPv4 rules to phys 0x%x",
-				v4_cmd->ipv4_addr);
+				v4_cmd.ipv4_addr);
 
-	desc.pyld = (void *)v4_cmd;
+	desc.pyld = &v4_cmd;
 	desc.len = sizeof(struct ipa_ip_v4_filter_init);
 	desc.type = IPA_IMM_CMD_DESC;
 	IPA_DUMP_BUFF(mem.base, mem.phys_base, mem.size);
@@ -2440,8 +2352,6 @@ int _ipa_init_flt4_v2(void)
 		rc = -EFAULT;
 	}
 
-	kfree(v4_cmd);
-fail_send_cmd:
 	dma_free_coherent(ipa_ctx->pdev, mem.size, mem.base, mem.phys_base);
 	return rc;
 }
@@ -2450,7 +2360,7 @@ int _ipa_init_flt6_v2(void)
 {
 	struct ipa_desc desc = { 0 };
 	struct ipa_mem_buffer mem;
-	struct ipa_ip_v6_filter_init *v6_cmd = NULL;
+	struct ipa_ip_v6_filter_init v6_cmd;
 	u32 *entry;
 	int i;
 	int rc = 0;
@@ -2473,22 +2383,15 @@ int _ipa_init_flt6_v2(void)
 		entry++;
 	}
 
-	v6_cmd = kzalloc(sizeof(*v6_cmd), GFP_KERNEL);
-	if (v6_cmd == NULL) {
-		IPAERR("Failed to alloc v6 fliter init command object\n");
-		rc = -ENOMEM;
-		goto fail_send_cmd;
-	}
-
 	desc.opcode = IPA_IP_V6_FILTER_INIT;
-	v6_cmd->ipv6_rules_addr = mem.phys_base;
-	v6_cmd->size_ipv6_rules = mem.size;
-	v6_cmd->ipv6_addr = ipa_ctx->smem_restricted_bytes +
+	v6_cmd.ipv6_rules_addr = mem.phys_base;
+	v6_cmd.size_ipv6_rules = mem.size;
+	v6_cmd.ipv6_addr = ipa_ctx->smem_restricted_bytes +
 		IPA_MEM_PART(v6_flt_ofst);
 	IPADBG("putting Filtering IPv6 rules to phys 0x%x",
-				v6_cmd->ipv6_addr);
+				v6_cmd.ipv6_addr);
 
-	desc.pyld = (void *)v6_cmd;
+	desc.pyld = &v6_cmd;
 	desc.len = sizeof(struct ipa_ip_v6_filter_init);
 	desc.type = IPA_IMM_CMD_DESC;
 	IPA_DUMP_BUFF(mem.base, mem.phys_base, mem.size);
@@ -2498,8 +2401,6 @@ int _ipa_init_flt6_v2(void)
 		rc = -EFAULT;
 	}
 
-	kfree(v6_cmd);
-fail_send_cmd:
 	dma_free_coherent(ipa_ctx->pdev, mem.size, mem.base, mem.phys_base);
 	return rc;
 }
