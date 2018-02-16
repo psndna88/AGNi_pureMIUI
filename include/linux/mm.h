@@ -1954,6 +1954,7 @@ struct reclaim_param {
 extern struct reclaim_param reclaim_task_anon(struct task_struct *task,
 		int nr_to_reclaim);
 #endif
+extern bool low_batt_swap_stall;
 
 #endif /* __KERNEL__ */
 #endif /* _LINUX_MM_H */

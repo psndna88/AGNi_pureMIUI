@@ -37,6 +37,7 @@
 #include <linux/alarmtimer.h>
 #include <linux/qpnp-revid.h>
 #include <linux/charging_state.h>
+#include <linux/mm.h>
 
 /* Register offsets */
 
@@ -2101,6 +2102,7 @@ static int get_monotonic_soc_raw(struct fg_chip *chip)
 }
 
 #define EMPTY_CAPACITY		0
+#define LOW_CAPACITY		0x26
 #define DEFAULT_CAPACITY	50
 #define MISSING_CAPACITY	100
 #define FULL_CAPACITY		100
@@ -2111,6 +2113,10 @@ static int get_prop_capacity(struct fg_chip *chip)
 	bool vbatt_low_sts;
 
 	if (chip->use_last_soc && chip->last_soc) {
+		if (chip->last_soc <= LOW_CAPACITY)
+			low_batt_swap_stall = true;
+		else
+			low_batt_swap_stall = false;
 		if (chip->last_soc == FULL_SOC_RAW)
 			return FULL_CAPACITY;
 		return DIV_ROUND_CLOSEST((chip->last_soc - 1) *

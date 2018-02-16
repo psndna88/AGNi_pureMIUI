@@ -138,6 +138,8 @@ struct scan_control {
  * From 0 .. 100.  Higher means more swappy.
  */
 int vm_swappiness = 10;
+bool low_batt_swap_stall = false;
+static int low_batt_swappiness = 1;
 unsigned long vm_total_pages;	/* The total number of pages which the VM controls */
 
 #ifdef CONFIG_KSWAPD_CPU_AFFINITY_MASK
@@ -1940,9 +1942,14 @@ static unsigned long shrink_list(enum lru_list lru, unsigned long nr_to_scan,
 
 static int vmscan_swappiness(struct scan_control *sc)
 {
-	if (global_reclaim(sc))
-		return vm_swappiness;
-	return mem_cgroup_swappiness(sc->target_mem_cgroup);
+	if (low_batt_swap_stall) {
+		return low_batt_swappiness;
+	} else {
+		if (global_reclaim(sc))
+			return vm_swappiness;
+		else
+			return mem_cgroup_swappiness(sc->target_mem_cgroup);
+	}
 }
 
 enum scan_balance {
@@ -2179,7 +2186,7 @@ static void shrink_lruvec(struct lruvec *lruvec, struct scan_control *sc)
 			}
 		}
 
-		cond_resched();
+		cond_resched(); //Marker
 
 		if (nr_reclaimed < nr_to_reclaim || scan_adjusted)
 			continue;
@@ -2981,7 +2988,7 @@ static bool prepare_kswapd_sleep(pg_data_t *pgdat, int order, long remaining,
 					int classzone_idx)
 {
 	/* If kswapd has been running too long, just sleep */
-	if (need_resched())
+	if (need_resched()) //Marker
 		return false;
 
 	/* If a direct reclaimer woke kswapd within HZ/10, it's premature */
