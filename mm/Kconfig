@@ -20,7 +20,7 @@ config FLATMEM_MANUAL
 
 	  Some users of more advanced features like NUMA and
 	  memory hotplug may have different options here.
-	  DISCONTIGMEM is an more mature, better tested system,
+	  DISCONTIGMEM is a more mature, better tested system,
 	  but is incompatible with memory hotplug and may suffer
 	  decreased performance over SPARSEMEM.  If unsure between
 	  "Sparse Memory" and "Discontiguous Memory", choose
@@ -624,7 +624,7 @@ config ZPOOL
 	  zsmalloc.
 
 config ZSMALLOC
-	bool "Memory allocator for compressed pages"
+	tristate "Memory allocator for compressed pages"
 	depends on MMU
 	default n
 	help
@@ -647,17 +647,6 @@ config PGTABLE_MAPPING
 
 	  You can check speed with zsmalloc benchmark:
 	  https://github.com/spartacus06/zsmapbench
-
-config ZSMALLOC_STAT
-	bool "Export zsmalloc statistics"
-	depends on ZSMALLOC
-	select DEBUG_FS
-	default n
-	help
-	  This option enables code in the zsmalloc to collect various
-	  statistics about whats happening in zsmalloc and exports that
-	  information to userspace via debugfs.
-	  If unsure, say N.
 
 config ZCACHE
        bool "Compressed cache for file pages (EXPERIMENTAL)"

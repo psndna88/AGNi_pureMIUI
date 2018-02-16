@@ -2988,8 +2988,8 @@ static bool prepare_kswapd_sleep(pg_data_t *pgdat, int order, long remaining,
 					int classzone_idx)
 {
 	/* If kswapd has been running too long, just sleep */
-	if (need_resched()) //Marker
-		return false;
+//	if (need_resched()) //Marker
+//		return false;
 
 	/* If a direct reclaimer woke kswapd within HZ/10, it's premature */
 	if (remaining)
