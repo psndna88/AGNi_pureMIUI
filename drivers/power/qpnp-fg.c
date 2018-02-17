@@ -553,8 +553,6 @@ struct fg_chip {
 	int			last_soc;
 	/* Validating temperature */
 	int			last_good_temp;
-	int			batt_temp_low_limit;
-	int			batt_temp_high_limit;
 	/* Validating CC_SOC */
 	struct work_struct	cc_soc_store_work;
 	struct fg_wakeup_source	cc_soc_wakeup_source;
@@ -1894,12 +1892,7 @@ static void fg_handle_battery_insertion(struct fg_chip *chip)
 	INIT_COMPLETION(chip->fg_reset_done);
 	schedule_work(&chip->batt_profile_init);
 	cancel_delayed_work(&chip->update_sram_data);
-	if (charging_detected()) {
-		schedule_delayed_work(&chip->update_sram_data, msecs_to_jiffies(0));
-	} else {
-		queue_delayed_work(system_power_efficient_wq, &chip->update_sram_data,
-			msecs_to_jiffies(0));
-	}
+	schedule_delayed_work(&chip->update_sram_data, msecs_to_jiffies(0));
 }
 
 
@@ -2616,7 +2609,7 @@ out:
 				TEMP_SENSE_CHARGE_BIT)
 #define TEMP_PERIOD_UPDATE_MS		10000
 #define TEMP_PERIOD_TIMEOUT_MS		3000
-#define BATT_TEMP_LOW_LIMIT		-600
+#define BATT_TEMP_LOW_LIMIT			-600
 #define BATT_TEMP_HIGH_LIMIT		1500
 static void update_temp_data(struct work_struct *work)
 {
@@ -2673,8 +2666,8 @@ wait:
 	 * update it to the userspace. Otherwise, use the last read good
 	 * temperature.
 	 */
-	if (temp > chip->batt_temp_low_limit &&
-			temp < chip->batt_temp_high_limit) {
+	if (temp > BATT_TEMP_LOW_LIMIT &&
+			temp < BATT_TEMP_HIGH_LIMIT) {
 		chip->last_good_temp = temp;
 		fg_data[0].value = temp;
 	} else {
@@ -2686,8 +2679,8 @@ wait:
 		 * FG lockup. Trigger the FG reset sequence in such cases.
 		 */
 		if (chip->last_temp_update_time && fg_reset_on_lockup &&
-			(chip->last_good_temp > chip->batt_temp_low_limit &&
-			chip->last_good_temp < chip->batt_temp_high_limit)) {
+			(chip->last_good_temp > BATT_TEMP_LOW_LIMIT &&
+			chip->last_good_temp < BATT_TEMP_HIGH_LIMIT)) {
 			pr_err("Batt_temp is %d !, triggering FG reset\n",
 				temp);
 			fg_check_ima_error_handling(chip);
@@ -3872,14 +3865,8 @@ static void status_change_work(struct work_struct *work)
 		 */
 		if (chip->last_sram_update_time + 5 < current_time) {
 			cancel_delayed_work(&chip->update_sram_data);
-			if (charging_detected()) {
-				schedule_delayed_work(&chip->update_sram_data,
-					msecs_to_jiffies(0));
-			} else {
-				queue_delayed_work(system_power_efficient_wq,
-					&chip->update_sram_data,
-					msecs_to_jiffies(0));
-			}
+			schedule_delayed_work(&chip->update_sram_data,
+				msecs_to_jiffies(0));
 		}
 		if (chip->cyc_ctr.en)
 			schedule_work(&chip->cycle_count_work);
@@ -4384,14 +4371,8 @@ static irqreturn_t fg_vbatt_low_handler(int irq, void *_chip)
 			disable_irq_nosync(chip->batt_irq[VBATT_LOW].irq);
 			chip->vbat_low_irq_enabled = false;
 			fg_stay_awake(&chip->empty_check_wakeup_source);
-			if (charging_detected()) {
-				schedule_delayed_work(&chip->check_empty_work,
-					msecs_to_jiffies(FG_EMPTY_DEBOUNCE_MS));
-			} else {
-				queue_delayed_work(system_power_efficient_wq,
-					&chip->check_empty_work,
-					msecs_to_jiffies(FG_EMPTY_DEBOUNCE_MS));
-			}
+			schedule_delayed_work(&chip->check_empty_work,
+				msecs_to_jiffies(FG_EMPTY_DEBOUNCE_MS));
 		} else {
 			if (fg_debug_mask & FG_IRQS)
 				pr_info("Vbatt is high\n");
@@ -4498,13 +4479,8 @@ static irqreturn_t fg_soc_irq_handler(int irq, void *_chip)
 		msoc = get_monotonic_soc_raw(chip);
 		if (msoc == 0 || chip->soc_empty) {
 			fg_stay_awake(&chip->empty_check_wakeup_source);
-			if (charging_detected()) {
-				schedule_delayed_work(&chip->check_empty_work,
-					msecs_to_jiffies(FG_EMPTY_DEBOUNCE_MS));
-			} else {
-				queue_delayed_work(system_power_efficient_wq,
-					&chip->check_empty_work, msecs_to_jiffies(FG_EMPTY_DEBOUNCE_MS));
-			}
+			schedule_delayed_work(&chip->check_empty_work,
+				msecs_to_jiffies(FG_EMPTY_DEBOUNCE_MS));
 		}
 	}
 
@@ -4566,14 +4542,8 @@ static irqreturn_t fg_empty_soc_irq_handler(int irq, void *_chip)
 		pr_info("triggered 0x%x\n", soc_rt_sts);
 	if (fg_is_batt_empty(chip)) {
 		fg_stay_awake(&chip->empty_check_wakeup_source);
-		if (charging_detected()) {
-			schedule_delayed_work(&chip->check_empty_work,
-				msecs_to_jiffies(FG_EMPTY_DEBOUNCE_MS));
-		} else {
-			queue_delayed_work(system_power_efficient_wq,
-				&chip->check_empty_work,
-				msecs_to_jiffies(FG_EMPTY_DEBOUNCE_MS));
-		}
+		schedule_delayed_work(&chip->check_empty_work,
+			msecs_to_jiffies(FG_EMPTY_DEBOUNCE_MS));
 	} else {
 		chip->soc_empty = false;
 	}
@@ -6690,21 +6660,6 @@ static int fg_8950_hw_init(struct fg_chip *chip)
 	if (rc)
 		pr_err("failed to force hpm in charge rc=%d\n", rc);
 
-	OF_READ_PROPERTY(chip->batt_temp_low_limit,
-			"fg-batt-temp-low-limit", rc, BATT_TEMP_LOW_LIMIT);
-
-	OF_READ_PROPERTY(chip->batt_temp_high_limit,
-			"fg-batt-temp-high-limit", rc, BATT_TEMP_HIGH_LIMIT);
-
-	if (fg_debug_mask & FG_STATUS)
-		pr_info("batt-temp-low_limit: %d batt-temp-high_limit: %d\n",
-			chip->batt_temp_low_limit, chip->batt_temp_high_limit);
-
-	OF_READ_PROPERTY(chip->cc_soc_limit_pct, "fg-cc-soc-limit-pct", rc, 0);
-
-	if (fg_debug_mask & FG_STATUS)
-		pr_info("cc-soc-limit-pct: %d\n", chip->cc_soc_limit_pct);
-
 	return rc;
 }
 
@@ -7105,15 +7060,8 @@ static void delayed_init_work(struct work_struct *work)
 	/* release memory access before update_sram_data is called */
 	fg_mem_release(chip);
 
-	if (charging_detected()) {
-		schedule_delayed_work(
-			&chip->update_jeita_setting,
-			msecs_to_jiffies(INIT_JEITA_DELAY_MS));
-	} else {
-		queue_delayed_work(system_power_efficient_wq,
-			&chip->update_jeita_setting,
-			msecs_to_jiffies(INIT_JEITA_DELAY_MS));
-	}
+	schedule_delayed_work(&chip->update_jeita_setting,
+		msecs_to_jiffies(INIT_JEITA_DELAY_MS));
 
 	if (chip->last_sram_update_time == 0)
 		update_sram_data_work(&chip->update_sram_data.work);
@@ -7125,13 +7073,8 @@ static void delayed_init_work(struct work_struct *work)
 		schedule_work(&chip->batt_profile_init);
 
 	if (chip->ima_supported && fg_reset_on_lockup) {
-		if (charging_detected()) {
-			schedule_delayed_work(&chip->check_sanity_work,
-				msecs_to_jiffies(1000));
-		} else {
-			queue_delayed_work(system_power_efficient_wq,
-				&chip->check_sanity_work, msecs_to_jiffies(1000));
-		}
+		schedule_delayed_work(&chip->check_sanity_work,
+			msecs_to_jiffies(1000));
 	}
 
 	if (chip->wa_flag & IADC_GAIN_COMP_WA) {
