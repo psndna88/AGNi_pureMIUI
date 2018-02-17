@@ -50,6 +50,7 @@
 
 #include <linux/swapops.h>
 #include <linux/balloon_compaction.h>
+#include <linux/charging_state.h>
 
 #include "internal.h"
 
@@ -139,7 +140,7 @@ struct scan_control {
  */
 int vm_swappiness = 10;
 bool low_batt_swap_stall = false;
-static int low_batt_swappiness = 1;
+#define LOW_BATT_SWAPPINESS		1
 unsigned long vm_total_pages;	/* The total number of pages which the VM controls */
 
 #ifdef CONFIG_KSWAPD_CPU_AFFINITY_MASK
@@ -1942,8 +1943,8 @@ static unsigned long shrink_list(enum lru_list lru, unsigned long nr_to_scan,
 
 static int vmscan_swappiness(struct scan_control *sc)
 {
-	if (low_batt_swap_stall) {
-		return low_batt_swappiness;
+	if (!charging_detected() && low_batt_swap_stall) {
+		return LOW_BATT_SWAPPINESS;
 	} else {
 		if (global_reclaim(sc))
 			return vm_swappiness;
