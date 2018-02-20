@@ -35,7 +35,7 @@ static int dpp_hostapd_run(struct sigma_dut *dut)
 	if (!dut->ap_oper_chn)
 		dut->ap_channel = 11;
 	dut->ap_is_dual = 0;
-	dut->ap_mode = AP_11ng;
+	dut->ap_mode = dut->ap_channel <= 14 ? AP_11ng : AP_11na;
 	dut->ap_key_mgmt = AP_OPEN;
 	dut->ap_cipher = AP_PLAIN;
 	return cmd_ap_config_commit(dut, NULL, NULL) == 1 ? 0 : -1;
