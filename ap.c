@@ -2625,6 +2625,15 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 	const char *ifname;
 	char ifname2[50];
 
+	if (sigma_radio_ifname[0] &&
+	    strcmp(sigma_radio_ifname[0], "wifi2") == 0)
+		ifname = "ath2";
+	else if (sigma_radio_ifname[0] &&
+		 strcmp(sigma_radio_ifname[0], "wifi1") == 0)
+		ifname = "ath1";
+	else
+		ifname = "ath0";
+
 	for (vap_count = 0; vap_count < OPENWRT_MAX_NUM_RADIOS; vap_count++) {
 		snprintf(buf, sizeof(buf), "wifi%d", vap_count);
 
