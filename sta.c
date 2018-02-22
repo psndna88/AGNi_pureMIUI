@@ -3265,8 +3265,8 @@ static void ath_sta_set_11nrates(struct sigma_dut *dut, const char *intf,
 }
 
 
-static void ath_sta_set_amsdu(struct sigma_dut *dut, const char *intf,
-			      const char *val)
+static void iwpriv_sta_set_amsdu(struct sigma_dut *dut, const char *intf,
+				 const char *val)
 {
 	char buf[60];
 
@@ -4351,7 +4351,8 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 	if (val) {
 		switch (get_driver_type()) {
 		case DRIVER_ATHEROS:
-			ath_sta_set_amsdu(dut, intf, val);
+		case DRIVER_WCN:
+			iwpriv_sta_set_amsdu(dut, intf, val);
 			break;
 		default:
 			if (strcmp(val, "1") == 0 ||
@@ -5547,6 +5548,9 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 
 			/* Disable STBC as default */
 			wcn_sta_set_stbc(dut, intf, "0");
+
+			/* Disable AMSDU as default */
+			iwpriv_sta_set_amsdu(dut, intf, "0");
 		}
 	}
 }
