@@ -17,7 +17,7 @@ fi
 rm $KERNELDIR/arch/arm/boot/dts/*.dtb
 rm $KERNELDIR/drivers/staging/prima/wlan.ko
 rm $KERNELDIR/include/generated/compile.h
-make -j3 || exit 1
+make -j4 || exit 1
 
 rm -rf $KERNELDIR/BUILT_kenzo-miuiMM
 mkdir -p $KERNELDIR/BUILT_kenzo-miuiMM/system/lib/modules/pronto
