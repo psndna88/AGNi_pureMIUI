@@ -599,9 +599,10 @@ static int dpp_scan_peer_qrcode(struct sigma_dut *dut)
 	unlink(dpp_qrcode_file);
 
 	snprintf(buf, sizeof(buf),
-		 "am start -n w1.fi.wpadebug/w1.fi.wpadebug.QrCodeScannerActivity");
+		 "am start -n w1.fi.wpadebug/w1.fi.wpadebug.QrCodeReadActivity");
 	if (system(buf) != 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to launch Scanner");
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to launch QR Code scanner");
 		return -1;
 	}
 
