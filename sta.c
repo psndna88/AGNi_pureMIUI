@@ -3968,6 +3968,27 @@ static int cmd_sta_preset_testparameters(struct sigma_dut *dut,
 		return 0;
 	}
 
+#ifdef NL80211_SUPPORT
+	val = get_param(cmd, "FrgmntSupport");
+	if (val) {
+		if (strcasecmp(val, "Enable") == 0) {
+			if (sta_set_he_fragmentation(dut, intf,
+						     HE_FRAG_LEVEL1)) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "ErrorCode,Failed to enable HE Fragmentation");
+				return 0;
+			}
+		} else if (strcasecmp(val, "Disable") == 0) {
+			if (sta_set_he_fragmentation(dut, intf,
+						     HE_FRAG_DISABLE)) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "ErrorCode,Failed to disable HE Fragmentation");
+				return 0;
+			}
+		}
+	}
+#endif /* NL80211_SUPPORT */
+
 	return 1;
 }
 
