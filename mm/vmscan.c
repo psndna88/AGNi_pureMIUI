@@ -138,7 +138,8 @@ struct scan_control {
 /*
  * From 0 .. 100.  Higher means more swappy.
  */
-int vm_swappiness = 10;
+int vm_swappiness = 20;
+int agni_vm_swappiness = 20;
 bool low_batt_swap_stall = false;
 #define LOW_BATT_SWAPPINESS		1
 unsigned long vm_total_pages;	/* The total number of pages which the VM controls */
@@ -1946,9 +1947,12 @@ static int vmscan_swappiness(struct scan_control *sc)
 	if (!charging_detected() && low_batt_swap_stall) {
 		return LOW_BATT_SWAPPINESS;
 	} else {
-		if (global_reclaim(sc))
+		if (global_reclaim(sc)) {
+			if (vm_swappiness != agni_vm_swappiness) {
+				vm_swappiness = agni_vm_swappiness;
+			}
 			return vm_swappiness;
-		else
+		} else
 			return mem_cgroup_swappiness(sc->target_mem_cgroup);
 	}
 }
