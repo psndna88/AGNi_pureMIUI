@@ -207,6 +207,8 @@ SYSCALL_DEFINE1(syncfs, int, fd)
  */
 int vfs_fsync_range(struct file *file, loff_t start, loff_t end, int datasync)
 {
+	struct inode *inode = file->f_mapping->host;
+
 	if (!fsync_unblockable && fsync_block && !vfs_fsync_range_sdcardfs) {
 		fsync_pending_flag = true;
 		return 0;
@@ -214,6 +216,13 @@ int vfs_fsync_range(struct file *file, loff_t start, loff_t end, int datasync)
 
 	if (!file->f_op || !file->f_op->fsync)
 		return -EINVAL;
+
+	if (!datasync && (inode->i_state & I_DIRTY_TIME)) {
+		spin_lock(&inode->i_lock);
+		inode->i_state &= ~I_DIRTY_TIME;
+		spin_unlock(&inode->i_lock);
+		mark_inode_dirty_sync(inode);
+	}
 
 	return file->f_op->fsync(file, start, end, datasync);
 }
