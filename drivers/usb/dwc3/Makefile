@@ -36,11 +36,11 @@ endif
 # PCI doesn't provide nops if CONFIG_PCI isn't enabled.
 ##
 
-obj-$(CONFIG_USB_DWC3)		+= dwc3-omap.o
-obj-$(CONFIG_USB_DWC3)		+= dwc3-exynos.o
+#obj-$(CONFIG_USB_DWC3)		+= dwc3-omap.o
+#obj-$(CONFIG_USB_DWC3)		+= dwc3-exynos.o
 obj-$(CONFIG_USB_DWC3_MSM)	+= dbm-1_4.o dbm-1_5.o dwc3-msm.o dbm.o
 
-ifneq ($(CONFIG_PCI),)
-	obj-$(CONFIG_USB_DWC3)		+= dwc3-pci.o
-endif
+#ifneq ($(CONFIG_PCI),)
+#	obj-$(CONFIG_USB_DWC3)		+= dwc3-pci.o
+#endif
 
