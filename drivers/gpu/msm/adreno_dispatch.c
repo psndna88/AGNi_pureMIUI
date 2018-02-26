@@ -436,8 +436,7 @@ static struct kgsl_cmdbatch *_get_cmdbatch(struct adreno_context *drawctxt)
 		 * it hasn't already been started
 		 */
 		if (!cmdbatch->timeout_jiffies) {
-			cmdbatch->timeout_jiffies =
-				jiffies + msecs_to_jiffies(5000);
+			cmdbatch->timeout_jiffies = jiffies + msecs_to_jiffies(5000);
 			mod_timer(&cmdbatch->timer, cmdbatch->timeout_jiffies);
 		}
 
@@ -1367,6 +1366,7 @@ static void __adreno_dispatcher_preempt_complete_state(
 		cmdbatch->expires = jiffies +
 			msecs_to_jiffies(_cmdbatch_timeout);
 	}
+	queue_work(device->work_queue, &device->event_work);
 }
 
 /**
@@ -2484,8 +2484,6 @@ static void adreno_dispatcher_work(struct kthread_work *work)
 		count = adreno_dispatch_process_cmdqueue(adreno_dev,
 			&(adreno_dev->cur_rb->dispatch_q), 0);
 
-	kgsl_process_event_groups(device);
-
 	/* Check if gpu fault occurred */
 	if (dispatcher_do_fault(device))
 		goto done;
@@ -2508,6 +2506,12 @@ static void adreno_dispatcher_work(struct kthread_work *work)
 		if (dispatch_q->head == dispatch_q->tail)
 			adreno_dispatcher_schedule(device);
 	}
+	/*
+	 * If inflight went to 0, queue back up the event processor to catch
+	 * stragglers
+	 */
+	if (dispatcher->inflight == 0 && count)
+		queue_work(device->work_queue, &device->event_work);
 
 	/* Try to dispatch new commands */
 	_adreno_dispatcher_issuecmds(adreno_dev);

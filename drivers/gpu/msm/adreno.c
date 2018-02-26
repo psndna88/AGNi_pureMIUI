@@ -17,7 +17,6 @@
 #include <linux/of_device.h>
 #include <linux/delay.h>
 #include <linux/of_coresight.h>
-#include <linux/input.h>
 
 #include <linux/msm-bus-board.h>
 #include <linux/msm-bus.h>
@@ -51,11 +50,6 @@
 #define SECVID_PROGRAM_PATH_UNKNOWN	0x0
 #define SECVID_PROGRAM_PATH_GPU		0x1
 #define SECVID_PROGRAM_PATH_CPU		0x2
-
-static void adreno_input_work(struct work_struct *work);
-
-/* pwrctrl_input_disable - To disable GPU wakeup on touch input event */
-static bool pwrctrl_input_disable = true;
 
 static struct devfreq_msm_adreno_tz_data adreno_tz_data = {
 	.bus = {
@@ -91,8 +85,6 @@ static struct adreno_device device_3d0 = {
 	.ft_pf_policy = KGSL_FT_PAGEFAULT_DEFAULT_POLICY,
 	.fast_hang_detect = 1,
 	.long_ib_detect = 1,
-	.input_work = __WORK_INITIALIZER(device_3d0.input_work,
-		adreno_input_work),
 	.pwrctrl_flag = BIT(ADRENO_SPTP_PC_CTRL) | BIT(ADRENO_PPD_CTRL),
 	.profile.enabled = false,
 };
@@ -256,10 +248,6 @@ static int kgsl_iommu_pdev_probe(struct platform_device *pdev)
 					&data->iommu_ctx_count);
 	if (result)
 		goto err;
-
-	if (of_property_read_u32(pdev->dev.of_node,
-			"qcom,secure_align_mask", &data->secure_align_mask))
-		data->secure_align_mask = 0xfff;
 
 	if (!data->iommu_ctx_count) {
 		KGSL_CORE_ERR(
@@ -427,151 +415,6 @@ void adreno_fault_detect_stop(struct adreno_device *adreno_dev)
 	adreno_dev->fast_hang_detect = 0;
 }
 
-/*
- * A workqueue callback responsible for actually turning on the GPU after a
- * touch event. kgsl_pwrctrl_change_state(ACTIVE) is used without any
- * active_count protection to avoid the need to maintain state.  Either
- * somebody will start using the GPU or the idle timer will fire and put the
- * GPU back into slumber.
- */
-static void adreno_input_work(struct work_struct *work)
-{
-	struct adreno_device *adreno_dev = container_of(work,
-			struct adreno_device, input_work);
-	struct kgsl_device *device = &adreno_dev->dev;
-
-	mutex_lock(&device->mutex);
-
-	device->flags |= KGSL_FLAG_WAKE_ON_TOUCH;
-
-	/*
-	 * Don't schedule adreno_start in a high priority workqueue, we are
-	 * already in a workqueue which should be sufficient
-	 */
-	kgsl_pwrctrl_change_state(device, KGSL_STATE_ACTIVE);
-
-	/*
-	 * When waking up from a touch event we want to stay active long enough
-	 * for the user to send a draw command.  The default idle timer timeout
-	 * is shorter than we want so go ahead and push the idle timer out
-	 * further for this special case
-	 */
-	mod_timer(&device->idle_timer,
-		jiffies + msecs_to_jiffies(adreno_wake_timeout));
-	mutex_unlock(&device->mutex);
-}
-
-/*
- * Process input events and schedule work if needed.  At this point we are only
- * interested in groking EV_ABS touchscreen events
- */
-static void adreno_input_event(struct input_handle *handle, unsigned int type,
-		unsigned int code, int value)
-{
-	struct kgsl_device *device = handle->handler->private;
-	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
-
-	/* Only consider EV_ABS (touch) events */
-	if (type != EV_ABS)
-		return;
-
-	/*
-	 * Don't do anything if anything hasn't been rendered since we've been
-	 * here before
-	 */
-
-	if (device->flags & KGSL_FLAG_WAKE_ON_TOUCH)
-		return;
-
-	/*
-	 * If the device is in nap, kick the idle timer to make sure that we
-	 * don't go into slumber before the first render. If the device is
-	 * already in slumber schedule the wake.
-	 */
-
-	if (device->state == KGSL_STATE_NAP) {
-		/*
-		 * Set the wake on touch bit to keep from coming back here and
-		 * keeping the device in nap without rendering
-		 */
-
-		device->flags |= KGSL_FLAG_WAKE_ON_TOUCH;
-
-		mod_timer(&device->idle_timer,
-			jiffies + device->pwrctrl.interval_timeout);
-	} else if (device->state == KGSL_STATE_SLUMBER) {
-		schedule_work(&adreno_dev->input_work);
-	}
-}
-
-#ifdef CONFIG_INPUT
-static int adreno_input_connect(struct input_handler *handler,
-		struct input_dev *dev, const struct input_device_id *id)
-{
-	struct input_handle *handle;
-	int ret;
-
-	handle = kzalloc(sizeof(*handle), GFP_KERNEL);
-	if (handle == NULL)
-		return -ENOMEM;
-
-	handle->dev = dev;
-	handle->handler = handler;
-	handle->name = handler->name;
-
-	ret = input_register_handle(handle);
-	if (ret) {
-		kfree(handle);
-		return ret;
-	}
-
-	ret = input_open_device(handle);
-	if (ret) {
-		input_unregister_handle(handle);
-		kfree(handle);
-	}
-
-	return ret;
-}
-
-static void adreno_input_disconnect(struct input_handle *handle)
-{
-	input_close_device(handle);
-	input_unregister_handle(handle);
-	kfree(handle);
-}
-#else
-static int adreno_input_connect(struct input_handler *handler,
-		struct input_dev *dev, const struct input_device_id *id)
-{
-	return 0;
-}
-static void adreno_input_disconnect(struct input_handle *handle) {}
-#endif
-
-/*
- * We are only interested in EV_ABS events so only register handlers for those
- * input devices that have EV_ABS events
- */
-static const struct input_device_id adreno_input_ids[] = {
-	{
-		.flags = INPUT_DEVICE_ID_MATCH_EVBIT,
-		.evbit = { BIT_MASK(EV_ABS) },
-		/* assumption: MT_.._X & MT_.._Y are in the same long */
-		.absbit = { [BIT_WORD(ABS_MT_POSITION_X)] =
-				BIT_MASK(ABS_MT_POSITION_X) |
-				BIT_MASK(ABS_MT_POSITION_Y) },
-	},
-	{ },
-};
-
-static struct input_handler adreno_input_handler = {
-	.event = adreno_input_event,
-	.connect = adreno_input_connect,
-	.disconnect = adreno_input_disconnect,
-	.name = "kgsl",
-	.id_table = adreno_input_ids,
-};
 
 static int adreno_soft_reset(struct kgsl_device *device);
 
@@ -653,6 +496,7 @@ void adreno_cp_callback(struct adreno_device *adreno_dev, int bit)
 {
 	struct kgsl_device *device = &adreno_dev->dev;
 
+	queue_work(device->work_queue, &device->event_work);
 	adreno_dispatcher_schedule(device);
 }
 
@@ -662,20 +506,10 @@ static irqreturn_t adreno_irq_handler(struct kgsl_device *device)
 	struct adreno_gpudev *gpudev = ADRENO_GPU_DEVICE(adreno_dev);
 	struct adreno_irq *irq_params = gpudev->irq;
 	irqreturn_t ret = IRQ_NONE;
-	unsigned int status = 0, tmp = 0, int_bit;
+	unsigned int status = 0, tmp = 0;
 	int i;
 
 	adreno_readreg(adreno_dev, ADRENO_REG_RBBM_INT_0_STATUS, &status);
-
-	/*
-	 * Clear all the interrupt bits but ADRENO_INT_RBBM_AHB_ERROR. Because
-	 * even if we clear it here, it will stay high until it is cleared
-	 * in its respective handler. Otherwise, the interrupt handler will
-	 * fire again.
-	 */
-	int_bit = ADRENO_INT_BIT(adreno_dev, ADRENO_INT_RBBM_AHB_ERROR);
-	adreno_writereg(adreno_dev, ADRENO_REG_RBBM_INT_CLEAR_CMD,
-				status & ~int_bit);
 
 	/* Loop through all set interrupts and call respective handlers */
 	for (tmp = status, i = 0; tmp &&
@@ -693,13 +527,9 @@ static irqreturn_t adreno_irq_handler(struct kgsl_device *device)
 
 //	gpudev->irq_trace(adreno_dev, status);
 
-	/*
-	 * Clear ADRENO_INT_RBBM_AHB_ERROR bit after this interrupt has been
-	 * cleared in its respective handler
-	 */
-	if (status & int_bit)
+	if (status)
 		adreno_writereg(adreno_dev, ADRENO_REG_RBBM_INT_CLEAR_CMD,
-				int_bit);
+				status);
 
 	return ret;
 
@@ -1356,19 +1186,6 @@ int adreno_probe(struct platform_device *pdev)
 
 	kgsl_pwrscale_init(&pdev->dev, CONFIG_MSM_ADRENO_DEFAULT_GOVERNOR);
 
-	if (!pwrctrl_input_disable)
-		adreno_input_handler.private = device;
-
-#ifdef CONFIG_INPUT
-	/*
-	 * It isn't fatal if we cannot register the input handler.  Sad,
-	 * perhaps, but not fatal
-	 */
-	if (!pwrctrl_input_disable) {
-		if (input_register_handler(&adreno_input_handler))
-			KGSL_DRV_ERR(device, "Unable to register the input handler\n");
-	}
-#endif
 out:
 	if (status) {
 		adreno_ringbuffer_close(adreno_dev);
@@ -1392,11 +1209,6 @@ static int adreno_remove(struct platform_device *pdev)
 	if (test_bit(ADRENO_DEVICE_CMDBATCH_PROFILE, &adreno_dev->priv))
 		kgsl_free_global(&adreno_dev->cmdbatch_profile_buffer);
 
-#ifdef CONFIG_INPUT
-	if (!pwrctrl_input_disable) {
-		input_unregister_handler(&adreno_input_handler);
-	}
-#endif
 	adreno_sysfs_close(device);
 
 	adreno_coresight_remove(adreno_dev);
@@ -1966,8 +1778,6 @@ static int adreno_stop(struct kgsl_device *device)
 
 	/* Save physical performance counter values before GPU power down*/
 	adreno_perfcounter_save(adreno_dev);
-
-	adreno_vbif_clear_pending_transactions(device);
 
 	kgsl_mmu_stop(&device->mmu);
 	kgsl_cffdump_close(device);

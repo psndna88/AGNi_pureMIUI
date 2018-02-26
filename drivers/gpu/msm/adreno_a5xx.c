@@ -363,7 +363,7 @@ static void a5xx_protect_init(struct adreno_device *adreno_dev)
 	adreno_set_protected_registers(adreno_dev, &index, 0xE70, 4);
 
 	/* UCHE registers */
-	adreno_set_protected_registers(adreno_dev, &index, 0xE80, ilog2(16));
+	adreno_set_protected_registers(adreno_dev, &index, 0xE87, 4);
 
 	/* SMMU registers */
 	iommu_regs = kgsl_mmu_get_prot_regs(&device->mmu);
@@ -1439,30 +1439,8 @@ static void a5xx_start(struct adreno_device *adreno_dev)
 		kgsl_regwrite(device, A5XX_SP_DBG_ECO_CNTL, val);
 	}
 
-	/*
-	 * Disable UCHE global filter as SP can invalidate/flush
-	 * independently
-	 */
-	kgsl_regwrite(device, A5XX_UCHE_MODE_CNTL, BIT(29));
-
 	/* Set the USE_RETENTION_FLOPS chicken bit */
 	kgsl_regwrite(device, A5XX_CP_CHICKEN_DBG, 0x02000000);
-
-	/*
-	 *  In A5x, CCU can send context_done event of a particular context to
-	 *  UCHE which ultimately reaches CP even when there is valid
-	 *  transaction of that context inside CCU. This can let CP to program
-	 *  config registers, which will make the "valid transaction" inside
-	 *  CCU to be interpreted differently. This can cause gpu fault. This
-	 *  bug is fixed in latest A510 revision. To enable this bug fix -
-	 *  bit[11] of RB_DBG_ECO_CNTL need to be set to 0, default is 1
-	 *  (disable). For older A510 version this bit is unused.
-	 */
-	if (adreno_is_a510(adreno_dev)) {
-		kgsl_regread(device, A5XX_RB_DBG_ECO_CNTL, &val);
-		val = (val & (~(1 << 11)));
-		kgsl_regwrite(device, A5XX_RB_DBG_ECO_CNTL, val);
-	}
 
 	/* Enable ISDB mode if requested */
 	if (test_bit(ADRENO_DEVICE_ISDB_ENABLED, &adreno_dev->priv)) {
@@ -2088,10 +2066,6 @@ struct adreno_ft_perf_counters a5xx_ft_perf_counters[] = {
 	{KGSL_PERFCOUNTER_GROUP_TSE, A5XX_TSE_INPUT_PRIM_NUM},
 };
 
-static unsigned int a5xx_int_bits[ADRENO_INT_BITS_MAX] = {
-	ADRENO_INT_DEFINE(ADRENO_INT_RBBM_AHB_ERROR, A5XX_INT_RBBM_AHB_ERROR),
-};
-
 /* Register offset defines for A5XX, in order of enum adreno_regs */
 static unsigned int a5xx_register_offsets[ADRENO_REG_REGISTER_MAX] = {
 	ADRENO_REG_DEFINE(ADRENO_REG_CP_WFI_PEND_CTR, A5XX_CP_WFI_PEND_CTR),
@@ -2315,7 +2289,6 @@ void a5x_gpc_err_int_callback(struct adreno_device *adreno_dev, int bit)
 	 (1 << A5XX_INT_CP_IB1) |			\
 	 (1 << A5XX_INT_CP_IB2) |			\
 	 (1 << A5XX_INT_CP_RB) |			\
-	 (1 << A5XX_INT_CP_CACHE_FLUSH_TS) |		\
 	 (1 << A5XX_INT_RBBM_ATB_BUS_OVERFLOW) |	\
 	 (1 << A5XX_INT_UCHE_OOB_ACCESS)) |		\
 	 (1 << A5XX_INT_UCHE_TRAP_INTR)
@@ -2350,7 +2323,7 @@ static struct adreno_irq_funcs a5xx_irq_funcs[] = {
 	ADRENO_IRQ_CALLBACK(NULL), /* 17 - CP_RB_DONE_TS */
 	ADRENO_IRQ_CALLBACK(NULL), /* 18 - CP_WT_DONE_TS */
 	ADRENO_IRQ_CALLBACK(NULL), /* 19 - UNKNOWN_1 */
-	ADRENO_IRQ_CALLBACK(adreno_cp_callback), /* 20 - CP_CACHE_FLUSH_TS */
+	ADRENO_IRQ_CALLBACK(NULL), /* 20 - CP_CACHE_FLUSH_TS */
 	/* 21 - UNUSED_2 */
 	ADRENO_IRQ_CALLBACK(NULL),
 	ADRENO_IRQ_CALLBACK(a5xx_err_callback), /* 22 - RBBM_ATB_BUS_OVERFLOW */
@@ -2584,7 +2557,6 @@ static struct adreno_coresight a5xx_coresight = {
 
 struct adreno_gpudev adreno_a5xx_gpudev = {
 	.reg_offsets = &a5xx_reg_offsets,
-	.int_bits = a5xx_int_bits,
 	.ft_perf_counters = a5xx_ft_perf_counters,
 	.ft_perf_counters_count = ARRAY_SIZE(a5xx_ft_perf_counters),
 	.coresight = &a5xx_coresight,

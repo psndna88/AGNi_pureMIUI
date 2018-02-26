@@ -13,9 +13,15 @@
 #ifndef __KGSL_SHAREDMEM_H
 #define __KGSL_SHAREDMEM_H
 
+#include <linux/slab.h>
 #include <linux/dma-mapping.h>
+#include "kgsl_mmu.h"
+#include <linux/slab.h>
+#include <linux/kmemleak.h>
+#include <linux/iommu.h>
 
 #include "kgsl_mmu.h"
+#include "kgsl_log.h"
 
 struct kgsl_device;
 struct kgsl_process_private;
@@ -24,9 +30,16 @@ struct kgsl_process_private;
 #define KGSL_CACHE_OP_FLUSH     0x02
 #define KGSL_CACHE_OP_CLEAN     0x03
 
-int kgsl_sharedmem_alloc_contig(struct kgsl_device *device,
+int kgsl_sharedmem_page_alloc_user(struct kgsl_memdesc *memdesc,
+				struct kgsl_pagetable *pagetable,
+				uint64_t size);
+
+int kgsl_cma_alloc_coherent(struct kgsl_device *device,
 			struct kgsl_memdesc *memdesc,
 			struct kgsl_pagetable *pagetable, uint64_t size);
+
+int kgsl_cma_alloc_secure(struct kgsl_device *device,
+			struct kgsl_memdesc *memdesc, uint64_t size);
 
 void kgsl_sharedmem_free(struct kgsl_memdesc *memdesc);
 
@@ -68,12 +81,6 @@ int kgsl_allocate_user(struct kgsl_device *device,
 		struct kgsl_memdesc *memdesc,
 		struct kgsl_pagetable *pagetable,
 		uint64_t size, uint64_t mmapsize, uint64_t flags);
-
-void kgsl_get_memory_usage(char *str, size_t len, uint64_t memflags);
-
-int kgsl_sharedmem_page_alloc_user(struct kgsl_memdesc *memdesc,
-				struct kgsl_pagetable *pagetable,
-				uint64_t size);
 
 #define MEMFLAGS(_flags, _mask, _shift) \
 	((unsigned int) (((_flags) & (_mask)) >> (_shift)))
@@ -118,8 +125,10 @@ kgsl_memdesc_get_memtype(const struct kgsl_memdesc *memdesc)
 static inline int
 kgsl_memdesc_set_align(struct kgsl_memdesc *memdesc, unsigned int align)
 {
-	if (align > 32)
+	if (align > 32) {
+		KGSL_CORE_ERR("Alignment too big, restricting to 2^32\n");
 		align = 32;
+	}
 
 	memdesc->flags &= ~KGSL_MEMALIGN_MASK;
 	memdesc->flags |= (align << KGSL_MEMALIGN_SHIFT) & KGSL_MEMALIGN_MASK;
@@ -245,6 +254,21 @@ kgsl_memdesc_mmapsize(const struct kgsl_memdesc *memdesc)
 	return size;
 }
 
+static inline int
+kgsl_allocate_contiguous(struct kgsl_device *device,
+			struct kgsl_memdesc *memdesc, size_t size)
+{
+	int ret;
+
+	size = ALIGN(size, PAGE_SIZE);
+
+	ret = kgsl_cma_alloc_coherent(device, memdesc, NULL, size);
+	if (!ret && (kgsl_mmu_get_mmutype() == KGSL_MMU_TYPE_NONE))
+		memdesc->gpuaddr = memdesc->physaddr;
+
+	return ret;
+}
+
 /*
  * kgsl_allocate_global() - Allocate GPU accessible memory that will be global
  * across all processes
@@ -265,18 +289,16 @@ static inline int kgsl_allocate_global(struct kgsl_device *device,
 {
 	int ret;
 
+	BUG_ON(size > SIZE_MAX);
+
+	if (size == 0)
+		return -EINVAL;
+
 	memdesc->flags = flags;
 	memdesc->priv = priv;
 
-	if ((memdesc->priv & KGSL_MEMDESC_CONTIG) != 0)
-		ret = kgsl_sharedmem_alloc_contig(device, memdesc, NULL,
-						(size_t) size);
-	else {
-		ret = kgsl_sharedmem_page_alloc_user(memdesc, NULL,
-						(size_t) size);
-		if (ret == 0)
-			kgsl_memdesc_map(memdesc);
-	}
+	ret = kgsl_allocate_contiguous(device, memdesc, (size_t) size);
+
 	if (!ret) {
 		ret = kgsl_add_global_pt_entry(device, memdesc);
 		if (ret)
@@ -300,34 +322,5 @@ static inline void kgsl_free_global(struct kgsl_memdesc *memdesc)
 	kgsl_remove_global_pt_entry(memdesc);
 	kgsl_sharedmem_free(memdesc);
 }
-
-void kgsl_sharedmem_set_noretry(bool val);
-bool kgsl_sharedmem_get_noretry(void);
-
-/**
- * kgsl_get_page_size() - Get supported pagesize
- * @size: Size of the page
- * @align: Desired alignment of the size
- *
- * Return supported pagesize
- */
-#ifndef CONFIG_ALLOC_BUFFERS_IN_4K_CHUNKS
-static inline int kgsl_get_page_size(size_t size, unsigned int align)
-{
-	if (align >= ilog2(SZ_1M) && size >= SZ_1M)
-		return SZ_1M;
-	else if (align >= ilog2(SZ_64K) && size >= SZ_64K)
-		return SZ_64K;
-	else if (align >= ilog2(SZ_8K) && size >= SZ_8K)
-		return SZ_8K;
-	else
-		return PAGE_SIZE;
-}
-#else
-static inline int kgsl_get_page_size(size_t size, unsigned int align)
-{
-	return PAGE_SIZE;
-}
-#endif
 
 #endif /* __KGSL_SHAREDMEM_H */

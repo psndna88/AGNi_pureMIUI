@@ -171,10 +171,6 @@ enum adreno_start_type {
 
 struct adreno_gpudev;
 
-#define ADRENO_INT_BIT(a, _bit) (((a)->gpucore->gpudev->int_bits) ? \
-		(adreno_get_int(a, _bit) < 0 ? 0 : \
-		BIT(adreno_get_int(a, _bit))) : 0)
-
 struct adreno_busy_data {
 	unsigned int gpu_busy;
 	unsigned int vbif_ram_cycles;
@@ -275,7 +271,6 @@ struct adreno_gpu_core {
  * @dispatcher: Container for adreno GPU dispatcher
  * @pwron_fixup: Command buffer to run a post-power collapse shader workaround
  * @pwron_fixup_dwords: Number of dwords in the command buffer
- * @input_work: Work struct for turning on the GPU after a touch event
  * @busy_data: Struct holding GPU VBIF busy stats
  * @ram_cycles_lo: Number of DDR clock cycles for the monitor session
  * @perfctr_pwr_lo: Number of cycles VBIF is stalled by DDR
@@ -320,7 +315,6 @@ struct adreno_device {
 	struct adreno_dispatcher dispatcher;
 	struct kgsl_memdesc pwron_fixup;
 	unsigned int pwron_fixup_dwords;
-	struct work_struct input_work;
 	struct adreno_busy_data busy_data;
 	unsigned int ram_cycles_lo;
 	unsigned int starved_ram_lo;
@@ -476,11 +470,6 @@ enum adreno_regs {
 	ADRENO_REG_REGISTER_MAX,
 };
 
-enum adreno_int_bits {
-	ADRENO_INT_RBBM_AHB_ERROR,
-	ADRENO_INT_BITS_MAX,
-};
-
 /**
  * adreno_reg_offsets: Holds array of register offsets
  * @offsets: Offset array of size defined by enum adreno_regs
@@ -496,7 +485,6 @@ struct adreno_reg_offsets {
 #define ADRENO_REG_UNUSED	0xFFFFFFFF
 #define ADRENO_REG_SKIP	0xFFFFFFFE
 #define ADRENO_REG_DEFINE(_offset, _reg) [_offset] = _reg
-#define ADRENO_INT_DEFINE(_offset, _val) ADRENO_REG_DEFINE(_offset, _val)
 
 /*
  * struct adreno_vbif_data - Describes vbif register value pair
@@ -633,7 +621,6 @@ struct adreno_gpudev {
 	 * so define them in the structure and use them as variables.
 	 */
 	const struct adreno_reg_offsets *reg_offsets;
-	unsigned int *const int_bits;
 	const struct adreno_ft_perf_counters *ft_perf_counters;
 	unsigned int ft_perf_counters_count;
 
@@ -1022,23 +1009,6 @@ static inline unsigned int adreno_getreg(struct adreno_device *adreno_dev,
 	return gpudev->reg_offsets->offsets[offset_name];
 }
 
-/*
- * adreno_get_int() - Returns the offset value of an interrupt bit from
- * the interrupt bit array in the gpudev node
- * @adreno_dev:		Pointer to the the adreno device
- * @bit_name:		The interrupt bit enum whose bit is returned
- */
-static inline unsigned int adreno_get_int(struct adreno_device *adreno_dev,
-				enum adreno_int_bits bit_name)
-{
-	struct adreno_gpudev *gpudev = ADRENO_GPU_DEVICE(adreno_dev);
-
-	if (bit_name >= ADRENO_INT_BITS_MAX)
-		return -ERANGE;
-
-	return gpudev->int_bits[bit_name];
-}
-
 /**
  * adreno_gpu_fault() - Return the current state of the GPU
  * @adreno_dev: A pointer to the adreno_device to query
@@ -1275,8 +1245,10 @@ adreno_get_rptr(struct adreno_ringbuffer *rb)
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(rb->device);
 	if (adreno_dev->cur_rb == rb &&
 		adreno_preempt_state(adreno_dev,
-			ADRENO_DISPATCHER_PREEMPT_CLEAR))
+			ADRENO_DISPATCHER_PREEMPT_CLEAR)) {
 		adreno_readreg(adreno_dev, ADRENO_REG_CP_RB_RPTR, &(rb->rptr));
+		rmb();
+	}
 
 	return rb->rptr;
 }

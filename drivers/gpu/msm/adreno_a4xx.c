@@ -826,10 +826,6 @@ void a4xx_err_callback(struct adreno_device *adreno_dev, int bit)
 	}
 }
 
-static unsigned int a4xx_int_bits[ADRENO_INT_BITS_MAX] = {
-	ADRENO_INT_DEFINE(ADRENO_INT_RBBM_AHB_ERROR, A4XX_INT_RBBM_AHB_ERROR),
-};
-
 /* Register offset defines for A4XX, in order of enum adreno_regs */
 static unsigned int a4xx_register_offsets[ADRENO_REG_REGISTER_MAX] = {
 	ADRENO_REG_DEFINE(ADRENO_REG_CP_ME_RAM_WADDR, A4XX_CP_ME_RAM_WADDR),
@@ -1716,7 +1712,6 @@ static struct adreno_coresight a4xx_coresight = {
 	 (1 << A4XX_INT_CP_IB1_INT) |			\
 	 (1 << A4XX_INT_CP_IB2_INT) |			\
 	 (1 << A4XX_INT_CP_RB_INT) |			\
-	 (1 << A4XX_INT_CACHE_FLUSH_TS) |		\
 	 (1 << A4XX_INT_CP_REG_PROTECT_FAULT) |		\
 	 (1 << A4XX_INT_CP_AHB_ERROR_HALT) |		\
 	 (1 << A4XX_INT_RBBM_ATB_BUS_OVERFLOW) |	\
@@ -1753,7 +1748,7 @@ static struct adreno_irq_funcs a4xx_irq_funcs[] = {
 	ADRENO_IRQ_CALLBACK(NULL), /* 17 - CP_RB_DONE_TS */
 	ADRENO_IRQ_CALLBACK(NULL), /* 18 - CP_VS_DONE_TS */
 	ADRENO_IRQ_CALLBACK(NULL), /* 19 - CP_PS_DONE_TS */
-	ADRENO_IRQ_CALLBACK(adreno_cp_callback), /* 20 - CP_CACHE_FLUSH_TS */
+	ADRENO_IRQ_CALLBACK(NULL), /* 20 - CP_CACHE_FLUSH_TS */
 	/* 21 - CP_AHB_ERROR_FAULT */
 	ADRENO_IRQ_CALLBACK(a4xx_err_callback),
 	ADRENO_IRQ_CALLBACK(a4xx_err_callback), /* 22 - RBBM_ATB_BUS_OVERFLOW */
@@ -1783,7 +1778,6 @@ static struct adreno_snapshot_data a4xx_snapshot_data = {
 
 struct adreno_gpudev adreno_a4xx_gpudev = {
 	.reg_offsets = &a4xx_reg_offsets,
-	.int_bits = a4xx_int_bits,
 	.ft_perf_counters = a4xx_ft_perf_counters,
 	.ft_perf_counters_count = ARRAY_SIZE(a4xx_ft_perf_counters),
 	.perfcounters = &a4xx_perfcounters,
