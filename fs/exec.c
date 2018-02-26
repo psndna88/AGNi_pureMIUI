@@ -1063,7 +1063,7 @@ EXPORT_SYMBOL_GPL(get_task_comm);
 void set_task_comm(struct task_struct *tsk, char *buf)
 {
 	task_lock(tsk);
-	trace_task_rename(tsk, buf);
+//	trace_task_rename(tsk, buf);
 	strlcpy(tsk->comm, buf, sizeof(tsk->comm));
 	task_unlock(tsk);
 	perf_event_comm(tsk);
@@ -1421,7 +1421,8 @@ int search_binary_handler(struct linux_binprm *bprm)
 	unsigned int depth = bprm->recursion_depth;
 	int try,retval;
 	struct linux_binfmt *fmt;
-	pid_t old_pid, old_vpid;
+//	pid_t old_pid;
+	pid_t old_vpid;
 
 	/* This allows 4 levels of binfmt rewrites before failing hard. */
 	if (depth > 5)
@@ -1436,7 +1437,7 @@ int search_binary_handler(struct linux_binprm *bprm)
 		return retval;
 
 	/* Need to fetch pid before load_binary changes it */
-	old_pid = current->pid;
+//	old_pid = current->pid;
 	rcu_read_lock();
 	old_vpid = task_pid_nr_ns(current, task_active_pid_ns(current->parent));
 	rcu_read_unlock();
@@ -1456,7 +1457,7 @@ int search_binary_handler(struct linux_binprm *bprm)
 			bprm->recursion_depth = depth;
 			if (retval >= 0) {
 				if (depth == 0) {
-					trace_sched_process_exec(current, old_pid, bprm);
+//					trace_sched_process_exec(current, old_pid, bprm);
 					ptrace_event(PTRACE_EVENT_EXEC, old_vpid);
 				}
 				put_binfmt(fmt);

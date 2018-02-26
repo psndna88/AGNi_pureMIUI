@@ -56,7 +56,7 @@ EXPORT_SYMBOL(init_buffer);
 
 inline void touch_buffer(struct buffer_head *bh)
 {
-	trace_block_touch_buffer(bh);
+//	trace_block_touch_buffer(bh);
 	mark_page_accessed(bh->b_page);
 }
 EXPORT_SYMBOL(touch_buffer);
@@ -1170,7 +1170,7 @@ void mark_buffer_dirty(struct buffer_head *bh)
 {
 	WARN_ON_ONCE(!buffer_uptodate(bh));
 
-	trace_block_dirty_buffer(bh);
+//	trace_block_dirty_buffer(bh);
 
 	/*
 	 * Very *carefully* optimize the it-is-already-dirty case.
