@@ -3385,9 +3385,9 @@ static int wcn_sta_set_sp_stream(struct sigma_dut *dut, const char *intf,
 {
 	char buf[60];
 
-	if (strcmp(val, "1SS") == 0) {
+	if (strcmp(val, "1SS") == 0 || strcmp(val, "1") == 0) {
 		snprintf(buf, sizeof(buf), "iwpriv %s nss 1", intf);
-	} else if (strcmp(val, "2SS") == 0) {
+	} else if (strcmp(val, "2SS") == 0 || strcmp(val, "2") == 0) {
 		snprintf(buf, sizeof(buf), "iwpriv %s nss 2", intf);
 	} else {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
