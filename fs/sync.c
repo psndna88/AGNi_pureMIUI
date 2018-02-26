@@ -21,11 +21,11 @@
 #define VALID_FLAGS (SYNC_FILE_RANGE_WAIT_BEFORE|SYNC_FILE_RANGE_WRITE| \
 			SYNC_FILE_RANGE_WAIT_AFTER)
 
-bool __read_mostly fsync_unblockable = true;
-bool __read_mostly fsync_block = true;
-bool __read_mostly fsync_pending_flag = false;
-bool __read_mostly vfs_fsync_range_sdcardfs = false;
-int __read_mostly auto_fsync_delay_sec = 60;
+bool fsync_unblockable = true;
+bool fsync_block = true;
+bool fsync_pending_flag = false;
+bool vfs_fsync_range_sdcardfs = false;
+int auto_fsync_delay_sec = 300;
 module_param_named(fsync_enabled, fsync_unblockable, bool, 0755);
 module_param(fsync_block, bool, 0644);
 module_param(auto_fsync_delay_sec, int, 0644);
