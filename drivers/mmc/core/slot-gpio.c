@@ -92,7 +92,7 @@ static irqreturn_t mmc_gpio_cd_irqt(int irq, void *dev_id)
 		} else
 			mmc_detect_change(host, msecs_to_jiffies(1));
 #else
-			mmc_detect_change(host, msecs_to_jiffies(200));
+		mmc_detect_change(host, msecs_to_jiffies(200));
 #endif
 	}
 out:
