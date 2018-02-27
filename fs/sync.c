@@ -132,7 +132,7 @@ SYSCALL_DEFINE0(sync)
 	iterate_supers(sync_fs_one_sb, &wait);
 	iterate_bdevs(fdatawrite_one_bdev, NULL);
 	iterate_bdevs(fdatawait_one_bdev, NULL);
-	if (likely(laptop_mode))
+	if (unlikely(laptop_mode))
 		laptop_sync_completion();
 	return 0;
 }
