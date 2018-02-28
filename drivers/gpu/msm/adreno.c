@@ -2867,6 +2867,8 @@ static const struct kgsl_functable adreno_functable = {
 	.stop_fault_timer = adreno_dispatcher_stop_fault_timer,
 	.suspend_device = adreno_suspend_device,
 	.resume_device = adreno_resume_device,
+	.dispatcher_halt = adreno_dispatcher_halt,
+	.dispatcher_unhalt = adreno_dispatcher_unhalt,
 };
 
 static struct platform_driver adreno_platform_driver = {
