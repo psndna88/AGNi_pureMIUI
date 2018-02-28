@@ -3865,8 +3865,14 @@ static void status_change_work(struct work_struct *work)
 		 */
 		if (chip->last_sram_update_time + 5 < current_time) {
 			cancel_delayed_work(&chip->update_sram_data);
-			schedule_delayed_work(&chip->update_sram_data,
-				msecs_to_jiffies(0));
+			if (charging_detected()) {
+				schedule_delayed_work(&chip->update_sram_data,
+					msecs_to_jiffies(0));
+			} else {
+				queue_delayed_work(system_power_efficient_wq,
+					&chip->update_sram_data,
+					msecs_to_jiffies(0));
+			}
 		}
 		if (chip->cyc_ctr.en)
 			schedule_work(&chip->cycle_count_work);
@@ -7060,8 +7066,15 @@ static void delayed_init_work(struct work_struct *work)
 	/* release memory access before update_sram_data is called */
 	fg_mem_release(chip);
 
-	schedule_delayed_work(&chip->update_jeita_setting,
-		msecs_to_jiffies(INIT_JEITA_DELAY_MS));
+	if (charging_detected()) {
+		schedule_delayed_work(
+			&chip->update_jeita_setting,
+			msecs_to_jiffies(INIT_JEITA_DELAY_MS));
+	} else {
+		queue_delayed_work(system_power_efficient_wq,
+			&chip->update_jeita_setting,
+			msecs_to_jiffies(INIT_JEITA_DELAY_MS));
+	}
 
 	if (chip->last_sram_update_time == 0)
 		update_sram_data_work(&chip->update_sram_data.work);
@@ -7073,8 +7086,13 @@ static void delayed_init_work(struct work_struct *work)
 		schedule_work(&chip->batt_profile_init);
 
 	if (chip->ima_supported && fg_reset_on_lockup) {
-		schedule_delayed_work(&chip->check_sanity_work,
-			msecs_to_jiffies(1000));
+		if (charging_detected()) {
+			schedule_delayed_work(&chip->check_sanity_work,
+				msecs_to_jiffies(1000));
+		} else {
+			queue_delayed_work(system_power_efficient_wq,
+				&chip->check_sanity_work, msecs_to_jiffies(1000));
+		}
 	}
 
 	if (chip->wa_flag & IADC_GAIN_COMP_WA) {
