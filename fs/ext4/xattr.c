@@ -53,7 +53,7 @@
 #include <linux/init.h>
 #include <linux/fs.h>
 #include <linux/slab.h>
-#include <linux/mbcache2.h>
+#include <linux/mbcache.h>
 #include <linux/quotaops.h>
 #include <linux/rwsem.h>
 #include "ext4_jbd2.h"
