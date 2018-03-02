@@ -5773,6 +5773,14 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 		/* Configure ADDBA Req/Rsp buffer size to be 64 */
 		sta_set_addba_buf_size(dut, intf, 64);
 
+#ifdef NL80211_SUPPORT
+		/* Disable noackpolicy for all AC */
+		if (nlvendor_sta_set_noack(dut, intf, 0, QCA_WLAN_AC_ALL)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Disable of noackpolicy for all AC failed");
+		}
+#endif /* NL80211_SUPPORT */
+
 		/* Set nss to 1 and MCS 0-7 in case of testbed */
 		if (type && strcasecmp(type, "Testbed") == 0) {
 #ifdef NL80211_SUPPORT
