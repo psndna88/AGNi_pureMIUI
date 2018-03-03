@@ -202,6 +202,8 @@ static ssize_t max_comp_streams_store(struct device *dev,
 		return ret;
 	if (num < 1)
 		return -EINVAL;
+	if (num > 6)
+		return -EINVAL;
 
 	down_write(&zram->init_lock);
 	if (init_done(zram)) {
@@ -730,7 +732,7 @@ static void zram_reset_device(struct zram *zram, bool reset_capacity)
 	}
 
 	zcomp_destroy(zram->comp);
-	zram->max_comp_streams = 1;
+	zram->max_comp_streams = 4;
 
 	zram_meta_free(zram->meta);
 	zram->meta = NULL;
@@ -1071,7 +1073,7 @@ static int create_device(struct zram *zram, int device_id)
 	}
 	strlcpy(zram->compressor, default_compressor, sizeof(zram->compressor));
 	zram->meta = NULL;
-	zram->max_comp_streams = 1;
+	zram->max_comp_streams = 4;
 	return 0;
 
 out_free_disk:
