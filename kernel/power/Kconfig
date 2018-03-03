@@ -117,6 +117,9 @@ config PM_SLEEP
 	select PM
 	select SRCU
 
+config SUSPEND_NVS
+	def_bool y
+
 config PM_SLEEP_SMP
 	def_bool y
 	depends on SMP
