@@ -3869,9 +3869,25 @@ static int cmd_sta_preset_testparameters(struct sigma_dut *dut,
 			char buf[60];
 
 			if (strcmp(val, "11a") == 0) {
-				phymode = 1;
-			} else if (strcmp (val, "11g") == 0) {
-				phymode = 3;
+				phymode = 1; /* IEEE80211_MODE_11A */
+			} else if (strcmp(val, "11g") == 0) {
+				phymode = 3; /* IEEE80211_MODE_11G */
+			} else if (strcmp(val, "11b") == 0) {
+				phymode = 2; /* IEEE80211_MODE_11B */
+			} else if (strcmp(val, "11n") == 0 ||
+				   strcmp(val, "11nl") == 0 ||
+				   strcmp(val, "11nl(nabg)") == 0) {
+				phymode = 22; /* IEEE80211_MODE_11AGN */
+			} else if (strcmp(val, "11ng") == 0) {
+				phymode = 13; /* IEEE80211_MODE_11NG_HT40 */
+			} else if (strcmp(val, "AC") == 0 ||
+				   strcasecmp(val, "11AC") == 0) {
+				phymode = 19; /* IEEE80211_MODE_11AC_VHT80 */
+			} else if (strcmp(val, "11na") == 0 ||
+				   strcasecmp(val, "11an") == 0) {
+				phymode = 14; /* IEEE80211_MODE_11NA_HT40 */
+			} else if (strcmp(val, "11ax") == 0) {
+				phymode = 0; /* IEEE80211_MODE_AUTO */
 			} else {
 				sigma_dut_print(dut, DUT_MSG_DEBUG,
 						"Ignoring mode change for mode: %s",
