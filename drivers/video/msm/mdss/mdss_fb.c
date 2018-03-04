@@ -83,7 +83,7 @@
 					out = (((v) - 2) * 255 / 250);\
 					} while (0)
 
-bool backlight_dimmer = false;
+bool backlight_dimmer = true;
 module_param(backlight_dimmer, bool, 0755);
 bool backlight_low_dimmer = false;
 module_param(backlight_low_dimmer, bool, 0755);
