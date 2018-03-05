@@ -124,7 +124,8 @@ static const struct snd_soc_dapm_widget tas2557_dapm_widgets[] = {
 	SND_SOC_DAPM_SUPPLY("PLL", SND_SOC_NOPM, 0, 0, NULL, 0),
 	SND_SOC_DAPM_SUPPLY("NDivider", SND_SOC_NOPM, 0, 0, NULL, 0),
 
-	SND_SOC_DAPM_OUTPUT("OUT")
+	SND_SOC_DAPM_OUTPUT("OUT"),
+	SND_SOC_DAPM_INPUT("IN")
 };
 
 static const struct snd_soc_dapm_route tas2557_audio_map[] = {
@@ -135,6 +136,7 @@ static const struct snd_soc_dapm_route tas2557_audio_map[] = {
 	{"OUT", NULL, "ClassD"},
 	{"DAC", NULL, "PLL"},
 	{"DAC", NULL, "NDivider"},
+	{"ASI1 Capture", NULL, "IN"},
 };
 
 static int tas2557_startup(struct snd_pcm_substream *substream,
@@ -733,6 +735,13 @@ static struct snd_soc_dai_driver tas2557_dai_driver[] = {
 		.id = 0,
 		.playback = {
 				.stream_name = "ASI1 Playback",
+				.channels_min = 2,
+				.channels_max = 2,
+				.rates = SNDRV_PCM_RATE_8000_192000,
+				.formats = TAS2557_FORMATS,
+			},
+		.capture = {
+				.stream_name = "ASI1 Capture",
 				.channels_min = 2,
 				.channels_max = 2,
 				.rates = SNDRV_PCM_RATE_8000_192000,
