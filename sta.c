@@ -5839,6 +5839,30 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 						"Enabling HE config with WEP/TKIP failed");
 			}
 		}
+
+		/* Defaults in case of DUT */
+		if (type && strcasecmp(type, "DUT") == 0) {
+			/* set nss to 2 */
+			snprintf(buf, sizeof(buf), "iwpriv %s nss 2", intf);
+			if (system(buf) != 0) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"iwpriv %s nss 2 failed", intf);
+			}
+
+#ifdef NL80211_SUPPORT
+			/* Set HE_MCS to 0-7 */
+			if (sta_set_he_mcs(dut, intf, HE_80_MCS0_7)) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"Setting of MCS failed");
+			}
+#endif /* NL80211_SUPPORT */
+
+			/* Disable WEP/TKIP with HE capability in DUT */
+			if (sta_set_heconfig_and_wep_tkip(dut, intf, 0)) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"Enabling HE config with WEP/TKIP failed");
+			}
+		}
 	}
 }
 
