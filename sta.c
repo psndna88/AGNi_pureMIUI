@@ -3284,7 +3284,10 @@ static int iwpriv_sta_set_ampdu(struct sigma_dut *dut, const char *intf,
 				int ampdu)
 {
 	char buf[60];
+	int maxaggregation = 63;
 
+	if (ampdu)
+		ampdu = maxaggregation;
 	snprintf(buf, sizeof(buf), "iwpriv %s ampdu %d", intf, ampdu);
 	if (system(buf) != 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR, "iwpriv ampdu failed");
@@ -5815,6 +5818,9 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Enable sending of ADDBA in sta_reset_default_wcn failed");
 		}
+
+		/* Enable AMPDU by default */
+		iwpriv_sta_set_ampdu(dut, intf, 1);
 
 		/* Set nss to 1 and MCS 0-7 in case of testbed */
 		if (type && strcasecmp(type, "Testbed") == 0) {
