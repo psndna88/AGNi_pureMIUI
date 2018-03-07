@@ -4372,7 +4372,8 @@ static int sta_set_addba_reject(struct sigma_dut *dut, const char *intf,
 }
 
 
-static int nlvendor_disable_addba(struct sigma_dut *dut, const char *intf)
+static int nlvendor_config_send_addba(struct sigma_dut *dut, const char *intf,
+				      int enable)
 {
 #ifdef NL80211_SUPPORT
 	struct nl_msg *msg;
@@ -4397,7 +4398,7 @@ static int nlvendor_disable_addba(struct sigma_dut *dut, const char *intf)
 	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
 	    nla_put_u8(msg,
 		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_SEND_ADDBA_REQ,
-		       0)) {
+		       enable)) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"%s: err in adding vendor_cmd and vendor_data",
 				__func__);
@@ -4499,7 +4500,7 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 
 		if (ampdu == 0) {
 			/* Disable sending of addba using nl vendor command */
-			ret = nlvendor_disable_addba(dut, intf);
+			ret = nlvendor_config_send_addba(dut, intf, 0);
 			if (ret) {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
 						"Failed to disable addba, ret:%d",
@@ -5807,6 +5808,12 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 		if (nlvendor_sta_set_addba_reject(dut, intf, 0)) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Disable of addba_reject in sta_reset_default_wcn failed");
+		}
+
+		/* Enable sending of ADDBA by default */
+		if (nlvendor_config_send_addba(dut, intf, 1)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Enable sending of ADDBA in sta_reset_default_wcn failed");
 		}
 
 		/* Set nss to 1 and MCS 0-7 in case of testbed */
