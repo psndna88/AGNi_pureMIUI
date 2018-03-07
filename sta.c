@@ -5797,6 +5797,18 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 		}
 #endif /* NL80211_SUPPORT */
 
+		/* Enable WMM by default */
+		if (wcn_sta_set_wmm(dut, intf, "on")) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Enable of WMM in sta_reset_default_wcn failed");
+		}
+
+		/* Disable ADDBA_REJECT by default */
+		if (nlvendor_sta_set_addba_reject(dut, intf, 0)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Disable of addba_reject in sta_reset_default_wcn failed");
+		}
+
 		/* Set nss to 1 and MCS 0-7 in case of testbed */
 		if (type && strcasecmp(type, "Testbed") == 0) {
 #ifdef NL80211_SUPPORT
