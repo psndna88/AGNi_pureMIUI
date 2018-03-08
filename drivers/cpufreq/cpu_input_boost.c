@@ -250,13 +250,9 @@ static int do_cpu_boost(struct notifier_block *nb,
 	bool initd = !is_initd(current->comm);
 	bool ret;
 
-	if (action != CPUFREQ_ADJUST)
+	if (action != CPUFREQ_ADJUST || initd)
 		return NOTIFY_OK;
 
-	if (initd) {
-		pr_err("I'm eating, fuck off!");
-		return NOTIFY_OK;
-	}
 	state = get_boost_state(b);
 
 	/*
