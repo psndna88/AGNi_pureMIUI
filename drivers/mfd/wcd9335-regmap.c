@@ -297,7 +297,6 @@ static const struct reg_default wcd9335_2_0_defaults[] = {
 	{ WCD9335_SPLINE_SRC2_STATUS                    , 0x00 },
 	{ WCD9335_SPLINE_SRC3_STATUS                    , 0x00 },
 	{ WCD9335_CDC_PROX_DETECT_PROX_CTL_REPEAT_PAT   , 0x00 },
-	{ WCD9335_DUMMY_REG                             , 0x00 },
 };
 
 static const struct reg_default wcd9335_defaults[] = {

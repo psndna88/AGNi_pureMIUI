@@ -680,7 +680,6 @@ enum {
 #define WCD9335_SE_LO_LO4_CTRL                           0x06fb
 #define WCD9335_SE_LO_LO3_STATUS                         0x06fe
 #define WCD9335_SE_LO_LO4_STATUS                         0x06ff
-#define WCD9335_DUMMY_REG                                0x81FF
 
 /* Page-10 Registers */
 #define WCD9335_PAGE10_PAGE_REGISTER                     0x0a00
