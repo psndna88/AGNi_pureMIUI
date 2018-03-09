@@ -1630,7 +1630,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		if (res < 0)
 			result = "BootstrapResult,OK,AuthResult,OK,ConfResult,Timeout";
 		else
-			result = "BootstrapResult,OK,AuthResult,OK,ConfResult,Errorsent";
+			result = "BootstrapResult,OK,AuthResult,OK,ConfResult,Errorsent,LastFrameReceived,ConfigurationRequest";
 		send_resp(dut, conn, SIGMA_COMPLETE, result);
 		goto out;
 	}
