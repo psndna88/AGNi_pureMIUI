@@ -1416,10 +1416,20 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		}
 
 		if (strcasecmp(frametype, "AuthenticationConfirm") == 0) {
-			if (dpp_wait_rx(dut, ctrl, 2, -1) < 0)
-				result = "BootstrapResult,OK,AuthResult,Timeout";
-			else
-				result = "BootstrapResult,OK,AuthResult,Errorsent";
+			if (strcasecmp(auth_role, "Initiator") == 0) {
+				if (dpp_wait_tx_status(dut, ctrl, 2) < 0)
+					result = "BootstrapResult,OK,AuthResult,Timeout";
+				else if (dpp_wait_rx_conf_req(dut, ctrl, 5) <
+					 0)
+					result = "BootstrapResult,OK,AuthResult,Errorsent,LastFrameReceived,AuthenticationResponse";
+				else
+					result = "BootstrapResult,OK,AuthResult,OK,LastFrameReceived,ConfigurationRequest";
+			} else {
+				if (dpp_wait_rx(dut, ctrl, 2, -1) < 0)
+					result = "BootstrapResult,OK,AuthResult,Timeout";
+				else
+					result = "BootstrapResult,OK,AuthResult,Errorsent,LastFrameReceived,AuthenticationConfirm";
+			}
 		}
 
 		if (strcasecmp(frametype, "ConfigurationRequest") == 0) {
