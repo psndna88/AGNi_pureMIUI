@@ -1497,6 +1497,10 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 
 		if (dpp_wait_rx(dut, ctrl, 1, 5) < 0)
 			result = "BootstrapResult,OK,AuthResult,Errorsent,LastFrameReceived,None";
+		else if	(get_wpa_cli_events(dut, ctrl, auth_events,
+					    buf, sizeof(buf)) >= 0 &&
+			 strstr(buf, "DPP-RESPONSE-PENDING") != NULL)
+			result = "BootstrapResult,OK,AuthResult,Errorsent,LastFrameReceived,AuthenticationResponseWithStatusPending";
 		else
 			result = "BootstrapResult,OK,AuthResult,Errorsent,LastFrameReceived,AuthenticationResponse";
 		send_resp(dut, conn, SIGMA_COMPLETE, result);
