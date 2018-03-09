@@ -4638,7 +4638,7 @@ unsigned long nr_iowait(void)
 	return sum;
 }
 
-#ifdef CONFIG_INTELLI_HOTPLUG
+#if defined(CONFIG_INTELLI_HOTPLUG) || defined(CONFIG_LAZYPLUG)
 unsigned long avg_nr_running(void)
 {
 	unsigned long i, sum = 0;
