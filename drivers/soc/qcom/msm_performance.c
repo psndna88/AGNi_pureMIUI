@@ -355,9 +355,6 @@ static int set_cpu_min_freq(const char *buf, const struct kernel_param *kp)
 	int ret;
 	const char *reset = "0:0 4:0";
 
-	if (touchboost == 0)
-		cp = reset;
-
 	while ((cp = strpbrk(cp + 1, " :")))
 		ntokens++;
 
