@@ -327,3 +327,11 @@ config BOEFFLA_WL_BLOCKER
 	bool "Boeffla generic wakelock blocker driver"
 	depends on PM
 	default n
+
+config QUICK_WAKEUP
+	bool "Quick wakeup"
+	depends on SUSPEND
+	default y
+	---help---
+	  Allow kernel driver to do periodic jobs without resuming the full system
+	  This option can increase battery life on android powered smartphone
