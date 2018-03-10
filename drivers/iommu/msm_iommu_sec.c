@@ -310,8 +310,8 @@ irqreturn_t msm_iommu_secure_fault_handler_v2(int irq, void *dev_id)
 					ctx_drvdata->num, regs);
 
 	if (tmp) {
-		pr_err("%s: Couldn't dump fault registers (%d) %s, ctx: %d\n",
-			__func__, tmp, drvdata->name, ctx_drvdata->num);
+//		pr_err("%s: Couldn't dump fault registers (%d) %s, ctx: %d\n",
+//			__func__, tmp, drvdata->name, ctx_drvdata->num);
 		goto clock_off;
 	} else {
 		struct msm_iommu_context_reg ctx_regs[MAX_DUMP_REGS];
