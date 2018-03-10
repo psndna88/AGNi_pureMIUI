@@ -1,5 +1,7 @@
 /*
  * Copyright (C) 2014-2017, Sultanxda <sultanxda@gmail.com>
+ *           (C) 2017, Joe Maples <joe@frap129.org>
+ *           (C) 2017, Wang Han <416810799@qq.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -22,11 +24,11 @@
 #define CPU_MASK(cpu) (1U << (cpu))
 
 /*
- * For MSM8996 (big.LITTLE). CPU0 and CPU1 are LITTLE CPUs; CPU2 and CPU3 are
+ * For MSM8952 (big.LITTLE). CPU0-3 are LITTLE CPUs; CPU4-5 are
  * big CPUs.
  */
 #define LITTLE_CPU_MASK (CPU_MASK(0) | CPU_MASK(1) | CPU_MASK(2) | CPU_MASK(3))
-#define BIG_CPU_MASK    (CPU_MASK(4) | CPU_MASK(5))
+#define BIG_CPU_MASK (CPU_MASK(4) | CPU_MASK(5))
 
 /* Available bits for boost_policy state */
 #define DRIVER_ENABLED        (1U << 0)
@@ -34,9 +36,6 @@
 #define WAKE_BOOST            (1U << 2)
 #define INPUT_BOOST           (1U << 3)
 #define INPUT_REBOOST         (1U << 4)
-
-/* The duration in milliseconds for the wake boost */
-#define FB_BOOST_MS (2000)
 
 /*
  * "fb" = "framebuffer". This is the boost that occurs on framebuffer unblank,
@@ -46,6 +45,7 @@
 struct fb_policy {
 	struct work_struct boost_work;
 	struct delayed_work unboost_work;
+	uint32_t fb_duration_ms;
 };
 
 /*
@@ -82,6 +82,7 @@ struct boost_policy {
 	spinlock_t lock;
 	struct fb_policy fb;
 	struct ib_config ib;
+	struct workqueue_struct *wq;
 	uint32_t state;
 };
 
@@ -109,6 +110,10 @@ static bool validate_cpu_freq(unsigned int cpu, uint32_t *freq);
 	return false;
 } */
 
+static bool is_initd(const char* p)
+{
+	return strncmp(p, "init", sizeof("init"));
+}
 static void ib_boost_main(struct work_struct *work)
 {
 	struct boost_policy *b = boost_policy_g;
@@ -204,7 +209,7 @@ static void ib_reboost_main(struct work_struct *work)
 
 	/* Only keep CPU0 boosted (more efficient) */
 	if (cancel_delayed_work_sync(&pcpu->unboost_work))
-		queue_delayed_work(system_power_efficient_wq, &pcpu->unboost_work,
+		queue_delayed_work(b->wq, &pcpu->unboost_work,
 			msecs_to_jiffies(ib->adj_duration_ms));
 
 	/* Clear reboost bit */
@@ -222,8 +227,8 @@ static void fb_boost_main(struct work_struct *work)
 	/* Immediately boost the online CPUs */
 	update_online_cpu_policy();
 
-	queue_delayed_work(system_power_efficient_wq, &fb->unboost_work,
-				msecs_to_jiffies(FB_BOOST_MS));
+	queue_delayed_work(b->wq, &fb->unboost_work,
+				msecs_to_jiffies(fb->fb_duration_ms));
 }
 
 static void fb_unboost_main(struct work_struct *work)
@@ -241,19 +246,30 @@ static int do_cpu_boost(struct notifier_block *nb,
 	struct boost_policy *b = boost_policy_g;
 	struct ib_config *ib = &b->ib;
 	uint32_t boost_freq, state;
+	unsigned int min_freq_boosted;
+	bool initd = !is_initd(current->comm);
 	bool ret;
 
 	if (action != CPUFREQ_ADJUST)
 		return NOTIFY_OK;
 
+	if (initd) {
+		pr_err("I'm eating, fuck off!");
+		return NOTIFY_OK;
+	}
 	state = get_boost_state(b);
+
+	/*
+	* Save policy->min that was set by user/system before boosting
+	*/
+	min_freq_boosted = policy->min;
 
 	/*
 	 * Don't do anything when the driver is disabled, unless there are
 	 * still CPUs that need to be unboosted.
 	 */
 	if (!(state & DRIVER_ENABLED) &&
-		policy->min == policy->cpuinfo.min_freq)
+		min_freq_boosted == policy->cpuinfo.min_freq)
 		return NOTIFY_OK;
 
 	/* Boost CPU to max frequency for wake boost */
@@ -278,7 +294,11 @@ static int do_cpu_boost(struct notifier_block *nb,
 			set_boost_freq(b, policy->cpu, boost_freq);
 		policy->min = min(policy->max, boost_freq);
 	} else {
-		policy->min = policy->cpuinfo.min_freq;
+		/*
+		* Set policy->min same as we had it before boosting.
+		* Don't drop it to cpuinfo.min.
+		*/
+		policy->min = min_freq_boosted;
 	}
 
 	return NOTIFY_OK;
@@ -325,7 +345,7 @@ static int fb_notifier_callback(struct notifier_block *nb,
 	if (state & WAKE_BOOST)
 		return NOTIFY_OK;
 
-	queue_work(system_power_efficient_wq, &fb->boost_work);
+	queue_work(b->wq, &fb->boost_work);
 
 	return NOTIFY_OK;
 }
@@ -353,12 +373,12 @@ static void cpu_ib_input_event(struct input_handle *handle, unsigned int type,
 	/* Continuous boosting (from constant user input) */
 	if (state & INPUT_BOOST) {
 		set_boost_bit(b, INPUT_REBOOST);
-		queue_work(system_power_efficient_wq, &ib->reboost_work);
+		queue_work(b->wq, &ib->reboost_work);
 		return;
 	}
 
 	set_boost_bit(b, INPUT_BOOST);
-	queue_work(system_power_efficient_wq, &ib->boost_work);
+	queue_work(b->wq, &ib->boost_work);
 }
 
 static int cpu_ib_input_connect(struct input_handler *handler,
@@ -407,7 +427,8 @@ static const struct input_device_id cpu_ib_ids[] = {
 		.evbit = { BIT_MASK(EV_ABS) },
 		.absbit = { [BIT_WORD(ABS_MT_POSITION_X)] =
 			BIT_MASK(ABS_MT_POSITION_X) |
-			BIT_MASK(ABS_MT_POSITION_Y) },
+			BIT_MASK(ABS_MT_POSITION_Y) |
+			BIT_MASK(ABS_MT_TRACKING_ID) },
 	},
 	/* touchpad */
 	{
@@ -448,7 +469,7 @@ static void ib_boost_cpus(struct boost_policy *b)
 			cpufreq_update_policy(cpu);
 
 		pcpu = per_cpu_ptr(ib->boost_info, cpu);
-		queue_delayed_work(system_power_efficient_wq, &pcpu->unboost_work,
+		queue_delayed_work(b->wq, &pcpu->unboost_work,
 				msecs_to_jiffies(ib->adj_duration_ms));
 	}
 }
@@ -612,9 +633,6 @@ static ssize_t ib_freqs_write(struct device *dev,
 	if (ret != 2)
 		return -EINVAL;
 
-	if (!freq[0] || !freq[1])
-		return -EINVAL;
-
 	/* freq[0] is assigned to LITTLE cluster, freq[1] to big cluster */
 	spin_lock(&b->lock);
 	ib->freq[0] = freq[0];
@@ -640,6 +658,26 @@ static ssize_t ib_duration_ms_write(struct device *dev,
 		return -EINVAL;
 
 	ib->duration_ms = data;
+
+	return size;
+}
+
+static ssize_t fb_duration_ms_write(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	struct boost_policy *b = boost_policy_g;
+	struct fb_policy *fb = &b->fb;
+	uint32_t data;
+	int ret;
+
+	ret = kstrtou32(buf, 10, &data);
+	if (ret)
+		return -EINVAL;
+
+	if (!data)
+		return -EINVAL;
+
+	fb->fb_duration_ms = data;
 
 	return size;
 }
@@ -677,17 +715,29 @@ static ssize_t ib_duration_ms_read(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%u\n", ib->duration_ms);
 }
 
+static ssize_t fb_duration_ms_read(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct boost_policy *b = boost_policy_g;
+	struct fb_policy *fb = &b->fb;
+
+	return snprintf(buf, PAGE_SIZE, "%u\n", fb->fb_duration_ms);
+}
+
 static DEVICE_ATTR(enabled, 0644,
 			enabled_read, enabled_write);
 static DEVICE_ATTR(ib_freqs, 0644,
 			ib_freqs_read, ib_freqs_write);
 static DEVICE_ATTR(ib_duration_ms, 0644,
 			ib_duration_ms_read, ib_duration_ms_write);
+static DEVICE_ATTR(fb_duration_ms, 0644,
+			fb_duration_ms_read, fb_duration_ms_write);
 
 static struct attribute *cpu_ib_attr[] = {
 	&dev_attr_enabled.attr,
 	&dev_attr_ib_freqs.attr,
 	&dev_attr_ib_duration_ms.attr,
+	&dev_attr_fb_duration_ms.attr,
 	NULL
 };
 
@@ -723,17 +773,38 @@ static struct boost_policy *alloc_boost_policy(void)
 	if (!b)
 		return NULL;
 
+	b->wq = alloc_workqueue("cpu_ib_wq", WQ_HIGHPRI, 0);
+	if (!b->wq) {
+		pr_err("Failed to allocate workqueue\n");
+		goto free_b;
+	}
+
 	b->ib.boost_info = alloc_percpu(typeof(*b->ib.boost_info));
 	if (!b->ib.boost_info) {
 		pr_err("Failed to allocate percpu definition\n");
-		goto free_b;
+		goto destroy_wq;
 	}
 
 	return b;
 
+destroy_wq:
+	destroy_workqueue(b->wq);
 free_b:
 	kfree(b);
 	return NULL;
+}
+
+static void set_default_value(void)
+{
+	struct boost_policy *b = boost_policy_g;
+	struct ib_config *ib = &b->ib;
+	struct fb_policy *fb = &b->fb;
+
+	set_boost_bit(b, DRIVER_ENABLED);
+	ib->freq[0] = 960000;
+	ib->freq[1] = 384000;
+	ib->duration_ms = 40;
+	fb->fb_duration_ms = 1000;
 }
 
 static int __init cpu_ib_init(void)
@@ -778,6 +849,9 @@ static int __init cpu_ib_init(void)
 	cpufreq_register_notifier(&do_cpu_boost_nb, CPUFREQ_POLICY_NOTIFIER);
 
 	fb_register_client(&fb_notifier_callback_nb);
+
+	/* Set default device attributes values */
+	set_default_value();
 
 	return 0;
 
