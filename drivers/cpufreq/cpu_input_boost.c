@@ -158,13 +158,9 @@ static void ib_boost_main(struct work_struct *work)
 		ib->adj_duration_ms /= 100;
 
 		/*
-		 * Only allow two CPUs to be boosted at any given time. The 2nd
-		 * CPU that is boosted is one that is running at a freq greater
-		 * than its min freq (not idling) but lower than its boost
-		 * freq.
+		 * Allow all CPUs to be boosted at any given time.
 		 */
-		if (freq < boost_freq && ib->cpus_to_boost == CPU_MASK(0))
-			ib->cpus_to_boost |= CPU_MASK(cpu);
+		ib->cpus_to_boost |= CPU_MASK(cpu);
 	}
 
 	/* Make sure boosts don't become too long or too short */
