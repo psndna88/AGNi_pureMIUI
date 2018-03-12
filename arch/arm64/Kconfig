@@ -254,6 +254,8 @@ config ARCH_MSM
 	select DEVFREQ_GOV_MSM_BW_HWMON
 	select DEVFREQ_GOV_MSM_CACHE_HWMON
 	select DEVFREQ_SIMPLE_DEV
+	select ARM_MEMLAT_MON
+	select DEVFREQ_GOV_MEMLAT
 	select ARCH_SUPPORTS_MSI
 	help
 	  This enables support for the ARMv8 based Qualcomm chipsets.
