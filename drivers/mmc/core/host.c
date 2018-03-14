@@ -33,6 +33,8 @@
 #include "core.h"
 #include "host.h"
 
+#define cls_dev_to_mmc_host(d)	container_of(d, struct mmc_host, class_dev)
+
 static void mmc_host_classdev_release(struct device *dev)
 {
 	struct mmc_host *host = cls_dev_to_mmc_host(dev);
@@ -1036,7 +1038,7 @@ int mmc_add_host(struct mmc_host *host)
 	host->clk_scaling.up_threshold = 35;
 	host->clk_scaling.down_threshold = 5;
 	host->clk_scaling.polling_delay_ms = 100;
-	host->clk_scaling.scale_down_in_low_wr_load = true;
+	host->clk_scaling.scale_down_in_low_wr_load = false;
 
 	err = sysfs_create_group(&host->class_dev.kobj, &clk_scaling_attr_grp);
 	if (err)
@@ -1047,8 +1049,6 @@ int mmc_add_host(struct mmc_host *host)
 	if (err)
 		pr_err("%s: failed to create sysfs group with err %d\n",
 							 __func__, err);
-
-	mmc_latency_hist_sysfs_init(host);
 
 	mmc_start_host(host);
 	if (!(host->pm_flags & MMC_PM_IGNORE_PM_NOTIFY))
@@ -1101,7 +1101,6 @@ void mmc_free_host(struct mmc_host *host)
 	idr_remove(&mmc_host_idr, host->index);
 	spin_unlock(&mmc_host_lock);
 	wake_lock_destroy(&host->detect_wake_lock);
-	mmc_latency_hist_sysfs_exit(host);
 	kfree(host->wlock_name);
 	put_device(&host->class_dev);
 }

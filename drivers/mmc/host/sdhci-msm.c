@@ -46,7 +46,7 @@
 #include "cmdq_hci.h"
 
 #ifdef CONFIG_MACH_XIAOMI_KENZO
-extern int sd_slot_plugoutt;
+extern int sd_slot_plugout;
 struct sdhci_msm_reg_data *sd_vdd_vreg = NULL;
 #endif
 
@@ -1319,12 +1319,6 @@ static int sdhci_msm_dt_parse_vreg_info(struct device *dev,
 #endif
 
 	snprintf(prop_name, MAX_PROP_SIZE,
-			"qcom,%s-is-sd-vdd", vreg_name);
-	if (of_get_property(np, prop_name, NULL))
-		vreg->is_sd_vdd = true;
-
-
-	snprintf(prop_name, MAX_PROP_SIZE,
 			"qcom,%s-lpm-sup", vreg_name);
 	if (of_get_property(np, prop_name, NULL))
 		vreg->lpm_sup = true;
@@ -1357,6 +1351,7 @@ static int sdhci_msm_dt_parse_vreg_info(struct device *dev,
 	if (vreg->is_sd_vdd == true)
 		sd_vdd_vreg = vreg;
 #endif
+
 	dev_dbg(dev, "%s: %s %s vol=[%d %d]uV, curr=[%d %d]uA\n",
 		vreg->name, vreg->is_always_on ? "always_on," : "",
 		vreg->lpm_sup ? "lpm_sup," : "", vreg->low_vol_level,
@@ -2142,7 +2137,7 @@ static int sdhci_msm_vreg_enable(struct sdhci_msm_reg_data *vreg)
 	int ret = 0;
 
 #ifdef CONFIG_MACH_XIAOMI_KENZO
-	if ((vreg != NULL) && (vreg->is_sd_vdd == 1) && (sd_slot_plugoutt == 1))
+	if ((vreg != NULL) && (vreg->is_sd_vdd == true) && sd_slot_plugout)
 		return ret;
 #endif
 
@@ -2207,7 +2202,7 @@ out:
 int sdhci_msm_disable_sd_vdd(void)
 {
 	int ret = 0;
-	if ((sd_vdd_vreg != NULL) && (sd_vdd_vreg->is_sd_vdd == 1)) {
+	if ((sd_vdd_vreg != NULL) && (sd_vdd_vreg->is_sd_vdd == true)) {
 		pr_err("sdhci_msm_disable_sd_vdd \n");
 		ret = sdhci_msm_vreg_disable(sd_vdd_vreg);
 	}
@@ -2778,6 +2773,8 @@ static void sdhci_msm_disable_controller_clock(struct sdhci_host *host)
 			clk_disable_unprepare(msm_host->clk);
 		if (!IS_ERR(msm_host->pclk))
 			clk_disable_unprepare(msm_host->pclk);
+		if (!IS_ERR(msm_host->ice_clk))
+			clk_disable_unprepare(msm_host->ice_clk);
 		sdhci_msm_bus_voting(host, 0);
 		atomic_set(&msm_host->controller_clock, 0);
 		pr_debug("%s: %s: disabled controller clock\n",
@@ -4237,7 +4234,6 @@ static int sdhci_msm_suspend(struct device *dev)
 	struct sdhci_host *host = dev_get_drvdata(dev);
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct sdhci_msm_host *msm_host = pltfm_host->priv;
-	int ret = 0;
 
 	if (gpio_is_valid(msm_host->pdata->status_gpio))
 		mmc_gpio_free_cd(msm_host->mmc);
@@ -4248,10 +4244,10 @@ static int sdhci_msm_suspend(struct device *dev)
 		goto out;
 	}
 
-	return sdhci_msm_runtime_suspend(dev);
+	sdhci_msm_runtime_suspend(dev);
 out:
 	sdhci_msm_disable_controller_clock(host);
-	return ret;
+	return 0;
 }
 
 static int sdhci_msm_resume(struct device *dev)
@@ -4270,8 +4266,8 @@ static int sdhci_msm_resume(struct device *dev)
 	}
 
 #ifdef CONFIG_MACH_XIAOMI_KENZO
-	if ((sd_slot_plugoutt == 1) && (mmc_hostname(host->mmc) != NULL) && (!strcmp(mmc_hostname(host->mmc), "mmc1")))
-		sd_slot_plugoutt = gpio_get_value_cansleep(msm_host->pdata->status_gpio);
+	if (sd_slot_plugout && (mmc_hostname(host->mmc) != NULL) && (!strcmp(mmc_hostname(host->mmc), "mmc1")))
+		sd_slot_plugout = gpio_get_value_cansleep(msm_host->pdata->status_gpio);
 #endif
 
 	if (pm_runtime_suspended(dev)) {

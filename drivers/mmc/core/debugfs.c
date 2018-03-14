@@ -251,33 +251,6 @@ out:
 DEFINE_SIMPLE_ATTRIBUTE(mmc_max_clock_fops, mmc_max_clock_get,
 		mmc_max_clock_set, "%llu\n");
 
-static int mmc_err_state_get(void *data, u64 *val)
-{
-	struct mmc_host *host = data;
-
-	if (!host)
-		return -EINVAL;
-
-	*val = host->err_occurred ? 1 : 0;
-
-	return 0;
-}
-
-static int mmc_err_state_clear(void *data, u64 val)
-{
-	struct mmc_host *host = data;
-
-	if (!host)
-		return -EINVAL;
-
-	host->err_occurred = false;
-
-	return 0;
-}
-
-DEFINE_SIMPLE_ATTRIBUTE(mmc_err_state, mmc_err_state_get,
-		mmc_err_state_clear, "%llu\n");
-
 void mmc_add_host_debugfs(struct mmc_host *host)
 {
 	struct dentry *root;
@@ -302,10 +275,6 @@ void mmc_add_host_debugfs(struct mmc_host *host)
 
 	if (!debugfs_create_file("max_clock", S_IRUSR | S_IWUSR, root, host,
 		&mmc_max_clock_fops))
-		goto err_node;
-
-	if (!debugfs_create_file("err_state", S_IRUSR | S_IWUSR, root, host,
-		&mmc_err_state))
 		goto err_node;
 
 #ifdef CONFIG_MMC_CLKGATE
@@ -474,10 +443,9 @@ static ssize_t mmc_wr_pack_stats_read(struct file *filp, char __user *ubuf,
 {
 	struct mmc_card *card = filp->private_data;
 	struct mmc_wr_pack_stats *pack_stats;
-	int i, ret = 0;
+	int i;
 	int max_num_of_packed_reqs = 0;
-	char *temp_buf, *temp_ubuf;
-	size_t tubuf_cnt = 0;
+	char *temp_buf;
 
 	if (!card)
 		return cnt;
@@ -503,24 +471,15 @@ static ssize_t mmc_wr_pack_stats_read(struct file *filp, char __user *ubuf,
 
 	max_num_of_packed_reqs = card->ext_csd.max_packed_writes;
 
-	if (cnt <= (strlen_user(ubuf) + 1))
-		goto exit;
-
-	temp_buf = kzalloc(TEMP_BUF_SIZE, GFP_KERNEL);
+	temp_buf = kmalloc(TEMP_BUF_SIZE, GFP_KERNEL);
 	if (!temp_buf)
 		goto exit;
-
-	tubuf_cnt = cnt - strlen_user(ubuf) - 1;
-
-	temp_ubuf = kzalloc(tubuf_cnt, GFP_KERNEL);
-	if (!temp_ubuf)
-		goto cleanup;
 
 	spin_lock(&pack_stats->lock);
 
 	snprintf(temp_buf, TEMP_BUF_SIZE, "%s: write packing statistics:\n",
 		mmc_hostname(card->host));
-	strlcat(temp_ubuf, temp_buf, tubuf_cnt);
+	strlcat(ubuf, temp_buf, cnt);
 
 	for (i = 1 ; i <= max_num_of_packed_reqs ; ++i) {
 		if (pack_stats->packing_events[i]) {
@@ -528,63 +487,63 @@ static ssize_t mmc_wr_pack_stats_read(struct file *filp, char __user *ubuf,
 				 "%s: Packed %d reqs - %d times\n",
 				mmc_hostname(card->host), i,
 				pack_stats->packing_events[i]);
-			strlcat(temp_ubuf, temp_buf, tubuf_cnt);
+			strlcat(ubuf, temp_buf, cnt);
 		}
 	}
 
 	snprintf(temp_buf, TEMP_BUF_SIZE,
 		 "%s: stopped packing due to the following reasons:\n",
 		 mmc_hostname(card->host));
-	strlcat(temp_ubuf, temp_buf, tubuf_cnt);
+	strlcat(ubuf, temp_buf, cnt);
 
 	if (pack_stats->pack_stop_reason[EXCEEDS_SEGMENTS]) {
 		snprintf(temp_buf, TEMP_BUF_SIZE,
 			 "%s: %d times: exceed max num of segments\n",
 			 mmc_hostname(card->host),
 			 pack_stats->pack_stop_reason[EXCEEDS_SEGMENTS]);
-		strlcat(temp_ubuf, temp_buf, tubuf_cnt);
+		strlcat(ubuf, temp_buf, cnt);
 	}
 	if (pack_stats->pack_stop_reason[EXCEEDS_SECTORS]) {
 		snprintf(temp_buf, TEMP_BUF_SIZE,
 			 "%s: %d times: exceed max num of sectors\n",
 			mmc_hostname(card->host),
 			pack_stats->pack_stop_reason[EXCEEDS_SECTORS]);
-		strlcat(temp_ubuf, temp_buf, tubuf_cnt);
+		strlcat(ubuf, temp_buf, cnt);
 	}
 	if (pack_stats->pack_stop_reason[WRONG_DATA_DIR]) {
 		snprintf(temp_buf, TEMP_BUF_SIZE,
 			 "%s: %d times: wrong data direction\n",
 			mmc_hostname(card->host),
 			pack_stats->pack_stop_reason[WRONG_DATA_DIR]);
-		strlcat(temp_ubuf, temp_buf, tubuf_cnt);
+		strlcat(ubuf, temp_buf, cnt);
 	}
 	if (pack_stats->pack_stop_reason[FLUSH_OR_DISCARD]) {
 		snprintf(temp_buf, TEMP_BUF_SIZE,
 			 "%s: %d times: flush or discard\n",
 			mmc_hostname(card->host),
 			pack_stats->pack_stop_reason[FLUSH_OR_DISCARD]);
-		strlcat(temp_ubuf, temp_buf, tubuf_cnt);
+		strlcat(ubuf, temp_buf, cnt);
 	}
 	if (pack_stats->pack_stop_reason[EMPTY_QUEUE]) {
 		snprintf(temp_buf, TEMP_BUF_SIZE,
 			 "%s: %d times: empty queue\n",
 			mmc_hostname(card->host),
 			pack_stats->pack_stop_reason[EMPTY_QUEUE]);
-		strlcat(temp_ubuf, temp_buf, tubuf_cnt);
+		strlcat(ubuf, temp_buf, cnt);
 	}
 	if (pack_stats->pack_stop_reason[REL_WRITE]) {
 		snprintf(temp_buf, TEMP_BUF_SIZE,
 			 "%s: %d times: rel write\n",
 			mmc_hostname(card->host),
 			pack_stats->pack_stop_reason[REL_WRITE]);
-		strlcat(temp_ubuf, temp_buf, tubuf_cnt);
+		strlcat(ubuf, temp_buf, cnt);
 	}
 	if (pack_stats->pack_stop_reason[THRESHOLD]) {
 		snprintf(temp_buf, TEMP_BUF_SIZE,
 			 "%s: %d times: Threshold\n",
 			mmc_hostname(card->host),
 			pack_stats->pack_stop_reason[THRESHOLD]);
-		strlcat(temp_ubuf, temp_buf, tubuf_cnt);
+		strlcat(ubuf, temp_buf, cnt);
 	}
 
 	if (pack_stats->pack_stop_reason[LARGE_SEC_ALIGN]) {
@@ -592,36 +551,25 @@ static ssize_t mmc_wr_pack_stats_read(struct file *filp, char __user *ubuf,
 			 "%s: %d times: Large sector alignment\n",
 			mmc_hostname(card->host),
 			pack_stats->pack_stop_reason[LARGE_SEC_ALIGN]);
-		strlcat(temp_ubuf, temp_buf, tubuf_cnt);
+		strlcat(ubuf, temp_buf, cnt);
 	}
 	if (pack_stats->pack_stop_reason[RANDOM]) {
 		snprintf(temp_buf, TEMP_BUF_SIZE,
 			 "%s: %d times: random request\n",
 			mmc_hostname(card->host),
 			pack_stats->pack_stop_reason[RANDOM]);
-		strlcat(temp_ubuf, temp_buf, tubuf_cnt);
+		strlcat(ubuf, temp_buf, cnt);
 	}
 	if (pack_stats->pack_stop_reason[FUA]) {
 		snprintf(temp_buf, TEMP_BUF_SIZE,
 			 "%s: %d times: fua request\n",
 			mmc_hostname(card->host),
 			pack_stats->pack_stop_reason[FUA]);
-		strlcat(temp_ubuf, temp_buf, tubuf_cnt);
+		strlcat(ubuf, temp_buf, cnt);
 	}
-	if (strlen_user(ubuf) < cnt - strlen(temp_ubuf))
-		ret = copy_to_user((ubuf + strlen_user(ubuf)),
-				temp_ubuf, tubuf_cnt);
-	else
-		ret = -EFAULT;
-	if (ret)
-		pr_err("%s: %s: Copy to userspace failed: %s\n",
-				mmc_hostname(card->host), __func__, ubuf);
 
 	spin_unlock(&pack_stats->lock);
 
-	kfree(temp_ubuf);
-
-cleanup:
 	kfree(temp_buf);
 
 	pr_info("%s", ubuf);
