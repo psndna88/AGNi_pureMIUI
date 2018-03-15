@@ -139,8 +139,6 @@ static void ib_boost_main(struct work_struct *work)
 			continue;
 
 		freq = policy.cur;
-		if (freq == policy.min)
-			continue;
 
 		boost_freq = get_boost_freq(b, cpu);
 
