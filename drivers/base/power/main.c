@@ -420,7 +420,8 @@ static void dpm_wd_handler(unsigned long data)
 	dev_emerg(dev, "**** DPM device timeout ****\n");
 	show_stack(tsk, NULL);
 
-	BUG();
+//	BUG();
+	pr_info("dpm_wd_handler: Device driver timeout suspending or resuming.\n");
 }
 
 /**
