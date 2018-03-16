@@ -25,8 +25,6 @@
 #include <linux/module.h>
 #include <linux/kthread.h>
 
-static int touchboost = 0;
-
 static struct mutex managed_cpus_lock;
 
 /* Maximum number to clusters that this module will manage*/
@@ -83,7 +81,6 @@ static DEFINE_PER_CPU(struct cpu_status, cpu_stats);
 static unsigned int num_online_managed(struct cpumask *mask);
 static int init_cluster_control(void);
 static int rm_high_pwr_cost_cpus(struct cluster *cl);
-static int init_events_group(void);
 
 static DEFINE_PER_CPU(unsigned int, cpu_power_cost);
 
@@ -96,15 +93,6 @@ struct load_stats {
 	unsigned int cpu_load;
 };
 static DEFINE_PER_CPU(struct load_stats, cpu_load_stats);
-
-struct events {
-	spinlock_t cpu_hotplug_lock;
-	bool cpu_hotplug;
-	bool init_success;
-};
-static struct events events_group;
-static struct task_struct *events_notify_thread;
-
 #define LAST_UPDATE_TOL		USEC_PER_MSEC
 
 /* Bitmask to keep track of the workloads being detected */
@@ -140,29 +128,6 @@ static struct task_struct *notify_thread;
 #define LAST_LD_CHECK_TOL	(2 * USEC_PER_MSEC)
 
 /**************************sysfs start********************************/
-
-/* static int set_touchboost(const char *buf, const struct kernel_param *kp)
-{
-	int val;
-
-	if (sscanf(buf, "%d\n", &val) != 1)
-		return -EINVAL;
-
-	touchboost = val;
-
-	return 0;
-}
-
-static int get_touchboost(char *buf, const struct kernel_param *kp)
-{
-	return snprintf(buf, PAGE_SIZE, "%d", touchboost);
-}
-
-static const struct kernel_param_ops param_ops_touchboost = {
-	.set = set_touchboost,
-	.get = get_touchboost,
-};
-device_param_cb(touchboost, &param_ops_touchboost, NULL, 0644); */
 
 static int set_num_clusters(const char *buf, const struct kernel_param *kp)
 {
@@ -346,6 +311,7 @@ device_param_cb(managed_online_cpus, &param_ops_managed_online_cpus,
  */
 static int set_cpu_min_freq(const char *buf, const struct kernel_param *kp)
 {
+#if 0
 	int i, j, ntokens = 0;
 	unsigned int val, cpu;
 	const char *cp = buf;
@@ -406,6 +372,7 @@ static int set_cpu_min_freq(const char *buf, const struct kernel_param *kp)
 			cpumask_clear_cpu(j, limit_mask);
 	}
 	put_online_cpus();
+#endif
 
 	return 0;
 }
@@ -434,6 +401,7 @@ module_param_cb(cpu_min_freq, &param_ops_cpu_min_freq, NULL, 0644);
  */
 static int set_cpu_max_freq(const char *buf, const struct kernel_param *kp)
 {
+#if 0
 	int i, j, ntokens = 0;
 	unsigned int val, cpu;
 	const char *cp = buf;
@@ -484,6 +452,7 @@ static int set_cpu_max_freq(const char *buf, const struct kernel_param *kp)
 			cpumask_clear_cpu(j, limit_mask);
 	}
 	put_online_cpus();
+#endif
 
 	return 0;
 }
@@ -1125,25 +1094,6 @@ static struct attribute_group attr_group = {
 	.attrs = attrs,
 };
 
-/* CPU Hotplug */
-static struct kobject *events_kobj;
-
-static ssize_t show_cpu_hotplug(struct kobject *kobj,
-					struct kobj_attribute *attr, char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "\n");
-}
-static struct kobj_attribute cpu_hotplug_attr =
-__ATTR(cpu_hotplug, 0444, show_cpu_hotplug, NULL);
-
-static struct attribute *events_attrs[] = {
-	&cpu_hotplug_attr.attr,
-	NULL,
-};
-
-static struct attribute_group events_attr_group = {
-	.attrs = events_attrs,
-};
 /*******************************sysfs ends************************************/
 
 static unsigned int num_online_managed(struct cpumask *mask)
@@ -1242,54 +1192,6 @@ static int notify_userspace(void *data)
 			pr_debug("msm_perf: Notifying CPU mode:%u\n",
 								aggr_mode);
 		}
-	}
-
-	return 0;
-}
-
-static void hotplug_notify(int action)
-{
-	unsigned long flags;
-
-	if (!events_group.init_success)
-		return;
-
-	if ((action == CPU_ONLINE) || (action == CPU_DEAD)) {
-		spin_lock_irqsave(&(events_group.cpu_hotplug_lock), flags);
-		events_group.cpu_hotplug = true;
-		spin_unlock_irqrestore(&(events_group.cpu_hotplug_lock), flags);
-		wake_up_process(events_notify_thread);
-	}
-}
-
-static int events_notify_userspace(void *data)
-{
-	unsigned long flags;
-	bool notify_change;
-
-	while (1) {
-
-		set_current_state(TASK_INTERRUPTIBLE);
-		spin_lock_irqsave(&(events_group.cpu_hotplug_lock), flags);
-
-		if (!events_group.cpu_hotplug) {
-			spin_unlock_irqrestore(&(events_group.cpu_hotplug_lock),
-									flags);
-
-			schedule();
-			if (kthread_should_stop())
-				break;
-			spin_lock_irqsave(&(events_group.cpu_hotplug_lock),
-									flags);
-		}
-
-		set_current_state(TASK_RUNNING);
-		notify_change = events_group.cpu_hotplug;
-		events_group.cpu_hotplug = false;
-		spin_unlock_irqrestore(&(events_group.cpu_hotplug_lock), flags);
-
-		if (notify_change)
-			sysfs_notify(events_kobj, NULL, "cpu_hotplug");
 	}
 
 	return 0;
@@ -1745,8 +1647,6 @@ static int __ref msm_performance_cpu_callback(struct notifier_block *nfb,
 	unsigned int i;
 	struct cluster *i_cl = NULL;
 
-	hotplug_notify(action);
-
 	if (!clusters_inited)
 		return NOTIFY_OK;
 
@@ -1938,40 +1838,6 @@ error:
 	return ret;
 }
 
-static int init_events_group(void)
-{
-	int ret;
-	struct kobject *module_kobj;
-
-	module_kobj = kset_find_obj(module_kset, KBUILD_MODNAME);
-	if (!module_kobj) {
-		pr_err("msm_perf: Couldn't find module kobject\n");
-		return -ENOENT;
-	}
-
-	events_kobj = kobject_create_and_add("events", module_kobj);
-	if (!events_kobj) {
-		pr_err("msm_perf: Failed to add events_kobj\n");
-		return -ENOMEM;
-	}
-
-	ret = sysfs_create_group(events_kobj, &events_attr_group);
-	if (ret) {
-		pr_err("msm_perf: Failed to create sysfs\n");
-		return ret;
-	}
-
-	spin_lock_init(&(events_group.cpu_hotplug_lock));
-	events_notify_thread = kthread_run(events_notify_userspace,
-					NULL, "msm_perf:events_notify");
-	if (IS_ERR(events_notify_thread))
-		return PTR_ERR(events_notify_thread);
-
-	events_group.init_success = true;
-
-	return 0;
-}
-
 static int __init msm_performance_init(void)
 {
 	unsigned int cpu;
@@ -1983,8 +1849,6 @@ static int __init msm_performance_init(void)
 		per_cpu(cpu_stats, cpu).max = UINT_MAX;
 
 	register_cpu_notifier(&msm_performance_cpu_notifier);
-
-	init_events_group();
 
 	return 0;
 }
