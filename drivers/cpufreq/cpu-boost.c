@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
- * Copyright (c) 2013-2016, Pranav Vashi <neobuddy89@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -26,9 +25,7 @@
 #include <linux/time.h>
 #include <linux/sched.h>
 #include <linux/sched/rt.h>
-#ifdef CONFIG_STATE_NOTIFIER
-#include <linux/state_notifier.h>
-#endif
+#include "../../kernel/sched/sched.h"
 
 struct cpu_sync {
 	int cpu;
@@ -38,26 +35,16 @@ struct cpu_sync {
 
 static DEFINE_PER_CPU(struct cpu_sync, sync_info);
 
-#ifdef CONFIG_STATE_NOTIFIER
-static struct notifier_block notif;
-#endif
-
-static bool input_boost_enabled = false;
-module_param(input_boost_enabled, bool, 0644);
+static unsigned int input_boost_enabled = 0;
+module_param(input_boost_enabled, uint, 0644);
 
 static unsigned int input_boost_ms = 40;
 module_param(input_boost_ms, uint, 0644);
 
-static bool sched_boost_on_input = true;
+static bool sched_boost_on_input = false;
 module_param(sched_boost_on_input, bool, 0644);
 
 static bool sched_boost_active;
-
-static bool hotplug_boost;
-module_param(hotplug_boost, bool, 0644);
-
-static bool wakeup_boost;
-module_param(wakeup_boost, bool, 0644);
 
 static struct delayed_work input_boost_rem;
 static u64 last_input_time;
@@ -66,15 +53,11 @@ static struct kthread_work input_boost_work;
 static struct kthread_worker cpu_boost_worker;
 static struct task_struct *cpu_boost_worker_thread;
 
-static unsigned int min_input_interval = 150;
-module_param(min_input_interval, uint, 0644);
-
 static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 {
 	int i, ntokens = 0;
 	unsigned int val, cpu;
 	const char *cp = buf;
-	bool enabled = false;
 
 	while ((cp = strpbrk(cp + 1, " :")))
 		ntokens++;
@@ -85,7 +68,7 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 			return -EINVAL;
 		for_each_possible_cpu(i)
 			per_cpu(sync_info, i).input_boost_freq = val;
-		goto check_enable;
+		goto out;
 	}
 
 	/* CPU:value pair */
@@ -104,15 +87,7 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 		cp++;
 	}
 
-check_enable:
-	for_each_possible_cpu(i) {
-		if (per_cpu(sync_info, i).input_boost_freq) {
-			enabled = true;
-			break;
-		}
-	}
-	input_boost_enabled = enabled;
-
+out:
 	return 0;
 }
 
@@ -236,6 +211,17 @@ static void do_input_boost(struct kthread_work *work)
 	pr_debug("Setting input boost min for all CPUs\n");
 	for_each_possible_cpu(i) {
 		i_sync_info = &per_cpu(sync_info, i);
+
+		// cpu 0-3 -> silver cluster
+		// cpu 4-5 -> gold cluster
+		// to save power there's no point in boosting the
+		// gold cluster core if it doesn't have any runnable
+		// thread at this point in time
+		// since inputs are fairly common we might save some
+		// juice in the long run
+		if (i >= 4 && cpu_rq(i)->nr_running == 0)
+			continue;
+
 		i_sync_info->input_boost_min = i_sync_info->input_boost_freq;
 	}
 
@@ -263,26 +249,17 @@ static void cpuboost_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
 	u64 now;
-	unsigned int min_interval;
-
-#ifdef CONFIG_STATE_NOTIFIER
-	if (state_suspended)
-		return;
-#endif
 
 	if (!input_boost_enabled)
 		return;
 
 	now = ktime_to_us(ktime_get());
-	min_interval = max(min_input_interval, input_boost_ms);
-
-	if (now - last_input_time < min_interval * USEC_PER_MSEC)
+	if ((now - last_input_time) < (input_boost_ms * USEC_PER_MSEC))
 		return;
 
 	if (queuing_blocked(&cpu_boost_worker, &input_boost_work))
 		return;
 
-	pr_debug("Input boost for input event.\n");
 	queue_kthread_work(&cpu_boost_worker, &input_boost_work);
 	last_input_time = ktime_to_us(ktime_get());
 }
@@ -358,57 +335,6 @@ static struct input_handler cpuboost_input_handler = {
 	.id_table       = cpuboost_ids,
 };
 
-static int cpuboost_cpu_callback(struct notifier_block *cpu_nb,
-				 unsigned long action, void *hcpu)
-{
-#ifdef CONFIG_STATE_NOTIFIER
-	if (state_suspended)
-		return NOTIFY_OK;
-#endif
-
-	switch (action & ~CPU_TASKS_FROZEN) {
-		case CPU_ONLINE:
-			if (!hotplug_boost || !input_boost_enabled)
-				break;
-			pr_debug("Hotplug boost for CPU%lu\n", (long)hcpu);
-			queue_kthread_work(&cpu_boost_worker, &input_boost_work);
-			last_input_time = ktime_to_us(ktime_get());
-			break;
-		default:
-			break;
-	}
-	return NOTIFY_OK;
-}
-
-static struct notifier_block __refdata cpu_nblk = {
-        .notifier_call = cpuboost_cpu_callback,
-};
-
-#ifdef CONFIG_STATE_NOTIFIER
-static void __wakeup_boost(void)
-{
-	if (!wakeup_boost || !input_boost_enabled)
-		return;
-	pr_debug("Wakeup boost for display on event.\n");
-	queue_kthread_work(&cpu_boost_worker, &input_boost_work);
-	last_input_time = ktime_to_us(ktime_get());
-}
-
-static int state_notifier_callback(struct notifier_block *this,
-				unsigned long event, void *data)
-{
-	switch (event) {
-		case STATE_NOTIFIER_ACTIVE:
-			__wakeup_boost();
-			break;
-		default:
-			break;
-	}
-
-	return NOTIFY_OK;
-}
-#endif
-
 static int cpu_boost_init(void)
 {
 	int cpu, ret;
@@ -434,18 +360,6 @@ static int cpu_boost_init(void)
 	cpufreq_register_notifier(&boost_adjust_nb, CPUFREQ_POLICY_NOTIFIER);
 
 	ret = input_register_handler(&cpuboost_input_handler);
-	if (ret)
-		pr_err("Cannot register cpuboost input handler.\n");
-
-	ret = register_hotcpu_notifier(&cpu_nblk);
-	if (ret)
-		pr_err("Cannot register cpuboost hotplug handler.\n");
-
-#ifdef CONFIG_STATE_NOTIFIER
-	notif.notifier_call = state_notifier_callback;
-	if (state_register_client(&notif))
-		pr_err("Cannot register State notifier callback for cpuboost.\n");
-#endif
 
 	return ret;
 }
