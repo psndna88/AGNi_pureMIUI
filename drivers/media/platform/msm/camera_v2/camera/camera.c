@@ -636,20 +636,25 @@ static int camera_v4l2_open(struct file *filep)
 	idx |= (1 << find_first_zero_bit((const unsigned long *)&opn_idx,
 				MSM_CAMERA_STREAM_CNT_BITS));
 	atomic_cmpxchg(&pvdev->opened, opn_idx, idx);
+	sched_set_boost(1);
 	mutex_unlock(&pvdev->video_drvdata_mutex);
 
 	return rc;
 
 post_fail:
+	sched_set_boost(0);
 	msm_delete_command_ack_q(pvdev->vdev->num, 0);
 command_ack_q_fail:
 	msm_destroy_session(pvdev->vdev->num);
 session_fail:
+	sched_set_boost(0);
 	pm_relax(&pvdev->vdev->dev);
 	camera_v4l2_vb2_q_release(filep);
 vb2_q_fail:
+	sched_set_boost(0);
 	camera_v4l2_fh_release(filep);
 fh_open_fail:
+	sched_set_boost(0);
 	mutex_unlock(&pvdev->video_drvdata_mutex);
 	return rc;
 }
@@ -721,6 +726,7 @@ static int camera_v4l2_close(struct file *filep)
 
 	camera_v4l2_vb2_q_release(filep);
 	camera_v4l2_fh_release(filep);
+	sched_set_boost(0);
 	mutex_unlock(&pvdev->video_drvdata_mutex);
 
 	return rc;
