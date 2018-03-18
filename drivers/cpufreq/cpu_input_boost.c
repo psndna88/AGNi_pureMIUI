@@ -24,7 +24,7 @@
 #define CPU_MASK(cpu) (1U << (cpu))
 
 /*
- * For MSM8952 (big.LITTLE). CPU0-3 are LITTLE CPUs; CPU4-5 are
+ * For MSM8956 (big.LITTLE). CPU0-3 are LITTLE CPUs; CPU4-5 are
  * big CPUs.
  */
 #define LITTLE_CPU_MASK (CPU_MASK(0) | CPU_MASK(1) | CPU_MASK(2) | CPU_MASK(3))
@@ -801,8 +801,8 @@ static void set_default_value(void)
 	struct fb_policy *fb = &b->fb;
 
 	set_boost_bit(b, DRIVER_ENABLED);
-	ib->freq[0] = 960000;
-	ib->freq[1] = 384000;
+	ib->freq[0] = 806400;
+	ib->freq[1] = 883200;
 	ib->duration_ms = 40;
 	fb->fb_duration_ms = 1000;
 }
