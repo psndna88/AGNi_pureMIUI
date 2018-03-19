@@ -58,7 +58,7 @@ sio_merged_requests(struct request_queue *q, struct request *rq,
 	 * and move into next position (next will be deleted) in fifo.
 	 */
 	if (!list_empty(&rq->queuelist) && !list_empty(&next->queuelist)) {
-		if (time_before(next->fifo_time, rq->fifo_time)) {
+		if (time_before((unsigned long)next->fifo_time, (unsigned long)rq->fifo_time)) {
 			list_move(&rq->queuelist, &next->queuelist);
 			rq->fifo_time = next->fifo_time;
 		}
@@ -108,7 +108,7 @@ sio_expired_request(struct sio_data *sd, int sync, int data_dir)
 	rq = rq_entry_fifo(list->next);
 
 	/* Request has expired */
-	if (time_after(jiffies, rq->fifo_time))
+	if (time_after(jiffies, (unsigned long)rq->fifo_time))
 		return rq;
 
 	return NULL;
