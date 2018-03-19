@@ -62,7 +62,7 @@ maple_merged_requests(struct request_queue *q, struct request *rq,
 	 * and move into next position (next will be deleted) in fifo.
 	 */
 	if (!list_empty(&rq->queuelist) && !list_empty(&next->queuelist)) {
-		if (time_before(next->fifo_time, rq->fifo_time)) {
+		if (time_before((unsigned long)next->fifo_time, (unsigned long)rq->fifo_time)) {
 			list_move(&rq->queuelist, &next->queuelist);
 			rq->fifo_time = next->fifo_time;
 		}
@@ -109,7 +109,7 @@ maple_expired_request(struct maple_data *mdata, int sync, int data_dir)
 	rq = rq_entry_fifo(list->next);
 
 	/* Request has expired */
-    if (time_after_eq(jiffies, rq->fifo_time))
+    if (time_after_eq(jiffies, (unsigned long)rq->fifo_time))
 		return rq;
 
 	return NULL;
@@ -133,7 +133,7 @@ maple_choose_expired_request(struct maple_data *mdata)
 	 */
 
    if (rq_async_read && rq_sync_read) {
-     if (time_after(rq_sync_read->fifo_time, rq_async_read->fifo_time))
+     if (time_after((unsigned long)rq_sync_read->fifo_time, (unsigned long)rq_async_read->fifo_time))
              return rq_async_read;
    } else if (rq_async_read) {
            return rq_async_read;
@@ -142,7 +142,7 @@ maple_choose_expired_request(struct maple_data *mdata)
    }
 
    if (rq_async_write && rq_sync_write) {
-if (time_after(rq_sync_write->fifo_time, rq_async_write->fifo_time))
+if (time_after((unsigned long)rq_sync_write->fifo_time, (unsigned long)rq_async_write->fifo_time))
              return rq_async_write;
    } else if (rq_async_write) {
            return rq_async_write;
