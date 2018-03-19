@@ -8414,7 +8414,9 @@ static const struct snd_kcontrol_new tasha_analog_gain_controls[] = {
 			3, 16, 1, line_gain),
 	SOC_SINGLE_TLV("LINEOUT3 Volume", WCD9335_SE_LO_LO3_GAIN, 0, 20, 1,
 			line_gain),
-	SOC_SINGLE_TLV("LINEOUT4 Volume", WCD9335_SE_LO_LO4_GAIN, 0, 20, 1,
+	SOC_SINGLE_TLV("LINEOUT4 Volume", WCD9335_DUMMY_REG, 0, 20, 1,
+			line_gain),
+	SOC_SINGLE_TLV("LINEOUT4 Volume AGNi", WCD9335_SE_LO_LO4_GAIN, 20, 20, 1,
 			line_gain),
 
 	SOC_SINGLE_TLV("ADC1 Volume", WCD9335_ANA_AMIC1, 0, 20, 0,
@@ -11511,6 +11513,7 @@ static const struct tasha_reg_mask_val tasha_codec_reg_init_1_x_val[] = {
 	{WCD9335_DIFF_LO_CORE_OUT_PROG, 0xFC, 0xD8},
 	{WCD9335_CDC_RX5_RX_PATH_SEC3, 0xBD, 0xBD},
 	{WCD9335_CDC_RX6_RX_PATH_SEC3, 0xBD, 0xBD},
+	{WCD9335_DUMMY_REG, 0x20, 0x20},
 };
 
 static void tasha_update_reg_reset_values(struct snd_soc_codec *codec)
