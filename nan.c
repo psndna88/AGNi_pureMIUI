@@ -45,8 +45,6 @@ static u32 global_publish_service_name_len = 0;
 static u8 global_subscribe_service_name[NAN_MAX_SERVICE_NAME_LEN];
 static u32 global_subscribe_service_name_len = 0;
 
-extern wifi_interface_handle wifi_get_iface_handle(wifi_handle handle, char *name);
-
 static int nan_further_availability_tx(struct sigma_dut *dut,
 				       struct sigma_conn *conn,
 				       struct sigma_cmd *cmd);
@@ -1553,7 +1551,6 @@ void nan_notify_response(transaction_id id, NanResponseMsg *rsp_data)
 }
 
 
-#if QTI_BSP
 /* Events Callback */
 void nan_event_publish_replied(NanPublishRepliedInd *event)
 {
@@ -1568,7 +1565,6 @@ void nan_event_publish_replied(NanPublishRepliedInd *event)
 		 (event->requestor_instance_id & 0xFFFF),
 		 MAC_ADDR_ARRAY(event->addr));
 }
-#endif
 
 
 /* Events Callback */
@@ -1853,9 +1849,7 @@ void * my_thread_function(void *ptr)
 
 static NanCallbackHandler callbackHandler = {
 	.NotifyResponse = nan_notify_response,
-#if QTI_BSP
 	.EventPublishReplied = nan_event_publish_replied,
-#endif
 	.EventPublishTerminated = nan_event_publish_terminated,
 	.EventMatch = nan_event_match,
 	.EventMatchExpired = nan_event_match_expired,
