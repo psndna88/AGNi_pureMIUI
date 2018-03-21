@@ -296,7 +296,6 @@ static void __kthread_bind(struct task_struct *p, unsigned int cpu, long state)
 		return;
 	}
 	/* It's safe because the task is inactive. */
-	p->kthread_per_cpu = true;
 	do_set_cpus_allowed(p, cpumask_of(cpu));
 	p->flags |= PF_NO_SETAFFINITY;
 }
@@ -337,7 +336,6 @@ struct task_struct *kthread_create_on_cpu(int (*threadfn)(void *data),
 				   cpu);
 	if (IS_ERR(p))
 		return p;
-	p->kthread_per_cpu = true;
 	set_bit(KTHREAD_IS_PER_CPU, &to_kthread(p)->flags);
 	to_kthread(p)->cpu = cpu;
 	/* Park the thread to get it out of TASK_UNINTERRUPTIBLE state */
