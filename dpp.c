@@ -1172,7 +1172,8 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			snprintf(buf, sizeof(buf), "DPP_QR_CODE %s",
 				 dut->dpp_peer_uri);
 			if (wpa_command_resp(ifname, buf, buf,
-					     sizeof(buf)) < 0) {
+					     sizeof(buf)) < 0 ||
+			    strncmp(buf, "FAIL", 4) == 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "errorCode,Failed to parse URI");
 				goto out;
