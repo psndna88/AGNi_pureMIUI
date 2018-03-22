@@ -62,6 +62,9 @@ CFLAGS += -DSIGMA_DUT_VER=\"$(SIGMA_VER)\"
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := sigma_dut
+ifeq ($(PRODUCT_VENDOR_MOVE_ENABLED), true)
+LOCAL_VENDOR_MODULE := true
+endif
 LOCAL_MODULE_TAGS := optional
 LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH) frameworks/base/cmds/keystore system/security/keystore \
