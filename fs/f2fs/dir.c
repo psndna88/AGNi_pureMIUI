@@ -93,14 +93,12 @@ static struct f2fs_dir_entry *find_in_block(struct page *dentry_page,
 	struct f2fs_dir_entry *de;
 	struct f2fs_dentry_ptr d;
 
-	dentry_blk = (struct f2fs_dentry_block *)kmap(dentry_page);
+	dentry_blk = (struct f2fs_dentry_block *)page_address(dentry_page);
 
 	make_dentry_ptr_block(NULL, &d, dentry_blk);
 	de = find_target_dentry(fname, namehash, max_slots, &d);
 	if (de)
 		*res_page = dentry_page;
-	else
-		kunmap(dentry_page);
 
 	return de;
 }
@@ -286,7 +284,6 @@ ino_t f2fs_inode_by_name(struct inode *dir, const struct qstr *qstr,
 	de = f2fs_find_entry(dir, qstr, page);
 	if (de) {
 		res = le32_to_cpu(de->ino);
-		f2fs_dentry_kunmap(dir, *page);
 		f2fs_put_page(*page, 0);
 	}
 
@@ -301,7 +298,6 @@ void f2fs_set_link(struct inode *dir, struct f2fs_dir_entry *de,
 	f2fs_wait_on_page_writeback(page, type, true);
 	de->ino = cpu_to_le32(inode->i_ino);
 	set_de_type(de, inode->i_mode);
-	f2fs_dentry_kunmap(dir, page);
 	set_page_dirty(page);
 
 	dir->i_mtime = dir->i_ctime = current_time(dir);
@@ -349,12 +345,10 @@ static int make_empty_dir(struct inode *inode,
 	if (IS_ERR(dentry_page))
 		return PTR_ERR(dentry_page);
 
-	dentry_blk = kmap_atomic(dentry_page);
+	dentry_blk = page_address(dentry_page);
 
 	make_dentry_ptr_block(NULL, &d, dentry_blk);
 	do_make_empty_dir(inode, parent, &d);
-
-	kunmap_atomic(dentry_blk);
 
 	set_page_dirty(dentry_page);
 	f2fs_put_page(dentry_page, 1);
@@ -546,13 +540,12 @@ start:
 		if (IS_ERR(dentry_page))
 			return PTR_ERR(dentry_page);
 
-		dentry_blk = kmap(dentry_page);
+		dentry_blk = page_address(dentry_page);
 		bit_pos = room_for_filename(&dentry_blk->dentry_bitmap,
 						slots, NR_DENTRY_IN_BLOCK);
 		if (bit_pos < NR_DENTRY_IN_BLOCK)
 			goto add_dentry;
 
-		kunmap(dentry_page);
 		f2fs_put_page(dentry_page, 1);
 	}
 
@@ -587,7 +580,6 @@ fail:
 	if (inode)
 		up_write(&F2FS_I(inode)->i_sem);
 
-	kunmap(dentry_page);
 	f2fs_put_page(dentry_page, 1);
 
 	return err;
@@ -641,7 +633,6 @@ int __f2fs_add_link(struct inode *dir, const struct qstr *name,
 		F2FS_I(dir)->task = NULL;
 	}
 	if (de) {
-		f2fs_dentry_kunmap(dir, page);
 		f2fs_put_page(page, 0);
 		err = -EEXIST;
 	} else if (IS_ERR(page)) {
@@ -727,7 +718,6 @@ void f2fs_delete_entry(struct f2fs_dir_entry *dentry, struct page *page,
 	bit_pos = find_next_bit_le(&dentry_blk->dentry_bitmap,
 			NR_DENTRY_IN_BLOCK,
 			0);
-	kunmap(page); /* kunmap - pair of f2fs_find_entry */
 	set_page_dirty(page);
 
 	dir->i_ctime = dir->i_mtime = current_time(dir);
@@ -772,7 +762,7 @@ bool f2fs_empty_dir(struct inode *dir)
 				return false;
 		}
 
-		dentry_blk = kmap_atomic(dentry_page);
+		dentry_blk = page_address(dentry_page);
 		if (bidx == 0)
 			bit_pos = 2;
 		else
@@ -780,7 +770,6 @@ bool f2fs_empty_dir(struct inode *dir)
 		bit_pos = find_next_bit_le(&dentry_blk->dentry_bitmap,
 						NR_DENTRY_IN_BLOCK,
 						bit_pos);
-		kunmap_atomic(dentry_blk);
 
 		f2fs_put_page(dentry_page, 1);
 
@@ -894,21 +883,19 @@ static int f2fs_readdir(struct file *file, void *dirent, filldir_t filldir)
 			}
 		}
 
-		dentry_blk = kmap(dentry_page);
+		dentry_blk = page_address(dentry_page);
 
 		make_dentry_ptr_block(inode, &d, dentry_blk);
 
 		err = f2fs_fill_dentries(file, dirent, filldir, &d, n,
 							bit_pos, &fstr);
 		if (err) {
-			kunmap(dentry_page);
 			f2fs_put_page(dentry_page, 1);
 			break;
 		}
 
 		bit_pos = 0;
 		file->f_pos = (n + 1) * NR_DENTRY_IN_BLOCK;
-		kunmap(dentry_page);
 		f2fs_put_page(dentry_page, 1);
 	}
 out:
