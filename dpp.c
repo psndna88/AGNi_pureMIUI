@@ -1415,6 +1415,12 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			}
 			sigma_dut_print(dut, DUT_MSG_DEBUG,
 					"DPP auth result: %s", buf);
+			if (strstr(buf, "DPP-NOT-COMPATIBLE")) {
+			    send_resp(dut, conn, SIGMA_COMPLETE,
+				      "BootstrapResult,OK,AuthResult,ROLES_NOT_COMPATIBLE");
+			    goto out;
+			}
+
 			if (strstr(buf, "DPP-SCAN-PEER-QR-CODE") == NULL) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "errorCode,No scan request for peer QR Code seen");
