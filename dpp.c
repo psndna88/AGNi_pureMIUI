@@ -1482,6 +1482,12 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 
 		if (strcasecmp(frametype, "AuthenticationConfirm") == 0) {
 			if (strcasecmp(auth_role, "Initiator") == 0) {
+				if (check_mutual &&
+				    dpp_process_auth_response(
+					    dut, conn, ctrl, auth_events,
+					    action_type, check_mutual,
+					    buf, sizeof(buf)) < 0)
+					goto out;
 				if (dpp_wait_tx_status(dut, ctrl, 2) < 0)
 					result = "BootstrapResult,OK,AuthResult,Timeout";
 				else if (dpp_wait_rx_conf_req(dut, ctrl, 5) <
