@@ -783,6 +783,71 @@ static int dpp_display_own_qrcode(struct sigma_dut *dut)
 }
 
 
+static int dpp_process_auth_response(struct sigma_dut *dut,
+				     struct sigma_conn *conn,
+				     struct wpa_ctrl *ctrl,
+				     const char **auth_events,
+				     const char *action_type,
+				     int check_mutual, char *buf, size_t buflen)
+{
+	int res;
+
+	res = get_wpa_cli_events(dut, ctrl, auth_events, buf, buflen);
+	if (res < 0) {
+		send_resp(dut, conn, SIGMA_COMPLETE,
+			  "BootstrapResult,OK,AuthResult,Timeout");
+		return res;
+	}
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "DPP auth result: %s", buf);
+
+	if (strstr(buf, "DPP-RESPONSE-PENDING")) {
+		/* Display own QR code in manual mode */
+		if (action_type && strcasecmp(action_type, "ManualDPP") == 0 &&
+		    dpp_display_own_qrcode(dut) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to display own QR code");
+			return -1;
+		}
+
+		/* Wait for the actual result after the peer has scanned the
+		 * QR Code. */
+		res = get_wpa_cli_events(dut, ctrl, auth_events,
+					 buf, buflen);
+		if (res < 0) {
+			send_resp(dut, conn, SIGMA_COMPLETE,
+				  "BootstrapResult,OK,AuthResult,Timeout");
+			return res;
+		}
+
+		sigma_dut_print(dut, DUT_MSG_DEBUG, "DPP auth result: %s", buf);
+	}
+
+	if (check_mutual) {
+		if (strstr(buf, "DPP-NOT-COMPATIBLE")) {
+			send_resp(dut, conn, SIGMA_COMPLETE,
+				  "BootstrapResult,OK,AuthResult,ROLES_NOT_COMPATIBLE");
+			return -1;
+		}
+
+		if (!strstr(buf, "DPP-AUTH-DIRECTION")) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,No event for auth direction seen");
+			return -1;
+		}
+
+		sigma_dut_print(dut, DUT_MSG_DEBUG, "DPP auth direction: %s",
+				buf);
+		if (strstr(buf, "mutual=1") == NULL) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Peer did not use mutual authentication");
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+
 static int dpp_automatic_dpp(struct sigma_dut *dut,
 			     struct sigma_conn *conn,
 			     struct sigma_cmd *cmd)
@@ -1532,57 +1597,9 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		goto out;
 	}
 
-	res = get_wpa_cli_events(dut, ctrl, auth_events, buf, sizeof(buf));
-	if (res < 0) {
-		send_resp(dut, conn, SIGMA_COMPLETE,
-			  "BootstrapResult,OK,AuthResult,Timeout");
+	if (dpp_process_auth_response(dut, conn, ctrl, auth_events, action_type,
+				      check_mutual, buf, sizeof(buf)) < 0)
 		goto out;
-	}
-	sigma_dut_print(dut, DUT_MSG_DEBUG, "DPP auth result: %s", buf);
-
-	if (strstr(buf, "DPP-RESPONSE-PENDING")) {
-		/* Display own QR code in manual mode */
-		if (action_type && strcasecmp(action_type, "ManualDPP") == 0 &&
-		    dpp_display_own_qrcode(dut) < 0) {
-			send_resp(dut, conn, SIGMA_ERROR,
-				  "errorCode,Failed to display own QR code");
-			goto out;
-		}
-
-		/* Wait for the actual result after the peer has scanned the
-		 * QR Code. */
-		res = get_wpa_cli_events(dut, ctrl, auth_events,
-					 buf, sizeof(buf));
-		if (res < 0) {
-			send_resp(dut, conn, SIGMA_COMPLETE,
-				  "BootstrapResult,OK,AuthResult,Timeout");
-			goto out;
-		}
-
-		sigma_dut_print(dut, DUT_MSG_DEBUG, "DPP auth result: %s", buf);
-	}
-
-	if (check_mutual) {
-		if (strstr(buf, "DPP-NOT-COMPATIBLE")) {
-			send_resp(dut, conn, SIGMA_COMPLETE,
-				  "BootstrapResult,OK,AuthResult,ROLES_NOT_COMPATIBLE");
-			goto out;
-		}
-
-		if (!strstr(buf, "DPP-AUTH-DIRECTION")) {
-			send_resp(dut, conn, SIGMA_ERROR,
-				  "errorCode,No event for auth direction seen");
-			goto out;
-		}
-
-		sigma_dut_print(dut, DUT_MSG_DEBUG, "DPP auth direction: %s",
-				buf);
-		if (strstr(buf, "mutual=1") == NULL) {
-			send_resp(dut, conn, SIGMA_ERROR,
-				  "errorCode,Peer did not use mutual authentication");
-			goto out;
-		}
-	}
 
 	if (frametype && strcasecmp(frametype, "AuthenticationConfirm") == 0) {
 		if (dpp_wait_tx_status(dut, ctrl, 2) < 0) {
