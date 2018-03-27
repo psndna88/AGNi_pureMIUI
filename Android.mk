@@ -64,6 +64,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := sigma_dut
 ifeq ($(PRODUCT_VENDOR_MOVE_ENABLED), true)
 LOCAL_VENDOR_MODULE := true
+LOCAL_CLANG := true
 endif
 LOCAL_MODULE_TAGS := optional
 LOCAL_C_INCLUDES += \
