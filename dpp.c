@@ -1488,6 +1488,16 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 
 		if (strcasecmp(frametype, "AuthenticationConfirm") == 0) {
 			if (strcasecmp(auth_role, "Initiator") == 0) {
+				/* This special case of DPPStep,Timeout with
+				 * DPPFrameType,AuthenticationConfirm on an
+				 * Initiator is used to cover need for stopping
+				 * the Initiator/Enrollee from sending out
+				 * Configuration Request message. */
+				if (strcasecmp(prov_role, "Enrollee") != 0) {
+					send_resp(dut, conn, SIGMA_ERROR,
+						  "errorCode,Unexpected use of timeout after AuthenticationConfirm TX in Configurator role");
+					goto out;
+				}
 				if (check_mutual &&
 				    dpp_process_auth_response(
 					    dut, conn, ctrl, auth_events,
@@ -1496,11 +1506,8 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 					goto out;
 				if (dpp_wait_tx_status(dut, ctrl, 2) < 0)
 					result = "BootstrapResult,OK,AuthResult,Timeout";
-				else if (dpp_wait_rx_conf_req(dut, ctrl, 5) <
-					 0)
-					result = "BootstrapResult,OK,AuthResult,Errorsent,LastFrameReceived,AuthenticationResponse";
 				else
-					result = "BootstrapResult,OK,AuthResult,OK,LastFrameReceived,ConfigurationRequest";
+					result = "BootstrapResult,OK,AuthResult,Errorsent,LastFrameReceived,AuthenticationResponse";
 			} else {
 				if (dpp_wait_rx(dut, ctrl, 2, -1) < 0)
 					result = "BootstrapResult,OK,AuthResult,Timeout";
