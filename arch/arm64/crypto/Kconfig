@@ -67,6 +67,13 @@ config CRYPTO_AES_ARM64_NEON_BLK
 	select CRYPTO_AES
 	select CRYPTO_ABLK_HELPER
 
+config CRYPTO_SPECK_NEON
+	tristate "NEON accelerated Speck cipher algorithms"
+	depends on KERNEL_MODE_NEON
+	select CRYPTO_BLKCIPHER
+	select CRYPTO_GF128MUL
+	select CRYPTO_SPECK
+
 config CRYPTO_CHACHA20_NEON
 	tristate "NEON accelerated ChaCha20 symmetric cipher"
 	depends on KERNEL_MODE_NEON

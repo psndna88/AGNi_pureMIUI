@@ -35,6 +35,9 @@ aes-ce-blk-y := aes-glue-ce.o aes-ce.o
 obj-$(CONFIG_CRYPTO_AES_ARM64_NEON_BLK) += aes-neon-blk.o
 aes-neon-blk-y := aes-glue-neon.o aes-neon.o
 
+obj-$(CONFIG_CRYPTO_SPECK_NEON) += speck-neon.o
+speck-neon-y := speck-neon-core.o speck-neon-glue.o
+
 obj-$(CONFIG_CRYPTO_SHA256_ARM64) += sha256-arm64.o
 sha256-arm64-y := sha256-glue.o sha256-core.o
 
