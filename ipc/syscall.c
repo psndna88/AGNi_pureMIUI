@@ -13,8 +13,13 @@
 #include <linux/syscalls.h>
 #include <linux/uaccess.h>
 
+#ifdef CONFIG_SYSVIPC_FAKE_INVISIBLE
+SYSCALL_DEFINE6(xipc, unsigned int, call, int, first, unsigned long, second,
+		unsigned long, third, void __user *, ptr, long, fifth)
+#else
 SYSCALL_DEFINE6(ipc, unsigned int, call, int, first, unsigned long, second,
 		unsigned long, third, void __user *, ptr, long, fifth)
+#endif
 {
 	int version, ret;
 

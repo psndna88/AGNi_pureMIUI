@@ -607,7 +607,11 @@ static inline int shm_more_checks(struct kern_ipc_perm *ipcp,
 	return 0;
 }
 
+#ifdef CONFIG_SYSVIPC_FAKE_INVISIBLE
+SYSCALL_DEFINE3(xshmget, key_t, key, size_t, size, int, shmflg)
+#else
 SYSCALL_DEFINE3(shmget, key_t, key, size_t, size, int, shmflg)
+#endif
 {
 	struct ipc_namespace *ns;
 	struct ipc_ops shm_ops;
@@ -936,7 +940,11 @@ out:
 	return err;
 }
 
+#ifdef CONFIG_SYSVIPC_FAKE_INVISIBLE
+SYSCALL_DEFINE3(xshmctl, int, shmid, int, cmd, struct shmid_ds __user *, buf)
+#else
 SYSCALL_DEFINE3(shmctl, int, shmid, int, cmd, struct shmid_ds __user *, buf)
+#endif
 {
 	struct shmid_kernel *shp;
 	int err, version;
@@ -1208,7 +1216,11 @@ out:
 	return err;
 }
 
+#ifdef CONFIG_SYSVIPC_FAKE_INVISIBLE
+SYSCALL_DEFINE3(xshmat, int, shmid, char __user *, shmaddr, int, shmflg)
+#else
 SYSCALL_DEFINE3(shmat, int, shmid, char __user *, shmaddr, int, shmflg)
+#endif
 {
 	unsigned long ret;
 	long err;
@@ -1224,7 +1236,11 @@ SYSCALL_DEFINE3(shmat, int, shmid, char __user *, shmaddr, int, shmflg)
  * detach and kill segment if marked destroyed.
  * The work is done in shm_close.
  */
+#ifdef CONFIG_SYSVIPC_FAKE_INVISIBLE
+SYSCALL_DEFINE1(xshmdt, char __user *, shmaddr)
+#else
 SYSCALL_DEFINE1(shmdt, char __user *, shmaddr)
+#endif
 {
 	struct mm_struct *mm = current->mm;
 	struct vm_area_struct *vma;

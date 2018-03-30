@@ -329,8 +329,13 @@ static long compat_do_msg_fill(void __user *dest, struct msg_msg *msg, size_t bu
 #endif
 
 #ifdef CONFIG_ARCH_WANT_OLD_COMPAT_IPC
+#ifdef CONFIG_SYSVIPC_FAKE_INVISIBLE
+COMPAT_SYSCALL_DEFINE6(xipc, u32, call, int, first, int, second,
+	u32, third, compat_uptr_t, ptr, u32, fifth)
+#else
 COMPAT_SYSCALL_DEFINE6(ipc, u32, call, int, first, int, second,
 	u32, third, compat_uptr_t, ptr, u32, fifth)
+#endif
 {
 	int version;
 	u32 pad;
@@ -413,13 +418,22 @@ COMPAT_SYSCALL_DEFINE6(ipc, u32, call, int, first, int, second,
 }
 #endif
 
+#ifdef CONFIG_SYSVIPC_FAKE_INVISIBLE
+COMPAT_SYSCALL_DEFINE4(xsemctl, int, semid, int, semnum, int, cmd, int, arg)
+#else
 COMPAT_SYSCALL_DEFINE4(semctl, int, semid, int, semnum, int, cmd, int, arg)
+#endif
 {
 	return do_compat_semctl(semid, semnum, cmd, arg);
 }
 
+#ifdef CONFIG_SYSVIPC_FAKE_INVISIBLE
+COMPAT_SYSCALL_DEFINE4(xmsgsnd, int, msqid, compat_uptr_t, msgp,
+		       compat_ssize_t, msgsz, int, msgflg)
+#else
 COMPAT_SYSCALL_DEFINE4(msgsnd, int, msqid, compat_uptr_t, msgp,
 		       compat_ssize_t, msgsz, int, msgflg)
+#endif
 {
 	struct compat_msgbuf __user *up = compat_ptr(msgp);
 	compat_long_t mtype;
@@ -429,8 +443,13 @@ COMPAT_SYSCALL_DEFINE4(msgsnd, int, msqid, compat_uptr_t, msgp,
 	return do_msgsnd(msqid, mtype, up->mtext, (ssize_t)msgsz, msgflg);
 }
 
+#ifdef CONFIG_SYSVIPC_FAKE_INVISIBLE
+COMPAT_SYSCALL_DEFINE5(xmsgrcv, int, msqid, compat_uptr_t, msgp,
+		       compat_ssize_t, msgsz, long, msgtyp, int, msgflg)
+#else
 COMPAT_SYSCALL_DEFINE5(msgrcv, int, msqid, compat_uptr_t, msgp,
 		       compat_ssize_t, msgsz, long, msgtyp, int, msgflg)
+#endif
 {
 	return do_msgrcv(msqid, compat_ptr(msgp), (ssize_t)msgsz, msgtyp,
 			 msgflg, compat_do_msg_fill);
@@ -552,7 +571,11 @@ long compat_sys_msgctl(int first, int second, void __user *uptr)
 	return err;
 }
 
+#ifdef CONFIG_SYSVIPC_FAKE_INVISIBLE
+COMPAT_SYSCALL_DEFINE3(xshmat, int, shmid, compat_uptr_t, shmaddr, int, shmflg)
+#else
 COMPAT_SYSCALL_DEFINE3(shmat, int, shmid, compat_uptr_t, shmaddr, int, shmflg)
+#endif
 {
 	unsigned long ret;
 	long err;

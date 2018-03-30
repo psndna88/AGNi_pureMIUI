@@ -225,6 +225,22 @@ config SYSVIPC_SYSCTL
 	depends on SYSCTL
 	default y
 
+config SYSVIPC_FAKE_INVISIBLE
+	bool "System V IPC Fake as not available (AGNi LOS-N/O,MIUI-N)"
+	depends on SYSVIPC
+	default y
+	---help---
+	  Rename the System V IPC syscalls so that the android security cannot
+	  detect it. Intended for android 7.0 nougat & above as SysV IPC is not
+	  supported in Android 7.0+ kernels. Disable this to get SYS V IPC working for
+	  android 6.0.x (AGNi MIUI-MM).
+	  (We have removed this from the OS as it exposes additional attack surface
+	  that doesn’t add functionality to the system that could be exploited by
+	  malicious applications. Also, System V IPCs are not compliant with Android's
+	  application lifecycle because the allocated resources are not freeable by the
+	  memory manager leading to global kernel resource leakage. This change
+	  addresses issue such as CVE-2015-7613.)
+
 config POSIX_MQUEUE
 	bool "POSIX Message Queues"
 	depends on NET

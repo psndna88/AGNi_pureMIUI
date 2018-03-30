@@ -772,8 +772,13 @@ static struct file *do_open(struct path *path, int oflag)
 	return dentry_open(path, oflag, current_cred());
 }
 
+#ifdef CONFIG_SYSVIPC_FAKE_INVISIBLE
+SYSCALL_DEFINE4(xmq_open, const char __user *, u_name, int, oflag, umode_t, mode,
+		struct mq_attr __user *, u_attr)
+#else
 SYSCALL_DEFINE4(mq_open, const char __user *, u_name, int, oflag, umode_t, mode,
 		struct mq_attr __user *, u_attr)
+#endif
 {
 	struct path path;
 	struct file *filp;
@@ -853,7 +858,11 @@ out_putname:
 	return fd;
 }
 
+#ifdef CONFIG_SYSVIPC_FAKE_INVISIBLE
+SYSCALL_DEFINE1(xmq_unlink, const char __user *, u_name)
+#else
 SYSCALL_DEFINE1(mq_unlink, const char __user *, u_name)
+#endif
 {
 	int err;
 	struct filename *name;
@@ -948,9 +957,15 @@ static inline void pipelined_receive(struct mqueue_inode_info *info)
 	sender->state = STATE_READY;
 }
 
+#ifdef CONFIG_SYSVIPC_FAKE_INVISIBLE
+SYSCALL_DEFINE5(xmq_timedsend, mqd_t, mqdes, const char __user *, u_msg_ptr,
+		size_t, msg_len, unsigned int, msg_prio,
+		const struct timespec __user *, u_abs_timeout)
+#else
 SYSCALL_DEFINE5(mq_timedsend, mqd_t, mqdes, const char __user *, u_msg_ptr,
 		size_t, msg_len, unsigned int, msg_prio,
 		const struct timespec __user *, u_abs_timeout)
+#endif
 {
 	struct fd f;
 	struct inode *inode;
@@ -1067,9 +1082,15 @@ out:
 	return ret;
 }
 
+#ifdef CONFIG_SYSVIPC_FAKE_INVISIBLE
+SYSCALL_DEFINE5(xmq_timedreceive, mqd_t, mqdes, char __user *, u_msg_ptr,
+		size_t, msg_len, unsigned int __user *, u_msg_prio,
+		const struct timespec __user *, u_abs_timeout)
+#else
 SYSCALL_DEFINE5(mq_timedreceive, mqd_t, mqdes, char __user *, u_msg_ptr,
 		size_t, msg_len, unsigned int __user *, u_msg_prio,
 		const struct timespec __user *, u_abs_timeout)
+#endif
 {
 	ssize_t ret;
 	struct msg_msg *msg_ptr;
@@ -1174,8 +1195,13 @@ out:
  * and he isn't currently owner of notification, will be silently discarded.
  * It isn't explicitly defined in the POSIX.
  */
+#ifdef CONFIG_SYSVIPC_FAKE_INVISIBLE
+SYSCALL_DEFINE2(xmq_notify, mqd_t, mqdes,
+		const struct sigevent __user *, u_notification)
+#else
 SYSCALL_DEFINE2(mq_notify, mqd_t, mqdes,
 		const struct sigevent __user *, u_notification)
+#endif
 {
 	int ret;
 	struct fd f;
@@ -1306,9 +1332,15 @@ out:
 	return ret;
 }
 
+#ifdef CONFIG_SYSVIPC_FAKE_INVISIBLE
+SYSCALL_DEFINE3(xmq_getsetattr, mqd_t, mqdes,
+		const struct mq_attr __user *, u_mqstat,
+		struct mq_attr __user *, u_omqstat)
+#else
 SYSCALL_DEFINE3(mq_getsetattr, mqd_t, mqdes,
 		const struct mq_attr __user *, u_mqstat,
 		struct mq_attr __user *, u_omqstat)
+#endif
 {
 	int ret;
 	struct mq_attr mqstat, omqstat;

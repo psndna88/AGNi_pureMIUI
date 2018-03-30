@@ -297,7 +297,11 @@ static inline int msg_security(struct kern_ipc_perm *ipcp, int msgflg)
 	return security_msg_queue_associate(msq, msgflg);
 }
 
+#ifdef CONFIG_SYSVIPC_FAKE_INVISIBLE
+SYSCALL_DEFINE2(xmsgget, key_t, key, int, msgflg)
+#else
 SYSCALL_DEFINE2(msgget, key_t, key, int, msgflg)
+#endif
 {
 	struct ipc_namespace *ns;
 	struct ipc_ops msg_ops;
@@ -579,7 +583,11 @@ out_unlock:
 	return err;
 }
 
+#ifdef CONFIG_SYSVIPC_FAKE_INVISIBLE
+SYSCALL_DEFINE3(xmsgctl, int, msqid, int, cmd, struct msqid_ds __user *, buf)
+#else
 SYSCALL_DEFINE3(msgctl, int, msqid, int, cmd, struct msqid_ds __user *, buf)
+#endif
 {
 	int version;
 	struct ipc_namespace *ns;
@@ -768,8 +776,13 @@ out_unlock1:
 	return err;
 }
 
+#ifdef CONFIG_SYSVIPC_FAKE_INVISIBLE
+SYSCALL_DEFINE4(xmsgsnd, int, msqid, struct msgbuf __user *, msgp, size_t, msgsz,
+		int, msgflg)
+#else
 SYSCALL_DEFINE4(msgsnd, int, msqid, struct msgbuf __user *, msgp, size_t, msgsz,
 		int, msgflg)
+#endif
 {
 	long mtype;
 
@@ -1034,8 +1047,13 @@ out_unlock1:
 	return bufsz;
 }
 
+#ifdef CONFIG_SYSVIPC_FAKE_INVISIBLE
+SYSCALL_DEFINE5(xmsgrcv, int, msqid, struct msgbuf __user *, msgp, size_t, msgsz,
+		long, msgtyp, int, msgflg)
+#else
 SYSCALL_DEFINE5(msgrcv, int, msqid, struct msgbuf __user *, msgp, size_t, msgsz,
 		long, msgtyp, int, msgflg)
+#endif
 {
 	return do_msgrcv(msqid, msgp, msgsz, msgtyp, msgflg, do_msg_fill);
 }

@@ -571,7 +571,11 @@ static inline int sem_more_checks(struct kern_ipc_perm *ipcp,
 	return 0;
 }
 
+#ifdef CONFIG_SYSVIPC_FAKE_INVISIBLE
+SYSCALL_DEFINE3(xsemget, key_t, key, int, nsems, int, semflg)
+#else
 SYSCALL_DEFINE3(semget, key_t, key, int, nsems, int, semflg)
+#endif
 {
 	struct ipc_namespace *ns;
 	struct ipc_ops sem_ops;
@@ -1563,7 +1567,11 @@ out_up:
 	return err;
 }
 
+#ifdef CONFIG_SYSVIPC_FAKE_INVISIBLE
+SYSCALL_DEFINE4(xsemctl, int, semid, int, semnum, int, cmd, unsigned long, arg)
+#else
 SYSCALL_DEFINE4(semctl, int, semid, int, semnum, int, cmd, unsigned long, arg)
+#endif
 {
 	int version;
 	struct ipc_namespace *ns;
@@ -1768,8 +1776,13 @@ static int get_queue_result(struct sem_queue *q)
 	return error;
 }
 
+#ifdef CONFIG_SYSVIPC_FAKE_INVISIBLE
+SYSCALL_DEFINE4(xsemtimedop, int, semid, struct sembuf __user *, tsops,
+		unsigned, nsops, const struct timespec __user *, timeout)
+#else
 SYSCALL_DEFINE4(semtimedop, int, semid, struct sembuf __user *, tsops,
 		unsigned, nsops, const struct timespec __user *, timeout)
+#endif
 {
 	int error = -EINVAL;
 	struct sem_array *sma;
@@ -1998,8 +2011,13 @@ out_free:
 	return error;
 }
 
+#ifdef CONFIG_SYSVIPC_FAKE_INVISIBLE
+SYSCALL_DEFINE3(xsemop, int, semid, struct sembuf __user *, tsops,
+		unsigned, nsops)
+#else
 SYSCALL_DEFINE3(semop, int, semid, struct sembuf __user *, tsops,
 		unsigned, nsops)
+#endif
 {
 	return sys_semtimedop(semid, tsops, nsops, NULL);
 }
