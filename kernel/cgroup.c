@@ -62,6 +62,7 @@
 #include <linux/kthread.h>
 
 #include <linux/atomic.h>
+#include <linux/freezer.h>
 
 /* css deactivation bias, makes css->refcnt negative to deny new trygets */
 #define CSS_DEACT_BIAS		INT_MIN
@@ -2260,6 +2261,22 @@ int cgroup_attach_task_all(struct task_struct *from, struct task_struct *tsk)
 	return retval;
 }
 EXPORT_SYMBOL_GPL(cgroup_attach_task_all);
+
+#ifdef CONFIG_FROZEN_APP
+void cgroup_thawed_by_pid(int pid_nr)
+{
+	struct task_struct *ptask;
+
+	ptask = find_task_by_vpid(pid_nr);
+	if (ptask) {
+		get_task_struct(ptask);
+		freezer_change_state_to_thawed(ptask);
+		put_task_struct(ptask);
+		return;
+	}
+	return;
+}
+#endif
 
 static int cgroup_tasks_write(struct cgroup *cgrp, struct cftype *cft, u64 pid)
 {

@@ -2049,6 +2049,10 @@ static void binder_transaction(struct binder_proc *proc,
 		target_wait = &target_proc->wait;
 	}
 	e->to_proc = target_proc->pid;
+#ifdef CONFIG_FROZEN_APP
+	/* Wakeup frozen application cgroup */
+	cgroup_thawed_by_pid(target_proc->pid);
+#endif
 
 	/* TODO: reuse incoming transaction for reply */
 	t = kzalloc_preempt_disabled(sizeof(*t));

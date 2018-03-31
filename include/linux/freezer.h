@@ -7,6 +7,7 @@
 #include <linux/sched.h>
 #include <linux/wait.h>
 #include <linux/atomic.h>
+#include <linux/cgroup.h>
 
 #ifdef CONFIG_FREEZER
 extern atomic_t system_freezing_cnt;	/* nr of freezing conds in effect */
@@ -74,7 +75,14 @@ extern bool set_freezable(void);
 
 #ifdef CONFIG_CGROUP_FREEZER
 extern bool cgroup_freezing(struct task_struct *task);
+/* set cgroup state thawed */
+extern void cgroup_thawed_by_pid(int pid_nr);
+extern void freezer_change_state_to_thawed(struct task_struct *task);
 #else /* !CONFIG_CGROUP_FREEZER */
+static inline void cgroup_thawed_by_pid(int pid_nr)
+{
+	return;
+}
 static inline bool cgroup_freezing(struct task_struct *task)
 {
 	return false;
@@ -234,7 +242,7 @@ static inline long freezable_schedule_timeout_killable_unsafe(long timeout)
  * call this with locks held.
  */
 static inline int freezable_schedule_hrtimeout_range(ktime_t *expires,
-		unsigned long delta, const enum hrtimer_mode mode)
+		u64 delta, const enum hrtimer_mode mode)
 {
 	int __retval;
 	freezer_do_not_count();

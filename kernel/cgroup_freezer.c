@@ -425,6 +425,18 @@ static void freezer_change_state(struct freezer *freezer, bool freeze)
 	rcu_read_unlock();
 }
 
+#ifdef CONFIG_FROZEN_APP
+void freezer_change_state_to_thawed(struct task_struct *task)
+{
+	struct freezer *frozen_task;
+
+	frozen_task = task_freezer(task);
+	if (frozen_task->state & CGROUP_FROZEN)
+		freezer_change_state(frozen_task, false);
+	return;
+}
+#endif
+
 static int freezer_write(struct cgroup *cgroup, struct cftype *cft,
 			 const char *buffer)
 {
