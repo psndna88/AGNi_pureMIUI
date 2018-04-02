@@ -349,7 +349,7 @@ static int mmc_ext_csd_open(struct inode *inode, struct file *filp)
 	char *buf;
 	ssize_t n = 0;
 	u8 *ext_csd;
-	int err, i;
+	int err = 0, i;
 
 	buf = kmalloc(EXT_CSD_STR_LEN + 1, GFP_KERNEL);
 	if (!buf)
@@ -678,6 +678,16 @@ static ssize_t mmc_bkops_stats_read(struct file *filp, char __user *ubuf,
 		 mmc_hostname(card->host), bkops_stats->suspend);
 	strlcat(ubuf, temp_buf, cnt);
 
+	snprintf(temp_buf, TEMP_BUF_SIZE,
+			"%s: BKOPS: sent AUTO_EN set to 1: %u\n",
+			mmc_hostname(card->host), bkops_stats->auto_start);
+	strlcat(ubuf, temp_buf, cnt);
+
+	snprintf(temp_buf, TEMP_BUF_SIZE,
+			"%s: BKOPS: sent AUTO_EN set to 0: %u\n",
+			mmc_hostname(card->host), bkops_stats->auto_stop);
+	strlcat(ubuf, temp_buf, cnt);
+
 	spin_unlock(&bkops_stats->lock);
 
 	kfree(temp_buf);
@@ -766,7 +776,8 @@ void mmc_add_card_debugfs(struct mmc_card *card)
 			goto err;
 
 	if (mmc_card_mmc(card) && (card->ext_csd.rev >= 5) &&
-	    (mmc_card_get_bkops_en_manual(card)))
+	    (mmc_card_support_auto_bkops(card) ||
+	     mmc_card_get_bkops_en_manual(card)))
 		if (!debugfs_create_file("bkops_stats", S_IRUSR, root, card,
 					 &mmc_dbg_bkops_stats_fops))
 			goto err;

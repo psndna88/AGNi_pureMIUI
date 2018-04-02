@@ -149,7 +149,11 @@ static struct policydb_compat_info policydb_compat[] = {
 		.ocon_num	= OCON_NUM,
 	},
 	{
+#ifdef CONFIG_MACH_XIAOMI_KENZO_AGNI_MIUI_MM
+		.version	= POLICYDB_VERSION_IOCTL_OPERATIONS,
+#else
 		.version	= POLICYDB_VERSION_XPERMS_IOCTL,
+#endif
 		.sym_num	= SYM_NUM,
 		.ocon_num	= OCON_NUM,
 	},

@@ -75,7 +75,7 @@ lookup_exec_domain(unsigned int personality)
  * Disabling this here avoids folks adding module_request
  * to their sepolicy, which is maybe too generous
  */
-#if 0
+#if defined(CONFIG_MODULES) && defined(CONFIG_MACH_XIAOMI_KENZO_AGNI_MIUI_MM)
 	read_unlock(&exec_domains_lock);
 	request_module("personality-%d", pers);
 	read_lock(&exec_domains_lock);

@@ -95,7 +95,8 @@ static inline u32 avc_audit_required(u32 requested,
 		 */
 		if (auditdeny && !(auditdeny & avd->auditdeny))
 			audited = 0;
-		if (force_audit) audited = 1;
+		if (force_audit)
+			audited = 1;
 	} else if (result)
 		audited = denied = requested;
 	else
@@ -151,10 +152,14 @@ static inline int avc_audit(u32 ssid, u32 tsid,
 #endif
 
 #define AVC_EXTENDED_PERMS 2	/* update extended permissions */
+#define AVC_OPERATION_CMD 2	/* ignore command when updating operations */
 int avc_has_perm_noaudit(u32 ssid, u32 tsid,
 			 u16 tclass, u32 requested,
 			 unsigned flags,
 			 struct av_decision *avd);
+
+int avc_has_operation(u32 ssid, u32 tsid, u16 tclass, u32 requested,
+		u16 cmd, struct common_audit_data *ad);
 
 int avc_has_perm_flags(u32 ssid, u32 tsid,
 		       u16 tclass, u32 requested,
@@ -182,6 +187,7 @@ u32 avc_policy_seqno(void);
 #define AVC_CALLBACK_AUDITDENY_ENABLE	64
 #define AVC_CALLBACK_AUDITDENY_DISABLE	128
 #define AVC_CALLBACK_ADD_XPERMS		256
+#define AVC_CALLBACK_ADD_OPERATION	256
 
 int avc_add_callback(int (*callback)(u32 event), u32 events);
 

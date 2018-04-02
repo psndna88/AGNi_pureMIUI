@@ -154,8 +154,10 @@ static int aio_setup_ring(struct kioctx *ctx)
 	unsigned long size, populate;
 	int nr_pages;
 
+#ifndef CONFIG_MACH_XIAOMI_KENZO_AGNI_MIUI_MM
 	if (current->personality & READ_IMPLIES_EXEC)
 		return -EPERM;
+#endif
 
 	/* Compensate for the ring buffer's head/tail overlap entry */
 	nr_events += 2;	/* 1 is required, 2 for good luck */

@@ -741,7 +741,12 @@ struct mm_struct *mm_access(struct task_struct *task, unsigned int mode)
 
 	mm = get_task_mm(task);
 	if (mm && mm != current->mm &&
+#ifdef CONFIG_MACH_XIAOMI_KENZO_AGNI_MIUI_MM
+			!ptrace_may_access(task, mode) &&
+			!capable(CAP_SYS_RESOURCE)) {
+#else
 			!ptrace_may_access(task, mode)) {
+#endif
 
 		if (Binder_System == 0)
 			goto done;

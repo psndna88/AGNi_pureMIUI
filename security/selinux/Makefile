@@ -4,10 +4,17 @@
 
 obj-$(CONFIG_SECURITY_SELINUX) := selinux.o
 
+ifeq ($(CONFIG_MACH_XIAOMI_KENZO_AGNI_MIUI_MM),y)
+selinux-y := avc_mm.o hooks_mm.o selinuxfs.o netlink.o nlmsgtab.o netif.o \
+	     netnode.o netport.o exports.o \
+	     ss/ebitmap.o ss/hashtab.o ss/symtab.o ss/sidtab.o ss/avtab_mm.o \
+	     ss/policydb.o ss/services_mm.o ss/conditional_mm.o ss/mls.o ss/status.o
+else
 selinux-y := avc.o hooks.o selinuxfs.o netlink.o nlmsgtab.o netif.o \
 	     netnode.o netport.o exports.o \
 	     ss/ebitmap.o ss/hashtab.o ss/symtab.o ss/sidtab.o ss/avtab.o \
 	     ss/policydb.o ss/services.o ss/conditional.o ss/mls.o ss/status.o
+endif
 
 selinux-$(CONFIG_SECURITY_NETWORK_XFRM) += xfrm.o
 
