@@ -2,7 +2,7 @@
  * Core MDSS framebuffer driver.
  *
  * Copyright (C) 2007 Google Incorporated
- * Copyright (c) 2008-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2008-2017, The Linux Foundation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1425,14 +1425,8 @@ static void mdss_fb_stop_disp_thread(struct msm_fb_data_type *mfd)
 	pr_debug("%pS: stop display thread fb%d\n",
 		__builtin_return_address(0), mfd->index);
 
-#ifdef CONFIG_MACH_XIAOMI_KENZO_AGNI_LOS_O
-	mutex_lock(&mfd->mdp_sync_pt_data.sync_mutex);
-#endif
 	kthread_stop(mfd->disp_thread);
 	mfd->disp_thread = NULL;
-#ifdef CONFIG_MACH_XIAOMI_KENZO_AGNI_LOS_O
-	mutex_unlock(&mfd->mdp_sync_pt_data.sync_mutex);
-#endif
 }
 
 static void mdss_panel_validate_debugfs_info(struct msm_fb_data_type *mfd)
@@ -2993,16 +2987,10 @@ static int mdss_fb_pan_display_ex(struct fb_info *info,
 	mfd->msm_fb_backup.info = *info;
 	mfd->msm_fb_backup.disp_commit = *disp_commit;
 
-#ifdef CONFIG_MACH_XIAOMI_KENZO_AGNI_LOS_O
-	if (mfd->disp_thread) {
-#endif
-		atomic_inc(&mfd->mdp_sync_pt_data.commit_cnt);
-		atomic_inc(&mfd->commits_pending);
-		atomic_inc(&mfd->kickoff_pending);
-		wake_up_all(&mfd->commit_wait_q);
-#ifdef CONFIG_MACH_XIAOMI_KENZO_AGNI_LOS_O
-	}
-#endif
+	atomic_inc(&mfd->mdp_sync_pt_data.commit_cnt);
+	atomic_inc(&mfd->commits_pending);
+	atomic_inc(&mfd->kickoff_pending);
+	wake_up_all(&mfd->commit_wait_q);
 	mutex_unlock(&mfd->mdp_sync_pt_data.sync_mutex);
 	if (wait_for_finish) {
 		ret = mdss_fb_pan_idle(mfd);
