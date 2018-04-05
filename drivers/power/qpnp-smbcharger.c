@@ -1016,11 +1016,7 @@ static int get_property_from_fg(struct smbchg_chip *chip,
 
 static int get_prop_batt_voltage_now(struct smbchg_chip *chip);
 #define DEFAULT_BATT_CAPACITY	50
-#ifdef CONFIG_MACH_XIAOMI_KENZO
-#define DEFAULT_BATT_VOLTAGE_MAX	4200000
-#else
-#define DEFAULT_BATT_VOLTAGE_MAX	4300000
-#endif
+#define DEFAULT_BATT_VOLTAGE_MAX	4400000
 static int get_prop_batt_capacity(struct smbchg_chip *chip)
 {
 	int capacity, rc;
@@ -1101,7 +1097,7 @@ static int get_prop_batt_voltage_now(struct smbchg_chip *chip)
 	return uv;
 }
 
-#define DEFAULT_BATT_VOLTAGE_MAX_DESIGN	4200000
+#define DEFAULT_BATT_VOLTAGE_MAX_DESIGN	4400000
 static int get_prop_batt_voltage_max_design(struct smbchg_chip *chip)
 {
 	int uv, rc;
