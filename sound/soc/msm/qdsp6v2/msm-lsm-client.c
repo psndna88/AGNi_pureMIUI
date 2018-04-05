@@ -1872,7 +1872,7 @@ static int msm_lsm_pcm_copy(struct snd_pcm_substream *substream, int ch,
 	}
 	rc = wait_event_timeout(prtd->period_wait,
 		(atomic_read(&prtd->buf_count) |
-		atomic_read(&prtd->read_abort)), (2 * HZ));
+		atomic_read(&prtd->read_abort)), msecs_to_jiffies(2000));
 	if (!rc) {
 		dev_err(rtd->dev,
 			"%s: timeout for read retry\n", __func__);

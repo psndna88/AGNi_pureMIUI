@@ -466,7 +466,7 @@ static int msm_pcm_playback_close(struct snd_pcm_substream *substream)
 		q6asm_cmd_nowait(prtd->audio_client, CMD_EOS);
 		pr_debug("%s\n", __func__);
 		rc = wait_event_timeout(the_locks.eos_wait,
-			prtd->cmd_ack, 5 * HZ);
+			prtd->cmd_ack, msecs_to_jiffies(5000));
 		if (!rc)
 			pr_err("EOS cmd timeout\n");
 		prtd->pcm_irq_pos = 0;
@@ -683,7 +683,7 @@ static int msm_pcm_ioctl(struct snd_pcm_substream *substream,
 			return -ENETRESET;
 		}
 		rc = wait_event_timeout(the_locks.eos_wait,
-			!prtd->reset_event && prtd->cmd_ack, 5 * HZ);
+			!prtd->reset_event && prtd->cmd_ack, msecs_to_jiffies(5000));
 		if (!rc)
 			pr_err("Flush cmd timeout\n");
 		prtd->pcm_irq_pos = 0;

@@ -294,7 +294,7 @@ retry:
 			err = get_dnode_of_data(&dn, page->index, LOOKUP_NODE);
 			if (err) {
 				if (err == -ENOMEM) {
-					congestion_wait(BLK_RW_ASYNC, HZ/50);
+					congestion_wait(BLK_RW_ASYNC, msecs_to_jiffies(20));
 					cond_resched();
 					goto retry;
 				}
@@ -401,7 +401,7 @@ retry:
 			err = do_write_data_page(&fio);
 			if (err) {
 				if (err == -ENOMEM) {
-					congestion_wait(BLK_RW_ASYNC, HZ/50);
+					congestion_wait(BLK_RW_ASYNC, msecs_to_jiffies(20));
 					cond_resched();
 					goto retry;
 				}

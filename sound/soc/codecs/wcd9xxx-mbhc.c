@@ -3742,7 +3742,7 @@ irqreturn_t wcd9xxx_dce_handler(int irq, void *data)
 	sta = wcd9xxx_read_sta_result(codec);
 	if (mbhc_status != STATUS_REL_DETECTION) {
 		if (mbhc->mbhc_last_resume &&
-		    !time_after(jiffies, mbhc->mbhc_last_resume + HZ)) {
+		    !time_after(jiffies, mbhc->mbhc_last_resume + msecs_to_jiffies(1000))) {
 			pr_debug("%s: Button is released after resume\n",
 				__func__);
 			n_btn_meas = 0;

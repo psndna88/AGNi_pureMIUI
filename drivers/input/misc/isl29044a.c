@@ -240,7 +240,7 @@ static void do_als_work(struct work_struct *work)
 		return ;
 
 	dev_dat->als_timer.expires = jiffies +
-				(HZ * atomic_read(&dev_dat->poll_delay)) / 1000;
+				(msecs_to_jiffies(1000) * atomic_read(&dev_dat->poll_delay)) / 1000;
 	add_timer(&dev_dat->als_timer);
 
 	return ;
@@ -288,7 +288,7 @@ static void do_ps_work(struct work_struct *work)
 	/* restart timer */
 	if (atomic_read(&dev_dat->ps_pwr_status) == 0)
 		return ;
-	dev_dat->ps_timer.expires = jiffies + (HZ * PS_POLL_TIME) / 1000;
+	dev_dat->ps_timer.expires = jiffies + (msecs_to_jiffies(1000) * PS_POLL_TIME) / 1000;
 	add_timer(&dev_dat->ps_timer);
 
 	return ;
@@ -362,7 +362,7 @@ static int set_als_pwr_st(u8 state, struct isl29044a_data_t *dat)
 		dat->als_timer.function = &do_als_timer;
 		dat->als_timer.data = (unsigned long)dat;
 		dat->als_timer.expires = jiffies +
-				(HZ * atomic_read(&dat->poll_delay)) / 1000;
+				(msecs_to_jiffies(1000) * atomic_read(&dat->poll_delay)) / 1000;
 
 		dat->als_range_using = atomic_read(&dat->als_range);
 		add_timer(&dat->als_timer);
@@ -401,7 +401,7 @@ static int set_ps_pwr_st(u8 state, struct isl29044a_data_t *dat)
 		/* start timer */
 		dat->ps_timer.function = &do_ps_timer;
 		dat->ps_timer.data = (unsigned long)dat;
-		dat->ps_timer.expires = jiffies + (HZ * PS_POLL_TIME) / 1000;
+		dat->ps_timer.expires = jiffies + (msecs_to_jiffies(1000) * PS_POLL_TIME) / 1000;
 		add_timer(&dat->ps_timer);
 	} else {
 		if (atomic_read(&dat->ps_pwr_status) == 0)

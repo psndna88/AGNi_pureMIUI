@@ -437,12 +437,12 @@ static int msm_xfer_msg(struct slim_controller *ctrl, struct slim_msg_txn *txn)
 		mc == SLIM_MSG_MC_BEGIN_RECONFIGURATION)
 		dev->reconf_busy = true;
 	msm_send_msg_buf(dev, pbuf, txn->rl, MGR_TX_MSG);
-	timeout = wait_for_completion_timeout(&done, HZ);
+	timeout = wait_for_completion_timeout(&done, msecs_to_jiffies(1000));
 	if (mc == SLIM_MSG_MC_RECONFIGURE_NOW) {
 		if ((txn->mc == (SLIM_MSG_MC_RECONFIGURE_NOW |
 					SLIM_MSG_CLK_PAUSE_SEQ_FLG)) &&
 				timeout) {
-			timeout = wait_for_completion_timeout(&dev->reconf, HZ);
+			timeout = wait_for_completion_timeout(&dev->reconf, msecs_to_jiffies(1000));
 			dev->reconf_busy = false;
 			if (timeout) {
 				clk_disable_unprepare(dev->rclk);
@@ -511,7 +511,7 @@ retry_laddr:
 	buf[2] = laddr;
 
 	ret = msm_send_msg_buf(dev, buf, 9, MGR_TX_MSG);
-	timeout = wait_for_completion_timeout(&done, HZ);
+	timeout = wait_for_completion_timeout(&done, msecs_to_jiffies(1000));
 	if (!timeout)
 		dev->err = -ETIMEDOUT;
 	if (dev->err) {

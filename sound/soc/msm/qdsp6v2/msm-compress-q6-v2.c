@@ -1203,7 +1203,7 @@ static int msm_compr_free(struct snd_compr_stream *cstream)
 	}
 	if (atomic_read(&prtd->eos)) {
 		ret = wait_event_timeout(prtd->eos_wait,
-					 prtd->eos_ack, 5 * HZ);
+					 prtd->eos_ack, msecs_to_jiffies(5000));
 		if (!ret)
 			pr_err("%s: CMD_EOS failed\n", __func__);
 	}
@@ -1211,7 +1211,7 @@ static int msm_compr_free(struct snd_compr_stream *cstream)
 		prtd->cmd_ack = 0;
 		atomic_set(&prtd->wait_on_close, 1);
 		ret = wait_event_timeout(prtd->close_wait,
-					prtd->cmd_ack, 5 * HZ);
+					prtd->cmd_ack, msecs_to_jiffies(5000));
 		if (!ret)
 			pr_err("%s: CMD_CLOSE failed\n", __func__);
 	}
@@ -1475,7 +1475,7 @@ static int msm_compr_wait_for_stream_avail(struct msm_compr_audio *prtd,
 	 * commands like flush or till a timeout of one second.
 	 */
 	rc = wait_event_timeout(prtd->wait_for_stream_avail,
-		prtd->stream_available || prtd->cmd_interrupt, 1 * HZ);
+		prtd->stream_available || prtd->cmd_interrupt, msecs_to_jiffies(1000));
 	pr_err("%s:prtd->stream_available %d, prtd->cmd_interrupt %d rc %d\n",
 		   __func__, prtd->stream_available, prtd->cmd_interrupt, rc);
 

@@ -726,7 +726,7 @@ int ipa_uc_reset_pipe(enum ipa_client_type ipa_client)
 	       IPA_CLIENT_IS_PROD(ipa_client) ? "CONS" : "PROD", ep_idx);
 
 	ret = ipa_uc_send_cmd(cmd.raw32b, IPA_CPU_2_HW_CMD_RESET_PIPE, 0,
-			      false, 10*HZ);
+			      false, msecs_to_jiffies(10000));
 
 	return ret;
 }
@@ -785,7 +785,7 @@ int ipa_uc_monitor_holb(enum ipa_client_type ipa_client, bool enable)
 
 	ret = ipa_uc_send_cmd(cmd.raw32b,
 				IPA_CPU_2_HW_CMD_UPDATE_HOLB_MONITORING, 0,
-				true, 10*HZ);
+				true, msecs_to_jiffies(10000));
 
 	return ret;
 }
@@ -837,7 +837,7 @@ int ipa_uc_update_hw_flags(u32 flags)
 	memset(&cmd, 0, sizeof(cmd));
 	cmd.params.newFlags = flags;
 	return ipa_uc_send_cmd(cmd.raw32b, IPA_CPU_2_HW_CMD_UPDATE_FLAGS, 0,
-		false, HZ);
+		false, msecs_to_jiffies(1000));
 }
 EXPORT_SYMBOL(ipa_uc_update_hw_flags);
 
@@ -870,7 +870,7 @@ int ipa_uc_memcpy(phys_addr_t dest, phys_addr_t src, int len)
 	cmd->source_addr = src;
 	cmd->source_buffer_size = len;
 	res = ipa_uc_send_cmd((u32)mem.phys_base, IPA_CPU_2_HW_CMD_MEMCPY, 0,
-		true, 10 * HZ);
+		true, 10 * msecs_to_jiffies(1000));
 	if (res) {
 		IPAERR("ipa_uc_send_cmd failed %d\n", res);
 		goto free_coherent;

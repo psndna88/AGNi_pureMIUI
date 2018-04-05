@@ -2566,7 +2566,7 @@ static int init_plugin(struct plug_interface *pl)
 	}
 
 #if defined(CONFIG_MXT_T71_RESET_WATCHDOG)
-	cfg->interval_reset_check_wait = HZ * 3 / 4;
+	cfg->interval_reset_check_wait = msecs_to_jiffies(750);
 #endif
 #if defined(CONFIG_MXT_CAL_T37_WORKAROUND)
 	plugin_cal_init(pl->cal);

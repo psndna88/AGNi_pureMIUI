@@ -74,7 +74,7 @@
 #define USB_PHY_VDD_DIG_VOL_MIN	1045000 /* uV */
 #define USB_PHY_VDD_DIG_VOL_MAX	1320000 /* uV */
 
-#define USB_SUSPEND_DELAY_TIME	(500 * HZ/1000) /* 500 msec */
+#define USB_SUSPEND_DELAY_TIME	500 /* 500 msec */
 
 #define USB_DEFAULT_SYSTEM_CLOCK 80000000	/* 80 MHz */
 
@@ -1049,7 +1049,7 @@ static int msm_otg_set_suspend(struct usb_phy *phy, int suspend)
 			if (!atomic_read(&motg->in_lpm))
 				queue_delayed_work(motg->otg_wq,
 					&motg->suspend_work,
-					USB_SUSPEND_DELAY_TIME);
+					msecs_to_jiffies(USB_SUSPEND_DELAY_TIME));
 			break;
 
 		default:
@@ -3029,10 +3029,10 @@ static const char *chg_to_string(enum usb_chg_type chg_type)
 	}
 }
 
-#define MSM_CHG_DCD_TIMEOUT		(750 * HZ/1000) /* 750 msec */
-#define MSM_CHG_DCD_POLL_TIME		(50 * HZ/1000) /* 50 msec */
-#define MSM_CHG_PRIMARY_DET_TIME	(50 * HZ/1000) /* TVDPSRC_ON */
-#define MSM_CHG_SECONDARY_DET_TIME	(50 * HZ/1000) /* TVDMSRC_ON */
+#define MSM_CHG_DCD_TIMEOUT		750 /* 750 msec */
+#define MSM_CHG_DCD_POLL_TIME		50 /* 50 msec */
+#define MSM_CHG_PRIMARY_DET_TIME	50 /* TVDPSRC_ON */
+#define MSM_CHG_SECONDARY_DET_TIME	50 /* TVDMSRC_ON */
 static void msm_chg_detect_work(struct work_struct *w)
 {
 	struct msm_otg *motg = container_of(w, struct msm_otg, chg_work.work);
@@ -3060,7 +3060,7 @@ static void msm_chg_detect_work(struct work_struct *w)
 		msm_chg_enable_aca_det(motg);
 		motg->chg_state = USB_CHG_STATE_WAIT_FOR_DCD;
 		motg->dcd_time = 0;
-		delay = MSM_CHG_DCD_POLL_TIME;
+		delay = msecs_to_jiffies(MSM_CHG_DCD_POLL_TIME);
 		break;
 	case USB_CHG_STATE_WAIT_FOR_DCD:
 		if (msm_chg_mhl_detect(motg)) {
@@ -3084,8 +3084,8 @@ static void msm_chg_detect_work(struct work_struct *w)
 			}
 		}
 		is_dcd = msm_chg_check_dcd(motg);
-		motg->dcd_time += MSM_CHG_DCD_POLL_TIME;
-		tmout = motg->dcd_time >= MSM_CHG_DCD_TIMEOUT;
+		motg->dcd_time += msecs_to_jiffies(MSM_CHG_DCD_POLL_TIME);
+		tmout = motg->dcd_time >= msecs_to_jiffies(MSM_CHG_DCD_TIMEOUT);
 		if (is_dcd || tmout) {
 			if (is_dcd)
 				dcd = true;
@@ -3093,10 +3093,10 @@ static void msm_chg_detect_work(struct work_struct *w)
 				dcd = false;
 			msm_chg_disable_dcd(motg);
 			msm_chg_enable_primary_det(motg);
-			delay = MSM_CHG_PRIMARY_DET_TIME;
+			delay = msecs_to_jiffies(MSM_CHG_PRIMARY_DET_TIME);
 			motg->chg_state = USB_CHG_STATE_DCD_DONE;
 		} else {
-			delay = MSM_CHG_DCD_POLL_TIME;
+			delay = msecs_to_jiffies(MSM_CHG_DCD_POLL_TIME);
 		}
 		break;
 	case USB_CHG_STATE_DCD_DONE:
@@ -3116,7 +3116,7 @@ static void msm_chg_detect_work(struct work_struct *w)
 				delay = 0;
 			} else {
 				msm_chg_enable_secondary_det(motg);
-				delay = MSM_CHG_SECONDARY_DET_TIME;
+				delay = msecs_to_jiffies(MSM_CHG_SECONDARY_DET_TIME);
 				motg->chg_state = USB_CHG_STATE_PRIMARY_DONE;
 			}
 		} else { /* DM < VDAT_REF || DM > VLGC */

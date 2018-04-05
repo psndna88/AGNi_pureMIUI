@@ -1075,7 +1075,7 @@ int slim_xfer_msg(struct slim_controller *ctrl, struct slim_device *sbdev,
 
 		/* sync read */
 		if (!ret && !msg->comp) {
-			ret = wait_for_completion_timeout(&complete, HZ);
+			ret = wait_for_completion_timeout(&complete, msecs_to_jiffies(1000));
 			if (!ret) {
 				dev_err(&ctrl->dev, "slimbus Read timed out");
 				spin_lock_irqsave(&ctrl->txn_lock, flags);

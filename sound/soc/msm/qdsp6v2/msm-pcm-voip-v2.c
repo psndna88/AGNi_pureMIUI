@@ -801,7 +801,7 @@ static int msm_pcm_playback_copy(struct snd_pcm_substream *substream, int a,
 	ret = wait_event_interruptible_timeout(prtd->in_wait,
 				(!list_empty(&prtd->free_in_queue) ||
 				prtd->state == VOIP_STOPPED),
-				1 * HZ);
+				msecs_to_jiffies(1000));
 	if (prtd->voip_reset) {
 		pr_debug("%s: RESET event happened during VoIP\n", __func__);
 		return -ENETRESET;
@@ -874,7 +874,7 @@ static int msm_pcm_capture_copy(struct snd_pcm_substream *substream,
 	ret = wait_event_interruptible_timeout(prtd->out_wait,
 				(!list_empty(&prtd->out_queue) ||
 				prtd->state == VOIP_STOPPED),
-				1 * HZ);
+				msecs_to_jiffies(1000));
 
 	if (prtd->voip_reset) {
 		pr_debug("%s: RESET event happened during VoIP\n", __func__);

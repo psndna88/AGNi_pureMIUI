@@ -1103,7 +1103,7 @@ static void cpe_clk_plan_work(struct work_struct *work)
 
 	/* Wait for clk plan command to complete */
 	rc = wait_for_completion_timeout(&t_info->core_svc_cmd_compl,
-					 (10 * HZ));
+					 msecs_to_jiffies(10000));
 	if (!rc) {
 		pr_err("%s: clk plan cmd timed out\n",
 			__func__);

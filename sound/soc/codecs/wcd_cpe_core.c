@@ -33,7 +33,7 @@
 #include "wcd_cpe_services.h"
 #include "wcd_cmi_api.h"
 
-#define CMI_CMD_TIMEOUT (10 * HZ)
+#define CMI_CMD_TIMEOUT 10000
 #define WCD_CPE_LSM_MAX_SESSIONS 1
 #define WCD_CPE_AFE_MAX_PORTS 4
 #define AFE_SVC_EXPLICIT_PORT_START 1
@@ -59,8 +59,8 @@
 }
 
 #define WCD_CPE_STATE_MAX_LEN 11
-#define CPE_OFFLINE_WAIT_TIMEOUT (2 * HZ)
-#define CPE_READY_WAIT_TIMEOUT (3 * HZ)
+#define CPE_OFFLINE_WAIT_TIMEOUT 2000
+#define CPE_READY_WAIT_TIMEOUT 3000
 #define WCD_CPE_SYSFS_DIR_MAX_LENGTH 32
 
 #define CPE_ERR_IRQ_CB(core) \
@@ -1049,7 +1049,7 @@ void wcd_cpe_ssr_work(struct work_struct *work)
 				__func__, rc);
 
 		rc = wait_for_completion_timeout(&core->offline_compl,
-						 CPE_OFFLINE_WAIT_TIMEOUT);
+						 msecs_to_jiffies(CPE_OFFLINE_WAIT_TIMEOUT));
 		if (!rc) {
 			dev_err(core->dev,
 				"%s: wait for cpe offline timed out\n",
@@ -1075,7 +1075,7 @@ void wcd_cpe_ssr_work(struct work_struct *work)
 	}
 
 	rc = wait_for_completion_timeout(&core->ready_compl,
-					 CPE_READY_WAIT_TIMEOUT);
+					 msecs_to_jiffies(CPE_READY_WAIT_TIMEOUT));
 	if (!rc) {
 		dev_err(core->dev,
 			"%s: ready to online timed out, status = %u\n",
@@ -2208,7 +2208,7 @@ static int wcd_cpe_cmi_send_lsm_msg(
 	}
 
 	ret = wait_for_completion_timeout(&session->cmd_comp,
-					  CMI_CMD_TIMEOUT);
+					  msecs_to_jiffies(CMI_CMD_TIMEOUT));
 	if (ret > 0) {
 		pr_debug("%s: command 0x%x, received response 0x%x\n",
 			__func__, hdr->opcode, session->cmd_err_code);
@@ -3965,7 +3965,7 @@ static int wcd_cpe_cmi_send_afe_msg(
 	}
 
 	ret = wait_for_completion_timeout(&port_d->afe_cmd_complete,
-					  CMI_CMD_TIMEOUT);
+					  msecs_to_jiffies(CMI_CMD_TIMEOUT));
 	if (ret > 0) {
 		pr_debug("%s: command 0x%x, received response 0x%x\n",
 			 __func__, hdr->opcode, port_d->cmd_result);

@@ -296,7 +296,7 @@ int wcd9xxx_spmi_suspend(pm_message_t pmesg)
 							WCD9XXX_PM_SLEEPABLE,
 							WCD9XXX_PM_ASLEEP) ==
 							WCD9XXX_PM_SLEEPABLE,
-							HZ))) {
+							msecs_to_jiffies(1000)))) {
 			pr_debug("%s: suspend failed state %d, wlock %d\n",
 				 __func__, map.pm_state,
 				 map.wlock_holders);

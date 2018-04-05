@@ -47,7 +47,7 @@ struct snd_msm {
 };
 
 #define CMD_EOS_MIN_TIMEOUT_LENGTH  50
-#define CMD_EOS_TIMEOUT_MULTIPLIER  (HZ * 50)
+#define CMD_EOS_TIMEOUT_MULTIPLIER  50000
 
 #define ATRACE_END() \
 	trace_printk("tracing_mark_write: E\n")
@@ -495,7 +495,7 @@ static int msm_pcm_close(struct snd_pcm_substream *substream)
 			timeout = CMD_EOS_MIN_TIMEOUT_LENGTH;
 		} else {
 			timeout = (runtime->period_size *
-					CMD_EOS_TIMEOUT_MULTIPLIER) /
+					msecs_to_jiffies(CMD_EOS_TIMEOUT_MULTIPLIER)) /
 					((runtime->frame_bits / 8) *
 					 runtime->rate);
 			if (timeout < CMD_EOS_MIN_TIMEOUT_LENGTH)

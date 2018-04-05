@@ -415,7 +415,7 @@ static int ngd_xfer_msg(struct slim_controller *ctrl, struct slim_msg_txn *txn)
 				mc < SLIM_USR_MC_DISCONNECT_PORT)))
 				return -EREMOTEIO;
 			timeout = wait_for_completion_timeout(&dev->ctrl_up,
-							HZ);
+							msecs_to_jiffies(1000));
 			if (!timeout)
 				return -ETIMEDOUT;
 			mutex_lock(&dev->tx_lock);
@@ -596,7 +596,7 @@ static int ngd_xfer_msg(struct slim_controller *ctrl, struct slim_msg_txn *txn)
 			NGD_BASE(dev->ctrl.nr, dev->ver) + NGD_TX_MSG);
 	if (!ret && sync_wr) {
 		int i;
-		int timeout = wait_for_completion_timeout(&tx_sent, HZ);
+		int timeout = wait_for_completion_timeout(&tx_sent, msecs_to_jiffies(1000));
 		if (!timeout && dev->use_tx_msgqs == MSM_MSGQ_ENABLED) {
 			struct msm_slim_endp *endpoint = &dev->tx_msgq;
 			struct sps_mem_buffer *mem = &endpoint->buf;
@@ -652,7 +652,7 @@ static int ngd_xfer_msg(struct slim_controller *ctrl, struct slim_msg_txn *txn)
 		mutex_unlock(&dev->tx_lock);
 		msm_slim_put_ctrl(dev);
 		if (!ret) {
-			timeout = wait_for_completion_timeout(txn->comp, HZ);
+			timeout = wait_for_completion_timeout(txn->comp, msecs_to_jiffies(1000));
 			/* remote side did not acknowledge */
 			if (!timeout)
 				ret = -EREMOTEIO;
@@ -849,7 +849,7 @@ static int ngd_bulk_wr(struct slim_controller *ctrl, u8 la, u8 mt, u8 mc,
 		goto retpath;
 	}
 	if (dev->bulk.cb == ngd_bulk_cb) {
-		int timeout = wait_for_completion_timeout(&done, HZ);
+		int timeout = wait_for_completion_timeout(&done, msecs_to_jiffies(1000));
 
 		if (!timeout) {
 			SLIM_WARN(dev, "timeout for bulk wr");
@@ -897,7 +897,7 @@ static int ngd_xferandwait_ack(struct slim_controller *ctrl,
 	ret = ngd_xfer_msg(ctrl, txn);
 	if (!ret) {
 		int timeout;
-		timeout = wait_for_completion_timeout(txn->comp, HZ);
+		timeout = wait_for_completion_timeout(txn->comp, msecs_to_jiffies(1000));
 		if (!timeout)
 			ret = -ETIMEDOUT;
 		else
@@ -1234,7 +1234,7 @@ static int ngd_slim_power_up(struct msm_slim_ctrl *dev, bool mdm_restart)
 
 	if (!mdm_restart && cur_state == MSM_CTRL_DOWN) {
 		int timeout = wait_for_completion_timeout(&dev->qmi.qmi_comp,
-						HZ);
+						msecs_to_jiffies(1000));
 		if (!timeout) {
 			SLIM_ERR(dev, "slimbus QMI init timed out\n");
 			return -EREMOTEIO;
@@ -1318,7 +1318,7 @@ capability_retry:
 	/* reconnect BAM pipes if needed and enable NGD */
 	ngd_slim_setup(dev);
 
-	timeout = wait_for_completion_timeout(&dev->reconf, HZ);
+	timeout = wait_for_completion_timeout(&dev->reconf, msecs_to_jiffies(1000));
 	if (!timeout) {
 		u32 cfg = readl_relaxed(dev->base +
 					 NGD_BASE(dev->ctrl.nr, dev->ver));

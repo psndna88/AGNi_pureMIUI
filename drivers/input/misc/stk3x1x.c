@@ -697,7 +697,7 @@ static int32_t stk3x1x_enable_ps(struct stk3x1x_data *ps_data, uint8_t enable)
 		ps_data->ps_distance_last = near_far_state;
 		input_report_abs(ps_data->ps_input_dev, ABS_DISTANCE, near_far_state);
 		input_sync(ps_data->ps_input_dev);
-		wake_lock_timeout(&ps_data->ps_wakelock, 3*HZ);
+		wake_lock_timeout(&ps_data->ps_wakelock, msecs_to_jiffies(3000));
 		reading = stk3x1x_get_ps_reading(ps_data);
 		dev_dbg(&ps_data->client->dev,
 			"%s: ps input event=%d, ps code = %d\n",
@@ -1348,7 +1348,7 @@ static ssize_t stk_ps_distance_show(struct device *dev, struct device_attribute 
 	input_report_abs(ps_data->ps_input_dev, ABS_DISTANCE, dist);
 	input_sync(ps_data->ps_input_dev);
     mutex_unlock(&ps_data->io_lock);
-	wake_lock_timeout(&ps_data->ps_wakelock, 3*HZ);
+	wake_lock_timeout(&ps_data->ps_wakelock, msecs_to_jiffies(3000));
 	dev_dbg(dev, "%s: ps input event %d cm\n", __func__, dist);
     return scnprintf(buf, PAGE_SIZE, "%d\n", dist);
 }
@@ -1371,7 +1371,7 @@ static ssize_t stk_ps_distance_store(struct device *dev, struct device_attribute
 	input_report_abs(ps_data->ps_input_dev, ABS_DISTANCE, value);
 	input_sync(ps_data->ps_input_dev);
     mutex_unlock(&ps_data->io_lock);
-	wake_lock_timeout(&ps_data->ps_wakelock, 3*HZ);
+	wake_lock_timeout(&ps_data->ps_wakelock, msecs_to_jiffies(3000));
 	dev_dbg(dev, "%s: ps input event %ld cm\n", __func__, value);
     return size;
 }
@@ -1787,7 +1787,7 @@ static void stk_ps_work_func(struct work_struct *work)
 		ps_data->ps_distance_last = near_far_state;
 		input_report_abs(ps_data->ps_input_dev, ABS_DISTANCE, near_far_state);
 		input_sync(ps_data->ps_input_dev);
-		wake_lock_timeout(&ps_data->ps_wakelock, 3*HZ);
+		wake_lock_timeout(&ps_data->ps_wakelock, msecs_to_jiffies(3000));
 #ifdef STK_DEBUG_PRINTF
 		printk(KERN_INFO "%s: ps input event %d cm, ps code = %d\n",__func__, near_far_state, reading);
 #endif
@@ -1837,7 +1837,7 @@ static void stk_work_func(struct work_struct *work)
 	ps_data->ps_distance_last = near_far_state;
 	input_report_abs(ps_data->ps_input_dev, ABS_DISTANCE, near_far_state);
 	input_sync(ps_data->ps_input_dev);
-	wake_lock_timeout(&ps_data->ps_wakelock, 3*HZ);
+	wake_lock_timeout(&ps_data->ps_wakelock, msecs_to_jiffies(3000));
 	reading = stk3x1x_get_ps_reading(ps_data);
 #ifdef STK_DEBUG_PRINTF
 	printk(KERN_INFO "%s: ps input event %d cm, ps code = %d\n",__func__, near_far_state, reading);
@@ -1886,7 +1886,7 @@ static void stk_work_func(struct work_struct *work)
 		ps_data->ps_distance_last = near_far_state;
 		input_report_abs(ps_data->ps_input_dev, ABS_DISTANCE, near_far_state);
 		input_sync(ps_data->ps_input_dev);
-		wake_lock_timeout(&ps_data->ps_wakelock, 3*HZ);
+		wake_lock_timeout(&ps_data->ps_wakelock, msecs_to_jiffies(3000));
         reading = stk3x1x_get_ps_reading(ps_data);
 #ifdef STK_DEBUG_PRINTF
 		printk(KERN_INFO "%s: ps input event=%d, ps code = %d\n",__func__, near_far_state, reading);

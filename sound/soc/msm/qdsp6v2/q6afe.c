@@ -2941,7 +2941,7 @@ int afe_cmd_memory_map(phys_addr_t dma_addr_p, u32 dma_buf_sz)
 	struct afe_service_cmd_shared_mem_map_regions *mregion = NULL;
 	struct  afe_service_shared_map_region_payload *mregion_pl = NULL;
 	int index = 0;
-	static DEFINE_RATELIMIT_STATE(rl, HZ/2, 1);
+	static DEFINE_RATELIMIT_STATE(rl, 50, 1);
 
 	pr_debug("%s:\n", __func__);
 
@@ -4636,7 +4636,7 @@ static int afe_set_cal(int32_t cal_type, size_t data_size,
 {
 	int				ret = 0;
 	int				cal_index;
-	static DEFINE_RATELIMIT_STATE(rl, HZ/2, 1);
+	static DEFINE_RATELIMIT_STATE(rl, 50, 1);
 	pr_debug("%s:\n", __func__);
 
 	cal_index = get_cal_type_index(cal_type);
@@ -4843,7 +4843,7 @@ static int afe_map_cal_data(int32_t cal_type,
 {
 	int ret = 0;
 	int cal_index;
-	static DEFINE_RATELIMIT_STATE(rl, HZ/2, 1);
+	static DEFINE_RATELIMIT_STATE(rl, 50, 1);
 	pr_debug("%s:\n", __func__);
 
 	cal_index = get_cal_type_index(cal_type);

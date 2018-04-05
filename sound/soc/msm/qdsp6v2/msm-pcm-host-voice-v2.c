@@ -961,7 +961,7 @@ static int msm_pcm_playback_copy(struct snd_pcm_substream *substream, int a,
 	ret = wait_event_interruptible_timeout(dai_data->queue_wait,
 				(!list_empty(&dai_data->free_queue) ||
 				dai_data->state == HPCM_STOPPED),
-				1 * HZ);
+				msecs_to_jiffies(1000));
 	if (ret > 0) {
 		if (count <= HPCM_MAX_VOC_PKT_SIZE) {
 			spin_lock_irqsave(&dai_data->dsp_lock, dsp_flags);
@@ -1016,7 +1016,7 @@ static int msm_pcm_capture_copy(struct snd_pcm_substream *substream,
 	ret = wait_event_interruptible_timeout(dai_data->queue_wait,
 				(!list_empty(&dai_data->filled_queue) ||
 				dai_data->state == HPCM_STOPPED),
-				1 * HZ);
+				msecs_to_jiffies(1000));
 
 	if (ret > 0) {
 		if (count <= HPCM_MAX_VOC_PKT_SIZE) {

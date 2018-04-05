@@ -1383,7 +1383,7 @@ static int adm_memory_map_regions(phys_addr_t *buf_add, uint32_t mempool_id,
 	int     ret = 0;
 	int     i = 0;
 	int     cmd_size = 0;
-	static DEFINE_RATELIMIT_STATE(rl, HZ/2, 1);
+	static DEFINE_RATELIMIT_STATE(rl, 50, 1);
 
 	pr_debug("%s:\n", __func__);
 	if (this_adm.apr == NULL) {
@@ -1447,7 +1447,7 @@ static int adm_memory_map_regions(phys_addr_t *buf_add, uint32_t mempool_id,
 
 	ret = wait_event_timeout(this_adm.adm_wait,
 				 atomic_read(&this_adm.adm_stat),
-				 5 * HZ);
+				 msecs_to_jiffies(5000));
 	if (!ret) {
 		pr_err("%s: timeout. waited for memory_map\n", __func__);
 		ret = -EINVAL;
@@ -1498,7 +1498,7 @@ static int adm_memory_unmap_regions(void)
 
 	ret = wait_event_timeout(this_adm.adm_wait,
 				 atomic_read(&this_adm.adm_stat),
-				 5 * HZ);
+				 msecs_to_jiffies(5000));
 	if (!ret) {
 		pr_err("%s: timeout. waited for memory_unmap\n",
 		       __func__);
@@ -2674,7 +2674,7 @@ static int adm_set_cal(int32_t cal_type, size_t data_size, void *data)
 {
 	int				ret = 0;
 	int				cal_index;
-	static DEFINE_RATELIMIT_STATE(rl, HZ/2, 1);
+	static DEFINE_RATELIMIT_STATE(rl, 50, 1);
 
 	pr_debug("%s:\n", __func__);
 
@@ -2710,7 +2710,7 @@ static int adm_map_cal_data(int32_t cal_type,
 {
 	int ret = 0;
 	int cal_index;
-	static DEFINE_RATELIMIT_STATE(rl, HZ/2, 1);
+	static DEFINE_RATELIMIT_STATE(rl, 50, 1);
 
 	pr_debug("%s:\n", __func__);
 

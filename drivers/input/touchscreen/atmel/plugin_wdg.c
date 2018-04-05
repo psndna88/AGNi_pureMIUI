@@ -485,7 +485,7 @@ static int init_ti(struct plugin_wdg *p)
 	struct wd_config *cfg = p->cfg;
 	struct timer_config *ti_cfg = &cfg->timer;
 
-	ti_cfg->interval_wd_check = 2 * HZ + (HZ/10);
+	ti_cfg->interval_wd_check = msecs_to_jiffies(2100);
 	ti_cfg->min_check_count = 2;
 	ti_cfg->failed_reset_retry = 3;
 
@@ -533,7 +533,7 @@ static int init_wd_object(struct plugin_wdg *p)
 		return -ENOMEM;
 	}
 
-	cfg->interval_wdc_recheck = HZ / 8;
+	cfg->interval_wdc_recheck = msecs_to_jiffies(125);
 
 	set_flag(/*WD_FLAG_FUNC_TIMER|WD_FLAG_FUNC_REGISTER*/0, &obs->flag);
 

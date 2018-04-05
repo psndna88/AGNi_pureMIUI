@@ -57,7 +57,7 @@ struct snd_msm {
 };
 
 #define CMD_EOS_MIN_TIMEOUT_LENGTH  50
-#define CMD_EOS_TIMEOUT_MULTIPLIER  (HZ * 50)
+#define CMD_EOS_TIMEOUT_MULTIPLIER  50000
 
 static struct snd_pcm_hardware msm_pcm_hardware_capture = {
 	.info =                 (SNDRV_PCM_INFO_MMAP |
@@ -526,7 +526,7 @@ static int msm_pcm_open(struct snd_pcm_substream *substream)
 	struct snd_soc_pcm_runtime *soc_prtd = substream->private_data;
 	struct msm_audio *prtd;
 	int ret = 0;
-	static DEFINE_RATELIMIT_STATE(rl, HZ/2, 1);
+	static DEFINE_RATELIMIT_STATE(rl, 50, 1);
 
 	prtd = kzalloc(sizeof(struct msm_audio), GFP_KERNEL);
 	if (prtd == NULL) {
@@ -634,7 +634,7 @@ static int msm_pcm_playback_copy(struct snd_pcm_substream *substream, int a,
 	}
 
 	ret = wait_event_timeout(the_locks.write_wait,
-			(atomic_read(&prtd->out_count)), 5 * HZ);
+			(atomic_read(&prtd->out_count)), msecs_to_jiffies(500));
 	if (!ret) {
 		pr_err("%s: wait_event_timeout failed\n", __func__);
 		goto fail;
@@ -702,7 +702,7 @@ static int msm_pcm_playback_close(struct snd_pcm_substream *substream)
 			timeout = CMD_EOS_MIN_TIMEOUT_LENGTH;
 		} else {
 			timeout = (runtime->period_size *
-					CMD_EOS_TIMEOUT_MULTIPLIER) /
+					msecs_to_jiffies(CMD_EOS_TIMEOUT_MULTIPLIER)) /
 					((runtime->frame_bits / 8) *
 					 runtime->rate);
 			if (timeout < CMD_EOS_MIN_TIMEOUT_LENGTH)
@@ -757,7 +757,7 @@ static int msm_pcm_capture_copy(struct snd_pcm_substream *substream,
 		return -ENETRESET;
 	}
 	ret = wait_event_timeout(the_locks.read_wait,
-			(atomic_read(&prtd->in_count)), 5 * HZ);
+			(atomic_read(&prtd->in_count)), msecs_to_jiffies(500));
 	if (!ret) {
 		pr_debug("%s: wait_event_timeout failed\n", __func__);
 		goto fail;

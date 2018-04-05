@@ -858,7 +858,7 @@ static int ipa_mhi_reset_ul_channel(struct ipa_mhi_channel_ctx *channel)
 			}
 		}
 
-		res = ipa_tag_process(NULL, 0, HZ);
+		res = ipa_tag_process(NULL, 0, msecs_to_jiffies(1000));
 		if (res)
 			IPAERR("TAG process failed\n");
 
