@@ -30,10 +30,12 @@
 #include <linux/platform_data/qcom_crypto_device.h>
 #include <linux/msm-bus.h>
 #include <linux/qcedev.h>
+#include <uapi/linux/fips_status.h>
 
 #include <crypto/hash.h>
 #include "qcedevi.h"
 #include "qce.h"
+#include "qcryptoi.h"
 
 #ifdef CONFIG_COMPAT
 #include <linux/compat.h>

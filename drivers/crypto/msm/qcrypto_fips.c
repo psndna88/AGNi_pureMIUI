@@ -26,7 +26,7 @@
 #include <crypto/scatterwalk.h>
 #include <crypto/internal/hash.h>
 #include <linux/platform_data/qcom_crypto_device.h>
-#include <mach/qcrypto.h>
+#include <linux/qcrypto.h>
 #include "qcryptoi.h"
 #include "qcrypto_fips.h"
 

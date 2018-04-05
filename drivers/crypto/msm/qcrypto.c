@@ -46,7 +46,7 @@
 #include <crypto/internal/hash.h>
 #include <crypto/internal/aead.h>
 
-#include <linux/fips_status.h>
+#include <uapi/linux/fips_status.h>
 #include "qcryptoi.h"
 #include "qce.h"
 
