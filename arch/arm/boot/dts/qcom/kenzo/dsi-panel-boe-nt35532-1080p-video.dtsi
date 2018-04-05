@@ -434,7 +434,8 @@
 				23 01 00 00 00 00 02 D4 0A
 				05 01 00 00 78 00 02 11 00
 				05 01 00 00 00 00 02 29 00];
-		qcom,mdss-dsi-off-command = [05 01 00 00 96 00 02 28 00
+		qcom,mdss-dsi-off-command = [
+				05 01 00 00 96 00 02 28 00
 				05 01 00 00 96 00 02 10 00];
 		qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
 		qcom,mdss-dsi-off-command-state = "dsi_lp_mode";
@@ -445,7 +446,6 @@
 		qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
 		qcom,mdss-pan-physical-width-dimension = <70>;
 		qcom,mdss-pan-physical-height-dimension = <128>;
-
 		qcom,mdss-dsi-panel-status-command = [06 01 00 01 05 00 02 0A 08];
 		qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
 		qcom,mdss-dsi-panel-status-check-mode = "reg_read";

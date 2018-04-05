@@ -446,5 +446,6 @@
 		qcom,mdss-dsi-panel-status-check-mode = "reg_read";
 		qcom,mdss-dsi-panel-status-value = <0x9c>;
 		qcom,mdss-dsi-hbp-power-mode;
+		qcom,esd-check-enabled;
 	};
 };
