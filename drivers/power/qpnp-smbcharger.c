@@ -66,7 +66,6 @@ struct smbchg_regulator {
 struct parallel_usb_cfg {
 	struct power_supply		*psy;
 	int				min_current_thr_ma;
-	int				min_9v_current_thr_ma;
 	int				allowed_lowering_ma;
 	int				current_max_ma;
 	bool				avail;
@@ -313,7 +312,6 @@ enum pmic_subtype {
 
 enum smbchg_wa {
 	SMBCHG_AICL_DEGLITCH_WA = BIT(0),
-	SMBCHG_HVDCP_9V_EN_WA	= BIT(1),
 	SMBCHG_USB100_WA = BIT(2),
 	SMBCHG_BATT_OV_WA = BIT(3),
 	SMBCHG_CC_ESR_WA = BIT(4),
@@ -759,10 +757,8 @@ static bool is_otg_present(struct smbchg_chip *chip)
 	return is_otg_present_schg(chip);
 }
 
-#define USBIN_9V			BIT(5)
 #define USBIN_UNREG			BIT(4)
 #define USBIN_LV			BIT(3)
-#define DCIN_9V				BIT(2)
 #define DCIN_UNREG			BIT(1)
 #define DCIN_LV				BIT(0)
 #define INPUT_STS			0x0D
@@ -804,7 +800,7 @@ static bool is_usb_present(struct smbchg_chip *chip)
 		return false;
 	}
 
-	return !!(reg & (USBIN_9V | USBIN_UNREG | USBIN_LV));
+	return !!(reg & (USBIN_UNREG | USBIN_LV));
 }
 
 static char *usb_type_str[] = {
@@ -1740,13 +1736,11 @@ out:
 
 #define USBIN_HVDCP_STS				0x0C
 #define USBIN_HVDCP_SEL_BIT			BIT(4)
-#define USBIN_HVDCP_SEL_9V_BIT			BIT(1)
-#define SCHG_LITE_USBIN_HVDCP_SEL_9V_BIT	BIT(2)
 #define SCHG_LITE_USBIN_HVDCP_SEL_BIT		BIT(0)
 static int smbchg_get_min_parallel_current_ma(struct smbchg_chip *chip)
 {
 	int rc;
-	u8 reg, hvdcp_sel, hvdcp_sel_9v;
+	u8 reg, hvdcp_sel;
 
 	rc = smbchg_read(chip, &reg,
 			chip->usb_chgpth_base + USBIN_HVDCP_STS, 1);
@@ -1756,14 +1750,10 @@ static int smbchg_get_min_parallel_current_ma(struct smbchg_chip *chip)
 	}
 	if (chip->schg_version == QPNP_SCHG_LITE) {
 		hvdcp_sel = SCHG_LITE_USBIN_HVDCP_SEL_BIT;
-		hvdcp_sel_9v = SCHG_LITE_USBIN_HVDCP_SEL_9V_BIT;
 	} else {
 		hvdcp_sel = USBIN_HVDCP_SEL_BIT;
-		hvdcp_sel_9v = USBIN_HVDCP_SEL_9V_BIT;
 	}
 
-	if ((reg & hvdcp_sel) && (reg & hvdcp_sel_9v))
-		return chip->parallel.min_9v_current_thr_ma;
 	return chip->parallel.min_current_thr_ma;
 }
 
@@ -3616,8 +3606,6 @@ struct regulator_ops smbchg_otg_reg_ops = {
 
 #define USBIN_CHGR_CFG			0xF1
 #define ADAPTER_ALLOWANCE_MASK		0x7
-#define USBIN_ADAPTER_9V		0x3
-#define USBIN_ADAPTER_5V_9V_CONT	0x2
 #define HVDCP_EN_BIT			BIT(3)
 static int smbchg_external_otg_regulator_enable(struct regulator_dev *rdev)
 {
@@ -3638,8 +3626,8 @@ static int smbchg_external_otg_regulator_enable(struct regulator_dev *rdev)
 	}
 
 	/*
-	 * To disallow source detect and usbin_uv interrupts, set the adapter
-	 * allowance to 9V, so that the audio boost operating in reverse never
+	 * To disallow source detect and usbin_uv interrupts,
+	 * so that the audio boost operating in reverse never
 	 * gets detected as a valid input
 	 */
 	rc = smbchg_sec_masked_write(chip,
@@ -3650,15 +3638,6 @@ static int smbchg_external_otg_regulator_enable(struct regulator_dev *rdev)
 		return rc;
 	}
 
-	rc = smbchg_sec_masked_write(chip,
-				chip->usb_chgpth_base + USBIN_CHGR_CFG,
-				0xFF, USBIN_ADAPTER_9V);
-	if (rc < 0) {
-		dev_err(chip->dev, "Couldn't write usb allowance rc=%d\n", rc);
-		return rc;
-	}
-
-	pr_smb(PR_STATUS, "Enabling OTG Boost\n");
 	return rc;
 }
 
@@ -4346,10 +4325,9 @@ static bool is_hvdcp_present(struct  smbchg_chip *chip)
 
 #define HVDCP_ADAPTER_SEL_MASK	SMB_MASK(5, 4)
 #define HVDCP_5V		0x00
-#define HVDCP_9V		0x10
 #define USB_CMD_HVDCP_1		0x42
 #define FORCE_HVDCP_2p0		BIT(3)
-static int force_9v_hvdcp(struct smbchg_chip *chip)
+static int force_5v_hvdcp(struct smbchg_chip *chip)
 {
 	int rc;
 
@@ -4377,13 +4355,6 @@ static int force_9v_hvdcp(struct smbchg_chip *chip)
 	/* wait for QC2.0 */
 	msleep(500);
 
-	/* Force 9V HVDCP */
-	rc = smbchg_sec_masked_write(chip,
-			chip->usb_chgpth_base + CHGPTH_CFG,
-			HVDCP_ADAPTER_SEL_MASK, HVDCP_9V);
-	if (rc)
-		pr_err("Couldn't set hvdcp config in chgpath_chg rc=%d\n", rc);
-
 	return rc;
 }
 
@@ -4395,12 +4366,11 @@ static void smbchg_hvdcp_det_work(struct work_struct *work)
 	int rc;
 
 	if (is_hvdcp_present(chip)) {
-		if (!chip->hvdcp3_supported &&
-			(chip->wa_flags & SMBCHG_HVDCP_9V_EN_WA)) {
+		if (!chip->hvdcp3_supported) {
 			/* force HVDCP 2.0 */
-			rc = force_9v_hvdcp(chip);
+			rc = force_5v_hvdcp(chip);
 			if (rc)
-				pr_err("could not force 9V HVDCP continuing rc=%d\n",
+				pr_err("could not force 5V HVDCP continuing rc=%d\n",
 						rc);
 		}
 		smbchg_change_usb_supply_type(chip,
@@ -4438,12 +4408,6 @@ static void restore_from_hvdcp_detection(struct smbchg_chip *chip)
 {
 	int rc;
 
-	/* switch to 9V HVDCP */
-	rc = smbchg_sec_masked_write(chip, chip->usb_chgpth_base + CHGPTH_CFG,
-				HVDCP_ADAPTER_SEL_MASK, HVDCP_9V);
-	if (rc < 0)
-		pr_err("Couldn't configure HVDCP 9V rc=%d\n", rc);
-
 	/* enable HVDCP */
 	rc = smbchg_sec_masked_write(chip,
 				chip->usb_chgpth_base + CHGPTH_CFG,
@@ -4458,13 +4422,6 @@ static void restore_from_hvdcp_detection(struct smbchg_chip *chip)
 	if (rc < 0)
 		pr_err("Couldn't enable APSD rc=%d\n", rc);
 
-	/* allow 5 to 9V chargers */
-	rc = smbchg_sec_masked_write(chip,
-			chip->usb_chgpth_base + USBIN_CHGR_CFG,
-			ADAPTER_ALLOWANCE_MASK, USBIN_ADAPTER_5V_9V_CONT);
-	if (rc < 0)
-		pr_err("Couldn't write usb allowance rc=%d\n", rc);
-
 	rc = smbchg_sec_masked_write(chip, chip->usb_chgpth_base + USB_AICL_CFG,
 			AICL_EN_BIT, AICL_EN_BIT);
 	if (rc < 0)
@@ -4475,10 +4432,10 @@ static void restore_from_hvdcp_detection(struct smbchg_chip *chip)
 
 	if ((chip->schg_version == QPNP_SCHG_LITE)
 				&& is_hvdcp_present(chip)) {
-		pr_smb(PR_MISC, "Forcing 9V HVDCP 2.0\n");
-		rc = force_9v_hvdcp(chip);
+		pr_smb(PR_MISC, "Forcing 5V HVDCP 2.0\n");
+		rc = force_5v_hvdcp(chip);
 		if (rc)
-			pr_err("Failed to force 9V HVDCP=%d\n",	rc);
+			pr_err("Failed to force 5V HVDCP=%d\n",	rc);
 	}
 
 	pr_smb(PR_MISC, "Retracting HVDCP vote for ICL\n");
@@ -4876,18 +4833,6 @@ static int fake_insertion_removal(struct smbchg_chip *chip, bool insertion)
 		return -EINVAL;
 	}
 
-	pr_smb(PR_MISC, "Allow only %s charger\n",
-			insertion ? "5-9V" : "9V only");
-	rc = smbchg_sec_masked_write(chip,
-			chip->usb_chgpth_base + USBIN_CHGR_CFG,
-			ADAPTER_ALLOWANCE_MASK,
-			insertion ?
-			USBIN_ADAPTER_5V_9V_CONT : USBIN_ADAPTER_9V);
-	if (rc < 0) {
-		pr_err("Couldn't write usb allowance rc=%d\n", rc);
-		return rc;
-	}
-
 	pr_smb(PR_MISC, "Waiting on %s usbin uv\n",
 			insertion ? "falling" : "rising");
 	rc = wait_for_usbin_uv(chip, !insertion);
@@ -5048,15 +4993,6 @@ static int smbchg_unprepare_for_pulsing(struct smbchg_chip *chip)
 
 	set_usb_psy_dp_dm(chip, POWER_SUPPLY_DP_DM_DPF_DMF);
 
-	/* switch to 9V HVDCP */
-	pr_smb(PR_MISC, "Switch to 9V HVDCP\n");
-	rc = smbchg_sec_masked_write(chip, chip->usb_chgpth_base + CHGPTH_CFG,
-				HVDCP_ADAPTER_SEL_MASK, HVDCP_9V);
-	if (rc < 0) {
-		pr_err("Couldn't configure HVDCP 9V rc=%d\n", rc);
-		return rc;
-	}
-
 	/* enable HVDCP */
 	pr_smb(PR_MISC, "Enable HVDCP\n");
 	rc = smbchg_sec_masked_write(chip,
@@ -5189,8 +5125,6 @@ static int rerun_apsd(struct smbchg_chip *chip)
 	return rc;
 }
 
-#define SCHG_LITE_USBIN_HVDCP_5_9V		0x8
-#define SCHG_LITE_USBIN_HVDCP_5_9V_SEL_MASK	0x38
 #define SCHG_LITE_USBIN_HVDCP_SEL_IDLE		BIT(3)
 static bool is_hvdcp_5v_cont_mode(struct smbchg_chip *chip)
 {
@@ -5214,9 +5148,7 @@ static bool is_hvdcp_5v_cont_mode(struct smbchg_chip *chip)
 			return false;
 		}
 		pr_smb(PR_STATUS, "INPUT status = %x\n", reg);
-		if ((reg & SCHG_LITE_USBIN_HVDCP_5_9V_SEL_MASK) ==
-					SCHG_LITE_USBIN_HVDCP_5_9V)
-			return true;
+		return true;
 	}
 	return false;
 }
@@ -5311,13 +5243,6 @@ out:
 static int smbchg_unprepare_for_pulsing_lite(struct smbchg_chip *chip)
 {
 	int rc = 0;
-
-	pr_smb(PR_MISC, "Forcing 9V HVDCP 2.0\n");
-	rc = force_9v_hvdcp(chip);
-	if (rc) {
-		pr_err("Failed to force 9V HVDCP=%d\n",	rc);
-		return rc;
-	}
 
 	pr_smb(PR_MISC, "Retracting HVDCP vote for ICL\n");
 	rc = vote(chip->usb_icl_votable, HVDCP_ICL_VOTER, false, 0);
@@ -6800,7 +6725,6 @@ static inline int get_bpd(const char *name)
 #define CHGR_CCMP_CFG			0xFA
 #define JEITA_TEMP_HARD_LIMIT_BIT	BIT(5)
 #define HVDCP_ADAPTER_SEL_MASK		SMB_MASK(5, 4)
-#define HVDCP_ADAPTER_SEL_9V_BIT	BIT(4)
 #define HVDCP_AUTH_ALG_EN_BIT		BIT(6)
 #define CMD_APSD			0x41
 #define APSD_RERUN_BIT			BIT(0)
@@ -6898,7 +6822,6 @@ static int smbchg_hw_init(struct smbchg_chip *chip)
 	 * Do not force using current from the register i.e. use auto
 	 * power source detect (APSD) mA ratings for the initial current values.
 	 *
-	 * If this is set, AICL will not rerun at 9V for HVDCPs
 	 */
 	rc = smbchg_masked_write(chip, chip->usb_chgpth_base + CMD_IL,
 			USE_REGISTER_FOR_CURRENT, 0);
@@ -7405,12 +7328,9 @@ static int smb_parse_dt(struct smbchg_chip *chip)
 	OF_PROP_READ(chip, chip->resume_delta_mv, "resume-delta-mv", rc, 1);
 	OF_PROP_READ(chip, chip->parallel.min_current_thr_ma,
 			"parallel-usb-min-current-ma", rc, 1);
-	OF_PROP_READ(chip, chip->parallel.min_9v_current_thr_ma,
-			"parallel-usb-9v-min-current-ma", rc, 1);
 	OF_PROP_READ(chip, chip->parallel.allowed_lowering_ma,
 			"parallel-allowed-lowering-ma", rc, 1);
-	if (chip->parallel.min_current_thr_ma != -EINVAL
-			&& chip->parallel.min_9v_current_thr_ma != -EINVAL)
+	if (chip->parallel.min_current_thr_ma != -EINVAL)
 		chip->parallel.avail = true;
 	/*
 	 * use the dt values if they exist, otherwise do not touch the params
@@ -7421,9 +7341,8 @@ static int smb_parse_dt(struct smbchg_chip *chip)
 	of_property_read_u32(chip->spmi->dev.of_node,
 					"qcom,parallel-main-chg-icl-percent",
 					&smbchg_main_chg_icl_percent);
-	pr_smb(PR_STATUS, "parallel usb thr: %d, 9v thr: %d\n",
-			chip->parallel.min_current_thr_ma,
-			chip->parallel.min_9v_current_thr_ma);
+	pr_smb(PR_STATUS, "parallel usb thr: %d\n",
+			chip->parallel.min_current_thr_ma);
 	OF_PROP_READ(chip, chip->jeita_temp_hard_limit,
 			"jeita-temp-hard-limit", rc, 1);
 	OF_PROP_READ(chip, chip->aicl_rerun_period_s,
@@ -7866,8 +7785,7 @@ static int smbchg_check_chg_version(struct smbchg_chip *chip)
 		if (pmic_rev_id->rev4 < 2) /* PMI8950 1.0 */ {
 			chip->wa_flags |= SMBCHG_AICL_DEGLITCH_WA;
 		} else	{ /* rev > PMI8950 v1.0 */
-			chip->wa_flags |= SMBCHG_HVDCP_9V_EN_WA
-					| SMBCHG_USB100_WA;
+			chip->wa_flags |= SMBCHG_USB100_WA;
 		}
 		use_pmi8994_tables(chip);
 		chip->tables.aicl_rerun_period_table =
