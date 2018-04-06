@@ -13,6 +13,9 @@ config MACH_XIAOMI_MSM8956
 	help
 	  Support for MSM8956 Xiaomi variants
 
+config MACH_XIAOMI_KENZO_AGNI_MIUI
+	bool
+
 menu "Xiaomi board selection"
 
 	config MACH_XIAOMI_KENZO
@@ -54,12 +57,14 @@ choice
 	config MACH_XIAOMI_KENZO_AGNI_MIUI_MM
 		bool "XIAOMI KENZO AGNi for miui-MM"
 		select MACH_XIAOMI_MSM8956
+		select MACH_XIAOMI_KENZO_AGNI_MIUI
 		help
 		  Support for Xiaomi Redmi Note 3 AGNi MIUI MM
 
 	config MACH_XIAOMI_KENZO_AGNI_MIUI_N
 		bool "XIAOMI KENZO AGNi for miui-N"
 		select MACH_XIAOMI_MSM8956
+		select MACH_XIAOMI_KENZO_AGNI_MIUI
 		help
 		  Support for Xiaomi Redmi Note 3 AGNi MIUI N
 
