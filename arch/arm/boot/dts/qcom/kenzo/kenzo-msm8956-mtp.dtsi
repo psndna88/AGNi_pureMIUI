@@ -38,7 +38,7 @@
 			focaltech,button-map = <139 102 158>;
 			focaltech,fw-name = "ct820_ft_fw.bin";
 			focaltech,fw-auto-update;
-			/*focaltech,no-force-update;*/
+			focaltech,no-force-update;
 			focaltech,i2c-pull-up;
 			focaltech,group-id = <1>;
 			focaltech,hard-reset-delay-ms = <20>;
