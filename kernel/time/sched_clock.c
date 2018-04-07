@@ -147,6 +147,11 @@ void __init sched_clock_register(u64 (*read)(void), int bits,
 	wrap = clocks_calc_max_nsecs(cd.mult, cd.shift, 0, sched_clock_mask);
 	cd.wrap_kt = ns_to_ktime(wrap - (wrap >> 3));
 
+    if (sched_clock_timer.function != NULL) {
+        /* update timeout for clock wrap */
+        hrtimer_start(&sched_clock_timer, cd.wrap_kt, HRTIMER_MODE_REL);
+    }
+
 	/* calculate the ns resolution of this counter */
 	res = cyc_to_ns(1ULL, cd.mult, cd.shift);
 	pr_info("sched_clock: %u bits at %lu%cHz, resolution %lluns, wraps every %lluns\n",
