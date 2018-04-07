@@ -24,7 +24,6 @@
 */
 
 
-#define DEBUG
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/init.h>
@@ -40,6 +39,8 @@
 #include <linux/fcntl.h>
 #include <asm/uaccess.h>
 #include <linux/i2c-dev.h>
+#include <linux/device.h>
+#include <linux/miscdevice.h>
 
 
 
@@ -57,7 +58,7 @@
 #define EXT_CLASS_D_DELAY_DELTA 2000
 
 static int spk_pa_gpio = -1;
-static int value = 0;
+static int value = 1;
 
 static void amplifier_enable(void) {
   int i = 0;
@@ -115,6 +116,69 @@ static struct kobj_attribute enable_attr =
 	__ATTR(enable, 0664, enable_show, enable_store);
 
 static struct kobject *kobj;
+
+static ssize_t aw8738_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", value);
+}
+
+static ssize_t aw8738_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	sscanf(buf, "%du", &value);
+	if (value) {
+		amplifier_enable();
+	} else {
+		amplifier_disable();
+	}
+
+	return size;
+}
+
+static DEVICE_ATTR(aw8738_amp_enable, 0664, aw8738_show, aw8738_store);
+
+static struct attribute *aw8738_amp_attributes[] =
+{
+	&dev_attr_aw8738_amp_enable.attr,
+	NULL
+};	
+
+static struct attribute_group aw8738_amp_group =
+{
+	.attrs  = aw8738_amp_attributes,
+};
+
+static struct miscdevice aw8738_amp_device =
+{
+	.minor = MISC_DYNAMIC_MINOR,
+	.name = "aw8738_amp",
+};
+
+static int __init aw8738_amp_init(void)
+{
+	int ret;
+
+	pr_info("%s misc_register(%s)\n", __FUNCTION__,
+		aw8738_amp_device.name);
+
+	ret = misc_register(&aw8738_amp_device);
+
+	if (ret) {
+		pr_err("%s misc_register(%s) fail\n", __FUNCTION__,
+			aw8738_amp_device.name);
+		return -EINVAL;
+	}
+
+	if (sysfs_create_group(&aw8738_amp_device.this_device->kobj,
+			&aw8738_amp_group) < 0) {
+		pr_err("%s sysfs_create_group fail\n", __FUNCTION__);
+		pr_err("Failed to create sysfs group for device (%s)!\n",
+			aw8738_amp_device.name);
+	}
+
+	return 0;
+}
 
 static int aw8738_machine_probe(struct platform_device *pdev)
 {
@@ -177,6 +241,7 @@ static int __init aw8738_machine_init(void)
 }
 
 late_initcall(aw8738_machine_init);
+late_initcall(aw8738_amp_init);
 
 static void __exit aw8738_machine_exit(void)
 {
