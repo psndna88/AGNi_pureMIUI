@@ -317,6 +317,16 @@ bool scr_suspended_ft(void) {
 }
 #endif
 
+unsigned int force_ft5346_fw_flash = 0;
+static int __init setup_force_ft5346_fw_flash(char *str)
+{
+	if (!strncmp(str, "force", strlen(str)))
+		force_ft5346_fw_flash = 1;
+
+	return force_ft5346_fw_flash;
+}
+__setup("androidboot.ft5346.flash=", setup_force_ft5346_fw_flash);
+
 static DEFINE_MUTEX(i2c_rw_access);
 
 static int ft5x06_i2c_read(struct i2c_client *client, char *writebuf,
@@ -2104,15 +2114,21 @@ static int ft5x06_fw_upgrade_by_array_data(struct device *dev, char *fw_data, in
 				data->fw_ver[1], data->fw_ver[2]);
 	dev_info(dev, "New firmware: 0x%02x.%d.%d", fw_file_maj,
 				fw_file_min, fw_file_sub_min);
-	if (force) {
+	if (force_ft5346_fw_flash) {
 		fw_upgrade = true;
+		dev_info(dev, "focaltech fw upgrade forced by cmdline...\n");
 		dev_info(dev, "Forcing fw upgrade to 0x%02x & current fw is 0x%02x...\n", fw_file_maj, data->fw_ver[0]);
-	} else if (data->fw_ver[0] != fw_file_maj) {
-		fw_upgrade = true;
-		dev_info(dev, "Doing fw upgrade to 0x%02x as current fw is 0x%02x...\n", fw_file_maj, data->fw_ver[0]);
 	} else {
-		fw_upgrade = false;
-		dev_info(dev, "Not going to upgrade fw as current one matches with 0x%02x.\n", fw_file_maj);
+		if (force) {
+			fw_upgrade = true;
+			dev_info(dev, "Forcing fw upgrade to 0x%02x & current fw is 0x%02x...\n", fw_file_maj, data->fw_ver[0]);
+		} else if (data->fw_ver[0] != fw_file_maj) {
+			fw_upgrade = true;
+			dev_info(dev, "Performing fw upgrade to 0x%02x as current fw is 0x%02x...\n", fw_file_maj, data->fw_ver[0]);
+		} else {
+			fw_upgrade = false;
+			dev_info(dev, "Not going to upgrade fw as current is 0x%02x.\n", fw_file_maj);
+		}
 	}
 
 	if (!fw_upgrade) {
