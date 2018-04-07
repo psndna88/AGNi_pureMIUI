@@ -458,7 +458,6 @@ struct fg_chip {
 	struct delayed_work	update_sram_data;
 	struct delayed_work	update_temp_work;
 	struct delayed_work	check_empty_work;
-	struct delayed_work	soc_work;
 	char			*batt_profile;
 	u8			thermal_coefficients[THERMAL_COEFF_N_BYTES];
 	u32			cc_cv_threshold_mv;
@@ -1703,7 +1702,7 @@ static int get_prop_capacity(struct fg_chip *chip)
 		return MISSING_CAPACITY;
 #ifndef CONFIG_MACH_XIAOMI_KENZO
 	if (!chip->profile_loaded && !chip->use_otp_profile) {
-		pr_info("loading batt profile, return last soc\n");
+		pr_debug("loading batt profile, return last soc\n");
 		return chip->last_soc;
 	}
 #endif
@@ -2073,31 +2072,6 @@ static void update_sram_data(struct fg_chip *chip, int *resched_ms)
 		*resched_ms = SRAM_PERIOD_NO_ID_UPDATE_MS;
 	}
 	fg_relax(&chip->update_sram_wakeup_source);
-}
-
-#define SOC_WORK_MS	20000
-static void soc_work_fn(struct work_struct *work)
-{	struct fg_chip *chip = container_of(work,
-				struct fg_chip,
-				soc_work.work);
-	pr_info("adjust_soc: s %d r %d i %d v %d t %d\n",
-			get_prop_capacity(chip),
-			get_sram_prop_now(chip, FG_DATA_BATT_SOC),
-			get_sram_prop_now(chip, FG_DATA_CURRENT),
-			get_sram_prop_now(chip, FG_DATA_VOLTAGE),
-			get_sram_prop_now(chip, FG_DATA_BATT_TEMP));
-
-	schedule_delayed_work(
-		&chip->soc_work,
-		msecs_to_jiffies(SOC_WORK_MS));
-	if (charging_detected()) {
-	schedule_delayed_work(
-		&chip->soc_work, msecs_to_jiffies(SOC_WORK_MS));
-	} else {
-		queue_delayed_work(system_power_efficient_wq,
-			&chip->soc_work, msecs_to_jiffies(SOC_WORK_MS));
-	}
-
 }
 
 #define SRAM_TIMEOUT_MS			3000
@@ -5288,7 +5262,6 @@ static int fg_init_irqs(struct fg_chip *chip)
 
 static void fg_cleanup(struct fg_chip *chip)
 {
-	cancel_delayed_work_sync(&chip->soc_work);
 	cancel_delayed_work_sync(&chip->update_sram_data);
 	cancel_delayed_work_sync(&chip->update_temp_work);
 	cancel_delayed_work_sync(&chip->update_jeita_setting);
@@ -6142,9 +6115,6 @@ static void delayed_init_work(struct work_struct *work)
 	if (chip->last_temp_update_time == 0)
 		update_temp_data(&chip->update_temp_work.work);
 
-	schedule_delayed_work(
-		&chip->soc_work,
-		msecs_to_jiffies(SOC_WORK_MS));
 	if (!chip->use_otp_profile)
 		schedule_work(&chip->batt_profile_init);
 
@@ -6259,7 +6229,6 @@ static int fg_probe(struct spmi_device *spmi)
 	INIT_DELAYED_WORK(&chip->update_sram_data, update_sram_data_work);
 	INIT_DELAYED_WORK(&chip->update_temp_work, update_temp_data);
 	INIT_DELAYED_WORK(&chip->check_empty_work, check_empty_work);
-	INIT_DELAYED_WORK(&chip->soc_work, soc_work_fn);
 	INIT_WORK(&chip->rslow_comp_work, rslow_comp_work);
 	INIT_WORK(&chip->fg_cap_learning_work, fg_cap_learning_work);
 	INIT_WORK(&chip->batt_profile_init, batt_profile_init);
@@ -6424,7 +6393,6 @@ cancel_work:
 	cancel_delayed_work_sync(&chip->update_sram_data);
 	cancel_delayed_work_sync(&chip->update_temp_work);
 	cancel_delayed_work_sync(&chip->check_empty_work);
-	cancel_delayed_work_sync(&chip->soc_work);
 	alarm_try_to_cancel(&chip->fg_cap_learning_alarm);
 	cancel_work_sync(&chip->set_resume_soc_work);
 	cancel_work_sync(&chip->fg_cap_learning_work);
@@ -6482,9 +6450,6 @@ static void check_and_update_sram_data(struct fg_chip *chip)
 
 	schedule_delayed_work(
 		&chip->update_sram_data, msecs_to_jiffies(time_left * 1000));
-
-	schedule_delayed_work(
-		&chip->soc_work, msecs_to_jiffies(SOC_WORK_MS));
 }
 
 static int fg_suspend(struct device *dev)
@@ -6494,7 +6459,6 @@ static int fg_suspend(struct device *dev)
 	if (!chip->sw_rbias_ctrl)
 		return 0;
 
-	cancel_delayed_work(&chip->soc_work);
 	cancel_delayed_work(&chip->update_temp_work);
 	cancel_delayed_work(&chip->update_sram_data);
 
