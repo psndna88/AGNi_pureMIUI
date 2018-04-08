@@ -23,7 +23,6 @@ rm -rf $KERNELDIR/BUILT_kenzo-losO
 mkdir -p $KERNELDIR/BUILT_kenzo-losO
 
 find -name '*.ko' -exec mv -v {} $KERNELDIR/BUILT_kenzo-losO/ \;
-#find -name '*.ko' -exec mv -v {} $KERNELDIR/BUILT_kenzo-losO/system/lib/modules/ \;
 
 mv $KERNELDIR/arch/arm64/boot/Image.*-dtb $KERNELDIR/BUILT_kenzo-losO/
 

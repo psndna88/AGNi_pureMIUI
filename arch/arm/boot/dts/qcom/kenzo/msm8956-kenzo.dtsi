@@ -25,6 +25,24 @@
 		bootargs = "boot_cpus=0,1,2,3,4,5 sched_enable_hmp=1 sched_enable_power_aware=1";
 	};
 
+	/* make sure to remove system mount from fstab.qcom or set it recoveryonly. AGNI_OREO_SYSMOUNT_MARKER */
+	firmware: firmware {						/* AGNI_OREO_SYSMOUNT_MARKER */
+		android {								/* AGNI_OREO_SYSMOUNT_MARKER */
+			compatible = "android,firmware";	/* AGNI_OREO_SYSMOUNT_MARKER */
+            fstab {								/* AGNI_OREO_SYSMOUNT_MARKER */
+				compatible = "android,fstab";	/* AGNI_OREO_SYSMOUNT_MARKER */
+                system {						/* AGNI_OREO_SYSMOUNT_MARKER */
+            	    compatible = "android,system";	/* AGNI_OREO_SYSMOUNT_MARKER */
+                    dev = "/dev/block/platform/soc.0/7824900.sdhci/by-name/system";	/* AGNI_OREO_SYSMOUNT_MARKER */
+					type = "ext4";				/* AGNI_OREO_SYSMOUNT_MARKER */
+                    mnt_flags = "ro,barrier=1,noatime,nodiratime,discard";	/* AGNI_OREO_SYSMOUNT_MARKER */
+					fsmgr_flags = "wait";		/* AGNI_OREO_SYSMOUNT_MARKER */
+                    status = "ok";				/* AGNI_OREO_SYSMOUNT_MARKER */
+				};								/* AGNI_OREO_SYSMOUNT_MARKER */
+			};									/* AGNI_OREO_SYSMOUNT_MARKER */
+		};										/* AGNI_OREO_SYSMOUNT_MARKER */
+	};											/* AGNI_OREO_SYSMOUNT_MARKER */
+
 	aliases {
 		/* smdtty devices */
 		smd1 = &smdtty_apps_fm;
@@ -402,7 +420,7 @@
 	cpubw: qcom,cpubw {
 		label = "cpubw";
 		compatible = "qcom,devbw";
-		governor = "performance";
+		governor = "cpufreq";
 		qcom,src-dst-ports = <1 512>;
 		qcom,active-only;
 		qcom,bw-tbl =
