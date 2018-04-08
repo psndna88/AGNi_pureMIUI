@@ -1458,17 +1458,17 @@ static int msm_isp_cfg_ping_pong_address(struct vfe_device *vfe_dev,
 	struct msm_vfe_axi_stream *stream_info, uint32_t pingpong_status,
 	uint8_t valid_address, uint8_t sync_dual_vfe, uint8_t skip_get_buf)
 {
-	int i, rc = -1;
+	int i = 0, rc = -1;
 	struct msm_isp_buffer *buf = NULL;
 	uint32_t bufq_handle = 0;
 	struct msm_vfe_frame_request_queue *queue_req;
-	uint32_t pingpong_bit;
+	uint32_t pingpong_bit = 0;
 	uint32_t buf_cnt = 0;
 	uint32_t stream_idx = HANDLE_TO_IDX(stream_info->stream_handle);
 	dma_addr_t paddr;
 	struct dual_vfe_resource *dual_vfe_res = NULL;
 	uint32_t vfe_id = 0;
-	unsigned long flags;
+	unsigned long flags = 0;
 
 	if (stream_idx >= VFE_AXI_SRC_MAX) {
 		pr_err("%s: Invalid stream_idx", __func__);
@@ -1800,7 +1800,7 @@ int msm_isp_drop_frame(struct vfe_device *vfe_dev,
 	int rc = -1;
 	struct msm_isp_buffer *done_buf = NULL;
 	uint32_t pingpong_status, frame_id;
-	unsigned long flags;
+	unsigned long flags = 0;
 	struct msm_isp_bufq *bufq = NULL;
 
 	if (!vfe_dev || !stream_info || !ts || !sof_info) {

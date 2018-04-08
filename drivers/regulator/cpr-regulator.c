@@ -3625,7 +3625,7 @@ static int cpr_aging_init(struct platform_device *pdev,
 	struct cpr_aging_sensor_info *sensor_info;
 	int num_fuse_corners = cpr_vreg->num_fuse_corners;
 	int i, rc = 0, len = 0, num_aging_sensors, ro_sel, bits;
-	u32 *aging_sensor_id, *fuse_sel, *fuse_sel_orig;
+	u32 *aging_sensor_id, *fuse_sel, *fuse_sel_orig = NULL;
 	u32 sensor = 0, non_collapsible_sensor_mask = 0;
 	u64 efuse_val;
 	struct property *prop;
@@ -5160,7 +5160,7 @@ static int cpr_check_tsens(struct cpr_regulator *cpr_vreg)
 
 static int cpr_thermal_init(struct cpr_regulator *cpr_vreg)
 {
-	int rc;
+	int rc = 0;
 	struct device_node *of_node = cpr_vreg->dev->of_node;
 
 	if (!of_find_property(of_node, "qcom,cpr-thermal-sensor-id", NULL))

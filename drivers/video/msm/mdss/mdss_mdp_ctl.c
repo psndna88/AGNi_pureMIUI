@@ -3754,7 +3754,7 @@ int mdss_mdp_mixer_pipe_unstage(struct mdss_mdp_pipe *pipe,
 int mdss_mdp_ctl_update_fps(struct mdss_mdp_ctl *ctl)
 {
 	struct mdss_panel_info *pinfo;
-	struct mdss_overlay_private *mdp5_data;
+	struct mdss_overlay_private *mdp5_data = NULL;
 	int ret = 0;
 	int new_fps;
 

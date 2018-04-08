@@ -1079,9 +1079,9 @@ static int msm_vsens_probe(struct platform_device *pdev)
 	struct vsens_chip *chip;
 	struct regulator_config reg_config_voltage = {};
 	struct regulator_config reg_config_corner = {};
-	struct regulator_init_data *init_data_voltage;
-	struct regulator_init_data *init_data_corner;
-	struct resource *res;
+	struct regulator_init_data *init_data_voltage = NULL;
+	struct regulator_init_data *init_data_corner = NULL;
+	struct resource *res = NULL;
 	struct vsense_type_smem_info *vsens_info;
 	unsigned temp_sz;
 	bool smem_invalid = false;

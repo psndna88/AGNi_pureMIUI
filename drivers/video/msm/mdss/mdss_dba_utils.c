@@ -602,7 +602,7 @@ void *mdss_dba_utils_init(struct mdss_dba_utils_init_data *uid)
 	struct mdss_dba_utils_data *udata = NULL;
 	struct msm_dba_reg_info info;
 	struct cec_abstract_init_data cec_abst_init_data;
-	void *cec_abst_data;
+	void *cec_abst_data = NULL;
 	int ret = 0;
 
 	if (!uid) {

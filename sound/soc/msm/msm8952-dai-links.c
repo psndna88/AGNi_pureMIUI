@@ -1199,7 +1199,7 @@ struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 {
 	struct snd_soc_card *card = &snd_soc_card_msm_card;
 	struct snd_soc_dai_link *msm8952_dai_links = NULL;
-	int num_links, ret, len1, len2, len3, i;
+	int num_links = 0, ret, len1, len2, len3, i;
 	const char *wsa = "qcom,aux-codec";
 	const char *wsa_prefix = "qcom,aux-codec-prefix";
 	int num_strings;

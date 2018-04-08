@@ -225,7 +225,7 @@ static struct tcp_metrics_block *__tcp_get_metrics_req(struct request_sock *req,
 						       struct dst_entry *dst)
 {
 	struct tcp_metrics_block *tm;
-	struct inetpeer_addr addr;
+	struct inetpeer_addr uninitialized_var(addr);
 	unsigned int hash;
 	struct net *net;
 
@@ -259,7 +259,7 @@ static struct tcp_metrics_block *__tcp_get_metrics_tw(struct inet_timewait_sock 
 {
 	struct inet6_timewait_sock *tw6;
 	struct tcp_metrics_block *tm;
-	struct inetpeer_addr addr;
+	struct inetpeer_addr uninitialized_var(addr);
 	unsigned int hash;
 	struct net *net;
 
@@ -896,7 +896,7 @@ static int parse_nl_addr(struct genl_info *info, struct inetpeer_addr *addr,
 static int tcp_metrics_nl_cmd_get(struct sk_buff *skb, struct genl_info *info)
 {
 	struct tcp_metrics_block *tm;
-	struct inetpeer_addr addr;
+	struct inetpeer_addr uninitialized_var(addr);
 	unsigned int hash;
 	struct sk_buff *msg;
 	struct net *net = genl_info_net(info);

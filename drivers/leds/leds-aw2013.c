@@ -208,7 +208,7 @@ static void aw2013_led_work(struct work_struct *work)
 {
 	struct aw2013_led *led = container_of(work, struct aw2013_led,
 					work);
-	u8 val;
+	u8 val = 0;
 
 	mutex_lock(&led->pdata->led->lock);
 
@@ -399,7 +399,7 @@ static struct attribute_group aw2013_led_attr_group = {
 
 static int aw_2013_check_chipid(struct aw2013_led *led)
 {
-	u8 val;
+	u8 val = 0;
 
 	aw2013_write(led, AW_REG_RESET, AW_LED_RESET_MASK);
 	usleep(AW_LED_RESET_DELAY);

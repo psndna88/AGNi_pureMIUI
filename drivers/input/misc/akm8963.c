@@ -1792,10 +1792,10 @@ static enum hrtimer_restart mag_timer_handle(struct hrtimer *hrtimer)
 
 static int mag_poll_thread(void *data)
 {
-	int ret;
+	int ret = 0;
 	struct akm_compass_data *akm = data;
 	ktime_t timestamp;
-	uint8_t dat_buf[AKM_SENSOR_DATA_SIZE];/* for GET_DATA */
+	uint8_t dat_buf[AKM_SENSOR_DATA_SIZE] = {0};/* for GET_DATA */
 	int mag_x, mag_y, mag_z;
 	int tmp;
 	uint8_t mode;
@@ -1920,7 +1920,7 @@ int akm8963_compass_probe(
 		struct i2c_client *i2c,
 		const struct i2c_device_id *id)
 {
-	struct akm8963_platform_data *pdata;
+	struct akm8963_platform_data *pdata = NULL;
 	int err = 0;
 	int i;
 

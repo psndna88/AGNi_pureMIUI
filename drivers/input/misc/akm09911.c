@@ -1964,7 +1964,7 @@ static int akm_self_test(struct sensors_classdev *sensors_cdev)
 	int count;
 	int ret;
 	int fail_total = 0;
-	uint8_t mode;
+	uint8_t mode = 0;
 	bool power_enabled = akm->power_enabled ? true : false;
 
 	mutex_lock(&akm->op_mutex);

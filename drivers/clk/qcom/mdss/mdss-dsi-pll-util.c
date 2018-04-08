@@ -346,7 +346,7 @@ static void pll_28nm_ssc_param_calc(struct dsi_pll_vco_clk *vco,
 		struct mdss_dsi_vco_calc *vco_calc)
 {
 	struct mdss_pll_resources *dsi_pll_res = vco->priv;
-	s64 ppm_freq, incr, spread_freq, div_rf, frac_n_value;
+	s64 ppm_freq, incr, spread_freq = 0, div_rf, frac_n_value;
 	s32 rem;
 
 	if (!dsi_pll_res->ssc_en) {
