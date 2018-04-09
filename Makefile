@@ -67,6 +67,11 @@ CFLAGS += -DMIRACAST -DMIRACAST_DHCP_M
 LIBS += -ldl
 endif
 
+ifdef NL80211_SUPPORT
+CFLAGS += -DNL80211_SUPPORT -I /usr/include/libnl3
+LIBS += -lnl-3 -lnl-genl-3
+endif
+
 sigma_dut: $(OBJS)
 	$(LDO) $(LDFLAGS) -o sigma_dut $(OBJS) $(LIBS)
 

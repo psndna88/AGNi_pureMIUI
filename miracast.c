@@ -1,6 +1,7 @@
 /*
  * Sigma Control API DUT - Miracast interface
  * Copyright (c) 2017, Qualcomm Atheros, Inc.
+ * Copyright (c) 2018, The Linux Foundation
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  *
@@ -1094,9 +1095,8 @@ static int cmd_start_wfd_connection(struct sigma_dut *dut,
 	snprintf(command, sizeof(command), "P2P_PEER %s", peer_address);
 	strlcpy(dut->peer_mac_address, peer_address,
 		sizeof(dut->peer_mac_address));
-	wpa_command_resp(intf, command, buf_peer, sizeof(buf_peer));
-
-	if (strlen(buf_peer) != 0)
+	if (wpa_command_resp(intf, command, buf_peer, sizeof(buf_peer)) >= 0 &&
+	    strlen(buf_peer) != 0)
 		availability = strstr(buf_peer, "wfd_subelems=");
 
 	if (!availability || strlen(availability) < 21) {
@@ -1137,6 +1137,11 @@ static int cmd_start_wfd_connection(struct sigma_dut *dut,
 
 	memset(resp_buf, 0, sizeof(resp_buf));
 	res = wpa_command_resp(intf, cmd_buf, resp_buf, sizeof(resp_buf));
+	if (res < 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"wpa_command_resp failed");
+		return 1;
+	}
 	if (strncmp(resp_buf, "FAIL", 4) == 0) {
 		sigma_dut_print(dut, DUT_MSG_INFO,
 				"wpa_command: Command failed (FAIL received)");
@@ -1315,6 +1320,11 @@ static int cmd_connect_go_start_wfd(struct sigma_dut *dut,
 	}
 
 	res = wpa_command_resp(intf, cmd_buf, resp_buf, sizeof(resp_buf));
+	if (res < 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"wpa_command_resp failed");
+		return 1;
+	}
 	if (strncmp(resp_buf, "FAIL", 4) == 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,failed P2P connection");
@@ -1345,10 +1355,9 @@ static int cmd_connect_go_start_wfd(struct sigma_dut *dut,
 		sigma_dut_print(dut, DUT_MSG_DEBUG,
 				"Log --- p2p address = %s", p2p_dev_id);
 		snprintf(cmd_buff, sizeof(cmd_buff), "P2P_PEER %s", p2p_dev_id);
-		wpa_command_resp(output_ifname, cmd_buff, rtsp_buff,
-				 sizeof(rtsp_buff));
-
-		if (strlen(rtsp_buff) != 0)
+		if (wpa_command_resp(output_ifname, cmd_buff, rtsp_buff,
+				     sizeof(rtsp_buff)) >= 0 &&
+		    strlen(rtsp_buff) != 0)
 			sub_elem = strstr(rtsp_buff, "wfd_subelems=");
 
 		/* Extract RTSP Port for Sink */

@@ -1,6 +1,7 @@
 /*
  * Sigma Control API DUT (station/AP)
  * Copyright (c) 2014-2017, Qualcomm Atheros, Inc.
+ * Copyright (c) 2018, The Linux Foundation
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
@@ -75,7 +76,8 @@ enum openwrt_driver_type get_openwrt_driver_type(void)
 	struct stat s;
 
 	if (openwrt_chip_type == OPENWRT_DRIVER_NOT_SET) {
-		if (stat("/sys/module/umac", &s) == 0)
+		if (stat("/sys/module/umac", &s) == 0 ||
+		    stat("/sys/module/atd", &s) == 0)
 			openwrt_chip_type = OPENWRT_DRIVER_ATHEROS;
 	}
 
@@ -119,6 +121,12 @@ enum sigma_program sigma_program_to_enum(const char *prog)
 		return PROGRAM_IOTLP;
 	if (strcasecmp(prog, "DPP") == 0)
 		return PROGRAM_DPP;
+	if (strcasecmp(prog, "OCE") == 0)
+		return PROGRAM_OCE;
+	if (strcasecmp(prog, "WPA3") == 0)
+		return PROGRAM_WPA3;
+	if (strcasecmp(prog, "HE") == 0)
+		return PROGRAM_HE;
 
 	return PROGRAM_UNKNOWN;
 }
@@ -289,3 +297,219 @@ size_t strlcat(char *dst, const char *str, size_t size)
 }
 
 #endif /* ANDROID */
+
+
+void hex_dump(struct sigma_dut *dut, u8 *data, size_t len)
+{
+	char buf[1024];
+	size_t index;
+	u8 *ptr;
+	int pos;
+
+	memset(buf, 0, sizeof(buf));
+	ptr = data;
+	pos = 0;
+	for (index = 0; index < len; index++) {
+		pos += snprintf(&(buf[pos]), sizeof(buf) - pos,
+				"%02x ", *ptr++);
+		if (pos > 1020)
+			break;
+	}
+	sigma_dut_print(dut, DUT_MSG_INFO, "HEXDUMP len=[%d]", (int) len);
+	sigma_dut_print(dut, DUT_MSG_INFO, "buf:%s", buf);
+}
+
+
+#ifdef NL80211_SUPPORT
+
+void * nl80211_cmd(struct sigma_dut *dut, struct nl80211_ctx *ctx,
+		   struct nl_msg *msg, int flags, uint8_t cmd)
+{
+	return genlmsg_put(msg, 0, 0, ctx->netlink_familyid,
+			   0, flags, cmd, 0);
+}
+
+
+static struct nl_msg *
+nl80211_ifindex_msg(struct sigma_dut *dut, struct nl80211_ctx *ctx, int ifindex,
+		    int flags, uint8_t cmd)
+{
+	struct nl_msg *msg;
+
+	msg = nlmsg_alloc();
+	if (!msg) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to allocate NL message");
+		return NULL;
+	}
+
+	if (!nl80211_cmd(dut, ctx, msg, flags, cmd) ||
+	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex)) {
+		nlmsg_free(msg);
+		return NULL;
+	}
+
+	return msg;
+}
+
+
+struct nl_msg * nl80211_drv_msg(struct sigma_dut *dut, struct nl80211_ctx *ctx,
+				int ifindex, int flags, uint8_t cmd)
+{
+	return nl80211_ifindex_msg(dut, ctx, ifindex, flags, cmd);
+}
+
+
+static int ack_handler(struct nl_msg *msg, void *arg)
+{
+	int *err = arg;
+	*err = 0;
+	return NL_STOP;
+}
+
+
+static int finish_handler(struct nl_msg *msg, void *arg)
+{
+	int *ret = arg;
+	*ret = 0;
+	return NL_SKIP;
+}
+
+
+static int error_handler(struct sockaddr_nl *nla, struct nlmsgerr *err,
+			 void *arg)
+{
+	int *ret = arg;
+	*ret = err->error;
+	return NL_SKIP;
+}
+
+
+int send_and_recv_msgs(struct sigma_dut *dut, struct nl80211_ctx *ctx,
+		       struct nl_msg *nlmsg,
+		       int (*valid_handler)(struct nl_msg *, void *),
+		       void *valid_data)
+{
+	struct nl_cb *cb;
+	int err = -ENOMEM;
+
+	if (!nlmsg)
+		return -ENOMEM;
+
+	cb = nl_cb_alloc(NL_CB_DEFAULT);
+	if (!cb)
+		goto out;
+
+	err = nl_send_auto_complete(ctx->sock, nlmsg);
+	if (err < 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"nl80211: failed to send err=%d", err);
+		goto out;
+	}
+
+	err = 1;
+
+	nl_cb_err(cb, NL_CB_CUSTOM, error_handler, &err);
+	nl_cb_set(cb, NL_CB_FINISH, NL_CB_CUSTOM, finish_handler, &err);
+	nl_cb_set(cb, NL_CB_ACK, NL_CB_CUSTOM, ack_handler, &err);
+
+	if (valid_handler)
+		nl_cb_set(cb, NL_CB_VALID, NL_CB_CUSTOM,
+			  valid_handler, valid_data);
+
+	while (err > 0) {
+		int res = nl_recvmsgs(ctx->sock, cb);
+
+		if (res < 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"nl80211: %s->nl_recvmsgs failed: res=%d, err=%d",
+					__func__, res, err);
+		}
+	}
+ out:
+	nl_cb_put(cb);
+	if (!valid_handler && valid_data == (void *) -1) {
+		if (nlmsg) {
+			struct nlmsghdr *hdr = nlmsg_hdr(nlmsg);
+			void *data = nlmsg_data(hdr);
+			int len = hdr->nlmsg_len - NLMSG_HDRLEN;
+
+			memset(data, 0, len);
+		}
+	}
+
+	nlmsg_free(nlmsg);
+	return err;
+}
+
+
+struct nl80211_ctx * nl80211_init(struct sigma_dut *dut)
+{
+	struct nl80211_ctx *ctx;
+
+	ctx = calloc(1, sizeof(struct nl80211_ctx));
+	if (!ctx) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to alloc nl80211_ctx");
+		return NULL;
+	}
+
+	ctx->sock = nl_socket_alloc();
+	if (!ctx->sock) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to create NL socket, err: %s",
+				strerror(errno));
+		goto cleanup;
+	}
+
+	if (nl_connect(ctx->sock, NETLINK_GENERIC)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Could not connect socket, err: %s",
+				strerror(errno));
+		goto cleanup;
+	}
+
+	if (nl_socket_set_buffer_size(ctx->sock, SOCK_BUF_SIZE, 0) < 0) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Could not set nl_socket RX buffer size for sock: %s",
+				strerror(errno));
+	}
+
+	ctx->netlink_familyid = genl_ctrl_resolve(ctx->sock, "nl80211");
+	if (ctx->netlink_familyid < 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Could not resolve nl80211 family id");
+		goto cleanup;
+	}
+
+	ctx->nlctrl_familyid = genl_ctrl_resolve(ctx->sock, "nlctrl");
+	if (ctx->nlctrl_familyid < 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"net link family nlctrl is not present: %d err:%s",
+				ctx->nlctrl_familyid, strerror(errno));
+		goto cleanup;
+	}
+
+	return ctx;
+
+cleanup:
+	if (ctx->sock)
+		nl_socket_free(ctx->sock);
+
+	free(ctx);
+	return NULL;
+}
+
+
+void nl80211_deinit(struct sigma_dut *dut, struct nl80211_ctx *ctx)
+{
+	if (!ctx || !ctx->sock) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "%s: ctx/sock is NULL",
+				__func__);
+		return;
+	}
+	nl_socket_free(ctx->sock);
+	free(ctx);
+}
+
+#endif /* NL80211_SUPPORT */

@@ -14,6 +14,7 @@ OBJS += powerswitch.c
 OBJS += atheros.c
 OBJS += ftm.c
 OBJS += dpp.c
+OBJS += dhcp.c
 
 # Initialize CFLAGS to limit to local module
 CFLAGS =
@@ -39,6 +40,8 @@ endif
 CFLAGS += -DCONFIG_CTRL_IFACE_CLIENT_DIR=\"/data/misc/wifi/sockets\"
 CFLAGS += -DSIGMA_TMPDIR=\"/data\"
 
+CFLAGS += -DNL80211_SUPPORT
+
 LOCAL_PATH := $(call my-dir)
 FRAMEWORK_GIT_VER := $(shell cd $(ANDROID_BUILD_TOP/)frameworks/base && git describe)
 SIGMA_GIT_VER := $(shell cd $(LOCAL_PATH) && git describe --dirty=+)
@@ -59,6 +62,10 @@ CFLAGS += -DSIGMA_DUT_VER=\"$(SIGMA_VER)\"
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := sigma_dut
+ifeq ($(PRODUCT_VENDOR_MOVE_ENABLED), true)
+LOCAL_VENDOR_MODULE := true
+LOCAL_CLANG := true
+endif
 LOCAL_MODULE_TAGS := optional
 LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH) frameworks/base/cmds/keystore system/security/keystore \
@@ -66,8 +73,12 @@ LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH) hardware/qcom/wlan/qcwcn/wifi_hal \
 	$(LOCAL_PATH) system/core/include/cutils \
 	$(LOCAL_PATH) hardware/libhardware_legacy/include/hardware_legacy \
-	$(TARGET_OUT_HEADERS)/common/inc
-LOCAL_SHARED_LIBRARIES := libc libcutils
+	$(LOCAL_PATH) external/libpcap \
+	$(TARGET_OUT_HEADERS)/common/inc \
+	$(LOCAL_PATH) external/libnl/include
+
+LOCAL_SHARED_LIBRARIES := libc libcutils libnl
+LOCAL_STATIC_LIBRARIES := libpcap
 ifneq (,$(strip $(dhcpver)))
 LOCAL_SHARED_LIBRARIES += libnetutils
 LOCAL_C_INCLUDES += $(LOCAL_PATH) system/core/include/netutils
