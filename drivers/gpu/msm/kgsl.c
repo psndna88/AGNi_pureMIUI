@@ -3953,7 +3953,9 @@ static int kgsl_mmap(struct file *file, struct vm_area_struct *vma)
 	case KGSL_CACHEMODE_WRITETHROUGH:
 		vma->vm_page_prot = pgprot_writethroughcache(vma->vm_page_prot);
 #ifdef CONFIG_ARM64
-		WARN_ONCE(1, "WRITETHROUGH is deprecated for arm64");
+		if (vma->vm_page_prot ==
+			pgprot_writebackcache(vma->vm_page_prot))
+			WARN_ONCE(1, "WRITETHROUGH is deprecated for arm64");
 #endif
 		break;
 	case KGSL_CACHEMODE_WRITEBACK:
@@ -4346,8 +4348,6 @@ static void kgsl_core_exit(void)
 static int __init kgsl_core_init(void)
 {
 	int result = 0;
-	struct sched_param param = { .sched_priority = 6 };
-
 	/* alloc major and minor device numbers */
 	result = alloc_chrdev_region(&kgsl_driver.major, 0, KGSL_DEVICE_MAX,
 		"kgsl");
@@ -4408,18 +4408,6 @@ static int __init kgsl_core_init(void)
 	INIT_LIST_HEAD(&kgsl_driver.pagetable_list);
 
 	kgsl_mmu_set_mmutype(ksgl_mmu_type);
-
-	init_kthread_worker(&kgsl_driver.worker);
-
-	kgsl_driver.worker_thread = kthread_run(kthread_worker_fn,
-		&kgsl_driver.worker, "kgsl_worker_thread");
-
-	if (IS_ERR(kgsl_driver.worker_thread)) {
-		pr_err("unable to start kgsl thread\n");
-		goto err;
-	}
-
-	sched_setscheduler(kgsl_driver.worker_thread, SCHED_FIFO, &param);
 
 	kgsl_events_init();
 

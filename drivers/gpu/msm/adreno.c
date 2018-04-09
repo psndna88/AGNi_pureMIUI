@@ -1031,9 +1031,9 @@ static int adreno_of_get_pdata(struct platform_device *pdev)
 		&pdata->pm_qos_wakeup_latency))
 		pdata->pm_qos_wakeup_latency = 101;
 
-	if (of_property_read_u32(pdev->dev.of_node, "qcom,idle-timeout",
-		&pdata->idle_timeout))
-		pdata->idle_timeout = 80;
+//	if (of_property_read_u32(pdev->dev.of_node, "qcom,idle-timeout",
+//		&pdata->idle_timeout))
+	pdata->idle_timeout = msecs_to_jiffies(80);
 
 	pdata->strtstp_sleepwake = of_property_read_bool(pdev->dev.of_node,
 						"qcom,strtstp-sleepwake");
