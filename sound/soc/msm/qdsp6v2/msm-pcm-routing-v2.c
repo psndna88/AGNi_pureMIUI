@@ -736,7 +736,6 @@ int msm_pcm_routing_reg_phy_stream(int fedai_id, int perf_mode,
 	int i, j, session_type, path_type, port_type, topology, num_copps = 0;
 	struct route_payload payload;
 	u32 channels, sample_rate;
-	uint16_t bits_per_sample = 32;
 
 	if (fedai_id > MSM_FRONTEND_DAI_MM_MAX_ID) {
 		/* bad ID assigned in machine driver */
@@ -936,7 +935,6 @@ static void msm_pcm_routing_process_audio(u16 reg, u16 val, int set)
 {
 	int session_type, path_type, topology;
 	u32 channels, sample_rate;
-	uint16_t bits_per_sample = 32;
 	struct msm_pcm_routing_fdai_data *fdai;
 
 	pr_debug("%s: reg %x val %x set %x\n", __func__, reg, val, set);
@@ -6372,9 +6370,7 @@ static int msm_pcm_routing_prepare(struct snd_pcm_substream *substream)
 			}
 			if (bedai->format == SNDRV_PCM_FORMAT_S32_LE)
 				bits_per_sample = 32;
-			else
-			
-			if (bedai->format == (SNDRV_PCM_FORMAT_S24_LE || SNDRV_PCM_FORMAT_S24_3LE))
+			else if (bedai->format == (SNDRV_PCM_FORMAT_S24_LE || SNDRV_PCM_FORMAT_S24_3LE))
 				bits_per_sample = 24;
 
 			app_type = playback ?

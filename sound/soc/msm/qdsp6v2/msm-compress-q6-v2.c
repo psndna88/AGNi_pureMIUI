@@ -82,6 +82,19 @@ const DECLARE_TLV_DB_LINEAR(msm_compr_vol_gain, 0,
 
 #define MAX_NUMBER_OF_STREAMS 2
 
+uint16_t bits_per_sample = 16;
+static int __init setup_bits_per_sample(char *str)
+{
+	if (!strncmp(str, "32bit", strlen(str)))
+		bits_per_sample = 32;
+
+	if (!strncmp(str, "24bit", strlen(str)))
+		bits_per_sample = 24;
+
+	return bits_per_sample;
+}
+__setup("androidboot.bps=", setup_bits_per_sample);
+
 struct msm_compr_gapless_state {
 	bool set_next_stream_id;
 	int32_t stream_opened[MAX_NUMBER_OF_STREAMS];
@@ -962,7 +975,6 @@ static int msm_compr_configure_dsp(struct snd_compr_stream *cstream)
 	struct snd_compr_runtime *runtime = cstream->runtime;
 	struct msm_compr_audio *prtd = runtime->private_data;
 	struct snd_soc_pcm_runtime *soc_prtd = cstream->private_data;
-	uint16_t bits_per_sample = 32;
 	int dir = IN, ret = 0;
 	struct audio_client *ac = prtd->audio_client;
 	uint32_t stream_index;
@@ -1558,7 +1570,6 @@ static int msm_compr_trigger(struct snd_compr_stream *cstream, int cmd)
 	unsigned long flags;
 	int stream_id;
 	uint32_t stream_index;
-	uint16_t bits_per_sample = 32;
 
 	if (cstream->direction != SND_COMPRESS_PLAYBACK) {
 		pr_err("%s: Unsupported stream type\n", __func__);

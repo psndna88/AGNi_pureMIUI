@@ -172,4 +172,5 @@ enum q6_subsys_image {
 };
 enum q6_subsys_image q6core_get_avs_version(void);
 int core_get_adsp_ver(void);
+extern uint16_t bits_per_sample;
 #endif /* __Q6CORE_H__ */
