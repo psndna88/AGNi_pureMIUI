@@ -296,7 +296,7 @@ static int call_set_cals(int32_t cal_type,
 	int				ret2 = 0;
 	struct list_head		*ptr, *next;
 	struct audio_cal_client_info	*client_info_node = NULL;
-	static DEFINE_RATELIMIT_STATE(rl, HZ/2, 1);
+	static DEFINE_RATELIMIT_STATE(rl, 50, 1);
 
 	pr_debug("%s cal type %d\n", __func__, cal_type);
 

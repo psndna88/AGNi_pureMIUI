@@ -647,7 +647,7 @@ static void smp2p_ut_remote_inout_core(struct seq_file *s, int remote_pid,
 		do {
 			/* wait for up to 32 changes */
 			if (wait_for_completion_timeout(
-					&cb_in->cb_completion, HZ / 2) == 0)
+					&cb_in->cb_completion, msecs_to_jiffies(500)) == 0)
 				break;
 			INIT_COMPLETION(cb_in->cb_completion);
 		} while (cb_in->cb_count < 32);
@@ -674,7 +674,7 @@ static void smp2p_ut_remote_inout_core(struct seq_file *s, int remote_pid,
 		do {
 			UT_ASSERT_INT(
 				(int)wait_for_completion_timeout(
-					&cb_in->cb_completion, HZ / 2),
+					&cb_in->cb_completion, msecs_to_jiffies(500)),
 			   >, 0);
 			INIT_COMPLETION(cb_in->cb_completion);
 		} while (cb_in->cb_count < 24);

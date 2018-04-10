@@ -118,7 +118,7 @@
 
 #define FT5X46_POINT_READ_BUF		(3 + FT5X46_TOUCH_LENGTH * FT5X0X_MAX_FINGER)
 
-#define NOISE_FILTER_DELAY	HZ
+#define NOISE_FILTER_DELAY	1000
 
 #define FT_VTG_MIN_UV		2600000
 #define FT_VTG_MAX_UV		3300000
@@ -1234,7 +1234,7 @@ int ft5x46_resume(struct ft5x46_data *ft5x46)
 	mutex_unlock(&ft5x46->mutex);
 
 	schedule_delayed_work(&ft5x46->noise_filter_delayed_work,
-				NOISE_FILTER_DELAY);
+				msecs_to_jiffies(NOISE_FILTER_DELAY));
 
 	mutex_lock(&ft5x46->mutex);
 	ft5x46->in_suspend = false;

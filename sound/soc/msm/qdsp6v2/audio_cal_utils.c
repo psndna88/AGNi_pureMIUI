@@ -671,7 +671,7 @@ static int map_memory(struct cal_type_data *cal_type,
 			struct cal_block_data *cal_block)
 {
 	int ret = 0;
-	static DEFINE_RATELIMIT_STATE(rl, HZ/2, 1);
+	static DEFINE_RATELIMIT_STATE(rl, 50, 1);
 
 
 	if (cal_type->info.cal_util_callbacks.map_cal != NULL) {

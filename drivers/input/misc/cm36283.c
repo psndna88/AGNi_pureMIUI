@@ -41,8 +41,6 @@
 
 #define I2C_RETRY_COUNT 10
 
-#define NEAR_DELAY_TIME ((100 * HZ) / 1000)
-
 #define CONTROL_INT_ISR_REPORT        0x00
 #define CONTROL_ALS                   0x01
 #define CONTROL_PS                    0x02
