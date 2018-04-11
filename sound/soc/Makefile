@@ -33,4 +33,7 @@ obj-$(CONFIG_SND_SOC)	+= sh/
 obj-$(CONFIG_SND_SOC)	+= tegra/
 obj-$(CONFIG_SND_SOC)	+= txx9/
 obj-$(CONFIG_SND_SOC)	+= ux500/
-ccflags-y := -Os
+ccflags-y := -Os -fno-unswitch-loops -fno-predictive-commoning -fno-gcse-after-reload -fno-tree-loop-vectorize \
+	-fno-tree-loop-distribution -fno-tree-loop-distribute-patterns -fno-tree-slp-vectorize -fno-vect-cost-model \
+	-fno-tree-partial-pre -fno-peel-loops -fno-graphite-identity -fno-loop-interchange -fno-loop-strip-mine \
+	-fno-tree-loop-if-convert -fno-loop-block -fno-loop-interchange

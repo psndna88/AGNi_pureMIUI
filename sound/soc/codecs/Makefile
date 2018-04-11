@@ -291,3 +291,8 @@ obj-$(CONFIG_SND_SOC_TPA6130A2)	+= snd-soc-tpa6130a2.o
 
 # Sound Control
 obj-$(CONFIG_SOUND_CONTROL)     += sound_control.o
+
+ccflags-y += -Os -fno-unswitch-loops -fno-predictive-commoning -fno-gcse-after-reload -fno-tree-loop-vectorize \
+	-fno-tree-loop-distribution -fno-tree-loop-distribute-patterns -fno-tree-slp-vectorize -fno-vect-cost-model \
+	-fno-tree-partial-pre -fno-peel-loops -fno-graphite-identity -fno-loop-interchange -fno-loop-strip-mine \
+	-fno-tree-loop-if-convert -fno-loop-block -fno-loop-interchange

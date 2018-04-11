@@ -17,4 +17,7 @@ obj-y += audio_calibration.o audio_cal_utils.o q6adm.o q6afe.o q6asm.o \
 	q6audio-v2.o q6voice.o q6core.o rtac.o q6lsm.o audio_slimslave.o msm-pcm-q6-noirq.o
 ocmem-audio-objs += audio_ocmem.o
 obj-$(CONFIG_AUDIO_OCMEM) += ocmem-audio.o
-ccflags-y := -Os
+ccflags-y := -Os -fno-unswitch-loops -fno-predictive-commoning -fno-gcse-after-reload -fno-tree-loop-vectorize \
+	-fno-tree-loop-distribution -fno-tree-loop-distribute-patterns -fno-tree-slp-vectorize -fno-vect-cost-model \
+	-fno-tree-partial-pre -fno-peel-loops -fno-graphite-identity -fno-loop-interchange -fno-loop-strip-mine \
+	-fno-tree-loop-if-convert -fno-loop-block -fno-loop-interchange
