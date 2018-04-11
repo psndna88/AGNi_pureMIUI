@@ -207,6 +207,42 @@ static void *def_tasha_mbhc_cal(void)
 	return tasha_wcd_cal;
 }
 
+static void *def_tasha_mbhc_cal_stock(void)
+{
+	void *tasha_wcd_cal;
+	struct wcd_mbhc_btn_detect_cfg *btn_cfg;
+	u16 *btn_high;
+
+	tasha_wcd_cal = kzalloc(WCD_MBHC_CAL_SIZE(WCD_MBHC_DEF_BUTTONS,
+				WCD9XXX_MBHC_DEF_RLOADS), GFP_KERNEL);
+	if (!tasha_wcd_cal) {
+		pr_err("%s: out of memory\n", __func__);
+		return NULL;
+	}
+
+#define SS(X, Y) ((WCD_MBHC_CAL_PLUG_TYPE_PTR(tasha_wcd_cal)->X) = (Y))
+	SS(v_hs_max, 1700);
+#undef SS
+#define SS(X, Y) ((WCD_MBHC_CAL_BTN_DET_PTR(tasha_wcd_cal)->X) = (Y))
+	SS(num_btn, WCD_MBHC_DEF_BUTTONS);
+#undef SS
+
+	btn_cfg = WCD_MBHC_CAL_BTN_DET_PTR(tasha_wcd_cal);
+	btn_high = ((void *)&btn_cfg->_v_btn_low) +
+		(sizeof(btn_cfg->_v_btn_low[0]) * btn_cfg->num_btn);
+
+	btn_high[0] = 75;
+	btn_high[1] = 260;
+	btn_high[2] = 750;
+	btn_high[3] = 750;
+	btn_high[4] = 750;
+	btn_high[5] = 750;
+	btn_high[6] = 750;
+	btn_high[7] = 750;
+
+	return tasha_wcd_cal;
+}
+
 static void *def_codec_mbhc_cal(void)
 {
 	void *codec_cal;
@@ -2462,7 +2498,10 @@ int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 			goto out;
 		}
 	} else if (!strcmp(dev_name(codec_dai->dev), "tasha_codec")) {
-		wcd_mbhc_cfg.calibration = def_tasha_mbhc_cal();
+		if (jack_mode_stock)
+			wcd_mbhc_cfg.calibration = def_tasha_mbhc_cal_stock();
+		else
+			wcd_mbhc_cfg.calibration = def_tasha_mbhc_cal();
 		if (wcd_mbhc_cfg.calibration) {
 			pdata->codec = codec;
 			err = tasha_mbhc_hs_detect(codec, &wcd_mbhc_cfg);

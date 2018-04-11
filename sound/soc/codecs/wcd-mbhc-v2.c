@@ -70,7 +70,7 @@ bool zdet_high_indicate = false;
 uint32_t impedence_hph_left, impedence_hph_right;
 static bool skip_impdet_retry, lineout_detected;
 bool jack_connected = false;
-static bool jack_mode_stock = false; /* default to modified jack-stuck fix mode */
+bool jack_mode_stock = false; /* default to modified jack-stuck fix mode */
 module_param(zdet_high_indicate, bool, S_IRUGO);
 module_param(impedence_hph_left, int, S_IRUGO);
 module_param(impedence_hph_right, int, S_IRUGO);

@@ -101,4 +101,5 @@ static inline void snd_jack_report(struct snd_jack *jack, int status)
 
 #endif
 
+extern bool jack_mode_stock;
 #endif
