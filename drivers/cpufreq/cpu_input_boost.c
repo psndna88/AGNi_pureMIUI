@@ -782,10 +782,10 @@ static void set_default_value(void)
 	struct fb_policy *fb = &b->fb;
 
 	set_boost_bit(b, DRIVER_ENABLED);
-	ib->freq[0] = 806400;
-	ib->freq[1] = 883200;
-	ib->duration_ms = 40;
-	fb->fb_duration_ms = 1000;
+	ib->freq[0] = 1190400;
+	ib->freq[1] = 1056000;
+	ib->duration_ms = 500;
+	fb->fb_duration_ms = 2000;
 }
 
 static int __init cpu_ib_init(void)
