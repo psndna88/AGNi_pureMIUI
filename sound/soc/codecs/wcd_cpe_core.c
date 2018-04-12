@@ -2895,7 +2895,7 @@ static int wcd_cpe_send_param_snd_model(struct wcd_cpe_core *core,
 	struct cpe_lsm_session *session, struct cpe_lsm_ids *ids)
 {
 	int ret = 0;
-	struct cmi_obm_msg obm_msg;
+	struct cmi_obm_msg obm_msg = {0};
 	struct cpe_param_data *param_d;
 
 
