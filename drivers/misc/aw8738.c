@@ -51,7 +51,7 @@
 
 #define DRV_NAME "aw8738"
 
-#define AW8738_MODE 6
+#define AW8738_MODE 5
 
 #define EXT_CLASS_D_EN_DELAY 13000
 #define EXT_CLASS_D_DIS_DELAY 3000
