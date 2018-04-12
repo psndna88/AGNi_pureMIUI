@@ -3633,7 +3633,7 @@ static int wcd_cpe_lsm_eob(
 			struct cpe_lsm_session *session)
 {
 	int ret = 0;
-	struct cmi_hdr lab_eob;
+	struct cmi_hdr lab_eob = {0};
 
 	if (fill_lsm_cmd_header_v0_inband(&lab_eob, session->id,
 		0, CPE_LSM_SESSION_CMD_EOB)) {

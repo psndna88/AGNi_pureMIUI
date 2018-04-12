@@ -1147,7 +1147,7 @@ static bool wcd_is_special_headset(struct wcd_mbhc *mbhc)
 	struct snd_soc_codec *codec = mbhc->codec;
 	int delay = 0, rc;
 	bool ret = false;
-	u16 hs_comp_res;
+	u16 hs_comp_res = 0;
 	bool is_spl_hs = false;
 
 	/*

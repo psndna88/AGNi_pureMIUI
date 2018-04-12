@@ -135,7 +135,7 @@ struct net_bridge_mdb_entry *br_mdb_get(struct net_bridge *br,
 					struct sk_buff *skb, u16 vid)
 {
 	struct net_bridge_mdb_htable *mdb = rcu_dereference(br->mdb);
-	struct br_ip ip;
+	struct br_ip uninitialized_var(ip);
 
 	if (br->multicast_disabled)
 		return NULL;

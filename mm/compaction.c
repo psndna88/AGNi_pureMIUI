@@ -490,7 +490,7 @@ isolate_migratepages_range(struct zone *zone, struct compact_control *cc,
 	struct list_head *migratelist = &cc->migratepages;
 	isolate_mode_t mode = 0;
 	struct lruvec *lruvec;
-	unsigned long flags;
+	unsigned long flags = 0;
 	bool locked = false;
 	struct page *page = NULL, *valid_page = NULL;
 

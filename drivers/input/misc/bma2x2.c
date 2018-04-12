@@ -5447,7 +5447,7 @@ static ssize_t bma2x2_value_show(struct device *dev,
 {
 	struct input_dev *input = to_input_dev(dev);
 	struct bma2x2_data *bma2x2 = input_get_drvdata(input);
-	struct bma2x2acc acc_value;
+	struct bma2x2acc acc_value = { 0 };
 
 	bma2x2_read_accel_xyz(bma2x2->bma2x2_client, bma2x2->sensor_type,
 								&acc_value);

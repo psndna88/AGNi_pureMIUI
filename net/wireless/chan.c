@@ -185,7 +185,7 @@ const struct cfg80211_chan_def *
 cfg80211_chandef_compatible(const struct cfg80211_chan_def *c1,
 			    const struct cfg80211_chan_def *c2)
 {
-	u32 c1_pri40, c1_pri80, c2_pri40, c2_pri80;
+	u32 c1_pri40, c1_pri80 = 0, c2_pri40 = 0, c2_pri80 = 0;
 
 	/* If they are identical, return */
 	if (cfg80211_chandef_identical(c1, c2))

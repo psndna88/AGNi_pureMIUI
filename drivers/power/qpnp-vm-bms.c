@@ -1932,7 +1932,7 @@ low_soc_exit:
 static int calculate_soc_from_voltage(struct qpnp_bms_chip *chip)
 {
 	int voltage_range_uv, voltage_remaining_uv, voltage_based_soc;
-	int rc, vbat_uv;
+	int rc, vbat_uv = 0;
 
 	/* check if we have the averaged fifo data */
 	if (chip->voltage_soc_uv) {
@@ -2015,7 +2015,7 @@ static void calculate_reported_soc(struct qpnp_bms_chip *chip)
 
 static int clamp_soc_based_on_voltage(struct qpnp_bms_chip *chip, int soc)
 {
-	int rc, vbat_uv;
+	int rc, vbat_uv = 0;
 
 	rc = get_battery_voltage(chip, &vbat_uv);
 	if (rc < 0) {
@@ -2057,7 +2057,7 @@ static void monitor_soc_work(struct work_struct *work)
 	struct qpnp_bms_chip *chip = container_of(work,
 				struct qpnp_bms_chip,
 				monitor_soc_work.work);
-	int rc, new_soc = 0, batt_temp;
+	int rc, new_soc = 0, batt_temp = 0;
 
 	bms_stay_awake(&chip->vbms_soc_wake_source);
 

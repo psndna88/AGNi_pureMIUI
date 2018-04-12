@@ -1222,7 +1222,7 @@ SYSCALL_DEFINE3(xshmat, int, shmid, char __user *, shmaddr, int, shmflg)
 SYSCALL_DEFINE3(shmat, int, shmid, char __user *, shmaddr, int, shmflg)
 #endif
 {
-	unsigned long ret;
+	unsigned long ret = 0;
 	long err;
 
 	err = do_shmat(shmid, shmaddr, shmflg, &ret, SHMLBA);
