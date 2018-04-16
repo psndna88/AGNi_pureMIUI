@@ -415,9 +415,6 @@ static void sched_debug_header(struct seq_file *m)
 	P(sched_small_task);
 	P(sched_upmigrate);
 	P(sched_downmigrate);
-	P(sysctl_sched_use_shadow_scheduling);
-	P(sched_shadow_upmigrate);
-	P(sched_shadow_downmigrate);
 	P(sched_init_task_load_windows);
 	P(sched_init_task_load_pelt);
 	P(min_capacity);
