@@ -472,9 +472,9 @@ static void __cpufreq_cafactive_timer(unsigned long data, bool is_notif)
 	    new_freq > pcpu->policy->cur &&
 	    now - pcpu->hispeed_validate_time <
 	    freq_to_above_hispeed_delay(tunables, pcpu->policy->cur)) {
-		trace_cpufreq_cafactive_notyet(
-			data, cpu_load, pcpu->target_freq,
-			pcpu->policy->cur, new_freq);
+//		trace_cpufreq_cafactive_notyet(
+//			data, cpu_load, pcpu->target_freq,
+//			pcpu->policy->cur, new_freq);
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm;
 	}
@@ -493,8 +493,8 @@ static void __cpufreq_cafactive_timer(unsigned long data, bool is_notif)
 	if (!is_notif && new_freq < pcpu->target_freq &&
 	    now - pcpu->max_freq_hyst_start_time <
 	    tunables->max_freq_hysteresis) {
-		trace_cpufreq_cafactive_notyet(data, cpu_load,
-			pcpu->target_freq, pcpu->policy->cur, new_freq);
+//		trace_cpufreq_cafactive_notyet(data, cpu_load,
+//			pcpu->target_freq, pcpu->policy->cur, new_freq);
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm;
 	}
@@ -507,9 +507,9 @@ static void __cpufreq_cafactive_timer(unsigned long data, bool is_notif)
 	if (!is_notif && new_freq < pcpu->floor_freq &&
 	    pcpu->target_freq >= pcpu->policy->cur) {
 		if (now - max_fvtime < tunables->min_sample_time) {
-			trace_cpufreq_cafactive_notyet(
-				data, cpu_load, pcpu->target_freq,
-				pcpu->policy->cur, new_freq);
+//			trace_cpufreq_cafactive_notyet(
+//				data, cpu_load, pcpu->target_freq,
+//				pcpu->policy->cur, new_freq);
 			spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 			goto rearm;
 		}
@@ -534,15 +534,15 @@ static void __cpufreq_cafactive_timer(unsigned long data, bool is_notif)
 		pcpu->max_freq_hyst_start_time = now;
 
 	if (pcpu->target_freq == new_freq) {
-		trace_cpufreq_cafactive_already(
-			data, cpu_load, pcpu->target_freq,
-			pcpu->policy->cur, new_freq);
+//		trace_cpufreq_cafactive_already(
+//			data, cpu_load, pcpu->target_freq,
+//			pcpu->policy->cur, new_freq);
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm;
 	}
 
-	trace_cpufreq_cafactive_target(data, cpu_load, pcpu->target_freq,
-					 pcpu->policy->cur, new_freq);
+//	trace_cpufreq_cafactive_target(data, cpu_load, pcpu->target_freq,
+//					 pcpu->policy->cur, new_freq);
 
 	pcpu->target_freq = new_freq;
 	spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
@@ -655,9 +655,9 @@ static int cpufreq_cafactive_speedchange_task(void *data)
 					pjcpu->hispeed_validate_time = hvt;
 				}
 			}
-			trace_cpufreq_cafactive_setspeed(cpu,
-						     pcpu->target_freq,
-						     pcpu->policy->cur);
+//			trace_cpufreq_cafactive_setspeed(cpu,
+//						     pcpu->target_freq,
+//						     pcpu->policy->cur);
 
 			up_read(&pcpu->enable_sem);
 		}
@@ -811,17 +811,17 @@ void cafactive_boost_ondemand(int cpu, s64 miliseconds, bool static_switch)
 
 	if (!miliseconds) {
 		 if (static_switch) {
-			trace_cpufreq_cafactive_boost("on");
+//			trace_cpufreq_cafactive_boost("on");
 			if (!tunables->boosted)
 				cpufreq_cafactive_boost(tunables);
 		 } else {
 			tunables->boostpulse_endtime = ktime_to_us(ktime_get());
-			trace_cpufreq_cafactive_unboost("off");
+//			trace_cpufreq_cafactive_unboost("off");
 		 }
 	} else {
 		 tunables->boostpulse_endtime = ktime_to_us(ktime_get()) +
 			(miliseconds * 1000);
-		 trace_cpufreq_cafactive_boost("pulse");
+//		 trace_cpufreq_cafactive_boost("pulse");
 		 if (!tunables->boosted)
 			cpufreq_cafactive_boost(tunables);
 	}
@@ -1051,12 +1051,12 @@ static ssize_t store_boost(struct cpufreq_cafactive_tunables *tunables,
 	tunables->boost_val = val;
 
 	if (tunables->boost_val) {
-		trace_cpufreq_cafactive_boost("on");
+//		trace_cpufreq_cafactive_boost("on");
 		if (!tunables->boosted)
 			cpufreq_cafactive_boost(tunables);
 	} else {
 		tunables->boostpulse_endtime = ktime_to_us(ktime_get());
-		trace_cpufreq_cafactive_unboost("off");
+//		trace_cpufreq_cafactive_unboost("off");
 	}
 
 	return count;
@@ -1074,7 +1074,7 @@ static ssize_t store_boostpulse(struct cpufreq_cafactive_tunables *tunables,
 
 	tunables->boostpulse_endtime = ktime_to_us(ktime_get()) +
 		tunables->boostpulse_duration_val;
-	trace_cpufreq_cafactive_boost("pulse");
+//	trace_cpufreq_cafactive_boost("pulse");
 	if (!tunables->boosted)
 		cpufreq_cafactive_boost(tunables);
 	return count;
