@@ -281,13 +281,13 @@ static bool wq_disable_numa;
 module_param_named(disable_numa, wq_disable_numa, bool, 0444);
 
 /* see the comment above the definition of WQ_POWER_EFFICIENT */
-#ifdef CONFIG_WQ_POWER_EFFICIENT_DEFAULT
-static bool wq_power_efficient = true;
-#else
-static bool wq_power_efficient;
-#endif
+//#ifdef CONFIG_WQ_POWER_EFFICIENT_DEFAULT
+//static bool wq_power_efficient = true;
+//#else
+static bool wq_power_efficient = false;
+//#endif
 
-//module_param_named(power_efficient, wq_power_efficient, bool, 0664);
+module_param_named(power_efficient, wq_power_efficient, bool, 0664);
 
 static bool wq_numa_enabled;		/* unbound NUMA affinity enabled */
 
