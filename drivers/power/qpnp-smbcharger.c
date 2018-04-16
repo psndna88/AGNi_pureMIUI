@@ -425,6 +425,12 @@ module_param_named(
 	int, S_IRUSR | S_IWUSR
 );
 
+static int smbchg_default_hvdcp3_icl_ma = 2100;
+module_param_named(
+	default_hvdcp3_icl_ma, smbchg_default_hvdcp3_icl_ma,
+	int, S_IRUSR | S_IWUSR
+);
+
 static int smbchg_default_dcp_icl_ma = 2100;
 module_param_named(
 	default_dcp_icl_ma, smbchg_default_dcp_icl_ma,
@@ -4288,12 +4294,16 @@ static int smbchg_change_usb_supply_type(struct smbchg_chip *chip,
 		current_limit_ma = DEFAULT_SDP_MA;
 	else if (type == POWER_SUPPLY_TYPE_USB_CDP)
 		current_limit_ma = DEFAULT_CDP_MA;
-	else if (type == POWER_SUPPLY_TYPE_USB_HVDCP
-			|| type == POWER_SUPPLY_TYPE_USB_HVDCP_3) {
+	else if (type == POWER_SUPPLY_TYPE_USB_HVDCP) {
 		if ((limc) && (smbchg_default_hvdcp_icl_ma > MAX_DCP_MA))
 			current_limit_ma = MAX_DCP_MA;
 		else
 			current_limit_ma = smbchg_default_hvdcp_icl_ma;
+	} else if (type == POWER_SUPPLY_TYPE_USB_HVDCP_3) {
+		if ((limc) && (smbchg_default_hvdcp3_icl_ma > MAX_DCP_MA))
+			current_limit_ma = MAX_DCP_MA;
+		else
+			current_limit_ma = smbchg_default_hvdcp3_icl_ma;
 	} else {
 		if ((limc) && (smbchg_default_dcp_icl_ma > MAX_DCP_MA))
 			current_limit_ma = MAX_DCP_MA;
