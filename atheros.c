@@ -44,6 +44,8 @@ static int cmd_sta_atheros(struct sigma_dut *dut, struct sigma_conn *conn,
 		return -2;
 
 	i = snprintf(resp, sizeof(resp), "resp,");
+	if (i < 0)
+		return -2;
 	pos = buf;
 	while (*pos && i + 1 < (int) sizeof(resp)) {
 		char c = *pos++;

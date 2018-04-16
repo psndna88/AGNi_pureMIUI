@@ -900,6 +900,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	int check_mutual = 0;
 	int enrollee_ap;
 	int force_gas_fragm = 0;
+	int not_dpp_akm = 0;
 
 	if (!wait_conn)
 		wait_conn = "no";
@@ -1711,6 +1712,34 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	if (strcasecmp(wait_conn, "Yes") == 0 &&
 	    !sigma_dut_is_ap(dut) &&
 	    strcasecmp(prov_role, "Enrollee") == 0) {
+		int netw_id;
+		char *pos;
+
+		res = get_wpa_cli_event(dut, ctrl, "DPP-NETWORK-ID",
+					buf, sizeof(buf));
+		if (res < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,No DPP-NETWORK-ID");
+			goto out;
+		}
+		pos = strchr(buf, ' ');
+		if (!pos) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Invalid DPP-NETWORK-ID");
+			goto out;
+		}
+		pos++;
+		netw_id = atoi(pos);
+		snprintf(buf, sizeof(buf), "GET_NETWORK %d key_mgmt", netw_id);
+		if (wpa_command_resp(ifname, buf, buf, sizeof(buf)) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Could not fetch provisioned key_mgmt");
+			goto out;
+		}
+		if (strncmp(buf, "SAE", 3) == 0) {
+			/* SAE generates PMKSA-CACHE-ADDED event */
+			not_dpp_akm = 1;
+		}
 	wait_connect:
 		if (frametype && strcasecmp(frametype,
 					    "PeerDiscoveryRequest") == 0) {
@@ -1737,6 +1766,8 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 						 buf, sizeof(buf));
 			if (res < 0) {
 				send_resp(dut, conn, SIGMA_COMPLETE,
+					  not_dpp_akm ?
+					  "BootstrapResult,OK,AuthResult,OK,ConfResult,OK,NetworkConnectResult,Timeout" :
 					  "BootstrapResult,OK,AuthResult,OK,ConfResult,OK,NetworkIntroResult,OK,NetworkConnectResult,Timeout");
 				goto out;
 			}
@@ -1744,9 +1775,13 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 					"DPP connect result: %s", buf);
 			if (strstr(buf, "CTRL-EVENT-CONNECTED"))
 				send_resp(dut, conn, SIGMA_COMPLETE,
+					  not_dpp_akm ?
+					  "BootstrapResult,OK,AuthResult,OK,ConfResult,OK,NetworkConnectResult,OK" :
 					  "BootstrapResult,OK,AuthResult,OK,ConfResult,OK,NetworkIntroResult,OK,NetworkConnectResult,OK");
 			else
 				send_resp(dut, conn, SIGMA_COMPLETE,
+					  not_dpp_akm ?
+					  "BootstrapResult,OK,AuthResult,OK,ConfResult,OK,NetworkConnectResult,Timeout" :
 					  "BootstrapResult,OK,AuthResult,OK,ConfResult,OK,NetworkIntroResult,OK,NetworkConnectResult,Timeout");
 			goto out;
 		}
