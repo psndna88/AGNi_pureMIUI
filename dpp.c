@@ -1816,6 +1816,7 @@ static int dpp_manual_dpp(struct sigma_dut *dut,
 			  struct sigma_cmd *cmd)
 {
 	const char *auth_role = get_param(cmd, "DPPAuthRole");
+	const char *self_conf = get_param(cmd, "DPPSelfConfigure");
 	int res = -1, success;
 	const char *val;
 	unsigned int old_timeout;
@@ -1825,6 +1826,9 @@ static int dpp_manual_dpp(struct sigma_dut *dut,
 			  "errorCode,Missing DPPAuthRole");
 		return 0;
 	}
+
+	if (!self_conf)
+		self_conf = "no";
 
 	old_timeout = dut->default_timeout;
 	val = get_param(cmd, "DPPTimeout");
@@ -1848,12 +1852,14 @@ static int dpp_manual_dpp(struct sigma_dut *dut,
 	}
 
 	if (strcasecmp(auth_role, "Initiator") == 0) {
-		res = dpp_scan_peer_qrcode(dut);
-		if (res < 0) {
-			send_resp(dut, conn, SIGMA_ERROR,
-				  "errorCode,Failed to scan peer QR Code");
-			res = 0;
-			goto out;
+		if (strcasecmp(self_conf, "Yes") != 0) {
+			res = dpp_scan_peer_qrcode(dut);
+			if (res < 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					"errorCode,Failed to scan peer QR Code");
+				res = 0;
+				goto out;
+			}
 		}
 
 		res = dpp_automatic_dpp(dut, conn, cmd);
