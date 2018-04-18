@@ -16,10 +16,17 @@
 #include <linux/notifier.h>
 #include <linux/reboot.h>
 #include <linux/writeback.h>
+#include <linux/syscalls.h>
+#include <linux/fs.h>
 
 static int dyn_fsync_panic_event(struct notifier_block *this,
 		unsigned long event, void *ptr)
 {
+	/* flush all outstanding buffers */
+	wakeup_flusher_threads(0, WB_REASON_SYNC);
+	sync_filesystems(0);
+	sync_filesystems(1);
+	sys_sync();
 	emergency_sync();
 	pr_warn("Reboot auto-fsync: panic - force flush!\n");
 
@@ -31,6 +38,11 @@ static int dyn_fsync_notify_sys(struct notifier_block *this, unsigned long code,
 {
 	if (code == SYS_DOWN || code == SYS_HALT) 
 	{
+		/* flush all outstanding buffers */
+		wakeup_flusher_threads(0, WB_REASON_SYNC);
+		sync_filesystems(0);
+		sync_filesystems(1);
+		sys_sync();
 		emergency_sync();
 		pr_warn("Reboot auto-fsync: reboot - force flush!\n");
 	}
