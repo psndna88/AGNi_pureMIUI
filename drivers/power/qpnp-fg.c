@@ -1684,7 +1684,7 @@ static int get_monotonic_soc_raw(struct fg_chip *chip)
 }
 
 #define EMPTY_CAPACITY		0
-#define LOW_CAPACITY		0x26
+#define LOW_CAPACITY		15
 #define DEFAULT_CAPACITY	50
 #define MISSING_CAPACITY	100
 #define FULL_CAPACITY		100
@@ -1692,11 +1692,6 @@ static int get_monotonic_soc_raw(struct fg_chip *chip)
 static int get_prop_capacity(struct fg_chip *chip)
 {
 	int msoc;
-
-	if (chip->last_soc <= LOW_CAPACITY)
-		low_batt_swap_stall = true;
-	else
-		low_batt_swap_stall = false;
 
 	if (chip->battery_missing)
 		return MISSING_CAPACITY;
@@ -1750,6 +1745,11 @@ static int get_last_soc(struct fg_chip *chip)
 
 	if (cap[0] > 0)
 		capacity = (cap[0] * 100 / FULL_PERCENT);
+
+	if (capacity <= LOW_CAPACITY)
+		low_batt_swap_stall = true;
+	else
+		low_batt_swap_stall = false;
 
 	return capacity;
 }
