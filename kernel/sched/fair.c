@@ -1807,12 +1807,11 @@ int sched_set_boost(int enable)
 
 	if (!fsync_unblockable && enable == 0 && fsync_pending_flag) {
 		if (!delayed_work_pending(&fsync_auto_work) && is_display_on()) {
-			if (auto_fsync_delay_sec < 5)
-				auto_fsync_delay_sec = 5;
-			else if (auto_fsync_delay_sec > 300)
+			if (auto_fsync_delay_sec > 300)
 				auto_fsync_delay_sec = 300;
-			schedule_delayed_work(&fsync_auto_work,
-				msecs_to_jiffies(auto_fsync_delay_sec * 1000));
+			if (auto_fsync_delay_sec)
+				schedule_delayed_work(&fsync_auto_work,
+					msecs_to_jiffies(auto_fsync_delay_sec * 1000));
 		}
 	}
 
