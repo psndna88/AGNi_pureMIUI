@@ -31,6 +31,8 @@
 #include <linux/task_work.h>
 #include <linux/ratelimit.h>
 #include <linux/display_state.h>
+#include <linux/writeback.h>
+#include <linux/syscalls.h>
 
 #include <trace/events/sched.h>
 
@@ -1749,8 +1751,9 @@ static DEFINE_MUTEX(boost_mutex);
 static void fsync_auto(struct work_struct *fsync_auto_work)
 {
 	fsync_block = false;
-	sync_filesystems(0);
-	sync_filesystems(1);
+	/* flush all outstanding buffers */
+	wakeup_flusher_threads(0, WB_REASON_SYNC);
+	sys_sync();
 	fsync_block = true;
 	fsync_pending_flag = false;
 	pr_debug("Sched-fSync: Auto delayed Syncing filesystems done.");

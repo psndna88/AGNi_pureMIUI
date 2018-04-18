@@ -30,6 +30,7 @@
 #include <trace/events/power.h>
 #include <linux/wakeup_reason.h>
 #include <linux/moduleparam.h>
+#include <linux/writeback.h>
 
 #include "power.h"
 
@@ -361,6 +362,8 @@ static int enter_state(suspend_state_t state)
 #ifdef CONFIG_PM_SYNC_BEFORE_SUSPEND
 	if (!fsync_unblockable) {
 		cancel_fsync_auto_work();
+		/* flush all outstanding buffers */
+		wakeup_flusher_threads(0, WB_REASON_SYNC);
 		pr_debug(KERN_INFO "PM: Syncing filesystems ... ");
 		sys_sync();
 		printk("done.\n");
