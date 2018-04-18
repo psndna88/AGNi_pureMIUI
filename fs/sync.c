@@ -24,7 +24,6 @@
 bool fsync_unblockable = true;
 bool fsync_block = true;
 bool fsync_pending_flag = false;
-bool vfs_fsync_range_sdcardfs = false;
 int auto_fsync_delay_sec = 300;
 module_param_named(fsync_enabled, fsync_unblockable, bool, 0755);
 module_param(fsync_block, bool, 0644);
@@ -209,7 +208,7 @@ int vfs_fsync_range(struct file *file, loff_t start, loff_t end, int datasync)
 {
 	struct inode *inode = file->f_mapping->host;
 
-	if (!fsync_unblockable && fsync_block && !vfs_fsync_range_sdcardfs) {
+	if (!fsync_unblockable && fsync_block) {
 		fsync_pending_flag = true;
 		return 0;
 	}
@@ -227,6 +226,24 @@ int vfs_fsync_range(struct file *file, loff_t start, loff_t end, int datasync)
 	return file->f_op->fsync(file, start, end, datasync);
 }
 EXPORT_SYMBOL(vfs_fsync_range);
+
+int vfs_fsync_range_sdcardfs(struct file *file, loff_t start, loff_t end, int datasync)
+{
+	struct inode *inode = file->f_mapping->host;
+
+	if (!file->f_op || !file->f_op->fsync)
+		return -EINVAL;
+
+	if (!datasync && (inode->i_state & I_DIRTY_TIME)) {
+		spin_lock(&inode->i_lock);
+		inode->i_state &= ~I_DIRTY_TIME;
+		spin_unlock(&inode->i_lock);
+		mark_inode_dirty_sync(inode);
+	}
+
+	return file->f_op->fsync(file, start, end, datasync);
+}
+EXPORT_SYMBOL(vfs_fsync_range_sdcardfs);
 
 /**
  * vfs_fsync - perform a fsync or fdatasync on a file
