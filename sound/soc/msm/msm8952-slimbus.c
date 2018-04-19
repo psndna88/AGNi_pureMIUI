@@ -585,16 +585,16 @@ static int slim5_rx_sample_rate_put(struct snd_kcontrol *kcontrol,
 
 	switch (ucontrol->value.integer.value[0]) {
 	case 6:
-		slim5_rx_sample_rate = SAMPLING_RATE_352P8KHZ;
+		slim5_rx_sample_rate = SAMPLING_RATE_192KHZ;
 		break;	
 	case 5:
-		slim5_rx_sample_rate = SAMPLING_RATE_176P4KHZ;
+		slim5_rx_sample_rate = SAMPLING_RATE_192KHZ;
 		break;	
 	case 4:
 		slim5_rx_sample_rate = SAMPLING_RATE_44P1KHZ;
 		break;	
 	case 3:
-		slim5_rx_sample_rate = SAMPLING_RATE_384KHZ;
+		slim5_rx_sample_rate = SAMPLING_RATE_192KHZ;
 		break;
 	case 2:
 		slim5_rx_sample_rate = SAMPLING_RATE_192KHZ;
@@ -648,7 +648,7 @@ static int mi2s_rx_bit_format_put(struct snd_kcontrol *kcontrol,
 {
 	switch (ucontrol->value.integer.value[0]) {
 	case 3:
-		mi2s_rx_bit_format = SNDRV_PCM_FORMAT_S32_LE;
+		mi2s_rx_bit_format = SNDRV_PCM_FORMAT_S24_3LE;
 		break;	
 	case 2:
 		mi2s_rx_bit_format = SNDRV_PCM_FORMAT_S24_3LE;
@@ -716,16 +716,16 @@ static int slim0_rx_sample_rate_put(struct snd_kcontrol *kcontrol,
 
 	switch (ucontrol->value.integer.value[0]) {
 	case 6:
-		slim0_rx_sample_rate = SAMPLING_RATE_352P8KHZ;
+		slim0_rx_sample_rate = SAMPLING_RATE_192KHZ;
 		break;	
 	case 5:
-		slim0_rx_sample_rate = SAMPLING_RATE_176P4KHZ;
+		slim0_rx_sample_rate = SAMPLING_RATE_192KHZ;
 		break;	
 	case 4:
 		slim0_rx_sample_rate = SAMPLING_RATE_44P1KHZ;
 		break;	
 	case 3:
-		slim0_rx_sample_rate = SAMPLING_RATE_384KHZ;
+		slim0_rx_sample_rate = SAMPLING_RATE_192KHZ;
 		break;
 	case 2:
 		slim0_rx_sample_rate = SAMPLING_RATE_192KHZ;
@@ -779,7 +779,7 @@ static int slim5_rx_bit_format_put(struct snd_kcontrol *kcontrol,
 {
 	switch (ucontrol->value.integer.value[0]) {
 	case 3:
-		slim5_rx_bit_format = SNDRV_PCM_FORMAT_S32_LE;
+		slim5_rx_bit_format = SNDRV_PCM_FORMAT_S24_3LE;
 		break;	
 	case 2:
 		slim5_rx_bit_format = SNDRV_PCM_FORMAT_S24_3LE;
@@ -830,7 +830,7 @@ static int slim0_rx_bit_format_put(struct snd_kcontrol *kcontrol,
 {
 	switch (ucontrol->value.integer.value[0]) {
 	case 3:
-		slim0_rx_bit_format = SNDRV_PCM_FORMAT_S32_LE;
+		slim0_rx_bit_format = SNDRV_PCM_FORMAT_S24_3LE;
 		break;			
 	case 2:
 		slim0_rx_bit_format = SNDRV_PCM_FORMAT_S24_3LE;
