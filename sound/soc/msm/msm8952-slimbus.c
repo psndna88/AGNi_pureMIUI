@@ -37,6 +37,9 @@
 #include "../codecs/wcd9335.h"
 #include "../codecs/wcd-mbhc-v2.h"
 #include "../codecs/wsa881x.h"
+#if defined(CONFIG_SPEAKER_EXT_PA)
+#include <linux/delay.h>
+#endif
 
 #define DRV_NAME "msm8952-slimbus-wcd"
 
