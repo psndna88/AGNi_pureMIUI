@@ -199,8 +199,8 @@
 			#address-cells = <1>;
 			#size-cells = <1>;
 
-			qcom,iterm-ma = <150>;
-			qcom,float-voltage-mv = <4400>;
+			qcom,iterm-ma = <100>;
+			qcom,float-voltage-mv = <4200>;
 			qcom,resume-delta-mv = <200>;
 			qcom,chg-inhibit-fg;
 			qcom,rparasitic-uohm = <100000>;
@@ -323,12 +323,12 @@
 			status = "okay";
 			qcom,bcl-lm-threshold-ma = <127>;
 			qcom,bcl-mh-threshold-ma = <405>;
-			qcom,fg-iterm-ma = <200>;
-			qcom,fg-chg-iterm-ma = <150>;
+			qcom,fg-iterm-ma = <150>;
+			qcom,fg-chg-iterm-ma = <100>;
 			qcom,pmic-revid = <&pmi8950_revid>;
 			qcom,cycle-counter-en;
 			qcom,capacity-learning-on;
-			qcom,fg-cutoff-voltage-mv = <3400>;
+			qcom,fg-cutoff-voltage-mv = <3200>;
 			qcom,cold-bat-decidegc = <0>;
 			qcom,cool-bat-decidegc = <100>;
 			qcom,warm-bat-decidegc = <450>;
@@ -513,7 +513,7 @@
 				qcom,qpnp-lab-ps-enable;
 				qcom,qpnp-lab-nfet-size = <100>;
 				qcom,qpnp-lab-pfet-size = <100>;
-				qcom,qpnp-lab-max-precharge-time = <300>;
+				qcom,qpnp-lab-max-precharge-time = <500>;
 			};
 
 		};

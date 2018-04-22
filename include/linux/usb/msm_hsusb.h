@@ -2,7 +2,7 @@
  *
  * Copyright (C) 2008 Google, Inc.
  * Author: Brian Swetland <swetland@google.com>
- * Copyright (c) 2009-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2009-2015, 2018 The Linux Foundation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -466,6 +466,7 @@ struct msm_otg {
 	struct clk *bus_clks[USB_NUM_BUS_CLOCKS];
 	struct clk *phy_ref_clk;
 	long core_clk_rate;
+	long core_clk_svs_rate;
 	struct resource *io_res;
 	void __iomem *regs;
 	void __iomem *phy_csr_regs;
@@ -571,6 +572,7 @@ struct msm_otg {
 	u8 active_tmout;
 	struct hrtimer timer;
 	struct power_supply usb_psy;
+	enum power_supply_type usb_supply_type;
 	unsigned int online;
 	unsigned int host_mode;
 	unsigned int voltage_max;
@@ -604,6 +606,10 @@ struct msm_otg {
 	char (buf[DEBUG_MAX_MSG])[DEBUG_MSG_LEN];   /* buffer */
 	u32 max_nominal_system_clk_rate;
 	unsigned int vbus_state;
+	unsigned int usb_irq_count;
+	int pm_qos_latency;
+	struct pm_qos_request pm_qos_req_dma;
+	struct delayed_work perf_vote_work;
 };
 
 struct ci13xxx_platform_data {
@@ -743,9 +749,13 @@ static inline bool msm_usb_bam_enable(enum usb_ctrl ctrl, bool bam_enable)
 }
 #endif
 #ifdef CONFIG_USB_CI13XXX_MSM
+void msm_hw_soft_reset(void);
 void msm_hw_bam_disable(bool bam_disable);
 void msm_usb_irq_disable(bool disable);
 #else
+static inline void msm_hw_soft_reset(void)
+{
+}
 static inline void msm_hw_bam_disable(bool bam_disable)
 {
 }

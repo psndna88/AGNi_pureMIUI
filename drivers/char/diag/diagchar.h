@@ -432,8 +432,6 @@ struct diagchar_dev {
 	struct class *diagchar_class;
 	struct device *diag_dev;
 	int ref_count;
-	int mask_clear;
-	struct mutex diag_maskclear_mutex;
 	struct mutex diagchar_mutex;
 	struct mutex diag_file_mutex;
 	wait_queue_head_t wait_q;
@@ -474,7 +472,7 @@ struct diagchar_dev {
 	struct list_head cmd_reg_list;
 	struct mutex cmd_reg_mutex;
 	uint32_t cmd_reg_count;
-	struct mutex diagfwd_channel_mutex;
+	struct mutex diagfwd_channel_mutex[NUM_PERIPHERALS];
 	/* Sizes that reflect memory pool sizes */
 	unsigned int poolsize;
 	unsigned int poolsize_hdlc;
@@ -581,7 +579,6 @@ void diag_ws_on_copy_complete(int type);
 void diag_ws_reset(int type);
 void diag_ws_release(void);
 void chk_logging_wakeup(void);
-void diag_clear_masks(void);
 int diag_cmd_add_reg(struct diag_cmd_reg_entry_t *new_entry, uint8_t proc,
 		     int pid);
 struct diag_cmd_reg_entry_t *diag_cmd_search(

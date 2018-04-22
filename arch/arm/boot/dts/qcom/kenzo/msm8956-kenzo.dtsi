@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -95,7 +95,7 @@
 			linux,reserve-contiguous-region;
 			linux,reserve-region;
 			linux,remove-completely;
-			reg = <0x0 0x8c200000 0x0 0x1700000>;
+			reg = <0x0 0x8c200000 0x0 0x1800000>;
 			label = "reloc_mem";
 		};
 
@@ -108,18 +108,21 @@
 
 		secure_mem: secure_region@0 {
 			linux,reserve-contiguous-region;
+			linux,memory-limit = <0xffffffff>;
 			reg = <0x0 0x0 0x0 0x8100000>;
 			label = "secure_mem";
 		};
 
 		qseecom_mem: qseecom_region@0 {
 			linux,reserve-contiguous-region;
+			linux,memory-limit = <0xffffffff>;
 			reg = <0x0 0x0 0x0 0x1000000>;
 			label = "qseecom_mem";
 		};
 
 		audio_mem: audio_region@0 {
 			linux,reserve-contiguous-region;
+			linux,memory-limit = <0xffffffff>;
 			reg = <0x0 0x0 0x0 0x314000>;
 		};
 
@@ -132,6 +135,7 @@
 
 		adsp_mem: adsp_region@0 {
 			linux,reserve-contiguous-region;
+			linux,memory-limit = <0xffffffff>;
 			reg = <0x0 0x0 0x0 0x400000>;
 			label = "adsp_mem";
 		};
@@ -357,7 +361,9 @@
 			< 1382400000 4>,
 			< 1612800000 5>,
 			< 1747200000 6>,
-			< 1843200000 7>;
+			< 1843200000 7>,
+			< 1958400000 8>,
+			< 2016000000 9>;
 		qcom,speed0-bin-v0-cci =
 			<          0 0>,
 			<  307200000 1>,
@@ -384,7 +390,9 @@
 			< 1382400000 4>,
 			< 1612800000 5>,
 			< 1747200000 6>,
-			< 1843200000 7>;
+			< 1843200000 7>,
+			< 1958400000 8>,
+			< 2016000000 9>;
 		qcom,speed1-bin-v0-cci =
 			<          0 0>,
 			<  307200000 1>,
@@ -523,7 +531,7 @@
 				< 1190400  4101 >,	/* SVS+  */
 				< 1382400  5712 >,	/* NOM   */
 				< 1612800  6152 >,	/* TURBO */
-				< 1843200  7104 >;
+				< 2016000  7104 >;
 		};
 
 		mincpubw-cpufreq {
@@ -551,7 +559,7 @@
 				< 1190400 403200 >,
 				< 1382400 441600 >,
 				< 1612800 556800 >,
-				< 1843200 614400 >;
+				< 2016000 614400 >;
 		};
 	};
 
@@ -590,7 +598,9 @@
 			< 1382400 >,
 			< 1612800 >,
 			< 1747200 >,
-			< 1843200 >;
+			< 1843200 >,
+			< 1958400 >,
+			< 2016000 >;
 	};
 
 	timer {
@@ -885,6 +895,7 @@
 		qcom,vdd-restriction-temp-hysteresis = <10>;
 		vdd-dig-supply = <&pm8950_s2_floor_level>;
 		vdd-gfx-supply = <&gfx_vreg_corner>;
+		qcom,therm-hw-version-enable;
 
 		qcom,vdd-dig-rstr {
 			qcom,vdd-rstr-reg = "vdd-dig";
@@ -1358,7 +1369,7 @@
 		compatible = "qcom,ehci-host";
 		reg = <0x79c0000 0x400>;
 		interrupts = <0 132 0>;
-		status = "disabled";
+		status = "ok";
 
 		clocks = <&clock_gcc clk_gcc_usb_fs_ahb_clk>,
 			 <&clock_gcc clk_gcc_usb_fs_system_clk>,
@@ -1401,7 +1412,6 @@
 		qcom,ignore-core-reset-ack;
 		qcom,disable-clk-gating;
 		qcom,usb-bam-max-mbps-highspeed = <400>;
-		qcom,enable-hsusb-bam-on-boot;
 
 		qcom,pipe0 {
 			label = "hsusb-ipa-out-0";

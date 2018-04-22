@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
  * Copyright (C) 2016 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -178,7 +178,6 @@
 			regulator-min-microvolt = <1800000>;
 			regulator-max-microvolt = <1800000>;
 			qcom,init-voltage = <1800000>;
-			regulator-always-on;
 			status = "okay";
 		};
 	};
@@ -226,8 +225,8 @@
 		status = "okay";
 		pm8950_l10: regulator-l10 {
 			regulator-min-microvolt = <2800000>;
-			regulator-max-microvolt = <2950000>;
-			qcom,init-voltage = <2950000>;
+			regulator-max-microvolt = <2800000>;
+			qcom,init-voltage = <2800000>;
 			status = "okay";
 		};
 	};
@@ -316,8 +315,8 @@
 		status = "okay";
 		pm8950_l22: regulator-l22 {
 			regulator-min-microvolt = <2800000>;
-			regulator-max-microvolt = <2950000>;
-			qcom,init-voltage = <2950000>;
+			regulator-max-microvolt = <2800000>;
+			qcom,init-voltage = <2800000>;
 			status = "okay";
 		};
 	};
@@ -481,7 +480,7 @@
 		interrupts = <0 19 0>;
 		regulator-name = "apc1_corner";
 		regulator-min-microvolt = <1>;
-		regulator-max-microvolt = <7>;
+		regulator-max-microvolt = <9>;
 
 		qcom,cpr-fuse-corners = <3>;
 		qcom,cpr-voltage-ceiling = <950000 1050000 1165000>;
@@ -495,6 +494,8 @@
 					 <RPM_SMD_REGULATOR_LEVEL_SVS>,
 					 <RPM_SMD_REGULATOR_LEVEL_SVS_PLUS>,
 					 <RPM_SMD_REGULATOR_LEVEL_NOM>,
+					 <RPM_SMD_REGULATOR_LEVEL_TURBO>,
+					 <RPM_SMD_REGULATOR_LEVEL_TURBO>,
 					 <RPM_SMD_REGULATOR_LEVEL_TURBO>,
 					 <RPM_SMD_REGULATOR_LEVEL_TURBO>,
 					 <RPM_SMD_REGULATOR_LEVEL_TURBO>;
@@ -537,7 +538,7 @@
 		qcom,cpr-init-voltage-ref = <950000 1050000 1165000>;
 		qcom,cpr-init-voltage-step = <10000>;
 
-		qcom,cpr-corner-map = <1 1 2 2 3 3 3>;
+		qcom,cpr-corner-map = <1 1 2 2 3 3 3 3 3>;
 		qcom,cpr-scaled-init-voltage-as-ceiling;
 		qcom,cpr-voltage-scaling-factor-max = <0 2000 2000>;
 		qcom,cpr-quot-adjust-scaling-factor-max = <0 1400 1400>;
@@ -548,7 +549,9 @@
 				<4  1382400000>,
 				<5  1612800000>,
 				<6  1747200000>,
-				<7  1843200000>;
+				<7  1843200000>,
+				<8  1958400000>,
+				<9  2016000000>;
 		qcom,cpr-speed-bin-max-corners =
 				<0 0 2 4 7>,
 				<1 0 2 4 7>;
@@ -565,7 +568,7 @@
 			<0    0  0>;
 		qcom,cpr-voltage-floor-override =
 			<(-1) (-1) 790000 790000 820000 850000
-			940000 990000 990000>;
+			940000 990000 990000 990000 990000>;
 		qcom,cpr-enable;
 	};
 
@@ -661,6 +664,8 @@
 			<1074 1028 1198 1135 635 675 483 531>,
 			<1188 1135 1317 1246 720 753 562 605>,
 			<1276 1212 1405 1323 776 816 604 654>;
+
+		qcom,cpr-gfx-dynamic-floor-offset = <40000>;
 		qcom,cpr-enable;
 	};
 };

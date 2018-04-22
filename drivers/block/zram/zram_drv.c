@@ -113,6 +113,18 @@ static int zram_show_mem_notifier(struct notifier_block *nb,
 	return 0;
 }
 
+static inline bool zram_meta_get(struct zram *zram)
+{
+       if (atomic_inc_not_zero(&zram->refcount))
+               return true;
+       return false;
+}
+
+static inline void zram_meta_put(struct zram *zram)
+{
+       atomic_dec(&zram->refcount);
+}
+
 static struct notifier_block zram_show_mem_notifier_block = {
 	.notifier_call = zram_show_mem_notifier
 };
@@ -148,7 +160,7 @@ static ssize_t disksize_show(struct device *dev,
 {
 	struct zram *zram = dev_to_zram(dev);
 
-	return scnprintf(buf, PAGE_SIZE, "%llu\n", zram->disksize);
+	return sprintf(buf, "%llu\n", zram->disksize);
 }
 
 static ssize_t initstate_show(struct device *dev,
@@ -161,7 +173,7 @@ static ssize_t initstate_show(struct device *dev,
 	val = init_done(zram);
 	up_read(&zram->init_lock);
 
-	return scnprintf(buf, PAGE_SIZE, "%u\n", val);
+	return sprintf(buf, "%u\n", val);
 }
 
 static ssize_t orig_data_size_show(struct device *dev,
@@ -201,7 +213,7 @@ static ssize_t max_comp_streams_show(struct device *dev,
 	val = zram->max_comp_streams;
 	up_read(&zram->init_lock);
 
-	return scnprintf(buf, PAGE_SIZE, "%d\n", val);
+	return sprintf(buf, "%d\n", val);
 }
 
 static ssize_t mem_limit_show(struct device *dev,
@@ -443,18 +455,6 @@ out_error:
 	vfree(meta->table);
 	kfree(meta);
 	return NULL;
-}
-
-static inline bool zram_meta_get(struct zram *zram)
-{
-	if (atomic_inc_not_zero(&zram->refcount))
-		return true;
-	return false;
-}
-
-static inline void zram_meta_put(struct zram *zram)
-{
-	atomic_dec(&zram->refcount);
 }
 
 static void update_position(u32 *index, int *offset, struct bio_vec *bvec)
@@ -904,11 +904,11 @@ static ssize_t disksize_store(struct device *dev,
 		goto out_destroy_comp;
 	}
 
-	init_waitqueue_head(&zram->io_done);
-	atomic_set(&zram->refcount, 1);
 	zram->meta = meta;
 	zram->comp = comp;
 	zram->disksize = disksize;
+	init_waitqueue_head(&zram->io_done);
+        atomic_set(&zram->refcount, 1);
 	set_capacity(zram->disk, zram->disksize >> SECTOR_SHIFT);
 	up_write(&zram->init_lock);
 

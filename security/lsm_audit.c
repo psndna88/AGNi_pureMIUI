@@ -222,7 +222,7 @@ static void dump_common_audit_data(struct audit_buffer *ab,
 
 	if (tsk->cred)
 		audit_log_format(ab, " uid=%d", tsk->cred->uid);
-	audit_log_format(ab, " pid=%d comm=", tsk->pid);
+	audit_log_format(ab, " pid=%d comm=", task_tgid_nr(current));
 	audit_log_untrustedstring(ab, tsk->comm);
 
 	switch (a->type) {
@@ -298,7 +298,7 @@ static void dump_common_audit_data(struct audit_buffer *ab,
 		if (tsk && tsk->pid) {
 			if (tsk->cred)
 				audit_log_format(ab, " uid=%d", tsk->cred->uid);
-			audit_log_format(ab, " pid=%d comm=", tsk->pid);
+			audit_log_format(ab, " pid=%d comm=", task_tgid_nr(tsk));
 			audit_log_untrustedstring(ab, tsk->comm);
 		}
 		break;

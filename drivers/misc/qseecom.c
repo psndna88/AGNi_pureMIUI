@@ -334,6 +334,7 @@ static void __qseecom_disable_clk(enum qseecom_ce_hw_instance ce);
 static int __qseecom_init_clk(enum qseecom_ce_hw_instance ce);
 static int qseecom_load_commonlib_image(struct qseecom_dev_handle *data,
 					char *cmnlib_name);
+static void __qseecom_reentrancy_check_if_no_app_blocked(void);
 static int qseecom_enable_ice_setup(int usage);
 static int qseecom_disable_ice_setup(int usage);
 
@@ -681,6 +682,13 @@ static int qseecom_scm_call2(uint32_t svc_id, uint32_t tz_cmd_id,
 		case QSEOS_RPMB_ERASE_COMMAND: {
 			smc_id = TZ_OS_RPMB_ERASE_ID;
 			desc.arginfo = TZ_OS_RPMB_ERASE_ID_PARAM_ID;
+			ret = scm_call2(smc_id, &desc);
+			break;
+		}
+		case QSEOS_RPMB_CHECK_PROV_STATUS_COMMAND: {
+			smc_id = TZ_OS_RPMB_CHECK_PROV_STATUS_ID;
+			desc.arginfo = TZ_OS_RPMB_CHECK_PROV_STATUS_ID_PARAM_ID;
+			__qseecom_reentrancy_check_if_no_app_blocked();
 			ret = scm_call2(smc_id, &desc);
 			break;
 		}
@@ -1533,7 +1541,6 @@ static int __qseecom_qseos_fail_return_resp_tz(struct qseecom_dev_handle *data,
 			return ret;
 		}
 	}
-
 	if (lstnr == RPMB_SERVICE) {
 		ret = __qseecom_enable_clk(CLK_QSEE);
 		if (ret)
@@ -1681,22 +1688,13 @@ static int __qseecom_process_incomplete_cmd(struct qseecom_dev_handle *data,
 		else
 			*(uint32_t *)cmd_buf =
 				QSEOS_LISTENER_DATA_RSP_COMMAND_WHITELIST;
-		if (ptr_svc) {
-			ret = msm_ion_do_cache_op(qseecom.ion_clnt,
-					ptr_svc->ihandle,
+		if (ptr_svc)
+			msm_ion_do_cache_op(qseecom.ion_clnt, ptr_svc->ihandle,
 					ptr_svc->sb_virt, ptr_svc->sb_length,
-					ION_IOC_CLEAN_INV_CACHES);
-			if (ret) {
-				pr_err("cache operation failed %d\n", ret);
-				return ret;
-			}
-		}
+						ION_IOC_CLEAN_INV_CACHES);
 
-		if ((lstnr == RPMB_SERVICE) || (lstnr == SSD_SERVICE)) {
-			ret = __qseecom_enable_clk(CLK_QSEE);
-			if (ret)
-				return ret;
-		}
+		if ((lstnr == RPMB_SERVICE) || (lstnr == SSD_SERVICE))
+			__qseecom_enable_clk(CLK_QSEE);
 
 		ret = qseecom_scm_call(SCM_SVC_TZSCHEDULER, 1,
 					cmd_buf, cmd_len, resp, sizeof(*resp));
@@ -1837,8 +1835,7 @@ static int __qseecom_reentrancy_process_incomplete_cmd(
 			*(uint32_t *)cmd_buf =
 				QSEOS_LISTENER_DATA_RSP_COMMAND_WHITELIST;
 		if (ptr_svc) {
-			ret = msm_ion_do_cache_op(qseecom.ion_clnt,
-					ptr_svc->ihandle,
+			msm_ion_do_cache_op(qseecom.ion_clnt, ptr_svc->ihandle,
 					ptr_svc->sb_virt, ptr_svc->sb_length,
 					ION_IOC_CLEAN_INV_CACHES);
 			if (ret) {
@@ -2066,7 +2063,7 @@ static int qseecom_load_app(struct qseecom_dev_handle *data, void __user *argp)
 		ret = 0;
 	} else {
 		first_time = true;
-		pr_debug("App (%s) does'nt exist, loading apps for first time\n",
+		pr_warn("App (%s) does'nt exist, loading apps for first time\n",
 			(char *)(load_img_req.img_name));
 		/* Get the handle of the shared fd */
 		ihandle = ion_import_dma_buf(qseecom.ion_clnt,
@@ -2112,7 +2109,7 @@ static int qseecom_load_app(struct qseecom_dev_handle *data, void __user *argp)
 			cmd_len = sizeof(struct qseecom_load_app_64bit_ireq);
 		}
 
-		ret = msm_ion_do_cache_op(qseecom.ion_clnt, ihandle, NULL, len,
+		msm_ion_do_cache_op(qseecom.ion_clnt, ihandle, NULL, len,
 					ION_IOC_CLEAN_INV_CACHES);
 		if (ret) {
 			pr_err("cache operation failed %d\n", ret);
@@ -2186,7 +2183,7 @@ static int qseecom_load_app(struct qseecom_dev_handle *data, void __user *argp)
 		spin_unlock_irqrestore(&qseecom.registered_app_list_lock,
 									flags);
 
-		pr_debug("App with id %d (%s) now loaded\n", app_id,
+		pr_warn("App with id %d (%s) now loaded\n", app_id,
 		(char *)(load_img_req.img_name));
 	}
 	data->client.app_id = app_id;
@@ -2263,7 +2260,7 @@ static int qseecom_unload_app(struct qseecom_dev_handle *data,
 
 	if (!memcmp(data->client.app_name, "keymaste", strlen("keymaste"))) {
 		pr_debug("Do not unload keymaster app from tz\n");
-		return 0;
+		goto unload_exit;
 	}
 
 	if (data->client.app_id > 0) {
@@ -2290,8 +2287,7 @@ static int qseecom_unload_app(struct qseecom_dev_handle *data,
 			pr_err("Cannot find app with id = %d (%s)\n",
 				data->client.app_id,
 				(char *)data->client.app_name);
-			ret = -EINVAL;
-			goto unload_exit;
+			return -EINVAL;
 		}
 	}
 
@@ -2315,16 +2311,14 @@ static int qseecom_unload_app(struct qseecom_dev_handle *data,
 		if (ret) {
 			pr_err("scm_call to unload app (id = %d) failed\n",
 								req.app_id);
-			ret = -EFAULT;
-			goto unload_exit;
+			return -EFAULT;
 		} else {
-			pr_debug("App id %d now unloaded\n", req.app_id);
+			pr_warn("App id %d now unloaded\n", req.app_id);
 		}
 		if (resp.result == QSEOS_RESULT_FAILURE) {
 			pr_err("app (%d) unload_failed!!\n",
 					data->client.app_id);
-			ret = -EFAULT;
-			goto unload_exit;
+			return -EFAULT;
 		}
 		if (resp.result == QSEOS_RESULT_SUCCESS)
 			pr_debug("App (%d) is unloaded!!\n",
@@ -2335,7 +2329,7 @@ static int qseecom_unload_app(struct qseecom_dev_handle *data,
 			if (ret) {
 				pr_err("process_incomplete_cmd fail err: %d\n",
 									ret);
-				goto unload_exit;
+				return ret;
 			}
 		}
 	}
@@ -2566,6 +2560,7 @@ static int qseecom_send_service_cmd(struct qseecom_dev_handle *data,
 	switch (req.cmd_id) {
 	case QSEOS_RPMB_PROVISION_KEY_COMMAND:
 	case QSEOS_RPMB_ERASE_COMMAND:
+	case QSEOS_RPMB_CHECK_PROV_STATUS_COMMAND:
 		send_req_ptr = &send_svc_ireq;
 		req_buf_size = sizeof(send_svc_ireq);
 		if (__qseecom_process_rpmb_svc_cmd(data, &req,
@@ -2643,11 +2638,16 @@ static int qseecom_send_service_cmd(struct qseecom_dev_handle *data,
 	case QSEOS_RESULT_SUCCESS:
 		break;
 	case QSEOS_RESULT_INCOMPLETE:
-		pr_err("qseos_result_incomplete\n");
+		pr_debug("qseos_result_incomplete\n");
 		ret = __qseecom_process_incomplete_cmd(data, &resp);
 		if (ret) {
-			pr_err("process_incomplete_cmd fail: err: %d\n",
-				ret);
+			pr_err("process_incomplete_cmd fail with result: %d\n",
+				resp.result);
+		}
+		if (req.cmd_id == QSEOS_RPMB_CHECK_PROV_STATUS_COMMAND) {
+			pr_warn("RPMB key status is 0x%x\n", resp.result);
+			*(uint32_t *)req.resp_buf = resp.result;
+			ret = 0;
 		}
 		if (req.cmd_id == QSEOS_RPMB_CHECK_PROV_STATUS_COMMAND) {
 			pr_warn("RPMB key status is 0x%x\n", resp.result);
@@ -2660,7 +2660,8 @@ static int qseecom_send_service_cmd(struct qseecom_dev_handle *data,
 		}
 		break;
 	case QSEOS_RESULT_FAILURE:
-		pr_err("process_incomplete_cmd failed err: %d\n", ret);
+		pr_err("scm call failed with resp.result: %d\n", resp.result);
+		ret = -EINVAL;
 		break;
 	default:
 		pr_err("Response result %d not supported\n",
@@ -3177,21 +3178,13 @@ static int __qseecom_update_cmd_buf(void *msg, bool cleanup,
 		}
 
 		if (cleanup) {
-			ret = msm_ion_do_cache_op(qseecom.ion_clnt,
+			msm_ion_do_cache_op(qseecom.ion_clnt,
 					ihandle, NULL, len,
 					ION_IOC_INV_CACHES);
-			if (ret) {
-				pr_err("cache operation failed %d\n", ret);
-				goto err;
-			}
 		} else {
-			ret = msm_ion_do_cache_op(qseecom.ion_clnt,
+			msm_ion_do_cache_op(qseecom.ion_clnt,
 					ihandle, NULL, len,
 					ION_IOC_CLEAN_INV_CACHES);
-			if (ret) {
-				pr_err("cache operation failed %d\n", ret);
-				goto err;
-			}
 			if (data->type == QSEECOM_CLIENT_APP) {
 				offset = req->ifd_data[i].cmd_buf_offset;
 				data->sglistinfo_ptr[i].indexAndFlags =
@@ -3332,7 +3325,7 @@ static int __qseecom_update_cmd_buf_64(void *msg, bool cleanup,
 		}
 		/* Populate the cmd data structure with the phys_addr */
 		sg_ptr = ion_sg_table(qseecom.ion_clnt, ihandle);
-		if (IS_ERR_OR_NULL(sg_ptr)) {
+		if (sg_ptr == NULL) {
 			pr_err("IOn client could not retrieve sg table\n");
 			goto err;
 		}
@@ -3415,21 +3408,13 @@ static int __qseecom_update_cmd_buf_64(void *msg, bool cleanup,
 		}
 cleanup:
 		if (cleanup) {
-			ret = msm_ion_do_cache_op(qseecom.ion_clnt,
+			msm_ion_do_cache_op(qseecom.ion_clnt,
 					ihandle, NULL, len,
 					ION_IOC_INV_CACHES);
-			if (ret) {
-				pr_err("cache operation failed %d\n", ret);
-				goto err;
-			}
 		} else {
-			ret = msm_ion_do_cache_op(qseecom.ion_clnt,
+			msm_ion_do_cache_op(qseecom.ion_clnt,
 					ihandle, NULL, len,
 					ION_IOC_CLEAN_INV_CACHES);
-			if (ret) {
-				pr_err("cache operation failed %d\n", ret);
-				goto err;
-			}
 			if (data->type == QSEECOM_CLIENT_APP) {
 				offset = req->ifd_data[i].cmd_buf_offset;
 				data->sglistinfo_ptr[i].indexAndFlags =
@@ -5878,9 +5863,7 @@ static int qseecom_mdtp_cipher_dip(void __user *argp)
 		desc.args[3] = req.out_buf_size;
 		desc.args[4] = req.direction;
 
-		ret = __qseecom_enable_clk(CLK_QSEE);
-		if (ret)
-			break;
+		__qseecom_enable_clk(CLK_QSEE);
 
 		ret = scm_call2(TZ_MDTP_CIPHER_DIP_ID, &desc);
 
@@ -6067,7 +6050,7 @@ static int __qseecom_update_qteec_req_buf(struct qseecom_qteec_modfd_req *req,
 		}
 		/* Populate the cmd data structure with the phys_addr */
 		sg_ptr = ion_sg_table(qseecom.ion_clnt, ihandle);
-		if (IS_ERR_OR_NULL(sg_ptr)) {
+		if (sg_ptr == NULL) {
 			pr_err("IOn client could not retrieve sg table\n");
 			goto err;
 		}
@@ -6123,21 +6106,13 @@ static int __qseecom_update_qteec_req_buf(struct qseecom_qteec_modfd_req *req,
 		}
 clean:
 		if (cleanup) {
-			ret = msm_ion_do_cache_op(qseecom.ion_clnt,
+			msm_ion_do_cache_op(qseecom.ion_clnt,
 				ihandle, NULL, sg->length,
 				ION_IOC_INV_CACHES);
-			if (ret) {
-				pr_err("cache operation failed %d\n", ret);
-				goto err;
-			}
 		} else {
-			ret = msm_ion_do_cache_op(qseecom.ion_clnt,
+			msm_ion_do_cache_op(qseecom.ion_clnt,
 				ihandle, NULL, sg->length,
 				ION_IOC_CLEAN_INV_CACHES);
-			if (ret) {
-				pr_err("cache operation failed %d\n", ret);
-				goto err;
-			}
 			data->sglistinfo_ptr[i].indexAndFlags =
 				SGLISTINFO_SET_INDEX_FLAG(
 				(sg_ptr->nents == 1), 0,
@@ -6452,7 +6427,7 @@ static int qseecom_qteec_invoke_modfd_cmd(struct qseecom_dev_handle *data,
 	else
 		*(uint32_t *)cmd_buf = QSEOS_TEE_INVOKE_COMMAND;
 
-	ret = msm_ion_do_cache_op(qseecom.ion_clnt, data->client.ihandle,
+	msm_ion_do_cache_op(qseecom.ion_clnt, data->client.ihandle,
 					data->client.sb_virt,
 					reqd_len_sb_in,
 					ION_IOC_CLEAN_INV_CACHES);

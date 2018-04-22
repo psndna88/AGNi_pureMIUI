@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -65,6 +65,7 @@ static void __iomem *pil_info_base;
 static int proxy_timeout_ms = -1;
 module_param(proxy_timeout_ms, int, S_IRUGO | S_IWUSR);
 
+static bool disable_timeouts;
 /**
  * struct pil_mdt - Representation of <name>.mdt file in memory
  * @hdr: ELF32 header
@@ -482,6 +483,9 @@ static int pil_init_mmap(struct pil_desc *desc, const struct pil_mdt *mdt)
 	if (ret)
 		return ret;
 
+	pil_info(desc, "loading from %pa to %pa\n", &priv->region_start,
+							&priv->region_end);
+
 	for (i = 0; i < mdt->hdr.e_phnum; i++) {
 		phdr = &mdt->phdr[i];
 		if (!segment_is_loadable(phdr))
@@ -754,6 +758,7 @@ int pil_boot(struct pil_desc *desc)
 		pil_err(desc, "Failed to bring out of reset\n");
 		goto err_deinit_image;
 	}
+	pil_info(desc, "Brought out of reset\n");
 err_deinit_image:
 	if (ret && desc->ops->deinit_image)
 		desc->ops->deinit_image(desc);
@@ -774,6 +779,8 @@ out:
 					&desc->attrs);
 			priv->region = NULL;
 		}
+		if (desc->clear_fw_region && priv->region_start)
+			pil_clear_segment(desc);
 		pil_release_mmap(desc);
 	}
 	return ret;
@@ -824,6 +831,10 @@ EXPORT_SYMBOL(pil_free_memory);
 
 static DEFINE_IDA(pil_ida);
 
+bool is_timeout_disabled(void)
+{
+	return disable_timeouts;
+}
 /**
  * pil_desc_init() - Initialize a pil descriptor
  * @desc: descriptor to intialize
@@ -962,6 +973,10 @@ static int __init msm_pil_init(void)
 	if (!pil_info_base) {
 		pr_warn("pil: could not map imem region\n");
 		goto out;
+	}
+	if (__raw_readl(pil_info_base) == 0x53444247) {
+		pr_info("pil: pil-imem set to disable pil timeouts\n");
+		disable_timeouts = true;
 	}
 	for (i = 0; i < resource_size(&res)/sizeof(u32); i++)
 		writel_relaxed(0, pil_info_base + (i * sizeof(u32)));

@@ -126,6 +126,12 @@
 	} while (0)
 
 unsigned int temp_threshold = 60;
+#define HW_VER_ADDRESS 0xA4160
+#define HW_VER_SIZE  0x8
+#define HW_VER_SHIFT  20
+#define HW_VER_BIT_MASK 0x1
+#define HW_VER_VALUE 0x1
+
 static struct msm_thermal_data msm_thermal_info;
 static struct delayed_work check_temp_work, retry_hotplug_work;
 static bool core_control_enabled;
@@ -209,6 +215,8 @@ static u32 tsens_temp_print;
 static uint32_t bucket;
 static cpumask_t throttling_mask;
 static int tsens_scaling_factor = SENSOR_SCALING_FACTOR;
+static int therm_hw_version;
+static bool therm_hw_ver_enable;
 
 static LIST_HEAD(devices_list);
 static LIST_HEAD(thresholds_list);
@@ -3488,7 +3496,7 @@ static int hotplug_init_cpu_offlined(void)
 	long temp = 0;
 	uint32_t cpu = 0;
 
-	if (!hotplug_enabled || !hotplug_task)
+	if (!hotplug_enabled)
 		return 0;
 
 	mutex_lock(&core_control_mutex);
@@ -3505,7 +3513,8 @@ static int hotplug_init_cpu_offlined(void)
 
 		if (temp >= msm_thermal_info.hotplug_temp_degC)
 			cpus[cpu].offline = 1;
-		else
+		else if (temp <= (msm_thermal_info.hotplug_temp_degC -
+			msm_thermal_info.hotplug_temp_hysteresis_degC))
 			cpus[cpu].offline = 0;
 	}
 	mutex_unlock(&core_control_mutex);
@@ -4668,6 +4677,63 @@ static int msm_thermal_notify(enum thermal_trip_type type, int temp, void *data)
 	} else {
 		pr_err("Thermal monitor task is not initialized\n");
 	}
+	return 0;
+}
+
+static ssize_t hw_version_show(
+	struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+{
+	return (snprintf(buf, PAGE_SIZE, "%d\n", therm_hw_version));
+}
+
+static struct kobj_attribute hw_ver_attr =
+__ATTR_RO(hw_version);
+
+static int create_hw_ver_sysfs(void)
+{
+	void __iomem *efuse_base = NULL;
+	u32 efuse_bits = 0;
+	int bin = 0, ret = 0;
+	struct kobject *module_kobj = NULL;
+	char *key = NULL;
+
+	if (!msm_thermal_probed) {
+		therm_hw_ver_enable = true;
+		return ret;
+	}
+
+	key = "qcom,therm-hw-version-enable";
+	if (!of_property_read_bool(msm_thermal_info.pdev->dev.of_node,
+		key))
+		return ret;
+
+	efuse_base = ioremap(HW_VER_ADDRESS, HW_VER_SIZE);
+	if (!efuse_base)
+		return -EINVAL;
+
+	efuse_bits = readl_relaxed(efuse_base);
+	iounmap(efuse_base);
+	bin = (efuse_bits >> HW_VER_SHIFT) & HW_VER_BIT_MASK;
+
+	pr_debug("thermal hw_version:%d\n", bin);
+
+	if (bin == HW_VER_VALUE) {
+		/* create new sysfs entry */
+		module_kobj = kset_find_obj(module_kset, KBUILD_MODNAME);
+		if (!module_kobj) {
+			pr_err("cannot find kobject\n");
+			return -ENOENT;
+		}
+
+		sysfs_attr_init(&hw_ver_attr.attr);
+		ret = sysfs_create_file(module_kobj, &hw_ver_attr.attr);
+		if (ret) {
+			pr_err("cannot create hw_ver kobj\n");
+			return ret;
+		}
+		therm_hw_version = 1;
+	}
+
 	return 0;
 }
 
@@ -7599,6 +7665,11 @@ static int msm_thermal_dev_probe(struct platform_device *pdev)
 		interrupt_mode_enable = false;
 	}
 
+	if (therm_hw_ver_enable) {
+		create_hw_ver_sysfs();
+		therm_hw_ver_enable = false;
+	}
+
 	return ret;
 fail:
 	if (ret)
@@ -7613,6 +7684,7 @@ static int msm_thermal_dev_exit(struct platform_device *inp_dev)
 {
 	int i = 0;
 	struct thermal_progressive_rule *prog = NULL, *next_prog = NULL;
+	struct kobject *module_kobj = NULL;
 
 	unregister_reboot_notifier(&msm_thermal_reboot_notifier);
 	if (msm_therm_debugfs && msm_therm_debugfs->parent)
@@ -7664,6 +7736,10 @@ static int msm_thermal_dev_exit(struct platform_device *inp_dev)
 		devm_kfree(&inp_dev->dev, prog);
 		prog = NULL;
 	}
+
+	module_kobj = kset_find_obj(module_kset, KBUILD_MODNAME);
+	if (module_kobj)
+		sysfs_remove_file(module_kobj, &hw_ver_attr.attr);
 
 	return 0;
 }
@@ -7722,6 +7798,7 @@ int __init msm_thermal_late_init(void)
 	create_cpu_topology_sysfs();
 	create_thermal_debugfs();
 	msm_thermal_add_bucket_info_nodes();
+	create_hw_ver_sysfs();
 	return 0;
 }
 late_initcall(msm_thermal_late_init);

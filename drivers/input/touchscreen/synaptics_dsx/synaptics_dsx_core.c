@@ -3564,10 +3564,11 @@ static int synaptics_rmi4_probe(struct platform_device *pdev)
 	rmi4_data->fingers_on_2d = false;
 	rmi4_data->update_coords = true;
 
-	rmi4_data->write_buf = devm_kzalloc(&pdev->dev, I2C_WRITE_BUF_MAX_LEN,
-					GFP_KERNEL);
-	if (!rmi4_data->write_buf)
-		return -ENOMEM;
+	rmi4_data->write_buf = kzalloc(I2C_WRITE_BUF_MAX_LEN, GFP_KERNEL);
+	if (!rmi4_data->write_buf) {
+		retval = -ENOMEM;
+		goto err_write_buf_alloc;
+	}
 	rmi4_data->write_buf_len = I2C_WRITE_BUF_MAX_LEN;
 
 	rmi4_data->irq_enable = synaptics_rmi4_irq_enable;
@@ -3785,6 +3786,8 @@ err_regulator_enable:
 	regulator_put(rmi4_data->regulator_vdd);
 	regulator_put(rmi4_data->regulator_avdd);
 err_regulator_configure:
+	kfree(rmi4_data->write_buf);
+err_write_buf_alloc:
 	kfree(rmi4_data);
 
 	return retval;
@@ -3879,6 +3882,7 @@ static int synaptics_rmi4_remove(struct platform_device *pdev)
 		regulator_put(rmi4_data->regulator_avdd);
 	}
 
+	kfree(rmi4_data->write_buf);
 	kfree(rmi4_data);
 
 	return 0;
