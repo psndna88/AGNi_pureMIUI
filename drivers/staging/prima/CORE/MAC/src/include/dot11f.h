@@ -86,8 +86,8 @@ typedef tANI_U32 tDOT11F_U64[2];
 #define DOT11F_BUFFER_OVERFLOW       ( 0x10000005 )
 #define DOT11F_MANDATORY_TLV_MISSING ( 0x00001000 )
 #define DOT11F_FAILED(code)          ( (code) & 0x10000000 )
-#define DOT11F_WARNED(code)          ( ( ( 0 == (code) ) & 0x10000000 ) && code)
 #define DOT11F_SUCCEEDED(code)       ( (code) == 0 )
+#define DOT11F_WARNED(code)          (!DOT11F_SUCCEEDED(code) && !DOT11F_FAILED(code))
 
 /*********************************************************************
  * Fixed Fields                                                      *
@@ -628,6 +628,28 @@ typedef struct sDot11fFfVhtUserPositionArray {
 void dot11fUnpackFfVhtUserPositionArray(tpAniSirGlobal, tANI_U8*, tDot11fFfVhtUserPositionArray*);
 
 void dot11fPackFfVhtUserPositionArray(tpAniSirGlobal, tDot11fFfVhtUserPositionArray*, tANI_U8*);
+
+typedef struct sDot11fFfext_chan_switch_ann_action {
+    tANI_U32   switch_mode: 8;
+    tANI_U32      op_class: 8;
+    tANI_U32   new_channel: 8;
+    tANI_U32  switch_count: 8;
+} tDot11fFfext_chan_switch_ann_action;
+
+#define DOT11F_FF_EXT_CHAN_SWITCH_ANN_ACTION_LEN ( 4 )
+
+void dot11fUnpackFfext_chan_switch_ann_action(tpAniSirGlobal, tANI_U8*, tDot11fFfext_chan_switch_ann_action*);
+
+void dot11fPackFfext_chan_switch_ann_action(tpAniSirGlobal, tDot11fFfext_chan_switch_ann_action*, tANI_U8*);
+
+#define EXT_CHAN_SWITCH_ANN_ACTION_SWITCH_MODE_OFFSET  0
+#define EXT_CHAN_SWITCH_ANN_ACTION_SWITCH_MODE_WIDTH   8
+#define EXT_CHAN_SWITCH_ANN_ACTION_OP_CLASS_OFFSET     8
+#define EXT_CHAN_SWITCH_ANN_ACTION_OP_CLASS_WIDTH      8
+#define EXT_CHAN_SWITCH_ANN_ACTION_NEW_CHANNEL_OFFSET  16
+#define EXT_CHAN_SWITCH_ANN_ACTION_NEW_CHANNEL_WIDTH   8
+#define EXT_CHAN_SWITCH_ANN_ACTION_SWITCH_COUNT_OFFSET 24
+#define EXT_CHAN_SWITCH_ANN_ACTION_SWITCH_COUNT_WIDTH  8
 
 /*********************************************************************
  * TLVs                                                              *
@@ -3585,31 +3607,6 @@ tANI_U32 dot11fGetPackedIEExtCap(tpAniSirGlobal, tDot11fIEExtCap*, tANI_U32*);
 #ifdef __cplusplus
 }; /* End extern "C". */
 #endif /* C++ */
-// EID 62 (0x3e)
-typedef struct sDot11fIEExtChanSwitchAnn {
-    tANI_U8      present;
-    tANI_U8      secondaryChannelOffset;
-} tDot11fIEExtChanSwitchAnn;
-
-#define DOT11F_EID_EXTCHANSWITCHANN ( 62 )
-
-// N.B. These #defines do *not* include the EID & length
-#define DOT11F_IE_EXTCHANSWITCHANN_MIN_LEN ( 1 )
-
-#define DOT11F_IE_EXTCHANSWITCHANN_MAX_LEN ( 1 )
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* C++ */
-tANI_U32 dot11fUnpackIeExtChanSwitchAnn(tpAniSirGlobal, tANI_U8*,tANI_U8, tDot11fIEExtChanSwitchAnn*);
-
-tANI_U32 dot11fPackIeExtChanSwitchAnn(tpAniSirGlobal, tDot11fIEExtChanSwitchAnn*, tANI_U8*, tANI_U32, tANI_U32*);
-
-tANI_U32 dot11fGetPackedIEExtChanSwitchAnn(tpAniSirGlobal, tDot11fIEExtChanSwitchAnn*, tANI_U32*);
-
-#ifdef __cplusplus
-}; /* End extern "C". */
-#endif /* C++ */
 // EID 50 (0x32)
 typedef struct sDot11fIEExtSuppRates {
     tANI_U8      present;
@@ -6187,6 +6184,34 @@ tANI_U32 dot11fGetPackedIEWscReassocRes(tpAniSirGlobal, tDot11fIEWscReassocRes*,
 #ifdef __cplusplus
 }; /* End extern "C". */
 #endif /* C++ */
+// EID 60 (0x3c)
+typedef struct sDot11fIEext_chan_switch_ann {
+    tANI_U8      present;
+    tANI_U8      switch_mode;
+    tANI_U8      new_reg_class;
+    tANI_U8      new_channel;
+    tANI_U8      switch_count;
+} tDot11fIEext_chan_switch_ann;
+
+#define DOT11F_EID_EXT_CHAN_SWITCH_ANN ( 60 )
+
+// N.B. These #defines do *not* include the EID & length
+#define DOT11F_IE_EXT_CHAN_SWITCH_ANN_MIN_LEN ( 4 )
+
+#define DOT11F_IE_EXT_CHAN_SWITCH_ANN_MAX_LEN ( 4 )
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* C++ */
+tANI_U32 dot11fUnpackIeext_chan_switch_ann(tpAniSirGlobal, tANI_U8*,tANI_U8, tDot11fIEext_chan_switch_ann*);
+
+tANI_U32 dot11fPackIeext_chan_switch_ann(tpAniSirGlobal, tDot11fIEext_chan_switch_ann*, tANI_U8*, tANI_U32, tANI_U32*);
+
+tANI_U32 dot11fGetPackedIEext_chan_switch_ann(tpAniSirGlobal, tDot11fIEext_chan_switch_ann*, tANI_U32*);
+
+#ifdef __cplusplus
+}; /* End extern "C". */
+#endif /* C++ */
 // EID 221 (0xdd) {OUI 0x50, 0x6f, 0x9a, 0x10}
 typedef struct sDot11fIEhs20vendor_ie {
     tANI_U8      present;
@@ -6222,6 +6247,31 @@ tANI_U32 dot11fUnpackIehs20vendor_ie(tpAniSirGlobal, tANI_U8*,tANI_U8, tDot11fIE
 tANI_U32 dot11fPackIehs20vendor_ie(tpAniSirGlobal, tDot11fIEhs20vendor_ie*, tANI_U8*, tANI_U32, tANI_U32*);
 
 tANI_U32 dot11fGetPackedIEhs20vendor_ie(tpAniSirGlobal, tDot11fIEhs20vendor_ie*, tANI_U32*);
+
+#ifdef __cplusplus
+}; /* End extern "C". */
+#endif /* C++ */
+// EID 62 (0x3e)
+typedef struct sDot11fIEsec_chan_offset {
+    tANI_U8      present;
+    tANI_U8      secondaryChannelOffset;
+} tDot11fIEsec_chan_offset;
+
+#define DOT11F_EID_SEC_CHAN_OFFSET ( 62 )
+
+// N.B. These #defines do *not* include the EID & length
+#define DOT11F_IE_SEC_CHAN_OFFSET_MIN_LEN ( 1 )
+
+#define DOT11F_IE_SEC_CHAN_OFFSET_MAX_LEN ( 1 )
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* C++ */
+tANI_U32 dot11fUnpackIesec_chan_offset(tpAniSirGlobal, tANI_U8*,tANI_U8, tDot11fIEsec_chan_offset*);
+
+tANI_U32 dot11fPackIesec_chan_offset(tpAniSirGlobal, tDot11fIEsec_chan_offset*, tANI_U8*, tANI_U32, tANI_U32*);
+
+tANI_U32 dot11fGetPackedIEsec_chan_offset(tpAniSirGlobal, tDot11fIEsec_chan_offset*, tANI_U32*);
 
 #ifdef __cplusplus
 }; /* End extern "C". */
@@ -6475,6 +6525,7 @@ typedef struct sDot11fBeacon{
     tDot11fIEFHPattTable          FHPattTable;
     tDot11fIEPowerConstraints     PowerConstraints;
     tDot11fIEChanSwitchAnn        ChanSwitchAnn;
+    tDot11fIEext_chan_switch_ann  ext_chan_switch_ann;
     tDot11fIEQuiet                Quiet;
     tDot11fIETPCReport            TPCReport;
     tDot11fIEERPInfo              ERPInfo;
@@ -6489,7 +6540,7 @@ typedef struct sDot11fBeacon{
     tDot11fIEWPA                  WPA;
     tDot11fIEHTCaps               HTCaps;
     tDot11fIEHTInfo               HTInfo;
-    tDot11fIEExtChanSwitchAnn     ExtChanSwitchAnn;
+    tDot11fIEsec_chan_offset      sec_chan_offset;
     tDot11fIEWMMInfoAp            WMMInfoAp;
     tDot11fIEWMMParams            WMMParams;
     tDot11fIEWMMCaps              WMMCaps;
@@ -6552,6 +6603,7 @@ typedef struct sDot11fBeacon2{
     tDot11fIECountry              Country;
     tDot11fIEPowerConstraints     PowerConstraints;
     tDot11fIEChanSwitchAnn        ChanSwitchAnn;
+    tDot11fIEext_chan_switch_ann  ext_chan_switch_ann;
     tDot11fIEQuiet                Quiet;
     tDot11fIETPCReport            TPCReport;
     tDot11fIEERPInfo              ERPInfo;
@@ -6564,7 +6616,7 @@ typedef struct sDot11fBeacon2{
     tDot11fIEWPA                  WPA;
     tDot11fIEHTCaps               HTCaps;
     tDot11fIEHTInfo               HTInfo;
-    tDot11fIEExtChanSwitchAnn     ExtChanSwitchAnn;
+    tDot11fIEsec_chan_offset      sec_chan_offset;
     tDot11fIEWMMInfoAp            WMMInfoAp;
     tDot11fIEWMMParams            WMMParams;
     tDot11fIEWMMCaps              WMMCaps;
@@ -6612,6 +6664,7 @@ typedef struct sDot11fBeaconIEs{
     tDot11fIEFHPattTable          FHPattTable;
     tDot11fIEPowerConstraints     PowerConstraints;
     tDot11fIEChanSwitchAnn        ChanSwitchAnn;
+    tDot11fIEext_chan_switch_ann  ext_chan_switch_ann;
     tDot11fIEQuiet                Quiet;
     tDot11fIETPCReport            TPCReport;
     tDot11fIEERPInfo              ERPInfo;
@@ -6626,7 +6679,7 @@ typedef struct sDot11fBeaconIEs{
     tDot11fIEWPA                  WPA;
     tDot11fIEHTCaps               HTCaps;
     tDot11fIEHTInfo               HTInfo;
-    tDot11fIEExtChanSwitchAnn     ExtChanSwitchAnn;
+    tDot11fIEsec_chan_offset      sec_chan_offset;
     tDot11fIEWMMInfoAp            WMMInfoAp;
     tDot11fIEWMMParams            WMMParams;
     tDot11fIEWMMCaps              WMMCaps;
@@ -6666,7 +6719,7 @@ typedef struct sDot11fChannelSwitch{
     tDot11fFfCategory             Category;
     tDot11fFfAction               Action;
     tDot11fIEChanSwitchAnn        ChanSwitchAnn;
-    tDot11fIEExtChanSwitchAnn     ExtChanSwitchAnn;
+    tDot11fIEsec_chan_offset      sec_chan_offset;
     tDot11fIEWiderBWChanSwitchAnn WiderBWChanSwitchAnn;
 } tDot11fChannelSwitch;
 
@@ -7219,50 +7272,52 @@ tANI_U32 dot11fGetPackedProbeRequestSize(tpAniSirGlobal pCtx, tDot11fProbeReques
 #endif /* C++ */
 
 typedef struct sDot11fProbeResponse{
-    tDot11fFfTimeStamp          TimeStamp;
-    tDot11fFfBeaconInterval     BeaconInterval;
-    tDot11fFfCapabilities       Capabilities;
-    tDot11fIESSID               SSID;
-    tDot11fIESuppRates          SuppRates;
-    tDot11fIEFHParamSet         FHParamSet;
-    tDot11fIEDSParams           DSParams;
-    tDot11fIECFParams           CFParams;
-    tDot11fIEIBSSParams         IBSSParams;
-    tDot11fIECountry            Country;
-    tDot11fIEFHParams           FHParams;
-    tDot11fIEFHPattTable        FHPattTable;
-    tDot11fIEPowerConstraints   PowerConstraints;
-    tDot11fIEChanSwitchAnn      ChanSwitchAnn;
-    tDot11fIEQuiet              Quiet;
-    tDot11fIETPCReport          TPCReport;
-    tDot11fIEERPInfo            ERPInfo;
-    tDot11fIEExtSuppRates       ExtSuppRates;
-    tDot11fIERSNOpaque          RSNOpaque;
-    tDot11fIEQBSSLoad           QBSSLoad;
-    tDot11fIEEDCAParamSet       EDCAParamSet;
-    tDot11fIERRMEnabledCap      RRMEnabledCap;
-    tDot11fIEAPChannelReport    APChannelReport;
-    tDot11fIEMobilityDomain     MobilityDomain;
-    tDot11fIEWPA                WPA;
-    tDot11fIEHTCaps             HTCaps;
-    tDot11fIEHTInfo             HTInfo;
-    tDot11fIEExtChanSwitchAnn   ExtChanSwitchAnn;
-    tDot11fIEWMMInfoAp          WMMInfoAp;
-    tDot11fIEWMMParams          WMMParams;
-    tDot11fIEWMMCaps            WMMCaps;
-    tDot11fIEWAPI               WAPI;
-    tDot11fIEESERadMgmtCap      ESERadMgmtCap;
-    tDot11fIEESETrafStrmMet     ESETrafStrmMet;
-    tDot11fIEESETxmitPower      ESETxmitPower;
-    tDot11fIEAirgo              Airgo;
-    tDot11fIEWscProbeRes        WscProbeRes;
-    tDot11fIEP2PProbeRes        P2PProbeRes;
-    tDot11fIEVHTCaps            VHTCaps;
-    tDot11fIEVHTOperation       VHTOperation;
-    tDot11fIEVHTExtBssLoad      VHTExtBssLoad;
-    tDot11fIEExtCap             ExtCap;
-    tDot11fIEOBSSScanParameters OBSSScanParameters;
-    tDot11fIEhs20vendor_ie      hs20vendor_ie;
+    tDot11fFfTimeStamp            TimeStamp;
+    tDot11fFfBeaconInterval       BeaconInterval;
+    tDot11fFfCapabilities         Capabilities;
+    tDot11fIESSID                 SSID;
+    tDot11fIESuppRates            SuppRates;
+    tDot11fIEFHParamSet           FHParamSet;
+    tDot11fIEDSParams             DSParams;
+    tDot11fIECFParams             CFParams;
+    tDot11fIEIBSSParams           IBSSParams;
+    tDot11fIECountry              Country;
+    tDot11fIEFHParams             FHParams;
+    tDot11fIEFHPattTable          FHPattTable;
+    tDot11fIEPowerConstraints     PowerConstraints;
+    tDot11fIEChanSwitchAnn        ChanSwitchAnn;
+    tDot11fIEext_chan_switch_ann  ext_chan_switch_ann;
+    tDot11fIEQuiet                Quiet;
+    tDot11fIETPCReport            TPCReport;
+    tDot11fIEERPInfo              ERPInfo;
+    tDot11fIEExtSuppRates         ExtSuppRates;
+    tDot11fIERSNOpaque            RSNOpaque;
+    tDot11fIEQBSSLoad             QBSSLoad;
+    tDot11fIEEDCAParamSet         EDCAParamSet;
+    tDot11fIERRMEnabledCap        RRMEnabledCap;
+    tDot11fIEAPChannelReport      APChannelReport;
+    tDot11fIEMobilityDomain       MobilityDomain;
+    tDot11fIEWPA                  WPA;
+    tDot11fIEHTCaps               HTCaps;
+    tDot11fIEHTInfo               HTInfo;
+    tDot11fIEsec_chan_offset      sec_chan_offset;
+    tDot11fIEWMMInfoAp            WMMInfoAp;
+    tDot11fIEWMMParams            WMMParams;
+    tDot11fIEWMMCaps              WMMCaps;
+    tDot11fIEWAPI                 WAPI;
+    tDot11fIEESERadMgmtCap        ESERadMgmtCap;
+    tDot11fIEESETrafStrmMet       ESETrafStrmMet;
+    tDot11fIEESETxmitPower        ESETxmitPower;
+    tDot11fIEAirgo                Airgo;
+    tDot11fIEWscProbeRes          WscProbeRes;
+    tDot11fIEP2PProbeRes          P2PProbeRes;
+    tDot11fIEVHTCaps              VHTCaps;
+    tDot11fIEVHTOperation         VHTOperation;
+    tDot11fIEVHTExtBssLoad        VHTExtBssLoad;
+    tDot11fIEExtCap               ExtCap;
+    tDot11fIEOBSSScanParameters   OBSSScanParameters;
+    tDot11fIEhs20vendor_ie        hs20vendor_ie;
+    tDot11fIEWiderBWChanSwitchAnn WiderBWChanSwitchAnn;
 } tDot11fProbeResponse;
 
 #define DOT11F_PROBERESPONSE ( 37 )
@@ -7932,6 +7987,26 @@ extern "C" {
 tANI_U32 dot11fUnpackWMMDelTS(tpAniSirGlobal pCtx, tANI_U8 *pBuf, tANI_U32 nBuf, tDot11fWMMDelTS *pFrm);
 tANI_U32 dot11fPackWMMDelTS(tpAniSirGlobal pCtx, tDot11fWMMDelTS *pFrm, tANI_U8 *pBuf, tANI_U32 nBuf, tANI_U32 *pnConsumed);
 tANI_U32 dot11fGetPackedWMMDelTSSize(tpAniSirGlobal pCtx, tDot11fWMMDelTS *pFrm, tANI_U32 *pnNeeded);
+
+#ifdef __cplusplus
+} /* End extern "C". */
+#endif /* C++ */
+
+typedef struct sDot11fext_channel_switch_action_frame{
+    tDot11fFfCategory                   Category;
+    tDot11fFfAction                     Action;
+    tDot11fFfext_chan_switch_ann_action ext_chan_switch_ann_action;
+} tDot11fext_channel_switch_action_frame;
+
+#define DOT11F_EXT_CHANNEL_SWITCH_ACTION_FRAME ( 63 )
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* C++ */
+
+tANI_U32 dot11fUnpackext_channel_switch_action_frame(tpAniSirGlobal pCtx, tANI_U8 *pBuf, tANI_U32 nBuf, tDot11fext_channel_switch_action_frame *pFrm);
+tANI_U32 dot11fPackext_channel_switch_action_frame(tpAniSirGlobal pCtx, tDot11fext_channel_switch_action_frame *pFrm, tANI_U8 *pBuf, tANI_U32 nBuf, tANI_U32 *pnConsumed);
+tANI_U32 dot11fGetPackedext_channel_switch_action_frameSize(tpAniSirGlobal pCtx, tDot11fext_channel_switch_action_frame *pFrm, tANI_U32 *pnNeeded);
 
 #ifdef __cplusplus
 } /* End extern "C". */

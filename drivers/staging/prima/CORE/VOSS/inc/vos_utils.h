@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016, 2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -76,11 +76,14 @@
   Function declarations and documenation
   ------------------------------------------------------------------------*/
 
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(3,19,0)) || \
+	defined(WLAN_BTAMP_FEATURE)
+
 VOS_STATUS vos_crypto_init( v_U32_t *phCryptProv );
 
 VOS_STATUS vos_crypto_deinit( v_U32_t hCryptProv );
 
-
+#endif
 
 /**
  * vos_rand_get_bytes
@@ -97,6 +100,8 @@ VOS_STATUS vos_crypto_deinit( v_U32_t hCryptProv );
 */
 VOS_STATUS vos_rand_get_bytes( v_U32_t handle, v_U8_t *pbBuf, v_U32_t numBytes );
 
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(3,19,0)) || \
+	defined(WLAN_BTAMP_FEATURE)
 
 /**
  * vos_sha1_hmac_str
@@ -168,6 +173,8 @@ VOS_STATUS vos_decrypt_AES(v_U32_t cryptHandle, /* Handle */
                            v_U8_t *pText, /* pointer to data stream */
                            v_U8_t *pDecrypted,
                            v_U8_t *pKey); /* pointer to authentication key */
+
+#endif
 
 v_U8_t vos_chan_to_band(v_U32_t chan);
 void vos_get_wlan_unsafe_channel(v_U16_t *unsafeChannelList,

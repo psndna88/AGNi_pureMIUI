@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -2820,11 +2820,11 @@ static int create_crda_regulatory_entry(struct wiphy *wiphy,
    /* 20MHz channels */
    if (nBandCapability == eCSR_BAND_24)
        pr_info("BandCapability is set to 2G only.\n");
-   for (i=0,m=0;i<IEEE80211_NUM_BANDS;i++)
+   for (i=0,m=0;i<HDD_NUM_NL80211_BANDS;i++)
    {
-       if (i == IEEE80211_BAND_2GHZ && nBandCapability == eCSR_BAND_5G) // 5G only
+       if (i == HDD_NL80211_BAND_2GHZ && nBandCapability == eCSR_BAND_5G) // 5G only
           continue;
-       else if (i == IEEE80211_BAND_5GHZ && nBandCapability == eCSR_BAND_24) // 2G only
+       else if (i == HDD_NL80211_BAND_5GHZ && nBandCapability == eCSR_BAND_24) // 2G only
           continue;
        if (wiphy->bands[i] == NULL)
        {
@@ -3296,7 +3296,7 @@ v_BOOL_t vos_is_channel_valid_for_vht80(v_U32_t chan)
     if (chan <= RF_CHAN_14)
         return VOS_FALSE;
 
-    band = IEEE80211_BAND_5GHZ;
+    band = HDD_NL80211_BAND_5GHZ;
     freq = vos_chan_to_freq(chan);
     wiphy = pHddCtx->wiphy;
 
@@ -3587,7 +3587,7 @@ int vos_update_nv_table_from_wiphy_band(void *hdd_ctx,
    hdd_context_t *pHddCtx = (hdd_context_t *)hdd_ctx;
    struct wiphy *wiphy = (struct wiphy *)pwiphy;
 
-   for (i = 0, m = 0; i<IEEE80211_NUM_BANDS; i++)
+   for (i = 0, m = 0; i<HDD_NUM_NL80211_BANDS; i++)
    {
 
         if (wiphy->bands[i] == NULL)
@@ -3608,9 +3608,9 @@ int vos_update_nv_table_from_wiphy_band(void *hdd_ctx,
 
         for (j = 0; j < wiphy->bands[i]->n_channels; j++)
         {
-             if (IEEE80211_BAND_2GHZ == i && eCSR_BAND_5G == nBandCapability)
+             if (HDD_NL80211_BAND_2GHZ == i && eCSR_BAND_5G == nBandCapability)
                   wiphy->bands[i]->channels[j].flags |= IEEE80211_CHAN_DISABLED;
-             else if (IEEE80211_BAND_5GHZ == i && eCSR_BAND_24 == nBandCapability)
+             else if (HDD_NL80211_BAND_5GHZ == i && eCSR_BAND_24 == nBandCapability)
                   wiphy->bands[i]->channels[j].flags |= IEEE80211_CHAN_DISABLED;
 
             /* k = (m + j) is internal current channel index for 20MHz channel
@@ -3965,6 +3965,34 @@ static int create_linux_regulatory_entry(struct wiphy *wiphy,
 
 }
 
+static void
+wlan_hdd_disable_fcc_5600_5640(hdd_context_t *hdd_ctx, struct wiphy *wiphy,
+			       struct regulatory_request *request)
+{
+	struct ieee80211_channel *channels;
+	uint32_t no_channels;
+	uint32_t i;
+
+	if (cur_reg_domain != REGDOMAIN_FCC ||
+	    !hdd_ctx->cfg_ini->gEnableStrictRegulatoryForFCC ||
+	    !wiphy->bands[HDD_NL80211_BAND_5GHZ])
+		return;
+
+	channels = wiphy->bands[HDD_NL80211_BAND_5GHZ]->channels;
+	no_channels = wiphy->bands[HDD_NL80211_BAND_5GHZ]->n_channels;
+
+	for (i = 0; i < no_channels; i++) {
+		if (channels[i].center_freq != 5600 &&
+		    channels[i].center_freq != 5620 &&
+		    channels[i].center_freq != 5640)
+			continue;
+
+		channels[i].flags |= IEEE80211_CHAN_DISABLED;
+		if (request->initiator == NL80211_REGDOM_SET_BY_DRIVER)
+			channels[i].orig_flags |= IEEE80211_CHAN_DISABLED;
+	}
+}
+
 /*
  * Function: wlan_hdd_linux_reg_notifier
  * This function is called from cfg80211 core to provide regulatory settings
@@ -4141,22 +4169,24 @@ int __wlan_hdd_linux_reg_notifier(struct wiphy *wiphy,
        (request->initiator == NL80211_REGDOM_SET_BY_USER))
     {
        if ( pHddCtx->cfg_ini->gEnableStrictRegulatoryForFCC &&
-            wiphy->bands[IEEE80211_BAND_5GHZ])
+            wiphy->bands[HDD_NL80211_BAND_5GHZ])
        {
-          for (j=0; j<wiphy->bands[IEEE80211_BAND_5GHZ]->n_channels; j++)
+          for (j=0; j<wiphy->bands[HDD_NL80211_BAND_5GHZ]->n_channels; j++)
           {
               // UNII-1 band channels are passive when domain is FCC.
-             if ((wiphy->bands[IEEE80211_BAND_5GHZ ]->channels[j].center_freq == 5180 ||
-                  wiphy->bands[IEEE80211_BAND_5GHZ]->channels[j].center_freq == 5200 ||
-                  wiphy->bands[IEEE80211_BAND_5GHZ]->channels[j].center_freq == 5220 ||
-                  wiphy->bands[IEEE80211_BAND_5GHZ]->channels[j].center_freq == 5240) &&
+             if ((wiphy->bands[HDD_NL80211_BAND_5GHZ ]->channels[j].center_freq == 5180 ||
+                  wiphy->bands[HDD_NL80211_BAND_5GHZ]->channels[j].center_freq == 5200 ||
+                  wiphy->bands[HDD_NL80211_BAND_5GHZ]->channels[j].center_freq == 5220 ||
+                  wiphy->bands[HDD_NL80211_BAND_5GHZ]->channels[j].center_freq == 5240) &&
                   ((request->alpha2[0]== 'U'&& request->alpha2[1]=='S') &&
                                 pHddCtx->nEnableStrictRegulatoryForFCC))
              {
-                 wiphy->bands[IEEE80211_BAND_5GHZ]->channels[j].flags |= IEEE80211_CHAN_PASSIVE_SCAN;
+                 wiphy->bands[HDD_NL80211_BAND_5GHZ]->channels[j].flags |= IEEE80211_CHAN_PASSIVE_SCAN;
              }
           }
        }
+
+       wlan_hdd_disable_fcc_5600_5640(pHddCtx, wiphy, request);
     }
 do_comp:
     if ((request->initiator == NL80211_REGDOM_SET_BY_DRIVER) ||
@@ -4249,7 +4279,7 @@ VOS_STATUS vos_init_wiphy_from_nv_bin(void)
     temp_reg_domain = cur_reg_domain = reg_domain;
 
     m = 0;
-    for (i = 0; i < IEEE80211_NUM_BANDS; i++)
+    for (i = 0; i < HDD_NUM_NL80211_BANDS; i++)
     {
 
         if (wiphy->bands[i] == NULL)
@@ -4655,7 +4685,7 @@ int __wlan_hdd_crda_reg_notifier(struct wiphy *wiphy,
             settings. iwiphy->bands doesn't seem to set ht40 flags in kernel
             correctly, this may be fixed by later kernel */
 
-         for (i = 0, m = 0; i < IEEE80211_NUM_BANDS; i++)
+         for (i = 0, m = 0; i < HDD_NUM_NL80211_BANDS; i++)
          {
              if (NULL == wiphy->bands[i])
              {
@@ -4680,7 +4710,7 @@ int __wlan_hdd_crda_reg_notifier(struct wiphy *wiphy,
                  // k = (m + j) is internal current channel index for 20MHz channel
                  // n is internal channel index for corresponding 40MHz channel
                  k = m + j;
-                 if (IEEE80211_BAND_2GHZ == i && eCSR_BAND_5G == nBandCapability) // 5G only
+                 if (HDD_NL80211_BAND_2GHZ == i && eCSR_BAND_5G == nBandCapability) // 5G only
                  {
                      // Enable social channels for P2P
                      if ((2412 == wiphy->bands[i]->channels[j].center_freq ||
@@ -4696,7 +4726,7 @@ int __wlan_hdd_crda_reg_notifier(struct wiphy *wiphy,
                      }
                      continue;
                  }
-                 else if (IEEE80211_BAND_5GHZ == i && eCSR_BAND_24 == nBandCapability) // 2G only
+                 else if (HDD_NL80211_BAND_5GHZ == i && eCSR_BAND_24 == nBandCapability) // 2G only
                  {
                      wiphy->bands[i]->channels[j].flags |= IEEE80211_CHAN_DISABLED;
                      continue;
@@ -4752,34 +4782,34 @@ int __wlan_hdd_crda_reg_notifier(struct wiphy *wiphy,
             IOCTL operation is inactive                              */
 
          if ( pHddCtx->cfg_ini->gEnableStrictRegulatoryForFCC &&
-              wiphy->bands[IEEE80211_BAND_5GHZ])
+              wiphy->bands[HDD_NL80211_BAND_5GHZ])
          {
-             for (j=0; j<wiphy->bands[IEEE80211_BAND_5GHZ]->n_channels; j++)
+             for (j=0; j<wiphy->bands[HDD_NL80211_BAND_5GHZ]->n_channels; j++)
              {
                  // UNII-1 band channels are passive when domain is FCC.
-                 if ((wiphy->bands[IEEE80211_BAND_5GHZ ]->channels[j].center_freq == 5180 ||
-                      wiphy->bands[IEEE80211_BAND_5GHZ]->channels[j].center_freq == 5200 ||
-                      wiphy->bands[IEEE80211_BAND_5GHZ]->channels[j].center_freq == 5220 ||
-                      wiphy->bands[IEEE80211_BAND_5GHZ]->channels[j].center_freq == 5240) &&
+                 if ((wiphy->bands[HDD_NL80211_BAND_5GHZ ]->channels[j].center_freq == 5180 ||
+                      wiphy->bands[HDD_NL80211_BAND_5GHZ]->channels[j].center_freq == 5200 ||
+                      wiphy->bands[HDD_NL80211_BAND_5GHZ]->channels[j].center_freq == 5220 ||
+                      wiphy->bands[HDD_NL80211_BAND_5GHZ]->channels[j].center_freq == 5240) &&
                      ((domainIdCurrent == REGDOMAIN_FCC) &&
                                        pHddCtx->nEnableStrictRegulatoryForFCC))
                  {
-                     wiphy->bands[IEEE80211_BAND_5GHZ]->channels[j].flags |= IEEE80211_CHAN_PASSIVE_SCAN;
+                     wiphy->bands[HDD_NL80211_BAND_5GHZ]->channels[j].flags |= IEEE80211_CHAN_PASSIVE_SCAN;
                  }
-                 else if ((wiphy->bands[IEEE80211_BAND_5GHZ]->channels[j].center_freq == 5180 ||
-                           wiphy->bands[IEEE80211_BAND_5GHZ]->channels[j].center_freq == 5200 ||
-                           wiphy->bands[IEEE80211_BAND_5GHZ]->channels[j].center_freq == 5220 ||
-                           wiphy->bands[IEEE80211_BAND_5GHZ]->channels[j].center_freq == 5240) &&
+                 else if ((wiphy->bands[HDD_NL80211_BAND_5GHZ]->channels[j].center_freq == 5180 ||
+                           wiphy->bands[HDD_NL80211_BAND_5GHZ]->channels[j].center_freq == 5200 ||
+                           wiphy->bands[HDD_NL80211_BAND_5GHZ]->channels[j].center_freq == 5220 ||
+                           wiphy->bands[HDD_NL80211_BAND_5GHZ]->channels[j].center_freq == 5240) &&
                           ((domainIdCurrent != REGDOMAIN_FCC) ||
                                       !pHddCtx->nEnableStrictRegulatoryForFCC))
                  {
-                     wiphy->bands[IEEE80211_BAND_5GHZ]->channels[j].flags &= ~IEEE80211_CHAN_PASSIVE_SCAN;
+                     wiphy->bands[HDD_NL80211_BAND_5GHZ]->channels[j].flags &= ~IEEE80211_CHAN_PASSIVE_SCAN;
                  }
 
                  //Marking channels 52-144 as Radar channels if they are enabled
-                 k = wiphy->bands[IEEE80211_BAND_2GHZ]->n_channels + j;
+                 k = wiphy->bands[HDD_NL80211_BAND_2GHZ]->n_channels + j;
 
-                 if ((wiphy->bands[IEEE80211_BAND_5GHZ]->channels[j].center_freq == 5260 ||
+                 if ((wiphy->bands[HDD_NL80211_BAND_5GHZ]->channels[j].center_freq == 5260 ||
                       wiphy->bands[IEEE80211_BAND_5GHZ]->channels[j].center_freq == 5280 ||
                       wiphy->bands[IEEE80211_BAND_5GHZ]->channels[j].center_freq == 5300 ||
                       wiphy->bands[IEEE80211_BAND_5GHZ]->channels[j].center_freq == 5320 ||

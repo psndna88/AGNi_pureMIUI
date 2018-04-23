@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2017 The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2018 The Linux Foundation. All rights reserved.
 *
 * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
 *
@@ -598,7 +598,7 @@ int wlan_log_to_user(VOS_TRACE_LEVEL log_level, char *to_be_sent, int length)
 	local_time = (u32)(tv.tv_sec - (sys_tz.tz_minuteswest * 60));
 	rtc_time_to_tm(local_time, &tm);
         /* Firmware Time Stamp */
-        qtimer_ticks =  arch_counter_get_cntpct();
+        qtimer_ticks =  __vos_get_log_timestamp();
 
         tlen = snprintf(tbuf, sizeof(tbuf), "[%02d:%02d:%02d.%06lu] [%016llX]"
                         " [%.5s] ", tm.tm_hour, tm.tm_min, tm.tm_sec, tv.tv_usec,
@@ -1410,6 +1410,7 @@ int wlan_logging_sock_activate_svc(int log_fe_to_console, int num_buf,
 	int i, j = 0;
 	unsigned long irq_flag;
 	bool failure = FALSE;
+	struct log_msg *temp;
 
 	pr_info("%s: Initalizing FEConsoleLog = %d NumBuff = %d\n",
 			__func__, log_fe_to_console, num_buf);
@@ -1501,10 +1502,12 @@ err:
 		pr_err("%s: Could not Create LogMsg Thread Controller",
 		       __func__);
 		spin_lock_irqsave(&gwlan_logging.spin_lock, irq_flag);
-		vfree(gplog_msg);
+		temp = gplog_msg;
 		gplog_msg = NULL;
 		gwlan_logging.pcur_node = NULL;
 		spin_unlock_irqrestore(&gwlan_logging.spin_lock, irq_flag);
+		vfree(temp);
+		temp = NULL;
 		return -ENOMEM;
 	}
 	wake_up_process(gwlan_logging.thread);
@@ -1566,6 +1569,7 @@ int wlan_logging_sock_deactivate_svc(void)
 {
 	unsigned long irq_flag;
 	int i;
+	struct log_msg *temp;
 
 	if (!gplog_msg)
 		return 0;
@@ -1582,10 +1586,12 @@ int wlan_logging_sock_deactivate_svc(void)
 	wait_for_completion(&gwlan_logging.shutdown_comp);
 
 	spin_lock_irqsave(&gwlan_logging.spin_lock, irq_flag);
-	vfree(gplog_msg);
+	temp = gplog_msg;
 	gplog_msg = NULL;
 	gwlan_logging.pcur_node = NULL;
 	spin_unlock_irqrestore(&gwlan_logging.spin_lock, irq_flag);
+	vfree(temp);
+	temp = NULL;
 
 	spin_lock_irqsave(&gwlan_logging.pkt_stats_lock, irq_flag);
 	/* free allocated skb */

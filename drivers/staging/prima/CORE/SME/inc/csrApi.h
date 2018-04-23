@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -520,6 +520,9 @@ typedef enum
     eCSR_ROAM_UPDATE_MAX_RATE_IND,
     eCSR_ROAM_LOST_LINK_PARAMS_IND,
     eCSR_ROAM_UPDATE_SCAN_RESULT,
+    eCSR_ROAM_ECSA_BCN_TX_IND,
+    eCSR_ROAM_ECSA_CHAN_CHANGE_RSP,
+    eCSR_ROAM_STA_CHANNEL_SWITCH,
 }eRoamCmdStatus;
 
 
@@ -666,8 +669,6 @@ typedef enum
     eCSR_ASSOC_STATE_TYPE_INFRA_DISCONNECTED,
     // Participating in a Infra network and connected to a peer
     eCSR_ASSOC_STATE_TYPE_INFRA_CONNECTED,
-    /* Disconnecting with AP or stop connecting process */
-    eCSR_ASSOC_STATE_TYPE_INFRA_DISCONNECTING,
 
 }eCsrConnectState;
 
@@ -959,6 +960,7 @@ typedef struct tagCsrRoamProfile
     tCsrMobilityDomainInfo MDID;
 #endif
     tVOS_CON_MODE csrPersona;
+    bool force_24ghz_in_ht20;
     tCsrBssid bssid_hint;
 }tCsrRoamProfile;
 
@@ -1033,6 +1035,7 @@ typedef struct tagCsrNeighborRoamConfigParams
     tANI_U16       nNeighborResultsRefreshPeriod;
     tANI_U16       nEmptyScanRefreshPeriod;
     tANI_U8        nNeighborInitialForcedRoamTo5GhEnable;
+    tANI_U8        nWeakZoneRssiThresholdForRoam;
 }tCsrNeighborRoamConfigParams;
 #endif
 
@@ -1199,6 +1202,11 @@ typedef struct tagCsrConfigParam
     v_U32_t PERtimerThreshold;
     v_U32_t PERroamTriggerPercent;
 #endif
+
+#ifdef WLAN_FEATURE_LFR_MBB
+    tANI_BOOLEAN enable_lfr_mbb;
+#endif
+
 #endif
 
     tANI_BOOLEAN ignorePeerErpInfo;
@@ -1239,6 +1247,12 @@ typedef struct tagCsrConfigParam
     uint32_t edca_bk_aifs;
     uint32_t edca_be_aifs;
     tANI_BOOLEAN disable_scan_during_sco;
+    uint32_t sta_auth_retries_for_code17;
+    uint32_t sta_sap_scc_on_dfs_chan;
+    tANI_U8 agg_btc_sco_oui[3];
+    tANI_U8 num_ba_buff_btc_sco;
+    tANI_U8 num_ba_buff;
+    bool force_scc_with_ecsa;
 }tCsrConfigParam;
 
 //Tush
@@ -1336,6 +1350,9 @@ typedef struct tagCsrRoamInfo
     tDot11fIEVHTOperation vht_operation;
     tDot11fIEHTInfo ht_operation;
     bool reassoc;
+    struct sir_channel_chanege_rsp *ap_chan_change_rsp;
+    tSirSmeChanInfo chan_info;
+    tSirMacHTChannelWidth ch_width;
 }tCsrRoamInfo;
 
 typedef struct tagCsrFreqScanInfo
@@ -1365,6 +1382,10 @@ typedef struct sSirSmeAssocIndToUpperLayerCnf
     tANI_U8              HT40MHzIntoEnabledSta; //set to true if 40 MHz Intolerant enabled STA
 #endif
     uint32_t             rate_flags;
+    tSirSmeChanInfo      chan_info;
+    tSirMacHTChannelWidth ch_width;
+    tDot11fIEHTCaps HTCaps;
+    tDot11fIEVHTCaps VHTCaps;
 } tSirSmeAssocIndToUpperLayerCnf, *tpSirSmeAssocIndToUpperLayerCnf;
 
 typedef struct tagCsrSummaryStatsInfo
@@ -1558,6 +1579,18 @@ struct tagCsrDelStaParams
     tCsrBssid peerMacAddr;
     u16 reason_code;
     u8 subtype;
+};
+
+
+/**
+ * struct csr_set_tx_max_pwr_per_band - Req params to
+ * set max tx power per band
+ * @band: band for which power to be set
+ * @power: power to set in dB
+ */
+struct csr_set_tx_max_pwr_per_band {
+    eCsrBand band;
+    tPowerdBm power;
 };
 
 ////////////////////////////////////////////Common SCAN starts
@@ -1760,6 +1793,12 @@ eHalStatus csrSetBand(tHalHandle hHal, eCsrBand eBand);
 ---------------------------------------------------------------------------*/
 eCsrBand csrGetCurrentBand (tHalHandle hHal);
 
-
+/**
+ * csrConvertCBIniValueToPhyCBState() - convert ini CB value to Phy CB val
+ * @cb_ini_value: ini value of cb mode
+ *
+ * Return: phy CB val
+ */
+ePhyChanBondState csrConvertCBIniValueToPhyCBState(v_U32_t cb_ini_val);
 #endif
 

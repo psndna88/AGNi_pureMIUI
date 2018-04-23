@@ -258,6 +258,8 @@
 #ifdef WLAN_FEATURE_AP_HT40_24G
 #define SIR_MAC_ACTION_2040_BSS_COEXISTENCE     0
 #endif
+#define SIR_MAC_ACTION_EXT_CHANNEL_SWITCH_ID    4
+
 
 
 #ifdef WLAN_FEATURE_11W
@@ -391,6 +393,10 @@
 #define SIR_MAC_RSN_EID                48
 #define SIR_MAC_RSN_EID_MIN                4
 #define SIR_MAC_RSN_EID_MAX                254
+
+#define SIR_MAC_EXT_CHNL_SWITCH_ANN_EID    60
+#define SIR_MAC_WIDER_BW_CHANNEL_SWITCH_ANN 194
+
 
 //using reserved EID for Qos Action IE for now,
 //need to check 11e spec for the actual EID

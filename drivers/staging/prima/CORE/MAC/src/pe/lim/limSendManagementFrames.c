@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -798,6 +798,18 @@ limSendProbeRspMgmtFrame(tpAniSirGlobal pMac,
     }
 #endif
 
+    if (LIM_IS_AP_ROLE(psessionEntry) && psessionEntry->include_ecsa_ie) {
+       populate_dot11f_ext_chann_switch_ann(pMac, &pFrm->ext_chan_switch_ann,
+                                              psessionEntry);
+       if (psessionEntry->lim11hEnable) {
+           PopulateDot11fChanSwitchAnn(pMac,
+                                       &pFrm->ChanSwitchAnn, psessionEntry);
+           if (psessionEntry->include_wide_ch_bw_ie)
+               PopulateDot11fWiderBWChanSwitchAnn(pMac,
+                                &pFrm->WiderBWChanSwitchAnn, psessionEntry);
+       }
+    }
+
 
     if ( psessionEntry->pLimStartBssReq )
     {
@@ -859,7 +871,7 @@ limSendProbeRspMgmtFrame(tpAniSirGlobal pMac,
             return;
         }
         if (addnIE1Len <= WNI_CFG_PROBE_RSP_ADDNIE_DATA1_LEN && addnIE1Len &&
-                     (nBytes + addnIE1Len) <= SIR_MAX_PACKET_SIZE)
+                     (nBytes + addnIE1Len) <= SCH_MAX_PROBE_RESP_SIZE)
         {
             if ( eSIR_SUCCESS != wlan_cfgGetStr(pMac,
                                      WNI_CFG_PROBE_RSP_ADDNIE_DATA1, &addIE[0],
@@ -883,7 +895,7 @@ limSendProbeRspMgmtFrame(tpAniSirGlobal pMac,
             return;
         }
         if (addnIE2Len <= WNI_CFG_PROBE_RSP_ADDNIE_DATA2_LEN && addnIE2Len &&
-                     (nBytes + addnIE2Len) <= SIR_MAX_PACKET_SIZE)
+                     (nBytes + addnIE2Len) <= SCH_MAX_PROBE_RESP_SIZE)
         {
             if ( eSIR_SUCCESS != wlan_cfgGetStr(pMac,
                                      WNI_CFG_PROBE_RSP_ADDNIE_DATA2, &addIE[addnIE1Len],
@@ -907,7 +919,7 @@ limSendProbeRspMgmtFrame(tpAniSirGlobal pMac,
             return;
         }
         if (addnIE3Len <= WNI_CFG_PROBE_RSP_ADDNIE_DATA3_LEN && addnIE3Len &&
-                     (nBytes + addnIE3Len) <= SIR_MAX_PACKET_SIZE)
+                     (nBytes + addnIE3Len) <= SCH_MAX_PROBE_RESP_SIZE)
         {
             if ( eSIR_SUCCESS != wlan_cfgGetStr(pMac,
                                      WNI_CFG_PROBE_RSP_ADDNIE_DATA3,
@@ -1384,7 +1396,8 @@ limSendAssocRspMgmtFrame(tpAniSirGlobal pMac,
                          tANI_U16       aid,
                          tSirMacAddr    peerMacAddr,
                          tANI_U8        subType,
-                         tpDphHashNode  pSta,tpPESession psessionEntry)
+                         tpDphHashNode  pSta,tpPESession psessionEntry,
+                         assoc_rsp_tx_context *tx_complete_context)
 {
     static tDot11fAssocResponse frm;
     tANI_U8             *pFrame, *macAddr;
@@ -1763,14 +1776,29 @@ limSendAssocRspMgmtFrame(tpAniSirGlobal pMac,
 
     if (IS_FEATURE_SUPPORTED_BY_FW(ENHANCED_TXBD_COMPLETION))
     {
-        limLog(pMac, LOG1, FL("Re/AssocRsp - txBdToken %u"), pMac->lim.txBdToken);
+        limLog(pMac, LOG1, FL("Re/AssocRsp - txBdToken %u"),
+               pMac->lim.txBdToken);
         /// Queue Association Response frame in high priority WQ
-        halstatus = halTxFrameWithTxComplete( pMac, pPacket, ( tANI_U16 ) nBytes,
+        if (tx_complete_context)
+        {
+            tx_complete_context->txBdToken = pMac->lim.txBdToken;
+            halstatus = halTxFrameWithTxComplete(pMac, pPacket,
+                (tANI_U16) nBytes,
+                HAL_TXRX_FRM_802_11_MGMT,
+                ANI_TXDIR_TODS,
+                7,//SMAC_SWBD_TX_TID_MGMT_HIGH,
+                limTxComplete, pFrame, limAssocRspTxCompleteCnf,
+                txFlag, pMac->lim.txBdToken);
+        }
+        else
+            halstatus = halTxFrameWithTxComplete(pMac, pPacket,
+                (tANI_U16) nBytes,
                 HAL_TXRX_FRM_802_11_MGMT,
                 ANI_TXDIR_TODS,
                 7,//SMAC_SWBD_TX_TID_MGMT_HIGH,
                 limTxComplete, pFrame, limTxBdComplete,
-                txFlag, pMac->lim.txBdToken );
+                txFlag, pMac->lim.txBdToken);
+
         pMac->lim.txBdToken++;
     }
     else
@@ -5287,6 +5315,121 @@ limSendChannelSwitchMgmtFrame(tpAniSirGlobal pMac,
 
 } // End limSendChannelSwitchMgmtFrame.
 
+tSirRetStatus
+lim_send_extended_chan_switch_action_frame(tpAniSirGlobal mac_ctx,
+   tSirMacAddr peer, uint8_t mode, uint8_t new_op_class,
+   uint8_t new_channel, uint8_t count, tpPESession session_entry)
+{
+   tDot11fext_channel_switch_action_frame frm;
+   uint8_t                  *frame;
+   tpSirMacMgmtHdr          mac_hdr;
+   uint32_t                 num_bytes, n_payload, status;
+   void                     *packet;
+   eHalStatus               halstatus;
+   uint8_t                  txFlag = 0;
+
+   if (!session_entry) {
+       limLog(mac_ctx, LOGE, FL("Session entry is NULL!!!"));
+       return eSIR_FAILURE;
+   }
+
+   vos_mem_set(&frm, sizeof(frm), 0);
+
+   frm.Category.category     = SIR_MAC_ACTION_PUBLIC_USAGE;
+   frm.Action.action         = SIR_MAC_ACTION_EXT_CHANNEL_SWITCH_ID;
+
+   frm.ext_chan_switch_ann_action.switch_mode = mode;
+   frm.ext_chan_switch_ann_action.op_class = new_op_class;
+   frm.ext_chan_switch_ann_action.new_channel = new_channel;
+   frm.ext_chan_switch_ann_action.switch_count = count;
+
+
+   status = dot11fGetPackedext_channel_switch_action_frameSize(mac_ctx,
+                    &frm, &n_payload);
+   if (DOT11F_FAILED(status)) {
+       limLog(mac_ctx, LOGE, FL("Failed to get packed size for Channel Switch 0x%08x"),
+              status);
+       /* We'll fall back on the worst case scenario*/
+       n_payload = sizeof(tDot11fext_channel_switch_action_frame);
+   } else if (DOT11F_WARNED(status)) {
+       limLog(mac_ctx, LOGW, FL("There were warnings while calculating the packed size for a Ext Channel Switch (0x%08x)"),
+               status);
+   }
+
+   num_bytes = n_payload + sizeof(tSirMacMgmtHdr);
+
+   halstatus = palPktAlloc(mac_ctx->hHdd, HAL_TXRX_FRM_802_11_MGMT,
+                           (uint16_t )num_bytes, (void**) &frame,
+                           (void**) &packet);
+
+   if (!HAL_STATUS_SUCCESS(halstatus)) {
+       limLog(mac_ctx, LOGE, FL("Failed to allocate %d bytes for a Ext Channel Switch"),
+              num_bytes);
+       return eSIR_FAILURE;
+   }
+
+   /* Paranoia*/
+   vos_mem_set(frame, num_bytes, 0);
+
+   /* Next, we fill out the buffer descriptor */
+   limPopulateMacHeader(mac_ctx, frame, SIR_MAC_MGMT_FRAME,
+            SIR_MAC_MGMT_ACTION, peer, session_entry->selfMacAddr);
+   mac_hdr = (tpSirMacMgmtHdr) frame;
+   vos_mem_copy((uint8_t *) mac_hdr->bssId,
+                (uint8_t *) session_entry->bssId,
+                 sizeof(tSirMacAddr));
+
+#ifdef WLAN_FEATURE_11W
+   limSetProtectedBit(mac_ctx, session_entry, peer, mac_hdr);
+#endif
+
+   status = dot11fPackext_channel_switch_action_frame(mac_ctx, &frm,
+              frame + sizeof(tSirMacMgmtHdr), n_payload, &n_payload);
+   if (DOT11F_FAILED(status)) {
+       limLog(mac_ctx, LOGE, FL("Failed to pack a Channel Switch 0x%08x"),
+              status);
+        palPktFree(mac_ctx->hHdd, HAL_TXRX_FRM_802_11_MGMT, (void*) frame,
+                   (void*) packet );
+       return eSIR_FAILURE;
+   } else if (DOT11F_WARNED(status)) {
+       limLog(mac_ctx, LOGW, FL("There were warnings while packing a Channel Switch 0x%08x"),
+                status);
+   }
+
+   if ((SIR_BAND_5_GHZ ==
+       limGetRFBand(session_entry->currentOperChannel)) ||
+       (session_entry->pePersona == VOS_P2P_CLIENT_MODE) ||
+       (session_entry->pePersona == VOS_P2P_GO_MODE)) {
+         txFlag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
+   }
+   /* Use peer sta to transmit this frame */
+   txFlag |= HAL_USE_PEER_STA_REQUESTED_MASK;
+
+   limLog(mac_ctx, LOG1, FL("Send Ext channel Switch to :"MAC_ADDRESS_STR" with swcount %d, swmode %d , newchannel %d newops %d"),
+          MAC_ADDR_ARRAY(mac_hdr->da),
+          frm.ext_chan_switch_ann_action.switch_count,
+          frm.ext_chan_switch_ann_action.switch_mode,
+          frm.ext_chan_switch_ann_action.new_channel,
+          frm.ext_chan_switch_ann_action.op_class);
+
+   MTRACE(vos_trace(VOS_MODULE_ID_PE, TRACE_CODE_TX_MGMT,
+          session_entry->peSessionId, mac_hdr->fc.subType));
+
+   halstatus = halTxFrame(mac_ctx, packet, (uint16_t) num_bytes,
+                             HAL_TXRX_FRM_802_11_MGMT,
+                             ANI_TXDIR_TODS,
+                             7, limTxComplete, frame,
+                             txFlag);
+   MTRACE(vos_trace(VOS_MODULE_ID_PE, TRACE_CODE_TX_COMPLETE,
+          session_entry->peSessionId, halstatus));
+   if (!HAL_STATUS_SUCCESS(halstatus)) {
+       limLog(mac_ctx, LOGE, FL("Failed to send a Ext Channel Switch %X!"),
+              halstatus);
+       /* Pkt will be freed up by the callback */
+       return eSIR_FAILURE;
+   }
+   return eSIR_SUCCESS;
+} /* End lim_send_extended_chan_switch_action_frame */
 
 
 #ifdef WLAN_FEATURE_11AC    
@@ -5451,8 +5594,8 @@ limSendVHTChannelSwitchMgmtFrame(tpAniSirGlobal pMac,
     frm.ChanSwitchAnn.switchMode    = 1;
     frm.ChanSwitchAnn.newChannel    = nNewChannel;
     frm.ChanSwitchAnn.switchCount   = 1;
-    frm.ExtChanSwitchAnn.secondaryChannelOffset =  limGetHTCBState(ncbMode); 
-    frm.ExtChanSwitchAnn.present = 1; 
+    frm.sec_chan_offset.secondaryChannelOffset =  limGetHTCBState(ncbMode);
+    frm.sec_chan_offset.present = 1;
     frm.WiderBWChanSwitchAnn.newChanWidth = nChanWidth;
     frm.WiderBWChanSwitchAnn.newCenterChanFreq0 = limGetCenterChannel(pMac,nNewChannel,ncbMode,nChanWidth);
     frm.WiderBWChanSwitchAnn.newCenterChanFreq1 = 0;

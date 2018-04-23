@@ -94,8 +94,9 @@ const EID_FT_INFO                    =  55;
 const EID_TIMEOUT_INTERVAL           =  56;
 const EID_FT_RIC_DATA                =  57;
 const EID_SUPPORTED_OPER_CLASSES     =  59;
+const EID_EXT_CHAN_SWITCH            =  60;
 const EID_HT_INFO                    =  61;
-const EID_EXT_CHANNEL_SWITCH_ANN     =  62;
+const EID_SEC_CHAN_OFFSET            =  62;
 const EID_RSNI                       =  65;
 const EID_RRM_MEAS_PILOT_TX_INFO     =  66;
 const EID_WAPI                       =  68;
@@ -454,6 +455,15 @@ FF VhtUserPositionArray(16)                    // 8.4.1.52
     userPositionArray[16];
 }
 
+FF ext_chan_switch_ann_action(4)
+{
+   {
+     switch_mode: 8;
+     op_class: 8;
+     new_channel: 8;
+     switch_count: 8;
+   }
+}
 
 /////////////////////////////////////////////////////////////////////////////
 //                                  TLVs                                   //
@@ -1367,7 +1377,15 @@ IE ChanSwitchAnn (EID_CHANNEL_SWITCH_ANN) // 7.3.2.20
     switchCount, 1;
 }
 
-IE ExtChanSwitchAnn (EID_EXT_CHANNEL_SWITCH_ANN) // 7.3.2.20a
+IE ext_chan_switch_ann (EID_EXT_CHAN_SWITCH) //9.4.2.53
+{
+    switch_mode,   1;
+    new_reg_class, 1;
+    new_channel,   1;
+    switch_count,  1;
+}
+
+IE sec_chan_offset (EID_SEC_CHAN_OFFSET) //9.4.2.20
 {
 	secondaryChannelOffset, 1;
 }
@@ -3323,6 +3341,7 @@ FRAME Beacon                              // C.f. Sec. 7.2.3.1
     OPTIE  FHPattTable;
     OPTIE  PowerConstraints;
     OPTIE  ChanSwitchAnn;
+    OPTIE  ext_chan_switch_ann;
     OPTIE  Quiet;
     OPTIE  TPCReport;
     OPTIE  ERPInfo;
@@ -3337,7 +3356,7 @@ FRAME Beacon                              // C.f. Sec. 7.2.3.1
     OPTIE  WPA;
     OPTIE  HTCaps;
     OPTIE  HTInfo;
-    OPTIE  ExtChanSwitchAnn;
+    OPTIE  sec_chan_offset;
     OPTIE  WMMInfoAp;
     OPTIE  WMMParams;
     OPTIE  WMMCaps;
@@ -3407,6 +3426,7 @@ FRAME Beacon2
     OPTIE  Country;
     OPTIE  PowerConstraints;
     OPTIE  ChanSwitchAnn;
+    OPTIE  ext_chan_switch_ann;
     OPTIE  Quiet;
     OPTIE  TPCReport;
     OPTIE  ERPInfo;
@@ -3419,7 +3439,7 @@ FRAME Beacon2
     OPTIE  WPA;
     OPTIE  HTCaps;
     OPTIE  HTInfo;
-    OPTIE  ExtChanSwitchAnn;
+    OPTIE  sec_chan_offset;
     OPTIE  WMMInfoAp;
     OPTIE  WMMParams;
     OPTIE  WMMCaps;
@@ -3461,6 +3481,7 @@ FRAME BeaconIEs
     OPTIE  FHPattTable;
     OPTIE  PowerConstraints;
     OPTIE  ChanSwitchAnn;
+    OPTIE  ext_chan_switch_ann;
     OPTIE  Quiet;
     OPTIE  TPCReport;
     OPTIE  ERPInfo;
@@ -3475,7 +3496,7 @@ FRAME BeaconIEs
     OPTIE  WPA;
     OPTIE  HTCaps;
     OPTIE  HTInfo;
-    OPTIE  ExtChanSwitchAnn;
+    OPTIE  sec_chan_offset;
     OPTIE  WMMInfoAp;
     OPTIE  WMMParams;
     OPTIE  WMMCaps;
@@ -3672,6 +3693,7 @@ FRAME ProbeResponse                       // 7.2.3.9
     OPTIE  FHPattTable;
     OPTIE  PowerConstraints;
     OPTIE  ChanSwitchAnn;
+    OPTIE  ext_chan_switch_ann;
     OPTIE  Quiet;
     OPTIE  TPCReport;
     OPTIE  ERPInfo;
@@ -3685,7 +3707,7 @@ FRAME ProbeResponse                       // 7.2.3.9
     OPTIE  WPA;
     OPTIE  HTCaps;
     OPTIE  HTInfo;
-    OPTIE  ExtChanSwitchAnn;
+    OPTIE  sec_chan_offset;
     OPTIE  WMMInfoAp;
     OPTIE  WMMParams;
     OPTIE  WMMCaps;
@@ -3704,6 +3726,7 @@ FRAME ProbeResponse                       // 7.2.3.9
     OPTIE  ExtCap;
     OPTIE  OBSSScanParameters;
     OPTIE  hs20vendor_ie;
+    OPTIE  WiderBWChanSwitchAnn;
 } // End frame ProbeResponse.
 
 FRAME Authentication                      // 7.2.3.10
@@ -3829,8 +3852,15 @@ FRAME ChannelSwitch
     FF     Category;
     FF     Action;
     MANDIE ChanSwitchAnn;
-    OPTIE  ExtChanSwitchAnn;
+    OPTIE  sec_chan_offset;
     OPTIE  WiderBWChanSwitchAnn;
+}
+
+FRAME ext_channel_switch_action_frame
+{
+    FF     Category;
+    FF     Action;
+    FF     ext_chan_switch_ann_action;
 }
 
 FRAME MeasurementRequest

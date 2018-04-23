@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -456,7 +456,7 @@ tANI_U32 limSendProbeRspTemplateToHal(tpAniSirGlobal pMac,tpPESession psessionEn
         }
 
         if (addnIE1Len && addnIE1Len <= WNI_CFG_PROBE_RSP_ADDNIE_DATA1_LEN &&
-                                 (nBytes + addnIE1Len) <= SIR_MAX_PACKET_SIZE)
+                              (nBytes + addnIE1Len) <= SCH_MAX_PROBE_RESP_SIZE)
         {
             if ( eSIR_SUCCESS != wlan_cfgGetStr(pMac,
                                     WNI_CFG_PROBE_RSP_ADDNIE_DATA1, &addIE[0],
@@ -470,7 +470,7 @@ tANI_U32 limSendProbeRspTemplateToHal(tpAniSirGlobal pMac,tpPESession psessionEn
         }
 
         if (addnIE2Len && addnIE2Len <= WNI_CFG_PROBE_RSP_ADDNIE_DATA2_LEN &&
-                     (nBytes + addnIE1Len + addnIE2Len) <= SIR_MAX_PACKET_SIZE)
+                 (nBytes + addnIE1Len + addnIE2Len) <= SCH_MAX_PROBE_RESP_SIZE)
         {
             if ( eSIR_SUCCESS != wlan_cfgGetStr(pMac,
                                      WNI_CFG_PROBE_RSP_ADDNIE_DATA2,
@@ -485,7 +485,7 @@ tANI_U32 limSendProbeRspTemplateToHal(tpAniSirGlobal pMac,tpPESession psessionEn
         }
 
         if (addnIE3Len && addnIE3Len <= WNI_CFG_PROBE_RSP_ADDNIE_DATA3_LEN &&
-                     (nBytes + totalAddnIeLen) <= SIR_MAX_PACKET_SIZE)
+                     (nBytes + totalAddnIeLen) <= SCH_MAX_PROBE_RESP_SIZE)
         {
             if ( eSIR_SUCCESS != wlan_cfgGetStr(pMac,
                                      WNI_CFG_PROBE_RSP_ADDNIE_DATA3,
@@ -503,7 +503,7 @@ tANI_U32 limSendProbeRspTemplateToHal(tpAniSirGlobal pMac,tpPESession psessionEn
 
     if (addnIEPresent)
     {
-        if ((nBytes + totalAddnIeLen) <= SIR_MAX_PACKET_SIZE )
+        if ((nBytes + totalAddnIeLen) <= SCH_MAX_PROBE_RESP_SIZE)
             nBytes += totalAddnIeLen;
         else
             addnIEPresent = false; //Dont include the IE.

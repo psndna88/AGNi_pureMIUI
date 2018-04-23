@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -705,7 +705,6 @@ tpPESession limFillFTSession(tpAniSirGlobal pMac,
     tPowerdBm        localPowerConstraint;
     tPowerdBm        regMax;
     tSchBeaconStruct *pBeaconStruct;
-    uint32           selfDot11Mode;
     ePhyChanBondState cbMode;
 
     pBeaconStruct = vos_mem_malloc(sizeof(tSchBeaconStruct));
@@ -750,9 +749,8 @@ tpPESession limFillFTSession(tpAniSirGlobal pMac,
     vos_mem_copy(pftSessionEntry->ssId.ssId, pBeaconStruct->ssId.ssId,
         pftSessionEntry->ssId.length);
 
-    wlan_cfgGetInt(pMac, WNI_CFG_DOT11_MODE, &selfDot11Mode);
-    limLog(pMac, LOG1, FL("selfDot11Mode %d"),selfDot11Mode );
-    pftSessionEntry->dot11mode = selfDot11Mode;
+    pftSessionEntry->dot11mode = pMac->ft.ftPEContext.pFTPreAuthReq->dot11mode;
+    limLog(pMac, LOG1, FL("dot11mode %d"), pftSessionEntry->dot11mode);
     pftSessionEntry->vhtCapability =
                (IS_DOT11_MODE_VHT(pftSessionEntry->dot11mode)
                 && IS_BSS_VHT_CAPABLE(pBeaconStruct->VHTCaps));

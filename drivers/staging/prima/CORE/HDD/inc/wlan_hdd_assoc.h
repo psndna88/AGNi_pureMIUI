@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -223,6 +223,9 @@ v_BOOL_t hdd_connGetConnectedBssType( hdd_station_ctx_t *pHddCtx,
 int hdd_SetGENIEToCsr( hdd_adapter_t *pAdapter, eCsrAuthType *RSNAuthType );
 
 int hdd_set_csr_auth_type( hdd_adapter_t *pAdapter, eCsrAuthType RSNAuthType );
+
+void hdd_assoc_registerFwdEapolCB(void *pContext);
+
 VOS_STATUS hdd_roamRegisterTDLSSTA( hdd_adapter_t *pAdapter,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0))
                                     const tANI_U8 *peerMac,
@@ -241,5 +244,10 @@ void hdd_indicateEseBcnReportNoResults(const hdd_adapter_t *pAdapter,
 #endif /* FEATURE_WLAN_ESE && FEATURE_WLAN_ESE_UPLOAD */
 
 void iw_full_power_cbfn (void *pContext, eHalStatus status);
+
+void hdd_copy_ht_caps(struct ieee80211_ht_cap *hdd_ht_cap,
+                      tDot11fIEHTCaps *roam_ht_cap);
+void hdd_copy_vht_caps(struct ieee80211_vht_cap *hdd_vht_cap,
+                       tDot11fIEVHTCaps *roam_vht_cap);
 
 #endif

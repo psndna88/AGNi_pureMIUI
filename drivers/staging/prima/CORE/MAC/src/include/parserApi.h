@@ -97,7 +97,8 @@ typedef struct sSirProbeRespBeacon
     tDot11fIEPowerConstraints localPowerConstraint;
     tDot11fIETPCReport        tpcReport;
     tDot11fIEChanSwitchAnn    channelSwitchIE;
-    tDot11fIEExtChanSwitchAnn extChannelSwitchIE;
+    tDot11fIEsec_chan_offset sec_chan_offset;
+    tDot11fIEext_chan_switch_ann  ext_chan_switch_ann;
     tSirMacAddr               bssid;
     tDot11fIEQuiet            quietIE;
     tDot11fIEHTCaps           HTCaps;
@@ -130,7 +131,8 @@ typedef struct sSirProbeRespBeacon
     tANI_U8                   rsnPresent;
     tANI_U8                   erpPresent;
     tANI_U8                   channelSwitchPresent;
-    tANI_U8                   extChannelSwitchPresent;
+    tANI_U8                   sec_chan_offset_present;
+    tANI_U8                   ecsa_present;
     tANI_U8                   quietIEPresent;
     tANI_U8                   tpcReportPresent;
     tANI_U8                   powerConstraintPresent;
@@ -574,6 +576,19 @@ PopulateDot11fCapabilities2(tpAniSirGlobal         pMac,
                             struct sDphHashNode   *pSta,
                             tpPESession            psessionEntry);
 
+/**
+ * populate_dot11f_ext_chann_switch_ann() - Function to populate ECS
+ * @mac_ptr:            Pointer to PMAC structure
+ * @dot_11_ptr:         ECS element
+ * @session_entry:      PE session entry
+ *
+ * This function is used to populate the extended channel switch element
+ *
+ * Return: None
+ */
+void populate_dot11f_ext_chann_switch_ann(tpAniSirGlobal mac_ctx,
+        tDot11fIEext_chan_switch_ann *dot_11_ptr, tpPESession session_entry);
+
 /// Populate a tDot11fIEChanSwitchAnn
 void
 PopulateDot11fChanSwitchAnn(tpAniSirGlobal          pMac,
@@ -582,8 +597,8 @@ PopulateDot11fChanSwitchAnn(tpAniSirGlobal          pMac,
 
 /// Populate a tDot11fIEChanSwitchAnn
 void
-PopulateDot11fExtChanSwitchAnn(tpAniSirGlobal          pMac,
-                             tDot11fIEExtChanSwitchAnn *pDot11f,
+PopulateDot11fsecChanOffset(tpAniSirGlobal          pMac,
+                             tDot11fIEsec_chan_offset *pDot11f,
                              tpPESession psessionEntry);
 
 /// Populate a tDot11fIECountry
@@ -997,6 +1012,12 @@ tSirRetStatus ValidateAndRectifyIEs(tpAniSirGlobal pMac,
                                     tANI_U8 *pMgmtFrame,
                                     tANI_U32 nFrameBytes,
                                     tANI_U32 *nMissingRsnBytes);
+#ifdef SAP_AUTH_OFFLOAD
+void
+sap_auth_offload_update_rsn_ie(tpAniSirGlobal pmac,
+        tDot11fIERSNOpaque *pdot11f);
+#endif /* SAP_AUTH_OFFLOAD */
+
 /**
  * sir_copy_hs20_ie() - Update HS 2.0 Information Element.
  * @dest: dest HS IE buffer to be updated
