@@ -3673,6 +3673,49 @@ static int sta_set_he_fragmentation(struct sigma_dut *dut, const char *intf,
 }
 
 
+static int sta_set_he_ltf(struct sigma_dut *dut, const char *intf,
+			  enum qca_wlan_he_ltf_cfg ltf)
+{
+	struct nl_msg *msg;
+	int ret = 0;
+	struct nlattr *params;
+	int ifindex;
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s failed",
+				__func__, intf);
+		return -1;
+	}
+
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+				    NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
+	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_LTF,
+		       ltf)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding vendor_cmd and vendor_data",
+				__func__);
+		nlmsg_free(msg);
+		return -1;
+	}
+	nla_nest_end(msg, params);
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in send_and_recv_msgs, ret=%d",
+				__func__, ret);
+	}
+	return ret;
+}
+
+
 static int nlvendor_sta_set_noack(struct sigma_dut *dut, const char *intf,
 				  int noack, enum qca_wlan_ac_type ac)
 {
@@ -5827,6 +5870,13 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 
 		/* Enable AMPDU by default */
 		iwpriv_sta_set_ampdu(dut, intf, 1);
+
+#ifdef NL80211_SUPPORT
+		if (sta_set_he_ltf(dut, intf, QCA_WLAN_HE_LTF_AUTO)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Set LTF config to default in sta_reset_default_wcn failed");
+		}
+#endif /* NL80211_SUPPORT */
 
 		/* Set nss to 1 and MCS 0-7 in case of testbed */
 		if (type && strcasecmp(type, "Testbed") == 0) {
@@ -8998,6 +9048,27 @@ static int wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 				  "errorCode,Failed to set shortgi");
 			return 0;
 		}
+	}
+
+	val = get_param(cmd, "LTF");
+	if (val) {
+#ifdef NL80211_SUPPORT
+		if (strcmp(val, "3.2") == 0) {
+			sta_set_he_ltf(dut, intf, QCA_WLAN_HE_LTF_1X);
+		} if (strcmp(val, "6.4") == 0) {
+			sta_set_he_ltf(dut, intf, QCA_WLAN_HE_LTF_2X);
+		} else if (strcmp(val, "12.8") == 0) {
+			sta_set_he_ltf(dut, intf, QCA_WLAN_HE_LTF_4X);
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode, LTF value not supported");
+			return 0;
+		}
+#else /* NL80211_SUPPORT */
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"LTF cannot be set without NL80211_SUPPORT defined");
+		return -2;
+#endif /* NL80211_SUPPORT */
 	}
 
 	return 1;
