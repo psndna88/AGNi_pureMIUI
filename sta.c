@@ -5836,6 +5836,15 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 					"iwpriv %s setphymode failed", intf);
 		}
 
+		/* reset the rate to Auto rate */
+		snprintf(buf, sizeof(buf), "iwpriv %s set_11ax_rate 0xff",
+			 intf);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"iwpriv %s set_11ax_rate 0xff failed",
+					intf);
+		}
+
 		/* remove all network profiles */
 		remove_wpa_networks(intf);
 
