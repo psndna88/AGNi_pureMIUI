@@ -103,7 +103,7 @@ module_param_cb(compressor, &zswap_compressor_param_ops,
 		&zswap_compressor_kparam, 0644);
 
 /* Compressed storage zpool to use */
-#define ZSWAP_ZPOOL_DEFAULT "zbud"
+#define ZSWAP_ZPOOL_DEFAULT "zsmalloc"
 static char zswap_zpool_type[32 /* arbitrary */] = ZSWAP_ZPOOL_DEFAULT;
 static struct kparam_string zswap_zpool_kparam = {
 	.string =	zswap_zpool_type,
