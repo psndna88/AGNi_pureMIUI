@@ -39,7 +39,8 @@
 #ifdef ANDROID
 #include <dirent.h>
 #include <cutils/sockets.h>
-#include "private/android_filesystem_config.h"
+#include <grp.h>
+#include <pwd.h>
 #endif /* ANDROID */
 
 #include "wpa_ctrl.h"
@@ -141,7 +142,8 @@ try_again:
 
 #ifdef ANDROID
 	chmod(ctrl->local.sun_path, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
-	chown(ctrl->local.sun_path, AID_SYSTEM, AID_WIFI);
+	chown(ctrl->local.sun_path, getpwnam("system")->pw_uid,
+	      getgrnam("wifi")->gr_gid);
 	/*
 	 * If the ctrl_path isn't an absolute pathname, assume that
 	 * it's the name of a socket in the Android reserved namespace.
