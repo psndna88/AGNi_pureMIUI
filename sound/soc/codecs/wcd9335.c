@@ -1,6 +1,8 @@
 /*
  * Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
  * Copyright (C) 2016 XiaoMi, Inc.
+ * Copyright (C) 2017 ScreaMySkrillEX@xda,psndna88@xda
+ * Copyright (C) 2018, Laster K. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -166,7 +168,17 @@ enum tasha_sido_voltage {
 	SIDO_VOLTAGE_NOMINAL_MV = 1100,
 };
 
-static int dig_core_collapse_enable = 1;
+static int huwifi_mode = 1;
+module_param(huwifi_mode, int,
+	S_IRUGO | S_IWUSR | S_IWGRP);
+MODULE_PARM_DESC(huwifi_mode, "enable/disable l UHQA Mode");
+
+static int low_distort_amp = 1;
+module_param(low_distort_amp, int,
+	S_IRUGO | S_IWUSR | S_IWGRP);
+MODULE_PARM_DESC(low_distort_amp, "enable/disable l Class AB Mode");
+
+static int dig_core_collapse_enable = 0;
 module_param(dig_core_collapse_enable, int,
 		S_IRUGO | S_IWUSR | S_IWGRP);
 MODULE_PARM_DESC(dig_core_collapse_enable, "enable/disable power gating");
@@ -3666,8 +3678,12 @@ static void tasha_codec_hph_post_pa_config(struct tasha_priv *tasha,
 		case CLS_H_HIFI:
 			scale_val = 0x3;
 			break;
+
 		case CLS_H_LOHIFI:
-			scale_val = 0x1;
+			if (!huwifi_mode)
+				scale_val = 0x1;
+			else
+				scale_val = 031;
 			break;
 		}
 		break;
@@ -4088,10 +4104,16 @@ static void tasha_codec_hph_mode_config(struct snd_soc_codec *codec,
 
 	switch (mode) {
 	case CLS_H_LP:
-		tasha_codec_hph_lp_config(codec, event);
+		if (!huwifi_mode)
+			tasha_codec_hph_lp_config(codec, event);
+		else
+			tasha_codec_hph_hifi_config(codec, event);
 		break;
 	case CLS_H_LOHIFI:
-		tasha_codec_hph_lohifi_config(codec, event);
+		if (!huwifi_mode)
+			tasha_codec_hph_lohifi_config(codec, event);
+		else
+			tasha_codec_hph_hifi_config(codec, event);
 		break;
 	case CLS_H_HIFI:
 		tasha_codec_hph_hifi_config(codec, event);
@@ -4130,11 +4152,19 @@ static int tasha_codec_hphr_dac_event(struct snd_soc_dapm_widget *w,
 					__func__, hph_mode);
 			return -EINVAL;
 		}
-		wcd_clsh_fsm(codec, &tasha->clsh_d,
-			     WCD_CLSH_EVENT_PRE_DAC,
-			     WCD_CLSH_STATE_HPHR,
-			     ((hph_mode == CLS_H_LOHIFI) ?
-			       CLS_H_HIFI : hph_mode));
+		if (!low_distort_amp) {
+			wcd_clsh_fsm(codec, &tasha->clsh_d,
+				WCD_CLSH_EVENT_PRE_DAC,
+				WCD_CLSH_STATE_HPHR,
+				((hph_mode == CLS_H_LOHIFI) ?
+					CLS_H_HIFI : hph_mode));
+		}
+		else {
+			wcd_clsh_fsm(codec, &tasha->clsh_d,
+				WCD_CLSH_EVENT_PRE_DAC,
+				WCD_CLSH_STATE_HPHR,
+				CLS_AB);
+		}
 
 		tasha_codec_hph_mode_config(codec, event, hph_mode);
 
@@ -4166,12 +4196,19 @@ static int tasha_codec_hphr_dac_event(struct snd_soc_dapm_widget *w,
 		if (!(wcd_clsh_get_clsh_state(&tasha->clsh_d) &
 		     WCD_CLSH_STATE_HPHL))
 			tasha_codec_hph_mode_config(codec, event, hph_mode);
-
-		wcd_clsh_fsm(codec, &tasha->clsh_d,
-			     WCD_CLSH_EVENT_POST_PA,
-			     WCD_CLSH_STATE_HPHR,
-			     ((hph_mode == CLS_H_LOHIFI) ?
-			       CLS_H_HIFI : hph_mode));
+		if (!low_distort_amp) {
+			wcd_clsh_fsm(codec, &tasha->clsh_d,
+				WCD_CLSH_EVENT_POST_PA,
+				WCD_CLSH_STATE_HPHL,
+				((hph_mode == CLS_H_LOHIFI) ?
+					CLS_H_HIFI : hph_mode));
+		}
+		else {
+			wcd_clsh_fsm(codec, &tasha->clsh_d,
+				WCD_CLSH_EVENT_POST_PA,
+				WCD_CLSH_STATE_HPHL,
+				CLS_AB);
+		}
 		break;
 	};
 
@@ -4209,11 +4246,19 @@ static int tasha_codec_hphl_dac_event(struct snd_soc_dapm_widget *w,
 					__func__, hph_mode);
 			return -EINVAL;
 		}
-		wcd_clsh_fsm(codec, &tasha->clsh_d,
-			     WCD_CLSH_EVENT_PRE_DAC,
-			     WCD_CLSH_STATE_HPHL,
-			     ((hph_mode == CLS_H_LOHIFI) ?
-			       CLS_H_HIFI : hph_mode));
+		if (!low_distort_amp) {
+			wcd_clsh_fsm(codec, &tasha->clsh_d,
+				WCD_CLSH_EVENT_PRE_DAC,
+				WCD_CLSH_STATE_HPHL,
+				((hph_mode == CLS_H_LOHIFI) ?
+					CLS_H_HIFI : hph_mode));
+		}
+		else {
+			wcd_clsh_fsm(codec, &tasha->clsh_d,
+				WCD_CLSH_EVENT_PRE_DAC,
+				WCD_CLSH_STATE_HPHL,
+				CLS_AB);
+		}
 
 		tasha_codec_hph_mode_config(codec, event, hph_mode);
 
@@ -4245,11 +4290,26 @@ static int tasha_codec_hphl_dac_event(struct snd_soc_dapm_widget *w,
 		if (!(wcd_clsh_get_clsh_state(&tasha->clsh_d) &
 		     WCD_CLSH_STATE_HPHR))
 			tasha_codec_hph_mode_config(codec, event, hph_mode);
-		wcd_clsh_fsm(codec, &tasha->clsh_d,
-			     WCD_CLSH_EVENT_POST_PA,
-			     WCD_CLSH_STATE_HPHL,
-			     ((hph_mode == CLS_H_LOHIFI) ?
-			       CLS_H_HIFI : hph_mode));
+		if (!low_distort_amp) {
+                        wcd_clsh_fsm(codec, &tasha->clsh_d,
+                                WCD_CLSH_EVENT_POST_PA,
+                                WCD_CLSH_STATE_HPHR,
+                                ((hph_mode == CLS_H_LOHIFI) ?
+                                        CLS_H_HIFI : hph_mode));
+                }
+                else {
+                        wcd_clsh_fsm(codec, &tasha->clsh_d,
+                                WCD_CLSH_EVENT_POST_PA,
+                                WCD_CLSH_STATE_HPHR,
+                                CLS_AB);
+                }
+
+		if (test_bit(CLASSH_CONFIG, &tasha->status_mask)) {
+			wcd_clsh_imped_config(codec, impedl, true);
+			clear_bit(CLASSH_CONFIG, &tasha->status_mask);
+		} else
+			dev_dbg(codec->dev, "%s: Failed to get mbhc impedance %d\n",
+						__func__, ret);
 		break;
 	};
 
@@ -4305,6 +4365,7 @@ static int tasha_codec_ear_dac_event(struct snd_soc_dapm_widget *w,
 	struct snd_soc_codec *codec = w->codec;
 	struct tasha_priv *tasha = snd_soc_codec_get_drvdata(codec);
 	int ret = 0;
+	int hph_mode = tasha->hph_mode;
 
 	dev_dbg(codec->dev, "%s %s %d\n", __func__, w->name, event);
 
@@ -4312,11 +4373,27 @@ static int tasha_codec_ear_dac_event(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_PRE_PMU:
 		if (tasha->anc_func)
 			ret = tasha_codec_enable_anc(w, kcontrol, event);
-
-		wcd_clsh_fsm(codec, &tasha->clsh_d,
-			     WCD_CLSH_EVENT_PRE_DAC,
-			     WCD_CLSH_STATE_EAR,
-			     CLS_H_NORMAL);
+		if (!low_distort_amp) {
+			if (!huwifi_mode) {
+				wcd_clsh_fsm(codec, &tasha->clsh_d,
+					WCD_CLSH_EVENT_PRE_DAC,
+					WCD_CLSH_STATE_EAR,
+					CLS_H_NORMAL);
+			}
+			else {
+				wcd_clsh_fsm(codec, &tasha->clsh_d,
+					WCD_CLSH_EVENT_PRE_DAC,
+					WCD_CLSH_STATE_EAR,
+					((hph_mode == CLS_H_LOHIFI) ?
+						CLS_H_HIFI : hph_mode));
+			}
+		}
+		else {
+			wcd_clsh_fsm(codec, &tasha->clsh_d,
+				WCD_CLSH_EVENT_PRE_DAC,
+				WCD_CLSH_STATE_EAR,
+				CLS_AB);
+		}
 		if (tasha->anc_func)
 			snd_soc_update_bits(codec,
 				WCD9335_CDC_RX0_RX_PATH_CFG0, 0x10, 0x10);
@@ -4327,10 +4404,27 @@ static int tasha_codec_ear_dac_event(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_PRE_PMD:
 		break;
 	case SND_SOC_DAPM_POST_PMD:
-		wcd_clsh_fsm(codec, &tasha->clsh_d,
-			     WCD_CLSH_EVENT_POST_PA,
-			     WCD_CLSH_STATE_EAR,
-			     CLS_H_NORMAL);
+		if (!low_distort_amp) {
+			if (!huwifi_mode) {
+				wcd_clsh_fsm(codec, &tasha->clsh_d,
+					WCD_CLSH_EVENT_POST_PA,
+					WCD_CLSH_STATE_EAR,
+					CLS_H_NORMAL);
+			}
+			else {
+				wcd_clsh_fsm(codec, &tasha->clsh_d,
+					WCD_CLSH_EVENT_POST_PA,
+					WCD_CLSH_STATE_EAR,
+					((hph_mode == CLS_H_LOHIFI) ?
+						CLS_H_HIFI : hph_mode));
+			}
+		}
+		else {
+			wcd_clsh_fsm(codec, &tasha->clsh_d,
+				WCD_CLSH_EVENT_POST_PA,
+				WCD_CLSH_STATE_EAR,
+				CLS_AB);
+		}
 		break;
 	};
 
@@ -10742,9 +10836,6 @@ static int tasha_hw_params(struct snd_pcm_substream *substream,
 		case 192000:
 			tx_fs_rate = 6;
 			break;
-		case 384000:
-			tx_fs_rate = 7;
-			break;
 		default:
 			dev_err(tasha->dev, "%s: Invalid TX sample rate: %d\n",
 				__func__, params_rate(params));
@@ -13246,5 +13337,5 @@ static struct platform_driver tasha_codec_driver = {
 
 module_platform_driver(tasha_codec_driver);
 
-MODULE_DESCRIPTION("Tasha Codec driver");
+MODULE_DESCRIPTION("Laster K.'s tasha codec driver");
 MODULE_LICENSE("GPL v2");
