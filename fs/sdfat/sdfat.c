@@ -78,6 +78,7 @@ const char *FS_TYPE_STR[] = {
 static struct kset *sdfat_kset;
 static struct kmem_cache *sdfat_inode_cachep;
 
+
 static int sdfat_default_codepage = CONFIG_SDFAT_DEFAULT_CODEPAGE;
 static char sdfat_default_iocharset[] = CONFIG_SDFAT_DEFAULT_IOCHARSET;
 static const char sdfat_iocharset_with_utf8[] = "iso8859-1";
@@ -199,19 +200,21 @@ static inline unsigned long __sdfat_init_name_hash(const struct dentry *unused)
 }
 #endif
 
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 21)
-	/* EMPTY */
+       /* EMPTY */
 #else /* LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 21) */
 static inline void inode_lock(struct inode *inode)
 {
-	mutex_lock(&inode->i_mutex);
+	       mutex_lock(&inode->i_mutex);
 }
 
 static inline void inode_unlock(struct inode *inode)
 {
-	mutex_unlock(&inode->i_mutex);
+	       mutex_unlock(&inode->i_mutex);
 }
 #endif
+
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
 static void sdfat_writepage_end_io(struct bio *bio)
@@ -1709,7 +1712,7 @@ sdfat_ioctl_defrag_req(
 
 	dfr_debug("IOC_DFR_REQ started (mode %d, nr_req %d)", head.mode, len - 1);
 	if (get_order(len * sizeof(struct defrag_chunk_info)) > MAX_ORDER) {
-		dfr_debug("len %u, sizeof(struct defrag_chunk_info) %lu, MAX_ORDER %d",
+		dfr_debug("len %d, sizeof(struct defrag_chunk_info) %lu, MAX_ORDER %d",
 				len, sizeof(struct defrag_chunk_info), MAX_ORDER);
 		err = -EINVAL;
 		goto error;
@@ -2423,7 +2426,11 @@ static struct dentry *__sdfat_lookup(struct inode *dir, struct dentry *dentry)
 		 * In such case, we reuse an alias instead of new dentry
 		 */
 		if (d_unhashed(alias)) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)
+			BUG_ON(alias->d_name.hash != dentry->d_name.hash && alias->d_name.len != dentry->d_name.len);
+#else
 			BUG_ON(alias->d_name.hash_len != dentry->d_name.hash_len);
+#endif
 			sdfat_msg(sb, KERN_INFO, "rehashed a dentry(%p) "
 				"in read lookup", alias);
 			d_drop(dentry);
@@ -4452,6 +4459,12 @@ enum {
 	Opt_discard,
 	Opt_fs,
 	Opt_adj_req,
+#ifdef CONFIG_SDFAT_USE_FOR_VFAT
+	Opt_shortname_lower,
+	Opt_shortname_win95,
+	Opt_shortname_winnt,
+	Opt_shortname_mixed,
+#endif /* CONFIG_SDFAT_USE_FOR_VFAT */
 };
 
 static const match_table_t sdfat_tokens = {
@@ -4480,6 +4493,12 @@ static const match_table_t sdfat_tokens = {
 	{Opt_discard, "discard"},
 	{Opt_fs, "fs=%s"},
 	{Opt_adj_req, "adj_req"},
+#ifdef CONFIG_SDFAT_USE_FOR_VFAT
+	{Opt_shortname_lower, "shortname=lower"},
+	{Opt_shortname_win95, "shortname=win95"},
+	{Opt_shortname_winnt, "shortname=winnt"},
+	{Opt_shortname_mixed, "shortname=mixed"},
+#endif /* CONFIG_SDFAT_USE_FOR_VFAT */
 	{Opt_err, NULL}
 };
 
@@ -4646,6 +4665,14 @@ static int parse_options(struct super_block *sb, char *options, int silent,
 			IMSG("adjust request config is not enabled. ignore\n");
 #endif
 			break;
+#ifdef CONFIG_SDFAT_USE_FOR_VFAT
+		case Opt_shortname_lower:
+		case Opt_shortname_win95:
+		case Opt_shortname_mixed:
+			pr_warn("[SDFAT] DRAGONS AHEAD! sdFAT only understands \"shortname=winnt\"!\n");
+		case Opt_shortname_winnt:
+			break;
+#endif /* CONFIG_SDFAT_USE_FOR_VFAT */
 		default:
 			if (!silent) {
 				sdfat_msg(sb, KERN_ERR,
@@ -4707,7 +4734,7 @@ static int sdfat_read_root(struct inode *inode)
 	SDFAT_I(inode)->fid.type = TYPE_DIR;
 	SDFAT_I(inode)->fid.version = 0;
 	SDFAT_I(inode)->fid.rwoffset = 0;
-	SDFAT_I(inode)->fid.hint_bmap.off = -1;
+	SDFAT_I(inode)->fid.hint_bmap.off = CLUS_EOF;
 	SDFAT_I(inode)->fid.hint_stat.eidx = 0;
 	SDFAT_I(inode)->fid.hint_stat.clu = fsi->root_dir;
 	SDFAT_I(inode)->fid.hint_femp.eidx = -1;
@@ -4971,6 +4998,34 @@ static struct file_system_type sdfat_fs_type = {
 	.fs_flags    = FS_REQUIRES_DEV,
 };
 
+#ifdef CONFIG_SDFAT_USE_FOR_EXFAT
+static struct file_system_type exfat_fs_type = {
+	.owner       = THIS_MODULE,
+	.name        = "exfat",
+	.mount       = sdfat_fs_mount,
+#ifdef CONFIG_SDFAT_DBG_IOCTL
+	.kill_sb    = sdfat_debug_kill_sb,
+#else
+	.kill_sb    = kill_block_super,
+#endif /* CONFIG_SDFAT_DBG_IOCTL */
+	.fs_flags    = FS_REQUIRES_DEV,
+};
+#endif /* CONFIG_SDFAT_USE_FOR_EXFAT */
+
+#ifdef CONFIG_SDFAT_USE_FOR_VFAT
+static struct file_system_type vfat_fs_type = {
+	.owner       = THIS_MODULE,
+	.name        = "vfat",
+	.mount       = sdfat_fs_mount,
+#ifdef CONFIG_SDFAT_DBG_IOCTL
+	.kill_sb    = sdfat_debug_kill_sb,
+#else
+	.kill_sb    = kill_block_super,
+#endif /* CONFIG_SDFAT_DBG_IOCTL */
+	.fs_flags    = FS_REQUIRES_DEV,
+};
+#endif /* CONFIG_SDFAT_USE_FOR_VFAT */
+
 static int __init init_sdfat_fs(void)
 {
 	int err;
@@ -5009,6 +5064,22 @@ static int __init init_sdfat_fs(void)
 		goto error;
 	}
 
+#ifdef CONFIG_SDFAT_USE_FOR_EXFAT
+	err = register_filesystem(&exfat_fs_type);
+	if (err) {
+		pr_err("[SDFAT] failed to register for exfat filesystem\n");
+		goto error;
+	}
+#endif /* CONFIG_SDFAT_USE_FOR_EXFAT */
+
+#ifdef CONFIG_SDFAT_USE_FOR_VFAT
+	err = register_filesystem(&vfat_fs_type);
+	if (err) {
+		pr_err("[SDFAT] failed to register for vfat filesystem\n");
+		goto error;
+	}
+#endif /* CONFIG_SDFAT_USE_FOR_VFAT */
+
 	return 0;
 error:
 	sdfat_statistics_uninit();
@@ -5038,7 +5109,12 @@ static void __exit exit_sdfat_fs(void)
 
 	sdfat_destroy_inodecache();
 	unregister_filesystem(&sdfat_fs_type);
-
+#ifdef CONFIG_SDFAT_USE_FOR_EXFAT
+	unregister_filesystem(&exfat_fs_type);
+#endif /* CONFIG_SDFAT_USE_FOR_EXFAT */
+#ifdef CONFIG_SDFAT_USE_FOR_VFAT
+	unregister_filesystem(&vfat_fs_type);
+#endif /* CONFIG_SDFAT_USE_FOR_VFAT */
 	fsapi_shutdown();
 }
 

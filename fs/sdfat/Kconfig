@@ -1,5 +1,5 @@
 config SDFAT_FS
-	tristate
+	tristate "sdFAT filesystem support"
 	default y
 	select NLS
 	select NLS_UTF8
@@ -14,6 +14,20 @@ config SDFAT_FS
 
 	  To compile this as a module, choose M here: the module will be called
 	  sdfat_core and sdfat_fs.
+
+config SDFAT_USE_FOR_EXFAT
+	bool "Register sdFAT as exFAT"
+	default y
+	depends on SDFAT_FS && !EXFAT_FS
+	help
+	  If you want to register sdFAT as available for exFAT, say Y.
+
+config SDFAT_USE_FOR_VFAT
+	bool "Register sdFAT as VFAT"
+	default y
+	depends on SDFAT_FS && !VFAT_FS
+	help
+	  If you want to register sdFAT as available for VFAT, say Y.
 
 config SDFAT_DELAYED_META_DIRTY
 	bool "Enable delayed metadata dirty"
@@ -94,6 +108,11 @@ config SDFAT_DBG_MSG
 
 config SDFAT_DBG_BUGON
 	bool "enable strict BUG_ON() for debugging"
+	depends on SDFAT_FS && SDFAT_DEBUG
+	default n
+
+config SDFAT_DBG_WARNON
+	bool "enable strict WARN_ON() for debugging"
 	depends on SDFAT_FS && SDFAT_DEBUG
 	default n
 
