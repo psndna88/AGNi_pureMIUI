@@ -26,7 +26,8 @@
 #include "wpa_helpers.h"
 #ifdef ANDROID
 #include <hardware_legacy/wifi.h>
-#include <private/android_filesystem_config.h>
+#include <grp.h>
+#include <pwd.h>
 #endif /* ANDROID */
 
 /* Temporary files for ap_send_addba_req */
@@ -6950,7 +6951,8 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Error changing permissions");
 
-	if (chown(SIGMA_TMPDIR "/sigma_dut-ap.conf", -1, AID_WIFI) < 0)
+	if (chown(SIGMA_TMPDIR "/sigma_dut-ap.conf", -1,
+		  getgrnam("wifi")->gr_gid) < 0)
 		sigma_dut_print(dut, DUT_MSG_ERROR, "Error changing groupid");
 #endif /* ANDROID */
 
