@@ -7882,6 +7882,12 @@ static int cmd_sta_send_frame_hs2(struct sigma_dut *dut,
 		count++;
 	}
 
+	val = get_param(cmd, "Advice_Of_Charge");
+	if (val && atoi(val)) {
+		pos += snprintf(pos, end - pos, "%s278", count > 0 ? "," : "");
+		count++;
+	}
+
 	if (count && wpa_command(intf, buf)) {
 		send_resp(dut, conn, SIGMA_ERROR, "ErrorCode,ANQP_GET failed");
 		return 0;
