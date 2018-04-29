@@ -7882,6 +7882,12 @@ static int cmd_sta_send_frame_hs2(struct sigma_dut *dut,
 		count++;
 	}
 
+	val = get_param(cmd, "Venue_URL");
+	if (val && atoi(val)) {
+		pos += snprintf(pos, end - pos, "%s277", count > 0 ? "," : "");
+		count++;
+	}
+
 	val = get_param(cmd, "Advice_Of_Charge");
 	if (val && atoi(val)) {
 		pos += snprintf(pos, end - pos, "%s278", count > 0 ? "," : "");
