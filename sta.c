@@ -7938,6 +7938,14 @@ static int cmd_sta_send_frame_hs2(struct sigma_dut *dut,
 		count2++;
 	}
 
+	val = get_param(cmd, "OPER_ICON_METADATA");
+	if (!val)
+		val = get_param(cmd, "OPERATOR_ICON_METADATA");
+	if (val && atoi(val)) {
+		pos += snprintf(pos, end - pos, "%s12", count2 > 0 ? "," : "");
+		count2++;
+	}
+
 	if (count && count2) {
 		sigma_dut_print(dut, DUT_MSG_DEBUG, "Wait before sending out "
 				"second query");
