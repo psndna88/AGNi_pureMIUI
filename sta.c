@@ -10,6 +10,7 @@
 #include "sigma_dut.h"
 #include <sys/ioctl.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #ifdef __linux__
 #include <regex.h>
 #include <dirent.h>
@@ -6098,19 +6099,90 @@ static int cmd_sta_get_events(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int sta_exec_action_url(struct sigma_dut *dut, struct sigma_conn *conn,
+			       struct sigma_cmd *cmd)
+{
+	const char *url = get_param(cmd, "url");
+	const char *method = get_param(cmd, "method");
+	pid_t pid;
+	int status;
+
+	if (!url || !method)
+		return -1;
+
+	/* TODO: Add support for method,post */
+	if (strcasecmp(method, "get") != 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "ErrorCode,Unsupported method");
+		return 0;
+	}
+
+	pid = fork();
+	if (pid < 0) {
+		perror("fork");
+		return -1;
+	}
+
+	if (pid == 0) {
+		char * argv[5] = { "wget", "-O", "/dev/null",
+				   (char *) url, NULL };
+
+		execv("/usr/bin/wget", argv);
+		perror("execv");
+		exit(0);
+		return -1;
+	}
+
+	if (waitpid(pid, &status, 0) < 0) {
+		perror("waitpid");
+		return -1;
+	}
+
+	if (WIFEXITED(status)) {
+		const char *errmsg;
+
+		if (WEXITSTATUS(status) == 0)
+			return 1;
+		sigma_dut_print(dut, DUT_MSG_INFO, "wget exit status %d",
+				WEXITSTATUS(status));
+		switch (WEXITSTATUS(status)) {
+		case 4:
+			errmsg = "errmsg,Network failure";
+			break;
+		case 8:
+			errmsg = "errmsg,Server issued an error response";
+			break;
+		default:
+			errmsg = "errmsg,Unknown failure from wget";
+			break;
+		}
+		send_resp(dut, conn, SIGMA_ERROR, errmsg);
+		return 0;
+	}
+
+	send_resp(dut, conn, SIGMA_ERROR, "errmsg,Unknown failure");
+	return 0;
+}
+
+
 static int cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 			       struct sigma_cmd *cmd)
 {
 	const char *program = get_param(cmd, "Prog");
 
-	if (program == NULL)
+	if (program && !get_param(cmd, "interface"))
 		return -1;
 #ifdef ANDROID_NAN
-	if (strcasecmp(program, "NAN") == 0)
+	if (program && strcasecmp(program, "NAN") == 0)
 		return nan_cmd_sta_exec_action(dut, conn, cmd);
 #endif /* ANDROID_NAN */
-	if (strcasecmp(program, "Loc") == 0)
+
+	if (program && strcasecmp(program, "Loc") == 0)
 		return loc_cmd_sta_exec_action(dut, conn, cmd);
+
+	if (get_param(cmd, "url"))
+		return sta_exec_action_url(dut, conn, cmd);
+
 	send_resp(dut, conn, SIGMA_ERROR, "ErrorCode,Unsupported parameter");
 	return 0;
 }
@@ -10277,7 +10349,7 @@ void sta_register_cmds(void)
 	sigma_dut_reg_cmd("sta_er_config", NULL, cmd_sta_er_config);
 	sigma_dut_reg_cmd("sta_wps_connect_pw_token", req_intf,
 			  cmd_sta_wps_connect_pw_token);
-	sigma_dut_reg_cmd("sta_exec_action", req_intf, cmd_sta_exec_action);
+	sigma_dut_reg_cmd("sta_exec_action", NULL, cmd_sta_exec_action);
 	sigma_dut_reg_cmd("sta_get_events", req_intf, cmd_sta_get_events);
 	sigma_dut_reg_cmd("sta_get_parameter", req_intf, cmd_sta_get_parameter);
 	sigma_dut_reg_cmd("start_wps_registration", req_intf,
