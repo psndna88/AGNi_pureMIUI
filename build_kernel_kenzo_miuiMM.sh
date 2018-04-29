@@ -15,8 +15,18 @@ then
 fi
 
 rm $KERNELDIR/arch/arm/boot/dts/*.dtb
-rm $KERNELDIR/drivers/staging/prima/wlan.ko
-rm $KERNELDIR/include/generated/compile.h
+if [ -f $KERNELDIR/drivers/staging/prima/wlan.ko ];
+	then
+	rm $KERNELDIR/drivers/staging/prima/wlan.ko
+fi
+if [ -f $KERNELDIR/drivers/staging/prima_n/wlan.ko ];
+	then
+	rm $KERNELDIR/drivers/staging/prima_n/wlan.ko
+fi
+if [ -f $KERNELDIR/include/generated/compile.h ];
+	then
+	rm $KERNELDIR/include/generated/compile.h
+fi
 if [ "`grep "AGNI_OREO_SYSMOUNT_MARKER" $KERNELDIR/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi`" ];
 	then
 	if [ -f $KERNELDIR/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi.bak ];
@@ -34,8 +44,7 @@ rm -rf $KERNELDIR/BUILT_kenzo-miuiMM
 mkdir -p $KERNELDIR/BUILT_kenzo-miuiMM/system/lib/modules/pronto
 
 find -name '*.ko' -exec mv -v {} $KERNELDIR/BUILT_kenzo-miuiMM/ \;
-find -name '*.ko' -exec mv -v {} $KERNELDIR/BUILT_kenzo-miuiMM/system/lib/modules/ \;
-mv $KERNELDIR/BUILT_kenzo-miuiMM/system/lib/modules/wlan.ko $KERNELDIR/BUILT_kenzo-miuiMM/system/lib/modules/pronto/pronto_wlan.ko
+mv $KERNELDIR/BUILT_kenzo-miuiMM/wlan.ko $KERNELDIR/BUILT_kenzo-miuiMM/system/lib/modules/pronto/pronto_wlan.ko
 
 mv $KERNELDIR/arch/arm64/boot/Image.*-dtb $KERNELDIR/BUILT_kenzo-miuiMM/
 
