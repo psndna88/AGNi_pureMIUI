@@ -486,6 +486,7 @@ struct sigma_dut {
 	int ap_osu_method[10];
 	int ap_osu_icon_tag;
 	int ap_venue_url;
+	int ap_advice_of_charge;
 
 	int ap_fake_pkhash;
 	int ap_disable_protection;
