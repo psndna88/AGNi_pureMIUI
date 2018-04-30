@@ -4320,6 +4320,14 @@ static int append_hostapd_conf_hs2(struct sigma_dut *dut, FILE *f)
 		break;
 	}
 
+	switch (dut->ap_oper_icon_metadata) {
+	case 1:
+		fprintf(f,
+			"hs20_icon=160:76:eng:image/png:icon_red_eng.png:/etc/ath/icon_red_eng.png\n"
+			"operator_icon=icon_red_eng.png\n");
+		break;
+	}
+
 	return 0;
 }
 
@@ -7445,6 +7453,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	dut->ap_venue_url = 0;
 	dut->ap_advice_of_charge = 0;
+	dut->ap_oper_icon_metadata = 0;
 
 	if (dut->program == PROGRAM_HS2 || dut->program == PROGRAM_HS2_R2 ||
 	    dut->program == PROGRAM_IOTLP) {
@@ -9249,6 +9258,10 @@ static int cmd_ap_set_hs2(struct sigma_dut *dut, struct sigma_conn *conn,
 	val = get_param(cmd, "Advice_of_Charge");
 	if (val)
 		dut->ap_advice_of_charge = atoi(val);
+
+	val = get_param(cmd, "Operator_Icon_Metadata");
+	if (val)
+		dut->ap_oper_icon_metadata = atoi(val);
 
 	return 1;
 }
