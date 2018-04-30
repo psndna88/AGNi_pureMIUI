@@ -4261,6 +4261,28 @@ static int append_hostapd_conf_hs2(struct sigma_dut *dut, FILE *f)
 			fprintf(f, "osu_method_list=%d\n", osu_method);
 	}
 
+	switch (dut->ap_venue_url) {
+	case 1:
+		fprintf(f,
+			"venue_url=1:https://venue-server.r2m-testbed.wi-fi.org/floorplans/index.html\n"
+			"venue_url=1:https://venue-server.r2m-testbed.wi-fi.org/directory/index.html\n");
+		break;
+	case 2:
+		fprintf(f,
+			"venue_url=1:https://the-great-mall.r2m-testbed.wi-fi.org/floorplans/index.html\n"
+			"venue_url=2:https://abercrombie.r2m-testbed.wi-fi.org/floorplans/index.html\n"
+			"venue_url=3:https://adidas.r2m-testbed.wi-fi.org/floorplans/index.html\n"
+			"venue_url=4:https://aeropostale.r2m-testbed.wi-fi.org/floorplans/index.html\n"
+			"venue_url=5:https://agaci.r2m-testbed.wi-fi.org/floorplans/index.html\n"
+			"venue_url=6:https://aldo-shoes.r2m-testbed.wi-fi.org/floorplans/index.html\n"
+			"venue_url=7:https://american-eagle-outfitters.r2m-testbed.wi-fi.org/floorplans/index.html\n"
+			"venue_url=8:https://anderson-bakery.r2m-testbed.wi-fi.org/floorplans/index.html\n"
+			"venue_url=9:https://banana-republic-factory-store.r2m-testbed.wi-fi.org/floorplans/index.html\n"
+			"venue_url=10:https://bed-bath-and-beyond.r2m-testbed.wi-fi.org/floorplans/index.html\n"
+			);
+		break;
+	}
+
 	return 0;
 }
 
@@ -7384,6 +7406,8 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_wmmps = AP_WMMPS_OFF;
 	}
 
+	dut->ap_venue_url = 0;
+
 	if (dut->program == PROGRAM_HS2 || dut->program == PROGRAM_HS2_R2 ||
 	    dut->program == PROGRAM_IOTLP) {
 		int i;
@@ -9179,6 +9203,10 @@ static int cmd_ap_set_hs2(struct sigma_dut *dut, struct sigma_conn *conn,
 		sigma_dut_print(dut, DUT_MSG_INFO, "ap_bss_load %d",
 				dut->ap_bss_load);
 	}
+
+	val = get_param(cmd, "Venue_URL");
+	if (val)
+		dut->ap_venue_url = atoi(val);
 
 	return 1;
 }
