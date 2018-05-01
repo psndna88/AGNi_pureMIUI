@@ -9042,11 +9042,13 @@ static int wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 	val = get_param(cmd, "GI");
 	if (val) {
 		if (strcmp(val, "0.8") == 0) {
-			snprintf(buf, sizeof(buf), "iwpriv %s shortgi 0", intf);
+			snprintf(buf, sizeof(buf), "iwpriv %s shortgi 9", intf);
 		} else if (strcmp(val, "1.6") == 0) {
-			snprintf(buf, sizeof(buf), "iwpriv %s shortgi 2", intf);
+			snprintf(buf, sizeof(buf), "iwpriv %s shortgi 10",
+				 intf);
 		} else if (strcmp(val, "3.2") == 0) {
-			snprintf(buf, sizeof(buf), "iwpriv %s shortgi 3", intf);
+			snprintf(buf, sizeof(buf), "iwpriv %s shortgi 11",
+				 intf);
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,GI value not supported");
