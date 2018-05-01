@@ -59,6 +59,11 @@ obj-$(CONFIG_SB105X)		+= sb105x/
 obj-$(CONFIG_FIREWIRE_SERIAL)	+= fwserial/
 obj-$(CONFIG_GOLDFISH)		+= goldfish/
 obj-$(CONFIG_USB_DWC2)		+= dwc2/
+ifeq ($(CONFIG_MACH_XIAOMI_KENZO_AGNI_LOS_O),y)
 obj-$(CONFIG_PRIMA_WLAN)	+= prima/
 obj-$(CONFIG_PRONTO_WLAN)	+= prima/
+else
+obj-$(CONFIG_PRIMA_WLAN)	+= prima_n/
+obj-$(CONFIG_PRONTO_WLAN)	+= prima_n/
+endif
 obj-$(CONFIG_VNSWAP)		+= vnswap/
