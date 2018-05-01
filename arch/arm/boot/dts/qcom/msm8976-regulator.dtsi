@@ -553,8 +553,8 @@
 				<8  1958400000>,
 				<9  2016000000>;
 		qcom,cpr-speed-bin-max-corners =
-				<0 0 2 4 7>,
-				<1 0 2 4 7>;
+				<0 0 2 4 9>,
+				<1 0 2 4 9>;
 		qcom,cpr-fuse-version-map =
 		/* <Speed_bits PVS_version CPR_Rev - - -> */
 			<  0  (-1)   1  (-1) (-1) (-1)>,
