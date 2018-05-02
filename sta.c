@@ -5940,8 +5940,8 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 			}
 
 #ifdef NL80211_SUPPORT
-			/* Set HE_MCS to 0-7 */
-			if (sta_set_he_mcs(dut, intf, HE_80_MCS0_7)) {
+			/* Set HE_MCS to 0-11 */
+			if (sta_set_he_mcs(dut, intf, HE_80_MCS0_11)) {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
 						"Setting of MCS failed");
 			}
