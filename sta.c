@@ -5932,6 +5932,9 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 
 		/* Defaults in case of DUT */
 		if (type && strcasecmp(type, "DUT") == 0) {
+			/* Enable STBC by default */
+			wcn_sta_set_stbc(dut, intf, "1");
+
 			/* set nss to 2 */
 			snprintf(buf, sizeof(buf), "iwpriv %s nss 2", intf);
 			if (system(buf) != 0) {
