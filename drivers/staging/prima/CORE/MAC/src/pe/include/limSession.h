@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -320,6 +320,8 @@ typedef struct sPESession           // Added to Support BT-AMP
     /* *********************11H related*****************************/
     //tANI_U32           gLim11hEnable;
     tLimSpecMgmtInfo   gLimSpecMgmt;
+    bool include_ecsa_ie;
+    bool include_wide_ch_bw_ie;
     // CB Primary/Secondary Channel Switch Info
     tLimChannelSwitchInfo  gLimChannelSwitch;
     /* *********************End 11H related*****************************/
@@ -353,6 +355,8 @@ typedef struct sPESession           // Added to Support BT-AMP
     tANI_BOOLEAN isCiscoVendorAP;
     /* To hold OBSS Scan IE Parameters */
     tSirOBSSHT40Param obssHT40ScanParam;
+    /* HS 2.0 Indication */
+    tDot11fIEhs20vendor_ie hs20vendor_ie;
     /* flag to indicate country code in beacon */
     tANI_U8  countryInfoPresent;
     /*  DSCP to UP mapping for HS 2.0 */
@@ -361,6 +365,12 @@ typedef struct sPESession           // Added to Support BT-AMP
     tANI_BOOLEAN is11Gonly;
     tANI_BOOLEAN addBssfailed;
     tDot11fIEExtCap ExtCap;
+    uint32_t sta_auth_retries_for_code17;
+    tDot11fIEHTCaps ht_caps;
+    tDot11fIEVHTCaps vht_caps;
+    tDot11fIEHTInfo ht_operation;
+    tDot11fIEVHTOperation vht_operation;
+    bool force_24ghz_in_ht20;
 }tPESession, *tpPESession;
 
 #define LIM_MAX_ACTIVE_SESSIONS 4
@@ -421,6 +431,7 @@ tpPESession peFindSessionByBssid(tpAniSirGlobal pMac,  tANI_U8*  bssid,    tANI_
 tpPESession peFindSessionByBssIdx(tpAniSirGlobal pMac,  tANI_U8 bssIdx);
 
 
+tANI_S8 limGetInfraSessionId(tpAniSirGlobal pMac);
 
 
 /*--------------------------------------------------------------------------
@@ -495,10 +506,5 @@ void peDeleteSession(tpAniSirGlobal pMac, tpPESession psessionEntry);
   \sa
   --------------------------------------------------------------------------*/
 
-
+int peFindBssIdxFromSmeSessionId(tpAniSirGlobal pMac, tANI_U8 sme_sessionId);
 #endif //#if !defined( __LIM_SESSION_H )
-
-
-
-
-

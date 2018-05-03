@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2016, 2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -80,18 +80,20 @@
 /*----------------------------------------------------------------------------
  * Global Data Definitions
  * -------------------------------------------------------------------------*/
+
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(3,19,0)) || \
+	defined(WLAN_BTAMP_FEATURE)
 extern struct crypto_ahash *wcnss_wlan_crypto_alloc_ahash(const char *alg_name,
                                                           unsigned int type,
                                                           unsigned int mask);
-
 extern int wcnss_wlan_crypto_ahash_digest(struct ahash_request *req);
 extern void wcnss_wlan_crypto_free_ahash(struct crypto_ahash *tfm);
 extern int wcnss_wlan_crypto_ahash_setkey(struct crypto_ahash *tfm, const u8 *key,
                                           unsigned int keylen);
 extern struct crypto_ablkcipher *wcnss_wlan_crypto_alloc_ablkcipher(const char *alg_name,
                                                                     u32 type, u32 mask);
-extern void wcnss_wlan_ablkcipher_request_free(struct ablkcipher_request *req);
 extern void wcnss_wlan_crypto_free_ablkcipher(struct crypto_ablkcipher *tfm);
+extern void wcnss_wlan_ablkcipher_request_free(struct ablkcipher_request *req);
 
 /*----------------------------------------------------------------------------
  * Static Variable Definitions
@@ -141,6 +143,8 @@ VOS_STATUS vos_crypto_deinit( v_U32_t hCryptProv )
 
     return ( uResult );
 }
+
+#endif
 
 /*--------------------------------------------------------------------------
 
@@ -192,6 +196,8 @@ VOS_STATUS vos_rand_get_bytes( v_U32_t cryptHandle, v_U8_t *pbBuf, v_U32_t numBy
 }
 
 
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(3,19,0)) || \
+	defined(WLAN_BTAMP_FEATURE)
 /**
  * vos_sha1_hmac_str
  *
@@ -718,6 +724,8 @@ err_tfm:
 
     return VOS_STATUS_SUCCESS;
 }
+
+#endif
 
 v_U8_t vos_chan_to_band(v_U32_t chan)
 {

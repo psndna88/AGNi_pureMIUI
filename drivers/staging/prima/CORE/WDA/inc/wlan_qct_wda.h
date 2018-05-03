@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -385,6 +385,8 @@ typedef eHalStatus (*pWDAAckFnTxComp)(tpAniSirGlobal, void *pData);
 typedef void (*WDA_txFailIndCallback)(tANI_U8 *, tANI_U8);
 #endif /* WLAN_FEATURE_RMC */
 
+typedef void (*WDA_suspend_req_callback)(tANI_U8 *, tANI_U8);
+
 typedef struct
 {
    tANI_U16 ucValidStaIndex ;
@@ -525,10 +527,6 @@ typedef struct
    uint8_t  mgmt_pktfree_fail;
    vos_lock_t mgmt_pkt_lock;
 
-   /* debug connection status */
-   bool tx_aggr;
-   uint8_t sta_id;
-   uint8_t tid;
 } tWDA_CbContext ; 
 
 typedef struct
@@ -724,6 +722,9 @@ tBssSystemRole wdaGetGlobalSystemRole(tpAniSirGlobal pMac);
 /* WDA_GET_RX_ADDR3_IDX ******************************************************/
 #  define WDA_GET_RX_ADDR3_IDX(pRxMeta) (((WDI_DS_RxMetaInfoType*)(pRxMeta))->addr3Idx)
 
+/* WDA_GET_RX_ADDR1_IDX ******************************************************/
+#  define WDA_GET_RX_ADDR1_IDX(pRxMeta) (((WDI_DS_RxMetaInfoType*)(pRxMeta))->addr1Idx)
+
 /* WDA_GET_RX_CH *************************************************************/
 #  define WDA_GET_RX_CH(pRxMeta) (((WDI_DS_RxMetaInfoType*)(pRxMeta))->rxChannel)
 
@@ -797,6 +798,8 @@ tBssSystemRole wdaGetGlobalSystemRole(tpAniSirGlobal pMac);
 #define WLANWDA_HO_IS_AN_AMPDU                    0x4000
 #define WLANWDA_HO_LAST_MPDU_OF_AMPDU             0x400
 
+#define WDA_MAX_MGMT_MPDU_LEN             2000
+
 /* WDA_IS_RX_AN_AMPDU ********************************************************/
 #  define WDA_IS_RX_AN_AMPDU(pRxMeta)       \
    ( ((WDI_DS_RxMetaInfoType*)(pRxMeta))->rxpFlags & WLANWDA_HO_IS_AN_AMPDU )
@@ -820,6 +823,11 @@ tBssSystemRole wdaGetGlobalSystemRole(tpAniSirGlobal pMac);
 #ifdef WLAN_FEATURE_EXTSCAN
 #define WDA_GET_EXTSCANFULLSCANRESIND(pRxMeta) (((WDI_DS_RxMetaInfoType*)(pRxMeta))->extscanBuffer)
 #endif
+
+#ifdef SAP_AUTH_OFFLOAD
+#define WDA_GET_SAP_AUTHOFFLOADIND(pRxMeta)  (((WDI_DS_RxMetaInfoType*)(pRxMeta))->indType)
+#endif
+
 /* WDA_GET_RX_RSSI_DB ********************************************************/
 // Volans RF
 #  define WDA_RSSI_OFFSET             100
@@ -1295,11 +1303,19 @@ tSirRetStatus uMacPostCtrlMsg(void* pSirGlobal, tSirMbMsg* pMb);
 #define WDA_START_RSSI_MONITOR_REQ             SIR_HAL_RSSI_MON_START_REQ
 #define WDA_STOP_RSSI_MONITOR_REQ              SIR_HAL_RSSI_MON_STOP_REQ
 
+#ifdef DHCP_SERVER_OFFLOAD
+#define WDA_SET_DHCP_SERVER_OFFLOAD_REQ     SIR_HAL_SET_DHCP_SERVER_OFFLOAD_REQ
+#endif /* DHCP_SERVER_OFFLOAD */
+#ifdef MDNS_OFFLOAD
+#define WDA_SET_MDNS_OFFLOAD_CMD              SIR_HAL_SET_MDNS_OFFLOAD
+#define WDA_SET_MDNS_FQDN_CMD                 SIR_HAL_SET_MDNS_FQDN
+#define WDA_SET_MDNS_RESPONSE_CMD             SIR_HAL_SET_MDNS_RESPONSE
+#define WDA_GET_MDNS_STATUS_CMD               SIR_HAL_GET_MDNS_STATUS
+#endif /* MDNS_OFFLOAD */
+
 /* ARP Debug */
 #define WDA_SET_ARP_STATS_REQ                 SIR_HAL_SET_ARP_STATS_REQ
 #define WDA_GET_ARP_STATS_REQ                 SIR_HAL_GET_ARP_STATS_REQ
-#define WDA_TRIGGER_ADD_BA_REQ                SIR_HAL_TRIGGER_ADD_BA_REQ
-#define WDA_GET_CON_STATUS                    SIR_HAL_GET_CON_STATUS
 
 tSirRetStatus wdaPostCtrlMsg(tpAniSirGlobal pMac, tSirMsgQ *pMsg);
 
@@ -1361,6 +1377,21 @@ eHalStatus WDA_SetRegDomain(void * clientCtxt, v_REGDOMAIN_t regId,
 #define WDA_SET_ALLOWED_ACTION_FRAMES_IND      SIR_HAL_SET_ALLOWED_ACTION_FRAMES
 
 #define WDA_PAUSE_TL_IND                       SIR_HAL_PAUSE_TL_IND
+
+#ifdef SAP_AUTH_OFFLOAD
+#define WDA_SAP_OFL_ADD_STA                   SIR_HAL_SAP_OFL_ADD_STA
+#define WDA_SAP_OFL_DEL_STA                   SIR_HAL_SAP_OFL_DEL_STA
+#define WDA_SET_SAP_AUTH_OFL                  SIR_HAL_SET_SAP_AUTH_OFL
+#endif /* SAP_AUTH_OFFLOAD */
+
+#ifdef WLAN_FEATURE_APFIND
+#define WDA_APFIND_SET_CMD                    SIR_HAL_APFIND_SET_CMD
+#define WDA_AP_FIND_IND                       SIR_HAL_AP_FIND_IND
+#endif /* WLAN_FEATURE_APFIND */
+
+#define WDA_CAP_TSF_REQ                       SIR_HAL_CAP_TSF_REQ
+#define WDA_GET_TSF_REQ                       SIR_HAL_GET_TSF_REQ
+
 
 #define HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME 0x40 // Bit 6 will be used to control BD rate for Management frames
 
@@ -2183,4 +2214,9 @@ void WDA_FWLoggingDXEdoneInd(v_U32_t logType);
 
 void WDA_SetMgmtPktViaWQ5(v_BOOL_t sendMgmtPktViaWQ5);
 
+#define CAP_TSF_REQUEST 0
+#define GET_TSF_REQUEST 1
+
+VOS_STATUS WDA_ProcessCapTsfReq(tWDA_CbContext *pWDA, tSirCapTsfParams *params);
+VOS_STATUS WDA_ProcessGetTsfReq(tWDA_CbContext *pWDA, tSirCapTsfParams *params);
 #endif

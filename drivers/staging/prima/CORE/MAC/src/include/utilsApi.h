@@ -705,7 +705,7 @@ halRoundS32(tANI_S32 p)
     else
         k = p;
 
-        return(k);
+    return(k);
 }
 
 // New functions for endianess conversion
