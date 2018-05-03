@@ -6784,7 +6784,10 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 			fclose(f);
 			return -2;
 		}
-		bssid[0] |= 0x02;
+		if (bssid[0] & 0x02)
+			bssid[5] ^= 0x01;
+		else
+			bssid[0] |= 0x02;
 
 		snprintf(ifname2, sizeof(ifname2), "%s_1", ifname);
 		fprintf(f, "bss=%s_1\n", ifname2);
