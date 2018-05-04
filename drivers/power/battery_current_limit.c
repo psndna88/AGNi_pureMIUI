@@ -869,8 +869,7 @@ mode_show(struct device *dev, struct device_attribute *attr, char *buf)
 			: "disabled");
 }
 
-#ifndef CONFIG_MACH_XIAOMI_KENZO_AGNI_MIUI_N
-static ssize_t
+/* static ssize_t
 mode_store(struct device *dev, struct device_attribute *attr,
 		const char *buf, size_t count)
 {
@@ -888,8 +887,7 @@ mode_store(struct device *dev, struct device_attribute *attr,
 	}
 
 	return count;
-}
-#endif
+} */
 
 static ssize_t
 poll_interval_store(struct device *dev,
@@ -1239,11 +1237,7 @@ static struct device_attribute bcl_dev_attr[] = {
 	__ATTR(vbat_min, 0644, vbat_min_show, vbat_min_store),
 	__ATTR(vbat, 0444, vbat_show, NULL),
 	__ATTR(rbat, 0444, rbat_show, NULL),
-#ifdef CONFIG_MACH_XIAOMI_KENZO_AGNI_MIUI_N
 	__ATTR(mode, 0644, mode_show, NULL),
-#else
-	__ATTR(mode, 0644, mode_show, mode_store),
-#endif
 	__ATTR(poll_interval, 0644,
 		poll_interval_show, poll_interval_store),
 	__ATTR(iavail_low_threshold_mode, 0644,
@@ -1262,11 +1256,7 @@ static struct device_attribute bcl_dev_attr[] = {
 
 static struct device_attribute btm_dev_attr[] = {
 	__ATTR(type, 0444, type_show, NULL),
-#ifdef CONFIG_MACH_XIAOMI_KENZO_AGNI_MIUI_N
 	__ATTR(mode, 0644, mode_show, NULL),
-#else
-	__ATTR(mode, 0644, mode_show, mode_store),
-#endif
 	__ATTR(vph_state, 0444, vph_state_show, NULL),
 	__ATTR(ibat_state, 0444, ibat_state_show, NULL),
 	__ATTR(high_threshold_ua, 0644, high_ua_show, high_ua_store),
@@ -1684,11 +1674,11 @@ static int bcl_probe(struct platform_device *pdev)
 
 	/* For BCL */
 	/* Init default BCL params */
-#ifndef CONFIG_MACH_XIAOMI_KENZO_AGNI_MIUI_N
+/*
 	if (of_property_read_bool(pdev->dev.of_node, "qcom,bcl-enable"))
 		bcl_mode = BCL_DEVICE_ENABLED;
 	else
-#endif
+*/
 		bcl_mode = BCL_DEVICE_DISABLED;
 	bcl->bcl_mode = BCL_DEVICE_DISABLED;
 	bcl->dev = &pdev->dev;
