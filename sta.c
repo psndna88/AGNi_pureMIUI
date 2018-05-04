@@ -6930,18 +6930,18 @@ static int wcn_sta_send_addba(struct sigma_dut *dut, struct sigma_conn *conn,
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"%s: err in send_and_recv_msgs, ret=%d",
 				__func__, ret);
+		if (ret == -EOPNOTSUPP)
+			return 1;
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "ErrorCode,sta_send_addba err in send_and_recv_msgs");
 		return 0;
 	}
-	return 1;
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"sta_send_addba not supported without NL80211_SUPPORT defined");
-	send_resp(dut, conn, SIGMA_ERROR,
-		  "ErrorCode,sta_send_addba not supported, NL80211_SUPPORT not enabled");
-	return 0;
 #endif /* NL80211_SUPPORT */
+
+	return 1;
 }
 
 
