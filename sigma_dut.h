@@ -485,6 +485,12 @@ struct sigma_dut {
 	char ap_osu_ssid[33];
 	int ap_osu_method[10];
 	int ap_osu_icon_tag;
+	int ap_venue_url;
+	int ap_advice_of_charge;
+	int ap_oper_icon_metadata;
+	int ap_tnc_file_name;
+	unsigned int ap_tnc_time_stamp;
+	char *ap_tnc_url;
 
 	int ap_fake_pkhash;
 	int ap_disable_protection;

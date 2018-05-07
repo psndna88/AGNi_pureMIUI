@@ -90,6 +90,13 @@ struct wpa_ctrl {
 
 struct wpa_ctrl * wpa_ctrl_open(const char *ctrl_path)
 {
+	return wpa_ctrl_open2(ctrl_path, NULL);
+}
+
+
+struct wpa_ctrl * wpa_ctrl_open2(const char *ctrl_path,
+				 const char *cli_path)
+{
 	struct wpa_ctrl *ctrl;
 	static int counter = 0;
 	int ret;
@@ -113,10 +120,19 @@ struct wpa_ctrl * wpa_ctrl_open(const char *ctrl_path)
 	ctrl->local.sun_family = AF_UNIX;
 	counter++;
 try_again:
-	ret = os_snprintf(ctrl->local.sun_path, sizeof(ctrl->local.sun_path),
-			  CONFIG_CTRL_IFACE_CLIENT_DIR "/"
-			  CONFIG_CTRL_IFACE_CLIENT_PREFIX "%d-%d",
-			  (int) getpid(), counter);
+	if (cli_path && cli_path[0] == '/') {
+		ret = os_snprintf(ctrl->local.sun_path,
+				  sizeof(ctrl->local.sun_path),
+				  "%s/" CONFIG_CTRL_IFACE_CLIENT_PREFIX "%d-%d",
+				  cli_path, (int) getpid(), counter);
+	} else {
+		ret = os_snprintf(ctrl->local.sun_path,
+				  sizeof(ctrl->local.sun_path),
+				  CONFIG_CTRL_IFACE_CLIENT_DIR "/"
+				  CONFIG_CTRL_IFACE_CLIENT_PREFIX "%d-%d",
+				  (int) getpid(), counter);
+	}
+
 	if (ret < 0 || (size_t) ret >= sizeof(ctrl->local.sun_path)) {
 		close(ctrl->s);
 		os_free(ctrl);

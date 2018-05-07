@@ -30,6 +30,7 @@ char *sigma_p2p_ifname = NULL;
 static char *sigma_p2p_ifname_buf = NULL;
 char *sigma_wpas_ctrl = "/var/run/wpa_supplicant/";
 char *sigma_hapd_ctrl = NULL;
+char *client_socket_path = NULL;
 char *ap_inet_addr = "192.168.43.1";
 char *ap_inet_mask = "255.255.255.0";
 char *sigma_cert_path = "/etc/wpa_supplicant";
@@ -772,7 +773,7 @@ int main(int argc, char *argv[])
 
 	for (;;) {
 		c = getopt(argc, argv,
-			   "aAb:Bc:C:dDE:e:fF:gGhH:j:i:Ik:l:L:m:M:nN:o:O:p:P:qr:R:s:S:tT:uv:VWw:x:y:");
+			   "aAb:Bc:C:dDE:e:fF:gGhH:j:i:Ik:l:L:m:M:nN:o:O:p:P:qr:R:s:S:tT:uv:VWw:x:y:z:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -953,6 +954,9 @@ int main(int argc, char *argv[])
 			sigma_dut.miracast_lib_path = optarg;
 			break;
 #endif /* MIRACAST */
+		case 'z':
+			client_socket_path = optarg;
+			break;
 		case 'h':
 		default:
 			printf("usage: sigma_dut [-aABdfGqDIntuVW] [-p<port>] "
@@ -982,6 +986,8 @@ int main(int argc, char *argv[])
 			       "       [-x <sink|source>] \\\n"
 			       "       [-y <Miracast library path>] \\\n"
 #endif /* MIRACAST */
+			       "       [-z <client socket directory path \\\n"
+			       "       Ex: </data/vendor/wifi/sockets>] \\\n"
 			       "       [-r <HT40 or 2.4_HT40>]\n");
 			printf("local command: sigma_dut [-p<port>] "
 			       "<-l<cmd>>\n");
@@ -1078,6 +1084,7 @@ int main(int argc, char *argv[])
 	free(sigma_dut.rsne_override);
 	free(sigma_dut.ap_sae_groups);
 	free(sigma_dut.dpp_peer_uri);
+	free(sigma_dut.ap_tnc_url);
 #ifdef NL80211_SUPPORT
 	nl80211_deinit(&sigma_dut, sigma_dut.nl_ctx);
 #endif /* NL80211_SUPPORT */

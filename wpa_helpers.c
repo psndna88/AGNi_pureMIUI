@@ -16,6 +16,7 @@ extern char *sigma_main_ifname;
 extern char *sigma_station_ifname;
 extern char *sigma_p2p_ifname;
 extern char *sigma_wpas_ctrl;
+extern char *client_socket_path;
 
 
 char * get_main_ifname(void)
@@ -108,9 +109,9 @@ int wpa_command(const char *ifname, const char *cmd)
 
 	printf("wpa_command(ifname='%s', cmd='%s')\n", ifname, cmd);
 	snprintf(buf, sizeof(buf), "%s%s", sigma_wpas_ctrl, ifname);
-	ctrl = wpa_ctrl_open(buf);
+	ctrl = wpa_ctrl_open2(buf, client_socket_path);
 	if (ctrl == NULL) {
-		printf("wpa_command: wpa_ctrl_open(%s) failed\n", buf);
+		printf("wpa_command: wpa_ctrl_open2(%s) failed\n", buf);
 		return -1;
 	}
 	len = sizeof(buf);
@@ -138,9 +139,9 @@ int wpa_command_resp(const char *ifname, const char *cmd,
 
 	printf("wpa_command(ifname='%s', cmd='%s')\n", ifname, cmd);
 	snprintf(buf, sizeof(buf), "%s%s", sigma_wpas_ctrl, ifname);
-	ctrl = wpa_ctrl_open(buf);
+	ctrl = wpa_ctrl_open2(buf, client_socket_path);
 	if (ctrl == NULL) {
-		printf("wpa_command: wpa_ctrl_open(%s) failed\n", buf);
+		printf("wpa_command: wpa_ctrl_open2(%s) failed\n", buf);
 		return -1;
 	}
 	len = resp_size;
@@ -161,7 +162,7 @@ struct wpa_ctrl * open_wpa_mon(const char *ifname)
 	char path[256];
 
 	snprintf(path, sizeof(path), "%s%s", sigma_wpas_ctrl, ifname);
-	ctrl = wpa_ctrl_open(path);
+	ctrl = wpa_ctrl_open2(path, client_socket_path);
 	if (ctrl == NULL)
 		return NULL;
 	if (wpa_ctrl_attach(ctrl) < 0) {
@@ -270,7 +271,7 @@ int get_wpa_status(const char *ifname, const char *field, char *obuf,
 	size_t len, flen;
 
 	snprintf(buf, sizeof(buf), "%s%s", sigma_wpas_ctrl, ifname);
-	ctrl = wpa_ctrl_open(buf);
+	ctrl = wpa_ctrl_open2(buf, client_socket_path);
 	if (ctrl == NULL)
 		return -1;
 	len = sizeof(buf);

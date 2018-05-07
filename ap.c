@@ -56,6 +56,37 @@
 #define QOS_MAP_SET_1 "53,2,22,6,8,15,0,7,255,255,16,31,32,39,255,255,40,47,255,255"
 #define QOS_MAP_SET_2 "8,15,0,7,255,255,16,31,32,39,255,255,40,47,48,63"
 
+#define ADV_OF_CHARGE_1 \
+"bc01000000d200454e475553443c3f786d6c2076657273696f6e3d22312e30222065" \
+"6e636f64696e673d225554462d38223f3e3c506c616e20786d6c6e733d22687474703a2f2f77" \
+"77772e77692d66692e6f72672f73706563696669636174696f6e732f686f7473706f7432646f" \
+"74302f76312e302f616f637069223e3c4465736372697074696f6e3e57692d46692061636365" \
+"737320666f72203120686f75722c207768696c6520796f752077616974206174207468652067" \
+"6174652c2024302e39393c2f4465736372697074696f6e3e3c2f506c616e3ee3004652414341" \
+"443c3f786d6c2076657273696f6e3d22312e302220656e636f64696e673d225554462d38223f" \
+"3e3c506c616e20786d6c6e733d22687474703a2f2f7777772e77692d66692e6f72672f737065" \
+"63696669636174696f6e732f686f7473706f7432646f74302f76312e302f616f637069223e3c" \
+"4465736372697074696f6e3e416363c3a8732057692d46692070656e64616e74203120686575" \
+"72652c2070656e64616e742071756520766f757320617474656e64657a20c3a0206c6120706f" \
+"7274652c20302c393920243c2f4465736372697074696f6e3e3c2f506c616e3ea101010000c7" \
+"00454e475553443c3f786d6c2076657273696f6e3d22312e302220656e636f64696e673d2255" \
+"54462d38223f3e3c506c616e20786d6c6e733d22687474703a2f2f7777772e77692d66692e6f" \
+"72672f73706563696669636174696f6e732f686f7473706f7432646f74302f76312e302f616f" \
+"637069223e3c4465736372697074696f6e3e446f776e6c6f616420766964656f7320666f7220" \
+"796f757220666c696768742c2024322e393920666f7220313047423c2f446573637269707469" \
+"6f6e3e3c2f506c616e3ed3004652414341443c3f786d6c2076657273696f6e3d22312e302220" \
+"656e636f64696e673d225554462d38223f3e3c506c616e20786d6c6e733d22687474703a2f2f" \
+"7777772e77692d66692e6f72672f73706563696669636174696f6e732f686f7473706f743264" \
+"6f74302f76312e302f616f637069223e3c4465736372697074696f6e3e54c3a96cc3a9636861" \
+"7267657a2064657320766964c3a96f7320706f757220766f74726520766f6c2c20322c393920" \
+"2420706f757220313020476f3c2f4465736372697074696f6e3e3c2f506c616e3ee40003002b" \
+"736572766963652d70726f76696465722e636f6d3b66656465726174696f6e2e6578616d706c" \
+"652e636f6db400454e475553443c3f786d6c2076657273696f6e3d22312e302220656e636f64" \
+"696e673d225554462d38223f3e3c506c616e20786d6c6e733d22687474703a2f2f7777772e77" \
+"692d66692e6f72672f73706563696669636174696f6e732f686f7473706f7432646f74302f76" \
+"312e302f616f637069223e3c4465736372697074696f6e3e46726565207769746820796f7572" \
+"20737562736372697074696f6e213c2f4465736372697074696f6e3e3c2f506c616e3e"
+
 extern char *sigma_main_ifname;
 extern char *sigma_wpas_ctrl;
 extern char *sigma_hapd_ctrl;
@@ -4261,6 +4292,54 @@ static int append_hostapd_conf_hs2(struct sigma_dut *dut, FILE *f)
 			fprintf(f, "osu_method_list=%d\n", osu_method);
 	}
 
+	switch (dut->ap_venue_url) {
+	case 1:
+		fprintf(f,
+			"venue_url=1:https://venue-server.r2m-testbed.wi-fi.org/floorplans/index.html\n"
+			"venue_url=1:https://venue-server.r2m-testbed.wi-fi.org/directory/index.html\n");
+		break;
+	case 2:
+		fprintf(f,
+			"venue_url=1:https://the-great-mall.r2m-testbed.wi-fi.org/floorplans/index.html\n"
+			"venue_url=2:https://abercrombie.r2m-testbed.wi-fi.org/floorplans/index.html\n"
+			"venue_url=3:https://adidas.r2m-testbed.wi-fi.org/floorplans/index.html\n"
+			"venue_url=4:https://aeropostale.r2m-testbed.wi-fi.org/floorplans/index.html\n"
+			"venue_url=5:https://agaci.r2m-testbed.wi-fi.org/floorplans/index.html\n"
+			"venue_url=6:https://aldo-shoes.r2m-testbed.wi-fi.org/floorplans/index.html\n"
+			"venue_url=7:https://american-eagle-outfitters.r2m-testbed.wi-fi.org/floorplans/index.html\n"
+			"venue_url=8:https://anderson-bakery.r2m-testbed.wi-fi.org/floorplans/index.html\n"
+			"venue_url=9:https://banana-republic-factory-store.r2m-testbed.wi-fi.org/floorplans/index.html\n"
+			"venue_url=10:https://bed-bath-and-beyond.r2m-testbed.wi-fi.org/floorplans/index.html\n"
+			);
+		break;
+	}
+
+	switch (dut->ap_advice_of_charge) {
+	case 1:
+		fprintf(f, "anqp_elem=278:" ADV_OF_CHARGE_1 "\n");
+		break;
+	}
+
+	switch (dut->ap_oper_icon_metadata) {
+	case 1:
+		fprintf(f,
+			"hs20_icon=160:76:eng:image/png:icon_red_eng.png:/etc/ath/icon_red_eng.png\n"
+			"operator_icon=icon_red_eng.png\n");
+		break;
+	}
+
+	switch (dut->ap_tnc_file_name) {
+	case 1:
+		fprintf(f, "hs20_t_c_filename=tandc-id1-content.txt\n");
+		break;
+	}
+
+	if (dut->ap_tnc_time_stamp)
+		fprintf(f, "hs20_t_c_timestamp=%u\n", dut->ap_tnc_time_stamp);
+
+	if (dut->ap_tnc_url)
+		fprintf(f, "hs20_t_c_server_url=%s\n", dut->ap_tnc_url);
+
 	return 0;
 }
 
@@ -6705,7 +6784,10 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 			fclose(f);
 			return -2;
 		}
-		bssid[0] |= 0x02;
+		if (bssid[0] & 0x02)
+			bssid[5] ^= 0x01;
+		else
+			bssid[0] |= 0x02;
 
 		snprintf(ifname2, sizeof(ifname2), "%s_1", ifname);
 		fprintf(f, "bss=%s_1\n", ifname2);
@@ -7383,6 +7465,14 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_wme = AP_WME_OFF;
 		dut->ap_wmmps = AP_WMMPS_OFF;
 	}
+
+	dut->ap_venue_url = 0;
+	dut->ap_advice_of_charge = 0;
+	dut->ap_oper_icon_metadata = 0;
+	dut->ap_tnc_file_name = 0;
+	dut->ap_tnc_time_stamp = 0;
+	free(dut->ap_tnc_url);
+	dut->ap_tnc_url = NULL;
 
 	if (dut->program == PROGRAM_HS2 || dut->program == PROGRAM_HS2_R2 ||
 	    dut->program == PROGRAM_IOTLP) {
@@ -9178,6 +9268,32 @@ static int cmd_ap_set_hs2(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_bss_load = atoi(val);
 		sigma_dut_print(dut, DUT_MSG_INFO, "ap_bss_load %d",
 				dut->ap_bss_load);
+	}
+
+	val = get_param(cmd, "Venue_URL");
+	if (val)
+		dut->ap_venue_url = atoi(val);
+
+	val = get_param(cmd, "Advice_of_Charge");
+	if (val)
+		dut->ap_advice_of_charge = atoi(val);
+
+	val = get_param(cmd, "Operator_Icon_Metadata");
+	if (val)
+		dut->ap_oper_icon_metadata = atoi(val);
+
+	val = get_param(cmd, "TnC_File_Name");
+	if (val)
+		dut->ap_tnc_file_name = atoi(val);
+
+	val = get_param(cmd, "TnC_File_Time_Stamp");
+	if (val)
+		dut->ap_tnc_time_stamp = strtol(val, NULL, 10);
+
+	val = get_param(cmd, "TnC_URL");
+	if (val) {
+		free(dut->ap_tnc_url);
+		dut->ap_tnc_url = strdup(val);
 	}
 
 	return 1;

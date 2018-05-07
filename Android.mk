@@ -100,6 +100,7 @@ else
 LOCAL_SHARED_LIBRARIES += libkeystore_binder
 endif
 LOCAL_SRC_FILES := $(OBJS)
+LOCAL_HEADER_LIBRARIES := libcutils_headers
 LOCAL_CFLAGS := $(CFLAGS)
 include $(BUILD_EXECUTABLE)
 
