@@ -6320,6 +6320,36 @@ static int cmd_sta_set_11n(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static void cmd_set_max_he_mcs(struct sigma_dut *dut, const char *intf,
+			       int mcs_config)
+{
+#ifdef NL80211_SUPPORT
+	int ret;
+
+	switch (mcs_config) {
+	case HE_80_MCS0_7:
+	case HE_80_MCS0_9:
+	case HE_80_MCS0_11:
+		ret = sta_set_he_mcs(dut, intf, mcs_config);
+		if (ret) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"cmd_set_max_he_mcs: Setting of MCS:%d failed, ret:%d",
+					mcs_config, ret);
+		}
+		break;
+	default:
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"cmd_set_max_he_mcs: Invalid mcs %d",
+				mcs_config);
+		break;
+	}
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"max HE MCS cannot be changed without NL80211_SUPPORT defined");
+#endif /* NL80211_SUPPORT */
+}
+
+
 static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 				    struct sigma_conn *conn,
 				    struct sigma_cmd *cmd)
@@ -6410,6 +6440,14 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 					"Enabling/Disabling of BCC failed");
 		}
 	}
+
+	val = get_param(cmd, "MaxHE-MCS_1SS_RxMapLTE80");
+	if (val && dut->sta_nss == 1)
+		cmd_set_max_he_mcs(dut, intf, atoi(val));
+
+	val = get_param(cmd, "MaxHE-MCS_2SS_RxMapLTE80");
+	if (val && dut->sta_nss == 2)
+		cmd_set_max_he_mcs(dut, intf, atoi(val));
 
 	val = get_param(cmd, "MCS_FixedRate");
 	if (val) {
