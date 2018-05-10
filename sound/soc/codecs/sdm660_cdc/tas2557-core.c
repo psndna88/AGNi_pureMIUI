@@ -73,6 +73,7 @@ static int tas2557_load_configuration(struct tas2557_priv *pTAS2557,
 #define TAS2557_BLOCK_CFG_PRE_DEV_B		0x0b
 #define TAS2557_BLOCK_CFG_POST			0x05
 #define TAS2557_BLOCK_CFG_POST_POWER	0x06
+#define TAS2557_ASI2
 
 static unsigned int p_tas2557_default_data[] = {
 	TAS2557_SAR_ADC2_REG, 0x05,	/* enable SAR ADC */
@@ -97,6 +98,18 @@ static unsigned int p_tas2557_startup_data[] = {
 	TAS2557_GPI_PIN_REG, 0x15,	/* enable DIN, MCLK, CCI */
 	TAS2557_GPIO1_PIN_REG, 0x01,	/* enable BCLK */
 	TAS2557_GPIO2_PIN_REG, 0x01,	/* enable WCLK */
+#ifdef TAS2557_ASI2
+	TAS2557_GPIO6_PIN_REG, 0x01,	/* GPIO6 as ASI2 WCLK, input 0x01, output 0x11 */
+	TAS2557_GPIO8_PIN_REG, 0x02,	/* GPIO8 as ASI2 DIN */
+	TAS2557_ASI2_DAC_FORMAT_REG, 0x18,	/* ASI2 as 32bit */
+	TAS2557_ASI2_BDIV_CLK_SEL_REG, 0x01,	/* ASI2 BDIV Clock source */
+	TAS2557_ASI2_BDIV_CLK_RATIO_REG, 0x01,	/* ASI2 BDIV Ratio */
+	TAS2557_ASI2_BDIV_CLK_RATIO_REG, 0x81,	/* ASI2 BDIV Power Up */
+	TAS2557_ASI2_WDIV_CLK_RATIO_REG, 0x40,  /* ASI2 WDIV Ratio */
+	TAS2557_ASI2_WDIV_CLK_RATIO_REG, 0xc0,  /* ASI2 WDIV Power Up */
+	TAS2557_GPIO5_PIN_REG, 0x01,		/* GPIO5 as ASI2 BCLK, input 0x01, output 0x12 */
+	TAS2557_GPIO7_PIN_REG, 0x15,		/* GPIO7 as ASI2 DOUT */
+#endif
 	TAS2557_POWER_CTRL2_REG, 0xA0,	 /* Class-D, Boost power up */
 	TAS2557_POWER_CTRL2_REG, 0xA3,	 /* Class-D, Boost, IV sense power up */
 	TAS2557_POWER_CTRL1_REG, 0xF8,	 /* PLL, DSP, clock dividers power up */
