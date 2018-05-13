@@ -2130,7 +2130,7 @@ int subsys_cgroup_allow_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
 	const struct cred *cred, *tcred;
 	struct task_struct *task;
 
-	if (capable(CAP_SYS_NICE) || capable(CAP_SYS_ADMIN))
+	if (capable(CAP_SYS_NICE))
 		return 0;
 
 	cred = current_cred();
@@ -2175,10 +2175,11 @@ retry_find_task:
 		 */
 		tcred = __task_cred(tsk);
 		if (!uid_eq(cred->euid, GLOBAL_ROOT_UID) &&
+#ifdef CONFIG_MACH_XIAOMI_KENZO_AGNI_MIUI
 		    !uid_eq(cred->euid, GLOBAL_SYSTEM_UID) &&
+#endif
 		    !uid_eq(cred->euid, tcred->uid) &&
-		    !uid_eq(cred->euid, tcred->suid) &&
-		    !ns_capable(tcred->user_ns, CAP_SYS_NICE)) {
+		    !uid_eq(cred->euid, tcred->suid)) {
 			/*
 			 * if the default permission check fails, give each
 			 * cgroup a chance to extend the permission check
