@@ -1564,7 +1564,7 @@ shrink_inactive_list(unsigned long nr_to_scan, struct lruvec *lruvec,
 	struct zone_reclaim_stat *reclaim_stat = &lruvec->reclaim_stat;
 
 	while (unlikely(too_many_isolated(zone, file, sc, safe))) {
-		congestion_wait(BLK_RW_ASYNC, 1000/10);
+		congestion_wait(BLK_RW_ASYNC, HZ/10);
 
 		/* We are about to die and free our memory. Return now. */
 		if (fatal_signal_pending(current))
@@ -1671,7 +1671,7 @@ shrink_inactive_list(unsigned long nr_to_scan, struct lruvec *lruvec,
 		 * they are written so also forcibly stall.
 		 */
 		if (nr_immediate)
-			congestion_wait(BLK_RW_ASYNC, 1000/10);
+			congestion_wait(BLK_RW_ASYNC, HZ/10);
 	}
 
 	/*
@@ -1680,7 +1680,7 @@ shrink_inactive_list(unsigned long nr_to_scan, struct lruvec *lruvec,
 	 * unqueued dirty pages or cycling through the LRU too quickly.
 	 */
 	if (!sc->hibernation_mode && !current_is_kswapd())
-		wait_iff_congested(zone, BLK_RW_ASYNC, 1000/10);
+		wait_iff_congested(zone, BLK_RW_ASYNC, HZ/10);
 
 //	trace_mm_vmscan_lru_shrink_inactive(zone->zone_pgdat->node_id,
 //		zone_idx(zone),
@@ -2751,7 +2751,7 @@ static bool throttle_direct_reclaim(gfp_t gfp_mask, struct zonelist *zonelist,
 	 */
 	if (!(gfp_mask & __GFP_FS)) {
 		wait_event_interruptible_timeout(pgdat->pfmemalloc_wait,
-			pfmemalloc_watermark_ok(pgdat), 1000);
+			pfmemalloc_watermark_ok(pgdat), HZ);
 
 		goto check_pending;
 	}
@@ -3327,7 +3327,7 @@ static void kswapd_try_to_sleep(pg_data_t *pgdat, int order, int classzone_idx)
 
 	/* Try to sleep for a short interval */
 	if (prepare_kswapd_sleep(pgdat, order, remaining, classzone_idx)) {
-		remaining = schedule_timeout(1000/10);
+		remaining = schedule_timeout(HZ/10);
 		finish_wait(&pgdat->kswapd_wait, &wait);
 		prepare_to_wait(&pgdat->kswapd_wait, &wait, TASK_INTERRUPTIBLE);
 	}
