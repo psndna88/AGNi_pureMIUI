@@ -458,9 +458,11 @@ static void cpufreq_ironactive_timer(unsigned long data)
 	}
 #endif
 
+#ifdef CONFIG_SCHED_FREQ_INPUT
 	if (tunables->use_sched_load)
 		sched_get_cpus_busy(ppol->cpu_busy_times,
 				    ppol->policy->related_cpus);
+#endif
 	max_cpu = cpumask_first(ppol->policy->cpus);
 	for_each_cpu(i, ppol->policy->cpus) {
 		pcpu = &per_cpu(cpuinfo, i);
