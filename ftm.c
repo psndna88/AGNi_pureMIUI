@@ -34,8 +34,6 @@ static const char WPA_ADDRESS_3_DISABLE[] =
 #define ETH_ALEN 6
 #endif
 
-static const char LOC_CAPI_COMMAND_STR[] = "sta_exec_action";
-
 static const char LOC_CAPI_INTERFACE[] = "interface";
 static const char LOC_CAPI_INTERFACE_VAL[] = "wlan0";
 
@@ -43,28 +41,18 @@ static const char LOC_CAPI_PROG[] = "prog";
 static const char LOC_CAPI_PROG_VAL[] = "loc";
 
 static const char LOC_CAPI_PROGRAM[] = "program";
-static const char LOC_CAPI_PROGRAM_VAL1[] = "24G";
-static const char LOC_CAPI_PROGRAM_VAL2[] = "5G";
 
 static const char LOC_CAPI_DEST_MAC[]  = "destmac";
-static const char LOC_CAPI_OPER_CHAN[] = "operChn";
 static const char LOC_CAPI_TYPE_TRIGGER[] = "Trigger";
-static const char LOC_CAPI_TYPE_FTM_VAL[] = "FTMsession";
 static const char LOC_CAPI_TYPE_ANQP_VAL[] = "ANQPQuery";
 static const char LOC_CAPI_BURSTS_EXP[] = "burstsexponent";
-static const char LOC_CAPI_BURST_DURATION[] = "burstduration";
-static const char LOC_CAPI_MIN_DELTA_FTM[] = "mindeltaftm";
-static const char LOC_CAPI_PTSF[] = "partialtsf";
 static const char LOC_CAPI_ASAP[] = "ASAP";
-static const char LOC_CAPI_FTM_PER_BURST[] = "ftmsperburst";
 static const char LOC_CAPI_FORMAT_BW[] = "formatbwftm";
-static const char LOC_CAPI_BURST_PERIOD[] = "burstperiod";
 static const char LOC_CAPI_LOC_CIVIC[] = "askforloccivic";
 static const char LOC_CAPI_LCI[] = "askforlci";
 
 static const char LOC_CAPI_FRAME_NAME[] = "FrameName";
 static const char LOC_CAPI_FRAME_NAME_VAL_ANQP[] = "AnqpQuery";
-static const char LOC_CAPI_FRAME_NAME_VAL_NRR[] = "NeighReportReq";
 
 static const char LOC_CAPI_FQDN[] = "AskForPublicIdentifierURI-FQDN";
 static const char LOC_CAPI_ADDRESS3[] = "address3";
