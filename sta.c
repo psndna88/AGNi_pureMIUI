@@ -464,14 +464,17 @@ int is_ipv6_addr(const char *str)
 int get_ip_config(struct sigma_dut *dut, const char *ifname, char *buf,
 		  size_t buf_len)
 {
-	char tmp[256], *pos, *pos2;
-	FILE *f;
+	char tmp[256];
 	char ip[16], mask[15], dns[16], sec_dns[16];
-	const char *str_ps;
 	int is_dhcp = 0;
 	int s;
 #ifdef ANDROID
 	char prop[PROPERTY_VALUE_MAX];
+#else /* ANDROID */
+	FILE *f;
+#ifdef __linux__
+	const char *str_ps;
+#endif /* __linux__ */
 #endif /* ANDROID */
 
 	ip[0] = '\0';
@@ -556,6 +559,8 @@ int get_ip_config(struct sigma_dut *dut, const char *ifname, char *buf,
 
 	f = fopen("/etc/resolv.conf", "r");
 	if (f) {
+		char *pos, *pos2;
+
 		while (fgets(tmp, sizeof(tmp), f)) {
 			if (strncmp(tmp, "nameserver", 10) != 0)
 				continue;
