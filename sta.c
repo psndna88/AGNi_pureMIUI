@@ -4288,7 +4288,7 @@ static int wcn_sta_set_width(struct sigma_dut *dut, const char *intf,
 	} else if (strcmp(val, "80") == 0) {
 		snprintf(buf, sizeof(buf), "iwpriv %s chwidth 2", intf);
 		dut->chwidth = 2;
-	} else if (strcmp(val, "Auto") == 0) {
+	} else if (strcasecmp(val, "Auto") == 0) {
 		buf[0] = '\0';
 	} else {
 		sigma_dut_print(dut, DUT_MSG_ERROR, "WIDTH %s not supported",
