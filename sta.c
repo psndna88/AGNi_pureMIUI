@@ -9015,18 +9015,46 @@ static int wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 		if (strcasecmp(result, "def") != 0)
 			mcs = atoi(result);
 
-		ratecode = 0x400; /* for nss:1 MCS 0 */
+		ratecode = 0x20; /* for nss:1 MCS 0 */
 		if (nss == 2) {
-			ratecode = 0x420; /* for nss:2 MCS 0 */
+			ratecode = 0x40; /* for nss:2 MCS 0 */
 		} else if (nss > 2) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"HE NSS %d not supported", nss);
 			goto failed;
 		}
 
+		snprintf(buf, sizeof(buf), "iwpriv %s nss %d", intf, nss);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"nss_mcs_opt: iwpriv %s nss %d failed",
+					intf, nss);
+			goto failed;
+		}
+
 		/* Add the MCS to the ratecode */
 		if (mcs >= 0 && mcs <= 11) {
 			ratecode += mcs;
+#ifdef NL80211_SUPPORT
+			if (dut->device_type == STA_testbed) {
+				enum he_mcs_config mcs_config;
+				int ret;
+
+				if (mcs <= 7)
+					mcs_config = HE_80_MCS0_7;
+				else if (mcs <= 9)
+					mcs_config = HE_80_MCS0_9;
+				else
+					mcs_config = HE_80_MCS0_11;
+				ret = sta_set_he_mcs(dut, intf, mcs_config);
+				if (ret) {
+					sigma_dut_print(dut, DUT_MSG_ERROR,
+							"nss_mcs_opt: mcs setting failed, mcs:%d, mcs_config %d, ret:%d",
+							mcs, mcs_config, ret);
+					goto failed;
+				}
+			}
+#endif /* NL80211_SUPPORT */
 		} else {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"HE MCS %d not supported", mcs);
