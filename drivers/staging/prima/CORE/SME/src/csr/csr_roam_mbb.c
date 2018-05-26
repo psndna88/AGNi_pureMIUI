@@ -74,6 +74,11 @@ eHalStatus csr_roam_issue_preauth_reassoc_req(tHalHandle hal,
                                           &mac->roam.neighborRoamInfo;
     eHalStatus status;
 
+    if (session == NULL) {
+        smsLog(mac, LOGE, FL("Invalid Session ID %d"), session_id);
+        return eHAL_STATUS_FAILURE;
+    }
+
     auth_req_len = sizeof(tSirFTPreAuthReq);
     pre_auth_req = (tpSirFTPreAuthReq)vos_mem_malloc(auth_req_len);
     if (NULL == pre_auth_req) {
@@ -453,7 +458,11 @@ eHalStatus csr_update_roamed_info_mbb(tHalHandle hal,
 
     /* Get profile */
     session = CSR_GET_SESSION(mac, sme_session_id);
-
+    if (session == NULL) {
+        smsLog(mac, LOGE,
+               FL("Invalid Session ID %d"), sme_session_id);
+        return eHAL_STATUS_FAILURE;
+    }
     profile = vos_mem_malloc(sizeof(*profile));
     if (NULL == profile) {
         smsLog(mac, LOGE, FL("Memory allocation failure for profile"));
@@ -749,6 +758,11 @@ void csr_roam_preauth_rsp_mbb_processor(tHalHandle hal,
     }
 
     session = CSR_GET_SESSION(mac, pre_auth_rsp->smeSessionId);
+    if (session == NULL) {
+        smsLog(mac, LOGE,
+               FL("Invalid Session ID %d"), pre_auth_rsp->smeSessionId);
+        return;
+    }
     if (session->abortConnection) {
         smsLog(mac, LOGE,
                FL("Disconnect in progress, stop preauth/reassoc timer"));

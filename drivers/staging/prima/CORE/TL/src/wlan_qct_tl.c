@@ -7822,7 +7822,7 @@ WLANTL_FatalErrorHandler
     * Issue SSR. vos_wlanRestart has tight checks to make sure that
     * we do not send an FIQ if previous FIQ is not processed
     */
-   vos_wlanRestart();
+   vos_wlanRestart(VOS_REASON_UNSPECIFIED);
 }
 
 /*==========================================================================

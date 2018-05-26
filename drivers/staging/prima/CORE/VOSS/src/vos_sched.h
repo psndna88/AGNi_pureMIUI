@@ -83,6 +83,7 @@
 #endif
 
 #include <vos_timer.h>
+#include <vos_api.h>
 
 
 #define TX_POST_EVENT               0x000
@@ -375,6 +376,7 @@ typedef struct _VosContextType
    spinlock_t wdthread_work_lock;
    bool snoc_high_freq_voting;
    spinlock_t freq_voting_lock;
+   enum vos_hang_reason recovery_reason;
 } VosContextType, *pVosContextType;
 
 

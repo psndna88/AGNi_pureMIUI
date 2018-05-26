@@ -795,6 +795,9 @@ static void hdd_save_bss_info(hdd_adapter_t *adapter,
     } else {
         hdd_sta_ctx->conn_info.conn_flag.vht_op_present = false;
     }
+    /* Cache last connection info */
+    vos_mem_copy(&hdd_sta_ctx->cache_conn_info, &hdd_sta_ctx->conn_info,
+                 sizeof(connection_info_t));
 }
 
 void hdd_connSaveConnectInfo( hdd_adapter_t *pAdapter, tCsrRoamInfo *pRoamInfo, eCsrRoamBssType eBssType )
@@ -2792,7 +2795,7 @@ static eHalStatus hdd_AssociationCompletionHandler( hdd_adapter_t *pAdapter, tCs
                 hddLog(VOS_TRACE_LEVEL_INFO,"Restart Sap as SAP channel is %d "
                        "and STA channel is %d", pHostapdAdapter->sessionCtx.ap.operatingChannel,
                        (int)pRoamInfo->pBssDesc->channelId);
-                if (pHddCtx->cfg_ini->force_scc_with_ecsa)
+                if (pHddCtx->cfg_ini && pHddCtx->cfg_ini->force_scc_with_ecsa)
                 {
                     hdd_schedule_ecsa_chan_change_work(pHddCtx,
                                                        pAdapter->sessionId);
@@ -2800,7 +2803,8 @@ static eHalStatus hdd_AssociationCompletionHandler( hdd_adapter_t *pAdapter, tCs
                 else
                 {
                     hdd_hostapd_stop(pHostapdAdapter->dev);
-                    if (pHddCtx->cfg_ini->enable_sap_auth_offload)
+                    if (pHddCtx->cfg_ini &&
+                        pHddCtx->cfg_ini->enable_sap_auth_offload)
                        hdd_force_scc_restart_sap(pHostapdAdapter,
                              pHddCtx, (int)pRoamInfo->pBssDesc->channelId);
                 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2015,2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2015,2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -309,11 +309,11 @@ wpt_status wpalRivaSubystemRestart(void);
     wpalWlanReload -  Initiate WLAN Driver reload
 
     Param:
-       None
+       reason: hang reason
     Return:
        NONE
 ---------------------------------------------------------------------------*/
-void wpalWlanReload(void);
+void wpalWlanReload(wpt_uint32 reason);
 
 /*---------------------------------------------------------------------------
     wpalWcnssResetIntr -  Trigger the reset FIQ to Riva

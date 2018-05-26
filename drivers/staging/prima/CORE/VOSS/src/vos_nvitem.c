@@ -1762,6 +1762,8 @@ VOS_STATUS vos_nv_readMultiMacAddress( v_U8_t *pMacAddress,
       VOS_TRACE( VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
           " Invalid Parameter from NV Client macCount %d, pMacAddress %pK",
           macCount, pMacAddress);
+
+      return VOS_STATUS_E_INVAL;
    }
 
    status = vos_nv_read( VNV_FIELD_IMAGE, &fieldImage, NULL,

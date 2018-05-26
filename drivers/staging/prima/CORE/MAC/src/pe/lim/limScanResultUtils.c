@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2014, 2016-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2014, 2016-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -80,18 +80,8 @@ limDeactivateMinChannelTimerDuringScan(tpAniSirGlobal pMac)
          * Beacon/Probe Response is received during active scanning.
          * Deactivate MIN channel timer if running.
          */
-
         limDeactivateAndChangeTimer(pMac,eLIM_MIN_CHANNEL_TIMER);
-        if (tx_timer_activate(&pMac->lim.limTimers.gLimMaxChannelTimer)
-                                          == TX_TIMER_ERROR)
-        {
-            /// Could not activate max channel timer.
-            // Log error
-            limLog(pMac,LOGP, FL("could not activate max channel timer"));
 
-            limCompleteMlmScan(pMac, eSIR_SME_RESOURCES_UNAVAILABLE);
-            return TX_TIMER_ERROR;
-        }
     }
     return eSIR_SUCCESS;
 } /*** end limDeactivateMinChannelTimerDuringScan() ***/

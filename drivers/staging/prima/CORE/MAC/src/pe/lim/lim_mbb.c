@@ -63,6 +63,10 @@ void lim_post_pre_auth_reassoc_rsp(tpAniSirGlobal mac,
     tANI_U16 rsp_len = sizeof(tSirFTPreAuthRsp);
     tpPESession session_entry_con_ap;
     tpDphHashNode sta_ds = NULL;
+    if (session_entry == NULL) {
+        limLog(mac, LOGE, FL("Invalid Session Entry"));
+        return;
+    }
 
     pre_auth_rsp = (tpSirFTPreAuthRsp)vos_mem_malloc(rsp_len);
     if (NULL == pre_auth_rsp) {
@@ -77,9 +81,7 @@ void lim_post_pre_auth_reassoc_rsp(tpAniSirGlobal mac,
     pre_auth_rsp->length = (tANI_U16)rsp_len;
     pre_auth_rsp->status = status;
     pre_auth_rsp->reason = reason;
-
-    if (session_entry)
-        pre_auth_rsp->smeSessionId = session_entry->smeSessionId;
+    pre_auth_rsp->smeSessionId = session_entry->smeSessionId;
 
     /* The bssid of the AP we are sending Auth1 to. */
     if (mac->ft.ftPEContext.pFTPreAuthReq)
@@ -668,7 +670,7 @@ void lim_handle_reassoc_mbb_success(tpAniSirGlobal mac,
         limLog(mac, LOGE,
                FL("session does not exist for given BSSID" MAC_ADDRESS_STR),
                MAC_ADDR_ARRAY(mac->ft.ftPEContext.pFTPreAuthReq->currbssId));
-        goto end;
+        goto cleanup;
     }
 
     session_entry->smeSessionId = session_entry_con_ap->smeSessionId;
@@ -681,7 +683,7 @@ void lim_handle_reassoc_mbb_success(tpAniSirGlobal mac,
         limLog(mac, LOGE,
                FL("sta_ds NULL for given BSSID" MAC_ADDRESS_STR),
                MAC_ADDR_ARRAY(mac->ft.ftPEContext.pFTPreAuthReq->currbssId));
-        goto end;
+        goto cleanup;
     }
 
     /*
@@ -698,9 +700,9 @@ void lim_handle_reassoc_mbb_success(tpAniSirGlobal mac,
     if (ret_code == eSIR_SUCCESS)
         return;
 
-end:
     /* Connected AP lim cleanup.*/
     lim_cleanup_connected_ap(mac, sta_ds_connected_ap, session_entry_con_ap);
+cleanup:
     /*
      * eHAL_STATUS_INVALID_PARAMETER is used
      * so that full cleanup is triggered.
@@ -721,7 +723,7 @@ end:
 static inline void lim_process_preauth_mbb_result(tpAniSirGlobal mac,
      eHalStatus status, tANI_U32 *data)
 {
-    tpPESession session_entry, ft_session_entry;
+    tpPESession session_entry, ft_session_entry = NULL;
     tpDphHashNode sta_ds;
     tAddBssParams *add_bss_params;
     tSirSmeJoinReq *reassoc_req;
@@ -853,7 +855,8 @@ static inline void lim_process_preauth_mbb_result(tpAniSirGlobal mac,
     return;
 
 end:
-    lim_handle_reassoc_mbb_fail(mac, ft_session_entry);
+    if (ft_session_entry)
+        lim_handle_reassoc_mbb_fail(mac, ft_session_entry);
 }
 
 /*

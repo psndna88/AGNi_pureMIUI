@@ -77,9 +77,9 @@
 //****************** MISC defs *********************************
 
 /// Maximum allowable size of a beacon frame
-#define SCH_MAX_BEACON_SIZE    512
+#define SCH_MAX_BEACON_SIZE    384
 
-#define SCH_MAX_PROBE_RESP_SIZE 2048
+#define SCH_MAX_PROBE_RESP_SIZE 384
 
 struct schMisc {
 

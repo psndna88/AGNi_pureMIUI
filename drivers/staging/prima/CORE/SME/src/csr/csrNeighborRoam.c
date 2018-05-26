@@ -3394,7 +3394,7 @@ VOS_STATUS csrNeighborRoamCreateChanListFromNeighborReport(tpAniSirGlobal pMac)
                 break;
         }
 
-        if (i == numChannels)
+        if (i == numChannels && i < MAX_BSS_IN_NEIGHBOR_RPT)
         {
             if (pNeighborBssDesc->pNeighborBssDescription->channel)
             {
