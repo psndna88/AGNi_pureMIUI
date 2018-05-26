@@ -769,6 +769,7 @@ int main(int argc, char *argv[])
 	sigma_dut.dialog_token = 0;
 	sigma_dut.dpp_conf_id = -1;
 	sigma_dut.dpp_local_bootstrap = -1;
+	sigma_dut.sta_nss = 2; /* Make default nss 2 */
 	set_defaults(&sigma_dut);
 
 	for (;;) {

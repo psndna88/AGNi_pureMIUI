@@ -3393,11 +3393,14 @@ static int wcn_sta_set_sp_stream(struct sigma_dut *dut, const char *intf,
 				 const char *val)
 {
 	char buf[60];
+	int sta_nss;
 
 	if (strcmp(val, "1SS") == 0 || strcmp(val, "1") == 0) {
 		snprintf(buf, sizeof(buf), "iwpriv %s nss 1", intf);
+		sta_nss = 1;
 	} else if (strcmp(val, "2SS") == 0 || strcmp(val, "2") == 0) {
 		snprintf(buf, sizeof(buf), "iwpriv %s nss 2", intf);
+		sta_nss = 2;
 	} else {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"SP_STREAM value not supported");
@@ -3409,6 +3412,8 @@ static int wcn_sta_set_sp_stream(struct sigma_dut *dut, const char *intf,
 				"Failed to set SP_STREAM");
 		return -1;
 	}
+
+	dut->sta_nss = sta_nss;
 
 	return 0;
 }
@@ -5668,6 +5673,7 @@ static void sta_reset_default_ath(struct sigma_dut *dut, const char *intf,
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"iwpriv %s nss 3 failed", intf);
 		}
+		dut->sta_nss = 3;
 
 		snprintf(buf, sizeof(buf), "iwpriv %s shortgi 1", intf);
 		if (system(buf) != 0) {
@@ -5941,6 +5947,7 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 				sigma_dut_print(dut, DUT_MSG_ERROR,
 						"iwpriv %s nss 2 failed", intf);
 			}
+			dut->sta_nss = 2;
 
 #ifdef NL80211_SUPPORT
 			/* Set HE_MCS to 0-11 */
@@ -6404,6 +6411,50 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		}
 	}
 
+	val = get_param(cmd, "MCS_FixedRate");
+	if (val) {
+#ifdef NL80211_SUPPORT
+		int mcs, ratecode = 0;
+		enum he_mcs_config mcs_config;
+		int ret;
+
+		ratecode = (0x07 & dut->sta_nss) << 5;
+		mcs = atoi(val);
+		/* Add the MCS to the ratecode */
+		if (mcs >= 0 && mcs <= 11) {
+			ratecode += mcs;
+			if (dut->device_type == STA_testbed &&
+			    mcs > 7 && mcs <= 11) {
+				if (mcs <= 9)
+					mcs_config = HE_80_MCS0_9;
+				else
+					mcs_config = HE_80_MCS0_11;
+				ret = sta_set_he_mcs(dut, intf, mcs_config);
+				if (ret) {
+					sigma_dut_print(dut, DUT_MSG_ERROR,
+							"MCS_FixedRate: mcs setting failed, mcs:%d, mcs_config %d, ret:%d",
+							mcs, mcs_config, ret);
+				}
+			}
+			snprintf(buf, sizeof(buf),
+				 "iwpriv %s set_11ax_rate 0x%03x",
+				 intf, ratecode);
+			if (system(buf) != 0) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"MCS_FixedRate: iwpriv setting of 11ax rates 0x%03x failed",
+						ratecode);
+			}
+		} else {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"MCS_FixedRate: HE MCS %d not supported",
+					mcs);
+		}
+#else /* NL80211_SUPPORT */
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"MCS_FixedRate cannot be changed without NL80211_SUPPORT defined");
+#endif /* NL80211_SUPPORT */
+	}
+
 	val = get_param(cmd, "opt_md_notif_ie");
 	if (val) {
 		char *result = NULL;
@@ -6512,6 +6563,7 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"iwpriv nss failed");
 		}
+		dut->sta_nss = nss;
 
 		result = strtok_r(NULL, ";", &saveptr);
 		if (result == NULL) {
@@ -9031,6 +9083,7 @@ static int wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 					intf, nss);
 			goto failed;
 		}
+		dut->sta_nss = nss;
 
 		/* Add the MCS to the ratecode */
 		if (mcs >= 0 && mcs <= 11) {

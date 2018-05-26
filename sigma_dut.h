@@ -728,6 +728,8 @@ struct sigma_dut {
 	struct nl80211_ctx *nl_ctx;
 	int config_rsnie;
 #endif /* NL80211_SUPPORT */
+
+	int sta_nss;
 };
 
 
