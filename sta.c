@@ -5901,6 +5901,13 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 					intf);
 		}
 
+		/* reset the LDPC setting */
+		snprintf(buf, sizeof(buf), "iwpriv %s ldpc 1", intf);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"iwpriv %s ldpc 1 failed", intf);
+		}
+
 		/* remove all network profiles */
 		remove_wpa_networks(intf);
 
