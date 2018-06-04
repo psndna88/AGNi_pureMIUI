@@ -1397,6 +1397,17 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (val)
 		dut->ap_blestacnt = atoi(val);
 
+	val = get_param(cmd, "PPDUTxType");
+	if (val) {
+		if (strcasecmp(val, "MU") == 0) {
+			dut->ap_he_ppdu = PPDU_MU;
+		} else {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Unsupported PPDUTxType");
+			return 0;
+		}
+	}
+
 	return 1;
 }
 
@@ -5792,6 +5803,21 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 		run_system(dut, buf);
 		dut->hostapd_running = 1;
 	}
+
+	if (dut->ap_he_ppdu == PPDU_MU) {
+		run_system_wrapper(
+			dut, "wifitool %s setUnitTestCmd 0x47 2 11 1000000",
+			ifname);
+		run_system_wrapper(
+			dut, "wifitool %s setUnitTestCmd 0x47 2 17 1000000",
+			ifname);
+		run_system_wrapper(dut,
+				   "wifitool %s setUnitTestCmd 0x47 2 8 0",
+				   ifname);
+		run_system_wrapper(dut,
+				   "wifitool %s setUnitTestCmd 0x47 2 29 0",
+				   ifname);
+	}
 }
 
 
@@ -7670,6 +7696,8 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_pmksa_caching = 0;
 		dut->ap_80plus80 = 0;
 	}
+
+	dut->ap_he_ppdu = PPDU_NOT_SET;
 
 	dut->ap_oper_chn = 0;
 
