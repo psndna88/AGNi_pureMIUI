@@ -2381,7 +2381,8 @@ static void mdss_dsi_start_wake_thread(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 	if (ctrl_pdata->wake_thread)
 		return;
 
-	ctrl_pdata->wake_thread = kthread_run(mdss_dsi_disp_wake_thread,
+	ctrl_pdata->wake_thread =
+			kthread_run_perf_critical(mdss_dsi_disp_wake_thread,
 						&ctrl_pdata->panel_data,
 						"mdss_disp_wake");
 	if (IS_ERR(ctrl_pdata->wake_thread)) {
