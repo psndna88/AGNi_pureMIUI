@@ -3802,7 +3802,8 @@ static int cmd_sta_preset_testparameters(struct sigma_dut *dut,
 	const char *val;
 
 	val = get_param(cmd, "Program");
-	if (val && strcasecmp(val, "HS2-R2") == 0)
+	if (val && (strcasecmp(val, "HS2-R2") == 0 ||
+		    strcasecmp(val, "HS2-R3") == 0))
 		return cmd_sta_preset_testparameters_hs2_r2(dut, conn, intf,
 							    cmd);
 
@@ -8492,7 +8493,8 @@ int cmd_sta_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (val && strcasecmp(val, "TDLS") == 0)
 		return cmd_sta_send_frame_tdls(dut, conn, cmd);
 	if (val && (strcasecmp(val, "HS2") == 0 ||
-		    strcasecmp(val, "HS2-R2") == 0))
+		    strcasecmp(val, "HS2-R2") == 0 ||
+		    strcasecmp(val, "HS2-R3") == 0))
 		return cmd_sta_send_frame_hs2(dut, conn, cmd);
 	if (val && strcasecmp(val, "VHT") == 0)
 		return cmd_sta_send_frame_vht(dut, conn, cmd);
@@ -8695,7 +8697,8 @@ int cmd_sta_set_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	val = get_param(cmd, "program");
 	if (val && (strcasecmp(val, "HS2") == 0 ||
-		    strcasecmp(val, "HS2-R2") == 0))
+		    strcasecmp(val, "HS2-R2") == 0 ||
+		    strcasecmp(val, "HS2-R3") == 0))
 		return cmd_sta_set_parameter_hs2(dut, conn, cmd, intf);
 
 	return -1;
