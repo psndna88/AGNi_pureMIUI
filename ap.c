@@ -6816,7 +6816,7 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 			bssid[0] |= 0x02;
 
 		snprintf(ifname2, sizeof(ifname2), "%s_1", ifname);
-		fprintf(f, "bss=%s_1\n", ifname2);
+		fprintf(f, "bss=%s\n", ifname2);
 		fprintf(f, "ssid=%s\n", dut->ap_tag_ssid[0]);
 		if (dut->bridge)
 			fprintf(f, "bridge=%s\n", dut->bridge);
