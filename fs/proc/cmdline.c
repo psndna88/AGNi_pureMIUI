@@ -2,27 +2,14 @@
 #include <linux/init.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
+#include <linux/module.h>
 #include <asm/setup.h>
 
 static char new_command_line[COMMAND_LINE_SIZE];
+static char new_command_line2[COMMAND_LINE_SIZE];
 
-static int cmdline_proc_show(struct seq_file *m, void *v)
-{
-	seq_printf(m, "%s\n", new_command_line);
-	return 0;
-}
-
-static int cmdline_proc_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, cmdline_proc_show, NULL);
-}
-
-static const struct file_operations cmdline_proc_fops = {
-	.open		= cmdline_proc_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= single_release,
-};
+static bool selinux_flag = false;
+module_param(selinux_flag, bool, S_IRUGO | S_IWUSR | S_IWGRP);
 
 static void remove_flag(char *cmd, const char *flag)
 {
@@ -37,6 +24,34 @@ static void remove_flag(char *cmd, const char *flag)
 			*(start_addr - 1) = '\0';
 	}
 }
+
+static void remove_selinux_flag(char *cmd)
+{
+	remove_flag(cmd, "androidboot.selinux=");
+}
+
+static int cmdline_proc_show(struct seq_file *m, void *v)
+{
+	if (selinux_flag) {
+		remove_selinux_flag(new_command_line2);
+		seq_printf(m, "%s\n", new_command_line2);
+	} else {
+		seq_printf(m, "%s\n", new_command_line);
+	}
+	return 0;
+}
+
+static int cmdline_proc_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, cmdline_proc_show, NULL);
+}
+
+static const struct file_operations cmdline_proc_fops = {
+	.open		= cmdline_proc_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
 
 static void remove_safetynet_flags(char *cmd)
 {
@@ -55,6 +70,7 @@ static int __init proc_cmdline_init(void)
 	 * pass SafetyNet CTS check.
 	 */
 	remove_safetynet_flags(new_command_line);
+	strcpy(new_command_line2, new_command_line);
 
 	proc_create("cmdline", 0, NULL, &cmdline_proc_fops);
 	return 0;
