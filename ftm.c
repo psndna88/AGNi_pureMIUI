@@ -34,45 +34,6 @@ static const char WPA_ADDRESS_3_DISABLE[] =
 #define ETH_ALEN 6
 #endif
 
-static const char LOC_CAPI_COMMAND_STR[] = "sta_exec_action";
-
-static const char LOC_CAPI_INTERFACE[] = "interface";
-static const char LOC_CAPI_INTERFACE_VAL[] = "wlan0";
-
-static const char LOC_CAPI_PROG[] = "prog";
-static const char LOC_CAPI_PROG_VAL[] = "loc";
-
-static const char LOC_CAPI_PROGRAM[] = "program";
-static const char LOC_CAPI_PROGRAM_VAL1[] = "24G";
-static const char LOC_CAPI_PROGRAM_VAL2[] = "5G";
-
-static const char LOC_CAPI_DEST_MAC[]  = "destmac";
-static const char LOC_CAPI_OPER_CHAN[] = "operChn";
-static const char LOC_CAPI_TYPE_TRIGGER[] = "Trigger";
-static const char LOC_CAPI_TYPE_FTM_VAL[] = "FTMsession";
-static const char LOC_CAPI_TYPE_ANQP_VAL[] = "ANQPQuery";
-static const char LOC_CAPI_BURSTS_EXP[] = "burstsexponent";
-static const char LOC_CAPI_BURST_DURATION[] = "burstduration";
-static const char LOC_CAPI_MIN_DELTA_FTM[] = "mindeltaftm";
-static const char LOC_CAPI_PTSF[] = "partialtsf";
-static const char LOC_CAPI_ASAP[] = "ASAP";
-static const char LOC_CAPI_FTM_PER_BURST[] = "ftmsperburst";
-static const char LOC_CAPI_FORMAT_BW[] = "formatbwftm";
-static const char LOC_CAPI_BURST_PERIOD[] = "burstperiod";
-static const char LOC_CAPI_LOC_CIVIC[] = "askforloccivic";
-static const char LOC_CAPI_LCI[] = "askforlci";
-
-static const char LOC_CAPI_FRAME_NAME[] = "FrameName";
-static const char LOC_CAPI_FRAME_NAME_VAL_ANQP[] = "AnqpQuery";
-static const char LOC_CAPI_FRAME_NAME_VAL_NRR[] = "NeighReportReq";
-
-static const char LOC_CAPI_FQDN[] = "AskForPublicIdentifierURI-FQDN";
-static const char LOC_CAPI_ADDRESS3[] = "address3";
-static const char LOC_WILD_CARD_BSSID[] = "FF:FF:FF:FF:FF:FF";
-
-static const char LOC_CAPI_RM_FTMRR_NAME[] = "RMEnabledCapBitmap";
-static const char LOC_CAPI_INTERWORKING_NAME[] = "Interworking";
-
 #define LOC_MAX_RM_FLAGS 10
 #define LOC_RM_FLAG_VAL_ARRAY 2
 
@@ -267,16 +228,16 @@ int loc_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 {
 	const char *params = NULL;
 	enum lowi_tst_cmd cmnd = LOWI_TST_RANGING;
-	const char *program = get_param(cmd, LOC_CAPI_PROG);
-	const char *loc_op = get_param(cmd, LOC_CAPI_TYPE_TRIGGER);
-	const char *interface = get_param(cmd, LOC_CAPI_INTERFACE);
+	const char *program = get_param(cmd, "prog");
+	const char *loc_op = get_param(cmd, "Trigger");
+	const char *interface = get_param(cmd, "interface");
 
-	const char *destMacStr = get_param(cmd, LOC_CAPI_DEST_MAC);
-	const char *burstExp = get_param(cmd, LOC_CAPI_BURSTS_EXP);
-	const char *asap = get_param(cmd, LOC_CAPI_ASAP);
-	const char *fmtbw = get_param(cmd, LOC_CAPI_FORMAT_BW);
-	const char *locCivic = get_param(cmd, LOC_CAPI_LOC_CIVIC);
-	const char *lci = get_param(cmd, LOC_CAPI_LCI);
+	const char *destMacStr = get_param(cmd, "destmac");
+	const char *burstExp = get_param(cmd, "burstsexponent");
+	const char *asap = get_param(cmd, "ASAP");
+	const char *fmtbw = get_param(cmd, "formatbwftm");
+	const char *locCivic = get_param(cmd, "askforloccivic");
+	const char *lci = get_param(cmd, "askforlci");
 	struct capi_loc_cmd loc_cmd;
 
 	memset(&loc_cmd, 0, sizeof(loc_cmd));
@@ -287,7 +248,7 @@ int loc_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 		return -1;
 	}
 
-	cmnd = strcasecmp(loc_op, LOC_CAPI_TYPE_ANQP_VAL) == 0 ?
+	cmnd = strcasecmp(loc_op, "ANQPQuery") == 0 ?
 		LOWI_TST_ANQP_REQ : LOWI_TST_RANGING;
 	sigma_dut_print(dut, DUT_MSG_INFO, "%s - Going to perform: %s",
 			__func__, loc_op);
@@ -365,7 +326,7 @@ int loc_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 			return 0;
 		}
 
-		if (strcasecmp(program, LOC_CAPI_PROG_VAL) != 0) {
+		if (strcasecmp(program, "loc") != 0) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"%s - Unsupported Program: %s",
 					__func__, program);
@@ -374,7 +335,7 @@ int loc_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 			return 0;
 		}
 
-		if (strcasecmp(interface, LOC_CAPI_INTERFACE_VAL) != 0) {
+		if (strcasecmp(interface, "wlan0") != 0) {
 			sigma_dut_print(dut, DUT_MSG_INFO,
 					"%s - Unsupported Interface Type: %s",
 					__func__, interface);
@@ -437,16 +398,16 @@ int loc_cmd_sta_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *address3Cmnd = WPA_ADDRESS_3_DISABLE;
 	enum lowi_tst_cmd cmnd = LOWI_TST_NEIGHBOR_REPORT_REQ; /* Default */
 	/* Mandatory arguments */
-	const char *interface = get_param(cmd, LOC_CAPI_INTERFACE);
-	const char *program = get_param(cmd, LOC_CAPI_PROGRAM);
-	const char *destMacStr = get_param(cmd, LOC_CAPI_DEST_MAC);
-	const char *frameName = get_param(cmd, LOC_CAPI_FRAME_NAME);
+	const char *interface = get_param(cmd, "interface");
+	const char *program = get_param(cmd, "program");
+	const char *destMacStr = get_param(cmd, "destmac");
+	const char *frameName = get_param(cmd, "FrameName");
 
 	/* Optional Arguments */
-	const char *locCivic = get_param(cmd, LOC_CAPI_LOC_CIVIC);
-	const char *lci = get_param(cmd, LOC_CAPI_LCI);
-	const char *fqdn = get_param(cmd, LOC_CAPI_FQDN);
-	const char *address3 = get_param(cmd, LOC_CAPI_ADDRESS3);
+	const char *locCivic = get_param(cmd, "askforloccivic");
+	const char *lci = get_param(cmd, "askforlci");
+	const char *fqdn = get_param(cmd, "AskForPublicIdentifierURI-FQDN");
+	const char *address3 = get_param(cmd, "address3");
 
 	const char *params = NULL;
 
@@ -473,8 +434,7 @@ int loc_cmd_sta_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 		return 0;
 	}
 
-	if (strcasecmp(frameName, LOC_CAPI_FRAME_NAME_VAL_ANQP) == 0 &&
-	    !destMacStr) {
+	if (strcasecmp(frameName, "AnqpQuery") == 0 && !destMacStr) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"%s - Incomplete command in LOC CAPI request",
 				__func__);
@@ -497,13 +457,13 @@ int loc_cmd_sta_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 	} else {
 		sigma_dut_print(dut, DUT_MSG_DEBUG, "%s - address3: %s",
 				__func__, address3);
-		if (strcasecmp(address3, LOC_WILD_CARD_BSSID) == 0)
+		if (strcasecmp(address3, "FF:FF:FF:FF:FF:FF") == 0)
 			address3Cmnd = WPA_ADDRESS_3_ENABLE;
 		else
 			address3Cmnd = WPA_ADDRESS_3_DISABLE;
 	}
 
-	if (strcasecmp(program, LOC_CAPI_PROG_VAL) != 0) {
+	if (strcasecmp(program, "loc") != 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"%s - Unsupported Program: %s", __func__,
 				program);
@@ -513,7 +473,7 @@ int loc_cmd_sta_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	sigma_dut_print(dut, DUT_MSG_INFO, "%s - Triggering Frame: %s",
 			__func__, frameName);
-	if (strcasecmp(frameName, LOC_CAPI_FRAME_NAME_VAL_ANQP) == 0) {
+	if (strcasecmp(frameName, "AnqpQuery") == 0) {
 		cmnd = LOWI_TST_ANQP_REQ;
 		params = destMacStr;
 	} else {
@@ -648,8 +608,8 @@ int loc_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 				      struct sigma_conn *conn,
 				      struct sigma_cmd *cmd)
 {
-	const char *rmFTMRFlagStr = get_param(cmd, LOC_CAPI_RM_FTMRR_NAME);
-	const char *interworkingEn = get_param(cmd, LOC_CAPI_INTERWORKING_NAME);
+	const char *rmFTMRFlagStr = get_param(cmd, "RMEnabledCapBitmap");
+	const char *interworkingEn = get_param(cmd, "Interworking");
 	unsigned int rmFTMRFlag = 0;
 	unsigned int i, interworking = 0;
 	char rmBitFlags[LOC_MAX_RM_FLAGS][LOC_RM_FLAG_VAL_ARRAY];
@@ -668,7 +628,7 @@ int loc_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 	if (!rmFTMRFlagStr && !interworkingEn) {
 		sigma_dut_print(dut, DUT_MSG_INFO, "%s - 2", __func__);
 		sigma_dut_print(dut, DUT_MSG_ERROR, "%s - Did not get %s",
-				__func__, LOC_CAPI_RM_FTMRR_NAME);
+				__func__, "RMEnabledCapBitmap");
 		send_resp(dut, conn, SIGMA_COMPLETE, NULL);
 		return 0;
 	}

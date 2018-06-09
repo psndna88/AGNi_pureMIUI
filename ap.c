@@ -1397,6 +1397,17 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (val)
 		dut->ap_blestacnt = atoi(val);
 
+	val = get_param(cmd, "PPDUTxType");
+	if (val) {
+		if (strcasecmp(val, "MU") == 0) {
+			dut->ap_he_ppdu = PPDU_MU;
+		} else {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Unsupported PPDUTxType");
+			return 0;
+		}
+	}
+
 	return 1;
 }
 
@@ -5792,6 +5803,21 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 		run_system(dut, buf);
 		dut->hostapd_running = 1;
 	}
+
+	if (dut->ap_he_ppdu == PPDU_MU) {
+		run_system_wrapper(
+			dut, "wifitool %s setUnitTestCmd 0x47 2 11 1000000",
+			ifname);
+		run_system_wrapper(
+			dut, "wifitool %s setUnitTestCmd 0x47 2 17 1000000",
+			ifname);
+		run_system_wrapper(dut,
+				   "wifitool %s setUnitTestCmd 0x47 2 8 0",
+				   ifname);
+		run_system_wrapper(dut,
+				   "wifitool %s setUnitTestCmd 0x47 2 29 0",
+				   ifname);
+	}
 }
 
 
@@ -6790,7 +6816,7 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 			bssid[0] |= 0x02;
 
 		snprintf(ifname2, sizeof(ifname2), "%s_1", ifname);
-		fprintf(f, "bss=%s_1\n", ifname2);
+		fprintf(f, "bss=%s\n", ifname2);
 		fprintf(f, "ssid=%s\n", dut->ap_tag_ssid[0]);
 		if (dut->bridge)
 			fprintf(f, "bridge=%s\n", dut->bridge);
@@ -6800,6 +6826,8 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 
 		if (dut->ap_tag_key_mgmt[0] == AP2_OSEN) {
 			fprintf(f, "osen=1\n");
+			/* Disable DGAF for OSEN BSS */
+			fprintf(f, "disable_dgaf=1\n");
 			if (strlen(dut->ap2_radius_ipaddr))
 				fprintf(f, "auth_server_addr=%s\n",
 					dut->ap2_radius_ipaddr);
@@ -7670,6 +7698,8 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_pmksa_caching = 0;
 		dut->ap_80plus80 = 0;
 	}
+
+	dut->ap_he_ppdu = PPDU_NOT_SET;
 
 	dut->ap_oper_chn = 0;
 

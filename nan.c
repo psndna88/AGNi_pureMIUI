@@ -262,7 +262,6 @@ int sigma_nan_enable(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *master_pref = get_param(cmd, "MasterPref");
 	const char *rand_fac = get_param(cmd, "RandFactor");
 	const char *hop_count = get_param(cmd, "HopCount");
-	const char *high_tsf = get_param(cmd, "HighTSF");
 	const char *sdftx_band = get_param(cmd, "SDFTxBand");
 	const char *oper_chan = get_param(cmd, "oper_chn");
 	const char *further_avail_ind = get_param(cmd, "FurtherAvailInd");

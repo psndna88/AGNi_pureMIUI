@@ -1044,7 +1044,8 @@ static int cmd_start_wfd_connection(struct sigma_dut *dut,
 	switch (dut->wps_method) {
 	case WFA_CS_WPS_PIN_DISPLAY:
 		snprintf(cmd_buf + strlen(cmd_buf),
-			 sizeof(cmd_buf) - strlen(cmd_buf), " pin display");
+			 sizeof(cmd_buf) - strlen(cmd_buf), " %s display",
+			 dut->wps_pin);
 		break;
 	case WFA_CS_WPS_PIN_LABEL:
 		snprintf(cmd_buf + strlen(cmd_buf),
@@ -1282,7 +1283,8 @@ static int cmd_connect_go_start_wfd(struct sigma_dut *dut,
 		break;
 	case WFA_CS_WPS_PIN_DISPLAY:
 		snprintf(cmd_buf + strlen(cmd_buf),
-			 sizeof(cmd_buf) - strlen(cmd_buf), " pin display");
+			 sizeof(cmd_buf) - strlen(cmd_buf), " %s display",
+			 dut->wps_pin);
 		strlcpy(method, "display", sizeof(method));
 		break;
 	case WFA_CS_WPS_PIN_LABEL:
