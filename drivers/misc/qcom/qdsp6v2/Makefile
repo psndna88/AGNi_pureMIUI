@@ -3,6 +3,7 @@ obj-$(CONFIG_MSM_QDSP6V2_CODECS) += audio_wma.o audio_wmapro.o audio_aac.o audio
 obj-$(CONFIG_MSM_QDSP6V2_CODECS) += q6audio_v2.o q6audio_v2_aio.o
 obj-$(CONFIG_MSM_QDSP6V2_CODECS)  += audio_mp3.o audio_amrnb.o audio_amrwb.o audio_amrwbplus.o audio_evrc.o audio_qcelp.o amrwb_in.o audio_hwacc_effects.o
 obj-$(CONFIG_MSM_ULTRASOUND) += ultrasound/
+obj-$(CONFIG_DTS_EAGLE)         += dts_eagle/
 ccflags-y += -Os -fno-unswitch-loops -fno-predictive-commoning -fno-gcse-after-reload -fno-tree-loop-vectorize \
 	-fno-tree-loop-distribution -fno-tree-loop-distribute-patterns -fno-tree-slp-vectorize -fno-vect-cost-model \
 	-fno-tree-partial-pre -fno-peel-loops -fno-graphite-identity -fno-loop-interchange -fno-loop-strip-mine \
