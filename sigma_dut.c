@@ -39,6 +39,10 @@ char *sigma_cert_path = "/etc/wpa_supplicant";
  * otherwise default WMM-PS 0 */
 int sigma_wmm_ac = 0;
 
+/* For VO-Enterprise testing set this to 1 through argument
+ * to send periodic data.
+ */
+int sigma_periodic_data = 0;
 
 #ifdef ANDROID
 #include <android/log.h>
@@ -774,7 +778,7 @@ int main(int argc, char *argv[])
 
 	for (;;) {
 		c = getopt(argc, argv,
-			   "aAb:Bc:C:dDE:e:fF:gGhH:j:i:Ik:l:L:m:M:nN:o:O:p:P:qr:R:s:S:tT:uv:VWw:x:y:z:");
+			   "aAb:Bc:C:dDE:e:fF:gGhH:j:i:Ik:l:L:m:M:nN:o:O:p:P:qQr:R:s:S:tT:uv:VWw:x:y:z:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -844,6 +848,11 @@ int main(int argc, char *argv[])
 			break;
 		case 'q':
 			sigma_dut.debug_level++;
+			break;
+		case 'Q':
+			sigma_dut_print(&sigma_dut, DUT_MSG_INFO,
+					"Send Periodic data");
+			sigma_periodic_data = 1;
 			break;
 		case 'r':
 			if (strcmp(optarg, "HT40") == 0) {
@@ -960,7 +969,7 @@ int main(int argc, char *argv[])
 			break;
 		case 'h':
 		default:
-			printf("usage: sigma_dut [-aABdfGqDIntuVW] [-p<port>] "
+			printf("usage: sigma_dut [-aABdfGqQDIntuVW] [-p<port>] "
 			       "[-s<sniffer>] [-m<set_maccaddr.sh>] \\\n"
 				"       [-M<main ifname>] [-R<radio ifname>] "
 			       "[-S<station ifname>] [-P<p2p_ifname>]\\\n"

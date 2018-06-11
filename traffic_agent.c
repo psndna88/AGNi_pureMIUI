@@ -11,6 +11,8 @@
 
 #define TG_MAX_CLIENTS_CONNECTIONS 1
 
+/* To send periodic data for VO-Enterprise tests */
+extern int sigma_periodic_data;
 
 static int cmd_traffic_agent_config(struct sigma_dut *dut,
 				    struct sigma_conn *conn,
@@ -553,6 +555,107 @@ static void send_file(struct sigma_stream *s)
 	free(pkt);
 }
 
+static void send_periodic_data(struct sigma_stream *s)
+{
+	char *pkt;
+	struct timeval stop, now, start;
+	int res;
+	unsigned int counter = 0, total_sleep_usec = 0, total_pkts;
+	int sleep_usec = 0;
+
+	if (s->duration <= 0 || s->frame_rate < 0 || s->payload_size < 20)
+		return;
+
+	pkt = malloc(s->payload_size);
+	if (pkt == NULL)
+		return;
+	memset(pkt, 1, s->payload_size);
+	strncpy(pkt, "1345678", s->payload_size);
+
+	if (s->frame_rate == 0 && s->no_timestamps) {
+		send_file_fast(s, pkt);
+		free(pkt);
+		return;
+	}
+
+	gettimeofday(&stop, NULL);
+	stop.tv_sec += s->duration;
+
+	total_pkts = s->duration * s->frame_rate;
+
+	gettimeofday(&start, NULL);
+	while (!s->stop) {
+		counter++;
+		WPA_PUT_BE32(&pkt[8], counter);
+
+		if (sleep_usec) {
+			usleep(sleep_usec);
+			total_sleep_usec += sleep_usec;
+		}
+		gettimeofday(&now, NULL);
+
+		if (now.tv_sec > stop.tv_sec ||
+		    (now.tv_sec == stop.tv_sec && now.tv_usec >= stop.tv_usec))
+			break;
+
+		if (s->frame_rate && (unsigned int) s->tx_frames >= total_pkts)
+			break;
+
+		WPA_PUT_BE32(&pkt[12], now.tv_sec);
+		WPA_PUT_BE32(&pkt[16], now.tv_usec);
+
+		s->tx_act_frames++;
+		res = send(s->sock, pkt, s->payload_size, 0);
+		if (res >= 0) {
+			s->tx_frames++;
+			s->tx_payload_bytes += res;
+		} else {
+			switch (errno) {
+			case EAGAIN:
+			case ENOBUFS:
+				usleep(1000);
+				break;
+			case ECONNRESET:
+			case EPIPE:
+				s->stop = 1;
+				break;
+			default:
+				perror("send");
+				break;
+			}
+		}
+
+		if (s->frame_rate == 0)
+			sleep_usec = 0;
+		else {
+			struct timeval tmp;
+			int diff, duration, pkt_spacing;
+
+			gettimeofday(&now, NULL);
+			timersub(&now, &start, &tmp);
+
+			pkt_spacing = 1000000 / s->frame_rate ;
+			diff = tmp.tv_sec * 1000000 + tmp.tv_usec;
+			duration = (pkt_spacing) * s->tx_frames;
+
+			if (duration > diff) {
+				if ((duration - diff) > pkt_spacing)
+					sleep_usec = (total_sleep_usec +
+						      (duration - diff)) / s->tx_frames;
+				else
+					sleep_usec = duration - diff;
+			} else {
+				sleep_usec = 0;
+			}
+		}
+	}
+
+	sigma_dut_print(s->dut, DUT_MSG_DEBUG,
+			"send_periodic_data: counter %u s->tx_frames %d total_sleep_usec %u",
+			counter, s->tx_frames, total_sleep_usec);
+
+	free(pkt);
+}
 
 static void send_transaction(struct sigma_stream *s)
 {
@@ -668,7 +771,10 @@ static void * send_thread(void *ctx)
 		send_file(s);
 		break;
 	case SIGMA_PROFILE_IPTV:
-		send_file(s);
+		if (sigma_periodic_data)
+			send_periodic_data(s);
+		else
+			send_file(s);
 		break;
 	case SIGMA_PROFILE_TRANSACTION:
 		send_transaction(s);
