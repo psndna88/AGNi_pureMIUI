@@ -93,16 +93,6 @@ config DOLBY_DAP
 	 device, end point dependent post processing parameters and
 	 the various posrt processing parameters
 
-config DTS_EAGLE
-	bool "Enable DTS Eagle Support"
-	depends on SND_SOC_MSM_QDSP6V2_INTF
-	select SND_HWDEP
-	help
-	 To add DTS Eagle support on QDSP6 targets.
-	 Eagle is a DTS pre/post processing
-	 package that includes HeadphoneX. The configuration
-	 includes sending tuning parameters of various modules.
-
 config DOLBY_DS2
 	bool "Enable Dolby DS2"
 	depends on SND_SOC_MSM_QDSP6V2_INTF
@@ -273,7 +263,6 @@ config SND_SOC_MSM8X16
 	select MSM_QDSP6V2_CODECS
 	select SND_SOC_CPE
 	select SND_HWDEP
-        select DTS_EAGLE
 	select SPEAKER_EXT_PA
 	help
 	 To add support for SoC audio on MSM8X16.
@@ -334,7 +323,6 @@ config SND_SOC_MSM8994
 	select SND_SOC_CPE
 	select DOLBY_DS2
 	select SND_HWDEP
-        select DTS_EAGLE
 	help
 	 To add support for SoC audio on MSM8994.
 	 This will enable sound soc drivers which
