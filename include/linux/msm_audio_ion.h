@@ -42,5 +42,6 @@ int msm_audio_ion_import_legacy(const char *name, struct ion_client *client,
 int msm_audio_ion_free_legacy(struct ion_client *client,
 			struct ion_handle *handle);
 u32 populate_upper_32_bits(ion_phys_addr_t pa);
+extern u32 msm_audio_populate_upper_32_bits(ion_phys_addr_t pa);
 #endif /* _LINUX_MSM_AUDIO_ION_H */
 

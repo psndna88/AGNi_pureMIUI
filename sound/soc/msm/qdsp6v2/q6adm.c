@@ -18,6 +18,7 @@
 #include <linux/wait.h>
 #include <linux/qdsp6v2/apr.h>
 #include <linux/ratelimit.h>
+#include <linux/msm_audio_ion.h>
 #include <sound/apr_audio-v2.h>
 #include <sound/q6adm-v2.h>
 #include <sound/q6audio-v2.h>
