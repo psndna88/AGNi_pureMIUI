@@ -48,6 +48,18 @@ int sched_boost_handler(struct ctl_table *table, int write,
 	if (ret || !write)
 		goto done;
 
+#ifdef CONFIG_DYNAMIC_STUNE_BOOST
+	if (verify_boost_params(old_val, *data)) {
+		if (*data > 0)
+			stune_boost("top-app");
+		else
+			reset_stune_boost("top-app");
+	} else {
+		*data = old_val;
+		ret = -EINVAL;
+	}
+#endif // CONFIG_DYNAMIC_STUNE_BOOST
+
 done:
 	return ret;
 }
