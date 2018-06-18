@@ -21,6 +21,7 @@ extern struct reciprocal_value schedtune_spc_rdiv;
 static DEFINE_MUTEX(stune_boost_mutex);
 static struct schedtune *getSchedtune(char *st_name);
 static int dynamic_boost(struct schedtune *st, int boost);
+static int stune_boost_count = 0;
 #endif /* CONFIG_DYNAMIC_STUNE_BOOST */
 
 /*
@@ -900,6 +901,7 @@ static int _do_stune_boost(struct schedtune *st, int boost)
 	int ret = 0;
 
 	mutex_lock(&stune_boost_mutex);
+	++stune_boost_count;
 
 	/* Boost if new value is greater than current */
 	if (boost > st->boost)
@@ -919,7 +921,11 @@ int reset_stune_boost(char *st_name)
 		return -EINVAL;
 
 	mutex_lock(&stune_boost_mutex);
-	ret = dynamic_boost(st, st->boost_default);
+	if (stune_boost_count == 1)
+		ret = dynamic_boost(st, st->boost_default);
+
+	if (stune_boost_count >= 1)
+		--stune_boost_count;
 	mutex_unlock(&stune_boost_mutex);
 
 	return ret;
