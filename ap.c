@@ -6432,6 +6432,9 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 	char path[100];
 	enum driver_type drv;
 	const char *key_mgmt;
+#ifdef ANDROID
+	struct group *gr;
+#endif /* ANDROID */
 
 	drv = get_driver_type();
 
@@ -7084,8 +7087,9 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Error changing permissions");
 
-	if (chown(SIGMA_TMPDIR "/sigma_dut-ap.conf", -1,
-		  getgrnam("wifi")->gr_gid) < 0)
+	gr = getgrnam("wifi");
+	if (!gr ||
+	    chown(SIGMA_TMPDIR "/sigma_dut-ap.conf", -1, gr->gr_gid) < 0)
 		sigma_dut_print(dut, DUT_MSG_ERROR, "Error changing groupid");
 #endif /* ANDROID */
 
