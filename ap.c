@@ -1696,6 +1696,10 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 			dut->ap_key_mgmt = AP_WPA2_OWE;
 			dut->ap_cipher = AP_CCMP;
 			dut->ap_pmf = AP_PMF_REQUIRED;
+		} else if (strcasecmp(val, "WPA2-ENT-OSEN") == 0) {
+			dut->ap_key_mgmt = AP_WPA2_EAP_OSEN;
+			dut->ap_cipher = AP_CCMP;
+			dut->ap_pmf = AP_PMF_OPTIONAL;
 		} else if (strcasecmp(val, "NONE") == 0) {
 			dut->ap_key_mgmt = AP_OPEN;
 			dut->ap_cipher = AP_PLAIN;
@@ -3095,6 +3099,9 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 				 dut->ap_radius_password);
 			owrt_ap_set_vap(dut, vap_count, "auth_secret", buf);
 			break;
+		case AP_WPA2_EAP_OSEN:
+			/* TODO */
+			break;
 		case AP_SUITEB:
 			owrt_ap_set_vap(dut, vap_count, "suite_b", "192");
 			snprintf(buf, sizeof(buf), "gcmp");
@@ -3986,6 +3993,7 @@ static int cmd_wcn_ap_config_commit(struct sigma_dut *dut,
 	case AP_WPA_EAP:
 	case AP_SUITEB:
 	case AP_WPA2_OWE:
+	case AP_WPA2_EAP_OSEN:
 		/* Not supported */
 		break;
 	}
@@ -5913,6 +5921,10 @@ static int cmd_ath_ap_config_commit(struct sigma_dut *dut,
 			 dut->ap_radius_password);
 		run_system(dut, buf);
 		break;
+	case AP_WPA2_EAP_OSEN:
+		/* TODO */
+		sigma_dut_print(dut, DUT_MSG_ERROR, "EAP+OSEN not supported");
+		break;
 	case AP_SUITEB:
 		/* TODO */
 		sigma_dut_print(dut, DUT_MSG_ERROR, "SuiteB not supported");
@@ -6003,6 +6015,11 @@ static int cmd_ath_ap_config_commit(struct sigma_dut *dut,
 			snprintf(buf, sizeof(buf), "cfg -a AP_AUTH_SECRET_2=%s",
 				 dut->ap_radius_password);
 			run_system(dut, buf);
+			break;
+		case AP_WPA2_EAP_OSEN:
+			/* TODO */
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"EAP+OSEN not supported");
 			break;
 		case AP_SUITEB:
 			/* TODO */
@@ -6633,8 +6650,10 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 	case AP_WPA2_EAP:
 	case AP_WPA2_EAP_MIXED:
 	case AP_WPA_EAP:
+	case AP_WPA2_EAP_OSEN:
 		fprintf(f, "ieee8021x=1\n");
-		if (dut->ap_key_mgmt == AP_WPA2_EAP)
+		if (dut->ap_key_mgmt == AP_WPA2_EAP ||
+		    dut->ap_key_mgmt == AP_WPA2_EAP_OSEN)
 			fprintf(f, "wpa=2\n");
 		else if (dut->ap_key_mgmt == AP_WPA2_EAP_MIXED)
 			fprintf(f, "wpa=3\n");
@@ -6646,11 +6665,15 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 				dut->ap_add_sha256 ? " WPA-EAP-SHA256" : "");
 			break;
 		case AP_PMF_OPTIONAL:
-			fprintf(f, "wpa_key_mgmt=WPA-EAP%s\n",
-				dut->ap_add_sha256 ? " WPA-EAP-SHA256" : "");
+			fprintf(f, "wpa_key_mgmt=WPA-EAP%s%s\n",
+				dut->ap_add_sha256 ? " WPA-EAP-SHA256" : "",
+				dut->ap_key_mgmt == AP_WPA2_EAP_OSEN ? " OSEN" :
+				"");
 			break;
 		case AP_PMF_REQUIRED:
-			fprintf(f, "wpa_key_mgmt=WPA-EAP-SHA256\n");
+			fprintf(f, "wpa_key_mgmt=WPA-EAP-SHA256%s\n",
+				dut->ap_key_mgmt == AP_WPA2_EAP_OSEN ? " OSEN" :
+				"");
 			break;
 		}
 		fprintf(f, "wpa_pairwise=%s\n",
