@@ -102,6 +102,10 @@ struct wpa_ctrl * wpa_ctrl_open2(const char *ctrl_path,
 	int ret;
 	size_t res;
 	int tries = 0;
+#ifdef ANDROID
+	struct passwd *pw;
+	struct group *gr;
+#endif /* ANDROID */
 
 	if (ctrl_path == NULL)
 		return NULL;
@@ -158,8 +162,11 @@ try_again:
 
 #ifdef ANDROID
 	chmod(ctrl->local.sun_path, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
-	chown(ctrl->local.sun_path, getpwnam("system")->pw_uid,
-	      getgrnam("wifi")->gr_gid);
+	pw = getpwnam("system");
+	gr = getgrnam("wifi");
+	if (pw && gr)
+		chown(ctrl->local.sun_path, pw->pw_uid, gr->gr_gid);
+
 	/*
 	 * If the ctrl_path isn't an absolute pathname, assume that
 	 * it's the name of a socket in the Android reserved namespace.
