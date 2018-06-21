@@ -491,7 +491,6 @@ struct sigma_dut {
 	int ap_oper_icon_metadata;
 	int ap_tnc_file_name;
 	unsigned int ap_tnc_time_stamp;
-	char *ap_tnc_url;
 
 	int ap_fake_pkhash;
 	int ap_disable_protection;

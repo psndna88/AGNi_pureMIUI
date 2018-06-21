@@ -4356,9 +4356,6 @@ static int append_hostapd_conf_hs2(struct sigma_dut *dut, FILE *f)
 	if (dut->ap_tnc_time_stamp)
 		fprintf(f, "hs20_t_c_timestamp=%u\n", dut->ap_tnc_time_stamp);
 
-	if (dut->ap_tnc_url)
-		fprintf(f, "hs20_t_c_server_url=%s\n", dut->ap_tnc_url);
-
 	return 0;
 }
 
@@ -7526,8 +7523,6 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	dut->ap_oper_icon_metadata = 0;
 	dut->ap_tnc_file_name = 0;
 	dut->ap_tnc_time_stamp = 0;
-	free(dut->ap_tnc_url);
-	dut->ap_tnc_url = NULL;
 
 	if (dut->program == PROGRAM_HS2 || dut->program == PROGRAM_HS2_R2 ||
 	    dut->program == PROGRAM_IOTLP) {
@@ -9346,12 +9341,6 @@ static int cmd_ap_set_hs2(struct sigma_dut *dut, struct sigma_conn *conn,
 	val = get_param(cmd, "TnC_File_Time_Stamp");
 	if (val)
 		dut->ap_tnc_time_stamp = strtol(val, NULL, 10);
-
-	val = get_param(cmd, "TnC_URL");
-	if (val) {
-		free(dut->ap_tnc_url);
-		dut->ap_tnc_url = strdup(val);
-	}
 
 	return 1;
 }

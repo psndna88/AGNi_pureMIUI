@@ -1085,7 +1085,6 @@ int main(int argc, char *argv[])
 	free(sigma_dut.rsne_override);
 	free(sigma_dut.ap_sae_groups);
 	free(sigma_dut.dpp_peer_uri);
-	free(sigma_dut.ap_tnc_url);
 #ifdef NL80211_SUPPORT
 	nl80211_deinit(&sigma_dut, sigma_dut.nl_ctx);
 #endif /* NL80211_SUPPORT */
