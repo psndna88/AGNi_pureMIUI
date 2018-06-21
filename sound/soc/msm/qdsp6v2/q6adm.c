@@ -311,7 +311,7 @@ int adm_dts_eagle_set(int port_id, int copp_idx, int param_id,
 	admp.hdr.token = p_idx << 16 | copp_idx;
 	admp.hdr.opcode = ADM_CMD_SET_PP_PARAMS_V5;
 	admp.payload_addr_lsw = lower_32_bits(this_adm.outband_memmap.paddr);
-	admp.payload_addr_msw = msm_audio_populate_upper_32_bits(
+	admp.payload_addr_msw = populate_upper_32_bits(
 						this_adm.outband_memmap.paddr);
 	admp.mem_map_handle = atomic_read(&this_adm.mem_map_handles[
 					  ADM_DTS_EAGLE]);
@@ -421,7 +421,7 @@ int adm_dts_eagle_get(int port_id, int copp_idx, int param_id,
 	admp.data_payload_addr_lsw =
 				lower_32_bits(this_adm.outband_memmap.paddr);
 	admp.data_payload_addr_msw =
-				msm_audio_populate_upper_32_bits(
+				populate_upper_32_bits(
 						this_adm.outband_memmap.paddr);
 	admp.mem_map_handle = atomic_read(&this_adm.mem_map_handles[
 					  ADM_DTS_EAGLE]);
