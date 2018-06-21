@@ -5547,7 +5547,7 @@ int q6asm_dts_eagle_set(struct audio_client *ac, int param_id, uint32_t size,
 			__func__, po->kvaddr, &po->paddr);
 		ad->param.data_payload_addr_lsw = lower_32_bits(po->paddr);
 		ad->param.data_payload_addr_msw =
-				msm_audio_populate_upper_32_bits(po->paddr);
+				populate_upper_32_bits(po->paddr);
 		list_for_each_safe(ptr, next, &ac->port[IN].mem_map_handle) {
 			node = list_entry(ptr, struct asm_buffer_node, list);
 			if (node->buf_phys_addr == po->paddr) {
@@ -5659,7 +5659,7 @@ int q6asm_dts_eagle_get(struct audio_client *ac, int param_id, uint32_t size,
 			 __func__, po->kvaddr, &po->paddr);
 		ad->param.data_payload_addr_lsw = lower_32_bits(po->paddr);
 		ad->param.data_payload_addr_msw =
-				msm_audio_populate_upper_32_bits(po->paddr);
+				populate_upper_32_bits(po->paddr);
 		list_for_each_safe(ptr, next, &ac->port[IN].mem_map_handle) {
 			node = list_entry(ptr, struct asm_buffer_node, list);
 			if (node->buf_phys_addr == po->paddr) {
