@@ -79,6 +79,10 @@ struct regmap {
 	struct list_head debugfs_off_cache;
 	struct mutex cache_lock;
 #endif
+	//Austin +++
+	struct list_head proc_off_cache;
+	struct mutex proc_cache_lock;
+	//Austin ---
 
 	unsigned int max_register;
 	bool (*writeable_reg)(struct device *dev, unsigned int reg);
