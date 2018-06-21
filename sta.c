@@ -6426,10 +6426,12 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *val;
+	const char *program;
 	char buf[30];
 	int tkip = -1;
 	int wep = -1;
 
+	program = get_param(cmd, "Program");
 	val = get_param(cmd, "SGI80");
 	if (val) {
 		int sgi80;
@@ -6661,7 +6663,9 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		result = strtok_r(token, ";", &saveptr);
 		if (!result) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"VHT NSS not specified");
+					"NSS not specified");
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,NSS not specified");
 			return 0;
 		}
 		nss = atoi(result);
@@ -6676,82 +6680,123 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		result = strtok_r(NULL, ";", &saveptr);
 		if (result == NULL) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"VHTMCS NOT SPECIFIED!");
+					"MCS not specified");
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,MCS not specified");
 			return 0;
 		}
 		result = strtok_r(result, "-", &saveptr);
 		result = strtok_r(NULL, "-", &saveptr);
 		if (!result) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"VHT MCS not specified");
+					"MCS not specified");
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,MCS not specified");
 			return 0;
 		}
 		mcs = atoi(result);
 
-		snprintf(buf, sizeof(buf), "iwpriv %s vhtmcs %d", intf, mcs);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv mcs failed");
-		}
+		if (program && strcasecmp(program, "HE") == 0) {
+#ifdef NL80211_SUPPORT
+			enum he_mcs_config mcs_config;
+			int ret;
 
-		switch (nss) {
-		case 1:
-			switch (mcs) {
-			case 7:
-				vht_mcsmap = 0xfffc;
-				break;
-			case 8:
-				vht_mcsmap = 0xfffd;
-				break;
-			case 9:
-				vht_mcsmap = 0xfffe;
-				break;
-			default:
-				vht_mcsmap = 0xfffe;
-				break;
+			if (mcs >= 0 && mcs <= 7) {
+				mcs_config = HE_80_MCS0_7;
+			} else if (mcs > 7 && mcs <= 9) {
+				mcs_config = HE_80_MCS0_9;
+			} else if (mcs > 9 && mcs <= 11) {
+				mcs_config = HE_80_MCS0_11;
+			} else {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"nss_mcs_cap: HE: Invalid mcs: %d",
+						mcs);
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Invalid MCS");
+				return 0;
 			}
-			break;
-		case 2:
-			switch (mcs) {
-			case 7:
-				vht_mcsmap = 0xfff0;
-				break;
-			case 8:
-				vht_mcsmap = 0xfff5;
-				break;
-			case 9:
-				vht_mcsmap = 0xfffa;
-				break;
-			default:
-				vht_mcsmap = 0xfffa;
-				break;
+
+			ret = sta_set_he_mcs(dut, intf, mcs_config);
+			if (ret) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"nss_mcs_cap: HE: Setting of MCS failed, mcs_config: %d, ret: %d",
+						mcs_config, ret);
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to set MCS");
+				return 0;
 			}
-			break;
-		case 3:
-			switch (mcs) {
-			case 7:
-				vht_mcsmap = 0xffc0;
-				break;
-			case 8:
-				vht_mcsmap = 0xffd5;
-				break;
-			case 9:
-				vht_mcsmap = 0xffea;
-				break;
-			default:
-				vht_mcsmap = 0xffea;
-				break;
-			}
-			break;
-		default:
-			vht_mcsmap = 0xffea;
-			break;
-		}
-		snprintf(buf, sizeof(buf), "iwpriv %s vht_mcsmap 0x%04x",
-			 intf, vht_mcsmap);
-		if (system(buf) != 0) {
+#else /* NL80211_SUPPORT */
 			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv vht_mcsmap failed");
+					"nss_mcs_cap: HE: MCS cannot be changed without NL80211_SUPPORT defined");
+#endif /* NL80211_SUPPORT */
+		} else {
+			snprintf(buf, sizeof(buf), "iwpriv %s vhtmcs %d",
+				 intf, mcs);
+			if (system(buf) != 0) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"iwpriv mcs failed");
+			}
+
+			switch (nss) {
+			case 1:
+				switch (mcs) {
+				case 7:
+					vht_mcsmap = 0xfffc;
+					break;
+				case 8:
+					vht_mcsmap = 0xfffd;
+					break;
+				case 9:
+					vht_mcsmap = 0xfffe;
+					break;
+				default:
+					vht_mcsmap = 0xfffe;
+					break;
+				}
+				break;
+			case 2:
+				switch (mcs) {
+				case 7:
+					vht_mcsmap = 0xfff0;
+					break;
+				case 8:
+					vht_mcsmap = 0xfff5;
+					break;
+				case 9:
+					vht_mcsmap = 0xfffa;
+					break;
+				default:
+					vht_mcsmap = 0xfffa;
+					break;
+				}
+				break;
+			case 3:
+				switch (mcs) {
+				case 7:
+					vht_mcsmap = 0xffc0;
+					break;
+				case 8:
+					vht_mcsmap = 0xffd5;
+					break;
+				case 9:
+					vht_mcsmap = 0xffea;
+					break;
+				default:
+					vht_mcsmap = 0xffea;
+					break;
+				}
+				break;
+			default:
+				vht_mcsmap = 0xffea;
+				break;
+			}
+			snprintf(buf, sizeof(buf),
+				 "iwpriv %s vht_mcsmap 0x%04x",
+				 intf, vht_mcsmap);
+			if (system(buf) != 0) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"iwpriv vht_mcsmap failed");
+			}
 		}
 	}
 
