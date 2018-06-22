@@ -168,12 +168,12 @@ enum tasha_sido_voltage {
 	SIDO_VOLTAGE_NOMINAL_MV = 1100,
 };
 
-static int huwifi_mode = 1;
+static int huwifi_mode = 0;
 module_param(huwifi_mode, int,
 	S_IRUGO | S_IWUSR | S_IWGRP);
 MODULE_PARM_DESC(huwifi_mode, "enable/disable l UHQA Mode");
 
-static int low_distort_amp = 1;
+static int low_distort_amp = 0;
 module_param(low_distort_amp, int,
 	S_IRUGO | S_IWUSR | S_IWGRP);
 MODULE_PARM_DESC(low_distort_amp, "enable/disable l Class AB Mode");
