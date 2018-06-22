@@ -95,9 +95,10 @@ enum sigma_program sigma_program_to_enum(const char *prog)
 	if (strcasecmp(prog, "HS2") == 0)
 		return PROGRAM_HS2;
 	if (strcasecmp(prog, "HS2_R2") == 0 ||
-	    strcasecmp(prog, "HS2-R2") == 0 ||
-	    strcasecmp(prog, "HS2-R3") == 0)
+	    strcasecmp(prog, "HS2-R2") == 0)
 		return PROGRAM_HS2_R2;
+	if (strcasecmp(prog, "HS2-R3") == 0)
+		return PROGRAM_HS2_R3;
 	if (strcasecmp(prog, "WFD") == 0)
 		return PROGRAM_WFD;
 	if (strcasecmp(prog, "DisplayR2") == 0)
