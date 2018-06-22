@@ -6687,6 +6687,12 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 				dut->ap_radius_port);
 		fprintf(f, "auth_server_shared_secret=%s\n",
 			dut->ap_radius_password);
+		if (dut->program == PROGRAM_HS2_R3) {
+			fprintf(f, "radius_das_port=3799\n");
+			fprintf(f, "radius_das_client=0.0.0.0 %s\n",
+				dut->ap_radius_password);
+			fprintf(f, "radius_das_require_event_timestamp=1\n");
+		}
 		break;
 	case AP_SUITEB:
 		fprintf(f, "ieee8021x=1\n");
