@@ -240,6 +240,14 @@ unsigned int freq_to_channel(unsigned int freq)
 }
 
 
+int is_ipv6_addr(const char *str)
+{
+	struct sockaddr_in6 addr;
+
+	return inet_pton(AF_INET6, str, &(addr.sin6_addr));
+}
+
+
 void convert_mac_addr_to_ipv6_lladdr(u8 *mac_addr, char *ipv6_buf,
 				     size_t buf_len)
 {

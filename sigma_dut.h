@@ -871,6 +871,7 @@ int parse_mac_address(struct sigma_dut *dut, const char *arg,
 		      unsigned char *addr);
 unsigned int channel_to_freq(unsigned int channel);
 unsigned int freq_to_channel(unsigned int freq);
+int is_ipv6_addr(const char *str);
 void convert_mac_addr_to_ipv6_lladdr(u8 *mac_addr, char *ipv6_buf,
 				     size_t buf_len);
 

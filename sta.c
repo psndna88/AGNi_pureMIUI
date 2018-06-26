@@ -453,14 +453,6 @@ int is_ip_addr(const char *str)
 }
 
 
-int is_ipv6_addr(const char *str)
-{
-	struct sockaddr_in6 addr;
-
-	return inet_pton(AF_INET6, str, &(addr.sin6_addr));
-}
-
-
 int get_ip_config(struct sigma_dut *dut, const char *ifname, char *buf,
 		  size_t buf_len)
 {
