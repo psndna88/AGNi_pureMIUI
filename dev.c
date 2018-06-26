@@ -1,6 +1,7 @@
 /*
  * Sigma Control API DUT (station/AP/sniffer)
  * Copyright (c) 2011-2013, 2017, Qualcomm Atheros, Inc.
+ * Copyright (c) 2018, The Linux Foundation
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
@@ -103,6 +104,27 @@ static int cmd_dev_configure_ie(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int cmd_dev_start_test(struct sigma_dut *dut, struct sigma_conn *conn,
+			      struct sigma_cmd *cmd)
+{
+	return 1;
+}
+
+
+static int cmd_dev_stop_test(struct sigma_dut *dut, struct sigma_conn *conn,
+			     struct sigma_cmd *cmd)
+{
+	return 1;
+}
+
+
+static int cmd_dev_get_log(struct sigma_dut *dut, struct sigma_conn *conn,
+			   struct sigma_cmd *cmd)
+{
+	return 1;
+}
+
+
 static int req_intf(struct sigma_cmd *cmd)
 {
 	return get_param(cmd, "interface") == NULL ? -1 : 0;
@@ -135,4 +157,7 @@ void dev_register_cmds(void)
 	sigma_dut_reg_cmd("dev_exec_action", req_prog,
 			  cmd_dev_exec_action);
 	sigma_dut_reg_cmd("dev_configure_ie", req_intf, cmd_dev_configure_ie);
+	sigma_dut_reg_cmd("dev_start_test", NULL, cmd_dev_start_test);
+	sigma_dut_reg_cmd("dev_stop_test", NULL, cmd_dev_stop_test);
+	sigma_dut_reg_cmd("dev_get_log", NULL, cmd_dev_get_log);
 }
