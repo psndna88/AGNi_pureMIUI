@@ -778,6 +778,11 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 #if NAN_CERT_VERSION >= 3
 	const char *qos_config = get_param(cmd, "QoS");
 #endif
+#if (NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+	const char *ndpe_enable = get_param(cmd, "Ndpe");
+	const char *ndpe_attr = get_param(cmd, "ndpeAttr");
+#endif
 	wifi_error ret;
 	NanDataPathInitiatorRequest init_req;
 	NanDebugParams cfg_debug;
@@ -869,6 +874,34 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 	}
 #endif
 
+#if (NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+	if (ndpe_enable &&
+	    strcasecmp(ndpe_enable, "Enable") == 0)
+		dut->ndpe = 1;
+
+	if (dut->ndpe && ndpe_attr) {
+		NanDebugParams cfg_debug;
+		int ndpe_attr_val;
+
+		memset(&cfg_debug, 0, sizeof(NanDebugParams));
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_DISABLE_NDPE;
+		if (strcasecmp(ndpe_attr, "Absent") == 0)
+			ndpe_attr_val = NAN_NDPE_ATTR_ABSENT;
+		else
+			ndpe_attr_val = NAN_NDPE_ATTR_PRESENT;
+		memcpy(cfg_debug.debug_cmd_data, &ndpe_attr_val, sizeof(int));
+		size = sizeof(u32) + sizeof(int);
+		ret = nan_debug_command_config(0, global_interface_handle,
+					       cfg_debug, size);
+		if (ret != WIFI_SUCCESS) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "NAN config ndpeAttr failed");
+			return 0;
+		}
+	}
+#endif
+
 	/*
 	 * Setting this flag, so that interface for ping6 command
 	 * is set appropriately in traffic_send_ping().
@@ -919,6 +952,23 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 				init_req.key_info.body.pmk_info.pmk_len);
 	}
 
+#if (NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+	if (dut->ndpe) {
+		unsigned char nan_mac_addr[ETH_ALEN];
+		size_t addr_len = 0;
+
+		get_hwaddr("nan0", nan_mac_addr);
+		addr_len = convert_mac_addr_to_ipv6_linklocal(
+			nan_mac_addr, &init_req.nan_ipv6_intf_addr[0]);
+		init_req.nan_ipv6_addr_present = 1;
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"%s: Initiator Request: IPv6:",  __func__);
+		nan_hex_dump(dut, &init_req.nan_ipv6_intf_addr[0],
+			     NAN_IPV6_ADDR_LEN);
+	}
+#endif
+
 	ret = nan_data_request_initiator(0, global_interface_handle, &init_req);
 	if (ret != WIFI_SUCCESS) {
 		send_resp(dut, conn, SIGMA_ERROR,
@@ -936,6 +986,10 @@ static int sigma_nan_data_response(struct sigma_dut *dut,
 {
 	const char *ndl_response = get_param(cmd, "NDLresponse");
 	const char *m4_response_type = get_param(cmd, "M4ResponseType");
+#if (NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+	const char *ndpe_attr = get_param(cmd, "ndpeAttr");
+#endif
 	wifi_error ret;
 	NanDebugParams cfg_debug;
 	int size;
@@ -1001,6 +1055,29 @@ static int sigma_nan_data_response(struct sigma_dut *dut,
 				  "Nan config request failed");
 		}
 	}
+
+#if (NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+	if (ndpe_attr && dut->ndpe) {
+		int ndpe_attr_val;
+
+		memset(&cfg_debug, 0, sizeof(NanDebugParams));
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_DISABLE_NDPE;
+		if (strcasecmp(ndpe_attr, "Absent") == 0)
+			ndpe_attr_val = NAN_NDPE_ATTR_ABSENT;
+		else
+			ndpe_attr_val = NAN_NDPE_ATTR_PRESENT;
+		memcpy(cfg_debug.debug_cmd_data, &ndpe_attr_val, sizeof(int));
+		size = sizeof(u32) + sizeof(int);
+		ret = nan_debug_command_config(0, global_interface_handle,
+					       cfg_debug, size);
+		if (ret != WIFI_SUCCESS) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "NAN config ndpeAttr failed");
+			return 0;
+		}
+	}
+#endif
 
 	return 0;
 }
