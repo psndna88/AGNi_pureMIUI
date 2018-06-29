@@ -570,7 +570,7 @@ static void send_periodic_data(struct sigma_stream *s)
 	if (pkt == NULL)
 		return;
 	memset(pkt, 1, s->payload_size);
-	strncpy(pkt, "1345678", s->payload_size);
+	strlcpy(pkt, "1345678", s->payload_size);
 
 	if (s->frame_rate == 0 && s->no_timestamps) {
 		send_file_fast(s, pkt);
