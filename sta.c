@@ -6464,26 +6464,30 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		case DRIVER_ATHEROS:
 			ath_sta_set_txsp_stream(dut, intf, "1SS");
 			ath_sta_set_rxsp_stream(dut, intf, "1SS");
+			snprintf(buf, sizeof(buf), "iwpriv %s vhtmubfee 1",
+				 intf);
+			if (system(buf) != 0) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"iwpriv vhtmubfee failed");
+			}
+			snprintf(buf, sizeof(buf), "iwpriv %s vhtmubfer 1",
+				 intf);
+			if (system(buf) != 0) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"iwpriv vhtmubfer failed");
+			}
+			break;
 		case DRIVER_WCN:
 			if (wcn_sta_set_sp_stream(dut, intf, "1SS") < 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "ErrorCode,Failed to set RX/TXSP_STREAM");
 				return 0;
 			}
+			break;
 		default:
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Setting SP_STREAM not supported");
 			break;
-		}
-		snprintf(buf, sizeof(buf), "iwpriv %s vhtmubfee 1", intf);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv vhtmubfee failed");
-		}
-		snprintf(buf, sizeof(buf), "iwpriv %s vhtmubfer 1", intf);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv vhtmubfer failed");
 		}
 	}
 
