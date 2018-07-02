@@ -6419,7 +6419,7 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 	const char *intf = get_param(cmd, "Interface");
 	const char *val;
 	const char *program;
-	char buf[30];
+	char buf[60];
 	int tkip = -1;
 	int wep = -1;
 
