@@ -6825,29 +6825,29 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		}
 	}
 
-	 val = get_param(cmd, "txBandwidth");
-	 if (val) {
-		 switch (get_driver_type()) {
-		 case DRIVER_WCN:
-			 if (wcn_sta_set_width(dut, intf, val) < 0) {
-				 send_resp(dut, conn, SIGMA_ERROR,
-					   "ErrorCode,Failed to set txBandwidth");
-				 return 0;
-			 }
-			 break;
-		 case DRIVER_ATHEROS:
-			 if (ath_set_width(dut, conn, intf, val) < 0) {
-				 send_resp(dut, conn, SIGMA_ERROR,
-					   "ErrorCode,Failed to set txBandwidth");
-				 return 0;
-			 }
-			 break;
-		 default:
-			 sigma_dut_print(dut, DUT_MSG_ERROR,
-					 "Setting txBandwidth not supported");
-			 break;
-		 }
-	 }
+	val = get_param(cmd, "txBandwidth");
+	if (val) {
+		switch (get_driver_type()) {
+		case DRIVER_WCN:
+			if (wcn_sta_set_width(dut, intf, val) < 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "ErrorCode,Failed to set txBandwidth");
+				return 0;
+			}
+			break;
+		case DRIVER_ATHEROS:
+			if (ath_set_width(dut, conn, intf, val) < 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "ErrorCode,Failed to set txBandwidth");
+				return 0;
+			}
+			break;
+		default:
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Setting txBandwidth not supported");
+			break;
+		}
+	}
 
 	return cmd_sta_set_wireless_common(intf, dut, conn, cmd);
 }
