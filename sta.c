@@ -5872,6 +5872,56 @@ static int sta_set_tx_beamformee(struct sigma_dut *dut, const char *intf,
 }
 
 
+static int sta_set_beamformee_sts(struct sigma_dut *dut, const char *intf,
+				  int val)
+{
+#ifdef NL80211_SUPPORT
+	struct nl_msg *msg;
+	int ret = 0;
+	struct nlattr *params;
+	int ifindex;
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s failed, val:%d",
+				__func__, intf, val);
+		return -1;
+	}
+
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+				    NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
+	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    nla_put_u8(msg,
+		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_TX_BEAMFORMEE_NSTS,
+		       val)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding vendor_cmd and vendor_data, val: %d",
+				__func__, val);
+		nlmsg_free(msg);
+		return -1;
+	}
+	nla_nest_end(msg, params);
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in send_and_recv_msgs, ret=%d, val=%d",
+				__func__, ret, val);
+	}
+	return ret;
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"beamformee sts cannot be changed without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
 static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 				  const char *type)
 {
@@ -5940,6 +5990,11 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 		if (sta_set_he_ltf(dut, intf, QCA_WLAN_HE_LTF_AUTO)) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Set LTF config to default in sta_reset_default_wcn failed");
+		}
+
+		if (sta_set_beamformee_sts(dut, intf, 0)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to set BeamformeeSTS");
 		}
 #endif /* NL80211_SUPPORT */
 
@@ -6846,6 +6901,15 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Setting txBandwidth not supported");
 			break;
+		}
+	}
+
+	val = get_param(cmd, "BeamformeeSTS");
+	if (val) {
+		if (sta_set_beamformee_sts(dut, intf, atoi(val))) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to set BeamformeeSTS");
+			return 0;
 		}
 	}
 
