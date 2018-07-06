@@ -6493,15 +6493,35 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 
 	val = get_param(cmd, "TxBF");
 	if (val && (strcmp(val, "1") == 0 || strcasecmp(val, "Enable") == 0)) {
-		snprintf(buf, sizeof(buf), "iwpriv %s vhtsubfee 1", intf);
-		if (system(buf) != 0) {
+		switch (get_driver_type()) {
+		case DRIVER_WCN:
+			if (sta_set_tx_beamformee(dut, intf, 1)) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "ErrorCode,Failed to set TX beamformee enable");
+				return 0;
+			}
+			break;
+		case DRIVER_ATHEROS:
+			snprintf(buf, sizeof(buf), "iwpriv %s vhtsubfee 1",
+				 intf);
+			if (system(buf) != 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "ErrorCode,Setting vhtsubfee failed");
+				return 0;
+			}
+
+			snprintf(buf, sizeof(buf), "iwpriv %s vhtsubfer 1",
+				 intf);
+			if (system(buf) != 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "ErrorCode,Setting vhtsubfer failed");
+				return 0;
+			}
+			break;
+		default:
 			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv vhtsubfee failed");
-		}
-		snprintf(buf, sizeof(buf), "iwpriv %s vhtsubfer 1", intf);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv vhtsubfer failed");
+					"Unsupported driver type");
+			break;
 		}
 	}
 
