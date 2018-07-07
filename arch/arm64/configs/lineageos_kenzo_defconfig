@@ -1,4 +1,4 @@
-CONFIG_LOCALVERSION="-Escrima-X24-Kamui-LightningBlade-PurpleLightning"
+CONFIG_LOCALVERSION="-Escrima-X25-Kamui-LightningBlade-PurpleLightning"
 CONFIG_SYSVIPC=y
 CONFIG_AUDIT=y
 CONFIG_NO_HZ=y
