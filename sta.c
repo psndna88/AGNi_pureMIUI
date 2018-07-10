@@ -6926,6 +6926,12 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 
 	val = get_param(cmd, "BeamformeeSTS");
 	if (val) {
+		if (sta_set_tx_beamformee(dut, intf, 1)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+					"ErrorCode,Failed to set TX beamformee enable");
+			return 0;
+		}
+
 		if (sta_set_beamformee_sts(dut, intf, atoi(val))) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,Failed to set BeamformeeSTS");
