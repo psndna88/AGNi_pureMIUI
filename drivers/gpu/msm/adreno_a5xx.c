@@ -363,7 +363,7 @@ static void a5xx_protect_init(struct adreno_device *adreno_dev)
 	adreno_set_protected_registers(adreno_dev, &index, 0xE70, 4);
 
 	/* UCHE registers */
-	adreno_set_protected_registers(adreno_dev, &index, 0xE80, ilog2(16));
+	adreno_set_protected_registers(adreno_dev, &index, 0xE87, 4);
 
 	/* SMMU registers */
 	iommu_regs = kgsl_mmu_get_prot_regs(&device->mmu);
@@ -468,9 +468,6 @@ static void a5xx_regulator_disable(struct adreno_device *adreno_dev)
 {
 	unsigned int reg;
 	struct kgsl_device *device = &adreno_dev->dev;
-
-	if (adreno_is_a510(adreno_dev))
-		return;
 
 	/* If feature is not supported or not enabled */
 	if (!adreno_is_a510(adreno_dev) &&
@@ -1076,8 +1073,7 @@ static void _load_regfile(struct adreno_device *adreno_dev)
 	/* All offset numbers calculated from file description */
 	while (block_total < fw_size) {
 		block_size = block[0];
-		if (((block_total + block_size) >= fw_size)
-				|| block_size < 5)
+		if (block_size >= fw_size || block_size < 2)
 			goto err;
 		if (block[1] != GPMU_SEQUENCE_ID)
 			goto err;
@@ -1092,9 +1088,6 @@ static void _load_regfile(struct adreno_device *adreno_dev)
 				goto err;
 
 			adreno_dev->lm_fw = fw;
-
-			if (block[2] > (block_size - 2))
-				goto err;
 			adreno_dev->lm_sequence = block + block[2] + 3;
 			adreno_dev->lm_size = block_size - block[2] - 2;
 		}
@@ -1442,30 +1435,8 @@ static void a5xx_start(struct adreno_device *adreno_dev)
 		kgsl_regwrite(device, A5XX_SP_DBG_ECO_CNTL, val);
 	}
 
-	/*
-	 * Disable UCHE global filter as SP can invalidate/flush
-	 * independently
-	 */
-	kgsl_regwrite(device, A5XX_UCHE_MODE_CNTL, BIT(29));
-
 	/* Set the USE_RETENTION_FLOPS chicken bit */
 	kgsl_regwrite(device, A5XX_CP_CHICKEN_DBG, 0x02000000);
-
-	/*
-	 *  In A5x, CCU can send context_done event of a particular context to
-	 *  UCHE which ultimately reaches CP even when there is valid
-	 *  transaction of that context inside CCU. This can let CP to program
-	 *  config registers, which will make the "valid transaction" inside
-	 *  CCU to be interpreted differently. This can cause gpu fault. This
-	 *  bug is fixed in latest A510 revision. To enable this bug fix -
-	 *  bit[11] of RB_DBG_ECO_CNTL need to be set to 0, default is 1
-	 *  (disable). For older A510 version this bit is unused.
-	 */
-	if (adreno_is_a510(adreno_dev)) {
-		kgsl_regread(device, A5XX_RB_DBG_ECO_CNTL, &val);
-		val = (val & (~(1 << 11)));
-		kgsl_regwrite(device, A5XX_RB_DBG_ECO_CNTL, val);
-	}
 
 	/* Enable ISDB mode if requested */
 	if (test_bit(ADRENO_DEVICE_ISDB_ENABLED, &adreno_dev->priv)) {

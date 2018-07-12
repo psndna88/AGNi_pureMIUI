@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -46,10 +46,6 @@
 #else
 /* bitmap of the page sizes currently supported */
 #define MSM_IOMMU_PGSIZES	(SZ_4K | SZ_64K | SZ_1M | SZ_16M)
-#endif
-
-#if defined(CONFIG_IOMMU_AARCH64)
-static unsigned int iommu_max_va_size = CONFIG_IOMMU_MAX_VA;
 #endif
 
 #define IOMMU_USEC_STEP		10
@@ -421,15 +417,8 @@ static int __flush_iotlb_va(struct iommu_domain *domain, unsigned long va)
 		if (ret)
 			goto fail;
 
-#ifdef CONFIG_IOMMU_AARCH64
-		va &= CB_TLBIVA_VA;
-		va >>= 12;
-		va |= (u64)ctx_drvdata->asid << CB_TLBIVA_ASID_SHIFT;
-#else
-		va &= CB_TLBIVA_VA;
-		va |= ctx_drvdata->asid << CB_TLBIVA_ASID_SHIFT;
-#endif
-		SET_TLBIVA(iommu_drvdata->cb_base, ctx_drvdata->num, va);
+		SET_TLBIVA(iommu_drvdata->cb_base, ctx_drvdata->num,
+				ctx_drvdata->asid | (va & CB_TLBIVA_VA));
 		__sync_tlb(iommu_drvdata, ctx_drvdata->num, priv);
 		__disable_clocks(iommu_drvdata);
 	}
@@ -568,7 +557,6 @@ static void __reset_context(struct msm_iommu_drvdata *iommu_drvdata, int ctx)
 	SET_TTBCR(base, ctx, 0);
 	SET_TTBR0(base, ctx, 0);
 	SET_TTBR1(base, ctx, 0);
-	SET_TCR2(base, ctx, 0);
 	mb();
 }
 
@@ -634,8 +622,8 @@ static void msm_iommu_set_ASID(void __iomem *base, unsigned int ctx_num,
 static inline phys_addr_t msm_iommu_get_phy_from_PAR(unsigned long va, u64 par)
 {
 	phys_addr_t phy;
-	phy = (par & (((1ULL << iommu_max_va_size)  - 1) &
-		      PAGE_MASK)) | (va & (PAGE_SIZE - 1));
+	/* Upper 48 bits from PAR, lower 12 from VA */
+	phy = (par & 0xFFFFFFFFF000ULL) | (va & 0x000000000FFFULL);
 	return phy;
 }
 
@@ -646,23 +634,7 @@ static void msm_iommu_setup_ctx(void __iomem *base, unsigned int ctx)
 	 * gets more physical size, we need to change for SMMU too.
 	 * Change CB_TCR2_PA in that case.
 	 */
-	if (iommu_max_va_size == 39) {
-		SET_CB_TCR2_SEP(base, ctx, 2);    /* bit[39] as sign bit */
-		SET_CB_TTBCR_T0SZ(base, ctx, 25); /* 39-bit VA */
-	} else if (iommu_max_va_size == 48) {
-		SET_CB_TCR2_SEP(base, ctx, 7);    /* bit[48] as sign bit */
-	} else {
-		BUG(); /*not supported*/
-	}
-
-	/*
-	 * Set EPD1 as 1, If a TLB miss occurs when SMMU_CBn_TTBR1 is used,
-	 * no translation table walk is performed and an L1 Section translation
-	 * fault is returned.
-	 */
-	SET_CB_TTBCR_EPD1(base, ctx, 1);
-
-	SET_CB_TCR2_PA(base, ctx, 1);  /* PASize 36 bit, 64 GB*/
+	SET_CB_TCR2_SEP(base, ctx, 7); /* bit[48] as sign bit */
 }
 
 static void msm_iommu_setup_memory_remap(void __iomem *base, unsigned int ctx)
@@ -971,10 +943,10 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 		goto unlock;
 	}
 
-	if (ctx_drvdata->attach_count >= 1) {
-		++ctx_drvdata->attach_count;
+	++ctx_drvdata->attach_count;
+
+	if (ctx_drvdata->attach_count > 1)
 		goto already_attached;
-	}
 
 	spin_lock_irqsave(&msm_iommu_spin_lock, flags);
 	if (!list_empty(&ctx_drvdata->attached_elm)) {
@@ -1009,9 +981,7 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 	}
 
 	/* We can only do this once */
-	if (!iommu_drvdata->ctx_attach_count &&
-	    !((iommu_drvdata->model == MMU_500) &&
-	      (iommu_drvdata->sec_cfg_restored == true))) {
+	if (!iommu_drvdata->ctx_attach_count) {
 		if (!is_secure) {
 			iommu_halt(iommu_drvdata);
 			__program_iommu(iommu_drvdata);
@@ -1050,7 +1020,6 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 
 	ctx_drvdata->attached_domain = domain;
 	++iommu_drvdata->ctx_attach_count;
-	++ctx_drvdata->attach_count;
 
 already_attached:
 	mutex_unlock(&msm_iommu_lock);
@@ -1593,8 +1562,8 @@ irqreturn_t msm_iommu_fault_handler_v2(int irq, void *dev_id)
 				pagetable_phys = msm_iommu_iova_to_phys_soft(
 					ctx_drvdata->attached_domain,
 					faulty_iova);
-				pr_err("Page table in DDR shows PA = %lx\n",
-					(unsigned long) pagetable_phys);
+				pr_err("Page table in DDR shows PA = %x\n",
+					(unsigned int) pagetable_phys);
 			}
 		}
 

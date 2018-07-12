@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, 2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -74,7 +74,7 @@ static const struct of_device_id msm_smmu_list[] = {
 };
 
 struct msm_scm_paddr_list {
-	phys_addr_t list;
+	unsigned int list;
 	unsigned int list_size;
 	unsigned int size;
 };
@@ -264,8 +264,8 @@ static void print_iova_to_phys(struct msm_iommu_ctx_drvdata *ctx_drvdata,
 		pagetable_phys = msm_iommu_iova_to_phys_soft(
 					ctx_drvdata->attached_domain,
 					faulty_iova);
-		pr_err("Page table in DDR shows PA = %pa\n",
-					&pagetable_phys);
+		pr_err("Page table in DDR shows PA = %lx\n",
+					(unsigned long) pagetable_phys);
 	}
 }
 
@@ -310,8 +310,8 @@ irqreturn_t msm_iommu_secure_fault_handler_v2(int irq, void *dev_id)
 					ctx_drvdata->num, regs);
 
 	if (tmp) {
-//		pr_err("%s: Couldn't dump fault registers (%d) %s, ctx: %d\n",
-//			__func__, tmp, drvdata->name, ctx_drvdata->num);
+		pr_err("%s: Couldn't dump fault registers (%d) %s, ctx: %d\n",
+			__func__, tmp, drvdata->name, ctx_drvdata->num);
 		goto clock_off;
 	} else {
 		struct msm_iommu_context_reg ctx_regs[MAX_DUMP_REGS];
@@ -500,10 +500,6 @@ int msm_iommu_sec_program_iommu(struct msm_iommu_drvdata *drvdata,
 		return ret ? ret : -EINVAL;
 	}
 
-	drvdata->sec_cfg_restored = true;
-
-	pr_info("sec cfg restored for %s\n", drvdata->name);
-
 	return ret;
 }
 
@@ -572,14 +568,14 @@ static int msm_iommu_sec_ptbl_map(struct msm_iommu_drvdata *iommu_drvdata,
 	return 0;
 }
 
-static phys_addr_t get_phys_addr(struct scatterlist *sg)
+static unsigned int get_phys_addr(struct scatterlist *sg)
 {
 	/*
 	 * Try sg_dma_address first so that we can
 	 * map carveout regions that do not have a
 	 * struct page associated with them.
 	 */
-	phys_addr_t pa = sg_dma_address(sg);
+	unsigned int pa = sg_dma_address(sg);
 	if (pa == 0)
 		pa = sg_phys(sg);
 	return pa;
@@ -591,9 +587,8 @@ static int msm_iommu_sec_ptbl_map_range(struct msm_iommu_drvdata *iommu_drvdata,
 {
 	struct scatterlist *sgiter;
 	struct msm_scm_map2_req map;
-	phys_addr_t *pa_list = 0;
-	unsigned int cnt;
-	phys_addr_t pa;
+	unsigned int *pa_list = 0;
+	unsigned int pa, cnt;
 	void *flush_va, *flush_va_end;
 	unsigned int offset = 0, chunk_offset = 0;
 	int ret;
@@ -769,9 +764,7 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 		goto fail;
 
 	/* We can only do this once */
-	if (!iommu_drvdata->ctx_attach_count &&
-	    !((iommu_drvdata->model == MMU_500) &&
-	      (iommu_drvdata->sec_cfg_restored == true))) {
+	if (!iommu_drvdata->ctx_attach_count) {
 		ret = iommu_access_ops->iommu_clk_on(iommu_drvdata);
 		if (ret) {
 			iommu_access_ops->iommu_power_off(iommu_drvdata);

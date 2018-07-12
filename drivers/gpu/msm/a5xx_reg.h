@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -555,7 +555,6 @@
 
 
 /* RB registers */
-#define A5XX_RB_DBG_ECO_CNTL                0xCC4
 #define A5XX_RB_PERFCTR_RB_SEL_0            0xCD0
 #define A5XX_RB_PERFCTR_RB_SEL_1            0xCD1
 #define A5XX_RB_PERFCTR_RB_SEL_2            0xCD2
@@ -629,7 +628,6 @@
 #define A5XX_VPC_PERFCTR_VPC_SEL_3          0xE67
 
 /* UCHE registers */
-#define A5XX_UCHE_MODE_CNTL                 0xE81
 #define A5XX_UCHE_WRITE_THRU_BASE_LO        0xE87
 #define A5XX_UCHE_WRITE_THRU_BASE_HI        0xE88
 #define A5XX_UCHE_TRAP_BASE_LO              0xE89
