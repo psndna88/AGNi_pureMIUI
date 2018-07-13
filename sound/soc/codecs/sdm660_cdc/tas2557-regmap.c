@@ -357,11 +357,9 @@ void tas2557_enableIRQ(struct tas2557_priv *pTAS2557, bool enable, bool startup_
 			}
 		}
 	} else {
-		if (pTAS2557->mbIRQEnable) {
-			if (gpio_is_valid(pTAS2557->mnGpioINT))
-				disable_irq_nosync(pTAS2557->mnIRQ);
-			pTAS2557->mbIRQEnable = false;
-		}
+		if (gpio_is_valid(pTAS2557->mnGpioINT))
+			disable_irq_nosync(pTAS2557->mnIRQ);
+		pTAS2557->mbIRQEnable = false;
 	}
 }
 
@@ -397,6 +395,9 @@ static void irq_work_routine(struct work_struct *work)
 #ifdef CONFIG_TAS2557_MISC
 	mutex_lock(&pTAS2557->file_lock);
 #endif
+
+	if(pTAS2557->mnErrCode & ERROR_FAILSAFE)
+		goto program;
 
 	if (pTAS2557->mbRuntimeSuspend) {
 		dev_info(pTAS2557->dev, "%s, Runtime Suspended\n", __func__);
@@ -595,8 +596,8 @@ static void timer_work_routine(struct work_struct *work)
 		if (!(pTAS2557->mnDieTvReadCounter % LOW_TEMPERATURE_COUNTER)) {
 			nAvg /= LOW_TEMPERATURE_COUNTER;
 			dev_dbg(pTAS2557->dev, "check : avg=%d\n", nAvg);
-			if ((nAvg & 0x80000000) != 0) {
-				/* if Die temperature is below ZERO */
+			if (nAvg < -6) {
+				/* if Die temperature is below -6 degree C */
 				if (pTAS2557->mnDevCurrentGain != LOW_TEMPERATURE_GAIN) {
 					nResult = tas2557_set_DAC_gain(pTAS2557, LOW_TEMPERATURE_GAIN);
 					if (nResult < 0)
@@ -764,6 +765,8 @@ static int tas2557_i2c_probe(struct i2c_client *pClient,
 	pTAS2557->hw_reset = tas2557_hw_reset;
 	pTAS2557->runtime_suspend = tas2557_runtime_suspend;
 	pTAS2557->runtime_resume = tas2557_runtime_resume;
+	pTAS2557->mnRestart = 0;
+	pTAS2557->mnEdge = 4;
 
 	mutex_init(&pTAS2557->dev_lock);
 
@@ -846,7 +849,6 @@ static int tas2557_i2c_probe(struct i2c_client *pClient,
 	nResult = request_firmware_nowait(THIS_MODULE, 1, pFWName,
 		pTAS2557->dev, GFP_KERNEL, pTAS2557, tas2557_fw_ready);
 
-	return nResult;
 err:
 
 #if defined(CONFIG_SND_SOC_TAS2557) && defined(CONFIG_SND_SOC_TFA98XX)

@@ -318,6 +318,7 @@
 #define	ERROR_UNDER_VOLTAGE	0x00000800
 #define	ERROR_OVER_CURRENT	0x00001000
 #define	ERROR_CLASSD_PWR	0x00002000
+#define	ERROR_SAFE_GUARD	0x00004000
 #define	ERROR_FAILSAFE		0x40000000
 
 struct TBlock {
@@ -465,11 +466,14 @@ struct tas2557_priv {
 	bool mbRuntimeSuspend;
 
 	unsigned int mnErrCode;
+	unsigned int mnRestart;
 
 	/* for configurations with maximum TLimit 0x7fffffff,
 	 * bypass calibration update, usually used in factory test
 	*/
 	bool mbBypassTMax;
+
+	unsigned int mnEdge;
 
 #ifdef CONFIG_TAS2557_CODEC
 	struct mutex codec_lock;

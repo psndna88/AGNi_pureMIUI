@@ -470,6 +470,58 @@ static int tas2557_calibration_put(struct snd_kcontrol *pKcontrol,
 	return ret;
 }
 
+static const char * const classd_edge_text[] = {
+	"0 (50ns)",
+	"1 (40ns)",
+	"2 (29ns)",
+	"3 (25ns)",
+	"4 (14ns)",
+	"5 (13ns)",
+	"6 (12ns)",
+	"7 (11ns)",
+};
+
+static const struct soc_enum classd_edge_enum[] = {
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(classd_edge_text), classd_edge_text),
+};
+
+static int tas2557_edge_get(struct snd_kcontrol *pKcontrol,
+			struct snd_ctl_elem_value *pValue)
+{
+#ifdef KCONTROL_CODEC
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(pKcontrol);
+#else
+	struct snd_soc_codec *codec = snd_kcontrol_chip(pKcontrol);
+#endif
+	struct tas2557_priv *pTAS2557 = snd_soc_codec_get_drvdata(codec);
+	mutex_lock(&pTAS2557->codec_lock);
+
+	pValue->value.integer.value[0] = pTAS2557->mnEdge;
+
+	mutex_unlock(&pTAS2557->codec_lock);
+	return 0;
+}
+static int tas2557_edge_put(struct snd_kcontrol *pKcontrol,
+			struct snd_ctl_elem_value *pValue)
+{
+#ifdef KCONTROL_CODEC
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(pKcontrol);
+#else
+	struct snd_soc_codec *codec = snd_kcontrol_chip(pKcontrol);
+#endif
+	struct tas2557_priv *pTAS2557 = snd_soc_codec_get_drvdata(codec);
+	unsigned int edge = pValue->value.integer.value[0];
+
+	mutex_lock(&pTAS2557->codec_lock);
+
+	dev_dbg(pTAS2557->dev, "%s, edge %d\n", __func__, edge);
+	pTAS2557->mnEdge = pValue->value.integer.value[0];
+	tas2557_update_edge(pTAS2557);
+
+	mutex_unlock(&pTAS2557->codec_lock);
+	return 0;
+}
+
 static const struct snd_kcontrol_new tas2557_snd_controls[] = {
 	SOC_SINGLE_EXT("PowerCtrl", SND_SOC_NOPM, 0, 0x0001, 0,
 		tas2557_power_ctrl_get, tas2557_power_ctrl_put),
@@ -483,6 +535,8 @@ static const struct snd_kcontrol_new tas2557_snd_controls[] = {
 		tas2557_Cali_get, NULL),
 	SOC_SINGLE_EXT("Calibration", SND_SOC_NOPM, 0, 0x00FF, 0,
 		tas2557_calibration_get, tas2557_calibration_put),
+	SOC_ENUM_EXT("TAS2557 ClassD Edge", classd_edge_enum[0],
+		tas2557_edge_get, tas2557_edge_put),
 };
 
 static struct snd_soc_codec_driver soc_codec_driver_tas2557 = {
@@ -494,12 +548,14 @@ static struct snd_soc_codec_driver soc_codec_driver_tas2557 = {
 	.resume = tas2557_codec_resume,
 	.set_bias_level = tas2557_set_bias_level,
 	.idle_bias_off = true,
-	.controls = tas2557_snd_controls,
-	.num_controls = ARRAY_SIZE(tas2557_snd_controls),
-	.dapm_widgets = tas2557_dapm_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(tas2557_dapm_widgets),
-	.dapm_routes = tas2557_audio_map,
-	.num_dapm_routes = ARRAY_SIZE(tas2557_audio_map),
+	.component_driver = {
+		.controls = tas2557_snd_controls,
+		.num_controls = ARRAY_SIZE(tas2557_snd_controls),
+		.dapm_widgets = tas2557_dapm_widgets,
+		.num_dapm_widgets = ARRAY_SIZE(tas2557_dapm_widgets),
+		.dapm_routes = tas2557_audio_map,
+		.num_dapm_routes = ARRAY_SIZE(tas2557_audio_map),
+	},
 };
 
 static struct snd_soc_dai_ops tas2557_dai_ops = {
