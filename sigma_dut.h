@@ -92,7 +92,7 @@ struct sigma_cmd {
 	int count;
 };
 
-#define MAX_CMD_LEN 2048
+#define MAX_CMD_LEN 4096
 
 struct sigma_conn {
 	int s;
