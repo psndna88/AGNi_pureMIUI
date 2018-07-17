@@ -2127,10 +2127,10 @@ static void owrt_ap_add_vap(struct sigma_dut *dut, int id, const char *key,
 }
 
 
-#define OPENWRT_MAX_NUM_RADIOS 3
+#define OPENWRT_MAX_NUM_RADIOS (MAX_RADIO + 1)
 static void owrt_ap_config_radio(struct sigma_dut *dut)
 {
-	int radio_id[MAX_RADIO] = { 0, 1 };
+	int radio_id[MAX_RADIO] = { 0, 1, 2 };
 	int radio_count, radio_no;
 	char buf[64];
 
