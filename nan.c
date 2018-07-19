@@ -782,6 +782,7 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
 	const char *ndpe_enable = get_param(cmd, "Ndpe");
 	const char *ndpe_attr = get_param(cmd, "ndpeAttr");
+	const char *ndp_attr = get_param(cmd, "ndpAttr");
 #endif
 	wifi_error ret;
 	NanDataPathInitiatorRequest init_req;
@@ -879,6 +880,27 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 	if (ndpe_enable &&
 	    strcasecmp(ndpe_enable, "Enable") == 0)
 		dut->ndpe = 1;
+
+	if (dut->ndpe && ndp_attr) {
+		NanDebugParams cfg_debug;
+		int ndp_attr_val;
+
+		memset(&cfg_debug, 0, sizeof(NanDebugParams));
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_ENABLE_NDP;
+		if (strcasecmp(ndp_attr, "Absent") == 0)
+			ndp_attr_val = NAN_NDP_ATTR_ABSENT;
+		else
+			ndp_attr_val = NAN_NDP_ATTR_PRESENT;
+		memcpy(cfg_debug.debug_cmd_data, &ndp_attr_val, sizeof(int));
+		size = sizeof(u32) + sizeof(int);
+		ret = nan_debug_command_config(0, global_interface_handle,
+					       cfg_debug, size);
+		if (ret != WIFI_SUCCESS) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "NAN config ndpAttr failed");
+			return 0;
+		}
+	}
 
 	if (dut->ndpe && ndpe_attr) {
 		NanDebugParams cfg_debug;
@@ -989,6 +1011,7 @@ static int sigma_nan_data_response(struct sigma_dut *dut,
 #if (NAN_MAJOR_VERSION > 2) || \
 	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
 	const char *ndpe_attr = get_param(cmd, "ndpeAttr");
+	const char *ndp_attr = get_param(cmd, "ndpAttr");
 #endif
 	wifi_error ret;
 	NanDebugParams cfg_debug;
@@ -1058,6 +1081,27 @@ static int sigma_nan_data_response(struct sigma_dut *dut,
 
 #if (NAN_MAJOR_VERSION > 2) || \
 	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+	if (dut->ndpe && ndp_attr) {
+		NanDebugParams cfg_debug;
+		int ndp_attr_val;
+
+		memset(&cfg_debug, 0, sizeof(NanDebugParams));
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_ENABLE_NDP;
+		if (strcasecmp(ndp_attr, "Absent") == 0)
+			ndp_attr_val = NAN_NDP_ATTR_ABSENT;
+		else
+			ndp_attr_val = NAN_NDP_ATTR_PRESENT;
+		memcpy(cfg_debug.debug_cmd_data, &ndp_attr_val, sizeof(int));
+		size = sizeof(u32) + sizeof(int);
+		ret = nan_debug_command_config(0, global_interface_handle,
+					       cfg_debug, size);
+		if (ret != WIFI_SUCCESS) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "NAN config ndpAttr failed");
+			return 0;
+		}
+	}
+
 	if (ndpe_attr && dut->ndpe) {
 		int ndpe_attr_val;
 
@@ -1304,6 +1348,10 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 #endif
 	const char *ndpe = get_param(cmd, "NDPE");
 	const char *trans_proto = get_param(cmd, "TransProtoType");
+#if (NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+	const char *ndp_attr = get_param(cmd, "ndpAttr");
+#endif
 	NanPublishRequest req;
 	NanConfigRequest config_req;
 	int filter_len_rx = 0, filter_len_tx = 0;
@@ -1524,6 +1572,27 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 
 #if (NAN_MAJOR_VERSION > 2) || \
 	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+	if (dut->ndpe && ndp_attr) {
+		NanDebugParams cfg_debug;
+		int ndp_attr_val, size;
+
+		memset(&cfg_debug, 0, sizeof(NanDebugParams));
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_ENABLE_NDP;
+		if (strcasecmp(ndp_attr, "Absent") == 0)
+			ndp_attr_val = NAN_NDP_ATTR_ABSENT;
+		else
+			ndp_attr_val = NAN_NDP_ATTR_PRESENT;
+		memcpy(cfg_debug.debug_cmd_data, &ndp_attr_val, sizeof(int));
+		size = sizeof(u32) + sizeof(int);
+		ret = nan_debug_command_config(0, global_interface_handle,
+					       cfg_debug, size);
+		if (ret != WIFI_SUCCESS) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "NAN config ndpAttr failed");
+			return 0;
+		}
+	}
+
 	if (dut->ndpe) {
 		unsigned char nan_mac_addr[ETH_ALEN];
 		size_t addr_len = 0;
