@@ -783,6 +783,7 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 	const char *ndpe_enable = get_param(cmd, "Ndpe");
 	const char *ndpe_attr = get_param(cmd, "ndpeAttr");
 	const char *ndp_attr = get_param(cmd, "ndpAttr");
+	const char *tlv_list = get_param(cmd, "TLVList");
 #endif
 	wifi_error ret;
 	NanDataPathInitiatorRequest init_req;
@@ -921,6 +922,31 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 				  "NAN config ndpeAttr failed");
 			return 0;
 		}
+	}
+
+	if (dut->ndpe && dut->device_type == STA_testbed && !tlv_list) {
+		NanDebugParams cfg_debug;
+		int implicit_ipv6_val;
+
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"%s: In test bed mode IPv6 is implicit in data request",
+				__func__);
+		memset(&cfg_debug, 0, sizeof(NanDebugParams));
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_DISABLE_IPV6_LINK_LOCAL;
+		implicit_ipv6_val = NAN_IPV6_IMPLICIT;
+		memcpy(cfg_debug.debug_cmd_data, &implicit_ipv6_val,
+		       sizeof(int));
+		size = sizeof(u32) + sizeof(int);
+		ret = nan_debug_command_config(0, global_interface_handle,
+					       cfg_debug, size);
+		if (ret != WIFI_SUCCESS) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,NAN config implicit IPv6 failed");
+			return 0;
+		}
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"%s: config command for implicit IPv6 sent",
+				__func__);
 	}
 #endif
 
