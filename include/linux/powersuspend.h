@@ -32,6 +32,7 @@
 
 #define POWER_SUSPEND_INACTIVE	0
 #define POWER_SUSPEND_ACTIVE	1
+#define POWER_SUSPEND_AUTOSLEEP	0	// Use kernel autosleep as hook
 
 #define POWER_SUSPEND_AUTOSLEEP	0	// Use kernel autosleep as hook
 #define POWER_SUSPEND_USERSPACE	1	// Use fauxclock as trigger
