@@ -1003,6 +1003,17 @@ static int ft5x06_ts_resume(struct device *dev)
 
 		return err;
 	}
+
+	/* Check and change the switch state */
+	if (dt2w_switch_changed) {
+		dt2w_switch = dt2w_switch_temp;
+		dt2w_switch_changed = false;
+	}
+	if (s2w_switch_changed) {
+		s2w_switch = s2w_switch_temp;
+		s2w_switch_changed = false;
+
+	}
 #endif
 
 	if (gpio_is_valid(data->pdata->reset_gpio)) {
