@@ -2985,7 +2985,7 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 			sizeof(struct ft5x06_ts_data), GFP_KERNEL);
 	if (!data) {
 		dev_err(&client->dev, "Not enough memory\n");
-		return -ENOMEM;
+		dev_err(&client->dev, "yet forarding to probe[@dev-harsh1998]");
 	}
 
 	if (pdata->fw_name) {
