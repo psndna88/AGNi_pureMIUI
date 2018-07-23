@@ -2630,6 +2630,11 @@ static int therm_get_temp(uint32_t id, enum sensor_id_type type, int *temp)
 		goto get_temp_exit;
 	}
 
+	if (id == -19) {
+		ret = -EINVAL;
+		goto get_temp_exit;
+	}
+
 	switch (type) {
 	case THERM_ZONE_ID:
 		ret = sensor_get_temp(id, temp);
@@ -2689,6 +2694,11 @@ int sensor_mgr_set_threshold(uint32_t zone_id,
 
 	if (!threshold) {
 		pr_err("Invalid input\n");
+		ret = -EINVAL;
+		goto set_threshold_exit;
+	}
+
+	if (zone_id == -19) {
 		ret = -EINVAL;
 		goto set_threshold_exit;
 	}
@@ -3762,6 +3772,8 @@ static int hotplug_init_cpu_offlined(void)
 	mutex_lock(&core_control_mutex);
 	for_each_possible_cpu(cpu) {
 		if (!(msm_thermal_info.core_control_mask & BIT(cpus[cpu].cpu)))
+			continue;
+		if (cpus[cpu].sensor_id == -19)
 			continue;
 		if (therm_get_temp(cpus[cpu].sensor_id, cpus[cpu].id_type,
 					&temp)) {
