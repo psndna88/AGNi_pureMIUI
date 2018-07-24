@@ -178,7 +178,6 @@
 #define TSENS_DEBUG_ID_MASK_1_4		0xffffffe1
 
 static uint32_t tsens_sec_to_msec_value = 1000;
-static uint32_t tsens_completion_timeout_hz = HZ/2;
 static uint32_t tsens_poll_check = 1;
 
 /* Trips: warm and cool */
@@ -1446,7 +1445,7 @@ critical_poll:
 
 	rc = wait_for_completion_timeout(
 				&tmdev->tsens_rslt_completion,
-				tsens_completion_timeout_hz);
+				msecs_to_jiffies(500));
 	if (!rc) {
 		pr_debug("Switch to polling, TSENS critical interrupt failed\n");
 		sensor_status_addr = TSENS_TM_SN_STATUS(tmdev->tsens_addr);
