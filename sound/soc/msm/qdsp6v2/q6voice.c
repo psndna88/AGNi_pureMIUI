@@ -29,6 +29,7 @@
 
 #ifdef CONFIG_WAKE_GESTURES
 #include <linux/wake_gestures.h>
+static bool CheckCallStatus;
 #endif
 
 #define TIMEOUT_MS 300
@@ -115,6 +116,13 @@ static int voice_send_get_sound_focus_cmd(struct voice_data *v,
 				struct sound_focus_param *soundFocusData);
 static int voice_send_get_source_tracking_cmd(struct voice_data *v,
 			struct source_tracking_param *sourceTrackingData);
+
+#ifdef CONFIG_WAKE_GESTURES
+bool IsOnCall(void)
+{
+	return CheckCallStatus;
+}
+#endif
 
 static void voice_itr_init(struct voice_session_itr *itr,
 			   u32 session_id)
@@ -5338,13 +5346,8 @@ int voc_end_voice_call(uint32_t session_id)
 		voc_set_ext_ec_ref(AFE_PORT_INVALID, false);
 
 #ifdef CONFIG_WAKE_GESTURES
-/* return flase if phone is not on call */
-bool IsOnCall(void)
-{
-	return false;
-}
+	CheckCallStatus = false;
 #endif
-
 	mutex_unlock(&v->lock);
 	return ret;
 }
@@ -5667,11 +5670,7 @@ int voc_start_voice_call(uint32_t session_id)
 	}
 
 #ifdef CONFIG_WAKE_GESTURES
-/* return true if phone is not on call */
-bool IsOnCall(void)
-{
-        return true;
-}
+	CheckCallStatus = true;
 #endif
 
 fail:
