@@ -33,5 +33,7 @@ extern bool gestures_enabled;
 bool scr_suspended(void);
 bool scr_suspended_ft(void);
 void set_vibrate(int value);
+bool IsOnCall(void);
+
 
 #endif	/* _LINUX_WAKE_GESTURES_H */

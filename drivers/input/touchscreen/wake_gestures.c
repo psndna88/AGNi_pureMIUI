@@ -32,9 +32,6 @@
 #include <linux/input.h>
 #include <linux/hrtimer.h>
 #include <asm-generic/cputime.h>
-/*
-#include <linux/wakelock.h>
-*/
 
 /* Tuneables */
 #define WG_DEBUG		0
@@ -119,6 +116,12 @@ static bool is_suspended(void)
 		return scr_suspended_ft();
 }
 
+/* dev-harsh1998 Call check implementation */
+static bool IsOnPhoneCall(void)
+{
+	return IsOnCall();
+}
+
 /* Wake Gestures */
 #if (WAKE_GESTURES_ENABLED)
 static void report_gesture(int gest)
@@ -161,6 +164,7 @@ static void wake_pwrtrigger(void) {
 	if (pwrtrigger_time[0] - pwrtrigger_time[1] < TRIGGER_TIMEOUT)
 		return;
 
+	if (!IsOnPhoneCall())
 	schedule_work(&wake_presspwr_work);
 
         return;
