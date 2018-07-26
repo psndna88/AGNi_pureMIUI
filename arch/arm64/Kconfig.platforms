@@ -53,8 +53,9 @@ config ARCH_QCOM
 	select HAVE_CLK
 	select HAVE_CLK_PREPARE
 	select PM_OPP
-    	select SOC_BUS
+    select SOC_BUS
 	select MSM_IRQ
+	select THERMAL
 	select THERMAL_WRITABLE_TRIPS
 	select RATIONAL
 	select ARCH_HAS_RESET_CONTROLLER

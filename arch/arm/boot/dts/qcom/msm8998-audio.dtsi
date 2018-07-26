@@ -368,7 +368,7 @@
 		pinctrl-1 = <&cdc_reset_sleep>;
 	};
 
-	qocm,wcd-dsp-glink {
+	qcom,wcd-dsp-glink {
 		compatible = "qcom,wcd-dsp-glink";
 	};
 };
