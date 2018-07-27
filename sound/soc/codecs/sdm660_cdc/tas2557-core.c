@@ -101,6 +101,7 @@ static unsigned int p_tas2557_startup_data[] = {
 	TAS2557_POWER_CTRL1_REG, 0xF8,	 /* PLL, DSP, clock dividers power up */
 	TAS2557_UDELAY, 2000,		/* delay */
 	TAS2557_CLK_ERR_CTRL, 0x2b,	/* enable clock error detection */
+	TAS2557_DBOOST_CFG_REG, 0x0b,   /* HTC_AUD: Solve full band noise */
 	0xFFFFFFFF, 0xFFFFFFFF
 };
 
