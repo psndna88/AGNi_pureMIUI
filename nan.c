@@ -2121,13 +2121,28 @@ static void ndp_event_data_confirm(NanDataPathConfirmInd *event)
 					"Failed to set nan interface up");
 			return;
 		}
-		if (system("ip -6 route add fe80::/64 dev nan0 table local") !=
+		if (system("ip -6 route replace fe80::/64 dev nan0 table local") !=
 		    0) {
 			sigma_dut_print(global_dut, DUT_MSG_ERROR,
 					"Failed to run:ip -6 route replace fe80::/64 dev nan0 table local");
 		}
-		convert_mac_addr_to_ipv6_lladdr(event->peer_ndi_mac_addr,
-						ipv6_buf, sizeof(ipv6_buf));
+#if (NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+		if (event->nan_ipv6_addr_present)
+			snprintf(ipv6_buf, sizeof(ipv6_buf),
+				 "fe80::%02x%02x:%02xff:fe%02x:%02x%02x",
+				 event->nan_ipv6_intf_addr[8],
+				 event->nan_ipv6_intf_addr[9],
+				 event->nan_ipv6_intf_addr[10],
+				 event->nan_ipv6_intf_addr[13],
+				 event->nan_ipv6_intf_addr[14],
+				 event->nan_ipv6_intf_addr[15]);
+		else
+#endif
+			convert_mac_addr_to_ipv6_lladdr(
+				event->peer_ndi_mac_addr,
+				ipv6_buf, sizeof(ipv6_buf));
+
 		snprintf(cmd, sizeof(cmd),
 			 "ip -6 neighbor replace %s lladdr %02x:%02x:%02x:%02x:%02x:%02x nud permanent dev nan0",
 			 ipv6_buf, event->peer_ndi_mac_addr[0],
