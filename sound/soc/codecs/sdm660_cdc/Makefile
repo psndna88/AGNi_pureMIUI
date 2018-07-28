@@ -6,3 +6,4 @@ snd-soc-dbmdx-objs := dbmdx.o dbmdx-spi.o dbmdx-i2c.o dbmdx-i2c-d2.o dbmdx-i2c-d
 obj-$(CONFIG_SND_SOC_DBMDX) += snd-soc-dbmdx.o
 snd-soc-dbmdx-snd-capture-objs := dbmdx-snd.o dbmdx-snd-pcm.o
 obj-$(CONFIG_SND_SOC_DBMDX_SND_CAPTURE) += snd-soc-dbmdx-snd-capture.o
+subdir-ccflags-y := $(call cc-disable-warning, shift-overflow)
