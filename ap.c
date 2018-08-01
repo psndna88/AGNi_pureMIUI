@@ -100,6 +100,15 @@ static int kill_process(struct sigma_dut *dut, char *proc_name,
 			unsigned char is_proc_instance_one, int sig);
 
 
+static int ap_ft_enabled(struct sigma_dut *dut)
+{
+	return dut->ap_ft_oa == 1 ||
+		dut->ap_key_mgmt == AP_WPA2_FT_EAP ||
+		dut->ap_key_mgmt == AP_WPA2_FT_PSK ||
+		dut->ap_key_mgmt == AP_WPA2_ENT_FT_EAP;
+}
+
+
 static int cmd_ap_ca_version(struct sigma_dut *dut, struct sigma_conn *conn,
 			     struct sigma_cmd *cmd)
 {
@@ -1700,6 +1709,26 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 			dut->ap_key_mgmt = AP_WPA2_EAP_OSEN;
 			dut->ap_cipher = AP_CCMP;
 			dut->ap_pmf = AP_PMF_OPTIONAL;
+		} else if (strcasecmp(val, "FT-EAP") == 0) {
+			dut->ap_key_mgmt = AP_WPA2_FT_EAP;
+			dut->ap_cipher = AP_CCMP;
+			dut->ap_pmf = AP_PMF_OPTIONAL;
+		} else if (strcasecmp(val, "FT-PSK") == 0) {
+			dut->ap_key_mgmt = AP_WPA2_FT_PSK;
+			dut->ap_cipher = AP_CCMP;
+			dut->ap_pmf = AP_PMF_OPTIONAL;
+		} else if (strcasecmp(val, "WPA2-ENT-256") == 0) {
+			dut->ap_key_mgmt = AP_WPA2_EAP_SHA256;
+			dut->ap_cipher = AP_CCMP;
+			dut->ap_pmf = AP_PMF_OPTIONAL;
+		} else if (strcasecmp(val, "WPA2-PSK-256") == 0) {
+			dut->ap_key_mgmt = AP_WPA2_PSK_SHA256;
+			dut->ap_cipher = AP_CCMP;
+			dut->ap_pmf = AP_PMF_OPTIONAL;
+		} else if (strcasecmp(val, "WPA2-ENT-FT-EAP") == 0) {
+			dut->ap_key_mgmt = AP_WPA2_ENT_FT_EAP;
+			dut->ap_cipher = AP_CCMP;
+			dut->ap_pmf = AP_PMF_OPTIONAL;
 		} else if (strcasecmp(val, "NONE") == 0) {
 			dut->ap_key_mgmt = AP_OPEN;
 			dut->ap_cipher = AP_PLAIN;
@@ -2742,7 +2771,7 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 						"hidden", "1");
 			}
 
-			if (dut->ap_ft_oa == 1) {
+			if (ap_ft_enabled(dut)) {
 				unsigned char self_mac[ETH_ALEN];
 				char mac_str[20];
 
@@ -2849,7 +2878,7 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 			owrt_ap_set_list_vap(dut, vap_count, "anqp_elem",
 					     anqp_string);
 
-			if (dut->ap_ft_oa == 1) {
+			if (ap_ft_enabled(dut)) {
 				owrt_ap_set_vap(dut, vap_count,
 						"mobility_domain",
 						dut->ap_mobility_domain);
@@ -3100,6 +3129,11 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 			owrt_ap_set_vap(dut, vap_count, "auth_secret", buf);
 			break;
 		case AP_WPA2_EAP_OSEN:
+		case AP_WPA2_FT_EAP:
+		case AP_WPA2_FT_PSK:
+		case AP_WPA2_EAP_SHA256:
+		case AP_WPA2_PSK_SHA256:
+		case AP_WPA2_ENT_FT_EAP:
 			/* TODO */
 			break;
 		case AP_SUITEB:
@@ -3391,7 +3425,7 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 		owrt_ap_set_vap(dut, vap_id, "gas_comeback_delay", buf);
 	}
 
-	if (dut->ap_ft_oa == 1) {
+	if (ap_ft_enabled(dut)) {
 		unsigned char self_mac[ETH_ALEN];
 		char mac_str[20];
 
@@ -3425,13 +3459,13 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 		owrt_ap_set_vap(dut, vap_id, "ap2_r1_key_holder", mac_str);
 	}
 
-	if ((dut->ap_ft_oa == 1 && dut->ap_name == 0) ||
-	    (dut->ap_ft_oa == 1 && dut->ap_name == 2)) {
+	if ((ap_ft_enabled(dut) && dut->ap_name == 0) ||
+	    (ap_ft_enabled(dut) && dut->ap_name == 2)) {
 		owrt_ap_set_vap(dut, vap_id, "nasid2", "nas2.example.com");
 		owrt_ap_set_vap(dut, vap_id, "nasid", "nas1.example.com");
 	}
 
-	if (dut->ap_ft_oa == 1 && dut->ap_name == 1) {
+	if (ap_ft_enabled(dut) && dut->ap_name == 1) {
 		owrt_ap_set_vap(dut, vap_id, "nasid2", "nas1.example.com");
 		owrt_ap_set_vap(dut, vap_id, "nasid", "nas2.example.com");
 	}
@@ -3994,6 +4028,11 @@ static int cmd_wcn_ap_config_commit(struct sigma_dut *dut,
 	case AP_SUITEB:
 	case AP_WPA2_OWE:
 	case AP_WPA2_EAP_OSEN:
+	case AP_WPA2_FT_EAP:
+	case AP_WPA2_FT_PSK:
+	case AP_WPA2_EAP_SHA256:
+	case AP_WPA2_PSK_SHA256:
+	case AP_WPA2_ENT_FT_EAP:
 		/* Not supported */
 		break;
 	}
@@ -5930,6 +5969,15 @@ static int cmd_ath_ap_config_commit(struct sigma_dut *dut,
 		/* TODO */
 		sigma_dut_print(dut, DUT_MSG_ERROR, "OWE not supported");
 		break;
+	case AP_WPA2_FT_EAP:
+	case AP_WPA2_FT_PSK:
+	case AP_WPA2_EAP_SHA256:
+	case AP_WPA2_PSK_SHA256:
+	case AP_WPA2_ENT_FT_EAP:
+		/* TODO */
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Unsupported KeyMgnt value");
+		return 0;
 	}
 
 	if (dut->ap_is_dual) {
@@ -6028,6 +6076,15 @@ static int cmd_ath_ap_config_commit(struct sigma_dut *dut,
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"OWE not supported");
 			break;
+		case AP_WPA2_FT_EAP:
+		case AP_WPA2_FT_PSK:
+		case AP_WPA2_EAP_SHA256:
+		case AP_WPA2_PSK_SHA256:
+		case AP_WPA2_ENT_FT_EAP:
+			/* TODO */
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported KeyMgnt value");
+			return 0;
 		}
 
 		/* wifi0 settings in case of dual */
@@ -6602,9 +6659,13 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 	case AP_WPA_PSK:
 	case AP_WPA2_SAE:
 	case AP_WPA2_PSK_SAE:
+	case AP_WPA2_PSK_SHA256:
+	case AP_WPA2_FT_PSK:
 		if (dut->ap_key_mgmt == AP_WPA2_PSK ||
 		    dut->ap_key_mgmt == AP_WPA2_SAE ||
-		    dut->ap_key_mgmt == AP_WPA2_PSK_SAE)
+		    dut->ap_key_mgmt == AP_WPA2_PSK_SAE ||
+		    dut->ap_key_mgmt == AP_WPA2_PSK_SHA256 ||
+		    dut->ap_key_mgmt == AP_WPA2_FT_PSK)
 			fprintf(f, "wpa=2\n");
 		else if (dut->ap_key_mgmt == AP_WPA2_PSK_MIXED)
 			fprintf(f, "wpa=3\n");
@@ -6635,6 +6696,10 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 			fprintf(f, "wpa_key_mgmt=%s\n", key_mgmt);
 			break;
 		}
+		if (dut->ap_key_mgmt == AP_WPA2_PSK_SHA256)
+			fprintf(f, "wpa_key_mgmt=WPA-PSK-SHA256\n");
+		else if (dut->ap_key_mgmt == AP_WPA2_FT_PSK)
+			fprintf(f, "wpa_key_mgmt=FT-PSK\n");
 		fprintf(f, "wpa_pairwise=%s\n",
 			hostapd_cipher_name(dut->ap_cipher));
 		if (dut->ap_group_cipher != AP_NO_GROUP_CIPHER_SET)
@@ -6651,9 +6716,15 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 	case AP_WPA2_EAP_MIXED:
 	case AP_WPA_EAP:
 	case AP_WPA2_EAP_OSEN:
+	case AP_WPA2_EAP_SHA256:
+	case AP_WPA2_FT_EAP:
+	case AP_WPA2_ENT_FT_EAP:
 		fprintf(f, "ieee8021x=1\n");
 		if (dut->ap_key_mgmt == AP_WPA2_EAP ||
-		    dut->ap_key_mgmt == AP_WPA2_EAP_OSEN)
+		    dut->ap_key_mgmt == AP_WPA2_EAP_OSEN ||
+		    dut->ap_key_mgmt == AP_WPA2_EAP_SHA256 ||
+		    dut->ap_key_mgmt == AP_WPA2_FT_EAP ||
+		    dut->ap_key_mgmt == AP_WPA2_ENT_FT_EAP)
 			fprintf(f, "wpa=2\n");
 		else if (dut->ap_key_mgmt == AP_WPA2_EAP_MIXED)
 			fprintf(f, "wpa=3\n");
@@ -6676,6 +6747,12 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 				"");
 			break;
 		}
+		if (dut->ap_key_mgmt == AP_WPA2_EAP_SHA256)
+			fprintf(f, "wpa_key_mgmt=WPA-EAP-SHA256\n");
+		else if (dut->ap_key_mgmt == AP_WPA2_FT_EAP)
+			fprintf(f, "wpa_key_mgmt=FT-EAP\n");
+		else if (dut->ap_key_mgmt == AP_WPA2_ENT_FT_EAP)
+			fprintf(f, "wpa_key_mgmt=FT-EAP WPA-EAP\n");
 		fprintf(f, "wpa_pairwise=%s\n",
 			hostapd_cipher_name(dut->ap_cipher));
 		if (dut->ap_group_cipher != AP_NO_GROUP_CIPHER_SET)
@@ -6738,6 +6815,27 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 	case AP_PMF_REQUIRED:
 		fprintf(f, "ieee80211w=2\n");
 		break;
+	}
+
+	if (ap_ft_enabled(dut)) {
+		unsigned char own_addr[ETH_ALEN];
+
+		fprintf(f, "mobility_domain=%s\n", dut->ap_mobility_domain);
+		fprintf(f, "ft_over_ds=0\n");
+		fprintf(f, "nas_identifier=nas1.example.com\n");
+		if (get_hwaddr(ifname, own_addr) < 0) {
+			memset(own_addr, 0, ETH_ALEN);
+			own_addr[0] = 0x02;
+		}
+		fprintf(f, "r1_key_holder=%02x%02x%02x%02x%02x%02x\n",
+			own_addr[0], own_addr[1], own_addr[2],
+			own_addr[3], own_addr[4], own_addr[5]);
+		fprintf(f, "ft_psk_generate_local=1\n");
+		fprintf(f, "pmk_r1_push=0\n");
+		fprintf(f,
+			"r0kh=ff:ff:ff:ff:ff:ff * 00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff");
+		fprintf(f,
+			"r1kh=00:00:00:00:00:00 00:00:00:00:00:00 00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff");
 	}
 
 	if (dut->rsne_override)

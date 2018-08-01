@@ -403,6 +403,11 @@ struct sigma_dut {
 		AP_SUITEB,
 		AP_WPA2_OWE,
 		AP_WPA2_EAP_OSEN,
+		AP_WPA2_FT_EAP,
+		AP_WPA2_FT_PSK,
+		AP_WPA2_EAP_SHA256,
+		AP_WPA2_PSK_SHA256,
+		AP_WPA2_ENT_FT_EAP,
 	} ap_key_mgmt;
 	enum ap_tag_key_mgmt {
 		AP2_OPEN,
