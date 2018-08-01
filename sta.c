@@ -5796,9 +5796,9 @@ static int sta_set_addba_buf_size(struct sigma_dut *dut,
 	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
 			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
 	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_ADDBA_BUFF_SIZE,
-		       bufsize)) {
+	    nla_put_u16(msg,
+			QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_ADDBA_BUFF_SIZE,
+			bufsize)) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"%s: err in adding vendor_cmd and vendor_data",
 				__func__);
@@ -7397,9 +7397,9 @@ static int wcn_sta_send_addba(struct sigma_dut *dut, struct sigma_conn *conn,
 		       QCA_WLAN_ADD_BA) ||
 	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_BA_TID,
 		       tid) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_ADDBA_BUFF_SIZE,
-		       bufsize)) {
+	    nla_put_u16(msg,
+			QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_ADDBA_BUFF_SIZE,
+			bufsize)) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"%s: err in adding vendor_cmd and vendor_data",
 				__func__);
