@@ -7066,6 +7066,39 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 			return 0;
 		}
 	}
+
+	val = get_param(cmd, "ADDBAResp_BufSize");
+	if (val) {
+		int buf_size;
+
+		if (strcasecmp(val, "gt64") == 0)
+			buf_size = 256;
+		else
+			buf_size = 64;
+		if (get_driver_type() == DRIVER_WCN &&
+		    sta_set_addba_buf_size(dut, intf, buf_size)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,set addbaresp_buff_size failed");
+			return 0;
+		}
+	}
+
+	val = get_param(cmd, "ADDBAReq_BufSize");
+	if (val) {
+		int buf_size;
+
+		if (strcasecmp(val, "gt64") == 0)
+			buf_size = 256;
+		else
+			buf_size = 64;
+		if (get_driver_type() == DRIVER_WCN &&
+		    sta_set_addba_buf_size(dut, intf, buf_size)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,set addbareq_buff_size failed");
+			return 0;
+		}
+	}
+
 	return cmd_sta_set_wireless_common(intf, dut, conn, cmd);
 }
 
