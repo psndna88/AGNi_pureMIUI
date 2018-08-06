@@ -203,6 +203,12 @@ int nan_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 {
 	const char *oper_chan = get_param(cmd, "oper_chn");
 	const char *pmk = get_param(cmd, "PMK");
+#if (NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+	const char *ndpe = get_param(cmd, "NDPE");
+	const char *trans_proto = get_param(cmd, "TransProtoType");
+	const char *ndp_attr = get_param(cmd, "ndpAttr");
+#endif
 
 	if (oper_chan) {
 		sigma_dut_print(dut, DUT_MSG_INFO, "Operating Channel: %s",
@@ -225,6 +231,67 @@ int nan_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 		sigma_dut_print(dut, DUT_MSG_INFO, "%s:hex pmk", __func__);
 		nan_hex_dump(dut, &dut->nan_pmk[0], dut->nan_pmk_len);
 	}
+
+#if (NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+	if (ndpe) {
+		NanConfigRequest req;
+		wifi_error ret;
+
+		sigma_dut_print(dut, DUT_MSG_DEBUG, "%s: NDPE: %s",
+				__func__, ndpe);
+		memset(&req, 0, sizeof(NanConfigRequest));
+		dut->ndpe = strcasecmp(ndpe, "Enable") == 0;
+		req.config_ndpe_attr = 1;
+		req.use_ndpe_attr = dut->ndpe;
+		ret = nan_config_request(0, global_interface_handle, &req);
+		if (ret != WIFI_SUCCESS) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "NAN config request failed");
+			return 0;
+		}
+	}
+
+	if (trans_proto) {
+		sigma_dut_print(dut, DUT_MSG_INFO, "%s: Transport protocol: %s",
+				__func__, trans_proto);
+		if (strcasecmp(trans_proto, "TCP") == 0) {
+			dut->trans_proto = TRANSPORT_PROTO_TYPE_TCP;
+		} else if (strcasecmp(trans_proto, "UDP") == 0) {
+			dut->trans_proto = TRANSPORT_PROTO_TYPE_UDP;
+		} else {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"%s: Invalid protocol %s, set to TCP",
+					__func__, trans_proto);
+			dut->trans_proto = TRANSPORT_PROTO_TYPE_TCP;
+		}
+	}
+
+	if (dut->ndpe && ndp_attr) {
+		NanDebugParams cfg_debug;
+		int ndp_attr_val;
+		int ret, size;
+
+		sigma_dut_print(dut, DUT_MSG_DEBUG, "%s: NDP Attr: %s",
+				__func__, ndp_attr);
+
+		memset(&cfg_debug, 0, sizeof(NanDebugParams));
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_ENABLE_NDP;
+		if (strcasecmp(ndp_attr, "Absent") == 0)
+			ndp_attr_val = NAN_NDP_ATTR_ABSENT;
+		else
+			ndp_attr_val = NAN_NDP_ATTR_PRESENT;
+		memcpy(cfg_debug.debug_cmd_data, &ndp_attr_val, sizeof(int));
+		size = sizeof(u32) + sizeof(int);
+		ret = nan_debug_command_config(0, global_interface_handle,
+					       cfg_debug, size);
+		if (ret != WIFI_SUCCESS) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "NAN config ndpAttr failed");
+			return 0;
+		}
+	}
+#endif
 
 	send_resp(dut, conn, SIGMA_COMPLETE, NULL);
 	return 0;
