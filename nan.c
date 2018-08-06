@@ -1,6 +1,7 @@
 /*
  * Sigma Control API DUT (NAN functionality)
  * Copyright (c) 2014-2017, Qualcomm Atheros, Inc.
+ * Copyright (c) 2018, The Linux Foundation
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
@@ -266,6 +267,10 @@ int sigma_nan_enable(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *band = get_param(cmd, "Band");
 	const char *only_5g = get_param(cmd, "5GOnly");
 	const char *nan_availability = get_param(cmd, "NANAvailability");
+#if (NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+	const char *ndpe = get_param(cmd, "NDPE");
+#endif
 	struct timespec abstime;
 	NanEnableRequest req;
 
@@ -306,6 +311,23 @@ int sigma_nan_enable(struct sigma_dut *dut, struct sigma_conn *conn,
 			req.support_2dot4g_val = 0;
 		}
 	}
+
+#if (NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+	if (ndpe) {
+		if (strcasecmp(ndpe, "Enable") == 0) {
+			dut->ndpe = 1;
+			req.config_ndpe_attr = 1;
+			req.use_ndpe_attr = 1;
+		} else {
+			dut->ndpe = 0;
+			req.config_ndpe_attr = 1;
+			req.use_ndpe_attr = 0;
+		}
+		req.config_disc_mac_addr_randomization = 1;
+		req.disc_mac_addr_rand_interval_sec = 0;
+	}
+#endif
 
 	sigma_dut_print(dut, DUT_MSG_INFO,
 			"%s: Setting dual band 2.4 GHz and 5 GHz by default",
@@ -1136,6 +1158,8 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *awake_dw_interval = get_param(cmd, "awakeDWint");
 	const char *qos_config = get_param(cmd, "QoS");
 #endif
+	const char *ndpe = get_param(cmd, "NDPE");
+	const char *trans_proto = get_param(cmd, "TransProtoType");
 	NanPublishRequest req;
 	NanConfigRequest config_req;
 	int filter_len_rx = 0, filter_len_tx = 0;
@@ -1335,6 +1359,51 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	if (qos_config)
 		req.sdea_params.qos_cfg = (NanQosCfgStatus) atoi(qos_config);
+#endif
+
+	if (ndpe &&
+	    strcasecmp(ndpe, "Enable") == 0)
+		dut->ndpe = 1;
+
+	if (trans_proto) {
+		if (strcasecmp(trans_proto, "TCP") == 0) {
+			dut->trans_proto = TRANSPORT_PROTO_TYPE_TCP;
+		} else if (strcasecmp(trans_proto, "UDP") == 0) {
+			dut->trans_proto = TRANSPORT_PROTO_TYPE_UDP;
+		} else {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"%s: Invalid protocol %s",
+					__func__, trans_proto);
+			return -1;
+		}
+	}
+
+#if (NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+	if (dut->ndpe) {
+		unsigned char nan_mac_addr[ETH_ALEN];
+		size_t addr_len = 0;
+		NanDebugParams cfg_debug;
+		NdpIpTransParams ndp_ip_trans_param;
+
+		get_hwaddr("nan0", nan_mac_addr);
+		addr_len = convert_mac_addr_to_ipv6_linklocal(
+			nan_mac_addr, ndp_ip_trans_param.ipv6_intf_addr);
+		ndp_ip_trans_param.ipv6_addr_present = 1;
+
+		ndp_ip_trans_param.trans_port_present = 1;
+		ndp_ip_trans_param.transport_port = dut->trans_port;
+
+		ndp_ip_trans_param.trans_proto_present = 1;
+		ndp_ip_trans_param.transport_protocol = dut->trans_proto;
+
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_TRANSPORT_IP_PARAM;
+		memcpy(cfg_debug.debug_cmd_data, &ndp_ip_trans_param,
+		       sizeof(NdpIpTransParams));
+		nan_debug_command_config(0, global_interface_handle, cfg_debug,
+					 sizeof(u32) +
+					 sizeof(NdpIpTransParams));
+	}
 #endif
 
 	ret = nan_publish_request(0, global_interface_handle, &req);
@@ -1924,6 +1993,9 @@ void nan_cmd_sta_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	memset(&dut->nan_pmk[0], 0, NAN_PMK_INFO_LEN);
 	dut->nan_pmk_len = 0;
 	dut->sta_channel = 0;
+	dut->ndpe = 0;
+	dut->trans_proto = NAN_TRANSPORT_PROTOCOL_DEFAULT;
+	dut->trans_port = NAN_TRANSPORT_PORT_DEFAULT;
 	memset(global_event_resp_buf, 0, sizeof(global_event_resp_buf));
 	memset(&global_nan_sync_stats, 0, sizeof(global_nan_sync_stats));
 	memset(global_publish_service_name, 0,
