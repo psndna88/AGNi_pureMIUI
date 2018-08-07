@@ -20,6 +20,7 @@
 #include "diagfwd_cntl.h"
 #include "diag_masks.h"
 #include "diagfwd_peripheral.h"
+#include "diag_ipc_logging.h"
 
 #define ALL_EQUIP_ID		100
 #define ALL_SSID		-1
@@ -586,7 +587,6 @@ static int diag_cmd_set_msg_mask(unsigned char *src_buf, int src_len,
 	struct diag_msg_mask_t *mask = NULL;
 	struct diag_msg_build_mask_t *req = NULL;
 	struct diag_msg_build_mask_t rsp;
-	struct diag_msg_mask_t *mask_next = NULL;
 	uint32_t *temp = NULL;
 
 	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0) {
@@ -600,18 +600,10 @@ static int diag_cmd_set_msg_mask(unsigned char *src_buf, int src_len,
 	mutex_lock(&msg_mask.lock);
 	mask = (struct diag_msg_mask_t *)msg_mask.ptr;
 	for (i = 0; i < driver->msg_mask_tbl_count; i++, mask++) {
-		if (i < (driver->msg_mask_tbl_count - 1)) {
-			mask_next = mask;
-			mask_next++;
-		} else
-			mask_next = NULL;
-
 		if ((req->ssid_first < mask->ssid_first) ||
-		    (req->ssid_first > mask->ssid_first + MAX_SSID_PER_RANGE) ||
-		    (mask_next && (req->ssid_first >= mask_next->ssid_first))) {
+		    (req->ssid_first > mask->ssid_last_tools)) {
 			continue;
 		}
-		mask_next = NULL;
 		found = 1;
 		mutex_lock(&mask->lock);
 		mask_size = req->ssid_last - req->ssid_first + 1;
@@ -628,10 +620,8 @@ static int diag_cmd_set_msg_mask(unsigned char *src_buf, int src_len,
 			pr_debug("diag: Msg SSID range mismatch\n");
 			if (mask_size != MAX_SSID_PER_RANGE)
 				mask->ssid_last_tools = req->ssid_last;
-			mask->range_tools =
-				mask->ssid_last_tools - mask->ssid_first + 1;
 			temp = krealloc(mask->ptr,
-					mask->range_tools * sizeof(uint32_t),
+					mask_size * sizeof(uint32_t),
 					GFP_KERNEL);
 			if (!temp) {
 				pr_err_ratelimited("diag: In %s, unable to allocate memory for msg mask ptr, mask_size: %d\n",
@@ -643,6 +633,7 @@ static int diag_cmd_set_msg_mask(unsigned char *src_buf, int src_len,
 				return -ENOMEM;
 			}
 			mask->ptr = temp;
+			mask->range_tools = mask_size;
 		}
 
 		offset = req->ssid_first - mask->ssid_first;
@@ -1474,6 +1465,16 @@ int diag_copy_to_user_msg_mask(char __user *buf, size_t count)
 
 	if (!buf || count == 0)
 		return -EINVAL;
+
+	mutex_lock(&driver->diag_maskclear_mutex);
+	if (driver->mask_clear) {
+		DIAG_LOG(DIAG_DEBUG_USERSPACE,
+		"diag:%s: count = %zu\n", __func__, count);
+		mutex_unlock(&driver->diag_maskclear_mutex);
+		return -EIO;
+	}
+	mutex_unlock(&driver->diag_maskclear_mutex);
+
 	mutex_lock(&driver->msg_mask_lock);
 	mutex_lock(&msg_mask.lock);
 	mask = (struct diag_msg_mask_t *)(msg_mask.ptr);
