@@ -31,14 +31,14 @@
 			compatible = "android,firmware";	/* AGNI_OREO_SYSMOUNT_MARKER */
             fstab {								/* AGNI_OREO_SYSMOUNT_MARKER */
 				compatible = "android,fstab";	/* AGNI_OREO_SYSMOUNT_MARKER */
-				vendor {						/* AGNI_OREO_SYSMOUNT_MARKER */
-					compatible = "android,vendor"; /* AGNI_OREO_SYSMOUNT_MARKER */
-					dev = "/dev/block/platform/soc.0/7824900.sdhci/by-name/cust"; /* AGNI_OREO_SYSMOUNT_MARKER */
-					type = "ext4";				/* AGNI_OREO_SYSMOUNT_MARKER */
-					mnt_flags = "ro,barrier=1,noatime,nodiratime"; /* AGNI_OREO_SYSMOUNT_MARKER */
-					fsmgr_flags = "wait";		/* AGNI_OREO_SYSMOUNT_MARKER */
-					status = "ok";				/* AGNI_OREO_SYSMOUNT_MARKER */
-				};								/* AGNI_OREO_SYSMOUNT_MARKER */
+				vendor {						/* AGNI_OREO_vendorMOUNT_MARKER */
+					compatible = "android,vendor"; /* AGNI_OREO_vendorMOUNT_MARKER */
+					dev = "/dev/block/platform/soc.0/7824900.sdhci/by-name/cust"; /* AGNI_OREO_vendorMOUNT_MARKER */
+					type = "ext4";				/* AGNI_OREO_vendorMOUNT_MARKER */
+					mnt_flags = "ro,barrier=1,noatime,nodiratime"; /* AGNI_OREO_vendorMOUNT_MARKER */
+					fsmgr_flags = "wait";		/* AGNI_OREO_vendorMOUNT_MARKER */
+					status = "ok";				/* AGNI_OREO_vendorMOUNT_MARKER */
+				};								/* AGNI_OREO_vendorMOUNT_MARKER */
                 system {						/* AGNI_OREO_SYSMOUNT_MARKER */
             	    compatible = "android,system";	/* AGNI_OREO_SYSMOUNT_MARKER */
                     dev = "/dev/block/platform/soc.0/7824900.sdhci/by-name/system";	/* AGNI_OREO_SYSMOUNT_MARKER */

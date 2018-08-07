@@ -28,20 +28,16 @@ if [ -f $KERNELDIR/include/generated/compile.h ];
 	rm $KERNELDIR/include/generated/compile.h
 fi
 
-if [ "`grep "AGNI_OREO_vendorMOUNT_MARKER" $KERNELDIR/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi`" ];
-	then
-	sed -i '/AGNI_OREO_vendorMOUNT_MARKER/d' $KERNELDIR/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi
-fi
-
-make -j4 || exit 1
 git checkout $KERNELDIR/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi
 
-rm -rf $KERNELDIR/BUILT_kenzo-losO
-mkdir -p $KERNELDIR/BUILT_kenzo-losO
+make -j4 || exit 1
 
-find -name '*.ko' -exec mv -v {} $KERNELDIR/BUILT_kenzo-losO/ \;
+rm -rf $KERNELDIR/BUILT_kenzo-losO_treble
+mkdir -p $KERNELDIR/BUILT_kenzo-losO_treble
 
-mv $KERNELDIR/arch/arm64/boot/Image.*-dtb $KERNELDIR/BUILT_kenzo-losO/
+find -name '*.ko' -exec mv -v {} $KERNELDIR/BUILT_kenzo-losO_treble/ \;
+
+mv $KERNELDIR/arch/arm64/boot/Image.*-dtb $KERNELDIR/BUILT_kenzo-losO_treble/
 
 echo ""
 echo "AGNi pureLOS-O has been built for kenzo !!!"

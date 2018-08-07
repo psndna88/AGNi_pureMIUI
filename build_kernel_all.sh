@@ -4,7 +4,20 @@ cd $KERNELDIR;
 
 #TEMP_DIR=$KERNELDIR/../TEMP_KENZO_BUILDS_RUN_STORE
 #mkdir -p $TEMP_DIR
-rm -rf BUILT_kenzo-miuiMM BUILT_kenzo-miuiN BUILT_kenzo-losMM BUILT_kenzo-losN BUILT_kenzo-losO .config .config.old
+rm -rf BUILT_kenzo-miuiMM BUILT_kenzo-miuiN BUILT_kenzo-losMM BUILT_kenzo-losN BUILT_kenzo-losO BUILT_kenzo-losO_treble .config .config.old
+
+echo "-----------------------------------------------------------------------"
+echo " "
+echo "          BATCH MODE: Building AGNi LOS-O treble variant..."
+# AGNI pureLOS-O
+rm drivers/staging/prima/wlan.ko
+./build_kernel_kenzo_losO_treble.sh || exit 1
+#mv -f $KERNELDIR/BUILT_kenzo-losO $TEMP_DIR/
+rm .config
+echo " "
+echo "          BATCH MODE: Built AGNi LOS-O treble variant!!!"
+echo "-----------------------------------------------------------------------"
+echo " "
 
 echo "-----------------------------------------------------------------------"
 echo " "
