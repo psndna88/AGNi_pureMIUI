@@ -5183,8 +5183,10 @@ static void __tcp_ack_snd_check(struct sock *sk, int ofo_possible)
 	     __tcp_select_window(sk) >= tp->rcv_wnd) ||
 	    /* We ACK each frame or... */
 	    tcp_in_quickack_mode(sk) ||
-	    /* We have out of order data. */
-	    (ofo_possible && !RB_EMPTY_ROOT(&tp->out_of_order_queue))) {
+	    /* We have out of order data or... */
+	    (ofo_possible && !RB_EMPTY_ROOT(&tp->out_of_order_queue)) ||
+	    /* Protocol state mandates a one-time immediate ACK */
+	    inet_csk(sk)->icsk_ack.pending & ICSK_ACK_NOW) {
 		/* Then ack it now */
 		tcp_send_ack(sk);
 	} else {
