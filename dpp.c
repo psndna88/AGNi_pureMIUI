@@ -895,7 +895,8 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		"CTRL-EVENT-CONNECTED",
 		NULL
 	};
-	const char *groups_override = NULL;
+	const char *group_id_str = NULL;
+	char group_id[100];
 	const char *result;
 	int check_mutual = 0;
 	int enrollee_ap;
@@ -1037,6 +1038,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 
 	conf_ssid[0] = '\0';
 	conf_pass[0] = '\0';
+	group_id[0] = '\0';
 	val = get_param(cmd, "DPPConfIndex");
 	if (val)
 		conf_index = atoi(val);
@@ -1049,11 +1051,10 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
 		if (enrollee_ap) {
 			conf_role = "ap-dpp";
-			groups_override = "[{\"groupId\":\"DPPGROUP_DPP_INFRA\",\"netRole\":\"ap\"}]";
 		} else {
 			conf_role = "sta-dpp";
-			groups_override = "[{\"groupId\":\"DPPGROUP_DPP_INFRA\",\"netRole\":\"sta\"}]";
 		}
+		group_id_str = "DPPGROUP_DPP_INFRA";
 		break;
 	case 2:
 		ascii2hexstr("DPPNET01", buf);
@@ -1080,11 +1081,10 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
 		if (enrollee_ap) {
 			conf_role = "ap-dpp";
-			groups_override = "[{\"groupId\":\"DPPGROUP_DPP_INFRA2\",\"netRole\":\"ap\"}]";
 		} else {
 			conf_role = "sta-dpp";
-			groups_override = "[{\"groupId\":\"DPPGROUP_DPP_INFRA2\",\"netRole\":\"sta\"}]";
 		}
+		group_id_str = "DPPGROUP_DPP_INFRA2";
 		break;
 	case 5:
 		ascii2hexstr("DPPNET01", buf);
@@ -1111,11 +1111,10 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
 		if (enrollee_ap) {
 			conf_role = "ap-dpp";
-			groups_override = "[{\"groupId\":\"DPPGROUP_DPP_INFRA\",\"netRole\":\"ap\"}]";
 		} else {
 			conf_role = "sta-dpp";
-			groups_override = "[{\"groupId\":\"DPPGROUP_DPP_INFRA\",\"netRole\":\"sta\"}]";
 		}
+		group_id_str = "DPPGROUP_DPP_INFRA";
 		force_gas_fragm = 1;
 		break;
 	default:
@@ -1124,15 +1123,9 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		goto out;
 	}
 
-	if (groups_override) {
-		snprintf(buf, sizeof(buf), "SET dpp_groups_override %s",
-			 groups_override);
-		if (wpa_command(ifname, buf) < 0) {
-			send_resp(dut, conn, SIGMA_ERROR,
-				  "errorCode,Failed to set cred:groups");
-			goto out;
-		}
-	}
+	if (group_id_str)
+		snprintf(group_id, sizeof(group_id), " group_id=%s",
+			 group_id_str);
 
 	if (force_gas_fragm) {
 		char spaces[1500];
@@ -1261,14 +1254,15 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 				goto out;
 			}
 			snprintf(buf, sizeof(buf),
-				 "DPP_AUTH_INIT peer=%d%s role=%s conf=%s %s %s configurator=%d%s",
+				 "DPP_AUTH_INIT peer=%d%s role=%s conf=%s %s %s configurator=%d%s%s",
 				 dpp_peer_bootstrap, own_txt, role,
 				 conf_role, conf_ssid, conf_pass,
-				 dut->dpp_conf_id, neg_freq);
+				 dut->dpp_conf_id, neg_freq, group_id);
 		} else if (strcasecmp(bs, "QR") == 0) {
 			snprintf(buf, sizeof(buf),
-				 "DPP_AUTH_INIT peer=%d%s role=%s%s",
-				 dpp_peer_bootstrap, own_txt, role, neg_freq);
+				 "DPP_AUTH_INIT peer=%d%s role=%s%s%s",
+				 dpp_peer_bootstrap, own_txt, role,
+				 neg_freq, group_id);
 		} else if (strcasecmp(bs, "PKEX") == 0 &&
 			   (strcasecmp(prov_role, "Configurator") == 0 ||
 			    strcasecmp(prov_role, "Both") == 0)) {
@@ -1339,9 +1333,9 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 				goto out;
 			}
 			snprintf(buf, sizeof(buf),
-				 "SET dpp_configurator_params  conf=%s %s %s configurator=%d",
+				 "SET dpp_configurator_params  conf=%s %s %s configurator=%d%s",
 				 conf_role, conf_ssid, conf_pass,
-				 dut->dpp_conf_id);
+				 dut->dpp_conf_id, group_id);
 			if (wpa_command(ifname, buf) < 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "errorCode,Failed to set configurator parameters");
