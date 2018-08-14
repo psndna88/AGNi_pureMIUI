@@ -1,0 +1,5 @@
+service bootscript /sbin/bootscript.sh
+	class main
+	user root
+	group root
+	oneshot
