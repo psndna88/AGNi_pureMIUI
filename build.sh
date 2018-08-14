@@ -2,8 +2,8 @@ KERNEL_DIR=$PWD
 Anykernel_DIR=$KERNEL_DIR/AnyKernel2/
 DATE=$(date +"%d%m%Y")
 KERNEL_NAME="Escrima-X25-Kamui-LightningBlade-PurpleLightning"
-DEVICE="kenzo"
-FINAL_ZIP="$KERNEL_NAME""$DEVICE""$DATE".zip
+DEVICE="-kenzo-"
+FINAL_ZIP="$KERNEL_NAME""$DEVICE""$DATE"
 
 # Cleanup before 
 rm -rf $Anykernel_DIR/*zip
@@ -28,3 +28,4 @@ make -j4
 cp arch/arm64/boot/Image.gz-dtb $Anykernel_DIR
 cd $Anykernel_DIR
 zip -r9 $FINAL_ZIP.zip * -x .git README.md *placeholder
+
