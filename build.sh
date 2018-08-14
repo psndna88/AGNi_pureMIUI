@@ -7,6 +7,7 @@ FINAL_ZIP="$KERNEL_NAME""$DEVICE""$DATE"
 
 # Cleanup before 
 rm -rf $Anykernel_DIR/*zip
+rm -rf $Anykernel_DIR/Image.gz-dtb
 rm -rf arch/arm64/boot/Image
 rm -rf arch/arm64/boot/dts/qcom/kenzo-msm8956-mtp.dtb
 rm -rf arch/arm64/boot/Image.gz
@@ -29,3 +30,9 @@ cp arch/arm64/boot/Image.gz-dtb $Anykernel_DIR
 cd $Anykernel_DIR
 zip -r9 $FINAL_ZIP.zip * -x .git README.md *placeholder
 
+# Cleanup again
+rm -rf $Anykernel_DIR/Image.gz-dtb
+rm -rf arch/arm64/boot/Image
+rm -rf arch/arm64/boot/dts/qcom/kenzo-msm8956-mtp.dtb
+rm -rf arch/arm64/boot/Image.gz
+rm -rf arch/arm64/boot/Image.gz-dtb
