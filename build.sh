@@ -31,6 +31,7 @@ cd $Anykernel_DIR
 zip -r9 $FINAL_ZIP.zip * -x .git README.md *placeholder
 
 # Cleanup again
+cd ../
 rm -rf $Anykernel_DIR/Image.gz-dtb
 rm -rf arch/arm64/boot/Image
 rm -rf arch/arm64/boot/dts/qcom/kenzo-msm8956-mtp.dtb
