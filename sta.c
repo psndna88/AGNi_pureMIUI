@@ -5922,10 +5922,10 @@ static int sta_set_beamformee_sts(struct sigma_dut *dut, const char *intf,
 }
 
 
-static int sta_set_mac_padding_duration(struct sigma_dut *dut, const char *intf,
-					int val)
-{
 #ifdef NL80211_SUPPORT
+static int sta_set_mac_padding_duration(struct sigma_dut *dut, const char *intf,
+					enum qca_wlan_he_mac_padding_dur val)
+{
 	struct nl_msg *msg;
 	int ret = 0;
 	struct nlattr *params;
@@ -5964,12 +5964,8 @@ static int sta_set_mac_padding_duration(struct sigma_dut *dut, const char *intf,
 				__func__, ret, val);
 	}
 	return ret;
-#else /* NL80211_SUPPORT */
-	sigma_dut_print(dut, DUT_MSG_ERROR,
-			"MAC padding duration cannot be changed without NL80211_SUPPORT defined");
-	return -1;
-#endif /* NL80211_SUPPORT */
 }
+#endif /* NL80211_SUPPORT */
 
 
 static int sta_set_mu_edca_override(struct sigma_dut *dut, const char *intf,
@@ -6097,7 +6093,9 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 					"Failed to set BeamformeeSTS");
 		}
 
-		if (sta_set_mac_padding_duration(dut, intf, 0)) {
+		if (sta_set_mac_padding_duration(
+			    dut, intf,
+			    QCA_WLAN_HE_NO_ADDITIONAL_PROCESS_TIME)) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Failed to set MAC padding duration");
 		}
@@ -7051,11 +7049,29 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 
 	val = get_param(cmd, "Trig_MAC_Padding_Dur");
 	if (val) {
-		if (sta_set_mac_padding_duration(dut, intf, atoi(val))) {
+#ifdef NL80211_SUPPORT
+		enum qca_wlan_he_mac_padding_dur set_val;
+
+		switch (atoi(val)) {
+		case 16:
+			set_val = QCA_WLAN_HE_16US_OF_PROCESS_TIME;
+			break;
+		case 8:
+			set_val = QCA_WLAN_HE_8US_OF_PROCESS_TIME;
+			break;
+		default:
+			set_val = QCA_WLAN_HE_NO_ADDITIONAL_PROCESS_TIME;
+			break;
+		}
+		if (sta_set_mac_padding_duration(dut, intf, set_val)) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,Failed to set MAC padding duration");
 			return 0;
 		}
+#else /* NL80211_SUPPORT */
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"MAC padding duration cannot be changed without NL80211_SUPPORT defined");
+#endif /* NL80211_SUPPORT */
 	}
 
 	val = get_param(cmd, "MU_EDCA");
