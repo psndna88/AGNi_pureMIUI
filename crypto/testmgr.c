@@ -3101,7 +3101,23 @@ static const struct alg_test_desc alg_test_descs[] = {
 				}
 			}
 		}
-	}
+	}, {
+		.alg = "zstd",
+		.test = alg_test_comp,
+		.fips_allowed = 1,
+		.suite = {
+			.pcomp = {
+				.comp = {
+					.vecs = zstd_comp_tv_template,
+					.count = ZLIB_COMP_TEST_VECTORS
+				},
+				.decomp = {
+					.vecs = zstd_decomp_tv_template,
+					.count = ZLIB_DECOMP_TEST_VECTORS
+				}
+			}
+		}
+ 	}
 };
 
 static int alg_find_test(const char *alg)
