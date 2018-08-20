@@ -156,7 +156,7 @@ int adreno_drawctxt_wait(struct adreno_device *adreno_dev,
 	if (kgsl_context_invalid(context))
 		return -EDEADLK;
 
-	trace_adreno_drawctxt_wait_start(-1, context->id, timestamp);
+//	trace_adreno_drawctxt_wait_start(-1, context->id, timestamp);
 
 	ret = kgsl_add_event(device, &context->events, timestamp,
 		wait_callback, (void *) drawctxt);
@@ -193,7 +193,7 @@ int adreno_drawctxt_wait(struct adreno_device *adreno_dev,
 		ret = -ENOENT;
 
 done:
-	trace_adreno_drawctxt_wait_done(-1, context->id, timestamp, ret);
+//	trace_adreno_drawctxt_wait_done(-1, context->id, timestamp, ret);
 	return ret;
 }
 
@@ -225,13 +225,13 @@ static int adreno_drawctxt_wait_rb(struct adreno_device *adreno_dev,
 			!test_bit(KGSL_CONTEXT_PRIV_SUBMITTED, &context->priv))
 		goto done;
 
-	trace_adreno_drawctxt_wait_start(drawctxt->rb->id, context->id,
-					timestamp);
+//	trace_adreno_drawctxt_wait_start(drawctxt->rb->id, context->id,
+//					timestamp);
 
 	ret = adreno_ringbuffer_waittimestamp(drawctxt->rb, timestamp, timeout);
 done:
-	trace_adreno_drawctxt_wait_done(drawctxt->rb->id, context->id,
-					timestamp, ret);
+//	trace_adreno_drawctxt_wait_done(drawctxt->rb->id, context->id,
+//					timestamp, ret);
 	return ret;
 }
 
@@ -268,7 +268,7 @@ void adreno_drawctxt_invalidate(struct kgsl_device *device,
 	struct kgsl_drawobj *list[ADRENO_CONTEXT_DRAWQUEUE_SIZE];
 	int i, count;
 
-	trace_adreno_drawctxt_invalidate(drawctxt);
+//	trace_adreno_drawctxt_invalidate(drawctxt);
 
 	spin_lock(&drawctxt->lock);
 	set_bit(KGSL_CONTEXT_PRIV_INVALID, &context->priv);
@@ -608,7 +608,7 @@ int adreno_drawctxt_switch(struct adreno_device *adreno_dev,
 	if (drawctxt != NULL && kgsl_context_detached(&drawctxt->base))
 		return -ENOENT;
 
-	trace_adreno_drawctxt_switch(rb, drawctxt);
+//	trace_adreno_drawctxt_switch(rb, drawctxt);
 
 	/* Get a refcount to the new instance */
 	if (drawctxt) {

@@ -892,8 +892,8 @@ static int kgsl_iommu_fault_handler(struct iommu_domain *domain,
 	 * address in free list as it takes quite long time in
 	 * search and delays the trace unnecessarily.
 	 */
-	trace_kgsl_mmu_pagefault(ctx->kgsldev, addr,
-			ptname, write ? "write" : "read");
+//	trace_kgsl_mmu_pagefault(ctx->kgsldev, addr,
+//			ptname, write ? "write" : "read");
 
 	if (test_bit(KGSL_FT_PAGEFAULT_LOG_ONE_PER_PAGE,
 		&adreno_dev->ft_pf_policy))
@@ -1082,7 +1082,7 @@ static void kgsl_iommu_destroy_pagetable(struct kgsl_pagetable *pt)
 	}
 
 	if (iommu_pt->domain) {
-		trace_kgsl_pagetable_destroy(iommu_pt->ttbr0, pt->name);
+//		trace_kgsl_pagetable_destroy(iommu_pt->ttbr0, pt->name);
 
 		_detach_pt(iommu_pt, ctx);
 

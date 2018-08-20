@@ -211,8 +211,8 @@ static void drawobj_sync_func(struct kgsl_device *device,
 {
 	struct kgsl_drawobj_sync_event *event = priv;
 
-	trace_syncpoint_timestamp_expire(event->syncobj,
-		event->context, event->timestamp);
+//	trace_syncpoint_timestamp_expire(event->syncobj,
+//		event->context, event->timestamp);
 
 	/*
 	 * Put down the context ref count only if
@@ -360,8 +360,8 @@ static void drawobj_sync_fence_func(void *priv)
 
 	drawobj_sync_expire(event->device, event);
 
-	trace_syncpoint_fence_expire(event->syncobj,
-		event->handle ? event->handle->name : "unknown");
+//	trace_syncpoint_fence_expire(event->syncobj,
+//		event->handle ? event->handle->name : "unknown");
 
 	spin_lock_irqsave(&event->handle_lock, flags);
 
@@ -413,7 +413,7 @@ static int drawobj_add_sync_fence(struct kgsl_device *device,
 	spin_lock_init(&event->handle_lock);
 	set_bit(event->id, &syncobj->pending);
 
-	trace_syncpoint_fence(syncobj, fence->name);
+//	trace_syncpoint_fence(syncobj, fence->name);
 
 	spin_lock_irqsave(&event->handle_lock, flags);
 
@@ -435,8 +435,8 @@ static int drawobj_add_sync_fence(struct kgsl_device *device,
 		 * the fence is already signaled or there is
 		 * a failure in registering the fence waiter.
 		 */
-		trace_syncpoint_fence_expire(syncobj, (ret < 0) ?
-				"error" : fence->name);
+//		trace_syncpoint_fence_expire(syncobj, (ret < 0) ?
+//				"error" : fence->name);
 	} else {
 		spin_unlock_irqrestore(&event->handle_lock, flags);
 	}
@@ -508,9 +508,9 @@ static int drawobj_add_sync_timestamp(struct kgsl_device *device,
 	if (ret) {
 		clear_bit(event->id, &syncobj->pending);
 		drawobj_put(drawobj);
-	} else {
-		trace_syncpoint_timestamp(syncobj, context, sync->timestamp);
-	}
+	} // else {
+//		trace_syncpoint_timestamp(syncobj, context, sync->timestamp);
+//	}
 
 done:
 	if (ret)

@@ -625,7 +625,7 @@ static irqreturn_t adreno_irq_handler(struct kgsl_device *device)
 		tmp &= ~BIT(i);
 	}
 
-	gpudev->irq_trace(adreno_dev, status);
+//	gpudev->irq_trace(adreno_dev, status);
 
 	/*
 	 * Clear ADRENO_INT_RBBM_AHB_ERROR bit after this interrupt has been
@@ -906,8 +906,9 @@ static int adreno_of_get_power(struct adreno_device *adreno_dev,
 	device->pwrctrl.bus_control = of_property_read_bool(node,
 		"qcom,bus-control");
 
-	device->pwrctrl.input_disable = of_property_read_bool(node,
-		"qcom,disable-wake-on-touch");
+//	device->pwrctrl.input_disable = of_property_read_bool(node,
+//		"qcom,disable-wake-on-touch");
+	device->pwrctrl.input_disable = true;
 
 	return 0;
 }
@@ -1984,19 +1985,19 @@ int adreno_set_constraint(struct kgsl_device *device,
 		context->pwr_constraint.type =
 				KGSL_CONSTRAINT_PWRLEVEL;
 		context->pwr_constraint.sub_type = pwr.level;
-		trace_kgsl_user_pwrlevel_constraint(device,
-			context->id,
-			context->pwr_constraint.type,
-			context->pwr_constraint.sub_type);
+//		trace_kgsl_user_pwrlevel_constraint(device,
+//			context->id,
+//			context->pwr_constraint.type,
+//			context->pwr_constraint.sub_type);
 		}
 		break;
 	case KGSL_CONSTRAINT_NONE:
-		if (context->pwr_constraint.type == KGSL_CONSTRAINT_PWRLEVEL)
-			trace_kgsl_user_pwrlevel_constraint(device,
-				context->id,
-				KGSL_CONSTRAINT_NONE,
-				context->pwr_constraint.sub_type);
-		context->pwr_constraint.type = KGSL_CONSTRAINT_NONE;
+//		if (context->pwr_constraint.type == KGSL_CONSTRAINT_PWRLEVEL)
+//			trace_kgsl_user_pwrlevel_constraint(device,
+//				context->id,
+//				KGSL_CONSTRAINT_NONE,
+//				context->pwr_constraint.sub_type);
+//		context->pwr_constraint.type = KGSL_CONSTRAINT_NONE;
 		break;
 
 	default:
@@ -2007,8 +2008,8 @@ int adreno_set_constraint(struct kgsl_device *device,
 	/* If a new constraint has been set for a context, cancel the old one */
 	if ((status == 0) &&
 		(context->id == device->pwrctrl.constraint.owner_id)) {
-		trace_kgsl_constraint(device, device->pwrctrl.constraint.type,
-					device->pwrctrl.active_pwrlevel, 0);
+//		trace_kgsl_constraint(device, device->pwrctrl.constraint.type,
+//					device->pwrctrl.active_pwrlevel, 0);
 		device->pwrctrl.constraint.type = KGSL_CONSTRAINT_NONE;
 	}
 
@@ -2436,7 +2437,7 @@ static void adreno_regwrite(struct kgsl_device *device,
 	if (!in_interrupt())
 		kgsl_pre_hwaccess(device);
 
-	trace_kgsl_regwrite(device, offsetwords, value);
+//	trace_kgsl_regwrite(device, offsetwords, value);
 
 	kgsl_cffdump_regwrite(device, offsetwords << 2, value);
 	reg = (device->reg_virt + (offsetwords << 2));

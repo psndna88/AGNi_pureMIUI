@@ -45,10 +45,10 @@ static inline void signal_event(struct kgsl_device *device,
 static void _kgsl_event_worker(struct kthread_work *work)
 {
 	struct kgsl_event *event = container_of(work, struct kgsl_event, work);
-	int id = KGSL_CONTEXT_ID(event->context);
+//	int id = KGSL_CONTEXT_ID(event->context);
 
-	trace_kgsl_fire_event(id, event->timestamp, event->result,
-		jiffies - event->created, event->func);
+//	trace_kgsl_fire_event(id, event->timestamp, event->result,
+//		jiffies - event->created, event->func);
 
 	event->func(event->device, event->group, event->priv, event->result);
 
@@ -284,7 +284,7 @@ int kgsl_add_event(struct kgsl_device *device, struct kgsl_event_group *group,
 
 	init_kthread_work(&event->work, _kgsl_event_worker);
 
-	trace_kgsl_register_event(KGSL_CONTEXT_ID(context), timestamp, func);
+//	trace_kgsl_register_event(KGSL_CONTEXT_ID(context), timestamp, func);
 
 	spin_lock(&group->lock);
 
