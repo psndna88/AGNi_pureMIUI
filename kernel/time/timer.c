@@ -675,20 +675,20 @@ static inline void debug_timer_assert_init(struct timer_list *timer) { }
 static inline void debug_init(struct timer_list *timer)
 {
 	debug_timer_init(timer);
-	trace_timer_init(timer);
+//	trace_timer_init(timer);
 }
 
 static inline void
 debug_activate(struct timer_list *timer, unsigned long expires)
 {
 	debug_timer_activate(timer);
-	trace_timer_start(timer, expires, timer->flags);
+//	trace_timer_start(timer, expires, timer->flags);
 }
 
 static inline void debug_deactivate(struct timer_list *timer)
 {
 	debug_timer_deactivate(timer);
-	trace_timer_cancel(timer);
+//	trace_timer_cancel(timer);
 }
 
 static inline void debug_assert_init(struct timer_list *timer)
@@ -1197,9 +1197,9 @@ static void call_timer_fn(struct timer_list *timer, void (*fn)(unsigned long),
 	 */
 	lock_map_acquire(&lockdep_map);
 
-	trace_timer_expire_entry(timer);
+//	trace_timer_expire_entry(timer);
 	fn(data);
-	trace_timer_expire_exit(timer);
+//	trace_timer_expire_exit(timer);
 
 	lock_map_release(&lockdep_map);
 

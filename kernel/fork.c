@@ -1704,7 +1704,7 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 	threadgroup_change_end(current);
 	perf_event_fork(p);
 
-	trace_task_newtask(p, clone_flags);
+//	trace_task_newtask(p, clone_flags);
 	uprobe_copy_process(p, clone_flags);
 
 	return p;
@@ -1826,7 +1826,7 @@ long _do_fork(unsigned long clone_flags,
 
 		cpufreq_task_times_alloc(p);
 
-		trace_sched_process_fork(current, p);
+//		trace_sched_process_fork(current, p);
 
 		pid = get_task_pid(p, PIDTYPE_PID);
 		nr = pid_vnr(pid);

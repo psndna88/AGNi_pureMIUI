@@ -135,9 +135,9 @@ static unsigned long measure_mrps_and_set_irq(struct cache_hwmon_node *node,
 
 	preempt_enable();
 
-	trace_cache_hwmon_meas(dev_name(hw->df->dev.parent), stat->mrps[HIGH],
-			       stat->mrps[MED], stat->mrps[LOW],
-			       stat->busy_percent, us);
+//	trace_cache_hwmon_meas(dev_name(hw->df->dev.parent), stat->mrps[HIGH],
+//			       stat->mrps[MED], stat->mrps[LOW],
+//			       stat->busy_percent, us);
 	return 0;
 }
 
@@ -166,7 +166,7 @@ static void compute_cache_freq(struct cache_hwmon_node *node,
 
 	new_mhz += node->guard_band_mhz;
 	*freq = new_mhz * 1000;
-	trace_cache_hwmon_update(dev_name(node->hw->df->dev.parent), *freq);
+//	trace_cache_hwmon_update(dev_name(node->hw->df->dev.parent), *freq);
 }
 
 #define TOO_SOON_US	(1 * USEC_PER_MSEC)

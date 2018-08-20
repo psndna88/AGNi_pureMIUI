@@ -538,8 +538,8 @@ static void cpufreq_interactive_timer(unsigned long data)
 
 		cpu_load = max(prev_l, pred_l);
 		pol_load = max(pol_load, cpu_load);
-		trace_cpufreq_interactive_cpuload(cpu, cpu_load, new_load_pct,
-						  prev_l, pred_l);
+//		trace_cpufreq_interactive_cpuload(cpu, cpu_load, new_load_pct,
+//						  prev_l, pred_l);
 
 		/* save loadadjfreq for notification */
 		pcpu->loadadjfreq = max(t_prevlaf, t_predlaf);
@@ -601,9 +601,9 @@ static void cpufreq_interactive_timer(unsigned long data)
 	    new_freq > ppol->target_freq &&
 	    now - ppol->hispeed_validate_time <
 	    freq_to_above_hispeed_delay(tunables, ppol->target_freq)) {
-		trace_cpufreq_interactive_notyet(
-			max_cpu, pol_load, ppol->target_freq,
-			ppol->policy->cur, new_freq);
+//		trace_cpufreq_interactive_notyet(
+//			max_cpu, pol_load, ppol->target_freq,
+//			ppol->policy->cur, new_freq);
 		spin_unlock_irqrestore(&ppol->target_freq_lock, flags);
 		goto rearm;
 	}
@@ -626,9 +626,9 @@ static void cpufreq_interactive_timer(unsigned long data)
 	if (!skip_min_sample_time && new_freq < ppol->floor_freq) {
 		if (now - ppol->floor_validate_time <
 				tunables->min_sample_time) {
-			trace_cpufreq_interactive_notyet(
-				max_cpu, pol_load, ppol->target_freq,
-				ppol->policy->cur, new_freq);
+//			trace_cpufreq_interactive_notyet(
+//				max_cpu, pol_load, ppol->target_freq,
+//				ppol->policy->cur, new_freq);
 			spin_unlock_irqrestore(&ppol->target_freq_lock, flags);
 			goto rearm;
 		}
@@ -656,15 +656,15 @@ static void cpufreq_interactive_timer(unsigned long data)
 
 	if (ppol->target_freq == new_freq &&
 			ppol->target_freq <= ppol->policy->cur) {
-		trace_cpufreq_interactive_already(
-			max_cpu, pol_load, ppol->target_freq,
-			ppol->policy->cur, new_freq);
+//		trace_cpufreq_interactive_already(
+//			max_cpu, pol_load, ppol->target_freq,
+//			ppol->policy->cur, new_freq);
 		spin_unlock_irqrestore(&ppol->target_freq_lock, flags);
 		goto rearm;
 	}
 
-	trace_cpufreq_interactive_target(max_cpu, pol_load, ppol->target_freq,
-					 ppol->policy->cur, new_freq);
+//	trace_cpufreq_interactive_target(max_cpu, pol_load, ppol->target_freq,
+//					 ppol->policy->cur, new_freq);
 
 	ppol->target_freq = new_freq;
 	spin_unlock_irqrestore(&ppol->target_freq_lock, flags);
@@ -738,9 +738,9 @@ static int cpufreq_interactive_speedchange_task(void *data)
 				__cpufreq_driver_target(ppol->policy,
 							ppol->target_freq,
 							CPUFREQ_RELATION_H);
-			trace_cpufreq_interactive_setspeed(cpu,
-						     ppol->target_freq,
-						     ppol->policy->cur);
+//			trace_cpufreq_interactive_setspeed(cpu,
+//						     ppol->target_freq,
+//						     ppol->policy->cur);
 			up_read(&ppol->enable_sem);
 		}
 	}
@@ -836,7 +836,7 @@ static enum hrtimer_restart cpufreq_interactive_hrtimer(struct hrtimer *timer)
 		return 0;
 	}
 	cpu = ppol->notif_cpu;
-	trace_cpufreq_interactive_load_change(cpu);
+//	trace_cpufreq_interactive_load_change(cpu);
 	del_timer(&ppol->policy_timer);
 	del_timer(&ppol->policy_slack_timer);
 	cpufreq_interactive_timer(cpu);
@@ -1175,12 +1175,12 @@ static ssize_t store_boost(struct cpufreq_interactive_tunables *tunables,
 	tunables->boost_val = val;
 
 	if (tunables->boost_val) {
-		trace_cpufreq_interactive_boost("on");
+//		trace_cpufreq_interactive_boost("on");
 		if (!tunables->boosted)
 			cpufreq_interactive_boost(tunables);
 	} else {
 		tunables->boostpulse_endtime = ktime_to_us(ktime_get());
-		trace_cpufreq_interactive_unboost("off");
+//		trace_cpufreq_interactive_unboost("off");
 	}
 
 	return count;
@@ -1198,7 +1198,7 @@ static ssize_t store_boostpulse(struct cpufreq_interactive_tunables *tunables,
 
 	tunables->boostpulse_endtime = ktime_to_us(ktime_get()) +
 		tunables->boostpulse_duration_val;
-	trace_cpufreq_interactive_boost("pulse");
+//	trace_cpufreq_interactive_boost("pulse");
 	if (!tunables->boosted)
 		cpufreq_interactive_boost(tunables);
 	return count;

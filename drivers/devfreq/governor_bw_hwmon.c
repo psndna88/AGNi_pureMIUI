@@ -233,10 +233,10 @@ static int __bw_hwmon_sw_sample_end(struct bw_hwmon *hwmon)
 	node->wake = wake;
 	node->sampled = true;
 
-	trace_bw_hwmon_meas(dev_name(df->dev.parent),
-				mbps,
-				us,
-				wake);
+//	trace_bw_hwmon_meas(dev_name(df->dev.parent),
+//				mbps,
+//				us,
+//				wake);
 
 	return wake;
 }
@@ -269,10 +269,10 @@ static int __bw_hwmon_hw_sample_end(struct bw_hwmon *hwmon)
 	node->wake = wake;
 	node->sampled = true;
 
-	trace_bw_hwmon_meas(dev_name(df->dev.parent),
-				mbps,
-				node->sample_ms * USEC_PER_MSEC,
-				wake);
+//	trace_bw_hwmon_meas(dev_name(df->dev.parent),
+//				mbps,
+//				node->sample_ms * USEC_PER_MSEC,
+//				wake);
 
 	return 1;
 }
@@ -485,11 +485,11 @@ static unsigned long get_bw_and_set_irq(struct hwmon_node *node,
 		*ab = roundup(new_bw, node->bw_step);
 
 	*freq = (new_bw * 100) / io_percent;
-	trace_bw_hwmon_update(dev_name(node->hw->df->dev.parent),
-				new_bw,
-				*freq,
-				hw->up_wake_mbps,
-				hw->down_wake_mbps);
+//	trace_bw_hwmon_update(dev_name(node->hw->df->dev.parent),
+//				new_bw,
+//				*freq,
+//				hw->up_wake_mbps,
+//				hw->down_wake_mbps);
 	return req_mbps;
 }
 

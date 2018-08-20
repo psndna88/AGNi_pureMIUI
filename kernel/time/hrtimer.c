@@ -448,19 +448,19 @@ debug_init(struct hrtimer *timer, clockid_t clockid,
 	   enum hrtimer_mode mode)
 {
 	debug_hrtimer_init(timer);
-	trace_hrtimer_init(timer, clockid, mode);
+//	trace_hrtimer_init(timer, clockid, mode);
 }
 
 static inline void debug_activate(struct hrtimer *timer)
 {
 	debug_hrtimer_activate(timer);
-	trace_hrtimer_start(timer);
+//	trace_hrtimer_start(timer);
 }
 
 static inline void debug_deactivate(struct hrtimer *timer)
 {
 	debug_hrtimer_deactivate(timer);
-	trace_hrtimer_cancel(timer);
+//	trace_hrtimer_cancel(timer);
 }
 
 #if defined(CONFIG_NO_HZ_COMMON) || defined(CONFIG_HIGH_RES_TIMERS)
@@ -1229,9 +1229,9 @@ static void __run_hrtimer(struct hrtimer_cpu_base *cpu_base,
 	 * the timer base.
 	 */
 	raw_spin_unlock(&cpu_base->lock);
-	trace_hrtimer_expire_entry(timer, now);
+//	trace_hrtimer_expire_entry(timer, now);
 	restart = fn(timer);
-	trace_hrtimer_expire_exit(timer);
+//	trace_hrtimer_expire_exit(timer);
 	raw_spin_lock(&cpu_base->lock);
 
 	/*
