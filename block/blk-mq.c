@@ -399,7 +399,7 @@ void blk_mq_start_request(struct request *rq)
 {
 	struct request_queue *q = rq->q;
 
-	trace_block_rq_issue(q, rq);
+//	trace_block_rq_issue(q, rq);
 
 	rq->resid_len = blk_rq_bytes(rq);
 	if (unlikely(blk_bidi_rq(rq)))
@@ -439,7 +439,7 @@ static void __blk_mq_requeue_request(struct request *rq)
 {
 	struct request_queue *q = rq->q;
 
-	trace_block_rq_requeue(q, rq);
+//	trace_block_rq_requeue(q, rq);
 
 	if (test_and_clear_bit(REQ_ATOM_STARTED, &rq->atomic_flags)) {
 		if (q->dma_drain_size && blk_rq_bytes(rq))
@@ -977,7 +977,7 @@ static inline void __blk_mq_insert_req_list(struct blk_mq_hw_ctx *hctx,
 					    struct request *rq,
 					    bool at_head)
 {
-	trace_block_rq_insert(hctx->queue, rq);
+//	trace_block_rq_insert(hctx->queue, rq);
 
 	if (at_head)
 		list_add(&rq->queuelist, &ctx->rq_list);
@@ -1027,7 +1027,7 @@ static void blk_mq_insert_requests(struct request_queue *q,
 	struct blk_mq_hw_ctx *hctx;
 	struct blk_mq_ctx *current_ctx;
 
-	trace_block_unplug(q, depth, !from_schedule);
+//	trace_block_unplug(q, depth, !from_schedule);
 
 	current_ctx = blk_mq_get_ctx(q);
 
@@ -1174,14 +1174,14 @@ static struct request *blk_mq_map_request(struct request_queue *q,
 	if (rw_is_sync(bio->bi_rw))
 		rw |= REQ_SYNC;
 
-	trace_block_getrq(q, bio, rw);
+//	trace_block_getrq(q, bio, rw);
 	blk_mq_set_alloc_data(&alloc_data, q, GFP_ATOMIC, false, ctx,
 			hctx);
 	rq = __blk_mq_alloc_request(&alloc_data, rw);
 	if (unlikely(!rq)) {
 		__blk_mq_run_hw_queue(hctx);
 		blk_mq_put_ctx(ctx);
-		trace_block_sleeprq(q, bio, rw);
+//		trace_block_sleeprq(q, bio, rw);
 
 		ctx = blk_mq_get_ctx(q);
 		hctx = q->mq_ops->map_queue(q, ctx->cpu);
@@ -1378,14 +1378,14 @@ static blk_qc_t blk_sq_make_request(struct request_queue *q, struct bio *bio)
 	plug = current->plug;
 	if (plug) {
 		blk_mq_bio_to_request(rq, bio);
-		if (!request_count)
-			trace_block_plug(q);
+//		if (!request_count)
+//			trace_block_plug(q);
 
 		blk_mq_put_ctx(data.ctx);
 
 		if (request_count >= BLK_MAX_REQUEST_COUNT) {
 			blk_flush_plug_list(plug, false);
-			trace_block_plug(q);
+//			trace_block_plug(q);
 		}
 
 		list_add_tail(&rq->queuelist, &plug->mq_list);

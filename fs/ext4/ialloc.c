@@ -189,7 +189,7 @@ ext4_read_inode_bitmap(struct super_block *sb, ext4_group_t block_group)
 	/*
 	 * submit the buffer_head for reading
 	 */
-	trace_ext4_load_inode_bitmap(sb, block_group);
+//	trace_ext4_load_inode_bitmap(sb, block_group);
 	bh->b_end_io = ext4_end_bitmap_read;
 	get_bh(bh);
 	submit_bh(READ | REQ_META | REQ_PRIO, bh);
@@ -263,7 +263,7 @@ void ext4_free_inode(handle_t *handle, struct inode *inode)
 
 	ino = inode->i_ino;
 	ext4_debug("freeing inode %lu\n", ino);
-	trace_ext4_free_inode(inode);
+//	trace_ext4_free_inode(inode);
 
 	/*
 	 * Note: we must free any quota before locking the superblock,
@@ -760,7 +760,7 @@ struct inode *__ext4_new_inode(handle_t *handle, struct inode *dir,
 
 	sb = dir->i_sb;
 	ngroups = ext4_get_groups_count(sb);
-	trace_ext4_request_inode(dir, mode);
+//	trace_ext4_request_inode(dir, mode);
 	inode = new_inode(sb);
 	if (!inode)
 		return ERR_PTR(-ENOMEM);
@@ -1104,7 +1104,7 @@ got:
 	}
 
 	ext4_debug("allocating inode %lu\n", inode->i_ino);
-	trace_ext4_allocate_inode(inode, dir, mode);
+//	trace_ext4_allocate_inode(inode, dir, mode);
 	brelse(inode_bitmap_bh);
 	return ret;
 

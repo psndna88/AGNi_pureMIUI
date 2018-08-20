@@ -95,7 +95,7 @@ int ext4_sync_file(struct file *file, loff_t start, loff_t end, int datasync)
 
 	J_ASSERT(ext4_journal_current_handle() == NULL);
 
-	trace_ext4_sync_file_enter(file, datasync);
+//	trace_ext4_sync_file_enter(file, datasync);
 
 	if (inode->i_sb->s_flags & MS_RDONLY) {
 		/* Make sure that we read updated s_mount_flags value */
@@ -145,6 +145,6 @@ int ext4_sync_file(struct file *file, loff_t start, loff_t end, int datasync)
 			ret = err;
 	}
 out:
-	trace_ext4_sync_file_exit(inode, ret);
+//	trace_ext4_sync_file_exit(inode, ret);
 	return ret;
 }

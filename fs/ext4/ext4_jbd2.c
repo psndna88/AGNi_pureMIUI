@@ -65,7 +65,7 @@ handle_t *__ext4_journal_start_sb(struct super_block *sb, unsigned int line,
 	journal_t *journal;
 	int err;
 
-	trace_ext4_journal_start(sb, blocks, rsv_blocks, _RET_IP_);
+//	trace_ext4_journal_start(sb, blocks, rsv_blocks, _RET_IP_);
 	err = ext4_journal_check_start(sb);
 	if (err < 0)
 		return ERR_PTR(err);
@@ -114,8 +114,8 @@ handle_t *__ext4_journal_start_reserved(handle_t *handle, unsigned int line,
 		return ext4_get_nojournal();
 
 	sb = handle->h_journal->j_private;
-	trace_ext4_journal_start_reserved(sb, handle->h_buffer_credits,
-					  _RET_IP_);
+//	trace_ext4_journal_start_reserved(sb, handle->h_buffer_credits,
+//					  _RET_IP_);
 	err = ext4_journal_check_start(sb);
 	if (err < 0) {
 		jbd2_journal_free_reserved(handle);
@@ -189,7 +189,7 @@ int __ext4_forget(const char *where, unsigned int line, handle_t *handle,
 
 	might_sleep();
 
-	trace_ext4_forget(inode, is_metadata, blocknr);
+//	trace_ext4_forget(inode, is_metadata, blocknr);
 	BUFFER_TRACE(bh, "enter");
 
 	jbd_debug(4, "forgetting bh %p: is_metadata = %d, mode %o, "

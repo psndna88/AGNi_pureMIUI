@@ -904,7 +904,7 @@ static void free_pcppages_bulk(struct zone *zone, int count,
 				mt = get_pageblock_migratetype(page);
 
 			__free_one_page(page, page_to_pfn(page), zone, 0, mt);
-			trace_mm_page_pcpu_drain(page, 0, mt);
+//			trace_mm_page_pcpu_drain(page, 0, mt);
 		} while (--to_free && --batch_free && !list_empty(list));
 	}
 	spin_unlock(&zone->lock);
@@ -1038,7 +1038,7 @@ static bool free_pages_prepare(struct page *page, unsigned int order)
 	VM_BUG_ON_PAGE(PageTail(page), page);
 	VM_BUG_ON_PAGE(compound && compound_order(page) != order, page);
 
-	trace_mm_page_free(page, order);
+//	trace_mm_page_free(page, order);
 	kmemcheck_free_shadow(page, order);
 
 	if (PageMappingFlags(page))
@@ -1895,8 +1895,8 @@ __rmqueue_fallback(struct zone *zone, unsigned int order, int start_migratetype)
 		 */
 		set_pcppage_migratetype(page, start_migratetype);
 
-		trace_mm_page_alloc_extfrag(page, order, current_order,
-			start_migratetype, fallback_mt);
+//		trace_mm_page_alloc_extfrag(page, order, current_order,
+//			start_migratetype, fallback_mt);
 
 		return page;
 	}
@@ -1918,7 +1918,7 @@ static struct page *__rmqueue(struct zone *zone, unsigned int order,
 		page = __rmqueue_fallback(zone, order, migratetype);
 	}
 
-	trace_mm_page_alloc_zone_locked(page, order, migratetype);
+//	trace_mm_page_alloc_zone_locked(page, order, migratetype);
 	return page;
 }
 
@@ -1929,7 +1929,7 @@ static struct page *__rmqueue_cma(struct zone *zone, unsigned int order)
 	if (IS_ENABLED(CONFIG_CMA))
 		if (!zone->cma_alloc)
 			page = __rmqueue_cma_fallback(zone, order);
-	trace_mm_page_alloc_zone_locked(page, order, MIGRATE_CMA);
+//	trace_mm_page_alloc_zone_locked(page, order, MIGRATE_CMA);
 	return page;
 }
 #else
@@ -2242,7 +2242,7 @@ void free_hot_cold_page_list(struct list_head *list, bool cold)
 	struct page *page, *next;
 
 	list_for_each_entry_safe(page, next, list, lru) {
-		trace_mm_page_free_batched(page, cold);
+//		trace_mm_page_free_batched(page, cold);
 		free_hot_cold_page(page, cold);
 	}
 }
@@ -2380,8 +2380,8 @@ struct page *buffered_rmqueue(struct zone *preferred_zone,
 		page = NULL;
 		if (alloc_flags & ALLOC_HARDER) {
 			page = __rmqueue_smallest(zone, order, MIGRATE_HIGHATOMIC);
-			if (page)
-				trace_mm_page_alloc_zone_locked(page, order, migratetype);
+//			if (page)
+//				trace_mm_page_alloc_zone_locked(page, order, migratetype);
 		}
 		if (!page && migratetype == MIGRATE_MOVABLE &&
 				gfp_flags & __GFP_CMA)
@@ -3392,7 +3392,7 @@ retry_cpuset:
 	if (kmemcheck_enabled && page)
 		kmemcheck_pagealloc_alloc(page, order, gfp_mask);
 
-	trace_mm_page_alloc(page, order, alloc_mask, ac.migratetype);
+//	trace_mm_page_alloc(page, order, alloc_mask, ac.migratetype);
 
 out:
 	/*

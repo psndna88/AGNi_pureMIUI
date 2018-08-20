@@ -1505,7 +1505,7 @@ retry:
 			atomic_inc(&inode->i_count);
 			inode->i_state &= ~I_DIRTY_TIME;
 			spin_unlock(&inode->i_lock);
-			trace_writeback_lazytime_iput(inode);
+//			trace_writeback_lazytime_iput(inode);
 			mark_inode_dirty_sync(inode);
 			goto retry;
 		}

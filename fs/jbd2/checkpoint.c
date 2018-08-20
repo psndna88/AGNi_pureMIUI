@@ -221,7 +221,7 @@ int jbd2_log_do_checkpoint(journal_t *journal)
 	 * journal straight away.
 	 */
 	result = jbd2_cleanup_journal_tail(journal);
-	trace_jbd2_checkpoint(journal, result);
+//	trace_jbd2_checkpoint(journal, result);
 	jbd_debug(1, "cleanup_journal_tail returned %d\n", result);
 	if (result <= 0)
 		return result;
@@ -590,8 +590,8 @@ int __jbd2_journal_remove_checkpoint(struct journal_head *jh)
 	if (stats->cs_chp_time)
 		stats->cs_chp_time = jbd2_time_diff(stats->cs_chp_time,
 						    jiffies);
-	trace_jbd2_checkpoint_stats(journal->j_fs_dev->bd_dev,
-				    transaction->t_tid, stats);
+//	trace_jbd2_checkpoint_stats(journal->j_fs_dev->bd_dev,
+//				    transaction->t_tid, stats);
 
 	__jbd2_journal_drop_transaction(journal, transaction);
 	jbd2_journal_free_transaction(transaction);
@@ -663,7 +663,7 @@ void __jbd2_journal_drop_transaction(journal_t *journal, transaction_t *transact
 	J_ASSERT(journal->j_committing_transaction != transaction);
 	J_ASSERT(journal->j_running_transaction != transaction);
 
-	trace_jbd2_drop_transaction(journal, transaction);
+//	trace_jbd2_drop_transaction(journal, transaction);
 
 	jbd_debug(1, "Dropping transaction %d, all done\n", transaction->t_tid);
 }

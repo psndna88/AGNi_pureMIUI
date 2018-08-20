@@ -464,9 +464,9 @@ handle_t *jbd2__journal_start(journal_t *journal, int nblocks, int rsv_blocks,
 	}
 	handle->h_type = type;
 	handle->h_line_no = line_no;
-	trace_jbd2_handle_start(journal->j_fs_dev->bd_dev,
-				handle->h_transaction->t_tid, type,
-				line_no, nblocks);
+//	trace_jbd2_handle_start(journal->j_fs_dev->bd_dev,
+//				handle->h_transaction->t_tid, type,
+//				line_no, nblocks);
 	return handle;
 }
 EXPORT_SYMBOL(jbd2__journal_start);
@@ -598,11 +598,11 @@ int jbd2_journal_extend(handle_t *handle, int nblocks)
 		goto unlock;
 	}
 
-	trace_jbd2_handle_extend(journal->j_fs_dev->bd_dev,
-				 transaction->t_tid,
-				 handle->h_type, handle->h_line_no,
-				 handle->h_buffer_credits,
-				 nblocks);
+//	trace_jbd2_handle_extend(journal->j_fs_dev->bd_dev,
+//				 transaction->t_tid,
+//				 handle->h_type, handle->h_line_no,
+//				 handle->h_buffer_credits,
+//				 nblocks);
 
 	handle->h_buffer_credits += nblocks;
 	handle->h_requested_credits += nblocks;
@@ -837,9 +837,9 @@ repeat:
 
 	/* If it takes too long to lock the buffer, trace it */
 	time_lock = jbd2_time_diff(start_lock, jiffies);
-	if (time_lock > HZ/10)
-		trace_jbd2_lock_buffer_stall(bh->b_bdev->bd_dev,
-			jiffies_to_msecs(time_lock));
+//	if (time_lock > HZ/10)
+//		trace_jbd2_lock_buffer_stall(bh->b_bdev->bd_dev,
+//			jiffies_to_msecs(time_lock));
 
 	/* We now hold the buffer lock so it is safe to query the buffer
 	 * state.  Is the buffer dirty?
@@ -1670,13 +1670,13 @@ int jbd2_journal_stop(handle_t *handle)
 	}
 
 	jbd_debug(4, "Handle %p going down\n", handle);
-	trace_jbd2_handle_stats(journal->j_fs_dev->bd_dev,
+/*	trace_jbd2_handle_stats(journal->j_fs_dev->bd_dev,
 				transaction->t_tid,
 				handle->h_type, handle->h_line_no,
 				jiffies - handle->h_start_jiffies,
 				handle->h_sync, handle->h_requested_credits,
 				(handle->h_requested_credits -
-				 handle->h_buffer_credits));
+				 handle->h_buffer_credits)); */
 
 	/*
 	 * Implement synchronous transaction batching.  If the handle

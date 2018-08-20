@@ -606,7 +606,7 @@ void try_to_unmap_flush(void)
 	if (cpumask_test_cpu(cpu, &tlb_ubc->cpumask)) {
 		count_vm_tlb_event(NR_TLB_LOCAL_FLUSH_ALL);
 		local_flush_tlb();
-		trace_tlb_flush(TLB_LOCAL_SHOOTDOWN, TLB_FLUSH_ALL);
+//		trace_tlb_flush(TLB_LOCAL_SHOOTDOWN, TLB_FLUSH_ALL);
 	}
 
 	if (cpumask_any_but(&tlb_ubc->cpumask, cpu) < nr_cpu_ids)

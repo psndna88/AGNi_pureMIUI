@@ -233,7 +233,7 @@ void __delete_from_page_cache(struct page *page, void *shadow,
 {
 	struct address_space *mapping = page->mapping;
 
-	trace_mm_filemap_delete_from_page_cache(page);
+//	trace_mm_filemap_delete_from_page_cache(page);
 	/*
 	 * if we're uptodate, flush out into the cleancache, otherwise
 	 * invalidate any existing cleancache entries.  We can't leave
@@ -654,7 +654,7 @@ static int __add_to_page_cache_locked(struct page *page,
 	spin_unlock_irq(&mapping->tree_lock);
 	if (!huge)
 		mem_cgroup_commit_charge(page, memcg, false);
-	trace_mm_filemap_add_to_page_cache(page);
+//	trace_mm_filemap_add_to_page_cache(page);
 	return 0;
 err_insert:
 	page->mapping = NULL;

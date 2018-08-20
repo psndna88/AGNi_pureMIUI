@@ -1316,7 +1316,7 @@ int migrate_pages(struct list_head *from, new_page_t get_new_page,
 	int swapwrite = current->flags & PF_SWAPWRITE;
 	int rc;
 
-	trace_mm_migrate_pages_start(mode, reason);
+//	trace_mm_migrate_pages_start(mode, reason);
 
 	if (!swapwrite)
 		current->flags |= PF_SWAPWRITE;
@@ -1364,7 +1364,7 @@ out:
 		count_vm_events(PGMIGRATE_SUCCESS, nr_succeeded);
 	if (nr_failed)
 		count_vm_events(PGMIGRATE_FAIL, nr_failed);
-	trace_mm_migrate_pages(nr_succeeded, nr_failed, mode, reason);
+//	trace_mm_migrate_pages(nr_succeeded, nr_failed, mode, reason);
 
 	if (!swapwrite)
 		current->flags &= ~PF_SWAPWRITE;
@@ -1788,8 +1788,8 @@ static bool numamigrate_update_ratelimit(pg_data_t *pgdat,
 		spin_unlock(&pgdat->numabalancing_migrate_lock);
 	}
 	if (pgdat->numabalancing_migrate_nr_pages > ratelimit_pages) {
-		trace_mm_numa_migrate_ratelimit(current, pgdat->node_id,
-								nr_pages);
+//		trace_mm_numa_migrate_ratelimit(current, pgdat->node_id,
+//								nr_pages);
 		return true;
 	}
 

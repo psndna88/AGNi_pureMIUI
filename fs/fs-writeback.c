@@ -187,7 +187,7 @@ static void finish_writeback_work(struct bdi_writeback *wb,
 static void wb_queue_work(struct bdi_writeback *wb,
 			  struct wb_writeback_work *work)
 {
-	trace_writeback_queue(wb, work);
+//	trace_writeback_queue(wb, work);
 
 	if (work->done)
 		atomic_inc(&work->done->cnt);
@@ -991,7 +991,7 @@ void wb_start_writeback(struct bdi_writeback *wb, long nr_pages,
 	 */
 	work = kzalloc(sizeof(*work), GFP_ATOMIC);
 	if (!work) {
-		trace_writeback_nowork(wb);
+//		trace_writeback_nowork(wb);
 		wb_wakeup(wb);
 		return;
 	}
@@ -1021,7 +1021,7 @@ void wb_start_background_writeback(struct bdi_writeback *wb)
 	 * We just wake up the flusher thread. It will perform background
 	 * writeback as soon as there is no other work to do.
 	 */
-	trace_writeback_wake_background(wb);
+//	trace_writeback_wake_background(wb);
 	wb_wakeup(wb);
 }
 
@@ -1174,7 +1174,7 @@ static void queue_io(struct bdi_writeback *wb, struct wb_writeback_work *work)
 				     EXPIRE_DIRTY_ATIME, work);
 	if (moved)
 		wb_io_lists_populated(wb);
-	trace_writeback_queue_io(wb, work, moved);
+//	trace_writeback_queue_io(wb, work, moved);
 }
 
 static int write_inode(struct inode *inode, struct writeback_control *wbc)
@@ -1182,9 +1182,9 @@ static int write_inode(struct inode *inode, struct writeback_control *wbc)
 	int ret;
 
 	if (inode->i_sb->s_op->write_inode && !is_bad_inode(inode)) {
-		trace_writeback_write_inode_start(inode, wbc);
+//		trace_writeback_write_inode_start(inode, wbc);
 		ret = inode->i_sb->s_op->write_inode(inode, wbc);
-		trace_writeback_write_inode(inode, wbc);
+//		trace_writeback_write_inode(inode, wbc);
 		return ret;
 	}
 	return 0;
@@ -1315,13 +1315,13 @@ static int
 __writeback_single_inode(struct inode *inode, struct writeback_control *wbc)
 {
 	struct address_space *mapping = inode->i_mapping;
-	long nr_to_write = wbc->nr_to_write;
+//	long nr_to_write = wbc->nr_to_write;
 	unsigned dirty;
 	int ret;
 
 	WARN_ON(!(inode->i_state & I_SYNC));
 
-	trace_writeback_single_inode_start(inode, wbc, nr_to_write);
+//	trace_writeback_single_inode_start(inode, wbc, nr_to_write);
 
 	ret = do_writepages(mapping, wbc);
 
@@ -1353,7 +1353,7 @@ __writeback_single_inode(struct inode *inode, struct writeback_control *wbc)
 					(inode->dirtied_time_when +
 					 dirtytime_expire_interval * HZ)))) {
 			dirty |= I_DIRTY_TIME | I_DIRTY_TIME_EXPIRED;
-			trace_writeback_lazytime(inode);
+//			trace_writeback_lazytime(inode);
 		}
 	} else
 		inode->i_state &= ~I_DIRTY_TIME_EXPIRED;
@@ -1385,7 +1385,7 @@ __writeback_single_inode(struct inode *inode, struct writeback_control *wbc)
 		if (ret == 0)
 			ret = err;
 	}
-	trace_writeback_single_inode(inode, wbc, nr_to_write);
+//	trace_writeback_single_inode(inode, wbc, nr_to_write);
 	return ret;
 }
 
@@ -1558,7 +1558,7 @@ static long writeback_sb_inodes(struct super_block *sb,
 			 */
 			spin_unlock(&inode->i_lock);
 			requeue_io(inode, wb);
-			trace_writeback_sb_inodes_requeue(inode);
+//			trace_writeback_sb_inodes_requeue(inode);
 			continue;
 		}
 		spin_unlock(&wb->list_lock);
@@ -1758,14 +1758,14 @@ static long wb_writeback(struct bdi_writeback *wb,
 		} else if (work->for_background)
 			oldest_jif = jiffies;
 
-		trace_writeback_start(wb, work);
+//		trace_writeback_start(wb, work);
 		if (list_empty(&wb->b_io))
 			queue_io(wb, work);
 		if (work->sb)
 			progress = writeback_sb_inodes(work->sb, wb, work);
 		else
 			progress = __writeback_inodes_wb(wb, work);
-		trace_writeback_written(wb, work);
+//		trace_writeback_written(wb, work);
 
 		wb_update_bandwidth(wb, wb_start);
 
@@ -1790,7 +1790,7 @@ static long wb_writeback(struct bdi_writeback *wb,
 		 * we'll just busyloop.
 		 */
 		if (!list_empty(&wb->b_more_io))  {
-			trace_writeback_wait(wb, work);
+//			trace_writeback_wait(wb, work);
 			inode = wb_inode(wb->b_more_io.prev);
 			spin_lock(&inode->i_lock);
 			spin_unlock(&wb->list_lock);
@@ -1895,7 +1895,7 @@ static long wb_do_writeback(struct bdi_writeback *wb)
 
 	set_bit(WB_writeback_running, &wb->state);
 	while ((work = get_next_work_item(wb)) != NULL) {
-		trace_writeback_exec(wb, work);
+//		trace_writeback_exec(wb, work);
 		wrote += wb_writeback(wb, work);
 		finish_writeback_work(wb, work);
 	}
@@ -1933,7 +1933,7 @@ void wb_workfn(struct work_struct *work)
 		 */
 		do {
 			pages_written = wb_do_writeback(wb);
-			trace_writeback_pages_written(pages_written);
+//			trace_writeback_pages_written(pages_written);
 		} while (!list_empty(&wb->work_list));
 	} else {
 		/*
@@ -1943,7 +1943,7 @@ void wb_workfn(struct work_struct *work)
 		 */
 		pages_written = writeback_inodes_wb(wb, 1024,
 						    WB_REASON_FORKER_THREAD);
-		trace_writeback_pages_written(pages_written);
+//		trace_writeback_pages_written(pages_written);
 	}
 
 	if (!list_empty(&wb->work_list))
@@ -2083,19 +2083,19 @@ void __mark_inode_dirty(struct inode *inode, int flags)
 	struct super_block *sb = inode->i_sb;
 	int dirtytime;
 
-	trace_writeback_mark_inode_dirty(inode, flags);
+//	trace_writeback_mark_inode_dirty(inode, flags);
 
 	/*
 	 * Don't do this for I_DIRTY_PAGES - that doesn't actually
 	 * dirty the inode itself
 	 */
 	if (flags & (I_DIRTY_SYNC | I_DIRTY_DATASYNC | I_DIRTY_TIME)) {
-		trace_writeback_dirty_inode_start(inode, flags);
+//		trace_writeback_dirty_inode_start(inode, flags);
 
 		if (sb->s_op->dirty_inode)
 			sb->s_op->dirty_inode(inode, flags);
 
-		trace_writeback_dirty_inode(inode, flags);
+//		trace_writeback_dirty_inode(inode, flags);
 	}
 	if (flags & I_DIRTY_INODE)
 		flags &= ~I_DIRTY_TIME;
@@ -2173,7 +2173,7 @@ void __mark_inode_dirty(struct inode *inode, int flags)
 							       dirty_list);
 
 			spin_unlock(&wb->list_lock);
-			trace_writeback_dirty_inode_enqueue(inode);
+//			trace_writeback_dirty_inode_enqueue(inode);
 
 			/*
 			 * If this is the first dirty inode for this bdi,
