@@ -1866,7 +1866,7 @@ void mdss_misr_crc_collect(struct mdss_data_type *mdata, int block_id,
 
 	pr_debug("$$ Vsync Count = %d, CRC=0x%x Indx = %d$$\n",
 		vsync_count, crc, map->crc_index);
-	trace_mdp_misr_crc(block_id, vsync_count, crc);
+//	trace_mdp_misr_crc(block_id, vsync_count, crc);
 
 	if (MAX_VSYNC_COUNT == vsync_count) {
 		pr_debug("RESET vsync_count(%d)\n", vsync_count);

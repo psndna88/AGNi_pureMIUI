@@ -577,7 +577,7 @@ static void wakeup_source_deactivate(struct wakeup_source *ws)
          * couter of wakeup events in progress simultaneously.
          */
         cec = atomic_add_return(MAX_IN_PROGRESS, &combined_event_count);
-        trace_wakeup_source_deactivate(ws->name, cec);
+//      trace_wakeup_source_deactivate(ws->name, cec);
 
         split_counters(&cnt, &inpr);
         if (!inpr && waitqueue_active(&wakeup_count_wait_queue))
@@ -692,7 +692,7 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 	/* Increment the counter of events in progress. */
 	cec = atomic_inc_return(&combined_event_count);
 
-	trace_wakeup_source_activate(ws->name, cec);
+//	trace_wakeup_source_activate(ws->name, cec);
 }
 
 #ifdef CONFIG_BOEFFLA_WL_BLOCKER

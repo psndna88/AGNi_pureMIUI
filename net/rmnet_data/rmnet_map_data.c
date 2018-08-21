@@ -217,7 +217,7 @@ static void rmnet_map_flush_packet_queue(struct work_struct *work)
 
 	spin_unlock_irqrestore(&config->agg_lock, flags);
 	if (skb) {
-		trace_rmnet_map_flush_packet_queue(skb, agg_count);
+//		trace_rmnet_map_flush_packet_queue(skb, agg_count);
 		rc = dev_queue_xmit(skb);
 		rmnet_stats_queue_xmit(rc, RMNET_STATS_QUEUE_XMIT_AGG_TIMEOUT);
 	}
@@ -269,7 +269,7 @@ new_packet:
 			LOGL("delta t: %ld.%09lu\tcount: bypass", diff.tv_sec,
 			     diff.tv_nsec);
 			rmnet_stats_agg_pkts(1);
-			trace_rmnet_map_aggregate(skb, 0);
+//			trace_rmnet_map_aggregate(skb, 0);
 			rc = dev_queue_xmit(skb);
 			rmnet_stats_queue_xmit(rc,
 					       RMNET_STATS_QUEUE_XMIT_AGG_SKIP);
@@ -283,7 +283,7 @@ new_packet:
 			memset(&(config->agg_time), 0, sizeof(struct timespec));
 			spin_unlock_irqrestore(&config->agg_lock, flags);
 			rmnet_stats_agg_pkts(1);
-			trace_rmnet_map_aggregate(skb, 0);
+//			trace_rmnet_map_aggregate(skb, 0);
 			rc = dev_queue_xmit(skb);
 			rmnet_stats_queue_xmit(rc,
 				RMNET_STATS_QUEUE_XMIT_AGG_CPY_EXP_FAIL);
@@ -291,7 +291,7 @@ new_packet:
 		}
 		config->agg_count = 1;
 		getnstimeofday(&(config->agg_time));
-		trace_rmnet_start_aggregation(skb);
+//		trace_rmnet_start_aggregation(skb);
 		rmnet_kfree_skb(skb, RMNET_STATS_SKBFREE_AGG_CPY_EXPAND);
 		goto schedule;
 	}
@@ -309,7 +309,7 @@ new_packet:
 		spin_unlock_irqrestore(&config->agg_lock, flags);
 		LOGL("delta t: %ld.%09lu\tcount: %d", diff.tv_sec,
 		     diff.tv_nsec, agg_count);
-		trace_rmnet_map_aggregate(skb, agg_count);
+//		trace_rmnet_map_aggregate(skb, agg_count);
 		rc = dev_queue_xmit(agg_skb);
 		rmnet_stats_queue_xmit(rc,
 					RMNET_STATS_QUEUE_XMIT_AGG_FILL_BUFFER);

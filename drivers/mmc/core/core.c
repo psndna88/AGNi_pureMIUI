@@ -1043,7 +1043,7 @@ void mmc_request_done(struct mmc_host *host, struct mmc_request *mrq)
 					&host->io_lat_write, delta_us);
 			}
 #endif
-			trace_mmc_blk_rw_end(cmd->opcode, cmd->arg, mrq->data);
+//			trace_mmc_blk_rw_end(cmd->opcode, cmd->arg, mrq->data);
 		}
 
 		if (mrq->stop) {
@@ -1857,9 +1857,9 @@ struct mmc_async_req *mmc_start_req(struct mmc_host *host,
 		} else
 			areq->mrq->lat_hist_enabled = 0;
 #endif
-		trace_mmc_blk_rw_start(areq->mrq->cmd->opcode,
-				       areq->mrq->cmd->arg,
-				       areq->mrq->data);
+//		trace_mmc_blk_rw_start(areq->mrq->cmd->opcode,
+//				       areq->mrq->cmd->arg,
+//				       areq->mrq->data);
 		__mmc_start_data_req(host, areq->mrq);
 	}
 
@@ -2373,7 +2373,7 @@ void mmc_set_ios(struct mmc_host *host)
 				mmc_hostname(host), ios->old_rate / 1000,
 				ios->clock / 1000, jiffies_to_msecs(
 					(long)jiffies - (long)ios->clk_ts));
-			trace_mmc_clk(trace_info);
+//			trace_mmc_clk(trace_info);
 		}
 		ios->old_rate = ios->clock;
 		ios->clk_ts = jiffies;
@@ -3641,7 +3641,7 @@ static int mmc_cmdq_do_erase(struct mmc_cmdq_req *cmdq_req,
 
 	fr = from;
 	nr = to - from + 1;
-	trace_mmc_blk_erase_start(arg, fr, nr);
+//	trace_mmc_blk_erase_start(arg, fr, nr);
 
 	qty = mmc_get_erase_qty(card, from, to);
 
@@ -3691,7 +3691,7 @@ static int mmc_cmdq_do_erase(struct mmc_cmdq_req *cmdq_req,
 	} while (!(cmd->resp[0] & R1_READY_FOR_DATA) ||
 		 (R1_CURRENT_STATE(cmd->resp[0]) == R1_STATE_PRG));
 out:
-	trace_mmc_blk_erase_end(arg, fr, nr);
+//	trace_mmc_blk_erase_end(arg, fr, nr);
 	return err;
 }
 
@@ -3706,7 +3706,7 @@ static int mmc_do_erase(struct mmc_card *card, unsigned int from,
 
 	fr = from;
 	nr = to - from + 1;
-	trace_mmc_blk_erase_start(arg, fr, nr);
+//	trace_mmc_blk_erase_start(arg, fr, nr);
 
 	qty = mmc_get_erase_qty(card, from, to);
 
@@ -3790,7 +3790,7 @@ static int mmc_do_erase(struct mmc_card *card, unsigned int from,
 		 (R1_CURRENT_STATE(cmd.resp[0]) == R1_STATE_PRG));
 out:
 	mmc_retune_release(card->host);
-	trace_mmc_blk_erase_end(arg, fr, nr);
+//	trace_mmc_blk_erase_end(arg, fr, nr);
 	return err;
 }
 

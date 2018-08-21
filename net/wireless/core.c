@@ -1007,7 +1007,7 @@ void cfg80211_stop_iface(struct wiphy *wiphy, struct wireless_dev *wdev,
 	struct cfg80211_event *ev;
 	unsigned long flags;
 
-	trace_cfg80211_stop_iface(wiphy, wdev);
+//	trace_cfg80211_stop_iface(wiphy, wdev);
 
 	ev = kzalloc(sizeof(*ev), gfp);
 	if (!ev)

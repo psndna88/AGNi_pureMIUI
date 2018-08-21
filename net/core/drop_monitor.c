@@ -205,7 +205,7 @@ out:
 
 static void trace_kfree_skb_hit(void *ignore, struct sk_buff *skb, void *location)
 {
-	trace_drop_common(skb, location);
+//	trace_drop_common(skb, location);
 }
 
 static void trace_napi_poll_hit(void *ignore, struct napi_struct *napi)
@@ -229,7 +229,7 @@ static void trace_napi_poll_hit(void *ignore, struct napi_struct *napi)
 		if ((new_stat->dev == napi->dev)  &&
 		    (time_after(jiffies, new_stat->last_rx + dm_hw_check_delta)) &&
 		    (napi->dev->stats.rx_dropped != new_stat->last_drop_val)) {
-			trace_drop_common(NULL, NULL);
+//			trace_drop_common(NULL, NULL);
 			new_stat->last_drop_val = napi->dev->stats.rx_dropped;
 			new_stat->last_rx = jiffies;
 			break;

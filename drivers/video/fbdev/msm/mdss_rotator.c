@@ -304,13 +304,13 @@ static int mdss_rotator_clk_ctrl(struct mdss_rot_mgr *mgr, int enable)
 			msm_bus_scale_client_update_context(
 				mgr->data_bus.bus_hdl, false,
 				mgr->data_bus.curr_bw_uc_idx);
-			trace_rotator_bw_ao_as_context(0);
+//			trace_rotator_bw_ao_as_context(0);
 		} else {
 			/* Active Only */
 			msm_bus_scale_client_update_context(
 				mgr->data_bus.bus_hdl, true,
 				mgr->data_bus.curr_bw_uc_idx);
-			trace_rotator_bw_ao_as_context(1);
+//			trace_rotator_bw_ao_as_context(1);
 		}
 		mutex_unlock(&mgr->bus_lock);
 	}

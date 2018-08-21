@@ -452,7 +452,7 @@ int sock_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
 
 	if (atomic_read(&sk->sk_rmem_alloc) >= sk->sk_rcvbuf) {
 		atomic_inc(&sk->sk_drops);
-		trace_sock_rcvqueue_full(sk, skb);
+//		trace_sock_rcvqueue_full(sk, skb);
 		return -ENOMEM;
 	}
 
@@ -2158,7 +2158,7 @@ suppress_allocation:
 			return 1;
 	}
 
-	trace_sock_exceed_buf_limit(sk, prot, allocated);
+//	trace_sock_exceed_buf_limit(sk, prot, allocated);
 
 	/* Alas. Undo changes. */
 	sk->sk_forward_alloc -= amt * SK_MEM_QUANTUM;

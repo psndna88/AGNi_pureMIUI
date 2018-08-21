@@ -345,7 +345,7 @@ static int __fib_validate_source(struct sk_buff *skb, __be32 src, __be32 dst,
 
 	fl4.flowi4_mark = IN_DEV_SRC_VMARK(idev) ? skb->mark : 0;
 
-	trace_fib_validate_source(dev, &fl4);
+//	trace_fib_validate_source(dev, &fl4);
 
 	net = dev_net(dev);
 	if (fib_lookup(net, &fl4, &res, 0))

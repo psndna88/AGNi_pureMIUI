@@ -332,7 +332,7 @@ static rx_handler_result_t __rmnet_deliver_skb(struct sk_buff *skb,
 	gro_result_t gro_res;
 	unsigned int skb_size;
 
-	trace___rmnet_deliver_skb(skb);
+//	trace___rmnet_deliver_skb(skb);
 	switch (ep->rmnet_mode) {
 	case RMNET_EPMODE_NONE:
 		return RX_HANDLER_PASS;
@@ -356,7 +356,7 @@ static rx_handler_result_t __rmnet_deliver_skb(struct sk_buff *skb,
 				if (napi != NULL) {
 					skb_size = skb->len;
 					gro_res = napi_gro_receive(napi, skb);
-					trace_rmnet_gro_downlink(gro_res);
+//					trace_rmnet_gro_downlink(gro_res);
 					rmnet_optional_gro_flush(
 								napi, ep,
 								skb_size);
@@ -471,7 +471,7 @@ static rx_handler_result_t _rmnet_map_ingress_handler(struct sk_buff *skb,
 	if ((config->ingress_data_format & RMNET_INGRESS_FORMAT_MAP_CKSUMV3) ||
 	    (config->ingress_data_format & RMNET_INGRESS_FORMAT_MAP_CKSUMV4)) {
 		ckresult = rmnet_map_checksum_downlink_packet(skb);
-		trace_rmnet_map_checksum_downlink_packet(skb, ckresult);
+//		trace_rmnet_map_checksum_downlink_packet(skb, ckresult);
 		rmnet_stats_dl_checksum(ckresult);
 		if (likely((ckresult == RMNET_MAP_CHECKSUM_OK)
 			    || (ckresult == RMNET_MAP_CHECKSUM_SKIPPED)))
@@ -516,12 +516,12 @@ static rx_handler_result_t rmnet_map_ingress_handler(struct sk_buff *skb,
 	int rc, co = 0;
 
 	if (config->ingress_data_format & RMNET_INGRESS_FORMAT_DEAGGREGATION) {
-		trace_rmnet_start_deaggregation(skb);
+//		trace_rmnet_start_deaggregation(skb);
 		while ((skbn = rmnet_map_deaggregate(skb, config)) != 0) {
 			_rmnet_map_ingress_handler(skbn, config);
 			co++;
 		}
-		trace_rmnet_end_deaggregation(skb, co);
+//		trace_rmnet_end_deaggregation(skb, co);
 		LOGD("De-aggregated %d packets", co);
 		rmnet_stats_deagg_pkts(co);
 		rmnet_kfree_skb(skb, RMNET_STATS_SKBFREE_MAPINGRESS_AGGBUF);
@@ -580,7 +580,7 @@ static int rmnet_map_egress_handler(struct sk_buff *skb,
 	    (config->egress_data_format & RMNET_EGRESS_FORMAT_MAP_CKSUMV4)) {
 		ckresult = rmnet_map_checksum_uplink_packet
 				(skb, orig_dev, config->egress_data_format);
-		trace_rmnet_map_checksum_uplink_packet(orig_dev, ckresult);
+//		trace_rmnet_map_checksum_uplink_packet(orig_dev, ckresult);
 		rmnet_stats_ul_checksum(ckresult);
 	}
 
@@ -640,7 +640,7 @@ rx_handler_result_t rmnet_ingress_handler(struct sk_buff *skb)
 		BUG();
 
 	dev = skb->dev;
-	trace_rmnet_ingress_handler(skb);
+//	trace_rmnet_ingress_handler(skb);
 	rmnet_print_packet(skb, dev->name, 'r');
 
 	config = _rmnet_get_phys_ep_config(skb->dev);
@@ -760,7 +760,7 @@ void rmnet_egress_handler(struct sk_buff *skb,
 		rmnet_vnd_tx_fixup(skb, orig_dev);
 
 	rmnet_print_packet(skb, skb->dev->name, 't');
-	trace_rmnet_egress_handler(skb);
+//	trace_rmnet_egress_handler(skb);
 	rc = dev_queue_xmit(skb);
 	if (rc != 0) {
 		LOGD("Failed to queue packet for transmission on [%s]",

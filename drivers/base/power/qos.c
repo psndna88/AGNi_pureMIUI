@@ -318,7 +318,7 @@ static int __dev_pm_qos_add_request(struct device *dev,
 	else if (!dev->power.qos)
 		ret = dev_pm_qos_constraints_allocate(dev);
 
-	trace_dev_pm_qos_add_request(dev_name(dev), type, value);
+//	trace_dev_pm_qos_add_request(dev_name(dev), type, value);
 	if (!ret) {
 		req->dev = dev;
 		req->type = type;
@@ -394,8 +394,8 @@ static int __dev_pm_qos_update_request(struct dev_pm_qos_request *req,
 		return -EINVAL;
 	}
 
-	trace_dev_pm_qos_update_request(dev_name(req->dev), req->type,
-					new_value);
+//	trace_dev_pm_qos_update_request(dev_name(req->dev), req->type,
+//					new_value);
 	if (curr_value != new_value)
 		ret = apply_constraint(req, PM_QOS_UPDATE_REQ, new_value);
 
@@ -445,8 +445,8 @@ static int __dev_pm_qos_remove_request(struct dev_pm_qos_request *req)
 	if (IS_ERR_OR_NULL(req->dev->power.qos))
 		return -ENODEV;
 
-	trace_dev_pm_qos_remove_request(dev_name(req->dev), req->type,
-					PM_QOS_DEFAULT_VALUE);
+//	trace_dev_pm_qos_remove_request(dev_name(req->dev), req->type,
+//					PM_QOS_DEFAULT_VALUE);
 	ret = apply_constraint(req, PM_QOS_REMOVE_REQ, PM_QOS_DEFAULT_VALUE);
 	memset(req, 0, sizeof(*req));
 	return ret;

@@ -359,7 +359,7 @@ int skb_copy_datagram_iter(const struct sk_buff *skb, int offset,
 	int i, copy = start - offset;
 	struct sk_buff *frag_iter;
 
-	trace_skb_copy_datagram_iovec(skb, len);
+//	trace_skb_copy_datagram_iovec(skb, len);
 
 	/* Copy header. */
 	if (copy > 0) {

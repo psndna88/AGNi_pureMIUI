@@ -973,7 +973,7 @@ static void dec_pending(struct dm_io *io, int error)
 			queue_io(md, bio);
 		} else {
 			/* done with normal IO or empty flush */
-			trace_block_bio_complete(md->queue, bio, io_error);
+//			trace_block_bio_complete(md->queue, bio, io_error);
 			if (io_error)
 				bio->bi_error = io_error;
 			bio_endio(bio);
@@ -1547,8 +1547,8 @@ static void __map_bio(struct dm_target_io *tio)
 	if (r == DM_MAPIO_REMAPPED) {
 		/* the bio has been remapped so dispatch it */
 
-		trace_block_bio_remap(bdev_get_queue(clone->bi_bdev), clone,
-				      tio->io->bio->bi_bdev->bd_dev, sector);
+//		trace_block_bio_remap(bdev_get_queue(clone->bi_bdev), clone,
+//				      tio->io->bio->bi_bdev->bd_dev, sector);
 
 		generic_make_request(clone);
 	} else if (r < 0 || r == DM_MAPIO_REQUEUE) {
@@ -2034,8 +2034,8 @@ static int map_request(struct dm_rq_target_io *tio, struct request *rq,
 		break;
 	case DM_MAPIO_REMAPPED:
 		/* The target has remapped the I/O so dispatch it */
-		trace_block_rq_remap(clone->q, clone, disk_devt(dm_disk(md)),
-				     blk_rq_pos(rq));
+//		trace_block_rq_remap(clone->q, clone, disk_devt(dm_disk(md)),
+//				     blk_rq_pos(rq));
 		dm_dispatch_clone_request(clone, rq);
 		break;
 	case DM_MAPIO_REQUEUE:

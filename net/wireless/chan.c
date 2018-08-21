@@ -915,7 +915,7 @@ static bool _cfg80211_reg_can_beacon(struct wiphy *wiphy,
 	u32 prohibited_flags = IEEE80211_CHAN_DISABLED |
 			       IEEE80211_CHAN_RADAR;
 
-	trace_cfg80211_reg_can_beacon(wiphy, chandef, iftype, check_no_ir);
+//	trace_cfg80211_reg_can_beacon(wiphy, chandef, iftype, check_no_ir);
 
 	if (check_no_ir)
 		prohibited_flags |= IEEE80211_CHAN_NO_IR;
@@ -928,7 +928,7 @@ static bool _cfg80211_reg_can_beacon(struct wiphy *wiphy,
 
 	res = cfg80211_chandef_usable(wiphy, chandef, prohibited_flags);
 
-	trace_cfg80211_return_bool(res);
+//	trace_cfg80211_return_bool(res);
 	return res;
 }
 
