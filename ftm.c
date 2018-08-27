@@ -127,6 +127,7 @@ static int loc_write_xml_file(struct sigma_dut *dut, const char *dst_mac_str,
 	default:
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"%s - Bad Format/BW received", __func__);
+		fclose(xml);
 		return -1;
 	}
 
