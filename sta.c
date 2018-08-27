@@ -9359,7 +9359,7 @@ static int ath_sta_set_rfeature_vht(const char *intf, struct sigma_dut *dut,
 				    struct sigma_cmd *cmd)
 {
 	const char *val;
-	char *token, *result;
+	char *token = NULL, *result;
 
 	novap_reset(dut, intf);
 
@@ -9426,6 +9426,7 @@ static int ath_sta_set_rfeature_vht(const char *intf, struct sigma_dut *dut,
 		}
 	}
 
+	free(token);
 	return 1;
 failed:
 	free(token);
