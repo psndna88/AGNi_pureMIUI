@@ -882,8 +882,10 @@ static int cmd_traffic_agent_send(struct sigma_dut *dut,
 			return 0;
 		}
 		for (j = 0; j < i; j++)
-			if (data->streams[i] == data->streams[j])
+			if (data->streams[i] == data->streams[j]) {
+				free(data);
 				return -1;
+			}
 		if (!s->sender) {
 			snprintf(buf, sizeof(buf), "errorCode,Not configured "
 				 "as sender for streamID %d", data->streams[i]);
