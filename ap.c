@@ -2863,9 +2863,9 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 				if (dut->ap_sae_groups) {
 					snprintf(buf, sizeof(buf), "\'%s\'",
 						 dut->ap_sae_groups);
-					owrt_ap_set_vap(dut, vap_count +
-							(wlan_tag - 1),
-							"owe_groups", buf);
+					owrt_ap_set_list_vap(dut, vap_count +
+							     (wlan_tag - 1),
+							     "owe_groups", buf);
 				}
 			}
 		}
@@ -3164,8 +3164,8 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 			if (dut->ap_sae_groups) {
 				snprintf(buf, sizeof(buf), "\'%s\'",
 					 dut->ap_sae_groups);
-				owrt_ap_set_vap(dut, vap_count, "owe_groups",
-						buf);
+				owrt_ap_set_list_vap(dut, vap_count,
+						     "owe_groups", buf);
 			}
 
 			if (dut->ap_key_mgmt == AP_WPA2_OWE &&
@@ -3496,7 +3496,7 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 
 	if (dut->ap_sae_groups) {
 		snprintf(buf, sizeof(buf), "\'%s\'", dut->ap_sae_groups);
-		owrt_ap_set_vap(dut, vap_count, "sae_groups", buf);
+		owrt_ap_set_list_vap(dut, vap_count, "sae_groups", buf);
 	}
 
 	if (dut->sae_anti_clogging_threshold >= 0) {
