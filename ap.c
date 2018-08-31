@@ -3266,10 +3266,10 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 	}
 
 	if (dut->ap_net_auth_type == 1) {
-		owrt_ap_set_vap(dut, vap_id, "network_auth_type",
-				"'00https://tandc-server.wi-fi.org'");
+		owrt_ap_set_list_vap(dut, vap_id, "network_auth_type",
+				     "'00https://tandc-server.wi-fi.org'");
 	} else if (dut->ap_net_auth_type == 2) {
-		owrt_ap_set_vap(dut, vap_id, "network_auth_type", "'01'");
+		owrt_ap_set_list_vap(dut, vap_id, "network_auth_type", "'01'");
 	}
 
 	if (dut->ap_nai_realm_list == 1) {
