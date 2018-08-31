@@ -744,6 +744,10 @@ struct sigma_dut {
 #endif /* NL80211_SUPPORT */
 
 	int sta_nss;
+
+#ifdef ANDROID
+	int nanservicediscoveryinprogress;
+#endif /* ANDROID */
 };
 
 
