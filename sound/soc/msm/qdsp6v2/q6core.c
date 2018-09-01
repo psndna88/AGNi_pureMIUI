@@ -375,6 +375,7 @@ struct cal_block_data *cal_utils_get_cal_block_by_key(
 	return NULL;
 }
 
+#if 0
 static int q6core_send_get_avcs_fwk_ver_cmd(void)
 {
 	struct apr_hdr avcs_ver_cmd;
@@ -476,7 +477,6 @@ int q6core_get_service_version(uint32_t service_id,
 	pr_err("%s: No service matching service ID %d\n", __func__, service_id);
 	return -EINVAL;
 }
-EXPORT_SYMBOL(q6core_get_service_version);
 
 size_t q6core_get_fwk_version_size(uint32_t service_id)
 {
@@ -533,6 +533,20 @@ size_t q6core_get_fwk_version_size(uint32_t service_id)
 done:
 	return ret;
 }
+#else
+int q6core_get_service_version(uint32_t service_id,
+			       struct avcs_fwk_ver_info *ver_info,
+			       size_t size)
+{
+	return -1;
+}
+
+size_t q6core_get_fwk_version_size(uint32_t service_id)
+{
+	return -1;
+}
+#endif
+EXPORT_SYMBOL(q6core_get_service_version);
 EXPORT_SYMBOL(q6core_get_fwk_version_size);
 
 int32_t core_set_license(uint32_t key, uint32_t module_id)
