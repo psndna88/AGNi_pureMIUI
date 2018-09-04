@@ -97,6 +97,8 @@
 			ti,cdc-reset-gpio = <&tlmm 77 0>;
 			ti,irq-gpio = <&tlmm 73 0>;
 			ti,i2s-bits = <32>;
+			ti,bypass-tmax = <0>;   /* 0, not bypass; 1, bypass */
+			ti,bob-fast-profile = <1>; /* 1:voice_handset */
 			status = "ok";
 		};
 
