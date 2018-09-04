@@ -1,11 +1,30 @@
 /*
  * Sigma Control API DUT (server)
  * Copyright (c) 2014, Qualcomm Atheros, Inc.
+ * Copyright (c) 2018, The Linux Foundation
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
 
 #include "sigma_dut.h"
+
+
+static int cmd_server_ca_get_version(struct sigma_dut *dut,
+				     struct sigma_conn *conn,
+				     struct sigma_cmd *cmd)
+{
+	send_resp(dut, conn, SIGMA_COMPLETE, "version,1.0");
+	return 0;
+}
+
+
+static int cmd_server_get_info(struct sigma_dut *dut,
+			       struct sigma_conn *conn,
+			       struct sigma_cmd *cmd)
+{
+	send_resp(dut, conn, SIGMA_COMPLETE, "vendor,OSU,model,OS,version,1.0");
+	return 0;
+}
 
 
 static int cmd_server_reset_default(struct sigma_dut *dut,
@@ -103,6 +122,10 @@ static int cmd_server_request_status(struct sigma_dut *dut,
 
 void server_register_cmds(void)
 {
+	sigma_dut_reg_cmd("server_ca_get_version", NULL,
+			  cmd_server_ca_get_version);
+	sigma_dut_reg_cmd("server_get_info", NULL,
+			  cmd_server_get_info);
 	sigma_dut_reg_cmd("server_reset_default", NULL,
 			  cmd_server_reset_default);
 	sigma_dut_reg_cmd("server_request_status", NULL,
