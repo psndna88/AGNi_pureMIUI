@@ -32,9 +32,17 @@ static int cmd_server_reset_default(struct sigma_dut *dut,
 				    struct sigma_cmd *cmd)
 {
 	const char *var;
+	enum sigma_program prog;
 
 	var = get_param(cmd, "Program");
-	if (var == NULL || strcasecmp(var, "HS2-R2") != 0) {
+	if (!var) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Missing program parameter");
+		return 0;
+	}
+
+	prog = sigma_program_to_enum(var);
+	if (prog != PROGRAM_HS2_R2 && prog != PROGRAM_HS2_R3) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Unsupported program");
 		return 0;
