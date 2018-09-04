@@ -59,6 +59,7 @@ endif
 ifdef SERVER
 CFLAGS += -DCONFIG_SERVER
 OBJS += server.o
+LIBS += -lsqlite3
 endif
 
 ifdef MIRACAST
