@@ -522,6 +522,159 @@ static int tas2557_edge_put(struct snd_kcontrol *pKcontrol,
 	return 0;
 }
 
+static const char * const vboost_ctl_text[] = {
+	"default",
+	"Device(s) AlwaysOn"
+};
+
+static const struct soc_enum vboost_ctl_enum[] = {
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(vboost_ctl_text), vboost_ctl_text),
+};
+
+static int tas2557_vboost_ctl_get(struct snd_kcontrol *pKcontrol,
+			struct snd_ctl_elem_value *pValue)
+{
+#ifdef KCONTROL_CODEC
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(pKcontrol);
+#else
+	struct snd_soc_codec *codec = snd_kcontrol_chip(pKcontrol);
+#endif
+	struct tas2557_priv *pTAS2557 = snd_soc_codec_get_drvdata(codec);
+	int nResult = 0, nVBoost = 0;
+
+	mutex_lock(&pTAS2557->codec_lock);
+
+	nResult = tas2557_get_VBoost(pTAS2557, &nVBoost);
+	if (nResult >= 0)
+		pValue->value.integer.value[0] = nVBoost;
+
+	mutex_unlock(&pTAS2557->codec_lock);
+
+	return 0;
+}
+
+static int tas2557_vboost_ctl_put(struct snd_kcontrol *pKcontrol,
+			struct snd_ctl_elem_value *pValue)
+{
+#ifdef KCONTROL_CODEC
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(pKcontrol);
+#else
+	struct snd_soc_codec *codec = snd_kcontrol_chip(pKcontrol);
+#endif
+	struct tas2557_priv *pTAS2557 = snd_soc_codec_get_drvdata(codec);
+	int vboost_state = pValue->value.integer.value[0];
+
+	mutex_lock(&pTAS2557->codec_lock);
+
+	tas2557_set_VBoost(pTAS2557, vboost_state, pTAS2557->mbPowerUp);
+
+	mutex_unlock(&pTAS2557->codec_lock);
+	return 0;
+}
+
+static const char * const vboost_volt_text[] = {
+	"8.6V",
+	"8.1V",
+	"7.6V",
+	"6.6V",
+	"5.6V"
+};
+
+static const struct soc_enum vboost_volt_enum[] = {
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(vboost_volt_text), vboost_volt_text),
+};
+
+static int tas2557_vboost_volt_get(struct snd_kcontrol *pKcontrol,
+			struct snd_ctl_elem_value *pValue)
+{
+#ifdef KCONTROL_CODEC
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(pKcontrol);
+#else
+	struct snd_soc_codec *codec = snd_kcontrol_chip(pKcontrol);
+#endif
+	struct tas2557_priv *pTAS2557 = snd_soc_codec_get_drvdata(codec);
+	int nVBstVolt = 0;
+
+	mutex_lock(&pTAS2557->codec_lock);
+
+	dev_dbg(pTAS2557->dev, "%s, VBoost volt %d\n", __func__, pTAS2557->mnVBoostVoltage);
+	switch (pTAS2557->mnVBoostVoltage) {
+	case TAS2557_VBST_8P5V:
+		nVBstVolt = 0;
+	break;
+
+	case TAS2557_VBST_8P1V:
+		nVBstVolt = 1;
+	break;
+
+	case TAS2557_VBST_7P6V:
+		nVBstVolt = 2;
+	break;
+
+	case TAS2557_VBST_6P6V:
+		nVBstVolt = 3;
+	break;
+
+	case TAS2557_VBST_5P6V:
+		nVBstVolt = 4;
+	break;
+
+	default:
+		dev_err(pTAS2557->dev, "%s, error volt %d\n", __func__, pTAS2557->mnVBoostVoltage);
+	break;
+	}
+
+	pValue->value.integer.value[0] = nVBstVolt;
+
+	mutex_unlock(&pTAS2557->codec_lock);
+
+	return 0;
+}
+
+static int tas2557_vboost_volt_put(struct snd_kcontrol *pKcontrol,
+			struct snd_ctl_elem_value *pValue)
+{
+#ifdef KCONTROL_CODEC
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(pKcontrol);
+#else
+	struct snd_soc_codec *codec = snd_kcontrol_chip(pKcontrol);
+#endif
+	struct tas2557_priv *pTAS2557 = snd_soc_codec_get_drvdata(codec);
+	int vbstvolt = pValue->value.integer.value[0];
+
+	mutex_lock(&pTAS2557->codec_lock);
+
+	dev_dbg(pTAS2557->dev, "%s, volt %d\n", __func__, vbstvolt);
+	switch (vbstvolt) {
+	case 0:
+		pTAS2557->mnVBoostVoltage = TAS2557_VBST_8P5V;
+	break;
+
+	case 1:
+		pTAS2557->mnVBoostVoltage = TAS2557_VBST_8P1V;
+	break;
+
+	case 2:
+		pTAS2557->mnVBoostVoltage = TAS2557_VBST_7P6V;
+	break;
+
+	case 3:
+		pTAS2557->mnVBoostVoltage = TAS2557_VBST_6P6V;
+	break;
+
+	case 4:
+		pTAS2557->mnVBoostVoltage = TAS2557_VBST_5P6V;
+	break;
+
+	default:
+		dev_err(pTAS2557->dev, "%s, error volt %d\n", __func__, vbstvolt);
+	break;
+	}
+
+	mutex_unlock(&pTAS2557->codec_lock);
+	return 0;
+}
+
 static const struct snd_kcontrol_new tas2557_snd_controls[] = {
 	SOC_SINGLE_EXT("PowerCtrl", SND_SOC_NOPM, 0, 0x0001, 0,
 		tas2557_power_ctrl_get, tas2557_power_ctrl_put),
@@ -537,6 +690,10 @@ static const struct snd_kcontrol_new tas2557_snd_controls[] = {
 		tas2557_calibration_get, tas2557_calibration_put),
 	SOC_ENUM_EXT("TAS2557 ClassD Edge", classd_edge_enum[0],
 		tas2557_edge_get, tas2557_edge_put),
+	SOC_ENUM_EXT("VBoost Ctrl", vboost_ctl_enum[0],
+		tas2557_vboost_ctl_get, tas2557_vboost_ctl_put),
+	SOC_ENUM_EXT("VBoost Volt", vboost_volt_enum[0],
+		tas2557_vboost_volt_get, tas2557_vboost_volt_put),
 };
 
 static struct snd_soc_codec_driver soc_codec_driver_tas2557 = {
