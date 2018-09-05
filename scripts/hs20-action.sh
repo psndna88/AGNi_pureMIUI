@@ -130,32 +130,8 @@ if [ "$CMD" = "CONNECTED" ]; then
     fi
 
     run_eloop_cmd "busybox sysctl -w net.ipv6.conf.$IFNAME.disable_ipv6=1 net.ipv6.conf.$IFNAME.autoconf=1 net.ipv6.conf.$IFNAME.accept_ra=1 net.ipv6.conf.$IFNAME.ndisc_notify=1 net.ipv6.conf.$IFNAME.disable_ipv6=0"
-    echo "DHCP/stateless IP configuration" >> $BASEDIR/Logs/hs20-action.log
-    #Fix the next line to use IFNAME
-    run_eloop_cmd "kill `cat /data/misc/dhcp/dhcpcd-wlan0.pid`"
-
-    #/system/bin/dhcpcd -ABKLG -f /system/etc/dhcpcd/dhcpcd.conf -h android-eaaffd5197248a27 $IFNAME
-    /system/bin/dhcpcd -ABKLG -f /system/etc/dhcpcd/dhcpcd.conf $IFNAME
-    #The above line replaces this line:
-    #dhclient -nw -pf /var/run/dhclient-$IFNAME.pid $IFNAME
-    #This does not really work properly after DHCP, i.e., this would need to be
-    #within dhcp-script.
-    #sleep 2
-    #ip addr show dev $IFNAME >> $BASEDIR/Logs/hs20-action.log
-    #addr=`ip addr show dev $IFNAME | grep "inet " | sed "s%.*inet \([^/]*\)/.*%\1%"`
-    #if [ -n "$addr" ]; then
-	#arping -I $IFNAME -D $addr -c 3 >> $BASEDIR/Logs/hs20-action.log 2>&1
-    #fi
-
-fi
-
-if [ "$CMD" = "DISCONNECTED" ]; then
-    if [ -e $BASEDIR/static-ip ]; then
-	exit
-    fi
-    #kill_daemon dhclient /var/run/dhclient-$IFNAME.pid
-    #Fix the next line to use IFNAME
-    run_eloop_cmd "kill `cat /data/misc/dhcp/dhcpcd-wlan0.pid`"
+    # Do not run dhcpcd from here as sigma_dut is already starting appropriate
+    # dhcp binary on CTRL-EVENT-CONNECTED.
 fi
 
 if [ "$CMD" = "ESS-DISASSOC-IMMINENT" ]; then
