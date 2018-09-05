@@ -20,7 +20,11 @@ echo "CMD=$CMD"
 
 echo "CMD=$CMD" >> $BASEDIR/Logs/hs20-action.log
 
-IFACE_DIR=/data/misc/wifi/sockets/
+if [ -e /data/vendor/wifi/wpa/sockets/$IFNAME ]; then
+    IFACE_DIR=/data/vendor/wifi/wpa/sockets/
+else
+    IFACE_DIR=/data/misc/wifi/sockets/
+fi
 
 run_eloop_cmd()
 {
