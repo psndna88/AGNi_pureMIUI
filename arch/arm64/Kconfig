@@ -1480,3 +1480,30 @@ source "arch/arm64/crypto/Kconfig"
 endif
 
 source "lib/Kconfig"
+
+menu "Xiaomi configuration options"
+
+config MACH_XIAOMI
+        bool "Xiaomi device"
+        depends on ARCH_QCOM
+        help
+          Support for Xiaomi products
+
+config MACH_XIAOMI_ATOLL
+        bool "Xiaomi ATOLL"
+        depends on ARCH_ATOLL
+        select MACH_XIAOMI
+        help
+          Support for ATOLL-based Xiaomi variants
+
+menu "Xiaomi board selection"
+
+config MACH_XIAOMI_CUST
+        bool "curtana, durandal, excalibur, gram, joyeuse boards"
+        select MACH_XIAOMI_ATOLL
+        help
+          Support for Xiaomi Redmi Note 9S / 9 Pro / 9 Pro Max
+
+endmenu
+
+endmenu
