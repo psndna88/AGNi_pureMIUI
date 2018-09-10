@@ -235,6 +235,68 @@ static int cmd_server_request_status(struct sigma_dut *dut,
 }
 
 
+static int cmd_server_set_parameter(struct sigma_dut *dut,
+				    struct sigma_conn *conn,
+				    struct sigma_cmd *cmd)
+{
+	const char *var;
+	int osu, timeout = -1;
+	enum sigma_program prog;
+
+	var = get_param(cmd, "Program");
+	if (!var) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Missing program parameter");
+		return 0;
+	}
+
+	prog = sigma_program_to_enum(var);
+	if (prog != PROGRAM_HS2_R2 && prog != PROGRAM_HS2_R3) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Unsupported program");
+		return 0;
+	}
+
+	var = get_param(cmd, "Device");
+	if (!var ||
+	    (strcasecmp(var, "AAAServer") != 0 &&
+	     strcasecmp(var, "OSUServer") != 0)) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Unsupported device type");
+		return 0;
+	}
+	osu = strcasecmp(var, "OSUServer") == 0;
+
+	var = get_param(cmd, "Timeout");
+	if (var)
+		timeout = atoi(var);
+
+	var = get_param(cmd, "ProvisioningProto");
+	if (var && strcasecmp(var, "SOAP") != 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Unsupported ProvisioningProto");
+		return 0;
+	}
+
+	/* TODO: CertReEnroll,{Enable|Disable} */
+	/* TODO: InterCACert,{ID-Z.2,ID-Z2,ID-Z.4} */
+	/* TODO: Issuing_Arch,{col2,col4} */
+	/* TODO: OSUServerCert,{ID-Q,ID-W} */
+	/* TODO: SerialNo,<hex> */
+	/* TODO: TrustRootCACert,{ID-T,ID-Y} */
+
+	if (timeout > -1) {
+		/* TODO */
+	}
+
+	if (osu) {
+	}
+
+	/* TODO */
+	return 1;
+}
+
+
 void server_register_cmds(void)
 {
 	sigma_dut_reg_cmd("server_ca_get_version", NULL,
@@ -245,4 +307,6 @@ void server_register_cmds(void)
 			  cmd_server_reset_default);
 	sigma_dut_reg_cmd("server_request_status", NULL,
 			  cmd_server_request_status);
+	sigma_dut_reg_cmd("server_set_parameter", NULL,
+			  cmd_server_set_parameter);
 }
