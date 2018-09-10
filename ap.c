@@ -2585,7 +2585,8 @@ static int owrt_ap_config_vap_hs2(struct sigma_dut *dut, int vap_id)
 		}
 
 		if (strlen(dut->ap_osu_ssid)) {
-			if (strcmp(dut->ap_tag_ssid[0],
+			if (dut->ap_tag_ssid[0][0] &&
+			    strcmp(dut->ap_tag_ssid[0],
 				   dut->ap_osu_ssid) != 0 &&
 			    strcmp(dut->ap_tag_ssid[0], osu_ssid) != 0) {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
@@ -4318,7 +4319,8 @@ static int append_hostapd_conf_hs2(struct sigma_dut *dut, FILE *f)
 		}
 
 		if (strlen(dut->ap_osu_ssid)) {
-			if (strcmp(dut->ap_tag_ssid[0], dut->ap_osu_ssid) &&
+			if (dut->ap_tag_ssid[0][0] &&
+			    strcmp(dut->ap_tag_ssid[0], dut->ap_osu_ssid) &&
 			    strcmp(dut->ap_tag_ssid[0], osu_ssid)) {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
 						"OSU_SSID and "
