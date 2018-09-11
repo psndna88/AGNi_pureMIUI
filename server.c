@@ -172,6 +172,106 @@ static int cmd_server_reset_default(struct sigma_dut *dut,
 }
 
 
+static int get_last_msk_cb(void *ctx, int argc, char *argv[], char *col[])
+{
+	char **last_msk = ctx;
+
+	if (argc < 1 || !argv[0])
+		return 0;
+
+	free(*last_msk);
+	*last_msk = strdup(argv[0]);
+
+	return 0;
+}
+
+
+static char * get_last_msk(struct sigma_dut *dut, sqlite3 *db,
+			   const char *username)
+{
+	char *sql, *last_msk = NULL;
+
+	sql = sqlite3_mprintf("SELECT last_msk FROM users WHERE identity=%Q",
+			      username);
+	if (!sql)
+		return NULL;
+
+	if (sqlite3_exec(db, sql, get_last_msk_cb, &last_msk, NULL) !=
+	    SQLITE_OK) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"SQL operation to fetch last_msk failed: %s",
+				sqlite3_errmsg(db));
+		sqlite3_free(sql);
+		return NULL;
+	}
+
+	sqlite3_free(sql);
+
+	return last_msk;
+}
+
+
+static int aaa_auth_status(struct sigma_dut *dut, struct sigma_conn *conn,
+			   struct sigma_cmd *cmd, const char *username,
+			   int timeout)
+{
+	sqlite3 *db;
+	char *sql = NULL;
+	int i;
+	char resp[500];
+
+	if (sqlite3_open(SERVER_DB, &db)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to open SQLite database %s",
+				SERVER_DB);
+		return -1;
+	}
+
+	sql = sqlite3_mprintf("UPDATE users SET last_msk=NULL WHERE identity=%Q",
+			      username);
+	if (!sql) {
+		sqlite3_close(db);
+		return -1;
+	}
+
+	if (sqlite3_exec(db, sql, NULL, NULL, NULL) != SQLITE_OK) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"SQL operation to clear last_msk failed: %s",
+				sqlite3_errmsg(db));
+		sqlite3_free(sql);
+		sqlite3_close(db);
+		return -1;
+	}
+
+	sqlite3_free(sql);
+
+	snprintf(resp, sizeof(resp), "AuthStatus,TIMEOUT,MSK,NULL");
+
+	for (i = 0; i < timeout; i++) {
+		char *last_msk;
+
+		last_msk = get_last_msk(dut, db, username);
+		if (last_msk) {
+			if (strcmp(last_msk, "FAIL") == 0) {
+				snprintf(resp, sizeof(resp),
+					 "AuthStatus,FAIL,MSK,NULL");
+			} else {
+				snprintf(resp, sizeof(resp),
+					 "AuthStatus,SUCCESS,MSK,%s", last_msk);
+			}
+			free(last_msk);
+			break;
+		}
+		sleep(1);
+	}
+
+	sqlite3_close(db);
+
+	send_resp(dut, conn, SIGMA_COMPLETE, resp);
+	return 0;
+}
+
+
 static int cmd_server_request_status(struct sigma_dut *dut,
 				     struct sigma_conn *conn,
 				     struct sigma_cmd *cmd)
@@ -179,9 +279,17 @@ static int cmd_server_request_status(struct sigma_dut *dut,
 	const char *var, *username, *serialno, *imsi, *addr, *status;
 	int osu, timeout;
 	char resp[500];
+	enum sigma_program prog;
 
 	var = get_param(cmd, "Program");
-	if (var == NULL || strcasecmp(var, "HS2-R2") != 0) {
+	if (!var) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Missing program parameter");
+		return 0;
+	}
+
+	prog = sigma_program_to_enum(var);
+	if (prog != PROGRAM_HS2_R2 && prog != PROGRAM_HS2_R3) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Unsupported program");
 		return 0;
@@ -230,6 +338,10 @@ static int cmd_server_request_status(struct sigma_dut *dut,
 		send_resp(dut, conn, SIGMA_COMPLETE, resp);
 		return 0;
 	}
+
+	if (!osu && status && strcasecmp(status, "Authentication") == 0 &&
+	    username)
+		return aaa_auth_status(dut, conn, cmd, username, timeout);
 
 	return 1;
 }
