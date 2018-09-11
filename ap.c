@@ -1709,6 +1709,9 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 			dut->ap_key_mgmt = AP_WPA2_EAP_OSEN;
 			dut->ap_cipher = AP_CCMP;
 			dut->ap_pmf = AP_PMF_OPTIONAL;
+		} else if (strcasecmp(val, "OSEN") == 0) {
+			dut->ap_key_mgmt = AP_OSEN;
+			dut->ap_cipher = AP_CCMP;
 		} else if (strcasecmp(val, "FT-EAP") == 0) {
 			dut->ap_key_mgmt = AP_WPA2_FT_EAP;
 			dut->ap_cipher = AP_CCMP;
@@ -3130,6 +3133,7 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 			owrt_ap_set_vap(dut, vap_count, "auth_secret", buf);
 			break;
 		case AP_WPA2_EAP_OSEN:
+		case AP_OSEN:
 		case AP_WPA2_FT_EAP:
 		case AP_WPA2_FT_PSK:
 		case AP_WPA2_EAP_SHA256:
@@ -4029,6 +4033,7 @@ static int cmd_wcn_ap_config_commit(struct sigma_dut *dut,
 	case AP_SUITEB:
 	case AP_WPA2_OWE:
 	case AP_WPA2_EAP_OSEN:
+	case AP_OSEN:
 	case AP_WPA2_FT_EAP:
 	case AP_WPA2_FT_PSK:
 	case AP_WPA2_EAP_SHA256:
@@ -5976,6 +5981,7 @@ static int cmd_ath_ap_config_commit(struct sigma_dut *dut,
 	case AP_WPA2_EAP_SHA256:
 	case AP_WPA2_PSK_SHA256:
 	case AP_WPA2_ENT_FT_EAP:
+	case AP_OSEN:
 		/* TODO */
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Unsupported KeyMgnt value");
@@ -6083,6 +6089,7 @@ static int cmd_ath_ap_config_commit(struct sigma_dut *dut,
 		case AP_WPA2_EAP_SHA256:
 		case AP_WPA2_PSK_SHA256:
 		case AP_WPA2_ENT_FT_EAP:
+		case AP_OSEN:
 			/* TODO */
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Unsupported KeyMgnt value");
@@ -6800,6 +6807,21 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 			hostapd_cipher_name(dut->ap_cipher));
 		if (dut->ap_sae_groups)
 			fprintf(f, "owe_groups=%s\n", dut->ap_sae_groups);
+		break;
+	case AP_OSEN:
+		fprintf(f, "osen=1\n");
+		fprintf(f, "disable_dgaf=1\n");
+		fprintf(f, "wpa_pairwise=%s\n",
+			hostapd_cipher_name(dut->ap_cipher));
+		if (dut->ap_group_cipher != AP_NO_GROUP_CIPHER_SET)
+			fprintf(f, "group_cipher=%s\n",
+				hostapd_cipher_name(dut->ap_group_cipher));
+		fprintf(f, "auth_server_addr=%s\n", dut->ap_radius_ipaddr);
+		if (dut->ap_radius_port)
+			fprintf(f, "auth_server_port=%d\n",
+				dut->ap_radius_port);
+		fprintf(f, "auth_server_shared_secret=%s\n",
+			dut->ap_radius_password);
 		break;
 	}
 
