@@ -10016,6 +10016,84 @@ try_again:
 }
 
 
+static int cmd_sta_hs2_venue_info(struct sigma_dut *dut,
+				  struct sigma_conn *conn,
+				  struct sigma_cmd *cmd)
+{
+	const char *intf = get_param(cmd, "Interface");
+	const char *display = get_param(cmd, "Display");
+	struct wpa_ctrl *ctrl;
+	char buf[300], params[400], *pos;
+	char bssid[20];
+	int info_avail = 0;
+	unsigned int old_timeout;
+	int res;
+
+	if (get_wpa_status(intf, "bssid", bssid, sizeof(bssid)) < 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "ErrorCode,Could not get current BSSID");
+		return 0;
+	}
+	ctrl = open_wpa_mon(intf);
+	if (!ctrl) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to open wpa_supplicant monitor connection");
+		return -2;
+	}
+
+	snprintf(buf, sizeof(buf), "ANQP_GET %s 277", bssid);
+	wpa_command(intf, buf);
+
+	res = get_wpa_cli_event(dut, ctrl, "GAS-QUERY-DONE", buf, sizeof(buf));
+	if (res < 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "ErrorCode,Could not complete GAS query");
+		goto fail;
+	}
+
+	old_timeout = dut->default_timeout;
+	dut->default_timeout = 2;
+	res = get_wpa_cli_event(dut, ctrl, "RX-VENUE-URL", buf, sizeof(buf));
+	dut->default_timeout = old_timeout;
+	if (res < 0)
+		goto done;
+	pos = strchr(buf, ' ');
+	if (!pos)
+		goto done;
+	pos++;
+	pos = strchr(pos, ' ');
+	if (!pos)
+		goto done;
+	pos++;
+	info_avail = 1;
+	snprintf(params, sizeof(params), "browser %s", pos);
+
+	if (display && strcasecmp(display, "Yes") == 0) {
+		pid_t pid;
+
+		pid = fork();
+		if (pid < 0) {
+			perror("fork");
+			return -1;
+		}
+
+		if (pid == 0) {
+			run_hs20_osu(dut, params);
+			exit(0);
+		}
+	}
+
+done:
+	snprintf(buf, sizeof(buf), "Info_available,%s",
+		 info_avail ? "Yes" : "No");
+	send_resp(dut, conn, SIGMA_COMPLETE, buf);
+fail:
+	wpa_ctrl_detach(ctrl);
+	wpa_ctrl_close(ctrl);
+	return 0;
+}
+
+
 static int sta_add_credential_uname_pwd(struct sigma_dut *dut,
 					struct sigma_conn *conn,
 					const char *ifname,
@@ -10950,6 +11028,8 @@ void sta_register_cmds(void)
 	sigma_dut_reg_cmd("sta_get_key", req_intf, cmd_sta_get_key);
 	sigma_dut_reg_cmd("sta_hs2_associate", req_intf,
 			  cmd_sta_hs2_associate);
+	sigma_dut_reg_cmd("sta_hs2_venue_info", req_intf,
+			  cmd_sta_hs2_venue_info);
 	sigma_dut_reg_cmd("sta_add_credential", req_intf,
 			  cmd_sta_add_credential);
 	sigma_dut_reg_cmd("sta_scan", req_intf, cmd_sta_scan);
