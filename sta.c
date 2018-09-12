@@ -10557,13 +10557,14 @@ static int cmd_sta_osu(struct sigma_dut *dut, struct sigma_conn *conn,
 		       struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
-	const char *name, *val;
+	const char *name, *osu_ssid, *val;
 	int prod_ess_assoc = 1;
-	char buf[200], bssid[100], ssid[100];
+	char buf[300], bssid[100], ssid[100];
 	int res;
 	struct wpa_ctrl *ctrl;
 
 	name = get_param(cmd, "osuFriendlyName");
+	osu_ssid = get_param(cmd, "osu_ssid");
 
 	val = get_param(cmd, "ProdESSAssoc");
 	if (val)
@@ -10576,10 +10577,12 @@ static int cmd_sta_osu(struct sigma_dut *dut, struct sigma_conn *conn,
 	sigma_dut_print(dut, DUT_MSG_DEBUG, "Trigger OSU");
 	mkdir("Logs", S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
 	res = snprintf(buf, sizeof(buf),
-		       "%s %s%s%s signup osu-ca.pem",
+		       "%s %s%s%s %s%s%s signup osu-ca.pem",
 		       prod_ess_assoc ? "" : "-N",
 		       name ? "-O'" : "", name ? name : "",
-		       name ? "'" : "");
+		       name ? "'" : "",
+		       osu_ssid ? "-o'" : "", osu_ssid ? osu_ssid : "",
+		       osu_ssid ? "'" : "");
 
 	hs2_set_policy(dut);
 	if (run_hs20_osu(dut, buf) < 0) {
