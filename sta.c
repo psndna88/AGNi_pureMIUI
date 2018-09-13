@@ -6375,6 +6375,8 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 		return sta_cfon_reset_default(dut, conn, cmd);
 	}
 
+	wpa_command(intf, "SET setband AUTO");
+
 	if (dut->program != PROGRAM_VHT)
 		return cmd_sta_p2p_reset(dut, conn, cmd);
 
@@ -9914,6 +9916,7 @@ static int cmd_sta_hs2_associate(struct sigma_dut *dut,
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *val = get_param(cmd, "Ignore_blacklist");
+	const char *band = get_param(cmd, "Band");
 	struct wpa_ctrl *ctrl;
 	int res;
 	char bssid[20], ssid[40], resp[100], buf[100], blacklisted[100];
@@ -9927,6 +9930,18 @@ static int cmd_sta_hs2_associate(struct sigma_dut *dut,
 	};
 
 	start_sta_mode(dut);
+
+	if (band) {
+		if (strcmp(band, "2.4") == 0) {
+			wpa_command(intf, "SET setband 2G");
+		} else if (strcmp(band, "5") == 0) {
+			wpa_command(intf, "SET setband 5G");
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported band");
+			return 0;
+		}
+	}
 
 	blacklisted[0] = '\0';
 	if (val && atoi(val))
