@@ -30,28 +30,28 @@
  * barrier case is generated as release+dmb for the former and
  * acquire+release for the latter.
  */
-#define __XCHG_CASE(w, sz, name, mb, nop_lse, acq, acq_lse, rel, cl)	\
-static inline unsigned long __xchg_case_##name(unsigned long x,		\
-					       volatile void *ptr)	\
-{									\
-	unsigned long ret, tmp;						\
-									\
-	asm volatile(ARM64_LSE_ATOMIC_INSN(				\
-	/* LL/SC */							\
-	"	prfm	pstl1strm, %2\n"				\
-	"1:	ld" #acq "xr" #sz "\t%" #w "0, %2\n"			\
-	"	st" #rel "xr" #sz "\t%w1, %" #w "3, %2\n"		\
-	"	cbnz	%w1, 1b\n"					\
-	"	" #mb,							\
-	/* LSE atomics */						\
-	"	swp" #acq_lse #rel #sz "\t%" #w "3, %" #w "0, %2\n"	\
-		__nops(3)						\
-	"	" #nop_lse)						\
-	: "=&r" (ret), "=&r" (tmp), "+Q" (*(unsigned long *)ptr)	\
-	: "r" (x)							\
-	: cl);								\
-									\
-	return ret;							\
+#define __XCHG_CASE(w, sfx, name, sz, mb, nop_lse, acq, acq_lse, rel, cl)	\
+static inline u##sz __xchg_case_##name##sz(u##sz x, volatile void *ptr)		\
+{										\
+	u##sz ret;								\
+	unsigned long tmp;							\
+										\
+	asm volatile(ARM64_LSE_ATOMIC_INSN(					\
+	/* LL/SC */								\
+	"	prfm	pstl1strm, %2\n"					\
+	"1:	ld" #acq "xr" #sfx "\t%" #w "0, %2\n"				\
+	"	st" #rel "xr" #sfx "\t%w1, %" #w "3, %2\n"			\
+	"	cbnz	%w1, 1b\n"						\
+	"	" #mb,								\
+	/* LSE atomics */							\
+	"	swp" #acq_lse #rel #sfx "\t%" #w "3, %" #w "0, %2\n"		\
+		__nops(3)							\
+	"	" #nop_lse)							\
+	: "=&r" (ret), "=&r" (tmp), "+Q" (*(u##sz *)ptr)			\
+	: "r" (x)								\
+	: cl);									\
+										\
+	return ret;								\
 }
 
 __XCHG_CASE(w, b,     1,        ,    ,  ,  ,  ,         )
@@ -123,13 +123,13 @@ static __always_inline unsigned long __cmpxchg##sfx(volatile void *ptr,	\
 {									\
 	switch (size) {							\
 	case 1:								\
-		return __cmpxchg_case##sfx##_1(ptr, (u8)old, new);	\
-	case 2:								\
-		return __cmpxchg_case##sfx##_2(ptr, (u16)old, new);	\
-	case 4:								\
-		return __cmpxchg_case##sfx##_4(ptr, old, new);		\
-	case 8:								\
 		return __cmpxchg_case##sfx##_8(ptr, old, new);		\
+	case 2:								\
+		return __cmpxchg_case##sfx##_16(ptr, old, new);		\
+	case 4:								\
+		return __cmpxchg_case##sfx##_32(ptr, old, new);		\
+	case 8:								\
+		return __cmpxchg_case##sfx##_64(ptr, old, new);		\
 	default:							\
 		BUILD_BUG();						\
 	}								\
