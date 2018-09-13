@@ -263,7 +263,7 @@
 			qcom,ilim-ma = <970>;
 			qcom,boost-duty-ns = <26>;
 			qcom,mod-freq-khz = <9600>;
-			qcom,dim-mode = "hybrid";
+			qcom,dim-mode = "analog";
 			qcom,hyb-thres = <625>;
 			qcom,sync-dly-us = <800>;
 			qcom,fs-curr-ua = <18000>;
