@@ -13,6 +13,10 @@
 #define SERVER_DB "/home/user/hs20-server/AS/DB/eap_user.db"
 #endif /* SERVER_DB */
 
+#ifndef CERT_DIR
+#define CERT_DIR "/home/user/hs20-server/certs"
+#endif /* CERT_DIR */
+
 
 static int cmd_server_ca_get_version(struct sigma_dut *dut,
 				     struct sigma_conn *conn,
@@ -351,7 +355,7 @@ static int cmd_server_set_parameter(struct sigma_dut *dut,
 				    struct sigma_conn *conn,
 				    struct sigma_cmd *cmd)
 {
-	const char *var;
+	const char *var, *root_ca, *inter_ca, *osu_cert, *issuing_arch, *name;
 	int osu, timeout = -1;
 	enum sigma_program prog;
 
@@ -390,18 +394,154 @@ static int cmd_server_set_parameter(struct sigma_dut *dut,
 		return 0;
 	}
 
+	name = get_param(cmd, "Name");
+	root_ca = get_param(cmd, "TrustRootCACert");
+	inter_ca = get_param(cmd, "InterCACert");
+	osu_cert = get_param(cmd, "OSUServerCert");
+	issuing_arch = get_param(cmd, "Issuing_Arch");
+
 	/* TODO: CertReEnroll,{Enable|Disable} */
-	/* TODO: InterCACert,{ID-Z.2,ID-Z2,ID-Z.4} */
-	/* TODO: Issuing_Arch,{col2,col4} */
-	/* TODO: OSUServerCert,{ID-Q,ID-W} */
 	/* TODO: SerialNo,<hex> */
-	/* TODO: TrustRootCACert,{ID-T,ID-Y} */
 
 	if (timeout > -1) {
 		/* TODO */
 	}
 
-	if (osu) {
+	if (osu && name && root_ca && inter_ca && osu_cert && issuing_arch) {
+		const char *srv;
+		char buf[500];
+		char buf2[500];
+		int col;
+
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Update server certificate setup");
+
+		if (strcasecmp(name, "ruckus") == 0) {
+			srv = "RKS";
+		} else if (strcasecmp(name, "aruba") == 0) {
+			srv = "ARU";
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported Name value");
+			return 0;
+		}
+
+		if (strcasecmp(issuing_arch, "col2") == 0) {
+			col = 2;
+		} else if (strcasecmp(issuing_arch, "col4") == 0) {
+			col = 4;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported Issuing_Arch value");
+			return 0;
+		}
+
+		if (strcasecmp(root_ca, "ID-T") == 0) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"OSU trust root: NetworkFX");
+			if (system("cp " CERT_DIR "/IDT-cert-RootCA.pem "
+				   CERT_DIR "/cacert.pem") < 0)
+				return -2;
+		} else if (strcasecmp(root_ca, "ID-Y") == 0) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"OSU trust root: NetworkFX");
+			if (system("cp " CERT_DIR "/IDY-cert-RootCA.pem "
+				   CERT_DIR "/cacert.pem") < 0)
+				return -2;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported TrustRootCACert value");
+			return 0;
+		}
+
+		if (strcasecmp(inter_ca, "ID-Z.2") == 0) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"OSU intermediate CA: NetworkFX (col2)");
+			if (system("cat " CERT_DIR "/IDZ2-cert-InterCA.pem >> "
+				   CERT_DIR "/cacert.pem") < 0)
+				return -2;
+		} else if (strcasecmp(inter_ca, "ID-Z.4") == 0) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"OSU intermediate CA: DigiCert (col2)");
+			if (system("cat " CERT_DIR "/IDZ4-cert-InterCA.pem >> "
+				   CERT_DIR "/cacert.pem") < 0)
+				return -2;
+		} else if (strcasecmp(inter_ca, "ID-Z.6") == 0) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"OSU intermediate CA: NetworkFX (col4)");
+			if (system("cat " CERT_DIR "/IDZ6-cert-InterCA.pem >> "
+				   CERT_DIR "/cacert.pem") < 0)
+				return -2;
+		} else if (strcasecmp(inter_ca, "ID-Z.8") == 0) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"OSU intermediate CA: DigiCert (col4)");
+			if (system("cat " CERT_DIR "/IDZ8-cert-InterCA.pem >> "
+				   CERT_DIR "/cacert.pem") < 0)
+				return -2;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported InterCACert value");
+			return 0;
+		}
+
+		if (strcasecmp(osu_cert, "ID-Q") == 0) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"OSU server cert: NetworkFX col%d",
+					col);
+			snprintf(buf, sizeof(buf),
+				 "cp " CERT_DIR "/IDQ-cert-c%d-%s.pem "
+				 CERT_DIR "/server.pem",
+				 col, srv);
+			snprintf(buf2, sizeof(buf2),
+				 "cp " CERT_DIR "/IDQ-key-%s.pem "
+				 CERT_DIR "/server.key", srv);
+		} else if (strcasecmp(osu_cert, "ID-W") == 0) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"OSU server cert: DigiCert col%d",
+					col);
+			snprintf(buf, sizeof(buf),
+				 "cp " CERT_DIR "/IDW-cert-c%d-%s.pem "
+				 CERT_DIR "/server.pem",
+				 col, srv);
+			snprintf(buf2, sizeof(buf2),
+				 "cp " CERT_DIR "/IDW-key-%s.pem "
+				 CERT_DIR "/server.key", srv);
+		} else if (strcasecmp(osu_cert, "ID-R.2") == 0) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"OSU server cert: NetworkFX revoked col%d",
+					col);
+			snprintf(buf, sizeof(buf),
+				 "cp " CERT_DIR "/IDR2-cert-c%d-%s.pem "
+				 CERT_DIR "/server.pem",
+				 col, srv);
+			snprintf(buf2, sizeof(buf2),
+				 "cp " CERT_DIR "/IDR2-key-%s.pem "
+				 CERT_DIR "/server.key", srv);
+		} else if (strcasecmp(osu_cert, "ID-R.4") == 0) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"OSU server cert: DigiCert revoked col%d",
+					col);
+			snprintf(buf, sizeof(buf),
+				 "cp " CERT_DIR "/IDR4-cert-c%d-%s.pem "
+				 CERT_DIR "/server.pem",
+				 col, srv);
+			snprintf(buf2, sizeof(buf2),
+				 "cp " CERT_DIR "/IDR4-key-%s.pem "
+				 CERT_DIR "/server.key", srv);
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported OSUServerCert value");
+			return 0;
+		}
+
+		if (system(buf) < 0 || system(buf2) < 0)
+			return -2;
+
+		if (system("service apache2 reload") < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to restart Apache");
+			return 0;
+		}
 	}
 
 	/* TODO */
