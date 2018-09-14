@@ -137,6 +137,44 @@ fail:
 }
 
 
+static int server_reset_cert_enroll(struct sigma_dut *dut, const char *addr)
+{
+	sqlite3 *db;
+	char *sql;
+
+	sigma_dut_print(dut, DUT_MSG_DEBUG,
+			"Reset certificate enrollment status for %s", addr);
+
+	if (sqlite3_open(SERVER_DB, &db)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to open SQLite database %s",
+				SERVER_DB);
+		return -1;
+	}
+	sql = sqlite3_mprintf("DELETE FROM cert_enroll WHERE mac_addr=%Q",
+			      addr);
+	if (!sql) {
+		sqlite3_close(db);
+		return -1;
+	}
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "SQL: %s", sql);
+
+	if (sqlite3_exec(db, sql, NULL, NULL, NULL) != SQLITE_OK) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"SQL operation failed: %s",
+				sqlite3_errmsg(db));
+		sqlite3_free(sql);
+		sqlite3_close(db);
+		return -1;
+	}
+
+	sqlite3_free(sql);
+	sqlite3_close(db);
+
+	return 0;
+}
+
+
 static int cmd_server_reset_default(struct sigma_dut *dut,
 				    struct sigma_conn *conn,
 				    struct sigma_cmd *cmd)
@@ -170,6 +208,13 @@ static int cmd_server_reset_default(struct sigma_dut *dut,
 		sigma_dut_print(dut, DUT_MSG_DEBUG, "Reset serial number %s",
 				var);
 		/* TODO */
+	}
+
+	var = get_param(cmd, "ClientMACAddr");
+	if (var && server_reset_cert_enroll(dut, var) < 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Failed to reset cert enroll to defaults");
+		return 0;
 	}
 
 	return 1;
@@ -276,6 +321,90 @@ static int aaa_auth_status(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int get_last_serial_cb(void *ctx, int argc, char *argv[], char *col[])
+{
+	char **last_serial = ctx;
+
+	if (argc < 1 || !argv[0])
+		return 0;
+
+	free(*last_serial);
+	*last_serial = strdup(argv[0]);
+
+	return 0;
+}
+
+
+static char * get_last_serial(struct sigma_dut *dut, sqlite3 *db,
+			      const char *addr)
+{
+	char *sql, *last_serial = NULL;
+
+	sql = sqlite3_mprintf("SELECT serialnum FROM cert_enroll WHERE mac_addr=%Q",
+			      addr);
+	if (!sql)
+		return NULL;
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "SQL: %s", sql);
+
+	if (sqlite3_exec(db, sql, get_last_serial_cb, &last_serial, NULL) !=
+	    SQLITE_OK) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"SQL operation to fetch last_serial failed: %s",
+				sqlite3_errmsg(db));
+		sqlite3_free(sql);
+		return NULL;
+	}
+
+	sqlite3_free(sql);
+
+	return last_serial;
+}
+
+
+static int osu_cert_enroll_status(struct sigma_dut *dut,
+				  struct sigma_conn *conn,
+				  struct sigma_cmd *cmd, const char *addr,
+				  int timeout)
+{
+	sqlite3 *db;
+	int i;
+	char resp[500];
+
+	if (sqlite3_open(SERVER_DB, &db)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to open SQLite database %s",
+				SERVER_DB);
+		return -1;
+	}
+
+	snprintf(resp, sizeof(resp), "OSUStatus,TIMEOUT");
+
+	for (i = 0; i < timeout; i++) {
+		char *last_serial;
+
+		last_serial = get_last_serial(dut, db, addr);
+		if (last_serial) {
+			if (strcmp(last_serial, "FAIL") == 0) {
+				snprintf(resp, sizeof(resp),
+					 "OSUStatus,FAIL");
+			} else if (strlen(last_serial) > 0) {
+				snprintf(resp, sizeof(resp),
+					 "OSUStatus,SUCCESS,SerialNo,%s",
+					 last_serial);
+			}
+			free(last_serial);
+			break;
+		}
+		sleep(1);
+	}
+
+	sqlite3_close(db);
+
+	send_resp(dut, conn, SIGMA_COMPLETE, resp);
+	return 0;
+}
+
+
 static int cmd_server_request_status(struct sigma_dut *dut,
 				     struct sigma_conn *conn,
 				     struct sigma_cmd *cmd)
@@ -346,6 +475,9 @@ static int cmd_server_request_status(struct sigma_dut *dut,
 	if (!osu && status && strcasecmp(status, "Authentication") == 0 &&
 	    username)
 		return aaa_auth_status(dut, conn, cmd, username, timeout);
+
+	if (osu && status && strcasecmp(status, "OSU") == 0 && addr)
+		return osu_cert_enroll_status(dut, conn, cmd, addr, timeout);
 
 	return 1;
 }
