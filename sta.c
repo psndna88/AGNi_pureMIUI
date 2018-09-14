@@ -8060,7 +8060,7 @@ static int sta_ap_known(const char *ifname, const char *bssid)
 {
 	char buf[4096];
 
-	snprintf(buf, sizeof(buf), "BSS %s", bssid);
+	snprintf(buf, sizeof(buf), "BSS MASK=1 %s", bssid);
 	if (wpa_command_resp(ifname, buf, buf, sizeof(buf)) < 0)
 		return 0;
 	if (strncmp(buf, "id=", 3) != 0)
