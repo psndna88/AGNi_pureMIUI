@@ -22,22 +22,6 @@
 #endif /* ANDROID */
 
 
-static int is_ipv6_addr(const char *str)
-{
-	const char *pos = str;
-
-	while (*pos) {
-		if (*pos != ':' && (*pos < '0' || *pos > '9') &&
-		    (*pos < 'a' || *pos > 'f') &&
-		    (*pos < 'A' || *pos > 'F'))
-			return 0;
-		pos++;
-	}
-
-	return 1;
-}
-
-
 static int cmd_traffic_send_ping(struct sigma_dut *dut,
 				 struct sigma_conn *conn,
 				 struct sigma_cmd *cmd)

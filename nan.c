@@ -1889,6 +1889,31 @@ void nan_cmd_sta_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 {
 	sigma_dut_print(dut, DUT_MSG_INFO, "NAN sta_reset_default");
 
+#ifdef ANDROID
+	if (dut->nanservicediscoveryinprogress) {
+		char *argv[5];
+		pid_t pid;
+
+		argv[0] = "am";
+		argv[1] = "broadcast";
+		argv[2] = "-a";
+		argv[3] = "org.codeaurora.nanservicediscovery.close";
+		argv[4] = NULL;
+
+		pid = fork();
+		if (pid == -1) {
+			sigma_dut_print(dut, DUT_MSG_ERROR, "fork: %s",
+					strerror(errno));
+		} else if (pid == 0) {
+			execv("/system/bin/am", argv);
+			sigma_dut_print(dut, DUT_MSG_ERROR, "execv: %s",
+					strerror(errno));
+			exit(0);
+		}
+		dut->nanservicediscoveryinprogress = 0;
+	}
+#endif /* ANDROID */
+
 	if (nan_state == 0) {
 		nan_init(dut);
 		nan_state = 1;
@@ -1922,6 +1947,7 @@ int nan_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *nan_op = get_param(cmd, "NANOp");
 	const char *method_type = get_param(cmd, "MethodType");
 	const char *band = get_param(cmd, "band");
+	const char *disc_mac_addr = get_param(cmd, "DiscoveryMacAddress");
 	char resp_buf[100];
 	wifi_error ret;
 
@@ -2055,6 +2081,12 @@ int nan_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 				sigma_nan_schedule_update(dut, cmd);
 				send_resp(dut, conn, SIGMA_COMPLETE, "NULL");
 			}
+		} else if (disc_mac_addr &&
+			   strcasecmp(disc_mac_addr, "GET") == 0) {
+			snprintf(resp_buf, sizeof(resp_buf), "mac,"
+				 MAC_ADDR_STR,
+				 MAC_ADDR_ARRAY(global_nan_mac_addr));
+			send_resp(dut, conn, SIGMA_COMPLETE, resp_buf);
 		} else {
 			sigma_nan_config_enable(dut, conn, cmd);
 			snprintf(resp_buf, sizeof(resp_buf), "mac,"

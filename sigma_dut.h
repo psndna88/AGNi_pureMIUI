@@ -67,7 +67,7 @@
 struct sigma_dut;
 
 #define MAX_PARAMS 100
-#define MAX_RADIO 2
+#define MAX_RADIO 3
 
 /* Set default operating channel width 80 MHz */
 #define VHT_DEFAULT_OPER_CHWIDTH AP_80_VHT_OPER_CHWIDTH
@@ -92,7 +92,7 @@ struct sigma_cmd {
 	int count;
 };
 
-#define MAX_CMD_LEN 2048
+#define MAX_CMD_LEN 4096
 
 struct sigma_conn {
 	int s;
@@ -403,6 +403,12 @@ struct sigma_dut {
 		AP_SUITEB,
 		AP_WPA2_OWE,
 		AP_WPA2_EAP_OSEN,
+		AP_WPA2_FT_EAP,
+		AP_WPA2_FT_PSK,
+		AP_WPA2_EAP_SHA256,
+		AP_WPA2_PSK_SHA256,
+		AP_WPA2_ENT_FT_EAP,
+		AP_OSEN,
 	} ap_key_mgmt;
 	enum ap_tag_key_mgmt {
 		AP2_OPEN,
@@ -491,7 +497,6 @@ struct sigma_dut {
 	int ap_oper_icon_metadata;
 	int ap_tnc_file_name;
 	unsigned int ap_tnc_time_stamp;
-	char *ap_tnc_url;
 
 	int ap_fake_pkhash;
 	int ap_disable_protection;
@@ -667,6 +672,7 @@ struct sigma_dut {
 		PROGRAM_OCE,
 		PROGRAM_WPA3,
 		PROGRAM_HE,
+		PROGRAM_HS2_R3,
 	} program;
 
 	enum device_type {
@@ -739,6 +745,10 @@ struct sigma_dut {
 #endif /* NL80211_SUPPORT */
 
 	int sta_nss;
+
+#ifdef ANDROID
+	int nanservicediscoveryinprogress;
+#endif /* ANDROID */
 };
 
 
@@ -866,6 +876,7 @@ int parse_mac_address(struct sigma_dut *dut, const char *arg,
 		      unsigned char *addr);
 unsigned int channel_to_freq(unsigned int channel);
 unsigned int freq_to_channel(unsigned int freq);
+int is_ipv6_addr(const char *str);
 void convert_mac_addr_to_ipv6_lladdr(u8 *mac_addr, char *ipv6_buf,
 				     size_t buf_len);
 

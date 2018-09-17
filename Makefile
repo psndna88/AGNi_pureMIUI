@@ -56,9 +56,10 @@ CFLAGS += -DCONFIG_SNIFFER
 OBJS += sniffer.o
 endif
 
-ifndef NO_SERVER
+ifdef SERVER
 CFLAGS += -DCONFIG_SERVER
 OBJS += server.o
+LIBS += -lsqlite3
 endif
 
 ifdef MIRACAST
