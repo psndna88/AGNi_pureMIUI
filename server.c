@@ -483,11 +483,52 @@ static int cmd_server_request_status(struct sigma_dut *dut,
 }
 
 
+static int osu_set_cert_reenroll(struct sigma_dut *dut, const char *serial,
+				 int enable)
+{
+	sqlite3 *db;
+	char *sql;
+	char id[100];
+	int ret = -1;
+
+	if (sqlite3_open(SERVER_DB, &db)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to open SQLite database %s",
+				SERVER_DB);
+		return -1;
+	}
+
+	snprintf(id, sizeof(id), "cert-%s", serial);
+	sql = sqlite3_mprintf("UPDATE users SET remediation=%Q WHERE lower(identity)=lower(%Q)",
+			      enable ? "machine" : "", id);
+	if (!sql)
+		goto fail;
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "SQL: %s", sql);
+	if (sqlite3_exec(db, sql, NULL, NULL, NULL) != SQLITE_OK) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "SQL operation failed: %s",
+				sqlite3_errmsg(db));
+		goto fail;
+	}
+
+	if (sqlite3_changes(db) < 1) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "No DB rows modified (specified serial number not found)");
+		goto fail;
+	}
+
+	ret = 0;
+fail:
+	sqlite3_close(db);
+
+	return ret;
+}
+
+
 static int cmd_server_set_parameter(struct sigma_dut *dut,
 				    struct sigma_conn *conn,
 				    struct sigma_cmd *cmd)
 {
 	const char *var, *root_ca, *inter_ca, *osu_cert, *issuing_arch, *name;
+	const char *reenroll, *serial;
 	int osu, timeout = -1;
 	enum sigma_program prog;
 
@@ -526,14 +567,33 @@ static int cmd_server_set_parameter(struct sigma_dut *dut,
 		return 0;
 	}
 
+	reenroll = get_param(cmd, "CertReEnroll");
+	serial = get_param(cmd, "SerialNo");
+	if (reenroll && serial) {
+		int enable;
+
+		if (strcasecmp(reenroll, "Enable") == 0) {
+			enable = 1;
+		} else if (strcasecmp(reenroll, "Disable") == 0) {
+			enable = 0;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Invalid CertReEnroll value");
+			return 0;
+		}
+
+		if (osu_set_cert_reenroll(dut, serial, enable) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to update certificate reenrollment state");
+			return 0;
+		}
+	}
+
 	name = get_param(cmd, "Name");
 	root_ca = get_param(cmd, "TrustRootCACert");
 	inter_ca = get_param(cmd, "InterCACert");
 	osu_cert = get_param(cmd, "OSUServerCert");
 	issuing_arch = get_param(cmd, "Issuing_Arch");
-
-	/* TODO: CertReEnroll,{Enable|Disable} */
-	/* TODO: SerialNo,<hex> */
 
 	if (timeout > -1) {
 		/* TODO */
