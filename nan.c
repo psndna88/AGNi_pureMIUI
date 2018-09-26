@@ -1,6 +1,7 @@
 /*
  * Sigma Control API DUT (NAN functionality)
  * Copyright (c) 2014-2017, Qualcomm Atheros, Inc.
+ * Copyright (c) 2018, The Linux Foundation
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
@@ -202,6 +203,12 @@ int nan_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 {
 	const char *oper_chan = get_param(cmd, "oper_chn");
 	const char *pmk = get_param(cmd, "PMK");
+#if (NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+	const char *ndpe = get_param(cmd, "NDPE");
+	const char *trans_proto = get_param(cmd, "TransProtoType");
+	const char *ndp_attr = get_param(cmd, "ndpAttr");
+#endif
 
 	if (oper_chan) {
 		sigma_dut_print(dut, DUT_MSG_INFO, "Operating Channel: %s",
@@ -224,6 +231,67 @@ int nan_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 		sigma_dut_print(dut, DUT_MSG_INFO, "%s:hex pmk", __func__);
 		nan_hex_dump(dut, &dut->nan_pmk[0], dut->nan_pmk_len);
 	}
+
+#if (NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+	if (ndpe) {
+		NanConfigRequest req;
+		wifi_error ret;
+
+		sigma_dut_print(dut, DUT_MSG_DEBUG, "%s: NDPE: %s",
+				__func__, ndpe);
+		memset(&req, 0, sizeof(NanConfigRequest));
+		dut->ndpe = strcasecmp(ndpe, "Enable") == 0;
+		req.config_ndpe_attr = 1;
+		req.use_ndpe_attr = dut->ndpe;
+		ret = nan_config_request(0, global_interface_handle, &req);
+		if (ret != WIFI_SUCCESS) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "NAN config request failed");
+			return 0;
+		}
+	}
+
+	if (trans_proto) {
+		sigma_dut_print(dut, DUT_MSG_INFO, "%s: Transport protocol: %s",
+				__func__, trans_proto);
+		if (strcasecmp(trans_proto, "TCP") == 0) {
+			dut->trans_proto = TRANSPORT_PROTO_TYPE_TCP;
+		} else if (strcasecmp(trans_proto, "UDP") == 0) {
+			dut->trans_proto = TRANSPORT_PROTO_TYPE_UDP;
+		} else {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"%s: Invalid protocol %s, set to TCP",
+					__func__, trans_proto);
+			dut->trans_proto = TRANSPORT_PROTO_TYPE_TCP;
+		}
+	}
+
+	if (dut->ndpe && ndp_attr) {
+		NanDebugParams cfg_debug;
+		int ndp_attr_val;
+		int ret, size;
+
+		sigma_dut_print(dut, DUT_MSG_DEBUG, "%s: NDP Attr: %s",
+				__func__, ndp_attr);
+
+		memset(&cfg_debug, 0, sizeof(NanDebugParams));
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_ENABLE_NDP;
+		if (strcasecmp(ndp_attr, "Absent") == 0)
+			ndp_attr_val = NAN_NDP_ATTR_ABSENT;
+		else
+			ndp_attr_val = NAN_NDP_ATTR_PRESENT;
+		memcpy(cfg_debug.debug_cmd_data, &ndp_attr_val, sizeof(int));
+		size = sizeof(u32) + sizeof(int);
+		ret = nan_debug_command_config(0, global_interface_handle,
+					       cfg_debug, size);
+		if (ret != WIFI_SUCCESS) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "NAN config ndpAttr failed");
+			return 0;
+		}
+	}
+#endif
 
 	send_resp(dut, conn, SIGMA_COMPLETE, NULL);
 	return 0;
@@ -266,6 +334,10 @@ int sigma_nan_enable(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *band = get_param(cmd, "Band");
 	const char *only_5g = get_param(cmd, "5GOnly");
 	const char *nan_availability = get_param(cmd, "NANAvailability");
+#if (NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+	const char *ndpe = get_param(cmd, "NDPE");
+#endif
 	struct timespec abstime;
 	NanEnableRequest req;
 
@@ -306,6 +378,23 @@ int sigma_nan_enable(struct sigma_dut *dut, struct sigma_conn *conn,
 			req.support_2dot4g_val = 0;
 		}
 	}
+
+#if (NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+	if (ndpe) {
+		if (strcasecmp(ndpe, "Enable") == 0) {
+			dut->ndpe = 1;
+			req.config_ndpe_attr = 1;
+			req.use_ndpe_attr = 1;
+		} else {
+			dut->ndpe = 0;
+			req.config_ndpe_attr = 1;
+			req.use_ndpe_attr = 0;
+		}
+		req.config_disc_mac_addr_randomization = 1;
+		req.disc_mac_addr_rand_interval_sec = 0;
+	}
+#endif
 
 	sigma_dut_print(dut, DUT_MSG_INFO,
 			"%s: Setting dual band 2.4 GHz and 5 GHz by default",
@@ -689,6 +778,13 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 #if NAN_CERT_VERSION >= 3
 	const char *qos_config = get_param(cmd, "QoS");
 #endif
+#if (NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+	const char *ndpe_enable = get_param(cmd, "Ndpe");
+	const char *ndpe_attr = get_param(cmd, "ndpeAttr");
+	const char *ndp_attr = get_param(cmd, "ndpAttr");
+	const char *tlv_list = get_param(cmd, "TLVList");
+#endif
 	wifi_error ret;
 	NanDataPathInitiatorRequest init_req;
 	NanDebugParams cfg_debug;
@@ -780,6 +876,80 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 	}
 #endif
 
+#if (NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+	if (ndpe_enable &&
+	    strcasecmp(ndpe_enable, "Enable") == 0)
+		dut->ndpe = 1;
+
+	if (dut->ndpe && ndp_attr) {
+		NanDebugParams cfg_debug;
+		int ndp_attr_val;
+
+		memset(&cfg_debug, 0, sizeof(NanDebugParams));
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_ENABLE_NDP;
+		if (strcasecmp(ndp_attr, "Absent") == 0)
+			ndp_attr_val = NAN_NDP_ATTR_ABSENT;
+		else
+			ndp_attr_val = NAN_NDP_ATTR_PRESENT;
+		memcpy(cfg_debug.debug_cmd_data, &ndp_attr_val, sizeof(int));
+		size = sizeof(u32) + sizeof(int);
+		ret = nan_debug_command_config(0, global_interface_handle,
+					       cfg_debug, size);
+		if (ret != WIFI_SUCCESS) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "NAN config ndpAttr failed");
+			return 0;
+		}
+	}
+
+	if (dut->ndpe && ndpe_attr) {
+		NanDebugParams cfg_debug;
+		int ndpe_attr_val;
+
+		memset(&cfg_debug, 0, sizeof(NanDebugParams));
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_DISABLE_NDPE;
+		if (strcasecmp(ndpe_attr, "Absent") == 0)
+			ndpe_attr_val = NAN_NDPE_ATTR_ABSENT;
+		else
+			ndpe_attr_val = NAN_NDPE_ATTR_PRESENT;
+		memcpy(cfg_debug.debug_cmd_data, &ndpe_attr_val, sizeof(int));
+		size = sizeof(u32) + sizeof(int);
+		ret = nan_debug_command_config(0, global_interface_handle,
+					       cfg_debug, size);
+		if (ret != WIFI_SUCCESS) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "NAN config ndpeAttr failed");
+			return 0;
+		}
+	}
+
+	if (dut->ndpe && dut->device_type == STA_testbed && !tlv_list) {
+		NanDebugParams cfg_debug;
+		int implicit_ipv6_val;
+
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"%s: In test bed mode IPv6 is implicit in data request",
+				__func__);
+		memset(&cfg_debug, 0, sizeof(NanDebugParams));
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_DISABLE_IPV6_LINK_LOCAL;
+		implicit_ipv6_val = NAN_IPV6_IMPLICIT;
+		memcpy(cfg_debug.debug_cmd_data, &implicit_ipv6_val,
+		       sizeof(int));
+		size = sizeof(u32) + sizeof(int);
+		ret = nan_debug_command_config(0, global_interface_handle,
+					       cfg_debug, size);
+		if (ret != WIFI_SUCCESS) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,NAN config implicit IPv6 failed");
+			return 0;
+		}
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"%s: config command for implicit IPv6 sent",
+				__func__);
+	}
+#endif
+
 	/*
 	 * Setting this flag, so that interface for ping6 command
 	 * is set appropriately in traffic_send_ping().
@@ -830,6 +1000,23 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 				init_req.key_info.body.pmk_info.pmk_len);
 	}
 
+#if (NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+	if (dut->ndpe) {
+		unsigned char nan_mac_addr[ETH_ALEN];
+		size_t addr_len = 0;
+
+		get_hwaddr("nan0", nan_mac_addr);
+		addr_len = convert_mac_addr_to_ipv6_linklocal(
+			nan_mac_addr, &init_req.nan_ipv6_intf_addr[0]);
+		init_req.nan_ipv6_addr_present = 1;
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"%s: Initiator Request: IPv6:",  __func__);
+		nan_hex_dump(dut, &init_req.nan_ipv6_intf_addr[0],
+			     NAN_IPV6_ADDR_LEN);
+	}
+#endif
+
 	ret = nan_data_request_initiator(0, global_interface_handle, &init_req);
 	if (ret != WIFI_SUCCESS) {
 		send_resp(dut, conn, SIGMA_ERROR,
@@ -847,6 +1034,11 @@ static int sigma_nan_data_response(struct sigma_dut *dut,
 {
 	const char *ndl_response = get_param(cmd, "NDLresponse");
 	const char *m4_response_type = get_param(cmd, "M4ResponseType");
+#if (NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+	const char *ndpe_attr = get_param(cmd, "ndpeAttr");
+	const char *ndp_attr = get_param(cmd, "ndpAttr");
+#endif
 	wifi_error ret;
 	NanDebugParams cfg_debug;
 	int size;
@@ -912,6 +1104,50 @@ static int sigma_nan_data_response(struct sigma_dut *dut,
 				  "Nan config request failed");
 		}
 	}
+
+#if (NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+	if (dut->ndpe && ndp_attr) {
+		NanDebugParams cfg_debug;
+		int ndp_attr_val;
+
+		memset(&cfg_debug, 0, sizeof(NanDebugParams));
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_ENABLE_NDP;
+		if (strcasecmp(ndp_attr, "Absent") == 0)
+			ndp_attr_val = NAN_NDP_ATTR_ABSENT;
+		else
+			ndp_attr_val = NAN_NDP_ATTR_PRESENT;
+		memcpy(cfg_debug.debug_cmd_data, &ndp_attr_val, sizeof(int));
+		size = sizeof(u32) + sizeof(int);
+		ret = nan_debug_command_config(0, global_interface_handle,
+					       cfg_debug, size);
+		if (ret != WIFI_SUCCESS) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "NAN config ndpAttr failed");
+			return 0;
+		}
+	}
+
+	if (ndpe_attr && dut->ndpe) {
+		int ndpe_attr_val;
+
+		memset(&cfg_debug, 0, sizeof(NanDebugParams));
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_DISABLE_NDPE;
+		if (strcasecmp(ndpe_attr, "Absent") == 0)
+			ndpe_attr_val = NAN_NDPE_ATTR_ABSENT;
+		else
+			ndpe_attr_val = NAN_NDPE_ATTR_PRESENT;
+		memcpy(cfg_debug.debug_cmd_data, &ndpe_attr_val, sizeof(int));
+		size = sizeof(u32) + sizeof(int);
+		ret = nan_debug_command_config(0, global_interface_handle,
+					       cfg_debug, size);
+		if (ret != WIFI_SUCCESS) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "NAN config ndpeAttr failed");
+			return 0;
+		}
+	}
+#endif
 
 	return 0;
 }
@@ -1136,6 +1372,12 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *awake_dw_interval = get_param(cmd, "awakeDWint");
 	const char *qos_config = get_param(cmd, "QoS");
 #endif
+	const char *ndpe = get_param(cmd, "NDPE");
+	const char *trans_proto = get_param(cmd, "TransProtoType");
+#if (NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+	const char *ndp_attr = get_param(cmd, "ndpAttr");
+#endif
 	NanPublishRequest req;
 	NanConfigRequest config_req;
 	int filter_len_rx = 0, filter_len_tx = 0;
@@ -1335,6 +1577,72 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	if (qos_config)
 		req.sdea_params.qos_cfg = (NanQosCfgStatus) atoi(qos_config);
+#endif
+
+	if (ndpe &&
+	    strcasecmp(ndpe, "Enable") == 0)
+		dut->ndpe = 1;
+
+	if (trans_proto) {
+		if (strcasecmp(trans_proto, "TCP") == 0) {
+			dut->trans_proto = TRANSPORT_PROTO_TYPE_TCP;
+		} else if (strcasecmp(trans_proto, "UDP") == 0) {
+			dut->trans_proto = TRANSPORT_PROTO_TYPE_UDP;
+		} else {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"%s: Invalid protocol %s",
+					__func__, trans_proto);
+			return -1;
+		}
+	}
+
+#if (NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+	if (dut->ndpe && ndp_attr) {
+		NanDebugParams cfg_debug;
+		int ndp_attr_val, size;
+
+		memset(&cfg_debug, 0, sizeof(NanDebugParams));
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_ENABLE_NDP;
+		if (strcasecmp(ndp_attr, "Absent") == 0)
+			ndp_attr_val = NAN_NDP_ATTR_ABSENT;
+		else
+			ndp_attr_val = NAN_NDP_ATTR_PRESENT;
+		memcpy(cfg_debug.debug_cmd_data, &ndp_attr_val, sizeof(int));
+		size = sizeof(u32) + sizeof(int);
+		ret = nan_debug_command_config(0, global_interface_handle,
+					       cfg_debug, size);
+		if (ret != WIFI_SUCCESS) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "NAN config ndpAttr failed");
+			return 0;
+		}
+	}
+
+	if (dut->ndpe) {
+		unsigned char nan_mac_addr[ETH_ALEN];
+		size_t addr_len = 0;
+		NanDebugParams cfg_debug;
+		NdpIpTransParams ndp_ip_trans_param;
+
+		get_hwaddr("nan0", nan_mac_addr);
+		addr_len = convert_mac_addr_to_ipv6_linklocal(
+			nan_mac_addr, ndp_ip_trans_param.ipv6_intf_addr);
+		ndp_ip_trans_param.ipv6_addr_present = 1;
+
+		ndp_ip_trans_param.trans_port_present = 1;
+		ndp_ip_trans_param.transport_port = dut->trans_port;
+
+		ndp_ip_trans_param.trans_proto_present = 1;
+		ndp_ip_trans_param.transport_protocol = dut->trans_proto;
+
+		cfg_debug.cmd = NAN_TEST_MODE_CMD_TRANSPORT_IP_PARAM;
+		memcpy(cfg_debug.debug_cmd_data, &ndp_ip_trans_param,
+		       sizeof(NdpIpTransParams));
+		nan_debug_command_config(0, global_interface_handle, cfg_debug,
+					 sizeof(u32) +
+					 sizeof(NdpIpTransParams));
+	}
 #endif
 
 	ret = nan_publish_request(0, global_interface_handle, &req);
@@ -1813,13 +2121,28 @@ static void ndp_event_data_confirm(NanDataPathConfirmInd *event)
 					"Failed to set nan interface up");
 			return;
 		}
-		if (system("ip -6 route add fe80::/64 dev nan0 table local") !=
+		if (system("ip -6 route replace fe80::/64 dev nan0 table local") !=
 		    0) {
 			sigma_dut_print(global_dut, DUT_MSG_ERROR,
 					"Failed to run:ip -6 route replace fe80::/64 dev nan0 table local");
 		}
-		convert_mac_addr_to_ipv6_lladdr(event->peer_ndi_mac_addr,
-						ipv6_buf, sizeof(ipv6_buf));
+#if (NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+		if (event->nan_ipv6_addr_present)
+			snprintf(ipv6_buf, sizeof(ipv6_buf),
+				 "fe80::%02x%02x:%02xff:fe%02x:%02x%02x",
+				 event->nan_ipv6_intf_addr[8],
+				 event->nan_ipv6_intf_addr[9],
+				 event->nan_ipv6_intf_addr[10],
+				 event->nan_ipv6_intf_addr[13],
+				 event->nan_ipv6_intf_addr[14],
+				 event->nan_ipv6_intf_addr[15]);
+		else
+#endif
+			convert_mac_addr_to_ipv6_lladdr(
+				event->peer_ndi_mac_addr,
+				ipv6_buf, sizeof(ipv6_buf));
+
 		snprintf(cmd, sizeof(cmd),
 			 "ip -6 neighbor replace %s lladdr %02x:%02x:%02x:%02x:%02x:%02x nud permanent dev nan0",
 			 ipv6_buf, event->peer_ndi_mac_addr[0],
@@ -1924,6 +2247,9 @@ void nan_cmd_sta_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	memset(&dut->nan_pmk[0], 0, NAN_PMK_INFO_LEN);
 	dut->nan_pmk_len = 0;
 	dut->sta_channel = 0;
+	dut->ndpe = 0;
+	dut->trans_proto = NAN_TRANSPORT_PROTOCOL_DEFAULT;
+	dut->trans_port = NAN_TRANSPORT_PORT_DEFAULT;
 	memset(global_event_resp_buf, 0, sizeof(global_event_resp_buf));
 	memset(&global_nan_sync_stats, 0, sizeof(global_nan_sync_stats));
 	memset(global_publish_service_name, 0,

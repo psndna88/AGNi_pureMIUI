@@ -774,6 +774,8 @@ int main(int argc, char *argv[])
 	sigma_dut.dpp_conf_id = -1;
 	sigma_dut.dpp_local_bootstrap = -1;
 	sigma_dut.sta_nss = 2; /* Make default nss 2 */
+	sigma_dut.trans_proto = NAN_TRANSPORT_PROTOCOL_DEFAULT;
+	sigma_dut.trans_port = NAN_TRANSPORT_PORT_DEFAULT;
 	set_defaults(&sigma_dut);
 
 	for (;;) {

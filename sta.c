@@ -6336,6 +6336,7 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 		wpa_command(intf, "SET ignore_assoc_disallow 0");
 		wpa_command(intf, "SET gas_address3 0");
 		wpa_command(intf, "SET roaming 1");
+		wpa_command(intf, "SET interworking 1");
 	}
 
 	free(dut->rsne_override);
@@ -9359,7 +9360,7 @@ static int ath_sta_set_rfeature_vht(const char *intf, struct sigma_dut *dut,
 				    struct sigma_cmd *cmd)
 {
 	const char *val;
-	char *token, *result;
+	char *token = NULL, *result;
 
 	novap_reset(dut, intf);
 
@@ -9426,6 +9427,7 @@ static int ath_sta_set_rfeature_vht(const char *intf, struct sigma_dut *dut,
 		}
 	}
 
+	free(token);
 	return 1;
 failed:
 	free(token);

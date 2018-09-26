@@ -231,6 +231,11 @@ struct sigma_stream {
 #define MBO_MAX_PREF_BSSIDS 10
 #define MAX_FT_BSS_LIST 10
 
+#define TRANSPORT_PROTO_TYPE_TCP 0x06
+#define TRANSPORT_PROTO_TYPE_UDP 0x11
+#define NAN_TRANSPORT_PORT_DEFAULT 7000
+#define NAN_TRANSPORT_PROTOCOL_DEFAULT TRANSPORT_PROTO_TYPE_TCP
+
 enum value_not_set_enabled_disabled {
 	VALUE_NOT_SET,
 	VALUE_ENABLED,
@@ -709,6 +714,10 @@ struct sigma_dut {
 
 	int ndp_enable; /* Flag which is set once the NDP is setup */
 
+	int ndpe; /* Flag indicating NDPE is supported */
+	u16 trans_port; /* transport port number for TCP/UDP connection */
+	u8 trans_proto; /* transport protocol, 0x06: TCP, 0x11: UDP */
+
 	/* Length of nan_pmk in octets */
 	u8 nan_pmk_len;
 
@@ -879,6 +888,7 @@ unsigned int freq_to_channel(unsigned int freq);
 int is_ipv6_addr(const char *str);
 void convert_mac_addr_to_ipv6_lladdr(u8 *mac_addr, char *ipv6_buf,
 				     size_t buf_len);
+size_t convert_mac_addr_to_ipv6_linklocal(const u8 *mac_addr, u8 *ipv6);
 
 #ifndef ANDROID
 size_t strlcpy(char *dest, const char *src, size_t siz);

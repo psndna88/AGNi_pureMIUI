@@ -2,6 +2,7 @@
  * Sigma Control API DUT (station/AP)
  * Copyright (c) 2010, Atheros Communications, Inc.
  * Copyright (c) 2011-2017, Qualcomm Atheros, Inc.
+ * Copyright (c) 2018, The Linux Foundation
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
@@ -68,14 +69,24 @@ static int cmd_traffic_agent_config(struct sigma_dut *dut,
 
 	val = get_param(cmd, "destination");
 	if (val) {
-		if (inet_aton(val, &s->dst) == 0)
-			return -1;
+		if (!is_ipv6_addr(val)) {
+			if (inet_aton(val, &s->dst) == 0)
+				return -1;
+		} else {
+			if (inet_pton(AF_INET6, val, &s->dst) != 1)
+				return -1;
+		}
 	}
 
 	val = get_param(cmd, "source");
 	if (val) {
-		if (inet_aton(val, &s->src) == 0)
-			return -1;
+		if (!is_ipv6_addr(val)) {
+			if (inet_aton(val, &s->src) == 0)
+				return -1;
+		} else {
+			if (inet_pton(AF_INET6, val, &s->src) != 1)
+				return -1;
+		}
 	}
 
 	val = get_param(cmd, "destinationPort");
@@ -988,8 +999,10 @@ static int cmd_traffic_agent_send(struct sigma_dut *dut,
 			return 0;
 		}
 		for (j = 0; j < i; j++)
-			if (data->streams[i] == data->streams[j])
+			if (data->streams[i] == data->streams[j]) {
+				free(data);
 				return -1;
+			}
 		if (!s->sender) {
 			snprintf(buf, sizeof(buf), "errorCode,Not configured "
 				 "as sender for streamID %d", data->streams[i]);

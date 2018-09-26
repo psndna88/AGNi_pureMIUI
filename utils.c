@@ -259,6 +259,27 @@ void convert_mac_addr_to_ipv6_lladdr(u8 *mac_addr, char *ipv6_buf,
 }
 
 
+size_t convert_mac_addr_to_ipv6_linklocal(const u8 *mac_addr, u8 *ipv6)
+{
+	int i;
+
+	ipv6[0] = 0xfe;
+	ipv6[1] = 0x80;
+	for (i = 2; i < 8; i++)
+		ipv6[i] = 0;
+	ipv6[8] = mac_addr[0] ^ 0x02;
+	ipv6[9] = mac_addr[1];
+	ipv6[10] = mac_addr[2];
+	ipv6[11] = 0xff;
+	ipv6[12] = 0xfe;
+	ipv6[13] = mac_addr[3];
+	ipv6[14] = mac_addr[4];
+	ipv6[15] = mac_addr[5];
+
+	return 16;
+}
+
+
 #ifndef ANDROID
 
 size_t strlcpy(char *dest, const char *src, size_t siz)
