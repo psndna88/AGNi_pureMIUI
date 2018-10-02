@@ -285,6 +285,12 @@ endif # NETWORK_FILESYSTEMS
 source "fs/nls/Kconfig"
 source "fs/dlm/Kconfig"
 
+config REBOOT_AUTO_FSYNC
+	bool "automatic file sync on reboot/panic"
+	default y
+	help
+	  Force automatic file sync on power off, reboot, panic/freeze
+
 config FILE_TABLE_DEBUG
 	bool "Enable FILE_TABLE_DEBUG"
 	help
