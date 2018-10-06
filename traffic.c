@@ -37,7 +37,7 @@ static int cmd_traffic_send_ping(struct sigma_dut *dut,
 	char buf[100];
 	int type = 1;
 	int dscp = 0, use_dscp = 0;
-	char extra[100], int_arg[100], intf_arg[100];
+	char extra[100], int_arg[100], intf_arg[100], ip_dst[100];
 
 	val = get_param(cmd, "Type");
 	if (!val)
@@ -54,6 +54,10 @@ static int cmd_traffic_send_ping(struct sigma_dut *dut,
 	if (dst == NULL || (type == 1 && !is_ip_addr(dst)) ||
 	    (type == 2 && !is_ipv6_addr(dst)))
 		return -1;
+	if (dut->ndp_enable && type == 2) {
+		snprintf(ip_dst, sizeof(ip_dst), "%s%%nan0", dst);
+		dst = ip_dst;
+	}
 
 	val = get_param(cmd, "frameSize");
 	if (val == NULL)
@@ -113,12 +117,11 @@ static int cmd_traffic_send_ping(struct sigma_dut *dut,
 	int_arg[0] = '\0';
 	if (rate != 1)
 		snprintf(int_arg, sizeof(int_arg), " -i %f", interval);
-	intf_arg[0] = '\0';
-	if (dut->ndp_enable)
-		strlcpy(intf_arg, " -I nan0", sizeof(intf_arg));
-	else if (type == 2)
+	if (!dut->ndp_enable && type == 2)
 		snprintf(intf_arg, sizeof(intf_arg), " -I %s",
 			 get_station_ifname());
+	else
+		intf_arg[0] = '\0';
 	fprintf(f, "#!" SHELL "\n"
 		"ping%s -c %d%s -s %d%s -q%s %s > " SIGMA_TMPDIR
 		"/sigma_dut-ping.%d &\n"
