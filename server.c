@@ -294,6 +294,13 @@ static int aaa_auth_status(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	sqlite3_free(sql);
 
+	if (sqlite3_changes(db) < 1) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"No DB rows modified (specified user not found)");
+		sqlite3_close(db);
+		return -1;
+	}
+
 	snprintf(resp, sizeof(resp), "AuthStatus,TIMEOUT,MSK,NULL");
 
 	for (i = 0; i < timeout; i++) {
@@ -475,6 +482,12 @@ static int cmd_server_request_status(struct sigma_dut *dut,
 	if (!osu && status && strcasecmp(status, "Authentication") == 0 &&
 	    username)
 		return aaa_auth_status(dut, conn, cmd, username, timeout);
+
+	if (!osu && status && strcasecmp(status, "Authentication") == 0 &&
+	    serialno) {
+		snprintf(resp, sizeof(resp), "cert-%s", serialno);
+		return aaa_auth_status(dut, conn, cmd, resp, timeout);
+	}
 
 	if (osu && status && strcasecmp(status, "OSU") == 0 && addr)
 		return osu_cert_enroll_status(dut, conn, cmd, addr, timeout);
