@@ -46,7 +46,7 @@ static int server_reset_user(struct sigma_dut *dut, const char *user)
 	const char *password = "ChangeMe";
 	int phase2 = 1;
 	int machine_managed = 1;
-	int remediation = 0;
+	const char *remediation = "";
 	int fetch_pps = 0;
 	const char *osu_user = NULL;
 	const char *osu_password = NULL;
@@ -61,22 +61,29 @@ static int server_reset_user(struct sigma_dut *dut, const char *user)
 	}
 
 	if (strcmp(user, "test01") == 0) {
+		remediation = "machine";
 	} else if (strcmp(user, "test02") == 0) {
+		remediation = "user";
 		machine_managed = 0;
 	} else if (strcmp(user, "test03") == 0) {
+		/* UpdateInterval-based client trigger for policy update */
 	} else if (strcmp(user, "test04") == 0) {
 	} else if (strcmp(user, "test05") == 0) {
 	} else if (strcmp(user, "test06") == 0) {
 		realm = "example.com";
 	} else if (strcmp(user, "test07") == 0) {
 	} else if (strcmp(user, "test08") == 0) {
+		remediation = "machine";
 		osu_user = "testdmacc08";
 		osu_password = "P@ssw0rd";
 	} else if (strcmp(user, "test09") == 0) {
+		/* UpdateInterval-based client trigger for policy update */
 	} else if (strcmp(user, "test10") == 0) {
+		remediation = "machine";
 		methods = "TLS";
 	} else if (strcmp(user, "test11") == 0) {
 	} else if (strcmp(user, "test12") == 0) {
+		remediation = "user";
 		methods = "TLS";
 	} else if (strcmp(user, "test20") == 0) {
 	} else if (strcmp(user, "test26") == 0) {
@@ -111,7 +118,7 @@ static int server_reset_user(struct sigma_dut *dut, const char *user)
 		goto fail;
 	}
 
-	sql = sqlite3_mprintf("INSERT OR REPLACE INTO users(identity,realm,methods,password,phase2,machine_managed,remediation,fetch_pps,osu_user,osu_password) VALUES (%Q,%Q,%Q,%Q,%d,%d,%d,%d,%Q,%Q)",
+	sql = sqlite3_mprintf("INSERT OR REPLACE INTO users(identity,realm,methods,password,phase2,machine_managed,remediation,fetch_pps,osu_user,osu_password) VALUES (%Q,%Q,%Q,%Q,%d,%d,%Q,%d,%Q,%Q)",
 			      user, realm, methods, password,
 			      phase2, machine_managed, remediation, fetch_pps,
 			      osu_user, osu_password);
