@@ -419,6 +419,103 @@ static int osu_cert_enroll_status(struct sigma_dut *dut,
 }
 
 
+static int get_user_field_cb(void *ctx, int argc, char *argv[], char *col[])
+{
+	char **val = ctx;
+
+	if (argc < 1 || !argv[0])
+		return 0;
+
+	free(*val);
+	*val = strdup(argv[0]);
+
+	return 0;
+}
+
+
+static char * get_user_field(struct sigma_dut *dut, sqlite3 *db,
+			     const char *identity, const char *field)
+{
+	char *sql, *val = NULL;
+
+	sql = sqlite3_mprintf("SELECT %s FROM users WHERE identity=%Q",
+			      field, identity);
+	if (!sql)
+		return NULL;
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "SQL: %s", sql);
+
+	if (sqlite3_exec(db, sql, get_user_field_cb, &val, NULL) != SQLITE_OK) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"SQL operation to fetch user field failed: %s",
+				sqlite3_errmsg(db));
+		sqlite3_free(sql);
+		return NULL;
+	}
+
+	sqlite3_free(sql);
+
+	return val;
+}
+
+
+static int osu_remediation_status(struct sigma_dut *dut,
+				  struct sigma_conn *conn, int timeout,
+				  const char *username, const char *serialno)
+{
+	sqlite3 *db;
+	int i;
+	char resp[500];
+	char name[100];
+	char *remediation = NULL;
+
+	if (!username && !serialno)
+		return -1;
+	if (!username) {
+		snprintf(name, sizeof(name), "cert-%s", serialno);
+		username = name;
+	}
+
+	if (sqlite3_open(SERVER_DB, &db)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to open SQLite database %s",
+				SERVER_DB);
+		return -1;
+	}
+
+	remediation = get_user_field(dut, db, username, "remediation");
+	if (!remediation) {
+		snprintf(resp, sizeof(resp),
+			 "RemediationStatus,User entry not found");
+		goto done;
+	}
+	if (remediation[0] == '\0') {
+		snprintf(resp, sizeof(resp),
+			 "RemediationStatus,User was not configured to need remediation");
+		goto done;
+	}
+
+	snprintf(resp, sizeof(resp), "RemediationStatus,TIMEOUT");
+
+	for (i = 0; i < timeout; i++) {
+		sleep(1);
+		free(remediation);
+		remediation = get_user_field(dut, db, username, "remediation");
+		if (remediation && remediation[0] == '\0') {
+			snprintf(resp, sizeof(resp),
+				 "RemediationStatus,Remediation Complete");
+			break;
+		}
+	}
+
+done:
+	free(remediation);
+	sqlite3_close(db);
+
+	send_resp(dut, conn, SIGMA_COMPLETE, resp);
+	return 0;
+}
+
+
 static int cmd_server_request_status(struct sigma_dut *dut,
 				     struct sigma_conn *conn,
 				     struct sigma_cmd *cmd)
@@ -477,14 +574,9 @@ static int cmd_server_request_status(struct sigma_dut *dut,
 	if (status)
 		sigma_dut_print(dut, DUT_MSG_DEBUG, "Status: %s", status);
 
-	if (osu && status && strcasecmp(status, "Remediation") == 0) {
-		/* TODO */
-		sleep(1);
-		snprintf(resp, sizeof(resp),
-			 "RemediationStatus,Remediation Complete");
-		send_resp(dut, conn, SIGMA_COMPLETE, resp);
-		return 0;
-	}
+	if (osu && status && strcasecmp(status, "Remediation") == 0)
+		return osu_remediation_status(dut, conn, timeout, username,
+					      serialno);
 
 	if (!osu && status && strcasecmp(status, "Authentication") == 0 &&
 	    username)
