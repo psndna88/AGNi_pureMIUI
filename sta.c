@@ -32,6 +32,7 @@
 #include "wpa_ctrl.h"
 #include "wpa_helpers.h"
 #include "miracast.h"
+#include "qca-vendor_copy.h"
 
 /* Temporary files for sta_send_addba */
 #define VI_QOS_TMP_FILE     "/tmp/vi-qos.tmp"
@@ -6025,6 +6026,150 @@ static int sta_set_tx_su_ppdu_cfg(struct sigma_dut *dut, const char *intf,
 }
 
 
+static int sta_set_he_om_ctrl_nss(struct sigma_dut *dut, const char *intf,
+				  int val)
+{
+#ifdef NL80211_SUPPORT
+	struct nl_msg *msg;
+	int ret = 0;
+	struct nlattr *params;
+	int ifindex;
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s failed, val:%d",
+				__func__, intf, val);
+		return -1;
+	}
+
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+				    NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
+	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    nla_put_u8(msg,
+		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_OM_CTRL_NSS,
+		       val)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding vendor_cmd and vendor_data, val: %d",
+				__func__, val);
+		nlmsg_free(msg);
+		return -1;
+	}
+	nla_nest_end(msg, params);
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in send_and_recv_msgs, ret=%d, val=%d",
+				__func__, ret, val);
+	}
+	return ret;
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"OM CTRL NSS cannot be set without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
+static int sta_set_he_om_ctrl_bw(struct sigma_dut *dut, const char *intf,
+				 enum qca_wlan_he_om_ctrl_ch_bw val)
+{
+#ifdef NL80211_SUPPORT
+	struct nl_msg *msg;
+	int ret = 0;
+	struct nlattr *params;
+	int ifindex;
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s failed, val:%d",
+				__func__, intf, val);
+		return -1;
+	}
+
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+				    NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
+	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    nla_put_u8(msg,
+		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_OM_CTRL_BW,
+		       val)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding vendor_cmd and vendor_data, val: %d",
+				__func__, val);
+		nlmsg_free(msg);
+		return -1;
+	}
+	nla_nest_end(msg, params);
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in send_and_recv_msgs, ret=%d, val=%d",
+				__func__, ret, val);
+	}
+	return ret;
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"OM CTRL BW cannot be set without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
+#ifdef NL80211_SUPPORT
+static int sta_set_he_om_ctrl_reset(struct sigma_dut *dut, const char *intf)
+{
+	struct nl_msg *msg;
+	int ret = 0;
+	struct nlattr *params;
+	int ifindex;
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s failed",
+				__func__, intf);
+		return -1;
+	}
+
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+				    NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
+	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    nla_put_flag(msg,
+			 QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_CLEAR_HE_OM_CTRL_CONFIG)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding vendor_cmd and vendor_data",
+				__func__);
+		nlmsg_free(msg);
+		return -1;
+	}
+	nla_nest_end(msg, params);
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in send_and_recv_msgs, ret=%d",
+				__func__, ret);
+	}
+	return ret;
+}
+#endif /* NL80211_SUPPORT */
+
+
 static int sta_set_mu_edca_override(struct sigma_dut *dut, const char *intf,
 				    int val)
 {
@@ -6220,6 +6365,11 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 		if (sta_set_tx_su_ppdu_cfg(dut, intf, 1)) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Failed to set Tx SU PPDU enable");
+		}
+
+		if (sta_set_he_om_ctrl_reset(dut, intf)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to set OM ctrl reset");
 		}
 #endif /* NL80211_SUPPORT */
 
@@ -9740,6 +9890,35 @@ static int wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 		if (sta_set_tx_su_ppdu_cfg(dut, intf, set_val)) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,Failed to set Tx SU PPDU config");
+			return 0;
+		}
+	}
+
+	val = get_param(cmd, "OMCtrl_RxNSS");
+	if (val) {
+		/*
+		 * OMCtrl_RxNSS uses the IEEE 802.11 standard values for Nss,
+		 * i.e., 0 for 1Nss, 1 for Nss 2, etc. The driver checks for
+		 * the actual Nss value hence add 1 to the set value.
+		 */
+		int set_val = atoi(val) + 1;
+
+		if (sta_set_he_om_ctrl_nss(dut, intf, set_val)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to set OM ctrl NSS config");
+			return 0;
+		}
+	}
+
+	val = get_param(cmd, "OMCtrl_ChnlWidth");
+	if (val) {
+		int set_val = atoi(val);
+
+		if (sta_set_he_om_ctrl_bw(dut, intf,
+					  (enum qca_wlan_he_om_ctrl_ch_bw)
+					  set_val)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to set OM ctrl BW config");
 			return 0;
 		}
 	}
