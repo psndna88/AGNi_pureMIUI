@@ -6419,11 +6419,6 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 				sigma_dut_print(dut, DUT_MSG_ERROR,
 						"Enabling HE config with WEP/TKIP failed");
 			}
-
-			if (sta_set_tx_beamformee(dut, intf, 0)) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"Set tx beamformee disable by default for testbed in sta_reset_default_wcn failed");
-			}
 		}
 
 		/* Defaults in case of DUT */
