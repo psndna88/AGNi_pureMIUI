@@ -2,6 +2,7 @@
  * Sigma Control API DUT (station/AP)
  * Copyright (c) 2010-2011, Atheros Communications, Inc.
  * Copyright (c) 2011-2014, 2016, Qualcomm Atheros, Inc.
+ * Copyright (c) 2018, The Linux Foundation
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
@@ -259,6 +260,77 @@ int get_wpa_cli_event(struct sigma_dut *dut, struct wpa_ctrl *mon,
 		      const char *event, char *buf, size_t buf_size)
 {
 	return get_wpa_cli_event2(dut, mon, event, NULL, buf, buf_size);
+}
+
+
+/*
+ * signal_poll cmd output sample
+ * RSSI=-51
+ * LINKSPEED=866
+ * NOISE=-101
+ * FREQUENCY=5180
+ * AVG_RSSI=-50
+ */
+int get_wpa_signal_poll(struct sigma_dut *dut, const char *ifname,
+			const char *field, char *obuf, size_t obuf_size)
+{
+	struct wpa_ctrl *ctrl;
+	char buf[4096];
+	char *pos, *end;
+	size_t len, flen;
+
+	snprintf(buf, sizeof(buf), "%s%s", sigma_wpas_ctrl, ifname);
+	ctrl = wpa_ctrl_open2(buf, client_socket_path);
+	if (!ctrl) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to connect to wpa_supplicant");
+		return -1;
+	}
+
+	len = sizeof(buf);
+	if (wpa_ctrl_request(ctrl, "SIGNAL_POLL", 11, buf, &len, NULL) < 0) {
+		wpa_ctrl_close(ctrl);
+		sigma_dut_print(dut, DUT_MSG_ERROR, "ctrl request failed");
+		return -1;
+	}
+	buf[len] = '\0';
+
+	wpa_ctrl_close(ctrl);
+
+	flen = strlen(field);
+	pos = buf;
+	while (pos + flen < buf + len) {
+		if (pos > buf) {
+			if (*pos != '\n') {
+				pos++;
+				continue;
+			}
+			pos++;
+		}
+		if (strncmp(pos, field, flen) != 0 || pos[flen] != '=') {
+			pos++;
+			continue;
+		}
+		pos += flen + 1;
+		end = strchr(pos, '\n');
+		if (!end) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Could not find signal poll field '%s' - end is NULL",
+					field);
+			return -1;
+		}
+		*end++ = '\0';
+		if (end - pos > (int) obuf_size) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"signal poll out buffer is too small");
+			return -1;
+		}
+		memcpy(obuf, pos, end - pos);
+		return 0;
+	}
+
+	sigma_dut_print(dut, DUT_MSG_ERROR, "signal poll param not found");
+	return -1;
 }
 
 

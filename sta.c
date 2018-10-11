@@ -5517,6 +5517,36 @@ static int sta_get_parameter_60g(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int sta_get_parameter_he(struct sigma_dut *dut, struct sigma_conn *conn,
+				struct sigma_cmd *cmd)
+{
+	char buf[MAX_CMD_LEN];
+	const char *parameter = get_param(cmd, "Parameter");
+
+	if (!parameter)
+		return -1;
+
+	if (strcasecmp(parameter, "RSSI") == 0) {
+		char rssi[10];
+
+		if (get_wpa_signal_poll(dut, get_station_ifname(), "RSSI",
+					rssi, sizeof(rssi)) < 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Could not get RSSI");
+			return -2;
+		}
+
+		snprintf(buf, sizeof(buf), "rssi,%s", rssi);
+		sigma_dut_print(dut, DUT_MSG_INFO, "RSSI %s", buf);
+		send_resp(dut, conn, SIGMA_COMPLETE, buf);
+		return 0;
+	}
+
+	send_resp(dut, conn, SIGMA_ERROR, "ErrorCode,Unsupported parameter");
+	return 0;
+}
+
+
 static int cmd_sta_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
 				 struct sigma_cmd *cmd)
 {
@@ -5530,6 +5560,9 @@ static int cmd_sta_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	if (strcasecmp(program, "60ghz") == 0)
 		return sta_get_parameter_60g(dut, conn, cmd);
+
+	if (strcasecmp(program, "he") == 0)
+		return sta_get_parameter_he(dut, conn, cmd);
 
 #ifdef ANDROID_NAN
 	if (strcasecmp(program, "NAN") == 0)
