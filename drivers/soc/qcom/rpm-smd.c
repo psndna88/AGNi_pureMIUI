@@ -706,9 +706,9 @@ int msm_rpm_smd_buffer_request(struct msm_rpm_request *cdata,
 		/* handle unsent requests */
 		tr_update(slp, buf);
 	}
-	trace_rpm_smd_sleep_set(get_msg_id(cdata->client_buf),
-			get_rsc_type(cdata->client_buf),
-			get_req_len(cdata->client_buf));
+//	trace_rpm_smd_sleep_set(get_msg_id(cdata->client_buf),
+//			get_rsc_type(cdata->client_buf),
+//			get_req_len(cdata->client_buf));
 
 	spin_unlock_irqrestore(&slp_buffer_lock, flags);
 
@@ -784,7 +784,7 @@ static int msm_rpm_flush_requests(bool print)
 					get_buf_len(s->buf), true);
 
 		WARN_ON(ret != get_buf_len(s->buf));
-		trace_rpm_smd_send_sleep_set(get_msg_id(s->buf), type, id);
+//		trace_rpm_smd_send_sleep_set(get_msg_id(s->buf), type, id);
 
 		s->valid = false;
 		count++;
@@ -1017,7 +1017,7 @@ static void msm_rpm_notify(void *data, unsigned event)
 	switch (event) {
 	case SMD_EVENT_DATA:
 		tasklet_schedule(&data_tasklet);
-		trace_rpm_smd_interrupt_notify("interrupt notification");
+//		trace_rpm_smd_interrupt_notify("interrupt notification");
 		break;
 	case SMD_EVENT_OPEN:
 		complete(&pdata->smd_open);
@@ -1139,8 +1139,8 @@ static void msm_rpm_process_ack(uint32_t msg_id, int errno)
 	 * wait for ACKs. This would decrease the latency involved with
 	 * entering RPM assisted power collapse.
 	 */
-	if (!elem)
-		trace_rpm_smd_ack_recvd(0, msg_id, 0xDEADBEEF);
+//	if (!elem)
+//		trace_rpm_smd_ack_recvd(0, msg_id, 0xDEADBEEF);
 
 	spin_unlock_irqrestore(&msm_rpm_list_lock, flags);
 }
@@ -1201,7 +1201,7 @@ static void data_fn_tasklet(unsigned long data)
 			break;
 		msg_id = msm_rpm_get_msg_id_from_ack(buf);
 		errno = msm_rpm_get_error_from_ack(buf);
-		trace_rpm_smd_ack_recvd(0, msg_id, errno);
+//		trace_rpm_smd_ack_recvd(0, msg_id, errno);
 		msm_rpm_process_ack(msg_id, errno);
 	}
 	spin_unlock(&msm_rpm_data.smd_lock_read);
@@ -1505,9 +1505,9 @@ static int msm_rpm_send_data(struct msm_rpm_request *cdata,
 			cdata->kvp[i].valid = false;
 		set_data_len(cdata->client_buf, 0);
 		ret = msg_id;
-		trace_rpm_smd_send_active_set(msg_id,
-			get_rsc_type(cdata->client_buf),
-			get_rsc_id(cdata->client_buf));
+//		trace_rpm_smd_send_active_set(msg_id,
+//			get_rsc_type(cdata->client_buf),
+//			get_rsc_id(cdata->client_buf));
 	} else if (ret < msg_size) {
 		struct msm_rpm_wait_data *rc;
 		ret = 0;
@@ -1575,7 +1575,7 @@ int msm_rpm_wait_for_ack(uint32_t msg_id)
 		return rc;
 
 	wait_for_completion(&elem->ack);
-	trace_rpm_smd_ack_recvd(0, msg_id, 0xDEADFEED);
+//	trace_rpm_smd_ack_recvd(0, msg_id, 0xDEADFEED);
 
 	rc = elem->errno;
 	msm_rpm_free_list_entry(elem);
@@ -1596,7 +1596,7 @@ static void msm_rpm_smd_read_data_noirq(uint32_t msg_id)
 			msm_rpm_read_smd_data(buf);
 			id = msm_rpm_get_msg_id_from_ack(buf);
 			errno = msm_rpm_get_error_from_ack(buf);
-			trace_rpm_smd_ack_recvd(1, msg_id, errno);
+//			trace_rpm_smd_ack_recvd(1, msg_id, errno);
 			msm_rpm_process_ack(id, errno);
 		}
 	}

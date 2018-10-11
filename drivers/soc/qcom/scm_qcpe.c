@@ -836,11 +836,11 @@ int scm_call2(u32 fn_id, struct scm_desc *desc)
 
 	desc->ret[0] = desc->ret[1] = desc->ret[2] = 0;
 
-	trace_scm_call_start(x0, desc);
+//	trace_scm_call_start(x0, desc);
 
 	ret = scm_call_qcpe(x0, desc);
 
-	trace_scm_call_end(desc);
+//	trace_scm_call_end(desc);
 
 	if (SCM_SVC_ID(fn_id) == SCM_SVC_LMH)
 		mutex_unlock(&scm_lmh_lock);

@@ -1013,7 +1013,7 @@ static void ipa_sps_irq_rx_notify(struct sps_event_notify *notify)
 		}
 		ipa_inc_acquire_wakelock(sys->ep->wakelock_client);
 		atomic_set(&sys->curr_polling_state, 1);
-		trace_intr_to_poll(sys->ep->client);
+//		trace_intr_to_poll(sys->ep->client);
 		queue_work(sys->wq, &sys->work);
 		break;
 	default:
@@ -1049,10 +1049,10 @@ static void ipa_handle_rx(struct ipa_sys_context *sys)
 		cnt = ipa_handle_rx_core(sys, true, true);
 		if (cnt == 0) {
 			inactive_cycles++;
-			trace_idle_sleep_enter(sys->ep->client);
+//			trace_idle_sleep_enter(sys->ep->client);
 			usleep_range(ipa_ctx->ipa_rx_min_timeout_usec,
 					ipa_ctx->ipa_rx_max_timeout_usec);
-			trace_idle_sleep_exit(sys->ep->client);
+//			trace_idle_sleep_exit(sys->ep->client);
 		} else {
 			inactive_cycles = 0;
 		}
@@ -1066,7 +1066,7 @@ static void ipa_handle_rx(struct ipa_sys_context *sys)
 
 	} while (inactive_cycles <= ipa_ctx->ipa_polling_iteration);
 
-	trace_poll_to_intr(sys->ep->client);
+//	trace_poll_to_intr(sys->ep->client);
 	ipa_rx_switch_to_intr_mode(sys);
 	IPA_ACTIVE_CLIENTS_DEC_SIMPLE();
 }

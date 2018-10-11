@@ -213,11 +213,11 @@ static void match_rule(struct rule_update_path_info *inp_node,
 		for (i = 0; i < rule->num_src; i++) {
 			if (rule->src_info[i].id == inp_node->id) {
 				if (check_rule(rule, inp_node)) {
-					trace_bus_rules_matches(
-					(node->cur_rule ?
-						node->cur_rule->rule_id : -1),
-					inp_node->id, inp_node->ab,
-					inp_node->ib, inp_node->clk);
+//					trace_bus_rules_matches(
+//					(node->cur_rule ?
+//						node->cur_rule->rule_id : -1),
+//					inp_node->id, inp_node->ab,
+//					inp_node->ib, inp_node->clk);
 					if (rule->state ==
 						RULE_STATE_NOT_APPLIED)
 						rule->state_change = true;

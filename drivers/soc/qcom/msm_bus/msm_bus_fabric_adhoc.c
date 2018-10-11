@@ -255,9 +255,9 @@ static int send_rpm_msg(struct msm_bus_node_device_type *ndev, int ctx)
 				 ndev->node_info->mas_rpm_id);
 			goto exit_send_rpm_msg;
 		}
-		trace_bus_agg_bw(ndev->node_info->id,
-			ndev->node_info->mas_rpm_id, rpm_ctx,
-			ndev->node_bw[ctx].sum_ab);
+//		trace_bus_agg_bw(ndev->node_info->id,
+//			ndev->node_info->mas_rpm_id, rpm_ctx,
+//			ndev->node_bw[ctx].sum_ab);
 	}
 
 	if (ndev->node_info->slv_rpm_id != -1) {
@@ -272,9 +272,9 @@ static int send_rpm_msg(struct msm_bus_node_device_type *ndev, int ctx)
 				ndev->node_info->slv_rpm_id);
 			goto exit_send_rpm_msg;
 		}
-		trace_bus_agg_bw(ndev->node_info->id,
-			ndev->node_info->slv_rpm_id, rpm_ctx,
-			ndev->node_bw[ctx].sum_ab);
+//		trace_bus_agg_bw(ndev->node_info->id,
+//			ndev->node_info->slv_rpm_id, rpm_ctx,
+//			ndev->node_bw[ctx].sum_ab);
 	}
 exit_send_rpm_msg:
 	return ret;
