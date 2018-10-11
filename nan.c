@@ -203,8 +203,9 @@ int nan_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 {
 	const char *oper_chan = get_param(cmd, "oper_chn");
 	const char *pmk = get_param(cmd, "PMK");
-#if (NAN_MAJOR_VERSION > 2) || \
-	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+#if ((NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)) && \
+	NAN_CERT_VERSION >= 5
 	const char *ndpe = get_param(cmd, "NDPE");
 	const char *trans_proto = get_param(cmd, "TransProtoType");
 	const char *ndp_attr = get_param(cmd, "ndpAttr");
@@ -232,8 +233,9 @@ int nan_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 		nan_hex_dump(dut, &dut->nan_pmk[0], dut->nan_pmk_len);
 	}
 
-#if (NAN_MAJOR_VERSION > 2) || \
-	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+#if ((NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)) && \
+	NAN_CERT_VERSION >= 5
 	if (ndpe) {
 		NanConfigRequest req;
 		wifi_error ret;
@@ -334,8 +336,9 @@ int sigma_nan_enable(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *band = get_param(cmd, "Band");
 	const char *only_5g = get_param(cmd, "5GOnly");
 	const char *nan_availability = get_param(cmd, "NANAvailability");
-#if (NAN_MAJOR_VERSION > 2) || \
-	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+#if ((NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)) && \
+	NAN_CERT_VERSION >= 5
 	const char *ndpe = get_param(cmd, "NDPE");
 #endif
 	struct timespec abstime;
@@ -379,8 +382,9 @@ int sigma_nan_enable(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
-#if (NAN_MAJOR_VERSION > 2) || \
-	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+#if ((NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)) && \
+	NAN_CERT_VERSION >= 5
 	if (ndpe) {
 		if (strcasecmp(ndpe, "Enable") == 0) {
 			dut->ndpe = 1;
@@ -778,8 +782,9 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 #if NAN_CERT_VERSION >= 3
 	const char *qos_config = get_param(cmd, "QoS");
 #endif
-#if (NAN_MAJOR_VERSION > 2) || \
-	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+#if ((NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)) && \
+	NAN_CERT_VERSION >= 5
 	const char *ndpe_enable = get_param(cmd, "Ndpe");
 	const char *ndpe_attr = get_param(cmd, "ndpeAttr");
 	const char *ndp_attr = get_param(cmd, "ndpAttr");
@@ -876,8 +881,9 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 	}
 #endif
 
-#if (NAN_MAJOR_VERSION > 2) || \
-	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+#if ((NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)) && \
+	NAN_CERT_VERSION >= 5
 	if (ndpe_enable &&
 	    strcasecmp(ndpe_enable, "Enable") == 0)
 		dut->ndpe = 1;
@@ -1000,8 +1006,9 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 				init_req.key_info.body.pmk_info.pmk_len);
 	}
 
-#if (NAN_MAJOR_VERSION > 2) || \
-	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+#if ((NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)) && \
+	NAN_CERT_VERSION >= 5
 	if (dut->ndpe) {
 		unsigned char nan_mac_addr[ETH_ALEN];
 		size_t addr_len = 0;
@@ -1034,8 +1041,9 @@ static int sigma_nan_data_response(struct sigma_dut *dut,
 {
 	const char *ndl_response = get_param(cmd, "NDLresponse");
 	const char *m4_response_type = get_param(cmd, "M4ResponseType");
-#if (NAN_MAJOR_VERSION > 2) || \
-	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+#if ((NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)) && \
+	NAN_CERT_VERSION >= 5
 	const char *ndpe_attr = get_param(cmd, "ndpeAttr");
 	const char *ndp_attr = get_param(cmd, "ndpAttr");
 #endif
@@ -1105,8 +1113,9 @@ static int sigma_nan_data_response(struct sigma_dut *dut,
 		}
 	}
 
-#if (NAN_MAJOR_VERSION > 2) || \
-	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+#if ((NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)) && \
+	 NAN_CERT_VERSION >= 5
 	if (dut->ndpe && ndp_attr) {
 		NanDebugParams cfg_debug;
 		int ndp_attr_val;
@@ -1374,8 +1383,9 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 #endif
 	const char *ndpe = get_param(cmd, "NDPE");
 	const char *trans_proto = get_param(cmd, "TransProtoType");
-#if (NAN_MAJOR_VERSION > 2) || \
-	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+#if ((NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)) && \
+	NAN_CERT_VERSION >= 5
 	const char *ndp_attr = get_param(cmd, "ndpAttr");
 #endif
 	NanPublishRequest req;
@@ -1596,8 +1606,9 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
-#if (NAN_MAJOR_VERSION > 2) || \
-	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+#if ((NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)) && \
+	NAN_CERT_VERSION >= 5
 	if (dut->ndpe && ndp_attr) {
 		NanDebugParams cfg_debug;
 		int ndp_attr_val, size;
@@ -2126,8 +2137,9 @@ static void ndp_event_data_confirm(NanDataPathConfirmInd *event)
 			sigma_dut_print(global_dut, DUT_MSG_ERROR,
 					"Failed to run:ip -6 route replace fe80::/64 dev nan0 table local");
 		}
-#if (NAN_MAJOR_VERSION > 2) || \
-	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)
+#if ((NAN_MAJOR_VERSION > 2) || \
+	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)) && \
+	NAN_CERT_VERSION >= 5
 		if (event->nan_ipv6_addr_present)
 			snprintf(ipv6_buf, sizeof(ipv6_buf),
 				 "fe80::%02x%02x:%02xff:fe%02x:%02x%02x",
