@@ -2448,7 +2448,7 @@ static int owrt_ap_config_vap_hs2(struct sigma_dut *dut, int vap_id)
 				 hs20_icon_filename);
 			owrt_ap_set_list_vap(dut, vap_id, "hs20_icon",
 					     hs20_icon);
-			osu_friendly_name = "'kor:SP 파랑 테스트 전용'";
+			osu_friendly_name = "'kor:SP 오렌지 테스트 전용'";
 
 			hs20_icon_filename = "icon_orange_zxx.png";
 			if (dut->ap_osu_icon_tag == 2)
@@ -2465,7 +2465,7 @@ static int owrt_ap_config_vap_hs2(struct sigma_dut *dut, int vap_id)
 					     "'eng:SP Orange Test Only'");
 			owrt_ap_set_list_vap(dut, vap_id, "osu_service_desc",
 					     "'eng:Free service for test purpose'");
-			osu_friendly_name = "'kor:SP 파랑 테스트 전용'";
+			osu_friendly_name = "'kor:SP 오렌지 테스트 전용'";
 
 			hs20_icon_filename = "icon_orange_zxx.png";
 			if (dut->ap_osu_icon_tag == 2)
@@ -2546,7 +2546,7 @@ static int owrt_ap_config_vap_hs2(struct sigma_dut *dut, int vap_id)
 
 			owrt_ap_set_list_vap(dut, vap_id, "osu_icon",
 					     "'icon_green_eng.png'");
-			osu_friendly_name = "'kor:SP 오렌지 테스트 전용'";
+			osu_friendly_name = "'kor:SP 초록 테스트 전용'";
 
 			hs20_icon_filename = "icon_green_zxx.png";
 			if (dut->ap_osu_icon_tag == 2)
