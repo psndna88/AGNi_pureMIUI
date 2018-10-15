@@ -2430,8 +2430,8 @@ static int owrt_ap_config_vap_hs2(struct sigma_dut *dut, int vap_id)
 			break;
 		case 3:
 		case 103:
-			osu_friendly_name = "spa:SP Red Test Only";
-			osu_service_desc = "spa:Free service for test purpose";
+			osu_friendly_name = "'spa:SP Red Test Only'";
+			osu_service_desc = "'spa:Free service for test purpose'";
 			break;
 		case 4:
 		case 104:
