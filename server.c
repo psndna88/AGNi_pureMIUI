@@ -78,6 +78,8 @@ static int server_reset_user(struct sigma_dut *dut, const char *user)
 		osu_password = "P@ssw0rd";
 	} else if (strcmp(user, "test09") == 0) {
 		/* UpdateInterval-based client trigger for policy update */
+		osu_user = "testdmacc09";
+		osu_password = "P@ssw0rd";
 	} else if (strcmp(user, "test10") == 0) {
 		remediation = "machine";
 		methods = "TLS";
@@ -112,6 +114,11 @@ static int server_reset_user(struct sigma_dut *dut, const char *user)
 	} else if (strcmp(user, "test37") == 0) {
 		osu_user = "testdmacc37";
 		osu_password = "P@ssw0rd";
+	} else if (strcmp(user, "testdmacc08") == 0 ||
+		   strcmp(user, "testdmacc09") == 0) {
+		/* No need to set anything separate for testdmacc* users */
+		sqlite3_close(db);
+		return 0;
 	} else {
 		sigma_dut_print(dut, DUT_MSG_INFO, "Unsupported username '%s'",
 				user);
