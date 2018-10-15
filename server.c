@@ -440,13 +440,14 @@ static int get_user_field_cb(void *ctx, int argc, char *argv[], char *col[])
 }
 
 
-static char * get_user_field(struct sigma_dut *dut, sqlite3 *db,
-			     const char *identity, const char *field)
+static char * get_user_field_helper(struct sigma_dut *dut, sqlite3 *db,
+				    const char *id_field,
+				    const char *identity, const char *field)
 {
 	char *sql, *val = NULL;
 
-	sql = sqlite3_mprintf("SELECT %s FROM users WHERE identity=%Q",
-			      field, identity);
+	sql = sqlite3_mprintf("SELECT %s FROM users WHERE %s=%Q",
+			      field, id_field, identity);
 	if (!sql)
 		return NULL;
 	sigma_dut_print(dut, DUT_MSG_DEBUG, "SQL: %s", sql);
@@ -465,6 +466,20 @@ static char * get_user_field(struct sigma_dut *dut, sqlite3 *db,
 }
 
 
+static char * get_user_field(struct sigma_dut *dut, sqlite3 *db,
+			     const char *identity, const char *field)
+{
+	return get_user_field_helper(dut, db, "identity", identity, field);
+}
+
+
+static char * get_user_dmacc_field(struct sigma_dut *dut, sqlite3 *db,
+				   const char *identity, const char *field)
+{
+	return get_user_field_helper(dut, db, "osu_user", identity, field);
+}
+
+
 static int osu_remediation_status(struct sigma_dut *dut,
 				  struct sigma_conn *conn, int timeout,
 				  const char *username, const char *serialno)
@@ -474,6 +489,7 @@ static int osu_remediation_status(struct sigma_dut *dut,
 	char resp[500];
 	char name[100];
 	char *remediation = NULL;
+	int dmacc = 0;
 
 	if (!username && !serialno)
 		return -1;
@@ -491,6 +507,11 @@ static int osu_remediation_status(struct sigma_dut *dut,
 
 	remediation = get_user_field(dut, db, username, "remediation");
 	if (!remediation) {
+		remediation = get_user_dmacc_field(dut, db, username,
+						   "remediation");
+		dmacc = 1;
+	}
+	if (!remediation) {
 		snprintf(resp, sizeof(resp),
 			 "RemediationStatus,User entry not found");
 		goto done;
@@ -506,7 +527,12 @@ static int osu_remediation_status(struct sigma_dut *dut,
 	for (i = 0; i < timeout; i++) {
 		sleep(1);
 		free(remediation);
-		remediation = get_user_field(dut, db, username, "remediation");
+		if (dmacc)
+			remediation = get_user_dmacc_field(dut, db, username,
+							   "remediation");
+		else
+			remediation = get_user_field(dut, db, username,
+						     "remediation");
 		if (remediation && remediation[0] == '\0') {
 			snprintf(resp, sizeof(resp),
 				 "RemediationStatus,Remediation Complete");
