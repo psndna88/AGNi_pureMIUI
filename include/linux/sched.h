@@ -3538,6 +3538,12 @@ static inline unsigned long rlimit_max(unsigned int limit)
 	return task_rlimit_max(current, limit);
 }
 
+struct cpu_cycle_counter_cb {
+  u64 (*get_cpu_cycle_counter)(int cpu);
+  u32 (*get_cpu_cycles_max_per_us)(int cpu);
+};
+int register_cpu_cycle_counter_cb(struct cpu_cycle_counter_cb *cb);
+
 #define SCHED_CPUFREQ_RT        (1U << 0)
 #define SCHED_CPUFREQ_DL        (1U << 1)
 #define SCHED_CPUFREQ_IOWAIT    (1U << 2)
