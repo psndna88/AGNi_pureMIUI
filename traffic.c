@@ -2,6 +2,7 @@
  * Sigma Control API DUT (station/AP)
  * Copyright (c) 2010, Atheros Communications, Inc.
  * Copyright (c) 2011-2013, 2016-2017 Qualcomm Atheros, Inc.
+ * Copyright (c) 2018, The Linux Foundation
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
@@ -36,7 +37,7 @@ static int cmd_traffic_send_ping(struct sigma_dut *dut,
 	char buf[100];
 	int type = 1;
 	int dscp = 0, use_dscp = 0;
-	char extra[100], int_arg[100], intf_arg[100];
+	char extra[100], int_arg[100], intf_arg[100], ip_dst[100];
 
 	val = get_param(cmd, "Type");
 	if (!val)
@@ -53,6 +54,10 @@ static int cmd_traffic_send_ping(struct sigma_dut *dut,
 	if (dst == NULL || (type == 1 && !is_ip_addr(dst)) ||
 	    (type == 2 && !is_ipv6_addr(dst)))
 		return -1;
+	if (dut->ndp_enable && type == 2) {
+		snprintf(ip_dst, sizeof(ip_dst), "%s%%nan0", dst);
+		dst = ip_dst;
+	}
 
 	val = get_param(cmd, "frameSize");
 	if (val == NULL)
@@ -112,12 +117,11 @@ static int cmd_traffic_send_ping(struct sigma_dut *dut,
 	int_arg[0] = '\0';
 	if (rate != 1)
 		snprintf(int_arg, sizeof(int_arg), " -i %f", interval);
-	intf_arg[0] = '\0';
-	if (dut->ndp_enable)
-		strlcpy(intf_arg, " -I nan0", sizeof(intf_arg));
-	else if (type == 2)
+	if (!dut->ndp_enable && type == 2)
 		snprintf(intf_arg, sizeof(intf_arg), " -I %s",
 			 get_station_ifname());
+	else
+		intf_arg[0] = '\0';
 	fprintf(f, "#!" SHELL "\n"
 		"ping%s -c %d%s -s %d%s -q%s %s > " SIGMA_TMPDIR
 		"/sigma_dut-ping.%d &\n"
@@ -231,8 +235,248 @@ static int cmd_traffic_stop_ping(struct sigma_dut *dut,
 }
 
 
+static int cmd_traffic_start_iperf(struct sigma_dut *dut,
+				   struct sigma_conn *conn,
+				   struct sigma_cmd *cmd)
+{
+	const char *val, *dst;
+	const char *iptype;
+	int port, duration;
+	const char *proto;
+	char buf[256];
+	const char *ifname;
+	char port_str[20];
+	FILE *f;
+	int server, ipv6 = 0;
+
+	val = get_param(cmd, "mode");
+	if (!val) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Missing mode parameter");
+		return 0;
+	}
+	server = strcasecmp(val, "server") == 0;
+
+	iptype = "";
+	val = get_param(cmd, "iptype");
+	if (val) {
+		if (strcasecmp(val, "ipv6") == 0) {
+			iptype = "-6";
+			ipv6 = 1;
+		} else {
+			iptype = "-4";
+			ipv6 = 0;
+		}
+	}
+
+	port_str[0] = '\0';
+	val = get_param(cmd, "port");
+	if (val) {
+		port = atoi(val);
+		snprintf(port_str, sizeof(port_str), "-p %d", port);
+	}
+
+	proto = "";
+	val = get_param(cmd, "transproto");
+	if (val && strcasecmp(val, "udp") == 0)
+		proto = "-u";
+
+	dst = get_param(cmd, "destination");
+	if (!server && (!dst || (!is_ip_addr(dst) && !is_ipv6_addr(dst)))) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Invalid destination address");
+		return 0;
+	}
+
+	if (dut->ndpe)
+		ifname = "nan0";
+	else
+		ifname = get_station_ifname();
+
+	val = get_param(cmd, "duration");
+	if (val)
+		duration = atoi(val);
+	else
+		duration = 0;
+
+	unlink(SIGMA_TMPDIR "/sigma_dut-iperf");
+	unlink(SIGMA_TMPDIR "/sigma_dut-iperf-pid");
+
+	f = fopen(SIGMA_TMPDIR "/sigma_dut-iperf.sh", "w");
+	if (!f) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Can not write sigma_dut-iperf.sh");
+		return 0;
+	}
+
+	if (server) {
+		/* write server side command to shell file */
+		fprintf(f, "#!" SHELL "\n"
+			"iperf3 -s %s %s > " SIGMA_TMPDIR
+			"/sigma_dut-iperf &\n"
+			"echo $! > " SIGMA_TMPDIR "/sigma_dut-iperf-pid\n",
+			port_str, iptype);
+	} else {
+		/* write client side command to shell file */
+		if (!dst)
+			return -1;
+		if (ipv6)
+			snprintf(buf, sizeof(buf), "%s%%%s", dst, ifname);
+		else
+			snprintf(buf, sizeof(buf), "%s", dst);
+		fprintf(f, "#!" SHELL "\n"
+			"iperf3 -c %s -t %d %s %s %s > " SIGMA_TMPDIR
+			"/sigma_dut-iperf &\n"
+			"echo $! > " SIGMA_TMPDIR "/sigma_dut-iperf-pid\n",
+			buf, duration, iptype, proto, port_str);
+	}
+
+	fclose(f);
+
+	if (chmod(SIGMA_TMPDIR "/sigma_dut-iperf.sh",
+		  S_IRUSR | S_IWUSR | S_IXUSR) < 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Can not chmod sigma_dut-iperf.sh");
+		return 0;
+	}
+
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "Starting iperf");
+	if (system(SIGMA_TMPDIR "/sigma_dut-iperf.sh") != 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to start iperf");
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Failed to run sigma_dut-iperf.sh");
+		return 0;
+	}
+
+	unlink(SIGMA_TMPDIR "/sigma_dut-iperf.sh");
+	return 1;
+}
+
+
+static int cmd_traffic_stop_iperf(struct sigma_dut *dut,
+				  struct sigma_conn *conn,
+				  struct sigma_cmd *cmd)
+{
+	int pid;
+	FILE *f;
+	char buf[100], summary_buf[100];
+	float bandwidth, totalbytes, factor;
+	char *pos;
+	long l_bandwidth, l_totalbytes;
+
+	f = fopen(SIGMA_TMPDIR "/sigma_dut-iperf-pid", "r");
+	if (!f) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,PID file does not exist");
+		return 0;
+	}
+	if (fscanf(f, "%d", &pid) != 1 || pid <= 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "No PID for iperf process");
+		fclose(f);
+		unlink(SIGMA_TMPDIR "/sigma_dut-iperf-pid");
+		return -2;
+	}
+
+	fclose(f);
+	unlink(SIGMA_TMPDIR "/sigma_dut-iperf-pid");
+
+	if (kill(pid, SIGINT) < 0 && errno != ESRCH) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG, "kill failed: %s",
+				strerror(errno));
+	}
+	usleep(250000);
+
+	/* parse iperf output which is stored in sigma_dut-iperf */
+	f = fopen(SIGMA_TMPDIR "/sigma_dut-iperf", "r");
+	if (!f) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"No iperf result file found");
+		send_resp(dut, conn, SIGMA_COMPLETE,
+			  "bandwidth,0,totalbytes,0");
+		return 0;
+	}
+
+	/* find the last line which has the received bytes summary */
+	while (fgets(buf, sizeof(buf), f)) {
+		char *pos;
+
+		pos = strchr(buf, '\n');
+		if (pos)
+			*pos = '\0';
+		sigma_dut_print(dut, DUT_MSG_DEBUG, "iperf: %s", buf);
+		pos = strstr(buf, "  sec  ");
+		if (pos)
+			strlcpy(summary_buf, buf, sizeof(summary_buf));
+	}
+
+	fclose(f);
+	unlink(SIGMA_TMPDIR "/sigma_dut-iperf");
+
+	pos = strstr(summary_buf, "Bytes");
+	if (!pos || pos == summary_buf) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Can not parse iperf results");
+		send_resp(dut, conn, SIGMA_COMPLETE,
+			  "bandwidth,0,totalbytes,0");
+		return 0;
+	}
+
+	if (pos[-1] == 'G')
+		factor = 1024 * 1024 * 1024;
+	else if (pos[-1] == 'M')
+		factor = 1024 * 1024;
+	else if (pos[-1] == 'K')
+		factor = 1024;
+	else
+		factor = 1;
+
+	if (pos) {
+		pos -= 2;
+		while (pos > summary_buf && (pos[-1] != ' '))
+			pos--;
+		totalbytes = atof(pos);
+	} else
+		totalbytes = 0;
+	l_totalbytes = totalbytes * factor;
+
+	pos = strstr(summary_buf, "bits/sec");
+	if (!pos || pos == summary_buf) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Can not parse iperf results");
+		send_resp(dut, conn, SIGMA_COMPLETE,
+			  "bandwidth,0,totalbytes,0");
+		return 0;
+	}
+
+	if (pos[-1] == 'G')
+		factor = 1024 * 1024 * 1024 / 8;
+	else if (pos[-1] == 'M')
+		factor = 1024 * 1024 / 8;
+	else if (pos[-1] == 'K')
+		factor = 1024 / 8;
+	else
+		factor = 1 / 8;
+
+	if (pos && pos - summary_buf > 2) {
+		pos -= 2;
+		while (pos > summary_buf && (pos[-1] != ' '))
+			pos--;
+		bandwidth = atof(pos);
+	} else
+		bandwidth = 0;
+	l_bandwidth = bandwidth * factor;
+
+	snprintf(buf, sizeof(buf), "bandwidth,%lu,totalbytes,%lu",
+		 l_bandwidth, l_totalbytes);
+	send_resp(dut, conn, SIGMA_COMPLETE, buf);
+	return 0;
+}
+
+
 void traffic_register_cmds(void)
 {
 	sigma_dut_reg_cmd("traffic_send_ping", NULL, cmd_traffic_send_ping);
 	sigma_dut_reg_cmd("traffic_stop_ping", NULL, cmd_traffic_stop_ping);
+	sigma_dut_reg_cmd("traffic_start_iperf", NULL, cmd_traffic_start_iperf);
+	sigma_dut_reg_cmd("traffic_stop_iperf", NULL, cmd_traffic_stop_iperf);
 }
