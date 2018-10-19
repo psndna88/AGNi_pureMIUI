@@ -50,6 +50,7 @@ static int server_reset_user(struct sigma_dut *dut, const char *user)
 	int fetch_pps = 0;
 	const char *osu_user = NULL;
 	const char *osu_password = NULL;
+	const char *policy = NULL;
 
 	sigma_dut_print(dut, DUT_MSG_DEBUG, "Reset user %s", user);
 
@@ -67,6 +68,7 @@ static int server_reset_user(struct sigma_dut *dut, const char *user)
 		machine_managed = 0;
 	} else if (strcmp(user, "test03") == 0) {
 		/* UpdateInterval-based client trigger for policy update */
+		policy = "ruckus130";
 	} else if (strcmp(user, "test04") == 0) {
 	} else if (strcmp(user, "test05") == 0) {
 	} else if (strcmp(user, "test06") == 0) {
@@ -78,6 +80,7 @@ static int server_reset_user(struct sigma_dut *dut, const char *user)
 		osu_password = "P@ssw0rd";
 	} else if (strcmp(user, "test09") == 0) {
 		/* UpdateInterval-based client trigger for policy update */
+		policy = "ruckus130";
 		osu_user = "testdmacc09";
 		osu_password = "P@ssw0rd";
 	} else if (strcmp(user, "test10") == 0) {
@@ -125,10 +128,10 @@ static int server_reset_user(struct sigma_dut *dut, const char *user)
 		goto fail;
 	}
 
-	sql = sqlite3_mprintf("INSERT OR REPLACE INTO users(identity,realm,methods,password,phase2,machine_managed,remediation,fetch_pps,osu_user,osu_password) VALUES (%Q,%Q,%Q,%Q,%d,%d,%Q,%d,%Q,%Q)",
+	sql = sqlite3_mprintf("INSERT OR REPLACE INTO users(identity,realm,methods,password,phase2,machine_managed,remediation,fetch_pps,osu_user,osu_password,policy) VALUES (%Q,%Q,%Q,%Q,%d,%d,%Q,%d,%Q,%Q,%Q)",
 			      user, realm, methods, password,
 			      phase2, machine_managed, remediation, fetch_pps,
-			      osu_user, osu_password);
+			      osu_user, osu_password, policy);
 
 	if (!sql)
 		goto fail;
