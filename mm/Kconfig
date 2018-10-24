@@ -630,18 +630,9 @@ config KSM_THREAD_SLEEPMS
 	  configurable via defconfig. If left untouched it defaults to stock 20ms.
 
 config FORCE_RECLAIM
-	bool "Enable process reclaim"
-	depends on PROC_FS
-	default y
+	bool "Enable forced process reclaim"
+	depends on PROC_FS && PROCESS_RECLAIM
+	default n
 	help
 	 It allows to force reclaim pages of all processes by /proc/pid/reclaim.
 
-	 (echo file > /proc/PID/reclaim) reclaims file-backed pages only.
-	 (echo anon > /proc/PID/reclaim) reclaims anonymous pages only.
-	 (echo all > /proc/PID/reclaim) reclaims all pages.
-
-	 (echo addr size-byte > /proc/PID/reclaim) reclaims pages in
-	 (addr, addr + size-bytes) of the process.
-
-	 Any other value is ignored.
-	  read throughput and thus early boot performance.
