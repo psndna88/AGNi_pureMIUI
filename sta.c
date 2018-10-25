@@ -5763,6 +5763,56 @@ static int sta_set_he_mcs(struct sigma_dut *dut, const char *intf,
 #endif /* NL80211_SUPPORT */
 
 
+static int sta_set_action_tx_in_he_tb_ppdu(struct sigma_dut *dut,
+					   const char *intf, int enable)
+{
+#ifdef NL80211_SUPPORT
+	struct nl_msg *msg;
+	int ret = 0;
+	struct nlattr *params;
+	int ifindex;
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s failed",
+				__func__, intf);
+		return -1;
+	}
+
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+				    NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
+	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    nla_put_u8(msg,
+		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_ACTION_TX_TB_PPDU,
+		       enable)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding vendor_cmd and vendor_data",
+				__func__);
+		nlmsg_free(msg);
+		return -1;
+	}
+	nla_nest_end(msg, params);
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in send_and_recv_msgs, ret=%d",
+				__func__, ret);
+	}
+	return ret;
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"HE action Tx TB PPDU cannot be set without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
 static int sta_set_heconfig_and_wep_tkip(struct sigma_dut *dut,
 					 const char *intf, int enable)
 {
@@ -6398,6 +6448,11 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 		if (sta_set_tx_su_ppdu_cfg(dut, intf, 1)) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Failed to set Tx SU PPDU enable");
+		}
+
+		if (sta_set_action_tx_in_he_tb_ppdu(dut, intf, 0)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"failed to send TB PPDU Tx cfg");
 		}
 
 		if (sta_set_he_om_ctrl_reset(dut, intf)) {
@@ -8973,6 +9028,54 @@ static int cmd_sta_send_frame_vht(struct sigma_dut *dut,
 }
 
 
+static int wcn_sta_send_frame_he(struct sigma_dut *dut, struct sigma_conn *conn,
+				 struct sigma_cmd *cmd)
+{
+	const char *val;
+	const char *intf = get_param(cmd, "Interface");
+
+	val = get_param(cmd, "framename");
+	if (!val)
+		return -1;
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "framename is %s", val);
+
+	/* Command sequence to generate Op mode notification */
+	if (val && strcasecmp(val, "action") == 0) {
+		val = get_param(cmd, "PPDUTxType");
+		if (val && strcasecmp(val, "TB") == 0) {
+			if (sta_set_action_tx_in_he_tb_ppdu(dut, intf, 1)) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"failed to send TB PPDU Tx cfg");
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "ErrorCode,set TB PPDU Tx cfg failed");
+				return 0;
+			}
+			return 1;
+		}
+
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Action Tx type is not defined");
+	}
+
+	return 1;
+}
+
+
+static int cmd_sta_send_frame_he(struct sigma_dut *dut,
+				 struct sigma_conn *conn,
+				 struct sigma_cmd *cmd)
+{
+	switch (get_driver_type()) {
+	case DRIVER_WCN:
+		return wcn_sta_send_frame_he(dut, conn, cmd);
+	default:
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Unsupported sta_set_frame(HE) with the current driver");
+		return 0;
+	}
+}
+
+
 #ifdef __linux__
 int wil6210_send_frame_60g(struct sigma_dut *dut, struct sigma_conn *conn,
 			   struct sigma_cmd *cmd)
@@ -9129,6 +9232,8 @@ int cmd_sta_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 		return cmd_sta_send_frame_hs2(dut, conn, cmd);
 	if (val && strcasecmp(val, "VHT") == 0)
 		return cmd_sta_send_frame_vht(dut, conn, cmd);
+	if (val && strcasecmp(val, "HE") == 0)
+		return cmd_sta_send_frame_he(dut, conn, cmd);
 	if (val && strcasecmp(val, "LOC") == 0)
 		return loc_cmd_sta_send_frame(dut, conn, cmd);
 	if (val && strcasecmp(val, "60GHz") == 0)
