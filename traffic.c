@@ -387,6 +387,7 @@ static int cmd_traffic_stop_iperf(struct sigma_dut *dut,
 	usleep(250000);
 
 	/* parse iperf output which is stored in sigma_dut-iperf */
+	summary_buf[0] = '\0';
 	f = fopen(SIGMA_TMPDIR "/sigma_dut-iperf", "r");
 	if (!f) {
 		sigma_dut_print(dut, DUT_MSG_DEBUG,

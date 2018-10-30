@@ -50,6 +50,7 @@ static int server_reset_user(struct sigma_dut *dut, const char *user)
 	int fetch_pps = 0;
 	const char *osu_user = NULL;
 	const char *osu_password = NULL;
+	const char *policy = NULL;
 
 	sigma_dut_print(dut, DUT_MSG_DEBUG, "Reset user %s", user);
 
@@ -67,6 +68,7 @@ static int server_reset_user(struct sigma_dut *dut, const char *user)
 		machine_managed = 0;
 	} else if (strcmp(user, "test03") == 0) {
 		/* UpdateInterval-based client trigger for policy update */
+		policy = "ruckus130";
 	} else if (strcmp(user, "test04") == 0) {
 	} else if (strcmp(user, "test05") == 0) {
 	} else if (strcmp(user, "test06") == 0) {
@@ -78,6 +80,7 @@ static int server_reset_user(struct sigma_dut *dut, const char *user)
 		osu_password = "P@ssw0rd";
 	} else if (strcmp(user, "test09") == 0) {
 		/* UpdateInterval-based client trigger for policy update */
+		policy = "ruckus130";
 		osu_user = "testdmacc09";
 		osu_password = "P@ssw0rd";
 	} else if (strcmp(user, "test10") == 0) {
@@ -125,10 +128,10 @@ static int server_reset_user(struct sigma_dut *dut, const char *user)
 		goto fail;
 	}
 
-	sql = sqlite3_mprintf("INSERT OR REPLACE INTO users(identity,realm,methods,password,phase2,machine_managed,remediation,fetch_pps,osu_user,osu_password) VALUES (%Q,%Q,%Q,%Q,%d,%d,%Q,%d,%Q,%Q)",
+	sql = sqlite3_mprintf("INSERT OR REPLACE INTO users(identity,realm,methods,password,phase2,machine_managed,remediation,fetch_pps,osu_user,osu_password,policy) VALUES (%Q,%Q,%Q,%Q,%d,%d,%Q,%d,%Q,%Q,%Q)",
 			      user, realm, methods, password,
 			      phase2, machine_managed, remediation, fetch_pps,
-			      osu_user, osu_password);
+			      osu_user, osu_password, policy);
 
 	if (!sql)
 		goto fail;
@@ -549,6 +552,93 @@ done:
 }
 
 
+static int osu_polupd_status(struct sigma_dut *dut,
+			     struct sigma_conn *conn, int timeout,
+			     const char *username, const char *serialno)
+{
+	sqlite3 *db;
+	char *sql;
+	int i;
+	char resp[500];
+	char name[100];
+	char *policy = NULL;
+	int dmacc = 0;
+
+	if (!username && !serialno)
+		return -1;
+	if (!username) {
+		snprintf(name, sizeof(name), "cert-%s", serialno);
+		username = name;
+	}
+
+	if (sqlite3_open(SERVER_DB, &db)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to open SQLite database %s",
+				SERVER_DB);
+		return -1;
+	}
+
+	policy = get_user_field(dut, db, username, "policy");
+	if (!policy) {
+		policy = get_user_dmacc_field(dut, db, username, "policy");
+		dmacc = 1;
+	}
+	if (!policy) {
+		snprintf(resp, sizeof(resp),
+			 "PolicyUpdateStatus,User entry not found");
+		goto done;
+	}
+	if (policy[0] == '\0') {
+		snprintf(resp, sizeof(resp),
+			 "PolicyUpdateStatus,User was not configured to need policy update");
+		goto done;
+	}
+
+	sql = sqlite3_mprintf("UPDATE users SET polupd_done=0 WHERE %s=%Q",
+			      (dmacc ? "osu_user" : "identity"),
+			      username);
+	if (!sql) {
+		snprintf(resp, sizeof(resp),
+			 "PolicyUpdateStatus,Internal error");
+		goto done;
+	}
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "SQL: %s", sql);
+	if (sqlite3_exec(db, sql, NULL, NULL, NULL) != SQLITE_OK) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"SQL operation to fetch user field failed: %s",
+				sqlite3_errmsg(db));
+		sqlite3_free(sql);
+		goto done;
+	}
+	sqlite3_free(sql);
+
+	snprintf(resp, sizeof(resp), "PolicyUpdateStatus,TIMEOUT");
+
+	for (i = 0; i < timeout; i++) {
+		sleep(1);
+		free(policy);
+		if (dmacc)
+			policy = get_user_dmacc_field(dut, db, username,
+						      "polupd_done");
+		else
+			policy = get_user_field(dut, db, username,
+						"polupd_done");
+		if (policy && atoi(policy)) {
+			snprintf(resp, sizeof(resp),
+				 "PolicyUpdateStatus,UpdateComplete");
+			break;
+		}
+	}
+
+done:
+	free(policy);
+	sqlite3_close(db);
+
+	send_resp(dut, conn, SIGMA_COMPLETE, resp);
+	return 0;
+}
+
+
 static int cmd_server_request_status(struct sigma_dut *dut,
 				     struct sigma_conn *conn,
 				     struct sigma_cmd *cmd)
@@ -610,6 +700,10 @@ static int cmd_server_request_status(struct sigma_dut *dut,
 	if (osu && status && strcasecmp(status, "Remediation") == 0)
 		return osu_remediation_status(dut, conn, timeout, username,
 					      serialno);
+
+	if (osu && status && strcasecmp(status, "PolicyUpdate") == 0)
+		return osu_polupd_status(dut, conn, timeout, username,
+					 serialno);
 
 	if (!osu && status && strcasecmp(status, "Authentication") == 0 &&
 	    username)
