@@ -23,7 +23,7 @@
 #include <linux/freezer.h>
 #include <linux/page_owner.h>
 #include <linux/psi.h>
-#include <linux/fb.h>
+#include <linux/msm_drm_notify.h>
 #include <linux/moduleparam.h>
 #include <linux/time.h>
 #include <linux/workqueue.h>
@@ -1841,16 +1841,22 @@ module_param_named(compaction_screen_off_delay_ms, compaction_soff_delay_ms, int
 static unsigned long compaction_forced_timeout;
 
 
-static int fb_notifier_callback(struct notifier_block *self, unsigned long event, void *data)
+static int msm_drm_notifier_callback(struct notifier_block *self, unsigned long event, void *data)
 {
-	struct fb_event *evdata = data;
+	struct msm_drm_notifier *evdata = data;
 	int *blank;
 
-	if ((event == FB_EVENT_BLANK) && evdata && evdata->data) {
+	if (event != MSM_DRM_EVENT_BLANK)
+		return 0;
+
+	if (evdata->id != MSM_DRM_PRIMARY_DISPLAY)
+		return 0;
+
+	if (evdata && evdata->data) {
 		blank = evdata->data;
 
 		switch (*blank) {
-		case FB_BLANK_POWERDOWN:
+		case MSM_DRM_BLANK_POWERDOWN:
 			screen_on = false;
 			if (time_after(jiffies, compaction_forced_timeout) && !delayed_work_busy(&compaction_work)) {
 				compaction_forced_timeout = jiffies + msecs_to_jiffies(compaction_timeout_ms);
@@ -1858,7 +1864,7 @@ static int fb_notifier_callback(struct notifier_block *self, unsigned long event
 					msecs_to_jiffies(compaction_soff_delay_ms));
 			}
 		break;
-		case FB_BLANK_UNBLANK:
+		case MSM_DRM_BLANK_UNBLANK:
 			screen_on = true;
 		break;
 		}
@@ -1868,7 +1874,7 @@ static int fb_notifier_callback(struct notifier_block *self, unsigned long event
 }
 
 static struct notifier_block compaction_notifier_block = {
-	.notifier_call = fb_notifier_callback,
+	.notifier_call = msm_drm_notifier_callback,
 };
 
 /* Compact all zones within a node */
@@ -2224,7 +2230,7 @@ static int  __init scheduled_compaction_init(void)
 
 	INIT_DELAYED_WORK(&compaction_work, do_compaction);
 
-	fb_register_client(&compaction_notifier_block);
+	msm_drm_register_client(&compaction_notifier_block);
 
 	return 0;
 }
