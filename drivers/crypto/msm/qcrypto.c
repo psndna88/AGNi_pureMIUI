@@ -5420,6 +5420,7 @@ static struct platform_driver _qualcomm_crypto = {
 		.owner  = THIS_MODULE,
 		.name   = "qcrypto",
 		.of_match_table = qcrypto_match,
+		.probe_type = PROBE_FORCE_SYNCHRONOUS,
 	},
 };
 
