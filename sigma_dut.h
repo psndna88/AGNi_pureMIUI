@@ -491,6 +491,7 @@ struct sigma_dut {
 	int ap_anqpserver;
 	int ap_anqpserver_on;
 	int ap_osu_provider_list;
+	int ap_osu_provider_nai_list;
 	int ap_qos_map_set;
 	int ap_bss_load;
 	char ap_osu_server_uri[10][256];

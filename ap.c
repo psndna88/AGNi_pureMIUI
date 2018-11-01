@@ -4163,6 +4163,7 @@ static int append_hostapd_conf_hs2(struct sigma_dut *dut, FILE *f)
 		char *osu_icon = NULL;
 		char *osu_ssid = NULL;
 		char *osu_nai = NULL;
+		char *osu_nai2 = NULL;
 		char *osu_service_desc = NULL;
 		char *hs20_icon_filename = NULL;
 		char hs20_icon[150];
@@ -4319,7 +4320,61 @@ static int append_hostapd_conf_hs2(struct sigma_dut *dut, FILE *f)
 			osu_method = (dut->ap_osu_method[0] == 0xFF) ? 1 : dut->ap_osu_method[0];
 			osu_service_desc = NULL;
 			break;
+		case 10:
+		case 110:
+			/* OSU Provider #1 */
+			fprintf(f, "osu_friendly_name=eng:SP Orange Test Only\n");
+			fprintf(f, "osu_friendly_name=kor:SP 오렌지 테스트 전용\n");
+			fprintf(f, "hs20_icon=128:61:zxx:image/png:icon_orange_zxx.png:/etc/ath/icon_orange_zxx.png\n");
+			fprintf(f, "osu_icon=icon_orange_zxx.png\n");
+			osu_method = (dut->ap_osu_method[0] == 0xFF) ?
+				1 : dut->ap_osu_method[0];
+			fprintf(f, "osu_method_list=%d\n", osu_method);
+			fprintf(f, "osu_nai=test-anonymous@wi-fi.org\n");
+			switch (dut->ap_osu_provider_nai_list) {
+			case 3:
+				fprintf(f,
+					"osu_nai2=test-anonymous@wi-fi.org\n");
+				break;
+			case 4:
+				fprintf(f, "osu_nai2=random@hotspot.net\n");
+				break;
+			}
+
+			/* OSU Provider #2 */
+			/* SP Red from defaults */
+			if (strlen(dut->ap_osu_server_uri[1]))
+				fprintf(f, "osu_server_uri=%s\n", dut->ap_osu_server_uri[1]);
+			else
+				fprintf(f, "osu_server_uri=https://osu-server.r2-testbed.wi-fi.org/\n");
+			fprintf(f, "osu_friendly_name=eng:SP Red Test Only\n");
+			snprintf(hs20_icon, sizeof(hs20_icon),
+				 "128:61:zxx:image/png:icon_red_zxx.png:/etc/ath/icon_red_zxx.png");
+			osu_method = (dut->ap_osu_method[1] == 0xFF) ?
+				1 : dut->ap_osu_method[1];
+			osu_service_desc = NULL;
+			osu_nai = "anonymous@hotspot.net";
+			break;
 		default:
+			break;
+		}
+
+		switch (dut->ap_osu_provider_nai_list) {
+		case 1:
+			osu_nai2 = "anonymous@hotspot.net";
+			break;
+		case 2:
+			osu_nai2 = "test-anonymous@wi-fi.org";
+			break;
+		case 3:
+			/* OSU Provider NAI #1 written above */
+			/* OSU Provider NAI #2 */
+			osu_nai2 = "anonymous@hotspot.net";
+			break;
+		case 4:
+			/* OSU Provider NAI #1 written above */
+			/* OSU Provider NAI #2 */
+			osu_nai2 = "anonymous@hotspot.net";
 			break;
 		}
 
@@ -4345,6 +4400,8 @@ static int append_hostapd_conf_hs2(struct sigma_dut *dut, FILE *f)
 
 		if (osu_nai)
 			fprintf(f, "osu_nai=%s\n", osu_nai);
+		if (osu_nai2)
+			fprintf(f, "osu_nai2=%s\n", osu_nai2);
 
 		fprintf(f, "hs20_icon=%s\n", hs20_icon);
 
@@ -7719,6 +7776,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_osu_ssid[0] = '\0';
 		dut->ap_pmf = 1;
 		dut->ap_osu_provider_list = 0;
+		dut->ap_osu_provider_nai_list = 0;
 		for (i = 0; i < 10; i++) {
 			dut->ap_osu_server_uri[i][0] = '\0';
 			dut->ap_osu_method[i] = 0xFF;
@@ -9384,6 +9442,14 @@ static int cmd_ap_set_hs2(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_osu_provider_list = atoi(val);
 		sigma_dut_print(dut, DUT_MSG_INFO, "ap_osu_provider_list %d",
 				dut->ap_osu_provider_list);
+	}
+
+	val = get_param(cmd, "OSU_PROVIDER_NAI_LIST");
+	if (val) {
+		dut->ap_osu_provider_nai_list = atoi(val);
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"ap_osu_provider_nai_list %d",
+				dut->ap_osu_provider_nai_list);
 	}
 
 	val = get_param(cmd, "OSU_SERVER_URI");
