@@ -294,7 +294,7 @@ static int sched_clock_suspend(void)
 
 	suspend_ns = rd->epoch_ns;
 	suspend_cycles = rd->epoch_cyc;
-	pr_info("suspend ns:%17llu	suspend cycles:%17llu\n",
+	pr_debug("suspend ns:%17llu	suspend cycles:%17llu\n",
 				rd->epoch_ns, rd->epoch_cyc);
 	hrtimer_cancel(&sched_clock_timer);
 	rd->read_sched_clock = suspended_sched_clock_read;
@@ -308,7 +308,7 @@ static void sched_clock_resume(void)
 
 	rd->epoch_cyc = cd.actual_read_sched_clock();
 	resume_cycles = rd->epoch_cyc;
-	pr_info("resume cycles:%17llu\n", rd->epoch_cyc);
+	pr_debug("resume cycles:%17llu\n", rd->epoch_cyc);
 	hrtimer_start(&sched_clock_timer, cd.wrap_kt, HRTIMER_MODE_REL);
 	rd->read_sched_clock = cd.actual_read_sched_clock;
 }
