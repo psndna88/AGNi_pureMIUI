@@ -6948,7 +6948,8 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 			dut->ap_p2p_cross_connect);
 	}
 
-	if (dut->ap_l2tif || dut->ap_proxy_arp) {
+	if (dut->ap_l2tif || dut->ap_proxy_arp ||
+	    dut->ap_key_mgmt == AP_WPA2_EAP_OSEN) {
 		if (!dut->bridge) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Bridge must be configured. Run with -b <brname>.");
