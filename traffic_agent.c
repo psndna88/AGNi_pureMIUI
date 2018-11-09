@@ -441,7 +441,7 @@ static void send_file_fast(struct sigma_stream *s, char *pkt)
 		}
 
 		s->tx_act_frames++;
-		res = send(s->sock, pkt, s->payload_size, 0);
+		res = send(s->sock, pkt, s->payload_size, MSG_DONTWAIT);
 		if (res >= 0) {
 			s->tx_frames++;
 			s->tx_payload_bytes += res;
@@ -536,7 +536,7 @@ static void send_file(struct sigma_stream *s)
 		WPA_PUT_BE32(&pkt[16], now.tv_usec);
 
 		s->tx_act_frames++;
-		res = send(s->sock, pkt, s->payload_size, 0);
+		res = send(s->sock, pkt, s->payload_size, MSG_DONTWAIT);
 		if (res >= 0) {
 			s->tx_frames++;
 			s->tx_payload_bytes += res;
@@ -607,7 +607,7 @@ static void send_transaction(struct sigma_stream *s)
 		WPA_PUT_BE32(&pkt[12], now.tv_sec);
 		WPA_PUT_BE32(&pkt[16], now.tv_usec);
 
-		res = send(s->sock, pkt, s->payload_size, 0);
+		res = send(s->sock, pkt, s->payload_size, MSG_DONTWAIT);
 		if (res >= 0) {
 			s->tx_frames++;
 			s->tx_payload_bytes += res;
