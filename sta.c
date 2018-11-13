@@ -2707,7 +2707,7 @@ static int cmd_sta_associate(struct sigma_dut *dut, struct sigma_conn *conn,
 		extra[0] = '\0';
 		if (chan)
 			snprintf(extra, sizeof(extra), " freq=%u",
-				 channel_to_freq(atoi(chan)));
+				 channel_to_freq(dut, atoi(chan)));
 		snprintf(buf, sizeof(buf), "SELECT_NETWORK %d%s",
 			 dut->infra_network_id, extra);
 		if (wpa_command(get_station_ifname(), buf) < 0) {
@@ -5291,7 +5291,7 @@ static int cmd_sta_reassoc(struct sigma_dut *dut, struct sigma_conn *conn,
 		if (chan) {
 			unsigned int freq;
 
-			freq = channel_to_freq(chan);
+			freq = channel_to_freq(dut, chan);
 			if (!freq) {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
 						"Invalid channel number provided: %d",

@@ -215,8 +215,23 @@ fail:
 }
 
 
-unsigned int channel_to_freq(unsigned int channel)
+int is_60g_sigma_dut(struct sigma_dut *dut)
 {
+	return dut->program == PROGRAM_60GHZ ||
+		(dut->program == PROGRAM_WPS &&
+		 (get_driver_type() == DRIVER_WIL6210));
+}
+
+
+unsigned int channel_to_freq(struct sigma_dut *dut, unsigned int channel)
+{
+	if (is_60g_sigma_dut(dut)) {
+		if (channel >= 1 && channel <= 4)
+			return 58320 + 2160 * channel;
+
+		return 0;
+	}
+
 	if (channel >= 1 && channel <= 13)
 		return 2407 + 5 * channel;
 	if (channel == 14)
@@ -236,6 +251,8 @@ unsigned int freq_to_channel(unsigned int freq)
 		return 14;
 	if (freq >= 5180 && freq <= 5825)
 		return (freq - 5000) / 5;
+	if (freq >= 58320 && freq <= 64800)
+		return (freq - 58320) / 2160;
 	return 0;
 }
 
