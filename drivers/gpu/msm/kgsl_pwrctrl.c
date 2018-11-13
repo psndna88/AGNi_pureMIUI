@@ -2411,7 +2411,7 @@ static int kgsl_pwrctrl_enable(struct kgsl_device *device)
 		level = pwr->max_pwrlevel;
 		pwr->wakeup_maxpwrlevel = 0;
 	} else {
-		level = pwr->num_pwrlevels - 1;
+		level = pwr->num_pwrlevels - 2;
 	}
 
 	kgsl_pwrctrl_pwrlevel_change(device, level);
