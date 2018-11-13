@@ -818,7 +818,7 @@ static int cmd_sta_start_autonomous_go(struct sigma_dut *dut,
 				       struct sigma_conn *conn,
 				       struct sigma_cmd *cmd)
 {
-	const char *intf = get_param(cmd, "Interface");
+	const char *intf = get_p2p_ifname(get_param(cmd, "Interface"));
 	const char *oper_chn = get_param(cmd, "OPER_CHN");
 	const char *ssid_param = get_param(cmd, "SSID");
 #ifdef MIRACAST
