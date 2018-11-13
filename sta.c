@@ -7316,10 +7316,18 @@ static int wil6210_send_addba(struct sigma_dut *dut, const char *dest_mac,
 	f = fopen(buf, "r");
 	if (!f) {
 		sigma_dut_print(dut, DUT_MSG_ERROR, "failed to open: %s", buf);
-		return -1;
+		/* newer wil6210 driver renamed file to "rings" */
+		snprintf(buf, sizeof(buf), "%s/rings", dir);
+		f = fopen(buf, "r");
+		if (!f) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"failed to open: %s", buf);
+			return -1;
+		}
 	}
 
-	if (regcomp(&re, "VRING tx_[ \t]*([0-9]+)", REG_EXTENDED)) {
+	/* can be either VRING tx... or RING... */
+	if (regcomp(&re, "RING tx_[ \t]*([0-9]+)", REG_EXTENDED)) {
 		sigma_dut_print(dut, DUT_MSG_ERROR, "regcomp failed");
 		goto out;
 	}
