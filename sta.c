@@ -4884,7 +4884,14 @@ static int sta_pcp_start(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 
 	sigma_dut_print(dut, DUT_MSG_DEBUG,
-			"Supplicant set network with mode 2");
+			"Supplicant set network with mode 2. network_id %d",
+			net_id);
+
+	if (set_network(ifname, net_id, "wps_disabled", "0") < 0) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Failed to set supplicant to WPS ENABLE");
+		return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+	}
 
 	val = get_param(cmd, "Security");
 	if (val && strcasecmp(val, "OPEN") == 0) {
