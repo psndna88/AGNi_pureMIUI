@@ -6442,6 +6442,25 @@ static int set_ebtables_disable_dgaf(struct sigma_dut *dut,
 }
 
 
+static void set_ebtables_forward_drop(struct sigma_dut *dut,
+				      const char *ifname, const char *ifname2)
+{
+	char buf[128];
+
+	snprintf(buf, sizeof(buf), "ebtables -A FORWARD -i %s -o %s -j DROP",
+		 ifname, ifname2);
+	if (system(buf) != 0)
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to set ebtables rule");
+
+	snprintf(buf, sizeof(buf), "ebtables -A FORWARD -i %s -o %s -j DROP",
+		 ifname2, ifname);
+	if (system(buf) != 0)
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to set ebtables rule");
+}
+
+
 static int check_channel(int channel)
 {
 	int channel_list[] = { 36, 40, 44, 48, 52, 60, 64, 100, 104, 108, 112,
@@ -7037,6 +7056,7 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 			fprintf(f, "osen=1\n");
 			/* Disable DGAF for OSEN BSS */
 			fprintf(f, "disable_dgaf=1\n");
+			fprintf(f, "ap_isolate=1\n");
 			if (strlen(dut->ap2_radius_ipaddr))
 				fprintf(f, "auth_server_addr=%s\n",
 					dut->ap2_radius_ipaddr);
@@ -7046,6 +7066,11 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 			if (strlen(dut->ap2_radius_password))
 				fprintf(f, "auth_server_shared_secret=%s\n",
 					dut->ap2_radius_password);
+
+			set_ebtables_forward_drop(dut, ifname, ifname2);
+		} else if (dut->ap2_osu) {
+			fprintf(f, "ap_isolate=1\n");
+			set_ebtables_forward_drop(dut, ifname, ifname2);
 		}
 
 		if (dut->ap2_proxy_arp) {
@@ -7785,6 +7810,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_qos_map_set = 0;
 		dut->ap_tag_key_mgmt[0] = AP2_OPEN;
 		dut->ap2_proxy_arp = 0;
+		dut->ap2_osu = 0;
 		dut->ap_osu_icon_tag = 0;
 	}
 
@@ -9133,6 +9159,10 @@ static int cmd_ap_set_hs2(struct sigma_dut *dut, struct sigma_conn *conn,
 		val = get_param(cmd, "PROXY_ARP");
 		if (val)
 			dut->ap2_proxy_arp = atoi(val);
+
+		val = get_param(cmd, "OSU");
+		if (val)
+			dut->ap2_osu = atoi(val);
 		return 1;
 	}
 

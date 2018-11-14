@@ -487,6 +487,7 @@ struct sigma_dut {
 	int ap_gas_cb_delay;
 	int ap_proxy_arp;
 	int ap2_proxy_arp;
+	int ap2_osu;
 	int ap_l2tif;
 	int ap_anqpserver;
 	int ap_anqpserver_on;
