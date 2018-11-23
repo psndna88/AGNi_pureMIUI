@@ -20,10 +20,10 @@
 #include <linux/ftrace.h>
 #include <linux/mm.h>
 #include <linux/msm_adreno_devfreq.h>
+#include <linux/state_notifier.h>
 #include <asm/cacheflush.h>
 #include <soc/qcom/scm.h>
 #include "governor.h"
-#include <linux/display_state.h>
 #include <linux/agni_meminfo.h>
 
 static DEFINE_SPINLOCK(tz_lock);
@@ -70,8 +70,7 @@ static void do_partner_stop_event(struct work_struct *work);
 static void do_partner_suspend_event(struct work_struct *work);
 static void do_partner_resume_event(struct work_struct *work);
 
-/* Display and suspend state booleans */ 
-static bool display_on;
+/* Suspend state boolean */
 static bool suspended = false;
 
 static struct workqueue_struct *workqueue;
@@ -169,7 +168,7 @@ void compute_work_load(struct devfreq_dev_status *stats,
 	busy = (u64)stats->busy_time * stats->current_frequency;
 	do_div(busy, devfreq->profile->freq_table[0]);
 	acc_relative_busy += busy;
-	if (is_display_on()) {
+	if (!state_suspended) {
 		if (acc_total)
 			adreno_load_perc = ((acc_relative_busy * 100) / acc_total);
 	} else {
@@ -397,7 +396,7 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 	 * Force to use & record as min freq when system has
 	 * entered pm-suspend or screen-off state.
 	 */
-	if (suspended || !display_on) {
+	if (suspended || state_suspended) {
 		*freq = devfreq->profile->freq_table[devfreq->profile->max_state - 1];
 		return 0;
 	}
@@ -585,7 +584,6 @@ static int tz_suspend(struct devfreq *devfreq)
 	struct devfreq_msm_adreno_tz_data *priv = devfreq->data;
 	unsigned int scm_data[2] = {0, 0};
 	__secure_tz_reset_entry2(scm_data, sizeof(scm_data), priv->is_64);
-	display_on = is_display_on();
 	suspended = true;
 
 	priv->bin.total_time = 0;
@@ -631,7 +629,6 @@ static int tz_handler(struct devfreq *devfreq, unsigned int event, void *data)
 	case DEVFREQ_GOV_RESUME:
 		spin_lock(&suspend_lock);
 		suspend_time += suspend_time_ms();
-		display_on = is_display_on();
 		suspended = false;
 		/* Reset the suspend_start when gpu resumes */
 		suspend_start = 0;
