@@ -2247,6 +2247,11 @@ exit_err:
 
 	if (result) {
 		if (bam != NULL) {
+			ipc_log_context_destroy(bam->ipc_log0);
+			ipc_log_context_destroy(bam->ipc_log1);
+			ipc_log_context_destroy(bam->ipc_log2);
+			ipc_log_context_destroy(bam->ipc_log3);
+			ipc_log_context_destroy(bam->ipc_log4);
 			if (virt_addr != NULL)
 				iounmap(bam->props.virt_addr);
 			kfree(bam);
