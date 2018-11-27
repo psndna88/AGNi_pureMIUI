@@ -70,3 +70,9 @@ choice
 
 endchoice
 
+config MACH_XIAOMI_KENZO_AGNI_PIE
+	bool "Support AGNi for Android Pie"
+	depends on MACH_XIAOMI_KENZO_AGNI_LOS_O
+	help
+	  Support for Xiaomi Redmi Note 3 AGNi Pie 9.x
+
