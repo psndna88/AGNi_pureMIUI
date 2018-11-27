@@ -9,13 +9,26 @@ rm -rf BUILT_kenzo-miuiMM BUILT_kenzo-miuiN BUILT_kenzo-losMM BUILT_kenzo-losN B
 echo "-----------------------------------------------------------------------"
 echo " "
 echo "          BATCH MODE: Building AGNi LOS-O treble variant..."
-# AGNI pureLOS-O
+# AGNI pureLOS-O treble
 rm drivers/staging/prima/wlan.ko
 ./build_kernel_kenzo_losO_treble.sh || exit 1
-#mv -f $KERNELDIR/BUILT_kenzo-losO $TEMP_DIR/
+#mv -f $KERNELDIR/BUILT_kenzo-losO_treble $TEMP_DIR/
 rm .config
 echo " "
 echo "          BATCH MODE: Built AGNi LOS-O treble variant!!!"
+echo "-----------------------------------------------------------------------"
+echo " "
+
+echo "-----------------------------------------------------------------------"
+echo " "
+echo "          BATCH MODE: Building AGNi PIE treble variant..."
+# AGNI purePIE treble
+rm drivers/staging/prima/wlan.ko
+./build_kernel_kenzo_pie_treble.sh || exit 1
+#mv -f $KERNELDIR/BUILT_kenzo-pie_treble $TEMP_DIR/
+rm .config
+echo " "
+echo "          BATCH MODE: Built AGNi PIE treble variant!!!"
 echo "-----------------------------------------------------------------------"
 echo " "
 
@@ -32,6 +45,15 @@ echo "          BATCH MODE: Built AGNi LOS-O variant!!!"
 echo "-----------------------------------------------------------------------"
 echo " "
 
+# AGNI purePIE
+rm drivers/staging/prima/wlan.ko
+./build_kernel_kenzo_pie.sh || exit 1
+#mv -f $KERNELDIR/BUILT_kenzo-losO $TEMP_DIR/
+rm .config
+echo " "
+echo "          BATCH MODE: Built AGNi PIE variant!!!"
+echo "-----------------------------------------------------------------------"
+echo " "
 echo "-----------------------------------------------------------------------"
 echo " "
 echo "          BATCH MODE: Building AGNi LOS-N variant..."

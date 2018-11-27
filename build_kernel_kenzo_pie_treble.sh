@@ -4,14 +4,14 @@ export KERNELDIR=`readlink -f .`
 . ~/WORKING_DIRECTORY/gcc-8.x-uber_aarch64.sh
 
 echo ""
-echo " Cross-compiling AGNi pureLOS-O treble kernel ..."
+echo " Cross-compiling AGNi purePIE treble kernel ..."
 echo ""
 
 cd $KERNELDIR/
 
 if [ ! -f $KERNELDIR/.config ];
 then
-    make agni_kenzo-losO_defconfig
+    make agni_kenzo-pie_defconfig
 fi
 
 rm $KERNELDIR/arch/arm/boot/dts/*.dtb
@@ -32,13 +32,13 @@ git checkout $KERNELDIR/arch/arm/boot/dts/qcom/kenzo/msm8956-kenzo.dtsi
 
 make -j4 || exit 1
 
-rm -rf $KERNELDIR/BUILT_kenzo-losO_treble
-mkdir -p $KERNELDIR/BUILT_kenzo-losO_treble
+rm -rf $KERNELDIR/BUILT_kenzo-pie_treble
+mkdir -p $KERNELDIR/BUILT_kenzo-pie_treble
 
-find -name '*.ko' -exec mv -v {} $KERNELDIR/BUILT_kenzo-losO_treble/ \;
+find -name '*.ko' -exec mv -v {} $KERNELDIR/BUILT_kenzo-pie_treble/ \;
 
-mv $KERNELDIR/arch/arm64/boot/Image.*-dtb $KERNELDIR/BUILT_kenzo-losO_treble/
+mv $KERNELDIR/arch/arm64/boot/Image.*-dtb $KERNELDIR/BUILT_kenzo-pie_treble/
 
 echo ""
-echo "AGNi pureLOS-O treble has been built for kenzo !!!"
+echo "AGNi purePIE treble has been built for kenzo !!!"
 
