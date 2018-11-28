@@ -97,9 +97,6 @@
 		coresight-child-list = <&funnel_in0>;
 		coresight-child-ports = <4>;
 
-		/* Enable POPP */
-		qcom,popp-enable;
-
 		/* Power levels  */
 		qcom,gpu-pwrlevels {
 			#address-cells = <1>;

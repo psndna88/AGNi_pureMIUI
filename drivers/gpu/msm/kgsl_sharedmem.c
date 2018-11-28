@@ -359,8 +359,6 @@ static int kgsl_page_alloc_vmfault(struct kgsl_memdesc *memdesc,
 			get_page(page);
 			vmf->page = page;
 
-			memdesc->mapsize += PAGE_SIZE;
-
 			return 0;
 		}
 
@@ -407,7 +405,7 @@ static void kgsl_page_alloc_free(struct kgsl_memdesc *memdesc)
 	/* Secure buffers need to be unlocked before being freed */
 	if (memdesc->priv & KGSL_MEMDESC_TZ_LOCKED) {
 		int ret;
-		int dest_perms = PERM_READ | PERM_WRITE | PERM_EXEC;
+		int dest_perms = PERM_READ | PERM_WRITE;
 		int source_vm = VMID_CP_PIXEL;
 		int dest_vm = VMID_HLOS;
 
@@ -523,8 +521,6 @@ static int kgsl_contiguous_vmfault(struct kgsl_memdesc *memdesc,
 		return VM_FAULT_OOM;
 	else if (ret == -EFAULT)
 		return VM_FAULT_SIGBUS;
-
-	memdesc->mapsize += PAGE_SIZE;
 
 	return VM_FAULT_NOPAGE;
 }
