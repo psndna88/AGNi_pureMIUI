@@ -136,5 +136,6 @@ extern int sysctl_schedstats(struct ctl_table *table, int write,
 extern char sched_lib_name[LIB_PATH_LENGTH];
 extern unsigned int sched_lib_mask_force;
 extern bool is_sched_lib_based_app(pid_t pid);
+extern unsigned long *sched_busy_hysteresis_cpubits;
 
 #endif /* _LINUX_SCHED_SYSCTL_H */
