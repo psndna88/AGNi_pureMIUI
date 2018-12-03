@@ -154,6 +154,69 @@ fail:
 }
 
 
+static int server_reset_serial(struct sigma_dut *dut, const char *serial)
+{
+	sqlite3 *db;
+	int res = -1;
+	char *sql = NULL;
+	const char *realm = "wi-fi.org";
+	const char *methods = "TLS";
+	int phase2 = 0;
+	int machine_managed = 1;
+	const char *remediation = "";
+	int fetch_pps = 0;
+	const char *osu_user = NULL;
+	const char *osu_password = NULL;
+	const char *policy = NULL;
+	char user[128];
+
+	snprintf(user, sizeof(user), "cert-%s", serial);
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "Reset user %s (serial number: %s)",
+			user, serial);
+
+	if (sqlite3_open(SERVER_DB, &db)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to open SQLite database %s",
+				SERVER_DB);
+		return -1;
+	}
+
+	if (strcmp(serial, "1046") == 0) {
+		remediation = "machine";
+	} else if (strcmp(serial, "1047") == 0) {
+		remediation = "user";
+	} else {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Unsupported serial number '%s'", serial);
+		goto fail;
+	}
+
+	sql = sqlite3_mprintf("INSERT OR REPLACE INTO users(identity,realm,methods,phase2,machine_managed,remediation,fetch_pps,osu_user,osu_password,policy) VALUES (%Q,%Q,%Q,%d,%d,%Q,%d,%Q,%Q,%Q)",
+			      user, realm, methods,
+			      phase2, machine_managed, remediation, fetch_pps,
+			      osu_user, osu_password, policy);
+
+	if (!sql)
+		goto fail;
+
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "SQL: %s", sql);
+
+	if (sqlite3_exec(db, sql, NULL, NULL, NULL) != SQLITE_OK) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "SQL operation failed: %s",
+				sqlite3_errmsg(db));
+	} else {
+		res = 0;
+	}
+
+	sqlite3_free(sql);
+
+fail:
+	sqlite3_close(db);
+
+	return res;
+}
+
+
 static int server_reset_cert_enroll(struct sigma_dut *dut, const char *addr)
 {
 	sqlite3 *db;
@@ -221,7 +284,10 @@ static int cmd_server_reset_default(struct sigma_dut *dut,
 	}
 
 	var = get_param(cmd, "SerialNo");
-	if (var) {
+	if (var && server_reset_serial(dut, var)) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Failed to reset user account to defaults");
+		return 0;
 		sigma_dut_print(dut, DUT_MSG_DEBUG, "Reset serial number %s",
 				var);
 		/* TODO */
