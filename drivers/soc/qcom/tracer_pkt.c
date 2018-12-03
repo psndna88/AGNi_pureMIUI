@@ -170,7 +170,7 @@ int tracer_pkt_log_event(void *data, uint32_t event_id)
 		return -EINVAL;
 
 	if (qdss_tracing) {
-		trace_tracer_pkt_event(event_id, pkt_hdr->cc);
+//		trace_tracer_pkt_event(event_id, pkt_hdr->cc);
 		return 0;
 	}
 

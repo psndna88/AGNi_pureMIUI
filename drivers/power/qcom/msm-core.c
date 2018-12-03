@@ -195,8 +195,8 @@ static void core_temp_notify(enum thermal_trip_type type,
 
 	temp /= scaling_factor;
 
-	trace_temp_notification(cpu_node->sensor_id,
-		type, temp, cpu_node->temp);
+//	trace_temp_notification(cpu_node->sensor_id,
+//		type, temp, cpu_node->temp);
 
 	cpu_node->temp = temp;
 
@@ -225,8 +225,8 @@ static void repopulate_stats(int cpu)
 	for (i = 0; i < cpu_node->sp->num_of_freqs; i++)
 		pt[i].power = cpu_node->sp->power[temp_point][i];
 
-	trace_cpu_stats(cpu, cpu_stats[cpu].temp, pt[0].power,
-			pt[cpu_node->sp->num_of_freqs-1].power);
+//	trace_cpu_stats(cpu, cpu_stats[cpu].temp, pt[0].power,
+//			pt[cpu_node->sp->num_of_freqs-1].power);
 };
 
 void trigger_cpu_pwr_stats_calc(void)
@@ -331,11 +331,11 @@ static __ref int do_sampling(void *data)
 			if (prev_temp[cpu] != cpu_node->temp) {
 				prev_temp[cpu] = cpu_node->temp;
 				set_threshold(cpu_node);
-				trace_temp_threshold(cpu, cpu_node->temp,
-					cpu_node->hi_threshold.temp /
-					scaling_factor,
-					cpu_node->low_threshold.temp /
-					scaling_factor);
+//				trace_temp_threshold(cpu, cpu_node->temp,
+//					cpu_node->hi_threshold.temp /
+//					scaling_factor,
+//					cpu_node->low_threshold.temp /
+//					scaling_factor);
 			}
 		}
 		if (!poll_ms)
