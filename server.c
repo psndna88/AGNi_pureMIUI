@@ -805,7 +805,7 @@ static int osu_set_cert_reenroll(struct sigma_dut *dut, const char *serial,
 
 	snprintf(id, sizeof(id), "cert-%s", serial);
 	sql = sqlite3_mprintf("UPDATE users SET remediation=%Q WHERE lower(identity)=lower(%Q)",
-			      enable ? "machine" : "", id);
+			      enable ? "reenroll" : "", id);
 	if (!sql)
 		goto fail;
 	sigma_dut_print(dut, DUT_MSG_DEBUG, "SQL: %s", sql);
