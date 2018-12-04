@@ -2,7 +2,12 @@
 # Generic algorithms support
 #
 config XOR_BLOCKS
-	tristate
+	bool "NEON accelerated XOR implementation"
+	default y
+	depends on KERNEL_MODE_NEON
+	help
+	  This is a NEON acceleration method that can improve
+	  performance by approximately 20%.
 
 #
 # async_tx api: hardware offloaded memory transfer/transform support
