@@ -30,6 +30,7 @@
 #include <sound/pcm_params.h>
 #include <sound/info.h>
 #include <soc/snd_event.h>
+#include <soc/qcom/socinfo.h>
 #include <dsp/q6afe-v2.h>
 #include <dsp/q6core.h>
 #include "device_event.h"
@@ -42,7 +43,7 @@
 #include "codecs/bolero/bolero-cdc.h"
 #include <dt-bindings/sound/audio-codec-port-types.h>
 #include "codecs/bolero/wsa-macro.h"
-#include "codecs/wcd937x/internal.h"
+#include "codecs/wcd937x/wcd937x.h"
 
 #define DRV_NAME "sm6150-asoc-snd"
 
@@ -78,6 +79,9 @@
 #define ADSP_STATE_READY_TIMEOUT_MS 3000
 #define MSM_LL_QOS_VALUE 300 /* time in us to ensure LPM doesn't go in C3/C4 */
 #define MSM_HIFI_ON 1
+
+#define SM6150_SOC_VERSION_1_0 0x00010000
+#define SM6150_SOC_MSM_ID 0x163
 
 enum {
 	SLIM_RX_0 = 0,
@@ -4925,6 +4929,19 @@ static int msm_int_audrx_init(struct snd_soc_pcm_runtime *rtd)
 		pdata->codec_root = entry;
 	}
 	bolero_info_create_codec_entry(pdata->codec_root, codec);
+	/*
+	 * SM6150 MSM 1.0 doesn't have hardware wake up interrupt line
+	 * from AOSS to APSS. So, it uses SW workaround and listens to
+	 * interrupt from AFE over IPC.
+	 * Check for MSM version and MSM ID and register wake irq
+	 * accordingly to provide compatibility to all chipsets.
+	 */
+	if (socinfo_get_id() == SM6150_SOC_MSM_ID &&
+	    socinfo_get_version() == SM6150_SOC_VERSION_1_0)
+		bolero_register_wake_irq(codec, true);
+	else
+		bolero_register_wake_irq(codec, false);
+
 	codec_reg_done = true;
 	return 0;
 err:
@@ -8018,8 +8035,8 @@ static int msm_init_aux_dev(struct platform_device *pdev,
 	u32 wsa_dev_cnt;
 	u32 codec_aux_dev_cnt = 0;
 	int i;
-	struct msm_wsa881x_dev_info *wsa881x_dev_info;
-	struct aux_codec_dev_info *aux_cdc_dev_info;
+	struct msm_wsa881x_dev_info *wsa881x_dev_info = NULL;
+	struct aux_codec_dev_info *aux_cdc_dev_info = NULL;
 	const char *auxdev_name_prefix[1];
 	char *dev_name_str = NULL;
 	int found = 0;
