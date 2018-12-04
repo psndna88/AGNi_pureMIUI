@@ -17,6 +17,11 @@ obj-$(CONFIG_ARM64_LSE_ATOMICS) += atomic_ll_sc.o
 else
 lib-$(CONFIG_ARM64_LSE_ATOMICS) += atomic_ll_sc.o
 endif
+ifeq ($(CONFIG_KERNEL_MODE_NEON), y)
+obj-$(CONFIG_XOR_BLOCKS)	+= xor-neon.o
+CFLAGS_REMOVE_xor-neon.o	+= -mgeneral-regs-only
+CFLAGS_xor-neon.o		+= -ffreestanding
+endif
 CFLAGS_atomic_ll_sc.o	:= -ffixed-x1 -ffixed-x2        		\
 		   -ffixed-x3 -ffixed-x4 -ffixed-x5 -ffixed-x6		\
 		   -ffixed-x7 -fcall-saved-x8 -fcall-saved-x9		\
