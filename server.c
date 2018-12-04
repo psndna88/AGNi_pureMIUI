@@ -602,7 +602,7 @@ static int osu_remediation_status(struct sigma_dut *dut,
 		else
 			remediation = get_user_field(dut, db, username,
 						     "remediation");
-		if (remediation && remediation[0] == '\0') {
+		if (!remediation || (remediation && remediation[0] == '\0')) {
 			snprintf(resp, sizeof(resp),
 				 "RemediationStatus,Remediation Complete");
 			break;
