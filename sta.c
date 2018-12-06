@@ -3975,7 +3975,19 @@ static int cmd_sta_preset_testparameters(struct sigma_dut *dut,
 
 	val = get_param(cmd, "Powersave");
 	if (val) {
+		char buf[60];
+
 		if (strcmp(val, "0") == 0 || strcasecmp(val, "off") == 0) {
+			if (get_driver_type() == DRIVER_WCN) {
+				snprintf(buf, sizeof(buf),
+					 "iwpriv %s setPower 2", intf);
+				if (system(buf) != 0) {
+					sigma_dut_print(dut, DUT_MSG_ERROR,
+							"iwpriv setPower 2 failed");
+					return 0;
+				}
+			}
+
 			if (wpa_command(get_station_ifname(),
 					"P2P_SET ps 0") < 0)
 				return -2;
@@ -3985,6 +3997,15 @@ static int cmd_sta_preset_testparameters(struct sigma_dut *dut,
 		} else if (strcmp(val, "1") == 0 ||
 			   strcasecmp(val, "PSPoll") == 0 ||
 			   strcasecmp(val, "on") == 0) {
+			if (get_driver_type() == DRIVER_WCN) {
+				snprintf(buf, sizeof(buf),
+					 "iwpriv %s setPower 1", intf);
+				if (system(buf) != 0) {
+					sigma_dut_print(dut, DUT_MSG_ERROR,
+							"iwpriv setPower 1 failed");
+					return 0;
+				}
+			}
 			/* Disable default power save mode */
 			wpa_command(get_station_ifname(), "P2P_SET ps 0");
 			/* Enable PS-Poll test mode */
@@ -6380,6 +6401,13 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 		if (system(buf) != 0) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"iwpriv %s ldpc 1 failed", intf);
+		}
+
+		/* reset the power save setting */
+		snprintf(buf, sizeof(buf), "iwpriv %s setPower 2", intf);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"iwpriv %s  setPower 2 failed", intf);
 		}
 
 		/* remove all network profiles */
