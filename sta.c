@@ -6451,7 +6451,10 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 					"Set LTF config to default in sta_reset_default_wcn failed");
 		}
 
-		if (sta_set_beamformee_sts(dut, intf, 0)) {
+		/* set the beamformee NSTS(maximum number of
+		 * space-time streams) to default DUT config
+		 */
+		if (sta_set_beamformee_sts(dut, intf, 7)) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Failed to set BeamformeeSTS");
 		}
@@ -6528,6 +6531,15 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 				sigma_dut_print(dut, DUT_MSG_ERROR,
 						"Setting of HE fragmentation failed");
 			}
+
+			/* set the beamformee NSTS(maximum number of
+			 * space-time streams) to default testbed config
+			 */
+			if (sta_set_beamformee_sts(dut, intf, 3)) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"Failed to set BeamformeeSTS");
+			}
+
 #endif /* NL80211_SUPPORT */
 
 			/* Enable WEP/TKIP with HE capability in testbed */
