@@ -255,6 +255,43 @@ static int server_reset_cert_enroll(struct sigma_dut *dut, const char *addr)
 }
 
 
+static int server_reset_imsi(struct sigma_dut *dut, const char *imsi)
+{
+	sqlite3 *db;
+	char *sql;
+
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "Reset policy provisioning for %s",
+			imsi);
+
+	if (sqlite3_open(SERVER_DB, &db)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to open SQLite database %s",
+				SERVER_DB);
+		return -1;
+	}
+	sql = sqlite3_mprintf("DELETE FROM users WHERE identity=%Q", imsi);
+	if (!sql) {
+		sqlite3_close(db);
+		return -1;
+	}
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "SQL: %s", sql);
+
+	if (sqlite3_exec(db, sql, NULL, NULL, NULL) != SQLITE_OK) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"SQL operation failed: %s",
+				sqlite3_errmsg(db));
+		sqlite3_free(sql);
+		sqlite3_close(db);
+		return -1;
+	}
+
+	sqlite3_free(sql);
+	sqlite3_close(db);
+
+	return 0;
+}
+
+
 static int cmd_server_reset_default(struct sigma_dut *dut,
 				    struct sigma_conn *conn,
 				    struct sigma_cmd *cmd)
@@ -294,6 +331,13 @@ static int cmd_server_reset_default(struct sigma_dut *dut,
 	if (var && server_reset_cert_enroll(dut, var) < 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Failed to reset cert enroll to defaults");
+		return 0;
+	}
+
+	var = get_param(cmd, "imsi_val");
+	if (var && server_reset_imsi(dut, var) < 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Failed to reset IMSI/SIM user");
 		return 0;
 	}
 
