@@ -746,6 +746,43 @@ done:
 }
 
 
+static int osu_sim_policy_provisioning_status(struct sigma_dut *dut,
+					      struct sigma_conn *conn,
+					      const char *imsi, int timeout)
+{
+	sqlite3 *db;
+	int i;
+	char resp[500];
+	char *id = NULL;
+
+	if (sqlite3_open(SERVER_DB, &db)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to open SQLite database %s",
+				SERVER_DB);
+		return -1;
+	}
+
+	snprintf(resp, sizeof(resp), "PolicyProvisioning,TIMEOUT");
+
+	for (i = 0; i < timeout; i++) {
+		free(id);
+		id = get_user_field(dut, db, imsi, "identity");
+		if (id) {
+			snprintf(resp, sizeof(resp),
+				 "PolicyProvisioning,Provisioning Complete");
+			break;
+		}
+		sleep(1);
+	}
+
+	free(id);
+	sqlite3_close(db);
+
+	send_resp(dut, conn, SIGMA_COMPLETE, resp);
+	return 0;
+}
+
+
 static int cmd_server_request_status(struct sigma_dut *dut,
 				     struct sigma_conn *conn,
 				     struct sigma_cmd *cmd)
@@ -824,6 +861,11 @@ static int cmd_server_request_status(struct sigma_dut *dut,
 
 	if (osu && status && strcasecmp(status, "OSU") == 0 && addr)
 		return osu_cert_enroll_status(dut, conn, cmd, addr, timeout);
+
+	if (osu && status && strcasecmp(status, "PolicyProvisioning") == 0 &&
+	    imsi)
+		return osu_sim_policy_provisioning_status(dut, conn, imsi,
+							  timeout);
 
 	return 1;
 }
