@@ -14,6 +14,7 @@ device.name2=o
 device.name3=s
 device.name4=kate
 device.name5=
+supported.versions=
 '; } # end properties
 
 # shell variables
