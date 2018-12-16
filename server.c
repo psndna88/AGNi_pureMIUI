@@ -288,9 +288,6 @@ static int cmd_server_reset_default(struct sigma_dut *dut,
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Failed to reset user account to defaults");
 		return 0;
-		sigma_dut_print(dut, DUT_MSG_DEBUG, "Reset serial number %s",
-				var);
-		/* TODO */
 	}
 
 	var = get_param(cmd, "ClientMACAddr");
