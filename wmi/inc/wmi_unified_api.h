@@ -200,7 +200,18 @@ wmi_buf_t
 wmi_buf_alloc_debug(wmi_unified_t wmi_handle, uint16_t len,
 		    uint8_t *file_name, uint32_t line_num);
 #else
-wmi_buf_t wmi_buf_alloc(wmi_unified_t wmi_handle, uint16_t len);
+/**
+ * wmi_buf_alloc() - generic function to allocate WMI buffer
+ * @wmi_handle: handle to WMI.
+ * @len: length of the buffer
+ *
+ * Return: return wmi_buf_t or null if memory alloc fails
+ */
+#define wmi_buf_alloc(wmi_handle, len) \
+	wmi_buf_alloc_fl(wmi_handle, len, __func__, __LINE__)
+
+wmi_buf_t wmi_buf_alloc_fl(wmi_unified_t wmi_handle, uint32_t len,
+			   const char *func, uint32_t line);
 #endif
 
 /**
@@ -406,6 +417,18 @@ QDF_STATUS wmi_unified_vdev_create_send(void *wmi_hdl,
 
 QDF_STATUS wmi_unified_vdev_delete_send(void *wmi_hdl,
 					  uint8_t if_id);
+
+/**
+ * wmi_unified_vdev_nss_chain_params_send() - send VDEV nss chain params to fw
+ * @wmi_handle: wmi handle
+ * @vdev_id: vdev id
+ * @nss_chains_user_cfg: user configured params to send
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS wmi_unified_vdev_nss_chain_params_send(void *wmi_hdl,
+			uint8_t vdev_id,
+			struct mlme_nss_chains *nss_chains_user_cfg);
 
 QDF_STATUS wmi_unified_vdev_stop_send(void *wmi_hdl,
 					uint8_t vdev_id);

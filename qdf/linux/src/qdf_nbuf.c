@@ -41,6 +41,7 @@
 #include <qdf_atomic.h>
 #include <pld_common.h>
 #include <qdf_module.h>
+#include "qdf_str.h"
 
 #if defined(FEATURE_TSO)
 #include <net/ipv6.h>
@@ -353,24 +354,10 @@ void __qdf_nbuf_count_dec(__qdf_nbuf_t nbuf)
 qdf_export_symbol(__qdf_nbuf_count_dec);
 #endif
 
-
-/**
- * __qdf_nbuf_alloc() - Allocate nbuf
- * @hdl: Device handle
- * @size: Netbuf requested size
- * @reserve: headroom to start with
- * @align: Align
- * @prio: Priority
- *
- * This allocates an nbuf aligns if needed and reserves some space in the front,
- * since the reserve is done after alignment the reserve value if being
- * unaligned will result in an unaligned address.
- *
- * Return: nbuf or %NULL if no memory
- */
 #if defined(QCA_WIFI_QCA8074) && defined (BUILD_X86)
 struct sk_buff *__qdf_nbuf_alloc(qdf_device_t osdev, size_t size, int reserve,
-			 int align, int prio)
+				 int align, int prio, const char *func,
+				 uint32_t line)
 {
 	struct sk_buff *skb;
 	unsigned long offset;
@@ -388,7 +375,8 @@ realloc:
 	skb = pld_nbuf_pre_alloc(size);
 
 	if (!skb) {
-		pr_info("ERROR:NBUF alloc failed\n");
+		qdf_nofl_err("NBUF alloc failed %zuB @ %s:%d",
+			     size, func, line);
 		return NULL;
 	}
 
@@ -400,7 +388,8 @@ skb_alloc:
 	if (virt_to_phys(qdf_nbuf_data(skb)) < 0x50000040) {
 		lowmem_alloc_tries++;
 		if (lowmem_alloc_tries > 100) {
-			qdf_print("%s Failed \n",__func__);
+			qdf_nofl_err("NBUF alloc failed %zuB @ %s:%d",
+				     size, func, line);
 			return NULL;
 		} else {
 			/* Not freeing to make sure it
@@ -440,7 +429,8 @@ skb_alloc:
 }
 #else
 struct sk_buff *__qdf_nbuf_alloc(qdf_device_t osdev, size_t size, int reserve,
-			 int align, int prio)
+				 int align, int prio, const char *func,
+				 uint32_t line)
 {
 	struct sk_buff *skb;
 	unsigned long offset;
@@ -470,8 +460,8 @@ struct sk_buff *__qdf_nbuf_alloc(qdf_device_t osdev, size_t size, int reserve,
 	skb = pld_nbuf_pre_alloc(size);
 
 	if (!skb) {
-		pr_err_ratelimited("ERROR:NBUF alloc failed, size = %zu\n",
-				   size);
+		qdf_rl_nofl_err("NBUF alloc failed %zuB @ %s:%d",
+				size, func, line);
 		__qdf_nbuf_start_replenish_timer();
 		return NULL;
 	} else {
@@ -546,6 +536,7 @@ qdf_export_symbol(__qdf_nbuf_free);
 #ifdef NBUF_MEMORY_DEBUG
 enum qdf_nbuf_event_type {
 	QDF_NBUF_ALLOC,
+	QDF_NBUF_ALLOC_FAILURE,
 	QDF_NBUF_FREE,
 	QDF_NBUF_MAP,
 	QDF_NBUF_UNMAP,
@@ -553,7 +544,7 @@ enum qdf_nbuf_event_type {
 
 struct qdf_nbuf_event {
 	qdf_nbuf_t nbuf;
-	const char *file;
+	char file[QDF_MEM_FILE_NAME_SIZE];
 	uint32_t line;
 	enum qdf_nbuf_event_type type;
 	uint64_t timestamp;
@@ -582,7 +573,7 @@ qdf_nbuf_history_add(qdf_nbuf_t nbuf, const char *file, uint32_t line,
 	struct qdf_nbuf_event *event = &qdf_nbuf_history[idx];
 
 	event->nbuf = nbuf;
-	event->file = file;
+	qdf_str_lcopy(event->file, kbasename(file), QDF_MEM_FILE_NAME_SIZE);
 	event->line = line;
 	event->type = type;
 	event->timestamp = qdf_get_log_timestamp();
@@ -593,7 +584,7 @@ qdf_nbuf_history_add(qdf_nbuf_t nbuf, const char *file, uint32_t line,
 struct qdf_nbuf_map_metadata {
 	struct hlist_node node;
 	qdf_nbuf_t nbuf;
-	const char *file;
+	char file[QDF_MEM_FILE_NAME_SIZE];
 	uint32_t line;
 };
 
@@ -639,7 +630,7 @@ void qdf_nbuf_map_check_for_leaks(void)
 	hash_for_each(qdf_nbuf_map_ht, bucket, meta, node) {
 		count++;
 		qdf_err("0x%pk @ %s:%u",
-			meta->nbuf, kbasename(meta->file), meta->line);
+			meta->nbuf, meta->file, meta->line);
 	}
 	qdf_spin_unlock_irqrestore(&qdf_nbuf_map_lock);
 
@@ -691,7 +682,7 @@ qdf_nbuf_track_map(qdf_nbuf_t nbuf, const char *file, uint32_t line)
 	}
 
 	meta->nbuf = nbuf;
-	meta->file = file;
+	qdf_str_lcopy(meta->file, kbasename(file), QDF_MEM_FILE_NAME_SIZE);
 	meta->line = line;
 
 	qdf_spin_lock_irqsave(&qdf_nbuf_map_lock);
@@ -2120,7 +2111,7 @@ qdf_export_symbol(__qdf_nbuf_is_bcast_pkt);
 struct qdf_nbuf_track_t {
 	struct qdf_nbuf_track_t *p_next;
 	qdf_nbuf_t net_buf;
-	uint8_t *file_name;
+	char file_name[QDF_MEM_FILE_NAME_SIZE];
 	uint32_t line_num;
 	size_t size;
 };
@@ -2506,13 +2497,14 @@ void qdf_net_buf_debug_add_node(qdf_nbuf_t net_buf, size_t size,
 	if (p_node) {
 		qdf_print("Double allocation of skb ! Already allocated from %pK %s %d current alloc from %pK %s %d",
 			  p_node->net_buf, p_node->file_name, p_node->line_num,
-			  net_buf, file_name, line_num);
+			  net_buf, kbasename(file_name), line_num);
 		qdf_nbuf_track_free(new_node);
 	} else {
 		p_node = new_node;
 		if (p_node) {
 			p_node->net_buf = net_buf;
-			p_node->file_name = file_name;
+			qdf_str_lcopy(p_node->file_name, kbasename(file_name),
+				      QDF_MEM_FILE_NAME_SIZE);
 			p_node->line_num = line_num;
 			p_node->size = size;
 			qdf_mem_skb_inc(size);
@@ -2521,12 +2513,35 @@ void qdf_net_buf_debug_add_node(qdf_nbuf_t net_buf, size_t size,
 		} else
 			qdf_print(
 				  "Mem alloc failed ! Could not track skb from %s %d of size %zu",
-				  file_name, line_num, size);
+				  kbasename(file_name), line_num, size);
 	}
 
 	spin_unlock_irqrestore(&g_qdf_net_buf_track_lock[i], irq_flag);
 }
 qdf_export_symbol(qdf_net_buf_debug_add_node);
+
+void qdf_net_buf_debug_update_node(qdf_nbuf_t net_buf, uint8_t *file_name,
+				   uint32_t line_num)
+{
+	uint32_t i;
+	unsigned long irq_flag;
+	QDF_NBUF_TRACK *p_node;
+
+	i = qdf_net_buf_debug_hash(net_buf);
+	spin_lock_irqsave(&g_qdf_net_buf_track_lock[i], irq_flag);
+
+	p_node = qdf_net_buf_debug_look_up(net_buf);
+
+	if (p_node) {
+		qdf_str_lcopy(p_node->file_name, kbasename(file_name),
+			      QDF_MEM_FILE_NAME_SIZE);
+		p_node->line_num = line_num;
+	}
+
+	spin_unlock_irqrestore(&g_qdf_net_buf_track_lock[i], irq_flag);
+}
+
+qdf_export_symbol(qdf_net_buf_debug_update_node);
 
 /**
  * qdf_net_buf_debug_delete_node() - remove skb from debug hash table
@@ -2647,12 +2662,14 @@ qdf_nbuf_t qdf_nbuf_alloc_debug(qdf_device_t osdev, qdf_size_t size,
 {
 	qdf_nbuf_t nbuf;
 
-	nbuf = __qdf_nbuf_alloc(osdev, size, reserve, align, prio);
+	nbuf = __qdf_nbuf_alloc(osdev, size, reserve, align, prio, file, line);
 
 	/* Store SKB in internal QDF tracking table */
 	if (qdf_likely(nbuf)) {
 		qdf_net_buf_debug_add_node(nbuf, size, file, line);
 		qdf_nbuf_history_add(nbuf, file, line, QDF_NBUF_ALLOC);
+	} else {
+		qdf_nbuf_history_add(nbuf, file, line, QDF_NBUF_ALLOC_FAILURE);
 	}
 
 	return nbuf;

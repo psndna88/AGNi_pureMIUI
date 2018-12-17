@@ -50,6 +50,8 @@
 	p2p_logl(QDF_TRACE_LEVEL_ERROR, format, ## args)
 #define p2p_alert(format, args ...) \
 	p2p_logl(QDF_TRACE_LEVEL_FATAL, format, ## args)
+#define p2p_debug_rl(params...) \
+	QDF_TRACE_DEBUG_RL(QDF_MODULE_ID_P2P, params)
 
 struct scheduler_msg;
 struct p2p_tx_cnf;
@@ -327,6 +329,26 @@ QDF_STATUS p2p_process_cmd(struct scheduler_msg *msg);
  * Return: QDF_STATUS_SUCCESS - in case of success
  */
 QDF_STATUS p2p_process_evt(struct scheduler_msg *msg);
+
+/**
+ * p2p_msg_flush_callback() - Callback used to flush P2P messages
+ * @msg: message information
+ *
+ * This callback will be called when scheduler flush some of P2P messages.
+ *
+ * Return: QDF_STATUS_SUCCESS - in case of success
+ */
+QDF_STATUS p2p_msg_flush_callback(struct scheduler_msg *msg);
+
+/**
+ * p2p_event_flush_callback() - Callback used to flush P2P events
+ * @msg: event information
+ *
+ * This callback will be called when scheduler flush some of P2P events.
+ *
+ * Return: QDF_STATUS_SUCCESS - in case of success
+ */
+QDF_STATUS p2p_event_flush_callback(struct scheduler_msg *msg);
 
 /**
  * p2p_process_lo_stop() - Process lo stop event

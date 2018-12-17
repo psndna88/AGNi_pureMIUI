@@ -206,11 +206,23 @@ tdls_internal_send_mgmt_tx_done(struct tdls_action_frame_request *req,
 
 	indication.status = status;
 	indication.vdev = req->vdev;
-
 	tdls_soc_obj = wlan_vdev_get_tdls_soc_obj(req->vdev);
 	if (tdls_soc_obj && tdls_soc_obj->tdls_event_cb)
 		tdls_soc_obj->tdls_event_cb(tdls_soc_obj->tdls_evt_cb_data,
 			TDLS_EVENT_MGMT_TX_ACK_CNF, &indication);
+	return QDF_STATUS_SUCCESS;
+}
+
+static QDF_STATUS tdls_activate_send_mgmt_request_flush_cb(
+	struct scheduler_msg *msg)
+{
+	struct tdls_send_mgmt_request *tdls_mgmt_req;
+
+	tdls_mgmt_req = msg->bodyptr;
+
+	qdf_mem_free(tdls_mgmt_req);
+	msg->bodyptr = NULL;
+
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -226,15 +238,10 @@ static QDF_STATUS tdls_activate_send_mgmt_request(
 	if (!action_req || !action_req->vdev)
 		return QDF_STATUS_E_NULL_VALUE;
 
-	if (QDF_STATUS_SUCCESS != wlan_objmgr_vdev_try_get_ref(action_req->vdev,
-						WLAN_TDLS_SB_ID))
-		return QDF_STATUS_E_NULL_VALUE;
-
-
 	tdls_soc_obj = wlan_vdev_get_tdls_soc_obj(action_req->vdev);
 	if (!tdls_soc_obj) {
 		status = QDF_STATUS_E_NULL_VALUE;
-		goto release_mgmt_ref;
+		goto release_cmd;
 	}
 
 	tdls_mgmt_req = qdf_mem_malloc(sizeof(struct tdls_send_mgmt_request) +
@@ -243,7 +250,7 @@ static QDF_STATUS tdls_activate_send_mgmt_request(
 		status = QDF_STATUS_E_NOMEM;
 		tdls_err("mem alloc failed ");
 		QDF_ASSERT(0);
-		goto release_mgmt_ref;
+		goto release_cmd;
 	}
 
 	tdls_debug("session_id %d "
@@ -272,10 +279,10 @@ static QDF_STATUS tdls_activate_send_mgmt_request(
 
 	peer = wlan_vdev_get_bsspeer(action_req->vdev);
 
-	if (QDF_STATUS_SUCCESS != wlan_objmgr_peer_try_get_ref(peer,
-							WLAN_TDLS_SB_ID)) {
+	status =  wlan_objmgr_peer_try_get_ref(peer, WLAN_TDLS_SB_ID);
+	if (QDF_IS_STATUS_ERROR(status)) {
 		qdf_mem_free(tdls_mgmt_req);
-		goto release_mgmt_ref;
+		goto release_cmd;
 	}
 
 	qdf_mem_copy(tdls_mgmt_req->bssid.bytes,
@@ -304,15 +311,26 @@ static QDF_STATUS tdls_activate_send_mgmt_request(
 
 	msg.type = tdls_soc_obj->tdls_send_mgmt_req;
 	msg.bodyptr = tdls_mgmt_req;
+	msg.flush_callback = tdls_activate_send_mgmt_request_flush_cb;
 
-	status = scheduler_post_msg(QDF_MODULE_ID_PE, &msg);
+	status = scheduler_post_message(QDF_MODULE_ID_TDLS,
+					QDF_MODULE_ID_TDLS,
+					QDF_MODULE_ID_PE, &msg);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		tdls_err("failed to post msg, status %d", status);
+		qdf_mem_free(tdls_mgmt_req);
+	}
 
 	wlan_objmgr_peer_release_ref(peer, WLAN_TDLS_SB_ID);
-release_mgmt_ref:
-	wlan_objmgr_vdev_release_ref(action_req->vdev, WLAN_TDLS_SB_ID);
 
+release_cmd:
 	/*update tdls nss infornation based on action code */
 	tdls_reset_nss(tdls_soc_obj, action_req->chk_frame->action_code);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		tdls_internal_send_mgmt_tx_done(action_req, status);
+		tdls_release_serialization_command(action_req->vdev,
+						   WLAN_SER_CMD_TDLS_SEND_MGMT);
+	}
 
 	return status;
 }
@@ -346,13 +364,13 @@ tdls_send_mgmt_serialize_callback(struct wlan_serialization_command *cmd,
 		 */
 		status = tdls_internal_send_mgmt_tx_done(req,
 				QDF_STATUS_E_FAILURE);
-		qdf_mem_free(req);
 		break;
 
 	case WLAN_SER_CB_RELEASE_MEM_CMD:
 		/* command successfully completed.
 		 * release tdls_action_frame_request memory
 		 */
+		wlan_objmgr_vdev_release_ref(req->vdev, WLAN_TDLS_NB_ID);
 		qdf_mem_free(req);
 		break;
 
@@ -378,8 +396,7 @@ QDF_STATUS tdls_process_mgmt_req(
 	if (status != QDF_STATUS_SUCCESS) {
 		status = tdls_internal_send_mgmt_tx_done(tdls_mgmt_req,
 							 status);
-		qdf_mem_free(tdls_mgmt_req);
-		return status;
+		goto error_mgmt;
 	}
 
 	/* update the responder, status code information
@@ -415,14 +432,17 @@ QDF_STATUS tdls_process_mgmt_req(
 	case WLAN_SER_CMD_DENIED_LIST_FULL:
 	case WLAN_SER_CMD_DENIED_RULES_FAILED:
 	case WLAN_SER_CMD_DENIED_UNSPECIFIED:
-		/* free the request */
-		qdf_mem_free(tdls_mgmt_req);
-		break;
-
+		status = QDF_STATUS_E_FAILURE;
+		goto error_mgmt;
 	default:
 		QDF_ASSERT(0);
 		status = QDF_STATUS_E_INVAL;
-		break;
+		goto error_mgmt;
 	}
+	return status;
+
+error_mgmt:
+	wlan_objmgr_vdev_release_ref(tdls_mgmt_req->vdev, WLAN_TDLS_NB_ID);
+	qdf_mem_free(tdls_mgmt_req);
 	return status;
 }

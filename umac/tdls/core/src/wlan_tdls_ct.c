@@ -1121,6 +1121,15 @@ int tdls_set_tdls_offchannelmode(struct wlan_objmgr_vdev *vdev,
 	return ret_value;
 }
 
+static QDF_STATUS tdls_delete_all_tdls_peers_flush_cb(struct scheduler_msg *msg)
+{
+	if (msg && msg->bodyptr) {
+		qdf_mem_free(msg->bodyptr);
+		msg->bodyptr = NULL;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
 /**
  * tdls_delete_all_tdls_peers(): send request to delete tdls peers
  * @vdev: vdev object
@@ -1166,8 +1175,15 @@ QDF_STATUS tdls_delete_all_tdls_peers(struct wlan_objmgr_vdev *vdev,
 
 	msg.type = del_msg->msg_type;
 	msg.bodyptr = del_msg;
+	msg.flush_callback = tdls_delete_all_tdls_peers_flush_cb;
 
-	status = scheduler_post_msg(QDF_MODULE_ID_PE, &msg);
+	status = scheduler_post_message(QDF_MODULE_ID_TDLS,
+					QDF_MODULE_ID_PE,
+					QDF_MODULE_ID_PE, &msg);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		tdls_err("post delete all peer req failed, status %d", status);
+		qdf_mem_free(del_msg);
+	}
 
 	wlan_objmgr_peer_release_ref(peer, WLAN_TDLS_SB_ID);
 	return status;
@@ -1183,6 +1199,7 @@ void tdls_disable_offchan_and_teardown_links(
 	struct tdls_soc_priv_obj *tdls_soc;
 	QDF_STATUS status;
 	uint8_t vdev_id;
+	bool tdls_in_progress = false;
 
 	status = tdls_get_vdev_objects(vdev, &tdls_vdev, &tdls_soc);
 	if (QDF_STATUS_SUCCESS != status) {
@@ -1197,9 +1214,11 @@ void tdls_disable_offchan_and_teardown_links(
 	}
 
 	connected_tdls_peers = tdls_soc->connected_peer_count;
+	if (tdls_is_progress(tdls_vdev, NULL, 0))
+		tdls_in_progress = true;
 
-	if (!connected_tdls_peers) {
-		tdls_notice("No TDLS connected peers to delete");
+	if (!(connected_tdls_peers || tdls_in_progress)) {
+		tdls_notice("No TDLS connected/progress peers to delete");
 		vdev_id = vdev->vdev_objmgr.vdev_id;
 		if (tdls_soc->set_state_info.set_state_cnt > 0) {
 			tdls_debug("Disable the tdls in FW as second interface is coming up");

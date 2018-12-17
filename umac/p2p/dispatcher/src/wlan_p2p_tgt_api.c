@@ -149,15 +149,18 @@ QDF_STATUS tgt_p2p_mgmt_ota_comp_cb(void *context, qdf_nbuf_t buf,
 	msg.type = P2P_EVENT_MGMT_TX_ACK_CNF;
 	msg.bodyptr = tx_conf_event;
 	msg.callback = p2p_process_evt;
-	ret = scheduler_post_msg(QDF_MODULE_ID_TARGET_IF, &msg);
-	if (ret != QDF_STATUS_SUCCESS) {
+	msg.flush_callback = p2p_event_flush_callback;
+	ret = scheduler_post_message(QDF_MODULE_ID_P2P,
+				     QDF_MODULE_ID_P2P,
+				     QDF_MODULE_ID_TARGET_IF,
+				     &msg);
+	if (QDF_IS_STATUS_ERROR(ret)) {
 		qdf_mem_free(tx_conf_event);
-		qdf_mem_free(buf);
-		p2p_err("failed to post message");
-		return status;
+		qdf_nbuf_free(buf);
+		p2p_err("post msg fail:%d", status);
 	}
 
-	return QDF_STATUS_SUCCESS;
+	return ret;
 }
 
 QDF_STATUS tgt_p2p_mgmt_frame_rx_cb(struct wlan_objmgr_psoc *psoc,
@@ -172,6 +175,7 @@ QDF_STATUS tgt_p2p_mgmt_frame_rx_cb(struct wlan_objmgr_psoc *psoc,
 	struct wlan_objmgr_vdev *vdev;
 	uint32_t vdev_id;
 	uint8_t *pdata;
+	QDF_STATUS status;
 
 	p2p_debug("psoc:%pK, peer:%pK, type:%d", psoc, peer, frm_type);
 
@@ -207,17 +211,17 @@ QDF_STATUS tgt_p2p_mgmt_frame_rx_cb(struct wlan_objmgr_psoc *psoc,
 		vdev_id = wlan_vdev_get_id(vdev);
 	}
 
-	rx_mgmt_event = qdf_mem_malloc(sizeof(*rx_mgmt_event));
+	rx_mgmt_event = qdf_mem_malloc_atomic(sizeof(*rx_mgmt_event));
 	if (!rx_mgmt_event) {
-		p2p_err("Failed to allocate rx mgmt event");
+		p2p_debug_rl("Failed to allocate rx mgmt event");
 		qdf_nbuf_free(buf);
 		return QDF_STATUS_E_NOMEM;
 	}
 
-	rx_mgmt = qdf_mem_malloc(sizeof(*rx_mgmt) +
+	rx_mgmt = qdf_mem_malloc_atomic(sizeof(*rx_mgmt) +
 			mgmt_rx_params->buf_len);
 	if (!rx_mgmt) {
-		p2p_err("Failed to allocate rx mgmt frame");
+		p2p_debug_rl("Failed to allocate rx mgmt frame");
 		qdf_nbuf_free(buf);
 		return QDF_STATUS_E_NOMEM;
 	}
@@ -235,11 +239,19 @@ QDF_STATUS tgt_p2p_mgmt_frame_rx_cb(struct wlan_objmgr_psoc *psoc,
 	msg.type = P2P_EVENT_RX_MGMT;
 	msg.bodyptr = rx_mgmt_event;
 	msg.callback = p2p_process_evt;
-	scheduler_post_msg(QDF_MODULE_ID_TARGET_IF, &msg);
-
+	msg.flush_callback = p2p_event_flush_callback;
+	status = scheduler_post_message(QDF_MODULE_ID_P2P,
+					QDF_MODULE_ID_P2P,
+					QDF_MODULE_ID_TARGET_IF,
+					&msg);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		qdf_mem_free(rx_mgmt_event->rx_mgmt);
+		qdf_mem_free(rx_mgmt_event);
+		p2p_err("post msg fail:%d", status);
+	}
 	qdf_nbuf_free(buf);
 
-	return QDF_STATUS_SUCCESS;
+	return status;
 }
 
 QDF_STATUS  tgt_p2p_noa_event_cb(struct wlan_objmgr_psoc *psoc,
@@ -248,6 +260,7 @@ QDF_STATUS  tgt_p2p_noa_event_cb(struct wlan_objmgr_psoc *psoc,
 	struct p2p_noa_event *noa_event;
 	struct scheduler_msg msg = {0};
 	struct p2p_soc_priv_obj *p2p_soc_obj;
+	QDF_STATUS status;
 
 	p2p_debug("soc:%pK, event_info:%pK", psoc, event_info);
 
@@ -284,9 +297,18 @@ QDF_STATUS  tgt_p2p_noa_event_cb(struct wlan_objmgr_psoc *psoc,
 	msg.type = P2P_EVENT_NOA;
 	msg.bodyptr = noa_event;
 	msg.callback = p2p_process_evt;
-	scheduler_post_msg(QDF_MODULE_ID_TARGET_IF, &msg);
+	msg.flush_callback = p2p_event_flush_callback;
+	status = scheduler_post_message(QDF_MODULE_ID_P2P,
+					QDF_MODULE_ID_P2P,
+					QDF_MODULE_ID_TARGET_IF,
+					&msg);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		qdf_mem_free(noa_event->noa_info);
+		qdf_mem_free(noa_event);
+		p2p_err("post msg fail:%d", status);
+	}
 
-	return QDF_STATUS_SUCCESS;
+	return status;
 }
 
 QDF_STATUS tgt_p2p_lo_event_cb(struct wlan_objmgr_psoc *psoc,
@@ -295,6 +317,7 @@ QDF_STATUS tgt_p2p_lo_event_cb(struct wlan_objmgr_psoc *psoc,
 	struct p2p_lo_stop_event *lo_stop_event;
 	struct scheduler_msg msg = {0};
 	struct p2p_soc_priv_obj *p2p_soc_obj;
+	QDF_STATUS status;
 
 	p2p_debug("soc:%pK, event_info:%pK", psoc, event_info);
 
@@ -331,7 +354,13 @@ QDF_STATUS tgt_p2p_lo_event_cb(struct wlan_objmgr_psoc *psoc,
 	msg.type = P2P_EVENT_LO_STOPPED;
 	msg.bodyptr = lo_stop_event;
 	msg.callback = p2p_process_evt;
-	scheduler_post_msg(QDF_MODULE_ID_TARGET_IF, &msg);
+	msg.flush_callback = p2p_event_flush_callback;
+	status = scheduler_post_msg(QDF_MODULE_ID_TARGET_IF, &msg);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		qdf_mem_free(lo_stop_event->lo_event);
+		qdf_mem_free(lo_stop_event);
+		p2p_err("post msg fail:%d", status);
+	}
 
-	return QDF_STATUS_SUCCESS;
+	return status;
 }

@@ -40,7 +40,12 @@
 #include <cdp_txrx_handle.h>
 
 #ifndef OL_TXRX_NUM_LOCAL_PEER_IDS
-#define OL_TXRX_NUM_LOCAL_PEER_IDS 33   /* default */
+/*
+ * Each AP will occupy one ID, so it will occupy two IDs for AP-AP mode.
+ * Clients will be assigned max 32 IDs.
+ * STA(associated)/P2P DEV(self-PEER) will get one ID.
+ */
+#define OL_TXRX_NUM_LOCAL_PEER_IDS (32 + 1 + 1 + 1)
 #endif
 
 #define CDP_BA_256_BIT_MAP_SIZE_DWORDS 8
@@ -351,6 +356,13 @@ typedef struct cdp_soc_t *ol_txrx_soc_handle;
  * detach
  */
 typedef void (*ol_txrx_vdev_delete_cb)(void *context);
+
+/**
+ * ol_txrx_peer_unmap_sync_cb - callback registered during peer detach sync
+ */
+typedef QDF_STATUS(*ol_txrx_peer_unmap_sync_cb)(uint8_t vdev_id,
+						 uint32_t peer_id_cnt,
+						 uint16_t *peer_id_list);
 
 /**
  * ol_osif_vdev_handle - paque handle for OS shim virtual device

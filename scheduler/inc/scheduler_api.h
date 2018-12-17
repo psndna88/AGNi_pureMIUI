@@ -41,6 +41,12 @@
  */
 #define SYS_MSG_COOKIE      0xFACE
 
+#define scheduler_get_src_id(qid)       (((qid) >> 20) & 0x3FF)
+#define scheduler_get_dest_id(qid)      (((qid) >> 10) & 0x3FF)
+#define scheduler_get_que_id(qid)       ((qid) & 0x3FF)
+#define scheduler_get_qid(src, dest, que_id)    ((que_id) | ((dest) << 10) |\
+					     ((src) << 20))
+
 typedef enum {
 	SYS_MSG_ID_MC_TIMER,
 	SYS_MSG_ID_FTM_RSP,
@@ -148,26 +154,47 @@ QDF_STATUS scheduler_deregister_module(QDF_MODULE_ID qid);
 
 /**
  * scheduler_post_msg_by_priority() - post messages by priority
- * @qid: queue id to to post message
+ * @qid: queue id to which the message has to be posted.
  * @msg: message pointer
  * @is_high_priority: set to true for high priority message else false
  *
  * Return: QDF status
  */
-QDF_STATUS scheduler_post_msg_by_priority(QDF_MODULE_ID qid,
-		struct scheduler_msg *msg, bool is_high_priority);
+QDF_STATUS scheduler_post_msg_by_priority(uint32_t qid,
+					  struct scheduler_msg *msg,
+					  bool is_high_priority);
 
 /**
  * scheduler_post_msg() - post normal messages(no priority)
- * @qid: queue id to to post message
+ * @qid: queue id to which the message has to be posted.
  * @msg: message pointer
  *
  * Return: QDF status
  */
-static inline QDF_STATUS scheduler_post_msg(QDF_MODULE_ID qid,
-		struct scheduler_msg *msg)
+static inline QDF_STATUS scheduler_post_msg(uint32_t qid,
+					    struct scheduler_msg *msg)
 {
 	return scheduler_post_msg_by_priority(qid, msg, false);
+}
+
+/**
+ * scheduler_post_message() - post normal messages(no priority)
+ * @src_id: Source module of the message
+ * @dest_id: Destination module of the message
+ * @que_id: Queue to which the message has to posted.
+ * @msg: message pointer
+ *
+ * This function will mask the src_id, and destination id to qid of
+ * scheduler_post_msg
+ * Return: QDF status
+ */
+static inline QDF_STATUS scheduler_post_message(QDF_MODULE_ID src_id,
+						QDF_MODULE_ID dest_id,
+						QDF_MODULE_ID que_id,
+						struct scheduler_msg *msg)
+{
+	return scheduler_post_msg(scheduler_get_qid(src_id, dest_id, que_id),
+						    msg);
 }
 
 /**

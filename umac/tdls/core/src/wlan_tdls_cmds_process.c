@@ -83,6 +83,7 @@ static QDF_STATUS tdls_validate_current_mode(struct tdls_soc_priv_obj *soc_obj)
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef WLAN_DEBUG
 static char *tdls_get_ser_cmd_str(enum  wlan_serialization_cmd_type type)
 {
 	switch (type) {
@@ -96,8 +97,9 @@ static char *tdls_get_ser_cmd_str(enum  wlan_serialization_cmd_type type)
 		return "UNKNOWN";
 	}
 }
+#endif
 
-static void
+void
 tdls_release_serialization_command(struct wlan_objmgr_vdev *vdev,
 				   enum wlan_serialization_cmd_type type)
 {
@@ -167,7 +169,9 @@ static QDF_STATUS tdls_pe_add_peer(struct tdls_add_peer_request *req)
 		   QDF_MAC_ADDR_ARRAY(addstareq->peermac.bytes));
 	msg.type = soc_obj->tdls_add_sta_req;
 	msg.bodyptr = addstareq;
-	status = scheduler_post_msg(QDF_MODULE_ID_PE, &msg);
+	status = scheduler_post_message(QDF_MODULE_ID_TDLS,
+					QDF_MODULE_ID_PE,
+					QDF_MODULE_ID_PE, &msg);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		tdls_err("fail to post pe msg to add peer");
 		goto error;
@@ -232,7 +236,9 @@ QDF_STATUS tdls_pe_del_peer(struct tdls_del_peer_request *req)
 		   QDF_MAC_ADDR_ARRAY(delstareq->peermac.bytes));
 	msg.type = soc_obj->tdls_del_sta_req;
 	msg.bodyptr = delstareq;
-	status = scheduler_post_msg(QDF_MODULE_ID_PE, &msg);
+	status = scheduler_post_message(QDF_MODULE_ID_TDLS,
+					QDF_MODULE_ID_PE,
+					QDF_MODULE_ID_PE, &msg);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		tdls_err("fail to post pe msg to del peer");
 		goto error;
@@ -318,7 +324,9 @@ static QDF_STATUS tdls_pe_update_peer(struct tdls_update_peer_request *req)
 
 	msg.type = soc_obj->tdls_add_sta_req;
 	msg.bodyptr = addstareq;
-	status = scheduler_post_msg(QDF_MODULE_ID_PE, &msg);
+	status = scheduler_post_message(QDF_MODULE_ID_TDLS,
+					QDF_MODULE_ID_PE,
+					QDF_MODULE_ID_PE, &msg);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		tdls_err("fail to post pe msg to update peer");
 		goto error;
@@ -817,7 +825,7 @@ QDF_STATUS tdls_process_add_peer(struct tdls_add_peer_request *req)
 	cmd.umac_cmd = req;
 	cmd.source = WLAN_UMAC_COMP_TDLS;
 	cmd.is_high_priority = false;
-	cmd.cmd_timeout_duration = WAIT_TIME_TDLS_ADD_STA;
+	cmd.cmd_timeout_duration = TDLS_DEFAULT_SERIALIZE_CMD_TIMEOUT;
 	cmd.vdev = vdev;
 
 	ser_cmd_status = wlan_serialization_request(&cmd);
@@ -1026,7 +1034,7 @@ QDF_STATUS tdls_process_update_peer(struct tdls_update_peer_request *req)
 	cmd.umac_cmd = req;
 	cmd.source = WLAN_UMAC_COMP_TDLS;
 	cmd.is_high_priority = false;
-	cmd.cmd_timeout_duration = WAIT_TIME_TDLS_ADD_STA;
+	cmd.cmd_timeout_duration = TDLS_DEFAULT_SERIALIZE_CMD_TIMEOUT;
 	cmd.vdev = req->vdev;
 
 	ser_cmd_status = wlan_serialization_request(&cmd);
@@ -1179,7 +1187,7 @@ QDF_STATUS tdls_process_del_peer(struct tdls_oper_request *req)
 	cmd.umac_cmd = req;
 	cmd.source = WLAN_UMAC_COMP_TDLS;
 	cmd.is_high_priority = false;
-	cmd.cmd_timeout_duration = WAIT_TIME_TDLS_DEL_STA;
+	cmd.cmd_timeout_duration = TDLS_DEFAULT_SERIALIZE_CMD_TIMEOUT;
 	cmd.vdev = vdev;
 
 	ser_cmd_status = wlan_serialization_request(&cmd);
@@ -1561,7 +1569,9 @@ tdls_wma_update_peer_state(struct tdls_soc_priv_obj *soc_obj,
 	msg.reserved = 0;
 	msg.bodyptr = peer_state;
 
-	status = scheduler_post_msg(QDF_MODULE_ID_WMA, &msg);
+	status = scheduler_post_message(QDF_MODULE_ID_TDLS,
+					QDF_MODULE_ID_WMA,
+					QDF_MODULE_ID_WMA, &msg);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		tdls_err("scheduler_post_msg failed");
 		status = QDF_STATUS_E_FAILURE;
@@ -1981,6 +1991,7 @@ error:
 	return status;
 }
 
+#ifdef WLAN_DEBUG
 static const char *tdls_evt_to_str(enum tdls_event_msg_type type)
 {
 	switch (type) {
@@ -1996,6 +2007,7 @@ static const char *tdls_evt_to_str(enum tdls_event_msg_type type)
 		return "INVALID_TYPE";
 	}
 }
+#endif
 
 QDF_STATUS tdls_process_should_discover(struct wlan_objmgr_vdev *vdev,
 					struct tdls_event_info *evt)

@@ -170,6 +170,19 @@ QDF_STATUS tgt_tdls_unregister_ev_handler(struct wlan_objmgr_psoc *psoc)
 		return QDF_STATUS_SUCCESS;
 }
 
+static QDF_STATUS tgt_tdls_event_flush_cb(struct scheduler_msg *msg)
+{
+	struct tdls_event_notify *notify;
+
+	notify = msg->bodyptr;
+	if (notify && notify->vdev) {
+		wlan_objmgr_vdev_release_ref(notify->vdev, WLAN_TDLS_SB_ID);
+		qdf_mem_free(notify);
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
 QDF_STATUS
 tgt_tdls_event_handler(struct wlan_objmgr_psoc *psoc,
 		       struct tdls_event_info *info)
@@ -204,8 +217,11 @@ tgt_tdls_event_handler(struct wlan_objmgr_psoc *psoc,
 
 	msg.bodyptr = notify;
 	msg.callback = tdls_process_evt;
+	msg.flush_callback = tgt_tdls_event_flush_cb;
 
-	status = scheduler_post_msg(QDF_MODULE_ID_TARGET_IF, &msg);
+	status = scheduler_post_message(QDF_MODULE_ID_TDLS,
+					QDF_MODULE_ID_TDLS,
+					QDF_MODULE_ID_TARGET_IF, &msg);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		tdls_err("can't post msg to handle tdls event");
 		wlan_objmgr_vdev_release_ref(notify->vdev, WLAN_TDLS_SB_ID);
@@ -213,6 +229,23 @@ tgt_tdls_event_handler(struct wlan_objmgr_psoc *psoc,
 	}
 
 	return status;
+}
+
+static QDF_STATUS tgt_tdls_mgmt_frame_rx_flush_cb(struct scheduler_msg *msg)
+{
+	struct tdls_rx_mgmt_event *rx_mgmt_event;
+
+	rx_mgmt_event = msg->bodyptr;
+
+	if (rx_mgmt_event) {
+		if (rx_mgmt_event->rx_mgmt)
+			qdf_mem_free(rx_mgmt_event->rx_mgmt);
+
+		qdf_mem_free(rx_mgmt_event);
+	}
+	msg->bodyptr = NULL;
+
+	return QDF_STATUS_SUCCESS;
 }
 
 static
@@ -256,16 +289,16 @@ QDF_STATUS tgt_tdls_mgmt_frame_process_rx_cb(
 		vdev_id = wlan_vdev_get_id(vdev);
 	}
 
-	rx_mgmt_event = qdf_mem_malloc(sizeof(*rx_mgmt_event));
+	rx_mgmt_event = qdf_mem_malloc_atomic(sizeof(*rx_mgmt_event));
 	if (!rx_mgmt_event) {
-		tdls_err("Failed to allocate rx mgmt event");
+		tdls_debug_rl("Failed to allocate rx mgmt event");
 		return QDF_STATUS_E_NOMEM;
 	}
 
-	rx_mgmt = qdf_mem_malloc(sizeof(*rx_mgmt) +
+	rx_mgmt = qdf_mem_malloc_atomic(sizeof(*rx_mgmt) +
 			mgmt_rx_params->buf_len);
 	if (!rx_mgmt) {
-		tdls_err("Failed to allocate rx mgmt frame");
+		tdls_debug_rl("Failed to allocate rx mgmt frame");
 		qdf_mem_free(rx_mgmt_event);
 		return QDF_STATUS_E_NOMEM;
 	}
@@ -283,7 +316,14 @@ QDF_STATUS tgt_tdls_mgmt_frame_process_rx_cb(
 	msg.type = TDLS_EVENT_RX_MGMT;
 	msg.bodyptr = rx_mgmt_event;
 	msg.callback = tdls_process_rx_frame;
-	status = scheduler_post_msg(QDF_MODULE_ID_TARGET_IF, &msg);
+	msg.flush_callback = tgt_tdls_mgmt_frame_rx_flush_cb;
+	status = scheduler_post_message(QDF_MODULE_ID_TDLS,
+					QDF_MODULE_ID_TDLS,
+					QDF_MODULE_ID_TARGET_IF, &msg);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		qdf_mem_free(rx_mgmt);
+		qdf_mem_free(rx_mgmt_event);
+	}
 
 	qdf_nbuf_free(buf);
 
@@ -329,45 +369,8 @@ release_nbuf:
 	return status;
 }
 
-static void tgt_tdls_peers_deleted_notification_callback(
-			struct wlan_objmgr_vdev *vdev)
-{
-	if (!vdev) {
-		tdls_err("vdev is NULL");
-		return;
-	}
-
-	wlan_objmgr_vdev_release_ref(vdev, WLAN_TDLS_SB_ID);
-}
-
 void tgt_tdls_peers_deleted_notification(struct wlan_objmgr_psoc *psoc,
-						uint32_t session_id)
+					 uint32_t session_id)
 {
-	struct wlan_objmgr_vdev *vdev;
-	struct tdls_sta_notify_params notify_info;
-	QDF_STATUS status;
-
-	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc,
-						    session_id,
-						    WLAN_TDLS_SB_ID);
-
-	if (!vdev) {
-		tdls_err("vdev not exist for the session id %d",
-			 session_id);
-		return;
-	}
-
-	notify_info.lfr_roam = true;
-	notify_info.tdls_chan_swit_prohibited = false;
-	notify_info.tdls_prohibited = false;
-	notify_info.session_id = session_id;
-	notify_info.vdev = vdev;
-	notify_info.user_disconnect = false;
-	notify_info.callback = tgt_tdls_peers_deleted_notification_callback;
-	status = tdls_peers_deleted_notification(&notify_info);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		tdls_err("tdls_peers_deleted_notification failed");
-		wlan_objmgr_vdev_release_ref(vdev, WLAN_TDLS_SB_ID);
-	}
+	tdls_peers_deleted_notification(psoc, session_id);
 }
-

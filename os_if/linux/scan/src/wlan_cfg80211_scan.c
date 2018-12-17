@@ -587,27 +587,31 @@ error:
 int wlan_cfg80211_sched_scan_stop(struct wlan_objmgr_pdev *pdev,
 	struct net_device *dev)
 {
-	int ret = 0;
 	QDF_STATUS status;
 	struct wlan_objmgr_vdev *vdev;
 
 	vdev = wlan_objmgr_get_vdev_by_macaddr_from_pdev(pdev, dev->dev_addr,
 		WLAN_OSIF_ID);
 	if (!vdev) {
+	/*
+	 * cfg80211 expects sched_scan_stop command to always succeed.
+	 * There can be recovery or any other error in the driver between the
+	 * sched_scan_start and sched_scan_stop commands. If driver does
+	 * not return success in this case there is a possibility of further
+	 * sched_scan_start request might not be received again.
+	 */
 		cfg80211_err("vdev object is NULL");
-		return -EIO;
+		return 0;
 	}
 
 	status = ucfg_scan_pno_stop(vdev);
-	if (QDF_IS_STATUS_ERROR(status)) {
+	if (QDF_IS_STATUS_ERROR(status))
 		cfg80211_err("Failed to disabled PNO");
-		ret = -EINVAL;
-	} else {
+	else
 		cfg80211_info("PNO scan disabled");
-	}
 
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_OSIF_ID);
-	return ret;
+	return 0;
 }
 #endif /*FEATURE_WLAN_SCAN_PNO */
 
@@ -834,7 +838,7 @@ static void wlan_vendor_scan_callback(struct cfg80211_scan_request *req,
 	skb = cfg80211_vendor_event_alloc(req->wdev->wiphy, req->wdev,
 			SCAN_DONE_EVENT_BUF_SIZE + 4 + NLMSG_HDRLEN,
 			QCA_NL80211_VENDOR_SUBCMD_SCAN_DONE_INDEX,
-			GFP_KERNEL);
+			GFP_ATOMIC);
 
 	if (!skb) {
 		cfg80211_err("skb alloc failed");
@@ -880,7 +884,7 @@ static void wlan_vendor_scan_callback(struct cfg80211_scan_request *req,
 	if (nla_put_u8(skb, QCA_WLAN_VENDOR_ATTR_SCAN_STATUS, scan_status))
 		goto nla_put_failure;
 
-	cfg80211_vendor_event(skb, GFP_KERNEL);
+	cfg80211_vendor_event(skb, GFP_ATOMIC);
 	qdf_mem_free(req);
 
 	return;
@@ -913,6 +917,9 @@ static void wlan_cfg80211_scan_done_callback(
 	struct pdev_osif_priv *osif_priv;
 	struct net_device *netdev = NULL;
 	QDF_STATUS status;
+
+	qdf_mtrace(QDF_MODULE_ID_SCAN, QDF_MODULE_ID_OS_IF, event->type,
+		   event->vdev_id, event->scan_id);
 
 	if (!util_is_scan_completed(event, &success))
 		return;
@@ -1190,7 +1197,7 @@ int wlan_cfg80211_scan(struct wlan_objmgr_pdev *pdev,
 	struct scan_start_request *req;
 	struct wlan_ssid *pssid;
 	uint8_t i;
-	int status;
+	int ret = 0;
 	uint8_t num_chan = 0, channel;
 	uint32_t c_freq;
 	struct wlan_objmgr_vdev *vdev;
@@ -1201,6 +1208,7 @@ int wlan_cfg80211_scan(struct wlan_objmgr_pdev *pdev,
 	bool is_p2p_scan = false;
 	enum wlan_band band;
 	struct net_device *netdev = NULL;
+	QDF_STATUS qdf_status;
 
 	/* Get the vdev object */
 	vdev = wlan_objmgr_get_vdev_by_macaddr_from_pdev(pdev, dev->dev_addr,
@@ -1324,16 +1332,16 @@ int wlan_cfg80211_scan(struct wlan_objmgr_pdev *pdev,
 #ifdef WLAN_POLICY_MGR_ENABLE
 			if (ap_or_go_present) {
 				bool ok;
-				int ret;
 
-				ret = policy_mgr_is_chan_ok_for_dnbs(psoc,
-								channel,
-								&ok);
+				qdf_status =
+					policy_mgr_is_chan_ok_for_dnbs(psoc,
+								       channel,
+								       &ok);
 
-				if (QDF_IS_STATUS_ERROR(ret)) {
+				if (QDF_IS_STATUS_ERROR(qdf_status)) {
 					cfg80211_err("DNBS check failed");
 					qdf_mem_free(req);
-					status = -EINVAL;
+					ret = -EINVAL;
 					goto end;
 				}
 				if (!ok)
@@ -1357,7 +1365,7 @@ int wlan_cfg80211_scan(struct wlan_objmgr_pdev *pdev,
 	if (!num_chan) {
 		cfg80211_err("Received zero non-dsrc channels");
 		qdf_mem_free(req);
-		status = -EINVAL;
+		ret = -EINVAL;
 		goto end;
 	}
 	req->scan_req.chan_list.num_chan = num_chan;
@@ -1369,7 +1377,7 @@ int wlan_cfg80211_scan(struct wlan_objmgr_pdev *pdev,
 		req->scan_req.extraie.ptr = qdf_mem_malloc(request->ie_len);
 		if (!req->scan_req.extraie.ptr) {
 			cfg80211_err("Failed to allocate memory");
-			status = -ENOMEM;
+			ret = -ENOMEM;
 			qdf_mem_free(req);
 			goto end;
 		}
@@ -1381,7 +1389,7 @@ int wlan_cfg80211_scan(struct wlan_objmgr_pdev *pdev,
 			qdf_mem_malloc(params->default_ie.len);
 		if (!req->scan_req.extraie.ptr) {
 			cfg80211_err("Failed to allocate memory");
-			status = -ENOMEM;
+			ret = -ENOMEM;
 			qdf_mem_free(req);
 			goto end;
 		}
@@ -1409,25 +1417,22 @@ int wlan_cfg80211_scan(struct wlan_objmgr_pdev *pdev,
 	qdf_runtime_pm_prevent_suspend(
 		&osif_priv->osif_scan->runtime_pm_lock);
 
-	status = ucfg_scan_start(req);
-	if (QDF_STATUS_SUCCESS != status) {
-		cfg80211_err("ucfg_scan_start returned error %d", status);
-		if (QDF_STATUS_E_RESOURCES == status) {
+	qdf_status = ucfg_scan_start(req);
+	if (QDF_IS_STATUS_ERROR(qdf_status)) {
+		cfg80211_err("ucfg_scan_start returned error %d", qdf_status);
+		if (qdf_status == QDF_STATUS_E_RESOURCES)
 			cfg80211_err("HO is in progress.So defer the scan by informing busy");
-			status = -EBUSY;
-		} else {
-			status = -EIO;
-		}
 		wlan_scan_request_dequeue(pdev, scan_id, &request,
 					  &params->source, &netdev);
 		if (qdf_list_empty(&osif_priv->osif_scan->scan_req_q))
 			qdf_runtime_pm_allow_suspend(
 				&osif_priv->osif_scan->runtime_pm_lock);
 	}
+	ret = qdf_status_to_os_return(qdf_status);
 
 end:
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_OSIF_ID);
-	return status;
+	return ret;
 }
 
 /**
@@ -1515,8 +1520,7 @@ QDF_STATUS wlan_abort_scan(struct wlan_objmgr_pdev *pdev,
 		return QDF_STATUS_E_FAILURE;
 	}
 	if (vdev_id == INVAL_VDEV_ID)
-		vdev = wlan_objmgr_get_vdev_by_id_from_pdev(pdev,
-				0, WLAN_OSIF_ID);
+		vdev = wlan_objmgr_pdev_get_first_vdev(pdev, WLAN_OSIF_ID);
 	else
 		vdev = wlan_objmgr_get_vdev_by_id_from_pdev(pdev,
 				vdev_id, WLAN_OSIF_ID);
@@ -1715,7 +1719,7 @@ wlan_cfg80211_inform_bss_frame_data(struct wiphy *wiphy,
 	data.boottime_ns = bss->boottime_ns;
 	data.signal = bss->rssi;
 	return cfg80211_inform_bss_frame_data(wiphy, &data, bss->mgmt,
-					      bss->frame_len, GFP_KERNEL);
+					      bss->frame_len, GFP_ATOMIC);
 }
 #else
 struct cfg80211_bss *
@@ -1725,7 +1729,7 @@ wlan_cfg80211_inform_bss_frame_data(struct wiphy *wiphy,
 {
 	return cfg80211_inform_bss_frame(wiphy, bss->chan, bss->mgmt,
 					 bss->frame_len,
-					 bss->rssi, GFP_KERNEL);
+					 bss->rssi, GFP_ATOMIC);
 }
 #endif
 
@@ -1759,7 +1763,7 @@ void wlan_cfg80211_inform_bss_frame(struct wlan_objmgr_pdev *pdev,
 	wiphy = pdev_ospriv->wiphy;
 
 	bss_data.frame_len = wlan_get_frame_len(scan_params);
-	bss_data.mgmt = qdf_mem_malloc(bss_data.frame_len);
+	bss_data.mgmt = qdf_mem_malloc_atomic(bss_data.frame_len);
 	if (!bss_data.mgmt) {
 		cfg80211_err("mem alloc failed");
 		return;

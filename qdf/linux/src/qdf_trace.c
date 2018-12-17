@@ -460,7 +460,7 @@ qdf_export_symbol(qdf_trace_init);
 /**
  * qdf_trace() - puts the messages in to ring-buffer
  * @module: Enum of module, basically module id.
- * @param: Code to be recorded
+ * @code: Code to be recorded
  * @session: Session ID of the log
  * @data: Actual message contents
  *
@@ -525,6 +525,32 @@ void qdf_trace(uint8_t module, uint8_t code, uint16_t session, uint32_t data)
 	spin_unlock_irqrestore(&ltrace_lock, flags);
 }
 qdf_export_symbol(qdf_trace);
+
+#ifdef ENABLE_MTRACE_LOG
+void qdf_mtrace_log(QDF_MODULE_ID src_module, QDF_MODULE_ID dst_module,
+		    uint16_t message_id, uint8_t vdev_id)
+{
+	uint32_t trace_log, payload;
+	static uint16_t counter;
+
+	trace_log = (src_module << 23) | (dst_module << 15) | message_id;
+	payload = (vdev_id << 16) | counter++;
+
+	QDF_TRACE(src_module, QDF_TRACE_LEVEL_TRACE, "%x %x",
+		  trace_log, payload);
+}
+
+qdf_export_symbol(qdf_mtrace_log);
+#endif
+
+void qdf_mtrace(QDF_MODULE_ID src_module, QDF_MODULE_ID dst_module,
+		uint16_t message_id, uint8_t vdev_id, uint32_t data)
+{
+	qdf_trace(src_module, message_id, vdev_id, data);
+	qdf_mtrace_log(src_module, dst_module, message_id, vdev_id);
+}
+
+qdf_export_symbol(qdf_mtrace);
 
 /**
  * qdf_trace_spin_lock_init() - initializes the lock variable before use
@@ -1223,17 +1249,18 @@ static bool qdf_dp_enable_check(qdf_nbuf_t nbuf, enum QDF_DP_TRACE_ID code,
 	if (qdf_dp_trace_verbosity_check(code) == false)
 		return false;
 
-	if (!nbuf)
+	if (nbuf && (dir == QDF_TX && ((QDF_NBUF_CB_TX_DP_TRACE(nbuf) == 0) ||
+				       (QDF_NBUF_CB_TX_PACKET_TRACK(nbuf) !=
+					QDF_NBUF_TX_PKT_DATA_TRACK))))
 		return false;
 
-	if ((dir == QDF_TX) &&
-	    ((QDF_NBUF_CB_TX_DP_TRACE(nbuf) == 0) ||
-	     (QDF_NBUF_CB_TX_PACKET_TRACK(nbuf) != QDF_NBUF_TX_PKT_DATA_TRACK)))
+	if (nbuf && (dir == QDF_RX && (QDF_NBUF_CB_RX_DP_TRACE(nbuf) == 0)))
 		return false;
 
-	if ((dir == QDF_RX) && (QDF_NBUF_CB_RX_DP_TRACE(nbuf) == 0))
-		return false;
-
+	/*
+	 * Special packets called with NULL nbuf and this API is expected to
+	 * return true
+	 */
 	return true;
 }
 
@@ -1718,8 +1745,10 @@ void qdf_dp_display_mgmt_pkt(struct qdf_dp_trace_record_s *record,
 {
 	int loc;
 	char prepend_str[QDF_DP_TRACE_PREPEND_STR_SIZE];
+#ifdef WLAN_DEBUG
 	struct qdf_dp_trace_mgmt_buf *buf =
 		(struct qdf_dp_trace_mgmt_buf *)record->data;
+#endif
 
 	qdf_mem_set(prepend_str, 0, sizeof(prepend_str));
 	loc = qdf_dp_trace_fill_meta_str(prepend_str, sizeof(prepend_str),
@@ -1759,8 +1788,10 @@ void qdf_dp_display_event_record(struct qdf_dp_trace_record_s *record,
 			      uint16_t index, uint8_t pdev_id, uint8_t info)
 {
 	char prepend_str[QDF_DP_TRACE_PREPEND_STR_SIZE];
+#ifdef WLAN_DEBUG
 	struct qdf_dp_trace_event_buf *buf =
 		(struct qdf_dp_trace_event_buf *)record->data;
+#endif
 
 	qdf_mem_set(prepend_str, 0, sizeof(prepend_str));
 	qdf_dp_trace_fill_meta_str(prepend_str, sizeof(prepend_str),
@@ -1811,8 +1842,10 @@ void qdf_dp_display_proto_pkt(struct qdf_dp_trace_record_s *record,
 {
 	int loc;
 	char prepend_str[QDF_DP_TRACE_PREPEND_STR_SIZE];
+#ifdef WLAN_DEBUG
 	struct qdf_dp_trace_proto_buf *buf =
 		(struct qdf_dp_trace_proto_buf *)record->data;
+#endif
 
 	qdf_mem_set(prepend_str, 0, sizeof(prepend_str));
 	loc = qdf_dp_trace_fill_meta_str(prepend_str, sizeof(prepend_str),
@@ -2704,6 +2737,7 @@ struct category_name_info g_qdf_category_name[MAX_SUPPORTED_CATEGORY] = {
 	[QDF_MODULE_ID_IPA] = {"IPA"},
 	[QDF_MODULE_ID_CP_STATS] = {"CP_STATS"},
 	[QDF_MODULE_ID_ACTION_OUI] = {"action_oui"},
+	[QDF_MODULE_ID_TARGET] = {"TARGET"},
 	[QDF_MODULE_ID_ANY] = {"ANY"},
 };
 qdf_export_symbol(g_qdf_category_name);
@@ -2811,11 +2845,12 @@ void qdf_trace_msg_cmn(unsigned int idx,
 			[QDF_TRACE_LEVEL_INFO_MED] = "IM",
 			[QDF_TRACE_LEVEL_INFO_LOW] = "IL",
 			[QDF_TRACE_LEVEL_DEBUG] = "D",
+			[QDF_TRACE_LEVEL_TRACE] = "T",
 			[QDF_TRACE_LEVEL_ALL] = "" };
 
 		/* print the prefix string into the string buffer... */
 		n = scnprintf(str_buffer, QDF_TRACE_BUFFER_SIZE,
-			     "%s: [%d:%2s:%s] ", qdf_trace_wlan_modname(),
+			     "%s: [%d:%s:%s] ", qdf_trace_wlan_modname(),
 			     in_interrupt() ? 0 : current->pid,
 			     VERBOSE_STR[verbose],
 			     g_qdf_category_name[category].category_name_str);

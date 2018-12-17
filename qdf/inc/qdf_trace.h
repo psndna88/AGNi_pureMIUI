@@ -40,6 +40,20 @@
 
 #define QDF_TRACE_BUFFER_SIZE (512)
 
+/*
+ * Extracts the 8-bit group id from the wmi command id by performing the
+ * reverse operation of WMI_CMD_GRP_START_ID
+ */
+#define QDF_WMI_MTRACE_GRP_ID(message_id) (((message_id) >> 12) & 0xFF)
+/*
+ * Number of bits reserved for WMI mtrace command id
+ */
+ #define QDF_WMI_MTRACE_CMD_NUM_BITS 7
+/*
+ * Extracts the 7-bit group specific command id from the wmi command id
+ */
+#define QDF_WMI_MTRACE_CMD_ID(message_id) ((message_id) & 0x7F)
+
 #ifdef CONFIG_MCL
 #define QDF_DEFAULT_TRACE_LEVEL \
 	((1 << QDF_TRACE_LEVEL_FATAL) | (1 << QDF_TRACE_LEVEL_ERROR))
@@ -155,8 +169,9 @@ typedef struct s_qdf_trace_data {
 
 #define CASE_RETURN_STRING(str) case ((str)): return (uint8_t *)(# str);
 
-
+#ifndef MAX_QDF_DP_TRACE_RECORDS
 #define MAX_QDF_DP_TRACE_RECORDS       2000
+#endif
 #define QDF_DP_TRACE_RECORD_SIZE       40
 #define INVALID_QDF_DP_TRACE_ADDR      0xffffffff
 #define QDF_DP_TRACE_VERBOSITY_HIGH		4
@@ -518,6 +533,7 @@ static inline
 void qdf_trace_enable(uint32_t bitmask_of_module_id, uint8_t enable)
 {
 }
+
 static inline
 void qdf_trace(uint8_t module, uint8_t code, uint16_t session, uint32_t data)
 {
@@ -535,6 +551,64 @@ QDF_STATUS qdf_trace_spin_lock_init(void)
 	return QDF_STATUS_E_INVAL;
 }
 #endif
+#endif
+
+#ifdef ENABLE_MTRACE_LOG
+/**
+ * qdf_mtrace_log() - Logs a message tracepoint to DIAG
+ * Infrastructure.
+ * @src_module: Enum of source module (basically module id)
+ * from where the message with message_id is posted.
+ * @dst_module: Enum of destination module (basically module id)
+ * to which the message with message_id is posted.
+ * @message_id: Id of the message to be posted
+ * @vdev_id: Vdev Id
+ *
+ * This function logs to the DIAG Infrastructure a tracepoint for a
+ * message being sent from a source module to a destination module
+ * with a specific ID for the benefit of a specific vdev.
+ * For non-vdev messages vdev_id will be NO_SESSION
+ * Return: None
+ */
+void qdf_mtrace_log(QDF_MODULE_ID src_module, QDF_MODULE_ID dst_module,
+		    uint16_t message_id, uint8_t vdev_id);
+#else
+static inline
+void qdf_mtrace_log(QDF_MODULE_ID src_module, QDF_MODULE_ID dst_module,
+		    uint16_t message_id, uint8_t vdev_id)
+{
+}
+#endif
+
+#ifdef TRACE_RECORD
+/**
+ * qdf_mtrace() - puts the messages in to ring-buffer
+ * and logs a message tracepoint to DIAG Infrastructure.
+ * @src_module: Enum of source module (basically module id)
+ * from where the message with message_id is posted.
+ * @dst_module: Enum of destination module (basically module id)
+ * to which the message with message_id is posted.
+ * @message_id: Id of the message to be posted
+ * @vdev_id: Vdev Id
+ * @data: Actual message contents
+ *
+ * This function will be called from each module which wants to record the
+ * messages in circular queue. Before calling this function make sure you
+ * have registered your module with qdf through qdf_trace_register function.
+ * In addition of the recording the messages in circular queue this function
+ * will log the message tracepoint to the  DIAG infrastructure.
+ * these logs will be later used by post processing script.
+ *
+ * Return: None
+ */
+void qdf_mtrace(QDF_MODULE_ID src_module, QDF_MODULE_ID dst_module,
+		uint16_t message_id, uint8_t vdev_id, uint32_t data);
+#else
+static inline
+void qdf_mtrace(QDF_MODULE_ID src_module, QDF_MODULE_ID dst_module,
+		uint16_t message_id, uint8_t vdev_id, uint32_t data)
+{
+}
 #endif
 
 #ifdef CONFIG_DP_TRACE

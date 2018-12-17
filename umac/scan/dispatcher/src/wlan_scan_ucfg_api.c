@@ -189,7 +189,7 @@ QDF_STATUS ucfg_scan_pno_stop(struct wlan_objmgr_vdev *vdev)
 		return QDF_STATUS_E_INVAL;
 	}
 	if (!scan_vdev_obj->pno_in_progress) {
-		scm_err("pno already stopped");
+		scm_debug("pno already stopped");
 		return QDF_STATUS_E_ALREADY;
 	}
 
@@ -410,10 +410,7 @@ ucfg_scan_update_pno_config(struct pno_def_config *pno,
  *
  * Non-DBS scan is requested if any of the below case is met:
  *     1. HW is DBS incapable
- *     2. Directed scan
- *     3. Channel list has only few channels
- *     4. Channel list has single band channels
- *     5. A high accuracy scan request is sent by kernel.
+ *     2. A high accuracy scan request is sent by kernel.
  *
  * DBS scan is enabled for these conditions:
  *     1. A low power or low span scan request is sent by kernel.
@@ -423,63 +420,27 @@ ucfg_scan_update_pno_config(struct pno_def_config *pno,
 static void
 ucfg_scan_update_dbs_scan_ctrl_ext_flag(struct scan_start_request *req)
 {
-	uint32_t num_chan;
 	struct wlan_objmgr_psoc *psoc;
 	uint32_t scan_dbs_policy = SCAN_DBS_POLICY_DEFAULT;
-	uint32_t conn_cnt;
 
 	psoc = wlan_vdev_get_psoc(req->vdev);
 
-	if ((DISABLE_DBS_CXN_AND_SCAN ==
-	     wlan_objmgr_psoc_get_dual_mac_disable(psoc)) ||
-	    (ENABLE_DBS_CXN_AND_DISABLE_DBS_SCAN ==
-	     wlan_objmgr_psoc_get_dual_mac_disable(psoc)))
+	if (!policy_mgr_is_hw_dbs_capable(psoc)) {
+		scm_debug("dbs disabled, going for non-dbs scan");
+		scan_dbs_policy = SCAN_DBS_POLICY_FORCE_NONDBS;
 		goto end;
+	}
 
-	if (req->scan_req.scan_policy_high_accuracy)
+	if (req->scan_req.scan_policy_high_accuracy) {
+		scm_debug("high accuracy scan received, going for non-dbs scan");
+		scan_dbs_policy = SCAN_DBS_POLICY_FORCE_NONDBS;
 		goto end;
-
+	}
 	if ((req->scan_req.scan_policy_low_power) ||
 	    (req->scan_req.scan_policy_low_span)) {
+		scm_debug("low power/span scan received, going for dbs scan");
 		scan_dbs_policy = SCAN_DBS_POLICY_IGNORE_DUTY;
 		goto end;
-	}
-
-	conn_cnt = policy_mgr_get_connection_count(psoc);
-	if (conn_cnt > 0) {
-		scm_debug("%d active connections, go for DBS scan",
-				conn_cnt);
-		scan_dbs_policy = SCAN_DBS_POLICY_DEFAULT;
-		goto end;
-	}
-
-	if (req->scan_req.num_ssids) {
-		scm_debug("directed SSID");
-		goto end;
-	}
-
-	if (req->scan_req.num_bssid) {
-		scm_debug("directed BSSID");
-		goto end;
-	}
-
-	num_chan = req->scan_req.chan_list.num_chan;
-
-	/* num_chan=0 means all channels */
-	if (!num_chan)
-		scan_dbs_policy = SCAN_DBS_POLICY_DEFAULT;
-
-	if (num_chan < SCAN_MIN_CHAN_DBS_SCAN_THRESHOLD)
-		goto end;
-
-	while (num_chan > 1) {
-		if (!WLAN_REG_IS_SAME_BAND_CHANNELS(
-			req->scan_req.chan_list.chan[0].freq,
-			req->scan_req.chan_list.chan[num_chan-1].freq)) {
-			scan_dbs_policy = SCAN_DBS_POLICY_DEFAULT;
-			break;
-		}
-		num_chan--;
 	}
 
 end:
@@ -559,8 +520,9 @@ int ucfg_scan_get_burst_duration(int max_ch_time,
 		 * If miracast is not running, accommodate max
 		 * stations to make the scans faster
 		 */
-		burst_duration = SCAN_BURST_SCAN_MAX_NUM_OFFCHANNELS *
-						max_ch_time;
+		burst_duration = SCAN_GO_BURST_SCAN_MAX_NUM_OFFCHANNELS *
+							max_ch_time;
+
 		if (burst_duration > SCAN_GO_MAX_ACTIVE_SCAN_BURST_DURATION) {
 			uint8_t channels = SCAN_P2P_SCAN_MAX_BURST_DURATION /
 								 max_ch_time;
@@ -626,8 +588,10 @@ static void ucfg_scan_req_update_concurrency_params(
 	 * firmware spends more time on home channel which will increase the
 	 * probability of sending beacon at TBTT
 	 */
-	if (ap_present || go_present)
+	if (ap_present || go_present) {
+		req->scan_req.dwell_time_active_2g = 0;
 		req->scan_req.min_rest_time = req->scan_req.max_rest_time;
+	}
 
 	if (req->scan_req.p2p_scan_type == SCAN_NON_P2P_DEFAULT) {
 		/*
@@ -803,6 +767,7 @@ ucfg_scan_req_update_params(struct wlan_objmgr_vdev *vdev,
 		req->scan_req.scan_f_add_tpc_ie_in_probe = true;
 	} else {
 		req->scan_req.adaptive_dwell_time_mode = SCAN_DWELL_MODE_STATIC;
+		req->scan_req.dwell_time_active_2g = 0;
 		if (req->scan_req.p2p_scan_type == SCAN_P2P_LISTEN) {
 			req->scan_req.repeat_probe_time = 0;
 		} else {
@@ -954,7 +919,9 @@ ucfg_scan_start(struct scan_start_request *req)
 	msg.callback = scm_scan_start_req;
 	msg.flush_callback = scm_scan_start_flush_callback;
 
-	status = scheduler_post_msg(QDF_MODULE_ID_OS_IF, &msg);
+	status = scheduler_post_message(QDF_MODULE_ID_OS_IF,
+					QDF_MODULE_ID_SCAN,
+					QDF_MODULE_ID_OS_IF, &msg);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		wlan_objmgr_vdev_release_ref(req->vdev, WLAN_SCAN_ID);
 		scm_err("failed to post to QDF_MODULE_ID_OS_IF");
@@ -1067,7 +1034,9 @@ ucfg_scan_cancel(struct scan_cancel_request *req)
 	msg.callback = scm_scan_cancel_req;
 	msg.flush_callback = scm_scan_cancel_flush_callback;
 
-	status = scheduler_post_msg(QDF_MODULE_ID_OS_IF, &msg);
+	status = scheduler_post_message(QDF_MODULE_ID_OS_IF,
+					QDF_MODULE_ID_SCAN,
+					QDF_MODULE_ID_OS_IF, &msg);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		scm_err("failed to post to QDF_MODULE_ID_OS_IF");
 		goto vdev_put;
@@ -1197,12 +1166,19 @@ void
 ucfg_scan_unregister_requester(struct wlan_objmgr_psoc *psoc,
 	wlan_scan_requester requester)
 {
-	int idx = requester & WLAN_SCAN_REQUESTER_ID_MASK;
+	int idx;
 	struct wlan_scan_obj *scan;
 	struct scan_requester_info *requesters;
 
+	idx = requester & WLAN_SCAN_REQUESTER_ID_PREFIX;
+	if (idx != WLAN_SCAN_REQUESTER_ID_PREFIX) {
+		scm_err("prefix didn't match for requester id %d", requester);
+		return;
+	}
+
+	idx = requester & WLAN_SCAN_REQUESTER_ID_MASK;
 	if (idx >= WLAN_MAX_REQUESTORS) {
-		scm_err("requester id invalid");
+		scm_err("requester id %d greater than max value", requester);
 		return;
 	}
 
@@ -1313,8 +1289,8 @@ ucfg_scan_register_event_handler(struct wlan_objmgr_pdev *pdev,
 		if ((cb_handler->func == event_cb) &&
 			(cb_handler->arg == arg)) {
 			qdf_spin_unlock_bh(&scan->lock);
-			scm_warn("func: %pK, arg: %pK already exists",
-				event_cb, arg);
+			scm_debug("func: %pK, arg: %pK already exists",
+				  event_cb, arg);
 			return QDF_STATUS_SUCCESS;
 		}
 	}
@@ -1641,14 +1617,15 @@ ucfg_scan_init_chanlist_params(struct scan_start_request *req,
 	 * too much time to complete.
 	 */
 	if (pdev && !num_chans && ucfg_scan_get_wide_band_scan(pdev)) {
-		reg_chan_list = qdf_mem_malloc(NUM_CHANNELS *
+		reg_chan_list = qdf_mem_malloc_atomic(NUM_CHANNELS *
 				sizeof(struct regulatory_channel));
 		if (!reg_chan_list) {
 			scm_err("Couldn't allocate reg_chan_list memory");
 			status = QDF_STATUS_E_NOMEM;
 			goto end;
 		}
-		scan_freqs = qdf_mem_malloc(sizeof(uint32_t) * max_chans);
+		scan_freqs =
+			qdf_mem_malloc_atomic(sizeof(uint32_t) * max_chans);
 		if (!scan_freqs) {
 			scm_err("Couldn't allocate scan_freqs memory");
 			status = QDF_STATUS_E_NOMEM;
@@ -1904,15 +1881,16 @@ ucfg_scan_cancel_pdev_scan(struct wlan_objmgr_pdev *pdev)
 	QDF_STATUS status;
 	struct wlan_objmgr_vdev *vdev;
 
-	req = qdf_mem_malloc(sizeof(*req));
+	req = qdf_mem_malloc_atomic(sizeof(*req));
 	if (!req) {
 		scm_err("Failed to allocate memory");
 		return QDF_STATUS_E_NOMEM;
 	}
 
-	vdev = wlan_objmgr_get_vdev_by_id_from_pdev(pdev, 0, WLAN_OSIF_ID);
+	vdev = wlan_objmgr_pdev_get_first_vdev(pdev, WLAN_SCAN_ID);
 	if (!vdev) {
 		scm_err("Failed to get vdev");
+		qdf_mem_free(req);
 		return QDF_STATUS_E_INVAL;
 	}
 	req->vdev = vdev;
@@ -1923,7 +1901,7 @@ ucfg_scan_cancel_pdev_scan(struct wlan_objmgr_pdev *pdev)
 	status = ucfg_scan_cancel_sync(req);
 	if (QDF_IS_STATUS_ERROR(status))
 		scm_err("Cancel scan request failed");
-	wlan_objmgr_vdev_release_ref(vdev, WLAN_OSIF_ID);
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_SCAN_ID);
 
 	return status;
 }
@@ -1935,6 +1913,7 @@ ucfg_scan_suspend_handler(struct wlan_objmgr_psoc *psoc, void *arg)
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	int i;
 
+	ucfg_scan_set_enable(psoc, false);
 	/* Check all pdev */
 	for (i = 0; i < WLAN_UMAC_MAX_PDEVS; i++) {
 		pdev = wlan_objmgr_get_pdev_by_id(psoc, i, WLAN_SCAN_ID);
@@ -1956,6 +1935,7 @@ ucfg_scan_suspend_handler(struct wlan_objmgr_psoc *psoc, void *arg)
 static QDF_STATUS
 ucfg_scan_resume_handler(struct wlan_objmgr_psoc *psoc, void *arg)
 {
+	ucfg_scan_set_enable(psoc, true);
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -2280,4 +2260,9 @@ ucfg_scan_get_global_config(struct wlan_objmgr_psoc *psoc,
 	}
 
 	return status;
+}
+
+uint32_t ucfg_scan_get_max_cmd_allowed(void)
+{
+	return MAX_SCAN_COMMANDS;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -306,4 +306,82 @@ cdp_cfg_set_ptp_rx_opt_enabled(ol_txrx_soc_handle soc,
 
 	soc->ops->cfg_ops->set_ptp_rx_opt_enabled(cfg_pdev, val);
 }
+
+/**
+ * cdp_cfg_set_new_htt_msg_format() - set htt h2t msg feature
+ * @soc - datapath soc handle
+ * @val - enable or disable new htt h2t msg feature
+ *
+ * Enable whether htt h2t message length includes htc header length
+ *
+ * return NONE
+ */
+static inline void
+cdp_cfg_set_new_htt_msg_format(ol_txrx_soc_handle soc,
+			       uint8_t val)
+{
+	if (!soc || !soc->ops) {
+		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_DEBUG,
+			  "%s invalid instance", __func__);
+		return;
+	}
+
+	if (!soc->ops->cfg_ops ||
+	    !soc->ops->cfg_ops->set_new_htt_msg_format)
+		return;
+
+	soc->ops->cfg_ops->set_new_htt_msg_format(val);
+}
+
+/**
+ * cdp_cfg_set_peer_unmap_conf_support() - set peer unmap conf feature
+ * @soc - datapath soc handle
+ * @val - enable or disable peer unmap conf feature
+ *
+ * Set if peer unmap confirmation feature is supported by both FW and in INI
+ *
+ * return NONE
+ */
+static inline void
+cdp_cfg_set_peer_unmap_conf_support(ol_txrx_soc_handle soc, bool val)
+{
+	if (!soc || !soc->ops) {
+		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_DEBUG,
+			  "%s invalid instance", __func__);
+		QDF_BUG(0);
+		return;
+	}
+
+	if (!soc->ops->cfg_ops ||
+	    !soc->ops->cfg_ops->set_peer_unmap_conf_support)
+		return;
+
+	soc->ops->cfg_ops->set_peer_unmap_conf_support(val);
+}
+
+/**
+ * cdp_cfg_get_peer_unmap_conf_support() - check peer unmap conf feature
+ * @soc - datapath soc handle
+ *
+ * Check if peer unmap confirmation feature is enabled
+ *
+ * return true is peer unmap confirmation feature is enabled else false
+ */
+static inline bool
+cdp_cfg_get_peer_unmap_conf_support(ol_txrx_soc_handle soc)
+{
+	if (!soc || !soc->ops) {
+		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_DEBUG,
+			  "%s invalid instance", __func__);
+		QDF_BUG(0);
+		return false;
+	}
+
+	if (!soc->ops->cfg_ops ||
+	    !soc->ops->cfg_ops->get_peer_unmap_conf_support)
+		return false;
+
+	return soc->ops->cfg_ops->get_peer_unmap_conf_support();
+}
+
 #endif /* _CDP_TXRX_CFG_H_ */

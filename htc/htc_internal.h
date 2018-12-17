@@ -78,7 +78,9 @@ extern "C" {
 
 #define HTC_SERVICE_TX_PACKET_TAG  HTC_TX_PACKET_TAG_INTERNAL
 
+#ifndef HTC_CREDIT_HISTORY_MAX
 #define HTC_CREDIT_HISTORY_MAX              1024
+#endif
 
 #define HTC_IS_EPPING_ENABLED(_x)           ((_x) == QDF_GLOBAL_EPPING_MODE)
 
@@ -239,6 +241,8 @@ typedef struct _HTC_TARGET {
 	 * reflect the actual count.
 	 */
 	uint8_t wmi_ep_count;
+	/* Flag to indicate whether htc header length check is required */
+	bool htc_hdr_length_check;
 } HTC_TARGET;
 
 

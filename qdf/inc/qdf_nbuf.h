@@ -662,6 +662,8 @@ void qdf_nbuf_unmap_nbytes_single_debug(qdf_device_t osdev,
 
 #else /* NBUF_MAP_UNMAP_DEBUG */
 
+static inline void qdf_nbuf_map_check_for_leaks(void) {}
+
 static inline QDF_STATUS
 qdf_nbuf_map(qdf_device_t osdev, qdf_nbuf_t buf, qdf_dma_dir_t dir)
 {
@@ -1073,6 +1075,13 @@ void qdf_net_buf_debug_exit(void);
 void qdf_net_buf_debug_clean(void);
 void qdf_net_buf_debug_add_node(qdf_nbuf_t net_buf, size_t size,
 			uint8_t *file_name, uint32_t line_num);
+/**
+ * qdf_net_buf_debug_update_node() - update nbuf in debug hash table
+ *
+ * Return: none
+ */
+void qdf_net_buf_debug_update_node(qdf_nbuf_t net_buf, uint8_t *file_name,
+				   uint32_t line_num);
 void qdf_net_buf_debug_delete_node(qdf_nbuf_t net_buf);
 
 /**
@@ -1178,13 +1187,22 @@ static inline void qdf_net_buf_debug_release_skb(qdf_nbuf_t net_buf)
 {
 }
 
+static inline void
+qdf_net_buf_debug_update_node(qdf_nbuf_t net_buf, uint8_t *file_name,
+			      uint32_t line_num)
+{
+}
+
 /* Nbuf allocation rouines */
 
+#define qdf_nbuf_alloc(osdev, size, reserve, align, prio) \
+	qdf_nbuf_alloc_fl(osdev, size, reserve, align, prio, \
+			  __func__, __LINE__)
 static inline qdf_nbuf_t
-qdf_nbuf_alloc(qdf_device_t osdev,
-		qdf_size_t size, int reserve, int align, int prio)
+qdf_nbuf_alloc_fl(qdf_device_t osdev, qdf_size_t size, int reserve, int align,
+		  int prio, const char *func, uint32_t line)
 {
-	return __qdf_nbuf_alloc(osdev, size, reserve, align, prio);
+	return __qdf_nbuf_alloc(osdev, size, reserve, align, prio, func, line);
 }
 
 static inline void qdf_nbuf_free(qdf_nbuf_t buf)
@@ -1416,6 +1434,55 @@ static inline void qdf_nbuf_set_pktlen(qdf_nbuf_t buf, uint32_t len)
 static inline void qdf_nbuf_reserve(qdf_nbuf_t buf, qdf_size_t size)
 {
 	__qdf_nbuf_reserve(buf, size);
+}
+
+/**
+ * qdf_nbuf_reset() - reset the buffer data and pointer
+ * @buf: Network buf instance
+ * @reserve: reserve
+ * @align: align
+ *
+ * Return: none
+ */
+static inline void qdf_nbuf_reset(qdf_nbuf_t buf, int reserve, int align)
+{
+	__qdf_nbuf_reset(buf, reserve, align);
+}
+
+/**
+ * qdf_nbuf_dev_scratch_is_supported() - dev_scratch support for network buffer
+ *                                       in kernel
+ *
+ * Return: true if dev_scratch is supported
+ *         false if dev_scratch is not supported
+ */
+static inline bool qdf_nbuf_is_dev_scratch_supported(void)
+{
+	return __qdf_nbuf_is_dev_scratch_supported();
+}
+
+/**
+ * qdf_nbuf_get_dev_scratch() - get dev_scratch of network buffer
+ * @buf: Pointer to network buffer
+ *
+ * Return: dev_scratch if dev_scratch supported
+ *         0 if dev_scratch not supported
+ */
+static inline unsigned long qdf_nbuf_get_dev_scratch(qdf_nbuf_t buf)
+{
+	return __qdf_nbuf_get_dev_scratch(buf);
+}
+
+/**
+ * qdf_nbuf_set_dev_scratch() - set dev_scratch of network buffer
+ * @buf: Pointer to network buffer
+ * @value: value to be set in dev_scratch of network buffer
+ *
+ * Return: void
+ */
+static inline void qdf_nbuf_set_dev_scratch(qdf_nbuf_t buf, unsigned long value)
+{
+	__qdf_nbuf_set_dev_scratch(buf, value);
 }
 
 /**

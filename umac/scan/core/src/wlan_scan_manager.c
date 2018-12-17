@@ -151,7 +151,7 @@ static void scm_scan_post_event(struct wlan_objmgr_vdev *vdev,
 		  event->vdev_id, event->type, event->reason, event->chan_freq,
 		  event->requester, event->scan_id);
 
-	listeners = qdf_mem_malloc(sizeof(*listeners));
+	listeners = qdf_mem_malloc_atomic(sizeof(*listeners));
 	if (!listeners) {
 		scm_warn("couldn't allocate listeners list");
 		return;
@@ -321,6 +321,9 @@ scm_scan_serialize_callback(struct wlan_serialization_command *cmd,
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
+	qdf_mtrace(QDF_MODULE_ID_SERIALIZATION, QDF_MODULE_ID_SCAN, reason,
+		   req->scan_req.vdev_id, req->scan_req.scan_id);
+
 	switch (reason) {
 	case WLAN_SER_CB_ACTIVATE_CMD:
 		/* command moved to active list
@@ -393,6 +396,26 @@ scm_scan_start_req(struct scheduler_msg *msg)
 		goto err;
 	}
 
+	if (!scan_obj->enable_scan) {
+		scm_err("scan disabled, rejecting the scan req");
+		status = QDF_STATUS_E_NULL_VALUE;
+		goto err;
+	}
+
+	scan_vdev_priv_obj = wlan_get_vdev_scan_obj(req->vdev);
+	if (!scan_vdev_priv_obj) {
+		scm_debug("Couldn't find scan priv object");
+		status = QDF_STATUS_E_NULL_VALUE;
+		goto err;
+	}
+
+	if (scan_vdev_priv_obj->is_vdev_delete_in_progress) {
+		scm_err("Can't allow scan on vdev_id:%d",
+			wlan_vdev_get_id(req->vdev));
+		status = QDF_STATUS_E_NULL_VALUE;
+		goto err;
+	}
+
 	cmd.cmd_type = WLAN_SER_CMD_SCAN;
 	cmd.cmd_id = req->scan_req.scan_id;
 	cmd.cmd_cb = (wlan_serialization_cmd_callback)
@@ -411,18 +434,10 @@ scm_scan_start_req(struct scheduler_msg *msg)
 		  req, req->scan_req.scan_req_id, req->scan_req.scan_id,
 		  req->scan_req.vdev_id);
 
-	scan_vdev_priv_obj = wlan_get_vdev_scan_obj(req->vdev);
-	if (!scan_vdev_priv_obj) {
-		scm_debug("Couldn't find scan priv object");
-		status = QDF_STATUS_E_NULL_VALUE;
-		goto err;
-	}
-	if (scan_vdev_priv_obj->is_vdev_delete_in_progress) {
-		scm_err("Can't allow scan on vdev_id:%d",
-			wlan_vdev_get_id(req->vdev));
-		status = QDF_STATUS_E_NULL_VALUE;
-		goto err;
-	}
+	qdf_mtrace(QDF_MODULE_ID_SCAN, QDF_MODULE_ID_SERIALIZATION,
+		   WLAN_SER_CMD_SCAN, req->vdev->vdev_objmgr.vdev_id,
+		   req->scan_req.scan_id);
+
 	ser_cmd_status = wlan_serialization_request(&cmd);
 	scm_debug("wlan_serialization_request status:%d", ser_cmd_status);
 
@@ -436,11 +451,6 @@ scm_scan_start_req(struct scheduler_msg *msg)
 	case WLAN_SER_CMD_DENIED_LIST_FULL:
 	case WLAN_SER_CMD_DENIED_RULES_FAILED:
 	case WLAN_SER_CMD_DENIED_UNSPECIFIED:
-		/* notify registered scan event handlers
-		 * about internal error
-		 */
-		scm_post_internal_scan_complete_event(req,
-				SCAN_REASON_INTERNAL_FAILURE);
 		goto err;
 	default:
 		QDF_ASSERT(0);
@@ -450,6 +460,12 @@ scm_scan_start_req(struct scheduler_msg *msg)
 
 	return status;
 err:
+	/*
+	 * notify registered scan event handlers
+	 * about internal error
+	 */
+	scm_post_internal_scan_complete_event(req,
+					      SCAN_REASON_INTERNAL_FAILURE);
 	/*
 	 * cmd can't be serviced.
 	 * release vdev reference and free scan_start_request memory

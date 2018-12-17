@@ -31,6 +31,8 @@
 #include <wlan_scan_public_structs.h>
 #include<wlan_mgmt_txrx_utils_api.h>
 
+#define ASCII_SPACE_CHARACTER 32
+
 /**
  * util_is_scan_entry_match() - func to check if both scan entry
  * are from same AP
@@ -268,10 +270,6 @@ static inline bool
 util_is_ssid_match(struct wlan_ssid *ssid1,
 		struct wlan_ssid *ssid2)
 {
-
-	if (ssid1->length == 0)
-		return true;
-
 	if (ssid1->length != ssid2->length)
 		return false;
 
@@ -596,7 +594,7 @@ util_scan_copy_beacon_data(struct scan_cache_entry *new_entry,
 	struct ie_list *ie_lst;
 
 	new_entry->raw_frame.ptr =
-		qdf_mem_malloc(scan_entry->raw_frame.len);
+		qdf_mem_malloc_atomic(scan_entry->raw_frame.len);
 	if (!new_entry->raw_frame.ptr)
 		return QDF_STATUS_E_NOMEM;
 
@@ -677,7 +675,7 @@ util_scan_copy_cache_entry(struct scan_cache_entry *scan_entry)
 		return NULL;
 
 	new_entry =
-	   qdf_mem_malloc(sizeof(*scan_entry));
+	   qdf_mem_malloc_atomic(sizeof(*scan_entry));
 	if (!new_entry)
 		return NULL;
 
@@ -686,7 +684,7 @@ util_scan_copy_cache_entry(struct scan_cache_entry *scan_entry)
 
 	if (scan_entry->alt_wcn_ie.ptr) {
 		new_entry->alt_wcn_ie.ptr =
-		    qdf_mem_malloc(scan_entry->alt_wcn_ie.len);
+		    qdf_mem_malloc_atomic(scan_entry->alt_wcn_ie.len);
 		if (!new_entry->alt_wcn_ie.ptr) {
 			qdf_mem_free(new_entry);
 			return NULL;
@@ -1478,5 +1476,40 @@ enum wlan_band util_scan_scm_freq_to_band(uint16_t freq);
  * Return: true if scan complete, false otherwise
  */
 bool util_is_scan_completed(struct scan_event *event, bool *success);
+
+/**
+ * util_scan_is_null_ssid() - to check for NULL ssid
+ * @ssid: ssid
+ *
+ * Return: true if NULL ssid else false
+ */
+static inline bool util_scan_is_null_ssid(struct wlan_ssid *ssid)
+{
+	uint32_t ssid_length;
+	uint8_t *ssid_str;
+
+	if (ssid->length == 0)
+		return true;
+
+	/* Consider 0 or space for hidden SSID */
+	if (0 == ssid->ssid[0])
+		return true;
+
+	ssid_length = ssid->length;
+	ssid_str = ssid->ssid;
+
+	while (ssid_length) {
+		if (*ssid_str != ASCII_SPACE_CHARACTER &&
+		    *ssid_str)
+			break;
+		ssid_str++;
+		ssid_length--;
+	}
+
+	if (ssid_length == 0)
+		return true;
+
+	return false;
+}
 
 #endif

@@ -393,8 +393,16 @@ void policy_mgr_pdev_set_hw_mode_cb(uint32_t status,
 				enum policy_mgr_conn_update_reason reason,
 				uint32_t session_id, void *context);
 void policy_mgr_dump_current_concurrency(struct wlan_objmgr_psoc *psoc);
-void policy_mgr_set_pcl_for_existing_combo(
-		struct wlan_objmgr_psoc *psoc, enum policy_mgr_con_mode mode);
+
+/**
+ * policy_mgr_pdev_set_pcl() - SET PCL channel list and send to firmware
+ * @psoc: PSOC object information
+ * @mode: Adapter mode
+ *
+ * Return: None
+ */
+void policy_mgr_pdev_set_pcl(struct wlan_objmgr_psoc *psoc,
+			     enum QDF_OPMODE mode);
 void pm_dbs_opportunistic_timer_handler(void *data);
 enum policy_mgr_con_mode policy_mgr_get_mode(uint8_t type,
 		uint8_t subtype);
@@ -464,7 +472,8 @@ void policy_mgr_reg_chan_change_callback(struct wlan_objmgr_psoc *psoc,
 
 QDF_STATUS policy_mgr_nss_update(struct wlan_objmgr_psoc *psoc,
 		uint8_t  new_nss, uint8_t next_action,
-		enum policy_mgr_conn_update_reason reason);
+		enum policy_mgr_conn_update_reason reason,
+		uint32_t original_vdev_id);
 
 /**
  * policy_mgr_is_concurrency_allowed() - Check for allowed

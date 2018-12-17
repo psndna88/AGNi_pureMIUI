@@ -216,7 +216,7 @@ QDF_STATUS scheduler_deinit(void)
 	return QDF_STATUS_SUCCESS;
 }
 
-QDF_STATUS scheduler_post_msg_by_priority(QDF_MODULE_ID qid,
+QDF_STATUS scheduler_post_msg_by_priority(uint32_t qid,
 					  struct scheduler_msg *msg,
 					  bool is_high_priority)
 {
@@ -224,6 +224,9 @@ QDF_STATUS scheduler_post_msg_by_priority(QDF_MODULE_ID qid,
 	struct scheduler_mq_type *target_mq;
 	struct scheduler_msg *queue_msg;
 	struct scheduler_ctx *sched_ctx;
+	uint16_t src_id;
+	uint16_t dest_id;
+	uint16_t que_id;
 
 	QDF_BUG(msg);
 	if (!msg)
@@ -244,6 +247,15 @@ QDF_STATUS scheduler_post_msg_by_priority(QDF_MODULE_ID qid,
 		return QDF_STATUS_E_FAILURE;
 	}
 
+	dest_id = scheduler_get_dest_id(qid);
+	src_id = scheduler_get_src_id(qid);
+	que_id = scheduler_get_que_id(qid);
+
+	if (que_id >= QDF_MODULE_ID_MAX || src_id >= QDF_MODULE_ID_MAX ||
+	    dest_id >= QDF_MODULE_ID_MAX) {
+		sched_err("Src_id/Dest_id invalid, cannot post message");
+		return QDF_STATUS_E_FAILURE;
+	}
 	/* Target_If is a special message queue in phase 3 convergence beacause
 	 * its used by both legacy WMA and as well as new UMAC components which
 	 * directly populate callback handlers in message body.
@@ -255,20 +267,20 @@ QDF_STATUS scheduler_post_msg_by_priority(QDF_MODULE_ID qid,
 	 * legacy WMA message queue id to target_if queue such that its  always
 	 * handled in right order.
 	 */
-	if (QDF_MODULE_ID_WMA == qid) {
+	if (QDF_MODULE_ID_WMA == que_id) {
 		msg->callback = NULL;
 		/* change legacy WMA message id to new target_if mq id */
-		qid = QDF_MODULE_ID_TARGET_IF;
+		que_id = QDF_MODULE_ID_TARGET_IF;
 	}
 
-	qidx = sched_ctx->queue_ctx.scheduler_msg_qid_to_qidx[qid];
+	qidx = sched_ctx->queue_ctx.scheduler_msg_qid_to_qidx[que_id];
 	if (qidx >= SCHEDULER_NUMBER_OF_MSG_QUEUE) {
 		sched_err("Scheduler is deinitialized ignore msg");
 		return QDF_STATUS_E_FAILURE;
 	}
 
 	if (!sched_ctx->queue_ctx.scheduler_msg_process_fn[qidx]) {
-		QDF_DEBUG_PANIC("callback not registered for qid[%d]", qid);
+		QDF_DEBUG_PANIC("callback not registered for qid[%d]", que_id);
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -615,7 +627,9 @@ void scheduler_mc_timer_callback(unsigned long data)
 	/* bodyptr points to user data, do not free it during msg flush */
 	msg.flush_callback = scheduler_msg_flush_noop;
 
-	status = scheduler_post_msg(QDF_MODULE_ID_SYS, &msg);
+	status = scheduler_post_message(QDF_MODULE_ID_SCHEDULER,
+					QDF_MODULE_ID_SCHEDULER,
+					QDF_MODULE_ID_SYS, &msg);
 	if (QDF_IS_STATUS_ERROR(status))
 		sched_err("Could not enqueue timer to timer queue");
 }

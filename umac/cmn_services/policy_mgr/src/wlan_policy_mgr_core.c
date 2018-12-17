@@ -642,10 +642,10 @@ void policy_mgr_store_and_del_conn_info(struct wlan_objmgr_psoc *psoc,
 			/* Deleting the connection entry */
 			policy_mgr_decr_connection_count(psoc,
 					info[found_index].vdev_id);
-			policy_mgr_notice("Stored %d (%d), deleted STA entry with vdev id %d, index %d",
-				info[found_index].vdev_id,
-				info[found_index].mode,
-				info[found_index].vdev_id, conn_index);
+			policy_mgr_debug("Stored %d (%d), deleted STA entry with vdev id %d, index %d",
+					 info[found_index].vdev_id,
+					 info[found_index].mode,
+					 info[found_index].vdev_id, conn_index);
 			found_index++;
 			if (all_matching_cxn_to_del)
 				continue;
@@ -1919,6 +1919,7 @@ QDF_STATUS policy_mgr_get_channel_list(struct wlan_objmgr_psoc *psoc,
 	}
 
 	while ((chan_index < num_channels) &&
+		(chan_index < QDF_MAX_NUM_CHAN) &&
 		(chan_index_5 < QDF_MAX_NUM_CHAN)) {
 		if ((true == skip_dfs_channel) &&
 		    wlan_reg_is_dfs_ch(pm_ctx->pdev,
@@ -2465,6 +2466,7 @@ bool policy_mgr_is_5g_channel_allowed(struct wlan_objmgr_psoc *psoc,
  * @next_action: next action to happen at policy mgr after
  *		beacon update
  * @reason: Reason for nss update
+ * @original_vdev_id: original request hwmode change vdev id
  *
  * This function is the callback registered with SME at nss
  * update request time
@@ -2475,7 +2477,8 @@ static void policy_mgr_nss_update_cb(struct wlan_objmgr_psoc *psoc,
 		uint8_t tx_status,
 		uint8_t vdev_id,
 		uint8_t next_action,
-		enum policy_mgr_conn_update_reason reason)
+		enum policy_mgr_conn_update_reason reason,
+		uint32_t original_vdev_id)
 {
 	uint32_t conn_index = 0;
 	QDF_STATUS ret;
@@ -2493,9 +2496,11 @@ static void policy_mgr_nss_update_cb(struct wlan_objmgr_psoc *psoc,
 		return;
 	}
 
-	policy_mgr_debug("nss update successful for vdev:%d", vdev_id);
+	policy_mgr_debug("nss update successful for vdev:%d ori %d reason %d",
+			 vdev_id, original_vdev_id, reason);
 	if (PM_NOP != next_action)
-		policy_mgr_next_actions(psoc, vdev_id, next_action, reason);
+		policy_mgr_next_actions(psoc, original_vdev_id, next_action,
+					reason);
 	else {
 		policy_mgr_debug("No action needed right now");
 		ret = policy_mgr_set_opportunistic_update(psoc);
@@ -2508,7 +2513,8 @@ static void policy_mgr_nss_update_cb(struct wlan_objmgr_psoc *psoc,
 
 QDF_STATUS policy_mgr_nss_update(struct wlan_objmgr_psoc *psoc,
 		uint8_t  new_nss, uint8_t next_action,
-		enum policy_mgr_conn_update_reason reason)
+		enum policy_mgr_conn_update_reason reason,
+		uint32_t original_vdev_id)
 {
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
 	uint32_t index, count;
@@ -2544,7 +2550,8 @@ QDF_STATUS policy_mgr_nss_update(struct wlan_objmgr_psoc *psoc,
 			status = pm_ctx->sme_cbacks.sme_nss_update_request(
 					vdev_id, new_nss,
 					policy_mgr_nss_update_cb,
-					next_action, psoc, reason);
+					next_action, psoc, reason,
+					original_vdev_id);
 			if (!QDF_IS_STATUS_SUCCESS(status)) {
 				policy_mgr_err("sme_nss_update_request() failed for vdev %d",
 				vdev_id);
@@ -2571,7 +2578,8 @@ QDF_STATUS policy_mgr_nss_update(struct wlan_objmgr_psoc *psoc,
 			status = pm_ctx->sme_cbacks.sme_nss_update_request(
 					vdev_id, new_nss,
 					policy_mgr_nss_update_cb,
-					next_action, psoc, reason);
+					next_action, psoc, reason,
+					original_vdev_id);
 			if (!QDF_IS_STATUS_SUCCESS(status)) {
 				policy_mgr_err("sme_nss_update_request() failed for vdev %d",
 				vdev_id);
@@ -2615,7 +2623,9 @@ QDF_STATUS policy_mgr_complete_action(struct wlan_objmgr_psoc *psoc,
 	 * protection. So, not taking any lock inside
 	 * policy_mgr_complete_action() during pm_conc_connection_list access.
 	 */
-	status = policy_mgr_nss_update(psoc, new_nss, next_action, reason);
+
+	status = policy_mgr_nss_update(psoc, new_nss, next_action, reason,
+				       session_id);
 	if (!QDF_IS_STATUS_SUCCESS(status))
 		status = policy_mgr_next_actions(psoc, session_id,
 						next_action, reason);
@@ -2973,7 +2983,7 @@ void  policy_mgr_init_sap_mandatory_2g_chan(struct wlan_objmgr_psoc *psoc)
 	}
 	pm_ctx->sap_mandatory_channels_len = 0;
 
-	for (i = 0; i < len; i++) {
+	for (i = 0; (i < len) && (i < QDF_MAX_NUM_CHAN); i++) {
 		if (WLAN_REG_IS_24GHZ_CH(chan_list[i])) {
 			policy_mgr_debug("Add chan %hu to mandatory list",
 					chan_list[i]);

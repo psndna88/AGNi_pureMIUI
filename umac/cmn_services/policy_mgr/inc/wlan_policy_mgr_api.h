@@ -126,6 +126,20 @@ uint8_t policy_mgr_search_and_check_for_session_conc(
 		uint8_t session_id, void *roam_profile);
 
 /**
+ * policy_mgr_is_chnl_in_diff_band() - to check that given channel
+ * is in diff band from existing channel or not
+ * @psoc: pointer to psoc
+ * @channel: given channel
+ *
+ * This API will check that if the passed channel is in diff band than the
+ * already existing connections or not.
+ *
+ * Return: true if channel is in diff band
+ */
+bool policy_mgr_is_chnl_in_diff_band(struct wlan_objmgr_psoc *psoc,
+					    uint8_t channel);
+
+/**
  * policy_mgr_check_for_session_conc() - Check if concurrency is
  * allowed for a session
  * @psoc: PSOC object information
@@ -230,15 +244,14 @@ static inline void policy_mgr_change_sap_channel_with_csa(
 #endif
 
 /**
- * policy_mgr_pdev_set_pcl() - SET PCL channel list and send to firmware
+ * policy_mgr_set_pcl_for_existing_combo() - SET PCL for existing combo
  * @psoc: PSOC object information
- * @mode:	Adapter mode
+ * @mode: Adapter mode
  *
  * Return: None
  */
-void policy_mgr_pdev_set_pcl(struct wlan_objmgr_psoc *psoc,
-			     enum QDF_OPMODE mode);
-
+void policy_mgr_set_pcl_for_existing_combo(struct wlan_objmgr_psoc *psoc,
+					   enum policy_mgr_con_mode mode);
 /**
  * policy_mgr_incr_active_session() - increments the number of active sessions
  * @psoc: PSOC object information
@@ -834,6 +847,7 @@ typedef void (*policy_mgr_pdev_set_hw_mode_cback)(uint32_t status,
  * @next_action: next action to happen at policy mgr after
  *		beacon update
  * @reason: Reason for nss update
+ * @original_vdev_id: original request hwmode change vdev id
  *
  * This function is the callback registered with SME at nss
  * update request time
@@ -844,7 +858,8 @@ typedef void (*policy_mgr_nss_update_cback)(struct wlan_objmgr_psoc *psoc,
 		uint8_t tx_status,
 		uint8_t vdev_id,
 		uint8_t next_action,
-		enum policy_mgr_conn_update_reason reason);
+		enum policy_mgr_conn_update_reason reason,
+		uint32_t original_vdev_id);
 
 /**
  * struct policy_mgr_sme_cbacks - SME Callbacks to be invoked
@@ -868,9 +883,10 @@ struct policy_mgr_sme_cbacks {
 	QDF_STATUS (*sme_pdev_set_hw_mode)(struct policy_mgr_hw_mode msg);
 	QDF_STATUS (*sme_pdev_set_pcl)(struct policy_mgr_pcl_list *msg);
 	QDF_STATUS (*sme_nss_update_request)(uint32_t vdev_id,
-		uint8_t  new_nss, policy_mgr_nss_update_cback cback,
+		uint8_t new_nss, policy_mgr_nss_update_cback cback,
 		uint8_t next_action, struct wlan_objmgr_psoc *psoc,
-		enum policy_mgr_conn_update_reason reason);
+		enum policy_mgr_conn_update_reason reason,
+		uint32_t original_vdev_id);
 	QDF_STATUS (*sme_change_mcc_beacon_interval)(uint8_t session_id);
 	QDF_STATUS (*sme_get_ap_channel_from_scan)(
 		void *roam_profile,

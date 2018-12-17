@@ -203,7 +203,7 @@ enum policy_mgr_conc_next_action policy_mgr_need_opportunistic_upgrade(
 		goto done;
 	}
 	if (!hw_mode.dbs_cap) {
-		policy_mgr_notice("current HW mode is non-DBS capable");
+		policy_mgr_debug("current HW mode is non-DBS capable");
 		goto done;
 	}
 
@@ -439,7 +439,7 @@ bool policy_mgr_is_dbs_allowed_for_concurrency(
 	return ret;
 }
 
-static bool policy_mgr_is_chnl_in_diff_band(struct wlan_objmgr_psoc *psoc,
+bool policy_mgr_is_chnl_in_diff_band(struct wlan_objmgr_psoc *psoc,
 					    uint8_t channel)
 {
 	uint8_t i, pm_chnl;
@@ -736,7 +736,7 @@ QDF_STATUS policy_mgr_next_actions(struct wlan_objmgr_psoc *psoc,
 		 * intially. If yes, update the beacon template & notify FW.
 		 */
 		status = policy_mgr_nss_update(psoc, POLICY_MGR_RX_NSS_1,
-					PM_NOP, reason);
+					PM_NOP, reason, session_id);
 		break;
 	case PM_UPGRADE:
 		/*
@@ -744,7 +744,7 @@ QDF_STATUS policy_mgr_next_actions(struct wlan_objmgr_psoc *psoc,
 		 * intially. If yes, update the beacon template & notify FW.
 		 */
 		status = policy_mgr_nss_update(psoc, POLICY_MGR_RX_NSS_2,
-					PM_NOP, reason);
+					PM_NOP, reason, session_id);
 		break;
 	default:
 		policy_mgr_err("unexpected action value %d", action);
@@ -940,10 +940,13 @@ static void __policy_mgr_check_sta_ap_concurrent_ch_intf(void *data)
 					&vdev_id[cc_count],
 					PM_SAP_MODE);
 	policy_mgr_debug("Number of concurrent SAP: %d", cc_count);
-	cc_count = cc_count + policy_mgr_get_mode_specific_conn_info(psoc,
-						&operating_channel[cc_count],
-						&vdev_id[cc_count],
-						PM_P2P_GO_MODE);
+	if (cc_count < MAX_NUMBER_OF_CONC_CONNECTIONS)
+		cc_count = cc_count +
+				policy_mgr_get_mode_specific_conn_info
+					(psoc,
+					&operating_channel[cc_count],
+					&vdev_id[cc_count],
+					PM_P2P_GO_MODE);
 	policy_mgr_debug("Number of beaconing entities (SAP + GO):%d",
 							cc_count);
 	if (!cc_count) {
@@ -963,16 +966,18 @@ static void __policy_mgr_check_sta_ap_concurrent_ch_intf(void *data)
 		policy_mgr_err("SAP restart get channel callback in NULL");
 		goto end;
 	}
-	for (i = 0; i < cc_count; i++) {
-		status = pm_ctx->hdd_cbacks.
-			wlan_hdd_get_channel_for_sap_restart(psoc,
+	if (cc_count < MAX_NUMBER_OF_CONC_CONNECTIONS)
+		for (i = 0; i < cc_count; i++) {
+			status = pm_ctx->hdd_cbacks.
+				wlan_hdd_get_channel_for_sap_restart
+					(psoc,
 					vdev_id[i], &channel, &sec_ch);
-		if (status == QDF_STATUS_SUCCESS) {
-			policy_mgr_info("SAP restarts due to MCC->SCC switch, old chan :%d new chan: %d"
+			if (status == QDF_STATUS_SUCCESS) {
+				policy_mgr_info("SAP restarts due to MCC->SCC switch, old chan :%d new chan: %d"
 					, operating_channel[i], channel);
-			break;
+				break;
+			}
 		}
-	}
 	if (status != QDF_STATUS_SUCCESS)
 		policy_mgr_err("Failed to switch SAP channel");
 end:
@@ -1152,7 +1157,7 @@ void policy_mgr_check_concurrent_intf_and_restart_sap(
 					&operating_channel[cc_count],
 					&vdev_id[cc_count], PM_STA_MODE);
 	if (!cc_count) {
-		policy_mgr_err("Could not get STA operating channel&vdevid");
+		policy_mgr_debug("Could not get STA operating channel&vdevid");
 		return;
 	}
 

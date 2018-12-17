@@ -160,6 +160,9 @@ static QDF_STATUS p2p_scan_abort(struct p2p_roc_context *roc_ctx)
 	req->cancel_req.vdev_id = roc_ctx->vdev_id;
 	req->cancel_req.req_type = WLAN_SCAN_CANCEL_SINGLE;
 
+	qdf_mtrace(QDF_MODULE_ID_P2P, QDF_MODULE_ID_SCAN,
+		   req->cancel_req.req_type,
+		   req->vdev->vdev_objmgr.vdev_id, req->cancel_req.scan_id);
 	status = ucfg_scan_cancel(req);
 
 	p2p_debug("abort scan, scan req id:%d, scan id:%d, status:%d",
@@ -233,7 +236,8 @@ static QDF_STATUS p2p_destroy_roc_ctx(struct p2p_roc_context *roc_ctx,
 		p2p_soc_obj, roc_ctx, up_layer_event, in_roc_queue);
 
 	if (up_layer_event) {
-		p2p_send_roc_event(roc_ctx, ROC_EVENT_READY_ON_CHAN);
+		if (roc_ctx->roc_state < ROC_STATE_ON_CHAN)
+			p2p_send_roc_event(roc_ctx, ROC_EVENT_READY_ON_CHAN);
 		p2p_send_roc_event(roc_ctx, ROC_EVENT_COMPLETED);
 	}
 
@@ -719,7 +723,9 @@ QDF_STATUS p2p_cleanup_roc_sync(
 	msg.type = P2P_CLEANUP_ROC;
 	msg.bodyptr = param;
 	msg.callback = p2p_process_cmd;
-	status = scheduler_post_msg(QDF_MODULE_ID_OS_IF, &msg);
+	status = scheduler_post_message(QDF_MODULE_ID_P2P,
+					QDF_MODULE_ID_P2P,
+					QDF_MODULE_ID_OS_IF, &msg);
 	if (status != QDF_STATUS_SUCCESS) {
 		p2p_err("failed to post message");
 		qdf_mem_free(param);
@@ -870,12 +876,7 @@ QDF_STATUS p2p_process_cancel_roc_req(
 	}
 
 	if (curr_roc_ctx->roc_state == ROC_STATE_IDLE) {
-		status = qdf_list_remove_node(&p2p_soc_obj->roc_q,
-				(qdf_list_node_t *)curr_roc_ctx);
-		if (status == QDF_STATUS_SUCCESS)
-			qdf_mem_free(curr_roc_ctx);
-		else
-			p2p_err("Failed to remove roc req, status %d", status);
+		status = p2p_destroy_roc_ctx(curr_roc_ctx, true, true);
 	} else if (curr_roc_ctx->roc_state ==
 				ROC_STATE_CANCEL_IN_PROG) {
 		p2p_debug("Receive cancel roc req when roc req is canceling, cookie %llx",
@@ -907,6 +908,9 @@ void p2p_scan_event_cb(struct wlan_objmgr_vdev *vdev,
 		p2p_err("Failed to find valid P2P roc context");
 		return;
 	}
+
+	qdf_mtrace(QDF_MODULE_ID_SCAN, QDF_MODULE_ID_P2P, event->type,
+		   event->vdev_id, event->scan_id);
 	switch (event->type) {
 	case SCAN_EVENT_TYPE_STARTED:
 		p2p_process_scan_start_evt(curr_roc_ctx);
