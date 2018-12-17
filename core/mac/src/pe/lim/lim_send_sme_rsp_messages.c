@@ -1169,7 +1169,9 @@ lim_send_sme_mgmt_tx_completion(tpAniSirGlobal pMac,
 
 	pSirMgmtTxCompletionInd->psoc = pMac->psoc;
 	mmhMsg.callback = tgt_tdls_send_mgmt_tx_completion;
-	scheduler_post_msg(QDF_MODULE_ID_TARGET_IF, &mmhMsg);
+	scheduler_post_message(QDF_MODULE_ID_PE,
+			       QDF_MODULE_ID_TDLS,
+			       QDF_MODULE_ID_TARGET_IF, &mmhMsg);
 	return;
 } /*** end lim_send_sme_tdls_delete_all_peer_ind() ***/
 
@@ -2223,6 +2225,7 @@ void lim_handle_delete_bss_rsp(tpAniSirGlobal pMac, struct scheduler_msg *MsgQ)
 		pe_err("Session Does not exist for given sessionID: %d",
 			pDelBss->sessionId);
 		qdf_mem_free(MsgQ->bodyptr);
+		MsgQ->bodyptr = NULL;
 		return;
 	}
 
@@ -2372,7 +2375,8 @@ lim_send_sme_ap_channel_switch_resp(tpAniSirGlobal pMac,
 	if (!is_ch_dfs) {
 		if (channelId == psessionEntry->currentOperChannel) {
 			lim_apply_configuration(pMac, psessionEntry);
-			lim_send_beacon_ind(pMac, psessionEntry);
+			lim_send_beacon_ind(pMac,
+					    psessionEntry, REASON_DEFAULT);
 		} else {
 			pe_debug("Failed to Transmit Beacons on channel: %d after AP channel change response",
 				       psessionEntry->bcnLen);
@@ -2404,7 +2408,7 @@ lim_send_bss_color_change_ie_update(tpAniSirGlobal mac_ctx,
 	}
 
 	/* Send update beacon template message */
-	lim_send_beacon_ind(mac_ctx, session);
+	lim_send_beacon_ind(mac_ctx, session, REASON_COLOR_CHANGE);
 	pe_debug("Updated BSS color change countdown = %d",
 		 session->he_bss_color_change.countdown);
 }
@@ -2458,11 +2462,8 @@ lim_process_beacon_tx_success_ind(tpAniSirGlobal mac_ctx, uint16_t msgType,
 				  void *event)
 {
 	tpPESession session;
-	struct scheduler_msg msg = {0};
-	struct sir_beacon_tx_complete_rsp *bcn_tx_comp_rsp;
 	tpSirFirstBeaconTxCompleteInd bcn_ind =
 		(tSirFirstBeaconTxCompleteInd *) event;
-	QDF_STATUS status;
 
 	session = pe_find_session_by_bss_idx(mac_ctx, bcn_ind->bssIdx);
 	if (!session) {
@@ -2485,26 +2486,9 @@ lim_process_beacon_tx_success_ind(tpAniSirGlobal mac_ctx, uint16_t msgType,
 		lim_process_ap_ecsa_timeout(session);
 
 
-	if (session->gLimOperatingMode.present) {
-		/* Done with nss update, send response back to SME */
+	if (session->gLimOperatingMode.present)
+		/* Done with nss update */
 		session->gLimOperatingMode.present = 0;
-		bcn_tx_comp_rsp = (struct sir_beacon_tx_complete_rsp *)
-				  qdf_mem_malloc(sizeof(*bcn_tx_comp_rsp));
-		if (NULL == bcn_tx_comp_rsp) {
-			pe_err("AllocateMemory failed for bcn_tx_comp_rsp");
-			return;
-		}
-		bcn_tx_comp_rsp->session_id = session->smeSessionId;
-		bcn_tx_comp_rsp->tx_status = QDF_STATUS_SUCCESS;
-		msg.type = eWNI_SME_NSS_UPDATE_RSP;
-		msg.bodyptr = bcn_tx_comp_rsp;
-		msg.bodyval = 0;
-		status = scheduler_post_msg(QDF_MODULE_ID_SME, &msg);
-		if (QDF_IS_STATUS_ERROR(status)) {
-			sme_err("Failed to post eWNI_SME_NSS_UPDATE_RSP");
-			qdf_mem_free(bcn_tx_comp_rsp);
-		}
-	}
 
 	lim_handle_bss_color_change_ie(mac_ctx, session);
 

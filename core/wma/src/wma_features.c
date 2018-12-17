@@ -199,7 +199,9 @@ static int wma_wake_reason_auto_shutdown(void)
 	sme_msg.bodyptr = auto_sh_evt;
 	sme_msg.bodyval = 0;
 
-	qdf_status = scheduler_post_msg(QDF_MODULE_ID_SME, &sme_msg);
+	qdf_status = scheduler_post_message(QDF_MODULE_ID_WMA,
+					    QDF_MODULE_ID_SME,
+					    QDF_MODULE_ID_SME, &sme_msg);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		WMA_LOGE("Fail to post eWNI_SME_AUTO_SHUTDOWN_IND msg to SME");
 		qdf_mem_free(auto_sh_evt);
@@ -403,7 +405,9 @@ int wma_vdev_tsf_handler(void *handle, uint8_t *data, uint32_t data_len)
 	tsf_msg.bodyval = 0;
 
 	if (QDF_STATUS_SUCCESS !=
-		scheduler_post_msg(QDF_MODULE_ID_SME, &tsf_msg)) {
+		scheduler_post_message(QDF_MODULE_ID_WMA,
+				       QDF_MODULE_ID_SME,
+				       QDF_MODULE_ID_SME, &tsf_msg)) {
 
 		WMA_LOGP("%s: Failed to post eWNI_SME_TSF_EVENT", __func__);
 		qdf_mem_free(ptsf);
@@ -717,6 +721,7 @@ WLAN_PHY_MODE wma_chan_phy_mode(u8 chan, enum phy_ch_width chan_width,
 				else if (bw_val == 40)
 					phymode = MODE_11AC_VHT40_2G;
 				break;
+#if SUPPORT_11AX
 			case WNI_CFG_DOT11_MODE_11AX:
 			case WNI_CFG_DOT11_MODE_11AX_ONLY:
 				if (20 == bw_val)
@@ -724,6 +729,7 @@ WLAN_PHY_MODE wma_chan_phy_mode(u8 chan, enum phy_ch_width chan_width,
 				else if (40 == bw_val)
 					phymode = MODE_11AX_HE40_2G;
 				break;
+#endif
 			default:
 				break;
 			}
@@ -766,6 +772,7 @@ WLAN_PHY_MODE wma_chan_phy_mode(u8 chan, enum phy_ch_width chan_width,
 				else if (chan_width == CH_WIDTH_80P80MHZ)
 					phymode = MODE_11AC_VHT80_80;
 				break;
+#if SUPPORT_11AX
 			case WNI_CFG_DOT11_MODE_11AX:
 			case WNI_CFG_DOT11_MODE_11AX_ONLY:
 				if (20 == bw_val)
@@ -779,6 +786,7 @@ WLAN_PHY_MODE wma_chan_phy_mode(u8 chan, enum phy_ch_width chan_width,
 				else if (CH_WIDTH_80P80MHZ == chan_width)
 					phymode = MODE_11AX_HE80_80;
 				break;
+#endif
 			default:
 				break;
 			}
@@ -1279,7 +1287,9 @@ int wma_nan_rsp_event_handler(void *handle, uint8_t *event_buf,
 	message.bodyptr = (void *)nan_rsp_event;
 	message.bodyval = 0;
 
-	status = scheduler_post_msg(QDF_MODULE_ID_SME, &message);
+	status = scheduler_post_message(QDF_MODULE_ID_WMA,
+					QDF_MODULE_ID_SME,
+					QDF_MODULE_ID_SME, &message);
 	if (status != QDF_STATUS_SUCCESS) {
 		WMA_LOGE("%s: Failed to post NaN response event to SME",
 			 __func__);
@@ -1546,6 +1556,7 @@ QDF_STATUS wma_pktlog_wmi_send_cmd(WMA_HANDLE handle,
  *
  * Return: reason code in string format
  */
+#ifdef WLAN_DEBUG
 static const u8 *wma_wow_wake_reason_str(A_INT32 wake_reason)
 {
 	switch (wake_reason) {
@@ -1657,6 +1668,7 @@ static const u8 *wma_wow_wake_reason_str(A_INT32 wake_reason)
 		return "unknown";
 	}
 }
+#endif
 
 #ifdef QCA_SUPPORT_CP_STATS
 static bool wma_wow_reason_has_stats(enum wake_reason_e reason)
@@ -1672,6 +1684,7 @@ static bool wma_wow_reason_has_stats(enum wake_reason_e reason)
 	case WOW_REASON_ACTION_FRAME_RECV:
 	case WOW_REASON_BPF_ALLOW:
 	case WOW_REASON_PATTERN_MATCH_FOUND:
+	case WOW_REASON_PACKET_FILTER_MATCH:
 	case WOW_REASON_RA_MATCH:
 	case WOW_REASON_NLOD:
 	case WOW_REASON_NLO_SCAN_COMPLETE:
@@ -1783,6 +1796,7 @@ static void wma_print_wow_stats(t_wma_handle *wma,
 	switch (wake_info->wake_reason) {
 	case WOW_REASON_BPF_ALLOW:
 	case WOW_REASON_PATTERN_MATCH_FOUND:
+	case WOW_REASON_PACKET_FILTER_MATCH:
 	case WOW_REASON_RA_MATCH:
 	case WOW_REASON_NLOD:
 	case WOW_REASON_NLO_SCAN_COMPLETE:
@@ -2641,6 +2655,7 @@ wma_wake_reason_ap_assoc_lost(t_wma_handle *wma, void *event, uint32_t len)
 	return 0;
 }
 
+#ifdef WLAN_DEBUG
 static const char *wma_vdev_type_str(uint32_t vdev_type)
 {
 	switch (vdev_type) {
@@ -2662,6 +2677,7 @@ static const char *wma_vdev_type_str(uint32_t vdev_type)
 		return "unknown";
 	}
 }
+#endif
 
 static int wma_wake_event_packet(
 	t_wma_handle *wma,
@@ -2714,6 +2730,7 @@ static int wma_wake_event_packet(
 	case WOW_REASON_PATTERN_MATCH_FOUND:
 	case WOW_REASON_RA_MATCH:
 	case WOW_REASON_RECV_MAGIC_PATTERN:
+	case WOW_REASON_PACKET_FILTER_MATCH:
 		WMA_LOGD("Wake event packet:");
 		qdf_trace_hex_dump(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_DEBUG,
 				   packet, packet_len);
@@ -3779,7 +3796,9 @@ static void wma_send_status_of_ext_wow(tp_wma_handle wma, bool status)
 	message.bodyptr = (void *)ready_to_extwow;
 	message.bodyval = 0;
 
-	vstatus = scheduler_post_msg(QDF_MODULE_ID_SME, &message);
+	vstatus = scheduler_post_message(QDF_MODULE_ID_WMA,
+					 QDF_MODULE_ID_SME,
+					 QDF_MODULE_ID_SME, &message);
 	if (vstatus != QDF_STATUS_SUCCESS) {
 		WMA_LOGE("Failed to post ready to suspend");
 		qdf_mem_free(ready_to_extwow);
@@ -4244,6 +4263,7 @@ int wma_update_tdls_peer_state(WMA_HANDLE handle,
 	int ret = 0;
 	uint32_t *ch_mhz = NULL;
 	bool restore_last_peer = false;
+	QDF_STATUS qdf_status;
 
 	if (!wma_handle || !wma_handle->wmi_handle) {
 		WMA_LOGE("%s: WMA is closed, can not issue cmd", __func__);
@@ -4331,8 +4351,13 @@ int wma_update_tdls_peer_state(WMA_HANDLE handle,
 			 " vdevId: %d", __func__,
 			 MAC_ADDR_ARRAY(peer_mac_addr),
 			 peerStateParams->vdevId);
-		wma_remove_peer(wma_handle, peer_mac_addr,
+		qdf_status = wma_remove_peer(wma_handle, peer_mac_addr,
 				peerStateParams->vdevId, peer, false);
+		if (QDF_IS_STATUS_ERROR(qdf_status)) {
+			WMA_LOGE(FL("wma_remove_peer failed"));
+			ret = -EINVAL;
+			goto end_tdls_peer_state;
+		}
 		cdp_peer_update_last_real_peer(soc,
 				pdev, peer, &peer_id,
 				restore_last_peer);
@@ -4651,7 +4676,7 @@ int wma_apf_read_work_memory_event_handler(void *handle, uint8_t *evt_buf,
 	QDF_STATUS status;
 	tpAniSirGlobal pmac = cds_get_context(QDF_MODULE_ID_PE);
 
-	WMA_LOGI(FL("handle:%pK event:%pK len:%u"), handle, evt_buf, len);
+	WMA_LOGD(FL("handle:%pK event:%pK len:%u"), handle, evt_buf, len);
 
 	wma_handle = handle;
 	if (!wma_handle) {
@@ -4867,77 +4892,112 @@ QDF_STATUS wma_set_tx_rx_aggregation_size_per_ac(
 	return QDF_STATUS_SUCCESS;
 }
 
-QDF_STATUS wma_set_sw_retry_threshold(
-	struct sir_set_tx_aggr_sw_retry_threshold *tx_sw_retry_threshold)
+static QDF_STATUS wma_set_sw_retry_by_qos(
+	tp_wma_handle handle, uint8_t vdev_id,
+	wmi_vdev_custom_sw_retry_type_t retry_type,
+	wmi_traffic_ac ac_type,
+	uint32_t sw_retry)
 {
-	tp_wma_handle wma_handle;
 	wmi_vdev_set_custom_sw_retry_th_cmd_fixed_param *cmd;
 	int32_t len;
 	wmi_buf_t buf;
 	u_int8_t *buf_ptr;
 	int ret;
-	int queue_num;
-	uint32_t tx_aggr_retry[WMI_AC_MAX];
 
-	wma_handle = cds_get_context(QDF_MODULE_ID_WMA);
+	len = sizeof(*cmd);
+	buf = wmi_buf_alloc(handle->wmi_handle, len);
+
+	if (!buf)
+		return QDF_STATUS_E_NOMEM;
+
+	buf_ptr = (u_int8_t *)wmi_buf_data(buf);
+	cmd = (wmi_vdev_set_custom_sw_retry_th_cmd_fixed_param *)buf_ptr;
+
+	WMITLV_SET_HDR(&cmd->tlv_header,
+		       WMITLV_TAG_STRUC_wmi_vdev_set_custom_sw_retry_th_cmd_fixed_param,
+		       WMITLV_GET_STRUCT_TLVLEN(
+		       wmi_vdev_set_custom_sw_retry_th_cmd_fixed_param));
+
+	cmd->vdev_id = vdev_id;
+	cmd->ac_type = ac_type;
+	cmd->sw_retry_type = retry_type;
+	cmd->sw_retry_th = sw_retry;
+
+	wma_debug("ac_type: %d re_type: %d threshold: %d vid: %d",
+		  cmd->ac_type, cmd->sw_retry_type,
+		  cmd->sw_retry_th, cmd->vdev_id);
+
+	ret = wmi_unified_cmd_send(handle->wmi_handle,
+				   buf, len,
+				   WMI_VDEV_SET_CUSTOM_SW_RETRY_TH_CMDID);
+
+	if (ret) {
+		wmi_buf_free(buf);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS wma_set_sw_retry_threshold(
+	WMA_HANDLE handle,
+	struct sir_set_tx_sw_retry_threshold *tx_sw_retry_threshold)
+{
+	QDF_STATUS ret;
+	tp_wma_handle wma_handle;
+	uint8_t vdev_id;
+	int retry_type, queue_num;
+	uint32_t tx_sw_retry[WMI_VDEV_CUSTOM_SW_RETRY_TYPE_MAX][WMI_AC_MAX];
+	uint32_t sw_retry;
+
+	wma_handle = (tp_wma_handle)handle;
 
 	if (!tx_sw_retry_threshold) {
-		WMA_LOGE("%s: invalid pointer", __func__);
+		wma_err("%s: invalid pointer", __func__);
 		return QDF_STATUS_E_INVAL;
 	}
 
 	if (!wma_handle) {
-		WMA_LOGE("%s: WMA context is invald!", __func__);
+		wma_err("%s: WMA context is invalid!", __func__);
 		return QDF_STATUS_E_INVAL;
 	}
 
-	tx_aggr_retry[0] =
+	tx_sw_retry[WMI_VDEV_CUSTOM_SW_RETRY_TYPE_AGGR][WMI_AC_BE] =
 		tx_sw_retry_threshold->tx_aggr_sw_retry_threshold_be;
-	tx_aggr_retry[1] =
+	tx_sw_retry[WMI_VDEV_CUSTOM_SW_RETRY_TYPE_AGGR][WMI_AC_BK] =
 		tx_sw_retry_threshold->tx_aggr_sw_retry_threshold_bk;
-	tx_aggr_retry[2] =
+	tx_sw_retry[WMI_VDEV_CUSTOM_SW_RETRY_TYPE_AGGR][WMI_AC_VI] =
 		tx_sw_retry_threshold->tx_aggr_sw_retry_threshold_vi;
-	tx_aggr_retry[3] =
+	tx_sw_retry[WMI_VDEV_CUSTOM_SW_RETRY_TYPE_AGGR][WMI_AC_VO] =
 		tx_sw_retry_threshold->tx_aggr_sw_retry_threshold_vo;
 
-	for (queue_num = 0; queue_num < WMI_AC_MAX; queue_num++) {
-		if (tx_aggr_retry[queue_num] == 0)
-			continue;
+	tx_sw_retry[WMI_VDEV_CUSTOM_SW_RETRY_TYPE_NONAGGR][WMI_AC_BE] =
+		tx_sw_retry_threshold->tx_non_aggr_sw_retry_threshold_be;
+	tx_sw_retry[WMI_VDEV_CUSTOM_SW_RETRY_TYPE_NONAGGR][WMI_AC_BK] =
+		tx_sw_retry_threshold->tx_non_aggr_sw_retry_threshold_bk;
+	tx_sw_retry[WMI_VDEV_CUSTOM_SW_RETRY_TYPE_NONAGGR][WMI_AC_VI] =
+		tx_sw_retry_threshold->tx_non_aggr_sw_retry_threshold_vi;
+	tx_sw_retry[WMI_VDEV_CUSTOM_SW_RETRY_TYPE_NONAGGR][WMI_AC_VO] =
+		tx_sw_retry_threshold->tx_non_aggr_sw_retry_threshold_vo;
 
-		len = sizeof(*cmd);
-		buf = wmi_buf_alloc(wma_handle->wmi_handle, len);
+	retry_type = WMI_VDEV_CUSTOM_SW_RETRY_TYPE_NONAGGR;
+	while (retry_type < WMI_VDEV_CUSTOM_SW_RETRY_TYPE_MAX) {
+		for (queue_num = 0; queue_num < WMI_AC_MAX; queue_num++) {
+			if (tx_sw_retry[retry_type][queue_num] == 0)
+				continue;
 
-		if (!buf) {
-			WMA_LOGE("%s: Failed allocate wmi buffer", __func__);
-			return QDF_STATUS_E_NOMEM;
+			vdev_id = tx_sw_retry_threshold->vdev_id;
+			sw_retry = tx_sw_retry[retry_type][queue_num];
+			ret = wma_set_sw_retry_by_qos(wma_handle,
+						      vdev_id,
+						      retry_type,
+						      queue_num,
+						      sw_retry);
+
+			if (QDF_IS_STATUS_ERROR(ret))
+				return ret;
 		}
-
-		buf_ptr = (u_int8_t *)wmi_buf_data(buf);
-		cmd =
-		    (wmi_vdev_set_custom_sw_retry_th_cmd_fixed_param *)buf_ptr;
-
-		WMITLV_SET_HDR(&cmd->tlv_header,
-			       WMITLV_TAG_STRUC_wmi_vdev_set_custom_sw_retry_th_cmd_fixed_param,
-			       WMITLV_GET_STRUCT_TLVLEN(
-				   wmi_vdev_set_custom_sw_retry_th_cmd_fixed_param));
-
-		cmd->vdev_id = tx_sw_retry_threshold->vdev_id;
-		cmd->ac_type = queue_num;
-		cmd->sw_retry_type = WMI_VDEV_CUSTOM_SW_RETRY_TYPE_AGGR;
-		cmd->sw_retry_th = tx_aggr_retry[queue_num];
-
-		WMA_LOGD("queue: %d type: %d threshold: %d vdev: %d",
-			 queue_num, cmd->sw_retry_type,
-			 cmd->sw_retry_th, cmd->vdev_id);
-
-		ret = wmi_unified_cmd_send(wma_handle->wmi_handle, buf, len,
-					   WMI_VDEV_SET_CUSTOM_SW_RETRY_TH_CMDID);
-		if (ret) {
-			WMA_LOGE("%s: Failed to send retry threshold command",
-				 __func__);
-			wmi_buf_free(buf);
-			return QDF_STATUS_E_FAILURE;
-		}
+		retry_type++;
 	}
 
 	return QDF_STATUS_SUCCESS;
@@ -5772,7 +5832,9 @@ int wma_wlan_bt_activity_evt_handler(void *handle, uint8_t *event, uint32_t len)
 	sme_msg.bodyptr = NULL;
 	sme_msg.bodyval = fixed_param->coex_profile_evt;
 
-	qdf_status = scheduler_post_msg(QDF_MODULE_ID_SME, &sme_msg);
+	qdf_status = scheduler_post_message(QDF_MODULE_ID_WMA,
+					    QDF_MODULE_ID_SME,
+					    QDF_MODULE_ID_SME, &sme_msg);
 	if (QDF_IS_STATUS_ERROR(qdf_status)) {
 		WMA_LOGE(FL("Failed to post msg to SME"));
 		return -EINVAL;
@@ -5797,6 +5859,10 @@ int wma_pdev_div_info_evt_handler(void *handle, u_int8_t *event_buf,
 		return -EINVAL;
 	}
 
+	if (!pmac->sme.get_chain_rssi_cb) {
+		WMA_LOGE(FL("Invalid get_chain_rssi_cb"));
+		return -EINVAL;
+	}
 	param_buf = (WMI_PDEV_DIV_RSSI_ANTID_EVENTID_param_tlvs *) event_buf;
 	if (!param_buf) {
 		WMA_LOGE(FL("Invalid rssi antid event buffer"));

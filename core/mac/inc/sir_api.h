@@ -882,6 +882,20 @@ typedef struct sAniTrafStrmMetrics {
 	uint16_t RoamingDly;
 } tAniTrafStrmMetrics, *tpAniTrafStrmMetrics;
 
+#define STA_NSS_CHAINS_SHIFT               0
+#define SAP_NSS_CHAINS_SHIFT               3
+#define P2P_GO_NSS_CHAINS_SHIFT            6
+#define P2P_CLI_CHAINS_SHIFT               9
+#define TDLS_NSS_CHAINS_SHIFT              12
+#define IBSS_NSS_CHAINS_SHIFT              15
+#define P2P_DEV_NSS_CHAINS_SHIFT           18
+#define OCB_NSS_CHAINS_SHIFT               21
+#define NAN_NSS_CHAIN_SHIFT                24
+#define NSS_CHAIN_MASK                     0x7
+#define GET_VDEV_NSS_CHAIN(x, y)         (((x) >> (y)) & NSS_CHAIN_MASK)
+#define MAX_VDEV_NSS                       2
+#define MAX_VDEV_CHAINS                    2
+
 typedef struct sAniGetTsmStatsReq {
 	/* Common for all types are requests */
 	uint16_t msgType;       /* message type is same as the request type */
@@ -2406,7 +2420,7 @@ typedef struct sSirUpdateAPWPARSNIEsReq {
 #define SIR_ROAM_SCAN_RESERVED_BYTES     61
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
-#define SIR_ROAM_SCAN_PSK_SIZE    32
+#define SIR_ROAM_SCAN_PSK_SIZE    48
 #define SIR_ROAM_R0KH_ID_MAX_LEN  48
 #endif
 /* SME -> HAL - This is the host offload request. */
@@ -3150,7 +3164,7 @@ typedef struct sSirTdlsAddStaReq {
 	uint8_t supported_rates_length;
 	uint8_t supported_rates[SIR_MAC_MAX_SUPP_RATES];
 	uint8_t htcap_present;
-	tSirHTCap htCap;
+	struct htcap_cmn_ie htCap;
 	uint8_t vhtcap_present;
 	tSirVHTCap vhtCap;
 	uint8_t uapsd_queues;
@@ -5512,14 +5526,34 @@ struct sir_nss_update_request {
 };
 
 /**
- * struct sir_beacon_tx_complete_rsp
- *
- * @session_id: session for which beacon update happened
- * @tx_status: status of the beacon tx from FW
+ * enum sir_bcn_update_reason: bcn update reason
+ * @REASON_DEFAULT: reason default
+ * @REASON_NSS_UPDATE: If NSS is updated
+ * @REASON_CONFIG_UPDATE: Config update
+ * @REASON_SET_HT2040: HT2040 update
+ * @REASON_COLOR_CHANGE: Color change
+ * @REASON_CHANNEL_SWITCH: channel switch
  */
-struct sir_beacon_tx_complete_rsp {
-	uint8_t session_id;
-	uint8_t tx_status;
+enum sir_bcn_update_reason {
+	REASON_DEFAULT = 0,
+	REASON_NSS_UPDATE = 1,
+	REASON_CONFIG_UPDATE = 2,
+	REASON_SET_HT2040 = 3,
+	REASON_COLOR_CHANGE = 4,
+	REASON_CHANNEL_SWITCH = 5,
+};
+
+/**
+ * struct sir_bcn_update_rsp
+ *
+ * @vdev_id: session for which bcn was updated
+ * @reason: bcn update reason
+ * @status: status of the beacon sent to FW
+ */
+struct sir_bcn_update_rsp {
+	uint8_t vdev_id;
+	enum sir_bcn_update_reason reason;
+	QDF_STATUS status;
 };
 
 /**
@@ -6592,19 +6626,27 @@ struct sir_set_tx_rx_aggregation_size {
 };
 
 /**
- * struct sir_set_tx_aggr_sw_retry_threshold - set sw retry threshold
+ * struct sir_set_tx_sw_retry_threshold - set sw retry threshold
  * @vdev_id: vdev id of the session
  * @tx_aggr_sw_retry_threshold_be: sw retry threshold for BE
  * @tx_aggr_sw_retry_threshold_bk: sw retry threshold for BK
  * @tx_aggr_sw_retry_threshold_vi: sw retry threshold for VI
  * @tx_aggr_sw_retry_threshold_vo: sw retry threshold for VO
+ * @tx_non_aggr_sw_retry_threshold_be: non aggr sw retry threshold for BE
+ * @tx_non_aggr_sw_retry_threshold_bk: non aggr sw retry threshold for BK
+ * @tx_non_aggr_sw_retry_threshold_vi: non aggr sw retry threshold for VI
+ * @tx_non_aggr_sw_retry_threshold_vo: non aggr sw retry threshold for VO
  */
-struct sir_set_tx_aggr_sw_retry_threshold {
+struct sir_set_tx_sw_retry_threshold {
 	uint8_t vdev_id;
 	uint32_t tx_aggr_sw_retry_threshold_be;
 	uint32_t tx_aggr_sw_retry_threshold_bk;
 	uint32_t tx_aggr_sw_retry_threshold_vi;
 	uint32_t tx_aggr_sw_retry_threshold_vo;
+	uint32_t tx_non_aggr_sw_retry_threshold_be;
+	uint32_t tx_non_aggr_sw_retry_threshold_bk;
+	uint32_t tx_non_aggr_sw_retry_threshold_vi;
+	uint32_t tx_non_aggr_sw_retry_threshold_vo;
 };
 
 /**

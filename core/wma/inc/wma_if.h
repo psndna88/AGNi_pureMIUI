@@ -508,6 +508,10 @@ typedef struct {
 	uint32_t tx_aggregation_size_bk;
 	uint32_t tx_aggregation_size_vi;
 	uint32_t tx_aggregation_size_vo;
+	uint32_t tx_non_aggregation_size_be;
+	uint32_t tx_non_aggregation_size_bk;
+	uint32_t tx_non_aggregation_size_vi;
+	uint32_t tx_non_aggregation_size_vo;
 	uint32_t rx_aggregation_size;
 #ifdef WLAN_FEATURE_11AX
 	bool he_capable;
@@ -712,6 +716,7 @@ typedef struct sBeaconGenParams {
 
 /**
  * struct tSendbeaconParams - send beacon parameters
+ * vdev_id: vdev id
  * @bssId: BSSID mac address
  * @beacon: beacon data
  * @beaconLength: beacon length of template
@@ -719,8 +724,11 @@ typedef struct sBeaconGenParams {
  * @p2pIeOffset: P2P IE offset
  * @csa_count_offset: Offset of Switch count field in CSA IE
  * @ecsa_count_offset: Offset of Switch count field in ECSA IE
+ * @reason: bcn update reason
+ * @status: beacon send status
  */
 typedef struct {
+	uint8_t vdev_id;
 	tSirMacAddr bssId;
 	uint8_t beacon[SIR_MAX_BEACON_SIZE];
 	uint32_t beaconLength;
@@ -728,6 +736,8 @@ typedef struct {
 	uint16_t p2pIeOffset;
 	uint32_t csa_count_offset;
 	uint32_t ecsa_count_offset;
+	enum sir_bcn_update_reason reason;
+	QDF_STATUS status;
 } tSendbeaconParams, *tpSendbeaconParams;
 
 /**
@@ -1168,10 +1178,14 @@ typedef struct sMaxTxPowerPerBandParams {
  * @enable_bcast_probe_rsp: enable broadcast probe response
  * @fils_max_chan_guard_time: FILS max channel guard time
  * @pkt_err_disconn_th: packet drop threshold
- * @tx_aggr_sw_retry_threshold_be: sw retry threashold for be
- * @tx_aggr_sw_retry_threshold_bk: sw retry threashold for bk
- * @tx_aggr_sw_retry_threshold_vi: sw retry threashold for vi
- * @tx_aggr_sw_retry_threshold_vo: sw retry threashold for vo
+ * @tx_aggr_sw_retry_threshold_be: aggr sw retry threshold for be
+ * @tx_aggr_sw_retry_threshold_bk: aggr sw retry threshold for bk
+ * @tx_aggr_sw_retry_threshold_vi: aggr sw retry threshold for vi
+ * @tx_aggr_sw_retry_threshold_vo: aggr sw retry threshold for vo
+ * @tx_non_aggr_sw_retry_threshold_be: non aggr sw retry threshold for be
+ * @tx_non_aggr_sw_retry_threshold_bk: non aggr sw retry threshold for bk
+ * @tx_non_aggr_sw_retry_threshold_vi: non aggr sw retry threshold for vi
+ * @tx_non_aggr_sw_retry_threshold_vo: non aggr sw retry threshold for vo
  */
 struct add_sta_self_params {
 	tSirMacAddr self_mac_addr;
@@ -1196,6 +1210,10 @@ struct add_sta_self_params {
 	uint32_t tx_aggr_sw_retry_threshold_bk;
 	uint32_t tx_aggr_sw_retry_threshold_vi;
 	uint32_t tx_aggr_sw_retry_threshold_vo;
+	uint32_t tx_non_aggr_sw_retry_threshold_be;
+	uint32_t tx_non_aggr_sw_retry_threshold_bk;
+	uint32_t tx_non_aggr_sw_retry_threshold_vi;
+	uint32_t tx_non_aggr_sw_retry_threshold_vo;
 };
 
 /**

@@ -63,7 +63,6 @@ HDD_OBJS := 	$(HDD_SRC_DIR)/wlan_hdd_assoc.o \
 		$(HDD_SRC_DIR)/wlan_hdd_scan.o \
 		$(HDD_SRC_DIR)/wlan_hdd_softap_tx_rx.o \
 		$(HDD_SRC_DIR)/wlan_hdd_stats.o \
-		$(HDD_SRC_DIR)/wlan_hdd_sysfs.o \
 		$(HDD_SRC_DIR)/wlan_hdd_trace.o \
 		$(HDD_SRC_DIR)/wlan_hdd_tx_rx.o \
 		$(HDD_SRC_DIR)/wlan_hdd_wext.o \
@@ -165,6 +164,10 @@ endif
 
 ifeq ($(CONFIG_WLAN_NUD_TRACKING), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_nud_tracking.o
+endif
+
+ifeq ($(CONFIG_WLAN_SYSFS), y)
+HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs.o
 endif
 
 ########### HOST DIAG LOG ###########
@@ -479,6 +482,18 @@ ifeq ($(CONFIG_LEAK_DETECTION), y)
 	QDF_OBJS += $(QDF_OBJ_DIR)/qdf_debug_domain.o
 endif
 
+############ WBUFF ############
+WBUFF_OS_DIR :=	wbuff
+WBUFF_OS_INC_DIR := $(WBUFF_OS_DIR)/inc
+WBUFF_OS_SRC_DIR := $(WBUFF_OS_DIR)/src
+WBUFF_OBJ_DIR := $(WLAN_COMMON_ROOT)/$(WBUFF_OS_SRC_DIR)
+
+WBUFF_INC :=	-I$(WLAN_COMMON_INC)/$(WBUFF_OS_INC_DIR) \
+
+ifeq ($(CONFIG_WLAN_WBUFF), y)
+WBUFF_OBJS += 	$(WBUFF_OBJ_DIR)/wbuff.o
+endif
+
 ##########OS_IF #######
 OS_IF_DIR := $(WLAN_COMMON_ROOT)/os_if
 
@@ -713,6 +728,14 @@ IPA_OBJS :=	$(IPA_DIR)/dispatcher/src/wlan_ipa_ucfg_api.o \
 		$(IPA_DIR)/core/src/wlan_ipa_stats.o \
 		$(IPA_DIR)/core/src/wlan_ipa_rm.o
 endif
+
+######## MLME ##############
+MLME_DIR := components/mlme
+MLME_INC := -I$(WLAN_ROOT)/$(MLME_DIR)/core/inc \
+                -I$(WLAN_ROOT)/$(MLME_DIR)/dispatcher/inc
+
+MLME_OBJS :=    $(MLME_DIR)/core/src/wlan_mlme_main.o \
+                $(MLME_DIR)/dispatcher/src/wlan_mlme_ucfg_api.o
 
 ########## ACTION OUI ##########
 
@@ -1345,6 +1368,7 @@ INCS :=		$(HDD_INC) \
 		$(SME_INC) \
 		$(SYS_INC) \
 		$(QDF_INC) \
+		$(WBUFF_INC) \
 		$(CDS_INC) \
 		$(DFS_INC) \
 		$(TARGET_IF_INC) \
@@ -1408,6 +1432,7 @@ INCS +=		$(PLD_INC)
 INCS +=		$(OCB_INC)
 
 INCS +=		$(IPA_INC)
+INCS +=		$(MLME_INC)
 
 ifeq ($(CONFIG_REMOVE_PKT_LOG), n)
 INCS +=		$(PKTLOG_INC)
@@ -1435,6 +1460,7 @@ OBJS :=		$(HDD_OBJS) \
 		$(SME_OBJS) \
 		$(SYS_OBJS) \
 		$(QDF_OBJS) \
+		$(WBUFF_OBJS) \
 		$(CDS_OBJS) \
 		$(FTM_OBJS)
 
@@ -1484,6 +1510,7 @@ OBJS +=		$(NLINK_OBJS)
 OBJS +=		$(PTT_OBJS)
 OBJS +=		$(UMAC_SER_OBJS)
 OBJS +=		$(PLD_OBJS)
+OBJS +=		$(MLME_OBJS)
 
 ifeq ($(CONFIG_WLAN_FEATURE_DSRC), y)
 OBJS +=		$(OCB_OBJS)
@@ -1707,6 +1734,8 @@ cppflags-$(CONFIG_WLAN_FEATURE_LPSS) += -DWLAN_FEATURE_LPSS
 cppflags-$(CONFIG_DESC_DUP_DETECT_DEBUG) += -DDESC_DUP_DETECT_DEBUG
 cppflags-$(CONFIG_DEBUG_RX_RING_BUFFER) += -DDEBUG_RX_RING_BUFFER
 
+cppflags-$(CONFIG_DESC_TIMESTAMP_DEBUG_INFO) += -DDESC_TIMESTAMP_DEBUG_INFO
+
 cppflags-$(PANIC_ON_BUG) += -DPANIC_ON_BUG
 
 cppflags-$(WLAN_WARN_ON_ASSERT) += -DWLAN_WARN_ON_ASSERT
@@ -1825,6 +1854,9 @@ ifeq ($(CONFIG_ARCH_SDX20), y)
 cppflags-y += -DSYNC_IPA_READY
 endif
 
+#Enable wbuff
+cppflags-$(CONFIG_WLAN_WBUFF) += -DWLAN_FEATURE_WBUFF
+
 #Enable GTK Offload
 cppflags-$(CONFIG_GTK_OFFLOAD) += -DWLAN_FEATURE_GTK_OFFLOAD
 
@@ -1872,6 +1904,7 @@ cppflags-$(CONFIG_QCACLD_FEATURE_GREEN_AP) += -DWLAN_SUPPORT_GREEN_AP
 cppflags-$(CONFIG_QCACLD_FEATURE_APF) += -DFEATURE_WLAN_APF
 
 cppflags-$(CONFIG_WLAN_FEATURE_SARV1_TO_SARV2) += -DWLAN_FEATURE_SARV1_TO_SARV2
+cppflags-$(CONFIG_WLAN_SYSFS) += -DWLAN_SYSFS
 
 #Stats & Quota Metering feature
 ifeq ($(CONFIG_IPA_OFFLOAD), y)
@@ -1900,9 +1933,11 @@ cppflags-$(CONFIG_ATH_PCIE_ACCESS_DEBUG) += -DCONFIG_ATH_PCIE_ACCESS_DEBUG
 # Enable feature support for Linux version QCMBR
 cppflags-$(CONFIG_LINUX_QCMBR) += -DLINUX_QCMBR
 
-# Enable featue sync tsf between multi devices
+# Enable feature sync tsf between multi devices
 cppflags-$(CONFIG_WLAN_SYNC_TSF) += -DWLAN_FEATURE_TSF
 cppflags-$(CONFIG_WLAN_SYNC_TSF_PLUS) += -DWLAN_FEATURE_TSF_PLUS
+# Enable feature sync tsf for chips based on Adrastea arch
+cppflags-$(CONFIG_WLAN_SYNC_TSF_PLUS_NOIRQ) += -DWLAN_FEATURE_TSF_PLUS_NOIRQ
 
 cppflags-$(CONFIG_ATH_PROCFS_DIAG_SUPPORT) += -DCONFIG_ATH_PROCFS_DIAG_SUPPORT
 
@@ -1993,6 +2028,9 @@ cppflags-$(CONFIG_WLAN_DEBUGFS) += -DWLAN_DEBUGFS
 cppflags-$(CONFIG_DYNAMIC_DEBUG) += -DFEATURE_MULTICAST_HOST_FW_MSGS
 
 cppflags-$(CONFIG_ENABLE_SMMU_S1_TRANSLATION) += -DENABLE_SMMU_S1_TRANSLATION
+
+#Flag to enable/disable MTRACE feature
+cppflags-$(CONFIG_ENABLE_MTRACE_LOG) += -DENABLE_MTRACE_LOG
 
 #Flag to enable NUD tracking
 cppflags-$(CONFIG_WLAN_NUD_TRACKING) += -DWLAN_NUD_TRACKING

@@ -66,6 +66,11 @@ ifeq ($(CONFIG_ARCH_MSM8917), y)
 	endif
 endif
 
+ifeq ($(CONFIG_ARCH_QCS405), y)
+	CONFIG_WLAN_SYNC_TSF_PLUS := y
+	CONFIG_WLAN_SYNC_TSF_PLUS_NOIRQ := y
+endif
+
 #Flag to enable Legacy Fast Roaming2(LFR2)
 CONFIG_QCACLD_WLAN_LFR2 := y
 #Flag to enable Legacy Fast Roaming3(LFR3)
@@ -76,6 +81,7 @@ endif
 ifneq ($(CONFIG_MOBILE_ROUTER), y)
 #Flag to enable TDLS feature
 CONFIG_QCOM_TDLS := y
+CONFIG_WLAN_SYSFS := y
 endif
 
 CONFIG_QCACLD_FEATURE_GREEN_AP := y
@@ -107,6 +113,10 @@ CONFIG_QCACLD_FEATURE_METERING := y
 endif
 
 ifeq ($(CONFIG_ARCH_SDM670), y)
+CONFIG_QCACLD_FEATURE_METERING := y
+endif
+
+ifeq ($(CONFIG_ARCH_SM6150), y)
 CONFIG_QCACLD_FEATURE_METERING := y
 endif
 
@@ -489,8 +499,14 @@ CONFIG_WLAN_FEATURE_P2P_DEBUG := y
 #Flag to enable DFS Master feature
 CONFIG_WLAN_DFS_MASTER_ENABLE := y
 
+#Flag to enable/disable MTRACE feature
+CONFIG_ENABLE_MTRACE_LOG := y
+
 #Flag to enable nud tracking feature
 CONFIG_WLAN_NUD_TRACKING := y
+
+#Flag to enable wbuff feature
+CONFIG_WLAN_WBUFF := y
 
 #Flag to enable set and get disable channel list feature
 CONFIG_DISABLE_CHANNEL_LIST :=y
@@ -548,6 +564,7 @@ ifeq ($(CONFIG_SLUB_DEBUG_ON), y)
 	CONFIG_LEAK_DETECTION := y
 	CONFIG_SCHED_HISTORY_SIZE := 256
 	CONFIG_UNIT_TEST := y
+	CONFIG_DESC_TIMESTAMP_DEBUG_INFO := y
 endif
 
 # enable unit-test suspend for napier builds

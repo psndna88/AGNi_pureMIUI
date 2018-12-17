@@ -1682,6 +1682,8 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx,
 #endif  /* FEATURE_WLAN_ESE */
 	case eWNI_SME_REGISTER_MGMT_FRAME_CB:
 	case eWNI_SME_EXT_CHANGE_CHANNEL:
+	case eWNI_SME_ROAM_INVOKE:
+		/* fall through */
 	case eWNI_SME_ROAM_SCAN_OFFLOAD_REQ:
 	case eWNI_SME_SET_ADDBA_ACCEPT:
 	case eWNI_SME_UPDATE_EDCA_PROFILE:
@@ -1781,7 +1783,8 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx,
 		break;
 	case SIR_LIM_BEACON_GEN_IND:
 		if (mac_ctx->lim.gLimSystemRole != eLIM_AP_ROLE)
-			sch_process_pre_beacon_ind(mac_ctx, msg);
+			sch_process_pre_beacon_ind(mac_ctx,
+						   msg, REASON_DEFAULT);
 		break;
 	case SIR_LIM_DELETE_STA_CONTEXT_IND:
 		lim_delete_sta_context(mac_ctx, msg);
@@ -2073,6 +2076,11 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx,
 		break;
 	case WMA_OBSS_COLOR_COLLISION_INFO:
 		lim_process_obss_color_collision_info(mac_ctx, msg->bodyptr);
+		qdf_mem_free((void *)msg->bodyptr);
+		msg->bodyptr = NULL;
+		break;
+	case WMA_SEND_BCN_RSP:
+		lim_send_bcn_rsp(mac_ctx, (tpSendbeaconParams)msg->bodyptr);
 		qdf_mem_free((void *)msg->bodyptr);
 		msg->bodyptr = NULL;
 		break;

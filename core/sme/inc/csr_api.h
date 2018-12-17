@@ -597,7 +597,6 @@ typedef enum {
 	eCSR_DISCONNECT_REASON_DISASSOC,
 	eCSR_DISCONNECT_REASON_DEAUTH,
 	eCSR_DISCONNECT_REASON_HANDOFF,
-	eCSR_DISCONNECT_REASON_IBSS_JOIN_FAILURE,
 	eCSR_DISCONNECT_REASON_IBSS_LEAVE,
 	eCSR_DISCONNECT_REASON_STA_HAS_LEFT,
 	eCSR_DISCONNECT_REASON_NDI_DELETE,
@@ -1269,6 +1268,10 @@ typedef struct tagCsrConfigParam {
 	uint32_t tx_aggr_sw_retry_threshold_bk;
 	uint32_t tx_aggr_sw_retry_threshold_vi;
 	uint32_t tx_aggr_sw_retry_threshold_vo;
+	uint32_t tx_non_aggr_sw_retry_threshold_be;
+	uint32_t tx_non_aggr_sw_retry_threshold_bk;
+	uint32_t tx_non_aggr_sw_retry_threshold_vi;
+	uint32_t tx_non_aggr_sw_retry_threshold_vo;
 	struct wmi_per_roam_config per_roam_config;
 	bool enable_bcast_probe_rsp;
 	bool is_fils_enabled;

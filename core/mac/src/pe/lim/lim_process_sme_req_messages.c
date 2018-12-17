@@ -139,6 +139,7 @@ static QDF_STATUS lim_process_set_hw_mode(tpAniSirGlobal mac, uint32_t *msg)
 	buf = (struct s_sir_set_hw_mode *) msg;
 	if (!buf) {
 		pe_err("Set HW mode param is NULL");
+		status = QDF_STATUS_E_INVAL;
 		/* To free the active command list */
 		goto fail;
 	}
@@ -148,10 +149,11 @@ static QDF_STATUS lim_process_set_hw_mode(tpAniSirGlobal mac, uint32_t *msg)
 	req_msg = qdf_mem_malloc(len);
 	if (!req_msg) {
 		pe_err("qdf_mem_malloc failed");
+		status = QDF_STATUS_E_NOMEM;
 		/* Free the active command list
 		 * Probably the malloc is going to fail there as well?!
 		 */
-		return QDF_STATUS_E_NOMEM;
+		goto fail;
 	}
 
 	req_msg->hw_mode_index = buf->set_hw.hw_mode_index;
@@ -162,7 +164,9 @@ static QDF_STATUS lim_process_set_hw_mode(tpAniSirGlobal mac, uint32_t *msg)
 	message.type    = SIR_HAL_PDEV_SET_HW_MODE;
 
 	pe_debug("Posting SIR_HAL_SOC_SET_HW_MOD to WMA");
-	status = scheduler_post_msg(QDF_MODULE_ID_WMA, &message);
+	status = scheduler_post_message(QDF_MODULE_ID_PE,
+					QDF_MODULE_ID_WMA,
+					QDF_MODULE_ID_WMA, &message);
 	if (!QDF_IS_STATUS_SUCCESS(status)) {
 		pe_err("scheduler_post_msg failed!(err=%d)",
 			status);
@@ -183,7 +187,7 @@ fail:
 	resp_msg.bodyptr = param;
 	resp_msg.bodyval = 0;
 	lim_sys_process_mmh_msg_api(mac, &resp_msg, ePROT);
-	return QDF_STATUS_SUCCESS;
+	return status;
 }
 
 /**
@@ -209,6 +213,7 @@ static QDF_STATUS lim_process_set_dual_mac_cfg_req(tpAniSirGlobal mac,
 	buf = (struct sir_set_dual_mac_cfg *) msg;
 	if (!buf) {
 		pe_err("Set Dual mac config is NULL");
+		status = QDF_STATUS_E_INVAL;
 		/* To free the active command list */
 		goto fail;
 	}
@@ -217,11 +222,12 @@ static QDF_STATUS lim_process_set_dual_mac_cfg_req(tpAniSirGlobal mac,
 
 	req_msg = qdf_mem_malloc(len);
 	if (!req_msg) {
-		pe_err("qdf_mem_malloc failed");
+		pe_err("failed to allocate memory");
+		status = QDF_STATUS_E_NOMEM;
 		/* Free the active command list
 		 * Probably the malloc is going to fail there as well?!
 		 */
-		return QDF_STATUS_E_NOMEM;
+		goto fail;
 	}
 
 	req_msg->scan_config = buf->set_dual_mac.scan_config;
@@ -233,7 +239,9 @@ static QDF_STATUS lim_process_set_dual_mac_cfg_req(tpAniSirGlobal mac,
 
 	pe_debug("Post SIR_HAL_PDEV_DUAL_MAC_CFG_REQ to WMA: %x %x",
 		req_msg->scan_config, req_msg->fw_mode_config);
-	status = scheduler_post_msg(QDF_MODULE_ID_WMA, &message);
+	status = scheduler_post_message(QDF_MODULE_ID_PE,
+					QDF_MODULE_ID_WMA,
+					QDF_MODULE_ID_WMA, &message);
 	if (!QDF_IS_STATUS_SUCCESS(status)) {
 		pe_err("scheduler_post_msg failed!(err=%d)",
 				status);
@@ -252,7 +260,7 @@ fail:
 	resp_msg.bodyptr = param;
 	resp_msg.bodyval = 0;
 	lim_sys_process_mmh_msg_api(mac, &resp_msg, ePROT);
-	return QDF_STATUS_SUCCESS;
+	return status;
 }
 
 /**
@@ -278,14 +286,16 @@ static QDF_STATUS lim_process_set_antenna_mode_req(tpAniSirGlobal mac,
 	buf = (struct sir_set_antenna_mode *) msg;
 	if (!buf) {
 		pe_err("Set antenna mode is NULL");
+		status = QDF_STATUS_E_INVAL;
 		/* To free the active command list */
 		goto fail;
 	}
 
 	req_msg = qdf_mem_malloc(sizeof(*req_msg));
 	if (!req_msg) {
-		pe_err("qdf_mem_malloc failed");
-		return QDF_STATUS_E_NOMEM;
+		pe_err("failed to allocate memory");
+		status = QDF_STATUS_E_NOMEM;
+		goto fail;
 	}
 
 	req_msg->num_rx_chains = buf->set_antenna_mode.num_rx_chains;
@@ -297,7 +307,9 @@ static QDF_STATUS lim_process_set_antenna_mode_req(tpAniSirGlobal mac,
 	pe_debug("Post SIR_HAL_SOC_ANTENNA_MODE_REQ to WMA: %d %d",
 		req_msg->num_rx_chains,
 		req_msg->num_tx_chains);
-	status = scheduler_post_msg(QDF_MODULE_ID_WMA, &message);
+	status = scheduler_post_message(QDF_MODULE_ID_PE,
+					QDF_MODULE_ID_WMA,
+					QDF_MODULE_ID_WMA, &message);
 	if (!QDF_IS_STATUS_SUCCESS(status)) {
 		pe_err("scheduler_post_msg failed!(err=%d)",
 				status);
@@ -316,7 +328,7 @@ fail:
 	resp_msg.bodyptr = param;
 	resp_msg.bodyval = 0;
 	lim_sys_process_mmh_msg_api(mac, &resp_msg, ePROT);
-	return QDF_STATUS_SUCCESS;
+	return status;
 }
 
 /**
@@ -530,27 +542,6 @@ lim_configure_ap_start_bss_session(tpAniSirGlobal mac_ctx, tpPESession session,
 	session->beacon_tx_rate = sme_start_bss_req->beacon_tx_rate;
 
 }
-
-/**
- * lim_clear_he_tx_stbc() - Clear tx stbc for a given session
- * @session: Session
- *
- * Clear tx stbc for a given session
- *
- * Return: None
- */
-#ifdef WLAN_FEATURE_11AX
-static void lim_clear_he_tx_stbc(tpPESession session)
-{
-	if (session) {
-		session->he_config.tx_stbc_lt_80mhz = 0;
-		session->he_config.tx_stbc_gt_80mhz = 0;
-	}
-}
-#else
-static void lim_clear_he_tx_stbc(tpPESession session)
-{}
-#endif
 
 /**
  * __lim_handle_sme_start_bss_request() - process SME_START_BSS_REQ message
@@ -865,13 +856,6 @@ __lim_handle_sme_start_bss_request(tpAniSirGlobal mac_ctx, uint32_t *msg_buf)
 		/* Delete pre-auth list if any */
 		lim_delete_pre_auth_list(mac_ctx);
 
-		if (session->nss == 1) {
-			session->vht_config.su_beam_former = 0;
-			session->vht_config.tx_stbc = 0;
-			session->vht_config.num_soundingdim = 0;
-			session->htConfig.ht_tx_stbc = 0;
-			lim_clear_he_tx_stbc(session);
-		}
 		/*
 		 * keep the RSN/WPA IE information in PE Session Entry
 		 * later will be using this to check when received (Re)Assoc req
@@ -1616,17 +1600,6 @@ __lim_process_sme_join_req(tpAniSirGlobal mac_ctx, uint32_t *msg_buf)
 			&session->limCurrentBssPropCap,
 			&session->gLimCurrentBssUapsd,
 			&local_power_constraint, session);
-
-		/*
-		 * Once the AP capabilities are available then set the
-		 * beam forming capabilities accordingly.
-		 */
-		if (session->nss == 1) {
-			session->vht_config.su_beam_former = 0;
-			session->vht_config.tx_stbc = 0;
-			session->vht_config.num_soundingdim = 0;
-			session->htConfig.ht_tx_stbc = 0;
-		}
 
 		session->maxTxPower = lim_get_max_tx_power(reg_max,
 					local_power_constraint,
@@ -3680,7 +3653,7 @@ static void lim_process_sme_update_config(tpAniSirGlobal mac_ctx,
 
 	if (LIM_IS_AP_ROLE(pe_session)) {
 		sch_set_fixed_beacon_fields(mac_ctx, pe_session);
-		lim_send_beacon_ind(mac_ctx, pe_session);
+		lim_send_beacon_ind(mac_ctx, pe_session, REASON_CONFIG_UPDATE);
 	}
 }
 
@@ -3773,6 +3746,39 @@ static void __lim_process_roam_scan_offload_req(tpAniSirGlobal mac_ctx,
 		qdf_mem_free(req_buffer);
 	}
 }
+
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
+/**
+ * lim_process_roam_invoke() - process the Roam Invoke req
+ * @mac_ctx: Pointer to Global MAC structure
+ * @msg_buf: Pointer to the SME message buffer
+ *
+ * This function is called by limProcessMessageQueue(). This function sends the
+ * ROAM_INVOKE command to WMA.
+ *
+ * Return: None
+ */
+static void lim_process_roam_invoke(tpAniSirGlobal mac_ctx,
+				    uint32_t *msg_buf)
+{
+	struct scheduler_msg msg = {0};
+	QDF_STATUS status;
+
+	msg.type = SIR_HAL_ROAM_INVOKE;
+	msg.bodyptr = msg_buf;
+	msg.reserved = 0;
+
+	status = wma_post_ctrl_msg(mac_ctx, &msg);
+	if (QDF_STATUS_SUCCESS != status)
+		pe_err("Not able to post SIR_HAL_ROAM_INVOKE to WMA");
+}
+#else
+static void lim_process_roam_invoke(tpAniSirGlobal mac_ctx,
+				    uint32_t *msg_buf)
+{
+	qdf_mem_free(msg_buf);
+}
+#endif
 
 /*
  * lim_handle_update_ssid_hidden() - Processes SSID hidden update
@@ -3967,7 +3973,7 @@ static void __lim_process_sme_set_ht2040_mode(tpAniSirGlobal pMac,
 
 	/* Update beacon */
 	sch_set_fixed_beacon_fields(pMac, psessionEntry);
-	lim_send_beacon_ind(pMac, psessionEntry);
+	lim_send_beacon_ind(pMac, psessionEntry, REASON_SET_HT2040);
 
 	/* update OP Mode for each associated peer */
 	for (staId = 0; staId < psessionEntry->dph.dphHashTable.size; staId++) {
@@ -3995,7 +4001,10 @@ static void __lim_process_sme_set_ht2040_mode(tpAniSirGlobal pMac,
 			msg.reserved = 0;
 			msg.bodyptr = pHtOpMode;
 			if (!QDF_IS_STATUS_SUCCESS
-				    (scheduler_post_msg(QDF_MODULE_ID_WMA, &msg))) {
+				    (scheduler_post_message(QDF_MODULE_ID_PE,
+							    QDF_MODULE_ID_WMA,
+							    QDF_MODULE_ID_WMA,
+							    &msg))) {
 				pe_err("Not able to post WMA_UPDATE_OP_MODE message to WMA");
 				qdf_mem_free(pHtOpMode);
 				return;
@@ -4641,8 +4650,10 @@ bool lim_process_sme_req_messages(tpAniSirGlobal pMac,
 		break;
 
 	case eWNI_SME_ASSOC_CNF:
+#ifdef WLAN_DEBUG
 		if (pMsg->type == eWNI_SME_ASSOC_CNF)
 			pe_debug("Received ASSOC_CNF message");
+#endif
 			__lim_process_sme_assoc_cnf_new(pMac, pMsg->type,
 							pMsgBuf);
 		break;
@@ -4681,6 +4692,10 @@ bool lim_process_sme_req_messages(tpAniSirGlobal pMac,
 		break;
 	case eWNI_SME_ROAM_SCAN_OFFLOAD_REQ:
 		__lim_process_roam_scan_offload_req(pMac, pMsgBuf);
+		bufConsumed = false;
+		break;
+	case eWNI_SME_ROAM_INVOKE:
+		lim_process_roam_invoke(pMac, pMsgBuf);
 		bufConsumed = false;
 		break;
 	case eWNI_SME_CHNG_MCC_BEACON_INTERVAL:
@@ -4852,7 +4867,7 @@ static void lim_process_sme_start_beacon_req(tpAniSirGlobal pMac, uint32_t *pMsg
 			  FL("Start Beacon with ssid %s Ch %d"),
 			  psessionEntry->ssId.ssId,
 			  psessionEntry->currentOperChannel);
-		lim_send_beacon_ind(pMac, psessionEntry);
+		lim_send_beacon_ind(pMac, psessionEntry, REASON_DEFAULT);
 		lim_enable_obss_detection_config(pMac, psessionEntry);
 		lim_send_obss_color_collision_cfg(pMac, psessionEntry,
 					OBSS_COLOR_COLLISION_DETECTION);
@@ -5263,9 +5278,9 @@ static void lim_process_update_add_ies(tpAniSirGlobal mac_ctx,
 			update_ie->bssid.bytes, &session_id);
 
 	if (NULL == session_entry) {
-		pe_err("Session not found for given bssid"
-				       MAC_ADDRESS_STR,
-			MAC_ADDR_ARRAY(update_ie->bssid.bytes));
+		pe_debug("Session not found for given bssid"
+			 MAC_ADDRESS_STR,
+			 MAC_ADDR_ARRAY(update_ie->bssid.bytes));
 		goto end;
 	}
 	addn_ie = &session_entry->addIeParams;
@@ -5650,6 +5665,56 @@ static void lim_process_ext_change_channel(tpAniSirGlobal mac_ctx,
 }
 
 /**
+ * lim_nss_update_rsp() - send NSS update response to SME
+ * @mac_ctx Pointer to Global MAC structure
+ * @vdev_id: vdev id
+ * @status: nss update status
+ *
+ * Return: None
+ */
+static void lim_nss_update_rsp(tpAniSirGlobal mac_ctx,
+			       uint8_t vdev_id, QDF_STATUS status)
+{
+	struct scheduler_msg msg = {0};
+	struct sir_bcn_update_rsp *nss_rsp;
+	QDF_STATUS qdf_status;
+
+	nss_rsp = qdf_mem_malloc(sizeof(*nss_rsp));
+	if (!nss_rsp) {
+		pe_err("AllocateMemory failed for nss_rsp");
+		return;
+	}
+
+	nss_rsp->vdev_id = vdev_id;
+	nss_rsp->status = status;
+	nss_rsp->reason = REASON_NSS_UPDATE;
+
+	msg.type = eWNI_SME_NSS_UPDATE_RSP;
+	msg.bodyptr = nss_rsp;
+	msg.bodyval = 0;
+	qdf_status = scheduler_post_message(QDF_MODULE_ID_PE, QDF_MODULE_ID_SME,
+					    QDF_MODULE_ID_SME, &msg);
+	if (QDF_IS_STATUS_ERROR(qdf_status)) {
+		pe_err("Failed to post eWNI_SME_NSS_UPDATE_RSP");
+		qdf_mem_free(nss_rsp);
+	}
+}
+
+void lim_send_bcn_rsp(tpAniSirGlobal mac_ctx, tpSendbeaconParams rsp)
+{
+	if (!rsp) {
+		pe_err("rsp is NULL");
+		return;
+	}
+
+	pe_debug("Send beacon resp status %d for reason %d",
+		 rsp->status, rsp->reason);
+
+	if (rsp->reason == REASON_NSS_UPDATE)
+		lim_nss_update_rsp(mac_ctx, rsp->vdev_id, rsp->status);
+}
+
+/**
  * lim_process_nss_update_request() - process sme nss update req
  *
  * @mac_ctx: Pointer to Global MAC structure
@@ -5665,25 +5730,28 @@ static void lim_process_nss_update_request(tpAniSirGlobal mac_ctx,
 {
 	struct sir_nss_update_request *nss_update_req_ptr;
 	tpPESession session_entry = NULL;
+	QDF_STATUS status = QDF_STATUS_E_FAILURE;
+	uint8_t vdev_id;
 
-	if (msg_buf == NULL) {
+	if (!msg_buf) {
 		pe_err("Buffer is Pointing to NULL");
 		return;
 	}
 
 	nss_update_req_ptr = (struct sir_nss_update_request *)msg_buf;
+	vdev_id = nss_update_req_ptr->vdev_id;
 	session_entry = pe_find_session_by_sme_session_id(mac_ctx,
 				nss_update_req_ptr->vdev_id);
-	if (session_entry == NULL) {
+	if (!session_entry) {
 		pe_err("Session not found for given session_id %d",
 			nss_update_req_ptr->vdev_id);
-		return;
+		goto end;
 	}
 
 	if (session_entry->valid && !LIM_IS_AP_ROLE(session_entry)) {
 		pe_err("Invalid SystemRole %d",
 			GET_LIM_SYSTEM_ROLE(session_entry));
-		return;
+		goto end;
 	}
 
 	/* populate nss field in the beacon */
@@ -5695,16 +5763,28 @@ static void lim_process_nss_update_request(tpAniSirGlobal mac_ctx,
 			(session_entry->ch_width > CH_WIDTH_80MHZ))
 		session_entry->gLimOperatingMode.chanWidth = CH_WIDTH_80MHZ;
 
-	pe_debug("ch width %hu", session_entry->gLimOperatingMode.chanWidth);
+	pe_debug("ch width %d Rx NSS %d",
+		 session_entry->gLimOperatingMode.chanWidth,
+		 session_entry->gLimOperatingMode.rxNSS);
 
 	/* Send nss update request from here */
-	if (sch_set_fixed_beacon_fields(mac_ctx, session_entry) !=
-			QDF_STATUS_SUCCESS) {
+	status = sch_set_fixed_beacon_fields(mac_ctx, session_entry);
+	if (QDF_IS_STATUS_ERROR(status)) {
 		pe_err("Unable to set op mode IE in beacon");
-		return;
+		goto end;
 	}
 
-	lim_send_beacon_ind(mac_ctx, session_entry);
+	status = lim_send_beacon_ind(mac_ctx, session_entry, REASON_NSS_UPDATE);
+	if (QDF_IS_STATUS_SUCCESS(status))
+		return;
+
+	pe_err("Unable to send beacon");
+end:
+	/*
+	 * send resp only in case of failure,
+	 * success case response will be from wma.
+	 */
+	lim_nss_update_rsp(mac_ctx, vdev_id, status);
 }
 
 /**
@@ -5991,7 +6071,10 @@ void lim_send_obss_color_collision_cfg(tpAniSirGlobal mac_ctx,
 	msg.bodyptr = cfg_param;
 	msg.reserved = 0;
 
-	if (QDF_IS_STATUS_ERROR(scheduler_post_msg(QDF_MODULE_ID_WMA, &msg))) {
+	if (QDF_IS_STATUS_ERROR(scheduler_post_message(QDF_MODULE_ID_PE,
+						       QDF_MODULE_ID_WMA,
+						       QDF_MODULE_ID_WMA,
+						       &msg))) {
 		pe_err("Failed to post WMA_OBSS_COLOR_COLLISION_REQ to WMA");
 		qdf_mem_free(cfg_param);
 	} else {

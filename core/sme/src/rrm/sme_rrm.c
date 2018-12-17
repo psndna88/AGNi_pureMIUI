@@ -700,6 +700,9 @@ static void sme_rrm_scan_event_callback(struct wlan_objmgr_vdev *vdev,
 		return;
 	}
 
+	qdf_mtrace(QDF_MODULE_ID_SCAN, QDF_MODULE_ID_SME, event->type,
+		   event->vdev_id, event->scan_id);
+
 	if (!util_is_scan_completed(event, &success))
 		return;
 
@@ -759,15 +762,19 @@ static QDF_STATUS sme_rrm_issue_scan_req(tpAniSirGlobal mac_ctx)
 		req = qdf_mem_malloc(sizeof(*req));
 		if (!req) {
 			sme_debug("Failed to allocate memory");
-			return QDF_STATUS_E_NOMEM;
+			status = QDF_STATUS_E_NOMEM;
+			goto free_ch_lst;
 		}
+
 		vdev = wlan_objmgr_get_vdev_by_id_from_psoc(
 						mac_ctx->psoc,
 						session_id,
 						WLAN_LEGACY_SME_ID);
 		if (!vdev) {
 			sme_err("VDEV is null %d", session_id);
-			return QDF_STATUS_E_INVAL;
+			status = QDF_STATUS_E_INVAL;
+			qdf_mem_free(req);
+			goto free_ch_lst;
 		}
 		ucfg_scan_init_default_params(vdev, req);
 		req->scan_req.dwell_time_active = 0;
@@ -855,6 +862,8 @@ static QDF_STATUS sme_rrm_issue_scan_req(tpAniSirGlobal mac_ctx)
 				req->scan_req.chan_list.chan[0].freq);
 		status = ucfg_scan_start(req);
 		wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
+		if (QDF_IS_STATUS_ERROR(status))
+			goto free_ch_lst;
 
 		return status;
 	} else if (eSIR_BEACON_TABLE == scan_type) {
@@ -926,6 +935,14 @@ QDF_STATUS sme_rrm_process_beacon_report_req_ind(tpAniSirGlobal pMac,
 
 	sme_debug("Received Beacon report request ind Channel = %d",
 		pBeaconReq->channelInfo.channelNum);
+
+	if (pBeaconReq->channelList.numChannels >
+	    SIR_ESE_MAX_MEAS_IE_REQS) {
+		sme_err("Beacon report request numChannels:%u exceeds max num channels",
+			pBeaconReq->channelList.numChannels);
+		return QDF_STATUS_E_INVAL;
+	}
+
 	/* section 11.10.8.1 (IEEE Std 802.11k-2008) */
 	/* channel 0 and 255 has special meaning. */
 	if ((pBeaconReq->channelInfo.channelNum == 0) ||

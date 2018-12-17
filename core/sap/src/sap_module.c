@@ -279,7 +279,7 @@ struct sap_context *sap_create_ctx(void)
 
 QDF_STATUS sap_init_ctx(struct sap_context *sap_ctx,
 			 enum QDF_OPMODE mode,
-			 uint8_t *addr, uint32_t session_id)
+			 uint8_t *addr, uint32_t session_id, bool reinit)
 {
 	QDF_STATUS qdf_ret_status;
 	tHalHandle hal;
@@ -332,8 +332,10 @@ QDF_STATUS sap_init_ctx(struct sap_context *sap_ctx,
 			__func__, qdf_ret_status);
 		return QDF_STATUS_E_FAILURE;
 	}
-	/* Register with scan component */
-	sap_ctx->req_id = ucfg_scan_register_requester(pmac->psoc, "SAP",
+	/* Register with scan component only during init */
+	if (!reinit)
+		sap_ctx->req_id =
+			ucfg_scan_register_requester(pmac->psoc, "SAP",
 					sap_scan_event_callback, sap_ctx);
 
 	return QDF_STATUS_SUCCESS;
@@ -361,16 +363,16 @@ QDF_STATUS sap_deinit_ctx(struct sap_context *sap_ctx)
 		return QDF_STATUS_E_FAULT;
 	}
 	ucfg_scan_unregister_requester(pmac->psoc, sap_ctx->req_id);
-	sap_free_roam_profile(&sap_ctx->csr_roamProfile);
-	if (sap_ctx->sessionId != CSR_SESSION_ID_INVALID) {
-		/* empty queues/lists/pkts if any */
-		sap_clear_session_param(hal, sap_ctx, sap_ctx->sessionId);
-	}
 
 	if (sap_ctx->channelList) {
 		qdf_mem_free(sap_ctx->channelList);
 		sap_ctx->channelList = NULL;
 		sap_ctx->num_of_channel = 0;
+	}
+	sap_free_roam_profile(&sap_ctx->csr_roamProfile);
+	if (sap_ctx->sessionId != CSR_SESSION_ID_INVALID) {
+		/* empty queues/lists/pkts if any */
+		sap_clear_session_param(hal, sap_ctx, sap_ctx->sessionId);
 	}
 
 	return QDF_STATUS_SUCCESS;

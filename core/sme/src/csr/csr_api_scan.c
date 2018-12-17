@@ -1041,8 +1041,8 @@ static enum csr_scancomplete_nextcommand csr_scan_get_next_command_state(
 	switch (session->scan_info.scan_reason) {
 	case eCsrScanForSsid:
 		sme_debug("Resp for Scan For Ssid");
-		channel = policy_mgr_search_and_check_for_session_conc(
-				mac_ctx->psoc,
+		channel = csr_scan_get_channel_for_hw_mode_change(
+				mac_ctx,
 				session_id,
 				session->scan_info.profile);
 		if ((!channel) || scan_status) {
@@ -1300,6 +1300,9 @@ void csr_scan_callback(struct wlan_objmgr_vdev *vdev,
 	bool success = false;
 
 	mac_ctx = (tpAniSirGlobal)arg;
+
+	qdf_mtrace(QDF_MODULE_ID_SCAN, QDF_MODULE_ID_SME, event->type,
+		   event->vdev_id, event->scan_id);
 
 	if (!util_is_scan_completed(event, &success))
 		return;
@@ -1822,8 +1825,8 @@ QDF_STATUS csr_scan_abort_mac_scan(tpAniSirGlobal mac_ctx, uint32_t vdev_id,
 
 	/* Get NL global context from objmgr*/
 	if (vdev_id == INVAL_VDEV_ID)
-		vdev = wlan_objmgr_get_vdev_by_id_from_pdev(mac_ctx->pdev,
-				0, WLAN_LEGACY_SME_ID);
+		vdev = wlan_objmgr_pdev_get_first_vdev(mac_ctx->pdev,
+						       WLAN_LEGACY_SME_ID);
 	else
 		vdev = wlan_objmgr_get_vdev_by_id_from_pdev(mac_ctx->pdev,
 				vdev_id, WLAN_LEGACY_SME_ID);
@@ -2188,6 +2191,45 @@ csr_get_channel_for_hw_mode_change(tpAniSirGlobal mac_ctx,
 	}
 end:
 	return channel_id;
+}
+
+uint8_t
+csr_scan_get_channel_for_hw_mode_change(
+	tpAniSirGlobal mac_ctx, uint32_t session_id,
+	struct csr_roam_profile *profile)
+{
+	tScanResultHandle result_handle = NULL;
+	QDF_STATUS status;
+	uint8_t first_ap_ch = 0;
+	uint8_t candidate_chan;
+
+	status = sme_get_ap_channel_from_scan_cache(profile, &result_handle,
+						    &first_ap_ch);
+	if (status != QDF_STATUS_SUCCESS || !result_handle || !first_ap_ch) {
+		if (result_handle)
+			sme_scan_result_purge(result_handle);
+		sme_err("fail get scan result: status %d first ap ch %d",
+			status, first_ap_ch);
+		return 0;
+	}
+	if (!policy_mgr_check_for_session_conc(mac_ctx->psoc, session_id,
+					       first_ap_ch)) {
+		sme_scan_result_purge(result_handle);
+		sme_err("Conc not allowed for the session %d ch %d",
+			session_id, first_ap_ch);
+		return 0;
+	}
+
+	candidate_chan = csr_get_channel_for_hw_mode_change(mac_ctx,
+							    result_handle,
+							    session_id);
+	sme_scan_result_purge(result_handle);
+	if (!candidate_chan)
+		candidate_chan = first_ap_ch;
+	sme_debug("session %d hw mode check candidate_chan %d", session_id,
+		  candidate_chan);
+
+	return candidate_chan;
 }
 
 static enum wlan_auth_type csr_covert_auth_type_new(eCsrAuthType auth)
@@ -2929,7 +2971,7 @@ QDF_STATUS csr_scan_get_result(tpAniSirGlobal mac_ctx,
 	QDF_STATUS status;
 	struct scan_result_list *ret_list = NULL;
 	qdf_list_t *list = NULL;
-	struct scan_filter filter = {0};
+	struct scan_filter *filter = NULL;
 	struct wlan_objmgr_pdev *pdev = NULL;
 
 	if (results)
@@ -2937,14 +2979,19 @@ QDF_STATUS csr_scan_get_result(tpAniSirGlobal mac_ctx,
 
 	pdev = wlan_objmgr_get_pdev_by_id(mac_ctx->psoc,
 		0, WLAN_LEGACY_MAC_ID);
-
 	if (!pdev) {
 		sme_err("pdev is NULL");
 		return QDF_STATUS_E_INVAL;
 	}
 
 	if (pFilter) {
-		status = csr_prepare_scan_filter(mac_ctx, pFilter, &filter);
+		filter = qdf_mem_malloc(sizeof(*filter));
+		if (!filter) {
+			status = QDF_STATUS_E_NOMEM;
+			goto error;
+		}
+
+		status = csr_prepare_scan_filter(mac_ctx, pFilter, filter);
 		if (QDF_IS_STATUS_ERROR(status)) {
 			sme_err("Prepare filter failed");
 			goto error;
@@ -2952,7 +2999,7 @@ QDF_STATUS csr_scan_get_result(tpAniSirGlobal mac_ctx,
 	}
 
 	list = ucfg_scan_get_result(pdev,
-		    pFilter ? &filter : NULL);
+		    pFilter ? filter : NULL);
 	if (list)
 		sme_debug("num_entries %d", qdf_list_size(list));
 
@@ -2992,6 +3039,8 @@ QDF_STATUS csr_scan_get_result(tpAniSirGlobal mac_ctx,
 	}
 
 error:
+	if (filter)
+		qdf_mem_free(filter);
 	if (list)
 		ucfg_scan_purge_results(list);
 	if (pdev)
@@ -3097,23 +3146,39 @@ QDF_STATUS csr_scan_flush_result(tpAniSirGlobal mac_ctx)
 QDF_STATUS csr_scan_flush_selective_result(tpAniSirGlobal mac_ctx,
 	bool flush_p2p)
 {
-	struct scan_filter filter = {0};
+	struct scan_filter *filter;
+	QDF_STATUS status;
 
-	filter.p2p_results = flush_p2p;
-	return csr_flush_scan_results(mac_ctx, &filter);
+	filter = qdf_mem_malloc(sizeof(*filter));
+	if (!filter) {
+		status = QDF_STATUS_E_NOMEM;
+		goto end;
+	}
+	filter->p2p_results = flush_p2p;
+	status = csr_flush_scan_results(mac_ctx, filter);
+	if (filter)
+		qdf_mem_free(filter);
+end:
+	return status;
 }
 
 static inline void csr_flush_bssid(tpAniSirGlobal mac_ctx,
 	uint8_t *bssid)
 {
-	struct scan_filter filter = {0};
+	struct scan_filter *filter;
 
-	filter.num_of_bssid = 1;
-	qdf_mem_copy(filter.bssid_list[0].bytes,
-		bssid, QDF_MAC_ADDR_SIZE);
+	filter = qdf_mem_malloc(sizeof(*filter));
+	if (!filter)
+		return;
 
-	csr_flush_scan_results(mac_ctx, &filter);
+	filter->num_of_bssid = 1;
+	qdf_mem_copy(filter->bssid_list[0].bytes,
+		     bssid, QDF_MAC_ADDR_SIZE);
+
+	csr_flush_scan_results(mac_ctx, filter);
 	sme_debug("Removed BSS entry:%pM", bssid);
+	if (filter)
+		qdf_mem_free(filter);
 }
 
 void csr_scan_flush_bss_entry(tpAniSirGlobal mac_ctx,

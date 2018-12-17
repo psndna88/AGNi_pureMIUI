@@ -176,6 +176,7 @@ enum tdls_peer_capability {
 #define TID_AC_VI                  4
 #define TID_AC_BK                  1
 
+#ifdef WLAN_DEBUG
 static const uint8_t *lim_trace_tdls_action_string(uint8_t tdlsActionCode)
 {
 	switch (tdlsActionCode) {
@@ -192,6 +193,7 @@ static const uint8_t *lim_trace_tdls_action_string(uint8_t tdlsActionCode)
 	}
 	return (const uint8_t *)"UNKNOWN";
 }
+#endif
 
 /*
  * initialize TDLS setup list and related data structures.
@@ -1644,9 +1646,11 @@ static QDF_STATUS lim_send_tdls_setup_rsp_frame(tpAniSirGlobal pMac,
 			((pMac->lim.gLimTDLSUapsdMask & 0x04) >> 2);
 		tdlsSetupRsp.WMMInfoStation.acbe_uapsd =
 			((pMac->lim.gLimTDLSUapsdMask & 0x08) >> 3);
+#ifdef WLAN_DEBUG
 		if (wlan_cfg_get_int(pMac, WNI_CFG_MAX_SP_LENGTH, &val) !=
 		    QDF_STATUS_SUCCESS)
 			pe_warn("could not retrieve Max SP Length");
+#endif
 			tdlsSetupRsp.WMMInfoStation.max_sp_length = (uint8_t) val;
 		tdlsSetupRsp.WMMInfoStation.present = 1;
 	} else {
@@ -2042,7 +2046,7 @@ static QDF_STATUS lim_tdls_populate_dot11f_ht_caps(tpAniSirGlobal pMac,
 	tSirMacTxBFCapabilityInfo *pTxBFCapabilityInfo;
 	tSirMacASCapabilityInfo *pASCapabilityInfo;
 
-	nCfgValue = pTdlsAddStaReq->htCap.capInfo;
+	nCfgValue = pTdlsAddStaReq->htCap.hc_cap;
 
 	uHTCapabilityInfo.nCfgValue16 = nCfgValue & 0xFFFF;
 
@@ -2090,7 +2094,7 @@ static QDF_STATUS lim_tdls_populate_dot11f_ht_caps(tpAniSirGlobal pMac,
 		pDot11f->shortGI40MHz,
 		pDot11f->dsssCckMode40MHz);
 
-	nCfgValue = pTdlsAddStaReq->htCap.ampduParamsInfo;
+	nCfgValue = pTdlsAddStaReq->htCap.ampdu_param;
 
 	nCfgValue8 = (uint8_t) nCfgValue;
 	pHTParametersInfo = (tSirMacHTParametersInfo *) &nCfgValue8;
@@ -2100,11 +2104,10 @@ static QDF_STATUS lim_tdls_populate_dot11f_ht_caps(tpAniSirGlobal pMac,
 	pDot11f->reserved1 = pHTParametersInfo->reserved;
 
 	pe_debug("AMPDU Param: %x", nCfgValue);
-
-	qdf_mem_copy(pDot11f->supportedMCSSet, pTdlsAddStaReq->htCap.suppMcsSet,
+	qdf_mem_copy(pDot11f->supportedMCSSet, pTdlsAddStaReq->htCap.mcsset,
 		     SIZE_OF_SUPPORTED_MCS_SET);
 
-	nCfgValue = pTdlsAddStaReq->htCap.extendedHtCapInfo;
+	nCfgValue = pTdlsAddStaReq->htCap.extcap;
 
 	uHTCapabilityInfo.nCfgValue16 = nCfgValue & 0xFFFF;
 
@@ -2112,7 +2115,7 @@ static QDF_STATUS lim_tdls_populate_dot11f_ht_caps(tpAniSirGlobal pMac,
 	pDot11f->transitionTime = uHTCapabilityInfo.extHtCapInfo.transitionTime;
 	pDot11f->mcsFeedback = uHTCapabilityInfo.extHtCapInfo.mcsFeedback;
 
-	nCfgValue = pTdlsAddStaReq->htCap.txBFCapInfo;
+	nCfgValue = pTdlsAddStaReq->htCap.txbf_cap;
 
 	pTxBFCapabilityInfo = (tSirMacTxBFCapabilityInfo *) &nCfgValue;
 	pDot11f->txBF = pTxBFCapabilityInfo->txBF;
@@ -2137,7 +2140,7 @@ static QDF_STATUS lim_tdls_populate_dot11f_ht_caps(tpAniSirGlobal pMac,
 	pDot11f->compressedSteeringMatrixBFAntennae =
 		pTxBFCapabilityInfo->compressedSteeringMatrixBFAntennae;
 
-	nCfgValue = pTdlsAddStaReq->htCap.antennaSelectionInfo;
+	nCfgValue = pTdlsAddStaReq->htCap.antenna;
 
 	nCfgValue8 = (uint8_t) nCfgValue;
 
@@ -2472,7 +2475,7 @@ static void lim_tdls_update_hash_node_info(tpAniSirGlobal pMac,
 						   htCaps->supportedMCSSet);
 		pStaDs->baPolicyFlag = 0xFF;
 		pMac->lim.gLimTdlsLinkMode = TDLS_LINK_MODE_N;
-		pStaDs->ht_caps = pTdlsAddStaReq->htCap.capInfo;
+		pStaDs->ht_caps = pTdlsAddStaReq->htCap.hc_cap;
 	} else {
 		pStaDs->mlmStaContext.htCapability = 0;
 		pMac->lim.gLimTdlsLinkMode = TDLS_LINK_MODE_BG;
@@ -2545,9 +2548,11 @@ static void lim_tdls_update_hash_node_info(tpAniSirGlobal pMac,
 	 */
 	lim_tdls_populate_matching_rate_set(pMac, pStaDs,
 					    pTdlsAddStaReq->supported_rates,
-					    pTdlsAddStaReq->supported_rates_length,
-					    (uint8_t *) pTdlsAddStaReq->htCap.
-					    suppMcsSet, psessionEntry, pVhtCaps);
+					    pTdlsAddStaReq->
+					    supported_rates_length,
+					    (uint8_t *)pTdlsAddStaReq->
+					    htCap.mcsset,
+					    psessionEntry, pVhtCaps);
 
 	/*  TDLS Dummy AddSTA does not have right capability , is it OK ??
 	 */
@@ -2707,7 +2712,9 @@ static QDF_STATUS lim_send_sme_tdls_add_sta_rsp(tpAniSirGlobal pMac,
 	mmhMsg.bodyptr = addStaRsp;
 	mmhMsg.callback = tgt_tdls_add_peer_rsp;
 
-	return scheduler_post_msg(QDF_MODULE_ID_TARGET_IF, &mmhMsg);
+	return scheduler_post_message(QDF_MODULE_ID_PE,
+				      QDF_MODULE_ID_TDLS,
+				      QDF_MODULE_ID_TARGET_IF, &mmhMsg);
 }
 
 /*
@@ -2799,7 +2806,9 @@ lim_send_tdls_comp_mgmt_rsp(tpAniSirGlobal mac_ctx, uint16_t msg_type,
 	sme_rsp->psoc = mac_ctx->psoc;
 	msg.bodyptr = sme_rsp;
 	msg.callback = tgt_tdls_send_mgmt_rsp;
-	scheduler_post_msg(QDF_MODULE_ID_TARGET_IF, &msg);
+	scheduler_post_message(QDF_MODULE_ID_PE,
+			       QDF_MODULE_ID_TDLS,
+			       QDF_MODULE_ID_TARGET_IF, &msg);
 
 }
 
@@ -2968,7 +2977,9 @@ static QDF_STATUS lim_send_sme_tdls_del_sta_rsp(tpAniSirGlobal pMac,
 	pDelSta->psoc = pMac->psoc;
 	mmhMsg.bodyptr = pDelSta;
 	mmhMsg.callback = tgt_tdls_del_peer_rsp;
-	return scheduler_post_msg(QDF_MODULE_ID_TARGET_IF, &mmhMsg);
+	return scheduler_post_message(QDF_MODULE_ID_PE,
+				      QDF_MODULE_ID_TDLS,
+				      QDF_MODULE_ID_TARGET_IF, &mmhMsg);
 }
 
 /*

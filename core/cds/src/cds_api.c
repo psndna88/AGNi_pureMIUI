@@ -36,6 +36,7 @@
 #include "wlan_hdd_power.h"
 #include "wlan_hdd_tsf.h"
 #include <linux/vmalloc.h>
+#include <scheduler_core.h>
 
 #include "pld_common.h"
 #include "sap_api.h"
@@ -188,6 +189,7 @@ QDF_STATUS cds_init(void)
 
 	qdf_trace_spin_lock_init();
 	qdf_trace_init();
+	qdf_register_recovering_state_query_callback(cds_is_driver_recovering);
 
 	qdf_register_debugcb_init();
 
@@ -220,7 +222,7 @@ void cds_deinit(void)
 {
 	if (gp_cds_context == NULL)
 		return;
-
+	qdf_register_recovering_state_query_callback(NULL);
 	cds_recovery_work_deinit();
 	qdf_cpuhp_deinit();
 	qdf_mc_timer_manager_exit();
@@ -585,6 +587,7 @@ QDF_STATUS cds_open(struct wlan_objmgr_psoc *psoc)
 		hdd_ctx->config->maxNumberOfPeers = cds_cfg->max_station;
 
 	HTCHandle = cds_get_context(QDF_MODULE_ID_HTC);
+	gp_cds_context->cfg_ctx = NULL;
 	if (!HTCHandle) {
 		cds_alert("HTCHandle is null!");
 
@@ -1014,6 +1017,7 @@ QDF_STATUS cds_post_disable(void)
 	tp_wma_handle wma_handle;
 	struct hif_opaque_softc *hif_ctx;
 	struct cdp_pdev *txrx_pdev;
+	struct scheduler_ctx *sched_ctx;
 
 	wma_handle = cds_get_context(QDF_MODULE_ID_WMA);
 	if (!wma_handle) {
@@ -1032,6 +1036,11 @@ QDF_STATUS cds_post_disable(void)
 		cds_err("Failed to get txrx pdev!");
 		return QDF_STATUS_E_INVAL;
 	}
+
+	/* flush any unprocessed scheduler messages */
+	sched_ctx = scheduler_get_context();
+	if (sched_ctx)
+		scheduler_queues_flush(sched_ctx);
 
 	/*
 	 * With new state machine changes cds_close can be invoked without
@@ -2217,7 +2226,7 @@ bool cds_is_ptp_rx_opt_enabled(void)
 		return false;
 	}
 
-	return HDD_TSF_IS_RX_SET(hdd_ctx);
+	return hdd_tsf_is_rx_set(hdd_ctx);
 }
 
 bool cds_is_ptp_tx_opt_enabled(void)
@@ -2237,7 +2246,7 @@ bool cds_is_ptp_tx_opt_enabled(void)
 		return false;
 	}
 
-	return HDD_TSF_IS_TX_SET(hdd_ctx);
+	return hdd_tsf_is_tx_set(hdd_ctx);
 }
 #endif
 
@@ -2337,8 +2346,8 @@ QDF_STATUS cds_flush_logs(uint32_t is_fatal,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	cds_info("Triggering bug report: type:%d, indicator=%d reason_code=%d",
-		 is_fatal, indicator, reason_code);
+	cds_debug("Triggering bug report: type:%d, indicator=%d reason_code=%d",
+		  is_fatal, indicator, reason_code);
 
 	if (dump_mac_trace)
 		qdf_trace_dump_all(p_cds_context->mac_context, 0, 0, 500, 0);

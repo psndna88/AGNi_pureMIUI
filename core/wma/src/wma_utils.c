@@ -57,8 +57,10 @@
 #include "wmi_unified_param.h"
 #include "linux/ieee80211.h"
 #include <cdp_txrx_handle.h>
+#include <cdp_txrx_peer_ops.h>
 #include "cds_reg_service.h"
 #include "target_if.h"
+#include "wlan_mlme_main.h"
 
 /* MCS Based rate table */
 /* HT MCS parameters with Nss = 1 */
@@ -352,7 +354,10 @@ void wma_lost_link_info_handler(tp_wma_handle wma, uint32_t vdev_id,
 		WMA_LOGD("%s: post msg to SME, bss_idx %d, rssi %d",  __func__,
 			 lost_link_info->vdev_id, lost_link_info->rssi);
 
-		qdf_status = scheduler_post_msg(QDF_MODULE_ID_SME, &sme_msg);
+		qdf_status = scheduler_post_message(QDF_MODULE_ID_WMA,
+						    QDF_MODULE_ID_SME,
+						    QDF_MODULE_ID_SME,
+						    &sme_msg);
 		if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 			WMA_LOGE("%s: fail to post msg to SME", __func__);
 			qdf_mem_free(lost_link_info);
@@ -470,7 +475,9 @@ int wma_stats_ext_event_handler(void *handle, uint8_t *event_buf,
 	cds_msg.bodyptr = (void *)stats_ext_event;
 	cds_msg.bodyval = 0;
 
-	status = scheduler_post_msg(QDF_MODULE_ID_SME, &cds_msg);
+	status = scheduler_post_message(QDF_MODULE_ID_WMA,
+					QDF_MODULE_ID_SME,
+					QDF_MODULE_ID_SME, &cds_msg);
 	if (status != QDF_STATUS_SUCCESS) {
 		WMA_LOGE("%s: Failed to post stats ext event to SME", __func__);
 		qdf_mem_free(stats_ext_event);
@@ -1210,7 +1217,9 @@ static int wma_ll_stats_evt_handler(void *handle, u_int8_t *event,
 	sme_msg.type = eWMI_SME_LL_STATS_IND;
 	sme_msg.bodyptr = (void *)link_stats_results;
 	sme_msg.bodyval = 0;
-	qdf_status = scheduler_post_msg(QDF_MODULE_ID_SME, &sme_msg);
+	qdf_status = scheduler_post_message(QDF_MODULE_ID_WMA,
+					    QDF_MODULE_ID_SME,
+					    QDF_MODULE_ID_SME, &sme_msg);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		WMA_LOGP(FL("Failed to post peer stat change msg!"));
 		qdf_mem_free(link_stats_results);
@@ -1508,6 +1517,15 @@ static int wma_unified_radio_tx_power_level_stats_event_handler(void *handle,
 	rs_results = (tSirWifiRadioStat *) &link_stats_results->results[0] +
 							 fixed_param->radio_id;
 	tx_power_level_values = (uint8_t *) param_tlvs->tx_time_per_power_level;
+
+	if (rs_results->total_num_tx_power_levels &&
+	    fixed_param->total_num_tx_power_levels >
+		rs_results->total_num_tx_power_levels) {
+		WMA_LOGE("%s: excess tx_power buffers:%d, total_num_tx_power_levels:%d",
+			 __func__, fixed_param->total_num_tx_power_levels,
+			 rs_results->total_num_tx_power_levels);
+		return -EINVAL;
+	}
 
 	rs_results->total_num_tx_power_levels =
 				fixed_param->total_num_tx_power_levels;
@@ -1878,7 +1896,9 @@ static int wma_peer_ps_evt_handler(void *handle, u_int8_t *event,
 	sme_msg.bodyptr = link_stats_results;
 	sme_msg.bodyval = 0;
 
-	qdf_status = scheduler_post_msg(QDF_MODULE_ID_SME, &sme_msg);
+	qdf_status = scheduler_post_message(QDF_MODULE_ID_WMA,
+					    QDF_MODULE_ID_SME,
+					    QDF_MODULE_ID_SME, &sme_msg);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		WMA_LOGE("%s: Fail to post ps change ind msg", __func__);
 		qdf_mem_free(link_stats_results);
@@ -2581,7 +2601,10 @@ static void wma_update_vdev_stats(tp_wma_handle wma,
 		sme_msg.bodyptr = p_snr_req;
 		sme_msg.bodyval = 0;
 
-		qdf_status = scheduler_post_msg(QDF_MODULE_ID_SME, &sme_msg);
+		qdf_status = scheduler_post_message(QDF_MODULE_ID_WMA,
+						    QDF_MODULE_ID_SME,
+						    QDF_MODULE_ID_SME,
+						    &sme_msg);
 		if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 			WMA_LOGE("%s: Fail to post snr ind msg", __func__);
 			qdf_mem_free(p_snr_req);
@@ -2704,7 +2727,9 @@ void wma_post_link_status(tAniGetLinkStatus *pGetLinkStatus,
 	sme_msg.bodyptr = pGetLinkStatus;
 	sme_msg.bodyval = 0;
 
-	qdf_status = scheduler_post_msg(QDF_MODULE_ID_SME, &sme_msg);
+	qdf_status = scheduler_post_message(QDF_MODULE_ID_WMA,
+					    QDF_MODULE_ID_SME,
+					    QDF_MODULE_ID_SME, &sme_msg);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		WMA_LOGE("%s: Fail to post link status ind msg", __func__);
 		qdf_mem_free(pGetLinkStatus);
@@ -2910,7 +2935,9 @@ int wma_rso_cmd_status_event_handler(wmi_roam_event_fixed_param *wmi_event)
 	sme_msg.bodyval = 0;
 	WMA_LOGD("%s: Post RSO cmd status to SME",  __func__);
 
-	qdf_status = scheduler_post_msg(QDF_MODULE_ID_SME, &sme_msg);
+	qdf_status = scheduler_post_message(QDF_MODULE_ID_WMA,
+					    QDF_MODULE_ID_SME,
+					    QDF_MODULE_ID_SME, &sme_msg);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		WMA_LOGE("%s: fail to post RSO cmd status to SME", __func__);
 		qdf_mem_free(rso_status);
@@ -3015,7 +3042,9 @@ static void wma_handle_sta_peer_info(uint32_t num_peer_stats,
 	sme_msg.bodyptr = peer_info;
 	sme_msg.bodyval = 0;
 
-	qdf_status = scheduler_post_msg(QDF_MODULE_ID_SME, &sme_msg);
+	qdf_status = scheduler_post_message(QDF_MODULE_ID_WMA,
+					    QDF_MODULE_ID_SME,
+					    QDF_MODULE_ID_SME, &sme_msg);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		WMA_LOGE("%s: Fail to post get rssi msg", __func__);
 		qdf_mem_free(peer_info);
@@ -3315,7 +3344,9 @@ static QDF_STATUS wma_peer_info_ext_rsp(tp_wma_handle wma, u_int8_t *buf)
 	sme_msg.bodyptr = resp;
 	sme_msg.bodyval = 0;
 
-	qdf_status = scheduler_post_msg(QDF_MODULE_ID_SME, &sme_msg);
+	qdf_status = scheduler_post_message(QDF_MODULE_ID_WMA,
+					    QDF_MODULE_ID_SME,
+					    QDF_MODULE_ID_SME, &sme_msg);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		WMA_LOGE("%s: Fail to post get peer info msg", __func__);
 		qdf_mem_free(resp);
@@ -3693,18 +3724,30 @@ WLAN_PHY_MODE wma_peer_phymode(tSirNwType nw_type, uint8_t sta_type,
 		}
 		if (CH_WIDTH_40MHZ < ch_width)
 			WMA_LOGE("80/160 MHz BW sent in 11G, configured 40MHz");
-		if (ch_width)
+		if (ch_width) {
+#if SUPPORT_11AX
 			phymode = (is_he) ? MODE_11AX_HE40_2G : (is_vht) ?
 					MODE_11AC_VHT40_2G : MODE_11NG_HT40;
-		else
+#else
+			phymode = (is_vht) ? MODE_11AC_VHT40_2G :
+				MODE_11NG_HT40;
+#endif
+		} else {
+#if SUPPORT_11AX
 			phymode = (is_he) ? MODE_11AX_HE20_2G : (is_vht) ?
 					MODE_11AC_VHT20_2G : MODE_11NG_HT20;
+#else
+			phymode = (is_vht) ? MODE_11AC_VHT20_2G :
+				MODE_11NG_HT20;
+#endif
+		}
 		break;
 	case eSIR_11A_NW_TYPE:
 		if (!(is_ht || is_vht || is_he)) {
 			phymode = MODE_11A;
 			break;
 		}
+#if SUPPORT_11AX
 		if (is_he) {
 			if (ch_width == CH_WIDTH_160MHZ)
 				phymode = MODE_11AX_HE160;
@@ -3715,7 +3758,9 @@ WLAN_PHY_MODE wma_peer_phymode(tSirNwType nw_type, uint8_t sta_type,
 			else
 				phymode = (ch_width) ?
 					  MODE_11AX_HE40 : MODE_11AX_HE20;
-		} else if (is_vht) {
+		}
+#endif
+		else if (is_vht) {
 			if (ch_width == CH_WIDTH_160MHZ)
 				phymode = MODE_11AC_VHT160;
 			else if (ch_width == CH_WIDTH_80P80MHZ)
@@ -4389,9 +4434,40 @@ QDF_STATUS wma_send_vdev_stop_to_fw(t_wma_handle *wma, uint8_t vdev_id)
 {
 	QDF_STATUS status;
 	struct wma_txrx_node *vdev = &wma->interfaces[vdev_id];
+	struct mlme_nss_chains *ini_cfg;
+	struct mlme_nss_chains *dynamic_cfg;
+	struct wlan_objmgr_vdev *vdev_obj;
+
+	/*
+	 * Reset the dynamic nss chains config to the ini values, as when the
+	 * vdev gets its started again, this would be a fresh connection,
+	 * and we dont want the config of previous connection to affect the
+	 * current connection.
+	 */
+
+	vdev_obj = wlan_objmgr_get_vdev_by_id_from_psoc(wma->psoc, vdev_id,
+							WLAN_LEGACY_WMA_ID);
+	if (!vdev_obj) {
+		WMA_LOGE("%s, vdev_id: %d, failed to get vdev from psoc",
+			 __func__, vdev_id);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	ini_cfg = mlme_get_ini_vdev_config(vdev_obj);
+	dynamic_cfg = mlme_get_dynamic_vdev_config(vdev_obj);
+
+	if (!dynamic_cfg || !ini_cfg) {
+		wma_err("nss chain dynamic/ini config NULL");
+		goto get_config_failed;
+	}
+	*dynamic_cfg = *ini_cfg;
+
+get_config_failed:
+	wlan_objmgr_vdev_release_ref(vdev_obj, WLAN_LEGACY_WMA_ID);
 
 	wma_acquire_wakelock(&vdev->vdev_stop_wakelock,
 			     WMA_VDEV_STOP_REQUEST_TIMEOUT);
+
 	status = wmi_unified_vdev_stop_send(wma->wmi_handle, vdev_id);
 	if (QDF_IS_STATUS_ERROR(status))
 		wma_release_wakelock(&vdev->vdev_stop_wakelock);
@@ -4734,4 +4810,37 @@ QDF_STATUS wma_get_roam_scan_stats(WMA_HANDLE handle,
 	WMA_LOGD("%s: Exit", __func__);
 
 	return QDF_STATUS_SUCCESS;
+}
+
+void wma_remove_peer_on_add_bss_failure(tpAddBssParams add_bss_params)
+{
+	tp_wma_handle wma;
+	struct cdp_pdev *pdev;
+	void *peer = NULL;
+	uint8_t peer_id;
+	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
+
+	WMA_LOGE("%s: ADD BSS failure %d", __func__, add_bss_params->status);
+
+	pdev = cds_get_context(QDF_MODULE_ID_TXRX);
+	if (!pdev) {
+		WMA_LOGE("%s: Failed to get pdev", __func__);
+		return;
+	}
+
+	peer = cdp_peer_find_by_addr(soc, pdev, add_bss_params->bssId,
+				     &peer_id);
+	if (!peer) {
+		WMA_LOGE("%s Failed to find peer %pM",
+			 __func__, add_bss_params->bssId);
+		return;
+	}
+
+	wma = cds_get_context(QDF_MODULE_ID_WMA);
+	if (!wma) {
+		WMA_LOGE("%s wma handle is NULL", __func__);
+		return;
+	}
+	wma_remove_peer(wma, add_bss_params->bssId, add_bss_params->bssIdx,
+			peer, false);
 }
