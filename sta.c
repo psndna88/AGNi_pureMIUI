@@ -1500,6 +1500,7 @@ static int set_wpa_common(struct sigma_dut *dut, struct sigma_conn *conn,
 			if (set_network(ifname, id, "ieee80211w", "1") < 0)
 				return -2;
 		} else if (strcasecmp(val, "Disabled") == 0 ||
+			   strcasecmp(val, "Disable") == 0 ||
 			   strcasecmp(val, "Forced_Disabled") == 0) {
 			dut->sta_pmf = STA_PMF_DISABLED;
 		} else {
