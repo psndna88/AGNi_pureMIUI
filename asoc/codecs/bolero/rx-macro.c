@@ -438,7 +438,7 @@ static const char *const rx_macro_hph_hd2_mode_text[] = {"OFF", "ON"};
 static const struct soc_enum rx_macro_hph_hd2_mode_enum =
 	SOC_ENUM_SINGLE_EXT(2, rx_macro_hph_hd2_mode_text);
 
-static const char *const rx_macro_hph_pwr_mode_text[] = {"ULP", "LoHIFI"};
+static const char *const rx_macro_hph_pwr_mode_text[] = {"ULP", "LOHIFI"};
 static const struct soc_enum rx_macro_hph_pwr_mode_enum =
 	SOC_ENUM_SINGLE_EXT(2, rx_macro_hph_pwr_mode_text);
 
@@ -953,7 +953,7 @@ static int rx_macro_get_channel_map(struct snd_soc_dai *dai,
 	case RX_MACRO_AIF4_PB:
 		for_each_set_bit(temp, &rx_priv->active_ch_mask[dai->id],
 			 RX_MACRO_PORTS_MAX) {
-			ch_mask |= (1 << i);
+			ch_mask |= (1 << temp);
 			if (++i == RX_MACRO_MAX_DMA_CH_PER_PORT)
 				break;
 		}
