@@ -265,6 +265,13 @@ struct nl80211_ctx {
 };
 #endif /* NL80211_SUPPORT */
 
+/* hardcoded long WSC IE values to force fragmentation */
+#define WPS_LONG_DEVICE_NAME	"Qti1234511adtest1234567890123456"
+#define WPS_LONG_MANUFACTURER	"Qti1234511adQti1234511adQti1234511adQti1234511adQti1234511ad"
+#define WPS_LONG_MODEL_NAME	"Qti1234511adtest1234567890123456"
+#define WPS_LONG_MODEL_NUMBER	"11111111111111111111111111111111"
+#define WPS_LONG_SERIAL_NUMBER	"22222222222222222222222222222222"
+
 struct sigma_dut {
 	int s; /* server TCP socket */
 	int debug_level;
@@ -701,6 +708,13 @@ struct sigma_dut {
 		DEVROLE_STA_CFON,
 		DEVROLE_AP,
 	} dev_role;
+
+	enum wps_band {
+		WPS_BAND_NON_60G = 0,
+		WPS_BAND_60G,
+	} band;
+
+	int wsc_fragment; /* simulate WSC IE fragmentation */
 
 	const char *version;
 	int no_ip_addr_set;

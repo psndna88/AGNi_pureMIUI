@@ -1447,6 +1447,13 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
+	val = get_param(cmd, "WscIEFragment");
+	if (val && strcasecmp(val, "enable") == 0) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Enable WSC IE fragmentation");
+		dut->wsc_fragment = 1;
+	}
+
 	val = get_param(cmd, "MSDUSize");
 	if (val) {
 		int mtu;
@@ -7200,6 +7207,21 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 			is_60g_sigma_dut(dut) ? "physical_display " : "",
 			dut->ap_wpsnfc ? " nfc_interface ext_nfc_token" : "",
 			dut->bridge ? dut->bridge : ifname);
+		if (dut->wsc_fragment) {
+			fprintf(f, "device_name=%s\n"
+				"manufacturer=%s\n"
+				"model_name=%s\n"
+				"model_number=%s\n"
+				"serial_number=%s\n",
+				WPS_LONG_DEVICE_NAME,
+				WPS_LONG_MANUFACTURER,
+				WPS_LONG_MODEL_NAME,
+				WPS_LONG_MODEL_NUMBER,
+				WPS_LONG_SERIAL_NUMBER);
+		} else {
+			fprintf(f, "device_name=QCA AP\n"
+				"manufacturer=QCA\n");
+		}
 	}
 
 	if (dut->program == PROGRAM_VHT) {
@@ -7824,6 +7846,8 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	dut->ap_interface_5g = 0;
 	dut->ap_interface_2g = 0;
 	dut->ap_pmf = AP_PMF_DISABLED;
+
+	dut->wsc_fragment = 0;
 
 	if (dut->program == PROGRAM_HT || dut->program == PROGRAM_VHT) {
 		dut->ap_wme = AP_WME_ON;

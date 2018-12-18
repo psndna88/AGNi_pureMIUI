@@ -3010,6 +3010,44 @@ static int download_cert(struct sigma_dut *dut,
 }
 
 
+static int cmd_sta_preset_testparameters_60ghz(struct sigma_dut *dut,
+					       struct sigma_conn *conn,
+					       struct sigma_cmd *cmd)
+{
+	const char *val;
+	const char *intf = get_param(cmd, "interface");
+
+	if (!intf)
+		return -1;
+
+	val = get_param(cmd, "WscIEFragment");
+	if (val && strcasecmp(val, "enable") == 0) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Enable WSC IE fragmentation");
+
+		dut->wsc_fragment = 1;
+		/* set long attributes to force fragmentation */
+		if (wpa_command(intf, "SET device_name "
+				WPS_LONG_DEVICE_NAME) < 0)
+			return -2;
+		if (wpa_command(intf, "SET manufacturer "
+				WPS_LONG_MANUFACTURER) < 0)
+			return -2;
+		if (wpa_command(intf, "SET model_name "
+				WPS_LONG_MODEL_NAME) < 0)
+			return -2;
+		if (wpa_command(intf, "SET model_number "
+				WPS_LONG_MODEL_NUMBER) < 0)
+			return -2;
+		if (wpa_command(intf, "SET serial_number "
+				WPS_LONG_SERIAL_NUMBER) < 0)
+			return -2;
+	}
+
+	return 1;
+}
+
+
 static int cmd_sta_preset_testparameters_hs2_r2(struct sigma_dut *dut,
 						struct sigma_conn *conn,
 						const char *intf,
@@ -3847,6 +3885,9 @@ static int cmd_sta_preset_testparameters(struct sigma_dut *dut,
 
 	if (val && strcasecmp(val, "LOC") == 0)
 		return loc_cmd_sta_preset_testparameters(dut, conn, cmd);
+
+	if (dut->program == PROGRAM_WPS && dut->band == WPS_BAND_60G)
+		return cmd_sta_preset_testparameters_60ghz(dut, conn, cmd);
 
 #ifdef ANDROID_NAN
 	if (val && strcasecmp(val, "NAN") == 0)
@@ -6643,6 +6684,7 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 	int cmd_sta_p2p_reset(struct sigma_dut *dut, struct sigma_conn *conn,
 			      struct sigma_cmd *cmd);
 	const char *intf = get_param(cmd, "Interface");
+	const char *band = get_param(cmd, "band");
 	const char *type;
 	const char *program = get_param(cmd, "program");
 	const char *dev_role = get_param(cmd, "DevRole");
@@ -6700,6 +6742,15 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 		unlink("next-client-key.pem");
 	}
 
+	/* For WPS program of the 60 GHz band the band type needs to be saved */
+	if (dut->program == PROGRAM_WPS) {
+		if (band && strcasecmp(band, "60GHz") == 0) {
+			dut->band = WPS_BAND_60G;
+		} else {
+			dut->band = WPS_BAND_NON_60G;
+		}
+	}
+
 	if (is_60g_sigma_dut(dut)) {
 		const char *dev_role = get_param(cmd, "DevRole");
 		char buf[256];
@@ -6744,6 +6795,15 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 	wpa_command(intf, "FLUSH");
 	wpa_command(intf, "ERP_FLUSH");
 	wpa_command(intf, "SET radio_disabled 0");
+
+	if (dut->wsc_fragment) {
+		dut->wsc_fragment = 0;
+		wpa_command(intf, "SET device_name Test client");
+		wpa_command(intf, "SET manufacturer ");
+		wpa_command(intf, "SET model_name ");
+		wpa_command(intf, "SET model_number ");
+		wpa_command(intf, "SET serial_number ");
+	}
 
 	if (dut->tmp_mac_addr && dut->set_macaddr) {
 		dut->tmp_mac_addr = 0;
