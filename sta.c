@@ -10097,6 +10097,34 @@ static int wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 		}
 	}
 
+	val = get_param(cmd, "Powersave");
+	if (val) {
+		char buf[60];
+
+		if (strcasecmp(val, "off") == 0) {
+			snprintf(buf, sizeof(buf),
+					"iwpriv %s setPower 2", intf);
+			if (system(buf) != 0) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"iwpriv setPower 2 failed");
+				return 0;
+			}
+		} else if (strcasecmp(val, "on") == 0) {
+			snprintf(buf, sizeof(buf),
+					"iwpriv %s setPower 1", intf);
+			if (system(buf) != 0) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"iwpriv setPower 1 failed");
+				return 0;
+			}
+		} else {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Unsupported Powersave value '%s'",
+					val);
+			return -1;
+		}
+	}
+
 	return 1;
 
 failed:
