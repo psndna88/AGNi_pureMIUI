@@ -554,7 +554,7 @@ int set_cred_quoted(const char *ifname, int id, const char *field,
 int start_sta_mode(struct sigma_dut *dut)
 {
 	FILE *f;
-	char buf[100];
+	char buf[256];
 	char *ifname;
 	char *tmp, *pos;
 
@@ -623,11 +623,17 @@ int start_sta_mode(struct sigma_dut *dut)
 	fclose(f);
 
 #ifdef  __QNXNTO__
-	snprintf(buf, sizeof(buf), "wpa_supplicant -Dqca -i%s -B "
-		 "-c" SIGMA_TMPDIR "/sigma_dut-sta.conf", ifname);
+	snprintf(buf, sizeof(buf), "wpa_supplicant -Dqca -i%s -B %s%s"
+		 "-c" SIGMA_TMPDIR "/sigma_dut-sta.conf", ifname,
+		 dut->wpa_supplicant_debug_log ? "-K -t -ddd -f " : "",
+		 dut->wpa_supplicant_debug_log ?
+		 dut->wpa_supplicant_debug_log : "");
 #else /*__QNXNTO__*/
-	snprintf(buf, sizeof(buf), "wpa_supplicant -Dnl80211 -i%s -B "
-		 "-c" SIGMA_TMPDIR "/sigma_dut-sta.conf", ifname);
+	snprintf(buf, sizeof(buf), "wpa_supplicant -Dnl80211 -i%s -B %s%s "
+		 "-c" SIGMA_TMPDIR "/sigma_dut-sta.conf", ifname,
+		 dut->wpa_supplicant_debug_log ? "-K -t -ddd -f " : "",
+		 dut->wpa_supplicant_debug_log ?
+		 dut->wpa_supplicant_debug_log : "");
 #endif /*__QNXNTO__*/
 	if (system(buf) != 0) {
 		sigma_dut_print(dut, DUT_MSG_INFO, "Failed to run '%s'", buf);

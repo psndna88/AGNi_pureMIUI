@@ -605,6 +605,7 @@ struct sigma_dut {
 	} ap_he_ppdu;
 
 	const char *hostapd_debug_log;
+	const char *wpa_supplicant_debug_log;
 
 #ifdef CONFIG_TRAFFIC_AGENT
 	/* Traffic Agent */
