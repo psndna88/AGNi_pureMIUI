@@ -1548,6 +1548,7 @@ static int cmd_sta_set_psk(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *intf = get_param(cmd, "Interface");
 	const char *type = get_param(cmd, "Type");
 	const char *pmf = get_param(cmd, "PMF");
+	const char *network_mode = get_param(cmd, "network_mode");
 	const char *ifname, *val, *alg;
 	int id;
 
@@ -1655,6 +1656,11 @@ static int cmd_sta_set_psk(struct sigma_dut *dut, struct sigma_conn *conn,
 		free(dut->sae_commit_override);
 		dut->sae_commit_override = strdup(val);
 	}
+
+	if (dut->program == PROGRAM_60GHZ && network_mode &&
+	    strcasecmp(network_mode, "PBSS") == 0 &&
+	    set_network(ifname, id, "pbss", "1") < 0)
+		return -2;
 
 	return 1;
 }
@@ -2166,6 +2172,7 @@ static int sta_set_open(struct sigma_dut *dut, struct sigma_conn *conn,
 			struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
+	const char *network_mode = get_param(cmd, "network_mode");
 	const char *ifname;
 	int id;
 
@@ -2179,6 +2186,11 @@ static int sta_set_open(struct sigma_dut *dut, struct sigma_conn *conn,
 		return id;
 
 	if (set_network(ifname, id, "key_mgmt", "NONE") < 0)
+		return -2;
+
+	if (dut->program == PROGRAM_60GHZ && network_mode &&
+	    strcasecmp(network_mode, "PBSS") == 0 &&
+	    set_network(ifname, id, "pbss", "1") < 0)
 		return -2;
 
 	return 1;
@@ -2656,6 +2668,7 @@ static int cmd_sta_associate(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *wps_param = get_param(cmd, "WPS");
 	const char *bssid = get_param(cmd, "bssid");
 	const char *chan = get_param(cmd, "channel");
+	const char *network_mode = get_param(cmd, "network_mode");
 	int wps = 0;
 	char buf[1000], extra[50];
 
@@ -2697,6 +2710,12 @@ static int cmd_sta_associate(struct sigma_dut *dut, struct sigma_conn *conn,
 		wps = 1;
 
 	if (wps) {
+		if (dut->program == PROGRAM_60GHZ && network_mode &&
+		    strcasecmp(network_mode, "PBSS") == 0 &&
+		    set_network(get_station_ifname(), dut->infra_network_id,
+				"pbss", "1") < 0)
+			return -2;
+
 		if (dut->wps_method == WFA_CS_WPS_NOT_READY) {
 			send_resp(dut, conn, SIGMA_ERROR, "ErrorCode,WPS "
 				  "parameters not yet set");
@@ -5054,6 +5073,9 @@ static int sta_pcp_start(struct sigma_dut *dut, struct sigma_conn *conn,
 				"Failed to set supplicant network mode");
 		return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
 	}
+
+	if (set_network(ifname, net_id, "pbss", "1") < 0)
+		return -2;
 
 	sigma_dut_print(dut, DUT_MSG_DEBUG,
 			"Supplicant set network with mode 2. network_id %d",
@@ -11711,6 +11733,7 @@ static int cmd_start_wps_registration(struct sigma_dut *dut,
 {
 	struct wpa_ctrl *ctrl;
 	const char *intf = get_param(cmd, "Interface");
+	const char *network_mode = get_param(cmd, "network_mode");
 	const char *role, *method;
 	int res;
 	char buf[256];
@@ -11721,10 +11744,19 @@ static int cmd_start_wps_registration(struct sigma_dut *dut,
 		"WPS-FAIL",
 		NULL
 	};
+	int id = 0;
 
 	/* 60G WPS tests do not pass Interface parameter */
 	if (!intf)
 		intf = get_main_ifname();
+
+	if (dut->band == WPS_BAND_60G && network_mode &&
+	    strcasecmp(network_mode, "PBSS") == 0) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Set PBSS network mode, network id %d", id);
+		if (set_network(get_station_ifname(), id, "pbss", "1") < 0)
+			return -2;
+	}
 
 	if (dut->force_rsn_ie) {
 		sigma_dut_print(dut, DUT_MSG_DEBUG, "Force RSN_IE: %d",
