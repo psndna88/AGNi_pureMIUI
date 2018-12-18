@@ -665,6 +665,11 @@ int start_sta_mode(struct sigma_dut *dut)
 
 void stop_sta_mode(struct sigma_dut *dut)
 {
+	if (is_60g_sigma_dut(dut)) {
+		wpa_command(get_main_ifname(), "TERMINATE");
+		return;
+	}
+
 	wpa_command("wlan0", "TERMINATE");
 	wpa_command("wlan1", "TERMINATE");
 	wpa_command("ath0", "TERMINATE");
