@@ -920,6 +920,7 @@ int wil6210_set_ese(struct sigma_dut *dut, int count,
 		    struct sigma_ese_alloc *allocs);
 int sta_extract_60g_ese(struct sigma_dut *dut, struct sigma_cmd *cmd,
 			struct sigma_ese_alloc *allocs, int *allocs_size);
+int wil6210_set_force_mcs(struct sigma_dut *dut, int force, int mcs);
 
 /* p2p.c */
 int p2p_cmd_sta_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,

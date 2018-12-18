@@ -6679,6 +6679,21 @@ static int ap_set_60g_ese(struct sigma_dut *dut, int count,
 }
 
 
+static int ap_set_force_mcs(struct sigma_dut *dut, int force, int mcs)
+{
+	switch (get_driver_type()) {
+#ifdef __linux__
+	case DRIVER_WIL6210:
+		return wil6210_set_force_mcs(dut, force, mcs);
+#endif /* __linux__ */
+	default:
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Unsupported ap_set_force_mcs with the current driver");
+		return -1;
+	}
+}
+
+
 int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 			 struct sigma_cmd *cmd)
 {
@@ -7600,6 +7615,16 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 				  "errorCode,Could not set ExtSch");
 			return 0;
 		}
+		if (dut->ap_fixed_rate) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"forcing TX MCS index %d",
+					dut->ap_mcs);
+			if (ap_set_force_mcs(dut, 1, dut->ap_mcs)) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Could not force MCS");
+				return -2;
+			}
+		}
 	}
 
 	dut->hostapd_running = 1;
@@ -8146,6 +8171,12 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		if (system(buf) != 0) {
 			sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to set %s",
 					buf);
+			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+		}
+
+		if (ap_set_force_mcs(dut, 0, 1)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to reset force MCS");
 			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
 		}
 

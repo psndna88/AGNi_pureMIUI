@@ -135,6 +135,20 @@ struct wil_wmi_ese_cfg {
 	struct wil_wmi_ese_slot slots[WIL_WMI_MAX_ESE_SLOTS];
 } __attribute__((packed));
 
+#define WIL_WMI_UT_FORCE_MCS	6
+struct wil_wmi_force_mcs {
+	/* WIL_WMI_UT_HW_SYSAPI */
+	uint16_t module_id;
+	/* WIL_WMI_UT_FORCE_MCS */
+	uint16_t subtype_id;
+	/* cid (ignored in oob_mode, affects all stations) */
+	uint32_t cid;
+	/* 1 to force MCS, 0 to restore default behavior */
+	uint32_t force_enable;
+	/* MCS index, 0-12 */
+	uint32_t mcs;
+} __attribute__((packed));
+
 #define WIL_WMI_UT_HW_SYSAPI 10
 #define WIL_WMI_UT_FORCE_RSN_IE	0x29
 struct wil_wmi_force_rsn_ie {
@@ -464,6 +478,20 @@ int wil6210_set_ese(struct sigma_dut *dut, int count,
 	}
 
 	return wil6210_wmi_send(dut, WIL_WMI_ESE_CFG_CMDID, &cmd, sizeof(cmd));
+}
+
+
+int wil6210_set_force_mcs(struct sigma_dut *dut, int force, int mcs)
+{
+	struct wil_wmi_force_mcs cmd = { };
+
+	cmd.module_id = WIL_WMI_UT_HW_SYSAPI;
+	cmd.subtype_id = WIL_WMI_UT_FORCE_MCS;
+	cmd.force_enable = (uint32_t) force;
+	cmd.mcs = (uint32_t) mcs;
+
+	return wil6210_wmi_send(dut, WIL_WMI_UNIT_TEST_CMDID,
+				&cmd, sizeof(cmd));
 }
 
 
@@ -5076,6 +5104,21 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 }
 
 
+static int sta_set_force_mcs(struct sigma_dut *dut, int force, int mcs)
+{
+	switch (get_driver_type()) {
+#ifdef __linux__
+	case DRIVER_WIL6210:
+		return wil6210_set_force_mcs(dut, force, mcs);
+#endif /* __linux__ */
+	default:
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Unsupported sta_set_force_mcs with the current driver");
+		return -1;
+	}
+}
+
+
 static int sta_60g_force_rsn_ie(struct sigma_dut *dut, int state)
 {
 	switch (get_driver_type()) {
@@ -5138,6 +5181,15 @@ static int sta_set_60g_common(struct sigma_dut *dut, struct sigma_conn *conn,
 
 		sigma_dut_print(dut, DUT_MSG_DEBUG,
 				"Setting BAckRcvBuf to %s", val);
+	}
+
+	val = get_param(cmd, "MCS_FixedRate");
+	if (val) {
+		if (sta_set_force_mcs(dut, 1, atoi(val))) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to force MCS");
+			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+		}
 	}
 
 	return SIGMA_DUT_SUCCESS_CALLER_SEND_STATUS;
@@ -6973,6 +7025,12 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 		if (system(buf) != 0) {
 			sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to set %s",
 					buf);
+			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+		}
+
+		if (sta_set_force_mcs(dut, 0, 1)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to reset force MCS");
 			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
 		}
 	}
@@ -10704,6 +10762,17 @@ static int cmd_sta_set_rfeature_60g(const char *intf, struct sigma_dut *dut,
 		if (sta_extract_60g_ese(dut, cmd, allocs, &count))
 			return -1;
 		return sta_set_60g_ese(dut, count, allocs);
+	}
+
+	val = get_param(cmd, "MCS_FixedRate");
+	if (val) {
+		int sta_mcs = atoi(val);
+
+		sigma_dut_print(dut, DUT_MSG_INFO, "Force STA MCS to %d",
+				sta_mcs);
+		wil6210_set_force_mcs(dut, 1, sta_mcs);
+
+		return SIGMA_DUT_SUCCESS_CALLER_SEND_STATUS;
 	}
 
 	send_resp(dut, conn, SIGMA_ERROR,
