@@ -25,6 +25,7 @@ int get_wpa_signal_poll(struct sigma_dut *dut, const char *ifname,
 void remove_wpa_networks(const char *ifname);
 
 struct wpa_ctrl * open_wpa_mon(const char *ifname);
+struct wpa_ctrl * open_hapd_mon(const char *ifname);
 int wait_ip_addr(struct sigma_dut *dut, const char *ifname, int timeout);
 int get_wpa_cli_event(struct sigma_dut *dut, struct wpa_ctrl *mon,
 		      const char *event, char *buf, size_t buf_size);
