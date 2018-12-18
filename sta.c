@@ -7957,6 +7957,9 @@ static int cmd_sta_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 			return sta_set_wireless_60g(dut, conn, cmd);
 		if (strcasecmp(val, "OCE") == 0)
 			return sta_set_wireless_oce(dut, conn, cmd);
+		/* sta_set_wireless in WPS program is only used for 60G */
+		if (is_60g_sigma_dut(dut))
+			return sta_set_wireless_60g(dut, conn, cmd);
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "ErrorCode,Program value not supported");
 	} else {
