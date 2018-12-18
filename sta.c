@@ -63,6 +63,7 @@ extern char *sigma_radio_ifname[];
 #ifdef __linux__
 #define WIL_WMI_MAX_PAYLOAD	248
 #define WIL_WMI_BF_TRIG_CMDID	0x83a
+#define WIL_WMI_UNIT_TEST_CMDID	0x900
 
 struct wil_wmi_header {
 	uint8_t mid;
@@ -85,6 +86,17 @@ struct wil_wmi_bf_trig_cmd {
 	uint32_t reserved;
 	/* mac address when type = WIL_WMI_SLS */
 	uint8_t dest_mac[6];
+} __attribute__((packed));
+
+#define WIL_WMI_UT_HW_SYSAPI 10
+#define WIL_WMI_UT_FORCE_RSN_IE	0x29
+struct wil_wmi_force_rsn_ie {
+	/* WIL_WMI_UT_HW_SYSAPI */
+	uint16_t module_id;
+	/* WIL_WMI_UT_FORCE_RSN_IE */
+	uint16_t subtype_id;
+	/* 0 = no change, 1 = remove if exists, 2 = add if does not exist */
+	uint32_t state;
 } __attribute__((packed));
 #endif /* __linux__ */
 
@@ -352,6 +364,19 @@ static int wil6210_send_sls(struct sigma_dut *dut, const char *mac)
 
 	cmd.bf_type = WIL_WMI_SLS;
 	return wil6210_wmi_send(dut, WIL_WMI_BF_TRIG_CMDID,
+				&cmd, sizeof(cmd));
+}
+
+
+static int wil6210_force_rsn_ie(struct sigma_dut *dut, int state)
+{
+	struct wil_wmi_force_rsn_ie cmd = { };
+
+	cmd.module_id = WIL_WMI_UT_HW_SYSAPI;
+	cmd.subtype_id = WIL_WMI_UT_FORCE_RSN_IE;
+	cmd.state = (uint32_t) state;
+
+	return wil6210_wmi_send(dut, WIL_WMI_UNIT_TEST_CMDID,
 				&cmd, sizeof(cmd));
 }
 
@@ -3044,6 +3069,14 @@ static int cmd_sta_preset_testparameters_60ghz(struct sigma_dut *dut,
 			return -2;
 	}
 
+	val = get_param(cmd, "RSN_IE");
+	if (val) {
+		if (strcasecmp(val, "disable") == 0)
+			dut->force_rsn_ie = FORCE_RSN_IE_REMOVE;
+		else if (strcasecmp(val, "enable") == 0)
+			dut->force_rsn_ie = FORCE_RSN_IE_ADD;
+	}
+
 	return 1;
 }
 
@@ -4922,6 +4955,21 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 	}
 
 	return 1;
+}
+
+
+static int sta_60g_force_rsn_ie(struct sigma_dut *dut, int state)
+{
+	switch (get_driver_type()) {
+#ifdef __linux__
+	case DRIVER_WIL6210:
+		return wil6210_force_rsn_ie(dut, state);
+#endif /* __linux__ */
+	default:
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Unsupported sta_60g_force_rsn_ie with the current driver");
+		return -1;
+	}
 }
 
 
@@ -6828,6 +6876,10 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 		wpa_command(intf, "SET model_name ");
 		wpa_command(intf, "SET model_number ");
 		wpa_command(intf, "SET serial_number ");
+	}
+	if (is_60g_sigma_dut(dut) && dut->force_rsn_ie) {
+		dut->force_rsn_ie = FORCE_RSN_IE_NONE;
+		sta_60g_force_rsn_ie(dut, FORCE_RSN_IE_NONE);
 	}
 
 	if (dut->tmp_mac_addr && dut->set_macaddr) {
@@ -11673,6 +11725,16 @@ static int cmd_start_wps_registration(struct sigma_dut *dut,
 	/* 60G WPS tests do not pass Interface parameter */
 	if (!intf)
 		intf = get_main_ifname();
+
+	if (dut->force_rsn_ie) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG, "Force RSN_IE: %d",
+				dut->force_rsn_ie);
+		if (sta_60g_force_rsn_ie(dut, dut->force_rsn_ie) < 0) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Failed to force RSN_IE");
+			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+		}
+	}
 
 	ctrl = open_wpa_mon(intf);
 	if (!ctrl) {

@@ -716,6 +716,14 @@ struct sigma_dut {
 
 	int wps_disable; /* Used for 60G to disable PCP from sending WPS IE */
 	int wsc_fragment; /* simulate WSC IE fragmentation */
+	enum {
+		/* no change */
+		FORCE_RSN_IE_NONE = 0,
+		/* if exists, remove and clear privacy bit */
+		FORCE_RSN_IE_REMOVE,
+		/* if not exists, add and set privacy bit */
+		FORCE_RSN_IE_ADD,
+	} force_rsn_ie; /* override RSN IE in association request */
 
 	const char *version;
 	int no_ip_addr_set;
