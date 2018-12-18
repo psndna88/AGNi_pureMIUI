@@ -920,6 +920,8 @@ size_t strlcpy(char *dest, const char *src, size_t siz);
 size_t strlcat(char *dst, const char *str, size_t size);
 #endif /* ANDROID */
 void hex_dump(struct sigma_dut *dut, u8 *data, size_t len);
+int get_wps_pin_from_mac(struct sigma_dut *dut, const char *macaddr,
+			 char *pin, size_t len);
 void str_remove_chars(char *str, char ch);
 
 

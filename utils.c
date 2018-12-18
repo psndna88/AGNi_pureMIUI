@@ -563,6 +563,45 @@ void nl80211_deinit(struct sigma_dut *dut, struct nl80211_ctx *ctx)
 #endif /* NL80211_SUPPORT */
 
 
+static int get_wps_pin_checksum(int pin)
+{
+	int a = 0;
+
+	while (pin > 0) {
+		a += 3 * (pin % 10);
+		pin = pin / 10;
+		a += (pin % 10);
+		pin = pin / 10;
+	}
+
+	return (10 - (a % 10)) % 10;
+}
+
+
+int get_wps_pin_from_mac(struct sigma_dut *dut, const char *macaddr,
+			 char *pin, size_t len)
+{
+	unsigned char mac[ETH_ALEN];
+	int tmp, checksum;
+
+	if (len < 9)
+		return -1;
+	if (parse_mac_address(dut, macaddr, mac))
+		return -1;
+
+	/*
+	 * get 7 digit PIN from the last 24 bits of MAC
+	 * range 1000000 - 9999999
+	 */
+	tmp = (mac[5] & 0xFF) | ((mac[4] & 0xFF) << 8) |
+	      ((mac[3] & 0xFF) << 16);
+	tmp = (tmp % 9000000) + 1000000;
+	checksum = get_wps_pin_checksum(tmp);
+	snprintf(pin, len, "%07d%01d", tmp, checksum);
+	return 0;
+}
+
+
 void str_remove_chars(char *str, char ch)
 {
 	char *pr = str, *pw = str;
