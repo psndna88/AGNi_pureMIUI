@@ -1497,6 +1497,19 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 				"Setting BAckRcvBuf to %s", val);
 	}
 
+	val = get_param(cmd, "ExtSchIE");
+	if (val && !strcasecmp(val, "Enable")) {
+		int num_allocs = MAX_ESE_ALLOCS;
+
+		if (sta_extract_60g_ese(dut, cmd, dut->ap_ese_allocs,
+					&num_allocs)) {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Invalid ExtSchIE");
+			return 0;
+		}
+		dut->ap_num_ese_allocs = num_allocs;
+	}
+
 	return 1;
 }
 
@@ -6650,6 +6663,22 @@ hostapd_group_mgmt_cipher_name(enum ap_group_mgmt_cipher cipher)
 }
 
 
+static int ap_set_60g_ese(struct sigma_dut *dut, int count,
+			  struct sigma_ese_alloc *allocs)
+{
+	switch (get_driver_type()) {
+#ifdef __linux__
+	case DRIVER_WIL6210:
+		return wil6210_set_ese(dut, count, allocs);
+#endif /* __linux__ */
+	default:
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Unsupported ap_set_60g_ese with the current driver");
+		return -1;
+	}
+}
+
+
 int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 			 struct sigma_cmd *cmd)
 {
@@ -7562,6 +7591,17 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		return 0;
 	}
 
+	if (dut->program == PROGRAM_60GHZ && dut->ap_num_ese_allocs > 0) {
+		/* wait extra time for AP to start */
+		sleep(2);
+		if (ap_set_60g_ese(dut, dut->ap_num_ese_allocs,
+				   dut->ap_ese_allocs)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Could not set ExtSch");
+			return 0;
+		}
+	}
+
 	dut->hostapd_running = 1;
 	return 1;
 }
@@ -8093,6 +8133,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_channel = 2;
 		dut->wps_disable = 0; /* WPS is enabled */
 		dut->ap_pmf = 0;
+		dut->ap_num_ese_allocs = 0;
 		dut->ap_fixed_rate = 0;
 
 		dut->dev_role = DEVROLE_AP;
@@ -10532,6 +10573,32 @@ static int mac80211_ap_set_rfeature(struct sigma_dut *dut,
 }
 
 
+#ifdef __linux__
+static int wil6210_ap_set_rfeature(struct sigma_dut *dut,
+				   struct sigma_conn *conn,
+				   struct sigma_cmd *cmd)
+{
+	const char *val;
+
+	val = get_param(cmd, "ExtSchIE");
+	if (val && !strcasecmp(val, "Enable")) {
+		struct sigma_ese_alloc allocs[MAX_ESE_ALLOCS];
+		int count = MAX_ESE_ALLOCS;
+
+		if (sta_extract_60g_ese(dut, cmd, allocs, &count))
+			return -1;
+		if (wil6210_set_ese(dut, count, allocs))
+			return -1;
+		return 1;
+	}
+
+	send_resp(dut, conn, SIGMA_ERROR,
+		  "errorCode,Invalid ap_set_rfeature(60G)");
+	return 0;
+}
+#endif /* __linux__ */
+
+
 static int cmd_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 			       struct sigma_cmd *cmd)
 {
@@ -10555,6 +10622,10 @@ static int cmd_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 		return wcn_ap_set_rfeature(dut, conn, cmd);
 	case DRIVER_MAC80211:
 		return mac80211_ap_set_rfeature(dut, conn, cmd);
+#ifdef __linux__
+	case DRIVER_WIL6210:
+		return wil6210_ap_set_rfeature(dut, conn, cmd);
+#endif /* __linux__ */
 	default:
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Unsupported ap_set_rfeature with the current driver");

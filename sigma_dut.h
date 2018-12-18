@@ -220,6 +220,20 @@ struct sigma_stream {
 
 #endif /* CONFIG_TRAFFIC_AGENT */
 
+/* extended scheduling test */
+enum sigma_ese_type {
+	ESE_CBAP,
+	ESE_SP,
+};
+
+struct sigma_ese_alloc {
+	unsigned int percent_bi;
+	enum sigma_ese_type type;
+	unsigned int src_aid, dst_aid;
+};
+
+#define ESE_BCAST_AID	255
+#define MAX_ESE_ALLOCS	4
 
 #define NUM_AP_AC 4
 #define AP_AC_BE 0
@@ -612,6 +626,9 @@ struct sigma_dut {
 		PPDU_TB,
 	} ap_he_ppdu;
 
+	struct sigma_ese_alloc ap_ese_allocs[MAX_ESE_ALLOCS];
+	int ap_num_ese_allocs;
+
 	const char *hostapd_debug_log;
 	const char *wpa_supplicant_debug_log;
 
@@ -808,6 +825,8 @@ void send_resp(struct sigma_dut *dut, struct sigma_conn *conn,
 	       enum sigma_status status, const char *buf);
 
 const char * get_param(struct sigma_cmd *cmd, const char *name);
+const char * get_param_indexed(struct sigma_cmd *cmd, const char *name,
+			       int index);
 
 int sigma_dut_reg_cmd(const char *cmd,
 		      int (*validate)(struct sigma_cmd *cmd),
@@ -897,6 +916,10 @@ int set_ipv4_addr(struct sigma_dut *dut, const char *ifname,
 int set_ipv4_gw(struct sigma_dut *dut, const char *gw);
 int send_addba_60g(struct sigma_dut *dut, struct sigma_conn *conn,
 		   struct sigma_cmd *cmd, const char *param);
+int wil6210_set_ese(struct sigma_dut *dut, int count,
+		    struct sigma_ese_alloc *allocs);
+int sta_extract_60g_ese(struct sigma_dut *dut, struct sigma_cmd *cmd,
+			struct sigma_ese_alloc *allocs, int *allocs_size);
 
 /* p2p.c */
 int p2p_cmd_sta_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,

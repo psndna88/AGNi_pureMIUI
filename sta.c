@@ -62,6 +62,7 @@ extern char *sigma_radio_ifname[];
 
 #ifdef __linux__
 #define WIL_WMI_MAX_PAYLOAD	248
+#define WIL_WMI_ESE_CFG_CMDID	0xa01
 #define WIL_WMI_BF_TRIG_CMDID	0x83a
 #define WIL_WMI_UNIT_TEST_CMDID	0x900
 
@@ -86,6 +87,52 @@ struct wil_wmi_bf_trig_cmd {
 	uint32_t reserved;
 	/* mac address when type = WIL_WMI_SLS */
 	uint8_t dest_mac[6];
+} __attribute__((packed));
+
+enum wil_wmi_sched_scheme_advertisment {
+	WIL_WMI_ADVERTISE_ESE_DISABLED,
+	WIL_WMI_ADVERTISE_ESE_IN_BEACON,
+	WIL_WMI_ADVERTISE_ESE_IN_ANNOUNCE_FRAME,
+};
+
+enum wil_wmi_ese_slot_type {
+	WIL_WMI_ESE_SP,
+	WIL_WMI_ESE_CBAP,
+	WIL_WMI_ESE_ANNOUNCE_NO_ACK,
+};
+
+struct wil_wmi_ese_slot {
+	/* offset from start of BI in microseconds */
+	uint32_t tbtt_offset;
+	uint8_t flags;
+	/* enum wil_wmi_ese_slot_type */
+	uint8_t slot_type;
+	/* duration in microseconds */
+	uint16_t duration;
+	/* frame exchange sequence duration, microseconds */
+	uint16_t tx_op;
+	/* time between 2 blocks for periodic allocation(microseconds) */
+	uint16_t period;
+	/* number of blocks in periodic allocation */
+	uint8_t num_blocks;
+	/* for semi-active allocations */
+	uint8_t idle_period;
+	uint8_t src_aid;
+	uint8_t dst_aid;
+	uint32_t reserved;
+} __attribute__((packed));
+
+#define WIL_WMI_MAX_ESE_SLOTS	4
+struct wil_wmi_ese_cfg {
+	uint8_t serial_num;
+	/* wil_wmi_sched_scheme_advertisment */
+	uint8_t ese_advertisment;
+	uint16_t flags;
+	uint8_t num_allocs;
+	uint8_t reserved[3];
+	uint64_t start_tbtt;
+	/* allocations list */
+	struct wil_wmi_ese_slot slots[WIL_WMI_MAX_ESE_SLOTS];
 } __attribute__((packed));
 
 #define WIL_WMI_UT_HW_SYSAPI 10
@@ -365,6 +412,58 @@ static int wil6210_send_sls(struct sigma_dut *dut, const char *mac)
 	cmd.bf_type = WIL_WMI_SLS;
 	return wil6210_wmi_send(dut, WIL_WMI_BF_TRIG_CMDID,
 				&cmd, sizeof(cmd));
+}
+
+
+int wil6210_set_ese(struct sigma_dut *dut, int count,
+		    struct sigma_ese_alloc *allocs)
+{
+	struct wil_wmi_ese_cfg cmd = { };
+	int i;
+
+	if (count == 0 || count > WIL_WMI_MAX_ESE_SLOTS)
+		return -1;
+
+	if (dut->ap_bcnint <= 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"invalid beacon interval(%d), check test",
+				dut->ap_bcnint);
+		return -1;
+	}
+
+	cmd.ese_advertisment = WIL_WMI_ADVERTISE_ESE_IN_BEACON;
+	cmd.flags = 0x1d;
+	cmd.num_allocs = count;
+	for (i = 0; i < count; i++) {
+		/*
+		 * Convert percent from BI (BI specified in milliseconds)
+		 * to absolute duration in microseconds.
+		 */
+		cmd.slots[i].duration =
+			(allocs[i].percent_bi * dut->ap_bcnint * 1000) / 100;
+		switch (allocs[i].type) {
+		case ESE_CBAP:
+			cmd.slots[i].slot_type = WIL_WMI_ESE_CBAP;
+			break;
+		case ESE_SP:
+			cmd.slots[i].slot_type = WIL_WMI_ESE_SP;
+			break;
+		default:
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"invalid slot type(%d) at index %d",
+					allocs[i].type, i);
+			return -1;
+		}
+		cmd.slots[i].src_aid = allocs[i].src_aid;
+		cmd.slots[i].dst_aid = allocs[i].dst_aid;
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"slot %d, duration %u, type %d, srcAID %u dstAID %u",
+				i, cmd.slots[i].duration,
+				cmd.slots[i].slot_type, cmd.slots[i].src_aid,
+				cmd.slots[i].dst_aid);
+	}
+
+	return wil6210_wmi_send(dut, WIL_WMI_ESE_CFG_CMDID, &cmd, sizeof(cmd));
 }
 
 
@@ -5275,14 +5374,6 @@ static int sta_set_60g_pcp(struct sigma_dut *dut, struct sigma_conn *conn,
 	val = get_param(cmd, "BCNINT");
 	if (val)
 		dut->ap_bcnint = atoi(val);
-
-
-	val = get_param(cmd, "ExtSchIE");
-	if (val) {
-		send_resp(dut, conn, SIGMA_ERROR,
-			  "ErrorCode,ExtSchIE is not supported yet");
-		return -1;
-	}
 
 	val = get_param(cmd, "AllocType");
 	if (val) {
@@ -10528,6 +10619,99 @@ static int cmd_sta_set_power_save(struct sigma_dut *dut,
 }
 
 
+int sta_extract_60g_ese(struct sigma_dut *dut, struct sigma_cmd *cmd,
+			struct sigma_ese_alloc *allocs, int *allocs_size)
+{
+	int max_count = *allocs_size;
+	int count = 0, i;
+	const char *val;
+
+	do {
+		val = get_param_indexed(cmd, "AllocID", count);
+		if (val)
+			count++;
+	} while (val);
+
+	if (count == 0 || count > max_count) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Invalid number of allocations(%d)", count);
+		return -1;
+	}
+
+	for (i = 0; i < count; i++) {
+		val = get_param_indexed(cmd, "PercentBI", i);
+		if (!val) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Missing PercentBI parameter at index %d",
+					i);
+			return -1;
+		}
+		allocs[i].percent_bi = atoi(val);
+
+		val = get_param_indexed(cmd, "SrcAID", i);
+		if (val)
+			allocs[i].src_aid = strtol(val, NULL, 0);
+		else
+			allocs[i].src_aid = ESE_BCAST_AID;
+
+		val = get_param_indexed(cmd, "DestAID", i);
+		if (val)
+			allocs[i].dst_aid = strtol(val, NULL, 0);
+		else
+			allocs[i].dst_aid = ESE_BCAST_AID;
+
+		allocs[i].type = ESE_CBAP;
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Alloc %d PercentBI %d SrcAID %d DstAID %d",
+				i, allocs[i].percent_bi, allocs[i].src_aid,
+				allocs[i].dst_aid);
+	}
+
+	*allocs_size = count;
+	return 0;
+}
+
+
+static int sta_set_60g_ese(struct sigma_dut *dut, int count,
+			   struct sigma_ese_alloc *allocs)
+{
+	switch (get_driver_type()) {
+#ifdef __linux__
+	case DRIVER_WIL6210:
+		if (wil6210_set_ese(dut, count, allocs))
+			return -1;
+		return 1;
+#endif /* __linux__ */
+	default:
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Unsupported sta_set_60g_ese with the current driver");
+		return -1;
+	}
+}
+
+
+static int cmd_sta_set_rfeature_60g(const char *intf, struct sigma_dut *dut,
+				    struct sigma_conn *conn,
+				    struct sigma_cmd *cmd)
+{
+	const char *val;
+
+	val = get_param(cmd, "ExtSchIE");
+	if (val && !strcasecmp(val, "Enable")) {
+		struct sigma_ese_alloc allocs[MAX_ESE_ALLOCS];
+		int count = MAX_ESE_ALLOCS;
+
+		if (sta_extract_60g_ese(dut, cmd, allocs, &count))
+			return -1;
+		return sta_set_60g_ese(dut, count, allocs);
+	}
+
+	send_resp(dut, conn, SIGMA_ERROR,
+		  "errorCode,Invalid sta_set_rfeature(60G)");
+	return SIGMA_DUT_SUCCESS_STATUS_SENT;
+}
+
+
 static int cmd_sta_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 				struct sigma_cmd *cmd)
 {
@@ -10564,6 +10748,9 @@ static int cmd_sta_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 
 		return 1;
 	}
+
+	if (strcasecmp(prog, "60GHz") == 0)
+		return cmd_sta_set_rfeature_60g(intf, dut, conn, cmd);
 
 	send_resp(dut, conn, SIGMA_ERROR, "errorCode,Unsupported Prog");
 	return 0;

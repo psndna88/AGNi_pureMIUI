@@ -284,6 +284,23 @@ const char * get_param(struct sigma_cmd *cmd, const char *name)
 }
 
 
+const char * get_param_indexed(struct sigma_cmd *cmd, const char *name,
+			       int index)
+{
+	int i, j;
+
+	for (i = 0, j = 0; i < cmd->count; i++) {
+		if (strcasecmp(name, cmd->params[i]) == 0) {
+			j++;
+			if (j > index)
+				return cmd->values[i];
+		}
+	}
+
+	return NULL;
+}
+
+
 static void process_cmd(struct sigma_dut *dut, struct sigma_conn *conn,
 			char *buf)
 {
