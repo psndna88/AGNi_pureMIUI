@@ -3628,6 +3628,50 @@ static int mbo_set_non_pref_ch_list(struct sigma_dut *dut,
 
 #ifdef NL80211_SUPPORT
 
+static int sta_set_he_htc_supp(struct sigma_dut *dut, const char *intf,
+			       uint8_t cfg)
+{
+	struct nl_msg *msg;
+	int ret = 0;
+	struct nlattr *params;
+	int ifindex;
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s failed",
+				__func__, intf);
+		return -1;
+	}
+
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+				    NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
+	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    nla_put_u8(msg,
+		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_HTC_HE_SUPP,
+		       cfg)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding vendor_cmd and vendor_data",
+				__func__);
+		nlmsg_free(msg);
+		return -1;
+	}
+	nla_nest_end(msg, params);
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in send_and_recv_msgs, ret=%d",
+				__func__, ret);
+	}
+	return ret;
+}
+
+
 static int sta_set_he_fragmentation(struct sigma_dut *dut, const char *intf,
 				    enum he_fragmentation_val frag)
 {
@@ -6491,6 +6535,12 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Failed to set OM ctrl reset");
 		}
+
+		/* +HTC-HE support default on */
+		if (sta_set_he_htc_supp(dut, intf, 1)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Setting of +HTC-HE support failed");
+		}
 #endif /* NL80211_SUPPORT */
 
 		if (sta_set_tx_beamformee(dut, intf, 1)) {
@@ -6541,6 +6591,11 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 						"Failed to set BeamformeeSTS");
 			}
 
+			/* +HTC-HE support default off */
+			if (sta_set_he_htc_supp(dut, intf, 0)) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"Setting of +HTC-HE support failed");
+			}
 #endif /* NL80211_SUPPORT */
 
 			/* Enable WEP/TKIP with HE capability in testbed */
