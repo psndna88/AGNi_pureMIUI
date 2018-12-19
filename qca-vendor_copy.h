@@ -42,8 +42,12 @@ enum qca_radiotap_vendor_ids {
  *
  * @QCA_NL80211_VENDOR_SUBCMD_AVOID_FREQUENCY: Recommendation of frequency
  *	ranges to avoid to reduce issues due to interference or internal
- *	co-existence information in the driver. The event data structure is
- *	defined in struct qca_avoid_freq_list.
+ *	co-existence information in the driver. These frequencies aim to
+ *	minimize the traffic but not to totally avoid the traffic. That said
+ *	for a P2P use case, these frequencies are allowed for the P2P
+ *	discovery/negotiation but avoid the group to get formed on these
+ *	frequencies. The event data structure is defined in
+ *	struct qca_avoid_freq_list.
  *
  * @QCA_NL80211_VENDOR_SUBCMD_DFS_CAPABILITY: Command to check driver support
  *	for DFS offloading.
@@ -499,6 +503,10 @@ enum qca_radiotap_vendor_ids {
  *
  *	Based on the config provided, FW will boost the weight and prioritize
  *	the traffic for that subsystem (WLAN/BT/Zigbee).
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_GET_SUPPORTED_AKMS: This command is used to query
+ *	the supported AKM suite selectorss from the driver. It returns the list
+ *	of supported AKMs in the attribute NL80211_ATTR_AKM_SUITES.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -663,6 +671,7 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_PEER_CFR_CAPTURE_CFG = 173,
 	QCA_NL80211_VENDOR_SUBCMD_THROUGHPUT_CHANGE_EVENT = 174,
 	QCA_NL80211_VENDOR_SUBCMD_COEX_CONFIG = 175,
+	QCA_NL80211_VENDOR_SUBCMD_GET_SUPPORTED_AKMS = 176,
 };
 
 enum qca_wlan_vendor_attr {
@@ -5492,6 +5501,43 @@ enum qca_wlan_he_om_ctrl_ch_bw {
 	QCA_WLAN_HE_OM_CTRL_BW_160M = 3,
 };
 
+/**
+ * enum qca_wlan_vendor_attr_he_omi_tx: Represents attributes for
+ * HE operating mode control transmit request. These attributes are
+ * sent as part of QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_OMI_TX and
+ * QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_HE_OMI_RX_NSS: Mandatory 8-bit unsigned value
+ * indicates the maximum number of spatial streams, NSS, that the STA
+ * supports in reception for PPDU bandwidths less than or equal to 80 MHz
+ * and is set to NSS - 1.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_HE_OMI_CH_BW: Mandatory 8-bit unsigned value
+ * indicates the operating channel width supported by the STA for both
+ * reception and transmission. Uses enum qca_wlan_he_om_ctrl_ch_bw values.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_HE_OMI_ULMU_DISABLE: Mandatory 8-bit unsigned value
+ * indicates the all trigger based UL MU operations by the STA.
+ * 0 - UL MU operations are enabled by the STA.
+ * 1 - All triggered UL MU transmissions are suspended by the STA.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_HE_OMI_TX_NSTS: Mandatory 8-bit unsigned value
+ * indicates the maximum number of space-time streams, NSTS, that
+ * the STA supports in transmission and is set to NSTS - 1.
+ */
+enum qca_wlan_vendor_attr_he_omi_tx {
+	QCA_WLAN_VENDOR_ATTR_HE_OMI_INVALID = 0,
+	QCA_WLAN_VENDOR_ATTR_HE_OMI_RX_NSS = 1,
+	QCA_WLAN_VENDOR_ATTR_HE_OMI_CH_BW = 2,
+	QCA_WLAN_VENDOR_ATTR_HE_OMI_ULMU_DISABLE = 3,
+	QCA_WLAN_VENDOR_ATTR_HE_OMI_TX_NSTS = 4,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_HE_OMI_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_HE_OMI_MAX =
+	QCA_WLAN_VENDOR_ATTR_HE_OMI_AFTER_LAST - 1,
+};
+
 /* Attributes for data used by
  * QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION
  */
@@ -5737,6 +5783,24 @@ enum qca_wlan_vendor_attr_wifi_test_config {
 	 * 1-enable, 0-disable
 	 */
 	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_ACTION_TX_TB_PPDU = 32,
+
+	/* Nested attribute to indicate HE operating mode control field
+	 * transmission. It contains operating mode control field Nss,
+	 * channel bandwidth, Tx Nsts and UL MU disable attributes.
+	 * These nested attributes are used to send HE operating mode control
+	 * with configured values.
+	 * Uses the enum qca_wlan_vendor_attr_he_omi_tx attributes.
+	 * This attribute is used to configure the testbed device.
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_OMI_TX = 33,
+
+	/* 8-bit unsigned value to configure +HTC_HE support to indicate the
+	 * support for the reception of a frame that carries an HE variant
+	 * HT Control field.
+	 * This attribute is used to configure the testbed device.
+	 * 1-enable, 0-disable
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_HTC_HE_SUPP = 34,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_AFTER_LAST,
