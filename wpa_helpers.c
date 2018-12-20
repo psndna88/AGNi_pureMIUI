@@ -615,6 +615,11 @@ int start_sta_mode(struct sigma_dut *dut)
 	free(tmp);
 	fprintf(f, "device_name=Test client\n");
 	fprintf(f, "device_type=1-0050F204-1\n");
+	if (is_60g_sigma_dut(dut)) {
+		fprintf(f, "eapol_version=2\n");
+		fprintf(f,
+			"config_methods=display push_button keypad virtual_display physical_display virtual_push_button\n");
+	}
 	fclose(f);
 
 #ifdef  __QNXNTO__
