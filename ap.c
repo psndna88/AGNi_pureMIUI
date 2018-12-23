@@ -7183,16 +7183,21 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 
 	if (dut->program == PROGRAM_WPS) {
+		/* 60G WPS tests requires wps_state of 2 (configured) */
+		int wps_state = is_60g_sigma_dut(dut) ? 2 : 1;
+
 		fprintf(f, "eap_server=1\n"
-			"wps_state=1\n"
+			"wps_state=%d\n"
 			"device_name=QCA AP\n"
 			"manufacturer=QCA\n"
 			"device_type=6-0050F204-1\n"
-			"config_methods=label virtual_display "
+			"config_methods=label virtual_display %s"
 			"virtual_push_button keypad%s\n"
 			"ap_pin=12345670\n"
 			"friendly_name=QCA Access Point\n"
 			"upnp_iface=%s\n",
+			wps_state,
+			is_60g_sigma_dut(dut) ? "physical_display " : "",
 			dut->ap_wpsnfc ? " nfc_interface ext_nfc_token" : "",
 			dut->bridge ? dut->bridge : ifname);
 	}
