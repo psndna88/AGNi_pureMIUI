@@ -10858,17 +10858,31 @@ static int cmd_sta_set_pwrsave(struct sigma_dut *dut, struct sigma_conn *conn,
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *mode = get_param(cmd, "Mode");
-	int res;
+	const char *prog = get_param(cmd, "program");
+	const char *powersave = get_param(cmd, "powersave");
+	int res = 0;
 
-	if (intf == NULL || mode == NULL)
+	if (intf == NULL)
 		return -1;
 
-	if (strcasecmp(mode, "On") == 0)
-		res = set_ps(intf, dut, 1);
-	else if (strcasecmp(mode, "Off") == 0)
-		res = set_ps(intf, dut, 0);
-	else
-		return -1;
+	if (prog && strcasecmp(prog, "60GHz") == 0) {
+		/*
+		 * The CAPI mode parameter does not exist in 60G
+		 * unscheduled PS.
+		 */
+		if (strcasecmp(powersave, "unscheduled") == 0)
+			res = set_ps(intf, dut, 1);
+	} else {
+		if (mode == NULL)
+			return -1;
+
+		if (strcasecmp(mode, "On") == 0)
+			res = set_ps(intf, dut, 1);
+		else if (strcasecmp(mode, "Off") == 0)
+			res = set_ps(intf, dut, 0);
+		else
+			return -1;
+	}
 
 	if (res) {
 		send_resp(dut, conn, SIGMA_ERROR, "errorCode,Failed to change "
@@ -12142,6 +12156,7 @@ void sta_register_cmds(void)
 	sigma_dut_reg_cmd("sta_set_rfeature", req_intf, cmd_sta_set_rfeature);
 	sigma_dut_reg_cmd("sta_set_radio", req_intf, cmd_sta_set_radio);
 	sigma_dut_reg_cmd("sta_set_pwrsave", req_intf, cmd_sta_set_pwrsave);
+	sigma_dut_reg_cmd("sta_set_power_save", req_intf, cmd_sta_set_pwrsave);
 	sigma_dut_reg_cmd("sta_bssid_pool", req_intf, cmd_sta_bssid_pool);
 	sigma_dut_reg_cmd("sta_reset_parm", req_intf, cmd_sta_reset_parm);
 	sigma_dut_reg_cmd("sta_get_key", req_intf, cmd_sta_get_key);
