@@ -11585,6 +11585,10 @@ static int cmd_start_wps_registration(struct sigma_dut *dut,
 		NULL
 	};
 
+	/* 60G WPS tests do not pass Interface parameter */
+	if (!intf)
+		intf = get_main_ifname();
+
 	ctrl = open_wpa_mon(intf);
 	if (!ctrl) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
@@ -11723,7 +11727,7 @@ void sta_register_cmds(void)
 	sigma_dut_reg_cmd("sta_exec_action", NULL, cmd_sta_exec_action);
 	sigma_dut_reg_cmd("sta_get_events", req_intf, cmd_sta_get_events);
 	sigma_dut_reg_cmd("sta_get_parameter", req_intf, cmd_sta_get_parameter);
-	sigma_dut_reg_cmd("start_wps_registration", req_intf,
+	sigma_dut_reg_cmd("start_wps_registration", NULL,
 			  cmd_start_wps_registration);
 	sigma_dut_reg_cmd("sta_set_power_save", req_intf,
 			  cmd_sta_set_power_save);
