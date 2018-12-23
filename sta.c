@@ -6702,6 +6702,7 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 
 	if (dut->program == PROGRAM_60GHZ) {
 		const char *dev_role = get_param(cmd, "DevRole");
+		char buf[256];
 
 		if (!dev_role) {
 			send_resp(dut, conn, SIGMA_ERROR,
@@ -6725,6 +6726,17 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Unknown device type");
 			return 0;
+		}
+
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Setting msdu_size to MAX: 7912");
+		snprintf(buf, sizeof(buf), "ifconfig %s mtu 7912",
+			 get_station_ifname());
+
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to set %s",
+					buf);
+			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
 		}
 	}
 
