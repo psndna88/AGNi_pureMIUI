@@ -23,6 +23,7 @@
 #include <ifaddrs.h>
 #include <net/if_dl.h>
 #endif /* __QNXNTO__ */
+#include "wpa_ctrl.h"
 #include "wpa_helpers.h"
 #ifdef ANDROID
 #include <hardware_legacy/wifi.h>
@@ -369,6 +370,8 @@ static enum ap_mode get_mode(const char *str)
 		return AP_11ng;
 	else if (strcasecmp(str, "11ac") == 0 || strcasecmp(str, "ac") == 0)
 		return AP_11ac;
+	else if (strcasecmp(str, "11ad") == 0)
+		return AP_11ad;
 	else
 		return AP_inval;
 }
@@ -438,6 +441,13 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *val;
 	unsigned int wlan_tag = 1;
 	char *ifname = get_main_ifname();
+
+	/* Allow program to be overridden if specified in the ap_set_wireless
+	 * to support some 60 GHz test scripts where the program may be 60 GHz
+	 * or WPS. */
+	val = get_param(cmd, "PROGRAM");
+	if (val)
+		dut->program = sigma_program_to_enum(val);
 
 	val = get_param(cmd, "WLAN_TAG");
 	if (val) {
@@ -573,6 +583,14 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 			dut->ap_mode = AP_11ac;
 		else
 			dut->ap_mode = AP_11na;
+	}
+
+	/* Override the AP mode in case of 60 GHz */
+	if (dut->program == PROGRAM_60GHZ) {
+		dut->ap_mode = AP_11ad;
+		/* Workaround to force channel 2 if not specified */
+		if (!dut->ap_channel)
+			dut->ap_channel = 2;
 	}
 
 	val = get_param(cmd, "WME");
@@ -2678,6 +2696,8 @@ static void get_if_name(struct sigma_dut *dut, char *ifname_str,
 			ifname = "ath1";
 		else
 			ifname = "ath0";
+	} else if (drv == DRIVER_WIL6210) {
+		ifname = get_main_ifname();
 	} else {
 		if ((dut->ap_mode == AP_11a || dut->ap_mode == AP_11na ||
 		     dut->ap_mode == AP_11ac) &&
@@ -3072,6 +3092,8 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 					strlcat(buf, "+ccmp+tkip", sizeof(buf));
 				else if (dut->ap_cipher == AP_TKIP)
 					strlcat(buf, "+tkip", sizeof(buf));
+				else if (dut->ap_cipher == AP_GCMP_128)
+					strlcat(buf, "+gcmp", sizeof(buf));
 				else
 					strlcat(buf, "+ccmp", sizeof(buf));
 			}
@@ -6642,6 +6664,10 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 		fprintf(f, "hw_mode=a\n");
 		break;
+	case AP_11ad:
+		ifname = get_main_ifname();
+		fprintf(f, "hw_mode=ad\n");
+		break;
 	default:
 		fclose(f);
 		return -1;
@@ -7669,6 +7695,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 {
 	const char *type, *program;
 	enum driver_type drv;
+	char buf[128];
 	int i;
 
 	for (i = 0; i < MAX_WLAN_TAGS - 1; i++) {
@@ -7972,6 +7999,32 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	dut->ap_psk[0] = '\0';
 
 	dut->dpp_conf_id = -1;
+
+	if (dut->program == PROGRAM_60GHZ) {
+		dut->ap_mode = AP_11ad;
+		dut->ap_channel = 2;
+		dut->ap_pmf = 0;
+		dut->ap_fixed_rate = 0;
+
+		dut->dev_role = DEVROLE_AP;
+
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Setting msdu_size to MAX: 7912");
+		snprintf(buf, sizeof(buf), "ifconfig %s mtu 7912",
+			 get_main_ifname());
+
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to set %s",
+					buf);
+			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+		}
+
+		if (set_ps(get_main_ifname(), dut, 1)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to enable power save");
+			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+		}
+	}
 
 	dut->hostapd_running = 0;
 

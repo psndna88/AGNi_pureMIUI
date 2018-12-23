@@ -354,6 +354,7 @@ struct sigma_dut {
 		AP_11na,
 		AP_11ng,
 		AP_11ac,
+		AP_11ad,
 		AP_inval
 	} ap_mode;
 	int ap_channel;
@@ -697,7 +698,8 @@ struct sigma_dut {
 		DEVROLE_UNKNOWN = 0,
 		DEVROLE_STA,
 		DEVROLE_PCP,
-		DEVROLE_STA_CFON
+		DEVROLE_STA_CFON,
+		DEVROLE_AP,
 	} dev_role;
 
 	const char *version;
