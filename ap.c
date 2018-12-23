@@ -88,6 +88,17 @@
 "312e302f616f637069223e3c4465736372697074696f6e3e46726565207769746820796f7572" \
 "20737562736372697074696f6e213c2f4465736372697074696f6e3e3c2f506c616e3e"
 
+/*
+ * MTU for Ethernet need to take into account 8-byte SNAP header
+ * to be added when encapsulating Ethernet frame into 802.11.
+ */
+#ifndef IEEE80211_MAX_DATA_LEN_DMG
+#define IEEE80211_MAX_DATA_LEN_DMG 7920
+#endif /* IEEE80211_MAX_DATA_LEN_DMG */
+#ifndef IEEE80211_SNAP_LEN_DMG
+#define IEEE80211_SNAP_LEN_DMG 8
+#endif /* IEEE80211_SNAP_LEN_DMG */
+
 extern char *sigma_main_ifname;
 extern char *sigma_wpas_ctrl;
 extern char *sigma_hapd_ctrl;
@@ -441,6 +452,7 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *val;
 	unsigned int wlan_tag = 1;
 	char *ifname = get_main_ifname();
+	char buf[128];
 
 	/* Allow program to be overridden if specified in the ap_set_wireless
 	 * to support some 60 GHz test scripts where the program may be 60 GHz
@@ -1432,6 +1444,35 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 			send_resp(dut, conn, SIGMA_INVALID,
 				  "errorCode,Unsupported PPDUTxType");
 			return 0;
+		}
+	}
+
+	val = get_param(cmd, "MSDUSize");
+	if (val) {
+		int mtu;
+
+		dut->amsdu_size = atoi(val);
+		if (dut->amsdu_size > IEEE80211_MAX_DATA_LEN_DMG ||
+		    dut->amsdu_size < IEEE80211_SNAP_LEN_DMG) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"MSDUSize %d is above max %d or below min %d",
+					dut->amsdu_size,
+					IEEE80211_MAX_DATA_LEN_DMG,
+					IEEE80211_SNAP_LEN_DMG);
+			dut->amsdu_size = 0;
+			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+		}
+
+		mtu = dut->amsdu_size - IEEE80211_SNAP_LEN_DMG;
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Setting amsdu_size to %d", mtu);
+		snprintf(buf, sizeof(buf), "ifconfig %s mtu %d",
+			 get_station_ifname(), mtu);
+
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to set %s",
+					buf);
+			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
 		}
 	}
 
