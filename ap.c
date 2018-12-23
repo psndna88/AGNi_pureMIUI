@@ -9943,6 +9943,48 @@ static int cmd_ap_wps_set_pbc(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int cmd_ap_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
+				struct sigma_cmd *cmd)
+{
+	char value[256], resp[512];
+	const char *param = get_param(cmd, "parameter");
+	const char *ifname = get_param(cmd, "Interface");
+
+	if (!ifname)
+		ifname = get_main_ifname();
+
+	if (!param) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "ErrorCode,Parameter not specified");
+		return 0;
+	}
+
+	if (strcasecmp(param, "SSID") == 0) {
+		if (get_hapd_config(ifname, "ssid", value, sizeof(value))) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to get SSID");
+			return -2;
+		}
+		snprintf(resp, sizeof(resp), "SSID,%s", value);
+	} else if (strcasecmp(param, "PSK") == 0) {
+		if (get_hapd_config(ifname, "passphrase", value,
+				    sizeof(value))) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to get PSK");
+			return -2;
+		}
+		snprintf(resp, sizeof(resp), "PSK,%s", value);
+	} else {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "ErrorCode,Unsupported parameter");
+		return 0;
+	}
+
+	send_resp(dut, conn, SIGMA_COMPLETE, resp);
+	return 0;
+}
+
+
 static int ath_vht_op_mode_notif(struct sigma_dut *dut, const char *ifname,
 				 const char *val)
 {
@@ -10571,6 +10613,7 @@ void ap_register_cmds(void)
 	sigma_dut_reg_cmd("ap_wps_read_pin", NULL, cmd_ap_wps_read_pin);
 	sigma_dut_reg_cmd("ap_wps_enter_pin", NULL, cmd_ap_wps_enter_pin);
 	sigma_dut_reg_cmd("ap_wps_set_pbc", NULL, cmd_ap_wps_set_pbc);
+	sigma_dut_reg_cmd("ap_get_parameter", NULL, cmd_ap_get_parameter);
 	sigma_dut_reg_cmd("AccessPoint", NULL, cmd_accesspoint);
 	sigma_dut_reg_cmd("ap_preset_testparameters", NULL,
 			  cmd_ap_preset_testparameters);

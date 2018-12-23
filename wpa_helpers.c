@@ -445,6 +445,17 @@ int get_wpa_status(const char *ifname, const char *field, char *obuf,
 }
 
 
+int get_hapd_config(const char *ifname, const char *field, char *obuf,
+		    size_t obuf_size)
+{
+	const char *path = sigma_hapd_ctrl ?
+		sigma_hapd_ctrl : DEFAULT_HAPD_CTRL_PATH;
+
+	return get_wpa_ctrl_status_field(path, ifname, "GET_CONFIG",
+					 field, obuf, obuf_size);
+}
+
+
 int wait_ip_addr(struct sigma_dut *dut, const char *ifname, int timeout)
 {
 	char ip[30];
