@@ -1476,6 +1476,20 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
+	val = get_param(cmd, "BAckRcvBuf");
+	if (val) {
+		dut->back_rcv_buf = atoi(val);
+		if (dut->back_rcv_buf == 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to convert %s or value is 0",
+					val);
+			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+		}
+
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Setting BAckRcvBuf to %s", val);
+	}
+
 	return 1;
 }
 
