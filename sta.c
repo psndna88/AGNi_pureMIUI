@@ -6700,7 +6700,7 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 		unlink("next-client-key.pem");
 	}
 
-	if (dut->program == PROGRAM_60GHZ) {
+	if (is_60g_sigma_dut(dut)) {
 		const char *dev_role = get_param(cmd, "DevRole");
 		char buf[256];
 
