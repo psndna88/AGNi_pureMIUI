@@ -140,6 +140,16 @@ int wpa_command(const char *ifname, const char *cmd)
 }
 
 
+int hapd_command(const char *ifname, const char *cmd)
+{
+	const char *path = sigma_hapd_ctrl ? sigma_hapd_ctrl :
+		DEFAULT_HAPD_CTRL_PATH;
+
+	printf("hapd_command(ifname='%s', cmd='%s')\n", ifname, cmd);
+	return wpa_ctrl_command(path, ifname, cmd);
+}
+
+
 int wpa_ctrl_command_resp(const char *path, const char *ifname,
 			  const char *cmd, char *resp, size_t resp_size)
 {
@@ -171,6 +181,17 @@ int wpa_command_resp(const char *ifname, const char *cmd,
 	printf("wpa_command(ifname='%s', cmd='%s')\n", ifname, cmd);
 	return wpa_ctrl_command_resp(sigma_wpas_ctrl, ifname, cmd,
 				     resp, resp_size);
+}
+
+
+int hapd_command_resp(const char *ifname, const char *cmd,
+		      char *resp, size_t resp_size)
+{
+	const char *path = sigma_hapd_ctrl ? sigma_hapd_ctrl :
+		DEFAULT_HAPD_CTRL_PATH;
+
+	printf("hapd_command(ifname='%s', cmd='%s')\n", ifname, cmd);
+	return wpa_ctrl_command_resp(path, ifname, cmd, resp, resp_size);
 }
 
 

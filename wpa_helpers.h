@@ -16,8 +16,11 @@ const char * get_p2p_ifname(const char *primary_ifname);
 void dut_ifc_reset(struct sigma_dut *dut);
 
 int wpa_command(const char *ifname, const char *cmd);
+int hapd_command(const char *ifname, const char *cmd);
 int wpa_command_resp(const char *ifname, const char *cmd,
 		     char *resp, size_t resp_size);
+int hapd_command_resp(const char *ifname, const char *cmd,
+		      char *resp, size_t resp_size);
 int get_wpa_status(const char *ifname, const char *field, char *obuf,
 		   size_t obuf_size);
 int get_wpa_signal_poll(struct sigma_dut *dut, const char *ifname,
