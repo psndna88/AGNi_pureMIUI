@@ -9880,6 +9880,40 @@ static int cmd_ap_wps_read_pin(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int cmd_ap_wps_enter_pin(struct sigma_dut *dut, struct sigma_conn *conn,
+				struct sigma_cmd *cmd)
+{
+	const char *pin = get_param(cmd, "PIN");
+	char wps_pin[11];
+
+	if (!pin)
+		return -1;
+
+	sigma_dut_print(dut, DUT_MSG_DEBUG,
+			"Authorize a client to join with WPS PIN %s", pin);
+
+	strlcpy(wps_pin, pin, sizeof(wps_pin));
+	/* we need to tolerate extra '-' characters entered */
+	str_remove_chars(wps_pin, '-');
+	strlcpy(dut->wps_pin, wps_pin, sizeof(dut->wps_pin));
+	dut->wps_method = WFA_CS_WPS_PIN_KEYPAD;
+
+	return 1;
+}
+
+
+static int cmd_ap_wps_set_pbc(struct sigma_dut *dut, struct sigma_conn *conn,
+			      struct sigma_cmd *cmd)
+{
+	sigma_dut_print(dut, DUT_MSG_DEBUG,
+			"Selecting the push button configuration method");
+
+	dut->wps_method = WFA_CS_WPS_PBC;
+
+	return 1;
+}
+
+
 static int ath_vht_op_mode_notif(struct sigma_dut *dut, const char *ifname,
 				 const char *val)
 {
@@ -10506,6 +10540,8 @@ void ap_register_cmds(void)
 	sigma_dut_reg_cmd("ap_set_rfeature", NULL, cmd_ap_set_rfeature);
 	sigma_dut_reg_cmd("ap_nfc_action", NULL, cmd_ap_nfc_action);
 	sigma_dut_reg_cmd("ap_wps_read_pin", NULL, cmd_ap_wps_read_pin);
+	sigma_dut_reg_cmd("ap_wps_enter_pin", NULL, cmd_ap_wps_enter_pin);
+	sigma_dut_reg_cmd("ap_wps_set_pbc", NULL, cmd_ap_wps_set_pbc);
 	sigma_dut_reg_cmd("AccessPoint", NULL, cmd_accesspoint);
 	sigma_dut_reg_cmd("ap_preset_testparameters", NULL,
 			  cmd_ap_preset_testparameters);

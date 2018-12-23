@@ -561,3 +561,16 @@ void nl80211_deinit(struct sigma_dut *dut, struct nl80211_ctx *ctx)
 }
 
 #endif /* NL80211_SUPPORT */
+
+
+void str_remove_chars(char *str, char ch)
+{
+	char *pr = str, *pw = str;
+
+	while (*pr) {
+		*pw = *pr++;
+		if (*pw != ch)
+			pw++;
+	}
+	*pw = '\0';
+}
