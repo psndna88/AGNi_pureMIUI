@@ -714,6 +714,7 @@ struct sigma_dut {
 		WPS_BAND_60G,
 	} band;
 
+	int wps_disable; /* Used for 60G to disable PCP from sending WPS IE */
 	int wsc_fragment; /* simulate WSC IE fragmentation */
 
 	const char *version;

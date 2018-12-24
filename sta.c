@@ -3885,6 +3885,22 @@ static int cmd_sta_preset_testparameters(struct sigma_dut *dut,
 
 	if (val && strcasecmp(val, "LOC") == 0)
 		return loc_cmd_sta_preset_testparameters(dut, conn, cmd);
+	if (val && strcasecmp(val, "60GHZ") == 0) {
+		val = get_param(cmd, "WPS");
+		if (val && strcasecmp(val, "disable") == 0) {
+			dut->wps_disable = 1;
+			sigma_dut_print(dut, DUT_MSG_INFO, "WPS disabled");
+		} else {
+			/* wps_disable can have other value from the previous
+			 * test, so make sure it has the correct value.
+			 */
+			dut->wps_disable = 0;
+		}
+
+		val = get_param(cmd, "P2P");
+		if (val && strcasecmp(val, "disable") == 0)
+			sigma_dut_print(dut, DUT_MSG_INFO, "P2P disabled");
+	}
 
 	if (dut->program == PROGRAM_WPS && dut->band == WPS_BAND_60G)
 		return cmd_sta_preset_testparameters_60ghz(dut, conn, cmd);
@@ -6746,14 +6762,23 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 	if (dut->program == PROGRAM_WPS) {
 		if (band && strcasecmp(band, "60GHz") == 0) {
 			dut->band = WPS_BAND_60G;
+			/* For 60 GHz enable WPS for WPS TCs */
+			dut->wps_disable = 0;
 		} else {
 			dut->band = WPS_BAND_NON_60G;
 		}
+	} else if (dut->program == PROGRAM_60GHZ) {
+		/* For 60 GHz MAC/PHY TCs WPS must be disabled */
+		dut->wps_disable = 1;
 	}
 
 	if (is_60g_sigma_dut(dut)) {
 		const char *dev_role = get_param(cmd, "DevRole");
 		char buf[256];
+
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"WPS 60 GHz program, wps_disable = %d",
+				dut->wps_disable);
 
 		if (!dev_role) {
 			send_resp(dut, conn, SIGMA_ERROR,

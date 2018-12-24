@@ -8088,9 +8088,10 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	dut->dpp_conf_id = -1;
 
-	if (dut->program == PROGRAM_60GHZ) {
+	if (is_60g_sigma_dut(dut)) {
 		dut->ap_mode = AP_11ad;
 		dut->ap_channel = 2;
+		dut->wps_disable = 0; /* WPS is enabled */
 		dut->ap_pmf = 0;
 		dut->ap_fixed_rate = 0;
 
