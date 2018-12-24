@@ -1607,6 +1607,10 @@ static int cmd_ap_send_addba_req(struct sigma_dut *dut, struct sigma_conn *conn,
 	switch (get_driver_type()) {
 	case DRIVER_ATHEROS:
 		return ath_ap_send_addba_req(dut, conn, cmd);
+#ifdef __linux__
+	case DRIVER_WIL6210:
+		return send_addba_60g(dut, conn, cmd, "sta_mac_address");
+#endif /* __linux__ */
 	case DRIVER_OPENWRT:
 		switch (get_openwrt_driver_type()) {
 		case OPENWRT_DRIVER_ATHEROS:

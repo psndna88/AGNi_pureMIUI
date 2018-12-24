@@ -872,6 +872,8 @@ int hwaddr_aton(const char *txt, unsigned char *addr);
 int set_ipv4_addr(struct sigma_dut *dut, const char *ifname,
 		  const char *ip, const char *mask);
 int set_ipv4_gw(struct sigma_dut *dut, const char *gw);
+int send_addba_60g(struct sigma_dut *dut, struct sigma_conn *conn,
+		   struct sigma_cmd *cmd, const char *param);
 
 /* p2p.c */
 int p2p_cmd_sta_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,

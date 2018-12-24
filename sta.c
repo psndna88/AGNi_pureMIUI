@@ -7852,8 +7852,8 @@ out:
 }
 
 
-static int send_addba_60g(struct sigma_dut *dut, struct sigma_conn *conn,
-			  struct sigma_cmd *cmd)
+int send_addba_60g(struct sigma_dut *dut, struct sigma_conn *conn,
+		   struct sigma_cmd *cmd, const char *mac_param)
 {
 	const char *val;
 	int tid = 0;
@@ -7868,7 +7868,7 @@ static int send_addba_60g(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
-	val = get_param(cmd, "Dest_mac");
+	val = get_param(cmd, mac_param);
 	if (!val) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Currently not supporting addba for 60G without Dest_mac");
@@ -7974,7 +7974,7 @@ static int cmd_sta_send_addba(struct sigma_dut *dut, struct sigma_conn *conn,
 		return wcn_sta_send_addba(dut, conn, cmd);
 #ifdef __linux__
 	case DRIVER_WIL6210:
-		return send_addba_60g(dut, conn, cmd);
+		return send_addba_60g(dut, conn, cmd, "Dest_mac");
 #endif /* __linux__ */
 	default:
 		/*
