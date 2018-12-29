@@ -2398,10 +2398,6 @@ static void __sched_fork(unsigned long clone_flags, struct task_struct *p)
 	p->se.prev_sum_exec_runtime	= 0;
 	p->se.nr_migrations		= 0;
 	p->se.vruntime			= 0;
-#ifdef CONFIG_SCHED_WALT
-	p->last_sleep_ts		= 0;
-#endif
-
 	INIT_LIST_HEAD(&p->se.group_node);
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
@@ -3613,10 +3609,6 @@ static void __sched notrace __schedule(bool preempt)
 		if (!is_idle_task(prev) && !prev->on_rq)
 			update_avg_burst(prev);
 
-#ifdef CONFIG_SCHED_WALT
-		if (!prev->on_rq)
-			prev->last_sleep_ts = wallclock;
-#endif
 		rq->nr_switches++;
 		rq->curr = next;
 		++*switch_count;

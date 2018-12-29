@@ -1688,7 +1688,6 @@ struct task_struct {
 	struct related_thread_group *grp;
 	struct list_head grp_list;
 	u64 cpu_cycles;
-	u64 last_sleep_ts;
 #endif
 #ifdef CONFIG_CGROUP_SCHED
 	struct task_group *sched_task_group;
