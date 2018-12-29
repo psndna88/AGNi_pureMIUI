@@ -27,10 +27,7 @@
 #include <linux/sched_energy.h>
 #include <linux/stddef.h>
 
-#include "sched.h"
-
 struct sched_group_energy *sge_array[NR_CPUS][NR_SD_LEVELS];
-bool sched_energy_aware;
 
 static void free_resources(void)
 {
@@ -58,13 +55,6 @@ void init_sched_energy_costs(void)
 	const struct property *prop;
 	int sd_level, i, nstates, cpu;
 	const __be32 *val;
-
-	if (!energy_aware()) {
-		sched_energy_aware = false;
-		return;
-	}
-
-	sched_energy_aware = true;
 
 	for_each_possible_cpu(cpu) {
 		cn = of_get_cpu_node(cpu, NULL);
