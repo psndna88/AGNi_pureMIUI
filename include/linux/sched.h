@@ -1389,8 +1389,8 @@ struct sched_statistics {
 };
 #endif
 
+#ifdef CONFIG_SCHED_WALT
 #define RAVG_HIST_SIZE_MAX  5
-#define NUM_BUSY_BUCKETS 10
 
 /* ravg represents frequency scaled cpu-demand of tasks */
 struct ravg {
@@ -1410,32 +1410,19 @@ struct ravg {
 	 * sysctl_sched_ravg_hist_size windows. 'demand' could drive frequency
 	 * demand for tasks.
 	 *
-	 * 'curr_window_cpu' represents task's contribution to cpu busy time on
-	 * various CPUs in the current window
+	 * 'curr_window' represents task's contribution to cpu busy time
+	 * statistics (rq->curr_runnable_sum) in current window
 	 *
-	 * 'prev_window_cpu' represents task's contribution to cpu busy time on
-	 * various CPUs in the previous window
-	 *
-	 * 'curr_window' represents the sum of all entries in curr_window_cpu
-	 *
-	 * 'prev_window' represents the sum of all entries in prev_window_cpu
-	 *
-	 * 'pred_demand' represents task's current predicted cpu busy time
-	 *
-	 * 'busy_buckets' groups historical busy time into different buckets
-	 * used for prediction
+	 * 'prev_window' represents task's contribution to cpu busy time
+	 * statistics (rq->prev_runnable_sum) in previous window
 	 */
 	u64 mark_start;
 	u32 sum, demand;
 	u32 sum_history[RAVG_HIST_SIZE_MAX];
-	u32 *curr_window_cpu, *prev_window_cpu;
-	u64 proc_load;
 	u32 curr_window, prev_window;
-	u64 curr_burst, avg_burst, avg_sleep_time;
 	u16 active_windows;
-	u32 pred_demand;
-	u8 busy_buckets[NUM_BUSY_BUCKETS];
 };
+#endif
 
 struct sched_entity {
 	struct load_weight	load;		/* for load-balancing */
@@ -1611,6 +1598,14 @@ struct task_struct {
 	const struct sched_class *sched_class;
 	struct sched_entity se;
 	struct sched_rt_entity rt;
+#ifdef CONFIG_SCHED_WALT
+	struct ravg ravg;
+	/*
+	 * 'init_load_pct' represents the initial task load assigned to children
+	 * of this task
+	 */
+	u32 init_load_pct;
+#endif
 #ifdef CONFIG_CGROUP_SCHED
 	struct task_group *sched_task_group;
 #endif
