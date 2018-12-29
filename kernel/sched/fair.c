@@ -2667,6 +2667,12 @@ int sched_set_wake_up_idle(struct task_struct *p, int wake_up_idle)
 }
 EXPORT_SYMBOL(sched_set_wake_up_idle);
 
+int core_ctl_set_boost(bool boost)
+{
+	return 0;
+}
+EXPORT_SYMBOL(core_ctl_set_boost);
+
 #ifdef CONFIG_SMP
 static const u32 runnable_avg_yN_inv[] = {
 	0xffffffff, 0xfa83b2da, 0xf5257d14, 0xefe4b99a, 0xeac0c6e6, 0xe5b906e6,
