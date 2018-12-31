@@ -12,7 +12,7 @@ do.cleanuponabort=0
 device.name1=kenzo
 device.name2=o
 device.name3=s
-device.name4=
+device.name4=kate
 device.name5=
 '; } # end properties
 
