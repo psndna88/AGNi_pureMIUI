@@ -634,6 +634,7 @@ config DEBUG_LOCK_ALLOC
 	select DEBUG_SPINLOCK
 	select DEBUG_MUTEXES
 	select LOCKDEP
+	default n
 	help
 	 This feature will check whether any held lock (spinlock, rwlock,
 	 mutex or rwsem) is incorrectly freed by the kernel, via any of the
@@ -692,6 +693,7 @@ config LOCKDEP
 	select FRAME_POINTER if !MIPS && !PPC && !ARM_UNWIND && !S390 && !MICROBLAZE
 	select KALLSYMS
 	select KALLSYMS_ALL
+	default n
 
 config LOCK_STAT
 	bool "Lock usage statistics"
