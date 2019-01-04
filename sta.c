@@ -10203,6 +10203,46 @@ static int cmd_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 }
 
 
+static int cmd_sta_set_power_save_he(const char *intf, struct sigma_dut *dut,
+				     struct sigma_conn *conn,
+				     struct sigma_cmd *cmd)
+{
+	const char *val;
+
+	val = get_param(cmd, "powersave");
+	if (val) {
+		char buf[60];
+
+		if (strcasecmp(val, "off") == 0) {
+			snprintf(buf, sizeof(buf), "iwpriv %s setPower 2",
+				 intf);
+			if (system(buf) != 0) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"iwpriv setPower 2 failed");
+				return 0;
+			}
+		} else if (strcasecmp(val, "on") == 0) {
+			snprintf(buf, sizeof(buf), "iwpriv %s setPower 1",
+				 intf);
+			if (system(buf) != 0) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"iwpriv setPower 1 failed");
+				return 0;
+			}
+		} else {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Unsupported power save config");
+			return -1;
+		}
+		return 1;
+	}
+
+	send_resp(dut, conn, SIGMA_ERROR, "errorCode,Unsupported command");
+
+	return 0;
+}
+
+
 static int btm_query_candidate_list(struct sigma_dut *dut,
 				    struct sigma_conn *conn,
 				    struct sigma_cmd *cmd)
@@ -10296,6 +10336,24 @@ static int btm_query_candidate_list(struct sigma_dut *dut,
 	}
 
 	return 1;
+}
+
+
+static int cmd_sta_set_power_save(struct sigma_dut *dut,
+				  struct sigma_conn *conn,
+				  struct sigma_cmd *cmd)
+{
+	const char *intf = get_param(cmd, "interface");
+	const char *prog = get_param(cmd, "program");
+
+	if (!intf || !prog)
+		return -1;
+
+	if ((get_driver_type() == DRIVER_WCN) && (strcasecmp(prog, "HE") == 0))
+		return cmd_sta_set_power_save_he(intf, dut, conn, cmd);
+
+	send_resp(dut, conn, SIGMA_ERROR, "errorCode,Unsupported Prog");
+	return 0;
 }
 
 
@@ -11655,4 +11713,6 @@ void sta_register_cmds(void)
 	sigma_dut_reg_cmd("sta_get_parameter", req_intf, cmd_sta_get_parameter);
 	sigma_dut_reg_cmd("start_wps_registration", req_intf,
 			  cmd_start_wps_registration);
+	sigma_dut_reg_cmd("sta_set_power_save", req_intf,
+			  cmd_sta_set_power_save);
 }
