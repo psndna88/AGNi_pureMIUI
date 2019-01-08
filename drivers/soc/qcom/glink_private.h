@@ -32,6 +32,7 @@ enum local_channel_state_e;
 
 /* Logging Macros */
 enum {
+	QCOM_GLINK_NONE = 0,
 	QCOM_GLINK_INFO = 1U << 0,
 	QCOM_GLINK_DEBUG = 1U << 1,
 	QCOM_GLINK_GPIO = 1U << 2,

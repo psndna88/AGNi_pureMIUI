@@ -318,7 +318,7 @@ struct channel_ctx {
 
 static struct glink_core_if core_impl;
 static void *log_ctx;
-static unsigned glink_debug_mask = QCOM_GLINK_INFO;
+static unsigned glink_debug_mask = QCOM_GLINK_NONE;
 module_param_named(debug_mask, glink_debug_mask,
 		   uint, S_IRUGO | S_IWUSR | S_IWGRP);
 
