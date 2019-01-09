@@ -590,6 +590,51 @@ static char * get_user_dmacc_field(struct sigma_dut *dut, sqlite3 *db,
 }
 
 
+static int get_eventlog_new_serialno_cb(void *ctx, int argc, char *argv[],
+					char *col[])
+{
+	char **serialno = ctx;
+	char *val;
+
+	if (argc < 1 || !argv[0])
+		return 0;
+
+	val = argv[0];
+	if (strncmp(val, "renamed user to: cert-", 22) != 0)
+		return 0;
+	val += 22;
+	free(*serialno);
+	*serialno = strdup(val);
+
+	return 0;
+}
+
+
+static char * get_eventlog_new_serialno(struct sigma_dut *dut, sqlite3 *db,
+					const char *username)
+{
+	char *sql, *serial = NULL;
+
+	sql = sqlite3_mprintf("SELECT notes FROM eventlog WHERE user=%Q AND notes LIKE %Q",
+			      username, "renamed user to:%");
+	if (!sql)
+		return NULL;
+
+	if (sqlite3_exec(db, sql, get_eventlog_new_serialno_cb, &serial,
+			 NULL) != SQLITE_OK) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"SQL operation to fetch new serialno failed: %s",
+				sqlite3_errmsg(db));
+		sqlite3_free(sql);
+		return NULL;
+	}
+
+	sqlite3_free(sql);
+
+	return serial;
+}
+
+
 static int osu_remediation_status(struct sigma_dut *dut,
 				  struct sigma_conn *conn, int timeout,
 				  const char *username, const char *serialno)
@@ -643,7 +688,25 @@ static int osu_remediation_status(struct sigma_dut *dut,
 		else
 			remediation = get_user_field(dut, db, username,
 						     "remediation");
-		if (!remediation || (remediation && remediation[0] == '\0')) {
+		if (!remediation && serialno) {
+			char *new_serial;
+
+			/* Certificate reenrollment through subscription
+			 * remediation - fetch the new serial number */
+			new_serial = get_eventlog_new_serialno(dut, db,
+							       username);
+			if (!new_serial) {
+				/* New SerialNo not known?! */
+				snprintf(resp, sizeof(resp),
+					 "RemediationStatus,Remediation Complete,SerialNo,Unknown");
+				break;
+			}
+			snprintf(resp, sizeof(resp),
+				 "RemediationStatus,Remediation Complete,SerialNo,%s",
+				new_serial);
+			free(new_serial);
+			break;
+		} else if (remediation && remediation[0] == '\0') {
 			snprintf(resp, sizeof(resp),
 				 "RemediationStatus,Remediation Complete");
 			break;
