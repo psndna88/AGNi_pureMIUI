@@ -27,8 +27,6 @@
 #include "wlan_serialization_utils_i.h"
 #include "wlan_objmgr_vdev_obj.h"
 
-extern struct serialization_legacy_callback ser_legacy_cb;
-
 static struct wlan_objmgr_pdev *wlan_serialization_get_first_pdev(
 			struct wlan_objmgr_psoc *psoc)
 {
@@ -90,14 +88,14 @@ uint32_t wlan_serialization_get_active_list_count(
 		return 0;
 	}
 
-	wlan_serialization_acquire_lock(ser_pdev_obj);
+	wlan_serialization_acquire_lock(&ser_pdev_obj->pdev_ser_list_lock);
 	if (is_cmd_from_active_scan_queue)
 		queue = &ser_pdev_obj->active_scan_list;
 	else
 		queue = &ser_pdev_obj->active_list;
 
 	count = qdf_list_size(queue);
-	wlan_serialization_release_lock(ser_pdev_obj);
+	wlan_serialization_release_lock(&ser_pdev_obj->pdev_ser_list_lock);
 
 	return count;
 }
@@ -116,14 +114,14 @@ uint32_t wlan_serialization_get_pending_list_count(
 		return 0;
 	}
 
-	wlan_serialization_acquire_lock(ser_pdev_obj);
+	wlan_serialization_acquire_lock(&ser_pdev_obj->pdev_ser_list_lock);
 	if (is_cmd_from_pending_scan_queue)
 		queue = &ser_pdev_obj->pending_scan_list;
 	else
 		queue = &ser_pdev_obj->pending_list;
 
 	count = qdf_list_size(queue);
-	wlan_serialization_release_lock(ser_pdev_obj);
+	wlan_serialization_release_lock(&ser_pdev_obj->pdev_ser_list_lock);
 
 	return count;
 }
@@ -324,12 +322,6 @@ wlan_serialization_get_pending_list_next_node_using_psoc(
 
 	return wlan_serialization_get_list_next_node(queue, prev_cmd,
 						     ser_pdev_obj);
-}
-
-void wlan_serialization_legacy_init_callback(void)
-{
-	ser_legacy_cb.serialization_purge_cmd_list =
-			wlan_serialization_purge_cmd_list;
 }
 
 void wlan_serialization_purge_cmd_list_by_vdev_id(struct wlan_objmgr_psoc *psoc,
