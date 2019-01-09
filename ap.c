@@ -7188,6 +7188,7 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 			fclose(f2);
 		}
 		fprintf(f, "ssid=owe-%lx\n", val);
+		fprintf(f, "ignore_broadcast_ssid=1\n");
 
 		if (get_hwaddr(ifname, bssid)) {
 			fclose(f);
@@ -7251,6 +7252,7 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		fprintf(f, "wpa_key_mgmt=OWE\n");
 		fprintf(f, "rsn_pairwise=CCMP\n");
 		fprintf(f, "ieee80211w=2\n");
+		fprintf(f, "ignore_broadcast_ssid=1\n");
 		if (dut->ap_sae_groups)
 			fprintf(f, "owe_groups=%s\n", dut->ap_sae_groups);
 	}
