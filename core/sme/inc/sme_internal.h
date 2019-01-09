@@ -220,6 +220,11 @@ typedef struct tagSmeStruct {
 	void (*power_stats_resp_callback)(struct power_stats_response *rsp,
 						void *callback_context);
 #endif
+#ifdef WLAN_FEATURE_BEACON_RECEPTION_STATS
+	void *beacon_stats_context;
+	void (*beacon_stats_resp_callback)(struct bcn_reception_stats_rsp *rsp,
+					   void *callback_context);
+#endif
 #ifdef FEATURE_WLAN_AUTO_SHUTDOWN
 	void (*pAutoShutdownNotificationCb)(void);
 #endif
@@ -256,17 +261,6 @@ typedef struct tagSmeStruct {
 	struct ps_global_info  ps_global_info;
 	void (*rssi_threshold_breached_cb)(void *, struct rssi_breach_event *);
 	hw_mode_transition_cb sme_hw_mode_trans_cb;
-	/* OCB callbacks */
-	void *ocb_set_config_context;
-	ocb_callback ocb_set_config_callback;
-	void *ocb_get_tsf_timer_context;
-	ocb_callback ocb_get_tsf_timer_callback;
-	void *dcc_get_stats_context;
-	ocb_callback dcc_get_stats_callback;
-	void *dcc_update_ndl_context;
-	ocb_callback dcc_update_ndl_callback;
-	void *dcc_stats_event_context;
-	ocb_callback dcc_stats_event_callback;
 	sme_set_thermal_level_callback set_thermal_level_cb;
 	void *apf_get_offload_context;
 	p2p_lo_callback p2p_lo_event_callback;

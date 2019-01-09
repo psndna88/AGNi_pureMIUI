@@ -142,6 +142,8 @@
 #include "wlan_reg_ucfg_api.h"
 #include "wlan_ocb_ucfg_api.h"
 #include <wlan_hdd_spectralscan.h>
+#include <wlan_p2p_ucfg_api.h>
+
 #ifdef MODULE
 #define WLAN_MODULE_NAME  module_name(THIS_MODULE)
 #else
@@ -2275,7 +2277,7 @@ wlan_hdd_update_dbs_scan_and_fw_mode_config(void)
 {
 	struct policy_mgr_dual_mac_config cfg = {0};
 	QDF_STATUS status;
-	uint32_t channel_select_logic_conc;
+	uint32_t channel_select_logic_conc = 0;
 	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
 
 	if (!hdd_ctx) {
@@ -2284,15 +2286,23 @@ wlan_hdd_update_dbs_scan_and_fw_mode_config(void)
 	}
 
 
-	if (!policy_mgr_is_hw_dbs_capable(hdd_ctx->psoc))
+	/*
+	 * ROME platform doesn't support any DBS related commands in FW,
+	 * so if driver sends wmi command with dual_mac_config with all set to
+	 * 0 then FW wouldn't respond back and driver would timeout on waiting
+	 * for response. Check if FW supports DBS to eliminate ROME vs
+	 * NON-ROME platform.
+	 */
+	if (!policy_mgr_find_if_fw_supports_dbs(hdd_ctx->psoc))
 		return QDF_STATUS_SUCCESS;
 
 	cfg.scan_config = 0;
 	cfg.fw_mode_config = 0;
 	cfg.set_dual_mac_cb = policy_mgr_soc_set_dual_mac_cfg_cb;
 
-	channel_select_logic_conc = hdd_ctx->config->
-						channel_select_logic_conc;
+	if (policy_mgr_is_hw_dbs_capable(hdd_ctx->psoc))
+		channel_select_logic_conc =
+			hdd_ctx->config->channel_select_logic_conc;
 
 	if (hdd_ctx->config->dual_mac_feature_disable !=
 	    DISABLE_DBS_CXN_AND_SCAN) {
@@ -4034,7 +4044,10 @@ int hdd_vdev_destroy(struct hdd_adapter *adapter)
 	ucfg_pmo_del_wow_pattern(adapter->vdev);
 
 	status = ucfg_reg_11d_vdev_delete_update(adapter->vdev);
+
+	/* Disable Scan and abort any pending scans for this vdev */
 	ucfg_scan_set_vdev_del_in_progress(adapter->vdev);
+	wlan_hdd_scan_abort(adapter);
 
 	/* close sme session (destroy vdev in firmware via legacy API) */
 	qdf_event_reset(&adapter->qdf_session_close_event);
@@ -4531,6 +4544,8 @@ static void hdd_cleanup_adapter(struct hdd_context *hdd_ctx, struct hdd_adapter 
 	hdd_apf_context_destroy(adapter);
 
 	wlan_hdd_debugfs_csr_deinit(adapter);
+	if (adapter->device_mode == QDF_STA_MODE)
+		hdd_sysfs_destroy_adapter_root_obj(adapter);
 
 	hdd_debugfs_exit(adapter);
 
@@ -5216,7 +5231,9 @@ struct hdd_adapter *hdd_open_adapter(struct hdd_context *hdd_ctx, uint8_t sessio
 					WLAN_CONTROL_PATH);
 
 		hdd_nud_init_tracking(adapter);
-
+		if (adapter->device_mode == QDF_STA_MODE ||
+		    adapter->device_mode == QDF_P2P_DEVICE_MODE)
+			hdd_sysfs_create_adapter_root_obj(adapter);
 		qdf_mutex_create(&adapter->disconnection_status_lock);
 
 		break;
@@ -6756,6 +6773,23 @@ QDF_STATUS hdd_add_adapter_front(struct hdd_context *hdd_ctx,
 	qdf_spin_unlock_bh(&hdd_ctx->hdd_adapter_lock);
 
 	return status;
+}
+
+struct hdd_adapter *hdd_get_adapter_by_rand_macaddr(
+	struct hdd_context *hdd_ctx, tSirMacAddr mac_addr)
+{
+	struct hdd_adapter *adapter;
+
+	hdd_for_each_adapter(hdd_ctx, adapter) {
+		if ((adapter->device_mode == QDF_STA_MODE ||
+		     adapter->device_mode == QDF_P2P_CLIENT_MODE ||
+		     adapter->device_mode == QDF_P2P_DEVICE_MODE) &&
+		    ucfg_p2p_check_random_mac(hdd_ctx->psoc,
+					      adapter->session_id, mac_addr))
+			return adapter;
+	}
+
+	return NULL;
 }
 
 struct hdd_adapter *hdd_get_adapter_by_macaddr(struct hdd_context *hdd_ctx,
@@ -8722,16 +8756,8 @@ void hdd_switch_sap_channel(struct hdd_adapter *adapter, uint8_t channel,
 
 	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 
-	hdd_ap_ctx->sap_config.channel = channel;
-	hdd_ap_ctx->sap_config.ch_params.ch_width = CH_WIDTH_MAX;
-
 	hdd_debug("chan:%d width:%d",
 		channel, hdd_ap_ctx->sap_config.ch_width_orig);
-
-	wlan_reg_set_channel_params(hdd_ctx->pdev,
-				    hdd_ap_ctx->sap_config.channel,
-				    hdd_ap_ctx->sap_config.sec_ch,
-				    &hdd_ap_ctx->sap_config.ch_params);
 
 	policy_mgr_change_sap_channel_with_csa(hdd_ctx->psoc,
 		adapter->session_id, channel,
@@ -9245,6 +9271,7 @@ static int hdd_context_init(struct hdd_context *hdd_ctx)
 
 	init_completion(&hdd_ctx->mc_sus_event_var);
 	init_completion(&hdd_ctx->ready_to_suspend);
+	init_completion(&hdd_ctx->pdev_cmd_flushed_var);
 
 	qdf_spinlock_create(&hdd_ctx->connection_status_lock);
 	qdf_spinlock_create(&hdd_ctx->sta_update_info_lock);
@@ -9936,6 +9963,9 @@ static int hdd_update_cds_config(struct hdd_context *hdd_ctx)
 	cds_cfg->delay_before_vdev_stop =
 		hdd_ctx->config->delay_before_vdev_stop;
 
+	cds_cfg->enable_peer_unmap_conf_support =
+		hdd_ctx->config->enable_peer_unmap_conf_support;
+
 	hdd_ra_populate_cds_config(cds_cfg, hdd_ctx);
 	hdd_txrx_populate_cds_config(cds_cfg, hdd_ctx);
 	hdd_nan_populate_cds_config(cds_cfg, hdd_ctx);
@@ -10463,6 +10493,7 @@ static int hdd_initialize_mac_address(struct hdd_context *hdd_ctx)
 	if (!qdf_is_macaddr_zero(&hdd_ctx->hw_macaddr)) {
 		hdd_update_macaddr(hdd_ctx, hdd_ctx->hw_macaddr, false);
 		update_mac_addr_to_fw = false;
+		return 0;
 	} else if (hdd_generate_macaddr_auto(hdd_ctx) != 0) {
 		struct qdf_mac_addr mac_addr;
 
@@ -12032,10 +12063,6 @@ void hdd_deregister_cb(struct hdd_context *hdd_ctx)
 
 	mac_handle = hdd_ctx->mac_handle;
 	sme_deregister_tx_queue_cb(mac_handle);
-	status = sme_deregister_for_dcc_stats_event(mac_handle);
-	if (!QDF_IS_STATUS_SUCCESS(status))
-		hdd_err("De-register of dcc stats callback failed: %d",
-			status);
 
 	sme_reset_link_layer_stats_ind_cb(mac_handle);
 	sme_reset_rssi_threshold_breached_cb(mac_handle);
@@ -13785,7 +13812,7 @@ void hdd_clean_up_pre_cac_interface(struct hdd_context *hdd_ctx)
  */
 static void hdd_update_ol_config(struct hdd_context *hdd_ctx)
 {
-	struct ol_config_info cfg;
+	struct ol_config_info cfg = {0};
 	struct ol_context *ol_ctx = cds_get_context(QDF_MODULE_ID_BMI);
 
 	if (!ol_ctx)
@@ -13830,7 +13857,7 @@ static void hdd_populate_runtime_cfg(struct hdd_context *hdd_ctx,
 static void hdd_update_hif_config(struct hdd_context *hdd_ctx)
 {
 	struct hif_opaque_softc *scn = cds_get_context(QDF_MODULE_ID_HIF);
-	struct hif_config_info cfg;
+	struct hif_config_info cfg = {0};
 
 	if (!scn)
 		return;
@@ -13852,7 +13879,7 @@ static void hdd_update_hif_config(struct hdd_context *hdd_ctx)
  */
 static int hdd_update_dp_config(struct hdd_context *hdd_ctx)
 {
-	struct cdp_config_params params;
+	struct cdp_config_params params = {0};
 	QDF_STATUS status;
 
 	params.tso_enable = hdd_ctx->config->tso_enable;
@@ -13934,7 +13961,7 @@ static inline void hdd_ra_populate_pmo_config(
  */
 static int hdd_update_pmo_config(struct hdd_context *hdd_ctx)
 {
-	struct pmo_psoc_cfg psoc_cfg;
+	struct pmo_psoc_cfg psoc_cfg = {0};
 	QDF_STATUS status;
 
 	/*
@@ -13987,7 +14014,7 @@ static inline void hdd_update_pno_config(struct pno_user_cfg *pno_cfg,
 	pno_cfg->channel_prediction = cfg->pno_channel_prediction;
 	pno_cfg->top_k_num_of_channels = cfg->top_k_num_of_channels;
 	pno_cfg->stationary_thresh = cfg->stationary_thresh;
-	pno_cfg->adaptive_dwell_mode = cfg->adaptive_dwell_mode_enabled;
+	pno_cfg->adaptive_dwell_mode = cfg->pnoscan_adaptive_dwell_mode;
 	pno_cfg->channel_prediction_full_scan =
 		cfg->channel_prediction_full_scan;
 	mawc_cfg->enable = cfg->MAWCEnabled && cfg->mawc_nlo_enabled;
@@ -14202,7 +14229,7 @@ static int hdd_update_dfs_config(struct hdd_context *hdd_ctx)
 {
 	struct wlan_objmgr_psoc *psoc = hdd_ctx->psoc;
 	struct hdd_config *cfg = hdd_ctx->config;
-	struct dfs_user_config dfs_cfg;
+	struct dfs_user_config dfs_cfg = {0};
 	QDF_STATUS status;
 
 	dfs_cfg.dfs_is_phyerr_filter_offload = !!cfg->fDfsPhyerrFilterOffload;
@@ -14224,7 +14251,7 @@ static int hdd_update_dfs_config(struct hdd_context *hdd_ctx)
 static int hdd_update_scan_config(struct hdd_context *hdd_ctx)
 {
 	struct wlan_objmgr_psoc *psoc = hdd_ctx->psoc;
-	struct scan_user_cfg scan_cfg;
+	struct scan_user_cfg scan_cfg = {0};
 	struct hdd_config *cfg = hdd_ctx->config;
 	QDF_STATUS status;
 
@@ -14244,6 +14271,8 @@ static int hdd_update_scan_config(struct hdd_context *hdd_ctx)
 	scan_cfg.scan_bucket_threshold = cfg->first_scan_bucket_threshold;
 	scan_cfg.rssi_cat_gap = cfg->nRssiCatGap;
 	scan_cfg.scan_dwell_time_mode = cfg->scan_adaptive_dwell_mode;
+	scan_cfg.scan_dwell_time_mode_nc =
+		cfg->scan_adaptive_dwell_mode_nc;
 	scan_cfg.is_snr_monitoring_enabled = cfg->fEnableSNRMonitoring;
 	scan_cfg.usr_cfg_probe_rpt_time = cfg->scan_probe_repeat_time;
 	scan_cfg.usr_cfg_num_probes = cfg->scan_num_probes;
