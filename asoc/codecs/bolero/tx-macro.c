@@ -134,6 +134,7 @@ struct tx_macro_priv {
 	bool dec_active[NUM_DECIMATORS];
 	int tx_mclk_users;
 	int swr_clk_users;
+	bool reset_swr;
 	struct clk *tx_core_clk;
 	struct clk *tx_npl_clk;
 	struct mutex mclk_lock;
@@ -317,12 +318,14 @@ static int tx_macro_event_handler(struct snd_soc_codec *codec, u16 event,
 	case BOLERO_MACRO_EVT_SSR_DOWN:
 		swrm_wcd_notify(
 			tx_priv->swr_ctrl_data[0].tx_swr_pdev,
-			SWR_DEVICE_SSR_DOWN, NULL);
+			SWR_DEVICE_DOWN, NULL);
 		swrm_wcd_notify(
 			tx_priv->swr_ctrl_data[0].tx_swr_pdev,
-			SWR_DEVICE_DOWN, NULL);
+			SWR_DEVICE_SSR_DOWN, NULL);
 		break;
 	case BOLERO_MACRO_EVT_SSR_UP:
+		/* reset swr after ssr/pdr */
+		tx_priv->reset_swr = true;
 		swrm_wcd_notify(
 			tx_priv->swr_ctrl_data[0].tx_swr_pdev,
 			SWR_DEVICE_SSR_UP, NULL);
@@ -1407,9 +1410,18 @@ static int tx_macro_swrm_clock(void *handle, bool enable)
 					__func__);
 				goto exit;
 			}
+			if (tx_priv->reset_swr)
+				regmap_update_bits(regmap,
+					BOLERO_CDC_TX_CLK_RST_CTRL_SWR_CONTROL,
+					0x02, 0x02);
 			regmap_update_bits(regmap,
 				BOLERO_CDC_TX_CLK_RST_CTRL_SWR_CONTROL,
 				0x01, 0x01);
+			if (tx_priv->reset_swr)
+				regmap_update_bits(regmap,
+					BOLERO_CDC_TX_CLK_RST_CTRL_SWR_CONTROL,
+					0x02, 0x00);
+			tx_priv->reset_swr = false;
 			regmap_update_bits(regmap,
 				BOLERO_CDC_TX_CLK_RST_CTRL_SWR_CONTROL,
 				0x1C, 0x0C);
@@ -1543,14 +1555,14 @@ static int tx_macro_init(struct snd_soc_codec *codec)
 	snd_soc_dapm_ignore_suspend(dapm, "TX SWR_ADC1");
 	snd_soc_dapm_ignore_suspend(dapm, "TX SWR_ADC2");
 	snd_soc_dapm_ignore_suspend(dapm, "TX SWR_ADC3");
-	snd_soc_dapm_ignore_suspend(dapm, "TX SWR_MIC0");
-	snd_soc_dapm_ignore_suspend(dapm, "TX SWR_MIC1");
-	snd_soc_dapm_ignore_suspend(dapm, "TX SWR_MIC2");
-	snd_soc_dapm_ignore_suspend(dapm, "TX SWR_MIC3");
-	snd_soc_dapm_ignore_suspend(dapm, "TX SWR_MIC4");
-	snd_soc_dapm_ignore_suspend(dapm, "TX SWR_MIC5");
-	snd_soc_dapm_ignore_suspend(dapm, "TX SWR_MIC6");
-	snd_soc_dapm_ignore_suspend(dapm, "TX SWR_MIC7");
+	snd_soc_dapm_ignore_suspend(dapm, "TX SWR_DMIC0");
+	snd_soc_dapm_ignore_suspend(dapm, "TX SWR_DMIC1");
+	snd_soc_dapm_ignore_suspend(dapm, "TX SWR_DMIC2");
+	snd_soc_dapm_ignore_suspend(dapm, "TX SWR_DMIC3");
+	snd_soc_dapm_ignore_suspend(dapm, "TX SWR_DMIC4");
+	snd_soc_dapm_ignore_suspend(dapm, "TX SWR_DMIC5");
+	snd_soc_dapm_ignore_suspend(dapm, "TX SWR_DMIC6");
+	snd_soc_dapm_ignore_suspend(dapm, "TX SWR_DMIC7");
 	snd_soc_dapm_sync(dapm);
 
 	for (i = 0; i < NUM_DECIMATORS; i++) {
@@ -1755,7 +1767,7 @@ static int tx_macro_probe(struct platform_device *pdev)
 		sample_rate, tx_priv) == TX_MACRO_DMIC_SAMPLE_RATE_UNDEFINED)
 			return -EINVAL;
 	}
-
+	tx_priv->reset_swr = true;
 	INIT_WORK(&tx_priv->tx_macro_add_child_devices_work,
 		  tx_macro_add_child_devices);
 	tx_priv->swr_plat_data.handle = (void *) tx_priv;
