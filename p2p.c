@@ -102,6 +102,12 @@ void start_dhcp(struct sigma_dut *dut, const char *group_ifname, int go)
 		} else if (access("/system/bin/dhcptool", F_OK) != -1) {
 			snprintf(buf, sizeof(buf), "/system/bin/dhcptool %s",
 				 group_ifname);
+		} else if (access("/vendor/bin/dhcpcd", F_OK) != -1) {
+			snprintf(buf, sizeof(buf), "/vendor/bin/dhcpcd %s",
+				 group_ifname);
+		} else if (access("/vendor/bin/dhcptool", F_OK) != -1) {
+			snprintf(buf, sizeof(buf), "/vendor/bin/dhcptool %s",
+				 group_ifname);
 		} else {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"DHCP client program missing");
