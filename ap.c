@@ -2690,7 +2690,8 @@ static void get_if_name(struct sigma_dut *dut, char *ifname_str,
 	if (drv == DRIVER_OPENWRT && wlan_tag > 1) {
 		/* Handle tagged-ifname only on OPENWRT for now */
 		snprintf(ifname_str, str_size, "%s%d", ifname, wlan_tag - 1);
-	} else if (drv == DRIVER_MAC80211 && wlan_tag == 2) {
+	} else if ((drv == DRIVER_MAC80211 || drv == DRIVER_LINUX_WCN) &&
+		   wlan_tag == 2) {
 		snprintf(ifname_str, str_size, "%s_1", ifname);
 	} else {
 		snprintf(ifname_str, str_size, "%s", ifname);
