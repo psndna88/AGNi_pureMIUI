@@ -7049,9 +7049,13 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		fprintf(f, "ssid=%s\n", dut->ap_tag_ssid[0]);
 		if (dut->bridge)
 			fprintf(f, "bridge=%s\n", dut->bridge);
-		fprintf(f, "bssid=%02x:%02x:%02x:%02x:%02x:%02x\n",
-			bssid[0], bssid[1], bssid[2], bssid[3],
-			bssid[4], bssid[5]);
+
+		if (drv == DRIVER_LINUX_WCN)
+			fprintf(f, "use_driver_iface_addr=1\n");
+		else
+			fprintf(f, "bssid=%02x:%02x:%02x:%02x:%02x:%02x\n",
+				bssid[0], bssid[1], bssid[2], bssid[3],
+				bssid[4], bssid[5]);
 
 		if (dut->ap_tag_key_mgmt[0] == AP2_OSEN) {
 			fprintf(f, "osen=1\n");
@@ -7204,9 +7208,12 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		fprintf(f, "ssid=%s\n", dut->ap_ssid);
 		if (dut->bridge)
 			fprintf(f, "bridge=%s\n", dut->bridge);
-		fprintf(f, "bssid=%02x:%02x:%02x:%02x:%02x:%02x\n",
-			bssid[0], bssid[1], bssid[2], bssid[3],
-			bssid[4], bssid[5]);
+		if (drv == DRIVER_LINUX_WCN)
+			fprintf(f, "use_driver_iface_addr=1\n");
+		else
+			fprintf(f, "bssid=%02x:%02x:%02x:%02x:%02x:%02x\n",
+				bssid[0], bssid[1], bssid[2], bssid[3],
+				bssid[4], bssid[5]);
 		fprintf(f, "owe_transition_ifname=%s\n", ifname);
 	}
 
@@ -7245,9 +7252,12 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		fprintf(f, "ssid=owe-%lx\n", val);
 		if (dut->bridge)
 			fprintf(f, "bridge=%s\n", dut->bridge);
-		fprintf(f, "bssid=%02x:%02x:%02x:%02x:%02x:%02x\n",
-			bssid[0], bssid[1], bssid[2], bssid[3],
-			bssid[4], bssid[5]);
+		if (drv == DRIVER_LINUX_WCN)
+			fprintf(f, "use_driver_iface_addr=1\n");
+		else
+			fprintf(f, "bssid=%02x:%02x:%02x:%02x:%02x:%02x\n",
+				bssid[0], bssid[1], bssid[2], bssid[3],
+				bssid[4], bssid[5]);
 		fprintf(f, "owe_transition_ifname=%s\n", ifname);
 		fprintf(f, "wpa=2\n");
 		fprintf(f, "wpa_key_mgmt=OWE\n");
