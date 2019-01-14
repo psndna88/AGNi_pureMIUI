@@ -102,6 +102,12 @@ void start_dhcp(struct sigma_dut *dut, const char *group_ifname, int go)
 		} else if (access("/system/bin/dhcptool", F_OK) != -1) {
 			snprintf(buf, sizeof(buf), "/system/bin/dhcptool %s",
 				 group_ifname);
+		} else if (access("/vendor/bin/dhcpcd", F_OK) != -1) {
+			snprintf(buf, sizeof(buf), "/vendor/bin/dhcpcd %s",
+				 group_ifname);
+		} else if (access("/vendor/bin/dhcptool", F_OK) != -1) {
+			snprintf(buf, sizeof(buf), "/vendor/bin/dhcptool %s",
+				 group_ifname);
 		} else {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"DHCP client program missing");
@@ -818,7 +824,7 @@ static int cmd_sta_start_autonomous_go(struct sigma_dut *dut,
 				       struct sigma_conn *conn,
 				       struct sigma_cmd *cmd)
 {
-	const char *intf = get_param(cmd, "Interface");
+	const char *intf = get_p2p_ifname(get_param(cmd, "Interface"));
 	const char *oper_chn = get_param(cmd, "OPER_CHN");
 	const char *ssid_param = get_param(cmd, "SSID");
 #ifdef MIRACAST

@@ -2690,7 +2690,8 @@ static void get_if_name(struct sigma_dut *dut, char *ifname_str,
 	if (drv == DRIVER_OPENWRT && wlan_tag > 1) {
 		/* Handle tagged-ifname only on OPENWRT for now */
 		snprintf(ifname_str, str_size, "%s%d", ifname, wlan_tag - 1);
-	} else if (drv == DRIVER_MAC80211 && wlan_tag == 2) {
+	} else if ((drv == DRIVER_MAC80211 || drv == DRIVER_LINUX_WCN) &&
+		   wlan_tag == 2) {
 		snprintf(ifname_str, str_size, "%s_1", ifname);
 	} else {
 		snprintf(ifname_str, str_size, "%s", ifname);
@@ -4163,6 +4164,7 @@ static int append_hostapd_conf_hs2(struct sigma_dut *dut, FILE *f)
 		char *osu_icon = NULL;
 		char *osu_ssid = NULL;
 		char *osu_nai = NULL;
+		char *osu_nai2 = NULL;
 		char *osu_service_desc = NULL;
 		char *hs20_icon_filename = NULL;
 		char hs20_icon[150];
@@ -4319,7 +4321,61 @@ static int append_hostapd_conf_hs2(struct sigma_dut *dut, FILE *f)
 			osu_method = (dut->ap_osu_method[0] == 0xFF) ? 1 : dut->ap_osu_method[0];
 			osu_service_desc = NULL;
 			break;
+		case 10:
+		case 110:
+			/* OSU Provider #1 */
+			fprintf(f, "osu_friendly_name=eng:SP Orange Test Only\n");
+			fprintf(f, "osu_friendly_name=kor:SP 오렌지 테스트 전용\n");
+			fprintf(f, "hs20_icon=128:61:zxx:image/png:icon_orange_zxx.png:/etc/ath/icon_orange_zxx.png\n");
+			fprintf(f, "osu_icon=icon_orange_zxx.png\n");
+			osu_method = (dut->ap_osu_method[0] == 0xFF) ?
+				1 : dut->ap_osu_method[0];
+			fprintf(f, "osu_method_list=%d\n", osu_method);
+			fprintf(f, "osu_nai=test-anonymous@wi-fi.org\n");
+			switch (dut->ap_osu_provider_nai_list) {
+			case 3:
+				fprintf(f,
+					"osu_nai2=test-anonymous@wi-fi.org\n");
+				break;
+			case 4:
+				fprintf(f, "osu_nai2=random@hotspot.net\n");
+				break;
+			}
+
+			/* OSU Provider #2 */
+			/* SP Red from defaults */
+			if (strlen(dut->ap_osu_server_uri[1]))
+				fprintf(f, "osu_server_uri=%s\n", dut->ap_osu_server_uri[1]);
+			else
+				fprintf(f, "osu_server_uri=https://osu-server.r2-testbed.wi-fi.org/\n");
+			fprintf(f, "osu_friendly_name=eng:SP Red Test Only\n");
+			snprintf(hs20_icon, sizeof(hs20_icon),
+				 "128:61:zxx:image/png:icon_red_zxx.png:/etc/ath/icon_red_zxx.png");
+			osu_method = (dut->ap_osu_method[1] == 0xFF) ?
+				1 : dut->ap_osu_method[1];
+			osu_service_desc = NULL;
+			osu_nai = "anonymous@hotspot.net";
+			break;
 		default:
+			break;
+		}
+
+		switch (dut->ap_osu_provider_nai_list) {
+		case 1:
+			osu_nai2 = "anonymous@hotspot.net";
+			break;
+		case 2:
+			osu_nai2 = "test-anonymous@wi-fi.org";
+			break;
+		case 3:
+			/* OSU Provider NAI #1 written above */
+			/* OSU Provider NAI #2 */
+			osu_nai2 = "anonymous@hotspot.net";
+			break;
+		case 4:
+			/* OSU Provider NAI #1 written above */
+			/* OSU Provider NAI #2 */
+			osu_nai2 = "anonymous@hotspot.net";
 			break;
 		}
 
@@ -4345,6 +4401,8 @@ static int append_hostapd_conf_hs2(struct sigma_dut *dut, FILE *f)
 
 		if (osu_nai)
 			fprintf(f, "osu_nai=%s\n", osu_nai);
+		if (osu_nai2)
+			fprintf(f, "osu_nai2=%s\n", osu_nai2);
 
 		fprintf(f, "hs20_icon=%s\n", hs20_icon);
 
@@ -6385,6 +6443,25 @@ static int set_ebtables_disable_dgaf(struct sigma_dut *dut,
 }
 
 
+static void set_ebtables_forward_drop(struct sigma_dut *dut,
+				      const char *ifname, const char *ifname2)
+{
+	char buf[128];
+
+	snprintf(buf, sizeof(buf), "ebtables -A FORWARD -i %s -o %s -j DROP",
+		 ifname, ifname2);
+	if (system(buf) != 0)
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to set ebtables rule");
+
+	snprintf(buf, sizeof(buf), "ebtables -A FORWARD -i %s -o %s -j DROP",
+		 ifname2, ifname);
+	if (system(buf) != 0)
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to set ebtables rule");
+}
+
+
 static int check_channel(int channel)
 {
 	int channel_list[] = { 36, 40, 44, 48, 52, 60, 64, 100, 104, 108, 112,
@@ -6891,7 +6968,8 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 			dut->ap_p2p_cross_connect);
 	}
 
-	if (dut->ap_l2tif || dut->ap_proxy_arp) {
+	if (dut->ap_l2tif || dut->ap_proxy_arp ||
+	    dut->ap_key_mgmt == AP_WPA2_EAP_OSEN) {
 		if (!dut->bridge) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Bridge must be configured. Run with -b <brname>.");
@@ -6971,14 +7049,19 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		fprintf(f, "ssid=%s\n", dut->ap_tag_ssid[0]);
 		if (dut->bridge)
 			fprintf(f, "bridge=%s\n", dut->bridge);
-		fprintf(f, "bssid=%02x:%02x:%02x:%02x:%02x:%02x\n",
-			bssid[0], bssid[1], bssid[2], bssid[3],
-			bssid[4], bssid[5]);
+
+		if (drv == DRIVER_LINUX_WCN)
+			fprintf(f, "use_driver_iface_addr=1\n");
+		else
+			fprintf(f, "bssid=%02x:%02x:%02x:%02x:%02x:%02x\n",
+				bssid[0], bssid[1], bssid[2], bssid[3],
+				bssid[4], bssid[5]);
 
 		if (dut->ap_tag_key_mgmt[0] == AP2_OSEN) {
 			fprintf(f, "osen=1\n");
 			/* Disable DGAF for OSEN BSS */
 			fprintf(f, "disable_dgaf=1\n");
+			fprintf(f, "ap_isolate=1\n");
 			if (strlen(dut->ap2_radius_ipaddr))
 				fprintf(f, "auth_server_addr=%s\n",
 					dut->ap2_radius_ipaddr);
@@ -6988,6 +7071,11 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 			if (strlen(dut->ap2_radius_password))
 				fprintf(f, "auth_server_shared_secret=%s\n",
 					dut->ap2_radius_password);
+
+			set_ebtables_forward_drop(dut, ifname, ifname2);
+		} else if (dut->ap2_osu) {
+			fprintf(f, "ap_isolate=1\n");
+			set_ebtables_forward_drop(dut, ifname, ifname2);
 		}
 
 		if (dut->ap2_proxy_arp) {
@@ -7105,6 +7193,7 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 			fclose(f2);
 		}
 		fprintf(f, "ssid=owe-%lx\n", val);
+		fprintf(f, "ignore_broadcast_ssid=1\n");
 
 		if (get_hwaddr(ifname, bssid)) {
 			fclose(f);
@@ -7119,9 +7208,12 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		fprintf(f, "ssid=%s\n", dut->ap_ssid);
 		if (dut->bridge)
 			fprintf(f, "bridge=%s\n", dut->bridge);
-		fprintf(f, "bssid=%02x:%02x:%02x:%02x:%02x:%02x\n",
-			bssid[0], bssid[1], bssid[2], bssid[3],
-			bssid[4], bssid[5]);
+		if (drv == DRIVER_LINUX_WCN)
+			fprintf(f, "use_driver_iface_addr=1\n");
+		else
+			fprintf(f, "bssid=%02x:%02x:%02x:%02x:%02x:%02x\n",
+				bssid[0], bssid[1], bssid[2], bssid[3],
+				bssid[4], bssid[5]);
 		fprintf(f, "owe_transition_ifname=%s\n", ifname);
 	}
 
@@ -7160,14 +7252,18 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		fprintf(f, "ssid=owe-%lx\n", val);
 		if (dut->bridge)
 			fprintf(f, "bridge=%s\n", dut->bridge);
-		fprintf(f, "bssid=%02x:%02x:%02x:%02x:%02x:%02x\n",
-			bssid[0], bssid[1], bssid[2], bssid[3],
-			bssid[4], bssid[5]);
+		if (drv == DRIVER_LINUX_WCN)
+			fprintf(f, "use_driver_iface_addr=1\n");
+		else
+			fprintf(f, "bssid=%02x:%02x:%02x:%02x:%02x:%02x\n",
+				bssid[0], bssid[1], bssid[2], bssid[3],
+				bssid[4], bssid[5]);
 		fprintf(f, "owe_transition_ifname=%s\n", ifname);
 		fprintf(f, "wpa=2\n");
 		fprintf(f, "wpa_key_mgmt=OWE\n");
 		fprintf(f, "rsn_pairwise=CCMP\n");
 		fprintf(f, "ieee80211w=2\n");
+		fprintf(f, "ignore_broadcast_ssid=1\n");
 		if (dut->ap_sae_groups)
 			fprintf(f, "owe_groups=%s\n", dut->ap_sae_groups);
 	}
@@ -7719,6 +7815,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_osu_ssid[0] = '\0';
 		dut->ap_pmf = 1;
 		dut->ap_osu_provider_list = 0;
+		dut->ap_osu_provider_nai_list = 0;
 		for (i = 0; i < 10; i++) {
 			dut->ap_osu_server_uri[i][0] = '\0';
 			dut->ap_osu_method[i] = 0xFF;
@@ -7726,6 +7823,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_qos_map_set = 0;
 		dut->ap_tag_key_mgmt[0] = AP2_OPEN;
 		dut->ap2_proxy_arp = 0;
+		dut->ap2_osu = 0;
 		dut->ap_osu_icon_tag = 0;
 	}
 
@@ -9074,6 +9172,10 @@ static int cmd_ap_set_hs2(struct sigma_dut *dut, struct sigma_conn *conn,
 		val = get_param(cmd, "PROXY_ARP");
 		if (val)
 			dut->ap2_proxy_arp = atoi(val);
+
+		val = get_param(cmd, "OSU");
+		if (val)
+			dut->ap2_osu = atoi(val);
 		return 1;
 	}
 
@@ -9384,6 +9486,14 @@ static int cmd_ap_set_hs2(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_osu_provider_list = atoi(val);
 		sigma_dut_print(dut, DUT_MSG_INFO, "ap_osu_provider_list %d",
 				dut->ap_osu_provider_list);
+	}
+
+	val = get_param(cmd, "OSU_PROVIDER_NAI_LIST");
+	if (val) {
+		dut->ap_osu_provider_nai_list = atoi(val);
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"ap_osu_provider_nai_list %d",
+				dut->ap_osu_provider_nai_list);
 	}
 
 	val = get_param(cmd, "OSU_SERVER_URI");

@@ -822,7 +822,7 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 		int avoid_channel_freq = 0;
 
 		memset(&cfg_debug, 0, sizeof(NanDebugParams));
-		avoid_channel_freq = channel_to_freq(atoi(avoid_channel));
+		avoid_channel_freq = channel_to_freq(dut, atoi(avoid_channel));
 		cfg_debug.cmd = NAN_TEST_MODE_CMD_NDP_AVOID_CHANNEL;
 		memcpy(cfg_debug.debug_cmd_data, &avoid_channel_freq,
 		       sizeof(int));
@@ -989,7 +989,7 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 		init_req.channel = 0;
 	} else {
 		init_req.channel_request_type = NAN_DP_FORCE_CHANNEL_SETUP;
-		init_req.channel = channel_to_freq(dut->sta_channel);
+		init_req.channel = channel_to_freq(dut, dut->sta_channel);
 	}
 	sigma_dut_print(dut, DUT_MSG_INFO,
 			"%s: Initiator Request: Channel = %d  Channel Request Type = %d",

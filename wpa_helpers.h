@@ -2,6 +2,7 @@
  * Sigma Control API DUT (station/AP)
  * Copyright (c) 2010, Atheros Communications, Inc.
  * Copyright (c) 2012-2014, 2016, Qualcomm Atheros, Inc.
+ * Copyright (c) 2018, The Linux Foundation
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
@@ -19,6 +20,8 @@ int wpa_command_resp(const char *ifname, const char *cmd,
 		     char *resp, size_t resp_size);
 int get_wpa_status(const char *ifname, const char *field, char *obuf,
 		   size_t obuf_size);
+int get_wpa_signal_poll(struct sigma_dut *dut, const char *ifname,
+			const char *field, char *obuf, size_t obuf_size);
 void remove_wpa_networks(const char *ifname);
 
 struct wpa_ctrl * open_wpa_mon(const char *ifname);

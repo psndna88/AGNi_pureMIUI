@@ -295,7 +295,7 @@ static void process_cmd(struct sigma_dut *dut, struct sigma_conn *conn,
 	struct sigma_cmd c;
 	char *cmd, *pos, *pos2;
 	int len;
-	char txt[200];
+	char txt[300];
 	int res;
 
 	while (*buf == '\r' || *buf == '\n' || *buf == '\t' || *buf == ' ')

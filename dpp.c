@@ -1211,7 +1211,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 
 			/* Ignoring opclass for now; could use it here for more
 			 * robust frequency determination. */
-			freq = channel_to_freq(channel);
+			freq = channel_to_freq(dut, channel);
 			if (!freq) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "errorCode,Unsupported DPPSubsequentChannel channel");
@@ -1307,7 +1307,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 
 		val = get_param(cmd, "DPPListenChannel");
 		if (val) {
-			freq = channel_to_freq(atoi(val));
+			freq = channel_to_freq(dut, atoi(val));
 			if (freq == 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "errorCode,Unsupported DPPListenChannel value");
