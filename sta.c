@@ -10661,14 +10661,19 @@ static int wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 
 	val = get_param(cmd, "GI");
 	if (val) {
+		int fix_rate_sgi;
+
 		if (strcmp(val, "0.8") == 0) {
 			snprintf(buf, sizeof(buf), "iwpriv %s shortgi 9", intf);
+			fix_rate_sgi = 1;
 		} else if (strcmp(val, "1.6") == 0) {
 			snprintf(buf, sizeof(buf), "iwpriv %s shortgi 10",
 				 intf);
+			fix_rate_sgi = 2;
 		} else if (strcmp(val, "3.2") == 0) {
 			snprintf(buf, sizeof(buf), "iwpriv %s shortgi 11",
 				 intf);
+			fix_rate_sgi = 3;
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,GI value not supported");
@@ -10678,6 +10683,13 @@ static int wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Failed to set shortgi");
 			return 0;
+		}
+		snprintf(buf, sizeof(buf), "iwpriv %s shortgi %d",
+				intf, fix_rate_sgi);
+		if (system(buf) != 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to set fix rate shortgi");
+			return STATUS_SENT;
 		}
 	}
 
