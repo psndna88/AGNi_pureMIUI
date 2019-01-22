@@ -169,6 +169,8 @@ static int server_reset_serial(struct sigma_dut *dut, const char *serial)
 	const char *osu_password = NULL;
 	const char *policy = NULL;
 	char user[128];
+	const char *cert = "";
+	const char *subrem = "";
 
 	snprintf(user, sizeof(user), "cert-%s", serial);
 	sigma_dut_print(dut, DUT_MSG_DEBUG, "Reset user %s (serial number: %s)",
@@ -183,18 +185,21 @@ static int server_reset_serial(struct sigma_dut *dut, const char *serial)
 
 	if (strcmp(serial, "1046") == 0) {
 		remediation = "machine";
+		cert = "3786eb9ef44778fe8048f9fa6f8c3e611f2dbdd15f239fa93edcc417debefa5a";
+		subrem = "homeoi";
 	} else if (strcmp(serial, "1047") == 0) {
 		remediation = "user";
+		cert = "55cd0af162f2fb6de5b9481e37a0b0887f42e477ab09586b0c10f24b269b893f";
 	} else {
 		sigma_dut_print(dut, DUT_MSG_INFO,
 				"Unsupported serial number '%s'", serial);
 		goto fail;
 	}
 
-	sql = sqlite3_mprintf("INSERT OR REPLACE INTO users(identity,realm,methods,phase2,machine_managed,remediation,fetch_pps,osu_user,osu_password,policy) VALUES (%Q,%Q,%Q,%d,%d,%Q,%d,%Q,%Q,%Q)",
+	sql = sqlite3_mprintf("INSERT OR REPLACE INTO users(identity,realm,methods,phase2,machine_managed,remediation,fetch_pps,osu_user,osu_password,policy,cert,subrem) VALUES (%Q,%Q,%Q,%d,%d,%Q,%d,%Q,%Q,%Q,%Q,%Q)",
 			      user, realm, methods,
 			      phase2, machine_managed, remediation, fetch_pps,
-			      osu_user, osu_password, policy);
+			      osu_user, osu_password, policy, cert, subrem);
 
 	if (!sql)
 		goto fail;
