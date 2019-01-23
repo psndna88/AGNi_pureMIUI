@@ -9,12 +9,16 @@
 #include "sigma_dut.h"
 #include <sqlite3.h>
 
+#ifndef ROOT_DIR
+#define ROOT_DIR "/home/user/hs20-server"
+#endif /* ROOT_DIR */
+
 #ifndef SERVER_DB
-#define SERVER_DB "/home/user/hs20-server/AS/DB/eap_user.db"
+#define SERVER_DB ROOT_DIR "/AS/DB/eap_user.db"
 #endif /* SERVER_DB */
 
 #ifndef CERT_DIR
-#define CERT_DIR "/home/user/hs20-server/certs"
+#define CERT_DIR ROOT_DIR "/certs"
 #endif /* CERT_DIR */
 
 
@@ -31,7 +35,12 @@ static int cmd_server_get_info(struct sigma_dut *dut,
 			       struct sigma_conn *conn,
 			       struct sigma_cmd *cmd)
 {
-	send_resp(dut, conn, SIGMA_COMPLETE, "vendor,OSU,model,OS,version,1.0");
+	char ver[128], resp[256];
+
+	get_ver(ROOT_DIR "/spp/hs20_spp_server -v", ver, sizeof(ver));
+
+	snprintf(resp, sizeof(resp), "vendor,OSU,model,OS,version,%s", ver);
+	send_resp(dut, conn, SIGMA_COMPLETE, resp);
 	return 0;
 }
 

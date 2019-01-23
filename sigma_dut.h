@@ -880,6 +880,9 @@ void stop_dhcp(struct sigma_dut *dut, const char *group_ifname, int go);
 int p2p_discover_peer(struct sigma_dut *dut, const char *ifname,
 		      const char *peer, int full);
 
+/* basic.c */
+void get_ver(const char *cmd, char *buf, size_t buflen);
+
 /* utils.c */
 enum sigma_program sigma_program_to_enum(const char *prog);
 int parse_hexstr(const char *hex, unsigned char *buf, size_t buflen);

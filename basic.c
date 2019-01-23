@@ -44,7 +44,7 @@ static void first_line(char *s)
 }
 
 
-static void get_ver(const char *cmd, char *buf, size_t buflen)
+void get_ver(const char *cmd, char *buf, size_t buflen)
 {
 	FILE *f;
 	char *pos;
