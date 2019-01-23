@@ -22,7 +22,7 @@ static int cmd_server_ca_get_version(struct sigma_dut *dut,
 				     struct sigma_conn *conn,
 				     struct sigma_cmd *cmd)
 {
-	send_resp(dut, conn, SIGMA_COMPLETE, "version,1.0");
+	send_resp(dut, conn, SIGMA_COMPLETE, "version," SIGMA_DUT_VER);
 	return 0;
 }
 
