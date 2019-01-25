@@ -178,3 +178,28 @@ if [ "$CMD" = "HS20-DEAUTH-IMMINENT-NOTICE" ]; then
     esac
 #    notify-send "HS 2.0 Deauthentication imminent"
 fi
+
+if [ "$CMD" = "HS20-T-C-ACCEPTANCE" ]; then
+    cd $BASEDIR
+    URL="$3"
+    count=1
+    echo "HS 2.0 Terms and Conditions notification received - URL: $URL" >> summary
+    case "$URL" in
+	http*)
+	    while [ $count -le 10 ]
+	    do
+		sleep 1
+		addr=$(busybox ip addr show dev $IFNAME | grep "inet ")
+		if [ -n "$addr" ]; then
+		    if ! busybox pidof hs20-osu-client; then
+			nohup hs20-osu-client -w $IFACE_DIR -f Logs/hs20-osu-client.txt browser $URL > Logs/browser.txt 2>&1 &
+		    fi
+		    break
+		else
+		    echo "waiting $count seconds"
+		fi
+		count=$(($count + 1))
+	    done
+	    ;;
+    esac
+fi
