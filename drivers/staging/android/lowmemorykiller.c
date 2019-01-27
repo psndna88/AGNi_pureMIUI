@@ -56,9 +56,6 @@
 #define _ZONE ZONE_NORMAL
 #endif
 
-#define CREATE_TRACE_POINTS
-#include "trace/lowmemorykiller.h"
-
 static uint32_t lowmem_debug_level = 1;
 static short lowmem_adj[6] = {
 	0,
@@ -86,8 +83,6 @@ static unsigned long lowmem_deathpending_timeout;
 
 static atomic_t shift_adj = ATOMIC_INIT(0);
 static short adj_max_shift = 353;
-module_param_named(adj_max_shift, adj_max_shift, short,
-	S_IRUGO | S_IWUSR);
 
 /* User knob to enable/disable adaptive lmk feature */
 static int enable_adaptive_lmk;
@@ -127,6 +122,40 @@ int adjust_minadj(short *min_score_adj)
 		*min_score_adj = adj_max_shift;
 	}
 	atomic_set(&shift_adj, 0);
+
+	return ret;
+}
+
+static bool lowmem_whitelist(char *name)
+{
+	bool ret = false;
+	if (name == NULL)return ret;
+
+	if ((!strcmp(name, "com.miui.home")) ||
+		(!strcmp(name, "com.android.launcher3")) ||
+		(!strcmp(name, "com.android.quickstep")) ||
+		(!strcmp(name, "org.lineageos.snap")) ||
+		(!strcmp(name, "com.teslacoilsw.launcher")) ||
+		(!strcmp(name, "com.Tele.GCam")) ||
+		(!strcmp(name, "com.google.android.Redmi4X")) ||
+		(!strcmp(name, "com.teslacoilsw.launcher")) ||
+		(!strcmp(name, "com.android.launcher3")) ||
+		(!strcmp(name, "com.google.android.apps.nexuslauncher")) ||
+		(!strcmp(name, "ch.deletescape.lawnchair.plah")) ||
+		(!strcmp(name, "com.google.android.launcher")) ||
+		(!strcmp(name, "ru.whatau.cpl")) ||
+		(!strcmp(name, "amirz.rootless.nexuslauncher")) ||
+		(!strcmp(name, "com.google.android.GooglrCamera")) ||
+		(!strcmp(name, "ch.deletescape.lawnchair.ci")) ||
+		(!strcmp(name, "com.bsgmod.camera")) ||
+		(!strcmp(name, "com.whatsapp")) ||		
+		(!strcmp(name, "com.android.contacts")) ||
+		(!strcmp(name, "com.android.mms")) ||
+		(!strcmp(name, "com.xiaomi.hm.health")) ||
+		(!strcmp(name, ".android.camera")))
+	{
+		ret = true;
+	}
 
 	return ret;
 }
@@ -400,7 +429,6 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		global_page_state(NR_FILE_PAGES))
 		other_file = global_page_state(NR_FILE_PAGES) -
 						global_page_state(NR_SHMEM) -
-						global_page_state(NR_UNEVICTABLE) -
 						total_swapcache_pages();
 	else
 		other_file = 0;
@@ -413,7 +441,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		array_size = lowmem_minfree_size;
 	for (i = 0; i < array_size; i++) {
 		minfree = lowmem_minfree[i];
-		if (other_free < minfree && other_file < minfree) {
+		if (other_free < minfree && other_file < (minfree + minfree / 4)) {
 			min_score_adj = lowmem_adj[i];
 			break;
 		}
@@ -476,8 +504,11 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			continue;
 		}
 		tasksize = get_mm_rss(p->mm);
+#ifdef CONFIG_ZRAM
+		tasksize += (get_mm_counter(p->mm, MM_SWAPENTS) / 3);
+#endif
 		task_unlock(p);
-		if (tasksize <= 0)
+		if ((tasksize <= 0) || (lowmem_whitelist(p->comm) == true))
 			continue;
 		if (selected) {
 			if (oom_score_adj < selected_oom_score_adj)
@@ -493,10 +524,6 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			     p->comm, p->pid, oom_score_adj, tasksize);
 	}
 	if (selected) {
-		long cache_size = other_file * (long)(PAGE_SIZE / 1024);
-		long cache_limit = minfree * (long)(PAGE_SIZE / 1024);
-		long free = other_free * (long)(PAGE_SIZE / 1024);
-//		trace_lowmemory_kill(selected, cache_size, cache_limit, free);
 		lowmem_print(1, "Killing '%s' (%d), adj %hd,\n" \
 				"   to free %ldkB on behalf of '%s' (%d) because\n" \
 				"   cache %ldkB is below limit %ldkB for oom_score_adj %hd\n" \
@@ -513,9 +540,10 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			     selected_oom_score_adj,
 			     selected_tasksize * (long)(PAGE_SIZE / 1024),
 			     current->comm, current->pid,
-			     cache_size, cache_limit,
+			     other_file * (long)(PAGE_SIZE / 1024),
+			     minfree * (long)(PAGE_SIZE / 1024),
 			     min_score_adj,
-			     free ,
+			     other_free * (long)(PAGE_SIZE / 1024),
 			     global_page_state(NR_FREE_CMA_PAGES) *
 				(long)(PAGE_SIZE / 1024),
 			     totalreserve_pages * (long)(PAGE_SIZE / 1024),
@@ -540,8 +568,8 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		}
 
 		lowmem_deathpending_timeout = jiffies + HZ;
-		set_tsk_thread_flag(selected, TIF_MEMDIE);
 		send_sig(SIGKILL, selected, 0);
+		set_tsk_thread_flag(selected, TIF_MEMDIE);
 		rem -= selected_tasksize;
 		rcu_read_unlock();
 		/* give the system time to free up the memory */
