@@ -1336,6 +1336,7 @@ static void mdss_mdp_hw_rev_caps_init(struct mdss_data_type *mdata)
 		mdata->max_cursor_size = 64;
 	}
 
+	mdss_set_quirk(mdata, MDSS_QUIRK_HDR_SUPPORT_ENABLED);
 	if (mdata->mdp_rev < MDSS_MDP_HW_REV_103)
 		mdss_set_quirk(mdata, MDSS_QUIRK_DOWNSCALE_HANG);
 }
@@ -1669,6 +1670,8 @@ static ssize_t mdss_mdp_show_capabilities(struct device *dev,
 		SPRINT(" src_split");
 	if (mdata->has_rot_dwnscale)
 		SPRINT(" rotator_downscale");
+	if (mdss_has_quirk(mdata, MDSS_QUIRK_HDR_SUPPORT_ENABLED))
+		SPRINT(" hdr");
 	SPRINT("\n");
 
 	return cnt;

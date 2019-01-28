@@ -451,5 +451,10 @@
 		qcom,mdss-dsi-panel-status-check-mode = "reg_read";
 		qcom,mdss-dsi-panel-status-value = <0x9c>;
 		qcom,esd-check-enabled;
+		qcom,mdss-dsi-panel-hdr-enabled;
+		qcom,mdss-dsi-panel-hdr-color-primaries = <14880 15935 32435
+			16555 14945 30910 7790 3415>;
+		qcom,mdss-dsi-panel-peak-brightness = <5643000>;
+		qcom,mdss-dsi-panel-blackness-level = <6134>;
 	};
 };
