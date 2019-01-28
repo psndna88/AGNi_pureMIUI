@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2939,8 +2939,8 @@ static QDF_STATUS send_scan_start_cmd_tlv(wmi_unified_t wmi_handle,
 	buf_ptr += WMI_TLV_HDR_SIZE +
 			(params->chan_list.num_chan * sizeof(uint32_t));
 
-	if (params->num_ssids > WMI_SCAN_MAX_NUM_SSID) {
-		WMI_LOGE("Invalid value for numSsid");
+	if (params->num_ssids > WLAN_SCAN_MAX_NUM_SSID) {
+		WMI_LOGE("Invalid value for num_ssids %d", params->num_ssids);
 		goto error;
 	}
 
@@ -21852,6 +21852,7 @@ static QDF_STATUS send_btm_config_cmd_tlv(wmi_unified_t wmi_handle,
 	cmd->max_attempt_cnt = params->btm_max_attempt_cnt;
 	cmd->solicited_timeout_ms = params->btm_solicited_timeout;
 	cmd->stick_time_seconds = params->btm_sticky_time;
+	cmd->disassoc_timer_threshold = params->disassoc_timer_threshold;
 
 	wmi_mtrace(WMI_ROAM_BTM_CONFIG_CMDID, cmd->vdev_id, 0);
 	if (wmi_unified_cmd_send(wmi_handle, buf, len,
