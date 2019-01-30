@@ -435,6 +435,10 @@ struct page *swapin_readahead(swp_entry_t entry, gfp_t gfp_mask,
 				(1UL << page_cluster) - 1;
 	struct blk_plug plug;
 
+	/* If exiting, don't do swap readahead. */
+	if (current->flags & PF_EXITING)
+		goto skip;
+
 	/* Read a page_cluster sized and aligned cluster around offset. */
 	start_offset = offset & ~mask;
 	end_offset = offset | mask;
@@ -453,5 +457,6 @@ struct page *swapin_readahead(swp_entry_t entry, gfp_t gfp_mask,
 	blk_finish_plug(&plug);
 
 	lru_add_drain();	/* Push any new pages onto the LRU now */
+skip:
 	return read_swap_cache_async(entry, gfp_mask, vma, addr);
 }
