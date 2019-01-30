@@ -10520,6 +10520,23 @@ static int wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 		}
 	}
 
+	val = get_param(cmd, "MU_EDCA");
+	if (val) {
+		if (strcasecmp(val, "Override") == 0) {
+			if (sta_set_mu_edca_override(dut, intf, 1)) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,MU EDCA override set failed");
+				return STATUS_SENT;
+			}
+		} else if (strcasecmp(val, "Disable") == 0) {
+			if (sta_set_mu_edca_override(dut, intf, 0)) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,MU EDCA override disable failed");
+				return STATUS_SENT;
+			}
+		}
+	}
+
 	return 1;
 
 failed:
