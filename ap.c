@@ -1454,6 +1454,10 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->wsc_fragment = 1;
 	}
 
+	val = get_param(cmd, "WpsVersion");
+	if (val)
+		dut->wps_forced_version = get_wps_forced_version(dut, val);
+
 	val = get_param(cmd, "WscEAPFragment");
 	if (val && strcasecmp(val, "enable") == 0)
 		dut->eap_fragment = 1;
@@ -7651,6 +7655,16 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
+	if (dut->wps_forced_version) {
+		snprintf(buf, sizeof(buf), "SET wps_version_number %d",
+			 dut->wps_forced_version);
+		if (hapd_command(ifname, buf) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Fail to set wps_version_number");
+			return STATUS_SENT;
+		}
+	}
+
 	dut->hostapd_running = 1;
 	return 1;
 }
@@ -7938,6 +7952,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	dut->wsc_fragment = 0;
 	dut->eap_fragment = 0;
+	dut->wps_forced_version = 0;
 
 	if (dut->program == PROGRAM_HT || dut->program == PROGRAM_VHT) {
 		dut->ap_wme = AP_WME_ON;

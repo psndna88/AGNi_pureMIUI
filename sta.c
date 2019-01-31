@@ -3223,6 +3223,10 @@ static int cmd_sta_preset_testparameters_60ghz(struct sigma_dut *dut,
 			dut->force_rsn_ie = FORCE_RSN_IE_ADD;
 	}
 
+	val = get_param(cmd, "WpsVersion");
+	if (val)
+		dut->wps_forced_version = get_wps_forced_version(dut, val);
+
 	val = get_param(cmd, "WscEAPFragment");
 	if (val && strcasecmp(val, "enable") == 0)
 		dut->eap_fragment = 1;
@@ -7050,6 +7054,8 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 	wpa_command(intf, "FLUSH");
 	wpa_command(intf, "ERP_FLUSH");
 	wpa_command(intf, "SET radio_disabled 0");
+
+	dut->wps_forced_version = 0;
 
 	if (dut->wsc_fragment) {
 		dut->wsc_fragment = 0;

@@ -603,6 +603,25 @@ int get_wps_pin_from_mac(struct sigma_dut *dut, const char *macaddr,
 }
 
 
+int get_wps_forced_version(struct sigma_dut *dut, const char *str)
+{
+	int major, minor, result = 0;
+	int count = sscanf(str, "%d.%d", &major, &minor);
+
+	if (count == 2) {
+		result = major * 16 + minor;
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Force WPS version to 0x%02x (%s)",
+				result, str);
+	} else {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Invalid WPS version %s", str);
+	}
+
+	return result;
+}
+
+
 void str_remove_chars(char *str, char ch)
 {
 	char *pr = str, *pw = str;
