@@ -736,6 +736,7 @@ struct sigma_dut {
 
 	int wps_disable; /* Used for 60G to disable PCP from sending WPS IE */
 	int wsc_fragment; /* simulate WSC IE fragmentation */
+	int eap_fragment; /* simulate EAP fragmentation */
 	enum {
 		/* no change */
 		FORCE_RSN_IE_NONE = 0,

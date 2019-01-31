@@ -3223,6 +3223,10 @@ static int cmd_sta_preset_testparameters_60ghz(struct sigma_dut *dut,
 			dut->force_rsn_ie = FORCE_RSN_IE_ADD;
 	}
 
+	val = get_param(cmd, "WscEAPFragment");
+	if (val && strcasecmp(val, "enable") == 0)
+		dut->eap_fragment = 1;
+
 	return 1;
 }
 
@@ -5316,6 +5320,13 @@ static int sta_pcp_start(struct sigma_dut *dut, struct sigma_conn *conn,
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Failed to set supplicant network frequency");
 		return ERROR_SEND_STATUS;
+	}
+
+	if (dut->eap_fragment) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Set EAP fragment size to 128 bytes.");
+		if (set_network(ifname, net_id, "fragment_size", "128") < 0)
+			return ERROR_SEND_STATUS;
 	}
 
 	sigma_dut_print(dut, DUT_MSG_DEBUG,

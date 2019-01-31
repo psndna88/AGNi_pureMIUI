@@ -1454,6 +1454,10 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->wsc_fragment = 1;
 	}
 
+	val = get_param(cmd, "WscEAPFragment");
+	if (val && strcasecmp(val, "enable") == 0)
+		dut->eap_fragment = 1;
+
 	val = get_param(cmd, "MSDUSize");
 	if (val) {
 		int mtu;
@@ -7284,6 +7288,8 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 			fprintf(f, "device_name=QCA AP\n"
 				"manufacturer=QCA\n");
 		}
+		if (dut->eap_fragment)
+			fprintf(f, "fragment_size=128\n");
 	}
 
 	if (dut->program == PROGRAM_VHT) {
@@ -7931,6 +7937,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	dut->ap_pmf = AP_PMF_DISABLED;
 
 	dut->wsc_fragment = 0;
+	dut->eap_fragment = 0;
 
 	if (dut->program == PROGRAM_HT || dut->program == PROGRAM_VHT) {
 		dut->ap_wme = AP_WME_ON;
