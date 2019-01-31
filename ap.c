@@ -1510,6 +1510,24 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_num_ese_allocs = num_allocs;
 	}
 
+	if (is_60g_sigma_dut(dut)) {
+		unsigned int abft_len = 1; /* default is one slot */
+
+		val = get_param(cmd, "ABFTLRang");
+		if (val) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"ABFTLRang parameter %s", val);
+			if (strcasecmp(val, "Gt1") == 0)
+				abft_len = 2; /* 2 slots in this case */
+		}
+
+		if (sta_set_60g_abft_len(dut, conn, abft_len)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Can't set ABFT length");
+			return STATUS_SENT;
+		}
+	}
+
 	return 1;
 }
 

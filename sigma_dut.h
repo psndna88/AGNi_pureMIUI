@@ -911,6 +911,8 @@ void ath_set_cts_width(struct sigma_dut *dut, const char *ifname,
 		       const char *val);
 int ath_set_width(struct sigma_dut *dut, struct sigma_conn *conn,
 		  const char *intf, const char *val);
+int sta_set_60g_abft_len(struct sigma_dut *dut, struct sigma_conn *conn,
+			 int abft_len);
 int wil6210_send_frame_60g(struct sigma_dut *dut, struct sigma_conn *conn,
 			   struct sigma_cmd *cmd);
 int hwaddr_aton(const char *txt, unsigned char *addr);

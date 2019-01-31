@@ -5361,8 +5361,8 @@ static int wil6210_set_abft_len(struct sigma_dut *dut, int abft_len)
 }
 
 
-static int sta_set_60g_abft_len(struct sigma_dut *dut, struct sigma_conn *conn,
-				int abft_len)
+int sta_set_60g_abft_len(struct sigma_dut *dut, struct sigma_conn *conn,
+			 int abft_len)
 {
 	switch (get_driver_type()) {
 	case DRIVER_WIL6210:
