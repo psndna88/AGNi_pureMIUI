@@ -1452,15 +1452,6 @@ static struct ctl_table vm_table[] = {
 		.extra1		= &zero,
 		.extra2		= &one_hundred,
 	},
-	{
-		.procname	= "agni_swappiness",
-		.data		= &agni_vm_swappiness,
-		.maxlen		= sizeof(agni_vm_swappiness),
-		.mode		= 0664,
-		.proc_handler	= proc_dointvec_minmax,
-		.extra1		= &zero,
-		.extra2		= &one_hundred,
-	},
 #ifdef CONFIG_HUGETLB_PAGE
 	{
 		.procname	= "nr_hugepages",

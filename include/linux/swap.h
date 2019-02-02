@@ -316,7 +316,6 @@ extern unsigned long mem_cgroup_shrink_node_zone(struct mem_cgroup *mem,
 						unsigned long *nr_scanned);
 extern unsigned long shrink_all_memory(unsigned long nr_pages);
 extern int vm_swappiness;
-extern int agni_vm_swappiness;
 extern int remove_mapping(struct address_space *mapping, struct page *page);
 extern unsigned long vm_total_pages;
 
@@ -343,9 +342,6 @@ extern int mem_cgroup_swappiness(struct mem_cgroup *mem);
 #else
 static inline int mem_cgroup_swappiness(struct mem_cgroup *mem)
 {
-	if (vm_swappiness != agni_vm_swappiness) {
-		vm_swappiness = agni_vm_swappiness;
-	}
 	return vm_swappiness;
 }
 #endif
