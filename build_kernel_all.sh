@@ -4,7 +4,7 @@ cd $KERNELDIR;
 
 #TEMP_DIR=$KERNELDIR/../TEMP_KENZO_BUILDS_RUN_STORE
 #mkdir -p $TEMP_DIR
-rm -rf BUILT_kenzo-miuiMM BUILT_kenzo-miuiN BUILT_kenzo-losMM BUILT_kenzo-losN BUILT_kenzo-losO BUILT_kenzo-losO_treble .config .config.old
+rm -rf BUILT_kenzo-miuiMM BUILT_kenzo-miuiN BUILT_kenzo-miuiO BUILT_kenzo-losMM BUILT_kenzo-losN BUILT_kenzo-losO BUILT_kenzo-losO_treble .config .config.old
 
 echo "-----------------------------------------------------------------------"
 echo " "
@@ -45,6 +45,23 @@ echo "          BATCH MODE: Built AGNi LOS-O variant!!!"
 echo "-----------------------------------------------------------------------"
 echo " "
 
+echo " "
+echo "-----------------------------------------------------------------------"
+echo " "
+echo "          BATCH MODE: Building AGNi MIUI-O variant..."
+# AGNI pureMIUI-O
+rm drivers/staging/prima/wlan.ko
+./build_kernel_kenzo_miuiO.sh || exit 1
+#mv -f $KERNELDIR/BUILT_kenzo-miuiO $TEMP_DIR/
+rm .config
+echo " "
+echo "          BATCH MODE: Built AGNi MIUI-O variant!!!"
+echo "-----------------------------------------------------------------------"
+echo " "
+
+echo "-----------------------------------------------------------------------"
+echo " "
+echo "          BATCH MODE: Building AGNi PIE variant..."
 # AGNI purePIE
 rm drivers/staging/prima/wlan.ko
 ./build_kernel_kenzo_pie.sh || exit 1
