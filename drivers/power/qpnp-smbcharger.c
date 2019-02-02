@@ -449,16 +449,6 @@ module_param_named(
 	int, S_IRUSR | S_IWUSR
 );
 
-unsigned int smbcharger_supress_9v = 0;
-static int __init setup_smbcharger_supress_9v(char *str)
-{
-	if (!strncmp(str, "true", strlen(str)))
-		smbcharger_supress_9v = 1;
-
-	return smbcharger_supress_9v;
-}
-__setup("androidboot.smbcharger.9v=", setup_smbcharger_supress_9v);
-
 #define WIPOWER_DEFAULT_HYSTERISIS_UV	250000
 static int wipower_dcin_hyst_uv = WIPOWER_DEFAULT_HYSTERISIS_UV;
 module_param_named(
@@ -820,10 +810,7 @@ static bool is_usb_present(struct smbchg_chip *chip)
 		return false;
 	}
 
-	if (smbcharger_supress_9v)
-		return !!(reg & (USBIN_UNREG | USBIN_LV));
-	else
-		return !!(reg & (USBIN_9V | USBIN_UNREG | USBIN_LV));
+	return !!(reg & (USBIN_9V | USBIN_UNREG | USBIN_LV));
 }
 
 static char *usb_type_str[] = {
@@ -1775,18 +1762,14 @@ static int smbchg_get_min_parallel_current_ma(struct smbchg_chip *chip)
 	}
 	if (chip->schg_version == QPNP_SCHG_LITE) {
 		hvdcp_sel = SCHG_LITE_USBIN_HVDCP_SEL_BIT;
-		if (!smbcharger_supress_9v)
-			hvdcp_sel_9v = SCHG_LITE_USBIN_HVDCP_SEL_9V_BIT;
+		hvdcp_sel_9v = SCHG_LITE_USBIN_HVDCP_SEL_9V_BIT;
 	} else {
 		hvdcp_sel = USBIN_HVDCP_SEL_BIT;
-		if (!smbcharger_supress_9v)
-			hvdcp_sel_9v = USBIN_HVDCP_SEL_9V_BIT;
+		hvdcp_sel_9v = USBIN_HVDCP_SEL_9V_BIT;
 	}
 
-	if (!smbcharger_supress_9v) {
-		if ((reg & hvdcp_sel) && (reg & hvdcp_sel_9v))
-			return chip->parallel.min_9v_current_thr_ma;
-	}
+	if ((reg & hvdcp_sel) && (reg & hvdcp_sel_9v))
+		return chip->parallel.min_9v_current_thr_ma;
 	return chip->parallel.min_current_thr_ma;
 }
 
@@ -3673,17 +3656,15 @@ static int smbchg_external_otg_regulator_enable(struct regulator_dev *rdev)
 		return rc;
 	}
 
-	if (!smbcharger_supress_9v) {
-		rc = smbchg_sec_masked_write(chip,
-					chip->usb_chgpth_base + USBIN_CHGR_CFG,
-					0xFF, USBIN_ADAPTER_9V);
-		if (rc < 0) {
-			dev_err(chip->dev, "Couldn't write usb allowance rc=%d\n", rc);
-			return rc;
-		}
-
-		pr_smb(PR_STATUS, "Enabling OTG Boost\n");
+	rc = smbchg_sec_masked_write(chip,
+				chip->usb_chgpth_base + USBIN_CHGR_CFG,
+				0xFF, USBIN_ADAPTER_9V);
+	if (rc < 0) {
+		dev_err(chip->dev, "Couldn't write usb allowance rc=%d\n", rc);
+		return rc;
 	}
+
+	pr_smb(PR_STATUS, "Enabling OTG Boost\n");
 	return rc;
 }
 
@@ -4294,22 +4275,15 @@ static int smbchg_change_usb_supply_type(struct smbchg_chip *chip,
 		current_limit_ma = DEFAULT_SDP_MA;
 	else if (type == POWER_SUPPLY_TYPE_USB_CDP)
 		current_limit_ma = DEFAULT_CDP_MA;
-	else if (type == POWER_SUPPLY_TYPE_USB_HVDCP) {
-		if ((limc) && (smbchg_default_hvdcp_icl_ma > MAX_DCP_MA))
-			current_limit_ma = MAX_DCP_MA;
-		else
-			current_limit_ma = smbchg_default_hvdcp_icl_ma;
-	} else if (type == POWER_SUPPLY_TYPE_USB_HVDCP_3) {
-		if ((limc) && (smbchg_default_hvdcp3_icl_ma > MAX_DCP_MA))
-			current_limit_ma = MAX_DCP_MA;
-		else
-			current_limit_ma = smbchg_default_hvdcp3_icl_ma;
-	} else {
-		if ((limc) && (smbchg_default_dcp_icl_ma > MAX_DCP_MA))
-			current_limit_ma = MAX_DCP_MA;
-		else
-			current_limit_ma = smbchg_default_dcp_icl_ma;
-	}
+	else if (type == POWER_SUPPLY_TYPE_USB_HVDCP)
+		current_limit_ma = smbchg_default_hvdcp_icl_ma;
+	else if (type == POWER_SUPPLY_TYPE_USB_HVDCP_3)
+		current_limit_ma = smbchg_default_hvdcp3_icl_ma;
+	else
+		current_limit_ma = smbchg_default_dcp_icl_ma;
+
+	if ((limc) && (current_limit_ma > MAX_DCP_MA))
+		current_limit_ma = MAX_DCP_MA;
 
 	pr_smb(PR_STATUS, "Type %d: setting mA = %d\n",
 		type, current_limit_ma);
@@ -4392,7 +4366,7 @@ static int force_9v_hvdcp(struct smbchg_chip *chip)
 	}
 
 	/* Force QC2.0 */
-	rc = smbchg_masked_write(chip,
+/*	rc = smbchg_masked_write(chip,
 			chip->usb_chgpth_base + USB_CMD_HVDCP_1,
 			FORCE_HVDCP_2p0, FORCE_HVDCP_2p0);
 	rc |= smbchg_masked_write(chip,
@@ -4401,19 +4375,17 @@ static int force_9v_hvdcp(struct smbchg_chip *chip)
 	if (rc < 0) {
 		pr_err("Couldn't force QC2.0 rc=%d\n", rc);
 		return rc;
-	}
+	} */
 
 	/* wait for QC2.0 */
-	msleep(500);
+//	msleep(500);
 
-	if (!smbcharger_supress_9v) {
-		/* Force 9V HVDCP */
-		rc = smbchg_sec_masked_write(chip,
-				chip->usb_chgpth_base + CHGPTH_CFG,
-				HVDCP_ADAPTER_SEL_MASK, HVDCP_9V);
-		if (rc)
-			pr_err("Couldn't set hvdcp config in chgpath_chg rc=%d\n", rc);
-	}
+	/* Force 9V HVDCP */
+/*	rc = smbchg_sec_masked_write(chip,
+			chip->usb_chgpth_base + CHGPTH_CFG,
+			HVDCP_ADAPTER_SEL_MASK, HVDCP_9V);
+	if (rc)
+		pr_err("Couldn't set hvdcp config in chgpath_chg rc=%d\n", rc); */
 
 	return rc;
 }
@@ -4426,23 +4398,13 @@ static void smbchg_hvdcp_det_work(struct work_struct *work)
 	int rc;
 
 	if (is_hvdcp_present(chip)) {
-		if (smbcharger_supress_9v) {
-			if (!chip->hvdcp3_supported) {
-				/* force HVDCP 2.0 */
-				rc = force_9v_hvdcp(chip);
-				if (rc)
-					pr_err("could not force 5V HVDCP continuing rc=%d\n",
-							rc);
-			}
-		} else {
-			if (!chip->hvdcp3_supported &&
-				(chip->wa_flags & SMBCHG_HVDCP_9V_EN_WA)) {
-				/* force HVDCP 2.0 */
-				rc = force_9v_hvdcp(chip);
-				if (rc)
-					pr_err("could not force 9V HVDCP continuing rc=%d\n",
-							rc);
-			}
+		if (!chip->hvdcp3_supported &&
+			(chip->wa_flags & SMBCHG_HVDCP_9V_EN_WA)) {
+			/* force HVDCP 2.0 */
+			rc = force_9v_hvdcp(chip);
+			if (rc)
+				pr_err("could not force 9V HVDCP continuing rc=%d\n",
+						rc);
 		}
 		smbchg_change_usb_supply_type(chip,
 				POWER_SUPPLY_TYPE_USB_HVDCP);
@@ -4479,13 +4441,11 @@ static void restore_from_hvdcp_detection(struct smbchg_chip *chip)
 {
 	int rc;
 
-	if (!smbcharger_supress_9v) {
-		/* switch to 9V HVDCP */
-		rc = smbchg_sec_masked_write(chip, chip->usb_chgpth_base + CHGPTH_CFG,
-					HVDCP_ADAPTER_SEL_MASK, HVDCP_9V);
-		if (rc < 0)
-			pr_err("Couldn't configure HVDCP 9V rc=%d\n", rc);
-	}
+	/* switch to 9V HVDCP */
+	rc = smbchg_sec_masked_write(chip, chip->usb_chgpth_base + CHGPTH_CFG,
+				HVDCP_ADAPTER_SEL_MASK, HVDCP_9V);
+	if (rc < 0)
+		pr_err("Couldn't configure HVDCP 9V rc=%d\n", rc);
 
 	/* enable HVDCP */
 	rc = smbchg_sec_masked_write(chip,
@@ -4501,14 +4461,12 @@ static void restore_from_hvdcp_detection(struct smbchg_chip *chip)
 	if (rc < 0)
 		pr_err("Couldn't enable APSD rc=%d\n", rc);
 
-	if (!smbcharger_supress_9v) {
-		/* allow 5 to 9V chargers */
-		rc = smbchg_sec_masked_write(chip,
-				chip->usb_chgpth_base + USBIN_CHGR_CFG,
-				ADAPTER_ALLOWANCE_MASK, USBIN_ADAPTER_5V_9V_CONT);
-		if (rc < 0)
-			pr_err("Couldn't write usb allowance rc=%d\n", rc);
-	}
+	/* allow 5 to 9V chargers */
+	rc = smbchg_sec_masked_write(chip,
+			chip->usb_chgpth_base + USBIN_CHGR_CFG,
+			ADAPTER_ALLOWANCE_MASK, USBIN_ADAPTER_5V_9V_CONT);
+	if (rc < 0)
+		pr_err("Couldn't write usb allowance rc=%d\n", rc);
 
 	rc = smbchg_sec_masked_write(chip, chip->usb_chgpth_base + USB_AICL_CFG,
 			AICL_EN_BIT, AICL_EN_BIT);
@@ -4520,17 +4478,10 @@ static void restore_from_hvdcp_detection(struct smbchg_chip *chip)
 
 	if ((chip->schg_version == QPNP_SCHG_LITE)
 				&& is_hvdcp_present(chip)) {
-		if (smbcharger_supress_9v)
-			pr_smb(PR_MISC, "Forcing 5V HVDCP 2.0\n");
-		else
-			pr_smb(PR_MISC, "Forcing 9V HVDCP 2.0\n");
+		pr_smb(PR_MISC, "Forcing 9V HVDCP 2.0\n");
 		rc = force_9v_hvdcp(chip);
-		if (rc) {
-			if (smbcharger_supress_9v)
-				pr_err("Failed to force 5V HVDCP=%d\n",	rc);
-			else
-				pr_err("Failed to force 9V HVDCP=%d\n",	rc);
-		}
+		if (rc)
+			pr_err("Failed to force 9V HVDCP=%d\n",	rc);
 	}
 
 	pr_smb(PR_MISC, "Retracting HVDCP vote for ICL\n");
@@ -4928,18 +4879,16 @@ static int fake_insertion_removal(struct smbchg_chip *chip, bool insertion)
 		return -EINVAL;
 	}
 
-	if (!smbcharger_supress_9v) {
-		pr_smb(PR_MISC, "Allow only %s charger\n",
-				insertion ? "5-9V" : "9V only");
-		rc = smbchg_sec_masked_write(chip,
-				chip->usb_chgpth_base + USBIN_CHGR_CFG,
-				ADAPTER_ALLOWANCE_MASK,
-				insertion ?
-				USBIN_ADAPTER_5V_9V_CONT : USBIN_ADAPTER_9V);
-		if (rc < 0) {
-			pr_err("Couldn't write usb allowance rc=%d\n", rc);
-			return rc;
-		}
+	pr_smb(PR_MISC, "Allow only %s charger\n",
+			insertion ? "5-9V" : "9V only");
+	rc = smbchg_sec_masked_write(chip,
+			chip->usb_chgpth_base + USBIN_CHGR_CFG,
+			ADAPTER_ALLOWANCE_MASK,
+			insertion ?
+			USBIN_ADAPTER_5V_9V_CONT : USBIN_ADAPTER_9V);
+	if (rc < 0) {
+		pr_err("Couldn't write usb allowance rc=%d\n", rc);
+		return rc;
 	}
 
 	pr_smb(PR_MISC, "Waiting on %s usbin uv\n",
@@ -5102,15 +5051,13 @@ static int smbchg_unprepare_for_pulsing(struct smbchg_chip *chip)
 
 	set_usb_psy_dp_dm(chip, POWER_SUPPLY_DP_DM_DPF_DMF);
 
-	if (!smbcharger_supress_9v) {
-		/* switch to 9V HVDCP */
-		pr_smb(PR_MISC, "Switch to 9V HVDCP\n");
-		rc = smbchg_sec_masked_write(chip, chip->usb_chgpth_base + CHGPTH_CFG,
-					HVDCP_ADAPTER_SEL_MASK, HVDCP_9V);
-		if (rc < 0) {
-			pr_err("Couldn't configure HVDCP 9V rc=%d\n", rc);
-			return rc;
-		}
+	/* switch to 9V HVDCP */
+	pr_smb(PR_MISC, "Switch to 9V HVDCP\n");
+	rc = smbchg_sec_masked_write(chip, chip->usb_chgpth_base + CHGPTH_CFG,
+				HVDCP_ADAPTER_SEL_MASK, HVDCP_9V);
+	if (rc < 0) {
+		pr_err("Couldn't configure HVDCP 9V rc=%d\n", rc);
+		return rc;
 	}
 
 	/* enable HVDCP */
@@ -5270,11 +5217,8 @@ static bool is_hvdcp_5v_cont_mode(struct smbchg_chip *chip)
 			return false;
 		}
 		pr_smb(PR_STATUS, "INPUT status = %x\n", reg);
-		if (!smbcharger_supress_9v) {
-			if ((reg & SCHG_LITE_USBIN_HVDCP_5_9V_SEL_MASK) ==
-						SCHG_LITE_USBIN_HVDCP_5_9V)
-				return true;
-		} else
+		if ((reg & SCHG_LITE_USBIN_HVDCP_5_9V_SEL_MASK) ==
+					SCHG_LITE_USBIN_HVDCP_5_9V)
 			return true;
 	}
 	return false;
@@ -5371,13 +5315,11 @@ static int smbchg_unprepare_for_pulsing_lite(struct smbchg_chip *chip)
 {
 	int rc = 0;
 
-	if (!smbcharger_supress_9v) {
-		pr_smb(PR_MISC, "Forcing 9V HVDCP 2.0\n");
-		rc = force_9v_hvdcp(chip);
-		if (rc) {
-			pr_err("Failed to force 9V HVDCP=%d\n",	rc);
-			return rc;
-		}
+	pr_smb(PR_MISC, "Forcing 9V HVDCP 2.0\n");
+	rc = force_9v_hvdcp(chip);
+	if (rc) {
+		pr_err("Failed to force 9V HVDCP=%d\n",	rc);
+		return rc;
 	}
 
 	pr_smb(PR_MISC, "Retracting HVDCP vote for ICL\n");
@@ -5742,27 +5684,12 @@ void lct_charging_adjust(struct smbchg_chip *chip)
 	}
 	return;
 	board_temp = lct_get_prop_batt_temp(chip);
-	if (charging_detected()) {
-		if (board_temp < 500)
-			schedule_delayed_work(&chip->boardtemp_work,
-				msecs_to_jiffies(30000));
-		else if (board_temp < 540)
-			schedule_delayed_work(&chip->boardtemp_work,
-				msecs_to_jiffies(10000));
-		else
-			schedule_delayed_work(&chip->boardtemp_work,
-				msecs_to_jiffies(3000));
-	} else {
-		if (board_temp < 500)
-			queue_delayed_work(system_power_efficient_wq,
-				&chip->boardtemp_work, msecs_to_jiffies(30000));
-		else if (board_temp < 540)
-			queue_delayed_work(system_power_efficient_wq,
-				&chip->boardtemp_work, msecs_to_jiffies(10000));
-		else
-			queue_delayed_work(system_power_efficient_wq,
-				&chip->boardtemp_work, msecs_to_jiffies(3000));
-	}
+	if (board_temp < 500)
+		schedule_delayed_work(&chip->boardtemp_work, msecs_to_jiffies(30000));
+	else if (board_temp < 540)
+		schedule_delayed_work(&chip->boardtemp_work, msecs_to_jiffies(10000));
+	else
+		schedule_delayed_work(&chip->boardtemp_work, msecs_to_jiffies(3000));
 
 	is_temp_rise = (board_temp - backup_temp) > 0 ? true : false;
 	backup_temp = board_temp;
@@ -6152,27 +6079,12 @@ static void smb_temp_work_fn(struct work_struct *work)
 	temp = get_prop_batt_temp(chip);
 	smb_for_batt_temp_too_high_too_low(chip, temp);
 	if (chip->usb_present) {
-		if (charging_detected()) {
-			if (temp < 450)
-				schedule_delayed_work(&chip->temp_work,
-					msecs_to_jiffies(30000));
-			else if (temp < 500)
-				schedule_delayed_work(&chip->temp_work,
-					msecs_to_jiffies(10000));
-			else
-				schedule_delayed_work(&chip->temp_work,
-					msecs_to_jiffies(3000));
-		} else {
-			if (temp < 450)
-				queue_delayed_work(system_power_efficient_wq,
-					&chip->temp_work, msecs_to_jiffies(30000));
-			else if (temp < 500)
-				queue_delayed_work(system_power_efficient_wq,
-					&chip->temp_work, msecs_to_jiffies(10000));
-			else
-				queue_delayed_work(system_power_efficient_wq,
-					&chip->temp_work, msecs_to_jiffies(3000));
-		}
+		if (temp < 450)
+			schedule_delayed_work(&chip->temp_work, msecs_to_jiffies(30000));
+		else if (temp < 500)
+			schedule_delayed_work(&chip->temp_work, msecs_to_jiffies(10000));
+		else
+			schedule_delayed_work(&chip->temp_work, msecs_to_jiffies(3000));
 	}
 }
 #endif
@@ -6448,22 +6360,10 @@ static irqreturn_t dcin_uv_handler(int irq, void *_chip)
 	}
 
 #if defined (CONFIG_TEMP_CHARGE_DISABLE)
-	if (charging_detected()) {
-		schedule_delayed_work(&chip->temp_work,
-			msecs_to_jiffies(1000));
-	} else {
-		queue_delayed_work(system_power_efficient_wq,
-			&chip->temp_work, msecs_to_jiffies(1000));
-	}
+		schedule_delayed_work(&chip->temp_work, msecs_to_jiffies(1000));
 #endif
 #if defined(CONFIG_BOARDTEMP_WORK)
-	if (charging_detected()) {
-		schedule_delayed_work(&chip->boardtemp_work,
-			msecs_to_jiffies(3000));
-	} else {
-		queue_delayed_work(system_power_efficient_wq,
-			&chip->boardtemp_work, msecs_to_jiffies(3000));
-	}
+		schedule_delayed_work(&chip->boardtemp_work, msecs_to_jiffies(3000));
 #endif
 
 	smbchg_wipower_check(chip);
@@ -7466,20 +7366,13 @@ static int smb_parse_dt(struct smbchg_chip *chip)
 	OF_PROP_READ(chip, chip->resume_delta_mv, "resume-delta-mv", rc, 1);
 	OF_PROP_READ(chip, chip->parallel.min_current_thr_ma,
 			"parallel-usb-min-current-ma", rc, 1);
-	if (!smbcharger_supress_9v) {
-		OF_PROP_READ(chip, chip->parallel.min_9v_current_thr_ma,
-				"parallel-usb-9v-min-current-ma", rc, 1);
-	}
+	OF_PROP_READ(chip, chip->parallel.min_9v_current_thr_ma,
+			"parallel-usb-9v-min-current-ma", rc, 1);
 	OF_PROP_READ(chip, chip->parallel.allowed_lowering_ma,
 			"parallel-allowed-lowering-ma", rc, 1);
-	if (smbcharger_supress_9v) {
-		if (chip->parallel.min_current_thr_ma != -EINVAL)
-			chip->parallel.avail = true;
-	} else {
-		if (chip->parallel.min_current_thr_ma != -EINVAL
-				&& chip->parallel.min_9v_current_thr_ma != -EINVAL)
-			chip->parallel.avail = true;
-	}
+	if (chip->parallel.min_current_thr_ma != -EINVAL
+			&& chip->parallel.min_9v_current_thr_ma != -EINVAL)
+		chip->parallel.avail = true;
 	/*
 	 * use the dt values if they exist, otherwise do not touch the params
 	 */
@@ -7489,14 +7382,9 @@ static int smb_parse_dt(struct smbchg_chip *chip)
 	of_property_read_u32(chip->spmi->dev.of_node,
 					"qcom,parallel-main-chg-icl-percent",
 					&smbchg_main_chg_icl_percent);
-	if (smbcharger_supress_9v) {
-		pr_smb(PR_STATUS, "parallel usb thr: %d\n",
-				chip->parallel.min_current_thr_ma);
-	} else {
-		pr_smb(PR_STATUS, "parallel usb thr: %d, 9v thr: %d\n",
-				chip->parallel.min_current_thr_ma,
-				chip->parallel.min_9v_current_thr_ma);
-	}
+	pr_smb(PR_STATUS, "parallel usb thr: %d, 9v thr: %d\n",
+			chip->parallel.min_current_thr_ma,
+			chip->parallel.min_9v_current_thr_ma);
 	OF_PROP_READ(chip, chip->jeita_temp_hard_limit,
 			"jeita-temp-hard-limit", rc, 1);
 	OF_PROP_READ(chip, chip->aicl_rerun_period_s,
@@ -7939,12 +7827,8 @@ static int smbchg_check_chg_version(struct smbchg_chip *chip)
 		if (pmic_rev_id->rev4 < 2) /* PMI8950 1.0 */ {
 			chip->wa_flags |= SMBCHG_AICL_DEGLITCH_WA;
 		} else	{ /* rev > PMI8950 v1.0 */
-			if (smbcharger_supress_9v) {
-				chip->wa_flags |= SMBCHG_USB100_WA;
-			} else {
-				chip->wa_flags |= SMBCHG_HVDCP_9V_EN_WA
+			chip->wa_flags |= SMBCHG_HVDCP_9V_EN_WA
 					| SMBCHG_USB100_WA;
-			}
 		}
 		use_pmi8994_tables(chip);
 		chip->tables.aicl_rerun_period_table =
@@ -8219,16 +8103,14 @@ static int smbchg_probe(struct spmi_device *spmi)
 	if (IS_ERR(chip->tzd))
 		pr_err("thermal_zone_device_register error!\n");
 	INIT_DELAYED_WORK(&chip->boardtemp_work, smb_boardtemp_work_fn);
-	queue_delayed_work(system_power_efficient_wq,
-		&chip->boardtemp_work, msecs_to_jiffies(30000));
+	schedule_delayed_work(&chip->boardtemp_work, msecs_to_jiffies(30000));
 
 #endif
 #if defined(CONFIG_TEMP_CHARGE_DISABLE)
 	{
 		pr_debug("support lct temp high func, init");
 		INIT_DELAYED_WORK(&chip->temp_work, smb_temp_work_fn);
-		queue_delayed_work(system_power_efficient_wq,
-			&chip->temp_work, msecs_to_jiffies(5000));
+		schedule_delayed_work(&chip->temp_work, msecs_to_jiffies(5000));
 	}
 #endif
 
