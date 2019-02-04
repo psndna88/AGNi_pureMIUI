@@ -8205,6 +8205,34 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
+	if (dut->program == PROGRAM_WPS &&
+	    get_driver_type() == DRIVER_WIL6210) {
+		/*
+		 * In 60 GHz WPS tests, we configure the AP OOB to
+		 * secure connection with a random passphrase.
+		 */
+		char r[16], passphrase[65];
+
+		if (random_get_bytes(r, sizeof(r))) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to get random bytes");
+			return ERROR_SEND_STATUS;
+		}
+		if (base64_encode(r, sizeof(r),
+				  passphrase, sizeof(passphrase))) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to generate random passphrase");
+			return ERROR_SEND_STATUS;
+		}
+
+		dut->ap_key_mgmt = AP_WPA2_PSK;
+		dut->ap_cipher = AP_GCMP_128;
+		strlcpy(dut->ap_passphrase, passphrase,
+			sizeof(dut->ap_passphrase));
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"60G WPS: configure secure AP with random passphrase");
+	}
+
 	dut->hostapd_running = 0;
 
 	if (get_openwrt_driver_type() == OPENWRT_DRIVER_ATHEROS)
