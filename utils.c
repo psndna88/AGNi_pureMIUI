@@ -2,6 +2,7 @@
  * Sigma Control API DUT (station/AP)
  * Copyright (c) 2014-2017, Qualcomm Atheros, Inc.
  * Copyright (c) 2018, The Linux Foundation
+ * Copyright (c) 2005-2011, Jouni Malinen <j@w1.fi>
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
@@ -612,4 +613,66 @@ void str_remove_chars(char *str, char ch)
 			pw++;
 	}
 	*pw = '\0';
+}
+
+
+static const char base64_table[65] =
+	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+
+int base64_encode(const char *src, size_t len, char *out, size_t out_len)
+{
+	unsigned char *pos;
+	const unsigned char *end, *in;
+	size_t olen;
+
+	olen = len * 4 / 3 + 4; /* 3-byte blocks to 4-byte */
+	olen++; /* nul termination */
+	if (olen < len || olen > out_len)
+		return -1;
+
+	end = (unsigned char *)(src + len);
+	in = (unsigned char *)src;
+	pos = (unsigned char *)out;
+	while (end - in >= 3) {
+		*pos++ = base64_table[(in[0] >> 2) & 0x3f];
+		*pos++ = base64_table[(((in[0] & 0x03) << 4) |
+				       (in[1] >> 4)) & 0x3f];
+		*pos++ = base64_table[(((in[1] & 0x0f) << 2) |
+				       (in[2] >> 6)) & 0x3f];
+		*pos++ = base64_table[in[2] & 0x3f];
+		in += 3;
+	}
+
+	if (end - in) {
+		*pos++ = base64_table[(in[0] >> 2) & 0x3f];
+		if (end - in == 1) {
+			*pos++ = base64_table[((in[0] & 0x03) << 4) & 0x3f];
+			*pos++ = '=';
+		} else {
+			*pos++ = base64_table[(((in[0] & 0x03) << 4) |
+					       (in[1] >> 4)) & 0x3f];
+			*pos++ = base64_table[((in[1] & 0x0f) << 2) & 0x3f];
+		}
+		*pos++ = '=';
+	}
+
+	*pos = '\0';
+	return 0;
+}
+
+
+int random_get_bytes(char *buf, size_t len)
+{
+	FILE *f;
+	size_t rc;
+
+	f = fopen("/dev/urandom", "rb");
+	if (!f)
+		return -1;
+
+	rc = fread(buf, 1, len, f);
+	fclose(f);
+
+	return rc != len ? -1 : 0;
 }

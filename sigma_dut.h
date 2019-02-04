@@ -962,6 +962,8 @@ int get_wps_pin_from_mac(struct sigma_dut *dut, const char *macaddr,
 			 char *pin, size_t len);
 void str_remove_chars(char *str, char ch);
 
+int base64_encode(const char *src, size_t len, char *out, size_t out_len);
+int random_get_bytes(char *buf, size_t len);
 
 /* uapsd_stream.c */
 void receive_uapsd(struct sigma_stream *s);
