@@ -10084,6 +10084,43 @@ static int cmd_ap_wps_set_pbc(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+int ap_wps_registration(struct sigma_dut *dut, struct sigma_conn *conn,
+			struct sigma_cmd *cmd)
+{
+	char buf[100], resp[256];
+	const char *intf = get_param(cmd, "interface");
+	const char *config_method = get_param(cmd, "WPSConfigMethod");
+
+	if (config_method && strcasecmp(config_method, "PBC") == 0)
+		dut->wps_method = WFA_CS_WPS_PBC;
+
+	if (!intf)
+		intf = get_main_ifname();
+
+	if (dut->wps_method == WFA_CS_WPS_NOT_READY) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "ErrorCode,WPS parameters not yet set");
+		return STATUS_SENT;
+	}
+
+	if (dut->wps_method == WFA_CS_WPS_PBC)
+		snprintf(buf, sizeof(buf), "WPS_PBC");
+	else /* WFA_CS_WPS_PIN_KEYPAD */
+		snprintf(buf, sizeof(buf), "WPS_PIN any %s", dut->wps_pin);
+
+	/* Run WPS command */
+	if (hapd_command(intf, buf) < 0) {
+		/* command fails immediately if overlapped session detected */
+		snprintf(resp, sizeof(resp), "WpsState,OverlapSession");
+		send_resp(dut, conn, SIGMA_COMPLETE, resp);
+		return STATUS_SENT;
+	}
+
+	/* In AP mode return immediately and do not wait for WPS registration */
+	return SUCCESS_SEND_STATUS;
+}
+
+
 static int cmd_ap_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
 				struct sigma_cmd *cmd)
 {

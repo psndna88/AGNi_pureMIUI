@@ -12009,7 +12009,8 @@ static int cmd_start_wps_registration(struct sigma_dut *dut,
 	struct wpa_ctrl *ctrl;
 	const char *intf = get_param(cmd, "Interface");
 	const char *network_mode = get_param(cmd, "network_mode");
-	const char *role, *method;
+	const char *config_method = get_param(cmd, "WPSConfigMethod");
+	const char *role;
 	int res;
 	char buf[256];
 	const char *events[] = {
@@ -12024,6 +12025,24 @@ static int cmd_start_wps_registration(struct sigma_dut *dut,
 	/* 60G WPS tests do not pass Interface parameter */
 	if (!intf)
 		intf = get_main_ifname();
+
+	if (dut->mode == SIGMA_MODE_AP)
+		return ap_wps_registration(dut, conn, cmd);
+
+	if (config_method) {
+		/* WFA_CS_WPS_PIN_KEYPAD mode is set when using the
+		 * sta_wps_enter_pin before calling start_wps_registration. */
+		if (strcasecmp(config_method, "PBC") == 0)
+			dut->wps_method = WFA_CS_WPS_PBC;
+	}
+	if (dut->wps_method == WFA_CS_WPS_NOT_READY) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "ErrorCode,WPS parameters not yet set");
+		return STATUS_SENT;
+	}
+
+	/* Make sure WPS is enabled (also for STA mode) */
+	dut->wps_disable = 0;
 
 	if (dut->band == WPS_BAND_60G && network_mode &&
 	    strcasecmp(network_mode, "PBSS") == 0) {
@@ -12057,14 +12076,44 @@ static int cmd_start_wps_registration(struct sigma_dut *dut,
 		goto fail;
 	}
 
-	if (strcasecmp(role, "Enrollee") == 0) {
-		method = get_param(cmd, "WpsConfigMethod");
-		if (!method) {
-			send_resp(dut, conn, SIGMA_INVALID,
-				  "ErrorCode,WpsConfigMethod not provided");
+	if (strcasecmp(role, "Enrollee") != 0) {
+		/* Registrar role for STA not supported */
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "ErrorCode,Unsupported WpsRole value");
+		goto fail;
+	}
+
+	if (is_60g_sigma_dut(dut)) {
+		if (dut->wps_method == WFA_CS_WPS_PBC)
+			snprintf(buf, sizeof(buf), "WPS_PBC");
+		else /* WFA_CS_WPS_PIN_KEYPAD */
+			snprintf(buf, sizeof(buf), "WPS_PIN any %s",
+				 dut->wps_pin);
+		if (wpa_command(intf, buf) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to start WPS");
 			goto fail;
 		}
-		if (strcasecmp(method, "PBC") == 0) {
+		res = get_wpa_cli_events(dut, ctrl, events, buf, sizeof(buf));
+		if (res < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,WPS connection did not complete");
+			goto fail;
+		}
+		if (strstr(buf, "WPS-TIMEOUT")) {
+			send_resp(dut, conn, SIGMA_COMPLETE, "WpsState,NoPeer");
+		} else if (strstr(buf, "WPS-OVERLAP-DETECTED")) {
+			send_resp(dut, conn, SIGMA_COMPLETE,
+				  "WpsState,OverlapSession");
+		} else if (strstr(buf, "CTRL-EVENT-CONNECTED")) {
+			send_resp(dut, conn, SIGMA_COMPLETE,
+				  "WpsState,Successful");
+		} else {
+			send_resp(dut, conn, SIGMA_COMPLETE,
+				  "WpsState,Failure");
+		}
+	} else {
+		if (dut->wps_method == WFA_CS_WPS_PBC) {
 			if (wpa_command(intf, "WPS_PBC") < 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "ErrorCode,Failed to enable PBC");
@@ -12093,10 +12142,6 @@ static int cmd_start_wps_registration(struct sigma_dut *dut,
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,WPS operation failed");
 		}
-	} else {
-		/* TODO: Registrar role */
-		send_resp(dut, conn, SIGMA_ERROR,
-			  "ErrorCode,Unsupported WpsRole value");
 	}
 
 fail:
