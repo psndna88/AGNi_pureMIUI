@@ -10679,24 +10679,6 @@ static int btm_query_candidate_list(struct sigma_dut *dut,
 }
 
 
-static int cmd_sta_set_power_save(struct sigma_dut *dut,
-				  struct sigma_conn *conn,
-				  struct sigma_cmd *cmd)
-{
-	const char *intf = get_param(cmd, "interface");
-	const char *prog = get_param(cmd, "program");
-
-	if (!intf || !prog)
-		return -1;
-
-	if ((get_driver_type() == DRIVER_WCN) && (strcasecmp(prog, "HE") == 0))
-		return cmd_sta_set_power_save_he(intf, dut, conn, cmd);
-
-	send_resp(dut, conn, SIGMA_ERROR, "errorCode,Unsupported Prog");
-	return 0;
-}
-
-
 int sta_extract_60g_ese(struct sigma_dut *dut, struct sigma_cmd *cmd,
 			struct sigma_ese_alloc *allocs, int *allocs_size)
 {
@@ -10892,6 +10874,9 @@ static int cmd_sta_set_pwrsave(struct sigma_dut *dut, struct sigma_conn *conn,
 		 */
 		if (strcasecmp(powersave, "unscheduled") == 0)
 			res = set_ps(intf, dut, 1);
+	} else if (prog && get_driver_type() == DRIVER_WCN &&
+		   strcasecmp(prog, "HE") == 0) {
+		return cmd_sta_set_power_save_he(intf, dut, conn, cmd);
 	} else {
 		if (mode == NULL)
 			return -1;
@@ -12199,6 +12184,4 @@ void sta_register_cmds(void)
 	sigma_dut_reg_cmd("sta_get_parameter", req_intf, cmd_sta_get_parameter);
 	sigma_dut_reg_cmd("start_wps_registration", NULL,
 			  cmd_start_wps_registration);
-	sigma_dut_reg_cmd("sta_set_power_save", req_intf,
-			  cmd_sta_set_power_save);
 }
