@@ -819,7 +819,7 @@ static int hdmi_hdcp2p2_link_check(struct hdmi_hdcp2p2_ctrl *ctrl)
 	memset(ddc_data, 0, sizeof(*ddc_data));
 
 	timeout_hsync = hdmi_utils_get_timeout_in_hysnc(
-		ctrl->init_data.timing, jiffies_to_msecs(HZ / 2));
+		ctrl->init_data.timing, jiffies_to_msecs(msecs_to_jiffies(500)));
 
 	if (timeout_hsync <= 0) {
 		pr_err("err in timeout hsync calc\n");

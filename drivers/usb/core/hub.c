@@ -460,7 +460,7 @@ static void set_port_led(struct usb_hub *hub, int port1, int selector)
 		to_led_name(selector), status);
 }
 
-#define	LED_CYCLE_PERIOD	((2*HZ)/3)
+#define	LED_CYCLE_PERIOD	67
 
 static void led_work(struct work_struct *work)
 {

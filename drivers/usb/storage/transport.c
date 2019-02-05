@@ -243,7 +243,7 @@ int usb_stor_clear_halt(struct us_data *us, unsigned int pipe)
 	result = usb_stor_control_msg(us, us->send_ctrl_pipe,
 		USB_REQ_CLEAR_FEATURE, USB_RECIP_ENDPOINT,
 		USB_ENDPOINT_HALT, endp,
-		NULL, 0, 3*HZ);
+		NULL, 0, msecs_to_jiffies(3000));
 
 	if (result >= 0)
 		usb_reset_endpoint(us->pusb_dev, endp);
@@ -1047,7 +1047,7 @@ int usb_stor_Bulk_max_lun(struct us_data *us)
 				 US_BULK_GET_MAX_LUN, 
 				 USB_DIR_IN | USB_TYPE_CLASS | 
 				 USB_RECIP_INTERFACE,
-				 0, us->ifnum, us->iobuf, 1, 10*HZ);
+				 0, us->ifnum, us->iobuf, 1, msecs_to_jiffies(10000));
 
 	usb_stor_dbg(us, "GetMaxLUN command result is %d, data is %d\n",
 		     result, us->iobuf[0]);
@@ -1313,7 +1313,7 @@ static int usb_stor_reset_common(struct us_data *us,
 
 	result = usb_stor_control_msg(us, us->send_ctrl_pipe,
 			request, requesttype, value, index, data, size,
-			5*HZ);
+			msecs_to_jiffies(5000));
 	if (result < 0) {
 		usb_stor_dbg(us, "Soft reset failed: %d\n", result);
 		return result;
@@ -1323,7 +1323,7 @@ static int usb_stor_reset_common(struct us_data *us,
 	 * but don't delay disconnect processing. */
 	wait_event_interruptible_timeout(us->delay_wait,
 			test_bit(US_FLIDX_DISCONNECTING, &us->dflags),
-			HZ*6);
+			msecs_to_jiffies(6000));
 	if (test_bit(US_FLIDX_DISCONNECTING, &us->dflags)) {
 		usb_stor_dbg(us, "Reset interrupted by disconnect\n");
 		return -EIO;

@@ -3045,7 +3045,7 @@ static ssize_t test_sysfs_no_auto_cal_store(struct device *dev,
 static int check_ito_test_flag=2;
 #ifdef SYNAPTICS_ESD_CHECK
 extern void synaptics_rmi4_esd_work(struct work_struct *work);
-#define SYNAPTICS_ESD_CHECK_CIRCLE 2*HZ
+#define SYNAPTICS_ESD_CHECK_CIRCLE 2*100
 extern struct synaptics_rmi4_data *rmi4_data;
 #endif
 static ssize_t test_sysfs_read_report_show(struct device *dev,
