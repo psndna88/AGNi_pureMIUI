@@ -1357,7 +1357,7 @@ struct xhci_td {
 };
 
 /* xHCI command default timeout value */
-#define XHCI_CMD_DEFAULT_TIMEOUT	(5 * HZ)
+#define XHCI_CMD_DEFAULT_TIMEOUT	(5 * 100)
 
 /* command descriptor */
 struct xhci_cd {

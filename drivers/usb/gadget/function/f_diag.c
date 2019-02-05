@@ -489,7 +489,7 @@ int usb_diag_read(struct usb_diag_ch *ch, struct diag_request *d_req)
 	unsigned long flags;
 	struct usb_request *req;
 	struct usb_ep *out;
-	static DEFINE_RATELIMIT_STATE(rl, 10*HZ, 1);
+	static DEFINE_RATELIMIT_STATE(rl, 10*100, 1);
 
 	if (!ctxt)
 		return -ENODEV;
@@ -566,7 +566,7 @@ int usb_diag_write(struct usb_diag_ch *ch, struct diag_request *d_req)
 	unsigned long flags;
 	struct usb_request *req = NULL;
 	struct usb_ep *in;
-	static DEFINE_RATELIMIT_STATE(rl, 10*HZ, 1);
+	static DEFINE_RATELIMIT_STATE(rl, 10*100, 1);
 
 	if (!ctxt)
 		return -ENODEV;

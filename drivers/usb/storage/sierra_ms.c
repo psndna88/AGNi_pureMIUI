@@ -165,7 +165,7 @@ int sierra_ms_init(struct us_data *us)
 			result = sierra_get_swoc_info(udev, swocInfo);
 			if (result < 0) {
 				usb_stor_dbg(us, "SWIMS: Failed SWoC query\n");
-				schedule_timeout_uninterruptible(2*HZ);
+				schedule_timeout_uninterruptible(msecs_to_jiffies(2000));
 			}
 		} while (retries && result < 0);
 

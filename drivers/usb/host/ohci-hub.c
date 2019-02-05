@@ -370,7 +370,7 @@ static int ohci_root_hub_state_changes(struct ohci_hcd *ohci, int changed,
 					poll_rh = 0;
 			} else {
 				ohci->autostop = 1;
-				ohci->next_statechange = jiffies + HZ;
+				ohci->next_statechange = jiffies + msecs_to_jiffies(1000);
 			}
 
 		/* if no devices have been attached for one second, autostop */

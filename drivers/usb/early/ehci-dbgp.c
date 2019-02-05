@@ -1081,7 +1081,7 @@ static int kgdbdbgp_reader_thread(void *ptr)
 			}
 			continue;
 		}
-		schedule_timeout_interruptible(kgdbdbgp_wait_time * HZ);
+		schedule_timeout_interruptible(kgdbdbgp_wait_time * msecs_to_jiffies(1000));
 	}
 	return 0;
 }
