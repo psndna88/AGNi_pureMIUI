@@ -25,6 +25,8 @@ int get_wpa_status(const char *ifname, const char *field, char *obuf,
 		   size_t obuf_size);
 int get_wpa_signal_poll(struct sigma_dut *dut, const char *ifname,
 			const char *field, char *obuf, size_t obuf_size);
+int get_wpa_ssid_bssid(struct sigma_dut *dut, const char *ifname,
+		       char *buf, size_t buf_size);
 int get_hapd_config(const char *ifname, const char *field, char *obuf,
 		    size_t obuf_size);
 void remove_wpa_networks(const char *ifname);

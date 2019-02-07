@@ -11835,9 +11835,23 @@ static int cmd_sta_scan(struct sigma_dut *dut, struct sigma_conn *conn,
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *val, *bssid, *ssid;
-	char buf[100];
+	char buf[4096];
 	char ssid_hex[65];
 	int res;
+
+	val = get_param(cmd, "GetParameter");
+	if (val && strcmp(val, "SSID_BSSID") == 0) {
+		if (get_wpa_ssid_bssid(dut, get_station_ifname(),
+				       buf, sizeof(buf)) < 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Could not get ssid bssid");
+			return ERROR_SEND_STATUS;
+		}
+
+		sigma_dut_print(dut, DUT_MSG_INFO, "%s", buf);
+		send_resp(dut, conn, SIGMA_COMPLETE, buf);
+		return STATUS_SENT;
+	}
 
 	val = get_param(cmd, "HESSID");
 	if (val) {

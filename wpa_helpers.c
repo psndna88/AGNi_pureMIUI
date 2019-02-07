@@ -387,6 +387,103 @@ int get_wpa_signal_poll(struct sigma_dut *dut, const char *ifname,
 }
 
 
+int get_wpa_ssid_bssid(struct sigma_dut *dut, const char *ifname,
+		       char *buf, size_t buf_size)
+{
+	struct wpa_ctrl *ctrl;
+	char buf_local[4096];
+	char *network, *ssid, *bssid;
+	size_t buf_size_local;
+	unsigned int count = 0;
+	int len, res;
+	char *save_ptr_network = NULL;
+
+	ctrl = open_wpa_mon(ifname);
+	if (!ctrl) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to connect to wpa_supplicant");
+		return -1;
+	}
+
+	wpa_command(ifname, "BSS_FLUSH");
+	if (wpa_command(ifname, "SCAN TYPE=ONLY")) {
+		wpa_ctrl_detach(ctrl);
+		wpa_ctrl_close(ctrl);
+		sigma_dut_print(dut, DUT_MSG_ERROR, "SCAN command failed");
+		return -1;
+	}
+
+	res = get_wpa_cli_event(dut, ctrl, "CTRL-EVENT-SCAN-RESULTS",
+				buf_local, sizeof(buf_local));
+	wpa_ctrl_detach(ctrl);
+	buf_size_local = sizeof(buf_local);
+	if (res < 0 || wpa_ctrl_request(ctrl, "BSS RANGE=ALL MASK=0x1002", 25,
+					buf_local, &buf_size_local, NULL) < 0) {
+		wpa_ctrl_close(ctrl);
+		sigma_dut_print(dut, DUT_MSG_ERROR, "BSS ctrl request failed");
+		return -1;
+	}
+	buf_local[buf_size_local] = '\0';
+
+	wpa_ctrl_close(ctrl);
+
+	/* Below is BSS RANGE=ALL MASK=0x1002 command sample output which is
+	 * parsed to get the BSSID and SSID parameters.
+	 * Even number of lines, first line BSSID of network 1, second line SSID
+	 * of network 1, ...
+	 *
+	 * bssid=xx:xx:xx:xx:xx:x1
+	 * ssid=SSID1
+	 * bssid=xx:xx:xx:xx:xx:x2
+	 * ssid=SSID2
+	 */
+
+	network = strtok_r(buf_local, "\n", &save_ptr_network);
+
+	while (network) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG, "BSSID: %s", network);
+		bssid = NULL;
+		if (!strtok_r(network, "=", &bssid)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Invalid BSS result: BSSID not found");
+			return -1;
+		}
+		network = strtok_r(NULL, "\n", &save_ptr_network);
+		if (network) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG, "SSID: %s",
+					network);
+			ssid = NULL;
+			if (!strtok_r(network, "=", &ssid)) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"Invalid BSS result: SSID is null");
+				return -1;
+			}
+		} else {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Invalid BSS result: SSID not found");
+			return -1;
+		}
+
+		/* Skip comma for first entry */
+		count++;
+		len = snprintf(buf, buf_size, "%sSSID%d,%s,BSSID%d,%s",
+			       count > 1 ? "," : "",
+			       count, ssid, count, bssid);
+		if (len < 0 || len >= buf_size) {
+			buf[0] = '\0';
+			return 0;
+		}
+
+		buf_size -= len;
+		buf += len;
+
+		network = strtok_r(NULL, "\n", &save_ptr_network);
+	}
+
+	return 0;
+}
+
+
 static int get_wpa_ctrl_status_field(const char *path, const char *ifname,
 				     const char *cmd, const char *field,
 				     char *obuf, size_t obuf_size)
