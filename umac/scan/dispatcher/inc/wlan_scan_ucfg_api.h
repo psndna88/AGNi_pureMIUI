@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -147,6 +147,32 @@ QDF_STATUS
 ucfg_scan_get_pno_def_params(struct wlan_objmgr_vdev *vdev,
 	struct pno_scan_req_params *req);
 
+/**
+ * ucfg_scan_is_dfs_chnl_scan_enabled() - Check if PNO dfs channel scan support
+ * is enabled
+ * @psoc: pointer to psoc object
+ *
+ * Return: dfs_chnl_scan_enabled flag
+ */
+bool ucfg_scan_is_dfs_chnl_scan_enabled(struct wlan_objmgr_psoc *psoc);
+
+/**
+* ucfg_scan_get_scan_timer_repeat_value() - API to get PNO scan timer repeat
+* value
+* @psoc: pointer to psoc object
+*
+* Return: scan_timer_repeat_value
+*/
+uint32_t ucfg_scan_get_scan_timer_repeat_value(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_scan_get_slow_scan_multiplier() - API to get PNO slow scan multiplier
+ * value
+ * @psoc: pointer to psoc object
+ *
+ * Return: slow_scan_multiplier value
+ */
+uint32_t ucfg_scan_get_slow_scan_multiplier(struct wlan_objmgr_psoc *psoc);
 #else
 
 static inline bool
@@ -605,6 +631,15 @@ void ucfg_scan_set_vdev_del_in_progress(struct wlan_objmgr_vdev *vdev);
  * Return: none
  */
 void ucfg_scan_clear_vdev_del_in_progress(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_scan_wake_lock_in_user_scan() - API to determine if wake lock in user
+ * scan is used.
+ * @psoc: pointer to psoc object
+ *
+ * Return: true if wake lock in user scan is required
+ */
+bool ucfg_scan_wake_lock_in_user_scan(struct wlan_objmgr_psoc *psoc);
 
 /**
  * ucfg_scan_get_max_cmd_allowed() - API To get max no. of scan commands allowed

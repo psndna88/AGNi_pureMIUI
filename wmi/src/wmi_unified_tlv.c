@@ -17221,13 +17221,9 @@ static QDF_STATUS extract_ndp_ind_tlv(wmi_unified_t wmi_handle,
 		 rsp->peer_discovery_mac_addr.bytes);
 
 	WMI_LOGD("ndp_cfg - %d bytes", fixed_params->ndp_cfg_len);
-	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_WMI, QDF_TRACE_LEVEL_DEBUG,
-			   &event->ndp_cfg, fixed_params->ndp_cfg_len);
 
 	WMI_LOGD("ndp_app_info - %d bytes",
 			fixed_params->ndp_app_info_len);
-	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_WMI, QDF_TRACE_LEVEL_DEBUG,
-			&event->ndp_app_info, fixed_params->ndp_app_info_len);
 
 	rsp->ndp_config.ndp_cfg_len = fixed_params->ndp_cfg_len;
 	rsp->ndp_info.ndp_app_info_len = fixed_params->ndp_app_info_len;
@@ -17259,10 +17255,6 @@ static QDF_STATUS extract_ndp_ind_tlv(wmi_unified_t wmi_handle,
 	}
 	WMI_LOGD(FL("IPv6 addr present: %d, addr: %pI6"),
 		 rsp->is_ipv6_addr_present, rsp->ipv6_addr);
-
-	WMI_LOGD("scid hex dump:");
-	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_WMI, QDF_TRACE_LEVEL_DEBUG,
-			   rsp->scid.scid, rsp->scid.scid_len);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -17939,6 +17931,12 @@ static host_mem_req *extract_host_mem_req_tlv(wmi_unified_t wmi_handle,
 	ev = (wmi_service_ready_event_fixed_param *) param_buf->fixed_param;
 	if (!ev) {
 		qdf_print("%s: wmi_buf_alloc failed\n", __func__);
+		return NULL;
+	}
+
+	if (ev->num_mem_reqs > param_buf->num_mem_reqs) {
+		WMI_LOGE("Invalid num_mem_reqs %d:%d",
+			 ev->num_mem_reqs, param_buf->num_mem_reqs);
 		return NULL;
 	}
 
@@ -19720,6 +19718,7 @@ static QDF_STATUS extract_chainmask_tables_tlv(wmi_unified_t wmi_handle,
 	WMI_MAC_PHY_CHAINMASK_CAPABILITY *chainmask_caps;
 	WMI_SOC_MAC_PHY_HW_MODE_CAPS *hw_caps;
 	uint8_t i = 0, j = 0;
+	uint32_t num_mac_phy_chainmask_caps = 0;
 
 	param_buf = (WMI_SERVICE_READY_EXT_EVENTID_param_tlvs *) event;
 	if (!param_buf)
@@ -19739,6 +19738,26 @@ static QDF_STATUS extract_chainmask_tables_tlv(wmi_unified_t wmi_handle,
 
 	if (chainmask_caps == NULL)
 		return QDF_STATUS_E_INVAL;
+
+	for (i = 0; i < hw_caps->num_chainmask_tables; i++) {
+		if (chainmask_table[i].num_valid_chainmasks >
+		    (UINT_MAX - num_mac_phy_chainmask_caps)) {
+			wmi_err_rl("integer overflow, num_mac_phy_chainmask_caps:%d, i:%d, um_valid_chainmasks:%d",
+				   num_mac_phy_chainmask_caps, i,
+				   chainmask_table[i].num_valid_chainmasks);
+			return QDF_STATUS_E_INVAL;
+		}
+		num_mac_phy_chainmask_caps +=
+			chainmask_table[i].num_valid_chainmasks;
+	}
+
+	if (num_mac_phy_chainmask_caps >
+	    param_buf->num_mac_phy_chainmask_caps) {
+		wmi_err_rl("invalid chainmask caps num, num_mac_phy_chainmask_caps:%d, param_buf->num_mac_phy_chainmask_caps:%d",
+			   num_mac_phy_chainmask_caps,
+			   param_buf->num_mac_phy_chainmask_caps);
+		return QDF_STATUS_E_INVAL;
+	}
 
 	for (i = 0; i < hw_caps->num_chainmask_tables; i++) {
 
@@ -19934,6 +19953,12 @@ static QDF_STATUS extract_hw_mode_cap_service_ready_ext_tlv(
 	if (!hw_caps)
 		return QDF_STATUS_E_INVAL;
 
+	if (!hw_caps->num_hw_modes ||
+	    !param_buf->hw_mode_caps ||
+	    hw_caps->num_hw_modes > PSOC_MAX_HW_MODE ||
+	    hw_caps->num_hw_modes > param_buf->num_hw_mode_caps)
+		return QDF_STATUS_E_INVAL;
+
 	if (hw_mode_idx >= hw_caps->num_hw_modes)
 		return QDF_STATUS_E_INVAL;
 
@@ -19962,6 +19987,7 @@ static QDF_STATUS extract_mac_phy_cap_service_ready_ext_tlv(
 			uint8_t *event, uint8_t hw_mode_id, uint8_t phy_id,
 			struct wlan_psoc_host_mac_phy_caps *param)
 {
+#define MAX_NUM_HW_MODES 24
 	WMI_SERVICE_READY_EXT_EVENTID_param_tlvs *param_buf;
 	WMI_MAC_PHY_CAPABILITIES *mac_phy_caps;
 	WMI_SOC_MAC_PHY_HW_MODE_CAPS *hw_caps;
@@ -19975,6 +20001,13 @@ static QDF_STATUS extract_mac_phy_cap_service_ready_ext_tlv(
 	hw_caps = param_buf->soc_hw_mode_caps;
 	if (!hw_caps)
 		return QDF_STATUS_E_INVAL;
+	/**
+	 * The max number of hw modes is 24 including 11ax.
+	 */
+	if (hw_caps->num_hw_modes > MAX_NUM_HW_MODES) {
+		wmi_err_rl("invalid num_hw_modes %d", hw_caps->num_hw_modes);
+		return QDF_STATUS_E_INVAL;
+	}
 
 	for (hw_idx = 0; hw_idx < hw_caps->num_hw_modes; hw_idx++) {
 		if (hw_mode_id == param_buf->hw_mode_caps[hw_idx].hw_mode_id)
@@ -20071,6 +20104,9 @@ static QDF_STATUS extract_reg_cap_service_ready_ext_tlv(
 
 	reg_caps = param_buf->soc_hal_reg_caps;
 	if (!reg_caps)
+		return QDF_STATUS_E_INVAL;
+
+	if (reg_caps->num_phy > param_buf->num_hal_reg_caps)
 		return QDF_STATUS_E_INVAL;
 
 	if (phy_idx >= reg_caps->num_phy)
