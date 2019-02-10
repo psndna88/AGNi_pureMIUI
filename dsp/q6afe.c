@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -95,7 +95,8 @@ struct afe_ctl {
 	atomic_t status;
 	wait_queue_head_t wait[AFE_MAX_PORTS];
 	wait_queue_head_t wait_wakeup;
-	struct task_struct *task;
+	wait_queue_head_t lpass_core_hw_wait;
+	uint32_t lpass_hw_core_client_hdl;
 	void (*tx_cb)(uint32_t opcode,
 		uint32_t token, uint32_t *payload, void *priv);
 	void (*rx_cb)(uint32_t opcode,
@@ -419,6 +420,15 @@ static void afe_notify_spdif_fmt_update(void *payload)
 	schedule_work(&this_afe.afe_spdif_work);
 }
 
+static bool afe_token_is_valid(uint32_t token)
+{
+	if (token >= AFE_MAX_PORTS) {
+		pr_err("%s: token %d is invalid.\n", __func__, token);
+		return false;
+	}
+	return true;
+}
+
 static int32_t afe_callback(struct apr_client_data *data, void *priv)
 {
 	if (!data) {
@@ -445,12 +455,6 @@ static int32_t afe_callback(struct apr_client_data *data, void *priv)
 			this_afe.apr = NULL;
 			rtac_set_afe_handle(this_afe.apr);
 		}
-		/* send info to user */
-		if (this_afe.task == NULL)
-			this_afe.task = current;
-		pr_debug("%s: task_name = %s pid = %d\n",
-			__func__,
-			this_afe.task->comm, this_afe.task->pid);
 
 		/*
 		 * Pass reset events to proxy driver, if cb is registered
@@ -498,9 +502,22 @@ static int32_t afe_callback(struct apr_client_data *data, void *priv)
 						 data->payload_size))
 				return -EINVAL;
 		}
-		wake_up(&this_afe.wait[data->token]);
+		if (afe_token_is_valid(data->token))
+			wake_up(&this_afe.wait[data->token]);
+		else
+			return -EINVAL;
 	} else if (data->opcode == AFE_EVENT_MBHC_DETECTION_SW_WA) {
 		msm_aud_evt_notifier_call_chain(SWR_WAKE_IRQ_EVENT, NULL);
+	} else if (data->opcode ==
+			AFE_CMD_RSP_REMOTE_LPASS_CORE_HW_VOTE_REQUEST) {
+		uint32_t *payload = data->payload;
+
+		pr_debug("%s: LPASS_CORE_HW_VOTE_REQUEST handle %d\n",
+			 __func__, payload[0]);
+		this_afe.lpass_hw_core_client_hdl = payload[0];
+		atomic_set(&this_afe.state, 0);
+		atomic_set(&this_afe.status, 0);
+		wake_up(&this_afe.lpass_core_hw_wait);
 	} else if (data->payload_size) {
 		uint32_t *payload;
 		uint16_t port_id = 0;
@@ -534,7 +551,10 @@ static int32_t afe_callback(struct apr_client_data *data, void *priv)
 			case AFE_SVC_CMD_SET_PARAM_V2:
 			case AFE_PORT_CMD_MOD_EVENT_CFG:
 				atomic_set(&this_afe.state, 0);
-				wake_up(&this_afe.wait[data->token]);
+				if (afe_token_is_valid(data->token))
+					wake_up(&this_afe.wait[data->token]);
+				else
+					return -EINVAL;
 				break;
 			case AFE_SERVICE_CMD_REGISTER_RT_PORT_DRIVER:
 				break;
@@ -546,7 +566,10 @@ static int32_t afe_callback(struct apr_client_data *data, void *priv)
 				break;
 			case AFE_CMD_ADD_TOPOLOGIES:
 				atomic_set(&this_afe.state, 0);
-				wake_up(&this_afe.wait[data->token]);
+				if (afe_token_is_valid(data->token))
+					wake_up(&this_afe.wait[data->token]);
+				else
+					return -EINVAL;
 				pr_debug("%s: AFE_CMD_ADD_TOPOLOGIES cmd 0x%x\n",
 						__func__, payload[1]);
 				break;
@@ -570,7 +593,15 @@ static int32_t afe_callback(struct apr_client_data *data, void *priv)
 						return 0;
 				}
 				atomic_set(&this_afe.state, payload[1]);
-				wake_up(&this_afe.wait[data->token]);
+				if (afe_token_is_valid(data->token))
+					wake_up(&this_afe.wait[data->token]);
+				else
+					return -EINVAL;
+				break;
+			case AFE_CMD_REMOTE_LPASS_CORE_HW_VOTE_REQUEST:
+			case AFE_CMD_REMOTE_LPASS_CORE_HW_DEVOTE_REQUEST:
+				atomic_set(&this_afe.state, 0);
+				wake_up(&this_afe.lpass_core_hw_wait);
 				break;
 			case AFE_SVC_CMD_EVENT_CFG:
 				atomic_set(&this_afe.state, payload[1]);
@@ -594,7 +625,10 @@ static int32_t afe_callback(struct apr_client_data *data, void *priv)
 			else
 				this_afe.mmap_handle = payload[0];
 			atomic_set(&this_afe.state, 0);
-			wake_up(&this_afe.wait[data->token]);
+			if (afe_token_is_valid(data->token))
+				wake_up(&this_afe.wait[data->token]);
+			else
+				return -EINVAL;
 		} else if (data->opcode == AFE_EVENT_RT_PROXY_PORT_STATUS) {
 			port_id = (uint16_t)(0x0000FFFF & payload[0]);
 		} else if (data->opcode == AFE_PORT_MOD_EVENT) {
@@ -2806,7 +2840,7 @@ EXPORT_SYMBOL(afe_send_spdif_ch_status_cfg);
 int afe_send_cmd_wakeup_register(void *handle, bool enable)
 {
 	struct afe_svc_cmd_evt_cfg_payload wakeup_irq;
-	int ret;
+	int ret = 0;
 
 	pr_debug("%s: enter\n", __func__);
 
@@ -2820,18 +2854,13 @@ int afe_send_cmd_wakeup_register(void *handle, bool enable)
 	wakeup_irq.hdr.opcode = AFE_SVC_CMD_EVENT_CFG;
 	wakeup_irq.event_id = AFE_EVENT_ID_MBHC_DETECTION_SW_WA;
 	wakeup_irq.reg_flag = enable;
-	pr_debug("%s: cmd device start opcode[0x%x] register:%d\n",
+	pr_debug("%s: cmd wakeup register opcode[0x%x] register:%d\n",
 		 __func__, wakeup_irq.hdr.opcode, wakeup_irq.reg_flag);
 
 	ret = afe_apr_send_pkt(&wakeup_irq, &this_afe.wait_wakeup);
-	if (ret) {
+	if (ret)
 		pr_err("%s: AFE wakeup command register %d failed %d\n",
 			__func__, enable, ret);
-	} else if (this_afe.task != current) {
-		this_afe.task = current;
-		pr_debug("task_name = %s pid = %d\n",
-			 this_afe.task->comm, this_afe.task->pid);
-	}
 
 	return ret;
 }
@@ -2868,14 +2897,9 @@ static int afe_send_cmd_port_start(u16 port_id)
 		 __func__, start.hdr.opcode, start.port_id);
 
 	ret = afe_apr_send_pkt(&start, &this_afe.wait[index]);
-	if (ret) {
+	if (ret)
 		pr_err("%s: AFE enable for port 0x%x failed %d\n", __func__,
 		       port_id, ret);
-	} else if (this_afe.task != current) {
-		this_afe.task = current;
-		pr_debug("task_name = %s pid = %d\n",
-			 this_afe.task->comm, this_afe.task->pid);
-	}
 
 	return ret;
 }
@@ -8251,6 +8275,7 @@ int __init afe_init(void)
 		init_waitqueue_head(&this_afe.wait[i]);
 	}
 	init_waitqueue_head(&this_afe.wait_wakeup);
+	init_waitqueue_head(&this_afe.lpass_core_hw_wait);
 	wakeup_source_init(&wl.ws, "spkr-prot");
 	ret = afe_init_cal_data();
 	if (ret)
@@ -8322,3 +8347,167 @@ int afe_cal_init_hwdep(void *card)
 	return ret;
 }
 EXPORT_SYMBOL(afe_cal_init_hwdep);
+
+/*
+ * afe_vote_lpass_core_hw -
+ *        Voting for lpass core hardware
+ *
+ * @hw_block_id: ID of hw block to vote for
+ * @client_name: Name of the client
+ * @client_handle: Handle for the client
+ *
+ */
+int afe_vote_lpass_core_hw(uint32_t hw_block_id, char *client_name,
+			uint32_t *client_handle)
+{
+	struct afe_cmd_remote_lpass_core_hw_vote_request hw_vote_cfg;
+	struct afe_cmd_remote_lpass_core_hw_vote_request *cmd_ptr =
+						&hw_vote_cfg;
+	int ret = 0;
+
+	if (!client_handle) {
+		pr_err("%s: Invalid client_handle\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!client_name) {
+		pr_err("%s: Invalid client_name\n", __func__);
+		*client_handle = 0;
+		return -EINVAL;
+	}
+
+	mutex_lock(&this_afe.afe_cmd_lock);
+
+	memset(cmd_ptr, 0, sizeof(hw_vote_cfg));
+
+	cmd_ptr->hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
+				APR_HDR_LEN(APR_HDR_SIZE),
+				APR_PKT_VER);
+	cmd_ptr->hdr.pkt_size = sizeof(hw_vote_cfg);
+	cmd_ptr->hdr.src_port = 0;
+	cmd_ptr->hdr.dest_port = 0;
+	cmd_ptr->hdr.token = 0;
+	cmd_ptr->hdr.opcode = AFE_CMD_REMOTE_LPASS_CORE_HW_VOTE_REQUEST;
+	cmd_ptr->hw_block_id = hw_block_id;
+	strlcpy(cmd_ptr->client_name, client_name,
+			sizeof(cmd_ptr->client_name));
+
+	pr_debug("%s: lpass core hw vote opcode[0x%x] hw id[0x%x]\n",
+		__func__, cmd_ptr->hdr.opcode, cmd_ptr->hw_block_id);
+
+	*client_handle = 0;
+	atomic_set(&this_afe.status, 0);
+	atomic_set(&this_afe.state, 1);
+	ret = apr_send_pkt(this_afe.apr, (uint32_t *) cmd_ptr);
+	if (ret < 0) {
+		pr_err("%s: lpass core hw vote failed %d\n",
+			__func__, ret);
+		goto done;
+	}
+
+	ret = wait_event_timeout(this_afe.lpass_core_hw_wait,
+		(atomic_read(&this_afe.state) == 0),
+		msecs_to_jiffies(TIMEOUT_MS));
+	if (!ret) {
+		pr_err("%s: timeout. waited for lpass core hw vote\n",
+			__func__);
+		ret = -ETIMEDOUT;
+		goto done;
+	} else {
+		/* set ret to 0 as no timeout happened */
+		ret = 0;
+	}
+
+	if (atomic_read(&this_afe.status) > 0) {
+		pr_err("%s: lpass core hw vote cmd failed [%s]\n",
+			__func__, adsp_err_get_err_str(
+			atomic_read(&this_afe.status)));
+		ret = adsp_err_get_lnx_err_code(
+				atomic_read(&this_afe.status));
+		goto done;
+	}
+
+	*client_handle = this_afe.lpass_hw_core_client_hdl;
+	pr_debug("%s: lpass_hw_core_client_hdl %d\n", __func__,
+		this_afe.lpass_hw_core_client_hdl);
+done:
+	mutex_unlock(&this_afe.afe_cmd_lock);
+	return ret;
+}
+EXPORT_SYMBOL(afe_vote_lpass_core_hw);
+
+/*
+ * afe_unvote_lpass_core_hw -
+ *        Voting for lpass core hardware
+ *
+ * @hw_block_id: ID of hw block to vote for
+ * @client_handle: Handle for the client
+ *
+ */
+int afe_unvote_lpass_core_hw(uint32_t hw_block_id, uint32_t client_handle)
+{
+	struct afe_cmd_remote_lpass_core_hw_devote_request hw_vote_cfg;
+	struct afe_cmd_remote_lpass_core_hw_devote_request *cmd_ptr =
+						&hw_vote_cfg;
+	int ret = 0;
+
+	mutex_lock(&this_afe.afe_cmd_lock);
+
+	memset(cmd_ptr, 0, sizeof(hw_vote_cfg));
+
+	cmd_ptr->hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
+				APR_HDR_LEN(APR_HDR_SIZE),
+				APR_PKT_VER);
+	cmd_ptr->hdr.pkt_size = sizeof(hw_vote_cfg);
+	cmd_ptr->hdr.src_port = 0;
+	cmd_ptr->hdr.dest_port = 0;
+	cmd_ptr->hdr.token = 0;
+	cmd_ptr->hdr.opcode = AFE_CMD_REMOTE_LPASS_CORE_HW_DEVOTE_REQUEST;
+	cmd_ptr->hw_block_id = hw_block_id;
+	cmd_ptr->client_handle = client_handle;
+
+	pr_debug("%s: lpass core hw devote opcode[0x%x] hw id[0x%x]\n",
+		__func__, cmd_ptr->hdr.opcode, cmd_ptr->hw_block_id);
+
+	if (cmd_ptr->client_handle <= 0) {
+		pr_err("%s: invalid client handle\n", __func__);
+		ret = -EINVAL;
+		goto done;
+	}
+
+	atomic_set(&this_afe.status, 0);
+	atomic_set(&this_afe.state, 1);
+	ret = apr_send_pkt(this_afe.apr, (uint32_t *) cmd_ptr);
+	if (ret < 0) {
+		pr_err("%s: lpass core hw devote failed %d\n",
+			__func__, ret);
+		goto done;
+	}
+
+	ret = wait_event_timeout(this_afe.lpass_core_hw_wait,
+		(atomic_read(&this_afe.state) == 0),
+		msecs_to_jiffies(TIMEOUT_MS));
+	if (!ret) {
+		pr_err("%s: timeout. waited for lpass core hw devote\n",
+			__func__);
+		ret = -ETIMEDOUT;
+		goto done;
+	} else {
+		/* set ret to 0 as no timeout happened */
+		ret = 0;
+	}
+
+	if (atomic_read(&this_afe.status) > 0) {
+		pr_err("%s: lpass core hw devote cmd failed [%s]\n",
+			__func__, adsp_err_get_err_str(
+			atomic_read(&this_afe.status)));
+		ret = adsp_err_get_lnx_err_code(
+				atomic_read(&this_afe.status));
+	}
+
+done:
+	mutex_unlock(&this_afe.afe_cmd_lock);
+	return ret;
+}
+EXPORT_SYMBOL(afe_unvote_lpass_core_hw);
+

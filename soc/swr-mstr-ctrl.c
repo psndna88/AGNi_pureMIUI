@@ -399,7 +399,13 @@ static int swrm_get_port_config(struct swr_mstr_ctrl *swrm)
 			params = rx_frame_params;
 		break;
 	case MASTER_ID_TX:
-		params = tx_frame_params_superset;
+		if ((swrm->mport_cfg[0].port_en &&
+		   swrm->mport_cfg[0].ch_rate == swrm->mclk_freq) ||
+		   (swrm->mport_cfg[1].port_en &&
+		   swrm->mport_cfg[1].ch_rate == swrm->mclk_freq))
+			params = tx_perf_frame_params_superset;
+		else
+			params = tx_frame_params_superset;
 		break;
 	default: /* MASTER_GENERIC*/
 		/* computer generic frame parameters */
@@ -2262,7 +2268,7 @@ int swrm_wcd_notify(struct platform_device *pdev, u32 id, void *data)
 		reinit_completion(&swrm->clk_off_complete);
 		if (swrm->clk_ref_count &&
 			 !wait_for_completion_timeout(&swrm->clk_off_complete,
-						   msecs_to_jiffies(500)))
+						   msecs_to_jiffies(5000)))
 			dev_err(swrm->dev, "%s: clock voting not zero\n",
 				__func__);
 
