@@ -427,7 +427,7 @@ ibss_dph_entry_add(tpAniSirGlobal pMac,
 		dph_get_hash_entry(pMac, peerIdx, &psessionEntry->dph.dphHashTable);
 	if (pStaDs) {
 		(void)lim_del_sta(pMac, pStaDs, false /*asynchronous */,
-				  psessionEntry, false);
+				  psessionEntry);
 		lim_delete_dph_hash_entry(pMac, pStaDs->staAddr, peerIdx,
 					  psessionEntry);
 	}
@@ -540,7 +540,7 @@ static void ibss_bss_add(tpAniSirGlobal pMac, tpPESession psessionEntry)
 	 * even though all the nodes are capable of doing CB.
 	 * so it is decided to leave the self HT capabilties intact. This may change if some issues are found in interop.
 	 */
-	qdf_mem_set((void *)&mlmStartReq, sizeof(mlmStartReq), 0);
+	qdf_mem_zero((void *)&mlmStartReq, sizeof(mlmStartReq));
 
 	qdf_mem_copy(mlmStartReq.bssId, pHdr->bssId, sizeof(tSirMacAddr));
 	mlmStartReq.rateSet.numRates =
@@ -621,7 +621,7 @@ void lim_ibss_init(tpAniSirGlobal pMac)
 	pMac->lim.gLimNumIbssPeers = 0;
 
 	/* ibss info - params for which ibss to join while coalescing */
-	qdf_mem_set(&pMac->lim.ibssInfo, sizeof(tAniSirLimIbss), 0);
+	qdf_mem_zero(&pMac->lim.ibssInfo, sizeof(tAniSirLimIbss));
 } /*** end lim_ibss_init() ***/
 
 /**
@@ -925,7 +925,7 @@ lim_ibss_sta_add(tpAniSirGlobal pMac, void *pBody, tpPESession psessionEntry)
 	tSirMacAddr *pPeerAddr = (tSirMacAddr *) pBody;
 	tUpdateBeaconParams beaconParams;
 
-	qdf_mem_set((uint8_t *) &beaconParams, sizeof(tUpdateBeaconParams), 0);
+	qdf_mem_zero((uint8_t *) &beaconParams, sizeof(tUpdateBeaconParams));
 
 	if (pBody == 0) {
 		pe_err("Invalid IBSS AddSta");
@@ -1085,7 +1085,7 @@ lim_ibss_delete_peer(tpAniSirGlobal mac_ctx,
 
 	if (STA_INVALID_IDX != sta->staIndex) {
 		lim_del_sta(mac_ctx, sta,
-			  true, session_entry, false);
+			  true, session_entry);
 	} else {
 		/*
 		 * This mean ADD STA failed, thus remove the sta from
@@ -1256,7 +1256,7 @@ void lim_ibss_add_bss_rsp_when_coalescing(tpAniSirGlobal pMac, void *msg,
 	infoLen = sizeof(tSirMacAddr) + sizeof(tSirMacChanNum) +
 		  sizeof(uint8_t) + pBeacon->ssId.length + 1;
 
-	qdf_mem_set((void *)&newBssInfo, sizeof(newBssInfo), 0);
+	qdf_mem_zero((void *)&newBssInfo, sizeof(newBssInfo));
 	qdf_mem_copy(newBssInfo.bssId.bytes, pHdr->bssId, QDF_MAC_ADDR_SIZE);
 	newBssInfo.channelNumber = (tSirMacChanNum) pAddBss->currentOperChannel;
 	qdf_mem_copy((uint8_t *) &newBssInfo.ssId,
@@ -1386,7 +1386,7 @@ lim_ibss_coalesce(tpAniSirGlobal pMac,
 	tpDphHashNode pStaDs;
 	tUpdateBeaconParams beaconParams;
 
-	qdf_mem_set((uint8_t *) &beaconParams, sizeof(tUpdateBeaconParams), 0);
+	qdf_mem_zero((uint8_t *) &beaconParams, sizeof(tUpdateBeaconParams));
 
 	sir_copy_mac_addr(currentBssId, psessionEntry->bssId);
 
@@ -1596,7 +1596,7 @@ void lim_ibss_heart_beat_handle(tpAniSirGlobal mac_ctx, tpPESession session)
 				sta_idx = stads->staIndex;
 
 				(void)lim_del_sta(mac_ctx, stads, false,
-						  session, false);
+						  session);
 				lim_delete_dph_hash_entry(mac_ctx,
 					stads->staAddr, peer_idx, session);
 				lim_release_peer_idx(mac_ctx, peer_idx,

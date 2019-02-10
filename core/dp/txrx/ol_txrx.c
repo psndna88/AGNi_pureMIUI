@@ -1970,7 +1970,7 @@ ol_txrx_pdev_post_attach(struct cdp_pdev *ppdev)
 	/*
 	 * Initialize rx PN check characteristics for different security types.
 	 */
-	qdf_mem_set(&pdev->rx_pn[0], sizeof(pdev->rx_pn), 0);
+	qdf_mem_zero(&pdev->rx_pn[0], sizeof(pdev->rx_pn));
 
 	/* TKIP: 48-bit TSC, CCMP: 48-bit PN */
 	pdev->rx_pn[htt_sec_type_tkip].len =
@@ -2337,6 +2337,7 @@ static void ol_txrx_pdev_detach(struct cdp_pdev *ppdev, int force)
 
 	htt_pdev_free(pdev->htt_pdev);
 	ol_txrx_peer_find_detach(pdev);
+	qdf_flush_work(&pdev->peer_unmap_timer_work);
 	ol_txrx_tso_stats_deinit(pdev);
 	ol_txrx_fw_stats_desc_pool_deinit(pdev);
 
@@ -3974,6 +3975,7 @@ void peer_unmap_timer_work_function(void *param)
 	WMA_LOGI("Enter: %s", __func__);
 	/* Added for debugging only */
 	ol_txrx_dump_peer_access_list(param);
+	ol_txrx_peer_release_ref(param, PEER_DEBUG_ID_OL_UNMAP_TIMER_WORK);
 	wlan_roam_debug_dump_table();
 	cds_trigger_recovery(QDF_PEER_UNMAP_TIMEDOUT);
 }
@@ -4000,6 +4002,8 @@ void peer_unmap_timer_handler(void *data)
 		qdf_create_work(0, &txrx_pdev->peer_unmap_timer_work,
 				peer_unmap_timer_work_function,
 				peer);
+		/* Make sure peer is present before scheduling work */
+		ol_txrx_peer_get_ref(peer, PEER_DEBUG_ID_OL_UNMAP_TIMER_WORK);
 		qdf_sched_work(0, &txrx_pdev->peer_unmap_timer_work);
 	} else {
 		ol_txrx_err("Recovery is in progress, ignore!");
@@ -5605,6 +5609,7 @@ static QDF_STATUS ol_txrx_enqueue_rx_frames(
 
 	buf = rx_buf_list;
 	while (buf) {
+		QDF_NBUF_CB_RX_PEER_CACHED_FRM(buf) = 1;
 		next_buf = qdf_nbuf_queue_next(buf);
 		cache_buf = qdf_mem_malloc(sizeof(*cache_buf));
 		if (!cache_buf) {

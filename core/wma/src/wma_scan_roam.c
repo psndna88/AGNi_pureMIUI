@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -47,6 +47,7 @@
 
 #include "cds_utils.h"
 #include "wlan_policy_mgr_api.h"
+#include <wlan_utility.h>
 
 #if !defined(REMOVE_PKT_LOG)
 #include "pktlog_ac.h"
@@ -2321,6 +2322,7 @@ int wma_roam_synch_event_handler(void *handle, uint8_t *event,
 	roam_offload_synch_ind *roam_synch_ind_ptr = NULL;
 	tpSirBssDescription  bss_desc_ptr = NULL;
 	uint16_t ie_len = 0;
+	uint8_t channel;
 	int status = -EINVAL;
 	tSirRoamOffloadScanReq *roam_req;
 	qdf_time_t roam_synch_received = qdf_get_system_timestamp();
@@ -2516,6 +2518,18 @@ int wma_roam_synch_event_handler(void *handle, uint8_t *event,
 	if (roam_synch_ind_ptr->join_rsp)
 		wma->interfaces[synch_event->vdev_id].chan_width =
 			roam_synch_ind_ptr->join_rsp->vht_channel_width;
+	/*
+	 * update phy_mode in wma to avoid mismatch in phymode between host and
+	 * firmware. The phymode stored in interface[vdev_id].chanmode is sent
+	 * to firmware as part of opmode update during either - vht opmode
+	 * action frame received or during opmode change detected while
+	 * processing beacon. Any mismatch of this value with firmware phymode
+	 * results in firmware assert.
+	 */
+	channel = cds_freq_to_chan(wma->interfaces[synch_event->vdev_id].mhz);
+	wma_get_phy_mode_cb(channel,
+			    wma->interfaces[synch_event->vdev_id].chan_width,
+			    &wma->interfaces[synch_event->vdev_id].chanmode);
 
 	wma->csr_roam_synch_cb((tpAniSirGlobal)wma->mac_context,
 		roam_synch_ind_ptr, bss_desc_ptr, SIR_ROAM_SYNCH_COMPLETE);
@@ -2722,7 +2736,7 @@ QDF_STATUS wma_roam_scan_fill_self_caps(tp_wma_handle wma_handle,
 		tSirMacExtendedHTCapabilityInfo extHtCapInfo;
 	} uHTCapabilityInfo;
 
-	qdf_mem_set(&macQosInfoSta, sizeof(tSirMacQosInfoStation), 0);
+	qdf_mem_zero(&macQosInfoSta, sizeof(tSirMacQosInfoStation));
 	/* Roaming is done only for INFRA STA type.
 	 * So, ess will be one and ibss will be Zero
 	 */
@@ -5063,7 +5077,7 @@ QDF_STATUS wma_scan_probe_setoui(tp_wma_handle wma, tSirScanMacOui *psetoui)
 {
 	struct scan_mac_oui set_oui;
 
-	qdf_mem_set(&set_oui, sizeof(struct scan_mac_oui), 0);
+	qdf_mem_zero(&set_oui, sizeof(struct scan_mac_oui));
 
 	if (!wma || !wma->wmi_handle) {
 		WMA_LOGE("%s: WMA is closed, can not issue  cmd", __func__);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -237,7 +237,7 @@ hdd_conn_set_authenticated(struct hdd_adapter *adapter, uint8_t auth_state)
 		qdf_get_time_of_the_day_in_hr_min_sec_usec(auth_time,
 							   time_buffer_size);
 	else
-		qdf_mem_set(auth_time, 0x00, time_buffer_size);
+		qdf_mem_zero(auth_time, time_buffer_size);
 
 }
 
@@ -274,7 +274,7 @@ void hdd_conn_set_connection_state(struct hdd_adapter *adapter,
 		qdf_get_time_of_the_day_in_hr_min_sec_usec(connect_time,
 							   time_buffer_size);
 	else
-		qdf_mem_set(connect_time, 0x00, time_buffer_size);
+		qdf_mem_zero(connect_time, time_buffer_size);
 
 }
 
@@ -386,7 +386,7 @@ struct hdd_adapter *hdd_get_sta_connection_in_progress(
 		    (QDF_P2P_DEVICE_MODE == adapter->device_mode)) {
 			if (eConnectionState_Connecting ==
 			    hdd_sta_ctx->conn_info.connState) {
-				hdd_debug("session_id %d: Connection is in progress",
+				hdd_debug("vdev_id %d: Connection is in progress",
 					  adapter->session_id);
 				return adapter;
 			} else if ((eConnectionState_Associated ==
@@ -394,13 +394,31 @@ struct hdd_adapter *hdd_get_sta_connection_in_progress(
 				   sme_is_sta_key_exchange_in_progress(
 							hdd_ctx->mac_handle,
 							adapter->session_id)) {
-				hdd_debug("session_id %d: Key exchange is in progress",
+				hdd_debug("vdev_id %d: Key exchange is in progress",
 					  adapter->session_id);
 				return adapter;
 			}
 		}
 	}
 	return NULL;
+}
+
+void hdd_abort_ongoing_sta_connection(struct hdd_context *hdd_ctx)
+{
+	struct hdd_adapter *sta_adapter;
+	QDF_STATUS status;
+
+	sta_adapter = hdd_get_sta_connection_in_progress(hdd_ctx);
+	if (sta_adapter) {
+		hdd_debug("Disconnecting STA on vdev: %d",
+			  sta_adapter->session_id);
+		status = wlan_hdd_disconnect(sta_adapter,
+					     eCSR_DISCONNECT_REASON_DEAUTH);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			hdd_err("wlan_hdd_disconnect failed, status: %d",
+				status);
+		}
+	}
 }
 
 /**
@@ -4870,7 +4888,6 @@ hdd_sme_roam_callback(void *pContext, struct csr_roam_info *roam_info,
 		wlan_hdd_netif_queue_control(adapter,
 				WLAN_STOP_ALL_NETIF_QUEUE,
 				WLAN_CONTROL_PATH);
-		hdd_napi_serialize(1);
 		hdd_set_connection_in_progress(true);
 		hdd_set_roaming_in_progress(true);
 		policy_mgr_restart_opportunistic_timer(hdd_ctx->psoc, true);

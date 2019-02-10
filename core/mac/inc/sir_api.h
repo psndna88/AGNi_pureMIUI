@@ -1113,6 +1113,7 @@ typedef struct sSirSmeJoinRsp {
 	uint32_t assocReqLength;
 	uint32_t assocRspLength;
 	uint32_t parsedRicRspLen;
+	uint8_t uapsd_mask;
 #ifdef FEATURE_WLAN_ESE
 	uint32_t tspecIeLen;
 #endif
@@ -3247,7 +3248,6 @@ typedef struct sSirTdlsDelStaRsp {
 	struct qdf_mac_addr peermac;
 	uint16_t staId;
 	struct wlan_objmgr_psoc *psoc;
-	bool release_serial_cmd;
 } tSirTdlsDelStaRsp, *tpSirTdlsDelStaRsp;
 /* TDLS Delete Indication struct PE-->SME */
 typedef struct sSirTdlsDelStaInd {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -425,8 +425,10 @@ static int __hdd_hostapd_open(struct net_device *dev)
 
 	hdd_enter_dev(dev);
 
-	MTRACE(qdf_trace(QDF_MODULE_ID_HDD,
-			 TRACE_CODE_HDD_HOSTAPD_OPEN_REQUEST, NO_SESSION, 0));
+	qdf_mtrace(QDF_MODULE_ID_HDD, QDF_MODULE_ID_HDD,
+		   TRACE_CODE_HDD_HOSTAPD_OPEN_REQUEST,
+		   NO_SESSION, 0);
+
 	/* Nothing to be done if device is unloading */
 	if (cds_is_driver_unloading()) {
 		hdd_err("Driver is unloading can not open the hdd");
@@ -500,6 +502,11 @@ static int __hdd_hostapd_stop(struct net_device *dev)
 	int ret;
 
 	hdd_enter_dev(dev);
+
+	qdf_mtrace(QDF_MODULE_ID_HDD, QDF_MODULE_ID_HDD,
+		   TRACE_CODE_HDD_HOSTAPD_STOP_REQUEST,
+		   NO_SESSION, 0);
+
 	ret = wlan_hdd_validate_context(hdd_ctx);
 	if (ret) {
 		set_bit(DOWN_DURING_SSR, &adapter->event_flags);
@@ -2785,6 +2792,16 @@ int hdd_softap_set_channel_change(struct net_device *dev, int target_channel,
 	ret = wlan_hdd_validate_context(hdd_ctx);
 	if (ret)
 		return ret;
+
+	/*
+	 * If sta connection is in progress do not allow SAP channel change from
+	 * user space as it may change the HW mode requirement, for which sta is
+	 * trying to connect.
+	 */
+	if (hdd_get_sta_connection_in_progress(hdd_ctx)) {
+		hdd_err("STA connection is in progress");
+		return -EBUSY;
+	}
 
 	ret = hdd_validate_channel_and_bandwidth(adapter,
 						target_channel, target_bw);
@@ -6503,9 +6520,9 @@ int wlan_hdd_set_channel(struct wiphy *wiphy,
 	}
 	adapter = WLAN_HDD_GET_PRIV_PTR(dev);
 
-	MTRACE(qdf_trace(QDF_MODULE_ID_HDD,
-			 TRACE_CODE_HDD_CFG80211_SET_CHANNEL,
-			 adapter->session_id, channel_type));
+	qdf_mtrace(QDF_MODULE_ID_HDD, QDF_MODULE_ID_HDD,
+		   TRACE_CODE_HDD_CFG80211_SET_CHANNEL,
+		   adapter->session_id, channel_type);
 
 	hdd_debug("Device_mode %s(%d)  freq = %d",
 	       hdd_device_mode_to_string(adapter->device_mode),
@@ -7691,7 +7708,6 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 	bool MFPRequired = false;
 	uint16_t prev_rsn_length = 0;
 	enum dfs_mode mode;
-	struct hdd_adapter *sta_adapter;
 	uint8_t ignore_cac = 0;
 	uint8_t beacon_fixed_len;
 
@@ -7725,12 +7741,7 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 	 * disconnect the STA interface first if connection or key exchange is
 	 * in progress and then start SAP interface.
 	 */
-	sta_adapter = hdd_get_sta_connection_in_progress(hdd_ctx);
-	if (sta_adapter) {
-		hdd_debug("Disconnecting STA with session id: %d",
-			  sta_adapter->session_id);
-		wlan_hdd_disconnect(sta_adapter, eCSR_DISCONNECT_REASON_DEAUTH);
-	}
+	hdd_abort_ongoing_sta_connection(hdd_ctx);
 
 	/*
 	 * Reject start bss if reassoc in progress on any adapter.
@@ -7768,7 +7779,8 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 	}
 
 	/* Mark the indoor channel (passive) to disable */
-	if (iniConfig->force_ssc_disable_indoor_channel) {
+	if (iniConfig->force_ssc_disable_indoor_channel &&
+	    adapter->device_mode == QDF_SAP_MODE) {
 		hdd_update_indoor_channel(hdd_ctx, true);
 		if (QDF_IS_STATUS_ERROR(
 		    sme_update_channel_list(mac_handle))) {
@@ -8124,6 +8136,12 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 
 		if (pIe != NULL) {
 			pIe++;
+			if (pIe[0] > SIR_MAC_RATESET_EID_MAX) {
+				hdd_err("Invalid supported rates %d",
+					pIe[0]);
+				ret = -EINVAL;
+				goto error;
+			}
 			pConfig->supported_rates.numRates = pIe[0];
 			pIe++;
 			for (i = 0;
@@ -8140,6 +8158,12 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 					       pBeacon->tail_len);
 		if (pIe != NULL) {
 			pIe++;
+			if (pIe[0] > SIR_MAC_RATESET_EID_MAX) {
+				hdd_err("Invalid supported rates %d",
+					pIe[0]);
+				ret = -EINVAL;
+				goto error;
+			}
 			pConfig->extended_rates.numRates = pIe[0];
 			pIe++;
 			for (i = 0; i < pConfig->extended_rates.numRates; i++) {
@@ -8367,7 +8391,8 @@ error:
 		wlan_hdd_restore_channels(hdd_ctx, true);
 
 	/* Revert the indoor to passive marking if START BSS fails */
-	if (iniConfig->force_ssc_disable_indoor_channel) {
+	if (iniConfig->force_ssc_disable_indoor_channel &&
+	    adapter->device_mode == QDF_SAP_MODE) {
 		hdd_update_indoor_channel(hdd_ctx, false);
 		sme_update_channel_list(mac_handle);
 	}
@@ -8421,7 +8446,6 @@ static int __wlan_hdd_cfg80211_stop_ap(struct wiphy *wiphy,
 					struct net_device *dev)
 {
 	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
-	struct hdd_adapter *sta_adapter;
 	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
 	QDF_STATUS qdf_status = QDF_STATUS_E_FAILURE;
@@ -8445,9 +8469,9 @@ static int __wlan_hdd_cfg80211_stop_ap(struct wiphy *wiphy,
 	if (wlan_hdd_validate_session_id(adapter->session_id))
 		return -EINVAL;
 
-	MTRACE(qdf_trace(QDF_MODULE_ID_HDD,
-			 TRACE_CODE_HDD_CFG80211_STOP_AP,
-			 adapter->session_id, adapter->device_mode));
+	qdf_mtrace(QDF_MODULE_ID_HDD, QDF_MODULE_ID_HDD,
+		   TRACE_CODE_HDD_CFG80211_STOP_AP,
+		   adapter->session_id, adapter->device_mode);
 
 	if (!(adapter->device_mode == QDF_SAP_MODE ||
 	      adapter->device_mode == QDF_P2P_GO_MODE)) {
@@ -8473,12 +8497,7 @@ static int __wlan_hdd_cfg80211_stop_ap(struct wiphy *wiphy,
 	 * the STA and complete the SAP operation. STA will reconnect
 	 * after SAP stop is done.
 	 */
-	sta_adapter = hdd_get_sta_connection_in_progress(hdd_ctx);
-	if (sta_adapter) {
-		hdd_debug("Disconnecting STA with session id: %d",
-			  sta_adapter->session_id);
-		wlan_hdd_disconnect(sta_adapter, eCSR_DISCONNECT_REASON_DEAUTH);
-	}
+	hdd_abort_ongoing_sta_connection(hdd_ctx);
 
 	if (adapter->device_mode == QDF_SAP_MODE)
 		wlan_hdd_del_station(adapter);
@@ -8754,9 +8773,10 @@ static int __wlan_hdd_cfg80211_start_ap(struct wiphy *wiphy,
 	if (wlan_hdd_validate_session_id(adapter->session_id))
 		return -EINVAL;
 
-	MTRACE(qdf_trace(QDF_MODULE_ID_HDD,
-			 TRACE_CODE_HDD_CFG80211_START_AP, adapter->session_id,
-			 params->beacon_interval));
+	qdf_mtrace(QDF_MODULE_ID_HDD, QDF_MODULE_ID_HDD,
+		   TRACE_CODE_HDD_CFG80211_START_AP,
+		   adapter->session_id, params->beacon_interval);
+
 	if (WLAN_HDD_ADAPTER_MAGIC != adapter->magic) {
 		hdd_err("HDD adapter magic is invalid");
 		return -ENODEV;
@@ -9083,9 +9103,10 @@ static int __wlan_hdd_cfg80211_change_beacon(struct wiphy *wiphy,
 	if (wlan_hdd_validate_session_id(adapter->session_id))
 		return -EINVAL;
 
-	MTRACE(qdf_trace(QDF_MODULE_ID_HDD,
-			 TRACE_CODE_HDD_CFG80211_CHANGE_BEACON,
-			 adapter->session_id, adapter->device_mode));
+	qdf_mtrace(QDF_MODULE_ID_HDD, QDF_MODULE_ID_HDD,
+		   TRACE_CODE_HDD_CFG80211_CHANGE_BEACON,
+		   adapter->session_id, adapter->device_mode);
+
 	hdd_debug("Device_mode %s(%d)",
 	       hdd_device_mode_to_string(adapter->device_mode),
 	       adapter->device_mode);

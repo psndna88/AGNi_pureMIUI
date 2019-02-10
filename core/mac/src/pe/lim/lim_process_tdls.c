@@ -540,7 +540,7 @@ static QDF_STATUS lim_send_tdls_dis_req_frame(tpAniSirGlobal pMac,
 	 * and then hand it off to 'dot11f_pack_probe_request' (for
 	 * serialization).  We start by zero-initializing the structure:
 	 */
-	qdf_mem_set((uint8_t *) &tdlsDisReq, sizeof(tDot11fTDLSDisReq), 0);
+	qdf_mem_zero((uint8_t *) &tdlsDisReq, sizeof(tDot11fTDLSDisReq));
 
 	/*
 	 * setup Fixed fields,
@@ -608,7 +608,7 @@ static QDF_STATUS lim_send_tdls_dis_req_frame(tpAniSirGlobal pMac,
 	}
 
 	/* zero out the memory */
-	qdf_mem_set(pFrame, nBytes, 0);
+	qdf_mem_zero(pFrame, nBytes);
 
 	/*
 	 * IE formation, memory allocation is completed, Now form TDLS discovery
@@ -651,9 +651,9 @@ static QDF_STATUS lim_send_tdls_dis_req_frame(tpAniSirGlobal pMac,
 
 		/* padding zero if more than 5 bytes are required */
 		if (padLen > MIN_VENDOR_SPECIFIC_IE_SIZE)
-			qdf_mem_set(pFrame + header_offset + nPayload +
+			qdf_mem_zero(pFrame + header_offset + nPayload +
 				    MIN_VENDOR_SPECIFIC_IE_SIZE,
-				    padLen - MIN_VENDOR_SPECIFIC_IE_SIZE, 0);
+				    padLen - MIN_VENDOR_SPECIFIC_IE_SIZE);
 	}
 #endif
 
@@ -708,7 +708,7 @@ static void populate_dot11f_tdls_ht_vht_cap(tpAniSirGlobal pMac,
 	nss = QDF_MIN(nss, pMac->user_configured_nss);
 	if (IS_DOT11_MODE_HT(selfDot11Mode)) {
 		/* Include HT Capability IE */
-		populate_dot11f_ht_caps(pMac, NULL, htCap);
+		populate_dot11f_ht_caps(pMac, psessionEntry, htCap);
 		val = SIZE_OF_SUPPORTED_MCS_SET;
 		wlan_cfg_get_str(pMac, WNI_CFG_SUPPORTED_MCS_SET,
 				&htCap->supportedMCSSet[0], &val);
@@ -729,8 +729,9 @@ static void populate_dot11f_tdls_ht_vht_cap(tpAniSirGlobal pMac,
 		 * 11.21.1 General: The channel width of the TDLS direct link on
 		 * the base channel shall not exceed the channel width of the
 		 * BSS to which the TDLS peer STAs are associated.
+		 * Select supportedChannelWidthSet based on channel bonding settings
+		 * for each band
 		 */
-		htCap->supportedChannelWidthSet = 1;
 	} else {
 		htCap->present = 0;
 	}
@@ -828,7 +829,7 @@ static QDF_STATUS lim_send_tdls_dis_rsp_frame(tpAniSirGlobal pMac,
 	 * and then hand it off to 'dot11f_pack_probe_request' (for
 	 * serialization).  We start by zero-initializing the structure:
 	 */
-	qdf_mem_set((uint8_t *) &tdlsDisRsp, sizeof(tDot11fTDLSDisRsp), 0);
+	qdf_mem_zero((uint8_t *) &tdlsDisRsp, sizeof(tDot11fTDLSDisRsp));
 
 	/*
 	 * setup Fixed fields,
@@ -920,7 +921,7 @@ static QDF_STATUS lim_send_tdls_dis_rsp_frame(tpAniSirGlobal pMac,
 	}
 
 	/* zero out the memory */
-	qdf_mem_set(pFrame, nBytes, 0);
+	qdf_mem_zero(pFrame, nBytes);
 
 	/*
 	 * IE formation, memory allocation is completed, Now form TDLS discovery
@@ -1139,7 +1140,7 @@ QDF_STATUS lim_send_tdls_link_setup_req_frame(tpAniSirGlobal pMac,
 	 */
 	smeSessionId = psessionEntry->smeSessionId;
 
-	qdf_mem_set((uint8_t *) &tdlsSetupReq, sizeof(tDot11fTDLSSetupReq), 0);
+	qdf_mem_zero((uint8_t *) &tdlsSetupReq, sizeof(tDot11fTDLSSetupReq));
 	tdlsSetupReq.Category.category = SIR_MAC_ACTION_TDLS;
 	tdlsSetupReq.Action.action = SIR_MAC_TDLS_SETUP_REQ;
 	tdlsSetupReq.DialogToken.token = dialog;
@@ -1293,7 +1294,7 @@ QDF_STATUS lim_send_tdls_link_setup_req_frame(tpAniSirGlobal pMac,
 	}
 
 	/* zero out the memory */
-	qdf_mem_set(pFrame, nBytes, 0);
+	qdf_mem_zero(pFrame, nBytes);
 
 	/*
 	 * IE formation, memory allocation is completed, Now form TDLS discovery
@@ -1402,7 +1403,7 @@ QDF_STATUS lim_send_tdls_teardown_frame(tpAniSirGlobal pMac,
 	 * and then hand it off to 'dot11f_pack_probe_request' (for
 	 * serialization).  We start by zero-initializing the structure:
 	 */
-	qdf_mem_set((uint8_t *) &teardown, sizeof(tDot11fTDLSTeardown), 0);
+	qdf_mem_zero((uint8_t *) &teardown, sizeof(tDot11fTDLSTeardown));
 	teardown.Category.category = SIR_MAC_ACTION_TDLS;
 	teardown.Action.action = SIR_MAC_TDLS_TEARDOWN;
 	teardown.Reason.code = reason;
@@ -1472,7 +1473,7 @@ QDF_STATUS lim_send_tdls_teardown_frame(tpAniSirGlobal pMac,
 	}
 
 	/* zero out the memory */
-	qdf_mem_set(pFrame, nBytes, 0);
+	qdf_mem_zero(pFrame, nBytes);
 
 	/*
 	 * IE formation, memory allocation is completed, Now form TDLS discovery
@@ -1523,9 +1524,9 @@ QDF_STATUS lim_send_tdls_teardown_frame(tpAniSirGlobal pMac,
 
 		/* padding zero if more than 5 bytes are required */
 		if (padLen > MIN_VENDOR_SPECIFIC_IE_SIZE)
-			qdf_mem_set(pFrame + header_offset + nPayload +
+			qdf_mem_zero(pFrame + header_offset + nPayload +
 				    addIeLen + MIN_VENDOR_SPECIFIC_IE_SIZE,
-				    padLen - MIN_VENDOR_SPECIFIC_IE_SIZE, 0);
+				    padLen - MIN_VENDOR_SPECIFIC_IE_SIZE);
 	}
 #endif
 	pe_debug("[TDLS] action: %d (%s) -%s-> OTA peer="MAC_ADDRESS_STR,
@@ -1598,7 +1599,7 @@ static QDF_STATUS lim_send_tdls_setup_rsp_frame(tpAniSirGlobal pMac,
 	 * and then hand it off to 'dot11f_pack_probe_request' (for
 	 * serialization).  We start by zero-initializing the structure:
 	 */
-	qdf_mem_set((uint8_t *) &tdlsSetupRsp, sizeof(tDot11fTDLSSetupRsp), 0);
+	qdf_mem_zero((uint8_t *) &tdlsSetupRsp, sizeof(tDot11fTDLSSetupRsp));
 
 	/*
 	 * setup Fixed fields,
@@ -1749,7 +1750,7 @@ static QDF_STATUS lim_send_tdls_setup_rsp_frame(tpAniSirGlobal pMac,
 	}
 
 	/* zero out the memory */
-	qdf_mem_set(pFrame, nBytes, 0);
+	qdf_mem_zero(pFrame, nBytes);
 
 	/*
 	 * IE formation, memory allocation is completed, Now form TDLS discovery
@@ -1850,7 +1851,7 @@ QDF_STATUS lim_send_tdls_link_setup_cnf_frame(tpAniSirGlobal pMac,
 	 */
 	smeSessionId = psessionEntry->smeSessionId;
 
-	qdf_mem_set((uint8_t *) &tdlsSetupCnf, sizeof(tDot11fTDLSSetupCnf), 0);
+	qdf_mem_zero((uint8_t *) &tdlsSetupCnf, sizeof(tDot11fTDLSSetupCnf));
 
 	/*
 	 * setup Fixed fields,
@@ -1941,7 +1942,7 @@ QDF_STATUS lim_send_tdls_link_setup_cnf_frame(tpAniSirGlobal pMac,
 	}
 
 	/* zero out the memory */
-	qdf_mem_set(pFrame, nBytes, 0);
+	qdf_mem_zero(pFrame, nBytes);
 
 	/*
 	 * IE formation, memory allocation is completed, Now form TDLS discovery
@@ -1993,9 +1994,9 @@ QDF_STATUS lim_send_tdls_link_setup_cnf_frame(tpAniSirGlobal pMac,
 
 		/* padding zero if more than 5 bytes are required */
 		if (padLen > MIN_VENDOR_SPECIFIC_IE_SIZE)
-			qdf_mem_set(pFrame + header_offset + nPayload +
+			qdf_mem_zero(pFrame + header_offset + nPayload +
 				    addIeLen + MIN_VENDOR_SPECIFIC_IE_SIZE,
-				    padLen - MIN_VENDOR_SPECIFIC_IE_SIZE, 0);
+				    padLen - MIN_VENDOR_SPECIFIC_IE_SIZE);
 	}
 #endif
 
@@ -2347,7 +2348,7 @@ lim_tdls_populate_matching_rate_set(tpAniSirGlobal mac_ctx, tpDphHashNode stads,
 	temp_rate_set.numRates = supp_rates_len;
 
 	rates = &stads->supportedRates;
-	qdf_mem_set((uint8_t *) rates, sizeof(tSirSupportedRates), 0);
+	qdf_mem_zero((uint8_t *) rates, sizeof(tSirSupportedRates));
 
 	for (i = 0; i < temp_rate_set2.numRates; i++) {
 		for (j = 0; j < temp_rate_set.numRates; j++) {
@@ -2608,7 +2609,7 @@ static QDF_STATUS lim_tdls_setup_add_sta(tpAniSirGlobal pMac,
 
 		if (pStaDs) {
 			(void)lim_del_sta(pMac, pStaDs, false /*asynchronous */,
-					  psessionEntry, false);
+					  psessionEntry);
 			lim_delete_dph_hash_entry(pMac, pStaDs->staAddr, aid,
 						  psessionEntry);
 		}
@@ -2645,7 +2646,7 @@ static QDF_STATUS lim_tdls_setup_add_sta(tpAniSirGlobal pMac,
 static QDF_STATUS lim_tdls_del_sta(tpAniSirGlobal pMac,
 				      struct qdf_mac_addr peerMac,
 				      tpPESession psessionEntry,
-				      bool release_serial_cmd)
+				      bool resp_reqd)
 {
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
 	uint16_t peerIdx = 0;
@@ -2661,10 +2662,9 @@ static QDF_STATUS lim_tdls_del_sta(tpAniSirGlobal pMac,
 		pe_debug("STA type: %x, sta idx: %x resp_reqd: %d",
 			 pStaDs->staType,
 			 pStaDs->staIndex,
-			 true);
+			 resp_reqd);
 
-		status = lim_del_sta(pMac, pStaDs, true, psessionEntry,
-				release_serial_cmd);
+		status = lim_del_sta(pMac, pStaDs, resp_reqd, psessionEntry);
 	} else {
 		pe_debug("DEL STA peer MAC: "MAC_ADDRESS_STR" not found",
 			 MAC_ADDR_ARRAY(peerMac.bytes));
@@ -2951,9 +2951,7 @@ lim_tdls_send_mgmt_error:
 static QDF_STATUS lim_send_sme_tdls_del_sta_rsp(tpAniSirGlobal pMac,
 						uint8_t sessionId,
 						struct qdf_mac_addr peerMac,
-						tDphHashNode *pStaDs,
-						uint8_t status,
-						bool release_serial_cmd)
+						tDphHashNode *pStaDs, uint8_t status)
 {
 	struct scheduler_msg mmhMsg = { 0 };
 	tSirTdlsDelStaRsp *pDelSta = NULL;
@@ -2978,7 +2976,6 @@ static QDF_STATUS lim_send_sme_tdls_del_sta_rsp(tpAniSirGlobal pMac,
 	pDelSta->length = sizeof(tSirTdlsDelStaRsp);
 	pDelSta->messageType = eWNI_SME_TDLS_DEL_STA_RSP;
 	pDelSta->psoc = pMac->psoc;
-	pDelSta->release_serial_cmd = release_serial_cmd;
 	mmhMsg.bodyptr = pDelSta;
 	mmhMsg.callback = tgt_tdls_del_peer_rsp;
 	return scheduler_post_message(QDF_MODULE_ID_PE,
@@ -3069,7 +3066,7 @@ QDF_STATUS lim_process_sme_tdls_del_sta_req(tpAniSirGlobal pMac,
 			pDelStaReq->sessionId);
 		lim_send_sme_tdls_del_sta_rsp(pMac, pDelStaReq->sessionId,
 					      pDelStaReq->peermac, NULL,
-					      QDF_STATUS_E_FAILURE, true);
+					      QDF_STATUS_E_FAILURE);
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -3085,7 +3082,7 @@ QDF_STATUS lim_process_sme_tdls_del_sta_req(tpAniSirGlobal pMac,
 		       pDelStaReq->sessionId);
 		lim_send_sme_tdls_del_sta_rsp(pMac, pDelStaReq->sessionId,
 					      pDelStaReq->peermac, NULL,
-					      QDF_STATUS_E_FAILURE, true);
+					      QDF_STATUS_E_FAILURE);
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -3108,8 +3105,7 @@ QDF_STATUS lim_process_sme_tdls_del_sta_req(tpAniSirGlobal pMac,
 
 lim_tdls_del_sta_error:
 	lim_send_sme_tdls_del_sta_rsp(pMac, psessionEntry->smeSessionId,
-				      pDelStaReq->peermac, NULL,
-				      QDF_STATUS_E_FAILURE, true);
+				      pDelStaReq->peermac, NULL, QDF_STATUS_E_FAILURE);
 
 	return status;
 }
@@ -3147,7 +3143,7 @@ static void lim_check_aid_and_delete_peer(tpAniSirGlobal p_mac,
 					&session_entry->dph.dphHashTable);
 
 			if (NULL == stads)
-				continue;
+				goto skip;
 
 			pe_debug("Deleting "MAC_ADDRESS_STR,
 				MAC_ADDR_ARRAY(stads->staAddr));
@@ -3167,8 +3163,22 @@ static void lim_check_aid_and_delete_peer(tpAniSirGlobal p_mac,
 					pe_debug("peer "MAC_ADDRESS_STR" not found",
 						MAC_ADDR_ARRAY(stads->staAddr));
 			}
+
+			dph_delete_hash_entry(p_mac,
+				stads->staAddr, stads->assocId,
+				&session_entry->dph.dphHashTable);
+skip:
+			lim_release_peer_idx(p_mac,
+				(aid + i * (sizeof(uint32_t) << 3)),
+				session_entry);
+			CLEAR_BIT(session_entry->peerAIDBitmap[i], aid);
 		}
 	}
+}
+
+void lim_update_tdls_set_state_for_fw(tpPESession session_entry, bool value)
+{
+	session_entry->tdls_send_set_state_disable  = value;
 }
 
 /**
@@ -3195,10 +3205,22 @@ QDF_STATUS lim_delete_tdls_peers(tpAniSirGlobal mac_ctx,
 
 	if (lim_is_roam_synch_in_progress(session_entry))
 		return QDF_STATUS_SUCCESS;
+	/* In case of CSA, Only peers in lim and TDLS component
+	 * needs to be removed and set state disable command
+	 * should not be sent to fw as there is no way to enable
+	 * TDLS in FW after vdev restart.
+	 */
+	if (session_entry->tdls_send_set_state_disable) {
+		tgt_tdls_peers_deleted_notification(mac_ctx->psoc,
+						    session_entry->
+						    smeSessionId);
+	}
 
-	tgt_tdls_peers_deleted_notification(mac_ctx->psoc,
-					    session_entry->smeSessionId);
+	tgt_tdls_delete_all_peers_indication(mac_ctx->psoc,
+					     session_entry->smeSessionId);
 
+	/* reset the set_state_disable flag */
+	session_entry->tdls_send_set_state_disable = true;
 	pe_debug("Exit");
 	return QDF_STATUS_SUCCESS;
 }
@@ -3256,7 +3278,6 @@ void lim_process_tdls_del_sta_rsp(tpAniSirGlobal mac_ctx,
 	tpDphHashNode sta_ds;
 	uint16_t peer_idx = 0;
 	struct qdf_mac_addr peer_mac;
-	bool release_serial_cmd;
 
 	if (!del_sta_params) {
 		pe_err("del_sta_params is NULL");
@@ -3274,13 +3295,11 @@ void lim_process_tdls_del_sta_rsp(tpAniSirGlobal mac_ctx,
 	qdf_mem_copy(peer_mac.bytes,
 			del_sta_params->staMac, QDF_MAC_ADDR_SIZE);
 
-	release_serial_cmd = del_sta_params->release_serial_cmd;
 	if (QDF_STATUS_SUCCESS != del_sta_params->status) {
 		pe_err("DEL STA failed!");
 		lim_send_sme_tdls_del_sta_rsp(mac_ctx,
 				      session_entry->smeSessionId,
-				      peer_mac, NULL, QDF_STATUS_E_FAILURE,
-				      release_serial_cmd);
+				      peer_mac, NULL, QDF_STATUS_E_FAILURE);
 		goto skip_event;
 	}
 
@@ -3290,7 +3309,7 @@ void lim_process_tdls_del_sta_rsp(tpAniSirGlobal mac_ctx,
 
 	lim_send_sme_tdls_del_sta_rsp(mac_ctx, session_entry->smeSessionId,
 				      peer_mac, sta_ds,
-				      QDF_STATUS_SUCCESS, release_serial_cmd);
+				      QDF_STATUS_SUCCESS);
 	lim_release_peer_idx(mac_ctx, sta_ds->assocId, session_entry);
 
 	/* Clear the aid in peerAIDBitmap as this aid is now in freepool */

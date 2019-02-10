@@ -564,7 +564,7 @@ lim_send_sme_join_reassoc_rsp(tpAniSirGlobal mac_ctx, uint16_t msg_type,
 #endif
 		lim_handle_join_rsp_status(mac_ctx, session_entry, result_code,
 			sme_join_rsp);
-
+		sme_join_rsp->uapsd_mask = session_entry->gUapsdPerAcBitmask;
 		/* Send supported NSS 1x1 to SME */
 		sme_join_rsp->supported_nss_1x1 =
 			session_entry->supported_nss_1x1;
@@ -1993,11 +1993,12 @@ void lim_handle_csa_offload_msg(tpAniSirGlobal mac_ctx,
 		qdf_mem_free(csa_offload_ind);
 		goto err;
 	}
-
 	/*
 	 * on receiving channel switch announcement from AP, delete all
 	 * TDLS peers before leaving BSS and proceed for channel switch
 	 */
+
+	lim_update_tdls_set_state_for_fw(session_entry, false);
 	lim_delete_tdls_peers(mac_ctx, session_entry);
 
 	lim_ch_switch = &session_entry->gLimChannelSwitch;

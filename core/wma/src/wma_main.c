@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -89,6 +89,7 @@
 #include "target_if_green_ap.h"
 #include "service_ready_param.h"
 #include "wlan_cp_stats_mc_ucfg_api.h"
+#include "init_cmd_api.h"
 
 #define WMA_LOG_COMPLETION_TIMER 3000 /* 3 seconds */
 #define WMI_TLV_HEADROOM 128
@@ -3068,16 +3069,7 @@ static void wma_register_apf_events(tp_wma_handle wma_handle)
 }
 #endif /* FEATURE_WLAN_APF */
 
-/**
- * wma_get_phy_mode_cb() - Callback to get current PHY Mode.
- * @chan: channel number
- * @chan_width: maximum channel width possible
- * @phy_mode: PHY Mode
- *
- * Return: None
- */
-static void wma_get_phy_mode_cb(uint8_t chan, uint32_t chan_width,
-				uint32_t *phy_mode)
+void wma_get_phy_mode_cb(uint8_t chan, uint32_t chan_width, uint32_t *phy_mode)
 {
 	uint32_t dot11_mode;
 	struct sAniSirGlobal *mac = cds_get_context(QDF_MODULE_ID_PE);
@@ -4679,6 +4671,7 @@ QDF_STATUS wma_wmi_work_close(void)
 QDF_STATUS wma_close(void)
 {
 	tp_wma_handle wma_handle;
+	struct target_psoc_info *tgt_psoc_info;
 	QDF_STATUS qdf_status = QDF_STATUS_SUCCESS;
 
 	WMA_LOGD("%s: Enter", __func__);
@@ -4761,6 +4754,8 @@ QDF_STATUS wma_close(void)
 	pmo_unregister_get_pause_bitmap(wma_handle->psoc);
 	pmo_unregister_pause_bitmap_notifier(wma_handle->psoc);
 
+	tgt_psoc_info = wlan_psoc_get_tgt_if_handle(wma_handle->psoc);
+	init_deinit_free_num_units(wma_handle->psoc, tgt_psoc_info);
 	target_if_free_psoc_tgt_info(wma_handle->psoc);
 
 	wlan_objmgr_psoc_release_ref(wma_handle->psoc, WLAN_LEGACY_WMA_ID);
