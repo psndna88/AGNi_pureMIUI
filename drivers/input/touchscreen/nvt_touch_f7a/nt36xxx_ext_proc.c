@@ -396,10 +396,6 @@ static int32_t nvt_fw_version_open(struct inode *inode, struct file *file)
 
 	NVT_LOG("++\n");
 
-#if NVT_TOUCH_ESD_PROTECT
-	nvt_esd_check_enable(false);
-#endif /* #if NVT_TOUCH_ESD_PROTECT */
-
 	if (nvt_get_fw_info()) {
 		mutex_unlock(&ts->lock);
 		return -EAGAIN;
@@ -436,10 +432,6 @@ static int32_t nvt_baseline_open(struct inode *inode, struct file *file)
 	}
 
 	NVT_LOG("++\n");
-
-#if NVT_TOUCH_ESD_PROTECT
-	nvt_esd_check_enable(false);
-#endif /* #if NVT_TOUCH_ESD_PROTECT */
 
 	if (nvt_clear_fw_status()) {
 		mutex_unlock(&ts->lock);
@@ -498,10 +490,6 @@ static int32_t nvt_raw_open(struct inode *inode, struct file *file)
 	}
 
 	NVT_LOG("++\n");
-
-#if NVT_TOUCH_ESD_PROTECT
-	nvt_esd_check_enable(false);
-#endif /* #if NVT_TOUCH_ESD_PROTECT */
 
 	if (nvt_clear_fw_status()) {
 		mutex_unlock(&ts->lock);
@@ -567,10 +555,6 @@ static int32_t nvt_diff_open(struct inode *inode, struct file *file)
 	}
 
 	NVT_LOG("++\n");
-
-#if NVT_TOUCH_ESD_PROTECT
-	nvt_esd_check_enable(false);
-#endif /* #if NVT_TOUCH_ESD_PROTECT */
 
 	if (nvt_clear_fw_status()) {
 		mutex_unlock(&ts->lock);
@@ -984,10 +968,6 @@ static ssize_t nvt_pwr_plug_switch_proc_read(struct file *filp, char __user *buf
 		return -ERESTARTSYS;
 	}
 
-#if NVT_TOUCH_ESD_PROTECT
-	nvt_esd_check_enable(false);
-#endif /* #if NVT_TOUCH_ESD_PROTECT */
-
 	nvt_get_pwr_plug_switch(&pwr_plug_switch);
 
 	mutex_unlock(&ts->lock);
@@ -1039,10 +1019,6 @@ static ssize_t nvt_pwr_plug_switch_proc_write(struct file *filp,const char __use
 	if (mutex_lock_interruptible(&ts->lock)) {
 		return -ERESTARTSYS;
 	}
-
-#if NVT_TOUCH_ESD_PROTECT
-	nvt_esd_check_enable(false);
-#endif /* #if NVT_TOUCH_ESD_PROTECT */
 
 	nvt_set_pwr_plug_switch(pwr_plug_switch);
 
