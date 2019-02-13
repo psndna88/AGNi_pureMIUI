@@ -69,7 +69,6 @@ struct g_nvt_data {
 struct g_nvt_data g_nvt = {0};
 EXPORT_SYMBOL(g_nvt);
 
-static struct workqueue_struct *nvt_wq;
 
 #if BOOT_UPDATE_FIRMWARE
 static struct workqueue_struct *nvt_fwu_wq;
@@ -884,7 +883,7 @@ Novatek touchscreen work function.
 return:
 n.a.
  *******************************************************/
-static void nvt_ts_work_func(struct work_struct *work)
+static void nvt_ts_work_func(void)
 {
 	int32_t ret = -1;
 	uint8_t point_data[POINT_DATA_LEN + 1] = {0};
@@ -901,12 +900,11 @@ static void nvt_ts_work_func(struct work_struct *work)
 	int32_t finger_cnt = 0;
 
 	LOG_ENTRY();
-	mutex_lock(&ts->lock);
 
 	ret = CTP_I2C_READ(ts->client, I2C_FW_Address, point_data, POINT_DATA_LEN + 1);
 	if (ret < 0) {
 		NVT_ERR("CTP_I2C_READ failed.(%d)\n", ret);
-		goto XFER_ERROR;
+		return;
 	}
 	/*
 	//--- dump I2C buf ---
@@ -933,7 +931,6 @@ static void nvt_ts_work_func(struct work_struct *work)
 		input_id = (uint8_t)(point_data[position + 0] >> 3);
 		if ((input_id == 0) || (input_id > ts->max_touch_num))
 			continue;
-
 		if (((point_data[position] & 0x07) == 0x01) || ((point_data[position] & 0x07) == 0x02)) {
 			input_x = (uint32_t)(point_data[position + 1] << 4) + (uint32_t) (point_data[position + 3] >> 4);
 			input_y = (uint32_t)(point_data[position + 2] << 4) + (uint32_t) (point_data[position + 3] & 0x0F);
@@ -1013,10 +1010,6 @@ static void nvt_ts_work_func(struct work_struct *work)
 
 	input_sync(ts->input_dev);
 
-XFER_ERROR:
-	enable_irq(ts->client->irq);
-
-	mutex_unlock(&ts->lock);
 	LOG_DONE();
 }
 
@@ -1082,7 +1075,6 @@ irq execute status.
 static irqreturn_t nvt_ts_irq_handler(int32_t irq, void *dev_id)
 {
 	LOG_ENTRY();
-	disable_irq_nosync(ts->client->irq);
 
 #if WAKEUP_GESTURE
 	if (bTouchIsAwake == 0) {
@@ -1090,7 +1082,9 @@ static irqreturn_t nvt_ts_irq_handler(int32_t irq, void *dev_id)
 	}
 #endif
 
-	queue_work(nvt_wq, &ts->nvt_work);
+	mutex_lock(&ts->lock);
+	nvt_ts_work_func();
+	mutex_unlock(&ts->lock);
 
 	LOG_DONE();
 	return IRQ_HANDLED;
@@ -1319,14 +1313,6 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	nvt_get_fw_info();
 	mutex_unlock(&ts->lock);
 
-	//---create workqueue---
-	nvt_wq = create_workqueue("nvt_wq");
-	if (!nvt_wq) {
-		NVT_ERR("nvt_wq create workqueue failed\n");
-		ret = -ENOMEM;
-		goto err_create_nvt_wq_failed;
-	}
-	INIT_WORK(&ts->nvt_work, nvt_ts_work_func);
 	INIT_WORK(&g_nvt.nvt_usb_plugin_work, nvt_ts_usb_plugin_work_func);
 
 	//---allocate input device---
@@ -1409,9 +1395,9 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 		NVT_LOG("int_trigger_type=%d\n", ts->int_trigger_type);
 
 #if WAKEUP_GESTURE
-		ret = request_irq(client->irq, nvt_ts_irq_handler, ts->int_trigger_type | IRQF_NO_SUSPEND, client->name, ts);
+       		ret = request_threaded_irq(client->irq, NULL, nvt_ts_irq_handler, ts->int_trigger_type | IRQF_ONESHOT | IRQF_NO_SUSPEND, client->name, ts);
 #else
-		ret = request_irq(client->irq, nvt_ts_irq_handler, ts->int_trigger_type, client->name, ts);
+     		ret = request_threaded_irq(client->irq, NULL, nvt_ts_irq_handler, ts->int_trigger_type | IRQF_ONESHOT, client->name, ts);
 #endif
 		if (ret != 0) {
 			NVT_ERR("request irq failed. ret=%d\n", ret);
@@ -1521,8 +1507,6 @@ err_int_request_failed:
 err_input_register_device_failed:
 	input_free_device(ts->input_dev);
 err_input_dev_alloc_failed:
-err_create_nvt_wq_failed:
-	mutex_destroy(&ts->lock);
 err_chipvertrim_failed:
 err_check_functionality_failed:
 	gpio_free(ts->irq_gpio);
@@ -2040,8 +2024,6 @@ static void __exit nvt_driver_exit(void)
 	NVT_LOG("exit tp driver ...\n");
 	i2c_del_driver(&nvt_i2c_driver);
 
-	if (nvt_wq)
-		destroy_workqueue(nvt_wq);
 
 #if BOOT_UPDATE_FIRMWARE
 	if (nvt_fwu_wq)
