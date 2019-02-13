@@ -1,9 +1,10 @@
 KERNEL_DIR=$PWD
 Anykernel_DIR=$KERNEL_DIR/AnyKernel2/
 DATE=$(date +"%d%m%Y")
+TIME=$(date +"-%H.%M.%S")
 KERNEL_NAME="Escrima-X26-Kamui-LightningBlade-PurpleLightning"
 DEVICE="-kenzo-"
-FINAL_ZIP="$KERNEL_NAME""$DEVICE""$DATE"
+FINAL_ZIP="$KERNEL_NAME""$DEVICE""$DATE""$TIME"
 
 # Cleanup before 
 rm -rf $Anykernel_DIR/*zip
@@ -16,7 +17,7 @@ rm -rf arch/arm64/boot/Image.gz-dtb
 # Export few variables
 export KBUILD_BUILD_USER="AmolAmrit"
 export KBUILD_BUILD_HOST="Nightwing"
-export CROSS_COMPILE=/home/amol/ex/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin/aarch64-linux-android-
+export CROSS_COMPILE=/home/amol/pie/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin/aarch64-linux-android-
 export ARCH="arm64"
 export USE_CCACHE=1
 
