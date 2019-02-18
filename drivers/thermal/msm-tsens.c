@@ -2419,7 +2419,7 @@ static int tsens_tm_probe(struct platform_device *pdev)
 	tmdev->pdev = pdev;
 
 	tmdev->tsens_critical_wq = alloc_workqueue("tsens_critical_wq",
-							WQ_HIGHPRI, 0);
+							WQ_UNBOUND, 1);
 	if (!tmdev->tsens_critical_wq) {
 		rc = -ENOMEM;
 		goto fail;
