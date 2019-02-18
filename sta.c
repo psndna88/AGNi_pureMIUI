@@ -5153,7 +5153,7 @@ static int sta_set_60g_common(struct sigma_dut *dut, struct sigma_conn *conn,
 					IEEE80211_MAX_DATA_LEN_DMG,
 					IEEE80211_SNAP_LEN_DMG);
 			dut->amsdu_size = 0;
-			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+			return ERROR_SEND_STATUS;
 		}
 
 		mtu = dut->amsdu_size - IEEE80211_SNAP_LEN_DMG;
@@ -5165,7 +5165,7 @@ static int sta_set_60g_common(struct sigma_dut *dut, struct sigma_conn *conn,
 		if (system(buf) != 0) {
 			sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to set %s",
 					buf);
-			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+			return ERROR_SEND_STATUS;
 		}
 	}
 
@@ -5176,7 +5176,7 @@ static int sta_set_60g_common(struct sigma_dut *dut, struct sigma_conn *conn,
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Failed to convert %s or value is 0",
 					val);
-			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+			return ERROR_SEND_STATUS;
 		}
 
 		sigma_dut_print(dut, DUT_MSG_DEBUG,
@@ -5188,11 +5188,11 @@ static int sta_set_60g_common(struct sigma_dut *dut, struct sigma_conn *conn,
 		if (sta_set_force_mcs(dut, 1, atoi(val))) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Failed to force MCS");
-			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+			return ERROR_SEND_STATUS;
 		}
 	}
 
-	return SIGMA_DUT_SUCCESS_CALLER_SEND_STATUS;
+	return SUCCESS_SEND_STATUS;
 }
 
 
@@ -5208,7 +5208,7 @@ static int sta_pcp_start(struct sigma_dut *dut, struct sigma_conn *conn,
 	ifname = get_main_ifname();
 	if (wpa_command(ifname, "PING") != 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR, "Supplicant not running");
-		return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+		return ERROR_SEND_STATUS;
 	}
 
 	wpa_command(ifname, "FLUSH");
@@ -5222,7 +5222,7 @@ static int sta_pcp_start(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (set_network(ifname, net_id, "mode", "2") < 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Failed to set supplicant network mode");
-		return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+		return ERROR_SEND_STATUS;
 	}
 
 	if (set_network(ifname, net_id, "pbss", "1") < 0)
@@ -5235,7 +5235,7 @@ static int sta_pcp_start(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (set_network(ifname, net_id, "wps_disabled", "0") < 0) {
 		sigma_dut_print(dut, DUT_MSG_INFO,
 				"Failed to set supplicant to WPS ENABLE");
-		return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+		return ERROR_SEND_STATUS;
 	}
 
 	val = get_param(cmd, "Security");
@@ -5245,7 +5245,7 @@ static int sta_pcp_start(struct sigma_dut *dut, struct sigma_conn *conn,
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Failed to set supplicant to %s security",
 					val);
-			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+			return ERROR_SEND_STATUS;
 		}
 	} else if (val && strcasecmp(val, "WPA2-PSK") == 0) {
 		dut->ap_key_mgmt = AP_WPA2_PSK;
@@ -5253,19 +5253,19 @@ static int sta_pcp_start(struct sigma_dut *dut, struct sigma_conn *conn,
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Failed to set supplicant to %s security",
 					val);
-			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+			return ERROR_SEND_STATUS;
 		}
 
 		if (set_network(ifname, net_id, "proto", "RSN") < 0) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Failed to set supplicant to proto RSN");
-			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+			return ERROR_SEND_STATUS;
 		}
 	} else if (val) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Requested Security %s is not supported on 60GHz",
 				val);
-		return SIGMA_DUT_INVALID_CALLER_SEND_STATUS;
+		return INVALID_SEND_STATUS;
 	}
 
 	val = get_param(cmd, "Encrypt");
@@ -5273,25 +5273,25 @@ static int sta_pcp_start(struct sigma_dut *dut, struct sigma_conn *conn,
 		if (set_network(ifname, net_id, "pairwise", "GCMP") < 0) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Failed to set supplicant to pairwise GCMP");
-			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+			return ERROR_SEND_STATUS;
 		}
 		if (set_network(ifname, net_id, "group", "GCMP") < 0) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Failed to set supplicant to group GCMP");
-			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+			return ERROR_SEND_STATUS;
 		}
 	} else if (val) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Requested Encrypt %s is not supported on 60 GHz",
 				val);
-		return SIGMA_DUT_INVALID_CALLER_SEND_STATUS;
+		return INVALID_SEND_STATUS;
 	}
 
 	val = get_param(cmd, "PSK");
 	if (val && set_network_quoted(ifname, net_id, "psk", val) < 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to set psk %s",
 				val);
-		return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+		return ERROR_SEND_STATUS;
 	}
 
 	/* Convert 60G channel to freq */
@@ -5309,13 +5309,13 @@ static int sta_pcp_start(struct sigma_dut *dut, struct sigma_conn *conn,
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Failed to configure channel %d. Not supported",
 				dut->ap_channel);
-		return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+		return ERROR_SEND_STATUS;
 	}
 
 	if (set_network(ifname, net_id, "frequency", val) < 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Failed to set supplicant network frequency");
-		return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+		return ERROR_SEND_STATUS;
 	}
 
 	sigma_dut_print(dut, DUT_MSG_DEBUG,
@@ -5326,12 +5326,12 @@ static int sta_pcp_start(struct sigma_dut *dut, struct sigma_conn *conn,
 		sigma_dut_print(dut, DUT_MSG_INFO,
 				"Failed to select network id %d on %s",
 				net_id, ifname);
-		return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+		return ERROR_SEND_STATUS;
 	}
 
 	sigma_dut_print(dut, DUT_MSG_DEBUG, "Selected network");
 
-	return SIGMA_DUT_SUCCESS_CALLER_SEND_STATUS;
+	return SUCCESS_SEND_STATUS;
 }
 
 
@@ -5532,7 +5532,7 @@ static int sta_set_60g_sta(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 
 	if (start_sta_mode(dut) != 0)
-		return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+		return ERROR_SEND_STATUS;
 	return sta_set_60g_common(dut, conn, cmd);
 }
 
@@ -7025,13 +7025,13 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 		if (system(buf) != 0) {
 			sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to set %s",
 					buf);
-			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+			return ERROR_SEND_STATUS;
 		}
 
 		if (sta_set_force_mcs(dut, 0, 1)) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Failed to reset force MCS");
-			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+			return ERROR_SEND_STATUS;
 		}
 	}
 
@@ -8183,7 +8183,7 @@ int send_addba_60g(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (!val) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Currently not supporting addba for 60G without Dest_mac");
-		return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+		return ERROR_SEND_STATUS;
 	}
 
 	if (wil6210_send_addba(dut, val, dut->back_rcv_buf))
@@ -10775,12 +10775,12 @@ static int cmd_sta_set_rfeature_60g(const char *intf, struct sigma_dut *dut,
 				sta_mcs);
 		wil6210_set_force_mcs(dut, 1, sta_mcs);
 
-		return SIGMA_DUT_SUCCESS_CALLER_SEND_STATUS;
+		return SUCCESS_SEND_STATUS;
 	}
 
 	send_resp(dut, conn, SIGMA_ERROR,
 		  "errorCode,Invalid sta_set_rfeature(60G)");
-	return SIGMA_DUT_SUCCESS_STATUS_SENT;
+	return STATUS_SENT;
 }
 
 
@@ -12037,7 +12037,7 @@ static int cmd_start_wps_registration(struct sigma_dut *dut,
 		if (sta_60g_force_rsn_ie(dut, dut->force_rsn_ie) < 0) {
 			sigma_dut_print(dut, DUT_MSG_INFO,
 					"Failed to force RSN_IE");
-			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+			return ERROR_SEND_STATUS;
 		}
 	}
 

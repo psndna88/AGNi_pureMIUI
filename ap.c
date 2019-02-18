@@ -1467,7 +1467,7 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 					IEEE80211_MAX_DATA_LEN_DMG,
 					IEEE80211_SNAP_LEN_DMG);
 			dut->amsdu_size = 0;
-			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+			return ERROR_SEND_STATUS;
 		}
 
 		mtu = dut->amsdu_size - IEEE80211_SNAP_LEN_DMG;
@@ -1479,7 +1479,7 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 		if (system(buf) != 0) {
 			sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to set %s",
 					buf);
-			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+			return ERROR_SEND_STATUS;
 		}
 	}
 
@@ -1490,7 +1490,7 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Failed to convert %s or value is 0",
 					val);
-			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+			return ERROR_SEND_STATUS;
 		}
 
 		sigma_dut_print(dut, DUT_MSG_DEBUG,
@@ -8171,19 +8171,19 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		if (system(buf) != 0) {
 			sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to set %s",
 					buf);
-			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+			return ERROR_SEND_STATUS;
 		}
 
 		if (ap_set_force_mcs(dut, 0, 1)) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Failed to reset force MCS");
-			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+			return ERROR_SEND_STATUS;
 		}
 
 		if (set_ps(get_main_ifname(), dut, 1)) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Failed to enable power save");
-			return SIGMA_DUT_ERROR_CALLER_SEND_STATUS;
+			return ERROR_SEND_STATUS;
 		}
 	}
 

@@ -103,10 +103,12 @@ struct sigma_conn {
 	int waiting_completion;
 };
 
-#define SIGMA_DUT_ERROR_CALLER_SEND_STATUS -2
-#define SIGMA_DUT_INVALID_CALLER_SEND_STATUS -1
-#define SIGMA_DUT_SUCCESS_STATUS_SENT 0
-#define SIGMA_DUT_SUCCESS_CALLER_SEND_STATUS 1
+enum sigma_cmd_result {
+	ERROR_SEND_STATUS = -2,
+	INVALID_SEND_STATUS = -1,
+	STATUS_SENT = 0,
+	SUCCESS_SEND_STATUS = 1
+};
 
 struct sigma_cmd_handler {
 	struct sigma_cmd_handler *next;
@@ -115,7 +117,7 @@ struct sigma_cmd_handler {
 	/* process return value:
 	 * -2 = failed, caller will send status,ERROR
 	 * -1 = failed, caller will send status,INVALID
-	 * 0 = success, response already sent
+	 * 0 = response already sent
 	 * 1 = success, caller will send status,COMPLETE
 	 */
 	int (*process)(struct sigma_dut *dut, struct sigma_conn *conn,
