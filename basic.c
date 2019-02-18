@@ -13,8 +13,9 @@
 #include "wpa_helpers.h"
 
 
-static int cmd_ca_get_version(struct sigma_dut *dut, struct sigma_conn *conn,
-			      struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_ca_get_version(struct sigma_dut *dut,
+						struct sigma_conn *conn,
+						struct sigma_cmd *cmd)
 {
 	const char *info;
 
@@ -26,7 +27,7 @@ static int cmd_ca_get_version(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 
 	send_resp(dut, conn, SIGMA_COMPLETE, "version,1.0");
-	return 0;
+	return STATUS_SENT;
 }
 
 
@@ -67,8 +68,9 @@ void get_ver(const char *cmd, char *buf, size_t buflen)
 #endif /* __linux__ */
 
 
-static int cmd_device_get_info(struct sigma_dut *dut, struct sigma_conn *conn,
-			       struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_device_get_info(struct sigma_dut *dut,
+						 struct sigma_conn *conn,
+						 struct sigma_cmd *cmd)
 {
 	const char *vendor = "Qualcomm Atheros";
 	const char *model = "N/A";
@@ -175,7 +177,7 @@ static int cmd_device_get_info(struct sigma_dut *dut, struct sigma_conn *conn,
 		 vendor, model, version);
 
 	send_resp(dut, conn, SIGMA_COMPLETE, resp);
-	return 0;
+	return STATUS_SENT;
 }
 
 
@@ -187,9 +189,9 @@ static int check_device_list_interfaces(struct sigma_cmd *cmd)
 }
 
 
-static int cmd_device_list_interfaces(struct sigma_dut *dut,
-				      struct sigma_conn *conn,
-				      struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_device_list_interfaces(struct sigma_dut *dut,
+							struct sigma_conn *conn,
+							struct sigma_cmd *cmd)
 {
 	const char *type;
 	char resp[200];
@@ -200,13 +202,12 @@ static int cmd_device_list_interfaces(struct sigma_dut *dut,
 	sigma_dut_print(dut, DUT_MSG_DEBUG, "device_list_interfaces - "
 			"interfaceType=%s", type);
 	if (strcmp(type, "802.11") != 0)
-		return -2;
+		return ERROR_SEND_STATUS;
 
 	snprintf(resp, sizeof(resp), "interfaceType,802.11,"
 		 "interfaceID,%s", get_main_ifname());
 	send_resp(dut, conn, SIGMA_COMPLETE, resp);
-
-	return 0;
+	return STATUS_SENT;
 }
 
 
