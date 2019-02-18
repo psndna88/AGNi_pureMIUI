@@ -120,8 +120,9 @@ struct sigma_cmd_handler {
 	 * 0 = response already sent
 	 * 1 = success, caller will send status,COMPLETE
 	 */
-	int (*process)(struct sigma_dut *dut, struct sigma_conn *conn,
-		       struct sigma_cmd *cmd);
+	enum sigma_cmd_result (*process)(struct sigma_dut *dut,
+					 struct sigma_conn *conn,
+					 struct sigma_cmd *cmd);
 };
 
 #define P2P_GRP_ID_LEN 128
@@ -832,9 +833,9 @@ const char * get_param_indexed(struct sigma_cmd *cmd, const char *name,
 
 int sigma_dut_reg_cmd(const char *cmd,
 		      int (*validate)(struct sigma_cmd *cmd),
-		      int (*process)(struct sigma_dut *dut,
-				     struct sigma_conn *conn,
-				     struct sigma_cmd *cmd));
+		      enum sigma_cmd_result (*process)(struct sigma_dut *dut,
+						       struct sigma_conn *conn,
+						       struct sigma_cmd *cmd));
 
 void sigma_dut_register_cmds(void);
 

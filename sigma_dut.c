@@ -108,9 +108,9 @@ void sigma_dut_summary(struct sigma_dut *dut, const char *fmt, ...)
 
 int sigma_dut_reg_cmd(const char *cmd,
 		      int (*validate)(struct sigma_cmd *cmd),
-		      int (*process)(struct sigma_dut *dut,
-				     struct sigma_conn *conn,
-				     struct sigma_cmd *cmd))
+		      enum sigma_cmd_result (*process)(struct sigma_dut *dut,
+						       struct sigma_conn *conn,
+						       struct sigma_cmd *cmd))
 {
 	struct sigma_cmd_handler *h;
 	size_t clen, len;
@@ -309,7 +309,7 @@ static void process_cmd(struct sigma_dut *dut, struct sigma_conn *conn,
 	char *cmd, *pos, *pos2;
 	int len;
 	char txt[300];
-	int res;
+	enum sigma_cmd_result res;
 
 	while (*buf == '\r' || *buf == '\n' || *buf == '\t' || *buf == ' ')
 		buf++;
@@ -405,12 +405,19 @@ static void process_cmd(struct sigma_dut *dut, struct sigma_conn *conn,
 	send_resp(dut, conn, SIGMA_RUNNING, NULL);
 	sigma_dut_print(dut, DUT_MSG_INFO, "Run command: %s", cmd);
 	res = h->process(dut, conn, &c);
-	if (res == -2)
+	switch (res) {
+	case ERROR_SEND_STATUS:
 		send_resp(dut, conn, SIGMA_ERROR, NULL);
-	else if (res == -1)
+		break;
+	case INVALID_SEND_STATUS:
 		send_resp(dut, conn, SIGMA_INVALID, NULL);
-	else if (res == 1)
+		break;
+	case STATUS_SENT:
+		break;
+	case SUCCESS_SEND_STATUS:
 		send_resp(dut, conn, SIGMA_COMPLETE, NULL);
+		break;
+	}
 
 out:
 	if (dut->debug_level < DUT_MSG_INFO) {
