@@ -3175,7 +3175,7 @@ static int qpnp_adc_tm_probe(struct platform_device *pdev)
 				pr_err("thermal device register failed.\n");
 		}
 		chip->sensor[sen_idx].req_wq = alloc_workqueue(
-				"qpnp_adc_notify_wq", WQ_HIGHPRI, 0);
+				"qpnp_adc_notify_wq", WQ_UNBOUND, 1);
 		if (!chip->sensor[sen_idx].req_wq) {
 			pr_err("Requesting priority wq failed\n");
 			goto fail;
@@ -3186,19 +3186,19 @@ static int qpnp_adc_tm_probe(struct platform_device *pdev)
 	}
 	chip->max_channels_available = count_adc_channel_list;
 	chip->high_thr_wq = alloc_workqueue("qpnp_adc_tm_high_thr_wq",
-							WQ_HIGHPRI, 0);
+							WQ_UNBOUND, 1);
 	if (!chip->high_thr_wq) {
 		pr_err("Requesting high thr priority wq failed\n");
 		goto fail;
 	}
 	chip->low_thr_wq = alloc_workqueue("qpnp_adc_tm_low_thr_wq",
-							WQ_HIGHPRI, 0);
+							WQ_UNBOUND, 1);
 	if (!chip->low_thr_wq) {
 		pr_err("Requesting low thr priority wq failed\n");
 		goto fail;
 	}
 	chip->thr_wq = alloc_workqueue("qpnp_adc_tm_thr_wq",
-						WQ_HIGHPRI, 0);
+						WQ_UNBOUND, 1);
 	if (!chip->thr_wq) {
 		pr_err("Requesting thr priority wq failed\n");
 		goto fail;
