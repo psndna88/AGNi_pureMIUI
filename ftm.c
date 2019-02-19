@@ -73,12 +73,8 @@ static int loc_write_xml_file(struct sigma_dut *dut, const char *dst_mac_str,
 
 	/* Using this following defaults:
 	 * default value of band 1
-	 * channel 36
-	 * center frequency of 5210
 	 */
 	band = 1;
-	primary_ch = 36;
-	center_freq = 5210;
 
 #define FMT_BW_NO_PREF 0
 #define FMT_BW_HT_20 9
