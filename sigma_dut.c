@@ -2,7 +2,7 @@
  * Sigma Control API DUT (station/AP)
  * Copyright (c) 2010-2011, Atheros Communications, Inc.
  * Copyright (c) 2011-2017, Qualcomm Atheros, Inc.
- * Copyright (c) 2018, The Linux Foundation
+ * Copyright (c) 2018-2019, The Linux Foundation
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
@@ -114,6 +114,14 @@ int sigma_dut_reg_cmd(const char *cmd,
 {
 	struct sigma_cmd_handler *h;
 	size_t clen, len;
+
+	for (h = sigma_dut.cmds; h; h = h->next) {
+		if (strcmp(h->cmd, cmd) == 0) {
+			printf("ERROR: Duplicate sigma_dut command registration for '%s'\n",
+			       cmd);
+			return -1;
+		}
+	}
 
 	clen = strlen(cmd);
 	len = sizeof(*h) + clen + 1;
