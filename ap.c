@@ -2,7 +2,7 @@
  * Sigma Control API DUT (station/AP)
  * Copyright (c) 2010-2011, Atheros Communications, Inc.
  * Copyright (c) 2011-2017, Qualcomm Atheros, Inc.
- * Copyright (c) 2018, The Linux Foundation
+ * Copyright (c) 2018-2019, The Linux Foundation
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
@@ -2758,14 +2758,15 @@ static int owrt_ap_config_vap_hs2(struct sigma_dut *dut, int vap_id)
 }
 
 
-static void set_anqp_elem_value(struct sigma_dut *dut, const char *ifname,
-				char *anqp_string, size_t str_size)
+static int set_anqp_elem_value(struct sigma_dut *dut, const char *ifname,
+			       char *anqp_string, size_t str_size)
 {
 	unsigned char bssid[ETH_ALEN];
 	unsigned char dummy_mac[] = { 0x00, 0x10, 0x20, 0x30, 0x40, 0x50 };
 	int preference = 0xff;
 
-	get_hwaddr(ifname, bssid);
+	if (get_hwaddr(ifname, bssid) < 0)
+		return -1;
 	snprintf(anqp_string, str_size,
 		 "272:3410%02x%02x%02x%02x%02x%02xf70000007330000301%02x3410%02x%02x%02x%02x%02x%02xf70000007330000301%02x",
 		 bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5],
@@ -2773,6 +2774,7 @@ static void set_anqp_elem_value(struct sigma_dut *dut, const char *ifname,
 		 dummy_mac[0], dummy_mac[1], dummy_mac[2],
 		 dummy_mac[3], dummy_mac[4], dummy_mac[5],
 		 preference - 1);
+	return 0;
 }
 
 
@@ -2914,7 +2916,9 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 						"ieee80211r", "1");
 				owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
 						"nasid", "nas1.example.com");
-				get_hwaddr(sigma_radio_ifname[0], self_mac);
+				if (get_hwaddr(sigma_radio_ifname[0],
+					       self_mac) < 0)
+					return -1;
 				snprintf(mac_str, sizeof(mac_str),
 					 "%02x:%02x:%02x:%02x:%02x:%02x",
 					 self_mac[0], self_mac[1], self_mac[2],
@@ -3003,8 +3007,10 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 			char mac_str[20];
 			char anqp_string[200];
 
-			set_anqp_elem_value(dut, sigma_radio_ifname[0],
-					    anqp_string, sizeof(anqp_string));
+			if (set_anqp_elem_value(dut, sigma_radio_ifname[0],
+						anqp_string,
+						sizeof(anqp_string)) < 0)
+				return -1;
 			owrt_ap_set_list_vap(dut, vap_count, "anqp_elem",
 					     anqp_string);
 
@@ -3367,7 +3373,7 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 
 			rcons = strdup(dut->ap_roaming_cons);
 			if (rcons == NULL)
-				return 0;
+				return -1;
 
 			temp_ptr = strchr(rcons, ';');
 
@@ -3564,7 +3570,8 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 
 		owrt_ap_set_vap(dut, vap_id, "ft_over_ds", "0");
 		owrt_ap_set_vap(dut, vap_id, "ieee80211r", "1");
-		get_hwaddr(sigma_radio_ifname[0], self_mac);
+		if (get_hwaddr(sigma_radio_ifname[0], self_mac) < 0)
+			return -1;
 		snprintf(mac_str, sizeof(mac_str),
 			 "%02x:%02x:%02x:%02x:%02x:%02x",
 			 self_mac[0], self_mac[1], self_mac[2],
@@ -3748,7 +3755,8 @@ static int cmd_owrt_ap_config_commit(struct sigma_dut *dut,
 
 	/* Configure Radio & VAP, commit the config */
 	owrt_ap_config_radio(dut);
-	owrt_ap_config_vap(dut);
+	if (owrt_ap_config_vap(dut) < 0)
+		return ERROR_SEND_STATUS;
 	run_system(dut, "uci commit");
 
 	/* Start AP */
