@@ -2,6 +2,7 @@
  * Sigma Control API DUT (station/AP)
  * Copyright (c) 2010-2011, Atheros Communications, Inc.
  * Copyright (c) 2011-2017, Qualcomm Atheros, Inc.
+ * Copyright (c) 2018-2019, The Linux Foundation
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
@@ -294,6 +295,7 @@ struct sigma_dut {
 	int debug_level;
 	int stdout_debug;
 	struct sigma_cmd_handler *cmds;
+	int response_sent;
 
 	/* Default timeout value (seconds) for commands */
 	unsigned int default_timeout;

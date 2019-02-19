@@ -278,6 +278,7 @@ void send_resp(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (sendmsg(conn->s, &msg, 0) < 0)
 		sigma_dut_print(dut, DUT_MSG_INFO, "sendmsg: %s",
 				strerror(errno));
+	dut->response_sent++;
 }
 
 
@@ -410,6 +411,7 @@ static void process_cmd(struct sigma_dut *dut, struct sigma_conn *conn,
 		goto out;
 	}
 
+	dut->response_sent = 0;
 	send_resp(dut, conn, SIGMA_RUNNING, NULL);
 	sigma_dut_print(dut, DUT_MSG_INFO, "Run command: %s", cmd);
 	res = h->process(dut, conn, &c);
@@ -425,6 +427,12 @@ static void process_cmd(struct sigma_dut *dut, struct sigma_conn *conn,
 	case SUCCESS_SEND_STATUS:
 		send_resp(dut, conn, SIGMA_COMPLETE, NULL);
 		break;
+	}
+
+	if (!conn->waiting_completion && dut->response_sent != 2) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"ERROR: Unexpected number of status lines sent (%d) for command '%s'",
+				dut->response_sent, cmd);
 	}
 
 out:
