@@ -739,7 +739,7 @@ static const char * const license1 =
 "\n"
 "Copyright (c) 2010-2011, Atheros Communications, Inc.\n"
 "Copyright (c) 2011-2017, Qualcomm Atheros, Inc.\n"
-"Copyright (c) 2018, The Linux Foundation\n"
+"Copyright (c) 2018-2019, The Linux Foundation\n"
 "All Rights Reserved.\n"
 "Licensed under the Clear BSD license.\n"
 "\n";
