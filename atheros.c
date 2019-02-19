@@ -97,7 +97,7 @@ static enum sigma_cmd_result cmd_atheros_config_scan(struct sigma_dut *dut,
 				"%s: err in adding vendor_cmd and vendor_data",
 				__func__);
 		nlmsg_free(msg);
-		return INVALID_SEND_STATUS;
+		return ERROR_SEND_STATUS;
 	}
 	nla_nest_end(msg, params);
 
@@ -106,7 +106,7 @@ static enum sigma_cmd_result cmd_atheros_config_scan(struct sigma_dut *dut,
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"%s: err in send_and_recv_msgs, ret=%d",
 				__func__, ret);
-		return ret;
+		return ERROR_SEND_STATUS;
 	}
 
 	return STATUS_SENT;
