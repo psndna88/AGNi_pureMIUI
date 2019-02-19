@@ -1,7 +1,7 @@
 /*
  * Sigma Control API DUT (server)
  * Copyright (c) 2014, Qualcomm Atheros, Inc.
- * Copyright (c) 2018, The Linux Foundation
+ * Copyright (c) 2018-2019, The Linux Foundation
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
@@ -22,18 +22,18 @@
 #endif /* CERT_DIR */
 
 
-static int cmd_server_ca_get_version(struct sigma_dut *dut,
-				     struct sigma_conn *conn,
-				     struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_server_ca_get_version(struct sigma_dut *dut,
+						       struct sigma_conn *conn,
+						       struct sigma_cmd *cmd)
 {
 	send_resp(dut, conn, SIGMA_COMPLETE, "version," SIGMA_DUT_VER);
-	return 0;
+	return STATUS_SENT;
 }
 
 
-static int cmd_server_get_info(struct sigma_dut *dut,
-			       struct sigma_conn *conn,
-			       struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_server_get_info(struct sigma_dut *dut,
+						 struct sigma_conn *conn,
+						 struct sigma_cmd *cmd)
 {
 	char ver[128], resp[256];
 
@@ -41,7 +41,7 @@ static int cmd_server_get_info(struct sigma_dut *dut,
 
 	snprintf(resp, sizeof(resp), "vendor,OSU,model,OS,version,%s", ver);
 	send_resp(dut, conn, SIGMA_COMPLETE, resp);
-	return 0;
+	return STATUS_SENT;
 }
 
 
@@ -306,9 +306,9 @@ static int server_reset_imsi(struct sigma_dut *dut, const char *imsi)
 }
 
 
-static int cmd_server_reset_default(struct sigma_dut *dut,
-				    struct sigma_conn *conn,
-				    struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_server_reset_default(struct sigma_dut *dut,
+						      struct sigma_conn *conn,
+						      struct sigma_cmd *cmd)
 {
 	const char *var;
 	enum sigma_program prog;
@@ -317,45 +317,45 @@ static int cmd_server_reset_default(struct sigma_dut *dut,
 	if (!var) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Missing program parameter");
-		return 0;
+		return STATUS_SENT;
 	}
 
 	prog = sigma_program_to_enum(var);
 	if (prog != PROGRAM_HS2_R2 && prog != PROGRAM_HS2_R3) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Unsupported program");
-		return 0;
+		return STATUS_SENT;
 	}
 
 	var = get_param(cmd, "UserName");
 	if (var && server_reset_user(dut, var) < 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Failed to reset user account to defaults");
-		return 0;
+		return STATUS_SENT;
 	}
 
 	var = get_param(cmd, "SerialNo");
 	if (var && server_reset_serial(dut, var)) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Failed to reset user account to defaults");
-		return 0;
+		return STATUS_SENT;
 	}
 
 	var = get_param(cmd, "ClientMACAddr");
 	if (var && server_reset_cert_enroll(dut, var) < 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Failed to reset cert enroll to defaults");
-		return 0;
+		return STATUS_SENT;
 	}
 
 	var = get_param(cmd, "imsi_val");
 	if (var && server_reset_imsi(dut, var) < 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Failed to reset IMSI/SIM user");
-		return 0;
+		return STATUS_SENT;
 	}
 
-	return 1;
+	return SUCCESS_SEND_STATUS;
 }
 
 
@@ -398,9 +398,9 @@ static char * get_last_msk(struct sigma_dut *dut, sqlite3 *db,
 }
 
 
-static int aaa_auth_status(struct sigma_dut *dut, struct sigma_conn *conn,
-			   struct sigma_cmd *cmd, const char *username,
-			   int timeout)
+static enum sigma_cmd_result
+aaa_auth_status(struct sigma_dut *dut, struct sigma_conn *conn,
+		struct sigma_cmd *cmd, const char *username, int timeout)
 {
 	sqlite3 *db;
 	char *sql = NULL;
@@ -411,14 +411,14 @@ static int aaa_auth_status(struct sigma_dut *dut, struct sigma_conn *conn,
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Failed to open SQLite database %s",
 				SERVER_DB);
-		return -1;
+		return INVALID_SEND_STATUS;
 	}
 
 	sql = sqlite3_mprintf("UPDATE users SET last_msk=NULL WHERE identity=%Q",
 			      username);
 	if (!sql) {
 		sqlite3_close(db);
-		return -1;
+		return ERROR_SEND_STATUS;
 	}
 
 	if (sqlite3_exec(db, sql, NULL, NULL, NULL) != SQLITE_OK) {
@@ -427,7 +427,7 @@ static int aaa_auth_status(struct sigma_dut *dut, struct sigma_conn *conn,
 				sqlite3_errmsg(db));
 		sqlite3_free(sql);
 		sqlite3_close(db);
-		return -1;
+		return ERROR_SEND_STATUS;
 	}
 
 	sqlite3_free(sql);
@@ -436,7 +436,7 @@ static int aaa_auth_status(struct sigma_dut *dut, struct sigma_conn *conn,
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"No DB rows modified (specified user not found)");
 		sqlite3_close(db);
-		return -1;
+		return ERROR_SEND_STATUS;
 	}
 
 	snprintf(resp, sizeof(resp), "AuthStatus,TIMEOUT,MSK,NULL");
@@ -462,7 +462,7 @@ static int aaa_auth_status(struct sigma_dut *dut, struct sigma_conn *conn,
 	sqlite3_close(db);
 
 	send_resp(dut, conn, SIGMA_COMPLETE, resp);
-	return 0;
+	return STATUS_SENT;
 }
 
 
@@ -506,10 +506,9 @@ static char * get_last_serial(struct sigma_dut *dut, sqlite3 *db,
 }
 
 
-static int osu_cert_enroll_status(struct sigma_dut *dut,
-				  struct sigma_conn *conn,
-				  struct sigma_cmd *cmd, const char *addr,
-				  int timeout)
+static enum sigma_cmd_result
+osu_cert_enroll_status(struct sigma_dut *dut, struct sigma_conn *conn,
+		       struct sigma_cmd *cmd, const char *addr, int timeout)
 {
 	sqlite3 *db;
 	int i;
@@ -519,7 +518,7 @@ static int osu_cert_enroll_status(struct sigma_dut *dut,
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Failed to open SQLite database %s",
 				SERVER_DB);
-		return -1;
+		return INVALID_SEND_STATUS;
 	}
 
 	snprintf(resp, sizeof(resp), "OSUStatus,TIMEOUT");
@@ -546,7 +545,7 @@ static int osu_cert_enroll_status(struct sigma_dut *dut,
 	sqlite3_close(db);
 
 	send_resp(dut, conn, SIGMA_COMPLETE, resp);
-	return 0;
+	return STATUS_SENT;
 }
 
 
@@ -649,9 +648,9 @@ static char * get_eventlog_new_serialno(struct sigma_dut *dut, sqlite3 *db,
 }
 
 
-static int osu_remediation_status(struct sigma_dut *dut,
-				  struct sigma_conn *conn, int timeout,
-				  const char *username, const char *serialno)
+static enum sigma_cmd_result
+osu_remediation_status(struct sigma_dut *dut, struct sigma_conn *conn,
+		       int timeout, const char *username, const char *serialno)
 {
 	sqlite3 *db;
 	int i;
@@ -661,7 +660,7 @@ static int osu_remediation_status(struct sigma_dut *dut,
 	int dmacc = 0;
 
 	if (!username && !serialno)
-		return -1;
+		return INVALID_SEND_STATUS;
 	if (!username) {
 		snprintf(name, sizeof(name), "cert-%s", serialno);
 		username = name;
@@ -671,7 +670,7 @@ static int osu_remediation_status(struct sigma_dut *dut,
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Failed to open SQLite database %s",
 				SERVER_DB);
-		return -1;
+		return ERROR_SEND_STATUS;
 	}
 
 	remediation = get_user_field(dut, db, username, "remediation");
@@ -732,13 +731,13 @@ done:
 	sqlite3_close(db);
 
 	send_resp(dut, conn, SIGMA_COMPLETE, resp);
-	return 0;
+	return STATUS_SENT;
 }
 
 
-static int osu_polupd_status(struct sigma_dut *dut,
-			     struct sigma_conn *conn, int timeout,
-			     const char *username, const char *serialno)
+static enum sigma_cmd_result
+osu_polupd_status(struct sigma_dut *dut, struct sigma_conn *conn, int timeout,
+		  const char *username, const char *serialno)
 {
 	sqlite3 *db;
 	char *sql;
@@ -749,7 +748,7 @@ static int osu_polupd_status(struct sigma_dut *dut,
 	int dmacc = 0;
 
 	if (!username && !serialno)
-		return -1;
+		return INVALID_SEND_STATUS;
 	if (!username) {
 		snprintf(name, sizeof(name), "cert-%s", serialno);
 		username = name;
@@ -759,7 +758,7 @@ static int osu_polupd_status(struct sigma_dut *dut,
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Failed to open SQLite database %s",
 				SERVER_DB);
-		return -1;
+		return ERROR_SEND_STATUS;
 	}
 
 	policy = get_user_field(dut, db, username, "policy");
@@ -819,13 +818,14 @@ done:
 	sqlite3_close(db);
 
 	send_resp(dut, conn, SIGMA_COMPLETE, resp);
-	return 0;
+	return STATUS_SENT;
 }
 
 
-static int osu_sim_policy_provisioning_status(struct sigma_dut *dut,
-					      struct sigma_conn *conn,
-					      const char *imsi, int timeout)
+static enum sigma_cmd_result
+osu_sim_policy_provisioning_status(struct sigma_dut *dut,
+				   struct sigma_conn *conn,
+				   const char *imsi, int timeout)
 {
 	sqlite3 *db;
 	int i;
@@ -836,7 +836,7 @@ static int osu_sim_policy_provisioning_status(struct sigma_dut *dut,
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Failed to open SQLite database %s",
 				SERVER_DB);
-		return -1;
+		return INVALID_SEND_STATUS;
 	}
 
 	snprintf(resp, sizeof(resp), "PolicyProvisioning,TIMEOUT");
@@ -856,13 +856,13 @@ static int osu_sim_policy_provisioning_status(struct sigma_dut *dut,
 	sqlite3_close(db);
 
 	send_resp(dut, conn, SIGMA_COMPLETE, resp);
-	return 0;
+	return STATUS_SENT;
 }
 
 
-static int cmd_server_request_status(struct sigma_dut *dut,
-				     struct sigma_conn *conn,
-				     struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_server_request_status(struct sigma_dut *dut,
+						       struct sigma_conn *conn,
+						       struct sigma_cmd *cmd)
 {
 	const char *var, *username, *serialno, *imsi, *addr, *status;
 	int osu, timeout;
@@ -873,14 +873,14 @@ static int cmd_server_request_status(struct sigma_dut *dut,
 	if (!var) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Missing program parameter");
-		return 0;
+		return STATUS_SENT;
 	}
 
 	prog = sigma_program_to_enum(var);
 	if (prog != PROGRAM_HS2_R2 && prog != PROGRAM_HS2_R3) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Unsupported program");
-		return 0;
+		return STATUS_SENT;
 	}
 
 	var = get_param(cmd, "Device");
@@ -889,7 +889,7 @@ static int cmd_server_request_status(struct sigma_dut *dut,
 	     strcasecmp(var, "OSUServer") != 0)) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Unsupported device type");
-		return 0;
+		return STATUS_SENT;
 	}
 	osu = strcasecmp(var, "OSUServer") == 0;
 
@@ -897,7 +897,7 @@ static int cmd_server_request_status(struct sigma_dut *dut,
 	if (!var) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Missing timeout");
-		return 0;
+		return STATUS_SENT;
 	}
 	timeout = atoi(var);
 	sigma_dut_print(dut, DUT_MSG_DEBUG, "timeout: %d", timeout);
@@ -944,7 +944,7 @@ static int cmd_server_request_status(struct sigma_dut *dut,
 		return osu_sim_policy_provisioning_status(dut, conn, imsi,
 							  timeout);
 
-	return 1;
+	return SUCCESS_SEND_STATUS;
 }
 
 
@@ -988,9 +988,9 @@ fail:
 }
 
 
-static int cmd_server_set_parameter(struct sigma_dut *dut,
-				    struct sigma_conn *conn,
-				    struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_server_set_parameter(struct sigma_dut *dut,
+						      struct sigma_conn *conn,
+						      struct sigma_cmd *cmd)
 {
 	const char *var, *root_ca, *inter_ca, *osu_cert, *issuing_arch, *name;
 	const char *reenroll, *serial;
@@ -1001,14 +1001,14 @@ static int cmd_server_set_parameter(struct sigma_dut *dut,
 	if (!var) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Missing program parameter");
-		return 0;
+		return STATUS_SENT;
 	}
 
 	prog = sigma_program_to_enum(var);
 	if (prog != PROGRAM_HS2_R2 && prog != PROGRAM_HS2_R3) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Unsupported program");
-		return 0;
+		return STATUS_SENT;
 	}
 
 	var = get_param(cmd, "Device");
@@ -1017,7 +1017,7 @@ static int cmd_server_set_parameter(struct sigma_dut *dut,
 	     strcasecmp(var, "OSUServer") != 0)) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Unsupported device type");
-		return 0;
+		return STATUS_SENT;
 	}
 	osu = strcasecmp(var, "OSUServer") == 0;
 
@@ -1029,7 +1029,7 @@ static int cmd_server_set_parameter(struct sigma_dut *dut,
 	if (var && strcasecmp(var, "SOAP") != 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Unsupported ProvisioningProto");
-		return 0;
+		return STATUS_SENT;
 	}
 
 	reenroll = get_param(cmd, "CertReEnroll");
@@ -1044,13 +1044,13 @@ static int cmd_server_set_parameter(struct sigma_dut *dut,
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Invalid CertReEnroll value");
-			return 0;
+			return STATUS_SENT;
 		}
 
 		if (osu_set_cert_reenroll(dut, serial, enable) < 0) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Failed to update certificate reenrollment state");
-			return 0;
+			return STATUS_SENT;
 		}
 	}
 
@@ -1080,7 +1080,7 @@ static int cmd_server_set_parameter(struct sigma_dut *dut,
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Unsupported Name value");
-			return 0;
+			return STATUS_SENT;
 		}
 
 		if (strcasecmp(issuing_arch, "col2") == 0) {
@@ -1090,7 +1090,7 @@ static int cmd_server_set_parameter(struct sigma_dut *dut,
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Unsupported Issuing_Arch value");
-			return 0;
+			return STATUS_SENT;
 		}
 
 		if (strcasecmp(root_ca, "ID-T") == 0) {
@@ -1098,17 +1098,17 @@ static int cmd_server_set_parameter(struct sigma_dut *dut,
 					"OSU trust root: NetworkFX");
 			if (system("cp " CERT_DIR "/IDT-cert-RootCA.pem "
 				   CERT_DIR "/cacert.pem") < 0)
-				return -2;
+				return ERROR_SEND_STATUS;
 		} else if (strcasecmp(root_ca, "ID-Y") == 0) {
 			sigma_dut_print(dut, DUT_MSG_DEBUG,
 					"OSU trust root: NetworkFX");
 			if (system("cp " CERT_DIR "/IDY-cert-RootCA.pem "
 				   CERT_DIR "/cacert.pem") < 0)
-				return -2;
+				return ERROR_SEND_STATUS;
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Unsupported TrustRootCACert value");
-			return 0;
+			return STATUS_SENT;
 		}
 
 		if (strcasecmp(inter_ca, "ID-Z.2") == 0) {
@@ -1116,29 +1116,29 @@ static int cmd_server_set_parameter(struct sigma_dut *dut,
 					"OSU intermediate CA: NetworkFX (col2)");
 			if (system("cat " CERT_DIR "/IDZ2-cert-InterCA.pem >> "
 				   CERT_DIR "/cacert.pem") < 0)
-				return -2;
+				return ERROR_SEND_STATUS;
 		} else if (strcasecmp(inter_ca, "ID-Z.4") == 0) {
 			sigma_dut_print(dut, DUT_MSG_DEBUG,
 					"OSU intermediate CA: DigiCert (col2)");
 			if (system("cat " CERT_DIR "/IDZ4-cert-InterCA.pem >> "
 				   CERT_DIR "/cacert.pem") < 0)
-				return -2;
+				return ERROR_SEND_STATUS;
 		} else if (strcasecmp(inter_ca, "ID-Z.6") == 0) {
 			sigma_dut_print(dut, DUT_MSG_DEBUG,
 					"OSU intermediate CA: NetworkFX (col4)");
 			if (system("cat " CERT_DIR "/IDZ6-cert-InterCA.pem >> "
 				   CERT_DIR "/cacert.pem") < 0)
-				return -2;
+				return ERROR_SEND_STATUS;
 		} else if (strcasecmp(inter_ca, "ID-Z.8") == 0) {
 			sigma_dut_print(dut, DUT_MSG_DEBUG,
 					"OSU intermediate CA: DigiCert (col4)");
 			if (system("cat " CERT_DIR "/IDZ8-cert-InterCA.pem >> "
 				   CERT_DIR "/cacert.pem") < 0)
-				return -2;
+				return ERROR_SEND_STATUS;
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Unsupported InterCACert value");
-			return 0;
+			return STATUS_SENT;
 		}
 
 		if (strcasecmp(osu_cert, "ID-Q") == 0) {
@@ -1188,21 +1188,21 @@ static int cmd_server_set_parameter(struct sigma_dut *dut,
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Unsupported OSUServerCert value");
-			return 0;
+			return STATUS_SENT;
 		}
 
 		if (system(buf) < 0 || system(buf2) < 0)
-			return -2;
+			return ERROR_SEND_STATUS;
 
 		if (system("service apache2 reload") < 0) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Failed to restart Apache");
-			return 0;
+			return STATUS_SENT;
 		}
 	}
 
 	/* TODO */
-	return 1;
+	return SUCCESS_SEND_STATUS;
 }
 
 
