@@ -6316,6 +6316,52 @@ static int sta_set_heconfig_and_wep_tkip(struct sigma_dut *dut,
 }
 
 
+#ifdef NL80211_SUPPORT
+static int sta_set_he_testbed_def(struct sigma_dut *dut,
+				  const char *intf, int cfg)
+{
+	struct nl_msg *msg;
+	int ret = 0;
+	struct nlattr *params;
+	int ifindex;
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s failed",
+				__func__, intf);
+		return -1;
+	}
+
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+				    NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
+	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    nla_put_u8(msg,
+		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_SET_HE_TESTBED_DEFAULTS,
+		       cfg)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding vendor_cmd and vendor_data",
+				__func__);
+		nlmsg_free(msg);
+		return -1;
+	}
+	nla_nest_end(msg, params);
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in send_and_recv_msgs, ret=%d",
+				__func__, ret);
+	}
+	return ret;
+}
+#endif /* NL80211_SUPPORT */
+
+
 static int sta_set_addba_buf_size(struct sigma_dut *dut,
 				  const char *intf, int bufsize)
 {
@@ -6799,6 +6845,10 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 		sta_set_addba_buf_size(dut, intf, 64);
 
 #ifdef NL80211_SUPPORT
+		/* Reset the device HE capabilities to its default supported
+		 * configuration. */
+		sta_set_he_testbed_def(dut, intf, 0);
+
 		/* Disable noackpolicy for all AC */
 		if (nlvendor_sta_set_noack(dut, intf, 0, QCA_WLAN_AC_ALL)) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
@@ -6932,6 +6982,13 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 			if (sta_set_he_htc_supp(dut, intf, 0)) {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
 						"Setting of +HTC-HE support failed");
+			}
+
+			/* Set device HE capabilities to testbed default
+			 * configuration. */
+			if (sta_set_he_testbed_def(dut, intf, 1)) {
+				sigma_dut_print(dut, DUT_MSG_DEBUG,
+						"Failed to set HE defaults");
 			}
 #endif /* NL80211_SUPPORT */
 
