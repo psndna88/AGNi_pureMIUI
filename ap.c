@@ -804,14 +804,14 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	val = get_param(cmd, "BSS_max_Idle_period");
 	if (val) {
-		int idle_time = (int) strtol(val, (char **) NULL, 10);
+		long int idle_time = strtol(val, (char **) NULL, 10);
 
 		if (idle_time == LONG_MIN || idle_time == LONG_MAX) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Invalid value for BSS_max_Idle_period");
 			return 0;
 		}
-		dut->wnm_bss_max_idle_time = idle_time;
+		dut->wnm_bss_max_idle_time = (int) idle_time;
 	}
 
 	val = get_param(cmd, "PROXY_ARP");
