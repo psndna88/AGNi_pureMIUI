@@ -44,19 +44,13 @@
 #include <linux/sysfs.h>
 #include <net/net_namespace.h>
 
-struct hardidletimer_tg_attr {
-	struct attribute attr;
-	ssize_t	(*show)(struct kobject *kobj,
-			struct attribute *attr, char *buf);
-};
-
 struct hardidletimer_tg {
 	struct list_head entry;
 	struct alarm alarm;
 	struct work_struct work;
 
 	struct kobject *kobj;
-	struct hardidletimer_tg_attr attr;
+	struct device_attribute attr;
 
 	unsigned int refcnt;
 	bool send_nl_msg;
@@ -107,8 +101,8 @@ struct hardidletimer_tg *__hardidletimer_tg_find_by_label(const char *label)
 	return NULL;
 }
 
-static ssize_t hardidletimer_tg_show(struct kobject *kobj,
-				     struct attribute *attr, char *buf)
+static ssize_t hardidletimer_tg_show(struct device *dev,
+				     struct device_attribute *attr, char *buf)
 {
 	struct hardidletimer_tg *timer;
 	ktime_t expires;
@@ -117,7 +111,7 @@ static ssize_t hardidletimer_tg_show(struct kobject *kobj,
 	memset(&ktimespec, 0, sizeof(struct timespec));
 	mutex_lock(&list_mutex);
 
-	timer =	__hardidletimer_tg_find_by_label(attr->name);
+	timer =	__hardidletimer_tg_find_by_label(attr->attr.name);
 	if (timer) {
 		expires = alarm_expires_remaining(&timer->alarm);
 		ktimespec = ktime_to_timespec(expires);
