@@ -349,7 +349,7 @@ static ssize_t daytime_r_dump(struct device *dev,
     if (!sscanf(buf, "%u", &tmpval))
       return -EINVAL;
 
-    if ((tmpval > (SCALE_VAL_MIN)) && (tmpval <= MAX_SCALE))
+    if ((tmpval >= (SCALE_VAL_MIN)) && (tmpval <= MAX_SCALE))
     {
         daytime_r = tmpval;
         if (enable_klapse == 0)
@@ -384,7 +384,7 @@ static ssize_t daytime_g_dump(struct device *dev,
     if (!sscanf(buf, "%u", &tmpval))
         return -EINVAL;
 
-    if ((tmpval > (SCALE_VAL_MIN)) && (tmpval <= MAX_SCALE))
+    if ((tmpval >= (SCALE_VAL_MIN)) && (tmpval <= MAX_SCALE))
     {
         daytime_g = tmpval;
         if (enable_klapse == 0)
@@ -419,7 +419,7 @@ static ssize_t daytime_b_dump(struct device *dev,
     if (!sscanf(buf, "%u", &tmpval))
         return -EINVAL;
 
-    if ((tmpval > (SCALE_VAL_MIN)) && (tmpval <= MAX_SCALE))
+    if ((tmpval >= (SCALE_VAL_MIN)) && (tmpval <= MAX_SCALE))
     {
         daytime_b = tmpval;
         if (enable_klapse == 0)
@@ -454,7 +454,7 @@ static ssize_t target_r_dump(struct device *dev,
     if (!sscanf(buf, "%u", &tmpval))
       return -EINVAL;
 
-    if ((tmpval > (SCALE_VAL_MIN)) && (tmpval <= MAX_SCALE))
+    if ((tmpval >= (SCALE_VAL_MIN)) && (tmpval <= MAX_SCALE))
     {
         target_r = tmpval;
         if (enable_klapse == 2)
@@ -487,7 +487,7 @@ static ssize_t target_g_dump(struct device *dev,
     if (!sscanf(buf, "%u", &tmpval))
       return -EINVAL;
 
-    if ((tmpval > (SCALE_VAL_MIN)) && (tmpval <= MAX_SCALE))
+    if ((tmpval >= (SCALE_VAL_MIN)) && (tmpval <= MAX_SCALE))
     {
         target_g = tmpval;
         if (enable_klapse == 2)
@@ -520,7 +520,7 @@ static ssize_t target_b_dump(struct device *dev,
     if (!sscanf(buf, "%u", &tmpval))
       return -EINVAL;
 
-    if ((tmpval > (SCALE_VAL_MIN)) && (tmpval <= MAX_SCALE))
+    if ((tmpval >= (SCALE_VAL_MIN)) && (tmpval <= MAX_SCALE))
     {
         target_b = tmpval;
         if (enable_klapse == 2)
