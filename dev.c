@@ -116,7 +116,6 @@ static enum sigma_cmd_result cmd_dev_ble_action(struct sigma_dut *dut,
 						struct sigma_cmd *cmd)
 {
 #ifdef ANDROID
-	char buf[200];
 	const char *ble_op = get_param(cmd, "BLEOp");
 	const char *prog = get_param(cmd, "Prog");
 	const char *service_name = get_param(cmd, "ServiceName");
