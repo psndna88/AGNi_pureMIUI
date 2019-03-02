@@ -826,7 +826,7 @@ static ssize_t fadeback_minutes_dump(struct device *dev,
     if (!sscanf(buf, "%u", &tmp))
       return -EINVAL;     
 
-    if ((tmp >= 2) && (tmp <= active_minutes))
+    if ((tmp >= 0) && (tmp <= active_minutes))
     {
         fadeback_minutes = tmp;
         flush_timer();
