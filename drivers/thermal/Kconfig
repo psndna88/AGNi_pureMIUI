@@ -441,6 +441,20 @@ config QCOM_THERMAL_LIMITS_DCVS
 	  tracking temperatures of the CPUs and taking thermal action in the
 	  hardware without s/w intervention.
 
+config MSM_THERMAL_SIMPLE
+	bool "Simple solution to monitor temperature and limit CPU frequency"
+	default n
+	help
+	  When properly configured, this driver monitors temperatures from a
+	  specified sensor and reduces the CPU's max frequency in response to
+	  the temperature crossing specified thermal zones. The temperature sensor
+	  use must be a specified ADC channel on a given VADC device, hence this
+	  driver's dependency on the chipset being an MSM product.
+
+	  This driver can only be configured via the device tree; it cannot be
+	  configured at runtime. Configuration instructions can be found in the
+	  accompanying documentation.
+
 menu "Texas Instruments thermal drivers"
 depends on ARCH_HAS_BANDGAP || COMPILE_TEST
 source "drivers/thermal/ti-soc-thermal/Kconfig"
