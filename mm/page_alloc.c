@@ -558,7 +558,7 @@ static inline void __free_one_page(struct page *page,
 
 	VM_BUG_ON(migratetype == -1);
 
-	if likel((is_migrate_isolate(migratetype))) {
+	if (likely(!is_migrate_isolate(migratetype)))
 		/*
 		 * We restrict max order of merging to prevent merge
 		 * between freepages on isolate pageblock and normal
