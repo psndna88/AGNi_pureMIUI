@@ -11518,30 +11518,6 @@ enum dot11p_mode {
 
 /*
  * <ini>
- * rx_wakelock_timeout - Amount of time to hold wakelock for RX unicast packets
- * @Min: 0
- * @Max: 100
- * @Default: 50
- *
- * This ini item configures the amount of time, in milliseconds, that the driver
- * should prevent system power collapse after receiving an RX unicast packet.
- * A conigured value of 0 disables the RX Wakelock feature completely.
- *
- * Related: None.
- *
- * Supported Feature: RX Wakelock
- *
- * Usage: Internal/External
- *
- * </ini>
- */
-#define CFG_RX_WAKELOCK_TIMEOUT_NAME     "rx_wakelock_timeout"
-#define CFG_RX_WAKELOCK_TIMEOUT_DEFAULT  (50)
-#define CFG_RX_WAKELOCK_TIMEOUT_MIN      (0)
-#define CFG_RX_WAKELOCK_TIMEOUT_MAX      (100)
-
-/*
- * <ini>
  * enable_5g_band_pref - Enable preference for 5G from INI.
  * @Min: 0
  * @Max: 1
@@ -18675,7 +18651,6 @@ struct hdd_config {
 	/* beacon count before channel switch */
 	uint8_t sap_chanswitch_beacon_cnt;
 	uint8_t sap_chanswitch_mode;
-	uint32_t rx_wakelock_timeout;
 	uint32_t max_sched_scan_plan_interval;
 	uint32_t max_sched_scan_plan_iterations;
 #ifdef WLAN_FEATURE_WOW_PULSE
