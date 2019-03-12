@@ -6704,6 +6704,56 @@ static int sta_set_om_ctrl_supp(struct sigma_dut *dut, const char *intf,
 }
 
 
+static int sta_set_twt_req_support(struct sigma_dut *dut, const char *intf,
+				   int val)
+{
+#ifdef NL80211_SUPPORT
+	struct nl_msg *msg;
+	int ret;
+	struct nlattr *params;
+	int ifindex;
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s failed, val:%d",
+				__func__, intf, val);
+		return -1;
+	}
+
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+				    NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
+	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    nla_put_u8(msg,
+		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_TWT_REQ_SUPPORT,
+		       val)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding vendor_cmd and vendor_data, val: %d",
+				__func__, val);
+		nlmsg_free(msg);
+		return -1;
+	}
+	nla_nest_end(msg, params);
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in send_and_recv_msgs, ret=%d, val=%d",
+				__func__, ret, val);
+	}
+	return ret;
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"TWT Request cannot be changed without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
 static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 				  const char *type)
 {
@@ -7361,6 +7411,187 @@ static void cmd_set_max_he_mcs(struct sigma_dut *dut, const char *intf,
 }
 
 
+static int sta_twt_request(struct sigma_dut *dut, struct sigma_conn *conn,
+			   struct sigma_cmd *cmd)
+{
+#ifdef NL80211_SUPPORT
+	struct nlattr *params;
+	struct nlattr *attr;
+	struct nlattr *attr1;
+	struct nl_msg *msg;
+	int ifindex, ret;
+	const char *val;
+	const char *intf = get_param(cmd, "Interface");
+	int wake_interval_exp = 10, nominal_min_wake_dur = 255,
+		wake_interval_mantissa = 512;
+	int flow_type = 0, twt_trigger = 0, target_wake_time = 0,
+		protection = 0;
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s failed",
+				__func__, intf);
+		return -1;
+	}
+
+	val = get_param(cmd, "FlowType");
+	if (val) {
+		flow_type = atoi(val);
+		if (flow_type != 0 && flow_type != 1) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"TWT: Invalid FlowType %d", flow_type);
+			return -1;
+		}
+	}
+
+	val = get_param(cmd, "TWT_Trigger");
+	if (val) {
+		twt_trigger = atoi(val);
+		if (twt_trigger != 0 && twt_trigger != 1) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"TWT: Invalid TWT_Trigger %d",
+					twt_trigger);
+			return -1;
+		}
+	}
+
+	val = get_param(cmd, "Protection");
+	if (val) {
+		protection = atoi(val);
+		if (protection != 0 && protection != 1) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"TWT: Invalid Protection %d",
+					protection);
+			return -1;
+		}
+	}
+
+	val = get_param(cmd, "TargetWakeTime");
+	if (val)
+		target_wake_time = atoi(val);
+
+	val = get_param(cmd, "WakeIntervalMantissa");
+	if (val)
+		wake_interval_mantissa = atoi(val);
+
+	val = get_param(cmd, "WakeIntervalExp");
+	if (val)
+		wake_interval_exp = atoi(val);
+
+	val = get_param(cmd, "NominalMinWakeDur");
+	if (val)
+		nominal_min_wake_dur = atoi(val);
+
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+				    NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
+	    !(attr = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    !(params = nla_nest_start(
+		      msg, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_TWT_SETUP)) ||
+	    !(attr1 = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_INTVL_EXP,
+		       wake_interval_exp) ||
+	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_BCAST, 0) ||
+	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_REQ_TYPE, 1) ||
+	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_TRIGGER,
+		       twt_trigger) ||
+	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_FLOW_TYPE,
+		       flow_type) ||
+	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_PROTECTION,
+		       protection) ||
+	    nla_put_u32(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_TIME,
+			target_wake_time) ||
+	    nla_put_u32(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_DURATION,
+			nominal_min_wake_dur) ||
+	    nla_put_u32(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_INTVL_MANTISSA,
+			wake_interval_mantissa)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding vendor_cmd and vendor_data",
+				__func__);
+		nlmsg_free(msg);
+		return -1;
+	}
+	nla_nest_end(msg, attr1);
+	nla_nest_end(msg, params);
+	nla_nest_end(msg, attr);
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in send_and_recv_msgs, ret=%d",
+				__func__, ret);
+	}
+
+	return ret;
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"TWT request cannot be done without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
+static int sta_twt_teardown(struct sigma_dut *dut, struct sigma_conn *conn,
+			    struct sigma_cmd *cmd)
+{
+ #ifdef NL80211_SUPPORT
+	struct nlattr *params;
+	struct nlattr *attr;
+	struct nlattr *attr1;
+	int ifindex, ret;
+	struct nl_msg *msg;
+	const char *intf = get_param(cmd, "Interface");
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s failed",
+				__func__, intf);
+		return -1;
+	}
+
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+				    NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
+	    !(attr = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    !(params = nla_nest_start(
+		      msg,
+		      QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_TWT_TERMINATE)) ||
+	    !(attr1 = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_FLOW_TYPE, 0)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding vendor_cmd and vendor_data",
+				__func__);
+		nlmsg_free(msg);
+		return -1;
+	}
+	nla_nest_end(msg, attr1);
+	nla_nest_end(msg, params);
+	nla_nest_end(msg, attr);
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in send_and_recv_msgs, ret=%d",
+				__func__, ret);
+	}
+
+	return ret;
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"TWT teardown cannot be done without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
 static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 				    struct sigma_conn *conn,
 				    struct sigma_cmd *cmd)
@@ -7858,6 +8089,30 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"MAC padding duration cannot be changed without NL80211_SUPPORT defined");
 #endif /* NL80211_SUPPORT */
+	}
+
+	val = get_param(cmd, "TWT_ReqSupport");
+	if (val) {
+		int set_val;
+
+		if (strcasecmp(val, "Enable") == 0) {
+			set_val = 1;
+		} else if (strcasecmp(val, "Disable") == 0) {
+			set_val = 0;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Invalid TWT_ReqSupport");
+			return STATUS_SENT;
+		}
+
+		if (sta_set_twt_req_support(dut, intf, set_val)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to set TWT req support %d",
+					set_val);
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to set TWT_ReqSupport");
+			return STATUS_SENT;
+		}
 	}
 
 	val = get_param(cmd, "MU_EDCA");
@@ -10460,6 +10715,23 @@ static int wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,Failed to set Tx SU PPDU config");
 			return 0;
+		}
+	}
+
+	val = get_param(cmd, "TWT_Setup");
+	if (val) {
+		if (strcasecmp(val, "Request") == 0) {
+			if (sta_twt_request(dut, conn, cmd)) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "ErrorCode,sta_twt_request failed");
+				return STATUS_SENT;
+			}
+		} else if (strcasecmp(val, "Teardown") == 0) {
+			if (sta_twt_teardown(dut, conn, cmd)) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "ErrorCode,sta_twt_teardown failed");
+				return STATUS_SENT;
+			}
 		}
 	}
 
