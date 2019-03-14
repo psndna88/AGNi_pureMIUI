@@ -240,19 +240,10 @@ qdf_export_symbol(qdf_mutex_release);
  *
  * Return: Pointer to the name if it is valid or a default string
  */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
-const char *qdf_wake_lock_name(qdf_wake_lock_t *lock)
-{
-	if (lock->name)
-		return lock->name;
-	return "UNNAMED_WAKELOCK";
-}
-#else
 const char *qdf_wake_lock_name(qdf_wake_lock_t *lock)
 {
 	return "NO_WAKELOCK_SUPPORT";
 }
-#endif
 qdf_export_symbol(qdf_wake_lock_name);
 
 /**
@@ -264,18 +255,10 @@ qdf_export_symbol(qdf_wake_lock_name);
  * QDF status success: if wake lock is initialized
  * QDF status failure: if wake lock was not initialized
  */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
-QDF_STATUS qdf_wake_lock_create(qdf_wake_lock_t *lock, const char *name)
-{
-	wakeup_source_init(lock, name);
-	return QDF_STATUS_SUCCESS;
-}
-#else
 QDF_STATUS qdf_wake_lock_create(qdf_wake_lock_t *lock, const char *name)
 {
 	return QDF_STATUS_SUCCESS;
 }
-#endif
 qdf_export_symbol(qdf_wake_lock_create);
 
 /**
@@ -287,23 +270,10 @@ qdf_export_symbol(qdf_wake_lock_create);
  * QDF status success: if wake lock is acquired
  * QDF status failure: if wake lock was not acquired
  */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
-QDF_STATUS qdf_wake_lock_acquire(qdf_wake_lock_t *lock, uint32_t reason)
-{
-#ifdef CONFIG_MCL
-	host_diag_log_wlock(reason, qdf_wake_lock_name(lock),
-			WIFI_POWER_EVENT_DEFAULT_WAKELOCK_TIMEOUT,
-			WIFI_POWER_EVENT_WAKELOCK_TAKEN);
-#endif
-	__pm_stay_awake(lock);
-	return QDF_STATUS_SUCCESS;
-}
-#else
 QDF_STATUS qdf_wake_lock_acquire(qdf_wake_lock_t *lock, uint32_t reason)
 {
 	return QDF_STATUS_SUCCESS;
 }
-#endif
 qdf_export_symbol(qdf_wake_lock_acquire);
 
 /**
@@ -315,21 +285,10 @@ qdf_export_symbol(qdf_wake_lock_acquire);
  * QDF status success: if wake lock is acquired
  * QDF status failure: if wake lock was not acquired
  */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
-QDF_STATUS qdf_wake_lock_timeout_acquire(qdf_wake_lock_t *lock, uint32_t msec)
-{
-	/* Wakelock for Rx is frequent.
-	 * It is reported only during active debug
-	 */
-	__pm_wakeup_event(lock, msec);
-	return QDF_STATUS_SUCCESS;
-}
-#else
 QDF_STATUS qdf_wake_lock_timeout_acquire(qdf_wake_lock_t *lock, uint32_t msec)
 {
 	return QDF_STATUS_SUCCESS;
 }
-#endif
 qdf_export_symbol(qdf_wake_lock_timeout_acquire);
 
 /**
@@ -341,23 +300,10 @@ qdf_export_symbol(qdf_wake_lock_timeout_acquire);
  * QDF status success: if wake lock is acquired
  * QDF status failure: if wake lock was not acquired
  */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
-QDF_STATUS qdf_wake_lock_release(qdf_wake_lock_t *lock, uint32_t reason)
-{
-#ifdef CONFIG_MCL
-	host_diag_log_wlock(reason, qdf_wake_lock_name(lock),
-			WIFI_POWER_EVENT_DEFAULT_WAKELOCK_TIMEOUT,
-			WIFI_POWER_EVENT_WAKELOCK_RELEASED);
-#endif
-	__pm_relax(lock);
-	return QDF_STATUS_SUCCESS;
-}
-#else
 QDF_STATUS qdf_wake_lock_release(qdf_wake_lock_t *lock, uint32_t reason)
 {
 	return QDF_STATUS_SUCCESS;
 }
-#endif
 qdf_export_symbol(qdf_wake_lock_release);
 
 /**
@@ -368,18 +314,10 @@ qdf_export_symbol(qdf_wake_lock_release);
  * QDF status success: if wake lock is acquired
  * QDF status failure: if wake lock was not acquired
  */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
-QDF_STATUS qdf_wake_lock_destroy(qdf_wake_lock_t *lock)
-{
-	wakeup_source_trash(lock);
-	return QDF_STATUS_SUCCESS;
-}
-#else
 QDF_STATUS qdf_wake_lock_destroy(qdf_wake_lock_t *lock)
 {
 	return QDF_STATUS_SUCCESS;
 }
-#endif
 qdf_export_symbol(qdf_wake_lock_destroy);
 
 #ifdef CONFIG_MCL
