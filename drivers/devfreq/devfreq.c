@@ -71,28 +71,28 @@ static struct devfreq *find_device_devfreq(struct device *dev)
 	return ERR_PTR(-ENODEV);
 }
 
-static unsigned long find_available_min_freq(struct devfreq *devfreq)
+static long find_available_min_freq(struct devfreq *devfreq)
 {
 	struct dev_pm_opp *opp;
-	unsigned long min_freq = 0;
+	long min_freq = 0;
 
 	opp = dev_pm_opp_find_freq_ceil(devfreq->dev.parent, &min_freq);
 	if (IS_ERR(opp))
-		min_freq = 0;
+		min_freq = PTR_ERR(opp);
 	else
 		dev_pm_opp_put(opp);
 
 	return min_freq;
 }
 
-static unsigned long find_available_max_freq(struct devfreq *devfreq)
+static long find_available_max_freq(struct devfreq *devfreq)
 {
 	struct dev_pm_opp *opp;
-	unsigned long max_freq = ULONG_MAX;
+	long max_freq = LONG_MAX;
 
 	opp = dev_pm_opp_find_freq_floor(devfreq->dev.parent, &max_freq);
 	if (IS_ERR(opp))
-		max_freq = 0;
+		max_freq = PTR_ERR(opp);
 	else
 		dev_pm_opp_put(opp);
 
@@ -555,18 +555,23 @@ static int devfreq_notifier_call(struct notifier_block *nb, unsigned long type,
 {
 	struct devfreq *devfreq = container_of(nb, struct devfreq, nb);
 	int err = -EINVAL;
+	long freq;
 
 	mutex_lock(&devfreq->lock);
 
-	devfreq->scaling_min_freq = find_available_min_freq(devfreq);
-	if (!devfreq->scaling_min_freq)
+	freq = find_available_min_freq(devfreq);
+	if (freq < 0) {
+		devfreq->scaling_min_freq = 0;
 		goto out;
+	}
+	devfreq->scaling_min_freq = freq;
 
-	devfreq->scaling_max_freq = find_available_max_freq(devfreq);
-	if (!devfreq->scaling_max_freq) {
+	freq = find_available_max_freq(devfreq);
+	if (freq < 0) {
 		devfreq->scaling_max_freq = ULONG_MAX;
 		goto out;
 	}
+	devfreq->scaling_max_freq = freq;
 
 	err = update_devfreq(devfreq);
 
@@ -618,6 +623,7 @@ struct devfreq *devfreq_add_device(struct device *dev,
 	struct devfreq *devfreq;
 	struct devfreq_governor *governor;
 	int err = 0;
+	long freq;
 
 	if (!dev || !profile || !governor_name) {
 		dev_err(dev, "%s: Invalid parameters.\n", __func__);
@@ -662,21 +668,21 @@ struct devfreq *devfreq_add_device(struct device *dev,
 		mutex_lock(&devfreq->lock);
 	}
 
-	devfreq->scaling_min_freq = find_available_min_freq(devfreq);
-	if (!devfreq->scaling_min_freq) {
+	freq = find_available_min_freq(devfreq);
+	if (freq < 0) {
 		mutex_unlock(&devfreq->lock);
 		err = -EINVAL;
 		goto err_dev;
 	}
-	devfreq->min_freq = devfreq->scaling_min_freq;
+	devfreq->min_freq = devfreq->scaling_min_freq = freq;
 
-	devfreq->scaling_max_freq = find_available_max_freq(devfreq);
-	if (!devfreq->scaling_max_freq) {
+	freq = find_available_max_freq(devfreq);
+	if (freq < 0) {
 		mutex_unlock(&devfreq->lock);
 		err = -EINVAL;
 		goto err_dev;
 	}
-	devfreq->max_freq = devfreq->scaling_max_freq;
+	devfreq->max_freq = devfreq->scaling_max_freq = freq;
 
 	devfreq->suspend_freq = dev_pm_opp_get_suspend_opp_freq(dev);
 	atomic_set(&devfreq->suspend_count, 0);
