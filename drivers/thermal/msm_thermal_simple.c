@@ -111,10 +111,15 @@ static int cpu_notifier_cb(struct notifier_block *nb, unsigned long val,
 		return NOTIFY_OK;
 
 	zone = t->curr_zone;
-	if (zone)
-		policy->max = get_throttle_freq(zone, policy->cpu);
-	else
+
+	if (zone) {
+		u32 target_freq = get_throttle_freq(zone, policy->cpu);
+
+		if (target_freq < policy->max)
+			policy->max = target_freq;
+	} else {
 		policy->max = policy->user_policy.max;
+	}
 
 	if (policy->max < policy->min)
 		policy->min = policy->max;
