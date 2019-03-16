@@ -385,7 +385,7 @@ extern void hrtimer_start_range_ns(struct hrtimer *timer, ktime_t tim,
 static inline void hrtimer_start(struct hrtimer *timer, ktime_t tim,
 				 const enum hrtimer_mode mode)
 {
-	hrtimer_start_range_ns(timer, tim, 0, mode);
+	hrtimer_start_range_ns(timer, tim, 500000, mode);
 }
 
 extern int hrtimer_cancel(struct hrtimer *timer);
@@ -398,7 +398,7 @@ static inline void hrtimer_start_expires(struct hrtimer *timer,
 	ktime_t soft, hard;
 	soft = hrtimer_get_softexpires(timer);
 	hard = hrtimer_get_expires(timer);
-	delta = ktime_to_ns(ktime_sub(hard, soft));
+	delta = max(ktime_to_ns(ktime_sub(hard, soft)), 500000LL);
 	hrtimer_start_range_ns(timer, soft, delta, mode);
 }
 
