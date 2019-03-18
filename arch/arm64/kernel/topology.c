@@ -211,9 +211,32 @@ out:
 struct cpu_topology cpu_topology[NR_CPUS];
 EXPORT_SYMBOL_GPL(cpu_topology);
 
+const struct cpumask *cpu_possible_coregroup_mask(int cpu)
+{
+	return &cpu_topology[cpu].core_possible_sibling;
+}
+
 const struct cpumask *cpu_coregroup_mask(int cpu)
 {
 	return &cpu_topology[cpu].core_sibling;
+}
+
+static void update_possible_siblings_masks(unsigned int cpuid)
+{
+	struct cpu_topology *cpu_topo, *cpuid_topo = &cpu_topology[cpuid];
+	int cpu;
+
+	if (cpuid_topo->cluster_id == -1)
+		return;
+
+	for_each_possible_cpu(cpu) {
+		cpu_topo = &cpu_topology[cpu];
+
+		if (cpuid_topo->cluster_id != cpu_topo->cluster_id)
+			continue;
+		cpumask_set_cpu(cpuid, &cpu_topo->core_possible_sibling);
+		cpumask_set_cpu(cpu, &cpuid_topo->core_possible_sibling);
+	}
 }
 
 static void update_siblings_masks(unsigned int cpuid)
@@ -349,14 +372,19 @@ static void __init reset_cpu_topology(void)
 
 void __init init_cpu_topology(void)
 {
+	int cpu;
+
 	reset_cpu_topology();
 
 	/*
 	 * Discard anything that was parsed if we hit an error so we
 	 * don't use partial information.
 	 */
-	if (of_have_populated_dt() && parse_dt_topology())
+	if (of_have_populated_dt() && parse_dt_topology()) {
 		reset_cpu_topology();
-	else
+	} else {
 		set_sched_topology(arm64_topology);
+		for_each_possible_cpu(cpu)
+			update_possible_siblings_masks(cpu);
+	}
 }
