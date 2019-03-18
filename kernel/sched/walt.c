@@ -3223,8 +3223,7 @@ void walt_irq_work(struct irq_work *irq_work)
 				if (rq->notif_pending) {
 					flag |= SCHED_CPUFREQ_INTERCLUSTER_MIG;
 					rq->notif_pending = false;
-				} else
-					flag |= SCHED_CPUFREQ_FORCE_UPDATE;
+				}
 			}
 
 			if (i == num_cpus)
