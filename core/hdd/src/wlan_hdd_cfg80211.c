@@ -809,14 +809,16 @@ int wlan_hdd_merge_avoid_freqs(struct ch_avoid_ind_type *destFreqList,
 		struct ch_avoid_ind_type *srcFreqList)
 {
 	int i;
+	uint32_t room;
 	struct ch_avoid_freq_type *avoid_range =
 	&destFreqList->avoid_freq_range[destFreqList->ch_avoid_range_cnt];
 
-	destFreqList->ch_avoid_range_cnt += srcFreqList->ch_avoid_range_cnt;
-	if (destFreqList->ch_avoid_range_cnt > CH_AVOID_MAX_RANGE) {
+	room = CH_AVOID_MAX_RANGE - destFreqList->ch_avoid_range_cnt;
+	if (srcFreqList->ch_avoid_range_cnt > room) {
 		hdd_err("avoid freq overflow");
 		return -EINVAL;
 	}
+	destFreqList->ch_avoid_range_cnt += srcFreqList->ch_avoid_range_cnt;
 
 	for (i = 0; i < srcFreqList->ch_avoid_range_cnt; i++) {
 		avoid_range->start_freq =
@@ -18435,7 +18437,7 @@ static int wlan_hdd_cfg80211_set_fils_config(struct hdd_adapter *adapter,
 
 	roam_profile->fils_con_info->is_fils_connection = true;
 	roam_profile->fils_con_info->sequence_number =
-		req->fils_erp_next_seq_num;
+			(req->fils_erp_next_seq_num + 1);
 	roam_profile->fils_con_info->auth_type = auth_type;
 
 	roam_profile->fils_con_info->r_rk_length =
@@ -22512,7 +22514,7 @@ __wlan_hdd_cfg80211_update_connect_params(struct wiphy *wiphy,
 					req->fils_erp_realm_len);
 		}
 
-		fils_info->sequence_number = req->fils_erp_next_seq_num;
+		fils_info->sequence_number = req->fils_erp_next_seq_num + 1;
 		fils_info->r_rk_length = req->fils_erp_rrk_len;
 
 		if (req->fils_erp_rrk_len && req->fils_erp_rrk)

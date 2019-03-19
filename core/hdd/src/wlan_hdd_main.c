@@ -7807,6 +7807,7 @@ void hdd_display_periodic_stats(struct hdd_context *hdd_ctx,
 	if (counter * hdd_ctx->config->busBandwidthComputeInterval >=
 		hdd_ctx->config->periodic_stats_disp_time * 1000) {
 		if (data_in_time_period) {
+			wlan_hdd_display_txrx_stats(hdd_ctx);
 			cdp_display_stats(cds_get_context(QDF_MODULE_ID_SOC),
 					  CDP_TXRX_PATH_STATS,
 					  QDF_STATS_VERBOSITY_LEVEL_LOW);
@@ -9373,6 +9374,19 @@ list_destroy:
 	return ret;
 }
 
+/*
+ * enum hdd_block_shutdown - Control if driver allows modem shutdown
+ * @HDD_UNBLOCK_MODEM_SHUTDOWN: Unblock shutdown
+ * @HDD_BLOCK_MODEM_SHUTDOWN: Block shutdown
+ *
+ * On calling pld_block_shutdown API with the given values, modem
+ * graceful shutdown is blocked/unblocked.
+ */
+enum hdd_block_shutdown {
+	HDD_UNBLOCK_MODEM_SHUTDOWN,
+	HDD_BLOCK_MODEM_SHUTDOWN,
+};
+
 /**
  * ie_whitelist_attrs_init() - initialize ie whitelisting attributes
  * @hdd_ctx: pointer to hdd context
@@ -9424,9 +9438,16 @@ static void hdd_iface_change_callback(void *priv)
 
 	hdd_enter();
 	hdd_debug("Interface change timer expired close the modules!");
+
+	/* Block the modem graceful shutdown till stop modules is completed */
+	pld_block_shutdown(hdd_ctx->parent_dev, HDD_BLOCK_MODEM_SHUTDOWN);
+
 	ret = hdd_wlan_stop_modules(hdd_ctx, false);
 	if (ret)
 		hdd_err("Failed to stop modules");
+
+	pld_block_shutdown(hdd_ctx->parent_dev, HDD_UNBLOCK_MODEM_SHUTDOWN);
+
 	hdd_exit();
 }
 
@@ -14353,6 +14374,7 @@ static int hdd_update_scan_config(struct hdd_context *hdd_ctx)
 	scan_cfg.p2p_scan_burst_duration = cfg->p2p_scan_burst_duration;
 	scan_cfg.go_scan_burst_duration = cfg->go_scan_burst_duration;
 	scan_cfg.ap_scan_burst_duration = cfg->ap_scan_burst_duration;
+	scan_cfg.skip_dfs_chan_in_p2p_search = cfg->skipDfsChnlInP2pSearch;
 
 	hdd_update_pno_config(&scan_cfg.pno_cfg, cfg);
 	hdd_update_ie_whitelist_attr(&scan_cfg.ie_whitelist, cfg);
