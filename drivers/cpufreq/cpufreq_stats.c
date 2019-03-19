@@ -14,37 +14,33 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 
-static DEFINE_SPINLOCK(cpufreq_stats_lock);
-
 struct cpufreq_stats {
 	unsigned int total_trans;
-	unsigned long long last_time;
+	atomic64_t last_time;
 	unsigned int max_state;
 	unsigned int state_num;
 	unsigned int last_index;
-	u64 *time_in_state;
+	atomic64_t *time_in_state;
 	unsigned int *freq_table;
 	unsigned int *trans_table;
 };
 
-static int cpufreq_stats_update(struct cpufreq_stats *stats)
+static void cpufreq_stats_update(struct cpufreq_stats *stats)
 {
 	unsigned long long cur_time = get_jiffies_64();
+	unsigned long long time = cur_time;
 
-	spin_lock(&cpufreq_stats_lock);
-	stats->time_in_state[stats->last_index] += cur_time - stats->last_time;
-	stats->last_time = cur_time;
-	spin_unlock(&cpufreq_stats_lock);
-	return 0;
+	time = atomic64_xchg(&stats->last_time, time);
+	atomic64_add(cur_time - time, &stats->time_in_state[stats->last_index]);
 }
 
 static void cpufreq_stats_clear_table(struct cpufreq_stats *stats)
 {
 	unsigned int count = stats->max_state;
 
-	memset(stats->time_in_state, 0, count * sizeof(u64));
+	memset(stats->time_in_state, 0, count * sizeof(atomic64_t));
 	memset(stats->trans_table, 0, count * count * sizeof(int));
-	stats->last_time = get_jiffies_64();
+	atomic64_set(&stats->last_time, get_jiffies_64());
 	stats->total_trans = 0;
 }
 
@@ -66,7 +62,8 @@ static ssize_t show_time_in_state(struct cpufreq_policy *policy, char *buf)
 	for (i = 0; i < stats->state_num; i++) {
 		len += sprintf(buf + len, "%u %llu\n", stats->freq_table[i],
 			(unsigned long long)
-			jiffies_64_to_clock_t(stats->time_in_state[i]));
+			jiffies_64_to_clock_t(atomic64_read(
+					&stats->time_in_state[i])));
 	}
 	return len;
 }
@@ -118,8 +115,11 @@ static ssize_t show_trans_table(struct cpufreq_policy *policy, char *buf)
 			break;
 		len += snprintf(buf + len, PAGE_SIZE - len, "\n");
 	}
-	if (len >= PAGE_SIZE)
-		return PAGE_SIZE;
+
+	if (len >= PAGE_SIZE) {
+		pr_warn_once("cpufreq transition table exceeds PAGE_SIZE. Disabling\n");
+		return -EFBIG;
+	}
 	return len;
 }
 cpufreq_freq_attr_ro(trans_table);
@@ -184,7 +184,7 @@ void cpufreq_stats_create_table(struct cpufreq_policy *policy)
 	if (!stats)
 		return;
 
-	alloc_size = count * sizeof(int) + count * sizeof(u64);
+	alloc_size = count * sizeof(int) + count * sizeof(atomic64_t);
 
 	alloc_size += count * count * sizeof(int);
 
@@ -205,7 +205,7 @@ void cpufreq_stats_create_table(struct cpufreq_policy *policy)
 			stats->freq_table[i++] = pos->frequency;
 
 	stats->state_num = i;
-	stats->last_time = get_jiffies_64();
+	atomic64_set(&stats->last_time, get_jiffies_64());
 	stats->last_index = freq_table_get_index(stats, policy->cur);
 
 	policy->stats = stats;
