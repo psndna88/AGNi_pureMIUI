@@ -170,4 +170,34 @@ static inline const char *kbasename(const char *path)
 	return tail ? tail + 1 : path;
 }
 
+/*
+ * Replace some common string helpers with faster alternatives when one of the
+ * arguments is a constant (i.e., literal string). This uses strlen instead of
+ * sizeof for calculating the string length in order to silence compiler
+ * warnings that may arise due to what the compiler thinks is incorrect sizeof
+ * usage. The strlen calls on constants are folded into scalar values at compile
+ * time, so performance is not reduced by using strlen.
+ */
+#define strcpy(dest, src)							\
+	__builtin_choose_expr(__builtin_constant_p(src),			\
+		memcpy((dest), (src), strlen(src) + 1),				\
+		(strcpy)((dest), (src)))
+
+#define strcat(dest, src)							\
+	__builtin_choose_expr(__builtin_constant_p(src),			\
+		({								\
+			memcpy((dest) + strlen(dest), (src), strlen(src) + 1);	\
+			(dest);							\
+		}),								\
+		(strcat)((dest), (src)))
+
+#define strcmp(left, right)							\
+	__builtin_choose_expr(__builtin_constant_p(left),			\
+		__builtin_choose_expr(__builtin_constant_p(right),		\
+			(strcmp)((left), (right)),				\
+			memcmp((left), (right), strlen(left) + 1)),		\
+		__builtin_choose_expr(__builtin_constant_p(right),		\
+			memcmp((left), (right), strlen(right) + 1),		\
+			(strcmp)((left), (right))))
+
 #endif /* _LINUX_STRING_H_ */
