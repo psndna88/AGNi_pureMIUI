@@ -71,8 +71,8 @@ static int dsi_update_pconfig(struct mdss_panel_data *pdata,
 	} else {
 		pinfo->mipi.mode = DSI_VIDEO_MODE;
 		pinfo->type = MIPI_VIDEO_PANEL;
-		pinfo->mipi.vsync_enable = 0;
-		pinfo->mipi.hw_vsync_mode = 0;
+		pinfo->mipi.vsync_enable = 1;
+		pinfo->mipi.hw_vsync_mode = 1;
 	}
 
 	ctrl_pdata->panel_mode = pinfo->mipi.mode;

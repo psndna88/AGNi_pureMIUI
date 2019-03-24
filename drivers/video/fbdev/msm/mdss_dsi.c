@@ -1763,9 +1763,9 @@ static int mdss_dsi_update_panel_config(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 	} else {	/*video mode*/
 		pinfo->mipi.mode = DSI_VIDEO_MODE;
 		pinfo->type = MIPI_VIDEO_PANEL;
-		pinfo->mipi.vsync_enable = 0;
-		pinfo->mipi.hw_vsync_mode = 0;
-		pinfo->partial_update_enabled = 0;
+		pinfo->mipi.vsync_enable = 1;
+		pinfo->mipi.hw_vsync_mode = 1;
+		pinfo->partial_update_enabled = pinfo->partial_update_supported;
 	}
 
 	ctrl_pdata->panel_mode = pinfo->mipi.mode;
