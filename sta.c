@@ -1485,6 +1485,85 @@ static int cmd_sta_set_encryption(struct sigma_dut *dut,
 }
 
 
+static int set_akm_suites(struct sigma_dut *dut, const char *ifname,
+			  int id, const char *val)
+{
+	char key_mgmt[200], *end, *pos;
+	const char *in_pos = val;
+
+	pos = key_mgmt;
+	end = pos + sizeof(key_mgmt);
+	while (*in_pos) {
+		int res, akm = atoi(in_pos);
+		const char *str;
+
+		switch (akm) {
+		case AKM_WPA_EAP:
+			str = "WPA-EAP";
+			break;
+		case AKM_WPA_PSK:
+			str = "WPA-PSK";
+			break;
+		case AKM_FT_EAP:
+			str = "FT-EAP";
+			break;
+		case AKM_FT_PSK:
+			str = "FT-PSK";
+			break;
+		case AKM_EAP_SHA256:
+			str = "WPA-EAP-SHA256";
+			break;
+		case AKM_PSK_SHA256:
+			str = "WPA-PSK-SHA256";
+			break;
+		case AKM_SAE:
+			str = "SAE";
+			break;
+		case AKM_FT_SAE:
+			str = "FT-SAE";
+			break;
+		case AKM_SUITE_B:
+			str = "WPA-EAP-SUITE-B-192";
+			break;
+		case AKM_FT_SUITE_B:
+			str = "FT-EAP-SHA384";
+			break;
+		case AKM_FILS_SHA256:
+			str = "FILS-SHA256";
+			break;
+		case AKM_FILS_SHA384:
+			str = "FILS-SHA384";
+			break;
+		case AKM_FT_FILS_SHA256:
+			str = "FT-FILS-SHA256";
+			break;
+		case AKM_FT_FILS_SHA384:
+			str = "FT-FILS-SHA384";
+			break;
+		default:
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Unsupported AKMSuitetype %d", akm);
+			return -1;
+		}
+
+		res = snprintf(pos, end - pos, "%s%s",
+			       pos == key_mgmt ? "" : " ", str);
+		if (res < 0 || res >= end - pos)
+			return -1;
+		pos += res;
+
+		in_pos = strchr(in_pos, ';');
+		if (!in_pos)
+			break;
+		while (*in_pos == ';')
+			in_pos++;
+	}
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "AKMSuiteType %s --> %s",
+			val, key_mgmt);
+	return set_network(ifname, id, "key_mgmt", key_mgmt);
+}
+
+
 static int set_wpa_common(struct sigma_dut *dut, struct sigma_conn *conn,
 			  const char *ifname, struct sigma_cmd *cmd)
 {
@@ -1505,11 +1584,12 @@ static int set_wpa_common(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (!val && owe)
 		val = "OWE";
 	if (val == NULL) {
-		send_resp(dut, conn, SIGMA_INVALID, "errorCode,Missing keyMgmtType");
-		return 0;
-	}
-	if (strcasecmp(val, "wpa") == 0 ||
-	    strcasecmp(val, "wpa-psk") == 0) {
+		/* keyMgmtType is being replaced with AKMSuiteType, so ignore
+		 * this missing parameter and assume proto=WPA2. */
+		if (set_network(ifname, id, "proto", "WPA2") < 0)
+			return ERROR_SEND_STATUS;
+	} else if (strcasecmp(val, "wpa") == 0 ||
+		   strcasecmp(val, "wpa-psk") == 0) {
 		if (set_network(ifname, id, "proto", "WPA") < 0)
 			return -2;
 	} else if (strcasecmp(val, "wpa2") == 0 ||
@@ -1632,6 +1712,10 @@ static int set_wpa_common(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
+	val = get_param(cmd, "AKMSuiteType");
+	if (val && set_akm_suites(dut, ifname, id, val) < 0)
+		return ERROR_SEND_STATUS;
+
 	dut->sta_pmf = STA_PMF_DISABLED;
 
 	if (dut->program == PROGRAM_OCE) {
@@ -1676,6 +1760,7 @@ static int cmd_sta_set_psk(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *type = get_param(cmd, "Type");
 	const char *pmf = get_param(cmd, "PMF");
 	const char *network_mode = get_param(cmd, "network_mode");
+	const char *akm = get_param(cmd, "AKMSuiteType");
 	const char *ifname, *val, *alg;
 	int id;
 
@@ -1695,10 +1780,10 @@ static int cmd_sta_set_psk(struct sigma_dut *dut, struct sigma_conn *conn,
 	alg = get_param(cmd, "micAlg");
 
 	if (type && strcasecmp(type, "SAE") == 0) {
-		if (val && strcasecmp(val, "wpa2-ft") == 0) {
+		if (!akm && val && strcasecmp(val, "wpa2-ft") == 0) {
 			if (set_network(ifname, id, "key_mgmt", "FT-SAE") < 0)
 				return -2;
-		} else {
+		} else if (!akm) {
 			if (set_network(ifname, id, "key_mgmt", "SAE") < 0)
 				return -2;
 		}

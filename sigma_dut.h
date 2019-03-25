@@ -290,6 +290,24 @@ struct nl80211_ctx {
 #define WPS_LONG_MODEL_NUMBER	"11111111111111111111111111111111"
 #define WPS_LONG_SERIAL_NUMBER	"22222222222222222222222222222222"
 
+enum akm_suite_values {
+	AKM_WPA_EAP = 1,
+	AKM_WPA_PSK = 2,
+	AKM_FT_EAP = 3,
+	AKM_FT_PSK = 4,
+	AKM_EAP_SHA256 = 5,
+	AKM_PSK_SHA256 = 6,
+	AKM_SAE = 8,
+	AKM_FT_SAE = 9,
+	AKM_SUITE_B = 12,
+	AKM_FT_SUITE_B = 13,
+	AKM_FILS_SHA256 = 14,
+	AKM_FILS_SHA384 = 15,
+	AKM_FT_FILS_SHA256 = 16,
+	AKM_FT_FILS_SHA384 = 17,
+
+};
+
 struct sigma_dut {
 	int s; /* server TCP socket */
 	int debug_level;
