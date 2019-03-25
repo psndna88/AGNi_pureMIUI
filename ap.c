@@ -2029,7 +2029,7 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 			dut->ap_add_sha256 = 1;
 		} else {
 			send_resp(dut, conn, SIGMA_INVALID,
-				  "errorCode,Unsupported PMF");
+				  "errorCode,Unsupported SHA256");
 			return 0;
 		}
 	}
