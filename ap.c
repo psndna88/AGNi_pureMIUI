@@ -117,7 +117,14 @@ static int ap_ft_enabled(struct sigma_dut *dut)
 	return dut->ap_ft_oa == 1 ||
 		dut->ap_key_mgmt == AP_WPA2_FT_EAP ||
 		dut->ap_key_mgmt == AP_WPA2_FT_PSK ||
-		dut->ap_key_mgmt == AP_WPA2_ENT_FT_EAP;
+		dut->ap_key_mgmt == AP_WPA2_ENT_FT_EAP ||
+		(dut->ap_akm_values &
+		 ((1 << AKM_FT_EAP) |
+		  (1 << AKM_FT_PSK) |
+		  (1 << AKM_FT_SAE) |
+		  (1 << AKM_FT_SUITE_B) |
+		  (1 << AKM_FT_FILS_SHA256) |
+		  (1 << AKM_FT_FILS_SHA384)));
 }
 
 
@@ -1987,8 +1994,14 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (!val)
 		val = get_param(cmd, "passphrase");
 	if (val) {
-		if (dut->ap_key_mgmt != AP_WPA2_SAE && strlen(val) > 64)
+		if (dut->ap_key_mgmt != AP_WPA2_SAE &&
+		    (dut->ap_akm_values & (AKM_WPA_PSK | AKM_SAE)) !=
+		    AKM_SAE &&
+		    strlen(val) > 64) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Too long PSK/passphtase");
 			return -1;
+		}
 		if (strlen(val) > sizeof(dut->ap_passphrase) - 1)
 			return -1;
 		snprintf(dut->ap_passphrase, sizeof(dut->ap_passphrase),
@@ -2018,11 +2031,6 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 				  "errorCode,Unsupported PMF");
 			return 0;
 		}
-	}
-
-	if (dut->ap_key_mgmt == AP_OPEN) {
-		dut->ap_hs2 = 0;
-		dut->ap_pmf = AP_PMF_DISABLED;
 	}
 
 	dut->ap_add_sha256 = 0;
@@ -2055,19 +2063,36 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	val = get_param(cmd, "AKMSuiteType");
 	if (val) {
-		unsigned int akmsuitetype = 0;
+		const char *in_pos = val;
 
-		dut->ap_akm = 1;
-		akmsuitetype = atoi(val);
-		if (akmsuitetype == 14) {
-			dut->ap_add_sha256 = 1;
-		} else if (akmsuitetype == 15) {
-			dut->ap_add_sha384 = 1;
-		} else {
-			send_resp(dut, conn, SIGMA_INVALID,
-				  "errorCode,Unsupported AKMSuitetype");
-			return 0;
+		dut->ap_akm_values = 0;
+		while (*in_pos) {
+			int akm = atoi(in_pos);
+
+			if (akm < 0 || akm >= 32) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Unsupported AKMSuiteType value");
+				return STATUS_SENT;
+			}
+
+			dut->ap_akm_values |= 1 << akm;
+
+			in_pos = strchr(in_pos, ';');
+			if (!in_pos)
+				break;
+			while (*in_pos == ';')
+				in_pos++;
 		}
+		dut->ap_akm = 1;
+		if (dut->ap_akm_values & (1 << 14))
+			dut->ap_add_sha384 = 1;
+		if (dut->ap_akm_values & (1 << 15))
+			dut->ap_add_sha384 = 1;
+	}
+
+	if (dut->ap_key_mgmt == AP_OPEN && !dut->ap_akm_values) {
+		dut->ap_hs2 = 0;
+		dut->ap_pmf = AP_PMF_DISABLED;
 	}
 
 	val = get_param(cmd, "PMKSACaching");
@@ -6911,6 +6936,54 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (dut->ap_bcnint)
 		fprintf(f, "beacon_int=%d\n", dut->ap_bcnint);
 
+	if (dut->ap_akm_values) {
+		struct {
+			int akm;
+			const char *str;
+		} akms[] = {
+			{ AKM_WPA_EAP, "WPA-EAP" },
+			{ AKM_WPA_PSK, "WPA-PSK" },
+			{ AKM_FT_EAP, "FT-EAP" },
+			{ AKM_FT_PSK, "FT-PSK" },
+			{ AKM_EAP_SHA256, "WPA-EAP-SHA256" },
+			{ AKM_PSK_SHA256, "WPA-PSK-SHA256" },
+			{ AKM_SAE, "SAE" },
+			{ AKM_FT_SAE, "FT-SAE" },
+			{ AKM_SUITE_B, "WPA-EAP-SUITE-B-192" },
+			{ AKM_FT_SUITE_B, "FT-EAP-SHA384" },
+			{ AKM_FILS_SHA256, "FILS-SHA256" },
+			{ AKM_FILS_SHA384, "FILS-SHA384" },
+			{ AKM_FT_FILS_SHA256, "FT-FILS-SHA256" },
+			{ AKM_FT_FILS_SHA384, "FT-FILS-SHA384" },
+		};
+		int first = 1, i;
+
+		fprintf(f, "wpa_key_mgmt=");
+		for (i = 0; i < ARRAY_SIZE(akms); i++) {
+			if (dut->ap_akm_values & (1 << akms[i].akm)) {
+				fprintf(f, "%s%s", first ? "" : " ",
+					akms[i].str);
+				first = 0;
+			}
+		}
+		fprintf(f, "\n");
+		/* TODO: mixed mode and WPAv1 only */
+		fprintf(f, "wpa=2\n");
+		fprintf(f, "wpa_pairwise=%s\n",
+			hostapd_cipher_name(dut->ap_cipher));
+		if (dut->ap_group_cipher != AP_NO_GROUP_CIPHER_SET)
+			fprintf(f, "group_cipher=%s\n",
+				hostapd_cipher_name(dut->ap_group_cipher));
+		if ((dut->ap_akm_values & (1 << 8 /* SAE */)) &&
+		    dut->ap_passphrase[0])
+			fprintf(f, "sae_password=%s\n", dut->ap_passphrase);
+		else if (!dut->ap_passphrase[0] && dut->ap_psk[0])
+			fprintf(f, "wpa_psk=%s", dut->ap_psk);
+		else if (dut->ap_passphrase[0])
+			fprintf(f, "wpa_passphrase=%s\n", dut->ap_passphrase);
+		goto skip_key_mgmt;
+	}
+
 	switch (dut->ap_key_mgmt) {
 	case AP_OPEN:
 		if (dut->ap_cipher == AP_WEP)
@@ -7077,6 +7150,7 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 			dut->ap_radius_password);
 		break;
 	}
+skip_key_mgmt:
 
 	if (dut->ap_sae_passwords) {
 		char *tmp, *pos, *end, *id;
@@ -7114,7 +7188,9 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		break;
 	case AP_PMF_OPTIONAL:
 		fprintf(f, "ieee80211w=1\n");
-		if (dut->ap_key_mgmt == AP_WPA2_PSK_SAE)
+		if (dut->ap_key_mgmt == AP_WPA2_PSK_SAE ||
+		    (dut->ap_akm_values & (AKM_SAE | AKM_WPA_PSK)) ==
+		    (AKM_SAE | AKM_WPA_PSK))
 			fprintf(f, "sae_require_mfp=1\n");
 		break;
 	case AP_PMF_REQUIRED:
@@ -8010,6 +8086,7 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	dut->ap_tnc_file_name = 0;
 	dut->ap_tnc_time_stamp = 0;
 
+	dut->ap_akm_values = 0;
 	free(dut->ap_sae_passwords);
 	dut->ap_sae_passwords = NULL;
 

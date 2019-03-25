@@ -49,6 +49,8 @@
 #define PRINTF_FORMAT(a,b)
 #endif
 
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
+
 #ifndef SIGMA_TMPDIR
 #define SIGMA_TMPDIR "/tmp"
 #endif /* SIGMA_TMPDIR */
@@ -624,6 +626,7 @@ struct sigma_dut {
 	int ap_ul_availcap;
 	int ap_dl_availcap;
 	int ap_akm;
+	unsigned int ap_akm_values;
 	int ap_pmksa;
 	int ap_pmksa_caching;
 	int ap_80plus80;
