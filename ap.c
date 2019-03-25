@@ -7214,9 +7214,9 @@ skip_key_mgmt:
 		fprintf(f, "ft_psk_generate_local=1\n");
 		fprintf(f, "pmk_r1_push=0\n");
 		fprintf(f,
-			"r0kh=ff:ff:ff:ff:ff:ff * 00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff");
+			"r0kh=ff:ff:ff:ff:ff:ff * 00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff\n");
 		fprintf(f,
-			"r1kh=00:00:00:00:00:00 00:00:00:00:00:00 00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff");
+			"r1kh=00:00:00:00:00:00 00:00:00:00:00:00 00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff\n");
 	}
 
 	if (dut->rsne_override)
