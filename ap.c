@@ -1885,6 +1885,12 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->sae_commit_override = strdup(val);
 	}
 
+	val = get_param(cmd, "SAEPasswords");
+	if (val) {
+		free(dut->ap_sae_passwords);
+		dut->ap_sae_passwords = strdup(val);
+	}
+
 	val = get_param(cmd, "ENCRYPT");
 	if (!val)
 		val = get_param(cmd, "EncpType");
@@ -7072,6 +7078,34 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		break;
 	}
 
+	if (dut->ap_sae_passwords) {
+		char *tmp, *pos, *end, *id;
+
+		tmp = strdup(dut->ap_sae_passwords);
+		if (!tmp) {
+			fclose(f);
+			return ERROR_SEND_STATUS;
+		}
+
+		pos = tmp;
+		while (*pos) {
+			end = strchr(pos, ';');
+			if (end)
+				*end = '\0';
+			id = strchr(pos, ':');
+			if (id)
+				*id++ = '\0';
+
+			fprintf(f, "sae_password=%s%s%s\n",
+				pos, id ? "|id=" : "", id ? id : "");
+			if (!end)
+				break;
+			pos = end + 1;
+		}
+
+		free(tmp);
+	}
+
 	if (dut->ap_rsn_preauth)
 		fprintf(f, "rsn_preauth=1\n");
 
@@ -7975,6 +8009,9 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	dut->ap_oper_icon_metadata = 0;
 	dut->ap_tnc_file_name = 0;
 	dut->ap_tnc_time_stamp = 0;
+
+	free(dut->ap_sae_passwords);
+	dut->ap_sae_passwords = NULL;
 
 	if (dut->program == PROGRAM_HS2 || dut->program == PROGRAM_HS2_R2 ||
 	    dut->program == PROGRAM_HS2_R3 ||
