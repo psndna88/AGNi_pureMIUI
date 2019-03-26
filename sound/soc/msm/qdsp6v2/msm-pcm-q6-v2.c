@@ -384,7 +384,8 @@ static int msm_pcm_playback_prepare(struct snd_pcm_substream *substream)
 			prtd->audio_client = NULL;
 			return -ENOMEM;
 		}
-	} else if (q6core_get_avs_version() == Q6_SUBSYS_AVS2_7) {
+	} else if (pdata->avs_ver &&
+			(q6core_get_avs_version() == Q6_SUBSYS_AVS2_7)) {
 		ret = q6asm_open_write_v3(prtd->audio_client,
 				FORMAT_LINEAR_PCM, bits_per_sample);
 		if (ret < 0) {
@@ -443,8 +444,9 @@ static int msm_pcm_playback_prepare(struct snd_pcm_substream *substream)
 				prtd->channel_map, bits_per_sample,
 				sample_word_size, ASM_LITTLE_ENDIAN,
 				DEFAULT_QF);
-		else if (q6core_get_avs_version() ==
-				Q6_SUBSYS_AVS2_7)
+		else if (pdata->avs_ver &&
+				(q6core_get_avs_version() ==
+					Q6_SUBSYS_AVS2_7))
 			ret = q6asm_media_format_block_multi_ch_pcm_v3(
 				prtd->audio_client, runtime->rate,
 				runtime->channels, !prtd->set_channel_map,
@@ -514,7 +516,8 @@ static int msm_pcm_capture_prepare(struct snd_pcm_substream *substream)
 		pr_debug("%s Opening %d-ch PCM read stream, perf_mode %d\n",
 				__func__, params_channels(params),
 				prtd->audio_client->perf_mode);
-		if (q6core_get_avs_version() == Q6_SUBSYS_AVS2_7)
+		if (pdata->avs_ver &&
+			(q6core_get_avs_version() == Q6_SUBSYS_AVS2_7))
 			ret = q6asm_open_read_v3(prtd->audio_client,
 					FORMAT_LINEAR_PCM,
 					bits_per_sample);
@@ -598,8 +601,9 @@ static int msm_pcm_capture_prepare(struct snd_pcm_substream *substream)
 					sample_word_size,
 					ASM_LITTLE_ENDIAN,
 					DEFAULT_QF);
-	else if (q6core_get_avs_version() ==
-				Q6_SUBSYS_AVS2_7)
+	else if (pdata->avs_ver &&
+			(q6core_get_avs_version() ==
+				Q6_SUBSYS_AVS2_7))
 		ret = q6asm_enc_cfg_blk_pcm_format_support_v3(
 					prtd->audio_client,
 					prtd->samp_rate,
@@ -3076,6 +3080,14 @@ static int msm_pcm_probe(struct platform_device *pdev)
 	} else {
 		pdata->perf_mode = LEGACY_PCM_MODE;
 	}
+
+	if (of_property_read_bool(pdev->dev.of_node,
+				"qcom,avs-version"))
+		pdata->avs_ver = true;
+	else
+		pdata->avs_ver = false;
+
+	pr_debug("%s: avs_ver = %d\n", __func__, pdata->avs_ver);
 
 	dev_set_drvdata(&pdev->dev, pdata);
 
