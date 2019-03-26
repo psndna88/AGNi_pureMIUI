@@ -369,7 +369,7 @@ static struct ctl_table kern_table[] = {
 	},
 	{
 		.procname	= "sched_boost",
-		.data		= &sysctl_sched_boost,
+		.data		= &sysctl_sched_boost_dummy,
 		.maxlen		= sizeof(unsigned int),
 		.mode		= 0644,
 		.proc_handler	= sched_boost_handler,

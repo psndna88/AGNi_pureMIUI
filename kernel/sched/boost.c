@@ -23,7 +23,8 @@
  * boost is responsible for disabling it as well.
  */
 
-unsigned int sysctl_sched_boost; /* To/from userspace */
+unsigned int sysctl_sched_boost = 0; /* To/from userspace */
+unsigned int sysctl_sched_boost_dummy;
 unsigned int sched_boost_type; /* currently activated sched boost */
 enum sched_boost_policy boost_policy;
 
