@@ -7203,11 +7203,14 @@ skip_key_mgmt:
 
 		fprintf(f, "mobility_domain=%s\n", dut->ap_mobility_domain);
 		fprintf(f, "ft_over_ds=0\n");
-		fprintf(f, "nas_identifier=nas1.example.com\n");
 		if (get_hwaddr(ifname, own_addr) < 0) {
 			memset(own_addr, 0, ETH_ALEN);
 			own_addr[0] = 0x02;
 		}
+		fprintf(f,
+			"nas_identifier=%02x%02x%02x%02x%02x%02x.nas.example.com\n",
+			own_addr[0], own_addr[1], own_addr[2],
+			own_addr[3], own_addr[4], own_addr[5]);
 		fprintf(f, "r1_key_holder=%02x%02x%02x%02x%02x%02x\n",
 			own_addr[0], own_addr[1], own_addr[2],
 			own_addr[3], own_addr[4], own_addr[5]);
