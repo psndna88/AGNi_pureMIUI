@@ -1915,8 +1915,9 @@ static int set_eap_common(struct sigma_dut *dut, struct sigma_conn *conn,
 	} else if (val && strcasecmp(val, "wpa2-ft") == 0) {
 		if (set_network(ifname, id, "key_mgmt", "FT-EAP") < 0)
 			return -2;
-	} else if ((val && strcasecmp(val, "wpa2-sha256") == 0) ||
-		   dut->sta_pmf == STA_PMF_REQUIRED) {
+	} else if (!akm &&
+		   ((val && strcasecmp(val, "wpa2-sha256") == 0) ||
+		    dut->sta_pmf == STA_PMF_REQUIRED)) {
 		if (set_network(ifname, id, "key_mgmt",
 				"WPA-EAP WPA-EAP-SHA256") < 0)
 			return -2;
@@ -1948,11 +1949,11 @@ static int set_eap_common(struct sigma_dut *dut, struct sigma_conn *conn,
 
 		if (set_network(ifname, id, "erp", "1") < 0)
 			return -2;
-	} else if (dut->sta_pmf == STA_PMF_OPTIONAL) {
+	} else if (!akm && dut->sta_pmf == STA_PMF_OPTIONAL) {
 		if (set_network(ifname, id, "key_mgmt",
 				"WPA-EAP WPA-EAP-SHA256") < 0)
 			return -2;
-	} else {
+	} else if (!akm) {
 		if (set_network(ifname, id, "key_mgmt", "WPA-EAP") < 0)
 			return -2;
 	}
