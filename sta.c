@@ -1491,11 +1491,15 @@ static int set_akm_suites(struct sigma_dut *dut, const char *ifname,
 	char key_mgmt[200], *end, *pos;
 	const char *in_pos = val;
 
+	dut->akm_values = 0;
 	pos = key_mgmt;
 	end = pos + sizeof(key_mgmt);
 	while (*in_pos) {
 		int res, akm = atoi(in_pos);
 		const char *str;
+
+		if (akm >= 0 && akm < 32)
+			dut->akm_values |= 1 << akm;
 
 		switch (akm) {
 		case AKM_WPA_EAP:
@@ -1893,6 +1897,7 @@ static int set_eap_common(struct sigma_dut *dut, struct sigma_conn *conn,
 	unsigned char kvalue[KEYSTORE_MESSAGE_SIZE];
 	int length;
 #endif /* ANDROID */
+	int erp = 0;
 
 	id = set_wpa_common(dut, conn, ifname, cmd);
 	if (id < 0)
@@ -1933,8 +1938,7 @@ static int set_eap_common(struct sigma_dut *dut, struct sigma_conn *conn,
 				return -2;
 		}
 
-		if (set_network(ifname, id, "erp", "1") < 0)
-			return -2;
+		erp = 1;
 	} else if (akm && atoi(akm) == 15) {
 		if (dut->sta_pmf == STA_PMF_OPTIONAL ||
 		    dut->sta_pmf == STA_PMF_REQUIRED) {
@@ -1947,8 +1951,7 @@ static int set_eap_common(struct sigma_dut *dut, struct sigma_conn *conn,
 				return -2;
 		}
 
-		if (set_network(ifname, id, "erp", "1") < 0)
-			return -2;
+		erp = 1;
 	} else if (!akm && dut->sta_pmf == STA_PMF_OPTIONAL) {
 		if (set_network(ifname, id, "key_mgmt",
 				"WPA-EAP WPA-EAP-SHA256") < 0)
@@ -2003,6 +2006,15 @@ ca_cert_selected:
 				return -2;
 		}
 	}
+
+	if (dut->akm_values &
+	    ((1 << AKM_FILS_SHA256) |
+	     (1 << AKM_FILS_SHA384) |
+	     (1 << AKM_FT_FILS_SHA256) |
+	     (1 << AKM_FT_FILS_SHA384)))
+		erp = 1;
+	if (erp && set_network(ifname, id, "erp", "1") < 0)
+		return ERROR_SEND_STATUS;
 
 	return id;
 }
@@ -7185,6 +7197,8 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 		hlp_thread_cleanup(dut);
 #endif /* ANDROID */
 	}
+
+	dut->akm_values = 0;
 
 #ifdef NL80211_SUPPORT
 	if (get_driver_type() == DRIVER_WCN &&

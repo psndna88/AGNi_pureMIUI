@@ -386,6 +386,8 @@ struct sigma_dut {
 	int testbed_flag_rxsp;
 	int chwidth;
 
+	unsigned int akm_values;
+
 	/* AP configuration */
 	char ap_ssid[33];
 	/*
