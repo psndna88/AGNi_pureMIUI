@@ -6981,6 +6981,23 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 			fprintf(f, "wpa_psk=%s", dut->ap_psk);
 		else if (dut->ap_passphrase[0])
 			fprintf(f, "wpa_passphrase=%s\n", dut->ap_passphrase);
+		if (dut->ap_akm_values & ((1 << AKM_WPA_EAP) |
+					  (1 << AKM_EAP_SHA256) |
+					  (1 << AKM_SUITE_B) |
+					  (1 << AKM_FT_SUITE_B) |
+					  (1 << AKM_FILS_SHA256) |
+					  (1 << AKM_FILS_SHA384) |
+					  (1 << AKM_FT_FILS_SHA256) |
+					  (1 << AKM_FT_FILS_SHA384))) {
+			fprintf(f, "ieee8021x=1\n");
+			fprintf(f, "auth_server_addr=%s\n",
+				dut->ap_radius_ipaddr);
+			if (dut->ap_radius_port)
+				fprintf(f, "auth_server_port=%d\n",
+					dut->ap_radius_port);
+			fprintf(f, "auth_server_shared_secret=%s\n",
+				dut->ap_radius_password);
+		}
 		goto skip_key_mgmt;
 	}
 
@@ -7197,6 +7214,12 @@ skip_key_mgmt:
 		fprintf(f, "ieee80211w=2\n");
 		break;
 	}
+
+	if (dut->ap_pmf != AP_PMF_DISABLED &&
+	    dut->ap_group_mgmt_cipher != AP_NO_GROUP_MGMT_CIPHER_SET)
+		fprintf(f, "group_mgmt_cipher=%s\n",
+			hostapd_group_mgmt_cipher_name(
+				dut->ap_group_mgmt_cipher));
 
 	if (ap_ft_enabled(dut)) {
 		unsigned char own_addr[ETH_ALEN];
