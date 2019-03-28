@@ -1835,11 +1835,11 @@ static int cmd_sta_set_psk(struct sigma_dut *dut, struct sigma_conn *conn,
 		if (set_network(ifname, id, "key_mgmt",
 				"WPA-PSK WPA-PSK-SHA256") < 0)
 			return -2;
-	} else if (dut->sta_pmf == STA_PMF_OPTIONAL) {
+	} else if (!akm && dut->sta_pmf == STA_PMF_OPTIONAL) {
 		if (set_network(ifname, id, "key_mgmt",
 				"WPA-PSK WPA-PSK-SHA256") < 0)
 			return -2;
-	} else {
+	} else if (!akm) {
 		if (set_network(ifname, id, "key_mgmt", "WPA-PSK") < 0)
 			return -2;
 	}
