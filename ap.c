@@ -6974,7 +6974,10 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		if (dut->ap_group_cipher != AP_NO_GROUP_CIPHER_SET)
 			fprintf(f, "group_cipher=%s\n",
 				hostapd_cipher_name(dut->ap_group_cipher));
-		if ((dut->ap_akm_values & (1 << 8 /* SAE */)) &&
+		if ((dut->ap_akm_values &
+		     ((1 << AKM_SAE) | (1 << AKM_FT_SAE))) &&
+		    !(dut->ap_akm_values &
+		      ((1 << AKM_WPA_PSK) | (1 << AKM_FT_PSK))) &&
 		    dut->ap_passphrase[0])
 			fprintf(f, "sae_password=%s\n", dut->ap_passphrase);
 		else if (!dut->ap_passphrase[0] && dut->ap_psk[0])
