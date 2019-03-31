@@ -27,6 +27,7 @@
 #include <linux/err.h>
 #include <linux/platform_device.h>
 #include <linux/of.h>
+#include <linux/delay.h>
 #include <trace/events/power.h>
 
 #include <linux/proc_fs.h>
@@ -45,6 +46,13 @@ struct cpufreq_suspend_t {
 };
 
 static DEFINE_PER_CPU(struct cpufreq_suspend_t, suspend_data);
+
+struct clk_update_data {
+	struct mutex update_lock;
+	ktime_t last_update;
+};
+
+static struct clk_update_data cpu_update_data[NR_CPUS];
 
 static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 			unsigned int index)
@@ -80,8 +88,13 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 	int ret = 0;
 	int index;
 	struct cpufreq_frequency_table *table;
+	struct clk_update_data *udata;
+	s64 delta_us;
 
 	mutex_lock(&per_cpu(suspend_data, policy->cpu).suspend_mutex);
+
+	udata = &cpu_update_data[cpumask_first(policy->cpus)];
+	mutex_lock(&udata->update_lock);
 
 	if (target_freq == policy->cur)
 		goto done;
@@ -111,9 +124,16 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 		policy->cpu, target_freq, relation,
 		policy->min, policy->max, table[index].frequency);
 
+	/* The old rate needs time to settle before it can be changed again */
+	delta_us = ktime_us_delta(ktime_get_boottime(), udata->last_update);
+	if (delta_us < 10000)
+		usleep_range(10000 - delta_us, 11000 - delta_us);
+	udata->last_update = ktime_get_boottime();
+
 	ret = set_cpu_freq(policy, table[index].frequency,
 			   table[index].driver_data);
 done:
+	mutex_unlock(&udata->update_lock);
 	mutex_unlock(&per_cpu(suspend_data, policy->cpu).suspend_mutex);
 	return ret;
 }
@@ -502,6 +522,7 @@ static int __init msm_cpufreq_register(void)
 	for_each_possible_cpu(cpu) {
 		mutex_init(&(per_cpu(suspend_data, cpu).suspend_mutex));
 		per_cpu(suspend_data, cpu).device_suspended = 0;
+		mutex_init(&cpu_update_data[cpu].update_lock);
 	}
 
 	rc = platform_driver_probe(&msm_cpufreq_plat_driver,
