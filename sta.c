@@ -954,6 +954,10 @@ static int start_dhcp_client(struct sigma_dut *dut, const char *ifname)
 			 "/system/bin/dhcpcd -b %s", ifname);
 	} else if (access("/system/bin/dhcptool", F_OK) != -1) {
 		snprintf(buf, sizeof(buf), "/system/bin/dhcptool %s &", ifname);
+	} else if (access("/vendor/bin/dhcpcd", F_OK) != -1) {
+		snprintf(buf, sizeof(buf), "/vendor/bin/dhcpcd -b %s", ifname);
+	} else if (access("/vendor/bin/dhcptool", F_OK) != -1) {
+		snprintf(buf, sizeof(buf), "/vendor/bin/dhcptool %s", ifname);
 	} else {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"DHCP client program missing");
