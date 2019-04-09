@@ -807,6 +807,8 @@ struct sigma_dut {
 	const char *vendor_name; /* device_get_info vendor override */
 	const char *model_name; /* device_get_info model override */
 	const char *version_name; /* device_get_info version override */
+	const char *log_file_dir; /* Directory to generate log file */
+	FILE *log_file_fd; /* Pointer to log file */
 
 	int ndp_enable; /* Flag which is set once the NDP is setup */
 
@@ -856,6 +858,9 @@ struct sigma_dut {
 #endif /* ANDROID */
 
 	const char *priv_cmd; /* iwpriv / cfg80211tool command name */
+
+	unsigned int wpa_log_size;
+	char dev_start_test_runtime_id[100];
 };
 
 
