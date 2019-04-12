@@ -5186,6 +5186,26 @@ static QDF_STATUS csr_roam_get_qos_info_from_bss(tpAniSirGlobal pMac,
 	return status;
 }
 
+static void csr_reset_cfg_privacy(tpAniSirGlobal mac)
+{
+	uint8_t Key0[WNI_CFG_WEP_DEFAULT_KEY_1_LEN] = {0};
+	uint8_t Key1[WNI_CFG_WEP_DEFAULT_KEY_2_LEN] = {0};
+	uint8_t Key2[WNI_CFG_WEP_DEFAULT_KEY_3_LEN] = {0};
+	uint8_t Key3[WNI_CFG_WEP_DEFAULT_KEY_4_LEN] = {0};
+
+	cfg_set_int(mac, WNI_CFG_PRIVACY_ENABLED, 0);
+	cfg_set_int(mac, WNI_CFG_RSN_ENABLED, 0);
+	cfg_set_str(mac, WNI_CFG_WEP_DEFAULT_KEY_1, Key0,
+			 WNI_CFG_WEP_DEFAULT_KEY_1_LEN);
+	cfg_set_str(mac, WNI_CFG_WEP_DEFAULT_KEY_2, Key1,
+			 WNI_CFG_WEP_DEFAULT_KEY_2_LEN);
+	cfg_set_str(mac, WNI_CFG_WEP_DEFAULT_KEY_3, Key2,
+			 WNI_CFG_WEP_DEFAULT_KEY_3_LEN);
+	cfg_set_str(mac, WNI_CFG_WEP_DEFAULT_KEY_4, Key3,
+			 WNI_CFG_WEP_DEFAULT_KEY_4_LEN);
+	cfg_set_int(mac, WNI_CFG_WEP_DEFAULT_KEYID, 0);
+}
+
 void csr_set_cfg_privacy(tpAniSirGlobal pMac, struct csr_roam_profile *pProfile,
 			 bool fPrivacy)
 {
@@ -10733,6 +10753,60 @@ static void csr_roam_roaming_state_start_bss_rsp_processor(tpAniSirGlobal pMac,
 }
 
 /**
+ * csr_roam_send_disconnect_done_indication() - Send disconnect ind to HDD.
+ *
+ * @mac_ctx: mac global context
+ * @msg_ptr: incoming message
+ *
+ * This function gives final disconnect event to HDD after all cleanup in
+ * lower layers is done.
+ *
+ * Return: None
+ */
+static void
+csr_roam_send_disconnect_done_indication(tpAniSirGlobal mac_ctx, tSirSmeRsp
+				     *msg_ptr)
+{
+	struct sir_sme_discon_done_ind *discon_ind =
+				(struct sir_sme_discon_done_ind *)(msg_ptr);
+	struct csr_roam_info roam_info;
+	struct csr_roam_session *session;
+
+	sme_debug("DISCONNECT_DONE_IND RC:%d", discon_ind->reason_code);
+
+	if (CSR_IS_SESSION_VALID(mac_ctx, discon_ind->session_id)) {
+		roam_info.reasonCode = discon_ind->reason_code;
+		roam_info.statusCode = eSIR_SME_STA_NOT_ASSOCIATED;
+		qdf_mem_copy(roam_info.peerMac.bytes, discon_ind->peer_mac,
+			     ETH_ALEN);
+
+		roam_info.rssi = mac_ctx->peer_rssi;
+		roam_info.tx_rate = mac_ctx->peer_txrate;
+		roam_info.rx_rate = mac_ctx->peer_rxrate;
+		roam_info.disassoc_reason = discon_ind->reason_code;
+
+		csr_roam_call_callback(mac_ctx, discon_ind->session_id,
+				       &roam_info, 0, eCSR_ROAM_LOSTLINK,
+				       eCSR_ROAM_RESULT_DISASSOC_IND);
+		session = CSR_GET_SESSION(mac_ctx, discon_ind->session_id);
+		if (session &&
+		   !CSR_IS_INFRA_AP(&session->connectedProfile))
+			csr_roam_state_change(mac_ctx, eCSR_ROAMING_STATE_IDLE,
+				discon_ind->session_id);
+
+	} else {
+		sme_err("Inactive session %d", discon_ind->session_id);
+	}
+
+	/*
+	 * Release WM status change command as eWNI_SME_DISCONNECT_DONE_IND
+	 * has been sent to HDD and there is nothing else left to do.
+	 */
+	csr_roam_wm_status_change_complete(mac_ctx, discon_ind->session_id);
+}
+
+
+/**
  * csr_roaming_state_msg_processor() - process roaming messages
  * @pMac:       mac global context
  * @pMsgBuf:    message buffer
@@ -10859,6 +10933,10 @@ void csr_roaming_state_msg_processor(tpAniSirGlobal pMac, void *pMsgBuf)
 		csr_purge_pdev_all_ser_cmd_list_sync(pMac, pMsgBuf);
 		break;
 
+	case eWNI_SME_DISCONNECT_DONE_IND:
+		csr_roam_send_disconnect_done_indication(pMac, pSmeRsp);
+		break;
+
 	default:
 		sme_debug("Unexpected message type: %d[0x%X] received in substate %s",
 			pSmeRsp->messageType, pSmeRsp->messageType,
@@ -10954,6 +11032,8 @@ void csr_roam_joined_state_msg_processor(tpAniSirGlobal pMac, void *pMsgBuf)
 			roam_info->vht_caps = pUpperLayerAssocCnf->vht_caps;
 		roam_info->capability_info =
 					pUpperLayerAssocCnf->capability_info;
+		roam_info->he_caps_present =
+					pUpperLayerAssocCnf->he_caps_present;
 
 		if (CSR_IS_INFRA_AP(roam_info->u.pConnectedProfile)) {
 			pMac->roam.roamSession[sessionId].connectState =
@@ -11839,6 +11919,7 @@ csr_roam_chk_lnk_assoc_ind(tpAniSirGlobal mac_ctx, tSirSmeRsp *msg_ptr)
 			     &pAssocInd->VHTCaps,
 			     sizeof(tDot11fIEVHTCaps));
 	roam_info_ptr->capability_info = pAssocInd->capability_info;
+	roam_info_ptr->he_caps_present = pAssocInd->he_caps_present;
 
 	if (CSR_IS_INFRA_AP(roam_info_ptr->u.pConnectedProfile)) {
 		if (session->pCurRoamProfile &&
@@ -12011,60 +12092,6 @@ csr_roam_chk_lnk_disassoc_ind(tpAniSirGlobal mac_ctx, tSirSmeRsp *msg_ptr)
 						  eCsrForcedDeauthSta);
 	}
 	qdf_mem_free(cmd);
-}
-
-/**
- * csr_roam_send_disconnect_done_indication() - Send disconnect ind to HDD.
- *
- * @mac_ctx: mac global context
- * @msg_ptr: incoming message
- *
- * This function gives final disconnect event to HDD after all cleanup in
- * lower layers is done.
- *
- * Return: None
- */
-static void
-csr_roam_send_disconnect_done_indication(tpAniSirGlobal mac_ctx, tSirSmeRsp
-				     *msg_ptr)
-{
-	struct sir_sme_discon_done_ind *discon_ind =
-				(struct sir_sme_discon_done_ind *)(msg_ptr);
-	struct csr_roam_info roam_info;
-	struct csr_roam_session *session;
-
-	sme_debug("eWNI_SME_DISCONNECT_DONE_IND RC:%d",
-		discon_ind->reason_code);
-
-	if (CSR_IS_SESSION_VALID(mac_ctx, discon_ind->session_id)) {
-		roam_info.reasonCode = discon_ind->reason_code;
-		roam_info.statusCode = eSIR_SME_STA_NOT_ASSOCIATED;
-		qdf_mem_copy(roam_info.peerMac.bytes, discon_ind->peer_mac,
-			     ETH_ALEN);
-
-		roam_info.rssi = mac_ctx->peer_rssi;
-		roam_info.tx_rate = mac_ctx->peer_txrate;
-		roam_info.rx_rate = mac_ctx->peer_rxrate;
-		roam_info.disassoc_reason = discon_ind->reason_code;
-
-		csr_roam_call_callback(mac_ctx, discon_ind->session_id,
-				       &roam_info, 0, eCSR_ROAM_LOSTLINK,
-				       eCSR_ROAM_RESULT_DISASSOC_IND);
-		session = CSR_GET_SESSION(mac_ctx, discon_ind->session_id);
-		if (session &&
-		   !CSR_IS_INFRA_AP(&session->connectedProfile))
-			csr_roam_state_change(mac_ctx, eCSR_ROAMING_STATE_IDLE,
-				discon_ind->session_id);
-
-	} else
-		sme_err("Inactive session %d",
-			discon_ind->session_id);
-
-	/*
-	 * Release WM status change command as eWNI_SME_DISCONNECT_DONE_IND
-	 * has been sent to HDD and there is nothing else left to do.
-	 */
-	csr_roam_wm_status_change_complete(mac_ctx, discon_ind->session_id);
 }
 
 static void
@@ -15007,6 +15034,18 @@ csr_roam_set_pmkid_cache(tpAniSirGlobal pMac, uint32_t sessionId,
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
+static void csr_mem_zero_psk_pmk(struct csr_roam_session *session)
+{
+	qdf_mem_zero(session->psk_pmk, sizeof(session->psk_pmk));
+	session->pmk_len = 0;
+}
+#else
+static void csr_mem_zero_psk_pmk(struct csr_roam_session *session)
+{
+}
+#endif
+
 QDF_STATUS csr_roam_del_pmkid_from_cache(tpAniSirGlobal pMac,
 					 uint32_t sessionId,
 					 tPmkidCacheInfo *pmksa,
@@ -15036,6 +15075,7 @@ QDF_STATUS csr_roam_del_pmkid_from_cache(tpAniSirGlobal pMac,
 			     sizeof(tPmkidCacheInfo) * CSR_MAX_PMKID_ALLOWED);
 		pSession->NumPmkidCache = 0;
 		pSession->curr_cache_idx = 0;
+		csr_mem_zero_psk_pmk(pSession);
 		return QDF_STATUS_SUCCESS;
 	}
 
@@ -17045,7 +17085,7 @@ QDF_STATUS csr_send_assoc_ind_to_upper_layer_cnf_msg(tpAniSirGlobal pMac,
 		if (pAssocInd->VHTCaps.present)
 			pMsg->vht_caps = pAssocInd->VHTCaps;
 		pMsg->capability_info = pAssocInd->capability_info;
-
+		pMsg->he_caps_present = pAssocInd->he_caps_present;
 		msgQ.type = eWNI_SME_UPPER_LAYER_ASSOC_CNF;
 		msgQ.bodyptr = pMsg;
 		msgQ.bodyval = 0;
@@ -17800,6 +17840,9 @@ void csr_cleanup_session(tpAniSirGlobal pMac, uint32_t sessionId)
 		/* Clean up FT related data structures */
 		sme_ft_close(MAC_HANDLE(pMac), sessionId);
 		csr_free_connect_bss_desc(pMac, sessionId);
+
+		sme_reset_key(MAC_HANDLE(pMac), sessionId);
+		csr_reset_cfg_privacy(pMac);
 		csr_roam_free_connect_profile(&pSession->connectedProfile);
 		csr_roam_free_connected_info(pMac, &pSession->connectedInfo);
 		qdf_mc_timer_destroy(&pSession->hTimerRoaming);

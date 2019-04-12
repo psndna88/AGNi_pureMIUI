@@ -3473,6 +3473,11 @@ QDF_STATUS wma_open(struct wlan_objmgr_psoc *psoc,
 					   wma_roam_scan_stats_event_handler,
 					   WMA_RX_SERIALIZER_CTX);
 
+	wmi_unified_register_event_handler(wma_handle->wmi_handle,
+					   wmi_pdev_cold_boot_cal_event_id,
+					   wma_cold_boot_cal_event_handler,
+					   WMA_RX_WORK_CTX);
+
 #ifdef WLAN_FEATURE_LINK_LAYER_STATS
 	/* Register event handler for processing Link Layer Stats
 	 * response from the FW
@@ -5473,6 +5478,53 @@ static void wma_green_ap_register_handlers(tp_wma_handle wma_handle)
 }
 #endif
 
+static uint8_t
+wma_convert_chainmask_to_chain(uint8_t chainmask)
+{
+	uint8_t num_chains = 0;
+
+	while (chainmask) {
+		chainmask &= (chainmask - 1);
+		num_chains++;
+	}
+
+	return num_chains;
+}
+
+static void
+wma_fill_chain_cfg(struct wma_tgt_cfg *tgt_cfg,
+		   struct target_psoc_info *tgt_hdl,
+		   uint8_t phy)
+{
+	uint8_t num_chain;
+	struct wlan_psoc_host_mac_phy_caps *mac_phy_cap =
+						tgt_hdl->info.mac_phy_cap;
+
+	num_chain = wma_convert_chainmask_to_chain(mac_phy_cap[phy].
+						   tx_chain_mask_2G);
+
+	if (num_chain > tgt_cfg->chain_cfg.max_tx_chains_2g)
+		tgt_cfg->chain_cfg.max_tx_chains_2g = num_chain;
+
+	num_chain = wma_convert_chainmask_to_chain(mac_phy_cap[phy].
+						   tx_chain_mask_5G);
+
+	if (num_chain > tgt_cfg->chain_cfg.max_tx_chains_5g)
+		tgt_cfg->chain_cfg.max_tx_chains_5g = num_chain;
+
+	num_chain = wma_convert_chainmask_to_chain(mac_phy_cap[phy].
+						   rx_chain_mask_2G);
+
+	if (num_chain > tgt_cfg->chain_cfg.max_rx_chains_2g)
+		tgt_cfg->chain_cfg.max_rx_chains_2g = num_chain;
+
+	num_chain = wma_convert_chainmask_to_chain(mac_phy_cap[phy].
+						   rx_chain_mask_5G);
+
+	if (num_chain > tgt_cfg->chain_cfg.max_rx_chains_5g)
+		tgt_cfg->chain_cfg.max_rx_chains_5g = num_chain;
+}
+
 /**
  * wma_update_hdd_cfg() - update HDD config
  * @wma_handle: wma handle
@@ -5482,6 +5534,7 @@ static void wma_green_ap_register_handlers(tp_wma_handle wma_handle)
 static void wma_update_hdd_cfg(tp_wma_handle wma_handle)
 {
 	struct wma_tgt_cfg tgt_cfg;
+	uint8_t i;
 	void *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
 	target_resource_config *wlan_res_cfg;
 	struct wlan_psoc_host_service_ext_param *service_ext_param;
@@ -5567,6 +5620,11 @@ static void wma_update_hdd_cfg(tp_wma_handle wma_handle)
 	wma_update_obss_detection_support(wma_handle, &tgt_cfg);
 	wma_update_obss_color_collision_support(wma_handle, &tgt_cfg);
 	wma_update_hdd_cfg_ndp(wma_handle, &tgt_cfg);
+
+	/* Take the max of chains supported by FW, which will limit nss */
+	for (i = 0; i < tgt_hdl->info.total_mac_phy_cnt; i++)
+		wma_fill_chain_cfg(&tgt_cfg, tgt_hdl, i);
+
 	wma_handle->tgt_cfg_update_cb(hdd_ctx, &tgt_cfg);
 	target_if_store_pdev_target_if_ctx(wma_get_pdev_from_scn_handle);
 	target_pdev_set_wmi_handle(wma_handle->pdev->tgt_if_handle,
@@ -8579,7 +8637,11 @@ static QDF_STATUS wma_mc_process_msg(struct scheduler_msg *msg)
 	case SIR_HAL_SET_DEL_PMKID_CACHE:
 		wma_set_del_pmkid_cache(wma_handle,
 			(struct wmi_unified_pmk_cache *) msg->bodyptr);
-		qdf_mem_free(msg->bodyptr);
+		if (msg->bodyptr) {
+			qdf_mem_zero(msg->bodyptr,
+				     sizeof(struct wmi_unified_pmk_cache));
+			qdf_mem_free(msg->bodyptr);
+		}
 		break;
 	case SIR_HAL_HLP_IE_INFO:
 		wma_roam_scan_send_hlp(wma_handle,

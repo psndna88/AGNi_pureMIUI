@@ -593,10 +593,9 @@ QDF_STATUS sme_ser_handle_active_cmd(struct wlan_serialization_command *cmd)
 	return status;
 }
 
-QDF_STATUS sme_ser_cmd_callback(void *buf,
+QDF_STATUS sme_ser_cmd_callback(struct wlan_serialization_command *cmd,
 				enum wlan_serialization_cb_reason reason)
 {
-	struct wlan_serialization_command *cmd = buf;
 	tHalHandle hal;
 	tpAniSirGlobal mac_ctx;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
@@ -15082,7 +15081,10 @@ send_flush_cmd:
 				   QDF_MODULE_ID_WMA,
 				   QDF_MODULE_ID_WMA, &msg)) {
 		sme_err("Not able to post message to WDA");
-		qdf_mem_free(pmk_cache);
+		if (pmk_cache) {
+			qdf_mem_zero(pmk_cache, sizeof(*pmk_cache));
+			qdf_mem_free(pmk_cache);
+		}
 		return QDF_STATUS_E_FAILURE;
 	}
 

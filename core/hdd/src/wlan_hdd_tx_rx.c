@@ -57,6 +57,7 @@
 #include <wlan_hdd_tsf.h>
 #include <net/tcp.h>
 #include "wma_api.h"
+#include "wlan_hdd_object_manager.h"
 
 #include "wlan_hdd_nud_tracking.h"
 
@@ -849,8 +850,8 @@ static netdev_tx_t __hdd_hard_start_xmit(struct sk_buff *skb,
 	struct hdd_station_ctx *sta_ctx = &adapter->session.station;
 	struct qdf_mac_addr *mac_addr;
 	uint8_t pkt_type = 0;
-	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	bool is_arp = false;
+	struct wlan_objmgr_vdev *vdev;
 
 #ifdef QCA_WIFI_FTM
 	if (hdd_get_conparam() == QDF_GLOBAL_FTM_MODE) {
@@ -873,7 +874,7 @@ static netdev_tx_t __hdd_hard_start_xmit(struct sk_buff *skb,
 	if (QDF_NBUF_CB_GET_PACKET_TYPE(skb) == QDF_NBUF_CB_PACKET_TYPE_ARP) {
 		is_arp = true;
 		if (qdf_nbuf_data_is_arp_req(skb) &&
-		    (hdd_ctx->track_arp_ip == qdf_nbuf_get_arp_tgt_ip(skb))) {
+		    (adapter->track_arp_ip == qdf_nbuf_get_arp_tgt_ip(skb))) {
 			++adapter->hdd_stats.hdd_arp_stats.tx_arp_req_count;
 			QDF_TRACE(QDF_MODULE_ID_HDD_DATA,
 				  QDF_TRACE_LEVEL_INFO_HIGH,
@@ -998,7 +999,11 @@ static netdev_tx_t __hdd_hard_start_xmit(struct sk_buff *skb,
 
 	mac_addr = (struct qdf_mac_addr *)skb->data;
 
-	ucfg_tdls_update_tx_pkt_cnt(adapter->vdev, mac_addr);
+	vdev = hdd_objmgr_get_vdev(adapter);
+	if (vdev) {
+		ucfg_tdls_update_tx_pkt_cnt(vdev, mac_addr);
+		hdd_objmgr_put_vdev(vdev);
+	}
 
 	if (qdf_nbuf_is_tso(skb))
 		adapter->stats.tx_packets += qdf_nbuf_get_tso_num_seg(skb);
@@ -1796,6 +1801,7 @@ QDF_STATUS hdd_rx_packet_cbk(void *context, qdf_nbuf_t rxBuf)
 	bool wake_lock = false;
 	uint8_t pkt_type = 0;
 	bool track_arp = false;
+	struct wlan_objmgr_vdev *vdev;
 
 	/* Sanity check on inputs */
 	if (unlikely((NULL == context) || (NULL == rxBuf))) {
@@ -1835,7 +1841,7 @@ QDF_STATUS hdd_rx_packet_cbk(void *context, qdf_nbuf_t rxBuf)
 		if (QDF_NBUF_CB_PACKET_TYPE_ARP ==
 		    QDF_NBUF_CB_GET_PACKET_TYPE(skb)) {
 			if (qdf_nbuf_data_is_arp_rsp(skb) &&
-				(hdd_ctx->track_arp_ip ==
+				(adapter->track_arp_ip ==
 			     qdf_nbuf_get_arp_src_ip(skb))) {
 				++adapter->hdd_stats.hdd_arp_stats.
 							rx_arp_rsp_count;
@@ -1880,9 +1886,15 @@ QDF_STATUS hdd_rx_packet_cbk(void *context, qdf_nbuf_t rxBuf)
 		dest_mac_addr = (struct qdf_mac_addr *)(skb->data);
 		mac_addr = (struct qdf_mac_addr *)(skb->data+QDF_MAC_ADDR_SIZE);
 
-		if (!hdd_is_current_high_throughput(hdd_ctx))
-			ucfg_tdls_update_rx_pkt_cnt(adapter->vdev, mac_addr,
-						    dest_mac_addr);
+		if (!hdd_is_current_high_throughput(hdd_ctx)) {
+			vdev = hdd_objmgr_get_vdev(adapter);
+			if (vdev) {
+				ucfg_tdls_update_rx_pkt_cnt(vdev,
+							    mac_addr,
+							    dest_mac_addr);
+				hdd_objmgr_put_vdev(vdev);
+			}
+		}
 
 		skb->dev = adapter->dev;
 		skb->protocol = eth_type_trans(skb, skb->dev);
