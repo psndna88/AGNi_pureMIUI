@@ -9,12 +9,17 @@
 #include "sigma_dut.h"
 #ifdef __linux__
 #include <sys/stat.h>
+#include <linux/ethtool.h>
+#include <linux/netlink.h>
+#include <linux/sockios.h>
 #endif /* __linux__ */
 #include "wpa_helpers.h"
+#include <sys/ioctl.h>
 
 
-static int cmd_ca_get_version(struct sigma_dut *dut, struct sigma_conn *conn,
-			      struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_ca_get_version(struct sigma_dut *dut,
+						struct sigma_conn *conn,
+						struct sigma_cmd *cmd)
 {
 	const char *info;
 
@@ -26,7 +31,7 @@ static int cmd_ca_get_version(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 
 	send_resp(dut, conn, SIGMA_COMPLETE, "version,1.0");
-	return 0;
+	return STATUS_SENT;
 }
 
 
@@ -44,7 +49,7 @@ static void first_line(char *s)
 }
 
 
-static void get_ver(const char *cmd, char *buf, size_t buflen)
+void get_ver(const char *cmd, char *buf, size_t buflen)
 {
 	FILE *f;
 	char *pos;
@@ -67,8 +72,9 @@ static void get_ver(const char *cmd, char *buf, size_t buflen)
 #endif /* __linux__ */
 
 
-static int cmd_device_get_info(struct sigma_dut *dut, struct sigma_conn *conn,
-			       struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_device_get_info(struct sigma_dut *dut,
+						 struct sigma_conn *conn,
+						 struct sigma_cmd *cmd)
 {
 	const char *vendor = "Qualcomm Atheros";
 	const char *model = "N/A";
@@ -143,13 +149,34 @@ static int cmd_device_get_info(struct sigma_dut *dut, struct sigma_conn *conn,
 			get_ver("wpa_supplicant -v", wpa_supplicant_ver,
 				sizeof(wpa_supplicant_ver));
 
+		host_fw_ver[0] = '\0';
 		if (get_driver_type() == DRIVER_WCN ||
-		    get_driver_type() == DRIVER_LINUX_WCN)
+		    get_driver_type() == DRIVER_LINUX_WCN) {
 			get_ver("iwpriv wlan0 version", host_fw_ver,
 				sizeof(host_fw_ver));
-		else
-			host_fw_ver[0] = '\0';
+		} else if (get_driver_type() == DRIVER_WIL6210) {
+			struct ethtool_drvinfo drvinfo;
+			struct ifreq ifr; /* ifreq suitable for ethtool ioctl */
+			int fd; /* socket suitable for ethtool ioctl */
 
+			memset(&drvinfo, 0, sizeof(drvinfo));
+			drvinfo.cmd = ETHTOOL_GDRVINFO;
+
+			memset(&ifr, 0, sizeof(ifr));
+			strcpy(ifr.ifr_name, get_main_ifname());
+
+			fd = socket(AF_INET, SOCK_DGRAM, 0);
+			if (fd < 0)
+				fd = socket(AF_NETLINK, SOCK_RAW,
+					    NETLINK_GENERIC);
+			if (fd >= 0) {
+				ifr.ifr_data = (void *) &drvinfo;
+				if (ioctl(fd, SIOCETHTOOL, &ifr) == 0)
+					strlcpy(host_fw_ver, drvinfo.fw_version,
+						sizeof(host_fw_ver));
+				close(fd);
+			}
+		}
 		snprintf(ver_buf, sizeof(ver_buf),
 			 "drv=%s%s%s%s%s%s%s/sigma=" SIGMA_DUT_VER "%s%s",
 			 compat_ver,
@@ -175,7 +202,7 @@ static int cmd_device_get_info(struct sigma_dut *dut, struct sigma_conn *conn,
 		 vendor, model, version);
 
 	send_resp(dut, conn, SIGMA_COMPLETE, resp);
-	return 0;
+	return STATUS_SENT;
 }
 
 
@@ -187,9 +214,9 @@ static int check_device_list_interfaces(struct sigma_cmd *cmd)
 }
 
 
-static int cmd_device_list_interfaces(struct sigma_dut *dut,
-				      struct sigma_conn *conn,
-				      struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_device_list_interfaces(struct sigma_dut *dut,
+							struct sigma_conn *conn,
+							struct sigma_cmd *cmd)
 {
 	const char *type;
 	char resp[200];
@@ -200,13 +227,12 @@ static int cmd_device_list_interfaces(struct sigma_dut *dut,
 	sigma_dut_print(dut, DUT_MSG_DEBUG, "device_list_interfaces - "
 			"interfaceType=%s", type);
 	if (strcmp(type, "802.11") != 0)
-		return -2;
+		return ERROR_SEND_STATUS;
 
 	snprintf(resp, sizeof(resp), "interfaceType,802.11,"
 		 "interfaceID,%s", get_main_ifname());
 	send_resp(dut, conn, SIGMA_COMPLETE, resp);
-
-	return 0;
+	return STATUS_SENT;
 }
 
 

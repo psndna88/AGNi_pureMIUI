@@ -1,7 +1,7 @@
 /*
  * Sigma Control API DUT (station/AP/sniffer)
  * Copyright (c) 2011-2013, 2017, Qualcomm Atheros, Inc.
- * Copyright (c) 2018, The Linux Foundation
+ * Copyright (c) 2018-2019, The Linux Foundation
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
@@ -13,8 +13,9 @@
 #include "wpa_helpers.h"
 
 
-static int cmd_dev_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
-			      struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_dev_send_frame(struct sigma_dut *dut,
+						struct sigma_conn *conn,
+						struct sigma_cmd *cmd)
 {
 #ifdef MIRACAST
 	const char *program = get_param(cmd, "Program");
@@ -44,13 +45,14 @@ static int cmd_dev_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 #else /* CONFIG_WLANTEST */
 	send_resp(dut, conn, SIGMA_ERROR,
 		  "errorCode,Unsupported dev_send_frame");
-	return 0;
+	return STATUS_SENT;
 #endif /* CONFIG_WLANTEST */
 }
 
 
-static int cmd_dev_set_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
-				 struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_dev_set_parameter(struct sigma_dut *dut,
+						   struct sigma_conn *conn,
+						   struct sigma_cmd *cmd)
 {
 	const char *device = get_param(cmd, "Device");
 
@@ -60,12 +62,13 @@ static int cmd_dev_set_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
 		return cmd_sta_set_parameter(dut, conn, cmd);
 	}
 
-	return -1;
+	return INVALID_SEND_STATUS;
 }
 
 
-static int cmd_dev_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
-			       struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_dev_exec_action(struct sigma_dut *dut,
+						 struct sigma_conn *conn,
+						 struct sigma_cmd *cmd)
 {
 	const char *program = get_param(cmd, "Program");
 
@@ -73,7 +76,7 @@ static int cmd_dev_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (program && (strcasecmp(program, "WFD") == 0 ||
 			strcasecmp(program, "DisplayR2") == 0)) {
 		if (get_param(cmd, "interface") == NULL)
-			return -1;
+			return INVALID_SEND_STATUS;
 		return miracast_dev_exec_action(dut, conn, cmd);
 	}
 #endif /* MIRACAST */
@@ -81,37 +84,38 @@ static int cmd_dev_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (program && strcasecmp(program, "DPP") == 0)
 		return dpp_dev_exec_action(dut, conn, cmd);
 
-	return -2;
+	return ERROR_SEND_STATUS;
 }
 
 
-static int cmd_dev_configure_ie(struct sigma_dut *dut, struct sigma_conn *conn,
-				struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_dev_configure_ie(struct sigma_dut *dut,
+						  struct sigma_conn *conn,
+						  struct sigma_cmd *cmd)
 {
 	const char *ie_name = get_param(cmd, "IE_Name");
 	const char *contents = get_param(cmd, "Contents");
 
 	if (!ie_name || !contents)
-		return -1;
+		return INVALID_SEND_STATUS;
 
 	if (strcasecmp(ie_name, "RSNE") != 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Unsupported IE_Name value");
-		return 0;
+		return STATUS_SENT;
 	}
 
 	free(dut->rsne_override);
 	dut->rsne_override = strdup(contents);
 
-	return dut->rsne_override ? 1 : -1;
+	return dut->rsne_override ? SUCCESS_SEND_STATUS : ERROR_SEND_STATUS;
 }
 
 
-static int cmd_dev_ble_action(struct sigma_dut *dut, struct sigma_conn *conn,
-			      struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_dev_ble_action(struct sigma_dut *dut,
+						struct sigma_conn *conn,
+						struct sigma_cmd *cmd)
 {
 #ifdef ANDROID
-	char buf[200];
 	const char *ble_op = get_param(cmd, "BLEOp");
 	const char *prog = get_param(cmd, "Prog");
 	const char *service_name = get_param(cmd, "ServiceName");
@@ -126,17 +130,17 @@ static int cmd_dev_ble_action(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (prog && ble_role && action && msg_type) {
 		send_resp(dut, conn, SIGMA_COMPLETE,
 			  "OrgID,0x00,TransDataHeader,0x00,BloomFilterElement,NULL");
-		return 0;
+		return STATUS_SENT;
 	}
 	if (!ble_op || !prog || !service_name || !ble_role || !discovery_type) {
 		sigma_dut_print(dut, DUT_MSG_ERROR, "Invalid arguments");
-		return -1;
+		return INVALID_SEND_STATUS;
 	}
 
 	if ((strcasecmp(prog, "NAN") != 0)) {
 		sigma_dut_print(dut, DUT_MSG_ERROR, "Program %s not supported",
 				prog);
-		return -1;
+		return INVALID_SEND_STATUS;
 	}
 
 	if (strcasecmp(ble_role, "seeker") != 0 &&
@@ -144,14 +148,14 @@ static int cmd_dev_ble_action(struct sigma_dut *dut, struct sigma_conn *conn,
 	    strcasecmp(ble_role, "browser") != 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR, "Invalid BLERole: %s",
 				ble_role);
-		return -1;
+		return INVALID_SEND_STATUS;
 	}
 
 	if (strcasecmp(discovery_type, "active") != 0 &&
 	    strcasecmp(discovery_type, "passive") != 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR, "Invalid DiscoveryType: %s",
 				discovery_type);
-		return -1;
+		return INVALID_SEND_STATUS;
 	}
 
 	if (!M2Transmit)
@@ -179,7 +183,7 @@ static int cmd_dev_ble_action(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (pid == -1) {
 		sigma_dut_print(dut, DUT_MSG_ERROR, "fork: %s",
 				strerror(errno));
-		return -1;
+		return ERROR_SEND_STATUS;
 	}
 
 	if (pid == 0) {
@@ -187,35 +191,38 @@ static int cmd_dev_ble_action(struct sigma_dut *dut, struct sigma_conn *conn,
 		sigma_dut_print(dut, DUT_MSG_ERROR, "execv: %s",
 				strerror(errno));
 		exit(0);
-		return -1;
+		return ERROR_SEND_STATUS;
 	}
 
 	dut->nanservicediscoveryinprogress = 1;
 #endif /* ANDROID */
 
-	return 1;
+	return SUCCESS_SEND_STATUS;
 }
 
 
 
-static int cmd_dev_start_test(struct sigma_dut *dut, struct sigma_conn *conn,
-			      struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_dev_start_test(struct sigma_dut *dut,
+						struct sigma_conn *conn,
+						struct sigma_cmd *cmd)
 {
-	return 1;
+	return SUCCESS_SEND_STATUS;
 }
 
 
-static int cmd_dev_stop_test(struct sigma_dut *dut, struct sigma_conn *conn,
-			     struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_dev_stop_test(struct sigma_dut *dut,
+					       struct sigma_conn *conn,
+					       struct sigma_cmd *cmd)
 {
-	return 1;
+	return SUCCESS_SEND_STATUS;
 }
 
 
-static int cmd_dev_get_log(struct sigma_dut *dut, struct sigma_conn *conn,
-			   struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_dev_get_log(struct sigma_dut *dut,
+					     struct sigma_conn *conn,
+					     struct sigma_cmd *cmd)
 {
-	return 1;
+	return SUCCESS_SEND_STATUS;
 }
 
 

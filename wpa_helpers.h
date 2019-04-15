@@ -16,15 +16,23 @@ const char * get_p2p_ifname(const char *primary_ifname);
 void dut_ifc_reset(struct sigma_dut *dut);
 
 int wpa_command(const char *ifname, const char *cmd);
+int hapd_command(const char *ifname, const char *cmd);
 int wpa_command_resp(const char *ifname, const char *cmd,
 		     char *resp, size_t resp_size);
+int hapd_command_resp(const char *ifname, const char *cmd,
+		      char *resp, size_t resp_size);
 int get_wpa_status(const char *ifname, const char *field, char *obuf,
 		   size_t obuf_size);
 int get_wpa_signal_poll(struct sigma_dut *dut, const char *ifname,
 			const char *field, char *obuf, size_t obuf_size);
+int get_wpa_ssid_bssid(struct sigma_dut *dut, const char *ifname,
+		       char *buf, size_t buf_size);
+int get_hapd_config(const char *ifname, const char *field, char *obuf,
+		    size_t obuf_size);
 void remove_wpa_networks(const char *ifname);
 
 struct wpa_ctrl * open_wpa_mon(const char *ifname);
+struct wpa_ctrl * open_hapd_mon(const char *ifname);
 int wait_ip_addr(struct sigma_dut *dut, const char *ifname, int timeout);
 int get_wpa_cli_event(struct sigma_dut *dut, struct wpa_ctrl *mon,
 		      const char *event, char *buf, size_t buf_size);

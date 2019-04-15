@@ -1,6 +1,7 @@
 /*
  * Sigma Control API DUT (sniffer)
  * Copyright (c) 2013-2014, Qualcomm Atheros, Inc.
+ * Copyright (c) 2019, The Linux Foundation
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
@@ -22,12 +23,12 @@ static void capture_process(const char *ifname, const char *filename)
 }
 
 
-static int cmd_sniffer_control_start(struct sigma_dut *dut,
-				     struct sigma_conn *conn,
-				     struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sniffer_control_start(struct sigma_dut *dut,
+						       struct sigma_conn *conn,
+						       struct sigma_cmd *cmd)
 {
 	const char *filename = get_param(cmd, "filename");
-	int res;
+	enum sigma_cmd_result res;
 	pid_t pid;
 
 	if (dut->sniffer_pid) {
@@ -38,15 +39,15 @@ static int cmd_sniffer_control_start(struct sigma_dut *dut,
 	if (filename == NULL) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Missing filename argument");
-		return 0;
+		return STATUS_SENT;
 	}
 	if (strchr(filename, '/')) {
 		send_resp(dut, conn, SIGMA_ERROR, "errorCode,Invalid filename");
-		return 0;
+		return STATUS_SENT;
 	}
 
 	res = cmd_wlantest_set_channel(dut, conn, cmd);
-	if (res != 1)
+	if (res != SUCCESS_SEND_STATUS)
 		return res;
 
 	mkdir("Captures", S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
@@ -58,17 +59,17 @@ static int cmd_sniffer_control_start(struct sigma_dut *dut,
 	if (pid < 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Failed to fork sniffer process");
-		return 0;
+		return STATUS_SENT;
 	}
 
 	if (pid == 0) {
 		capture_process(dut->sniffer_ifname, dut->sniffer_filename);
-		return 0;
+		return SUCCESS_SEND_STATUS;
 	}
 
 	dut->sniffer_pid = pid;
 
-	return 1;
+	return SUCCESS_SEND_STATUS;
 }
 
 
@@ -94,24 +95,24 @@ void sniffer_close(struct sigma_dut *dut)
 }
 
 
-static int cmd_sniffer_control_stop(struct sigma_dut *dut,
-				    struct sigma_conn *conn,
-				    struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sniffer_control_stop(struct sigma_dut *dut,
+						      struct sigma_conn *conn,
+						      struct sigma_cmd *cmd)
 {
 	if (!dut->sniffer_pid) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Sniffer was not capturing");
-		return 0;
+		return STATUS_SENT;
 	}
 
 	sniffer_close(dut);
-	return 1;
+	return SUCCESS_SEND_STATUS;
 }
 
 
-static int cmd_sniffer_control_field_check(struct sigma_dut *dut,
-					   struct sigma_conn *conn,
-					   struct sigma_cmd *cmd)
+static enum sigma_cmd_result
+cmd_sniffer_control_field_check(struct sigma_dut *dut, struct sigma_conn *conn,
+				struct sigma_cmd *cmd)
 {
 	const char *filename = get_param(cmd, "filename");
 	const char *framename = get_param(cmd, "framename");
@@ -124,16 +125,16 @@ static int cmd_sniffer_control_field_check(struct sigma_dut *dut,
 	FILE *f;
 
 	if (filename == NULL || srcmac == NULL)
-		return -1;
+		return INVALID_SEND_STATUS;
 
 	if (strchr(filename, '/')) {
 		send_resp(dut, conn, SIGMA_ERROR, "errorCode,Invalid filename");
-		return 0;
+		return STATUS_SENT;
 	}
 
 	if (!file_exists("sniffer-control-field-check.py")) {
 		send_resp(dut, conn, SIGMA_ERROR, "errorCode,sniffer-control-field-check.py not found");
-		return 0;
+		return STATUS_SENT;
 	}
 
 	snprintf(buf, sizeof(buf),
@@ -150,14 +151,14 @@ static int cmd_sniffer_control_field_check(struct sigma_dut *dut,
 	if (f == NULL) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Failed to run sniffer helper");
-		return 0;
+		return STATUS_SENT;
 	}
 
 	if (!fgets(buf, sizeof(buf), f)) {
 		pclose(f);
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Failed extract response from sniffer helper");
-		return 0;
+		return STATUS_SENT;
 	}
 	pos = strchr(buf, '\n');
 	if (pos)
@@ -166,24 +167,26 @@ static int cmd_sniffer_control_field_check(struct sigma_dut *dut,
 	pclose(f);
 
 	send_resp(dut, conn, SIGMA_COMPLETE, buf);
-	return 0;
+	return STATUS_SENT;
 }
 
 
-static int cmd_sniffer_get_info(struct sigma_dut *dut, struct sigma_conn *conn,
-				struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sniffer_get_info(struct sigma_dut *dut,
+						  struct sigma_conn *conn,
+						  struct sigma_cmd *cmd)
 {
 	char buf[200];
 
 	snprintf(buf, sizeof(buf), "WfaSnifferVersion,SigmaSniffer-foo,SnifferSTA,foo,DeviceSwInfo,foo,WiresharkVersion,foo");
 	send_resp(dut, conn, SIGMA_COMPLETE, buf);
-	return 0;
+	return STATUS_SENT;
 }
 
 
-static int cmd_sniffer_control_filter_capture(struct sigma_dut *dut,
-					      struct sigma_conn *conn,
-					      struct sigma_cmd *cmd)
+static enum sigma_cmd_result
+cmd_sniffer_control_filter_capture(struct sigma_dut *dut,
+				   struct sigma_conn *conn,
+				   struct sigma_cmd *cmd)
 {
 	const char *infile = get_param(cmd, "InFile");
 	const char *outfile = get_param(cmd, "OutFile");
@@ -197,14 +200,14 @@ static int cmd_sniffer_control_filter_capture(struct sigma_dut *dut,
 
 	if (infile == NULL || outfile == NULL || srcmac == NULL ||
 	    nframes == NULL)
-		return -1;
+		return INVALID_SEND_STATUS;
 
 	if (strchr(infile, '/') || strchr(outfile, '/'))
-		return -1;
+		return INVALID_SEND_STATUS;
 
 	if (!file_exists("sniffer-control-filter-capture.py")) {
 		send_resp(dut, conn, SIGMA_ERROR, "errorCode,sniffer-control-filter-capture.py not found");
-		return 0;
+		return STATUS_SENT;
 	}
 
 	snprintf(buf, sizeof(buf),
@@ -219,14 +222,14 @@ static int cmd_sniffer_control_filter_capture(struct sigma_dut *dut,
 	if (f == NULL) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Failed to run sniffer helper");
-		return 0;
+		return STATUS_SENT;
 	}
 
 	if (!fgets(buf, sizeof(buf), f)) {
 		pclose(f);
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Failed extract response from sniffer helper");
-		return 0;
+		return STATUS_SENT;
 	}
 	pos = strchr(buf, '\n');
 	if (pos)
@@ -235,13 +238,13 @@ static int cmd_sniffer_control_filter_capture(struct sigma_dut *dut,
 	pclose(f);
 
 	send_resp(dut, conn, SIGMA_COMPLETE, buf);
-	return 0;
+	return STATUS_SENT;
 }
 
 
-static int cmd_sniffer_get_field_value(struct sigma_dut *dut,
-				       struct sigma_conn *conn,
-				       struct sigma_cmd *cmd)
+static enum sigma_cmd_result
+cmd_sniffer_get_field_value(struct sigma_dut *dut, struct sigma_conn *conn,
+			    struct sigma_cmd *cmd)
 {
 	const char *infile = get_param(cmd, "FileName");
 	const char *srcmac = get_param(cmd, "SrcMac");
@@ -252,11 +255,11 @@ static int cmd_sniffer_get_field_value(struct sigma_dut *dut,
 
 	if (infile == NULL || srcmac == NULL || framename == NULL ||
 	    fieldname == NULL)
-		return -1;
+		return INVALID_SEND_STATUS;
 
 	if (!file_exists("sniffer-get-field-value.py")) {
 		send_resp(dut, conn, SIGMA_ERROR, "errorCode,sniffer-get-field-value.py not found");
-		return 0;
+		return STATUS_SENT;
 	}
 
 	snprintf(buf, sizeof(buf),
@@ -267,14 +270,14 @@ static int cmd_sniffer_get_field_value(struct sigma_dut *dut,
 	if (f == NULL) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Failed to run sniffer helper");
-		return 0;
+		return STATUS_SENT;
 	}
 
 	if (!fgets(buf, sizeof(buf), f)) {
 		pclose(f);
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Failed extract response from sniffer helper");
-		return 0;
+		return STATUS_SENT;
 	}
 	pos = strchr(buf, '\n');
 	if (pos)
@@ -283,13 +286,14 @@ static int cmd_sniffer_get_field_value(struct sigma_dut *dut,
 	pclose(f);
 
 	send_resp(dut, conn, SIGMA_COMPLETE, buf);
-	return 0;
+	return STATUS_SENT;
 }
 
 
-static int cmd_sniffer_check_p2p_noa_duration(struct sigma_dut *dut,
-					      struct sigma_conn *conn,
-					      struct sigma_cmd *cmd)
+static enum sigma_cmd_result
+cmd_sniffer_check_p2p_noa_duration(struct sigma_dut *dut,
+				   struct sigma_conn *conn,
+				   struct sigma_cmd *cmd)
 {
 	FILE *f;
 	char buf[200], *pos;
@@ -300,11 +304,11 @@ static int cmd_sniffer_check_p2p_noa_duration(struct sigma_dut *dut,
 
 	if (infile == NULL || bssid == NULL || srcmac == NULL ||
 	    destmac == NULL)
-		return -1;
+		return INVALID_SEND_STATUS;
 
 	if (!file_exists("sniffer-check-p2p-noa-duration.py")) {
 		send_resp(dut, conn, SIGMA_ERROR, "errorCode,sniffer-check-p2p-noa-duration.py not found");
-		return 0;
+		return STATUS_SENT;
 	}
 
 	snprintf(buf, sizeof(buf),
@@ -315,14 +319,14 @@ static int cmd_sniffer_check_p2p_noa_duration(struct sigma_dut *dut,
 	if (f == NULL) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Failed to run sniffer check");
-		return 0;
+		return STATUS_SENT;
 	}
 
 	if (!fgets(buf, sizeof(buf), f)) {
 		pclose(f);
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Failed extract response from sniffer check");
-		return 0;
+		return STATUS_SENT;
 	}
 	pos = strchr(buf, '\n');
 	if (pos)
@@ -331,33 +335,35 @@ static int cmd_sniffer_check_p2p_noa_duration(struct sigma_dut *dut,
 	pclose(f);
 
 	send_resp(dut, conn, SIGMA_COMPLETE, buf);
-	return 0;
+	return STATUS_SENT;
 }
 
 
-static int cmd_sniffer_check_p2p_opps_client(struct sigma_dut *dut,
-					     struct sigma_conn *conn,
-					     struct sigma_cmd *cmd)
+static enum sigma_cmd_result
+cmd_sniffer_check_p2p_opps_client(struct sigma_dut *dut,
+				  struct sigma_conn *conn,
+				  struct sigma_cmd *cmd)
 {
 	char buf[200];
 
 	/* TODO */
 	snprintf(buf, sizeof(buf), "FilterStatus,SUCCESS");
 	send_resp(dut, conn, SIGMA_COMPLETE, buf);
-	return 0;
+	return STATUS_SENT;
 }
 
 
-static int cmd_sniffer_check_frame_field(struct sigma_dut *dut,
-					 struct sigma_conn *conn,
-					 struct sigma_cmd *cmd)
+static enum sigma_cmd_result
+cmd_sniffer_check_frame_field(struct sigma_dut *dut,
+			      struct sigma_conn *conn,
+			      struct sigma_cmd *cmd)
 {
 	char buf[200];
 
 	/* TODO */
 	snprintf(buf, sizeof(buf), "FilterStatus,SUCCESS");
 	send_resp(dut, conn, SIGMA_COMPLETE, buf);
-	return 0;
+	return STATUS_SENT;
 }
 
 

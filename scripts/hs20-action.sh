@@ -20,7 +20,11 @@ echo "CMD=$CMD"
 
 echo "CMD=$CMD" >> $BASEDIR/Logs/hs20-action.log
 
-IFACE_DIR=/data/misc/wifi/sockets/
+if [ -e /data/vendor/wifi/wpa/sockets/$IFNAME ]; then
+    IFACE_DIR=/data/vendor/wifi/wpa/sockets/
+else
+    IFACE_DIR=/data/misc/wifi/sockets/
+fi
 
 run_eloop_cmd()
 {
@@ -126,32 +130,8 @@ if [ "$CMD" = "CONNECTED" ]; then
     fi
 
     run_eloop_cmd "busybox sysctl -w net.ipv6.conf.$IFNAME.disable_ipv6=1 net.ipv6.conf.$IFNAME.autoconf=1 net.ipv6.conf.$IFNAME.accept_ra=1 net.ipv6.conf.$IFNAME.ndisc_notify=1 net.ipv6.conf.$IFNAME.disable_ipv6=0"
-    echo "DHCP/stateless IP configuration" >> $BASEDIR/Logs/hs20-action.log
-    #Fix the next line to use IFNAME
-    run_eloop_cmd "kill `cat /data/misc/dhcp/dhcpcd-wlan0.pid`"
-
-    #/system/bin/dhcpcd -ABKLG -f /system/etc/dhcpcd/dhcpcd.conf -h android-eaaffd5197248a27 $IFNAME
-    /system/bin/dhcpcd -ABKLG -f /system/etc/dhcpcd/dhcpcd.conf $IFNAME
-    #The above line replaces this line:
-    #dhclient -nw -pf /var/run/dhclient-$IFNAME.pid $IFNAME
-    #This does not really work properly after DHCP, i.e., this would need to be
-    #within dhcp-script.
-    #sleep 2
-    #ip addr show dev $IFNAME >> $BASEDIR/Logs/hs20-action.log
-    #addr=`ip addr show dev $IFNAME | grep "inet " | sed "s%.*inet \([^/]*\)/.*%\1%"`
-    #if [ -n "$addr" ]; then
-	#arping -I $IFNAME -D $addr -c 3 >> $BASEDIR/Logs/hs20-action.log 2>&1
-    #fi
-
-fi
-
-if [ "$CMD" = "DISCONNECTED" ]; then
-    if [ -e $BASEDIR/static-ip ]; then
-	exit
-    fi
-    #kill_daemon dhclient /var/run/dhclient-$IFNAME.pid
-    #Fix the next line to use IFNAME
-    run_eloop_cmd "kill `cat /data/misc/dhcp/dhcpcd-wlan0.pid`"
+    # Do not run dhcpcd from here as sigma_dut is already starting appropriate
+    # dhcp binary on CTRL-EVENT-CONNECTED.
 fi
 
 if [ "$CMD" = "ESS-DISASSOC-IMMINENT" ]; then
@@ -197,4 +177,29 @@ if [ "$CMD" = "HS20-DEAUTH-IMMINENT-NOTICE" ]; then
 	    ;;
     esac
 #    notify-send "HS 2.0 Deauthentication imminent"
+fi
+
+if [ "$CMD" = "HS20-T-C-ACCEPTANCE" ]; then
+    cd $BASEDIR
+    URL="$3"
+    count=1
+    echo "HS 2.0 Terms and Conditions notification received - URL: $URL" >> summary
+    case "$URL" in
+	http*)
+	    while [ $count -le 10 ]
+	    do
+		sleep 1
+		addr=$(busybox ip addr show dev $IFNAME | grep "inet ")
+		if [ -n "$addr" ]; then
+		    if ! busybox pidof hs20-osu-client; then
+			nohup hs20-osu-client -w $IFACE_DIR -f Logs/hs20-osu-client.txt browser $URL > Logs/browser.txt 2>&1 &
+		    fi
+		    break
+		else
+		    echo "waiting $count seconds"
+		fi
+		count=$(($count + 1))
+	    done
+	    ;;
+    esac
 fi

@@ -1,6 +1,7 @@
 /*
  * Sigma Control API DUT (station/AP)
  * Copyright (c) 2010, Atheros Communications, Inc.
+ * Copyright (c) 2019, The Linux Foundation
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
@@ -8,17 +9,17 @@
 #include "sigma_dut.h"
 
 
-static int cmd_power_switch_ctrl(struct sigma_dut *dut,
-				 struct sigma_conn *conn,
-				 struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_power_switch_ctrl(struct sigma_dut *dut,
+						   struct sigma_conn *conn,
+						   struct sigma_cmd *cmd)
 {
-	return 1;
+	return SUCCESS_SEND_STATUS;
 }
 
 
-static int cmd_power_switch_reset(struct sigma_dut *dut,
-				  struct sigma_conn *conn,
-				  struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_power_switch_reset(struct sigma_dut *dut,
+						    struct sigma_conn *conn,
+						    struct sigma_cmd *cmd)
 {
 	if (system("killall hostapd") == 0) {
 		int i;
@@ -31,14 +32,15 @@ static int cmd_power_switch_reset(struct sigma_dut *dut,
 				break;
 		}
 	}
-	return 1;
+	return SUCCESS_SEND_STATUS;
 }
 
 
-static int cmd_powerswitch(struct sigma_dut *dut, struct sigma_conn *conn,
-			   struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_powerswitch(struct sigma_dut *dut,
+					     struct sigma_conn *conn,
+					     struct sigma_cmd *cmd)
 {
-	return 1;
+	return SUCCESS_SEND_STATUS;
 }
 
 

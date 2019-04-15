@@ -1666,8 +1666,8 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	}
 
 	if (frametype && strcasecmp(frametype, "ConfigurationResponse") == 0) {
-		res = get_wpa_cli_event(dut, ctrl, "DPP-CONF-SENT",
-					buf, sizeof(buf));
+		res = get_wpa_cli_events(dut, ctrl, conf_events,
+					 buf, sizeof(buf));
 		if (res < 0)
 			result = "BootstrapResult,OK,AuthResult,OK,ConfResult,Timeout";
 		else

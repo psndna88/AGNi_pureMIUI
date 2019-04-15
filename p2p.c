@@ -1624,10 +1624,17 @@ static int cmd_sta_set_wps_pbc(struct sigma_dut *dut, struct sigma_conn *conn,
 static int cmd_sta_wps_read_pin(struct sigma_dut *dut, struct sigma_conn *conn,
 				struct sigma_cmd *cmd)
 {
-	/* const char *intf = get_param(cmd, "Interface"); */
+	const char *intf = get_param(cmd, "Interface");
 	const char *grpid = get_param(cmd, "GroupID");
-	char *pin = "12345670"; /* TODO: use random PIN */
+	char pin[9], addr[20];
 	char resp[100];
+
+	if (get_wpa_status(intf, "address", addr, sizeof(addr)) < 0 ||
+	    get_wps_pin_from_mac(dut, addr, pin, sizeof(pin)) < 0) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Failed to calculate PIN from MAC, use default");
+		strlcpy(pin, "12345670", sizeof(pin));
+	}
 
 	if (grpid) {
 		char buf[100];

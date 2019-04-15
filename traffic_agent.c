@@ -2,7 +2,7 @@
  * Sigma Control API DUT (station/AP)
  * Copyright (c) 2010, Atheros Communications, Inc.
  * Copyright (c) 2011-2017, Qualcomm Atheros, Inc.
- * Copyright (c) 2018, The Linux Foundation
+ * Copyright (c) 2018-2019, The Linux Foundation
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
@@ -15,9 +15,9 @@
 /* To send periodic data for VO-Enterprise tests */
 extern int sigma_periodic_data;
 
-static int cmd_traffic_agent_config(struct sigma_dut *dut,
-				    struct sigma_conn *conn,
-				    struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_traffic_agent_config(struct sigma_dut *dut,
+						      struct sigma_conn *conn,
+						      struct sigma_cmd *cmd)
 {
 	struct sigma_stream *s;
 	const char *val;
@@ -26,7 +26,7 @@ static int cmd_traffic_agent_config(struct sigma_dut *dut,
 	if (dut->num_streams == MAX_SIGMA_STREAMS) {
 		send_resp(dut, conn, SIGMA_ERROR, "errorCode,No more "
 			  "concurrent traffic streams supported");
-		return 0;
+		return STATUS_SENT;
 	}
 
 	s = &dut->streams[dut->num_streams];
@@ -37,7 +37,7 @@ static int cmd_traffic_agent_config(struct sigma_dut *dut,
 
 	val = get_param(cmd, "profile");
 	if (!val)
-		return -1;
+		return INVALID_SEND_STATUS;
 
 	if (strcasecmp(val, "File_Transfer") == 0)
 		s->profile = SIGMA_PROFILE_FILE_TRANSFER;
@@ -54,27 +54,27 @@ static int cmd_traffic_agent_config(struct sigma_dut *dut,
 	else {
 		send_resp(dut, conn, SIGMA_INVALID, "errorCode,Unsupported "
 			  "profile");
-		return 0;
+		return STATUS_SENT;
 	}
 
 	val = get_param(cmd, "direction");
 	if (!val)
-		return -1;
+		return INVALID_SEND_STATUS;
 	if (strcasecmp(val, "send") == 0)
 		s->sender = 1;
 	else if (strcasecmp(val, "receive") == 0)
 		s->sender = 0;
 	else
-		return -1;
+		return INVALID_SEND_STATUS;
 
 	val = get_param(cmd, "destination");
 	if (val) {
 		if (!is_ipv6_addr(val)) {
 			if (inet_aton(val, &s->dst) == 0)
-				return -1;
+				return INVALID_SEND_STATUS;
 		} else {
 			if (inet_pton(AF_INET6, val, &s->dst) != 1)
-				return -1;
+				return INVALID_SEND_STATUS;
 		}
 	}
 
@@ -82,10 +82,10 @@ static int cmd_traffic_agent_config(struct sigma_dut *dut,
 	if (val) {
 		if (!is_ipv6_addr(val)) {
 			if (inet_aton(val, &s->src) == 0)
-				return -1;
+				return INVALID_SEND_STATUS;
 		} else {
 			if (inet_pton(AF_INET6, val, &s->src) != 1)
-				return -1;
+				return INVALID_SEND_STATUS;
 		}
 	}
 
@@ -128,7 +128,7 @@ static int cmd_traffic_agent_config(struct sigma_dut *dut,
 		else if (strcasecmp(val, "BestEffort") == 0)
 			s->tc = SIGMA_TC_BEST_EFFORT;
 		else
-			return -1;
+			return INVALID_SEND_STATUS;
 	}
 
 	val = get_param(cmd, "userpriority");
@@ -163,7 +163,7 @@ static int cmd_traffic_agent_config(struct sigma_dut *dut,
 		else if (strcmp(val, "0") == 0)
 			s->trans_proto = IPPROTO_UDP;
 		else
-			return -1;
+			return INVALID_SEND_STATUS;
 	} else {
 		s->trans_proto = IPPROTO_UDP;
 	}
@@ -173,7 +173,7 @@ static int cmd_traffic_agent_config(struct sigma_dut *dut,
 		s->stats = calloc(MAX_SIGMA_STATS,
 				  sizeof(struct sigma_frame_stats));
 		if (s->stats == NULL)
-			return -1;
+			return ERROR_SEND_STATUS;
 	}
 
 	dut->stream_id++;
@@ -182,7 +182,7 @@ static int cmd_traffic_agent_config(struct sigma_dut *dut,
 	s->stream_id = dut->stream_id;
 	snprintf(buf, sizeof(buf), "streamID,%d", s->stream_id);
 	send_resp(dut, conn, SIGMA_COMPLETE, buf);
-	return 0;
+	return STATUS_SENT;
 }
 
 
@@ -200,9 +200,9 @@ static void stop_stream(struct sigma_stream *s)
 }
 
 
-static int cmd_traffic_agent_reset(struct sigma_dut *dut,
-				   struct sigma_conn *conn,
-				   struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_traffic_agent_reset(struct sigma_dut *dut,
+						     struct sigma_conn *conn,
+						     struct sigma_cmd *cmd)
 {
 	int i;
 	for (i = 0; i < dut->num_streams; i++) {
@@ -212,7 +212,7 @@ static int cmd_traffic_agent_reset(struct sigma_dut *dut,
 	}
 	dut->num_streams = 0;
 	memset(&dut->streams, 0, sizeof(dut->streams));
-	return 1;
+	return SUCCESS_SEND_STATUS;
 }
 
 
@@ -964,9 +964,9 @@ static void * send_report_thread(void *ctx)
 }
 
 
-static int cmd_traffic_agent_send(struct sigma_dut *dut,
-				  struct sigma_conn *conn,
-				  struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_traffic_agent_send(struct sigma_dut *dut,
+						    struct sigma_conn *conn,
+						    struct sigma_cmd *cmd)
 {
 	const char *val;
 	int i, j, res;
@@ -975,18 +975,18 @@ static int cmd_traffic_agent_send(struct sigma_dut *dut,
 
 	val = get_param(cmd, "streamID");
 	if (val == NULL)
-		return -1;
+		return INVALID_SEND_STATUS;
 
 	data = calloc(1, sizeof(*data));
 	if (data == NULL)
-		return -1;
+		return ERROR_SEND_STATUS;
 	data->dut = dut;
 	data->conn = conn;
 
 	data->count = get_stream_id(val, data->streams);
 	if (data->count < 0) {
 		free(data);
-		return -1;
+		return ERROR_SEND_STATUS;
 	}
 	for (i = 0; i < data->count; i++) {
 		struct sigma_stream *s = get_stream(dut, data->streams[i]);
@@ -996,25 +996,25 @@ static int cmd_traffic_agent_send(struct sigma_dut *dut,
 				 "not configured", data->streams[i]);
 			send_resp(dut, conn, SIGMA_INVALID, buf);
 			free(data);
-			return 0;
+			return STATUS_SENT;
 		}
 		for (j = 0; j < i; j++)
 			if (data->streams[i] == data->streams[j]) {
 				free(data);
-				return -1;
+				return ERROR_SEND_STATUS;
 			}
 		if (!s->sender) {
 			snprintf(buf, sizeof(buf), "errorCode,Not configured "
 				 "as sender for streamID %d", data->streams[i]);
 			send_resp(dut, conn, SIGMA_INVALID, buf);
 			free(data);
-			return 0;
+			return STATUS_SENT;
 		}
 		if (s->ta_send_in_progress) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Multiple concurrent send cmds on same streamID not supported");
 			free(data);
-			return 0;
+			return STATUS_SENT;
 		}
 	}
 
@@ -1027,7 +1027,7 @@ static int cmd_traffic_agent_send(struct sigma_dut *dut,
 				"socket for send stream %d", data->streams[i]);
 		if (open_socket(dut, s) < 0) {
 			free(data);
-			return -2;
+			return ERROR_SEND_STATUS;
 		}
 	}
 
@@ -1050,7 +1050,7 @@ static int cmd_traffic_agent_send(struct sigma_dut *dut,
 			sigma_dut_print(dut, DUT_MSG_INFO, "pthread_create "
 					"failed: %d", res);
 			free(data);
-			return -2;
+			return ERROR_SEND_STATUS;
 		}
 		s->started = 1;
 	}
@@ -1063,7 +1063,7 @@ static int cmd_traffic_agent_send(struct sigma_dut *dut,
 				res);
 		free(data);
 		conn->waiting_completion = 0;
-		return -2;
+		return ERROR_SEND_STATUS;
 	}
 
 	for (i = 0; i < data->count; i++) {
@@ -1075,7 +1075,7 @@ static int cmd_traffic_agent_send(struct sigma_dut *dut,
 
 	/* Command will be completed in send_report_thread() */
 
-	return 0;
+	return STATUS_SENT;
 }
 
 
@@ -1249,9 +1249,9 @@ static void * receive_thread(void *ctx)
 }
 
 
-static int cmd_traffic_agent_receive_start(struct sigma_dut *dut,
-					   struct sigma_conn *conn,
-					   struct sigma_cmd *cmd)
+static enum sigma_cmd_result
+cmd_traffic_agent_receive_start(struct sigma_dut *dut, struct sigma_conn *conn,
+				struct sigma_cmd *cmd)
 {
 	const char *val;
 	int streams[MAX_SIGMA_STREAMS];
@@ -1260,10 +1260,10 @@ static int cmd_traffic_agent_receive_start(struct sigma_dut *dut,
 
 	val = get_param(cmd, "streamID");
 	if (val == NULL)
-		return -1;
+		return INVALID_SEND_STATUS;
 	count = get_stream_id(val, streams);
 	if (count < 0)
-		return -1;
+		return ERROR_SEND_STATUS;
 	for (i = 0; i < count; i++) {
 		struct sigma_stream *s = get_stream(dut, streams[i]);
 
@@ -1271,16 +1271,16 @@ static int cmd_traffic_agent_receive_start(struct sigma_dut *dut,
 			snprintf(buf, sizeof(buf), "errorCode,StreamID %d "
 				 "not configured", streams[i]);
 			send_resp(dut, conn, SIGMA_INVALID, buf);
-			return 0;
+			return STATUS_SENT;
 		}
 		for (j = 0; j < i; j++)
 			if (streams[i] == streams[j])
-				return -1;
+				return ERROR_SEND_STATUS;
 		if (s->sender) {
 			snprintf(buf, sizeof(buf), "errorCode,Not configured "
 				 "as receiver for streamID %d", streams[i]);
 			send_resp(dut, conn, SIGMA_INVALID, buf);
-			return 0;
+			return STATUS_SENT;
 		}
 	}
 
@@ -1292,7 +1292,7 @@ static int cmd_traffic_agent_receive_start(struct sigma_dut *dut,
 		sigma_dut_print(dut, DUT_MSG_DEBUG, "Traffic agent: open "
 				"receive socket for stream %d", streams[i]);
 		if (open_socket(dut, s) < 0)
-			return -2;
+			return ERROR_SEND_STATUS;
 	}
 
 	for (i = 0; i < count; i++) {
@@ -1320,12 +1320,12 @@ static int cmd_traffic_agent_receive_start(struct sigma_dut *dut,
 		if (res) {
 			sigma_dut_print(dut, DUT_MSG_INFO, "pthread_create "
 					"failed: %d", res);
-			return -2;
+			return ERROR_SEND_STATUS;
 		}
 		s->started = 1;
 	}
 
-	return 1;
+	return SUCCESS_SEND_STATUS;
 }
 
 
@@ -1360,9 +1360,9 @@ static void write_frame_stats(struct sigma_dut *dut, struct sigma_stream *s,
 }
 
 
-static int cmd_traffic_agent_receive_stop(struct sigma_dut *dut,
-					  struct sigma_conn *conn,
-					  struct sigma_cmd *cmd)
+static enum sigma_cmd_result
+cmd_traffic_agent_receive_stop(struct sigma_dut *dut, struct sigma_conn *conn,
+			       struct sigma_cmd *cmd)
 {
 	const char *val;
 	int streams[MAX_SIGMA_STREAMS];
@@ -1371,10 +1371,10 @@ static int cmd_traffic_agent_receive_stop(struct sigma_dut *dut,
 
 	val = get_param(cmd, "streamID");
 	if (val == NULL)
-		return -1;
+		return INVALID_SEND_STATUS;
 	count = get_stream_id(val, streams);
 	if (count < 0)
-		return -1;
+		return ERROR_SEND_STATUS;
 	for (i = 0; i < count; i++) {
 		struct sigma_stream *s = get_stream(dut, streams[i]);
 
@@ -1382,16 +1382,16 @@ static int cmd_traffic_agent_receive_stop(struct sigma_dut *dut,
 			snprintf(buf, sizeof(buf), "errorCode,StreamID %d "
 				 "not configured", streams[i]);
 			send_resp(dut, conn, SIGMA_INVALID, buf);
-			return 0;
+			return STATUS_SENT;
 		}
 		for (j = 0; j < i; j++)
 			if (streams[i] == streams[j])
-				return -1;
+				return ERROR_SEND_STATUS;
 		if (!s->started) {
 			snprintf(buf, sizeof(buf), "errorCode,Receive not "
 				 "started for streamID %d", streams[i]);
 			send_resp(dut, conn, SIGMA_INVALID, buf);
-			return 0;
+			return STATUS_SENT;
 		}
 	}
 
@@ -1521,16 +1521,16 @@ static int cmd_traffic_agent_receive_stop(struct sigma_dut *dut,
 		s->num_stats = 0;
 	}
 
-	return 0;
+	return STATUS_SENT;
 }
 
 
-static int cmd_traffic_agent_version(struct sigma_dut *dut,
-				     struct sigma_conn *conn,
-				     struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_traffic_agent_version(struct sigma_dut *dut,
+						       struct sigma_conn *conn,
+						       struct sigma_cmd *cmd)
 {
 	send_resp(dut, conn, SIGMA_COMPLETE, "version,1.0");
-	return 0;
+	return STATUS_SENT;
 }
 
 

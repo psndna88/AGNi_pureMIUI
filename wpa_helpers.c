@@ -13,11 +13,14 @@
 #include "wpa_helpers.h"
 
 
+#define DEFAULT_HAPD_CTRL_PATH "/var/run/hostapd/"
+
 extern char *sigma_main_ifname;
 extern char *sigma_station_ifname;
 extern char *sigma_p2p_ifname;
 extern char *sigma_wpas_ctrl;
 extern char *client_socket_path;
+extern char *sigma_hapd_ctrl;
 
 
 char * get_main_ifname(void)
@@ -102,14 +105,13 @@ void dut_ifc_reset(struct sigma_dut *dut)
 }
 
 
-int wpa_command(const char *ifname, const char *cmd)
+int wpa_ctrl_command(const char *path, const char *ifname, const char *cmd)
 {
 	struct wpa_ctrl *ctrl;
 	char buf[128];
 	size_t len;
 
-	printf("wpa_command(ifname='%s', cmd='%s')\n", ifname, cmd);
-	snprintf(buf, sizeof(buf), "%s%s", sigma_wpas_ctrl, ifname);
+	snprintf(buf, sizeof(buf), "%s%s", path, ifname);
 	ctrl = wpa_ctrl_open2(buf, client_socket_path);
 	if (ctrl == NULL) {
 		printf("wpa_command: wpa_ctrl_open2(%s) failed\n", buf);
@@ -131,15 +133,31 @@ int wpa_command(const char *ifname, const char *cmd)
 }
 
 
-int wpa_command_resp(const char *ifname, const char *cmd,
-		     char *resp, size_t resp_size)
+int wpa_command(const char *ifname, const char *cmd)
+{
+	printf("wpa_command(ifname='%s', cmd='%s')\n", ifname, cmd);
+	return wpa_ctrl_command(sigma_wpas_ctrl, ifname, cmd);
+}
+
+
+int hapd_command(const char *ifname, const char *cmd)
+{
+	const char *path = sigma_hapd_ctrl ? sigma_hapd_ctrl :
+		DEFAULT_HAPD_CTRL_PATH;
+
+	printf("hapd_command(ifname='%s', cmd='%s')\n", ifname, cmd);
+	return wpa_ctrl_command(path, ifname, cmd);
+}
+
+
+int wpa_ctrl_command_resp(const char *path, const char *ifname,
+			  const char *cmd, char *resp, size_t resp_size)
 {
 	struct wpa_ctrl *ctrl;
 	char buf[128];
 	size_t len;
 
-	printf("wpa_command(ifname='%s', cmd='%s')\n", ifname, cmd);
-	snprintf(buf, sizeof(buf), "%s%s", sigma_wpas_ctrl, ifname);
+	snprintf(buf, sizeof(buf), "%s%s", path, ifname);
 	ctrl = wpa_ctrl_open2(buf, client_socket_path);
 	if (ctrl == NULL) {
 		printf("wpa_command: wpa_ctrl_open2(%s) failed\n", buf);
@@ -157,12 +175,32 @@ int wpa_command_resp(const char *ifname, const char *cmd,
 }
 
 
-struct wpa_ctrl * open_wpa_mon(const char *ifname)
+int wpa_command_resp(const char *ifname, const char *cmd,
+		     char *resp, size_t resp_size)
+{
+	printf("wpa_command(ifname='%s', cmd='%s')\n", ifname, cmd);
+	return wpa_ctrl_command_resp(sigma_wpas_ctrl, ifname, cmd,
+				     resp, resp_size);
+}
+
+
+int hapd_command_resp(const char *ifname, const char *cmd,
+		      char *resp, size_t resp_size)
+{
+	const char *path = sigma_hapd_ctrl ? sigma_hapd_ctrl :
+		DEFAULT_HAPD_CTRL_PATH;
+
+	printf("hapd_command(ifname='%s', cmd='%s')\n", ifname, cmd);
+	return wpa_ctrl_command_resp(path, ifname, cmd, resp, resp_size);
+}
+
+
+struct wpa_ctrl * open_wpa_ctrl_mon(const char *ctrl_path, const char *ifname)
 {
 	struct wpa_ctrl *ctrl;
 	char path[256];
 
-	snprintf(path, sizeof(path), "%s%s", sigma_wpas_ctrl, ifname);
+	snprintf(path, sizeof(path), "%s%s", ctrl_path, ifname);
 	ctrl = wpa_ctrl_open2(path, client_socket_path);
 	if (ctrl == NULL)
 		return NULL;
@@ -172,6 +210,21 @@ struct wpa_ctrl * open_wpa_mon(const char *ifname)
 	}
 
 	return ctrl;
+}
+
+
+struct wpa_ctrl * open_wpa_mon(const char *ifname)
+{
+	return open_wpa_ctrl_mon(sigma_wpas_ctrl, ifname);
+}
+
+
+struct wpa_ctrl * open_hapd_mon(const char *ifname)
+{
+	const char *path = sigma_hapd_ctrl ?
+		sigma_hapd_ctrl : DEFAULT_HAPD_CTRL_PATH;
+
+	return open_wpa_ctrl_mon(path, ifname);
 }
 
 
@@ -334,20 +387,118 @@ int get_wpa_signal_poll(struct sigma_dut *dut, const char *ifname,
 }
 
 
-int get_wpa_status(const char *ifname, const char *field, char *obuf,
-		   size_t obuf_size)
+int get_wpa_ssid_bssid(struct sigma_dut *dut, const char *ifname,
+		       char *buf, size_t buf_size)
+{
+	struct wpa_ctrl *ctrl;
+	char buf_local[4096];
+	char *network, *ssid, *bssid;
+	size_t buf_size_local;
+	unsigned int count = 0;
+	int len, res;
+	char *save_ptr_network = NULL;
+
+	ctrl = open_wpa_mon(ifname);
+	if (!ctrl) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to connect to wpa_supplicant");
+		return -1;
+	}
+
+	wpa_command(ifname, "BSS_FLUSH");
+	if (wpa_command(ifname, "SCAN TYPE=ONLY")) {
+		wpa_ctrl_detach(ctrl);
+		wpa_ctrl_close(ctrl);
+		sigma_dut_print(dut, DUT_MSG_ERROR, "SCAN command failed");
+		return -1;
+	}
+
+	res = get_wpa_cli_event(dut, ctrl, "CTRL-EVENT-SCAN-RESULTS",
+				buf_local, sizeof(buf_local));
+	wpa_ctrl_detach(ctrl);
+	buf_size_local = sizeof(buf_local);
+	if (res < 0 || wpa_ctrl_request(ctrl, "BSS RANGE=ALL MASK=0x1002", 25,
+					buf_local, &buf_size_local, NULL) < 0) {
+		wpa_ctrl_close(ctrl);
+		sigma_dut_print(dut, DUT_MSG_ERROR, "BSS ctrl request failed");
+		return -1;
+	}
+	buf_local[buf_size_local] = '\0';
+
+	wpa_ctrl_close(ctrl);
+
+	/* Below is BSS RANGE=ALL MASK=0x1002 command sample output which is
+	 * parsed to get the BSSID and SSID parameters.
+	 * Even number of lines, first line BSSID of network 1, second line SSID
+	 * of network 1, ...
+	 *
+	 * bssid=xx:xx:xx:xx:xx:x1
+	 * ssid=SSID1
+	 * bssid=xx:xx:xx:xx:xx:x2
+	 * ssid=SSID2
+	 */
+
+	network = strtok_r(buf_local, "\n", &save_ptr_network);
+
+	while (network) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG, "BSSID: %s", network);
+		bssid = NULL;
+		if (!strtok_r(network, "=", &bssid)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Invalid BSS result: BSSID not found");
+			return -1;
+		}
+		network = strtok_r(NULL, "\n", &save_ptr_network);
+		if (network) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG, "SSID: %s",
+					network);
+			ssid = NULL;
+			if (!strtok_r(network, "=", &ssid)) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"Invalid BSS result: SSID is null");
+				return -1;
+			}
+		} else {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Invalid BSS result: SSID not found");
+			return -1;
+		}
+
+		/* Skip comma for first entry */
+		count++;
+		len = snprintf(buf, buf_size, "%sSSID%d,%s,BSSID%d,%s",
+			       count > 1 ? "," : "",
+			       count, ssid, count, bssid);
+		if (len < 0 || len >= buf_size) {
+			buf[0] = '\0';
+			return 0;
+		}
+
+		buf_size -= len;
+		buf += len;
+
+		network = strtok_r(NULL, "\n", &save_ptr_network);
+	}
+
+	return 0;
+}
+
+
+static int get_wpa_ctrl_status_field(const char *path, const char *ifname,
+				     const char *cmd, const char *field,
+				     char *obuf, size_t obuf_size)
 {
 	struct wpa_ctrl *ctrl;
 	char buf[4096];
 	char *pos, *end;
 	size_t len, flen;
 
-	snprintf(buf, sizeof(buf), "%s%s", sigma_wpas_ctrl, ifname);
+	snprintf(buf, sizeof(buf), "%s%s", path, ifname);
 	ctrl = wpa_ctrl_open2(buf, client_socket_path);
 	if (ctrl == NULL)
 		return -1;
 	len = sizeof(buf);
-	if (wpa_ctrl_request(ctrl, "STATUS", 6, buf, &len, NULL) < 0) {
+	if (wpa_ctrl_request(ctrl, cmd, strlen(cmd), buf, &len, NULL) < 0) {
 		wpa_ctrl_close(ctrl);
 		return -1;
 	}
@@ -380,6 +531,25 @@ int get_wpa_status(const char *ifname, const char *field, char *obuf,
 	}
 
 	return -1;
+}
+
+
+int get_wpa_status(const char *ifname, const char *field, char *obuf,
+		   size_t obuf_size)
+{
+	return get_wpa_ctrl_status_field(sigma_wpas_ctrl, ifname, "STATUS",
+					 field, obuf, obuf_size);
+}
+
+
+int get_hapd_config(const char *ifname, const char *field, char *obuf,
+		    size_t obuf_size)
+{
+	const char *path = sigma_hapd_ctrl ?
+		sigma_hapd_ctrl : DEFAULT_HAPD_CTRL_PATH;
+
+	return get_wpa_ctrl_status_field(path, ifname, "GET_CONFIG",
+					 field, obuf, obuf_size);
 }
 
 
@@ -492,7 +662,7 @@ int set_cred_quoted(const char *ifname, int id, const char *field,
 int start_sta_mode(struct sigma_dut *dut)
 {
 	FILE *f;
-	char buf[100];
+	char buf[256];
 	char *ifname;
 	char *tmp, *pos;
 
@@ -553,14 +723,25 @@ int start_sta_mode(struct sigma_dut *dut)
 	free(tmp);
 	fprintf(f, "device_name=Test client\n");
 	fprintf(f, "device_type=1-0050F204-1\n");
+	if (is_60g_sigma_dut(dut)) {
+		fprintf(f, "eapol_version=2\n");
+		fprintf(f,
+			"config_methods=display push_button keypad virtual_display physical_display virtual_push_button\n");
+	}
 	fclose(f);
 
 #ifdef  __QNXNTO__
-	snprintf(buf, sizeof(buf), "wpa_supplicant -Dqca -i%s -B "
-		 "-c" SIGMA_TMPDIR "/sigma_dut-sta.conf", ifname);
+	snprintf(buf, sizeof(buf), "wpa_supplicant -Dqca -i%s -B %s%s"
+		 "-c" SIGMA_TMPDIR "/sigma_dut-sta.conf", ifname,
+		 dut->wpa_supplicant_debug_log ? "-K -t -ddd -f " : "",
+		 dut->wpa_supplicant_debug_log ?
+		 dut->wpa_supplicant_debug_log : "");
 #else /*__QNXNTO__*/
-	snprintf(buf, sizeof(buf), "wpa_supplicant -Dnl80211 -i%s -B "
-		 "-c" SIGMA_TMPDIR "/sigma_dut-sta.conf", ifname);
+	snprintf(buf, sizeof(buf), "wpa_supplicant -Dnl80211 -i%s -B %s%s "
+		 "-c" SIGMA_TMPDIR "/sigma_dut-sta.conf", ifname,
+		 dut->wpa_supplicant_debug_log ? "-K -t -ddd -f " : "",
+		 dut->wpa_supplicant_debug_log ?
+		 dut->wpa_supplicant_debug_log : "");
 #endif /*__QNXNTO__*/
 	if (system(buf) != 0) {
 		sigma_dut_print(dut, DUT_MSG_INFO, "Failed to run '%s'", buf);
@@ -581,6 +762,11 @@ int start_sta_mode(struct sigma_dut *dut)
 
 void stop_sta_mode(struct sigma_dut *dut)
 {
+	if (is_60g_sigma_dut(dut)) {
+		wpa_command(get_main_ifname(), "TERMINATE");
+		return;
+	}
+
 	wpa_command("wlan0", "TERMINATE");
 	wpa_command("wlan1", "TERMINATE");
 	wpa_command("ath0", "TERMINATE");
