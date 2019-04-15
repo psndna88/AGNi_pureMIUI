@@ -1690,6 +1690,7 @@ static int thermal_pm_notify(struct notifier_block *nb,
 				tz->ops->is_wakeable(tz)) ||
 				tz_mode == THERMAL_DEVICE_DISABLED)
 				continue;
+
 			thermal_zone_device_init(tz);
 			thermal_zone_device_update(tz,
 						   THERMAL_EVENT_UNSPECIFIED);
