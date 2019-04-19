@@ -437,6 +437,26 @@ static int ath_set_lci_config(struct sigma_dut *dut, const char *val,
 }
 
 
+static void set_ap_country_code(struct sigma_dut *dut)
+{
+#if defined(ANDROID) || defined(LINUX_EMBEDDED)
+	char buf[256];
+
+	if (dut->ap_countrycode[0]) {
+		snprintf(buf, sizeof(buf), "DRIVER COUNTRY %s",
+			 dut->ap_countrycode);
+		if (wpa_command(get_station_ifname(), buf) < 0)
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to set country code");
+		else
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Successfully set country code to %s",
+					dut->ap_countrycode);
+	}
+#endif
+}
+
+
 static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 			       struct sigma_cmd *cmd)
 {
@@ -485,6 +505,17 @@ static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 			return -1;
 		snprintf(dut->ap_countrycode, sizeof(dut->ap_countrycode),
 			 "%s", val);
+
+		/*
+		 * Regdomain self-managed driver does not accept hostapd country
+		 * code setting in all cases. Try to use wpa_supplicant DRIVER
+		 * command first to set the driver to a specific country code
+		 * before starting AP functionality. This is targeting cases
+		 * where wpa_supplicant is running on the device as well for
+		 * non-AP mode functionality.
+		 */
+		if (get_driver_type() == DRIVER_LINUX_WCN)
+			set_ap_country_code(dut);
 	}
 
 	val = get_param(cmd, "regulatory_mode");
