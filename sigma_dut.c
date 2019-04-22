@@ -730,6 +730,34 @@ static char * determine_sigma_p2p_ifname(void)
 }
 
 
+static int get_nl80211_config_enable_option(struct sigma_dut *dut)
+{
+	char cmd[100], result[5];
+	FILE *f;
+	size_t len;
+	int ap_nl80211_enable;
+
+	snprintf(cmd, sizeof(cmd), "uci get qcacfg80211.config.enable");
+	f = popen(cmd, "r");
+	if (!f)
+		return -1;
+
+	len = fread(result, 1, sizeof(result) - 1, f);
+	pclose(f);
+
+	if (len == 0)
+		return -1;
+
+	result[len] = '\0';
+	ap_nl80211_enable = atoi(result);
+
+	if (ap_nl80211_enable)
+		dut->priv_cmd = "cfg80211tool";
+
+	return 0;
+}
+
+
 static void set_defaults(struct sigma_dut *dut)
 {
 	dut->ap_p2p_cross_connect = -1;
@@ -738,6 +766,7 @@ static void set_defaults(struct sigma_dut *dut)
 	dut->default_11ng_ap_chwidth = AP_AUTO;
 	/* by default, enable writing of traffic stream stats */
 	dut->write_stats = 1;
+	dut->priv_cmd = "iwpriv";
 }
 
 
@@ -1056,6 +1085,9 @@ int main(int argc, char *argv[])
 		sigma_dut_print(&sigma_dut, DUT_MSG_ERROR,
 				"Interface should be provided for QNX/LINUX-WCN driver - check option M and S");
 	}
+
+	if (get_openwrt_driver_type() == OPENWRT_DRIVER_ATHEROS)
+		get_nl80211_config_enable_option(&sigma_dut);
 
 #ifdef NL80211_SUPPORT
 	sigma_dut.nl_ctx = nl80211_init(&sigma_dut);

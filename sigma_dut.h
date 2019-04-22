@@ -834,6 +834,8 @@ struct sigma_dut {
 #ifdef ANDROID
 	int nanservicediscoveryinprogress;
 #endif /* ANDROID */
+
+	const char *priv_cmd; /* iwpriv / cfg80211tool command name */
 };
 
 
@@ -919,6 +921,7 @@ int ath6kl_client_uapsd(struct sigma_dut *dut, const char *intf, int uapsd);
 int is_ip_addr(const char *str);
 int run_system(struct sigma_dut *dut, const char *cmd);
 int run_system_wrapper(struct sigma_dut *dut, const char *cmd, ...);
+int run_iwpriv(struct sigma_dut *dut, const char *ifname, const char *cmd, ...);
 int cmd_wlantest_set_channel(struct sigma_dut *dut, struct sigma_conn *conn,
 			     struct sigma_cmd *cmd);
 void sniffer_close(struct sigma_dut *dut);
