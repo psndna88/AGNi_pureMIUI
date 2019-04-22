@@ -3444,26 +3444,16 @@ static void ath_sta_set_noack(struct sigma_dut *dut, const char *intf,
 	int counter = 0;
 	char token[50];
 	char *result;
-	char buf[100];
 	char *saveptr;
 
 	strlcpy(token, val, sizeof(token));
 	token[sizeof(token) - 1] = '\0';
 	result = strtok_r(token, ":", &saveptr);
 	while (result) {
-		if (strcmp(result, "disable") == 0) {
-			snprintf(buf, sizeof(buf),
-				 "iwpriv %s noackpolicy %d 1 0",
-				 intf, counter);
-		} else {
-			snprintf(buf, sizeof(buf),
-				 "iwpriv %s noackpolicy %d 1 1",
-				 intf, counter);
-		}
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv noackpolicy failed");
-		}
+		if (strcmp(result, "disable") == 0)
+			run_iwpriv(dut, intf, "noackpolicy %d 1 0", counter);
+		else
+			run_iwpriv(dut, intf, "noackpolicy %d 1 1", counter);
 		result = strtok_r(NULL, ":", &saveptr);
 		counter++;
 	}
@@ -3485,14 +3475,8 @@ static void ath_sta_set_rts(struct sigma_dut *dut, const char *intf,
 static void ath_sta_set_wmm(struct sigma_dut *dut, const char *intf,
 			    const char *val)
 {
-	char buf[100];
-
 	if (strcasecmp(val, "off") == 0) {
-		snprintf(buf, sizeof(buf), "iwpriv %s wmm 0", intf);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"Failed to turn off WMM");
-		}
+		run_iwpriv(dut, intf, "wmm 0");
 	}
 }
 
@@ -3554,21 +3538,17 @@ static int wcn_sta_set_wmm(struct sigma_dut *dut, const char *intf,
 static void ath_sta_set_sgi(struct sigma_dut *dut, const char *intf,
 			    const char *val)
 {
-	char buf[100];
 	int sgi20;
 
 	sgi20 = strcmp(val, "1") == 0 || strcasecmp(val, "Enable") == 0;
 
-	snprintf(buf, sizeof(buf), "iwpriv %s shortgi %d", intf, sgi20);
-	if (system(buf) != 0)
-		sigma_dut_print(dut, DUT_MSG_ERROR, "iwpriv shortgi failed");
+	run_iwpriv(dut, intf, "shortgi %d", sgi20);
 }
 
 
 static void ath_sta_set_11nrates(struct sigma_dut *dut, const char *intf,
 				 const char *val)
 {
-	char buf[100];
 	int rate_code, v;
 
 	/* Disable Tx Beam forming when using a fixed rate */
@@ -3582,17 +3562,10 @@ static void ath_sta_set_11nrates(struct sigma_dut *dut, const char *intf,
 	}
 	rate_code = 0x80 + v;
 
-	snprintf(buf, sizeof(buf), "iwpriv %s set11NRates 0x%x",
-		 intf, rate_code);
-	if (system(buf) != 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"iwpriv set11NRates failed");
-	}
+	run_iwpriv(dut, intf, "set11NRates 0x%x", rate_code);
 
 	/* Channel width gets messed up, fix this */
-	snprintf(buf, sizeof(buf), "iwpriv %s chwidth %d", intf, dut->chwidth);
-	if (system(buf) != 0)
-		sigma_dut_print(dut, DUT_MSG_ERROR, "iwpriv chwidth failed");
+	run_iwpriv(dut, intf, "chwidth %d", dut->chwidth);
 }
 
 
@@ -3632,19 +3605,8 @@ static int iwpriv_sta_set_ampdu(struct sigma_dut *dut, const char *intf,
 static void ath_sta_set_stbc(struct sigma_dut *dut, const char *intf,
 			     const char *val)
 {
-	char buf[60];
-
-	snprintf(buf, sizeof(buf), "iwpriv %s tx_stbc %s", intf, val);
-	if (system(buf) != 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"iwpriv tx_stbc failed");
-	}
-
-	snprintf(buf, sizeof(buf), "iwpriv %s rx_stbc %s", intf, val);
-	if (system(buf) != 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"iwpriv rx_stbc failed");
-	}
+	run_iwpriv(dut, intf, "tx_stbc %s", val);
+	run_iwpriv(dut, intf, "rx_stbc %s", val);
 }
 
 
@@ -3682,32 +3644,25 @@ static int wcn_sta_set_cts_width(struct sigma_dut *dut, const char *intf,
 int ath_set_width(struct sigma_dut *dut, struct sigma_conn *conn,
 		  const char *intf, const char *val)
 {
-	char buf[60];
-
 	if (strcasecmp(val, "Auto") == 0) {
-		snprintf(buf, sizeof(buf), "iwpriv %s chwidth 0", intf);
+		run_iwpriv(dut, intf, "chwidth 0");
 		dut->chwidth = 0;
 	} else if (strcasecmp(val, "20") == 0) {
-		snprintf(buf, sizeof(buf), "iwpriv %s chwidth 0", intf);
+		run_iwpriv(dut, intf, "chwidth 0");
 		dut->chwidth = 0;
 	} else if (strcasecmp(val, "40") == 0) {
-		snprintf(buf, sizeof(buf), "iwpriv %s chwidth 1", intf);
+		run_iwpriv(dut, intf, "chwidth 1");
 		dut->chwidth = 1;
 	} else if (strcasecmp(val, "80") == 0) {
-		snprintf(buf, sizeof(buf), "iwpriv %s chwidth 2", intf);
+		run_iwpriv(dut, intf, "chwidth 2");
 		dut->chwidth = 2;
 	} else if (strcasecmp(val, "160") == 0) {
-		snprintf(buf, sizeof(buf), "iwpriv %s chwidth 3", intf);
+		run_iwpriv(dut, intf, "chwidth 3");
 		dut->chwidth = 3;
 	} else {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "ErrorCode,WIDTH not supported");
 		return -1;
-	}
-
-	if (system(buf) != 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"iwpriv chwidth failed");
 	}
 
 	return 0;
@@ -4569,7 +4524,6 @@ static const char * ath_get_radio_name(const char *radio_name)
 static void ath_sta_set_txsp_stream(struct sigma_dut *dut, const char *intf,
 				    const char *val)
 {
-	char buf[60];
 	unsigned int vht_mcsmap = 0;
 	int txchainmask = 0;
 	const char *basedev = ath_get_radio_name(sigma_radio_ifname[0]);
@@ -4615,29 +4569,16 @@ static void ath_sta_set_txsp_stream(struct sigma_dut *dut, const char *intf,
 		}
 	}
 
-	if (txchainmask) {
-		snprintf(buf, sizeof(buf), "iwpriv %s txchainmask %d",
-			 basedev, txchainmask);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv txchainmask failed");
-		}
-	}
+	if (txchainmask)
+		run_iwpriv(dut, basedev, "txchainmask %d", txchainmask);
 
-	snprintf(buf, sizeof(buf), "iwpriv %s vht_mcsmap 0x%04x",
-		 intf, vht_mcsmap);
-	if (system(buf) != 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"iwpriv %s vht_mcsmap 0x%04x failed",
-				intf, vht_mcsmap);
-	}
+	run_iwpriv(dut, intf, "vht_mcsmap 0x%04x", vht_mcsmap);
 }
 
 
 static void ath_sta_set_rxsp_stream(struct sigma_dut *dut, const char *intf,
 				    const char *val)
 {
-	char buf[60];
 	unsigned int vht_mcsmap = 0;
 	int rxchainmask = 0;
 	const char *basedev = ath_get_radio_name(sigma_radio_ifname[0]);
@@ -4683,22 +4624,10 @@ static void ath_sta_set_rxsp_stream(struct sigma_dut *dut, const char *intf,
 		}
 	}
 
-	if (rxchainmask) {
-		snprintf(buf, sizeof(buf), "iwpriv %s rxchainmask %d",
-			 basedev, rxchainmask);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv rxchainmask failed");
-		}
-	}
+	if (rxchainmask)
+		run_iwpriv(dut, basedev, "rxchainmask %d", rxchainmask);
 
-	snprintf(buf, sizeof(buf), "iwpriv %s vht_mcsmap 0x%04x",
-		 intf, vht_mcsmap);
-	if (system(buf) != 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"iwpriv %s vht_mcsmap 0x%04x",
-				intf, vht_mcsmap);
-	}
+	run_iwpriv(dut, intf, "vht_mcsmap 0x%04x", vht_mcsmap);
 }
 
 
@@ -5175,20 +5104,13 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 	val = get_param(cmd, "BW_SGNL");
 	if (val) {
 		if (strcasecmp(val, "Enable") == 0) {
-			snprintf(buf, sizeof(buf), "iwpriv %s cwmenable 1",
-				 intf);
+			run_iwpriv(dut, intf, "cwmenable 1");
 		} else if (strcasecmp(val, "Disable") == 0) {
 			/* TODO: Disable */
-			buf[0] = '\0';
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,BW_SGNL value not supported");
 			return 0;
-		}
-
-		if (buf[0] != '\0' && system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"Failed to set BW_SGNL");
 		}
 	}
 
@@ -6043,53 +5965,19 @@ static void sta_reset_default_ath(struct sigma_dut *dut, const char *intf,
 	char buf[100];
 
 	if (dut->program == PROGRAM_VHT) {
-		snprintf(buf, sizeof(buf), "iwpriv %s chwidth 2", intf);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv %s chwidth failed", intf);
-		}
-
-		snprintf(buf, sizeof(buf), "iwpriv %s mode 11ACVHT80", intf);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv %s mode 11ACVHT80 failed",
-					intf);
-		}
-
-		snprintf(buf, sizeof(buf), "iwpriv %s vhtmcs -1", intf);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv %s vhtmcs -1 failed", intf);
-		}
+		run_iwpriv(dut, intf, "chwidth 2");
+		run_iwpriv(dut, intf, "mode 11ACVHT80");
+		run_iwpriv(dut, intf, "vhtmcs -1");
 	}
 
 	if (dut->program == PROGRAM_HT) {
-		snprintf(buf, sizeof(buf), "iwpriv %s chwidth 0", intf);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv %s chwidth failed", intf);
-		}
-
-		snprintf(buf, sizeof(buf), "iwpriv %s mode 11naht40", intf);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv %s mode 11naht40 failed",
-					intf);
-		}
-
-		snprintf(buf, sizeof(buf), "iwpriv %s set11NRates 0", intf);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv set11NRates failed");
-		}
+		run_iwpriv(dut, intf, "chwidth 0");
+		run_iwpriv(dut, intf, "mode 11naht40");
+		run_iwpriv(dut, intf, "set11NRates 0");
 	}
 
 	if (dut->program == PROGRAM_VHT || dut->program == PROGRAM_HT) {
-		snprintf(buf, sizeof(buf), "iwpriv %s powersave 0", intf);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"disabling powersave failed");
-		}
+		run_iwpriv(dut, intf, "powersave 0");
 
 		/* Reset CTS width */
 		snprintf(buf, sizeof(buf), "wifitool %s beeliner_fw_test 54 0",
@@ -6101,11 +5989,7 @@ static void sta_reset_default_ath(struct sigma_dut *dut, const char *intf,
 		}
 
 		/* Enable Dynamic Bandwidth signalling by default */
-		snprintf(buf, sizeof(buf), "iwpriv %s cwmenable 1", intf);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv %s cwmenable 1 failed", intf);
-		}
+		run_iwpriv(dut, intf, "cwmenable 1");
 
 		snprintf(buf, sizeof(buf), "iwconfig %s rts 2347", intf);
 		if (system(buf) != 0) {
@@ -6118,59 +6002,26 @@ static void sta_reset_default_ath(struct sigma_dut *dut, const char *intf,
 		dut->testbed_flag_txsp = 1;
 		dut->testbed_flag_rxsp = 1;
 		/* STA has to set spatial stream to 2 per Appendix H */
-		snprintf(buf, sizeof(buf), "iwpriv %s vht_mcsmap 0xfff0", intf);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv vht_mcsmap failed");
-		}
+		run_iwpriv(dut, intf, "vht_mcsmap 0xfff0");
 
 		/* Disable LDPC per Appendix H */
-		snprintf(buf, sizeof(buf), "iwpriv %s ldpc 0", intf);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv %s ldpc 0 failed", intf);
-		}
+		run_iwpriv(dut, intf, "ldpc 0");
 
-		snprintf(buf, sizeof(buf), "iwpriv %s amsdu 1", intf);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv amsdu failed");
-		}
+		run_iwpriv(dut, intf, "amsdu 1");
 
 		/* TODO: Disable STBC 2x1 transmit and receive */
-		snprintf(buf, sizeof(buf), "iwpriv %s tx_stbc 0", intf);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"Disable tx_stbc 0 failed");
-		}
-
-		snprintf(buf, sizeof(buf), "iwpriv %s rx_stbc 0", intf);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"Disable rx_stbc 0 failed");
-		}
+		run_iwpriv(dut, intf, "tx_stbc 0");
+		run_iwpriv(dut, intf, "rx_stbc 0");
 
 		/* STA has to disable Short GI per Appendix H */
-		snprintf(buf, sizeof(buf), "iwpriv %s shortgi 0", intf);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv %s shortgi 0 failed", intf);
-		}
+		run_iwpriv(dut, intf, "shortgi 0");
 	}
 
 	if (type && strcasecmp(type, "DUT") == 0) {
-		snprintf(buf, sizeof(buf), "iwpriv %s nss 3", intf);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv %s nss 3 failed", intf);
-		}
+		run_iwpriv(dut, intf, "nss 3");
 		dut->sta_nss = 3;
 
-		snprintf(buf, sizeof(buf), "iwpriv %s shortgi 1", intf);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv %s shortgi 1 failed", intf);
-		}
+		run_iwpriv(dut, intf, "shortgi 1");
 	}
 }
 
@@ -7796,7 +7647,6 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 	const char *intf = get_param(cmd, "Interface");
 	const char *val;
 	const char *program;
-	char buf[60];
 	int tkip = -1;
 	int wep = -1;
 
@@ -7806,11 +7656,7 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		int sgi80;
 
 		sgi80 = strcmp(val, "1") == 0 || strcasecmp(val, "Enable") == 0;
-		snprintf(buf, sizeof(buf), "iwpriv %s shortgi %d", intf, sgi80);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv shortgi failed");
-		}
+		run_iwpriv(dut, intf, "shortgi %d", sgi80);
 	}
 
 	val = get_param(cmd, "TxBF");
@@ -7824,17 +7670,12 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 			}
 			break;
 		case DRIVER_ATHEROS:
-			snprintf(buf, sizeof(buf), "iwpriv %s vhtsubfee 1",
-				 intf);
-			if (system(buf) != 0) {
+			if (run_iwpriv(dut, intf, "vhtsubfee 1") < 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "ErrorCode,Setting vhtsubfee failed");
 				return 0;
 			}
-
-			snprintf(buf, sizeof(buf), "iwpriv %s vhtsubfer 1",
-				 intf);
-			if (system(buf) != 0) {
+			if (run_iwpriv(dut, intf, "vhtsubfer 1") < 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "ErrorCode,Setting vhtsubfer failed");
 				return 0;
@@ -7853,18 +7694,8 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		case DRIVER_ATHEROS:
 			ath_sta_set_txsp_stream(dut, intf, "1SS");
 			ath_sta_set_rxsp_stream(dut, intf, "1SS");
-			snprintf(buf, sizeof(buf), "iwpriv %s vhtmubfee 1",
-				 intf);
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"iwpriv vhtmubfee failed");
-			}
-			snprintf(buf, sizeof(buf), "iwpriv %s vhtmubfer 1",
-				 intf);
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"iwpriv vhtmubfer failed");
-			}
+			run_iwpriv(dut, intf, "vhtmubfee 1");
+			run_iwpriv(dut, intf, "vhtmubfer 1");
 			break;
 		case DRIVER_WCN:
 			if (wcn_sta_set_sp_stream(dut, intf, "1SS") < 0) {
@@ -7885,11 +7716,7 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		int ldpc;
 
 		ldpc = strcmp(val, "1") == 0 || strcasecmp(val, "Enable") == 0;
-		snprintf(buf, sizeof(buf), "iwpriv %s ldpc %d", intf, ldpc);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv ldpc failed");
-		}
+		run_iwpriv(dut, intf, "ldpc %d", ldpc);
 	}
 
 	val = get_param(cmd, "BCC");
@@ -7899,11 +7726,7 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		bcc = strcmp(val, "1") == 0 || strcasecmp(val, "Enable") == 0;
 		/* use LDPC iwpriv itself to set bcc coding, bcc coding
 		 * is mutually exclusive to bcc */
-		snprintf(buf, sizeof(buf), "iwpriv %s ldpc %d", intf, !bcc);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"Enabling/Disabling of BCC failed");
-		}
+		run_iwpriv(dut, intf, "ldpc %d", !bcc);
 	}
 
 	val = get_param(cmd, "MaxHE-MCS_1SS_RxMapLTE80");
@@ -7990,19 +7813,9 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 				break;
 			}
 
-			snprintf(buf, sizeof(buf), "iwpriv %s rxchainmask %d",
-				 intf, config_val);
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"iwpriv rxchainmask failed");
-			}
+			run_iwpriv(dut, intf, "rxchainmask %d", config_val);
+			run_iwpriv(dut, intf, "txchainmask %d", config_val);
 
-			snprintf(buf, sizeof(buf), "iwpriv %s txchainmask %d",
-				 intf, config_val);
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"iwpriv txchainmask failed");
-			}
 		}
 
 		/* Extract the channel width information */
@@ -8029,19 +7842,10 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 
 			dut->chwidth = config_val;
 
-			snprintf(buf, sizeof(buf), "iwpriv %s chwidth %d",
-				 intf, config_val);
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"iwpriv chwidth failed");
-			}
+			run_iwpriv(dut, intf, "chwidth %d", config_val);
 		}
 
-		snprintf(buf, sizeof(buf), "iwpriv %s opmode_notify 1", intf);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv opmode_notify failed");
-		}
+		run_iwpriv(dut, intf, "opmode_notify 1");
 	}
 
 	val = get_param(cmd, "nss_mcs_cap");
@@ -8063,11 +7867,7 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		}
 		nss = atoi(result);
 
-		snprintf(buf, sizeof(buf), "iwpriv %s nss %d", intf, nss);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv nss failed");
-		}
+		run_iwpriv(dut, intf, "nss %d", nss);
 		dut->sta_nss = nss;
 
 		result = strtok_r(NULL, ";", &saveptr);
@@ -8123,12 +7923,7 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 					"nss_mcs_cap: HE: MCS cannot be changed without NL80211_SUPPORT defined");
 #endif /* NL80211_SUPPORT */
 		} else {
-			snprintf(buf, sizeof(buf), "iwpriv %s vhtmcs %d",
-				 intf, mcs);
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"iwpriv mcs failed");
-			}
+			run_iwpriv(dut, intf, "vhtmcs %d", mcs);
 
 			switch (nss) {
 			case 1:
@@ -8183,13 +7978,7 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 				vht_mcsmap = 0xffea;
 				break;
 			}
-			snprintf(buf, sizeof(buf),
-				 "iwpriv %s vht_mcsmap 0x%04x",
-				 intf, vht_mcsmap);
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"iwpriv vht_mcsmap failed");
-			}
+			run_iwpriv(dut, intf, "vht_mcsmap 0x%04x", vht_mcsmap);
 		}
 	}
 
@@ -8205,20 +7994,13 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 
 	if (tkip != -1 || wep != -1) {
 		if ((tkip == 1 && wep != 0) || (wep == 1 && tkip != 0)) {
-			snprintf(buf, sizeof(buf), "iwpriv %s htweptkip 1",
-				 intf);
+			run_iwpriv(dut, intf, "htweptkip 1");
 		} else if ((tkip == 0 && wep != 1) || (wep == 0 && tkip != 1)) {
-			snprintf(buf, sizeof(buf), "iwpriv %s htweptkip 0",
-				 intf);
+			run_iwpriv(dut, intf, "htweptkip 0");
 		} else {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"ErrorCode,mixed mode of VHT TKIP/WEP not supported");
 			return 0;
-		}
-
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv htweptkip failed");
 		}
 	}
 
@@ -8518,11 +8300,7 @@ static int ath_sta_send_addba(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 
 	/* Command sequence for ADDBA request on Peregrine based devices */
-	snprintf(buf, sizeof(buf), "iwpriv %s setaddbaoper 1", intf);
-	if (system(buf) != 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"iwpriv setaddbaoper failed");
-	}
+	run_iwpriv(dut, intf, "setaddbaoper 1");
 
 	snprintf(buf, sizeof(buf), "wifitool %s senddelba 1 %d 1 4", intf, tid);
 	if (system(buf) != 0) {
@@ -9811,7 +9589,6 @@ static int ath_sta_send_frame_vht(struct sigma_dut *dut,
 {
 	const char *val;
 	char *ifname;
-	char buf[100];
 	int chwidth, nss;
 
 	val = get_param(cmd, "framename");
@@ -9824,12 +9601,7 @@ static int ath_sta_send_frame_vht(struct sigma_dut *dut,
 		ifname = get_station_ifname();
 
 		/* Disable STBC */
-		snprintf(buf, sizeof(buf),
-			 "iwpriv %s tx_stbc 0", ifname);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv tx_stbc 0 failed!");
-		}
+		run_iwpriv(dut, ifname, "tx_stbc 0");
 
 		/* Extract Channel width */
 		val = get_param(cmd, "Channel_width");
@@ -9852,12 +9624,7 @@ static int ath_sta_send_frame_vht(struct sigma_dut *dut,
 				break;
 			}
 
-			snprintf(buf, sizeof(buf), "iwpriv %s chwidth %d",
-				 ifname, chwidth);
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"iwpriv chwidth failed!");
-			}
+			run_iwpriv(dut, ifname, "chwidth %d", chwidth);
 		}
 
 		/* Extract NSS */
@@ -9878,23 +9645,11 @@ static int ath_sta_send_frame_vht(struct sigma_dut *dut,
 				nss = 3;
 				break;
 			}
-			snprintf(buf, sizeof(buf),
-				 "iwpriv %s rxchainmask %d", ifname, nss);
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"iwpriv rxchainmask failed!");
-			}
+			run_iwpriv(dut, ifname, "rxchainmask %d", nss);
 		}
 
 		/* Opmode notify */
-		snprintf(buf, sizeof(buf), "iwpriv %s opmode_notify 1", ifname);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv opmode_notify failed!");
-		} else {
-			sigma_dut_print(dut, DUT_MSG_INFO,
-					"Sent out the notify frame!");
-		}
+		run_iwpriv(dut, ifname, "opmode_notify 1");
 	}
 
 	return 1;
@@ -10680,7 +10435,6 @@ static int ath_sta_set_rfeature_vht(const char *intf, struct sigma_dut *dut,
 	if (val) {
 		/* String (nss_operating_mode; mcs_operating_mode) */
 		int nss, mcs;
-		char buf[50];
 		char *saveptr;
 
 		token = strdup(val);
@@ -10696,13 +10450,9 @@ static int ath_sta_set_rfeature_vht(const char *intf, struct sigma_dut *dut,
 			nss = atoi(result);
 			if (nss == 4)
 				ath_disable_txbf(dut, intf);
-			snprintf(buf, sizeof(buf), "iwpriv %s nss %d",
-				 intf, nss);
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv nss failed");
+			if (run_iwpriv(dut, intf, "nss %d", nss) < 0)
 				goto failed;
-			}
+
 		}
 
 		result = strtok_r(NULL, ";", &saveptr);
@@ -10712,31 +10462,15 @@ static int ath_sta_set_rfeature_vht(const char *intf, struct sigma_dut *dut,
 			goto failed;
 		}
 		if (strcasecmp(result, "def") == 0) {
-			snprintf(buf, sizeof(buf), "iwpriv %s set11NRates 0",
-				 intf);
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"iwpriv set11NRates failed");
+			if (run_iwpriv(dut, intf, "set11NRates 0") < 0)
 				goto failed;
-			}
-
 		} else {
 			mcs = atoi(result);
-			snprintf(buf, sizeof(buf), "iwpriv %s vhtmcs %d",
-				 intf, mcs);
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"iwpriv vhtmcs failed");
+			if (run_iwpriv(dut, intf, "vhtmcs %d", mcs) < 0)
 				goto failed;
-			}
 		}
 		/* Channel width gets messed up, fix this */
-		snprintf(buf, sizeof(buf), "iwpriv %s chwidth %d",
-			 intf, dut->chwidth);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv chwidth failed");
-		}
+		run_iwpriv(dut, intf, "chwidth %d", dut->chwidth);
 	}
 
 	free(token);
