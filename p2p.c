@@ -2050,15 +2050,16 @@ static int cmd_sta_set_opportunistic_ps(struct sigma_dut *dut,
 		return 0;
 	}
 
-	if (wpa_command(grp->ifname, "P2P_SET oppps 1") < 0) {
-		send_resp(dut, conn, SIGMA_ERROR,
-			  "errorCode,Use of OppPS as GO not supported");
-		return 0;
-	}
 	snprintf(buf, sizeof(buf), "P2P_SET ctwindow %d", atoi(ctwindow));
 	if (wpa_command(grp->ifname, buf) < 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Use of CTWindow as GO not supported");
+		return 0;
+	}
+
+	if (wpa_command(grp->ifname, "P2P_SET oppps 1") < 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Use of OppPS as GO not supported");
 		return 0;
 	}
 
