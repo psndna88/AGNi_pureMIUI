@@ -1012,8 +1012,6 @@ int nan_cmd_sta_get_events(struct sigma_dut *dut, struct sigma_conn *conn,
 int nan_cmd_sta_transmit_followup(struct sigma_dut *dut,
 				  struct sigma_conn *conn,
 				  struct sigma_cmd *cmd);
-void lowi_cmd_sta_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
-			       struct sigma_cmd *cmd);
 void nan_cmd_sta_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 			       struct sigma_cmd *cmd);
 int nan_cmd_sta_preset_testparameters(struct sigma_dut *dut,

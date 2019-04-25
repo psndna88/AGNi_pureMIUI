@@ -7139,9 +7139,6 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 		nan_cmd_sta_reset_default(dut, conn, cmd);
 #endif /* ANDROID_NAN */
 
-	if (dut->program == PROGRAM_LOC)
-		lowi_cmd_sta_reset_default(dut, conn, cmd);
-
 	if (dut->program == PROGRAM_HS2_R2 || dut->program == PROGRAM_HS2_R3) {
 		unlink("SP/wi-fi.org/pps.xml");
 		if (system("rm -r SP/*") != 0) {

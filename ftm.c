@@ -9,10 +9,6 @@
 #include <sys/stat.h>
 #include <regex.h>
 #include "wpa_helpers.h"
-#include "wifi_hal.h"
-
-extern wifi_handle global_wifi_handle;
-extern wifi_interface_handle global_interface_handle;
 
 static const char LOC_XML_FILE_PATH[] = "./data/sigma-dut-target.xml";
 
@@ -33,7 +29,6 @@ static const char WPA_ADDRESS_3_ENABLE[] =
 "SET gas_address3 1";
 static const char WPA_ADDRESS_3_DISABLE[] =
 "SET gas_address3 0";
-static int lowi_state = 0;
 
 #ifndef ETH_ALEN
 #define ETH_ALEN 6
@@ -688,49 +683,4 @@ int loc_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 
 	send_resp(dut, conn, SIGMA_COMPLETE, NULL);
 	return 0;
-}
-
-void * lowi_thread_function(void *ptr)
-{
-	wifi_event_loop(global_wifi_handle);
-	pthread_exit(0);
-	return (void *) NULL;
-}
-
-void lowi_init(struct sigma_dut *dut)
-{
-	pthread_t thread1;	/* thread variables */
-
-	if(global_wifi_handle)
-	{
-		sigma_dut_print(dut, DUT_MSG_INFO,
-				"%s - wifi hal already initialized", __func__);
-		return;
-	}
-
-	wifi_error err = wifi_initialize(&global_wifi_handle);
-
-	if (err) {
-		printf("wifi hal initialize failed\n");
-		return;
-	}
-
-	global_interface_handle = wifi_get_iface_handle(global_wifi_handle,
-							(char *) "wlan0");
-	/* create threads 1 */
-	pthread_create(&thread1, NULL, &lowi_thread_function, NULL);
-
-	sigma_dut_print(dut, DUT_MSG_INFO,
-			"%s - wifi hal initialized", __func__);
-	return;
-
-}
-
-void lowi_cmd_sta_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
-			        struct sigma_cmd *cmd)
-{
-	if (lowi_state == 0) {
-		lowi_init(dut);
-		lowi_state = 1;
-	}
 }
