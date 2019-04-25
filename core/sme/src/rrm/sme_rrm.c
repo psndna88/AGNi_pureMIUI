@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -655,12 +655,26 @@ static QDF_STATUS sme_rrm_scan_request_callback(tHalHandle halHandle,
 	tpRrmSMEContext pSmeRrmContext = &pMac->rrm.rrmSmeContext;
 	uint32_t time_tick;
 	QDF_STATUS qdf_status;
+	uint32_t session_id;
+	bool valid_result = true;
+
+	/*
+	 * RRM scan response received after roaming to different AP.
+	 * Post message to PE for rrm cleanup.
+	 */
+	qdf_status = csr_roam_get_session_id_from_bssid(pMac,
+						&pSmeRrmContext->sessionBssId,
+						&session_id);
+	if (qdf_status == QDF_STATUS_E_FAILURE) {
+		sme_debug("Cleanup RRM context due to STA roaming");
+		valid_result = false;
+	}
 
 	/* if any more channels are pending, start a timer of a random value
 	 * within randomization interval.
 	 */
-	if ((pSmeRrmContext->currentIndex + 1) <
-	    pSmeRrmContext->channelList.numOfChannels) {
+	if (((pSmeRrmContext->currentIndex + 1) <
+	     pSmeRrmContext->channelList.numOfChannels) && valid_result) {
 		sme_rrm_send_scan_result(pMac, 1,
 					 &pSmeRrmContext->channelList.
 					 ChannelList[pSmeRrmContext
@@ -1302,23 +1316,13 @@ static QDF_STATUS sme_rrm_process_neighbor_report(tpAniSirGlobal pMac,
 	tpRrmNeighborReportDesc pNeighborReportDesc;
 	uint8_t i = 0;
 	QDF_STATUS qdf_status = QDF_STATUS_SUCCESS;
-	uint32_t sessionId;
 
-	/* Get the session id */
-	status =
-		csr_roam_get_session_id_from_bssid(pMac,
-			   (struct qdf_mac_addr *) pNeighborRpt->bssId,
-			   &sessionId);
-	if (QDF_IS_STATUS_SUCCESS(status)) {
-#ifdef FEATURE_WLAN_ESE
-		/* Clear the cache for ESE. */
-		if (csr_roam_is_ese_assoc(pMac, sessionId)) {
-			rrm_ll_purge_neighbor_cache(pMac,
-						    &pMac->rrm.rrmSmeContext.
-						    neighborReportCache);
-		}
-#endif
-	}
+	/* Purge the cache on reception of unsolicited neighbor report */
+	if (!pMac->rrm.rrmSmeContext.neighborReqControlInfo.
+			isNeighborRspPending)
+		rrm_ll_purge_neighbor_cache(pMac,
+					    &pMac->rrm.rrmSmeContext.
+					    neighborReportCache);
 
 	for (i = 0; i < pNeighborRpt->numNeighborReports; i++) {
 		pNeighborReportDesc =
@@ -1370,6 +1374,7 @@ end:
 		qdf_status = QDF_STATUS_E_FAILURE;
 
 	rrm_indicate_neighbor_report_result(pMac, qdf_status);
+
 	return status;
 }
 
