@@ -679,7 +679,7 @@ int tdls_validate_mgmt_request(struct tdls_action_frame_request *tdls_mgmt_req)
 	 * STA or P2P client should be connected and authenticated before
 	 *  sending any TDLS frames
 	 */
-	if (!tdls_is_vdev_connected(vdev) ||
+	if (!wlan_vdev_is_up(vdev) ||
 	    !tdls_is_vdev_authenticated(vdev)) {
 		tdls_err("STA is not connected or not authenticated.");
 		return -EAGAIN;
@@ -1411,6 +1411,7 @@ static QDF_STATUS tdls_add_peer_rsp(struct tdls_add_sta_rsp *rsp)
 			if (INVALID_TDLS_PEER_ID == conn_rec[sta_idx].sta_id) {
 				conn_rec[sta_idx].session_id = rsp->session_id;
 				conn_rec[sta_idx].sta_id = rsp->sta_id;
+				conn_rec[sta_idx].index = sta_idx;
 				qdf_copy_macaddr(&conn_rec[sta_idx].peer_mac,
 						 &rsp->peermac);
 				tdls_warn("TDLS: STA IDX at %d is %d of mac "
@@ -1522,6 +1523,7 @@ QDF_STATUS tdls_process_del_peer_rsp(struct tdls_del_sta_rsp *rsp)
 		tdls_reset_peer(vdev_obj, macaddr);
 		conn_rec[sta_idx].sta_id = INVALID_TDLS_PEER_ID;
 		conn_rec[sta_idx].session_id = 0xff;
+		conn_rec[sta_idx].index = INVALID_TDLS_PEER_INDEX;
 		qdf_mem_zero(&conn_rec[sta_idx].peer_mac,
 			     QDF_MAC_ADDR_SIZE);
 
