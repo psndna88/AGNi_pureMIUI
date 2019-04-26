@@ -7743,6 +7743,7 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		int mcs, ratecode = 0;
 		enum he_mcs_config mcs_config;
 		int ret;
+		char buf[60];
 
 		ratecode = (0x07 & dut->sta_nss) << 5;
 		mcs = atoi(val);
