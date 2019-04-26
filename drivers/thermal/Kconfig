@@ -193,6 +193,13 @@ config LIMITS_LITE_HW
 	 supported by LMH Lite, their throttling intensity and the operating
 	 profiles.
 
+config LIMITS_LITE_HW_POLLING
+	bool "LMH Lite hardware driver polling support"
+	depends on LIMITS_LITE_HW
+	help
+	  Enable this option to periodically poll for temperature and throttling
+	  information.
+
 config THERMAL_MONITOR
 	bool "Monitor thermal state and limit CPU Frequency"
 	depends on THERMAL_TSENS8974
