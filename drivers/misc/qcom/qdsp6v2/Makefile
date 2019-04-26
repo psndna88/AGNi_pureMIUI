@@ -4,3 +4,4 @@ obj-$(CONFIG_MSM_QDSP6V2_CODECS) += q6audio_v2.o q6audio_v2_aio.o
 obj-$(CONFIG_MSM_QDSP6V2_CODECS) += audio_g711mlaw.o audio_g711alaw.o
 obj-$(CONFIG_MSM_QDSP6V2_CODECS)  += audio_mp3.o audio_amrnb.o audio_amrwb.o audio_amrwbplus.o audio_evrc.o audio_qcelp.o amrwb_in.o audio_hwacc_effects.o
 obj-$(CONFIG_MSM_ULTRASOUND) += ultrasound/
+obj-$(CONFIG_AINUR_DTS_HW) += dts_eagle/

@@ -47,6 +47,11 @@
 #include "../wcd9xxx-common-v2.h"
 #include "../wcd9xxx-resmgr-v2.h"
 #include "../wcdcal-hwdep.h"
+#ifdef CONFIG_AINUR_DTS_HW
+#include <linux/proc_fs.h>
+#include <../drivers/base/regmap/internal.h>
+#include <linux/switch.h>
+#endif
 #include "wcd934x-dsd.h"
 
 #define WCD934X_RATES_MASK (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000 |\
@@ -132,6 +137,11 @@ static const struct snd_kcontrol_new name##_mux = \
 #define DAPM_MICBIAS2_STANDALONE "MIC BIAS2 Standalone"
 #define DAPM_MICBIAS3_STANDALONE "MIC BIAS3 Standalone"
 #define DAPM_MICBIAS4_STANDALONE "MIC BIAS4 Standalone"
+
+#ifdef CONFIG_AINUR_DTS_HW
+int g_DebugMode = 0;
+struct switch_dev *g_audiowizard_force_preset_sdev = NULL;
+#endif
 
 #define  TX_HPF_CUT_OFF_FREQ_MASK	0x60
 #define  CF_MIN_3DB_4HZ			0x0
@@ -9394,6 +9404,21 @@ static int tavil_soc_codec_probe(struct snd_soc_codec *codec)
 	 * can be released allowing the codec to go to SVS2.
 	 */
 	tavil_vote_svs(tavil, false);
+
+#ifdef CONFIG_AINUR_DTS_HW
+        if (!g_audiowizard_force_preset_sdev) {
+		g_audiowizard_force_preset_sdev = kzalloc(sizeof(struct switch_dev), GFP_KERNEL);
+		if (!g_audiowizard_force_preset_sdev) {
+			pr_err("%s: failed to allocate switch_dev\n", __func__);
+			ret = -ENOMEM;
+		}
+		g_audiowizard_force_preset_sdev->name = "audiowizard_force_preset";
+		g_audiowizard_force_preset_sdev->state = 0;
+		ret = switch_dev_register(g_audiowizard_force_preset_sdev);
+		if (ret < 0)
+			pr_err("%s: failed to register switch audiowizard_force_preset\n", __func__);
+	}
+#endif
 
 	return ret;
 

@@ -524,6 +524,10 @@ struct wcd_mbhc {
 	(cfg_ptr->_n_rload * \
 	(sizeof(cfg_ptr->_rload[0]) + sizeof(cfg_ptr->_alpha[0]))))
 
+#ifdef CONFIG_AINUR_DTS_HW
+void wcd_mbhc_plug_detect_for_debug_mode(struct wcd_mbhc *mbhc, int debug_mode);
+#endif
+
 #ifdef CONFIG_SND_SOC_WCD_MBHC
 int wcd_mbhc_set_keycode(struct wcd_mbhc *mbhc);
 int wcd_mbhc_start(struct wcd_mbhc *mbhc,

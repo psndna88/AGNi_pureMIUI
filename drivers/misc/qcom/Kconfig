@@ -18,3 +18,12 @@ config MSM_ULTRASOUND
 	  ultrasound data paths between
 	  HW and services, calculating input events
 	  upon the ultrasound data.
+
+config AINUR_DTS_HW
+        bool "Ainur DTS hardware driver"
+        depends on SND_SOC_QDSP6V2
+        select SND_HWDEP
+        default n
+        help
+          Driver port of DTS' android audio hardware-processed
+          effect, which is processed upon the Hexagon DSP.

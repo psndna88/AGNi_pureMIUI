@@ -34,6 +34,13 @@ struct audio_cal_reg {
 	struct audio_cal_callbacks	callbacks;
 };
 
+#ifdef CONFIG_AINUR_DTS_HW
+struct headset_imp_val {
+	uint32_t	ZL;
+	uint32_t	ZR;
+};
+#endif
+
 int audio_cal_register(int num_cal_types, struct audio_cal_reg *reg_data);
 int audio_cal_deregister(int num_cal_types, struct audio_cal_reg *reg_data);
 

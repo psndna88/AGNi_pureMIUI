@@ -20,6 +20,9 @@
 #include <sound/control.h>
 #include <sound/q6adm-v2.h>
 #include <sound/asound.h>
+#ifdef CONFIG_AINUR_DTS_HW
+#include <sound/msm-dts-eagle.h>
+#endif
 #include "msm-dts-srs-tm-config.h"
 #include "msm-pcm-routing-v2.h"
 

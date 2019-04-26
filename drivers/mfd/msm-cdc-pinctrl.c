@@ -157,8 +157,8 @@ static int msm_cdc_pinctrl_probe(struct platform_device *pdev)
 
 	gpio_data->pinctrl = devm_pinctrl_get(&pdev->dev);
 	if (IS_ERR_OR_NULL(gpio_data->pinctrl)) {
-		dev_err(&pdev->dev, "%s: Cannot get cdc gpio pinctrl:%ld\n",
-			__func__, PTR_ERR(gpio_data->pinctrl));
+		dev_err(&pdev->dev, "%s: Cannot get cdc gpio pinctrl:%ld, dev:%s\n",
+			__func__, PTR_ERR(gpio_data->pinctrl), pdev->name);
 		ret = PTR_ERR(gpio_data->pinctrl);
 		goto err_pctrl_get;
 	}
