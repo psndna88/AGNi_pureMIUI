@@ -6677,7 +6677,8 @@ int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 			{ AKM_FT_FILS_SHA256, "FT-FILS-SHA256" },
 			{ AKM_FT_FILS_SHA384, "FT-FILS-SHA384" },
 		};
-		int first = 1, i;
+		int first = 1;
+		unsigned int i;
 
 		fprintf(f, "wpa_key_mgmt=");
 		for (i = 0; i < ARRAY_SIZE(akms); i++) {
