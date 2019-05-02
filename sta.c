@@ -11,6 +11,7 @@
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <ctype.h>
 #ifdef __linux__
 #include <regex.h>
 #include <dirent.h>
@@ -55,6 +56,20 @@
 #define DEFAULT_NEIGHBOR_BSSID_INFO "17"
 #define DEFAULT_NEIGHBOR_PHY_TYPE "1"
 
+#define WIL_DEFAULT_BI	100
+
+/* default remain on channel time for transmitting frames (milliseconds) */
+#define WIL_TRANSMIT_FRAME_DEFAULT_ROC 500
+#define IEEE80211_P2P_ATTR_DEVICE_ID 3
+#define IEEE80211_P2P_ATTR_GROUP_ID 15
+
+/* describes tagged bytes in template frame file */
+struct template_frame_tag {
+	int num;
+	int offset;
+	size_t len;
+};
+
 extern char *sigma_wpas_ctrl;
 extern char *sigma_cert_path;
 extern enum driver_type wifi_chip_type;
@@ -65,6 +80,9 @@ extern char *sigma_radio_ifname[];
 #define WIL_WMI_ESE_CFG_CMDID	0xa01
 #define WIL_WMI_BF_TRIG_CMDID	0x83a
 #define WIL_WMI_UNIT_TEST_CMDID	0x900
+#define WIL_WMI_P2P_CFG_CMDID	0x910
+#define WIL_WMI_START_LISTEN_CMDID	0x914
+#define WIL_WMI_DISCOVERY_STOP_CMDID	0x917
 
 struct wil_wmi_header {
 	uint8_t mid;
@@ -158,6 +176,21 @@ struct wil_wmi_force_rsn_ie {
 	uint16_t subtype_id;
 	/* 0 = no change, 1 = remove if exists, 2 = add if does not exist */
 	uint32_t state;
+} __attribute__((packed));
+
+enum wil_wmi_discovery_mode {
+	WMI_DISCOVERY_MODE_NON_OFFLOAD,
+	WMI_DISCOVERY_MODE_OFFLOAD,
+	WMI_DISCOVERY_MODE_PEER2PEER,
+};
+
+struct wil_wmi_p2p_cfg_cmd {
+	/* enum wil_wmi_discovery_mode */
+	uint8_t discovery_mode;
+	/* 0-based (wireless channel - 1) */
+	uint8_t channel;
+	/* set to WIL_DEFAULT_BI */
+	uint16_t bcon_interval;
 } __attribute__((packed));
 #endif /* __linux__ */
 
@@ -505,6 +538,243 @@ static int wil6210_force_rsn_ie(struct sigma_dut *dut, int state)
 
 	return wil6210_wmi_send(dut, WIL_WMI_UNIT_TEST_CMDID,
 				&cmd, sizeof(cmd));
+}
+
+
+/*
+ * this function is also used to configure generic remain-on-channel
+ */
+static int wil6210_p2p_cfg(struct sigma_dut *dut, int freq)
+{
+	struct wil_wmi_p2p_cfg_cmd cmd = { };
+	int channel = freq_to_channel(freq);
+
+	if (channel < 0)
+		return -1;
+	cmd.discovery_mode = WMI_DISCOVERY_MODE_NON_OFFLOAD;
+	cmd.channel = channel - 1;
+	cmd.bcon_interval = WIL_DEFAULT_BI;
+	cmd.discovery_mode = WMI_DISCOVERY_MODE_PEER2PEER;
+
+	return wil6210_wmi_send(dut, WIL_WMI_P2P_CFG_CMDID,
+				&cmd, sizeof(cmd));
+}
+
+
+static int wil6210_remain_on_channel(struct sigma_dut *dut, int freq)
+{
+	int ret = wil6210_p2p_cfg(dut, freq);
+
+	if (ret)
+		return ret;
+
+	ret = wil6210_wmi_send(dut, WIL_WMI_START_LISTEN_CMDID, NULL, 0);
+	if (!ret) {
+		/*
+		 * wait a bit to allow FW to setup the radio
+		 * especially important if we switch channels
+		 */
+		usleep(500000);
+	}
+
+	return ret;
+}
+
+
+static int wil6210_stop_discovery(struct sigma_dut *dut)
+{
+	return wil6210_wmi_send(dut, WIL_WMI_DISCOVERY_STOP_CMDID, NULL, 0);
+}
+
+
+static int wil6210_transmit_frame(struct sigma_dut *dut, int freq,
+				  int wait_duration,
+				  const char *frame, size_t frame_len)
+{
+	char buf[128], fname[128];
+	FILE *f;
+	int res = 0;
+	size_t written;
+
+	if (wil6210_get_debugfs_dir(dut, buf, sizeof(buf))) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"failed to get wil6210 debugfs dir");
+		return -1;
+	}
+	snprintf(fname, sizeof(fname), "%s/tx_mgmt", buf);
+
+	if (wil6210_remain_on_channel(dut, freq)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"failed to listen on channel");
+		return -1;
+	}
+
+	f = fopen(fname, "wb");
+	if (!f) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"failed to open: %s", fname);
+		res = -1;
+		goto out_stop;
+	}
+	written = fwrite(frame, 1, frame_len, f);
+	fclose(f);
+
+	if (written != frame_len) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"failed to transmit frame (got %zd, expected %zd)",
+				written, frame_len);
+		res = -1;
+		goto out_stop;
+	}
+
+	usleep(wait_duration * 1000);
+
+out_stop:
+	wil6210_stop_discovery(dut);
+	return res;
+}
+
+
+static int find_template_frame_tag(struct template_frame_tag *tags,
+				   int total_tags, int tag_num)
+{
+	int i;
+
+	for (i = 0; i < total_tags; i++) {
+		if (tag_num == tags[i].num)
+			return i;
+	}
+
+	return -1;
+}
+
+
+static int replace_p2p_attribute(struct sigma_dut *dut, char *buf, size_t len,
+				 int id, const char *value, size_t val_len)
+{
+	struct wfa_p2p_attribute *attr = (struct wfa_p2p_attribute *) buf;
+
+	if (len < 3 + val_len) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"not enough space to replace P2P attribute");
+		return -1;
+	}
+
+	if (attr->len != val_len) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"attribute length mismatch (need %zu have %hu)",
+				val_len, attr->len);
+		return -1;
+	}
+
+	if (attr->id != id) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"incorrect attribute id (expected %d actual %d)",
+				id, attr->id);
+		return -1;
+	}
+
+	memcpy(attr->variable, value, val_len);
+
+	return 0;
+}
+
+
+static int parse_template_frame_file(struct sigma_dut *dut, const char *fname,
+				     char *buf, size_t *length,
+				     struct template_frame_tag *tags,
+				     size_t *num_tags)
+{
+	char line[512];
+	FILE *f;
+	size_t offset = 0, tag_index = 0;
+	int num, index;
+	int in_tag = 0, tag_num = 0, tag_offset = 0;
+
+	if (*length < sizeof(struct ieee80211_hdr_3addr)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"supplied buffer is too small");
+		return -1;
+	}
+
+	f = fopen(fname, "r");
+	if (!f) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"failed to open template file %s", fname);
+		return -1;
+	}
+
+	/*
+	 * template file format: lines beginning with # are comments and
+	 * ignored.
+	 * It is possible to tag bytes in the frame to make it easy
+	 * to replace fields in the template, espcially if they appear
+	 * in variable-sized sections (such as IEs)
+	 * This is done by a line beginning with $NUM where NUM is an integer
+	 * tag number. It can be followed by space(s) and comment.
+	 * The next line is considered the tagged bytes. The parser will fill
+	 * the tag number, offset and length of the tagged bytes.
+	 * rest of the lines contain frame bytes as sequence of hex digits,
+	 * 2 digits for each byte. Spaces are allowed between bytes.
+	 * On bytes lines only hex digits and spaces are allowed
+	 */
+	while (!feof(f)) {
+		if (!fgets(line, sizeof(line), f))
+			break;
+		index = 0;
+		while (isspace((unsigned char) line[index]))
+			index++;
+		if (!line[index] || line[index] == '#')
+			continue;
+		if (line[index] == '$') {
+			if (tags) {
+				index++;
+				tag_num = strtol(&line[index], NULL, 0);
+				tag_offset = offset;
+				in_tag = 1;
+			}
+			continue;
+		}
+		while (line[index]) {
+			if (isspace((unsigned char) line[index])) {
+				index++;
+				continue;
+			}
+			num = hex_byte(&line[index]);
+			if (num < 0)
+				break;
+			buf[offset++] = num;
+			if (offset == *length)
+				goto out;
+			index += 2;
+		}
+
+		if (in_tag) {
+			if (tag_index < *num_tags) {
+				tags[tag_index].num = tag_num;
+				tags[tag_index].offset = tag_offset;
+				tags[tag_index].len = offset - tag_offset;
+				tag_index++;
+			} else {
+				sigma_dut_print(dut, DUT_MSG_INFO,
+						"too many tags, tag ignored");
+			}
+			in_tag = 0;
+		}
+	}
+
+	if (num_tags)
+		*num_tags = tag_index;
+out:
+	fclose(f);
+	if (offset < sizeof(struct ieee80211_hdr_3addr)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"template frame is too small");
+		return -1;
+	}
+
+	*length = offset;
+	return 0;
 }
 
 #endif /* __linux__ */
@@ -9727,6 +9997,178 @@ static int cmd_sta_send_frame_he(struct sigma_dut *dut,
 
 
 #ifdef __linux__
+
+static int
+wil6210_send_p2p_frame_60g(struct sigma_dut *dut, struct sigma_cmd *cmd,
+			   const char *frame_name, const char *dest_mac)
+{
+	int isprobereq = strcasecmp(frame_name, "probereq") == 0;
+	const char *ssid = get_param(cmd, "ssid");
+	const char *countstr = get_param(cmd, "count");
+	const char *channelstr = get_param(cmd, "channel");
+	const char *group_id = get_param(cmd, "groupid");
+	const char *client_id = get_param(cmd, "clientmac");
+	int count, channel, freq, i;
+	const char *fname;
+	char frame[1024], src_mac[20], group_id_attr[25],
+		device_macstr[3 * ETH_ALEN], client_mac[ETH_ALEN];
+	const char *group_ssid;
+	const int group_ssid_prefix_len = 9;
+	struct ieee80211_hdr_3addr *hdr = (struct ieee80211_hdr_3addr *) frame;
+	size_t framelen = sizeof(frame);
+	struct template_frame_tag tags[2];
+	size_t tags_total = ARRAY_SIZE(tags);
+	int tag_index, len, dst_len;
+
+	if (!countstr || !channelstr) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Missing argument: count, channel");
+		return -1;
+	}
+	if (isprobereq && !ssid) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Missing argument: ssid");
+		return -1;
+	}
+	if (!isprobereq && (!group_id || !client_id)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Missing argument: group_id, client_id");
+		return -1;
+	}
+
+	count = atoi(countstr);
+	channel = atoi(channelstr);
+	freq = channel_to_freq(dut, channel);
+
+	if (!freq) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"invalid channel: %s", channelstr);
+		return -1;
+	}
+
+	if (isprobereq) {
+		if (strcasecmp(ssid, "wildcard") == 0) {
+			fname = "probe_req_wildcard.txt";
+		} else if (strcasecmp(ssid, "P2P_Wildcard") == 0) {
+			fname = "probe_req_P2P_Wildcard.txt";
+		} else {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"invalid probe request type");
+			return -1;
+		}
+	} else {
+		fname = "P2P_device_discovery_req.txt";
+	}
+
+	if (parse_template_frame_file(dut, fname, frame, &framelen,
+				      tags, &tags_total)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"invalid frame template: %s", fname);
+		return -1;
+	}
+
+	if (get_wpa_status(get_station_ifname(), "address",
+			   src_mac, sizeof(src_mac)) < 0 ||
+	    parse_mac_address(dut, src_mac, &hdr->addr2[0]) ||
+	    parse_mac_address(dut, dest_mac, &hdr->addr1[0]))
+		return -1;
+	/* Use wildcard BSSID, since we are in PBSS */
+	memset(&hdr->addr3, 0xFF, ETH_ALEN);
+
+	if (!isprobereq) {
+		tag_index = find_template_frame_tag(tags, tags_total, 1);
+		if (tag_index < 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"can't find device id attribute");
+			return -1;
+		}
+		if (parse_mac_address(dut, client_id,
+				      (unsigned char *) client_mac)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"invalid client_id: %s", client_id);
+			return -1;
+		}
+		if (replace_p2p_attribute(dut, &frame[tags[tag_index].offset],
+					  framelen - tags[tag_index].offset,
+					  IEEE80211_P2P_ATTR_DEVICE_ID,
+					  client_mac, ETH_ALEN)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"fail to replace device id attribute");
+			return -1;
+		}
+
+		/*
+		 * group_id arg contains device MAC address followed by
+		 * space and SSID (DIRECT-somessid).
+		 * group id attribute contains device address (6 bytes)
+		 * followed by SSID prefix DIRECT-XX (9 bytes)
+		 */
+		if (strlen(group_id) < sizeof(device_macstr)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"group_id arg too short");
+			return -1;
+		}
+		memcpy(device_macstr, group_id, sizeof(device_macstr));
+		device_macstr[sizeof(device_macstr) - 1] = '\0';
+		if (parse_mac_address(dut, device_macstr,
+				      (unsigned char *) group_id_attr)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"fail to parse device address from group_id");
+			return -1;
+		}
+		group_ssid = strchr(group_id, ' ');
+		if (!group_ssid) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"invalid group_id arg, no ssid");
+			return -1;
+		}
+		group_ssid++;
+		len = strlen(group_ssid);
+		if (len < group_ssid_prefix_len) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"group_id SSID too short");
+			return -1;
+		}
+		dst_len = sizeof(group_id_attr) - ETH_ALEN;
+		if (len > dst_len) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"group_id SSID (%s) too long",
+					group_ssid);
+			return -1;
+		}
+
+		memcpy(group_id_attr + ETH_ALEN, group_ssid, len);
+		tag_index = find_template_frame_tag(tags, tags_total, 2);
+		if (tag_index < 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"can't find group id attribute");
+			return -1;
+		}
+		if (replace_p2p_attribute(dut, &frame[tags[tag_index].offset],
+					  framelen - tags[tag_index].offset,
+					  IEEE80211_P2P_ATTR_GROUP_ID,
+					  group_id_attr,
+					  sizeof(group_id_attr))) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"fail to replace group id attribute");
+			return -1;
+		}
+	}
+
+	for (i = 0; i < count; i++) {
+		if (wil6210_transmit_frame(dut, freq,
+					   WIL_TRANSMIT_FRAME_DEFAULT_ROC,
+					   frame, framelen)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"fail to transmit probe request frame");
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+
 int wil6210_send_frame_60g(struct sigma_dut *dut, struct sigma_conn *conn,
 			   struct sigma_cmd *cmd)
 {
@@ -9766,6 +10208,13 @@ int wil6210_send_frame_60g(struct sigma_dut *dut, struct sigma_conn *conn,
 				"dev_send_frame: SLS, dest_mac %s", mac);
 		if (wil6210_send_sls(dut, mac))
 			return -1;
+	} else if ((strcasecmp(frame_name, "probereq") == 0) ||
+		   (strcasecmp(frame_name, "devdiscreq") == 0)) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"dev_send_frame: %s, dest_mac %s", frame_name,
+				mac);
+		if (wil6210_send_p2p_frame_60g(dut, cmd, frame_name, mac))
+			return -1;
 	} else {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"unsupported frame type: %s", frame_name);
@@ -9774,6 +10223,7 @@ int wil6210_send_frame_60g(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	return 1;
 }
+
 #endif /* __linux__ */
 
 

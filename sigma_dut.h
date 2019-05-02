@@ -67,6 +67,10 @@
 #define ETH_P_ARP 0x0806
 #endif
 
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE(x) (sizeof((x)) / (sizeof(((x)[0]))))
+#endif
+
 struct sigma_dut;
 
 #define MAX_PARAMS 100
@@ -78,6 +82,21 @@ struct sigma_dut;
 typedef unsigned int u32;
 typedef uint16_t u16;
 typedef unsigned char u8;
+
+struct ieee80211_hdr_3addr {
+	uint16_t frame_control;
+	uint16_t duration_id;
+	uint8_t addr1[ETH_ALEN];
+	uint8_t addr2[ETH_ALEN];
+	uint8_t addr3[ETH_ALEN];
+	uint16_t seq_ctrl;
+} __attribute__((packed));
+
+struct wfa_p2p_attribute {
+	uint8_t id;
+	uint16_t len;
+	uint8_t variable[0];
+} __attribute__((packed));
 
 #define WPA_GET_BE32(a) ((((u32) (a)[0]) << 24) | (((u32) (a)[1]) << 16) | \
 			 (((u32) (a)[2]) << 8) | ((u32) (a)[3]))
