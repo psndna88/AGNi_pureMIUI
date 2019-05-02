@@ -975,6 +975,7 @@ void get_ver(const char *cmd, char *buf, size_t buflen);
 
 /* utils.c */
 enum sigma_program sigma_program_to_enum(const char *prog);
+int hex_byte(const char *str);
 int parse_hexstr(const char *hex, unsigned char *buf, size_t buflen);
 int parse_mac_address(struct sigma_dut *dut, const char *arg,
 		      unsigned char *addr);
