@@ -469,7 +469,7 @@ int get_wpa_ssid_bssid(struct sigma_dut *dut, const char *ifname,
 		len = snprintf(buf, buf_size, "%sSSID%d,%s,BSSID%d,%s",
 			       count > 1 ? "," : "",
 			       count, ssid, count, bssid);
-		if (len < 0 || len >= buf_size) {
+		if (len < 0 || (size_t) len >= buf_size) {
 			buf[0] = '\0';
 			return 0;
 		}

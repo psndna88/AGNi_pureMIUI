@@ -262,7 +262,7 @@ static int req_prog(struct sigma_cmd *cmd)
 
 void dev_register_cmds(void)
 {
-	sigma_dut_reg_cmd("dev_send_frame", req_intf_prog, cmd_dev_send_frame);
+	sigma_dut_reg_cmd("dev_send_frame", req_prog, cmd_dev_send_frame);
 	sigma_dut_reg_cmd("dev_set_parameter", req_intf_prog,
 			  cmd_dev_set_parameter);
 	sigma_dut_reg_cmd("dev_exec_action", req_prog,

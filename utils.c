@@ -147,7 +147,7 @@ static int parse_hex(char c)
 }
 
 
-static int hex_byte(const char *str)
+int hex_byte(const char *str)
 {
 	int res1, res2;
 

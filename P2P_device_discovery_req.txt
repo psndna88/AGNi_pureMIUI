@@ -1,0 +1,31 @@
+#### template frame for P2P device discovery request ####
+# Frame control - type management(0) and subtype action(13)
+d000
+# Duration
+d004
+# DA (destination address)
+001500f86819
+# SA (source address)
+001500f8b05b
+# BSSID
+001500f86819
+# Fragment number and sequence number
+a0b0
+# Category - 4 (public action) and action field - 9 (vendor specific)
+0409
+# WFA OUI (506f9a) and OUI type - 9 (P2P)
+506f9a09
+# OUI subtype - 5 (Device discoveribility)
+05
+# Dialog token
+05
+### P2P IE ###
+# Element type - 221 (vendor element) and length (0x29)
+dd29
+# OUI - WFA (506f9a) and OUI type - 9 (P2P)
+506f9a09
+$1 P2P device ID attribute
+#030600001500f8caf
+030600001500f8caf5
+$2 P2P group ID attribute
+0f1900001500f868194449524543542d373600000000000000000000
