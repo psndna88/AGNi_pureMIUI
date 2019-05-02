@@ -8991,6 +8991,9 @@ static int cmd_sta_send_frame_tdls(struct sigma_dut *dut,
 	unsigned char addr[ETH_ALEN];
 	char buf[100];
 
+	if (!intf)
+		return -1;
+
 	sta = get_param(cmd, "peer");
 	if (sta == NULL)
 		sta = get_param(cmd, "station");
@@ -9678,6 +9681,9 @@ static int wcn_sta_send_frame_he(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *val;
 	const char *intf = get_param(cmd, "Interface");
 
+	if (!intf)
+		return -1;
+
 	val = get_param(cmd, "framename");
 	if (!val)
 		return -1;
@@ -9864,6 +9870,9 @@ int cmd_sta_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 	char buf[100];
 	unsigned char addr[ETH_ALEN];
 	int res;
+
+	if (!intf)
+		return -1;
 
 	val = get_param(cmd, "program");
 	if (val == NULL)
