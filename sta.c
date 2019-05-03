@@ -2267,6 +2267,15 @@ ca_cert_selected:
 			return -2;
 	}
 
+	val = get_param(cmd, "Domain");
+	if (val && set_network_quoted(ifname, id, "domain_match", val) < 0)
+		return ERROR_SEND_STATUS;
+
+	val = get_param(cmd, "DomainSuffix");
+	if (val &&
+	    set_network_quoted(ifname, id, "domain_suffix_match", val) < 0)
+		return ERROR_SEND_STATUS;
+
 	if (username_identity) {
 		val = get_param(cmd, "username");
 		if (val) {
