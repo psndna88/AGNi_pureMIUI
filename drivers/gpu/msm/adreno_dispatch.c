@@ -64,13 +64,13 @@ static unsigned int _fault_throttle_burst = 3;
  * Maximum ringbuffer inflight for the single submitting context case - this
  * should be sufficiently high to keep the GPU loaded
  */
-static unsigned int _dispatcher_q_inflight_hi = 15;
+static unsigned int _dispatcher_q_inflight_hi = 25;
 
 /*
  * Minimum inflight for the multiple context case - this should sufficiently low
  * to allow for lower latency context switching
  */
-static unsigned int _dispatcher_q_inflight_lo = 4;
+static unsigned int _dispatcher_q_inflight_lo = 5;
 
 /* Command batch timeout (in milliseconds) */
 unsigned int adreno_drawobj_timeout = 2000;
