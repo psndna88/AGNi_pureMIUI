@@ -2166,7 +2166,7 @@ static int set_eap_common(struct sigma_dut *dut, struct sigma_conn *conn,
 {
 	const char *val, *alg, *akm;
 	int id;
-	char buf[200];
+	char buf[200], buf2[300];
 #ifdef ANDROID
 	unsigned char kvalue[KEYSTORE_MESSAGE_SIZE];
 	int length;
@@ -2265,6 +2265,33 @@ ca_cert_selected:
 #endif /* ANDROID */
 		if (set_network_quoted(ifname, id, "ca_cert", buf) < 0)
 			return -2;
+	}
+
+	val = get_param(cmd, "ServerCert");
+	if (val) {
+		FILE *f;
+		char *result = NULL, *pos;
+
+		snprintf(buf, sizeof(buf), "%s/%s.sha256", sigma_cert_path,
+			 val);
+		f = fopen(buf, "r");
+		if (f) {
+			result = fgets(buf, sizeof(buf), f);
+			fclose(f);
+		}
+		if (!result) {
+			snprintf(buf2, sizeof(buf2),
+				 "ErrorCode,ServerCert hash could not be read from %s",
+				 buf);
+			send_resp(dut, conn, SIGMA_ERROR, buf2);
+			return STATUS_SENT_ERROR;
+		}
+		pos = strchr(buf, '\n');
+		if (pos)
+			*pos = '\0';
+		snprintf(buf2, sizeof(buf2), "hash://server/sha256/%s", buf);
+		if (set_network_quoted(ifname, id, "ca_cert", buf2) < 0)
+			return ERROR_SEND_STATUS;
 	}
 
 	val = get_param(cmd, "Domain");
