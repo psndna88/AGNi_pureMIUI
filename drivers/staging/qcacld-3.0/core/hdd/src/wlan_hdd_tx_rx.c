@@ -352,6 +352,7 @@ uint32_t hdd_txrx_get_tx_ack_count(struct hdd_adapter *adapter)
 				    adapter->session_id);
 }
 
+#ifdef FEATURE_WLAN_DIAG_SUPPORT
 /**
  * qdf_event_eapol_log() - send event to wlan diag
  * @skb: skb ptr
@@ -393,7 +394,7 @@ void hdd_event_eapol_log(struct sk_buff *skb, enum qdf_proto_dir dir)
 
 	WLAN_HOST_DIAG_EVENT_REPORT(&wlan_diag_event, EVENT_WLAN_EAPOL);
 }
-
+#endif
 
 /**
  * wlan_hdd_classify_pkt() - classify packet
