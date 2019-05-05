@@ -6163,6 +6163,7 @@ static void __vsync_retire_signal(struct msm_fb_data_type *mfd, int val)
 {
 	struct mdss_overlay_private *mdp5_data = mfd_to_mdp5_data(mfd);
 
+	pm_qos_update_request(&mdp5_data->pm_qos_req, 100);
 	mutex_lock(&mfd->mdp_sync_pt_data.sync_mutex);
 	if (mdp5_data->retire_cnt > 0) {
 		sw_sync_timeline_inc(mdp5_data->vsync_timeline, val);
@@ -6179,6 +6180,7 @@ static void __vsync_retire_signal(struct msm_fb_data_type *mfd, int val)
 		}
 	}
 	mutex_unlock(&mfd->mdp_sync_pt_data.sync_mutex);
+	pm_qos_update_request(&mdp5_data->pm_qos_req, PM_QOS_DEFAULT_VALUE);
 }
 
 static struct sync_fence *
@@ -6649,6 +6651,9 @@ int mdss_mdp_overlay_init(struct msm_fb_data_type *mfd)
 
 	if (mdss_mdp_pp_overlay_init(mfd))
 		pr_warn("Failed to initialize pp overlay data.\n");
+
+	pm_qos_add_request(&mdp5_data->pm_qos_req, PM_QOS_CPU_DMA_LATENCY,
+			   PM_QOS_DEFAULT_VALUE);
 	return rc;
 init_fail:
 	kfree(mdp5_data);
