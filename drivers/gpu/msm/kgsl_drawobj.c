@@ -74,49 +74,6 @@ static inline void drawobj_put(struct kgsl_drawobj *drawobj)
 		kref_put(&drawobj->refcount, drawobj_destroy_object);
 }
 
-void kgsl_dump_syncpoints(struct kgsl_device *device,
-	struct kgsl_drawobj_sync *syncobj)
-{
-	struct kgsl_drawobj_sync_event *event;
-	unsigned int i;
-	unsigned long flags;
-
-	for (i = 0; i < syncobj->numsyncs; i++) {
-		event = &syncobj->synclist[i];
-
-		if (!kgsl_drawobj_event_pending(syncobj, i))
-			continue;
-
-		switch (event->type) {
-		case KGSL_CMD_SYNCPOINT_TYPE_TIMESTAMP: {
-			unsigned int retired;
-
-			 kgsl_readtimestamp(event->device,
-				event->context, KGSL_TIMESTAMP_RETIRED,
-				&retired);
-
-			dev_err(device->dev,
-				"  [timestamp] context %d timestamp %d (retired %d)\n",
-				event->context->id, event->timestamp,
-				retired);
-			break;
-		}
-		case KGSL_CMD_SYNCPOINT_TYPE_FENCE:
-			spin_lock_irqsave(&event->handle_lock, flags);
-
-			if (event->handle)
-				dev_err(device->dev, "  fence: [%pK] %s\n",
-					event->handle->fence,
-					event->handle->name);
-			else
-				dev_err(device->dev, "  fence: invalid\n");
-
-			spin_unlock_irqrestore(&event->handle_lock, flags);
-			break;
-		}
-	}
-}
-
 static void syncobj_timer(unsigned long data)
 {
 	struct kgsl_device *device;
@@ -134,10 +91,6 @@ static void syncobj_timer(unsigned long data)
 	dev_err(device->dev,
 		"kgsl: possible gpu syncpoint deadlock for context %d timestamp %d\n",
 		drawobj->context->id, drawobj->timestamp);
-
-	set_bit(ADRENO_CONTEXT_FENCE_LOG, &drawobj->context->priv);
-	kgsl_context_dump(drawobj->context);
-	clear_bit(ADRENO_CONTEXT_FENCE_LOG, &drawobj->context->priv);
 
 	dev_err(device->dev, "      pending events:\n");
 

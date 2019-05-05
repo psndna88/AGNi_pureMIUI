@@ -25,13 +25,12 @@ static void kgsl_sync_timeline_signal(struct sync_timeline *timeline,
 	unsigned int timestamp);
 
 static struct sync_pt *kgsl_sync_pt_create(struct sync_timeline *timeline,
-	struct kgsl_context *context, unsigned int timestamp)
+	unsigned int timestamp)
 {
 	struct sync_pt *pt;
 	pt = sync_pt_create(timeline, (int) sizeof(struct kgsl_sync_pt));
 	if (pt) {
 		struct kgsl_sync_pt *kpt = (struct kgsl_sync_pt *) pt;
-		kpt->context = context;
 		kpt->timestamp = timestamp;
 	}
 	return pt;
@@ -49,7 +48,7 @@ static void kgsl_sync_pt_destroy(struct sync_pt *pt)
 static struct sync_pt *kgsl_sync_pt_dup(struct sync_pt *pt)
 {
 	struct kgsl_sync_pt *kpt = (struct kgsl_sync_pt *) pt;
-	return kgsl_sync_pt_create(sync_pt_parent(pt), kpt->context, kpt->timestamp);
+	return kgsl_sync_pt_create(sync_pt_parent(pt), kpt->timestamp);
 }
 
 static int kgsl_sync_pt_has_signaled(struct sync_pt *pt)
@@ -121,7 +120,6 @@ static int _add_fence_event(struct kgsl_device *device,
 
 	event->context = context;
 	event->timestamp = timestamp;
-	event->context = context;
 
 	ret = kgsl_add_event(device, &context->events, timestamp,
 		kgsl_fence_event_cb, event);
@@ -171,7 +169,7 @@ int kgsl_add_fence_event(struct kgsl_device *device,
 	if (test_bit(KGSL_CONTEXT_PRIV_INVALID, &context->priv))
 		goto out;
 
-	pt = kgsl_sync_pt_create(context->timeline, context, timestamp);
+	pt = kgsl_sync_pt_create(context->timeline, timestamp);
 	if (pt == NULL) {
 		KGSL_DRV_CRIT_RATELIMIT(device, "kgsl_sync_pt_create failed\n");
 		ret = -ENOMEM;

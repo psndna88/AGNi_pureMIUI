@@ -106,7 +106,6 @@ enum adreno_context_priv {
 	ADRENO_CONTEXT_SKIP_EOF,
 	ADRENO_CONTEXT_FORCE_PREAMBLE,
 	ADRENO_CONTEXT_SKIP_CMD,
-	ADRENO_CONTEXT_FENCE_LOG,
 };
 
 /* Flags for adreno_drawctxt_switch() */
@@ -135,19 +134,4 @@ int adreno_drawctxt_wait(struct adreno_device *adreno_dev,
 void adreno_drawctxt_invalidate(struct kgsl_device *device,
 		struct kgsl_context *context);
 
-void adreno_drawctxt_dump(struct kgsl_device *device,
-		struct kgsl_context *context);
-
-static struct adreno_context_type ctxt_type_table[] = {KGSL_CONTEXT_TYPES};
-
-static inline const char *get_api_type_str(unsigned int type)
-{
-	int i;
-
-	for (i = 0; i < ARRAY_SIZE(ctxt_type_table); i++) {
-		if (ctxt_type_table[i].type == type)
-			return ctxt_type_table[i].str;
-	}
-	return "UNKNOWN";
-}
 #endif  /* __ADRENO_DRAWCTXT_H */

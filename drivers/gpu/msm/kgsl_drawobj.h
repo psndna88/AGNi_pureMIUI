@@ -203,9 +203,6 @@ int kgsl_drawobj_sparse_add_sparselist(struct kgsl_device *device,
 int kgsl_drawobjs_cache_init(void);
 void kgsl_drawobjs_cache_exit(void);
 
-void kgsl_dump_syncpoints(struct kgsl_device *device,
-	struct kgsl_drawobj_sync *syncobj);
-
 void kgsl_drawobj_destroy(struct kgsl_drawobj *drawobj);
 
 static inline bool kgsl_drawobj_events_pending(

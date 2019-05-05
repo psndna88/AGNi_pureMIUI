@@ -476,33 +476,6 @@ static void kgsl_mem_entry_detach_process(struct kgsl_mem_entry *entry)
 	entry->priv = NULL;
 }
 
-/**
- * kgsl_context_dump() - dump information about a draw context
- * @device: KGSL device that owns the context
- * @context: KGSL context to dump information about
- *
- * Dump specific information about the context to the kernel log.  Used for
- * fence timeout callbacks
- */
-void kgsl_context_dump(struct kgsl_context *context)
-{
-	struct kgsl_device *device;
-
-	if (_kgsl_context_get(context) == 0)
-		return;
-
-	device = context->device;
-
-	if (kgsl_context_detached(context)) {
-		dev_err(device->dev, "  context[%d]: context detached\n",
-			context->id);
-	} else if (device->ftbl->drawctxt_dump != NULL)
-		device->ftbl->drawctxt_dump(device, context);
-
-	kgsl_context_put(context);
-}
-EXPORT_SYMBOL(kgsl_context_dump);
-
 /* Allocate a new context ID */
 static int _kgsl_get_context_id(struct kgsl_device *device)
 {
