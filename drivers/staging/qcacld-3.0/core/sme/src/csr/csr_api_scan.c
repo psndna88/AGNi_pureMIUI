@@ -739,6 +739,7 @@ void csr_clear_votes_for_country_info(tpAniSirGlobal pMac)
 		    sizeof(struct csr_votes11d) * CSR_MAX_NUM_COUNTRY_CODE);
 }
 
+#ifdef FEATURE_WLAN_DIAG_SUPPORT_CSR
 /* caller allocated memory for pNumChn and pChnPowerInfo */
 /* As input, *pNumChn has the size of the array of pChnPowerInfo */
 /* Upon return, *pNumChn has the number of channels assigned. */
@@ -770,7 +771,6 @@ static void csr_get_channel_power_info(tpAniSirGlobal pMac, tDblLinkList *list,
 
 }
 
-#ifdef FEATURE_WLAN_DIAG_SUPPORT_CSR
 static void csr_diag_apply_country_info(tpAniSirGlobal mac_ctx)
 {
 	host_log_802_11d_pkt_type *p11dLog;

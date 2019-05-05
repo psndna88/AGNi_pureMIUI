@@ -344,10 +344,10 @@ endif
 # Feature flags which are not (currently) configurable via Kconfig
 
 #Whether to build debug version
-BUILD_DEBUG_VERSION := y
+BUILD_DEBUG_VERSION := n
 
 #Enable this flag to build driver in diag version
-BUILD_DIAG_VERSION := y
+BUILD_DIAG_VERSION := n
 
 ifeq ($(CONFIG_SLUB_DEBUG), y)
 	PANIC_ON_BUG := y
@@ -635,9 +635,7 @@ ifeq ($(CONFIG_ARCH_MSM8996), y)
 CONFIG_CHANNEL_HOPPING_ALL_BANDS := y
 endif
 
-ifneq ($(CONFIG_HIF_USB), y)
-CONFIG_WLAN_LOGGING_SOCK_SVC := y
-endif
+CONFIG_WLAN_LOGGING_SOCK_SVC := n
 
 ifneq ($(TARGET_BUILD_VARIANT),user)
 CONFIG_DESC_DUP_DETECT_DEBUG := y

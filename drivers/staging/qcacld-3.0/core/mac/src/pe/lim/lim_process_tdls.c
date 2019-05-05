@@ -176,7 +176,6 @@ enum tdls_peer_capability {
 #define TID_AC_VI                  4
 #define TID_AC_BK                  1
 
-#ifdef WLAN_DEBUG
 static const uint8_t *lim_trace_tdls_action_string(uint8_t tdlsActionCode)
 {
 	switch (tdlsActionCode) {
@@ -193,7 +192,6 @@ static const uint8_t *lim_trace_tdls_action_string(uint8_t tdlsActionCode)
 	}
 	return (const uint8_t *)"UNKNOWN";
 }
-#endif
 
 /*
  * initialize TDLS setup list and related data structures.

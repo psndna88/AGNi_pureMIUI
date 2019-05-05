@@ -2135,8 +2135,10 @@ QDF_STATUS hdd_roam_register_sta(struct hdd_adapter *adapter,
 		hdd_conn_set_authenticated(adapter, true);
 		hdd_objmgr_set_peer_mlme_auth_state(adapter->vdev, true);
 	} else {
+#ifdef WLAN_DEBUG
 		hdd_debug("ULA auth StaId= %d. Changing TL state to CONNECTED at Join time",
 			 sta_ctx->conn_info.staId[0]);
+#endif
 		qdf_status =
 			hdd_change_peer_state(adapter, staDesc.sta_id,
 						OL_TXRX_PEER_STATE_CONN,

@@ -5114,9 +5114,7 @@ static int __wlan_hdd_cfg80211_disable_dfs_chan_scan(struct wiphy *wiphy,
 						     const void *data,
 						     int data_len)
 {
-#ifdef WLAN_DEBUG
 	struct net_device *dev = wdev->netdev;
-#endif
 	struct hdd_context *hdd_ctx  = wiphy_priv(wiphy);
 	struct nlattr *tb[QCA_WLAN_VENDOR_ATTR_SET_NO_DFS_FLAG_MAX + 1];
 	int ret_val;
@@ -21963,18 +21961,17 @@ int wlan_hdd_disconnect(struct hdd_adapter *adapter, u16 reason,
  */
 static void hdd_print_netdev_txq_status(struct net_device *dev)
 {
+#ifdef WLAN_DEBUG
 	unsigned int i;
 
 	if (!dev)
 		return;
 
 	for (i = 0; i < dev->num_tx_queues; i++) {
-#ifdef WLAN_DEBUG
 		struct netdev_queue *txq = netdev_get_tx_queue(dev, i);
-#endif
-
 		hdd_debug("netdev tx queue[%u] state: 0x%lx", i, txq->state);
 	}
+#endif
 }
 
 /**

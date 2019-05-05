@@ -743,10 +743,10 @@ void lim_diag_mgmt_rx_event_report(tpAniSirGlobal mac_ctx, void *mgmt_hdr,
 static inline void lim_diag_event_report(tpAniSirGlobal pMac, uint16_t
 		eventType, tpPESession pSessionEntry, uint16_t status,
 		uint16_t reasonCode) {}
-void lim_diag_mgmt_tx_event_report(tpAniSirGlobal mac_ctx, void *mgmt_hdr,
+static inline void lim_diag_mgmt_tx_event_report(tpAniSirGlobal mac_ctx, void *mgmt_hdr,
 		tpPESession session, uint16_t result_code,
 		uint16_t reason_code) {}
-void lim_diag_mgmt_rx_event_report(tpAniSirGlobal mac_ctx, void *mgmt_hdr,
+static inline void lim_diag_mgmt_rx_event_report(tpAniSirGlobal mac_ctx, void *mgmt_hdr,
 		tpPESession session, uint16_t result_code,
 		uint16_t reason_code) {}
 #endif /* FEATURE_WLAN_DIAG_SUPPORT */

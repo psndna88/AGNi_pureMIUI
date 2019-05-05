@@ -7409,7 +7409,6 @@ static void hdd_cfg_print_action_oui(struct hdd_context *hdd_ctx)
 {
 #ifdef WLAN_DEBUG
 	struct hdd_config *config = hdd_ctx->config;
-#endif
 
 	hdd_debug("Name = [%s] value = [%u]",
 		  CFG_ENABLE_ACTION_OUI,
@@ -7446,6 +7445,7 @@ static void hdd_cfg_print_action_oui(struct hdd_context *hdd_ctx)
 	hdd_debug("Name = [%s] value = [%s]",
 		  CFG_ACTION_OUI_DISABLE_AGGRESSIVE_EDCA,
 		  config->action_oui_str[ACTION_OUI_DISABLE_AGGRESSIVE_EDCA]);
+#endif
 }
 
 /**
