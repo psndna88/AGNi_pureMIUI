@@ -2166,7 +2166,7 @@ static int set_eap_common(struct sigma_dut *dut, struct sigma_conn *conn,
 {
 	const char *val, *alg, *akm;
 	int id;
-	char buf[200];
+	char buf[200], buf2[300];
 #ifdef ANDROID
 	unsigned char kvalue[KEYSTORE_MESSAGE_SIZE];
 	int length;
@@ -2266,6 +2266,42 @@ ca_cert_selected:
 		if (set_network_quoted(ifname, id, "ca_cert", buf) < 0)
 			return -2;
 	}
+
+	val = get_param(cmd, "ServerCert");
+	if (val) {
+		FILE *f;
+		char *result = NULL, *pos;
+
+		snprintf(buf, sizeof(buf), "%s/%s.sha256", sigma_cert_path,
+			 val);
+		f = fopen(buf, "r");
+		if (f) {
+			result = fgets(buf, sizeof(buf), f);
+			fclose(f);
+		}
+		if (!result) {
+			snprintf(buf2, sizeof(buf2),
+				 "ErrorCode,ServerCert hash could not be read from %s",
+				 buf);
+			send_resp(dut, conn, SIGMA_ERROR, buf2);
+			return STATUS_SENT_ERROR;
+		}
+		pos = strchr(buf, '\n');
+		if (pos)
+			*pos = '\0';
+		snprintf(buf2, sizeof(buf2), "hash://server/sha256/%s", buf);
+		if (set_network_quoted(ifname, id, "ca_cert", buf2) < 0)
+			return ERROR_SEND_STATUS;
+	}
+
+	val = get_param(cmd, "Domain");
+	if (val && set_network_quoted(ifname, id, "domain_match", val) < 0)
+		return ERROR_SEND_STATUS;
+
+	val = get_param(cmd, "DomainSuffix");
+	if (val &&
+	    set_network_quoted(ifname, id, "domain_suffix_match", val) < 0)
+		return ERROR_SEND_STATUS;
 
 	if (username_identity) {
 		val = get_param(cmd, "username");
@@ -5088,6 +5124,63 @@ static int nlvendor_config_send_addba(struct sigma_dut *dut, const char *intf,
 }
 
 
+#ifdef NL80211_SUPPORT
+static int nl80211_sta_set_rts(struct sigma_dut *dut, const char *intf, int val)
+{
+	struct nl_msg *msg;
+	int ret = 0;
+	int ifindex;
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s failed",
+				__func__, intf);
+		return -1;
+	}
+
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+				    NL80211_CMD_SET_WIPHY)) ||
+	    nla_put_u32(msg, NL80211_ATTR_WIPHY_RTS_THRESHOLD, val)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding RTS threshold",
+				__func__);
+		nlmsg_free(msg);
+		return -1;
+	}
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in send_and_recv_msgs, ret=%d",
+				__func__, ret);
+	}
+	return ret;
+}
+#endif /* NL80211_SUPPORT */
+
+
+static int sta_set_rts(struct sigma_dut *dut, const char *intf, int val)
+{
+	char buf[100];
+
+#ifdef NL80211_SUPPORT
+	if (nl80211_sta_set_rts(dut, intf, val) == 0)
+		return 0;
+	sigma_dut_print(dut, DUT_MSG_DEBUG,
+			"Fall back to using iwconfig for setting RTS threshold");
+#endif /* NL80211_SUPPORT */
+
+	snprintf(buf, sizeof(buf), "iwconfig %s rts %d", intf, val);
+	if (system(buf) != 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to set RTS threshold %d", val);
+		return -1;
+	}
+	return 0;
+}
+
+
 static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 				       struct sigma_conn *conn,
 				       struct sigma_cmd *cmd)
@@ -5326,8 +5419,7 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 	if (val) {
 		novap_reset(dut, intf);
 		if (strcasecmp(val, "Enable") == 0) {
-			snprintf(buf, sizeof(buf), "iwconfig %s rts 64", intf);
-			if (system(buf) != 0) {
+			if (sta_set_rts(dut, intf, 64) != 0) {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
 						"Failed to set RTS_FORCE 64");
 			}
@@ -5338,9 +5430,7 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 						"wifitool beeliner_fw_test 100 1 failed");
 			}
 		} else if (strcasecmp(val, "Disable") == 0) {
-			snprintf(buf, sizeof(buf), "iwconfig %s rts 2347",
-				 intf);
-			if (system(buf) != 0) {
+			if (sta_set_rts(dut, intf, 2347) != 0) {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
 						"Failed to set RTS_FORCE 2347");
 			}

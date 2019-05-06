@@ -126,6 +126,7 @@ struct sigma_conn {
 };
 
 enum sigma_cmd_result {
+	STATUS_SENT_ERROR = -3,
 	ERROR_SEND_STATUS = -2,
 	INVALID_SEND_STATUS = -1,
 	STATUS_SENT = 0,

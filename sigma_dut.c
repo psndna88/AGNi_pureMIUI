@@ -427,6 +427,7 @@ static void process_cmd(struct sigma_dut *dut, struct sigma_conn *conn,
 		send_resp(dut, conn, SIGMA_INVALID, NULL);
 		break;
 	case STATUS_SENT:
+	case STATUS_SENT_ERROR:
 		break;
 	case SUCCESS_SEND_STATUS:
 		send_resp(dut, conn, SIGMA_COMPLETE, NULL);
