@@ -2665,7 +2665,6 @@ static int msm_compr_trigger(struct snd_compr_stream *cstream, int cmd)
 				prtd->codec, bits_per_sample,
 				stream_id,
 				prtd->gapless_state.use_dsp_gapless_mode);
-			break;
 		if (rc < 0) {
 			pr_err("%s: Session out open failed for gapless\n",
 				 __func__);
