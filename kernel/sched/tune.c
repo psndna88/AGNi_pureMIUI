@@ -619,16 +619,40 @@ boost_write(struct cgroup_subsys_state *css, struct cftype *cft,
 	return 0;
 }
 
+#ifdef CONFIG_STUNE_ASSIST
+static int boost_write_wrapper(struct cgroup_subsys_state *css,
+			struct cftype *cft, s64 boost)
+{
+	if (!strcmp(current->comm, "init"))
+		return 0;
+
+	boost_write(css, NULL, boost);
+
+	return 0;
+}
+
+static int prefer_idle_write_wrapper(struct cgroup_subsys_state *css,
+			struct cftype *cft, u64 prefer_idle)
+{
+	if (!strcmp(current->comm, "init"))
+		return 0;
+
+	prefer_idle_write(css, NULL, prefer_idle);
+
+	return 0;
+}
+#endif
+
 static struct cftype files[] = {
 	{
 		.name = "boost",
 		.read_s64 = boost_read,
-		.write_s64 = boost_write,
+		.write_s64 = boost_write_wrapper,
 	},
 	{
 		.name = "prefer_idle",
 		.read_u64 = prefer_idle_read,
-		.write_u64 = prefer_idle_write,
+		.write_u64 = prefer_idle_write_wrapper,
 	},
 	{ }	/* terminate */
 };
@@ -652,6 +676,30 @@ schedtune_boostgroup_init(struct schedtune *st)
 	return 0;
 }
 
+#ifdef CONFIG_STUNE_ASSIST
+static void write_default_values(struct cgroup_subsys_state *css)
+{
+	u8 i;
+	struct groups_data {
+		char *name;
+		int boost;
+		bool prefer_idle;
+	};
+	struct groups_data groups[2] = {
+		{ "top-app",	1, 1 },
+		{ "foreground", 0, 1 }};
+
+	for (i = 0; i < ARRAY_SIZE(groups); i++) {
+		if (!strcmp(css->cgroup->kn->name, groups[i].name)) {
+			pr_info("%s: %i - %i\n", groups[i].name,
+					groups[i].boost, groups[i].prefer_idle);
+			boost_write(css, NULL, groups[i].boost);
+			prefer_idle_write(css, NULL, groups[i].prefer_idle);
+		}
+	}
+}
+#endif
+
 static struct cgroup_subsys_state *
 schedtune_css_alloc(struct cgroup_subsys_state *parent_css)
 {
@@ -667,10 +715,13 @@ schedtune_css_alloc(struct cgroup_subsys_state *parent_css)
 		return ERR_PTR(-ENOMEM);
 	}
 
-	/* Allow only a limited number of boosting groups */
-	for (idx = 1; idx < BOOSTGROUPS_COUNT; ++idx)
+	for (idx = 1; idx < BOOSTGROUPS_COUNT; ++idx) {
 		if (!allocated_group[idx])
 			break;
+#ifdef CONFIG_STUNE_ASSIST
+		write_default_values(&allocated_group[idx]->css);
+#endif
+	}
 	if (idx == BOOSTGROUPS_COUNT) {
 		pr_err("Trying to create more than %d SchedTune boosting groups\n",
 		       BOOSTGROUPS_COUNT);
