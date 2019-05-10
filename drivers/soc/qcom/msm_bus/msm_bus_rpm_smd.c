@@ -33,27 +33,6 @@ struct commit_data {
 	struct msm_bus_node_hw_info *slv_arb;
 };
 
-#ifdef CONFIG_DEBUG_FS
-void msm_bus_rpm_fill_cdata_buffer(int *curr, char *buf, const int max_size,
-	void *cdata, int nmasters, int nslaves, int ntslaves)
-{
-	int c;
-	struct commit_data *cd = (struct commit_data *)cdata;
-
-	*curr += scnprintf(buf + *curr, max_size - *curr, "\nMas BW:\n");
-	for (c = 0; c < nmasters; c++)
-		*curr += scnprintf(buf + *curr, max_size - *curr,
-			"%d: %llu\t", cd->mas_arb[c].hw_id,
-			cd->mas_arb[c].bw);
-	*curr += scnprintf(buf + *curr, max_size - *curr, "\nSlave BW:\n");
-	for (c = 0; c < nslaves; c++) {
-		*curr += scnprintf(buf + *curr, max_size - *curr,
-		"%d: %llu\t", cd->slv_arb[c].hw_id,
-		cd->slv_arb[c].bw);
-	}
-}
-#endif
-
 static int msm_bus_rpm_compare_cdata(
 	struct msm_bus_fabric_registration *fab_pdata,
 	struct commit_data *cd1, struct commit_data *cd2)
@@ -64,14 +43,14 @@ static int msm_bus_rpm_compare_cdata(
 	n = sizeof(struct msm_bus_node_hw_info) * fab_pdata->nmasters * 2;
 	ret = memcmp(cd1->mas_arb, cd2->mas_arb, n);
 	if (ret) {
-		MSM_BUS_DBG("Master Arb Data not equal\n");
+//		MSM_BUS_DBG("Master Arb Data not equal\n");
 		return ret;
 	}
 
 	n = sizeof(struct msm_bus_node_hw_info) * fab_pdata->nslaves * 2;
 	ret = memcmp(cd1->slv_arb, cd2->slv_arb, n);
 	if (ret) {
-		MSM_BUS_DBG("Master Arb Data not equal\n");
+//		MSM_BUS_DBG("Master Arb Data not equal\n");
 		return ret;
 	}
 
