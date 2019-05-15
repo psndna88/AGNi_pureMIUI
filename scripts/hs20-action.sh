@@ -58,12 +58,12 @@ if [ "$CMD" = "HS20-SUBSCRIPTION-REMEDIATION" ]; then
     echo "METHOD=$METHOD" >> Logs/hs20-osu-client.txt
     echo "URL=$URL" >> Logs/hs20-osu-client.txt
     if [ -e $BASEDIR/SP/wi-fi.org/pps.xml ]; then
-	nohup hs20-osu-client -w $IFACE_DIR -r hs20-osu-client.res -s summary -dddKt -f Logs/hs20-osu-client.txt sub_rem $URL SP/wi-fi.org/pps.xml SP/wi-fi.org/ca.pem >> Logs/browser.txt 2>&1 &
+        run_eloop_cmd "nohup hs20-osu-client -w $IFACE_DIR -r hs20-osu-client.res -s summary -dddKt -f Logs/hs20-osu-client.txt sub_rem $URL SP/wi-fi.org/pps.xml SP/wi-fi.org/ca.pem >> Logs/browser.txt 2>&1 &"
     else
         if [ "$METHOD" = "0" ]; then
-            hs20-osu-client -w $IFACE_DIR -r hs20-osu-client.res -s summary -dddKt -f Logs/hs20-osu-client.txt oma_dm_sim_prov $URL osu-ca.pem
+            run_eloop_cmd "hs20-osu-client -w $IFACE_DIR -r hs20-osu-client.res -s summary -dddKt -f Logs/hs20-osu-client.txt oma_dm_sim_prov $URL osu-ca.pem"
         else
-            hs20-osu-client -w $IFACE_DIR -r hs20-osu-client.res -s summary -dddKt -f Logs/hs20-osu-client.txt sim_prov $URL osu-ca.pem
+            run_eloop_cmd "hs20-osu-client -w $IFACE_DIR -r hs20-osu-client.res -s summary -dddKt -f Logs/hs20-osu-client.txt sim_prov $URL osu-ca.pem"
         fi
     fi
     RES=$?
@@ -146,7 +146,7 @@ if [ "$CMD" = "ESS-DISASSOC-IMMINENT" ]; then
     echo "Disassociation imminent notification received - URL: $URL" >> summary
     if ! busybox pidof hs20-osu-client; then
 	sleep 1
-	nohup hs20-osu-client -w $IFACE_DIR -f Logs/hs20-osu-client.txt browser $URL > Logs/browser.txt 2>&1 &
+	run_eloop_cmd "nohup hs20-osu-client -w $IFACE_DIR -f Logs/hs20-osu-client.txt browser $URL > Logs/browser.txt 2>&1 &"
     fi
 #    notify-send "Disassociation imminent"
 fi
@@ -166,7 +166,7 @@ if [ "$CMD" = "HS20-DEAUTH-IMMINENT-NOTICE" ]; then
 		addr=$(busybox ip addr show dev $IFNAME | grep "inet ")
 		if [ -n "$addr" ]; then
 		    if ! busybox pidof hs20-osu-client; then
-			nohup hs20-osu-client -w $IFACE_DIR -f Logs/hs20-osu-client.txt browser $URL > Logs/browser.txt 2>&1 &
+			run_eloop_cmd "nohup hs20-osu-client -w $IFACE_DIR -f Logs/hs20-osu-client.txt browser $URL > Logs/browser.txt 2>&1 &"
 		    fi
 		    break
 		else
@@ -192,7 +192,7 @@ if [ "$CMD" = "HS20-T-C-ACCEPTANCE" ]; then
 		addr=$(busybox ip addr show dev $IFNAME | grep "inet ")
 		if [ -n "$addr" ]; then
 		    if ! busybox pidof hs20-osu-client; then
-			nohup hs20-osu-client -w $IFACE_DIR -f Logs/hs20-osu-client.txt browser $URL > Logs/browser.txt 2>&1 &
+			run_eloop_cmd "nohup hs20-osu-client -w $IFACE_DIR -f Logs/hs20-osu-client.txt browser $URL > Logs/browser.txt 2>&1 &"
 		    fi
 		    break
 		else
