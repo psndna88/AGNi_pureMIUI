@@ -418,6 +418,16 @@ static void sugov_walt_adjust(struct sugov_cpu *sg_cpu, unsigned long *util,
 	}
 }
 
+static inline unsigned long target_util(struct sugov_policy *sg_policy,
+				  unsigned int freq)
+{
+	unsigned long util;
+
+	util = freq_to_util(sg_policy, freq);
+	util = mult_frac(util, TARGET_LOAD, 100);
+	return util;
+}
+
 static void sugov_update_single(struct update_util_data *hook, u64 time,
 				unsigned int flags)
 {
@@ -448,14 +458,12 @@ static void sugov_update_single(struct update_util_data *hook, u64 time,
 		sugov_get_util(&util, &max, sg_cpu->cpu);
 		if (sg_policy->max != max) {
 			sg_policy->max = max;
-			hs_util = freq_to_util(sg_policy,
+			hs_util = target_util(sg_policy,
 					sg_policy->tunables->hispeed_freq);
-			hs_util = mult_frac(hs_util, TARGET_LOAD, 100);
 			sg_policy->hispeed_util = hs_util;
 
-			boost_util = freq_to_util(sg_policy,
+			boost_util = target_util(sg_policy,
 					    sg_policy->tunables->rtg_boost_freq);
-			boost_util = mult_frac(boost_util, TARGET_LOAD, 100);
 			sg_policy->rtg_boost_util = boost_util;
 		}
 
@@ -558,14 +566,12 @@ static void sugov_update_shared(struct update_util_data *hook, u64 time,
 
 	if (sg_policy->max != max) {
 		sg_policy->max = max;
-		hs_util = freq_to_util(sg_policy,
+		hs_util = target_util(sg_policy,
 					sg_policy->tunables->hispeed_freq);
-		hs_util = mult_frac(hs_util, TARGET_LOAD, 100);
 		sg_policy->hispeed_util = hs_util;
 
-		boost_util = freq_to_util(sg_policy,
+		boost_util = target_util(sg_policy,
 				    sg_policy->tunables->rtg_boost_freq);
-		boost_util = mult_frac(boost_util, TARGET_LOAD, 100);
 		sg_policy->rtg_boost_util = boost_util;
 	}
 
@@ -753,9 +759,8 @@ static ssize_t hispeed_freq_store(struct gov_attr_set *attr_set,
 	tunables->hispeed_freq = val;
 	list_for_each_entry(sg_policy, &attr_set->policy_list, tunables_hook) {
 		raw_spin_lock_irqsave(&sg_policy->update_lock, flags);
-		hs_util = freq_to_util(sg_policy,
+		hs_util = target_util(sg_policy,
 					sg_policy->tunables->hispeed_freq);
-		hs_util = mult_frac(hs_util, TARGET_LOAD, 100);
 		sg_policy->hispeed_util = hs_util;
 		raw_spin_unlock_irqrestore(&sg_policy->update_lock, flags);
 	}
@@ -785,9 +790,8 @@ static ssize_t rtg_boost_freq_store(struct gov_attr_set *attr_set,
 	tunables->rtg_boost_freq = val;
 	list_for_each_entry(sg_policy, &attr_set->policy_list, tunables_hook) {
 		raw_spin_lock_irqsave(&sg_policy->update_lock, flags);
-		boost_util = freq_to_util(sg_policy,
+		boost_util = target_util(sg_policy,
 					  sg_policy->tunables->rtg_boost_freq);
-		boost_util = mult_frac(boost_util, TARGET_LOAD, 100);
 		sg_policy->rtg_boost_util = boost_util;
 		raw_spin_unlock_irqrestore(&sg_policy->update_lock, flags);
 	}
@@ -1038,8 +1042,7 @@ static int sugov_init(struct cpufreq_policy *policy)
 	policy->governor_data = sg_policy;
 	sg_policy->tunables = tunables;
 
-	util = freq_to_util(sg_policy, sg_policy->tunables->rtg_boost_freq);
-	util = mult_frac(util, TARGET_LOAD, 100);
+	util = target_util(sg_policy, sg_policy->tunables->rtg_boost_freq);
 	sg_policy->rtg_boost_util = util;
 
 	stale_ns = sched_ravg_window + (sched_ravg_window >> 3);
