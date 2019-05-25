@@ -170,7 +170,7 @@
  *
  *****************************************************************************/
 
-#if defined(_LINUX) || defined(__linux__)
+#if defined(_LINUX) || defined(__linux__) || defined(__KERNEL__)
 #include <acpi/platform/aclinux.h>
 
 #elif defined(_APPLE) || defined(__APPLE__)

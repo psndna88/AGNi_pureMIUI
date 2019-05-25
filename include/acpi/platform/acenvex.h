@@ -53,7 +53,7 @@
  *
  *****************************************************************************/
 
-#if defined(_LINUX) || defined(__linux__)
+#if defined(_LINUX) || defined(__linux__) || defined(__KERNEL__)
 #include <acpi/platform/aclinuxex.h>
 
 #elif defined(WIN32)
