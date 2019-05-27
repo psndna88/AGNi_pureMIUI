@@ -4066,6 +4066,7 @@ static struct platform_driver icnss_driver = {
 		.pm = &icnss_pm_ops,
 		.owner = THIS_MODULE,
 		.of_match_table = icnss_dt_match,
+		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 	},
 };
 
