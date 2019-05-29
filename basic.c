@@ -82,6 +82,7 @@ static enum sigma_cmd_result cmd_device_get_info(struct sigma_dut *dut,
 #ifdef __linux__
 	char model_buf[128];
 	char ver_buf[256];
+	int res;
 #endif /* __linux__ */
 	char resp[512];
 
@@ -180,17 +181,19 @@ static enum sigma_cmd_result cmd_device_get_info(struct sigma_dut *dut,
 				close(fd);
 			}
 		}
-		snprintf(ver_buf, sizeof(ver_buf),
-			 "drv=%s%s%s%s%s%s%s/sigma=" SIGMA_DUT_VER "%s%s",
-			 compat_ver,
-			 wpa_supplicant_ver[0] ? "/wpas=" : "",
-			 wpa_supplicant_ver,
-			 hostapd_ver[0] ? "/hapd=" : "",
-			 hostapd_ver,
-			 host_fw_ver[0] ? "/wlan=" : "",
-			 host_fw_ver,
-			 dut->version ? "@" : "",
-			 dut->version ? dut->version : "");
+		res = snprintf(ver_buf, sizeof(ver_buf),
+			       "drv=%s%s%s%s%s%s%s/sigma=" SIGMA_DUT_VER "%s%s",
+			       compat_ver,
+			       wpa_supplicant_ver[0] ? "/wpas=" : "",
+			       wpa_supplicant_ver,
+			       hostapd_ver[0] ? "/hapd=" : "",
+			       hostapd_ver,
+			       host_fw_ver[0] ? "/wlan=" : "",
+			       host_fw_ver,
+			       dut->version ? "@" : "",
+			       dut->version ? dut->version : "");
+		if (res < 0 || res >= sizeof(ver_buf))
+			return ERROR_SEND_STATUS;
 		version = ver_buf;
 	}
 #endif /* __linux__ */

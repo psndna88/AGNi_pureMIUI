@@ -1651,7 +1651,7 @@ static int ath10k_debug_enable_addba_req(struct sigma_dut *dut, int tid,
 	DIR *dir;
 	struct dirent *entry;
 	char buf[128], path[128];
-	int ret = 0;
+	int ret = 0, res;
 
 	dir = opendir(dir_path);
 	if (!dir)
@@ -1664,21 +1664,22 @@ static int ath10k_debug_enable_addba_req(struct sigma_dut *dut, int tid,
 		    strcmp(entry->d_name, "..") == 0)
 			continue;
 
-		snprintf(path, sizeof(path) - 1, "%s/%s",
-			 dir_path, entry->d_name);
-		path[sizeof(path) - 1] = 0;
+		res = snprintf(path, sizeof(path) - 1, "%s/%s",
+			       dir_path, entry->d_name);
+		if (res < 0 || res >= sizeof(path))
+			continue;
 
 		if (strcmp(entry->d_name, sta_mac) == 0) {
-			snprintf(buf, sizeof(buf), "echo 1 > %s/aggr_mode",
-				 path);
-			if (system(buf) != 0) {
+			res = snprintf(buf, sizeof(buf),
+				       "echo 1 > %s/aggr_mode", path);
+			if (res < 0 || res >= sizeof(buf) || system(buf) != 0) {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
 						"Failed to set aggr mode for ath10k");
 			}
 
-			snprintf(buf, sizeof(buf), "echo %d 32 > %s/addba",
-				 tid, path);
-			if (system(buf) != 0) {
+			res = snprintf(buf, sizeof(buf),
+				       "echo %d 32 > %s/addba", tid, path);
+			if (res < 0 || res >= sizeof(buf) || system(buf) != 0) {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
 						"Failed to set addbareq for ath10k");
 			}
@@ -2272,19 +2273,23 @@ static void owrt_ap_add_vap(struct sigma_dut *dut, int id, const char *key,
 			    const char *val)
 {
 	char buf[256];
+	int res;
 
 	if (val == NULL) {
-		snprintf(buf, sizeof(buf),
-			 "uci delete wireless.@wifi-iface[%d].%s", id, key);
-		run_system(dut, buf);
+		res = snprintf(buf, sizeof(buf),
+			       "uci delete wireless.@wifi-iface[%d].%s",
+			       id, key);
+		if (res >= 0 && res < sizeof(buf))
+			run_system(dut, buf);
 		return;
 	}
 
-	snprintf(buf, sizeof(buf), "uci add wireless wifi-iface");
-	run_system(dut, buf);
-	snprintf(buf, sizeof(buf), "uci set wireless.@wifi-iface[%d].%s=%s",
-		 id, key, val);
-	run_system(dut, buf);
+	run_system(dut, "uci add wireless wifi-iface");
+	res = snprintf(buf, sizeof(buf),
+		       "uci set wireless.@wifi-iface[%d].%s=%s",
+		       id, key, val);
+	if (res >= 0 && res < sizeof(buf))
+		run_system(dut, buf);
 	snprintf(buf, sizeof(buf), "uci set wireless.@wifi-iface[%d].%s=%s",
 		 id, "network", "lan");
 	run_system(dut, buf);
@@ -2873,7 +2878,7 @@ static void get_if_name(struct sigma_dut *dut, char *ifname_str,
 static int owrt_ap_config_vap(struct sigma_dut *dut)
 {
 	char buf[256], *temp;
-	int vap_id = 0, vap_count, i, j;
+	int vap_id = 0, vap_count, i, j, res;
 	const char *ifname;
 	char ifname2[50];
 
@@ -2911,9 +2916,15 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 
 			if (wlan_tag == 2 && dut->program == PROGRAM_WPA3 &&
 			   (dut->ap_interface_5g || dut->ap_interface_2g)) {
-				snprintf(dut->ap_tag_ssid[wlan_tag - 2],
-					 sizeof(dut->ap_tag_ssid[wlan_tag - 2]),
-					 "%s-owe", dut->ap_ssid);
+				res = snprintf(
+					dut->ap_tag_ssid[wlan_tag - 2],
+					sizeof(dut->ap_tag_ssid[wlan_tag - 2]),
+					"%s-owe", dut->ap_ssid);
+				if (res < 0 ||
+				    res >= sizeof(dut->ap_tag_ssid[wlan_tag -
+								   2]))
+					dut->ap_tag_ssid[wlan_tag - 2][0] =
+						'\0';
 			}
 
 			if (dut->ap_tag_ssid[j][0] == '\0')
@@ -3947,7 +3958,7 @@ static int kill_process(struct sigma_dut *dut, char *proc_name,
 	FILE *fp;
 	char *pid, *temp;
 	char *saveptr;
-	int ret = -1;
+	int ret = -1, res;
 
 	if (dir == NULL)
 		return ret;
@@ -3956,7 +3967,9 @@ static int kill_process(struct sigma_dut *dut, char *proc_name,
 		if (dp->d_type != DT_DIR)
 			continue;
 
-		snprintf(buf, sizeof(buf), "%s%s", direc, dp->d_name);
+		res = snprintf(buf, sizeof(buf), "%s%s", direc, dp->d_name);
+		if (res < 0 || res >= sizeof(buf))
+			continue;
 		dir_in = opendir(buf);
 		if (dir_in == NULL)
 			continue;
@@ -3964,7 +3977,10 @@ static int kill_process(struct sigma_dut *dut, char *proc_name,
 		closedir(dir_in);
 		if (dp_in == NULL)
 			continue;
-		snprintf(buf, sizeof(buf), "%s%s/stat", direc, dp->d_name);
+		res = snprintf(buf, sizeof(buf), "%s%s/stat",
+			       direc, dp->d_name);
+		if (res < 0 || res >= sizeof(buf))
+			continue;
 		fp = fopen(buf, "r");
 		if (fp == NULL)
 			continue;
@@ -5830,6 +5846,7 @@ static int cmd_ath_ap_config_commit(struct sigma_dut *dut,
 	char buf[100];
 	struct stat s;
 	const char *ifname = dut->ap_is_dual ? "ath1" : "ath0";
+	int res;
 
 	if (stat("/proc/athversion", &s) == 0) {
 		sigma_dut_print(dut, DUT_MSG_INFO, "Run apdown");
@@ -5877,8 +5894,10 @@ static int cmd_ath_ap_config_commit(struct sigma_dut *dut,
 		/* TODO: SAE configuration */
 		run_system(dut, "cfg -a AP_SECMODE=WPA");
 		run_system(dut, "cfg -a AP_SECFILE=PSK");
-		snprintf(buf, sizeof(buf), "cfg -a 'PSK_KEY=%s'",
-			 dut->ap_passphrase);
+		res = snprintf(buf, sizeof(buf), "cfg -a 'PSK_KEY=%s'",
+			       dut->ap_passphrase);
+		if (res < 0 || res >= sizeof(buf))
+			return ERROR_SEND_STATUS;
 		run_system(dut, buf);
 		if (dut->ap_cipher == AP_CCMP_TKIP)
 			run_system(dut, "cfg -a AP_CYPHER=\"CCMP TKIP\"");
@@ -5910,8 +5929,10 @@ static int cmd_ath_ap_config_commit(struct sigma_dut *dut,
 		snprintf(buf, sizeof(buf), "cfg -a AP_AUTH_PORT=%d",
 			 dut->ap_radius_port);
 		run_system(dut, buf);
-		snprintf(buf, sizeof(buf), "cfg -a AP_AUTH_SECRET=%s",
-			 dut->ap_radius_password);
+		res = snprintf(buf, sizeof(buf), "cfg -a AP_AUTH_SECRET=%s",
+			       dut->ap_radius_password);
+		if (res < 0 || res >= sizeof(buf))
+			return ERROR_SEND_STATUS;
 		run_system(dut, buf);
 		break;
 	case AP_WPA2_EAP_OSEN:
@@ -5981,8 +6002,11 @@ static int cmd_ath_ap_config_commit(struct sigma_dut *dut,
 			/* TODO: SAE configuration */
 			run_system(dut, "cfg -a AP_SECMODE_2=WPA");
 			run_system(dut, "cfg -a AP_SECFILE_2=PSK");
-			snprintf(buf, sizeof(buf), "cfg -a 'PSK_KEY_2=%s'",
-				 dut->ap_passphrase);
+			res = snprintf(buf, sizeof(buf),
+				       "cfg -a 'PSK_KEY_2=%s'",
+				       dut->ap_passphrase);
+			if (res < 0 || res >= sizeof(buf))
+				return ERROR_SEND_STATUS;
 			run_system(dut, buf);
 			if (dut->ap_cipher == AP_CCMP_TKIP)
 				run_system(dut, "cfg -a AP_CYPHER_2=\"CCMP TKIP\"");
@@ -6015,8 +6039,11 @@ static int cmd_ath_ap_config_commit(struct sigma_dut *dut,
 			snprintf(buf, sizeof(buf), "cfg -a AP_AUTH_PORT_2=%d",
 				 dut->ap_radius_port);
 			run_system(dut, buf);
-			snprintf(buf, sizeof(buf), "cfg -a AP_AUTH_SECRET_2=%s",
-				 dut->ap_radius_password);
+			res = snprintf(buf, sizeof(buf),
+				       "cfg -a AP_AUTH_SECRET_2=%s",
+				       dut->ap_radius_password);
+			if (res < 0 || res >= sizeof(buf))
+				return ERROR_SEND_STATUS;
 			run_system(dut, buf);
 			break;
 		case AP_WPA2_EAP_OSEN:
@@ -6153,16 +6180,25 @@ static int cmd_ath_ap_config_commit(struct sigma_dut *dut,
 			run_system(dut, "cfg -a AP_SECMODE_2=WPA");
 			run_system(dut, "cfg -a AP_SECFILE_2=OSEN");
 
-			snprintf(buf, sizeof(buf), "cfg -a AP_AUTH_SERVER_2=%s",
-				 dut->ap2_radius_ipaddr);
+			res = snprintf(buf, sizeof(buf),
+				       "cfg -a AP_AUTH_SERVER_2=%s",
+				       dut->ap2_radius_ipaddr);
+			if (res < 0 || res >= sizeof(buf))
+				return ERROR_SEND_STATUS;
 			run_system(dut, buf);
 
-			snprintf(buf, sizeof(buf), "cfg -a AP_AUTH_PORT_2=%d",
-				 dut->ap2_radius_port);
+			res = snprintf(buf, sizeof(buf),
+				       "cfg -a AP_AUTH_PORT_2=%d",
+				       dut->ap2_radius_port);
+			if (res < 0 || res >= sizeof(buf))
+				return ERROR_SEND_STATUS;
 			run_system(dut, buf);
 
-			snprintf(buf, sizeof(buf), "cfg -a AP_AUTH_SECRET_2=%s",
-				 dut->ap2_radius_password);
+			res = snprintf(buf, sizeof(buf),
+				       "cfg -a AP_AUTH_SECRET_2=%s",
+				       dut->ap2_radius_password);
+			if (res < 0 || res >= sizeof(buf))
+				return ERROR_SEND_STATUS;
 			run_system(dut, buf);
 		} else {
 			run_system(dut, "cfg -a AP_SECMODE_2=None");
@@ -8171,6 +8207,7 @@ static int cmd_ap_get_info(struct sigma_dut *dut, struct sigma_conn *conn,
 	char resp[200];
 	FILE *f;
 	enum driver_type drv = get_driver_type();
+	int res;
 
 	switch (drv) {
 	case DRIVER_ATHEROS: {
@@ -8200,15 +8237,17 @@ static int cmd_ap_get_info(struct sigma_dut *dut, struct sigma_conn *conn,
 			version = "Unknown";
 
 		if (if_nametoindex("ath1") > 0)
-			snprintf(resp, sizeof(resp), "interface,ath0_24G "
-				 "ath1_5G,agent,1.0,version,%s/drv:%s",
-				 version, athver);
+			res = snprintf(resp, sizeof(resp),
+				       "interface,ath0_24G ath1_5G,agent,1.0,version,%s/drv:%s",
+				       version, athver);
 		else
-			snprintf(resp, sizeof(resp), "interface,ath0_24G,"
-				 "agent,1.0,version,%s/drv:%s",
-				 version, athver);
-
-		send_resp(dut, conn, SIGMA_COMPLETE, resp);
+			res = snprintf(resp, sizeof(resp),
+				       "interface,ath0_24G,agent,1.0,version,%s/drv:%s",
+				       version, athver);
+		if (res < 0 || res >= sizeof(resp))
+			send_resp(dut, conn, SIGMA_ERROR, NULL);
+		else
+			send_resp(dut, conn, SIGMA_COMPLETE, resp);
 		return 0;
 	}
 	case DRIVER_LINUX_WCN:
@@ -10439,6 +10478,7 @@ static int mac80211_vht_chnum_band(struct sigma_dut *dut, const char *ifname,
 		channel_freq;
 	char buf[100];
 	char *saveptr;
+	int res;
 
 	/* Extract the channel info */
 	token = strdup(val);
@@ -10463,10 +10503,10 @@ static int mac80211_vht_chnum_band(struct sigma_dut *dut, const char *ifname,
 	channel_freq = get_5g_channel_freq(channel);
 
 	/* Issue the channel switch command */
-	snprintf(buf, sizeof(buf),
-		 " -i %s chan_switch 10 %d sec_channel_offset=1 center_freq1=%d bandwidth=%d blocktx vht",
-		 ifname, channel_freq, center_freq, chwidth);
-	if (run_hostapd_cli(dut,buf) != 0) {
+	res = snprintf(buf, sizeof(buf),
+		       " -i %s chan_switch 10 %d sec_channel_offset=1 center_freq1=%d bandwidth=%d blocktx vht",
+		       ifname, channel_freq, center_freq, chwidth);
+	if (res < 0 || res >= sizeof(buf) || run_hostapd_cli(dut, buf) != 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"hostapd_cli chan_switch failed");
 	}
