@@ -87,7 +87,7 @@ static enum sigma_cmd_result cmd_device_get_info(struct sigma_dut *dut,
 
 #ifdef __linux__
 	{
-		char path[128];
+		char fname[128], path[128];
 		struct stat s;
 		FILE *f;
 		char compat_ver[128];
@@ -100,13 +100,16 @@ static enum sigma_cmd_result cmd_device_get_info(struct sigma_dut *dut,
 		if (stat(path, &s) == 0) {
 			ssize_t res;
 			char *pos;
-			snprintf(path, sizeof(path),
-				 "/sys/class/net/%s/device/driver",
-				 get_main_ifname());
-			res = readlink(path, path, sizeof(path));
-			if (res < 0)
+
+			res = snprintf(fname, sizeof(fname),
+				       "/sys/class/net/%s/device/driver",
+				       get_main_ifname());
+			if (res < 0 || res >= sizeof(fname)) {
 				model = "Linux/";
-			else {
+			} else if ((res = readlink(fname, path,
+						   sizeof(path))) < 0) {
+				model = "Linux/";
+			} else {
 				if (res >= (int) sizeof(path))
 					res = sizeof(path) - 1;
 				path[res] = '\0';

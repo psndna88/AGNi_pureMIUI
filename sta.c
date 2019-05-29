@@ -2826,8 +2826,11 @@ int ath6kl_client_uapsd(struct sigma_dut *dut, const char *intf, int uapsd)
 	ssize_t res;
 	FILE *f;
 
-	snprintf(path, sizeof(path), "/sys/class/net/%s/phy80211", intf);
-	res = readlink(path, path, sizeof(path));
+	res = snprintf(fname, sizeof(fname), "/sys/class/net/%s/phy80211",
+		       intf);
+	if (res < 0 || res >= sizeof(fname))
+		return 0;
+	res = readlink(fname, path, sizeof(path));
 	if (res < 0)
 		return 0; /* not ath6kl */
 
