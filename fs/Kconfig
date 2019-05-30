@@ -297,4 +297,10 @@ config FILE_TABLE_DEBUG
 	help
 	  This option enables debug of the open files using a global filetable
 
+config DYNAMIC_FSYNC
+	bool "dynamic file sync control"
+	default n
+	help
+	  An experimental file sync control using new power_suspend driver 
+
 endmenu
