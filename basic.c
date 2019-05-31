@@ -167,7 +167,8 @@ static enum sigma_cmd_result cmd_device_get_info(struct sigma_dut *dut,
 			drvinfo.cmd = ETHTOOL_GDRVINFO;
 
 			memset(&ifr, 0, sizeof(ifr));
-			strcpy(ifr.ifr_name, get_main_ifname());
+			strlcpy(ifr.ifr_name, get_main_ifname(),
+				sizeof(ifr.ifr_name));
 
 			fd = socket(AF_INET, SOCK_DGRAM, 0);
 			if (fd < 0)
