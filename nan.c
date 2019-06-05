@@ -14,6 +14,13 @@
 
 #if NAN_CERT_VERSION >= 2
 
+#if ((NAN_MAJOR_VERSION > 2) ||					 \
+     (NAN_MAJOR_VERSION == 2 &&					 \
+      (NAN_MINOR_VERSION >= 1 || NAN_MICRO_VERSION >= 1))) &&	 \
+	NAN_CERT_VERSION >= 5
+#define NAN_NEW_CERT_VERSION
+#endif
+
 pthread_cond_t gCondition;
 pthread_mutex_t gMutex;
 static NanSyncStats global_nan_sync_stats;
@@ -34,6 +41,11 @@ uint32_t global_match_handle = 0;
 #define ETH_ALEN 6
 #endif
 
+static const u8 nan_wfa_oui[] = { 0x50, 0x6f, 0x9a };
+/* TLV header length = tag (1 byte) + length (2 bytes) */
+#define WLAN_NAN_TLV_HEADER_SIZE (1 + 2)
+#define NAN_INTF_ID_LEN   8
+
 struct sigma_dut *global_dut = NULL;
 static char global_nan_mac_addr[ETH_ALEN];
 static char global_peer_mac_addr[ETH_ALEN];
@@ -49,6 +61,35 @@ static int nan_further_availability_tx(struct sigma_dut *dut,
 static int nan_further_availability_rx(struct sigma_dut *dut,
 				       struct sigma_conn *conn,
 				       struct sigma_cmd *cmd);
+
+enum wlan_nan_tlv_type {
+	NAN_TLV_TYPE_IPV6_LINK_LOCAL = 0x00,
+	NAN_TLV_TYPE_SERVICE_INFO = 0x01,
+	NAN_TLV_TYPE_RSVD_START = 0x02,
+	NAN_TLV_TYPE_RSVD_START_END = 0xFF
+};
+
+enum wlan_nan_service_protocol_type {
+	NAN_TLV_SERVICE_PROTO_TYPE_RSVD1 = 0x00,
+	NAN_TLV_SERVICE_PROTO_TYPE_BONJOUR = 0x01,
+	NAN_TLV_SERVICE_PROTO_TYPE_GENERIC = 0x02,
+	NAN_TLV_SERVICE_PROTO_RSVD2_START = 0x03,
+	NAN_TLV_SERVICE_PROTO_TYPE_RSVD2_END = 0xFF
+};
+
+enum wlan_nan_generic_service_proto_sub_attr {
+	NAN_GENERIC_SERVICE_PROTO_SUB_ATTR_ID_TRANS_PORT = 0x00,
+	NAN_GENERIC_SERVICE_PROTO_SUB_ATTR_ID_TRANS_PROTO = 0x01,
+	NAN_GENERIC_SERVICE_PROTO_SUB_ATTR_ID_SERVICE_NAME = 0x02,
+	NAN_GENERIC_SERVICE_PROTO_SUB_ATTR_ID_TEXTINFO = 0x04,
+	NAN_GENERIC_SERVICE_PROTO_SUB_ATTR_ID_UUID = 0x05,
+	NAN_GENERIC_SERVICE_PROTO_SUB_ATTR_ID_BLOB = 0x06,
+	NAN_GENERIC_SERVICE_PROTO_SUB_ATTR_ID_RSVD1_START = 0x07,
+	NAN_GENERIC_SERVICE_PROTO_SUB_ATTR_ID_RSVD1_END = 0xDC,
+	NAN_GENERIC_SERVICE_PROTO_SUB_ATTR_ID_VENDOR_SPEC_INFO= 0xDD,
+	NAN_GENERIC_SERVICE_PROTO_SUB_ATTR_ID_RSVD2_START = 0xDE,
+	NAN_GENERIC_SERVICE_PROTO_SUB_ATTR_ID_RSVD2_END = 0xFF
+};
 
 
 void nan_hex_dump(struct sigma_dut *dut, uint8_t *data, size_t len)
@@ -174,6 +215,94 @@ int nan_parse_hex_string(struct sigma_dut *dut, const char *input,
 }
 
 
+static size_t nan_build_ipv6_link_local_tlv(u8 *p_frame,
+					    const u8 *p_ipv6_intf_addr)
+{
+	/* fill attribute ID */
+	*p_frame++ = NAN_TLV_TYPE_IPV6_LINK_LOCAL;
+
+	/* Fill the length */
+	*p_frame++ = NAN_INTF_ID_LEN & 0xFF;
+	*p_frame++ = NAN_INTF_ID_LEN >> 8;
+
+	/* only the lower 8 bytes is needed */
+	memcpy(p_frame, &p_ipv6_intf_addr[NAN_INTF_ID_LEN], NAN_INTF_ID_LEN);
+
+	return NAN_INTF_ID_LEN + WLAN_NAN_TLV_HEADER_SIZE;
+}
+
+
+static size_t nan_build_service_info_tlv_sub_attr(
+	u8 *p_frame, const u8 *sub_attr, const u16 sub_attr_len,
+	enum wlan_nan_generic_service_proto_sub_attr sub_attr_id)
+{
+	/* Fill Service Subattibute ID */
+	*p_frame++ = (u8) sub_attr_id;
+
+	/* Fill the length */
+	*p_frame++ = sub_attr_len & 0xFF;
+	*p_frame++ = sub_attr_len >> 8;
+
+	/* Fill the value */
+	memcpy(p_frame, sub_attr, sub_attr_len);
+
+	return sub_attr_len + WLAN_NAN_TLV_HEADER_SIZE;
+}
+
+
+static size_t nan_build_service_info_tlv(u8 *p_frame,
+					 const NdpIpTransParams *p_ndp_attr)
+{
+	u16 tlv_len = 0, len = 0;
+	u8 *p_offset_len;
+
+	if (p_ndp_attr->trans_port_present || p_ndp_attr->trans_proto_present) {
+		/* fill attribute ID */
+		*p_frame++ = NAN_TLV_TYPE_SERVICE_INFO;
+
+		p_offset_len = p_frame;
+		p_frame += 2;
+
+		/* Fill WFA Specific OUI */
+		memcpy(p_frame, nan_wfa_oui, sizeof(nan_wfa_oui));
+		p_frame += sizeof(nan_wfa_oui);
+		tlv_len += sizeof(nan_wfa_oui);
+
+		/* Fill Service protocol Type */
+		*p_frame++ = NAN_TLV_SERVICE_PROTO_TYPE_GENERIC;
+		tlv_len += 1;
+
+		if (p_ndp_attr->trans_port_present) {
+			len = nan_build_service_info_tlv_sub_attr(
+				p_frame,
+				(const u8 *) &p_ndp_attr->transport_port,
+				sizeof(p_ndp_attr->transport_port),
+				NAN_GENERIC_SERVICE_PROTO_SUB_ATTR_ID_TRANS_PORT);
+			p_frame += len;
+			tlv_len += len;
+		}
+
+		if (p_ndp_attr->trans_proto_present) {
+			len = nan_build_service_info_tlv_sub_attr(
+				p_frame,
+				(const u8 *) &p_ndp_attr->transport_protocol,
+				sizeof(p_ndp_attr->transport_protocol),
+				NAN_GENERIC_SERVICE_PROTO_SUB_ATTR_ID_TRANS_PROTO);
+			p_frame += len;
+			tlv_len += len;
+		}
+
+		/* Fill the length */
+		*p_offset_len++ = tlv_len  & 0xFF;
+		*p_offset_len = tlv_len >> 8;
+
+		tlv_len += WLAN_NAN_TLV_HEADER_SIZE;
+	}
+
+	return tlv_len;
+}
+
+
 int wait(struct timespec abstime)
 {
 	struct timeval now;
@@ -200,9 +329,7 @@ int nan_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 {
 	const char *oper_chan = get_param(cmd, "oper_chn");
 	const char *pmk = get_param(cmd, "PMK");
-#if ((NAN_MAJOR_VERSION > 2) || \
-	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)) && \
-	NAN_CERT_VERSION >= 5
+#ifdef NAN_NEW_CERT_VERSION
 	const char *ndpe = get_param(cmd, "NDPE");
 	const char *trans_proto = get_param(cmd, "TransProtoType");
 	const char *ndp_attr = get_param(cmd, "ndpAttr");
@@ -230,9 +357,7 @@ int nan_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 		nan_hex_dump(dut, &dut->nan_pmk[0], dut->nan_pmk_len);
 	}
 
-#if ((NAN_MAJOR_VERSION > 2) || \
-	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)) && \
-	NAN_CERT_VERSION >= 5
+#ifdef NAN_NEW_CERT_VERSION
 	if (ndpe) {
 		NanConfigRequest req;
 		wifi_error ret;
@@ -333,9 +458,7 @@ int sigma_nan_enable(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *band = get_param(cmd, "Band");
 	const char *only_5g = get_param(cmd, "5GOnly");
 	const char *nan_availability = get_param(cmd, "NANAvailability");
-#if ((NAN_MAJOR_VERSION > 2) || \
-	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)) && \
-	NAN_CERT_VERSION >= 5
+#ifdef NAN_NEW_CERT_VERSION
 	const char *ndpe = get_param(cmd, "NDPE");
 #endif
 	struct timespec abstime;
@@ -379,9 +502,7 @@ int sigma_nan_enable(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
-#if ((NAN_MAJOR_VERSION > 2) || \
-	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)) && \
-	NAN_CERT_VERSION >= 5
+#ifdef NAN_NEW_CERT_VERSION
 	if (ndpe) {
 		if (strcasecmp(ndpe, "Enable") == 0) {
 			dut->ndpe = 1;
@@ -779,9 +900,7 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 #if NAN_CERT_VERSION >= 3
 	const char *qos_config = get_param(cmd, "QoS");
 #endif
-#if ((NAN_MAJOR_VERSION > 2) || \
-	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)) && \
-	NAN_CERT_VERSION >= 5
+#ifdef NAN_NEW_CERT_VERSION
 	const char *ndpe_enable = get_param(cmd, "Ndpe");
 	const char *ndpe_attr = get_param(cmd, "ndpeAttr");
 	const char *ndp_attr = get_param(cmd, "ndpAttr");
@@ -878,9 +997,7 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 	}
 #endif
 
-#if ((NAN_MAJOR_VERSION > 2) || \
-	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)) && \
-	NAN_CERT_VERSION >= 5
+#ifdef NAN_NEW_CERT_VERSION
 	if (ndpe_enable &&
 	    strcasecmp(ndpe_enable, "Enable") == 0)
 		dut->ndpe = 1;
@@ -925,31 +1042,6 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 				  "NAN config ndpeAttr failed");
 			return 0;
 		}
-	}
-
-	if (dut->ndpe && dut->device_type == STA_testbed && !tlv_list) {
-		NanDebugParams cfg_debug;
-		int implicit_ipv6_val;
-
-		sigma_dut_print(dut, DUT_MSG_INFO,
-				"%s: In test bed mode IPv6 is implicit in data request",
-				__func__);
-		memset(&cfg_debug, 0, sizeof(NanDebugParams));
-		cfg_debug.cmd = NAN_TEST_MODE_CMD_DISABLE_IPV6_LINK_LOCAL;
-		implicit_ipv6_val = NAN_IPV6_IMPLICIT;
-		memcpy(cfg_debug.debug_cmd_data, &implicit_ipv6_val,
-		       sizeof(int));
-		size = sizeof(u32) + sizeof(int);
-		ret = nan_debug_command_config(0, dut->wifi_hal_iface_handle,
-					       cfg_debug, size);
-		if (ret != WIFI_SUCCESS) {
-			send_resp(dut, conn, SIGMA_ERROR,
-				  "errorCode,NAN config implicit IPv6 failed");
-			return 0;
-		}
-		sigma_dut_print(dut, DUT_MSG_INFO,
-				"%s: config command for implicit IPv6 sent",
-				__func__);
 	}
 #endif
 
@@ -1003,21 +1095,37 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 				init_req.key_info.body.pmk_info.pmk_len);
 	}
 
-#if ((NAN_MAJOR_VERSION > 2) || \
-	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)) && \
-	NAN_CERT_VERSION >= 5
+#ifdef NAN_NEW_CERT_VERSION
 	if (dut->ndpe) {
-		unsigned char nan_mac_addr[ETH_ALEN];
-		size_t addr_len = 0;
+		if (dut->device_type == STA_testbed && !tlv_list) {
+			init_req.app_info.ndp_app_info_len = 0;
+			memset(init_req.app_info.ndp_app_info, 0,
+			       sizeof(init_req.app_info.ndp_app_info));
+		} else {
+			size_t addr_len = 0;
+			u8 nan_ipv6_intf_addr[IPV6_ADDR_LEN];
+			unsigned char nan_mac_addr[ETH_ALEN];
 
-		get_hwaddr("nan0", nan_mac_addr);
-		addr_len = convert_mac_addr_to_ipv6_linklocal(
-			nan_mac_addr, &init_req.nan_ipv6_intf_addr[0]);
-		init_req.nan_ipv6_addr_present = 1;
-		sigma_dut_print(dut, DUT_MSG_DEBUG,
-				"%s: Initiator Request: IPv6:",  __func__);
-		nan_hex_dump(dut, &init_req.nan_ipv6_intf_addr[0],
-			     NAN_IPV6_ADDR_LEN);
+			if (get_hwaddr("nan0", nan_mac_addr) < 0) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"%s:get_hwaddr nan0 failed",
+						__func__);
+				return -1;
+			}
+
+			/* store IPv6 into app_info as TLV */
+			addr_len = convert_mac_addr_to_ipv6_linklocal(
+				nan_mac_addr, &nan_ipv6_intf_addr[0]);
+			init_req.app_info.ndp_app_info_len =
+				nan_build_ipv6_link_local_tlv(
+					init_req.app_info.ndp_app_info,
+					&nan_ipv6_intf_addr[0]);
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"%s: Initiator Request: IPv6:",
+					__func__);
+			nan_hex_dump(dut, &nan_ipv6_intf_addr[0],
+				     IPV6_ADDR_LEN);
+		}
 	}
 #endif
 
@@ -1039,9 +1147,7 @@ static int sigma_nan_data_response(struct sigma_dut *dut,
 {
 	const char *ndl_response = get_param(cmd, "NDLresponse");
 	const char *m4_response_type = get_param(cmd, "M4ResponseType");
-#if ((NAN_MAJOR_VERSION > 2) || \
-	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)) && \
-	NAN_CERT_VERSION >= 5
+#ifdef NAN_NEW_CERT_VERSION
 	const char *ndpe_attr = get_param(cmd, "ndpeAttr");
 	const char *ndp_attr = get_param(cmd, "ndpAttr");
 #endif
@@ -1111,9 +1217,7 @@ static int sigma_nan_data_response(struct sigma_dut *dut,
 		}
 	}
 
-#if ((NAN_MAJOR_VERSION > 2) || \
-	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)) && \
-	 NAN_CERT_VERSION >= 5
+#ifdef NAN_NEW_CERT_VERSION
 	if (dut->ndpe && ndp_attr) {
 		NanDebugParams cfg_debug;
 		int ndp_attr_val;
@@ -1382,9 +1486,7 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 #endif
 	const char *ndpe = get_param(cmd, "NDPE");
 	const char *trans_proto = get_param(cmd, "TransProtoType");
-#if ((NAN_MAJOR_VERSION > 2) || \
-	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)) && \
-	NAN_CERT_VERSION >= 5
+#ifdef NAN_NEW_CERT_VERSION
 	const char *ndp_attr = get_param(cmd, "ndpAttr");
 #endif
 	NanPublishRequest req;
@@ -1605,9 +1707,7 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
-#if ((NAN_MAJOR_VERSION > 2) || \
-	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)) && \
-	NAN_CERT_VERSION >= 5
+#ifdef NAN_NEW_CERT_VERSION
 	if (dut->ndpe && ndp_attr) {
 		NanDebugParams cfg_debug;
 		int ndp_attr_val, size;
@@ -1631,12 +1731,17 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	if (dut->ndpe) {
 		unsigned char nan_mac_addr[ETH_ALEN];
-		size_t addr_len = 0;
+		size_t len = 0, tlv_len = 0;
 		NanDebugParams cfg_debug;
 		NdpIpTransParams ndp_ip_trans_param;
+		u8 *p_buf;
 
-		get_hwaddr("nan0", nan_mac_addr);
-		addr_len = convert_mac_addr_to_ipv6_linklocal(
+		if (get_hwaddr("nan0", nan_mac_addr) < 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"%s:get_hwaddr nan0 failed", __func__);
+			return -1;
+		}
+		len = convert_mac_addr_to_ipv6_linklocal(
 			nan_mac_addr, ndp_ip_trans_param.ipv6_intf_addr);
 		ndp_ip_trans_param.ipv6_addr_present = 1;
 
@@ -1646,13 +1751,24 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 		ndp_ip_trans_param.trans_proto_present = 1;
 		ndp_ip_trans_param.transport_protocol = dut->trans_proto;
 
+		/* build TLV blob for cfg_debug cmd */
+		p_buf = cfg_debug.debug_cmd_data;
+
+		/* put IPv6 address tlv into data buffer */
+		len = nan_build_ipv6_link_local_tlv(
+			p_buf, ndp_ip_trans_param.ipv6_intf_addr);
+		tlv_len = len;
+		p_buf += len;
+
+		/* put port and protocol TLV into data buffer */
+		len = nan_build_service_info_tlv(p_buf, &ndp_ip_trans_param);
+		tlv_len += len;
+
 		cfg_debug.cmd = NAN_TEST_MODE_CMD_TRANSPORT_IP_PARAM;
 		memcpy(cfg_debug.debug_cmd_data, &ndp_ip_trans_param,
 		       sizeof(NdpIpTransParams));
 		nan_debug_command_config(0, dut->wifi_hal_iface_handle,
-					 cfg_debug,
-					 sizeof(u32) +
-					 sizeof(NdpIpTransParams));
+					 cfg_debug, tlv_len + sizeof(u32));
 	}
 #endif
 
@@ -2098,6 +2214,12 @@ void nan_event_disabled(NanDisabledInd *event)
 /* Events callback */
 static void ndp_event_data_indication(NanDataPathRequestInd *event)
 {
+	u8 *p_frame;
+	u16 ipv6_addr_len = 0;
+	static const u8 ipv6_intf_addr_msb[] = {
+		0xFE, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+	};
+
 	sigma_dut_print(global_dut, DUT_MSG_INFO,
 			"%s: Service Instance Id: %d  Peer Discovery MAC ADDR "
 			MAC_ADDR_STR
@@ -2110,6 +2232,27 @@ static void ndp_event_data_indication(NanDataPathRequestInd *event)
 			event->app_info.ndp_app_info);
 
 	global_ndp_instance_id = event->ndp_instance_id;
+	memset(global_dut->nan_ipv6_addr, 0, sizeof(global_dut->nan_ipv6_addr));
+	global_dut->nan_ipv6_len = 0;
+
+	if (event->app_info.ndp_app_info_len > 0) {
+		p_frame = event->app_info.ndp_app_info;
+		if (*p_frame == NAN_TLV_TYPE_IPV6_LINK_LOCAL) {
+			p_frame++;
+			ipv6_addr_len = *p_frame++;
+			ipv6_addr_len |= (*p_frame++) << 8;
+			memcpy(global_dut->nan_ipv6_addr, ipv6_intf_addr_msb,
+			       NAN_INTF_ID_LEN);
+			global_dut->nan_ipv6_len = NAN_INTF_ID_LEN;
+			if (ipv6_addr_len > 0 &&
+			    ipv6_addr_len <= NAN_INTF_ID_LEN) {
+				memcpy(global_dut->nan_ipv6_addr +
+				       NAN_INTF_ID_LEN,
+				       p_frame, ipv6_addr_len);
+				global_dut->nan_ipv6_len += ipv6_addr_len;
+			}
+		}
+	}
 }
 
 
@@ -2138,20 +2281,18 @@ static void ndp_event_data_confirm(NanDataPathConfirmInd *event)
 			sigma_dut_print(global_dut, DUT_MSG_ERROR,
 					"Failed to run:ip -6 route replace fe80::/64 dev nan0 table local");
 		}
-#if ((NAN_MAJOR_VERSION > 2) || \
-	(NAN_MAJOR_VERSION == 2 && NAN_MINOR_VERSION >= 1)) && \
-	NAN_CERT_VERSION >= 5
-		if (event->nan_ipv6_addr_present)
+
+		if (global_dut->nan_ipv6_len > 0 &&
+		    global_dut->nan_ipv6_len >= IPV6_ADDR_LEN)
 			snprintf(ipv6_buf, sizeof(ipv6_buf),
 				 "fe80::%02x%02x:%02xff:fe%02x:%02x%02x",
-				 event->nan_ipv6_intf_addr[8],
-				 event->nan_ipv6_intf_addr[9],
-				 event->nan_ipv6_intf_addr[10],
-				 event->nan_ipv6_intf_addr[13],
-				 event->nan_ipv6_intf_addr[14],
-				 event->nan_ipv6_intf_addr[15]);
+				 global_dut->nan_ipv6_addr[8],
+				 global_dut->nan_ipv6_addr[9],
+				 global_dut->nan_ipv6_addr[10],
+				 global_dut->nan_ipv6_addr[13],
+				 global_dut->nan_ipv6_addr[14],
+				 global_dut->nan_ipv6_addr[15]);
 		else
-#endif
 			convert_mac_addr_to_ipv6_lladdr(
 				event->peer_ndi_mac_addr,
 				ipv6_buf, sizeof(ipv6_buf));
