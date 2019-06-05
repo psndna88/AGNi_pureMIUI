@@ -256,7 +256,6 @@ static void do_idle(void)
 			arch_cpu_idle_dead();
 		}
 
-		local_irq_disable();
 		arch_cpu_idle_enter();
 
 		/*
