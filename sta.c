@@ -322,6 +322,7 @@ static int wil6210_wmi_send(struct sigma_dut *dut, uint16_t command,
 	char buf[128], fname[128];
 	size_t towrite, written;
 	FILE *f;
+	int res;
 
 	if (length > WIL_WMI_MAX_PAYLOAD) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
@@ -340,7 +341,9 @@ static int wil6210_wmi_send(struct sigma_dut *dut, uint16_t command,
 		return -1;
 	}
 
-	snprintf(fname, sizeof(fname), "%s/wmi_send", buf);
+	res = snprintf(fname, sizeof(fname), "%s/wmi_send", buf);
+	if (res < 0 || res >= sizeof(fname))
+		return -1;
 	f = fopen(fname, "wb");
 	if (!f) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
@@ -368,7 +371,7 @@ static int wil6210_get_sta_info_field(struct sigma_dut *dut, const char *bssid,
 	FILE *f;
 	regex_t re;
 	regmatch_t m[2];
-	int rc, ret = -1;
+	int rc, ret = -1, res;
 
 	if (wil6210_get_debugfs_dir(dut, buf, sizeof(buf))) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
@@ -376,7 +379,9 @@ static int wil6210_get_sta_info_field(struct sigma_dut *dut, const char *bssid,
 		return -1;
 	}
 
-	snprintf(fname, sizeof(fname), "%s/stations", buf);
+	res = snprintf(fname, sizeof(fname), "%s/stations", buf);
+	if (res < 0 || res >= sizeof(fname))
+		return -1;
 	f = fopen(fname, "r");
 	if (!f) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
@@ -593,7 +598,7 @@ static int wil6210_transmit_frame(struct sigma_dut *dut, int freq,
 {
 	char buf[128], fname[128];
 	FILE *f;
-	int res = 0;
+	int res = 0, r;
 	size_t written;
 
 	if (wil6210_get_debugfs_dir(dut, buf, sizeof(buf))) {
@@ -601,7 +606,9 @@ static int wil6210_transmit_frame(struct sigma_dut *dut, int freq,
 				"failed to get wil6210 debugfs dir");
 		return -1;
 	}
-	snprintf(fname, sizeof(fname), "%s/tx_mgmt", buf);
+	r = snprintf(fname, sizeof(fname), "%s/tx_mgmt", buf);
+	if (r < 0 || r >= sizeof(fname))
+		return -1;
 
 	if (wil6210_remain_on_channel(dut, freq)) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
@@ -2826,8 +2833,11 @@ int ath6kl_client_uapsd(struct sigma_dut *dut, const char *intf, int uapsd)
 	ssize_t res;
 	FILE *f;
 
-	snprintf(path, sizeof(path), "/sys/class/net/%s/phy80211", intf);
-	res = readlink(path, path, sizeof(path));
+	res = snprintf(fname, sizeof(fname), "/sys/class/net/%s/phy80211",
+		       intf);
+	if (res < 0 || res >= sizeof(fname))
+		return 0;
+	res = readlink(fname, path, sizeof(path));
 	if (res < 0)
 		return 0; /* not ath6kl */
 
@@ -5187,7 +5197,8 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 {
 	const char *val;
 	int ampdu = -1, addbareject = -1;
-	char buf[30];
+	char buf[128];
+	int res;
 
 	val = get_param(cmd, "40_INTOLERANT");
 	if (val) {
@@ -5423,9 +5434,10 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 				sigma_dut_print(dut, DUT_MSG_ERROR,
 						"Failed to set RTS_FORCE 64");
 			}
-			snprintf(buf, sizeof(buf),
-				 "wifitool %s beeliner_fw_test 100 1", intf);
-			if (system(buf) != 0) {
+			res = snprintf(buf, sizeof(buf),
+				       "wifitool %s beeliner_fw_test 100 1",
+				       intf);
+			if (res < 0 || res >= sizeof(buf) || system(buf) != 0) {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
 						"wifitool beeliner_fw_test 100 1 failed");
 			}
@@ -5742,6 +5754,7 @@ static int wil6210_set_abft_len(struct sigma_dut *dut, int abft_len)
 {
 	char buf[128], fname[128];
 	FILE *f;
+	int res;
 
 	if (wil6210_get_debugfs_dir(dut, buf, sizeof(buf))) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
@@ -5749,7 +5762,9 @@ static int wil6210_set_abft_len(struct sigma_dut *dut, int abft_len)
 		return -1;
 	}
 
-	snprintf(fname, sizeof(fname), "%s/abft_len", buf);
+	res = snprintf(fname, sizeof(fname), "%s/abft_len", buf);
+	if (res < 0 || res >= sizeof(fname))
+		return -1;
 	f = fopen(fname, "w");
 	if (!f) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
@@ -8690,7 +8705,7 @@ static int wil6210_send_addba(struct sigma_dut *dut, const char *dest_mac,
 	FILE *f;
 	regex_t re;
 	regmatch_t m[2];
-	int rc, ret = -1, vring_id, found;
+	int rc, ret = -1, vring_id, found, res;
 
 	if (wil6210_get_debugfs_dir(dut, dir, sizeof(dir))) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
@@ -8698,12 +8713,16 @@ static int wil6210_send_addba(struct sigma_dut *dut, const char *dest_mac,
 		return -1;
 	}
 
-	snprintf(buf, sizeof(buf), "%s/vrings", dir);
+	res = snprintf(buf, sizeof(buf), "%s/vrings", dir);
+	if (res < 0 || res >= sizeof(buf))
+		return -1;
 	f = fopen(buf, "r");
 	if (!f) {
 		sigma_dut_print(dut, DUT_MSG_ERROR, "failed to open: %s", buf);
 		/* newer wil6210 driver renamed file to "rings" */
-		snprintf(buf, sizeof(buf), "%s/rings", dir);
+		res = snprintf(buf, sizeof(buf), "%s/rings", dir);
+		if (res < 0 || res >= sizeof(buf))
+			return -1;
 		f = fopen(buf, "r");
 		if (!f) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
@@ -8752,7 +8771,9 @@ static int wil6210_send_addba(struct sigma_dut *dut, const char *dest_mac,
 
 	/* send the addba command */
 	fclose(f);
-	snprintf(buf, sizeof(buf), "%s/back", dir);
+	res = snprintf(buf, sizeof(buf), "%s/back", dir);
+	if (res < 0 || res >= sizeof(buf))
+		return -1;
 	f = fopen(buf, "w");
 	if (!f) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
@@ -11777,7 +11798,7 @@ static int cmd_sta_hs2_associate(struct sigma_dut *dut,
 	const char *val = get_param(cmd, "Ignore_blacklist");
 	const char *band = get_param(cmd, "Band");
 	struct wpa_ctrl *ctrl;
-	int res;
+	int res, r;
 	char bssid[20], ssid[40], resp[100], buf[100], blacklisted[100];
 	int tries = 0;
 	int ignore_blacklist = 0;
@@ -11844,9 +11865,9 @@ try_again:
 			*end = '\0';
 		sigma_dut_print(dut, DUT_MSG_DEBUG, "Try to connect to a blacklisted network: %s",
 				blacklisted);
-		snprintf(buf, sizeof(buf), "INTERWORKING_CONNECT %s",
-			 blacklisted);
-		if (wpa_command(intf, buf)) {
+		r = snprintf(buf, sizeof(buf), "INTERWORKING_CONNECT %s",
+			     blacklisted);
+		if (r < 0 || r >= sizeof(buf) || wpa_command(intf, buf)) {
 			send_resp(dut, conn, SIGMA_ERROR, "errorCode,Failed to start Interworking connection to blacklisted network");
 			wpa_ctrl_detach(ctrl);
 			wpa_ctrl_close(ctrl);

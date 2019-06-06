@@ -82,12 +82,13 @@ static enum sigma_cmd_result cmd_device_get_info(struct sigma_dut *dut,
 #ifdef __linux__
 	char model_buf[128];
 	char ver_buf[256];
+	int res;
 #endif /* __linux__ */
 	char resp[512];
 
 #ifdef __linux__
 	{
-		char path[128];
+		char fname[128], path[128];
 		struct stat s;
 		FILE *f;
 		char compat_ver[128];
@@ -100,13 +101,16 @@ static enum sigma_cmd_result cmd_device_get_info(struct sigma_dut *dut,
 		if (stat(path, &s) == 0) {
 			ssize_t res;
 			char *pos;
-			snprintf(path, sizeof(path),
-				 "/sys/class/net/%s/device/driver",
-				 get_main_ifname());
-			res = readlink(path, path, sizeof(path));
-			if (res < 0)
+
+			res = snprintf(fname, sizeof(fname),
+				       "/sys/class/net/%s/device/driver",
+				       get_main_ifname());
+			if (res < 0 || res >= sizeof(fname)) {
 				model = "Linux/";
-			else {
+			} else if ((res = readlink(fname, path,
+						   sizeof(path))) < 0) {
+				model = "Linux/";
+			} else {
 				if (res >= (int) sizeof(path))
 					res = sizeof(path) - 1;
 				path[res] = '\0';
@@ -163,7 +167,8 @@ static enum sigma_cmd_result cmd_device_get_info(struct sigma_dut *dut,
 			drvinfo.cmd = ETHTOOL_GDRVINFO;
 
 			memset(&ifr, 0, sizeof(ifr));
-			strcpy(ifr.ifr_name, get_main_ifname());
+			strlcpy(ifr.ifr_name, get_main_ifname(),
+				sizeof(ifr.ifr_name));
 
 			fd = socket(AF_INET, SOCK_DGRAM, 0);
 			if (fd < 0)
@@ -177,17 +182,19 @@ static enum sigma_cmd_result cmd_device_get_info(struct sigma_dut *dut,
 				close(fd);
 			}
 		}
-		snprintf(ver_buf, sizeof(ver_buf),
-			 "drv=%s%s%s%s%s%s%s/sigma=" SIGMA_DUT_VER "%s%s",
-			 compat_ver,
-			 wpa_supplicant_ver[0] ? "/wpas=" : "",
-			 wpa_supplicant_ver,
-			 hostapd_ver[0] ? "/hapd=" : "",
-			 hostapd_ver,
-			 host_fw_ver[0] ? "/wlan=" : "",
-			 host_fw_ver,
-			 dut->version ? "@" : "",
-			 dut->version ? dut->version : "");
+		res = snprintf(ver_buf, sizeof(ver_buf),
+			       "drv=%s%s%s%s%s%s%s/sigma=" SIGMA_DUT_VER "%s%s",
+			       compat_ver,
+			       wpa_supplicant_ver[0] ? "/wpas=" : "",
+			       wpa_supplicant_ver,
+			       hostapd_ver[0] ? "/hapd=" : "",
+			       hostapd_ver,
+			       host_fw_ver[0] ? "/wlan=" : "",
+			       host_fw_ver,
+			       dut->version ? "@" : "",
+			       dut->version ? dut->version : "");
+		if (res < 0 || res >= sizeof(ver_buf))
+			return ERROR_SEND_STATUS;
 		version = ver_buf;
 	}
 #endif /* __linux__ */

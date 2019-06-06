@@ -71,6 +71,7 @@ void sigma_dut_print(struct sigma_dut *dut, int level, const char *fmt, ...)
 	if (level < dut->debug_level)
 		return;
 
+	gettimeofday(&tv, NULL);
 #ifdef ANDROID
 	va_start(ap, fmt);
 	__android_log_vprint(level_to_android_priority(level),
@@ -78,10 +79,18 @@ void sigma_dut_print(struct sigma_dut *dut, int level, const char *fmt, ...)
 	va_end(ap);
 	if (!dut->stdout_debug)
 		return;
+#else /* ANDROID */
+	if (dut->log_file_fd) {
+		va_start(ap, fmt);
+		fprintf(dut->log_file_fd, "%ld.%06u: ",
+			(long) tv.tv_sec, (unsigned int) tv.tv_usec);
+		vfprintf(dut->log_file_fd, fmt, ap);
+		fprintf(dut->log_file_fd, "\n");
+		va_end(ap);
+	}
 #endif /* ANDROID */
 
 	va_start(ap, fmt);
-	gettimeofday(&tv, NULL);
 	printf("%ld.%06u: ", (long) tv.tv_sec,
 	       (unsigned int) tv.tv_usec);
 	vprintf(fmt, ap);
@@ -850,7 +859,7 @@ int main(int argc, char *argv[])
 
 	for (;;) {
 		c = getopt(argc, argv,
-			   "aAb:Bc:C:dDE:e:fF:gGhH:j:J:i:Ik:l:L:m:M:nN:o:O:p:P:qQr:R:s:S:tT:uv:VWw:x:y:z:");
+			   "aAb:Bc:C:dDE:e:fF:gGhH:j:J:i:Ik:K:l:L:m:M:nN:o:O:p:P:qQr:R:s:S:tT:uv:VWw:x:y:z:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -983,6 +992,9 @@ int main(int argc, char *argv[])
 		case 'O':
 			sigma_dut.version_name = optarg;
 			break;
+		case 'K':
+			sigma_dut.log_file_dir = optarg;
+			break;
 		case 'S':
 			sigma_station_ifname = optarg;
 			break;
@@ -1064,6 +1076,7 @@ int main(int argc, char *argv[])
 			       "\\\n"
 			       "       [-i <IP address of the AP>] \\\n"
 			       "       [-k <subnet mask for the AP>] \\\n"
+			       "       [-K <sigma_dut log file directory>] \\\n"
 			       "       [-e <hostapd entropy file>] \\\n"
 			       "       [-N <device_get_info vendor>] \\\n"
 			       "       [-o <device_get_info model>] \\\n"
@@ -1174,6 +1187,8 @@ int main(int argc, char *argv[])
 	free(sigma_dut.ap_sae_groups);
 	free(sigma_dut.dpp_peer_uri);
 	free(sigma_dut.ap_sae_passwords);
+	if (sigma_dut.log_file_fd)
+		fclose(sigma_dut.log_file_fd);
 #ifdef NL80211_SUPPORT
 	nl80211_deinit(&sigma_dut, sigma_dut.nl_ctx);
 #endif /* NL80211_SUPPORT */

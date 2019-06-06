@@ -7,6 +7,7 @@
  */
 
 #include "sigma_dut.h"
+#include <ctype.h>
 #include "miracast.h"
 #include <sys/wait.h>
 #include "wpa_ctrl.h"
@@ -201,19 +202,334 @@ static enum sigma_cmd_result cmd_dev_ble_action(struct sigma_dut *dut,
 }
 
 
+/* Runtime ID must contain only numbers */
+static int is_runtime_id_valid(struct sigma_dut *dut, const char *val)
+{
+	int i;
+
+	for (i = 0; val[i] != '\0'; i++) {
+		if (!isdigit(val[i])) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"Invalid Runtime_ID %s", val);
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+
+static int build_log_dir(struct sigma_dut *dut, char *dir, size_t dir_size)
+{
+	int res;
+	const char *vendor;
+	int i;
+
+	vendor = dut->vendor_name ? dut->vendor_name : "Qualcomm";
+
+	if (dut->log_file_dir) {
+		res = snprintf(dir, dir_size, "%s/%s", dut->log_file_dir,
+			       vendor);
+	} else {
+#ifdef ANDROID
+		res = snprintf(dir, dir_size, "/data/vendor/wifi/%s",
+			       vendor);
+#else /* ANDROID */
+		res = snprintf(dir, dir_size, "/var/log/%s", vendor);
+#endif /* ANDROID */
+	}
+
+	if (res < 0 || res >= dir_size)
+		return -1;
+
+	/* Check for valid vendor name in log dir path since the log dir
+	 * (/var/log/vendor) is deleted in dev_stop routine. This check is to
+	 * avoid any unintended file deletion.
+	 */
+	for (i = 0; vendor[i] != '\0'; i++) {
+		if (!isalpha(vendor[i])) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"Invalid char %c in vendor name %s",
+					vendor[i], vendor);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+
+/* User has to redirect wpa_supplicant logs to the following file. */
+#ifndef WPA_SUPPLICANT_LOG_FILE
+#define WPA_SUPPLICANT_LOG_FILE "/var/log/supplicant_log/wpa_log.txt"
+#endif /* WPA_SUPPLICANT_LOG_FILE */
 
 static enum sigma_cmd_result cmd_dev_start_test(struct sigma_dut *dut,
 						struct sigma_conn *conn,
 						struct sigma_cmd *cmd)
 {
+	const char *val;
+	char buf[250];
+	char dir[200];
+	FILE *supp_log;
+	int res;
+
+	val = get_param(cmd, "Runtime_ID");
+	if (!(val && is_runtime_id_valid(dut, val)))
+		return INVALID_SEND_STATUS;
+
+	if (build_log_dir(dut, dir, sizeof(dir)) < 0)
+		return ERROR_SEND_STATUS;
+
+	supp_log = fopen(WPA_SUPPLICANT_LOG_FILE, "r");
+	if (!supp_log) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to open wpa_log file %s",
+				WPA_SUPPLICANT_LOG_FILE);
+	} else {
+		/* Get the wpa_supplicant log file size */
+		if (fseek(supp_log, 0, SEEK_END))
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to get file size for read");
+		else
+			dut->wpa_log_size = ftell(supp_log);
+
+		fclose(supp_log);
+	}
+
+	strlcpy(dut->dev_start_test_runtime_id, val,
+		sizeof(dut->dev_start_test_runtime_id));
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "Runtime_ID %s",
+			dut->dev_start_test_runtime_id);
+
+	run_system_wrapper(dut, "rm -rf %s", dir);
+	run_system_wrapper(dut, "mkdir -p %s", dir);
+
+#ifdef ANDROID
+	run_system_wrapper(dut, "logcat -v time > %s/logcat_%s.txt &",
+			   dir, dut->dev_start_test_runtime_id);
+#else /* ANDROID */
+	/* Open log file for sigma_dut logs. This is not needed for Android, as
+	 * we are already collecting logcat. */
+	res = snprintf(buf, sizeof(buf), "%s/sigma_%s.txt", dir,
+		       dut->dev_start_test_runtime_id);
+	if (res >= 0 && res < sizeof(buf)) {
+		if (dut->log_file_fd)
+			fclose(dut->log_file_fd);
+
+		dut->log_file_fd = fopen(buf, "a");
+		if (!dut->log_file_fd)
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to create sigma_dut log %s",
+					buf);
+	}
+
+	run_system_wrapper(dut, "killall -9 cnss_diag_lite");
+	run_system_wrapper(dut,
+			   "cnss_diag_lite -c -x 31 > %s/cnss_diag_id_%s.txt &",
+			   dir, dut->dev_start_test_runtime_id);
+#endif /* ANDROID */
+
 	return SUCCESS_SEND_STATUS;
 }
+
+
+static int is_allowed_char(char ch)
+{
+	return strchr("./-_", ch) != NULL;
+}
+
+
+static int is_destpath_valid(struct sigma_dut *dut, const char *val)
+{
+	int i;
+
+	for (i = 0; val[i] != '\0'; i++) {
+		if (!(isalnum(val[i]) || is_allowed_char(val[i]))) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"Invalid char %c in destpath %s",
+					val[i], val);
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+
+#ifndef ANDROID
+#define SUPP_LOG_BUFF_SIZE 4 * 1024
+
+static int save_supplicant_log(struct sigma_dut *dut)
+{
+	char dir[200];
+	char buf[300];
+	FILE *wpa_log = NULL;
+	FILE *supp_log;
+	char *buff_ptr = NULL;
+	unsigned int file_size;
+	unsigned int file_size_orig;
+	int status = -1, res;
+
+	if (build_log_dir(dut, dir, sizeof(dir)) < 0)
+		return -1;
+
+	res = snprintf(buf, sizeof(buf), "%s/wpa_supplicant_log_%s.txt", dir,
+		       dut->dev_start_test_runtime_id);
+	if (res < 0 || res >= sizeof(buf))
+		return -1;
+
+	supp_log = fopen(WPA_SUPPLICANT_LOG_FILE, "r");
+	if (!supp_log) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to open wpa_log file %s",
+				WPA_SUPPLICANT_LOG_FILE);
+		return -1;
+	}
+
+	/* Get the wpa_supplicant log file size */
+	if (fseek(supp_log, 0, SEEK_END)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to get file size for read");
+		goto exit;
+	}
+	file_size_orig = ftell(supp_log);
+
+	if (file_size_orig < dut->wpa_log_size) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"file size err, new size %u, old size %u",
+				file_size_orig, dut->wpa_log_size);
+		goto exit;
+	}
+
+	/* Get the wpa_supplicant file size for current test */
+	file_size = file_size_orig - dut->wpa_log_size;
+
+	wpa_log = fopen(buf, "w");
+	if (!wpa_log) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to create tmp wpa_log file %s", buf);
+		goto exit;
+	}
+
+	if (fseek(supp_log, dut->wpa_log_size, SEEK_SET)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to set wpa_log file ptr for read");
+		goto exit;
+	}
+
+	buff_ptr = malloc(SUPP_LOG_BUFF_SIZE);
+	if (!buff_ptr) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to alloc buffer of size %d",
+				SUPP_LOG_BUFF_SIZE);
+		goto exit;
+	}
+
+	/* Read wpa_supplicant log file in 4K byte chunks */
+	do {
+		unsigned int num_bytes_to_read;
+		unsigned int bytes_read;
+
+		num_bytes_to_read = (file_size > SUPP_LOG_BUFF_SIZE) ?
+			SUPP_LOG_BUFF_SIZE : file_size;
+		bytes_read = fread(buff_ptr, 1, num_bytes_to_read, supp_log);
+		if (!bytes_read) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to read wpa_supplicant log");
+			goto exit;
+		}
+		if (bytes_read != num_bytes_to_read) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"wpa_supplicant log read err, read %d, num_bytes_to_read %d",
+					bytes_read, num_bytes_to_read);
+			goto exit;
+		}
+		fwrite(buff_ptr, 1, bytes_read, wpa_log);
+		file_size -= bytes_read;
+	} while (file_size > 0);
+	status = 0;
+
+exit:
+	if (wpa_log)
+		fclose(wpa_log);
+	fclose(supp_log);
+	free(buff_ptr);
+
+	return status;
+}
+#endif /* !ANDROID */
 
 
 static enum sigma_cmd_result cmd_dev_stop_test(struct sigma_dut *dut,
 					       struct sigma_conn *conn,
 					       struct sigma_cmd *cmd)
 {
+	const char *val;
+	char buf[300];
+	char out_file[100];
+	char dir[200];
+	int res;
+
+	val = get_param(cmd, "Runtime_ID");
+	if (!val || strcmp(val, dut->dev_start_test_runtime_id) != 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "Invalid runtime id");
+		return ERROR_SEND_STATUS;
+	}
+
+	if (build_log_dir(dut, dir, sizeof(dir)) < 0)
+		return ERROR_SEND_STATUS;
+
+#ifdef ANDROID
+	/* Copy all cnss_diag logs to dir */
+	run_system_wrapper(dut, "cp -a /data/vendor/wifi/wlan_logs/* %s", dir);
+#else /* ANDROID */
+	if (dut->log_file_fd) {
+		fclose(dut->log_file_fd);
+		dut->log_file_fd = NULL;
+	}
+	if (save_supplicant_log(dut))
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to save wpa_supplicant log");
+#endif /* ANDROID */
+
+	res = snprintf(out_file, sizeof(out_file), "%s_%s_%s.tar.gz",
+		       dut->vendor_name ? dut->vendor_name : "Qualcomm",
+		       dut->model_name ? dut->model_name : "Unknown",
+		       dut->dev_start_test_runtime_id);
+	if (res < 0 || res >= sizeof(out_file))
+	    return ERROR_SEND_STATUS;
+
+	if (run_system_wrapper(dut, "tar -czvf %s/../%s %s", dir, out_file,
+			       dir) < 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to create tar: %s",
+				buf);
+		return ERROR_SEND_STATUS;
+	}
+
+	val = get_param(cmd, "destpath");
+	if (!(val && is_destpath_valid(dut, val))) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG, "Invalid path for TFTP %s",
+				val);
+		return ERROR_SEND_STATUS;
+	}
+
+	res = snprintf(buf, sizeof(buf), "tftp %s -c put %s/%s %s/%s",
+		       inet_ntoa(conn->addr.sin_addr), dir, out_file, val,
+		       out_file);
+	if (res < 0 || res >= sizeof(buf))
+		return ERROR_SEND_STATUS;
+	if (run_system_wrapper(dut, buf) < 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"TFTP file transfer failed: %s", buf);
+		return ERROR_SEND_STATUS;
+	}
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "TFTP file transfer: %s", buf);
+	snprintf(buf, sizeof(buf), "filename,%s", out_file);
+	send_resp(dut, conn, SIGMA_COMPLETE, buf);
+	run_system_wrapper(dut, "rm -f %s/../%s", dir, out_file);
+	run_system_wrapper(dut, "rm -rf %s", dir);
+
 	return SUCCESS_SEND_STATUS;
 }
 

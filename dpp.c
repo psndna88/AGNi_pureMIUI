@@ -69,6 +69,7 @@ static int dpp_get_local_bootstrap(struct sigma_dut *dut,
 	const char *chan_list = get_param(cmd, "DPPChannelList");
 	char *pos, mac[50], buf[200], resp[1000], hex[2000];
 	const char *ifname = get_station_ifname();
+	int res;
 
 	if (success)
 		*success = 0;
@@ -118,9 +119,9 @@ static int dpp_get_local_bootstrap(struct sigma_dut *dut,
 	if (chan_list &&
 	    (strcmp(chan_list, "0/0") == 0 || chan_list[0] == '\0')) {
 		/* No channel list */
-		snprintf(buf, sizeof(buf),
-			 "DPP_BOOTSTRAP_GEN type=qrcode curve=%s mac=%s",
-			 curve, mac);
+		res = snprintf(buf, sizeof(buf),
+			       "DPP_BOOTSTRAP_GEN type=qrcode curve=%s mac=%s",
+			       curve, mac);
 	} else if (chan_list) {
 		/* Channel list override (CTT case) - space separated tuple(s)
 		 * of OperatingClass/Channel; convert to wpa_supplicant/hostapd
@@ -130,17 +131,18 @@ static int dpp_get_local_bootstrap(struct sigma_dut *dut,
 			if (*pos == ' ')
 				*pos = ',';
 		}
-		snprintf(buf, sizeof(buf),
-			 "DPP_BOOTSTRAP_GEN type=qrcode curve=%s chan=%s mac=%s",
-			 curve, resp, mac);
+		res = snprintf(buf, sizeof(buf),
+			       "DPP_BOOTSTRAP_GEN type=qrcode curve=%s chan=%s mac=%s",
+			       curve, resp, mac);
 	} else {
 		/* Default channel list (normal DUT case) */
-		snprintf(buf, sizeof(buf),
-			 "DPP_BOOTSTRAP_GEN type=qrcode curve=%s chan=81/11 mac=%s",
-			 curve, mac);
+		res = snprintf(buf, sizeof(buf),
+			       "DPP_BOOTSTRAP_GEN type=qrcode curve=%s chan=81/11 mac=%s",
+			       curve, mac);
 	}
 
-	if (wpa_command_resp(ifname, buf, resp, sizeof(resp)) < 0)
+	if (res < 0 || res >= sizeof(buf) ||
+	    wpa_command_resp(ifname, buf, resp, sizeof(resp)) < 0)
 		return -2;
 	if (strncmp(resp, "FAIL", 4) == 0)
 		return -2;
@@ -156,8 +158,9 @@ static int dpp_get_local_bootstrap(struct sigma_dut *dut,
 
 	if (send_result) {
 		ascii2hexstr(resp, hex);
-		snprintf(resp, sizeof(resp), "BootstrappingData,%s", hex);
-		send_resp(dut, conn, SIGMA_COMPLETE, resp);
+		res = snprintf(resp, sizeof(resp), "BootstrappingData,%s", hex);
+		send_resp(dut, conn, SIGMA_COMPLETE,
+			  res >= 0 && res < sizeof(resp) ? resp : NULL);
 	}
 
 	if (success)
@@ -1048,7 +1051,9 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		break;
 	case 1:
 		ascii2hexstr("DPPNET01", buf);
-		snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		res = snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		if (res < 0 || res >= sizeof(conf_ssid))
+			goto err;
 		if (enrollee_ap) {
 			conf_role = "ap-dpp";
 		} else {
@@ -1058,7 +1063,9 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		break;
 	case 2:
 		ascii2hexstr("DPPNET01", buf);
-		snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		res = snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		if (res < 0 || res >= sizeof(conf_ssid))
+			goto err;
 		snprintf(conf_pass, sizeof(conf_pass),
 			 "psk=10506e102ad1e7f95112f6b127675bb8344dacacea60403f3fa4055aec85b0fc");
 		if (enrollee_ap)
@@ -1068,9 +1075,13 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		break;
 	case 3:
 		ascii2hexstr("DPPNET01", buf);
-		snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		res = snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		if (res < 0 || res >= sizeof(conf_ssid))
+			goto err;
 		ascii2hexstr("ThisIsDppPassphrase", buf);
-		snprintf(conf_pass, sizeof(conf_pass), "pass=%s", buf);
+		res = snprintf(conf_pass, sizeof(conf_pass), "pass=%s", buf);
+		if (res < 0 || res >= sizeof(conf_pass))
+			goto err;
 		if (enrollee_ap)
 			conf_role = "ap-psk";
 		else
@@ -1078,7 +1089,9 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		break;
 	case 4:
 		ascii2hexstr("DPPNET01", buf);
-		snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		res = snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		if (res < 0 || res >= sizeof(conf_ssid))
+			goto err;
 		if (enrollee_ap) {
 			conf_role = "ap-dpp";
 		} else {
@@ -1088,9 +1101,13 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		break;
 	case 5:
 		ascii2hexstr("DPPNET01", buf);
-		snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		res = snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		if (res < 0 || res >= sizeof(conf_ssid))
+			goto err;
 		ascii2hexstr("ThisIsDppPassphrase", buf);
-		snprintf(conf_pass, sizeof(conf_pass), "pass=%s", buf);
+		res = snprintf(conf_pass, sizeof(conf_pass), "pass=%s", buf);
+		if (res < 0 || res >= sizeof(conf_pass))
+			goto err;
 		if (enrollee_ap)
 			conf_role = "ap-sae";
 		else
@@ -1098,9 +1115,13 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		break;
 	case 6:
 		ascii2hexstr("DPPNET01", buf);
-		snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		res = snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		if (res < 0 || res >= sizeof(conf_ssid))
+			goto err;
 		ascii2hexstr("ThisIsDppPassphrase", buf);
-		snprintf(conf_pass, sizeof(conf_pass), "pass=%s", buf);
+		res = snprintf(conf_pass, sizeof(conf_pass), "pass=%s", buf);
+		if (res < 0 || res >= sizeof(conf_pass))
+			goto err;
 		if (enrollee_ap)
 			conf_role = "ap-psk-sae";
 		else
@@ -1108,7 +1129,9 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		break;
 	case 7:
 		ascii2hexstr("DPPNET01", buf);
-		snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		res = snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		if (res < 0 || res >= sizeof(conf_ssid))
+			goto err;
 		if (enrollee_ap) {
 			conf_role = "ap-dpp";
 		} else {
@@ -1802,6 +1825,9 @@ out:
 	wpa_ctrl_close(ctrl);
 	dut->default_timeout = old_timeout;
 	return 0;
+err:
+	send_resp(dut, conn, SIGMA_ERROR, NULL);
+	goto out;
 }
 
 
