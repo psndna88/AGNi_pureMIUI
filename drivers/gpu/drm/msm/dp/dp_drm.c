@@ -14,6 +14,9 @@
 
 #define pr_fmt(fmt)	"[drm-dp]: %s: " fmt, __func__
 
+#if defined(CONFIG_ANDROID) && !defined(CONFIG_DEBUG_FS)
+#define CONFIG_DEBUG_FS
+#endif
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_atomic.h>
 #include <drm/drm_crtc.h>
