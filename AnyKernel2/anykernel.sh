@@ -1,4 +1,4 @@
-# AnyKernel2 Ramdisk Mod Script
+# AnyKernel3 Ramdisk Mod Script
 # osm0sis @ xda-developers
 
 ## AnyKernel setup
@@ -24,7 +24,7 @@ is_slot_device=0;
 
 ## AnyKernel methods (DO NOT CHANGE)
 # import patching functions/variables - see for reference
-. /tmp/anykernel/tools/ak2-core.sh;
+. tools/ak3-core.sh;
 
 
 ## AnyKernel install
