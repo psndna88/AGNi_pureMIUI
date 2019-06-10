@@ -1140,6 +1140,22 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		group_id_str = "DPPGROUP_DPP_INFRA";
 		force_gas_fragm = 1;
 		break;
+	case 8:
+		ascii2hexstr("DPPNET01", buf);
+		res = snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		if (res < 0 || res >= sizeof(conf_ssid))
+			goto err;
+		ascii2hexstr("This_is_legacy_password", buf);
+		res = snprintf(conf_pass, sizeof(conf_pass), "pass=%s", buf);
+		if (res < 0 || res >= sizeof(conf_pass))
+			goto err;
+		if (enrollee_ap) {
+			conf_role = "ap-dpp+psk+sae";
+		} else {
+			conf_role = "sta-dpp+psk+sae";
+		}
+		group_id_str = "DPPGROUP_DPP_INFRA1";
+		break;
 	default:
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Unsupported DPPConfIndex");
