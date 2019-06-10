@@ -107,12 +107,16 @@ struct kgsl_drawobj_sync {
 
 #define KGSL_FENCE_NAME_LEN 74
 
+#ifdef CONFIG_FENCE_DEBUG
 struct fence_info {
 	char name[KGSL_FENCE_NAME_LEN];
 };
+#endif
 
 struct event_fence_info {
+#ifdef CONFIG_FENCE_DEBUG
 	struct fence_info *fences;
+#endif
 	int num_fences;
 };
 
