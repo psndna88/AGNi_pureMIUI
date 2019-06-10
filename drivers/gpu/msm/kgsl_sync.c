@@ -318,32 +318,40 @@ static const char *kgsl_sync_fence_driver_name(struct dma_fence *fence)
 
 static const char *kgsl_sync_timeline_name(struct dma_fence *fence)
 {
+#ifdef CONFIG_FENCE_DEBUG
 	struct kgsl_sync_fence *kfence = (struct kgsl_sync_fence *)fence;
 	struct kgsl_sync_timeline *ktimeline = kfence->parent;
 
 	return ktimeline->name;
+#else
+	return "kgsl_sync_timeline";
+#endif
 }
 
 int kgsl_sync_timeline_create(struct kgsl_context *context)
 {
 	struct kgsl_sync_timeline *ktimeline;
 
+#ifdef CONFIG_FENCE_DEBUG
 	/*
 	 * Generate a name which includes the thread name, thread id, process
 	 * name, process id, and context id. This makes it possible to
 	 * identify the context of a timeline in the sync dump.
 	 */
 	char ktimeline_name[sizeof(ktimeline->name)] = {};
+#endif
 
 	/* Put context when timeline is released */
 	if (!_kgsl_context_get(context))
 		return -ENOENT;
 
+#ifdef CONFIG_FENCE_DEBUG
 	snprintf(ktimeline_name, sizeof(ktimeline_name),
 		"%s_%d-%.15s(%d)-%.15s(%d)",
 		context->device->name, context->id,
 		current->group_leader->comm, current->group_leader->pid,
 		current->comm, current->pid);
+#endif
 
 	ktimeline = kzalloc(sizeof(*ktimeline), GFP_KERNEL);
 	if (ktimeline == NULL) {
@@ -352,7 +360,9 @@ int kgsl_sync_timeline_create(struct kgsl_context *context)
 	}
 
 	kref_init(&ktimeline->kref);
+#ifdef CONFIG_FENCE_DEBUG
 	strlcpy(ktimeline->name, ktimeline_name, KGSL_TIMELINE_NAME_LEN);
+#endif
 	ktimeline->fence_context = dma_fence_context_alloc(1);
 	ktimeline->last_timestamp = 0;
 	INIT_LIST_HEAD(&ktimeline->child_list_head);
@@ -440,6 +450,7 @@ static void kgsl_sync_fence_callback(struct dma_fence *fence,
 	}
 }
 
+#ifdef CONFIG_FENCE_DEBUG
 static void kgsl_get_fence_names(struct dma_fence *fence,
 	struct event_fence_info *info_ptr)
 {
@@ -485,6 +496,7 @@ static void kgsl_get_fence_names(struct dma_fence *fence,
 		}
 	}
 }
+#endif
 
 struct kgsl_sync_fence_cb *kgsl_sync_fence_async_wait(int fd,
 	bool (*func)(void *priv), void *priv, struct event_fence_info *info_ptr)
@@ -508,7 +520,9 @@ struct kgsl_sync_fence_cb *kgsl_sync_fence_async_wait(int fd,
 	kcb->priv = priv;
 	kcb->func = func;
 
+#ifdef CONFIG_FENCE_DEBUG
 	kgsl_get_fence_names(fence, info_ptr);
+#endif
 
 	/* if status then error or signaled */
 	status = dma_fence_add_callback(fence, &kcb->fence_cb,
