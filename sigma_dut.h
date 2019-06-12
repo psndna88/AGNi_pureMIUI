@@ -952,9 +952,11 @@ int run_system_wrapper(struct sigma_dut *dut, const char *cmd, ...);
 int run_iwpriv(struct sigma_dut *dut, const char *ifname, const char *cmd, ...);
 int cmd_wlantest_set_channel(struct sigma_dut *dut, struct sigma_conn *conn,
 			     struct sigma_cmd *cmd);
+void wlantest_register_cmds(void);
 void sniffer_close(struct sigma_dut *dut);
 
 /* ap.c */
+void ap_register_cmds(void);
 void ath_disable_txbf(struct sigma_dut *dut, const char *intf);
 void ath_config_dyn_bw_sig(struct sigma_dut *dut, const char *ifname,
 			   const char *val);
@@ -966,6 +968,7 @@ int ap_wps_registration(struct sigma_dut *dut, struct sigma_conn *conn,
 			struct sigma_cmd *cmd);
 
 /* sta.c */
+void sta_register_cmds(void);
 int set_ps(const char *intf, struct sigma_dut *dut, int enabled);
 void ath_set_zero_crc(struct sigma_dut *dut, const char *val);
 void ath_set_cts_width(struct sigma_dut *dut, const char *ifname,
@@ -989,6 +992,7 @@ int sta_extract_60g_ese(struct sigma_dut *dut, struct sigma_cmd *cmd,
 int wil6210_set_force_mcs(struct sigma_dut *dut, int force, int mcs);
 
 /* p2p.c */
+void p2p_register_cmds(void);
 int p2p_cmd_sta_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
 			      struct sigma_cmd *cmd);
 void p2p_create_event_thread(struct sigma_dut *dut);
@@ -1002,6 +1006,7 @@ enum sigma_cmd_result cmd_sta_p2p_reset(struct sigma_dut *dut,
 					struct sigma_cmd *cmd);
 
 /* basic.c */
+void basic_register_cmds(void);
 void get_ver(const char *cmd, char *buf, size_t buflen);
 
 /* utils.c */
@@ -1081,5 +1086,14 @@ int send_and_recv_msgs(struct sigma_dut *dut, struct nl80211_ctx *ctx,
 		       int (*valid_handler)(struct nl_msg *, void *),
 		       void *valid_data);
 #endif /* NL80211_SUPPORT */
+
+void traffic_register_cmds(void);
+void traffic_agent_register_cmds(void);
+void powerswitch_register_cmds(void);
+void atheros_register_cmds(void);
+void dev_register_cmds(void);
+void sniffer_register_cmds(void);
+void server_register_cmds(void);
+void miracast_register_cmds(void);
 
 #endif /* SIGMA_DUT_H */
