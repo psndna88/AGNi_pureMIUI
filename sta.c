@@ -2334,6 +2334,8 @@ ca_cert_selected:
 	if (erp && set_network(ifname, id, "erp", "1") < 0)
 		return ERROR_SEND_STATUS;
 
+	dut->sta_associate_wait_connect = 1;
+
 	return id;
 }
 
@@ -3221,6 +3223,12 @@ static int cmd_sta_associate(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *network_mode = get_param(cmd, "network_mode");
 	int wps = 0;
 	char buf[1000], extra[50];
+	int e;
+	enum sigma_cmd_result ret = SUCCESS_SEND_STATUS;
+	struct wpa_ctrl *ctrl = NULL;
+	int num_network_not_found = 0;
+	int num_disconnected = 0;
+	int tod = -1;
 
 	if (ssid == NULL)
 		return -1;
@@ -3300,6 +3308,13 @@ static int cmd_sta_associate(struct sigma_dut *dut, struct sigma_conn *conn,
 			return 0;
 		}
 
+		if (dut->program == PROGRAM_WPA3 &&
+		    dut->sta_associate_wait_connect) {
+			ctrl = open_wpa_mon(get_station_ifname());
+			if (!ctrl)
+				return ERROR_SEND_STATUS;
+		}
+
 		extra[0] = '\0';
 		if (chan)
 			snprintf(extra, sizeof(extra), " freq=%u",
@@ -3311,11 +3326,109 @@ static int cmd_sta_associate(struct sigma_dut *dut, struct sigma_conn *conn,
 					"network id %d on %s",
 					dut->infra_network_id,
 					get_station_ifname());
-			return -2;
+			ret = ERROR_SEND_STATUS;
+			goto done;
 		}
 	}
 
-	return 1;
+	if (!ctrl)
+		return SUCCESS_SEND_STATUS;
+
+	/* Wait for connection result to be able to store server certificate
+	 * hash for trust root override testing
+	 * (dev_exec_action,ServerCertTrust). */
+
+	for (e = 0; e < 20; e++) {
+		const char *events[] = {
+			"CTRL-EVENT-EAP-PEER-CERT",
+			"CTRL-EVENT-EAP-TLS-CERT-ERROR",
+			"CTRL-EVENT-DISCONNECTED",
+			"CTRL-EVENT-CONNECTED",
+			"CTRL-EVENT-NETWORK-NOT-FOUND",
+			NULL
+		};
+		char buf[1024];
+		int res;
+
+		res = get_wpa_cli_events(dut, ctrl, events, buf, sizeof(buf));
+		if (res < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Association did not complete");
+			ret = STATUS_SENT_ERROR;
+			break;
+		}
+		sigma_dut_print(dut, DUT_MSG_DEBUG, "Connection event: %s",
+				buf);
+
+		if (strstr(buf, "CTRL-EVENT-EAP-PEER-CERT") &&
+		    strstr(buf, " depth=0")) {
+			char *pos = strstr(buf, " hash=");
+
+			if (pos) {
+				char *end;
+
+				tod = strstr(buf, " tod=1") != NULL;
+				sigma_dut_print(dut, DUT_MSG_DEBUG,
+						"Server certificate TOD policy: %d",
+						tod);
+
+				pos += 6;
+				end = strchr(pos, ' ');
+				if (end)
+					*end = '\0';
+				strlcpy(dut->server_cert_hash, pos,
+					sizeof(dut->server_cert_hash));
+				sigma_dut_print(dut, DUT_MSG_DEBUG,
+						"Server certificate hash: %s",
+						dut->server_cert_hash);
+			}
+		}
+
+		if (strstr(buf, "CTRL-EVENT-EAP-TLS-CERT-ERROR")) {
+			send_resp(dut, conn, SIGMA_COMPLETE,
+				  "Result,TLS server certificate validation failed");
+			ret = STATUS_SENT_ERROR;
+			break;
+		}
+
+		if (strstr(buf, "CTRL-EVENT-NETWORK-NOT-FOUND")) {
+			num_network_not_found++;
+
+			if (num_network_not_found > 2) {
+				send_resp(dut, conn, SIGMA_COMPLETE,
+					  "Result,Network not found");
+				ret = STATUS_SENT_ERROR;
+				break;
+			}
+		}
+
+		if (strstr(buf, "CTRL-EVENT-DISCONNECTED")) {
+			num_disconnected++;
+
+			if (num_disconnected > 2) {
+				send_resp(dut, conn, SIGMA_COMPLETE,
+					  "Result,Connection failed");
+				ret = STATUS_SENT_ERROR;
+				break;
+			}
+		}
+
+		if (strstr(buf, "CTRL-EVENT-CONNECTED")) {
+			if (tod >= 0) {
+				sigma_dut_print(dut, DUT_MSG_DEBUG,
+						"Network profile TOD policy update: %d -> %d",
+						dut->sta_tod_policy, tod);
+				dut->sta_tod_policy = tod;
+			}
+			break;
+		}
+	}
+done:
+	if (ctrl) {
+		wpa_ctrl_detach(ctrl);
+		wpa_ctrl_close(ctrl);
+	}
+	return ret;
 }
 
 
@@ -7515,6 +7628,10 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 
 	free(dut->sae_commit_override);
 	dut->sae_commit_override = NULL;
+
+	dut->sta_associate_wait_connect = 0;
+	dut->server_cert_hash[0] = '\0';
+	dut->sta_tod_policy = 0;
 
 	dut->dpp_conf_id = -1;
 	free(dut->dpp_peer_uri);
