@@ -7443,8 +7443,6 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 						   struct sigma_conn *conn,
 						   struct sigma_cmd *cmd)
 {
-	int cmd_sta_p2p_reset(struct sigma_dut *dut, struct sigma_conn *conn,
-			      struct sigma_cmd *cmd);
 	const char *intf = get_param(cmd, "Interface");
 	const char *band = get_param(cmd, "band");
 	const char *type;

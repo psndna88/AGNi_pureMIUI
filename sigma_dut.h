@@ -997,6 +997,9 @@ void start_dhcp(struct sigma_dut *dut, const char *group_ifname, int go);
 void stop_dhcp(struct sigma_dut *dut, const char *group_ifname, int go);
 int p2p_discover_peer(struct sigma_dut *dut, const char *ifname,
 		      const char *peer, int full);
+enum sigma_cmd_result cmd_sta_p2p_reset(struct sigma_dut *dut,
+					struct sigma_conn *conn,
+					struct sigma_cmd *cmd);
 
 /* basic.c */
 void get_ver(const char *cmd, char *buf, size_t buflen);
