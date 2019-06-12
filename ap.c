@@ -10241,8 +10241,8 @@ void novap_reset(struct sigma_dut *dut, const char *ifname)
 }
 
 
-struct mbo_pref_ap * mbo_find_nebor_ap_entry(struct sigma_dut *dut,
-					     const uint8_t *mac_addr)
+static struct mbo_pref_ap * mbo_find_nebor_ap_entry(struct sigma_dut *dut,
+						    const uint8_t *mac_addr)
 {
 	int i;
 
