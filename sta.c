@@ -2087,7 +2087,7 @@ static int cmd_sta_set_psk(struct sigma_dut *dut, struct sigma_conn *conn,
 			if (set_network(ifname, id, "key_mgmt",
 					"FT-SAE FT-PSK") < 0)
 				return -2;
-		} else {
+		} else if (!akm) {
 			if (set_network(ifname, id, "key_mgmt",
 					"SAE WPA-PSK") < 0)
 				return -2;
@@ -2111,8 +2111,9 @@ static int cmd_sta_set_psk(struct sigma_dut *dut, struct sigma_conn *conn,
 	} else if (val && strcasecmp(val, "wpa2-ft") == 0) {
 		if (set_network(ifname, id, "key_mgmt", "FT-PSK") < 0)
 			return -2;
-	} else if ((val && strcasecmp(val, "wpa2-sha256") == 0) ||
-		   dut->sta_pmf == STA_PMF_REQUIRED) {
+	} else if (!akm &&
+		   ((val && strcasecmp(val, "wpa2-sha256") == 0) ||
+		    dut->sta_pmf == STA_PMF_REQUIRED)) {
 		if (set_network(ifname, id, "key_mgmt",
 				"WPA-PSK WPA-PSK-SHA256") < 0)
 			return -2;
