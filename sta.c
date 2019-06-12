@@ -1099,9 +1099,9 @@ int get_ipv6_config(struct sigma_dut *dut, const char *ifname, char *buf,
 }
 
 
-static int cmd_sta_get_ip_config(struct sigma_dut *dut,
-				 struct sigma_conn *conn,
-				 struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_get_ip_config(struct sigma_dut *dut,
+						   struct sigma_conn *conn,
+						   struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *ifname;
@@ -1374,9 +1374,9 @@ int set_ipv4_gw(struct sigma_dut *dut, const char *gw)
 }
 
 
-static int cmd_sta_set_ip_config(struct sigma_dut *dut,
-				 struct sigma_conn *conn,
-				 struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_set_ip_config(struct sigma_dut *dut,
+						   struct sigma_conn *conn,
+						   struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *ifname;
@@ -1545,8 +1545,9 @@ static int cmd_sta_set_ip_config(struct sigma_dut *dut,
 }
 
 
-static int cmd_sta_get_info(struct sigma_dut *dut, struct sigma_conn *conn,
-			    struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_get_info(struct sigma_dut *dut,
+					      struct sigma_conn *conn,
+					      struct sigma_cmd *cmd)
 {
 	/* const char *intf = get_param(cmd, "Interface"); */
 	/* TODO: could report more details here */
@@ -1555,9 +1556,9 @@ static int cmd_sta_get_info(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_get_mac_address(struct sigma_dut *dut,
-				   struct sigma_conn *conn,
-				   struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_get_mac_address(struct sigma_dut *dut,
+						     struct sigma_conn *conn,
+						     struct sigma_cmd *cmd)
 {
 	/* const char *intf = get_param(cmd, "Interface"); */
 	char addr[20], resp[50];
@@ -1575,8 +1576,9 @@ static int cmd_sta_get_mac_address(struct sigma_dut *dut,
 }
 
 
-static int cmd_sta_is_connected(struct sigma_dut *dut, struct sigma_conn *conn,
-				struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_is_connected(struct sigma_dut *dut,
+						  struct sigma_conn *conn,
+						  struct sigma_cmd *cmd)
 {
 	/* const char *intf = get_param(cmd, "Interface"); */
 	int connected = 0;
@@ -1601,9 +1603,9 @@ static int cmd_sta_is_connected(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_verify_ip_connection(struct sigma_dut *dut,
-					struct sigma_conn *conn,
-					struct sigma_cmd *cmd)
+static enum sigma_cmd_result
+cmd_sta_verify_ip_connection(struct sigma_dut *dut, struct sigma_conn *conn,
+			     struct sigma_cmd *cmd)
 {
 	/* const char *intf = get_param(cmd, "Interface"); */
 	const char *dst, *timeout;
@@ -1638,8 +1640,9 @@ static int cmd_sta_verify_ip_connection(struct sigma_dut *dut,
 }
 
 
-static int cmd_sta_get_bssid(struct sigma_dut *dut, struct sigma_conn *conn,
-			     struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_get_bssid(struct sigma_dut *dut,
+					       struct sigma_conn *conn,
+					       struct sigma_cmd *cmd)
 {
 	/* const char *intf = get_param(cmd, "Interface"); */
 	char bssid[20], resp[50];
@@ -1710,9 +1713,9 @@ static int add_network_common(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_set_encryption(struct sigma_dut *dut,
-				  struct sigma_conn *conn,
-				  struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_set_encryption(struct sigma_dut *dut,
+						    struct sigma_conn *conn,
+						    struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *ssid = get_param(cmd, "ssid");
@@ -2038,8 +2041,9 @@ static int set_wpa_common(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_set_psk(struct sigma_dut *dut, struct sigma_conn *conn,
-			   struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_set_psk(struct sigma_dut *dut,
+					     struct sigma_conn *conn,
+					     struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *type = get_param(cmd, "Type");
@@ -2367,8 +2371,9 @@ static int set_tls_cipher(const char *ifname, int id, const char *cipher)
 }
 
 
-static int cmd_sta_set_eaptls(struct sigma_dut *dut, struct sigma_conn *conn,
-			      struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_set_eaptls(struct sigma_dut *dut,
+						struct sigma_conn *conn,
+						struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *ifname, *val;
@@ -2493,8 +2498,9 @@ static int cmd_sta_set_eaptls(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_set_eapttls(struct sigma_dut *dut, struct sigma_conn *conn,
-			       struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_set_eapttls(struct sigma_dut *dut,
+						 struct sigma_conn *conn,
+						 struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *ifname;
@@ -2528,8 +2534,9 @@ static int cmd_sta_set_eapttls(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_set_eapsim(struct sigma_dut *dut, struct sigma_conn *conn,
-			      struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_set_eapsim(struct sigma_dut *dut,
+						struct sigma_conn *conn,
+						struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *ifname;
@@ -2554,8 +2561,9 @@ static int cmd_sta_set_eapsim(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_set_peap(struct sigma_dut *dut, struct sigma_conn *conn,
-			       struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_set_peap(struct sigma_dut *dut,
+					      struct sigma_conn *conn,
+					      struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *ifname, *val;
@@ -2605,8 +2613,9 @@ static int cmd_sta_set_peap(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_set_eapfast(struct sigma_dut *dut, struct sigma_conn *conn,
-			       struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_set_eapfast(struct sigma_dut *dut,
+						 struct sigma_conn *conn,
+						 struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *ifname, *val;
@@ -2664,8 +2673,9 @@ static int cmd_sta_set_eapfast(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_set_eapaka(struct sigma_dut *dut, struct sigma_conn *conn,
-			      struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_set_eapaka(struct sigma_dut *dut,
+						struct sigma_conn *conn,
+						struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *ifname;
@@ -2690,9 +2700,9 @@ static int cmd_sta_set_eapaka(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_set_eapakaprime(struct sigma_dut *dut,
-				   struct sigma_conn *conn,
-				   struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_set_eapakaprime(struct sigma_dut *dut,
+						     struct sigma_conn *conn,
+						     struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *ifname;
@@ -2786,8 +2796,9 @@ static int sta_set_owe(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
-				struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_set_security(struct sigma_dut *dut,
+						  struct sigma_conn *conn,
+						  struct sigma_cmd *cmd)
 {
 	const char *type = get_param(cmd, "Type");
 
@@ -2887,8 +2898,9 @@ int ath6kl_client_uapsd(struct sigma_dut *dut, const char *intf, int uapsd)
 }
 
 
-static int cmd_sta_set_uapsd(struct sigma_dut *dut, struct sigma_conn *conn,
-			     struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_set_uapsd(struct sigma_dut *dut,
+					       struct sigma_conn *conn,
+					       struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	/* const char *ssid = get_param(cmd, "ssid"); */
@@ -2948,8 +2960,9 @@ static int cmd_sta_set_uapsd(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_set_wmm(struct sigma_dut *dut, struct sigma_conn *conn,
-			   struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_set_wmm(struct sigma_dut *dut,
+					     struct sigma_conn *conn,
+					     struct sigma_cmd *cmd)
 {
 	char buf[1000];
 	const char *intf = get_param(cmd, "Interface");
@@ -3212,8 +3225,9 @@ static int sta_config_rsnie(struct sigma_dut *dut, int val)
 #endif /* NL80211_SUPPORT */
 
 
-static int cmd_sta_associate(struct sigma_dut *dut, struct sigma_conn *conn,
-			     struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_associate(struct sigma_dut *dut,
+					       struct sigma_conn *conn,
+					       struct sigma_cmd *cmd)
 {
 	/* const char *intf = get_param(cmd, "Interface"); */
 	const char *ssid = get_param(cmd, "ssid");
@@ -4548,9 +4562,9 @@ static void wcn_sta_set_noack(struct sigma_dut *dut, const char *intf,
 #endif /* NL80211_SUPPORT */
 
 
-static int cmd_sta_preset_testparameters(struct sigma_dut *dut,
-					 struct sigma_conn *conn,
-					 struct sigma_cmd *cmd)
+static enum sigma_cmd_result
+cmd_sta_preset_testparameters(struct sigma_dut *dut, struct sigma_conn *conn,
+			      struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *val;
@@ -6069,8 +6083,9 @@ static int sta_set_60g_sta(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_disconnect(struct sigma_dut *dut, struct sigma_conn *conn,
-			      struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_disconnect(struct sigma_dut *dut,
+						struct sigma_conn *conn,
+						struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *val = get_param(cmd, "maintain_profile");
@@ -6091,8 +6106,9 @@ static int cmd_sta_disconnect(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_reassoc(struct sigma_dut *dut, struct sigma_conn *conn,
-			   struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
+					     struct sigma_conn *conn,
+					     struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *bssid = get_param(cmd, "bssid");
@@ -6415,8 +6431,9 @@ static int sta_get_parameter_he(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
-				 struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_get_parameter(struct sigma_dut *dut,
+						   struct sigma_conn *conn,
+						   struct sigma_cmd *cmd)
 {
 	const char *program = get_param(cmd, "Program");
 
@@ -7422,9 +7439,9 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 }
 
 
-static int cmd_sta_reset_default(struct sigma_dut *dut,
-				 struct sigma_conn *conn,
-				 struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
+						   struct sigma_conn *conn,
+						   struct sigma_cmd *cmd)
 {
 	int cmd_sta_p2p_reset(struct sigma_dut *dut, struct sigma_conn *conn,
 			      struct sigma_cmd *cmd);
@@ -7675,8 +7692,9 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 }
 
 
-static int cmd_sta_get_events(struct sigma_dut *dut, struct sigma_conn *conn,
-			      struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_get_events(struct sigma_dut *dut,
+						struct sigma_conn *conn,
+						struct sigma_cmd *cmd)
 {
 	const char *program = get_param(cmd, "Program");
 
@@ -7757,8 +7775,9 @@ static int sta_exec_action_url(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
-			       struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_exec_action(struct sigma_dut *dut,
+						 struct sigma_conn *conn,
+						 struct sigma_cmd *cmd)
 {
 	const char *program = get_param(cmd, "Prog");
 
@@ -7780,8 +7799,9 @@ static int cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_set_11n(struct sigma_dut *dut, struct sigma_conn *conn,
-			   struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_set_11n(struct sigma_dut *dut,
+					     struct sigma_conn *conn,
+					     struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *val, *mcs32, *rate;
@@ -8687,8 +8707,9 @@ static int sta_set_wireless_oce(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
-				struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_set_wireless(struct sigma_dut *dut,
+						  struct sigma_conn *conn,
+						  struct sigma_cmd *cmd)
 {
 	const char *val;
 
@@ -9022,8 +9043,9 @@ static int wcn_sta_send_addba(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_send_addba(struct sigma_dut *dut, struct sigma_conn *conn,
-			      struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_send_addba(struct sigma_dut *dut,
+						struct sigma_conn *conn,
+						struct sigma_cmd *cmd)
 {
 	switch (get_driver_type()) {
 	case DRIVER_ATHEROS:
@@ -10539,8 +10561,9 @@ static int mbo_cmd_sta_send_frame(struct sigma_dut *dut,
 }
 
 
-int cmd_sta_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
-		       struct sigma_cmd *cmd)
+enum sigma_cmd_result cmd_sta_send_frame(struct sigma_dut *dut,
+					 struct sigma_conn *conn,
+					 struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *val;
@@ -10773,8 +10796,9 @@ int cmd_sta_set_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_set_macaddr(struct sigma_dut *dut, struct sigma_conn *conn,
-			       struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_set_macaddr(struct sigma_dut *dut,
+						 struct sigma_conn *conn,
+						 struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *mac = get_param(cmd, "MAC");
@@ -11682,8 +11706,9 @@ static int cmd_sta_set_rfeature_60g(const char *intf, struct sigma_dut *dut,
 }
 
 
-static int cmd_sta_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
-				struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_set_rfeature(struct sigma_dut *dut,
+						  struct sigma_conn *conn,
+						  struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *prog = get_param(cmd, "Prog");
@@ -11727,8 +11752,9 @@ static int cmd_sta_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_set_radio(struct sigma_dut *dut, struct sigma_conn *conn,
-			     struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_set_radio(struct sigma_dut *dut,
+					       struct sigma_conn *conn,
+					       struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *mode = get_param(cmd, "Mode");
@@ -11754,8 +11780,9 @@ static int cmd_sta_set_radio(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_set_pwrsave(struct sigma_dut *dut, struct sigma_conn *conn,
-			       struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_set_pwrsave(struct sigma_dut *dut,
+						 struct sigma_conn *conn,
+						 struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *mode = get_param(cmd, "Mode");
@@ -11798,8 +11825,9 @@ static int cmd_sta_set_pwrsave(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_bssid_pool(struct sigma_dut *dut, struct sigma_conn *conn,
-			      struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_bssid_pool(struct sigma_dut *dut,
+						struct sigma_conn *conn,
+						struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *val, *bssid;
@@ -11841,8 +11869,9 @@ static int cmd_sta_bssid_pool(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_reset_parm(struct sigma_dut *dut, struct sigma_conn *conn,
-			      struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_reset_parm(struct sigma_dut *dut,
+						struct sigma_conn *conn,
+						struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *val;
@@ -11857,8 +11886,9 @@ static int cmd_sta_reset_parm(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_get_key(struct sigma_dut *dut, struct sigma_conn *conn,
-			   struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_get_key(struct sigma_dut *dut,
+					     struct sigma_conn *conn,
+					     struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *key_type = get_param(cmd, "KeyType");
@@ -11908,9 +11938,9 @@ static int hs2_set_policy(struct sigma_dut *dut)
 }
 
 
-static int cmd_sta_hs2_associate(struct sigma_dut *dut,
-				 struct sigma_conn *conn,
-				 struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_hs2_associate(struct sigma_dut *dut,
+						   struct sigma_conn *conn,
+						   struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *val = get_param(cmd, "Ignore_blacklist");
@@ -12029,9 +12059,9 @@ try_again:
 }
 
 
-static int cmd_sta_hs2_venue_info(struct sigma_dut *dut,
-				  struct sigma_conn *conn,
-				  struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_hs2_venue_info(struct sigma_dut *dut,
+						    struct sigma_conn *conn,
+						    struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *display = get_param(cmd, "Display");
@@ -12412,9 +12442,9 @@ static int sta_add_credential_cert(struct sigma_dut *dut,
 }
 
 
-static int cmd_sta_add_credential(struct sigma_dut *dut,
-				  struct sigma_conn *conn,
-				  struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_add_credential(struct sigma_dut *dut,
+						    struct sigma_conn *conn,
+						    struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *type;
@@ -12440,8 +12470,9 @@ static int cmd_sta_add_credential(struct sigma_dut *dut,
 }
 
 
-static int cmd_sta_scan(struct sigma_dut *dut, struct sigma_conn *conn,
-			struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_scan(struct sigma_dut *dut,
+					  struct sigma_conn *conn,
+					  struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *val, *bssid, *ssid;
@@ -12510,8 +12541,9 @@ static int cmd_sta_scan(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_scan_bss(struct sigma_dut *dut, struct sigma_conn *conn,
-			    struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_scan_bss(struct sigma_dut *dut,
+					      struct sigma_conn *conn,
+					      struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *bssid;
@@ -12589,8 +12621,9 @@ static int cmd_sta_scan_bss(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_set_systime(struct sigma_dut *dut, struct sigma_conn *conn,
-			       struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_set_systime(struct sigma_dut *dut,
+						 struct sigma_conn *conn,
+						 struct sigma_cmd *cmd)
 {
 #ifdef __linux__
 	struct timeval tv;
@@ -12658,8 +12691,9 @@ static int cmd_sta_set_systime(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_osu(struct sigma_dut *dut, struct sigma_conn *conn,
-		       struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_osu(struct sigma_dut *dut,
+					 struct sigma_conn *conn,
+					 struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *name, *osu_ssid, *val;
@@ -12756,8 +12790,9 @@ report:
 }
 
 
-static int cmd_sta_policy_update(struct sigma_dut *dut, struct sigma_conn *conn,
-				 struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_policy_update(struct sigma_dut *dut,
+						   struct sigma_conn *conn,
+						   struct sigma_cmd *cmd)
 {
 	const char *val;
 	int timeout = 120;
@@ -12787,8 +12822,9 @@ static int cmd_sta_policy_update(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_er_config(struct sigma_dut *dut, struct sigma_conn *conn,
-			     struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_er_config(struct sigma_dut *dut,
+					       struct sigma_conn *conn,
+					       struct sigma_cmd *cmd)
 {
 	struct wpa_ctrl *ctrl;
 	const char *intf = get_param(cmd, "Interface");
@@ -12879,9 +12915,9 @@ static int cmd_sta_er_config(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_wps_connect_pw_token(struct sigma_dut *dut,
-					struct sigma_conn *conn,
-					struct sigma_cmd *cmd)
+static enum sigma_cmd_result
+cmd_sta_wps_connect_pw_token(struct sigma_dut *dut, struct sigma_conn *conn,
+			     struct sigma_cmd *cmd)
 {
 	struct wpa_ctrl *ctrl;
 	const char *intf = get_param(cmd, "Interface");
@@ -12915,9 +12951,9 @@ static int cmd_sta_wps_connect_pw_token(struct sigma_dut *dut,
 }
 
 
-static int cmd_start_wps_registration(struct sigma_dut *dut,
-				      struct sigma_conn *conn,
-				      struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_start_wps_registration(struct sigma_dut *dut,
+							struct sigma_conn *conn,
+							struct sigma_cmd *cmd)
 {
 	struct wpa_ctrl *ctrl;
 	const char *intf = get_param(cmd, "Interface");

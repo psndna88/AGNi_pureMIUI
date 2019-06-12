@@ -162,8 +162,9 @@ static int run_wlantest_simple(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_wlantest_version(struct sigma_dut *dut, struct sigma_conn *conn,
-				struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_wlantest_version(struct sigma_dut *dut,
+						  struct sigma_conn *conn,
+						  struct sigma_cmd *cmd)
 {
 	int s;
 	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
@@ -203,8 +204,9 @@ static int cmd_wlantest_version(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-int cmd_wlantest_set_channel(struct sigma_dut *dut, struct sigma_conn *conn,
-			     struct sigma_cmd *cmd)
+enum sigma_cmd_result cmd_wlantest_set_channel(struct sigma_dut *dut,
+					       struct sigma_conn *conn,
+					       struct sigma_cmd *cmd)
 {
 	char buf[100];
 	const char *chan;
@@ -258,15 +260,17 @@ int cmd_wlantest_set_channel(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_wlantest_flush(struct sigma_dut *dut, struct sigma_conn *conn,
-			      struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_wlantest_flush(struct sigma_dut *dut,
+						struct sigma_conn *conn,
+						struct sigma_cmd *cmd)
 {
 	return run_wlantest_simple(dut, conn, WLANTEST_CTRL_FLUSH);
 }
 
 
-int cmd_wlantest_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
-			    struct sigma_cmd *cmd)
+enum sigma_cmd_result cmd_wlantest_send_frame(struct sigma_dut *dut,
+					      struct sigma_conn *conn,
+					      struct sigma_cmd *cmd)
 {
 	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
 	u8 buf[100], *end, *pos;
@@ -387,9 +391,9 @@ int cmd_wlantest_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_wlantest_add_passphrase(struct sigma_dut *dut,
-				       struct sigma_conn *conn,
-				       struct sigma_cmd *cmd)
+static enum sigma_cmd_result
+cmd_wlantest_add_passphrase(struct sigma_dut *dut, struct sigma_conn *conn,
+			    struct sigma_cmd *cmd)
 {
 	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
 	u8 buf[100], *end, *pos;
@@ -438,9 +442,9 @@ static int cmd_wlantest_add_passphrase(struct sigma_dut *dut,
 }
 
 
-static int cmd_wlantest_clear_sta_counters(struct sigma_dut *dut,
-					   struct sigma_conn *conn,
-					   struct sigma_cmd *cmd)
+static enum sigma_cmd_result
+cmd_wlantest_clear_sta_counters(struct sigma_dut *dut, struct sigma_conn *conn,
+				struct sigma_cmd *cmd)
 {
 	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
 	u8 buf[100], *end, *pos;
@@ -493,9 +497,9 @@ static int cmd_wlantest_clear_sta_counters(struct sigma_dut *dut,
 }
 
 
-static int cmd_wlantest_clear_bss_counters(struct sigma_dut *dut,
-					   struct sigma_conn *conn,
-					   struct sigma_cmd *cmd)
+static enum sigma_cmd_result
+cmd_wlantest_clear_bss_counters(struct sigma_dut *dut, struct sigma_conn *conn,
+				struct sigma_cmd *cmd)
 {
 	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
 	u8 buf[100], *end, *pos;
@@ -535,9 +539,9 @@ static int cmd_wlantest_clear_bss_counters(struct sigma_dut *dut,
 }
 
 
-static int cmd_wlantest_clear_tdls_counters(struct sigma_dut *dut,
-					    struct sigma_conn *conn,
-					    struct sigma_cmd *cmd)
+static enum sigma_cmd_result
+cmd_wlantest_clear_tdls_counters(struct sigma_dut *dut, struct sigma_conn *conn,
+				 struct sigma_cmd *cmd)
 {
 	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
 	u8 buf[100], *end, *pos;
@@ -658,9 +662,9 @@ static const struct sta_counters sta_counters[] = {
 	{ NULL, 0 }
 };
 
-static int cmd_wlantest_get_sta_counter(struct sigma_dut *dut,
-					struct sigma_conn *conn,
-					struct sigma_cmd *cmd)
+static enum sigma_cmd_result
+cmd_wlantest_get_sta_counter(struct sigma_dut *dut, struct sigma_conn *conn,
+			     struct sigma_cmd *cmd)
 {
 	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
 	u8 buf[100], *end, *pos;
@@ -748,9 +752,9 @@ static const struct bss_counters bss_counters[] = {
 	{ NULL, 0 }
 };
 
-static int cmd_wlantest_get_bss_counter(struct sigma_dut *dut,
-					struct sigma_conn *conn,
-					struct sigma_cmd *cmd)
+static enum sigma_cmd_result
+cmd_wlantest_get_bss_counter(struct sigma_dut *dut, struct sigma_conn *conn,
+			     struct sigma_cmd *cmd)
 {
 	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
 	u8 buf[100], *end, *pos;
@@ -829,9 +833,9 @@ static const struct tdls_counters tdls_counters[] = {
 	{ NULL, 0 }
 };
 
-static int cmd_wlantest_get_tdls_counter(struct sigma_dut *dut,
-					 struct sigma_conn *conn,
-					 struct sigma_cmd *cmd)
+static enum sigma_cmd_result
+cmd_wlantest_get_tdls_counter(struct sigma_dut *dut, struct sigma_conn *conn,
+			      struct sigma_cmd *cmd)
 {
 	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
 	u8 buf[100], *end, *pos;
@@ -933,9 +937,9 @@ static const struct sta_infos sta_infos[] = {
 	{ NULL, 0 }
 };
 
-static int cmd_wlantest_info_sta(struct sigma_dut *dut,
-				 struct sigma_conn *conn,
-				 struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_wlantest_info_sta(struct sigma_dut *dut,
+						   struct sigma_conn *conn,
+						   struct sigma_cmd *cmd)
 {
 	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
 	u8 buf[100], *end, *pos;
@@ -1029,9 +1033,9 @@ static const struct bss_infos bss_infos[] = {
 	{ NULL, 0 }
 };
 
-static int cmd_wlantest_info_bss(struct sigma_dut *dut,
-				 struct sigma_conn *conn,
-				 struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_wlantest_info_bss(struct sigma_dut *dut,
+						   struct sigma_conn *conn,
+						   struct sigma_cmd *cmd)
 {
 	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
 	u8 buf[100], *end, *pos;
