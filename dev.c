@@ -79,24 +79,28 @@ static enum sigma_cmd_result sta_server_cert_trust(struct sigma_dut *dut,
 
 	strlcpy(resp, "ServerCertTrustResult,Accepted", sizeof(resp));
 
-	if (strcasecmp(val, "Accept") != 0) {
-		strlcpy(resp,
-			"ServerCertTrustResult,NotAccepted,Reason,Unsupported ServerCertTrust value",
-			sizeof(resp));
-		goto done;
+	if (strcasecmp(val, "Accept") != 0 && strcasecmp(val, "Reject") != 0) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Unknown ServerCertTrust value '%s'", val);
+		return INVALID_SEND_STATUS;
 	}
 
 	if (!dut->server_cert_hash[0]) {
 		strlcpy(resp,
-			"ServerCertTrustResult,NotAccepted,Reason,No server certificate stored",
+			"ServerCertTrustResult,OverrideNotAllowed,Reason,No server certificate stored",
 			sizeof(resp));
 		goto done;
 	}
 
 	if (dut->sta_tod_policy) {
 		strlcpy(resp,
-			"ServerCertTrustResult,NotAccepted,Reason,TOD policy",
+			"ServerCertTrustResult,OverrideNotAllowed,Reason,TOD policy",
 			sizeof(resp));
+		goto done;
+	}
+
+	if (strcasecmp(val, "Accept") != 0) {
+		strlcpy(resp, "ServerCertTrustResult,Rejected", sizeof(resp));
 		goto done;
 	}
 
@@ -105,7 +109,7 @@ static enum sigma_cmd_result sta_server_cert_trust(struct sigma_dut *dut,
 	if (set_network_quoted(get_station_ifname(), dut->infra_network_id,
 			       "ca_cert", buf) < 0) {
 		strlcpy(resp,
-			"ServerCertTrustResult,NotAccepted,Reason,Could not configure server certificate hash for the network profile",
+			"ServerCertTrustResult,OverrideNotAllowed,Reason,Could not configure server certificate hash for the network profile",
 			sizeof(resp));
 		goto done;
 	}
@@ -149,7 +153,7 @@ static enum sigma_cmd_result sta_server_cert_trust(struct sigma_dut *dut,
 
 		if (strstr(buf, "CTRL-EVENT-EAP-TLS-CERT-ERROR")) {
 			strlcpy(resp,
-				"ServerCertTrustResult,Accepted,Result,TLS server certitficate validation failed with updated profile",
+				"ServerCertTrustResult,Accepted,Result,TLS server certificate validation failed with updated profile",
 				sizeof(resp));
 			goto done;
 		}
