@@ -6968,6 +6968,9 @@ skip_key_mgmt:
 	if (dut->ap_rsn_preauth)
 		fprintf(f, "rsn_preauth=1\n");
 
+	if (dut->ap_pmksa && dut->ap_pmksa_caching)
+		fprintf(f, "disable_pmksa_caching=1\n");
+
 	switch (dut->ap_pmf) {
 	case AP_PMF_DISABLED:
 		break;
@@ -8083,14 +8086,15 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 		dut->ap_akm = 0;
 		dut->ap_add_sha256 = 0;
 		dut->ap_add_sha384 = 0;
-		dut->ap_pmksa = 0;
-		dut->ap_pmksa_caching = 0;
 		dut->ap_80plus80 = 0;
 	}
 
 	dut->ap_he_ppdu = PPDU_NOT_SET;
 
 	dut->ap_oper_chn = 0;
+
+	dut->ap_pmksa = 0;
+	dut->ap_pmksa_caching = 0;
 
 	free(dut->rsne_override);
 	dut->rsne_override = NULL;
