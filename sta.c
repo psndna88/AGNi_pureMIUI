@@ -2304,6 +2304,13 @@ ca_cert_selected:
 		snprintf(buf2, sizeof(buf2), "hash://server/sha256/%s", buf);
 		if (set_network_quoted(ifname, id, "ca_cert", buf2) < 0)
 			return ERROR_SEND_STATUS;
+
+		snprintf(buf, sizeof(buf), "%s/%s.tod", sigma_cert_path, val);
+		if (file_exists(buf)) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"TOD policy enabled for the configured ServerCert hash");
+			dut->sta_tod_policy = 1;
+		}
 	}
 
 	val = get_param(cmd, "Domain");
