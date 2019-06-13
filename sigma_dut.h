@@ -897,14 +897,17 @@ int sigma_dut_reg_cmd(const char *cmd,
 
 void sigma_dut_register_cmds(void);
 
-int cmd_sta_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
-		       struct sigma_cmd *cmd);
+enum sigma_cmd_result cmd_sta_send_frame(struct sigma_dut *dut,
+					 struct sigma_conn *conn,
+					 struct sigma_cmd *cmd);
 int cmd_sta_set_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
 			  struct sigma_cmd *cmd);
-int cmd_ap_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
-		      struct sigma_cmd *cmd);
-int cmd_wlantest_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
-			    struct sigma_cmd *cmd);
+enum sigma_cmd_result cmd_ap_send_frame(struct sigma_dut *dut,
+					struct sigma_conn *conn,
+					struct sigma_cmd *cmd);
+enum sigma_cmd_result cmd_wlantest_send_frame(struct sigma_dut *dut,
+					      struct sigma_conn *conn,
+					      struct sigma_cmd *cmd);
 int sta_cfon_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 			  struct sigma_cmd *cmd);
 int sta_cfon_get_mac_address(struct sigma_dut *dut, struct sigma_conn *conn,
@@ -950,8 +953,9 @@ int is_ip_addr(const char *str);
 int run_system(struct sigma_dut *dut, const char *cmd);
 int run_system_wrapper(struct sigma_dut *dut, const char *cmd, ...);
 int run_iwpriv(struct sigma_dut *dut, const char *ifname, const char *cmd, ...);
-int cmd_wlantest_set_channel(struct sigma_dut *dut, struct sigma_conn *conn,
-			     struct sigma_cmd *cmd);
+enum sigma_cmd_result cmd_wlantest_set_channel(struct sigma_dut *dut,
+					       struct sigma_conn *conn,
+					       struct sigma_cmd *cmd);
 void wlantest_register_cmds(void);
 void sniffer_close(struct sigma_dut *dut);
 
@@ -962,8 +966,9 @@ void ath_config_dyn_bw_sig(struct sigma_dut *dut, const char *ifname,
 			   const char *val);
 void novap_reset(struct sigma_dut *dut, const char *ifname);
 int get_hwaddr(const char *ifname, unsigned char *hwaddr);
-int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
-			 struct sigma_cmd *cmd);
+enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
+					   struct sigma_conn *conn,
+					   struct sigma_cmd *cmd);
 int ap_wps_registration(struct sigma_dut *dut, struct sigma_conn *conn,
 			struct sigma_cmd *cmd);
 
