@@ -970,9 +970,9 @@ int miracast_mdns_start_wfd_connection(struct sigma_dut *dut,
 }
 
 
-static int cmd_start_wfd_connection(struct sigma_dut *dut,
-				    struct sigma_conn *conn,
-				    struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_start_wfd_connection(struct sigma_dut *dut,
+						      struct sigma_conn *conn,
+						      struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *peer_address = get_param(cmd, "PeerAddress");
@@ -1249,9 +1249,9 @@ static int cmd_start_wfd_connection(struct sigma_dut *dut,
 }
 
 
-static int cmd_connect_go_start_wfd(struct sigma_dut *dut,
-				    struct sigma_conn *conn,
-				    struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_connect_go_start_wfd(struct sigma_dut *dut,
+						      struct sigma_conn *conn,
+						      struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *p2p_dev_id = get_param(cmd, "P2PdevID");
@@ -1398,9 +1398,9 @@ static int cmd_connect_go_start_wfd(struct sigma_dut *dut,
 }
 
 
-static int cmd_sta_generate_event(struct sigma_dut *dut,
-				  struct sigma_conn *conn,
-				  struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_sta_generate_event(struct sigma_dut *dut,
+						    struct sigma_conn *conn,
+						    struct sigma_cmd *cmd)
 {
 
 	/* const char *intf = get_param(cmd, "Interface"); */
@@ -1449,9 +1449,9 @@ static int cmd_sta_generate_event(struct sigma_dut *dut,
 }
 
 
-static int cmd_reinvoke_wfd_session(struct sigma_dut *dut,
-				    struct sigma_conn *conn,
-				    struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_reinvoke_wfd_session(struct sigma_dut *dut,
+						      struct sigma_conn *conn,
+						      struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *grp_id = get_param(cmd, "GroupID");

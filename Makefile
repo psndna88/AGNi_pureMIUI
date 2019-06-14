@@ -12,6 +12,13 @@ LDFLAGS += -fsanitize=$(CHECKS)
 LDFLAGS += -fno-sanitize-recover=all
 endif
 
+ifdef CFI
+CC=clang-6.0
+CFLAGS += -MMD -O2 -Wall -g
+CFLAGS += -flto -fvisibility=hidden -fsanitize=cfi -fno-sanitize-trap=cfi
+LDFLAGS += -flto -fvisibility=hidden -fsanitize=cfi -fno-sanitize-trap=cfi
+endif
+
 ifndef CC
 CC=gcc
 endif

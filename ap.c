@@ -128,8 +128,9 @@ static int ap_ft_enabled(struct sigma_dut *dut)
 }
 
 
-static int cmd_ap_ca_version(struct sigma_dut *dut, struct sigma_conn *conn,
-			     struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_ap_ca_version(struct sigma_dut *dut,
+					       struct sigma_conn *conn,
+					       struct sigma_cmd *cmd)
 {
 	/* const char *name = get_param(cmd, "NAME"); */
 	send_resp(dut, conn, SIGMA_COMPLETE, "version,1.0");
@@ -457,8 +458,9 @@ static void set_ap_country_code(struct sigma_dut *dut)
 }
 
 
-static int cmd_ap_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
-			       struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
+						 struct sigma_conn *conn,
+						 struct sigma_cmd *cmd)
 {
 	/* const char *name = get_param(cmd, "NAME"); */
 	/* const char *ifname = get_param(cmd, "INTERFACE"); */
@@ -1719,8 +1721,9 @@ static int ath10k_ap_send_addba_req(struct sigma_dut *dut,
 }
 
 
-static int cmd_ap_send_addba_req(struct sigma_dut *dut, struct sigma_conn *conn,
-				 struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_ap_send_addba_req(struct sigma_dut *dut,
+						   struct sigma_conn *conn,
+						   struct sigma_cmd *cmd)
 {
 	/* const char *name = get_param(cmd, "NAME"); */
 	/* const char *ifname = get_param(cmd, "INTERFACE"); */
@@ -1760,8 +1763,9 @@ static int cmd_ap_send_addba_req(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
-			       struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_ap_set_security(struct sigma_dut *dut,
+						 struct sigma_conn *conn,
+						 struct sigma_cmd *cmd)
 {
 	/* const char *name = get_param(cmd, "NAME"); */
 	const char *val;
@@ -2142,8 +2146,9 @@ int sta_cfon_set_wireless(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_ap_set_radius(struct sigma_dut *dut, struct sigma_conn *conn,
-			     struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_ap_set_radius(struct sigma_dut *dut,
+					       struct sigma_conn *conn,
+					       struct sigma_cmd *cmd)
 {
 	/* const char *name = get_param(cmd, "NAME"); */
 	const char *val;
@@ -3909,8 +3914,9 @@ static void cmd_owrt_ap_hs2_reset(struct sigma_dut *dut)
 }
 
 
-static int cmd_ap_reboot(struct sigma_dut *dut, struct sigma_conn *conn,
-			 struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_ap_reboot(struct sigma_dut *dut,
+					   struct sigma_conn *conn,
+					   struct sigma_cmd *cmd)
 {
 	switch (get_driver_type()) {
 	case DRIVER_ATHEROS:
@@ -6516,8 +6522,9 @@ static int ap_set_force_mcs(struct sigma_dut *dut, int force, int mcs)
 }
 
 
-int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
-			 struct sigma_cmd *cmd)
+enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
+					   struct sigma_conn *conn,
+					   struct sigma_cmd *cmd)
 {
 	/* const char *name = get_param(cmd, "NAME"); */
 	FILE *f;
@@ -7635,8 +7642,9 @@ static int parse_qos_params(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_ap_set_apqos(struct sigma_dut *dut, struct sigma_conn *conn,
-			    struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_ap_set_apqos(struct sigma_dut *dut,
+					      struct sigma_conn *conn,
+					      struct sigma_cmd *cmd)
 {
 	/* TXOP: The values provided here for VHT5G only */
 	if (!parse_qos_params(dut, conn, &dut->ap_qos[AP_AC_VO],
@@ -7669,8 +7677,9 @@ static int cmd_ap_set_apqos(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_ap_set_staqos(struct sigma_dut *dut, struct sigma_conn *conn,
-			     struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_ap_set_staqos(struct sigma_dut *dut,
+					       struct sigma_conn *conn,
+					       struct sigma_cmd *cmd)
 {
 	if (!parse_qos_params(dut, conn, &dut->ap_sta_qos[AP_AC_VO],
 			      get_param(cmd, "cwmin_VO"),
@@ -7784,8 +7793,9 @@ static void ath_reset_vht_defaults(struct sigma_dut *dut)
 }
 
 
-static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
-				struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
+						  struct sigma_conn *conn,
+						  struct sigma_cmd *cmd)
 {
 	const char *type, *program;
 	enum driver_type drv;
@@ -8199,8 +8209,9 @@ int sta_cfon_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_ap_get_info(struct sigma_dut *dut, struct sigma_conn *conn,
-			   struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_ap_get_info(struct sigma_dut *dut,
+					     struct sigma_conn *conn,
+					     struct sigma_cmd *cmd)
 {
 	/* const char *name = get_param(cmd, "NAME"); */
 	struct stat s;
@@ -8322,8 +8333,9 @@ static int cmd_ap_get_info(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_ap_deauth_sta(struct sigma_dut *dut, struct sigma_conn *conn,
-			   struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_ap_deauth_sta(struct sigma_dut *dut,
+					       struct sigma_conn *conn,
+					       struct sigma_cmd *cmd)
 {
 	/* const char *name = get_param(cmd, "NAME"); */
 	/* const char *ifname = get_param(cmd, "INTERFACE"); */
@@ -9110,8 +9122,9 @@ static int ap_send_frame_60g(struct sigma_dut *dut,
 }
 
 
-int cmd_ap_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
-		      struct sigma_cmd *cmd)
+enum sigma_cmd_result cmd_ap_send_frame(struct sigma_dut *dut,
+					struct sigma_conn *conn,
+					struct sigma_cmd *cmd)
 {
 	/* const char *name = get_param(cmd, "NAME"); */
 	/* const char *ifname = get_param(cmd, "INTERFACE"); */
@@ -9202,9 +9215,9 @@ int cmd_ap_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_ap_get_mac_address(struct sigma_dut *dut,
-				  struct sigma_conn *conn,
-				  struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_ap_get_mac_address(struct sigma_dut *dut,
+						    struct sigma_conn *conn,
+						    struct sigma_cmd *cmd)
 {
 #if defined( __linux__)
 	/* const char *name = get_param(cmd, "NAME"); */
@@ -9285,8 +9298,9 @@ int sta_cfon_get_mac_address(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_ap_set_pmf(struct sigma_dut *dut, struct sigma_conn *conn,
-			  struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_ap_set_pmf(struct sigma_dut *dut,
+					    struct sigma_conn *conn,
+					    struct sigma_cmd *cmd)
 {
 	/*
 	 * Ignore the command since the parameters are already handled through
@@ -9297,8 +9311,9 @@ static int cmd_ap_set_pmf(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_ap_set_hs2(struct sigma_dut *dut, struct sigma_conn *conn,
-			  struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_ap_set_hs2(struct sigma_dut *dut,
+					    struct sigma_conn *conn,
+					    struct sigma_cmd *cmd)
 {
 	/* const char *name = get_param(cmd, "NAME"); */
 	/* const char *ifname = get_param(cmd, "INTERFACE"); */
@@ -9896,8 +9911,9 @@ static int ap_nfc_wps_connection_handover(struct sigma_dut *dut,
 }
 
 
-static int cmd_ap_nfc_action(struct sigma_dut *dut, struct sigma_conn *conn,
-			     struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_ap_nfc_action(struct sigma_dut *dut,
+					       struct sigma_conn *conn,
+					       struct sigma_cmd *cmd)
 {
 	/* const char *name = get_param(cmd, "Name"); */
 	/* const char *intf = get_param(cmd, "Interface"); */
@@ -9920,8 +9936,9 @@ static int cmd_ap_nfc_action(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_ap_wps_read_pin(struct sigma_dut *dut, struct sigma_conn *conn,
-			       struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_ap_wps_read_pin(struct sigma_dut *dut,
+						 struct sigma_conn *conn,
+						 struct sigma_cmd *cmd)
 {
 	char *pin = "12345670"; /* TODO: use random PIN */
 	char resp[100];
@@ -9933,8 +9950,9 @@ static int cmd_ap_wps_read_pin(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_ap_wps_enter_pin(struct sigma_dut *dut, struct sigma_conn *conn,
-				struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_ap_wps_enter_pin(struct sigma_dut *dut,
+						  struct sigma_conn *conn,
+						  struct sigma_cmd *cmd)
 {
 	const char *pin = get_param(cmd, "PIN");
 	char wps_pin[11];
@@ -9955,8 +9973,9 @@ static int cmd_ap_wps_enter_pin(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_ap_wps_set_pbc(struct sigma_dut *dut, struct sigma_conn *conn,
-			      struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_ap_wps_set_pbc(struct sigma_dut *dut,
+						struct sigma_conn *conn,
+						struct sigma_cmd *cmd)
 {
 	sigma_dut_print(dut, DUT_MSG_DEBUG,
 			"Selecting the push button configuration method");
@@ -10004,8 +10023,9 @@ int ap_wps_registration(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_ap_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
-				struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_ap_get_parameter(struct sigma_dut *dut,
+						  struct sigma_conn *conn,
+						  struct sigma_cmd *cmd)
 {
 	char value[256], resp[512];
 	const char *param = get_param(cmd, "parameter");
@@ -10221,8 +10241,8 @@ void novap_reset(struct sigma_dut *dut, const char *ifname)
 }
 
 
-struct mbo_pref_ap * mbo_find_nebor_ap_entry(struct sigma_dut *dut,
-					     const uint8_t *mac_addr)
+static struct mbo_pref_ap * mbo_find_nebor_ap_entry(struct sigma_dut *dut,
+						    const uint8_t *mac_addr)
 {
 	int i;
 
@@ -10558,8 +10578,9 @@ static int wil6210_ap_set_rfeature(struct sigma_dut *dut,
 #endif /* __linux__ */
 
 
-static int cmd_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
-			       struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_ap_set_rfeature(struct sigma_dut *dut,
+						 struct sigma_conn *conn,
+						 struct sigma_cmd *cmd)
 {
 	/* const char *name = get_param(cmd, "NAME"); */
 	/* const char *type = get_param(cmd, "Type"); */
@@ -10593,17 +10614,18 @@ static int cmd_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_accesspoint(struct sigma_dut *dut, struct sigma_conn *conn,
-			   struct sigma_cmd *cmd)
+static enum sigma_cmd_result cmd_accesspoint(struct sigma_dut *dut,
+					     struct sigma_conn *conn,
+					     struct sigma_cmd *cmd)
 {
 	/* const char *name = get_param(cmd, "NAME"); */
 	return 1;
 }
 
 
-static int cmd_ap_preset_testparameters(struct sigma_dut *dut,
-					struct sigma_conn *conn,
-					struct sigma_cmd *cmd)
+static enum sigma_cmd_result
+cmd_ap_preset_testparameters(struct sigma_dut *dut, struct sigma_conn *conn,
+			     struct sigma_cmd *cmd)
 {
 	const char *val;
 
