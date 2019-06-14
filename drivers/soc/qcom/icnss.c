@@ -3837,6 +3837,8 @@ static int icnss_probe(struct platform_device *pdev)
 			goto out_unregister_ext_modem;
 	}
 
+	device_enable_async_suspend(dev);
+
 	spin_lock_init(&priv->event_lock);
 	spin_lock_init(&priv->on_off_lock);
 	mutex_init(&priv->dev_lock);
