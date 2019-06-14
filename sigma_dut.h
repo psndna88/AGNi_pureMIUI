@@ -41,6 +41,9 @@
 #include "qca-vendor_copy.h"
 #include "nl80211_copy.h"
 #endif /* NL80211_SUPPORT */
+#ifdef ANDROID_WIFI_HAL
+#include "wifi_hal.h"
+#endif /*ANDROID_WIFI_HAL*/
 
 
 #ifdef __GNUC__
@@ -864,6 +867,11 @@ struct sigma_dut {
 
 	unsigned int wpa_log_size;
 	char dev_start_test_runtime_id[100];
+#ifdef ANDROID_WIFI_HAL
+	wifi_interface_handle wifi_hal_iface_handle;
+	wifi_handle wifi_hal_handle;
+	bool wifi_hal_initialized;
+#endif /*ANDROID_WIFI_HAL*/
 };
 
 
@@ -958,6 +966,9 @@ enum sigma_cmd_result cmd_wlantest_set_channel(struct sigma_dut *dut,
 					       struct sigma_cmd *cmd);
 void wlantest_register_cmds(void);
 void sniffer_close(struct sigma_dut *dut);
+
+/* sigma_dut.c */
+int wifi_hal_initialize(struct sigma_dut *dut);
 
 /* ap.c */
 void ap_register_cmds(void);

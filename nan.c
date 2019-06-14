@@ -10,15 +10,12 @@
 #include <sys/stat.h>
 #include "wpa_ctrl.h"
 #include "wpa_helpers.h"
-#include "wifi_hal.h"
 #include "nan_cert.h"
 
 #if NAN_CERT_VERSION >= 2
 
 pthread_cond_t gCondition;
 pthread_mutex_t gMutex;
-wifi_handle global_wifi_handle;
-wifi_interface_handle global_interface_handle;
 static NanSyncStats global_nan_sync_stats;
 static int nan_state = 0;
 static int event_anyresponse = 0;
@@ -246,7 +243,7 @@ int nan_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 		dut->ndpe = strcasecmp(ndpe, "Enable") == 0;
 		req.config_ndpe_attr = 1;
 		req.use_ndpe_attr = dut->ndpe;
-		ret = nan_config_request(0, global_interface_handle, &req);
+		ret = nan_config_request(0, dut->wifi_hal_iface_handle, &req);
 		if (ret != WIFI_SUCCESS) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "NAN config request failed");
@@ -285,7 +282,7 @@ int nan_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 			ndp_attr_val = NAN_NDP_ATTR_PRESENT;
 		memcpy(cfg_debug.debug_cmd_data, &ndp_attr_val, sizeof(int));
 		size = sizeof(u32) + sizeof(int);
-		ret = nan_debug_command_config(0, global_interface_handle,
+		ret = nan_debug_command_config(0, dut->wifi_hal_iface_handle,
 					       cfg_debug, size);
 		if (ret != WIFI_SUCCESS) {
 			send_resp(dut, conn, SIGMA_ERROR,
@@ -455,7 +452,7 @@ int sigma_nan_enable(struct sigma_dut *dut, struct sigma_conn *conn,
 		req.sdf_2dot4g_val = 1;
 	}
 
-	nan_enable_request(0, global_interface_handle, &req);
+	nan_enable_request(0, dut->wifi_hal_iface_handle, &req);
 
 	if (nan_availability) {
 		int cmd_len, size;
@@ -473,7 +470,7 @@ int sigma_nan_enable(struct sigma_dut *dut, struct sigma_conn *conn,
 				__func__);
 		nan_hex_dump(dut, &cfg_debug.debug_cmd_data[0], size);
 		cmd_len = size + sizeof(u32);
-		nan_debug_command_config(0, global_interface_handle,
+		nan_debug_command_config(0, dut->wifi_hal_iface_handle,
 					 cfg_debug, cmd_len);
 	}
 
@@ -492,7 +489,7 @@ int sigma_nan_disable(struct sigma_dut *dut, struct sigma_conn *conn,
 {
 	struct timespec abstime;
 
-	nan_disable_request(0, global_interface_handle);
+	nan_disable_request(0, dut->wifi_hal_iface_handle);
 
 	abstime.tv_sec = 4;
 	abstime.tv_nsec = 0;
@@ -537,7 +534,7 @@ int sigma_nan_config_enable(struct sigma_dut *dut, struct sigma_conn *conn,
 		req.hop_count_force_val = hop_count_val;
 	}
 
-	ret = nan_config_request(0, global_interface_handle, &req);
+	ret = nan_config_request(0, dut->wifi_hal_iface_handle, &req);
 	if (ret != WIFI_SUCCESS)
 		send_resp(dut, conn, SIGMA_ERROR, "NAN config request failed");
 
@@ -605,7 +602,7 @@ static int sigma_nan_subscribe_request(struct sigma_dut *dut,
 
 			memset(&req, 0, sizeof(NanSubscribeCancelRequest));
 			ret = nan_subscribe_cancel_request(
-				0, global_interface_handle, &req);
+				0, dut->wifi_hal_iface_handle, &req);
 			if (ret != WIFI_SUCCESS) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "NAN subscribe cancel request failed");
@@ -724,7 +721,7 @@ static int sigma_nan_subscribe_request(struct sigma_dut *dut,
 		config_req.config_dw.dw_2dot4g_interval_val = awake_dw_int;
 		config_req.config_dw.config_5g_dw_band = 1;
 		config_req.config_dw.dw_5g_interval_val = awake_dw_int;
-		ret = nan_config_request(0, global_interface_handle,
+		ret = nan_config_request(0, dut->wifi_hal_iface_handle,
 					 &config_req);
 		if (ret != WIFI_SUCCESS) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
@@ -735,7 +732,7 @@ static int sigma_nan_subscribe_request(struct sigma_dut *dut,
 	}
 #endif
 
-	ret = nan_subscribe_request(0, global_interface_handle, &req);
+	ret = nan_subscribe_request(0, dut->wifi_hal_iface_handle, &req);
 	if (ret != WIFI_SUCCESS) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "NAN subscribe request failed");
@@ -760,7 +757,7 @@ static int sigma_ndp_configure_band(struct sigma_dut *dut,
 	sigma_dut_print(dut, DUT_MSG_INFO, "%s:setting debug cmd=0x%x",
 			__func__, cfg_debug.cmd);
 	size = sizeof(u32) + sizeof(int);
-	ret = nan_debug_command_config(0, global_interface_handle, cfg_debug,
+	ret = nan_debug_command_config(0, dut->wifi_hal_iface_handle, cfg_debug,
 				       size);
 	if (ret != WIFI_SUCCESS)
 		send_resp(dut, conn, SIGMA_ERROR, "Nan config request failed");
@@ -814,7 +811,7 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 		memcpy(cfg_debug.debug_cmd_data, &include_immutable_val,
 		       sizeof(int));
 		size = sizeof(u32) + sizeof(int);
-		nan_debug_command_config(0, global_interface_handle,
+		nan_debug_command_config(0, dut->wifi_hal_iface_handle,
 		cfg_debug, size);
 	}
 
@@ -827,7 +824,7 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 		memcpy(cfg_debug.debug_cmd_data, &avoid_channel_freq,
 		       sizeof(int));
 		size = sizeof(u32) + sizeof(int);
-		nan_debug_command_config(0, global_interface_handle,
+		nan_debug_command_config(0, dut->wifi_hal_iface_handle,
 					 cfg_debug, size);
 	}
 
@@ -844,7 +841,7 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 				"%s: invalid schedule type: cmd type = %d and command data = %d",
 				__func__, cfg_debug.cmd,
 				invalid_nan_schedule_type);
-		nan_debug_command_config(0, global_interface_handle,
+		nan_debug_command_config(0, dut->wifi_hal_iface_handle,
 					 cfg_debug, size);
 	}
 
@@ -860,7 +857,7 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 				"%s: map order: cmd type = %d and command data = %d",
 				__func__,
 				cfg_debug.cmd, map_order_val);
-		nan_debug_command_config(0, global_interface_handle,
+		nan_debug_command_config(0, dut->wifi_hal_iface_handle,
 					 cfg_debug, size);
 	}
 
@@ -876,7 +873,7 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 		sigma_dut_print(dut, DUT_MSG_INFO,
 				"%s: qos config: cmd type = %d and command data = %d",
 				__func__, cfg_debug.cmd, qos_config_val);
-		nan_debug_command_config(0, global_interface_handle,
+		nan_debug_command_config(0, dut->wifi_hal_iface_handle,
 					 cfg_debug, size);
 	}
 #endif
@@ -900,7 +897,7 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 			ndp_attr_val = NAN_NDP_ATTR_PRESENT;
 		memcpy(cfg_debug.debug_cmd_data, &ndp_attr_val, sizeof(int));
 		size = sizeof(u32) + sizeof(int);
-		ret = nan_debug_command_config(0, global_interface_handle,
+		ret = nan_debug_command_config(0, dut->wifi_hal_iface_handle,
 					       cfg_debug, size);
 		if (ret != WIFI_SUCCESS) {
 			send_resp(dut, conn, SIGMA_ERROR,
@@ -921,7 +918,7 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 			ndpe_attr_val = NAN_NDPE_ATTR_PRESENT;
 		memcpy(cfg_debug.debug_cmd_data, &ndpe_attr_val, sizeof(int));
 		size = sizeof(u32) + sizeof(int);
-		ret = nan_debug_command_config(0, global_interface_handle,
+		ret = nan_debug_command_config(0, dut->wifi_hal_iface_handle,
 					       cfg_debug, size);
 		if (ret != WIFI_SUCCESS) {
 			send_resp(dut, conn, SIGMA_ERROR,
@@ -943,7 +940,7 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 		memcpy(cfg_debug.debug_cmd_data, &implicit_ipv6_val,
 		       sizeof(int));
 		size = sizeof(u32) + sizeof(int);
-		ret = nan_debug_command_config(0, global_interface_handle,
+		ret = nan_debug_command_config(0, dut->wifi_hal_iface_handle,
 					       cfg_debug, size);
 		if (ret != WIFI_SUCCESS) {
 			send_resp(dut, conn, SIGMA_ERROR,
@@ -1024,7 +1021,8 @@ static int sigma_nan_data_request(struct sigma_dut *dut,
 	}
 #endif
 
-	ret = nan_data_request_initiator(0, global_interface_handle, &init_req);
+	ret = nan_data_request_initiator(0, dut->wifi_hal_iface_handle,
+					 &init_req);
 	if (ret != WIFI_SUCCESS) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "Unable to initiate nan data request");
@@ -1079,7 +1077,7 @@ static int sigma_nan_data_response(struct sigma_dut *dut,
 		memcpy(cfg_debug.debug_cmd_data, &auto_responder_mode_val,
 		       sizeof(int));
 		size = sizeof(u32) + sizeof(int);
-		ret = nan_debug_command_config(0, global_interface_handle,
+		ret = nan_debug_command_config(0, dut->wifi_hal_iface_handle,
 					       cfg_debug, size);
 		if (ret != WIFI_SUCCESS) {
 			send_resp(dut, conn, SIGMA_ERROR,
@@ -1105,7 +1103,7 @@ static int sigma_nan_data_response(struct sigma_dut *dut,
 		memcpy(cfg_debug.debug_cmd_data, &m4_response_type_val,
 		       sizeof(int));
 		size = sizeof(u32) + sizeof(int);
-		ret = nan_debug_command_config(0, global_interface_handle,
+		ret = nan_debug_command_config(0, dut->wifi_hal_iface_handle,
 					       cfg_debug, size);
 		if (ret != WIFI_SUCCESS) {
 			send_resp(dut, conn, SIGMA_ERROR,
@@ -1128,7 +1126,7 @@ static int sigma_nan_data_response(struct sigma_dut *dut,
 			ndp_attr_val = NAN_NDP_ATTR_PRESENT;
 		memcpy(cfg_debug.debug_cmd_data, &ndp_attr_val, sizeof(int));
 		size = sizeof(u32) + sizeof(int);
-		ret = nan_debug_command_config(0, global_interface_handle,
+		ret = nan_debug_command_config(0, dut->wifi_hal_iface_handle,
 					       cfg_debug, size);
 		if (ret != WIFI_SUCCESS) {
 			send_resp(dut, conn, SIGMA_ERROR,
@@ -1148,7 +1146,7 @@ static int sigma_nan_data_response(struct sigma_dut *dut,
 			ndpe_attr_val = NAN_NDPE_ATTR_PRESENT;
 		memcpy(cfg_debug.debug_cmd_data, &ndpe_attr_val, sizeof(int));
 		size = sizeof(u32) + sizeof(int);
-		ret = nan_debug_command_config(0, global_interface_handle,
+		ret = nan_debug_command_config(0, dut->wifi_hal_iface_handle,
 					       cfg_debug, size);
 		if (ret != WIFI_SUCCESS) {
 			send_resp(dut, conn, SIGMA_ERROR,
@@ -1186,14 +1184,14 @@ static int sigma_nan_data_end(struct sigma_dut *dut, struct sigma_cmd *cmd)
 				"%s: nmf_security_config_val -- cmd type = %d and command data = %d",
 				__func__, cfg_debug.cmd,
 				nmf_security_config_val);
-		nan_debug_command_config(0, global_interface_handle,
+		nan_debug_command_config(0, dut->wifi_hal_iface_handle,
 					 cfg_debug, size);
 	}
 
 	req.num_ndp_instances = 1;
 	req.ndp_instance_id[0] = global_ndp_instance_id;
 
-	nan_data_end(0, global_interface_handle, &req);
+	nan_data_end(0, dut->wifi_hal_iface_handle, &req);
 	return 0;
 }
 
@@ -1230,7 +1228,7 @@ static int sigma_nan_range_request(struct sigma_dut *dut,
 			dut, DUT_MSG_INFO, "peer mac addr: " MAC_ADDR_STR,
 			MAC_ADDR_ARRAY(req.range_response_cfg.peer_addr));
 	}
-	nan_subscribe_request(0, global_interface_handle, &req);
+	nan_subscribe_request(0, dut->wifi_hal_iface_handle, &req);
 
 	return 0;
 }
@@ -1261,7 +1259,7 @@ static int sigma_nan_cancel_range(struct sigma_dut *dut,
 			dut, DUT_MSG_INFO, "peer mac addr: " MAC_ADDR_STR,
 			MAC_ADDR_ARRAY(req.range_response_cfg.peer_addr));
 	}
-	nan_publish_request(0, global_interface_handle, &req);
+	nan_publish_request(0, dut->wifi_hal_iface_handle, &req);
 
 	return 0;
 }
@@ -1331,13 +1329,14 @@ static int sigma_nan_schedule_update(struct sigma_dut *dut,
 				cfg_debug.cmd);
 	}
 
-	nan_debug_command_config(0, global_interface_handle, cfg_debug, size);
+	nan_debug_command_config(0, dut->wifi_hal_iface_handle, cfg_debug,
+				 size);
 
 	return 0;
 }
 
 
-int config_post_disc_attr(void)
+int config_post_disc_attr(struct sigma_dut *dut)
 {
 	wifi_error ret;
 	NanConfigRequest configReq;
@@ -1353,7 +1352,7 @@ int config_post_disc_attr(void)
 	configReq.discovery_attr_val[0].duration = 0;
 	configReq.discovery_attr_val[0].avail_interval_bitmap = 0x00000008;
 
-	ret = nan_config_request(0, global_interface_handle, &configReq);
+	ret = nan_config_request(0, dut->wifi_hal_iface_handle, &configReq);
 	if (ret != WIFI_SUCCESS) {
 		sigma_dut_print(global_dut, DUT_MSG_INFO,
 				"NAN config request failed while configuring post discovery attribute");
@@ -1436,7 +1435,7 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 
 			memset(&req, 0, sizeof(NanPublishCancelRequest));
 			ret = nan_publish_cancel_request(
-				0, global_interface_handle, &req);
+				0, dut->wifi_hal_iface_handle, &req);
 			if (ret != WIFI_SUCCESS) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "Unable to cancel nan publish request");
@@ -1468,7 +1467,7 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 
 	if (is_fam == 1) {
-		config_post_disc_attr();
+		config_post_disc_attr(dut);
 		/*
 		 * 8-bit bitmap which allows the Host to associate this publish
 		 * with a particular Post-NAN Connectivity attribute which has
@@ -1575,7 +1574,7 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 		config_req.config_dw.dw_2dot4g_interval_val = awake_dw_int;
 		config_req.config_dw.config_5g_dw_band = 1;
 		config_req.config_dw.dw_5g_interval_val = awake_dw_int;
-		ret = nan_config_request(0, global_interface_handle,
+		ret = nan_config_request(0, dut->wifi_hal_iface_handle,
 					 &config_req);
 		if (ret != WIFI_SUCCESS) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
@@ -1621,7 +1620,7 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 			ndp_attr_val = NAN_NDP_ATTR_PRESENT;
 		memcpy(cfg_debug.debug_cmd_data, &ndp_attr_val, sizeof(int));
 		size = sizeof(u32) + sizeof(int);
-		ret = nan_debug_command_config(0, global_interface_handle,
+		ret = nan_debug_command_config(0, dut->wifi_hal_iface_handle,
 					       cfg_debug, size);
 		if (ret != WIFI_SUCCESS) {
 			send_resp(dut, conn, SIGMA_ERROR,
@@ -1650,13 +1649,14 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 		cfg_debug.cmd = NAN_TEST_MODE_CMD_TRANSPORT_IP_PARAM;
 		memcpy(cfg_debug.debug_cmd_data, &ndp_ip_trans_param,
 		       sizeof(NdpIpTransParams));
-		nan_debug_command_config(0, global_interface_handle, cfg_debug,
+		nan_debug_command_config(0, dut->wifi_hal_iface_handle,
+					 cfg_debug,
 					 sizeof(u32) +
 					 sizeof(NdpIpTransParams));
 	}
 #endif
 
-	ret = nan_publish_request(0, global_interface_handle, &req);
+	ret = nan_publish_request(0, dut->wifi_hal_iface_handle, &req);
 	if (ret != WIFI_SUCCESS)
 		send_resp(dut, conn, SIGMA_ERROR, "Unable to publish");
 
@@ -1701,7 +1701,7 @@ static int nan_further_availability_rx(struct sigma_dut *dut,
 		req.hop_count_force_val = hop_count_val;
 	}
 
-	ret = nan_enable_request(0, global_interface_handle, &req);
+	ret = nan_enable_request(0, dut->wifi_hal_iface_handle, &req);
 	if (ret != WIFI_SUCCESS) {
 		send_resp(dut, conn, SIGMA_ERROR, "Unable to enable nan");
 		return 0;
@@ -1749,7 +1749,7 @@ static int nan_further_availability_tx(struct sigma_dut *dut,
 		req.hop_count_force_val = hop_count_val;
 	}
 
-	ret = nan_enable_request(0, global_interface_handle, &req);
+	ret = nan_enable_request(0, dut->wifi_hal_iface_handle, &req);
 	if (ret != WIFI_SUCCESS) {
 		send_resp(dut, conn, SIGMA_ERROR, "Unable to enable nan");
 		return 0;
@@ -1767,7 +1767,7 @@ static int nan_further_availability_tx(struct sigma_dut *dut,
 	configReq.fam_val.famchan[0].mapid = 0;
 	configReq.fam_val.famchan[0].avail_interval_bitmap = 0x7ffffffe;
 
-	ret = nan_config_request(0, global_interface_handle, &configReq);
+	ret = nan_config_request(0, dut->wifi_hal_iface_handle, &configReq);
 	if (ret != WIFI_SUCCESS)
 		send_resp(dut, conn, SIGMA_ERROR, "Nan config request failed");
 
@@ -1825,7 +1825,8 @@ int sigma_nan_transmit_followup(struct sigma_dut *dut,
 	}
 	nan_parse_mac_address(dut, mac, req.addr);
 
-	ret = nan_transmit_followup_request(0, global_interface_handle, &req);
+	ret = nan_transmit_followup_request(0, dut->wifi_hal_iface_handle,
+					    &req);
 	if (ret != WIFI_SUCCESS) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "Unable to complete nan transmit followup");
@@ -2174,14 +2175,6 @@ static void ndp_event_data_confirm(NanDataPathConfirmInd *event)
 }
 
 
-void * my_thread_function(void *ptr)
-{
-	wifi_event_loop(global_wifi_handle);
-	pthread_exit(0);
-	return (void *) NULL;
-}
-
-
 static NanCallbackHandler callbackHandler = {
 	.NotifyResponse = nan_notify_response,
 	.EventPublishReplied = nan_event_publish_replied,
@@ -2199,23 +2192,17 @@ static NanCallbackHandler callbackHandler = {
 
 void nan_init(struct sigma_dut *dut)
 {
-	pthread_t thread1;	/* thread variables */
-	wifi_error err = wifi_initialize(&global_wifi_handle);
-
-	if (err) {
-		printf("wifi hal initialize failed\n");
-		return;
+	if (wifi_hal_initialize(dut)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s - wifi hal init failed for - NAN",
+				__func__);
+		exit(0);
 	}
-
-	global_interface_handle = wifi_get_iface_handle(global_wifi_handle,
-							(char *) "wlan0");
-	/* create threads 1 */
-	pthread_create(&thread1, NULL, &my_thread_function, NULL);
-
 	pthread_mutex_init(&gMutex, NULL);
 	pthread_cond_init(&gCondition, NULL);
-	if (global_interface_handle)
-		nan_register_handler(global_interface_handle, callbackHandler);
+	if (dut->wifi_hal_iface_handle)
+		nan_register_handler(dut->wifi_hal_iface_handle,
+				     callbackHandler);
 }
 
 
@@ -2271,7 +2258,8 @@ void nan_cmd_sta_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	global_subscribe_id = 0;
 
 	sigma_nan_data_end(dut, cmd);
-	nan_data_interface_delete(0, global_interface_handle, (char *) "nan0");
+	nan_data_interface_delete(0, dut->wifi_hal_iface_handle,
+				  (char *) "nan0");
 	sigma_nan_disable(dut, conn, cmd);
 	global_header_handle = 0;
 	global_match_handle = 0;
@@ -2316,7 +2304,7 @@ int nan_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 		sigma_dut_print(dut, DUT_MSG_INFO,
 				"%s: Device Type: cmd type = %d and command data = %u",
 				__func__, cfg_debug.cmd, device_type_val);
-		nan_debug_command_config(0, global_interface_handle,
+		nan_debug_command_config(0, dut->wifi_hal_iface_handle,
 					 cfg_debug, size);
 #endif
 		/*
@@ -2326,7 +2314,7 @@ int nan_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 		if (strcasecmp(nan_op, "On") == 0) {
 			if (sigma_nan_enable(dut, conn, cmd) == 0) {
 				ret = nan_data_interface_create(
-					0, global_interface_handle,
+					0, dut->wifi_hal_iface_handle,
 					(char *) "nan0");
 				if (ret != WIFI_SUCCESS) {
 					sigma_dut_print(
@@ -2357,7 +2345,7 @@ int nan_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 			}
 		} else if (strcasecmp(nan_op, "Off") == 0) {
 			nan_data_interface_delete(0,
-				global_interface_handle, (char *) "nan0");
+				dut->wifi_hal_iface_handle, (char *) "nan0");
 			sigma_nan_disable(dut, conn, cmd);
 			memset(global_publish_service_name, 0,
 			       sizeof(global_publish_service_name));
@@ -2476,7 +2464,7 @@ int nan_cmd_sta_get_parameter(struct sigma_dut *dut, struct sigma_conn *conn,
 	memset(&req, 0, sizeof(NanStatsRequest));
 	memset(resp_buf, 0, sizeof(resp_buf));
 	req.stats_type = (NanStatsType) NAN_STATS_ID_DE_TIMING_SYNC;
-	nan_stats_request(0, global_interface_handle, &req);
+	nan_stats_request(0, dut->wifi_hal_iface_handle, &req);
 	/*
 	 * To ensure sta_get_events to get the events
 	 * only after joining the NAN cluster

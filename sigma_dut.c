@@ -43,6 +43,45 @@ int sigma_wmm_ac = 0;
 #ifdef ANDROID
 #include <android/log.h>
 
+#ifdef ANDROID_WIFI_HAL
+
+static void * wifi_hal_event_thread(void *ptr)
+{
+	struct sigma_dut *dut = ptr;
+
+	wifi_event_loop(dut->wifi_hal_handle);
+	pthread_exit(0);
+
+	return NULL;
+}
+
+
+int wifi_hal_initialize(struct sigma_dut *dut)
+{
+	pthread_t thread1;
+	wifi_error err;
+
+	if (dut->wifi_hal_initialized)
+		return 0;
+
+	err = wifi_initialize(&dut->wifi_hal_handle);
+	if (err) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"wifi hal initialize failed");
+		return -1;
+	}
+
+	dut->wifi_hal_iface_handle = wifi_get_iface_handle(dut->wifi_hal_handle,
+							   (char *) "wlan0");
+	pthread_create(&thread1, NULL, &wifi_hal_event_thread, (void *) dut);
+	dut->wifi_hal_initialized = true;
+
+	return 0;
+}
+
+#endif /* ANDROID_WIFI_HAL */
+
+
 static enum android_LogPriority level_to_android_priority(int level)
 {
 	switch (level) {
@@ -56,6 +95,7 @@ static enum android_LogPriority level_to_android_priority(int level)
 		return ANDROID_LOG_VERBOSE;
 	}
 }
+
 #endif /* ANDROID */
 
 

@@ -89,6 +89,7 @@ ifneq ($(wildcard hardware/qcom/wlan/qcwcn/wifi_hal/nan_cert.h),)
 LOCAL_SHARED_LIBRARIES += libwifi-hal-qcom
 OBJS += nan.c
 CFLAGS += -DANDROID_NAN
+CFLAGS += -DANDROID_WIFI_HAL
 endif
 endif
 CFLAGS += -Wno-unused-parameter
