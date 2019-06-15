@@ -4577,12 +4577,10 @@ int mdss_fb_atomic_commit(struct fb_info *info,
 	} else
 		mfd->bl_extn_level = -1;
 
-	mutex_lock(&mfd->mdp_sync_pt_data.sync_mutex);
 	atomic_inc(&mfd->mdp_sync_pt_data.commit_cnt);
 	atomic_inc(&mfd->commits_pending);
 	atomic_inc(&mfd->kickoff_pending);
 	wake_up_all(&mfd->commit_wait_q);
-	mutex_unlock(&mfd->mdp_sync_pt_data.sync_mutex);
 
 	if (wait_for_finish)
 		ret = mdss_fb_pan_idle(mfd);
