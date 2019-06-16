@@ -216,8 +216,10 @@ static int dsi_ctrl_debugfs_init(struct dsi_ctrl *dsi_ctrl,
 	dir = debugfs_create_dir(dsi_ctrl->name, parent);
 	if (IS_ERR_OR_NULL(dir)) {
 		rc = PTR_ERR(dir);
+#ifdef CONFIG_DEBUG_FS
 		pr_err("[DSI_%d] debugfs create dir failed, rc=%d\n",
 		       dsi_ctrl->cell_index, rc);
+#endif
 		goto error;
 	}
 
