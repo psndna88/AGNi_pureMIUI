@@ -849,9 +849,11 @@ static int qusb_phy_create_debugfs(struct qusb_phy *qphy)
 
 	qphy->root = debugfs_create_dir(dev_name(qphy->phy.dev), NULL);
 	if (IS_ERR_OR_NULL(qphy->root)) {
+#ifdef CONFIG_DEBUG_FS
 		dev_err(qphy->phy.dev,
 			"can't create debugfs root for %s\n",
 					dev_name(qphy->phy.dev));
+#endif
 		ret = -ENOMEM;
 		goto create_err;
 	}
