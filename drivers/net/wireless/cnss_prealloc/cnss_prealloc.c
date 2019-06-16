@@ -362,7 +362,9 @@ static int __init wcnss_pre_alloc_init(void)
 
 	debug_base = debugfs_create_dir(PRE_ALLOC_DEBUGFS_DIR, NULL);
 	if (IS_ERR_OR_NULL(debug_base)) {
+#ifdef CONFIG_DEBUG_FS
 		pr_err("%s: Failed to create debugfs dir\n", __func__);
+#endif
 	} else if (IS_ERR_OR_NULL(debugfs_create_file(
 			PRE_ALLOC_DEBUGFS_FILE_OBJ,
 			0644, debug_base, NULL,
