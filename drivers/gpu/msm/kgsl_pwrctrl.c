@@ -2902,7 +2902,7 @@ int kgsl_active_count_wait(struct kgsl_device *device, int count)
 	while (atomic_read(&device->active_cnt) > count) {
 		long ret;
 		mutex_unlock(&device->mutex);
-		ret = wait_event_timeout(device->active_cnt_wq,
+		ret = wait_event_interruptible_timeout(device->active_cnt_wq,
 			_check_active_count(device, count), wait_jiffies);
 		mutex_lock(&device->mutex);
 		result = ret == 0 ? -ETIMEDOUT : 0;
