@@ -1,5 +1,5 @@
 KERNEL_DIR=$PWD
-Anykernel_DIR=$KERNEL_DIR/AnyKernel2/
+Anykernel_DIR=$KERNEL_DIR/AnyKernel3/
 DATE=$(date +"%d%m%Y")
 TIME=$(date +"-%H.%M.%S")
 KERNEL_NAME="Escrima-X27-Kamui-LightningBlade-PurpleLightning"
