@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -58,9 +58,6 @@
 #include "vos_nvitem.h"
 #ifdef WLAN_FEATURE_11W
 #include "wniCfg.h"
-#endif
-#ifdef SAP_AUTH_OFFLOAD
-#include "limAssocUtils.h"
 #endif
 
 /* Static global used to mark situations where pMac->lim.gLimTriggerBackgroundScanDuringQuietBss is SET
@@ -648,13 +645,6 @@ char *limMsgStr(tANI_U32 msgType)
             return "SIR_LIM_FT_PREAUTH_RSP_TIMEOUT";
 #endif
 
-#ifdef WLAN_FEATURE_LFR_MBB
-        case SIR_LIM_PREAUTH_MBB_RSP_TIMEOUT:
-            return "SIR_LIM_PREAUTH_MBB_RSP_TIMEOUT";
-        case SIR_LIM_REASSOC_MBB_RSP_TIMEOUT:
-            return "SIR_LIM_REASSOC_MBB_RSP_TIMEOUT";
-#endif
-
         case SIR_HAL_APP_SETUP_NTF:
             return "SIR_HAL_APP_SETUP_NTF";
         case SIR_HAL_INITIAL_CAL_FAILED_NTF:
@@ -1137,9 +1127,6 @@ limCleanupMlm(tpAniSirGlobal pMac)
 
         tx_timer_deactivate(&pMac->lim.limTimers.gLimActiveToPassiveChannelTimer);
         tx_timer_delete(&pMac->lim.limTimers.gLimActiveToPassiveChannelTimer);
-
-        tx_timer_deactivate(&pMac->lim.limTimers.g_lim_ap_ecsa_timer);
-        tx_timer_delete(&pMac->lim.limTimers.g_lim_ap_ecsa_timer);
 
         pMac->lim.gLimTimersCreated = 0;
     }
@@ -2736,42 +2723,6 @@ void limProcessChannelSwitchTimeout(tpAniSirGlobal pMac)
 }
 
 /**
- * lim_process_ecsa_ie()- Process ECSA IE in beacon/ probe resp
- * @mac_ctx: pointer to global mac structure
- * @ecsa_ie: ecsa ie
- * @session: Session entry.
- *
- * This function is called when ECSA IE is received on STA interface.
- *
- * Return: void
- */
-static void
-lim_process_ecsa_ie(tpAniSirGlobal mac_ctx,
-     tDot11fIEext_chan_switch_ann *ecsa_ie, tpPESession session)
-{
-    struct ecsa_frame_params ecsa_req;
-
-    limLog(mac_ctx, LOG1, FL("Received ECSA IE in beacon/probe resp"));
-
-    if (session->currentOperChannel == ecsa_ie->new_channel) {
-        limLog(mac_ctx, LOGE, FL("New channel %d is same as old channel ignore req"),
-               ecsa_ie->new_channel);
-        return;
-    }
-
-    ecsa_req.new_channel = ecsa_ie->new_channel;
-    ecsa_req.op_class = ecsa_ie->new_reg_class;
-    ecsa_req.switch_mode = ecsa_ie->switch_mode;
-    ecsa_req.switch_count = ecsa_ie->switch_count;
-    limLog(mac_ctx, LOG1, FL("New channel %d op class %d switch mode %d switch count %d"),
-           ecsa_req.new_channel, ecsa_req.op_class,
-           ecsa_req.switch_mode, ecsa_req.switch_count);
-
-    lim_handle_ecsa_req(mac_ctx, &ecsa_req, session);
-}
-
-
-/**
  * limUpdateChannelSwitch()
  *
  *FUNCTION:
@@ -2794,9 +2745,6 @@ limUpdateChannelSwitch(struct sAniSirGlobal *pMac,  tpSirProbeRespBeacon pBeacon
 #ifdef WLAN_FEATURE_11AC
     tDot11fIEWiderBWChanSwitchAnn    *pWiderChnlSwitch;
 #endif
-   if (pBeacon->ecsa_present)
-       return lim_process_ecsa_ie(pMac,
-                                  &pBeacon->ext_chan_switch_ann, psessionEntry);
 
     beaconPeriod = psessionEntry->beaconParams.beaconInterval;
 
@@ -2844,28 +2792,28 @@ limUpdateChannelSwitch(struct sAniSirGlobal *pMac,  tpSirProbeRespBeacon pBeacon
          */
         if (psessionEntry->htSupportedChannelWidthSet)
         {
-            if (pBeacon->sec_chan_offset_present)
+            if (pBeacon->extChannelSwitchPresent)
             {
-                if ((pBeacon->sec_chan_offset.secondaryChannelOffset == PHY_DOUBLE_CHANNEL_LOW_PRIMARY) ||
-                    (pBeacon->sec_chan_offset.secondaryChannelOffset == PHY_DOUBLE_CHANNEL_HIGH_PRIMARY))
+                if ((pBeacon->extChannelSwitchIE.secondaryChannelOffset == PHY_DOUBLE_CHANNEL_LOW_PRIMARY) || 
+                    (pBeacon->extChannelSwitchIE.secondaryChannelOffset == PHY_DOUBLE_CHANNEL_HIGH_PRIMARY))
                 {
                     psessionEntry->gLimChannelSwitch.state = eLIM_CHANNEL_SWITCH_PRIMARY_AND_SECONDARY;
-                    psessionEntry->gLimChannelSwitch.secondarySubBand = pBeacon->sec_chan_offset.secondaryChannelOffset;
+                    psessionEntry->gLimChannelSwitch.secondarySubBand = pBeacon->extChannelSwitchIE.secondaryChannelOffset;
                 }
 #ifdef WLAN_FEATURE_11AC
                 if(psessionEntry->vhtCapability && pBeacon->WiderBWChanSwitchAnnPresent)
                 {
                     if (pWiderChnlSwitch->newChanWidth == WNI_CFG_VHT_CHANNEL_WIDTH_80MHZ)
                     {
-                        if(pBeacon->sec_chan_offset_present)
+                        if(pBeacon->extChannelSwitchPresent)
                         {
-                            if ((pBeacon->sec_chan_offset.secondaryChannelOffset == PHY_DOUBLE_CHANNEL_LOW_PRIMARY) ||
-                                (pBeacon->sec_chan_offset.secondaryChannelOffset == PHY_DOUBLE_CHANNEL_HIGH_PRIMARY))
+                            if ((pBeacon->extChannelSwitchIE.secondaryChannelOffset == PHY_DOUBLE_CHANNEL_LOW_PRIMARY) ||
+                                (pBeacon->extChannelSwitchIE.secondaryChannelOffset == PHY_DOUBLE_CHANNEL_HIGH_PRIMARY))
                             {
                                 psessionEntry->gLimChannelSwitch.state = eLIM_CHANNEL_SWITCH_PRIMARY_AND_SECONDARY;
                                 psessionEntry->gLimChannelSwitch.secondarySubBand = limGet11ACPhyCBState(pMac, 
                                                                                                          psessionEntry->gLimChannelSwitch.primaryChannel,
-                                                                                                         pBeacon->sec_chan_offset.secondaryChannelOffset,
+                                                                                                         pBeacon->extChannelSwitchIE.secondaryChannelOffset,
                                                                                                          pWiderChnlSwitch->newCenterChanFreq0,
                                                                                                          psessionEntry);
                             }
@@ -2891,118 +2839,6 @@ limUpdateChannelSwitch(struct sAniSirGlobal *pMac,  tpSirProbeRespBeacon pBeacon
         psessionEntry->gLimChannelSwitch.switchCount,
         psessionEntry->gLimChannelSwitch.switchTimeoutValue);
     return;
-}
-
-/**
- * lim_select_cbmode()- select cb mode for the channel and BW
- * @sta_ds: peer sta
- * @channel: channel
- * @chan_bw: BW
- *
- * Return: cb mode for a channel and BW
- */
-static inline int lim_select_cbmode(tDphHashNode *sta_ds, uint8_t channel,
-       uint8_t chan_bw)
-{
-    if (sta_ds->mlmStaContext.vhtCapability && chan_bw) {
-        if (channel== 36 || channel == 52 || channel == 100 ||
-            channel == 116 || channel == 149)
-           return PHY_QUADRUPLE_CHANNEL_20MHZ_LOW_40MHZ_LOW;
-        else if (channel == 40 || channel == 56 || channel == 104 ||
-             channel == 120 || channel == 153)
-           return PHY_QUADRUPLE_CHANNEL_20MHZ_HIGH_40MHZ_LOW;
-        else if (channel == 44 || channel == 60 || channel == 108 ||
-                 channel == 124 || channel == 157)
-           return PHY_QUADRUPLE_CHANNEL_20MHZ_LOW_40MHZ_HIGH;
-        else if (channel == 48 || channel == 64 || channel == 112 ||
-             channel == 128 || channel == 161)
-            return PHY_QUADRUPLE_CHANNEL_20MHZ_HIGH_40MHZ_HIGH;
-        else if (channel == 165)
-            return PHY_SINGLE_CHANNEL_CENTERED;
-    } else if (sta_ds->mlmStaContext.htCapability) {
-        if (channel== 40 || channel == 48 || channel == 56 ||
-             channel == 64 || channel == 104 || channel == 112 ||
-             channel == 120 || channel == 128 || channel == 136 ||
-             channel == 144 || channel == 153 || channel == 161)
-           return PHY_DOUBLE_CHANNEL_HIGH_PRIMARY;
-        else if (channel== 36 || channel == 44 || channel == 52 ||
-             channel == 60 || channel == 100 || channel == 108 ||
-             channel == 116 || channel == 124 || channel == 132 ||
-             channel == 140 || channel == 149 || channel == 157)
-           return PHY_DOUBLE_CHANNEL_LOW_PRIMARY;
-        else if (channel == 165)
-           return PHY_SINGLE_CHANNEL_CENTERED;
-    }
-    return PHY_SINGLE_CHANNEL_CENTERED;
-}
-
-void lim_handle_ecsa_req(tpAniSirGlobal mac_ctx, struct ecsa_frame_params *ecsa_req,
-              tpPESession session)
-{
-   offset_t ch_offset;
-   tpDphHashNode sta_ds = NULL ;
-   uint16_t aid = 0;
-
-   if (!LIM_IS_STA_ROLE(session)) {
-       limLog(mac_ctx, LOGE, FL("Session not in sta role"));
-       return;
-   }
-
-   sta_ds = dphLookupHashEntry(mac_ctx, session->bssId, &aid,
-                               &session->dph.dphHashTable);
-   if (!sta_ds) {
-       limLog(mac_ctx, LOGE, FL("pStaDs does not exist for given sessionID"));
-       return;
-   }
-
-   session->gLimChannelSwitch.primaryChannel = ecsa_req->new_channel;
-   session->gLimChannelSwitch.switchCount = ecsa_req->switch_count;
-   session->gLimChannelSwitch.switchTimeoutValue =
-            SYS_MS_TO_TICKS(session->beaconParams.beaconInterval) *
-            ecsa_req->switch_count;
-   session->gLimChannelSwitch.switchMode = ecsa_req->switch_mode;
-
-   /* Only primary channel switch element is present */
-   session->gLimChannelSwitch.state = eLIM_CHANNEL_SWITCH_PRIMARY_ONLY;
-   session->gLimChannelSwitch.secondarySubBand = PHY_SINGLE_CHANNEL_CENTERED;
-   session->gLimWiderBWChannelSwitch.newChanWidth = 0;
-
-   ch_offset = limGetOffChMaxBwOffsetFromChannel(
-                       mac_ctx->scan.countryCodeCurrent,
-                       ecsa_req->new_channel,
-                       sta_ds->mlmStaContext.vhtCapability);
-   if (ch_offset == BW80) {
-       session->gLimWiderBWChannelSwitch.newChanWidth =
-                                  WNI_CFG_VHT_CHANNEL_WIDTH_80MHZ;
-   } else {
-       session->gLimWiderBWChannelSwitch.newChanWidth =
-                                   WNI_CFG_VHT_CHANNEL_WIDTH_20_40MHZ;
-   }
-
-   /*
-    * Do not bother to look and operate on extended channel switch element
-    * if our own channel-bonding state is not enabled
-    */
-   if (session->htSupportedChannelWidthSet) {
-       session->gLimChannelSwitch.secondarySubBand = lim_select_cbmode(sta_ds,
-                                ecsa_req->new_channel,
-                                session->gLimWiderBWChannelSwitch.newChanWidth);
-       if (session->gLimChannelSwitch.secondarySubBand > 0)
-              session->gLimChannelSwitch.state =
-                                     eLIM_CHANNEL_SWITCH_PRIMARY_AND_SECONDARY;
-   }
-
-   if (eSIR_SUCCESS != limStartChannelSwitch(mac_ctx, session)) {
-       limLog(mac_ctx, LOGW, FL("Could not start Channel Switch"));
-   }
-
-   limLog(mac_ctx, LOG1,
-        FL("session %d primary chl %d, subband %d, count  %d (%d ticks) "),
-        session->peSessionId,
-        session->gLimChannelSwitch.primaryChannel,
-        session->gLimChannelSwitch.secondarySubBand,
-        session->gLimChannelSwitch.switchCount,
-        session->gLimChannelSwitch.switchTimeoutValue);
 }
 
 /**
@@ -3616,16 +3452,15 @@ void limSwitchPrimarySecondaryChannel(tpAniSirGlobal pMac, tpPESession psessionE
             psessionEntry->currentOperChannel, newChannel);
         psessionEntry->currentOperChannel = newChannel;
     }
-    if (psessionEntry->htSecondaryChannelOffset != limGetHTCBState(subband))
+    if (psessionEntry->htSecondaryChannelOffset != subband)
     {
         limLog(pMac, LOGW,
             FL("switch old sec chnl %d --> new sec chnl %d "),
-            psessionEntry->htSecondaryChannelOffset, limGetHTCBState(subband));
-        psessionEntry->htSecondaryChannelOffset = limGetHTCBState(subband);
+            psessionEntry->htSecondaryChannelOffset, subband);
+        psessionEntry->htSecondaryChannelOffset = subband;
         if (psessionEntry->htSecondaryChannelOffset == PHY_SINGLE_CHANNEL_CENTERED)
         {
             psessionEntry->htSupportedChannelWidthSet = WNI_CFG_CHANNEL_BONDING_MODE_DISABLE;
-            psessionEntry->apCenterChan = 0;
         }
         else
         {
@@ -3633,18 +3468,6 @@ void limSwitchPrimarySecondaryChannel(tpAniSirGlobal pMac, tpPESession psessionE
         }
         psessionEntry->htRecommendedTxWidthSet = psessionEntry->htSupportedChannelWidthSet;
     }
-
-    if (psessionEntry->htSecondaryChannelOffset == PHY_SINGLE_CHANNEL_CENTERED)
-        return;
-
-    if (subband > PHY_DOUBLE_CHANNEL_HIGH_PRIMARY)
-        psessionEntry->apCenterChan =
-               limGetCenterChannel(pMac, newChannel,
-                                   subband, WNI_CFG_VHT_CHANNEL_WIDTH_80MHZ);
-    else
-        psessionEntry->apCenterChan =
-               limGetCenterChannel(pMac, newChannel,
-                                   subband, WNI_CFG_VHT_CHANNEL_WIDTH_20_40MHZ);
 
     return;
 }
@@ -5418,13 +5241,6 @@ void limUpdateStaRunTimeHTSwitchChnlParams( tpAniSirGlobal   pMac,
    if( !limGetHTCapability( pMac, eHT_SUPPORTED_CHANNEL_WIDTH_SET, psessionEntry ))
         return;
 
-   if ((RF_CHAN_14 >= psessionEntry->currentOperChannel) &&
-      psessionEntry->force_24ghz_in_ht20) {
-        limLog(pMac, LOG1,
-               FL("force_24_gh_in_ht20 is set and channel is 2.4 Ghz"));
-        return;
-   }
-
 #if !defined WLAN_FEATURE_VOWIFI  
     if(wlan_cfgGetInt(pMac, WNI_CFG_LOCAL_POWER_CONSTRAINT, &localPwrConstraint) != eSIR_SUCCESS) {
         limLog( pMac, LOGP, FL( "Unable to get Local Power Constraint from cfg" ));
@@ -6038,6 +5854,29 @@ void limDelAllBASessions(tpAniSirGlobal pMac)
             limDeleteBASessions(pMac, pSessionEntry, BA_BOTH_DIRECTIONS,
                                 eSIR_MAC_UNSPEC_FAILURE_REASON);
         }
+    }
+}
+
+/** -------------------------------------------------------------
+\fn     limDelAllBASessionsBtc
+\brief  Deletes all the exisitng BA receipent sessions in 2.4GHz
+        band.
+\param  tpAniSirGlobal pMac
+\return None
+-------------------------------------------------------------*/
+
+void limDelPerBssBASessionsBtc(tpAniSirGlobal pMac)
+{
+    tANI_U8 sessionId;
+    tpPESession pSessionEntry;
+    pSessionEntry = peFindSessionByBssid(pMac,pMac->btc.btcBssfordisableaggr,
+                                                                &sessionId);
+    if (pSessionEntry)
+    {
+        PELOGW(limLog(pMac, LOGW,
+        "Deleting the BA for session %d as host got BTC event", sessionId);)
+        limDeleteBASessions(pMac, pSessionEntry, BA_BOTH_DIRECTIONS,
+                            eSIR_MAC_PEER_TIMEDOUT_REASON);
     }
 }
 
@@ -8685,84 +8524,6 @@ eHalStatus limTxBdComplete(tpAniSirGlobal pMac, void *pData)
     return eHAL_STATUS_SUCCESS;
 }
 
-eHalStatus limAssocRspTxCompleteCnf(tpAniSirGlobal pMac, void *pData)
-{
-    tpSirTxBdStatus pTxBdStatus;
-    tpDphHashNode pStaDs;
-    tpPESession psessionEntry;
-    VOS_STATUS vosStatus;
-    vos_list_node_t *pNode= NULL, *pNext = NULL;
-    assoc_rsp_tx_context *tmp_tx_context = NULL;
-
-    if (!pData)
-    {
-       limLog(pMac, LOGE, FL("pData is NULL"));
-       return eHAL_STATUS_FAILURE;
-    }
-
-    pTxBdStatus = (tpSirTxBdStatus) pData;
-
-    limLog(pMac, LOG1, FL("txBdToken %u, txBdStatus %u"),
-            pTxBdStatus->txBdToken, pTxBdStatus->txCompleteStatus);
-
-    vos_list_peek_front(&pMac->assoc_rsp_completion_list,
-             &pNode);
-
-    while(pNode)
-    {
-       tmp_tx_context = container_of(pNode, assoc_rsp_tx_context, node);
-       if (tmp_tx_context->txBdToken != pTxBdStatus->txBdToken)
-       {
-        limLog(pMac, LOG1, FL("expecting txBdToken %u, got txBdToken %u"),
-            tmp_tx_context->txBdToken, pTxBdStatus->txBdToken);
-
-        vosStatus = vos_list_peek_next (
-                &pMac->assoc_rsp_completion_list,
-                pNode, &pNext );
-        pNode = pNext;
-        pNext = NULL;
-      }
-      else
-      {
-        limLog(pMac, LOG1, FL("expecting txBdToken %u, got txBdToken %u"),
-            tmp_tx_context->txBdToken, pTxBdStatus->txBdToken);
-        break;
-      }
-    }
-
-    if (!tmp_tx_context) {
-        limLog(pMac, LOGE, FL("context is NULL"));
-        return eHAL_STATUS_SUCCESS;
-    }
-    psessionEntry = peFindSessionBySessionId(pMac, tmp_tx_context->psessionID);
-    if (!psessionEntry) {
-        limLog(pMac, LOGE, FL("failed to get psession pointer"));
-        vos_list_remove_node(&pMac->assoc_rsp_completion_list,
-                pNode);
-        vos_mem_free(tmp_tx_context);
-        return eHAL_STATUS_SUCCESS;
-    }
-    pStaDs = dphGetHashEntry(pMac, tmp_tx_context->staId,
-                             &psessionEntry->dph.dphHashTable);
-    if (pStaDs == NULL)
-    {
-        limLog(pMac, LOGW,
-               FL("STA context not found"));
-        vos_list_remove_node(&pMac->assoc_rsp_completion_list,
-                pNode);
-        vos_mem_free(tmp_tx_context);
-
-        return eHAL_STATUS_SUCCESS;
-    }
-
-    /* Receive path cleanup */
-    limCleanupRxPath(pMac, pStaDs, psessionEntry);
-    vos_list_remove_node(&pMac->assoc_rsp_completion_list,
-                pNode);
-    vos_mem_free(tmp_tx_context);
-
-    return eHAL_STATUS_SUCCESS;
-}
 /**
  * lim_is_robust_mgmt_action_frame() - Check if action catagory is
  * robust action frame
@@ -8854,576 +8615,5 @@ void lim_update_caps_info_for_bss(tpAniSirGlobal mac_ctx,
     if (!(bss_caps & LIM_IMMEDIATE_BLOCK_ACK_MASK)) {
           *caps &= (~LIM_IMMEDIATE_BLOCK_ACK_MASK);
           limLog(mac_ctx, LOG1, FL("Clearing Immed Blk Ack:no AP support"));
-    }
-}
-#ifdef SAP_AUTH_OFFLOAD
-/**
- * _sap_offload_parse_assoc_req - Parse assoc request and store it.
- *
- * @pmac: mac context
- * @assoc_req: Assoc request
- * @add_sta_req: Add Sta request
- *
- * This function process recieved add sta message and store it as
- * sta ds entry. This function will add this sta entry to DPH as well.
- *
- * Return: DPH hash node
- */
-static tpDphHashNode
-_sap_offload_parse_assoc_req(tpAniSirGlobal pmac,
-        tpSirAssocReq assoc_req,
-        tSapOfldAddStaIndMsg *add_sta_req)
-{
-    tpSirMacAssocReqFrame mac_assoc_req = NULL;
-    tpSirAssocReq temp_assoc_req;
-    tSirRetStatus status;
-    tpDphHashNode sta_ds = NULL;
-    uint8_t *frame_body = NULL;
-    uint32_t data_len;
-
-    tpPESession session_entry = limIsApSessionActive(pmac);
-
-    if (session_entry == NULL)
-    {
-        PELOGE(limLog(pmac, LOGE, FL(" Session not found"));)
-            return NULL;
-    }
-
-    if (add_sta_req->data_len <= sizeof(tSirMacMgmtHdr))
-    {
-        limLog(pmac, LOGE, FL("insufficient length of assoc request"));
-        return NULL;
-    }
-
-    /* Update Attribute and Remove IE for
-     * Software AP Authentication Offload
-     */
-    frame_body = (tANI_U8 *)add_sta_req->bufp;
-
-    /*
-     * strip MAC mgmt header before passing buf to
-     * sirConvertAssocReqFrame2Struct() as this API
-     * expects buf starting from fixed parameters only.
-     */
-    frame_body += sizeof(tSirMacMgmtHdr);
-    data_len = add_sta_req->data_len - sizeof(tSirMacMgmtHdr);
-
-    mac_assoc_req = (tpSirMacAssocReqFrame)frame_body;
-    mac_assoc_req->capabilityInfo.privacy = 0;
-
-    status = sirConvertAssocReqFrame2Struct(pmac,
-            frame_body,
-            data_len,
-            assoc_req);
-    if (status != eSIR_SUCCESS)
-    {
-        limLog(pmac, LOGW, FL("sap_offload_add_sta_req parse error"));
-        goto error;
-    }
-    /* For software AP Auth Offload feature
-     * Host will take it as none security station
-     * Force change to none security
-     */
-    assoc_req->rsnPresent = 0;
-    assoc_req->wpaPresent = 0;
-
-    sta_ds = dphAddHashEntry(pmac,
-            add_sta_req->peer_macaddr,
-            add_sta_req->assoc_id,
-            &session_entry->dph.dphHashTable);
-    if (sta_ds == NULL)
-    {
-        /* Could not add hash table entry at DPH */
-        limLog(pmac, LOGE,
-                FL("could not add hash entry at DPH for aid=%d, MacAddr:"
-                    MAC_ADDRESS_STR),
-                add_sta_req->assoc_id,MAC_ADDR_ARRAY(add_sta_req->peer_macaddr));
-        goto error;
-    }
-
-    if (session_entry->parsedAssocReq != NULL)
-    {
-        temp_assoc_req = session_entry->parsedAssocReq[sta_ds->assocId];
-        if (temp_assoc_req != NULL)
-        {
-            if (temp_assoc_req->assocReqFrame)
-            {
-                vos_mem_free(temp_assoc_req->assocReqFrame);
-                temp_assoc_req->assocReqFrame = NULL;
-                temp_assoc_req->assocReqFrameLength = 0;
-            }
-            vos_mem_free(temp_assoc_req);
-            temp_assoc_req = NULL;
-        }
-        session_entry->parsedAssocReq[sta_ds->assocId] = assoc_req;
-    }
-error:
-    return sta_ds;
-}
-
-/**
- * _sap_offload_parse_sta_capability - Parse sta caps from assoc request
- *
- * @sta_ds: STA state node
- * @assoc_req: Assoc request
- * @add_sta_req: Add Sta request
- *
- * This function process recieved add sta message and store station's caps
- * in station ds entry.
- *
- * Return: none
- */
-static void
-_sap_offload_parse_sta_capability(tpDphHashNode sta_ds,
-        tpSirAssocReq assoc_req,
-        tSapOfldAddStaIndMsg *add_sta_req)
-
-{
-
-    sta_ds->mlmStaContext.htCapability = assoc_req->HTCaps.present;
-#ifdef WLAN_FEATURE_11AC
-    sta_ds->mlmStaContext.vhtCapability = assoc_req->VHTCaps.present;
-#endif
-    sta_ds->qos.addtsPresent = (assoc_req->addtsPresent==0) ? false : true;
-    sta_ds->qos.addts        = assoc_req->addtsReq;
-    sta_ds->qos.capability   = assoc_req->qosCapability;
-    sta_ds->versionPresent   = 0;
-    /* short slot and short preamble should be
-     * updated before doing limaddsta
-     */
-    sta_ds->shortPreambleEnabled =
-        (tANI_U8)assoc_req->capabilityInfo.shortPreamble;
-    sta_ds->shortSlotTimeEnabled =
-        (tANI_U8)assoc_req->capabilityInfo.shortSlotTime;
-
-    sta_ds->valid = 0;
-    /* The Auth Type of Software AP Authentication Offload
-     * is always Open System is host side
-     */
-    sta_ds->mlmStaContext.authType = eSIR_OPEN_SYSTEM;
-    sta_ds->staType = STA_ENTRY_PEER;
-
-    /* Assoc Response frame to requesting STA */
-    sta_ds->mlmStaContext.subType = 0;
-
-    sta_ds->mlmStaContext.listenInterval = assoc_req->listenInterval;
-    sta_ds->mlmStaContext.capabilityInfo = assoc_req->capabilityInfo;
-
-    /* The following count will be used to knock-off the station
-     * if it doesn't come back to receive the buffered data.
-     * The AP will wait for numTimSent number of beacons after
-     * sending TIM information for the station, before assuming that
-     * the station is no more associated and disassociates it
-     */
-
-    /* timWaitCount is used by PMM for monitoring the STA's in PS for LINK*/
-    sta_ds->timWaitCount =
-        (tANI_U8)GET_TIM_WAIT_COUNT(assoc_req->listenInterval);
-
-    /* Initialise the Current successful
-     * MPDU's tranfered to this STA count as 0
-     */
-    sta_ds->curTxMpduCnt = 0;
-}
-
-/**
- * _sap_offload_parse_sta_vht - Parse sta's HT/VHT caps from assoc request
- *
- * @pmac: mac context
- * @sta_ds: STA state node
- * @assoc_req: Assoc request
- *
- * This function process recieved add sta message and store station's HT and
- * and VHT caps and store them in station ds entry.
- *
- * Return: tSirRetStatus
- */
-static tSirRetStatus
-_sap_offload_parse_sta_vht(tpAniSirGlobal pmac,
-        tpDphHashNode sta_ds,
-        tpSirAssocReq assoc_req)
-{
-    tpPESession session_entry = limIsApSessionActive(pmac);
-
-    if (IS_DOT11_MODE_HT(session_entry->dot11mode) &&
-            assoc_req->HTCaps.present && assoc_req->wmeInfoPresent)
-    {
-        sta_ds->htGreenfield = (tANI_U8)assoc_req->HTCaps.greenField;
-        sta_ds->htAMpduDensity = assoc_req->HTCaps.mpduDensity;
-        sta_ds->htDsssCckRate40MHzSupport =
-            (tANI_U8)assoc_req->HTCaps.dsssCckMode40MHz;
-        sta_ds->htLsigTXOPProtection =
-            (tANI_U8)assoc_req->HTCaps.lsigTXOPProtection;
-        sta_ds->htMaxAmsduLength =
-            (tANI_U8)assoc_req->HTCaps.maximalAMSDUsize;
-        sta_ds->htMaxRxAMpduFactor = assoc_req->HTCaps.maxRxAMPDUFactor;
-        sta_ds->htMIMOPSState = assoc_req->HTCaps.mimoPowerSave;
-        sta_ds->htShortGI20Mhz = (tANI_U8)assoc_req->HTCaps.shortGI20MHz;
-        sta_ds->htShortGI40Mhz = (tANI_U8)assoc_req->HTCaps.shortGI40MHz;
-        sta_ds->htSupportedChannelWidthSet =
-            (tANI_U8)assoc_req->HTCaps.supportedChannelWidthSet;
-        /* peer just follows AP; so when we are softAP/GO,
-         * we just store our session entry's secondary channel offset here
-         * in peer INFRA STA. However, if peer's 40MHz channel width support
-         * is disabled then secondary channel will be zero
-         */
-        sta_ds->htSecondaryChannelOffset =
-            (sta_ds->htSupportedChannelWidthSet) ?
-            session_entry->htSecondaryChannelOffset : 0;
-#ifdef WLAN_FEATURE_11AC
-        if (assoc_req->operMode.present)
-        {
-            sta_ds->vhtSupportedChannelWidthSet =
-                (tANI_U8)((assoc_req->operMode.chanWidth ==
-                            eHT_CHANNEL_WIDTH_80MHZ) ?
-                        WNI_CFG_VHT_CHANNEL_WIDTH_80MHZ :
-                        WNI_CFG_VHT_CHANNEL_WIDTH_20_40MHZ);
-            sta_ds->htSupportedChannelWidthSet =
-                (tANI_U8)(assoc_req->operMode.chanWidth ?
-                        eHT_CHANNEL_WIDTH_40MHZ : eHT_CHANNEL_WIDTH_20MHZ);
-        }
-        else if (assoc_req->VHTCaps.present)
-        {
-            /* Check if STA has enabled it's channel bonding mode.
-             * If channel bonding mode is enabled, we decide based on
-             * SAP's current configuration else, we set it to VHT20.
-             */
-            sta_ds->vhtSupportedChannelWidthSet =
-                (tANI_U8)((sta_ds->htSupportedChannelWidthSet ==
-                            eHT_CHANNEL_WIDTH_20MHZ) ?
-                        WNI_CFG_VHT_CHANNEL_WIDTH_20_40MHZ :
-                        session_entry->vhtTxChannelWidthSet );
-            sta_ds->htMaxRxAMpduFactor = assoc_req->VHTCaps.maxAMPDULenExp;
-        }
-
-        /* Lesser among the AP and STA bandwidth of operation. */
-        sta_ds->htSupportedChannelWidthSet =
-            (sta_ds->htSupportedChannelWidthSet <
-             session_entry->htSupportedChannelWidthSet) ?
-            sta_ds->htSupportedChannelWidthSet :
-            session_entry->htSupportedChannelWidthSet ;
-#endif
-        sta_ds->baPolicyFlag = 0xFF;
-        sta_ds->htLdpcCapable = (tANI_U8)assoc_req->HTCaps.advCodingCap;
-    }
-
-    if (assoc_req->VHTCaps.present && assoc_req->wmeInfoPresent)
-        sta_ds->vhtLdpcCapable = (tANI_U8)assoc_req->VHTCaps.ldpcCodingCap;
-
-    if (!assoc_req->wmeInfoPresent)
-    {
-        sta_ds->mlmStaContext.htCapability = 0;
-#ifdef WLAN_FEATURE_11AC
-        sta_ds->mlmStaContext.vhtCapability = 0;
-#endif
-    }
-#ifdef WLAN_FEATURE_11AC
-    if (limPopulateMatchingRateSet(pmac,
-                sta_ds,
-                &(assoc_req->supportedRates),
-                &(assoc_req->extendedRates),
-                assoc_req->HTCaps.supportedMCSSet,
-                &(assoc_req->propIEinfo.propRates),
-                session_entry , &assoc_req->VHTCaps)
-            != eSIR_SUCCESS)
-    {
-#else
-        if (limPopulateMatchingRateSet(pmac,
-                    sta_ds,
-                    &(assoc_req->supportedRates),
-                    &(assoc_req->extendedRates),
-                    assoc_req->HTCaps.supportedMCSSet,
-                    &(assoc_req->propIEinfo.propRates),
-                    session_entry) != eSIR_SUCCESS)
-        {
-#endif
-            limLog(pmac, LOGE,
-                    FL("Rate set mismatched for aid=%d, MacAddr: "
-                        MAC_ADDRESS_STR),
-                    sta_ds->assocId, MAC_ADDR_ARRAY(sta_ds->staAddr));
-            goto error;
-        }
-        return eSIR_SUCCESS;
-error:
-        return eSIR_FAILURE;
-}
-
-/**
- * _sap_offload_parse_sta_qos - Parse sta's QOS caps from assoc request
- *
- * @pmac: mac context
- * @sta_ds: STA state node
- * @assoc_req: Assoc request
- *
- * This function process recieved add sta message and store station's QOS
- * store them in station ds entry.
- *
- * Return: none
- */
-static void
- _sap_offload_parse_sta_qos(tpAniSirGlobal pmac,
-            tpDphHashNode sta_ds,
-            tpSirAssocReq assoc_req)
-{
-    tHalBitVal qos_mode;
-    tHalBitVal wsm_mode, wme_mode;
-    tpPESession session_entry = limIsApSessionActive(pmac);
-
-    limGetQosMode(session_entry, &qos_mode);
-    sta_ds->qosMode    = eANI_BOOLEAN_FALSE;
-    sta_ds->lleEnabled = eANI_BOOLEAN_FALSE;
-
-    if (assoc_req->capabilityInfo.qos && (qos_mode == eHAL_SET))
-    {
-        sta_ds->lleEnabled = eANI_BOOLEAN_TRUE;
-        sta_ds->qosMode    = eANI_BOOLEAN_TRUE;
-    }
-
-    sta_ds->wmeEnabled = eANI_BOOLEAN_FALSE;
-    sta_ds->wsmEnabled = eANI_BOOLEAN_FALSE;
-    limGetWmeMode(session_entry, &wme_mode);
-    if ((!sta_ds->lleEnabled) && assoc_req->wmeInfoPresent &&
-            (wme_mode == eHAL_SET))
-    {
-        sta_ds->wmeEnabled = eANI_BOOLEAN_TRUE;
-        sta_ds->qosMode = eANI_BOOLEAN_TRUE;
-        limGetWsmMode(session_entry, &wsm_mode);
-        /* WMM_APSD - WMM_SA related processing should be
-         * separate; WMM_SA and WMM_APSD can coexist
-         */
-        if (assoc_req->WMMInfoStation.present)
-        {
-            /* check whether AP supports or not */
-            if ((session_entry->limSystemRole == eLIM_AP_ROLE)
-                    && (session_entry->apUapsdEnable == 0) &&
-                    (assoc_req->WMMInfoStation.acbe_uapsd
-                     || assoc_req->WMMInfoStation.acbk_uapsd
-                     || assoc_req->WMMInfoStation.acvo_uapsd
-                     || assoc_req->WMMInfoStation.acvi_uapsd))
-            {
-                /*
-                 * Received Re/Association Request from
-                 * STA when UPASD is not supported
-                 */
-                limLog( pmac, LOGE, FL( "AP do not support UAPSD so reply "
-                            "to STA accordingly" ));
-                /* update UAPSD and send it to LIM to add STA */
-                sta_ds->qos.capability.qosInfo.acbe_uapsd = 0;
-                sta_ds->qos.capability.qosInfo.acbk_uapsd = 0;
-                sta_ds->qos.capability.qosInfo.acvo_uapsd = 0;
-                sta_ds->qos.capability.qosInfo.acvi_uapsd = 0;
-                sta_ds->qos.capability.qosInfo.maxSpLen =   0;
-            }
-            else
-            {
-                /* update UAPSD and send it to LIM to add STA */
-                sta_ds->qos.capability.qosInfo.acbe_uapsd =
-                    assoc_req->WMMInfoStation.acbe_uapsd;
-                sta_ds->qos.capability.qosInfo.acbk_uapsd =
-                    assoc_req->WMMInfoStation.acbk_uapsd;
-                sta_ds->qos.capability.qosInfo.acvo_uapsd =
-                    assoc_req->WMMInfoStation.acvo_uapsd;
-                sta_ds->qos.capability.qosInfo.acvi_uapsd =
-                    assoc_req->WMMInfoStation.acvi_uapsd;
-                sta_ds->qos.capability.qosInfo.maxSpLen =
-                    assoc_req->WMMInfoStation.max_sp_length;
-            }
-        }
-        if (assoc_req->wsmCapablePresent && (wsm_mode == eHAL_SET))
-            sta_ds->wsmEnabled = eANI_BOOLEAN_TRUE;
-    }
-}
-
-/**
- * lim_sap_offload_add_sta - Parse Add sta request from firmware
- *
- * @pmac: mac context
- * @lim_msgq: Add Sta indication buffer
- *
- * This function will recieve buffer from firmware. This buffer will store
- * information about connected client. driver will process this buffer and
- * will register this client with driver. Driver will call limAddSta
- *
- * Return: none
- */
-void lim_sap_offload_add_sta(tpAniSirGlobal pmac,
-        tSapOfldAddStaIndMsg *lim_msgq)
-{
-    tpSirAssocReq assoc_req = NULL;
-    tpDphHashNode sta_ds = NULL;
-
-    tSapOfldAddStaIndMsg  *add_sta_req = NULL;
-    tpPESession session_entry = limIsApSessionActive(pmac);
-
-    if (session_entry == NULL)
-    {
-        PELOGE(limLog(pmac, LOGE, FL(" Session not found"));)
-            return;
-    }
-    add_sta_req = lim_msgq;
-    assoc_req = vos_mem_malloc(sizeof(*assoc_req));
-    if (NULL == assoc_req) {
-        limLog(pmac, LOGP, FL("Allocate Memory failed in AssocReq"));
-        return;
-    }
-    vos_mem_set(assoc_req , sizeof(*assoc_req), 0);
-
-    /* parse Assoc req frame for station information */
-    sta_ds = _sap_offload_parse_assoc_req(pmac, assoc_req, add_sta_req);
-    if (sta_ds == NULL)
-    {
-        PELOGE(limLog(pmac, LOGE, FL("could not add hash entry for"));)
-            limPrintMacAddr(pmac, add_sta_req->peer_macaddr, LOGE);
-        vos_mem_free(assoc_req);
-        goto error;
-    }
-
-    /* Parse Station Capability */
-    _sap_offload_parse_sta_capability(sta_ds, assoc_req, add_sta_req);
-
-    /* Parse Station HT/VHT information */
-    if (_sap_offload_parse_sta_vht(pmac, sta_ds, assoc_req)
-            == eSIR_FAILURE)
-    {
-        PELOGE(limLog(pmac, LOGE, FL("mismatch ht/vht information for "));)
-            limPrintMacAddr(pmac, add_sta_req->peer_macaddr, LOGE);
-            vos_mem_free(assoc_req);
-        goto error;
-
-    }
-
-    /* Parse Station QOS information */
-    _sap_offload_parse_sta_qos(pmac, sta_ds, assoc_req);
-
-    session_entry->parsedAssocReq[sta_ds->assocId] = assoc_req;
-    sta_ds->staIndex = add_sta_req->staIdx;
-    sta_ds->dpuIndex = add_sta_req->dpuIndex;
-    sta_ds->bcastDpuIndex = add_sta_req->bcastDpuIndex;
-    sta_ds->bcastMgmtDpuIdx = add_sta_req->bcastMgmtDpuIdx;
-    sta_ds->ucUcastSig = add_sta_req->ucUcastSig;
-    sta_ds->ucBcastSig = add_sta_req->ucBcastSig;
-    sta_ds->ucMgmtSig = add_sta_req->ucMgmtSig;
-    sta_ds->bssId     = add_sta_req->bssIdx;
-
-    limLog(pmac, LOG1, FL("StaIndex %d BssIDx %d dpuIndex %d bcastDpuIndex %d bcastMgmtDpuIdx %d ucUcastSig %d ucBcastSig %d ucMgmtSig %d AssocId %d"),
-       sta_ds->staIndex,
-       sta_ds->bssId,
-       sta_ds->dpuIndex,
-       sta_ds->bcastDpuIndex,
-       sta_ds->bcastMgmtDpuIdx,
-       sta_ds->ucUcastSig,
-       sta_ds->ucBcastSig,
-       sta_ds->ucMgmtSig,
-       sta_ds->assocId);
-
-    if (limAddSta(pmac, sta_ds, false, session_entry) != eSIR_SUCCESS) {
-        limLog(pmac, LOGE, FL("could not Add STA with assocId=%d"),
-                sta_ds->assocId);
-    }
-
-error:
-    return;
-}
-
-/**
- * lim_sap_offload_del_sta - Parse Del sta request from firmware
- *
- * @pmac: mac context
- * @lim_msgq: Del Sta indication buffer
- *
- * This function will recieve buffer from firmware. This buffer will
- * have information about clinet to remove with reason code.
- * This function will call limSendSmeDisassocInd to do cleanup
- * for station entry
- *
- * Return: none
- */
-void
-lim_sap_offload_del_sta(tpAniSirGlobal pmac, tSapOfldDelStaIndMsg *lim_msgq)
-{
-    tSapOfldDelStaIndMsg *del_sta_req = NULL;
-    tpDphHashNode sta_ds = NULL;
-    tANI_U16 assoc_id = 0;
-    tpPESession psession_entry = limIsApSessionActive(pmac);
-
-    if (psession_entry == NULL)
-    {
-        PELOGE(limLog(pmac, LOGE, FL(" Session not found"));)
-            goto error;
-    }
-
-    del_sta_req = lim_msgq;
-    sta_ds = dphLookupHashEntry(pmac,
-            del_sta_req->peer_macaddr,
-            &assoc_id,
-            &psession_entry->dph.dphHashTable);
-    if (sta_ds == NULL)
-    {
-        /*
-         * Disassociating STA is not associated.
-         * Log error
-         */
-        PELOGE(limLog(pmac, LOGE,
-                    FL("received del sta event that sta not exist in table "
-                        "reasonCode=%d, addr "MAC_ADDRESS_STR),
-                    del_sta_req->reason,
-                    MAC_ADDR_ARRAY(del_sta_req->peer_macaddr));)
-            goto error;
-    }
-
-    if (assoc_id != (tANI_U16)del_sta_req->assoc_id)
-    {
-        /*
-         * Associate Id mismatch
-         * Log error
-         */
-        PELOGE(limLog(pmac, LOGE,
-                    FL("received del sta event that sta assoc Id mismatch"));)
-            goto error;
-    }
-
-    sta_ds->mlmStaContext.cleanupTrigger = eLIM_PEER_ENTITY_DISASSOC;
-    sta_ds->mlmStaContext.disassocReason =
-        (tSirMacReasonCodes) del_sta_req->reason;
-
-    limSendSmeDisassocInd(pmac, sta_ds, psession_entry);
-
-error:
-    return;
-}
-#endif /* SAP_AUTH_OFFLOAD */
-
-int peFindBssIdxFromSmeSessionId(tpAniSirGlobal pMac, tANI_U8 sme_sessionId)
-{
-    tANI_U8 i;
-    tpPESession psessionEntry = NULL;
-
-    for(i =0; i < pMac->lim.maxBssId; i++)
-    {
-        /* If BSSID matches return corresponding tables address*/
-        if( (pMac->lim.gpSession[i].valid) && (pMac->lim.gpSession[i].smeSessionId == sme_sessionId))
-        {
-            psessionEntry = (&pMac->lim.gpSession[i]);
-            return psessionEntry->bssIdx;
-        }
-    }
-
-    limLog(pMac, LOG4, FL("Session lookup fails for sme_sessionId: "));
-    return(0xFF);
-}
-void limStaDelBASession(tpAniSirGlobal pMac)
-{
-    tANI_U32 i;
-    tpPESession pSessionEntry;
-
-    for (i = 0; i < pMac->lim.maxBssId; i++)
-    {
-        pSessionEntry = peFindSessionBySessionId(pMac, i);
-        if (pSessionEntry &&
-            pSessionEntry->limSystemRole == eLIM_STA_ROLE)
-        {
-            limDeleteBASessions(pMac, pSessionEntry, BA_BOTH_DIRECTIONS,
-                                eSIR_MAC_UNSPEC_FAILURE_REASON);
-        }
     }
 }

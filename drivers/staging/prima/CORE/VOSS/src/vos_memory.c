@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -492,7 +492,7 @@ v_VOID_t vos_mem_copy( v_VOID_t *pDst, const v_VOID_t *pSrc, v_SIZE_t numBytes )
    if ((pDst == NULL) || (pSrc==NULL))
    {
       VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
-                "%s called with NULL parameter, source:%pK destination:%pK",
+                "%s called with NULL parameter, source:%p destination:%p",
                 __func__, pSrc, pDst);
       VOS_ASSERT(0);
       return;
@@ -511,7 +511,7 @@ v_VOID_t vos_mem_move( v_VOID_t *pDst, const v_VOID_t *pSrc, v_SIZE_t numBytes )
    if ((pDst == NULL) || (pSrc==NULL))
    {
       VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
-                "%s called with NULL parameter, source:%pK destination:%pK",
+                "%s called with NULL parameter, source:%p destination:%p",
                 __func__, pSrc, pDst);
       VOS_ASSERT(0);
       return;
@@ -519,17 +519,7 @@ v_VOID_t vos_mem_move( v_VOID_t *pDst, const v_VOID_t *pSrc, v_SIZE_t numBytes )
    memmove(pDst, pSrc, numBytes);
 }
 
-v_BOOL_t vos_mem_compare(
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0))
-                          const v_VOID_t *pMemory1,
-#else
-                          v_VOID_t *pMemory1,
-#endif
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0))
-                          const v_VOID_t *pMemory2,
-#else
-                          v_VOID_t *pMemory2,
-#endif
+v_BOOL_t vos_mem_compare( const v_VOID_t *pMemory1, const v_VOID_t *pMemory2,
                           v_U32_t numBytes )
 { 
    if (0 == numBytes)
@@ -541,7 +531,7 @@ v_BOOL_t vos_mem_compare(
    if ((pMemory1 == NULL) || (pMemory2==NULL))
    {
       VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
-                "%s called with NULL parameter, p1:%pK p2:%pK",
+                "%s called with NULL parameter, p1:%p p2:%p",
                 __func__, pMemory1, pMemory2);
       VOS_ASSERT(0);
       return VOS_FALSE;

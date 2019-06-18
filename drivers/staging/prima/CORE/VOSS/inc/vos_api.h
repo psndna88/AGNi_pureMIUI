@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -74,7 +74,6 @@
 #include <vos_threads.h>
 #include <vos_timer.h>
 #include <vos_pack_align.h>
-#include <asm/arch_timer.h>
 
 /**
  * enum userspace_log_level - Log level at userspace
@@ -518,44 +517,21 @@ v_BOOL_t vos_isLoadUnloadInProgress(void);
 bool vos_get_rx_wow_dump(void);
 void vos_set_rx_wow_dump(bool value);
 
-void vos_set_hdd_bad_sta(uint8_t sta_id);
-void vos_reset_hdd_bad_sta(uint8_t sta_id);
-
 void vos_probe_threads(void);
 void vos_per_pkt_stats_to_user(void *perPktStat);
 void vos_updatePktStatsInfo(void * pktStat);
 bool vos_is_wlan_logging_enabled(void);
 
 v_BOOL_t vos_is_probe_rsp_offload_enabled(void);
-void vos_set_snoc_high_freq_voting(bool enable);
 void vos_smd_dump_stats(void);
 void vos_log_wdi_event(uint16 msg, vos_wdi_trace_event_type event);
 void vos_dump_wdi_events(void);
 
-bool vos_check_arp_target_ip(vos_pkt_t *pPacket);
+bool vos_check_arp_target_ip(void *pSkb, bool conversion);
+bool vos_check_arp_req_target_ip(void *pSkb, bool conversion);
+bool vos_check_arp_src_ip(void *pSkb, bool conversion);
+bool vos_check_arp_rsp_src_ip(void *pSkb, bool conversion);
 void vos_update_arp_fw_tx_delivered(void);
 void vos_update_arp_rx_drop_reorder(void);
-v_U16_t vos_get_rate_from_rateidx(uint32 rateindex);
-
-/**
- * vos_check_monitor_state() - vos api to check monitor mode capture state
- *
- * This function is used to check whether capture of monitor mode is ON/OFF
- *
- * Return: TRUE - capture is ON, FALSE - capture is OFF
- */
-v_BOOL_t vos_check_monitor_state(void);
-
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
-static inline uint64_t __vos_get_log_timestamp(void)
-{
-	return arch_counter_get_cntvct();
-}
-#else
-static inline uint64_t __vos_get_log_timestamp(void)
-{
-	return arch_counter_get_cntpct();
-}
-#endif /* LINUX_VERSION_CODE */
-
+void vos_set_snoc_high_freq_voting(bool enable);
 #endif // if !defined __VOS_NVITEM_H

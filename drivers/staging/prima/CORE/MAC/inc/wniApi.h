@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, 2016-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013, 2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -235,6 +235,7 @@ enum eWniMsgTypes
     eWNI_SME_PRE_CHANNEL_SWITCH_FULL_POWER,
     eWNI_SME_GET_SNR_REQ,
     eWNI_SME_LOST_LINK_PARAMS_IND,
+    eWNI_SME_DEL_TEST_BA,
     //General Power Save Messages
     eWNI_PMC_MSG_TYPES_BEGIN,
     eWNI_PMC_PWR_SAVE_CFG,
@@ -387,20 +388,6 @@ enum eWniMsgTypes
     eWNI_SME_SET_TDLS_2040_BSSCOEX_REQ,
     eWNI_SME_DEL_ALL_TDLS_PEERS,
     eWNI_SME_REGISTER_MGMT_FRAME_CB,
-    eWNI_SME_CAP_TSF_REQ,
-    eWNI_SME_GET_TSF_REQ,
-
-#ifdef WLAN_FEATURE_LFR_MBB
-    eWNI_SME_MBB_PRE_AUTH_REASSOC_REQ,
-    eWNI_SME_MBB_PRE_AUTH_REASSOC_RSP,
-#endif
-
-    eWNI_SME_DEL_BA_SES_REQ,
-    eWNI_SME_SET_CHAN_SW_IE_REQ,
-    eWNI_SME_ECSA_IE_BEACON_COMP_IND,
-    eWNI_SME_ECSA_CHAN_CHANGE_REQ,
-    eWNI_SME_ECSA_CHAN_CHANGE_RSP,
-    eWNI_SME_STA_DEL_BA_REQ,
     eWNI_SME_MSG_TYPES_END
 };
 

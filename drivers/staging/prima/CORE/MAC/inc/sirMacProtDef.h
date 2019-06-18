@@ -258,8 +258,6 @@
 #ifdef WLAN_FEATURE_AP_HT40_24G
 #define SIR_MAC_ACTION_2040_BSS_COEXISTENCE     0
 #endif
-#define SIR_MAC_ACTION_EXT_CHANNEL_SWITCH_ID    4
-
 
 
 #ifdef WLAN_FEATURE_11W
@@ -393,10 +391,6 @@
 #define SIR_MAC_RSN_EID                48
 #define SIR_MAC_RSN_EID_MIN                4
 #define SIR_MAC_RSN_EID_MAX                254
-
-#define SIR_MAC_EXT_CHNL_SWITCH_ANN_EID    60
-#define SIR_MAC_WIDER_BW_CHANNEL_SWITCH_ANN 194
-
 
 //using reserved EID for Qos Action IE for now,
 //need to check 11e spec for the actual EID
@@ -604,13 +598,8 @@
 #define SIR_MAC_MAX_NUM_OF_DEFAULT_KEYS      4
 #define SIR_MAC_KEY_LENGTH                   13   // WEP Maximum key length size
 #define SIR_MAC_AUTH_CHALLENGE_LENGTH        253
-#define SIR_MAC_SAP_AUTH_CHALLENGE_LENGTH    128
 #define SIR_MAC_WEP_IV_LENGTH                4
 #define SIR_MAC_WEP_ICV_LENGTH               4
-#define SIR_MAC_CHALLENGE_ID_LEN             2
-
-/* 2 bytes each for auth algo number, transaction number and status code */
-#define SIR_MAC_AUTH_FRAME_INFO_LEN          6
 
 /// MAX key length when ULA is used
 #define SIR_MAC_MAX_KEY_LENGTH               32

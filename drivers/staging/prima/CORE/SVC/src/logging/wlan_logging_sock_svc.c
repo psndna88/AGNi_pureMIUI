@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2018 The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2016 The Linux Foundation. All rights reserved.
 *
 * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
 *
@@ -598,7 +598,7 @@ int wlan_log_to_user(VOS_TRACE_LEVEL log_level, char *to_be_sent, int length)
 	local_time = (u32)(tv.tv_sec - (sys_tz.tz_minuteswest * 60));
 	rtc_time_to_tm(local_time, &tm);
         /* Firmware Time Stamp */
-        qtimer_ticks =  __vos_get_log_timestamp();
+        qtimer_ticks =  arch_counter_get_cntpct();
 
         tlen = snprintf(tbuf, sizeof(tbuf), "[%02d:%02d:%02d.%06lu] [%016llX]"
                         " [%.5s] ", tm.tm_hour, tm.tm_min, tm.tm_sec, tv.tv_usec,
@@ -739,8 +739,8 @@ static int send_fw_log_pkt_to_user(void)
 		msg_header.wmsg.length = skb->len;
 
 		if (unlikely(skb_headroom(skb) < sizeof(msg_header))) {
-			pr_err("VPKT [%d]: Insufficient headroom, head[%pK],"
-				" data[%pK], req[%zu]", __LINE__, skb->head,
+			pr_err("VPKT [%d]: Insufficient headroom, head[%p],"
+				" data[%p], req[%zu]", __LINE__, skb->head,
 				skb->data, sizeof(msg_header));
 			return -EIO;
 		}
@@ -835,8 +835,8 @@ static int send_data_mgmt_log_pkt_to_user(void)
 		msg_header.frameSize = WLAN_MGMT_LOGGING_FRAMESIZE_128BYTES;
 
 		if (unlikely(skb_headroom(skb) < sizeof(msg_header))) {
-			pr_err("VPKT [%d]: Insufficient headroom, head[%pK],"
-				" data[%pK], req[%zu]", __LINE__, skb->head,
+			pr_err("VPKT [%d]: Insufficient headroom, head[%p],"
+				" data[%p], req[%zu]", __LINE__, skb->head,
 				skb->data, sizeof(msg_header));
 			return -EIO;
 		}
@@ -1066,8 +1066,8 @@ static int send_per_pkt_stats_to_user(void)
 		pktlog.seq_no = gwlan_logging.pkt_stats_msg_idx++;
 
 		if (unlikely(skb_headroom(plog_msg->skb) < sizeof(vos_log_pktlog_info))) {
-			pr_err("VPKT [%d]: Insufficient headroom, head[%pK],"
-				" data[%pK], req[%zu]", __LINE__, plog_msg->skb->head,
+			pr_err("VPKT [%d]: Insufficient headroom, head[%p],"
+				" data[%p], req[%zu]", __LINE__, plog_msg->skb->head,
 				plog_msg->skb->data, sizeof(msg_header));
 			ret = -EIO;
 			free_old_skb = true;
@@ -1077,8 +1077,8 @@ static int send_per_pkt_stats_to_user(void)
 							sizeof(vos_log_pktlog_info));
 
 		if (unlikely(skb_headroom(plog_msg->skb) < sizeof(int))) {
-			pr_err("VPKT [%d]: Insufficient headroom, head[%pK],"
-				" data[%pK], req[%zu]", __LINE__, plog_msg->skb->head,
+			pr_err("VPKT [%d]: Insufficient headroom, head[%p],"
+				" data[%p], req[%zu]", __LINE__, plog_msg->skb->head,
 				plog_msg->skb->data, sizeof(int));
 			ret = -EIO;
 			free_old_skb = true;
@@ -1104,8 +1104,8 @@ static int send_per_pkt_stats_to_user(void)
 		msg_header.wmsg.length = cpu_to_be16(plog_msg->skb->len);
 
 		if (unlikely(skb_headroom(plog_msg->skb) < sizeof(msg_header))) {
-			pr_err("VPKT [%d]: Insufficient headroom, head[%pK],"
-				" data[%pK], req[%zu]", __LINE__, plog_msg->skb->head,
+			pr_err("VPKT [%d]: Insufficient headroom, head[%p],"
+				" data[%p], req[%zu]", __LINE__, plog_msg->skb->head,
 				plog_msg->skb->data, sizeof(msg_header));
 			ret = -EIO;
 			free_old_skb = true;
@@ -1410,7 +1410,6 @@ int wlan_logging_sock_activate_svc(int log_fe_to_console, int num_buf,
 	int i, j = 0;
 	unsigned long irq_flag;
 	bool failure = FALSE;
-	struct log_msg *temp;
 
 	pr_info("%s: Initalizing FEConsoleLog = %d NumBuff = %d\n",
 			__func__, log_fe_to_console, num_buf);
@@ -1502,12 +1501,10 @@ err:
 		pr_err("%s: Could not Create LogMsg Thread Controller",
 		       __func__);
 		spin_lock_irqsave(&gwlan_logging.spin_lock, irq_flag);
-		temp = gplog_msg;
+		vfree(gplog_msg);
 		gplog_msg = NULL;
 		gwlan_logging.pcur_node = NULL;
 		spin_unlock_irqrestore(&gwlan_logging.spin_lock, irq_flag);
-		vfree(temp);
-		temp = NULL;
 		return -ENOMEM;
 	}
 	wake_up_process(gwlan_logging.thread);
@@ -1569,7 +1566,6 @@ int wlan_logging_sock_deactivate_svc(void)
 {
 	unsigned long irq_flag;
 	int i;
-	struct log_msg *temp;
 
 	if (!gplog_msg)
 		return 0;
@@ -1586,12 +1582,10 @@ int wlan_logging_sock_deactivate_svc(void)
 	wait_for_completion(&gwlan_logging.shutdown_comp);
 
 	spin_lock_irqsave(&gwlan_logging.spin_lock, irq_flag);
-	temp = gplog_msg;
+	vfree(gplog_msg);
 	gplog_msg = NULL;
 	gwlan_logging.pcur_node = NULL;
 	spin_unlock_irqrestore(&gwlan_logging.spin_lock, irq_flag);
-	vfree(temp);
-	temp = NULL;
 
 	spin_lock_irqsave(&gwlan_logging.pkt_stats_lock, irq_flag);
 	/* free allocated skb */
@@ -1857,7 +1851,7 @@ void wlan_process_done_indication(uint8 type, uint32 reason_code)
             if ((type == WLAN_FW_LOGS) &&
                 (wlan_is_log_report_in_progress() == TRUE))
             {
-                pr_info("%s: Setting LOGGER_FATAL_EVENT %d\n",
+                pr_debug("%s: Setting LOGGER_FATAL_EVENT %d\n",
                          __func__, reason_code);
                 set_bit(LOGGER_FATAL_EVENT_POST, &gwlan_logging.event_flag);
                 wake_up_interruptible(&gwlan_logging.wait_queue);
@@ -1871,7 +1865,7 @@ void wlan_process_done_indication(uint8 type, uint32 reason_code)
 	{
 		if(wlan_is_log_report_in_progress() == TRUE)
 		{
-                        pr_info("%s: Setting LOGGER_FATAL_EVENT %d\n",
+                        pr_debug("%s: Setting LOGGER_FATAL_EVENT %d\n",
                                  __func__, reason_code);
 			set_bit(LOGGER_FATAL_EVENT_POST, &gwlan_logging.event_flag);
 			wake_up_interruptible(&gwlan_logging.wait_queue);
@@ -2033,7 +2027,7 @@ size_t wlan_fwr_mem_dump_fsread_handler(char __user *buf,
 {
 	if (buf == NULL || gwlan_logging.fw_mem_dump_ctx.fw_dump_start_loc == NULL)
 	{
-		pr_err("%s : start loc : %pK buf : %pK ",__func__,gwlan_logging.fw_mem_dump_ctx.fw_dump_start_loc,buf);
+		pr_err("%s : start loc : %p buf : %p ",__func__,gwlan_logging.fw_mem_dump_ctx.fw_dump_start_loc,buf);
 		return 0;
 	}
 

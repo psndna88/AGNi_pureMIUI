@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, 2017-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -40,7 +40,6 @@
 #include "wlan_qct_pal_trace.h"
 #include "wlan_qct_os_status.h"
 #include "vos_threads.h"
-#include "vos_api.h"
 
 #include <linux/delay.h>
 #if defined(ANI_OS_TYPE_ANDROID)
@@ -63,7 +62,7 @@ static void wpalTimerCback( void * userData )
    else
    {
       WPAL_TRACE( eWLAN_MODULE_PAL, eWLAN_PAL_TRACE_LEVEL_WARN,
-                  " %s pTimer(%pK) callback after deleted",
+                  " %s pTimer(%p) callback after deleted",
                   __func__, pTimer );
    }
 }/*wpalTimerCback*/
@@ -83,7 +82,7 @@ wpt_status wpalTimerInit(wpt_timer * pTimer, wpal_timer_callback callback, void 
    if( pTimer == NULL || callback == NULL )
    {
       WPAL_TRACE( eWLAN_MODULE_PAL, eWLAN_PAL_TRACE_LEVEL_ERROR,
-                  " %s Wrong param pTimer(%pK) callback(%pK)",
+                  " %s Wrong param pTimer(%p) callback(%p)",
                   __func__, pTimer, callback );
       return eWLAN_PAL_STATUS_E_INVAL;
    }
@@ -115,7 +114,7 @@ wpt_status wpalTimerDelete(wpt_timer *pTimer)
    if( pTimer == NULL )
    {
       WPAL_TRACE( eWLAN_MODULE_PAL, eWLAN_PAL_TRACE_LEVEL_ERROR,
-                  " %s Wrong param pTimer(%pK)",
+                  " %s Wrong param pTimer(%p)",
                   __func__, pTimer );
       return eWLAN_PAL_STATUS_E_INVAL;
    }
@@ -147,7 +146,7 @@ wpt_status wpalTimerStart(wpt_timer * pTimer, wpt_uint32 timeout)
    if( pTimer == NULL )
    {
       WPAL_TRACE( eWLAN_MODULE_PAL, eWLAN_PAL_TRACE_LEVEL_ERROR,
-                  " %s Wrong param pTimer(%pK)",
+                  " %s Wrong param pTimer(%p)",
                   __func__, pTimer );
       return eWLAN_PAL_STATUS_E_INVAL;
    }
@@ -171,7 +170,7 @@ wpt_status wpalTimerStop(wpt_timer * pTimer)
    if( pTimer == NULL )
    {
       WPAL_TRACE( eWLAN_MODULE_PAL, eWLAN_PAL_TRACE_LEVEL_ERROR,
-                  " %s Wrong param pTimer(%pK)",
+                  " %s Wrong param pTimer(%p)",
                   __func__, pTimer );
       return eWLAN_PAL_STATUS_E_INVAL;
    }
@@ -192,7 +191,7 @@ WPAL_TIMER_STATE wpalTimerGetCurStatus(wpt_timer * pTimer)
    if( pTimer == NULL )
    {
       WPAL_TRACE( eWLAN_MODULE_PAL, eWLAN_PAL_TRACE_LEVEL_ERROR,
-                  " %s Wrong param pTimer(%pK)",
+                  " %s Wrong param pTimer(%p)",
                   __func__, pTimer );
       return eWLAN_PAL_STATUS_E_INVAL;
    }
@@ -219,7 +218,7 @@ wpt_uint32 wpalGetSystemTime(void)
 #if defined(ANI_OS_TYPE_ANDROID)
 wpt_uint64 wpalGetArchCounterTime(void)
 {
-   return __vos_get_log_timestamp();
+   return arch_counter_get_cntpct();
 }/*wpalGetArchCounterTime*/
 #else
 wpt_uint64 wpalGetArchCounterTime(void)

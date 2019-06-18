@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, 2016-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013, 2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -193,8 +193,6 @@ typedef enum {
     eSAP_MAC_TRIG_STOP_BSS_EVENT,
     eSAP_UNKNOWN_STA_JOIN, /* Event send when a STA in neither white list or black list tries to associate in softap mode */
     eSAP_MAX_ASSOC_EXCEEDED, /* Event send when a new STA is rejected association since softAP max assoc limit has reached */
-    eSAP_CHANNEL_CHANGED_EVENT,
-    eSAP_STA_LOSTLINK_DETECTED
 } eSapHddEvent;
 
 typedef enum {
@@ -289,10 +287,6 @@ typedef struct sap_StationAssocReassocCompleteEvent_s {
     tANI_U32     assocRespLength;
     tANI_U8*     assocRespPtr;
     uint32_t rate_flags;
-    tSirSmeChanInfo chan_info;
-    tSirMacHTChannelWidth ch_width;
-    tDot11fIEVHTCaps VHTCaps;
-    tDot11fIEHTCaps HTCaps;
 } tSap_StationAssocReassocCompleteEvent;
 
 typedef struct sap_StationDisassocCompleteEvent_s {
@@ -380,14 +374,6 @@ typedef struct sap_MaxAssocExceededEvent_s {
     v_MACADDR_t    macaddr;  
 } tSap_MaxAssocExceededEvent;
 
-/**
- * struct sap_chan_selected - channel change indication to cfg layer
- * @new_chan: new channel
- */
-struct sap_chan_selected {
-   uint16_t new_chan;
-};
-
 
 /* 
    This struct will be filled in and passed to tpWLAN_SAPEventCB that is provided during WLANSAP_StartBss call   
@@ -411,7 +397,6 @@ typedef struct sap_Event_s {
         tSap_SendActionCnf                        sapActionCnf;  /* eSAP_SEND_ACTION_CNF */ 
         tSap_UnknownSTAJoinEvent                  sapUnknownSTAJoin; /* eSAP_UNKNOWN_STA_JOIN */
         tSap_MaxAssocExceededEvent                sapMaxAssocExceeded; /* eSAP_MAX_ASSOC_EXCEEDED */
-        struct sap_chan_selected                  sap_chan_selected;
     } sapevt;
 } tSap_Event, *tpSap_Event;
 
@@ -437,8 +422,7 @@ typedef struct sap_Config {
     v_MACADDR_t     deny_mac[MAX_ACL_MAC_ADDRESS]; /* MAC filtering */
     v_MACADDR_t     self_macaddr; //self macaddress or BSSID
    
-    v_U8_t          channel;               /* Operation channel */
-    v_U8_t          user_config_channel;   /* user configured channel */
+    v_U8_t          channel;         /* Operation channel */
     v_U8_t          max_num_sta;     /* maximum number of STAs in station table */
     v_U8_t          dtim_period;     /* dtim interval */
     v_U8_t          num_accept_mac;
@@ -899,30 +883,6 @@ typedef VOS_STATUS (*tpWLAN_SAPEventCB)( tpSap_Event pSapEvent, v_PVOID_t  pUsrC
 
 v_U8_t WLANSAP_getState ( v_PVOID_t  pvosGCtx);
 
-/*==========================================================================
-  FUNCTION    WLANSAP_get_sessionId
-
-  DESCRIPTION
-     This api returns the current SAP sessionId to the caller.
-
-  DEPENDENCIES
-
-  PARAMETERS
-
-    IN
-    pContext            : Pointer to Sap Context structure
-    v_U8_t              : Pointer to sessionID
-
-  RETURN VALUE
-     VOS_STATUS_SUCCESS on success.
-
-     VOS_STATUS_E_INVAL: Pointer to SAP cb is NULL ; access would cause a page
-                         fault
-============================================================================*/
-VOS_STATUS WLANSAP_get_sessionId
-(
-    v_PVOID_t  pvosGCtx, v_U8_t *sessionId
-);
 /*==========================================================================
   FUNCTION    WLANSAP_StartBss
 
@@ -1633,19 +1593,6 @@ void WLANSAP_PopulateDelStaParams(const v_U8_t *mac,
                                  v_U16_t reason_code,
                                  v_U8_t subtype,
                                  struct tagCsrDelStaParams *pDelStaParams);
-/**
- * wlansap_set_channel_change() -
- * This function to support SAP channel change with CSA/ECSA IE
- * set in the beacons.
- *
- * @vos_ctx: vos context.
- * @new_channel: target channel number.
- * @allow_dfs_chan: dont allow dfs channel
- *
- * Return: 0 for success, non zero for failure
- */
-int wlansap_set_channel_change(v_PVOID_t vos_ctx,
-    uint32_t new_channel, bool allow_dfs_chan);
 
 #ifdef __cplusplus
  }

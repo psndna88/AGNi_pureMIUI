@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -58,9 +58,6 @@
 #endif
 #ifdef FEATURE_WLAN_DIAG_SUPPORT_LIM
 #include "vos_diag_core_log.h"
-#endif
-#ifdef WLAN_FEATURE_LFR_MBB
-#include "lim_mbb.h"
 #endif
 
 
@@ -158,14 +155,6 @@ limProcessMlmReqMessages(tpAniSirGlobal pMac, tpSirMsgQ Msg)
 #ifdef WLAN_FEATURE_VOWIFI_11R
         case SIR_LIM_FT_PREAUTH_RSP_TIMEOUT:limProcessFTPreauthRspTimeout(pMac); break;
 #endif
-#ifdef WLAN_FEATURE_LFR_MBB
-        case SIR_LIM_PREAUTH_MBB_RSP_TIMEOUT:
-             lim_process_preauth_mbb_rsp_timeout(pMac);
-             break;
-        case SIR_LIM_REASSOC_MBB_RSP_TIMEOUT:
-             lim_process_reassoc_mbb_rsp_timeout(pMac);
-             break;
-#endif
         case SIR_LIM_REMAIN_CHN_TIMEOUT:    limProcessRemainOnChnTimeout(pMac); break;
         case SIR_LIM_INSERT_SINGLESHOT_NOA_TIMEOUT:   
                                             limProcessInsertSingleShotNOATimeout(pMac); break;
@@ -176,7 +165,6 @@ limProcessMlmReqMessages(tpAniSirGlobal pMac, tpSirMsgQ Msg)
                                             break;
         case SIR_LIM_DISASSOC_ACK_TIMEOUT:  limProcessDisassocAckTimeout(pMac); break;
         case SIR_LIM_DEAUTH_ACK_TIMEOUT:    limProcessDeauthAckTimeout(pMac); break;
-        case SIR_LIM_SAP_ECSA_TIMEOUT:      lim_process_ap_ecsa_timeout(pMac);break;
         case LIM_MLM_ADDBA_REQ:             limProcessMlmAddBAReq( pMac, Msg->bodyptr ); break;
         case LIM_MLM_ADDBA_RSP:             limProcessMlmAddBARsp( pMac, Msg->bodyptr ); break;
         case LIM_MLM_DELBA_REQ:             limProcessMlmDelBAReq( pMac, Msg->bodyptr ); break;
@@ -286,7 +274,7 @@ limSuspendLink(tpAniSirGlobal pMac, tSirLinkTrafficCheck trafficCheck,  SUSPEND_
    if( pMac->lim.gpLimSuspendCallback ||
        pMac->lim.gLimSystemInScanLearnMode )
    {
-      limLog( pMac, LOGE, FL("Something is wrong, SuspendLinkCbk:%pK "
+      limLog( pMac, LOGE, FL("Something is wrong, SuspendLinkCbk:%p "
               "IsSystemInScanLearnMode:%d"), pMac->lim.gpLimSuspendCallback,
                pMac->lim.gLimSystemInScanLearnMode );
       callback( pMac, eHAL_STATUS_FAILURE, data ); 
@@ -774,41 +762,8 @@ void limSetDFSChannelList(tpAniSirGlobal pMac,tANI_U8 channelNum, tSirDFSChannel
     return;
 }
 
-void limDoSendAuthMgmtFrame(tpAniSirGlobal pMac, tpPESession psessionEntry)
-{
-        tSirMacAuthFrameBody    authFrameBody;
 
-        //Prepare & send Authentication frame
-        authFrameBody.authAlgoNumber =
-                        (tANI_U8) pMac->lim.gpLimMlmAuthReq->authType;
-        authFrameBody.authTransactionSeqNumber = SIR_MAC_AUTH_FRAME_1;
-        authFrameBody.authStatusCode = 0;
-        pMac->authAckStatus = LIM_AUTH_ACK_NOT_RCD;
-        limSendAuthMgmtFrame(pMac,
-                        &authFrameBody,
-                        pMac->lim.gpLimMlmAuthReq->peerMacAddr,
-                        LIM_NO_WEP_IN_FC, psessionEntry, eSIR_TRUE);
-        if (tx_timer_activate(&pMac->lim.limTimers.gLimAuthFailureTimer)
-                        != TX_SUCCESS) {
-                //Could not start Auth failure timer.
-                //Log error
-                limLog(pMac, LOGP,
-                FL("could not start Auth failure timer"));
-                //Cleanup as if auth timer expired
-                limProcessAuthFailureTimeout(pMac);
-        } else {
-                MTRACE(macTrace(pMac, TRACE_CODE_TIMER_ACTIVATE,
-                        psessionEntry->peSessionId, eLIM_AUTH_RETRY_TIMER));
-                //Activate Auth Retry timer
-                if (tx_timer_activate
-                        (&pMac->lim.limTimers.gLimPeriodicAuthRetryTimer)
-                                            != TX_SUCCESS) {
-                        limLog(pMac, LOGP,
-                                  FL("could not activate Auth Retry timer"));
-                }
-        }
-        return;
-}
+
 
 /*
 * Creates a Raw frame to be sent before every Scan, if required.
@@ -2431,6 +2386,7 @@ limProcessMlmAuthReq(tpAniSirGlobal pMac, tANI_U32 *pMsgBuf)
 {
     tANI_U32                numPreAuthContexts;
     tSirMacAddr             currentBssId;
+    tSirMacAuthFrameBody    authFrameBody;
     tLimMlmAuthCnf          mlmAuthCnf;
     struct tLimPreAuthNode  *preAuthNode;
     tpDphHashNode           pStaDs;
@@ -2557,6 +2513,17 @@ limProcessMlmAuthReq(tpAniSirGlobal pMac, tANI_U32 *pMsgBuf)
         psessionEntry->limMlmState = eLIM_MLM_WT_AUTH_FRAME2_STATE;
         MTRACE(macTrace(pMac, TRACE_CODE_MLM_STATE, psessionEntry->peSessionId, psessionEntry->limMlmState));
 
+        /// Prepare & send Authentication frame
+        authFrameBody.authAlgoNumber =
+                                  (tANI_U8) pMac->lim.gpLimMlmAuthReq->authType;
+        authFrameBody.authTransactionSeqNumber = SIR_MAC_AUTH_FRAME_1;
+        authFrameBody.authStatusCode = 0;
+        pMac->authAckStatus = LIM_AUTH_ACK_NOT_RCD;
+        limSendAuthMgmtFrame(pMac,
+                             &authFrameBody,
+                             pMac->lim.gpLimMlmAuthReq->peerMacAddr,
+                             LIM_NO_WEP_IN_FC, psessionEntry, eSIR_TRUE);
+
         //assign appropriate sessionId to the timer object
         pMac->lim.limTimers.gLimAuthFailureTimer.sessionId = sessionId;
         /* assign appropriate sessionId to the timer object */
@@ -2564,8 +2531,27 @@ limProcessMlmAuthReq(tpAniSirGlobal pMac, tANI_U32 *pMsgBuf)
         limDeactivateAndChangeTimer(pMac, eLIM_AUTH_RETRY_TIMER);
         // Activate Auth failure timer
         MTRACE(macTrace(pMac, TRACE_CODE_TIMER_ACTIVATE, psessionEntry->peSessionId, eLIM_AUTH_FAIL_TIMER));
-
-        limDoSendAuthMgmtFrame(pMac, psessionEntry);
+        if (tx_timer_activate(&pMac->lim.limTimers.gLimAuthFailureTimer)
+                                       != TX_SUCCESS)
+        {
+            /// Could not start Auth failure timer.
+            // Log error
+            limLog(pMac, LOGP,
+                   FL("could not start Auth failure timer"));
+            // Cleanup as if auth timer expired
+            limProcessAuthFailureTimeout(pMac);
+        }
+        else
+        {
+            MTRACE(macTrace(pMac, TRACE_CODE_TIMER_ACTIVATE,
+                    psessionEntry->peSessionId, eLIM_AUTH_RETRY_TIMER));
+            // Activate Auth Retry timer
+            if (tx_timer_activate(&pMac->lim.limTimers.gLimPeriodicAuthRetryTimer)
+                                                                   != TX_SUCCESS)
+            {
+               limLog(pMac, LOGP, FL("could not activate Auth Retry timer"));
+            }
+        }
         return;
     }
     else
@@ -3517,96 +3503,6 @@ void limProcessDeauthAckTimeout(tpAniSirGlobal pMac)
     limLog(pMac, LOG1, FL(""));
     limSendDeauthCnf(pMac);
 }
-
-void lim_process_ap_ecsa_timeout(tpAniSirGlobal mac_ctx)
-{
-    tSirMsgQ msg = {0};
-    struct sir_ecsa_ie_complete_ind *ecsa_ie_cmp_ind;
-    tpPESession session;
-
-    session = peFindSessionBySessionId(mac_ctx,
-                        mac_ctx->lim.limTimers.g_lim_ap_ecsa_timer.sessionId);
-
-    if(!session)
-    {
-      limLog(mac_ctx, LOGE, FL("session does not exist for given sessionId %d"),
-             mac_ctx->lim.limTimers.g_lim_ap_ecsa_timer.sessionId);
-      return;
-    }
-    limLog(mac_ctx, LOG1, FL("session id %d switch count %d"),
-           mac_ctx->lim.limTimers.g_lim_ap_ecsa_timer.sessionId,
-           session->gLimChannelSwitch.switchCount);
-    /*
-     * For each beacon interval decrement switch count to use proper value
-     * in probe resp sent by host. Once it becomes 0 send tx complete
-     * indication to SME.
-     */
-    if (session->gLimChannelSwitch.switchCount > 0) {
-        session->gLimChannelSwitch.switchCount--;
-        lim_send_chan_switch_action_frame(mac_ctx,
-                 session->gLimChannelSwitch.primaryChannel, session);
-        mac_ctx->lim.limTimers.g_lim_ap_ecsa_timer.sessionId =
-                                             session->peSessionId;
-        limDeactivateAndChangeTimer(mac_ctx, eLIM_AP_ECSA_TIMER);
-
-        if (tx_timer_activate(&mac_ctx->lim.limTimers.g_lim_ap_ecsa_timer) !=
-            TX_SUCCESS)
-        {
-           limLog(mac_ctx, LOGE, FL("Couldn't activate g_lim_ap_ecsa_timer"));
-           lim_process_ap_ecsa_timeout(mac_ctx);
-        }
-        return;
-    }
-
-    session->include_ecsa_ie = false;
-    session->include_wide_ch_bw_ie = false;
-
-    ecsa_ie_cmp_ind = vos_mem_malloc(sizeof(*ecsa_ie_cmp_ind));
-    if(!ecsa_ie_cmp_ind)
-    {
-      limLog(mac_ctx, LOGE, FL("failed to allocate ecsa_ie_cmp_ind"));
-      return;
-    }
-    ecsa_ie_cmp_ind->session_id = session->smeSessionId;
-
-    msg.type = eWNI_SME_ECSA_IE_BEACON_COMP_IND;
-    msg.bodyptr = ecsa_ie_cmp_ind;
-    limSysProcessMmhMsgApi(mac_ctx, &msg, ePROT);
-    return;
-}
-
-void lim_send_sme_ap_channel_switch_resp(tpAniSirGlobal mac_ctx,
-          tpPESession session, tpSwitchChannelParams chan_params)
-{
-   tSirMsgQ msg = {0};
-   struct sir_channel_chanege_rsp *params;
-
-   params = vos_mem_malloc(sizeof(*params));
-   if (!params) {
-       limLog(mac_ctx, LOGE, FL("AllocateMemory failed for pSmeSwithChnlParams"));
-       return;
-   }
-
-   params->sme_session_id = session->smeSessionId;
-   params->new_channel = chan_params->channelNumber;
-   params->status = chan_params->status;
-
-   msg.type = eWNI_SME_ECSA_CHAN_CHANGE_RSP;
-   msg.bodyptr = params;
-   msg.bodyval = 0;
-   limSysProcessMmhMsgApi(mac_ctx, &msg, ePROT);
-
-   if (chan_params->channelNumber == session->currentOperChannel) {
-       limApplyConfiguration(mac_ctx, session);
-       limSendBeaconInd(mac_ctx, session);
-   } else {
-       limLog(mac_ctx, LOGE, FL("channel switch resp chan %d and session channel doesnt match %d"),
-              chan_params->channelNumber, session->currentOperChannel);
-   }
-
-   return;
-}
-
 
 /**
  * limProcessMlmDeauthReq()

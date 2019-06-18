@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, 2015, 2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013, 2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -189,33 +189,6 @@ typedef struct {
 
 } hdd_station_info_t;
 
-struct hdd_cache_sta_info{
-    v_BOOL_t isUsed;
-    v_U8_t ucSTAId;
-    v_U32_t freq;
-    v_MACADDR_t macAddrSTA;
-    v_S7_t rssi;
-    v_U8_t nss;
-    v_U8_t dot11_mode;
-    v_U32_t reason_code;
-    v_U32_t rx_rate;
-    tSirMacHTChannelWidth ch_width;
-    v_BOOL_t ht_present;
-    struct ieee80211_ht_cap ht_caps;
-    v_BOOL_t vht_present;
-    struct ieee80211_vht_cap vht_caps;
-};
-
-/**
- * struct ecsa_info - structure to store ecsa info
- * @new_channel: new channel to which switch is requested
- * @channel_switch_in_progress: check if channel switch is in progress
- */
-struct ecsa_info {
-    uint8_t new_channel;
-    bool channel_switch_in_progress;
-};
-
 typedef struct sSapContext {
 
     vos_lock_t          SapGlobalLock;
@@ -293,7 +266,6 @@ typedef struct sSapContext {
     tSapAcsChannelInfo acsBestChannelInfo;
     spinlock_t staInfo_lock; //To protect access to station Info
     hdd_station_info_t aStaInfo[WLAN_MAX_STA_COUNT];
-    struct hdd_cache_sta_info cache_sta_info[WLAN_MAX_STA_COUNT];
 #ifdef WLAN_FEATURE_AP_HT40_24G
     v_U8_t            affected_start;
     v_U8_t            affected_end;
@@ -303,7 +275,6 @@ typedef struct sSapContext {
     v_U8_t            ObssScanInterval;
     v_U8_t            ObssTransitionDelayFactor;
 #endif
-    struct ecsa_info ecsa_info;
 } *ptSapContext;
 
 
@@ -940,10 +911,6 @@ SIDE EFFECTS
 
 eHalStatus sapCheckHT40SecondaryIsNotAllowed(ptSapContext psapCtx);
 #endif
-
-struct hdd_cache_sta_info *hdd_get_cache_stainfo(
-                                          struct hdd_cache_sta_info *astainfo,
-                                          u8 *mac_addr);
 
 #ifdef __cplusplus
 }

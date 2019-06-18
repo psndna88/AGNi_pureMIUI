@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -142,10 +142,6 @@ typedef struct
 #define QCSAP_IOCTL_GETPARAM          (SIOCIWFIRSTPRIV+1)
 #define QCSAP_IOCTL_COMMIT            (SIOCIWFIRSTPRIV+2)
 
-#define QCSAP_IOCTL_SET_CHAR_GET_NONE (SIOCIWFIRSTPRIV + 3)
-#define WE_WOWL_ADD_PTRN     1
-#define WE_WOWL_DEL_PTRN     2
-
 #define QCSAP_IOCTL_GET_STAWPAIE      (SIOCIWFIRSTPRIV+4)
 
 #define QCSAP_IOCTL_STOPBSS           (SIOCIWFIRSTPRIV+6)
@@ -177,9 +173,6 @@ typedef struct
 #define QCSAP_IOCTL_SET_TRAFFIC_MONITOR (SIOCIWFIRSTPRIV+24)
 #define QCSAP_IOCTL_AP_STATS            (SIOCIWFIRSTPRIV+25) // get routines should be odd numbered
 
-#define QCSAP_IOCTL_PRIV_SET_NONE_GET_THREE_INT  (SIOCIWFIRSTPRIV+27)
-#define QCSAP_IOCTL_GET_TSF 1
-
 #define MAX_VAR_ARGS         7
 #define QCSAP_IOCTL_PRIV_GET_SOFTAP_LINK_SPEED (SIOCIWFIRSTPRIV + 31)
 
@@ -193,10 +186,7 @@ enum {
     QCSAP_PARAM_SET_MC_RATE = 10,
     QCSAP_PARAM_SET_AUTO_CHANNEL = 11,
     QCSAP_PARAM_GET_FRAME_LOGS = 12,
-    QCSAP_PARAM_SET_PROXIMITY = 13,
-    QCSAP_PARAM_SET_WOWL = 14,
-    QCSAP_PARAM_CAP_TSF = 15,
-    QCSAP_PARAM_SET_CHANNEL_CHANGE = 16,
+    QCSAP_PARAM_SET_PROXIMITY = 13
 };
 
 int iw_softap_get_channel_list(struct net_device *dev, 

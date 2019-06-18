@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -116,34 +116,8 @@ void hdd_restart_softap (hdd_context_t *pHddCtx, hdd_adapter_t *pAdapter);
 void hdd_hostapd_ch_avoid_cb(void *pAdapter, void *indParam);
 #endif /* FEATURE_WLAN_CH_AVOID */
 int hdd_del_all_sta(hdd_adapter_t *pAdapter);
+
 void hdd_sap_indicate_disconnect_for_sta(hdd_adapter_t *adapter);
 void hdd_sap_destroy_timers(hdd_adapter_t *adapter);
-
-#ifdef SAP_AUTH_OFFLOAD
-bool  hdd_set_sap_auth_offload(hdd_adapter_t *pHostapdAdapter,
-        bool enabled);
-#else
-static inline bool
-hdd_set_sap_auth_offload(hdd_adapter_t *pHostapdAdapter, bool enabled)
-{
-}
-#endif
-
-/**
- * hdd_check_for_unsafe_ch() - Check the current operating channel with
- * unsafe channel list.
- * @phostapd_adapter : Pointer to HDD adapter.
- * @hdd_ctx: pointer to hdd context.
- *
- * Check the current operating chennel of SAP with unsafe channel list
- * and Restart the SAP on safe channel if currently SAP is
- * on unsafe channel.
- *
- * Return : None
- */
-void hdd_check_for_unsafe_ch(hdd_adapter_t *phostapd_adapter,
-                                           hdd_context_t *hdd_ctx);
-void hdd_force_scc_restart_sap(hdd_adapter_t *adapter,
-    hdd_context_t *hdd_ctx, tANI_U8  channelId);
 
 #endif    // end #if !defined( WLAN_HDD_HOSTAPD_H )

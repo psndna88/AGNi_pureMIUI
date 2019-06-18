@@ -123,7 +123,7 @@ typedef tANI_U8 tHalIpv4Addr[4];
 /* 80 is actually NUM_RF_CHANNELS_V2, but beyond V2, this number will be ignored by FW */
 #define WLAN_HAL_ROAM_SCAN_MAX_CHANNELS       80
 #define WLAN_HAL_ROAM_SACN_PMK_SIZE           32
-#define WLAN_HAL_ROAM_SCAN_RESERVED_BYTES     19
+#define WLAN_HAL_ROAM_SCAN_RESERVED_BYTES     20
 
 #define WLAN_HAL_EXT_SCAN_MAX_CHANNELS               16
 #define WLAN_HAL_EXT_SCAN_MAX_BUCKETS                16
@@ -605,24 +605,6 @@ typedef enum
    WLAN_HAL_PER_ROAM_SCAN_TRIGGER_REQ        = 336,
    WLAN_HAL_PER_ROAM_SCAN_TRIGGER_RSP        = 337,
 
-   WLAN_HAL_DHCP_SERVER_OFFLOAD_REQ          = 339,
-   WLAN_HAL_DHCP_SERVER_OFFLOAD_RSP          = 340,
-   WLAN_HAL_SAP_AUTH_OFFLOAD_IND             = 341,
-   WLAN_HAL_MDNS_ENABLE_OFFLOAD_REQ          = 342,
-   WLAN_HAL_MDNS_ENABLE_OFFLOAD_RSP          = 343,
-   WLAN_HAL_MDNS_FQDN_OFFLOAD_REQ            = 344,
-   WLAN_HAL_MDNS_FQDN_OFFLOAD_RSP            = 345,
-   WLAN_HAL_MDNS_RESP_OFFLOAD_REQ            = 346,
-   WLAN_HAL_MDNS_RESP_OFFLOAD_RSP            = 347,
-   WLAN_HAL_MDNS_STATS_OFFLOAD_REQ           = 348,
-   WLAN_HAL_MDNS_STATS_OFFLOAD_RSP           = 349,
-
-   /* QRF Support */
-   WLAN_HAL_QRF_AP_FIND_COMMAND              = 350,
-   WLAN_HAL_QRF_PREF_NETW_FOUND_IND          = 351,
-   WLAN_HAL_CAPTURE_GET_TSF_TSTAMP           = 352,
-   WLAN_HAL_CAPTURE_GET_TSF_TSTAMP_RSP       = 353,
-   /* ARP DEBUG stats*/
    WLAN_HAL_FW_SET_CLEAR_ARP_STATS_REQ       = 354,
    WLAN_HAL_FW_SET_CLEAR_ARP_STATS_RSP       = 355,
    WLAN_HAL_FW_GET_ARP_STATS_REQ             = 356,
@@ -841,9 +823,6 @@ typedef enum eSriLinkState {
 #endif
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
     eSIR_LINK_FT_PREASSOC_STATE = 16,
-#endif
-#ifdef WLAN_FEATURE_LFR_MBB
-    eSIR_LINK_PRE_AUTH_REASSOC_STATE = 17,
 #endif
     eSIR_LINK_MAX = WLAN_HAL_MAX_ENUM_SIZE
 } tSirLinkState;
@@ -6391,7 +6370,6 @@ typedef PACKED_PRE struct PACKED_POST {
    tANI_U8           Prefer5GHz;
    tANI_U8           RoamRssiCatGap;
    tANI_U8           Select5GHzMargin;
-   tANI_U8           WeakZoneRssiThresholdForRoam;
    tANI_U8           ReservedBytes[WLAN_HAL_ROAM_SCAN_RESERVED_BYTES];
    tRoamNetworkType  ConnectedNetwork;
    tMobilityDomainInfo MDID;
@@ -6919,15 +6897,10 @@ typedef enum {
     WIFI_CONFIG            = 61,
     ANTENNA_DIVERSITY_SELECTION  = 62,
     PER_BASED_ROAMING      = 63,
-    SAP_MODE_WOW           = 64,
-    SAP_OFFLOADS           = 65,
-    SAP_BUFF_ALLOC         = 66,
-    MAKE_BEFORE_BREAK      = 67,
     NUD_DEBUG              = 68,
     /* 69 reserved for FATAL_EVENT_LOGGING */
     /* 70 reserved for WIFI_DUAL_BAND_ENABLE */
     PROBE_RSP_TEMPLATE_VER1 = 71,
-    STA_MONITOR_SCC         = 72,
     MAX_FEATURE_SUPPORTED  = 128,
 } placeHolderInCapBitmap;
 
@@ -9116,39 +9089,6 @@ typedef PACKED_PRE struct PACKED_POST
    tConfigRoamScanRspParams configRoamScanRspParams;
 }  tSetRoamScanConfigRsp, * tpSetRoamScanConfigRsp;
 
-/*---------------------------------------------------------------------------
-* WLAN_HAL_CAPTURE_GET_TSF_TSTAMP
-*-------------------------------------------------------------------------*/
-typedef PACKED_PRE struct PACKED_POST
-{
-   uint8    uBssIdx;
-   boolean  capTSFget;
-}tHalCapTSFget, *tptHalCapTSFget;
-
-typedef PACKED_PRE struct PACKED_POST
-{
-   tHalMsgHeader header;
-   tHalCapTSFget capTSFget;
-}tHalCapTSFgetReqInd, *tpHalCapTSFgetReqInd;
-
-/*---------------------------------------------------------------------------
-    WLAN_HAL_CAPTURE_GET_TSF_TSTAMP_RSP
----------------------------------------------------------------------------*/
-
-typedef PACKED_PRE struct PACKED_POST
-{
-    /* Success /Failure / Nil result */
-    tANI_U32   status;
-    tANI_U32   tsf_lo;
-    tANI_U32   tsf_hi;
-} tConfigcapTSFgetRspParams, * tptConfigcapTSFgetRspParams;
-
-typedef PACKED_PRE struct PACKED_POST
-{
-   tHalMsgHeader header;
-   tConfigcapTSFgetRspParams configcapTSFgetRspParams;
-}  tcapGetTSFConfigRsp, * tpcapGetTSFConfigRsp;
-
 
 #define PER_ROAM_MAX_AP_CNT 30
 #define PER_ROAM_MAX_CANDIDATE_CNT 15
@@ -9186,75 +9126,6 @@ typedef PACKED_PRE struct PACKED_POST
     tHalMsgHeader         header;
     tFWLoggingDxeDoneInd    tFWLoggingDxeDoneIndParams;
 }  tFWLoggingDxeDoneIndMsg,  * tpFWLoggingDxeDoneIndMsg;
-
-/*---------------------------------------------------------------------------
- *     WLAN_HAL_APFIND_CMDID
- * ---------------------------------------------------------------------------*/
-
-#define MAX_ARRAY_SIZE 1000
-typedef PACKED_PRE struct PACKED_POST
-{
-    tANI_U16 msg_version:4;
-    tANI_U16 msg_id:12;
-    tANI_U16 msg_len:16;
-    tANI_U16 handle;
-    tANI_U16 transaction_id;
-} tApfindMsgHeader, *tpApfindMsgHeader;
-
-typedef PACKED_PRE struct PACKED_POST
-{
-    tANI_U16 type;
-    tANI_U16 length;
-    tANI_U8* value;
-} tApfindTlv, *tpApfindTlv;
-
-typedef PACKED_PRE struct PACKED_POST
-{
-    tApfindMsgHeader apFindHeader;
-    tANI_U8 ptlv[MAX_ARRAY_SIZE];
-} tQRFPrefNetwListParams, *tpQRFPrefNetwListParams;
-
-typedef enum
-{
-    APFIND_MSG_ID_ERROR_RSP    = 0,
-    APFIND_MSG_ID_ENABLE_REQ   = 1,
-    APFIND_MSG_ID_SET_SSID     = 2,
-    APFIND_MSG_ID_SET_MAC      = 3,
-    APFIND_MSG_ID_SET_PARAMS   = 4,
-} tApfindMsgId;
-
-typedef PACKED_PRE struct PACKED_POST
-{
-    tHalMsgHeader header;
-    tQRFPrefNetwListParams qRFprefNetwListParams;
-} tQRFSetPrefNetwListReq, *tpQRFSetPrefNetwListReq;
-
-#define QRF_MAX_SUPPORTED_NETWORKS  10
-
-typedef PACKED_PRE struct PACKED_POST {
-    /*Network that was found with the highest RSSI*/
-    tSirMacSSid ssId;
-    /*Indicates the RSSI */
-    tANI_U8     rssi;
-    /* The MPDU frame length of a beacon or probe rsp.
-     * data is the start of the frame
-     */
-    tANI_U16    frameLength;
-} tQrfNetwFoundParam, *tpQrfNetwFoundParam;
-
-typedef PACKED_PRE struct PACKED_POST {
-    uint8 netwCount;
-    tQrfNetwFoundParam qrfNetwParams[QRF_MAX_SUPPORTED_NETWORKS];
-} tQrfPrefNetwFoundParams, * tpQrfPrefNetwFoundParams;
-
-/*
- * Preferred network found indication
- */
-typedef PACKED_PRE struct PACKED_POST {
-    tHalMsgHeader header;
-    tQrfPrefNetwFoundParams   qrfPrefNetwFoundParams;
-} tQrfPrefNetwFoundInd, *tpQrfPrefNetwFoundInd;
-
 
 /*---------------------------------------------------------------------------
  * Logging mail box structure
@@ -9455,184 +9326,6 @@ typedef PACKED_PRE struct PACKED_POST
    tHalMsgHeader header;
    tHalModifyRoamParamsIndParams  modifyRoamParamsReqParams;
 } tHalModifyRoamParamsInd, *tpHalModifyRoamParamsInd;
-
-typedef PACKED_PRE struct PACKED_POST
-{
-    tSirMacAddr selfMacAddr;
-    tANI_U32 enable;
-    tSirMacSSid ssId;
-    tANI_U32 rsn_authmode;
-    tANI_U32 rsn_ucastcipherset;
-    tANI_U32 rsn_mcastcipherset;
-    tANI_U32 rsn_mcastmgmtcipherset;
-    tANI_U32 channel;
-    tANI_U32 psk_len;
-    tANI_U8 psk[1];
-} tSapOffloadEnableMsg, *tpSapOffloadEnableMsg;
-
-typedef PACKED_PRE struct PACKED_POST
-{
-    tHalMsgHeader header;
-    tSapOffloadEnableMsg SapOffloadEnableMsg;
-} tHalSapoffloadEnable, *tpHalSapoffloadEnable;
-
-/*---------------------------------------------------------------------------
- * WLAN_HAL_DHCP_SERVER_OFFLOAD_REQ
- *--------------------------------------------------------------------------*/
-typedef PACKED_PRE struct PACKED_POST
-{
-   tANI_U8 bss_idx;
-   tANI_U32 enable;
-   tANI_U32 srv_ipv4; /* server IP */
-   tANI_U32 start_lsb; /* starting address assigned to client */
-   tANI_U32 num_client; /* number of clients we support */
-} hal_dhcp_srv_offload_req_param_t, *hal_dhcp_srv_offload_req_params;
-
-typedef PACKED_PRE struct PACKED_POST
-{
-   tHalMsgHeader header;
-   hal_dhcp_srv_offload_req_param_t dhcp_srv_offload_req_params;
-} hal_dhcp_srv_offload_req_msg_t;
-
-/*---------------------------------------------------------------------------
- * WLAN_HAL_DHCP_SERVER_OFFLOAD_RSP
- *--------------------------------------------------------------------------*/
-typedef PACKED_PRE struct PACKED_POST
-{
-   tANI_U32 status;
-} hal_dhcp_srv_offload_rsp_param_t, *hal_dhcp_srv_offload_rsp_params;
-
-typedef PACKED_PRE struct PACKED_POST
-{
-   tHalMsgHeader header;
-   hal_dhcp_srv_offload_rsp_param_t dhcp_srv_offload_rsp_params;
-} hal_dhcp_srv_offload_rsp_msg_t, *hal_dhcp_srv_offload_rsp_msg;
-
-/*---------------------------------------------------------------------------
- * WLAN_HAL_MDNS_ENABLE_OFFLOAD_REQ
- *--------------------------------------------------------------------------*/
-typedef PACKED_PRE struct PACKED_POST
-{
-   tANI_U8 bss_idx;
-   tANI_U32 enable;
-} hal_mdns_enable_offload_req_param_t, *hal_mdns_enable_offload_req_params;
-
-typedef PACKED_PRE struct PACKED_POST
-{
-   tHalMsgHeader header;
-   hal_mdns_enable_offload_req_param_t mdns_enable_req_params;
-} hal_mdns_enable_offload_req_msg_t;
-
-/*---------------------------------------------------------------------------
- * WLAN_HAL_MDNS_ENABLE_OFFLOAD_RSP
- *--------------------------------------------------------------------------*/
-typedef PACKED_PRE struct PACKED_POST
-{
-   tANI_U32 status;
-} hal_mdns_enable_offload_rsp_param_t, *hal_mdns_enable_offload_rsp_params;
-
-typedef PACKED_PRE struct PACKED_POST
-{
-   tHalMsgHeader header;
-   hal_mdns_enable_offload_rsp_param_t mdns_enable_rsp_params;
-} hal_mdns_enable_offload_rsp_msg_t, *hal_mdns_enable_offload_rsp_msg;
-
-/*---------------------------------------------------------------------------
- * WLAN_HAL_MDNS_FQDN_OFFLOAD_REQ
- *--------------------------------------------------------------------------*/
-typedef PACKED_PRE struct PACKED_POST
-{
-   tANI_U8 bss_idx;
-   tANI_U32 type;
-   tANI_U32 fqdn_len;
-   tANI_U8 fqdn_data[1];
-} hal_mdns_fqdn_offload_req_param_t, *hal_mdns_fqdn_offload_req_params;
-
-typedef PACKED_PRE struct PACKED_POST
-{
-   tHalMsgHeader header;
-   hal_mdns_fqdn_offload_req_param_t mdns_fqdn_req_params;
-} hal_mdns_fqdn_offload_req_msg_t;
-
-/*---------------------------------------------------------------------------
- * WLAN_HAL_MDNS_FQDN_OFFLOAD_RSP
- *--------------------------------------------------------------------------*/
-typedef PACKED_PRE struct PACKED_POST
-{
-   tANI_U32 status;
-} hal_mdns_fqdn_offload_rsp_param_t, *hal_mdns_fqdn_offload_rsp_params;
-
-typedef PACKED_PRE struct PACKED_POST
-{
-   tHalMsgHeader header;
-   hal_mdns_fqdn_offload_rsp_param_t mdns_fqdn_rsp_params;
-} hal_mdns_fqdn_offload_rsp_msg_t, *hal_mdns_fqdn_offload_rsp_msg;
-
-/*---------------------------------------------------------------------------
- * WLAN_HAL_MDNS_RESP_OFFLOAD_REQ
- *--------------------------------------------------------------------------*/
-typedef PACKED_PRE struct PACKED_POST
-{
-   tANI_U8 bss_idx;
-   tANI_U32 ar_count;
-   tANI_U32 resp_len;
-   tANI_U8 resp_data[1];
-} hal_mdns_resp_offload_req_param_t, *hal_mdns_resp_offload_req_params;
-
-typedef PACKED_PRE struct PACKED_POST
-{
-   tHalMsgHeader header;
-   hal_mdns_resp_offload_req_param_t mdns_resp_req_params;
-} hal_mdns_resp_offload_req_msg_t;
-
-/*---------------------------------------------------------------------------
- * WLAN_HAL_MDNS_RESP_OFFLOAD_RSP
- *--------------------------------------------------------------------------*/
-typedef PACKED_PRE struct PACKED_POST
-{
-   tANI_U32 status;
-} hal_mdns_resp_offload_rsp_param_t, *hal_mdns_resp_offload_rsp_params;
-
-typedef PACKED_PRE struct PACKED_POST
-{
-   tHalMsgHeader header;
-   hal_mdns_resp_offload_rsp_param_t mdns_rsp_params;
-} hal_mdns_resp_offload_rsp_msg_t, *hal_mdns_resp_offload_rsp_msg;
-
-/*---------------------------------------------------------------------------
- * WLAN_HAL_MDNS_STATS_OFFLOAD_REQ
- *--------------------------------------------------------------------------*/
-typedef PACKED_PRE struct PACKED_POST
-{
-   tANI_U8 bss_idx;
-} hal_mdns_stats_offload_req_param_t, *hal_mdns_stats_offload_req_params;
-
-typedef PACKED_PRE struct PACKED_POST
-{
-   tHalMsgHeader header;
-   hal_mdns_stats_offload_req_param_t mdns_stats_req_params;
-} hal_mdns_stats_offload_req_msg_t;
-
-/*---------------------------------------------------------------------------
- * WLAN_HAL_MDNS_STATS_OFFLOAD_RSP
- *--------------------------------------------------------------------------*/
-typedef PACKED_PRE struct PACKED_POST
-{
-   tANI_U8 bss_idx;
-   tANI_U32 current_ts;
-   tANI_U32 last_query_ts;
-   tANI_U32 last_rsp_ts;
-   tANI_U32 tot_queries;
-   tANI_U32 tot_matches;
-   tANI_U32 tot_rsp;
-   tANI_U32 status;
-} hal_mdns_stats_offload_rsp_param_t, *hal_mdns_stats_offload_rsp_params;
-
-typedef PACKED_PRE struct PACKED_POST
-{
-   tHalMsgHeader header;
-   hal_mdns_stats_offload_rsp_param_t mdns_stats_rsp_params;
-} hal_mdns_stats_offload_rsp_msg_t, *hal_mdns_stats_offload_rsp_msg;
 
 /*---------------------------------------------------------------------------
  * WLAN_HAL_FW_SET_CLEAR_ARP_STATS_REQ

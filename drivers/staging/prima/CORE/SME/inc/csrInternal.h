@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -206,7 +206,7 @@ typedef enum
     eCsrLostLink1Abort,
     eCsrLostLink2Abort,
     eCsrLostLink3Abort,
-    ecsr_mbb_perform_preauth_reassoc,
+
 }eCsrRoamReason;
 
 typedef enum
@@ -367,7 +367,6 @@ typedef struct tagCsrRoamStartBssParams
     tCsrBssid           bssid;    //this is the BSSID for the party we want to join (only use for IBSS or WDS)
     tSirNwType          sirNwType;
     ePhyChanBondState   cbMode;
-    enum eSirMacHTChannelWidth orig_ch_width;
     tSirMacRateSet      operationalRateSet;
     tSirMacRateSet      extendedRateSet;
     tANI_U8             operationChn;
@@ -521,7 +520,6 @@ typedef struct tagCsrNeighborRoamConfig
     tANI_U16       nNeighborResultsRefreshPeriod;
     tANI_U16       nEmptyScanRefreshPeriod;
     tANI_U8        nNeighborInitialForcedRoamTo5GhEnable;
-    tANI_U8        nWeakZoneRssiThresholdForRoam;
 }tCsrNeighborRoamConfig;
 #endif
 
@@ -638,10 +636,6 @@ typedef struct tagCsrConfig
 #endif
 #endif
 
-#ifdef WLAN_FEATURE_LFR_MBB
-    tANI_BOOLEAN enable_lfr_mbb;
-#endif
-
 #ifdef FEATURE_WLAN_ESE
     tANI_U8   isEseIniFeatureEnabled;
 #endif
@@ -716,10 +710,6 @@ typedef struct tagCsrConfig
     uint32_t edca_vi_aifs;
     uint32_t edca_bk_aifs;
     uint32_t edca_be_aifs;
-    tANI_U8 agg_btc_sco_oui[3];
-    tANI_BOOLEAN agg_btc_sco_enabled;
-    tANI_U8 num_ba_buff_btc_sco;
-    tANI_U8 num_ba_buff;
 }tCsrConfig;
 
 typedef struct tagCsrChannelPowerInfo
@@ -1016,7 +1006,6 @@ typedef struct tagCsrRoamSession
     tANI_BOOLEAN fIgnorePMKIDCache;
     tANI_BOOLEAN abortConnection;
     bool dhcp_done;
-    v_TIME_t connect_req_start_time;
 } tCsrRoamSession;
 
 typedef struct tagCsrRoamStruct
@@ -1075,7 +1064,6 @@ typedef struct tagCsrRoamStruct
 #endif
     tANI_U32 deauthRspStatus;
     tANI_BOOLEAN pending_roam_disable;
-    vos_spin_lock_t roam_state_lock;
 }tCsrRoamStruct;
 
 
@@ -1507,18 +1495,3 @@ void csrDisableDfsChannel(tpAniSirGlobal pMac);
 eHalStatus csrEnableRMC(tpAniSirGlobal pMac, tANI_U32 sessionId);
 eHalStatus csrDisableRMC(tpAniSirGlobal pMac, tANI_U32 sessionId);
 #endif /* WLAN_FEATURE_RMC */
-
-eHalStatus csrRoamStopNetwork(tpAniSirGlobal pMac, tANI_U32 sessionId,
-    tCsrRoamProfile *pProfile, tSirBssDescription *pBssDesc,
-    tDot11fBeaconIEs *pIes);
-
-eHalStatus csrRoamSaveSecurityRspIE(tpAniSirGlobal pMac,
-    tANI_U32 sessionId, eCsrAuthType authType,
-    tSirBssDescription *pSirBssDesc,
-    tDot11fBeaconIEs *pIes);
-
-void csrRoamSubstateChange(tpAniSirGlobal pMac,
-    eCsrRoamSubState NewSubstate, tANI_U32 sessionId);
-
-eHalStatus csrRoamFreeConnectedInfo(tpAniSirGlobal pMac,
-   tCsrRoamConnectedInfo *pConnectedInfo);

@@ -491,19 +491,9 @@ typedef enum
   WDI_PER_ROAM_SCAN_OFFLOAD_REQ                  = 116,
   WDI_PER_ROAM_SCAN_TRIGGER_REQ                  = 117,
 #endif
-
-  WDI_DHCP_SERVER_OFFLOAD_REQ                    = 118,
-  WDI_MDNS_ENABLE_OFFLOAD_REQ                    = 119,
-  WDI_MDNS_FQDN_OFFLOAD_REQ                      = 120,
-  WDI_MDNS_RESP_OFFLOAD_REQ                      = 121,
-  WDI_MDNS_STATS_OFFLOAD_REQ                     = 122,
-
-  WDI_CAP_TSF_REQ                                = 123,
-  WDI_GET_TSF_REQ                                = 124,
-
-  /* ARP DEBUG STATS */
-  WDI_FW_ARP_STATS_REQ                           = 125,
-  WDI_FW_GET_ARP_STATS_REQ                       = 126,
+/* ARP DEBUG STATS */
+  WDI_FW_ARP_STATS_REQ                           = 118,
+  WDI_FW_GET_ARP_STATS_REQ                       = 119,
 
   WDI_MAX_REQ,
 
@@ -568,12 +558,8 @@ typedef enum
   WDI_ANTENNA_DIVERSITY_SELECTION_REQ = WDI_MAX_REQ + 21,
   WDI_MODIFY_ROAM_PARAMS_IND = WDI_MAX_REQ + 22,
   WDI_SET_ALLOWED_ACTION_FRAMES_IND = WDI_MAX_REQ + 23,
-#ifdef SAP_AUTH_OFFLOAD
-  WDI_PROCESS_SAP_AUTH_OFFLOAD_IND = WDI_MAX_REQ +24,
-#endif
 
-  WDI_SET_AP_FIND_IND = WDI_MAX_REQ + 25,
-  WDI_MAX_UMAC_IND = WDI_MAX_REQ + 26
+  WDI_MAX_UMAC_IND = WDI_MAX_REQ + 24
 
 }WDI_RequestEnumType;
 
@@ -883,15 +869,8 @@ typedef enum
   WDI_PER_ROAM_SCAN_OFFLOAD_RSP                  = 116,
   WDI_PER_ROAM_SCAN_TRIGGER_RSP                  = 117,
 #endif
-  WDI_DHCP_SERVER_OFFLOAD_RSP                    = 118,
-  WDI_MDNS_ENABLE_OFFLOAD_RSP                    = 119,
-  WDI_MDNS_FQDN_OFFLOAD_RSP                      = 120,
-  WDI_MDNS_RESP_OFFLOAD_RSP                      = 121,
-  WDI_MDNS_STATS_OFFLOAD_RSP                     = 122,
-  WDI_CAPTURE_GET_TSF_TSTAMP_RSP                 = 123,
-  WDI_FW_ARP_STATS_RSP                           = 124,
-  WDI_FW_GET_ARP_STATS_RSP                       = 125,
-
+  WDI_FW_ARP_STATS_RSP                           = 118,
+  WDI_FW_GET_ARP_STATS_RSP                       = 119,
 
   /*-------------------------------------------------------------------------
     Indications
@@ -983,9 +962,6 @@ typedef enum
   WDI_HAL_RSSI_BREACHED_IND          = WDI_HAL_IND_MIN + 32,
   WDI_HAL_START_OEM_DATA_RSP_IND_NEW = WDI_HAL_IND_MIN + 33,
   WDI_ANTENNA_DIVERSITY_SELECTION_RSP = WDI_HAL_IND_MIN + 34,
-#ifdef WLAN_FEATURE_APFIND
-  WDI_HAL_QRF_PREF_NETWORK_FOUND_IND = WDI_HAL_IND_MIN + 35,
-#endif
   WDI_MAX_RESP
 }WDI_ResponseEnumType; 
 
@@ -1351,8 +1327,6 @@ typedef struct
    wpt_uint8                  roamDelayStatsEnabled;
    /* enable/disable sendMgmtPktViaWQ5 params in ini */
    wpt_boolean                 sendMgmtPktViaWQ5;
-   /* Wake lock for keep device in awake once host gets a find AP indication */
-   vos_wake_lock_t             find_ap_lock;
 
 }WDI_ControlBlockType; 
 
@@ -5940,15 +5914,6 @@ WDI_Status WDI_ProcessLphbCfgRsp
 );
 #endif /* FEATURE_WLAN_LPHB */
 
-#ifdef WLAN_FEATURE_APFIND
-WDI_Status
-WDI_ProcessQRFPrefNetworkFoundInd
-(
-  WDI_ControlBlockType*  pWDICtx,
-  WDI_EventInfoType*     pEventData
-);
-#endif
-
 /**
  @brief Process Rate Update Indication and post it to HAL
 
@@ -6675,131 +6640,6 @@ WDI_ProcessSetAllowedActionFramesInd
   WDI_ControlBlockType*  pWDICtx,
   WDI_EventInfoType*     pEventData
 );
-#ifdef SAP_AUTH_OFFLOAD
-/**
- *  WDI_ProcessSapAuthOffloadInd - Process Set sap offload enable
- *                                         command
- *
- *  @pWDICtx: pointer to the WLAN DAL context
- *  @pEventData: pointer to the event information structure
- *
- */
-WDI_Status
-WDI_ProcessSapAuthOffloadInd
-(
-  WDI_ControlBlockType*  pWDICtx,
-  WDI_EventInfoType*     pEventData
- );
-#endif
-
-#ifdef DHCP_SERVER_OFFLOAD
-WDI_Status
-wdi_dhcp_server_offload_req
-(
-  WDI_ControlBlockType *wdi_ctx,
-  WDI_EventInfoType *event_data
-);
-
-WDI_Status
-wdi_dhcp_server_offload_rsp
-(
-  WDI_ControlBlockType *wdi_ctx,
-  WDI_EventInfoType *event_data
-);
-#endif /* DHCP_SERVER_OFFLOAD */
-
-#ifdef MDNS_OFFLOAD
-WDI_Status
-wdi_mdns_enable_offload_req
-(
-  WDI_ControlBlockType *wdi_ctx,
-  WDI_EventInfoType *event_data
-);
-
-WDI_Status
-wdi_mdns_enable_offload_rsp
-(
-  WDI_ControlBlockType *wdi_ctx,
-  WDI_EventInfoType *event_data
-);
-
-WDI_Status
-wdi_mdns_fqdn_offload_req
-(
-  WDI_ControlBlockType *wdi_ctx,
-  WDI_EventInfoType *event_data
-);
-
-WDI_Status
-wdi_mdns_fqdn_offload_rsp
-(
-  WDI_ControlBlockType *wdi_ctx,
-  WDI_EventInfoType *event_data
-);
-
-WDI_Status
-wdi_mdns_resp_offload_req
-(
-  WDI_ControlBlockType *wdi_ctx,
-  WDI_EventInfoType *event_data
-);
-
-WDI_Status
-wdi_mdns_resp_offload_rsp
-(
-  WDI_ControlBlockType *wdi_ctx,
-  WDI_EventInfoType *event_data
-);
-
-WDI_Status
-wdi_get_mdns_stats_offload_req
-(
-  WDI_ControlBlockType *wdi_ctx,
-  WDI_EventInfoType *event_data
-);
-
-WDI_Status
-wdi_get_mdns_stats_offload_rsp
-(
-  WDI_ControlBlockType *wdi_ctx,
-  WDI_EventInfoType *event_data
-);
-#endif /* MDNS_OFFLOAD */
-#ifdef WLAN_FEATURE_APFIND
-/**
- *  WDI_ProcessApFindInd - Process AP find command command
- *
- *  @pWDICtx: pointer to the WLAN DAL context
- *  @pEventData: pointer to the event information structure
- *
- */
-WDI_Status
-WDI_ProcessApFindInd
-(
-  WDI_ControlBlockType*  pWDICtx,
-  WDI_EventInfoType*     pEventData
-);
-#endif
-
-WDI_Status
-wdi_cap_tsf_req
-(
-    WDI_ControlBlockType *wdi_ctx,
-    WDI_EventInfoType *event_data
-);
-
-WDI_Status
-wdi_get_tsf_req
-(
-    WDI_ControlBlockType *wdi_ctx,
-    WDI_EventInfoType *event_data
-);
-WDI_Status
-wdi_get_tsf_rsp
-(
-    WDI_ControlBlockType *wdi_ctx,
-    WDI_EventInfoType *event_data
-);
 
 WDI_Status
 WDI_ProcessSetArpStatsReq
@@ -6828,6 +6668,5 @@ WDI_ProcessGetArpStatsResp
   WDI_ControlBlockType*  pWDICtx,
   WDI_EventInfoType*     pEventData
 );
-
 #endif /*WLAN_QCT_WDI_I_H*/
 

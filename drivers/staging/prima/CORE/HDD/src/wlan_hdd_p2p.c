@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -132,13 +132,9 @@ static void hdd_sendMgmtFrameOverMonitorIface( hdd_adapter_t *pMonAdapter,
                                                tANI_U8* pbFrames,
                                                tANI_U8 frameType );
 
-static v_BOOL_t wlan_hdd_is_type_p2p_action( const u8 *buf, uint32_t len )
+static v_BOOL_t wlan_hdd_is_type_p2p_action( const u8 *buf )
 {
     const u8 *ouiPtr;
-
-    if (len < WLAN_HDD_PUBLIC_ACTION_FRAME_SUB_TYPE_OFFSET + 1) {
-        return VOS_FALSE;
-    }
 
     if ( buf[WLAN_HDD_PUBLIC_ACTION_FRAME_CATEGORY_OFFSET] !=
                WLAN_HDD_PUBLIC_ACTION_FRAME ) {
@@ -164,11 +160,11 @@ static v_BOOL_t wlan_hdd_is_type_p2p_action( const u8 *buf, uint32_t len )
     return VOS_TRUE;
 }
 
-static bool hdd_p2p_is_action_type_rsp( const u8 *buf, uint32_t len )
+static bool hdd_p2p_is_action_type_rsp( const u8 *buf )
 {
     tActionFrmType actionFrmType;
 
-    if ( wlan_hdd_is_type_p2p_action(buf, len) )
+    if ( wlan_hdd_is_type_p2p_action(buf) )
     {
         actionFrmType = buf[WLAN_HDD_PUBLIC_ACTION_FRAME_SUB_TYPE_OFFSET];
         if ( actionFrmType != WLAN_HDD_INVITATION_REQ &&
@@ -285,7 +281,7 @@ eHalStatus wlan_hdd_remain_on_channel_callback( tHalHandle hHal, void* pCtx,
             vos_mem_free(pRemainChanCtx->action_pkt_buff.frame_ptr);
         }
         hddLog( LOG1, FL(
-                    "Freeing ROC ctx cfgState->remain_on_chan_ctx=%pK"),
+                    "Freeing ROC ctx cfgState->remain_on_chan_ctx=%p"),
                 cfgState->remain_on_chan_ctx);
         vos_mem_free( pRemainChanCtx );
         pRemainChanCtx = NULL;
@@ -492,7 +488,7 @@ void wlan_hdd_remain_on_chan_timeout(void *data)
 
     if ((NULL == pAdapter) || (WLAN_HDD_ADAPTER_MAGIC != pAdapter->magic))
     {
-        hddLog( LOGE, FL("pAdapter is invalid %pK !!!"), pAdapter);
+        hddLog( LOGE, FL("pAdapter is invalid %p !!!"), pAdapter);
         return;
     }
     pHddCtx = WLAN_HDD_GET_CTX( pAdapter );
@@ -599,7 +595,7 @@ static int wlan_hdd_p2p_start_remain_on_channel(
         hddLog(VOS_TRACE_LEVEL_ERROR,
                 FL("Not able to initalize remain_on_chan timer"));
         hddLog( LOG1, FL(
-                    "Freeing ROC ctx cfgState->remain_on_chan_ctx=%pK"),
+                    "Freeing ROC ctx cfgState->remain_on_chan_ctx=%p"),
                 cfgState->remain_on_chan_ctx);
         cfgState->remain_on_chan_ctx = NULL;
         vos_mem_free(pRemainChanCtx);
@@ -643,7 +639,7 @@ static int wlan_hdd_p2p_start_remain_on_channel(
             mutex_lock(&pHddCtx->roc_lock);
             pRemainChanCtx = cfgState->remain_on_chan_ctx;
             hddLog( LOG1, FL(
-                        "Freeing ROC ctx cfgState->remain_on_chan_ctx=%pK"),
+                        "Freeing ROC ctx cfgState->remain_on_chan_ctx=%p"),
                          cfgState->remain_on_chan_ctx);
             if (pRemainChanCtx)
             {
@@ -687,7 +683,7 @@ static int wlan_hdd_p2p_start_remain_on_channel(
             mutex_lock(&pHddCtx->roc_lock);
             pRemainChanCtx = cfgState->remain_on_chan_ctx;
             hddLog( LOG1, FL(
-                        "Freeing ROC ctx cfgState->remain_on_chan_ctx=%pK"),
+                        "Freeing ROC ctx cfgState->remain_on_chan_ctx=%p"),
                          cfgState->remain_on_chan_ctx);
             if (pRemainChanCtx)
             {
@@ -852,7 +848,7 @@ static int wlan_hdd_request_remain_on_channel( struct wiphy *wiphy,
 
                 schedule_delayed_work(&pAdapter->roc_work,
                         msecs_to_jiffies(pHddCtx->cfg_ini->gP2PListenDeferInterval));
-                hddLog(VOS_TRACE_LEVEL_INFO, "Defer interval is %hu, pAdapter %pK",
+                hddLog(VOS_TRACE_LEVEL_INFO, "Defer interval is %hu, pAdapter %p",
                         pHddCtx->cfg_ini->gP2PListenDeferInterval, pAdapter);
                 return 0;
             }
@@ -1278,27 +1274,17 @@ int __wlan_hdd_mgmt_tx( struct wiphy *wiphy, struct net_device *dev,
     hdd_cfg80211_state_t *cfgState = WLAN_HDD_GET_CFG_STATE_PTR( pAdapter );
     hdd_remain_on_chan_ctx_t *pRemainChanCtx = NULL;
     hdd_context_t *pHddCtx = WLAN_HDD_GET_CTX( pAdapter );
-    tANI_U8 type;
-    tANI_U8 subType;
+    tANI_U8 type = WLAN_HDD_GET_TYPE_FRM_FC(buf[0]);
+    tANI_U8 subType = WLAN_HDD_GET_SUBTYPE_FRM_FC(buf[0]);
     tActionFrmType actionFrmType = WLAN_HDD_ACTION_FRM_TYPE_MAX;
     bool noack = 0;
     int status;
-    uint32_t mgmt_hdr_len = sizeof(struct ieee80211_hdr_3addr);
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38))
     uint8_t home_ch = 0;
 #endif
 
     ENTER();
-
-    if (len < mgmt_hdr_len + 1) {
-        hddLog(VOS_TRACE_LEVEL_ERROR,"Invalid Length");
-        return -EINVAL;
-    }
-
-    type = WLAN_HDD_GET_TYPE_FRM_FC(buf[0]);
-    subType = WLAN_HDD_GET_SUBTYPE_FRM_FC(buf[0]);
-
     MTRACE(vos_trace(VOS_MODULE_ID_HDD,
                       TRACE_CODE_HDD_ACTION, pAdapter->sessionId,
                       pAdapter->device_mode ));
@@ -1315,8 +1301,7 @@ int __wlan_hdd_mgmt_tx( struct wiphy *wiphy, struct net_device *dev,
 
     if ((type == SIR_MAC_MGMT_FRAME) &&
             (subType == SIR_MAC_MGMT_ACTION) &&
-            wlan_hdd_is_type_p2p_action(
-            &buf[WLAN_HDD_PUBLIC_ACTION_FRAME_BODY_OFFSET], len - mgmt_hdr_len))
+            wlan_hdd_is_type_p2p_action(&buf[WLAN_HDD_PUBLIC_ACTION_FRAME_BODY_OFFSET]))
     {
         actionFrmType = buf[WLAN_HDD_PUBLIC_ACTION_FRAME_TYPE_OFFSET];
 #ifdef WLAN_FEATURE_P2P_DEBUG
@@ -1615,9 +1600,7 @@ bypass_lock:
 
         if ((type == SIR_MAC_MGMT_FRAME) &&
                 (subType == SIR_MAC_MGMT_ACTION) &&
-            wlan_hdd_is_type_p2p_action(
-             &buf[WLAN_HDD_PUBLIC_ACTION_FRAME_BODY_OFFSET],
-             len - mgmt_hdr_len))
+                (buf[WLAN_HDD_PUBLIC_ACTION_FRAME_OFFSET] == WLAN_HDD_PUBLIC_ACTION_FRAME))
         {
             actionFrmType = buf[WLAN_HDD_PUBLIC_ACTION_FRAME_TYPE_OFFSET];
             hddLog(LOG1, "Tx Action Frame %u.", actionFrmType);
@@ -2140,143 +2123,23 @@ static tANI_U8 wlan_hdd_get_session_type( enum nl80211_iftype type )
     return sessionType;
 }
 
-/**
- * hdd_close_all_adapters_per_mode() - close all adapters per mode
- * @hdd_ctx: pointer to hdd context
- * @mode: all adapters to be deleted in this mode
- *
- * Return: None
- */
-static void
-hdd_close_all_adapters_per_mode(hdd_context_t *hdd_ctx,
-				uint32_t mode)
-{
-	hdd_adapter_t *adapter = hdd_get_adapter(hdd_ctx, mode);
-
-	while (adapter) {
-		hdd_stop_adapter(hdd_ctx, adapter, VOS_TRUE);
-		hdd_deinit_adapter(hdd_ctx, adapter, TRUE);
-		hdd_close_adapter(hdd_ctx, adapter, VOS_TRUE);
-
-		adapter = hdd_get_adapter(hdd_ctx, mode);
-	}
-}
-
-static void wlan_hdd_create_p2p_adapter(hdd_context_t *hdd_ctx,
-					tANI_U8 rtnl_held)
-{
-	hdd_adapter_t *p2p_adapter;
-
-	p2p_adapter = hdd_open_adapter(hdd_ctx, WLAN_HDD_P2P_DEVICE, "p2p%d",
-				       &hdd_ctx->p2pDeviceAddress.bytes[0],
-				       rtnl_held);
-	if (!p2p_adapter)
-		hddLog(LOGE,
-		 FL("Failed to do hdd_open_adapter for P2P Device Interface"));
-}
-
-/**
- * wlan_hdd_add_monitor_check() - check for monitor intf and add if needed
- * @hdd_ctx: pointer to hdd context
- * @adapter: output pointer to hold created monitor adapter
- * @type: type of the interface
- * @name: name of the interface
- *
- * Return: 0 - on success
- *         1 - on failure
- */
-static int
-wlan_hdd_add_monitor_check(hdd_context_t *hdd_ctx, hdd_adapter_t **adapter,
-			   enum nl80211_iftype type, const char *name)
-{
-	hdd_adapter_t *sta_adapter;
-	hdd_adapter_t *mon_adapter;
-	uint32_t i;
-
-	*adapter = NULL;
-
-	/*
-	 * If add interface request is for monitor mode, then it can run in
-	 * parallel with only one station interface.
-	 * If there is no existing station interface return error
-	 */
-	if (type != NL80211_IFTYPE_MONITOR)
-		return 0;
-
-	if (!sme_IsFeatureSupportedByFW(STA_MONITOR_SCC)) {
-		hddLog(LOGE, FL("No FW support for STA + MON SCC"));
-		return -EINVAL;
-	}
-
-	if (hdd_ctx->no_of_open_sessions[VOS_MONITOR_MODE]) {
-		hddLog(VOS_TRACE_LEVEL_ERROR,
-		       "%s: monitor mode already exists, only one is possible",
-		       __func__);
-
-		return -EBUSY;
-	}
-
-	/* Ensure there is only one station interface */
-	if (hdd_ctx->no_of_open_sessions[VOS_STA_MODE] != 1) {
-		hddLog(LOGE,
-		 FL("cannot add monitor mode, due to %u sta interfaces"),
-		 hdd_ctx->no_of_open_sessions[VOS_STA_MODE]);
-
-		return -EINVAL;
-	}
-
-	sta_adapter = hdd_get_adapter(hdd_ctx, WLAN_HDD_INFRA_STATION);
-	if (!sta_adapter) {
-		hddLog(LOGE, FL("No station adapter"));
-		return -EINVAL;
-	}
-
-	/* delete all the other interfaces */
-	for (i = VOS_STA_SAP_MODE; i <= VOS_P2P_DEVICE; i++) {
-		if (i == VOS_FTM_MODE || i == VOS_MONITOR_MODE)
-			continue;
-
-		hdd_close_all_adapters_per_mode(hdd_ctx, i);
-	}
-
-	mon_adapter = hdd_open_adapter(hdd_ctx, WLAN_HDD_MONITOR, name,
-				       wlan_hdd_get_intf_addr(hdd_ctx),
-				       VOS_TRUE);
-	if (!mon_adapter) {
-		hddLog(VOS_TRACE_LEVEL_ERROR,"%s: hdd_open_adapter failed",
-		       __func__);
-		wlan_hdd_create_p2p_adapter(hdd_ctx, TRUE);
-		return -EINVAL;
-	}
-
-	*adapter = mon_adapter;
-	return 0;
-}
-
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0))
-static struct wireless_dev *
-__wlan_hdd_add_virtual_intf(struct wiphy *wiphy,
-			    const char *name,
-			    unsigned char name_assign_type,
-			    enum nl80211_iftype type,
-			    u32 *flags,
-			    struct vif_params *params)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,0))
+struct wireless_dev* __wlan_hdd_add_virtual_intf(
+                  struct wiphy *wiphy, const char *name,
+                  enum nl80211_iftype type,
+                  u32 *flags, struct vif_params *params )
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0))
+struct wireless_dev* __wlan_hdd_add_virtual_intf(
+                  struct wiphy *wiphy, char *name, enum nl80211_iftype type,
+                  u32 *flags, struct vif_params *params )
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38))
-static struct net_device *
-__wlan_hdd_add_virtual_intf(struct wiphy *wiphy,
-			    const char *name,
-			    unsigned char name_assign_type,
-			    enum nl80211_iftype type,
-			    u32 *flags,
-			    struct vif_params *params)
+struct net_device* __wlan_hdd_add_virtual_intf(
+                  struct wiphy *wiphy, char *name, enum nl80211_iftype type,
+                  u32 *flags, struct vif_params *params )
 #else
-static int
-__wlan_hdd_add_virtual_intf(struct wiphy *wiphy,
-			    const char *name,
-			    unsigned char name_assign_type,
-			    enum nl80211_iftype type,
-			    u32 *flags,
-			    struct vif_params *params)
+int __wlan_hdd_add_virtual_intf( struct wiphy *wiphy, char *name,
+                               enum nl80211_iftype type,
+                               u32 *flags, struct vif_params *params )
 #endif
 {
     hdd_context_t *pHddCtx = (hdd_context_t*) wiphy_priv(wiphy);
@@ -2311,17 +2174,6 @@ __wlan_hdd_add_virtual_intf(struct wiphy *wiphy,
 #endif
     }
 
-    if (pHddCtx->concurrency_mode == VOS_STA_MON) {
-        hddLog(VOS_TRACE_LEVEL_ERROR,
-               "%s: STA + MONITOR mode is in progress, cannot add new interface",
-               __func__);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38))
-       return ERR_PTR(-EINVAL);
-#else
-        return -EBUSY;
-#endif
-    }
-
     pAdapter = hdd_get_adapter(pHddCtx, WLAN_HDD_INFRA_STATION);
     pScanInfo =  &pHddCtx->scan_info;
     if ((pScanInfo != NULL) && (pAdapter != NULL) &&
@@ -2332,18 +2184,6 @@ __wlan_hdd_add_virtual_intf(struct wiphy *wiphy,
         hddLog(VOS_TRACE_LEVEL_INFO,
                "%s: Abort Scan while adding virtual interface",__func__);
     }
-
-    ret = wlan_hdd_add_monitor_check(pHddCtx, &pAdapter, type, name);
-    if (ret) {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38))
-       return ERR_PTR(-EINVAL);
-#else
-       return ret;
-#endif
-    }
-
-    if (pAdapter)
-        goto return_adapter;
 
     pAdapter = NULL;
     if (pHddCtx->cfg_ini->isP2pDeviceAddrAdministrated &&
@@ -2388,8 +2228,6 @@ __wlan_hdd_add_virtual_intf(struct wiphy *wiphy,
         hdd_tdls_notify_mode_change(pAdapter, pHddCtx);
     }
 
-return_adapter:
-
     EXIT();
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0))
     return pAdapter->dev->ieee80211_ptr;
@@ -2400,176 +2238,46 @@ return_adapter:
 #endif
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)
-struct wireless_dev *wlan_hdd_add_virtual_intf(struct wiphy *wiphy,
-					       const char *name,
-					       unsigned char name_assign_type,
-					       enum nl80211_iftype type,
-					       struct vif_params *params)
-{
-	struct wireless_dev *wdev;
-
-	vos_ssr_protect(__func__);
-	wdev = __wlan_hdd_add_virtual_intf(wiphy, name, name_assign_type,
-					   type, &params->flags, params);
-	vos_ssr_unprotect(__func__);
-
-	return wdev;
-}
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 1, 0)) || \
-	defined(WITH_BACKPORTS)
-/**
- * wlan_hdd_add_virtual_intf() - Add virtual interface wrapper
- * @wiphy: wiphy pointer
- * @name: User-visible name of the interface
- * @name_assign_type: the name of assign type of the netdev
- * @nl80211_iftype: (virtual) interface types
- * @flags: monitor mode configuration flags (not used)
- * @vif_params: virtual interface parameters (not used)
- *
- * Return: the pointer of wireless dev, otherwise ERR_PTR.
- */
-struct wireless_dev *wlan_hdd_add_virtual_intf(struct wiphy *wiphy,
-                                               const char *name,
-                                               unsigned char name_assign_type,
-                                               enum nl80211_iftype type,
-                                               u32 *flags,
-                                               struct vif_params *params)
-{
-        struct wireless_dev *wdev;
-
-        vos_ssr_protect(__func__);
-        wdev = __wlan_hdd_add_virtual_intf(wiphy, name, name_assign_type,
-                                           type, flags, params);
-        vos_ssr_unprotect(__func__);
-        return wdev;
-
-}
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,0))
-/**
- * wlan_hdd_add_virtual_intf() - Add virtual interface wrapper
- * @wiphy: wiphy pointer
- * @name: User-visible name of the interface
- * @nl80211_iftype: (virtual) interface types
- * @flags: monitor mode configuration flags (not used)
- * @vif_params: virtual interface parameters (not used)
- *
- * Return: the pointer of wireless dev, otherwise ERR_PTR.
- */
-struct wireless_dev *wlan_hdd_add_virtual_intf(struct wiphy *wiphy,
-                                               const char *name,
-                                               enum nl80211_iftype type,
-                                               u32 *flags,
-                                               struct vif_params *params)
-{
-        struct wireless_dev *wdev;
-        unsigned char name_assign_type = 0;
-
-        vos_ssr_protect(__func__);
-        wdev = __wlan_hdd_add_virtual_intf(wiphy, name, name_assign_type,
-                                           type, flags, params);
-        vos_ssr_unprotect(__func__);
-        return wdev;
-
-}
-
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,0))
+struct wireless_dev* wlan_hdd_add_virtual_intf(
+                  struct wiphy *wiphy, const char *name,
+                  enum nl80211_iftype type,
+                  u32 *flags, struct vif_params *params )
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0))
 struct wireless_dev* wlan_hdd_add_virtual_intf(
                   struct wiphy *wiphy, char *name, enum nl80211_iftype type,
                   u32 *flags, struct vif_params *params )
-{
-        struct wireless_dev *wdev;
-        unsigned char name_assign_type = 0;
-
-        vos_ssr_protect(__func__);
-        wdev = __wlan_hdd_add_virtual_intf(wiphy, (const char *)name,
-                                           name_assign_type,
-                                           type, flags, params);
-        vos_ssr_unprotect(__func__);
-        return wdev;
-
-}
-
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38))
-struct net_device* wlan_hdd_add_virtual_intf(struct wiphy *wiphy,
-					     char *name,
-					     enum nl80211_iftype type,
-					     u32 *flags,
-					     struct vif_params *params)
-{
-	struct net_device *ndev;
-	unsigned char name_assign_type = 0;
-
-	vos_ssr_protect(__func__);
-	ndev = __wlan_hdd_add_virtual_intf(wiphy, (const char *)name, name_assign_type,
-                                           type, flags, params);
-        vos_ssr_unprotect(__func__);
-        return wdev;
-
-}
+struct net_device* wlan_hdd_add_virtual_intf(
+                  struct wiphy *wiphy, char *name, enum nl80211_iftype type,
+                  u32 *flags, struct vif_params *params )
 #else
-int wlan_hdd_add_virtual_intf(struct wiphy *wiphy, char *name,
-			      enum nl80211_iftype type,
-			      u32 *flags, struct vif_params *params)
-{
-	int ret;
-	unsigned char name_assign_type = 0;
-
-	vos_ssr_protect(__func__);
-	ret = __wlan_hdd_add_virtual_intf(wiphy, (const char *)name, name_assign_type,
-                                           type, flags, params);
-        vos_ssr_unprotect(__func__);
-
-        return ret;
-}
+int wlan_hdd_add_virtual_intf( struct wiphy *wiphy, char *name,
+                               enum nl80211_iftype type,
+                               u32 *flags, struct vif_params *params )
 #endif
-
-/**
- * hdd_delete_adapter() - stop and close adapter
- * @hdd_ctx: pointer to hdd context
- * @adapter: adapter to be deleted
- * @rtnl_held: rtnl lock held
- *
- * Rerurn: None
- */
-static void
-hdd_delete_adapter(hdd_context_t *hdd_ctx, hdd_adapter_t *adapter,
-		   tANI_U8 rtnl_held)
 {
-	wlan_hdd_release_intf_addr(hdd_ctx, adapter->macAddressCurrent.bytes);
-	hdd_stop_adapter(hdd_ctx, adapter, VOS_TRUE);
-	hdd_close_adapter(hdd_ctx, adapter, rtnl_held);
-}
-
-/**
- * wlan_hdd_del_monitor() - delete monitor interface
- * @hdd_ctx: pointer to hdd context
- * @adapter: adapter to be deleted
- * @rtnl_held: rtnl lock held
- *
- * This function is invoked to delete monitor interface and also
- * station interface if needed.
- *
- * Return: None
- */
-static void
-wlan_hdd_del_monitor(hdd_context_t *hdd_ctx, hdd_adapter_t *adapter,
-		     tANI_U8 rtnl_held)
-{
-	hdd_adapter_t *monitor_adapter;
-	bool delete_station = false;
-
-	monitor_adapter = hdd_get_adapter(hdd_ctx, WLAN_HDD_MONITOR);
-	if (monitor_adapter != adapter)
-		delete_station = true;
-
-	/* delete the monitor adapter and re-create the p2p-dev adapter */
-	hdd_delete_adapter(hdd_ctx, monitor_adapter, rtnl_held);
-
-	wlan_hdd_create_p2p_adapter(hdd_ctx, rtnl_held);
-
-	if (delete_station)
-		hdd_delete_adapter(hdd_ctx, adapter, rtnl_held);
+#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0)))
+    struct wireless_dev* wdev;
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38))
+    struct net_device* ndev;
+#else
+    int ret;
+#endif
+    vos_ssr_protect(__func__);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0))
+    wdev = __wlan_hdd_add_virtual_intf(wiphy, name, type, flags, params);
+    vos_ssr_unprotect(__func__);
+    return wdev;
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38))
+    ndev = __wlan_hdd_add_virtual_intf(wiphy, name, type, flags, params);
+    vos_ssr_unprotect(__func__);
+    return ndev;
+#else
+    ret  = __wlan_hdd_add_virtual_intf(wiphy, name, type, flags, params);
+    vos_ssr_unprotect(__func__);
+    return ret;
+#endif
 }
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0))
@@ -2582,7 +2290,10 @@ int __wlan_hdd_del_virtual_intf( struct wiphy *wiphy, struct net_device *dev )
     struct net_device *dev = wdev->netdev;
 #endif
     hdd_context_t *pHddCtx = (hdd_context_t*) wiphy_priv(wiphy);
+#ifdef TRACE_RECORD
     hdd_adapter_t *pAdapter = WLAN_HDD_GET_PRIV_PTR( dev );
+#endif
+    hdd_adapter_t *pVirtAdapter = WLAN_HDD_GET_PRIV_PTR(dev);
     int status;
 
     ENTER();
@@ -2591,7 +2302,7 @@ int __wlan_hdd_del_virtual_intf( struct wiphy *wiphy, struct net_device *dev )
                      TRACE_CODE_HDD_DEL_VIRTUAL_INTF,
                      pAdapter->sessionId, pAdapter->device_mode));
     hddLog(VOS_TRACE_LEVEL_INFO, "%s: device_mode = %d",
-           __func__,pAdapter->device_mode);
+           __func__,pVirtAdapter->device_mode);
 
     status = wlan_hdd_validate_context(pHddCtx);
 
@@ -2600,11 +2311,11 @@ int __wlan_hdd_del_virtual_intf( struct wiphy *wiphy, struct net_device *dev )
         return status;
     }
 
-    if (pHddCtx->concurrency_mode == VOS_STA_MON)
-        wlan_hdd_del_monitor(pHddCtx, pAdapter, TRUE);
-    else
-        hdd_delete_adapter(pHddCtx, pAdapter, TRUE);
+    wlan_hdd_release_intf_addr( pHddCtx,
+                                 pVirtAdapter->macAddressCurrent.bytes );
 
+    hdd_stop_adapter( pHddCtx, pVirtAdapter, VOS_TRUE);
+    hdd_close_adapter( pHddCtx, pVirtAdapter, TRUE );
     EXIT();
     return 0;
 }
@@ -2670,7 +2381,7 @@ void hdd_sendMgmtFrameOverMonitorIface( hdd_adapter_t *pMonAdapter,
      {
          VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_FATAL,
                    "HDD [%d]: Insufficient headroom, "
-                   "head[%pK], data[%pK], req[%d]",
+                   "head[%p], data[%p], req[%d]",
                    __LINE__, skb->head, skb->data, nFrameLength);
          kfree_skb(skb);
          return ;
@@ -2752,9 +2463,7 @@ void __hdd_indicate_mgmt_frame(hdd_adapter_t *pAdapter,
 
     /* Get pAdapter from Destination mac address of the frame */
     if ((type == SIR_MAC_MGMT_FRAME) &&
-        (subType != SIR_MAC_MGMT_PROBE_REQ) &&
-        !vos_is_macaddr_broadcast(
-         (v_MACADDR_t *)&pbFrames[WLAN_HDD_80211_FRM_DA_OFFSET]))
+            (subType != SIR_MAC_MGMT_PROBE_REQ))
     {
          pAdapter = hdd_get_adapter_by_macaddr( WLAN_HDD_GET_CTX(pAdapter),
                             &pbFrames[WLAN_HDD_80211_FRM_DA_OFFSET]);
@@ -2812,12 +2521,12 @@ void __hdd_indicate_mgmt_frame(hdd_adapter_t *pAdapter,
     if( rxChan <= MAX_NO_OF_2_4_CHANNELS )
     {
         freq = ieee80211_channel_to_frequency( rxChan,
-                HDD_NL80211_BAND_2GHZ);
+                IEEE80211_BAND_2GHZ);
     }
     else
     {
         freq = ieee80211_channel_to_frequency( rxChan,
-                HDD_NL80211_BAND_5GHZ);
+                IEEE80211_BAND_5GHZ);
     }
 
     cfgState = WLAN_HDD_GET_CFG_STATE_PTR( pAdapter );
@@ -3003,17 +2712,17 @@ void __hdd_indicate_mgmt_frame(hdd_adapter_t *pAdapter,
     //Indicate Frame Over Normal Interface
     hddLog( LOG1, FL("Indicate Frame over NL80211 Interface"));
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0))
-    cfg80211_rx_mgmt(pAdapter->dev->ieee80211_ptr, freq, rxRssi * 100, pbFrames,
+    cfg80211_rx_mgmt(pAdapter->dev->ieee80211_ptr, freq, 0, pbFrames,
                      nFrameLength, NL80211_RXMGMT_FLAG_ANSWERED);
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,12,0))
-    cfg80211_rx_mgmt(pAdapter->dev->ieee80211_ptr, freq, rxRssi * 100, pbFrames,
+    cfg80211_rx_mgmt(pAdapter->dev->ieee80211_ptr, freq, 0, pbFrames,
                      nFrameLength, NL80211_RXMGMT_FLAG_ANSWERED, GFP_ATOMIC);
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0))
-    cfg80211_rx_mgmt( pAdapter->dev->ieee80211_ptr, freq, rxRssi * 100,
+    cfg80211_rx_mgmt( pAdapter->dev->ieee80211_ptr, freq, 0,
                       pbFrames, nFrameLength,
                       GFP_ATOMIC );
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0))
-    cfg80211_rx_mgmt( pAdapter->dev, freq, rxRssi * 100,
+    cfg80211_rx_mgmt( pAdapter->dev, freq, 0,
                       pbFrames, nFrameLength,
                       GFP_ATOMIC );
 #else

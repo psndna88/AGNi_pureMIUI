@@ -325,16 +325,9 @@ typedef struct
         this field is set to zero. */
         wpt_uint32 tid:4;
 
-        wpt_uint32 indType:2;
-        wpt_uint32 reserved4:4;
-        wpt_uint32 htt_t2h_msg:1;
-        wpt_uint32 fc:1;
-
+        wpt_uint32 reserved4:8;
 #else
-        wpt_uint32 fc:1;
-        wpt_uint32 htt_t2h_msg:1;
-        wpt_uint32 reserved4:4;
-        wpt_uint32 indType:2;
+        wpt_uint32 reserved4:8;
         wpt_uint32 tid:4;
 #ifdef WCN_PRONTO
         wpt_uint32 rxDXEPriorityRouting:1;

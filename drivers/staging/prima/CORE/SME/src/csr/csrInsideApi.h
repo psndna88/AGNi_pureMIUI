@@ -71,8 +71,6 @@
 
 #define CSR_MAX_2_4_GHZ_SUPPORTED_CHANNELS 14
 
-#define DEFAULT_NUM_BUFF_BTC_SCO 3
-
 #define CSR_MAX_BSS_SUPPORT            512
 #define SYSTEM_TIME_MSEC_TO_USEC      1000
 #define SYSTEM_TIME_SEC_TO_MSEC       1000
@@ -96,8 +94,8 @@
 #define CSR_SCAN_AGING_TIME_NOT_CONNECT_W_PS 300     //300 seconds
 #define CSR_SCAN_AGING_TIME_CONNECT_NO_PS 150        //150 seconds
 #define CSR_SCAN_AGING_TIME_CONNECT_W_PS 600         //600 seconds
-#define CSR_JOIN_FAILURE_TIMEOUT_DEFAULT ( 300 )
-#define CSR_JOIN_FAILURE_TIMEOUT_MIN   (300)  //minimal value
+#define CSR_JOIN_FAILURE_TIMEOUT_DEFAULT ( 3000 )
+#define CSR_JOIN_FAILURE_TIMEOUT_MIN   (1000)  //minimal value
 //These are going against the signed RSSI (tANI_S8) so it is between -+127
 #define CSR_BEST_RSSI_VALUE         (-30)   //RSSI >= this is in CAT4
 #define CSR_DEFAULT_RSSI_DB_GAP     30 //every 30 dbm for one category
@@ -210,6 +208,8 @@ typedef struct tagCsrScanResult
     tANI_S32 AgingCount;    //This BSS is removed when it reaches 0 or less
     tANI_U32 preferValue;   //The bigger the number, the better the BSS. This value override capValue
     tANI_U32 capValue;  //The biggger the better. This value is in use only if we have equal preferValue
+    //This member must be the last in the structure because the end of tSirBssDescription (inside) is an
+    //    array with nonknown size at this time
     
     eCsrEncryptionType ucEncryptionType; //Preferred Encryption type that matched with profile.
     eCsrEncryptionType mcEncryptionType; 
@@ -218,12 +218,6 @@ typedef struct tagCsrScanResult
     int congestionScore;
 #endif
     tCsrScanResultInfo Result;
-    /*
-     * WARNING - Do not add any element here
-     * This member Result must be the last in the structure because the end
-     * of tSirBssDescription (inside) is an array with nonknown size at
-     * this time.
-     */
 }tCsrScanResult;
 
 typedef struct
@@ -263,15 +257,13 @@ struct csr_scan_for_ssid_context
                                       ( eCSR_ENCRYPT_TYPE_WEP40 != (encType) ) && \
                                       ( eCSR_ENCRYPT_TYPE_WEP104 != (encType) ) )
 
-#define CSR_IS_DISCONNECT_COMMAND(pCommand) ((eSmeCommandRoam == \
-              (pCommand)->command) &&\
-        ((eCsrForcedDisassoc == (pCommand)->u.roamCmd.roamReason) ||\
-         (eCsrForcedIbssLeave == (pCommand)->u.roamCmd.roamReason) ||\
-         (eCsrForcedDeauth == (pCommand)->u.roamCmd.roamReason) ||\
-         (eCsrSmeIssuedDisassocForHandoff ==\
-             (pCommand)->u.roamCmd.roamReason) ||\
-         (eCsrForcedDisassocMICFailure ==\
-             (pCommand)->u.roamCmd.roamReason)))
+#define CSR_IS_DISCONNECT_COMMAND(pCommand) ( ( eSmeCommandRoam == (pCommand)->command ) &&\
+                                              ( ( eCsrForcedDisassoc == (pCommand)->u.roamCmd.roamReason ) ||\
+                                                ( eCsrForcedDeauth == (pCommand)->u.roamCmd.roamReason ) ||\
+                                                ( eCsrSmeIssuedDisassocForHandoff ==\
+                                                                        (pCommand)->u.roamCmd.roamReason ) ||\
+                                                ( eCsrForcedDisassocMICFailure ==\
+                                                                          (pCommand)->u.roamCmd.roamReason ) ) )
 
 eCsrRoamState csrRoamStateChange( tpAniSirGlobal pMac, eCsrRoamState NewRoamState, tANI_U8 sessionId);
 eHalStatus csrScanningStateMsgProcessor( tpAniSirGlobal pMac, void *pMsgBuf );
@@ -279,10 +271,6 @@ void csrRoamingStateMsgProcessor( tpAniSirGlobal pMac, void *pMsgBuf );
 void csrRoamJoinedStateMsgProcessor( tpAniSirGlobal pMac, void *pMsgBuf );
 tANI_BOOLEAN csrScanComplete( tpAniSirGlobal pMac, tSirSmeScanRsp *pScanRsp );
 void csrReleaseCommandRoam(tpAniSirGlobal pMac, tSmeCmd *pCommand);
-tpCsrNeighborRoamBSSInfo csrNeighborRoamGetRoamableAPListNextEntry(tpAniSirGlobal pMac,
-                                        tDblLinkList *pList, tpCsrNeighborRoamBSSInfo pNeighborEntry);
-v_U8_t *csrNeighborRoamStateToString(v_U8_t state);
-void csrReleaseCommandPreauth(tpAniSirGlobal pMac, tSmeCmd *pCommand);
 void csrReleaseCommandScan(tpAniSirGlobal pMac, tSmeCmd *pCommand);
 void csrReleaseCommandWmStatusChange(tpAniSirGlobal pMac, tSmeCmd *pCommand);
 //pIes2 can be NULL
@@ -412,10 +400,6 @@ void csrRoamRemoveDuplicateCommand(tpAniSirGlobal pMac, tANI_U32 sessionId, tSme
 eHalStatus csrSendJoinReqMsg( tpAniSirGlobal pMac, tANI_U32 sessionId, tSirBssDescription *pBssDescription, 
                               tCsrRoamProfile *pProfile, tDot11fBeaconIEs *pIes, tANI_U16 messageType );
 eHalStatus csrSendMBDisassocReqMsg( tpAniSirGlobal pMac, tANI_U32 sessionId, tSirMacAddr bssId, tANI_U16 reasonCode );
-#ifdef WLAN_FEATURE_LFR_MBB
-eHalStatus csr_fill_reassoc_req(tpAniSirGlobal pMac, tANI_U32 sessionId, tSirBssDescription *pBssDescription,
-                                  tDot11fBeaconIEs *pIes, tSirSmeJoinReq **reassoc_req);
-#endif
 eHalStatus csrSendMBDeauthReqMsg( tpAniSirGlobal pMac, tANI_U32 sessionId, tSirMacAddr bssId, tANI_U16 reasonCode );
 eHalStatus csrSendMBDisassocCnfMsg( tpAniSirGlobal pMac, tpSirSmeDisassocInd pDisassocInd );
 eHalStatus csrSendMBDeauthCnfMsg( tpAniSirGlobal pMac, tpSirSmeDeauthInd pDeauthInd );

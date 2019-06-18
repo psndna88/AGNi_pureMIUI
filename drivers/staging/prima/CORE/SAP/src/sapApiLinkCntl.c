@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, 2016-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013, 2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -280,8 +280,7 @@ void sap_ht2040_timer_cb(v_PVOID_t usrDataForCallback)
     sapPhyMode =
         sapConvertSapPhyModeToCsrPhyMode(sapContext->csrRoamProfile.phyMode);
 
-    sme_SelectCBMode(hHal, sapPhyMode,
-                     sapContext->channel, eHT_MAX_CHANNEL_WIDTH);
+    sme_SelectCBMode(hHal, sapPhyMode, sapContext->channel);
 
     cbMode = sme_GetChannelBondingMode24G(hHal);
 
@@ -711,8 +710,7 @@ eHalStatus sapGet24GOBSSAffectedChannel(tHalHandle halHandle,
     sapPhyMode =
      sapConvertSapPhyModeToCsrPhyMode(psapCtx->csrRoamProfile.phyMode);
 
-    sme_SelectCBMode(halHandle, sapPhyMode,
-                     psapCtx->channel, eHT_MAX_CHANNEL_WIDTH);
+    sme_SelectCBMode(halHandle, sapPhyMode, psapCtx->channel);
 
     cbMode = sme_GetChannelBondingMode24G(halHandle);
 
@@ -1110,8 +1108,7 @@ WLANSAP_ScanCallback
 #ifdef WLAN_FEATURE_AP_HT40_24G
     if (psapContext->channel > SIR_11B_CHANNEL_END)
 #endif
-        sme_SelectCBMode(halHandle, sapPhyMode,
-                         psapContext->channel, eHT_MAX_CHANNEL_WIDTH);
+        sme_SelectCBMode(halHandle, sapPhyMode, psapContext->channel);
 
 #ifdef SOFTAP_CHANNEL_RANGE
     if(psapContext->channelList != NULL)
@@ -1137,94 +1134,6 @@ WLANSAP_ScanCallback
 
     return sapstatus;
 }// WLANSAP_ScanCallback
-
-/**
- * sap_roam_process_ecsa_bcn_tx_ind() - handles the case for
- * eCSR_ROAM_ECSA_BCN_TX_IND in wlansap_roam_callback()
- * @hal: hal global context
- * @sap_ctx: sap context
- *
- * Return: VOS_STATUS
- */
-static VOS_STATUS sap_roam_process_ecsa_bcn_tx_ind(tHalHandle hHal,
-     ptSapContext sap_ctx)
-{
-   tWLAN_SAPEvent sap_event;
-   VOS_STATUS qdf_status;
-
-   if (eSAP_STARTED != sap_ctx->sapsMachine) {
-       VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_WARN,
-                 FL("eCSR_ROAM_ECSA_BCN_TX_IND received in (%d) state"),
-                 sap_ctx->sapsMachine);
-                 return VOS_STATUS_E_INVAL;
-   }
-
-   VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO,
-             FL("sapdfs: from state eSAP_STARTED => eSAP_DISCONNECTING"));
-   /* SAP to be moved to DISCONNECTING state */
-   sap_ctx->sapsMachine = eSAP_DISCONNECTING;
-
-   /* Send channel switch request */
-   sap_event.event = eWNI_ECSA_TX_COMPLETED;
-   sap_event.params = 0;
-   sap_event.u1 = 0;
-   sap_event.u2 = 0;
-   /* Handle event */
-   qdf_status = sapFsm(sap_ctx, &sap_event);
-   if (!VOS_IS_STATUS_SUCCESS(qdf_status)) {
-        VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
-                  FL("post chnl chng req failed, sap[%pK]"), sap_ctx);
-        return VOS_STATUS_E_FAILURE;
-   }
-   return VOS_STATUS_SUCCESS;
-}
-
-/**
- * sap_roam_process_ch_change_resp() - handles the case for
- * eCSR_ROAM_ECSA_CHAN_CHANGE_RSP in function wlansap_roam_callback()
- * @sap_ctx: sap context
- * @csr_roam_info:  raom info struct
- *
- * Return: VOS_STATUS
- */
-static VOS_STATUS sap_roam_process_ch_change_resp(ptSapContext sap_ctx,
-          tCsrRoamInfo *csr_roam_info)
-{
-   tWLAN_SAPEvent sap_event;
-   VOS_STATUS status;
-
-   if (!VOS_IS_STATUS_SUCCESS(csr_roam_info->ap_chan_change_rsp->status)) {
-        sap_event.event = eWNI_ECSA_CHANNEL_CHANGE_RSP;
-        sap_event.params = 0;
-        sap_event.u1 = eCSR_ROAM_INFRA_IND;
-        sap_event.u2 = eCSR_ROAM_RESULT_FAILURE;
-
-        status = sapFsm(sap_ctx, &sap_event);
-        return status;
-   }
-
-   VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO,
-             FL("sapdfs: changing target channel to [%d]"),
-             sap_ctx->ecsa_info.new_channel);
-   sap_ctx->channel = sap_ctx->ecsa_info.new_channel;
-
-   if (eSAP_DISCONNECTING != sap_ctx->sapsMachine)
-        return VOS_STATUS_E_FAILURE;
-
-   VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO,
-             FL("sapdfs: from state eSAP_DISCONNECTING => eSAP_STARTING on sapctx[%pK]"),
-             sap_ctx);
-   sap_ctx->sapsMachine = eSAP_STARTING;
-   sap_ctx->ecsa_info.channel_switch_in_progress = false;
-   sap_event.event = eSAP_MAC_START_BSS_SUCCESS;
-   sap_event.params = csr_roam_info;
-   sap_event.u1 = eCSR_ROAM_INFRA_IND;
-   sap_event.u2 = eCSR_ROAM_RESULT_INFRA_STARTED;
-
-   /* Handle the event */
-   status = sapFsm(sap_ctx, &sap_event);
-   return status;
-}
 
 /*==========================================================================
   FUNCTION    WLANSAP_RoamCallback()
@@ -1426,38 +1335,6 @@ WLANSAP_RoamCallback
            sapCheckHT2040CoexAction(sapContext, pCsrRoamInfo->pSmeHT2040CoexInfoInd);
            break;
 #endif
-        case eCSR_ROAM_ECSA_BCN_TX_IND:
-            {
-                tHalHandle hal = VOS_GET_HAL_CB(sapContext->pvosGCtx);
-
-                VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO,
-                            FL("CSR roamStatus = %s (%d)"),
-                            get_eRoamCmdStatus_str(roamStatus), roamStatus);
-                if (!hal)
-                {
-                   VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
-                              "In %s invalid hHal", __func__);
-                   halStatus = eHAL_STATUS_FAILED_ALLOC;
-                   break;
-                }
-                vosStatus = sap_roam_process_ecsa_bcn_tx_ind(hal, sapContext);
-                if (!VOS_IS_STATUS_SUCCESS(vosStatus))
-                    halStatus = eHAL_STATUS_FAILURE;
-                break;
-           }
-        case eCSR_ROAM_ECSA_CHAN_CHANGE_RSP:
-            vosStatus = sap_roam_process_ch_change_resp(sapContext,
-                                                        pCsrRoamInfo);
-            if (!VOS_IS_STATUS_SUCCESS(vosStatus))
-                halStatus = eHAL_STATUS_FAILURE;
-            break;
-        case eCSR_ROAM_LOSTLINK_DETECTED:
-            if (pCsrRoamInfo) {
-                sapSignalHDDevent(sapContext, pCsrRoamInfo,
-                                  eSAP_STA_LOSTLINK_DETECTED,
-                                  (v_PVOID_t)eSAP_STATUS_SUCCESS);
-                return eHAL_STATUS_SUCCESS;
-           }
 
         default:
             VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,

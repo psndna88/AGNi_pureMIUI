@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, 2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -433,7 +433,7 @@ limDeletePreAuthNode(tpAniSirGlobal pMac, tSirMacAddr macAddr)
 
         limLog(pMac, LOG1, FL(" first node to delete"));
         limLog(pMac, LOG1,
-               FL(" Release data entry:%pK idx %d peer: " MAC_ADDRESS_STR),
+               FL(" Release data entry:%p idx %d peer: " MAC_ADDRESS_STR),
                                          pTempNode, pTempNode->authNodeIdx,
                                                    MAC_ADDR_ARRAY(macAddr));
         limReleasePreAuthNode(pMac, pTempNode);
@@ -455,7 +455,7 @@ limDeletePreAuthNode(tpAniSirGlobal pMac, tSirMacAddr macAddr)
 
             limLog(pMac, LOG1, FL(" subsequent node to delete"));
             limLog(pMac, LOG1,
-                   FL("Release data entry: %pK id %d peer: "MAC_ADDRESS_STR),
+                   FL("Release data entry: %p id %d peer: "MAC_ADDRESS_STR),
                    pTempNode, pTempNode->authNodeIdx, MAC_ADDR_ARRAY(macAddr));
             limReleasePreAuthNode(pMac, pTempNode);
 
@@ -472,6 +472,10 @@ limDeletePreAuthNode(tpAniSirGlobal pMac, tSirMacAddr macAddr)
     limPrintMacAddr(pMac, macAddr, LOGP);
 
 } /*** end limDeletePreAuthNode() ***/
+
+
+
+
 
 /**
  * limRestoreFromPreAuthState
@@ -511,6 +515,13 @@ limRestoreFromAuthState(tpAniSirGlobal pMac, tSirResultCodes resultCode, tANI_U1
     
     /* Update PE session ID*/
     mlmAuthCnf.sessionId = sessionEntry->peSessionId;
+
+    /// Free up buffer allocated
+    /// for pMac->lim.gLimMlmAuthReq
+    vos_mem_free(pMac->lim.gpLimMlmAuthReq);
+    pMac->lim.gpLimMlmAuthReq = NULL;
+
+    sessionEntry->limMlmState = sessionEntry->limPrevMlmState;
     
     MTRACE(macTrace(pMac, TRACE_CODE_MLM_STATE, sessionEntry->peSessionId, sessionEntry->limMlmState));
     /* Set the authAckStatus status flag as sucess as
@@ -537,25 +548,9 @@ limRestoreFromAuthState(tpAniSirGlobal pMac, tSirResultCodes resultCode, tANI_U1
         pMac->lim.gLimPreAuthChannelNumber = 0;
     }
 
-    if ((protStatusCode == eSIR_MAC_MAX_ASSOC_STA_REACHED_STATUS)
-             && (sessionEntry->sta_auth_retries_for_code17 <
-                            pMac->sta_auth_retries_for_code17)) {
-        limLog(pMac, LOG1, FL("Retry Auth "));
-        limDoSendAuthMgmtFrame(pMac, sessionEntry);
-        sessionEntry->sta_auth_retries_for_code17++;
-    } else {
-        /// Free up buffer allocated
-        /// for pMac->lim.gLimMlmAuthReq
-        vos_mem_free(pMac->lim.gpLimMlmAuthReq);
-        pMac->lim.gpLimMlmAuthReq = NULL;
-
-        sessionEntry->limMlmState = sessionEntry->limPrevMlmState;
-
-        limPostSmeMessage(pMac,
+    limPostSmeMessage(pMac,
                       LIM_MLM_AUTH_CNF,
                       (tANI_U32 *) &mlmAuthCnf);
-        sessionEntry->sta_auth_retries_for_code17 = 0;
-    }
 } /*** end limRestoreFromAuthState() ***/
 
 
@@ -619,10 +614,7 @@ limEncryptAuthFrame(tpAniSirGlobal pMac, tANI_U8 keyId, tANI_U8 *pKey, tANI_U8 *
                     tANI_U8 *pEncrBody, tANI_U32 keyLength)
 {
     tANI_U8  seed[LIM_SEED_LENGTH], icv[SIR_MAC_WEP_ICV_LENGTH];
-    tANI_U16 frame_len;
 
-    frame_len = ((tpSirMacAuthFrameBody)pPlainText)->length +
-		 SIR_MAC_AUTH_FRAME_INFO_LEN + SIR_MAC_CHALLENGE_ID_LEN;
     keyLength += 3;
 
     // Bytes 0-2 of seed is IV
@@ -633,15 +625,15 @@ limEncryptAuthFrame(tpAniSirGlobal pMac, tANI_U8 keyId, tANI_U8 *pKey, tANI_U8 *
     vos_mem_copy((tANI_U8 *) &seed[3], pKey, keyLength - 3);
 
     // Compute CRC-32 and place them in last 4 bytes of plain text
-    limComputeCrc32(icv, pPlainText, frame_len);
+    limComputeCrc32(icv, pPlainText, sizeof(tSirMacAuthFrameBody));
 
-    vos_mem_copy( pPlainText + frame_len,
+    vos_mem_copy( pPlainText + sizeof(tSirMacAuthFrameBody),
                   icv, SIR_MAC_WEP_ICV_LENGTH);
 
     // Run RC4 on plain text with the seed
     limRC4(pEncrBody + SIR_MAC_WEP_IV_LENGTH,
            (tANI_U8 *) pPlainText, seed, keyLength,
-           frame_len + SIR_MAC_WEP_ICV_LENGTH);
+           LIM_ENCR_AUTH_BODY_LEN - SIR_MAC_WEP_IV_LENGTH);
 
     // Prepare IV
     pEncrBody[0] = seed[0];

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, 2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -47,28 +47,36 @@
 
 void dump_pmc_callbackRoutine (void *callbackContext, eHalStatus status)
 {
+#ifdef TRACE_RECORD
     tpAniSirGlobal pMac = (tpAniSirGlobal)callbackContext;
+#endif
     pmcLog(pMac, LOGW, "*********Received callback from PMC with status = %d\n*********",status);
 }
 
 #ifdef WLAN_WAKEUP_EVENTS
 void dump_pmc_callbackRoutine2 (void *callbackContext, tpSirWakeReasonInd pWakeReasonInd)
 {
+#ifdef TRACE_RECORD
     tpAniSirGlobal pMac = (tpAniSirGlobal)callbackContext;
+#endif
     pmcLog(pMac, LOGW, "*********Received callback from PMC with reason = %d\n*********",pWakeReasonInd->ulReason);
 }
 #endif // WLAN_WAKEUP_EVENTS
 
 void dump_pmc_deviceUpdateRoutine (void *callbackContext, tPmcState pmcState)
 {
+#ifdef TRACE_RECORD
     tpAniSirGlobal pMac = (tpAniSirGlobal)callbackContext;
+#endif
     pmcLog(pMac, LOGW, "*********Received msg from PMC: Device is in %s state\n*********", pmcGetPmcStateStr(pmcState));
 }
 
 static char *
 dump_pmc_state( tpAniSirGlobal pMac, tANI_U32 arg1, tANI_U32 arg2, tANI_U32 arg3, tANI_U32 arg4, char *p)
 {
+#ifdef TRACE_RECORD
     char *ptr = p;
+#endif
 
     (void) arg1; (void) arg2; (void) arg3; (void) arg4;
 
@@ -85,7 +93,6 @@ dump_pmc_state( tpAniSirGlobal pMac, tANI_U32 arg1, tANI_U32 arg2, tANI_U32 arg3
     p += log_sprintf( pMac,p, " PMC: RequestFullPowerPending = %d\n", pMac->pmc.requestFullPowerPending);
     p += log_sprintf( pMac,p, " PMC: UapsdSessionRequired = %d\n", pMac->pmc.uapsdSessionRequired);
     p += log_sprintf( pMac,p, " PMC: wowlModeRequired = %d\n\n", pMac->pmc.wowlModeRequired);
-    p += log_sprintf( pMac,p, " PMC: isAPWOWExit  = %d\n\n", pMac->pmc.isAPWOWExit);
 
     pmcLog(pMac, LOGW, "\n%s", ptr);
 

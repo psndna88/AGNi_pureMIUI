@@ -41,18 +41,10 @@
 #ifndef __SIR_API_H
 #define __SIR_API_H
 
-/* Take care to avoid redefinition of this type, if it is */
-/* already defined in "halWmmApi.h" */
-#if !defined(_HALMAC_WMM_API_H)
-typedef struct sAniSirGlobal *tpAniSirGlobal;
-#endif
-
-
 #include "sirTypes.h"
 #include "sirMacProtDef.h"
 #include "aniSystemDefs.h"
 #include "sirParams.h"
-#include <dot11f.h>
 
 #if defined(FEATURE_WLAN_ESE) && !defined(FEATURE_WLAN_ESE_UPLOAD)
 #include "eseGlobal.h"
@@ -154,9 +146,6 @@ typedef tANI_U8 tSirVersionString[SIR_VERSION_STRING_LEN];
 #endif /* WLAN_FEATURE_EXTSCAN */
 
 #define WLAN_DISA_MAX_PAYLOAD_SIZE                1600
-
-#define CHANNEL_SWITCH_BEACON_COUNT 5
-#define SAP_CHANNEL_SWITCH_MODE 1
 
 enum eSirHostMsgTypes
 {
@@ -767,13 +756,6 @@ typedef struct sSirSmeStartBssRsp
     tSirBssDescription  bssDescription;//Peer BSS description
 } tSirSmeStartBssRsp, *tpSirSmeStartBssRsp;
 
-#ifdef WLAN_FEATURE_APFIND
-struct hal_apfind_request
-{
-    tANI_U16 request_data_len;
-    tANI_U8 request_data[];
-};
-#endif
 
 typedef struct sSirChannelList
 {
@@ -1128,13 +1110,8 @@ typedef struct sSirSmeJoinReq
     tAniBool            spectrumMgtIndicator;
     tSirMacPowerCapInfo powerCap;
     tSirSupChnl         supportedChannels;
-    bool force_24ghz_in_ht20;
     tSirBssDescription  bssDescription;
-    /*
-     * WARNING: Pls make bssDescription as last variable in struct
-     * tSirSmeJoinReq as it has ieFields followed after this bss
-     * description. Adding a variable after this corrupts the ieFields
-     */
+
 } tSirSmeJoinReq, *tpSirSmeJoinReq;
 
 /// Definition for reponse message to previously issued join request
@@ -1172,12 +1149,6 @@ typedef struct sSirSmeJoinRsp
     /*to report MAX link-speed populate rate-flags from ASSOC RSP frame*/
     tANI_U32           maxRateFlags;
 
-    tDot11fIEHTCaps ht_caps;
-    tDot11fIEVHTCaps vht_caps;
-    tDot11fIEHTInfo ht_operation;
-    tDot11fIEVHTOperation vht_operation;
-    tDot11fIEhs20vendor_ie hs20vendor_ie;
-
     tANI_U8         frames[ 1 ];
 } tSirSmeJoinRsp, *tpSirSmeJoinRsp;
 
@@ -1201,15 +1172,6 @@ typedef struct sSirSmeProbereq
     tSirMacAddr        peerMacAddr;
     tANI_U16           devicePasswdId;
 } tSirSmeProbeReq, *tpSirSmeProbeReq;
-
-typedef struct sSirSmeChanInfo
-{
-    /* channel id */
-    tANI_U8 chan_id;
-    /* channel info described below */
-    tANI_U32 info;
-}tSirSmeChanInfo, *tpSirSmeChanInfo;
-
 
 /// Definition for Association indication from peer
 /// MAC --->
@@ -1245,10 +1207,6 @@ typedef struct sSirSmeAssocInd
     tANI_U32             assocReqLength;
     tANI_U8*             assocReqPtr;
     uint32_t             rate_flags;
-    tSirSmeChanInfo      chan_info;
-    tSirMacHTChannelWidth ch_width;
-    tDot11fIEHTCaps HTCaps;
-    tDot11fIEVHTCaps VHTCaps;
 } tSirSmeAssocInd, *tpSirSmeAssocInd;
 
 
@@ -2970,11 +2928,10 @@ typedef struct sSmeDelBAPeerInd
     // Message Type
     tANI_U16 mesgType;
 
-    tSirMacAddr bssId;//BSSID 
-
     // Message Length
     tANI_U16 mesgLen;
 
+    tSirMacAddr bssId;//BSSID
     // Station Index
     tANI_U16 staIdx;
 
@@ -3794,13 +3751,9 @@ typedef struct sSirNoAParam
     tANI_U8   psSelection;
 }tSirNoAParam, *tpSirNoAParam;
 
-typedef void(*wlan_suspend_req_cb)(void *ptr, VOS_STATUS status);
-
 typedef struct sSirWlanSuspendParam
 {
     tANI_U8 configuredMcstBcstFilterSetting;
-    wlan_suspend_req_cb wlan_sus_callback;
-    void *context;
 }tSirWlanSuspendParam,*tpSirWlanSuspendParam;
 
 typedef struct sSirWlanResumeParam
@@ -3881,17 +3834,11 @@ typedef struct {
    void *data_ctx;
 } getArpStatsParams, *pgetArpStatsParams;
 
-
 typedef void(*FWLoggingInitReqCb)(void *fwlogInitCbContext, tAniLoggingInitRsp *pRsp);
 typedef void ( *tGetFrameLogCallback) (void *pContext);
 typedef void(*RssiMonitorReqCb)(void *rssiMonitorCbContext, VOS_STATUS status);
 typedef void(*pktFilterReqCb)(void *data, tANI_U32 status);
-typedef void(*dhcp_offload_req_cb)(void *rssiMonitorCbContext,
-                                   VOS_STATUS status);
-typedef void(*mdns_enable_req_cb)(void *mdns_enable_cb_context,
-                                  VOS_STATUS status);
-typedef void(*mdns_fqdn_req_cb)(void *mdns_fqdn_cb_context, VOS_STATUS status);
-typedef void(*mdns_resp_req_cb)(void *mdns_resp_cb_context, VOS_STATUS status);
+
 
 typedef struct sAniGetFrameLogReq
 {
@@ -4153,7 +4100,6 @@ typedef struct sSirRoamOffloadScanReq
   tANI_U8   p5GProbeTemplate[SIR_ROAM_SCAN_MAX_PB_REQ_SIZE];
   tANI_U8   nProbes;
   tANI_U16  HomeAwayTime;
-  tANI_U8     WeakZoneRssiThresholdForRoam;
   tSirRoamNetworkType ConnectedNetwork;
   tSirMobilityDomainInfo MDID;
 } tSirRoamOffloadScanReq, *tpSirRoamOffloadScanReq;
@@ -5666,65 +5612,6 @@ typedef PACKED_PRE struct PACKED_POST
     tSirWifiScanResult   bssHotlist[1];
 } tSirEXTScanHotlistMatch, *tpSirEXTScanHotlistMatch;
 
-#ifdef DHCP_SERVER_OFFLOAD
-/**
- * sir_dhcp_srv_offload_info_t - dhcp server offload info
- * @bssidx: bss index
- * @dhcp_srv_offload_enabled: enable or disable
- * @dhcp_client_num: number of clients supported
- * @dhcp_srv_ip: server ip address
- * @start_lsb: lsb of start address of dhcp pool
- */
-typedef struct
-{
-    tANI_U8 bssidx;
-    tANI_U32 dhcp_srv_offload_enabled;
-    tANI_U32 dhcp_client_num;
-    tANI_U32 dhcp_srv_ip;
-    tANI_U32 start_lsb;
-    dhcp_offload_req_cb    dhcp_offload_callback;
-    void                   *dhcp_server_offload_cb_context;
-} sir_dhcp_srv_offload_info_t, *sir_dhcp_srv_offload_info;
-#endif /* DHCP_SERVER_OFFLOAD */
-
-#ifdef MDNS_OFFLOAD
-#define MAX_MDNS_FQDN_LEN                         64
-#define MAX_MDNS_RESP_LEN                         512
-
-typedef struct
-{
-    tANI_U8 bss_idx;
-    tANI_U32 enable;
-    mdns_enable_req_cb    mdns_enable_callback;
-    void                   *mdns_enable_cb_context;
-} sir_mdns_offload_info_t, *sir_mdns_offload_info;
-
-typedef struct
-{
-    tANI_U8 bss_idx;
-    tANI_U32 fqdn_type;
-    tANI_U32 fqdn_len;
-    tANI_U8 fqdn_data[MAX_MDNS_FQDN_LEN];
-    mdns_fqdn_req_cb    mdns_fqdn_callback;
-    void                *mdns_fqdn_cb_context;
-
-} sir_mdns_fqdn_info_t, *sir_mdns_fqdn_info;
-
-typedef struct
-{
-    tANI_U8 bss_idx;
-    tANI_U32 resourceRecord_count;
-    tANI_U32 resp_len;
-    tANI_U8 resp_data[MAX_MDNS_RESP_LEN];
-    mdns_resp_req_cb    mdns_resp_callback;
-    void                *mdns_resp_cb_context;
-} sir_mdns_resp_info_t, *sir_mdns_resp_info;
-
-typedef struct
-{
-    tANI_U8 bss_idx;
-} sir_get_mdns_stats_info_t, *sir_get_mdns_stats_info;
-#endif /* MDNS_OFFLOAD */
 
 typedef PACKED_PRE struct PACKED_POST
 {
@@ -6163,262 +6050,11 @@ typedef struct {
    tANI_U32  value;
 } tModifyRoamParamsReqParams, * tpModifyRoamParamsReqParams;
 
-#ifdef SAP_AUTH_OFFLOAD
-/* 80211 Pre-Share Key length */
-#define SIR_PSK_MAX_LEN   64
+typedef void(*hdd_conAliveCb)(void *data, bool status);
 
-/**
- * enum tSirSecurityType - definition for Software AP Auth Offload
- *                         Security Type
- * @eSIR_OFFLOAD_NONE: None type security
- * @eSIR_OFFLOAD_WPA2PSK_CCMP: WPA2-PSK
- */
-enum tSirSecurityType
-{
-    eSIR_OFFLOAD_NONE,
-    eSIR_OFFLOAD_WPA2PSK_CCMP,
-};
-
-/**
- * struct tSirSapOffloadInfo - Structure to store sap offload related params.
- * @macAddr: Self mac address
- * @sap_auth_offload_enable: tell if sap auth offload is enabled or not.
- * @sap_auth_offload_sec_type: tells security type
- *        0 - none
- *        1 - WPA1-PSK
- * @key_len: psk key length
- * @key: psk key.
- */
-struct tSirSapOffloadInfo
-{
-    tSirMacAddr macAddr;
-    bool sap_auth_offload_enable;
-    uint32_t sap_auth_offload_sec_type;
-    uint32_t key_len;
-    uint8_t key[SIR_PSK_MAX_LEN];
-};
-
-typedef PACKED_PRE struct PACKED_POST
-{
-    /** staId returned from firmware for each STA association to SAP */
-    tANI_U8 staIdx;
-    /** bssIdx on which the STA is added */
-    tANI_U8 bssIdx;
-    /** DPU desc index of this station */
-    tANI_U8 dpuIndex;
-    /** Bcast DPU index of this station */
-    tANI_U8 bcastDpuIndex;
-    /** Bcast DPU Management index of this station */
-    tANI_U8 bcastMgmtDpuIdx;
-
-    tANI_U8 ucUcastSig;
-
-    tANI_U8 ucBcastSig;
-
-    tANI_U8 ucMgmtSig;
-    /** aid (association id) of this station */
-    tANI_U32 assoc_id;
-    /** peer station's mac addr */
-    tSirMacAddr peer_macaddr;
-    /** length of association request frame */
-    tANI_U32 data_len;
-    /* Following this structure is the byte stream of a whole
-     * association request frame of length data_len
-     */
-    tANI_U8 bufp[1];
-} tSapOfldAddStaIndMsg, *tpSapOfldAddStaIndMsg;
-
-typedef enum
-{
-    SAP_OFL_DEL_STA_FLAG_NONE       = 0x00,
-    SAP_OFL_DEL_STA_FLAG_RECONNECT  = 0x01,
-} eSapOfldDelStaFlags;
-
-typedef PACKED_PRE struct PACKED_POST
-{
-    tANI_U32 staIdx;
-    /** bssIdx on which the STA is added */
-    tANI_U32 bssIdx;
-    /** aid (association id) of this station */
-    tANI_U32 assoc_id;
-    /** peer station's mac addr */
-    tSirMacAddr peer_macaddr;
-    /** disassociation reason */
-    tANI_U32 reason;
-    /** flags - wmi_sap_ofl_del_sta_flags */
-    tANI_U32 flags;
-} tSapOfldDelStaIndMsg, *tpSapOfldDelStaIndMsg;
-
-typedef enum
-{
-    SAP_OFFLOAD_ADD_STA_IND       = 0x00,
-    SAP_OFFLOAD_DEL_STA_IND       = 0x01,
-} eSapOfldIndType;
-
-typedef PACKED_PRE struct PACKED_POST
-{
-    /* indType will be from eSapOfldIndType */
-    tANI_U32 indType;
-    /* size of this array will be depend on the indication type.
-     * Indication type can be either ADD_STA_IND or DEL_STA_IND.
-     * If indication type is ADD_STA_IND, size of this indication
-     * array will be sizeof(tSapOfldDelStaIndMsg)
-     * and if indication type is DEL_STA_IND, size of this indication
-     * arrary will be sizeof(tSapOfldAddStaIndMsg)
-     */
-    tANI_U8         indication[1];
-} tSapOfldInd;
-
-typedef PACKED_PRE struct PACKED_POST
-{
-    tANI_U32 num_indications;
-    /* size of this array will be depend on the number of indications.*/
-    tSapOfldInd indications[1];
-}tSapOfldIndications;
-
-#endif /* SAP_AUTH_OFFLOAD */
-
-/**
- * struct stsf - the basic stsf structure
- *
- * @session_id: session id from adapter
- * @set_req: set/get request flag.
- * @tsf_low: low 32bits of tsf
- * @tsf_high: high 32bits of tsf
- *
- * driver use this struct to store the tsf info
- */
-struct stsf {
-    uint32_t session_id;
-    bool     set_tsf_req;
-    uint32_t tsf_low;
-    uint32_t tsf_high;
-    bool tsf_req_status;
-};
-
-typedef int(*tsf_rsp_cb)(void *tsf_ctx, struct stsf *pTsf);
-
-/**
- * struct tCapTsfParams - capture tsf request
- * @bss_idx: bss index, SAP/STA
- * @session_id: adapter session id
- * @bssid: bssid for SAP/STA
- * @tsf_rsp_cb_func : handler for tsf rsp from fw
- * @tsf_rsp_cb_ctx : hdd ctx for tsf rsp handler
- */
 typedef struct {
-    tANI_U8 bss_idx;
-    tANI_U8 session_id;
-    tSirMacAddr  bssid;
-    tsf_rsp_cb tsf_rsp_cb_func;
-    void * tsf_rsp_cb_ctx;
-}tSirCapTsfParams,*tpSirCapTsfParams;
-
-#ifdef WLAN_FEATURE_LFR_MBB
-
-/**
- * enum csr_roam_op_code - Operation to be done by the callback.
- * @SIR_ROAMING_DEREGISTER_STA: Deregister the old STA after roaming.
- * @SIR_STOP_ROAM_OFFLOAD_SCAN : sends RSO stop
- * @SIR_PREPARE_REASSOC_REQ: prepares reassoc request
- */
-enum csr_roam_op_code {
-    SIR_ROAMING_DEREGISTER_STA,
-    SIR_STOP_ROAM_OFFLOAD_SCAN,
-    SIR_PREPARE_REASSOC_REQ,
-};
-
-/**
- * enum sir_roam_cleanup_type - Type of cleanup needs to be performed.
- * @SIR_MBB_DISCONNECTED: Entire CSR cleanup for connected AP
- * needs to be performed
- * @SIR_MBB_CONNECTED: No need to perform CSR cleanup for connected AP.
- */
-enum sir_roam_cleanup_type {
-    SIR_MBB_DISCONNECTED,
-    SIR_MBB_CONNECTED,
-};
-#endif
-
-/**
- * struct tDelBaParams - Del BA Session req
- * @session_id: adapter session id
- */
-typedef struct {
-    tANI_U8 session_id;
-}tDelBaParams,*ptDelBaParams;
-
-/**
- * struct sir_ecsa_ie_req - structure to send req to include ECSA IE in beacon
- * @type: type of msg
- * @len: length of msg
- * @new_chan: new channel to which switch is requested
- * @cb_mode:cbmode of the new channel
- * @bssid: bssid of the AP
- */
-struct sir_ecsa_ie_req {
-   uint16_t type;
-   uint16_t len;
-   uint8_t new_chan;
-   uint8_t cb_mode;
-   uint8_t bssid[VOS_MAC_ADDR_SIZE];
-};
-
-/**
- * struct sir_ecsa_ie_complete_ind - structure to send indication that ECSA IE
- * TX completion in beacon
- * @session_id: session on which ECSA IE was sent
- */
-struct sir_ecsa_ie_complete_ind {
-   uint8_t session_id;
-};
-
-/**
- * struct sir_channel_chanege_req - structure to send channel change req to LIM
- * @type: type of msg
- * @len: length of msg
- * @new_chan: new channel to which switch is requested
- * @cb_mode:cbmode of the new channel
- * @bssid: bssid of the AP
- * @dot11mode: new dot11 mode
- * @operational_rateset: new rate set
- * @extended_rateset: new extended rate set
- */
-struct sir_channel_chanege_req {
-   uint16_t type;
-   uint16_t len;
-   uint8_t new_chan;
-   uint8_t cb_mode;
-   uint8_t bssid[VOS_MAC_ADDR_SIZE];
-   uint32_t dot11mode;
-   tSirMacRateSet operational_rateset;
-   tSirMacRateSet extended_rateset;
-};
-
-/**
- * struct sir_channel_chanege_rsp - structure for channel change resp from LIM
- * @sme_session_id: sme session on which channel was changed
- * @new_channel: new channel to which channel is changed
- * @status:status of channel change
- */
-struct sir_channel_chanege_rsp {
-   uint8_t sme_session_id;
-   uint8_t new_channel;
-   VOS_STATUS status;
-};
-
-/**
- * struct ecsa_frame_params - ecsa frame params
- * @switch_mode: switch mode of channel change
- * @op_class: new channel op class
- * @new_channel: new channel to shift
- * @switch_count: channel switch count
- */
-struct ecsa_frame_params {
-    uint8_t   switch_mode;
-    uint8_t      op_class;
-    uint8_t   new_channel;
-    uint8_t  switch_count;
-};
+   hdd_conAliveCb rsp_cb_fn;
+   void *data_ctx;
+}getConStatusParams, *pgetConStatusParams;
 
 #endif /* __SIR_API_H */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -49,9 +49,6 @@
 #include "limSerDesUtils.h"
 #include "limSendMessages.h"
 #include "schApi.h"
-#ifdef WLAN_FEATURE_LFR_MBB
-#include "lim_mbb.h"
-#endif
 
 
 /**
@@ -87,6 +84,7 @@ limProcessDisassocFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession
     pHdr = WDA_GET_RX_MAC_HEADER(pRxPacketInfo);
     pBody = WDA_GET_RX_MPDU_DATA(pRxPacketInfo);
 
+
     if (limIsGroupAddr(pHdr->sa))
     {
         // Received Disassoc frame from a BC/MC address
@@ -106,16 +104,6 @@ limProcessDisassocFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession
 
         return;
     }
-
-    if (LIM_IS_STA_ROLE(psessionEntry) &&
-       ((eLIM_SME_WT_DISASSOC_STATE == psessionEntry->limSmeState) ||
-        (eLIM_SME_WT_DEAUTH_STATE == psessionEntry->limSmeState))) {
-            PELOGE(limLog(pMac, LOG1,
-                   FL("recevied disaasoc frame in %d limsmestate... droping this"),
-                       psessionEntry->limSmeState);)
-            return;
-    }
-
 
 #ifdef WLAN_FEATURE_11W
     /* PMF: If this session is a PMF session, then ensure that this frame was protected */
@@ -171,13 +159,6 @@ limProcessDisassocFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession
         limCleanUpDisassocDeauthReq(pMac,(tANI_U8*)pHdr->sa, 1);
         return;
     }
-
-#ifdef WLAN_FEATURE_LFR_MBB
-    if (lim_is_mbb_reassoc_in_progress(pMac, psessionEntry)) {
-        limLog(pMac, LOGE, FL("Ignore Disassoc frame as LFR MBB in progress"));
-        return;
-    }
-#endif
 
     /** If we are in the Wait for ReAssoc Rsp state */
     if (limIsReassocInProgress(pMac,psessionEntry)) {
