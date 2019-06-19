@@ -2531,17 +2531,21 @@ void update_best_cluster(struct related_thread_group *grp,
 {
 	if (boost) {
 		grp->preferred_cluster = sched_cluster[1];
+		grp->skip_min = true;
 		return;
 	}
 
 	if (grp->preferred_cluster == sched_cluster[0]) {
-		if (demand >= sched_group_upmigrate)
+		if (demand >= sched_group_upmigrate) {
 			grp->preferred_cluster = sched_cluster[1];
+			grp->skip_min = true;
+		}
 		return;
 	}
 	if (demand < sched_group_downmigrate) {
 		if (!sysctl_sched_coloc_downmigrate_ns) {
 			grp->preferred_cluster = sched_cluster[0];
+			grp->skip_min = false;
 			return;
 		}
 		if (!grp->downmigrate_ts) {
@@ -2552,6 +2556,7 @@ void update_best_cluster(struct related_thread_group *grp,
 				sysctl_sched_coloc_downmigrate_ns) {
 			grp->preferred_cluster = sched_cluster[0];
 			grp->downmigrate_ts = 0;
+			grp->skip_min = false;
 		}
 	} else if (grp->downmigrate_ts)
 		grp->downmigrate_ts = 0;
@@ -2585,6 +2590,7 @@ static void _set_preferred_cluster(struct related_thread_group *grp)
 
 	if (!hmp_capable()) {
 		grp->preferred_cluster = sched_cluster[0];
+		grp->skip_min = false;
 		return;
 	}
 
