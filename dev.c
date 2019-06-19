@@ -125,6 +125,16 @@ static enum sigma_cmd_result sta_server_cert_trust(struct sigma_dut *dut,
 		goto done;
 	}
 
+	if (set_network(get_station_ifname(), dut->infra_network_id,
+			"domain_match", "NULL") < 0 ||
+	    set_network(get_station_ifname(), dut->infra_network_id,
+			"domain_suffix_match", "NULL") < 0) {
+		strlcpy(resp,
+			"ServerCertTrustResult,OverrideNotAllowed,Reason,Could not clear domain matching rules",
+			sizeof(resp));
+		goto done;
+	}
+
 	wpa_command(get_station_ifname(), "DISCONNECT");
 	snprintf(buf, sizeof(buf), "SELECT_NETWORK %d", dut->infra_network_id);
 	if (wpa_command(get_station_ifname(), buf) < 0) {
