@@ -359,10 +359,11 @@ static int is_runtime_id_valid(struct sigma_dut *dut, const char *val)
 static int build_log_dir(struct sigma_dut *dut, char *dir, size_t dir_size)
 {
 	int res;
-	const char *vendor;
+	const char *vendor = dut->vendor_name;
 	int i;
 
-	vendor = dut->vendor_name ? dut->vendor_name : "Qualcomm";
+	if (!vendor)
+		return -1;
 
 	if (dut->log_file_dir) {
 		res = snprintf(dir, dir_size, "%s/%s", dut->log_file_dir,
@@ -414,6 +415,12 @@ static enum sigma_cmd_result cmd_dev_start_test(struct sigma_dut *dut,
 	val = get_param(cmd, "Runtime_ID");
 	if (!(val && is_runtime_id_valid(dut, val)))
 		return INVALID_SEND_STATUS;
+
+	if (!dut->vendor_name) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Log collection not supported without vendor name specified on the command line (-N)");
+		return SUCCESS_SEND_STATUS;
+	}
 
 	if (build_log_dir(dut, dir, sizeof(dir)) < 0)
 		return ERROR_SEND_STATUS;
@@ -608,6 +615,12 @@ static enum sigma_cmd_result cmd_dev_stop_test(struct sigma_dut *dut,
 	char dir[200];
 	int res;
 
+	if (!dut->vendor_name) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Log collection not supported without vendor name specified on the command line (-N)");
+		return SUCCESS_SEND_STATUS;
+	}
+
 	val = get_param(cmd, "Runtime_ID");
 	if (!val || strcmp(val, dut->dev_start_test_runtime_id) != 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR, "Invalid runtime id");
@@ -631,7 +644,7 @@ static enum sigma_cmd_result cmd_dev_stop_test(struct sigma_dut *dut,
 #endif /* ANDROID */
 
 	res = snprintf(out_file, sizeof(out_file), "%s_%s_%s.tar.gz",
-		       dut->vendor_name ? dut->vendor_name : "Qualcomm",
+		       dut->vendor_name,
 		       dut->model_name ? dut->model_name : "Unknown",
 		       dut->dev_start_test_runtime_id);
 	if (res < 0 || res >= sizeof(out_file))
