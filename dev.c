@@ -351,7 +351,7 @@ static int build_log_dir(struct sigma_dut *dut, char *dir, size_t dir_size)
 	const char *vendor;
 	int i;
 
-	vendor = dut->vendor_name ? dut->vendor_name : "Qualcomm";
+	vendor = dut->vendor_name ? dut->vendor_name : "Unknown";
 
 	if (dut->log_file_dir) {
 		res = snprintf(dir, dir_size, "%s/%s", dut->log_file_dir,
@@ -620,7 +620,7 @@ static enum sigma_cmd_result cmd_dev_stop_test(struct sigma_dut *dut,
 #endif /* ANDROID */
 
 	res = snprintf(out_file, sizeof(out_file), "%s_%s_%s.tar.gz",
-		       dut->vendor_name ? dut->vendor_name : "Qualcomm",
+		       dut->vendor_name ? dut->vendor_name : "Unknown",
 		       dut->model_name ? dut->model_name : "Unknown",
 		       dut->dev_start_test_runtime_id);
 	if (res < 0 || res >= sizeof(out_file))
