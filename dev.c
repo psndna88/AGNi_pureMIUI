@@ -14,6 +14,9 @@
 #include "wpa_helpers.h"
 
 
+extern char *sigma_cert_path;
+
+
 static enum sigma_cmd_result cmd_dev_send_frame(struct sigma_dut *dut,
 						struct sigma_conn *conn,
 						struct sigma_cmd *cmd)
@@ -71,7 +74,7 @@ static enum sigma_cmd_result sta_server_cert_trust(struct sigma_dut *dut,
 						   struct sigma_conn *conn,
 						   const char *val)
 {
-	char buf[100];
+	char buf[200];
 	struct wpa_ctrl *ctrl = NULL;
 	int e;
 	char resp[200];
@@ -83,6 +86,14 @@ static enum sigma_cmd_result sta_server_cert_trust(struct sigma_dut *dut,
 		sigma_dut_print(dut, DUT_MSG_INFO,
 				"Unknown ServerCertTrust value '%s'", val);
 		return INVALID_SEND_STATUS;
+	}
+
+	snprintf(buf, sizeof(buf), "%s/uosc-disabled", sigma_cert_path);
+	if (file_exists(buf)) {
+		strlcpy(resp,
+			"ServerCertTrustResult,OverrideNotAllowed,Reason,UOSC disabled on device",
+			sizeof(resp));
+		goto done;
 	}
 
 	if (!dut->server_cert_hash[0]) {
