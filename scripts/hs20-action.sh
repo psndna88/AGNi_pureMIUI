@@ -139,15 +139,30 @@ if [ "$CMD" = "ESS-DISASSOC-IMMINENT" ]; then
     PMF="$3"
     TIME_IN_MS="$4"
     URL="$5"
+    count=1
     if [ "$PMF" = "0" ]; then
 	echo "Disassociation imminent notification received without PMF - ignored" >> summary
 	exit 0
     fi
     echo "Disassociation imminent notification received - URL: $URL" >> summary
-    if ! busybox pidof hs20-osu-client; then
-	sleep 1
-	run_eloop_cmd "nohup hs20-osu-client -w $IFACE_DIR -f Logs/hs20-osu-client.txt browser $URL > Logs/browser.txt 2>&1 &"
-    fi
+    case "$URL" in
+	http*)
+	    while [ $count -le 10 ]
+	    do
+		sleep 1
+		addr=$(busybox ip addr show dev $IFNAME | grep "inet ")
+		if [ -n "$addr" ]; then
+		    if ! busybox pidof hs20-osu-client; then
+			run_eloop_cmd "nohup hs20-osu-client -w $IFACE_DIR -f Logs/hs20-osu-client.txt browser $URL > Logs/browser.txt 2>&1 &"
+		    fi
+		    break
+		else
+		    echo "waiting $count seconds"
+		fi
+		count=$(($count + 1))
+	    done
+	    ;;
+    esac
 #    notify-send "Disassociation imminent"
 fi
 
