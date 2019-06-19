@@ -11803,7 +11803,7 @@ static enum sigma_cmd_result cmd_sta_set_pwrsave(struct sigma_dut *dut,
 		 * The CAPI mode parameter does not exist in 60G
 		 * unscheduled PS.
 		 */
-		if (strcasecmp(powersave, "unscheduled") == 0)
+		if (powersave && strcasecmp(powersave, "unscheduled") == 0)
 			res = set_ps(intf, dut, 1);
 	} else if (prog && get_driver_type() == DRIVER_WCN &&
 		   strcasecmp(prog, "HE") == 0) {
