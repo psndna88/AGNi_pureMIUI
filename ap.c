@@ -6750,6 +6750,7 @@ enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 		else if (dut->ap_passphrase[0])
 			fprintf(f, "wpa_passphrase=%s\n", dut->ap_passphrase);
 		if (dut->ap_akm_values & ((1 << AKM_WPA_EAP) |
+					  (1 << AKM_FT_EAP) |
 					  (1 << AKM_EAP_SHA256) |
 					  (1 << AKM_SUITE_B) |
 					  (1 << AKM_FT_SUITE_B) |
