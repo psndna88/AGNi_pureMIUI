@@ -70,10 +70,6 @@ uint8_t esd_retry_max = 5;
 extern int32_t nvt_extra_proc_init(void);
 #endif
 
-#if NVT_TOUCH_MP
-extern int32_t nvt_mp_proc_init(void);
-#endif
-
 struct nvt_ts_data *ts;
 
 //F7A Novatek touch usb pulgin work
@@ -1615,14 +1611,6 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	}
 #endif
 
-#if NVT_TOUCH_MP
-	ret = nvt_mp_proc_init();
-	if (ret != 0) {
-		NVT_ERR("nvt mp proc init failed. ret=%d\n", ret);
-		goto err_init_NVT_ts;
-	}
-#endif
-
 #if defined(CONFIG_FB)
 	ts->fb_notif.notifier_call = fb_notifier_callback;
 	ret = fb_register_client(&ts->fb_notif);
@@ -1662,7 +1650,7 @@ err_register_fb_notif_failed:
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
 err_register_early_suspend_failed:
 #endif
-#if (NVT_TOUCH_PROC || NVT_TOUCH_EXT_PROC || NVT_TOUCH_MP)
+#if (NVT_TOUCH_PROC || NVT_TOUCH_EXT_PROC)
 err_init_NVT_ts:
 #endif
 	free_irq(client->irq, ts);
