@@ -1562,6 +1562,17 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		}
 	}
 
+	val = get_param(cmd, "OFDMA");
+	if (val) {
+		if (strcasecmp(val, "UL") == 0) {
+			dut->ap_he_ulofdma = VALUE_ENABLED;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported OFDMA value");
+			return STATUS_SENT_ERROR;
+		}
+	}
+
 	return 1;
 }
 
@@ -10340,11 +10351,38 @@ static int ath_set_nebor_bssid(struct sigma_dut *dut, const char *ifname,
 }
 
 
+static enum sigma_cmd_result he_ltf(struct sigma_dut *dut,
+				    struct sigma_conn *conn,
+				    const char *ifname, const char *val)
+{
+	const char *var;
+
+	if (dut->ap_he_ulofdma == VALUE_ENABLED)
+		var = "he_ul_ltf";
+	else
+		var = "he_ltf";
+
+	if (strcmp(val, "6.4") == 0) {
+		run_iwpriv(dut, ifname, "%s 2", var);
+	} else if (strcmp(val, "12.8") == 0) {
+		run_iwpriv(dut, ifname, "%s 3", var);
+	} else if (strcmp(val, "3.2") == 0) {
+		run_iwpriv(dut, ifname, "%s 1", var);
+	} else {
+		send_resp(dut, conn, SIGMA_ERROR, "errorCode,Unsupported LTF");
+		return STATUS_SENT_ERROR;
+	}
+
+	return SUCCESS_SEND_STATUS;
+}
+
+
 static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 			       struct sigma_cmd *cmd)
 {
 	const char *val;
 	char *ifname;
+	enum sigma_cmd_result res;
 
 	ifname = get_main_ifname();
 
@@ -10450,6 +10488,20 @@ static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 		run_iwpriv(dut, ifname, "oce_asoc_rej 1");
 		retrydelay = atoi(val);
 		run_iwpriv(dut, ifname, "oce_asoc_dly %d", retrydelay);
+	}
+
+	val = get_param(cmd, "LTF");
+	if (val) {
+		if (dut->ap_fixed_rate) {
+			res = he_ltf(dut, conn, ifname, val);
+			if (res != SUCCESS_SEND_STATUS)
+				return res;
+		} else {
+			free(dut->ar_ltf);
+			dut->ar_ltf = strdup(val);
+			if (!dut->ar_ltf)
+				return -1;
+		}
 	}
 
 	return 1;
