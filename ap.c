@@ -10447,6 +10447,93 @@ static enum sigma_cmd_result he_ar_gi_ltf_mask(struct sigma_dut *dut,
 }
 
 
+static enum sigma_cmd_result he_rualloctones(struct sigma_dut *dut,
+					     struct sigma_conn *conn,
+					     const char *ifname,
+					     const char *val)
+{
+	char *token, *result;
+	int value;
+	char *saveptr;
+	int rualloc_type;
+	enum sigma_cmd_result ret = SUCCESS_SEND_STATUS;
+
+	token = strdup(val);
+	if (!token)
+		return -1;
+	result = strtok_r(token, ":", &saveptr);
+	if (!result) {
+		free(token);
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,RUAllocTones not specified");
+		return STATUS_SENT_ERROR;
+	}
+
+	/*
+	* ru_allocation_type can take the values of:
+	* 1 - DL OFDMA data RU allocation
+	* 3 - UL OFDMA data RU allocation
+	*/
+	rualloc_type = dut->ap_he_ulofdma == VALUE_ENABLED ? 3 : 1;
+
+
+	value = atoi(result);
+	if (value == 106) {
+		enum value_not_set_enabled_disabled ap_he_rualloc_106_80 =
+			VALUE_NOT_SET;
+
+		result = strtok_r(NULL, ":", &saveptr);
+		if (result) {
+			result = strtok_r(NULL, ":", &saveptr);
+			if (result)
+				ap_he_rualloc_106_80 = VALUE_ENABLED;
+			else
+				ap_he_rualloc_106_80 = VALUE_DISABLED;
+		}
+		if (ap_he_rualloc_106_80 == VALUE_ENABLED) {
+			run_system_wrapper(dut,
+					   "wifitool %s setUnitTestCmd 0x4b 9 %d 0 2 1 2 2 2 3 2",
+					   ifname, rualloc_type);
+		} else {
+			run_system_wrapper(dut,
+					   "wifitool %s setUnitTestCmd 0x4b 5 %d 0 2 1 2",
+					   ifname, rualloc_type);
+		}
+	} else if (value == 242) {
+		run_system_wrapper(
+			dut,
+			"wifitool %s setUnitTestCmd 0x4b 9 %d 0 3 1 3 2 3 3 3",
+			ifname, rualloc_type);
+	} else if (value == 26) {
+		run_system_wrapper(
+			dut,
+			"wifitool %s setUnitTestCmd 0x4b 9 %d 0 0 2 0 5 0 7 0",
+			ifname, rualloc_type);
+	} else if (value == 52) {
+		run_system_wrapper(
+			dut,
+			"wifitool %s setUnitTestCmd 0x4b 9 %d 0 1 1 1 2 1 3 1",
+			ifname, rualloc_type);
+	} else if (value == 484) {
+		run_system_wrapper(
+			dut,
+			"wifitool %s setUnitTestCmd 0x4b 5 %d 0 4 1 4",
+			ifname, rualloc_type);
+	} else if (value == 996) {
+		run_system_wrapper(dut,
+				   "wifitool %s setUnitTestCmd 0x4b 3 %d 0 5",
+				   ifname, rualloc_type);
+	} else {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Unsupported RUAllocTones");
+		ret = STATUS_SENT_ERROR;
+	}
+
+	free(token);
+	return ret;
+}
+
+
 static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 			       struct sigma_cmd *cmd)
 {
@@ -10580,6 +10667,13 @@ static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 			res = he_shortgi(dut, conn, ifname, val);
 		else
 			res = he_ar_gi_ltf_mask(dut, conn, ifname, val);
+		if (res != SUCCESS_SEND_STATUS)
+			return res;
+	}
+
+	val = get_param(cmd, "RUAllocTones");
+	if (val) {
+		res = he_rualloctones(dut, conn, ifname, val);
 		if (res != SUCCESS_SEND_STATUS)
 			return res;
 	}
