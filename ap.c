@@ -10377,6 +10377,76 @@ static enum sigma_cmd_result he_ltf(struct sigma_dut *dut,
 }
 
 
+static enum sigma_cmd_result he_shortgi(struct sigma_dut *dut,
+					struct sigma_conn *conn,
+					const char *ifname,
+					const char *val)
+{
+	const char *var;
+
+	if (dut->ap_he_ulofdma == VALUE_ENABLED)
+		var = "he_ul_shortgi";
+	else
+		var = "shortgi";
+
+	if (strcmp(val, "0.8") == 0) {
+		run_iwpriv(dut, ifname, "%s 0", var);
+	} else if (strcmp(val, "1.6") == 0) {
+		run_iwpriv(dut, ifname, "%s 2", var);
+	} else if (strcmp(val, "3.2") == 0) {
+		run_iwpriv(dut, ifname, "%s 3", var);
+	} else {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Unsupported shortGI");
+		return STATUS_SENT_ERROR;
+	}
+
+	return SUCCESS_SEND_STATUS;
+}
+
+
+static enum sigma_cmd_result he_ar_gi_ltf_mask(struct sigma_dut *dut,
+					       struct sigma_conn *conn,
+					       const char *ifname,
+					       const char *val)
+{
+
+	uint32_t he_ar_gi_ltf;
+	uint16_t he_ar_gi, he_ar_ltf;
+
+	if (strcmp(val, "0.4") == 0) {
+		he_ar_gi = 0x01;
+	} else if (strcmp(val, "0.8") == 0) {
+		he_ar_gi = 0x02;
+	} else if (strcmp(val, "1.6") == 0) {
+		he_ar_gi = 0x04;
+	} else if (strcmp(val, "3.2") == 0) {
+		he_ar_gi = 0x08;
+	} else {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Unsupported shortGI");
+		return STATUS_SENT_ERROR;
+	}
+
+	if (dut->ar_ltf && strcmp(dut->ar_ltf, "6.4") == 0) {
+		he_ar_ltf = 0x02;
+	} else if (dut->ar_ltf && strcmp(dut->ar_ltf, "12.8") == 0) {
+		he_ar_ltf = 0x04;
+	} else if (dut->ar_ltf && strcmp(dut->ar_ltf, "3.2") == 0) {
+		he_ar_ltf = 0x01;
+	} else {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Unsupported LTF");
+		return STATUS_SENT_ERROR;
+	}
+
+	he_ar_gi_ltf = (he_ar_gi << 8) | he_ar_ltf;
+	run_iwpriv(dut, ifname, "he_ar_gi_ltf %lu", he_ar_gi_ltf);
+
+	return SUCCESS_SEND_STATUS;
+}
+
+
 static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 			       struct sigma_cmd *cmd)
 {
@@ -10502,6 +10572,16 @@ static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 			if (!dut->ar_ltf)
 				return -1;
 		}
+	}
+
+	val = get_param(cmd, "GI");
+	if (val) {
+		if (dut->ap_fixed_rate)
+			res = he_shortgi(dut, conn, ifname, val);
+		else
+			res = he_ar_gi_ltf_mask(dut, conn, ifname, val);
+		if (res != SUCCESS_SEND_STATUS)
+			return res;
 	}
 
 	return 1;
