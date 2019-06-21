@@ -1565,9 +1565,9 @@ tANI_U8 *pBody;
     else
         frmAddBARsp.AddBAParameterSet.bufferSize =
                     VOS_MIN(val, frmAddBARsp.AddBAParameterSet.bufferSize);
-        limLog( pMac, LOG1,
-            FL( "ADDBA RSP  Buffsize = %d" ),
-            frmAddBARsp.AddBAParameterSet.bufferSize);
+    limLog( pMac, LOG1,
+        FL( "ADDBA RSP  Buffsize = %d" ),
+        frmAddBARsp.AddBAParameterSet.bufferSize);
     // Now, validate the ADDBA Rsp
     if( eSIR_MAC_SUCCESS_STATUS !=
         __limValidateAddBAParameterSet( pMac, pSta,
@@ -2584,6 +2584,15 @@ limProcessActionFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,tpPESession ps
             {
               tpSirMacVendorSpecificPublicActionFrameHdr pPubAction = (tpSirMacVendorSpecificPublicActionFrameHdr) pActionHdr;
               tANI_U8 P2POui[] = { 0x50, 0x6F, 0x9A, 0x09 };
+              tANI_U32 frameLen;
+
+              frameLen = WDA_GET_RX_PAYLOAD_LEN(pRxPacketInfo);
+
+              if (frameLen < sizeof(pActionHdr)) {
+                  limLog(pMac, LOG1,
+                    FL("Received action frame of invalid len %d"), frameLen);
+                  break;
+              }
 
               //Check if it is a P2P public action frame.
               if (vos_mem_compare(pPubAction->Oui, P2POui, 4))
@@ -2721,6 +2730,15 @@ limProcessActionFrameNoSession(tpAniSirGlobal pMac, tANI_U8 *pBd)
             case SIR_MAC_ACTION_VENDOR_SPECIFIC:
               {
                 tANI_U8 P2POui[] = { 0x50, 0x6F, 0x9A, 0x09 };
+                tANI_U32 frameLen;
+
+                frameLen = WDA_GET_RX_PAYLOAD_LEN(pBd);
+
+                if (frameLen < sizeof(pActionHdr)) {
+                    limLog(pMac, LOG1,
+                      FL("Received action frame of invalid len %d"), frameLen);
+                    break;
+                }
 
                 //Check if it is a P2P public action frame.
                 if (vos_mem_compare(pActionHdr->Oui, P2POui, 4))

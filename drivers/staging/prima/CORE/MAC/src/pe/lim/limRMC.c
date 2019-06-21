@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -119,7 +119,7 @@ __rmcGroupInsertHashEntry(tpAniSirGlobal pMac, tSirMacAddr transmitter)
     {
         entry = (tLimRmcGroupContext *)vos_mem_malloc(sizeof(*entry));
 
-        PELOG1(limLog(pMac, LOG1, FL("RMC: Hash Insert:new entry %p"), entry);)
+        PELOG1(limLog(pMac, LOG1, FL("RMC: Hash Insert:new entry %pK"), entry);)
 
         if (entry)
         {
@@ -186,7 +186,7 @@ __rmcGroupDeleteHashEntry(tpAniSirGlobal pMac, tSirMacAddr transmitter)
                 prev->next = entry->next;
             }
 
-            PELOG1(limLog(pMac, LOG1, FL("RMC: Hash Delete: entry %p "
+            PELOG1(limLog(pMac, LOG1, FL("RMC: Hash Delete: entry %pK "
                          " transmitter " MAC_ADDRESS_STR), entry
                              MAC_ADDR_ARRAY(transmitter));)
 

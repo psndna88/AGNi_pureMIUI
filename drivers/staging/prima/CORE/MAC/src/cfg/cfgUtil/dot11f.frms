@@ -2047,6 +2047,28 @@ IE ESERadMgmtCap (EID_VENDOR_SPECIFIC) OUI (0x00, 0x40, 0x96, 0x01)
 
 }
 
+IE hs20vendor_ie (EID_VENDOR_SPECIFIC) OUI (0x50, 0x6F, 0x9A, 0x10)
+{
+    /* hotspot_configurations */
+    {
+        dgaf_dis:               1;
+        hs_id_present:          2;
+        reserved:               1;
+        release_num:            4;
+    }
+    OPTIONAL UNION hs_id (DISCRIMINATOR hs_id_present)
+    {
+        pps_mo (hs_id_present IS 1)
+        {
+            pps_mo_id,          2;
+        }
+        anqp_domain (hs_id_present IS 2)
+        {
+            anqp_domain_id,     2;
+        }
+    };
+}
+
 IE ESETrafStrmMet (EID_VENDOR_SPECIFIC) OUI (0x00, 0x40, 0x96, 0x07)
 {
     tsid,           1;
@@ -3334,6 +3356,7 @@ FRAME Beacon                              // C.f. Sec. 7.2.3.1
     OPTIE  OperatingMode;
     OPTIE  WiderBWChanSwitchAnn;
     OPTIE  OBSSScanParameters;
+    OPTIE  hs20vendor_ie;
 } // End frame Beacon.
 
 // Ok, here's  the story on  Beacon1 & Beacon2.   We presumably beacon  a lot
@@ -3414,6 +3437,7 @@ FRAME Beacon2
     OPTIE  OperatingMode;
     OPTIE  WiderBWChanSwitchAnn;
     OPTIE  OBSSScanParameters;
+    OPTIE  hs20vendor_ie;
 }
 
 // This frame is just Beacon with its Fixed Fields stripped out.  It's handy
@@ -3471,6 +3495,7 @@ FRAME BeaconIEs
     OPTIE  OperatingMode;
     OPTIE  WiderBWChanSwitchAnn;
     OPTIE  OBSSScanParameters;
+    OPTIE  hs20vendor_ie;
 
 } // End frame BeaconIEs.
 
@@ -3508,6 +3533,7 @@ FRAME AssocRequest                        // 7.2.3.4
     OPTIE  ExtCap;
     OPTIE  OperatingMode;
     OPTIE  QosMapSet;
+    OPTIE  hs20vendor_ie;
 } // End frame AssocRequest.
 
 FRAME AssocResponse                       // 7.2.3.5
@@ -3578,6 +3604,7 @@ FRAME ReAssocRequest                      // 7.2.3.6
     OPTIE  ExtCap;
     OPTIE  OperatingMode;
     OPTIE  QosMapSet;
+    OPTIE  hs20vendor_ie;
 } // End frame ReAssocRequest.
 
 FRAME ReAssocResponse                     // 7.2.3.7
@@ -3676,6 +3703,7 @@ FRAME ProbeResponse                       // 7.2.3.9
     OPTIE  VHTExtBssLoad;
     OPTIE  ExtCap;
     OPTIE  OBSSScanParameters;
+    OPTIE  hs20vendor_ie;
 } // End frame ProbeResponse.
 
 FRAME Authentication                      // 7.2.3.10
