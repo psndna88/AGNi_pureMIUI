@@ -3166,6 +3166,9 @@ bool wma_is_roam_in_progress(uint32_t vdev_id)
 {
 	tp_wma_handle wma = cds_get_context(QDF_MODULE_ID_WMA);
 
+	if (!wma)
+		return false;
+
 	if (!wma_is_vdev_valid(vdev_id))
 		return false;
 
