@@ -57,6 +57,13 @@ config SYNC
 	  drivers.  Sync implementations can take advantage of hardware
 	  synchronization built into devices like GPUs.
 
+config DEBUG_TIMELINE
+	bool "Synchronization framework debug"
+	default n
+	depends on SYNC
+	---help---
+          This option enables debugging for the synchronizations framework.
+
 config SW_SYNC
 	bool "Software synchronization objects"
 	default n
