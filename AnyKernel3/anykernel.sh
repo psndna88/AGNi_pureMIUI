@@ -10,16 +10,17 @@ do.modules=0
 do.cleanup=1
 do.cleanuponabort=0
 device.name1=kenzo
-device.name2=o
-device.name3=s
-device.name4=kate
+device.name2=kate
+device.name3=
+device.name4=
 device.name5=
 supported.versions=
 '; } # end properties
 
 # shell variables
-block=/dev/block/bootdevice/by-name/boot;
+block=/dev/block/platform/omap/omap_hsmmc.0/by-name/boot;
 is_slot_device=0;
+ramdisk_compression=auto;
 
 
 ## AnyKernel methods (DO NOT CHANGE)
@@ -30,6 +31,5 @@ is_slot_device=0;
 ## AnyKernel install
 dump_boot;
 write_boot;
-
 ## end install
 
