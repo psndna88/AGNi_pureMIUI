@@ -54,7 +54,7 @@
 #include <asm/ioctls.h>
 #include "internal.h"
 
-int compat_log = 1;
+int compat_log;
 
 int compat_printk(const char *fmt, ...)
 {
