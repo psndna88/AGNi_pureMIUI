@@ -14,6 +14,9 @@
 #include "wpa_helpers.h"
 
 
+extern char *sigma_cert_path;
+
+
 static enum sigma_cmd_result cmd_dev_send_frame(struct sigma_dut *dut,
 						struct sigma_conn *conn,
 						struct sigma_cmd *cmd)
@@ -71,7 +74,7 @@ static enum sigma_cmd_result sta_server_cert_trust(struct sigma_dut *dut,
 						   struct sigma_conn *conn,
 						   const char *val)
 {
-	char buf[100];
+	char buf[200];
 	struct wpa_ctrl *ctrl = NULL;
 	int e;
 	char resp[200];
@@ -83,6 +86,14 @@ static enum sigma_cmd_result sta_server_cert_trust(struct sigma_dut *dut,
 		sigma_dut_print(dut, DUT_MSG_INFO,
 				"Unknown ServerCertTrust value '%s'", val);
 		return INVALID_SEND_STATUS;
+	}
+
+	snprintf(buf, sizeof(buf), "%s/uosc-disabled", sigma_cert_path);
+	if (file_exists(buf)) {
+		strlcpy(resp,
+			"ServerCertTrustResult,OverrideNotAllowed,Reason,UOSC disabled on device",
+			sizeof(resp));
+		goto done;
 	}
 
 	if (!dut->server_cert_hash[0]) {
@@ -110,6 +121,16 @@ static enum sigma_cmd_result sta_server_cert_trust(struct sigma_dut *dut,
 			       "ca_cert", buf) < 0) {
 		strlcpy(resp,
 			"ServerCertTrustResult,OverrideNotAllowed,Reason,Could not configure server certificate hash for the network profile",
+			sizeof(resp));
+		goto done;
+	}
+
+	if (set_network(get_station_ifname(), dut->infra_network_id,
+			"domain_match", "NULL") < 0 ||
+	    set_network(get_station_ifname(), dut->infra_network_id,
+			"domain_suffix_match", "NULL") < 0) {
+		strlcpy(resp,
+			"ServerCertTrustResult,OverrideNotAllowed,Reason,Could not clear domain matching rules",
 			sizeof(resp));
 		goto done;
 	}
@@ -348,10 +369,11 @@ static int is_runtime_id_valid(struct sigma_dut *dut, const char *val)
 static int build_log_dir(struct sigma_dut *dut, char *dir, size_t dir_size)
 {
 	int res;
-	const char *vendor;
+	const char *vendor = dut->vendor_name;
 	int i;
 
-	vendor = dut->vendor_name ? dut->vendor_name : "Unknown";
+	if (!vendor)
+		return -1;
 
 	if (dut->log_file_dir) {
 		res = snprintf(dir, dir_size, "%s/%s", dut->log_file_dir,
@@ -403,6 +425,12 @@ static enum sigma_cmd_result cmd_dev_start_test(struct sigma_dut *dut,
 	val = get_param(cmd, "Runtime_ID");
 	if (!(val && is_runtime_id_valid(dut, val)))
 		return INVALID_SEND_STATUS;
+
+	if (!dut->vendor_name) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Log collection not supported without vendor name specified on the command line (-N)");
+		return SUCCESS_SEND_STATUS;
+	}
 
 	if (build_log_dir(dut, dir, sizeof(dir)) < 0)
 		return ERROR_SEND_STATUS;
@@ -597,6 +625,12 @@ static enum sigma_cmd_result cmd_dev_stop_test(struct sigma_dut *dut,
 	char dir[200];
 	int res;
 
+	if (!dut->vendor_name) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Log collection not supported without vendor name specified on the command line (-N)");
+		return SUCCESS_SEND_STATUS;
+	}
+
 	val = get_param(cmd, "Runtime_ID");
 	if (!val || strcmp(val, dut->dev_start_test_runtime_id) != 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR, "Invalid runtime id");
@@ -620,7 +654,7 @@ static enum sigma_cmd_result cmd_dev_stop_test(struct sigma_dut *dut,
 #endif /* ANDROID */
 
 	res = snprintf(out_file, sizeof(out_file), "%s_%s_%s.tar.gz",
-		       dut->vendor_name ? dut->vendor_name : "Unknown",
+		       dut->vendor_name,
 		       dut->model_name ? dut->model_name : "Unknown",
 		       dut->dev_start_test_runtime_id);
 	if (res < 0 || res >= sizeof(out_file))

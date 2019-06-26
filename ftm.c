@@ -684,3 +684,19 @@ int loc_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 	send_resp(dut, conn, SIGMA_COMPLETE, NULL);
 	return 0;
 }
+
+
+int lowi_cmd_sta_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
+				struct sigma_cmd *cmd)
+{
+#ifdef ANDROID_WIFI_HAL
+	if (wifi_hal_initialize(dut)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s - wifihal init failed for - LOC",
+				__func__);
+		return -1;
+	}
+#endif /* ANDROID_WIFI_HAL */
+
+	return 0;
+}

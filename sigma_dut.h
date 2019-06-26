@@ -41,6 +41,9 @@
 #include "qca-vendor_copy.h"
 #include "nl80211_copy.h"
 #endif /* NL80211_SUPPORT */
+#ifdef ANDROID_WIFI_HAL
+#include "wifi_hal.h"
+#endif /*ANDROID_WIFI_HAL*/
 
 
 #ifdef __GNUC__
@@ -70,6 +73,8 @@
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(x) (sizeof((x)) / (sizeof(((x)[0]))))
 #endif
+
+#define IPV6_ADDR_LEN 16
 
 struct sigma_dut;
 
@@ -815,6 +820,8 @@ struct sigma_dut {
 	int ndpe; /* Flag indicating NDPE is supported */
 	u16 trans_port; /* transport port number for TCP/UDP connection */
 	u8 trans_proto; /* transport protocol, 0x06: TCP, 0x11: UDP */
+	u8 nan_ipv6_addr[IPV6_ADDR_LEN]; /* NAN IPv6 address */
+	u8 nan_ipv6_len; /* NAN IPv6 address length */
 
 	/* Length of nan_pmk in octets */
 	u8 nan_pmk_len;
@@ -864,6 +871,11 @@ struct sigma_dut {
 
 	unsigned int wpa_log_size;
 	char dev_start_test_runtime_id[100];
+#ifdef ANDROID_WIFI_HAL
+	wifi_interface_handle wifi_hal_iface_handle;
+	wifi_handle wifi_hal_handle;
+	bool wifi_hal_initialized;
+#endif /*ANDROID_WIFI_HAL*/
 };
 
 
@@ -958,6 +970,9 @@ enum sigma_cmd_result cmd_wlantest_set_channel(struct sigma_dut *dut,
 					       struct sigma_cmd *cmd);
 void wlantest_register_cmds(void);
 void sniffer_close(struct sigma_dut *dut);
+
+/* sigma_dut.c */
+int wifi_hal_initialize(struct sigma_dut *dut);
 
 /* ap.c */
 void ap_register_cmds(void);
@@ -1071,6 +1086,8 @@ int loc_cmd_sta_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 int loc_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 				      struct sigma_conn *conn,
 				      struct sigma_cmd *cmd);
+int lowi_cmd_sta_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
+			       struct sigma_cmd *cmd);
 
 /* dpp.c */
 int dpp_dev_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
