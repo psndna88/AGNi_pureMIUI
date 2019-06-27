@@ -384,7 +384,8 @@ static int msm_pcm_playback_prepare(struct snd_pcm_substream *substream)
 			prtd->audio_client = NULL;
 			return -ENOMEM;
 		}
-	} else if (q6core_get_avs_version() == Q6_SUBSYS_AVS2_7) {
+	} else if (pdata->avs_ver &&
+			(q6core_get_avs_version() == Q6_SUBSYS_AVS2_7)) {
 		ret = q6asm_open_write_v3(prtd->audio_client,
 				FORMAT_LINEAR_PCM, bits_per_sample);
 		if (ret < 0) {
@@ -443,8 +444,9 @@ static int msm_pcm_playback_prepare(struct snd_pcm_substream *substream)
 				prtd->channel_map, bits_per_sample,
 				sample_word_size, ASM_LITTLE_ENDIAN,
 				DEFAULT_QF);
-		else if (q6core_get_avs_version() ==
-				Q6_SUBSYS_AVS2_7)
+		else if (pdata->avs_ver &&
+				(q6core_get_avs_version() ==
+					Q6_SUBSYS_AVS2_7))
 			ret = q6asm_media_format_block_multi_ch_pcm_v3(
 				prtd->audio_client, runtime->rate,
 				runtime->channels, !prtd->set_channel_map,
@@ -514,7 +516,8 @@ static int msm_pcm_capture_prepare(struct snd_pcm_substream *substream)
 		pr_debug("%s Opening %d-ch PCM read stream, perf_mode %d\n",
 				__func__, params_channels(params),
 				prtd->audio_client->perf_mode);
-		if (q6core_get_avs_version() == Q6_SUBSYS_AVS2_7)
+		if (pdata->avs_ver &&
+			(q6core_get_avs_version() == Q6_SUBSYS_AVS2_7))
 			ret = q6asm_open_read_v3(prtd->audio_client,
 					FORMAT_LINEAR_PCM,
 					bits_per_sample);
@@ -598,8 +601,9 @@ static int msm_pcm_capture_prepare(struct snd_pcm_substream *substream)
 					sample_word_size,
 					ASM_LITTLE_ENDIAN,
 					DEFAULT_QF);
-	else if (q6core_get_avs_version() ==
-				Q6_SUBSYS_AVS2_7)
+	else if (pdata->avs_ver &&
+			(q6core_get_avs_version() ==
+				Q6_SUBSYS_AVS2_7))
 		ret = q6asm_enc_cfg_blk_pcm_format_support_v3(
 					prtd->audio_client,
 					prtd->samp_rate,
@@ -1579,7 +1583,7 @@ static int msm_pcm_chmap_ctl_put(struct snd_kcontrol *kcontrol,
 	prtd = substream->runtime->private_data;
 	if (prtd) {
 		prtd->set_channel_map = true;
-			for (i = 0; i < PCM_FORMAT_MAX_NUM_CHANNEL; i++)
+			for (i = 0; i < PCM_FORMAT_MAX_NUM_CHANNEL_V2; i++)
 				prtd->channel_map[i] =
 				(char)(ucontrol->value.integer.value[i]);
 	}
@@ -1607,11 +1611,11 @@ static int msm_pcm_chmap_ctl_get(struct snd_kcontrol *kcontrol,
 	prtd = substream->runtime->private_data;
 
 	if (prtd && prtd->set_channel_map == true) {
-		for (i = 0; i < PCM_FORMAT_MAX_NUM_CHANNEL; i++)
+		for (i = 0; i < PCM_FORMAT_MAX_NUM_CHANNEL_V2; i++)
 			ucontrol->value.integer.value[i] =
 					(int)prtd->channel_map[i];
 	} else {
-		for (i = 0; i < PCM_FORMAT_MAX_NUM_CHANNEL; i++)
+		for (i = 0; i < PCM_FORMAT_MAX_NUM_CHANNEL_V2; i++)
 			ucontrol->value.integer.value[i] = 0;
 	}
 
@@ -1629,7 +1633,7 @@ static int msm_pcm_add_chmap_controls(struct snd_soc_pcm_runtime *rtd)
 	pr_debug("%s, Channel map cntrl add\n", __func__);
 	ret = snd_pcm_add_chmap_ctls(pcm, SNDRV_PCM_STREAM_PLAYBACK,
 				     snd_pcm_std_chmaps,
-				     PCM_FORMAT_MAX_NUM_CHANNEL, 0,
+				     PCM_FORMAT_MAX_NUM_CHANNEL_V2, 0,
 				     &chmap_info);
 	if (ret < 0) {
 		pr_err("%s, channel map cntrl add failed\n", __func__);
@@ -2494,7 +2498,7 @@ static int msm_pcm_channel_mixer_output_map_info(struct snd_kcontrol *kcontrol,
 				       struct snd_ctl_elem_info *uinfo)
 {
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
-	uinfo->count = 32;
+	uinfo->count = PCM_FORMAT_MAX_NUM_CHANNEL_V2;
 	uinfo->value.integer.min = 1;
 	uinfo->value.integer.max = 64;
 	return 0;
@@ -2596,7 +2600,7 @@ static int msm_pcm_channel_mixer_input_map_info(struct snd_kcontrol *kcontrol,
 				       struct snd_ctl_elem_info *uinfo)
 {
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
-	uinfo->count = 32;
+	uinfo->count = PCM_FORMAT_MAX_NUM_CHANNEL_V2;
 	uinfo->value.integer.min = 1;
 	uinfo->value.integer.max = 64;
 	return 0;
@@ -2811,7 +2815,7 @@ static int msm_pcm_channel_mixer_weight_info(struct snd_kcontrol *kcontrol,
 				       struct snd_ctl_elem_info *uinfo)
 {
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
-	uinfo->count = 32;
+	uinfo->count = PCM_FORMAT_MAX_NUM_CHANNEL_V2;
 	uinfo->value.integer.min = 0;
 	uinfo->value.integer.max = 0x4000;
 	return 0;
@@ -3076,6 +3080,14 @@ static int msm_pcm_probe(struct platform_device *pdev)
 	} else {
 		pdata->perf_mode = LEGACY_PCM_MODE;
 	}
+
+	if (of_property_read_bool(pdev->dev.of_node,
+				"qcom,avs-version"))
+		pdata->avs_ver = true;
+	else
+		pdata->avs_ver = false;
+
+	pr_debug("%s: avs_ver = %d\n", __func__, pdata->avs_ver);
 
 	dev_set_drvdata(&pdev->dev, pdata);
 

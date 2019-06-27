@@ -556,9 +556,8 @@ out_notify:
 		__cpu_notify(CPU_UP_CANCELED | mod, hcpu, nr_calls, NULL);
 out:
 	cpu_hotplug_done();
-	arch_smt_update();
 	trace_sched_cpu_hotplug(cpu, ret, 1);
-
+	arch_smt_update();
 	return ret;
 }
 
@@ -915,6 +914,11 @@ void init_cpu_online(const struct cpumask *src)
 	cpumask_copy(to_cpumask(cpu_online_bits), src);
 }
 
+void init_cpu_isolated(const struct cpumask *src)
+{
+	cpumask_copy(to_cpumask(cpu_isolated_bits), src);
+}
+
 enum cpu_mitigations cpu_mitigations = CPU_MITIGATIONS_AUTO;
 
 static int __init mitigations_parse_cmdline(char *arg)
@@ -927,11 +931,6 @@ static int __init mitigations_parse_cmdline(char *arg)
 	return 0;
 }
 early_param("mitigations", mitigations_parse_cmdline);
-
-void init_cpu_isolated(const struct cpumask *src)
-{
-	cpumask_copy(to_cpumask(cpu_isolated_bits), src);
-}
 
 static ATOMIC_NOTIFIER_HEAD(idle_notifier);
 
