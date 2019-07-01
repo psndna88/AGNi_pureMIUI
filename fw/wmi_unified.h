@@ -5872,19 +5872,26 @@ typedef enum {
 
     /* Parameter used to configure OBSS Packet Detect threshold
      * for Spatial Reuse feature.
-     * The accepted values are in between 62 and 95, inclusive.
+     * The accepted values are in between 0x00 and 0xFF, inclusive.
      * The parameter value is programmed into the spatial reuse register,
      * to specify how low the background signal strength from neighboring
      * BSS cells must be, for this AP to employ spatial reuse.
-     * The value of the parameter is multiplied by -1 to get the
-     * OBSS RSSI threshold, in dBm, below which spatial reuse will
-     * be allowed.
-     * For example, if the parameter value is 62, the target will
+     *
+     * The value of the parameter is compared against the OBSS RSSI in dB.
+     * It is a 8-bit value whose
+     * range is -128 to 127 (after two's complement operation).
+     * For example, if the parameter value is 0xF5, the target will
      * allow spatial reuse if the RSSI detected from other BSS
-     * is below -62 dBm.
-     * Similarly, if the parameter value is 80, the target will
+     * is below -10 dB.
+     * Similarly, if the parameter value is 0x0A, the target will
      * allow spatial reuse only if the RSSI detected from neighboring
-     * BSS cells is no more than -80 dBm.
+     * BSS cells is no more than 10 dB.
+     *
+     * bit    | purpose
+     * -------------
+     * 0 - 7  | Param Value
+     * 8 - 30 | reserved
+     * 31     | Enable/Disable. If set to 0, ignore bits 0-7.
      */
     WMI_PDEV_PARAM_SET_CMD_OBSS_PD_THRESHOLD,
 
@@ -6841,6 +6848,7 @@ typedef enum {
     WMI_CHAN_WIDTH_80P80 = 4,
     WMI_CHAN_WIDTH_5     = 5,
     WMI_CHAN_WIDTH_10    = 6,
+    WMI_CHAN_WIDTH_165   = 7,
 } wmi_channel_width;
 
 /*Clear stats*/
@@ -10048,6 +10056,12 @@ WMI_VDEV_PARAM_ROAM_FW_OFFLOAD WMI_VDEV_PARAM **/
 #define WMI_ROAM_FW_OFFLOAD_ENABLE_FLAG                          0x1
 /* Enable Roaming module in FW to do scan based on Final BMISS */
 #define WMI_ROAM_BMISS_FINAL_SCAN_ENABLE_FLAG                    0x2
+/**
+	 * To enable/desable EAPOL_4WAY_HANDSHAKE process while roaming. 
+	 * param value = 0 --> Enable EAPOL 4way handshake
+     * param value = 1 --> Skip EAPOL 4way handshake  
+	 */
+#define WMI_VDEV_PARAM_SKIP_ROAM_EAPOL_4WAY_HANDSHAKE           0x4
 
 /** slot time long */
 #define WMI_VDEV_SLOT_TIME_LONG                                  0x1
@@ -10118,6 +10132,8 @@ typedef struct {
 #define WMI_VDEV_START_RESPONSE_INVALID_VDEVID  0x1  /** requested VDEV not found */
 #define WMI_VDEV_START_RESPONSE_NOT_SUPPORTED  0x2  /** unsupported VDEV combination */
 #define WMI_VDEV_START_RESPONSE_DFS_VIOLATION  0x3  /** DFS_VIOLATION since channel in the NOL is selected */
+#define WMI_VDEV_START_RESPONSE_INVALID_REGDOMAIN 0x4 /** Invalid regulatory domain in VDEV start */
+#define WMI_VDEV_START_RESPONSE_INVALID_BAND   0x5    /** Band unsupported by current hw mode in VDEV start */
 
 /** Beacon processing related command and event structures */
 typedef struct {
@@ -12726,6 +12742,10 @@ typedef struct {
      *  Refer to WMI_ROAM_NOTIF_ defs to interpret the notif_params value.
      */
     A_UINT32 notif_params;
+    /** roam notification param1
+     *  Refer to WMI_ROAM_NOTIF_ defs to interpret the notif_params1 value.
+     */
+    A_UINT32 notif_params1;
 } wmi_roam_event_fixed_param;
 
 
@@ -12798,8 +12818,8 @@ typedef enum
 #define WMI_ROAM_NOTIF_DISCONNECT        0x6 /** indicate that roaming not allowed due BTM req */
 #define WMI_ROAM_NOTIF_SUBNET_CHANGED    0x7 /** indicate that subnet has changed */
 #define WMI_ROAM_NOTIF_SCAN_START        0x8 /** indicate roam scan start, notif_params to be sent as WMI_ROAM_TRIGGER_REASON_ID */
-#define WMI_ROAM_NOTIF_DEAUTH_RECV       0x9 /** indicate deauth received, notif_params to be sent as reason code */
-#define WMI_ROAM_NOTIF_DISASSOC_RECV     0xa /** indicate disassoc received, notif_params to be sent as reason code */
+#define WMI_ROAM_NOTIF_DEAUTH_RECV       0x9 /** indicate deauth received, notif_params to be sent as reason code, notif_params1 to be sent as frame length */
+#define WMI_ROAM_NOTIF_DISASSOC_RECV     0xa /** indicate disassoc received, notif_params to be sent as reason code, notif_params1 to be sent as frame length */
 
 /**whenever RIC request information change, host driver should pass all ric related information to firmware (now only support tsepc)
 * Once, 11r roaming happens, firmware can generate RIC request in reassoc request based on these informations
@@ -13474,6 +13494,7 @@ typedef enum wake_reason_e {
     WOW_REASON_WLAN_BL, /* baselining done */
     WOW_REASON_NTH_BCN_OFLD, /* nth beacon forward to host */
     WOW_REASON_PKT_CAPTURE_MODE_WAKE,
+    WOW_REASON_PAGE_FAULT, /* Host wake up due to page fault */
 
     /* add new WOW_REASON_ defs before this line */
     WOW_REASON_MAX,
@@ -22677,6 +22698,10 @@ typedef enum wmi_coex_config_type {
      * config msw mute duration (ms units) after MPTA interrupt fired
      */
     WMI_COEX_CONFIG_MPTA_HELPER_WLAN_MUTE_DURATION   = 41,
+    /* WMI_COEX_CONFIG_BT_SCO_ALLOW_WLAN_2G_SCAN
+     * allow WLAN scan on 2.4G channel when BT SCO connectivity is alive
+     */
+    WMI_COEX_CONFIG_BT_SCO_ALLOW_WLAN_2G_SCAN   = 42,
 } WMI_COEX_CONFIG_TYPE;
 
 typedef struct {
@@ -24927,15 +24952,7 @@ typedef struct {
      * [7:0]  : channel metric -  0 = unusable, 1 = worst, 100 = best
      * [11:8] : channel BW - This bit-field uses values compatible with
      *          enum definitions used internally within the target's
-     *          halphy code.  These values are specified below.
-     *              BW_20MHZ    = 0,
-     *              BW_40MHZ    = 1,
-     *              BW_80MHZ    = 2,
-     *              BW_160MHZ   = 3,
-     *              BW_80P80MHZ = 4,
-     *              BW_5MHZ     = 5,
-     *              BW_10MHZ    = 6,
-     *              BW_165MHZ   = 7,
+     *          halphy code.  This bit field uses wmi_channel_width.
      * [15:12]: Reserved
      * [31:16]: Frequency - Center frequency of the channel for which
      *          the RF characterisation info applies (MHz)
