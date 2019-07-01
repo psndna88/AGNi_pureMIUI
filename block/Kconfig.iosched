@@ -43,6 +43,10 @@ config IOSCHED_CFQ
 
 	  This is the default I/O scheduler.
 
+config IOSCHED_DEPRESSION
+	tristate "DEPRESSION I/O scheduler"
+	default y
+
 config CFQ_GROUP_IOSCHED
 	bool "CFQ Group Scheduling support"
 	depends on IOSCHED_CFQ && BLK_CGROUP
@@ -66,11 +70,15 @@ choice
 	config DEFAULT_NOOP
 		bool "No-op"
 
+	config DEFAULT_DEPRESSION
+		bool "Depression" if IOSCHED_DEPRESSION=y
+
 endchoice
 
 config DEFAULT_IOSCHED
 	string
 	default "deadline" if DEFAULT_DEADLINE
+	default "depression" if DEFAULT_DEPRESSION
 	default "cfq" if DEFAULT_CFQ
 	default "noop" if DEFAULT_NOOP
 
