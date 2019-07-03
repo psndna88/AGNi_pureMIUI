@@ -6679,9 +6679,22 @@ enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 	if ((drv == DRIVER_MAC80211 || drv == DRIVER_QNXNTO ||
 	     drv == DRIVER_LINUX_WCN) &&
 	    dut->ap_mode == AP_11ac) {
+		int ht40plus = 0, ht40minus = 0;
+
 		fprintf(f, "ieee80211ac=1\n"
-			"ieee80211n=1\n"
-			"ht_capab=[HT40+]\n");
+			"ieee80211n=1\n");
+
+		/* configure ht_capab based on channel width */
+		if (dut->ap_chwidth != AP_20) {
+			if (is_ht40plus_chan(dut->ap_channel))
+				ht40plus = 1;
+			else if (is_ht40minus_chan(dut->ap_channel))
+				ht40minus = 1;
+
+			fprintf(f, "ht_capab=%s%s\n",
+				ht40plus ? "[HT40+]" : "",
+				ht40minus ? "[HT40-]" : "");
+		}
 	}
 
 	if ((drv == DRIVER_MAC80211 || drv == DRIVER_QNXNTO ||
