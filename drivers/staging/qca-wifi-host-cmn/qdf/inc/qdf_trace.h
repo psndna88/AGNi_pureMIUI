@@ -1185,11 +1185,11 @@ struct category_name_info {
  * Return: nothing
  *
  */
-void qdf_trace_msg_cmn(unsigned int idx,
+static inline void qdf_trace_msg_cmn(unsigned int idx,
 			QDF_MODULE_ID category,
 			QDF_TRACE_LEVEL verbose,
 			const char *str_format,
-			va_list val);
+			va_list val) {}
 
 /**
  * struct qdf_print_ctrl: QDF Print Control structure
@@ -1301,8 +1301,10 @@ QDF_STATUS qdf_print_set_category_verbose(unsigned int idx,
  *
  * Return : Verbose enabled(true) or disabled(false) or invalid input (false)
  */
-bool qdf_print_is_category_enabled(unsigned int idx,
-				   QDF_MODULE_ID category);
+static inline bool qdf_print_is_category_enabled(unsigned int idx,
+				   QDF_MODULE_ID category) {
+	return false;
+}
 
 /**
  * qdf_print_is_verbose_enabled() - Get verbose information of a category for
@@ -1314,9 +1316,11 @@ bool qdf_print_is_category_enabled(unsigned int idx,
  *
  * Return : Verbose enabled(true) or disabled(false) or invalid input (false)
  */
-bool qdf_print_is_verbose_enabled(unsigned int idx,
+static inline bool qdf_print_is_verbose_enabled(unsigned int idx,
 				  QDF_MODULE_ID category,
-				  QDF_TRACE_LEVEL verbose);
+				  QDF_TRACE_LEVEL verbose) {
+	return false;
+}
 
 /**
  * qdf_print_clean_node_flag() - Clean up node flag for print control object
