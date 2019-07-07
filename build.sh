@@ -66,6 +66,7 @@ rm -rf arch/arm64/boot/Image
 rm -rf arch/arm64/boot/dts/qcom/kenzo-msm8956-mtp.dtb
 rm -rf arch/arm64/boot/Image.gz
 rm -rf arch/arm64/boot/Image.gz-dtb
+make clean && make mrproper
 
 # Build complete
 BUILD_END=$(date +"%s")
