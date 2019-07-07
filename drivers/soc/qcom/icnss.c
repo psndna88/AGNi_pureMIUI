@@ -3876,6 +3876,7 @@ out:
 	return ret;
 }
 
+#ifdef CONFIG_ICNSS_DEBUG
 static int icnss_fw_debug_show(struct seq_file *s, void *data)
 {
 	struct icnss_priv *priv = s->private;
@@ -4538,7 +4539,6 @@ static const struct file_operations icnss_regread_fops = {
 	.llseek         = seq_lseek,
 };
 
-#ifdef CONFIG_ICNSS_DEBUG
 static int icnss_debugfs_create(struct icnss_priv *priv)
 {
 	int ret = 0;
@@ -4567,32 +4567,21 @@ static int icnss_debugfs_create(struct icnss_priv *priv)
 out:
 	return ret;
 }
-#else
-static int icnss_debugfs_create(struct icnss_priv *priv)
-{
-	int ret = 0;
-	struct dentry *root_dentry;
-
-	root_dentry = debugfs_create_dir("icnss", NULL);
-
-	if (IS_ERR(root_dentry)) {
-		ret = PTR_ERR(root_dentry);
-		icnss_pr_err("Unable to create debugfs %d\n", ret);
-		return ret;
-	}
-
-	priv->root_dentry = root_dentry;
-
-	debugfs_create_file("stats", 0600, root_dentry, priv,
-			    &icnss_stats_fops);
-	return 0;
-}
-#endif
 
 static void icnss_debugfs_destroy(struct icnss_priv *priv)
 {
-	debugfs_remove_recursive(priv->root_dentry);
+        debugfs_remove_recursive(priv->root_dentry);
 }
+
+#else
+static int inline icnss_debugfs_create(struct icnss_priv *priv)
+{
+	return 0;
+}
+static void inline icnss_debugfs_destroy(struct icnss_priv *priv)
+{
+}
+#endif
 
 static int icnss_get_vbatt_info(struct icnss_priv *priv)
 {
