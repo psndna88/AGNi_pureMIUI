@@ -376,6 +376,10 @@ int qcom_pdc_init(struct device_node *node,
 	if (pin_count % IRQS_PER_REG)
 		max_enable_regs++;
 
+	if (pdc_domain->flags & IRQ_DOMAIN_NAME_ALLOCATED) {
+		pdc_domain->flags &= ~IRQ_DOMAIN_NAME_ALLOCATED;
+		kfree(pdc_domain->name);
+	}
 	return 0;
 
 failure:
