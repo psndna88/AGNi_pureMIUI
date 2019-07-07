@@ -4958,15 +4958,12 @@ static int icnss_pm_suspend_noirq(struct device *dev)
 	    !test_bit(ICNSS_DRIVER_PROBED, &priv->state))
 		goto out;
 
-	ret = priv->ops->suspend_noirq(dev);
+	priv->ops->suspend_noirq(dev);
 
 out:
-	if (ret == 0) {
-		priv->stats.pm_suspend_noirq++;
-		set_bit(ICNSS_PM_SUSPEND_NOIRQ, &priv->state);
-	} else {
-		priv->stats.pm_suspend_noirq_err++;
-	}
+	priv->stats.pm_suspend_noirq++;
+	set_bit(ICNSS_PM_SUSPEND_NOIRQ, &priv->state);
+
 	return ret;
 }
 
@@ -4987,15 +4984,12 @@ static int icnss_pm_resume_noirq(struct device *dev)
 	    !test_bit(ICNSS_DRIVER_PROBED, &priv->state))
 		goto out;
 
-	ret = priv->ops->resume_noirq(dev);
+	priv->ops->resume_noirq(dev);
 
 out:
-	if (ret == 0) {
-		priv->stats.pm_resume_noirq++;
-		clear_bit(ICNSS_PM_SUSPEND_NOIRQ, &priv->state);
-	} else {
-		priv->stats.pm_resume_noirq_err++;
-	}
+	priv->stats.pm_resume_noirq++;
+	clear_bit(ICNSS_PM_SUSPEND_NOIRQ, &priv->state);
+
 	return ret;
 }
 #endif
