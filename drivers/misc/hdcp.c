@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -2338,6 +2338,7 @@ bool hdcp1_check_if_supported_load_app(void)
 		if (rc) {
 			pr_err("hdcp1 qseecom_start_app failed %d\n", rc);
 			hdcp1_supported = false;
+			hdcp1_srm_supported = false;
 			kfree(hdcp1_handle);
 		}
 	}
