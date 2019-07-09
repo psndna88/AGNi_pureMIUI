@@ -2332,6 +2332,7 @@ bool hdcp1_check_if_supported_load_app(void)
 
 	/* start hdcp1 app */
 	if (hdcp1_supported && !hdcp1_handle->qsee_handle) {
+		mutex_init(&hdcp1_ta_cmd_lock);
 		rc = qseecom_start_app(&hdcp1_handle->qsee_handle,
 				HDCP1_APP_NAME,
 				QSEECOM_SBUFF_SIZE);
@@ -2345,7 +2346,6 @@ bool hdcp1_check_if_supported_load_app(void)
 
 	/* if hdcp1 app succeeds load SRM TA as well */
 	if (hdcp1_supported && !hdcp1_handle->srm_handle) {
-		mutex_init(&hdcp1_ta_cmd_lock);
 		rc = qseecom_start_app(&hdcp1_handle->srm_handle,
 				SRMAPP_NAME,
 				QSEECOM_SBUFF_SIZE);
@@ -2577,8 +2577,10 @@ int hdcp1_set_enc(bool enable)
 
 	hdcp1_qsee_handle = hdcp1_handle->qsee_handle;
 
-	if (!hdcp1_qsee_handle)
-		return -EINVAL;
+	if (!hdcp1_qsee_handle) {
+		rc = -EINVAL;
+		goto end;
+	}
 
 	if (hdcp1_enc_enabled == enable) {
 		pr_info("already %s\n", enable ? "enabled" : "disabled");
