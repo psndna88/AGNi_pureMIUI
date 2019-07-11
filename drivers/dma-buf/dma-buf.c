@@ -34,6 +34,13 @@
 #include <linux/poll.h>
 #include <linux/reservation.h>
 
+static struct kmem_cache *kmem_attach_pool;
+
+void __init init_dma_buf_kmem_pool(void)
+{
+	kmem_attach_pool = KMEM_CACHE(dma_buf_attachment, SLAB_HWCACHE_ALIGN | SLAB_PANIC);
+}
+
 static inline int is_dma_buf_file(struct file *);
 
 struct dma_buf_list {
@@ -433,7 +440,7 @@ struct dma_buf_attachment *dma_buf_attach(struct dma_buf *dmabuf,
 	if (WARN_ON(!dmabuf || !dev))
 		return ERR_PTR(-EINVAL);
 
-	attach = kzalloc(sizeof(struct dma_buf_attachment), GFP_KERNEL);
+	attach = kmem_cache_zalloc(kmem_attach_pool, GFP_KERNEL);
 	if (attach == NULL)
 		return ERR_PTR(-ENOMEM);
 
@@ -453,7 +460,7 @@ struct dma_buf_attachment *dma_buf_attach(struct dma_buf *dmabuf,
 	return attach;
 
 err_attach:
-	kfree(attach);
+	kmem_cache_free(kmem_attach_pool, attach);
 	mutex_unlock(&dmabuf->lock);
 	return ERR_PTR(ret);
 }
@@ -477,7 +484,7 @@ void dma_buf_detach(struct dma_buf *dmabuf, struct dma_buf_attachment *attach)
 		dmabuf->ops->detach(dmabuf, attach);
 
 	mutex_unlock(&dmabuf->lock);
-	kfree(attach);
+	kmem_cache_free(kmem_attach_pool, attach);
 }
 EXPORT_SYMBOL_GPL(dma_buf_detach);
 
