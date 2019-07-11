@@ -120,6 +120,8 @@ struct read_work {
 	struct work_struct work;
 };
 
+static struct kmem_cache *kmem_read_work_pool;
+
 static void glink_xprt_read_data(struct work_struct *work);
 static void glink_xprt_open_event(struct work_struct *work);
 static void glink_xprt_close_event(struct work_struct *work);
@@ -380,7 +382,7 @@ static void glink_xprt_read_data(struct work_struct *work)
 	release_pkt(pkt);
 out_read_data:
 	glink_rx_done(glink_xprtp->ch_hndl, rx_work->iovec, reuse_intent);
-	kfree(rx_work);
+	kmem_cache_free(kmem_read_work_pool, rx_work);
 	up_read(&glink_xprtp->ss_reset_rwlock);
 	__pm_relax(&glink_xprtp->notify_rxv_ws);
 }
@@ -485,7 +487,7 @@ static void glink_xprt_notify_rxv(void *handle, const void *priv,
 		(struct ipc_router_glink_xprt *)priv;
 	struct read_work *rx_work;
 
-	rx_work = kmalloc(sizeof(*rx_work), GFP_ATOMIC);
+	rx_work = kmem_cache_alloc(kmem_read_work_pool, GFP_ATOMIC);
 	if (!rx_work) {
 		IPC_RTR_ERR("%s: couldn't allocate read_work\n", __func__);
 		glink_rx_done(glink_xprtp->ch_hndl, ptr, true);
@@ -911,6 +913,8 @@ static struct platform_driver ipc_router_glink_xprt_driver = {
 static int __init ipc_router_glink_xprt_init(void)
 {
 	int rc;
+
+	kmem_read_work_pool = KMEM_CACHE(read_work, SLAB_HWCACHE_ALIGN | SLAB_PANIC);
 
 	glink_xprt_wq = create_singlethread_workqueue("glink_xprt_wq");
 	if (IS_ERR_OR_NULL(glink_xprt_wq)) {
