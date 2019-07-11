@@ -198,7 +198,7 @@ int msm_comm_vote_bus(struct msm_vidc_core *core)
 	int rc = 0, vote_data_count = 0, i = 0;
 	struct hfi_device *hdev;
 	struct msm_vidc_inst *inst = NULL;
-	struct vidc_bus_vote_data *vote_data = NULL;
+	struct vidc_bus_vote_data vote_data[MAX_SUPPORTED_INSTANCES] __aligned(8);
 	bool is_turbo = false;
 
 	if (!core || !core->device) {
@@ -207,19 +207,7 @@ int msm_comm_vote_bus(struct msm_vidc_core *core)
 	}
 	hdev = core->device;
 
-	vote_data = kzalloc(sizeof(struct vidc_bus_vote_data) *
-			MAX_SUPPORTED_INSTANCES, GFP_ATOMIC);
-	if (!vote_data) {
-		dprintk(VIDC_DBG,
-			"vote_data allocation with GFP_ATOMIC failed\n");
-		vote_data = kzalloc(sizeof(struct vidc_bus_vote_data) *
-			MAX_SUPPORTED_INSTANCES, GFP_KERNEL);
-		if (!vote_data) {
-			dprintk(VIDC_DBG,
-				"vote_data allocation failed\n");
-			return -EINVAL;
-		}
-	}
+	memset(vote_data, 0, sizeof(struct vidc_bus_vote_data));
 
 	mutex_lock(&core->lock);
 	list_for_each_entry(inst, &core->instances, list) {
@@ -350,7 +338,6 @@ int msm_comm_vote_bus(struct msm_vidc_core *core)
 		rc = call_hfi_op(hdev, vote_bus, hdev->hfi_device_data,
 			vote_data, vote_data_count);
 
-	kfree(vote_data);
 	return rc;
 }
 
