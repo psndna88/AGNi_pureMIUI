@@ -90,6 +90,8 @@
 
 static DEFINE_MUTEX(msm_release_lock);
 
+static struct kmem_cache *kmem_vblank_work_pool;
+
 static void msm_fb_output_poll_changed(struct drm_device *dev)
 {
 	struct msm_drm_private *priv = NULL;
@@ -367,7 +369,7 @@ static void vblank_ctrl_worker(struct kthread_work *work)
 	else
 		kms->funcs->disable_vblank(kms, priv->crtcs[cur_work->crtc_id]);
 
-	kfree(cur_work);
+	kmem_cache_free(kmem_vblank_work_pool, cur_work);
 }
 
 static int vblank_ctrl_queue_work(struct msm_drm_private *priv,
@@ -379,7 +381,7 @@ static int vblank_ctrl_queue_work(struct msm_drm_private *priv,
 	if (!priv || crtc_id >= priv->num_crtcs)
 		return -EINVAL;
 
-	cur_work = kzalloc(sizeof(*cur_work), GFP_ATOMIC);
+	cur_work = kmem_cache_zalloc(kmem_vblank_work_pool, GFP_ATOMIC);
 	if (!cur_work)
 		return -ENOMEM;
 
@@ -2392,6 +2394,7 @@ static int __init msm_drm_register(void)
 		return -EINVAL;
 
 	DBG("init");
+	kmem_vblank_work_pool = KMEM_CACHE(vblank_work, SLAB_HWCACHE_ALIGN | SLAB_PANIC);
 	sde_rsc_rpmh_register();
 	sde_rsc_register();
 	dsi_display_register();
