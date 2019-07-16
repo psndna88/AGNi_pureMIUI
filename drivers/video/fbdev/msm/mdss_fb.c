@@ -1,7 +1,7 @@
 /*
  * Core MDSS framebuffer driver.
  *
- * Copyright (c) 2008-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2008-2019, 2020, The Linux Foundation. All rights reserved.
  * Copyright (C) 2007 Google Incorporated
  *
  * This software is licensed under the terms of the GNU General Public
@@ -3518,7 +3518,7 @@ static int mdss_fb_pan_display(struct fb_var_screeninfo *var,
 	 * 2. When the splash handoff is pending.
 	 */
 	if ((mfd->switch_state != MDSS_MDP_NO_UPDATE_REQUESTED) ||
-			mdata->handoff_pending) {
+		(mdss_fb_is_hdmi_primary(mfd) && mdata->handoff_pending)) {
 		pr_debug("fb%d: pan_display skipped during switch or handoff\n",
 				mfd->index);
 		return 0;
