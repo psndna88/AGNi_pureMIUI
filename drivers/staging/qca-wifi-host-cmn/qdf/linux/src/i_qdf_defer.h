@@ -144,7 +144,7 @@ static inline QDF_STATUS __qdf_sched_work(__qdf_work_t *work)
 static inline QDF_STATUS
 __qdf_sched_delayed_work(__qdf_delayed_work_t *work, uint32_t delay)
 {
-	schedule_delayed_work(&work->dwork, msecs_to_jiffies(delay));
+	queue_delayed_work(system_power_efficient_wq, &work->dwork, msecs_to_jiffies(delay));
 	return QDF_STATUS_SUCCESS;
 }
 
