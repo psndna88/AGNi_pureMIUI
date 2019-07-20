@@ -74,9 +74,3 @@
 		/delete-node/ qcom,msm_fastrpc_compute_cb13;
 	};
 };
-
-/* GPU overrides */
-&msm_gpu {
-		/* Update GPU chip ID*/
-		qcom,chipid = <0x05000900>;
-};
