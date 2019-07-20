@@ -373,6 +373,8 @@ static void adreno_pwr_on_work(struct work_struct *work)
 
 	mutex_lock(&device->mutex);
 	kgsl_pwrctrl_change_state(device, KGSL_STATE_ACTIVE);
+
+
 	mutex_unlock(&device->mutex);
 }
 
@@ -1020,9 +1022,6 @@ static int adreno_of_get_power(struct adreno_device *adreno_dev,
 
 	device->pwrctrl.bus_control = of_property_read_bool(node,
 		"qcom,bus-control");
-
-	device->pwrctrl.input_disable = of_property_read_bool(node,
-		"qcom,disable-wake-on-touch");
 
 	return 0;
 }
