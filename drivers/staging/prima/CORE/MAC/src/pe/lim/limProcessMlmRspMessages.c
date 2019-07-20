@@ -957,7 +957,7 @@ limProcessMlmReassocCnf(tpAniSirGlobal pMac, tANI_U32 *pMsgBuf)
      */
     if (pMac->ft.ftPEContext.pFTPreAuthReq)
     {
-        limLog(pMac, LOG1, "%s: Freeing pFTPreAuthReq= %pK", __func__,
+        limLog(pMac, LOG1, "%s: Freeing pFTPreAuthReq= %p", __func__,
                pMac->ft.ftPEContext.pFTPreAuthReq);
         if (pMac->ft.ftPEContext.pFTPreAuthReq->pbssDescription)
         {
@@ -4827,7 +4827,7 @@ limHandleDelBssInReAssocContext(tpAniSirGlobal pMac, tpDphHashNode pStaDs,tpPESe
               pBeaconStruct);
             if(pMac->lim.gLimProtectionControl != WNI_CFG_FORCE_POLICY_PROTECTION_DISABLE)
                 limDecideStaProtectionOnAssoc(pMac, pBeaconStruct, psessionEntry);
-            if(pBeaconStruct->erpPresent) {
+                if(pBeaconStruct->erpPresent) {
                 if (pBeaconStruct->erpIEInfo.barkerPreambleMode)
                     psessionEntry->beaconParams.fShortPreamble = 0;
                 else

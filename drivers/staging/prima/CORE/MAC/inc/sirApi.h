@@ -41,18 +41,10 @@
 #ifndef __SIR_API_H
 #define __SIR_API_H
 
-/* Take care to avoid redefinition of this type, if it is */
-/* already defined in "halWmmApi.h" */
-#if !defined(_HALMAC_WMM_API_H)
-typedef struct sAniSirGlobal *tpAniSirGlobal;
-#endif
-
-
 #include "sirTypes.h"
 #include "sirMacProtDef.h"
 #include "aniSystemDefs.h"
 #include "sirParams.h"
-#include <dot11f.h>
 
 #if defined(FEATURE_WLAN_ESE) && !defined(FEATURE_WLAN_ESE_UPLOAD)
 #include "eseGlobal.h"
@@ -151,6 +143,7 @@ typedef tANI_U8 tSirVersionString[SIR_VERSION_STRING_LEN];
 #define WLAN_EXTSCAN_MAX_BUCKETS                  16
 #define WLAN_EXTSCAN_MAX_HOTLIST_APS              128
 #define WLAN_EXTSCAN_MAX_RSSI_SAMPLE_SIZE     8
+#define WLAN_EXTSCAN_MAX_HOTLIST_SSIDS            8
 #endif /* WLAN_FEATURE_EXTSCAN */
 
 #define WLAN_DISA_MAX_PAYLOAD_SIZE                1600
@@ -1156,12 +1149,6 @@ typedef struct sSirSmeJoinRsp
 
     /*to report MAX link-speed populate rate-flags from ASSOC RSP frame*/
     tANI_U32           maxRateFlags;
-
-    tDot11fIEHTCaps ht_caps;
-    tDot11fIEVHTCaps vht_caps;
-    tDot11fIEHTInfo ht_operation;
-    tDot11fIEVHTOperation vht_operation;
-    tDot11fIEhs20vendor_ie hs20vendor_ie;
 
     tANI_U8         frames[ 1 ];
 } tSirSmeJoinRsp, *tpSirSmeJoinRsp;
@@ -5643,6 +5630,22 @@ typedef PACKED_PRE struct PACKED_POST
     tANI_U8 result[1];
 } tSirWifiScanResultEvent, *tpSirWifiScanResultEvent;
 
+/* WLAN_HAL_SSID_HOTLIST_RESULT_IND */
+
+typedef PACKED_PRE struct PACKED_POST
+{
+    tANI_U32             requestId;
+    tANI_BOOLEAN         ssid_found;
+    tANI_U32             numHotlistSsid;     // numbers of SSIDs
+
+    /*
+     * 0 for last fragment
+     * 1 still more fragment(s) coming
+     */
+    tANI_BOOLEAN         moreData;
+    tSirWifiScanResult   ssidHotlist[1];
+} tSirEXTScanSsidHotlistMatch, *tpSirEXTScanSsidHotlistMatch;
+
 typedef PACKED_PRE struct PACKED_POST
 {
     tANI_U8       elemId;       // Element Identifier
@@ -5771,6 +5774,49 @@ typedef PACKED_PRE struct PACKED_POST
     tANI_U32      requestId;
     tANI_U32      status;
 } tSirEXTScanResetBssidHotlistRspParams, *tpSirEXTScanResetBssidHotlistRspParams;
+
+typedef struct
+{
+    tANI_U32      requestId;
+    tANI_U8       sessionId;
+} tSirEXTScanResetSsidHotlistReqParams, *tpSirEXTScanResetSsidHotlistReqParams;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+    tANI_U32      requestId;
+    tANI_U32      status;
+} tSirEXTScanResetSsidHotlistRspParams, *tpSirEXTScanResetSsidHotlistRspParams;
+
+
+/**
+ * struct sir_ssid_hotlist_param - param for SSID Hotlist
+ * @ssid: SSID which is being hotlisted
+ * @band: Band in which the given SSID should be scanned
+ * @rssi_low: Low bound on RSSI
+ * @rssi_high: High bound on RSSI
+ */
+typedef struct
+{
+    tSirMacSSid ssid;
+    tANI_U8 band;
+    tANI_S32 rssi_low;
+    tANI_S32 rssi_high;
+}tSirSsidThresholdParam, *tpSirSsidThresholdParam;
+
+typedef struct
+{
+    tANI_U32 request_id;
+    tANI_U8 session_id;
+    tANI_U32 lost_ssid_sample_size;
+    tANI_U32 ssid_count;
+    tSirSsidThresholdParam ssid[WLAN_EXTSCAN_MAX_HOTLIST_SSIDS];
+}tSirEXTScanSetSsidHotListReqParams, *tpSirEXTScanSetSsidHotListReqParams;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+    tANI_U32      requestId;
+    tANI_U32      status;
+} tSirEXTScanSetSsidHotListRspParams, *tpSirEXTScanSetSsidHotListRspParams;
 
 /*---------------------------------------------------------------------------
  *  * WLAN_HAL_EXTSCAN_RESULT_AVAILABLE_IND

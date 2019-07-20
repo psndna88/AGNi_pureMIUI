@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014, 2016-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2014, 2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -149,8 +149,6 @@ typedef struct sSirProbeRespBeacon
     tDot11fIEWiderBWChanSwitchAnn WiderBWChanSwitchAnn;
 #endif
     tDot11fIEOBSSScanParameters OBSSScanParameters;
-    tDot11fIEhs20vendor_ie  hs20vendor_ie;
-
 } tSirProbeRespBeacon, *tpSirProbeRespBeacon;
 
 // probe Request structure
@@ -222,7 +220,6 @@ typedef struct sSirAssocReq
     tDot11fIEVHTCaps          VHTCaps;
     tDot11fIEOperatingMode    operMode;
 #endif
-    tDot11fIEhs20vendor_ie hs20vendor_ie;
 } tSirAssocReq, *tpSirAssocReq;
 
 
@@ -963,6 +960,7 @@ void PopulateDot11fAssocRspRates ( tpAniSirGlobal pMac, tDot11fIESuppRates *pSup
 int FindIELocation( tpAniSirGlobal pMac,
                            tpSirRSNie pRsnIe,
                            tANI_U8 EID);
+#endif
 
 #ifdef WLAN_FEATURE_11AC
 tSirRetStatus
@@ -997,15 +995,3 @@ tSirRetStatus ValidateAndRectifyIEs(tpAniSirGlobal pMac,
                                     tANI_U8 *pMgmtFrame,
                                     tANI_U32 nFrameBytes,
                                     tANI_U32 *nMissingRsnBytes);
-/**
- * sir_copy_hs20_ie() - Update HS 2.0 Information Element.
- * @dest: dest HS IE buffer to be updated
- * @src: src HS IE buffer
- *
- * Update HS2.0 IE info from src to dest
- *
- * Return: void
- */
-void sir_copy_hs20_ie(tDot11fIEhs20vendor_ie *dest,
-                      tDot11fIEhs20vendor_ie *src);
-#endif /* __PARSE_H__ */

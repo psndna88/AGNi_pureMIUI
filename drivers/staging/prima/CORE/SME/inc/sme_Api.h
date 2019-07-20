@@ -293,6 +293,27 @@ eHalStatus sme_SetBssHotlist (tHalHandle hHal,
 eHalStatus sme_ResetBssHotlist (tHalHandle hHal,
                               tSirEXTScanResetBssidHotlistReqParams *pResetReq);
 
+/**
+ * sme_set_ssid_hotlist() - Set the SSID hotlist
+ * @hal: SME handle
+ * @request: set ssid hotlist request
+ *
+ * Return: eHalStatus
+ */
+eHalStatus sme_set_ssid_hotlist(tHalHandle hal,
+             tSirEXTScanSetSsidHotListReqParams *request);
+
+/* ---------------------------------------------------------------------------
+    \fn sme_ResetBssHotlist
+    \brief  SME API to reset BSSID hotlist
+    \param  hHal
+    \param  pSetHotListReq: Extented Scan set hotlist structure
+    \- return eHalStatus
+    -------------------------------------------------------------------------*/
+eHalStatus sme_reset_ssid_hotlist (tHalHandle hHal,
+                              tSirEXTScanResetSsidHotlistReqParams *pResetReq);
+
+
 /* ---------------------------------------------------------------------------
     \fn sme_getCachedResults
     \brief  SME API to get cached results

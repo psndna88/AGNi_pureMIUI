@@ -274,7 +274,7 @@ limSuspendLink(tpAniSirGlobal pMac, tSirLinkTrafficCheck trafficCheck,  SUSPEND_
    if( pMac->lim.gpLimSuspendCallback ||
        pMac->lim.gLimSystemInScanLearnMode )
    {
-      limLog( pMac, LOGE, FL("Something is wrong, SuspendLinkCbk:%pK "
+      limLog( pMac, LOGE, FL("Something is wrong, SuspendLinkCbk:%p "
               "IsSystemInScanLearnMode:%d"), pMac->lim.gpLimSuspendCallback,
                pMac->lim.gLimSystemInScanLearnMode );
       callback( pMac, eHAL_STATUS_FAILURE, data ); 
@@ -3875,12 +3875,12 @@ tLimMlmRemoveKeyCnf  mlmRemoveKeyCnf;
   
 
 
-  psessionEntry->limMlmState = eLIM_MLM_WT_REMOVE_STA_KEY_STATE;
-  MTRACE(macTrace(pMac, TRACE_CODE_MLM_STATE, psessionEntry->peSessionId, psessionEntry->limMlmState));
+    psessionEntry->limMlmState = eLIM_MLM_WT_REMOVE_STA_KEY_STATE;
+    MTRACE(macTrace(pMac, TRACE_CODE_MLM_STATE, psessionEntry->peSessionId, psessionEntry->limMlmState));
 
-  // Package WDA_REMOVE_STAKEY_REQ message parameters
-  limSendRemoveStaKeyReq( pMac,pMlmRemoveKeyReq,staIdx,psessionEntry);
-  return;
+    // Package WDA_REMOVE_STAKEY_REQ message parameters
+    limSendRemoveStaKeyReq( pMac,pMlmRemoveKeyReq,staIdx,psessionEntry);
+    return;
  
 end:
     limPostSmeRemoveKeyCnf( pMac,

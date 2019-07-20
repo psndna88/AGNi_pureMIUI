@@ -69,7 +69,7 @@
 #define VOS_TRACE_BUFFER_SIZE ( 512 )
 
 // macro to map vos trace levels into the bitmask
-#define VOS_TRACE_LEVEL_TO_MODULE_BITMASK( _level ) VOS_TRACE_LEVEL_NONE
+#define VOS_TRACE_LEVEL_TO_MODULE_BITMASK( _level ) ( ( 1 << (_level) ) )
 
 typedef struct
 {
@@ -88,7 +88,8 @@ typedef struct
 
 } moduleTraceInfo;
 
-#define VOS_DEFAULT_TRACE_LEVEL VOS_TRACE_LEVEL_NONE
+#define VOS_DEFAULT_TRACE_LEVEL \
+   ((1<<VOS_TRACE_LEVEL_FATAL)|(1<<VOS_TRACE_LEVEL_ERROR))
 
 // Array of static data that contains all of the per module trace
 // information.  This includes the trace level for the module and

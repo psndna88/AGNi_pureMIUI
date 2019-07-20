@@ -116,9 +116,6 @@ void sme_SetFTIEs( tHalHandle hHal, tANI_U8 sessionId, const tANI_U8 *ft_ies,
     {
         case eFT_START_READY:
         case eFT_AUTH_REQ_READY:
-#if defined WLAN_FEATURE_VOWIFI_11R_DEBUG
-            smsLog( pMac, LOG1, FL("ft_ies_length: %d"), ft_ies_length);
-#endif
             if ((pMac->ft.ftSmeContext.auth_ft_ies) && 
                     (pMac->ft.ftSmeContext.auth_ft_ies_length))
             {
@@ -126,7 +123,7 @@ void sme_SetFTIEs( tHalHandle hHal, tANI_U8 sessionId, const tANI_U8 *ft_ies,
                 vos_mem_free(pMac->ft.ftSmeContext.auth_ft_ies);
                 pMac->ft.ftSmeContext.auth_ft_ies_length = 0; 
             }
-            ft_ies_length = VOS_MIN(ft_ies_length, MAX_FTIE_SIZE);
+
             // Save the FT IEs
             pMac->ft.ftSmeContext.auth_ft_ies = vos_mem_malloc(ft_ies_length);
             if ( NULL == pMac->ft.ftSmeContext.auth_ft_ies )
@@ -141,6 +138,9 @@ void sme_SetFTIEs( tHalHandle hHal, tANI_U8 sessionId, const tANI_U8 *ft_ies,
                           ft_ies,ft_ies_length);
             pMac->ft.ftSmeContext.FTState = eFT_AUTH_REQ_READY;
 
+#if defined WLAN_FEATURE_VOWIFI_11R_DEBUG
+            smsLog( pMac, LOG1, "ft_ies_length=%d", ft_ies_length);
+#endif
             break;
 
         case eFT_AUTH_COMPLETE:
@@ -166,7 +166,7 @@ void sme_SetFTIEs( tHalHandle hHal, tANI_U8 sessionId, const tANI_U8 *ft_ies,
 
             // At this juncture we are ready to start sending Re-Assoc Req.
 #if defined WLAN_FEATURE_VOWIFI_11R_DEBUG
-            smsLog( pMac, LOGE, "New Reassoc Req=%pK in state %d",
+            smsLog( pMac, LOGE, "New Reassoc Req=%p in state %d",
                 ft_ies, pMac->ft.ftSmeContext.FTState);
 #endif
             if ((pMac->ft.ftSmeContext.reassoc_ft_ies) && 
@@ -473,7 +473,7 @@ void sme_FTReset(tHalHandle hHal)
     if (pMac->ft.ftSmeContext.auth_ft_ies != NULL)
     {
 #if defined WLAN_FEATURE_VOWIFI_11R_DEBUG
-        smsLog( pMac, LOGE, FL(" Freeing FT Auth IE %pK and setting to NULL"),
+        smsLog( pMac, LOGE, FL(" Freeing FT Auth IE %p and setting to NULL"),
             pMac->ft.ftSmeContext.auth_ft_ies);
 #endif
         vos_mem_free(pMac->ft.ftSmeContext.auth_ft_ies);
@@ -484,7 +484,7 @@ void sme_FTReset(tHalHandle hHal)
     if (pMac->ft.ftSmeContext.reassoc_ft_ies != NULL)
     {
 #if defined WLAN_FEATURE_VOWIFI_11R_DEBUG
-        smsLog( pMac, LOGE, FL(" Freeing FT Reassoc  IE %pK and setting to NULL"),
+        smsLog( pMac, LOGE, FL(" Freeing FT Reassoc  IE %p and setting to NULL"),
             pMac->ft.ftSmeContext.auth_ft_ies);
 #endif
         vos_mem_free(pMac->ft.ftSmeContext.reassoc_ft_ies);
@@ -495,7 +495,7 @@ void sme_FTReset(tHalHandle hHal)
     if (pMac->ft.ftSmeContext.psavedFTPreAuthRsp != NULL)
     {
 #if defined WLAN_FEATURE_VOWIFI_11R_DEBUG
-        smsLog( pMac, LOGE, FL("Freeing FtPreAuthRsp %pK and setting to NULL"),
+        smsLog( pMac, LOGE, FL("Freeing FtPreAuthRsp %p and setting to NULL"),
             pMac->ft.ftSmeContext.psavedFTPreAuthRsp);
 #endif
         vos_mem_free(pMac->ft.ftSmeContext.psavedFTPreAuthRsp);

@@ -1238,7 +1238,6 @@ typedef struct tagCsrConfigParam
     uint32_t edca_vi_aifs;
     uint32_t edca_bk_aifs;
     uint32_t edca_be_aifs;
-    tANI_BOOLEAN disable_scan_during_sco;
 }tCsrConfigParam;
 
 //Tush
@@ -1330,12 +1329,6 @@ typedef struct tagCsrRoamInfo
 #ifdef WLAN_FEATURE_AP_HT40_24G
     tpSirHT2040CoexInfoInd pSmeHT2040CoexInfoInd;
 #endif
-    tDot11fIEHTCaps ht_caps;
-    tDot11fIEVHTCaps vht_caps;
-    tDot11fIEhs20vendor_ie hs20vendor_ie;
-    tDot11fIEVHTOperation vht_operation;
-    tDot11fIEHTInfo ht_operation;
-    bool reassoc;
 }tCsrRoamInfo;
 
 typedef struct tagCsrFreqScanInfo

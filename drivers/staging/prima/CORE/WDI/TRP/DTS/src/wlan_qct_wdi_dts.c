@@ -437,7 +437,7 @@ wpt_status WDTS_TxPacketComplete(void *pContext, wpt_packet *pFrame, wpt_status 
   // Do Sanity checks
   if(NULL == pContext || NULL == pFrame){
     VOS_TRACE(VOS_MODULE_ID_WDI, VOS_TRACE_LEVEL_WARN,
-                 "%s: Tx complete cannot proceed(%pK:%pK)",
+                 "%s: Tx complete cannot proceed(%p:%p)",
                  __func__, pContext, pFrame);
     return eWLAN_PAL_STATUS_E_FAILURE;
   }
@@ -611,7 +611,7 @@ static void WDTS_RxPacketDump(vos_pkt_t *pFrame,
 
     pHdr = (tpSirMacMgmtHdr)pRxMetadata->mpduHeaderPtr;
 
-    /* RX packet type
+    /* RX packet type*/
     if (pRxMetadata->bcast)
          VOS_TRACE(VOS_MODULE_ID_WDI, VOS_TRACE_LEVEL_ERROR,
                    "%s RX Data frame is BC", __func__);
@@ -620,7 +620,7 @@ static void WDTS_RxPacketDump(vos_pkt_t *pFrame,
                    "%s RX Data frame is MC", __func__);
     else
          VOS_TRACE(VOS_MODULE_ID_WDI, VOS_TRACE_LEVEL_ERROR,
-                   "%s RX Data frame is UC", __func__); */
+                   "%s RX Data frame is UC", __func__);
 
     /* 802.11 packet type, subtype */
     if (WDI_MAC_MGMT_FRAME == pRxMetadata->type) {

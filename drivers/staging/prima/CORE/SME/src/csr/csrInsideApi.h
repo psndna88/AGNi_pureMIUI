@@ -115,9 +115,6 @@
 #define CSR_JOIN_RETRY_TIMEOUT_PERIOD        ( 1 *  PAL_TIMER_TO_SEC_UNIT )  // 1 second
 #endif
 
-#define CSR_DISABLE_SCAN_DURING_SCO          100 //100 milliseconds
-
-
 #ifdef WLAN_FEATURE_ROAM_SCAN_OFFLOAD
 #define ROAMING_RSSI_WEIGHT 50
 #define MIN_RSSI (-100)
