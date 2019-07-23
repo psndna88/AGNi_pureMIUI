@@ -1227,7 +1227,7 @@ static int q6afe_get_params_v2(u16 port_id, int index,
 	afe_get_param.apr_hdr.hdr_field =
 		APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD, APR_HDR_LEN(APR_HDR_SIZE),
 			      APR_PKT_VER);
-	afe_get_param.apr_hdr.pkt_size = sizeof(afe_get_param) + param_size;
+	afe_get_param.apr_hdr.pkt_size = sizeof(afe_get_param);
 	afe_get_param.apr_hdr.src_port = 0;
 	afe_get_param.apr_hdr.dest_port = 0;
 	afe_get_param.apr_hdr.token = index;
@@ -8040,6 +8040,7 @@ static int afe_set_cal_sp_th_vi_cfg(int32_t cal_type, size_t data_size,
 	uint32_t mode;
 
 	if (cal_data == NULL ||
+	    data_size != sizeof(*cal_data) ||
 	    this_afe.cal_data[AFE_FB_SPKR_PROT_TH_VI_CAL] == NULL)
 		goto done;
 
@@ -8183,6 +8184,7 @@ static int afe_get_cal_sp_th_vi_param(int32_t cal_type, size_t data_size,
 	int ret = 0;
 
 	if (cal_data == NULL ||
+	    data_size != sizeof(*cal_data) ||
 	    this_afe.cal_data[AFE_FB_SPKR_PROT_TH_VI_CAL] == NULL)
 		return 0;
 
