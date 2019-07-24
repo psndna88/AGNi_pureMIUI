@@ -1651,7 +1651,9 @@ static void hdmi_edid_detail_desc(struct hdmi_edid_ctrl *edid_ctrl,
 		timing.pixel_freq    = pixel_clk;
 		timing.refresh_rate  = refresh_rate;
 		timing.interlaced    = interlaced;
-		timing.supported     = true;
+		if (!interlaced)
+			timing.supported     = true;
+
 		timing.ar            = aspect_ratio_4_3 ? HDMI_RES_AR_4_3 :
 					(aspect_ratio_5_4 ? HDMI_RES_AR_5_4 :
 					HDMI_RES_AR_16_9);
