@@ -1113,6 +1113,16 @@ int do_stune_boost(char *st_name, int boost, int *slot)
 	return _do_stune_boost(st, boost, slot);
 }
 
+int get_sched_boost(char *st_name)
+{
+	struct schedtune *st = getSchedtune(st_name);
+
+	if (!st)
+		return -EINVAL;
+
+	return st->sched_boost;
+}
+
 #endif /* CONFIG_DYNAMIC_STUNE_BOOST */
 
 #else /* CONFIG_CGROUP_SCHEDTUNE */
