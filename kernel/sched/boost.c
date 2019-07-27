@@ -55,7 +55,10 @@ int sched_boost_handler(struct ctl_table *table, int write,
 #ifdef CONFIG_DYNAMIC_STUNE_BOOST
 	if (verify_boost_params(old_val, *data)) {
 		if (*data > 0)
-			do_stune_sched_boost("top-app", &boost_slot);
+			if (*data == 1)
+				do_stune_sched_boost("top-app", &boost_slot);
+			else
+				do_stune_boost("top-app", get_sched_boost("top-app") / 2, &boost_slot);
 		else
 			reset_stune_boost("top-app", boost_slot);
 	} else {
