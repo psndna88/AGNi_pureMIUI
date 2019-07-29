@@ -665,12 +665,16 @@ struct sigma_dut {
 	unsigned char ft_bss_mac_list[MAX_FT_BSS_LIST][ETH_ALEN];
 	int ft_bss_mac_cnt;
 
+	char *ar_ltf;
+
 	enum value_not_set_enabled_disabled ap_oce;
 	enum value_not_set_enabled_disabled ap_filsdscv;
 	enum value_not_set_enabled_disabled ap_filshlp;
 	enum value_not_set_enabled_disabled ap_broadcast_ssid;
 	enum value_not_set_enabled_disabled ap_rnr;
 	enum value_not_set_enabled_disabled ap_esp;
+
+	enum value_not_set_enabled_disabled ap_he_ulofdma;
 
 	enum ppdu {
 		PPDU_NOT_SET,

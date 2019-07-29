@@ -1228,6 +1228,8 @@ int main(int argc, char *argv[])
 	free(sigma_dut.ap_sae_groups);
 	free(sigma_dut.dpp_peer_uri);
 	free(sigma_dut.ap_sae_passwords);
+	free(sigma_dut.ar_ltf);
+	sigma_dut.ar_ltf = NULL;
 	if (sigma_dut.log_file_fd)
 		fclose(sigma_dut.log_file_fd);
 #ifdef NL80211_SUPPORT
