@@ -10790,6 +10790,23 @@ static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 			return res;
 	}
 
+	val = get_param(cmd, "TriggerCoding");
+	if (val) {
+		if (strcasecmp(val, "BCC") == 0) {
+			/* In case of LDPC enable this command can force BCC if
+			 * RU size <= 242 */
+			run_iwpriv(dut, ifname, "he_ul_ldpc 0");
+		} else if (strcasecmp(val, "LDPC") == 0) {
+			novap_reset(dut, ifname, 0);
+			run_iwpriv(dut, ifname, "he_ul_ldpc 1");
+			novap_reset(dut, ifname, 1);
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported TriggerCoding");
+			return STATUS_SENT_ERROR;
+		}
+	}
+
 	return 1;
 }
 
