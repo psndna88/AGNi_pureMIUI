@@ -10554,6 +10554,7 @@ static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 	char *ifname;
 	enum sigma_cmd_result res;
 	const char *basedev = "wifi0";
+	int trigtype;
 
 	ifname = get_main_ifname();
 
@@ -10752,6 +10753,35 @@ static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 		run_system_wrapper(dut,
 				   "wifitool %s setUnitTestCmd 0x48 2 141 %d",
 				   ifname, atoi(val));
+
+	val = get_param(cmd, "DisableTriggerType");
+	if (val) {
+		trigtype = atoi(val);
+		switch (trigtype) {
+		case 0:
+			/* DisableTriggerType "0" for basic trigger */
+			run_system_wrapper(dut,
+					   "wifitool %s setUnitTestCmd 0x47 2 42 0",
+					   ifname);
+			break;
+		default:
+			/* Nothing to be done for now */
+			break;
+		}
+	}
+
+	val = get_param(cmd, "Trigger_TxBF");
+	if (val) {
+		if (strcasecmp(val, "enable") == 0) {
+			run_iwpriv(dut, ifname, "he_sounding_mode 0x9");
+		} else if (strcasecmp(val, "disable") == 0) {
+			run_iwpriv(dut, ifname, "he_sounding_mode 0x1");
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported trigger_txbf");
+			return STATUS_SENT_ERROR;
+		}
+	}
 
 	return 1;
 }
