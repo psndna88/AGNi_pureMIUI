@@ -10783,6 +10783,13 @@ static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
+	val = get_param(cmd, "Trig_UsrInfo_RUAlloc");
+	if (val) {
+		res = he_rualloctones(dut, conn, ifname, val);
+		if (res != SUCCESS_SEND_STATUS)
+			return res;
+	}
+
 	return 1;
 }
 
