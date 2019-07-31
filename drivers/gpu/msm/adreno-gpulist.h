@@ -397,6 +397,7 @@ static const struct adreno_gpu_core adreno_gpulist[] = {
 		.gpmu_major = 0x1,
 		.gpmu_minor = 0x003,
 	},
+#endif
 	{
 		.gpurev = ADRENO_REV_A618,
 		.core = 6,
@@ -416,6 +417,7 @@ static const struct adreno_gpu_core adreno_gpulist[] = {
 		.gpmu_major = 0x1,
 		.gpmu_minor = 0x008,
 	},
+#if 0
 	{
 		.gpurev = ADRENO_REV_A640,
 		.core = 6,
@@ -534,4 +536,5 @@ static const struct adreno_gpu_core adreno_gpulist[] = {
 		.busy_mask = 0xFFFFFFFE,
 		.cx_ipeak_gpu_freq = 900000000,
 	},
+#endif
 };
