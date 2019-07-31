@@ -10553,8 +10553,12 @@ static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *val;
 	char *ifname;
 	enum sigma_cmd_result res;
+	const char *basedev = "wifi0";
 
 	ifname = get_main_ifname();
+
+	if (sigma_radio_ifname[0])
+		basedev = sigma_radio_ifname[0];
 
 	/* Disable vap reset between the commands */
 	novap_reset(dut, ifname);
@@ -10726,6 +10730,28 @@ static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 			return STATUS_SENT_ERROR;
 		}
 	}
+
+	val = get_param(cmd, "Trig_Usrinfo_UL-MCS");
+	if (val)
+		run_iwpriv(dut, ifname, "he_ul_mcs %d", atoi(val));
+
+	val = get_param(cmd, "Trig_Usrinfo_UL-Target-RSSI");
+	if (val) {
+		/* Set target RSSI to -55 dBm */
+		run_system_wrapper(dut,
+				   "wifitool %s setUnitTestCmd 0x4b 2 7 %d",
+				   ifname, atoi(val) - 110);
+	}
+
+	val = get_param(cmd, "Trig_Interval");
+	if (val)
+		run_iwpriv(dut, basedev, "he_ul_trig_int %d", atoi(val));
+
+	val = get_param(cmd, "Trig_ComInfo_ULLength");
+	if (val)
+		run_system_wrapper(dut,
+				   "wifitool %s setUnitTestCmd 0x48 2 141 %d",
+				   ifname, atoi(val));
 
 	return 1;
 }
