@@ -336,6 +336,3 @@ cpe_lsm_dlkm-y := $(CPE_LSM_OBJS)
 
 obj-$(CONFIG_SND_SOC_GVM_AUTO_SPF) += gvm_spf_machine_dlkm.o
 gvm_spf_machine_dlkm-y := $(SPF_MACHINE_OBJS)
-
-# inject some build related information
-DEFINES += -DBUILD_TIMESTAMP=\"$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')\"
