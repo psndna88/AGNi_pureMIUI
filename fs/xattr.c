@@ -601,6 +601,7 @@ getxattr(struct dentry *d, const char __user *name, void __user *value,
 	ssize_t error;
 	void *kvalue = NULL;
 	char kname[XATTR_NAME_MAX + 1];
+	char kvalue_onstack[SZ_4K] __aligned(sizeof(long));
 
 	error = strncpy_from_user(kname, name, sizeof(kname));
 	if (error == 0 || error == sizeof(kname))
@@ -609,11 +610,16 @@ getxattr(struct dentry *d, const char __user *name, void __user *value,
 		return error;
 
 	if (size) {
-		if (size > XATTR_SIZE_MAX)
-			size = XATTR_SIZE_MAX;
-		kvalue = kvzalloc(size, GFP_KERNEL);
-		if (!kvalue)
-			return -ENOMEM;
+		if (size <= ARRAY_SIZE(kvalue_onstack)) {
+			kvalue = kvalue_onstack;
+			memset(kvalue, 0, size);
+		} else {
+			if (size > XATTR_SIZE_MAX)
+				size = XATTR_SIZE_MAX;
+			kvalue = kvzalloc(size, GFP_KERNEL);
+			if (!kvalue)
+				return -ENOMEM;
+		}
 	}
 
 	error = vfs_getxattr(d, kname, kvalue, size);
@@ -629,7 +635,8 @@ getxattr(struct dentry *d, const char __user *name, void __user *value,
 		error = -E2BIG;
 	}
 
-	kvfree(kvalue);
+	if (kvalue != kvalue_onstack)
+		kvfree(kvalue);
 
 	return error;
 }
