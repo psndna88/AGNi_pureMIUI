@@ -10264,9 +10264,9 @@ static int ath_ndpa_stainfo_mac(struct sigma_dut *dut, const char *ifname,
 }
 
 
-void novap_reset(struct sigma_dut *dut, const char *ifname)
+void novap_reset(struct sigma_dut *dut, const char *ifname, int reset)
 {
-	run_iwpriv(dut, ifname, "novap_reset 1");
+	run_iwpriv(dut, ifname, "novap_reset %d", reset);
 }
 
 
@@ -10562,7 +10562,7 @@ static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 		basedev = sigma_radio_ifname[0];
 
 	/* Disable vap reset between the commands */
-	novap_reset(dut, ifname);
+	novap_reset(dut, ifname, 1);
 
 	val = get_param(cmd, "Opt_md_notif_ie");
 	if (val && ath_vht_op_mode_notif(dut, ifname, val) < 0)

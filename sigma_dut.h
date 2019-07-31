@@ -983,7 +983,7 @@ void ap_register_cmds(void);
 void ath_disable_txbf(struct sigma_dut *dut, const char *intf);
 void ath_config_dyn_bw_sig(struct sigma_dut *dut, const char *ifname,
 			   const char *val);
-void novap_reset(struct sigma_dut *dut, const char *ifname);
+void novap_reset(struct sigma_dut *dut, const char *ifname, int reset);
 int get_hwaddr(const char *ifname, unsigned char *hwaddr);
 enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 					   struct sigma_conn *conn,

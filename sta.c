@@ -5551,7 +5551,7 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 			}
 			break;
 		case DRIVER_ATHEROS:
-			novap_reset(dut, intf);
+			novap_reset(dut, intf, 1);
 			ath_config_dyn_bw_sig(dut, intf, val);
 			break;
 		default:
@@ -5563,7 +5563,7 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 
 	val = get_param(cmd, "RTS_FORCE");
 	if (val) {
-		novap_reset(dut, intf);
+		novap_reset(dut, intf, 1);
 		if (strcasecmp(val, "Enable") == 0) {
 			if (sta_set_rts(dut, intf, 64) != 0) {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
@@ -7853,7 +7853,7 @@ static enum sigma_cmd_result cmd_sta_set_11n(struct sigma_dut *dut,
 	} else if (!mcs32 && rate) {
 		switch (get_driver_type()) {
 		case DRIVER_ATHEROS:
-			novap_reset(dut, intf);
+			novap_reset(dut, intf, 1);
 			ath_sta_set_11nrates(dut, intf, rate);
 			break;
 		default:
@@ -11151,7 +11151,7 @@ static int ath_sta_set_rfeature_vht(const char *intf, struct sigma_dut *dut,
 	const char *val;
 	char *token = NULL, *result;
 
-	novap_reset(dut, intf);
+	novap_reset(dut, intf, 1);
 
 	val = get_param(cmd, "nss_mcs_opt");
 	if (val) {
