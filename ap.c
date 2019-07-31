@@ -10691,6 +10691,42 @@ static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 			return res;
 	}
 
+	val = get_param(cmd, "MPDU_MU_SpacingFactor");
+	if (val)
+		run_system_wrapper(dut,
+				   "wifitool %s setUnitTestCmd 0x48 2 119, %s",
+				   ifname, val);
+
+	val = get_param(cmd, "PPDUTxType");
+	if (val) {
+		if (strcasecmp(val, "HE-SU") == 0) {
+			/* Change PPDU format type to HE-SU MCS 1 */
+			run_system_wrapper(dut,
+					   "wifitool %s setUnitTestCmd 0x48 2 89 0x401",
+					   ifname);
+		} else if (strcasecmp(val, "legacy") == 0) {
+			/* Change PPDU format type to non-HT */
+			run_system_wrapper(dut,
+					   "wifitool %s setUnitTestCmd 0x48 2 89 3",
+					   ifname);
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported PPDUTxType");
+			return STATUS_SENT_ERROR;
+		}
+	}
+
+	val = get_param(cmd, "TXOPDuration");
+	if (val) {
+		if (strcasecmp(val, "UNSPECIFIED") == 0) {
+			/* The hardware is hardcoded with 0x7f; do nothing */
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported TXOPDuration");
+			return STATUS_SENT_ERROR;
+		}
+	}
+
 	return 1;
 }
 
