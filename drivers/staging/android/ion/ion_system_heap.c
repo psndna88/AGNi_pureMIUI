@@ -35,6 +35,8 @@ static gfp_t high_order_gfp_flags = (GFP_HIGHUSER | __GFP_ZERO | __GFP_NOWARN |
 				     __GFP_NORETRY) & ~__GFP_RECLAIM;
 static gfp_t low_order_gfp_flags  = GFP_HIGHUSER | __GFP_ZERO;
 
+static struct kmem_cache *ion_page_info_pool;
+
 int order_to_index(unsigned int order)
 {
 	int i;
@@ -126,19 +128,15 @@ void free_buffer_page(struct ion_system_heap *heap,
 	}
 }
 
-static struct page_info *alloc_largest_available(struct ion_system_heap *heap,
-						 struct ion_buffer *buffer,
-						 unsigned long size,
-						 unsigned int max_order)
+static int alloc_largest_available(struct page_info *info,
+				   struct ion_system_heap *heap,
+				   struct ion_buffer *buffer,
+				   unsigned long size,
+				   unsigned int max_order)
 {
 	struct page *page;
-	struct page_info *info;
 	int i;
 	bool from_pool;
-
-	info = kmalloc(sizeof(*info), GFP_KERNEL);
-	if (!info)
-		return ERR_PTR(-ENOMEM);
 
 	for (i = 0; i < NUM_ORDERS; i++) {
 		if (size < order_to_size(orders[i]))
@@ -154,27 +152,21 @@ static struct page_info *alloc_largest_available(struct ion_system_heap *heap,
 		info->order = orders[i];
 		info->from_pool = from_pool;
 		INIT_LIST_HEAD(&info->list);
-		return info;
+		return 0;
 	}
-	kfree(info);
 
-	return ERR_PTR(-ENOMEM);
+	return -ENOMEM;
 }
 
-static struct page_info *alloc_from_pool_preferred(
+static int alloc_from_pool_preferred(struct page_info *info,
 		struct ion_system_heap *heap, struct ion_buffer *buffer,
 		unsigned long size, unsigned int max_order)
 {
 	struct page *page;
-	struct page_info *info;
 	int i;
 
 	if (buffer->flags & ION_FLAG_POOL_FORCE_ALLOC)
 		goto force_alloc;
-
-	info = kmalloc(sizeof(*info), GFP_KERNEL);
-	if (!info)
-		return ERR_PTR(-ENOMEM);
 
 	for (i = 0; i < NUM_ORDERS; i++) {
 		if (size < order_to_size(orders[i]))
@@ -190,7 +182,7 @@ static struct page_info *alloc_from_pool_preferred(
 		info->order = orders[i];
 		info->from_pool = true;
 		INIT_LIST_HEAD(&info->list);
-		return info;
+		return 0;
 	}
 
 	page = split_page_from_secure_pool(heap, buffer);
@@ -199,12 +191,11 @@ static struct page_info *alloc_from_pool_preferred(
 		info->order = 0;
 		info->from_pool = true;
 		INIT_LIST_HEAD(&info->list);
-		return info;
+		return 0;
 	}
 
-	kfree(info);
 force_alloc:
-	return alloc_largest_available(heap, buffer, size, max_order);
+	return alloc_largest_available(info, heap, buffer, size, max_order);
 }
 
 static unsigned int process_info(struct page_info *info,
@@ -231,8 +222,14 @@ static unsigned int process_info(struct page_info *info,
 			data->pages[i++] = nth_page(page, j);
 	}
 	list_del(&info->list);
-	kfree(info);
 	return i;
+}
+
+static void free_info(struct page_info *info, struct page_info *info_onstack,
+		      size_t onstack_len)
+{
+	if (info < info_onstack || info > &info_onstack[onstack_len - 1])
+		kmem_cache_free(ion_page_info_pool, info);
 }
 
 static int ion_heap_alloc_pages_mem(struct pages_mem *pages_mem)
@@ -290,6 +287,7 @@ static int ion_system_heap_allocate(struct ion_heap *heap,
 	struct pages_mem data;
 	unsigned int sz;
 	int vmid = get_secure_vmid(buffer->flags);
+	struct page_info info_onstack[SZ_4K / sizeof(struct page_info)];
 
 	if (size / PAGE_SIZE > totalram_pages / 2)
 		return -ENOMEM;
@@ -306,17 +304,25 @@ static int ion_system_heap_allocate(struct ion_heap *heap,
 	INIT_LIST_HEAD(&pages_from_pool);
 
 	while (size_remaining > 0) {
+		if (i >= ARRAY_SIZE(info_onstack)) {
+			info = kmem_cache_alloc(ion_page_info_pool, GFP_KERNEL);
+			if (!info)
+				goto err;
+		} else {
+			info = &info_onstack[i];
+		}
+
 		if (is_secure_vmid_valid(vmid))
-			info = alloc_from_pool_preferred(
+			ret = alloc_from_pool_preferred(info,
 					sys_heap, buffer, size_remaining,
 					max_order);
 		else
-			info = alloc_largest_available(
+			ret = alloc_largest_available(info,
 					sys_heap, buffer, size_remaining,
 					max_order);
 
-		if (IS_ERR(info)) {
-			ret = PTR_ERR(info);
+		if (ret) {
+			free_info(info, info_onstack, ARRAY_SIZE(info_onstack));
 			goto err;
 		}
 
@@ -343,7 +349,7 @@ static int ion_system_heap_allocate(struct ion_heap *heap,
 	if (ret)
 		goto err;
 
-	table = kzalloc(sizeof(*table), GFP_KERNEL);
+	table = kmalloc(sizeof(*table), GFP_KERNEL);
 	if (!table) {
 		ret = -ENOMEM;
 		goto err_free_data_pages;
@@ -376,15 +382,22 @@ static int ion_system_heap_allocate(struct ion_heap *heap,
 		if (info && tmp_info) {
 			if (info->order >= tmp_info->order) {
 				i = process_info(info, sg, sg_sync, &data, i);
+				free_info(info, info_onstack,
+					  ARRAY_SIZE(info_onstack));
 				sg_sync = sg_next(sg_sync);
 			} else {
 				i = process_info(tmp_info, sg, 0, 0, i);
+				free_info(tmp_info, info_onstack,
+					  ARRAY_SIZE(info_onstack));
 			}
 		} else if (info) {
 			i = process_info(info, sg, sg_sync, &data, i);
+			free_info(info, info_onstack, ARRAY_SIZE(info_onstack));
 			sg_sync = sg_next(sg_sync);
 		} else if (tmp_info) {
 			i = process_info(tmp_info, sg, 0, 0, i);
+			free_info(tmp_info, info_onstack,
+				  ARRAY_SIZE(info_onstack));
 		}
 		sg = sg_next(sg);
 
@@ -425,11 +438,11 @@ err_free_data_pages:
 err:
 	list_for_each_entry_safe(info, tmp_info, &pages, list) {
 		free_buffer_page(sys_heap, buffer, info->page, info->order);
-		kfree(info);
+		free_info(info, info_onstack, ARRAY_SIZE(info_onstack));
 	}
 	list_for_each_entry_safe(info, tmp_info, &pages_from_pool, list) {
 		free_buffer_page(sys_heap, buffer, info->page, info->order);
-		kfree(info);
+		free_info(info, info_onstack, ARRAY_SIZE(info_onstack));
 	}
 	return ret;
 }
@@ -555,9 +568,14 @@ struct ion_heap *ion_system_heap_create(struct ion_platform_heap *data)
 	struct ion_system_heap *heap;
 	int i;
 
+	ion_page_info_pool = KMEM_CACHE(page_info, 0);
+	if (!ion_page_info_pool)
+		return ERR_PTR(-ENOMEM);
+
 	heap = kzalloc(sizeof(*heap), GFP_KERNEL);
 	if (!heap)
-		return ERR_PTR(-ENOMEM);
+		goto destroy_page_info_pool;
+
 	heap->heap.ops = &system_heap_ops;
 	heap->heap.type = ION_HEAP_TYPE_SYSTEM;
 	heap->heap.flags = ION_HEAP_FLAG_DEFER_FREE;
@@ -586,6 +604,8 @@ destroy_secure_pools:
 			ion_system_heap_destroy_pools(heap->secure_pools[i]);
 	}
 	kfree(heap);
+destroy_page_info_pool:
+	kmem_cache_destroy(ion_page_info_pool);
 	return ERR_PTR(-ENOMEM);
 }
 
@@ -610,7 +630,7 @@ static int ion_system_contig_heap_allocate(struct ion_heap *heap,
 	for (i = len >> PAGE_SHIFT; i < (1 << order); i++)
 		__free_page(page + i);
 
-	table = kmalloc(sizeof(struct sg_table), GFP_KERNEL);
+	table = kmalloc(sizeof(*table), GFP_KERNEL);
 	if (!table) {
 		ret = -ENOMEM;
 		goto free_pages;
