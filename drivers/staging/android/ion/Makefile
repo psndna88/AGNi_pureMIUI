@@ -5,3 +5,4 @@ obj-$(CONFIG_ION) +=	ion.o ion-ioctl.o ion_heap.o \
 			ion_system_secure_heap.o ion_cma_heap.o \
 			ion_secure_util.o ion_cma_secure_heap.o msm/
 
+CFLAGS_ion_system_heap.o += -Wframe-larger-than=8192
