@@ -1714,7 +1714,6 @@ retry:
 		goto retry;
 	}
 
-	next_task->on_rq = TASK_ON_RQ_MIGRATING;
 	deactivate_task(rq, next_task, 0);
 	clear_average_bw(&next_task->dl, &rq->dl);
 	next_task->on_rq = TASK_ON_RQ_MIGRATING;
@@ -1722,7 +1721,6 @@ retry:
 	next_task->on_rq = TASK_ON_RQ_QUEUED;
 	add_average_bw(&next_task->dl, &later_rq->dl);
 	activate_task(later_rq, next_task, 0);
-	next_task->on_rq = TASK_ON_RQ_QUEUED;
 	ret = 1;
 
 	resched_curr(later_rq);
@@ -1808,7 +1806,6 @@ static void pull_dl_task(struct rq *this_rq)
 
 			resched = true;
 
-			p->on_rq = TASK_ON_RQ_MIGRATING;
 			deactivate_task(src_rq, p, 0);
 			clear_average_bw(&p->dl, &src_rq->dl);
 			p->on_rq = TASK_ON_RQ_MIGRATING;
@@ -1816,7 +1813,6 @@ static void pull_dl_task(struct rq *this_rq)
 			p->on_rq = TASK_ON_RQ_QUEUED;
 			add_average_bw(&p->dl, &this_rq->dl);
 			activate_task(this_rq, p, 0);
-			p->on_rq = TASK_ON_RQ_QUEUED;
 			dmin = p->dl.deadline;
 
 			/* Is there any other task even earlier? */
