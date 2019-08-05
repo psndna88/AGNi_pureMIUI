@@ -44,22 +44,11 @@ static int validate_ioctl_arg(unsigned int cmd, union ion_ioctl_arg *arg)
 	return ret ? -EINVAL : 0;
 }
 
-/* fix up the cases where the ioctl direction bits are incorrect */
-static unsigned int ion_ioctl_dir(unsigned int cmd)
-{
-	switch (cmd) {
-	default:
-		return _IOC_DIR(cmd);
-	}
-}
-
 long ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
-	int ret = 0;
-	unsigned int dir;
+	unsigned int dir = _IOC_DIR(cmd);
 	union ion_ioctl_arg data;
-
-	dir = ion_ioctl_dir(cmd);
+	int ret = 0;
 
 	if (_IOC_SIZE(cmd) > sizeof(data))
 		return -EINVAL;
@@ -73,10 +62,8 @@ long ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		return -EFAULT;
 
 	ret = validate_ioctl_arg(cmd, &data);
-	if (ret) {
-		pr_warn_once("%s: ioctl validate failed\n", __func__);
+	if (ret)
 		return ret;
-	}
 
 	if (!(dir & _IOC_WRITE))
 		memset(&data, 0, sizeof(data));
@@ -84,25 +71,19 @@ long ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	switch (cmd) {
 	case ION_IOC_ALLOC:
 	{
-		int fd;
-
-		fd = ion_alloc_fd(data.allocation.len,
-				  data.allocation.heap_id_mask,
-				  data.allocation.flags);
+		int fd = ion_alloc_fd(data.allocation.len,
+				      data.allocation.heap_id_mask,
+				      data.allocation.flags);
 		if (fd < 0)
 			return fd;
 
 		data.allocation.fd = fd;
-
 		break;
 	}
 	case ION_IOC_HEAP_QUERY:
 		ret = ion_query_heaps(&data.query);
 		break;
 	case ION_IOC_PREFETCH:
-	{
-		int ret;
-
 		ret = ion_walk_heaps(data.prefetch_data.heap_id,
 				     (enum ion_heap_type)
 				     ION_HEAP_TYPE_SYSTEM_SECURE,
@@ -110,22 +91,18 @@ long ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 				     ion_system_secure_heap_prefetch);
 		if (ret)
 			return ret;
-		break;
-	}
-	case ION_IOC_DRAIN:
-	{
-		int ret;
 
+		break;
+	case ION_IOC_DRAIN:
 		ret = ion_walk_heaps(data.prefetch_data.heap_id,
 				     (enum ion_heap_type)
 				     ION_HEAP_TYPE_SYSTEM_SECURE,
 				     (void *)&data.prefetch_data,
 				     ion_system_secure_heap_drain);
-
 		if (ret)
 			return ret;
+
 		break;
-	}
 	default:
 		return -ENOTTY;
 	}
@@ -134,5 +111,6 @@ long ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		if (copy_to_user((void __user *)arg, &data, _IOC_SIZE(cmd)))
 			return -EFAULT;
 	}
+
 	return ret;
 }
