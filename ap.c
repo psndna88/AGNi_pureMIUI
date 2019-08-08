@@ -10547,8 +10547,9 @@ static enum sigma_cmd_result he_rualloctones(struct sigma_dut *dut,
 }
 
 
-static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
-			       struct sigma_cmd *cmd)
+static enum sigma_cmd_result ath_ap_set_rfeature(struct sigma_dut *dut,
+						 struct sigma_conn *conn,
+						 struct sigma_cmd *cmd)
 {
 	const char *val;
 	char *ifname;
@@ -10566,17 +10567,17 @@ static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	val = get_param(cmd, "Opt_md_notif_ie");
 	if (val && ath_vht_op_mode_notif(dut, ifname, val) < 0)
-		return -1;
+		return ERROR_SEND_STATUS;
 
 	/* TODO: Optional arguments */
 
 	val = get_param(cmd, "nss_mcs_opt");
 	if (val && ath_vht_nss_mcs(dut, ifname, val) < 0)
-		return -1;
+		return ERROR_SEND_STATUS;
 
 	val = get_param(cmd, "chnum_band");
 	if (val && ath_vht_chnum_band(dut, ifname, val) < 0)
-		return -1;
+		return ERROR_SEND_STATUS;
 
 	val = get_param(cmd, "RTS_FORCE");
 	if (val)
@@ -10592,11 +10593,11 @@ static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	val = get_param(cmd, "Ndpa_stainfo_mac");
 	if (val && ath_ndpa_stainfo_mac(dut, ifname, val) < 0)
-		return -1;
+		return ERROR_SEND_STATUS;
 
 	val = get_param(cmd, "txBandwidth");
 	if (val && ath_set_width(dut, conn, ifname, val) < 0)
-		return -1;
+		return ERROR_SEND_STATUS;
 
 	val = get_param(cmd, "Assoc_Disallow");
 	if (val)
@@ -10675,7 +10676,7 @@ static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 			free(dut->ar_ltf);
 			dut->ar_ltf = strdup(val);
 			if (!dut->ar_ltf)
-				return -1;
+				return ERROR_SEND_STATUS;
 		}
 	}
 
@@ -10807,7 +10808,7 @@ static int ath_ap_set_rfeature(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
-	return 1;
+	return SUCCESS_SEND_STATUS;
 }
 
 
