@@ -10666,6 +10666,7 @@ static enum sigma_cmd_result ath_ap_set_rfeature(struct sigma_dut *dut,
 	char *aid[4] = { NULL, NULL, NULL, NULL };
 	char *aid_ss = NULL;
 	int omctrl_rxnss = 0, omctrl_chwidth = 0;
+	int param;
 	unsigned char mac_addr[ETH_ALEN];
 
 	memset(mac_addr, 0x00, ETH_ALEN);
@@ -11237,6 +11238,104 @@ static enum sigma_cmd_result ath_ap_set_rfeature(struct sigma_dut *dut,
 				  "errorCode,Unsupported NAV update");
 			return STATUS_SENT_ERROR;
 		}
+	}
+
+	/* Configure WMM Parameter Elements */
+	val = get_param(cmd, "STA_WMMPE_ECWmin_BE");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "cwmin %d 1 %d", AP_AC_BE, param);
+	}
+
+	val = get_param(cmd, "STA_WMMPE_ECWmin_BK");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "cwmin %d 1 %d", AP_AC_BK, param);
+	}
+
+	val = get_param(cmd, "STA_WMMPE_ECWmin_VI");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "cwmin %d 1 %d", AP_AC_VI, param);
+	}
+
+	val = get_param(cmd, "STA_WMMPE_ECWmin_VO");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "cwmin %d 1 %d", AP_AC_VO, param);
+	}
+
+	val = get_param(cmd, "STA_WMMPE_ECWmax_BE");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "cwmax %d 1 %d", AP_AC_BE, param);
+	}
+
+	val = get_param(cmd, "STA_WMMPE_ECWmax_BK");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "cwmax %d 1 %d", AP_AC_BK, param);
+	}
+
+	val = get_param(cmd, "STA_WMMPE_ECWmax_VI");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "cwmax %d 1 %d", AP_AC_VI, param);
+	}
+
+	val = get_param(cmd, "STA_WMMPE_ECWmax_VO");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "cwmax %d 1 %d", AP_AC_VO, param);
+	}
+
+	val = get_param(cmd, "STA_WMMPE_AIFSN_BE");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "aifs %d 1 %d", AP_AC_BE, param);
+	}
+
+	val = get_param(cmd, "STA_WMMPE_AIFSN_BK");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "aifs %d 1 %d", AP_AC_BK, param);
+	}
+
+	val = get_param(cmd, "STA_WMMPE_AIFSN_VI");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "aifs %d 1 %d", AP_AC_VI, param);
+	}
+
+	val = get_param(cmd, "STA_WMMPE_AIFSN_VO");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "aifs %d 1 %d", AP_AC_VO, param);
+	}
+
+
+	val = get_param(cmd, "STA_WMMPE_TXOP_BE");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "txoplimit %d 1 %d", AP_AC_BE, param);
+	}
+
+	val = get_param(cmd, "STA_WMMPE_TOXP_BK");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "txoplimit %d 1 %d", AP_AC_BK, param);
+	}
+
+	val = get_param(cmd, "STA_WMMPE_TXOP_VI");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "txoplimit %d %d", AP_AC_VI, param);
+	}
+
+	val = get_param(cmd, "STA_WMMPE_TXOP_VO");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "txoplimit %d 1 %d", AP_AC_VO, param);
 	}
 
 	return SUCCESS_SEND_STATUS;
