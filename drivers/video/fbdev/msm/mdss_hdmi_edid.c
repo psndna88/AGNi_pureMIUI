@@ -1252,6 +1252,9 @@ static void hdmi_edid_extract_3d_present(struct hdmi_edid_ctrl *edid_ctrl,
 	}
 
 	offset = HDMI_VSDB_3D_EVF_DATA_OFFSET(vsd);
+	if (offset >= len - 1)
+		return;
+
 	DEV_DBG("%s: EDID: 3D present @ 0x%x = %02x\n", __func__,
 		offset, vsd[offset]);
 
@@ -1367,7 +1370,8 @@ static void hdmi_edid_extract_sink_caps(struct hdmi_edid_ctrl *edid_ctrl,
 		return;
 
 	/* Max TMDS clock is in  multiples of 5Mhz. */
-	edid_ctrl->sink_caps.max_pclk_in_hz = vsd[7] * 5000000;
+	if (len >= 7)
+		edid_ctrl->sink_caps.max_pclk_in_hz = vsd[7] * 5000000;
 
 	vsd = hdmi_edid_find_hfvsdb(in_buf);
 
@@ -1412,8 +1416,19 @@ static void hdmi_edid_extract_latency_fields(struct hdmi_edid_ctrl *edid_ctrl,
 	vsd = hdmi_edid_find_block(in_buf, DBC_START_OFFSET,
 		VENDOR_SPECIFIC_DATA_BLOCK, &len);
 
-	if (vsd == NULL || len == 0 || len > MAX_DATA_BLOCK_SIZE ||
-		!(vsd[8] & BIT(7))) {
+	if (vsd == NULL || len == 0 || len > MAX_DATA_BLOCK_SIZE) {
+		DEV_DBG("%s: No/Invalid vendor Specific Data Block\n",
+				__func__);
+		return;
+	}
+
+	if (len < 8) {
+		DEV_DBG("%s: No extra Vendor Specific information present\n",
+				__func__);
+		return;
+	}
+
+	if (!(vsd[8] & BIT(7))) {
 		edid_ctrl->video_latency = (u16)-1;
 		edid_ctrl->audio_latency = (u16)-1;
 		DEV_DBG("%s: EDID: No audio/video latency present\n", __func__);
@@ -1446,8 +1461,11 @@ static u32 hdmi_edid_extract_ieee_reg_id(struct hdmi_edid_ctrl *edid_ctrl,
 		return 0;
 	}
 
-	DEV_DBG("%s: EDID: VSD PhyAddr=%04x, MaxTMDS=%dMHz\n", __func__,
-		((u32)vsd[4] << 8) + (u32)vsd[5], (u32)vsd[7] * 5);
+	DEV_DBG("%s: EDID: VSD PhyAddr=%04x\n", __func__,
+		((u32)vsd[4] << 8) + (u32)vsd[5]);
+
+	if (len >= 7)
+		DEV_DBG("%s: MaxTMDS=%dMHz\n", __func__, (u32)vsd[7] * 5);
 
 	edid_ctrl->physical_address = ((u16)vsd[4] << 8) + (u16)vsd[5];
 
@@ -1491,7 +1509,9 @@ static void hdmi_edid_extract_dc(struct hdmi_edid_ctrl *edid_ctrl,
 	if (vsd == NULL || len == 0 || len > MAX_DATA_BLOCK_SIZE)
 		return;
 
-	edid_ctrl->deep_color = (vsd[6] >> 0x3) & 0xF;
+	edid_ctrl->deep_color = 0;
+	if (len >= 6)
+		edid_ctrl->deep_color = (vsd[6] >> 0x3) & 0xF;
 
 	vsd = hdmi_edid_find_hfvsdb(in_buf);
 
@@ -1987,6 +2007,12 @@ static void hdmi_edid_get_extended_video_formats(
 		return;
 	}
 
+	if (db_len < 8) {
+		DEV_DBG("%s: No extra Vendor Specific information present\n",
+				__func__);
+		return;
+	}
+
 	/* check if HDMI_Video_present flag is set or not */
 	if (!(vsd[8] & BIT(5))) {
 		DEV_DBG("%s: extended vfmts are not supported by the sink.\n",
@@ -2430,18 +2456,20 @@ int hdmi_edid_parser(void *input)
 
 		ieee_reg_id = hdmi_edid_extract_ieee_reg_id(edid_ctrl,
 				edid_buf);
-		DEV_DBG("%s: ieee_reg_id = 0x%08x\n", __func__, ieee_reg_id);
+		DEV_DBG("%s: ieee_reg_id = 0x%06x\n", __func__, ieee_reg_id);
 		if (ieee_reg_id == EDID_IEEE_REG_ID)
 			edid_ctrl->sink_mode = SINK_MODE_HDMI;
 		else
 			edid_ctrl->sink_mode = SINK_MODE_DVI;
 
-		hdmi_edid_extract_sink_caps(edid_ctrl, edid_buf);
-		hdmi_edid_extract_latency_fields(edid_ctrl, edid_buf);
-		hdmi_edid_extract_dc(edid_ctrl, edid_buf);
+		if (ieee_reg_id == EDID_IEEE_REG_ID) {
+			hdmi_edid_extract_sink_caps(edid_ctrl, edid_buf);
+			hdmi_edid_extract_latency_fields(edid_ctrl, edid_buf);
+			hdmi_edid_extract_dc(edid_ctrl, edid_buf);
+			hdmi_edid_extract_3d_present(edid_ctrl, edid_buf);
+		}
 		hdmi_edid_extract_speaker_allocation_data(edid_ctrl, edid_buf);
 		hdmi_edid_extract_audio_data_blocks(edid_ctrl, edid_buf);
-		hdmi_edid_extract_3d_present(edid_ctrl, edid_buf);
 		hdmi_edid_extract_extended_data_blocks(edid_ctrl, edid_buf);
 	}
 
