@@ -10864,6 +10864,36 @@ static enum sigma_cmd_result ath_ap_set_rfeature(struct sigma_dut *dut,
 		}
 	}
 
+	val = get_param(cmd, "Trig_ComInfo_GI-LTF");
+	if (val) {
+		int trig_gi_ltf;
+
+		trig_gi_ltf = atoi(val);
+		if (trig_gi_ltf == 0) {
+			he_ltf(dut, conn, ifname, "3.2");
+			he_shortgi(dut, conn, ifname, "1.6");
+		} else if (trig_gi_ltf == 1) {
+			he_ltf(dut, conn, ifname, "6.4");
+			he_shortgi(dut, conn, ifname, "1.6");
+		} else if (trig_gi_ltf == 2) {
+			he_ltf(dut, conn, ifname, "12.8");
+			he_shortgi(dut, conn, ifname, "3.2");
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported Trig_ComInfo_GI-LTF");
+			return STATUS_SENT_ERROR;
+		}
+	}
+
+	val = get_param(cmd, "Trig_ComInfo_BW");
+	if (val) {
+		int chwidth;
+
+		chwidth = atoi(val);
+		/* Set the channel width */
+		run_iwpriv(dut, ifname, "chwidth %d", chwidth);
+	}
+
 	return SUCCESS_SEND_STATUS;
 }
 
