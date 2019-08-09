@@ -11338,6 +11338,103 @@ static enum sigma_cmd_result ath_ap_set_rfeature(struct sigma_dut *dut,
 		run_iwpriv(dut, ifname, "txoplimit %d 1 %d", AP_AC_VO, param);
 	}
 
+	/* Configure MU EDCA */
+	val = get_param(cmd, "STA_MUEDCA_ECWmin_BE");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "muedca_ecwmin %d %d", AP_AC_BE, param);
+	}
+
+	val = get_param(cmd, "STA_MUEDCA_ECWmin_BK");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "muedca_ecwmin %d %d", AP_AC_BK, param);
+	}
+
+	val = get_param(cmd, "STA_MUEDCA_ECWmin_VI");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "muedca_ecwmin %d %d", AP_AC_VI, param);
+	}
+
+	val = get_param(cmd, "STA_MUEDCA_ECWmin_VO");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "muedca_ecwmin %d %d", AP_AC_VO, param);
+	}
+
+	val = get_param(cmd, "STA_MUEDCA_ECWmax_BE");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "muedca_ecwmax %d %d", AP_AC_BE, param);
+	}
+
+	val = get_param(cmd, "STA_MUEDCA_ECWmax_BK");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "muedca_ecwmax %d %d", AP_AC_BK, param);
+	}
+
+	val = get_param(cmd, "STA_MUEDCA_ECWmax_VI");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "muedca_ecwmax %d %d", AP_AC_VI, param);
+	}
+
+	val = get_param(cmd, "STA_MUEDCA_ECWmax_VO");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "muedca_ecwmax %d %d", AP_AC_VO, param);
+	}
+
+	val = get_param(cmd, "STA_MUEDCA_AIFSN_BE");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "muedca_aifsn %d %d", AP_AC_BE, param);
+	}
+
+	val = get_param(cmd, "STA_MUEDCA_AIFSN_BK");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "muedca_aifsn %d %d", AP_AC_BK, param);
+	}
+
+	val = get_param(cmd, "STA_MUEDCA_AIFSN_VI");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "muedca_aifsn %d %d", AP_AC_VI, param);
+	}
+
+	val = get_param(cmd, "STA_MUEDCA_AIFSN_VO");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "muedca_aifsn %d %d", AP_AC_VO, param);
+	}
+
+	val = get_param(cmd, "STA_MUEDCA_Timer_BE");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "muedca_timer %d %d", AP_AC_BE, param);
+	}
+
+	val = get_param(cmd, "STA_MUEDCA_Timer_BK");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "muedca_timer %d %d", AP_AC_BK, param);
+	}
+
+	val = get_param(cmd, "STA_MUEDCA_Timer_VI");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "muedca_timer %d %d", AP_AC_VI, param);
+	}
+
+	val = get_param(cmd, "STA_MUEDCA_Timer_VO");
+	if (val) {
+		param = atoi(val);
+		run_iwpriv(dut, ifname, "muedca_timer %d %d", AP_AC_VO, param);
+	}
+
 	return SUCCESS_SEND_STATUS;
 }
 
