@@ -10561,6 +10561,7 @@ static enum sigma_cmd_result ath_ap_set_rfeature(struct sigma_dut *dut,
 	char *nss[4] = { NULL, NULL, NULL, NULL };
 	char *aid[4] = { NULL, NULL, NULL, NULL };
 	char *aid_ss = NULL;
+	int omctrl_rxnss = 0, omctrl_chwidth = 0;
 	unsigned char mac_addr[ETH_ALEN];
 
 	memset(mac_addr, 0x00, ETH_ALEN);
@@ -11064,6 +11065,32 @@ static enum sigma_cmd_result ath_ap_set_rfeature(struct sigma_dut *dut,
 
 	free(aid_ss);
 	aid_ss = NULL;
+
+	val = get_param(cmd, "OMCtrl_RxNSS");
+	if (val)
+		omctrl_rxnss = atoi(val);
+
+	val = get_param(cmd, "OMCtrl_ChnlWidth");
+	if (val)
+		omctrl_chwidth = atoi(val);
+
+	val = get_param(cmd, "Client_mac");
+	if (val) {
+		if (parse_mac_address(dut, val, mac_addr) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,MAC Address not in proper format");
+			return STATUS_SENT_ERROR;
+		}
+
+		/* setUnitTestCmd 13 7 1 mac3mac2mac1mac0 mac5mac4 <rx_nss>
+		 * <bw> <ulmu> <tx_nss> */
+		run_system_wrapper(dut,
+				   "wifitool %s setUnitTestCmd 13 7 1 0x%02x%02x%02x%02x 0x%02x%02x %d %d 1 %d",
+				   ifname, mac_addr[3], mac_addr[2],
+				   mac_addr[1], mac_addr[0], mac_addr[5],
+				   mac_addr[4], omctrl_rxnss,
+				   omctrl_chwidth, omctrl_rxnss);
+	}
 
 	return SUCCESS_SEND_STATUS;
 }
