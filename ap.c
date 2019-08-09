@@ -10559,6 +10559,8 @@ static enum sigma_cmd_result ath_ap_set_rfeature(struct sigma_dut *dut,
 	int he_ackpolicymac = 0;
 	char *num_ss = NULL;
 	char *nss[4] = { NULL, NULL, NULL, NULL };
+	char *aid[4] = { NULL, NULL, NULL, NULL };
+	char *aid_ss = NULL;
 	unsigned char mac_addr[ETH_ALEN];
 
 	memset(mac_addr, 0x00, ETH_ALEN);
@@ -10958,6 +10960,110 @@ static enum sigma_cmd_result ath_ap_set_rfeature(struct sigma_dut *dut,
 
 	free(num_ss);
 	num_ss = NULL;
+
+	val = get_param(cmd, "AID");
+	if (val) {
+		int i = 0;
+		char *aid_val;
+		char *saveptr;
+
+		aid_ss = strdup(val);
+		if (!aid_ss)
+			return ERROR_SEND_STATUS;
+
+		aid_val = strtok_r(aid_ss, " ", &saveptr);
+		for (i = 0; aid_val && i < 4; i++) {
+			aid[i] = aid_val;
+			aid_val = strtok_r(NULL, " ", &saveptr);
+		}
+	}
+
+	val = get_param(cmd, "AddbaReq");
+	if (val) {
+		if (strcasecmp(val, "enable") == 0) {
+			run_iwpriv(dut, ifname, "setaddbaoper 1");
+			run_system_wrapper(dut,
+					   "wifitool %s sendaddba %s 0 64",
+					   ifname, aid[0]);
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported AddbaReq value");
+			free(aid_ss);
+			return STATUS_SENT_ERROR;
+		}
+	}
+
+	val = get_param(cmd, "AddbaResp");
+	if (val) {
+		if (aid_ss && strcasecmp(val, "accepted") == 0) {
+			int aid_1 = atoi(aid_ss);
+
+			if (aid_1 == 1)
+				aid_1 = 2;
+			else
+				aid_1 = aid_1 - 1;
+
+			/* There is no mechanism in place to reject Add BA Req
+			 * from all STAs and selectively accept Add BA Req from
+			 * a specified STA. Instead, it can accept Add BA Req
+			 * from all STAs and selectively reject from specified
+			 * STAs. Make changes for the same using the below
+			 * commands. */
+			run_system_wrapper(dut, ifname, "setaddbaoper 1");
+			run_system_wrapper(dut, "wifitool %s refusealladdbas 0",
+					   ifname);
+			run_system_wrapper(dut,
+					   "wifitool %s setaddbaresp %d 0 37",
+					   ifname, aid_1);
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported Addbaresp value");
+			free(aid_ss);
+			return STATUS_SENT_ERROR;
+		}
+	}
+
+	val = get_param(cmd, "Trig_UsrInfo_SSAlloc_RA-RU");
+	if (val) {
+		char *ssalloc_str;
+		char *saveptr;
+		char *ssalloc_list_str;
+
+		ssalloc_list_str = strdup(val);
+		if (!ssalloc_list_str) {
+			free(aid_ss);
+			return ERROR_SEND_STATUS;
+		}
+
+		ssalloc_str = strtok_r(ssalloc_list_str, ":", &saveptr);
+		if (ssalloc_str && aid[0]) {
+			run_system_wrapper(dut, "wifitool %s peer_nss %s %s",
+					   ifname, aid[0], ssalloc_str);
+		}
+
+		ssalloc_str = strtok_r(NULL, " ", &saveptr);
+		if (ssalloc_str && aid[1]) {
+			run_system_wrapper(dut, "wifitool %s peer_nss %s %s",
+					   ifname, aid[1], ssalloc_str);
+		}
+
+		ssalloc_str = strtok_r(NULL, " ", &saveptr);
+		if (ssalloc_str && aid[2]) {
+			run_system_wrapper(dut, "wifitool %s peer_nss %s %s",
+					   ifname, aid[2], ssalloc_str);
+		}
+
+		ssalloc_str = strtok_r(NULL, " ", &saveptr);
+		if (ssalloc_str && aid[3]) {
+			run_system_wrapper(dut, "wifitool %s peer_nss %s %s",
+					   ifname, aid[3], ssalloc_str);
+		}
+
+		free(ssalloc_list_str);
+	}
+
+	free(aid_ss);
+	aid_ss = NULL;
 
 	return SUCCESS_SEND_STATUS;
 }
