@@ -10557,6 +10557,8 @@ static enum sigma_cmd_result ath_ap_set_rfeature(struct sigma_dut *dut,
 	const char *basedev = "wifi0";
 	int trigtype;
 	int he_ackpolicymac = 0;
+	char *num_ss = NULL;
+	char *nss[4] = { NULL, NULL, NULL, NULL };
 	unsigned char mac_addr[ETH_ALEN];
 
 	memset(mac_addr, 0x00, ETH_ALEN);
@@ -10893,6 +10895,69 @@ static enum sigma_cmd_result ath_ap_set_rfeature(struct sigma_dut *dut,
 		/* Set the channel width */
 		run_iwpriv(dut, ifname, "chwidth %d", chwidth);
 	}
+
+	val = get_param(cmd, "NumSS");
+	if (val) {
+		int i = 0;
+		char *numss_val;
+		char *saveptr;
+
+		num_ss = strdup(val);
+		if (!num_ss)
+			return ERROR_SEND_STATUS;
+
+		numss_val = strtok_r(num_ss, " ", &saveptr);
+		for (i = 0; numss_val && i < 4; i++) {
+			nss[i] = numss_val;
+			numss_val = strtok_r(NULL, " ", &saveptr);
+		}
+	}
+
+	val = get_param(cmd, "NumSS_MAC");
+	if (val) {
+		char *sta_mac_str;
+		char *saveptr;
+		char *sta_mac_list_str;
+
+		sta_mac_list_str = strdup(val);
+		if (!sta_mac_list_str) {
+			free(num_ss);
+			return ERROR_SEND_STATUS;
+		}
+
+		sta_mac_str = strtok_r(sta_mac_list_str, " ", &saveptr);
+		if (sta_mac_str && nss[0]) {
+			run_system_wrapper(dut,
+					   "wifitool %s chmask_persta %s %s",
+					   ifname, sta_mac_str, nss[0]);
+		}
+
+		sta_mac_str = strtok_r(NULL, " ", &saveptr);
+		if (sta_mac_str && nss[1]) {
+			run_system_wrapper(dut,
+					   "wifitool %s chmask_persta %s %s",
+					   ifname, sta_mac_str, nss[1]);
+		}
+
+		sta_mac_str = strtok_r(NULL, " ", &saveptr);
+		if (sta_mac_str && nss[2]) {
+			run_system_wrapper(dut,
+					   "wifitool %s chmask_persta %s %s",
+					   ifname, sta_mac_str, nss[2]);
+		}
+
+		sta_mac_str = strtok_r(NULL, " ", &saveptr);
+		if (sta_mac_str && nss[3]) {
+			run_system_wrapper(dut,
+					   "wifitool %s chmask_persta %s %s",
+					   ifname, sta_mac_str, nss[3]);
+		}
+
+		free(sta_mac_list_str);
+	}
+
+	free(num_ss);
+	num_ss = NULL;
 
 	return SUCCESS_SEND_STATUS;
 }
