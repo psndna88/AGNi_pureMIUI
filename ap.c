@@ -10556,6 +10556,10 @@ static enum sigma_cmd_result ath_ap_set_rfeature(struct sigma_dut *dut,
 	enum sigma_cmd_result res;
 	const char *basedev = "wifi0";
 	int trigtype;
+	int he_ackpolicymac = 0;
+	unsigned char mac_addr[ETH_ALEN];
+
+	memset(mac_addr, 0x00, ETH_ALEN);
 
 	ifname = get_main_ifname();
 
@@ -10804,6 +10808,58 @@ static enum sigma_cmd_result ath_ap_set_rfeature(struct sigma_dut *dut,
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Unsupported TriggerCoding");
+			return STATUS_SENT_ERROR;
+		}
+	}
+
+	val = get_param(cmd, "AckPolicy_MAC");
+	if (val) {
+		if (parse_mac_address(dut, val, mac_addr) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,MAC Address not in proper format");
+			return STATUS_SENT_ERROR;
+		}
+		he_ackpolicymac = 1;
+	}
+
+	val = get_param(cmd, "AckPolicy");
+	if (val) {
+		int ap_he_ackpolicy;
+
+		ap_he_ackpolicy = atoi(val);
+		if (ap_he_ackpolicy == 0 && he_ackpolicymac) {
+			/* Disable all-BAR ackpolicy for MU-MIMO */
+			run_system_wrapper(dut,
+					   "wifitool %s setUnitTestCmd 0x48 2 62 0",
+					   ifname);
+			/* Disable all-BAR ackpolicy first */
+			run_system_wrapper(dut,
+					   "wifitool %s setUnitTestCmd 0x48 2 64 0",
+					   ifname);
+			/* Set normal ack policy for the STA with the specified
+			 * MAC address in DL-TX case */
+			run_system_wrapper(dut,
+					   "wifitool %s setUnitTestCmd 0x4b 8 8 1 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x",
+					   ifname, mac_addr[0], mac_addr[1],
+					   mac_addr[2], mac_addr[3],
+					   mac_addr[4], mac_addr[5]);
+		} else if (ap_he_ackpolicy == 3) {
+			/* Enable all-BAR ackpolicy for MU-MIMO DL */
+			run_system_wrapper(dut,
+					   "wifitool %s setUnitTestCmd 0x48 2 62 1",
+					   ifname);
+			/* Enable all-BAR ackpolicy */
+			run_system_wrapper(dut,
+					   "wifitool %s setUnitTestCmd 0x48 2 64 1",
+					   ifname);
+		} else if (ap_he_ackpolicy == 4) {
+			/* Enable htp-ack ackpolicy */
+			run_system_wrapper(dut,
+					   "wifitool %s setUnitTestCmd 0x47 2 99 1",
+					   ifname);
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Invalid AckPolicy setting");
 			return STATUS_SENT_ERROR;
 		}
 	}
