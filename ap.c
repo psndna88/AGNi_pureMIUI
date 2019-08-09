@@ -11222,6 +11222,23 @@ static enum sigma_cmd_result ath_ap_set_rfeature(struct sigma_dut *dut,
 		}
 	}
 
+	val = get_param(cmd, "HE_TXOPDurRTSThr");
+	if (val)
+		run_iwpriv(dut, ifname, "he_rtsthrshld %d", atoi(val));
+
+	val = get_param(cmd, "NAV_Update");
+	if (val) {
+		if (strcasecmp(val, "disable") == 0) {
+			run_iwpriv(dut, basedev, "nav_config 1 0");
+		} else if (strcasecmp(val, "enable") == 0) {
+			/* Do nothing */
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported NAV update");
+			return STATUS_SENT_ERROR;
+		}
+	}
+
 	return SUCCESS_SEND_STATUS;
 }
 
