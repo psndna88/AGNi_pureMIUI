@@ -5286,6 +5286,22 @@ static void apply_mbo_pref_ap_list(struct sigma_dut *dut)
 }
 
 
+static void mubrp_commands(struct sigma_dut *dut, const char *ifname)
+{
+	run_iwpriv(dut, ifname, "he_subfer 1");
+	run_iwpriv(dut, ifname, "he_mubfer 1");
+	/* To enable MU_AX with MU_BRP trigger */
+	run_iwpriv(dut, ifname, "he_sounding_mode 13");
+	/* Sets g_force_1x1_peer to 1 which should be reset to zero for non MU
+	 * test cases */
+	run_system_wrapper(dut, "wifitool %s setUnitTestCmd 0x48 2 118 1",
+			   ifname);
+	/* Disable DL OFDMA */
+	run_system_wrapper(dut, "wifitool %s setUnitTestCmd 0x47 2 11 0",
+			   ifname);
+}
+
+
 static void ath_ap_set_params(struct sigma_dut *dut)
 {
 	const char *basedev = "wifi0";
@@ -10547,6 +10563,94 @@ static enum sigma_cmd_result he_rualloctones(struct sigma_dut *dut,
 }
 
 
+static void ath_set_trigger_type_0(struct sigma_dut *dut, const char *ifname)
+{
+	/* TriggerType "0" for Basic trigger */
+	if (dut->ap_channel >= 36) {
+		/* 1 and 2 here is interpreted to 5g and 2g (bitmasks) */
+		run_system_wrapper(dut,
+				   "wifitool %s setUnitTestCmd 0x47 2 42 1",
+				   ifname);
+	} else {
+		run_system_wrapper(dut,
+				   "wifitool %s setUnitTestCmd 0x47 2 42 2",
+				   ifname);
+	}
+	run_system_wrapper(dut, "wifitool %s setUnitTestCmd 0x47 2 43 6",
+			   ifname);
+}
+
+
+static void ath_set_trigger_type_1(struct sigma_dut *dut, const char *ifname)
+{
+	/* TriggerType "1" for MU BRP */
+	run_system_wrapper(dut, "wifitool %s setUnitTestCmd 0x47 2 7 1",
+			   ifname);
+	mubrp_commands(dut, ifname);
+}
+
+
+static void ath_set_trigger_type_2(struct sigma_dut *dut, const char *ifname)
+{
+	/* TriggerType "2" for MU BAR */
+	if (dut->ap_channel >= 36) {
+		/* RU allocation RU 242 - DL OFDMA data */
+		run_system_wrapper(dut,
+				   "wifitool %s setUnitTestCmd 0x4b 5 9 0 3 1 3 2 3 3 3",
+				   ifname);
+		/* RU allocation RU 52 - UL BA */
+		run_system_wrapper(dut,
+				   "wifitool %s setUnitTestCmd 0x4b 5 9 0 2 1 2 2 2 3 2",
+				   ifname);
+	} else {
+		/* RU allocation RU 52 - DL ofdma data */
+		run_system_wrapper(dut,
+				   "wifitool %s setUnitTestCmd 0x4b 5 9 0 1 1 1 2 1 3 1",
+				   ifname);
+	}
+	/* Force TBPPDU duration to 400 us */
+	run_system_wrapper(dut, "wifitool %s setUnitTestCmd 0x48 2 63 400",
+			   ifname);
+	/* 0 to enable MU BAR, 1 to enable SU BAR */
+	run_system_wrapper(dut, "wifitool %s setUnitTestCmd 0x47 2 49 0",
+			   ifname);
+	/* MU BAR */
+	run_system_wrapper(dut, "wifitool %s setUnitTestCmd 0x47 2 64 0",
+			   ifname);
+}
+
+
+static void ath_set_trigger_type_3(struct sigma_dut *dut, const char *ifname)
+{
+	/* TriggerType "3" for MU RTS */
+	/* Send MU RTS Trigger - '1' is to enable MU RTS */
+	run_system_wrapper(dut, "wifitool %s setUnitTestCmd 0x47 2 101 1",
+			   ifname);
+}
+
+
+static void ath_set_trigger_type_4(struct sigma_dut *dut, const char *ifname,
+				   const char *basedev)
+{
+	/* TriggerType "4" for BSRP */
+	run_system_wrapper(dut, "cfg80211tool %s he_ul_trig_int 200", basedev);
+	run_system_wrapper(dut, "wifitool %s setUnitTestCmd 0x48 2 63 1000",
+			   ifname);
+	if (dut->ap_channel >= 36) {
+		run_system_wrapper(dut,
+				   "wifitool %s setUnitTestCmd 0x47 2 42 1",
+				   ifname);
+	} else {
+		run_system_wrapper(dut,
+				   "wifitool %s setUnitTestCmd 0x47 2 42 2",
+				   ifname);
+	}
+	/* Send BSRP command */
+	run_system_wrapper(dut, "wifitool %s setUnitTestCmd 0x47 2 43 7",
+			   ifname);
+}
+
+
 static enum sigma_cmd_result ath_ap_set_rfeature(struct sigma_dut *dut,
 						 struct sigma_conn *conn,
 						 struct sigma_cmd *cmd)
@@ -11090,6 +11194,32 @@ static enum sigma_cmd_result ath_ap_set_rfeature(struct sigma_dut *dut,
 				   mac_addr[1], mac_addr[0], mac_addr[5],
 				   mac_addr[4], omctrl_rxnss,
 				   omctrl_chwidth, omctrl_rxnss);
+	}
+
+	val = get_param(cmd, "TriggerType");
+	if (val) {
+		trigtype = atoi(val);
+		switch (trigtype) {
+		case 0:
+			ath_set_trigger_type_0(dut, ifname);
+			break;
+		case 1:
+			ath_set_trigger_type_1(dut, ifname);
+			break;
+		case 2:
+			ath_set_trigger_type_2(dut, ifname);
+			break;
+		case 3:
+			ath_set_trigger_type_3(dut, ifname);
+			break;
+		case 4:
+			ath_set_trigger_type_4(dut, ifname, basedev);
+			break;
+		default:
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,TriggerType not supported");
+			return STATUS_SENT_ERROR;
+		}
 	}
 
 	return SUCCESS_SEND_STATUS;
