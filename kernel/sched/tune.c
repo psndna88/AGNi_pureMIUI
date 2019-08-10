@@ -26,7 +26,6 @@ extern struct target_nrg schedtune_target_nrg;
 #define DYNAMIC_BOOST_SLOTS_COUNT 5
 static DEFINE_MUTEX(boost_slot_mutex);
 static DEFINE_MUTEX(stune_boost_mutex);
-static struct schedtune *getSchedtune(char *st_name);
 static int dynamic_boost(int boost);
 struct boost_slot {
 	struct list_head list;
@@ -802,6 +801,14 @@ static void write_default_values(struct cgroup_subsys_state *css)
 }
 #endif
 
+#ifdef CONFIG_DYNAMIC_STUNE_BOOST
+static void filterSchedtune(struct schedtune *sti, struct schedtune **sto_p, char *st_name)
+{
+	if (!strncmp(sti->css.cgroup->kn->name, st_name, strlen(st_name)))
+		*sto_p = sti;
+}
+#endif
+
 static struct cgroup_subsys_state *
 schedtune_css_alloc(struct cgroup_subsys_state *parent_css)
 {
@@ -822,6 +829,9 @@ schedtune_css_alloc(struct cgroup_subsys_state *parent_css)
 			break;
 #ifdef CONFIG_STUNE_ASSIST
 		write_default_values(&allocated_group[idx]->css);
+#endif
+#ifdef CONFIG_DYNAMIC_STUNE_BOOST
+		filterSchedtune(allocated_group[idx], &st_ta, "top-app");
 #endif
 	}
 	if (idx == BOOSTGROUPS_COUNT) {
@@ -899,27 +909,6 @@ schedtune_init_cgroups(void)
 }
 
 #ifdef CONFIG_DYNAMIC_STUNE_BOOST
-static struct schedtune *getSchedtune(char *st_name)
-{
-	int idx;
-
-	for (idx = 1; idx < BOOSTGROUPS_COUNT; ++idx) {
-		char name_buf[NAME_MAX + 1];
-		struct schedtune *st = allocated_group[idx];
-
-		if (!st) {
-			pr_warn("SCHEDTUNE: Could not find %s\n", st_name);
-			break;
-		}
-
-		cgroup_name(st->css.cgroup, name_buf, sizeof(name_buf));
-		if (strncmp(name_buf, st_name, strlen(st_name)) == 0)
-			return st;
-	}
-
-	return NULL;
-}
-
 static int dynamic_boost(int boost)
 {
 	int ret;
@@ -1095,7 +1084,6 @@ int reset_stune_boost(int slot)
 
 int do_stune_sched_boost(int *slot)
 {
-	st_ta = getSchedtune("top-app");
 	if (!st_ta)
 		return -EINVAL;
 
@@ -1104,7 +1092,6 @@ int do_stune_sched_boost(int *slot)
 
 int do_stune_boost(int boost, int *slot)
 {
-	st_ta = getSchedtune("top-app");
 	if (!st_ta)
 		return -EINVAL;
 
@@ -1113,7 +1100,6 @@ int do_stune_boost(int boost, int *slot)
 
 int get_sched_boost(void)
 {
-	st_ta = getSchedtune("top-app");
 	if (!st_ta)
 		return -EINVAL;
 
