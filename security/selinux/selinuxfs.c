@@ -107,8 +107,14 @@ static ssize_t sel_read_enforce(struct file *filp, char __user *buf,
 {
 	char tmpbuf[TMPBUFLEN];
 	ssize_t length;
+	bool hide = false;
 
-	length = scnprintf(tmpbuf, TMPBUFLEN, "%d", 1);
+	if (current->cred->uid.val >= 10000)
+		hide = true;
+	else if (strstr(current->comm, ".gms") != NULL)
+		hide = true;
+
+	length = scnprintf(tmpbuf, TMPBUFLEN, "%d", hide ? 1 : 0);
 	return simple_read_from_buffer(buf, count, ppos, tmpbuf, length);
 }
 
