@@ -56,11 +56,11 @@ int sched_boost_handler(struct ctl_table *table, int write,
 	if (verify_boost_params(old_val, *data)) {
 		if (*data > 0)
 			if (*data == 1)
-				do_stune_sched_boost("top-app", &boost_slot);
+				do_stune_sched_boost(&boost_slot);
 			else
-				do_stune_boost("top-app", get_sched_boost("top-app") / 2, &boost_slot);
+				do_stune_boost(get_sched_boost() / 2, &boost_slot);
 		else
-			reset_stune_boost("top-app", boost_slot);
+			reset_stune_boost(boost_slot);
 	} else {
 		*data = old_val;
 		ret = -EINVAL;
