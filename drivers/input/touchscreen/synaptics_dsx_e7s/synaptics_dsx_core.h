@@ -71,7 +71,7 @@
 #define SYNA_TDDI
 */
 #define SYNA_TDDI
-#define SYN_DEBUG 1
+#define SYN_DEBUG 0
 #define SYN_I2C_NAME "SYN-ts"
 
 #if SYN_DEBUG
