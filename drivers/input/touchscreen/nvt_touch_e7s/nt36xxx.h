@@ -28,7 +28,7 @@
 #include <linux/earlysuspend.h>
 #endif
 
-#define NVT_DEBUG 1
+#define NVT_DEBUG 0
 
 
 #define NVTTOUCH_INT_PIN 943
