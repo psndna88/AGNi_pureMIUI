@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2017, 2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -3991,6 +3991,16 @@ static int hdmi_tx_evt_handle_check_param(struct hdmi_tx_ctrl *hdmi_ctrl)
 		rc = 1;
 		DEV_DBG("%s: res change %d ==> %d\n", __func__,
 			hdmi_ctrl->vic, new_vic);
+	}
+
+	/*
+	 * Since bootloader doesn't support DC return 1
+	 * for panel reconfig.
+	 */
+	if (hdmi_ctrl->panel_data.panel_info.cont_splash_enabled
+			&& hdmi_tx_dc_support(hdmi_ctrl)) {
+		rc = 1;
+		DEV_DBG("%s: Bitdepth changed\n", __func__);
 	}
 end:
 	return rc;
