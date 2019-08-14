@@ -1466,10 +1466,20 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 	if (val) {
 		if (strcasecmp(val, "MU") == 0) {
 			dut->ap_he_ppdu = PPDU_MU;
+		} else if (strcasecmp(val, "HE-SU") == 0) {
+			/* Do nothing */
+		} else if (strcasecmp(val, "SU") == 0) {
+			/* Do nothing */
+		} else if (strcasecmp(val, "legacy") == 0) {
+			/* Do nothing */
+		} else if (strcasecmp(val, "ER") == 0) {
+			/* Do nothing */
+		} else if (strcasecmp(val, "TB") == 0) {
+			/* Do nothing */
 		} else {
-			send_resp(dut, conn, SIGMA_INVALID,
+			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Unsupported PPDUTxType");
-			return 0;
+			return STATUS_SENT_ERROR;
 		}
 	}
 
@@ -1566,6 +1576,10 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 	if (val) {
 		if (strcasecmp(val, "UL") == 0) {
 			dut->ap_he_ulofdma = VALUE_ENABLED;
+		} else if (strcasecmp(val, "DL") == 0) {
+			dut->ap_he_dlofdma = VALUE_ENABLED;
+		} else if (strcasecmp(val, "DL-20and80") == 0) {
+			dut->ap_he_dlofdma = VALUE_ENABLED;
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Unsupported OFDMA value");
@@ -3715,6 +3729,37 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 	if (dut->sae_reflection)
 		owrt_ap_set_vap(dut, vap_count, "sae_reflection_attack", "1");
 
+	if (dut->program == PROGRAM_HE &&
+	    (dut->ap_txBF || dut->ap_he_ulofdma == VALUE_ENABLED)) {
+		switch (dut->ap_chwidth) {
+		case AP_20:
+			owrt_ap_set_vap(dut, vap_id, "chwidth", "0");
+			break;
+		case AP_40:
+			owrt_ap_set_vap(dut, vap_id, "chwidth", "1");
+			break;
+		case AP_80:
+			owrt_ap_set_vap(dut, vap_id, "chwidth", "2");
+			break;
+		case AP_160:
+			owrt_ap_set_vap(dut, vap_id, "chwidth", "3");
+			break;
+		case AP_80_80:
+			owrt_ap_set_vap(dut, vap_id, "chwidth", "3");
+			break;
+		case AP_AUTO:
+			break;
+		}
+	}
+
+	if (dut->ap_he_dlofdma == VALUE_ENABLED && dut->ap_he_ppdu == PPDU_MU) {
+		dut->ap_txBF = 0;
+		dut->ap_mu_txBF = 0;
+		owrt_ap_set_vap(dut, vap_id, "vhtsubfer", "0");
+		owrt_ap_set_vap(dut, vap_id, "vhtsubfee", "0");
+		owrt_ap_set_vap(dut, vap_id, "he_subfer", "0");
+	}
+
 	return 1;
 }
 
@@ -5854,18 +5899,100 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 		dut->hostapd_running = 1;
 	}
 
-	if (dut->ap_he_ppdu == PPDU_MU) {
-		run_system_wrapper(
-			dut, "wifitool %s setUnitTestCmd 0x47 2 11 1000000",
-			ifname);
-		run_system_wrapper(
-			dut, "wifitool %s setUnitTestCmd 0x47 2 17 1000000",
-			ifname);
-		run_system_wrapper(dut,
-				   "wifitool %s setUnitTestCmd 0x47 2 8 0",
+	if (dut->ap_he_ulofdma == VALUE_ENABLED) {
+		run_iwpriv(dut, ifname, "he_ul_ofdma 1");
+		run_iwpriv(dut, ifname, "he_mu_edca 1");
+
+		/* Disable sounding for UL OFDMA */
+		run_system_wrapper(dut, "wifitool %s setUnitTestCmd 0x47 2 7 0",
 				   ifname);
+
+		if ((dut->ap_rx_streams || dut->ap_tx_streams) &&
+		    dut->device_type == AP_testbed) {
+			unsigned int txchainmask = 0x00;
+
+			switch (dut->ap_rx_streams) {
+			case 1:
+				txchainmask = 0x01;
+				break;
+			case 2:
+				txchainmask = 0x03;
+				break;
+			case 3:
+				txchainmask = 0x07;
+				break;
+			case 4:
+				txchainmask = 0x0f;
+				break;
+			case 5:
+				txchainmask = 0x1f;
+				break;
+			case 6:
+				txchainmask = 0x3f;
+				break;
+			case 7:
+				txchainmask = 0x7f;
+				break;
+			case 8:
+				txchainmask = 0xff;
+				break;
+			}
+
+			run_iwpriv(dut, ifname, "he_ul_nss %d",
+				   dut->ap_rx_streams);
+			run_iwpriv(dut, basedev, "txchainmask %d", txchainmask);
+			run_iwpriv(dut, basedev, "rxchainmask %d", txchainmask);
+		}
+
+		if (dut->ap_channel == 100 && dut->device_type == AP_testbed)
+			run_system_wrapper(dut, "iwpriv %s inact 1000", ifname);
+
+		run_iwpriv(dut, ifname, "he_ul_ltf 3");
+		run_iwpriv(dut, ifname, "he_ul_shortgi 3");
+		run_iwpriv(dut, basedev, "he_ul_trig_int 2");
+
+		/* Set random RU allocation */
+		run_system_wrapper(dut, "wifitool %s setUnitTestCmd 0x47 2 9 1",
+				   ifname);
+		/* To set TBTT PPDU duration (us) */
+		run_system_wrapper(dut,
+				   "wifitool %s setUnitTestCmd 0x48 2 63 1908",
+				   ifname);
+	}
+
+	if (dut->program == PROGRAM_HE && dut->device_type == AP_testbed &&
+	    dut->ap_he_dlofdma == VALUE_DISABLED)
+		run_iwpriv(dut, ifname, "he_dl_ofdma 0");
+
+	if (dut->ap_he_dlofdma == VALUE_ENABLED) {
+		run_iwpriv(dut, ifname, "he_dl_ofdma 1", ifname);
+
+		/* For fixed MCS */
+		novap_reset(dut, ifname, 0);
+		run_iwpriv(dut, ifname,
+			   "cfg80211tool %s setratemask 3 0x80f80f80 0x0f80f80f 0xf80f80f8");
+	}
+
+	if (dut->ap_he_ppdu == PPDU_MU && dut->ap_he_dlofdma == VALUE_ENABLED) {
+		/* Increase the min TX time limit for MU MIMO to disable MU MIMO
+		 * scheduling */
+		run_system_wrapper(dut,
+				   "wifitool %s setUnitTestCmd 0x47 2 11 1000000",
+				   ifname);
+		/* Increase the max TX time limit for DL OFDMA to enable OFDMA
+		 * scheduling */
+		run_system_wrapper(dut,
+				   "wifitool %s setUnitTestCmd 0x47 2 17 1000000",
+				   ifname);
+		/* Disable 'force SU schedule' to enable MU sch */
+		run_system_wrapper(dut, "wifitool %s setUnitTestCmd 0x47 2 8 0",
+				   ifname);
+		/* Enable MU 11ax support in sch algo */
 		run_system_wrapper(dut,
 				   "wifitool %s setUnitTestCmd 0x47 2 29 0",
+				   ifname);
+		/* Enable to sort RU allocation */
+		run_system_wrapper(dut, "wifitool %s setUnitTestCmd 0x4b 2 2 1",
 				   ifname);
 	}
 }
@@ -8131,6 +8258,11 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 	}
 
 	dut->ap_he_ppdu = PPDU_NOT_SET;
+	dut->ap_he_ulofdma = VALUE_NOT_SET;
+	if (dut->device_type == AP_testbed)
+		dut->ap_he_dlofdma = VALUE_DISABLED;
+	else
+		dut->ap_he_dlofdma = VALUE_NOT_SET;
 
 	dut->ap_oper_chn = 0;
 

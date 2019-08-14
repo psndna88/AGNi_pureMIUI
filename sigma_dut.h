@@ -675,6 +675,7 @@ struct sigma_dut {
 	enum value_not_set_enabled_disabled ap_esp;
 
 	enum value_not_set_enabled_disabled ap_he_ulofdma;
+	enum value_not_set_enabled_disabled ap_he_dlofdma;
 
 	enum ppdu {
 		PPDU_NOT_SET,
@@ -682,6 +683,7 @@ struct sigma_dut {
 		PPDU_SU,
 		PPDU_ER,
 		PPDU_TB,
+		PPDU_HESU,
 	} ap_he_ppdu;
 
 	struct sigma_ese_alloc ap_ese_allocs[MAX_ESE_ALLOCS];
