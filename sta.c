@@ -2172,6 +2172,80 @@ static enum sigma_cmd_result cmd_sta_set_psk(struct sigma_dut *dut,
 }
 
 
+static enum sigma_cmd_result set_trust_root_system(struct sigma_dut *dut,
+						   struct sigma_conn *conn,
+						   const char *ifname, int id)
+{
+	char buf[200];
+
+	snprintf(buf, sizeof(buf), "%s/certs", sigma_cert_path);
+	if (!file_exists(buf))
+		strlcpy(buf, "/system/etc/security/cacerts", sizeof(buf));
+	if (!file_exists(buf))
+		strlcpy(buf, "/etc/ssl/certs", sizeof(buf));
+	if (!file_exists(buf)) {
+		char msg[300];
+
+		snprintf(msg, sizeof(msg),
+			 "ErrorCode,trustedRootCA system store (%s) not found",
+			 buf);
+		send_resp(dut, conn, SIGMA_ERROR, msg);
+		return STATUS_SENT_ERROR;
+	}
+
+	if (set_network_quoted(ifname, id, "ca_path", buf) < 0)
+		return ERROR_SEND_STATUS;
+
+	return SUCCESS_SEND_STATUS;
+}
+
+
+static enum sigma_cmd_result set_trust_root(struct sigma_dut *dut,
+					    struct sigma_conn *conn,
+					    const char *ifname, int id,
+					    const char *val)
+{
+	char buf[200];
+#ifdef ANDROID
+	unsigned char kvalue[KEYSTORE_MESSAGE_SIZE];
+	int length;
+#endif /* ANDROID */
+
+	if (strcmp(val, "DEFAULT") == 0)
+		return set_trust_root_system(dut, conn, ifname, id);
+
+#ifdef ANDROID
+	snprintf(buf, sizeof(buf), "CACERT_%s", val);
+	length = android_keystore_get(ANDROID_KEYSTORE_GET, buf, kvalue);
+	if (length > 0) {
+		sigma_dut_print(dut, DUT_MSG_INFO, "Use Android keystore [%s]",
+				buf);
+		snprintf(buf, sizeof(buf), "keystore://CACERT_%s", val);
+		goto ca_cert_selected;
+	}
+#endif /* ANDROID */
+
+	snprintf(buf, sizeof(buf), "%s/%s", sigma_cert_path, val);
+#ifdef __linux__
+	if (!file_exists(buf)) {
+		char msg[300];
+
+		snprintf(msg, sizeof(msg),
+			 "ErrorCode,trustedRootCA file (%s) not found", buf);
+		send_resp(dut, conn, SIGMA_ERROR, msg);
+		return STATUS_SENT_ERROR;
+	}
+#endif /* __linux__ */
+#ifdef ANDROID
+ca_cert_selected:
+#endif /* ANDROID */
+	if (set_network_quoted(ifname, id, "ca_cert", buf) < 0)
+		return ERROR_SEND_STATUS;
+
+	return SUCCESS_SEND_STATUS;
+}
+
+
 static int set_eap_common(struct sigma_dut *dut, struct sigma_conn *conn,
 			  const char *ifname, int username_identity,
 			  struct sigma_cmd *cmd)
@@ -2179,11 +2253,8 @@ static int set_eap_common(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *val, *alg, *akm;
 	int id;
 	char buf[200], buf2[300];
-#ifdef ANDROID
-	unsigned char kvalue[KEYSTORE_MESSAGE_SIZE];
-	int length;
-#endif /* ANDROID */
 	int erp = 0;
+	enum sigma_cmd_result res;
 
 	id = set_wpa_common(dut, conn, ifname, cmd);
 	if (id < 0)
@@ -2249,34 +2320,9 @@ static int set_eap_common(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	val = get_param(cmd, "trustedRootCA");
 	if (val) {
-#ifdef ANDROID
-		snprintf(buf, sizeof(buf), "CACERT_%s", val);
-		length = android_keystore_get(ANDROID_KEYSTORE_GET, buf,
-					      kvalue);
-		if (length > 0) {
-			sigma_dut_print(dut, DUT_MSG_INFO,
-					"Use Android keystore [%s]", buf);
-			snprintf(buf, sizeof(buf), "keystore://CACERT_%s",
-				 val);
-			goto ca_cert_selected;
-		}
-#endif /* ANDROID */
-
-		snprintf(buf, sizeof(buf), "%s/%s", sigma_cert_path, val);
-#ifdef __linux__
-		if (!file_exists(buf)) {
-			char msg[300];
-			snprintf(msg, sizeof(msg), "ErrorCode,trustedRootCA "
-				 "file (%s) not found", buf);
-			send_resp(dut, conn, SIGMA_ERROR, msg);
-			return -3;
-		}
-#endif /* __linux__ */
-#ifdef ANDROID
-ca_cert_selected:
-#endif /* ANDROID */
-		if (set_network_quoted(ifname, id, "ca_cert", buf) < 0)
-			return -2;
+		res = set_trust_root(dut, conn, ifname, id, val);
+		if (res != SUCCESS_SEND_STATUS)
+			return res;
 	}
 
 	val = get_param(cmd, "ServerCert");
