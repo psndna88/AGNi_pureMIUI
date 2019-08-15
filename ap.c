@@ -275,6 +275,53 @@ void ath_config_dyn_bw_sig(struct sigma_dut *dut, const char *ifname,
 }
 
 
+static void mac80211_config_rts_force(struct sigma_dut *dut, const char *ifname,
+				      const char *val)
+{
+	char buf[60];
+	char fname[128], path[128], *pos;
+	ssize_t res;
+
+	res = snprintf(fname, sizeof(fname), "/sys/class/net/%s/phy80211",
+		       ifname);
+	if (res < 0 || res >= sizeof(fname))
+		return;
+
+	res = readlink(fname, path, sizeof(path));
+	if (res < 0)
+		return;
+
+	if (res >= (int) sizeof(path))
+		res = sizeof(path) - 1;
+	path[res] = '\0';
+
+	pos = strrchr(path, '/');
+	if (!pos)
+		pos = path;
+	else
+		pos++;
+
+	if (strcasecmp(val, "enable") == 0) {
+		dut->ap_sig_rts = VALUE_ENABLED;
+		snprintf(buf, sizeof(buf), "iw %s set rts 64", pos);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"iw set rts 64 failed");
+		}
+	} else if (strcasecmp(val, "disable") == 0) {
+		dut->ap_sig_rts = VALUE_DISABLED;
+		snprintf(buf, sizeof(buf), "iw %s set rts 2347", pos);
+		if (system(buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"iw rts 2347 failed");
+		}
+	} else {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "Unsupported RTS_FORCE");
+	}
+
+}
+
+
 static void ath_config_rts_force(struct sigma_dut *dut, const char *ifname,
 				 const char *val)
 {
@@ -1082,6 +1129,9 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 					  "errorCode,Unsupported RTS_FORCE with OpenWrt driver");
 				return STATUS_SENT;
 			}
+			break;
+		case DRIVER_MAC80211:
+			mac80211_config_rts_force(dut, ifname, val);
 			break;
 		default:
 			sigma_dut_print(dut, DUT_MSG_ERROR,
@@ -12047,6 +12097,11 @@ static int mac80211_ap_set_rfeature(struct sigma_dut *dut,
 	const char *ifname;
 
 	ifname = get_main_ifname(dut);
+
+	val = get_param(cmd, "RTS_FORCE");
+	if (val)
+		mac80211_config_rts_force(dut, ifname, val);
+
 	val = get_param(cmd, "chnum_band");
 	if (val && mac80211_vht_chnum_band(dut, ifname, val) < 0)
 		return -1;
