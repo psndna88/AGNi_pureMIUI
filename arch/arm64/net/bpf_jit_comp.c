@@ -29,7 +29,7 @@
 
 #include "bpf_jit.h"
 
-int bpf_jit_enable __read_mostly;
+int bpf_jit_enable __read_mostly = 1;
 
 #define TMP_REG_1 (MAX_BPF_REG + 0)
 #define TMP_REG_2 (MAX_BPF_REG + 1)
