@@ -3434,7 +3434,12 @@ static enum sigma_cmd_result cmd_sta_associate(struct sigma_dut *dut,
 			if (pos) {
 				char *end;
 
-				tod = strstr(buf, " tod=1") != NULL;
+				if (strstr(buf, " tod=1"))
+					tod = 1;
+				else if (strstr(buf, " tod=2"))
+					tod = 2;
+				else
+					tod = 0;
 				sigma_dut_print(dut, DUT_MSG_DEBUG,
 						"Server certificate TOD policy: %d",
 						tod);
