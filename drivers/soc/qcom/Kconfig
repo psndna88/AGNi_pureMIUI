@@ -746,14 +746,6 @@ config MSM_PERFORMANCE
 	  given point in time. It also provides CPU/IO intensive workload
 	  detection for userspace.
 
-config MSM_PERFORMANCE_HOTPLUG_ON
-	bool "Hotplug functionality through msm_performance turned on"
-	depends on MSM_PERFORMANCE
-	help
-	 Setting this flag to true will enable the nodes needed for core-control
-	 functionality of hot plugging cores through msm_performance if there is
-	 no default core-control driver available.
-
 endif # ARCH_QCOM
 
 config MSM_SUBSYSTEM_RESTART
