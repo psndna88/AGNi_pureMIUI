@@ -25,8 +25,8 @@ index 654ab2df7fca..0f8e9fe0b828 100755
  ## AnyKernel setup
  # begin properties
  properties() { '
--kernel.string=Escrima-X27-Kamui-LightningBlade-PurpleLightning
-+kernel.string=Escrima-X27-Kamui-LightningBlade-PurpleLightning-OldJackFix
+-kernel.string=Escrima-X28-Kamui-LightningBlade-PurpleLightning
++kernel.string=Escrima-X28-Kamui-LightningBlade-PurpleLightning-OldJackFix
  do.devicecheck=1
  do.modules=0
  do.cleanup=1
@@ -38,8 +38,8 @@ index 5a155859a845..1764de80eec3 100644
  Anykernel_DIR=$KERNEL_DIR/AnyKernel2/
  DATE=$(date +"%d%m%Y")
  TIME=$(date +"-%H.%M.%S")
--KERNEL_NAME="Escrima-X27-Kamui-LightningBlade-PurpleLightning"
-+KERNEL_NAME="Escrima-X27-Kamui-LightningBlade-PurpleLightning-OldJackFix"
+-KERNEL_NAME="Escrima-X28-Kamui-LightningBlade-PurpleLightning"
++KERNEL_NAME="Escrima-X28-Kamui-LightningBlade-PurpleLightning-OldJackFix"
  DEVICE="-kenzo-"
  FINAL_ZIP="$KERNEL_NAME""$DEVICE""$DATE""$TIME"
  
