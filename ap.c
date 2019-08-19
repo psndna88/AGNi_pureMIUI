@@ -115,6 +115,7 @@ static int kill_process(struct sigma_dut *dut, char *proc_name,
 static int ap_ft_enabled(struct sigma_dut *dut)
 {
 	return dut->ap_ft_oa == 1 ||
+		dut->ap_ft_ds == VALUE_ENABLED ||
 		dut->ap_key_mgmt == AP_WPA2_FT_EAP ||
 		dut->ap_key_mgmt == AP_WPA2_FT_PSK ||
 		dut->ap_key_mgmt == AP_WPA2_ENT_FT_EAP ||
@@ -1272,6 +1273,19 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Wrong value for FT_OA");
 			return 0;
+		}
+	}
+
+	val = get_param(cmd, "FT_DS");
+	if (val) {
+		if (strcasecmp(val, "Enable") == 0) {
+			dut->ap_ft_ds = VALUE_ENABLED;
+		} else if (strcasecmp(val, "Disable") == 0) {
+			dut->ap_ft_ds = VALUE_DISABLED;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported value for FT_DS");
+			return STATUS_SENT_ERROR;
 		}
 	}
 
@@ -2996,7 +3010,9 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 						"mobility_domain",
 						dut->ap_mobility_domain);
 				owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
-						"ft_over_ds", "0");
+						"ft_over_ds",
+						dut->ap_ft_ds == VALUE_ENABLED ?
+						"1" : "0");
 				owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
 						"ieee80211r", "1");
 				owrt_ap_set_vap(dut, vap_count + (wlan_tag - 1),
@@ -3104,7 +3120,9 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 						"mobility_domain",
 						dut->ap_mobility_domain);
 				owrt_ap_set_vap(dut, vap_count,
-						"ft_over_ds", "0");
+						"ft_over_ds",
+						dut->ap_ft_ds == VALUE_ENABLED ?
+						"1" : "0");
 				owrt_ap_set_vap(dut, vap_count,
 						"ieee80211r", "1");
 				owrt_ap_set_vap(dut, vap_count,
@@ -3653,7 +3671,8 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 		unsigned char self_mac[ETH_ALEN];
 		char mac_str[20];
 
-		owrt_ap_set_vap(dut, vap_id, "ft_over_ds", "0");
+		owrt_ap_set_vap(dut, vap_id, "ft_over_ds",
+				dut->ap_ft_ds == VALUE_ENABLED ? "1" : "0");
 		owrt_ap_set_vap(dut, vap_id, "ieee80211r", "1");
 		if (get_hwaddr(sigma_radio_ifname[0], self_mac) < 0)
 			return -1;
@@ -7164,7 +7183,7 @@ skip_key_mgmt:
 		unsigned char own_addr[ETH_ALEN];
 
 		fprintf(f, "mobility_domain=%s\n", dut->ap_mobility_domain);
-		fprintf(f, "ft_over_ds=0\n");
+		fprintf(f, "ft_over_ds=%d\n", dut->ap_ft_ds == VALUE_ENABLED);
 		if (get_hwaddr(ifname, own_addr) < 0) {
 			memset(own_addr, 0, ETH_ALEN);
 			own_addr[0] = 0x02;
@@ -8206,6 +8225,7 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 		dut->ap_msnt_type = 0;
 	}
 	dut->ap_ft_oa = 0;
+	dut->ap_ft_ds = VALUE_NOT_SET;
 	dut->ap_reg_domain = REG_DOMAIN_NOT_SET;
 	dut->ap_mobility_domain[0] = '\0';
 

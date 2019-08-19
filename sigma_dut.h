@@ -634,6 +634,7 @@ struct sigma_dut {
 	char ap_mobility_domain[10];
 	unsigned char ap_cell_cap_pref;
 	int ap_ft_oa;
+	enum value_not_set_enabled_disabled ap_ft_ds;
 	int ap_name;
 	int ap_interface_5g;
 	int ap_interface_2g;
