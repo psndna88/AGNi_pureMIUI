@@ -4630,6 +4630,19 @@ cmd_sta_preset_testparameters(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *intf = get_param(cmd, "Interface");
 	const char *val;
 
+	val = get_param(cmd, "FT_DS");
+	if (val) {
+		if (strcasecmp(val, "Enable") == 0) {
+			dut->sta_ft_ds = 1;
+		} else if (strcasecmp(val, "Disable") == 0) {
+			dut->sta_ft_ds = 0;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported value for FT_DS");
+			return STATUS_SENT_ERROR;
+		}
+	}
+
 	val = get_param(cmd, "Program");
 	if (val && (strcasecmp(val, "HS2-R2") == 0 ||
 		    strcasecmp(val, "HS2-R3") == 0))
@@ -6179,13 +6192,14 @@ static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
 	char result[32];
 	int res;
 	int chan = 0;
-	int status = 0;
+	enum sigma_cmd_result status = STATUS_SENT;
 	int fastreassoc = 1;
+	int ft_ds = 0;
 
 	if (bssid == NULL) {
 		send_resp(dut, conn, SIGMA_ERROR, "errorCode,Missing bssid "
 			  "argument");
-		return 0;
+		return STATUS_SENT_ERROR;
 	}
 
 	if (val)
@@ -6198,14 +6212,14 @@ static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
 		if (set_network(intf, dut->infra_network_id, "bssid", bssid) <
 		    0 ||
 		    set_network(intf, 0, "bssid", bssid) < 0)
-			return -2;
+			return ERROR_SEND_STATUS;
 	}
 
 	ctrl = open_wpa_mon(intf);
 	if (ctrl == NULL) {
 		sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to open "
 				"wpa_supplicant monitor connection");
-		return -1;
+		return ERROR_SEND_STATUS;
 	}
 
 	if (get_wpa_status(get_station_ifname(), "wpa_state", result,
@@ -6214,6 +6228,10 @@ static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
 		sigma_dut_print(dut, DUT_MSG_DEBUG,
 				"sta_reassoc: Not connected");
 		fastreassoc = 0;
+	} else if (dut->sta_ft_ds) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"sta_reassoc: Use FT-over-DS");
+		ft_ds = 1;
 	}
 
 	if (dut->rsne_override) {
@@ -6232,7 +6250,58 @@ static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
 		}
 	}
 
-	if (wifi_chip_type == DRIVER_WCN && fastreassoc) {
+	if (ft_ds) {
+		if (chan) {
+			unsigned int freq;
+
+			freq = channel_to_freq(dut, chan);
+			if (!freq) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"Invalid channel number provided: %d",
+						chan);
+				send_resp(dut, conn, SIGMA_INVALID,
+					  "ErrorCode,Invalid channel number");
+				goto close_mon_conn;
+			}
+			res = snprintf(buf, sizeof(buf),
+				       "SCAN TYPE=ONLY freq=%d", freq);
+		} else {
+			res = snprintf(buf, sizeof(buf), "SCAN TYPE=ONLY");
+		}
+		if (res < 0 || res >= (int) sizeof(buf)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,snprintf failed");
+			goto close_mon_conn;
+		}
+		if (wpa_command(intf, buf) < 0) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Failed to start scan");
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,scan failed");
+			goto close_mon_conn;
+		}
+
+		res = get_wpa_cli_event(dut, ctrl, "CTRL-EVENT-SCAN-RESULTS",
+					buf, sizeof(buf));
+		if (res < 0) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Scan did not complete");
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,scan did not complete");
+			goto close_mon_conn;
+		}
+
+		res = snprintf(buf, sizeof(buf), "FT_DS %s", bssid);
+		if (res > 0 && res < (int) sizeof(buf))
+			res = wpa_command(intf, buf);
+
+		if (res < 0 || res >= (int) sizeof(buf)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,FT_DS command failed");
+			status = STATUS_SENT_ERROR;
+			goto close_mon_conn;
+		}
+	} else if (wifi_chip_type == DRIVER_WCN && fastreassoc) {
 #ifdef ANDROID
 		if (chan) {
 			unsigned int freq;
@@ -6278,7 +6347,7 @@ static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
 		    < 0) {
 			sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to set "
 					"bssid to any during FASTREASSOC");
-			status = -2;
+			status = ERROR_SEND_STATUS;
 			goto close_mon_conn;
 		}
 		res = snprintf(buf, sizeof(buf), "DRIVER FASTREASSOC %s %d",
@@ -6298,7 +6367,7 @@ static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
 		snprintf(buf, sizeof(buf), "iwpriv %s reassoc", intf);
 		if (system(buf) != 0) {
 			sigma_dut_print(dut, DUT_MSG_ERROR, "%s failed", buf);
-			status = -2;
+			status = ERROR_SEND_STATUS;
 			goto close_mon_conn;
 		}
 #endif /* ANDROID */
@@ -6313,11 +6382,12 @@ static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
 	res = get_wpa_cli_event(dut, ctrl, "CTRL-EVENT-CONNECTED",
 				buf, sizeof(buf));
 	if (res < 0) {
-		sigma_dut_print(dut, DUT_MSG_INFO, "Connection did not complete");
-		status = -1;
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Connection did not complete");
+		status = STATUS_SENT_ERROR;
 		goto close_mon_conn;
 	}
-	status = 1;
+	status = SUCCESS_SEND_STATUS;
 
 close_mon_conn:
 	wpa_ctrl_detach(ctrl);
@@ -7733,6 +7803,7 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 	}
 
 	dut->akm_values = 0;
+	dut->sta_ft_ds = 0;
 
 #ifdef NL80211_SUPPORT
 	if (get_driver_type() == DRIVER_WCN &&

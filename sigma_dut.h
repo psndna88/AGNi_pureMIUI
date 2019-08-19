@@ -400,6 +400,8 @@ struct sigma_dut {
 		STA_PMF_REQUIRED
 	} sta_pmf;
 
+	int sta_ft_ds;
+
 	int no_tpk_expiration;
 
 	int er_oper_performed;
