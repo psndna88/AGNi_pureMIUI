@@ -110,6 +110,13 @@ static enum sigma_cmd_result sta_server_cert_trust(struct sigma_dut *dut,
 		goto done;
 	}
 
+	if (dut->server_cert_tod == 1) {
+		strlcpy(resp,
+			"ServerCertTrustResult,OverrideNotAllowed,Reason,TOD-STRICT policy in received server certificate",
+			sizeof(resp));
+		goto done;
+	}
+
 	if (strcasecmp(val, "Accept") != 0) {
 		strlcpy(resp, "ServerCertTrustResult,Rejected", sizeof(resp));
 		goto done;

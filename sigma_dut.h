@@ -849,6 +849,7 @@ struct sigma_dut {
 	char *rsne_override;
 	int sta_associate_wait_connect;
 	char server_cert_hash[65];
+	int server_cert_tod;
 	int sta_tod_policy;
 	const char *hostapd_bin;
 	int use_hostapd_pid_file;

@@ -3300,6 +3300,8 @@ static enum sigma_cmd_result cmd_sta_associate(struct sigma_dut *dut,
 	if (ssid == NULL)
 		return -1;
 
+	dut->server_cert_tod = 0;
+
 	if (dut->rsne_override) {
 #ifdef NL80211_SUPPORT
 		if (get_driver_type() == DRIVER_WCN) {
@@ -3443,6 +3445,7 @@ static enum sigma_cmd_result cmd_sta_associate(struct sigma_dut *dut,
 				sigma_dut_print(dut, DUT_MSG_DEBUG,
 						"Server certificate TOD policy: %d",
 						tod);
+				dut->server_cert_tod = tod;
 
 				pos += 6;
 				end = strchr(pos, ' ');
@@ -7708,6 +7711,7 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 
 	dut->sta_associate_wait_connect = 0;
 	dut->server_cert_hash[0] = '\0';
+	dut->server_cert_tod = 0;
 	dut->sta_tod_policy = 0;
 
 	dut->dpp_conf_id = -1;
