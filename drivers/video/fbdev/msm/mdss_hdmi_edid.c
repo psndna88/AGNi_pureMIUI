@@ -147,6 +147,7 @@ struct hdmi_edid_ctrl {
 	bool keep_resv_timings;
 	bool edid_override;
 	bool hdr_supported;
+	bool override_default_vic;
 
 	struct hdmi_edid_sink_data sink_data;
 	struct hdmi_edid_init_data init_data;
@@ -964,6 +965,17 @@ static void hdmi_edid_add_sink_y420_format(struct hdmi_edid_ctrl *edid_ctrl,
 		video_format, msm_hdmi_mode_2string(video_format),
 		supported ? "Supported" : "Not-Supported");
 
+	/* override the default resolution */
+	if (edid_ctrl->override_default_vic) {
+		if (!ret && supported) {
+			sink->disp_mode_list[0].video_format = video_format;
+			sink->disp_mode_list[0].y420_support = true;
+			sink->disp_mode_list[0].rgb_support = false;
+			edid_ctrl->override_default_vic = false;
+			return;
+		}
+	}
+
 	if (!ret && supported) {
 		sink->disp_mode_list[sink->num_of_elements].video_format
 			= video_format;
@@ -1731,6 +1743,16 @@ static void hdmi_edid_add_sink_video_format(struct hdmi_edid_ctrl *edid_ctrl,
 	DEV_DBG("%s: EDID: format: %d [%s], %s\n", __func__,
 		video_format, msm_hdmi_mode_2string(video_format),
 		supported ? "Supported" : "Not-Supported");
+
+	/* override the default resolution */
+	if (edid_ctrl->override_default_vic) {
+		if (!ret && supported) {
+			disp_mode_list[0].video_format = video_format;
+			disp_mode_list[0].rgb_support = true;
+			edid_ctrl->override_default_vic = false;
+			return;
+		}
+	}
 
 	for (i = 0; i < sink_data->num_of_elements; i++) {
 		u32 vic = disp_mode_list[i].video_format;
@@ -2701,6 +2723,7 @@ void hdmi_edid_set_video_resolution(void *input, u32 resolution, bool reset)
 		edid_ctrl->sink_data.disp_mode_list[0].video_format =
 			resolution;
 		edid_ctrl->sink_data.disp_mode_list[0].rgb_support = true;
+		edid_ctrl->override_default_vic = true;
 	}
 } /* hdmi_edid_set_video_resolution */
 
