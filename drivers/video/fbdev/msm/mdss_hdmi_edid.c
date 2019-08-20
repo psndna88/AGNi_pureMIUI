@@ -2363,6 +2363,8 @@ int hdmi_edid_parser(void *input)
 	int status = 0;
 	u32 i = 0;
 	u32 cea_idx = 1;
+	u32 sink_caps_pclk_khz = 0;
+	u32 max_pclk_khz = 0;
 	struct hdmi_edid_ctrl *edid_ctrl = (struct hdmi_edid_ctrl *)input;
 
 	if (!edid_ctrl) {
@@ -2452,6 +2454,13 @@ bail:
 	}
 
 	edid_ctrl->cea_blks = num_of_cea_blocks;
+
+	sink_caps_pclk_khz =
+		hdmi_edid_get_sink_caps_max_tmds_clk(edid_ctrl) / 1000;
+	max_pclk_khz = hdmi_edid_get_max_pclk(edid_ctrl);
+	if (sink_caps_pclk_khz && max_pclk_khz)
+		hdmi_edid_set_max_pclk_rate(edid_ctrl,
+			min(max_pclk_khz, sink_caps_pclk_khz));
 
 	hdmi_edid_get_display_mode(edid_ctrl);
 
