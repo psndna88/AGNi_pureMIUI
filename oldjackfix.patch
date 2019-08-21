@@ -11,16 +11,16 @@ Subject: [PATCH] wcd-mbhc-v2: fix jack detection issues and unwanted music
 Signed-off-by: psndna88 <psndna88@gmail.com>
 Signed-off-by: AmolAmrit <amol.amrit03@outlook.com>
 ---
- AnyKernel2/anykernel.sh        |   2 +-
+ AnyKernel3/anykernel.sh        |   2 +-
  build.sh                       |   2 +-
  sound/soc/codecs/wcd-mbhc-v2.c | 168 ++++++++++++++++++++++++---------
  sound/soc/codecs/wcd-mbhc-v2.h |   3 +-
  4 files changed, 128 insertions(+), 47 deletions(-)
 
-diff --git a/AnyKernel2/anykernel.sh b/AnyKernel2/anykernel.sh
+diff --git a/AnyKernel3/anykernel.sh b/AnyKernel3/anykernel.sh
 index 654ab2df7fca..0f8e9fe0b828 100755
---- a/AnyKernel2/anykernel.sh
-+++ b/AnyKernel2/anykernel.sh
+--- a/AnyKernel3/anykernel.sh
++++ b/AnyKernel3/anykernel.sh
 @@ -4,7 +4,7 @@
  ## AnyKernel setup
  # begin properties
@@ -35,7 +35,7 @@ index 5a155859a845..1764de80eec3 100644
 --- a/build.sh
 +++ b/build.sh
 @@ -2,7 +2,7 @@ KERNEL_DIR=$PWD
- Anykernel_DIR=$KERNEL_DIR/AnyKernel2/
+ Anykernel_DIR=$KERNEL_DIR/AnyKernel3/
  DATE=$(date +"%d%m%Y")
  TIME=$(date +"-%H.%M.%S")
 -KERNEL_NAME="Escrima-X28-Kamui-LightningBlade-PurpleLightning"
