@@ -7746,10 +7746,23 @@ skip_key_mgmt:
 	}
 
 	if (drv == DRIVER_LINUX_WCN) {
-		sigma_dut_print(dut, DUT_MSG_INFO, "setting ip addr %s mask %s",
-				ap_inet_addr, ap_inet_mask);
+		const char *ifname_ptr = ifname;
+
+		if ((dut->ap_key_mgmt == AP_OPEN &&
+		     dut->ap_tag_key_mgmt[0] == AP2_WPA2_OWE) ||
+		    (dut->ap_key_mgmt == AP_WPA2_OWE &&
+		     dut->ap_tag_ssid[0][0] &&
+		     dut->ap_tag_key_mgmt[0] == AP2_OPEN)) {
+			/* OWE transition mode */
+			if (dut->bridge)
+				ifname_ptr = dut->bridge;
+		}
+
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"setting ip addr %s mask %s ifname %s",
+				ap_inet_addr, ap_inet_mask, ifname_ptr);
 		snprintf(buf, sizeof(buf), "ifconfig %s %s netmask %s up",
-			 ifname, ap_inet_addr, ap_inet_mask);
+			 ifname_ptr, ap_inet_addr, ap_inet_mask);
 		if (system(buf) != 0) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Failed to initialize the interface");
