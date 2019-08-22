@@ -22,6 +22,7 @@
 #include <linux/dma-direction.h>
 #include <linux/kref.h>
 #include <linux/mm_types.h>
+#include <linux/msm_dma_iommu_mapping.h>
 #include <linux/mutex.h>
 #include <linux/rbtree.h>
 #include <linux/sched.h>
@@ -120,6 +121,7 @@ struct ion_buffer {
 	struct sg_table *sg_table;
 	struct list_head attachments;
 	struct list_head vmas;
+	struct msm_iommu_data iommu_data;
 };
 
 void ion_buffer_destroy(struct ion_buffer *buffer);
