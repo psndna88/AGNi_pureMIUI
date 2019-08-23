@@ -2250,7 +2250,7 @@ static int set_eap_common(struct sigma_dut *dut, struct sigma_conn *conn,
 			  const char *ifname, int username_identity,
 			  struct sigma_cmd *cmd)
 {
-	const char *val, *alg, *akm;
+	const char *val, *alg, *akm, *trust_root, *domain, *domain_suffix;
 	int id;
 	char buf[200], buf2[300];
 	int erp = 0;
@@ -2263,6 +2263,9 @@ static int set_eap_common(struct sigma_dut *dut, struct sigma_conn *conn,
 	val = get_param(cmd, "keyMgmtType");
 	alg = get_param(cmd, "micAlg");
 	akm = get_param(cmd, "AKMSuiteType");
+	trust_root = get_param(cmd, "trustedRootCA");
+	domain = get_param(cmd, "Domain");
+	domain_suffix = get_param(cmd, "DomainSuffix");
 
 	if (val && strcasecmp(val, "SuiteB") == 0) {
 		if (set_network(ifname, id, "key_mgmt", "WPA-EAP-SUITE-B-192") <
@@ -2318,9 +2321,14 @@ static int set_eap_common(struct sigma_dut *dut, struct sigma_conn *conn,
 			return -2;
 	}
 
-	val = get_param(cmd, "trustedRootCA");
-	if (val) {
-		res = set_trust_root(dut, conn, ifname, id, val);
+	if (trust_root) {
+		if (strcmp(trust_root, "DEFAULT") == 0 && !domain &&
+		    !domain_suffix) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,trustRootCA DEFAULT used without specifying Domain or DomainSuffix");
+			return STATUS_SENT_ERROR;
+		}
+		res = set_trust_root(dut, conn, ifname, id, trust_root);
 		if (res != SUCCESS_SEND_STATUS)
 			return res;
 	}
@@ -2359,13 +2367,13 @@ static int set_eap_common(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
-	val = get_param(cmd, "Domain");
-	if (val && set_network_quoted(ifname, id, "domain_match", val) < 0)
+	if (domain &&
+	    set_network_quoted(ifname, id, "domain_match", domain) < 0)
 		return ERROR_SEND_STATUS;
 
-	val = get_param(cmd, "DomainSuffix");
-	if (val &&
-	    set_network_quoted(ifname, id, "domain_suffix_match", val) < 0)
+	if (domain_suffix &&
+	    set_network_quoted(ifname, id, "domain_suffix_match",
+			       domain_suffix) < 0)
 		return ERROR_SEND_STATUS;
 
 	if (username_identity) {
