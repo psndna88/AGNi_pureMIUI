@@ -784,6 +784,7 @@ static int qcom_smp2p_freeze(struct device *dev)
 	}
 	INIT_LIST_HEAD(&smp2p->outbound);
 
+
 	/* Walk through the in bound list and reset last value */
 	list_for_each_entry_safe(entry, next_entry, &smp2p->inbound, node) {
 		entry->last_value = 0;
