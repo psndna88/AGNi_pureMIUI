@@ -22,9 +22,9 @@ struct msm_iommu_map {
 	struct list_head lnode;
 	struct scatterlist *sgl;
 	enum dma_data_direction dir;
-	unsigned int nents;
-	int refcount;
 	unsigned long attrs;
+	int nents;
+	int refcount;
 };
 
 static LIST_HEAD(meta_list);
@@ -66,9 +66,7 @@ static void msm_iommu_map_free(struct msm_iommu_meta *meta,
 	}
 
 	/* Skip an additional cache maintenance on the dma unmap path */
-	if (!(map->attrs & DMA_ATTR_SKIP_CPU_SYNC))
-		map->attrs |= DMA_ATTR_SKIP_CPU_SYNC;
-
+	map->attrs |= DMA_ATTR_SKIP_CPU_SYNC;
 	dma_unmap_sg_attrs(map->dev, map->sgl, map->nents, map->dir,
 			   map->attrs);
 	sg_free_table(&table);
@@ -81,9 +79,7 @@ static struct scatterlist *clone_sgl(struct scatterlist *sg, int nents)
 	struct sg_table table;
 	int i;
 
-	if (sg_alloc_table(&table, nents, GFP_KERNEL))
-		return NULL;
-
+	sg_alloc_table(&table, nents, GFP_KERNEL | __GFP_NOFAIL);
 	next = table.sgl;
 	for_each_sg(sg, s, nents, i) {
 		*next = *s;
@@ -118,11 +114,11 @@ int msm_dma_map_sg_attrs(struct device *dev, struct scatterlist *sg, int nents,
 		for_each_sg(map->sgl, map_sg, nents, i) {
 			sg_dma_address(sg_tmp) = sg_dma_address(map_sg);
 			sg_dma_len(sg_tmp) = sg_dma_len(map_sg);
-			if (sg_dma_len(map_sg) == 0)
+			if (!sg_dma_len(map_sg))
 				break;
 
 			sg_tmp = sg_next(sg_tmp);
-			if (sg_tmp == NULL)
+			if (!sg_tmp)
 				break;
 		}
 
@@ -142,11 +138,6 @@ int msm_dma_map_sg_attrs(struct device *dev, struct scatterlist *sg, int nents,
 			map->attrs = attrs;
 			map->refcount = 2 - not_lazy;
 			map->sgl = clone_sgl(sg, nents);
-			if (!map->sgl) {
-				kfree(map);
-				ret = -ENOMEM;
-				goto out_unlock;
-			}
 
 			if (meta) {
 				meta->refcount++;
@@ -164,15 +155,13 @@ int msm_dma_map_sg_attrs(struct device *dev, struct scatterlist *sg, int nents,
 			list_add(&map->lnode, &meta->map_list);
 		}
 	}
-	ret = nents;
-
-out_unlock:
 	up_read(&unmap_all_rwsem);
 	mutex_unlock(&data->lock);
-	return ret;
+
+	return nents;
 }
 
-void msm_dma_unmap_sg_attrs(struct device *dev, struct scatterlist *sgl,
+void msm_dma_unmap_sg_attrs(struct device *dev, struct scatterlist *sg,
 			    int nents, enum dma_data_direction dir,
 			    struct dma_buf *dma_buf, unsigned long attrs)
 {
@@ -180,16 +169,19 @@ void msm_dma_unmap_sg_attrs(struct device *dev, struct scatterlist *sgl,
 	struct msm_iommu_meta *meta;
 	struct msm_iommu_map *map;
 
-	if (!(attrs & DMA_ATTR_SKIP_CPU_SYNC))
-		dma_sync_sg_for_cpu(dev, map->sgl, map->nents, dir);
-
 	mutex_lock(&data->lock);
 	down_read(&unmap_all_rwsem);
 	meta = data->meta;
 	if (meta) {
 		map = msm_iommu_map_lookup(meta, dev);
-		if (map && !--map->refcount)
-			msm_iommu_map_free(meta, map);
+		if (map) {
+			if (!(attrs & DMA_ATTR_SKIP_CPU_SYNC))
+				dma_sync_sg_for_cpu(dev, map->sgl, map->nents,
+						    dir);
+
+			if (!--map->refcount)
+				msm_iommu_map_free(meta, map);
+		}
 	}
 	up_read(&unmap_all_rwsem);
 	mutex_unlock(&data->lock);
@@ -211,9 +203,6 @@ int msm_dma_unmap_all_for_dev(struct device *dev)
 	return 0;
 }
 
-/*
- * Only to be called by ION code when a buffer is freed
- */
 void msm_dma_buf_freed(struct msm_iommu_data *data)
 {
 	struct msm_iommu_map *map, *tmp_map;
