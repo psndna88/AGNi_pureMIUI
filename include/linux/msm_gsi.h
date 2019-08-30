@@ -1222,7 +1222,7 @@ int gsi_alloc_channel(struct gsi_chan_props *props, unsigned long dev_hdl,
  * @Return gsi_status
  */
 int gsi_write_channel_scratch(unsigned long chan_hdl,
-		union __packed gsi_channel_scratch val);
+		union gsi_channel_scratch val);
 
 /**
  * gsi_write_channel_scratch3_reg - Peripheral should call this function to
@@ -1261,7 +1261,7 @@ int gsi_write_wdi3_channel_scratch2_reg(unsigned long chan_hdl,
  * @Return gsi_status
  */
 int gsi_read_channel_scratch(unsigned long chan_hdl,
-		union __packed gsi_channel_scratch *val);
+		union gsi_channel_scratch *val);
 
 /**
  * gsi_read_wdi3_channel_scratch2_reg - Peripheral should call this function to
@@ -1717,7 +1717,7 @@ static inline int gsi_alloc_channel(struct gsi_chan_props *props,
 }
 
 static inline int gsi_write_channel_scratch(unsigned long chan_hdl,
-		union __packed gsi_channel_scratch val)
+		union gsi_channel_scratch val)
 {
 	return -GSI_STATUS_UNSUPPORTED_OP;
 }
@@ -1728,7 +1728,7 @@ static inline int gsi_write_channel_scratch3_reg(unsigned long chan_hdl,
 }
 
 static inline int gsi_read_channel_scratch(unsigned long chan_hdl,
-		union __packed gsi_channel_scratch *val)
+		union gsi_channel_scratch *val)
 {
 	return -GSI_STATUS_UNSUPPORTED_OP;
 }
