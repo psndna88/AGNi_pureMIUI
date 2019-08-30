@@ -764,7 +764,7 @@ struct __packed gsi_wdi_channel_scratch {
 * gsi_mhip_channel_scratch - MHI PRIME protocol SW config area of
 * channel scratch
 * @assert_bit_40: Valid only for non-host channels.
-* Set to 1 for MHI’ channels when running over PCIe.
+* Set to 1 for MHIï¿½ channels when running over PCIe.
 * @host_channel: Set to 1 for MHIP channel running on host.
 *
 */
@@ -1348,7 +1348,7 @@ int gsi_alloc_channel(struct gsi_chan_props *props, unsigned long dev_hdl,
  * @Return gsi_status
  */
 int gsi_write_channel_scratch(unsigned long chan_hdl,
-		union __packed gsi_channel_scratch val);
+		union gsi_channel_scratch val);
 
 /**
  * gsi_write_channel_scratch3_reg - Peripheral should call this function to
@@ -1387,7 +1387,7 @@ int gsi_write_wdi3_channel_scratch2_reg(unsigned long chan_hdl,
  * @Return gsi_status
  */
 int gsi_read_channel_scratch(unsigned long chan_hdl,
-		union __packed gsi_channel_scratch *val);
+		union gsi_channel_scratch *val);
 
 /**
  * gsi_read_wdi3_channel_scratch2_reg - Peripheral should call this function to
@@ -1886,7 +1886,7 @@ static inline int gsi_alloc_channel(struct gsi_chan_props *props,
 }
 
 static inline int gsi_write_channel_scratch(unsigned long chan_hdl,
-		union __packed gsi_channel_scratch val)
+		union gsi_channel_scratch val)
 {
 	return -GSI_STATUS_UNSUPPORTED_OP;
 }
