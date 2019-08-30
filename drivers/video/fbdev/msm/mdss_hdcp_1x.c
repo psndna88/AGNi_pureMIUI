@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1348,15 +1348,15 @@ static int hdcp_1x_authentication_part2(struct hdcp_1x *hdcp)
 	}
 
 	do {
-		rc = hdcp_1x_transfer_v_h(hdcp);
-		if (rc)
-			goto error;
-
 		/* do not proceed further if no device connected */
 		if (!hdcp->current_tp.dev_count) {
 			rc = -EINVAL;
 			goto error;
 		}
+
+		rc = hdcp_1x_transfer_v_h(hdcp);
+		if (rc)
+			goto error;
 
 		rc = hdcp_1x_write_ksv_fifo(hdcp);
 	} while (--v_retry && rc);
