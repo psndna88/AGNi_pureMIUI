@@ -4207,14 +4207,6 @@ static int fg_psy_set_property(struct power_supply *psy,
 		break;
 #endif
 	case POWER_SUPPLY_PROP_CHARGE_FULL:
-		if (chip->cl.active) {
-			pr_warn("Capacity learning active!\n");
-			return 0;
-		}
-		if (pval->intval <= 0 || pval->intval > chip->cl.nom_cap_uah) {
-			pr_err("charge_full is out of bounds\n");
-			return -EINVAL;
-		}
 		chip->cl.learned_cc_uah = pval->intval;
 		rc = fg_save_learned_cap_to_sram(chip);
 		if (rc < 0)
