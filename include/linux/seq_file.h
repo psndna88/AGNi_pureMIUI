@@ -149,6 +149,20 @@ static inline struct user_namespace *seq_user_ns(struct seq_file *seq)
 #endif
 }
 
+#define DEFINE_SHOW_ATTRIBUTE(__name)					\
+static int __name ## _open(struct inode *inode, struct file *file)	\
+{									\
+	return single_open(file, __name ## _show, inode->i_private);	\
+}									\
+									\
+static const struct file_operations __name ## _fops = {			\
+	.owner		= THIS_MODULE,					\
+	.open		= __name ## _open,				\
+	.read		= seq_read,					\
+	.llseek		= seq_lseek,					\
+	.release	= single_release,				\
+}
+
 /**
  * seq_show_options - display mount options with appropriate escapes.
  * @m: the seq_file handle
