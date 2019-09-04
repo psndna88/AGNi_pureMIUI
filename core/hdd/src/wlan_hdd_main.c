@@ -216,6 +216,7 @@ static struct kparam_string fwpath = {
 static char *country_code;
 static int enable_11d = -1;
 static int enable_dfs_chan_scan = -1;
+static bool is_mode_change_psoc_idle_shutdown;
 
 /*
  * spinlock for synchronizing asynchronous request/response
@@ -4265,8 +4266,10 @@ int hdd_vdev_destroy(struct hdd_adapter *adapter)
 
 		if (status == QDF_STATUS_E_TIMEOUT)
 			hdd_err("timed out waiting for sme close session");
-		else if (adapter->qdf_session_close_event.force_set)
+		else if (adapter->qdf_session_close_event.force_set) {
+			ucfg_mlme_force_objmgr_vdev_peer_cleanup(vdev_id);
 			hdd_info("SSR occurred during sme close session");
+		}
 		else
 			hdd_err("failed to wait for sme close session; status:%u",
 				status);
@@ -9539,6 +9542,31 @@ static void hdd_set_wlan_logging(struct hdd_context *hdd_ctx)
 { }
 #endif
 
+
+static int hdd_mode_change_psoc_idle_shutdown(struct device *dev)
+{
+	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
+	int ret;
+
+	if (!hdd_ctx)
+		return -EINVAL;
+
+	ret = hdd_wlan_stop_modules(hdd_ctx, true);
+	if (ret)
+		hdd_err("Failed to stop modules");
+
+	is_mode_change_psoc_idle_shutdown = false;
+
+	return ret;
+}
+
+static int hdd_mode_change_psoc_idle_restart(struct device *dev)
+{
+	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
+
+	return hdd_wlan_start_modules(hdd_ctx, false);
+}
+
 /**
  * hdd_psoc_idle_timeout_callback() - Handler for psoc idle timeout
  * @priv: pointer to hdd context
@@ -9596,6 +9624,9 @@ int hdd_psoc_idle_shutdown(struct device *dev)
 {
 	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
 	int ret;
+
+	if (is_mode_change_psoc_idle_shutdown)
+		return hdd_mode_change_psoc_idle_shutdown(dev);
 
 	ret = wlan_hdd_validate_context(hdd_ctx);
 	if (ret)
@@ -11781,6 +11812,7 @@ int hdd_wlan_stop_modules(struct hdd_context *hdd_ctx, bool ftm_mode)
 
 	/* Free the cache channels of the command SET_DISABLE_CHANNEL_LIST */
 	wlan_hdd_free_cache_channels(hdd_ctx);
+	hdd_driver_mem_cleanup();
 
 	/* Free the resources allocated while storing SAR config. These needs
 	 * to be freed only in the case when it is not SSR. As in the case of
@@ -12734,6 +12766,11 @@ static void __hdd_bus_bw_compute_timer_start(struct hdd_context *hdd_ctx)
 void hdd_bus_bw_compute_timer_start(struct hdd_context *hdd_ctx)
 {
 	hdd_enter();
+
+	if (wlan_hdd_validate_context(hdd_ctx)) {
+		hdd_exit();
+		return;
+	}
 
 	if (hdd_bus_bw_compute_timer_is_running(hdd_ctx)) {
 		hdd_debug("Bandwidth compute timer already started");
@@ -13879,9 +13916,12 @@ static int __con_mode_handler(const char *kmessage,
 	/* ensure adapters are stopped */
 	hdd_stop_present_mode(hdd_ctx, curr_mode);
 
-	ret = hdd_wlan_stop_modules(hdd_ctx, true);
+	is_mode_change_psoc_idle_shutdown = true;
+	ret = pld_idle_shutdown(hdd_ctx->parent_dev,
+				hdd_mode_change_psoc_idle_shutdown);
 	if (ret) {
-		hdd_err("Stop wlan modules failed");
+		is_mode_change_psoc_idle_shutdown = false;
+		hdd_err("Failed to change the mode because of idle shutdown");
 		goto reset_flags;
 	}
 
@@ -13904,9 +13944,11 @@ static int __con_mode_handler(const char *kmessage,
 		goto reset_flags;
 	}
 
-	ret = hdd_wlan_start_modules(hdd_ctx, false);
+	ret = pld_idle_restart(hdd_ctx->parent_dev,
+			       hdd_mode_change_psoc_idle_restart);
 	if (ret) {
-		hdd_err("Failed to start modules: %d", ret);
+		is_mode_change_psoc_idle_shutdown = false;
+		hdd_err("Start wlan modules failed: %d", ret);
 		goto reset_flags;
 	}
 
