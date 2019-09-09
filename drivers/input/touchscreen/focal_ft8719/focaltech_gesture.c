@@ -109,6 +109,10 @@ static ssize_t fts_gesture_store(struct device *dev, struct device_attribute *at
 static ssize_t fts_gesture_buf_show(struct device *dev, struct device_attribute *attr, char *buf);
 static ssize_t fts_gesture_buf_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count);
 
+static int fts_gesture_proc_read(struct seq_file *file, void *v)
+static int fts_gesture_proc_open(struct inode *inode, struct file *file)
+static ssize_t fts_gesture_proc_write(struct file *file, const char __user *buf, size_t count, loff_t *ppos)
+
 /* sysfs gesture node
  *   read example: cat  fts_gesture_mode        ---read gesture mode
  *   write example:echo 01 > fts_gesture_mode   ---write gesture mode to 01
@@ -214,6 +218,36 @@ static ssize_t fts_gesture_buf_store(struct device *dev, struct device_attribute
     /* place holder for future use */
     return -EPERM;
 }
+
+static int fts_gesture_read(struct seq_file *file, void *v)
+{
+	seq_printf(file, "%d", fts_gesture_data.mode);
+	return 0;
+}
+
+static int fts_gesture_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, fts_gesture_read, inode);
+}
+
+static ssize_t fts_gesture_write(struct file *file, const char __user *buf,
+			 size_t count, loff_t *ppos)
+{
+	uint8_t str;
+	if(copy_from_user(&str, buf, 1)); // ignore
+	fts_gesture_data.mode = (str == '1');
+	return 1;
+}
+
+ static const struct file_operations fts_gesture_fops = {
+	.owner = THIS_MODULE,
+	.open = fts_gesture_proc_open,
+	.write = fts_gesture_proc_write,
+	.release = single_release,
+	.read = seq_read,
+	.llseek = seq_lseek,
+};
+#define FTS_GESTURE_NAME "fts_wake_gesture"
 
 /*****************************************************************************
 *   Name: fts_create_gesture_sysfs
@@ -570,6 +604,7 @@ int fts_gesture_init(struct fts_ts_data *ts_data)
     __set_bit(KEY_GESTURE_Z, input_dev->keybit);
 
     fts_create_gesture_sysfs(client);
+    proc_create(FTS_GESTURE_NAME, 0666, NULL, &fts_gesture_fops)
     fts_gesture_data.mode = ENABLE;
     fts_gesture_data.active = DISABLE;
 
