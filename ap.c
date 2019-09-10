@@ -1620,6 +1620,19 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		}
 	}
 
+	val = get_param(cmd, "FrgmntSupport");
+	if (val) {
+		if (strcasecmp(val, "enable") == 0) {
+			dut->ap_he_frag = VALUE_ENABLED;
+		} else if (strcasecmp(val, "disable") == 0) {
+			dut->ap_he_frag = VALUE_DISABLED;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported FrgmntSupport value");
+			return STATUS_SENT_ERROR;
+		}
+	}
+
 	return 1;
 }
 
@@ -6092,6 +6105,11 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 		run_iwpriv(dut, ifname, "he_txmcsmap 0x0");
 		run_iwpriv(dut, ifname, "he_rxmcsmap 0x0");
 	}
+
+	if (dut->ap_he_frag == VALUE_ENABLED)
+		run_iwpriv(dut, ifname, "he_frag 1");
+	else if (dut->ap_he_frag == VALUE_DISABLED)
+		run_iwpriv(dut, ifname, "he_frag 0");
 }
 
 
@@ -8359,10 +8377,13 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 	dut->ap_he_ulofdma = VALUE_NOT_SET;
 	dut->ap_numsounddim = 0;
 	dut->ap_bcc = VALUE_DISABLED;
-	if (dut->device_type == AP_testbed)
+	if (dut->device_type == AP_testbed) {
 		dut->ap_he_dlofdma = VALUE_DISABLED;
-	else
+		dut->ap_he_frag = VALUE_DISABLED;
+	} else {
 		dut->ap_he_dlofdma = VALUE_NOT_SET;
+		dut->ap_he_frag = VALUE_NOT_SET;
+	}
 
 	if (dut->program == PROGRAM_HE) {
 		if (dut->device_type == AP_testbed)
