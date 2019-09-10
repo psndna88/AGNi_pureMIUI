@@ -1165,8 +1165,8 @@ static void hdmi_edid_extract_extended_data_blocks(
 			break;
 		}
 
-		/* The extended data block should at least be 2 bytes long */
-		if (len < 2) {
+		/* The extended data block should at least be 1 bytes long */
+		if (len < 1) {
 			DEV_DBG("%s: invalid block size\n", __func__);
 			continue;
 		}
