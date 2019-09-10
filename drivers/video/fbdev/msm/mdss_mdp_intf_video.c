@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1955,10 +1955,24 @@ static int mdss_mdp_video_cdm_setup(struct mdss_mdp_cdm *cdm,
 {
 	struct mdp_cdm_cfg setup;
 
-	if (fmt->is_yuv)
-		setup.csc_type = MDSS_MDP_CSC_RGB2YUV_601FR;
-	else
-		setup.csc_type = MDSS_MDP_CSC_RGB2RGB;
+	if (fmt->is_yuv) {
+		if (pinfo->is_ce_mode) {
+			if (pinfo->yres < 720)
+				setup.csc_type = MDSS_MDP_CSC_RGB2YUV_601L;
+			else
+				setup.csc_type = MDSS_MDP_CSC_RGB2YUV_709L;
+		} else {
+			if (pinfo->yres < 720)
+				setup.csc_type = MDSS_MDP_CSC_RGB2YUV_601FR;
+			else
+				setup.csc_type = MDSS_MDP_CSC_RGB2YUV_709FR;
+		}
+	} else {
+		if (pinfo->is_ce_mode)
+			setup.csc_type = MDSS_MDP_CSC_RGB2RGB_L;
+		else
+			setup.csc_type = MDSS_MDP_CSC_RGB2RGB;
+	}
 
 	switch (fmt->chroma_sample) {
 	case MDSS_MDP_CHROMA_RGB:
@@ -2120,6 +2134,7 @@ static int mdss_mdp_video_ctx_setup(struct mdss_mdp_ctl *ctl,
 	}
 
 	if (mdss_mdp_is_cdm_supported(mdata, ctl->intf_type, 0)) {
+		bool needs_qr_conversion = false;
 
 		fmt = mdss_mdp_get_format_params(pinfo->out_format);
 		if (!fmt) {
@@ -2127,7 +2142,11 @@ static int mdss_mdp_video_ctx_setup(struct mdss_mdp_ctl *ctl,
 			       pinfo->out_format);
 			return -EINVAL;
 		}
-		if (fmt->is_yuv) {
+
+		if (ctl->intf_type == MDSS_INTF_HDMI && pinfo->is_ce_mode)
+			needs_qr_conversion = true;
+
+		if (fmt->is_yuv || needs_qr_conversion) {
 			ctl->cdm =
 			mdss_mdp_cdm_init(ctl, MDP_CDM_CDWN_OUTPUT_HDMI);
 			if (!IS_ERR_OR_NULL(ctl->cdm)) {
