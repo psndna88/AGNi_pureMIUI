@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -143,6 +143,11 @@ enum hdmi_quantization_range {
 	HDMI_QUANTIZATION_FULL_RANGE
 };
 
+enum hdmi_ycc_quantization_range {
+	HDMI_YCC_QUANTIZATION_LIMITED_RANGE,
+	HDMI_YCC_QUANTIZATION_FULL_RANGE
+};
+
 enum hdmi_scaling_info {
 	HDMI_SCALING_NONE,
 	HDMI_SCALING_HORZ,
@@ -189,8 +194,17 @@ static int hdmi_panel_config_avi(struct hdmi_panel *panel)
 	avi->bar_info.start_of_right_bar = timing->active_h + 1;
 
 	avi->act_fmt_info_present = true;
-	avi->rgb_quantization_range = HDMI_QUANTIZATION_DEFAULT;
-	avi->yuv_quantization_range = HDMI_QUANTIZATION_DEFAULT;
+	if (pinfo->is_ce_mode) {
+		avi->rgb_quantization_range =
+			HDMI_QUANTIZATION_LIMITED_RANGE;
+		avi->yuv_quantization_range =
+			HDMI_YCC_QUANTIZATION_LIMITED_RANGE;
+	} else {
+		avi->rgb_quantization_range =
+			HDMI_QUANTIZATION_FULL_RANGE;
+		avi->yuv_quantization_range =
+			HDMI_YCC_QUANTIZATION_FULL_RANGE;
+	}
 
 	avi->scaling_info = HDMI_SCALING_NONE;
 
