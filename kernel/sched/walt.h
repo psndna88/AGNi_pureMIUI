@@ -332,6 +332,7 @@ static inline bool walt_should_kick_upmigrate(struct task_struct *p, int cpu)
 }
 
 extern bool is_rtgb_active(void);
+extern u64 get_rtgb_active_time(void);
 
 #else /* CONFIG_SCHED_WALT */
 
@@ -419,6 +420,10 @@ static inline bool walt_should_kick_upmigrate(struct task_struct *p, int cpu)
 	return false;
 }
 
+static inline u64 get_rtgb_active_time(void)
+{
+	return 0;
+}
 #endif /* CONFIG_SCHED_WALT */
 
 #endif
