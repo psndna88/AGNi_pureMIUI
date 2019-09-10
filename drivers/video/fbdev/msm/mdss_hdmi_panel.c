@@ -137,6 +137,12 @@ enum {
 	DATA_BYTE_13,
 };
 
+enum hdmi_colorimetry {
+	HDMI_COLORIMETRY_DEFAULT,
+	HDMI_COLORIMETRY_ITU_R_601,
+	HDMI_COLORIMETRY_ITU_R_709
+};
+
 enum hdmi_quantization_range {
 	HDMI_QUANTIZATION_DEFAULT,
 	HDMI_QUANTIZATION_LIMITED_RANGE,
@@ -208,7 +214,15 @@ static int hdmi_panel_config_avi(struct hdmi_panel *panel)
 
 	avi->scaling_info = HDMI_SCALING_NONE;
 
-	avi->colorimetry_info = 0;
+	if (avi->pixel_format == MDP_Y_CBCR_H2V2) {
+		if (pinfo->yres < 720)
+			avi->colorimetry_info = HDMI_COLORIMETRY_ITU_R_601;
+		else
+			avi->colorimetry_info = HDMI_COLORIMETRY_ITU_R_709;
+	} else {
+		avi->colorimetry_info = HDMI_COLORIMETRY_DEFAULT;
+	}
+
 	avi->ext_colorimetry_info = 0;
 
 	avi->pixel_rpt_factor = 0;
