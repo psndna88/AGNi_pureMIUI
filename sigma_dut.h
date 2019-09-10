@@ -670,6 +670,8 @@ struct sigma_dut {
 
 	char *ar_ltf;
 
+	int ap_numsounddim;
+
 	enum value_not_set_enabled_disabled ap_oce;
 	enum value_not_set_enabled_disabled ap_filsdscv;
 	enum value_not_set_enabled_disabled ap_filshlp;

@@ -1601,6 +1601,10 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		}
 	}
 
+	val = get_param(cmd, "NumSoundDim");
+	if (val)
+		dut->ap_numsounddim = atoi(val);
+
 	return 1;
 }
 
@@ -6014,6 +6018,52 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 		run_system_wrapper(dut, "wifitool %s setUnitTestCmd 0x4b 2 2 1",
 				   ifname);
 	}
+
+	if (dut->ap_numsounddim) {
+		unsigned int txchainmask = 0;
+
+		switch (dut->ap_numsounddim) {
+		case 1:
+			txchainmask = 0x01;
+			break;
+		case 2:
+			txchainmask = 0x03;
+			break;
+		case 3:
+			txchainmask = 0x07;
+			break;
+		case 4:
+			txchainmask = 0x0f;
+			break;
+		case 5:
+			txchainmask = 0x1f;
+			break;
+		case 6:
+			txchainmask = 0x3f;
+			break;
+		case 7:
+			txchainmask = 0x7f;
+			break;
+		case 8:
+			txchainmask = 0xff;
+			break;
+		}
+		run_iwpriv(dut, basedev, "txchainmask %d", txchainmask);
+	}
+
+	if (dut->ap_numsounddim && dut->device_type == AP_testbed) {
+		/* Sets g_force_1x1_peer to 1 which should be reset to zero
+		 * for non-MU test cases */
+		run_system_wrapper(dut,
+				   "wifitool %s setUnitTestCmd 0x48 2 118 1",
+				   ifname);
+		if (dut->ap_mu_txBF) {
+			/* Disable DL OFDMA */
+			run_system_wrapper(dut,
+					   "wifitool %s setUnitTestCmd 0x47 2 11 0",
+					   ifname);
+		}
+	}
 }
 
 
@@ -8279,6 +8329,7 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 
 	dut->ap_he_ppdu = PPDU_NOT_SET;
 	dut->ap_he_ulofdma = VALUE_NOT_SET;
+	dut->ap_numsounddim = 0;
 	if (dut->device_type == AP_testbed)
 		dut->ap_he_dlofdma = VALUE_DISABLED;
 	else
