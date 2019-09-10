@@ -24,6 +24,9 @@
 /* minimum number of output buffers */
 #define MIN_ENC_OUTPUT_BUFFERS 4
 
+/* extra output buffers for encoder HEIF usecase */
+#define HEIF_ENC_TOTAL_OUTPUT_BUFFERS 12
+
 #define HFI_COLOR_FORMAT_YUV420_NV12_UBWC_Y_TILE_WIDTH 32
 #define HFI_COLOR_FORMAT_YUV420_NV12_UBWC_Y_TILE_HEIGHT 8
 #define HFI_COLOR_FORMAT_YUV420_NV12_UBWC_UV_TILE_WIDTH 16
@@ -802,6 +805,13 @@ static int msm_vidc_get_extra_output_buff_count(struct msm_vidc_inst *inst)
 	 */
 	if (!is_realtime_session(inst) || is_thumbnail_session(inst))
 		return extra_output_count;
+
+	/* For HEIF, we are increasing buffer count */
+	if (is_image_session(inst)) {
+		extra_output_count = (HEIF_ENC_TOTAL_OUTPUT_BUFFERS -
+			MIN_ENC_OUTPUT_BUFFERS);
+		return extra_output_count;
+	}
 
 	if (is_decode_session(inst)) {
 		/* add 4 extra buffers for dcvs */
