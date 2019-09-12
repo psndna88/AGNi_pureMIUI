@@ -24,6 +24,7 @@
 #include <linux/thermal.h>
 #include "fg-core.h"
 #include "fg-reg.h"
+#include <linux/charging_state.h>
 
 #define FG_GEN3_DEV_NAME	"qcom,fg-gen3"
 
@@ -406,6 +407,13 @@ static int fg_sram_dump_period_ms = 20000;
 module_param_named(
 	sram_dump_period_ms, fg_sram_dump_period_ms, int, S_IRUSR | S_IWUSR
 );
+
+bool is_charging = false;
+
+bool charging_detected(void)
+{
+	return is_charging;
+}
 
 static int fg_restart;
 static bool fg_sram_dump;
@@ -1702,12 +1710,14 @@ static void fg_cap_learning_update(struct fg_chip *chip)
 	/* Initialize the starting point of learning capacity */
 	if (!chip->cl.active) {
 		if (chip->charge_status == POWER_SUPPLY_STATUS_CHARGING) {
+			is_charging = true;
 			rc = fg_cap_learning_begin(chip, batt_soc);
 			chip->cl.active = (rc == 0);
 		} else {
 			if ((chip->charge_status ==
 					POWER_SUPPLY_STATUS_DISCHARGING) ||
 					chip->charge_done)
+				is_charging = false;
 				prime_cc = true;
 		}
 	} else {
