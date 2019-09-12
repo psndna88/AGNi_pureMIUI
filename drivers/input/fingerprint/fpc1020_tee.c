@@ -90,7 +90,7 @@ struct fpc1020_data {
 	struct wake_lock ttw_wl;
 	int irq_gpio;
 	int rst_gpio;
-	struct mutex lock; /* To set/get exported values in sysfs */
+	struct rt_mutex lock; /* To set/get exported values in sysfs */
 	bool prepared;
 	atomic_t wakeup_enabled; /* Used both in ISR and non-ISR */
 	struct notifier_block fb_notifier;
@@ -254,9 +254,9 @@ static ssize_t pinctl_set(struct device *dev,
 	struct fpc1020_data *fpc1020 = dev_get_drvdata(dev);
 	int rc;
 
-	mutex_lock(&fpc1020->lock);
+	rt_mutex_lock(&fpc1020->lock);
 	rc = select_pin_ctl(fpc1020, buf);
-	mutex_unlock(&fpc1020->lock);
+	rt_mutex_unlock(&fpc1020->lock);
 
         tyt_debug;
 	return rc ? rc : count;
@@ -282,9 +282,9 @@ static ssize_t regulator_enable_set(struct device *dev,
 		return -EINVAL;
 
         tyt_debug;
-	mutex_lock(&fpc1020->lock);
+	rt_mutex_lock(&fpc1020->lock);
 	rc = vreg_setup(fpc1020, name, enable);
-	mutex_unlock(&fpc1020->lock);
+	rt_mutex_unlock(&fpc1020->lock);
 
 	return rc ? rc : count;
 }
@@ -325,9 +325,9 @@ static ssize_t hw_reset_set(struct device *dev,
 	struct fpc1020_data *fpc1020 = dev_get_drvdata(dev);
 
 	if (!strncmp(buf, "reset", strlen("reset"))) {
-		mutex_lock(&fpc1020->lock);
+		rt_mutex_lock(&fpc1020->lock);
 		rc = hw_reset(fpc1020);
-		mutex_unlock(&fpc1020->lock);
+		rt_mutex_unlock(&fpc1020->lock);
 	} else {
 		return -EINVAL;
 	}
@@ -353,7 +353,7 @@ static int device_prepare(struct fpc1020_data *fpc1020, bool enable)
 {
 	int rc;
 
-	mutex_lock(&fpc1020->lock);
+	rt_mutex_lock(&fpc1020->lock);
 	if (enable && !fpc1020->prepared) {
 		fpc1020->prepared = true;
 		select_pin_ctl(fpc1020, "fpc1020_reset_reset");
@@ -395,7 +395,7 @@ exit:
 	} else {
 		rc = 0;
 	}
-	mutex_unlock(&fpc1020->lock);
+	rt_mutex_unlock(&fpc1020->lock);
 
 	return rc;
 }
@@ -432,14 +432,14 @@ static ssize_t wakeup_enable_set(struct device *dev,
 	struct fpc1020_data *fpc1020 = dev_get_drvdata(dev);
 	ssize_t ret = count;
 
-	mutex_lock(&fpc1020->lock);
+	rt_mutex_lock(&fpc1020->lock);
 	if (!strncmp(buf, "enable", strlen("enable")))
 		atomic_set(&fpc1020->wakeup_enabled, 1);
 	else if (!strncmp(buf, "disable", strlen("disable")))
 		atomic_set(&fpc1020->wakeup_enabled, 0);
 	else
 		ret = -EINVAL;
-	mutex_unlock(&fpc1020->lock);
+	rt_mutex_unlock(&fpc1020->lock);
 
         tyt_debug;
 	return ret;
@@ -699,7 +699,7 @@ static int fpc1020_probe(struct platform_device *pdev)
 		device_init_wakeup(dev, 1);
 	}
 
-	mutex_init(&fpc1020->lock);
+	rt_mutex_init(&fpc1020->lock);
 	rc = devm_request_threaded_irq(dev, gpio_to_irq(fpc1020->irq_gpio),
 			NULL, fpc1020_irq_handler, irqf,
 			dev_name(dev), fpc1020);
@@ -757,7 +757,7 @@ static int fpc1020_remove(struct platform_device *pdev)
 	struct fpc1020_data *fpc1020 = platform_get_drvdata(pdev);
 	fb_unregister_client(&fpc1020->fb_notifier);
 	sysfs_remove_group(&pdev->dev.kobj, &attribute_group);
-	mutex_destroy(&fpc1020->lock);
+	rt_mutex_destroy(&fpc1020->lock);
 	wake_lock_destroy(&fpc1020->ttw_wl);
 	(void)vreg_setup(fpc1020, "vdd_ana", false);
 	(void)vreg_setup(fpc1020, "vdd_io", false);
