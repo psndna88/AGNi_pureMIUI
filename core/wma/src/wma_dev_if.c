@@ -2268,11 +2268,12 @@ int wma_vdev_stop_resp_handler(void *handle, uint8_t *cmd_param_info,
 
 		status = wma_remove_bss_peer(wma, pdev, resp_event->vdev_id,
 					     params);
-		if (status != 0) {
-			WMA_LOGE("%s Del bss failed vdev:%d", __func__,
-				 resp_event->vdev_id);
-			wma_cleanup_target_req_param(req_msg);
-			goto free_req_msg;
+		if (status) {
+			WMA_LOGE("%s Del bss failed  call vdev down vdev:%d",
+				 __func__, resp_event->vdev_id);
+			wma_send_del_bss_response(wma, req_msg,
+						  resp_event->vdev_id);
+			 goto free_req_msg;
 		}
 
 		if (wmi_service_enabled(wma->wmi_handle,
@@ -3649,19 +3650,17 @@ void wma_vdev_resp_timer(void *data)
 		 * Trigger host crash if the flag is set or if the timeout
 		 * is not due to fw down
 		 */
-		if (wma_crash_on_fw_timeout(wma->fw_timeout_crash) == true) {
+		if (wma_crash_on_fw_timeout(wma->fw_timeout_crash))
 			wma_trigger_recovery_assert_on_fw_timeout(
 				WMA_DELETE_BSS_REQ);
-			wma_cleanup_target_req_param(tgt_req);
-			goto free_tgt_req;
-		}
 
 		status = wma_remove_bss_peer(wma, pdev, tgt_req->vdev_id,
 					     params);
-		if (status != 0) {
-			WMA_LOGE("Del BSS failed vdev_id:%d", tgt_req->vdev_id);
-			wma_cleanup_target_req_param(tgt_req);
-			goto free_tgt_req;
+		if (status) {
+			WMA_LOGE("Del BSS failed call del bss response vdev_id:%d",
+				 tgt_req->vdev_id);
+			wma_send_del_bss_response(wma, tgt_req,
+						  tgt_req->vdev_id);
 		}
 
 		if (wmi_service_enabled(wma->wmi_handle,
@@ -3984,6 +3983,7 @@ static void wma_add_bss_ap_mode(tp_wma_handle wma, tpAddBssParams add_bss)
 	int8_t maxTxPower;
 	struct policy_mgr_hw_mode_params hw_mode = {0};
 	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
+	struct wma_txrx_node *iface;
 
 	pdev = cds_get_context(QDF_MODULE_ID_TXRX);
 
@@ -4026,6 +4026,8 @@ static void wma_add_bss_ap_mode(tp_wma_handle wma, tpAddBssParams add_bss)
 		goto peer_cleanup;
 	}
 
+	iface = &wma->interfaces[vdev_id];
+
 	add_bss->staContext.staIdx = cdp_peer_get_local_peer_id(soc, peer);
 
 	qdf_mem_zero(&req, sizeof(req));
@@ -4046,7 +4048,7 @@ static void wma_add_bss_ap_mode(tp_wma_handle wma, tpAddBssParams add_bss)
 
 	req.max_txpow = add_bss->maxTxPower;
 	maxTxPower = add_bss->maxTxPower;
-
+	iface->rmfEnabled = add_bss->rmfEnabled;
 	if (add_bss->rmfEnabled)
 		wma_set_mgmt_frame_protection(wma);
 
@@ -4785,11 +4787,6 @@ static void wma_add_sta_req_ap_mode(tp_wma_handle wma, tpAddStaParams add_sta)
 		}
 	}
 #endif
-
-	iface->rmfEnabled = add_sta->rmfEnabled;
-	if (add_sta->rmfEnabled)
-		wma_set_mgmt_frame_protection(wma);
-
 	if (add_sta->uAPSD) {
 		status = wma_set_ap_peer_uapsd(wma, add_sta->smesessionId,
 					    add_sta->staMac,

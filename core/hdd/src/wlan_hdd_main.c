@@ -5745,14 +5745,21 @@ QDF_STATUS hdd_stop_adapter_ext(struct hdd_context *hdd_ctx,
 					mac_handle,
 					adapter->session_id,
 					eCSR_DISCONNECT_REASON_IBSS_LEAVE);
-			else if (QDF_STA_MODE == adapter->device_mode)
-				 wlan_hdd_disconnect(adapter,
+			else if (QDF_STA_MODE == adapter->device_mode) {
+				rc = wlan_hdd_disconnect(
+						adapter,
 						eCSR_DISCONNECT_REASON_DEAUTH);
-			else
+				if (rc != 0 && ucfg_ipa_is_enabled()) {
+					hdd_err("STA disconnect failed");
+					ucfg_ipa_uc_cleanup_sta(hdd_ctx->pdev,
+								adapter->dev);
+				}
+			} else {
 				qdf_ret_status = sme_roam_disconnect(
 					mac_handle,
 					adapter->session_id,
 					eCSR_DISCONNECT_REASON_UNSPECIFIED);
+			}
 			/* success implies disconnect command got
 			 * queued up successfully
 			 */
@@ -9564,6 +9571,9 @@ static int hdd_mode_change_psoc_idle_restart(struct device *dev)
 {
 	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
 
+	if (!hdd_ctx)
+		return -EINVAL;
+
 	return hdd_wlan_start_modules(hdd_ctx, false);
 }
 
@@ -10253,6 +10263,8 @@ static int hdd_update_cds_config(struct hdd_context *hdd_ctx)
 	hdd_ra_populate_cds_config(cds_cfg, hdd_ctx);
 	cds_cfg->enable_tx_compl_tsf64 =
 		hdd_tsf_is_tsf64_tx_set(hdd_ctx);
+	cds_cfg->enable_three_way_coex_config_legacy =
+		hdd_ctx->config->enable_three_way_coex_config_legacy;
 	hdd_txrx_populate_cds_config(cds_cfg, hdd_ctx);
 	hdd_nan_populate_cds_config(cds_cfg, hdd_ctx);
 	hdd_lpass_populate_cds_config(cds_cfg, hdd_ctx);
@@ -11454,7 +11466,7 @@ int hdd_configure_cds(struct hdd_context *hdd_ctx)
 
 	hdd_action_oui_send(hdd_ctx);
 
-	if (hdd_ctx->config->is_force_1x1)
+	if (hdd_ctx->config->is_force_1x1_enable)
 		sme_cli_set_command(0, (int)WMI_PDEV_PARAM_SET_IOT_PATTERN,
 				1, PDEV_CMD);
 	/* set chip power save failure detected callback */
@@ -12312,6 +12324,8 @@ int hdd_register_cb(struct hdd_context *hdd_ctx)
 	if (!QDF_IS_STATUS_SUCCESS(status))
 		hdd_err("set lost link info callback failed");
 
+	wlan_hdd_register_cp_stats_cb(hdd_ctx);
+
 	ret = hdd_register_data_stall_detect_cb();
 	if (ret) {
 		hdd_err("Register data stall detect detect callback failed.");
@@ -13135,7 +13149,6 @@ int hdd_init(void)
 		QDF_TIMER_TYPE_SW);
 
 	hdd_trace_init();
-	hdd_qdf_print_init();
 
 	hdd_register_debug_callback();
 
@@ -13152,7 +13165,6 @@ err_out:
  */
 void hdd_deinit(void)
 {
-	hdd_qdf_print_deinit();
 	qdf_timer_free(&hdd_drv_ops_inactivity_timer);
 
 #ifdef WLAN_LOGGING_SOCK_SVC_ENABLE
@@ -13405,6 +13417,7 @@ static int hdd_driver_load(void)
 	       g_wlan_driver_version,
 	       TIMER_MANAGER_STR MEMORY_DEBUG_STR PANIC_ON_BUG_STR);
 
+	hdd_qdf_print_init();
 	errno = hdd_init();
 	if (errno) {
 		hdd_fln("Failed to init HDD; errno:%d", errno);
@@ -13498,6 +13511,7 @@ static void hdd_driver_unload(void)
 	qdf_wake_lock_destroy(&wlan_wake_lock);
 	hdd_component_deinit();
 	hdd_deinit();
+	hdd_qdf_print_deinit();
 }
 
 #ifndef MODULE
@@ -15249,7 +15263,7 @@ void hdd_stop_driver_ops_timer(void)
  *
  * Return: None
  */
-void hdd_drv_ops_inactivity_handler(void)
+void hdd_drv_ops_inactivity_handler(void *context)
 {
 	hdd_err("WLAN_BUG_RCA %s: %d Sec timer expired while in .%s",
 		__func__, HDD_OPS_INACTIVITY_TIMEOUT/1000, drv_ops_string);
