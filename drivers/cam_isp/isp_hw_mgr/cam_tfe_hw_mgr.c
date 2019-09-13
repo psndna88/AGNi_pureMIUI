@@ -3809,6 +3809,7 @@ static int cam_tfe_mgr_prepare_hw_update(void *hw_mgr_priv,
 	uint32_t                                 i;
 	bool                                     fill_fence = true;
 	struct cam_isp_prepare_hw_update_data   *prepare_hw_data;
+	struct cam_isp_frame_header_info         frame_header_info;
 
 	if (!hw_mgr_priv || !prepare_hw_update_args) {
 		CAM_ERR(CAM_ISP, "Invalid args");
@@ -3886,13 +3887,18 @@ static int cam_tfe_mgr_prepare_hw_update(void *hw_mgr_priv,
 			}
 		}
 
+		memset(&frame_header_info, 0,
+			sizeof(struct cam_isp_frame_header_info));
+		frame_header_info.frame_header_enable = false;
+
 		/* get IO buffers */
 		rc = cam_isp_add_io_buffers(hw_mgr->mgr_common.img_iommu_hdl,
 			hw_mgr->mgr_common.img_iommu_hdl_secure,
 			prepare, ctx->base[i].idx,
 			&kmd_buf, ctx->res_list_tfe_out,
 			NULL,
-			CAM_TFE_HW_OUT_RES_MAX, fill_fence);
+			CAM_TFE_HW_OUT_RES_MAX, fill_fence,
+			&frame_header_info);
 
 		if (rc) {
 			CAM_ERR(CAM_ISP,

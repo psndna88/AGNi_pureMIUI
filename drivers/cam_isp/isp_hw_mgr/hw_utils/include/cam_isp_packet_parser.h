@@ -35,6 +35,19 @@ struct cam_isp_generic_blob_info {
 };
 
 /*
+ * struct cam_isp_frame_header_info
+ *
+ * @frame_header_enable:    Enable frame header
+ * @frame_header_iova_addr: frame header iova
+ * @frame_header_res_id:    res id for which frame header is enabled
+ */
+struct cam_isp_frame_header_info {
+	bool                     frame_header_enable;
+	uint64_t                 frame_header_iova_addr;
+	uint32_t                 frame_header_res_id;
+};
+
+/*
  * cam_isp_add_change_base()
  *
  * @brief                  Add change base in the hw entries list
@@ -127,7 +140,7 @@ int cam_isp_add_command_buffers(
  * @res_list_ife_in_rd:    IFE /VFE in rd resource list
  * @size_isp_out:          Size of the res_list_isp_out array
  * @fill_fence:            If true, Fence map table will be filled
- *
+ * @frame_header_info:     Frame header related params
  * @return:                0 for success
  *                         -EINVAL for Fail
  */
@@ -140,7 +153,8 @@ int cam_isp_add_io_buffers(
 	struct cam_isp_hw_mgr_res            *res_list_isp_out,
 	struct list_head                     *res_list_ife_in_rd,
 	uint32_t                              size_isp_out,
-	bool                                  fill_fence);
+	bool                                  fill_fence,
+	struct cam_isp_frame_header_info     *frame_header_info);
 
 /*
  * cam_isp_add_reg_update()
