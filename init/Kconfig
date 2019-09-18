@@ -937,8 +937,16 @@ config PELT_HALFLIFE_16
 
 	  If not sure, use the default of 32 ms
 
+config PELT_HALFLIFE_12
+	bool "12 ms, very fast"
+	help
+	  A 16ms PELT half-life is suggested for mobile/interactive workloads
+	  where tasks usually run with a 90Hz activation cadence.
+
+	  If not sure, use the default of 32 ms
+
 config PELT_HALFLIFE_8
-	bool "8 ms, very fast"
+	bool "8 ms, more fast"
 	help
 	  An 8ms PELT half-life is suggested for mobile/interactive workloads
 	  where tasks usually run with a 120Hz activation cadence.
