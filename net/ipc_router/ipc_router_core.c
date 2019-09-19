@@ -3953,6 +3953,7 @@ static void debugfs_init(void)
 static void debugfs_init(void) {}
 #endif
 
+#ifdef CONFIG_IPC_LOGGING
 /**
  * ipc_router_create_log_ctx() - Create and add the log context based on transport
  * @name:	subsystem name
@@ -3985,6 +3986,12 @@ static void *ipc_router_create_log_ctx(char *name)
 	list_add_tail(&sub_log_ctx->list, &log_ctx_list);
 	return sub_log_ctx->log_ctx;
 }
+#else
+static void *ipc_router_create_log_ctx(char *name)
+{
+	return NULL;
+}
+#endif
 
 static void ipc_router_log_ctx_init(void)
 {
