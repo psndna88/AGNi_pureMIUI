@@ -1633,6 +1633,30 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		}
 	}
 
+	val = get_param(cmd, "ADDBAReq_BufSize");
+	if (val) {
+		if (strcasecmp(val, "le64") == 0) {
+			dut->ap_ba_bufsize = BA_BUFSIZE_64;
+		} else if (strcasecmp(val, "gt64") == 0) {
+			dut->ap_ba_bufsize = BA_BUFSIZE_256;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported ADDBAReq Buffer Size");
+			return STATUS_SENT_ERROR;
+		}
+	}
+
+	val = get_param(cmd, "ADDBAResp_BufSize");
+	if (val) {
+		if (strcasecmp(val, "gt64") == 0) {
+			dut->ap_ba_bufsize = BA_BUFSIZE_256;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported ADDBAResp Buffer Size");
+			return STATUS_SENT_ERROR;
+		}
+	}
+
 	return 1;
 }
 
@@ -6110,6 +6134,13 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 		run_iwpriv(dut, ifname, "he_frag 1");
 	else if (dut->ap_he_frag == VALUE_DISABLED)
 		run_iwpriv(dut, ifname, "he_frag 0");
+
+	if (dut->ap_ba_bufsize != BA_BUFSIZE_NOT_SET) {
+		if (dut->ap_ba_bufsize == BA_BUFSIZE_64)
+			run_iwpriv(dut, ifname, "ba_bufsize 0");
+		else
+			run_iwpriv(dut, ifname, "ba_bufsize 1");
+	}
 }
 
 
@@ -8396,11 +8427,14 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 	} else {
 		dut->ap_he_dlofdma = VALUE_NOT_SET;
 		dut->ap_he_frag = VALUE_NOT_SET;
+		dut->ap_ba_bufsize = BA_BUFSIZE_NOT_SET;
 	}
 
 	if (dut->program == PROGRAM_HE) {
-		if (dut->device_type == AP_testbed)
+		if (dut->device_type == AP_testbed) {
 			dut->ap_ldpc = VALUE_DISABLED;
+			dut->ap_ba_bufsize = BA_BUFSIZE_64;
+		}
 	}
 
 	dut->ap_oper_chn = 0;

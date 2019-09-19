@@ -693,6 +693,12 @@ struct sigma_dut {
 		PPDU_HESU,
 	} ap_he_ppdu;
 
+	enum bufsize {
+		BA_BUFSIZE_NOT_SET,
+		BA_BUFSIZE_64,
+		BA_BUFSIZE_256,
+	} ap_ba_bufsize;
+
 	struct sigma_ese_alloc ap_ese_allocs[MAX_ESE_ALLOCS];
 	int ap_num_ese_allocs;
 
