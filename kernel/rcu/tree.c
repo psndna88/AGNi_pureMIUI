@@ -2727,6 +2727,7 @@ static void kfree_rcu_work(struct work_struct *work)
 	for (; head; head = next) {
 		next = head->next;
 		// Potentially optimize with kfree_bulk in future.
+		debug_rcu_head_unqueue(head);
 		__rcu_reclaim(rcu_state.name, head);
 		cond_resched_tasks_rcu_qs();
 	}
@@ -2832,6 +2833,12 @@ void kfree_call_rcu(struct rcu_head *head, rcu_callback_t func)
 		spin_lock(&krcp->lock);
 
 	// Queue the object but don't yet schedule the batch.
+	if (debug_rcu_head_queue(head)) {
+		// Probable double kfree_rcu(), just leak.
+		WARN_ONCE(1, "%s(): Double-freed call. rcu_head %p\n",
+			  __func__, head);
+		goto unlock_return;
+	}
 	head->func = func;
 	head->next = krcp->head;
 	krcp->head = head;
@@ -2841,6 +2848,7 @@ void kfree_call_rcu(struct rcu_head *head, rcu_callback_t func)
 	    !xchg(&krcp->monitor_todo, true))
 		schedule_delayed_work(&krcp->monitor_work, KFREE_DRAIN_JIFFIES);
 
+unlock_return:
 	if (krcp->initialized)
 		spin_unlock(&krcp->lock);
 	local_irq_restore(flags);
