@@ -435,15 +435,8 @@ static int msm_pcm_playback_prepare(struct snd_pcm_substream *substream)
 			return -ENOMEM;
 		}
 	} else {
-		if ((q6core_get_avcs_api_version_per_service(
-				APRV2_IDS_SERVICE_ID_ADSP_ASM_V) >=
-				ADSP_ASM_API_VERSION_V2))
-			ret = q6asm_open_write_v5(prtd->audio_client,
+		ret = q6asm_open_write_with_retry(prtd->audio_client,
 				fmt_type, bits_per_sample);
-		else
-			ret = q6asm_open_write_v4(prtd->audio_client,
-				fmt_type, bits_per_sample);
-
 		if (ret < 0) {
 			pr_err("%s: q6asm_open_write failed (%d)\n",
 			__func__, ret);
@@ -576,16 +569,9 @@ static int msm_pcm_capture_prepare(struct snd_pcm_substream *substream)
 		prtd->audio_client->stream_type = SNDRV_PCM_STREAM_CAPTURE;
 		prtd->audio_client->fedai_id = soc_prtd->dai_link->id;
 
-		if ((q6core_get_avcs_api_version_per_service(
-				APRV2_IDS_SERVICE_ID_ADSP_ASM_V) >=
-				ADSP_ASM_API_VERSION_V2))
-			ret = q6asm_open_read_v5(prtd->audio_client,
-				FORMAT_LINEAR_PCM,
-				bits_per_sample, false, ENC_CFG_ID_NONE);
-		else
-			ret = q6asm_open_read_v4(prtd->audio_client,
-				FORMAT_LINEAR_PCM,
-				bits_per_sample, false, ENC_CFG_ID_NONE);
+		ret = q6asm_open_read_with_retry(prtd->audio_client,
+					FORMAT_LINEAR_PCM,
+					bits_per_sample, false);
 		if (ret < 0) {
 			pr_err("%s: q6asm_open_read failed\n", __func__);
 			q6asm_audio_client_free(prtd->audio_client);

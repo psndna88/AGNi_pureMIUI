@@ -101,6 +101,7 @@ struct audio_session {
 	struct audio_client *ac;
 	spinlock_t session_lock;
 	struct mutex mutex_lock_per_session;
+	bool ignore;
 };
 /* session id: 0 reserved */
 static struct audio_session session[ASM_ACTIVE_STREAMS_ALLOWED + 1];
@@ -583,6 +584,87 @@ static int q6asm_session_alloc(struct audio_client *ac)
 	}
 	pr_err("%s: session not available\n", __func__);
 	return -ENOMEM;
+}
+
+static void q6asm_session_set_ignore(int id)
+{
+	session[id].ignore = true;
+}
+
+static void q6asm_session_clean_ignore(void)
+{
+	int i;
+
+	for (i = 1; i <= ASM_ACTIVE_STREAMS_ALLOWED; i++)
+		session[i].ignore = false;
+}
+
+static void q6asm_session_deregister(struct audio_client *ac)
+{
+	rtac_set_asm_handle(ac->session, NULL);
+	apr_deregister(ac->apr2);
+	apr_deregister(ac->apr);
+	q6asm_mmap_apr_dereg();
+	ac->apr2 = NULL;
+	ac->apr = NULL;
+	ac->mmap_apr = NULL;
+}
+
+static int q6asm_session_register(struct audio_client *ac)
+{
+	ac->apr = apr_register("ADSP", "ASM",
+			(apr_fn)q6asm_callback,
+			((ac->session) << 8 | 0x0001),
+			ac);
+	if (ac->apr == NULL) {
+		pr_err("%s: Registration with APR failed\n", __func__);
+		goto fail_apr1;
+	}
+
+	ac->apr2 = apr_register("ADSP", "ASM",
+			(apr_fn)q6asm_callback,
+			((ac->session) << 8 | 0x0002),
+			ac);
+	if (ac->apr2 == NULL) {
+		pr_err("%s: Registration with APR-2 failed\n", __func__);
+		goto fail_apr2;
+	}
+
+	rtac_set_asm_handle(ac->session, ac->apr);
+
+	pr_debug("%s: Registering the common port with APR\n", __func__);
+	ac->mmap_apr = q6asm_mmap_apr_reg();
+	if (ac->mmap_apr == NULL)
+		goto fail_mmap;
+
+	return 0;
+
+fail_mmap:
+	apr_deregister(ac->apr2);
+fail_apr2:
+	apr_deregister(ac->apr);
+fail_apr1:
+	return -EINVAL;
+}
+
+static int q6asm_session_try_next(struct audio_client *ac)
+{
+	int n;
+	int s = ac->session;
+
+	for (n = 1; n <= ASM_ACTIVE_STREAMS_ALLOWED; n++) {
+		if (++s > ASM_ACTIVE_STREAMS_ALLOWED)
+			s -= ASM_ACTIVE_STREAMS_ALLOWED;
+		if (!session[s].ignore && !session[s].ac) {
+			q6asm_session_deregister(ac);
+			session[ac->session].ac = NULL;
+			session[s].ac = ac;
+			ac->session = s;
+			return q6asm_session_register(ac);
+		}
+	}
+	pr_debug("%s: session not available\n", __func__);
+	return -EINVAL;
 }
 
 static int q6asm_get_session_id_from_audio_client(struct audio_client *ac)
@@ -1225,13 +1307,7 @@ void q6asm_audio_client_free(struct audio_client *ac)
 		}
 	}
 
-	rtac_set_asm_handle(ac->session, NULL);
-	apr_deregister(ac->apr2);
-	apr_deregister(ac->apr);
-	q6asm_mmap_apr_dereg();
-	ac->apr2 = NULL;
-	ac->apr = NULL;
-	ac->mmap_apr = NULL;
+	q6asm_session_deregister(ac);
 	q6asm_session_free(ac);
 
 	pr_debug("%s: APR De-Register\n", __func__);
@@ -1436,34 +1512,11 @@ struct audio_client *q6asm_audio_client_alloc(app_cb cb, void *priv)
 	ac->fptr_cache_ops = NULL;
 	/* DSP expects stream id from 1 */
 	ac->stream_id = 1;
-	ac->apr = apr_register("ADSP", "ASM",
-			(apr_fn)q6asm_callback,
-			((ac->session) << 8 | 0x0001),
-			ac);
 
-	if (ac->apr == NULL) {
-		pr_err("%s: Registration with APR failed\n", __func__);
+	rc = q6asm_session_register(ac);
+	if (rc < 0) {
 		mutex_unlock(&session_lock);
-		goto fail_apr1;
-	}
-	ac->apr2 = apr_register("ADSP", "ASM",
-			(apr_fn)q6asm_callback,
-			((ac->session) << 8 | 0x0002),
-			ac);
-
-	if (ac->apr2 == NULL) {
-		pr_err("%s: Registration with APR-2 failed\n", __func__);
-		mutex_unlock(&session_lock);
-		goto fail_apr2;
-	}
-
-	rtac_set_asm_handle(n, ac->apr);
-
-	pr_debug("%s: Registering the common port with APR\n", __func__);
-	ac->mmap_apr = q6asm_mmap_apr_reg();
-	if (ac->mmap_apr == NULL) {
-		mutex_unlock(&session_lock);
-		goto fail_mmap;
+		goto fail_register;
 	}
 
 	init_waitqueue_head(&ac->cmd_wait);
@@ -1486,7 +1539,7 @@ struct audio_client *q6asm_audio_client_alloc(app_cb cb, void *priv)
 	rc = send_asm_custom_topology(ac);
 	if (rc < 0) {
 		mutex_unlock(&session_lock);
-		goto fail_mmap;
+		goto fail_send;
 	}
 
 	pr_debug("%s: session[%d]\n", __func__, ac->session);
@@ -1494,11 +1547,9 @@ struct audio_client *q6asm_audio_client_alloc(app_cb cb, void *priv)
 	mutex_unlock(&session_lock);
 
 	return ac;
-fail_mmap:
-	apr_deregister(ac->apr2);
-fail_apr2:
-	apr_deregister(ac->apr);
-fail_apr1:
+fail_send:
+	q6asm_session_deregister(ac);
+fail_register:
 	q6asm_session_free(ac);
 fail_session:
 	return NULL;
@@ -3428,6 +3479,53 @@ int q6asm_open_read_v5(struct audio_client *ac, uint32_t format,
 }
 EXPORT_SYMBOL(q6asm_open_read_v5);
 
+static int q6asm_open_read_version_adaptor(struct audio_client *ac,
+			uint32_t format, uint16_t bits_per_sample, bool ts_mode)
+{
+	if (q6core_get_avcs_api_version_per_service(
+			APRV2_IDS_SERVICE_ID_ADSP_ASM_V) >=
+			ADSP_ASM_API_VERSION_V2)
+		return q6asm_open_read_v5(ac, FORMAT_LINEAR_PCM,
+						bits_per_sample, false, ENC_CFG_ID_NONE);
+	else
+		return q6asm_open_read_v4(ac, FORMAT_LINEAR_PCM,
+						bits_per_sample, false, ENC_CFG_ID_NONE);
+}
+
+/*
+ * q6asm_open_read_with_retry - Opens audio capture session, with retrying
+ * in case of session ID conflict
+ *
+ * @ac: Client session handle
+ * @format: encoder format
+ * @bits_per_sample: bit width of capture session
+ * @ts_mode: timestamp mode
+ */
+int q6asm_open_read_with_retry(struct audio_client *ac, uint32_t format,
+			uint16_t bits_per_sample, bool ts_mode)
+{
+	int i, rc;
+
+	mutex_lock(&session_lock);
+	for (i = 0; i < ASM_ACTIVE_STREAMS_ALLOWED; i++) {
+		rc = q6asm_open_read_version_adaptor(ac, format,
+				bits_per_sample, ts_mode);
+		if (rc != -EALREADY)
+			break;
+
+		pr_debug("%s: session %d is occupied, try next\n",
+				__func__, ac->session);
+		q6asm_session_set_ignore(ac->session);
+		rc = q6asm_session_try_next(ac);
+		if (rc < 0)
+			break;
+	}
+	q6asm_session_clean_ignore();
+	mutex_unlock(&session_lock);
+
+	return rc;
+}
+EXPORT_SYMBOL(q6asm_open_read_with_retry);
 
 /**
  * q6asm_open_write_compressed -
@@ -3758,6 +3856,51 @@ int q6asm_open_write_v4(struct audio_client *ac, uint32_t format,
 				  PCM_MEDIA_FORMAT_V4 /*pcm_format_block_ver*/);
 }
 EXPORT_SYMBOL(q6asm_open_write_v4);
+
+static int q6asm_open_write_version_adaptor(struct audio_client *ac,
+			uint32_t format, uint16_t bits_per_sample)
+{
+	if (q6core_get_avcs_api_version_per_service(
+			APRV2_IDS_SERVICE_ID_ADSP_ASM_V) >=
+			ADSP_ASM_API_VERSION_V2)
+		return q6asm_open_write_v5(ac, format, bits_per_sample);
+	else
+		return q6asm_open_write_v4(ac, format, bits_per_sample);
+}
+
+/*
+ * q6asm_open_write_with_retry - Opens audio playback session, with retrying
+ * in case of session ID conflict
+ *
+ * @ac: Client session handle
+ * @format: decoder format
+ * @bits_per_sample: bit width of playback session
+ */
+int q6asm_open_write_with_retry(struct audio_client *ac, uint32_t format,
+			uint16_t bits_per_sample)
+{
+	int i, rc;
+
+	mutex_lock(&session_lock);
+	for (i = 0; i < ASM_ACTIVE_STREAMS_ALLOWED; i++) {
+		rc = q6asm_open_write_version_adaptor(ac, format,
+						bits_per_sample);
+		if (rc != -EALREADY)
+			break;
+
+		pr_debug("%s: session %d is occupied, try next\n",
+				__func__, ac->session);
+		q6asm_session_set_ignore(ac->session);
+		rc = q6asm_session_try_next(ac);
+		if (rc < 0)
+			break;
+	}
+	q6asm_session_clean_ignore();
+	mutex_unlock(&session_lock);
+
+	return rc;
+}
+EXPORT_SYMBOL(q6asm_open_write_with_retry);
 
 int q6asm_stream_open_write_v2(struct audio_client *ac, uint32_t format,
 			       uint16_t bits_per_sample, int32_t stream_id,
@@ -4170,6 +4313,37 @@ fail_cmd:
 	return rc;
 }
 EXPORT_SYMBOL(q6asm_open_loopback_v2);
+
+/*
+ * q6asm_open_loopback_with_retry - Opens audio loopback session, with retrying
+ * in case of session ID conflict
+ *
+ * @ac: Client session handle
+ * @bits_per_sample: bit width of sample
+ */
+int q6asm_open_loopback_with_retry(struct audio_client *ac,
+				uint16_t bits_per_sample)
+{
+	int i, rc;
+
+	mutex_lock(&session_lock);
+	for (i = 0; i < ASM_ACTIVE_STREAMS_ALLOWED; i++) {
+		rc = q6asm_open_loopback_v2(ac, bits_per_sample);
+		if (rc != -EALREADY)
+			break;
+		pr_debug("%s: session %d is occupied, try next\n",
+					__func__, ac->session);
+		q6asm_session_set_ignore(ac->session);
+		rc = q6asm_session_try_next(ac);
+		if (rc < 0)
+			break;
+	}
+	q6asm_session_clean_ignore();
+	mutex_unlock(&session_lock);
+
+	return rc;
+}
+EXPORT_SYMBOL(q6asm_open_loopback_with_retry);
 
 /**
  * q6asm_open_transcode_loopback -
