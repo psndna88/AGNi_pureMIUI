@@ -286,6 +286,8 @@ enum hal_capability {
 	CAP_HEVC_IMAGE_FRAME_HEIGHT,
 	CAP_HEIC_IMAGE_FRAME_WIDTH,
 	CAP_HEIC_IMAGE_FRAME_HEIGHT,
+	CAP_H264_LEVEL,
+	CAP_HEVC_LEVEL,
 	CAP_MAX,
 };
 
@@ -597,16 +599,6 @@ struct msm_vidc_cb_cmd_done {
 	} data;
 };
 
-struct hal_index_extradata_input_crop_payload {
-	u32 size;
-	u32 version;
-	u32 port_index;
-	u32 left;
-	u32 top;
-	u32 width;
-	u32 height;
-};
-
 struct msm_vidc_cb_event {
 	u32 device_id;
 	void *inst_id;
@@ -622,8 +614,11 @@ struct msm_vidc_cb_event {
 	u32 profile;
 	u32 level;
 	u32 entropy_mode;
-	u32 capture_buf_count;
-	struct hal_index_extradata_input_crop_payload crop_data;
+	u32 max_dpb_count;
+	u32 max_ref_frames;
+	u32 max_dec_buffering;
+	u32 max_reorder_frames;
+	u32 fw_min_cnt;
 };
 
 struct msm_vidc_cb_data_done {

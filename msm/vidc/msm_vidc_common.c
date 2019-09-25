@@ -636,6 +636,7 @@ int msm_comm_ctrl_init(struct msm_vidc_inst *inst,
 		}
 
 		ctrl->flags |= drv_ctrls[idx].flags;
+		ctrl->flags |= V4L2_CTRL_FLAG_EXECUTE_ON_WRITE;
 		inst->ctrls[idx] = ctrl;
 	}
 	inst->num_ctrls = num_ctrls;
@@ -1252,8 +1253,8 @@ static void handle_session_release_buf_done(enum hal_command_response cmd,
 	else
 		s_vpr_e(inst->sid, "Invalid inst cmd response: %d\n", cmd);
 
-	put_inst(inst);
 	s_vpr_l(inst->sid, "handled: SESSION_RELEASE_BUFFER_DONE\n");
+	put_inst(inst);
 }
 
 static void handle_sys_release_res_done(
@@ -1455,15 +1456,18 @@ static void msm_vidc_comm_update_ctrl_limits(struct msm_vidc_inst *inst)
 				V4L2_CID_MPEG_VIDEO_B_FRAMES,
 				&inst->capability.cap[CAP_BFRAME]);
 	}
+	msm_vidc_comm_update_ctrl(inst,
+			V4L2_CID_MPEG_VIDEO_H264_LEVEL,
+			&inst->capability.cap[CAP_H264_LEVEL]);
+	msm_vidc_comm_update_ctrl(inst,
+			V4L2_CID_MPEG_VIDEO_HEVC_LEVEL,
+			&inst->capability.cap[CAP_HEVC_LEVEL]);
 }
 
 static void handle_session_init_done(enum hal_command_response cmd, void *data)
 {
 	struct msm_vidc_cb_cmd_done *response = data;
 	struct msm_vidc_inst *inst = NULL;
-	struct msm_vidc_capability *capability = NULL;
-	struct msm_vidc_core *core;
-	u32 i, codec;
 
 	if (!response) {
 		d_vpr_e("Failed to get valid response for session init\n");
@@ -1490,6 +1494,32 @@ static void handle_session_init_done(enum hal_command_response cmd, void *data)
 		return;
 	}
 
+	s_vpr_l(inst->sid, "handled: SESSION_INIT_DONE\n");
+	signal_session_msg_receipt(cmd, inst);
+	put_inst(inst);
+	return;
+
+error:
+	if (response->status == VIDC_ERR_MAX_CLIENTS)
+		msm_comm_generate_max_clients_error(inst);
+	else
+		msm_comm_generate_session_error(inst);
+
+	signal_session_msg_receipt(cmd, inst);
+	put_inst(inst);
+}
+
+static int msm_comm_update_capabilities(struct msm_vidc_inst *inst)
+{
+	struct msm_vidc_core *core;
+	struct msm_vidc_capability *capability = NULL;
+	u32 i, codec;
+
+	if (!inst || !inst->core) {
+		d_vpr_e("%s: invalid parameters\n", __func__);
+		return -EINVAL;
+	}
+
 	core = inst->core;
 	codec = get_v4l2_codec(inst);
 
@@ -1507,7 +1537,7 @@ static void handle_session_init_done(enum hal_command_response cmd, void *data)
 			"%s: capabilities not found for domain %#x codec %#x\n",
 			__func__, get_hal_domain(inst->session_type, inst->sid),
 			get_hal_codec(codec, inst->sid));
-		goto error;
+		return -EINVAL;
 	}
 
 	s_vpr_h(inst->sid, "%s: capabilities for domain %#x codec %#x\n",
@@ -1569,19 +1599,7 @@ static void handle_session_init_done(enum hal_command_response cmd, void *data)
 
 	msm_vidc_comm_update_ctrl_limits(inst);
 
-	s_vpr_l(inst->sid, "handled: SESSION_INIT_DONE\n");
-	signal_session_msg_receipt(cmd, inst);
-	put_inst(inst);
-	return;
-
-error:
-	if (response->status == VIDC_ERR_MAX_CLIENTS)
-		msm_comm_generate_max_clients_error(inst);
-	else
-		msm_comm_generate_session_error(inst);
-
-	signal_session_msg_receipt(cmd, inst);
-	put_inst(inst);
+	return 0;
 }
 
 static void msm_vidc_queue_rbr_event(struct msm_vidc_inst *inst,
@@ -1670,6 +1688,8 @@ static void handle_event_change(enum hal_command_response cmd, void *data)
 		if (event_fields_changed) {
 			event = V4L2_EVENT_SEQ_CHANGED_INSUFFICIENT;
 		} else {
+			inst->entropy_mode = event_notify->entropy_mode;
+
 			s_vpr_h(inst->sid,
 				"seq: No parameter change continue session\n");
 			rc = call_hfi_op(hdev, session_continue,
@@ -1719,30 +1739,17 @@ static void handle_event_change(enum hal_command_response cmd, void *data)
 	 * codecs except HEVC
 	 * event data is now as follows:
 	 * u32 *ptr = seq_changed_event.u.data;
-	 * ptr[0] = height
-	 * ptr[1] = width
-	 * ptr[2] = bit depth
-	 * ptr[3] = pic struct (progressive or interlaced)
-	 * ptr[4] = colour space
-	 * ptr[5] = crop_data(top)
-	 * ptr[6] = crop_data(left)
-	 * ptr[7] = crop_data(height)
-	 * ptr[8] = crop_data(width)
-	 * ptr[9] = profile
-	 * ptr[10] = level
+	 * ptr[MSM_VIDC_HEIGHT] = height
+	 * ptr[MSM_VIDC_WIDTH] = width
+	 * ptr[MSM_VIDC_BIT_DEPTH] = bit depth
+	 * ptr[MSM_VIDC_PIC_STRUCT] = pic struct (progressive or interlaced)
+	 * ptr[MSM_VIDC_COLOR_SPACE] = colour space
+	 * ptr[MSM_VIDC_FW_MIN_COUNT] = fw min count
 	 */
 
 	inst->profile = event_notify->profile;
 	inst->level = event_notify->level;
 	inst->entropy_mode = event_notify->entropy_mode;
-	inst->prop.crop_info.left =
-		event_notify->crop_data.left;
-	inst->prop.crop_info.top =
-		event_notify->crop_data.top;
-	inst->prop.crop_info.height =
-		event_notify->crop_data.height;
-	inst->prop.crop_info.width =
-		event_notify->crop_data.width;
 	/* HW returns progressive_only flag in pic_struct. */
 	inst->pic_struct =
 		event_notify->pic_struct ?
@@ -1751,33 +1758,23 @@ static void handle_event_change(enum hal_command_response cmd, void *data)
 	inst->colour_space = event_notify->colour_space;
 
 	ptr = (u32 *)seq_changed_event.u.data;
-	ptr[0] = event_notify->height;
-	ptr[1] = event_notify->width;
-	ptr[2] = event_notify->bit_depth;
-	ptr[3] = event_notify->pic_struct;
-	ptr[4] = event_notify->colour_space;
-	ptr[5] = event_notify->crop_data.top;
-	ptr[6] = event_notify->crop_data.left;
-	ptr[7] = event_notify->crop_data.height;
-	ptr[8] = event_notify->crop_data.width;
-	ptr[9] = msm_comm_get_v4l2_profile(codec,
-		event_notify->profile, inst->sid);
-	ptr[10] = msm_comm_get_v4l2_level(codec,
-		event_notify->level, inst->sid);
+	ptr[MSM_VIDC_HEIGHT] = event_notify->height;
+	ptr[MSM_VIDC_WIDTH] = event_notify->width;
+	ptr[MSM_VIDC_BIT_DEPTH] = event_notify->bit_depth;
+	ptr[MSM_VIDC_PIC_STRUCT] = event_notify->pic_struct;
+	ptr[MSM_VIDC_COLOR_SPACE] = event_notify->colour_space;
+	ptr[MSM_VIDC_FW_MIN_COUNT] = event_notify->fw_min_cnt;
 
-	s_vpr_h(inst->sid,
-		"seq: height = %u width = %u profile = %u level = %u\n",
-		event_notify->height, event_notify->width, ptr[9], ptr[10]);
+	s_vpr_h(inst->sid, "seq: height = %u width = %u\n",
+		event_notify->height, event_notify->width);
 
 	s_vpr_h(inst->sid,
 		"seq: bit_depth = %u pic_struct = %u colour_space = %u\n",
 		event_notify->bit_depth, event_notify->pic_struct,
 		event_notify->colour_space);
 
-	s_vpr_h(inst->sid,
-		"seq: CROP top = %u left = %u Height = %u Width = %u\n",
-		event_notify->crop_data.top, event_notify->crop_data.left,
-		event_notify->crop_data.height, event_notify->crop_data.width);
+	s_vpr_h(inst->sid, "seq: fw_min_count = %u\n",
+		event_notify->fw_min_cnt);
 
 	mutex_lock(&inst->lock);
 	inst->in_reconfig = true;
@@ -1803,7 +1800,7 @@ static void handle_event_change(enum hal_command_response cmd, void *data)
 		msm_dcvs_try_enable(inst);
 		extra_buff_count = msm_vidc_get_extra_buff_count(inst,
 				HAL_BUFFER_OUTPUT);
-		fmt->count_min = event_notify->capture_buf_count;
+		fmt->count_min = event_notify->fw_min_cnt;
 		fmt->count_min_host = fmt->count_min + extra_buff_count;
 		s_vpr_h(inst->sid,
 			"seq: hal buffer[%d] count: min %d min_host %d\n",
@@ -1893,8 +1890,8 @@ static void handle_load_resource_done(enum hal_command_response cmd, void *data)
 		msm_comm_generate_session_error(inst);
 	}
 
-	put_inst(inst);
 	s_vpr_l(inst->sid, "handled: SESSION_LOAD_RESOURCE_DONE\n");
+	put_inst(inst);
 }
 
 static void handle_start_done(enum hal_command_response cmd, void *data)
@@ -2110,8 +2107,8 @@ static void handle_session_flush(enum hal_command_response cmd, void *data)
 
 exit:
 	mutex_unlock(&inst->flush_lock);
-	put_inst(inst);
 	s_vpr_l(inst->sid, "handled: SESSION_FLUSH_DONE\n");
+	put_inst(inst);
 }
 
 static void handle_session_error(enum hal_command_response cmd, void *data)
@@ -2160,8 +2157,8 @@ static void handle_session_error(enum hal_command_response cmd, void *data)
 	/* change state before sending error to client */
 	change_inst_state(inst, MSM_VIDC_CORE_INVALID);
 	msm_vidc_queue_v4l2_event(inst, event);
-	put_inst(inst);
 	s_vpr_l(inst->sid, "handled: SESSION_ERROR\n");
+	put_inst(inst);
 }
 
 static void msm_comm_clean_notify_client(struct msm_vidc_core *core)
@@ -2511,8 +2508,8 @@ static void handle_ebd(enum hal_command_response cmd, void *data)
 	msm_vidc_debugfs_update(inst, MSM_VIDC_DEBUGFS_EVENT_EBD);
 	kref_put_mbuf(mbuf);
 exit:
-	put_inst(inst);
 	s_vpr_l(inst->sid, "handled: SESSION_ETB_DONE\n");
+	put_inst(inst);
 }
 
 static int handle_multi_stream_buffers(struct msm_vidc_inst *inst,
@@ -2688,8 +2685,8 @@ static void handle_fbd(enum hal_command_response cmd, void *data)
 	kref_put_mbuf(mbuf);
 
 exit:
-	put_inst(inst);
 	s_vpr_l(inst->sid, "handled: SESSION_FTB_DONE\n");
+	put_inst(inst);
 }
 
 void handle_cmd_response(enum hal_command_response cmd, void *data)
@@ -3179,7 +3176,6 @@ static int msm_comm_session_init(int flipped_state,
 			inst, get_hal_domain(inst->session_type, inst->sid),
 			get_hal_codec(fourcc, inst->sid),
 			&inst->session, inst->sid);
-
 	if (rc || !inst->session) {
 		s_vpr_e(inst->sid,
 			"Failed to call session init for: %pK, %pK, %d, %d\n",
@@ -3188,7 +3184,11 @@ static int msm_comm_session_init(int flipped_state,
 		rc = -EINVAL;
 		goto exit;
 	}
-
+	rc = msm_comm_update_capabilities(inst);
+	if (rc) {
+		s_vpr_e(inst->sid, "Failed to update capabilities\n");
+		goto exit;
+	}
 	rc = msm_vidc_calculate_buffer_counts(inst);
 	if (rc) {
 		s_vpr_e(inst->sid, "Failed to initialize buff counts\n");
@@ -5600,15 +5600,10 @@ int msm_vidc_check_scaling_supported(struct msm_vidc_inst *inst)
 	u32 x_min, x_max, y_min, y_max;
 	u32 input_height, input_width, output_height, output_width;
 	struct v4l2_format *f;
-	struct v4l2_ctrl *ctrl = NULL;
 
-	/* Grid get_ctrl allowed for encode session only */
-	if (is_image_session(inst)) {
-		ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDC_IMG_GRID_SIZE);
-		if (ctrl->val > 0) {
-			s_vpr_h(inst->sid, "Skip scaling check for HEIC\n");
-			return 0;
-		}
+	if (is_grid_session(inst)) {
+		s_vpr_h(inst->sid, "Skip scaling check for HEIC\n");
+		return 0;
 	}
 
 	f = &inst->fmts[INPUT_PORT].v4l2_fmt;
@@ -5693,7 +5688,6 @@ int msm_vidc_check_session_supported(struct msm_vidc_inst *inst)
 	u32 width_min, width_max, height_min, height_max;
 	u32 mbpf_max;
 	struct v4l2_format *f;
-	struct v4l2_ctrl *ctrl = NULL;
 	u32 sid;
 
 	if (!inst || !inst->core || !inst->core->device) {
@@ -5756,8 +5750,7 @@ int msm_vidc_check_session_supported(struct msm_vidc_inst *inst)
 			return -ENOTSUPP;
 		}
 
-		ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDC_IMG_GRID_SIZE);
-		if (ctrl->val > 0) {
+		if (is_grid_session(inst)) {
 			if (inst->fmts[INPUT_PORT].v4l2_fmt.fmt.pix_mp.pixelformat !=
 				V4L2_PIX_FMT_NV12 &&
 				inst->fmts[INPUT_PORT].v4l2_fmt.fmt.pix_mp.pixelformat !=
@@ -7250,7 +7243,8 @@ int msm_comm_check_window_bitrate(struct msm_vidc_inst *inst,
 	struct vidc_frame_data *frame_data)
 {
 	struct msm_vidc_window_data *pdata, *temp = NULL;
-	u32 bitrate, max_br, window_size;
+	u32 frame_size, window_size, window_buffer;
+	u32 max_avg_frame_size, max_frame_size;
 	int buf_cnt = 1, fps, window_start;
 
 	if (!inst || !inst->core || !frame_data) {
@@ -7259,25 +7253,31 @@ int msm_comm_check_window_bitrate(struct msm_vidc_inst *inst,
 	}
 
 	if (!inst->core->resources.avsync_window_size ||
+		inst->entropy_mode == HFI_H264_ENTROPY_CAVLC ||
 		!frame_data->filled_len)
 		return 0;
 
 	fps = inst->clk_data.frame_rate >> 16;
-	max_br = MAX_BITRATE_DECODER_CAVLC;
-	if (inst->entropy_mode == HFI_H264_ENTROPY_CABAC)
-		max_br = inst->clk_data.work_mode == HFI_WORKMODE_2 ?
-			MAX_BITRATE_DECODER_2STAGE_CABAC :
-			MAX_BITRATE_DECODER_1STAGE_CABAC;
 	window_size = inst->core->resources.avsync_window_size * fps;
-	window_size = DIV_ROUND_UP(window_size, 1000);
+	window_size = DIV_ROUND_CLOSEST(window_size, 1000);
+	window_buffer = inst->clk_data.work_mode == HFI_WORKMODE_2 ? 2 : 0;
 
-	bitrate = frame_data->filled_len;
+	max_frame_size =
+		inst->core->resources.allowed_clks_tbl[0].clock_rate / fps -
+		inst->clk_data.entry->vsp_cycles *
+		msm_vidc_get_mbs_per_frame(inst);
+	max_avg_frame_size = (u64)max_frame_size * 100 *
+		(window_size + window_buffer) / (window_size * 135);
+	max_frame_size = (u64)max_frame_size * 100 *
+		(1 + window_buffer) / 135;
+
+	frame_size = frame_data->filled_len;
 	window_start = inst->count.etb;
 
 	mutex_lock(&inst->window_data.lock);
 	list_for_each_entry(pdata, &inst->window_data.list, list) {
 		if (buf_cnt < window_size && pdata->frame_size) {
-			bitrate += pdata->frame_size;
+			frame_size += pdata->frame_size;
 			window_start = pdata->etb_count;
 			buf_cnt++;
 		} else {
@@ -7303,12 +7303,18 @@ int msm_comm_check_window_bitrate(struct msm_vidc_inst *inst,
 	list_add(&pdata->list, &inst->window_data.list);
 	mutex_unlock(&inst->window_data.lock);
 
-	bitrate = DIV_ROUND_UP(((u64)bitrate * 8 * fps), window_size);
-	if (bitrate > max_br) {
+	frame_size = DIV_ROUND_UP((frame_size * 8), window_size);
+	if (frame_size > max_avg_frame_size) {
 		s_vpr_p(inst->sid,
-			"Unsupported bitrate %u max %u, window size %u [%u,%u]",
-			bitrate, max_br, window_size,
+			"Unsupported avg frame size %u max %u, window size %u [%u,%u]",
+			frame_size, max_avg_frame_size, window_size,
 			window_start, inst->count.etb);
+	}
+	if (frame_data->filled_len * 8 > max_frame_size) {
+		s_vpr_p(inst->sid,
+			"Unsupported frame size(bit) %u max %u [%u]",
+			frame_data->filled_len * 8, max_frame_size,
+			inst->count.etb);
 	}
 
 	return 0;

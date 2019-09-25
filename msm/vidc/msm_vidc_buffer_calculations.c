@@ -35,6 +35,9 @@
 /* extra output buffers for encoder HFR usecase */
 #define HFR_ENC_TOTAL_OUTPUT_BUFFERS 12
 
+/* extra output buffers for encoder HEIF usecase */
+#define HEIF_ENC_TOTAL_OUTPUT_BUFFERS 12
+
 #define HFI_COLOR_FORMAT_YUV420_NV12_UBWC_Y_TILE_WIDTH 32
 #define HFI_COLOR_FORMAT_YUV420_NV12_UBWC_Y_TILE_HEIGHT 8
 #define HFI_COLOR_FORMAT_YUV420_NV12_UBWC_UV_TILE_WIDTH 16
@@ -833,6 +836,13 @@ static int msm_vidc_get_extra_output_buff_count(struct msm_vidc_inst *inst)
 	if (!is_realtime_session(inst) || is_thumbnail_session(inst))
 		return extra_output_count;
 
+	/* For HEIF, we are increasing buffer count */
+	if (is_image_session(inst)) {
+		extra_output_count = (HEIF_ENC_TOTAL_OUTPUT_BUFFERS -
+			MIN_ENC_OUTPUT_BUFFERS);
+		return extra_output_count;
+	}
+
 	/*
 	 * Batch mode and HFR not supported for resolution greater than
 	 * UHD. Hence extra buffers are not required.
@@ -970,6 +980,10 @@ u32 msm_vidc_calculate_enc_output_frame_size(struct msm_vidc_inst *inst)
 	 * For resolution > 4k : YUVsize / 4
 	 * Initially frame_size = YUVsize * 2;
 	 */
+
+	if (is_grid_session(inst)) {
+		f->fmt.pix_mp.width = f->fmt.pix_mp.height = HEIC_GRID_DIMENSION;
+	}
 	width = ALIGN(f->fmt.pix_mp.width, BUFFER_ALIGNMENT_SIZE(32));
 	height = ALIGN(f->fmt.pix_mp.height, BUFFER_ALIGNMENT_SIZE(32));
 	mbs_per_frame = NUM_MBS_PER_FRAME(width, height);

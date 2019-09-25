@@ -505,7 +505,7 @@ static unsigned long msm_vidc_max_freq(struct msm_vidc_core *core, u32 sid)
 
 	allowed_clks_tbl = core->resources.allowed_clks_tbl;
 	freq = allowed_clks_tbl[0].clock_rate;
-	s_vpr_p(sid, "Max rate = %lu\n", freq);
+	s_vpr_l(sid, "Max rate = %lu\n", freq);
 	return freq;
 }
 
@@ -724,11 +724,10 @@ static unsigned long msm_vidc_calc_freq_iris2(struct msm_vidc_inst *inst,
 	u32 vpp_cycles_per_mb;
 	u32 mbs_per_second;
 	struct msm_vidc_core *core = NULL;
-	int i = 0;
-	struct allowed_clock_rates_table *allowed_clks_tbl = NULL;
-	u64 rate = 0, fps;
+	u32 fps;
 	struct clock_data *dcvs = NULL;
-	u32 operating_rate, vsp_factor_num = 10, vsp_factor_den = 5;
+	u32 operating_rate, vsp_factor_num = 1, vsp_factor_den = 1;
+	u32 base_cycles = 0;
 
 	core = inst->core;
 	dcvs = &inst->clk_data;
@@ -763,18 +762,34 @@ static unsigned long msm_vidc_calc_freq_iris2(struct msm_vidc_inst *inst,
 		if (inst->clk_data.work_route > 1)
 			vpp_cycles += vpp_cycles / 100;
 
-		vsp_cycles = mbs_per_second * inst->clk_data.entry->vsp_cycles;
-
+		/* VSP */
 		/* bitrate is based on fps, scale it using operating rate */
 		operating_rate = inst->clk_data.operating_rate >> 16;
 		if (operating_rate > (inst->clk_data.frame_rate >> 16) &&
 			(inst->clk_data.frame_rate >> 16)) {
-			vsp_factor_num *= operating_rate;
-			vsp_factor_den *= inst->clk_data.frame_rate >> 16;
+			vsp_factor_num = operating_rate;
+			vsp_factor_den = inst->clk_data.frame_rate >> 16;
 		}
-		vsp_cycles += ((u64)inst->clk_data.bitrate * vsp_factor_num) /
+		vsp_cycles = ((u64)inst->clk_data.bitrate * vsp_factor_num) /
 				vsp_factor_den;
+
+		base_cycles = inst->clk_data.entry->vsp_cycles;
+		if (inst->entropy_mode == HFI_H264_ENTROPY_CABAC) {
+			vsp_cycles = (vsp_cycles * 135) / 100;
+		} else {
+			base_cycles = 0;
+			vsp_cycles = vsp_cycles / 2;
+			/* VSP FW Overhead 1.05 */
+			vsp_cycles = (vsp_cycles * 21) / 20;
+		}
+
+		if (inst->clk_data.work_mode == HFI_WORKMODE_1)
+			vsp_cycles = vsp_cycles * 3;
+
+		vsp_cycles += mbs_per_second * base_cycles;
+
 	} else if (inst->session_type == MSM_VIDC_DECODER) {
+		/* VPP */
 		vpp_cycles = mbs_per_second * inst->clk_data.entry->vpp_cycles /
 				inst->clk_data.work_route;
 		/* 21 / 20 is minimum overhead factor */
@@ -783,10 +798,23 @@ static unsigned long msm_vidc_calc_freq_iris2(struct msm_vidc_inst *inst,
 		if (inst->clk_data.work_route > 1)
 			vpp_cycles += vpp_cycles * 59 / 1000;
 
-		vsp_cycles = mbs_per_second * inst->clk_data.entry->vsp_cycles;
+		/* VSP */
+		base_cycles = inst->clk_data.entry->vsp_cycles;
+		vsp_cycles = fps * filled_len * 8;
+		if (inst->entropy_mode == HFI_H264_ENTROPY_CABAC) {
+			vsp_cycles = (vsp_cycles * 135) / 100;
+		} else {
+			base_cycles = 0;
+			vsp_cycles = vsp_cycles / 2;
+			/* VSP FW Overhead 1.05 */
+			vsp_cycles = vsp_cycles * 21 / 20;
+		}
 
-		/* vsp perf is about 0.5 bits/cycle */
-		vsp_cycles += ((fps * filled_len * 8) * 10) / 5;
+		if (inst->clk_data.work_mode == HFI_WORKMODE_1)
+			vsp_cycles = vsp_cycles * 3;
+
+		vsp_cycles += mbs_per_second * base_cycles;
+
 	} else {
 		s_vpr_e(inst->sid, "%s: Unknown session type\n", __func__);
 		return msm_vidc_max_freq(inst->core, inst->sid);
@@ -794,16 +822,6 @@ static unsigned long msm_vidc_calc_freq_iris2(struct msm_vidc_inst *inst,
 
 	freq = max(vpp_cycles, vsp_cycles);
 	freq = max(freq, fw_cycles);
-
-	allowed_clks_tbl = core->resources.allowed_clks_tbl;
-	for (i = core->resources.allowed_clks_tbl_size - 1; i >= 0; i--) {
-		rate = allowed_clks_tbl[i].clock_rate;
-		if (rate >= freq)
-			break;
-	}
-
-	if (i < 0)
-		i = 0;
 
 	s_vpr_p(inst->sid, "%s: inst %pK: filled len %d required freq %llu\n",
 		__func__, inst, filled_len, freq);
@@ -864,7 +882,7 @@ int msm_vidc_set_clocks(struct msm_vidc_core *core, u32 sid)
 		freq_core_max = max_t(unsigned long, freq_core_1, freq_core_2);
 
 		if (msm_vidc_clock_voting) {
-			s_vpr_p(sid, "msm_vidc_clock_voting %d\n",
+			s_vpr_l(sid, "msm_vidc_clock_voting %d\n",
 				 msm_vidc_clock_voting);
 			freq_core_max = msm_vidc_clock_voting;
 			decrement = false;
@@ -947,17 +965,19 @@ int msm_comm_scale_clocks(struct msm_vidc_inst *inst)
 		return 0;
 	}
 
-	if (inst->clk_data.buffer_counter < DCVS_FTB_WINDOW || is_turbo ||
-		msm_vidc_clock_voting) {
+	if (inst->clk_data.buffer_counter < DCVS_FTB_WINDOW || is_turbo) {
 		inst->clk_data.min_freq =
 				msm_vidc_max_freq(inst->core, inst->sid);
+		inst->clk_data.dcvs_flags = 0;
+	} else if (msm_vidc_clock_voting) {
+		inst->clk_data.min_freq = msm_vidc_clock_voting;
 		inst->clk_data.dcvs_flags = 0;
 	} else {
 		freq = call_core_op(inst->core, calc_freq, inst, filled_len);
 		inst->clk_data.min_freq = freq;
-		/* update dcvs flags */
 		msm_dcvs_scale_clocks(inst, freq);
 	}
+
 	msm_vidc_set_clocks(inst->core, inst->sid);
 
 	return 0;
@@ -1616,7 +1636,10 @@ int msm_vidc_decide_core_and_power_mode_iris1(struct msm_vidc_inst *inst)
 		return -EINVAL;
 	}
 
-	if (cur_inst_load + core_load <= max_freq) {
+	/* Power saving always disabled for HEIF image sessions */
+	if (is_image_session(inst))
+		msm_vidc_power_save_mode_enable(inst, false);
+	else if (cur_inst_load + core_load <= max_freq) {
 		if (mbpf > max_hq_mbpf || mbps > max_hq_mbps)
 			enable = true;
 		msm_vidc_power_save_mode_enable(inst, enable);
@@ -1662,12 +1685,16 @@ int msm_vidc_decide_core_and_power_mode_iris2(struct msm_vidc_inst *inst)
 
 void msm_vidc_init_core_clk_ops(struct msm_vidc_core *core)
 {
+	uint32_t vpu;
+
 	if (!core)
 		return;
 
-	if (core->platform_data->vpu_ver == VPU_VERSION_AR50)
+	vpu = core->platform_data->vpu_ver;
+
+	if (vpu == VPU_VERSION_AR50 || vpu == VPU_VERSION_AR50_LITE)
 		core->core_ops = &core_ops_ar50;
-	else if (core->platform_data->vpu_ver == VPU_VERSION_IRIS1)
+	else if (vpu == VPU_VERSION_IRIS1)
 		core->core_ops = &core_ops_iris1;
 	else
 		core->core_ops = &core_ops_iris2;

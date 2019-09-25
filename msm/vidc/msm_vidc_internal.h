@@ -271,6 +271,7 @@ enum vpu_version {
 	VPU_VERSION_AR50 = 1,
 	VPU_VERSION_IRIS1,
 	VPU_VERSION_IRIS2,
+	VPU_VERSION_AR50_LITE,
 };
 
 struct msm_vidc_ubwc_config_data {
@@ -345,15 +346,7 @@ struct msm_video_device {
 	struct video_device vdev;
 };
 
-struct session_crop {
-	u32 left;
-	u32 top;
-	u32 width;
-	u32 height;
-};
-
 struct session_prop {
-	struct session_crop crop_info;
 	u32 fps;
 	u32 bitrate;
 	bool bframe_changed;

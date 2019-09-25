@@ -352,20 +352,22 @@ int msm_vidc_qbuf(void *instance, struct v4l2_buffer *b)
 	}
 
 	for (i = 0; i < b->length; i++) {
-		b->m.planes[i].m.fd = b->m.planes[i].reserved[0];
-		b->m.planes[i].data_offset = b->m.planes[i].reserved[1];
+		b->m.planes[i].m.fd =
+				b->m.planes[i].reserved[MSM_VIDC_BUFFER_FD];
+		b->m.planes[i].data_offset =
+				b->m.planes[i].reserved[MSM_VIDC_DATA_OFFSET];
 	}
 
 	/* Compression ratio is valid only for Encoder YUV buffers. */
 	if (inst->session_type == MSM_VIDC_ENCODER &&
 			b->type == INPUT_MPLANE) {
-		cr = b->m.planes[0].reserved[2];
+		cr = b->m.planes[0].reserved[MSM_VIDC_COMP_RATIO];
 		msm_comm_update_input_cr(inst, b->index, cr);
 	}
 
 	if (b->type == INPUT_MPLANE) {
 		client_data = msm_comm_store_client_data(inst,
-			b->m.planes[0].reserved[3]);
+			b->m.planes[0].reserved[MSM_VIDC_INPUT_TAG_1]);
 		if (!client_data) {
 			s_vpr_e(inst->sid,
 				"%s: failed to store client data\n", __func__);
@@ -425,8 +427,10 @@ int msm_vidc_dqbuf(void *instance, struct v4l2_buffer *b)
 	}
 
 	for (i = 0; i < b->length; i++) {
-		b->m.planes[i].reserved[0] = b->m.planes[i].m.fd;
-		b->m.planes[i].reserved[1] = b->m.planes[i].data_offset;
+		b->m.planes[i].reserved[MSM_VIDC_BUFFER_FD] =
+					b->m.planes[i].m.fd;
+		b->m.planes[i].reserved[MSM_VIDC_DATA_OFFSET] =
+					b->m.planes[i].data_offset;
 	}
 	/**
 	 * Flush handling:
@@ -453,8 +457,8 @@ int msm_vidc_dqbuf(void *instance, struct v4l2_buffer *b)
 					!(b->flags & V4L2_BUF_FLAG_CODECCONFIG);
 			msm_comm_fetch_client_data(inst, remove,
 				input_tag, input_tag2,
-				&b->m.planes[0].reserved[3],
-				&b->m.planes[0].reserved[4]);
+				&b->m.planes[0].reserved[MSM_VIDC_INPUT_TAG_1],
+				&b->m.planes[0].reserved[MSM_VIDC_INPUT_TAG_2]);
 		}
 	}
 
@@ -1604,6 +1608,7 @@ void *msm_vidc_open(int core_id, int session_type)
 	inst->dpb_extra_binfo = NULL;
 	inst->all_intra = false;
 	inst->max_filled_len = 0;
+	inst->entropy_mode = HFI_H264_ENTROPY_CABAC;
 
 	for (i = SESSION_MSG_INDEX(SESSION_MSG_START);
 		i <= SESSION_MSG_INDEX(SESSION_MSG_END); i++) {
@@ -1805,6 +1810,9 @@ int msm_vidc_destroy(struct msm_vidc_inst *inst)
 
 	core = inst->core;
 
+	for (i = 0; i < MAX_PORT_NUM; i++)
+		vb2_queue_release(&inst->bufq[i].vb2_bufq);
+
 	mutex_lock(&core->lock);
 	/* inst->list lives in core->instances */
 	list_del(&inst->list);
@@ -1814,9 +1822,6 @@ int msm_vidc_destroy(struct msm_vidc_inst *inst)
 
 	v4l2_fh_del(&inst->event_handler);
 	v4l2_fh_exit(&inst->event_handler);
-
-	for (i = 0; i < MAX_PORT_NUM; i++)
-		vb2_queue_release(&inst->bufq[i].vb2_bufq);
 
 	DEINIT_MSM_VIDC_LIST(&inst->scratchbufs);
 	DEINIT_MSM_VIDC_LIST(&inst->persistbufs);

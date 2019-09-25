@@ -133,6 +133,20 @@ struct venus_hfi_vpu_ops vpu4_ops = {
 	.boot_firmware = __boot_firmware_common,
 };
 
+struct venus_hfi_vpu_ops ar50_lite_ops = {
+        .interrupt_init = __interrupt_init_ar50_lt,
+        .setup_ucregion_memmap = __setup_ucregion_memory_map_ar50_lt,
+        .clock_config_on_enable = NULL,
+        .reset_ahb2axi_bridge = NULL,
+        .power_off = __power_off_ar50_lt,
+        .prepare_pc = __prepare_pc_ar50_lt,
+        .raise_interrupt = __raise_interrupt_ar50_lt,
+        .watchdog = __watchdog_common,
+        .noc_error_info = __noc_error_info_common,
+        .core_clear_interrupt = __core_clear_interrupt_ar50_lt,
+        .boot_firmware = __boot_firmware_ar50_lt,
+};
+
 struct venus_hfi_vpu_ops iris1_ops = {
 	.interrupt_init = __interrupt_init_iris1,
 	.setup_ucregion_memmap = __setup_ucregion_memory_map_iris1,
@@ -1039,7 +1053,7 @@ static int __vote_buses(struct venus_hfi_device *device,
 				bus->range[0], bus->range[1]);
 
 			if (TRIVIAL_BW_CHANGE(bw_kbps, bw_prev) && bw_prev) {
-				s_vpr_p(sid, "Skip voting bus %s to %llu bps",
+				s_vpr_l(sid, "Skip voting bus %s to %llu bps",
 					bus->name, bw_kbps * 1000);
 				continue;
 			}
@@ -4773,6 +4787,8 @@ void __init_venus_ops(struct venus_hfi_device *device)
 {
 	if (device->res->vpu_ver == VPU_VERSION_AR50)
 		device->vpu_ops = &vpu4_ops;
+        else if (device->res->vpu_ver == VPU_VERSION_AR50_LITE)
+                device->vpu_ops = &ar50_lite_ops;
 	else if (device->res->vpu_ver == VPU_VERSION_IRIS1)
 		device->vpu_ops = &iris1_ops;
 	else
