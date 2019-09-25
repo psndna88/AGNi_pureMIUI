@@ -400,6 +400,8 @@ struct sigma_dut {
 		STA_PMF_REQUIRED
 	} sta_pmf;
 
+	int sta_ft_ds;
+
 	int no_tpk_expiration;
 
 	int er_oper_performed;
@@ -634,6 +636,7 @@ struct sigma_dut {
 	char ap_mobility_domain[10];
 	unsigned char ap_cell_cap_pref;
 	int ap_ft_oa;
+	enum value_not_set_enabled_disabled ap_ft_ds;
 	int ap_name;
 	int ap_interface_5g;
 	int ap_interface_2g;
@@ -667,6 +670,8 @@ struct sigma_dut {
 
 	char *ar_ltf;
 
+	int ap_numsounddim;
+
 	enum value_not_set_enabled_disabled ap_oce;
 	enum value_not_set_enabled_disabled ap_filsdscv;
 	enum value_not_set_enabled_disabled ap_filshlp;
@@ -675,6 +680,9 @@ struct sigma_dut {
 	enum value_not_set_enabled_disabled ap_esp;
 
 	enum value_not_set_enabled_disabled ap_he_ulofdma;
+	enum value_not_set_enabled_disabled ap_he_dlofdma;
+	enum value_not_set_enabled_disabled ap_bcc;
+	enum value_not_set_enabled_disabled ap_he_frag;
 
 	enum ppdu {
 		PPDU_NOT_SET,
@@ -682,7 +690,14 @@ struct sigma_dut {
 		PPDU_SU,
 		PPDU_ER,
 		PPDU_TB,
+		PPDU_HESU,
 	} ap_he_ppdu;
+
+	enum bufsize {
+		BA_BUFSIZE_NOT_SET,
+		BA_BUFSIZE_64,
+		BA_BUFSIZE_256,
+	} ap_ba_bufsize;
 
 	struct sigma_ese_alloc ap_ese_allocs[MAX_ESE_ALLOCS];
 	int ap_num_ese_allocs;
@@ -847,6 +862,7 @@ struct sigma_dut {
 	char *rsne_override;
 	int sta_associate_wait_connect;
 	char server_cert_hash[65];
+	int server_cert_tod;
 	int sta_tod_policy;
 	const char *hostapd_bin;
 	int use_hostapd_pid_file;
@@ -983,7 +999,7 @@ void ap_register_cmds(void);
 void ath_disable_txbf(struct sigma_dut *dut, const char *intf);
 void ath_config_dyn_bw_sig(struct sigma_dut *dut, const char *ifname,
 			   const char *val);
-void novap_reset(struct sigma_dut *dut, const char *ifname);
+void novap_reset(struct sigma_dut *dut, const char *ifname, int reset);
 int get_hwaddr(const char *ifname, unsigned char *hwaddr);
 enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 					   struct sigma_conn *conn,

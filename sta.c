@@ -2172,18 +2172,89 @@ static enum sigma_cmd_result cmd_sta_set_psk(struct sigma_dut *dut,
 }
 
 
-static int set_eap_common(struct sigma_dut *dut, struct sigma_conn *conn,
-			  const char *ifname, int username_identity,
-			  struct sigma_cmd *cmd)
+static enum sigma_cmd_result set_trust_root_system(struct sigma_dut *dut,
+						   struct sigma_conn *conn,
+						   const char *ifname, int id)
 {
-	const char *val, *alg, *akm;
-	int id;
-	char buf[200], buf2[300];
+	char buf[200];
+
+	snprintf(buf, sizeof(buf), "%s/certs", sigma_cert_path);
+	if (!file_exists(buf))
+		strlcpy(buf, "/system/etc/security/cacerts", sizeof(buf));
+	if (!file_exists(buf))
+		strlcpy(buf, "/etc/ssl/certs", sizeof(buf));
+	if (!file_exists(buf)) {
+		char msg[300];
+
+		snprintf(msg, sizeof(msg),
+			 "ErrorCode,trustedRootCA system store (%s) not found",
+			 buf);
+		send_resp(dut, conn, SIGMA_ERROR, msg);
+		return STATUS_SENT_ERROR;
+	}
+
+	if (set_network_quoted(ifname, id, "ca_path", buf) < 0)
+		return ERROR_SEND_STATUS;
+
+	return SUCCESS_SEND_STATUS;
+}
+
+
+static enum sigma_cmd_result set_trust_root(struct sigma_dut *dut,
+					    struct sigma_conn *conn,
+					    const char *ifname, int id,
+					    const char *val)
+{
+	char buf[200];
 #ifdef ANDROID
 	unsigned char kvalue[KEYSTORE_MESSAGE_SIZE];
 	int length;
 #endif /* ANDROID */
+
+	if (strcmp(val, "DEFAULT") == 0)
+		return set_trust_root_system(dut, conn, ifname, id);
+
+#ifdef ANDROID
+	snprintf(buf, sizeof(buf), "CACERT_%s", val);
+	length = android_keystore_get(ANDROID_KEYSTORE_GET, buf, kvalue);
+	if (length > 0) {
+		sigma_dut_print(dut, DUT_MSG_INFO, "Use Android keystore [%s]",
+				buf);
+		snprintf(buf, sizeof(buf), "keystore://CACERT_%s", val);
+		goto ca_cert_selected;
+	}
+#endif /* ANDROID */
+
+	snprintf(buf, sizeof(buf), "%s/%s", sigma_cert_path, val);
+#ifdef __linux__
+	if (!file_exists(buf)) {
+		char msg[300];
+
+		snprintf(msg, sizeof(msg),
+			 "ErrorCode,trustedRootCA file (%s) not found", buf);
+		send_resp(dut, conn, SIGMA_ERROR, msg);
+		return STATUS_SENT_ERROR;
+	}
+#endif /* __linux__ */
+#ifdef ANDROID
+ca_cert_selected:
+#endif /* ANDROID */
+	if (set_network_quoted(ifname, id, "ca_cert", buf) < 0)
+		return ERROR_SEND_STATUS;
+
+	return SUCCESS_SEND_STATUS;
+}
+
+
+static int set_eap_common(struct sigma_dut *dut, struct sigma_conn *conn,
+			  const char *ifname, int username_identity,
+			  struct sigma_cmd *cmd)
+{
+	const char *val, *alg, *akm, *trust_root, *domain, *domain_suffix;
+	int id;
+	char buf[200], buf2[300];
 	int erp = 0;
+	enum sigma_cmd_result res;
 
 	id = set_wpa_common(dut, conn, ifname, cmd);
 	if (id < 0)
@@ -2192,6 +2263,9 @@ static int set_eap_common(struct sigma_dut *dut, struct sigma_conn *conn,
 	val = get_param(cmd, "keyMgmtType");
 	alg = get_param(cmd, "micAlg");
 	akm = get_param(cmd, "AKMSuiteType");
+	trust_root = get_param(cmd, "trustedRootCA");
+	domain = get_param(cmd, "Domain");
+	domain_suffix = get_param(cmd, "DomainSuffix");
 
 	if (val && strcasecmp(val, "SuiteB") == 0) {
 		if (set_network(ifname, id, "key_mgmt", "WPA-EAP-SUITE-B-192") <
@@ -2247,36 +2321,16 @@ static int set_eap_common(struct sigma_dut *dut, struct sigma_conn *conn,
 			return -2;
 	}
 
-	val = get_param(cmd, "trustedRootCA");
-	if (val) {
-#ifdef ANDROID
-		snprintf(buf, sizeof(buf), "CACERT_%s", val);
-		length = android_keystore_get(ANDROID_KEYSTORE_GET, buf,
-					      kvalue);
-		if (length > 0) {
-			sigma_dut_print(dut, DUT_MSG_INFO,
-					"Use Android keystore [%s]", buf);
-			snprintf(buf, sizeof(buf), "keystore://CACERT_%s",
-				 val);
-			goto ca_cert_selected;
+	if (trust_root) {
+		if (strcmp(trust_root, "DEFAULT") == 0 && !domain &&
+		    !domain_suffix) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,trustRootCA DEFAULT used without specifying Domain or DomainSuffix");
+			return STATUS_SENT_ERROR;
 		}
-#endif /* ANDROID */
-
-		snprintf(buf, sizeof(buf), "%s/%s", sigma_cert_path, val);
-#ifdef __linux__
-		if (!file_exists(buf)) {
-			char msg[300];
-			snprintf(msg, sizeof(msg), "ErrorCode,trustedRootCA "
-				 "file (%s) not found", buf);
-			send_resp(dut, conn, SIGMA_ERROR, msg);
-			return -3;
-		}
-#endif /* __linux__ */
-#ifdef ANDROID
-ca_cert_selected:
-#endif /* ANDROID */
-		if (set_network_quoted(ifname, id, "ca_cert", buf) < 0)
-			return -2;
+		res = set_trust_root(dut, conn, ifname, id, trust_root);
+		if (res != SUCCESS_SEND_STATUS)
+			return res;
 	}
 
 	val = get_param(cmd, "ServerCert");
@@ -2313,13 +2367,13 @@ ca_cert_selected:
 		}
 	}
 
-	val = get_param(cmd, "Domain");
-	if (val && set_network_quoted(ifname, id, "domain_match", val) < 0)
+	if (domain &&
+	    set_network_quoted(ifname, id, "domain_match", domain) < 0)
 		return ERROR_SEND_STATUS;
 
-	val = get_param(cmd, "DomainSuffix");
-	if (val &&
-	    set_network_quoted(ifname, id, "domain_suffix_match", val) < 0)
+	if (domain_suffix &&
+	    set_network_quoted(ifname, id, "domain_suffix_match",
+			       domain_suffix) < 0)
 		return ERROR_SEND_STATUS;
 
 	if (username_identity) {
@@ -3254,6 +3308,8 @@ static enum sigma_cmd_result cmd_sta_associate(struct sigma_dut *dut,
 	if (ssid == NULL)
 		return -1;
 
+	dut->server_cert_tod = 0;
+
 	if (dut->rsne_override) {
 #ifdef NL80211_SUPPORT
 		if (get_driver_type() == DRIVER_WCN) {
@@ -3388,10 +3444,16 @@ static enum sigma_cmd_result cmd_sta_associate(struct sigma_dut *dut,
 			if (pos) {
 				char *end;
 
-				tod = strstr(buf, " tod=1") != NULL;
+				if (strstr(buf, " tod=1"))
+					tod = 1;
+				else if (strstr(buf, " tod=2"))
+					tod = 2;
+				else
+					tod = 0;
 				sigma_dut_print(dut, DUT_MSG_DEBUG,
 						"Server certificate TOD policy: %d",
 						tod);
+				dut->server_cert_tod = tod;
 
 				pos += 6;
 				end = strchr(pos, ' ');
@@ -4576,6 +4638,19 @@ cmd_sta_preset_testparameters(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *intf = get_param(cmd, "Interface");
 	const char *val;
 
+	val = get_param(cmd, "FT_DS");
+	if (val) {
+		if (strcasecmp(val, "Enable") == 0) {
+			dut->sta_ft_ds = 1;
+		} else if (strcasecmp(val, "Disable") == 0) {
+			dut->sta_ft_ds = 0;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported value for FT_DS");
+			return STATUS_SENT_ERROR;
+		}
+	}
+
 	val = get_param(cmd, "Program");
 	if (val && (strcasecmp(val, "HS2-R2") == 0 ||
 		    strcasecmp(val, "HS2-R3") == 0))
@@ -5551,7 +5626,7 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 			}
 			break;
 		case DRIVER_ATHEROS:
-			novap_reset(dut, intf);
+			novap_reset(dut, intf, 1);
 			ath_config_dyn_bw_sig(dut, intf, val);
 			break;
 		default:
@@ -5563,7 +5638,7 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 
 	val = get_param(cmd, "RTS_FORCE");
 	if (val) {
-		novap_reset(dut, intf);
+		novap_reset(dut, intf, 1);
 		if (strcasecmp(val, "Enable") == 0) {
 			if (sta_set_rts(dut, intf, 64) != 0) {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
@@ -6125,13 +6200,14 @@ static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
 	char result[32];
 	int res;
 	int chan = 0;
-	int status = 0;
+	enum sigma_cmd_result status = STATUS_SENT;
 	int fastreassoc = 1;
+	int ft_ds = 0;
 
 	if (bssid == NULL) {
 		send_resp(dut, conn, SIGMA_ERROR, "errorCode,Missing bssid "
 			  "argument");
-		return 0;
+		return STATUS_SENT_ERROR;
 	}
 
 	if (val)
@@ -6144,14 +6220,14 @@ static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
 		if (set_network(intf, dut->infra_network_id, "bssid", bssid) <
 		    0 ||
 		    set_network(intf, 0, "bssid", bssid) < 0)
-			return -2;
+			return ERROR_SEND_STATUS;
 	}
 
 	ctrl = open_wpa_mon(intf);
 	if (ctrl == NULL) {
 		sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to open "
 				"wpa_supplicant monitor connection");
-		return -1;
+		return ERROR_SEND_STATUS;
 	}
 
 	if (get_wpa_status(get_station_ifname(), "wpa_state", result,
@@ -6160,6 +6236,10 @@ static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
 		sigma_dut_print(dut, DUT_MSG_DEBUG,
 				"sta_reassoc: Not connected");
 		fastreassoc = 0;
+	} else if (dut->sta_ft_ds) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"sta_reassoc: Use FT-over-DS");
+		ft_ds = 1;
 	}
 
 	if (dut->rsne_override) {
@@ -6178,7 +6258,58 @@ static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
 		}
 	}
 
-	if (wifi_chip_type == DRIVER_WCN && fastreassoc) {
+	if (ft_ds) {
+		if (chan) {
+			unsigned int freq;
+
+			freq = channel_to_freq(dut, chan);
+			if (!freq) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"Invalid channel number provided: %d",
+						chan);
+				send_resp(dut, conn, SIGMA_INVALID,
+					  "ErrorCode,Invalid channel number");
+				goto close_mon_conn;
+			}
+			res = snprintf(buf, sizeof(buf),
+				       "SCAN TYPE=ONLY freq=%d", freq);
+		} else {
+			res = snprintf(buf, sizeof(buf), "SCAN TYPE=ONLY");
+		}
+		if (res < 0 || res >= (int) sizeof(buf)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,snprintf failed");
+			goto close_mon_conn;
+		}
+		if (wpa_command(intf, buf) < 0) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Failed to start scan");
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,scan failed");
+			goto close_mon_conn;
+		}
+
+		res = get_wpa_cli_event(dut, ctrl, "CTRL-EVENT-SCAN-RESULTS",
+					buf, sizeof(buf));
+		if (res < 0) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Scan did not complete");
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,scan did not complete");
+			goto close_mon_conn;
+		}
+
+		res = snprintf(buf, sizeof(buf), "FT_DS %s", bssid);
+		if (res > 0 && res < (int) sizeof(buf))
+			res = wpa_command(intf, buf);
+
+		if (res < 0 || res >= (int) sizeof(buf)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,FT_DS command failed");
+			status = STATUS_SENT_ERROR;
+			goto close_mon_conn;
+		}
+	} else if (wifi_chip_type == DRIVER_WCN && fastreassoc) {
 #ifdef ANDROID
 		if (chan) {
 			unsigned int freq;
@@ -6224,7 +6355,7 @@ static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
 		    < 0) {
 			sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to set "
 					"bssid to any during FASTREASSOC");
-			status = -2;
+			status = ERROR_SEND_STATUS;
 			goto close_mon_conn;
 		}
 		res = snprintf(buf, sizeof(buf), "DRIVER FASTREASSOC %s %d",
@@ -6244,7 +6375,7 @@ static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
 		snprintf(buf, sizeof(buf), "iwpriv %s reassoc", intf);
 		if (system(buf) != 0) {
 			sigma_dut_print(dut, DUT_MSG_ERROR, "%s failed", buf);
-			status = -2;
+			status = ERROR_SEND_STATUS;
 			goto close_mon_conn;
 		}
 #endif /* ANDROID */
@@ -6259,11 +6390,12 @@ static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
 	res = get_wpa_cli_event(dut, ctrl, "CTRL-EVENT-CONNECTED",
 				buf, sizeof(buf));
 	if (res < 0) {
-		sigma_dut_print(dut, DUT_MSG_INFO, "Connection did not complete");
-		status = -1;
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Connection did not complete");
+		status = STATUS_SENT_ERROR;
 		goto close_mon_conn;
 	}
-	status = 1;
+	status = SUCCESS_SEND_STATUS;
 
 close_mon_conn:
 	wpa_ctrl_detach(ctrl);
@@ -7657,6 +7789,7 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 
 	dut->sta_associate_wait_connect = 0;
 	dut->server_cert_hash[0] = '\0';
+	dut->server_cert_tod = 0;
 	dut->sta_tod_policy = 0;
 
 	dut->dpp_conf_id = -1;
@@ -7678,6 +7811,7 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 	}
 
 	dut->akm_values = 0;
+	dut->sta_ft_ds = 0;
 
 #ifdef NL80211_SUPPORT
 	if (get_driver_type() == DRIVER_WCN &&
@@ -7853,7 +7987,7 @@ static enum sigma_cmd_result cmd_sta_set_11n(struct sigma_dut *dut,
 	} else if (!mcs32 && rate) {
 		switch (get_driver_type()) {
 		case DRIVER_ATHEROS:
-			novap_reset(dut, intf);
+			novap_reset(dut, intf, 1);
 			ath_sta_set_11nrates(dut, intf, rate);
 			break;
 		default:
@@ -11151,7 +11285,7 @@ static int ath_sta_set_rfeature_vht(const char *intf, struct sigma_dut *dut,
 	const char *val;
 	char *token = NULL, *result;
 
-	novap_reset(dut, intf);
+	novap_reset(dut, intf, 1);
 
 	val = get_param(cmd, "nss_mcs_opt");
 	if (val) {

@@ -79,6 +79,7 @@ static enum sigma_cmd_result sta_server_cert_trust(struct sigma_dut *dut,
 	int e;
 	char resp[200];
 	int num_disconnected = 0;
+	int tod = -1;
 
 	strlcpy(resp, "ServerCertTrustResult,Accepted", sizeof(resp));
 
@@ -106,6 +107,13 @@ static enum sigma_cmd_result sta_server_cert_trust(struct sigma_dut *dut,
 	if (dut->sta_tod_policy) {
 		strlcpy(resp,
 			"ServerCertTrustResult,OverrideNotAllowed,Reason,TOD policy",
+			sizeof(resp));
+		goto done;
+	}
+
+	if (dut->server_cert_tod == 1) {
+		strlcpy(resp,
+			"ServerCertTrustResult,OverrideNotAllowed,Reason,TOD-STRICT policy in received server certificate",
 			sizeof(resp));
 		goto done;
 	}
@@ -154,6 +162,7 @@ static enum sigma_cmd_result sta_server_cert_trust(struct sigma_dut *dut,
 
 	for (e = 0; e < 20; e++) {
 		const char *events[] = {
+			"CTRL-EVENT-EAP-PEER-CERT",
 			"CTRL-EVENT-EAP-TLS-CERT-ERROR",
 			"CTRL-EVENT-DISCONNECTED",
 			"CTRL-EVENT-CONNECTED",
@@ -171,6 +180,25 @@ static enum sigma_cmd_result sta_server_cert_trust(struct sigma_dut *dut,
 		}
 		sigma_dut_print(dut, DUT_MSG_DEBUG, "Connection event: %s",
 				buf);
+
+
+		if (strstr(buf, "CTRL-EVENT-EAP-PEER-CERT") &&
+		    strstr(buf, " depth=0")) {
+			char *pos = strstr(buf, " hash=");
+
+			if (pos) {
+				if (strstr(buf, " tod=1"))
+					tod = 1;
+				else if (strstr(buf, " tod=2"))
+					tod = 2;
+				else
+					tod = 0;
+				sigma_dut_print(dut, DUT_MSG_DEBUG,
+						"Server certificate TOD policy: %d",
+						tod);
+				dut->server_cert_tod = tod;
+			}
+		}
 
 		if (strstr(buf, "CTRL-EVENT-EAP-TLS-CERT-ERROR")) {
 			strlcpy(resp,
@@ -191,9 +219,15 @@ static enum sigma_cmd_result sta_server_cert_trust(struct sigma_dut *dut,
 		}
 
 		if (strstr(buf, "CTRL-EVENT-CONNECTED")) {
-				strlcpy(resp,
-					"ServerCertTrustResult,Accepted,Result,Connected",
-					sizeof(resp));
+			if (tod >= 0) {
+				sigma_dut_print(dut, DUT_MSG_DEBUG,
+						"Network profile TOD policy update: %d -> %d",
+						dut->sta_tod_policy, tod);
+				dut->sta_tod_policy = tod;
+			}
+			strlcpy(resp,
+				"ServerCertTrustResult,Accepted,Result,Connected",
+				sizeof(resp));
 			break;
 		}
 	}
