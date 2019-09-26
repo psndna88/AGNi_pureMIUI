@@ -907,6 +907,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	int enrollee_ap;
 	int force_gas_fragm = 0;
 	int not_dpp_akm = 0;
+	int akm_use_selector = 0;
 
 	if (!wait_conn)
 		wait_conn = "no";
@@ -1144,6 +1145,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		force_gas_fragm = 1;
 		break;
 	case 8:
+	case 9:
 		ascii2hexstr("DPPNET01", buf);
 		res = snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
 		if (res < 0 || res >= sizeof(conf_ssid))
@@ -1158,6 +1160,8 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			conf_role = "sta-dpp+psk+sae";
 		}
 		group_id_str = "DPPGROUP_DPP_INFRA1";
+		if (conf_index == 9)
+			akm_use_selector = 1;
 		break;
 	case 10:
 		ascii2hexstr("DPPNET01", buf);
@@ -1312,10 +1316,12 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 				goto out;
 			}
 			snprintf(buf, sizeof(buf),
-				 "DPP_AUTH_INIT peer=%d%s role=%s conf=%s %s %s configurator=%d%s%s%s",
+				 "DPP_AUTH_INIT peer=%d%s role=%s conf=%s %s %s configurator=%d%s%s%s%s",
 				 dpp_peer_bootstrap, own_txt, role,
 				 conf_role, conf_ssid, conf_pass,
-				 dut->dpp_conf_id, neg_freq, group_id, conf2);
+				 dut->dpp_conf_id, neg_freq, group_id,
+				 akm_use_selector ? " akm_use_selector=1" : "",
+				 conf2);
 		} else if (strcasecmp(bs, "QR") == 0) {
 			snprintf(buf, sizeof(buf),
 				 "DPP_AUTH_INIT peer=%d%s role=%s%s%s",
@@ -1391,9 +1397,11 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 				goto out;
 			}
 			snprintf(buf, sizeof(buf),
-				 "SET dpp_configurator_params  conf=%s %s %s configurator=%d%s%s",
+				 "SET dpp_configurator_params  conf=%s %s %s configurator=%d%s%s%s",
 				 conf_role, conf_ssid, conf_pass,
-				 dut->dpp_conf_id, group_id, conf2);
+				 dut->dpp_conf_id, group_id,
+				 akm_use_selector ? " akm_use_selector=1" : "",
+				 conf2);
 			if (wpa_command(ifname, buf) < 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "errorCode,Failed to set configurator parameters");
