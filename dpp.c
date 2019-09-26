@@ -871,6 +871,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	const char *conf_role;
 	int conf_index = -1;
 	char buf[2000];
+	char buf2[200];
 	char conf_ssid[100];
 	char conf_pass[100];
 	char pkex_identifier[200];
@@ -900,6 +901,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	};
 	const char *group_id_str = NULL;
 	char group_id[100];
+	char conf2[300];
 	const char *result;
 	int check_mutual = 0;
 	int enrollee_ap;
@@ -1042,6 +1044,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	conf_ssid[0] = '\0';
 	conf_pass[0] = '\0';
 	group_id[0] = '\0';
+	conf2[0] = '\0';
 	val = get_param(cmd, "DPPConfIndex");
 	if (val)
 		conf_index = atoi(val);
@@ -1155,6 +1158,22 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			conf_role = "sta-dpp+psk+sae";
 		}
 		group_id_str = "DPPGROUP_DPP_INFRA1";
+		break;
+	case 10:
+		ascii2hexstr("DPPNET01", buf);
+		res = snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		if (res < 0 || res >= sizeof(conf_ssid))
+			goto err;
+		if (enrollee_ap)
+			conf_role = "ap-dpp";
+		else
+			conf_role = "sta-dpp";
+		group_id_str = "DPPGROUP_DPP_INFRA1";
+		ascii2hexstr("DPPNET02", buf);
+		ascii2hexstr("This_is_legacy_password", buf2);
+		res = snprintf(conf2, sizeof(conf2),
+			       " @CONF-OBJ-SEP@ conf=%s-dpp+psk+sae ssid=%s pass=%s group_id=DPPGROUP_DPP_INFRA2",
+			       enrollee_ap ? "ap" : "sta", buf, buf2);
 		break;
 	default:
 		send_resp(dut, conn, SIGMA_ERROR,
@@ -1293,10 +1312,10 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 				goto out;
 			}
 			snprintf(buf, sizeof(buf),
-				 "DPP_AUTH_INIT peer=%d%s role=%s conf=%s %s %s configurator=%d%s%s",
+				 "DPP_AUTH_INIT peer=%d%s role=%s conf=%s %s %s configurator=%d%s%s%s",
 				 dpp_peer_bootstrap, own_txt, role,
 				 conf_role, conf_ssid, conf_pass,
-				 dut->dpp_conf_id, neg_freq, group_id);
+				 dut->dpp_conf_id, neg_freq, group_id, conf2);
 		} else if (strcasecmp(bs, "QR") == 0) {
 			snprintf(buf, sizeof(buf),
 				 "DPP_AUTH_INIT peer=%d%s role=%s%s%s",
@@ -1372,9 +1391,9 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 				goto out;
 			}
 			snprintf(buf, sizeof(buf),
-				 "SET dpp_configurator_params  conf=%s %s %s configurator=%d%s",
+				 "SET dpp_configurator_params  conf=%s %s %s configurator=%d%s%s",
 				 conf_role, conf_ssid, conf_pass,
-				 dut->dpp_conf_id, group_id);
+				 dut->dpp_conf_id, group_id, conf2);
 			if (wpa_command(ifname, buf) < 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "errorCode,Failed to set configurator parameters");
