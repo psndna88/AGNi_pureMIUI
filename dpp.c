@@ -135,10 +135,16 @@ static int dpp_get_local_bootstrap(struct sigma_dut *dut,
 			       "DPP_BOOTSTRAP_GEN type=qrcode curve=%s chan=%s mac=%s",
 			       curve, resp, mac);
 	} else {
+		int channel = 11;
+
 		/* Default channel list (normal DUT case) */
+		if (sigma_dut_is_ap(dut) && dut->hostapd_running &&
+		    dut->ap_oper_chn &&
+		    dut->ap_channel > 0 && dut->ap_channel <= 13)
+			channel = dut->ap_channel;
 		res = snprintf(buf, sizeof(buf),
-			       "DPP_BOOTSTRAP_GEN type=qrcode curve=%s chan=81/11 mac=%s",
-			       curve, mac);
+			       "DPP_BOOTSTRAP_GEN type=qrcode curve=%s chan=81/%d mac=%s",
+			       curve, channel, mac);
 	}
 
 	if (res < 0 || res >= sizeof(buf) ||
@@ -1358,6 +1364,10 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		const char *delay_qr_resp;
 		int mutual;
 		int freq = 2462; /* default: channel 11 */
+
+		if (sigma_dut_is_ap(dut) && dut->hostapd_running &&
+		    dut->ap_oper_chn)
+			freq = channel_to_freq(dut, dut->ap_channel);
 
 		if (strcasecmp(bs, "PKEX") == 0) {
 			/* default: channel 6 for PKEX */
