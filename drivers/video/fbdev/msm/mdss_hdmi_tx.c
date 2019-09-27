@@ -4097,6 +4097,9 @@ static int hdmi_tx_evt_handle_resume(struct hdmi_tx_ctrl *hdmi_ctrl)
 		goto end;
 	}
 
+	if (hdmi_tx_is_cec_wakeup_en(hdmi_ctrl))
+		hdmi_ctrl->mdss_util->disable_wake_irq(&hdmi_tx_hw);
+
 end:
 	return rc;
 }
@@ -4154,6 +4157,9 @@ static int hdmi_tx_evt_handle_suspend(struct hdmi_tx_ctrl *hdmi_ctrl)
 
 	if (!hdmi_ctrl->hpd_state && !hdmi_ctrl->panel_power_on)
 		hdmi_tx_hpd_off(hdmi_ctrl);
+
+	if (hdmi_tx_is_cec_wakeup_en(hdmi_ctrl))
+		hdmi_ctrl->mdss_util->enable_wake_irq(&hdmi_tx_hw);
 
 	hdmi_ctrl->panel_suspend = true;
 	hdmi_tx_cec_device_suspend(hdmi_ctrl);
