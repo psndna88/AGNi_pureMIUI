@@ -630,13 +630,29 @@ end:
 	return rc;
 }
 
+static inline int get_bitdepth(enum hdmi_deep_color_depth bitdepth)
+{
+	switch (bitdepth) {
+	case HDMI_DEEP_COLOR_DEPTH_24BPP:
+		return 24;
+	case HDMI_DEEP_COLOR_DEPTH_30BPP:
+		return 30;
+	case HDMI_DEEP_COLOR_DEPTH_36BPP:
+		return 36;
+	default:
+		return 0;
+	}
+}
+
 static int hdmi_panel_setup_dc(struct hdmi_panel *panel)
 {
 	u32 hdmi_ctrl_reg;
 	u32 vbi_pkt_reg;
 	int rc = 0;
 
-	pr_debug("Deep Color: %s\n", panel->data->dc_enable ? "ON" : "OFF");
+	pr_debug("Deep Color: %s, bitdepth = %d\n",
+			panel->data->dc_enable ? "ON" : "OFF",
+			get_bitdepth(panel->data->bitdepth));
 
 	/* enable deep color if supported */
 	if (panel->data->dc_enable) {

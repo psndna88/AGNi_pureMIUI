@@ -3403,6 +3403,10 @@ static int hdmi_tx_power_on(struct hdmi_tx_ctrl *hdmi_ctrl)
 	hdmi_ctrl->panel.scrambler = hdmi_edid_get_sink_scrambler_support(
 					edata);
 	hdmi_ctrl->panel.dc_enable = hdmi_tx_dc_support(hdmi_ctrl);
+	if (hdmi_ctrl->panel.dc_enable)
+		hdmi_ctrl->panel.bitdepth = HDMI_DEEP_COLOR_DEPTH_30BPP;
+	else
+		hdmi_ctrl->panel.bitdepth = HDMI_DEEP_COLOR_DEPTH_24BPP;
 
 	if (hdmi_ctrl->panel_ops.on)
 		hdmi_ctrl->panel_ops.on(pdata);
