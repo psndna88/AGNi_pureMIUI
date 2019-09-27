@@ -124,6 +124,7 @@ static int hdmi_tx_enable_pll_update(struct hdmi_tx_ctrl *hdmi_ctrl,
 	int enable);
 static void hdmi_tx_hpd_polarity_setup(struct hdmi_tx_ctrl *hdmi_ctrl,
 		bool polarity);
+static int hdmi_tx_notify_events(struct hdmi_tx_ctrl *hdmi_ctrl, int val);
 
 static struct mdss_hw hdmi_tx_hw = {
 	.hw_ndx = MDSS_HW_HDMI,
@@ -897,8 +898,7 @@ static ssize_t hdmi_tx_sysfs_wta_hpd(struct device *dev,
 			 * No need to blocking wait for display/audio in this
 			 * case since HAL is not up so no ACK can be expected.
 			 */
-			hdmi_tx_send_audio_notification(hdmi_ctrl, 0);
-			hdmi_tx_send_video_notification(hdmi_ctrl, 0, true);
+			hdmi_tx_notify_events(hdmi_ctrl, 0);
 		}
 
 		break;
@@ -2447,13 +2447,29 @@ static int hdmi_tx_notify_events(struct hdmi_tx_ctrl *hdmi_ctrl, int val)
 	int rc = 0;
 
 	if (val == hdmi_ctrl->notification_status) {
-		pr_debug("No change in notification status %d -> %d\n",
-				hdmi_ctrl->notification_status, val);
+		pr_debug("%s: No change in notification status %d -> %d\n",
+				__func__, hdmi_ctrl->notification_status, val);
 		goto end;
 	}
-	hdmi_ctrl->notification_status = val;
 
+	reinit_completion(&hdmi_ctrl->notification_comp);
+	if (atomic_read(&hdmi_ctrl->notification_pending)) {
+		pr_debug("%s: wait for previous event to finish\n", __func__);
+		rc = wait_for_completion_timeout(
+				&hdmi_ctrl->notification_comp, HZ);
+		if (rc <= 0) {
+			pr_debug("%s: wait for pending notification timed out\n",
+					__func__);
+			hdmi_ctrl->pending_event = val;
+			hdmi_ctrl->handle_pe = true;
+			rc = -ETIMEDOUT;
+			goto end;
+		}
+	}
+
+	hdmi_ctrl->notification_status = val;
 	atomic_set(&hdmi_ctrl->notification_pending, 1);
+
 	if (val) {
 		rc = hdmi_tx_send_video_notification(hdmi_ctrl, val, true);
 	} else {
@@ -2462,10 +2478,10 @@ static int hdmi_tx_notify_events(struct hdmi_tx_ctrl *hdmi_ctrl, int val)
 	}
 
 	if (!rc) {
-		pr_debug("Successfully sent %s notification\n",
+		pr_debug("%s: Successfully sent %s notification\n", __func__,
 			val ? "CONNECT" : "DISCONNECT");
 	} else {
-		pr_err("%s notification failed\n",
+		pr_err("%s: %s notification failed\n", __func__,
 			val ? "CONNECT" : "DISCONNECT");
 		atomic_set(&hdmi_ctrl->notification_pending, 0);
 	}
@@ -2499,20 +2515,6 @@ static void hdmi_tx_hpd_int_work(struct work_struct *work)
 	DEV_DBG("%s: %s\n", __func__,
 		hpd_state ? "CONNECT" : "DISCONNECT");
 
-	reinit_completion(&hdmi_ctrl->notification_comp);
-
-	if (atomic_read(&hdmi_ctrl->notification_pending)) {
-		pr_debug("wait for previous event to finish\n");
-		rc = wait_for_completion_timeout(&hdmi_ctrl->notification_comp,
-				HZ);
-		if (rc <= 0) {
-			pr_debug("wait for pending notification timed out\n");
-			hdmi_ctrl->pending_event = hpd_state;
-			hdmi_ctrl->handle_pe = true;
-			return;
-		}
-	}
-
 	if (hpd_state) {
 		hdmi_tx_hpd_polarity_setup(hdmi_ctrl,
 				HPD_DISCONNECT_POLARITY);
@@ -2525,8 +2527,15 @@ static void hdmi_tx_hpd_int_work(struct work_struct *work)
 		hdmi_tx_update_hdr_info(hdmi_ctrl);
 
 		hdmi_tx_notify_events(hdmi_ctrl, hpd_state);
+
 	} else {
-		hdmi_tx_notify_events(hdmi_ctrl, hpd_state);
+		rc = hdmi_tx_notify_events(hdmi_ctrl, hpd_state);
+
+		if (!rc && !hdmi_ctrl->panel_power_on) {
+			atomic_set(&hdmi_ctrl->notification_pending, 0);
+			hdmi_tx_hpd_polarity_setup(hdmi_ctrl,
+					HPD_CONNECT_POLARITY);
+		}
 	}
 } /* hdmi_tx_hpd_int_work */
 
@@ -3528,6 +3537,7 @@ static int hdmi_tx_hpd_on(struct hdmi_tx_ctrl *hdmi_ctrl)
 		/* Turn on HPD HW circuit */
 		DSS_REG_W(io, HDMI_HPD_CTRL, reg_val | BIT(28));
 
+		atomic_set(&hdmi_ctrl->notification_pending, 0);
 		hdmi_tx_hpd_polarity_setup(hdmi_ctrl, HPD_CONNECT_POLARITY);
 		DEV_DBG("%s: HPD is now ON\n", __func__);
 	}
@@ -4259,8 +4269,6 @@ static int hdmi_tx_post_evt_handle_unblank(struct hdmi_tx_ctrl *hdmi_ctrl)
 
 static int hdmi_tx_post_evt_handle_resume(struct hdmi_tx_ctrl *hdmi_ctrl)
 {
-	int rc = 0;
-
 	if (!hdmi_ctrl->hpd_feature_on)
 		return 0;
 
@@ -4272,17 +4280,6 @@ static int hdmi_tx_post_evt_handle_resume(struct hdmi_tx_ctrl *hdmi_ctrl)
 			&hdmi_ctrl->hpd_int_done, HZ/10);
 		if (!timeout) {
 			pr_debug("cable removed during suspend\n");
-			if (atomic_read(&hdmi_ctrl->notification_pending)) {
-				pr_debug("wait for previous event to finish\n");
-				rc = wait_for_completion_timeout(
-					&hdmi_ctrl->notification_comp, HZ);
-				if (rc <= 0) {
-					pr_debug("wait for pending notification timed out\n");
-					hdmi_ctrl->pending_event = 0;
-					hdmi_ctrl->handle_pe = true;
-					return 0;
-				}
-			}
 			hdmi_tx_notify_events(hdmi_ctrl, 0);
 		}
 	}
@@ -4292,23 +4289,8 @@ static int hdmi_tx_post_evt_handle_resume(struct hdmi_tx_ctrl *hdmi_ctrl)
 
 static int hdmi_tx_post_evt_handle_panel_on(struct hdmi_tx_ctrl *hdmi_ctrl)
 {
-	int rc = 0;
-
 	if (hdmi_ctrl->panel_suspend) {
 		pr_debug("panel suspend has triggered\n");
-
-		if (atomic_read(&hdmi_ctrl->notification_pending)) {
-			pr_debug("wait for previous event to finish\n");
-			rc = wait_for_completion_timeout(
-					&hdmi_ctrl->notification_comp,
-					HZ);
-			if (rc <= 0) {
-				pr_debug("wait for pending notification timed out\n");
-				hdmi_ctrl->pending_event = 0;
-				hdmi_ctrl->handle_pe = true;
-				return 0;
-			}
-		}
 		hdmi_tx_notify_events(hdmi_ctrl, 0);
 	}
 
