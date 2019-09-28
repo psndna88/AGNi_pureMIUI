@@ -130,6 +130,20 @@ static char *initcall_command_line;
 static char *execute_command;
 static char *ramdisk_execute_command;
 
+static unsigned int android_version = 9;
+
+static int __init set_android_version(char *val)
+{
+	get_option(&val, &android_version);
+	return 0;
+}
+__setup("androidboot.version=", set_android_version);
+
+unsigned int get_android_version(void)
+{
+	return android_version;
+}
+
 /*
  * Used to generate warnings if static_key manipulation functions are used
  * before jump_label_init is called.
