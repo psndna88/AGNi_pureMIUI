@@ -1184,6 +1184,8 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		res = snprintf(conf2, sizeof(conf2),
 			       " @CONF-OBJ-SEP@ conf=%s-dpp+psk+sae ssid=%s pass=%s group_id=DPPGROUP_DPP_INFRA2",
 			       enrollee_ap ? "ap" : "sta", buf, buf2);
+		if (res < 0 || res >= sizeof(conf2))
+			goto err;
 		break;
 	default:
 		send_resp(dut, conn, SIGMA_ERROR,
