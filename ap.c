@@ -7525,6 +7525,10 @@ skip_key_mgmt:
 			fprintf(f, "fragment_size=128\n");
 	}
 
+	if (dut->ap_dpp_conf_addr && dut->ap_dpp_conf_pkhash)
+		fprintf(f, "dpp_controller=ipaddr=%s pkhash=%s\n",
+			dut->ap_dpp_conf_addr, dut->ap_dpp_conf_pkhash);
+
 	if (dut->program == PROGRAM_VHT) {
 		int vht_oper_centr_freq_idx;
 
@@ -8461,6 +8465,10 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 	dut->ap_psk[0] = '\0';
 
 	dut->dpp_conf_id = -1;
+	free(dut->ap_dpp_conf_addr);
+	dut->ap_dpp_conf_addr = NULL;
+	free(dut->ap_dpp_conf_pkhash);
+	dut->ap_dpp_conf_pkhash = NULL;
 
 	if (is_60g_sigma_dut(dut)) {
 		dut->ap_mode = AP_11ad;
@@ -11926,6 +11934,18 @@ cmd_ap_preset_testparameters(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (val) {
 		dut->ap_oper_chn = 1;
 		dut->ap_channel = atoi(val);
+	}
+
+	val = get_param(cmd, "DPPConfiguratorAddress");
+	if (val) {
+		free(dut->ap_dpp_conf_addr);
+		dut->ap_dpp_conf_addr = strdup(val);
+	}
+
+	val = get_param(cmd, "DPPConfiguratorPKHash");
+	if (val) {
+		free(dut->ap_dpp_conf_pkhash);
+		dut->ap_dpp_conf_pkhash = strdup(val);
 	}
 
 	return 1;

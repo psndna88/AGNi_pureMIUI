@@ -740,6 +740,9 @@ struct sigma_dut {
 
 	enum sec_ch_offset ap_chwidth_offset;
 
+	char *ap_dpp_conf_addr;
+	char *ap_dpp_conf_pkhash;
+
 #ifdef CONFIG_SNIFFER
 	pid_t sniffer_pid;
 	char sniffer_filename[200];

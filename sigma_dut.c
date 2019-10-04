@@ -1221,6 +1221,8 @@ int main(int argc, char *argv[])
 	free(sigma_dut.ap_sae_passwords);
 	free(sigma_dut.ar_ltf);
 	sigma_dut.ar_ltf = NULL;
+	free(sigma_dut.ap_dpp_conf_addr);
+	free(sigma_dut.ap_dpp_conf_pkhash);
 	if (sigma_dut.log_file_fd)
 		fclose(sigma_dut.log_file_fd);
 #ifdef NL80211_SUPPORT
