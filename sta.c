@@ -2739,6 +2739,7 @@ static enum sigma_cmd_result cmd_sta_set_eapaka(struct sigma_dut *dut,
 						struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
+	const char *username = get_param(cmd, "Username");
 	const char *ifname;
 	int id;
 
@@ -2754,8 +2755,15 @@ static enum sigma_cmd_result cmd_sta_set_eapaka(struct sigma_dut *dut,
 	if (id < 0)
 		return id;
 
-	if (set_network(ifname, id, "eap", "AKA") < 0)
+	/* RFC 5448: EAP-AKA' MUST use the leading character "6" (ASCII 36
+	 * hexadecimal).
+	 */
+	if (username && username[0] == '6') {
+		if (set_network(ifname, id, "eap", "AKA'") < 0)
+			return -2;
+	} else if (set_network(ifname, id, "eap", "AKA") < 0) {
 		return -2;
+	}
 
 	return 1;
 }
