@@ -1683,6 +1683,19 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		}
 	}
 
+	val = get_param(cmd, "HE_TXOPDurRTSThr");
+	if (val) {
+		if (strcasecmp(val, "enable") == 0) {
+			dut->ap_he_rtsthrshld = VALUE_ENABLED;
+		} else if (strcasecmp(val, "disable") == 0) {
+			dut->ap_he_rtsthrshld = VALUE_DISABLED;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported HE_TXOPDurRTSThr value");
+			return STATUS_SENT_ERROR;
+		}
+	}
+
 	return 1;
 }
 
@@ -6212,6 +6225,11 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 
 	if (dut->ap_he_mimo == MIMO_UL)
 		run_iwpriv(dut, ifname, "he_mubfee 1");
+
+	if (dut->ap_he_rtsthrshld == VALUE_ENABLED)
+		run_iwpriv(dut, ifname, "he_rtsthrshld 512");
+	else if (dut->ap_he_rtsthrshld == VALUE_DISABLED)
+		run_iwpriv(dut, ifname, "he_rtsthrshld 1024");
 }
 
 
@@ -8500,6 +8518,7 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 	dut->ap_bcc = VALUE_DISABLED;
 	dut->ap_mu_edca = VALUE_DISABLED;
 	dut->ap_he_mimo = MIMO_NOT_SET;
+	dut->ap_he_rtsthrshld = VALUE_NOT_SET;
 	if (dut->device_type == AP_testbed) {
 		dut->ap_he_dlofdma = VALUE_DISABLED;
 		dut->ap_he_frag = VALUE_DISABLED;

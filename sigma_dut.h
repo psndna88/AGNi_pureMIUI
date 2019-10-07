@@ -685,6 +685,7 @@ struct sigma_dut {
 	enum value_not_set_enabled_disabled ap_bcc;
 	enum value_not_set_enabled_disabled ap_he_frag;
 	enum value_not_set_enabled_disabled ap_mu_edca;
+	enum value_not_set_enabled_disabled ap_he_rtsthrshld;
 
 	enum ppdu {
 		PPDU_NOT_SET,
