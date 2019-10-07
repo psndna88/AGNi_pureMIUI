@@ -701,6 +701,12 @@ struct sigma_dut {
 		BA_BUFSIZE_256,
 	} ap_ba_bufsize;
 
+	enum mimo {
+		MIMO_NOT_SET,
+		MIMO_DL,
+		MIMO_UL,
+	} ap_he_mimo;
+
 	struct sigma_ese_alloc ap_ese_allocs[MAX_ESE_ALLOCS];
 	int ap_num_ese_allocs;
 

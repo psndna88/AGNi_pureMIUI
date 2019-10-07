@@ -1670,6 +1670,19 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		}
 	}
 
+	val = get_param(cmd, "MIMO");
+	if (val) {
+		if (strcasecmp(val, "DL") == 0) {
+			dut->ap_he_mimo = MIMO_DL;
+		} else if (strcasecmp(val, "UL") == 0) {
+			dut->ap_he_mimo = MIMO_UL;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported mimo param value");
+			return STATUS_SENT_ERROR;
+		}
+	}
+
 	return 1;
 }
 
@@ -3852,6 +3865,31 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 		owrt_ap_set_vap(dut, vap_id, "vhtsubfer", "0");
 		owrt_ap_set_vap(dut, vap_id, "vhtsubfee", "0");
 		owrt_ap_set_vap(dut, vap_id, "he_subfer", "0");
+	}
+
+	if (dut->program == PROGRAM_HE &&
+	    (dut->ap_txBF || dut->ap_he_ulofdma == VALUE_ENABLED ||
+	     dut->ap_he_mimo == MIMO_DL)) {
+		switch (dut->ap_chwidth) {
+		case AP_20:
+			owrt_ap_set_vap(dut, vap_id, "chwidth", "0");
+			break;
+		case AP_40:
+			owrt_ap_set_vap(dut, vap_id, "chwidth", "1");
+			break;
+		case AP_80:
+			owrt_ap_set_vap(dut, vap_id, "chwidth", "2");
+			break;
+		case AP_160:
+			owrt_ap_set_vap(dut, vap_id, "chwidth", "3");
+			break;
+		case AP_80_80:
+			owrt_ap_set_vap(dut, vap_id, "chwidth", "3");
+			break;
+		case AP_AUTO:
+		default:
+			break;
+		}
 	}
 
 	return 1;
@@ -6163,6 +6201,17 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 
 	if (dut->ap_mu_edca == VALUE_ENABLED)
 		run_iwpriv(dut, ifname, "he_mu_edca 1");
+
+	if (dut->ap_he_mimo == MIMO_DL) {
+		mubrp_commands(dut, ifname);
+		if (dut->device_type != AP_testbed)
+			run_system_wrapper(
+				dut, "wifitool %s setUnitTestCmd 0x48 2 100 2",
+				ifname);
+	}
+
+	if (dut->ap_he_mimo == MIMO_UL)
+		run_iwpriv(dut, ifname, "he_mubfee 1");
 }
 
 
@@ -8450,6 +8499,7 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 	dut->ap_numsounddim = 0;
 	dut->ap_bcc = VALUE_DISABLED;
 	dut->ap_mu_edca = VALUE_DISABLED;
+	dut->ap_he_mimo = MIMO_NOT_SET;
 	if (dut->device_type == AP_testbed) {
 		dut->ap_he_dlofdma = VALUE_DISABLED;
 		dut->ap_he_frag = VALUE_DISABLED;
