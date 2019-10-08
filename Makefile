@@ -18,4 +18,9 @@ ifeq ($(CONFIG_ARCH_LITO), y)
 LINUXINCLUDE    += -include $(srctree)/techpack/video/config/litovidconf.h
 endif
 
+LINUXINCLUDE    += -I$(srctree)/techpack/video/include \
+                   -I$(srctree)/techpack/video/include/uapi
+
+USERINCLUDE     += -I$(srctree)/techpack/video/include/uapi
+
 obj-y +=msm/

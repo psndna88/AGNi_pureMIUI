@@ -1,0 +1,4 @@
+# include header files
+
+header-y += msm_media_info.h
+header-y += msm_vidc_utils.h
