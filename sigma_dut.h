@@ -527,6 +527,7 @@ struct sigma_dut {
 	char *ap_sae_groups;
 	int sae_anti_clogging_threshold;
 	int sae_reflection;
+	int sae_confirm_immediate;
 	char ap_passphrase[101];
 	char ap_psk[65];
 	char *ap_sae_passwords;
@@ -1078,6 +1079,7 @@ void str_remove_chars(char *str, char ch);
 int get_wps_forced_version(struct sigma_dut *dut, const char *str);
 int base64_encode(const char *src, size_t len, char *out, size_t out_len);
 int random_get_bytes(char *buf, size_t len);
+int get_enable_disable(const char *val);
 
 /* uapsd_stream.c */
 void receive_uapsd(struct sigma_stream *s);
