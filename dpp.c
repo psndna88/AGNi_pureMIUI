@@ -1336,6 +1336,11 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 				 akm_use_selector ? " akm_use_selector=1" : "",
 				 conn_status ? " conn_status=1" : "",
 				 conf2);
+		} else if (tcp && strcasecmp(bs, "QR") == 0) {
+			snprintf(buf, sizeof(buf),
+				 "DPP_AUTH_INIT peer=%d%s role=%s tcp_addr=%s%s%s",
+				 dpp_peer_bootstrap, own_txt, role, tcp,
+				 neg_freq, group_id);
 		} else if (strcasecmp(bs, "QR") == 0) {
 			snprintf(buf, sizeof(buf),
 				 "DPP_AUTH_INIT peer=%d%s role=%s%s%s",
