@@ -7,8 +7,7 @@
 #include <linux/timer.h>
 #include <linux/slab.h>
 
-#include <soc/qcom/scm.h>
-
+#include "cam_compat.h"
 #include "cam_cpas_hw_intf.h"
 #include "cam_cpas_hw.h"
 #include "cam_cpastop_hw.h"
@@ -519,7 +518,7 @@ done:
 
 static int cam_cpastop_poweron(struct cam_hw_info *cpas_hw)
 {
-	int i, reg_val;
+	int i;
 	struct cam_cpas_hw_errata_wa_list *errata_wa_list =
 		camnoc_info->errata_wa_list;
 	struct cam_cpas_hw_errata_wa *errata_wa =
@@ -546,9 +545,7 @@ static int cam_cpastop_poweron(struct cam_hw_info *cpas_hw)
 	}
 
 	if (errata_wa->enable) {
-		reg_val = scm_io_read(errata_wa->data.reg_info.offset);
-		reg_val |= errata_wa->data.reg_info.value;
-		scm_io_write(errata_wa->data.reg_info.offset, reg_val);
+		cam_cpastop_scm_write(errata_wa);
 	}
 
 	return 0;

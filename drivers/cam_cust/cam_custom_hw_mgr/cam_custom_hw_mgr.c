@@ -8,10 +8,10 @@
 #include <linux/uaccess.h>
 #include <linux/debugfs.h>
 
-#include <soc/qcom/scm.h>
 #include <media/cam_custom.h>
 #include <media/cam_sync.h>
 
+#include "cam_compat.h"
 #include "cam_sync_api.h"
 #include "cam_smmu_api.h"
 #include "cam_req_mgr_workq.h"

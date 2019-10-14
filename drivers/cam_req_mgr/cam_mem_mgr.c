@@ -10,10 +10,6 @@
 #include <linux/dma-buf.h>
 #include <linux/version.h>
 
-#if KERNEL_VERSION(5, 4, 0) > LINUX_VERSION_CODE
-#include <linux/ion_kernel.h>
-#endif
-
 #include "cam_compat.h"
 #include "cam_req_mgr_util.h"
 #include "cam_mem_mgr.h"

@@ -4,50 +4,23 @@
  */
 
 #include <linux/module.h>
+
+#include <dt-bindings/msm/msm-camera.h>
+
+#include "cam_compat.h"
 #include "cam_csiphy_core.h"
 #include "cam_csiphy_dev.h"
 #include "cam_csiphy_soc.h"
 #include "cam_common_util.h"
 #include "cam_packet_util.h"
-
-#include <dt-bindings/msm/msm-camera.h>
-
-#include <soc/qcom/scm.h>
-#include <cam_mem_mgr.h>
-#include <cam_cpas_api.h>
-
-#define SCM_SVC_CAMERASS 0x18
-#define SECURE_SYSCALL_ID 0x6
-#define SECURE_SYSCALL_ID_2 0x7
+#include "cam_mem_mgr.h"
+#include "cam_cpas_api.h"
 
 #define LANE_MASK_2PH 0x1F
 #define LANE_MASK_3PH 0x7
 
 static int csiphy_dump;
 module_param(csiphy_dump, int, 0644);
-
-static int cam_csiphy_notify_secure_mode(struct csiphy_device *csiphy_dev,
-	bool protect, int32_t offset)
-{
-	struct scm_desc desc = {0};
-
-	if (offset >= CSIPHY_MAX_INSTANCES) {
-		CAM_ERR(CAM_CSIPHY, "Invalid CSIPHY offset");
-		return -EINVAL;
-	}
-
-	desc.arginfo = SCM_ARGS(2, SCM_VAL, SCM_VAL);
-	desc.args[0] = protect;
-	desc.args[1] = csiphy_dev->csiphy_cpas_cp_reg_mask[offset];
-
-	if (scm_call2(SCM_SIP_FNID(SCM_SVC_CAMERASS, SECURE_SYSCALL_ID_2),
-		&desc)) {
-		CAM_ERR(CAM_CSIPHY, "scm call to hypervisor failed");
-		return -EINVAL;
-	}
-
-	return 0;
-}
 
 int32_t cam_csiphy_get_instance_offset(
 	struct csiphy_device *csiphy_dev,
