@@ -247,6 +247,13 @@ enum v4l2_mpeg_vidc_video_stream_output_mode {
 	V4L2_CID_MPEG_VIDC_VIDEO_STREAM_OUTPUT_PRIMARY = 0,
 	V4L2_CID_MPEG_VIDC_VIDEO_STREAM_OUTPUT_SECONDARY = 1,
 };
+#define V4L2_CID_MPEG_VIDC_VIDEO_ROI_TYPE \
+	(V4L2_CID_MPEG_MSM_VIDC_BASE + 128)
+enum v4l2_mpeg_vidc_video_roi_type {
+	V4L2_CID_MPEG_VIDC_VIDEO_ROI_TYPE_NONE = 0,
+	V4L2_CID_MPEG_VIDC_VIDEO_ROI_TYPE_2BIT = 1,
+	V4L2_CID_MPEG_VIDC_VIDEO_ROI_TYPE_2BYTE = 2,
+};
 #define V4L2_CID_MPEG_VIDC_VIDEO_UNKNOWN \
 		(V4L2_CID_MPEG_MSM_VIDC_BASE + 0xFFF)
 /* vendor controls end */
@@ -406,6 +413,14 @@ struct msm_vidc_s3d_frame_packing_payload {
 struct msm_vidc_roi_deltaqp_payload {
 	__u32 b_roi_info; /*Enable/Disable*/
 	__u32 mbi_info_size; /*Size of QP data*/
+	__u32 data[1];
+};
+
+struct msm_vidc_roi_qp_payload {
+	__s32 upper_qp_offset;
+	__s32 lower_qp_offset;
+	__u32 b_roi_info;
+	__u32 mbi_info_size;
 	__u32 data[1];
 };
 
