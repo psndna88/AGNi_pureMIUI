@@ -1415,6 +1415,8 @@ static const struct v4l2_ctrl_ops msm_vidc_ctrl_ops = {
 static struct msm_vidc_inst_smem_ops  msm_vidc_smem_ops = {
 	.smem_map_dma_buf = msm_smem_map_dma_buf,
 	.smem_unmap_dma_buf = msm_smem_unmap_dma_buf,
+	.smem_prefetch = msm_smem_memory_prefetch,
+	.smem_drain = msm_smem_memory_drain,
 };
 
 void *msm_vidc_open(int core_id, int session_type)
@@ -1756,6 +1758,7 @@ int msm_vidc_close(void *instance)
 	}
 
 	msm_comm_session_clean(inst);
+	msm_comm_memory_drain(inst);
 
 	kref_put(&inst->kref, close_helper);
 	return 0;

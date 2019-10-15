@@ -168,6 +168,10 @@ struct msm_vidc_platform_resources {
 	uint32_t pm_qos_latency_us;
 	uint32_t max_inst_count;
 	uint32_t max_secure_inst_count;
+	uint32_t prefetch_pix_buf_count;
+	uint32_t prefetch_pix_buf_size;
+	uint32_t prefetch_non_pix_buf_count;
+	uint32_t prefetch_non_pix_buf_size;
 	int msm_vidc_hw_rsp_timeout;
 	int msm_vidc_firmware_unload_delay;
 	uint32_t msm_vidc_pwr_collapse_delay;

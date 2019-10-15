@@ -883,6 +883,7 @@ int msm_vdec_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 				__func__);
 			return -ENOTSUPP;
 		}
+		msm_comm_memory_prefetch(inst);
 		break;
 	case V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA:
 		if (ctrl->val == EXTRADATA_NONE)
