@@ -2672,7 +2672,7 @@ EXPORT_SYMBOL(core_ctl_set_boost);
  * Approximate:
  *   val * y^n,    where y^32 ~= 0.5 (~1 scheduling period)
  */
-static __always_inline u64 decay_load(u64 val, u64 n)
+static u64 decay_load(u64 val, u64 n)
 {
 	unsigned int local_n;
 
@@ -2698,7 +2698,7 @@ static __always_inline u64 decay_load(u64 val, u64 n)
 	return val;
 }
 
-u32 __accumulate_pelt_segments(u64 periods, u32 d1, u32 d3)
+static u32 __accumulate_pelt_segments(u64 periods, u32 d1, u32 d3)
 {
 	u32 c1, c2, c3 = d3; /* y^0 == 1 */
 
@@ -2774,7 +2774,7 @@ static inline void cfs_se_util_change(struct sched_avg *avg)
  *      d1 y^(p+1) + 1024 \Sum y^n + d3 y^0	(Step 2)
  *                         n=1
  */
-__always_inline u32
+static __always_inline u32
 accumulate_sum(u64 delta, int cpu, struct sched_avg *sa,
 	       unsigned long weight, int running, struct cfs_rq *cfs_rq)
 {
