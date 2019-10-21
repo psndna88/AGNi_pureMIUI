@@ -1829,7 +1829,8 @@ done:
 
 		if (vic == video_format) {
 			DEV_DBG("%s: vic %d already added\n", __func__, vic);
-			disp_mode_list[i].rgb_support = true;
+			if (supported)
+				disp_mode_list[i].rgb_support = true;
 			if (y420_supported)
 				disp_mode_list[i].y420_support = true;
 			return;
