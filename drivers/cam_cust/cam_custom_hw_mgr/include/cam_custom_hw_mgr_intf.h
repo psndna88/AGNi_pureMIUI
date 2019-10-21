@@ -32,6 +32,22 @@ enum cam_custom_cmd_types {
 	CAM_CUSTOM_SUBMIT_REQ,
 };
 
+enum cam_custom_hw_mgr_cmd {
+	CAM_CUSTOM_HW_MGR_CMD_NONE,
+	CAM_CUSTOM_HW_MGR_PROG_DEFAULT_CONFIG,
+};
+
+/**
+ * struct cam_custom_hw_cmd_args - Payload for hw manager command
+ *
+ * @cmd_type               HW command type
+ * @reserved               any other required data
+ */
+struct cam_custom_hw_cmd_args {
+	uint32_t                   cmd_type;
+	uint32_t                   reserved;
+};
+
 /**
  * struct cam_custom_stop_args - hardware stop arguments
  *

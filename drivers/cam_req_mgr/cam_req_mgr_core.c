@@ -49,6 +49,7 @@ void cam_req_mgr_core_link_reset(struct cam_req_mgr_core_link *link)
 	link->initial_skip = true;
 	link->sof_timestamp = 0;
 	link->prev_sof_timestamp = 0;
+	link->enable_apply_default = false;
 	atomic_set(&link->eof_event_cnt, 0);
 }
 
@@ -206,6 +207,35 @@ static void __cam_req_mgr_find_dev_name(
 				req_id, link->link_hdl, pd, dev->dev_info.name,
 				link->open_req_cnt);
 		}
+	}
+}
+
+/**
+ * __cam_req_mgr_apply_default()
+ *
+ * @brief : Apply default settings to all devices
+ * @link  : link on which we are applying these settings
+ *
+ */
+static void __cam_req_mgr_apply_default(
+	struct cam_req_mgr_core_link *link)
+{
+	int                                  i;
+	struct cam_req_mgr_apply_request     apply_req;
+	struct cam_req_mgr_connected_device *dev = NULL;
+
+	if (!link->enable_apply_default)
+		return;
+
+	for (i = 0; i < link->num_devs; i++) {
+		dev = &link->l_dev[i];
+		apply_req.request_id = 0;
+		apply_req.dev_hdl = dev->dev_hdl;
+		apply_req.link_hdl = link->link_hdl;
+		apply_req.trigger_point = 0;
+		apply_req.report_if_bubble = 0;
+		if (dev->ops && dev->ops->apply_default)
+			dev->ops->apply_default(&apply_req);
 	}
 }
 
@@ -738,6 +768,7 @@ static int __cam_req_mgr_send_req(struct cam_req_mgr_core_link *link,
 			rc = dev->ops->apply_req(&apply_req);
 			if (rc) {
 				*failed_dev = dev;
+				__cam_req_mgr_apply_default(link);
 				return rc;
 			}
 		}
@@ -750,6 +781,10 @@ static int __cam_req_mgr_send_req(struct cam_req_mgr_core_link *link,
 			slot->ops.skip_next_frame) {
 			slot->ops.skip_next_frame = false;
 			slot->ops.is_applied = true;
+			CAM_DBG(CAM_REQ,
+				"SEND: link_hdl: %x pd: %d req_id %lld",
+				link->link_hdl, pd, apply_req.request_id);
+			__cam_req_mgr_apply_default(link);
 			return -EAGAIN;
 		} else if ((trigger == CAM_TRIGGER_POINT_EOF) &&
 			(slot->ops.apply_at_eof)) {
@@ -774,15 +809,26 @@ static int __cam_req_mgr_send_req(struct cam_req_mgr_core_link *link,
 					pd);
 				continue;
 			}
-			if (link->req.apply_data[pd].skip_idx ||
-				link->req.apply_data[pd].req_id < 0) {
-				CAM_DBG(CAM_CRM, "skip %d req_id %lld",
-					link->req.apply_data[pd].skip_idx,
-					link->req.apply_data[pd].req_id);
-				continue;
-			}
+
 			if (!(dev->dev_info.trigger & trigger))
 				continue;
+
+			if (link->req.apply_data[pd].skip_idx ||
+				(link->req.apply_data[pd].req_id < 0)) {
+				CAM_DBG(CAM_CRM,
+					"dev %s skip %d req_id %lld",
+					dev->dev_info.name,
+					link->req.apply_data[pd].skip_idx,
+					link->req.apply_data[pd].req_id);
+				apply_req.dev_hdl = dev->dev_hdl;
+				apply_req.request_id = 0;
+				apply_req.trigger_point = 0;
+				apply_req.report_if_bubble = 0;
+				if ((link->enable_apply_default) &&
+					(dev->ops) && (dev->ops->apply_default))
+					dev->ops->apply_default(&apply_req);
+				continue;
+			}
 
 			apply_req.dev_hdl = dev->dev_hdl;
 			apply_req.request_id =
@@ -843,6 +889,7 @@ static int __cam_req_mgr_send_req(struct cam_req_mgr_core_link *link,
 			if (dev->ops && dev->ops->process_evt)
 				dev->ops->process_evt(&evt_data);
 		}
+		__cam_req_mgr_apply_default(link);
 	}
 	return rc;
 }
@@ -1534,6 +1581,7 @@ static int __cam_req_mgr_process_req(struct cam_req_mgr_core_link *link,
 				rc = -EPERM;
 			}
 			spin_unlock_bh(&link->link_state_spin_lock);
+			__cam_req_mgr_apply_default(link);
 			goto error;
 		}
 	}
@@ -3222,6 +3270,9 @@ static int __cam_req_mgr_setup_link_info(struct cam_req_mgr_core_link *link,
 				}
 			if (dev->dev_info.p_delay > max_delay)
 				max_delay = dev->dev_info.p_delay;
+
+			if (dev->dev_info.enable_apply_default)
+				link->enable_apply_default = true;
 
 			subscribe_event |= (uint32_t)dev->dev_info.trigger;
 		}

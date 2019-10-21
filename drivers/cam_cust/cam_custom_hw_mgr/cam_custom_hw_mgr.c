@@ -1281,6 +1281,57 @@ static int cam_custom_hw_mgr_irq_cb(void *data,
 	return 0;
 }
 
+static int cam_custom_mgr_cmd(void *hw_mgr_priv, void *cmd_args)
+{
+	int rc = 0;
+	struct cam_hw_cmd_args        *hw_cmd_args = cmd_args;
+	struct cam_custom_hw_cmd_args *custom_hw_cmd_args;
+	struct cam_custom_hw_mgr_ctx  *custom_ctx = NULL;
+
+	if (!hw_mgr_priv || !cmd_args) {
+		CAM_ERR(CAM_CUSTOM, "Invalid arguments");
+		return -EINVAL;
+	}
+
+	custom_ctx =
+		(struct cam_custom_hw_mgr_ctx *)
+		hw_cmd_args->ctxt_to_hw_map;
+
+	if (!custom_ctx || !custom_ctx->ctx_in_use) {
+		CAM_ERR(CAM_CUSTOM, "Fatal: Invalid context is used");
+		return -EPERM;
+	}
+
+	switch (hw_cmd_args->cmd_type) {
+	case CAM_HW_MGR_CMD_INTERNAL:
+		if (!hw_cmd_args->u.internal_args) {
+			CAM_ERR(CAM_CUSTOM, "Invalid cmd arguments");
+			return -EINVAL;
+		}
+
+		custom_hw_cmd_args = (struct cam_custom_hw_cmd_args *)
+					hw_cmd_args->u.internal_args;
+
+		switch (custom_hw_cmd_args->cmd_type) {
+		case CAM_CUSTOM_HW_MGR_PROG_DEFAULT_CONFIG:
+			CAM_DBG(CAM_CUSTOM, "configure RUP and scratch buffer");
+			/* Handle event accordingly */
+			break;
+		default:
+			CAM_ERR(CAM_CUSTOM, "Invalid HW mgr command:0x%x",
+				hw_cmd_args->cmd_type);
+			rc = -EINVAL;
+			break;
+		}
+		break;
+	default:
+		rc = -EINVAL;
+		break;
+	}
+
+	return rc;
+}
+
 int cam_custom_hw_mgr_init(struct device_node *of_node,
 	struct cam_hw_mgr_intf *hw_mgr_intf, int *iommu_hdl)
 {
@@ -1376,6 +1427,7 @@ int cam_custom_hw_mgr_init(struct device_node *of_node,
 	hw_mgr_intf->hw_prepare_update = cam_custom_mgr_prepare_hw_update;
 	hw_mgr_intf->hw_config = cam_custom_mgr_config_hw;
 	hw_mgr_intf->hw_reset = cam_custom_hw_mgr_reset;
+	hw_mgr_intf->hw_cmd = cam_custom_mgr_cmd;
 
 	if (iommu_hdl)
 		*iommu_hdl = g_custom_hw_mgr.img_iommu_hdl;
