@@ -283,8 +283,6 @@ irqreturn_t cam_custom_hw_sub_mod_irq(int irq_num, void *data)
 			core_info->device_hw_info->irq_clear);
 
 	spin_lock(&custom_dev->hw_lock);
-	cb_args.irq_status = irq_status;
-	cb_args.req_info = core_info->curr_req;
 	core_info->curr_req = NULL;
 	if (core_info->irq_cb.custom_hw_mgr_cb)
 		core_info->irq_cb.custom_hw_mgr_cb(
@@ -315,7 +313,7 @@ int cam_custom_hw_sub_mod_process_cmd(void *hw_priv, uint32_t cmd_type,
 	switch (cmd_type) {
 	case CAM_CUSTOM_SET_IRQ_CB: {
 		struct cam_custom_sub_mod_set_irq_cb *irq_cb = cmd_args;
-
+		/* This can be deprecated */
 		CAM_DBG(CAM_CUSTOM, "Setting irq cb");
 		spin_lock_irqsave(&hw->hw_lock, flag);
 		core_info->irq_cb.custom_hw_mgr_cb = irq_cb->custom_hw_mgr_cb;
