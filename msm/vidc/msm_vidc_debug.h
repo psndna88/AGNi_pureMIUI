@@ -7,9 +7,83 @@
 #define __MSM_VIDC_DEBUG__
 #include <linux/debugfs.h>
 #include <linux/delay.h>
+
+/* Mock all the missing parts for successful compilation starts here */
 #include <linux/types.h>
+#include <linux/time.h>
+#include <linux/interrupt.h>
+#include <soc/qcom/subsystem_restart.h>
 #include "msm_vidc_internal.h"
-#include "trace/events/msm_vidc_events.h"
+
+#define MAX_TRACER_LOG_LENGTH 128
+
+#define trace_msm_vidc_printf(trace_logbuf, log_length) (void) log_length
+#define trace_msm_v4l2_vidc_fw_load_start(s)
+#define trace_msm_v4l2_vidc_fw_load_end(s)
+
+void trace_msm_v4l2_vidc_open_start(char *s);
+void trace_msm_v4l2_vidc_open_end(char *s);
+void trace_msm_v4l2_vidc_close_start(char *s);
+void trace_msm_v4l2_vidc_close_end(char *s);
+void trace_msm_vidc_common_state_change(void*, enum instance_state ins_state, int state);
+void trace_msm_smem_buffer_iommu_op_start(char *s, int i, int j, unsigned long k,
+										  dma_addr_t iova, unsigned long l);
+void trace_msm_smem_buffer_iommu_op_end(char *s, int i, int j, unsigned long k,
+										  dma_addr_t iova, unsigned long l);
+void trace_msm_smem_buffer_dma_op_start(char *s, u32 buffer_type, unsigned long heap_mask,
+										size_t size, u32 align, u32 flags,
+										int map_kernel);
+void trace_msm_smem_buffer_dma_op_end(char *s, u32 buffer_type, unsigned long heap_mask,
+										size_t size, u32 align, u32 flags,
+										int map_kernel);
+void trace_msm_v4l2_vidc_buffer_counter(char *s, int etb, int ebd, int ftb, int fbd);
+void trace_msm_vidc_perf_clock_scale(const char *name, u32 freq);
+void trace_venus_hfi_var_done(u32 cp_start, u32 cp_size,
+							  u32 cp_nonpixel_start, u32 cp_nonpixel_size);
+void trace_msm_v4l2_vidc_buffer_event_start(char *event_type, u32 device_addr,
+											int64_t timestamp, u32 alloc_len,
+											u32 filled_len, u32 offset);
+void trace_msm_v4l2_vidc_buffer_event_end(char *event_type, u32 device_addr,
+											int64_t timestamp, u32 alloc_len,
+											u32 filled_len, u32 offset);
+
+// void disable_irq_nosync(unsigned int irq);
+// void enable_irq(unsigned int irq);
+
+struct msm_bus_client_handle {
+	char *name;
+	int mas;
+	int slv;
+	int first_hop;
+	// struct device *mas_dev;
+	u64 cur_act_ib;
+	u64 cur_act_ab;
+	u64 cur_dual_ib;
+	u64 cur_dual_ab;
+	bool active_only;
+};
+
+int msm_bus_scale_update_bw(struct msm_bus_client_handle *cl, u64 ab, u64 ib);
+int msm_bus_scale_update_bw(struct msm_bus_client_handle *cl, u64 ab, u64 ib);
+struct msm_bus_client_handle* msm_bus_scale_register(uint32_t mas, uint32_t slv,
+                                                     char *name, bool active_only);
+void msm_bus_scale_unregister(struct msm_bus_client_handle *cl);
+
+void do_gettimeofday(struct timeval *__ddl_tv);
+
+#ifndef CONFIG_VIDEOBUF2_CORE
+int vb2_reqbufs(struct vb2_queue *q, struct v4l2_requestbuffers *req);
+int vb2_qbuf(struct vb2_queue *q, struct media_device *mdev,
+			 struct v4l2_buffer *b);
+int vb2_dqbuf(struct vb2_queue *q, struct v4l2_buffer *b, bool nonblocking);
+int vb2_streamon(struct vb2_queue *q, enum v4l2_buf_type type);
+int vb2_streamoff(struct vb2_queue *q, enum v4l2_buf_type type);
+int vb2_queue_init(struct vb2_queue *q);
+void vb2_buffer_done(struct vb2_buffer *vb, enum vb2_buffer_state state);
+#endif
+
+#define SMEM_IMAGE_VERSION_TABLE 469
+/* Mock all the missing parts for successful compilation ends */
 
 #ifndef VIDC_DBG_LABEL
 #define VIDC_DBG_LABEL "msm_vidc"
@@ -42,7 +116,6 @@ enum vidc_msg_prio {
 	VIDC_BUS        = 0x00000020,
 	VIDC_ENCODER    = 0x00000100,
 	VIDC_DECODER    = 0x00000200,
-	VIDC_CVP        = 0x00000400,
 	VIDC_PRINTK     = 0x00001000,
 	VIDC_FTRACE     = 0x00002000,
 	FW_LOW          = 0x00010000,

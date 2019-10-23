@@ -3,24 +3,17 @@
  * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
  */
 
-#include <linux/dma-direction.h>
-#include <linux/sched.h>
-#include <linux/slab.h>
 #include "msm_vidc.h"
 #include "msm_vidc_internal.h"
 #include "msm_vidc_debug.h"
 #include "msm_vdec.h"
 #include "msm_venc.h"
-#include "msm_cvp_internal.h"
-#include "msm_cvp_external.h"
 #include "msm_vidc_common.h"
-#include <linux/delay.h>
 #include "vidc_hfi.h"
 #include "vidc_hfi_helper.h"
 #include "vidc_hfi_api.h"
 #include "msm_vidc_clocks.h"
 #include "msm_vidc_buffer_calculations.h"
-#include <linux/dma-buf.h>
 
 #define MAX_EVENTS 30
 
@@ -324,7 +317,8 @@ int msm_vidc_release_buffer(void *instance, int type, unsigned int index)
 }
 EXPORT_SYMBOL(msm_vidc_release_buffer);
 
-int msm_vidc_qbuf(void *instance, struct v4l2_buffer *b)
+int msm_vidc_qbuf(void *instance, struct media_device *mdev,
+		struct v4l2_buffer *b)
 {
 	struct msm_vidc_inst *inst = instance;
 	struct msm_vidc_client_data *client_data = NULL;
@@ -385,7 +379,7 @@ int msm_vidc_qbuf(void *instance, struct v4l2_buffer *b)
 	}
 
 	mutex_lock(&q->lock);
-	rc = vb2_qbuf(&q->vb2_bufq, b);
+	rc = vb2_qbuf(&q->vb2_bufq, mdev, b);
 	mutex_unlock(&q->lock);
 	if (rc)
 		s_vpr_e(inst->sid, "Failed to qbuf, %d\n", rc);
@@ -735,90 +729,6 @@ static int msm_vidc_set_properties(struct msm_vidc_inst *inst)
 	return rc;
 }
 
-bool is_vidc_cvp_allowed(struct msm_vidc_inst *inst)
-{
-	bool allowed = false;
-	struct msm_vidc_core *core;
-	struct v4l2_ctrl *cvp_disable;
-	struct v4l2_ctrl *superframe_enable;
-
-	if (!inst || !inst->core) {
-		d_vpr_e("%s: invalid params %pK\n", __func__, inst);
-		goto exit;
-	}
-	core = inst->core;
-
-	/*
-	 * CVP enable if
-	 * - platform support CVP external
-	 * - client did not disable CVP forcefully
-	 *      - client may disable forcefully to save power
-	 * - client did not enable CVP extradata
-	 *      - if enabled, client will give CVP extradata
-	 * - rate control is not one of below modes
-	 *      - RATE_CONTROL_OFF
-	 *      - V4L2_MPEG_VIDEO_BITRATE_MODE_CQ
-	 *      - V4L2_MPEG_VIDEO_BITRATE_MODE_CBR
-	 * - not secure session
-	 * - not superframe enabled
-	 */
-	cvp_disable = get_ctrl(inst, V4L2_CID_MPEG_VIDC_VENC_CVP_DISABLE);
-	superframe_enable = get_ctrl(inst, V4L2_CID_MPEG_VIDC_SUPERFRAME);
-
-	if (core->resources.cvp_external && !cvp_disable->val &&
-		!(inst->prop.extradata_ctrls & EXTRADATA_ENC_INPUT_CVP) &&
-		inst->rc_type != RATE_CONTROL_OFF &&
-		inst->rc_type != V4L2_MPEG_VIDEO_BITRATE_MODE_CQ &&
-		!inst->clk_data.is_legacy_cbr &&
-		!superframe_enable->val) {
-		s_vpr_h(inst->sid, "%s: cvp allowed\n", __func__);
-		allowed = true;
-	} else {
-		s_vpr_h(inst->sid,
-			"%s: cvp not allowed, cvp_external %d cvp_disable %d extradata %#x rc_type %d legacy_cbr %d secure %d superframe %d\n",
-			__func__, core->resources.cvp_external,
-			cvp_disable->val, inst->prop.extradata_ctrls,
-			inst->rc_type, inst->clk_data.is_legacy_cbr,
-			is_secure_session(inst), superframe_enable->val);
-		allowed = false;
-	}
-exit:
-	return allowed;
-}
-
-static int msm_vidc_prepare_preprocess(struct msm_vidc_inst *inst)
-{
-	int rc = 0;
-
-	if (!inst) {
-		d_vpr_e("%s: invalid params\n", __func__);
-		return -EINVAL;
-	}
-
-	if (!msm_vidc_cvp_usage) {
-		s_vpr_h(inst->sid, "%s: cvp usage disabled\n", __func__);
-		return 0;
-	}
-
-	if (!is_vidc_cvp_allowed(inst)) {
-		s_vpr_h(inst->sid, "%s: cvp not allowed\n", __func__);
-		return 0;
-	}
-
-	rc = msm_vidc_cvp_prepare_preprocess(inst);
-	if (rc) {
-		s_vpr_e(inst->sid, "%s: no cvp preprocessing\n", __func__);
-		goto exit;
-	}
-	s_vpr_h(inst->sid, "%s: kernel to kernel cvp enabled\n", __func__);
-	inst->prop.extradata_ctrls |= EXTRADATA_ENC_INPUT_KK_CVP;
-
-exit:
-	if (rc)
-		msm_vidc_cvp_unprepare_preprocess(inst);
-	return rc;
-}
-
 static bool msm_vidc_set_cvp_metadata(struct msm_vidc_inst *inst) {
 
 	int rc = 0;
@@ -829,8 +739,7 @@ static bool msm_vidc_set_cvp_metadata(struct msm_vidc_inst *inst) {
 		return false;
 	}
 
-	if ((inst->prop.extradata_ctrls & EXTRADATA_ENC_INPUT_CVP) ||
-	    (inst->prop.extradata_ctrls & EXTRADATA_ENC_INPUT_KK_CVP))
+	if (inst->prop.extradata_ctrls & EXTRADATA_ENC_INPUT_CVP)
 	    value = 0x1;
 
 	s_vpr_h(inst->sid, "%s: CVP extradata %d\n", __func__, value);
@@ -841,27 +750,7 @@ static bool msm_vidc_set_cvp_metadata(struct msm_vidc_inst *inst) {
 		return false;
 	}
 
-	if (inst->prop.extradata_ctrls & EXTRADATA_ENC_INPUT_KK_CVP) {
-		u32 cap_rate = 0;
-		u32 cvp_rate = 0;
-		u32 oprate = 0;
-		u32 fps_max = CVP_FRAME_RATE_MAX << 16;
-
-		if (inst->clk_data.operating_rate == INT_MAX)
-			oprate = fps_max;
-		else
-			oprate = inst->clk_data.operating_rate;
-
-		cap_rate = max(inst->clk_data.frame_rate, oprate);
-		if (cap_rate > fps_max) {
-			cap_rate = roundup(cap_rate, fps_max);
-			cvp_rate = fps_max;
-		}
-		else
-			cvp_rate = cap_rate;
-		rc = msm_comm_set_cvp_skip_ratio(inst, cap_rate, cvp_rate);
-	}
-	else if(inst->prop.extradata_ctrls & EXTRADATA_ENC_INPUT_CVP)
+	if(inst->prop.extradata_ctrls & EXTRADATA_ENC_INPUT_CVP)
 		rc = msm_venc_set_cvp_skipratio(inst);
 
 	if (rc) {
@@ -889,12 +778,6 @@ static inline int start_streaming(struct msm_vidc_inst *inst)
 	}
 
 	if (is_encode_session(inst)) {
-		rc = msm_vidc_prepare_preprocess(inst);
-		if (rc) {
-			s_vpr_e(inst->sid, "%s: no preprocessing\n", __func__);
-			/* ignore error */
-			rc = 0;
-		}
 		if (!(msm_vidc_set_cvp_metadata(inst)))
 			goto fail_start;
 	}
@@ -1123,25 +1006,6 @@ stream_start_failed:
 	return rc;
 }
 
-static int msm_vidc_unprepare_preprocess(struct msm_vidc_inst *inst)
-{
-	int rc = 0;
-
-	if (!inst) {
-		d_vpr_e("%s: invalid params\n", __func__);
-		return -EINVAL;
-	}
-
-	if (!is_vidc_cvp_enabled(inst))
-		return 0;
-
-	rc = msm_vidc_cvp_unprepare_preprocess(inst);
-	if (rc)
-		s_vpr_e(inst->sid, "%s: failed rc %d\n", __func__, rc);
-
-	return rc;
-}
-
 static inline int stop_streaming(struct msm_vidc_inst *inst)
 {
 	int rc = 0;
@@ -1158,11 +1022,6 @@ static inline int stop_streaming(struct msm_vidc_inst *inst)
 				inst, MSM_VIDC_RELEASE_RESOURCES_DONE);
 
 	if (is_encode_session(inst)) {
-		rc = msm_vidc_unprepare_preprocess(inst);
-		if (rc)
-			s_vpr_e(inst->sid,
-				"%s: failed to unprepare preprocess\n",
-				__func__);
 		inst->all_intra = false;
 	}
 
@@ -1404,35 +1263,6 @@ int msm_vidc_dqevent(void *inst, struct v4l2_event *event)
 }
 EXPORT_SYMBOL(msm_vidc_dqevent);
 
-int msm_vidc_private(void *vidc_inst, unsigned int cmd,
-		struct msm_vidc_arg *arg)
-{
-	int rc = 0;
-	struct msm_vidc_inst *inst = (struct msm_vidc_inst *)vidc_inst;
-
-	if (!inst || !arg) {
-		d_vpr_e("%s: invalid args\n", __func__);
-		return -EINVAL;
-	}
-	if (cmd != VIDIOC_VIDEO_CMD) {
-		s_vpr_e(inst->sid,
-			"%s: invalid private cmd %#x\n", __func__, cmd);
-		return -ENOIOCTLCMD;
-	}
-
-	if (inst->session_type == MSM_VIDC_CVP) {
-		rc = msm_vidc_cvp(inst, arg);
-	} else {
-		s_vpr_e(inst->sid,
-			"%s: private cmd %#x not supported for session_type %d\n",
-			__func__, cmd, inst->session_type);
-		rc = -EINVAL;
-	}
-
-	return rc;
-}
-EXPORT_SYMBOL(msm_vidc_private);
-
 static int msm_vidc_try_set_ctrl(void *instance, struct v4l2_ctrl *ctrl)
 {
 	struct msm_vidc_inst *inst = instance;
@@ -1583,7 +1413,6 @@ void *msm_vidc_open(int core_id, int session_type)
 	INIT_MSM_VIDC_LIST(&inst->pending_getpropq);
 	INIT_MSM_VIDC_LIST(&inst->outputbufs);
 	INIT_MSM_VIDC_LIST(&inst->registeredbufs);
-	INIT_MSM_VIDC_LIST(&inst->cvpbufs);
 	INIT_MSM_VIDC_LIST(&inst->refbufs);
 	INIT_MSM_VIDC_LIST(&inst->eosbufs);
 	INIT_MSM_VIDC_LIST(&inst->client_data);
@@ -1621,9 +1450,6 @@ void *msm_vidc_open(int core_id, int session_type)
 	} else if (session_type == MSM_VIDC_ENCODER) {
 		msm_venc_inst_init(inst);
 		rc = msm_venc_ctrl_init(inst, &msm_vidc_ctrl_ops);
-	} else if (session_type == MSM_VIDC_CVP) {
-		msm_cvp_inst_init(inst);
-		rc = msm_cvp_ctrl_init(inst, &msm_vidc_ctrl_ops);
 	}
 	if (rc) {
 		s_vpr_e(inst->sid, "Failed control initialization\n");
@@ -1667,15 +1493,6 @@ void *msm_vidc_open(int core_id, int session_type)
 	inst->debugfs_root =
 		msm_vidc_debugfs_init_inst(inst, core->debugfs_root);
 
-	if (inst->session_type == MSM_VIDC_CVP) {
-		rc = msm_comm_try_state(inst, MSM_VIDC_OPEN_DONE);
-		if (rc) {
-			s_vpr_e(inst->sid,
-				"Failed to move video instance to open done state\n");
-			goto fail_init;
-		}
-	}
-
 	return inst;
 fail_init:
 	mutex_lock(&core->lock);
@@ -1699,7 +1516,6 @@ fail_bufq_capture:
 	DEINIT_MSM_VIDC_LIST(&inst->persistbufs);
 	DEINIT_MSM_VIDC_LIST(&inst->pending_getpropq);
 	DEINIT_MSM_VIDC_LIST(&inst->outputbufs);
-	DEINIT_MSM_VIDC_LIST(&inst->cvpbufs);
 	DEINIT_MSM_VIDC_LIST(&inst->registeredbufs);
 	DEINIT_MSM_VIDC_LIST(&inst->eosbufs);
 	DEINIT_MSM_VIDC_LIST(&inst->input_crs);
@@ -1827,7 +1643,6 @@ int msm_vidc_destroy(struct msm_vidc_inst *inst)
 	DEINIT_MSM_VIDC_LIST(&inst->persistbufs);
 	DEINIT_MSM_VIDC_LIST(&inst->pending_getpropq);
 	DEINIT_MSM_VIDC_LIST(&inst->outputbufs);
-	DEINIT_MSM_VIDC_LIST(&inst->cvpbufs);
 	DEINIT_MSM_VIDC_LIST(&inst->registeredbufs);
 	DEINIT_MSM_VIDC_LIST(&inst->eosbufs);
 	DEINIT_MSM_VIDC_LIST(&inst->input_crs);
@@ -1877,17 +1692,6 @@ int msm_vidc_close(void *instance)
 	rc = msm_comm_try_state(inst, MSM_VIDC_RELEASE_RESOURCES_DONE);
 	if (rc)
 		s_vpr_e(inst->sid, "Failed: move to rel resource done state\n");
-
-	/*
-	 * deinit instance after REL_RES_DONE to ensure hardware
-	 * released all buffers.
-	 */
-	if (inst->session_type == MSM_VIDC_CVP)
-		msm_cvp_inst_deinit(inst);
-
-	/* clean up preprocess if not done already */
-	if (is_encode_session(inst))
-		msm_vidc_unprepare_preprocess(inst);
 
 	msm_vidc_cleanup_instance(inst);
 

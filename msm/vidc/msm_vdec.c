@@ -3,8 +3,6 @@
  * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
  */
 
-#include <linux/slab.h>
-#include <soc/qcom/scm.h>
 #include "msm_vdec.h"
 #include "msm_vidc_internal.h"
 #include "msm_vidc_common.h"
@@ -64,7 +62,7 @@ static const char *const mpeg2_level[] = {
 
 static struct msm_vidc_ctrl msm_vdec_ctrls[] = {
 	{
-		.id = V4L2_CID_MPEG_VIDEO_UNKNOWN,
+		.id = V4L2_CID_MPEG_VIDC_VIDEO_UNKNOWN,
 		.name = "Invalid control",
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.minimum = 0,

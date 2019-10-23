@@ -666,12 +666,6 @@ inline void update_log_ctxt(u32 sid, u32 session_type, u32 fourcc)
 	case V4L2_PIX_FMT_HEVC:
 		codec = "h265";
 		break;
-	case V4L2_PIX_FMT_TME:
-		codec = " tme";
-		break;
-	case V4L2_PIX_FMT_CVP:
-		codec = " cvp";
-		break;
 	default:
 		codec = "....";
 		break;
@@ -686,9 +680,6 @@ inline void update_log_ctxt(u32 sid, u32 session_type, u32 fourcc)
 		type = 'd';
 		s_type = VIDC_DECODER;
 		break;
-	case MSM_VIDC_CVP:
-		type = 'c';
-		s_type = VIDC_CVP;
 	default:
 		type = '.';
 		break;
@@ -713,7 +704,6 @@ inline char *get_codec_name(u32 sid)
  * 0xx -> allow prints for all sessions
  * 1xx -> allow only encoder prints
  * 2xx -> allow only decoder prints
- * 4xx -> allow only cvp prints
  */
 inline bool is_print_allowed(u32 sid, u32 level)
 {
@@ -731,3 +721,183 @@ inline bool is_print_allowed(u32 sid, u32 level)
 
 	return false;
 }
+
+/* Mock all the missing parts for successful compilation starts here */
+void trace_msm_smem_buffer_iommu_op_start(char *s, int i, int j, unsigned long k,
+  dma_addr_t iova, unsigned long l)
+{
+}
+void trace_msm_smem_buffer_iommu_op_end(char *s, int i, int j, unsigned long k,
+	dma_addr_t iova, unsigned long l)
+{
+}
+void trace_msm_smem_buffer_dma_op_start(char *s, u32 buffer_type, unsigned long heap_mask,
+	size_t size, u32 align, u32 flags,
+	int map_kernel)
+{
+}
+void trace_msm_smem_buffer_dma_op_end(char *s, u32 buffer_type, unsigned long heap_mask,
+	size_t size, u32 align, u32 flags,
+	int map_kernel)
+{
+}
+void trace_msm_v4l2_vidc_buffer_counter(char *s, int etb, int ebd, int ftb, int fbd)
+{
+}
+void trace_msm_v4l2_vidc_open_start(char *s)
+{
+	(void) s;
+}
+void trace_msm_v4l2_vidc_open_end(char *s)
+{
+	(void) s;
+}
+void trace_msm_v4l2_vidc_close_start(char *s)
+{
+	(void) s;
+}
+void trace_msm_v4l2_vidc_close_end(char *s)
+{
+	(void) s;
+}
+void trace_msm_vidc_common_state_change(void* inst, enum instance_state ins_state, int state)
+{
+	(void) inst;
+	(void) ins_state;
+	(void) state;
+}
+
+void trace_msm_vidc_perf_clock_scale(const char *name, u32 freq)
+{
+	(void) name;
+	(void) freq;
+}
+
+void trace_venus_hfi_var_done(u32 cp_start, u32 cp_size,
+	u32 cp_nonpixel_start, u32 cp_nonpixel_size)
+
+{
+	(void) cp_start;
+	(void) cp_size;
+	(void) cp_nonpixel_start;
+	(void) cp_nonpixel_size;
+}
+
+void trace_msm_v4l2_vidc_buffer_event_start(char *event_type, u32 device_addr,
+	int64_t timestamp, u32 alloc_len,
+	u32 filled_len, u32 offset)
+{
+	(void)event_type;
+	(void) device_addr;
+	(void) timestamp;
+	(void) alloc_len;
+	(void) filled_len;
+	(void) offset;
+}
+
+void trace_msm_v4l2_vidc_buffer_event_end(char *event_type, u32 device_addr,
+	int64_t timestamp, u32 alloc_len,
+	u32 filled_len, u32 offset)
+{
+	(void) event_type;
+	(void) device_addr;
+	(void) timestamp;
+	(void) alloc_len;
+	(void) filled_len;
+	(void) offset;
+}
+
+int
+msm_bus_scale_update_bw(struct msm_bus_client_handle *cl, u64 ab, u64 ib)
+{
+	(void) cl;
+	(void) ab;
+	(void) ib;
+
+	return 0;
+}
+
+struct msm_bus_client_handle dummy_cl;
+struct msm_bus_client_handle*
+msm_bus_scale_register(uint32_t mas, uint32_t slv, char *name,
+					   bool active_only)
+{
+	(void) mas;
+	(void) slv;
+	(void) name;
+	(void) active_only;
+
+	return &dummy_cl;
+}
+
+void msm_bus_scale_unregister(struct msm_bus_client_handle *cl)
+{
+	(void) cl;
+}
+
+void do_gettimeofday(struct timeval *__ddl_tv)
+{
+}
+
+#ifndef CONFIG_VIDEOBUF2_CORE
+void vb2_queue_release(struct vb2_queue *q)
+{
+	(void) q;
+}
+
+int vb2_reqbufs(struct vb2_queue *q, struct v4l2_requestbuffers *req)
+{
+	(void) q;
+	(void) req;
+
+	return 0;
+}
+
+int vb2_qbuf(struct vb2_queue *q, struct media_device *mdev,
+			 struct v4l2_buffer *b)
+{
+	(void) q;
+	(void) mdev;
+	(void) b;
+
+	return 0;
+}
+
+int vb2_dqbuf(struct vb2_queue *q, struct v4l2_buffer *b, bool nonblocking)
+{
+	(void) q;
+	(void) b;
+	(void) nonblocking;
+
+	return 0;
+}
+
+int vb2_streamon(struct vb2_queue *q, enum v4l2_buf_type type)
+{
+	(void) q;
+	(void) type;
+
+	return 0;
+}
+
+int vb2_streamoff(struct vb2_queue *q, enum v4l2_buf_type type)
+{
+	(void) q;
+	(void) type;
+
+	return 0;
+}
+
+int vb2_queue_init(struct vb2_queue *q)
+{
+	(void) q;
+
+	return 0;
+}
+
+void vb2_buffer_done(struct vb2_buffer *vb, enum vb2_buffer_state state)
+{
+	(void) vb;
+	(void) state;
+}
+#endif

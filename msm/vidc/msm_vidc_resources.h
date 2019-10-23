@@ -9,7 +9,6 @@
 #include <linux/platform_device.h>
 #include "msm_vidc.h"
 #include <linux/soc/qcom/llcc-qcom.h>
-#include "soc/qcom/cx_ipeak.h"
 
 #define MAX_BUFFER_TYPES 32
 
@@ -175,8 +174,6 @@ struct msm_vidc_platform_resources {
 	int msm_vidc_hw_rsp_timeout;
 	int msm_vidc_firmware_unload_delay;
 	uint32_t msm_vidc_pwr_collapse_delay;
-	bool cvp_internal;
-	bool cvp_external;
 	bool non_fatal_pagefaults;
 	bool cache_pagetables;
 	bool decode_batching;

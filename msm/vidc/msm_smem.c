@@ -3,15 +3,8 @@
  * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
  */
 
-#include <asm/dma-iommu.h>
 #include <linux/dma-buf.h>
-#include <linux/dma-direction.h>
-#include <linux/iommu.h>
-#include <linux/msm_dma_iommu_mapping.h>
-#include <linux/msm_ion.h>
-#include <linux/ion_kernel.h>
-#include <linux/slab.h>
-#include <linux/types.h>
+#include <linux/ion.h>
 #include "msm_vidc.h"
 #include "msm_vidc_debug.h"
 #include "msm_vidc_resources.h"

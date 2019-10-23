@@ -3,14 +3,11 @@ ccflags-y += -I$(srctree)/techpack/video/msm/vidc/ \
     -I$(srctree)/drivers/devfreq/
 
 msm-vidc-objs := vidc/msm_v4l2_vidc.o \
-                vidc/msm_v4l2_private.o \
                 vidc/msm_vidc_platform.o \
                 vidc/msm_vidc_common.o \
                 vidc/msm_vidc.o \
                 vidc/msm_vdec.o \
                 vidc/msm_venc.o \
-                vidc/msm_cvp_internal.o \
-                vidc/msm_cvp_external.o \
                 vidc/msm_smem.o \
                 vidc/msm_vidc_debug.o \
                 vidc/msm_vidc_res_parse.o \

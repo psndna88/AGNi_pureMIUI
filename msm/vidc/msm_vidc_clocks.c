@@ -280,8 +280,7 @@ int msm_comm_set_buses(struct msm_vidc_core *core, u32 sid)
 		}
 		mutex_unlock(&inst->registeredbufs.lock);
 
-		if ((!filled_len || !device_addr) &&
-			(inst->session_type != MSM_VIDC_CVP)) {
+		if (!filled_len || !device_addr) {
 			s_vpr_l(sid, "%s: no input\n", __func__);
 			continue;
 		}
@@ -336,8 +335,7 @@ int msm_comm_vote_bus(struct msm_vidc_inst *inst)
 	}
 	mutex_unlock(&inst->registeredbufs.lock);
 
-	if ((!filled_len || !device_addr) &&
-		(inst->session_type != MSM_VIDC_CVP)) {
+	if (!filled_len || !device_addr) {
 		s_vpr_l(inst->sid, "%s: no input\n", __func__);
 		return 0;
 	}
@@ -345,16 +343,12 @@ int msm_comm_vote_bus(struct msm_vidc_inst *inst)
 	vote_data->sid = inst->sid;
 	vote_data->domain = get_hal_domain(inst->session_type, inst->sid);
 	vote_data->power_mode = 0;
-	if (inst->clk_data.buffer_counter < DCVS_FTB_WINDOW &&
-		inst->session_type != MSM_VIDC_CVP)
+	if (inst->clk_data.buffer_counter < DCVS_FTB_WINDOW)
 		vote_data->power_mode = VIDC_POWER_TURBO;
 	if (msm_vidc_clock_voting || is_turbo || is_turbo_session(inst))
 		vote_data->power_mode = VIDC_POWER_TURBO;
 
-	if (inst->session_type == MSM_VIDC_CVP) {
-		vote_data->calc_bw_ddr= inst->clk_data.ddr_bw;
-		vote_data->calc_bw_llcc= inst->clk_data.sys_cache_bw;
-	} else if (vote_data->power_mode != VIDC_POWER_TURBO) {
+	if (vote_data->power_mode != VIDC_POWER_TURBO) {
 		out_f = &inst->fmts[OUTPUT_PORT].v4l2_fmt;
 		inp_f = &inst->fmts[INPUT_PORT].v4l2_fmt;
 		switch (inst->session_type) {
@@ -363,9 +357,6 @@ int msm_comm_vote_bus(struct msm_vidc_inst *inst)
 			break;
 		case MSM_VIDC_ENCODER:
 			codec = out_f->fmt.pix_mp.pixelformat;
-			break;
-		case MSM_VIDC_CVP:
-			codec = V4L2_PIX_FMT_CVP;
 			break;
 		default:
 			s_vpr_e(inst->sid, "%s: invalid session_type %#x\n",
@@ -1042,11 +1033,6 @@ int msm_comm_init_clocks_and_bus_data(struct msm_vidc_inst *inst)
 		return -EINVAL;
 	}
 
-	if (inst->session_type == MSM_VIDC_CVP) {
-		s_vpr_l(inst->sid, "%s: cvp session\n", __func__);
-		return 0;
-	}
-
 	count = inst->core->resources.codec_data_count;
 	fourcc = get_v4l2_codec(inst);
 
@@ -1171,7 +1157,6 @@ int msm_vidc_decide_work_route_iris1(struct msm_vidc_inst *inst)
 
 		switch (codec) {
 		case V4L2_PIX_FMT_VP8:
-		case V4L2_PIX_FMT_TME:
 			pdata.video_work_route = 1;
 			goto decision_done;
 		}
@@ -1188,7 +1173,7 @@ int msm_vidc_decide_work_route_iris1(struct msm_vidc_inst *inst)
 		fps = inst->clk_data.frame_rate >> 16;
 		mbps = NUM_MBS_PER_SEC(output_height, output_width, fps);
 		if (slice_mode ==
-			V4L2_MPEG_VIDEO_MULTI_SICE_MODE_MAX_BYTES ||
+			V4L2_MPEG_VIDEO_MULTI_SLICE_MODE_MAX_BYTES ||
 			(inst->rc_type == V4L2_MPEG_VIDEO_BITRATE_MODE_CBR &&
 			mbps <= CBR_MB_LIMIT) ||
 			(inst->rc_type ==
@@ -1246,7 +1231,7 @@ int msm_vidc_decide_work_route_iris2(struct msm_vidc_inst *inst)
 		height = f->fmt.pix_mp.height;
 		width = f->fmt.pix_mp.width;
 
-		if (slice_mode == V4L2_MPEG_VIDEO_MULTI_SICE_MODE_MAX_BYTES ||
+		if (slice_mode == V4L2_MPEG_VIDEO_MULTI_SLICE_MODE_MAX_BYTES ||
 			codec == V4L2_PIX_FMT_VP8 || is_legacy_cbr) {
 			pdata.video_work_route = 1;
 		}
@@ -1381,7 +1366,6 @@ int msm_vidc_decide_work_mode_iris1(struct msm_vidc_inst *inst)
 
 		switch (codec) {
 		case V4L2_PIX_FMT_VP8:
-		case V4L2_PIX_FMT_TME:
 			pdata.video_work_mode = HFI_WORKMODE_1;
 			goto decision_done;
 		}

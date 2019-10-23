@@ -5,7 +5,6 @@
 #ifndef __HFI_PACKETIZATION_H__
 #define __HFI_PACKETIZATION_H__
 
-#include <linux/types.h>
 #include "vidc_hfi_helper.h"
 #include "vidc_hfi.h"
 #include "vidc_hfi_api.h"
@@ -50,12 +49,6 @@ struct hfi_packetization_ops {
 	int (*session_release_buffers)(
 		struct hfi_cmd_session_release_buffer_packet *pkt,
 		u32 sid, struct vidc_buffer_addr_info *buffer_info);
-	int (*session_register_buffer)(
-		struct hfi_cmd_session_register_buffers_packet *pkt,
-		u32 sid, struct vidc_register_buffer *buffer);
-	int (*session_unregister_buffer)(
-		struct hfi_cmd_session_unregister_buffers_packet *pkt,
-		u32 sid, struct vidc_unregister_buffer *buffer);
 	int (*session_etb_decoder)(
 		struct hfi_cmd_session_empty_buffer_compressed_packet *pkt,
 		u32 sid, struct vidc_frame_data *input_frame);

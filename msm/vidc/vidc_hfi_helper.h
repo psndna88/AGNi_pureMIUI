@@ -6,21 +6,19 @@
 #ifndef __H_VIDC_HFI_HELPER_H__
 #define __H_VIDC_HFI_HELPER_H__
 
-#include <linux/types.h>
 #include <media/msm_vidc_utils.h>
+
 #define HFI_COMMON_BASE				(0)
 #define HFI_OX_BASE					(0x01000000)
 
 #define HFI_VIDEO_DOMAIN_ENCODER	(HFI_COMMON_BASE + 0x1)
 #define HFI_VIDEO_DOMAIN_DECODER	(HFI_COMMON_BASE + 0x2)
 #define HFI_VIDEO_DOMAIN_VPE		(HFI_COMMON_BASE + 0x4)
-#define HFI_VIDEO_DOMAIN_CVP		(HFI_COMMON_BASE + 0x8)
 
 #define HFI_DOMAIN_BASE_COMMON		(HFI_COMMON_BASE + 0)
 #define HFI_DOMAIN_BASE_VDEC		(HFI_COMMON_BASE + 0x01000000)
 #define HFI_DOMAIN_BASE_VENC		(HFI_COMMON_BASE + 0x02000000)
 #define HFI_DOMAIN_BASE_VPE			(HFI_COMMON_BASE + 0x03000000)
-#define HFI_DOMAIN_BASE_CVP			(HFI_COMMON_BASE + 0x04000000)
 
 #define HFI_VIDEO_ARCH_OX			(HFI_COMMON_BASE + 0x1)
 
@@ -76,8 +74,6 @@
 #define HFI_VIDEO_CODEC_VP8				0x00001000
 #define HFI_VIDEO_CODEC_HEVC				0x00002000
 #define HFI_VIDEO_CODEC_VP9				0x00004000
-#define HFI_VIDEO_CODEC_TME				0x00008000
-#define HFI_VIDEO_CODEC_CVP				0x00010000
 
 #define HFI_PROFILE_UNKNOWN				0x00000000
 #define HFI_LEVEL_UNKNOWN				0x00000000
@@ -962,26 +958,6 @@ struct hfi_buffer_mapping_type {
 	u32 index;
 	u32 device_addr;
 	u32 size;
-};
-
-struct hfi_cmd_session_register_buffers_packet {
-	u32 size;
-	u32 packet_type;
-	u32 sid;
-	u32 client_data;
-	u32 response_req;
-	u32 num_buffers;
-	struct hfi_buffer_mapping_type buffer[1];
-};
-
-struct hfi_cmd_session_unregister_buffers_packet {
-	u32 size;
-	u32 packet_type;
-	u32 sid;
-	u32 client_data;
-	u32 response_req;
-	u32 num_buffers;
-	struct hfi_buffer_mapping_type buffer[1];
 };
 
 struct hfi_cmd_session_sync_process_packet {

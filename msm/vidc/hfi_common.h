@@ -7,18 +7,22 @@
 #define __HFI_COMMON_H__
 
 #include <linux/clk.h>
-#include <linux/mutex.h>
-#include <linux/platform_device.h>
+#include <linux/regulator/consumer.h>
 #include <linux/pm_qos.h>
-#include <linux/spinlock.h>
 #include <linux/clk-provider.h>
+#include <linux/iommu.h>
+#include <soc/qcom/scm.h>
+#include <linux/soc/qcom/smem.h>
+#include <linux/irqreturn.h>
+#include <linux/reset.h>
 #include "vidc_hfi_api.h"
 #include "vidc_hfi_helper.h"
 #include "vidc_hfi_api.h"
 #include "vidc_hfi.h"
 #include "msm_vidc_resources.h"
-#include "hfi_packetization.h"
 #include "msm_vidc_bus.h"
+#include "hfi_packetization.h"
+#include "hfi_io_common.h"
 
 #define HFI_MASK_QHDR_TX_TYPE			0xFF000000
 #define HFI_MASK_QHDR_RX_TYPE			0x00FF0000
@@ -214,11 +218,6 @@ struct hal_data {
 
 struct venus_resources {
 	struct msm_vidc_fw fw;
-};
-
-enum dsp_flag {
-	DSP_INIT = BIT(0),
-	DSP_SUSPEND = BIT(1),
 };
 
 enum venus_hfi_state {

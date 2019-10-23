@@ -3,15 +3,12 @@
  * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
  */
 
-#include <asm/dma-iommu.h>
 #include <linux/iommu.h>
 #include <linux/of.h>
-#include <linux/slab.h>
 #include <linux/sort.h>
 #include "msm_vidc_debug.h"
 #include "msm_vidc_resources.h"
 #include "msm_vidc_res_parse.h"
-#include "soc/qcom/secure_buffer.h"
 
 enum clock_properties {
 	CLOCK_PROP_HAS_SCALING = 1 << 0,
@@ -109,13 +106,6 @@ static inline void msm_vidc_free_clock_table(
 	res->clock_set.count = 0;
 }
 
-static inline void msm_vidc_free_cx_ipeak_context(
-			struct msm_vidc_platform_resources *res)
-{
-	cx_ipeak_unregister(res->cx_ipeak_context);
-	res->cx_ipeak_context = NULL;
-}
-
 void msm_vidc_free_platform_resources(
 			struct msm_vidc_platform_resources *res)
 {
@@ -126,7 +116,6 @@ void msm_vidc_free_platform_resources(
 	msm_vidc_free_qdss_addr_table(res);
 	msm_vidc_free_bus_vectors(res);
 	msm_vidc_free_buffer_usage_table(res);
-	msm_vidc_free_cx_ipeak_context(res);
 }
 
 static int msm_vidc_load_reg_table(struct msm_vidc_platform_resources *res)
@@ -805,10 +794,6 @@ int read_platform_resources_from_drv_data(
 			"qcom,fw-unload-delay");
 	res->msm_vidc_hw_rsp_timeout = find_key_value(platform_data,
 			"qcom,hw-resp-timeout");
-	res->cvp_internal = find_key_value(platform_data,
-			"qcom,cvp-internal");
-	res->cvp_external = find_key_value(platform_data,
-			"qcom,cvp-external");
 	res->non_fatal_pagefaults = find_key_value(platform_data,
 			"qcom,domain-attr-non-fatal-faults");
 	res->cache_pagetables = find_key_value(platform_data,
@@ -833,44 +818,6 @@ int read_platform_resources_from_drv_data(
 
 	return rc;
 
-}
-
-static int msm_vidc_populate_cx_ipeak_context(
-		struct msm_vidc_platform_resources *res)
-{
-	struct platform_device *pdev = res->pdev;
-	int rc = 0;
-
-	if (of_find_property(pdev->dev.of_node,
-			"qcom,cx-ipeak-data", NULL))
-		res->cx_ipeak_context = cx_ipeak_register(
-				pdev->dev.of_node, "qcom,cx-ipeak-data");
-	else
-		return rc;
-
-	if (IS_ERR(res->cx_ipeak_context)) {
-		rc = PTR_ERR(res->cx_ipeak_context);
-		if (rc == -EPROBE_DEFER)
-			d_vpr_h("cx-ipeak register failed. Deferring probe!");
-		else
-			d_vpr_e("cx-ipeak register failed. rc: %d", rc);
-
-		res->cx_ipeak_context = NULL;
-		return rc;
-	}
-
-	if (res->cx_ipeak_context)
-		d_vpr_h("cx-ipeak register successful");
-	else
-		d_vpr_h("cx-ipeak register not implemented");
-
-	of_property_read_u32(pdev->dev.of_node,
-		"qcom,clock-freq-threshold",
-		&res->clk_freq_threshold);
-	d_vpr_h("cx ipeak threshold frequency = %u\n",
-			res->clk_freq_threshold);
-
-	return rc;
 }
 
 int read_platform_resources_from_dt(
@@ -952,16 +899,9 @@ int read_platform_resources_from_dt(
 		goto err_setup_legacy_cb;
 	}
 
-	rc = msm_vidc_populate_cx_ipeak_context(res);
-	if (rc) {
-		d_vpr_e("Failed to setup cx-ipeak %d\n", rc);
-		goto err_register_cx_ipeak;
-	}
 
 return rc;
 
-err_register_cx_ipeak:
-	msm_vidc_free_cx_ipeak_context(res);
 err_setup_legacy_cb:
 err_load_reset_table:
 	msm_vidc_free_allowed_clocks_table(res);

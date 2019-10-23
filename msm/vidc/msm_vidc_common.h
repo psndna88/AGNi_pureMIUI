@@ -17,7 +17,6 @@
 #define HEIC_GRID_DIMENSION 512
 #define CBR_MB_LIMIT                           (((1280+15)/16)*((720+15)/16)*30)
 #define CBR_VFR_MB_LIMIT                       (((640+15)/16)*((480+15)/16)*30)
-#define V4L2_CID_MPEG_VIDEO_UNKNOWN (V4L2_CID_MPEG_MSM_VIDC_BASE + 0xFFF)
 #define MAX_BITRATE_DECODER_CAVLC              220000000
 #define MAX_BITRATE_DECODER_2STAGE_CABAC       200000000
 #define MAX_BITRATE_DECODER_1STAGE_CABAC        70000000
@@ -64,10 +63,6 @@ static inline struct v4l2_ctrl *get_ctrl(struct msm_vidc_inst *inst,
 	u32 id)
 {
 	int i;
-
-	if (inst->session_type == MSM_VIDC_CVP &&
-	    inst->core->resources.cvp_internal)
-		return inst->ctrls[0];
 
 	for (i = 0; i < inst->num_ctrls; i++) {
 		if (inst->ctrls[i]->id == id)

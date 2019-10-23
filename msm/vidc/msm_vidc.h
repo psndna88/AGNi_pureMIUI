@@ -6,21 +6,13 @@
 #ifndef _MSM_VIDC_H_
 #define _MSM_VIDC_H_
 
-#include <linux/poll.h>
 #include <linux/videodev2.h>
-#include <linux/types.h>
 #include <linux/msm_ion.h>
-#include <media/msm_vidc_private.h>
 #include <media/msm_vidc_utils.h>
+#include <media/media-device.h>
 
 #define HAL_BUFFER_MAX 0xe
-
-#define V4L2_CID_MPEG_VIDC_VIDEO_STREAM_OUTPUT_MODE \
-		(V4L2_CID_MPEG_MSM_VIDC_BASE + 22)
-enum v4l2_mpeg_vidc_video_decoder_multi_stream {
-	V4L2_CID_MPEG_VIDC_VIDEO_STREAM_OUTPUT_PRIMARY = 0,
-	V4L2_CID_MPEG_VIDC_VIDEO_STREAM_OUTPUT_SECONDARY = 1,
-};
+#define CVP_FRAME_RATE_MAX (60)
 
 enum smem_type {
 	SMEM_DMA = 1,
@@ -91,7 +83,6 @@ enum core_id {
 enum session_type {
 	MSM_VIDC_ENCODER = 0,
 	MSM_VIDC_DECODER,
-	MSM_VIDC_CVP,
 	MSM_VIDC_UNKNOWN,
 	MSM_VIDC_MAX_DEVICES = MSM_VIDC_UNKNOWN,
 };
@@ -115,7 +106,8 @@ int msm_vidc_g_ctrl(void *instance, struct v4l2_control *a);
 int msm_vidc_reqbufs(void *instance, struct v4l2_requestbuffers *b);
 int msm_vidc_release_buffer(void *instance, int buffer_type,
 		unsigned int buffer_index);
-int msm_vidc_qbuf(void *instance, struct v4l2_buffer *b);
+int msm_vidc_qbuf(void *instance, struct media_device *mdev,
+		struct v4l2_buffer *b);
 int msm_vidc_dqbuf(void *instance, struct v4l2_buffer *b);
 int msm_vidc_streamon(void *instance, enum v4l2_buf_type i);
 int msm_vidc_query_ctrl(void *instance, struct v4l2_queryctrl *ctrl);
@@ -130,6 +122,4 @@ int msm_vidc_unsubscribe_event(void *instance,
 int msm_vidc_dqevent(void *instance, struct v4l2_event *event);
 int msm_vidc_g_crop(void *instance, struct v4l2_crop *a);
 int msm_vidc_enum_framesizes(void *instance, struct v4l2_frmsizeenum *fsize);
-int msm_vidc_private(void *vidc_inst, unsigned int cmd,
-		struct msm_vidc_arg *arg);
 #endif

@@ -2,7 +2,6 @@
 /*
  * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
  */
-#include <linux/slab.h>
 #include "msm_vidc_debug.h"
 #include "vidc_hfi_api.h"
 #include "hfi_common.h"

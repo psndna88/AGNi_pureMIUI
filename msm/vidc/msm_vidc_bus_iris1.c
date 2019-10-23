@@ -73,11 +73,6 @@ static unsigned long __calculate_vpe(struct vidc_bus_vote_data *d)
 	return 0;
 }
 
-static unsigned long __calculate_cvp(struct vidc_bus_vote_data *d)
-{
-	return 0;
-}
-
 static unsigned long __calculate_decoder(struct vidc_bus_vote_data *d)
 {
 	/*
@@ -627,9 +622,6 @@ static unsigned long __calculate(struct vidc_bus_vote_data *d)
 		break;
 	case HAL_VIDEO_DOMAIN_DECODER:
 		value = __calculate_decoder(d);
-		break;
-	case HAL_VIDEO_DOMAIN_CVP:
-		value = __calculate_cvp(d);
 		break;
 	default:
 		s_vpr_e(d->sid, "Unknown Domain %#x", d->domain);

@@ -19,9 +19,6 @@ u32 vidc_get_hfi_domain(enum hal_domain hal_domain, u32 sid)
 	case HAL_VIDEO_DOMAIN_DECODER:
 		hfi_domain = HFI_VIDEO_DOMAIN_DECODER;
 		break;
-	case HAL_VIDEO_DOMAIN_CVP:
-		hfi_domain = HFI_VIDEO_DOMAIN_CVP;
-		break;
 	default:
 		s_vpr_e(sid, "%s: invalid domain 0x%x\n",
 			__func__, hal_domain);
@@ -53,12 +50,6 @@ u32 vidc_get_hfi_codec(enum hal_video_codec hal_codec, u32 sid)
 		break;
 	case HAL_VIDEO_CODEC_VP9:
 		hfi_codec = HFI_VIDEO_CODEC_VP9;
-		break;
-	case HAL_VIDEO_CODEC_TME:
-		hfi_codec = HFI_VIDEO_CODEC_TME;
-		break;
-	case HAL_VIDEO_CODEC_CVP:
-		hfi_codec = HFI_VIDEO_CODEC_CVP;
 		break;
 	default:
 		s_vpr_h(sid, "%s: invalid codec 0x%x\n",
@@ -465,70 +456,6 @@ int create_pkt_cmd_session_release_buffers(
 	return rc;
 }
 
-int create_pkt_cmd_session_register_buffer(
-		struct hfi_cmd_session_register_buffers_packet *pkt,
-		u32 sid, struct vidc_register_buffer *buffer)
-{
-	int rc = 0;
-	u32 i;
-	struct hfi_buffer_mapping_type *buf;
-
-	if (!pkt) {
-		d_vpr_e("%s: invalid params %pK\n", __func__, pkt);
-		return -EINVAL;
-	}
-	pkt->packet_type = HFI_CMD_SESSION_REGISTER_BUFFERS;
-	pkt->sid = sid;
-	pkt->client_data = buffer->client_data;
-	pkt->response_req = buffer->response_required;
-	pkt->num_buffers = 1;
-	pkt->size = sizeof(struct hfi_cmd_session_register_buffers_packet) -
-			sizeof(u32) + (pkt->num_buffers *
-			sizeof(struct hfi_buffer_mapping_type));
-
-	buf = (struct hfi_buffer_mapping_type *)pkt->buffer;
-	for (i = 0; i < pkt->num_buffers; i++) {
-		buf->index = buffer->index;
-		buf->device_addr = buffer->device_addr;
-		buf->size = buffer->size;
-		buf++;
-	}
-
-	return rc;
-}
-
-int create_pkt_cmd_session_unregister_buffer(
-		struct hfi_cmd_session_unregister_buffers_packet *pkt,
-		u32 sid, struct vidc_unregister_buffer *buffer)
-{
-	int rc = 0;
-	u32 i;
-	struct hfi_buffer_mapping_type *buf;
-
-	if (!pkt) {
-		d_vpr_e("%s: invalid params %pK\n", __func__, pkt);
-		return -EINVAL;
-	}
-	pkt->packet_type = HFI_CMD_SESSION_UNREGISTER_BUFFERS;
-	pkt->sid = sid;
-	pkt->client_data = buffer->client_data;
-	pkt->response_req = buffer->response_required;
-	pkt->num_buffers = 1;
-	pkt->size = sizeof(struct hfi_cmd_session_unregister_buffers_packet) -
-			sizeof(u32) + (pkt->num_buffers *
-			sizeof(struct hfi_buffer_mapping_type));
-
-	buf = (struct hfi_buffer_mapping_type *)pkt->buffer;
-	for (i = 0; i < pkt->num_buffers; i++) {
-		buf->index = buffer->index;
-		buf->device_addr = buffer->device_addr;
-		buf->size = buffer->size;
-		buf++;
-	}
-
-	return rc;
-}
-
 int create_pkt_cmd_session_etb_decoder(
 	struct hfi_cmd_session_empty_buffer_compressed_packet *pkt,
 	u32 sid, struct vidc_frame_data *input_frame)
@@ -774,8 +701,6 @@ static struct hfi_packetization_ops hfi_default = {
 	.session_cmd = create_pkt_cmd_session_cmd,
 	.session_set_buffers = create_pkt_cmd_session_set_buffers,
 	.session_release_buffers = create_pkt_cmd_session_release_buffers,
-	.session_register_buffer = create_pkt_cmd_session_register_buffer,
-	.session_unregister_buffer = create_pkt_cmd_session_unregister_buffer,
 	.session_etb_decoder = create_pkt_cmd_session_etb_decoder,
 	.session_etb_encoder = create_pkt_cmd_session_etb_encoder,
 	.session_ftb = create_pkt_cmd_session_ftb,
