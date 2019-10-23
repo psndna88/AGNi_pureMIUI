@@ -24,9 +24,9 @@ static const char isp_dev_name[] = "cam-isp";
 
 static struct cam_isp_ctx_debug isp_ctx_debug;
 
-#define INC_STATE_MONITOR_HEAD(head) \
-	(atomic64_add_return(1, head) % \
-	CAM_ISP_CTX_STATE_MONITOR_MAX_ENTRIES)
+#define INC_STATE_MONITOR_HEAD(head, ret) \
+	div_u64_rem(atomic64_add_return(1, head),\
+	CAM_ISP_CTX_STATE_MONITOR_MAX_ENTRIES, (ret))
 
 static int cam_isp_context_dump_active_request(void *data, unsigned long iova,
 	uint32_t buf_info);
@@ -39,7 +39,9 @@ static void __cam_isp_ctx_update_state_monitor_array(
 	enum cam_isp_state_change_trigger trigger_type,
 	uint64_t req_id)
 {
-	int iterator = INC_STATE_MONITOR_HEAD(&ctx_isp->state_monitor_head);
+	int iterator;
+
+	INC_STATE_MONITOR_HEAD(&ctx_isp->state_monitor_head, &iterator);
 
 	ctx_isp->cam_isp_ctx_state_monitor[iterator].curr_state =
 		ctx_isp->substate_activated;
@@ -117,8 +119,8 @@ static void __cam_isp_ctx_dump_state_monitor_array(
 		oldest_entry = 0;
 	} else {
 		num_entries = CAM_ISP_CTX_STATE_MONITOR_MAX_ENTRIES;
-		oldest_entry = (state_head + 1) %
-			CAM_ISP_CTX_STATE_MONITOR_MAX_ENTRIES;
+		div_u64_rem(state_head + 1,
+			CAM_ISP_CTX_STATE_MONITOR_MAX_ENTRIES, &oldest_entry);
 	}
 
 	CAM_ERR(CAM_ISP,
@@ -810,21 +812,17 @@ static int __cam_isp_ctx_notify_sof_in_activated_state(
 			return rc;
 		}
 
-		spin_lock_bh(&ctx->lock);
 		req = list_first_entry(&ctx->active_req_list,
 			struct cam_ctx_request, list);
 		req_isp = (struct cam_isp_ctx_req *) req->req_priv;
-		spin_unlock_bh(&ctx->lock);
 
 		if (ctx_isp->bubble_frame_cnt >= 1 &&
 			req_isp->bubble_detected) {
 			req_isp->num_acked = 0;
 			ctx_isp->bubble_frame_cnt = 0;
 			req_isp->bubble_detected = false;
-			spin_lock_bh(&ctx->lock);
 			list_del_init(&req->list);
 			list_add(&req->list, &ctx->pending_req_list);
-			spin_unlock_bh(&ctx->lock);
 			atomic_set(&ctx_isp->process_bubble, 0);
 			ctx_isp->active_req_cnt--;
 			CAM_DBG(CAM_REQ,
@@ -1127,8 +1125,9 @@ static int __cam_isp_ctx_sof_in_epoch(struct cam_isp_context *ctx_isp,
 			CAM_ISP_STATE_CHANGE_TRIGGER_SOF,
 			req->request_id);
 
-	CAM_DBG(CAM_ISP, "next substate %d",
-		ctx_isp->substate_activated);
+	CAM_INFO(CAM_ISP,
+		"First SOF in EPCR ctx:%d frame_id:%lld next substate %d",
+		ctx->ctx_id, ctx_isp->frame_id, ctx_isp->substate_activated);
 
 	return rc;
 }
@@ -1409,7 +1408,7 @@ move_to_pending:
 end:
 	do {
 		if (list_empty(&ctx->pending_req_list)) {
-			error_request_id = ctx_isp->last_applied_req_id + 1;
+			error_request_id = ctx_isp->last_applied_req_id;
 			req_isp = NULL;
 			break;
 		}
@@ -1440,13 +1439,11 @@ end:
 		notify.link_hdl = ctx->link_hdl;
 		notify.dev_hdl = ctx->dev_hdl;
 		notify.req_id = error_request_id;
+		notify.error = CRM_KMD_ERR_FATAL;
 
-		if (req_isp_to_report && req_isp_to_report->bubble_report) {
+		if (req_isp_to_report && req_isp_to_report->bubble_report)
 			if (error_event_data->recovery_enabled)
 				notify.error = CRM_KMD_ERR_BUBBLE;
-		} else {
-			notify.error = CRM_KMD_ERR_FATAL;
-		}
 
 		CAM_WARN(CAM_ISP,
 			"Notify CRM: req %lld, frame %lld ctx %u, error %d",
@@ -2167,6 +2164,7 @@ static int __cam_isp_ctx_flush_req_in_top_state(
 			CAM_ERR(CAM_ISP, "Failed to stop HW in Flush rc: %d",
 				rc);
 
+		CAM_INFO(CAM_ISP, "Stop HW complete. Reset HW next.");
 		CAM_DBG(CAM_ISP, "Flush wait and active lists");
 		spin_lock_bh(&ctx->lock);
 		if (!list_empty(&ctx->wait_req_list))
@@ -3557,12 +3555,13 @@ static int __cam_isp_ctx_config_dev_in_flushed(struct cam_context *ctx,
 
 	if (!ctx_isp->hw_acquired) {
 		CAM_ERR(CAM_ISP, "HW is not acquired, reject packet");
-		return -EINVAL;
+		rc = -EINVAL;
+		goto end;
 	}
 
 	rc = __cam_isp_ctx_config_dev_in_top_state(ctx, cmd);
 	if (rc)
-		return rc;
+		goto end;
 
 	if (!ctx_isp->init_received) {
 		CAM_WARN(CAM_ISP,
@@ -3578,7 +3577,7 @@ static int __cam_isp_ctx_config_dev_in_flushed(struct cam_context *ctx,
 		&hw_cmd_args);
 	if (rc) {
 		CAM_ERR(CAM_ISP, "Failed to resume HW rc: %d", rc);
-		return rc;
+		goto end;
 	}
 
 	start_cmd.dev_handle = cmd->dev_handle;
@@ -3587,6 +3586,9 @@ static int __cam_isp_ctx_config_dev_in_flushed(struct cam_context *ctx,
 	if (rc)
 		CAM_ERR(CAM_ISP,
 			"Failed to re-start HW after flush rc: %d", rc);
+	else
+		CAM_INFO(CAM_ISP,
+			"Received init after flush. Re-start HW complete.");
 
 end:
 	CAM_DBG(CAM_ISP, "next state %d sub_state:%d", ctx->state,
@@ -3683,6 +3685,8 @@ static int __cam_isp_ctx_start_dev_in_ready(struct cam_context *ctx,
 	start_isp.hw_config.priv  = &req_isp->hw_update_data;
 	start_isp.hw_config.init_packet = 1;
 	start_isp.hw_config.reapply = 0;
+
+	ctx_isp->last_applied_req_id = req->request_id;
 
 	if (ctx->state == CAM_CTX_FLUSHED)
 		start_isp.start_only = true;
@@ -3838,6 +3842,7 @@ static int __cam_isp_ctx_stop_dev_in_activated_unlock(
 	ctx_isp->active_req_cnt = 0;
 	ctx_isp->reported_req_id = 0;
 	ctx_isp->bubble_frame_cnt = 0;
+	ctx_isp->last_applied_req_id = 0;
 	atomic_set(&ctx_isp->process_bubble, 0);
 	atomic64_set(&ctx_isp->state_monitor_head, -1);
 

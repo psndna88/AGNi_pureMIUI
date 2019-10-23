@@ -44,7 +44,7 @@ int cam_cpas_util_reg_update(struct cam_hw_info *cpas_hw,
 		value = reg_info->value;
 	}
 
-	CAM_DBG(CAM_CPAS, "Base[%d] Offset[0x%8x] Value[0x%8x]",
+	CAM_DBG(CAM_CPAS, "Base[%d] Offset[0x%08x] Value[0x%08x]",
 		reg_base, reg_info->offset, value);
 
 	cam_io_w_mb(value, soc_info->reg_map[reg_base_index].mem_base +
@@ -424,7 +424,7 @@ static int cam_cpas_util_set_camnoc_axi_clk_rate(
 
 	if (soc_private->control_camnoc_axi_clk) {
 		struct cam_hw_soc_info *soc_info = &cpas_hw->soc_info;
-		uint64_t required_camnoc_bw = 0;
+		uint64_t required_camnoc_bw = 0, intermediate_result = 0;
 		int32_t clk_rate = 0;
 
 		for (i = 0; i < CAM_CPAS_MAX_TREE_NODES; i++) {
@@ -440,15 +440,19 @@ static int cam_cpas_util_set_camnoc_axi_clk_rate(
 			}
 		}
 
-		required_camnoc_bw += (required_camnoc_bw *
-			soc_private->camnoc_axi_clk_bw_margin) / 100;
+		intermediate_result = required_camnoc_bw *
+			soc_private->camnoc_axi_clk_bw_margin;
+		do_div(intermediate_result, 100);
+		required_camnoc_bw += intermediate_result;
 
 		if ((required_camnoc_bw > 0) &&
 			(required_camnoc_bw <
 			soc_private->camnoc_axi_min_ib_bw))
 			required_camnoc_bw = soc_private->camnoc_axi_min_ib_bw;
 
-		clk_rate = required_camnoc_bw / soc_private->camnoc_bus_width;
+		intermediate_result = required_camnoc_bw;
+		do_div(intermediate_result, soc_private->camnoc_bus_width);
+		clk_rate = intermediate_result;
 
 		CAM_DBG(CAM_CPAS, "Setting camnoc axi clk rate : %llu %d",
 			required_camnoc_bw, clk_rate);
