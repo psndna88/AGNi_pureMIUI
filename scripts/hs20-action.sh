@@ -50,9 +50,17 @@ status=$(grep "ELOOP_CMD_STATUS :"  $BASEDIR/Logs/e_loop.log)
 echo "Eloop: $cmd ; $status" >> $BASEDIR/Logs/hs20-action.log
 }
 
+# generated cleanup url for system() command
+cleanup_url()
+{
+    sp_str="&"
+    mod_str="\\\\&"
+    URL="${1//$sp_str/$mod_str}"
+}
+
 if [ "$CMD" = "HS20-SUBSCRIPTION-REMEDIATION" ]; then
     METHOD="$3"
-    URL="$4"
+    cleanup_url "$4"
     cd $BASEDIR
     date >> Logs/hs20-osu-client.txt
     echo "METHOD=$METHOD" >> Logs/hs20-osu-client.txt
@@ -138,7 +146,7 @@ if [ "$CMD" = "ESS-DISASSOC-IMMINENT" ]; then
     cd $BASEDIR
     PMF="$3"
     TIME_IN_MS="$4"
-    URL="$5"
+    cleanup_url "$5"
     count=1
     if [ "$PMF" = "0" ]; then
 	echo "Disassociation imminent notification received without PMF - ignored" >> summary
@@ -170,7 +178,7 @@ if [ "$CMD" = "HS20-DEAUTH-IMMINENT-NOTICE" ]; then
     cd $BASEDIR
     CODE="$3"
     DELAY="$4"
-    URL="$5"
+    cleanup_url "$5"
     count=1
     echo "HS 2.0 Deauthentication Imminent notification received - code=$CODE reauth_delay=$DELAY URL: $URL" >> summary
     case "$URL" in
@@ -196,7 +204,7 @@ fi
 
 if [ "$CMD" = "HS20-T-C-ACCEPTANCE" ]; then
     cd $BASEDIR
-    URL="$3"
+    cleanup_url "$3"
     count=1
     echo "HS 2.0 Terms and Conditions notification received - URL: $URL" >> summary
     case "$URL" in

@@ -2052,6 +2052,7 @@ static enum sigma_cmd_result cmd_sta_set_psk(struct sigma_dut *dut,
 	const char *akm = get_param(cmd, "AKMSuiteType");
 	const char *ifname, *val, *alg;
 	int id;
+	char buf[50];
 
 	if (intf == NULL)
 		return -1;
@@ -2147,8 +2148,6 @@ static enum sigma_cmd_result cmd_sta_set_psk(struct sigma_dut *dut,
 
 	val = get_param(cmd, "ECGroupID");
 	if (val) {
-		char buf[50];
-
 		snprintf(buf, sizeof(buf), "SET sae_groups %u", atoi(val));
 		if (wpa_command(ifname, buf) != 0) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
@@ -2161,6 +2160,13 @@ static enum sigma_cmd_result cmd_sta_set_psk(struct sigma_dut *dut,
 	if (val) {
 		free(dut->sae_commit_override);
 		dut->sae_commit_override = strdup(val);
+	}
+
+	val = get_param(cmd, "PMKID_Include");
+	if (val) {
+		snprintf(buf, sizeof(buf), "SET sae_pmkid_in_assoc %d",
+			 get_enable_disable(val));
+		wpa_command(intf, buf);
 	}
 
 	if (dut->program == PROGRAM_60GHZ && network_mode &&
@@ -7794,6 +7800,7 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 
 	free(dut->sae_commit_override);
 	dut->sae_commit_override = NULL;
+	wpa_command(intf, "SET sae_pmkid_in_assoc 0");
 
 	dut->sta_associate_wait_connect = 0;
 	dut->server_cert_hash[0] = '\0';

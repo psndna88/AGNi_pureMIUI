@@ -695,3 +695,14 @@ int random_get_bytes(char *buf, size_t len)
 
 	return rc != len ? -1 : 0;
 }
+
+
+int get_enable_disable(const char *val)
+{
+	if (strcasecmp(val, "enable") == 0 ||
+	    strcasecmp(val, "enabled") == 0 ||
+	    strcasecmp(val, "on") == 0 ||
+	    strcasecmp(val, "yes") == 0)
+		return 1;
+	return atoi(val);
+}
