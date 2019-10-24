@@ -194,7 +194,7 @@ static struct lut {
 	},
 };
 
-static inline u32 get_type_frm_name(char *name)
+static inline u32 get_type_frm_name(const char *name)
 {
 	if (!strcmp(name, "venus-llcc"))
 		return LLCC;

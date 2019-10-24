@@ -807,34 +807,6 @@ void trace_msm_v4l2_vidc_buffer_event_end(char *event_type, u32 device_addr,
 	(void) offset;
 }
 
-int
-msm_bus_scale_update_bw(struct msm_bus_client_handle *cl, u64 ab, u64 ib)
-{
-	(void) cl;
-	(void) ab;
-	(void) ib;
-
-	return 0;
-}
-
-struct msm_bus_client_handle dummy_cl;
-struct msm_bus_client_handle*
-msm_bus_scale_register(uint32_t mas, uint32_t slv, char *name,
-					   bool active_only)
-{
-	(void) mas;
-	(void) slv;
-	(void) name;
-	(void) active_only;
-
-	return &dummy_cl;
-}
-
-void msm_bus_scale_unregister(struct msm_bus_client_handle *cl)
-{
-	(void) cl;
-}
-
 void do_gettimeofday(struct timeval *__ddl_tv)
 {
 }

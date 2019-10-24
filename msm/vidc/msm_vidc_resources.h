@@ -77,14 +77,10 @@ struct clock_set {
 };
 
 struct bus_info {
-	char *name;
-	int master;
-	int slave;
+	const char *name;
 	unsigned int range[2];
 	struct device *dev;
-	struct msm_bus_client_handle *client;
-	bool is_prfm_mode;
-	const char *mode;
+	struct icc_path *path;
 };
 
 struct bus_set {
