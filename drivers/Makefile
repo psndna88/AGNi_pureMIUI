@@ -49,6 +49,14 @@ ifdef CONFIG_QCOM_CX_IPEAK
 camera-y += cam_utils/cam_cx_ipeak.o
 endif
 
+ifneq (,$(filter $(CONFIG_QCOM_BUS_SCALING),y m))
+camera-y += cam_utils/cam_soc_bus.o
+endif
+
+ifneq (,$(filter $(CONFIG_INTERCONNECT_QCOM),y m))
+camera-y += cam_utils/cam_soc_icc.o
+endif
+
 camera-$(CONFIG_SPECTRA_ISP) += \
 	cam_isp/isp_hw_mgr/hw_utils/cam_tasklet_util.o \
 	cam_isp/isp_hw_mgr/hw_utils/cam_isp_packet_parser.o \
