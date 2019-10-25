@@ -1232,6 +1232,22 @@ static enum nl80211_dfs_regions dfs_reg_to_nl80211_dfs_regions(
 	}
 }
 
+#ifdef DFS_PRI_MULTIPLIER
+static void hdd_set_dfs_pri_multiplier(struct hdd_context *hdd_ctx,
+				       enum dfs_reg dfs_region)
+{
+	if (dfs_region == DFS_ETSI_REG)
+		wlan_sap_set_dfs_pri_multiplier(
+				hdd_ctx->mac_handle,
+				hdd_ctx->config->dfsRadarPriMultiplier);
+}
+#else
+static inline void hdd_set_dfs_pri_multiplier(struct hdd_context *hdd_ctx,
+					      enum dfs_reg dfs_region)
+{
+}
+#endif
+
 void hdd_send_wiphy_regd_sync_event(struct hdd_context *hdd_ctx)
 {
 	struct ieee80211_regdomain *regd;
@@ -1269,6 +1285,9 @@ void hdd_send_wiphy_regd_sync_event(struct hdd_context *hdd_ctx)
 	qdf_mem_copy(regd->alpha2, reg_rules->alpha2, REG_ALPHA2_LEN + 1);
 	regd->dfs_region =
 		dfs_reg_to_nl80211_dfs_regions(reg_rules->dfs_region);
+
+	hdd_set_dfs_pri_multiplier(hdd_ctx, reg_rules->dfs_region);
+
 	regd_rules = regd->reg_rules;
 	hdd_debug("Regulatory Domain %s", regd->alpha2);
 	hdd_debug("start freq\tend freq\t@ max_bw\tant_gain\tpwr\tflags");
@@ -1414,3 +1433,15 @@ int hdd_regulatory_init(struct hdd_context *hdd_ctx, struct wiphy *wiphy)
 	return 0;
 }
 #endif
+
+void hdd_update_regdb_offload_config(struct hdd_context *hdd_ctx)
+{
+	if (!hdd_ctx->config->ignore_fw_reg_offload_ind) {
+		hdd_debug("regdb offload is based on firmware capability");
+		return;
+	}
+
+	hdd_debug("Ignore regdb offload Indication from FW");
+	ucfg_set_ignore_fw_reg_offload_ind(hdd_ctx->psoc);
+}
+

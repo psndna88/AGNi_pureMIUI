@@ -2624,6 +2624,14 @@ struct reg_table_entry g_registry_table[] = {
 		     CFG_IPA_LOW_BANDWIDTH_MBPS_DEFAULT,
 		     CFG_IPA_LOW_BANDWIDTH_MBPS_MIN,
 		     CFG_IPA_LOW_BANDWIDTH_MBPS_MAX),
+
+	REG_VARIABLE(CFG_IPA_FORCE_VOTING_ENABLE, WLAN_PARAM_Integer,
+		     struct hdd_config, IpaForceVoting,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_IPA_FORCE_VOTING_ENABLE_DEFAULT,
+		     CFG_IPA_FORCE_VOTING_ENABLE_MIN,
+		     CFG_IPA_FORCE_VOTING_ENABLE_MAX),
+
 #endif
 
 	REG_VARIABLE(CFG_VHT_AMPDU_LEN_EXPONENT_NAME, WLAN_PARAM_Integer,
@@ -3196,6 +3204,14 @@ struct reg_table_entry g_registry_table[] = {
 		     CFG_WLAN_LOGGING_CONSOLE_SUPPORT_DEFAULT,
 		     CFG_WLAN_LOGGING_CONSOLE_SUPPORT_DISABLE,
 		     CFG_WLAN_LOGGING_CONSOLE_SUPPORT_ENABLE),
+
+	REG_VARIABLE(CFG_HOST_LOG_CUSTOM_NETLINK_PROTO,
+		     WLAN_PARAM_Integer,
+		     struct hdd_config, host_log_custom_nl_proto,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_HOST_LOG_CUSTOM_NETLINK_PROTO_DEFAULT,
+		     CFG_HOST_LOG_CUSTOM_NETLINK_PROTO_MIN,
+		     CFG_HOST_LOG_CUSTOM_NETLINK_PROTO_MAX),
 #endif /* WLAN_LOGGING_SOCK_SVC_ENABLE */
 
 #ifdef WLAN_FEATURE_LPSS
@@ -5952,6 +5968,13 @@ struct reg_table_entry g_registry_table[] = {
 		     CFG_ENABLE_RTT_SUPPORT_DEFAULT,
 		     CFG_ENABLE_RTT_SUPPORT_MIN,
 		     CFG_ENABLE_RTT_SUPPORT_MAX),
+
+	REG_VARIABLE(CFG_IGNORE_FW_REG_OFFLOAD_IND, WLAN_PARAM_Integer,
+		     struct hdd_config, ignore_fw_reg_offload_ind,
+		     VAR_FLAGS_OPTIONAL,
+		     CFG_IGNORE_FW_REG_OFFLOAD_IND_DEFAULT,
+		     CFG_IGNORE_FW_REG_OFFLOAD_IND_MIN,
+		     CFG_IGNORE_FW_REG_OFFLOAD_IND_MAX),
 };
 
 
@@ -7360,6 +7383,8 @@ void hdd_cfg_print(struct hdd_context *hdd_ctx)
 		  hdd_ctx->config->IpaMediumBandwidthMbps);
 	hdd_debug("Name = [IpaLowBandwidthMbps] Value = [%u] ",
 		  hdd_ctx->config->IpaLowBandwidthMbps);
+	hdd_debug("Name = [IpaForceVoting] Value = [%u] ",
+		  hdd_ctx->config->IpaForceVoting);
 #endif
 	hdd_debug("Name = [gEnableOverLapCh] Value = [%u] ",
 		  hdd_ctx->config->gEnableOverLapCh);
@@ -7986,6 +8011,10 @@ void hdd_cfg_print(struct hdd_context *hdd_ctx)
 	hdd_cfg_print_action_oui(hdd_ctx);
 	hdd_cfg_print_btc_params(hdd_ctx);
 	hdd_cfg_print_roam_preauth(hdd_ctx);
+
+	hdd_debug("Name = [%s] Value = [%u]",
+		  CFG_IGNORE_FW_REG_OFFLOAD_IND,
+		  hdd_ctx->config->ignore_fw_reg_offload_ind);
 }
 
 /**
@@ -10063,6 +10092,7 @@ QDF_STATUS hdd_update_nss(struct hdd_adapter *adapter, uint8_t nss)
 	uint8_t enable2x2;
 	mac_handle_t mac_handle;
 	uint8_t tx_nss, rx_nss;
+	uint8_t band, max_supp_nss;
 
 	if ((nss == 2) && (hdd_ctx->num_rf_chains != 2)) {
 		hdd_err("No support for 2 spatial streams");
@@ -10080,12 +10110,44 @@ QDF_STATUS hdd_update_nss(struct hdd_adapter *adapter, uint8_t nss)
 		return QDF_STATUS_E_INVAL;
 	}
 
+	max_supp_nss = MAX_VDEV_NSS;
+
 	/* Till now we dont have support for different rx, tx nss values */
 	tx_nss = nss;
 	rx_nss = nss;
 
-	if (hdd_ctx->dynamic_nss_chains_support)
-		return hdd_set_nss_params(adapter, tx_nss, rx_nss);
+	/*
+	 * If FW is supporting the dynamic nss update, this command is meant to
+	 * be per vdev, so update only the ini params of that particular vdev
+	 * and not the global param enable2x2
+	 */
+	if (hdd_ctx->dynamic_nss_chains_support) {
+		if (hdd_is_vdev_in_conn_state(adapter))
+			return hdd_set_nss_params(adapter, tx_nss, rx_nss);
+		hdd_debug("Vdev %d in disconnect state, changing ini nss params",
+			  adapter->session_id);
+		if (!hdd_config->enable2x2) {
+			hdd_err("Nss in 1x1, no change required, 2x2 mode disabled");
+			return QDF_STATUS_E_FAILURE;
+		}
+
+		for (band = NSS_CHAINS_BAND_2GHZ; band < NSS_CHAINS_BAND_MAX;
+		     band++)
+			hdd_modify_nss_in_hdd_cfg(hdd_ctx, rx_nss, tx_nss,
+						  adapter->device_mode, band);
+		sme_update_vdev_type_nss(mac_handle, max_supp_nss,
+					 hdd_ctx->config->rx_nss_2g, BAND_2G);
+		sme_update_vdev_type_nss(mac_handle, max_supp_nss,
+					 hdd_ctx->config->rx_nss_5g, BAND_5G);
+
+		/*
+		 * This API will change the ini and dynamic nss params in
+		 * mlme vdev priv obj.
+		 */
+		hdd_store_nss_chains_cfg_in_vdev(adapter);
+
+		return QDF_STATUS_SUCCESS;
+	}
 
 	enable2x2 = (nss == 1) ? 0 : 1;
 

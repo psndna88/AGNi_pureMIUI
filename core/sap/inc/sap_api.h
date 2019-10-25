@@ -794,14 +794,6 @@ typedef struct sap_SoftapStats_s {
 	uint32_t rxRate;
 } tSap_SoftapStats, *tpSap_SoftapStats;
 
-#ifdef FEATURE_WLAN_CH_AVOID
-/* Store channel safety information */
-typedef struct {
-	uint16_t channelNumber;
-	bool isSafe;
-} sapSafeChannelType;
-#endif /* FEATURE_WLAN_CH_AVOID */
-
 /**
  * struct sap_context - per-BSS Context for SAP
  *
@@ -1057,7 +1049,7 @@ QDF_STATUS wlansap_set_mac_acl(struct sap_context *sap_ctx,
  *
  * Return: None
  */
-void sap_undo_acs(struct sap_context *sap_context);
+void sap_undo_acs(struct sap_context *sap_context, struct sap_config *sap_cfg);
 
 /**
  * wlansap_disassoc_sta() - initiate disassociation of station.
@@ -1407,6 +1399,20 @@ static inline QDF_STATUS wlansap_set_dfs_nol(struct sap_context *sap_ctx,
 }
 #endif
 
+/**
+ * wlan_sap_set_dfs_pri_multiplier() - Set dfs_pri_multiplier
+ * @hal:        global hal handle
+ * @val:        value to set
+ *
+ * Return: none
+ */
+#ifdef DFS_PRI_MULTIPLIER
+void wlan_sap_set_dfs_pri_multiplier(tHalHandle hal, uint32_t val);
+#else
+static inline void wlan_sap_set_dfs_pri_multiplier(tHalHandle hal, uint32_t val)
+{
+}
+#endif
 /**
  * wlan_sap_set_vendor_acs() - Set vendor specific acs in sap context
  * @sap_context: SAP context
