@@ -57,14 +57,4 @@ alternative_else_nop_endif
 	.macro	uaccess_ttbr0_enable, tmp1, tmp2, tmp3
 	.endm
 #endif
-
-/*
- * Remove the address tag from a virtual address, if present.
- */
-	.macro	clear_address_tag, dst, addr
-	tst	\addr, #(1 << 55)
-	bic	\dst, \addr, #(0xff << 56)
-	csel	\dst, \dst, \addr, eq
-	.endm
-
 #endif
