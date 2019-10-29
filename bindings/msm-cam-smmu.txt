@@ -96,7 +96,7 @@ Third Level Node - CAM SMMU memory map device
   Definition: Should specify IOVA granularity for shared memory region.
 
 Example:
-	qcom,cam_smmu@0 {
+	qcom,cam_smmu {
 		compatible = "qcom,msm-cam-smmu";
 
 		msm_cam_smmu_icp {

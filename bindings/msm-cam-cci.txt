@@ -724,7 +724,7 @@ Example:
 };
 
 &cam_cci0 {
-    actuator0: qcom,actuator@0 {
+    actuator0: qcom,actuator0 {
          cell-index = <0>;
          reg = <0x0>;
          compatible = "qcom,actuator";
@@ -738,7 +738,7 @@ Example:
          rgltr-load-current = <100000>;
     };
 
-	ois0: qcom,ois@0 {
+    ois0: qcom,ois0 {
          cell-index = <0>;
          reg = <0x0>;
          compatible = "qcom,ois";
@@ -761,7 +761,7 @@ Example:
          pinctrl-1 = <&cam_shared_clk_suspend &cam_res_mgr_suspend>;
     };
 
-    qcom,cam-sensor@0 {
+    qcom,cam-sensor0 {
          cell-index = <0>;
          compatible = "qcom,camera";
          reg = <0x0>;

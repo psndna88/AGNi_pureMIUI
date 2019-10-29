@@ -434,7 +434,7 @@ First Level Node - CAM EEPROM device
 
 Example:
 
-	eeprom0: qcom,eeprom@0 {
+	eeprom0: qcom,eeprom0 {
 		cell-index = <0>;
 		reg = <0x0>;
 		qcom,eeprom-name = "msm_eeprom";

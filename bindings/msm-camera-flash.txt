@@ -107,7 +107,7 @@ First Level Node - CAM FLASH device
 
 Example:
 
-led_flash_rear: qcom,camera-flash@0 {
+led_flash_rear: qcom,camera-flash0 {
 		reg = <0x00 0x00>;
 		cell-index = <0>;
 		compatible = "qcom,camera-flash";

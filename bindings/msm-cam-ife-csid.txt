@@ -16,8 +16,9 @@ First Level Node - CAM IFE CSID device
   Usage: required
   Value type: <string>
   Definition: Should be "qcom,csid170", "qcom,csid175", "qcom,csid175_200",
-              "qcom,csid480", "qcom,csid-lite170", "qcom,csid-lite175",
-              "qcom,csid-lite480" or "qcom,csid-custom480".
+              "qcom,csid480", "qcom,csid580", "qcom,csid-lite170", "qcom,csid-lite175",
+              "qcom,csid-lite480" or "qcom,csid-custom480",
+              "qcom,csid-lite580" or "qcom,csid-custom580".
 
 - cell-index
   Usage: required
@@ -89,7 +90,7 @@ Example:
 
 	qcom,csid0@acb3000 {
 		cell-index = <0>;
-		compatible = "qcom,csid480";
+		compatible = "qcom,csid580";
 		reg = <0xacb3000 0x1000>;
 		reg-names = "csid";
 		interrupts = <0 464 0>;
