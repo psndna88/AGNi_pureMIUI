@@ -4007,6 +4007,9 @@ static int fg_psy_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CHARGE_FULL:
 	case POWER_SUPPLY_PROP_SOC_REPORTING_READY:
 		/* These props don't require a fg query; don't ratelimit them */
+	case POWER_SUPPLY_PROP_CAPACITY:
+	case POWER_SUPPLY_PROP_STATUS:
+		/* These props affect interactive experience in user space */
 		break;
 	default:
 		if (!sd->last_req_expires)
