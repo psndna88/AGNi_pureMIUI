@@ -487,7 +487,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 			 */
 			send_resp(dut, conn, SIGMA_INVALID,
 				  "errorCode,Invalid WLAN_TAG");
-			return 0;
+			return STATUS_SENT;
 		}
 	}
 
@@ -505,7 +505,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 	val = get_param(cmd, "CountryCode");
 	if (val) {
 		if (strlen(val) > sizeof(dut->ap_countrycode) - 1)
-			return -1;
+			return INVALID_SEND_STATUS;
 		snprintf(dut->ap_countrycode, sizeof(dut->ap_countrycode),
 			 "%s", val);
 
@@ -530,7 +530,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 	val = get_param(cmd, "SSID");
 	if (val) {
 		if (strlen(val) > sizeof(dut->ap_ssid) - 1)
-			return -1;
+			return INVALID_SEND_STATUS;
 
 		if (wlan_tag == 1) {
 			/*
@@ -585,7 +585,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 
 		str = strdup(val);
 		if (str == NULL)
-			return -1;
+			return INVALID_SEND_STATUS;
 		pos = strchr(str, ';');
 		if (pos)
 			*pos++ = '\0';
@@ -596,7 +596,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 			send_resp(dut, conn, SIGMA_INVALID,
 				  "errorCode,Unsupported MODE");
 			free(str);
-			return 0;
+			return STATUS_SENT;
 		}
 		if (dut->ap_mode == AP_11ac && dut->ap_80plus80 != 1)
 			dut->ap_chwidth = AP_80;
@@ -607,7 +607,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 				send_resp(dut, conn, SIGMA_INVALID,
 					  "errorCode,Unsupported MODE");
 				free(str);
-				return 0;
+				return STATUS_SENT;
 			}
 			if (dut->ap_mode_1 == AP_11ac)
 				dut->ap_chwidth_1 = AP_80;
@@ -678,7 +678,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 			if (drv == DRIVER_ATHEROS)
 				ath_ap_start_hostapd(dut);
 			else if (cmd_ap_config_commit(dut, conn, cmd) <= 0)
-				return 0;
+				return STATUS_SENT;
 		} else if (strcasecmp(val, "off") == 0) {
 			if (drv == DRIVER_OPENWRT) {
 				ath_radio(dut, val);
@@ -693,7 +693,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		} else {
 			send_resp(dut, conn, SIGMA_INVALID,
 				  "errorCode,Unsupported RADIO value");
-			return 0;
+			return STATUS_SENT;
 		}
 	}
 
@@ -812,7 +812,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Invalid value for BSS_max_Feature");
-			return 0;
+			return STATUS_SENT;
 		}
 	}
 
@@ -823,7 +823,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		if (protection != 1 && protection != 0) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Invalid value for BSS_Idle_Protection_options");
-			return 0;
+			return STATUS_SENT;
 		}
 		dut->wnm_bss_max_protection = protection ?
 			VALUE_ENABLED : VALUE_DISABLED;
@@ -836,7 +836,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		if (idle_time == LONG_MIN || idle_time == LONG_MAX) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Invalid value for BSS_max_Idle_period");
-			return 0;
+			return STATUS_SENT;
 		}
 		dut->wnm_bss_max_idle_time = (int) idle_time;
 	}
@@ -853,7 +853,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		char *saveptr;
 
 		if (strlen(val) >= sizeof(token))
-			return -1;
+			return INVALID_SEND_STATUS;
 		strlcpy(token, val, sizeof(token));
 		result = strtok_r(token, ";", &saveptr);
 		if (!result) {
@@ -957,7 +957,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		else {
 			send_resp(dut, conn, SIGMA_INVALID,
 				  "errorCode,Unsupported WIDTH");
-			return 0;
+			return STATUS_SENT;
 		}
 	}
 
@@ -997,7 +997,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 			default:
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "errorCode,Unsupported DYN_BW_SGNL with OpenWrt driver");
-				return 0;
+				return STATUS_SENT;
 			}
 			break;
 		case DRIVER_WCN:
@@ -1020,7 +1020,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		else {
 			send_resp(dut, conn, SIGMA_INVALID,
 				  "errorCode,Unsupported SGI80");
-			return 0;
+			return STATUS_SENT;
 		}
 	}
 
@@ -1033,7 +1033,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		else {
 			send_resp(dut, conn, SIGMA_INVALID,
 				  "errorCode,Unsupported LDPC");
-			return 0;
+			return STATUS_SENT;
 		}
 	}
 
@@ -1050,7 +1050,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		} else {
 			send_resp(dut, conn, SIGMA_INVALID,
 				  "errorCode,Unsupported BW_SGNL");
-			return 0;
+			return STATUS_SENT;
 		}
 	}
 
@@ -1065,7 +1065,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 			default:
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "errorCode,Unsupported RTS_FORCE with OpenWrt driver");
-				return 0;
+				return STATUS_SENT;
 			}
 			break;
 		default:
@@ -1089,13 +1089,13 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 			default:
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "errorCode,Unsupported zero_crc with the current driver");
-				return 0;
+				return STATUS_SENT;
 			}
 			break;
 		default:
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Unsupported zero_crc with the current driver");
-			return 0;
+			return STATUS_SENT;
 		}
 	}
 
@@ -1134,13 +1134,13 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 			default:
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "errorCode,Unsupported group_id with the current driver");
-				return 0;
+				return STATUS_SENT;
 			}
 			break;
 		default:
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Unsupported group_id with the current driver");
-			return 0;
+			return STATUS_SENT;
 		}
 	}
 
@@ -1155,13 +1155,13 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 			default:
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "errorCode,Unsupported cts_width with the current driver");
-				return 0;
+				return STATUS_SENT;
 			}
 			break;
 		default:
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Unsupported cts_width with the current driver");
-			return 0;
+			return STATUS_SENT;
 		}
 	}
 
@@ -1180,7 +1180,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 	val = get_param(cmd, "LCI");
 	if (val) {
 		if (strlen(val) > sizeof(dut->ap_val_lci) - 1)
-			return -1;
+			return INVALID_SEND_STATUS;
 		dut->ap_lci = 1;
 		snprintf(dut->ap_val_lci, sizeof(dut->ap_val_lci), "%s", val);
 		ath_set_lci_config(dut, val, cmd);
@@ -1189,14 +1189,14 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 	val = get_param(cmd, "InfoZ");
 	if (val) {
 		if (strlen(val) > sizeof(dut->ap_infoz) - 1)
-			return -1;
+			return INVALID_SEND_STATUS;
 		snprintf(dut->ap_infoz, sizeof(dut->ap_infoz), "%s", val);
 	}
 
 	val = get_param(cmd, "LocCivicAddr");
 	if (val) {
 		if (strlen(val) > sizeof(dut->ap_val_lcr) - 1)
-			return -1;
+			return INVALID_SEND_STATUS;
 		dut->ap_lcr = 1;
 		snprintf(dut->ap_val_lcr, sizeof(dut->ap_val_lcr), "%s", val);
 		if (dut->ap_lci == 0)
@@ -1211,7 +1211,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 				    dut->ap_val_neighap[dut->ap_neighap]) < 0) {
 				send_resp(dut, conn, SIGMA_INVALID,
 					  "Failed to parse MAC address");
-				return 0;
+				return STATUS_SENT;
 			}
 			dut->ap_neighap++;
 			if (dut->ap_lci == 1)
@@ -1236,7 +1236,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		} else {
 			send_resp(dut, conn, SIGMA_INVALID,
 				  "errorCode,Unsupported URI-FQDNdescriptor");
-			return 0;
+			return STATUS_SENT;
 		}
 	}
 
@@ -1249,7 +1249,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Wrong value for Reg_Domain");
-			return 0;
+			return STATUS_SENT;
 		}
 	}
 
@@ -1272,7 +1272,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Wrong value for FT_OA");
-			return 0;
+			return STATUS_SENT;
 		}
 	}
 
@@ -1298,7 +1298,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		if (strlen(val) >= sizeof(dut->ap_mobility_domain)) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Too long DOMAIN");
-			return 0;
+			return STATUS_SENT;
 		}
 		snprintf(dut->ap_mobility_domain,
 			 sizeof(dut->ap_mobility_domain), "%s", val);
@@ -1313,7 +1313,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 
 		mac_list_str = strdup(val);
 		if (!mac_list_str)
-			return -1;
+			return INVALID_SEND_STATUS;
 		mac_str = strtok_r(mac_list_str, " ", &saveptr);
 		for (i = 0; mac_str && i < MAX_FT_BSS_LIST; i++) {
 			if (parse_mac_address(dut, mac_str,
@@ -1351,7 +1351,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		} else {
 			send_resp(dut, conn, SIGMA_INVALID,
 				  "errorCode,Unsupported OCE");
-			return 0;
+			return STATUS_SENT;
 		}
 	}
 
@@ -1368,7 +1368,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		} else {
 			send_resp(dut, conn, SIGMA_INVALID,
 				  "errorCode,Unsupported hidden SSID");
-			return 0;
+			return STATUS_SENT;
 		}
 	}
 
@@ -1381,7 +1381,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		} else {
 			send_resp(dut, conn, SIGMA_INVALID,
 				  "errorCode,Unsupported FILSDscv");
-			return 0;
+			return STATUS_SENT;
 		}
 	}
 
@@ -1394,7 +1394,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		} else {
 			send_resp(dut, conn, SIGMA_INVALID,
 				  "errorCode,Unsupported FILSHLP");
-			return 0;
+			return STATUS_SENT;
 		}
 	}
 
@@ -1402,7 +1402,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 	if (val) {
 		dut->ap_nairealm_int = 1;
 		if (strlen(val) > sizeof(dut->ap_nairealm) - 1)
-			return -1;
+			return INVALID_SEND_STATUS;
 		snprintf(dut->ap_nairealm, sizeof(dut->ap_nairealm), "%s", val);
 	}
 
@@ -1413,7 +1413,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		} else {
 			send_resp(dut, conn, SIGMA_INVALID,
 				  "errorCode,Unsupported DeauthDisassocTx");
-			return 0;
+			return STATUS_SENT;
 		}
 	}
 
@@ -1426,7 +1426,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		} else {
 			send_resp(dut, conn, SIGMA_INVALID,
 				  "errorCode,Unsupported RNR");
-			return 0;
+			return STATUS_SENT;
 		}
 	}
 
@@ -1449,7 +1449,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 	val = get_param(cmd, "dhcpServIPADDR");
 	if (val) {
 		if (strlen(val) > sizeof(dut->ap_dhcpserv_ipaddr) - 1)
-			return -1;
+			return INVALID_SEND_STATUS;
 		snprintf(dut->ap_dhcpserv_ipaddr,
 			 sizeof(dut->ap_dhcpserv_ipaddr), "%s", val);
 		dut->ap_dhcp_stop = 1;
@@ -1464,7 +1464,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		} else {
 			send_resp(dut, conn, SIGMA_INVALID,
 				  "errorCode,Unsupported ESP_IE");
-			return 0;
+			return STATUS_SENT;
 		}
 	}
 
@@ -1563,7 +1563,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 					&num_allocs)) {
 			send_resp(dut, conn, SIGMA_INVALID,
 				  "errorCode,Invalid ExtSchIE");
-			return 0;
+			return STATUS_SENT;
 		}
 		dut->ap_num_ese_allocs = num_allocs;
 	}
@@ -1696,7 +1696,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		}
 	}
 
-	return 1;
+	return SUCCESS_SEND_STATUS;
 }
 
 
