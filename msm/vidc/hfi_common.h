@@ -290,6 +290,10 @@ int venus_hfi_initialize(struct hfi_device *hdev, u32 device_id,
 		struct msm_vidc_platform_resources *res,
 		hfi_cmd_response_callback callback);
 
+struct lut const *__lut(int width, int height, int fps);
+fp_t __compression_ratio(struct lut const *entry, int bpp);
+void __dump(struct dump dump[], int len, u32 sid);
+
 void __write_register(struct venus_hfi_device *device,
 		u32 reg, u32 value, u32 sid);
 int __read_register(struct venus_hfi_device *device, u32 reg, u32 sid);
@@ -299,15 +303,6 @@ int __unvote_buses(struct venus_hfi_device *device, u32 sid);
 int __reset_ahb2axi_bridge_common(struct venus_hfi_device *device, u32 sid);
 int __prepare_pc(struct venus_hfi_device *device);
 
-/* AR50 specific */
-void __interrupt_init_ar50(struct venus_hfi_device *device, u32 sid);
-/* IRIS1 specific */
-void __interrupt_init_iris1(struct venus_hfi_device *device, u32 sid);
-void __setup_dsp_uc_memmap_iris1(struct venus_hfi_device *device);
-void __clock_config_on_enable_iris1(struct venus_hfi_device *device,
-		u32 sid);
-void __setup_ucregion_memory_map_iris1(struct venus_hfi_device *device,
-		u32 sid);
 /* IRIS2 specific */
 void __interrupt_init_iris2(struct venus_hfi_device *device, u32 sid);
 void __setup_ucregion_memory_map_iris2(struct venus_hfi_device *device,

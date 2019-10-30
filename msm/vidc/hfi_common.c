@@ -80,30 +80,8 @@ static int __disable_subcaches(struct venus_hfi_device *device, u32 sid);
 static int __power_collapse(struct venus_hfi_device *device, bool force);
 static int venus_hfi_noc_error_info(void *dev);
 static int __set_ubwc_config(struct venus_hfi_device *device);
-static void __power_off_common(struct venus_hfi_device *device);
-static int __prepare_pc_common(struct venus_hfi_device *device);
-static void __raise_interrupt_common(struct venus_hfi_device *device, u32 sid);
 static bool __watchdog_common(u32 intr_status);
 static void __noc_error_info_common(struct venus_hfi_device *device);
-static void __core_clear_interrupt_common(struct venus_hfi_device *device);
-static inline int __boot_firmware_common(
-		struct venus_hfi_device *device, u32 sid);
-static void __setup_ucregion_memory_map_common(
-		struct venus_hfi_device *device, u32 sid);
-
-struct venus_hfi_vpu_ops vpu4_ops = {
-	.interrupt_init = __interrupt_init_ar50,
-	.setup_ucregion_memmap = __setup_ucregion_memory_map_common,
-	.clock_config_on_enable = NULL,
-	.reset_ahb2axi_bridge = NULL,
-	.power_off = __power_off_common,
-	.prepare_pc = __prepare_pc_common,
-	.raise_interrupt = __raise_interrupt_common,
-	.watchdog = __watchdog_common,
-	.noc_error_info = __noc_error_info_common,
-	.core_clear_interrupt = __core_clear_interrupt_common,
-	.boot_firmware = __boot_firmware_common,
-};
 
 struct venus_hfi_vpu_ops ar50_lite_ops = {
         .interrupt_init = __interrupt_init_ar50_lt,
@@ -117,20 +95,6 @@ struct venus_hfi_vpu_ops ar50_lite_ops = {
         .noc_error_info = __noc_error_info_common,
         .core_clear_interrupt = __core_clear_interrupt_ar50_lt,
         .boot_firmware = __boot_firmware_ar50_lt,
-};
-
-struct venus_hfi_vpu_ops iris1_ops = {
-	.interrupt_init = __interrupt_init_iris1,
-	.setup_ucregion_memmap = __setup_ucregion_memory_map_iris1,
-	.clock_config_on_enable = __clock_config_on_enable_iris1,
-	.reset_ahb2axi_bridge = __reset_ahb2axi_bridge_common,
-	.power_off = __power_off_common,
-	.prepare_pc = __prepare_pc_common,
-	.raise_interrupt = __raise_interrupt_common,
-	.watchdog = __watchdog_common,
-	.noc_error_info = __noc_error_info_common,
-	.core_clear_interrupt = __core_clear_interrupt_common,
-	.boot_firmware = __boot_firmware_common,
 };
 
 struct venus_hfi_vpu_ops iris2_ops = {
@@ -151,6 +115,70 @@ struct venus_hfi_vpu_ops iris2_ops = {
  * Utility function to enforce some of our assumptions.  Spam calls to this
  * in hotspots in code to double check some of the assumptions that we hold.
  */
+
+struct lut const *__lut(int width, int height, int fps)
+{
+	int frame_size = height * width, c = 0;
+
+	do {
+		if (LUT[c].frame_size >= frame_size && LUT[c].frame_rate >= fps)
+			return &LUT[c];
+	} while (++c < ARRAY_SIZE(LUT));
+
+	return &LUT[ARRAY_SIZE(LUT) - 1];
+}
+
+fp_t __compression_ratio(struct lut const *entry, int bpp)
+{
+	int c = 0;
+
+	for (c = 0; c < COMPRESSION_RATIO_MAX; ++c) {
+		if (entry->compression_ratio[c].bpp == bpp)
+			return entry->compression_ratio[c].ratio;
+	}
+
+	WARN(true, "Shouldn't be here, LUT possibly corrupted?\n");
+	return FP_ZERO; /* impossible */
+}
+
+
+void __dump(struct dump dump[], int len, u32 sid)
+{
+	int c = 0;
+
+	for (c = 0; c < len; ++c) {
+		char format_line[128] = "", formatted_line[128] = "";
+
+		if (dump[c].val == DUMP_HEADER_MAGIC) {
+			snprintf(formatted_line, sizeof(formatted_line), "%s\n",
+					 dump[c].key);
+		} else {
+			bool fp_format = !strcmp(dump[c].format, DUMP_FP_FMT);
+
+			if (!fp_format) {
+				snprintf(format_line, sizeof(format_line),
+						 "    %-35s: %s\n", dump[c].key,
+						 dump[c].format);
+				snprintf(formatted_line, sizeof(formatted_line),
+						 format_line, dump[c].val);
+			} else {
+				size_t integer_part, fractional_part;
+
+				integer_part = fp_int(dump[c].val);
+				fractional_part = fp_frac(dump[c].val);
+				snprintf(formatted_line, sizeof(formatted_line),
+						 "    %-35s: %zd + %zd/%zd\n",
+						 dump[c].key, integer_part,
+						 fractional_part,
+						 fp_frac_base());
+
+
+			}
+		}
+		s_vpr_b(sid, "%s", formatted_line);
+	}
+}
+
 static inline void __strict_check(struct venus_hfi_device *device)
 {
 	msm_vidc_res_handle_fatal_hw_error(device->res,
@@ -1008,34 +1036,6 @@ static int __tzbsp_set_video_state(enum tzbsp_video_state state, u32 sid)
 	return 0;
 }
 
-static inline int __boot_firmware_common(
-		struct venus_hfi_device *device, u32 sid)
-{
-	int rc = 0;
-	u32 ctrl_init_val = 0, ctrl_status = 0, count = 0, max_tries = 1000;
-
-	ctrl_init_val = BIT(0);
-
-	__write_register(device, CTRL_INIT, ctrl_init_val, sid);
-	while (!ctrl_status && count < max_tries) {
-		ctrl_status = __read_register(device, CTRL_STATUS, sid);
-		if ((ctrl_status & CTRL_ERROR_STATUS__M) == 0x4) {
-			s_vpr_e(sid, "invalid setting for UC_REGION\n");
-			break;
-		}
-
-		usleep_range(50, 100);
-		count++;
-	}
-
-	if (count >= max_tries) {
-		s_vpr_e(sid, "Error booting up vidc firmware\n");
-		rc = -ETIME;
-	}
-
-	return rc;
-}
-
 static int venus_hfi_suspend(void *dev)
 {
 	int rc = 0;
@@ -1230,12 +1230,6 @@ static int __iface_cmdq_write_relaxed(struct venus_hfi_device *device,
 err_q_write:
 err_q_null:
 	return result;
-}
-
-static void __raise_interrupt_common(struct venus_hfi_device *device, u32 sid)
-{
-	__write_register(device, CPU_IC_SOFTINT,
-				1 << CPU_IC_SOFTINT_H2A_SHFT, sid);
 }
 
 static int __iface_cmdq_write(struct venus_hfi_device *device,
@@ -1447,23 +1441,6 @@ static int __get_qdss_iommu_virtual_addr(struct venus_hfi_device *dev,
 	}
 
 	return rc;
-}
-
-static void __setup_ucregion_memory_map_common(struct venus_hfi_device *device,
-	u32 sid)
-{
-	__write_register(device, UC_REGION_ADDR,
-			(u32)device->iface_q_table.align_device_addr, sid);
-	__write_register(device, UC_REGION_SIZE, SHARED_QSIZE, sid);
-	__write_register(device, QTBL_ADDR,
-			(u32)device->iface_q_table.align_device_addr, sid);
-	__write_register(device, QTBL_INFO, 0x01, sid);
-	if (device->sfr.align_device_addr)
-		__write_register(device, SFR_ADDR,
-				(u32)device->sfr.align_device_addr, sid);
-	if (device->qdss.align_device_addr)
-		__write_register(device, MMAP_ADDR,
-				(u32)device->qdss.align_device_addr, sid);
 }
 
 static int __interface_queues_init(struct venus_hfi_device *dev)
@@ -1820,33 +1797,6 @@ static int __get_q_size(struct venus_hfi_device *dev, unsigned int q_index)
 	write_ptr = (u32)queue->qhdr_write_idx;
 	read_ptr = (u32)queue->qhdr_read_idx;
 	return read_ptr - write_ptr;
-}
-
-static void __core_clear_interrupt_common(struct venus_hfi_device *device)
-{
-	u32 intr_status = 0, mask = 0;
-
-	if (!device) {
-		d_vpr_e("%s: NULL device\n", __func__);
-		return;
-	}
-
-	intr_status = __read_register(device, WRAPPER_INTR_STATUS, DEFAULT_SID);
-	mask = (WRAPPER_INTR_STATUS_A2H_BMSK |
-		WRAPPER_INTR_STATUS_A2HWD_BMSK |
-		CTRL_INIT_IDLE_MSG_BMSK);
-
-	if (intr_status & mask) {
-		device->intr_status |= intr_status;
-		device->reg_count++;
-		d_vpr_l("INTERRUPT: times: %d interrupt_status: %d\n",
-			device->reg_count, intr_status);
-	} else {
-		device->spur_count++;
-	}
-
-	__write_register(device, CPU_CS_A2HSOFTINTCLR, 1, DEFAULT_SID);
-	__write_register(device, WRAPPER_INTR_CLEAR, intr_status, DEFAULT_SID);
 }
 
 static int venus_hfi_core_trigger_ssr(void *device,
@@ -2583,59 +2533,6 @@ static void venus_hfi_pm_handler(struct work_struct *work)
 		d_vpr_e("%s: power collapse failed\n", __func__);
 		break;
 	}
-}
-
-static int __prepare_pc_common(struct venus_hfi_device *device)
-{
-	int rc = 0;
-	u32 wfi_status = 0, idle_status = 0, pc_ready = 0;
-	u32 ctrl_status = 0;
-	int count = 0;
-	const int max_tries = 10;
-
-	ctrl_status = __read_register(device, CTRL_STATUS, DEFAULT_SID);
-	pc_ready = ctrl_status & CTRL_STATUS_PC_READY;
-	idle_status = ctrl_status & BIT(30);
-
-	if (pc_ready) {
-		d_vpr_h("Already in pc_ready state\n");
-		return 0;
-	}
-
-	wfi_status = BIT(0) & __read_register(device,
-				WRAPPER_CPU_STATUS, DEFAULT_SID);
-	if (!wfi_status || !idle_status) {
-		d_vpr_e("Skipping PC, wfi status not set\n");
-		goto skip_power_off;
-	}
-
-	rc = __prepare_pc(device);
-	if (rc) {
-		d_vpr_e("Failed __prepare_pc %d\n", rc);
-		goto skip_power_off;
-	}
-
-	while (count < max_tries) {
-		wfi_status = BIT(0) & __read_register(device,
-					WRAPPER_CPU_STATUS, DEFAULT_SID);
-		ctrl_status = __read_register(device, CTRL_STATUS, DEFAULT_SID);
-		if (wfi_status && (ctrl_status & CTRL_STATUS_PC_READY))
-			break;
-		usleep_range(150, 250);
-		count++;
-	}
-
-	if (count == max_tries) {
-		d_vpr_e("Skip PC. Core is not in right state\n");
-		goto skip_power_off;
-	}
-
-	return rc;
-
-skip_power_off:
-	d_vpr_e("Skip PC, wfi=%#x, idle=%#x, pcr=%#x, ctrl=%#x)\n",
-		wfi_status, idle_status, pc_ready, ctrl_status);
-	return -EAGAIN;
 }
 
 static int __power_collapse(struct venus_hfi_device *device, bool force)
@@ -3918,27 +3815,6 @@ fail_vote_buses:
 	return rc;
 }
 
-static void __power_off_common(struct venus_hfi_device *device)
-{
-	if (!device->power_enabled)
-		return;
-
-	if (!(device->intr_status & WRAPPER_INTR_STATUS_A2HWD_BMSK))
-		disable_irq_nosync(device->hal_data->irq);
-	device->intr_status = 0;
-
-	__disable_unprepare_clks(device);
-	if (call_venus_op(device, reset_ahb2axi_bridge, device, DEFAULT_SID))
-		d_vpr_e("Failed to reset ahb2axi\n");
-
-	if (__disable_regulators(device))
-		d_vpr_e("Failed to disable regulators\n");
-
-	if (__unvote_buses(device, DEFAULT_SID))
-		d_vpr_e("Failed to unvote for buses\n");
-	device->power_enabled = false;
-}
-
 static inline int __suspend(struct venus_hfi_device *device)
 {
 	int rc = 0;
@@ -4317,12 +4193,8 @@ static int __initialize_packetization(struct venus_hfi_device *device)
 
 void __init_venus_ops(struct venus_hfi_device *device)
 {
-	if (device->res->vpu_ver == VPU_VERSION_AR50)
-		device->vpu_ops = &vpu4_ops;
-        else if (device->res->vpu_ver == VPU_VERSION_AR50_LITE)
-                device->vpu_ops = &ar50_lite_ops;
-	else if (device->res->vpu_ver == VPU_VERSION_IRIS1)
-		device->vpu_ops = &iris1_ops;
+	if (device->res->vpu_ver == VPU_VERSION_AR50_LITE)
+		device->vpu_ops = &ar50_lite_ops;
 	else
 		device->vpu_ops = &iris2_ops;
 }
