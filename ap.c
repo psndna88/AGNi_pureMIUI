@@ -857,23 +857,23 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		strlcpy(token, val, sizeof(token));
 		result = strtok_r(token, ";", &saveptr);
 		if (!result) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"VHT NSS not specified");
-			return 0;
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,VHT NSS not specified");
+			return STATUS_SENT;
 		}
 		nss = atoi(result);
 		result = strtok_r(NULL, ";", &saveptr);
 		if (result == NULL) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"VHTMCS NOT SPECIFIED!");
-			return 0;
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,VHTMCS not specified");
+			return STATUS_SENT;
 		}
 		result = strtok_r(result, "-", &saveptr);
 		result = strtok_r(NULL, "-", &saveptr);
 		if (!result) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"VHT MCS not specified");
-			return 0;
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,VHT MCS not specified");
+			return STATUS_SENT;
 		}
 		mcs = atoi(result);
 		switch (nss) {
