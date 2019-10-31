@@ -1696,6 +1696,19 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		}
 	}
 
+	val = get_param(cmd, "MBSSID");
+	if (val) {
+		if (strcasecmp(val, "enable") == 0) {
+			dut->ap_mbssid = VALUE_ENABLED;
+		} else if (strcasecmp(val, "disable") == 0) {
+			dut->ap_mbssid = VALUE_DISABLED;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported MBSSID Value");
+			return STATUS_SENT_ERROR;
+		}
+	}
+
 	return SUCCESS_SEND_STATUS;
 }
 
@@ -2339,6 +2352,19 @@ static enum sigma_cmd_result cmd_ap_set_radius(struct sigma_dut *dut,
 }
 
 
+static void owrt_ap_set_qcawifi(struct sigma_dut *dut, const char *key,
+				const char *val)
+{
+	if (!val) {
+		run_system_wrapper(dut, "uci delete wireless.qcawifi.%s", key);
+		return;
+	}
+
+	run_system(dut, "uci set wireless.qcawifi=qcawifi");
+	run_system_wrapper(dut, "uci set wireless.qcawifi.%s=%s", key, val);
+}
+
+
 static void owrt_ap_set_radio(struct sigma_dut *dut, int id,
 			      const char *key, const char *val)
 {
@@ -2446,7 +2472,7 @@ static void owrt_ap_add_vap(struct sigma_dut *dut, int id, const char *key,
 
 
 #define OPENWRT_MAX_NUM_RADIOS (MAX_RADIO + 1)
-static void owrt_ap_config_radio(struct sigma_dut *dut)
+static int owrt_ap_config_radio(struct sigma_dut *dut)
 {
 	int radio_id[MAX_RADIO] = { 0, 1, 2 };
 	int radio_count, radio_no;
@@ -2491,7 +2517,7 @@ static void owrt_ap_config_radio(struct sigma_dut *dut)
 	case AP_inval:
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"MODE NOT SPECIFIED!");
-		return;
+		return -1;
 	default:
 		owrt_ap_set_radio(dut, radio_id[0], "hwmode", "11ng");
 		owrt_ap_set_radio(dut, radio_id[0], "htmode", "HT20");
@@ -2525,7 +2551,7 @@ static void owrt_ap_config_radio(struct sigma_dut *dut)
 		case AP_inval:
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"MODE NOT SPECIFIED!");
-			return;
+			return -1;
 		default:
 			owrt_ap_set_radio(dut, radio_id[1], "hwmode", "11ng");
 			owrt_ap_set_radio(dut, radio_id[1], "htmode", "HT20");
@@ -2593,6 +2619,11 @@ static void owrt_ap_config_radio(struct sigma_dut *dut)
 	if (dut->ap_oce == VALUE_ENABLED &&
 	    get_driver_type() == DRIVER_OPENWRT)
 		owrt_ap_set_radio(dut, radio_id[0], "bcnburst", "1");
+
+	if (dut->ap_mbssid == VALUE_ENABLED)
+		owrt_ap_set_qcawifi(dut, "mbss_ie_enable", "1");
+
+	return 1;
 }
 
 
@@ -4015,7 +4046,8 @@ static int cmd_owrt_ap_config_commit(struct sigma_dut *dut,
 	}
 
 	/* Configure Radio & VAP, commit the config */
-	owrt_ap_config_radio(dut);
+	if (owrt_ap_config_radio(dut) < 0)
+		return ERROR_SEND_STATUS;
 	if (owrt_ap_config_vap(dut) < 0)
 		return ERROR_SEND_STATUS;
 	run_system(dut, "uci commit");
@@ -6230,6 +6262,19 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 		run_iwpriv(dut, ifname, "he_rtsthrshld 512");
 	else if (dut->ap_he_rtsthrshld == VALUE_DISABLED)
 		run_iwpriv(dut, ifname, "he_rtsthrshld 1024");
+
+	if (dut->ap_mbssid == VALUE_ENABLED &&
+	    (dut->ap_rx_streams || dut->ap_tx_streams) &&
+	    dut->device_type == AP_testbed) {
+		const char *ifname_1;
+
+		ifname_1= dut->ap_channel >= 36 ? "ath01" : "ath11";
+
+		/* NSS is not set in Secondary VAP for MBSSID case,
+		 * hence it is explicitly set here. For primary VAP
+		 * NSS is set during AP configuration */
+		run_iwpriv(dut, ifname_1, "nss %d", dut->ap_rx_streams);
+	}
 }
 
 
@@ -8519,6 +8564,7 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 	dut->ap_mu_edca = VALUE_DISABLED;
 	dut->ap_he_mimo = MIMO_NOT_SET;
 	dut->ap_he_rtsthrshld = VALUE_NOT_SET;
+	dut->ap_mbssid = VALUE_DISABLED;
 	if (dut->device_type == AP_testbed) {
 		dut->ap_he_dlofdma = VALUE_DISABLED;
 		dut->ap_he_frag = VALUE_DISABLED;
