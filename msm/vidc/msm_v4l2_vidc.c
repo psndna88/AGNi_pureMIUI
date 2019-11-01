@@ -421,6 +421,9 @@ static int msm_vidc_register_video_device(enum session_type sess_type,
 	core->vdev[sess_type].vdev.vfl_dir = VFL_DIR_M2M;
 	core->vdev[sess_type].type = sess_type;
 	core->vdev[sess_type].vdev.v4l2_dev = &core->v4l2_dev;
+	core->vdev[sess_type].vdev.device_caps =
+		V4L2_CAP_VIDEO_CAPTURE_MPLANE | V4L2_CAP_VIDEO_OUTPUT_MPLANE |
+		V4L2_CAP_STREAMING;
 	rc = video_register_device(&core->vdev[sess_type].vdev,
 					VFL_TYPE_GRABBER, nr);
 	if (rc) {
