@@ -1709,6 +1709,19 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		}
 	}
 
+	val = get_param(cmd, "TWT_RespSupport");
+	if (val) {
+		if (strcasecmp(val, "enable") == 0) {
+			dut->ap_twtresp = VALUE_ENABLED;
+		} else if (strcasecmp(val, "disable") == 0) {
+			dut->ap_twtresp = VALUE_DISABLED;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported TWT_RespSupport value");
+			return STATUS_SENT_ERROR;
+		}
+	}
+
 	return SUCCESS_SEND_STATUS;
 }
 
@@ -6275,6 +6288,11 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 		 * NSS is set during AP configuration */
 		run_iwpriv(dut, ifname_1, "nss %d", dut->ap_rx_streams);
 	}
+
+	if (dut->ap_twtresp == VALUE_ENABLED)
+		run_iwpriv(dut, ifname, "twt_responder 1");
+	else if (dut->ap_twtresp == VALUE_DISABLED)
+		run_iwpriv(dut, ifname, "twt_responder 0");
 }
 
 
@@ -8568,10 +8586,12 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 	if (dut->device_type == AP_testbed) {
 		dut->ap_he_dlofdma = VALUE_DISABLED;
 		dut->ap_he_frag = VALUE_DISABLED;
+		dut->ap_twtresp = VALUE_DISABLED;
 	} else {
 		dut->ap_he_dlofdma = VALUE_NOT_SET;
 		dut->ap_he_frag = VALUE_NOT_SET;
 		dut->ap_ba_bufsize = BA_BUFSIZE_NOT_SET;
+		dut->ap_twtresp = VALUE_NOT_SET;
 	}
 
 	if (dut->program == PROGRAM_HE) {
