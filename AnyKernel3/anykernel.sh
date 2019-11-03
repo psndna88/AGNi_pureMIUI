@@ -4,7 +4,7 @@
 ## AnyKernel setup
 # begin properties
 properties() { '
-kernel.string=Escrima-X28-Bloody-Mod
+kernel.string=Bloody-Kernel-Mod-x69
 do.devicecheck=1
 do.modules=0
 do.cleanup=1
