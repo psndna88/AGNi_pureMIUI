@@ -16,8 +16,7 @@
 #include <media/cam_sensor.h>
 #include <media/cam_req_mgr.h>
 
-#define MAX_REGULATOR 5
-#define MAX_POWER_CONFIG 12
+#define MAX_POWER_CONFIG    12
 
 #define MAX_PER_FRAME_ARRAY 32
 #define BATCH_SIZE_MAX      16
@@ -142,6 +141,7 @@ enum msm_camera_power_seq_type {
 	SENSOR_STANDBY,
 	SENSOR_CUSTOM_GPIO1,
 	SENSOR_CUSTOM_GPIO2,
+	SENSOR_VANA1,
 	SENSOR_SEQ_TYPE_MAX,
 };
 
