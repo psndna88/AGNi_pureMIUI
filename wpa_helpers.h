@@ -10,9 +10,9 @@
 #ifndef WPA_HELPERS_H
 #define WPA_HELPERS_H
 
-char * get_main_ifname(void);
-char * get_station_ifname(void);
-const char * get_p2p_ifname(const char *primary_ifname);
+const char * get_main_ifname(struct sigma_dut *dut);
+const char * get_station_ifname(struct sigma_dut *dut);
+const char * get_p2p_ifname(struct sigma_dut *dut, const char *primary_ifname);
 void dut_ifc_reset(struct sigma_dut *dut);
 
 int wpa_command(const char *ifname, const char *cmd);

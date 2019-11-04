@@ -23,9 +23,9 @@ extern char *client_socket_path;
 extern char *sigma_hapd_ctrl;
 
 
-char * get_main_ifname(void)
+const char * get_main_ifname(struct sigma_dut *dut)
 {
-	enum driver_type drv = get_driver_type();
+	enum driver_type drv = get_driver_type(dut);
 	enum openwrt_driver_type openwrt_drv = get_openwrt_driver_type();
 
 	if (sigma_main_ifname)
@@ -61,7 +61,7 @@ char * get_main_ifname(void)
 }
 
 
-char * get_station_ifname(void)
+const char * get_station_ifname(struct sigma_dut *dut)
 {
 	if (sigma_station_ifname)
 		return sigma_station_ifname;
@@ -81,22 +81,22 @@ char * get_station_ifname(void)
 }
 
 
-const char * get_p2p_ifname(const char *primary_ifname)
+const char * get_p2p_ifname(struct sigma_dut *dut, const char *primary_ifname)
 {
-	if (strcmp(get_station_ifname(), primary_ifname) != 0)
+	if (strcmp(get_station_ifname(dut), primary_ifname) != 0)
 		return primary_ifname;
 
 	if (sigma_p2p_ifname)
 		return sigma_p2p_ifname;
 
-	return get_station_ifname();
+	return get_station_ifname(dut);
 }
 
 
 void dut_ifc_reset(struct sigma_dut *dut)
 {
 	char buf[256];
-	char *ifc = get_station_ifname();
+	const char *ifc = get_station_ifname(dut);
 
 	snprintf(buf, sizeof(buf), "ifconfig %s down", ifc);
 	run_system(dut, buf);
@@ -663,7 +663,7 @@ int start_sta_mode(struct sigma_dut *dut)
 {
 	FILE *f;
 	char buf[256];
-	char *ifname;
+	const char *ifname;
 	char *tmp, *pos;
 
 	if (dut->mode == SIGMA_MODE_STATION)
@@ -700,7 +700,7 @@ int start_sta_mode(struct sigma_dut *dut)
 
 	dut->mode = SIGMA_MODE_STATION;
 
-	ifname = get_main_ifname();
+	ifname = get_main_ifname(dut);
 	if (wpa_command(ifname, "PING") == 0)
 		return 0; /* wpa_supplicant is already running */
 
@@ -763,7 +763,7 @@ int start_sta_mode(struct sigma_dut *dut)
 void stop_sta_mode(struct sigma_dut *dut)
 {
 	if (is_60g_sigma_dut(dut)) {
-		wpa_command(get_main_ifname(), "TERMINATE");
+		wpa_command(get_main_ifname(dut), "TERMINATE");
 		return;
 	}
 

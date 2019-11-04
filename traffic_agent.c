@@ -1205,7 +1205,7 @@ cmd_traffic_agent_receive_start(struct sigma_dut *dut, struct sigma_conn *conn,
 		 */
 		s->dut = dut;
 		val = get_param(cmd, "Interface");
-		strlcpy(s->ifname, (val ? val : get_station_ifname()),
+		strlcpy(s->ifname, (val ? val : get_station_ifname(dut)),
 			sizeof(s->ifname));
 
 		sigma_dut_print(dut, DUT_MSG_DEBUG, "Traffic agent: start "

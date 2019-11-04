@@ -193,7 +193,7 @@ static int miracast_start_dhcp_client(struct sigma_dut *dut, const char *ifname)
 }
 
 
-static void miracast_stop_dhcp_client(struct sigma_dut *dut, char *ifname)
+static void miracast_stop_dhcp_client(struct sigma_dut *dut, const char *ifname)
 {
 #ifdef MIRACAST_DHCP_M
 	stop_dhcp(dut, ifname, 0);
@@ -859,10 +859,10 @@ int miracast_preset_testparameters(struct sigma_dut *dut,
 }
 
 
-static int get_p2p_peers(char *respbuf, size_t bufsize)
+static int get_p2p_peers(struct sigma_dut *dut, char *respbuf, size_t bufsize)
 {
 	char addr[1024], cmd[64];
-	char *intf = get_main_ifname();
+	const char *intf = get_main_ifname(dut);
 	int ret;
 	char *pos, *end;
 
@@ -911,7 +911,7 @@ int miracast_cmd_sta_get_parameter(struct sigma_dut *dut,
 		int len = strlen("DeviceList,");
 
 		snprintf(resp_buf, sizeof(resp_buf), "DeviceList,");
-		get_p2p_peers(resp_buf + len, 1024 - len);
+		get_p2p_peers(dut, resp_buf + len, 1024 - len);
 	} else {
 		send_resp(dut, conn, SIGMA_ERROR, "Invalid Parameter");
 		return 0;

@@ -45,7 +45,7 @@ int set_wifi_chip(const char *chip_type)
 }
 
 
-enum driver_type get_driver_type(void)
+enum driver_type get_driver_type(struct sigma_dut *dut)
 {
 	struct stat s;
 	if (wifi_chip_type == DRIVER_NOT_SET) {
@@ -53,7 +53,7 @@ enum driver_type get_driver_type(void)
 		ssize_t len;
 		char link[256];
 		char buf[256];
-		char *ifname = get_station_ifname();
+		const char *ifname = get_station_ifname(dut);
 
 		snprintf(buf, sizeof(buf), "/sys/class/net/%s/device/driver",
 			 ifname);
@@ -220,7 +220,7 @@ int is_60g_sigma_dut(struct sigma_dut *dut)
 {
 	return dut->program == PROGRAM_60GHZ ||
 		(dut->program == PROGRAM_WPS &&
-		 (get_driver_type() == DRIVER_WIL6210));
+		 (get_driver_type(dut) == DRIVER_WIL6210));
 }
 
 

@@ -26,7 +26,7 @@ static struct sigma_dut sigma_dut;
 char *sigma_main_ifname = NULL;
 char *sigma_radio_ifname[MAX_RADIO] = {};
 char *sigma_station_ifname = NULL;
-char *sigma_p2p_ifname = NULL;
+const char *sigma_p2p_ifname = NULL;
 static char *sigma_p2p_ifname_buf = NULL;
 char *sigma_wpas_ctrl = "/var/run/wpa_supplicant/";
 char *sigma_hapd_ctrl = NULL;
@@ -400,7 +400,7 @@ static void process_cmd(struct sigma_dut *dut, struct sigma_conn *conn,
 	sigma_dut_summary(dut, "CAPI cmd: %s", buf);
 	snprintf(txt, sizeof(txt), "NOTE CAPI:%s", buf);
 	txt[sizeof(txt) - 1] = '\0';
-	wpa_command(get_main_ifname(), txt);
+	wpa_command(get_main_ifname(dut), txt);
 
 	memset(&c, 0, sizeof(c));
 	cmd = buf;
@@ -753,7 +753,7 @@ static int run_local_cmd(int port, char *lcmd)
 }
 
 
-static char * determine_sigma_p2p_ifname(void)
+static const char * determine_sigma_p2p_ifname(struct sigma_dut *dut)
 {
 	char buf[256];
 	struct wpa_ctrl *ctrl;
@@ -761,7 +761,7 @@ static char * determine_sigma_p2p_ifname(void)
 	if (sigma_p2p_ifname)
 		return sigma_p2p_ifname;
 
-	snprintf(buf, sizeof(buf), "p2p-dev-%s", get_station_ifname());
+	snprintf(buf, sizeof(buf), "p2p-dev-%s", get_station_ifname(dut));
 	ctrl = open_wpa_mon(buf);
 	if (ctrl) {
 		wpa_ctrl_detach(ctrl);
@@ -771,9 +771,9 @@ static char * determine_sigma_p2p_ifname(void)
 		sigma_dut_print(&sigma_dut, DUT_MSG_INFO,
 				"Using interface %s for P2P operations instead of interface %s",
 				sigma_p2p_ifname ? sigma_p2p_ifname : "NULL",
-				get_station_ifname());
+				get_station_ifname(dut));
 	} else {
-		sigma_p2p_ifname = get_station_ifname();
+		sigma_p2p_ifname = get_station_ifname(dut);
 	}
 
 	return sigma_p2p_ifname;
@@ -1156,7 +1156,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	sigma_dut.p2p_ifname = determine_sigma_p2p_ifname();
+	sigma_dut.p2p_ifname = determine_sigma_p2p_ifname(&sigma_dut);
 #ifdef MIRACAST
 	miracast_init(&sigma_dut);
 #endif /* MIRACAST */

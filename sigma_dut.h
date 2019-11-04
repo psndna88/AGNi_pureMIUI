@@ -387,7 +387,7 @@ struct sigma_dut {
 
 	int go;
 	int p2p_client;
-	char *p2p_ifname;
+	const char *p2p_ifname;
 
 	int client_uapsd;
 
@@ -981,7 +981,7 @@ enum openwrt_driver_type {
 #define DRIVER_NAME_60G "wil6210"
 
 int set_wifi_chip(const char *chip_type);
-enum driver_type get_driver_type(void);
+enum driver_type get_driver_type(struct sigma_dut *dut);
 enum openwrt_driver_type get_openwrt_driver_type(void);
 int file_exists(const char *fname);
 

@@ -27,7 +27,7 @@ static enum sigma_cmd_result cmd_ca_get_version(struct sigma_dut *dut,
 	if (info) {
 		char buf[200];
 		snprintf(buf, sizeof(buf), "NOTE CAPI:TestInfo:%s", info);
-		wpa_command(get_main_ifname(), buf);
+		wpa_command(get_main_ifname(dut), buf);
 	}
 
 	send_resp(dut, conn, SIGMA_COMPLETE, "version,1.0");
@@ -97,14 +97,14 @@ static enum sigma_cmd_result cmd_device_get_info(struct sigma_dut *dut,
 		char host_fw_ver[128];
 
 		snprintf(path, sizeof(path), "/sys/class/net/%s/phy80211",
-			 get_main_ifname());
+			 get_main_ifname(dut));
 		if (stat(path, &s) == 0) {
 			ssize_t res;
 			char *pos;
 
 			res = snprintf(fname, sizeof(fname),
 				       "/sys/class/net/%s/device/driver",
-				       get_main_ifname());
+				       get_main_ifname(dut));
 			if (res < 0 || res >= sizeof(fname)) {
 				model = "Linux/";
 			} else if ((res = readlink(fname, path,
@@ -154,11 +154,11 @@ static enum sigma_cmd_result cmd_device_get_info(struct sigma_dut *dut,
 				sizeof(wpa_supplicant_ver));
 
 		host_fw_ver[0] = '\0';
-		if (get_driver_type() == DRIVER_WCN ||
-		    get_driver_type() == DRIVER_LINUX_WCN) {
+		if (get_driver_type(dut) == DRIVER_WCN ||
+		    get_driver_type(dut) == DRIVER_LINUX_WCN) {
 			get_ver("iwpriv wlan0 version", host_fw_ver,
 				sizeof(host_fw_ver));
-		} else if (get_driver_type() == DRIVER_WIL6210) {
+		} else if (get_driver_type(dut) == DRIVER_WIL6210) {
 			struct ethtool_drvinfo drvinfo;
 			struct ifreq ifr; /* ifreq suitable for ethtool ioctl */
 			int fd; /* socket suitable for ethtool ioctl */
@@ -167,7 +167,7 @@ static enum sigma_cmd_result cmd_device_get_info(struct sigma_dut *dut,
 			drvinfo.cmd = ETHTOOL_GDRVINFO;
 
 			memset(&ifr, 0, sizeof(ifr));
-			strlcpy(ifr.ifr_name, get_main_ifname(),
+			strlcpy(ifr.ifr_name, get_main_ifname(dut),
 				sizeof(ifr.ifr_name));
 
 			fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -236,8 +236,8 @@ static enum sigma_cmd_result cmd_device_list_interfaces(struct sigma_dut *dut,
 	if (strcmp(type, "802.11") != 0)
 		return ERROR_SEND_STATUS;
 
-	snprintf(resp, sizeof(resp), "interfaceType,802.11,"
-		 "interfaceID,%s", get_main_ifname());
+	snprintf(resp, sizeof(resp), "interfaceType,802.11,interfaceID,%s",
+		 get_main_ifname(dut));
 	send_resp(dut, conn, SIGMA_COMPLETE, resp);
 	return STATUS_SENT;
 }
