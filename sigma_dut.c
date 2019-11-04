@@ -878,6 +878,41 @@ static void print_license(void)
 }
 
 
+static void usage(void)
+{
+	printf("usage: sigma_dut [-aABdfGqDIntuVW] [-p<port>] "
+	       "[-s<sniffer>] [-m<set_maccaddr.sh>] \\\n"
+	       "       [-M<main ifname>] [-R<radio ifname>] "
+	       "[-S<station ifname>] [-P<p2p_ifname>]\\\n"
+	       "       [-T<throughput pktsize>] \\\n"
+	       "       [-w<wpa_supplicant/hostapd ctrl_iface dir>] \\\n"
+	       "       [-H <hostapd log file>] \\\n"
+	       "       [-F <hostapd binary path>] \\\n"
+	       "       [-j <hostapd ifname>] \\\n"
+	       "       [-J <wpa_supplicant debug log>] \\\n"
+	       "       [-C <certificate path>] \\\n"
+	       "       [-v <version string>] \\\n"
+	       "       [-L <summary log>] \\\n"
+	       "       [-c <wifi chip type: WCN or ATHEROS or "
+	       "AR6003 or MAC80211 or QNXNTO or OPENWRT or LINUX-WCN>] \\\n"
+	       "       [-i <IP address of the AP>] \\\n"
+	       "       [-k <subnet mask for the AP>] \\\n"
+	       "       [-K <sigma_dut log file directory>] \\\n"
+	       "       [-e <hostapd entropy file>] \\\n"
+	       "       [-N <device_get_info vendor>] \\\n"
+	       "       [-o <device_get_info model>] \\\n"
+	       "       [-O <device_get_info version>] \\\n"
+#ifdef MIRACAST
+	       "       [-x <sink|source>] \\\n"
+	       "       [-y <Miracast library path>] \\\n"
+#endif /* MIRACAST */
+	       "       [-z <client socket directory path \\\n"
+	       "       Ex: </data/vendor/wifi/sockets>] \\\n"
+	       "       [-r <HT40 or 2.4_HT40>]\n");
+	printf("local command: sigma_dut [-p<port>] <-l<cmd>>\n");
+}
+
+
 int main(int argc, char *argv[])
 {
 	int c;
@@ -1088,40 +1123,7 @@ int main(int argc, char *argv[])
 			break;
 		case 'h':
 		default:
-			printf("usage: sigma_dut [-aABdfGqDIntuVW] [-p<port>] "
-			       "[-s<sniffer>] [-m<set_maccaddr.sh>] \\\n"
-				"       [-M<main ifname>] [-R<radio ifname>] "
-			       "[-S<station ifname>] [-P<p2p_ifname>]\\\n"
-			       "       [-T<throughput pktsize>] \\\n"
-			       "       [-w<wpa_supplicant/hostapd ctrl_iface "
-			       "dir>] \\\n"
-			       "       [-H <hostapd log file>] \\\n"
-			       "       [-F <hostapd binary path>] \\\n"
-			       "       [-j <hostapd ifname>] \\\n"
-			       "       [-J <wpa_supplicant debug log>] \\\n"
-			       "       [-C <certificate path>] \\\n"
-			       "       [-v <version string>] \\\n"
-			       "       [-L <summary log>] \\\n"
-			       "       [-c <wifi chip type: WCN or ATHEROS or "
-			       "AR6003 or MAC80211 or QNXNTO or OPENWRT or "
-			       "LINUX-WCN>] "
-			       "\\\n"
-			       "       [-i <IP address of the AP>] \\\n"
-			       "       [-k <subnet mask for the AP>] \\\n"
-			       "       [-K <sigma_dut log file directory>] \\\n"
-			       "       [-e <hostapd entropy file>] \\\n"
-			       "       [-N <device_get_info vendor>] \\\n"
-			       "       [-o <device_get_info model>] \\\n"
-			       "       [-O <device_get_info version>] \\\n"
-#ifdef MIRACAST
-			       "       [-x <sink|source>] \\\n"
-			       "       [-y <Miracast library path>] \\\n"
-#endif /* MIRACAST */
-			       "       [-z <client socket directory path \\\n"
-			       "       Ex: </data/vendor/wifi/sockets>] \\\n"
-			       "       [-r <HT40 or 2.4_HT40>]\n");
-			printf("local command: sigma_dut [-p<port>] "
-			       "<-l<cmd>>\n");
+			usage();
 			exit(0);
 			break;
 		}
