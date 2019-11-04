@@ -15,7 +15,6 @@
 
 #define DEFAULT_HAPD_CTRL_PATH "/var/run/hostapd/"
 
-extern char *sigma_p2p_ifname;
 extern char *sigma_wpas_ctrl;
 extern char *client_socket_path;
 extern char *sigma_hapd_ctrl;
@@ -84,8 +83,8 @@ const char * get_p2p_ifname(struct sigma_dut *dut, const char *primary_ifname)
 	if (strcmp(get_station_ifname(dut), primary_ifname) != 0)
 		return primary_ifname;
 
-	if (sigma_p2p_ifname)
-		return sigma_p2p_ifname;
+	if (dut->p2p_ifname)
+		return dut->p2p_ifname;
 
 	return get_station_ifname(dut);
 }

@@ -24,8 +24,6 @@ extern enum driver_type wifi_chip_type;
 static struct sigma_dut sigma_dut;
 
 char *sigma_radio_ifname[MAX_RADIO] = {};
-const char *sigma_p2p_ifname = NULL;
-static char *sigma_p2p_ifname_buf = NULL;
 char *sigma_wpas_ctrl = "/var/run/wpa_supplicant/";
 char *sigma_hapd_ctrl = NULL;
 char *client_socket_path = NULL;
@@ -751,30 +749,28 @@ static int run_local_cmd(int port, char *lcmd)
 }
 
 
-static const char * determine_sigma_p2p_ifname(struct sigma_dut *dut)
+static void determine_sigma_p2p_ifname(struct sigma_dut *dut)
 {
 	char buf[256];
 	struct wpa_ctrl *ctrl;
 
-	if (sigma_p2p_ifname)
-		return sigma_p2p_ifname;
+	if (dut->p2p_ifname)
+		return;
 
 	snprintf(buf, sizeof(buf), "p2p-dev-%s", get_station_ifname(dut));
 	ctrl = open_wpa_mon(buf);
 	if (ctrl) {
 		wpa_ctrl_detach(ctrl);
 		wpa_ctrl_close(ctrl);
-		sigma_p2p_ifname_buf = strdup(buf);
-		sigma_p2p_ifname = sigma_p2p_ifname_buf;
+		dut->p2p_ifname_buf = strdup(buf);
+		dut->p2p_ifname = dut->p2p_ifname_buf;
 		sigma_dut_print(&sigma_dut, DUT_MSG_INFO,
 				"Using interface %s for P2P operations instead of interface %s",
-				sigma_p2p_ifname ? sigma_p2p_ifname : "NULL",
+				dut->p2p_ifname ? dut->p2p_ifname : "NULL",
 				get_station_ifname(dut));
 	} else {
-		sigma_p2p_ifname = get_station_ifname(dut);
+		dut->p2p_ifname = get_station_ifname(dut);
 	}
-
-	return sigma_p2p_ifname;
 }
 
 
@@ -851,6 +847,8 @@ static void deinit_sigma_dut(struct sigma_dut *dut)
 		fclose(dut->log_file_fd);
 		dut->log_file_fd = NULL;
 	}
+	free(dut->p2p_ifname_buf);
+	dut->p2p_ifname_buf = NULL;
 }
 
 
@@ -1025,7 +1023,7 @@ int main(int argc, char *argv[])
 			port = atoi(optarg);
 			break;
 		case 'P':
-			sigma_p2p_ifname = optarg;
+			sigma_dut.p2p_ifname = optarg;
 			break;
 		case 'q':
 			sigma_dut.debug_level++;
@@ -1154,7 +1152,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	sigma_dut.p2p_ifname = determine_sigma_p2p_ifname(&sigma_dut);
+	determine_sigma_p2p_ifname(&sigma_dut);
 #ifdef MIRACAST
 	miracast_init(&sigma_dut);
 #endif /* MIRACAST */
@@ -1233,7 +1231,6 @@ int main(int argc, char *argv[])
 	sniffer_close(&sigma_dut);
 #endif /* CONFIG_SNIFFER */
 
-	free(sigma_p2p_ifname_buf);
 	close_socket(&sigma_dut);
 #ifdef MIRACAST
 	miracast_deinit(&sigma_dut);
