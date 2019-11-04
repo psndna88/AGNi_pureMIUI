@@ -810,6 +810,15 @@ static int get_nl80211_config_enable_option(struct sigma_dut *dut)
 
 static void set_defaults(struct sigma_dut *dut)
 {
+	dut->debug_level = DUT_MSG_INFO;
+	dut->default_timeout = 120;
+	dut->dialog_token = 0;
+	dut->dpp_conf_id = -1;
+	dut->dpp_local_bootstrap = -1;
+	dut->sta_nss = 2; /* Make default nss 2 */
+	dut->trans_proto = NAN_TRANSPORT_PROTOCOL_DEFAULT;
+	dut->trans_port = NAN_TRANSPORT_PORT_DEFAULT;
+	dut->nan_ipv6_len = 0;
 	dut->ap_p2p_cross_connect = -1;
 	dut->ap_chwidth = AP_AUTO;
 	dut->default_11na_ap_chwidth = AP_AUTO;
@@ -883,15 +892,6 @@ int main(int argc, char *argv[])
 #endif /* __QNXNTO__ */
 
 	memset(&sigma_dut, 0, sizeof(sigma_dut));
-	sigma_dut.debug_level = DUT_MSG_INFO;
-	sigma_dut.default_timeout = 120;
-	sigma_dut.dialog_token = 0;
-	sigma_dut.dpp_conf_id = -1;
-	sigma_dut.dpp_local_bootstrap = -1;
-	sigma_dut.sta_nss = 2; /* Make default nss 2 */
-	sigma_dut.trans_proto = NAN_TRANSPORT_PROTOCOL_DEFAULT;
-	sigma_dut.trans_port = NAN_TRANSPORT_PORT_DEFAULT;
-	sigma_dut.nan_ipv6_len = 0;
 	set_defaults(&sigma_dut);
 
 	for (;;) {
