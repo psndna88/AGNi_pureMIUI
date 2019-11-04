@@ -25,8 +25,13 @@ const char * get_main_ifname(struct sigma_dut *dut)
 	enum driver_type drv = get_driver_type(dut);
 	enum openwrt_driver_type openwrt_drv = get_openwrt_driver_type();
 
-	if (dut->main_ifname)
+	if (dut->main_ifname) {
+		if (dut->use_5g && dut->main_ifname_5g)
+			return dut->main_ifname_5g;
+		if (!dut->use_5g && dut->main_ifname_2g)
+			return dut->main_ifname_2g;
 		return dut->main_ifname;
+	}
 
 	if (drv == DRIVER_ATHEROS || openwrt_drv == OPENWRT_DRIVER_ATHEROS) {
 		if (if_nametoindex("ath2") > 0)
@@ -60,8 +65,13 @@ const char * get_main_ifname(struct sigma_dut *dut)
 
 const char * get_station_ifname(struct sigma_dut *dut)
 {
-	if (dut->station_ifname)
+	if (dut->station_ifname) {
+		if (dut->use_5g && dut->station_ifname_5g)
+			return dut->station_ifname_5g;
+		if (!dut->use_5g && dut->station_ifname_2g)
+			return dut->station_ifname_2g;
 		return dut->station_ifname;
+	}
 
 	/*
 	 * If we have both wlan0 and wlan1, assume the first one is the station

@@ -849,6 +849,52 @@ static void deinit_sigma_dut(struct sigma_dut *dut)
 	}
 	free(dut->p2p_ifname_buf);
 	dut->p2p_ifname_buf = NULL;
+	free(dut->main_ifname_2g);
+	dut->main_ifname_2g = NULL;
+	free(dut->main_ifname_5g);
+	dut->main_ifname_5g = NULL;
+	free(dut->station_ifname_2g);
+	dut->station_ifname_2g = NULL;
+	free(dut->station_ifname_5g);
+	dut->station_ifname_5g = NULL;
+}
+
+
+static void set_main_ifname(struct sigma_dut *dut, const char *val)
+{
+	const char *pos;
+
+	dut->main_ifname = optarg;
+	pos = strchr(val, '/');
+	if (!pos)
+		return;
+	free(dut->main_ifname_2g);
+	dut->main_ifname_2g = malloc(pos - val + 1);
+	if (dut->main_ifname_2g) {
+		memcpy(dut->main_ifname_2g, val, pos - val);
+		dut->main_ifname_2g[pos - val] = '\0';
+	}
+	free(dut->main_ifname_5g);
+	dut->main_ifname_5g = strdup(pos + 1);
+}
+
+
+static void set_station_ifname(struct sigma_dut *dut, const char *val)
+{
+	const char *pos;
+
+	dut->station_ifname = optarg;
+	pos = strchr(val, '/');
+	if (!pos)
+		return;
+	free(dut->station_ifname_2g);
+	dut->station_ifname_2g = malloc(pos - val + 1);
+	if (dut->station_ifname_2g) {
+		memcpy(dut->station_ifname_2g, val, pos - val);
+		dut->station_ifname_2g[pos - val] = '\0';
+	}
+	free(dut->station_ifname_5g);
+	dut->station_ifname_5g = strdup(pos + 1);
 }
 
 
@@ -1068,7 +1114,7 @@ int main(int argc, char *argv[])
 			sigma_dut.set_macaddr = optarg;
 			break;
 		case 'M':
-			sigma_dut.main_ifname = optarg;
+			set_main_ifname(&sigma_dut, optarg);
 			break;
 		case 'n':
 			sigma_dut.no_ip_addr_set = 1;
@@ -1086,7 +1132,7 @@ int main(int argc, char *argv[])
 			sigma_dut.log_file_dir = optarg;
 			break;
 		case 'S':
-			sigma_dut.station_ifname = optarg;
+			set_station_ifname(&sigma_dut, optarg);
 			break;
 		case 'w':
 			sigma_hapd_ctrl = optarg;

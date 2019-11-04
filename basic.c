@@ -225,7 +225,7 @@ static enum sigma_cmd_result cmd_device_list_interfaces(struct sigma_dut *dut,
 							struct sigma_conn *conn,
 							struct sigma_cmd *cmd)
 {
-	const char *type;
+	const char *type, *band;
 	char resp[200];
 
 	type = get_param(cmd, "interfaceType");
@@ -236,6 +236,17 @@ static enum sigma_cmd_result cmd_device_list_interfaces(struct sigma_dut *dut,
 	if (strcmp(type, "802.11") != 0)
 		return ERROR_SEND_STATUS;
 
+	band = get_param(cmd, "band");
+	if (!band) {
+	} else if (strcasecmp(band, "24g") == 0) {
+		dut->use_5g = 0;
+	} else if (strcasecmp(band, "5g") == 0) {
+		dut->use_5g = 1;
+	} else {
+		send_resp(dut, conn, SIGMA_COMPLETE,
+			  "errorCode,Unsupported band value");
+		return STATUS_SENT_ERROR;
+	}
 	snprintf(resp, sizeof(resp), "interfaceType,802.11,interfaceID,%s",
 		 get_main_ifname(dut));
 	send_resp(dut, conn, SIGMA_COMPLETE, resp);

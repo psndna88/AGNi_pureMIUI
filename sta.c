@@ -7604,6 +7604,13 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 	const char *program = get_param(cmd, "program");
 	const char *dev_role = get_param(cmd, "DevRole");
 
+	if (dut->station_ifname_2g &&
+	    strcmp(dut->station_ifname_2g, intf) == 0)
+		dut->use_5g = 0;
+	else if (dut->station_ifname_5g &&
+		 strcmp(dut->station_ifname_5g, intf) == 0)
+		dut->use_5g = 1;
+
 	if (!program)
 		program = get_param(cmd, "prog");
 	dut->program = sigma_program_to_enum(program);

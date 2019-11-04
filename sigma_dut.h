@@ -337,8 +337,13 @@ enum akm_suite_values {
 
 struct sigma_dut {
 	const char *main_ifname;
+	char *main_ifname_2g;
+	char *main_ifname_5g;
 	const char *station_ifname;
+	char *station_ifname_2g;
+	char *station_ifname_5g;
 	char *p2p_ifname_buf;
+	int use_5g;
 
 	int s; /* server TCP socket */
 	int debug_level;
