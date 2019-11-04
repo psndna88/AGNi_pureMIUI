@@ -99,7 +99,6 @@
 #define IEEE80211_SNAP_LEN_DMG 8
 #endif /* IEEE80211_SNAP_LEN_DMG */
 
-extern char *sigma_main_ifname;
 extern char *sigma_wpas_ctrl;
 extern char *sigma_hapd_ctrl;
 extern char *ap_inet_addr;
@@ -4523,7 +4522,7 @@ static int cmd_wcn_ap_config_commit(struct sigma_dut *dut,
 
 	run_ndc(dut, "ndc softap startap");
 
-	snprintf(buf, sizeof(buf), "%s%s", sigma_wpas_ctrl, sigma_main_ifname);
+	snprintf(buf, sizeof(buf), "%s%s", sigma_wpas_ctrl, dut->main_ifname);
 	num_tries = 0;
 	while (num_tries < 10 && (ret = stat(buf, &s) != 0)) {
 		run_ndc(dut, "ndc softap stopap");
@@ -4540,7 +4539,7 @@ static int cmd_wcn_ap_config_commit(struct sigma_dut *dut,
 	sigma_dut_print(dut, DUT_MSG_INFO, "setting ip addr %s mask %s",
 			ap_inet_addr, ap_inet_mask);
 	snprintf(buf, sizeof(buf), "ifconfig %s %s netmask %s up",
-		 sigma_main_ifname, ap_inet_addr, ap_inet_mask);
+		 dut->main_ifname, ap_inet_addr, ap_inet_mask);
 	if (system(buf) != 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Failed to intialize the interface");
@@ -7033,16 +7032,16 @@ enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 	case AP_11ng:
 		ifname = (drv == DRIVER_MAC80211) ? "wlan0" : "ath0";
 		if ((drv == DRIVER_QNXNTO || drv == DRIVER_LINUX_WCN) &&
-		    sigma_main_ifname)
-			ifname = sigma_main_ifname;
+		    dut->main_ifname)
+			ifname = dut->main_ifname;
 		fprintf(f, "hw_mode=g\n");
 		break;
 	case AP_11a:
 	case AP_11na:
 	case AP_11ac:
 		if (drv == DRIVER_QNXNTO || drv == DRIVER_LINUX_WCN) {
-			if (sigma_main_ifname)
-				ifname = sigma_main_ifname;
+			if (dut->main_ifname)
+				ifname = dut->main_ifname;
 			else
 				ifname = "wlan0";
 		} else if (drv == DRIVER_MAC80211) {
@@ -8810,7 +8809,7 @@ static enum sigma_cmd_result cmd_ap_get_info(struct sigma_dut *dut,
 			version = "Unknown";
 		snprintf(resp, sizeof(resp),
 			 "interface,%s_any,agent,1.0,version,%s",
-			 sigma_main_ifname ? sigma_main_ifname : "NA",
+			 dut->main_ifname ? dut->main_ifname : "NA",
 			 version);
 		send_resp(dut, conn, SIGMA_COMPLETE, resp);
 		return 0;
@@ -9788,12 +9787,12 @@ static enum sigma_cmd_result cmd_ap_get_mac_address(struct sigma_dut *dut,
 	char resp[50];
 	unsigned char addr[6];
 
-	if (!sigma_main_ifname) {
+	if (!dut->main_ifname) {
 		send_resp(dut, conn, SIGMA_ERROR, "ifname is null");
 		return 0;
 	}
 
-	if (get_hwaddr(sigma_main_ifname, addr) != 0) {
+	if (get_hwaddr(dut->main_ifname, addr) != 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Failed to get address");
 		return 0;

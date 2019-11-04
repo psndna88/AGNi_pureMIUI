@@ -15,8 +15,6 @@
 
 #define DEFAULT_HAPD_CTRL_PATH "/var/run/hostapd/"
 
-extern char *sigma_main_ifname;
-extern char *sigma_station_ifname;
 extern char *sigma_p2p_ifname;
 extern char *sigma_wpas_ctrl;
 extern char *client_socket_path;
@@ -28,8 +26,8 @@ const char * get_main_ifname(struct sigma_dut *dut)
 	enum driver_type drv = get_driver_type(dut);
 	enum openwrt_driver_type openwrt_drv = get_openwrt_driver_type();
 
-	if (sigma_main_ifname)
-		return sigma_main_ifname;
+	if (dut->main_ifname)
+		return dut->main_ifname;
 
 	if (drv == DRIVER_ATHEROS || openwrt_drv == OPENWRT_DRIVER_ATHEROS) {
 		if (if_nametoindex("ath2") > 0)
@@ -63,8 +61,8 @@ const char * get_main_ifname(struct sigma_dut *dut)
 
 const char * get_station_ifname(struct sigma_dut *dut)
 {
-	if (sigma_station_ifname)
-		return sigma_station_ifname;
+	if (dut->station_ifname)
+		return dut->station_ifname;
 
 	/*
 	 * If we have both wlan0 and wlan1, assume the first one is the station

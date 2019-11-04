@@ -23,9 +23,7 @@ extern enum driver_type wifi_chip_type;
 
 static struct sigma_dut sigma_dut;
 
-char *sigma_main_ifname = NULL;
 char *sigma_radio_ifname[MAX_RADIO] = {};
-char *sigma_station_ifname = NULL;
 const char *sigma_p2p_ifname = NULL;
 static char *sigma_p2p_ifname_buf = NULL;
 char *sigma_wpas_ctrl = "/var/run/wpa_supplicant/";
@@ -1072,7 +1070,7 @@ int main(int argc, char *argv[])
 			sigma_dut.set_macaddr = optarg;
 			break;
 		case 'M':
-			sigma_main_ifname = optarg;
+			sigma_dut.main_ifname = optarg;
 			break;
 		case 'n':
 			sigma_dut.no_ip_addr_set = 1;
@@ -1090,7 +1088,7 @@ int main(int argc, char *argv[])
 			sigma_dut.log_file_dir = optarg;
 			break;
 		case 'S':
-			sigma_station_ifname = optarg;
+			sigma_dut.station_ifname = optarg;
 			break;
 		case 'w':
 			sigma_hapd_ctrl = optarg;
@@ -1165,7 +1163,7 @@ int main(int argc, char *argv[])
 
 	if ((wifi_chip_type == DRIVER_QNXNTO ||
 	     wifi_chip_type == DRIVER_LINUX_WCN) &&
-	    (sigma_main_ifname == NULL || sigma_station_ifname == NULL)) {
+	    (!sigma_dut.main_ifname || !sigma_dut.station_ifname)) {
 		sigma_dut_print(&sigma_dut, DUT_MSG_ERROR,
 				"Interface should be provided for QNX/LINUX-WCN driver - check option M and S");
 	}
