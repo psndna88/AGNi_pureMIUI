@@ -4522,7 +4522,8 @@ static int cmd_wcn_ap_config_commit(struct sigma_dut *dut,
 
 	run_ndc(dut, "ndc softap startap");
 
-	snprintf(buf, sizeof(buf), "%s%s", sigma_wpas_ctrl, dut->main_ifname);
+	snprintf(buf, sizeof(buf), "%s%s", sigma_wpas_ctrl,
+		 get_main_ifname(dut));
 	num_tries = 0;
 	while (num_tries < 10 && (ret = stat(buf, &s) != 0)) {
 		run_ndc(dut, "ndc softap stopap");
@@ -4539,7 +4540,7 @@ static int cmd_wcn_ap_config_commit(struct sigma_dut *dut,
 	sigma_dut_print(dut, DUT_MSG_INFO, "setting ip addr %s mask %s",
 			ap_inet_addr, ap_inet_mask);
 	snprintf(buf, sizeof(buf), "ifconfig %s %s netmask %s up",
-		 dut->main_ifname, ap_inet_addr, ap_inet_mask);
+		 get_main_ifname(dut), ap_inet_addr, ap_inet_mask);
 	if (system(buf) != 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Failed to intialize the interface");
@@ -7033,7 +7034,7 @@ enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 		ifname = (drv == DRIVER_MAC80211) ? "wlan0" : "ath0";
 		if ((drv == DRIVER_QNXNTO || drv == DRIVER_LINUX_WCN) &&
 		    dut->main_ifname)
-			ifname = dut->main_ifname;
+			ifname = get_main_ifname(dut);
 		fprintf(f, "hw_mode=g\n");
 		break;
 	case AP_11a:
@@ -7041,7 +7042,7 @@ enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 	case AP_11ac:
 		if (drv == DRIVER_QNXNTO || drv == DRIVER_LINUX_WCN) {
 			if (dut->main_ifname)
-				ifname = dut->main_ifname;
+				ifname = get_main_ifname(dut);
 			else
 				ifname = "wlan0";
 		} else if (drv == DRIVER_MAC80211) {
@@ -8809,7 +8810,7 @@ static enum sigma_cmd_result cmd_ap_get_info(struct sigma_dut *dut,
 			version = "Unknown";
 		snprintf(resp, sizeof(resp),
 			 "interface,%s_any,agent,1.0,version,%s",
-			 dut->main_ifname ? dut->main_ifname : "NA",
+			 dut->main_ifname ? get_main_ifname(dut) : "NA",
 			 version);
 		send_resp(dut, conn, SIGMA_COMPLETE, resp);
 		return 0;
@@ -9792,7 +9793,7 @@ static enum sigma_cmd_result cmd_ap_get_mac_address(struct sigma_dut *dut,
 		return 0;
 	}
 
-	if (get_hwaddr(dut->main_ifname, addr) != 0) {
+	if (get_hwaddr(get_main_ifname(dut), addr) != 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Failed to get address");
 		return 0;

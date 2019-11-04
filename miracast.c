@@ -405,7 +405,7 @@ static void * miracast_rtsp_thread_entry(void *ptr)
 	miracast_load(dut);
 
 	if (dut->main_ifname) {
-		intf = dut->main_ifname;
+		intf = get_main_ifname(dut);
 		sigma_dut_print(dut, DUT_MSG_DEBUG,
 				"miracast_rtsp_thread_entry: sigma_main_ifname = [%s]",
 				intf);
@@ -513,7 +513,7 @@ static void miracast_set_wfd_ie(struct sigma_dut *sigma_dut)
 	const char *intf = sigma_dut->station_ifname;
 
 	if (sigma_dut->main_ifname != NULL)
-		intf = sigma_dut->main_ifname;
+		intf = get_main_ifname(sigma_dut);
 
 	sigma_dut_print(sigma_dut, DUT_MSG_DEBUG, "miracast_set_wfd_ie() = intf = %s",
 			intf);
@@ -650,7 +650,7 @@ void miracast_sta_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	char string_cmd[MIRACAST_CMD_LEN] = { 0 };
 
 	if (dut->main_ifname != NULL)
-		intf = dut->main_ifname;
+		intf = get_main_ifname(dut);
 	sigma_dut_print(dut, DUT_MSG_DEBUG,
 			"miracast_sta_reset_default() = intf = %s", intf);
 	stop_dhcp(dut, intf, 1); /* IFNAME argument is ignored */
