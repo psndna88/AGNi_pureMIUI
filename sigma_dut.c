@@ -829,6 +829,33 @@ static void set_defaults(struct sigma_dut *dut)
 }
 
 
+static void deinit_sigma_dut(struct sigma_dut *dut)
+{
+	free(dut->non_pref_ch_list);
+	dut->non_pref_ch_list = NULL;
+	free(dut->btm_query_cand_list);
+	dut->btm_query_cand_list = NULL;
+	free(dut->rsne_override);
+	dut->rsne_override = NULL;
+	free(dut->ap_sae_groups);
+	dut->ap_sae_groups = NULL;
+	free(dut->dpp_peer_uri);
+	dut->dpp_peer_uri = NULL;
+	free(dut->ap_sae_passwords);
+	dut->ap_sae_passwords = NULL;
+	free(dut->ar_ltf);
+	dut->ar_ltf = NULL;
+	free(dut->ap_dpp_conf_addr);
+	dut->ap_dpp_conf_addr = NULL;
+	free(dut->ap_dpp_conf_pkhash);
+	dut->ap_dpp_conf_pkhash = NULL;
+	if (dut->log_file_fd) {
+		fclose(dut->log_file_fd);
+		dut->log_file_fd = NULL;
+	}
+}
+
+
 static const char * const license1 =
 "sigma_dut - WFA Sigma DUT/CA\n"
 "----------------------------\n"
@@ -1213,20 +1240,7 @@ int main(int argc, char *argv[])
 #ifdef MIRACAST
 	miracast_deinit(&sigma_dut);
 #endif /* MIRACAST */
-	free(sigma_dut.non_pref_ch_list);
-	sigma_dut.non_pref_ch_list = NULL;
-	free(sigma_dut.btm_query_cand_list);
-	sigma_dut.btm_query_cand_list = NULL;
-	free(sigma_dut.rsne_override);
-	free(sigma_dut.ap_sae_groups);
-	free(sigma_dut.dpp_peer_uri);
-	free(sigma_dut.ap_sae_passwords);
-	free(sigma_dut.ar_ltf);
-	sigma_dut.ar_ltf = NULL;
-	free(sigma_dut.ap_dpp_conf_addr);
-	free(sigma_dut.ap_dpp_conf_pkhash);
-	if (sigma_dut.log_file_fd)
-		fclose(sigma_dut.log_file_fd);
+	deinit_sigma_dut(&sigma_dut);
 #ifdef NL80211_SUPPORT
 	nl80211_deinit(&sigma_dut, sigma_dut.nl_ctx);
 #endif /* NL80211_SUPPORT */
