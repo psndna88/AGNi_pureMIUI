@@ -5623,10 +5623,22 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 	else if (dut->ap_ldpc == VALUE_DISABLED)
 		run_iwpriv(dut, ifname, "ldpc 0");
 
-	if (dut->ap_ampdu == VALUE_ENABLED)
+	if (dut->ap_ampdu == VALUE_ENABLED) {
 		run_iwpriv(dut, ifname, "ampdu 1");
-	else if (dut->ap_ampdu == VALUE_DISABLED)
+	} else if (dut->ap_ampdu == VALUE_DISABLED) {
 		run_iwpriv(dut, ifname, "ampdu 0");
+		if (dut->program == PROGRAM_HE) {
+			run_iwpriv(dut, ifname, "setaddbaoper 1");
+			run_system_wrapper(dut, "wifitool %s refusealladdbas 1",
+					   ifname);
+			if (dut->ap_amsdu == VALUE_ENABLED) {
+				/* disable the limit for A-MSDU */
+				run_system_wrapper(dut,
+						   "wifitool %s setUnitTestCmd 0x48 2 46 1",
+						   ifname);
+			}
+		}
+	}
 
 	if (dut->ap_ampdu_exp) {
 		if (dut->program == PROGRAM_VHT) {
@@ -8604,6 +8616,7 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 	dut->ap_he_mimo = MIMO_NOT_SET;
 	dut->ap_he_rtsthrshld = VALUE_NOT_SET;
 	dut->ap_mbssid = VALUE_DISABLED;
+	dut->ap_ampdu = VALUE_NOT_SET;
 	if (dut->device_type == AP_testbed) {
 		dut->ap_he_dlofdma = VALUE_DISABLED;
 		dut->ap_he_frag = VALUE_DISABLED;
@@ -8619,6 +8632,7 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 		if (dut->device_type == AP_testbed) {
 			dut->ap_ldpc = VALUE_DISABLED;
 			dut->ap_ba_bufsize = BA_BUFSIZE_64;
+			dut->ap_amsdu = VALUE_DISABLED;
 		}
 	}
 
