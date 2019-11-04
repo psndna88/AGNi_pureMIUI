@@ -9,7 +9,7 @@ ifneq (,$(filter $(CONFIG_MSM_GLOBAL_SYNX), y m))
 ccflags-y += -I$(srctree)/drivers/media/platform/msm/synx
 endif
 
-subdir-ccflags-y += -I$(srctree)/techpack/camera/include/uapi/camera
+ccflags-y += -I$(srctree)/techpack/camera/include/uapi/camera
 ccflags-y += -I$(srctree)
 
 camera-y := \
@@ -26,6 +26,7 @@ camera-y := \
 	cam_utils/cam_debug_util.o \
 	cam_utils/cam_trace.o \
 	cam_utils/cam_common_util.o \
+	cam_utils/cam_compat.o \
 	cam_core/cam_context.o \
 	cam_core/cam_context_utils.o \
 	cam_core/cam_node.o \

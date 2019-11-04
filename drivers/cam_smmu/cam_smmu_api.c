@@ -10,13 +10,18 @@
 #include <linux/iommu.h>
 #include <linux/slab.h>
 #include <linux/dma-mapping.h>
+#include <linux/of_address.h>
 #include <linux/msm_dma_iommu_mapping.h>
 #include <linux/workqueue.h>
 #include <linux/genalloc.h>
 #include <linux/debugfs.h>
+
 #include <soc/qcom/scm.h>
 #include <soc/qcom/secure_buffer.h>
+
 #include <media/cam_req_mgr.h>
+
+#include "cam_compat.h"
 #include "cam_smmu_api.h"
 #include "cam_debug_util.h"
 
@@ -36,13 +41,7 @@
 static int g_num_pf_handled = 4;
 module_param(g_num_pf_handled, int, 0644);
 
-struct firmware_alloc_info {
-	struct device *fw_dev;
-	void *fw_kva;
-	dma_addr_t fw_dma_hdl;
-};
-
-struct firmware_alloc_info icp_fw;
+struct cam_fw_alloc_info icp_fw;
 
 struct cam_smmu_work_payload {
 	int idx;
@@ -1172,23 +1171,17 @@ int cam_smmu_alloc_firmware(int32_t smmu_hdl,
 	firmware_start = iommu_cb_set.cb_info[idx].firmware_info.iova_start;
 	CAM_DBG(CAM_SMMU, "Firmware area len from DT = %zu", firmware_len);
 
-	icp_fw.fw_kva = dma_alloc_coherent(icp_fw.fw_dev,
-		firmware_len,
-		&icp_fw.fw_dma_hdl,
-		GFP_KERNEL);
-	if (!icp_fw.fw_kva) {
-		CAM_ERR(CAM_SMMU, "FW memory alloc failed");
-		rc = -ENOMEM;
+	rc = cam_reserve_icp_fw(&icp_fw, firmware_len);
+	if (rc)
 		goto unlock_and_end;
-	} else {
+	else
 		CAM_DBG(CAM_SMMU, "DMA alloc returned fw = %pK, hdl = %pK",
-			icp_fw.fw_kva, (void *)icp_fw.fw_dma_hdl);
-	}
+			icp_fw.fw_kva, (void *)icp_fw.fw_hdl);
 
 	domain = iommu_cb_set.cb_info[idx].domain;
 	rc = iommu_map(domain,
 		firmware_start,
-		icp_fw.fw_dma_hdl,
+		(phys_addr_t) icp_fw.fw_hdl,
 		firmware_len,
 		IOMMU_READ|IOMMU_WRITE|IOMMU_PRIV);
 
@@ -1207,10 +1200,7 @@ int cam_smmu_alloc_firmware(int32_t smmu_hdl,
 	return rc;
 
 alloc_fail:
-	dma_free_coherent(icp_fw.fw_dev,
-		firmware_len,
-		icp_fw.fw_kva,
-		icp_fw.fw_dma_hdl);
+	cam_unreserve_icp_fw(&icp_fw, firmware_len);
 unlock_and_end:
 	mutex_unlock(&iommu_cb_set.cb_info[idx].lock);
 end:
@@ -1270,13 +1260,10 @@ int cam_smmu_dealloc_firmware(int32_t smmu_hdl)
 		rc = -EINVAL;
 	}
 
-	dma_free_coherent(icp_fw.fw_dev,
-		firmware_len,
-		icp_fw.fw_kva,
-		icp_fw.fw_dma_hdl);
+	cam_unreserve_icp_fw(&icp_fw, firmware_len);
 
-	icp_fw.fw_kva = 0;
-	icp_fw.fw_dma_hdl = 0;
+	icp_fw.fw_kva = NULL;
+	icp_fw.fw_hdl = 0;
 
 	iommu_cb_set.cb_info[idx].is_fw_allocated = false;
 
@@ -3184,9 +3171,8 @@ EXPORT_SYMBOL(cam_smmu_destroy_handle);
 
 static void cam_smmu_deinit_cb(struct cam_context_bank_info *cb)
 {
-	if (cb->io_support && cb->domain) {
+	if (cb->io_support && cb->domain)
 		cb->domain = NULL;
-	}
 
 	if (cb->shared_support) {
 		gen_pool_destroy(cb->shared_mem_pool);
@@ -3616,7 +3602,7 @@ static int cam_smmu_probe(struct platform_device *pdev)
 	if (of_device_is_compatible(dev->of_node, "qcom,msm-cam-smmu-fw-dev")) {
 		icp_fw.fw_dev = &pdev->dev;
 		icp_fw.fw_kva = NULL;
-		icp_fw.fw_dma_hdl = 0;
+		icp_fw.fw_hdl = 0;
 		return rc;
 	}
 
