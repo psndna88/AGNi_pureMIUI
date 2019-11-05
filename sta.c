@@ -1566,6 +1566,7 @@ static enum sigma_cmd_result cmd_sta_get_mac_address(struct sigma_dut *dut,
 	if (dut->dev_role == DEVROLE_STA_CFON)
 		return sta_cfon_get_mac_address(dut, conn, cmd);
 
+	start_sta_mode(dut);
 	if (get_wpa_status(get_station_ifname(dut), "address",
 			   addr, sizeof(addr)) < 0)
 		return -2;
