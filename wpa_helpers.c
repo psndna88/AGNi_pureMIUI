@@ -744,8 +744,10 @@ int start_sta_mode(struct sigma_dut *dut)
 		 dut->wpa_supplicant_debug_log ?
 		 dut->wpa_supplicant_debug_log : "");
 #else /*__QNXNTO__*/
-	snprintf(buf, sizeof(buf), "wpa_supplicant -Dnl80211 -i%s -B %s%s "
-		 "-c" SIGMA_TMPDIR "/sigma_dut-sta.conf", ifname,
+	snprintf(buf, sizeof(buf), "%swpa_supplicant -Dnl80211 -i%s -B %s%s "
+		 "-c" SIGMA_TMPDIR "/sigma_dut-sta.conf",
+		 file_exists("wpa_supplicant") ? "./" : "",
+		 ifname,
 		 dut->wpa_supplicant_debug_log ? "-K -t -ddd -f " : "",
 		 dut->wpa_supplicant_debug_log ?
 		 dut->wpa_supplicant_debug_log : "");
