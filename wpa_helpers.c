@@ -778,4 +778,12 @@ void stop_sta_mode(struct sigma_dut *dut)
 	wpa_command("wlan1", "TERMINATE");
 	wpa_command("ath0", "TERMINATE");
 	wpa_command("ath1", "TERMINATE");
+	if (dut->main_ifname_2g)
+		wpa_command(dut->main_ifname_2g, "TERMINATE");
+	if (dut->main_ifname_5g)
+		wpa_command(dut->main_ifname_5g, "TERMINATE");
+	if (dut->station_ifname_2g)
+		wpa_command(dut->station_ifname_2g, "TERMINATE");
+	if (dut->station_ifname_5g)
+		wpa_command(dut->station_ifname_5g, "TERMINATE");
 }
