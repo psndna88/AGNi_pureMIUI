@@ -8858,7 +8858,7 @@ static enum sigma_cmd_result cmd_ap_deauth_sta(struct sigma_dut *dut,
 {
 	/* const char *name = get_param(cmd, "NAME"); */
 	/* const char *ifname = get_param(cmd, "INTERFACE"); */
-	const char *val;
+	const char *val, *disconnect;
 	char buf[100];
 
 	val = get_param(cmd, "MinorCode");
@@ -8872,7 +8872,11 @@ static enum sigma_cmd_result cmd_ap_deauth_sta(struct sigma_dut *dut,
 	val = get_param(cmd, "STA_MAC_ADDRESS");
 	if (val == NULL)
 		return -1;
-	snprintf(buf, sizeof(buf), "deauth %s", val);
+	disconnect = get_param(cmd, "disconnect");
+	if (disconnect && strcasecmp(disconnect, "silent") == 0)
+		snprintf(buf, sizeof(buf), "deauth %s tx=0", val);
+	else
+		snprintf(buf, sizeof(buf), "deauth %s", val);
 	if (run_hostapd_cli(dut, buf) != 0)
 		return -2;
 
