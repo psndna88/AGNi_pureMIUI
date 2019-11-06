@@ -7035,12 +7035,16 @@ enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 		if ((drv == DRIVER_QNXNTO || drv == DRIVER_LINUX_WCN) &&
 		    dut->main_ifname)
 			ifname = get_main_ifname(dut);
+		if (dut->main_ifname_2g)
+			ifname = dut->main_ifname_2g;
 		fprintf(f, "hw_mode=g\n");
 		break;
 	case AP_11a:
 	case AP_11na:
 	case AP_11ac:
-		if (drv == DRIVER_QNXNTO || drv == DRIVER_LINUX_WCN) {
+		if (dut->main_ifname_5g) {
+			ifname = dut->main_ifname_5g;
+		} else if (drv == DRIVER_QNXNTO || drv == DRIVER_LINUX_WCN) {
 			if (dut->main_ifname)
 				ifname = get_main_ifname(dut);
 			else
