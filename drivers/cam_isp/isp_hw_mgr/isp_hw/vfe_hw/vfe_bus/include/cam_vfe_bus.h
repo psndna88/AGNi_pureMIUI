@@ -6,7 +6,8 @@
 #ifndef _CAM_VFE_BUS_H_
 #define _CAM_VFE_BUS_H_
 
-#include <uapi/media/cam_isp.h>
+#include <media/cam_isp.h>
+
 #include "cam_hw_intf.h"
 #include "cam_isp_hw.h"
 

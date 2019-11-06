@@ -9,7 +9,9 @@
 #include <linux/of.h>
 #include <linux/time.h>
 #include <linux/list.h>
-#include <uapi/media/cam_custom.h>
+
+#include <media/cam_custom.h>
+
 #include "cam_hw.h"
 #include "cam_hw_mgr_intf.h"
 #include "cam_hw_intf.h"

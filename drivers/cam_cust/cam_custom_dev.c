@@ -12,7 +12,8 @@
 #include <linux/timer.h>
 #include <linux/kernel.h>
 
-#include <uapi/media/cam_req_mgr.h>
+#include <media/cam_req_mgr.h>
+
 #include "cam_custom_dev.h"
 #include "cam_hw_mgr_intf.h"
 #include "cam_custom_hw_mgr_intf.h"

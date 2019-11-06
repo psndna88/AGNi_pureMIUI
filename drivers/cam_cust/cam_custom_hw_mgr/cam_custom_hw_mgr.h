@@ -12,8 +12,9 @@
 #include "cam_ife_csid_hw_intf.h"
 #include "cam_isp_hw.h"
 #include "cam_custom_hw.h"
-#include <uapi/media/cam_defs.h>
-#include <uapi/media/cam_custom.h>
+
+#include <media/cam_defs.h>
+#include <media/cam_custom.h>
 
 enum cam_custom_hw_mgr_res_type {
 	CAM_CUSTOM_HW_SUB_MODULE,

@@ -9,7 +9,8 @@
 #include <linux/of.h>
 #include <linux/time.h>
 #include <linux/list.h>
-#include <uapi/media/cam_custom.h>
+
+#include <media/cam_custom.h>
 
 enum cam_custom_hw_resource_state {
 	CAM_CUSTOM_HW_RESOURCE_STATE_UNAVAILABLE   = 0,

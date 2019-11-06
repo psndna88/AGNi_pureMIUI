@@ -5,7 +5,9 @@
 
 #include <linux/ratelimit.h>
 #include <linux/slab.h>
-#include <uapi/media/cam_isp.h>
+
+#include <media/cam_isp.h>
+
 #include "cam_io_util.h"
 #include "cam_debug_util.h"
 #include "cam_cdm_util.h"

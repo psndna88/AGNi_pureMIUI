@@ -18,7 +18,7 @@
 #include <linux/of_fdt.h>
 
 #include "cam_io_util.h"
-#include <uapi/media/cam_defs.h>
+#include <media/cam_defs.h>
 
 #define NO_SET_RATE  -1
 #define INIT_RATE    -2
