@@ -558,6 +558,10 @@ static int stop_loop = 0;
 #ifdef __linux__
 static void handle_term(int sig)
 {
+	struct sigma_dut *dut = &sigma_dut;
+
+	if (dut->sta_2g_started || dut->sta_5g_started)
+		stop_sta_mode(dut);
 	stop_loop = 1;
 	stop_event_thread();
 	printf("sigma_dut terminating\n");
