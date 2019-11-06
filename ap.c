@@ -631,6 +631,22 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 			dut->ap_channel = 2;
 	}
 
+	switch (dut->ap_mode) {
+	case AP_11g:
+	case AP_11b:
+	case AP_11ng:
+		dut->use_5g = 0;
+		break;
+	case AP_11a:
+	case AP_11na:
+	case AP_11ac:
+		dut->use_5g = 1;
+		break;
+	case AP_11ad:
+	case AP_inval:
+		break;
+	}
+
 	val = get_param(cmd, "WME");
 	if (val) {
 		if (strcasecmp(val, "on") == 0)
@@ -8460,6 +8476,7 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 
 	if (dut->program == PROGRAM_VHT) {
 		/* Set up the defaults */
+		dut->use_5g = 1;
 		dut->ap_mode = AP_11ac;
 		dut->ap_channel = 36;
 		dut->ap_ampdu = VALUE_NOT_SET;
