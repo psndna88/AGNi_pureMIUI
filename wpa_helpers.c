@@ -673,8 +673,15 @@ int start_sta_mode(struct sigma_dut *dut)
 	const char *ifname;
 	char *tmp, *pos;
 
-	if (dut->mode == SIGMA_MODE_STATION)
-		return 0;
+	if (dut->mode == SIGMA_MODE_STATION) {
+		if ((dut->use_5g && dut->sta_2g_started) ||
+		    (!dut->use_5g && dut->sta_5g_started)) {
+			stop_sta_mode(dut);
+			sleep(1);
+		} else {
+			return 0;
+		}
+	}
 
 	if (dut->mode == SIGMA_MODE_AP) {
 		if (system("killall hostapd") == 0) {
@@ -764,6 +771,10 @@ int start_sta_mode(struct sigma_dut *dut)
 				"with wpa_supplicant");
 		return -1;
 	}
+	if (dut->use_5g)
+		dut->sta_5g_started = 1;
+	else
+		dut->sta_2g_started = 1;
 
 	return 0;
 }
@@ -788,4 +799,6 @@ void stop_sta_mode(struct sigma_dut *dut)
 		wpa_command(dut->station_ifname_2g, "TERMINATE");
 	if (dut->station_ifname_5g)
 		wpa_command(dut->station_ifname_5g, "TERMINATE");
+	dut->sta_2g_started = 0;
+	dut->sta_5g_started = 0;
 }

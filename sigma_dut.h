@@ -344,6 +344,8 @@ struct sigma_dut {
 	char *station_ifname_5g;
 	char *p2p_ifname_buf;
 	int use_5g;
+	int sta_2g_started;
+	int sta_5g_started;
 
 	int s; /* server TCP socket */
 	int debug_level;
