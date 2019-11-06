@@ -12647,6 +12647,8 @@ static enum sigma_cmd_result cmd_sta_scan(struct sigma_dut *dut,
 	char ssid_hex[65];
 	int res;
 
+	start_sta_mode(dut);
+
 	val = get_param(cmd, "GetParameter");
 	if (val && strcmp(val, "SSID_BSSID") == 0) {
 		if (get_wpa_ssid_bssid(dut, get_station_ifname(dut),
