@@ -3775,10 +3775,30 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 	if (dut->ap_txBF) {
 		owrt_ap_set_vap(dut, vap_id, "vhtsubfee", "1");
 		owrt_ap_set_vap(dut, vap_id, "vhtsubfer", "1");
+		if (dut->program == PROGRAM_HE) {
+			owrt_ap_set_vap(dut, vap_id, "he_subfer", "1");
+			owrt_ap_set_vap(dut, vap_id, "cwmenable", "0");
+		}
+	} else {
+		owrt_ap_set_vap(dut, vap_id, "vhtsubfee", "0");
+		owrt_ap_set_vap(dut, vap_id, "vhtsubfer", "0");
+		if (dut->program == PROGRAM_HE)
+			owrt_ap_set_vap(dut, vap_id, "he_subfer", "0");
 	}
 
-	if (dut->ap_mu_txBF)
+	if (dut->ap_mu_txBF) {
 		owrt_ap_set_vap(dut, vap_id, "vhtmubfer", "1");
+		if (dut->program == PROGRAM_HE) {
+			owrt_ap_set_vap(dut, vap_id, "he_mubfer", "1");
+			owrt_ap_set_vap(dut, vap_id, "he_mubfee", "1");
+		}
+	} else {
+		owrt_ap_set_vap(dut, vap_id, "vhtmubfer", "0");
+		if (dut->program == PROGRAM_HE) {
+			owrt_ap_set_vap(dut, vap_id, "he_mubfer", "0");
+			owrt_ap_set_vap(dut, vap_id, "he_mubfee", "0");
+		}
+	}
 
 	if (dut->ap_tx_stbc) {
 		/* STBC and beamforming are mutually exclusive features */
@@ -8633,6 +8653,11 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 			dut->ap_ldpc = VALUE_DISABLED;
 			dut->ap_ba_bufsize = BA_BUFSIZE_64;
 			dut->ap_amsdu = VALUE_DISABLED;
+			dut->ap_txBF = 0;
+			dut->ap_mu_txBF = 0;
+		} else {
+			dut->ap_txBF = 1;
+			dut->ap_mu_txBF = 1;
 		}
 	}
 
