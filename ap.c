@@ -3928,29 +3928,6 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 	if (dut->sae_confirm_immediate)
 		owrt_ap_set_vap(dut, vap_count, "sae_confirm_immediate", "1");
 
-	if (dut->program == PROGRAM_HE &&
-	    (dut->ap_txBF || dut->ap_he_ulofdma == VALUE_ENABLED)) {
-		switch (dut->ap_chwidth) {
-		case AP_20:
-			owrt_ap_set_vap(dut, vap_id, "chwidth", "0");
-			break;
-		case AP_40:
-			owrt_ap_set_vap(dut, vap_id, "chwidth", "1");
-			break;
-		case AP_80:
-			owrt_ap_set_vap(dut, vap_id, "chwidth", "2");
-			break;
-		case AP_160:
-			owrt_ap_set_vap(dut, vap_id, "chwidth", "3");
-			break;
-		case AP_80_80:
-			owrt_ap_set_vap(dut, vap_id, "chwidth", "3");
-			break;
-		case AP_AUTO:
-			break;
-		}
-	}
-
 	if (dut->ap_he_dlofdma == VALUE_ENABLED && dut->ap_he_ppdu == PPDU_MU) {
 		dut->ap_txBF = 0;
 		dut->ap_mu_txBF = 0;
