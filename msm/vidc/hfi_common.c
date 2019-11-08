@@ -824,15 +824,12 @@ static int __vote_bandwidth(struct bus_info *bus,
 	unsigned long bw_kbps, u32 sid)
 {
 	int rc = 0;
-	uint64_t ab = 0;
 
-	/* Bus Driver expects values in Bps */
-	ab = bw_kbps * 1000;
-	s_vpr_p(sid, "Voting bus %s to ab %llu bps\n", bus->name, ab);
-	rc = msm_bus_scale_update_bw(bus->client, ab, 0);
+	s_vpr_p(sid, "Voting bus %s to ab %llu kbps\n", bus->name, bw_kbps);
+	rc = icc_set_bw(bus->path, kbps_to_icc(bw_kbps), 0);
 	if (rc)
 		s_vpr_e(sid, "Failed voting bus %s to ab %llu, rc=%d\n",
-				bus->name, ab, rc);
+				bus->name, bw_kbps, rc);
 
 	return rc;
 }
@@ -863,7 +860,7 @@ static int __vote_buses(struct venus_hfi_device *device,
 	enum vidc_bus_type type;
 
 	venus_hfi_for_each_bus(device, bus) {
-		if (bus && bus->client) {
+		if (bus && bus->path) {
 			type = get_type_frm_name(bus->name);
 
 			if (type == DDR) {
@@ -3308,8 +3305,8 @@ static void __deinit_bus(struct venus_hfi_device *device)
 	device->bus_vote = DEFAULT_BUS_VOTE;
 
 	venus_hfi_for_each_bus_reverse(device, bus) {
-		msm_bus_scale_unregister(bus->client);
-		bus->client = NULL;
+		icc_put(bus->path);
+		bus->path = NULL;
 	}
 }
 
@@ -3322,21 +3319,21 @@ static int __init_bus(struct venus_hfi_device *device)
 		return -EINVAL;
 
 	venus_hfi_for_each_bus(device, bus) {
-		if (!strcmp(bus->mode, "msm-vidc-llcc")) {
+		if (!strcmp(bus->name, "venus-llcc")) {
 			if (msm_vidc_syscache_disable) {
-				d_vpr_h("Skipping LLC bus init %s: %s\n",
-				bus->name, bus->mode);
+				d_vpr_h("Skipping LLC bus init: %s\n",
+					bus->name);
 				continue;
 			}
 		}
-		bus->client = msm_bus_scale_register(bus->master, bus->slave,
-				bus->name, false);
-		if (IS_ERR_OR_NULL(bus->client)) {
-			rc = PTR_ERR(bus->client) ?
-				PTR_ERR(bus->client) : -EBADHANDLE;
+		bus->path = of_icc_get(bus->dev, bus->name);
+		if (IS_ERR_OR_NULL(bus->path)) {
+			rc = PTR_ERR(bus->path) ?
+				PTR_ERR(bus->path) : -EBADHANDLE;
+
 			d_vpr_e("Failed to register bus %s: %d\n",
 					bus->name, rc);
-			bus->client = NULL;
+			bus->path = NULL;
 			goto err_add_dev;
 		}
 	}

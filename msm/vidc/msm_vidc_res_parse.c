@@ -69,10 +69,9 @@ static inline void msm_vidc_free_qdss_addr_table(
 	res->qdss_addr_set.addr_tbl = NULL;
 }
 
-static inline void msm_vidc_free_bus_vectors(
+static inline void msm_vidc_free_bus_table(
 			struct msm_vidc_platform_resources *res)
 {
-	kfree(res->bus_set.bus_tbl);
 	res->bus_set.bus_tbl = NULL;
 	res->bus_set.count = 0;
 }
@@ -114,7 +113,7 @@ void msm_vidc_free_platform_resources(
 	msm_vidc_free_allowed_clocks_table(res);
 	msm_vidc_free_reg_table(res);
 	msm_vidc_free_qdss_addr_table(res);
-	msm_vidc_free_bus_vectors(res);
+	msm_vidc_free_bus_table(res);
 	msm_vidc_free_buffer_usage_table(res);
 }
 
@@ -360,76 +359,64 @@ static int msm_vidc_populate_mem_cdsp(struct device *dev,
 	return 0;
 }
 
-static int msm_vidc_populate_bus(struct device *dev,
-		struct msm_vidc_platform_resources *res)
+static int msm_vidc_load_bus_table(struct msm_vidc_platform_resources *res)
 {
 	struct bus_set *buses = &res->bus_set;
-	const char *temp_name = NULL;
-	struct bus_info *bus = NULL, *temp_table;
-	u32 range[2];
-	int rc = 0;
+	int c = 0, num_buses = 0, rc = 0;
+	u32 *bus_ranges = NULL;
+	struct platform_device *pdev = res->pdev;
 
-	temp_table = krealloc(buses->bus_tbl, sizeof(*temp_table) *
-			(buses->count + 1), GFP_KERNEL);
-	if (!temp_table) {
-		d_vpr_e("%s: Failed to allocate memory", __func__);
+	num_buses = of_property_count_strings(pdev->dev.of_node,
+				"interconnect-names");
+	if (num_buses <= 0) {
+		d_vpr_e("No buses found\n");
+		return -EINVAL;
+	}
+
+	buses->count = num_buses;
+	d_vpr_h("Found %d bus interconnects\n", num_buses);
+
+	bus_ranges = kzalloc(2 * num_buses * sizeof(*bus_ranges), GFP_KERNEL);
+	if (!bus_ranges) {
+		d_vpr_e("No memory to read bus ranges\n");
+		return -ENOMEM;
+	}
+
+	rc = of_property_read_u32_array(pdev->dev.of_node,
+				"qcom,bus-range-kbps", bus_ranges,
+				num_buses);
+	if (rc) {
+		d_vpr_e(
+			"Failed to read bus ranges: defaulting to <0 INT_MAX>\n");
+		for (c = 0; c < num_buses; c++) {
+			bus_ranges[c * 2] = 0;
+			bus_ranges[c * 2 + 1] = INT_MAX;
+		}
+	}
+
+	buses->bus_tbl = devm_kzalloc(&pdev->dev, num_buses *
+				sizeof(*buses->bus_tbl), GFP_KERNEL);
+	if (!buses->bus_tbl) {
+		d_vpr_e("No memory for bus table\n");
 		rc = -ENOMEM;
-		goto err_bus;
+		goto exit;
 	}
 
-	buses->bus_tbl = temp_table;
-	bus = &buses->bus_tbl[buses->count];
+	for (c = 0; c < num_buses; c++) {
+		struct bus_info *bus = &res->bus_set.bus_tbl[c];
 
-	memset(bus, 0x0, sizeof(struct bus_info));
+		of_property_read_string_index(pdev->dev.of_node,
+			"interconnect-names", c, &bus->name);
 
-	rc = of_property_read_string(dev->of_node, "label", &temp_name);
-	if (rc) {
-		d_vpr_e("'label' not found in node\n");
-		goto err_bus;
-	}
-	/* need a non-const version of name, hence copying it over */
-	bus->name = devm_kstrdup(dev, temp_name, GFP_KERNEL);
-	if (!bus->name) {
-		rc = -ENOMEM;
-		goto err_bus;
+		bus->dev = &pdev->dev;
+		bus->range[0] = bus_ranges[c * 2];
+		bus->range[1] = bus_ranges[c * 2 + 1];
+
+		d_vpr_h("Found bus %s\n", bus->name);
 	}
 
-	rc = of_property_read_u32(dev->of_node, "qcom,bus-master",
-			&bus->master);
-	if (rc) {
-		d_vpr_e("'bus-master' not found in node\n");
-		goto err_bus;
-	}
-
-	rc = of_property_read_u32(dev->of_node, "qcom,bus-slave", &bus->slave);
-	if (rc) {
-		d_vpr_e("'bus-slave' not found in node\n");
-		goto err_bus;
-	}
-
-	rc = of_property_read_string(dev->of_node, "qcom,mode",
-			&bus->mode);
-
-	if (!rc && !strcmp(bus->mode, "performance"))
-		bus->is_prfm_mode = true;
-
-	rc = of_property_read_u32_array(dev->of_node, "qcom,bus-range-kbps",
-			range, ARRAY_SIZE(range));
-	if (rc) {
-		rc = 0;
-		d_vpr_h("'bus-range' not found defaulting to <0 INT_MAX>\n");
-		range[0] = 0;
-		range[1] = INT_MAX;
-	}
-
-	bus->range[0] = range[0]; /* min */
-	bus->range[1] = range[1]; /* max */
-
-	buses->count++;
-	bus->dev = dev;
-	d_vpr_h("Found bus %s [%d->%d] with mode %s\n",
-			bus->name, bus->master, bus->slave, bus->mode);
-err_bus:
+exit:
+	kfree(bus_ranges);
 	return rc;
 }
 
@@ -875,6 +862,12 @@ int read_platform_resources_from_dt(
 		goto err_load_regulator_table;
 	}
 
+	rc = msm_vidc_load_bus_table(res);
+	if (rc) {
+		d_vpr_e("Failed to load bus table: %d\n", rc);
+		goto err_load_bus_table;
+	}
+
 	rc = msm_vidc_load_clock_table(res);
 	if (rc) {
 		d_vpr_e("Failed to load clock table: %d\n", rc);
@@ -908,6 +901,8 @@ err_load_reset_table:
 err_load_allowed_clocks_table:
 	msm_vidc_free_clock_table(res);
 err_load_clock_table:
+	msm_vidc_free_bus_table(res);
+err_load_bus_table:
 	msm_vidc_free_regulator_table(res);
 err_load_regulator_table:
 	msm_vidc_free_buffer_usage_table(res);
@@ -1185,29 +1180,6 @@ int read_context_bank_resources_from_dt(struct platform_device *pdev)
 		d_vpr_h("Successfully probed context bank\n");
 
 	return rc;
-}
-
-int read_bus_resources_from_dt(struct platform_device *pdev)
-{
-	struct msm_vidc_core *core;
-
-	if (!pdev) {
-		d_vpr_e("Invalid platform device\n");
-		return -EINVAL;
-	} else if (!pdev->dev.parent) {
-		d_vpr_e("Failed to find a parent for %s\n",
-			dev_name(&pdev->dev));
-		return -ENODEV;
-	}
-
-	core = dev_get_drvdata(pdev->dev.parent);
-	if (!core) {
-		d_vpr_e("Failed to find cookie in parent device %s",
-			dev_name(pdev->dev.parent));
-		return -EINVAL;
-	}
-
-	return msm_vidc_populate_bus(&pdev->dev, &core->resources);
 }
 
 int read_mem_cdsp_resources_from_dt(struct platform_device *pdev)

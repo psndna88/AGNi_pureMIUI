@@ -50,25 +50,6 @@ void trace_msm_v4l2_vidc_buffer_event_end(char *event_type, u32 device_addr,
 // void disable_irq_nosync(unsigned int irq);
 // void enable_irq(unsigned int irq);
 
-struct msm_bus_client_handle {
-	char *name;
-	int mas;
-	int slv;
-	int first_hop;
-	// struct device *mas_dev;
-	u64 cur_act_ib;
-	u64 cur_act_ab;
-	u64 cur_dual_ib;
-	u64 cur_dual_ab;
-	bool active_only;
-};
-
-int msm_bus_scale_update_bw(struct msm_bus_client_handle *cl, u64 ab, u64 ib);
-int msm_bus_scale_update_bw(struct msm_bus_client_handle *cl, u64 ab, u64 ib);
-struct msm_bus_client_handle* msm_bus_scale_register(uint32_t mas, uint32_t slv,
-                                                     char *name, bool active_only);
-void msm_bus_scale_unregister(struct msm_bus_client_handle *cl);
-
 void do_gettimeofday(struct timeval *__ddl_tv);
 
 #ifndef CONFIG_VIDEOBUF2_CORE
