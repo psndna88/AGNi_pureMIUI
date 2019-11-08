@@ -7870,7 +7870,7 @@ sme_modify_roam_cand_sel_criteria(mac_handle_t mac_handle,
 	if (QDF_IS_STATUS_ERROR(status))
 		return status;
 
-	if (csr_roamIsRoamOffloadEnabled(mac)) {
+	if (!csr_roamIsRoamOffloadEnabled(mac)) {
 		status = QDF_STATUS_E_INVAL;
 		goto out;
 	}
@@ -7881,6 +7881,98 @@ sme_modify_roam_cand_sel_criteria(mac_handle_t mac_handle,
 	status = csr_roam_offload_scan(mac, vdev_id,
 				       ROAM_SCAN_OFFLOAD_UPDATE_CFG,
 				       REASON_SCORING_CRITERIA_CHANGED);
+out:
+	sme_release_global_lock(&mac->sme);
+
+	return status;
+}
+
+/**
+ * sme_restore_default_roaming_params() - Restore neighbor roam config
+ * @mac: mac context
+ * @roam_info: Neighbor roam info pointer to be populated
+ *
+ * Restore neighbor roam info request params with lfr config params
+ *
+ * Return: None
+ */
+static void
+sme_restore_default_roaming_params(tpAniSirGlobal mac,
+				   tCsrNeighborRoamControlInfo *roam_info)
+{
+	struct csr_config *roam_config = &mac->roam.configParam;
+
+	sme_debug("%s default roam scoring",
+		  roam_config->neighborRoamConfig.enable_scoring_for_roam ?
+		  "Enable" : "Disable");
+
+	sme_debug("Restore scan period to: %u and full scan period to: %u",
+		  roam_config->neighborRoamConfig.nEmptyScanRefreshPeriod,
+		  roam_config->neighborRoamConfig.full_roam_scan_period);
+
+	roam_info->cfgParams.enable_scoring_for_roam =
+		roam_config->bss_score_params.enable_scoring_for_roam;
+	roam_info->cfgParams.emptyScanRefreshPeriod =
+		roam_config->neighborRoamConfig.nEmptyScanRefreshPeriod;
+	roam_info->cfgParams.full_roam_scan_period =
+		roam_config->neighborRoamConfig.full_roam_scan_period;
+	roam_info->cfgParams.maxChannelScanTime =
+		roam_config->neighborRoamConfig.nNeighborScanMaxChanTime;
+	roam_info->cfgParams.neighborScanPeriod =
+		roam_config->neighborRoamConfig.nNeighborScanTimerPeriod;
+	roam_info->cfgParams.neighborLookupThreshold =
+		roam_config->neighborRoamConfig.nNeighborLookupRssiThreshold;
+	roam_info->cfgParams.roam_rssi_diff =
+		roam_config->neighborRoamConfig.roam_rssi_diff;
+	roam_info->cfgParams.roam_scan_home_away_time =
+			roam_config->nRoamScanHomeAwayTime;
+	roam_info->cfgParams.roam_scan_n_probes =
+			roam_config->nProbes;
+}
+
+QDF_STATUS sme_roam_control_restore_default_config(mac_handle_t mac_handle,
+						   uint8_t vdev_id)
+{
+	tpAniSirGlobal mac = PMAC_STRUCT(mac_handle);
+	QDF_STATUS status;
+	tpCsrNeighborRoamControlInfo neighbor_roam_info;
+	tCsrChannelInfo *chan_info;
+
+	if (!CSR_IS_SESSION_VALID(mac, vdev_id)) {
+		sme_err("Invalid vdev_id: %d", vdev_id);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	status = sme_acquire_global_lock(&mac->sme);
+	if (QDF_IS_STATUS_ERROR(status))
+		return status;
+
+	if (!mac->roam.configParam.isRoamOffloadScanEnabled) {
+		sme_err("roam_scan_offload_enabled is not supported");
+		status = QDF_STATUS_E_INVAL;
+		goto out;
+	}
+
+	sme_debug("Cleanup roam scan control");
+	mac->roam.configParam.nRoamScanControl = false;
+
+	neighbor_roam_info = &mac->roam.neighborRoamInfo[vdev_id];
+
+	sme_debug("Cleanup Preferred frequency list");
+	chan_info = &neighbor_roam_info->cfgParams.pref_chan_info;
+	csr_flush_cfg_bg_scan_roam_channel_list(chan_info);
+
+	sme_debug("Cleanup specific frequency list");
+	chan_info = &neighbor_roam_info->cfgParams.specific_chan_info;
+	csr_flush_cfg_bg_scan_roam_channel_list(chan_info);
+
+	sme_debug("Cleanup roam control config related lfr params");
+
+	sme_restore_default_roaming_params(mac, neighbor_roam_info);
+
+	csr_roam_offload_scan(mac, vdev_id,
+			      ROAM_SCAN_OFFLOAD_UPDATE_CFG,
+			      REASON_SCORING_CRITERIA_CHANGED);
 out:
 	sme_release_global_lock(&mac->sme);
 
@@ -13963,14 +14055,14 @@ QDF_STATUS sme_handle_bcn_recv_start(mac_handle_t mac_handle,
 	QDF_STATUS status;
 	int ret;
 
-	if (!CSR_IS_SESSION_VALID(mac_ctx, vdev_id)) {
-		sme_err("CSR session not valid: %d", vdev_id);
-		return QDF_STATUS_E_FAILURE;
-	}
-
 	session = CSR_GET_SESSION(mac_ctx, vdev_id);
 	if (!session) {
 		sme_err("vdev_id %d not found", vdev_id);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!CSR_IS_SESSION_VALID(mac_ctx, vdev_id)) {
+		sme_err("CSR session not valid: %d", vdev_id);
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -16721,6 +16813,42 @@ sme_get_full_roam_scan_period(mac_handle_t mac_handle, uint8_t vdev_id,
 	*full_roam_scan_period =
 		neighbor_roam_info->cfgParams.full_roam_scan_period;
 	sme_release_global_lock(&mac->sme);
+
+	return status;
+}
+
+QDF_STATUS sme_set_roam_triggers(mac_handle_t mac_handle,
+				 struct roam_triggers *triggers)
+{
+	QDF_STATUS status;
+	tpAniSirGlobal mac = PMAC_STRUCT(mac_handle);
+	struct scheduler_msg message = {0};
+	struct roam_triggers *roam_trigger_data;
+
+	/* per contract must make a copy of the params when messaging */
+	roam_trigger_data = qdf_mem_malloc(sizeof(*roam_trigger_data));
+	if (!roam_trigger_data)
+		return QDF_STATUS_E_NOMEM;
+	*roam_trigger_data = *triggers;
+
+	status = sme_acquire_global_lock(&mac->sme);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		qdf_mem_free(roam_trigger_data);
+		return status;
+	}
+
+	/* Serialize the req through MC thread */
+	message.bodyptr = roam_trigger_data;
+	message.type = SIR_HAL_SET_ROAM_TRIGGERS;
+	status = scheduler_post_message(QDF_MODULE_ID_SME,
+					QDF_MODULE_ID_WMA,
+					QDF_MODULE_ID_WMA,
+					&message);
+	sme_release_global_lock(&mac->sme);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		sme_err("failed to post ROAM_TRIGGERS msg");
+		qdf_mem_free(roam_trigger_data);
+	}
 
 	return status;
 }
