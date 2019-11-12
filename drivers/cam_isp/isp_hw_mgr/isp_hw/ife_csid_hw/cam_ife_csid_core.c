@@ -3004,7 +3004,7 @@ static int cam_ife_csid_get_time_stamp(
 		CAM_IFE_CSID_QTIMER_DIV_FACTOR);
 
 	if (!csid_hw->prev_boot_timestamp) {
-		get_monotonic_boottime64(&ts);
+		ktime_get_boottime_ts64(&ts);
 		time_stamp->boot_timestamp =
 			(uint64_t)((ts.tv_sec * 1000000000) +
 			ts.tv_nsec);
