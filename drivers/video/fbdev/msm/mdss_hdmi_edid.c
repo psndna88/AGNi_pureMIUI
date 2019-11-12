@@ -92,6 +92,7 @@ enum extended_data_block_types {
 	VIDEO_CAPABILITY_DATA_BLOCK = 0x0,
 	VENDOR_SPECIFIC_VIDEO_DATA_BLOCK = 0x01,
 	HDMI_VIDEO_DATA_BLOCK = 0x04,
+	COLORIMETRY_DATA_BLOCK = 0x05,
 	HDR_STATIC_METADATA_DATA_BLOCK = 0x06,
 	Y420_VIDEO_DATA_BLOCK = 0x0E,
 	VIDEO_FORMAT_PREFERENCE_DATA_BLOCK = 0x0D,
@@ -130,6 +131,11 @@ struct hdmi_edid_y420_cmdb {
 	u32 len;
 };
 
+struct hdmi_edid_colorimetry {
+	u8 standards;
+	u8 metadata_profiles;
+};
+
 struct hdmi_edid_ctrl {
 	u8 pt_scan_info;
 	u8 it_scan_info;
@@ -166,6 +172,7 @@ struct hdmi_edid_ctrl {
 	struct hdmi_edid_sink_caps sink_caps;
 	struct hdmi_edid_override_data override_data;
 	struct hdmi_edid_hdr_data hdr_data;
+	struct hdmi_edid_colorimetry colorimetry;
 };
 
 static bool hdmi_edid_is_mode_supported(struct hdmi_edid_ctrl *edid_ctrl,
@@ -1142,6 +1149,26 @@ static void hdmi_edid_parse_hvdb(struct hdmi_edid_ctrl *edid_ctrl,
 
 }
 
+static void hdmi_edid_parse_colorimetry(
+	struct hdmi_edid_ctrl *edid_ctrl, const u8 *in_buf)
+{
+	u8 len = 0;
+
+	if (!edid_ctrl) {
+		DEV_ERR("%s: invalid input\n", __func__);
+		return;
+	}
+
+	len = in_buf[0] & 0x1F;
+	if ((in_buf[1] != COLORIMETRY_DATA_BLOCK) || (len < 3)) {
+		DEV_ERR("%s: Not a Colorimetry tag code\n", __func__);
+		return;
+	}
+
+	edid_ctrl->colorimetry.standards = in_buf[2];
+	edid_ctrl->colorimetry.metadata_profiles = in_buf[3];
+}
+
 static void hdmi_edid_extract_extended_data_blocks(
 	struct hdmi_edid_ctrl *edid_ctrl, const u8 *in_buf)
 {
@@ -1224,6 +1251,11 @@ static void hdmi_edid_extract_extended_data_blocks(
 				__func__, etag[2]);
 			hdmi_edid_parse_hdrdb(edid_ctrl, etag);
 			edid_ctrl->hdr_supported = true;
+			break;
+		case COLORIMETRY_DATA_BLOCK:
+			DEV_DBG("%s found COLORIMETRY block. byte 3 = 0x%x",
+					__func__, etag[2]);
+			hdmi_edid_parse_colorimetry(edid_ctrl, etag);
 			break;
 		default:
 			DEV_DBG("%s: Tag Code %d not supported\n",
@@ -2690,6 +2722,18 @@ void hdmi_edid_get_hdr_data(void *input,
 	}
 
 	*hdr_data = &edid_ctrl->hdr_data;
+}
+
+u8 hdmi_edid_get_colorimetry(void *input)
+{
+	struct hdmi_edid_ctrl *edid_ctrl = (struct hdmi_edid_ctrl *)input;
+
+	if (!edid_ctrl) {
+		DEV_ERR("%s: invalid input\n", __func__);
+		return 0;
+	}
+
+	return edid_ctrl->colorimetry.standards;
 }
 
 bool hdmi_edid_is_s3d_mode_supported(void *input, u32 video_mode, u32 s3d_mode)
