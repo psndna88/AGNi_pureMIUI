@@ -310,7 +310,7 @@ static inline bool hdmi_tx_metadata_type_one(struct hdmi_tx_ctrl *hdmi_ctrl)
 	return hdr_data->metadata_type_one;
 }
 
-static inline bool hdmix_tx_sink_dc_support(struct hdmi_tx_ctrl *hdmi_ctrl)
+static inline bool hdmi_tx_sink_dc_support(struct hdmi_tx_ctrl *hdmi_ctrl)
 {
 	void *edid_fd = hdmi_tx_get_fd(HDMI_TX_FEAT_EDID);
 
@@ -330,8 +330,7 @@ static inline bool hdmi_tx_dc_support(struct hdmi_tx_ctrl *hdmi_ctrl)
 		true);
 
 	return hdmi_ctrl->dc_feature_on &&
-		hdmi_ctrl->dc_support &&
-		hdmix_tx_sink_dc_support(hdmi_ctrl) &&
+		hdmi_tx_sink_dc_support(hdmi_ctrl) &&
 		(tmds_clk_with_dc <= hdmi_edid_get_max_pclk(edid_fd));
 }
 
@@ -3388,7 +3387,6 @@ static int hdmi_tx_power_off(struct hdmi_tx_ctrl *hdmi_ctrl)
 	hdmi_tx_core_off(hdmi_ctrl);
 
 	hdmi_ctrl->panel_power_on = false;
-	hdmi_ctrl->dc_support = false;
 	hdmi_ctrl->vic = 0;
 
 	if (hdmi_ctrl->hpd_off_pending || hdmi_ctrl->panel_suspend)
@@ -3517,6 +3515,7 @@ static void hdmi_tx_hpd_off(struct hdmi_tx_ctrl *hdmi_ctrl)
 
 	hdmi_ctrl->hpd_initialized = false;
 	hdmi_ctrl->hpd_off_pending = false;
+	hdmi_ctrl->dc_support = false;
 
 	DEV_DBG("%s: HPD is now OFF\n", __func__);
 } /* hdmi_tx_hpd_off */

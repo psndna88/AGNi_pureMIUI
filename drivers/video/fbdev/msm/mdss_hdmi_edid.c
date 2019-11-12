@@ -207,6 +207,9 @@ static int hdmi_edid_reset_parser(struct hdmi_edid_ctrl *edid_ctrl)
 
 	edid_ctrl->sink_data.num_of_elements = 0;
 
+	/* reset deep color */
+	edid_ctrl->deep_color = 0;
+
 	/* reset scan info data */
 	edid_ctrl->pt_scan_info = 0;
 	edid_ctrl->it_scan_info = 0;
