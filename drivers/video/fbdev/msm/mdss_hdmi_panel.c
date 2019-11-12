@@ -140,7 +140,20 @@ enum {
 enum hdmi_colorimetry {
 	HDMI_COLORIMETRY_DEFAULT,
 	HDMI_COLORIMETRY_ITU_R_601,
-	HDMI_COLORIMETRY_ITU_R_709
+	HDMI_COLORIMETRY_ITU_R_709,
+	HDMI_COLORIMETRY_EXTENDED
+};
+
+enum hdmi_ext_colorimetry {
+	HDMI_COLORIMETRY_XV_YCC_601,
+	HDMI_COLORIMETRY_XV_YCC_709,
+	HDMI_COLORIMETRY_S_YCC_601,
+	HDMI_COLORIMETRY_ADOBE_YCC_601,
+	HDMI_COLORIMETRY_ADOBE_RGB,
+	HDMI_COLORIMETRY_C_YCBCR_BT2020,
+	HDMI_COLORIMETRY_YCBCR_BT2020,
+	HDMI_COLORIMETRY_RESERVED
+
 };
 
 enum hdmi_quantization_range {
@@ -833,6 +846,53 @@ end:
 	return panel->vic;
 }
 
+static int hdmi_panel_avi_update_colorimetry(void *input,
+		bool use_bt2020)
+{
+	struct hdmi_panel *panel = input;
+	struct mdss_panel_info *pinfo;
+	struct hdmi_video_config *vid_cfg;
+	struct hdmi_avi_infoframe_config *avi;
+	int rc = 0;
+
+	if (!panel) {
+		DEV_ERR("%s: invalid hdmi panel\n", __func__);
+		rc = -EINVAL;
+		goto error;
+	}
+
+	/* Configure AVI infoframe */
+	rc = hdmi_panel_config_avi(panel);
+	if (rc) {
+		DEV_ERR("%s: failed to configure AVI\n", __func__);
+		goto error;
+	}
+
+	pinfo = panel->data->pinfo;
+	vid_cfg = &panel->vid_cfg;
+	avi = &vid_cfg->avi_iframe;
+
+	/* Update Colorimetry */
+	avi->ext_colorimetry_info = 0;
+
+	if (use_bt2020) {
+		avi->colorimetry_info = HDMI_COLORIMETRY_EXTENDED;
+		avi->ext_colorimetry_info = HDMI_COLORIMETRY_YCBCR_BT2020;
+	} else if (avi->pixel_format == MDP_Y_CBCR_H2V2) {
+		if (pinfo->yres < 720)
+			avi->colorimetry_info = HDMI_COLORIMETRY_ITU_R_601;
+		else
+			avi->colorimetry_info = HDMI_COLORIMETRY_ITU_R_709;
+	} else {
+		avi->colorimetry_info = HDMI_COLORIMETRY_DEFAULT;
+	}
+
+	hdmi_panel_set_avi_infoframe(panel);
+
+error:
+	return rc;
+}
+
 static int hdmi_panel_power_on(void *input)
 {
 	int rc = 0;
@@ -959,6 +1019,8 @@ void *hdmi_panel_init(struct hdmi_panel_init_data *data)
 		data->ops->off = hdmi_panel_power_off;
 		data->ops->vendor = hdmi_panel_set_vendor_specific_infoframe;
 		data->ops->update_fps = hdmi_panel_update_fps;
+		data->ops->update_colorimetry =
+			hdmi_panel_avi_update_colorimetry;
 	}
 end:
 	return panel;

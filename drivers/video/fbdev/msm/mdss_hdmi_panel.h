@@ -65,6 +65,7 @@ struct hdmi_panel_ops {
 	int (*off)(void *input);
 	void (*vendor)(void *input);
 	int (*update_fps)(void *input, u32 fps);
+	int (*update_colorimetry)(void *input, bool use_bt2020);
 };
 
 /**

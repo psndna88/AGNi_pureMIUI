@@ -138,6 +138,7 @@ struct hdmi_tx_ctrl {
 	bool power_data_enable[HDMI_TX_MAX_PM];
 	bool dc_support;
 	bool dc_feature_on;
+	bool use_bt2020;
 
 	void (*hdmi_tx_hpd_done)(void *data);
 	void *downstream_data;

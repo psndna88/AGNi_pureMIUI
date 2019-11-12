@@ -125,6 +125,8 @@ static int hdmi_tx_enable_pll_update(struct hdmi_tx_ctrl *hdmi_ctrl,
 static void hdmi_tx_hpd_polarity_setup(struct hdmi_tx_ctrl *hdmi_ctrl,
 		bool polarity);
 static int hdmi_tx_notify_events(struct hdmi_tx_ctrl *hdmi_ctrl, int val);
+static void hdmi_panel_update_colorimetry(struct hdmi_tx_ctrl *ctrl,
+		bool use_bt2020);
 
 static struct mdss_hw hdmi_tx_hw = {
 	.hw_ndx = MDSS_HW_HDMI,
@@ -1343,9 +1345,13 @@ static ssize_t hdmi_tx_sysfs_wta_hdr_stream(struct device *dev,
 	hdr_op = hdmi_hdr_get_ops(ctrl->curr_hdr_state,
 					ctrl->hdr_ctrl.hdr_state);
 
-	if (hdr_op == HDR_SEND_INFO)
+	if (hdr_op == HDR_SEND_INFO) {
 		hdmi_panel_set_hdr_infoframe(ctrl);
-	else if (hdr_op == HDR_CLEAR_INFO)
+		if (ctrl->hdr_ctrl.hdr_stream.eotf)
+			hdmi_panel_update_colorimetry(ctrl, true);
+		else
+			hdmi_panel_update_colorimetry(ctrl, false);
+	} else if (hdr_op == HDR_CLEAR_INFO)
 		hdmi_panel_clear_hdr_infoframe(ctrl);
 
 	ctrl->curr_hdr_state = ctrl->hdr_ctrl.hdr_state;
@@ -3128,6 +3134,34 @@ static void hdmi_panel_clear_hdr_infoframe(struct hdmi_tx_ctrl *ctrl)
 	packet_control = DSS_REG_R_ND(io, HDMI_GEN_PKT_CTRL);
 	packet_control &= ~HDMI_GEN_PKT_CTRL_CLR_MASK;
 	DSS_REG_W(io, HDMI_GEN_PKT_CTRL, packet_control);
+}
+
+static void hdmi_panel_update_colorimetry(struct hdmi_tx_ctrl *hdmi_ctrl,
+		bool use_bt2020)
+{
+	void *pdata;
+
+	if (!hdmi_ctrl) {
+		DEV_ERR("%s: invalid hdmi ctrl data\n", __func__);
+		return;
+	}
+
+	pdata = hdmi_tx_get_fd(HDMI_TX_FEAT_PANEL);
+	if (!pdata) {
+		DEV_ERR("%s: invalid panel data\n", __func__);
+		return;
+	}
+
+	/* If there is no change in colorimetry, just return */
+	if (use_bt2020 && hdmi_ctrl->use_bt2020)
+		return;
+	else if (!use_bt2020 && !hdmi_ctrl->use_bt2020)
+		return;
+
+	if (hdmi_ctrl->panel_ops.update_colorimetry)
+		hdmi_ctrl->panel_ops.update_colorimetry(pdata, use_bt2020);
+
+	hdmi_ctrl->use_bt2020 = use_bt2020;
 }
 
 static int hdmi_tx_audio_info_setup(struct platform_device *pdev,
