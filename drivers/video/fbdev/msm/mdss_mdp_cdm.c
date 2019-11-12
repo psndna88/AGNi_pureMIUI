@@ -139,7 +139,9 @@ static int mdss_mdp_cdm_csc_setup(struct mdss_mdp_cdm *cdm,
 	if ((data->csc_type == MDSS_MDP_CSC_RGB2YUV_601L) ||
 		(data->csc_type == MDSS_MDP_CSC_RGB2YUV_601FR) ||
 		(data->csc_type == MDSS_MDP_CSC_RGB2YUV_709L) ||
-		(data->csc_type == MDSS_MDP_CSC_RGB2YUV_709FR)) {
+		(data->csc_type == MDSS_MDP_CSC_RGB2YUV_709FR) ||
+		(data->csc_type == MDSS_MDP_CSC_RGB2YUV_2020L) ||
+		(data->csc_type == MDSS_MDP_CSC_RGB2YUV_2020FR)) {
 		op_mode |= BIT(2);  /* DST_DATA_FORMAT = YUV */
 		op_mode &= ~BIT(1); /* SRC_DATA_FORMAT = RGB */
 		op_mode |= BIT(0);  /* EN = 1 */
