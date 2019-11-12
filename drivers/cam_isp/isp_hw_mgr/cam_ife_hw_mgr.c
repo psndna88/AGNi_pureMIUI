@@ -2411,8 +2411,8 @@ static int cam_ife_mgr_acquire_hw_for_ctx(
 		goto err;
 	}
 
-	*num_pix_port += ipp_count + ppp_count + ife_rd_count + lcr_count;
-	*num_rdi_port += rdi_count;
+	*num_pix_port = ipp_count + ppp_count + ife_rd_count + lcr_count;
+	*num_rdi_port = rdi_count;
 
 	return 0;
 err:
@@ -3241,7 +3241,7 @@ static int cam_isp_blob_bw_update_v2(
 					sizeof(
 					struct cam_vfe_bw_update_args_v2));
 				if (rc)
-					CAM_ERR(CAM_ISP,
+					CAM_ERR(CAM_PERF,
 						"BW Update failed rc: %d", rc);
 			} else {
 				CAM_WARN(CAM_ISP, "NULL hw_intf!");
@@ -3340,7 +3340,7 @@ static int cam_isp_blob_bw_update(
 					&bw_upd_args,
 					sizeof(struct cam_vfe_bw_update_args));
 				if (rc)
-					CAM_ERR(CAM_ISP, "BW Update failed");
+					CAM_ERR(CAM_PERF, "BW Update failed");
 			} else
 				CAM_WARN(CAM_ISP, "NULL hw_intf!");
 		}
@@ -3389,7 +3389,7 @@ static int cam_ife_mgr_config_hw(void *hw_mgr_priv,
 	for (i = 0; i < CAM_IFE_HW_NUM_MAX; i++) {
 		if (hw_update_data->bw_config_valid[i] == true) {
 
-			CAM_DBG(CAM_ISP, "idx=%d, bw_config_version=%d",
+			CAM_DBG(CAM_PERF, "idx=%d, bw_config_version=%d",
 				ctx, ctx->ctx_index, i,
 				hw_update_data->bw_config_version);
 
@@ -3399,7 +3399,7 @@ static int cam_ife_mgr_config_hw(void *hw_mgr_priv,
 					(struct cam_isp_bw_config *)
 					&hw_update_data->bw_config[i], ctx);
 				if (rc)
-					CAM_ERR(CAM_ISP,
+					CAM_ERR(CAM_PERF,
 					"Bandwidth Update Failed rc: %d", rc);
 			} else if (hw_update_data->bw_config_version ==
 				CAM_ISP_BW_CONFIG_V2) {
@@ -3407,11 +3407,11 @@ static int cam_ife_mgr_config_hw(void *hw_mgr_priv,
 					(struct cam_isp_bw_config_v2 *)
 					&hw_update_data->bw_config_v2[i], ctx);
 				if (rc)
-					CAM_ERR(CAM_ISP,
+					CAM_ERR(CAM_PERF,
 					"Bandwidth Update Failed rc: %d", rc);
 
 			} else {
-				CAM_ERR(CAM_ISP,
+				CAM_ERR(CAM_PERF,
 					"Invalid bw config version: %d",
 					hw_update_data->bw_config_version);
 			}
@@ -4878,7 +4878,7 @@ static int cam_isp_blob_clock_update(
 			if (hw_intf && hw_intf->hw_ops.process_cmd) {
 				clock_upd_args.node_res =
 					hw_mgr_res->hw_res[i];
-				CAM_DBG(CAM_ISP,
+				CAM_DBG(CAM_PERF,
 				"res_id=%u i= %d clk=%llu\n",
 				hw_mgr_res->res_id, i, clk_rate);
 
@@ -4891,7 +4891,8 @@ static int cam_isp_blob_clock_update(
 					sizeof(
 					struct cam_vfe_clock_update_args));
 				if (rc)
-					CAM_ERR(CAM_ISP, "Clock Update failed");
+					CAM_ERR(CAM_PERF,
+						"Clock Update failed");
 			} else
 				CAM_WARN(CAM_ISP, "NULL hw_intf!");
 		}
@@ -5117,14 +5118,14 @@ static int cam_isp_packet_generic_blob_handler(void *user_data,
 		rc = cam_isp_blob_clock_update(blob_type, blob_info,
 			clock_config, prepare);
 		if (rc)
-			CAM_ERR(CAM_ISP, "Clock Update Failed");
+			CAM_ERR(CAM_PERF, "Clock Update Failed, rc=%d", rc);
 	}
 		break;
 	case CAM_ISP_GENERIC_BLOB_TYPE_BW_CONFIG: {
 		struct cam_isp_bw_config    *bw_config;
 		struct cam_isp_prepare_hw_update_data   *prepare_hw_data;
 
-		CAM_WARN_RATE_LIMIT_CUSTOM(CAM_ISP, 300, 1,
+		CAM_WARN_RATE_LIMIT_CUSTOM(CAM_PERF, 300, 1,
 			"Deprecated Blob TYPE_BW_CONFIG");
 		if (blob_size < sizeof(struct cam_isp_bw_config)) {
 			CAM_ERR(CAM_ISP, "Invalid blob size %u", blob_size);
@@ -5742,7 +5743,7 @@ static void cam_ife_mgr_print_io_bufs(struct cam_packet *packet,
 					io_cfg[i].mem_handle[j]);
 				continue;
 			}
-			if (iova_addr >> 32) {
+			if ((iova_addr & 0xFFFFFFFF) != iova_addr) {
 				CAM_ERR(CAM_ISP, "Invalid mapped address");
 				rc = -EINVAL;
 				continue;
@@ -5889,41 +5890,42 @@ static int cam_ife_mgr_cmd_get_sof_timestamp(
 	struct cam_hw_intf                   *hw_intf;
 	struct cam_csid_get_time_stamp_args   csid_get_time;
 
-	list_for_each_entry(hw_mgr_res, &ife_ctx->res_list_ife_csid, list) {
-		for (i = 0; i < CAM_ISP_HW_SPLIT_MAX; i++) {
-			if (!hw_mgr_res->hw_res[i])
-				continue;
+	hw_mgr_res = list_first_entry(&ife_ctx->res_list_ife_csid,
+		struct cam_ife_hw_mgr_res, list);
 
+	for (i = 0; i < CAM_ISP_HW_SPLIT_MAX; i++) {
+		if (!hw_mgr_res->hw_res[i])
+			continue;
+
+		/*
+		 * Get the SOF time stamp from left resource only.
+		 * Left resource is master for dual vfe case and
+		 * Rdi only context case left resource only hold
+		 * the RDI resource
+		 */
+
+		hw_intf = hw_mgr_res->hw_res[i]->hw_intf;
+		if (hw_intf->hw_ops.process_cmd) {
 			/*
-			 * Get the SOF time stamp from left resource only.
-			 * Left resource is master for dual vfe case and
-			 * Rdi only context case left resource only hold
-			 * the RDI resource
+			 * Single VFE case, Get the time stamp from
+			 * available one csid hw in the context
+			 * Dual VFE case, get the time stamp from
+			 * master(left) would be sufficient
 			 */
 
-			hw_intf = hw_mgr_res->hw_res[i]->hw_intf;
-			if (hw_intf->hw_ops.process_cmd) {
-				/*
-				 * Single VFE case, Get the time stamp from
-				 * available one csid hw in the context
-				 * Dual VFE case, get the time stamp from
-				 * master(left) would be sufficient
-				 */
-
-				csid_get_time.node_res =
-					hw_mgr_res->hw_res[i];
-				rc = hw_intf->hw_ops.process_cmd(
-					hw_intf->hw_priv,
-					CAM_IFE_CSID_CMD_GET_TIME_STAMP,
-					&csid_get_time,
-					sizeof(
-					struct cam_csid_get_time_stamp_args));
-				if (!rc && (i == CAM_ISP_HW_SPLIT_LEFT)) {
-					*time_stamp =
-						csid_get_time.time_stamp_val;
-					*boot_time_stamp =
-						csid_get_time.boot_timestamp;
-				}
+			csid_get_time.node_res =
+				hw_mgr_res->hw_res[i];
+			rc = hw_intf->hw_ops.process_cmd(
+				hw_intf->hw_priv,
+				CAM_IFE_CSID_CMD_GET_TIME_STAMP,
+				&csid_get_time,
+				sizeof(
+				struct cam_csid_get_time_stamp_args));
+			if (!rc && (i == CAM_ISP_HW_SPLIT_LEFT)) {
+				*time_stamp =
+					csid_get_time.time_stamp_val;
+				*boot_time_stamp =
+					csid_get_time.boot_timestamp;
 			}
 		}
 	}
