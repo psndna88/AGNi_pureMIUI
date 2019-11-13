@@ -1,3 +1,0 @@
-# include all directories below
-
-header-y += media/
