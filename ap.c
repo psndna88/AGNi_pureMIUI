@@ -2701,6 +2701,13 @@ static int owrt_ap_config_radio(struct sigma_dut *dut)
 	if (dut->ap_mbssid == VALUE_ENABLED)
 		owrt_ap_set_qcawifi(dut, "mbss_ie_enable", "1");
 
+	if (dut->program == PROGRAM_HE) {
+		owrt_ap_set_radio(dut, radio_id[0], "he_bsscolor", "'1 1'");
+		if (dut->ap_is_dual)
+			owrt_ap_set_radio(dut, radio_id[1], "he_bsscolor",
+					  "'2 1'");
+	}
+
 	return 1;
 }
 
