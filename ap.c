@@ -8686,6 +8686,8 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 			dut->ap_txBF = 1;
 			dut->ap_mu_txBF = 1;
 		}
+		if (get_openwrt_driver_type() == OPENWRT_DRIVER_ATHEROS)
+			dut->ap_dfs_mode = AP_DFS_MODE_ENABLED;
 	}
 
 	dut->ap_oper_chn = 0;
