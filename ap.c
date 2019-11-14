@@ -505,6 +505,63 @@ static void set_ap_country_code(struct sigma_dut *dut)
 }
 
 
+static void set_vht_mcsmap_nss(struct sigma_dut *dut, int nss, int mcs)
+{
+	switch (nss) {
+	case 1:
+		switch (mcs) {
+		case 7:
+			dut->ap_vhtmcs_map = 0xfffc;
+			break;
+		case 8:
+			dut->ap_vhtmcs_map = 0xfffd;
+			break;
+		case 9:
+			dut->ap_vhtmcs_map = 0xfffe;
+			break;
+		default:
+			dut->ap_vhtmcs_map = 0xfffe;
+			break;
+		}
+		break;
+	case 2:
+		switch (mcs) {
+		case 7:
+			dut->ap_vhtmcs_map = 0xfff0;
+			break;
+		case 8:
+			dut->ap_vhtmcs_map = 0xfff5;
+			break;
+		case 9:
+			dut->ap_vhtmcs_map = 0xfffa;
+			break;
+		default:
+			dut->ap_vhtmcs_map = 0xfffa;
+			break;
+		}
+		break;
+	case 3:
+		switch (mcs) {
+		case 7:
+			dut->ap_vhtmcs_map = 0xffc0;
+			break;
+		case 8:
+			dut->ap_vhtmcs_map = 0xffd5;
+			break;
+		case 9:
+			dut->ap_vhtmcs_map = 0xffea;
+			break;
+		default:
+			dut->ap_vhtmcs_map = 0xffea;
+			break;
+		}
+	default:
+		dut->ap_vhtmcs_map = 0xffea;
+		break;
+	}
+}
+
+
 static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 						 struct sigma_conn *conn,
 						 struct sigma_cmd *cmd)
@@ -938,59 +995,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 			return STATUS_SENT;
 		}
 		mcs = atoi(result);
-		switch (nss) {
-		case 1:
-			switch (mcs) {
-			case 7:
-				dut->ap_vhtmcs_map = 0xfffc;
-				break;
-			case 8:
-				dut->ap_vhtmcs_map = 0xfffd;
-				break;
-			case 9:
-				dut->ap_vhtmcs_map = 0xfffe;
-				break;
-			default:
-				dut->ap_vhtmcs_map = 0xfffe;
-				break;
-			}
-			break;
-		case 2:
-			switch (mcs) {
-			case 7:
-				dut->ap_vhtmcs_map = 0xfff0;
-				break;
-			case 8:
-				dut->ap_vhtmcs_map = 0xfff5;
-				break;
-			case 9:
-				dut->ap_vhtmcs_map = 0xfffa;
-				break;
-			default:
-				dut->ap_vhtmcs_map = 0xfffa;
-				break;
-			}
-			break;
-		case 3:
-			switch (mcs) {
-			case 7:
-				dut->ap_vhtmcs_map = 0xffc0;
-				break;
-			case 8:
-				dut->ap_vhtmcs_map = 0xffd5;
-				break;
-			case 9:
-				dut->ap_vhtmcs_map = 0xffea;
-				break;
-			default:
-				dut->ap_vhtmcs_map = 0xffea;
-				break;
-			}
-			break;
-		default:
-			dut->ap_vhtmcs_map = 0xffea;
-			break;
-		}
+		set_vht_mcsmap_nss(dut, nss, mcs);
 	}
 
 	/* TODO: MPDU_MIN_START_SPACING */
