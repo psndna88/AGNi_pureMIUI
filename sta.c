@@ -3445,8 +3445,8 @@ static enum sigma_cmd_result cmd_sta_associate(struct sigma_dut *dut,
 
 		res = get_wpa_cli_events(dut, ctrl, events, buf, sizeof(buf));
 		if (res < 0) {
-			send_resp(dut, conn, SIGMA_ERROR,
-				  "ErrorCode,Association did not complete");
+			send_resp(dut, conn, SIGMA_COMPLETE,
+				  "Result,Association did not complete");
 			ret = STATUS_SENT_ERROR;
 			break;
 		}
