@@ -562,6 +562,51 @@ static void set_vht_mcsmap_nss(struct sigma_dut *dut, int nss, int mcs)
 }
 
 
+/* Get 2*nss bitmask */
+/* We are trying to pack 2-bit MCS values per NSS in a 16-bit wide field.
+ * IEEE P802.11ax/D5.0, 9.4.2.247.4 supported HE-MCS And NSS Set field
+ * defines the following format for the 16 bit value. */
+
+#define HE_GET_MCS_NSS_PACK_MASK(nss) ((1 << ((nss) << 1)) - 1)
+
+static void he_reset_mcs_values_for_unsupported_ss(uint8_t *mcsnssmap,
+						   uint8_t nss)
+{
+	uint8_t nssmask;
+
+	if (nss <= 4) {
+		nssmask = ~HE_GET_MCS_NSS_PACK_MASK(nss);
+		mcsnssmap[0] |= nssmask;
+		mcsnssmap[1] = 0xff;
+	} else if (nss > 4 && nss <= 8) {
+		nssmask = ~HE_GET_MCS_NSS_PACK_MASK(nss - 4);
+		mcsnssmap[0] &= 0xff;
+		mcsnssmap[1] |= nssmask;
+	}
+}
+
+
+static void get_he_mcs_nssmap(uint8_t *mcsnssmap, uint8_t nss,
+			      uint8_t mcs)
+{
+	switch (mcs) {
+	case 11:
+		mcsnssmap[0] = 0xaa;
+		mcsnssmap[1] = 0xaa;
+		break;
+	case 9:
+		mcsnssmap[0] = 0x55;
+		mcsnssmap[1] = 0x55;
+		break;
+	case 7:
+		mcsnssmap[0] = 0x0;
+		mcsnssmap[1] = 0x0;
+		break;
+	}
+	he_reset_mcs_values_for_unsupported_ss(mcsnssmap, nss);
+}
+
+
 static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 						 struct sigma_conn *conn,
 						 struct sigma_cmd *cmd)
@@ -995,7 +1040,15 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 			return STATUS_SENT;
 		}
 		mcs = atoi(result);
-		set_vht_mcsmap_nss(dut, nss, mcs);
+		if (dut->program == PROGRAM_HE) {
+			uint16_t mcsnssmap = 0;
+
+			get_he_mcs_nssmap((uint8_t *) &mcsnssmap, nss, mcs);
+			dut->he_mcsnssmap = (mcsnssmap << 16) | mcsnssmap;
+			dut->he_ul_mcs = mcs;
+		} else {
+			set_vht_mcsmap_nss(dut, nss, mcs);
+		}
 	}
 
 	/* TODO: MPDU_MIN_START_SPACING */
@@ -5620,6 +5673,7 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 	char *ifname_dual = NULL;
 	int i;
 	char buf[300];
+	unsigned int he_mcsnssmap = dut->he_mcsnssmap;
 
 	if (sigma_radio_ifname[0])
 		basedev = sigma_radio_ifname[0];
@@ -6224,6 +6278,9 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 		if (dut->ap_channel == 100 && dut->device_type == AP_testbed)
 			run_system_wrapper(dut, "iwpriv %s inact 1000", ifname);
 
+		if (dut->he_ul_mcs)
+			run_iwpriv(dut, ifname, "he_ul_mcs %d", dut->he_ul_mcs);
+
 		run_iwpriv(dut, ifname, "he_ul_ltf 3");
 		run_iwpriv(dut, ifname, "he_ul_shortgi 3");
 		run_iwpriv(dut, basedev, "he_ul_trig_int 2");
@@ -6380,6 +6437,44 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 		run_iwpriv(dut, ifname, "twt_responder 1");
 	else if (dut->ap_twtresp == VALUE_DISABLED)
 		run_iwpriv(dut, ifname, "twt_responder 0");
+
+	if (dut->program == PROGRAM_HE && dut->ap_fixed_rate) {
+		int nss = 0, mcs = 0;
+		uint16_t mcsnssmap = 0;
+
+		/* MCS 7 is used - set only nss and he_mcs.
+		 * Do not set mcsnssmap unless MCS is 9 or 11. */
+		if (dut->ap_mcs >= 9) {
+			if (dut->ap_mcs == 9) {
+				if (dut->ap_tx_streams == 1) {
+					nss = 1;
+					mcs = dut->ap_mcs;
+				} else if (dut->ap_tx_streams == 2) {
+					nss = 2;
+					mcs = dut->ap_mcs;
+				}
+			} else if (dut->ap_mcs == 11) {
+				if (dut->ap_tx_streams == 1) {
+					nss = 1;
+					mcs = dut->ap_mcs;
+				} else if (dut->ap_tx_streams == 2) {
+					nss = 2;
+					mcs = dut->ap_mcs;
+				}
+			}
+
+			get_he_mcs_nssmap((uint8_t *) &mcsnssmap, nss, mcs);
+			he_mcsnssmap = (mcsnssmap << 16) | mcsnssmap;
+		}
+
+		run_iwpriv(dut, ifname, "nss %d", dut->ap_tx_streams);
+		run_iwpriv(dut, ifname, "he_mcs %d", dut->ap_mcs);
+	}
+
+	if (he_mcsnssmap) {
+		run_iwpriv(dut, ifname, "he_rxmcsmap %lu", he_mcsnssmap);
+		run_iwpriv(dut, ifname, "he_txmcsmap %lu", he_mcsnssmap);
+	}
 }
 
 
@@ -8676,15 +8771,19 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 	dut->ap_he_rtsthrshld = VALUE_NOT_SET;
 	dut->ap_mbssid = VALUE_DISABLED;
 	dut->ap_ampdu = VALUE_NOT_SET;
+	dut->he_mcsnssmap = 0;
+	dut->ap_fixed_rate = 0;
 	if (dut->device_type == AP_testbed) {
 		dut->ap_he_dlofdma = VALUE_DISABLED;
 		dut->ap_he_frag = VALUE_DISABLED;
 		dut->ap_twtresp = VALUE_DISABLED;
+		dut->he_ul_mcs = 7;
 	} else {
 		dut->ap_he_dlofdma = VALUE_NOT_SET;
 		dut->ap_he_frag = VALUE_NOT_SET;
 		dut->ap_ba_bufsize = BA_BUFSIZE_NOT_SET;
 		dut->ap_twtresp = VALUE_NOT_SET;
+		dut->he_ul_mcs = 0;
 	}
 
 	if (dut->program == PROGRAM_HE) {
@@ -10781,6 +10880,11 @@ static int ath_vht_nss_mcs(struct sigma_dut *dut, const char *ifname,
 	} else {
 		if (dut->device_type == AP_testbed && dut->ap_sgi80 == 1)
 			run_iwpriv(dut, ifname, "nss 1");
+		if (dut->device_type == AP_testbed &&
+		    dut->program == PROGRAM_HE) {
+			nss = dut->ap_tx_streams;
+			run_iwpriv(dut, ifname, "nss %d", nss);
+		}
 	}
 
 	result = strtok_r(NULL, ";", &saveptr);
@@ -10794,9 +10898,15 @@ static int ath_vht_nss_mcs(struct sigma_dut *dut, const char *ifname,
 			run_iwpriv(dut, ifname, "vhtmcs 7");
 		else
 			run_iwpriv(dut, ifname, "set11NRates 0");
+		if (dut->device_type == AP_testbed &&
+		    dut->program == PROGRAM_HE)
+			run_iwpriv(dut, ifname, "he_mcs 7");
 	} else {
 		mcs = atoi(result);
-		run_iwpriv(dut, ifname, "vhtmcs %d", mcs);
+		if (dut->program == PROGRAM_HE)
+			run_iwpriv(dut, ifname, "he_mcs %d", mcs);
+		else
+			run_iwpriv(dut, ifname, "vhtmcs %d", mcs);
 	}
 
 end:
