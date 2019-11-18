@@ -81,7 +81,7 @@ static enum sigma_cmd_result cmd_device_get_info(struct sigma_dut *dut,
 	const char *version = "N/A";
 #ifdef __linux__
 	char model_buf[128];
-	char ver_buf[256];
+	char ver_buf[512];
 	int res;
 #endif /* __linux__ */
 	char resp[512];
