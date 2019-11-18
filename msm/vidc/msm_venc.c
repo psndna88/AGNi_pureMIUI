@@ -1108,6 +1108,7 @@ int msm_venc_inst_init(struct msm_vidc_inst *inst)
 		return -EINVAL;
 	}
 	f = &inst->fmts[OUTPUT_PORT].v4l2_fmt;
+	f->type = OUTPUT_MPLANE;
 	f->fmt.pix_mp.height = DEFAULT_HEIGHT;
 	f->fmt.pix_mp.width = DEFAULT_WIDTH;
 	f->fmt.pix_mp.pixelformat = V4L2_PIX_FMT_H264;
@@ -1127,6 +1128,7 @@ int msm_venc_inst_init(struct msm_vidc_inst *inst)
 	strlcpy(inst->fmts[OUTPUT_PORT].description, fmt_desc->description,
 		sizeof(inst->fmts[OUTPUT_PORT].description));
 	f = &inst->fmts[INPUT_PORT].v4l2_fmt;
+	f->type = INPUT_MPLANE;
 	f->fmt.pix_mp.height = DEFAULT_HEIGHT;
 	f->fmt.pix_mp.width = DEFAULT_WIDTH;
 	f->fmt.pix_mp.pixelformat = V4L2_PIX_FMT_NV12_UBWC;
