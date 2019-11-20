@@ -36,7 +36,7 @@
 		/delete-property/ qcom,cpr-quotient-adjustment;
 
 		qcom,cpr-speed-bin-max-corners =
-				<0 0 2 4 8>;
+				<0 0 2 4 9>;
 	};
 
 	apc1_vreg_corner: regulator@b118000 {
@@ -45,7 +45,7 @@
 		/delete-property/ qcom,cpr-quotient-adjustment;
 
 		qcom,cpr-speed-bin-max-corners =
-				<0 0 2 4 7>;
+				<0 0 2 4 9>;
 	};
 
 	gfx_vreg_corner: regulator@98000 {
@@ -153,7 +153,8 @@
 			< 1190400000 5>,
 			< 1305600000 6>,
 			< 1382400000 7>,
-			< 1401600000 8>;
+			< 1401600000 8>,
+			< 1536000000 9>;
 		qcom,speed0-bin-v0-c1 =
 			<          0 0>,
 			<  400000000 1>,
