@@ -2943,7 +2943,7 @@ static unsigned int adreno_gpuid(struct kgsl_device *device,
 	 * that as a parameter */
 
 	if (chipid != NULL)
-		*chipid = adreno_dev->chipid;
+		*chipid = 0x05010200; /* Fake report Adreno 512 */
 
 	/* Standard KGSL gpuid format:
 	 * top word is 0x0002 for 2D or 0x0003 for 3D
