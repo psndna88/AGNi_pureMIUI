@@ -746,6 +746,7 @@ int msm_vdec_inst_init(struct msm_vidc_inst *inst)
 
 	inst->prop.extradata_ctrls = EXTRADATA_DEFAULT;
 	f = &inst->fmts[OUTPUT_PORT].v4l2_fmt;
+	f->type = OUTPUT_MPLANE;
 	f->fmt.pix_mp.height = DEFAULT_HEIGHT;
 	f->fmt.pix_mp.width = DEFAULT_WIDTH;
 	f->fmt.pix_mp.pixelformat = V4L2_PIX_FMT_NV12_UBWC;
@@ -767,6 +768,7 @@ int msm_vdec_inst_init(struct msm_vidc_inst *inst)
 	strlcpy(inst->fmts[OUTPUT_PORT].description, fmt_desc->description,
 		sizeof(inst->fmts[OUTPUT_PORT].description));
 	f = &inst->fmts[INPUT_PORT].v4l2_fmt;
+	f->type = INPUT_MPLANE;
 	f->fmt.pix_mp.height = DEFAULT_HEIGHT;
 	f->fmt.pix_mp.width = DEFAULT_WIDTH;
 	f->fmt.pix_mp.pixelformat = V4L2_PIX_FMT_H264;
