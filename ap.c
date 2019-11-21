@@ -1223,14 +1223,17 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 	}
 
 	val = get_param(cmd, "TxBF");
-	if (val)
+	if (val) {
 		dut->ap_txBF = strcasecmp(val, "enable") == 0;
+		dut->he_sounding = VALUE_DISABLED;
+	}
 
 	val = get_param(cmd, "MU_TxBF");
 	if (val) {
 		if (strcasecmp(val, "enable") == 0) {
 			dut->ap_txBF = 1;
 			dut->ap_mu_txBF = 1;
+			dut->he_sounding = VALUE_DISABLED;
 		} else if (strcasecmp(val, "disable") == 0) {
 			dut->ap_txBF = 0;
 			dut->ap_mu_txBF = 0;
@@ -1797,6 +1800,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 	if (val) {
 		if (strcasecmp(val, "DL") == 0) {
 			dut->ap_he_mimo = MIMO_DL;
+			dut->he_sounding = VALUE_DISABLED;
 		} else if (strcasecmp(val, "UL") == 0) {
 			dut->ap_he_mimo = MIMO_UL;
 		} else {
@@ -6475,6 +6479,10 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 		run_iwpriv(dut, ifname, "he_rxmcsmap %lu", he_mcsnssmap);
 		run_iwpriv(dut, ifname, "he_txmcsmap %lu", he_mcsnssmap);
 	}
+
+	if (dut->he_sounding == VALUE_ENABLED)
+		run_system_wrapper(dut, "wifitool %s setUnitTestCmd 0x47 2 7 0",
+				   ifname);
 }
 
 
@@ -8793,9 +8801,11 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 			dut->ap_amsdu = VALUE_DISABLED;
 			dut->ap_txBF = 0;
 			dut->ap_mu_txBF = 0;
+			dut->he_sounding = VALUE_DISABLED;
 		} else {
 			dut->ap_txBF = 1;
 			dut->ap_mu_txBF = 1;
+			dut->he_sounding = VALUE_ENABLED;
 		}
 		if (get_openwrt_driver_type() == OPENWRT_DRIVER_ATHEROS)
 			dut->ap_dfs_mode = AP_DFS_MODE_ENABLED;
