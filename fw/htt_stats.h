@@ -1692,6 +1692,11 @@ typedef struct _htt_tx_hwq_stats {
         ((_var) |= ((_val) << HTT_TX_SELFGEN_CMN_STATS_MAC_ID_S)); \
     } while (0)
 
+#define HTT_TX_PDEV_STATS_NUM_AC_MUMIMO_USER_STATS 4
+#define HTT_TX_PDEV_STATS_NUM_AX_MUMIMO_USER_STATS 8
+#define HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS 74
+#define HTT_TX_PDEV_STATS_NUM_UL_MUMIMO_USER_STATS 8
+
 typedef struct {
     htt_tlv_hdr_t tlv_hdr;
 
@@ -1776,6 +1781,7 @@ typedef struct {
     A_UINT32 ax_mu_bar_trigger_err;
     A_UINT32 ax_mu_rts_trigger_err;
     A_UINT32 ax_ulmumimo_trigger_err;
+    A_UINT32 ax_mu_mimo_brp_err_num_cbf_received[HTT_TX_PDEV_STATS_NUM_AX_MUMIMO_USER_STATS];
 } htt_tx_selfgen_ax_err_stats_tlv;
 
 /* STATS_TYPE : HTT_DBG_EXT_STATS_TX_SELFGEN_INFO
@@ -1803,11 +1809,6 @@ typedef struct {
 } htt_tx_pdev_selfgen_stats_t;
 
 /* == TX MU STATS == */
-
-#define HTT_TX_PDEV_STATS_NUM_AC_MUMIMO_USER_STATS 4
-#define HTT_TX_PDEV_STATS_NUM_AX_MUMIMO_USER_STATS 8
-#define HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS 74
-#define HTT_TX_PDEV_STATS_NUM_UL_MUMIMO_USER_STATS 8
 
 typedef struct {
     htt_tlv_hdr_t tlv_hdr;
@@ -4070,11 +4071,24 @@ typedef struct {
         A_UINT32 num_sr_tx_transmissions; /* CORRECTED - use this one */
         A_UINT32 num_sr_tx_tranmissions;  /* DEPRECATED - has typo in name */
     };
-    /* num_sr_rx_ge_pd_rssi_thr
-     * counter of rx from other BSS for which RSSI was above the
-     * packet-detection threshold specified for enabling spatial reuse
-     */
-    A_UINT32 num_sr_rx_ge_pd_rssi_thr;
+    union {
+        /*
+         * Count the number of times the RSSI from an other-BSS signal
+         * is below the spatial reuse power threshold, thus providing an
+         * opportunity for spatial reuse since OBSS interference will be
+         * inconsequential.
+         */
+        A_UINT32 num_spatial_reuse_opportunities;
+
+        /* DEPRECATED: num_sr_rx_ge_pd_rssi_thr
+         * This old name has been deprecated because it does not
+         * clearly and accurately reflect the information stored within
+         * this field.
+         * Use the new name (num_spatial_reuse_opportunities) instead of
+         * the deprecated old name (num_sr_rx_ge_pd_rssi_thr).
+         */
+        A_UINT32 num_sr_rx_ge_pd_rssi_thr;
+    };
 } htt_pdev_obss_pd_stats_tlv;
 
 /* NOTE:

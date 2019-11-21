@@ -259,6 +259,7 @@ typedef enum {
     WMI_GRP_HPCS_PULSE,     /* 0x42 */
     WMI_GRP_AUDIO,          /* 0x43 */
     WMI_GRP_CFR_CAPTURE,    /* 0x44 */
+    WMI_GRP_ATM,            /* 0x45 ATM (Air Time Management group) */
 } WMI_GRP_ID;
 
 #define WMI_CMD_GRP_START_ID(grp_id) (((grp_id) << 12) | 0x1)
@@ -1257,6 +1258,14 @@ typedef enum {
 
     /** WMI commands related to Channel Frequency Response Capture **/
     WMI_CFR_CAPTURE_FILTER_CMDID = WMI_CMD_GRP_START_ID(WMI_GRP_CFR_CAPTURE),
+
+    /** WMI commands related to Air Time Management feature **/
+    /** ATF SSID GROUPING REQUEST command */
+    WMI_ATF_SSID_GROUPING_REQUEST_CMDID = WMI_CMD_GRP_START_ID(WMI_GRP_ATM),
+    /** WMM ATF Configuration for groups */
+    WMI_ATF_GROUP_WMM_AC_CONFIG_REQUEST_CMDID,
+    /** ATF Peer Extended Request command */
+    WMI_PEER_ATF_EXT_REQUEST_CMDID,
 } WMI_CMD_ID;
 
 typedef enum {
@@ -3392,6 +3401,27 @@ typedef struct {
       * are used to read and write these bitfields.
       */
     A_UINT32 msdu_flow_override_config1;
+
+    /** @brief flags2 - contains flags used for the following purposes:
+     *  Configure 11ax uplink ofdma/MU-MIMO feature in FW, when chipsets
+     *  are brought up in Repeater/STA mode.
+     *
+     *  @details
+     *  Bits  3:0
+     *      Enable UL MU-OFDMA/MIMO for PDEVs WIFI0, WIFI1, WIFI2
+     *      This flags should only be set when a pdev has STA VAP
+     *      in repeater/self-organizing-network modes.
+     *      E.g. to enable UL RESP for 5G and 2G radios, value shall be
+     *      0b00000000000000000000000000000011 = 0x3.
+     *      Host shall use UCI config for a radio to populate this value,
+     *      each radio entry shall have "config re_ul_resp 1" value set.
+     *      Hence this can be configured dynamically.
+     *
+     *      Refer to the below WMI_RSRC_CFG_FLAGS2_RE_ULRESP_PDEV_CFG_GET/SET
+     *      macros.
+     *  Bits 31:4 - Reserved
+     */
+    A_UINT32 flags2;
 } wmi_resource_config;
 
 #define WMI_MSDU_FLOW_AST_ENABLE_GET(msdu_flow_config0, ast_x) \
@@ -3575,6 +3605,11 @@ typedef struct {
     WMI_RSRC_CFG_FLAG_SET((word32), BSS_MAX_IDLE_TIME_SUPPORT, (value))
 #define WMI_RSRC_CFG_FLAG_BSS_MAX_IDLE_TIME_SUPPORT_GET(word32) \
     WMI_RSRC_CFG_FLAG_GET((word32), BSS_MAX_IDLE_TIME_SUPPORT)
+
+#define WMI_RSRC_CFG_FLAGS2_RE_ULRESP_PDEV_CFG_GET(flags2, pdev_id) \
+    WMI_GET_BITS(flags2, pdev_id, 1)
+#define WMI_RSRC_CFG_FLAGS2_RE_ULRESP_PDEV_CFG_SET(flags2, pdev_id, value) \
+    WMI_SET_BITS(flags2, pdev_id, 1, value)
 
 typedef struct {
     A_UINT32 tlv_header; /* TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_init_cmd_fixed_param */
@@ -9472,6 +9507,10 @@ typedef struct {
 #define  WMI_CIPHER_AES_GCM      0x9
 #define  WMI_CIPHER_AES_GMAC     0xa
 #define  WMI_CIPHER_WAPI_GCM_SM4 0xb
+#define  WMI_CIPHER_BIP_CMAC_128 0xc
+#define  WMI_CIPHER_BIP_CMAC_256 0xd
+#define  WMI_CIPHER_BIP_GMAC_128 0xe
+#define  WMI_CIPHER_BIP_GMAC_256 0xf
 
 typedef struct {
     A_UINT32 tlv_header; /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_vdev_install_key_cmd_fixed_param */
@@ -9929,7 +9968,8 @@ typedef enum {
     WMI_VDEV_PARAM_DISABLE_DYN_BW_RTS,                        /* 0x68 */
 
     /** per ssid (vdev) based ATF strict/fair scheduling policy
-     *  param values are WMI_ATF_SSID_FAIR_SCHED or WMI_ATF_SSID_STRICT_SCHED
+     *  param values are WMI_ATF_SSID_FAIR_SCHED, WMI_ATF_SSID_STRICT_SCHED,
+     *  or WMI_ATF_SSID_FAIR_SCHED_WITH_UB
      */
     WMI_VDEV_PARAM_ATF_SSID_SCHED_POLICY,                     /* 0x69 */
 
@@ -22480,8 +22520,9 @@ typedef struct {
 
 #define WMI_ATF_DENOMINATION   1000 /* Expressed in 1 part in 1000 (permille) */
 
-#define WMI_ATF_SSID_FAIR_SCHED     0   /** fair ATF scheduling for vdev */
-#define WMI_ATF_SSID_STRICT_SCHED   1   /** strict ATF scheduling for vdev */
+#define WMI_ATF_SSID_FAIR_SCHED         0 /** fair ATF scheduling for vdev */
+#define WMI_ATF_SSID_STRICT_SCHED       1 /** strict ATF scheduling for vdev */
+#define WMI_ATF_SSID_FAIR_SCHED_WITH_UB 2 /** fair ATF scheduling with upper bound for VDEV */
 
 typedef struct {
     /** TLV tag and len; tag equals
@@ -22503,6 +22544,104 @@ typedef struct {
      * struct wmi_atf_peer_info peer_info[num_peers];
      */
 } wmi_peer_atf_request_fixed_param;
+
+#define WMI_ATF_GROUP_SCHED_POLICY_BIT_POS        0
+#define WMI_ATF_GROUP_SCHED_POLICY_NUM_BITS       4
+
+#define WMI_ATF_GROUP_GET_GROUP_SCHED_POLICY(atf_group_flags)  \
+    WMI_GET_BITS(atf_group_flags,WMI_ATF_GROUP_SCHED_POLICY_BIT_POS,WMI_ATF_GROUP_SCHED_POLICY_NUM_BITS)
+
+#define WMI_ATF_GROUP_SET_GROUP_SCHED_POLICY(atf_group_flags,val)  \
+    WMI_SET_BITS(atf_group_flags,WMI_ATF_GROUP_SCHED_POLICY_BIT_POS,WMI_ATF_GROUP_SCHED_POLICY_NUM_BITS,val)
+
+typedef struct {
+    /** TLV tag and len; tag equals
+     *  WMITLV_TAG_STRUC_wmi_atf_group_info */
+    A_UINT32 tlv_header;
+    A_UINT32 atf_group_id; /* ID of the Air Time Management group */
+    /* atf_group_units
+     * Fraction of air time allowed for the group, in per mille units
+     * (from 0-1000).
+     * For example, to indicate that the group can use 12.3% of the air time,
+     * the atf_group_units setting would be 123.
+     */
+    A_UINT32 atf_group_units;
+    /* atf_group_flags
+     *  Bits 4-31  - Reserved (Shall be zero)
+     *  Bits 0-3   - Group Schedule Policy (Fair/Strict/Fair with upper bound)
+     *               Refer to WMI_ATF_SSID_ definitions
+     */
+    A_UINT32 atf_group_flags;
+} wmi_atf_group_info;
+
+typedef struct {
+    A_UINT32 tlv_header; /* TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_atf_ssid_grp_request_fixed_param */
+    A_UINT32 pdev_id;
+    /*
+     * Following this structure is the TLV:
+     * struct wmi_atf_group_info group_info[];
+     */
+} wmi_atf_ssid_grp_request_fixed_param;
+
+/* ATF Configurations for WMM ACs of a group, value for each AC shall be in
+ * percentage (0-100).
+ * This perecentage is relative to the residual airtime (derived by FW)
+ * configured for the group.
+ * When WMM ATF is not configured for a peer all values shall be 0.
+ */
+typedef struct {
+    /** TLV tag and len; tag equals
+     *  WMITLV_TAG_STRUC_wmi_atf_group_wmm_ac_info
+     */
+    A_UINT32 tlv_header;
+    A_UINT32 atf_group_id; /* ID of the Air Time Management group */
+    A_UINT32 atf_units_be;
+    A_UINT32 atf_units_bk;
+    A_UINT32 atf_units_vi;
+    A_UINT32 atf_units_vo;
+} wmi_atf_group_wmm_ac_info;
+
+typedef struct {
+    A_UINT32 tlv_header; /* TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_atf_grp_wmm_ac_cfg_request_fixed_param */
+    A_UINT32 pdev_id;
+    /*
+     * Following this structure is the TLV:
+     * struct wmi_atf_group_wmm_ac_info group_info[];
+     */
+} wmi_atf_grp_wmm_ac_cfg_request_fixed_param;
+
+#define WMI_ATF_GROUP_CFG_PEER_BIT_POS     0
+#define WMI_ATF_GROUP_CFG_PEER_NUM_BITS    1
+
+#define WMI_ATF_GROUP_GET_CFG_PEER_BIT(atf_peer_flags) \
+    WMI_GET_BITS(atf_peer_flags,WMI_ATF_GROUP_CFG_PEER_BIT_POS,WMI_ATF_GROUP_CFG_PEER_NUM_BITS)
+
+#define WMI_ATF_GROUP_SET_CFG_PEER_BIT(atf_peer_flags,val) \
+    WMI_SET_BITS(atf_peer_flags,WMI_ATF_GROUP_CFG_PEER_BIT_POS,WMI_ATF_GROUP_CFG_PEER_NUM_BITS,val)
+
+typedef struct {
+    /** TLV tag and len; tag equals
+     *  WMITLV_TAG_STRUC_wmi_peer_atf_ext_info */
+    A_UINT32 tlv_header;
+    wmi_mac_addr peer_macaddr;
+    A_UINT32 atf_group_id; /* Group Id of the peers for ATF SSID grouping */
+    /* atf_peer_flags
+     *  Bits 1-31  - Reserved (Shall be zero)
+     *  Bit  0     - Configured Peer Indication (0/1), this bit would be set by
+     *               host to indicate that the peer has airtime % configured
+     *               explicitly by user.
+     */
+    A_UINT32 atf_peer_flags;
+} wmi_peer_atf_ext_info;
+
+typedef struct {
+    A_UINT32 tlv_header; /* TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_peer_atf_ext_request_fixed_param */
+    A_UINT32 pdev_id;
+    /*
+     * Following this structure is the TLV:
+     * struct wmi_peer_atf_ext_info peer_ext_info[];
+     */
+} wmi_peer_atf_ext_request_fixed_param;
 
 /* Structure for Bandwidth Fairness peer information */
 typedef struct {
@@ -23340,6 +23479,10 @@ typedef enum wmi_coex_config_type {
      * config BTC separate chain mode or shared mode
      */
     WMI_COEX_CONFIG_BTCOEX_SEPARATE_CHAIN_MODE  = 44,
+    /* WMI_COEX_CONFIG_ENABLE_TPUT_SHAPING
+     * enable WLAN throughput shaping while BT scanning
+     */
+    WMI_COEX_CONFIG_ENABLE_TPUT_SHAPING = 45,
 } WMI_COEX_CONFIG_TYPE;
 
 typedef struct {
@@ -24717,6 +24860,9 @@ static INLINE A_UINT8 *wmi_id_to_name(A_UINT32 wmi_command)
         WMI_RETURN_STRING(WMI_AUDIO_AGGR_SET_GROUP_RATE_CMDID);
         WMI_RETURN_STRING(WMI_AUDIO_AGGR_SET_GROUP_RETRY_CMDID);
         WMI_RETURN_STRING(WMI_CFR_CAPTURE_FILTER_CMDID);
+        WMI_RETURN_STRING(WMI_ATF_SSID_GROUPING_REQUEST_CMDID);
+        WMI_RETURN_STRING(WMI_ATF_GROUP_WMM_AC_CONFIG_REQUEST_CMDID);
+        WMI_RETURN_STRING(WMI_PEER_ATF_EXT_REQUEST_CMDID);
     }
 
     return "Invalid WMI cmd";
@@ -27926,6 +28072,9 @@ typedef struct {
     WMI_GET_BITS(param, WMI_CFR_GROUP_NSS_BIT_POS, WMI_CFR_GROUP_NSS_MASK_NUM_BITS)
 
 typedef struct {
+    /** TLV tag and len; tag equals
+     * WMITLV_TAG_STRUC_wmi_cfr_filter_group_config */
+    A_UINT32 tlv_header;
     /* Filter group number for which the below filters needs to be applied */
     A_UINT32 filter_group_id;
     /* Indicates which of the below filter's value is valid
