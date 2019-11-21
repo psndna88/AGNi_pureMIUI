@@ -441,6 +441,7 @@ struct sigma_dut {
 		AP_11ng,
 		AP_11ac,
 		AP_11ad,
+		AP_11ax,
 		AP_inval
 	} ap_mode;
 	int ap_channel;

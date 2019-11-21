@@ -424,6 +424,8 @@ static enum ap_mode get_mode(const char *str)
 		return AP_11ac;
 	else if (strcasecmp(str, "11ad") == 0)
 		return AP_11ad;
+	else if (strcasecmp(str, "11ax") == 0)
+		return AP_11ax;
 	else
 		return AP_inval;
 }
@@ -790,6 +792,12 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 	case AP_11na:
 	case AP_11ac:
 		dut->use_5g = 1;
+		break;
+	case AP_11ax:
+		if (dut->ap_channel >= 1 && dut->ap_channel <= 14)
+			dut->use_5g = 0;
+		else if (dut->ap_channel >= 36 && dut->ap_channel <= 171)
+			dut->use_5g = 1;
 		break;
 	case AP_11ad:
 	case AP_inval:
@@ -2654,6 +2662,15 @@ static int owrt_ap_config_radio(struct sigma_dut *dut)
 		owrt_ap_set_radio(dut, radio_id[0], "hwmode", "11ac");
 		owrt_ap_set_radio(dut, radio_id[0], "htmode", "HT80");
 		break;
+	case AP_11ax:
+		if (dut->ap_channel >= 36) {
+			owrt_ap_set_radio(dut, radio_id[0], "hwmode", "11axa");
+			owrt_ap_set_radio(dut, radio_id[0], "htmode", "HT80");
+		} else {
+			owrt_ap_set_radio(dut, radio_id[0], "hwmode", "11axg");
+			owrt_ap_set_radio(dut, radio_id[0], "htmode", "HT20");
+		}
+		break;
 	case AP_inval:
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"MODE NOT SPECIFIED!");
@@ -2687,6 +2704,19 @@ static int owrt_ap_config_radio(struct sigma_dut *dut)
 		case AP_11ac:
 			owrt_ap_set_radio(dut, radio_id[1], "hwmode", "11ac");
 			owrt_ap_set_radio(dut, radio_id[1], "htmode", "HT80");
+			break;
+		case AP_11ax:
+			if (dut->ap_channel >= 36) {
+				owrt_ap_set_radio(dut, radio_id[1],
+						  "hwmode", "11axa");
+				owrt_ap_set_radio(dut, radio_id[1],
+						  "htmode", "HT80");
+			} else {
+				owrt_ap_set_radio(dut, radio_id[1],
+						  "hwmode", "11axg");
+				owrt_ap_set_radio(dut, radio_id[1],
+						  "htmode", "HT20");
+			}
 			break;
 		case AP_inval:
 			sigma_dut_print(dut, DUT_MSG_ERROR,
