@@ -16548,12 +16548,25 @@ static void wlan_hdd_update_band_cap(struct hdd_context *hdd_ctx)
 	}
 
 	if (!sme_is_feature_supported_by_fw(DOT11AC)) {
-		hdd_ctx->wiphy->bands[HDD_NL80211_BAND_2GHZ]->
+		if (!hdd_ctx->wiphy->bands[HDD_NL80211_BAND_2GHZ]) {
+			hdd_ctx->wiphy->bands[HDD_NL80211_BAND_2GHZ]->
 						vht_cap.vht_supported = 0;
-		hdd_ctx->wiphy->bands[HDD_NL80211_BAND_2GHZ]->vht_cap.cap = 0;
-		hdd_ctx->wiphy->bands[HDD_NL80211_BAND_5GHZ]->
+			hdd_ctx->wiphy->bands[HDD_NL80211_BAND_2GHZ]->
+						vht_cap.cap = 0;
+		}
+
+		if (!hdd_ctx->wiphy->bands[HDD_NL80211_BAND_5GHZ]) {
+			hdd_ctx->wiphy->bands[HDD_NL80211_BAND_5GHZ]->
 						vht_cap.vht_supported = 0;
-		hdd_ctx->wiphy->bands[HDD_NL80211_BAND_5GHZ]->vht_cap.cap = 0;
+			hdd_ctx->wiphy->bands[HDD_NL80211_BAND_5GHZ]->
+						vht_cap.cap = 0;
+		}
+	} else {
+		if (!hdd_ctx->wiphy->bands[HDD_NL80211_BAND_2GHZ]) {
+			if (hdd_ctx->config->enableVhtFor24GHzBand)
+				hdd_ctx->wiphy->bands[HDD_NL80211_BAND_2GHZ]->
+						vht_cap.vht_supported = 1;
+		}
 	}
 }
 
@@ -23194,8 +23207,6 @@ int wlan_hdd_change_hw_mode_for_given_chnl(struct hdd_adapter *adapter,
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 
 	hdd_enter();
-	if (0 != wlan_hdd_validate_context(hdd_ctx))
-		return -EINVAL;
 
 	status = policy_mgr_reset_connection_update(hdd_ctx->psoc);
 	if (!QDF_IS_STATUS_SUCCESS(status))
