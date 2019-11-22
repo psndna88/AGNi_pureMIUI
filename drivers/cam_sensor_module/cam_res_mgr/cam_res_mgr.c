@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/init.h>
@@ -723,17 +723,15 @@ static struct platform_driver cam_res_mgr_driver = {
 	},
 };
 
-static int __init cam_res_mgr_init(void)
+int cam_res_mgr_init(void)
 {
 	return platform_driver_register(&cam_res_mgr_driver);
 }
 
-static void __exit cam_res_mgr_exit(void)
+void cam_res_mgr_exit(void)
 {
 	platform_driver_unregister(&cam_res_mgr_driver);
 }
 
-module_init(cam_res_mgr_init);
-module_exit(cam_res_mgr_exit);
 MODULE_DESCRIPTION("Camera resource manager driver");
 MODULE_LICENSE("GPL v2");

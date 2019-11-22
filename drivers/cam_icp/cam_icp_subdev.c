@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/delay.h>
@@ -260,16 +260,15 @@ static struct platform_driver cam_icp_driver = {
 	},
 };
 
-static int __init cam_icp_init_module(void)
+int cam_icp_init_module(void)
 {
 	return platform_driver_register(&cam_icp_driver);
 }
 
-static void __exit cam_icp_exit_module(void)
+void cam_icp_exit_module(void)
 {
 	platform_driver_unregister(&cam_icp_driver);
 }
-module_init(cam_icp_init_module);
-module_exit(cam_icp_exit_module);
+
 MODULE_DESCRIPTION("MSM ICP driver");
 MODULE_LICENSE("GPL v2");

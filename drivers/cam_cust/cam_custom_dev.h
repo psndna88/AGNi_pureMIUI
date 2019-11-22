@@ -31,4 +31,14 @@ struct cam_custom_dev {
 	int32_t                    open_cnt;
 };
 
+/**
+ * @brief : API to register Custom hw to platform framework.
+ * @return struct platform_device pointer on on success, or ERR_PTR() on error.
+ */
+int cam_custom_dev_init_module(void);
+
+/**
+ * @brief : API to remove Custom hw interface from platform framework.
+ */
+void cam_custom_dev_exit_module(void);
 #endif /* _CAM_CUSTOM_DEV_H_ */

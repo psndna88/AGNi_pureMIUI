@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/platform_device.h>
@@ -219,17 +219,15 @@ static struct platform_driver cam_fd_hw_driver = {
 	},
 };
 
-static int __init cam_fd_hw_init_module(void)
+int cam_fd_hw_init_module(void)
 {
 	return platform_driver_register(&cam_fd_hw_driver);
 }
 
-static void __exit cam_fd_hw_exit_module(void)
+void cam_fd_hw_exit_module(void)
 {
 	platform_driver_unregister(&cam_fd_hw_driver);
 }
 
-module_init(cam_fd_hw_init_module);
-module_exit(cam_fd_hw_exit_module);
 MODULE_DESCRIPTION("CAM FD HW driver");
 MODULE_LICENSE("GPL v2");

@@ -36,4 +36,14 @@ int cam_ipe_process_cmd(void *device_priv, uint32_t cmd_type,
 	void *cmd_args, uint32_t arg_size);
 irqreturn_t cam_ipe_irq(int irq_num, void *data);
 
+/**
+ * @brief : API to register IPE hw to platform framework.
+ * @return struct platform_device pointer on on success, or ERR_PTR() on error.
+ */
+int cam_ipe_init_module(void);
+
+/**
+ * @brief : API to remove IPE Hw from platform framework.
+ */
+void cam_ipe_exit_module(void);
 #endif /* CAM_IPE_CORE_H */

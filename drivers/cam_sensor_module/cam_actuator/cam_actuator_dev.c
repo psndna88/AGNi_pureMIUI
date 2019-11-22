@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
  */
 
 #include "cam_actuator_dev.h"
@@ -413,7 +413,7 @@ static struct i2c_driver cam_actuator_driver_i2c = {
 	},
 };
 
-static int __init cam_actuator_driver_init(void)
+int cam_actuator_driver_init(void)
 {
 	int32_t rc = 0;
 
@@ -430,13 +430,11 @@ static int __init cam_actuator_driver_init(void)
 	return rc;
 }
 
-static void __exit cam_actuator_driver_exit(void)
+void cam_actuator_driver_exit(void)
 {
 	platform_driver_unregister(&cam_actuator_platform_driver);
 	i2c_del_driver(&cam_actuator_driver_i2c);
 }
 
-module_init(cam_actuator_driver_init);
-module_exit(cam_actuator_driver_exit);
 MODULE_DESCRIPTION("cam_actuator_driver");
 MODULE_LICENSE("GPL v2");

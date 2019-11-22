@@ -297,6 +297,16 @@ irqreturn_t cam_cci_irq(int irq_num, void *data);
 
 struct v4l2_subdev *cam_cci_get_subdev(int cci_dev_index);
 
+/**
+ * @brief : API to register CCI hw to platform framework.
+ * @return struct platform_device pointer on on success, or ERR_PTR() on error.
+ */
+int cam_cci_init_module(void);
+
+/**
+ * @brief : API to remove CCI Hw from platform framework.
+ */
+void cam_cci_exit_module(void);
 #define VIDIOC_MSM_CCI_CFG \
 	_IOWR('V', BASE_VIDIOC_PRIVATE + 23, struct cam_cci_ctrl *)
 

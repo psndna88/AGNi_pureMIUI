@@ -195,4 +195,15 @@ struct cam_eeprom_ctrl_t {
 int32_t cam_eeprom_update_i2c_info(struct cam_eeprom_ctrl_t *e_ctrl,
 	struct cam_eeprom_i2c_info_t *i2c_info);
 
+/**
+ * @brief : API to register EEPROM hw to platform framework.
+ * @return struct platform_device pointer on on success, or ERR_PTR() on error.
+ */
+int cam_eeprom_driver_init(void);
+
+/**
+ * @brief : API to remove EEPROM Hw from platform framework.
+ */
+void cam_eeprom_driver_exit(void);
+
 #endif /*_CAM_EEPROM_DEV_H_ */

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_FD_HW_INTF_H_
@@ -278,5 +278,16 @@ struct cam_fd_hw_cmd_set_irq_cb {
 	int (*cam_fd_hw_mgr_cb)(void *data, enum cam_fd_hw_irq_type irq_type);
 	void *data;
 };
+
+/**
+ * @brief : API to register FD Hw to platform framework.
+ * @return struct platform_device pointer on on success, or ERR_PTR() on error.
+ */
+int cam_fd_hw_init_module(void);
+
+/**
+ * @brief : API to remove FD Hw interface from platform framework.
+ */
+void cam_fd_hw_exit_module(void);
 
 #endif /* _CAM_FD_HW_INTF_H_ */

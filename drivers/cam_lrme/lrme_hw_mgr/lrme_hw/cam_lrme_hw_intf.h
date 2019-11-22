@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_LRME_HW_INTF_H_
@@ -192,4 +192,14 @@ struct cam_lrme_hw_submit_args {
 	struct cam_lrme_frame_request *frame_req;
 };
 
+/**
+ * @brief : API to register LRME hw to platform framework.
+ * @return struct platform_device pointer on on success, or ERR_PTR() on error.
+ */
+int cam_lrme_hw_init_module(void);
+
+/**
+ * @brief : API to remove LRME Hw from platform framework.
+ */
+void cam_lrme_hw_exit_module(void);
 #endif /* _CAM_LRME_HW_INTF_H_ */

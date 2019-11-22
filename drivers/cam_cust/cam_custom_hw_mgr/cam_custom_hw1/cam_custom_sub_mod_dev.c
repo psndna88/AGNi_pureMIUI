@@ -146,17 +146,15 @@ static struct platform_driver cam_custom_hw_sub_mod_driver = {
 	},
 };
 
-static int __init cam_custom_hw_sub_module_init(void)
+int cam_custom_hw_sub_module_init(void)
 {
 	return platform_driver_register(&cam_custom_hw_sub_mod_driver);
 }
 
-static void __exit cam_custom_hw_sub_module_exit(void)
+void cam_custom_hw_sub_module_exit(void)
 {
 	platform_driver_unregister(&cam_custom_hw_sub_mod_driver);
 }
 
-module_init(cam_custom_hw_sub_module_init);
-module_exit(cam_custom_hw_sub_module_exit);
 MODULE_DESCRIPTION("CAM CUSTOM HW SUB MODULE driver");
 MODULE_LICENSE("GPL v2");

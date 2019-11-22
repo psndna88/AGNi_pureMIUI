@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_CPAS_HW_INTF_H_
@@ -125,4 +125,14 @@ int cam_cpas_hw_probe(struct platform_device *pdev,
 	struct cam_hw_intf **hw_intf);
 int cam_cpas_hw_remove(struct cam_hw_intf *cpas_hw_intf);
 
+/**
+ * @brief : API to register CPAS hw to platform framework.
+ * @return struct platform_device pointer on on success, or ERR_PTR() on error.
+ */
+int cam_cpas_dev_init_module(void);
+
+/**
+ * @brief : API to remove CPAS interface from platform framework.
+ */
+void cam_cpas_dev_exit_module(void);
 #endif /* _CAM_CPAS_HW_INTF_H_ */

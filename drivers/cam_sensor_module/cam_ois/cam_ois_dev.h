@@ -124,4 +124,14 @@ struct cam_ois_ctrl_t {
 	struct cam_ois_opcode opcode;
 };
 
+/**
+ * @brief : API to register OIS hw to platform framework.
+ * @return struct platform_device pointer on on success, or ERR_PTR() on error.
+ */
+int cam_ois_driver_init(void);
+
+/**
+ * @brief : API to remove OIS Hw from platform framework.
+ */
+void cam_ois_driver_exit(void);
 #endif /*_CAM_OIS_DEV_H_ */

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
  */
 
 #ifndef __CAM_SYNC_API_H__
@@ -140,5 +140,14 @@ int cam_sync_destroy(int32_t sync_obj);
  */
 int cam_sync_wait(int32_t sync_obj, uint64_t timeout_ms);
 
+/**
+ * @brief : API to register SYNC to platform framework.
+ * @return struct platform_device pointer on on success, or ERR_PTR() on error.
+ */
+int cam_sync_init(void);
 
+/**
+ * @brief : API to remove SYNC from platform framework.
+ */
+void cam_sync_exit(void);
 #endif /* __CAM_SYNC_API_H__ */

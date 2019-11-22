@@ -12,4 +12,14 @@
 
 #define CAM_CUSTOM_SUB_MOD_MAX_INSTANCES                   2
 
+/**
+ * @brief : API to register Custom submodule to platform framework.
+ * @return struct platform_device pointer on on success, or ERR_PTR() on error.
+ */
+int cam_custom_hw_sub_module_init(void);
+
+/**
+ * @brief : API to remove Custom submodule interface from platform framework.
+ */
+void cam_custom_hw_sub_module_exit(void);
 #endif /* _CAM_CUSTOM_SUB_MOD_DEV_H_ */

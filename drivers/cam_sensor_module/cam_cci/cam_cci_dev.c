@@ -308,7 +308,6 @@ irqreturn_t cam_cci_irq(int irq_num, void *data)
 		cam_io_w_mb(irq_update_rd_done, base + CCI_IRQ_MASK_1_ADDR);
 	}
 
-
 	cam_io_w_mb(irq_status1, base + CCI_IRQ_CLEAR_1_ADDR);
 	cam_io_w_mb(0x1, base + CCI_IRQ_GLOBAL_CLEAR_CMD_ADDR);
 	return IRQ_HANDLED;
@@ -340,34 +339,6 @@ static const struct v4l2_subdev_ops cci_subdev_ops = {
 };
 
 static const struct v4l2_subdev_internal_ops cci_subdev_intern_ops;
-
-static struct v4l2_file_operations cci_v4l2_subdev_fops;
-
-static long cam_cci_subdev_do_ioctl(
-	struct file *file, unsigned int cmd, void *arg)
-{
-	struct video_device *vdev = video_devdata(file);
-	struct v4l2_subdev *sd = vdev_to_v4l2_subdev(vdev);
-
-	return cam_cci_subdev_ioctl(sd, cmd, NULL);
-}
-
-static long cam_cci_subdev_fops_ioctl(struct file *file, unsigned int cmd,
-	unsigned long arg)
-{
-	return video_usercopy(file, cmd, arg, cam_cci_subdev_do_ioctl);
-}
-
-#ifdef CONFIG_COMPAT
-static long cam_cci_subdev_fops_compat_ioctl(struct file *file,
-	unsigned int cmd, unsigned long arg)
-{
-	struct video_device *vdev = video_devdata(file);
-	struct v4l2_subdev *sd = vdev_to_v4l2_subdev(vdev);
-
-	return v4l2_subdev_call(sd, core, ioctl, cmd, NULL);
-}
-#endif
 
 static int cam_cci_platform_probe(struct platform_device *pdev)
 {
@@ -428,13 +399,6 @@ static int cam_cci_platform_probe(struct platform_device *pdev)
 	mutex_init(&(new_cci_dev->init_mutex));
 	CAM_INFO(CAM_CCI, "Device Type :%d", soc_info->index);
 
-	cam_register_subdev_fops(&cci_v4l2_subdev_fops);
-	cci_v4l2_subdev_fops.unlocked_ioctl = cam_cci_subdev_fops_ioctl;
-#ifdef CONFIG_COMPAT
-	cci_v4l2_subdev_fops.compat_ioctl32 =
-		cam_cci_subdev_fops_compat_ioctl;
-#endif
-
 	cpas_parms.cam_cpas_client_cb = NULL;
 	cpas_parms.cell_index = soc_info->index;
 	cpas_parms.dev = &pdev->dev;
@@ -485,44 +449,15 @@ static struct platform_driver cci_driver = {
 	},
 };
 
-static int cam_cci_assign_fops(void)
-{
-	struct v4l2_subdev *sd;
-	int i = 0;
-
-	for (; i < MAX_CCI; i++) {
-		sd = g_cci_subdev[i];
-		if (!sd)
-			return 0;
-		if (!(sd->devnode)) {
-			CAM_ERR(CAM_CCI,
-			"Invalid dev node:%pK offset: %d",
-			sd->devnode, i);
-			return -EINVAL;
-		}
-		sd->devnode->fops = &cci_v4l2_subdev_fops;
-	}
-
-	return 0;
-}
-
-static int __init cam_cci_late_init(void)
-{
-	return cam_cci_assign_fops();
-}
-
-static int __init cam_cci_init_module(void)
+int cam_cci_init_module(void)
 {
 	return platform_driver_register(&cci_driver);
 }
 
-static void __exit cam_cci_exit_module(void)
+void cam_cci_exit_module(void)
 {
 	platform_driver_unregister(&cci_driver);
 }
 
-module_init(cam_cci_init_module);
-late_initcall(cam_cci_late_init);
-module_exit(cam_cci_exit_module);
 MODULE_DESCRIPTION("MSM CCI driver");
 MODULE_LICENSE("GPL v2");

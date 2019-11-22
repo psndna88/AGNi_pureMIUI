@@ -626,7 +626,7 @@ static struct i2c_driver cam_flash_i2c_driver = {
 	},
 };
 
-static int32_t __init cam_flash_init_module(void)
+int32_t cam_flash_init_module(void)
 {
 	int32_t rc = 0;
 
@@ -642,13 +642,11 @@ static int32_t __init cam_flash_init_module(void)
 	return rc;
 }
 
-static void __exit cam_flash_exit_module(void)
+void cam_flash_exit_module(void)
 {
 	platform_driver_unregister(&cam_flash_platform_driver);
 	i2c_del_driver(&cam_flash_i2c_driver);
 }
 
-module_init(cam_flash_init_module);
-module_exit(cam_flash_exit_module);
 MODULE_DESCRIPTION("CAM FLASH");
 MODULE_LICENSE("GPL v2");

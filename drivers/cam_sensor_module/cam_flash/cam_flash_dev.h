@@ -225,4 +225,14 @@ int cam_flash_pmic_flush_request(struct cam_flash_ctrl *fctrl,
 void cam_flash_shutdown(struct cam_flash_ctrl *fctrl);
 int cam_flash_release_dev(struct cam_flash_ctrl *fctrl);
 
+/**
+ * @brief : API to register FLASH hw to platform framework.
+ * @return struct platform_device pointer on on success, or ERR_PTR() on error.
+ */
+int32_t cam_flash_init_module(void);
+
+/**
+ * @brief : API to remove FLASH Hw from platform framework.
+ */
+void cam_flash_exit_module(void);
 #endif /*_CAM_FLASH_DEV_H_*/

@@ -366,7 +366,7 @@ static struct i2c_driver cam_sensor_driver_i2c = {
 	},
 };
 
-static int __init cam_sensor_driver_init(void)
+int cam_sensor_driver_init(void)
 {
 	int32_t rc = 0;
 
@@ -384,13 +384,11 @@ static int __init cam_sensor_driver_init(void)
 	return rc;
 }
 
-static void __exit cam_sensor_driver_exit(void)
+void cam_sensor_driver_exit(void)
 {
 	platform_driver_unregister(&cam_sensor_platform_driver);
 	i2c_del_driver(&cam_sensor_driver_i2c);
 }
 
-module_init(cam_sensor_driver_init);
-module_exit(cam_sensor_driver_exit);
 MODULE_DESCRIPTION("cam_sensor_driver");
 MODULE_LICENSE("GPL v2");

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_JPEG_DEV_H_
@@ -29,4 +29,15 @@ struct cam_jpeg_dev {
 	struct mutex jpeg_mutex;
 	int32_t open_cnt;
 };
+
+/**
+ * @brief : API to register JPEG dev to platform framework.
+ * @return struct platform_device pointer on on success, or ERR_PTR() on error.
+ */
+int cam_jpeg_dev_init_module(void);
+
+/**
+ * @brief : API to remove JPEG dev from platform framework.
+ */
+void cam_jpeg_dev_exit_module(void);
 #endif /* __CAM_JPEG_DEV_H__ */

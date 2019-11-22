@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -24,7 +24,6 @@ static struct cam_bps_device_hw_info cam_bps_hw_info = {
 	.pwr_status = 0x58,
 	.reserved = 0,
 };
-EXPORT_SYMBOL(cam_bps_hw_info);
 
 static char bps_dev_name[8];
 
@@ -191,17 +190,15 @@ static struct platform_driver cam_bps_driver = {
 	},
 };
 
-static int __init cam_bps_init_module(void)
+int cam_bps_init_module(void)
 {
 	return platform_driver_register(&cam_bps_driver);
 }
 
-static void __exit cam_bps_exit_module(void)
+void cam_bps_exit_module(void)
 {
 	platform_driver_unregister(&cam_bps_driver);
 }
 
-module_init(cam_bps_init_module);
-module_exit(cam_bps_exit_module);
 MODULE_DESCRIPTION("CAM BPS driver");
 MODULE_LICENSE("GPL v2");

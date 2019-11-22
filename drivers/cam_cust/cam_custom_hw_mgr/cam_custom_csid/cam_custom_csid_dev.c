@@ -152,7 +152,7 @@ static struct platform_driver cam_custom_csid_driver = {
 	.remove = cam_custom_csid_remove,
 };
 
-static int __init cam_custom_csid_driver_init(void)
+int cam_custom_csid_driver_init(void)
 {
 	int32_t rc = 0;
 
@@ -179,12 +179,10 @@ int cam_custom_csid_hw_init(struct cam_hw_intf **custom_csid_hw,
 	return rc;
 }
 
-static void __exit cam_custom_csid_driver_exit(void)
+void cam_custom_csid_driver_exit(void)
 {
 	platform_driver_unregister(&cam_custom_csid_driver);
 }
 
-module_init(cam_custom_csid_driver_init);
-module_exit(cam_custom_csid_driver_exit);
 MODULE_DESCRIPTION("cam_custom_csid_driver");
 MODULE_LICENSE("GPL v2");

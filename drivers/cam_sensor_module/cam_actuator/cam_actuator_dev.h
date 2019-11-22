@@ -64,13 +64,13 @@ struct cam_actuator_soc_private {
 };
 
 /**
- * struct intf_params
+ * struct actuator_intf_params
  * @device_hdl: Device Handle
  * @session_hdl: Session Handle
  * @ops: KMD operations
  * @crm_cb: Callback API pointers
  */
-struct intf_params {
+struct actuator_intf_params {
 	int32_t device_hdl;
 	int32_t session_hdl;
 	int32_t link_hdl;
@@ -113,8 +113,18 @@ struct cam_actuator_ctrl_t {
 	struct cam_subdev v4l2_dev_str;
 	struct i2c_data_settings i2c_data;
 	struct cam_actuator_query_cap act_info;
-	struct intf_params bridge_intf;
+	struct actuator_intf_params bridge_intf;
 	uint32_t last_flush_req;
 };
 
+/**
+ * @brief : API to register Actuator hw to platform framework.
+ * @return struct platform_device pointer on on success, or ERR_PTR() on error.
+ */
+int cam_actuator_driver_init(void);
+
+/**
+ * @brief : API to remove Actuator Hw from platform framework.
+ */
+void cam_actuator_driver_exit(void);
 #endif /* _CAM_ACTUATOR_DEV_H_ */

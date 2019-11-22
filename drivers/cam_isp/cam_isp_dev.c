@@ -181,17 +181,15 @@ static struct platform_driver isp_driver = {
 	},
 };
 
-static int __init cam_isp_dev_init_module(void)
+int cam_isp_dev_init_module(void)
 {
 	return platform_driver_register(&isp_driver);
 }
 
-static void __exit cam_isp_dev_exit_module(void)
+void cam_isp_dev_exit_module(void)
 {
 	platform_driver_unregister(&isp_driver);
 }
 
-module_init(cam_isp_dev_init_module);
-module_exit(cam_isp_dev_exit_module);
 MODULE_DESCRIPTION("MSM ISP driver");
 MODULE_LICENSE("GPL v2");

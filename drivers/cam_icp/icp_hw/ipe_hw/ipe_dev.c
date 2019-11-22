@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -32,7 +32,6 @@ static struct cam_ipe_device_hw_info cam_ipe_hw_info[] = {
 		.reserved = 0,
 	},
 };
-EXPORT_SYMBOL(cam_ipe_hw_info);
 
 static char ipe_dev_name[8];
 
@@ -183,17 +182,15 @@ static struct platform_driver cam_ipe_driver = {
 	},
 };
 
-static int __init cam_ipe_init_module(void)
+int cam_ipe_init_module(void)
 {
 	return platform_driver_register(&cam_ipe_driver);
 }
 
-static void __exit cam_ipe_exit_module(void)
+void cam_ipe_exit_module(void)
 {
 	platform_driver_unregister(&cam_ipe_driver);
 }
 
-module_init(cam_ipe_init_module);
-module_exit(cam_ipe_exit_module);
 MODULE_DESCRIPTION("CAM IPE driver");
 MODULE_LICENSE("GPL v2");

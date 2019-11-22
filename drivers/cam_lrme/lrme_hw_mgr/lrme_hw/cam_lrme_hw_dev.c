@@ -287,17 +287,15 @@ static struct platform_driver cam_lrme_hw_driver = {
 	},
 };
 
-static int __init cam_lrme_hw_init_module(void)
+int cam_lrme_hw_init_module(void)
 {
 	return platform_driver_register(&cam_lrme_hw_driver);
 }
 
-static void __exit cam_lrme_hw_exit_module(void)
+void cam_lrme_hw_exit_module(void)
 {
 	platform_driver_unregister(&cam_lrme_hw_driver);
 }
 
-module_init(cam_lrme_hw_init_module);
-module_exit(cam_lrme_hw_exit_module);
 MODULE_DESCRIPTION("CAM LRME HW driver");
 MODULE_LICENSE("GPL v2");

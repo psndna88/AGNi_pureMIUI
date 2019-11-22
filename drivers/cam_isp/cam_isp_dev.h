@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_ISP_DEV_H_
@@ -28,4 +28,14 @@ struct cam_isp_dev {
 	int32_t                    open_cnt;
 };
 
+/**
+ * @brief : API to register ISP Dev to platform framework.
+ * @return struct platform_device pointer on on success, or ERR_PTR() on error.
+ */
+int cam_isp_dev_init_module(void);
+
+/**
+ * @brief : API to remove ISP Dev from platform framework.
+ */
+void cam_isp_dev_exit_module(void);
 #endif /* __CAM_ISP_DEV_H__ */
