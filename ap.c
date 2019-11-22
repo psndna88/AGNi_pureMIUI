@@ -6264,6 +6264,58 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 		dut->hostapd_running = 1;
 	}
 
+	if (dut->program == PROGRAM_HE) {
+		/* disable sending basic triggers */
+		run_system_wrapper(dut,
+				   "wifitool %s setUnitTestCmd 0x47 2 42 0",
+				   ifname);
+		/* disable MU BAR */
+		run_system_wrapper(dut,
+				   "wifitool %s setUnitTestCmd 0x47 2 64 1",
+				   ifname);
+		/* disable PSD Boost */
+		run_system_wrapper(dut,
+				   "wifitool %s setUnitTestCmd 0x48 2 142 1",
+				   ifname);
+		/* Enable mix bw */
+		run_system_wrapper(dut,
+				   "wifitool %s setUnitTestCmd 0x47 2 141 1",
+				   ifname);
+		/* Disable preferred AC */
+		run_system_wrapper(dut,
+				   "wifitool %s setUnitTestCmd 0x48 2 186 0",
+				   ifname);
+		run_iwpriv(dut, basedev, "he_muedca_mode 0");
+		run_iwpriv(dut, ifname, "he_ul_ofdma 0");
+		run_iwpriv(dut, ifname, "he_dl_ofdma 0");
+		if (dut->device_type == AP_testbed) {
+			run_iwpriv(dut, ifname, "tx_stbc 0");
+			run_iwpriv(dut, ifname, "he_txmcsmap 0x0");
+			run_iwpriv(dut, ifname, "he_rxmcsmap 0x0");
+			run_iwpriv(dut, ifname, "he_amsdu_in_ampdu_supp 0");
+			run_iwpriv(dut, ifname, "he_bfee_sts_supp 0 0");
+			run_iwpriv(dut, ifname, "he_4xltf_800nsgi_rx 0");
+			run_iwpriv(dut, ifname, "he_1xltf_800nsgi_rx 0");
+			run_iwpriv(dut, ifname, "he_max_nc 0");
+			run_iwpriv(dut, ifname, "he_bsr_supp 0");
+			run_iwpriv(dut, ifname, "rx_stbc 0");
+			if (dut->ap_he_dlofdma == VALUE_DISABLED)
+				run_iwpriv(dut, ifname, "he_dlofdma 0");
+			if (dut->ap_channel <= 11) {
+				dut->ap_bcc = VALUE_ENABLED;
+				run_iwpriv(dut, ifname, "vht_11ng 0");
+			}
+			if (!dut->ap_txBF) {
+				run_iwpriv(dut, ifname, "he_subfer 0");
+				run_iwpriv(dut, ifname, "he_subfee 0");
+			}
+			if (!dut->ap_mu_txBF) {
+				run_iwpriv(dut, ifname, "he_mubfer 0");
+				run_iwpriv(dut, ifname, "he_mubfee 0");
+			}
+		}
+	}
+
 	if (dut->ap_he_ulofdma == VALUE_ENABLED) {
 		run_iwpriv(dut, ifname, "he_ul_ofdma 1");
 		run_iwpriv(dut, ifname, "he_mu_edca 1");
