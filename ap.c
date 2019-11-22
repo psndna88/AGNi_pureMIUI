@@ -2811,6 +2811,8 @@ static int owrt_ap_config_radio(struct sigma_dut *dut)
 		if (dut->ap_is_dual)
 			owrt_ap_set_radio(dut, radio_id[1], "he_bsscolor",
 					  "'2 1'");
+		owrt_ap_set_qcawifi(dut, "ap_bss_color_collision_detection",
+				    "1");
 	}
 
 	return 1;
