@@ -953,7 +953,7 @@ static void print_license(void)
 
 static void usage(void)
 {
-	printf("usage: sigma_dut [-aABdfGqDIntuVW] [-p<port>] "
+	printf("usage: sigma_dut [-aABdfGqDIntuVW2] [-p<port>] "
 	       "[-s<sniffer>] [-m<set_maccaddr.sh>] \\\n"
 	       "       [-M<main ifname>] [-R<radio ifname>] "
 	       "[-S<station ifname>] [-P<p2p_ifname>]\\\n"
@@ -1004,7 +1004,7 @@ int main(int argc, char *argv[])
 
 	for (;;) {
 		c = getopt(argc, argv,
-			   "aAb:Bc:C:dDE:e:fF:gGhH:j:J:i:Ik:K:l:L:m:M:nN:o:O:p:P:qr:R:s:S:tT:uv:VWw:x:y:z:");
+			   "aAb:Bc:C:dDE:e:fF:gGhH:j:J:i:Ik:K:l:L:m:M:nN:o:O:p:P:qr:R:s:S:tT:uv:VWw:x:y:z:2");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -1193,6 +1193,9 @@ int main(int argc, char *argv[])
 #endif /* MIRACAST */
 		case 'z':
 			client_socket_path = optarg;
+			break;
+		case '2':
+			sigma_dut.sae_h2e_default = 1;
 			break;
 		case 'h':
 		default:

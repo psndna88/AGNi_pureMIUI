@@ -2215,6 +2215,19 @@ static enum sigma_cmd_result cmd_ap_set_security(struct sigma_dut *dut,
 	if (val)
 		dut->sae_confirm_immediate = get_enable_disable(val);
 
+	val = get_param(cmd, "sae_pwe");
+	if (val) {
+		if (strcasecmp(val, "h2e") == 0) {
+			dut->sae_pwe = SAE_PWE_H2E;
+		} else if (strcasecmp(val, "loop") == 0) {
+			dut->sae_pwe = SAE_PWE_LOOP;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported sae_pwe value");
+			return STATUS_SENT_ERROR;
+		}
+	}
+
 	val = get_param(cmd, "ENCRYPT");
 	if (!val)
 		val = get_param(cmd, "EncpType");
@@ -4063,6 +4076,19 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 	if (dut->ap_sae_groups) {
 		snprintf(buf, sizeof(buf), "\'%s\'", dut->ap_sae_groups);
 		owrt_ap_set_list_vap(dut, vap_count, "sae_groups", buf);
+	}
+
+	if (dut->sae_pwe != SAE_PWE_DEFAULT || dut->sae_h2e_default) {
+		const char *sae_pwe = NULL;
+
+		if (dut->sae_pwe == SAE_PWE_LOOP)
+			sae_pwe = "0";
+		else if (dut->sae_pwe == SAE_PWE_H2E)
+			sae_pwe = "1";
+		else if (dut->sae_h2e_default)
+			sae_pwe = "2";
+		if (sae_pwe)
+			owrt_ap_set_vap(dut, vap_count, "sae_pwe", sae_pwe);
 	}
 
 	if (dut->sae_anti_clogging_threshold >= 0) {
@@ -7768,6 +7794,19 @@ skip_key_mgmt:
 	if (dut->ap_sae_groups)
 		fprintf(f, "sae_groups=%s\n", dut->ap_sae_groups);
 
+	if (dut->sae_pwe != SAE_PWE_DEFAULT || dut->sae_h2e_default) {
+		const char *sae_pwe = NULL;
+
+		if (dut->sae_pwe == SAE_PWE_LOOP)
+			sae_pwe = "0";
+		else if (dut->sae_pwe == SAE_PWE_H2E)
+			sae_pwe = "1";
+		else if (dut->sae_h2e_default)
+			sae_pwe = "2";
+		if (sae_pwe)
+			fprintf(f, "sae_pwe=%s", sae_pwe);
+	}
+
 	if (dut->sae_anti_clogging_threshold >= 0)
 		fprintf(f, "sae_anti_clogging_threshold=%d\n",
 			dut->sae_anti_clogging_threshold);
@@ -8910,6 +8949,7 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 	dut->sae_anti_clogging_threshold = -1;
 	dut->sae_reflection = 0;
 	dut->sae_confirm_immediate = 0;
+	dut->sae_pwe = SAE_PWE_DEFAULT;
 
 	dut->ap_cipher = AP_CCMP;
 	dut->ap_group_cipher = AP_NO_GROUP_CIPHER_SET;

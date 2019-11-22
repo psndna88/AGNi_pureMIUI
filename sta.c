@@ -2055,6 +2055,7 @@ static enum sigma_cmd_result cmd_sta_set_psk(struct sigma_dut *dut,
 	const char *ifname, *val, *alg;
 	int id;
 	char buf[50];
+	int sae_pwe = -1;
 
 	if (intf == NULL)
 		return -1;
@@ -2170,6 +2171,28 @@ static enum sigma_cmd_result cmd_sta_set_psk(struct sigma_dut *dut,
 			 get_enable_disable(val));
 		wpa_command(intf, buf);
 	}
+
+	val = get_param(cmd, "sae_pwe");
+	if (val) {
+		if (strcasecmp(val, "h2e") == 0) {
+			dut->sae_pwe = SAE_PWE_H2E;
+		} else if (strcasecmp(val, "loop") == 0) {
+			dut->sae_pwe = SAE_PWE_LOOP;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported sae_pwe value");
+			return STATUS_SENT_ERROR;
+		}
+	}
+	if (dut->sae_pwe == SAE_PWE_LOOP)
+		sae_pwe = 0;
+	else if (dut->sae_pwe == SAE_PWE_H2E)
+		sae_pwe = 1;
+	else if (dut->sae_h2e_default)
+		sae_pwe = 2;
+	snprintf(buf, sizeof(buf), "SET sae_pwe %d", sae_pwe);
+	if (sae_pwe >= 0 && wpa_command(ifname, buf) != 0)
+		return ERROR_SEND_STATUS;
 
 	if (dut->program == PROGRAM_60GHZ && network_mode &&
 	    strcasecmp(network_mode, "PBSS") == 0 &&
@@ -7811,6 +7834,7 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 	free(dut->sae_commit_override);
 	dut->sae_commit_override = NULL;
 	wpa_command(intf, "SET sae_pmkid_in_assoc 0");
+	dut->sae_pwe = SAE_PWE_DEFAULT;
 
 	dut->sta_associate_wait_connect = 0;
 	dut->server_cert_hash[0] = '\0';

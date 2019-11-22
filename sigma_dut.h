@@ -925,6 +925,13 @@ struct sigma_dut {
 	wifi_handle wifi_hal_handle;
 	bool wifi_hal_initialized;
 #endif /*ANDROID_WIFI_HAL*/
+
+	int sae_h2e_default;
+	enum {
+		SAE_PWE_DEFAULT,
+		SAE_PWE_LOOP,
+		SAE_PWE_H2E
+	} sae_pwe;
 };
 
 
