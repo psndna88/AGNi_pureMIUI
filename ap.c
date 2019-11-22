@@ -6341,6 +6341,9 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 				run_iwpriv(dut, ifname, "he_mubfer 0");
 				run_iwpriv(dut, ifname, "he_mubfee 0");
 			}
+			if (dut->ap_cipher == AP_WEP ||
+			    dut->ap_cipher == AP_TKIP)
+				run_iwpriv(dut, ifname, "htweptkip 1");
 		}
 	}
 
