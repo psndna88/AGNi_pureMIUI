@@ -6493,12 +6493,6 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 		}
 	}
 
-	if (dut->ap_channel <= 11 && dut->program == PROGRAM_HE &&
-	    dut->device_type == AP_testbed) {
-		dut->ap_bcc = VALUE_ENABLED;
-		run_iwpriv(dut, ifname, "vht_11ng 0");
-	}
-
 	if (dut->ap_bcc == VALUE_ENABLED) {
 		run_iwpriv(dut, ifname, "mode 11AHE20");
 		run_iwpriv(dut, ifname, "nss 2");
