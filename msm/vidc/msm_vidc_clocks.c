@@ -26,7 +26,8 @@ struct msm_vidc_core_ops core_ops_ar50_lt = {
 	.calc_freq = msm_vidc_calc_freq_ar50_lt,
 	.decide_work_route = NULL,
 	.decide_work_mode = msm_vidc_decide_work_mode_ar50_lt,
-	.decide_core_and_power_mode = NULL,
+	.decide_core_and_power_mode =
+		msm_vidc_decide_core_and_power_mode_ar50lt,
 	.calc_bw = NULL,
 };
 
@@ -1272,6 +1273,12 @@ static inline int msm_vidc_power_save_mode_enable(struct msm_vidc_inst *inst,
 		"Power Save Mode for inst: %pK Enable = %d\n", inst, enable);
 
 	return rc;
+}
+
+int msm_vidc_decide_core_and_power_mode_ar50lt(struct msm_vidc_inst *inst)
+{
+	inst->clk_data.core_id = VIDC_CORE_ID_1;
+	return 0;
 }
 
 int msm_vidc_decide_core_and_power_mode_iris2(struct msm_vidc_inst *inst)
