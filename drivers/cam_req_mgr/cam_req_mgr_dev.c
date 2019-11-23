@@ -6,12 +6,17 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/platform_device.h>
+#include <linux/highmem.h>
+
+#include <mm/slab.h>
+
 #include <media/v4l2-fh.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-event.h>
 #include <media/v4l2-ioctl.h>
 #include <media/cam_req_mgr.h>
 #include <media/cam_defs.h>
+
 #include "cam_req_mgr_dev.h"
 #include "cam_req_mgr_util.h"
 #include "cam_req_mgr_core.h"
@@ -19,7 +24,6 @@
 #include "cam_mem_mgr.h"
 #include "cam_debug_util.h"
 #include "cam_common_util.h"
-#include <linux/slub_def.h>
 
 #define CAM_REQ_MGR_EVENT_MAX 30
 
@@ -204,30 +208,38 @@ static void cam_v4l2_event_queue_notify_error(const struct v4l2_event *old,
 
 	ev_header = CAM_REQ_MGR_GET_PAYLOAD_PTR((*old),
 		struct cam_req_mgr_message);
+
 	switch (old->id) {
 	case V4L_EVENT_CAM_REQ_MGR_SOF:
-		CAM_ERR(CAM_CRM, "Failed to notify SOF event");
-		CAM_ERR(CAM_CRM, "Sess %X FrameId %lld ReqId %lld link %X",
-			ev_header->session_hdl,
-			ev_header->u.frame_msg.frame_id,
-			ev_header->u.frame_msg.request_id,
-			ev_header->u.frame_msg.link_hdl);
+	case V4L_EVENT_CAM_REQ_MGR_SOF_BOOT_TS:
+		if (ev_header->u.frame_msg.request_id)
+			CAM_ERR(CAM_CRM,
+				"Failed to notify %s Sess %X FrameId %lld FrameMeta %d ReqId %lld link %X",
+				((old->id == V4L_EVENT_CAM_REQ_MGR_SOF) ?
+				"SOF_TS" : "BOOT_TS"),
+				ev_header->session_hdl,
+				ev_header->u.frame_msg.frame_id,
+				ev_header->u.frame_msg.frame_id_meta,
+				ev_header->u.frame_msg.request_id,
+				ev_header->u.frame_msg.link_hdl);
+		else
+			CAM_WARN_RATE_LIMIT_CUSTOM(CAM_CRM, 5, 1,
+				"Failed to notify %s Sess %X FrameId %lld FrameMeta %d ReqId %lld link %X",
+				((old->id == V4L_EVENT_CAM_REQ_MGR_SOF) ?
+				"SOF_TS" : "BOOT_TS"),
+				ev_header->session_hdl,
+				ev_header->u.frame_msg.frame_id,
+				ev_header->u.frame_msg.frame_id_meta,
+				ev_header->u.frame_msg.request_id,
+				ev_header->u.frame_msg.link_hdl);
 		break;
 	case V4L_EVENT_CAM_REQ_MGR_ERROR:
-		CAM_ERR(CAM_CRM, "Failed to notify ERROR");
-		CAM_ERR(CAM_CRM, "Sess %X ReqId %d Link %X Type %d",
-			ev_header->u.err_msg.error_type,
+		CAM_ERR(CAM_CRM,
+			"Failed to notify ERROR Sess %X ReqId %d Link %X Type %d",
+			ev_header->session_hdl,
 			ev_header->u.err_msg.request_id,
 			ev_header->u.err_msg.link_hdl,
 			ev_header->u.err_msg.error_type);
-		break;
-	case V4L_EVENT_CAM_REQ_MGR_SOF_BOOT_TS:
-		CAM_ERR(CAM_CRM, "Failed to notify BOOT_TS event");
-		CAM_ERR(CAM_CRM, "Sess %X FrameId %lld ReqId %lld link %X",
-			ev_header->session_hdl,
-			ev_header->u.frame_msg.frame_id,
-			ev_header->u.frame_msg.request_id,
-			ev_header->u.frame_msg.link_hdl);
 		break;
 	default:
 		CAM_ERR(CAM_CRM, "Failed to notify crm event id %d",
