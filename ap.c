@@ -6418,10 +6418,6 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 				   ifname);
 	}
 
-	if (dut->program == PROGRAM_HE && dut->device_type == AP_testbed &&
-	    dut->ap_he_dlofdma == VALUE_DISABLED)
-		run_iwpriv(dut, ifname, "he_dl_ofdma 0");
-
 	if (dut->ap_he_dlofdma == VALUE_ENABLED) {
 		run_iwpriv(dut, ifname, "he_dl_ofdma 1", ifname);
 
