@@ -686,6 +686,7 @@ struct sigma_dut {
 	int ap_numsounddim;
 	unsigned int he_mcsnssmap;
 	int he_ul_mcs;
+	int he_mmss;
 
 	enum value_not_set_enabled_disabled ap_oce;
 	enum value_not_set_enabled_disabled ap_filsdscv;

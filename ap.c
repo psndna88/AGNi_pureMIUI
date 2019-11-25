@@ -1857,6 +1857,10 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		}
 	}
 
+	val = get_param(cmd, "MinMPDUStartSpacing");
+	if (val)
+		dut->he_mmss = atoi(val);
+
 	return SUCCESS_SEND_STATUS;
 }
 
@@ -6593,6 +6597,9 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 	if (dut->he_sounding == VALUE_ENABLED)
 		run_system_wrapper(dut, "wifitool %s setUnitTestCmd 0x47 2 7 0",
 				   ifname);
+
+	if (dut->he_mmss)
+		run_iwpriv(dut, ifname, "ampduden_ovrd %d", dut->he_mmss);
 }
 
 
@@ -8904,6 +8911,7 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 	dut->ap_ampdu = VALUE_NOT_SET;
 	dut->he_mcsnssmap = 0;
 	dut->ap_fixed_rate = 0;
+	dut->he_mmss = 0;
 	if (dut->device_type == AP_testbed) {
 		dut->ap_he_dlofdma = VALUE_DISABLED;
 		dut->ap_he_frag = VALUE_DISABLED;
