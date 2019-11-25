@@ -6320,6 +6320,23 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 		run_iwpriv(dut, basedev, "he_muedca_mode 0");
 		run_iwpriv(dut, ifname, "he_ul_ofdma 0");
 		run_iwpriv(dut, ifname, "he_dl_ofdma 0");
+		if (dut->ap_txBF) {
+			/* Enable SU_AX sounding */
+			run_iwpriv(dut, ifname, "he_sounding_mode 1");
+			/* Ignore TBTT for NDP */
+			run_system_wrapper(dut,
+					   "wifitool %s setUnitTestCmd 0x48 2 2 1",
+					   ifname);
+			/* g_cv_query_enable=1, i.e., cv query enable */
+			run_system_wrapper(dut,
+					   "wifitool %s setUnitTestCmd 0x47 2 7 1",
+					   ifname);
+			/* Override TPC calculations and set TxBF flag to True
+ */
+			run_system_wrapper(dut,
+					   "wifitool %s setUnitTestCmd 0x47 2 47 1",
+					   ifname);
+		}
 		if (dut->device_type == AP_testbed) {
 			run_iwpriv(dut, ifname, "tx_stbc 0");
 			run_iwpriv(dut, ifname, "he_txmcsmap 0x0");
