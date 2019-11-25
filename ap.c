@@ -6344,6 +6344,9 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 			if (dut->ap_cipher == AP_WEP ||
 			    dut->ap_cipher == AP_TKIP)
 				run_iwpriv(dut, ifname, "htweptkip 1");
+			if (dut->ap_rx_streams || dut->ap_tx_streams)
+				run_iwpriv(dut, ifname, "nss %d",
+					   dut->ap_rx_streams);
 		}
 	}
 
