@@ -384,7 +384,7 @@ static int msm_vidc_load_bus_table(struct msm_vidc_platform_resources *res)
 
 	rc = of_property_read_u32_array(pdev->dev.of_node,
 				"qcom,bus-range-kbps", bus_ranges,
-				num_buses);
+				num_buses * 2);
 	if (rc) {
 		d_vpr_e(
 			"Failed to read bus ranges: defaulting to <0 INT_MAX>\n");
