@@ -1,4 +1,4 @@
-Qualcomm Technologies, Inc. adreno/snapdragon MDP4 display controller
+Qualcomm Technologies, Inc. snapdragon MDP4 display controller
 
 Description:
 

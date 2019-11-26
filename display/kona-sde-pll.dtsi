@@ -6,12 +6,14 @@
 		#clock-cells = <1>;
 		reg = <0xae94900 0x260>,
 		      <0xae94400 0x800>,
-		      <0xaf03000 0x8>;
-		reg-names = "pll_base", "phy_base", "gdsc_base";
+		      <0xaf03000 0x8>,
+		      <0xae94200 0x100>;
+		reg-names = "pll_base", "phy_base", "gdsc_base",
+				"dynamic_pll_base";
 		clocks = <&clock_dispcc DISP_CC_MDSS_AHB_CLK>;
 		clock-names = "iface_clk";
 		clock-rate = <0>;
-		gdsc-supply = <&mdss_core_gdsc>;
+		memory-region = <&dfps_data_memory>;
 		qcom,dsi-pll-ssc-en;
 		qcom,dsi-pll-ssc-mode = "down-spread";
 		qcom,platform-supply-entries {
@@ -35,12 +37,13 @@
 		#clock-cells = <1>;
 		reg = <0xae96900 0x260>,
 		      <0xae96400 0x800>,
-		      <0xaf03000 0x8>;
-		reg-names = "pll_base", "phy_base", "gdsc_base";
+		      <0xaf03000 0x8>,
+		      <0xae96200 0x100>;
+		reg-names = "pll_base", "phy_base", "gdsc_base",
+				"dynamic_pll_base";
 		clocks = <&clock_dispcc DISP_CC_MDSS_AHB_CLK>;
 		clock-names = "iface_clk";
 		clock-rate = <0>;
-		gdsc-supply = <&mdss_core_gdsc>;
 		qcom,dsi-pll-ssc-en;
 		qcom,dsi-pll-ssc-mode = "down-spread";
 		qcom,platform-supply-entries {
@@ -66,10 +69,16 @@
 		reg = <0x088ea000 0x200>,
 		      <0x088eaa00 0x200>,
 		      <0x088ea200 0x200>,
+		      <0x088ea2b8 0x8>,
+		      <0x088ea2e8 0x4>,
 		      <0x088ea600 0x200>,
+		      <0x088ea6b8 0x8>,
+		      <0x088ea6e8 0x4>,
 		      <0xaf03000 0x8>;
-		reg-names = "pll_base", "phy_base", "ln_tx0_base",
-			"ln_tx1_base", "gdsc_base";
+		reg-names = "pll_base", "phy_base",
+			"ln_tx0_base", "ln_tx0_tran_base", "ln_tx0_vmode_base",
+			"ln_tx1_base", "ln_tx1_tran_base", "ln_tx1_vmode_base",
+			"gdsc_base";
 
 		clocks = <&clock_dispcc DISP_CC_MDSS_AHB_CLK>,
 			<&clock_rpmh RPMH_CXO_CLK>,
