@@ -92,6 +92,7 @@
 
 #define MAX_TILE_COLUMNS 32     /* 8K/256 */
 
+#define VPP_CMD_MAX_SIZE (1 << 20)
 #define NUM_HW_PIC_BUF 10
 #define BIN_BUFFER_THRESHOLD (1280 * 736)
 #define H264D_MAX_SLICE 1800
@@ -1122,7 +1123,7 @@ static inline u32 hfi_iris2_h264d_comv_size(u32 width, u32 height,
 	u32 comv_size = 0;
 	u32 frame_width_in_mbs = ((width + 15) >> 4);
 	u32 frame_height_in_mbs = ((height + 15) >> 4);
-	u32 col_mv_aligned_width = (frame_width_in_mbs << 6);
+	u32 col_mv_aligned_width = (frame_width_in_mbs << 7);
 	u32 col_zero_aligned_width = (frame_width_in_mbs << 2);
 	u32 col_zero_size = 0, size_colloc = 0;
 
@@ -1157,11 +1158,15 @@ static inline u32 size_h264d_bse_cmd_buf(u32 height)
 
 static inline u32 size_h264d_vpp_cmd_buf(u32 height)
 {
+	u32 size = 0;
 	u32 aligned_height = ALIGN(height, BUFFER_ALIGNMENT_SIZE(32));
 
-	return min_t(u32, (((aligned_height + 15) >> 4) * 3 * 4),
+	size = min_t(u32, (((aligned_height + 15) >> 4) * 3 * 4),
 		H264D_MAX_SLICE) *
 		SIZE_H264D_VPP_CMD_PER_BUF;
+	if (size > VPP_CMD_MAX_SIZE)
+		size = VPP_CMD_MAX_SIZE;
+	return size;
 }
 
 static inline u32 hfi_iris2_h264d_non_comv_size(u32 width, u32 height)
@@ -1258,7 +1263,8 @@ static inline u32 size_h265d_vpp_cmd_buf(u32 width, u32 height)
 	size = ALIGN(size, 4);
 	size = 2 * size * SIZE_H265D_VPP_CMD_PER_BUF;
 	size = ALIGN(size, VENUS_DMA_ALIGNMENT);
-
+	if (size > VPP_CMD_MAX_SIZE)
+		size = VPP_CMD_MAX_SIZE;
 	return size;
 }
 
