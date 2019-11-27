@@ -2795,7 +2795,7 @@ static int cam_ife_mgr_acquire_hw(void *hw_mgr_priv, void *acquire_hw_args)
 	acquire_args->valid_acquired_hw =
 		acquire_hw_info->num_inputs;
 
-	getnstimeofday64(&ife_ctx->ts);
+	ktime_get_real_ts64(&ife_ctx->ts);
 	CAM_INFO(CAM_ISP,
 		"Acquire HW success with total_pix: %u total_rdi: %u is_dual: %u in ctx: %u",
 		total_pix_port, total_rdi_port,
