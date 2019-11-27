@@ -13,6 +13,10 @@ ifeq ($(CONFIG_ARCH_BENGAL), y)
 include $(srctree)/techpack/camera/config/bengalcamera.conf
 endif
 
+ifeq ($(CONFIG_ARCH_LAHAINA), y)
+include $(srctree)/techpack/camera/config/lahainacamera.conf
+endif
+
 ifeq ($(CONFIG_ARCH_KONA), y)
 LINUXINCLUDE    += \
 		-include $(srctree)/techpack/camera/config/konacameraconf.h
