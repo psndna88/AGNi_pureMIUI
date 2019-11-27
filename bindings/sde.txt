@@ -193,6 +193,10 @@ Optional properties:
 					"hdmi" - HDMI display interface
 				An interface is considered as "none" if interface type
 				is not defined.
+- qcom,sde-intf-tear-irq-off	Array of offset addresses for the available
+				tear effect (TE) IRQ blocks from "mdp_phys".
+				There should be one entry per INTF instance with
+				a zero value for INTFs without TE IRQ block.
 - qcom,sde-off:			SDE offset from "mdp_phys" defined in reg property.
 - qcom,sde-cdm-off:	 	Array of offset addresses for the available
 				cdm blocks. These offsets will be calculated from
@@ -579,6 +583,7 @@ Example:
     qcom,sde-intf-off = <0x0006b000 0x0006b800
 			0x0006c000 0x0006c800>;
     qcom,sde-intf-type = "none", "dsi", "dsi", "hdmi";
+    qcom,sde-intf-tear-irq-off = <0 0x6e800 0x6e900 0>;
     qcom,sde-pp-off = <0x00071000 0x00071800
 			  0x00072000 0x00072800>;
     qcom,sde-pp-slave = <0x0 0x0 0x0 0x0>;
