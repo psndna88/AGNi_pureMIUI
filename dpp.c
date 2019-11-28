@@ -246,6 +246,12 @@ static int dpp_hostapd_conf_update(struct sigma_dut *dut,
 		goto out;
 	}
 
+	if (wpa_command(ifname, "SET utf8_ssid 1") < 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Failed to update AP UTF-8 SSID capa");
+		goto out;
+	}
+
 	res = get_wpa_cli_events(dut, ctrl, conf_data_events, buf, sizeof(buf));
 	if (res < 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
