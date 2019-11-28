@@ -27,9 +27,6 @@
 #define DHCP_LEASE_FILE_PATH "/data/misc/dhcp/dnsmasq.leases"
 #define MIRACAST_CMD_LEN         512
 
-extern char *sigma_main_ifname;
-extern char *sigma_station_ifname;
-
 static int session_management_control_port = 7236;
 /* Followingng stores p2p interface name after P2P group formation */
 static char wfd_ifname[32];
@@ -193,7 +190,7 @@ static int miracast_start_dhcp_client(struct sigma_dut *dut, const char *ifname)
 }
 
 
-static void miracast_stop_dhcp_client(struct sigma_dut *dut, char *ifname)
+static void miracast_stop_dhcp_client(struct sigma_dut *dut, const char *ifname)
 {
 #ifdef MIRACAST_DHCP_M
 	stop_dhcp(dut, ifname, 0);
@@ -394,7 +391,7 @@ static void * miracast_rtsp_thread_entry(void *ptr)
 	struct sigma_dut *dut = ptr;
 	char output_ifname[16];
 	int is_group_owner = 0;
-	const char *intf = sigma_station_ifname;
+	const char *intf = dut->station_ifname;
 	unsigned int wait_limit;
 	char peer_ip_address[32];
 	char rtsp_session_id[12];
@@ -407,8 +404,8 @@ static void * miracast_rtsp_thread_entry(void *ptr)
 
 	miracast_load(dut);
 
-	if (sigma_main_ifname) {
-		intf = sigma_main_ifname;
+	if (dut->main_ifname) {
+		intf = get_main_ifname(dut);
 		sigma_dut_print(dut, DUT_MSG_DEBUG,
 				"miracast_rtsp_thread_entry: sigma_main_ifname = [%s]",
 				intf);
@@ -513,10 +510,10 @@ EXIT:
 
 static void miracast_set_wfd_ie(struct sigma_dut *sigma_dut)
 {
-	char *intf = sigma_station_ifname;
+	const char *intf = sigma_dut->station_ifname;
 
-	if (sigma_main_ifname != NULL)
-		intf = sigma_main_ifname;
+	if (sigma_dut->main_ifname != NULL)
+		intf = get_main_ifname(sigma_dut);
 
 	sigma_dut_print(sigma_dut, DUT_MSG_DEBUG, "miracast_set_wfd_ie() = intf = %s",
 			intf);
@@ -648,12 +645,12 @@ THR_EXIT:
 void miracast_sta_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 				struct sigma_cmd *cmd)
 {
-	char *intf = sigma_station_ifname;
+	const char *intf = dut->station_ifname;
 	int (*extn_sta_reset_default)(char *);
 	char string_cmd[MIRACAST_CMD_LEN] = { 0 };
 
-	if (sigma_main_ifname != NULL)
-		intf = sigma_main_ifname;
+	if (dut->main_ifname != NULL)
+		intf = get_main_ifname(dut);
 	sigma_dut_print(dut, DUT_MSG_DEBUG,
 			"miracast_sta_reset_default() = intf = %s", intf);
 	stop_dhcp(dut, intf, 1); /* IFNAME argument is ignored */
@@ -859,10 +856,10 @@ int miracast_preset_testparameters(struct sigma_dut *dut,
 }
 
 
-static int get_p2p_peers(char *respbuf, size_t bufsize)
+static int get_p2p_peers(struct sigma_dut *dut, char *respbuf, size_t bufsize)
 {
 	char addr[1024], cmd[64];
-	char *intf = get_main_ifname();
+	const char *intf = get_main_ifname(dut);
 	int ret;
 	char *pos, *end;
 
@@ -911,7 +908,7 @@ int miracast_cmd_sta_get_parameter(struct sigma_dut *dut,
 		int len = strlen("DeviceList,");
 
 		snprintf(resp_buf, sizeof(resp_buf), "DeviceList,");
-		get_p2p_peers(resp_buf + len, 1024 - len);
+		get_p2p_peers(dut, resp_buf + len, 1024 - len);
 	} else {
 		send_resp(dut, conn, SIGMA_ERROR, "Invalid Parameter");
 		return 0;

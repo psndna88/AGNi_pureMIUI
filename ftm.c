@@ -480,7 +480,7 @@ int loc_cmd_sta_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (cmnd == LOWI_TST_ANQP_REQ) {
 		sigma_dut_print(dut, DUT_MSG_DEBUG, "%s - Executing command %s",
 				__func__, address3Cmnd);
-		if (wpa_command(get_station_ifname(), address3Cmnd) < 0) {
+		if (wpa_command(get_station_ifname(dut), address3Cmnd) < 0) {
 			send_resp(dut, conn, SIGMA_ERROR, NULL);
 			return -1;
 		}
@@ -645,8 +645,8 @@ int loc_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 			sigma_dut_print(dut, DUT_MSG_INFO,
 					"%s - Disabling RM - FTMRR",
 					__func__);
-			if (wpa_command(get_station_ifname(), WPA_RM_DISABLE) <
-			    0) {
+			if (wpa_command(get_station_ifname(dut),
+					WPA_RM_DISABLE) < 0) {
 				send_resp(dut, conn, SIGMA_ERROR, NULL);
 				return -1;
 			}
@@ -654,8 +654,8 @@ int loc_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 			sigma_dut_print(dut, DUT_MSG_INFO,
 					"%s - Enabling RM - FTMRR",
 					__func__);
-			if (wpa_command(get_station_ifname(), WPA_RM_ENABLE) <
-			    0) {
+			if (wpa_command(get_station_ifname(dut),
+					WPA_RM_ENABLE) < 0) {
 				send_resp(dut, conn, SIGMA_ERROR, NULL);
 				return 0;
 			}
@@ -674,10 +674,10 @@ int loc_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 		sigma_dut_print(dut, DUT_MSG_INFO, "%s - interworking: %u",
 				__func__, interworking);
 		if (interworking)
-			wpa_command(get_station_ifname(),
+			wpa_command(get_station_ifname(dut),
 				    WPA_INTERWORKING_ENABLE);
 		else
-			wpa_command(get_station_ifname(),
+			wpa_command(get_station_ifname(dut),
 				    WPA_INTERWORKING_DISABLE);
 	}
 

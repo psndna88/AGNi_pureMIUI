@@ -88,7 +88,7 @@ static void * process_dhcp_ack(void *ptr)
 	protocol = UDP_PROTOCOL;
 	port_no = DHCP_SERVER_PORT;
 
-	strlcpy(ifname, get_main_ifname(), sizeof(ifname));
+	strlcpy(ifname, get_main_ifname(dut), sizeof(ifname));
 
 	/* gives the network mask for ifname essential for applying filter */
 	pcap_lookupnet(ifname, &pcap_netp, &pcap_maskp, pcap_err);

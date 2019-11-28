@@ -336,6 +336,17 @@ enum akm_suite_values {
 };
 
 struct sigma_dut {
+	const char *main_ifname;
+	char *main_ifname_2g;
+	char *main_ifname_5g;
+	const char *station_ifname;
+	char *station_ifname_2g;
+	char *station_ifname_5g;
+	char *p2p_ifname_buf;
+	int use_5g;
+	int sta_2g_started;
+	int sta_5g_started;
+
 	int s; /* server TCP socket */
 	int debug_level;
 	int stdout_debug;
@@ -387,7 +398,7 @@ struct sigma_dut {
 
 	int go;
 	int p2p_client;
-	char *p2p_ifname;
+	const char *p2p_ifname;
 
 	int client_uapsd;
 
@@ -430,6 +441,7 @@ struct sigma_dut {
 		AP_11ng,
 		AP_11ac,
 		AP_11ad,
+		AP_11ax,
 		AP_inval
 	} ap_mode;
 	int ap_channel;
@@ -672,6 +684,9 @@ struct sigma_dut {
 	char *ar_ltf;
 
 	int ap_numsounddim;
+	unsigned int he_mcsnssmap;
+	int he_ul_mcs;
+	int he_mmss;
 
 	enum value_not_set_enabled_disabled ap_oce;
 	enum value_not_set_enabled_disabled ap_filsdscv;
@@ -684,6 +699,11 @@ struct sigma_dut {
 	enum value_not_set_enabled_disabled ap_he_dlofdma;
 	enum value_not_set_enabled_disabled ap_bcc;
 	enum value_not_set_enabled_disabled ap_he_frag;
+	enum value_not_set_enabled_disabled ap_mu_edca;
+	enum value_not_set_enabled_disabled ap_he_rtsthrshld;
+	enum value_not_set_enabled_disabled ap_mbssid;
+	enum value_not_set_enabled_disabled ap_twtresp;
+	enum value_not_set_enabled_disabled he_sounding;
 
 	enum ppdu {
 		PPDU_NOT_SET,
@@ -699,6 +719,12 @@ struct sigma_dut {
 		BA_BUFSIZE_64,
 		BA_BUFSIZE_256,
 	} ap_ba_bufsize;
+
+	enum mimo {
+		MIMO_NOT_SET,
+		MIMO_DL,
+		MIMO_UL,
+	} ap_he_mimo;
 
 	struct sigma_ese_alloc ap_ese_allocs[MAX_ESE_ALLOCS];
 	int ap_num_ese_allocs;
@@ -900,6 +926,13 @@ struct sigma_dut {
 	wifi_handle wifi_hal_handle;
 	bool wifi_hal_initialized;
 #endif /*ANDROID_WIFI_HAL*/
+
+	int sae_h2e_default;
+	enum {
+		SAE_PWE_DEFAULT,
+		SAE_PWE_LOOP,
+		SAE_PWE_H2E
+	} sae_pwe;
 };
 
 
@@ -971,7 +1004,7 @@ enum openwrt_driver_type {
 #define DRIVER_NAME_60G "wil6210"
 
 int set_wifi_chip(const char *chip_type);
-enum driver_type get_driver_type(void);
+enum driver_type get_driver_type(struct sigma_dut *dut);
 enum openwrt_driver_type get_openwrt_driver_type(void);
 int file_exists(const char *fname);
 

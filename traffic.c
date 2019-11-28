@@ -119,7 +119,7 @@ static enum sigma_cmd_result cmd_traffic_send_ping(struct sigma_dut *dut,
 		snprintf(int_arg, sizeof(int_arg), " -i %f", interval);
 	if (!dut->ndp_enable && type == 2)
 		snprintf(intf_arg, sizeof(intf_arg), " -I %s",
-			 get_station_ifname());
+			 get_station_ifname(dut));
 	else
 		intf_arg[0] = '\0';
 	fprintf(f, "#!" SHELL "\n"
@@ -291,7 +291,7 @@ static enum sigma_cmd_result cmd_traffic_start_iperf(struct sigma_dut *dut,
 	if (dut->ndpe)
 		ifname = "nan0";
 	else
-		ifname = get_station_ifname();
+		ifname = get_station_ifname(dut);
 
 	val = get_param(cmd, "duration");
 	if (val)
