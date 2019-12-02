@@ -20,6 +20,9 @@
  * @CAM_CAMNOC_HW_IRQ_IFE_UBWC_STATS_ENCODE_ERROR: Triggered if any error
  *                                                 detected in the IFE UBWC-
  *                                                 Stats encoder instance
+ * @CAM_CAMNOC_HW_IRQ_IFE_UBWC_STATS_1_ENCODE_ERROR: Triggered if any error
+ *                                                 detected in the IFE UBWC-
+ *                                                 Stats 1 encoder instance
  * @CAM_CAMNOC_HW_IRQ_IFE02_UBWC_ENCODE_ERROR  : Triggered if any error
  *                                               detected in the IFE0 UBWC
  *                                               encoder instance
@@ -54,6 +57,8 @@ enum cam_camnoc_hw_irq_type {
 		CAM_CAMNOC_IRQ_SLAVE_ERROR,
 	CAM_CAMNOC_HW_IRQ_IFE_UBWC_STATS_ENCODE_ERROR =
 		CAM_CAMNOC_IRQ_IFE_UBWC_STATS_ENCODE_ERROR,
+	CAM_CAMNOC_HW_IRQ_IFE_UBWC_STATS_1_ENCODE_ERROR =
+		CAM_CAMNOC_IRQ_IFE_UBWC_STATS_1_ENCODE_ERROR,
 	CAM_CAMNOC_HW_IRQ_IFE02_UBWC_ENCODE_ERROR =
 		CAM_CAMNOC_IRQ_IFE02_UBWC_ENCODE_ERROR,
 	CAM_CAMNOC_HW_IRQ_IFE13_UBWC_ENCODE_ERROR =
@@ -86,8 +91,12 @@ enum cam_camnoc_hw_irq_type {
  * @CAM_CAMNOC_IFE02: Indicates IFE0, IFE2 HW connection to camnoc
  * @CAM_CAMNOC_IFE13: Indicates IFE1, IFE3 HW connection to camnoc
  * @CAM_CAMNOC_IFE_LINEAR: Indicates linear data from all IFEs to cammnoc
- * @CAM_CAMNOC_IFE_UBWC_STATS: Indicates ubwc+stats from all IFEs to cammnoc
- * @CAM_CAMNOC_IFE_RDI_WR: Indicates RDI write data from all IFEs to cammnoc
+ * @CAM_CAMNOC_IFE_UBWC_STATS: Indicates ubwc+stats from certain IFEs to cammnoc
+ * @CAM_CAMNOC_IFE_UBWC_STATS_1: Indicates ubwc+stats from certain
+ *         IFEs to cammnoc
+ * @CAM_CAMNOC_IFE_RDI_WR: Indicates RDI write data from certain IFEs to cammnoc
+ * @CAM_CAMNOC_IFE_RDI_WR_1: Indicates RDI write data from certain
+ *         IFEs to cammnoc
  * @CAM_CAMNOC_IFE_RDI_RD: Indicates RDI read data from all IFEs to cammnoc
  * @CAM_CAMNOC_IFE0123_RDI_WRITE: RDI write only for all IFEx
  * @CAM_CAMNOC_IFE0_NRDI_WRITE: IFE0 non-RDI write
@@ -113,7 +122,9 @@ enum cam_camnoc_port_type {
 	CAM_CAMNOC_IFE13,
 	CAM_CAMNOC_IFE_LINEAR,
 	CAM_CAMNOC_IFE_UBWC_STATS,
+	CAM_CAMNOC_IFE_UBWC_STATS_1,
 	CAM_CAMNOC_IFE_RDI_WR,
+	CAM_CAMNOC_IFE_RDI_WR_1,
 	CAM_CAMNOC_IFE_RDI_RD,
 	CAM_CAMNOC_IFE0123_RDI_WRITE,
 	CAM_CAMNOC_IFE0_NRDI_WRITE,
