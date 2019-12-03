@@ -91,9 +91,13 @@
 		qcom,sde-cdm-off = <0x7a200>;
 		qcom,sde-cdm-size = <0x224>;
 
-		qcom,sde-dsc-off = <0x81000 0x81400 0x81800 0x81c00>;
+		qcom,sde-dsc-off = <0x81000 0x81000 0x82000 0x82000>;
 		qcom,sde-dsc-size = <0x140>;
 		qcom,sde-dsc-pair-mask = <2 1 4 3>;
+		qcom,sde-dsc-hw-rev = "dsc_1_2";
+		qcom,sde-dsc-enc = <0x100 0x200 0x100 0x200>;
+		qcom,sde-dsc-ctl = <0xF00 0xF80 0xF00 0xF80>;
+		qcom,sde-dsc-native422-supp = <0 0 1 1>;
 
 		qcom,sde-dither-off = <0xe0 0xe0 0xe0
 						0xe0 0xe0 0xe0>;
