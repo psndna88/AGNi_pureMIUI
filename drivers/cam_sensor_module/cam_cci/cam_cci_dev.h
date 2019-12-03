@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_CCI_DEV_H_
@@ -34,6 +34,8 @@
 #define V4L2_IDENT_CCI 50005
 #define CCI_I2C_QUEUE_0_SIZE 128
 #define CCI_I2C_QUEUE_1_SIZE 32
+#define CCI_I2C_QUEUE_0_SIZE_V_1_2 64
+#define CCI_I2C_QUEUE_1_SIZE_V_1_2 16
 #define CYCLES_PER_MICRO_SEC_DEFAULT 4915
 #define CCI_MAX_DELAY 1000000
 
