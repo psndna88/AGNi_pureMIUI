@@ -1234,6 +1234,7 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 	if (val) {
 		dut->ap_txBF = strcasecmp(val, "enable") == 0;
 		dut->he_sounding = VALUE_DISABLED;
+		dut->he_set_sta_1x1 = VALUE_ENABLED;
 	}
 
 	val = get_param(cmd, "MU_TxBF");
@@ -6337,6 +6338,12 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 		run_iwpriv(dut, basedev, "he_muedca_mode 0");
 		run_iwpriv(dut, ifname, "he_ul_ofdma 0");
 		run_iwpriv(dut, ifname, "he_dl_ofdma 0");
+		if (dut->he_set_sta_1x1 == VALUE_ENABLED) {
+			/* sets g_force_1x1_peer to 1 */
+			run_system_wrapper(dut,
+					   "wifitool %s setUnitTestCmd 0x48 2 118 1",
+					    ifname);
+		}
 		if (dut->ap_txBF) {
 			/* Enable SU_AX sounding */
 			run_iwpriv(dut, ifname, "he_sounding_mode 1");
@@ -8945,6 +8952,7 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 	dut->he_mcsnssmap = 0;
 	dut->ap_fixed_rate = 0;
 	dut->he_mmss = 0;
+	dut->he_set_sta_1x1 = VALUE_DISABLED;
 	if (dut->device_type == AP_testbed) {
 		dut->ap_he_dlofdma = VALUE_DISABLED;
 		dut->ap_he_frag = VALUE_DISABLED;

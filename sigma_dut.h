@@ -704,6 +704,7 @@ struct sigma_dut {
 	enum value_not_set_enabled_disabled ap_mbssid;
 	enum value_not_set_enabled_disabled ap_twtresp;
 	enum value_not_set_enabled_disabled he_sounding;
+	enum value_not_set_enabled_disabled he_set_sta_1x1;
 
 	enum ppdu {
 		PPDU_NOT_SET,
