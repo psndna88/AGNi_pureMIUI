@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_CSIPHY_SOC_H_
@@ -30,6 +30,7 @@
 #define CSIPHY_VERSION_V11                        0x11
 #define CSIPHY_VERSION_V12                        0x12
 #define CSIPHY_VERSION_V121                       0x121
+#define CSIPHY_VERSION_V123                       0x123
 #define CSIPHY_VERSION_V20                        0x20
 
 /**
