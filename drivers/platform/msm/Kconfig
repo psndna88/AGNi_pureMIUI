@@ -104,6 +104,11 @@ config GSI_REGISTER_VERSION_2
 	  new registers offsets, new registers fields structure and
 	  new registers.
 
+config GSI_DEBUG
+	bool "Debugging part of GSI core"
+	depends on GSI || DEBUG_FS
+	default n
+
 config MSM_MHI_DEV
         tristate "Modem Device Interface Driver"
 	depends on EP_PCIE && IPA3
