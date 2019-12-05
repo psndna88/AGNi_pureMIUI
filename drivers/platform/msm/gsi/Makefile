@@ -1,4 +1,3 @@
-gsidbg-$(CONFIG_DEBUG_FS) += gsi_dbg.o
-obj-$(CONFIG_GSI) += gsi.o gsidbg.o
-
+obj-$(CONFIG_GSI) += gsi.o
+obj-$(CONFIG_GSI_DEBUG) += gsi_dbg.o
 obj-$(CONFIG_IPA_EMULATION) += gsi_emulation.o
