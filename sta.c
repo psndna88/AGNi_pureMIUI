@@ -2172,6 +2172,13 @@ static enum sigma_cmd_result cmd_sta_set_psk(struct sigma_dut *dut,
 		wpa_command(intf, buf);
 	}
 
+	val = get_param(cmd, "IgnoreH2E_RSNXE_BSSMemSel");
+	if (val) {
+		snprintf(buf, sizeof(buf), "SET ignore_sae_h2e_only %d",
+			 get_enable_disable(val));
+		wpa_command(intf, buf);
+	}
+
 	val = get_param(cmd, "sae_pwe");
 	if (val) {
 		if (strcasecmp(val, "h2e") == 0) {
