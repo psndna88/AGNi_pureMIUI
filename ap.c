@@ -7425,6 +7425,29 @@ enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 		ifname = get_main_ifname(dut);
 		fprintf(f, "hw_mode=ad\n");
 		break;
+	case AP_11ax:
+		if (dut->use_5g && dut->main_ifname_5g) {
+			ifname = dut->main_ifname_5g;
+		} else if (!dut->use_5g && dut->main_ifname_2g) {
+			ifname = dut->main_ifname_2g;
+		} else if (drv == DRIVER_QNXNTO || drv == DRIVER_LINUX_WCN) {
+			if (dut->main_ifname)
+				ifname = get_main_ifname(dut);
+			else
+				ifname = "wlan0";
+		} else if (drv == DRIVER_MAC80211) {
+			if (if_nametoindex("wlan1") > 0)
+				ifname = "wlan1";
+			else
+				ifname = "wlan0";
+		} else {
+			ifname = get_main_ifname(dut);
+		}
+		if (dut->use_5g)
+			fprintf(f, "hw_mode=a\n");
+		else
+			fprintf(f, "hw_mode=g\n");
+		break;
 	default:
 		fclose(f);
 		return -1;
@@ -7437,10 +7460,13 @@ enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 
 	if ((drv == DRIVER_MAC80211 || drv == DRIVER_QNXNTO ||
 	     drv == DRIVER_LINUX_WCN) &&
-	    (dut->ap_mode == AP_11ng || dut->ap_mode == AP_11na)) {
+	    (dut->ap_mode == AP_11ng || dut->ap_mode == AP_11na ||
+	     (dut->ap_mode == AP_11ax && !dut->use_5g))) {
 		int ht40plus = 0, ht40minus = 0, tx_stbc = 0;
 
 		fprintf(f, "ieee80211n=1\n");
+		if (dut->ap_mode == AP_11ax)
+			fprintf(f, "ieee80211ax=1\n");
 		if (dut->ap_mode == AP_11ng &&
 		    (dut->ap_chwidth == AP_40 ||
 		     (dut->ap_chwidth == AP_AUTO &&
@@ -7485,11 +7511,14 @@ enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 
 	if ((drv == DRIVER_MAC80211 || drv == DRIVER_QNXNTO ||
 	     drv == DRIVER_LINUX_WCN) &&
-	    dut->ap_mode == AP_11ac) {
+	    (dut->ap_mode == AP_11ac ||
+	    (dut->ap_mode == AP_11ax && dut->use_5g))) {
 		int ht40plus = 0, ht40minus = 0;
 
 		fprintf(f, "ieee80211ac=1\n"
 			"ieee80211n=1\n");
+		if (dut->ap_mode == AP_11ax)
+			fprintf(f, "ieee80211ax=1\n");
 
 		/* configure ht_capab based on channel width */
 		if (dut->ap_chwidth != AP_20) {
@@ -8065,7 +8094,8 @@ skip_key_mgmt:
 		fprintf(f, "dpp_controller=ipaddr=%s pkhash=%s\n",
 			dut->ap_dpp_conf_addr, dut->ap_dpp_conf_pkhash);
 
-	if (dut->program == PROGRAM_VHT) {
+	if ((dut->program == PROGRAM_VHT) ||
+	    (dut->program == PROGRAM_HE && dut->use_5g)) {
 		int vht_oper_centr_freq_idx;
 
 		if (check_channel(dut->ap_channel) < 0) {
@@ -8110,6 +8140,11 @@ skip_key_mgmt:
 		fprintf(f, "vht_oper_centr_freq_seg0_idx=%d\n",
 			vht_oper_centr_freq_idx);
 		fprintf(f, "vht_oper_chwidth=%d\n", dut->ap_vht_chwidth);
+		if (dut->ap_mode == AP_11ax) {
+			fprintf(f, "he_oper_chwidth=%d\n", dut->ap_vht_chwidth);
+			fprintf(f, "he_oper_centr_freq_seg0_idx=%d\n",
+				vht_oper_centr_freq_idx);
+		}
 
 		if (dut->ap_sgi80 || dut->ap_txBF ||
 		    dut->ap_ldpc != VALUE_NOT_SET ||
