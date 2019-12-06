@@ -31,13 +31,12 @@
 					460000000>;
 
 		mmcx-supply = <&VDD_MMCX_LEVEL>;
+		vdd-supply = <&disp_cc_mdss_core_gdsc>;
 
 		/* interrupt config */
 		interrupts = <GIC_SPI 83 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-controller;
 		#interrupt-cells = <1>;
-
-		#power-domain-cells = <0>;
 
 		/* hw blocks */
 		qcom,sde-off = <0x1000>;
@@ -265,6 +264,15 @@
 				qcom,supply-enable-load = <0>;
 				qcom,supply-disable-load = <0>;
 			};
+
+			qcom,platform-supply-entry@1 {
+				reg = <0>;
+				qcom,supply-name = "vdd";
+				qcom,supply-min-voltage = <0>;
+				qcom,supply-max-voltage = <0>;
+				qcom,supply-enable-load = <0>;
+				qcom,supply-disable-load = <0>;
+			};
 		};
 
 		smmu_sde_unsec: qcom,smmu_sde_unsec_cb {
@@ -309,10 +317,7 @@
 	sde_dp: qcom,dp_display@ae90000 {
 		cell-index = <0>;
 		compatible = "qcom,dp-display";
-
-		vdda-1p2-supply = <&pm8150_l9>;
-		vdda-0p9-supply = <&pm8150_l18>;
-
+		status = "disabled";
 
 		reg =   <0xae90000 0x0dc>,
 			<0xae90200 0x0c0>,
@@ -341,15 +346,12 @@
 			<&clock_dispcc DISP_CC_MDSS_DP_LINK_CLK>,
 			<&clock_dispcc DISP_CC_MDSS_DP_LINK_INTF_CLK>,
 			<&clock_dispcc DISP_CC_MDSS_DP_PIXEL_CLK_SRC>,
-			<&mdss_dp_pll DP_VCO_DIVIDED_CLK_SRC_MUX>,
 			<&clock_dispcc DISP_CC_MDSS_DP_PIXEL1_CLK_SRC>,
-			<&mdss_dp_pll DP_VCO_DIVIDED_CLK_SRC_MUX>,
 			<&clock_dispcc DISP_CC_MDSS_DP_PIXEL_CLK>,
 			<&clock_dispcc DISP_CC_MDSS_DP_PIXEL1_CLK>;
 		clock-names = "core_aux_clk", "core_usb_ref_clk_src",
 			"core_usb_pipe_clk", "link_clk", "link_iface_clk",
-			"pixel_clk_rcg", "pixel_parent",
-			"pixel1_clk_rcg", "pixel1_parent",
+			"pixel_clk_rcg", "pixel1_clk_rcg",
 			"strm0_pixel_clk", "strm1_pixel_clk";
 
 		qcom,phy-version = <0x420>;
@@ -419,6 +421,7 @@
 	sde_rscc: qcom,sde_rscc@af20000 {
 		cell-index = <0>;
 		compatible = "qcom,sde-rsc";
+		status = "disabled";
 		reg = <0xaf20000 0x3c50>,
 			<0xaf30000 0x3fd4>;
 		reg-names = "drv", "wrapper";
@@ -426,7 +429,7 @@
 
 		qcom,sde-dram-channels = <2>;
 
-		vdd-supply = <&mdss_core_gdsc>;
+		vdd-supply = <&disp_cc_mdss_core_gdsc>;
 
 		clocks = <&clock_dispcc DISP_CC_MDSS_RSCC_VSYNC_CLK>,
 			<&clock_dispcc DISP_CC_MDSS_NON_GDSC_AHB_CLK>,
@@ -490,7 +493,6 @@
 			<25 512 0 6400000>,
 			<25 512 0 6400000>;
 
-		rot-vdd-supply = <&mdss_core_gdsc>;
 		qcom,supply-names = "rot-vdd";
 
 		clocks =
@@ -546,9 +548,8 @@
 			<0xaf08000 0x4>;
 		reg-names = "dsi_ctrl", "disp_cc_base";
 		interrupt-parent = <&mdss_mdp>;
+		status = "disabled";
 		interrupts = <4 0>;
-		vdda-1p2-supply = <&pm8150_l9>;
-		refgen-supply = <&refgen>;
 		clocks = <&clock_dispcc DISP_CC_MDSS_BYTE0_CLK>,
 			<&clock_dispcc DISP_CC_MDSS_BYTE0_CLK_SRC>,
 			<&clock_dispcc DISP_CC_MDSS_BYTE0_INTF_CLK>,
@@ -596,9 +597,8 @@
 			<0xaf08000 0x4>;
 		reg-names = "dsi_ctrl", "disp_cc_base";
 		interrupt-parent = <&mdss_mdp>;
+		status = "disabled";
 		interrupts = <5 0>;
-		vdda-1p2-supply = <&pm8150_l9>;
-		refgen-supply = <&refgen>;
 		clocks = <&clock_dispcc DISP_CC_MDSS_BYTE1_CLK>,
 			<&clock_dispcc DISP_CC_MDSS_BYTE1_CLK_SRC>,
 			<&clock_dispcc DISP_CC_MDSS_BYTE1_INTF_CLK>,
@@ -643,7 +643,7 @@
 		reg = <0xae94400 0x7c0>,
 			<0xae94200 0x100>;
 		reg-names = "dsi_phy", "dyn_refresh_base";
-		vdda-0p9-supply = <&pm8150_l5>;
+		status = "disabled";
 		qcom,platform-strength-ctrl = [55 03
 						55 03
 						55 03
@@ -676,7 +676,7 @@
 		reg = <0xae96400 0x7c0>,
 			<0xae96200 0x100>;
 		reg-names = "dsi_phy", "dyn_refresh_base";
-		vdda-0p9-supply = <&pm8150_l5>;
+		status = "disabled";
 		qcom,platform-strength-ctrl = [55 03
 						55 03
 						55 03
