@@ -1,4 +1,4 @@
-#include "kona-sde-display.dtsi"
+#include "lahaina-sde-display.dtsi"
 
 &dsi_sw43404_amoled_cmd {
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;

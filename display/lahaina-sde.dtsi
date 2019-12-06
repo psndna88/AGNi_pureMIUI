@@ -3,7 +3,7 @@
 &soc {
 	mdss_mdp: qcom,mdss_mdp@ae00000 {
 		compatible = "qcom,sde-kms";
-		reg = <0x0ae00000 0x84208>,
+		reg = <0x0ae00000 0x84000>,
 		      <0x0aeb0000 0x2008>,
 		      <0x0aeac000 0x214>,
 		      <0x0ae8f000 0x02c>,
@@ -43,9 +43,9 @@
 		qcom,sde-off = <0x1000>;
 		qcom,sde-len = <0x494>;
 
-		qcom,sde-ctl-off = <0x2000 0x2200 0x2400
-				     0x2600 0x2800 0x2a00>;
-		qcom,sde-ctl-size = <0x1dc>;
+		qcom,sde-ctl-off = <0x16000 0x17000 0x18000
+					0x19000 0x1a000>;
+		qcom,sde-ctl-size = <0x1e8>;
 		qcom,sde-ctl-display-pref = "primary", "none", "none",
 			    "none", "none";
 
@@ -74,21 +74,20 @@
 		qcom,sde-wb-id = <2>;
 		qcom,sde-wb-clk-ctrl = <0x2bc 16>;
 
-		qcom,sde-intf-off = <0x6b000 0x6b800
-					0x6c000 0x6c800>;
-		qcom,sde-intf-size = <0x2b8>;
+		qcom,sde-intf-off = <0x35000 0x36000
+					0x37000 0x38000>;
+		qcom,sde-intf-size = <0x2c0>;
 		qcom,sde-intf-type = "dp", "dsi", "dsi", "dp";
+		qcom,sde-intf-tear-irq-off = <0 0x36800 0x37800 0>;
 
-		qcom,sde-pp-off = <0x71000 0x71800
-					  0x72000 0x72800 0x73000 0x73800>;
+		qcom,sde-pp-off = <0x6a000 0x6b000
+					0x6c000 0x6d000 0x6e000 0x6f000>;
 		qcom,sde-pp-slave = <0x0 0x0 0x0 0x0 0x0 0x0>;
 		qcom,sde-pp-size = <0xd4>;
 		qcom,sde-pp-merge-3d-id = <0x0 0x0 0x1 0x1 0x2 0x2>;
 
-		qcom,sde-merge-3d-off = <0x84000 0x84100 0x84200>;
-		qcom,sde-merge-3d-size = <0x100>;
-
-		qcom,sde-te2-off = <0x2000 0x2000 0x0 0x0 0x0 0x0>;
+		qcom,sde-merge-3d-off = <0x4f000 0x50000 0x51000>;
+		qcom,sde-merge-3d-size = <0x10>;
 
 		qcom,sde-cdm-off = <0x7a200>;
 		qcom,sde-cdm-size = <0x224>;
@@ -97,8 +96,8 @@
 		qcom,sde-dsc-size = <0x140>;
 		qcom,sde-dsc-pair-mask = <2 1 4 3>;
 
-		qcom,sde-dither-off = <0x30e0 0x30e0 0x30e0
-							0x30e0 0x30e0 0x30e0>;
+		qcom,sde-dither-off = <0xe0 0xe0 0xe0
+						0xe0 0xe0 0xe0>;
 		qcom,sde-dither-version = <0x00010000>;
 		qcom,sde-dither-size = <0x20>;
 
@@ -168,7 +167,7 @@
 		qcom,sde-num-nrt-paths = <0>;
 		qcom,sde-dspp-ltm-version = <0x00010000>;
 		/* offsets are based off dspp 0 and dspp 1 */
-		qcom,sde-dspp-ltm-off = <0x2a000 0x28100>;
+		qcom,sde-dspp-ltm-off = <0x15300 0x14300>;
 
 		qcom,sde-uidle-off = <0x80000>;
 		qcom,sde-uidle-size = <0x70>;
@@ -314,6 +313,7 @@
 		vdda-1p2-supply = <&pm8150_l9>;
 		vdda-0p9-supply = <&pm8150_l18>;
 
+
 		reg =   <0xae90000 0x0dc>,
 			<0xae90200 0x0c0>,
 			<0xae90400 0x508>,
@@ -427,6 +427,7 @@
 		qcom,sde-dram-channels = <2>;
 
 		vdd-supply = <&mdss_core_gdsc>;
+
 		clocks = <&clock_dispcc DISP_CC_MDSS_RSCC_VSYNC_CLK>,
 			<&clock_dispcc DISP_CC_MDSS_NON_GDSC_AHB_CLK>,
 			<&clock_dispcc DISP_CC_MDSS_RSCC_AHB_CLK>;
@@ -467,7 +468,7 @@
 		};
 	};
 
-	mdss_rotator: qcom,mdss_rotator@aea8800 {
+	mdss_rotator: qcom,mdss_rotator@aea9000 {
 		compatible = "qcom,sde_rotator";
 		reg = <0x0ae00000 0xac000>,
 		      <0x0aeb8000 0x3000>;
