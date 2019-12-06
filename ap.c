@@ -12431,6 +12431,33 @@ static enum sigma_cmd_result wcn_ap_set_rfeature(struct sigma_dut *dut,
 	if (val && wcn_vht_chnum_band(dut, ifname, val) < 0)
 		return ERROR_SEND_STATUS;
 
+	val = get_param(cmd, "txBandwidth");
+	if (val) {
+		int old_ch_bw = dut->ap_chwidth;
+
+		if (strcasecmp(val, "Auto") == 0) {
+			dut->ap_chwidth = 0;
+		} else if (strcasecmp(val, "20") == 0) {
+			dut->ap_chwidth = 0;
+		} else if (strcasecmp(val, "40") == 0) {
+			dut->ap_chwidth = 1;
+		} else if (strcasecmp(val, "80") == 0) {
+			dut->ap_chwidth = 2;
+		} else if (strcasecmp(val, "160") == 0) {
+			dut->ap_chwidth = 3;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,WIDTH not supported");
+			return STATUS_SENT_ERROR;
+		}
+		if (old_ch_bw != dut->ap_chwidth) {
+			if (cmd_ap_config_commit(dut, conn, cmd) <= 0)
+				return STATUS_SENT_ERROR;
+		} else {
+			sigma_dut_print(dut, DUT_MSG_DEBUG, "No change in BW");
+		}
+	}
+
 	return SUCCESS_SEND_STATUS;
 }
 
