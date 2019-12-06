@@ -12458,6 +12458,27 @@ static enum sigma_cmd_result wcn_ap_set_rfeature(struct sigma_dut *dut,
 		}
 	}
 
+	val = get_param(cmd, "GI");
+	if (val) {
+		int fix_rate_sgi;
+
+		if (strcmp(val, "0.8") == 0) {
+			run_iwpriv(dut, ifname, "enable_short_gi 9");
+			fix_rate_sgi = 1;
+		} else if (strcmp(val, "1.6") == 0) {
+			run_iwpriv(dut, ifname, "enable_short_gi 10");
+			fix_rate_sgi = 2;
+		} else if (strcmp(val, "3.2") == 0) {
+			run_iwpriv(dut, ifname, "enable_short_gi 11");
+			fix_rate_sgi = 3;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,GI value not supported");
+			return STATUS_SENT_ERROR;
+		}
+		run_iwpriv(dut, ifname, "enable_short_gi %d", fix_rate_sgi);
+	}
+
 	return SUCCESS_SEND_STATUS;
 }
 
