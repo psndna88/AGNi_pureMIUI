@@ -275,6 +275,14 @@ void ath_config_dyn_bw_sig(struct sigma_dut *dut, const char *ifname,
 }
 
 
+static void wcn_config_ap_ldpc(struct sigma_dut *dut, const char *ifname)
+{
+	if (dut->ap_ldpc == VALUE_NOT_SET)
+		return;
+	run_iwpriv(dut, ifname, "ldpc %d", dut->ap_ldpc != VALUE_DISABLED);
+}
+
+
 static void mac80211_config_rts_force(struct sigma_dut *dut, const char *ifname,
 				      const char *val)
 {
@@ -1163,6 +1171,14 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 				  "errorCode,Unsupported LDPC");
 			return STATUS_SENT;
 		}
+		switch (get_driver_type(dut)) {
+		case DRIVER_WCN:
+		case DRIVER_LINUX_WCN:
+			wcn_config_ap_ldpc(dut, ifname);
+			break;
+		default:
+			break;
+		}
 	}
 
 	val = get_param(cmd, "BW_SGNL");
@@ -1752,6 +1768,14 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Unsupported BCC value");
 			return STATUS_SENT_ERROR;
+		}
+		switch (get_driver_type(dut)) {
+		case DRIVER_WCN:
+		case DRIVER_LINUX_WCN:
+			wcn_config_ap_ldpc(dut, ifname);
+			break;
+		default:
+			break;
 		}
 	}
 
@@ -9032,6 +9056,10 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 			dut->ap_txBF = 1;
 			dut->ap_mu_txBF = 1;
 			dut->he_sounding = VALUE_ENABLED;
+			if (drv == DRIVER_LINUX_WCN) {
+				dut->ap_ldpc = VALUE_ENABLED;
+				wcn_config_ap_ldpc(dut, get_main_ifname(dut));
+			}
 		}
 		if (get_openwrt_driver_type() == OPENWRT_DRIVER_ATHEROS)
 			dut->ap_dfs_mode = AP_DFS_MODE_ENABLED;
