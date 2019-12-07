@@ -1205,10 +1205,11 @@ QDF_STATUS sme_update_dfs_scan_mode(tHalHandle hHal,
 		uint8_t allowDFSChannelRoam);
 uint8_t sme_get_dfs_scan_mode(tHalHandle hHal);
 
-#ifdef FEATURE_WLAN_EXTSCAN
 QDF_STATUS sme_get_valid_channels_by_band(tHalHandle hHal, uint8_t wifiBand,
 		uint32_t *aValidChannels,
 		uint8_t *pNumChannels);
+
+#ifdef FEATURE_WLAN_EXTSCAN
 QDF_STATUS sme_ext_scan_get_capabilities(tHalHandle hHal,
 		tSirGetExtScanCapabilitiesReqParams *pReq);
 QDF_STATUS sme_ext_scan_start(tHalHandle hHal,
@@ -1694,6 +1695,15 @@ sme_apf_read_work_memory(tHalHandle hal,
 
 uint32_t sme_get_wni_dot11_mode(tHalHandle hal);
 QDF_STATUS sme_create_mon_session(tHalHandle hal_handle, uint8_t *bssid);
+/**
+ * sme_delete_mon_session() - post message to delete PE session for mon_mode
+ * operation
+ * @mac_handle: Opaque handle to the global MAC context
+ * @vdev_id: sme session id
+ *
+ * Return: QDF_STATUS_SUCCESS on success, non-zero error code on failure.
+ */
+QDF_STATUS sme_delete_mon_session(mac_handle_t mac_handle, uint8_t vdev_id);
 QDF_STATUS sme_set_adaptive_dwelltime_config(tHalHandle hal,
 			struct adaptive_dwelltime_params *dwelltime_params);
 
@@ -2981,4 +2991,16 @@ QDF_STATUS sme_set_roam_triggers(mac_handle_t mac_handle,
  */
 QDF_STATUS sme_roam_control_restore_default_config(mac_handle_t mac_handle,
 						   uint8_t vdev_id);
+
+/**
+ * sme_set_disconnect_ies() - set disconnect IEs
+ * @mac_handle: handle returned by mac_open
+ * @vdev_id: vdev id
+ * @ie_data: Disconnect IE data
+ * @ie_len: Disconnect IE length
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS sme_set_disconnect_ies(mac_handle_t mac_handle, uint8_t vdev_id,
+				  uint8_t *ie_data, uint16_t ie_len);
 #endif /* #if !defined( __SME_API_H ) */

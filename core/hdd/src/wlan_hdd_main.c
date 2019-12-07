@@ -1161,6 +1161,7 @@ static int hdd_update_tdls_config(struct hdd_context *hdd_ctx)
 	config->tdls_pre_off_chan_num = cfg->fTDLSPrefOffChanNum;
 	config->tdls_pre_off_chan_bw = cfg->fTDLSPrefOffChanBandwidth;
 	config->tdls_peer_kickout_threshold = cfg->tdls_peer_kickout_threshold;
+	config->tdls_discovery_wake_timeout = cfg->tdls_discovery_wake_timeout;
 	config->delayed_trig_framint = cfg->DelayedTriggerFrmInt;
 	config->tdls_feature_flags = ((cfg->fEnableTDLSOffChannel ?
 				     1 << TDLS_FEATURE_OFF_CHANNEL : 0) |
@@ -2188,6 +2189,7 @@ int hdd_update_tgt_cfg(hdd_handle_t hdd_handle, struct wma_tgt_cfg *cfg)
 	}
 
 	hdd_ctx->curr_band = hdd_ctx->config->nBandCapability;
+	hdd_ctx->psoc->soc_nif.user_config.band_capability = hdd_ctx->curr_band;
 
 	if (!cds_is_driver_recovering() || cds_is_driver_in_bad_state()) {
 		hdd_ctx->reg.reg_domain = cfg->reg_domain;
@@ -2223,6 +2225,7 @@ int hdd_update_tgt_cfg(hdd_handle_t hdd_handle, struct wma_tgt_cfg *cfg)
 	hdd_lpass_target_config(hdd_ctx, cfg);
 
 	hdd_ctx->ap_arpns_support = cfg->ap_arpns_support;
+
 	hdd_update_tgt_services(hdd_ctx, &cfg->services);
 
 	hdd_update_tgt_ht_cap(hdd_ctx, &cfg->ht_cap);
@@ -5839,6 +5842,7 @@ QDF_STATUS hdd_stop_adapter_ext(struct hdd_context *hdd_ctx,
 	case QDF_MONITOR_MODE:
 		wlan_hdd_scan_abort(adapter);
 		hdd_deregister_tx_flow_control(adapter);
+		sme_delete_mon_session(mac_handle, adapter->session_id);
 		hdd_vdev_destroy(adapter);
 		break;
 
@@ -6078,7 +6082,6 @@ QDF_STATUS hdd_reset_all_adapters(struct hdd_context *hdd_ctx)
 	struct hdd_adapter *adapter;
 	struct hdd_station_ctx *sta_ctx;
 	struct qdf_mac_addr peerMacAddr;
-	int sta_id;
 	struct wlan_objmgr_vdev *vdev;
 
 	hdd_enter();
@@ -6111,18 +6114,17 @@ QDF_STATUS hdd_reset_all_adapters(struct hdd_context *hdd_ctx)
 						&adapter->acs_pending_work);
 				clear_bit(ACS_PENDING, &adapter->event_flags);
 			}
-
-			if (test_bit(SOFTAP_BSS_STARTED,
-						&adapter->event_flags)) {
-				hdd_sap_indicate_disconnect_for_sta(adapter);
-				clear_bit(SOFTAP_BSS_STARTED,
-					  &adapter->event_flags);
-			}
-
 		} else {
 			wlan_hdd_netif_queue_control(adapter,
 					   WLAN_STOP_ALL_NETIF_QUEUE_N_CARRIER,
 					   WLAN_CONTROL_PATH);
+		}
+
+		if ((adapter->device_mode == QDF_P2P_GO_MODE ||
+		     adapter->device_mode == QDF_SAP_MODE) &&
+		    test_bit(SOFTAP_BSS_STARTED, &adapter->event_flags)) {
+			hdd_sap_indicate_disconnect_for_sta(adapter);
+			clear_bit(SOFTAP_BSS_STARTED, &adapter->event_flags);
 		}
 
 		hdd_reset_scan_operation(hdd_ctx, adapter);
@@ -6158,17 +6160,6 @@ QDF_STATUS hdd_reset_all_adapters(struct hdd_context *hdd_ctx)
 			qdf_copy_macaddr(&peerMacAddr,
 					 &sta_ctx->conn_info.bssId);
 
-		} else if (adapter->device_mode == QDF_P2P_GO_MODE) {
-			clear_bit(SOFTAP_BSS_STARTED, &adapter->event_flags);
-			for (sta_id = 0; sta_id < WLAN_MAX_STA_COUNT; sta_id++) {
-				if (adapter->sta_info[sta_id].in_use) {
-					hdd_debug("[SSR] deregister STA with ID %d",
-						  sta_id);
-					hdd_softap_deregister_sta(adapter,
-								  sta_id);
-					adapter->sta_info[sta_id].in_use = 0;
-				}
-			}
 		}
 
 		hdd_nud_ignore_tracking(adapter, true);
@@ -6946,7 +6937,8 @@ QDF_STATUS hdd_start_all_adapters(struct hdd_context *hdd_ctx)
 				/* indicate disconnected event to nl80211 */
 				wlan_hdd_cfg80211_indicate_disconnect(
 						adapter->dev, false,
-						WLAN_REASON_UNSPECIFIED);
+						WLAN_REASON_UNSPECIFIED,
+						NULL, 0);
 			} else if (eConnectionState_Connecting == connState) {
 				/*
 				 * Indicate connect failure to supplicant if we

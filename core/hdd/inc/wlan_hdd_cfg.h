@@ -7032,6 +7032,31 @@ enum hdd_link_speed_rpt_type {
 #define CFG_TDLS_PEER_KICKOUT_THRESHOLD_MAX        (5000)
 #define CFG_TDLS_PEER_KICKOUT_THRESHOLD_DEFAULT    (96)
 
+/*
+ * <ini>
+ * gTDLSDiscoveryWakeTimeout - TDLS discovery WAKE timeout in ms.
+ * @Min: 10
+ * @Max: 5000
+ * @Default: 96
+ *
+ * DUT will wake until this timeout to receive TDLS discovery response
+ * from peer. If tdls_discovery_wake_timeout is 0x0, the DUT will
+ * choose autonomously what wake timeout value to use.
+ *
+ *
+ * Related: gEnableTDLSSupport.
+ *
+ * Supported Feature: TDLS
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_TDLS_DISCOVERY_WAKE_TIMEOUT            "gTDLSDiscoveryWakeTimeout"
+#define CFG_TDLS_DISCOVERY_WAKE_TIMEOUT_MIN        (0)
+#define CFG_TDLS_DISCOVERY_WAKE_TIMEOUT_MAX        (2000)
+#define CFG_TDLS_DISCOVERY_WAKE_TIMEOUT_DEFAULT    (200)
+
 #endif
 
 /*
@@ -15282,7 +15307,7 @@ enum hdd_external_acs_policy {
 /*
  * <ini>
  * gActionOUIConnect1x1 - Used to specify action OUIs for 1x1 connection
- * @Default: 000C43 00 25 42 001018 06 02FFF02C0000 BC 25 42 001018 06 02FF040C0000 BC 25 42 00037F 00 35 6C
+ * @Default: 000C43 00 25 C2 001018 06 02FFF02C0000 BC 25 42 001018 06 02FF040C0000 BC 25 42 00037F 00 35 6C 001018 06 02FF009C0000 BC 25 48
  * Note: User should strictly add new action OUIs at the end of this
  * default value.
  *
@@ -15290,7 +15315,7 @@ enum hdd_external_acs_policy {
  * OUI 1 : 000C43
  *   OUI data Len : 00
  *   Info Mask : 25 - Check for NSS and Band
- *   Capabilities: 42 - NSS == 2 && Band == 2G
+ *   Capabilities: C2 - NSS == 2 && Band == 2G || Band == 5G
  * OUI 2 : 001018
  *   OUI data Len : 06
  *   OUI Data : 02FFF02C0000
@@ -15325,7 +15350,7 @@ enum hdd_external_acs_policy {
  * </ini>
  */
 #define CFG_ACTION_OUI_CONNECT_1X1_NAME    "gActionOUIConnect1x1"
-#define CFG_ACTION_OUI_CONNECT_1X1_DEFAULT "000C43 00 25 42 001018 06 02FFF02C0000 BC 25 42 001018 06 02FF040C0000 BC 25 42 00037F 00 35 6C 001018 06 02FF009C0000 BC 25 48"
+#define CFG_ACTION_OUI_CONNECT_1X1_DEFAULT "000C43 00 25 C2 001018 06 02FFF02C0000 BC 25 42 001018 06 02FF040C0000 BC 25 42 00037F 00 35 6C 001018 06 02FF009C0000 BC 25 48"
 
 /*
  * <ini>
@@ -16684,6 +16709,7 @@ struct hdd_config {
 	uint8_t fTDLSPrefOffChanBandwidth;
 	uint8_t enable_tdls_scan;
 	uint32_t tdls_peer_kickout_threshold;
+	uint32_t tdls_discovery_wake_timeout;
 #endif
 	uint8_t scanAgingTimeout;
 	uint8_t disableLDPCWithTxbfAP;

@@ -11160,7 +11160,6 @@ QDF_STATUS sme_abort_roam_scan(tHalHandle hHal, uint8_t sessionId)
 	return status;
 }
 
-#ifdef FEATURE_WLAN_EXTSCAN
 /**
  * sme_get_valid_channels_by_band() - to fetch valid channels filtered by band
  * @hHal: HAL context
@@ -11278,6 +11277,7 @@ QDF_STATUS sme_get_valid_channels_by_band(tHalHandle hHal,
 	return status;
 }
 
+#ifdef FEATURE_WLAN_EXTSCAN
 /*
  * sme_ext_scan_get_capabilities() -
  * SME API to fetch extscan capabilities
@@ -13906,9 +13906,10 @@ void sme_update_tgt_services(tHalHandle hal, struct wma_tgt_services *cfg)
 				cfg->is_fils_roaming_supported;
 	mac_ctx->is_11k_offload_supported =
 				cfg->is_11k_offload_supported;
-	sme_debug("pmf_offload: %d fils_roam support %d 11k_offload %d",
+	mac_ctx->ft_akm_service_bitmap = cfg->ft_akm_service_bitmap;
+	sme_debug("pmf_offload: %d fils_roam support %d 11k_offload %d ft_service_cap:%d",
 		  mac_ctx->pmf_offload, mac_ctx->is_fils_roaming_supported,
-		  mac_ctx->is_11k_offload_supported);
+		  mac_ctx->is_11k_offload_supported, mac_ctx->ft_akm_service_bitmap);
 	mac_ctx->bcn_reception_stats = cfg->bcn_reception_stats;
 }
 
@@ -14510,6 +14511,22 @@ QDF_STATUS sme_create_mon_session(tHalHandle hal_handle, tSirMacAddr bss_id)
 		qdf_mem_copy(msg->bss_id.bytes, bss_id, QDF_MAC_ADDR_SIZE);
 		status = umac_send_mb_message_to_mac(msg);
 	}
+	return status;
+}
+
+QDF_STATUS sme_delete_mon_session(mac_handle_t mac_handle, uint8_t vdev_id)
+{
+	QDF_STATUS status = QDF_STATUS_E_FAILURE;
+	struct sir_delete_session *msg;
+
+	msg = qdf_mem_malloc(sizeof(*msg));
+	if (msg) {
+		msg->type = eWNI_SME_MON_DEINIT_SESSION;
+		msg->vdev_id = vdev_id;
+		msg->msg_len = sizeof(*msg);
+		status = umac_send_mb_message_to_mac(msg);
+	}
+
 	return status;
 }
 
@@ -16863,4 +16880,33 @@ QDF_STATUS sme_set_roam_triggers(mac_handle_t mac_handle,
 	}
 
 	return status;
+}
+
+QDF_STATUS sme_set_disconnect_ies(mac_handle_t mac_handle, uint8_t vdev_id,
+				  uint8_t *ie_data, uint16_t ie_len)
+{
+	tpAniSirGlobal mac_ctx = PMAC_STRUCT(mac_handle);
+	struct wlan_objmgr_vdev *vdev;
+	struct wlan_ies ie;
+
+	if (!ie_data || !ie_len) {
+		sme_debug("Got NULL disconnect IEs");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac_ctx->psoc,
+						    vdev_id,
+						    WLAN_LEGACY_SME_ID);
+	if (!vdev) {
+		sme_err("Got NULL vdev obj, returning");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	ie.data = ie_data;
+	ie.len = ie_len;
+
+	mlme_set_self_disconnect_ies(vdev, &ie);
+
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
+	return QDF_STATUS_SUCCESS;
 }

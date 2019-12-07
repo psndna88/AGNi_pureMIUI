@@ -2386,6 +2386,18 @@ QDF_STATUS pe_roam_synch_callback(tpAniSirGlobal mac_ctx,
 
 	/* Next routine may update nss based on dot11Mode */
 	lim_ft_prepare_add_bss_req(mac_ctx, false, ft_session_ptr, bss_desc);
+	if (session_ptr->is11Rconnection) {
+		ft_session_ptr->is11Rconnection = session_ptr->is11Rconnection;
+		if (session_ptr->fils_info &&
+		    session_ptr->fils_info->fils_ft_len) {
+			ft_session_ptr->fils_info->fils_ft_len =
+			       session_ptr->fils_info->fils_ft_len;
+			qdf_mem_copy(ft_session_ptr->fils_info->fils_ft,
+				     session_ptr->fils_info->fils_ft,
+				     session_ptr->fils_info->fils_ft_len);
+		}
+	}
+
 	roam_sync_ind_ptr->add_bss_params =
 		(tpAddBssParams) ft_session_ptr->ftPEContext.pAddBssReq;
 	add_bss_params = ft_session_ptr->ftPEContext.pAddBssReq;
@@ -2759,6 +2771,17 @@ void lim_mon_init_session(tpAniSirGlobal mac_ptr,
 		return;
 	}
 	psession_entry->vhtCapability = 1;
+}
+
+void lim_mon_deinit_session(tpAniSirGlobal mac_ptr,
+			    struct sir_delete_session *msg)
+{
+	tpPESession session;
+
+	session = pe_find_session_by_session_id(mac_ptr, msg->vdev_id);
+
+	if (session && session->bssType == eSIR_MONITOR_MODE)
+		pe_delete_session(mac_ptr, session);
 }
 
 /**
