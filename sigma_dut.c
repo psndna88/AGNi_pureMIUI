@@ -835,6 +835,8 @@ static void deinit_sigma_dut(struct sigma_dut *dut)
 	dut->btm_query_cand_list = NULL;
 	free(dut->rsne_override);
 	dut->rsne_override = NULL;
+	free(dut->rsnxe_override_eapol);
+	dut->rsnxe_override_eapol = NULL;
 	free(dut->ap_sae_groups);
 	dut->ap_sae_groups = NULL;
 	free(dut->dpp_peer_uri);

@@ -890,6 +890,7 @@ struct sigma_dut {
 
 	char *sae_commit_override;
 	char *rsne_override;
+	char *rsnxe_override_eapol;
 	int sta_associate_wait_connect;
 	char server_cert_hash[65];
 	int server_cert_tod;

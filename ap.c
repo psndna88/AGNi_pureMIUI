@@ -2233,6 +2233,18 @@ static enum sigma_cmd_result cmd_ap_set_security(struct sigma_dut *dut,
 		}
 	}
 
+	val = get_param(cmd, "RSNXE_Content");
+	if (val) {
+		if (strncasecmp(val, "EapolM3:", 8) != 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported RSNXE_Content value");
+			return STATUS_SENT_ERROR;
+		}
+		val += 8;
+		free(dut->rsnxe_override_eapol);
+		dut->rsnxe_override_eapol = strdup(val);
+	}
+
 	val = get_param(cmd, "ENCRYPT");
 	if (!val)
 		val = get_param(cmd, "EncpType");
@@ -4074,6 +4086,10 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 		snprintf(buf, sizeof(buf), "%s", dut->rsne_override);
 		owrt_ap_set_vap(dut, vap_count, "own_ie_override", buf);
 	}
+
+	if (dut->rsnxe_override_eapol)
+		owrt_ap_set_vap(dut, vap_count, "rsnxe_override_eapol",
+				dut->rsnxe_override_eapol);
 
 	if (dut->sae_commit_override) {
 		snprintf(buf, sizeof(buf), "%s", dut->sae_commit_override);
@@ -7809,6 +7825,9 @@ skip_key_mgmt:
 
 	if (dut->rsne_override)
 		fprintf(f, "own_ie_override=%s\n", dut->rsne_override);
+	if (dut->rsnxe_override_eapol)
+		fprintf(f, "rsnxe_override_eapol=%s\n",
+			dut->rsnxe_override_eapol);
 
 	if (dut->sae_commit_override)
 		fprintf(f, "sae_commit_override=%s\n",
@@ -8963,6 +8982,8 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 
 	free(dut->rsne_override);
 	dut->rsne_override = NULL;
+	free(dut->rsnxe_override_eapol);
+	dut->rsnxe_override_eapol = NULL;
 
 	free(dut->sae_commit_override);
 	dut->sae_commit_override = NULL;
