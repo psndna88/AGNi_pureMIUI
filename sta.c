@@ -2190,7 +2190,8 @@ static enum sigma_cmd_result cmd_sta_set_psk(struct sigma_dut *dut,
 	if (val) {
 		if (strcasecmp(val, "h2e") == 0) {
 			dut->sae_pwe = SAE_PWE_H2E;
-		} else if (strcasecmp(val, "loop") == 0) {
+		} else if (strcasecmp(val, "loop") == 0 ||
+			   strcasecmp(val, "looping") == 0) {
 			dut->sae_pwe = SAE_PWE_LOOP;
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
