@@ -2186,6 +2186,25 @@ static enum sigma_cmd_result cmd_sta_set_psk(struct sigma_dut *dut,
 		wpa_command(intf, buf);
 	}
 
+	val = get_param(cmd, "RSNXE_Content");
+	if (val) {
+		const char *param;
+
+		if (strncasecmp(val, "AssocReq:", 9) == 0) {
+			val += 9;
+			param = "rsnxe_override_assoc";
+		} else if (strncasecmp(val, "EapolM2:", 8) == 0) {
+			val += 8;
+			param = "rsnxe_override_eapol";
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported RSNXE_Content value");
+			return STATUS_SENT_ERROR;
+		}
+		snprintf(buf, sizeof(buf), "SET %s %s", param, val);
+		wpa_command(intf, buf);
+	}
+
 	val = get_param(cmd, "sae_pwe");
 	if (val) {
 		if (strcasecmp(val, "h2e") == 0) {
