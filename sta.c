@@ -2179,6 +2179,13 @@ static enum sigma_cmd_result cmd_sta_set_psk(struct sigma_dut *dut,
 		wpa_command(intf, buf);
 	}
 
+	val = get_param(cmd, "ECGroupID_RGE");
+	if (val) {
+		snprintf(buf, sizeof(buf), "SET extra_sae_rejected_groups %s",
+			 val);
+		wpa_command(intf, buf);
+	}
+
 	val = get_param(cmd, "sae_pwe");
 	if (val) {
 		if (strcasecmp(val, "h2e") == 0) {
