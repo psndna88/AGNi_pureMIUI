@@ -705,6 +705,8 @@ enum qca_wlan_802_11_mode {
  * @QCA_WLAN_AUTH_TYPE_WAI_PSK wai psk key
  * @QCA_WLAN_AUTH_TYPE_CCKM_WPA: cckm wpa key
  * @QCA_WLAN_AUTH_TYPE_CCKM_RSN: cckm rsn key
+ * @QCA_WLAN_AUTH_TYPE_FT_SAE: FT sae akm
+ * @QCA_WLAN_AUTH_TYPE_FT_SUITEB_EAP_SHA384: FT suite B SHA384
  */
 enum qca_wlan_auth_type {
 	QCA_WLAN_AUTH_TYPE_INVALID,
@@ -724,6 +726,8 @@ enum qca_wlan_auth_type {
 	QCA_WLAN_AUTH_TYPE_CCKM_WPA,
 	QCA_WLAN_AUTH_TYPE_CCKM_RSN,
 	QCA_WLAN_AUTH_TYPE_AUTOSWITCH,
+	QCA_WLAN_AUTH_TYPE_FT_SAE,
+	QCA_WLAN_AUTH_TYPE_FT_SUITEB_EAP_SHA384,
 };
 
 /**
@@ -1334,7 +1338,6 @@ enum qca_wlan_vendor_attr {
 		QCA_WLAN_VENDOR_ATTR_MAX = QCA_WLAN_VENDOR_ATTR_AFTER_LAST - 1
 };
 
-#ifdef FEATURE_WLAN_EXTSCAN
 enum qca_wlan_vendor_attr_extscan_config_params {
 	QCA_WLAN_VENDOR_ATTR_EXTSCAN_SUBCMD_CONFIG_PARAM_INVALID = 0,
 
@@ -1749,7 +1752,6 @@ enum qca_wlan_vendor_attr_extscan_results {
 	QCA_WLAN_VENDOR_ATTR_EXTSCAN_RESULTS_MAX =
 	QCA_WLAN_VENDOR_ATTR_EXTSCAN_RESULTS_AFTER_LAST - 1,
 };
-#endif
 
 #ifdef WLAN_FEATURE_LINK_LAYER_STATS
 
