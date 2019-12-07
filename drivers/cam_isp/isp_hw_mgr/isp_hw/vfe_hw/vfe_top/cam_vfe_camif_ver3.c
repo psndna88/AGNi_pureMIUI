@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/slab.h>
@@ -52,6 +52,8 @@ struct cam_vfe_mux_camif_ver3_data {
 	uint32_t                           camif_debug;
 	uint32_t                           horizontal_bin;
 	uint32_t                           qcfa_bin;
+	uint32_t                           dual_hw_idx;
+	uint32_t                           is_dual;
 };
 
 static int cam_vfe_camif_ver3_get_evt_payload(
@@ -258,6 +260,10 @@ int cam_vfe_camif_ver3_acquire_resource(
 	camif_data->qcfa_bin    = acquire_data->vfe_in.in_port->qcfa_bin;
 	camif_data->event_cb    = acquire_data->event_cb;
 	camif_data->priv        = acquire_data->priv;
+	camif_data->is_dual     = acquire_data->vfe_in.is_dual;
+
+	if (acquire_data->vfe_in.is_dual)
+		camif_data->dual_hw_idx = acquire_data->vfe_in.dual_hw_idx;
 
 	CAM_DBG(CAM_ISP, "VFE:%d CAMIF pix_pattern:%d dsp_mode=%d",
 		camif_res->hw_intf->hw_idx,
@@ -387,10 +393,16 @@ static int cam_vfe_camif_ver3_resource_start(
 	if ((rsrc_data->dsp_mode >= CAM_ISP_DSP_MODE_ONE_WAY) &&
 		(rsrc_data->dsp_mode <= CAM_ISP_DSP_MODE_ROUND)) {
 		/* DSP mode reg val is CAM_ISP_DSP_MODE - 1 */
-		val |= (((rsrc_data->dsp_mode - 1) &
-			rsrc_data->reg_data->dsp_mode_mask) <<
-			rsrc_data->reg_data->dsp_mode_shift);
-		val |= (0x1 << rsrc_data->reg_data->dsp_en_shift);
+		if (camif_res->hw_intf->hw_idx != CAM_ISP_HW_VFE_CORE_2) {
+			val |= (((rsrc_data->dsp_mode - 1) &
+				rsrc_data->reg_data->dsp_mode_mask) <<
+				rsrc_data->reg_data->dsp_mode_shift);
+			val |= (0x1 << rsrc_data->reg_data->dsp_en_shift);
+		} else {
+			CAM_ERR(CAM_ISP, "Error, HVX not available for IFE_%d",
+				camif_res->hw_intf->hw_idx);
+			return -EINVAL;
+		}
 	}
 
 	if (rsrc_data->sync_mode == CAM_ISP_HW_SYNC_SLAVE)
@@ -418,6 +430,12 @@ static int cam_vfe_camif_ver3_resource_start(
 		CAM_SHIFT_TOP_CORE_CFG_STATS_HDR_BHIST;
 	val |= (rsrc_data->cam_common_cfg.input_mux_sel_pp & 0x3) <<
 		CAM_SHIFT_TOP_CORE_CFG_INPUTMUX_PP;
+
+	if (rsrc_data->is_dual && rsrc_data->reg_data->dual_vfe_sync_mask) {
+		val |= (((rsrc_data->dual_hw_idx &
+				rsrc_data->reg_data->dual_vfe_sync_mask) + 1) <<
+				rsrc_data->reg_data->dual_ife_sync_sel_shift);
+	}
 
 	cam_io_w_mb(val, rsrc_data->mem_base +
 		rsrc_data->common_reg->core_cfg_0);
