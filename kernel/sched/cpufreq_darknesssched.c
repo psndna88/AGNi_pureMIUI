@@ -21,7 +21,7 @@
 
 #include "sched.h"
 #include "tune.h"
-#include <linux/display_state.h>
+#include <linux/state_notifier.h>
 
 #ifdef CONFIG_SCHED_WALT
 unsigned long boosted_cpu_util(int cpu);
