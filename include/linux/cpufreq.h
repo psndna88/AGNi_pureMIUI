@@ -555,6 +555,9 @@ extern struct cpufreq_governor cpufreq_gov_electroutil;
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_PWRUTILX)
 extern struct cpufreq_governor cpufreq_gov_pwrutilx;
 #define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_pwrutilx)
+#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_HELIX)
+extern struct cpufreq_governor cpufreq_gov_helix_schedutil;
+#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_helix_schedutil)
 #endif
 
 static inline void cpufreq_policy_apply_limits(struct cpufreq_policy *policy)
