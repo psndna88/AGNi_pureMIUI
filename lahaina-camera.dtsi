@@ -819,7 +819,7 @@
 					<CAM_CPAS_TRANSACTION_WRITE>;
 					constituent-paths =
 					<CAM_CPAS_PATH_DATA_IFE_LINEAR
-					CAM_CPAS_PATH_DATA_IFE_PDAF>; // TODO
+					CAM_CPAS_PATH_DATA_IFE_PDAF>;
 					parent-node = <&level1_rt0_wr1>;
 				};
 
@@ -833,7 +833,7 @@
 					<CAM_CPAS_TRANSACTION_WRITE>;
 					constituent-paths =
 					<CAM_CPAS_PATH_DATA_IFE_LINEAR
-					CAM_CPAS_PATH_DATA_IFE_PDAF>; // TODO
+					CAM_CPAS_PATH_DATA_IFE_PDAF>;
 					parent-node = <&level1_rt0_wr1>;
 				};
 
@@ -1506,11 +1506,11 @@
 		camss-supply = <&cam_cc_titan_top_gdsc>;
 		clock-names =
 			"ife_csid_clk_src",
-			"ife_lite_ahb",
 			"ife_csid_clk",
 			"cphy_rx_clk_src",
 			"ife_cphy_rx_clk",
 			"ife_clk_src",
+			"ife_lite_ahb",
 			"ife_clk";
 		clocks =
 			<&clock_camcc CAM_CC_IFE_LITE_CSID_CLK_SRC>,
