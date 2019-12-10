@@ -1053,11 +1053,16 @@ static int cam_sync_probe(struct platform_device *pdev)
 	sync_dev->vdev->fops     = &cam_sync_v4l2_fops;
 	sync_dev->vdev->ioctl_ops = &g_cam_sync_ioctl_ops;
 	sync_dev->vdev->minor     = -1;
+	sync_dev->vdev->device_caps |= V4L2_CAP_VIDEO_CAPTURE;
 	sync_dev->vdev->vfl_type  = VFL_TYPE_GRABBER;
 	rc = video_register_device(sync_dev->vdev,
 		VFL_TYPE_GRABBER, -1);
-	if (rc < 0)
+	if (rc < 0) {
+		CAM_ERR(CAM_SYNC,
+			"video device registration failure rc = %d, name = %s, device_caps = %d",
+			rc, sync_dev->vdev->name, sync_dev->vdev->device_caps);
 		goto v4l2_fail;
+	}
 
 	cam_sync_init_entity(sync_dev);
 	video_set_drvdata(sync_dev->vdev, sync_dev);

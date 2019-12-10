@@ -555,9 +555,14 @@ static int cam_video_device_setup(void)
 	g_dev.video->ioctl_ops = &g_cam_ioctl_ops;
 	g_dev.video->minor = -1;
 	g_dev.video->vfl_type = VFL_TYPE_GRABBER;
+	g_dev.video->device_caps |= V4L2_CAP_VIDEO_CAPTURE;
 	rc = video_register_device(g_dev.video, VFL_TYPE_GRABBER, -1);
-	if (rc)
+	if (rc) {
+		CAM_ERR(CAM_CRM,
+			"video device registration failure rc = %d, name = %s, device_caps = %d",
+			rc, g_dev.video->name, g_dev.video->device_caps);
 		goto v4l2_fail;
+	}
 
 	rc = media_entity_pads_init(&g_dev.video->entity, 0, NULL);
 	if (rc)
