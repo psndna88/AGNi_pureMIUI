@@ -9053,8 +9053,13 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 			dut->ap_mu_txBF = 0;
 			dut->he_sounding = VALUE_DISABLED;
 		} else {
-			dut->ap_txBF = 1;
-			dut->ap_mu_txBF = 1;
+			if (drv == DRIVER_WCN || drv == DRIVER_LINUX_WCN) {
+				dut->ap_txBF = 0;
+				dut->ap_mu_txBF = 0;
+			} else {
+				dut->ap_txBF = 1;
+				dut->ap_mu_txBF = 1;
+			}
 			dut->he_sounding = VALUE_ENABLED;
 			if (drv == DRIVER_LINUX_WCN) {
 				dut->ap_ldpc = VALUE_ENABLED;
