@@ -2151,7 +2151,7 @@ static enum sigma_cmd_result cmd_sta_set_psk(struct sigma_dut *dut,
 
 	val = get_param(cmd, "ECGroupID");
 	if (val) {
-		snprintf(buf, sizeof(buf), "SET sae_groups %u", atoi(val));
+		snprintf(buf, sizeof(buf), "SET sae_groups %s", val);
 		if (wpa_command(ifname, buf) != 0) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Failed to clear sae_groups");
