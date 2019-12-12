@@ -1862,6 +1862,10 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 	if (val)
 		dut->he_mmss = atoi(val);
 
+	val = get_param(cmd, "SRCtrl_SRValue15Allowed");
+	if (val)
+		dut->he_srctrl_allow = atoi(val);
+
 	return SUCCESS_SEND_STATUS;
 }
 
@@ -6644,6 +6648,13 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 
 	if (dut->he_mmss)
 		run_iwpriv(dut, ifname, "ampduden_ovrd %d", dut->he_mmss);
+
+	if (dut->he_srctrl_allow == 0) {
+		/* This is a special testbed AP case to enable SR for protocol
+		 * testing when SRCtrl_SRValue15Allowed is specified.
+		 */
+		run_iwpriv(dut, ifname, "he_sr_enable 1");
+	}
 }
 
 
@@ -8960,6 +8971,7 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 	dut->ap_fixed_rate = 0;
 	dut->he_mmss = 0;
 	dut->he_set_sta_1x1 = VALUE_DISABLED;
+	dut->he_srctrl_allow = -1;
 	if (dut->device_type == AP_testbed) {
 		dut->ap_he_dlofdma = VALUE_DISABLED;
 		dut->ap_he_frag = VALUE_DISABLED;

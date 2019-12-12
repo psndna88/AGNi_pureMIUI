@@ -687,6 +687,7 @@ struct sigma_dut {
 	unsigned int he_mcsnssmap;
 	int he_ul_mcs;
 	int he_mmss;
+	int he_srctrl_allow;
 
 	enum value_not_set_enabled_disabled ap_oce;
 	enum value_not_set_enabled_disabled ap_filsdscv;
