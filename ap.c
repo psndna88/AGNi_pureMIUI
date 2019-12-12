@@ -6450,6 +6450,13 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 		run_iwpriv(dut, ifname, "he_ul_shortgi 3");
 		run_iwpriv(dut, basedev, "he_ul_trig_int 2");
 
+		/* Disable efficiency check for UL OFDMA. We do not send TBPPDU
+		 * for one user. With this command, we would send UL OFDMA even
+		 * for one user to allow testing to be done without requiring
+		 * more than one station. */
+		run_system_wrapper(dut,
+				   "wifitool %s setUnitTestCmd 0x47 2 131 0",
+				   ifname);
 		/* Set random RU allocation */
 		run_system_wrapper(dut, "wifitool %s setUnitTestCmd 0x47 2 9 1",
 				   ifname);
