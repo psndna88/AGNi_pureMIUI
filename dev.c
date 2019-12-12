@@ -275,7 +275,6 @@ static enum sigma_cmd_result wpa3_dev_exec_action(struct sigma_dut *dut,
 		}
 		snprintf(buf2, sizeof(buf2), "DHGroupVerResult,%s",
 			 pos ? pos : "");
-		/* TODO: search for sae_rejected_groups */
 		send_resp(dut, conn, SIGMA_COMPLETE, buf2);
 		return STATUS_SENT;
 
