@@ -46,7 +46,7 @@ camera-y := \
 	cam_cdm/cam_cdm_virtual_core.o \
 	cam_cdm/cam_cdm_hw_core.o
 
-ifdef CONFIG_QCOM_CX_IPEAK
+ifneq (,$(filter $(CONFIG_QCOM_CX_IPEAK),y m))
 camera-y += cam_utils/cam_cx_ipeak.o
 endif
 
