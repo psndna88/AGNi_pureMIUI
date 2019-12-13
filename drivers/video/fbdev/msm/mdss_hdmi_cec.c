@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2017, 2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -39,6 +39,7 @@ struct hdmi_cec_ctrl {
 	bool cec_device_suspend;
 
 	u32 cec_msg_wr_status;
+	struct cec_msg recv_msg;
 	spinlock_t lock;
 	struct work_struct cec_read_work;
 	struct completion cec_msg_wr_done;
@@ -164,12 +165,63 @@ static void hdmi_cec_deinit_input_event(struct hdmi_cec_ctrl *cec_ctrl)
 	cec_ctrl->input = NULL;
 }
 
+static int hdmi_cec_msg_read(struct hdmi_cec_ctrl *cec_ctrl)
+{
+	struct dss_io_data *io = NULL;
+	struct cec_msg *msg;
+	u32 data;
+	int i;
+
+	if (!cec_ctrl || !cec_ctrl->init_data.io) {
+		DEV_ERR("%s: invalid input\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!cec_ctrl->cec_enabled) {
+		DEV_ERR("%s: cec not enabled\n", __func__);
+		return -ENODEV;
+	}
+
+	msg = &cec_ctrl->recv_msg;
+	io = cec_ctrl->init_data.io;
+	data = DSS_REG_R(io, HDMI_CEC_RD_DATA);
+
+	msg->recvr_id   = (data & 0x000F);
+	msg->sender_id  = (data & 0x00F0) >> 4;
+	msg->frame_size = (data & 0x1F00) >> 8;
+	if (msg->frame_size < 1 || msg->frame_size > MAX_CEC_FRAME_SIZE) {
+		DEV_ERR("%s: invalid message (frame length = %d)\n",
+			__func__, msg->frame_size);
+		return -EINVAL;
+	} else if (msg->frame_size == 1) {
+		DEV_DBG("%s: polling message (dest[%x] <- init[%x])\n",
+			__func__, msg->recvr_id, msg->sender_id);
+		return -EINVAL;
+	}
+
+	/* data block 0 : opcode */
+	data = DSS_REG_R_ND(io, HDMI_CEC_RD_DATA);
+	msg->opcode = data & 0xFF;
+
+	/* data block 1-14 : operand 0-13 */
+	for (i = 0; i < msg->frame_size - 2; i++) {
+		data = DSS_REG_R_ND(io, HDMI_CEC_RD_DATA);
+		msg->operand[i] = data & 0xFF;
+	}
+
+	for (; i < MAX_OPERAND_SIZE; i++)
+		msg->operand[i] = 0;
+
+	DEV_DBG("%s: opcode 0x%x, wakup_en %d, device_suspend %d\n", __func__,
+		msg->opcode, cec_ctrl->cec_wakeup_en,
+		cec_ctrl->cec_device_suspend);
+
+	return 0;
+}
+
 static void hdmi_cec_msg_recv(struct work_struct *work)
 {
-	int i;
-	u32 data;
 	struct hdmi_cec_ctrl *cec_ctrl = NULL;
-	struct dss_io_data *io = NULL;
 	struct cec_msg msg;
 	struct cec_cbs *cbs;
 
@@ -179,49 +231,8 @@ static void hdmi_cec_msg_recv(struct work_struct *work)
 		return;
 	}
 
-	if (!cec_ctrl->cec_enabled) {
-		DEV_ERR("%s: cec not enabled\n", __func__);
-		return;
-	}
-
-	io = cec_ctrl->init_data.io;
 	cbs = cec_ctrl->init_data.cbs;
-
-	data = DSS_REG_R(io, HDMI_CEC_RD_DATA);
-
-	msg.recvr_id   = (data & 0x000F);
-	msg.sender_id  = (data & 0x00F0) >> 4;
-	msg.frame_size = (data & 0x1F00) >> 8;
-	DEV_DBG("%s: Recvd init=[%u] dest=[%u] size=[%u]\n", __func__,
-		msg.sender_id, msg.recvr_id,
-		msg.frame_size);
-
-	if (msg.frame_size < 1 || msg.frame_size > MAX_CEC_FRAME_SIZE) {
-		DEV_ERR("%s: invalid message (frame length = %d)\n",
-			__func__, msg.frame_size);
-		return;
-	} else if (msg.frame_size == 1) {
-		DEV_DBG("%s: polling message (dest[%x] <- init[%x])\n",
-			__func__, msg.recvr_id, msg.sender_id);
-		return;
-	}
-
-	/* data block 0 : opcode */
-	data = DSS_REG_R_ND(io, HDMI_CEC_RD_DATA);
-	msg.opcode = data & 0xFF;
-
-	/* data block 1-14 : operand 0-13 */
-	for (i = 0; i < msg.frame_size - 2; i++) {
-		data = DSS_REG_R_ND(io, HDMI_CEC_RD_DATA);
-		msg.operand[i] = data & 0xFF;
-	}
-
-	for (; i < MAX_OPERAND_SIZE; i++)
-		msg.operand[i] = 0;
-
-	DEV_DBG("%s: opcode 0x%x, wakup_en %d, device_suspend %d\n", __func__,
-		msg.opcode, cec_ctrl->cec_wakeup_en,
-		cec_ctrl->cec_device_suspend);
+	memcpy(&msg, &cec_ctrl->recv_msg, sizeof(msg));
 
 	if ((msg.opcode == CEC_OP_SET_STREAM_PATH ||
 		msg.opcode == CEC_OP_KEY_PRESS) &&
@@ -308,8 +319,12 @@ int hdmi_cec_isr(void *input)
 	if ((cec_intr & BIT(6)) && (cec_intr & BIT(7))) {
 		DEV_DBG("%s: CEC_IRQ_FRAME_RD_DONE\n", __func__);
 
+		rc = hdmi_cec_msg_read(cec_ctrl);
+		if (!rc)
+			queue_work(cec_ctrl->init_data.workq,
+					&cec_ctrl->cec_read_work);
+
 		DSS_REG_W(io, HDMI_CEC_INT, cec_intr | BIT(6));
-		queue_work(cec_ctrl->init_data.workq, &cec_ctrl->cec_read_work);
 	}
 
 	return rc;
