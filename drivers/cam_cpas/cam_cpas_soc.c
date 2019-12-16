@@ -569,13 +569,14 @@ int cam_cpas_get_custom_dt_info(struct cam_hw_info *cpas_hw,
 			return -EINVAL;
 		}
 
-		num_bw_values = of_property_count_u64_elems(of_node,
+		num_bw_values = of_property_count_u32_elems(of_node,
 			"cam-ahb-bw-KBps");
 		if (num_bw_values <= 0) {
 			CAM_ERR(CAM_UTIL, "Error counting ahb bw values");
 			return -EINVAL;
 		}
 
+		CAM_DBG(CAM_CPAS, "AHB: num bw values %d", num_bw_values);
 		num_levels = (num_bw_values / 2);
 
 		if (num_levels !=
@@ -586,11 +587,11 @@ int cam_cpas_get_custom_dt_info(struct cam_hw_info *cpas_hw,
 		}
 
 		for (i = 0; i < num_levels; i++) {
-			rc = of_property_read_u64_index(of_node,
+			rc = of_property_read_u32_index(of_node,
 				"cam-ahb-bw-KBps",
 				(i * 2),
-				&cpas_core->ahb_bus_client.common_data
-				.bw_pair[i].ab);
+				(uint32_t *) &cpas_core->ahb_bus_client
+				.common_data.bw_pair[i].ab);
 			if (rc) {
 				CAM_ERR(CAM_UTIL,
 					"Error reading ab bw value, rc=%d",
@@ -598,17 +599,23 @@ int cam_cpas_get_custom_dt_info(struct cam_hw_info *cpas_hw,
 				return rc;
 			}
 
-			rc = of_property_read_u64_index(of_node,
+			rc = of_property_read_u32_index(of_node,
 				"cam-ahb-bw-KBps",
 				((i * 2) + 1),
-				&cpas_core->ahb_bus_client.common_data
-				.bw_pair[i].ib);
+				(uint32_t *) &cpas_core->ahb_bus_client
+				.common_data.bw_pair[i].ib);
 			if (rc) {
 				CAM_ERR(CAM_UTIL,
 					"Error reading ib bw value, rc=%d",
 					rc);
 				return rc;
 			}
+
+			CAM_DBG(CAM_CPAS,
+				"AHB: Level: %d, ab_value %llu, ib_value: %llu",
+				i, cpas_core->ahb_bus_client.common_data
+				.bw_pair[i].ab, cpas_core->ahb_bus_client
+				.common_data.bw_pair[i].ib);
 		}
 	}
 
