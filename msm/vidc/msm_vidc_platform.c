@@ -480,6 +480,7 @@ void *vidc_get_drv_data(struct device *dev)
 	uint32_t ddr_type = DDR_TYPE_LPDDR5;
 
 	if (!IS_ENABLED(CONFIG_OF) || !dev->of_node) {
+		d_vpr_e("Using default_data\n");
 		driver_data = &default_data;
 		goto exit;
 	}
@@ -489,20 +490,22 @@ void *vidc_get_drv_data(struct device *dev)
 	if (match)
 		driver_data = (struct msm_vidc_platform_data *)match->data;
 
-	if (!of_find_property(dev->of_node, "sku-index", NULL) ||
-			!driver_data) {
+	if (!driver_data)
 		goto exit;
-	} else if (!strcmp(match->compatible, "qcom,lahaina-vidc")) {
+
+	if (!strcmp(match->compatible, "qcom,lahaina-vidc")) {
 		ddr_type = of_fdt_get_ddrtype();
 		if (ddr_type == -ENOENT) {
 			d_vpr_e("Failed to get ddr type, use LPDDR5\n");
 		}
-		d_vpr_h("DDR Type %x\n", ddr_type);
 
 		if (driver_data->ubwc_config &&
 			(ddr_type == DDR_TYPE_LPDDR4 ||
 			 ddr_type == DDR_TYPE_LPDDR4X))
 			driver_data->ubwc_config->highest_bank_bit = 0xf;
+
+		d_vpr_h("DDR Type 0x%x hbb 0x%x\n",
+			ddr_type, driver_data->ubwc_config->highest_bank_bit);
 	}
 exit:
 	return driver_data;
