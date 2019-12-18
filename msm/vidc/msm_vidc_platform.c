@@ -6,7 +6,6 @@
 #include <linux/module.h>
 #include <linux/of_platform.h>
 #include <linux/io.h>
-#include <linux/of_fdt.h>
 #include "msm_vidc_internal.h"
 #include "msm_vidc_debug.h"
 
@@ -465,7 +464,7 @@ static struct msm_vidc_platform_data bengal_data = {
 	.codec_caps_count = ARRAY_SIZE(bengal_capabilities),
 };
 
-static const struct of_device_id msm_vidc_dt_match[] = {
+static const struct of_device_id msm_vidc_dt_device[] = {
 	{
 		.compatible = "qcom,lahaina-vidc",
 		.data = &lahaina_data,
@@ -477,7 +476,7 @@ static const struct of_device_id msm_vidc_dt_match[] = {
 	{},
 };
 
-MODULE_DEVICE_TABLE(of, msm_vidc_dt_match);
+MODULE_DEVICE_TABLE(of, msm_vidc_dt_device);
 
 void *vidc_get_drv_data(struct device *dev)
 {
@@ -491,7 +490,7 @@ void *vidc_get_drv_data(struct device *dev)
 		goto exit;
 	}
 
-	match = of_match_node(msm_vidc_dt_match, dev->of_node);
+	match = of_match_node(msm_vidc_dt_device, dev->of_node);
 
 	if (match)
 		driver_data = (struct msm_vidc_platform_data *)match->data;
