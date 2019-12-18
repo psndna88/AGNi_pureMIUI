@@ -162,6 +162,18 @@ static inline bool is_output_buffer(struct msm_vidc_buffer *mbuf)
 	return mbuf->vvb.vb2_buf.type == OUTPUT_MPLANE;
 }
 
+static inline bool is_internal_buffer(enum hal_buffer type)
+{
+	u32 buf_type =
+		HAL_BUFFER_INTERNAL_SCRATCH |
+		HAL_BUFFER_INTERNAL_SCRATCH_1 |
+		HAL_BUFFER_INTERNAL_SCRATCH_2 |
+		HAL_BUFFER_INTERNAL_PERSIST |
+		HAL_BUFFER_INTERNAL_PERSIST_1 |
+		HAL_BUFFER_INTERNAL_RECON;
+	return !!(buf_type & type);
+}
+
 static inline int msm_comm_g_ctrl(struct msm_vidc_inst *inst,
 		struct v4l2_control *ctrl)
 {
@@ -342,4 +354,6 @@ u32 msm_comm_calc_framerate(struct msm_vidc_inst *inst,	u64 timestamp_us,
 int msm_comm_memory_prefetch(struct msm_vidc_inst *inst);
 int msm_comm_memory_drain(struct msm_vidc_inst *inst);
 int msm_comm_check_prefetch_sufficient(struct msm_vidc_inst *inst);
+int msm_comm_check_memory_supported(struct msm_vidc_inst *vidc_inst);
+int msm_comm_update_dpb_bufreqs(struct msm_vidc_inst *inst);
 #endif
