@@ -1108,19 +1108,25 @@ irqreturn_t cam_hw_cdm_irq(int irq_num, void *data)
 
 	for (i = 0; i < cdm_core->offsets->reg_data->num_bl_fifo_irq; i++) {
 		if (cam_cdm_read_hw_reg(cdm_hw,
-				cdm_core->offsets->irq_reg[i]->irq_status,
-				&irq_status[i])) {
+			cdm_core->offsets->irq_reg[i]->irq_status,
+			&irq_status[i])) {
 			CAM_ERR(CAM_CDM, "Failed to read CDM HW IRQ status");
+		}
+		if (cam_cdm_write_hw_reg(cdm_hw,
+			cdm_core->offsets->irq_reg[i]->irq_clear,
+			irq_status[i])) {
+			CAM_ERR(CAM_CDM,
+				"Failed to Write CDM HW IRQ Clear");
 		}
 	}
 
+	if (cam_cdm_write_hw_reg(cdm_hw,
+		cdm_core->offsets->irq_reg[0]->irq_clear_cmd, 0x01))
+		CAM_ERR(CAM_CDM, "Failed to Write CDM HW IRQ cmd 0");
+
 	for (i = 0; i < cdm_core->offsets->reg_data->num_bl_fifo_irq; i++) {
-		if (!irq_status[i]) {
-			cam_cdm_write_hw_reg(cdm_hw,
-				cdm_core->offsets->irq_reg[i]->irq_clear,
-				irq_status[i]);
+		if (!irq_status[i])
 			continue;
-		}
 
 		payload[i] = kzalloc(sizeof(struct cam_cdm_work_payload),
 			GFP_ATOMIC);
@@ -1128,11 +1134,10 @@ irqreturn_t cam_hw_cdm_irq(int irq_num, void *data)
 		if (!payload[i])
 			continue;
 
-		if (irq_status[i] &
-				CAM_CDM_IRQ_STATUS_INLINE_IRQ_MASK) {
+		if (irq_status[i] & CAM_CDM_IRQ_STATUS_INLINE_IRQ_MASK) {
 			if (cam_cdm_read_hw_reg(cdm_hw,
-					cdm_core->offsets->cmn_reg->usr_data,
-					&user_data)) {
+				cdm_core->offsets->cmn_reg->usr_data,
+				&user_data)) {
 				CAM_ERR(CAM_CDM,
 					"Failed to read CDM HW IRQ data");
 				kfree(payload[i]);
@@ -1142,9 +1147,8 @@ irqreturn_t cam_hw_cdm_irq(int irq_num, void *data)
 			payload[i]->irq_data = user_data >> (i * 0x8);
 
 			if (payload[i]->irq_data ==
-					CAM_CDM_DBG_GEN_IRQ_USR_DATA)
-				CAM_INFO(CAM_CDM,
-					"Debug gen_irq received");
+				CAM_CDM_DBG_GEN_IRQ_USR_DATA)
+				CAM_INFO(CAM_CDM, "Debug gen_irq received");
 		}
 
 		payload[i]->fifo_idx = i;
@@ -1154,18 +1158,9 @@ irqreturn_t cam_hw_cdm_irq(int irq_num, void *data)
 		INIT_WORK((struct work_struct *)&payload[i]->work,
 			cam_hw_cdm_work);
 
-		if (cam_cdm_write_hw_reg(cdm_hw,
-				cdm_core->offsets->irq_reg[i]->irq_clear,
-				payload[i]->irq_status)) {
-			CAM_ERR(CAM_CDM,
-				"Failed to Write CDM HW IRQ Clear");
-			kfree(payload[i]);
-			return IRQ_HANDLED;
-		}
-
 		work_status = queue_work(
-				cdm_core->bl_fifo[i].work_queue,
-				&payload[i]->work);
+			cdm_core->bl_fifo[i].work_queue,
+			&payload[i]->work);
 
 		if (work_status == false) {
 			CAM_ERR(CAM_CDM,
@@ -1174,11 +1169,6 @@ irqreturn_t cam_hw_cdm_irq(int irq_num, void *data)
 			kfree(payload[i]);
 		}
 	}
-
-	if (cam_cdm_write_hw_reg(cdm_hw,
-			cdm_core->offsets->irq_reg[0]->irq_clear_cmd,
-			0x01))
-		CAM_ERR(CAM_CDM, "Failed to Write CDM HW IRQ cmd 0");
 
 	return IRQ_HANDLED;
 }
