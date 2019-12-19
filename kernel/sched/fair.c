@@ -8090,7 +8090,7 @@ static int find_energy_efficient_cpu(struct sched_domain *sd,
 	int delta = 0;
 	int target_cpu = -1;
 	struct energy_env *eenv;
-	bool is_rtg;
+	bool is_rtg, curr_is_rtg;
 	struct find_best_target_env fbt_env;
 	bool need_idle = wake_to_idle(p);
 	int placement_boost = task_boost_policy(p);
@@ -8103,6 +8103,7 @@ static int find_energy_efficient_cpu(struct sched_domain *sd,
 		return -1;
 
 	is_rtg = task_in_related_thread_group(p);
+	curr_is_rtg = task_in_related_thread_group(cpu_rq(cpu)->curr);
 
 	fbt_env.fastpath = 0;
 	fbt_env.need_idle = 0;
@@ -8110,7 +8111,7 @@ static int find_energy_efficient_cpu(struct sched_domain *sd,
 	if (trace_sched_task_util_enabled())
 		start_t = sched_clock();
 
-	if (need_idle)
+	if (sync && (need_idle || (is_rtg && curr_is_rtg)))
 		sync = 0;
 
 	if (sysctl_sched_sync_hint_enable && sync &&
