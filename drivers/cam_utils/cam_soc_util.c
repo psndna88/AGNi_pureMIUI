@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/of.h>
@@ -1279,6 +1279,10 @@ int cam_soc_util_get_dt_properties(struct cam_hw_soc_info *soc_info)
 			return rc;
 		}
 	}
+
+	rc = of_property_read_string(of_node, "label", &soc_info->label_name);
+	if (rc)
+		CAM_DBG(CAM_UTIL, "Label is not available in the node: %d", rc);
 
 	if (soc_info->num_mem_block > 0) {
 		rc = of_property_read_u32_array(of_node, "reg-cam-base",
