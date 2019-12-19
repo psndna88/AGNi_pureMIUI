@@ -183,6 +183,7 @@ struct cam_vfe_bus_ver2_priv {
 	struct cam_vfe_bus_ver2_common_data common_data;
 	uint32_t                            num_client;
 	uint32_t                            num_out;
+	uint32_t                            top_irq_shift;
 
 	struct cam_isp_resource_node  bus_client[CAM_VFE_BUS_VER2_MAX_CLIENTS];
 	struct cam_isp_resource_node  comp_grp[CAM_VFE_BUS_VER2_COMP_GRP_MAX];
@@ -3424,7 +3425,7 @@ static int cam_vfe_bus_init_hw(void *hw_priv,
 	if (bus_priv->common_data.hw_init)
 		return 0;
 
-	top_irq_reg_mask[0] = (1 << 9);
+	top_irq_reg_mask[0] = (1 << bus_priv->top_irq_shift);
 
 	bus_priv->irq_handle = cam_irq_controller_subscribe_irq(
 		bus_priv->common_data.vfe_irq_controller,
@@ -3539,6 +3540,7 @@ static int cam_vfe_bus_process_cmd(
 {
 	int rc = -EINVAL;
 	struct cam_vfe_bus_ver2_priv		 *bus_priv;
+	uint32_t top_mask_0 = 0;
 
 	if (!priv || !cmd_args) {
 		CAM_ERR_RATE_LIMIT(CAM_ISP, "Invalid input arguments");
@@ -3573,6 +3575,14 @@ static int cam_vfe_bus_process_cmd(
 		break;
 	case CAM_ISP_HW_CMD_UBWC_UPDATE_V2:
 		rc = cam_vfe_bus_update_ubwc_config_v2(cmd_args);
+		break;
+	case CAM_ISP_HW_CMD_UNMASK_BUS_WR_IRQ:
+		bus_priv = (struct cam_vfe_bus_ver2_priv *) priv;
+		top_mask_0 = cam_io_r_mb(bus_priv->common_data.mem_base +
+			bus_priv->common_data.common_reg->top_irq_mask_0);
+		top_mask_0 |= (1 << bus_priv->top_irq_shift);
+		cam_io_w_mb(top_mask_0, bus_priv->common_data.mem_base +
+			bus_priv->common_data.common_reg->top_irq_mask_0);
 		break;
 	default:
 		CAM_ERR_RATE_LIMIT(CAM_ISP, "Invalid camif process command:%d",
@@ -3624,6 +3634,7 @@ int cam_vfe_bus_ver2_init(
 
 	bus_priv->num_client                     = ver2_hw_info->num_client;
 	bus_priv->num_out                        = ver2_hw_info->num_out;
+	bus_priv->top_irq_shift                  = ver2_hw_info->top_irq_shift;
 	bus_priv->common_data.num_sec_out        = 0;
 	bus_priv->common_data.secure_mode        = CAM_SECURE_MODE_NON_SECURE;
 	bus_priv->common_data.core_index         = soc_info->index;

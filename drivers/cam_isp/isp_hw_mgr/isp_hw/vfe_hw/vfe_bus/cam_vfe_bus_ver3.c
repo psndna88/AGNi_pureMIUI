@@ -3693,6 +3693,7 @@ static int cam_vfe_bus_ver3_process_cmd(
 {
 	int rc = -EINVAL;
 	struct cam_vfe_bus_ver3_priv		 *bus_priv;
+	uint32_t top_mask_0 = 0;
 
 	if (!priv || !cmd_args) {
 		CAM_ERR_RATE_LIMIT(CAM_ISP, "Invalid input arguments");
@@ -3729,6 +3730,14 @@ static int cam_vfe_bus_ver3_process_cmd(
 	case CAM_ISP_HW_CMD_WM_CONFIG_UPDATE:
 		rc = cam_vfe_bus_ver3_update_wm_config(cmd_args);
 		break;
+	case CAM_ISP_HW_CMD_UNMASK_BUS_WR_IRQ:
+		bus_priv = (struct cam_vfe_bus_ver3_priv *) priv;
+		top_mask_0 = cam_io_r_mb(bus_priv->common_data.mem_base +
+			bus_priv->common_data.common_reg->top_irq_mask_0);
+		top_mask_0 |= (1 << bus_priv->top_irq_shift);
+		cam_io_w_mb(top_mask_0, bus_priv->common_data.mem_base +
+			bus_priv->common_data.common_reg->top_irq_mask_0);
+		break;
 	default:
 		CAM_ERR_RATE_LIMIT(CAM_ISP, "Invalid camif process command:%d",
 			cmd_type);
@@ -3750,6 +3759,7 @@ int cam_vfe_bus_ver3_init(
 	struct cam_vfe_bus              *vfe_bus_local;
 	struct cam_vfe_bus_ver3_hw_info *ver3_hw_info = bus_hw_info;
 	struct cam_vfe_soc_private      *soc_private = NULL;
+	static const char rup_controller_name[] = "vfe_bus_rup";
 
 	CAM_DBG(CAM_ISP, "Enter");
 
@@ -3815,7 +3825,7 @@ int cam_vfe_bus_ver3_init(
 		goto free_bus_priv;
 	}
 
-	rc = cam_irq_controller_init("vfe_bus_rup",
+	rc = cam_irq_controller_init(rup_controller_name,
 		bus_priv->common_data.mem_base,
 		&ver3_hw_info->common_reg.irq_reg_info,
 		&bus_priv->common_data.rup_irq_controller, false);

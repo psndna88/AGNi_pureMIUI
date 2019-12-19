@@ -4005,6 +4005,36 @@ static int cam_ife_mgr_reset_vfe_hw(struct cam_ife_hw_mgr *hw_mgr,
 	return 0;
 }
 
+static int cam_ife_mgr_unmask_bus_wr_irq(struct cam_ife_hw_mgr *hw_mgr,
+	uint32_t hw_idx)
+{
+	uint32_t i = 0, dummy_args = 0;
+	struct cam_hw_intf *vfe_hw_intf;
+
+	if (!hw_mgr) {
+		CAM_DBG(CAM_ISP, "Invalid arguments");
+		return -EINVAL;
+	}
+
+	for (i = 0; i < CAM_VFE_HW_NUM_MAX; i++) {
+		if (hw_idx != hw_mgr->ife_devices[i]->hw_idx)
+			continue;
+
+		CAM_DBG(CAM_ISP, "Unmask VFE:%d BUS_WR IRQ", hw_idx);
+
+		vfe_hw_intf = hw_mgr->ife_devices[i];
+
+		vfe_hw_intf->hw_ops.process_cmd(vfe_hw_intf->hw_priv,
+			CAM_ISP_HW_CMD_UNMASK_BUS_WR_IRQ,
+			&dummy_args,
+			sizeof(dummy_args));
+
+		break;
+	}
+
+	return 0;
+}
+
 static int cam_ife_mgr_restart_hw(void *start_hw_args)
 {
 	int                               rc = -1;
@@ -4124,8 +4154,18 @@ static int cam_ife_mgr_start_hw(void *hw_mgr_priv, void *start_hw_args)
 
 	cam_tasklet_start(ctx->common.tasklet_info);
 
-	if (ctx->init_done && start_isp->start_only)
+	if (ctx->init_done && start_isp->start_only) {
+		/* Unmask BUS_WR bit in VFE top */
+		for (i = 0; i < ctx->num_base; i++) {
+			rc = cam_ife_mgr_unmask_bus_wr_irq(hw_mgr_priv,
+				ctx->base[i].idx);
+			if (rc)
+				CAM_ERR(CAM_ISP,
+					"Failed to unmask VFE:%d BUS_WR IRQ rc:%d",
+					ctx->base[i].idx, rc);
+		}
 		goto start_only;
+	}
 
 	/* set current csid debug information to CSID HW */
 	for (i = 0; i < CAM_IFE_CSID_HW_NUM_MAX; i++) {

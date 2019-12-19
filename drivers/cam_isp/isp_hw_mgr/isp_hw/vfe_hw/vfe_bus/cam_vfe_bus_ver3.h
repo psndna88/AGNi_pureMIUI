@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  */
 
 
@@ -95,6 +95,7 @@ struct cam_vfe_bus_ver3_reg_offset_common {
 	uint32_t debug_status_top_cfg;
 	uint32_t debug_status_top;
 	uint32_t test_bus_ctrl;
+	uint32_t top_irq_mask_0;
 	struct cam_irq_controller_reg_info irq_reg_info;
 };
 
