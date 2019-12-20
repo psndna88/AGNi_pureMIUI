@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  */
 #include <linux/module.h>
 #include <linux/build_bug.h>
@@ -47,6 +47,8 @@
 #include "cam_custom_sub_mod_dev.h"
 
 #include "cam_debug_util.h"
+
+#include "ope_dev_intf.h"
 
 struct camera_submodule_component {
 	int (*init)(void);
@@ -101,6 +103,13 @@ static const struct camera_submodule_component camera_icp[] = {
 #endif
 };
 
+static const struct camera_submodule_component camera_ope[] = {
+#ifdef CONFIG_SPECTRA_OPE
+	{&cam_ope_init_module, &cam_ope_exit_module},
+	{&cam_ope_subdev_init_module, &cam_ope_subdev_exit_module},
+#endif
+};
+
 static const struct camera_submodule_component camera_jpeg[] = {
 #ifdef CONFIG_SPECTRA_JPEG
 	{&cam_jpeg_enc_init_module, &cam_jpeg_enc_exit_module},
@@ -151,6 +160,11 @@ static const struct camera_submodule submodule_table[] = {
 		.name = "Camera ICP",
 		.num_component = ARRAY_SIZE(camera_icp),
 		.component = camera_icp,
+	},
+	{
+		.name = "Camera OPE",
+		.num_component = ARRAY_SIZE(camera_ope),
+		.component = camera_ope,
 	},
 	{
 		.name = "Camera JPEG",

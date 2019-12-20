@@ -172,6 +172,17 @@ camera-$(CONFIG_SPECTRA_CUSTOM) += \
 	cam_cust/cam_custom_dev.o \
 	cam_cust/cam_custom_context.o
 
+camera-$(CONFIG_SPECTRA_OPE) += \
+	cam_ope/cam_ope_subdev.o \
+	cam_ope/cam_ope_context.o \
+	cam_ope/ope_hw_mgr/cam_ope_hw_mgr.o \
+	cam_ope/ope_hw_mgr/ope_hw/ope_dev.o \
+	cam_ope/ope_hw_mgr/ope_hw/ope_soc.o \
+	cam_ope/ope_hw_mgr/ope_hw/ope_core.o \
+	cam_ope/ope_hw_mgr/ope_hw/top/ope_top.o \
+	cam_ope/ope_hw_mgr/ope_hw/bus_rd/ope_bus_rd.o\
+	cam_ope/ope_hw_mgr/ope_hw/bus_wr/ope_bus_wr.o
+
 camera-y += camera_main.o
 
 obj-$(CONFIG_SPECTRA_CAMERA) += camera.o
