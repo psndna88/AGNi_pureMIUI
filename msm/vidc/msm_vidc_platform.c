@@ -196,8 +196,8 @@ static struct msm_vidc_codec_capability lahaina_capabilities[] = {
 	{CAP_SECURE_BITRATE, DOMAINS_ALL, CODECS_ALL, 1, 40000000, 1, 20000000},
 
 	/* Batch Mode Decode */
-	{CAP_BATCH_MAX_MB_PER_FRAME, DEC, CODECS_ALL, 64, 34560, 1, 34560},
-	/* (4096 * 2160) / 256 */
+	{CAP_BATCH_MAX_MB_PER_FRAME, DEC, CODECS_ALL, 64, 34816, 1, 34816},
+	/* (4096 * 2176) / 256 */
 	{CAP_BATCH_MAX_FPS, DEC, CODECS_ALL, 1, 120, 1, 120},
 
 	/* Lossless encoding usecase specific */
@@ -284,31 +284,31 @@ static struct msm_vidc_common_data lahaina_common_data[] = {
 	},
 	{
 		.key = "qcom,max-hw-load",
-		.value = 7776000,       /*
-					 * 7680x4320@60fps, 3840x2160@240fps
-					 * Greater than 4096x2160@120fps,
+		.value = 7833600,	/*
+					 * 7680x4320@60fps, 3840x2176@240fps
+					 * Greater than 4096x2176@120fps,
 					 *  8192x4320@48fps
 					 */
 	},
 	{
 		.key = "qcom,max-mbpf",
-		.value = 172800,	/* (8192x4320)/256 + (4096x2160)/256*/
+		.value = 173056,	/* (8192x4320)/256 + (4096x2176)/256*/
 	},
 	{
 		.key = "qcom,max-hq-mbs-per-frame",
-		.value = 34560,		/* 4096x2160 */
+		.value = 34816,		/* 4096x2176 */
 	},
 	{
 		.key = "qcom,max-hq-mbs-per-sec",
-		.value = 1036800,	/* 4096x2160@30fps */
+		.value = 1044480,	/* 4096x2176@30fps */
 	},
 	{
 		.key = "qcom,max-b-frame-mbs-per-frame",
-		.value = 32400, /* 3840x2160/256 */
+		.value = 32640, /* 3840x2176/256 */
 	},
 	{
 		.key = "qcom,max-b-frame-mbs-per-sec",
-		.value = 1944000, /* 3840x2160/256 MBs@60fps */
+		.value = 1958400, /* 3840x2176/256 MBs@60fps */
 	},
 	{
 		.key = "qcom,power-collapse-delay",
