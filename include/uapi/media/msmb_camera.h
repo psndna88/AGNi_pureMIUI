@@ -53,7 +53,11 @@
 #define MSM_CAMERA_SUBDEV_EXT          19
 #define MSM_CAMERA_SUBDEV_TOF          20
 #define MSM_CAMERA_SUBDEV_LASER_LED    21
+#ifdef CONFIG_AGNI_MIUI_11_CAMERA_MODE
+#define MSM_MAX_CAMERA_SENSORS  7
+#else
 #define MSM_MAX_CAMERA_SENSORS  6
+#endif
 
 /* The below macro is defined to put an upper limit on maximum
  * number of buffer requested per stream. In case of extremely

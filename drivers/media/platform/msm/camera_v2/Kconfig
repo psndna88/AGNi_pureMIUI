@@ -253,3 +253,10 @@ config MSM_SEC_CCI_DEBUG
 	---help---
 	  Enables simulation of secure camera for Secure CCI Realy
 	  debugging.
+
+config AGNI_MIUI_11_CAMERA_MODE
+	bool "AGNi MIUI 11 CAMERA MODE support with updated miui 11 libs"
+	depends on MSM_CAMERA_SENSOR
+	---help---
+	  Support MIUI 11 camera libs
+
