@@ -238,16 +238,27 @@ int set_ps(const char *intf, struct sigma_dut *dut, int enabled)
 
 	if (wifi_chip_type == DRIVER_WCN) {
 		if (enabled) {
-			snprintf(buf, sizeof(buf), "iwpriv wlan0 dump 906");
-			if (system(buf) != 0)
-				goto set_power_save;
+			snprintf(buf, sizeof(buf), "iwpriv %s setPower 1",
+				 intf);
+			if (system(buf) != 0) {
+				snprintf(buf, sizeof(buf),
+					 "iwpriv wlan0 dump 906");
+				if (system(buf) != 0)
+					goto set_power_save;
+			}
 		} else {
-			snprintf(buf, sizeof(buf), "iwpriv wlan0 dump 905");
-			if (system(buf) != 0)
-				goto set_power_save;
-			snprintf(buf, sizeof(buf), "iwpriv wlan0 dump 912");
-			if (system(buf) != 0)
-				goto set_power_save;
+			snprintf(buf, sizeof(buf), "iwpriv %s setPower 2",
+				 intf);
+			if (system(buf) != 0) {
+				snprintf(buf, sizeof(buf),
+					 "iwpriv wlan0 dump 905");
+				if (system(buf) != 0)
+					goto set_power_save;
+				snprintf(buf, sizeof(buf),
+					 "iwpriv wlan0 dump 912");
+				if (system(buf) != 0)
+					goto set_power_save;
+			}
 		}
 
 		return 0;
