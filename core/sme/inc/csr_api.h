@@ -1819,4 +1819,24 @@ csr_get_channel_status(tpAniSirGlobal mac, uint32_t channel_id);
  * Return: none
  */
 void csr_clear_channel_status(tpAniSirGlobal mac);
+
+typedef void (*csr_ani_callback)(int8_t *ani, void *context);
+
+#ifdef WLAN_FEATURE_11W
+/**
+ * csr_update_pmf_cap_from_connected_profile() - Update pmf cap from profile
+ * @profile: connected profile
+ * @filter: scan filter
+ *
+ * Return: None
+ */
+void
+csr_update_pmf_cap_from_connected_profile(tCsrRoamConnectedProfile *profile,
+					  struct scan_filter *filter);
+#else
+static inline void
+csr_update_pmf_cap_from_connected_profile(tCsrRoamConnectedProfile *profile,
+					  struct scan_filter *filter)
+{}
+#endif
 #endif
