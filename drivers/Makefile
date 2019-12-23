@@ -183,6 +183,22 @@ camera-$(CONFIG_SPECTRA_OPE) += \
 	cam_ope/ope_hw_mgr/ope_hw/bus_rd/ope_bus_rd.o\
 	cam_ope/ope_hw_mgr/ope_hw/bus_wr/ope_bus_wr.o
 
+camera-$(CONFIG_SPECTRA_CAMERA) += \
+	cam_isp/isp_hw_mgr/cam_tfe_hw_mgr.o \
+	cam_isp/isp_hw_mgr/isp_hw/tfe_hw/cam_tfe_soc.o \
+	cam_isp/isp_hw_mgr/isp_hw/tfe_hw/cam_tfe_dev.o \
+	cam_isp/isp_hw_mgr/isp_hw/tfe_hw/cam_tfe_core.o \
+	cam_isp/isp_hw_mgr/isp_hw/tfe_hw/cam_tfe_bus.o \
+	cam_isp/isp_hw_mgr/isp_hw/tfe_hw/cam_tfe.o \
+	cam_isp/isp_hw_mgr/isp_hw/tfe_csid_hw/cam_tfe_csid_dev.o \
+	cam_isp/isp_hw_mgr/isp_hw/tfe_csid_hw/cam_tfe_csid_soc.o \
+	cam_isp/isp_hw_mgr/isp_hw/tfe_csid_hw/cam_tfe_csid_core.o \
+	cam_isp/isp_hw_mgr/isp_hw/tfe_csid_hw/cam_tfe_csid530.o \
+	cam_isp/isp_hw_mgr/isp_hw/top_tpg/cam_top_tpg_dev.o \
+	cam_isp/isp_hw_mgr/isp_hw/top_tpg/cam_top_tpg_soc.o \
+	cam_isp/isp_hw_mgr/isp_hw/top_tpg/cam_top_tpg_core.o \
+	cam_isp/isp_hw_mgr/isp_hw/top_tpg/cam_top_tpg_v1.o
+
 camera-y += camera_main.o
 
 obj-$(CONFIG_SPECTRA_CAMERA) += camera.o
