@@ -97,6 +97,7 @@ int cam_soc_bus_client_register(struct platform_device *pdev,
 	}
 
 	bus_client->client_data = bus_client_data;
+	bus_client->common_data = common_data;
 	bus_client_data->icc_data = icc_get(&pdev->dev,
 		bus_client->common_data->src_id,
 		bus_client->common_data->dst_id);
@@ -105,8 +106,6 @@ int cam_soc_bus_client_register(struct platform_device *pdev,
 		rc = -EINVAL;
 		goto error;
 	}
-
-	bus_client->common_data = common_data;
 
 	rc = icc_set_bw(bus_client_data->icc_data, 0, 0);
 	if (rc) {
