@@ -797,6 +797,15 @@ static int hdmi_panel_setup_scrambler(struct hdmi_panel *panel)
 		rc = hdmi_setup_ddc_timers(panel->ddc,
 			HDMI_TX_DDC_TIMER_SCRAMBLER_STATUS, timeout_hsync);
 	} else {
+		tmds_clock_ratio = 0;
+		rc = hdmi_scdc_write(panel->ddc,
+			HDMI_TX_SCDC_TMDS_BIT_CLOCK_RATIO_UPDATE,
+			tmds_clock_ratio);
+		if (rc) {
+			pr_err("TMDS CLK RATIO ERR\n");
+			return rc;
+		}
+
 		hdmi_scdc_write(panel->ddc,
 			HDMI_TX_SCDC_SCRAMBLING_ENABLE, 0x0);
 
