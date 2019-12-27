@@ -239,15 +239,6 @@ static int camera_init(void)
 		}
 	}
 
-	rc = cam_req_mgr_late_init();
-	if (rc) {
-		CAM_ERR(CAM_UTIL,
-			"Late_init Sequence/Subdev node creation fail: rc = %d",
-			rc);
-		camera_error_exit(i, j);
-		goto end_init;
-	}
-
 	CAM_INFO(CAM_UTIL, "Camera driver initialized");
 
 end_init:

@@ -12,7 +12,6 @@
  *
  * @video: pointer to struct video device.
  * @v4l2_dev: pointer to struct v4l2 device.
- * @subdev_nodes_created: flag to check the created state.
  * @count: number of subdevices registered.
  * @dev_lock: lock for the subdevice count.
  * @state: state of the root device.
@@ -24,7 +23,6 @@
 struct cam_req_mgr_device {
 	struct video_device *video;
 	struct v4l2_device *v4l2_dev;
-	bool subdev_nodes_created;
 	int count;
 	struct mutex dev_lock;
 	bool state;
@@ -46,12 +44,6 @@ int cam_req_mgr_notify_message(struct cam_req_mgr_message *msg,
  * @return struct platform_device pointer on on success, or ERR_PTR() on error.
  */
 int cam_req_mgr_init(void);
-
-/**
- * @brief : API to register all subdev with v4l2 framework.
- * @return struct platform_device pointer on on success, or ERR_PTR() on error.
- */
-int cam_req_mgr_late_init(void);
 
 /**
  * @brief : API to remove REQ_MGR from platform framework.
