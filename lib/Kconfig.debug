@@ -67,7 +67,7 @@ config DYNAMIC_DEBUG
 	bool "Enable dynamic printk() support"
 	default n
 	depends on PRINTK
-	depends on (DEBUG_FS || PROC_FS)
+	depends on PROC_FS
 	help
 
 	  Compiles debug level messages into the kernel, which would not
@@ -284,7 +284,6 @@ config UNUSED_SYMBOLS
 config PAGE_OWNER
 	bool "Track page owner"
 	depends on DEBUG_KERNEL && STACKTRACE_SUPPORT
-	select DEBUG_FS
 	select STACKTRACE
 	select STACKDEPOT
 	select PAGE_EXTENSION
@@ -576,7 +575,6 @@ config HAVE_DEBUG_KMEMLEAK
 config DEBUG_KMEMLEAK
 	bool "Kernel memory leak detector"
 	depends on DEBUG_KERNEL && HAVE_DEBUG_KMEMLEAK
-	select DEBUG_FS
 	select STACKTRACE if STACKTRACE_SUPPORT
 	select KALLSYMS
 	select CRC32
@@ -1761,7 +1759,6 @@ menu "Runtime Testing"
 
 config LKDTM
 	tristate "Linux Kernel Dump Test Tool Module"
-	depends on DEBUG_FS
 	depends on BLOCK
 	default n
 	help
