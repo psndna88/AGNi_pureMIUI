@@ -532,7 +532,7 @@ config CMA_DEBUG
 
 config CMA_DEBUGFS
 	bool "CMA debugfs interface"
-	depends on CMA && DEBUG_FS
+	depends on CMA
 	help
 	  Turns on the DebugFS interface for CMA.
 
@@ -649,7 +649,6 @@ config PGTABLE_MAPPING
 config ZSMALLOC_STAT
 	bool "Export zsmalloc statistics"
 	depends on ZSMALLOC
-	select DEBUG_FS
 	help
 	  This option enables code in the zsmalloc to collect various
 	  statistics about whats happening in zsmalloc and exports that
