@@ -211,13 +211,13 @@ static int _sde_fence_create_fd(void *fence_ctx, uint32_t val)
 	signed int fd = -EINVAL;
 	struct sde_fence_context *ctx = fence_ctx;
 
-	if (!ctx) {
+	if (unlikely(!ctx)) {
 		SDE_ERROR("invalid context\n");
 		goto exit;
 	}
 
 	sde_fence = kmem_cache_zalloc(kmem_fence_pool, GFP_KERNEL);
-	if (!sde_fence)
+	if (unlikely(!sde_fence))
 		return -ENOMEM;
 
 	sde_fence->ctx = fence_ctx;
@@ -231,7 +231,7 @@ static int _sde_fence_create_fd(void *fence_ctx, uint32_t val)
 
 	/* create fd */
 	fd = get_unused_fd_flags(0);
-	if (fd < 0) {
+	if (unlikely(fd < 0)) {
 #ifdef CONFIG_FENCE_DEBUG
 		SDE_ERROR("failed to get_unused_fd_flags(), %s\n",
 							sde_fence->name);
@@ -242,7 +242,7 @@ static int _sde_fence_create_fd(void *fence_ctx, uint32_t val)
 
 	/* create fence */
 	sync_file = sync_file_create(&sde_fence->base);
-	if (sync_file == NULL) {
+	if (unlikely(sync_file == NULL)) {
 		put_unused_fd(fd);
 		fd = -EINVAL;
 #ifdef CONFIG_FENCE_DEBUG
@@ -362,7 +362,7 @@ int sde_fence_create(struct sde_fence_context *ctx, uint64_t *val,
 	int fd, rc = -EINVAL;
 	unsigned long flags;
 
-	if (!ctx || !val) {
+	if (unlikely(!ctx || !val)) {
 		SDE_ERROR("invalid argument(s), fence %d, pval %d\n",
 				ctx != NULL, val != NULL);
 		return rc;
@@ -388,7 +388,7 @@ int sde_fence_create(struct sde_fence_context *ctx, uint64_t *val,
 
 	SDE_EVT32(ctx->drm_id, trigger_value, fd);
 
-	if (fd >= 0) {
+	if (likely(fd >= 0)) {
 		rc = 0;
 		_sde_fence_trigger(ctx, ktime_get(), false);
 	} else {
