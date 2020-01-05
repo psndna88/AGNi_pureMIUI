@@ -207,7 +207,7 @@ static int _fdt_resize_property(void *fdt, int nodeoffset, const char *name,
 	int err;
 
 	*prop = fdt_get_property_w(fdt, nodeoffset, name, &oldlen);
-	if (! (*prop))
+	if (!*prop)
 		return oldlen;
 
 	if ((err = _fdt_splice_struct(fdt, (*prop)->data, FDT_TAGALIGN(oldlen),
@@ -283,7 +283,8 @@ int fdt_setprop(void *fdt, int nodeoffset, const char *name,
 	if (err)
 		return err;
 
-	memcpy(prop->data, val, len);
+	if (len)
+		memcpy(prop->data, val, len);
 	return 0;
 }
 
@@ -322,7 +323,7 @@ int fdt_delprop(void *fdt, int nodeoffset, const char *name)
 	FDT_RW_CHECK_HEADER(fdt);
 
 	prop = fdt_get_property_w(fdt, nodeoffset, name, &len);
-	if (! prop)
+	if (!prop)
 		return len;
 
 	proplen = sizeof(*prop) + FDT_TAGALIGN(len);
@@ -392,7 +393,7 @@ int fdt_del_node(void *fdt, int nodeoffset)
 static void _fdt_packblocks(const char *old, char *new,
 			    int mem_rsv_size, int struct_size)
 {
-	uint32_t mem_rsv_off, struct_off, strings_off;
+	int mem_rsv_off, struct_off, strings_off;
 
 	mem_rsv_off = FDT_ALIGN(sizeof(struct fdt_header), 8);
 	struct_off = mem_rsv_off + mem_rsv_size;
