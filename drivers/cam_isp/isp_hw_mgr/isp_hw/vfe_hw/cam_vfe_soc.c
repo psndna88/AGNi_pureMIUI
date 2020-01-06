@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/slab.h>
@@ -60,6 +60,7 @@ static int cam_vfe_get_dt_properties(struct cam_hw_soc_info *soc_info)
 
 	switch (soc_info->hw_version) {
 	case CAM_CPAS_TITAN_480_V100:
+	case CAM_CPAS_TITAN_580_V100:
 		num_ubwc_cfg = of_property_count_u32_elems(of_node,
 			"ubwc-static-cfg");
 
