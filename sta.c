@@ -3008,10 +3008,10 @@ int ath6kl_client_uapsd(struct sigma_dut *dut, const char *intf, int uapsd)
 		pos = path;
 	else
 		pos++;
-	snprintf(fname, sizeof(fname),
-		 "/sys/kernel/debug/ieee80211/%s/ath6kl/"
-		 "create_qos", pos);
-	if (!file_exists(fname))
+	res = snprintf(fname, sizeof(fname),
+		       "/sys/kernel/debug/ieee80211/%s/ath6kl/"
+		       "create_qos", pos);
+	if (res < 0 || res >= sizeof(fname) || !file_exists(fname))
 		return 0; /* not ath6kl */
 
 	if (uapsd) {
@@ -3025,9 +3025,11 @@ int ath6kl_client_uapsd(struct sigma_dut *dut, const char *intf, int uapsd)
 			"20000 0\n");
 		fclose(f);
 	} else {
-		snprintf(fname, sizeof(fname),
-			 "/sys/kernel/debug/ieee80211/%s/ath6kl/"
-			 "delete_qos", pos);
+		res = snprintf(fname, sizeof(fname),
+			       "/sys/kernel/debug/ieee80211/%s/ath6kl/"
+			       "delete_qos", pos);
+		if (res < 0 || res >= sizeof(fname))
+			return -1;
 
 		f = fopen(fname, "w");
 		if (f == NULL)

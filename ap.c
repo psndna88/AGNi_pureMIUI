@@ -311,15 +311,15 @@ static void mac80211_config_rts_force(struct sigma_dut *dut, const char *ifname,
 
 	if (strcasecmp(val, "enable") == 0) {
 		dut->ap_sig_rts = VALUE_ENABLED;
-		snprintf(buf, sizeof(buf), "iw %s set rts 64", pos);
-		if (system(buf) != 0) {
+		res = snprintf(buf, sizeof(buf), "iw %s set rts 64", pos);
+		if (res < 0 || res >= sizeof(buf) || system(buf) != 0) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"iw set rts 64 failed");
 		}
 	} else if (strcasecmp(val, "disable") == 0) {
 		dut->ap_sig_rts = VALUE_DISABLED;
-		snprintf(buf, sizeof(buf), "iw %s set rts 2347", pos);
-		if (system(buf) != 0) {
+		res = snprintf(buf, sizeof(buf), "iw %s set rts 2347", pos);
+		if (res < 0 || res >= sizeof(buf) || system(buf) != 0) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"iw rts 2347 failed");
 		}
@@ -10314,7 +10314,7 @@ static enum sigma_cmd_result cmd_ap_set_hs2(struct sigma_dut *dut,
 	/* const char *ifname = get_param(cmd, "INTERFACE"); */
 	const char *val, *dest;
 	char *pos, buf[100];
-	int i, wlan_tag = 1;
+	int i, wlan_tag = 1, res;
 
 	sigma_dut_print(dut, DUT_MSG_INFO, "ap_set_hs2: Processing the "
 			"following parameters");
@@ -10555,8 +10555,11 @@ static enum sigma_cmd_result cmd_ap_set_hs2(struct sigma_dut *dut,
 					  "errorCode,Invalid PLMN_MCC");
 				return 0;
 			}
-			snprintf(dut->ap_plmn_mcc[i],
-				 sizeof(dut->ap_plmn_mcc[i]), "%s", start);
+			res = snprintf(dut->ap_plmn_mcc[i],
+				       sizeof(dut->ap_plmn_mcc[i]), "%s",
+				       start);
+			if (res < 0 || res >= sizeof(dut->ap_plmn_mcc[i]))
+				return ERROR_SEND_STATUS;
 			sigma_dut_print(dut, DUT_MSG_INFO, "ap_plmn_mcc %s",
 					dut->ap_plmn_mcc[i]);
 			i++;
@@ -10569,8 +10572,10 @@ static enum sigma_cmd_result cmd_ap_set_hs2(struct sigma_dut *dut,
 			return 0;
 		}
 		/* process last or only one */
-		snprintf(dut->ap_plmn_mcc[i],
-			sizeof(dut->ap_plmn_mcc[i]), "%s", start);
+		res = snprintf(dut->ap_plmn_mcc[i],
+			       sizeof(dut->ap_plmn_mcc[i]), "%s", start);
+		if (res < 0 || res >= sizeof(dut->ap_plmn_mcc[i]))
+			return ERROR_SEND_STATUS;
 		sigma_dut_print(dut, DUT_MSG_INFO, "ap_plmn_mcc %s",
 			dut->ap_plmn_mcc[i]);
 	}
@@ -10593,8 +10598,11 @@ static enum sigma_cmd_result cmd_ap_set_hs2(struct sigma_dut *dut,
 					"errorCode,Invalid PLMN_MNC");
 				return 0;
 			}
-			snprintf(dut->ap_plmn_mnc[i],
-				 sizeof(dut->ap_plmn_mnc[i]), "%s", start);
+			res = snprintf(dut->ap_plmn_mnc[i],
+				       sizeof(dut->ap_plmn_mnc[i]), "%s",
+				       start);
+			if (res < 0 || res >= sizeof(dut->ap_plmn_mnc[i]))
+				return ERROR_SEND_STATUS;
 			sigma_dut_print(dut, DUT_MSG_INFO, "ap_plmn_mnc %s",
 				dut->ap_plmn_mnc[i]);
 			i++;
@@ -10606,8 +10614,10 @@ static enum sigma_cmd_result cmd_ap_set_hs2(struct sigma_dut *dut,
 				  "errorCode,Invalid PLMN_MNC");
 			return 0;
 		}
-		snprintf(dut->ap_plmn_mnc[i],
-			sizeof(dut->ap_plmn_mnc[i]), "%s", start);
+		res = snprintf(dut->ap_plmn_mnc[i],
+			       sizeof(dut->ap_plmn_mnc[i]), "%s", start);
+		if (res < 0 || res >= sizeof(dut->ap_plmn_mnc[i]))
+			return ERROR_SEND_STATUS;
 		sigma_dut_print(dut, DUT_MSG_INFO, "ap_plmn_mnc %s",
 			dut->ap_plmn_mnc[i]);
 	}
