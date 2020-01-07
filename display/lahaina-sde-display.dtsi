@@ -10,6 +10,8 @@
 #include "dsi-panel-nt35597-truly-dualmipi-wqxga-video.dtsi"
 #include "dsi-panel-nt35695b-truly-fhd-cmd.dtsi"
 #include "dsi-panel-nt35695b-truly-fhd-video.dtsi"
+#include "dsi-panel-r66451-dsc-qhd-cmd.dtsi"
+#include "dsi-panel-r66451-dsc-qhd-video.dtsi"
 #include "dsi-panel-ext-bridge-1080p.dtsi"
 #include "dsi-panel-sim-cmd.dtsi"
 #include "dsi-panel-sim-video.dtsi"
@@ -117,6 +119,30 @@
 		timing@0 {
 			qcom,mdss-dsi-panel-phy-timings = [00 11 05 05 08 08 05
 				05 03 02 04 00 0f 0a];
+			qcom,display-topology = <2 2 1>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+&dsi_r66451_amoled_video {
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 15 06 06 0a 09 06
+				06 04 02 04 00 12 0b];
+			qcom,display-topology = <2 2 1>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+&dsi_r66451_amoled_cmd {
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 15 06 06 0a 09 06
+				06 04 02 04 00 12 0b];
 			qcom,display-topology = <2 2 1>;
 			qcom,default-topology-index = <0>;
 		};
