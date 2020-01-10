@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/iommu.h>
@@ -151,15 +151,15 @@ static int msm_vidc_load_reg_table(struct msm_vidc_platform_resources *res)
 	}
 
 	if (of_property_read_u32_array(pdev->dev.of_node, "qcom,reg-presets",
-		(u32 *)reg_set->reg_tbl, reg_set->count * 2)) {
+		(u32 *)reg_set->reg_tbl, reg_set->count * 3)) {
 		d_vpr_e("Failed to read register table\n");
 		msm_vidc_free_reg_table(res);
 		return -EINVAL;
 	}
 	for (i = 0; i < reg_set->count; i++) {
-		d_vpr_h("reg = %x, value = %x\n",
-			reg_set->reg_tbl[i].reg, reg_set->reg_tbl[i].value
-		);
+		d_vpr_h("reg = %#x, value = %#x, mask = %#x\n",
+			reg_set->reg_tbl[i].reg, reg_set->reg_tbl[i].value,
+			reg_set->reg_tbl[i].mask);
 	}
 	return rc;
 }

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef __MSM_VIDC_RESOURCES_H__
@@ -15,6 +15,7 @@
 struct reg_value_pair {
 	u32 reg;
 	u32 value;
+	u32 mask;
 };
 
 struct reg_set {
