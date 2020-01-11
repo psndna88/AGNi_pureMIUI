@@ -803,7 +803,7 @@ config MSM_AVTIMER
 
 config MSM_PM
 	depends on PM
-	select MSM_IDLE_STATS if DEBUG_FS
+	select MSM_IDLE_STATS
 	select CPU_IDLE_MULTIPLE_DRIVERS
 	bool "Qualcomm Techonolgies Inc (QTI) platform specific PM driver"
 	help
