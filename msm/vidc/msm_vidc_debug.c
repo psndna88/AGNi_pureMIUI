@@ -8,7 +8,6 @@
 #define MAX_DEBUG_LEVEL_STRING_LEN 15
 #include "msm_vidc_debug.h"
 #include "vidc_hfi_api.h"
-#include <linux/of_fdt.h>
 
 int msm_vidc_debug = VIDC_ERR | VIDC_PRINTK |
 	FW_ERROR | FW_FATAL | FW_FTRACE;
