@@ -46,6 +46,8 @@
 #include "cam_custom_csid_dev.h"
 #include "cam_custom_sub_mod_dev.h"
 
+#include "cam_debug_util.h"
+
 struct camera_submodule_component {
 	int (*init)(void);
 	void (*exit)(void);
@@ -67,7 +69,7 @@ static const struct camera_submodule_component camera_base[] = {
 };
 
 static const struct camera_submodule_component camera_isp[] = {
-#if IS_ENABLED(CONFIG_SPECTRA_ISP)
+#ifdef CONFIG_SPECTRA_ISP
 	{&cam_ife_csid17x_init_module, &cam_ife_csid17x_exit_module},
 	{&cam_ife_csid_lite_init_module, &cam_ife_csid_lite_exit_module},
 	{&cam_vfe_init_module, &cam_vfe_exit_module},
@@ -76,7 +78,7 @@ static const struct camera_submodule_component camera_isp[] = {
 };
 
 static const struct camera_submodule_component camera_sensor[] = {
-#if IS_ENABLED(CONFIG_SPECTRA_SENSOR)
+#ifdef CONFIG_SPECTRA_SENSOR
 	{&cam_res_mgr_init, &cam_res_mgr_exit},
 	{&cam_cci_init_module, &cam_cci_exit_module},
 	{&cam_csiphy_init_module, &cam_csiphy_exit_module},
@@ -91,7 +93,7 @@ static const struct camera_submodule_component camera_sensor[] = {
 };
 
 static const struct camera_submodule_component camera_icp[] = {
-#if IS_ENABLED(CONFIG_SPECTRA_ICP)
+#ifdef CONFIG_SPECTRA_ICP
 	{&cam_a5_init_module, &cam_a5_exit_module},
 	{&cam_ipe_init_module, &cam_ipe_exit_module},
 	{&cam_bps_init_module, &cam_bps_exit_module},
@@ -100,7 +102,7 @@ static const struct camera_submodule_component camera_icp[] = {
 };
 
 static const struct camera_submodule_component camera_jpeg[] = {
-#if IS_ENABLED(CONFIG_SPECTRA_JPEG)
+#ifdef CONFIG_SPECTRA_JPEG
 	{&cam_jpeg_enc_init_module, &cam_jpeg_enc_exit_module},
 	{&cam_jpeg_dma_init_module, &cam_jpeg_dma_exit_module},
 	{&cam_jpeg_dev_init_module, &cam_jpeg_dev_exit_module},
@@ -108,21 +110,21 @@ static const struct camera_submodule_component camera_jpeg[] = {
 };
 
 static const struct camera_submodule_component camera_fd[] = {
-#if IS_ENABLED(CONFIG_SPECTRA_FD)
+#ifdef CONFIG_SPECTRA_FD
 	{&cam_fd_hw_init_module, &cam_fd_hw_exit_module},
 	{&cam_fd_dev_init_module, &cam_fd_dev_exit_module},
 #endif
 };
 
 static const struct camera_submodule_component camera_lrme[] = {
-#if IS_ENABLED(CONFIG_SPECTRA_LRME)
+#ifdef CONFIG_SPECTRA_LRME
 	{&cam_lrme_hw_init_module, &cam_lrme_hw_exit_module},
 	{&cam_lrme_dev_init_module, &cam_lrme_dev_exit_module},
 #endif
 };
 
 static const struct camera_submodule_component camera_custom[] = {
-#if IS_ENABLED(CONFIG_SPECTRA_CUSTOM)
+#ifdef CONFIG_SPECTRA_CUSTOM
 	{&cam_custom_hw_sub_module_init, &cam_custom_hw_sub_module_exit},
 	{&cam_custom_csid_driver_init, &cam_custom_csid_driver_exit},
 	{&cam_custom_dev_init_module, &cam_custom_dev_exit_module},
@@ -188,16 +190,16 @@ static int camera_verify_submodules(void)
 					submodule_table[i].component[j].init,
 					submodule_table[i].component[j].exit);
 				rc = -EINVAL;
-				goto err;
+				goto end;
 			}
 		}
 	}
 
-err:
+end:
 	return rc;
 }
 
-static void camera_error_exit(int i, int j)
+static void __camera_exit(int i, int j)
 {
 	uint num_exits;
 
@@ -225,6 +227,8 @@ static int camera_init(void)
 	/* For Probing all available submodules */
 	for (i = 0; i < ARRAY_SIZE(submodule_table); i++) {
 		num_inits = submodule_table[i].num_component;
+		CAM_DBG(CAM_UTIL, "Number of %s components: %u",
+			submodule_table[i].name, num_inits);
 		for (j = 0; j < num_inits; j++) {
 			rc = submodule_table[i].component[j].init();
 			if (rc) {
@@ -233,13 +237,13 @@ static int camera_init(void)
 					submodule_table[i].name,
 					submodule_table[i].component[j].init,
 					rc);
-				camera_error_exit(i, j);
+				__camera_exit(i, j);
 				goto end_init;
 			}
 		}
 	}
 
-	CAM_INFO(CAM_UTIL, "Camera driver initialized");
+	CAM_INFO(CAM_UTIL, "Spectra camera driver initialized!");
 
 end_init:
 	return rc;
@@ -247,19 +251,13 @@ end_init:
 
 static void camera_exit(void)
 {
-	uint i, j, num_exits;
+	__camera_exit(ARRAY_SIZE(submodule_table), 0);
 
-	for (i = ARRAY_SIZE(submodule_table) - 1; i >= 0; i--) {
-		num_exits = submodule_table[i].num_component;
-		for (j = num_exits - 1; j >= 0; j--)
-			submodule_table[i].component[j].exit();
-	}
-
-	CAM_INFO(CAM_UTIL, "Camera driver exited!");
+	CAM_INFO(CAM_UTIL, "Spectra camera driver exited!");
 }
 
 module_init(camera_init);
 module_exit(camera_exit);
 
-MODULE_DESCRIPTION("Spectra_Camera Driver");
+MODULE_DESCRIPTION("Spectra camera driver");
 MODULE_LICENSE("GPL v2");

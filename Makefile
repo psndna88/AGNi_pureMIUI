@@ -32,6 +32,11 @@ LINUXINCLUDE    += \
 		-include $(srctree)/techpack/camera/config/bengalcameraconf.h
 endif
 
+ifeq ($(CONFIG_ARCH_LAHAINA), y)
+LINUXINCLUDE    += \
+		-include $(srctree)/techpack/camera/config/lahainacameraconf.h
+endif
+
 ifneq (,$(filter $(CONFIG_SPECTRA_CAMERA), y m))
 # Use USERINCLUDE when you must reference the UAPI directories only.
 USERINCLUDE     += \
