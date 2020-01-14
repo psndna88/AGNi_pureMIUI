@@ -980,6 +980,29 @@ int32_t msm_camera_fill_vreg_params(
 				power_setting[i].seq_val = INVALID_VREG;
 			break;
 
+		case SENSOR_VANA1:
+			for (j = 0; j < num_vreg; j++) {
+				if (!strcmp(soc_info->rgltr_name[j],
+					"cam_vana1")) {
+					CAM_DBG(CAM_SENSOR,
+						"i: %d j: %d cam_vana1", i, j);
+					power_setting[i].seq_val = j;
+
+					if (VALIDATE_VOLTAGE(
+						soc_info->rgltr_min_volt[j],
+						soc_info->rgltr_max_volt[j],
+						power_setting[i].config_val)) {
+						soc_info->rgltr_min_volt[j] =
+						soc_info->rgltr_max_volt[j] =
+						power_setting[i].config_val;
+					}
+					break;
+				}
+			}
+			if (j == num_vreg)
+				power_setting[i].seq_val = INVALID_VREG;
+			break;
+
 		case SENSOR_VAF:
 			for (j = 0; j < num_vreg; j++) {
 
@@ -1406,6 +1429,8 @@ int cam_get_dt_power_setting_data(struct device_node *of_node,
 			ps[i].seq_type = SENSOR_VIO;
 		} else if (!strcmp(seq_name, "cam_vana")) {
 			ps[i].seq_type = SENSOR_VANA;
+		} else if (!strcmp(seq_name, "cam_vana1")) {
+			ps[i].seq_type = SENSOR_VANA1;
 		} else if (!strcmp(seq_name, "cam_clk")) {
 			ps[i].seq_type = SENSOR_MCLK;
 		} else {
@@ -1531,6 +1556,24 @@ int cam_sensor_util_init_gpio_pin_tbl(
 
 		CAM_DBG(CAM_SENSOR, "gpio-vana %d",
 			gpio_num_info->gpio_num[SENSOR_VANA]);
+	}
+
+	rc = of_property_read_u32(of_node, "gpio-vana1", &val);
+	if (rc != -EINVAL) {
+		if (rc < 0) {
+			CAM_ERR(CAM_SENSOR, "read gpio-vana1 failed rc %d", rc);
+			goto free_gpio_info;
+		} else if (val >= gpio_array_size) {
+			CAM_ERR(CAM_SENSOR, "gpio-vana1 invalid %d", val);
+			rc = -EINVAL;
+			goto free_gpio_info;
+		}
+		gpio_num_info->gpio_num[SENSOR_VANA1] =
+			gconf->cam_gpio_common_tbl[val].gpio;
+		gpio_num_info->valid[SENSOR_VANA1] = 1;
+
+		CAM_DBG(CAM_SENSOR, "gpio-vana1 %d",
+			gpio_num_info->gpio_num[SENSOR_VANA1]);
 	}
 
 	rc = of_property_read_u32(of_node, "gpio-vio", &val);
@@ -1977,6 +2020,7 @@ int cam_sensor_core_power_up(struct cam_sensor_power_ctrl_t *ctrl,
 			}
 			break;
 		case SENSOR_VANA:
+		case SENSOR_VANA1:
 		case SENSOR_VDIG:
 		case SENSOR_VIO:
 		case SENSOR_VAF:
@@ -2093,6 +2137,7 @@ power_up_failed:
 				[power_setting->seq_type], GPIOF_OUT_INIT_LOW);
 			break;
 		case SENSOR_VANA:
+		case SENSOR_VANA1:
 		case SENSOR_VDIG:
 		case SENSOR_VIO:
 		case SENSOR_VAF:
@@ -2261,6 +2306,7 @@ int cam_sensor_util_power_down(struct cam_sensor_power_ctrl_t *ctrl,
 
 			break;
 		case SENSOR_VANA:
+		case SENSOR_VANA1:
 		case SENSOR_VDIG:
 		case SENSOR_VIO:
 		case SENSOR_VAF:

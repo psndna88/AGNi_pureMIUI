@@ -40,7 +40,6 @@
 #define MAX_DATA_RATES              3
 #define MAX_DATA_RATE_REGS          30
 
-#define MAX_REGULATOR         5
 #define CAMX_CSIPHY_DEV_NAME "cam-csiphy-driver"
 
 #define CSIPHY_POWER_UP       0
