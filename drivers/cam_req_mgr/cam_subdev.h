@@ -49,6 +49,7 @@ struct cam_subdev {
 	u32                                    sd_flags;
 	void                                  *token;
 	u32                                    ent_function;
+	bool                                   subdev_node_created;
 };
 
 /**

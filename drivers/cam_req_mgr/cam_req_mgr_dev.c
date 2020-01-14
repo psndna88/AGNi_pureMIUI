@@ -626,15 +626,6 @@ int cam_register_subdev(struct cam_subdev *csd)
 	}
 
 	mutex_lock(&g_dev.dev_lock);
-	if ((g_dev.subdev_nodes_created) &&
-		(csd->sd_flags & V4L2_SUBDEV_FL_HAS_DEVNODE)) {
-		CAM_ERR(CAM_CRM,
-			"dynamic node is not allowed, name: %s, type :%d",
-			csd->name, csd->ent_function);
-		rc = -EINVAL;
-		goto reg_fail;
-	}
-
 	sd = &csd->sd;
 	v4l2_subdev_init(sd, csd->ops);
 	sd->internal_ops = csd->internal_ops;
@@ -646,11 +637,34 @@ int cam_register_subdev(struct cam_subdev *csd)
 	sd->entity.pads = NULL;
 	sd->entity.function = csd->ent_function;
 
+	if (csd->subdev_node_created) {
+		CAM_ERR(CAM_CRM,
+			"Dynamic Node is not allowed, name: %s, type: %d",
+			csd->name, csd->ent_function);
+		rc = -EINVAL;
+		goto reg_fail;
+	}
+
 	rc = v4l2_device_register_subdev(g_dev.v4l2_dev, sd);
 	if (rc) {
 		CAM_ERR(CAM_CRM, "register subdev failed");
 		goto reg_fail;
 	}
+
+	rc = v4l2_device_register_subdev_nodes(g_dev.v4l2_dev);
+	if (rc) {
+		CAM_ERR(CAM_CRM,
+			"Device Register subdev node failed: rc = %d", rc);
+		goto reg_fail;
+
+	}
+
+	if ((sd->flags & V4L2_SUBDEV_FL_HAS_DEVNODE)) {
+		sd->entity.name = video_device_node_name(sd->devnode);
+		CAM_DBG(CAM_CRM, "created node :%s", sd->entity.name);
+	}
+
+	csd->subdev_node_created = true;
 	g_dev.count++;
 
 reg_fail:
@@ -684,7 +698,6 @@ static int cam_req_mgr_remove(struct platform_device *pdev)
 	cam_v4l2_device_cleanup();
 	mutex_destroy(&g_dev.dev_lock);
 	g_dev.state = false;
-	g_dev.subdev_nodes_created = false;
 
 	return 0;
 }
@@ -708,7 +721,6 @@ static int cam_req_mgr_probe(struct platform_device *pdev)
 	g_dev.open_cnt = 0;
 	mutex_init(&g_dev.cam_lock);
 	spin_lock_init(&g_dev.cam_eventq_lock);
-	g_dev.subdev_nodes_created = false;
 	mutex_init(&g_dev.dev_lock);
 
 	rc = cam_req_mgr_util_init();
@@ -723,8 +735,6 @@ static int cam_req_mgr_probe(struct platform_device *pdev)
 		goto req_mgr_core_fail;
 	}
 
-	g_dev.state = true;
-
 	if (g_cam_req_mgr_timer_cachep == NULL) {
 		g_cam_req_mgr_timer_cachep = kmem_cache_create("crm_timer",
 			sizeof(struct cam_req_mgr_timer), 64,
@@ -738,6 +748,7 @@ static int cam_req_mgr_probe(struct platform_device *pdev)
 				g_cam_req_mgr_timer_cachep->name);
 	}
 
+	g_dev.state = true;
 	return rc;
 
 req_mgr_core_fail:
@@ -770,55 +781,11 @@ static struct platform_driver cam_req_mgr_driver = {
 	},
 };
 
-int cam_dev_mgr_create_subdev_nodes(void)
-{
-	int rc;
-	struct v4l2_subdev *sd;
-
-	if (!g_dev.v4l2_dev)
-		return -EINVAL;
-
-	if (g_dev.state != true) {
-		CAM_ERR(CAM_CRM, "camera root device not ready yet");
-		return -ENODEV;
-	}
-
-	mutex_lock(&g_dev.dev_lock);
-	if (g_dev.subdev_nodes_created)	{
-		rc = -EEXIST;
-		goto create_fail;
-	}
-
-	rc = v4l2_device_register_subdev_nodes(g_dev.v4l2_dev);
-	if (rc) {
-		CAM_ERR(CAM_CRM, "failed to register the sub devices");
-		goto create_fail;
-	}
-
-	list_for_each_entry(sd, &g_dev.v4l2_dev->subdevs, list) {
-		if (!(sd->flags & V4L2_SUBDEV_FL_HAS_DEVNODE))
-			continue;
-		sd->entity.name = video_device_node_name(sd->devnode);
-		CAM_DBG(CAM_CRM, "created node :%s", sd->entity.name);
-	}
-
-	g_dev.subdev_nodes_created = true;
-
-create_fail:
-	mutex_unlock(&g_dev.dev_lock);
-	return rc;
-}
-
 int cam_req_mgr_init(void)
 {
 	return platform_driver_register(&cam_req_mgr_driver);
 }
 EXPORT_SYMBOL(cam_req_mgr_init);
-
-int cam_req_mgr_late_init(void)
-{
-	return cam_dev_mgr_create_subdev_nodes();
-}
 
 void cam_req_mgr_exit(void)
 {
