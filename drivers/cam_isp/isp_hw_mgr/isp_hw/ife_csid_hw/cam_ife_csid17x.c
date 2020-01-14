@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 
@@ -52,6 +52,10 @@ static const struct of_device_id cam_ife_csid17x_dt_match[] = {
 	},
 	{
 		.compatible = "qcom,csid480",
+		.data = &cam_ife_csid480_hw_info,
+	},
+	{
+		.compatible = "qcom,csid580",
 		.data = &cam_ife_csid480_hw_info,
 	},
 	{}

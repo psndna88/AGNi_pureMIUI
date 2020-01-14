@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/iopoll.h>
@@ -339,7 +339,8 @@ static int cam_ife_match_vc_dt_pair(int32_t *vc, uint32_t *dt,
 		return -EINVAL;
 	}
 
-	if (camera_hw_version != CAM_CPAS_TITAN_480_V100)
+	if ((camera_hw_version != CAM_CPAS_TITAN_480_V100) &&
+		(camera_hw_version != CAM_CPAS_TITAN_580_V100))
 		num_valid_vc_dt = 1;
 
 	switch (num_valid_vc_dt) {
@@ -771,6 +772,7 @@ int cam_ife_csid_cid_reserve(struct cam_ife_csid_hw *csid_hw,
 		}
 		break;
 	case CAM_CPAS_TITAN_480_V100:
+	case CAM_CPAS_TITAN_580_V100:
 		if (cid_reserv->in_port->cust_node == 1) {
 			if (cid_reserv->in_port->usage_type == 1) {
 				CAM_ERR(CAM_ISP, "Dual IFE is not supported");
@@ -1716,7 +1718,8 @@ static int cam_ife_csid_init_config_pxl_path(
 	}
 	CAM_DBG(CAM_ISP, "HW version: %x", camera_hw_version);
 
-	if (camera_hw_version == CAM_CPAS_TITAN_480_V100)
+	if ((camera_hw_version == CAM_CPAS_TITAN_480_V100) ||
+		(camera_hw_version == CAM_CPAS_TITAN_580_V100))
 		val |= (path_data->drop_enable <<
 			csid_reg->cmn_reg->drop_h_en_shift_val) |
 			(path_data->drop_enable <<
@@ -1737,7 +1740,8 @@ static int cam_ife_csid_init_config_pxl_path(
 		pxl_reg->csid_pxl_cfg0_addr);
 
 	if (path_data->is_valid_vc1_dt1 &&
-		camera_hw_version == CAM_CPAS_TITAN_480_V100) {
+		((camera_hw_version == CAM_CPAS_TITAN_480_V100) ||
+		(camera_hw_version == CAM_CPAS_TITAN_580_V100))) {
 		val = cam_io_r_mb(soc_info->reg_map[0].mem_base +
 			pxl_reg->csid_pxl_multi_vcdt_cfg0_addr);
 		val |= ((path_data->vc1 << 2) |
@@ -1773,7 +1777,8 @@ static int cam_ife_csid_init_config_pxl_path(
 		 * Skip for version 480 HW due to HW limitation.
 		 */
 		if (!(csid_hw->csid_debug & CSID_DEBUG_DISABLE_EARLY_EOF) &&
-			(camera_hw_version != CAM_CPAS_TITAN_480_V100)) {
+			(camera_hw_version != CAM_CPAS_TITAN_480_V100) &&
+			(camera_hw_version != CAM_CPAS_TITAN_580_V100)) {
 			val = cam_io_r_mb(soc_info->reg_map[0].mem_base +
 				pxl_reg->csid_pxl_cfg0_addr);
 			val |= (1 << pxl_reg->early_eof_en_shift_val);
@@ -2167,7 +2172,8 @@ static int cam_ife_csid_init_config_rdi_path(
 	CAM_DBG(CAM_ISP, "HW version: %x", camera_hw_version);
 
 	if (camera_hw_version == CAM_CPAS_TITAN_480_V100 ||
-		camera_hw_version == CAM_CPAS_TITAN_175_V130) {
+		camera_hw_version == CAM_CPAS_TITAN_175_V130 ||
+		camera_hw_version == CAM_CPAS_TITAN_580_V100) {
 		val |= (path_data->drop_enable <<
 			csid_reg->cmn_reg->drop_h_en_shift_val) |
 			(path_data->drop_enable <<
@@ -2180,7 +2186,8 @@ static int cam_ife_csid_init_config_rdi_path(
 			csid_reg->rdi_reg[id]->csid_rdi_cfg0_addr);
 
 	if (path_data->is_valid_vc1_dt1 &&
-		camera_hw_version == CAM_CPAS_TITAN_480_V100) {
+		((camera_hw_version == CAM_CPAS_TITAN_480_V100) ||
+		(camera_hw_version == CAM_CPAS_TITAN_580_V100))) {
 		val = cam_io_r_mb(soc_info->reg_map[0].mem_base +
 			csid_reg->rdi_reg[id]->csid_rdi_multi_vcdt_cfg0_addr);
 		val |= ((path_data->vc1 << 2) |
@@ -2236,7 +2243,8 @@ static int cam_ife_csid_init_config_rdi_path(
 		csid_reg->rdi_reg[id]->csid_rdi_rpp_pix_drop_pattern_addr);
 
 	/* Write max value to pixel drop period due to a bug in ver 480 HW */
-	if (camera_hw_version == CAM_CPAS_TITAN_480_V100 &&
+	if (((camera_hw_version == CAM_CPAS_TITAN_480_V100) ||
+		(camera_hw_version == CAM_CPAS_TITAN_580_V100)) &&
 		path_data->drop_enable)
 		cam_io_w_mb(0x1F, soc_info->reg_map[0].mem_base +
 		csid_reg->rdi_reg[id]->csid_rdi_rpp_pix_drop_period_addr);

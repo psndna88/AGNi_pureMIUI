@@ -443,6 +443,7 @@ static int cam_vfe_camif_ver3_resource_start(
 	/* epoch config */
 	switch (soc_private->cpas_version) {
 	case CAM_CPAS_TITAN_480_V100:
+	case CAM_CPAS_TITAN_580_V100:
 		epoch0_line_cfg = (rsrc_data->last_line -
 			rsrc_data->first_line) / 4;
 	/* epoch line cfg will still be configured at midpoint of the
