@@ -504,7 +504,8 @@ Optional properties:
 - qcom,compression-mode:		Select compression mode for panel.
 					"fbc" - frame buffer compression
 					"dsc" - display stream compression.
-					If "dsc" compression is used then config subnodes needs to be defined.
+					"vdc" - VESA display compression.
+					If "dsc" or "vdc" compression is used then config subnodes needs to be defined.
 - qcom,panel-supply-entries:		A node that lists the elements of the supply used to
 					power the DSI panel. There can be more than one instance
 					of this binding, in which case the entry would be appended
@@ -533,6 +534,26 @@ Optional properties:
 - qcom,mdss-dsc-block-prediction-enable: A boolean value to enable/disable the block prediction at decoder.
 - qcom,mdss-dsc-config-by-manufacture-cmd: A boolean to indicates panel use manufacture command to setup pps
 					instead of standard dcs type 0x0A.
+- qcom,vdc-version:		An 8 bit value indicates the VDC version supported by panel. Bits[0.3]
+					provides information about minor version while Bits[4.7] provides
+					major version information. It supports only VDC rev 1(Major).1(Minor)
+					right now.
+- qcom,vdc-version-release:		An 8 bit value indicated VDC version release. This has to be set to 0.
+- qcom,vdc-slice-height:	An u32 value which indicates slice height. This should be atleast 16 lines.
+- qcom,vdc-slice-width:		An u32 value which indicates slice width. This should be atleast 64 pixels and
+					should also be a multiple of 8
+- qcom,vdc-slice-per-pkt:	An u32 value indicates the slice per dsi packet.
+- qcom,vdc-bit-per-component:	An u32 value indicates the bits per component before compression.
+- qcom,vdc-bit-per-pixel:	An u32 value indicates the bits per pixel after compression.
+- qcom,src-color-space:		An u32 value indicating the source color space. It can either be RGB or YUV.
+					Default value is assumed to be RGB
+					0 - RGB
+					1 - YUV
+- qcom,src-chroma-format:	An u32 value indicating the source color space. It can either be 444, 420 or 422.
+					Default value is assumed to be 444
+					0 - 444
+					1 - 422
+					2 - 420
 - qcom,mdss-pps-delay-ms:		An u32 value that indicates post PPS command
 								delay in milliseconds. If no value is specified, it chooses zero by default.
 - qcom,display-topology:  		Array of u32 values which specifies the	list of topologies available
@@ -812,6 +833,15 @@ Example:
 		qcom,display-topology = <1 1 1>,
 			                <2 2 1>;
 		qcom,default-topology-index = <0>;
+		qcom,vdc-version = <0x11>;
+		qcom,vdc-version-release = <0>;
+		qcom,vdc-slice-height = <256>;
+		qcom,vdc-slice-width = <720>;
+		qcom,vdc-slice-per-pkt = <2>;
+		qcom,vdc-bit-per-component = <8>;
+		qcom,vdc-bit-per-pixel = <6>;
+		qcom,src-color-space = <0>;
+		qcom,src-chroma-format = <0>;
 		qcom,mdss-dsi-dma-schedule-line = <5>;
 	};
 };
