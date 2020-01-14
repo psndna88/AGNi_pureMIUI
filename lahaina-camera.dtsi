@@ -1351,7 +1351,7 @@
 		interrupts = <GIC_SPI 641 IRQ_TYPE_EDGE_RISING>;
 		regulator-names = "camss", "ife2";
 		camss-supply = <&cam_cc_titan_top_gdsc>;
-		ife1-supply = <&cam_cc_ife_2_gdsc>;
+		ife2-supply = <&cam_cc_ife_2_gdsc>;
 		clock-names =
 			"ife_csid_clk_src",
 			"ife_csid_clk",
@@ -1396,7 +1396,7 @@
 		interrupts = <GIC_SPI 642 IRQ_TYPE_EDGE_RISING>;
 		regulator-names = "camss", "ife2";
 		camss-supply = <&cam_cc_titan_top_gdsc>;
-		ife1-supply = <&cam_cc_ife_2_gdsc>;
+		ife2-supply = <&cam_cc_ife_2_gdsc>;
 		clock-names =
 			"ife_2_ahb",
 			"ife_2_areg",
@@ -1418,11 +1418,8 @@
 		clock-cntl-level = "lowsvs", "svs", "svs_l1", "nominal",
 			"turbo";
 		src-clock-name = "ife_clk_src";
-		scl-clk-names = "ife_1_areg";
+		scl-clk-names = "ife_2_areg";
 		clock-control-debugfs = "true";
-		clock-names-option =  "ife_dsp_clk";
-		clocks-option = <&clock_camcc CAM_CC_IFE_1_DSP_CLK>;
-		clock-rates-option = <720000000>;
 		ubwc-static-cfg = <0x1026 0x1036>;
 		status = "ok";
 	};
