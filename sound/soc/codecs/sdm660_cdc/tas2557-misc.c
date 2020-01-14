@@ -46,7 +46,7 @@
 #include "tas2557-misc.h"
 #include <linux/dma-mapping.h>
 
-static int g_logEnable = 1;
+static int g_logEnable = 0;
 static struct tas2557_priv *g_tas2557;
 
 static int tas2557_file_open(struct inode *inode, struct file *file)
