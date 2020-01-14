@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  */
 
 
@@ -37,6 +37,7 @@ static struct cam_vfe_camif_ver3_reg_data vfe_580_camif_reg_data = {
 	.pp_camif_cfg_en_shift           = 0,
 	.pp_camif_cfg_ife_out_en_shift   = 8,
 	.top_debug_cfg_en                = 1,
+	.dual_vfe_sync_mask              = 0x3,
 };
 
 static struct cam_vfe_camif_lite_ver3_reg_data vfe580_camif_rdi1_reg_data = {
