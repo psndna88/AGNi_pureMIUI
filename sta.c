@@ -6994,8 +6994,8 @@ static int sta_set_2g_vht_supp(struct sigma_dut *dut, const char *intf, int cfg)
 #endif /* NL80211_SUPPORT */
 
 
-static int sta_set_addba_buf_size(struct sigma_dut *dut,
-				  const char *intf, int bufsize)
+int sta_set_addba_buf_size(struct sigma_dut *dut,
+			   const char *intf, int bufsize)
 {
 #ifdef NL80211_SUPPORT
 	struct nl_msg *msg;

@@ -8388,6 +8388,25 @@ skip_key_mgmt:
 		return 0;
 	}
 
+	if (dut->ap_ba_bufsize != BA_BUFSIZE_NOT_SET) {
+		int buf_size;
+
+		if (dut->ap_ba_bufsize == BA_BUFSIZE_256)
+			buf_size = 256;
+		else
+			buf_size = 64;
+
+		if ((drv == DRIVER_WCN || drv == DRIVER_LINUX_WCN) &&
+		    sta_set_addba_buf_size(dut, ifname, buf_size)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,set_addba_buf_size failed");
+			return STATUS_SENT_ERROR;
+		}
+
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"setting addba buf_size=%d", buf_size);
+	}
+
 	if (drv == DRIVER_LINUX_WCN) {
 		const char *ifname_ptr = ifname;
 
