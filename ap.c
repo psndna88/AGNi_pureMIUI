@@ -8131,6 +8131,11 @@ skip_key_mgmt:
 		fprintf(f, "dpp_controller=ipaddr=%s pkhash=%s\n",
 			dut->ap_dpp_conf_addr, dut->ap_dpp_conf_pkhash);
 
+	if (dut->ap_he_rtsthrshld == VALUE_ENABLED)
+		fprintf(f, "he_rts_threshold=512\n");
+	else if (dut->ap_he_rtsthrshld == VALUE_DISABLED)
+		fprintf(f, "he_rts_threshold=1024\n");
+
 	if ((dut->program == PROGRAM_VHT) ||
 	    (dut->program == PROGRAM_HE && dut->use_5g)) {
 		int vht_oper_centr_freq_idx;
