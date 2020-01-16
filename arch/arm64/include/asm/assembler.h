@@ -100,13 +100,6 @@
 	.endm
 
 /*
- * SMP data memory barrier
- */
-	.macro	smp_dmb, opt
-	dmb	\opt
-	.endm
-
-/*
  * RAS Error Synchronization barrier
  */
 	.macro  esb
