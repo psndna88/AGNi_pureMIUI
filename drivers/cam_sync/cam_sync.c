@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/init.h>
@@ -1107,21 +1107,28 @@ vdev_fail:
 
 static int cam_sync_remove(struct platform_device *pdev)
 {
+	int i;
+
 	v4l2_device_unregister(sync_dev->vdev->v4l2_dev);
 	cam_sync_media_controller_cleanup(sync_dev);
 	video_device_release(sync_dev->vdev);
 	debugfs_remove_recursive(sync_dev->dentry);
 	sync_dev->dentry = NULL;
+
+	for (i = 0; i < CAM_SYNC_MAX_OBJS; i++)
+		spin_lock_init(&sync_dev->row_spinlocks[i]);
 	kfree(sync_dev);
 	sync_dev = NULL;
 
 	return 0;
 }
 
-static struct platform_device cam_sync_device = {
-	.name = "cam_sync",
-	.id = -1,
+static const struct of_device_id cam_sync_dt_match[] = {
+	{.compatible = "qcom,cam-sync"},
+	{}
 };
+
+MODULE_DEVICE_TABLE(of, cam_sync_dt_match);
 
 static struct platform_driver cam_sync_driver = {
 	.probe = cam_sync_probe,
@@ -1129,29 +1136,19 @@ static struct platform_driver cam_sync_driver = {
 	.driver = {
 		.name = "cam_sync",
 		.owner = THIS_MODULE,
+		.of_match_table = cam_sync_dt_match,
 		.suppress_bind_attrs = true,
 	},
 };
 
 int cam_sync_init(void)
 {
-	int rc;
-	rc = platform_device_register(&cam_sync_device);
-	if (rc)
-		return -ENODEV;
-
 	return platform_driver_register(&cam_sync_driver);
 }
 
 void cam_sync_exit(void)
 {
-	int idx;
-
-	for (idx = 0; idx < CAM_SYNC_MAX_OBJS; idx++)
-		spin_lock_init(&sync_dev->row_spinlocks[idx]);
 	platform_driver_unregister(&cam_sync_driver);
-	platform_device_unregister(&cam_sync_device);
-	kfree(sync_dev);
 }
 
 MODULE_DESCRIPTION("Camera sync driver");
