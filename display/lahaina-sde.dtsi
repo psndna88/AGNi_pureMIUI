@@ -104,6 +104,12 @@
 		qcom,sde-dither-version = <0x00010000>;
 		qcom,sde-dither-size = <0x20>;
 
+		qcom,sde-vdc-off = <0x7C000>;
+		qcom,sde-vdc-size = <0xf10>;
+		qcom,sde-vdc-hw-rev = "vdc_1_1";
+		qcom,sde-vdc-enc = <0x200>;
+		qcom,sde-vdc-ctl = <0xf00>;
+
 		qcom,sde-sspp-type = "vig", "vig", "vig", "vig",
 					"dma", "dma", "dma", "dma";
 
