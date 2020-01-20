@@ -1624,7 +1624,7 @@
 	cam_ipe0: qcom,ipe0 {
 		cell-index = <0>;
 		compatible = "qcom,cam-ipe";
-		reg = <0xac9a000 0xc000>;
+		reg = <0xac9a000 0x12000>;
 		reg-names = "ipe0_top";
 		reg-cam-base = <0x9a000>;
 		regulator-names = "ipe0-vdd";
