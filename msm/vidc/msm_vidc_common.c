@@ -3440,9 +3440,8 @@ int msm_comm_reset_bufreqs(struct msm_vidc_inst *inst, enum hal_buffer buf_type)
 			__func__, buf_type);
 		return -EINVAL;
 	}
-	bufreqs->buffer_size = bufreqs->buffer_region_size =
-	bufreqs->buffer_count_min = bufreqs->buffer_count_min_host =
-	bufreqs->buffer_count_actual = bufreqs->contiguous =
+	bufreqs->buffer_size = bufreqs->buffer_count_min =
+	bufreqs->buffer_count_min_host = bufreqs->buffer_count_actual =
 	bufreqs->buffer_alignment = 0;
 
 	return 0;
