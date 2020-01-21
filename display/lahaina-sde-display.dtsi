@@ -20,6 +20,8 @@
 #include "dsi-panel-sim-dualmipi-dsc375-cmd.dtsi"
 #include "dsi-panel-sim-sec-hd-cmd.dtsi"
 #include <dt-bindings/clock/mdss-5nm-pll-clk.h>
+#include "dsi-panel-sim-vdc-vid.dtsi"
+#include "dsi-panel-sim-vdc-cmd.dtsi"
 
 &soc {
 	ext_disp: qcom,msm-ext-disp {
