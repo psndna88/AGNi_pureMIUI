@@ -7567,6 +7567,19 @@ enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 		}
 	}
 
+	if (drv == DRIVER_LINUX_WCN && dut->ap_mode == AP_11ax) {
+		if (dut->ap_txBF) {
+			fprintf(f, "he_su_beamformer=1\n");
+			fprintf(f, "he_su_beamformee=1\n");
+			if (dut->ap_mu_txBF)
+				fprintf(f, "he_mu_beamformer=1\n");
+		} else {
+			fprintf(f, "he_su_beamformer=0\n");
+			fprintf(f, "he_su_beamformee=0\n");
+			fprintf(f, "he_mu_beamformer=0\n");
+		}
+	}
+
 	fprintf(f, "interface=%s\n", ifname);
 	if (dut->bridge)
 		fprintf(f, "bridge=%s\n", dut->bridge);
