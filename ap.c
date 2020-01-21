@@ -8475,14 +8475,16 @@ skip_key_mgmt:
 		return 0;
 	}
 
-	if (dut->program == PROGRAM_60GHZ && dut->ap_num_ese_allocs > 0) {
-		/* wait extra time for AP to start */
-		sleep(2);
-		if (ap_set_60g_ese(dut, dut->ap_num_ese_allocs,
-				   dut->ap_ese_allocs)) {
-			send_resp(dut, conn, SIGMA_ERROR,
-				  "errorCode,Could not set ExtSch");
-			return 0;
+	if (dut->program == PROGRAM_60GHZ) {
+		if (dut->ap_num_ese_allocs > 0) {
+			/* wait extra time for AP to start */
+			sleep(2);
+			if (ap_set_60g_ese(dut, dut->ap_num_ese_allocs,
+					   dut->ap_ese_allocs)) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Could not set ExtSch");
+				return 0;
+			}
 		}
 		if (dut->ap_fixed_rate) {
 			sigma_dut_print(dut, DUT_MSG_DEBUG,
