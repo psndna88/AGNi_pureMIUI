@@ -9079,6 +9079,13 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 			if (drv == DRIVER_LINUX_WCN) {
 				dut->ap_ldpc = VALUE_ENABLED;
 				wcn_config_ap_ldpc(dut, get_main_ifname(dut));
+#ifdef NL80211_SUPPORT
+				if (wcn_set_he_ltf(dut, get_main_ifname(dut),
+						   QCA_WLAN_HE_LTF_AUTO)) {
+					sigma_dut_print(dut, DUT_MSG_ERROR,
+							"Failed to set LTF in ap_reset_default");
+				}
+#endif /* NL80211_SUPPORT */
 			}
 		}
 		if (get_openwrt_driver_type() == OPENWRT_DRIVER_ATHEROS)
@@ -12507,6 +12514,27 @@ static enum sigma_cmd_result wcn_ap_set_rfeature(struct sigma_dut *dut,
 			return STATUS_SENT_ERROR;
 		}
 		run_iwpriv(dut, ifname, "enable_short_gi %d", fix_rate_sgi);
+	}
+
+	val = get_param(cmd, "LTF");
+	if (val) {
+#ifdef NL80211_SUPPORT
+		if (strcmp(val, "3.2") == 0) {
+			wcn_set_he_ltf(dut, ifname, QCA_WLAN_HE_LTF_1X);
+		} if (strcmp(val, "6.4") == 0) {
+			wcn_set_he_ltf(dut, ifname, QCA_WLAN_HE_LTF_2X);
+		} else if (strcmp(val, "12.8") == 0) {
+			wcn_set_he_ltf(dut, ifname, QCA_WLAN_HE_LTF_4X);
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,LTF value not supported");
+			return STATUS_SENT;
+		}
+#else /* NL80211_SUPPORT */
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"LTF cannot be set without NL80211_SUPPORT defined");
+		return ERROR_SEND_STATUS;
+#endif /* NL80211_SUPPORT */
 	}
 
 	return SUCCESS_SEND_STATUS;
