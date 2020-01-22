@@ -30,6 +30,9 @@
 		};
 	};
 
+	dsi_panel_pwr_supply: dsi_panel_pwr_supply {
+	};
+
 	sde_dsi: qcom,dsi-display-primary {
 		compatible = "qcom,dsi-display";
 		label = "primary";
