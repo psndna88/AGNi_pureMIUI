@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/slab.h>
@@ -12,10 +12,10 @@
 #include "cam_debug_util.h"
 #include "cam_vfe_soc.h"
 
-#define CAM_VFE_HW_RESET_HW_AND_REG_VAL       0x00000003
-#define CAM_VFE_HW_RESET_HW_VAL               0x007F0000
+#define CAM_VFE_HW_RESET_HW_AND_REG_VAL       0x00000001
+#define CAM_VFE_HW_RESET_HW_VAL               0x00010000
 #define CAM_VFE_LITE_HW_RESET_AND_REG_VAL     0x00000002
-#define CAM_VFE_LITE_HW_RESET_HW_VAL          0x0000003D
+#define CAM_VFE_LITE_HW_RESET_HW_VAL          0x00000001
 
 struct cam_vfe_top_ver3_common_data {
 	struct cam_hw_soc_info                     *soc_info;
@@ -266,11 +266,6 @@ int cam_vfe_top_ver3_reset(void *device_priv,
 			reset_reg_val = CAM_VFE_LITE_HW_RESET_HW_VAL;
 		break;
 	}
-	/* override due to hw limitation */
-	if (!soc_private->is_ife_lite)
-		reset_reg_val = CAM_VFE_HW_RESET_HW_AND_REG_VAL;
-	else
-		reset_reg_val = CAM_VFE_LITE_HW_RESET_AND_REG_VAL;
 
 	CAM_DBG(CAM_ISP, "reset reg value: 0x%x", reset_reg_val);
 
