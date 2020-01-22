@@ -4153,7 +4153,7 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 	if (dut->sae_reflection)
 		owrt_ap_set_vap(dut, vap_count, "sae_reflection_attack", "1");
 	if (dut->sae_confirm_immediate)
-		owrt_ap_set_vap(dut, vap_count, "sae_confirm_immediate", "1");
+		owrt_ap_set_vap(dut, vap_count, "sae_confirm_immediate", "2");
 
 	if (dut->ap_he_dlofdma == VALUE_ENABLED && dut->ap_he_ppdu == PPDU_MU) {
 		dut->ap_txBF = 0;
@@ -7933,7 +7933,7 @@ skip_key_mgmt:
 	if (dut->sae_reflection)
 		fprintf(f, "sae_reflection_attack=1\n");
 	if (dut->sae_confirm_immediate)
-		fprintf(f, "sae_confirm_immediate=1\n");
+		fprintf(f, "sae_confirm_immediate=2\n");
 
 	if (dut->ap_p2p_mgmt)
 		fprintf(f, "manage_p2p=1\n");
