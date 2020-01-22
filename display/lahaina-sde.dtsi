@@ -106,7 +106,7 @@
 
 		qcom,sde-dither-off = <0xe0 0xe0 0xe0
 						0xe0 0xe0 0xe0>;
-		qcom,sde-dither-version = <0x00010000>;
+		qcom,sde-dither-version = <0x00020000>;
 		qcom,sde-dither-size = <0x20>;
 
 		qcom,sde-vdc-off = <0x7C000>;
