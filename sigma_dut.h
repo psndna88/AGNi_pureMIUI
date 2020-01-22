@@ -1070,6 +1070,10 @@ int wil6210_set_ese(struct sigma_dut *dut, int count,
 int sta_extract_60g_ese(struct sigma_dut *dut, struct sigma_cmd *cmd,
 			struct sigma_ese_alloc *allocs, int *allocs_size);
 int wil6210_set_force_mcs(struct sigma_dut *dut, int force, int mcs);
+#ifdef NL80211_SUPPORT
+int wcn_set_he_ltf(struct sigma_dut *dut, const char *intf,
+		   enum qca_wlan_he_ltf_cfg ltf);
+#endif /* NL80211_SUPPORT */
 
 /* p2p.c */
 void p2p_register_cmds(void);
