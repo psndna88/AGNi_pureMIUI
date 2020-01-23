@@ -213,7 +213,20 @@ Optional properties:
 - qcom,sde-te2-off:		A u32 offset indicates the te2 block offset on pingpong.
 - qcom,sde-te-size:		A u32 value indicates the te block address range.
 - qcom,sde-te2-size:		A u32 value indicates the te2 block address range.
-- qcom,sde-dsc-off:	 	A u32 offset indicates the dsc block offset on pingpong.
+- qcom,sde-dsc-off: 		Array of offset addresses for the available dsc
+				blocks. These offsets are calculated from
+				register "mdp_phys" defined in reg property.
+- qcom,sde-dsc-hw-rev:		A string value indicates the dsc hw block
+				version.
+- qcom,sde-dsc-enc:		Array of offset addresses for the available dsc
+				encoder blocks. These offsets are calculated from
+				the corresponding DSC base.
+- qcom,sde-dsc-ctl:		Array of offset addresses for the available dsc
+				ctl blocks. These offsets are calculated from
+				the corresponding DSC base.
+- qcom,sde-dsc-native422-supp:	Array of flags indicating whether corresponding dsc
+				block can support native 422 and native 420
+				encoding.
 - qcom,sde-qdss-off:		A u32 offset indicates the qdss block offset.
 - qcom,sde-dither-off:		A u32 offset indicates the dither block offset on pingpong.
 - qcom,sde-dither-version:	A u32 value indicates the dither block version.
