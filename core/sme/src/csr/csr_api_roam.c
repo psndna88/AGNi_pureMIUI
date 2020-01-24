@@ -20019,11 +20019,11 @@ csr_create_roam_scan_offload_request(tpAniSirGlobal mac_ctx,
 	req_buf->EmptyRefreshScanPeriod =
 		roam_info->cfgParams.emptyScanRefreshPeriod;
 	req_buf->roam_scan_inactivity_time =
-		mac_ctx->roam.configParam.roam_scan_inactivity_time;
+		roam_info->cfgParams.roam_scan_inactivity_time;
 	req_buf->roam_inactive_data_packet_count =
-		mac_ctx->roam.configParam.roam_inactive_data_packet_count;
+		roam_info->cfgParams.roam_inactive_data_packet_count;
 	req_buf->roam_scan_period_after_inactivity =
-		mac_ctx->roam.configParam.roam_scan_period_after_inactivity;
+		roam_info->cfgParams.roam_scan_period_after_inactivity;
 	req_buf->full_roam_scan_period =
 		roam_info->cfgParams.full_roam_scan_period;
 
@@ -20542,17 +20542,8 @@ static bool csr_is_RSO_cmd_allowed(tpAniSirGlobal mac_ctx,
 	return ret_val;
 }
 
-/*
- * csr_roam_send_rso_cmd() - API to send RSO command to PE
- * @mac_ctx: Pointer to global MAC structure
- * @session_id: Session ID
- * @request_buf: Pointer to tSirRoamOffloadScanReq
- *
- * Return: QDF_STATUS
- */
-static QDF_STATUS csr_roam_send_rso_cmd(tpAniSirGlobal mac_ctx,
-					uint8_t session_id,
-					tSirRoamOffloadScanReq *request_buf)
+QDF_STATUS csr_roam_send_rso_cmd(tpAniSirGlobal mac_ctx, uint8_t session_id,
+				 tSirRoamOffloadScanReq *request_buf)
 {
 	QDF_STATUS status;
 

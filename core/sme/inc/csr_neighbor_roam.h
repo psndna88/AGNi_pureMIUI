@@ -70,6 +70,9 @@ typedef struct sCsrNeighborRoamCfgParams {
 	uint8_t roam_rssi_diff;
 	uint16_t roam_scan_home_away_time;
 	uint8_t roam_scan_n_probes;
+	uint32_t roam_scan_inactivity_time;
+	uint32_t roam_inactive_data_packet_count;
+	uint32_t roam_scan_period_after_inactivity;
 } tCsrNeighborRoamCfgParams, *tpCsrNeighborRoamCfgParams;
 
 #define CSR_NEIGHBOR_ROAM_INVALID_CHANNEL_INDEX    255
@@ -342,7 +345,11 @@ void csr_roam_reset_roam_params(tpAniSirGlobal mac_ptr);
 #define REASON_DRIVER_ENABLED                       43
 #define REASON_ROAM_FULL_SCAN_PERIOD_CHANGED        44
 #define REASON_SCORING_CRITERIA_CHANGED             45
-#define REASON_ROAM_CONTROL_CONFIG_RESTORED         46
+#define REASON_SUPPLICANT_INIT_ROAMING              46
+#define REASON_SUPPLICANT_DE_INIT_ROAMING           47
+#define REASON_DRIVER_DISABLED                      48
+#define REASON_ROAM_CONTROL_CONFIG_RESTORED         49
+#define REASON_ROAM_CONTROL_CONFIG_ENABLED          50
 
 #if defined(WLAN_FEATURE_HOST_ROAM) || defined(WLAN_FEATURE_ROAM_OFFLOAD)
 QDF_STATUS csr_roam_offload_scan(tpAniSirGlobal pMac, uint8_t sessionId,
@@ -403,6 +410,17 @@ QDF_STATUS csr_roam_synch_callback(tpAniSirGlobal mac,
 	roam_offload_synch_ind *roam_synch_data,
 	tpSirBssDescription  bss_desc_ptr, enum sir_roam_op_code reason);
 
+/*
+ * csr_roam_send_rso_cmd() - API to send RSO command to PE
+ * @mac_ctx: Pointer to global MAC structure
+ * @vdev_id: Session ID
+ * @request_buf: Pointer to tSirRoamOffloadScanReq
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS csr_roam_send_rso_cmd(tpAniSirGlobal mac_ctx, uint8_t vdev_id,
+				 tSirRoamOffloadScanReq *request_buf);
+
 /**
  * csr_roam_auth_offload_callback() - Registered CSR Callback function to handle
  * WPA3 roam pre-auth event from firmware.
@@ -448,6 +466,13 @@ static inline QDF_STATUS
 csr_process_roam_auth_offload_callback(tpAniSirGlobal mac_ctx,
 				       uint8_t vdev_id,
 				       struct qdf_mac_addr roam_bssid)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static inline QDF_STATUS
+csr_roam_send_rso_cmd(tpAniSirGlobal mac_ctx, uint8_t vdev_id,
+		      tSirRoamOffloadScanReq *request_buf)
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }
