@@ -43,10 +43,10 @@
 		qcom,sde-len = <0x494>;
 
 		qcom,sde-ctl-off = <0x16000 0x17000 0x18000
-					0x19000 0x1a000>;
+					0x19000 0x1a000 0x1b000>;
 		qcom,sde-ctl-size = <0x1e8>;
 		qcom,sde-ctl-display-pref = "primary", "none", "none",
-			    "none", "none";
+			    "none", "none", "none";
 
 		qcom,sde-mixer-off = <0x45000 0x46000 0x47000
 				      0x48000 0x49000 0x4a000>;
@@ -433,7 +433,6 @@
 		qcom,sde-dram-channels = <2>;
 
 		vdd-supply = <&disp_cc_mdss_core_gdsc>;
-
 		clocks = <&clock_dispcc DISP_CC_MDSS_RSCC_VSYNC_CLK>,
 			<&clock_dispcc DISP_CC_MDSS_NON_GDSC_AHB_CLK>,
 			<&clock_dispcc DISP_CC_MDSS_RSCC_AHB_CLK>;
@@ -442,72 +441,6 @@
 			<&gem_noc MASTER_APPSS_PROC
 				&config_noc SLAVE_DISPLAY_CFG>;
 		interconnect-names = "qcom,sde-reg-bus";
-	};
-
-	mdss_rotator: qcom,mdss_rotator@aea9000 {
-		compatible = "qcom,sde_rotator";
-		reg = <0x0ae00000 0xac000>,
-		      <0x0aeb8000 0x3000>;
-		reg-names = "mdp_phys",
-			"rot_vbif_phys";
-		status = "disabled";
-
-		#list-cells = <1>;
-
-		qcom,mdss-rot-mode = <1>;
-		qcom,mdss-highest-bank-bit = <0x3>;
-		interconnects =
-			<&mmss_noc MASTER_ROTATOR &mc_virt SLAVE_EBI1>,
-			<&gem_noc MASTER_APPSS_PROC
-				&config_noc SLAVE_DISPLAY_CFG>;
-		interconnect-names = "qcom,rot-data-bus0",
-				"qcom,sde-reg-bus";
-		qcom,msm-bus,active-only;
-
-		qcom,supply-names = "rot-vdd";
-
-		clocks =
-			<&clock_gcc GCC_DISP_AHB_CLK>,
-			<&clock_gcc GCC_DISP_SF_AXI_CLK>,
-			<&clock_dispcc DISP_CC_MDSS_AHB_CLK>,
-			<&clock_dispcc DISP_CC_MDSS_ROT_CLK>;
-		clock-names = "gcc_iface", "gcc_bus",
-			"iface_clk", "rot_clk";
-
-		interrupt-parent = <&mdss_mdp>;
-		interrupts = <2 0>;
-
-		power-domains = <&mdss_mdp>;
-
-		/* Offline rotator QoS setting */
-		qcom,mdss-rot-vbif-qos-setting = <3 3 3 3 3 3 3 3>;
-		qcom,mdss-rot-vbif-memtype = <3 3>;
-		qcom,mdss-rot-cdp-setting = <1 1>;
-		qcom,mdss-rot-qos-lut = <0x0 0x0 0x0 0x0>;
-		qcom,mdss-rot-danger-lut = <0x0 0x0>;
-		qcom,mdss-rot-safe-lut = <0x0000ffff 0x0000ffff>;
-
-		qcom,mdss-default-ot-rd-limit = <32>;
-		qcom,mdss-default-ot-wr-limit = <32>;
-
-		qcom,mdss-sbuf-headroom = <20>;
-
-		/* reg bus scale settings */
-		rot_reg: qcom,rot-reg-bus {
-			qcom,msm-bus,name = "mdss_rot_reg";
-			qcom,msm-bus,num-cases = <2>;
-			qcom,msm-bus,num-paths = <1>;
-			qcom,msm-bus,vectors-KBps =
-				<1 590 0 0>,
-				<1 590 0 76800>;
-		};
-
-		smmu_rot_unsec: qcom,smmu_rot_unsec_cb {
-			compatible = "qcom,smmu_sde_rot_unsec";
-			iommus = <&apps_smmu 0x215C 0x0400>;
-			qcom,iommu-dma-addr-pool = <0x00020000 0xfffe0000>;
-			qcom,iommu-faults = "non-fatal";
-		};
 	};
 
 	mdss_dsi0: qcom,mdss_dsi_ctrl0@ae94000 {
