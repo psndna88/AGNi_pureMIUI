@@ -1348,7 +1348,7 @@
 		reg = <0xacf0200 0x1000>;
 		reg-cam-base = <0xf0200>;
 		interrupt-names = "csid";
-		interrupts = <GIC_SPI 641 IRQ_TYPE_EDGE_RISING>;
+		interrupts = <GIC_SPI 640 IRQ_TYPE_EDGE_RISING>;
 		regulator-names = "camss", "ife2";
 		camss-supply = <&cam_cc_titan_top_gdsc>;
 		ife2-supply = <&cam_cc_ife_2_gdsc>;
@@ -1393,7 +1393,7 @@
 			<0xac42000 0x8000>;
 		reg-cam-base = <0xef000 0x42000>;
 		interrupt-names = "ife";
-		interrupts = <GIC_SPI 642 IRQ_TYPE_EDGE_RISING>;
+		interrupts = <GIC_SPI 641 IRQ_TYPE_EDGE_RISING>;
 		regulator-names = "camss", "ife2";
 		camss-supply = <&cam_cc_titan_top_gdsc>;
 		ife2-supply = <&cam_cc_ife_2_gdsc>;
