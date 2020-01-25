@@ -1056,6 +1056,11 @@ static struct msm_vidc_format_desc venc_input_formats[] = {
 		.description = "Y/CbCr 4:2:0 512 aligned",
 		.fourcc = V4L2_PIX_FMT_NV12_512,
 	},
+	{
+		.name = "32bit RGBA UBWC 8:8:8:8",
+		.description = "32-bit RGBA UBWC 8:8:8:8",
+		.fourcc = V4L2_PIX_FMT_RGBA8888_UBWC,
+	},
 };
 
 static struct msm_vidc_format_desc venc_output_formats[] = {

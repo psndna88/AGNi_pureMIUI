@@ -909,6 +909,9 @@ enum hal_uncompressed_format msm_comm_get_hal_uncompressed(int fourcc)
 	case V4L2_PIX_FMT_SDE_Y_CBCR_H2V2_P010_VENUS:
 		format = HAL_COLOR_FORMAT_P010;
 		break;
+	case V4L2_PIX_FMT_RGBA8888_UBWC:
+		format = HAL_COLOR_FORMAT_RGBA8888_UBWC;
+		break;
 	default:
 		format = HAL_UNUSED_COLOR;
 		break;
@@ -939,6 +942,9 @@ u32 msm_comm_get_hfi_uncompressed(int fourcc, u32 sid)
 		break;
 	case V4L2_PIX_FMT_SDE_Y_CBCR_H2V2_P010_VENUS:
 		format = HFI_COLOR_FORMAT_P010;
+		break;
+	case V4L2_PIX_FMT_RGBA8888_UBWC:
+		format = HFI_COLOR_FORMAT_RGBA8888_UBWC;
 		break;
 	default:
 		format = HFI_COLOR_FORMAT_NV12_UBWC;
@@ -3517,6 +3523,8 @@ u32 msm_comm_convert_color_fmt(u32 v4l2_fmt, u32 sid)
 		return COLOR_FMT_NV12_UBWC;
 	case V4L2_PIX_FMT_NV12_TP10_UBWC:
 		return COLOR_FMT_NV12_BPP10_UBWC;
+	case V4L2_PIX_FMT_RGBA8888_UBWC:
+		return COLOR_FMT_RGBA8888_UBWC;
 	default:
 		s_vpr_e(sid,
 			"Invalid v4l2 color fmt FMT : %x, Set default(NV12)",
