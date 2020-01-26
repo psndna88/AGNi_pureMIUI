@@ -8,6 +8,7 @@
 #include "cam_top_tpg_core.h"
 #include "cam_top_tpg_v1.h"
 #include "cam_top_tpg_dev.h"
+#include "camera_main.h"
 
 #define CAM_TOP_TPG_DRV_NAME                    "tpg_v1"
 #define CAM_TOP_TPG_VERSION_V1                  0x10000000
@@ -29,7 +30,7 @@ static const struct of_device_id cam_top_tpg_v1_dt_match[] = {
 
 MODULE_DEVICE_TABLE(of, cam_top_tpg_v1_dt_match);
 
-static struct platform_driver cam_top_tpg_v1_driver = {
+struct platform_driver cam_top_tpg_v1_driver = {
 	.probe = cam_top_tpg_probe,
 	.remove = cam_top_tpg_remove,
 	.driver = {

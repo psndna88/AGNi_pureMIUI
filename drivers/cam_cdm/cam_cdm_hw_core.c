@@ -22,6 +22,7 @@
 #include "cam_cdm_hw_reg_1_1.h"
 #include "cam_cdm_hw_reg_1_2.h"
 #include "cam_cdm_hw_reg_2_0.h"
+#include "camera_main.h"
 
 #define CAM_CDM_BL_FIFO_WAIT_TIMEOUT 2000
 #define CAM_CDM_DBG_GEN_IRQ_USR_DATA 0xff
@@ -1571,7 +1572,8 @@ int cam_hw_cdm_deinit(void *hw_priv,
 	return rc;
 }
 
-int cam_hw_cdm_probe(struct platform_device *pdev)
+static int cam_hw_cdm_component_bind(struct device *dev,
+	struct device *master_dev, void *data)
 {
 	int rc, len = 0, i, j;
 	struct cam_hw_info *cdm_hw = NULL;
@@ -1582,6 +1584,7 @@ int cam_hw_cdm_probe(struct platform_device *pdev)
 	struct cam_ahb_vote ahb_vote;
 	struct cam_axi_vote axi_vote = {0};
 	char cdm_name[128], work_q_name[128];
+	struct platform_device *pdev = to_platform_device(dev);
 
 	cdm_hw_intf = kzalloc(sizeof(struct cam_hw_intf), GFP_KERNEL);
 	if (!cdm_hw_intf)
@@ -1794,7 +1797,7 @@ int cam_hw_cdm_probe(struct platform_device *pdev)
 	cdm_hw->open_count--;
 	mutex_unlock(&cdm_hw->hw_mutex);
 
-	CAM_DBG(CAM_CDM, "%s probe successful", cdm_core->name);
+	CAM_DBG(CAM_CDM, "%s component bound successfully", cdm_core->name);
 
 	return rc;
 
@@ -1833,17 +1836,19 @@ release_mem:
 	return rc;
 }
 
-int cam_hw_cdm_remove(struct platform_device *pdev)
+static void cam_hw_cdm_component_unbind(struct device *dev,
+	struct device *master_dev, void *data)
 {
 	int rc = -EBUSY, i;
 	struct cam_hw_info *cdm_hw = NULL;
 	struct cam_hw_intf *cdm_hw_intf = NULL;
 	struct cam_cdm *cdm_core = NULL;
+	struct platform_device *pdev = to_platform_device(dev);
 
 	cdm_hw_intf = platform_get_drvdata(pdev);
 	if (!cdm_hw_intf) {
 		CAM_ERR(CAM_CDM, "Failed to get dev private data");
-		return rc;
+		return;
 	}
 
 	cdm_hw = cdm_hw_intf->hw_priv;
@@ -1851,7 +1856,7 @@ int cam_hw_cdm_remove(struct platform_device *pdev)
 		CAM_ERR(CAM_CDM,
 			"Failed to get hw private data for type=%d idx=%d",
 			cdm_hw_intf->hw_type, cdm_hw_intf->hw_idx);
-		return rc;
+		return;
 	}
 
 	cdm_core = cdm_hw->core_info;
@@ -1859,26 +1864,26 @@ int cam_hw_cdm_remove(struct platform_device *pdev)
 		CAM_ERR(CAM_CDM,
 			"Failed to get hw core data for type=%d idx=%d",
 			cdm_hw_intf->hw_type, cdm_hw_intf->hw_idx);
-		return rc;
+		return;
 	}
 
 	if (cdm_hw->open_count != 0) {
 		CAM_ERR(CAM_CDM, "Hw open count invalid type=%d idx=%d cnt=%d",
 			cdm_hw_intf->hw_type, cdm_hw_intf->hw_idx,
 			cdm_hw->open_count);
-		return rc;
+		return;
 	}
 
 	rc = cam_hw_cdm_deinit(cdm_hw, NULL, 0);
 	if (rc) {
 		CAM_ERR(CAM_CDM, "Deinit failed for hw");
-		return rc;
+		return;
 	}
 
 	rc = cam_cpas_unregister_client(cdm_core->cpas_handle);
 	if (rc) {
 		CAM_ERR(CAM_CDM, "CPAS unregister failed");
-		return rc;
+		return;
 	}
 
 	if (cam_soc_util_release_platform_resource(&cdm_hw->soc_info))
@@ -1899,11 +1904,32 @@ int cam_hw_cdm_remove(struct platform_device *pdev)
 	kfree(cdm_hw_intf);
 	kfree(cdm_hw->core_info);
 	kfree(cdm_hw);
+}
 
+const static struct component_ops cam_hw_cdm_component_ops = {
+	.bind = cam_hw_cdm_component_bind,
+	.unbind = cam_hw_cdm_component_unbind,
+};
+
+int cam_hw_cdm_probe(struct platform_device *pdev)
+{
+	int rc = 0;
+
+	CAM_DBG(CAM_CDM, "Adding HW CDM component");
+	rc = component_add(&pdev->dev, &cam_hw_cdm_component_ops);
+	if (rc)
+		CAM_ERR(CAM_CDM, "failed to add component rc: %d", rc);
+
+	return rc;
+}
+
+int cam_hw_cdm_remove(struct platform_device *pdev)
+{
+	component_del(&pdev->dev, &cam_hw_cdm_component_ops);
 	return 0;
 }
 
-static struct platform_driver cam_hw_cdm_driver = {
+struct platform_driver cam_hw_cdm_driver = {
 	.probe = cam_hw_cdm_probe,
 	.remove = cam_hw_cdm_remove,
 	.driver = {

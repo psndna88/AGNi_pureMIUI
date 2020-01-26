@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -19,6 +19,7 @@
 #include "cam_cpas_api.h"
 #include "cam_debug_util.h"
 #include "cam_jpeg_enc_hw_info_ver_4_2_0.h"
+#include "camera_main.h"
 
 static int cam_jpeg_enc_register_cpas(struct cam_hw_soc_info *soc_info,
 	struct cam_jpeg_enc_device_core_info *core_info,
@@ -57,54 +58,8 @@ static int cam_jpeg_enc_unregister_cpas(
 	return rc;
 }
 
-static int cam_jpeg_enc_remove(struct platform_device *pdev)
-{
-	struct cam_hw_info *jpeg_enc_dev = NULL;
-	struct cam_hw_intf *jpeg_enc_dev_intf = NULL;
-	struct cam_jpeg_enc_device_core_info *core_info = NULL;
-	int rc;
-
-	jpeg_enc_dev_intf = platform_get_drvdata(pdev);
-	if (!jpeg_enc_dev_intf) {
-		CAM_ERR(CAM_JPEG, "error No data in pdev");
-		return -EINVAL;
-	}
-
-	jpeg_enc_dev = jpeg_enc_dev_intf->hw_priv;
-	if (!jpeg_enc_dev) {
-		CAM_ERR(CAM_JPEG, "error HW data is NULL");
-		rc = -ENODEV;
-		goto free_jpeg_hw_intf;
-	}
-
-	core_info = (struct cam_jpeg_enc_device_core_info *)
-		jpeg_enc_dev->core_info;
-	if (!core_info) {
-		CAM_ERR(CAM_JPEG, "error core data NULL");
-		goto deinit_soc;
-	}
-
-	rc = cam_jpeg_enc_unregister_cpas(core_info);
-	if (rc)
-		CAM_ERR(CAM_JPEG, " unreg failed to reg cpas %d", rc);
-
-	mutex_destroy(&core_info->core_mutex);
-	kfree(core_info);
-
-deinit_soc:
-	rc = cam_soc_util_release_platform_resource(&jpeg_enc_dev->soc_info);
-	if (rc)
-		CAM_ERR(CAM_JPEG, "Failed to deinit soc rc=%d", rc);
-
-	mutex_destroy(&jpeg_enc_dev->hw_mutex);
-	kfree(jpeg_enc_dev);
-
-free_jpeg_hw_intf:
-	kfree(jpeg_enc_dev_intf);
-	return rc;
-}
-
-static int cam_jpeg_enc_probe(struct platform_device *pdev)
+static int cam_jpeg_enc_component_bind(struct device *dev,
+	struct device *master_dev, void *data)
 {
 	struct cam_hw_info *jpeg_enc_dev = NULL;
 	struct cam_hw_intf *jpeg_enc_dev_intf = NULL;
@@ -112,6 +67,7 @@ static int cam_jpeg_enc_probe(struct platform_device *pdev)
 	struct cam_jpeg_enc_device_core_info *core_info = NULL;
 	struct cam_jpeg_enc_device_hw_info *hw_info = NULL;
 	int rc;
+	struct platform_device *pdev = to_platform_device(dev);
 
 	jpeg_enc_dev_intf = kzalloc(sizeof(struct cam_hw_intf), GFP_KERNEL);
 	if (!jpeg_enc_dev_intf)
@@ -178,6 +134,7 @@ static int cam_jpeg_enc_probe(struct platform_device *pdev)
 	mutex_init(&jpeg_enc_dev->hw_mutex);
 	spin_lock_init(&jpeg_enc_dev->hw_lock);
 	init_completion(&jpeg_enc_dev->hw_complete);
+	CAM_DBG(CAM_JPEG, "Encoder component bound successfully");
 
 	return rc;
 
@@ -195,6 +152,76 @@ error_alloc_dev:
 	return rc;
 }
 
+static void cam_jpeg_enc_component_unbind(struct device *dev,
+	struct device *master_dev, void *data)
+{
+	struct cam_hw_info *jpeg_enc_dev = NULL;
+	struct cam_hw_intf *jpeg_enc_dev_intf = NULL;
+	struct cam_jpeg_enc_device_core_info *core_info = NULL;
+	int rc;
+	struct platform_device *pdev = to_platform_device(dev);
+
+	jpeg_enc_dev_intf = platform_get_drvdata(pdev);
+	if (!jpeg_enc_dev_intf) {
+		CAM_ERR(CAM_JPEG, "error No data in pdev");
+		return;
+	}
+
+	jpeg_enc_dev = jpeg_enc_dev_intf->hw_priv;
+	if (!jpeg_enc_dev) {
+		CAM_ERR(CAM_JPEG, "error HW data is NULL");
+		goto free_jpeg_hw_intf;
+	}
+
+	core_info = (struct cam_jpeg_enc_device_core_info *)
+		jpeg_enc_dev->core_info;
+	if (!core_info) {
+		CAM_ERR(CAM_JPEG, "error core data NULL");
+		goto deinit_soc;
+	}
+
+	rc = cam_jpeg_enc_unregister_cpas(core_info);
+	if (rc)
+		CAM_ERR(CAM_JPEG, " unreg failed to reg cpas %d", rc);
+
+	mutex_destroy(&core_info->core_mutex);
+	kfree(core_info);
+
+deinit_soc:
+	rc = cam_soc_util_release_platform_resource(&jpeg_enc_dev->soc_info);
+	if (rc)
+		CAM_ERR(CAM_JPEG, "Failed to deinit soc rc=%d", rc);
+
+	mutex_destroy(&jpeg_enc_dev->hw_mutex);
+	kfree(jpeg_enc_dev);
+
+free_jpeg_hw_intf:
+	kfree(jpeg_enc_dev_intf);
+}
+
+const static struct component_ops cam_jpeg_enc_component_ops = {
+	.bind = cam_jpeg_enc_component_bind,
+	.unbind = cam_jpeg_enc_component_unbind,
+};
+
+static int cam_jpeg_enc_remove(struct platform_device *pdev)
+{
+	component_del(&pdev->dev, &cam_jpeg_enc_component_ops);
+	return 0;
+}
+
+static int cam_jpeg_enc_probe(struct platform_device *pdev)
+{
+	int rc = 0;
+
+	CAM_DBG(CAM_JPEG, "Adding JPEG component");
+	rc = component_add(&pdev->dev, &cam_jpeg_enc_component_ops);
+	if (rc)
+		CAM_ERR(CAM_JPEG, "failed to add component rc: %d", rc);
+
+	return rc;
+}
+
 static const struct of_device_id cam_jpeg_enc_dt_match[] = {
 	{
 		.compatible = "qcom,cam_jpeg_enc",
@@ -204,7 +231,7 @@ static const struct of_device_id cam_jpeg_enc_dt_match[] = {
 };
 MODULE_DEVICE_TABLE(of, cam_jpeg_enc_dt_match);
 
-static struct platform_driver cam_jpeg_enc_driver = {
+struct platform_driver cam_jpeg_enc_driver = {
 	.probe = cam_jpeg_enc_probe,
 	.remove = cam_jpeg_enc_remove,
 	.driver = {

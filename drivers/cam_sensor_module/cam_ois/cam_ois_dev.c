@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include "cam_ois_dev.h"
@@ -8,6 +8,7 @@
 #include "cam_ois_soc.h"
 #include "cam_ois_core.h"
 #include "cam_debug_util.h"
+#include "camera_main.h"
 
 static long cam_ois_subdev_ioctl(struct v4l2_subdev *sd,
 	unsigned int cmd, void *arg)
@@ -244,12 +245,13 @@ static int cam_ois_i2c_driver_remove(struct i2c_client *client)
 	return 0;
 }
 
-static int32_t cam_ois_platform_driver_probe(
-	struct platform_device *pdev)
+static int cam_ois_component_bind(struct device *dev,
+	struct device *master_dev, void *data)
 {
 	int32_t                         rc = 0;
 	struct cam_ois_ctrl_t          *o_ctrl = NULL;
 	struct cam_ois_soc_private     *soc_private = NULL;
+	struct platform_device *pdev = to_platform_device(dev);
 
 	o_ctrl = kzalloc(sizeof(struct cam_ois_ctrl_t), GFP_KERNEL);
 	if (!o_ctrl)
@@ -300,7 +302,7 @@ static int32_t cam_ois_platform_driver_probe(
 
 	platform_set_drvdata(pdev, o_ctrl);
 	o_ctrl->cam_ois_state = CAM_OIS_INIT;
-
+	CAM_DBG(CAM_OIS, "Component bound successfully");
 	return rc;
 unreg_subdev:
 	cam_unregister_subdev(&(o_ctrl->v4l2_dev_str));
@@ -313,18 +315,20 @@ free_o_ctrl:
 	return rc;
 }
 
-static int cam_ois_platform_driver_remove(struct platform_device *pdev)
+static void cam_ois_component_unbind(struct device *dev,
+	struct device *master_dev, void *data)
 {
 	int                             i;
 	struct cam_ois_ctrl_t          *o_ctrl;
 	struct cam_ois_soc_private     *soc_private;
 	struct cam_sensor_power_ctrl_t *power_info;
 	struct cam_hw_soc_info         *soc_info;
+	struct platform_device *pdev = to_platform_device(dev);
 
 	o_ctrl = platform_get_drvdata(pdev);
 	if (!o_ctrl) {
 		CAM_ERR(CAM_OIS, "ois device is NULL");
-		return -EINVAL;
+		return;
 	}
 
 	CAM_INFO(CAM_OIS, "platform driver remove invoked");
@@ -346,7 +350,29 @@ static int cam_ois_platform_driver_remove(struct platform_device *pdev)
 	platform_set_drvdata(pdev, NULL);
 	v4l2_set_subdevdata(&o_ctrl->v4l2_dev_str.sd, NULL);
 	kfree(o_ctrl);
+}
 
+const static struct component_ops cam_ois_component_ops = {
+	.bind = cam_ois_component_bind,
+	.unbind = cam_ois_component_unbind,
+};
+
+static int32_t cam_ois_platform_driver_probe(
+	struct platform_device *pdev)
+{
+	int rc = 0;
+
+	CAM_DBG(CAM_OIS, "Adding OIS Sensor component");
+	rc = component_add(&pdev->dev, &cam_ois_component_ops);
+	if (rc)
+		CAM_ERR(CAM_OIS, "failed to add component rc: %d", rc);
+
+	return rc;
+}
+
+static int cam_ois_platform_driver_remove(struct platform_device *pdev)
+{
+	component_del(&pdev->dev, &cam_ois_component_ops);
 	return 0;
 }
 
@@ -358,7 +384,7 @@ static const struct of_device_id cam_ois_dt_match[] = {
 
 MODULE_DEVICE_TABLE(of, cam_ois_dt_match);
 
-static struct platform_driver cam_ois_platform_driver = {
+struct platform_driver cam_ois_platform_driver = {
 	.driver = {
 		.name = "qcom,ois",
 		.owner = THIS_MODULE,

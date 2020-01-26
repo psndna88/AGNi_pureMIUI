@@ -29,6 +29,7 @@
 #include "cam_hw_mgr_intf.h"
 #include "cam_debug_util.h"
 #include "cam_smmu_api.h"
+#include "camera_main.h"
 
 #define OPE_DEV_NAME        "cam-ope"
 
@@ -140,14 +141,16 @@ const struct v4l2_subdev_internal_ops cam_ope_subdev_internal_ops = {
 	.close = cam_ope_subdev_close,
 };
 
-static int cam_ope_subdev_probe(struct platform_device *pdev)
+static int cam_ope_subdev_component_bind(struct device *dev,
+	struct device *master_dev, void *data)
 {
 	int rc = 0, i = 0;
 	struct cam_node *node;
 	struct cam_hw_mgr_intf *hw_mgr_intf;
 	int iommu_hdl = -1;
+	struct platform_device *pdev = to_platform_device(dev);
 
-	CAM_DBG(CAM_OPE, "OPE subdev probe start");
+	CAM_DBG(CAM_OPE, "Binding OPE subdev component");
 	if (!pdev) {
 		CAM_ERR(CAM_OPE, "pdev is NULL");
 		return -EINVAL;
@@ -200,7 +203,7 @@ static int cam_ope_subdev_probe(struct platform_device *pdev)
 	g_ope_dev.open_cnt = 0;
 	mutex_init(&g_ope_dev.ope_lock);
 
-	CAM_DBG(CAM_OPE, "OPE subdev probe complete");
+	CAM_DBG(CAM_OPE, "Subdev component bound successfully");
 
 	return rc;
 
@@ -214,35 +217,59 @@ hw_alloc_fail:
 	return rc;
 }
 
-static int cam_ope_subdev_remove(struct platform_device *pdev)
+static void cam_ope_subdev_component_unbind(struct device *dev,
+	struct device *master_dev, void *data)
 {
 	int i;
 	struct v4l2_subdev *sd;
 	struct cam_subdev *subdev;
+	struct platform_device *pdev = to_platform_device(dev);
 
 	if (!pdev) {
 		CAM_ERR(CAM_OPE, "pdev is NULL");
-		return -ENODEV;
+		return;
 	}
 
 	sd = platform_get_drvdata(pdev);
 	if (!sd) {
 		CAM_ERR(CAM_OPE, "V4l2 subdev is NULL");
-		return -ENODEV;
+		return;
 	}
 
 	subdev = v4l2_get_subdevdata(sd);
 	if (!subdev) {
 		CAM_ERR(CAM_OPE, "cam subdev is NULL");
-		return -ENODEV;
+		return;
 	}
 
 	for (i = 0; i < OPE_CTX_MAX; i++)
 		cam_ope_context_deinit(&g_ope_dev.ctx_ope[i]);
+
 	cam_node_deinit(g_ope_dev.node);
 	cam_subdev_remove(&g_ope_dev.sd);
 	mutex_destroy(&g_ope_dev.ope_lock);
+}
 
+const static struct component_ops cam_ope_subdev_component_ops = {
+	.bind = cam_ope_subdev_component_bind,
+	.unbind = cam_ope_subdev_component_unbind,
+};
+
+static int cam_ope_subdev_probe(struct platform_device *pdev)
+{
+	int rc = 0;
+
+	CAM_DBG(CAM_OPE, "Adding OPE subdev component");
+	rc = component_add(&pdev->dev, &cam_ope_subdev_component_ops);
+	if (rc)
+		CAM_ERR(CAM_OPE, "failed to add component rc: %d", rc);
+
+	return rc;
+}
+
+static int cam_ope_subdev_remove(struct platform_device *pdev)
+{
+	component_del(&pdev->dev, &cam_ope_subdev_component_ops);
 	return 0;
 }
 
@@ -252,7 +279,7 @@ static const struct of_device_id cam_ope_dt_match[] = {
 };
 
 
-static struct platform_driver cam_ope_driver = {
+struct platform_driver cam_ope_subdev_driver = {
 	.probe = cam_ope_subdev_probe,
 	.remove = cam_ope_subdev_remove,
 	.driver = {
@@ -264,12 +291,12 @@ static struct platform_driver cam_ope_driver = {
 
 int cam_ope_subdev_init_module(void)
 {
-	return platform_driver_register(&cam_ope_driver);
+	return platform_driver_register(&cam_ope_subdev_driver);
 }
 
 void cam_ope_subdev_exit_module(void)
 {
-	platform_driver_unregister(&cam_ope_driver);
+	platform_driver_unregister(&cam_ope_subdev_driver);
 }
 
 MODULE_DESCRIPTION("MSM OPE driver");

@@ -375,10 +375,6 @@ int cam_cci_parse_dt_info(struct platform_device *pdev,
 	cam_cci_init_cci_params(new_cci_dev);
 	cam_cci_init_clk_params(new_cci_dev);
 
-	rc = of_platform_populate(pdev->dev.of_node, NULL, NULL, &pdev->dev);
-	if (rc)
-		CAM_ERR(CAM_CCI, "failed to add child nodes, rc=%d", rc);
-
 	for (i = 0; i < MASTER_MAX; i++) {
 		new_cci_dev->write_wq[i] = create_singlethread_workqueue(
 			"cam_cci_wq");
