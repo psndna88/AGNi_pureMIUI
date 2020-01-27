@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_REQ_MGR_DEV_H_
@@ -28,7 +28,7 @@ struct cam_req_mgr_device {
 	bool state;
 	int32_t open_cnt;
 	struct mutex cam_lock;
-	struct v4l2_fh  *cam_eventq;
+	struct v4l2_fh *cam_eventq;
 	spinlock_t cam_eventq_lock;
 };
 

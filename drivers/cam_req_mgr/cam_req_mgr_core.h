@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  */
 #ifndef _CAM_REQ_MGR_CORE_H_
 #define _CAM_REQ_MGR_CORE_H_
@@ -63,7 +63,6 @@ enum crm_workq_task_type {
  * @flush_info     : contains info of cancelled reqest
  * @dev_req        : contains tracking info of available req id at device
  * @send_req       : contains info of apply settings to be sent to devs in link
- * @apply_req      : contains info of which request is applied at device
  * @notify_trigger : contains notification from IFE to CRM about trigger
  * @notify_err     : contains error info happened while processing request
  * -
@@ -100,8 +99,8 @@ enum crm_req_state {
  * State machine for life cycle of request in input queue
  * NO_REQ     : empty slot
  * REQ_ADDED  : new entry in slot
- * PENDING    : waiting for next trigger to apply
- * APPLIED    : req is sent to all devices
+ * REQ_PENDING    : waiting for next trigger to apply
+ * REQ_APPLIED    : req is sent to all devices
  * INVALID    : invalid state
  */
 enum crm_slot_status {
@@ -206,7 +205,7 @@ struct cam_req_mgr_tbl_slot {
  * @dev_count     : num of devices having same pipeline delay
  * @dev_mask      : mask to track which devices are linked
  * @skip_traverse : to indicate how many traverses need to be dropped
- *              by this table especially in the beginning or bubble recovery
+ *                  by this table especially in the beginning or bubble recovery
  * @next          : pointer to next pipeline delay request table
  * @pd_delta      : differnce between this table's pipeline delay and next
  * @num_slots     : number of request slots present in the table
@@ -268,7 +267,7 @@ struct cam_req_mgr_req_queue {
  * @in_q        : Poiner to Input request queue
  * @l_tbl       : unique pd request tables.
  * @num_tbl     : how many unique pd value devices are present
- * @apply_data	: Holds information about request id for a request
+ * @apply_data  : Holds information about request id for a request
  * @lock        : mutex lock protecting request data ops.
  */
 struct cam_req_mgr_req_data {
@@ -384,7 +383,6 @@ struct cam_req_mgr_core_link {
  * @num_links          : num of active links for current session
  * - Links of this session
  * @links              : pointer to array of links within session
- * @in_q               : Input request queue one per session
  * - Session private data
  * @entry              : pvt data - entry in the list of sessions
  * @lock               : pvt data - spin lock to guard session data
@@ -462,8 +460,7 @@ int cam_req_mgr_unlink(struct cam_req_mgr_unlink_info *unlink_info);
  * @brief: Request is scheduled
  * @sched_req: request id, session and link id info, bubble recovery info
  */
-int cam_req_mgr_schedule_request(
-	struct cam_req_mgr_sched_request *sched_req);
+int cam_req_mgr_schedule_request(struct cam_req_mgr_sched_request *sched_req);
 
 /**
  * cam_req_mgr_sync_mode_setup()
@@ -477,8 +474,7 @@ int cam_req_mgr_sync_config(struct cam_req_mgr_sync_mode *sync_info);
  * @brief: flush all requests
  * @flush_info: requests related to link and session
  */
-int cam_req_mgr_flush_requests(
-	struct cam_req_mgr_flush_info *flush_info);
+int cam_req_mgr_flush_requests(struct cam_req_mgr_flush_info *flush_info);
 
 /**
  * cam_req_mgr_core_device_init()
