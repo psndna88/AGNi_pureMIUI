@@ -745,17 +745,21 @@ int start_sta_mode(struct sigma_dut *dut)
 	fclose(f);
 
 #ifdef  __QNXNTO__
-	snprintf(buf, sizeof(buf), "wpa_supplicant -Dqca -i%s -B %s%s"
+	snprintf(buf, sizeof(buf), "wpa_supplicant -Dqca -i%s -B %s%s%s"
 		 "-c" SIGMA_TMPDIR "/sigma_dut-sta.conf", ifname,
-		 dut->wpa_supplicant_debug_log ? "-K -t -ddd -f " : "",
+		 dut->wpa_supplicant_debug_log ? "-K -t -ddd " : "",
+		 (dut->wpa_supplicant_debug_log &&
+		  dut->wpa_supplicant_debug_log[0]) ? "-f " : "",
 		 dut->wpa_supplicant_debug_log ?
 		 dut->wpa_supplicant_debug_log : "");
 #else /*__QNXNTO__*/
-	snprintf(buf, sizeof(buf), "%swpa_supplicant -Dnl80211 -i%s -B %s%s "
+	snprintf(buf, sizeof(buf), "%swpa_supplicant -Dnl80211 -i%s -B %s%s%s "
 		 "-c" SIGMA_TMPDIR "/sigma_dut-sta.conf",
 		 file_exists("wpa_supplicant") ? "./" : "",
 		 ifname,
-		 dut->wpa_supplicant_debug_log ? "-K -t -ddd -f " : "",
+		 dut->wpa_supplicant_debug_log ? "-K -t -ddd " : "",
+		 (dut->wpa_supplicant_debug_log &&
+		  dut->wpa_supplicant_debug_log[0]) ? "-f " : "",
 		 dut->wpa_supplicant_debug_log ?
 		 dut->wpa_supplicant_debug_log : "");
 #endif /*__QNXNTO__*/
