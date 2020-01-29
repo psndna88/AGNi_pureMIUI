@@ -7369,6 +7369,7 @@ enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 	const char *ifname;
 	char buf[500];
 	char path[100];
+	char ap_conf_path[100];
 	enum driver_type drv;
 	const char *key_mgmt;
 #ifdef ANDROID
@@ -7406,7 +7407,8 @@ enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 	if (drv == DRIVER_OPENWRT)
 		return cmd_owrt_ap_config_commit(dut, conn, cmd);
 
-	f = fopen(SIGMA_TMPDIR "/sigma_dut-ap.conf", "w");
+	f = fopen(concat_sigma_tmpdir(dut, "/sigma_dut-ap.conf", ap_conf_path,
+				      sizeof(ap_conf_path)), "w");
 	if (f == NULL) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"%s: Failed to open sigma_dut-ap.conf",
@@ -8333,28 +8335,30 @@ skip_key_mgmt:
 	/* Set proper conf file permissions so that hostapd process
 	 * can access it.
 	 */
-	if (chmod(SIGMA_TMPDIR "/sigma_dut-ap.conf",
+	if (chmod(concat_sigma_tmpdir(dut, "/sigma_dut-ap.conf", ap_conf_path,
+				      sizeof(ap_conf_path)),
 		  S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP) < 0)
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Error changing permissions");
 
 	gr = getgrnam("wifi");
-	if (!gr ||
-	    chown(SIGMA_TMPDIR "/sigma_dut-ap.conf", -1, gr->gr_gid) < 0)
+	if (!gr || chown(concat_sigma_tmpdir(dut, "/sigma_dut-ap.conf",
+					     ap_conf_path, sizeof(ap_conf_path)),
+			 -1, gr->gr_gid) < 0)
 		sigma_dut_print(dut, DUT_MSG_ERROR, "Error changing groupid");
 #endif /* ANDROID */
 
 	if (drv == DRIVER_QNXNTO) {
 		snprintf(buf, sizeof(buf),
-			 "hostapd -B %s%s%s %s%s" SIGMA_TMPDIR
-			 "/sigma_dut-ap.conf",
+			 "hostapd -B %s%s%s %s%s %s/sigma_dut-ap.conf",
 			 dut->hostapd_debug_log ? "-dddKt " : "",
 			 (dut->hostapd_debug_log && dut->hostapd_debug_log[0]) ?
 			 "-f " : "",
 			 dut->hostapd_debug_log ? dut->hostapd_debug_log : "",
 			 dut->hostapd_entropy_log ? " -e" : "",
 			 dut->hostapd_entropy_log ? dut->hostapd_entropy_log :
-			 "");
+			 "",
+			 dut->sigma_tmpdir);
 	} else {
 		/*
 		 * It looks like a monitor interface can cause some issues for
@@ -8368,8 +8372,8 @@ skip_key_mgmt:
 
 		snprintf(path, sizeof(path), "%shostapd",
 			 file_exists("hostapd") ? "./" : "");
-		snprintf(buf, sizeof(buf), "%s -B%s%s%s%s%s%s " SIGMA_TMPDIR
-			 "/sigma_dut-ap.conf",
+		snprintf(buf, sizeof(buf),
+			 "%s -B%s%s%s%s%s%s %s/sigma_dut-ap.conf",
 			 dut->hostapd_bin ? dut->hostapd_bin : path,
 			 dut->hostapd_debug_log ? " -dddKt" : "",
 			 (dut->hostapd_debug_log && dut->hostapd_debug_log[0]) ?
@@ -8379,7 +8383,8 @@ skip_key_mgmt:
 			 dut->hostapd_entropy_log ? dut->hostapd_entropy_log :
 			 "",
 			 dut->use_hostapd_pid_file ?
-			 " -P " SIGMA_DUT_HOSTAPD_PID_FILE : "");
+			 " -P " SIGMA_DUT_HOSTAPD_PID_FILE : "",
+			 dut->sigma_tmpdir);
 	}
 
 	sigma_dut_print(dut, DUT_MSG_DEBUG, "hostapd command: %s", buf);

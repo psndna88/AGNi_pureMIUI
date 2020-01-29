@@ -353,6 +353,8 @@ struct sigma_dut {
 	struct sigma_cmd_handler *cmds;
 	int response_sent;
 
+	const char *sigma_tmpdir;
+
 	/* Default timeout value (seconds) for commands */
 	unsigned int default_timeout;
 

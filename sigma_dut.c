@@ -824,6 +824,7 @@ static void set_defaults(struct sigma_dut *dut)
 	/* by default, enable writing of traffic stream stats */
 	dut->write_stats = 1;
 	dut->priv_cmd = "iwpriv";
+	dut->sigma_tmpdir = SIGMA_TMPDIR;
 }
 
 
@@ -983,6 +984,7 @@ static void usage(void)
 #endif /* MIRACAST */
 	       "       [-z <client socket directory path \\\n"
 	       "       Ex: </data/vendor/wifi/sockets>] \\\n"
+	       "       [-Z <Override default tmp dir path>] \\\n"
 	       "       [-r <HT40 or 2.4_HT40>]\n");
 	printf("local command: sigma_dut [-p<port>] <-l<cmd>>\n");
 }
@@ -1006,7 +1008,7 @@ int main(int argc, char *argv[])
 
 	for (;;) {
 		c = getopt(argc, argv,
-			   "aAb:Bc:C:dDE:e:fF:gGhH:j:J:i:Ik:K:l:L:m:M:nN:o:O:p:P:qr:R:s:S:tT:uv:VWw:x:y:z:2");
+			   "aAb:Bc:C:dDE:e:fF:gGhH:j:J:i:Ik:K:l:L:m:M:nN:o:O:p:P:qr:R:s:S:tT:uv:VWw:x:y:z:Z:2");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -1195,6 +1197,9 @@ int main(int argc, char *argv[])
 #endif /* MIRACAST */
 		case 'z':
 			client_socket_path = optarg;
+			break;
+		case 'Z':
+			sigma_dut.sigma_tmpdir = optarg;
 			break;
 		case '2':
 			sigma_dut.sae_h2e_default = 1;

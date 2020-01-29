@@ -52,6 +52,9 @@ int set_cred(const char *ifname, int id, const char *field, const char *value);
 int set_cred_quoted(const char *ifname, int id, const char *field,
 		    const char *value);
 
+const char * concat_sigma_tmpdir(struct sigma_dut *dut, const char *src,
+				 char *dst, size_t len);
+
 int start_sta_mode(struct sigma_dut *dut);
 void stop_sta_mode(struct sigma_dut *dut);
 
