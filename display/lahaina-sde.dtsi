@@ -614,10 +614,10 @@
 		label = "dsi-phy-0";
 		cell-index = <0>;
 		#clock-cells = <1>;
-		reg = <0xae94900 0x77c>,
+		reg = <0xae94400 0x800>,
 		      <0xae94900 0x27c>,
 		      <0xaf03000 0x8>,
-		      <0x0ae94200 0x100>;
+		      <0xae94200 0x100>;
 		reg-names = "dsi_phy", "pll_base", "gdsc_base", "dyn_refresh_base";
 		pll-label = "dsi_pll_5nm";
 		vdda-0p9-supply = <&L5B>;
@@ -651,10 +651,10 @@
 		label = "dsi-phy-1";
 		cell-index = <1>;
 		#clock-cells = <1>;
-		reg = <0xae96900 0x77c>,
+		reg = <0xae96400 0x800>,
 		      <0xae96900 0x27c>,
 		      <0xaf03000 0x8>,
-		      <0x0ae96200 0x100>;
+		      <0xae96200 0x100>;
 		reg-names = "dsi_phy", "pll_base", "gdsc_base", "dyn_refresh_base";
 		pll-label = "dsi_pll_5nm";
 		vdda-0p9-supply = <&L5B>;
