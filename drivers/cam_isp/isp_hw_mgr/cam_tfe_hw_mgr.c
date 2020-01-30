@@ -1350,7 +1350,7 @@ static int cam_tfe_hw_mgr_acquire_tpg(
 	uint32_t i, j = 0;
 	struct cam_tfe_hw_mgr                        *tfe_hw_mgr;
 	struct cam_hw_intf                           *hw_intf;
-	struct cam_top_tpg_hw_reserve_resource_args   tpg_reserve;
+	struct cam_top_tpg_ver1_reserve_args          tpg_reserve;
 
 	tfe_hw_mgr = tfe_ctx->hw_mgr;
 

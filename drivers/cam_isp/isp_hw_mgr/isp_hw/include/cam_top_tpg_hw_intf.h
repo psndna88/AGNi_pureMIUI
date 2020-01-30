@@ -8,6 +8,7 @@
 
 #include "cam_isp_hw.h"
 #include "cam_hw_intf.h"
+#include "cam_ife_csid_hw_intf.h"
 
 /* Max top tpg instance */
 #define CAM_TOP_TPG_HW_NUM_MAX                        2
@@ -37,7 +38,7 @@ struct cam_top_tpg_hw_caps {
 };
 
 /**
- * struct cam_tfe_csid_hw_reserve_resource_args- hw reserve
+ * struct cam_top_tpg_ver1_reserve_args- hw reserve
  * @num_inport:   number of inport
  *                TPG support 4 dt types, each different dt comes in different
  *                in port.
@@ -45,10 +46,24 @@ struct cam_top_tpg_hw_caps {
  * @node_res :    Reserved resource structure pointer
  *
  */
-struct cam_top_tpg_hw_reserve_resource_args {
+struct cam_top_tpg_ver1_reserve_args {
 	uint32_t                          num_inport;
 	struct cam_isp_tfe_in_port_info  *in_port[CAM_TOP_TPG_MAX_SUPPORTED_DT];
 	struct cam_isp_resource_node     *node_res;
+};
+
+/**
+ * struct cam_top_tpg_ver2_reserve_args
+ * @num_inport:   number of inport
+ *                TPG supports 1 VC/DT
+ * @in_port :     Input port resource info structure pointer
+ * @node_res :    Reserved resource structure pointer
+ *
+ */
+struct cam_top_tpg_ver2_reserve_args {
+	uint32_t                                  num_inport;
+	struct cam_isp_in_port_generic_info      *in_port;
+	struct cam_isp_resource_node             *node_res;
 };
 
 /**

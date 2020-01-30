@@ -15,13 +15,14 @@ extern struct platform_driver cam_cpas_driver;
 extern struct platform_driver cam_cdm_intf_driver;
 extern struct platform_driver cam_hw_cdm_driver;
 #ifdef CONFIG_SPECTRA_ISP
+extern struct platform_driver cam_top_tpg_driver;
 extern struct platform_driver cam_ife_csid17x_driver;
 extern struct platform_driver cam_ife_csid_lite_driver;
 extern struct platform_driver cam_vfe_driver;
 extern struct platform_driver isp_driver;
 #endif
 #ifdef CONFIG_SPECTRA_TFE
-extern struct platform_driver cam_top_tpg_v1_driver;
+extern struct platform_driver cam_top_tpg_driver;
 extern struct platform_driver cam_tfe_driver;
 extern struct platform_driver cam_tfe_csid530_driver;
 #endif
