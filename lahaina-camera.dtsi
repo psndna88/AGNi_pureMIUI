@@ -935,7 +935,7 @@
 					traffic-data =
 					<CAM_CPAS_PATH_DATA_IFE_RDI_ALL>;
 					traffic-transaction-type =
-					<CAM_CPAS_TRANSACTION_READ>;
+					<CAM_CPAS_TRANSACTION_WRITE>;
 					constituent-paths =
 					<CAM_CPAS_PATH_DATA_IFE_RDI0
 					CAM_CPAS_PATH_DATA_IFE_RDI1
