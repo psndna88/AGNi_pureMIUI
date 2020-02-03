@@ -23,6 +23,9 @@
 #include <asm/cacheflush.h>
 #include <soc/qcom/scm.h>
 #include "governor.h"
+#include <linux/kernel.h>
+#include <linux/display_state.h>
+#include <linux/adrenokgsl_state.h>
 
 static DEFINE_SPINLOCK(tz_lock);
 static DEFINE_SPINLOCK(sample_lock);
@@ -107,6 +110,31 @@ static ssize_t gpu_load_show(struct device *dev,
 	acc_relative_busy = 0;
 	spin_unlock(&sample_lock);
 	return snprintf(buf, PAGE_SIZE, "%lu\n", sysfs_busy_perc);
+}
+
+
+/*
+ * AGNi: this function call returns the gpu load in % if display is on
+ */
+unsigned long adreno_load(void) {
+	unsigned long busy_perc = 0;
+	/*
+	 * Average out the samples taken since last read
+	 * This will keep the average value in sync with
+	 * with the client sampling duration.
+	 */
+	if (is_display_on()) {
+		spin_lock(&sample_lock);
+		if (acc_total)
+			busy_perc = DIV_ROUND_CLOSEST((acc_relative_busy * 100),acc_total);
+
+		/* Reset the parameters */
+		acc_total = 0;
+		acc_relative_busy = 0;
+		spin_unlock(&sample_lock);
+		return busy_perc;
+	} else
+		return 0;
 }
 
 /*
