@@ -104,6 +104,7 @@ Optional properties:
 - qcom,sde-dspp-size:		A u32 value indicates the address range for each dspp.
 - qcom,sde-intf-size:		A u32 value indicates the address range for each intf.
 - qcom,sde-dsc-size:		A u32 value indicates the address range for each dsc.
+- qcom,sde-vdc-size:		A u32 value indicates the address range for each vdc.
 - qcom,sde-cdm-size:		A u32 value indicates the address range for each cdm.
 - qcom,sde-pp-size:		A u32 value indicates the address range for each pingpong.
 - qcom,sde-merge-3d-size:	A u32 value indicates the address range for each merge 3d.
@@ -186,6 +187,7 @@ Optional properties:
 - qcom,sde-smart-dma-rev:	A string entry indicating the smart dma version
 				supported on the device. Supported entries are
 				"smart_dma_v1" and "smart_dma_v2".
+- qcom,sde-vdc-hw-rev:	A string indicating the hw version of vdc.
 - qcom,sde-intf-type:		Array of string provides the interface type information.
 				Possible string values
 					"dsi" - dsi display interface
@@ -227,6 +229,13 @@ Optional properties:
 - qcom,sde-dsc-native422-supp:	Array of flags indicating whether corresponding dsc
 				block can support native 422 and native 420
 				encoding.
+- qcom,sde-vdc-off:		A u32 offset address for the available vdc blocks.
+						This offset is calculated from register "mdp_phys"
+						defined in reg property.
+- qcom,sde-vdc-enc:		A u32 offset address for the vdc encoder block. This offset is
+						calculated from qcom,sde-vdc-off.
+- qcom,sde-vdc-ctl:		A u32 offset address for the vdc ctl block. This offset is
+						calculated from qcom,sde-vdc-off.
 - qcom,sde-qdss-off:		A u32 offset indicates the qdss block offset.
 - qcom,sde-dither-off:		A u32 offset indicates the dither block offset on pingpong.
 - qcom,sde-dither-version:	A u32 value indicates the dither block version.
@@ -602,6 +611,11 @@ Example:
     qcom,sde-pp-slave = <0x0 0x0 0x0 0x0>;
     qcom,sde-cdm-off = <0x0007a200>;
     qcom,sde-dsc-off = <0x00081000 0x00081400>;
+    qcom,sde-vdc-off = <0x7C000>;
+    qcom,sde-vdc-size = <0xf10>;
+    qcom,sde-vdc-hw-rev = "vdc_1_1";
+    qcom,sde-vdc-enc = <0x200>;
+    qcom,sde-vdc-ctl = <0xf00>;
     qcom,sde-intf-max-prefetch-lines = <0x15 0x15 0x15 0x15>;
 
     qcom,sde-mixer-pair-mask = <2 1 6 0 0 3>;
