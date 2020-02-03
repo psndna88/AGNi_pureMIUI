@@ -585,7 +585,8 @@
 			"csid0", "csid1", "csid2", "csid3",
 			"csid4", "ife0", "ife1", "ife2", "ife3", "ife4",
 			"custom0", "custom1", "ipe0", "cam-cdm-intf0",
-			"cpas-cdm0", "bps0", "icp0", "jpeg-dma0", "jpeg-enc0";
+			"cpas-cdm0", "bps0", "icp0", "jpeg-dma0", "jpeg-enc0",
+			"tpg0", "tpg1";
 
 		camera-bus-nodes {
 			level3-nodes {
@@ -1565,6 +1566,58 @@
 			"turbo";
 		src-clock-name = "ife_clk_src";
 		clock-control-debugfs = "true";
+		status = "ok";
+	};
+
+	cam_csiphy_tpg0: qcom,tpg0@ac97000 {
+		cell-index = <0>;
+		compatible = "qcom,tpg102";
+		reg-names = "tpg0", "cam_cpas_top";
+		reg = <0xac97000 0x100>,
+			<0xac40000 0x1000>;
+		reg-cam-base = <0x97000 0x40000>;
+		regulator-names = "camss";
+		camss-supply = <&cam_cc_titan_top_gdsc>;
+		clock-names =
+			"cphy_rx_clk_src",
+			"csiphy0_clk",
+			"csi0phytimer_clk_src",
+			"csi0phytimer_clk";
+		clocks =
+			<&clock_camcc CAM_CC_CPHY_RX_CLK_SRC>,
+			<&clock_camcc CAM_CC_CSIPHY0_CLK>,
+			<&clock_camcc CAM_CC_CSI0PHYTIMER_CLK_SRC>,
+			<&clock_camcc CAM_CC_CSI0PHYTIMER_CLK>;
+		clock-rates =
+			<400000000 0 300000000 0>;
+		clock-cntl-level = "nominal";
+		src-clock-name = "csi0phytimer_clk_src";
+		status = "ok";
+	};
+
+	cam_csiphy_tpg1: qcom,tpg1@ac98000 {
+		cell-index = <1>;
+		compatible = "qcom,tpg102";
+		reg-names = "tpg1", "cam_cpas_top";
+		reg = <0xac98000 0x100>,
+			<0xac40000 0x1000>;
+		reg-cam-base = <0x98000 0x40000>;
+		regulator-names = "camss";
+		camss-supply = <&cam_cc_titan_top_gdsc>;
+		clock-names =
+			"cphy_rx_clk_src",
+			"csiphy1_clk",
+			"csi1phytimer_clk_src",
+			"csi1phytimer_clk";
+		clocks =
+			<&clock_camcc CAM_CC_CPHY_RX_CLK_SRC>,
+			<&clock_camcc CAM_CC_CSIPHY1_CLK>,
+			<&clock_camcc CAM_CC_CSI1PHYTIMER_CLK_SRC>,
+			<&clock_camcc CAM_CC_CSI1PHYTIMER_CLK>;
+		clock-rates =
+			<400000000 0 300000000 0>;
+		clock-cntl-level = "nominal";
+		src-clock-name = "csi1phytimer_clk_src";
 		status = "ok";
 	};
 
