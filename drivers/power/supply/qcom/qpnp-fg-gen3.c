@@ -893,8 +893,8 @@ static int fg_get_msoc(struct fg_chip *chip, int *msoc)
 		*msoc = DIV_ROUND_CLOSEST((*msoc - 1) * (FULL_CAPACITY - 2),
 				FULL_SOC_RAW - 2) + 1;
 
-	agni_memprobe();
 	adreno_load();
+	agni_memprobe();
 
 	if (*msoc <= LOW_CAPACITY)
 		low_batt_swap_stall = true;

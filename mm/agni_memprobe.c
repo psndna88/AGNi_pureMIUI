@@ -3,21 +3,21 @@
  * (c) Parvinder Singh (psndna88@gmail.com)
  * Derived from fs/proc/meminfo.c
  * Calculate % of used ram
- * v1.1: trigger for free-ram based dynamic swappiness
- *       Do not swap to when enough ram available
+ * v1.1: trigger for available-ram based dynamic swappiness
+ *       Do not swap when enough ram available
  * v1.2: gpu workload awareness from msm_adreno_tz governor
  * 	 Do not swap on high gpu usage like gaming
+ * v1.3: feed actual zram usage of ram as addition for available ram
  */
 
 #include <asm/page.h>
 #include <linux/kernel.h>
 #include <linux/adrenokgsl_state.h>
+#include <linux/agni_meminfo.h>
 
 bool triggerswapping = false;
-extern unsigned long totalram_pages;
-extern long si_mem_available(void);
 
-#define SWAPTRIGGER 25 /* % of free ram */
+#define SWAPTRIGGER 20 /* % of free ram */
 #define GPULOADTRIGGER 75 /* gpu load % */
 
 bool agni_memprober(void) {
@@ -32,7 +32,7 @@ bool agni_memprober(void) {
 	totalmemk = K(totalram_pages);
 #undef K
 
-	mem_used_perc = DIV_ROUND_CLOSEST((availablememk * 100),totalmemk);
+	mem_used_perc = DIV_ROUND_CLOSEST(((availablememk + zram_ram_usage) * 100),totalmemk);
 	
 	gpu_load_perc = adreno_load();
 
