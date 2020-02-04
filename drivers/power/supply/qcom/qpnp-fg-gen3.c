@@ -841,12 +841,14 @@ static int fg_get_msoc_raw(struct fg_chip *chip, int *val)
 }
 
 #define FULL_CAPACITY	100
+#define HIGH_CAPACITY	80
 #define LOW_CAPACITY	25
 #define FULL_SOC_RAW	255
 #if defined(CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A)
 #define FULL_SOC_REPORT_THR 250
 #endif
 bool low_batt_swap_stall = false;
+bool batt_swap_push = false;
 
 static int fg_get_msoc(struct fg_chip *chip, int *msoc)
 {
@@ -893,14 +895,18 @@ static int fg_get_msoc(struct fg_chip *chip, int *msoc)
 		*msoc = DIV_ROUND_CLOSEST((*msoc - 1) * (FULL_CAPACITY - 2),
 				FULL_SOC_RAW - 2) + 1;
 
-	adreno_load();
-	agni_memprobe();
+	if (*msoc >= HIGH_CAPACITY)
+		batt_swap_push = true;
+	else
+		batt_swap_push = false;
 
 	if (*msoc <= LOW_CAPACITY)
 		low_batt_swap_stall = true;
 	else
 		low_batt_swap_stall = false;
 #endif
+	agni_memprobe();
+
 	return 0;
 }
 

@@ -12,5 +12,7 @@ extern bool triggerswapping;
 extern bool agni_memprober(void);
 extern void agni_memprobe(void);
 extern unsigned long zram_ram_usage;
+extern bool batt_swap_push;
+extern bool low_batt_swap_stall;
 
 #endif /* _LINUX_AGNI_MEMINFO_H */
