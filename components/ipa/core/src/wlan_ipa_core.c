@@ -243,9 +243,10 @@ static void wlan_ipa_send_pkt_to_tl(
 
 	qdf_spin_lock_bh(&ipa_ctx->q_lock);
 	/* get free Tx desc and assign ipa_tx_desc pointer */
-	if (qdf_list_remove_front(&ipa_ctx->tx_desc_list,
-				 (qdf_list_node_t **)&tx_desc) ==
-	    QDF_STATUS_SUCCESS) {
+	if (ipa_ctx->tx_desc_list.count &&
+	    qdf_list_remove_front(&ipa_ctx->tx_desc_list,
+				  (qdf_list_node_t **)&tx_desc) ==
+							QDF_STATUS_SUCCESS) {
 		tx_desc->ipa_tx_desc_ptr = ipa_tx_desc;
 		ipa_ctx->stats.num_tx_desc_q_cnt++;
 		qdf_spin_unlock_bh(&ipa_ctx->q_lock);
@@ -1219,8 +1220,16 @@ static QDF_STATUS wlan_ipa_setup_iface(struct wlan_ipa_priv *ipa_ctx,
 	if (device_mode == QDF_SAP_MODE) {
 		for (i = 0; i < WLAN_IPA_MAX_IFACE; i++) {
 			iface_context = &(ipa_ctx->iface_context[i]);
-			if (iface_context->dev == net_dev)
-				return QDF_STATUS_SUCCESS;
+			if (iface_context->dev == net_dev) {
+				if (iface_context->device_mode ==
+				    device_mode)
+					return QDF_STATUS_SUCCESS;
+
+				ipa_err("Obsolete iface %u found, device_mode %u, will remove it.",
+					i,
+					iface_context->device_mode);
+				wlan_ipa_cleanup_iface(iface_context);
+			}
 		}
 	}
 
@@ -2079,8 +2088,9 @@ static inline void wlan_ipa_free_tx_desc_list(struct wlan_ipa_priv *ipa_ctx)
 	qdf_ipa_rx_data_t *ipa_tx_desc;
 	qdf_list_node_t *node;
 
-	while (qdf_list_remove_front(&ipa_ctx->tx_desc_list, &node) ==
-	       QDF_STATUS_SUCCESS) {
+	while (ipa_ctx->tx_desc_list.count &&
+	       qdf_list_remove_front(&ipa_ctx->tx_desc_list, &node) ==
+							QDF_STATUS_SUCCESS) {
 		tmp_desc = qdf_container_of(node, struct wlan_ipa_tx_desc,
 					    node);
 

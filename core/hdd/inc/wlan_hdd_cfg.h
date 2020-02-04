@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1717,7 +1717,7 @@ enum hdd_dot11_mode {
  * <ini>
  * RoamRssiDiff - Enable roam based on rssi
  * @Min: 0
- * @Max: 30
+ * @Max: 100
  * @Default: 5
  *
  * This INI is used to decide whether to Roam or not based on RSSI. AP1 is the
@@ -1736,7 +1736,7 @@ enum hdd_dot11_mode {
  */
 #define CFG_ROAM_RSSI_DIFF_NAME                             "RoamRssiDiff"
 #define CFG_ROAM_RSSI_DIFF_MIN                              (0)
-#define CFG_ROAM_RSSI_DIFF_MAX                              (30)
+#define CFG_ROAM_RSSI_DIFF_MAX                              (100)
 #define CFG_ROAM_RSSI_DIFF_DEFAULT                          (5)
 
 /*
@@ -13687,6 +13687,31 @@ enum hdd_external_acs_policy {
 
 /*
  * <ini>
+ * vendor_roam_score_algorithm - Algorithm to calculate AP score
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * By default the value is 0 and default roam algorithm will be used.
+ * When the value is 1, the V2 roaming algorithm will be used:
+ * For this V2 algo, AP score calculation is based on below equation:
+ * AP Score = (RSSIfactor * rssiweight(0.65)) + (CUfactor *cuweight(0.35))
+ *
+ * Related: None
+ *
+ * Supported Feature: roam score algorithm
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_VENDOR_ROAM_SCORE_ALGORITHM_NAME  "vendor_roam_score_algorithm"
+#define CFG_VENDOR_ROAM_SCORE_ALGORITHM_MIN        0
+#define CFG_VENDOR_ROAM_SCORE_ALGORITHM_MAX        1
+#define CFG_VENDOR_ROAM_SCORE_ALGORITHM_DEFAULT    0
+
+/*
+ * <ini>
  * best_rssi_threshold - Best Rssi for score calculation
  * @Min: 0
  * @Max: 96
@@ -16935,6 +16960,22 @@ enum hdd_external_acs_policy {
 #define CFG_ENABLE_RING_BUFFER_MAX 1
 #define CFG_ENABLE_RING_BUFFER_DEFAULT 1
 
+
+/*
+ * <ini>
+ * gNumVdevs - max number of VDEVs supported
+ * @Min: 0x1
+ * @Max: 0x4
+ * @Default: CFG_TGT_NUM_VDEV
+ *
+ * Usage: External
+ * </ini>
+ */
+#define CFG_NUM_VDEV_ENABLE_NAME      "gNumVdevs"
+#define CFG_NUM_VDEV_ENABLE_MIN       (0x1)
+#define CFG_NUM_VDEV_ENABLE_MAX       (0x4)
+#define CFG_NUM_VDEV_ENABLE_DEFAULT   (CFG_TGT_NUM_VDEV)
+
 /*
  * Type declarations
  */
@@ -17936,6 +17977,10 @@ struct hdd_config {
 #ifdef WLAN_ADAPTIVE_11R
 	bool enable_adaptive_11r;
 #endif
+	uint32_t num_vdevs;
+	bool ShortGI80MhzEnable;
+	bool ShortGI160MhzEnable;
+	uint32_t vendor_roam_score_algorithm;
 };
 
 #define VAR_OFFSET(_Struct, _Var) (offsetof(_Struct, _Var))

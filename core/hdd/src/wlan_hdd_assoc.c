@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2762,7 +2762,7 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	struct hdd_station_ctx *sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
 	QDF_STATUS qdf_status = QDF_STATUS_E_FAILURE;
-	uint8_t reqRsnIe[DOT11F_IE_RSN_MAX_LEN];
+	uint8_t *reqRsnIe;
 	uint32_t reqRsnLength = DOT11F_IE_RSN_MAX_LEN, ie_len;
 	int ft_carrier_on = false;
 	bool hddDisconInProgress = false;
@@ -2951,6 +2951,11 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 			QDF_TRACE_DEFAULT_PDEV_ID,
 			QDF_PROTO_TYPE_MGMT, QDF_PROTO_MGMT_ASSOC));
 
+		reqRsnIe = qdf_mem_malloc(sizeof(uint8_t) *
+					  DOT11F_IE_RSN_MAX_LEN);
+		if (!reqRsnIe)
+			return QDF_STATUS_E_NOMEM;
+
 		/*
 		 * For reassoc, the station is already registered, all we need
 		 * is to change the state of the STA in TL.
@@ -2964,8 +2969,12 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 			u8 *pFTAssocReq = NULL;
 			unsigned int assocReqlen = 0;
 			struct ieee80211_channel *chan;
-			uint8_t rspRsnIe[DOT11F_IE_RSN_MAX_LEN];
 			uint32_t rspRsnLength = DOT11F_IE_RSN_MAX_LEN;
+			uint8_t *rspRsnIe =
+				qdf_mem_malloc(sizeof(uint8_t) *
+					       DOT11F_IE_RSN_MAX_LEN);
+			if (!rspRsnIe)
+				return QDF_STATUS_E_NOMEM;
 
 			/* add bss_id to cfg80211 data base */
 			bss =
@@ -2992,6 +3001,8 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 					   adapter->session_id,
 					   eCSR_DISCONNECT_REASON_UNSPECIFIED);
 				}
+				qdf_mem_free(reqRsnIe);
+				qdf_mem_free(rspRsnIe);
 				return QDF_STATUS_E_FAILURE;
 			}
 
@@ -3179,6 +3190,7 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 				 * wpa supplicant expecting WPA/RSN IE in
 				 * connect result.
 				 */
+
 				sme_roam_get_wpa_rsn_req_ie(mac_handle,
 							    adapter->session_id,
 							    &reqRsnLength,
@@ -3240,6 +3252,7 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 						WLAN_CONTROL_PATH);
 
 			}
+			qdf_mem_free(rspRsnIe);
 		} else {
 			/*
 			 * wpa supplicant expecting WPA/RSN IE in connect result
@@ -3307,6 +3320,7 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 						   WLAN_WAKE_ALL_NETIF_QUEUE,
 						   WLAN_CONTROL_PATH);
 		}
+		qdf_mem_free(reqRsnIe);
 
 		if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 			hdd_err("STA register with TL failed status: %d [%08X]",
@@ -3385,7 +3399,21 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 		 */
 		if (eCSR_ROAM_ASSOCIATION_FAILURE == roamStatus
 		    && !hddDisconInProgress) {
+			u8 *assoc_rsp = NULL;
+			u8 *assoc_req = NULL;
+
 			if (roam_info) {
+				if (roam_info->pbFrames) {
+				/* Association Request */
+					assoc_req =
+						(u8 *)(roam_info->pbFrames +
+						      roam_info->nBeaconLength);
+					/* Association Response */
+					assoc_rsp =
+						(u8 *)(roam_info->pbFrames +
+						      roam_info->nBeaconLength +
+						    roam_info->nAssocReqLength);
+				}
 				hdd_err("send connect failure to nl80211: for bssid "
 					MAC_ADDRESS_STR
 					" result: %d and Status: %d reasoncode: %d",
@@ -3410,7 +3438,10 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 				if (roam_info)
 					hdd_connect_result(dev,
 						roam_info->bssid.bytes,
-						roam_info, NULL, 0, NULL, 0,
+						roam_info, assoc_req,
+						roam_info->nAssocReqLength,
+						assoc_rsp,
+						roam_info->nAssocRspLength,
 						WLAN_STATUS_ASSOC_DENIED_UNSPEC,
 						GFP_KERNEL,
 						connect_timeout,
@@ -3427,7 +3458,10 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 				if (roam_info)
 					hdd_connect_result(dev,
 						roam_info->bssid.bytes,
-						roam_info, NULL, 0, NULL, 0,
+						roam_info, assoc_req,
+						roam_info->nAssocReqLength,
+						assoc_rsp,
+						roam_info->nAssocRspLength,
 						roam_info->reasonCode ?
 						roam_info->reasonCode :
 						WLAN_STATUS_UNSPECIFIED_FAILURE,
@@ -3494,8 +3528,18 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 		 * eCSR_ROAM_RESULT_SCAN_FOR_SSID_FAILURE that mean HDD is
 		 * waiting on disconnect_comp_var so unblock anyone waiting for
 		 * disconnect to complete.
+		 * Also add eCSR_ROAM_ASSOCIATION_FAILURE and
+		 * eCSR_ROAM_CANCELLED here to handle the following scenarios:
+		 *
+		 * 1. Connection is in progress, but completes with failure
+		 *    before we check the CSR state.
+		 * 2. Connection is in progress. But the connect command is in
+		 *    pending queue and is removed from pending queue as part
+		 *    of csr_roam_disconnect.
 		 */
-		if ((roamResult == eCSR_ROAM_RESULT_SCAN_FOR_SSID_FAILURE) &&
+		if ((roamResult == eCSR_ROAM_RESULT_SCAN_FOR_SSID_FAILURE ||
+		     roamStatus == eCSR_ROAM_ASSOCIATION_FAILURE ||
+		     roamStatus == eCSR_ROAM_CANCELLED) &&
 		    hddDisconInProgress)
 			complete(&adapter->disconnect_comp_var);
 	}
@@ -4976,6 +5020,12 @@ hdd_sme_roam_callback(void *pContext, struct csr_roam_info *roam_info,
 	case eCSR_ROAM_SAE_COMPUTE:
 		if (roam_info)
 			wlan_hdd_sae_callback(adapter, roam_info);
+		break;
+
+	case eCSR_ROAM_FIPS_PMK_REQUEST:
+		/* notify the supplicant of a new candidate */
+		qdf_ret_status = wlan_hdd_cfg80211_pmksa_candidate_notify(
+					adapter, roam_info, 1, false);
 		break;
 
 	default:
