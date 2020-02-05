@@ -5699,7 +5699,7 @@ static ssize_t fwu_sysfs_read_lockdown_code_show(struct device *dev,
 	}
 
 	for (i = 0; i < lockdown_data_size; i++) {
-		retval += snprintf(ld_val, PAGE_SIZE, "%02x",
+		retval += snprintf(ld_val, sizeof(ld_val), "%02x",
 				*(lockdown_data + i));
 		strlcat(buf, ld_val, lockdown_data_size);
 	}
