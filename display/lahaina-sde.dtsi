@@ -132,15 +132,15 @@
 		qcom,sde-mixer-blend-op-off = <0x20 0x38 0x50 0x68 0x80 0x98
 						0xb0 0xc8 0xe0 0xf8 0x110>;
 
-		qcom,sde-max-per-pipe-bw-kbps = <4400000 4400000
-						 4400000 4400000
-						 4400000 4400000
-						 4400000 4400000>;
+		qcom,sde-max-per-pipe-bw-kbps = <3900000 3900000
+						 3900000 3900000
+						 3900000 3900000
+						 3900000 3900000>;
 
-		qcom,sde-max-per-pipe-bw-high-kbps = <5300000 5300000
-						      5300000 5300000
-						      5300000 5300000
-						      5300000 5300000>;
+		qcom,sde-max-per-pipe-bw-high-kbps = <5200000 5200000
+						      5200000 5200000
+						      5200000 5200000
+						      5200000 5200000>;
 
 		/* offsets are relative to "mdp_phys + qcom,sde-off */
 		qcom,sde-sspp-clk-ctrl =
@@ -170,9 +170,9 @@
 		qcom,sde-has-idle-pc;
 		qcom,sde-max-dest-scaler-input-linewidth = <2048>;
 		qcom,sde-max-dest-scaler-output-linewidth = <2560>;
-		qcom,sde-max-bw-low-kbps = <13700000>;
-		qcom,sde-max-bw-high-kbps = <16600000>;
-		qcom,sde-min-core-ib-kbps = <4800000>;
+		qcom,sde-max-bw-low-kbps = <11800000>;
+		qcom,sde-max-bw-high-kbps = <15500000>;
+		qcom,sde-min-core-ib-kbps = <2500000>;
 		qcom,sde-min-llcc-ib-kbps = <0>;
 		qcom,sde-min-dram-ib-kbps = <800000>;
 		qcom,sde-dram-channels = <2>;
@@ -193,24 +193,22 @@
 		qcom,sde-vbif-qos-rt-remap = <3 3 4 4 5 5 6 6>;
 		qcom,sde-vbif-qos-nrt-remap = <3 3 3 3 3 3 3 3>;
 		qcom,sde-vbif-qos-cwb-remap = <3 3 4 4 5 5 6 3>;
-		qcom,sde-vbif-qos-lutdma-remap = <3 3 3 3 4 4 4 4>;
+		qcom,sde-vbif-qos-lutdma-remap = <3 3 3 3 4 4 4 6>;
 
-		/* macrotile & macrotile-qseed has the same configs */
-		qcom,sde-danger-lut = <0x000000ff 0x0000ffff
-			0x00000000 0x00000000 0x0000ffff>;
+		qcom,sde-danger-lut = <0x0000ffff 0x0000ffff 0x00000000
+			0x00000000 0x0000ffff 0x0000ffff>, <0x0003ffff
+			0x0003ffff 0x00000000 0x00000000 0x0003ffff 0x0003ffff>;
 
-		qcom,sde-safe-lut-linear = <0 0xfff0>;
-		qcom,sde-safe-lut-macrotile = <0 0xff00>;
-		/* same as safe-lut-macrotile */
-		qcom,sde-safe-lut-macrotile-qseed = <0 0xff00>;
-		qcom,sde-safe-lut-nrt = <0 0xffff>;
-		qcom,sde-safe-lut-cwb = <0 0x3ff>;
+		qcom,sde-safe-lut = <0xfff0 0xff00 0xffff 0x3ff 0xff00 0xff00>,
+			<0xfe00 0xfe00 0xffff 0x3ff 0xfe00 0xfe00>;
 
-		qcom,sde-qos-lut-linear = <0 0x00112222 0x22335777>;
-		qcom,sde-qos-lut-macrotile = <0 0x00112233 0x44556677>;
-		qcom,sde-qos-lut-macrotile-qseed = <0 0x00112233 0x66777777>;
-		qcom,sde-qos-lut-nrt = <0 0x00000000 0x00000000>;
-		qcom,sde-qos-lut-cwb = <0 0x66666541 0x00000000>;
+		qcom,sde-qos-lut-linear = <0x00112233 0x44556677>, <0x00112234 0x45566777>;
+		qcom,sde-qos-lut-macrotile = <0x00112233 0x44556677>, <0x00112234 0x45566777>;
+		qcom,sde-qos-lut-macrotile-qseed = <0x00112233 0x66777777>, <0x00112236 0x67777777>;
+		qcom,sde-qos-lut-linear-qseed = <0x00112233 0x66777777>, <0x00112236 0x67777777>;
+		qcom,sde-qos-lut-nrt = <0x0 0x0>, <0x0 0x0>;
+		qcom,sde-qos-lut-cwb = <0x66666541 0x0>, <0x66666541 0x0>;
+		qcom,sde-qos-refresh-rates = <60 120>;
 
 		qcom,sde-cdp-setting = <1 1>, <1 0>;
 
