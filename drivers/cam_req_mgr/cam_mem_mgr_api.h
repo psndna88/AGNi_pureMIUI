@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_MEM_MGR_API_H_
@@ -15,8 +15,7 @@
  * @size    : Size of memory requested for allocation
  * @align   : Alignment of requested memory
  * @smmu_hdl: SMMU handle to identify context bank where memory will be mapped
- * @flags   : Flags to indicate cached/uncached property
- * @region  : Region where memory should be allocated
+ * @flags: Flags to indicate cached/uncached property
  */
 struct cam_mem_mgr_request_desc {
 	uint64_t size;
@@ -83,7 +82,7 @@ int cam_mem_get_io_buf(int32_t buf_handle, int32_t mmu_handle,
  *
  * @buf_handle: Handle for the buffer
  * @vaddr_ptr : pointer to kernel virtual address
- * @len_ptr   : Length of the buffer
+ * @len       : Length of the buffer
  *
  * @return Status of operation. Negative in case of error. Zero otherwise.
  */

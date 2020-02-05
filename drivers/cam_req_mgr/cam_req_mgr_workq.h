@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_REQ_MGR_WORKQ_H_
@@ -65,17 +65,19 @@ struct crm_workq_task {
 };
 
 /** struct cam_req_mgr_core_workq
- * @work       : work token used by workqueue
- * @job        : workqueue internal job struct
+ * @work        : work token used by workqueue
+ * @job         : workqueue internal job struct
+ * @lock_bh     : lock for task structs
+ * @in_irq      : set true if workque can be used in irq context
  * task -
- * @lock_bh    : lock for task structs
- * @in_irq     : set true if workque can be used in irq context
- * @free_cnt   : num of free/available tasks
- * @empty_head : list  head of available taska which can be used
- *               or acquired in order to enqueue a task to workq
- * @pool       : pool of tasks used for handling events in workq context
- * @num_task   : size of tasks pool
- * -
+ * @lock        : Current task's lock handle
+ * @pending_cnt : # of tasks left in queue
+ * @free_cnt    : # of free/available tasks
+ * @process_head:
+ * @empty_head  : list  head of available taska which can be used
+ *                or acquired in order to enqueue a task to workq
+ * @pool        : pool of tasks used for handling events in workq context
+ * @num_task    : size of tasks pool
  */
 struct cam_req_mgr_core_workq {
 	struct work_struct         work;

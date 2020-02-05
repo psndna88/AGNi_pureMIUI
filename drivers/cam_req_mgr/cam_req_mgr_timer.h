@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_REQ_MGR_TIMER_H_
@@ -11,7 +11,8 @@
 
 #include "cam_req_mgr_core_defs.h"
 
-/** struct cam_req_mgr_timer
+/**
+ * struct cam_req_mgr_timer
  * @expires      : timeout value for timer
  * @sys_timer    : system timer variable
  * @parent       : priv data - link pointer
@@ -28,7 +29,7 @@ struct cam_req_mgr_timer {
 
 /**
  * crm_timer_modify()
- * @brief : allows ser to modify expiry time.
+ * @brief : modify expiry time.
  * @timer : timer which will be reset to expires values
  */
 void crm_timer_modify(struct cam_req_mgr_timer *crm_timer,
