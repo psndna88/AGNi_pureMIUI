@@ -8446,6 +8446,12 @@ skip_key_mgmt:
 		}
 	}
 
+	/* Configure the driver with LDPC setting for AP mode as a new vdev is
+	 * created when hostapd is started.
+	 */
+	if (drv == DRIVER_WCN || drv == DRIVER_LINUX_WCN)
+		wcn_config_ap_ldpc(dut, ifname);
+
 	if (dut->ap_l2tif) {
 		snprintf(path, sizeof(path),
 			 "/sys/class/net/%s/brport/hairpin_mode",
