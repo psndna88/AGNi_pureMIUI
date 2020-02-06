@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -552,6 +552,7 @@ static struct msm_vidc_platform_data default_data = {
 	.efuse_data_length = 0,
 	.sku_version = 0,
 	.vpu_ver = VPU_VERSION_IRIS2,
+	.num_vpp_pipes = 0x4,
 	.ubwc_config = 0x0,
 };
 
@@ -567,6 +568,7 @@ static struct msm_vidc_platform_data lahaina_data = {
 	.efuse_data_length = 0,
 	.sku_version = 0,
 	.vpu_ver = VPU_VERSION_IRIS2,
+	.num_vpp_pipes = 0x4,
 	.ubwc_config = lahaina_ubwc_data,
 	.codecs = default_codecs,
 	.codecs_count = ARRAY_SIZE(default_codecs),
@@ -586,6 +588,7 @@ static struct msm_vidc_platform_data bengal_data = {
 	.efuse_data_length = 0,
 	.sku_version = 0,
 	.vpu_ver = VPU_VERSION_AR50_LITE,
+	.num_vpp_pipes = 0x1,
 	.ubwc_config = 0x0,
 	.codecs = bengal_codecs,
 	.codecs_count = ARRAY_SIZE(bengal_codecs),
