@@ -25,6 +25,22 @@
 #include "dsi-panel-sim-vdc-vid.dtsi"
 #include "dsi-panel-sim-vdc-cmd.dtsi"
 
+&tlmm {
+	display_panel_avdd_default: display_panel_avdd_default {
+		mux {
+			pins = "gpio12";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio12";
+			drive-strength = <8>;
+			bias-disable = <0>;
+			output-high;
+		};
+	};
+};
+
 &soc {
 	ext_disp: qcom,msm-ext-disp {
 		compatible = "qcom,msm-ext-disp";
@@ -59,6 +75,42 @@
 		};
 	};
 
+	dsi_panel_pwr_supply_avdd: dsi_panel_pwr_supply_avdd {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "vddio";
+			qcom,supply-min-voltage = <1800000>;
+			qcom,supply-max-voltage = <1800000>;
+			qcom,supply-enable-load = <182000>;
+			qcom,supply-disable-load = <80>;
+			qcom,supply-post-on-sleep = <20>;
+		};
+
+		qcom,panel-supply-entry@1 {
+			reg = <1>;
+			qcom,supply-name = "avdd";
+			qcom,supply-min-voltage = <4600000>;
+			qcom,supply-max-voltage = <6000000>;
+			qcom,supply-enable-load = <100000>;
+			qcom,supply-disable-load = <100>;
+		};
+	};
+
+	display_panel_avdd: display_gpio_regulator@1 {
+		compatible = "regulator-fixed";
+		regulator-name = "display_panel_avdd";
+		regulator-min-microvolt = <5500000>;
+		regulator-max-microvolt = <5500000>;
+		regulator-enable-ramp-delay = <233>;
+		gpio = <&tlmm 12 0>;
+		enable-active-high;
+		pinctrl-names = "default";
+		pinctrl-0 = <&display_panel_avdd_default>;
+	};
+
 	sde_dsi: qcom,dsi-display-primary {
 		compatible = "qcom,dsi-display";
 		label = "primary";
@@ -82,6 +134,7 @@
 
 		vddio-supply = <&L12C>;
 		vdd-supply = <&L13C>;
+		avdd-supply = <&display_panel_avdd>;
 
 		qcom,mdp = <&mdss_mdp>;
 		qcom,dsi-default-panel = <&dsi_sw43404_amoled_cmd>;
@@ -144,6 +197,36 @@
 			qcom,mdss-dsi-panel-phy-timings = [00 15 06 06 0a 09 06
 				06 04 02 04 00 12 0b];
 			qcom,display-topology = <2 2 1>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+&dsi_sharp_4k_dsc_cmd {
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 12 05 05 09 08 05
+				05 03 02 04 00 10 0a];
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+			/*
+			 * Using same clock as Video mode panel as a
+			 * temporary solution for PHY timing issue that causes
+			 * corruption.
+			 */
+			qcom,mdss-dsi-panel-clockrate = <685751040>;
+		};
+	};
+};
+
+&dsi_sharp_4k_dsc_video {
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 12 05 05 09 08 05
+				05 03 02 04 00 10 0a];
+			qcom,display-topology = <2 2 2>;
 			qcom,default-topology-index = <0>;
 		};
 	};
