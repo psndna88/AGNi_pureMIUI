@@ -23,9 +23,8 @@
 #include <asm/cacheflush.h>
 #include <soc/qcom/scm.h>
 #include "governor.h"
-#include <linux/kernel.h>
 #include <linux/display_state.h>
-#include <linux/adrenokgsl_state.h>
+#include <linux/agni_meminfo.h>
 
 static DEFINE_SPINLOCK(tz_lock);
 static DEFINE_SPINLOCK(sample_lock);
@@ -72,6 +71,7 @@ static void do_partner_suspend_event(struct work_struct *work);
 static void do_partner_resume_event(struct work_struct *work);
 
 static struct workqueue_struct *workqueue;
+unsigned long adreno_load_perc;
 
 /*
  * Returns GPU suspend time in millisecond.
@@ -110,31 +110,6 @@ static ssize_t gpu_load_show(struct device *dev,
 	acc_relative_busy = 0;
 	spin_unlock(&sample_lock);
 	return snprintf(buf, PAGE_SIZE, "%lu\n", sysfs_busy_perc);
-}
-
-
-/*
- * AGNi: this function call returns the gpu load in % if display is on
- */
-unsigned long adreno_load(void) {
-	unsigned long busy_perc = 0;
-	/*
-	 * Average out the samples taken since last read
-	 * This will keep the average value in sync with
-	 * with the client sampling duration.
-	 */
-	if (is_display_on()) {
-		spin_lock(&sample_lock);
-		if (acc_total)
-			busy_perc = DIV_ROUND_CLOSEST((acc_relative_busy * 100),acc_total);
-
-		/* Reset the parameters */
-		acc_total = 0;
-		acc_relative_busy = 0;
-		spin_unlock(&sample_lock);
-		return busy_perc;
-	} else
-		return 0;
 }
 
 /*
@@ -190,6 +165,14 @@ void compute_work_load(struct devfreq_dev_status *stats,
 	busy = (u64)stats->busy_time * stats->current_frequency;
 	do_div(busy, devfreq->profile->freq_table[0]);
 	acc_relative_busy += busy;
+	if (is_display_on()) {
+		if (acc_total)
+			adreno_load_perc = ((acc_relative_busy * 100) / acc_total);
+	} else {
+		adreno_load_perc = 0;
+	}
+	if (adreno_load_perc > GPULOADTRIGGER) /* High GPU usage - typically while gaming */
+		agni_swappiness = 1;
 
 	spin_unlock(&sample_lock);
 }

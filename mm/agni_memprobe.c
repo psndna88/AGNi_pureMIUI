@@ -9,51 +9,82 @@
  * 	 Do not swap on high gpu usage like gaming
  * v1.3: feed actual zram usage of ram as addition for available ram
  * v1.4: use charging & battery % detection to decide swap behaviour by voting. Rewrite.
+ * v1.5: Rewrite Logic cleanly, optimise. Drop caches aswell as needed.
  */
 
 #include <asm/page.h>
-#include <linux/kernel.h>
 #include <linux/adrenokgsl_state.h>
 #include <linux/charging_state.h>
 #include <linux/agni_meminfo.h>
 
 bool triggerswapping = false;
+int agni_swappiness = 1;
+long totalmemk,mem_avail_perc;
+int trigthreshold;
+bool device_fourgbdone = false;
+bool fourgb;
 
-#define GPULOADTRIGGER 75 /* gpu load % threshold */
+void device_fourgb(void) {
 
-bool agni_memprober(void) {
-	int ramtrigger;
-	bool vote = false;
-	long availpages, totalmemk, availablememk, mem_used_perc;
-	unsigned long gpu_load_perc;
+	if (!device_fourgbdone) {
+		totalmemk = totalram_pages << (PAGE_SHIFT - 10);
+	
+		if (totalmemk > 5000000) {
+			fourgb = false; /* 6GB device */
+			trigthreshold = 15;
+		} else {
+			fourgb = true; /* 4GB device */
+			trigthreshold = 20;
+		}
+
+		device_fourgbdone = true;
+	}
+}
+
+void availmem_prober(void) {
+	long availpages, availablememk;
 
 	/* Ram pages */
 	availpages = si_mem_available();
 	availablememk = availpages << (PAGE_SHIFT - 10);
-	totalmemk = totalram_pages << (PAGE_SHIFT - 10);
-	mem_used_perc = DIV_ROUND_CLOSEST(((availablememk + zram_ram_usage) * 100),totalmemk);
-	if (totalmemk > 4000000) {
-		ramtrigger = 15; /* % of available ram - 6GB device*/
-	} else {
-		ramtrigger = 25; /* % of available ram - 4GB device*/
-	}
-	/* GPU load */
-	gpu_load_perc = adreno_load();
+	mem_avail_perc = ((availablememk + zram_ram_usage) * 100) / totalmemk;
+}
+
+bool agni_memprober(void) {
+	bool vote = false;
+
+	device_fourgb();
+	availmem_prober();
 
 	/* Decide voting */
 	if (!charging_detected()) {
-		if (mem_used_perc < ramtrigger) /* low available ram when not charging */
+		if (mem_avail_perc < trigthreshold) /* low available ram when not charging */
 			vote = true;
 		else
 			vote = false; /* stop swapping when enough available ram */
 	} else {
-		if (batt_swap_push && (mem_used_perc < ramtrigger)) /* Battery > 80 % and low available ram with charging ON  */
+		if (batt_swap_push && (mem_avail_perc < trigthreshold)) /* Battery > 80 % and low available ram with charging ON  */
 			vote = true;
 		else
 			vote = false; /* Allow charging faster by keeping swapping off and thus less cpu usage */
 	}
-	if ((gpu_load_perc > GPULOADTRIGGER) || low_batt_swap_stall) /* High GPU usage - typically while gaming OR Battery below 25% */
+	if (adreno_load_perc > GPULOADTRIGGER) /* High GPU usage - typically while gaming */
 		vote = false;
+
+	if (low_batt_swap_stall) /* Battery below 25% */
+		vote = false;
+		
+	if (vote) {
+		if (fourgb) {
+			agni_swappiness = 20;
+		} else {
+			agni_swappiness = 15;
+		}
+		if (mem_avail_perc < 10)
+			mm_drop_caches(3);
+	} else {
+		agni_swappiness = 1;
+	}
 
 	return vote;
 }

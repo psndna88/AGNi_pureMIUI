@@ -28,6 +28,8 @@
 #include "mdss_dsi.h"
 #include "mdss_dba_utils.h"
 #include "mdss_debug.h"
+#include "mdss_livedisplay.h"
+#include <linux/agni_meminfo.h>
 
 #define DT_CMD_HDR 6
 #define DEFAULT_MDP_TRANSFER_TIME 14000
@@ -1231,6 +1233,7 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 	
 	display_on = false;
 
+	agni_memprobe();
 end:
 	pr_debug("%s:-\n", __func__);
 	return 0;
