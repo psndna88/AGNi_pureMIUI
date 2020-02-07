@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2017, 2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2017, 2020 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -89,10 +89,6 @@ static int hdmi_cec_msg_send(void *data, struct cec_msg *msg)
 	frame_type = (msg->recvr_id == 15 ? BIT(0) : 0);
 	if (msg->retransmit > 0 && msg->retransmit < RETRANSMIT_MAX_NUM)
 		frame_retransmit = msg->retransmit;
-
-	/* toggle cec in order to flush out bad hw state, if any */
-	DSS_REG_W(io, HDMI_CEC_CTRL, 0);
-	DSS_REG_W(io, HDMI_CEC_CTRL, BIT(0));
 
 	frame_retransmit = (frame_retransmit & 0xF) << 4;
 	DSS_REG_W(io, HDMI_CEC_RETRANSMIT, BIT(0) | frame_retransmit);
@@ -360,6 +356,9 @@ int hdmi_cec_isr(void *input)
 	if ((cec_intr & BIT(2)) && (cec_intr & BIT(3))) {
 		DEV_DBG("%s: CEC_IRQ_FRAME_ERROR\n", __func__);
 		DSS_REG_W(io, HDMI_CEC_INT, cec_intr | BIT(2));
+		/* toggle cec in order to flush out bad hw state, if any */
+		DSS_REG_W(io, HDMI_CEC_CTRL, 0);
+		DSS_REG_W(io, HDMI_CEC_CTRL, BIT(0));
 
 		spin_lock_irqsave(&cec_ctrl->lock, flags);
 		cec_ctrl->cec_msg_wr_status |= CEC_STATUS_WR_ERROR;
