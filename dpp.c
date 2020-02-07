@@ -213,6 +213,7 @@ static int dpp_hostapd_conf_update(struct sigma_dut *dut,
 		"DPP-CONFOBJ-PSK",
 		NULL
 	};
+	unsigned int old_timeout;
 
 	sigma_dut_print(dut, DUT_MSG_INFO,
 			"Update hostapd configuration based on DPP Config Object");
@@ -366,6 +367,11 @@ static int dpp_hostapd_conf_update(struct sigma_dut *dut,
 	}
 skip_dpp_akm:
 
+	/* Wait for a possible Configuration Result to be sent */
+	old_timeout = dut->default_timeout;
+	dut->default_timeout = 1;
+	get_wpa_cli_event(dut, ctrl, "DPP-TX-STATUS", buf, sizeof(buf));
+	dut->default_timeout = old_timeout;
 	if (wpa_command(ifname, "DISABLE") < 0 ||
 	    wpa_command(ifname, "ENABLE") < 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
