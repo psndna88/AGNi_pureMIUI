@@ -8,6 +8,7 @@
 #include "cam_tfe_csid_core.h"
 #include "cam_tfe_csid530.h"
 #include "cam_tfe_csid_dev.h"
+#include "camera_main.h"
 
 #define CAM_TFE_CSID_DRV_NAME                    "csid_530"
 #define CAM_TFE_CSID_VERSION_V530                 0x50030000
@@ -27,7 +28,7 @@ static const struct of_device_id cam_tfe_csid530_dt_match[] = {
 
 MODULE_DEVICE_TABLE(of, cam_tfe_csid530_dt_match);
 
-static struct platform_driver cam_tfe_csid530_driver = {
+struct platform_driver cam_tfe_csid530_driver = {
 	.probe = cam_tfe_csid_probe,
 	.remove = cam_tfe_csid_remove,
 	.driver = {

@@ -7,6 +7,7 @@
 #include "cam_req_mgr_dev.h"
 #include "cam_cci_soc.h"
 #include "cam_cci_core.h"
+#include "camera_main.h"
 
 #define CCI_MAX_DELAY 1000000
 
@@ -366,12 +367,14 @@ static const struct v4l2_subdev_ops cci_subdev_ops = {
 
 static const struct v4l2_subdev_internal_ops cci_subdev_intern_ops;
 
-static int cam_cci_platform_probe(struct platform_device *pdev)
+static int cam_cci_component_bind(struct device *dev,
+	struct device *master_dev, void *data)
 {
 	struct cam_cpas_register_params cpas_parms;
 	struct cci_device *new_cci_dev;
 	struct cam_hw_soc_info *soc_info = NULL;
 	int rc = 0;
+	struct platform_device *pdev = to_platform_device(dev);
 
 	new_cci_dev = kzalloc(sizeof(struct cci_device),
 		GFP_KERNEL);
@@ -435,18 +438,22 @@ static int cam_cci_platform_probe(struct platform_device *pdev)
 		CAM_ERR(CAM_CCI, "CPAS registration failed");
 		goto cci_no_resource;
 	}
+
 	CAM_DBG(CAM_CCI, "CPAS registration successful handle=%d",
 		cpas_parms.client_handle);
 	new_cci_dev->cpas_handle = cpas_parms.client_handle;
-
+	CAM_DBG(CAM_CCI, "Component bound successfully");
 	return rc;
 cci_no_resource:
 	kfree(new_cci_dev);
 	return rc;
 }
 
-static int cam_cci_device_remove(struct platform_device *pdev)
+static void cam_cci_component_unbind(struct device *dev,
+	struct device *master_dev, void *data)
 {
+	struct platform_device *pdev = to_platform_device(dev);
+
 	struct v4l2_subdev *subdev = platform_get_drvdata(pdev);
 	struct cci_device *cci_dev =
 		v4l2_get_subdevdata(subdev);
@@ -454,6 +461,28 @@ static int cam_cci_device_remove(struct platform_device *pdev)
 	cam_cpas_unregister_client(cci_dev->cpas_handle);
 	cam_cci_soc_remove(pdev, cci_dev);
 	devm_kfree(&pdev->dev, cci_dev);
+}
+
+const static struct component_ops cam_cci_component_ops = {
+	.bind = cam_cci_component_bind,
+	.unbind = cam_cci_component_unbind,
+};
+
+static int cam_cci_platform_probe(struct platform_device *pdev)
+{
+	int rc = 0;
+
+	CAM_DBG(CAM_CCI, "Adding CCI component");
+	rc = component_add(&pdev->dev, &cam_cci_component_ops);
+	if (rc)
+		CAM_ERR(CAM_CCI, "failed to add component rc: %d", rc);
+
+	return rc;
+}
+
+static int cam_cci_device_remove(struct platform_device *pdev)
+{
+	component_del(&pdev->dev, &cam_cci_component_ops);
 	return 0;
 }
 
@@ -464,7 +493,7 @@ static const struct of_device_id cam_cci_dt_match[] = {
 
 MODULE_DEVICE_TABLE(of, cam_cci_dt_match);
 
-static struct platform_driver cci_driver = {
+struct platform_driver cci_driver = {
 	.probe = cam_cci_platform_probe,
 	.remove = cam_cci_device_remove,
 	.driver = {

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -14,6 +14,7 @@
 #include "cam_vfe_hw_intf.h"
 #include "cam_vfe_core.h"
 #include "cam_vfe_dev.h"
+#include "camera_main.h"
 
 static const struct of_device_id cam_vfe_dt_match[] = {
 	{
@@ -56,7 +57,7 @@ static const struct of_device_id cam_vfe_dt_match[] = {
 };
 MODULE_DEVICE_TABLE(of, cam_vfe_dt_match);
 
-static struct platform_driver cam_vfe_driver = {
+struct platform_driver cam_vfe_driver = {
 	.probe = cam_vfe_probe,
 	.remove = cam_vfe_remove,
 	.driver = {

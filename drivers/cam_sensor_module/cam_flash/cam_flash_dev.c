@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -8,6 +8,7 @@
 #include "cam_flash_soc.h"
 #include "cam_flash_core.h"
 #include "cam_common_util.h"
+#include "camera_main.h"
 
 static int32_t cam_flash_driver_cmd(struct cam_flash_ctrl *fctrl,
 		void *arg, struct cam_flash_private_soc *soc_private)
@@ -302,28 +303,6 @@ static long cam_flash_subdev_do_ioctl(struct v4l2_subdev *sd,
 }
 #endif
 
-static int cam_flash_platform_remove(struct platform_device *pdev)
-{
-	struct cam_flash_ctrl *fctrl;
-
-	fctrl = platform_get_drvdata(pdev);
-	if (!fctrl) {
-		CAM_ERR(CAM_FLASH, "Flash device is NULL");
-		return 0;
-	}
-
-	CAM_INFO(CAM_FLASH, "Platform remove invoked");
-	mutex_lock(&fctrl->flash_mutex);
-	cam_flash_shutdown(fctrl);
-	mutex_unlock(&fctrl->flash_mutex);
-	cam_unregister_subdev(&(fctrl->v4l2_dev_str));
-	platform_set_drvdata(pdev, NULL);
-	v4l2_set_subdevdata(&fctrl->v4l2_dev_str.sd, NULL);
-	kfree(fctrl);
-
-	return 0;
-}
-
 static int32_t cam_flash_i2c_driver_remove(struct i2c_client *client)
 {
 	int32_t rc = 0;
@@ -397,13 +376,15 @@ static int cam_flash_init_subdev(struct cam_flash_ctrl *fctrl)
 	return rc;
 }
 
-static int32_t cam_flash_platform_probe(struct platform_device *pdev)
+static int cam_flash_component_bind(struct device *dev,
+	struct device *master_dev, void *data)
 {
 	int32_t rc = 0, i = 0;
 	struct cam_flash_ctrl *fctrl = NULL;
 	struct device_node *of_parent = NULL;
+	struct platform_device *pdev = to_platform_device(dev);
 
-	CAM_DBG(CAM_FLASH, "Enter");
+	CAM_DBG(CAM_FLASH, "Binding flash component");
 	if (!pdev->dev.of_node) {
 		CAM_ERR(CAM_FLASH, "of_node NULL");
 		return -EINVAL;
@@ -503,7 +484,7 @@ static int32_t cam_flash_platform_probe(struct platform_device *pdev)
 	mutex_init(&(fctrl->flash_mutex));
 
 	fctrl->flash_state = CAM_FLASH_STATE_INIT;
-	CAM_DBG(CAM_FLASH, "Probe success");
+	CAM_DBG(CAM_FLASH, "Component bound successfully");
 	return rc;
 
 free_cci_resource:
@@ -517,6 +498,51 @@ free_resource:
 	fctrl->soc_info.soc_private = NULL;
 	kfree(fctrl);
 	fctrl = NULL;
+	return rc;
+}
+
+static void cam_flash_component_unbind(struct device *dev,
+	struct device *master_dev, void *data)
+{
+	struct cam_flash_ctrl *fctrl;
+	struct platform_device *pdev = to_platform_device(dev);
+
+	fctrl = platform_get_drvdata(pdev);
+	if (!fctrl) {
+		CAM_ERR(CAM_FLASH, "Flash device is NULL");
+		return;
+	}
+
+	mutex_lock(&fctrl->flash_mutex);
+	cam_flash_shutdown(fctrl);
+	mutex_unlock(&fctrl->flash_mutex);
+	cam_unregister_subdev(&(fctrl->v4l2_dev_str));
+	platform_set_drvdata(pdev, NULL);
+	v4l2_set_subdevdata(&fctrl->v4l2_dev_str.sd, NULL);
+	kfree(fctrl);
+	CAM_INFO(CAM_FLASH, "Flash Sensor component unbind");
+}
+
+const static struct component_ops cam_flash_component_ops = {
+	.bind = cam_flash_component_bind,
+	.unbind = cam_flash_component_unbind,
+};
+
+static int cam_flash_platform_remove(struct platform_device *pdev)
+{
+	component_del(&pdev->dev, &cam_flash_component_ops);
+	return 0;
+}
+
+static int32_t cam_flash_platform_probe(struct platform_device *pdev)
+{
+	int rc = 0;
+
+	CAM_DBG(CAM_FLASH, "Adding Flash Sensor component");
+	rc = component_add(&pdev->dev, &cam_flash_component_ops);
+	if (rc)
+		CAM_ERR(CAM_FLASH, "failed to add component rc: %d", rc);
+
 	return rc;
 }
 
@@ -601,7 +627,7 @@ free_ctrl:
 
 MODULE_DEVICE_TABLE(of, cam_flash_dt_match);
 
-static struct platform_driver cam_flash_platform_driver = {
+struct platform_driver cam_flash_platform_driver = {
 	.probe = cam_flash_platform_probe,
 	.remove = cam_flash_platform_remove,
 	.driver = {

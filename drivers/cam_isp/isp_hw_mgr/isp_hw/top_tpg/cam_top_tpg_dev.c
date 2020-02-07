@@ -10,15 +10,16 @@
 #include "cam_top_tpg_dev.h"
 #include "cam_top_tpg_hw_intf.h"
 #include "cam_debug_util.h"
+#include "camera_main.h"
 
 static struct cam_hw_intf *cam_top_tpg_hw_list[CAM_TOP_TPG_HW_NUM_MAX] = {
 	0, 0};
 
 static char tpg_dev_name[8];
 
-int cam_top_tpg_probe(struct platform_device *pdev)
+static int cam_top_tpg_component_bind(struct device *dev,
+	struct device *master_dev, void *data)
 {
-
 	struct cam_hw_intf             *tpg_hw_intf;
 	struct cam_hw_info             *tpg_hw_info;
 	struct cam_top_tpg_hw          *tpg_dev = NULL;
@@ -26,8 +27,9 @@ int cam_top_tpg_probe(struct platform_device *pdev)
 	struct cam_top_tpg_hw_info     *tpg_hw_data = NULL;
 	uint32_t                        tpg_dev_idx;
 	int                             rc = 0;
+	struct platform_device *pdev = to_platform_device(dev);
 
-	CAM_DBG(CAM_ISP, "probe called");
+	CAM_DBG(CAM_ISP, "Binding TPG component");
 
 	tpg_hw_intf = kzalloc(sizeof(*tpg_hw_intf), GFP_KERNEL);
 	if (!tpg_hw_intf) {
@@ -81,9 +83,8 @@ int cam_top_tpg_probe(struct platform_device *pdev)
 		goto free_dev;
 
 	platform_set_drvdata(pdev, tpg_dev);
-	CAM_DBG(CAM_ISP, "TPG:%d probe successful",
+	CAM_DBG(CAM_ISP, "TPG: %d component binded successfully",
 		tpg_hw_intf->hw_idx);
-
 
 	if (tpg_hw_intf->hw_idx < CAM_TOP_TPG_HW_NUM_MAX)
 		cam_top_tpg_hw_list[tpg_hw_intf->hw_idx] = tpg_hw_intf;
@@ -102,25 +103,47 @@ err:
 	return rc;
 }
 
-int cam_top_tpg_remove(struct platform_device *pdev)
+static void cam_top_tpg_component_unbind(struct device *dev,
+	struct device *master_dev, void *data)
 {
 	struct cam_top_tpg_hw          *tpg_dev = NULL;
 	struct cam_hw_intf             *tpg_hw_intf;
 	struct cam_hw_info             *tpg_hw_info;
+	struct platform_device *pdev = to_platform_device(dev);
 
 	tpg_dev = (struct cam_top_tpg_hw *)platform_get_drvdata(pdev);
 	tpg_hw_intf = tpg_dev->hw_intf;
 	tpg_hw_info = tpg_dev->hw_info;
 
-	CAM_DBG(CAM_ISP, "TPG:%d remove",
-		tpg_dev->hw_intf->hw_idx);
-
+	CAM_DBG(CAM_ISP, "TPG:%d component unbound", tpg_dev->hw_intf->hw_idx);
 	cam_top_tpg_hw_deinit(tpg_dev);
 
 	/*release the tpg device memory */
 	kfree(tpg_dev);
 	kfree(tpg_hw_info);
 	kfree(tpg_hw_intf);
+}
+
+const static struct component_ops cam_top_tpg_component_ops = {
+	.bind = cam_top_tpg_component_bind,
+	.unbind = cam_top_tpg_component_unbind,
+};
+
+int cam_top_tpg_probe(struct platform_device *pdev)
+{
+	int rc = 0;
+
+	CAM_DBG(CAM_ISP, "Adding TPG component");
+	rc = component_add(&pdev->dev, &cam_top_tpg_component_ops);
+	if (rc)
+		CAM_ERR(CAM_ISP, "failed to add component rc: %d", rc);
+
+	return rc;
+}
+
+int cam_top_tpg_remove(struct platform_device *pdev)
+{
+	component_del(&pdev->dev, &cam_top_tpg_component_ops);
 	return 0;
 }
 
