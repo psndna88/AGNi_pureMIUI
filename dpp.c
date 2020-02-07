@@ -1083,9 +1083,11 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	conf_pass[0] = '\0';
 	group_id[0] = '\0';
 	conf2[0] = '\0';
-	val = get_param(cmd, "DPPConfIndex");
-	if (val)
-		conf_index = atoi(val);
+	if (!enrollee_configurator) {
+		val = get_param(cmd, "DPPConfIndex");
+		if (val)
+			conf_index = atoi(val);
+	}
 	switch (conf_index) {
 	case -1:
 		if (enrollee_configurator)
