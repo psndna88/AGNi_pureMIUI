@@ -520,6 +520,7 @@ static int cam_ife_csid_global_reset(struct cam_ife_csid_hw *csid_hw)
 			csid_hw->hw_intf->hw_idx, val);
 	csid_hw->error_irq_count = 0;
 	csid_hw->prev_boot_timestamp = 0;
+	csid_hw->epd_supported = 0;
 
 end:
 	return rc;
@@ -1349,6 +1350,7 @@ static int cam_ife_csid_disable_hw(struct cam_ife_csid_hw *csid_hw)
 	csid_hw->hw_info->hw_state = CAM_HW_STATE_POWER_DOWN;
 	csid_hw->error_irq_count = 0;
 	csid_hw->prev_boot_timestamp = 0;
+	csid_hw->epd_supported = 0;
 
 	return rc;
 }
@@ -1584,7 +1586,6 @@ static int cam_ife_csid_enable_csi2(
 		CSID_CSI2_RX_ERROR_LANE1_FIFO_OVERFLOW |
 		CSID_CSI2_RX_ERROR_LANE2_FIFO_OVERFLOW |
 		CSID_CSI2_RX_ERROR_LANE3_FIFO_OVERFLOW |
-		CSID_CSI2_RX_ERROR_CPHY_EOT_RECEPTION |
 		CSID_CSI2_RX_ERROR_CPHY_SOT_RECEPTION |
 		CSID_CSI2_RX_ERROR_CRC |
 		CSID_CSI2_RX_ERROR_ECC |
@@ -1592,6 +1593,12 @@ static int cam_ife_csid_enable_csi2(
 		CSID_CSI2_RX_ERROR_STREAM_UNDERFLOW |
 		CSID_CSI2_RX_ERROR_UNBOUNDED_FRAME |
 		CSID_CSI2_RX_ERROR_CPHY_PH_CRC;
+
+	if (csid_hw->epd_supported == 1)
+		CAM_INFO(CAM_ISP,
+			"Disable CSID_CSI2_RX_ERROR_CPHY_EOT_RECEPTION for EPD");
+	else
+		val = val | CSID_CSI2_RX_ERROR_CPHY_EOT_RECEPTION;
 
 	/* Enable the interrupt based on csid debug info set */
 	if (csid_hw->csid_debug & CSID_DEBUG_ENABLE_SOT_IRQ)
@@ -3788,6 +3795,23 @@ static int cam_ife_csid_set_csid_qcfa(
 	return 0;
 }
 
+static int cam_ife_csid_set_epd_config(
+	struct cam_ife_csid_hw *csid_hw, void *cmd_args)
+{
+	struct cam_ife_csid_epd_update_args *epd_update = NULL;
+
+	if ((!csid_hw) || (!cmd_args))
+		return -EINVAL;
+
+	epd_update =
+		(struct cam_ife_csid_epd_update_args *)cmd_args;
+
+	csid_hw->epd_supported = epd_update->epd_supported;
+	CAM_DBG(CAM_ISP, "CSID EPD supported %d", csid_hw->epd_supported);
+
+	return 0;
+}
+
 static int cam_ife_csid_process_cmd(void *hw_priv,
 	uint32_t cmd_type, void *cmd_args, uint32_t arg_size)
 {
@@ -3824,6 +3848,9 @@ static int cam_ife_csid_process_cmd(void *hw_priv,
 		break;
 	case CAM_ISP_HW_CMD_CSID_QCFA_SUPPORTED:
 		rc = cam_ife_csid_set_csid_qcfa(csid_hw, cmd_args);
+		break;
+	case CAM_IFE_CSID_SET_CONFIG:
+		rc = cam_ife_csid_set_epd_config(csid_hw, cmd_args);
 		break;
 	default:
 		CAM_ERR(CAM_ISP, "CSID:%d unsupported cmd:%d",
