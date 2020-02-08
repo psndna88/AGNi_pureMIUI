@@ -168,6 +168,13 @@ camera-$(CONFIG_LEDS_QPNP_FLASH_V2) += \
 	cam_sensor_module/cam_flash/cam_flash_core.o \
 	cam_sensor_module/cam_flash/cam_flash_soc.o
 
+ifneq (,$(filter $(CONFIG_LEDS_QTI_FLASH),y m))
+camera-y += \
+	cam_sensor_module/cam_flash/cam_flash_dev.o \
+	cam_sensor_module/cam_flash/cam_flash_core.o \
+	cam_sensor_module/cam_flash/cam_flash_soc.o
+endif
+
 camera-$(CONFIG_SPECTRA_CUSTOM) += \
 	cam_cust/cam_custom_hw_mgr/cam_custom_hw1/cam_custom_sub_mod_soc.o \
 	cam_cust/cam_custom_hw_mgr/cam_custom_hw1/cam_custom_sub_mod_dev.o \

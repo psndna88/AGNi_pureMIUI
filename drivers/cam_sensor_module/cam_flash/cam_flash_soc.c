@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/of.h>
@@ -78,10 +78,11 @@ static int32_t cam_get_source_node_info(
 				&fctrl->flash_trigger[i]);
 
 			if (soc_private->is_wled_flash) {
-				rc = wled_flash_led_prepare(
+				rc = cam_flash_led_prepare(
 					fctrl->flash_trigger[i],
-					QUERY_MAX_CURRENT,
-					&soc_private->flash_max_current[i]);
+					QUERY_MAX_AVAIL_CURRENT,
+					&soc_private->flash_max_current[i],
+					true);
 				if (rc) {
 					CAM_ERR(CAM_FLASH,
 					"WLED FLASH max_current read fail: %d",
@@ -93,6 +94,9 @@ static int32_t cam_get_source_node_info(
 			} else {
 				rc = of_property_read_u32(flash_src_node,
 					"qcom,max-current",
+					&soc_private->flash_max_current[i]);
+				rc &= of_property_read_u32(flash_src_node,
+					"qcom,max-current-ma",
 					&soc_private->flash_max_current[i]);
 				if (rc < 0) {
 					CAM_WARN(CAM_FLASH,
@@ -165,10 +169,11 @@ static int32_t cam_get_source_node_info(
 				&fctrl->torch_trigger[i]);
 
 			if (soc_private->is_wled_flash) {
-				rc = wled_flash_led_prepare(
+				rc = cam_flash_led_prepare(
 					fctrl->torch_trigger[i],
-					QUERY_MAX_CURRENT,
-					&soc_private->torch_max_current[i]);
+					QUERY_MAX_AVAIL_CURRENT,
+					&soc_private->torch_max_current[i],
+					true);
 				if (rc) {
 					CAM_ERR(CAM_FLASH,
 					"WLED TORCH max_current read fail: %d",
@@ -179,6 +184,9 @@ static int32_t cam_get_source_node_info(
 			} else {
 				rc = of_property_read_u32(torch_src_node,
 					"qcom,max-current",
+					&soc_private->torch_max_current[i]);
+				rc &= of_property_read_u32(torch_src_node,
+					"qcom,max-current-ma",
 					&soc_private->torch_max_current[i]);
 				if (rc < 0) {
 					CAM_WARN(CAM_FLASH,
