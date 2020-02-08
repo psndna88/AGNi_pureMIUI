@@ -1,5 +1,39 @@
 #include <dt-bindings/clock/qcom,camcc-lahaina.h>
 
+&soc {
+	led_flash_triple_rear: qcom,camera-flash@4 {
+		cell-index = <4>;
+		compatible = "qcom,camera-flash";
+		flash-source = <&pm8350c_flash0 &pm8350c_flash1>;
+		torch-source = <&pm8350c_torch0 &pm8350c_torch1>;
+		switch-source = <&pm8350c_switch2>;
+		status = "ok";
+	};
+
+	led_flash_triple_rear_aux: qcom,camera-flash@5 {
+		cell-index = <5>;
+		compatible = "qcom,camera-flash";
+		flash-source = <&pm8350c_flash0 &pm8350c_flash1>;
+		torch-source = <&pm8350c_torch0 &pm8350c_torch1>;
+		switch-source = <&pm8350c_switch2>;
+		status = "ok";
+	};
+
+	led_flash_triple_rear_aux2: qcom,camera-flash@6 {
+		cell-index = <6>;
+		compatible = "qcom,camera-flash";
+		flash-source = <&pm8350c_flash0 &pm8350c_flash1>;
+		torch-source = <&pm8350c_torch0 &pm8350c_torch1>;
+		switch-source = <&pm8350c_switch2>;
+		status = "ok";
+	};
+
+	qcom,cam-res-mgr {
+		compatible = "qcom,cam-res-mgr";
+		status = "ok";
+	};
+};
+
 &cam_cci0 {
 	actuator_triple_tele: qcom,actuator0 {
 		cell-index = <0>;
@@ -140,6 +174,7 @@
 		sensor-position-yaw = <180>;
 		eeprom-src = <&eeprom_triple_tele>;
 		actuator-src = <&actuator_triple_tele>;
+		led-flash-src = <&led_flash_triple_rear_aux>;
 		cam_vio-supply = <&pm8008j_l3>;
 		cam_vana-supply = <&pm8008i_l4>;
 		cam_vdig-supply = <&pm8008i_l2>;
@@ -182,6 +217,7 @@
 		sensor-position-yaw = <180>;
 		actuator-src = <&actuator_triple_wide>;
 		eeprom-src = <&eeprom_triple_wide>;
+		led-flash-src = <&led_flash_triple_rear>;
 		cam_vio-supply = <&pm8008j_l3>;
 		cam_vana-supply = <&pm8008i_l3>;
 		cam_v_custom1-supply = <&pm8008i_l5>;
@@ -379,6 +415,7 @@
 		sensor-position-yaw = <180>;
 		eeprom-src = <&eeprom_triple_uw>;
 		actuator-src = <&actuator_triple_uw>;
+		led-flash-src = <&led_flash_triple_rear_aux2>;
 		cam_vio-supply = <&pm8008j_l3>;
 		cam_vana-supply = <&pm8008i_l6>;
 		cam_vdig-supply = <&pm8008i_l2>;
