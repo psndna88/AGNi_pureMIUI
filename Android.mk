@@ -78,7 +78,8 @@ LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH) external/libnl/include
 
 LOCAL_SHARED_LIBRARIES := libc libcutils libnl
-LOCAL_STATIC_LIBRARIES := libpcap
+# KEYSTONE(I53e0508ac95eea03568db936352142a4eca48b4e,b/149524265)
+LOCAL_STATIC_LIBRARIES := libpcap.vendor
 ifneq (,$(strip $(dhcpver)))
 LOCAL_SHARED_LIBRARIES += libnetutils
 LOCAL_C_INCLUDES += $(LOCAL_PATH) system/core/include/netutils
