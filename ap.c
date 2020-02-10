@@ -11096,6 +11096,7 @@ static enum sigma_cmd_result cmd_ap_get_parameter(struct sigma_dut *dut,
 	char value[256], resp[512];
 	const char *param = get_param(cmd, "parameter");
 	const char *ifname = get_param(cmd, "Interface");
+	const char *var;
 
 	if (!ifname)
 		ifname = get_main_ifname(dut);
@@ -11121,6 +11122,18 @@ static enum sigma_cmd_result cmd_ap_get_parameter(struct sigma_dut *dut,
 			return -2;
 		}
 		snprintf(resp, sizeof(resp), "PSK,%s", value);
+	} else if (strcasecmp(param, "PMK") == 0) {
+		var = get_param(cmd, "STA_MAC_Address");
+		if (!var)
+			return INVALID_SEND_STATUS;
+		snprintf(resp, sizeof(resp), "GET_PMK %s", var);
+		if (hapd_command_resp(ifname, resp, &resp[4],
+				      sizeof(resp) - 4) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,GET_PMK failed");
+			return STATUS_SENT_ERROR;
+		}
+		memcpy(resp, "PMK,", 4);
 	} else {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "ErrorCode,Unsupported parameter");
