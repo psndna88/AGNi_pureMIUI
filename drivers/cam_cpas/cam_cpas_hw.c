@@ -122,6 +122,14 @@ static int cam_cpas_util_vote_bus_client_level(
 		goto end;
 	}
 
+	if (level >= CAM_MAX_VOTE) {
+		CAM_ERR(CAM_CPAS,
+			"Invalid votelevel=%d,usecases=%d,Bus client=[%s]",
+			level, bus_client->common_data.num_usecases,
+			bus_client->common_data.name);
+		return -EINVAL;
+	}
+
 	if (level == bus_client->curr_vote_level)
 		goto end;
 
