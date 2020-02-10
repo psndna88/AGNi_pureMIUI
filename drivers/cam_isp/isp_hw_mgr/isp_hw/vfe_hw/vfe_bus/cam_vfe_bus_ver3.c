@@ -3727,7 +3727,6 @@ int cam_vfe_bus_ver3_init(
 	struct cam_vfe_bus              *vfe_bus_local;
 	struct cam_vfe_bus_ver3_hw_info *ver3_hw_info = bus_hw_info;
 	struct cam_vfe_soc_private      *soc_private = NULL;
-	char rup_controller_name[12] = "";
 
 	CAM_DBG(CAM_ISP, "Enter");
 
@@ -3793,10 +3792,7 @@ int cam_vfe_bus_ver3_init(
 		goto free_bus_priv;
 	}
 
-	strlcat(rup_controller_name, drv_name, sizeof(rup_controller_name));
-	strlcat(rup_controller_name, "_rup", sizeof(rup_controller_name));
-
-	rc = cam_irq_controller_init(rup_controller_name,
+	rc = cam_irq_controller_init("vfe_bus_rup",
 		bus_priv->common_data.mem_base,
 		&ver3_hw_info->common_reg.irq_reg_info,
 		&bus_priv->common_data.rup_irq_controller, false);
