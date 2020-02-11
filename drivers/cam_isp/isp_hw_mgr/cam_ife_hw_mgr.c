@@ -249,7 +249,7 @@ static int cam_ife_hw_mgr_reset_csid_res(
 			rc = hw_intf->hw_ops.reset(hw_intf->hw_priv,
 				&csid_reset_args,
 				sizeof(struct cam_csid_reset_cfg_args));
-			if (rc <= 0)
+			if (rc)
 				goto err;
 		}
 	}
@@ -3711,7 +3711,14 @@ static int cam_ife_mgr_stop_hw(void *hw_mgr_priv, void *stop_hw_args)
 
 	cam_ife_mgr_pause_hw(ctx);
 
-	wait_for_completion(&ctx->config_done_complete);
+	rc = wait_for_completion_timeout(&ctx->config_done_complete,
+		msecs_to_jiffies(10));
+	if (rc == 0) {
+		CAM_WARN(CAM_ISP,
+			"config done completion timeout for last applied req_id=%llu rc=%d ctx_index %d",
+			ctx->applied_req_id, rc, ctx->ctx_index);
+		rc = -ETIMEDOUT;
+	}
 
 	if (stop_isp->stop_only)
 		goto end;
@@ -5968,6 +5975,9 @@ static int cam_ife_mgr_process_recovery_cb(void *priv, void *data)
 			}
 		}
 
+		if (!g_ife_hw_mgr.debug_cfg.enable_recovery)
+			break;
+
 		CAM_DBG(CAM_ISP, "RESET: CSID PATH");
 		for (i = 0; i < recovery_data->no_of_context; i++) {
 			ctx = recovery_data->affected_ctx[i];
@@ -6193,22 +6203,12 @@ static int cam_ife_hw_mgr_handle_hw_err(
 	rc = cam_ife_hw_mgr_find_affected_ctx(&error_event_data,
 		core_idx, &recovery_data);
 
-	if (event_info->res_type == CAM_ISP_RESOURCE_VFE_OUT)
-		return rc;
+	if (event_info->err_type == CAM_VFE_IRQ_STATUS_VIOLATION)
+		recovery_data.error_type = CAM_ISP_HW_ERROR_VIOLATION;
+	else
+		recovery_data.error_type = CAM_ISP_HW_ERROR_OVERFLOW;
 
-	if (g_ife_hw_mgr.debug_cfg.enable_recovery) {
-		CAM_DBG(CAM_ISP, "IFE Mgr recovery is enabled");
-
-		/* Trigger for recovery */
-		if (event_info->err_type == CAM_VFE_IRQ_STATUS_VIOLATION)
-			recovery_data.error_type = CAM_ISP_HW_ERROR_VIOLATION;
-		else
-			recovery_data.error_type = CAM_ISP_HW_ERROR_OVERFLOW;
-		cam_ife_hw_mgr_do_error_recovery(&recovery_data);
-	} else {
-		CAM_DBG(CAM_ISP, "recovery is not enabled");
-		rc = 0;
-	}
+	cam_ife_hw_mgr_do_error_recovery(&recovery_data);
 
 	return rc;
 }

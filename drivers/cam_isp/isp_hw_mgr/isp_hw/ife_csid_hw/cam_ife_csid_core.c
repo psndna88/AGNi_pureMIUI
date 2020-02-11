@@ -529,6 +529,7 @@ static int cam_ife_csid_path_reset(struct cam_ife_csid_hw *csid_hw,
 	struct cam_csid_reset_cfg_args  *reset)
 {
 	int rc = 0;
+	unsigned long rem_jiffies;
 	struct cam_hw_soc_info                    *soc_info;
 	struct cam_isp_resource_node              *res;
 	const struct cam_ife_csid_reg_offset      *csid_reg;
@@ -648,14 +649,13 @@ static int cam_ife_csid_path_reset(struct cam_ife_csid_hw *csid_hw,
 	cam_io_w_mb(reset_strb_val, soc_info->reg_map[0].mem_base +
 				reset_strb_addr);
 
-	rc = wait_for_completion_timeout(complete,
+	rem_jiffies = wait_for_completion_timeout(complete,
 		msecs_to_jiffies(IFE_CSID_TIMEOUT));
-	if (rc <= 0) {
+	if (!rem_jiffies) {
+		rc = -ETIMEDOUT;
 		CAM_ERR(CAM_ISP, "CSID:%d Res id %d fail rc = %d",
 			 csid_hw->hw_intf->hw_idx,
 			res->res_id,  rc);
-		if (rc == 0)
-			rc = -ETIMEDOUT;
 	}
 
 end:
@@ -773,17 +773,39 @@ int cam_ife_csid_cid_reserve(struct cam_ife_csid_hw *csid_hw,
 		break;
 	case CAM_CPAS_TITAN_480_V100:
 	case CAM_CPAS_TITAN_580_V100:
-		if (cid_reserv->in_port->cust_node == 1) {
-			if (cid_reserv->in_port->usage_type == 1) {
-				CAM_ERR(CAM_ISP, "Dual IFE is not supported");
+		/*
+		 * Assigning existing two IFEs for custom in KONA,
+		 * this needs to be addressed accordingly for
+		 * upcoming targets
+		 */
+		if (cid_reserv->in_port->cust_node) {
+			if (cid_reserv->in_port->usage_type ==
+				CAM_ISP_RES_USAGE_DUAL) {
+				CAM_ERR(CAM_ISP,
+					"Dual IFE is not supported for cust_node %u",
+					cid_reserv->in_port->cust_node);
 				rc = -EINVAL;
 				goto end;
 			}
-			if (csid_hw->hw_intf->hw_idx != 0) {
-				CAM_DBG(CAM_ISP, "CSID%d not eligible",
-					csid_hw->hw_intf->hw_idx);
-				rc = -EINVAL;
-				goto end;
+
+			if (cid_reserv->in_port->cust_node ==
+				CAM_ISP_ACQ_CUSTOM_PRIMARY) {
+				if (csid_hw->hw_intf->hw_idx != 0) {
+					CAM_ERR(CAM_ISP, "CSID%d not eligible",
+						csid_hw->hw_intf->hw_idx);
+					rc = -EINVAL;
+					goto end;
+				}
+			}
+
+			if (cid_reserv->in_port->cust_node ==
+				CAM_ISP_ACQ_CUSTOM_SECONDARY) {
+				if (csid_hw->hw_intf->hw_idx != 1) {
+					CAM_ERR(CAM_ISP, "CSID%d not eligible",
+						csid_hw->hw_intf->hw_idx);
+					rc = -EINVAL;
+					goto end;
+				}
 			}
 		}
 		break;
@@ -828,7 +850,7 @@ int cam_ife_csid_cid_reserve(struct cam_ife_csid_hw *csid_hw,
 	case CAM_IFE_PIX_PATH_RES_IPP:
 		if (csid_hw->ipp_res.res_state !=
 			CAM_ISP_RESOURCE_STATE_AVAILABLE) {
-			CAM_DBG(CAM_ISP,
+			CAM_ERR(CAM_ISP,
 				"CSID:%d IPP resource not available",
 				csid_hw->hw_intf->hw_idx);
 			rc = -EINVAL;
