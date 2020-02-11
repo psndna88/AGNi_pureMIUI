@@ -48,6 +48,9 @@
 		hsuart0 = &qupv3_se18_4uart;
 		pci-domain0 = &pcie0; /* PCIe0 domain */
 		pci-domain1 = &pcie1; /* PCIe1 domain */
+		swr0 = &swr0;
+		swr1 = &swr1;
+		swr2 = &swr2;
 	};
 
 	cpus {
@@ -435,10 +438,18 @@
 			size = <0x0 0x1000000>;
 		};
 
+		secure_display_memory: secure_display_region { /* Secure UI */
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
+			reusable;
+			alignment = <0x0 0x400000>;
+			size = <0x0 0xA400000>;
+		};
+
 		/* global autoconfigured region for contiguous allocations */
 		linux,cma {
 			compatible = "shared-dma-pool";
-			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
+			alloc-ranges = <0x0 0x00000000 0x0 0xdfffffff>;
 			reusable;
 			alignment = <0x0 0x400000>;
 			size = <0x0 0x2000000>;
@@ -510,7 +521,7 @@
 			     <GIC_PPI 14 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_LOW)>,
 			     <GIC_PPI 11 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_LOW)>,
 			     <GIC_PPI 12 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_LOW)>;
-		clock-frequency = <96000>;
+		clock-frequency = <19200000>;
 	};
 
 	memtimer: timer@17c20000 {
@@ -940,6 +951,8 @@
 		vdd_parent-supply = <&VDD_MM_LEVEL>;
 		qcom,support-hw-trigger;
 		qcom,retain-regs;
+		proxy-supply = <&disp_cc_mdss_core_gdsc>;
+		qcom,proxy-consumer-enable;
 	};
 
 	/* GCC GDSCs */
@@ -1401,6 +1414,7 @@
 			"ref_aux_clk";
 		clocks = <&clock_rpmh RPMH_CXO_CLK>,
 			<&clock_gcc GCC_UFS_PHY_PHY_AUX_CLK>;
+		resets = <&ufshc_mem 0>;
 		status = "disabled";
 	};
 
@@ -1410,9 +1424,12 @@
 		interrupts = <GIC_SPI 265 IRQ_TYPE_LEVEL_HIGH>;
 		phys = <&ufsphy_mem>;
 		phy-names = "ufsphy";
-		lanes-per-direction = <2>;
-		dev-ref-clk-freq = <0>; /* 19.2 MHz */
+		#reset-cells = <1>;
 
+		lanes-per-direction = <2>;
+		limit-rate = <1>; /* HS Rate-A */
+		dev-ref-clk-freq = <0>; /* 19.2 MHz */
+		qcom,disable-lpm;
 		clock-names =
 			"core_clk",
 			"bus_aggr_clk",
@@ -1507,6 +1524,7 @@
 
 		resets = <&clock_gcc GCC_UFS_PHY_BCR>;
 		reset-names = "rst";
+		dma-coherent;
 
 		status = "disabled";
 	};
@@ -1750,8 +1768,8 @@
 		qcom,msm_fastrpc_compute_cb2 {
 			compatible = "qcom,msm-fastrpc-compute-cb";
 			label = "cdsprpc-smd";
-			iommus = <&apps_smmu 0x2142 0x04A0>,
-					 <&apps_smmu 0x1102 0x04A0>;
+			iommus = <&apps_smmu 0x2162 0x0400>,
+					 <&apps_smmu 0x1182 0x0420>;
 			qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
 			qcom,iommu-faults = "stall-disable";
 			dma-coherent;
@@ -1760,8 +1778,8 @@
 		qcom,msm_fastrpc_compute_cb3 {
 			compatible = "qcom,msm-fastrpc-compute-cb";
 			label = "cdsprpc-smd";
-			iommus = <&apps_smmu 0x2143 0x14A0>,
-					 <&apps_smmu 0x1103 0x04E0>;
+			iommus = <&apps_smmu 0x2163 0x0400>,
+					 <&apps_smmu 0x1183 0x0420>;
 			qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
 			qcom,iommu-faults = "stall-disable";
 			dma-coherent;
@@ -1770,8 +1788,8 @@
 		qcom,msm_fastrpc_compute_cb4 {
 			compatible = "qcom,msm-fastrpc-compute-cb";
 			label = "cdsprpc-smd";
-			iommus = <&apps_smmu 0x0144 0x2420>,
-					 <&apps_smmu 0x1184 0x0460>;
+			iommus = <&apps_smmu 0x2164 0x0400>,
+					 <&apps_smmu 0x1184 0x0420>;
 			qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
 			qcom,iommu-faults = "stall-disable";
 			dma-coherent;
@@ -1780,8 +1798,8 @@
 		qcom,msm_fastrpc_compute_cb5 {
 			compatible = "qcom,msm-fastrpc-compute-cb";
 			label = "cdsprpc-smd";
-			iommus = <&apps_smmu 0x2165 0x0480>,
-					 <&apps_smmu 0x1105 0x04E0>;
+			iommus = <&apps_smmu 0x2165 0x0400>,
+					 <&apps_smmu 0x1185 0x0420>;
 			qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
 			qcom,iommu-faults = "stall-disable";
 			dma-coherent;
@@ -1790,8 +1808,8 @@
 		qcom,msm_fastrpc_compute_cb6 {
 			compatible = "qcom,msm-fastrpc-compute-cb";
 			label = "cdsprpc-smd";
-			iommus = <&apps_smmu 0x0126 0x34C0>,
-					 <&apps_smmu 0x1186 0x2400>;
+			iommus = <&apps_smmu 0x2166 0x0400>,
+					 <&apps_smmu 0x1186 0x0420>;
 			qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
 			qcom,iommu-faults = "stall-disable";
 			dma-coherent;
@@ -1800,8 +1818,8 @@
 		qcom,msm_fastrpc_compute_cb7 {
 			compatible = "qcom,msm-fastrpc-compute-cb";
 			label = "cdsprpc-smd";
-			iommus = <&apps_smmu 0x2147 0x0420>,
-					 <&apps_smmu 0x1187 0x2420>;
+			iommus = <&apps_smmu 0x2167 0x0400>,
+					 <&apps_smmu 0x1187 0x0420>;
 			qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
 			qcom,iommu-faults = "stall-disable";
 			dma-coherent;
@@ -1810,8 +1828,8 @@
 		qcom,msm_fastrpc_compute_cb8 {
 			compatible = "qcom,msm-fastrpc-compute-cb";
 			label = "cdsprpc-smd";
-			iommus = <&apps_smmu 0x0148 0x3420>,
-					 <&apps_smmu 0x1108 0x24A0>;
+			iommus = <&apps_smmu 0x2168 0x0400>,
+					 <&apps_smmu 0x1188 0x0420>;
 			qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
 			qcom,iommu-faults = "stall-disable";
 			dma-coherent;
@@ -1821,8 +1839,8 @@
 			compatible = "qcom,msm-fastrpc-compute-cb";
 			label = "cdsprpc-smd";
 			qcom,secure-context-bank;
-			iommus = <&apps_smmu 0x0149 0x34A0>,
-					 <&apps_smmu 0x1109 0x04E0>;
+			iommus = <&apps_smmu 0x2169 0x0400>,
+					 <&apps_smmu 0x1189 0x0420>;
 			qcom,iommu-dma-addr-pool = <0x60000000 0x78000000>;
 			qcom,iommu-faults = "stall-disable";
 			qcom,iommu-vmid = <0xA>;	/* VMID_CP_PIXEL */
@@ -2417,6 +2435,16 @@
 				qcom,glink-channels = "glink_ssr";
 				qcom,notify-edges = <&glink_slpi>,
 						    <&glink_modem>;
+			};
+
+			qcom,pmic_glink_rpmsg {
+				qcom,glink-channels = "PMIC_RTR_ADSP_APPS";
+			};
+
+			qcom,pmic_glink_log_rpmsg {
+				qcom,glink-channels = "PMIC_LOGS_ADSP_APPS";
+				qcom,intents = <0x800 5
+						0xc00 3>;
 			};
 		};
 
@@ -3083,6 +3111,28 @@
 		iommus = <&apps_smmu 0x0584 0x0011>,
 			 <&apps_smmu 0x0594 0x0011>;
 		qcom,iommu-dma = "atomic";
+	};
+
+	qcom,pmic_glink {
+		compatible = "qcom,pmic-glink";
+		qcom,pmic-glink-channel = "PMIC_RTR_ADSP_APPS";
+
+		qcom,battery_charger {
+			compatible = "qcom,battery-charger";
+		};
+
+		qcom,ucsi {
+			compatible = "qcom,ucsi-glink";
+		};
+	};
+
+	qcom,pmic_glink_log {
+		compatible = "qcom,pmic-glink";
+		qcom,pmic-glink-channel = "PMIC_LOGS_ADSP_APPS";
+
+		qcom,battery_debug {
+			compatible = "qcom,battery-debug";
+		};
 	};
 
 	bluetooth: bt_qca6490 {
