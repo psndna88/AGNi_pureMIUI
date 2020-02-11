@@ -15,6 +15,10 @@
 #include "cam_context.h"
 #include "cam_isp_hw_mgr_intf.h"
 
+
+#define CAM_IFE_QTIMER_MUL_FACTOR        10000
+#define CAM_IFE_QTIMER_DIV_FACTOR        192
+
 /*
  * Maximum hw resource - This number is based on the maximum
  * output port resource. The current maximum resource number
@@ -246,6 +250,8 @@ struct cam_isp_context_event_record {
  * @hw_acquired:               Indicate whether HW resources are acquired
  * @init_received:             Indicate whether init config packet is received
  * @split_acquire:             Indicate whether a separate acquire is expected
+ * @custom_enabled:            Custom HW enabled for this ctx
+ * @use_frame_header_ts:       Use frame header for qtimer ts
  * @init_timestamp:            Timestamp at which this context is initialized
  * @isp_device_type            ISP device type
  *
@@ -283,6 +289,8 @@ struct cam_isp_context {
 	bool                                  hw_acquired;
 	bool                                  init_received;
 	bool                                  split_acquire;
+	bool                                  custom_enabled;
+	bool                                  use_frame_header_ts;
 	unsigned int                          init_timestamp;
 	uint32_t                              isp_device_type;
 };

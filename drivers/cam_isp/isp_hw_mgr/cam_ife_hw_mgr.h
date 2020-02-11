@@ -82,6 +82,8 @@ struct cam_ife_hw_mgr_debug {
  * @init_done               indicate whether init hw is done
  * @is_fe_enable            indicate whether fetch engine\read path is enabled
  * @is_dual                 indicate whether context is in dual VFE mode
+ * @custom_enabled          update the flag if context is connected to custom HW
+ * @use_frame_header_ts     obtain qtimer ts using frame header
  * @ts                      captured timestamp when the ctx is acquired
  */
 struct cam_ife_hw_mgr_ctx {
@@ -129,6 +131,8 @@ struct cam_ife_hw_mgr_ctx {
 	bool                            init_done;
 	bool                            is_fe_enable;
 	bool                            is_dual;
+	bool                            custom_enabled;
+	bool                            use_frame_header_ts;
 	struct timespec64               ts;
 };
 
