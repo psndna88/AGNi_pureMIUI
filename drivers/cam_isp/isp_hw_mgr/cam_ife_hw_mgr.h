@@ -11,6 +11,7 @@
 #include "cam_isp_hw_mgr.h"
 #include "cam_vfe_hw_intf.h"
 #include "cam_ife_csid_hw_intf.h"
+#include "cam_top_tpg_hw_intf.h"
 #include "cam_tasklet_util.h"
 
 /* IFE resource constants */
@@ -48,6 +49,7 @@ struct cam_ife_hw_mgr_debug {
  * @slave_hw_idx:           hw index for slave core
  * @hw_mgr:                 IFE hw mgr which owns this context
  * @ctx_in_use:             flag to tell whether context is active
+ * @res_list_tpg:           TPG resource list
  * @res_list_ife_in:        Starting resource(TPG,PHY0, PHY1...) Can only be
  *                          one.
  * @res_list_csid:          CSID resource list
@@ -85,6 +87,7 @@ struct cam_ife_hw_mgr_debug {
  * @custom_enabled          update the flag if context is connected to custom HW
  * @use_frame_header_ts     obtain qtimer ts using frame header
  * @ts                      captured timestamp when the ctx is acquired
+ * @is_tpg                  indicate whether context is using PHY TPG
  */
 struct cam_ife_hw_mgr_ctx {
 	struct list_head                list;
@@ -97,6 +100,7 @@ struct cam_ife_hw_mgr_ctx {
 	uint32_t                        ctx_in_use;
 
 	struct cam_isp_hw_mgr_res       res_list_ife_in;
+	struct cam_isp_hw_mgr_res       res_list_tpg;
 	struct list_head                res_list_ife_cid;
 	struct list_head                res_list_ife_csid;
 	struct list_head                res_list_ife_src;
@@ -134,6 +138,7 @@ struct cam_ife_hw_mgr_ctx {
 	bool                            custom_enabled;
 	bool                            use_frame_header_ts;
 	struct timespec64               ts;
+	bool                            is_tpg;
 };
 
 /**
@@ -155,6 +160,7 @@ struct cam_ife_hw_mgr_ctx {
  */
 struct cam_ife_hw_mgr {
 	struct cam_isp_hw_mgr          mgr_common;
+	struct cam_hw_intf            *tpg_devices[CAM_TOP_TPG_HW_NUM_MAX];
 	struct cam_hw_intf            *csid_devices[CAM_IFE_CSID_HW_NUM_MAX];
 	struct cam_hw_intf            *ife_devices[CAM_IFE_HW_NUM_MAX];
 	struct cam_soc_reg_map        *cdm_reg_map[CAM_IFE_HW_NUM_MAX];

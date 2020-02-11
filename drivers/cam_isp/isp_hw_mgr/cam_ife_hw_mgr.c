@@ -424,6 +424,17 @@ static int cam_ife_hw_mgr_init_hw(
 	struct cam_isp_hw_mgr_res *hw_mgr_res;
 	int rc = 0, i;
 
+	if (ctx->is_tpg) {
+		CAM_DBG(CAM_ISP, "INIT TPG ... in ctx id:%d",
+			ctx->ctx_index);
+		rc = cam_ife_hw_mgr_init_hw_res(&ctx->res_list_tpg);
+		if (rc) {
+			CAM_ERR(CAM_ISP, "Can not INIT TFE TPG(id :%d)",
+				ctx->res_list_tpg.hw_res[0]->hw_intf->hw_idx);
+			goto deinit;
+		}
+	}
+
 	CAM_DBG(CAM_ISP, "INIT IFE CID ... in ctx id:%d",
 		ctx->ctx_index);
 	/* INIT IFE CID */
@@ -839,6 +850,10 @@ static int cam_ife_hw_mgr_release_hw_for_ctx(
 		cam_ife_hw_mgr_free_hw_res(hw_mgr_res);
 		cam_ife_hw_mgr_put_res(&ife_ctx->free_res_list, &hw_mgr_res);
 	}
+
+	/* ife phy tpg resource */
+	if (ife_ctx->is_tpg)
+		cam_ife_hw_mgr_free_hw_res(&ife_ctx->res_list_tpg);
 
 	/* ife root node */
 	if (ife_ctx->res_list_ife_in.res_type != CAM_ISP_RESOURCE_UNINT)
@@ -1862,6 +1877,48 @@ end:
 
 }
 
+static int cam_ife_hw_mgr_acquire_tpg(
+	struct cam_ife_hw_mgr_ctx               *ife_ctx,
+	struct cam_isp_in_port_generic_info     *in_port,
+	uint32_t                                 num_inport)
+{
+	int rc = -EINVAL;
+	uint32_t i;
+	struct cam_ife_hw_mgr *ife_hw_mgr;
+	struct cam_hw_intf *hw_intf;
+	struct cam_top_tpg_ver2_reserve_args tpg_reserve;
+
+	ife_hw_mgr = ife_ctx->hw_mgr;
+
+	for (i = 0; i < CAM_TOP_TPG_HW_NUM_MAX; i++) {
+		if (!ife_hw_mgr->tpg_devices[i])
+			continue;
+
+		hw_intf = ife_hw_mgr->tpg_devices[i];
+		tpg_reserve.num_inport = num_inport;
+		tpg_reserve.node_res = NULL;
+		tpg_reserve.in_port = in_port;
+
+		rc = hw_intf->hw_ops.reserve(hw_intf->hw_priv,
+			&tpg_reserve, sizeof(tpg_reserve));
+		if (!rc)
+			break;
+	}
+
+	if (i == CAM_TOP_TPG_HW_NUM_MAX || !tpg_reserve.node_res) {
+		CAM_ERR(CAM_ISP, "Can not acquire IFE TPG");
+		rc = -EINVAL;
+		goto end;
+	}
+
+	ife_ctx->res_list_tpg.res_type = in_port->res_type;
+	ife_ctx->res_list_tpg.hw_res[0] = tpg_reserve.node_res;
+	ife_ctx->is_tpg = true;
+
+end:
+	return rc;
+}
+
 static int cam_ife_hw_mgr_acquire_res_ife_csid_pxl(
 	struct cam_ife_hw_mgr_ctx           *ife_ctx,
 	struct cam_isp_in_port_generic_info *in_port,
@@ -2753,6 +2810,16 @@ static int cam_ife_mgr_acquire_hw(void *hw_mgr_priv, void *acquire_hw_args)
 			ife_ctx->custom_enabled = true;
 			/* This can be obtained from uapi */
 			ife_ctx->use_frame_header_ts = true;
+		}
+
+		if ((in_port->res_type == CAM_ISP_IFE_IN_RES_CPHY_TPG_0) ||
+			(in_port->res_type == CAM_ISP_IFE_IN_RES_CPHY_TPG_1))
+			rc  = cam_ife_hw_mgr_acquire_tpg(ife_ctx, in_port,
+				acquire_hw_info->num_inputs);
+
+		if (rc) {
+			CAM_ERR(CAM_ISP, "can not acquire TPG resource");
+			goto free_mem;
 		}
 
 		rc = cam_ife_mgr_acquire_hw_for_ctx(ife_ctx, in_port,
@@ -3752,6 +3819,9 @@ static int cam_ife_mgr_stop_hw(void *hw_mgr_priv, void *stop_hw_args)
 	if (cam_cdm_stream_off(ctx->cdm_handle))
 		CAM_ERR(CAM_ISP, "CDM stream off failed %d", ctx->cdm_handle);
 
+	if (ctx->is_tpg)
+		cam_ife_hw_mgr_stop_hw_res(&ctx->res_list_tpg);
+
 	cam_ife_hw_mgr_deinit_hw(ctx);
 	CAM_DBG(CAM_ISP,
 		"Stop success for ctx id:%d rc :%d", ctx->ctx_index, rc);
@@ -4073,6 +4143,17 @@ start_only:
 		if (rc) {
 			CAM_ERR(CAM_ISP, "Can not start IFE CSID (%d)",
 				hw_mgr_res->res_id);
+			goto err;
+		}
+	}
+
+	if (ctx->is_tpg) {
+		CAM_DBG(CAM_ISP, "START TPG HW ... in ctx id:%d",
+			ctx->ctx_index);
+		rc = cam_ife_hw_mgr_start_hw_res(&ctx->res_list_tpg, ctx);
+		if (rc) {
+			CAM_ERR(CAM_ISP, "Can not start IFE TPG (%d)",
+				ctx->res_list_tpg.res_id);
 			goto err;
 		}
 	}
@@ -7100,6 +7181,16 @@ int cam_ife_hw_mgr_init(struct cam_hw_mgr_intf *hw_mgr_intf, int *iommu_hdl)
 		return -EINVAL;
 	}
 
+	/* fill tpg hw intf information */
+	for (i = 0, j = 0; i < CAM_TOP_TPG_HW_NUM_MAX; i++) {
+		rc = cam_top_tpg_hw_init(&g_ife_hw_mgr.tpg_devices[i], i);
+		if (!rc)
+			j++;
+	}
+	if (!j)
+		CAM_ERR(CAM_ISP, "no valid IFE TPG HW");
+
+
 	cam_ife_hw_mgr_sort_dev_with_caps(&g_ife_hw_mgr);
 
 	/* setup ife context list */
@@ -7146,6 +7237,7 @@ int cam_ife_hw_mgr_init(struct cam_hw_mgr_intf *hw_mgr_intf, int *iommu_hdl)
 			sizeof(g_ife_hw_mgr.ctx_pool[i]));
 		INIT_LIST_HEAD(&g_ife_hw_mgr.ctx_pool[i].list);
 
+		INIT_LIST_HEAD(&g_ife_hw_mgr.ctx_pool[i].res_list_tpg.list);
 		INIT_LIST_HEAD(&g_ife_hw_mgr.ctx_pool[i].res_list_ife_in.list);
 		INIT_LIST_HEAD(&g_ife_hw_mgr.ctx_pool[i].res_list_ife_cid);
 		INIT_LIST_HEAD(&g_ife_hw_mgr.ctx_pool[i].res_list_ife_csid);

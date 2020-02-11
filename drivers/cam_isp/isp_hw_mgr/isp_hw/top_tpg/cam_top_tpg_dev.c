@@ -21,10 +21,10 @@ static int cam_top_tpg_component_bind(struct device *dev,
 	struct device *master_dev, void *data)
 {
 	struct cam_hw_intf             *tpg_hw_intf;
-	struct cam_hw_info             *tpg_hw_info;
-	struct cam_top_tpg_hw          *tpg_dev = NULL;
+	struct cam_hw_info             *hw_info;
+	struct cam_top_tpg_hw          *tpg_hw = NULL;
 	const struct of_device_id      *match_dev = NULL;
-	struct cam_top_tpg_hw_info     *tpg_hw_data = NULL;
+	struct cam_top_tpg_hw_info     *tpg_hw_info = NULL;
 	uint32_t                        tpg_dev_idx;
 	int                             rc = 0;
 	struct platform_device *pdev = to_platform_device(dev);
@@ -37,14 +37,14 @@ static int cam_top_tpg_component_bind(struct device *dev,
 		goto err;
 	}
 
-	tpg_hw_info = kzalloc(sizeof(struct cam_hw_info), GFP_KERNEL);
-	if (!tpg_hw_info) {
+	hw_info = kzalloc(sizeof(struct cam_hw_info), GFP_KERNEL);
+	if (!hw_info) {
 		rc = -ENOMEM;
 		goto free_hw_intf;
 	}
 
-	tpg_dev = kzalloc(sizeof(struct cam_top_tpg_hw), GFP_KERNEL);
-	if (!tpg_dev) {
+	tpg_hw = kzalloc(sizeof(struct cam_top_tpg_hw), GFP_KERNEL);
+	if (!tpg_hw) {
 		rc = -ENOMEM;
 		goto free_hw_info;
 	}
@@ -66,23 +66,23 @@ static int cam_top_tpg_component_bind(struct device *dev,
 
 	tpg_hw_intf->hw_idx = tpg_dev_idx;
 	tpg_hw_intf->hw_type = CAM_ISP_HW_TYPE_TPG;
-	tpg_hw_intf->hw_priv = tpg_hw_info;
+	tpg_hw_intf->hw_priv = hw_info;
 
-	tpg_hw_info->core_info = tpg_dev;
-	tpg_hw_info->soc_info.pdev = pdev;
-	tpg_hw_info->soc_info.dev = &pdev->dev;
-	tpg_hw_info->soc_info.dev_name = tpg_dev_name;
-	tpg_hw_info->soc_info.index = tpg_dev_idx;
+	hw_info->core_info = tpg_hw;
+	hw_info->soc_info.pdev = pdev;
+	hw_info->soc_info.dev = &pdev->dev;
+	hw_info->soc_info.dev_name = tpg_dev_name;
+	hw_info->soc_info.index = tpg_dev_idx;
 
-	tpg_hw_data = (struct cam_top_tpg_hw_info  *)match_dev->data;
+	tpg_hw_info = (struct cam_top_tpg_hw_info  *)match_dev->data;
 	/* need to setup the pdev before call the tfe hw probe init */
-	tpg_dev->tpg_info = tpg_hw_data;
+	tpg_hw->tpg_info = tpg_hw_info;
 
-	rc = cam_top_tpg_hw_probe_init(tpg_hw_intf, tpg_dev_idx);
+	rc = cam_top_tpg_probe_init(tpg_hw_intf, tpg_dev_idx);
 	if (rc)
 		goto free_dev;
 
-	platform_set_drvdata(pdev, tpg_dev);
+	platform_set_drvdata(pdev, tpg_hw);
 	CAM_DBG(CAM_ISP, "TPG: %d component binded successfully",
 		tpg_hw_intf->hw_idx);
 
@@ -94,9 +94,9 @@ static int cam_top_tpg_component_bind(struct device *dev,
 	return 0;
 
 free_dev:
-	kfree(tpg_dev);
+	kfree(tpg_hw);
 free_hw_info:
-	kfree(tpg_hw_info);
+	kfree(hw_info);
 free_hw_intf:
 	kfree(tpg_hw_intf);
 err:
@@ -108,19 +108,19 @@ static void cam_top_tpg_component_unbind(struct device *dev,
 {
 	struct cam_top_tpg_hw          *tpg_dev = NULL;
 	struct cam_hw_intf             *tpg_hw_intf;
-	struct cam_hw_info             *tpg_hw_info;
 	struct platform_device *pdev = to_platform_device(dev);
+	struct cam_hw_info             *hw_info;
 
 	tpg_dev = (struct cam_top_tpg_hw *)platform_get_drvdata(pdev);
 	tpg_hw_intf = tpg_dev->hw_intf;
-	tpg_hw_info = tpg_dev->hw_info;
+	hw_info = tpg_dev->hw_info;
 
 	CAM_DBG(CAM_ISP, "TPG:%d component unbound", tpg_dev->hw_intf->hw_idx);
-	cam_top_tpg_hw_deinit(tpg_dev);
+	cam_top_tpg_deinit(tpg_dev);
 
 	/*release the tpg device memory */
 	kfree(tpg_dev);
-	kfree(tpg_hw_info);
+	kfree(hw_info);
 	kfree(tpg_hw_intf);
 }
 

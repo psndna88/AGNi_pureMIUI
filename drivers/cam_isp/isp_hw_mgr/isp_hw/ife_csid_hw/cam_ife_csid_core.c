@@ -25,6 +25,10 @@
 #define CAM_IFE_CSID_TPG_VC_VAL                        0xA
 #define CAM_IFE_CSID_TPG_DT_VAL                        0x2B
 
+/* CSIPHY TPG VC/DT values */
+#define CAM_IFE_CSI_TPG_VC_VAL                         0x0
+#define CAM_IFE_CSI_TPG_DT_VAL                         0x2B
+
 /* Timeout values in usec */
 #define CAM_IFE_CSID_TIMEOUT_SLEEP_US                  1000
 #define CAM_IFE_CSID_TIMEOUT_ALL_US                    100000
@@ -957,6 +961,12 @@ int cam_ife_csid_cid_reserve(struct cam_ife_csid_hw *csid_hw,
 				csid_hw->tpg_cfg.height);
 
 			cid_data->tpg_set = 1;
+		} else if (cid_reserv->in_port->res_type ==
+			CAM_ISP_IFE_IN_RES_CPHY_TPG_0) {
+			csid_hw->csi2_rx_cfg.phy_sel = 0;
+		} else if (cid_reserv->in_port->res_type ==
+			CAM_ISP_IFE_IN_RES_CPHY_TPG_1) {
+			csid_hw->csi2_rx_cfg.phy_sel = 1;
 		} else {
 			csid_hw->csi2_rx_cfg.phy_sel =
 				(cid_reserv->in_port->res_type & 0xFF) - 1;
@@ -1129,9 +1139,10 @@ int cam_ife_csid_path_reserve(struct cam_ife_csid_hw *csid_hw,
 		reserve->in_port->line_start, reserve->in_port->line_stop,
 		path_data->crop_enable);
 
-	if (reserve->in_port->res_type == CAM_ISP_IFE_IN_RES_TPG) {
-		path_data->dt = CAM_IFE_CSID_TPG_DT_VAL;
-		path_data->vc = CAM_IFE_CSID_TPG_VC_VAL;
+	if ((reserve->in_port->res_type == CAM_ISP_IFE_IN_RES_CPHY_TPG_0) ||
+		(reserve->in_port->res_type == CAM_ISP_IFE_IN_RES_CPHY_TPG_1)) {
+		path_data->dt = CAM_IFE_CSI_TPG_DT_VAL;
+		path_data->vc = CAM_IFE_CSI_TPG_VC_VAL;
 	} else {
 		path_data->dt = reserve->in_port->dt[0];
 		path_data->vc = reserve->in_port->vc[0];
@@ -4459,6 +4470,7 @@ int cam_ife_csid_hw_probe_init(struct cam_hw_intf  *csid_hw_intf,
 	num_paths = ife_csid_hw->csid_info->csid_reg->cmn_reg->num_pix +
 		ife_csid_hw->csid_info->csid_reg->cmn_reg->num_rdis +
 		ife_csid_hw->csid_info->csid_reg->cmn_reg->num_udis;
+
 	/* Initialize the CID resource */
 	for (i = 0; i < num_paths; i++) {
 		ife_csid_hw->cid_res[i].res_type = CAM_ISP_RESOURCE_CID;
