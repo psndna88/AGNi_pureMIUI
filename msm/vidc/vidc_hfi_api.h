@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef __VIDC_HFI_API_H__
@@ -184,12 +184,10 @@ struct hal_intra_refresh {
 struct hal_buffer_requirements {
 	enum hal_buffer buffer_type;
 	u32 buffer_size;
-	u32 buffer_region_size;
-	u32 buffer_count_min;
-	u32 buffer_count_min_host;
-	u32 buffer_count_actual;
-	u32 contiguous;
-	u32 buffer_alignment;
+	u16 buffer_count_min;
+	u16 buffer_count_min_host;
+	u16 buffer_count_actual;
+	u16 buffer_alignment;
 };
 
 enum hal_priority {/* Priority increases with number */
