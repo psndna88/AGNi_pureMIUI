@@ -182,7 +182,7 @@
 
 	cam_cci0: qcom,cci0 {
 		cell-index = <0>;
-		compatible = "qcom,cci";
+		compatible = "qcom,cci", "simple-bus";
 		reg = <0xac4f000 0x1000>;
 		reg-names = "cci";
 		reg-cam-base = <0x4f000>;
@@ -275,7 +275,7 @@
 
 	cam_cci1: qcom,cci1 {
 		cell-index = <1>;
-		compatible = "qcom,cci";
+		compatible = "qcom,cci", "simple-bus";
 		reg = <0xac50000 0x1000>;
 		reg-names = "cci";
 		reg-cam-base = <0x50000>;
@@ -367,7 +367,7 @@
 	};
 
 	qcom,cam_smmu {
-		compatible = "qcom,msm-cam-smmu";
+		compatible = "qcom,msm-cam-smmu", "simple-bus";
 		status = "ok";
 
 		msm_cam_smmu_ife {
@@ -935,7 +935,7 @@
 					traffic-data =
 					<CAM_CPAS_PATH_DATA_IFE_RDI_ALL>;
 					traffic-transaction-type =
-					<CAM_CPAS_TRANSACTION_READ>;
+					<CAM_CPAS_TRANSACTION_WRITE>;
 					constituent-paths =
 					<CAM_CPAS_PATH_DATA_IFE_RDI0
 					CAM_CPAS_PATH_DATA_IFE_RDI1
@@ -1348,7 +1348,7 @@
 		reg = <0xacf0200 0x1000>;
 		reg-cam-base = <0xf0200>;
 		interrupt-names = "csid";
-		interrupts = <GIC_SPI 641 IRQ_TYPE_EDGE_RISING>;
+		interrupts = <GIC_SPI 640 IRQ_TYPE_EDGE_RISING>;
 		regulator-names = "camss", "ife2";
 		camss-supply = <&cam_cc_titan_top_gdsc>;
 		ife2-supply = <&cam_cc_ife_2_gdsc>;
@@ -1393,7 +1393,7 @@
 			<0xac42000 0x8000>;
 		reg-cam-base = <0xef000 0x42000>;
 		interrupt-names = "ife";
-		interrupts = <GIC_SPI 642 IRQ_TYPE_EDGE_RISING>;
+		interrupts = <GIC_SPI 641 IRQ_TYPE_EDGE_RISING>;
 		regulator-names = "camss", "ife2";
 		camss-supply = <&cam_cc_titan_top_gdsc>;
 		ife2-supply = <&cam_cc_ife_2_gdsc>;
@@ -1624,7 +1624,7 @@
 	cam_ipe0: qcom,ipe0 {
 		cell-index = <0>;
 		compatible = "qcom,cam-ipe";
-		reg = <0xac9a000 0xc000>;
+		reg = <0xac9a000 0x12000>;
 		reg-names = "ipe0_top";
 		reg-cam-base = <0x9a000>;
 		regulator-names = "ipe0-vdd";
