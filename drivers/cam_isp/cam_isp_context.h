@@ -247,13 +247,16 @@ struct cam_isp_context_event_record {
  * @event_record:              Event record array
  * @rdi_only_context:          Get context type information.
  *                             true, if context is rdi only context
+ * @offline_context:           Indicate whether context is for offline IFE
  * @hw_acquired:               Indicate whether HW resources are acquired
  * @init_received:             Indicate whether init config packet is received
  * @split_acquire:             Indicate whether a separate acquire is expected
  * @custom_enabled:            Custom HW enabled for this ctx
  * @use_frame_header_ts:       Use frame header for qtimer ts
  * @init_timestamp:            Timestamp at which this context is initialized
- * @isp_device_type            ISP device type
+ * @isp_device_type:           ISP device type
+ * @rxd_epoch:                 Indicate whether epoch has been received. Used to
+ *                             decide whether to apply request in offline ctx
  *
  */
 struct cam_isp_context {
@@ -286,6 +289,7 @@ struct cam_isp_context {
 	struct cam_isp_context_event_record   event_record[
 		CAM_ISP_CTX_EVENT_MAX][CAM_ISP_CTX_EVENT_RECORD_MAX_ENTRIES];
 	bool                                  rdi_only_context;
+	bool                                  offline_context;
 	bool                                  hw_acquired;
 	bool                                  init_received;
 	bool                                  split_acquire;
@@ -293,6 +297,7 @@ struct cam_isp_context {
 	bool                                  use_frame_header_ts;
 	unsigned int                          init_timestamp;
 	uint32_t                              isp_device_type;
+	atomic_t                              rxd_epoch;
 };
 
 /**
