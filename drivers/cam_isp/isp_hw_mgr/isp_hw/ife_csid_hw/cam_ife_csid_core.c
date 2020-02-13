@@ -33,6 +33,8 @@
 #define CAM_IFE_CSID_TIMEOUT_SLEEP_US                  1000
 #define CAM_IFE_CSID_TIMEOUT_ALL_US                    100000
 
+#define CAM_IFE_CSID_RESET_TIMEOUT_MS                  100
+
 /*
  * Constant Factors needed to change QTimer ticks to nanoseconds
  * QTimer Freq = 19.2 MHz
@@ -655,7 +657,7 @@ static int cam_ife_csid_path_reset(struct cam_ife_csid_hw *csid_hw,
 				reset_strb_addr);
 
 	rem_jiffies = wait_for_completion_timeout(complete,
-		msecs_to_jiffies(IFE_CSID_TIMEOUT));
+		msecs_to_jiffies(CAM_IFE_CSID_RESET_TIMEOUT_MS));
 	if (!rem_jiffies) {
 		rc = -ETIMEDOUT;
 		CAM_ERR(CAM_ISP, "CSID:%d Res id %d fail rc = %d",
@@ -3321,7 +3323,7 @@ static int cam_ife_csid_reset_regs(
 	spin_unlock_irqrestore(&csid_hw->hw_info->hw_lock, flags);
 	CAM_DBG(CAM_ISP, "CSID reset start");
 	rc = wait_for_completion_timeout(&csid_hw->csid_top_complete,
-		msecs_to_jiffies(IFE_CSID_TIMEOUT));
+		msecs_to_jiffies(CAM_IFE_CSID_RESET_TIMEOUT_MS));
 	if (rc <= 0) {
 		val = cam_io_r_mb(soc_info->reg_map[0].mem_base +
 			csid_reg->cmn_reg->csid_top_irq_status_addr);
