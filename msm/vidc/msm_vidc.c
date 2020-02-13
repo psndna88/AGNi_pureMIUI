@@ -483,7 +483,9 @@ int msm_vidc_dqbuf(void *instance, struct v4l2_buffer *b)
 	 * fetch tag atleast 1 ETB is successfully processed after flush)
 	 */
 	if (b->type == OUTPUT_MPLANE && !inst->in_flush &&
-			!inst->out_flush && inst->clk_data.buffer_counter) {
+			!inst->out_flush &&
+			(inst->session_type == MSM_VIDC_ENCODER ||
+			inst->clk_data.buffer_counter)) {
 		rc = msm_comm_fetch_input_tag(&inst->fbd_data, b->index,
 				&input_tag, &input_tag2, inst->sid);
 		if (rc) {
