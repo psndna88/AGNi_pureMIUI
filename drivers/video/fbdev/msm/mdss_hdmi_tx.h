@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -92,6 +92,12 @@ struct hdmi_tx_ctrl {
 	struct msm_ext_disp_init_data ext_audio_data;
 	struct work_struct fps_work;
 	struct mdp_hdr_stream_ctrl hdr_ctrl;
+
+	int pending_event;
+	bool handle_pe;
+	atomic_t notification_pending;
+	struct completion notification_comp;
+	u32 notification_status;
 
 	spinlock_t hpd_state_lock;
 
