@@ -1142,7 +1142,8 @@ int cam_ife_csid_path_reserve(struct cam_ife_csid_hw *csid_hw,
 		path_data->crop_enable);
 
 	if ((reserve->in_port->res_type == CAM_ISP_IFE_IN_RES_CPHY_TPG_0) ||
-		(reserve->in_port->res_type == CAM_ISP_IFE_IN_RES_CPHY_TPG_1)) {
+		(reserve->in_port->res_type == CAM_ISP_IFE_IN_RES_CPHY_TPG_1) ||
+		(reserve->in_port->res_type == CAM_ISP_IFE_IN_RES_TPG)) {
 		path_data->dt = CAM_IFE_CSI_TPG_DT_VAL;
 		path_data->vc = CAM_IFE_CSI_TPG_VC_VAL;
 	} else {
