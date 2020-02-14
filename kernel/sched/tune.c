@@ -87,9 +87,8 @@ static inline struct schedtune *parent_st(struct schedtune *st)
  * By default, system-wide boosting is disabled, i.e. no boosting is applied
  * to tasks which are not into a child control group.
  */
-static struct schedtune
-root_schedtune = {
-	.boost	= 0,
+static struct schedtune root_schedtune = {
+	.boost = 0,
 #ifdef CONFIG_SCHED_WALT
 	.sched_boost_no_override = false,
 	.sched_boost_enabled = true,
@@ -551,24 +550,6 @@ int schedtune_task_boost(struct task_struct *p)
 	st = task_schedtune(p);
 	task_boost = st->boost;
 	rcu_read_unlock();
-
-	return task_boost;
-}
-
-/*  The same as schedtune_task_boost except assuming the caller has the rcu read
- *  lock.
- */
-int schedtune_task_boost_rcu_locked(struct task_struct *p)
-{
-	struct schedtune *st;
-	int task_boost;
-
-	if (unlikely(!schedtune_initialized))
-		return 0;
-
-	/* Get task boost value */
-	st = task_schedtune(p);
-	task_boost = st->boost;
 
 	return task_boost;
 }
