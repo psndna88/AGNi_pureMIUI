@@ -381,7 +381,8 @@
 				<&apps_smmu 0xC40 0x400>,
 				<&apps_smmu 0xC41 0x400>;
 			qcom,iommu-dma-addr-pool = <0x7400000 0xd8c00000>;
-			label = "ife";
+			label = "ife", "ife-cdm";
+			multiple-client-devices;
 			ife_iova_mem_map: iova-mem-map {
 				/* IO region is approximately 3.4 GB */
 				iova-mem-region-io {
@@ -489,7 +490,7 @@
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0x20C0 0x400>,
 				<&apps_smmu 0x24C0 0x400>;
-			label = "cpas-cdm0";
+			label = "cpas-cdm";
 			qcom,iommu-dma-addr-pool = <0x7400000 0xd8c00000>;
 			cpas_cdm_iova_mem_map: iova-mem-map {
 				iova-mem-region-io {
@@ -618,8 +619,8 @@
 			"csid4", "csid5", "csid6", "ife0",
 			"ife1", "ife2", "ife3", "custom0",
 			"ipe0", "cam-cdm-intf0", "cpas-cdm0",
-			"bps0", "icp0", "jpeg-dma0", "jpeg-enc0",
-			"fd0";
+			"ife-cdm0", "ife-cdm1", "bps0", "icp0",
+			"jpeg-dma0", "jpeg-enc0", "fd0";
 
 		camera-bus-nodes {
 			level3-nodes {
@@ -1127,9 +1128,9 @@
 		status = "ok";
 	};
 
-	qcom,cpas-cdm0@ac4d000 {
+	cam_cpas_cdm: qcom,cpas-cdm@ac4d000 {
 		cell-index = <0>;
-		compatible = "qcom,cam170-cpas-cdm0";
+		compatible = "qcom,cam-cpas-cdm1_2";
 		label = "cpas-cdm";
 		reg = <0xac4d000 0x1000>;
 		reg-names = "cpas-cdm";
@@ -1144,50 +1145,74 @@
 			<&clock_camcc CAM_CC_CPAS_AHB_CLK>;
 		clock-rates = <0 0>;
 		clock-cntl-level = "svs";
-		cdm-client-names = "ife";
+		cdm-client-names = "ife2", "ife3", "ife4", "ife5", "ife6";
 		status = "ok";
 	};
 
-	qcom,cpas-cdm1@acb4200 {
-		cell-index = <1>;
-		compatible = "qcom,cam480-cpas-cdm1";
-		label = "cpas-cdm";
+	qcom,ife-cdm0@acb4200 {
+		cell-index = <0>;
+		compatible = "qcom,cam-ife-cdm1_2";
+		label = "ife-cdm";
 		reg = <0xacb4200 0x1000>;
-		reg-names = "cpas-cdm";
+		reg-names = "ife-cdm0";
 		reg-cam-base = <0xb4200>;
 		interrupts = <GIC_SPI 456 IRQ_TYPE_EDGE_RISING>;
-		interrupt-names = "cpas-cdm";
-		regulator-names = "camss";
+		interrupt-names = "ife-cdm0";
+		regulator-names = "camss","ife0";
 		camss-supply = <&titan_top_gdsc>;
-		clock-names = "cam_cc_cpas_slow_ahb_clk",
+		ife0-supply = <&ife_0_gdsc>;
+		clock-names = "ife_0_ahb",
+			"ife_0_areg",
+			"ife_clk",
+			"ife_axi_clk",
 			"cam_cc_cpas_ahb_clk";
-		clocks = <&clock_camcc CAM_CC_SLOW_AHB_CLK_SRC>,
+		clocks =
+			<&clock_camcc CAM_CC_IFE_0_AHB_CLK>,
+			<&clock_camcc CAM_CC_IFE_0_AREG_CLK>,
+			<&clock_camcc CAM_CC_IFE_0_CLK>,
+			<&clock_camcc CAM_CC_IFE_0_AXI_CLK>,
 			<&clock_camcc CAM_CC_CPAS_AHB_CLK>;
-		clock-rates = <0 0>;
-		clock-cntl-level = "svs";
+		clock-rates =
+			<0 0 0 0 0>,
+			<0 0 0 0 0>,
+			<0 0 0 0 0>,
+			<0 0 0 0 0>;
+		clock-cntl-level = "lowsvs", "svs", "svs_l1", "turbo";
 		cdm-client-names = "ife0";
-		status = "disabled";
+		status = "ok";
 	};
 
-	qcom,cpas-cdm2@acc3200 {
-		cell-index = <2>;
-		compatible = "qcom,cam480-cpas-cdm2";
-		label = "cpas-cdm";
+	qcom,ife-cdm1@acc3200 {
+		cell-index = <1>;
+		compatible = "qcom,cam-ife-cdm1_2";
+		label = "ife-cdm";
 		reg = <0xacc3200 0x1000>;
-		reg-names = "cpas-cdm";
+		reg-names = "ife-cdm1";
 		reg-cam-base = <0xc3200>;
 		interrupts = <GIC_SPI 287 IRQ_TYPE_EDGE_RISING>;
-		interrupt-names = "cpas-cdm";
-		regulator-names = "camss";
+		interrupt-names = "ife-cdm1";
+		regulator-names = "camss","ife1";
 		camss-supply = <&titan_top_gdsc>;
-		clock-names = "cam_cc_cpas_slow_ahb_clk",
+		ife1-supply = <&ife_1_gdsc>;
+		clock-names = "ife_1_ahb",
+			"ife_1_areg",
+			"ife_clk",
+			"ife_axi_clk",
 			"cam_cc_cpas_ahb_clk";
-		clocks = <&clock_camcc CAM_CC_SLOW_AHB_CLK_SRC>,
+		clocks =
+			<&clock_camcc CAM_CC_IFE_1_AHB_CLK>,
+			<&clock_camcc CAM_CC_IFE_1_AREG_CLK>,
+			<&clock_camcc CAM_CC_IFE_1_CLK>,
+			<&clock_camcc CAM_CC_IFE_1_AXI_CLK>,
 			<&clock_camcc CAM_CC_CPAS_AHB_CLK>;
-		clock-rates = <0 0>;
-		clock-cntl-level = "svs";
+		clock-rates =
+			<0 0 0 0 0>,
+			<0 0 0 0 0>,
+			<0 0 0 0 0>,
+			<0 0 0 0 0>;
+		clock-cntl-level = "lowsvs", "svs", "svs_l1", "turbo";
 		cdm-client-names = "ife1";
-		status = "disabled";
+		status = "ok";
 	};
 
 	qcom,cam-isp {
