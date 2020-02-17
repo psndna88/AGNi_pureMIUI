@@ -1894,10 +1894,10 @@ static void cam_hw_cdm_component_unbind(struct device *dev,
 		destroy_workqueue(cdm_core->bl_fifo[i].work_queue);
 	}
 
-	if (cam_smmu_destroy_handle(cdm_core->iommu_hdl.non_secure))
-		CAM_ERR(CAM_CDM, "Release iommu secure hdl failed");
 	cam_smmu_unset_client_page_fault_handler(
 		cdm_core->iommu_hdl.non_secure, cdm_hw);
+	if (cam_smmu_destroy_handle(cdm_core->iommu_hdl.non_secure))
+		CAM_ERR(CAM_CDM, "Release iommu secure hdl failed");
 
 	mutex_destroy(&cdm_hw->hw_mutex);
 	kfree(cdm_hw->soc_info.soc_private);

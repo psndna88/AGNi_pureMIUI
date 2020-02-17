@@ -620,7 +620,7 @@ static void cam_cdm_intf_component_unbind(struct device *dev,
 
 	if (cam_virtual_cdm_remove(pdev)) {
 		CAM_ERR(CAM_CDM, "Virtual CDM remove failed");
-		goto end;
+		return;
 	}
 	put_cdm_mgr_refcount();
 
@@ -635,7 +635,6 @@ static void cam_cdm_intf_component_unbind(struct device *dev,
 		if (cdm_mgr.nodes[i].device || cdm_mgr.nodes[i].data ||
 			(cdm_mgr.nodes[i].refcount != 0)) {
 			CAM_ERR(CAM_CDM, "Valid node present in index=%d", i);
-			mutex_unlock(&cam_cdm_mgr_lock);
 			goto end;
 		}
 		mutex_destroy(&cdm_mgr.nodes[i].lock);
