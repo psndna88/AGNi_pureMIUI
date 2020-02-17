@@ -2400,9 +2400,6 @@ static int cam_vfe_bus_ver3_deinit_vfe_out_resource(
 		 * This is not error. It can happen if the resource is
 		 * never supported in the HW.
 		 */
-		CAM_DBG(CAM_ISP, "VFE:%d out_type:%d already deinitialized",
-			rsrc_data->common_data->core_index,
-			rsrc_data->out_type);
 		return 0;
 	}
 
