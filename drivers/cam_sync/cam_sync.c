@@ -1052,7 +1052,7 @@ static int cam_sync_component_bind(struct device *dev,
 
 	strlcpy(sync_dev->vdev->name, CAM_SYNC_NAME,
 				sizeof(sync_dev->vdev->name));
-	sync_dev->vdev->release  = video_device_release;
+	sync_dev->vdev->release  = video_device_release_empty;
 	sync_dev->vdev->fops     = &cam_sync_v4l2_fops;
 	sync_dev->vdev->ioctl_ops = &g_cam_sync_ioctl_ops;
 	sync_dev->vdev->minor     = -1;
@@ -1102,6 +1102,7 @@ v4l2_fail:
 register_fail:
 	cam_sync_media_controller_cleanup(sync_dev);
 mcinit_fail:
+	video_unregister_device(sync_dev->vdev);
 	video_device_release(sync_dev->vdev);
 vdev_fail:
 	mutex_destroy(&sync_dev->table_lock);
@@ -1116,6 +1117,7 @@ static void cam_sync_component_unbind(struct device *dev,
 
 	v4l2_device_unregister(sync_dev->vdev->v4l2_dev);
 	cam_sync_media_controller_cleanup(sync_dev);
+	video_unregister_device(sync_dev->vdev);
 	video_device_release(sync_dev->vdev);
 	debugfs_remove_recursive(sync_dev->dentry);
 	sync_dev->dentry = NULL;

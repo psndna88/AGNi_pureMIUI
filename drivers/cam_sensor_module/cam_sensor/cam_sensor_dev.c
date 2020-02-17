@@ -295,7 +295,7 @@ static void cam_sensor_component_unbind(struct device *dev,
 		return;
 	}
 
-	CAM_INFO(CAM_SENSOR, "platform remove invoked");
+	CAM_DBG(CAM_SENSOR, "Component unbind called for: %s", pdev->name);
 	mutex_lock(&(s_ctrl->cam_sensor_mutex));
 	cam_sensor_shutdown(s_ctrl);
 	mutex_unlock(&(s_ctrl->cam_sensor_mutex));

@@ -161,7 +161,7 @@ static int cam_isp_dev_component_bind(struct device *dev,
 
 	mutex_init(&g_isp_dev.isp_mutex);
 
-	CAM_INFO(CAM_ISP, "ISP HW component bound successfully");
+	CAM_INFO(CAM_ISP, "Component bound successfully");
 
 	return 0;
 unregister:

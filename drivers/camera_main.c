@@ -86,7 +86,7 @@ static const struct camera_submodule_component camera_isp[] = {
 };
 
 static const struct camera_submodule_component camera_tfe[] = {
-#if IS_ENABLED(CONFIG_SPECTRA_TFE)
+#ifdef CONFIG_SPECTRA_TFE
 	{&cam_top_tpg_init_module, &cam_top_tpg_exit_module},
 	{&cam_tfe_init_module, &cam_tfe_exit_module},
 	{&cam_tfe_csid530_init_module, &cam_tfe_csid530_exit_module},
@@ -381,7 +381,7 @@ static int camera_init(void)
 		}
 	}
 
-	CAM_INFO(CAM_UTIL, "Spectra camera driver initialized!");
+	CAM_INFO(CAM_UTIL, "Spectra camera driver initcalls done");
 
 end_init:
 	return rc;
