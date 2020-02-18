@@ -2692,6 +2692,7 @@ err_irq_fail:
 	mutex_destroy(&swrm->iolock);
 	mutex_destroy(&swrm->clklock);
 	mutex_destroy(&swrm->pm_lock);
+	mutex_destroy(&swrm->ssr_lock);
 	pm_qos_remove_request(&swrm->pm_qos_req);
 
 err_pdata_fail:
@@ -2725,6 +2726,7 @@ static int swrm_remove(struct platform_device *pdev)
 	mutex_destroy(&swrm->clklock);
 	mutex_destroy(&swrm->force_down_lock);
 	mutex_destroy(&swrm->pm_lock);
+	mutex_destroy(&swrm->ssr_lock);
 	pm_qos_remove_request(&swrm->pm_qos_req);
 	devm_kfree(&pdev->dev, swrm);
 	return 0;
@@ -3199,6 +3201,9 @@ int swrm_wcd_notify(struct platform_device *pdev, u32 id, void *data)
 		mutex_lock(&swrm->devlock);
 		swrm->dev_up = false;
 		mutex_unlock(&swrm->devlock);
+		mutex_lock(&swrm->reslock);
+		swrm->state = SWR_MSTR_SSR;
+		mutex_unlock(&swrm->reslock);
 		mutex_unlock(&swrm->ssr_lock);
 		break;
 	case SWR_DEVICE_SSR_UP:
