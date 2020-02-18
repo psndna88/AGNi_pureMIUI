@@ -14,7 +14,7 @@
 #include "cam_vfe_soc.h"
 #include "cam_debug_util.h"
 
-static struct cam_hw_intf *cam_vfe_hw_list[CAM_VFE_HW_NUM_MAX] = {0, 0, 0, 0};
+static struct cam_hw_intf *cam_vfe_hw_list[CAM_VFE_HW_NUM_MAX];
 
 static char vfe_dev_name[8];
 
