@@ -232,6 +232,19 @@
 	};
 };
 
+&dsi_sharp_1080_cmd {
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 1b 08 07 0d 0b 08
+				08 05 02 04 00 17 0c];
+			qcom,display-topology = <1 0 1>;
+			qcom,default-topology-index = <0>;
+			qcom,mdss-dsi-panel-clockrate = <900000000>;
+		};
+	};
+};
+
 &dsi_dual_nt35597_truly_cmd {
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 	qcom,mdss-dsi-display-timings {
@@ -258,6 +271,18 @@
 				07 05 02 04 00 15 0c];
 			qcom,display-topology = <2 0 2>,
 						<1 0 2>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+&dsi_nt35695b_truly_fhd_cmd {
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 1b 08 07 0d 0b 08
+				08 05 02 04 00 17 0c];
+			qcom,display-topology = <1 0 1>;
 			qcom,default-topology-index = <0>;
 		};
 	};
