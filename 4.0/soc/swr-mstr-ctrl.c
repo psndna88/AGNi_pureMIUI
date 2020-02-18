@@ -326,9 +326,18 @@ static int swrm_request_hw_vote(struct swr_mstr_ctrl *swrm,
 {
 	int ret = 0;
 
+	mutex_lock(&swrm->devlock);
 	if (core_type == LPASS_HW_CORE) {
 		if (swrm->lpass_core_hw_vote) {
 			if (enable) {
+				if (!swrm->dev_up) {
+					dev_dbg(swrm->dev, "%s: %d: device is down or SSR state\n",
+							__func__, core_type);
+					trace_printk("%s: %d: device is down or SSR state\n",
+							__func__, core_type);
+					mutex_unlock(&swrm->devlock);
+					return -ENODEV;
+				}
 				if (++swrm->hw_core_clk_en == 1) {
 					ret =
 					   clk_prepare_enable(
@@ -353,6 +362,14 @@ static int swrm_request_hw_vote(struct swr_mstr_ctrl *swrm,
 	if (core_type == LPASS_AUDIO_CORE) {
 		if (swrm->lpass_core_audio) {
 			if (enable) {
+				if (!swrm->dev_up) {
+					dev_dbg(swrm->dev, "%s: %d: device is down or SSR state\n",
+							__func__, core_type);
+					trace_printk("%s: %d: device is down or SSR state\n",
+							__func__, core_type);
+					mutex_unlock(&swrm->devlock);
+					return -ENODEV;
+				}
 				if (++swrm->aud_core_clk_en == 1) {
 					ret =
 					   clk_prepare_enable(
@@ -374,6 +391,7 @@ static int swrm_request_hw_vote(struct swr_mstr_ctrl *swrm,
 			}
 		}
 	}
+	mutex_unlock(&swrm->devlock);
 
 	dev_dbg(swrm->dev, "%s: hw_clk_en: %d audio_core_clk_en: %d\n",
 		__func__, swrm->hw_core_clk_en, swrm->aud_core_clk_en);
@@ -1790,6 +1808,7 @@ static irqreturn_t swr_mstr_interrupt_v2(int irq, void *dev)
 		return IRQ_NONE;
 	}
 
+	mutex_lock(&swrm->ssr_lock);
 	mutex_lock(&swrm->reslock);
 	if (swrm_request_hw_vote(swrm, LPASS_HW_CORE, true)) {
 		ret = IRQ_NONE;
@@ -1992,6 +2011,7 @@ err_audio_hw_vote:
 	swrm_request_hw_vote(swrm, LPASS_HW_CORE, false);
 exit:
 	mutex_unlock(&swrm->reslock);
+	mutex_unlock(&swrm->ssr_lock);
 	swrm_unlock_sleep(swrm);
 	trace_printk("%s exit\n", __func__);
 	return ret;
@@ -2523,6 +2543,7 @@ static int swrm_probe(struct platform_device *pdev)
 	mutex_init(&swrm->clklock);
 	mutex_init(&swrm->devlock);
 	mutex_init(&swrm->pm_lock);
+	mutex_init(&swrm->ssr_lock);
 	swrm->wlock_holders = 0;
 	swrm->pm_state = SWRM_PM_SLEEPABLE;
 	init_waitqueue_head(&swrm->pm_wq);
@@ -3174,12 +3195,11 @@ int swrm_wcd_notify(struct platform_device *pdev, u32 id, void *data)
 		break;
 	case SWR_DEVICE_SSR_DOWN:
 		trace_printk("%s: swr device down called\n", __func__);
+		mutex_lock(&swrm->ssr_lock);
 		mutex_lock(&swrm->devlock);
 		swrm->dev_up = false;
 		mutex_unlock(&swrm->devlock);
-		mutex_lock(&swrm->reslock);
-		swrm->state = SWR_MSTR_SSR;
-		mutex_unlock(&swrm->reslock);
+		mutex_unlock(&swrm->ssr_lock);
 		break;
 	case SWR_DEVICE_SSR_UP:
 		/* wait for clk voting to be zero */
