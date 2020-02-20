@@ -844,7 +844,7 @@ void cpufreq_task_stats_remove_uids(uid_t uid_start, uid_t uid_end)
 static int cpufreq_stat_notifier_policy(struct notifier_block *nb,
 		unsigned long val, void *data)
 {
-	int ret, count = 0, i;
+	int ret = 0, count = 0, i;
 	struct cpufreq_policy *policy = data;
 	struct cpufreq_frequency_table *table;
 	unsigned int cpu = policy->cpu;

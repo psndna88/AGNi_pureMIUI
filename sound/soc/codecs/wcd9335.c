@@ -4557,7 +4557,7 @@ static int tasha_codec_enable_prim_interpolator(
 {
 	struct tasha_priv *tasha = snd_soc_codec_get_drvdata(codec);
 	u16 prim_int_reg;
-	u16 ind;
+	u16 ind = 0;
 
 	prim_int_reg = tasha_interp_get_primary_reg(reg, &ind);
 

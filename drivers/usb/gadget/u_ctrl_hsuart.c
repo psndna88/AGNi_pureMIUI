@@ -475,7 +475,7 @@ int ghsuart_ctrl_setup(unsigned int num_ports, enum gadget_type gtype)
 free_ports:
 	for (i = first_port_id; i < num_ctrl_ports; i++)
 		ghsuart_ctrl_port_free(i);
-		num_ctrl_ports = first_port_id;
+	num_ctrl_ports = first_port_id;
 	return ret;
 }
 

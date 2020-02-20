@@ -7935,7 +7935,7 @@ void idle_balance(int this_cpu, struct rq *this_rq)
 			* Stop searching for tasks to pull if there are
 			* now runnable tasks on this rq.
 			*/
- 			if (pulled_task || this_rq->nr_running > 0) {
+ 		if (pulled_task || this_rq->nr_running > 0) {
 			balance_rq->idle_stamp = 0;
 			break;
 		}

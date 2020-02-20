@@ -1194,10 +1194,10 @@ int ghsic_data_setup(unsigned num_ports, enum gadget_type gtype)
 	return first_port_id;
 
 free_ports:
-	for (i = first_port_id; i < no_data_ports; i++)
+	for (i = first_port_id; i < no_data_ports; i++) {
 		ghsic_data_port_free(i);
 		no_data_ports = first_port_id;
-
+	}
 	return ret;
 }
 

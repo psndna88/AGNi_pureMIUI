@@ -1567,7 +1567,7 @@ static int mdss_fb_blank_unblank(struct msm_fb_data_type *mfd)
 			else if ((!mfd->panel_info->mipi.post_init_delay ||
 				cur_panel_dead) && esd_backlight)
 				mdss_fb_set_backlight(mfd, mfd->unset_bl_level);
-				esd_backlight = 0;
+			esd_backlight = 0;
 #else
 			/*
 			 * 1.) If in AD calibration mode then frameworks would

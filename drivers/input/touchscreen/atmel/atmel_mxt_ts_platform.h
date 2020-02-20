@@ -124,7 +124,7 @@ static inline void board_gpio_deinit(const struct mxt_platform_data *pdata)
 		gpio_free(pdata->gpio_reset);
 	if (gpio_is_valid(pdata->irq_gpio))
 		printk("%s, free_irq_gpio, irq_gpio=%ld\n", __func__, pdata->irq_gpio);
-		gpio_free(pdata->irq_gpio);
+	gpio_free(pdata->irq_gpio);
 
 
 }

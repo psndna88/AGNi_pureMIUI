@@ -5983,7 +5983,7 @@ static int fg_hw_init(struct fg_chip *chip)
 static int fg_setup_memif_offset(struct fg_chip *chip)
 {
 	int rc;
-	u8 dig_major;
+	u8 dig_major = 0;
 
 	rc = fg_read(chip, chip->revision, chip->mem_base + DIG_MINOR, 4);
 	if (rc) {
