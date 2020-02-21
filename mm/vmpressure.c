@@ -40,7 +40,7 @@
  * TODO: Make the window size depend on machine size, as we do for vmstat
  * thresholds. Currently we set it to 512 pages (2MB for 4KB pages).
  */
-static unsigned long vmpressure_win = SWAP_CLUSTER_MAX * 16;
+static const unsigned long vmpressure_win = SWAP_CLUSTER_MAX * 16;
 
 /*
  * These thresholds are used when we account memory pressure through
@@ -234,7 +234,6 @@ static void vmpressure_work_fn(struct work_struct *work)
 	unsigned long scanned;
 	unsigned long reclaimed;
 
-	spin_lock(&vmpr->sr_lock);
 	/*
 	 * Several contexts might be calling vmpressure(), so it is
 	 * possible that the work was rescheduled again before the old
@@ -243,16 +242,15 @@ static void vmpressure_work_fn(struct work_struct *work)
 	 * here. No need for any locks here since we don't care if
 	 * vmpr->reclaimed is in sync.
 	 */
-	scanned = vmpr->scanned;
-	if (!scanned) {
-		spin_unlock(&vmpr->sr_lock);
+	if (!vmpr->scanned)
 		return;
-	}
 
+	mutex_lock(&vmpr->sr_lock);
+	scanned = vmpr->scanned;
 	reclaimed = vmpr->reclaimed;
 	vmpr->scanned = 0;
 	vmpr->reclaimed = 0;
-	spin_unlock(&vmpr->sr_lock);
+	mutex_unlock(&vmpr->sr_lock);
 
 	do {
 		if (vmpressure_event(vmpr, scanned, reclaimed))
@@ -296,39 +294,15 @@ void vmpressure_memcg(gfp_t gfp, struct mem_cgroup *memcg,
 	if (!scanned)
 		return;
 
-	spin_lock(&vmpr->sr_lock);
+	mutex_lock(&vmpr->sr_lock);
 	vmpr->scanned += scanned;
 	vmpr->reclaimed += reclaimed;
 	scanned = vmpr->scanned;
-	spin_unlock(&vmpr->sr_lock);
+	mutex_unlock(&vmpr->sr_lock);
 
-	if (scanned < vmpressure_win)
+	if (scanned < vmpressure_win || work_pending(&vmpr->work))
 		return;
 	schedule_work(&vmpr->work);
-}
-
-void calculate_vmpressure_win(void)
-{
-	long x;
-
-	x = global_page_state(NR_FILE_PAGES) -
-			global_page_state(NR_SHMEM) -
-			global_page_state(NR_UNEVICTABLE) -
-			total_swapcache_pages() +
-			global_page_state(NR_FREE_PAGES);
-	if (x < 1)
-		x = 1;
-	/*
-	 * For low (free + cached), vmpressure window should be
-	 * small, and high for higher values of (free + cached).
-	 * But it should not be linear as well. This ensures
-	 * timely vmpressure notifications when system is under
-	 * memory pressure, and optimal number of events when
-	 * cached is high. The sqaure root function is empirically
-	 * found to serve the purpose.
-	 */
-	x = int_sqrt(x);
-	vmpressure_win = x;
 }
 
 void vmpressure_global(gfp_t gfp, unsigned long scanned,
@@ -344,10 +318,7 @@ void vmpressure_global(gfp_t gfp, unsigned long scanned,
 	if (!scanned)
 		return;
 
-	spin_lock(&vmpr->sr_lock);
-	if (!vmpr->scanned)
-		calculate_vmpressure_win();
-
+	mutex_lock(&vmpr->sr_lock);
 	vmpr->scanned += scanned;
 	vmpr->reclaimed += reclaimed;
 
@@ -357,16 +328,16 @@ void vmpressure_global(gfp_t gfp, unsigned long scanned,
 	stall = vmpr->stall;
 	scanned = vmpr->scanned;
 	reclaimed = vmpr->reclaimed;
-	spin_unlock(&vmpr->sr_lock);
+	mutex_unlock(&vmpr->sr_lock);
 
 	if (scanned < vmpressure_win)
 		return;
 
-	spin_lock(&vmpr->sr_lock);
+	mutex_lock(&vmpr->sr_lock);
 	vmpr->scanned = 0;
 	vmpr->reclaimed = 0;
 	vmpr->stall = 0;
-	spin_unlock(&vmpr->sr_lock);
+	mutex_unlock(&vmpr->sr_lock);
 
 	pressure = vmpressure_calc_pressure(scanned, reclaimed);
 	pressure = vmpressure_account_stall(pressure, stall, scanned);
@@ -517,7 +488,7 @@ void vmpressure_unregister_event(struct cgroup *cg, struct cftype *cft,
  */
 void vmpressure_init(struct vmpressure *vmpr)
 {
-	spin_lock_init(&vmpr->sr_lock);
+	mutex_init(&vmpr->sr_lock);
 	mutex_init(&vmpr->events_lock);
 	INIT_LIST_HEAD(&vmpr->events);
 	INIT_WORK(&vmpr->work, vmpressure_work_fn);
@@ -529,19 +500,3 @@ int vmpressure_global_init(void)
 	return 0;
 }
 late_initcall(vmpressure_global_init);
-
-/**
- * vmpressure_cleanup() - shuts down vmpressure control structure
- * @vmpr:	Structure to be cleaned up
- *
- * This function should be called before the structure in which it is
- * embedded is cleaned up.
- */
-void vmpressure_cleanup(struct vmpressure *vmpr)
-{
-	/*
-	 * Make sure there is no pending work before eventfd infrastructure
-	 * goes away.
-	 */
-	flush_work(&vmpr->work);
-}

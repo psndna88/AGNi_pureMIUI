@@ -58,8 +58,7 @@ int arch_update_cpu_topology(void);
 /*
  * If the distance between nodes in a system is larger than RECLAIM_DISTANCE
  * (in whatever arch specific measurement units returned by node_distance())
- * and zone_reclaim_mode is enabled then the VM will only call zone_reclaim()
- * on nodes within this distance.
+ * then switch on zone reclaim on boot.
  */
 #define RECLAIM_DISTANCE 30
 #endif
