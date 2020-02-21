@@ -7,6 +7,7 @@
 #include <linux/slab.h>
 #include <linux/platform_device.h>
 #include <linux/highmem.h>
+#include <linux/types.h>
 
 #include <mm/slab.h>
 

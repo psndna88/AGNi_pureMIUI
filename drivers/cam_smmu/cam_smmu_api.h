@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_SMMU_API_H_
@@ -111,11 +111,13 @@ int cam_smmu_ops(int handle, enum cam_smmu_ops_param op);
  *                CAM_SMMU_REGION_SHARED, dma_addr is used as an input parameter
  *                which specifies the cpu virtual address to map.
  * @len_ptr     : Length of buffer mapped returned by CAM SMMU driver.
+ * @region_id   : Memory region identifier
+ * @is_internal: Specifies if this buffer is kernel allocated.
  * @return Status of operation. Negative in case of error. Zero otherwise.
  */
 int cam_smmu_map_user_iova(int handle, int ion_fd, bool dis_delayed_unmap,
 	enum cam_smmu_map_dir dir, dma_addr_t *dma_addr, size_t *len_ptr,
-	enum cam_smmu_region_id region_id);
+	enum cam_smmu_region_id region_id, bool is_internal);
 
 /**
  * @brief        : Maps kernel space IOVA for calling driver
@@ -129,6 +131,7 @@ int cam_smmu_map_user_iova(int handle, int ion_fd, bool dis_delayed_unmap,
  *                 CAM_SMMU_REGION_SHARED, dma_addr is used as an input
  *                 parameter which specifies the cpu virtual address to map.
  * @len_ptr      : Length of buffer mapped returned by CAM SMMU driver.
+ * @region_id    : Memory region identifier
  * @return Status of operation. Negative in case of error. Zero otherwise.
  */
 int cam_smmu_map_kernel_iova(int handle,
