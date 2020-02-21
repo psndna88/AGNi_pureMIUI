@@ -724,18 +724,39 @@ static int cam_smmu_attach_device(int idx)
 static int cam_smmu_create_add_handle_in_table(char *name,
 	int *hdl)
 {
-	int i, j;
+	int i, j, rc = -EINVAL;
 	int handle;
-	bool valid = false;
 
 	/* create handle and add in the iommu hardware table */
 	for (i = 0; i < iommu_cb_set.cb_num; i++) {
 		for (j = 0; j < iommu_cb_set.cb_info[i].num_shared_hdl; j++) {
-			if (!strcmp(iommu_cb_set.cb_info[i].name[j], name))
-				valid = true;
+			if (strcmp(iommu_cb_set.cb_info[i].name[j], name))
+				continue;
 
-			if (iommu_cb_set.cb_info[i].handle != HANDLE_INIT &&
-				valid) {
+			if (iommu_cb_set.cb_info[i].handle == HANDLE_INIT) {
+				mutex_lock(&iommu_cb_set.cb_info[i].lock);
+				/* make sure handle is unique */
+				do {
+					handle =
+						cam_smmu_create_iommu_handle(i);
+				} while (cam_smmu_check_handle_unique(handle));
+
+				/* put handle in the table */
+				iommu_cb_set.cb_info[i].handle = handle;
+				iommu_cb_set.cb_info[i].cb_count = 0;
+				if (iommu_cb_set.cb_info[i].is_secure)
+					iommu_cb_set.cb_info[i].secure_count++;
+
+				if (iommu_cb_set.cb_info[i].is_mul_client)
+					iommu_cb_set.cb_info[i].device_count++;
+
+				*hdl = handle;
+				CAM_DBG(CAM_SMMU, "%s creates handle 0x%x",
+					name, handle);
+				mutex_unlock(&iommu_cb_set.cb_info[i].lock);
+				rc = 0;
+				goto end;
+			} else {
 				mutex_lock(&iommu_cb_set.cb_info[i].lock);
 				if (iommu_cb_set.cb_info[i].is_secure) {
 					iommu_cb_set.cb_info[i].secure_count++;
@@ -761,31 +782,8 @@ static int cam_smmu_create_add_handle_in_table(char *name,
 					"Error: %s already got handle 0x%x",
 					name, iommu_cb_set.cb_info[i].handle);
 				mutex_unlock(&iommu_cb_set.cb_info[i].lock);
-				return -EALREADY;
-			}
-
-			if (iommu_cb_set.cb_info[i].handle == HANDLE_INIT &&
-				valid) {
-				/* make sure handle is unique */
-				do {
-					handle =
-						cam_smmu_create_iommu_handle(i);
-				} while (cam_smmu_check_handle_unique(handle));
-
-				/* put handle in the table */
-				iommu_cb_set.cb_info[i].handle = handle;
-				iommu_cb_set.cb_info[i].cb_count = 0;
-				if (iommu_cb_set.cb_info[i].is_secure)
-					iommu_cb_set.cb_info[i].secure_count++;
-
-				if (iommu_cb_set.cb_info[i].is_mul_client)
-					iommu_cb_set.cb_info[i].device_count++;
-
-				*hdl = handle;
-				CAM_DBG(CAM_SMMU, "%s creates handle 0x%x",
-					name, handle);
-				mutex_unlock(&iommu_cb_set.cb_info[i].lock);
-				return 0;
+				rc = -EALREADY;
+				goto end;
 			}
 		}
 	}
@@ -793,7 +791,8 @@ static int cam_smmu_create_add_handle_in_table(char *name,
 	CAM_ERR(CAM_SMMU, "Error: Cannot find name %s or all handle exist",
 		name);
 	cam_smmu_print_table();
-	return -EINVAL;
+end:
+	return rc;
 }
 
 static int cam_smmu_init_scratch_map(struct scratch_mapping *scratch_map,
