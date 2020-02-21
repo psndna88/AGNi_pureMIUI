@@ -137,13 +137,13 @@
 		cam_vdig-supply = <&pm8350_s12>;
 		cam_clk-supply = <&cam_cc_titan_top_gdsc>;
 		cam_vana-supply = <&pm8008j_l6>;
-		cam_vana1-supply = <&pm8008j_l7>;
+		cam_v_custom1-supply = <&pm8008j_l7>;
 		regulator-names = "cam_vio", "cam_vdig",
-			"cam_clk", "cam_vana", "cam_vana1";
+			"cam_clk", "cam_vana", "cam_v_custom1";
 		rgltr-cntrl-support;
 		rgltr-min-voltage = <1800000 1170000 0 2800000 3000000>;
 		rgltr-max-voltage = <1800000 2040000 0 2800000 3600000>;
-		rgltr-load-current = <5000 680000 0 50000 29000>;
+		rgltr-load-current = <200000 680000 0 50000 29000>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk3_active
@@ -264,13 +264,13 @@
 		cam_vdig-supply = <&pm8350_s12>;
 		cam_clk-supply = <&cam_cc_titan_top_gdsc>;
 		cam_vana-supply = <&pm8008j_l6>;
-		cam_vana1-supply = <&pm8008j_l7>;
+		cam_v_custom1-supply = <&pm8008j_l7>;
 		regulator-names = "cam_vio", "cam_vdig",
-			"cam_clk", "cam_vana", "cam_vana1";
+			"cam_clk", "cam_vana", "cam_v_custom1";
 		rgltr-cntrl-support;
 		rgltr-min-voltage = <1800000 1170000 0 2800000 3000000>;
 		rgltr-max-voltage = <1800000 2040000 0 2800000 3600000>;
-		rgltr-load-current = <5000 680000 0 50000 29000>;
+		rgltr-load-current = <200000 680000 0 50000 29000>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk3_active
