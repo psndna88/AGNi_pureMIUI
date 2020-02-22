@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -792,7 +792,7 @@ tdls_process_decrement_active_session(struct wlan_objmgr_psoc *psoc)
 
 	if(!policy_mgr_is_hw_dbs_2x2_capable(psoc) &&
 	   policy_mgr_is_current_hwmode_dbs(psoc)) {
-		tdls_err("Current HW mode is 1*1 DBS. Wait for Opportunistic timer to expire to enable TDLS in FW");
+		tdls_debug("Current HW mode is 1*1 DBS. Wait for Opportunistic timer to expire to enable TDLS in FW");
 		return QDF_STATUS_SUCCESS;
 	}
 	tdls_obj_vdev = tdls_get_vdev(psoc, WLAN_TDLS_NB_ID);
@@ -1560,21 +1560,17 @@ void tdls_scan_done_callback(struct tdls_soc_priv_obj *tdls_soc)
 		return;
 
 	if (TDLS_SUPPORT_DISABLED == tdls_soc->tdls_current_mode) {
-		tdls_debug("TDLS mode is disabled OR not enabled");
+		tdls_debug_rl("TDLS mode is disabled OR not enabled");
 		return;
 	}
 
 	/* if tdls was enabled before scan, re-enable tdls mode */
 	if (TDLS_SUPPORT_IMP_MODE == tdls_soc->tdls_last_mode ||
 	    TDLS_SUPPORT_EXT_CONTROL == tdls_soc->tdls_last_mode ||
-	    TDLS_SUPPORT_EXP_TRIG_ONLY == tdls_soc->tdls_last_mode) {
-		tdls_debug("revert tdls mode %d",
-			   tdls_soc->tdls_last_mode);
-
+	    TDLS_SUPPORT_EXP_TRIG_ONLY == tdls_soc->tdls_last_mode)
 		tdls_set_current_mode(tdls_soc, tdls_soc->tdls_last_mode,
 				      false,
 				      TDLS_SET_MODE_SOURCE_SCAN);
-	}
 }
 
 /**
