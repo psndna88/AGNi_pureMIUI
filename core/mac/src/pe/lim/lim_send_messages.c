@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018, 2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -205,9 +205,6 @@ QDF_STATUS lim_send_switch_chnl_params(tpAniSirGlobal pMac,
 		lim_update_chan_he_capable(pMac, pChnlParams);
 	pChnlParams->dot11_mode = pSessionEntry->dot11mode;
 	pChnlParams->nss = pSessionEntry->nss;
-	pe_debug("dot11mode: %d, vht_capable: %d nss value: %d",
-		pChnlParams->dot11_mode, pChnlParams->vhtCapable,
-		pChnlParams->nss);
 
 	/*Set DFS flag for DFS channel */
 	if (ch_width == CH_WIDTH_160MHZ) {
@@ -261,6 +258,7 @@ QDF_STATUS lim_send_switch_chnl_params(tpAniSirGlobal pMac,
 		return QDF_STATUS_E_FAILURE;
 	}
 	pSessionEntry->ch_switch_in_progress = true;
+
 	return QDF_STATUS_SUCCESS;
 }
 

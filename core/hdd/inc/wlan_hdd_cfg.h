@@ -3650,7 +3650,7 @@ enum hdd_dot11_mode {
 #define CFG_INFRA_STA_KEEP_ALIVE_PERIOD_NAME          "gStaKeepAlivePeriod"
 #define CFG_INFRA_STA_KEEP_ALIVE_PERIOD_MIN           (0)
 #define CFG_INFRA_STA_KEEP_ALIVE_PERIOD_MAX           (65535)
-#define CFG_INFRA_STA_KEEP_ALIVE_PERIOD_DEFAULT       (60)
+#define CFG_INFRA_STA_KEEP_ALIVE_PERIOD_DEFAULT       (30)
 
 /**
  * enum station_keepalive_method - available keepalive methods for stations
@@ -5650,6 +5650,11 @@ enum hdd_link_speed_rpt_type {
 #else
 #define CFG_ENABLE_PACKET_LOG_DEFAULT    (0)
 #endif
+
+#define CFG_PACKET_LOG_BUFFER_SIZE_NAME    "PktlogBufSize"
+#define CFG_PACKET_LOG_BUFFER_SIZE_DEFAULT (10)
+#define CFG_PACKET_LOG_BUFFER_SIZE_MIN     (1)
+#define CFG_PACKET_LOG_BUFFER_SIZE_MAX     (10)
 #endif
 
 
@@ -8383,6 +8388,72 @@ enum hdd_link_speed_rpt_type {
 #define CFG_ENABLE_NAN_SUPPORT_DEFAULT                  (0)
 #define CFG_ENABLE_NAN_SUPPORT_MIN                      (0)
 #define CFG_ENABLE_NAN_SUPPORT_MAX                      (1)
+
+/*
+ * <ini>
+ * nan_separate_iface_support - Separate iface creation for NAN
+ * @Min: 0
+ * @Max: 1
+ * @Default: 1
+ *
+ * Value is 1 when Host HDD supports separate iface creation for NAN
+ *
+ * Related: None
+ *
+ * Supported Feature: NAN
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_NAN_SEPARATE_IFACE_SUPP                "nan_separate_iface_support"
+#define CFG_NAN_SEPARATE_IFACE_SUPP_DEFAULT        (1)
+#define CFG_NAN_SEPARATE_IFACE_SUPP_MIN            (0)
+#define CFG_NAN_SEPARATE_IFACE_SUPP_MAX            (1)
+
+/*
+ * <ini>
+ * gNdpKeepAlivePeriod - To configure duration of how many seconds
+ * to wait to kickout peer if peer is not reachable.
+ *
+ * @Min: 10
+ * @Max: 30
+ * @Default: 20
+ *
+ * Related: None
+ *
+ * Supported Feature: NAN
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_NDP_KEEP_ALIVE_PERIOD                  "gNdpKeepAlivePeriod"
+#define CFG_NDP_KEEP_ALIVE_PERIOD_MIN              (10)
+#define CFG_NDP_KEEP_ALIVE_PERIOD_MAX              (30)
+#define CFG_NDP_KEEP_ALIVE_PERIOD_DEFAULT          (20)
+
+/*
+ * <ini>
+ * gSupportMp0Discovery - To support discovery of NAN cluster with
+ * Master Preference (MP) as 0 when a new device is enabling NAN.
+ *
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * Related: None
+ *
+ * Supported Feature: NAN
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_SUPPORT_MP0_DISCOVERY                  "gSupportMp0Discovery"
+#define CFG_SUPPORT_MP0_DISCOVERY_MIN              (0)
+#define CFG_SUPPORT_MP0_DISCOVERY_MAX              (1)
+#define CFG_SUPPORT_MP0_DISCOVERY_DEFAULT          (1)
 #endif
 
 #define CFG_ENABLE_SELF_RECOVERY                   "gEnableSelfRecovery"
@@ -10712,6 +10783,35 @@ enum dot11p_mode {
  */
 #define CFG_ENABLE_DP_TRACE_CONFIG		"gDptraceConfig"
 #define CFG_ENABLE_DP_TRACE_CONFIG_DEFAULT	"1, 6, 2, 126"
+
+/*
+ * <ini>
+ * dp_proto_event_bitmap - Control for which protocol packet diag event should
+ *  be sent to user space.
+ * @Min: 0
+ * @Max: 0x17
+ * @Default: 0x6
+ *
+ * This ini is used to control for which protocol packet diag event should be
+ * sent to user space.
+ *
+ * QDF_NBUF_PKT_TRAC_TYPE_DNS       0x01
+ * QDF_NBUF_PKT_TRAC_TYPE_EAPOL     0x02
+ * QDF_NBUF_PKT_TRAC_TYPE_DHCP      0x04
+ * QDF_NBUF_PKT_TRAC_TYPE_ARP       0x10
+ *
+ * Related: None
+ *
+ * Supported Feature: STA, SAP
+ *
+ * Usage: Internal
+ *
+ * <ini>
+ */
+#define CFG_DP_PROTO_EVENT_BITMAP		"dp_proto_event_bitmap"
+#define CFG_DP_PROTO_EVENT_BITMAP_MIN		(0x0)
+#define CFG_DP_PROTO_EVENT_BITMAP_MAX		(0x17)
+#define CFG_DP_PROTO_EVENT_BITMAP_DEFAULT	(0x6)
 #endif
 
 /*
@@ -16117,6 +16217,37 @@ enum hdd_external_acs_policy {
 
 /*
  * <ini>
+ * min_roam_score_delta - Difference of roam score values between connected
+ * AP and roam candidate AP.
+ * @Min: 0
+ * @Max: 10000
+ * @Default: 1850
+ *
+ * This ini is used during CU and low rssi based roam triggers, consider
+ * AP as roam candidate only if its roam score is better than connected
+ * AP score by at least min_roam_score_delta.
+ * If user configured "roam_score_delta" and "min_roam_score_delta" both,
+ * then firmware selects roam candidate AP by considering values of both
+ * INIs.
+ * Example: If DUT is connected with AP1 and roam candidate AP2 has roam
+ * score greater than roam_score_delta and min_roam_score_delta then only
+ * firmware will trigger roaming to AP2.
+ *
+ * Related: roam_score_delta
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_CAND_MIN_ROAM_SCORE_DELTA "min_roam_score_delta"
+#define CFG_CAND_MIN_ROAM_SCORE_DELTA_DEFAULT 1850
+#define CFG_CAND_MIN_ROAM_SCORE_DELTA_MAX 10000
+#define CFG_CAND_MIN_ROAM_SCORE_DELTA_MIN 0
+
+/*
+ * <ini>
  * roam_score_delta_bitmap - bitmap to enable roam triggers on
  * which roam score delta is to be applied during roam candidate
  * selection
@@ -16976,6 +17107,202 @@ enum hdd_external_acs_policy {
 #define CFG_NUM_VDEV_ENABLE_MAX       (0x4)
 #define CFG_NUM_VDEV_ENABLE_DEFAULT   (CFG_TGT_NUM_VDEV)
 
+#ifdef SAR_SAFETY_FEATURE
+/*
+ * <ini>
+ * gSarSafetyTimeout - Specify SAR safety timeout value in milliseconds
+ *
+ * @Min: 120000
+ * @Max: 600000
+ * Default: 300000
+ *
+ * This ini is used to define SAR safety timeout value in milliseconds.
+ * This timer is started when the QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS
+ * is received first time.
+ * SAR safety timer will wait for the gSarSafetyTimeout for
+ * QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS vendor command and if
+ * SAR safety timer timeouts host will configure the gSarSafetyIndex
+ * to the FW.
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+
+#define CFG_SAR_SAFETY_TIMEOUT          "gSarSafetyTimeout"
+#define CFG_SAR_SAFETY_TIMEOUT_MIN      (120000)
+#define CFG_SAR_SAFETY_TIMEOUT_MAX      (600000)
+#define CFG_SAR_SAFETY_TIMEOUT_DEFAULT  (300000)
+/*
+ * <ini>
+ * gSarSafetyUnsolicitedTimeout - Specify SAR safety unsolicited timeout value
+ * in milliseconds
+ *
+ * @Min: 5000
+ * @Max: 30000
+ * Default: 15000
+ *
+ * This ini is used to define SAR safety unsolicited timeout value in
+ * milliseconds. This timer is started on first data tx.
+ * SAR unsolicited timer will wait for the
+ * gSarSafetyUnsolicitedTimeout for QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS
+ * vendor command and if SAR unsolicited timer timeouts host will indicate
+ * user space with QCA_NL80211_VENDOR_SUBCMD_REQUEST_SAR_LIMITS_EVENT to send
+ * QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS vendor command.
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_SAR_SAFETY_UNSOLICITED_TIMEOUT        "gSarSafetyUnsolicitedTimeout"
+#define CFG_SAR_SAFETY_UNSOLICITED_TIMEOUT_MIN     (5000)
+#define CFG_SAR_SAFETY_UNSOLICITED_TIMEOUT_MAX     (30000)
+#define CFG_SAR_SAFETY_UNSOLICITED_TIMEOUT_DEFAULT (15000)
+
+/*
+ * <ini>
+ * gSarSafetyReqRespTimeout - Specify SAR safety request response timeout value
+ * in milliseconds
+ *
+ * @Min: 500
+ * @Max: 3000
+ * Default: 1000
+ *
+ * This ini is used to define SAR request-response timeout value
+ * in milliseconds. SAR request-response timer will wait for the
+ * gSarSafetyReqRespTimeout for QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS
+ * vendor command and if SAR request-response timer timeouts host will
+ * indicate user space with QCA_NL80211_VENDOR_SUBCMD_REQUEST_SAR_LIMITS_EVENT
+ * for gSarSafetyReqRespRetry number of times to send
+ * QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS vendor command and still if host
+ * does not get QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS vendor command, host
+ * will configure the gSarSafetyIndex to the FW.
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_SAR_SAFETY_REQ_RESP_TIMEOUT          "gSarSafetyReqRespTimeout"
+#define CFG_SAR_SAFETY_REQ_RESP_TIMEOUT_MIN      (500)
+#define CFG_SAR_SAFETY_REQ_RESP_TIMEOUT_MAX      (3000)
+#define CFG_SAR_SAFETY_REQ_RESP_TIMEOUT_DEFAULT  (1000)
+
+/*
+ * <ini>
+ * gSarSafetyReqRespRetry - Specify SAR request response retries value
+ *
+ * @Min: 1
+ * @Max: 10
+ * Default: 5
+ *
+ * This ini is used to define SAR request-response retries value.
+ * SAR request-response timer will wait for the gSarReqRespTimeout for
+ * QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS vendor command and if
+ * SAR request-response timer timeouts host will indicate user space
+ * for gSarSafetyReqRespRetry number of times to send
+ * QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS vendor command and still if
+ * host does not get QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS vendor
+ * command, host will configure the gSarSafetyIndex to the FW.
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_SAR_SAFETY_REQ_RESP_RETRIES             "gSarSafetyReqRespRetry"
+#define CFG_SAR_SAFETY_REQ_RESP_RETRIES_MIN         (1)
+#define CFG_SAR_SAFETY_REQ_RESP_RETRIES_MAX         (10)
+#define CFG_SAR_SAFETY_REQ_RESP_RETRIES_DEFAULT     (5)
+
+/*
+ * <ini>
+ * gSarSafetyIndex - Specify SAR safety index
+ *
+ * @Min: 0
+ * @Max: 11
+ * Default: 11
+ *
+ * This ini is used to define SAR safety index, when sar safety timer
+ * timeouts or sar request response timer timeouts for gSarSafetyReqRespRetry
+ * number of times, host will configure gSarSafetyIndex value to the FW.
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_SAR_SAFETY_INDEX            "gSarSafetyIndex"
+#define CFG_SAR_SAFETY_INDEX_MIN        (0)
+#define CFG_SAR_SAFETY_INDEX_MAX        (11)
+#define CFG_SAR_SAFETY_INDEX_DEFAULT    (11)
+
+/*
+ * <ini>
+ * gSarSafetySleepIndex - Specify SAR Safety sleep index
+ *
+ * @Min: 0
+ * @Max: 11
+ * Default: 11
+ *
+ * This ini is used to define SAR sleep index, when device goes into the
+ * sleep mode, before going into the sleep mode host configures
+ * gSarSafetySleepIndex value to the FW.
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_SAR_SAFETY_SLEEP_INDEX             "gSarSafetySleepIndex"
+#define CFG_SAR_SAFETY_SLEEP_INDEX_MIN         (0)
+#define CFG_SAR_SAFETY_SLEEP_INDEX_MAX         (11)
+#define CFG_SAR_SAFETY_SLEEP_INDEX_DEFAULT     (11)
+
+/*
+ * <ini>
+ * gEnableSarSafety - Enable/Disable SAR safety feature
+ *
+ * @Min: 0
+ * @Max: 1
+ * Default: 0
+ *
+ * This ini is used to enable/disable SAR safety feature
+ * Value 1 of this ini enables SAR safety feature and
+ * value 0 of this ini disables SAR safety feature
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_ENABLE_SAR_SAFETY_FEATURE           "gEnableSarSafety"
+#define CFG_ENABLE_SAR_SAFETY_FEATURE_MIN       (0)
+#define CFG_ENABLE_SAR_SAFETY_FEATURE_MAX       (1)
+#define CFG_ENABLE_SAR_SAFETY_FEATURE_DEFAULT   (0)
+
+/*
+ * <ini>
+ * gConfigSarSafetySleepIndex - Enable/Disable SAR Safety sleep index
+ *
+ * @Min: 0
+ * @Max: 1
+ * Default: 0
+ *
+ * This Configuration is to decide that before going to
+ * sleep mode whether to maintain high RF power
+ * (SAR disable) or to configure SAR sleep mode index
+ *
+ * Value 0 for this ini indicates to maintain high
+ * RF power (SAR disable)
+ * Value 1 for this ini indicates to configure SAR
+ * sleep mode index.
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_CONFIG_SAR_SAFETY_SLEEP_MODE_INDEX     "gConfigSarSafetySleepIndex"
+#define CFG_CONFIG_SAR_SAFETY_SLEEP_MODE_INDEX_MIN       (0)
+#define CFG_CONFIG_SAR_SAFETY_SLEEP_MODE_INDEX_MAX       (1)
+#define CFG_CONFIG_SAR_SAFETY_SLEEP_MODE_INDEX_DEFAULT   (0)
+#endif
+
 /*
  * Type declarations
  */
@@ -17440,6 +17767,7 @@ struct hdd_config {
 
 #ifndef REMOVE_PKT_LOG
 	bool enablePacketLog;
+	uint8_t pktlog_buf_size;
 #endif
 
 #ifdef MSM_PLATFORM
@@ -17503,6 +17831,9 @@ struct hdd_config {
 #endif
 #ifdef WLAN_FEATURE_NAN
 	bool enable_nan_support;
+	bool nan_separate_iface_support;
+	uint16_t ndp_keep_alive_period;
+	bool support_mp0_discovery;
 #endif
 	bool enableSelfRecovery;
 #ifdef FEATURE_WLAN_FORCE_SAP_SCC
@@ -17948,6 +18279,7 @@ struct hdd_config {
 	uint8_t enable_rtt_support;
 
 	uint32_t roam_score_delta;
+	uint32_t min_roam_score_delta;
 	uint32_t roam_score_delta_bitmap;
 	bool prefer_btm_query;
 	bool btm_abridge_config;
@@ -17981,6 +18313,19 @@ struct hdd_config {
 	bool ShortGI80MhzEnable;
 	bool ShortGI160MhzEnable;
 	uint32_t vendor_roam_score_algorithm;
+	uint32_t dp_proto_event_bitmap;
+
+#ifdef SAR_SAFETY_FEATURE
+	uint32_t sar_safety_timeout;
+	uint32_t sar_safety_unsolicited_timeout;
+	uint32_t sar_safety_req_resp_timeout;
+	uint32_t sar_safety_req_resp_retry;
+	uint32_t sar_safety_index;
+	uint32_t sar_safety_sleep_index;
+	bool enable_sar_safety;
+	bool config_sar_safety_sleep_index;
+#endif
+
 };
 
 #define VAR_OFFSET(_Struct, _Var) (offsetof(_Struct, _Var))

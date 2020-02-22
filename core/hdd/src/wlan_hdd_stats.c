@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -557,8 +557,8 @@ bool hdd_get_interface_info(struct hdd_adapter *adapter,
 		}
 		if (eConnectionState_Connecting ==
 		    sta_ctx->conn_info.connState) {
-			hdd_err("Session ID %d, Connection is in progress",
-				adapter->session_id);
+			hdd_debug("Session ID %d, Connection is in progress",
+				  adapter->session_id);
 			pInfo->state = WIFI_ASSOCIATING;
 		}
 		if ((eConnectionState_Associated ==
@@ -1495,8 +1495,8 @@ __wlan_hdd_cfg80211_ll_stats_get(struct wiphy *wiphy,
 		return -EINVAL;
 
 	if (!adapter->is_link_layer_stats_set) {
-		hdd_warn("is_link_layer_stats_set: %d",
-			 adapter->is_link_layer_stats_set);
+		hdd_nofl_debug("is_link_layer_stats_set: %d",
+			       adapter->is_link_layer_stats_set);
 		return -EINVAL;
 	}
 
@@ -4857,9 +4857,6 @@ static int __wlan_hdd_cfg80211_dump_survey(struct wiphy *wiphy,
 	int status;
 	bool filled = false;
 
-	hdd_enter_dev(dev);
-
-	hdd_debug("dump survey index: %d", idx);
 	if (idx > QDF_MAX_NUM_CHAN - 1)
 		return -EINVAL;
 
@@ -4892,7 +4889,7 @@ static int __wlan_hdd_cfg80211_dump_survey(struct wiphy *wiphy,
 
 	if (!filled)
 		return -ENONET;
-	hdd_exit();
+
 	return 0;
 }
 

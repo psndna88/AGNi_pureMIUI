@@ -624,14 +624,11 @@ QDF_STATUS sme_ser_cmd_callback(struct wlan_serialization_command *cmd,
 
 	switch (reason) {
 	case WLAN_SER_CB_ACTIVATE_CMD:
-		sme_debug("WLAN_SER_CB_ACTIVATE_CMD callback");
 		status = sme_ser_handle_active_cmd(cmd);
 		break;
 	case WLAN_SER_CB_CANCEL_CMD:
-		sme_debug("WLAN_SER_CB_CANCEL_CMD callback");
 		break;
 	case WLAN_SER_CB_RELEASE_MEM_CMD:
-		sme_debug("WLAN_SER_CB_RELEASE_MEM_CMD callback");
 		if (cmd->vdev)
 			wlan_objmgr_vdev_release_ref(cmd->vdev,
 						     WLAN_LEGACY_SME_ID);
@@ -639,7 +636,6 @@ QDF_STATUS sme_ser_cmd_callback(struct wlan_serialization_command *cmd,
 		csr_release_command_buffer(mac_ctx, sme_cmd);
 		break;
 	case WLAN_SER_CB_ACTIVE_CMD_TIMEOUT:
-		sme_debug("WLAN_SER_CB_ACTIVE_CMD_TIMEOUT callback");
 		break;
 	default:
 		sme_debug("STOP: unknown reason code");
@@ -1361,11 +1357,15 @@ static QDF_STATUS dfs_msg_processor(tpAniSirGlobal mac,
 		struct scheduler_msg *msg)
 {
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
-	struct csr_roam_info roam_info = { 0 };
+	struct csr_roam_info *roam_info;
 	tSirSmeCSAIeTxCompleteRsp *csa_ie_tx_complete_rsp;
 	uint32_t session_id = 0;
 	eRoamCmdStatus roam_status;
 	eCsrRoamResult roam_result;
+
+	roam_info = qdf_mem_malloc(sizeof(*roam_info));
+	if (!roam_info)
+		return QDF_STATUS_E_NOMEM;
 
 	switch (msg->type) {
 	case eWNI_SME_DFS_RADAR_FOUND:
@@ -1383,6 +1383,7 @@ static QDF_STATUS dfs_msg_processor(tpAniSirGlobal mac,
 			(tSirSmeCSAIeTxCompleteRsp *) msg->bodyptr;
 		if (!csa_ie_tx_complete_rsp) {
 			sme_err("eWNI_SME_DFS_CSAIE_TX_COMPLETE_IND null msg");
+			qdf_mem_free(roam_info);
 			return QDF_STATUS_E_FAILURE;
 		}
 		session_id = csa_ie_tx_complete_rsp->sessionId;
@@ -1406,14 +1407,16 @@ static QDF_STATUS dfs_msg_processor(tpAniSirGlobal mac,
 	default:
 	{
 		sme_err("Invalid DFS message: 0x%x", msg->type);
+		qdf_mem_free(roam_info);
 		status = QDF_STATUS_E_FAILURE;
 		return status;
 	}
 	}
 
 	/* Indicate Radar Event to SAP */
-	csr_roam_call_callback(mac, session_id, &roam_info, 0,
+	csr_roam_call_callback(mac, session_id, roam_info, 0,
 			       roam_status, roam_result);
+	qdf_mem_free(roam_info);
 	return status;
 }
 
@@ -1428,16 +1431,22 @@ sme_unprotected_mgmt_frm_ind(tpAniSirGlobal mac,
 			     tpSirSmeUnprotMgmtFrameInd pSmeMgmtFrm)
 {
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
-	struct csr_roam_info roam_info = { 0 };
+	struct csr_roam_info *roam_info;
 	uint32_t SessionId = pSmeMgmtFrm->sessionId;
 
-	roam_info.nFrameLength = pSmeMgmtFrm->frameLen;
-	roam_info.pbFrames = pSmeMgmtFrm->frameBuf;
-	roam_info.frameType = pSmeMgmtFrm->frameType;
+	roam_info = qdf_mem_malloc(sizeof(*roam_info));
+	if (!roam_info)
+		return QDF_STATUS_E_NOMEM;
+
+	roam_info->nFrameLength = pSmeMgmtFrm->frameLen;
+	roam_info->pbFrames = pSmeMgmtFrm->frameBuf;
+	roam_info->frameType = pSmeMgmtFrm->frameType;
 
 	/* forward the mgmt frame to HDD */
-	csr_roam_call_callback(mac, SessionId, &roam_info, 0,
+	csr_roam_call_callback(mac, SessionId, roam_info, 0,
 			       eCSR_ROAM_UNPROT_MGMT_FRAME_IND, 0);
+
+	qdf_mem_free(roam_info);
 
 	return status;
 }
@@ -1489,7 +1498,7 @@ static QDF_STATUS sme_extended_change_channel_ind(tpAniSirGlobal mac_ctx,
 	struct sir_sme_ext_cng_chan_ind *ext_chan_ind;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	uint32_t session_id = 0;
-	struct csr_roam_info roamInfo = {0};
+	struct csr_roam_info *roam_info;
 	eRoamCmdStatus roam_status;
 	eCsrRoamResult roam_result;
 
@@ -1498,16 +1507,20 @@ static QDF_STATUS sme_extended_change_channel_ind(tpAniSirGlobal mac_ctx,
 		sme_err("ext_chan_ind is NULL");
 		return QDF_STATUS_E_FAILURE;
 	}
+	roam_info = qdf_mem_malloc(sizeof(*roam_info));
+	if (!roam_info)
+		return QDF_STATUS_E_NOMEM;
 	session_id = ext_chan_ind->session_id;
-	roamInfo.target_channel = ext_chan_ind->new_channel;
+	roam_info->target_channel = ext_chan_ind->new_channel;
 	roam_status = eCSR_ROAM_EXT_CHG_CHNL_IND;
 	roam_result = eCSR_ROAM_EXT_CHG_CHNL_UPDATE_IND;
 	sme_debug("sapdfs: Received eWNI_SME_EXT_CHANGE_CHANNEL_IND for session id [%d]",
 		 session_id);
 
 	/* Indicate Ext Channel Change event to SAP */
-	csr_roam_call_callback(mac_ctx, session_id, &roamInfo, 0,
-					roam_status, roam_result);
+	csr_roam_call_callback(mac_ctx, session_id, roam_info, 0,
+			       roam_status, roam_result);
+	qdf_mem_free(roam_info);
 	return status;
 }
 
@@ -1673,15 +1686,20 @@ static QDF_STATUS sme_tsm_ie_ind(tpAniSirGlobal mac,
 				 tSirSmeTsmIEInd *pSmeTsmIeInd)
 {
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
-	struct csr_roam_info roam_info = { 0 };
+	struct csr_roam_info *roam_info;
 	uint32_t SessionId = pSmeTsmIeInd->sessionId;
 
-	roam_info.tsmIe.tsid = pSmeTsmIeInd->tsmIe.tsid;
-	roam_info.tsmIe.state = pSmeTsmIeInd->tsmIe.state;
-	roam_info.tsmIe.msmt_interval = pSmeTsmIeInd->tsmIe.msmt_interval;
+	roam_info = qdf_mem_malloc(sizeof(*roam_info));
+	if (!roam_info)
+		return QDF_STATUS_E_NOMEM;
+
+	roam_info->tsmIe.tsid = pSmeTsmIeInd->tsmIe.tsid;
+	roam_info->tsmIe.state = pSmeTsmIeInd->tsmIe.state;
+	roam_info->tsmIe.msmt_interval = pSmeTsmIeInd->tsmIe.msmt_interval;
 	/* forward the tsm ie information to HDD */
-	csr_roam_call_callback(mac, SessionId, &roam_info, 0,
+	csr_roam_call_callback(mac, SessionId, roam_info, 0,
 			       eCSR_ROAM_TSM_IE_IND, 0);
+	qdf_mem_free(roam_info);
 	return status;
 }
 
@@ -6955,13 +6973,13 @@ void sme_free_join_rsp_fils_params(struct csr_roam_info *roam_info)
 	struct fils_join_rsp_params *roam_fils_params;
 
 	if (!roam_info) {
-		sme_err("FILS Roam Info NULL");
+		sme_debug("FILS Roam Info NULL");
 		return;
 	}
 
 	roam_fils_params = roam_info->fils_join_rsp;
 	if (!roam_fils_params) {
-		sme_err("FILS Roam Param NULL");
+		sme_debug("FILS Roam Param NULL");
 		return;
 	}
 
@@ -7995,8 +8013,7 @@ sme_restore_default_roaming_params(tpAniSirGlobal mac,
 		roam_config->neighborRoamConfig.nNeighborScanTimerPeriod;
 	roam_info->cfgParams.neighborLookupThreshold =
 		roam_config->neighborRoamConfig.nNeighborLookupRssiThreshold;
-	roam_info->cfgParams.roam_rssi_diff =
-		roam_config->neighborRoamConfig.roam_rssi_diff;
+	roam_info->cfgParams.roam_rssi_diff = roam_config->RoamRssiDiff;
 	roam_info->cfgParams.roam_scan_home_away_time =
 			roam_config->nRoamScanHomeAwayTime;
 	roam_info->cfgParams.roam_scan_n_probes =
@@ -8007,6 +8024,15 @@ sme_restore_default_roaming_params(tpAniSirGlobal mac,
 			roam_config->roam_inactive_data_packet_count;
 	roam_info->cfgParams.roam_scan_period_after_inactivity =
 			roam_config->roam_scan_period_after_inactivity;
+}
+
+void sme_roam_reset_configs(mac_handle_t mac_handle, uint8_t vdev_id)
+{
+	tpAniSirGlobal mac = PMAC_STRUCT(mac_handle);
+	tCsrNeighborRoamControlInfo *neighbor_roam_info;
+
+	neighbor_roam_info = &mac->roam.neighborRoamInfo[vdev_id];
+	sme_restore_default_roaming_params(mac, neighbor_roam_info);
 }
 
 QDF_STATUS sme_roam_control_restore_default_config(mac_handle_t mac_handle,
@@ -8510,6 +8536,26 @@ void sme_dump_chan_list(tCsrChannelInfo *chan_info)
 	qdf_mem_free(channel_list);
 }
 
+static uint8_t
+csr_append_pref_chan_list(tCsrChannelInfo *chan_info, uint8_t *channel_list,
+			  uint8_t num_chan)
+{
+	uint8_t i = 0;
+
+	for (i = 0; i < chan_info->numOfChannels; i++) {
+		if (csr_is_channel_present_in_list(
+			channel_list, num_chan, chan_info->ChannelList[i]))
+			continue;
+
+		if (num_chan >= SIR_ROAM_MAX_CHANNELS)
+			break;
+
+		channel_list[num_chan++] = chan_info->ChannelList[i];
+	}
+
+	return num_chan;
+}
+
 /**
  * sme_update_roam_scan_channel_list() - to update scan channel list
  * @mac_handle: Opaque handle to the global MAC context
@@ -8530,7 +8576,7 @@ sme_update_roam_scan_channel_list(mac_handle_t mac_handle, uint8_t vdev_id,
 {
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	tpAniSirGlobal mac = PMAC_STRUCT(mac_handle);
-	uint8_t *channel_list;
+	uint8_t *channel_list, pref_chan_cnt = 0;
 
 	channel_list = qdf_mem_malloc(SIR_MAX_SUPPORTED_CHANNEL_LIST);
 	if (!channel_list)
@@ -8547,9 +8593,15 @@ sme_update_roam_scan_channel_list(mac_handle_t mac_handle, uint8_t vdev_id,
 		status = QDF_STATUS_E_INVAL;
 		goto out;
 	}
+
+	pref_chan_cnt = csr_append_pref_chan_list(chan_info, channel_list,
+						  num_chan);
+	num_chan = pref_chan_cnt;
+
 	csr_flush_cfg_bg_scan_roam_channel_list(chan_info);
 	csr_create_bg_scan_roam_channel_list(mac, chan_info, channel_list,
 					     num_chan);
+
 	sme_debug("New channels:");
 	sme_dump_chan_list(chan_info);
 	sme_debug("Updated roam scan channels - roam state is %d",
@@ -8703,10 +8755,12 @@ QDF_STATUS sme_get_roam_scan_channel_list(tHalHandle hHal,
 			uint8_t *pChannelList, uint8_t *pNumChannels,
 			uint8_t sessionId)
 {
-	int i = 0;
+	int i = 0, chan_cnt = 0;
 	uint8_t *pOutPtr = pChannelList;
 	tpAniSirGlobal pMac = PMAC_STRUCT(hHal);
 	tpCsrNeighborRoamControlInfo pNeighborRoamInfo = NULL;
+	struct csr_channel *occupied_ch_lst =
+		&pMac->scan.occupiedChannels[sessionId];
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	tCsrChannelInfo *chan_info;
 
@@ -8722,21 +8776,43 @@ QDF_STATUS sme_get_roam_scan_channel_list(tHalHandle hHal,
 		return status;
 
 	chan_info = &pNeighborRoamInfo->cfgParams.specific_chan_info;
-	if (!chan_info->numOfChannels) {
+	if (chan_info->numOfChannels) {
+		*pNumChannels = chan_info->numOfChannels;
+		for (chan_cnt = 0; chan_cnt < (*pNumChannels) &&
+		     chan_cnt < WNI_CFG_VALID_CHANNEL_LIST_LEN; chan_cnt++)
+			pOutPtr[chan_cnt] = chan_info->ChannelList[chan_cnt];
+
+		*pNumChannels = chan_cnt;
+	} else {
 		chan_info = &pNeighborRoamInfo->cfgParams.pref_chan_info;
-		if (!chan_info->numOfChannels) {
+		if (chan_info->numOfChannels) {
+			*pNumChannels = chan_info->numOfChannels;
+			for (chan_cnt = 0; chan_cnt < (*pNumChannels) &&
+			     chan_cnt < WNI_CFG_VALID_CHANNEL_LIST_LEN;
+			     chan_cnt++)
+				pOutPtr[chan_cnt] =
+					chan_info->ChannelList[chan_cnt];
+		}
+
+		if (occupied_ch_lst->numChannels) {
+			for (i = 0; i < occupied_ch_lst->numChannels &&
+			     chan_cnt < WNI_CFG_VALID_CHANNEL_LIST_LEN; i++) {
+				if (csr_is_channel_present_in_list(
+					pOutPtr, chan_cnt,
+					occupied_ch_lst->channelList[i]))
+					continue;
+				 pOutPtr[chan_cnt++] =
+					occupied_ch_lst->channelList[i];
+			}
+		}
+		*pNumChannels = chan_cnt;
+		if (!(chan_info->numOfChannels ||
+		      occupied_ch_lst->numChannels)) {
 			sme_err("Roam Scan channel list is NOT yet initialized");
-			*pNumChannels = 0;
-			sme_release_global_lock(&pMac->sme);
-			return status;
+			status = QDF_STATUS_E_INVAL;
 		}
 	}
 
-	*pNumChannels = chan_info->numOfChannels;
-	for (i = 0; i < (*pNumChannels); i++)
-		pOutPtr[i] = chan_info->ChannelList[i];
-
-	pOutPtr[i] = '\0';
 	sme_release_global_lock(&pMac->sme);
 	return status;
 }
@@ -9378,6 +9454,25 @@ QDF_STATUS sme_send_cesium_enable_ind(tHalHandle hHal, uint32_t sessionId)
 
 	return status;
 }
+
+#ifdef WLAN_SEND_DSCP_UP_MAP_TO_FW
+QDF_STATUS sme_send_dscp_up_map_to_fw(uint32_t *dscp_to_up_map)
+{
+	QDF_STATUS status;
+	void *wma = cds_get_context(QDF_MODULE_ID_WMA);
+
+	if (!wma) {
+		sme_err("wma is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	status = wma_send_dscp_up_map_to_fw(wma, dscp_to_up_map);
+	if (!QDF_IS_STATUS_SUCCESS(status))
+		sme_err("%s: failed to send dscp_up_map to FW", __func__);
+
+	return status;
+}
+#endif
 
 QDF_STATUS sme_set_wlm_latency_level(tHalHandle hal, uint16_t session_id,
 				     uint16_t latency_level)
@@ -10532,41 +10627,44 @@ static QDF_STATUS sme_process_channel_change_resp(tpAniSirGlobal pMac,
 					   uint16_t msg_type, void *pMsgBuf)
 {
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
-	struct csr_roam_info proam_info = { 0 };
+	struct csr_roam_info *roam_info;
 	eCsrRoamResult roamResult;
 	tpSwitchChannelParams pChnlParams = (tpSwitchChannelParams) pMsgBuf;
 	uint32_t SessionId = pChnlParams->peSessionId;
 
-	proam_info.channelChangeRespEvent =
-		(tSirChanChangeResponse *)
+	roam_info = qdf_mem_malloc(sizeof(*roam_info));
+	if (!roam_info)
+		return QDF_STATUS_E_NOMEM;
+
+	roam_info->channelChangeRespEvent =
 		qdf_mem_malloc(sizeof(tSirChanChangeResponse));
-	if (NULL == proam_info.channelChangeRespEvent) {
+	if (!roam_info->channelChangeRespEvent) {
 		status = QDF_STATUS_E_NOMEM;
-		sme_err("Channel Change Event Allocation Failed: %d\n", status);
+		qdf_mem_free(roam_info);
 		return status;
 	}
 	if (msg_type == eWNI_SME_CHANNEL_CHANGE_RSP) {
-		proam_info.channelChangeRespEvent->sessionId = SessionId;
-		proam_info.channelChangeRespEvent->newChannelNumber =
+		roam_info->channelChangeRespEvent->sessionId = SessionId;
+		roam_info->channelChangeRespEvent->newChannelNumber =
 			pChnlParams->channelNumber;
 
 		if (pChnlParams->status == QDF_STATUS_SUCCESS) {
 			QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
 				  "sapdfs: Received success eWNI_SME_CHANNEL_CHANGE_RSP for sessionId[%d]",
 				  SessionId);
-			proam_info.channelChangeRespEvent->channelChangeStatus =
+			roam_info->channelChangeRespEvent->channelChangeStatus =
 				1;
 			roamResult = eCSR_ROAM_RESULT_CHANNEL_CHANGE_SUCCESS;
 		} else {
 			QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
 				  "sapdfs: Received failure eWNI_SME_CHANNEL_CHANGE_RSP for sessionId[%d]",
 				  SessionId);
-			proam_info.channelChangeRespEvent->channelChangeStatus =
+			roam_info->channelChangeRespEvent->channelChangeStatus =
 				0;
 			roamResult = eCSR_ROAM_RESULT_CHANNEL_CHANGE_FAILURE;
 		}
 
-		csr_roam_call_callback(pMac, SessionId, &proam_info, 0,
+		csr_roam_call_callback(pMac, SessionId, roam_info, 0,
 				       eCSR_ROAM_SET_CHANNEL_RSP, roamResult);
 
 	} else {
@@ -10574,7 +10672,8 @@ static QDF_STATUS sme_process_channel_change_resp(tpAniSirGlobal pMac,
 		sme_err("Invalid Channel Change Resp Message: %d",
 			status);
 	}
-	qdf_mem_free(proam_info.channelChangeRespEvent);
+	qdf_mem_free(roam_info->channelChangeRespEvent);
+	qdf_mem_free(roam_info);
 
 	return status;
 }

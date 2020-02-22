@@ -453,6 +453,12 @@ CONFIG_ATH_SUPPORT_FLOWMAC_MODULE := n
 #Enable spectral support
 CONFIG_ATH_SUPPORT_SPECTRAL := n
 
+#Customize DSCP_to-UP map based on RFC8325
+ifeq ($(CONFIG_HELIUMPLUS), y)
+CONFIG_WLAN_CUSTOM_DSCP_UP_MAP := y
+CONFIG_WLAN_SEND_DSCP_UP_MAP_TO_FW := y
+endif
+
 #Enable WDI Event support
 ifeq ($(CONFIG_REMOVE_PKT_LOG), y)
 CONFIG_WDI_EVENT_ENABLE := n
@@ -589,6 +595,10 @@ CONFIG_DISABLE_CHANNEL_LIST :=y
 
 #Flag to enable beacon receive feature
 CONFIG_WLAN_BCN_RECV_FEATURE := y
+
+#Flag to enable SAR Safety Feature
+CONFIG_SAR_SAFETY_FEATURE := y
+
 
 CONFIG_WIFI_POS_CONVERGED := y
 ifneq ($(CONFIG_WIFI_POS_CONVERGED), y)

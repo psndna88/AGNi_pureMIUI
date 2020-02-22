@@ -636,11 +636,8 @@ static void lim_post_join_set_link_state_callback(tpAniSirGlobal mac,
 	}
 
 	qdf_mem_free(session_cb_param);
-	pe_debug("Sessionid %d set link state(%d) cb status: %d",
-			session_entry->peSessionId, session_entry->limMlmState,
-			status);
-
 	if (!status) {
+
 		pe_err("failed to find pe session for session id:%d",
 			session_entry->peSessionId);
 		goto failure;
@@ -655,12 +652,6 @@ static void lim_post_join_set_link_state_callback(tpAniSirGlobal mac,
 	session_entry->channelChangeReasonCode =
 			 LIM_SWITCH_CHANNEL_JOIN;
 	session_entry->pLimMlmReassocRetryReq = NULL;
-	pe_debug("[lim_process_mlm_join_req]: suspend link success(%d) "
-		"on sessionid: %d setting channel to: %d with ch_width :%d "
-		"and maxtxPower: %d", status, session_entry->peSessionId,
-		session_entry->currentOperChannel,
-		session_entry->ch_width,
-		session_entry->maxTxPower);
 	lim_set_channel(mac, session_entry->currentOperChannel,
 		session_entry->ch_center_freq_seg0,
 		session_entry->ch_center_freq_seg1,
@@ -717,9 +708,6 @@ lim_process_mlm_post_join_suspend_link(tpAniSirGlobal mac_ctx,
 		session->peSessionId;
 
 	lnk_state = eSIR_LINK_PREASSOC_STATE;
-	pe_debug("[lim_process_mlm_join_req]: lnk_state: %d",
-		lnk_state);
-
 	pe_session_param = qdf_mem_malloc(sizeof(struct session_params));
 	if (pe_session_param) {
 		pe_session_param->session_id = session->peSessionId;
@@ -803,27 +791,8 @@ static void lim_process_mlm_join_req(tpAniSirGlobal mac_ctx, uint32_t *msg)
 		/* Hold onto Join request parameters */
 
 		session->pLimMlmJoinReq = (tpLimMlmJoinReq) msg;
-		if (is_lim_session_off_channel(mac_ctx, sessionid)) {
-			pe_debug("SessionId:%d LimSession is on OffChannel",
-				sessionid);
-			/* suspend link */
-			pe_debug("Suspend link, sessionid %d is off channel",
-				sessionid);
-			lim_process_mlm_post_join_suspend_link(mac_ctx,
+		lim_process_mlm_post_join_suspend_link(mac_ctx,
 				QDF_STATUS_SUCCESS, (uint32_t *)session);
-		} else {
-			pe_debug("No need to Suspend link");
-			 /*
-			  * No need to Suspend link as LimSession is not
-			  * off channel, calling
-			  * lim_process_mlm_post_join_suspend_link with
-			  * status as SUCCESS.
-			  */
-			pe_debug("SessionId:%d Join req on current chan",
-				sessionid);
-			lim_process_mlm_post_join_suspend_link(mac_ctx,
-				QDF_STATUS_SUCCESS, (uint32_t *)session);
-		}
 		return;
 	} else {
 		/**
@@ -1045,12 +1014,11 @@ static void lim_process_mlm_auth_req(tpAniSirGlobal mac_ctx, uint32_t *msg)
 		return;
 	}
 
-	pe_debug("Process Auth Req sessionID %d Systemrole %d"
-		       "mlmstate %d from: " MAC_ADDRESS_STR
-		       " with authtype %d", session_id,
-		GET_LIM_SYSTEM_ROLE(session), session->limMlmState,
-		MAC_ADDR_ARRAY(mac_ctx->lim.gpLimMlmAuthReq->peerMacAddr),
-		mac_ctx->lim.gpLimMlmAuthReq->authType);
+	pe_debug("vdev %d Systemrole %d mlmstate %d from: " QDF_MAC_ADDR_STR "with authtype %d",
+		 session->smeSessionId, GET_LIM_SYSTEM_ROLE(session),
+		 session->limMlmState,
+		 QDF_MAC_ADDR_ARRAY(mac_ctx->lim.gpLimMlmAuthReq->peerMacAddr),
+		 mac_ctx->lim.gpLimMlmAuthReq->authType);
 
 	sir_copy_mac_addr(curr_bssid, session->bssId);
 
@@ -1249,8 +1217,7 @@ static void lim_process_mlm_assoc_req(tpAniSirGlobal mac_ctx, uint32_t *msg_buf)
 	MTRACE(mac_trace(mac_ctx, TRACE_CODE_MLM_STATE,
 			 session_entry->peSessionId,
 			 session_entry->limMlmState));
-	pe_debug("SessionId:%d Sending Assoc_Req Frame",
-		session_entry->peSessionId);
+	pe_debug("vdev %d Sending Assoc_Req Frame", session_entry->smeSessionId);
 
 	/* Prepare and send Association request frame */
 	lim_send_assoc_req_mgmt_frame(mac_ctx, mlm_assoc_req, session_entry);

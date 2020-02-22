@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018, 2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1609,7 +1609,10 @@ static QDF_STATUS lim_assoc_tx_complete_cnf(void *context,
 	uint16_t reason_code;
 	tpAniSirGlobal mac_ctx = (tpAniSirGlobal)context;
 
-	pe_debug("tx_complete= %d", tx_complete);
+	 pe_nofl_info("Assoc TX %s",
+		      (tx_complete == WMI_MGMT_TX_COMP_TYPE_COMPLETE_OK) ?
+		      "success" : "fail");
+
 	if (tx_complete == WMI_MGMT_TX_COMP_TYPE_COMPLETE_OK) {
 		assoc_ack_status = ACKED;
 		reason_code = QDF_STATUS_SUCCESS;
@@ -2254,7 +2257,10 @@ lim_send_assoc_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 	MTRACE(qdf_trace(QDF_MODULE_ID_PE, TRACE_CODE_TX_MGMT,
 			 pe_session->peSessionId, mac_hdr->fc.subType));
 
-	pe_debug("Sending Association Request length %d to ", bytes);
+	pe_nofl_info("Assoc TX vdev %d to %pM seq num %d",
+		     pe_session->smeSessionId, pe_session->bssId,
+		     mac_ctx->mgmtSeqNum);
+
 	min_rid = lim_get_min_session_txrate(pe_session);
 	lim_diag_event_report(mac_ctx, WLAN_PE_DIAG_ASSOC_START_EVENT,
 			      pe_session, QDF_STATUS_SUCCESS, QDF_STATUS_SUCCESS);
@@ -2309,9 +2315,9 @@ static QDF_STATUS lim_auth_tx_complete_cnf(void *context,
 	uint16_t auth_ack_status;
 	uint16_t reason_code;
 
-	pe_debug("tx_complete = %d %s", tx_complete,
-		(tx_complete == WMI_MGMT_TX_COMP_TYPE_COMPLETE_OK) ?
-		 "success" : "fail");
+	pe_nofl_info("tx_complete = %d %s", tx_complete,
+		     (tx_complete == WMI_MGMT_TX_COMP_TYPE_COMPLETE_OK) ?
+		     "success" : "fail");
 	if (tx_complete == WMI_MGMT_TX_COMP_TYPE_COMPLETE_OK) {
 		mac_ctx->auth_ack_status = LIM_AUTH_ACK_RCD_SUCCESS;
 		auth_ack_status = ACKED;
@@ -2382,21 +2388,11 @@ lim_send_auth_mgmt_frame(tpAniSirGlobal mac_ctx,
 		 * status code, 128 bytes for challenge text and
 		 * 4 bytes each for IV & ICV.
 		 */
-		pe_debug("Sending encrypted auth frame to " MAC_ADDRESS_STR,
-				MAC_ADDR_ARRAY(peer_addr));
-
 		body_len = wep_challenge_len + LIM_ENCR_AUTH_INFO_LEN;
 		frame_len = sizeof(tSirMacMgmtHdr) + body_len;
 
 		goto alloc_packet;
 	}
-
-	pe_debug("Sending Auth seq# %d status %d (%d) to "
-		MAC_ADDRESS_STR,
-		auth_frame->authTransactionSeqNumber,
-		auth_frame->authStatusCode,
-		(auth_frame->authStatusCode == eSIR_MAC_SUCCESS_STATUS),
-		MAC_ADDR_ARRAY(peer_addr));
 
 	switch (auth_frame->authTransactionSeqNumber) {
 	case SIR_MAC_AUTH_FRAME_1:
@@ -2531,10 +2527,6 @@ alloc_packet:
 
 	if (wep_challenge_len) {
 		qdf_mem_copy(body, (uint8_t *) auth_frame, body_len);
-
-		pe_debug("Sending Auth seq# 3 to " MAC_ADDRESS_STR,
-			MAC_ADDR_ARRAY(mac_hdr->da));
-
 	} else {
 		*((uint16_t *) (body)) =
 			sir_swap_u16if_needed(auth_frame->authAlgoNumber);
@@ -2577,9 +2569,8 @@ alloc_packet:
 				qdf_mem_copy(body, auth_frame->challengeText,
 					     SIR_MAC_SAP_AUTH_CHALLENGE_LENGTH);
 				body += SIR_MAC_SAP_AUTH_CHALLENGE_LENGTH;
-
 				body_len -= SIR_MAC_SAP_AUTH_CHALLENGE_LENGTH +
-							SIR_MAC_CHALLENGE_ID_LEN;
+					    SIR_MAC_CHALLENGE_ID_LEN;
 			}
 		}
 
@@ -2617,17 +2608,13 @@ alloc_packet:
 			pe_debug("FILS: appending fils Auth data");
 			lim_add_fils_data_to_auth_frame(session, body);
 		}
-
-		pe_debug("*** Sending Auth seq# %d status %d (%d) to "
-				MAC_ADDRESS_STR,
-			auth_frame->authTransactionSeqNumber,
-			auth_frame->authStatusCode,
-			(auth_frame->authStatusCode ==
-				eSIR_MAC_SUCCESS_STATUS),
-			MAC_ADDR_ARRAY(mac_hdr->da));
 	}
-	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE,
-			   QDF_TRACE_LEVEL_DEBUG,
+
+	pe_nofl_info("Auth TX seq %d seq num %d status %d WEP %d to " QDF_MAC_ADDR_STR,
+		     auth_frame->authTransactionSeqNumber, mac_ctx->mgmtSeqNum,
+		     auth_frame->authStatusCode, mac_hdr->fc.wep,
+		     QDF_MAC_ADDR_ARRAY(mac_hdr->da));
+	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
 			   frame, frame_len);
 
 	if ((NULL != session->ftPEContext.pFTPreAuthReq) &&
@@ -2901,7 +2888,9 @@ static QDF_STATUS lim_deauth_tx_complete_cnf_handler(void *context,
 	QDF_STATUS status_code;
 	struct scheduler_msg msg = {0};
 
-	pe_debug("tx_success: %d", tx_success);
+	pe_info("tx_complete = %s tx_success = %d",
+		(tx_success == WMI_MGMT_TX_COMP_TYPE_COMPLETE_OK) ?
+		"success" : "fail", tx_success);
 
 	if (buf)
 		qdf_nbuf_free(buf);
@@ -3238,19 +3227,15 @@ lim_send_deauth_mgmt_frame(tpAniSirGlobal pMac,
 				&nPayload, discon_ie);
 	hdd_free_self_disconnect_ies(pMac, smeSessionId);
 
-	pe_debug("***Sessionid %d Sending Deauth frame with "
-		       "reason %u and waitForAck %d to " MAC_ADDRESS_STR
-		       " ,From " MAC_ADDRESS_STR,
-		psessionEntry->peSessionId, nReason, waitForAck,
-		MAC_ADDR_ARRAY(pMacHdr->da),
-		MAC_ADDR_ARRAY(psessionEntry->selfMacAddr));
+	pe_nofl_info("SessionId %d Deauth frame with reason %u and waitForAck %d to %pM from %pM",
+		     psessionEntry->peSessionId, nReason, waitForAck,
+		     pMacHdr->da, psessionEntry->selfMacAddr);
 
 	if ((BAND_5G == lim_get_rf_band(psessionEntry->currentOperChannel))
 	    || (psessionEntry->pePersona == QDF_P2P_CLIENT_MODE) ||
 	    (psessionEntry->pePersona == QDF_P2P_GO_MODE)
-	    ) {
+	    )
 		txFlag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
-	}
 
 	txFlag |= HAL_USE_PEER_STA_REQUESTED_MASK;
 #ifdef FEATURE_WLAN_TDLS
@@ -4506,7 +4491,7 @@ lim_send_radio_measure_report_action_frame(tpAniSirGlobal pMac,
 				tSirMacAddr peer,
 				tpPESession psessionEntry)
 {
-	QDF_STATUS statusCode = QDF_STATUS_SUCCESS;
+	QDF_STATUS status_code = QDF_STATUS_SUCCESS;
 	uint8_t *pFrame;
 	tpSirMacMgmtHdr pMacHdr;
 	uint32_t nBytes, nPayload, nStatus;
@@ -4531,8 +4516,6 @@ lim_send_radio_measure_report_action_frame(tpAniSirGlobal pMac,
 
 	smeSessionId = psessionEntry->smeSessionId;
 
-	pe_debug("dialog_token %d num_report %d is_last_frame %d",
-		 dialog_token, num_report, is_last_frame);
 
 	frm->Category.category = SIR_MAC_ACTION_RRM;
 	frm->Action.action = SIR_MAC_RRM_RADIO_MEASURE_RPT;
@@ -4570,11 +4553,12 @@ lim_send_radio_measure_report_action_frame(tpAniSirGlobal pMac,
 		}
 	}
 
+
 	nStatus =
 		dot11f_get_packed_radio_measurement_report_size(pMac, frm, &nPayload);
 	if (DOT11F_FAILED(nStatus)) {
-		pe_err("Failed to calculate the packed size for a Radio Measure Report (0x%08x)",
-			nStatus);
+		pe_nofl_err("TX: [802.11 RRM] Failed to get packed size for RM Report (0x%08x)",
+		       nStatus);
 		/* We'll fall back on the worst case scenario: */
 		nPayload = sizeof(tDot11fLinkMeasurementReport);
 		qdf_mem_free(frm);
@@ -4590,7 +4574,7 @@ lim_send_radio_measure_report_action_frame(tpAniSirGlobal pMac,
 		cds_packet_alloc((uint16_t) nBytes, (void **)&pFrame,
 				 (void **)&pPacket);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
-		pe_err("Failed to allocate %d bytes for a Radio Measure "
+		pe_nofl_err("TX: [802.11 RRM] Allocation of %d bytes failed for RM"
 			   "Report", nBytes);
 		qdf_mem_free(frm);
 		return QDF_STATUS_E_FAILURE;
@@ -4619,19 +4603,29 @@ lim_send_radio_measure_report_action_frame(tpAniSirGlobal pMac,
 						       nPayload, &nPayload);
 
 	if (DOT11F_FAILED(nStatus)) {
-		pe_err("Failed to pack an Radio Measure Report (0x%08x)",
+		pe_nofl_err("Failed to pack an Radio Measure Report (0x%08x)",
 			nStatus);
 
 		/* FIXME - Need to convert to QDF_STATUS */
-		statusCode = QDF_STATUS_E_FAILURE;
+		status_code = QDF_STATUS_E_FAILURE;
 		goto returnAfterError;
 	} else if (DOT11F_WARNED(nStatus)) {
 		pe_warn("There were warnings while packing Radio Measure Report (0x%08x)",
 			nStatus);
 	}
 
-	pe_warn("Sending a Radio Measure Report to");
-	lim_print_mac_addr(pMac, peer, LOGW);
+	pe_debug("Sending Radio Measure Report to %pM", peer);
+	if (frm->MeasurementReport[0].type == SIR_MAC_RRM_BEACON_TYPE)
+		pe_nofl_info("TX: [802.11 BCN_RPT] seq_no:%d dialog_token:%d no. of APs:%d is_last_rpt:%d",
+			     (pMacHdr->seqControl.seqNumHi << HIGH_SEQ_NUM_OFFSET |
+			      pMacHdr->seqControl.seqNumLo),
+			     dialog_token, frm->num_MeasurementReport,
+			     is_last_frame);
+	else
+		pe_nofl_info("TX: [802.11 RRM] seq_no:%d dialog_token %d num_report %d is_last_frm %d",
+			     (pMacHdr->seqControl.seqNumHi << HIGH_SEQ_NUM_OFFSET |
+			      pMacHdr->seqControl.seqNumLo),
+			     dialog_token, num_report, is_last_frame);
 
 	if ((BAND_5G == lim_get_rf_band(psessionEntry->currentOperChannel))
 	    || (psessionEntry->pePersona == QDF_P2P_CLIENT_MODE) ||
@@ -4652,20 +4646,19 @@ lim_send_radio_measure_report_action_frame(tpAniSirGlobal pMac,
 	MTRACE(qdf_trace(QDF_MODULE_ID_PE, TRACE_CODE_TX_COMPLETE,
 			 psessionEntry->peSessionId, qdf_status));
 	if (QDF_STATUS_SUCCESS != qdf_status) {
-		pe_err("wma_tx_frame FAILED! Status [%d]", qdf_status);
-		statusCode = QDF_STATUS_E_FAILURE;
+		pe_nofl_err("TX: [802.11 RRM] Send FAILED! err_status [%d]",
+		       qdf_status);
+		status_code = QDF_STATUS_E_FAILURE;
 		/* Pkt will be freed up by the callback */
-		qdf_mem_free(frm);
-		return statusCode;
-	} else {
-		qdf_mem_free(frm);
-		return QDF_STATUS_SUCCESS;
 	}
+
+	qdf_mem_free(frm);
+	return status_code;
 
 returnAfterError:
 	qdf_mem_free(frm);
 	cds_packet_free((void *)pPacket);
-	return statusCode;
+	return status_code;
 }
 
 #ifdef WLAN_FEATURE_11W

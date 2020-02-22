@@ -1836,6 +1836,33 @@ int wma_process_fw_event_handler(void *ctx, void *htc_packet, uint8_t rx_ctx)
 
 #ifdef WLAN_FEATURE_NAN
 /**
+ * wma_nan_set_separate_iface_support() - set separate_iface_support flag in WMA handle
+ * @wma_handle: Pointer to wma handle
+ * @cds_cfg: Pointer to CDS Configuration
+ *
+ * Return: none
+ */
+static void wma_nan_set_separate_iface_support(tp_wma_handle wma_handle,
+					       struct cds_config_info *cds_cfg)
+{
+	wma_handle->nan_separate_iface_support =
+			cds_cfg->nan_separate_iface_support;
+}
+
+/**
+ * wma_get_separate_iface_support() - get separate_iface_support flag in
+ * WMA handle
+ * @wma_handle: Pointer to wma handle
+ * @cds_cfg: Pointer to CDS Configuration
+ *
+ * Return: flag value
+ */
+static bool wma_get_separate_iface_support(tp_wma_handle wma_handle)
+{
+	return wma_handle->nan_separate_iface_support;
+}
+
+/**
  * wma_set_nan_enable() - set nan enable flag in WMA handle
  * @wma_handle: Pointer to wma handle
  * @cds_cfg: Pointer to CDS Configuration
@@ -1848,10 +1875,19 @@ static void wma_set_nan_enable(tp_wma_handle wma_handle,
 	wma_handle->is_nan_enabled = cds_cfg->is_nan_enabled;
 }
 #else
+static void wma_nan_set_separate_iface_support(tp_wma_handle wma_handle,
+					       struct cds_config_info *cds_cfg)
+{
+}
+static bool wma_get_separate_iface_support(tp_wma_handle wma_handle)
+{
+	return false;
+}
 static void wma_set_nan_enable(tp_wma_handle wma_handle,
 				struct cds_config_info *cds_cfg)
 {
 }
+
 #endif
 
 /**
@@ -3365,6 +3401,8 @@ QDF_STATUS wma_open(struct wlan_objmgr_psoc *psoc,
 	wma_handle->is_lpass_enabled = cds_cfg->is_lpass_enabled;
 #endif
 	wma_set_nan_enable(wma_handle, cds_cfg);
+	wma_nan_set_separate_iface_support(wma_handle, cds_cfg);
+
 	wma_handle->interfaces = qdf_mem_malloc(sizeof(struct wma_txrx_node) *
 						wma_handle->max_bssid);
 	if (!wma_handle->interfaces) {
@@ -3642,6 +3680,10 @@ QDF_STATUS wma_open(struct wlan_objmgr_psoc *psoc,
 					   WMA_RX_SERIALIZER_CTX);
 
 	wma_register_pmkid_req_event_handler(wma_handle);
+	wmi_unified_register_event_handler(wma_handle->wmi_handle,
+					   wmi_roam_stats_event_id,
+					   wma_roam_stats_event_handler,
+					   WMA_RX_SERIALIZER_CTX);
 #endif /* WLAN_FEATURE_ROAM_OFFLOAD */
 	wmi_unified_register_event_handler(wma_handle->wmi_handle,
 				wmi_rssi_breach_event_id,
@@ -4494,7 +4536,7 @@ QDF_STATUS wma_start(void)
 			goto end;
 		}
 	} else {
-		WMA_LOGE("Target does not support cesium network");
+		WMA_LOGD("Target does not support cesium network");
 	}
 
 	qdf_status = wma_tx_attach(wma_handle);
@@ -5746,6 +5788,10 @@ static int wma_update_hdd_cfg(tp_wma_handle wma_handle)
 
 	if (wmi_service_enabled(wma_handle->wmi_handle, wmi_service_nan_vdev))
 		tgt_cfg.nan_seperate_vdev_support = true;
+
+	wlan_res_cfg->nan_separate_iface_support =
+			tgt_cfg.nan_seperate_vdev_support &&
+			wma_get_separate_iface_support(wma_handle);
 
 	ret = wma_handle->tgt_cfg_update_cb(hdd_ctx, &tgt_cfg);
 	if (ret)

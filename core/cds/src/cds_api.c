@@ -345,7 +345,7 @@ static void cds_cdp_cfg_attach(struct cds_config_info *cds_cfg)
 	gp_cds_context->cfg_ctx = cdp_cfg_attach(soc, gp_cds_context->qdf_ctx,
 					(void *)(&cdp_cfg));
 	if (!gp_cds_context->cfg_ctx) {
-		WMA_LOGP("%s: failed to init cfg handle", __func__);
+		WMA_LOGD("%s: failed to init cfg handle", __func__);
 		return;
 	}
 
@@ -1055,7 +1055,7 @@ QDF_STATUS cds_post_disable(void)
 	 * - Clean up CE tasklets.
 	 */
 
-	cds_info("send deinit sequence to firmware");
+	cds_debug("send deinit sequence to firmware");
 	if (!(cds_is_driver_recovering() || cds_is_driver_in_bad_state()))
 		cds_suspend_target(wma_handle);
 	hif_disable_isr(hif_ctx);
@@ -1696,6 +1696,24 @@ bool cds_is_packet_log_enabled(void)
 	}
 	return hdd_ctx->config->enablePacketLog;
 }
+
+/**
+ * cds_get_packet_log_buffer_size() - get packet log buffer size
+ *
+ * Return: packet log buffer size in MB
+ */
+uint8_t cds_get_packet_log_buffer_size(void)
+{
+	struct hdd_context *hdd_ctx;
+
+	hdd_ctx = gp_cds_context->hdd_context;
+	if ((NULL == hdd_ctx) || (NULL == hdd_ctx->config)) {
+		cds_alert("Hdd Context is Null");
+		return 0;
+	}
+	return hdd_ctx->config->pktlog_buf_size;
+}
+
 #endif
 
 static int cds_force_assert_target_via_pld(qdf_device_t qdf)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1461,6 +1461,10 @@ static const struct nl80211_vendor_cmd_info wlan_hdd_cfg80211_vendor_events[] = 
 		.vendor_id = QCA_NL80211_VENDOR_ID,
 		.subcmd = QCA_NL80211_VENDOR_SUBCMD_OEM_DATA,
 	},
+	[QCA_NL80211_VENDOR_SUBCMD_REQUEST_SAR_LIMITS_INDEX] = {
+		.vendor_id = QCA_NL80211_VENDOR_ID,
+		.subcmd = QCA_NL80211_VENDOR_SUBCMD_GET_SAR_LIMITS_EVENT,
+	}
 };
 
 /**
@@ -1823,7 +1827,7 @@ int wlan_hdd_cfg80211_start_acs(struct hdd_adapter *adapter)
 
 	qdf_mem_copy(sap_config->self_macaddr.bytes,
 		adapter->mac_addr.bytes, sizeof(struct qdf_mac_addr));
-	hdd_info("ACS Started for %s", adapter->dev->name);
+	hdd_debug("ACS Started for %s", adapter->dev->name);
 	status = wlansap_acs_chselect(
 		WLAN_HDD_GET_SAP_CTX_PTR(adapter),
 		acs_event_callback, sap_config, adapter->dev);
@@ -2469,6 +2473,8 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 	}
 	hw_mode = nla_get_u8(tb[QCA_WLAN_VENDOR_ATTR_ACS_HW_MODE]);
 
+	hdd_nofl_info("ACS request vid %d hw mode %d", adapter->session_id,
+		      hw_mode);
 	if (tb[QCA_WLAN_VENDOR_ATTR_ACS_HT_ENABLED])
 		ht_enabled =
 			nla_get_flag(tb[QCA_WLAN_VENDOR_ATTR_ACS_HT_ENABLED]);
@@ -8673,7 +8679,7 @@ static int __wlan_hdd_cfg80211_wifi_logger_get_ring_data(struct wiphy *wiphy,
 		 * As part of DRIVER ring ID, flush both driver and fw logs.
 		 * For other Ring ID's driver doesn't have any rings to flush
 		 */
-		hdd_info("Bug report triggered by framework");
+		hdd_debug("Bug report triggered by framework");
 
 		status = cds_flush_logs(WLAN_LOG_TYPE_NON_FATAL,
 				WLAN_LOG_INDICATOR_FRAMEWORK,
@@ -12399,6 +12405,282 @@ static int wlan_hdd_cfg80211_setband(struct wiphy *wiphy,
 	return ret;
 }
 
+#ifdef SAR_SAFETY_FEATURE
+void hdd_disable_sar(struct hdd_context *hdd_ctx)
+{
+	struct sar_limit_cmd_params *sar_limit_cmd;
+	struct sar_limit_cmd_row *row;
+	QDF_STATUS status;
+
+	if (hdd_ctx->sar_version != SAR_VERSION_2) {
+		hdd_nofl_debug("FW SAR version: %d", hdd_ctx->sar_version);
+		return;
+	}
+
+	sar_limit_cmd = qdf_mem_malloc(sizeof(struct sar_limit_cmd_params));
+	if (!sar_limit_cmd)
+		return;
+
+	/*
+	 * Need two rows to hold the per-chain V2 power index
+	 */
+	row = qdf_mem_malloc(2 * sizeof(*row));
+	if (!row)
+		goto config_sar_failed;
+
+	sar_limit_cmd->sar_enable = WMI_SAR_FEATURE_OFF;
+	sar_limit_cmd->commit_limits = 1;
+	sar_limit_cmd->num_limit_rows = 2;
+	sar_limit_cmd->sar_limit_row_list = row;
+	row[0].limit_value = 0;
+	row[1].limit_value = 0;
+	row[0].chain_id = 0;
+	row[1].chain_id = 1;
+	row[0].validity_bitmap = WMI_SAR_CHAIN_ID_VALID_MASK;
+	row[1].validity_bitmap = WMI_SAR_CHAIN_ID_VALID_MASK;
+
+	hdd_nofl_debug("Disable the SAR limit index for both the chains");
+
+	status = sme_set_sar_power_limits(hdd_ctx->mac_handle, sar_limit_cmd);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		hdd_nofl_err("Failed to set sar power limits");
+		goto config_sar_failed;
+	}
+
+	/* After SSR, the SAR configuration is lost. As SSR is hidden from
+	 * userland, this command will not come from userspace after a SSR. To
+	 * restore this configuration, save this in hdd context and restore
+	 * after re-init.
+	 */
+	hdd_store_sar_config(hdd_ctx, sar_limit_cmd);
+	return;
+
+config_sar_failed:
+
+	if (sar_limit_cmd) {
+		qdf_mem_free(sar_limit_cmd->sar_limit_row_list);
+		qdf_mem_free(sar_limit_cmd);
+	}
+}
+
+static void hdd_configure_sar_index(struct hdd_context *hdd_ctx,
+				    uint32_t sar_index)
+{
+	struct sar_limit_cmd_params *sar_limit_cmd;
+	struct sar_limit_cmd_row *row;
+	QDF_STATUS status;
+
+	if (hdd_ctx->sar_version != SAR_VERSION_2) {
+		hdd_nofl_debug("FW SAR version: %d", hdd_ctx->sar_version);
+		return;
+	}
+
+	sar_limit_cmd = qdf_mem_malloc(sizeof(struct sar_limit_cmd_params));
+	if (!sar_limit_cmd)
+		return;
+
+	/*
+	 * Need two rows to hold the per-chain V2 power index
+	 */
+	row = qdf_mem_malloc(2 * sizeof(*row));
+	if (!row)
+		goto config_sar_failed;
+
+	sar_limit_cmd->sar_enable = WMI_SAR_FEATURE_ON_SAR_V2_0;
+	sar_limit_cmd->commit_limits = 1;
+	sar_limit_cmd->num_limit_rows = 2;
+	sar_limit_cmd->sar_limit_row_list = row;
+	row[0].limit_value = sar_index;
+	row[1].limit_value = sar_index;
+	row[0].chain_id = 0;
+	row[1].chain_id = 1;
+	row[0].validity_bitmap = WMI_SAR_CHAIN_ID_VALID_MASK;
+	row[1].validity_bitmap = WMI_SAR_CHAIN_ID_VALID_MASK;
+
+	hdd_nofl_debug("Configure POW_Limit Index: %d for both the chains",
+		       row->limit_value);
+
+	status = sme_set_sar_power_limits(hdd_ctx->mac_handle, sar_limit_cmd);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		hdd_nofl_err("Failed to set sar power limits");
+		goto config_sar_failed;
+	}
+
+	/*
+	 * After SSR, the SAR configuration is lost. As SSR is hidden from
+	 * userland, this command will not come from userspace after a SSR. To
+	 * restore this configuration, save this in hdd context and restore
+	 * after re-init.
+	 */
+	hdd_store_sar_config(hdd_ctx, sar_limit_cmd);
+	return;
+
+config_sar_failed:
+
+	if (sar_limit_cmd) {
+		qdf_mem_free(sar_limit_cmd->sar_limit_row_list);
+		qdf_mem_free(sar_limit_cmd);
+	}
+}
+
+void hdd_configure_sar_sleep_index(struct hdd_context *hdd_ctx)
+{
+	if (!hdd_ctx->config->enable_sar_safety)
+		return;
+
+	if (hdd_ctx->config->config_sar_safety_sleep_index) {
+		hdd_nofl_debug("Configure SAR sleep index %d",
+			       hdd_ctx->config->sar_safety_sleep_index);
+		hdd_configure_sar_index(
+				hdd_ctx,
+				hdd_ctx->config->sar_safety_sleep_index);
+	} else {
+		hdd_nofl_debug("Disable SAR");
+		hdd_disable_sar(hdd_ctx);
+	}
+}
+
+void hdd_configure_sar_resume_index(struct hdd_context *hdd_ctx)
+{
+	if (!hdd_ctx->config->enable_sar_safety)
+		return;
+
+	hdd_nofl_debug("Configure SAR safety index %d on wlan resume",
+		       hdd_ctx->config->sar_safety_index);
+	hdd_configure_sar_index(hdd_ctx,
+				hdd_ctx->config->sar_safety_index);
+}
+
+static void hdd_send_sar_unsolicited_event(struct hdd_context *hdd_ctx)
+{
+	struct sk_buff *vendor_event;
+	uint32_t len;
+
+	if (!hdd_ctx) {
+		hdd_err_rl("hdd context is null");
+		return;
+	}
+
+	len = NLMSG_HDRLEN;
+	vendor_event =
+		cfg80211_vendor_event_alloc(
+			hdd_ctx->wiphy, NULL, len,
+			QCA_NL80211_VENDOR_SUBCMD_REQUEST_SAR_LIMITS_INDEX,
+			GFP_KERNEL);
+
+	if (!vendor_event) {
+		hdd_err("cfg80211_vendor_event_alloc failed");
+		return;
+	}
+
+	cfg80211_vendor_event(vendor_event, GFP_KERNEL);
+}
+
+static void hdd_sar_unsolicited_timer_cb(void *user_data)
+{
+	struct hdd_context *hdd_ctx = (struct hdd_context *)user_data;
+	uint8_t i = 0;
+	QDF_STATUS status;
+
+	hdd_nofl_debug("Sar unsolicited timer expired");
+
+	for (i = 0; i < hdd_ctx->config->sar_safety_req_resp_retry; i++) {
+		hdd_send_sar_unsolicited_event(hdd_ctx);
+		status = qdf_wait_for_event_completion(
+				&hdd_ctx->sar_safety_req_resp_event,
+				hdd_ctx->config->sar_safety_req_resp_timeout);
+		if (QDF_IS_STATUS_SUCCESS(status))
+			break;
+	}
+
+	if (i >= hdd_ctx->config->sar_safety_req_resp_retry)
+		hdd_configure_sar_index(hdd_ctx,
+					hdd_ctx->config->sar_safety_index);
+
+}
+
+static void hdd_sar_safety_timer_cb(void *user_data)
+{
+	struct hdd_context *hdd_ctx = (struct hdd_context *)user_data;
+
+	hdd_nofl_debug("Sar safety timer expires");
+	hdd_configure_sar_index(hdd_ctx, hdd_ctx->config->sar_safety_index);
+}
+
+void wlan_hdd_sar_unsolicited_timer_start(struct hdd_context *hdd_ctx)
+{
+	if (!hdd_ctx->config->enable_sar_safety)
+		return;
+
+	if (QDF_TIMER_STATE_RUNNING !=
+		qdf_mc_timer_get_current_state(
+				&hdd_ctx->sar_safety_unsolicited_timer))
+		qdf_mc_timer_start(
+			&hdd_ctx->sar_safety_unsolicited_timer,
+			hdd_ctx->config->sar_safety_unsolicited_timeout);
+}
+
+void wlan_hdd_sar_timers_reset(struct hdd_context *hdd_ctx)
+{
+	if (!hdd_ctx->config->enable_sar_safety)
+		return;
+
+	if (hdd_ctx->sar_version != SAR_VERSION_2)
+		return;
+
+	if (QDF_TIMER_STATE_RUNNING ==
+		qdf_mc_timer_get_current_state(&hdd_ctx->sar_safety_timer))
+		qdf_mc_timer_stop(&hdd_ctx->sar_safety_timer);
+
+	qdf_mc_timer_start(&hdd_ctx->sar_safety_timer,
+			   hdd_ctx->config->sar_safety_timeout);
+
+	if (QDF_TIMER_STATE_RUNNING ==
+		qdf_mc_timer_get_current_state(
+				&hdd_ctx->sar_safety_unsolicited_timer))
+		qdf_mc_timer_stop(&hdd_ctx->sar_safety_unsolicited_timer);
+
+	qdf_event_set(&hdd_ctx->sar_safety_req_resp_event);
+}
+
+void wlan_hdd_sar_timers_init(struct hdd_context *hdd_ctx)
+{
+	if (!hdd_ctx->config->enable_sar_safety)
+		return;
+
+	qdf_mc_timer_init(&hdd_ctx->sar_safety_timer, QDF_TIMER_TYPE_SW,
+			  hdd_sar_safety_timer_cb, hdd_ctx);
+
+	qdf_mc_timer_init(&hdd_ctx->sar_safety_unsolicited_timer,
+			  QDF_TIMER_TYPE_SW,
+			  hdd_sar_unsolicited_timer_cb, hdd_ctx);
+
+	qdf_event_create(&hdd_ctx->sar_safety_req_resp_event);
+
+}
+
+void wlan_hdd_sar_timers_deinit(struct hdd_context *hdd_ctx)
+{
+	if (!hdd_ctx->config->enable_sar_safety)
+		return;
+
+	if (QDF_TIMER_STATE_RUNNING ==
+		qdf_mc_timer_get_current_state(&hdd_ctx->sar_safety_timer))
+		qdf_mc_timer_stop(&hdd_ctx->sar_safety_timer);
+
+	qdf_mc_timer_destroy(&hdd_ctx->sar_safety_timer);
+
+	if (QDF_TIMER_STATE_RUNNING ==
+		qdf_mc_timer_get_current_state(
+				&hdd_ctx->sar_safety_unsolicited_timer))
+		qdf_mc_timer_stop(&hdd_ctx->sar_safety_unsolicited_timer);
+
+	qdf_mc_timer_destroy(&hdd_ctx->sar_safety_unsolicited_timer);
+
+	qdf_event_destroy(&hdd_ctx->sar_safety_req_resp_event);
+}
+#endif
+
 /**
  * wlan_hdd_cfg80211_sar_convert_limit_set() - Convert limit set value
  * @nl80211_value:    Vendor command attribute value
@@ -13038,6 +13320,8 @@ static int __wlan_hdd_set_sar_power_limits(struct wiphy *wiphy,
 	sar_limit_cmd = qdf_mem_malloc(sizeof(struct sar_limit_cmd_params));
 	if (!sar_limit_cmd)
 		return -ENOMEM;
+
+	wlan_hdd_sar_timers_reset(hdd_ctx);
 
 	/* is special SAR V1 => SAR V2 logic enabled and applicable? */
 	if (hdd_convert_sarv1_to_sarv2(hdd_ctx, tb, sar_limit_cmd))
@@ -19039,7 +19323,7 @@ bool wlan_hdd_handle_sap_sta_dfs_conc(struct hdd_adapter *adapter,
 	/* sap is on non-dfs channel, nothing to handle */
 	if (!wlan_reg_is_dfs_ch(hdd_ctx->pdev,
 				hdd_ap_ctx->operating_channel)) {
-		hdd_info("sap is on non-dfs channel, sta is allowed");
+		hdd_debug("sap is on non-dfs channel, sta is allowed");
 		return true;
 	}
 	/*
@@ -19164,8 +19448,6 @@ static int wlan_hdd_cfg80211_connect_start(struct hdd_adapter *adapter,
 	uint8_t channel = 0;
 	mac_handle_t mac_handle;
 
-	hdd_enter();
-
 	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	hdd_sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
 
@@ -19262,7 +19544,6 @@ static int wlan_hdd_cfg80211_connect_start(struct hdd_adapter *adapter,
 			 */
 			qdf_mem_copy(sta_ctx->requested_bssid.bytes,
 				     bssid, QDF_MAC_ADDR_SIZE);
-			hdd_debug("bssid is given by upper layer %pM", bssid);
 		} else if (bssid_hint) {
 			qdf_mem_copy(roam_profile->bssid_hint.bytes,
 				bssid_hint, QDF_MAC_ADDR_SIZE);
@@ -19274,15 +19555,7 @@ static int wlan_hdd_cfg80211_connect_start(struct hdd_adapter *adapter,
 			 */
 			qdf_mem_copy(sta_ctx->requested_bssid.bytes,
 					bssid_hint, QDF_MAC_ADDR_SIZE);
-			hdd_debug("bssid_hint is given by upper layer %pM",
-					bssid_hint);
 		}
-
-		hdd_debug("vdevid %d: Connect to SSID: %.*s operating Channel: %u",
-			  adapter->session_id,
-			  roam_profile->SSIDs.SSIDList->SSID.length,
-			  roam_profile->SSIDs.SSIDList->SSID.ssId,
-			  operatingChannel);
 
 		if (hdd_sta_ctx->wpa_versions) {
 			hdd_set_genie_to_csr(adapter, &RSNAuthType);
@@ -19290,20 +19563,15 @@ static int wlan_hdd_cfg80211_connect_start(struct hdd_adapter *adapter,
 		}
 #ifdef FEATURE_WLAN_WAPI
 		if (adapter->wapi_info.wapi_mode) {
-			hdd_debug("Setting WAPI AUTH Type and Encryption Mode values");
 			switch (adapter->wapi_info.wapi_auth_mode) {
 			case WAPI_AUTH_MODE_PSK:
 			{
-				hdd_debug("WAPI AUTH TYPE: PSK: %d",
-				       adapter->wapi_info.wapi_auth_mode);
 				roam_profile->AuthType.authType[0] =
 					eCSR_AUTH_TYPE_WAPI_WAI_PSK;
 				break;
 			}
 			case WAPI_AUTH_MODE_CERT:
 			{
-				hdd_debug("WAPI AUTH TYPE: CERT: %d",
-				       adapter->wapi_info.wapi_auth_mode);
 				roam_profile->AuthType.authType[0] =
 					eCSR_AUTH_TYPE_WAPI_WAI_CERTIFICATE;
 				break;
@@ -19315,7 +19583,6 @@ static int wlan_hdd_cfg80211_connect_start(struct hdd_adapter *adapter,
 			    WAPI_AUTH_MODE_PSK
 			    || adapter->wapi_info.wapi_auth_mode ==
 			    WAPI_AUTH_MODE_CERT) {
-				hdd_debug("WAPI PAIRWISE/GROUP ENCRYPTION: WPI");
 				roam_profile->AuthType.numEntries = 1;
 				roam_profile->EncryptionType.numEntries = 1;
 				roam_profile->EncryptionType.encryptionType[0] =
@@ -19460,9 +19727,8 @@ static int wlan_hdd_cfg80211_connect_start(struct hdd_adapter *adapter,
 		if ((QDF_STATUS_SUCCESS != qdf_status) &&
 		    (QDF_STA_MODE == adapter->device_mode ||
 		     QDF_P2P_CLIENT_MODE == adapter->device_mode)) {
-			hdd_err("sme_roam_connect (session %d) failed with "
-			       "qdf_status %d. -> NotConnected",
-			       adapter->session_id, qdf_status);
+			hdd_err("Vdev %d connect failed with status %d",
+				adapter->session_id, qdf_status);
 			/* change back to NotAssociated */
 			hdd_conn_set_connection_state(adapter,
 						      eConnectionState_NotConnected);
@@ -19508,7 +19774,6 @@ ret_status:
 	if (status)
 		wlan_hdd_enable_roaming(adapter);
 
-	hdd_exit();
 	return status;
 }
 
@@ -19531,23 +19796,19 @@ static int wlan_hdd_cfg80211_set_auth_type(struct hdd_adapter *adapter,
 	/*set authentication type */
 	switch (auth_type) {
 	case NL80211_AUTHTYPE_AUTOMATIC:
-		hdd_debug("set authentication type to AUTOSWITCH");
 		sta_ctx->conn_info.authType = eCSR_AUTH_TYPE_AUTOSWITCH;
 		break;
 
 	case NL80211_AUTHTYPE_OPEN_SYSTEM:
 	case NL80211_AUTHTYPE_FT:
-		hdd_debug("set authentication type to OPEN");
 		sta_ctx->conn_info.authType = eCSR_AUTH_TYPE_OPEN_SYSTEM;
 		break;
 
 	case NL80211_AUTHTYPE_SHARED_KEY:
-		hdd_debug("set authentication type to SHARED");
 		sta_ctx->conn_info.authType = eCSR_AUTH_TYPE_SHARED_KEY;
 		break;
 #ifdef FEATURE_WLAN_ESE
 	case NL80211_AUTHTYPE_NETWORK_EAP:
-		hdd_debug("set authentication type to CCKM WPA");
 		sta_ctx->conn_info.authType = eCSR_AUTH_TYPE_CCKM_WPA;
 		break;
 #endif
@@ -19555,12 +19816,10 @@ static int wlan_hdd_cfg80211_set_auth_type(struct hdd_adapter *adapter,
 	(defined(CFG80211_FILS_SK_OFFLOAD_SUPPORT) || \
 		 (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)))
 	case NL80211_AUTHTYPE_FILS_SK:
-		hdd_debug("set authentication type to FILS SHARED");
 		sta_ctx->conn_info.authType = eCSR_AUTH_TYPE_OPEN_SYSTEM;
 		break;
 #endif
 	case NL80211_AUTHTYPE_SAE:
-		hdd_debug("set authentication type to SAE");
 		sta_ctx->conn_info.authType = eCSR_AUTH_TYPE_SAE;
 		break;
 	default:
@@ -19759,7 +20018,6 @@ static bool wlan_hdd_is_conn_type_fils(struct cfg80211_connect_params *req)
 	enum eAniAuthType fils_auth_type =
 		wlan_hdd_get_fils_auth_type(req->auth_type);
 
-	hdd_debug("Num of AKM suites = %d", num_akm_suites);
 	if (num_akm_suites <= 0)
 		return false;
 
@@ -19767,16 +20025,13 @@ static bool wlan_hdd_is_conn_type_fils(struct cfg80211_connect_params *req)
 	 * Auth type will be either be OPEN or FILS type for a FILS connection
 	 */
 	if ((auth_type != NL80211_AUTHTYPE_OPEN_SYSTEM) &&
-	    (fils_auth_type == eSIR_DONOT_USE_AUTH_TYPE)) {
-		hdd_debug("Not a FILS auth type, auth = %d, fils auth = %d",
-			  auth_type, fils_auth_type);
+	    (fils_auth_type == eSIR_DONOT_USE_AUTH_TYPE))
 		return false;
-	}
 
-	if (!wlan_hdd_is_akm_suite_fils(key_mgmt)) {
-		hdd_debug("Not a FILS AKM SUITE %d", key_mgmt);
+	if (!wlan_hdd_is_akm_suite_fils(key_mgmt))
 		return false;
-	}
+
+	hdd_debug("Fils Auth %d AKM %d", fils_auth_type, key_mgmt);
 
 	return true;
 }
@@ -19838,20 +20093,17 @@ static int wlan_hdd_set_akm_suite(struct hdd_adapter *adapter, u32 key_mgmt)
 	case WLAN_AKM_SUITE_PSK_SHA256:
 	case WLAN_AKM_SUITE_FT_PSK:
 	case WLAN_AKM_SUITE_DPP_RSN:
-		hdd_debug("setting key mgmt type to PSK");
 		sta_ctx->auth_key_mgmt |= HDD_AUTH_KEY_MGMT_PSK;
 		break;
 
 	case WLAN_AKM_SUITE_8021X_SHA256:
 	case WLAN_AKM_SUITE_8021X:
 	case WLAN_AKM_SUITE_FT_8021X:
-		hdd_debug("setting key mgmt type to 8021x");
 		sta_ctx->auth_key_mgmt |= HDD_AUTH_KEY_MGMT_802_1X;
 		break;
 #ifdef FEATURE_WLAN_ESE
 #define WLAN_AKM_SUITE_CCKM         0x00409600  /* Should be in ieee802_11_defs.h */
 	case WLAN_AKM_SUITE_CCKM:
-		hdd_debug("setting key mgmt type to CCKM");
 		sta_ctx->auth_key_mgmt |= HDD_AUTH_KEY_MGMT_CCKM;
 		break;
 #endif
@@ -19859,35 +20111,30 @@ static int wlan_hdd_set_akm_suite(struct hdd_adapter *adapter, u32 key_mgmt)
 #define WLAN_AKM_SUITE_OSEN         0x506f9a01  /* Should be in ieee802_11_defs.h */
 #endif
 	case WLAN_AKM_SUITE_OSEN:
-		hdd_debug("setting key mgmt type to OSEN");
 		sta_ctx->auth_key_mgmt |= HDD_AUTH_KEY_MGMT_802_1X;
 		break;
 #if defined(WLAN_FEATURE_FILS_SK) && \
 	(defined(CFG80211_FILS_SK_OFFLOAD_SUPPORT) || \
 		 (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)))
 	case WLAN_AKM_SUITE_FILS_SHA256:
-		hdd_debug("setting key mgmt type to FILS SHA256");
 		sta_ctx->auth_key_mgmt |= HDD_AUTH_KEY_MGMT_802_1X;
 		roam_profile->fils_con_info->akm_type =
 			eCSR_AUTH_TYPE_FILS_SHA256;
 		break;
 
 	case WLAN_AKM_SUITE_FILS_SHA384:
-		hdd_debug("setting key mgmt type to FILS SHA384");
 		sta_ctx->auth_key_mgmt |= HDD_AUTH_KEY_MGMT_802_1X;
 		roam_profile->fils_con_info->akm_type =
 			eCSR_AUTH_TYPE_FILS_SHA384;
 		break;
 
 	case WLAN_AKM_SUITE_FT_FILS_SHA256:
-		hdd_debug("setting key mgmt type to FILS FT SHA256");
 		sta_ctx->auth_key_mgmt |= HDD_AUTH_KEY_MGMT_802_1X;
 		roam_profile->fils_con_info->akm_type =
 			eCSR_AUTH_TYPE_FT_FILS_SHA256;
 		break;
 
 	case WLAN_AKM_SUITE_FT_FILS_SHA384:
-		hdd_debug("setting key mgmt type to FILS FT SHA384");
 		sta_ctx->auth_key_mgmt |= HDD_AUTH_KEY_MGMT_802_1X;
 		roam_profile->fils_con_info->akm_type =
 			eCSR_AUTH_TYPE_FT_FILS_SHA384;
@@ -19895,31 +20142,25 @@ static int wlan_hdd_set_akm_suite(struct hdd_adapter *adapter, u32 key_mgmt)
 #endif
 
 	case WLAN_AKM_SUITE_OWE:
-		hdd_debug("setting key mgmt type to OWE");
 		sta_ctx->auth_key_mgmt |= HDD_AUTH_KEY_MGMT_802_1X;
 		break;
 
 	case WLAN_AKM_SUITE_EAP_SHA256:
-		hdd_debug("setting key mgmt type to EAP_SHA256");
 		sta_ctx->auth_key_mgmt |= HDD_AUTH_KEY_MGMT_802_1X;
 		break;
 	case WLAN_AKM_SUITE_EAP_SHA384:
-		hdd_debug("setting key mgmt type to EAP_SHA384");
 		sta_ctx->auth_key_mgmt |= HDD_AUTH_KEY_MGMT_802_1X;
 		break;
 
 	case WLAN_AKM_SUITE_SAE:
-		hdd_debug("setting key mgmt type to SAE");
 		sta_ctx->auth_key_mgmt |= HDD_AUTH_KEY_MGMT_802_1X;
 		break;
 
 	case WLAN_AKM_SUITE_FT_SAE:
-		hdd_debug("setting key mgmt type to FT-SAE");
 		sta_ctx->auth_key_mgmt |= HDD_AUTH_KEY_MGMT_802_1X;
 		break;
 
 	case WLAN_AKM_SUITE_FT_EAP_SHA_384:
-		hdd_debug("setting key mgmt type to FT-EAP-SHA384");
 		sta_ctx->auth_key_mgmt |= HDD_AUTH_KEY_MGMT_802_1X;
 		break;
 
@@ -19950,7 +20191,6 @@ static int wlan_hdd_cfg80211_set_cipher(struct hdd_adapter *adapter,
 	struct csr_roam_profile *roam_profile;
 
 	if (!cipher) {
-		hdd_debug("received cipher %d - considering none", cipher);
 		encryptionType = eCSR_ENCRYPT_TYPE_NONE;
 	} else {
 
@@ -20005,13 +20245,11 @@ static int wlan_hdd_cfg80211_set_cipher(struct hdd_adapter *adapter,
 
 	roam_profile = hdd_roam_profile(adapter);
 	if (ucast) {
-		hdd_debug("setting unicast cipher type to %d", encryptionType);
 		sta_ctx->conn_info.ucEncryptionType = encryptionType;
 		roam_profile->EncryptionType.numEntries = 1;
 		roam_profile->EncryptionType.encryptionType[0] =
 			encryptionType;
 	} else {
-		hdd_debug("setting mcast cipher type to %d", encryptionType);
 		sta_ctx->conn_info.mcEncryptionType = encryptionType;
 		roam_profile->mcEncryptionType.numEntries = 1;
 		roam_profile->mcEncryptionType.encryptionType[0] =
@@ -20153,18 +20391,16 @@ static int wlan_hdd_cfg80211_set_ie(struct hdd_adapter *adapter,
 			return -EINVAL;
 		}
 
-		hdd_debug("IE[0x%X], LEN[%d]", elementId, eLen);
-
 		switch (elementId) {
 		case DOT11F_EID_WPA:
 			if (4 > eLen) { /* should have at least OUI which is 4 bytes so extra 2 bytes not needed */
-				hdd_err("Invalid WPA IE");
+				hdd_err("Invalid vendor ie");
 				return -EINVAL;
 			} else if (0 ==
 				   memcmp(&genie[0], "\x00\x50\xf2\x04", 4)) {
 				uint16_t curAddIELen = assoc_add_ie->length;
 
-				hdd_debug("Set WPS IE(len %d)", eLen + 2);
+				hdd_debug("WPS IE(len %d)", eLen + 2);
 
 				if (SIR_MAC_MAX_ADD_IE_LENGTH <
 				    (assoc_add_ie->length + eLen)) {
@@ -20189,7 +20425,7 @@ static int wlan_hdd_cfg80211_set_ie(struct hdd_adapter *adapter,
 					QDF_ASSERT(0);
 					return -EINVAL;
 				}
-				hdd_debug("Set WPA IE (len %d)", eLen + 2);
+				hdd_debug("WPA IE (len %d)", eLen + 2);
 				memset(security_ie, 0, MAX_WPA_RSN_IE_LEN);
 				memcpy(security_ie, genie - 2, (eLen + 2));
 				roam_profile->pWPAReqIE = security_ie;
@@ -20198,7 +20434,7 @@ static int wlan_hdd_cfg80211_set_ie(struct hdd_adapter *adapter,
 						P2P_OUI_TYPE_SIZE))) {
 				uint16_t curAddIELen =
 					assoc_add_ie->length;
-				hdd_debug("Set P2P IE(len %d)", eLen + 2);
+				hdd_debug("P2P IE(len %d)", eLen + 2);
 
 				if (SIR_MAC_MAX_ADD_IE_LENGTH <
 				    (assoc_add_ie->length + eLen)) {
@@ -20224,7 +20460,7 @@ static int wlan_hdd_cfg80211_set_ie(struct hdd_adapter *adapter,
 				     adapter->device_mode)) {
 				uint16_t curAddIELen =
 					assoc_add_ie->length;
-				hdd_debug("Set WFD IE(len %d)", eLen + 2);
+				hdd_debug("WFD IE(len %d)", eLen + 2);
 
 				if (SIR_MAC_MAX_ADD_IE_LENGTH <
 				    (assoc_add_ie->length + eLen)) {
@@ -20251,7 +20487,7 @@ static int wlan_hdd_cfg80211_set_ie(struct hdd_adapter *adapter,
 					      HS20_OUI_TYPE_SIZE))) {
 				uint16_t curAddIELen =
 					assoc_add_ie->length;
-				hdd_debug("Set HS20 IE(len %d)", eLen + 2);
+				hdd_debug("HS20 IE(len %d)", eLen + 2);
 
 				if (SIR_MAC_MAX_ADD_IE_LENGTH <
 				    (assoc_add_ie->length + eLen)) {
@@ -20273,7 +20509,7 @@ static int wlan_hdd_cfg80211_set_ie(struct hdd_adapter *adapter,
 					      OSEN_OUI_TYPE_SIZE))) {
 				uint16_t curAddIELen =
 					assoc_add_ie->length;
-				hdd_debug("Set OSEN IE(len %d)", eLen + 2);
+				hdd_debug("OSEN IE(len %d)", eLen + 2);
 
 				if (SIR_MAC_MAX_ADD_IE_LENGTH <
 				    (assoc_add_ie->length + eLen)) {
@@ -20292,7 +20528,7 @@ static int wlan_hdd_cfg80211_set_ie(struct hdd_adapter *adapter,
 					assoc_add_ie->length;
 			} else if ((0 == memcmp(&genie[0], MBO_OUI_TYPE,
 							MBO_OUI_TYPE_SIZE))){
-				hdd_debug("Set MBO IE(len %d)", eLen + 2);
+				hdd_debug("MBO IE(len %d)", eLen + 2);
 				status = wlan_hdd_add_assoc_ie(adapter,
 							genie - 2, eLen + 2);
 				if (status)
@@ -20330,7 +20566,7 @@ static int wlan_hdd_cfg80211_set_ie(struct hdd_adapter *adapter,
 			memcpy(security_ie, genie - 2, (eLen + 2));
 			roam_profile->pRSNReqIE = security_ie;
 			roam_profile->nRSNReqIELength = eLen + 2;     /* ie_len; */
-			hdd_debug("Set RSN IE(len %d)", eLen + 2);
+			hdd_debug("RSN IE(len %d)", eLen + 2);
 			break;
 		/*
 		 * Appending Extended Capabilities with Interworking bit set
@@ -20347,7 +20583,7 @@ static int wlan_hdd_cfg80211_set_ie(struct hdd_adapter *adapter,
 		{
 			uint16_t curAddIELen =
 				assoc_add_ie->length;
-			hdd_debug("Set Extended CAPS IE(len %d)", eLen + 2);
+			hdd_debug("Extended CAPS IE(len %d)", eLen + 2);
 
 			if (SIR_MAC_MAX_ADD_IE_LENGTH <
 			    (assoc_add_ie->length + eLen)) {
@@ -20412,7 +20648,8 @@ static int wlan_hdd_cfg80211_set_ie(struct hdd_adapter *adapter,
 #endif
 		case DOT11F_EID_SUPPOPERATINGCLASSES:
 			{
-				hdd_debug("Set Supported Operating Classes IE(len %d)", eLen + 2);
+				hdd_debug("Supported Operating Classes IE(len %d)",
+					  eLen + 2);
 				status = wlan_hdd_add_assoc_ie(adapter,
 							genie - 2, eLen + 2);
 				if (status)
@@ -20422,7 +20659,7 @@ static int wlan_hdd_cfg80211_set_ie(struct hdd_adapter *adapter,
 		case SIR_MAC_REQUEST_EID_MAX:
 			{
 				if (genie[0] == SIR_FILS_HLP_EXT_EID) {
-					hdd_debug("Set HLP EXT IE(len %d)",
+					hdd_debug("HLP EXT IE(len %d)",
 							eLen + 2);
 					wlan_hdd_save_hlp_ie(roam_profile,
 							genie - 2, eLen + 2,
@@ -20434,7 +20671,7 @@ static int wlan_hdd_cfg80211_set_ie(struct hdd_adapter *adapter,
 						return status;
 				} else if (genie[0] ==
 					   SIR_DH_PARAMETER_ELEMENT_EXT_EID) {
-					hdd_debug("Set DH EXT IE(len %d)",
+					hdd_debug("DH EXT IE(len %d)",
 							eLen + 2);
 					status = wlan_hdd_add_assoc_ie(
 							adapter, genie - 2,
@@ -20448,7 +20685,7 @@ static int wlan_hdd_cfg80211_set_ie(struct hdd_adapter *adapter,
 			}
 		case DOT11F_EID_FRAGMENT_IE:
 			{
-				hdd_debug("Set Fragment IE(len %d)", eLen + 2);
+				hdd_debug("Fragment IE(len %d)", eLen + 2);
 				wlan_hdd_save_hlp_ie(roam_profile,
 							genie - 2, eLen + 2,
 							false);
@@ -20459,7 +20696,7 @@ static int wlan_hdd_cfg80211_set_ie(struct hdd_adapter *adapter,
 				break;
 			}
 		default:
-			hdd_err("Set UNKNOWN IE: %X", elementId);
+			hdd_err("UNKNOWN IE: %X", elementId);
 			/* when Unknown IE is received we break
 			 * and continue to the next IE in the buffer
 			 */
@@ -20522,11 +20759,8 @@ static int wlan_hdd_cfg80211_set_privacy(struct hdd_adapter *adapter,
 	struct hdd_station_ctx *sta_ctx;
 	struct csr_roam_profile *roam_profile;
 
-	hdd_enter();
-
 	sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
 	sta_ctx->wpa_versions = req->crypto.wpa_versions;
-	hdd_debug("set wpa version to %d", sta_ctx->wpa_versions);
 
 	roam_profile = hdd_roam_profile(adapter);
 
@@ -20746,13 +20980,17 @@ static void wlan_hdd_wait_for_roaming(mac_handle_t mac_handle,
 				      struct hdd_adapter *adapter)
 {
 	struct hdd_context *hdd_ctx;
+	struct hdd_station_ctx *sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
 	unsigned long rc;
 
 	if (adapter->device_mode != QDF_STA_MODE)
 		return;
 
 	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
-	hdd_debug("Stop firmware roaming");
+
+	/* Return if not in connected state */
+	if (sta_ctx->conn_info.connState != eConnectionState_Associated)
+		return;
 	sme_stop_roaming(mac_handle, adapter->session_id, eCsrForcedDisassoc);
 	/*
 	 * If firmware has already started roaming process, driver
@@ -20835,10 +21073,10 @@ static int wlan_hdd_reassoc_bssid_hint(struct hdd_adapter *adapter,
 
 		status = hdd_reassoc(adapter, bssid, channel,
 				      CONNECT_CMD_USERSPACE);
-		if (QDF_IS_STATUS_ERROR(status))
+		if (QDF_IS_STATUS_ERROR(status)) {
 			hdd_set_roaming_in_progress(false);
-
-		hdd_debug("hdd_reassoc: status: %d", status);
+			hdd_debug("Failed with status: %d", status);
+		}
 	}
 	return status;
 }
@@ -20881,9 +21119,8 @@ wlan_hdd_check_ht20_ht40_ind(struct hdd_context *hdd_ctx,
 	    !(req->ht_capa.cap_info & IEEE80211_HT_CAP_SUP_WIDTH_20_40))
 		roam_profile->force_24ghz_in_ht20 = true;
 
-	hdd_debug("req->ht_capa.cap_info %x override_ht20_40_24g %d",
-		  req->ht_capa.cap_info,
-		  hdd_ctx->config->override_ht20_40_24g);
+	if (hdd_ctx->config->override_ht20_40_24g)
+		hdd_nofl_debug("HT cap %x", req->ht_capa.cap_info);
 }
 #else
 static inline void
@@ -20898,6 +21135,35 @@ wlan_hdd_check_ht20_ht40_ind(struct hdd_context *hdd_ctx,
 	roam_profile->force_24ghz_in_ht20 = false;
 }
 #endif
+
+static inline void hdd_dump_connect_req(struct hdd_adapter *adapter,
+					struct net_device *ndev,
+					struct cfg80211_connect_params *req)
+{
+	uint32_t i;
+
+	hdd_nofl_debug("cfg80211_connect req for %s(vdevid-%d): mode %d freq %d SSID %.*s auth type %d WPA ver %d n_akm %d n_cipher %d grp_cipher %x mfp %d freq hint %d",
+		       ndev->name, adapter->session_id, adapter->device_mode,
+		       req->channel ? req->channel->center_freq : 0,
+		       (int)req->ssid_len, req->ssid, req->auth_type,
+		       req->crypto.wpa_versions,
+		       req->crypto.n_akm_suites, req->crypto.n_ciphers_pairwise,
+		       req->crypto.cipher_group, req->mfp,
+		       req->channel_hint ? req->channel_hint->center_freq : 0);
+	if (req->bssid)
+		hdd_nofl_debug("BSSID %pM", req->bssid);
+	if (req->bssid_hint)
+		hdd_nofl_debug("BSSID hint %pM", req->bssid_hint);
+	if (req->prev_bssid)
+		hdd_nofl_debug("prev BSSID %pM", req->prev_bssid);
+
+	for (i = 0; i < req->crypto.n_akm_suites; i++)
+		hdd_nofl_debug("akm[%d] = %x", i, req->crypto.akm_suites[i]);
+
+	for (i = 0; i < req->crypto.n_ciphers_pairwise; i++)
+		hdd_nofl_debug("cipher_pairwise[%d] = %x", i,
+			       req->crypto.ciphers_pairwise[i]);
+}
 
 /**
  * __wlan_hdd_cfg80211_connect() - cfg80211 connect api
@@ -20938,11 +21204,6 @@ static int __wlan_hdd_cfg80211_connect(struct wiphy *wiphy,
 		   TRACE_CODE_HDD_CFG80211_CONNECT,
 		   adapter->session_id, adapter->device_mode);
 
-	hdd_info("%s(vdevid-%d): Device_mode %s(%d)",
-		 ndev->name, adapter->session_id,
-		 hdd_device_mode_to_string(adapter->device_mode),
-		 adapter->device_mode);
-
 	if (adapter->device_mode != QDF_STA_MODE &&
 		adapter->device_mode != QDF_P2P_CLIENT_MODE) {
 		hdd_err("Device_mode %s(%d) is not supported",
@@ -20971,6 +21232,8 @@ static int __wlan_hdd_cfg80211_connect(struct wiphy *wiphy,
 			MAC_ADDR_ARRAY(bssid));
 		return -EINVAL;
 	}
+
+	hdd_dump_connect_req(adapter, ndev, req);
 
 	/*
 	 * In STA + STA roaming scenario, connection to same ssid but different
@@ -21013,66 +21276,6 @@ static int __wlan_hdd_cfg80211_connect(struct wiphy *wiphy,
 		return status;
 	}
 
-	/*
-	 * Check for max concurrent connections after doing disconnect if any,
-	 * must be called after the invocation of wlan_hdd_cfg80211_set_privacy
-	 * so privacy is already set for the current adapter before it's
-	 * checked against concurrency.
-	 */
-	if (req->channel) {
-		bool ok = false;
-
-		if (req->channel->hw_value && policy_mgr_is_chan_ok_for_dnbs(
-						hdd_ctx->psoc,
-						req->channel->hw_value,
-						&ok)) {
-			hdd_warn("Unable to get channel:%d eligibility for DNBS",
-					req->channel->hw_value);
-			return -EINVAL;
-		}
-		/**
-		 * Send connection timedout, so that Android framework does not
-		 * blacklist us.
-		 */
-		if (!ok) {
-			struct ieee80211_channel *chan =
-				ieee80211_get_channel(wiphy,
-				wlan_chan_to_freq(req->channel->hw_value));
-			struct cfg80211_bss *bss;
-
-			hdd_warn("Channel:%d not OK for DNBS",
-				req->channel->hw_value);
-			if (chan) {
-				bss = hdd_cfg80211_get_bss(wiphy,
-							chan,
-							req->bssid, req->ssid,
-							req->ssid_len);
-				if (bss) {
-					cfg80211_assoc_timeout(ndev, bss);
-					return -ETIMEDOUT;
-				}
-			}
-			return -EINVAL;
-		}
-
-		if (!policy_mgr_allow_concurrency(hdd_ctx->psoc,
-				policy_mgr_convert_device_mode_to_qdf_type(
-				adapter->device_mode),
-				req->channel->hw_value, HW_MODE_20_MHZ)) {
-			hdd_warn("This concurrency combination is not allowed");
-			status = -ECONNREFUSED;
-			goto con_chk_failed;
-		}
-	} else {
-		if (!policy_mgr_allow_concurrency(hdd_ctx->psoc,
-				policy_mgr_convert_device_mode_to_qdf_type(
-				adapter->device_mode), 0, HW_MODE_20_MHZ)) {
-			hdd_warn("This concurrency combination is not allowed");
-			status = -ECONNREFUSED;
-			goto con_chk_failed;
-		}
-	}
-
 	if (req->channel)
 		channel = req->channel->hw_value;
 	else
@@ -21083,14 +21286,11 @@ static int __wlan_hdd_cfg80211_connect(struct wiphy *wiphy,
 	status = wlan_hdd_cfg80211_connect_start(adapter, req->ssid,
 						 req->ssid_len, req->bssid,
 						 bssid_hint, channel, 0);
-	if (0 > status) {
+	if (status) {
 		hdd_err("connect failed");
+		wlan_hdd_cfg80211_clear_privacy(adapter);
 	}
-	return status;
 
-con_chk_failed:
-	wlan_hdd_cfg80211_clear_privacy(adapter);
-	hdd_exit();
 	return status;
 }
 
@@ -21124,7 +21324,7 @@ int wlan_hdd_disconnect(struct hdd_adapter *adapter, u16 reason)
 	wlan_hdd_wait_for_roaming(mac_handle, adapter);
 
 	/*stop tx queues */
-	hdd_info("Disabling queues");
+	hdd_debug("Disabling queues");
 	wlan_hdd_netif_queue_control(adapter,
 		WLAN_STOP_ALL_NETIF_QUEUE_N_CARRIER, WLAN_CONTROL_PATH);
 
@@ -24029,8 +24229,6 @@ static void wlan_hdd_chan_info_cb(struct scan_chan_info *info)
 	struct scan_chan_info *chan;
 	uint8_t idx;
 
-	hdd_enter();
-
 	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
 	if (wlan_hdd_validate_context(hdd_ctx) != 0) {
 		hdd_err("hdd_ctx is invalid");
@@ -24059,8 +24257,6 @@ static void wlan_hdd_chan_info_cb(struct scan_chan_info *info)
 
 		}
 	}
-
-	hdd_exit();
 }
 
 /**

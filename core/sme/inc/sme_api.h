@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018, 2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -59,6 +59,17 @@
 #define sme_warn(params...) QDF_TRACE_WARN(QDF_MODULE_ID_SME, params)
 #define sme_info(params...) QDF_TRACE_INFO(QDF_MODULE_ID_SME, params)
 #define sme_debug(params...) QDF_TRACE_DEBUG(QDF_MODULE_ID_SME, params)
+
+#define sme_nofl_alert(params...) \
+	QDF_TRACE_FATAL_NO_FL(QDF_MODULE_ID_SME, params)
+#define sme_nofl_err(params...) \
+	QDF_TRACE_ERROR_NO_FL(QDF_MODULE_ID_SME, params)
+#define sme_nofl_warn(params...) \
+	QDF_TRACE_WARN_NO_FL(QDF_MODULE_ID_SME, params)
+#define sme_nofl_info(params...) \
+	QDF_TRACE_INFO_NO_FL(QDF_MODULE_ID_SME, params)
+#define sme_nofl_debug(params...) \
+	QDF_TRACE_DEBUG_NO_FL(QDF_MODULE_ID_SME, params)
 
 #define sme_alert_rl(params...) QDF_TRACE_FATAL_RL(QDF_MODULE_ID_SME, params)
 #define sme_err_rl(params...) QDF_TRACE_ERROR_RL(QDF_MODULE_ID_SME, params)
@@ -1088,6 +1099,23 @@ QDF_STATUS sme_send_rmc_action_period(tHalHandle hHal, uint32_t sessionId);
 QDF_STATUS sme_request_ibss_peer_info(tHalHandle hHal, void *pUserData,
 	pIbssPeerInfoCb peerInfoCbk, bool allPeerInfoReqd, uint8_t staIdx);
 QDF_STATUS sme_send_cesium_enable_ind(tHalHandle hHal, uint32_t sessionId);
+
+#ifdef WLAN_SEND_DSCP_UP_MAP_TO_FW
+/**
+ * sme_send_dscp_up_map_to_fw() - send DSCP-to-UP map values to fw
+ * @dscp_to_up_map: array of DSCP-to-UP map values
+ *
+ * Used to send DSCP-to-UP map values to fw
+ *
+ * Return QDF_STATUS
+ */
+QDF_STATUS sme_send_dscp_up_map_to_fw(uint32_t *dscp_to_up_map);
+#else
+QDF_STATUS sme_send_dscp_up_map_to_fw(uint32_t *dscp_to_up_map)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
 
 /**
  * sme_set_wlm_latency_level_ind() - Used to set the latency level to fw
@@ -3041,6 +3069,15 @@ QDF_STATUS sme_set_roam_triggers(mac_handle_t mac_handle,
  */
 QDF_STATUS sme_roam_control_restore_default_config(mac_handle_t mac_handle,
 						   uint8_t vdev_id);
+
+/**
+ * sme_roam_reset_configs() - API to reset roam configurations
+ * @mac_handle: Opaque handle to the global MAC context
+ * @vdev_id: vdev Identifier
+ *
+ * Return: void
+ */
+void sme_roam_reset_configs(mac_handle_t mac_handle, uint8_t vdev_id);
 
 /**
  * sme_set_disconnect_ies() - set disconnect IEs
