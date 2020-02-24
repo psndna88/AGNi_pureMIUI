@@ -194,6 +194,13 @@
 &dsi_r66451_amoled_video {
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 	qcom,mdss-dsi-display-timings {
+		/*
+		 * CDP could not display using the old HFP(96) and HSYNC(32).
+		 * Modified HFP to 95 and HSYNC to 1, but using the new porch
+		 * to caculator the PHY timing based on version YB, 90hz could
+		 * not display, need to keep the PHY timing(which based on
+		 * HFP=96, HSYNC=32).
+		 */
 		timing@0 {
 			qcom,mdss-dsi-panel-phy-timings = [00 15 06 06 0a 09 06
 				06 04 02 04 00 12 0b];
@@ -208,8 +215,25 @@
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
-			qcom,mdss-dsi-panel-phy-timings = [00 15 06 06 0a 09 06
-				06 04 02 04 00 12 0b];
+			qcom,mdss-dsi-panel-phy-timings = [00 19 08 07 0c 0b 07
+				07 05 02 04 00 16 0c];
+			qcom,display-topology = <2 2 1>;
+			qcom,default-topology-index = <0>;
+		};
+
+		timing@1 {
+			qcom,mdss-dsi-panel-phy-timings = [00 13 06 05 09 1f 06
+				06 03 02 04 00 11 0a];
+			qcom,display-topology = <2 2 1>;
+			qcom,default-topology-index = <0>;
+		};
+		/*
+		 * Using PHY Timings version YB 60hz could not display,
+		 * refer to version W, changed T_HS_ZERO from 0x06 to 0x1e.
+		 */
+		timing@2 {
+			qcom,mdss-dsi-panel-phy-timings = [00 0d 04 04 07 1e 04
+				04 02 02 04 00 0c 09];
 			qcom,display-topology = <2 2 1>;
 			qcom,default-topology-index = <0>;
 		};
