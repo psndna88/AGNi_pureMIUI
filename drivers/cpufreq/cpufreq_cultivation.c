@@ -674,7 +674,7 @@ static int load_change_callback(struct notifier_block *nb, unsigned long val,
 	return 0;
 }
 
-static struct notifier_block load_notifier_block = {
+struct notifier_block load_notifier_block = {
 	.notifier_call = load_change_callback,
 };
 
