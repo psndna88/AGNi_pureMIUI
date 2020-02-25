@@ -67,21 +67,27 @@ module_param(det_extn_cable_en, int,
 MODULE_PARM_DESC(det_extn_cable_en, "enable/disable extn cable detect");
 
 /* AGNi Audio Jack Testing & Debuging (psndna88@gmail.com) */
-int hs_detect_plug_time_ms = (1 * 1000);
-int special_hs_detect_time_ms = (2 * 1000);
+int hs_detect_plug_time_ms = (1 * 500);
+int special_hs_detect_time_ms = (1 * 1000);
 int mbhc_button_press_threshold_min = 250;
 int wcd_fake_removal_min_period_ms = 100;
 int fake_rem_retry_attempts;
 int wcd_mbhc_spl_hs_cnt = 1;
 int wcd_mbhc_btn_press_compl_timeout_ms = 50;
 int max_imped = 60000;
-bool new_jack = true;
+bool new_jack = false;
 
-static bool __init setup_new_jack(char *str)
-{
-	return new_jack;
-}
-__setup("android.audiojackmode=", setup_new_jack);
+//static bool __init setup_new_jack(char *str)
+//{
+//	if (!strncmp(str, "stock", strlen(str))) {
+//		new_jack = false;
+//		fake_rem_retry_attempts = 3;
+//        pr_info("wcd-mbhc-v2: android.audiojackmode = STOCK..\n");
+//    }
+//
+//	return new_jack;
+//}
+//__setup("android.audiojackmode=", setup_new_jack);
 
 module_param_named(hs_detect_plug_time_ms, hs_detect_plug_time_ms, int, 0664);
 module_param_named(mbhc_button_press_threshold_min_ms, mbhc_button_press_threshold_min, int, 0664);
@@ -99,7 +105,6 @@ enum wcd_mbhc_cs_mb_en_flag {
 
 static bool skip_impdet_retry;
 static bool lineout_detected;
-static struct switch_dev accdet_data;
 
 static void wcd_mbhc_jack_report(struct wcd_mbhc *mbhc,
 				struct snd_soc_jack *jack, int status, int mask)
