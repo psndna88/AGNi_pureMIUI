@@ -656,7 +656,7 @@ static int cpufreq_darkness_speedchange_task(void *data)
 	return 0;
 }
 
-static int load_change_callback(struct notifier_block *nb, unsigned long val,
+inline static int load_change_callback(struct notifier_block *nb, unsigned long val,
 				void *data)
 {
 	unsigned long cpu = (unsigned long) data;
