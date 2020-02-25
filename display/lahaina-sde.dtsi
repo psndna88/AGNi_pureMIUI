@@ -95,11 +95,13 @@
 		qcom,sde-cdm-size = <0x224>;
 
 		qcom,sde-dsc-off = <0x81000 0x81000 0x82000 0x82000>;
-		qcom,sde-dsc-size = <0x140>;
+		qcom,sde-dsc-size = <0x10>;
 		qcom,sde-dsc-pair-mask = <2 1 4 3>;
 		qcom,sde-dsc-hw-rev = "dsc_1_2";
 		qcom,sde-dsc-enc = <0x100 0x200 0x100 0x200>;
+		qcom,sde-dsc-enc-size = <0x100>;
 		qcom,sde-dsc-ctl = <0xF00 0xF80 0xF00 0xF80>;
+		qcom,sde-dsc-ctl-size = <0x10>;
 		qcom,sde-dsc-native422-supp = <0 0 1 1>;
 
 		qcom,sde-dither-off = <0xe0 0xe0 0xe0
@@ -108,10 +110,12 @@
 		qcom,sde-dither-size = <0x20>;
 
 		qcom,sde-vdc-off = <0x7C000>;
-		qcom,sde-vdc-size = <0xf10>;
+		qcom,sde-vdc-size = <0x10>;
 		qcom,sde-vdc-hw-rev = "vdc_1_1";
 		qcom,sde-vdc-enc = <0x200>;
+		qcom,sde-vdc-enc-size = <0x1C8>;
 		qcom,sde-vdc-ctl = <0xf00>;
+		qcom,sde-vdc-ctl-size = <0x10>;
 
 		qcom,sde-sspp-type = "vig", "vig", "vig", "vig",
 					"dma", "dma", "dma", "dma";

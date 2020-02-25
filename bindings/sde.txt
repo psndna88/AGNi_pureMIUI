@@ -223,19 +223,23 @@ Optional properties:
 - qcom,sde-dsc-enc:		Array of offset addresses for the available dsc
 				encoder blocks. These offsets are calculated from
 				the corresponding DSC base.
+- qcom,sde-dsc-enc-size		A u32 value indicates the enc block offset range.
 - qcom,sde-dsc-ctl:		Array of offset addresses for the available dsc
 				ctl blocks. These offsets are calculated from
 				the corresponding DSC base.
+- qcom,sde-dsc-ctl-size		A u32 value indicates the ctl block offset range.
 - qcom,sde-dsc-native422-supp:	Array of flags indicating whether corresponding dsc
 				block can support native 422 and native 420
 				encoding.
 - qcom,sde-vdc-off:		A u32 offset address for the available vdc blocks.
 						This offset is calculated from register "mdp_phys"
 						defined in reg property.
+- qcom,sde-vdc-enc-size		A u32 value indicates the enc block offset range.
 - qcom,sde-vdc-enc:		A u32 offset address for the vdc encoder block. This offset is
 						calculated from qcom,sde-vdc-off.
 - qcom,sde-vdc-ctl:		A u32 offset address for the vdc ctl block. This offset is
 						calculated from qcom,sde-vdc-off.
+- qcom,sde-vdc-ctl-size		A u32 value indicates the ctl block offset range.
 - qcom,sde-qdss-off:		A u32 offset indicates the qdss block offset.
 - qcom,sde-dither-off:		A u32 offset indicates the dither block offset on pingpong.
 - qcom,sde-dither-version:	A u32 value indicates the dither block version.
