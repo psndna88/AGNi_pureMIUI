@@ -14,7 +14,7 @@
 
 #include "cam_context.h"
 #include "cam_isp_hw_mgr_intf.h"
-
+#include "cam_req_mgr_workq.h"
 
 #define CAM_IFE_QTIMER_MUL_FACTOR        10000
 #define CAM_IFE_QTIMER_DIV_FACTOR        192
@@ -257,6 +257,7 @@ struct cam_isp_context_event_record {
  * @isp_device_type:           ISP device type
  * @rxd_epoch:                 Indicate whether epoch has been received. Used to
  *                             decide whether to apply request in offline ctx
+ * @workq:                     Worker thread for offline ife
  *
  */
 struct cam_isp_context {
@@ -298,6 +299,7 @@ struct cam_isp_context {
 	unsigned int                          init_timestamp;
 	uint32_t                              isp_device_type;
 	atomic_t                              rxd_epoch;
+	struct cam_req_mgr_core_workq        *workq;
 };
 
 /**
