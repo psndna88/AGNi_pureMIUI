@@ -24,6 +24,7 @@ static void handle_session_error(enum hal_command_response cmd, void *data);
 static void msm_vidc_print_running_insts(struct msm_vidc_core *core);
 
 #define V4L2_VP9_LEVEL_61 V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_61
+#define TIMESTAMPS_WINDOW_SIZE 32
 
 int msm_comm_g_ctrl_for_id(struct msm_vidc_inst *inst, int id)
 {
@@ -5364,8 +5365,20 @@ int msm_comm_flush(struct msm_vidc_inst *inst, u32 flags)
 		/* disable in_flush & out_flush */
 		inst->in_flush = false;
 		inst->out_flush = false;
+		goto exit;
 	}
-
+	/*
+	 * Set inst->flush_timestamps to true when flush is issued
+	 * Use this variable to clear timestamps list, everytime
+	 * flush is issued, before adding the next buffer's timestamp
+	 * to the list.
+	 */
+	if (is_decode_session(inst) && inst->in_flush) {
+		inst->flush_timestamps = true;
+		s_vpr_h(inst->sid,
+			"Setting flush variable to clear timestamp list: %d\n",
+			inst->flush_timestamps);
+	}
 exit:
 	return rc;
 }
@@ -7160,4 +7173,181 @@ void msm_comm_release_window_data(struct msm_vidc_inst *inst)
 		kfree(pdata);
 	}
 	mutex_unlock(&inst->window_data.lock);
+}
+
+void msm_comm_release_timestamps(struct msm_vidc_inst *inst)
+{
+	struct msm_vidc_timestamps *node, *next;
+
+	if (!inst) {
+		d_vpr_e("%s: invalid parameters\n", __func__);
+		return;
+	}
+
+	mutex_lock(&inst->timestamps.lock);
+	list_for_each_entry_safe(node, next, &inst->timestamps.list, list) {
+		list_del(&node->list);
+		kfree(node);
+	}
+	INIT_LIST_HEAD(&inst->timestamps.list);
+	mutex_unlock(&inst->timestamps.lock);
+}
+
+int msm_comm_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us)
+{
+	struct msm_vidc_timestamps *entry, *node, *prev = NULL;
+	int count = 0;
+	int rc = 0;
+	bool inserted = false;
+	bool update_next = false;
+
+	if (!inst) {
+		d_vpr_e("%s: invalid parameters\n", __func__);
+		return -EINVAL;
+	}
+
+	mutex_lock(&inst->timestamps.lock);
+	list_for_each_entry(node, &inst->timestamps.list, list) {
+		count++;
+		/* Skip adding duplicate entries */
+		if (node->timestamp_us == timestamp_us) {
+			s_vpr_e(inst->sid, "%s: skip ts duplicate entry %lld\n",
+				__func__, node->timestamp_us);
+			goto unlock;
+		}
+	}
+
+	/* Maintain a sliding window of size 32 */
+	entry = NULL;
+	if (count >= TIMESTAMPS_WINDOW_SIZE) {
+		entry = list_first_entry(&inst->timestamps.list,
+			struct msm_vidc_timestamps, list);
+		list_del_init(&entry->list);
+	}
+	if (!entry) {
+		entry = kzalloc(sizeof(*entry), GFP_KERNEL);
+		if (!entry) {
+			s_vpr_e(inst->sid, "%s: ts malloc failure\n",
+				__func__);
+			rc = -ENOMEM;
+			goto unlock;
+		}
+	}
+	entry->timestamp_us = timestamp_us;
+	entry->framerate = DEFAULT_FPS << 16;
+
+	/* add new entry into the list in sorted order */
+	prev = NULL;
+	inserted = false;
+	list_for_each_entry(node, &inst->timestamps.list, list) {
+		if (entry->timestamp_us < node->timestamp_us) {
+			/*
+			 * if prev available add entry next to prev else
+			 * entry is first so add it at head.
+			 */
+			if (prev)
+				list_add(&entry->list, &prev->list);
+			else
+				list_add(&entry->list, &inst->timestamps.list);
+			inserted = true;
+			break;
+		}
+		prev = node;
+	}
+
+	/* inserted will be false if list is empty */
+	if (!inserted)
+		list_add_tail(&entry->list, &inst->timestamps.list);
+
+	/* update framerate for both entry and entry->next (if any) */
+	prev = NULL;
+	update_next = false;
+	list_for_each_entry(node, &inst->timestamps.list, list) {
+		if (update_next) {
+			node->framerate = msm_comm_calc_framerate(inst,
+				node->timestamp_us, prev->timestamp_us);
+			break;
+		}
+		if (node->timestamp_us == entry->timestamp_us) {
+			if (prev)
+				node->framerate = msm_comm_calc_framerate(inst,
+					node->timestamp_us, prev->timestamp_us);
+			update_next = true;
+		}
+		prev = node;
+	}
+
+unlock:
+	mutex_unlock(&inst->timestamps.lock);
+	return rc;
+}
+
+u32 msm_comm_calc_framerate(struct msm_vidc_inst *inst,
+	u64 timestamp_us, u64 prev_ts)
+{
+	u32 framerate = DEFAULT_FPS << 16;
+
+	if (timestamp_us <= prev_ts) {
+		s_vpr_e(inst->sid, "%s: invalid ts %lld, prev ts %lld\n",
+			__func__, timestamp_us, prev_ts);
+		return framerate;
+	}
+	framerate = (1000000 / (timestamp_us - prev_ts)) << 16;
+	return framerate;
+}
+
+u32 msm_comm_get_max_framerate(struct msm_vidc_inst *inst)
+{
+	struct msm_vidc_timestamps *node;
+	u32 max_framerate = 1 << 16;
+	int count = 0;
+
+	if (!inst) {
+		d_vpr_e("%s: invalid parameters\n", __func__);
+		return max_framerate;
+	}
+
+	mutex_lock(&inst->timestamps.lock);
+	list_for_each_entry(node, &inst->timestamps.list, list) {
+		count++;
+		max_framerate = max_framerate < node->framerate ?
+			node->framerate : max_framerate;
+	}
+	s_vpr_l(inst->sid, "%s: fps %u, list size %d\n",
+		__func__, max_framerate, count);
+	mutex_unlock(&inst->timestamps.lock);
+	return max_framerate;
+}
+
+int msm_comm_fetch_framerate(struct msm_vidc_inst *inst,
+	u64 timestamp_us, u32 *framerate)
+{
+	struct msm_vidc_timestamps *node;
+	bool found_fps = false;
+	u32 count = 0;
+	int rc = 0;
+
+	if (!inst || !framerate) {
+		d_vpr_e("%s: invalid parameters\n", __func__);
+		return -EINVAL;
+	}
+
+	mutex_lock(&inst->timestamps.lock);
+	list_for_each_entry(node, &inst->timestamps.list, list) {
+		count++;
+		if (timestamp_us == node->timestamp_us) {
+			*framerate = node->framerate;
+			found_fps = true;
+			break;
+		}
+	}
+	mutex_unlock(&inst->timestamps.lock);
+
+	if (!found_fps) {
+		if (!inst->flush_timestamps)
+			s_vpr_e(inst->sid, "%s:ts %lld not found,listsize %d\n",
+				__func__, timestamp_us, count);
+		rc = -EINVAL;
+	}
+	return rc;
 }

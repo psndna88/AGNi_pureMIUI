@@ -232,6 +232,12 @@ struct msm_vidc_codec {
 	enum hal_video_codec codec;
 };
 
+struct msm_vidc_timestamps {
+	struct list_head list;
+	u64 timestamp_us;
+	u32 framerate;
+};
+
 enum efuse_purpose {
 	SKU_VERSION = 0,
 };
@@ -504,6 +510,7 @@ struct msm_vidc_inst {
 	struct msm_vidc_list fbd_data;
 	struct msm_vidc_list window_data;
 	struct msm_vidc_list client_data;
+	struct msm_vidc_list timestamps;
 	struct buffer_requirements buff_req;
 	struct vidc_frame_data superframe_data[VIDC_SUPERFRAME_MAX];
 	struct v4l2_ctrl_handler ctrl_handler;
@@ -528,6 +535,7 @@ struct msm_vidc_inst {
 	struct kref kref;
 	bool in_flush;
 	bool out_flush;
+	bool flush_timestamps;
 	u32 pic_struct;
 	u32 colour_space;
 	u32 profile;

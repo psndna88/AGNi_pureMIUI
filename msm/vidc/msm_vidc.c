@@ -366,6 +366,7 @@ int msm_vidc_qbuf(void *instance, struct media_device *mdev,
 	int rc = 0;
 	unsigned int i = 0;
 	struct buf_queue *q = NULL;
+	u64 timestamp_us = 0;
 	u32 cr = 0;
 
 	if (!inst || !inst->core || !b || !valid_v4l2_buffer(b, inst)) {
@@ -417,6 +418,19 @@ int msm_vidc_qbuf(void *instance, struct media_device *mdev,
 	if (is_grid_session(inst) && b->type == INPUT_MPLANE)
 		b->flags |= V4L2_BUF_FLAG_PERF_MODE;
 
+	if (is_decode_session(inst) && b->type == INPUT_MPLANE) {
+		if (inst->flush_timestamps)
+			msm_comm_release_timestamps(inst);
+		inst->flush_timestamps = false;
+
+		timestamp_us = (u64)((b->timestamp.tv_sec * 1000000ULL) +
+			b->timestamp.tv_usec);
+		rc = msm_comm_store_timestamp(inst, timestamp_us);
+		if (rc)
+			return rc;
+		inst->clk_data.frame_rate = msm_comm_get_max_framerate(inst);
+	}
+
 	q = msm_comm_get_vb2q(inst, b->type);
 	if (!q) {
 		s_vpr_e(inst->sid,
@@ -440,6 +454,7 @@ int msm_vidc_dqbuf(void *instance, struct v4l2_buffer *b)
 	int rc = 0;
 	unsigned int i = 0;
 	struct buf_queue *q = NULL;
+	u64 timestamp_us = 0;
 
 	if (!inst || !b || !valid_v4l2_buffer(b, inst)) {
 		d_vpr_e("%s: invalid params, %pK %pK\n",
@@ -479,6 +494,13 @@ int msm_vidc_dqbuf(void *instance, struct v4l2_buffer *b)
 			s_vpr_e(inst->sid, "Failed to fetch input tag");
 			return -EINVAL;
 		}
+	}
+	if (is_decode_session(inst) && b->type == OUTPUT_MPLANE) {
+		timestamp_us = (u64)((b->timestamp.tv_sec * 1000000ULL) +
+			b->timestamp.tv_usec);
+		b->m.planes[0].reserved[MSM_VIDC_FRAMERATE] = DEFAULT_FPS << 16;
+		msm_comm_fetch_framerate(inst, timestamp_us,
+			&b->m.planes[0].reserved[MSM_VIDC_FRAMERATE]);
 	}
 
 	return rc;
@@ -1448,6 +1470,7 @@ void *msm_vidc_open(int core_id, int session_type)
 	INIT_MSM_VIDC_LIST(&inst->etb_data);
 	INIT_MSM_VIDC_LIST(&inst->fbd_data);
 	INIT_MSM_VIDC_LIST(&inst->window_data);
+	INIT_MSM_VIDC_LIST(&inst->timestamps);
 
 	INIT_DELAYED_WORK(&inst->batch_work, msm_vidc_batch_handler);
 	kref_init(&inst->kref);
@@ -1552,6 +1575,7 @@ fail_bufq_capture:
 	DEINIT_MSM_VIDC_LIST(&inst->etb_data);
 	DEINIT_MSM_VIDC_LIST(&inst->fbd_data);
 	DEINIT_MSM_VIDC_LIST(&inst->window_data);
+	DEINIT_MSM_VIDC_LIST(&inst->timestamps);
 
 err_invalid_sid:
 	put_sid(inst->sid);
@@ -1622,6 +1646,8 @@ static void msm_vidc_cleanup_instance(struct msm_vidc_inst *inst)
 
 	msm_comm_release_eos_buffers(inst);
 
+	msm_comm_release_timestamps(inst);
+
 	if (msm_comm_release_dpb_only_buffers(inst, true))
 		s_vpr_e(inst->sid, "Failed to release output buffers\n");
 
@@ -1676,6 +1702,7 @@ int msm_vidc_destroy(struct msm_vidc_inst *inst)
 	DEINIT_MSM_VIDC_LIST(&inst->etb_data);
 	DEINIT_MSM_VIDC_LIST(&inst->fbd_data);
 	DEINIT_MSM_VIDC_LIST(&inst->window_data);
+	DEINIT_MSM_VIDC_LIST(&inst->timestamps);
 
 	mutex_destroy(&inst->sync_lock);
 	mutex_destroy(&inst->bufq[OUTPUT_PORT].lock);

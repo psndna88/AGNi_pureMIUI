@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef __MSM_VIDC_UTILS_H__
@@ -616,6 +616,7 @@ enum msm_vidc_plane_reserved_field_types {
 	MSM_VIDC_COMP_RATIO,
 	MSM_VIDC_INPUT_TAG_1,
 	MSM_VIDC_INPUT_TAG_2,
+	MSM_VIDC_FRAMERATE,
 };
 
 enum msm_vidc_cb_event_types {
