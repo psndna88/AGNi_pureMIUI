@@ -339,7 +339,6 @@ struct msm_video_device {
 struct session_prop {
 	u32 fps;
 	u32 bitrate;
-	bool bframe_changed;
 	u32 extradata_ctrls;
 };
 
