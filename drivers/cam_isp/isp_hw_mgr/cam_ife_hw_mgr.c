@@ -636,25 +636,50 @@ static const char *cam_ife_hw_mgr_get_src_res_id(
 	}
 }
 
-static void cam_ife_hw_mgr_dump_src_acq_info(
-	struct cam_ife_hw_mgr_ctx    *hwr_mgr_ctx,
-	uint32_t num_pix_port, uint32_t num_rdi_port)
+static void cam_ife_hw_mgr_print_acquire_info(
+	struct cam_ife_hw_mgr_ctx *hw_mgr_ctx, uint32_t num_pix_port,
+	uint32_t num_pd_port, uint32_t num_rdi_port, int acquire_failed)
 {
 	struct cam_isp_hw_mgr_res    *hw_mgr_res = NULL;
 	struct cam_isp_hw_mgr_res    *hw_mgr_res_temp = NULL;
 	struct cam_isp_resource_node *hw_res = NULL;
+	int hw_idx[CAM_ISP_HW_SPLIT_MAX] = {-1, -1};
 	int i = 0;
 
+	hw_mgr_res = list_first_entry(&hw_mgr_ctx->res_list_ife_csid,
+		struct cam_isp_hw_mgr_res, list);
+	for (i = 0; i < CAM_ISP_HW_SPLIT_MAX; i++) {
+		hw_res = hw_mgr_res->hw_res[i];
+		if (hw_res && hw_res->hw_intf)
+			hw_idx[i] = hw_res->hw_intf->hw_idx;
+	}
+
+	if (acquire_failed)
+		goto fail;
+
 	CAM_INFO(CAM_ISP,
-		"Acquired HW for ctx: %u with pix_port: %u rdi_port: %u",
-		hwr_mgr_ctx->ctx_index, num_pix_port, num_rdi_port);
+		"Acquired %s IFE[%d %d] with [%u pix] [%u pd] [%u rdi] ports for ctx:%u",
+		(hw_mgr_ctx->is_dual) ? "dual" : "single",
+		hw_idx[CAM_ISP_HW_SPLIT_LEFT], hw_idx[CAM_ISP_HW_SPLIT_RIGHT],
+		num_pix_port, num_pd_port, num_rdi_port, hw_mgr_ctx->ctx_index);
+
+	return;
+
+fail:
+	CAM_ERR(CAM_ISP, "Acquire HW failed for ctx:%u", hw_mgr_ctx->ctx_index);
+	CAM_INFO(CAM_ISP,
+		"Previously acquired %s IFE[%d %d] with [%u pix] [%u pd] [%u rdi] ports for ctx:%u",
+		(hw_mgr_ctx->is_dual) ? "dual" : "single",
+		hw_idx[CAM_ISP_HW_SPLIT_LEFT], hw_idx[CAM_ISP_HW_SPLIT_RIGHT],
+		num_pix_port, num_pd_port, num_rdi_port, hw_mgr_ctx->ctx_index);
+
 	list_for_each_entry_safe(hw_mgr_res, hw_mgr_res_temp,
-		&hwr_mgr_ctx->res_list_ife_src, list) {
+		&hw_mgr_ctx->res_list_ife_src, list) {
 		for (i = 0; i < CAM_ISP_HW_SPLIT_MAX; i++) {
 			hw_res = hw_mgr_res->hw_res[i];
 			if (hw_res && hw_res->hw_intf)
 				CAM_INFO(CAM_ISP,
-					"IFE src split_id: %d res_id: %s hw_idx: %u state: %s",
+					"IFE src split_id:%d res_id:%s hw_idx:%u state:%s",
 					i,
 					cam_ife_hw_mgr_get_src_res_id(
 					hw_res->res_id),
@@ -2435,8 +2460,9 @@ err:
 static int cam_ife_mgr_acquire_hw_for_ctx(
 	struct cam_ife_hw_mgr_ctx           *ife_ctx,
 	struct cam_isp_in_port_generic_info *in_port,
-	uint32_t  *num_pix_port, uint32_t  *num_rdi_port,
-	uint32_t *acquired_hw_id, uint32_t *acquired_hw_path)
+	uint32_t *num_pix_port, uint32_t *num_rdi_port,
+	uint32_t *num_pd_port, uint32_t *acquired_hw_id,
+	uint32_t *acquired_hw_path)
 {
 	int rc                                    = -1;
 	int is_dual_isp                           = 0;
@@ -2541,7 +2567,8 @@ static int cam_ife_mgr_acquire_hw_for_ctx(
 		goto err;
 	}
 
-	*num_pix_port = ipp_count + ppp_count + ife_rd_count + lcr_count;
+	*num_pix_port = ipp_count + ife_rd_count + lcr_count;
+	*num_pd_port = ppp_count;
 	*num_rdi_port = rdi_count;
 
 	return 0;
@@ -2819,8 +2846,10 @@ static int cam_ife_mgr_acquire_hw(void *hw_mgr_priv, void *acquire_hw_args)
 	struct cam_cdm_acquire_data        cdm_acquire;
 	uint32_t                           num_pix_port_per_in = 0;
 	uint32_t                           num_rdi_port_per_in = 0;
+	uint32_t                           num_pd_port_per_in = 0;
 	uint32_t                           total_pix_port = 0;
 	uint32_t                           total_rdi_port = 0;
+	uint32_t                           total_pd_port = 0;
 	struct cam_isp_acquire_hw_info    *acquire_hw_info = NULL;
 	uint32_t                           input_size = 0;
 
@@ -2917,16 +2946,18 @@ static int cam_ife_mgr_acquire_hw(void *hw_mgr_priv, void *acquire_hw_args)
 		else
 			rc = cam_ife_mgr_acquire_hw_for_ctx(ife_ctx, in_port,
 				&num_pix_port_per_in, &num_rdi_port_per_in,
+				&num_pd_port_per_in,
 				&acquire_args->acquired_hw_id[i],
 				acquire_args->acquired_hw_path[i]);
 
 		total_pix_port += num_pix_port_per_in;
 		total_rdi_port += num_rdi_port_per_in;
+		total_pd_port += num_pd_port_per_in;
 
 		if (rc) {
-			CAM_ERR(CAM_ISP, "can not acquire resource");
-			cam_ife_hw_mgr_dump_src_acq_info(ife_ctx,
-				total_pix_port, total_rdi_port);
+			cam_ife_hw_mgr_print_acquire_info(ife_ctx,
+				total_pix_port, total_pd_port,
+				total_rdi_port, rc);
 			goto free_mem;
 		}
 
@@ -2936,7 +2967,7 @@ static int cam_ife_mgr_acquire_hw(void *hw_mgr_priv, void *acquire_hw_args)
 	}
 
 	/* Check whether context has only RDI resource */
-	if (!total_pix_port) {
+	if (!total_pix_port && !total_pd_port) {
 		ife_ctx->is_rdi_only_context = 1;
 		CAM_DBG(CAM_ISP, "RDI only context");
 	}
@@ -2958,10 +2989,9 @@ static int cam_ife_mgr_acquire_hw(void *hw_mgr_priv, void *acquire_hw_args)
 		acquire_hw_info->num_inputs;
 
 	ktime_get_real_ts64(&ife_ctx->ts);
-	CAM_INFO(CAM_ISP,
-		"Acquire HW success with total_pix: %u total_rdi: %u is_dual: %u in ctx: %u",
-		total_pix_port, total_rdi_port,
-		ife_ctx->is_dual, ife_ctx->ctx_index);
+
+	cam_ife_hw_mgr_print_acquire_info(ife_ctx, total_pix_port,
+		total_pd_port, total_rdi_port, rc);
 
 	cam_ife_hw_mgr_put_ctx(&ife_hw_mgr->used_ctx_list, &ife_ctx);
 
@@ -3037,6 +3067,8 @@ static int cam_ife_mgr_acquire_dev(void *hw_mgr_priv, void *acquire_hw_args)
 	struct cam_isp_in_port_generic_info   *gen_port_info = NULL;
 	uint32_t                               num_pix_port_per_in = 0;
 	uint32_t                               num_rdi_port_per_in = 0;
+	uint32_t                               num_pd_port_per_in = 0;
+	uint32_t                               total_pd_port = 0;
 	uint32_t                               total_pix_port = 0;
 	uint32_t                               total_rdi_port = 0;
 	uint32_t                               in_port_length = 0;
@@ -3156,12 +3188,13 @@ static int cam_ife_mgr_acquire_dev(void *hw_mgr_priv, void *acquire_hw_args)
 
 			rc = cam_ife_mgr_acquire_hw_for_ctx(ife_ctx,
 				gen_port_info, &num_pix_port_per_in,
-				&num_rdi_port_per_in,
+				&num_rdi_port_per_in, &num_pd_port_per_in,
 				&acquire_args->acquired_hw_id[i],
 				acquire_args->acquired_hw_path[i]);
 
 			total_pix_port += num_pix_port_per_in;
 			total_rdi_port += num_rdi_port_per_in;
+			total_pd_port += num_pd_port_per_in;
 
 			kfree(in_port);
 			if (gen_port_info != NULL) {
@@ -3170,7 +3203,9 @@ static int cam_ife_mgr_acquire_dev(void *hw_mgr_priv, void *acquire_hw_args)
 				gen_port_info = NULL;
 			}
 			if (rc) {
-				CAM_ERR(CAM_ISP, "can not acquire resource");
+				cam_ife_hw_mgr_print_acquire_info(ife_ctx,
+					total_pix_port, total_pd_port,
+					total_rdi_port, rc);
 				goto free_res;
 			}
 		} else {
@@ -3199,10 +3234,8 @@ static int cam_ife_mgr_acquire_dev(void *hw_mgr_priv, void *acquire_hw_args)
 	ife_ctx->ctx_in_use = 1;
 	ife_ctx->num_reg_dump_buf = 0;
 
-	CAM_INFO(CAM_ISP,
-		"Acquire HW success with total_pix: %u total_rdi: %u is_dual: %u in ctx: %u",
-		total_pix_port, total_rdi_port,
-		ife_ctx->is_dual, ife_ctx->ctx_index);
+	cam_ife_hw_mgr_print_acquire_info(ife_ctx, total_pix_port,
+		total_pd_port, total_rdi_port, rc);
 
 	cam_ife_hw_mgr_put_ctx(&ife_hw_mgr->used_ctx_list, &ife_ctx);
 
@@ -4555,10 +4588,10 @@ static int cam_isp_blob_ubwc_update(
 				&bytes_used);
 			if (rc < 0) {
 				CAM_ERR(CAM_ISP,
-					"Failed cmd_update, base_idx=%d, bytes_used=%u, res_id_out=0x%x",
+					"Failed cmd_update, base_idx=%d, bytes_used=%u, res_id_out=0x%X",
 					blob_info->base_info->idx,
 					bytes_used,
-					res_id_out);
+					ubwc_plane_cfg->port_type);
 				goto end;
 			}
 
@@ -4728,10 +4761,10 @@ static int cam_isp_blob_ubwc_update_v2(
 			&bytes_used);
 		if (rc < 0) {
 			CAM_ERR(CAM_ISP,
-				"Failed cmd_update, base_idx=%d, bytes_used=%u, res_id_out=0x%x",
+				"Failed cmd_update, base_idx=%d, bytes_used=%u, res_id_out=0x%X",
 				blob_info->base_info->idx,
 				bytes_used,
-				res_id_out);
+				ubwc_plane_cfg->port_type);
 			goto end;
 		}
 
@@ -4829,8 +4862,9 @@ static int cam_isp_blob_hfr_update(
 			&bytes_used);
 		if (rc < 0) {
 			CAM_ERR(CAM_ISP,
-				"Failed cmd_update, base_idx=%d, rc=%d",
-				blob_info->base_info->idx, bytes_used);
+				"Failed cmd_update, base_idx=%d, rc=%d, res_id_out:0x%X",
+				blob_info->base_info->idx, bytes_used,
+				port_hfr_config->resource_type);
 			return rc;
 		}
 
