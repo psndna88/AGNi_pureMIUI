@@ -180,7 +180,7 @@ struct cam_fd_hw_mgr {
 	struct cam_fd_hw_mgr_ctx           ctx_pool[CAM_CTX_MAX];
 	struct cam_fd_mgr_frame_request    frame_req[CAM_CTX_REQ_MAX];
 	struct cam_req_mgr_core_workq     *work;
-	struct cam_fd_mgr_work_data        work_data[CAM_FD_WORKQ_NUM_TASK];
+	struct cam_fd_mgr_work_data        *work_data;
 	struct cam_fd_query_cap_cmd        fd_caps;
 };
 
