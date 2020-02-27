@@ -253,7 +253,7 @@
 	};
 
 	qcom,cam-sensor3 {
-		cell-index = <0>;
+		cell-index = <7>;
 		compatible = "qcom,cam-sensor";
 		csiphy-sd-index = <3>;
 		eeprom-src = <&eeprom_tof2>;
