@@ -56,6 +56,7 @@ int wifi_hal_initialize(struct sigma_dut *dut)
 {
 	pthread_t thread1;
 	wifi_error err;
+	const char *ifname;
 
 	if (dut->wifi_hal_initialized)
 		return 0;
@@ -67,8 +68,14 @@ int wifi_hal_initialize(struct sigma_dut *dut)
 		return -1;
 	}
 
+	if (if_nametoindex(NAN_AWARE_IFACE))
+		ifname = NAN_AWARE_IFACE;
+	else
+		ifname = "wlan0";
+
 	dut->wifi_hal_iface_handle = wifi_get_iface_handle(dut->wifi_hal_handle,
-							   (char *) "wlan0");
+							   (char *) ifname);
+
 	pthread_create(&thread1, NULL, &wifi_hal_event_thread, (void *) dut);
 	dut->wifi_hal_initialized = true;
 
