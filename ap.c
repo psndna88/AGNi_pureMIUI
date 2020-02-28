@@ -7940,7 +7940,7 @@ skip_key_mgmt:
 		else if (dut->sae_h2e_default)
 			sae_pwe = "2";
 		if (sae_pwe)
-			fprintf(f, "sae_pwe=%s", sae_pwe);
+			fprintf(f, "sae_pwe=%s\n", sae_pwe);
 	}
 
 	if (dut->sae_anti_clogging_threshold >= 0)
