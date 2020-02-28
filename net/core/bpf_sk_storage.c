@@ -61,7 +61,7 @@ struct bpf_local_storage_data {
 	 * the number of cachelines access during the cache hit case.
 	 */
 	struct bpf_local_storage_map __rcu *smap;
-	u8 data[0] __aligned(8);
+	u8 data[] __aligned(8);
 };
 
 /* Linked to bpf_local_storage and bpf_local_storage_map */
