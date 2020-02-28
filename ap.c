@@ -7407,8 +7407,9 @@ enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 	if (drv == DRIVER_OPENWRT)
 		return cmd_owrt_ap_config_commit(dut, conn, cmd);
 
-	f = fopen(concat_sigma_tmpdir(dut, "/sigma_dut-ap.conf", ap_conf_path,
-				      sizeof(ap_conf_path)), "w");
+	concat_sigma_tmpdir(dut, "/sigma_dut-ap.conf", ap_conf_path,
+			    sizeof(ap_conf_path));
+	f = fopen(ap_conf_path, "w");
 	if (f == NULL) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"%s: Failed to open sigma_dut-ap.conf",
@@ -8335,18 +8336,27 @@ skip_key_mgmt:
 	/* Set proper conf file permissions so that hostapd process
 	 * can access it.
 	 */
-	if (chmod(concat_sigma_tmpdir(dut, "/sigma_dut-ap.conf", ap_conf_path,
-				      sizeof(ap_conf_path)),
-		  S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP) < 0)
+	if (chmod(ap_conf_path, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP) < 0)
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Error changing permissions");
 
 	gr = getgrnam("wifi");
-	if (!gr || chown(concat_sigma_tmpdir(dut, "/sigma_dut-ap.conf",
-					     ap_conf_path, sizeof(ap_conf_path)),
-			 -1, gr->gr_gid) < 0)
+	if (!gr || chown(ap_conf_path, -1, gr->gr_gid) < 0)
 		sigma_dut_print(dut, DUT_MSG_ERROR, "Error changing groupid");
 #endif /* ANDROID */
+
+	f = fopen(ap_conf_path, "r");
+	if (f) {
+		size_t len;
+
+		len = fread(buf, 1, sizeof(buf), f);
+		fclose(f);
+		if (len >= sizeof(buf))
+			len = sizeof(buf) - 1;
+		buf[len] = '\0';
+		sigma_dut_print(dut, DUT_MSG_DEBUG, "hostapd debug log:\n%s",
+				buf);
+	}
 
 	if (drv == DRIVER_QNXNTO) {
 		snprintf(buf, sizeof(buf),
