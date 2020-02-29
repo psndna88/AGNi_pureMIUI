@@ -314,61 +314,71 @@ static int cam_isp_ctx_dump_req(
 	size_t                  *offset,
 	bool                     dump_to_buff)
 {
-	int i = 0, rc = 0;
+	int i, j, rc = 0;
 	size_t len = 0;
 	uint32_t *buf_addr;
 	uint32_t *buf_start, *buf_end;
-	size_t   remain_len = 0;
+	size_t remain_len = 0;
 	struct cam_cdm_cmd_buf_dump_info dump_info;
+	uint32_t num_cfg;
+	struct cam_hw_update_entry *cfg;
 
-	for (i = 0; i < req_isp->num_cfg; i++) {
-		rc = cam_packet_util_get_cmd_mem_addr(
-			req_isp->cfg[i].handle, &buf_addr, &len);
-		if (rc) {
-			CAM_ERR_RATE_LIMIT(CAM_ISP,
-				"Failed to get_cmd_mem_addr, rc=%d",
-				rc);
-		} else {
-			if (req_isp->cfg[i].offset >= ((uint32_t)len)) {
-				CAM_ERR(CAM_ISP,
-					"Invalid offset exp %u actual %u",
-					req_isp->cfg[i].offset, (uint32_t)len);
-				return rc;
-			}
-			remain_len = len - req_isp->cfg[i].offset;
-
-			if (req_isp->cfg[i].len >
-				((uint32_t)remain_len)) {
-				CAM_ERR(CAM_ISP,
-					"Invalid len exp %u remain_len %u",
-					req_isp->cfg[i].len,
-					(uint32_t)remain_len);
-				return rc;
-			}
-
-			buf_start = (uint32_t *)((uint8_t *) buf_addr +
-				req_isp->cfg[i].offset);
-			buf_end = (uint32_t *)((uint8_t *) buf_start +
-				req_isp->cfg[i].len - 1);
-			if (dump_to_buff) {
-				if (!cpu_addr || !offset || !buf_len) {
-					CAM_ERR(CAM_ISP, "Invalid args");
-					break;
-				}
-				dump_info.src_start = buf_start;
-				dump_info.src_end =   buf_end;
-				dump_info.dst_start = cpu_addr;
-				dump_info.dst_offset = *offset;
-				dump_info.dst_max_size = buf_len;
-				rc = cam_cdm_util_dump_cmd_bufs_v2(&dump_info);
-				*offset = dump_info.dst_offset;
-				if (rc)
-					return rc;
+	for (j = 0; j < CAM_IFE_HW_NUM_MAX; j++) {
+		num_cfg = req_isp->cfg_info[j].num_hw_entries;
+		cfg = req_isp->cfg_info[j].hw_entries;
+		for (i = 0; i < num_cfg; i++) {
+			rc = cam_packet_util_get_cmd_mem_addr(
+				cfg[i].handle, &buf_addr, &len);
+			if (rc) {
+				CAM_ERR_RATE_LIMIT(CAM_ISP,
+					"Failed to get_cmd_mem_addr, rc=%d",
+					rc);
 			} else {
-				cam_cdm_util_dump_cmd_buf(buf_start, buf_end);
+				if (cfg[i].offset >= ((uint32_t)len)) {
+					CAM_ERR(CAM_ISP,
+						"Invalid offset exp %u actual %u",
+						cfg[i].offset, (uint32_t)len);
+					return -EINVAL;
+				}
+				remain_len = len - cfg[i].offset;
+
+				if (req_isp->cfg_info[j].hw_entries[i].len >
+					((uint32_t)remain_len)) {
+					CAM_ERR(CAM_ISP,
+						"Invalid len exp %u remain_len %u",
+						cfg[i].len,
+						(uint32_t)remain_len);
+					return -EINVAL;
+				}
+
+				buf_start = (uint32_t *)((uint8_t *) buf_addr +
+					cfg[i].offset);
+				buf_end = (uint32_t *)((uint8_t *) buf_start +
+					cfg[i].len - 1);
+
+				if (dump_to_buff) {
+					if (!cpu_addr || !offset || !buf_len) {
+						CAM_ERR(CAM_ISP,
+							"Invalid args");
+						break;
+					}
+					dump_info.src_start = buf_start;
+					dump_info.src_end =   buf_end;
+					dump_info.dst_start = cpu_addr;
+					dump_info.dst_offset = *offset;
+					dump_info.dst_max_size = buf_len;
+					rc = cam_cdm_util_dump_cmd_bufs_v2(
+						&dump_info);
+					*offset = dump_info.dst_offset;
+					if (rc)
+						return rc;
+				} else
+					cam_cdm_util_dump_cmd_buf(buf_start,
+						buf_end);
 			}
 		}
 	}
+
 	return rc;
 }
 
@@ -419,13 +429,17 @@ static int __cam_isp_ctx_enqueue_request_in_order(
 static int __cam_isp_ctx_enqueue_init_request(
 	struct cam_context *ctx, struct cam_ctx_request *req)
 {
-	int rc = 0;
+	int rc = 0, i = 0;
 	struct cam_ctx_request                *req_old;
 	struct cam_isp_ctx_req                *req_isp_old;
 	struct cam_isp_ctx_req                *req_isp_new;
 	struct cam_isp_prepare_hw_update_data *req_update_old;
 	struct cam_isp_prepare_hw_update_data *req_update_new;
 	struct cam_isp_prepare_hw_update_data *hw_update_data;
+	struct cam_hw_update_entry            *cfg_old;
+	struct cam_hw_update_entry            *cfg_new;
+	uint32_t                               num_cfg_old;
+	uint32_t                               num_cfg_new;
 
 	spin_lock_bh(&ctx->lock);
 	if (list_empty(&ctx->pending_req_list)) {
@@ -441,9 +455,12 @@ static int __cam_isp_ctx_enqueue_init_request(
 	req_isp_new = (struct cam_isp_ctx_req *) req->req_priv;
 	if (req_isp_old->hw_update_data.packet_opcode_type ==
 		CAM_ISP_PACKET_INIT_DEV) {
-		if ((req_isp_old->num_cfg + req_isp_new->num_cfg) >=
+		if ((req_isp_old->total_num_cfg + req_isp_new->total_num_cfg) >=
 			CAM_ISP_CTX_CFG_MAX) {
-			CAM_WARN(CAM_ISP, "Can not merge INIT pkt");
+			CAM_WARN(CAM_ISP,
+				"Can not merge INIT pkt total_num_cfgs = %d",
+				(req_isp_old->total_num_cfg +
+					req_isp_new->total_num_cfg));
 			rc = -ENOMEM;
 		}
 
@@ -468,11 +485,19 @@ static int __cam_isp_ctx_enqueue_init_request(
 			req_isp_old->num_fence_map_in =
 				req_isp_new->num_fence_map_in;
 
-			memcpy(&req_isp_old->cfg[req_isp_old->num_cfg],
-				req_isp_new->cfg,
-				sizeof(req_isp_new->cfg[0])*
-				req_isp_new->num_cfg);
-			req_isp_old->num_cfg += req_isp_new->num_cfg;
+			for (i = 0; i < CAM_IFE_HW_NUM_MAX; i++) {
+				cfg_old = req_isp_old->cfg_info[i].hw_entries;
+				cfg_new = req_isp_new->cfg_info[i].hw_entries;
+				num_cfg_old =
+					req_isp_old->cfg_info[i].num_hw_entries;
+				num_cfg_new =
+					req_isp_old->cfg_info[i].num_hw_entries;
+				memcpy(&cfg_old[num_cfg_old],
+					cfg_new,
+					sizeof(cfg_new[0]) * num_cfg_new);
+				req_isp_old->cfg_info[i].num_hw_entries
+					+= num_cfg_new;
+			}
 
 			memcpy(&req_old->pf_data, &req->pf_data,
 				sizeof(struct cam_hw_mgr_dump_pf_data));
@@ -1049,12 +1074,12 @@ static int __cam_isp_ctx_handle_buf_done_in_activated_state(
 static int __cam_isp_ctx_apply_req_offline(
 	void *priv, void *data)
 {
-	int rc = 0;
+	int rc = 0, i = 0;
 	struct cam_context *ctx = NULL;
 	struct cam_isp_context *ctx_isp = priv;
 	struct cam_ctx_request *req;
 	struct cam_isp_ctx_req *req_isp;
-	struct cam_hw_config_args cfg;
+	struct cam_isp_hw_config_args cfg;
 
 	if (!ctx_isp) {
 		CAM_ERR(CAM_ISP, "Invalid ctx_isp:%pK", ctx);
@@ -1088,8 +1113,12 @@ static int __cam_isp_ctx_apply_req_offline(
 
 	cfg.ctxt_to_hw_map = ctx_isp->hw_ctx;
 	cfg.request_id = req->request_id;
-	cfg.hw_update_entries = req_isp->cfg;
-	cfg.num_hw_update_entries = req_isp->num_cfg;
+	for (i = 0; i < CAM_IFE_HW_NUM_MAX; i++) {
+		cfg.hw_update_info[i].num_hw_entries =
+			req_isp->cfg_info[i].num_hw_entries;
+		cfg.hw_update_info[i].hw_entries =
+				req_isp->cfg_info[i].hw_entries;
+	}
 	cfg.priv  = &req_isp->hw_update_data;
 	cfg.init_packet = 0;
 
@@ -2455,13 +2484,13 @@ static int __cam_isp_ctx_apply_req_in_activated_state(
 	struct cam_context *ctx, struct cam_req_mgr_apply_request *apply,
 	enum cam_isp_ctx_activated_substate next_state)
 {
-	int rc = 0;
+	int rc = 0, i;
 	struct cam_ctx_request          *req;
 	struct cam_ctx_request          *active_req = NULL;
 	struct cam_isp_ctx_req          *req_isp;
 	struct cam_isp_ctx_req          *active_req_isp;
 	struct cam_isp_context          *ctx_isp = NULL;
-	struct cam_hw_config_args        cfg;
+	struct cam_isp_hw_config_args    isp_cfg;
 
 	if (list_empty(&ctx->pending_req_list)) {
 		CAM_ERR(CAM_ISP, "No available request for Apply id %lld",
@@ -2547,15 +2576,22 @@ static int __cam_isp_ctx_apply_req_in_activated_state(
 	}
 	req_isp->bubble_report = apply->report_if_bubble;
 
-	cfg.ctxt_to_hw_map = ctx_isp->hw_ctx;
-	cfg.request_id = req->request_id;
-	cfg.hw_update_entries = req_isp->cfg;
-	cfg.num_hw_update_entries = req_isp->num_cfg;
-	cfg.priv  = &req_isp->hw_update_data;
-	cfg.init_packet = 0;
-	cfg.reapply = req_isp->reapply;
+	memset(&isp_cfg, 0, sizeof(isp_cfg));
 
-	rc = ctx->hw_mgr_intf->hw_config(ctx->hw_mgr_intf->hw_mgr_priv, &cfg);
+	isp_cfg.ctxt_to_hw_map = ctx_isp->hw_ctx;
+	isp_cfg.request_id = req->request_id;
+	for (i = 0; i < CAM_IFE_HW_NUM_MAX; i++) {
+		isp_cfg.hw_update_info[i].num_hw_entries =
+			req_isp->cfg_info[i].num_hw_entries;
+		isp_cfg.hw_update_info[i].hw_entries =
+			req_isp->cfg_info[i].hw_entries;
+	}
+	isp_cfg.priv  = &req_isp->hw_update_data;
+	isp_cfg.init_packet = 0;
+	isp_cfg.reapply = req_isp->reapply;
+
+	rc = ctx->hw_mgr_intf->hw_config(ctx->hw_mgr_intf->hw_mgr_priv,
+		&isp_cfg);
 	if (rc) {
 		CAM_ERR_RATE_LIMIT(CAM_ISP, "Can not apply the configuration");
 	} else {
@@ -3759,7 +3795,7 @@ static int __cam_isp_ctx_config_dev_in_top_state(
 	struct cam_packet                *packet;
 	size_t                            len = 0;
 	size_t                            remain_len = 0;
-	struct cam_hw_prepare_update_args cfg;
+	struct cam_isp_hw_update_args     isp_cfg;
 	struct cam_req_mgr_add_request    add_req;
 	struct cam_isp_context           *ctx_isp =
 		(struct cam_isp_context *) ctx->ctx_priv;
@@ -3840,31 +3876,43 @@ static int __cam_isp_ctx_config_dev_in_top_state(
 	}
 
 	/* preprocess the configuration */
-	memset(&cfg, 0, sizeof(cfg));
-	cfg.packet = packet;
-	cfg.remain_len = remain_len;
-	cfg.ctxt_to_hw_map = ctx_isp->hw_ctx;
-	cfg.max_hw_update_entries = CAM_ISP_CTX_CFG_MAX;
-	cfg.hw_update_entries = req_isp->cfg;
-	cfg.max_out_map_entries = CAM_ISP_CTX_RES_MAX;
-	cfg.max_in_map_entries = CAM_ISP_CTX_RES_MAX;
-	cfg.out_map_entries = req_isp->fence_map_out;
-	cfg.in_map_entries = req_isp->fence_map_in;
-	cfg.priv  = &req_isp->hw_update_data;
-	cfg.pf_data = &(req->pf_data);
+	memset(&isp_cfg, 0, sizeof(isp_cfg));
+
+	isp_cfg.packet = packet;
+	isp_cfg.remain_len = remain_len;
+	isp_cfg.ctxt_to_hw_map = ctx_isp->hw_ctx;
+	isp_cfg.max_hw_update_entries = CAM_ISP_CTX_CFG_MAX;
+	isp_cfg.max_out_map_entries = CAM_ISP_CTX_RES_MAX;
+	isp_cfg.max_in_map_entries = CAM_ISP_CTX_RES_MAX;
+	isp_cfg.out_map_entries = req_isp->fence_map_out;
+	isp_cfg.in_map_entries = req_isp->fence_map_in;
+	isp_cfg.priv  = &req_isp->hw_update_data;
+	isp_cfg.pf_data = &(req->pf_data);
+
+	for (i = 0; i < CAM_IFE_HW_NUM_MAX; i++)
+		isp_cfg.hw_update_info[i].hw_entries
+			= req_isp->cfg_info[i].hw_entries;
 
 	CAM_DBG(CAM_ISP, "try to prepare config packet......");
 
 	rc = ctx->hw_mgr_intf->hw_prepare_update(
-		ctx->hw_mgr_intf->hw_mgr_priv, &cfg);
+		ctx->hw_mgr_intf->hw_mgr_priv, &isp_cfg);
 	if (rc != 0) {
 		CAM_ERR(CAM_ISP, "Prepare config packet failed in HW layer");
 		rc = -EFAULT;
 		goto free_req;
 	}
-	req_isp->num_cfg = cfg.num_hw_update_entries;
-	req_isp->num_fence_map_out = cfg.num_out_map_entries;
-	req_isp->num_fence_map_in = cfg.num_in_map_entries;
+
+	req_isp->total_num_cfg = 0;
+	for (i = 0; i < CAM_IFE_HW_NUM_MAX; i++) {
+		req_isp->cfg_info[i].num_hw_entries
+			= isp_cfg.hw_update_info[i].num_hw_entries;
+		req_isp->total_num_cfg +=
+			req_isp->cfg_info[i].num_hw_entries;
+	}
+
+	req_isp->num_fence_map_out = isp_cfg.num_out_map_entries;
+	req_isp->num_fence_map_in = isp_cfg.num_in_map_entries;
 	req_isp->num_acked = 0;
 	req_isp->bubble_detected = false;
 
@@ -3878,7 +3926,7 @@ static int __cam_isp_ctx_config_dev_in_top_state(
 	}
 
 	CAM_DBG(CAM_ISP, "num_entry: %d, num fence out: %d, num fence in: %d",
-		req_isp->num_cfg, req_isp->num_fence_map_out,
+		req_isp->total_num_cfg, req_isp->num_fence_map_out,
 		req_isp->num_fence_map_in);
 
 	req->request_id = packet->header.request_id;
@@ -4604,8 +4652,14 @@ static int __cam_isp_ctx_start_dev_in_ready(struct cam_context *ctx,
 
 	start_isp.hw_config.ctxt_to_hw_map = ctx_isp->hw_ctx;
 	start_isp.hw_config.request_id = req->request_id;
-	start_isp.hw_config.hw_update_entries = req_isp->cfg;
-	start_isp.hw_config.num_hw_update_entries = req_isp->num_cfg;
+
+	for (i = 0; i < CAM_IFE_HW_NUM_MAX; i++) {
+		start_isp.hw_config.hw_update_info[i].hw_entries
+			= req_isp->cfg_info[i].hw_entries;
+		start_isp.hw_config.hw_update_info[i].num_hw_entries =
+			req_isp->cfg_info[i].num_hw_entries;
+	}
+
 	start_isp.hw_config.priv  = &req_isp->hw_update_data;
 	start_isp.hw_config.init_packet = 1;
 	start_isp.hw_config.reapply = 0;

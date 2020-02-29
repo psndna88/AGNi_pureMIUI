@@ -16,6 +16,7 @@
 #define CAM_VFE_HW_RESET_HW_VAL               0x00010000
 #define CAM_VFE_LITE_HW_RESET_AND_REG_VAL     0x00000002
 #define CAM_VFE_LITE_HW_RESET_HW_VAL          0x00000001
+#define CAM_CDM_WAIT_COMP_EVENT_BIT           0x2
 
 struct cam_vfe_top_ver3_common_data {
 	struct cam_hw_soc_info                     *soc_info;
@@ -210,6 +211,102 @@ static int cam_vfe_top_ver3_mux_get_reg_update(
 			CAM_ISP_HW_CMD_GET_REG_UPDATE, cmd_args, arg_size);
 
 	return -EINVAL;
+}
+
+static int cam_vfe_top_wait_comp_event(struct cam_vfe_top_ver3_priv *top_priv,
+	void *cmd_args, uint32_t arg_size)
+{
+	uint32_t                          size = 0;
+	struct cam_isp_hw_get_cmd_update *cdm_args  = cmd_args;
+	struct cam_cdm_utils_ops         *cdm_util_ops = NULL;
+
+	if (arg_size != sizeof(struct cam_isp_hw_get_cmd_update)) {
+		CAM_ERR(CAM_ISP, "Error, Invalid arg size = %d expected = %d",
+			arg_size, sizeof(struct cam_isp_hw_get_cmd_update));
+		return -EINVAL;
+	}
+
+	if (!cdm_args || !cdm_args->res || !top_priv ||
+		!top_priv->common_data.soc_info) {
+		CAM_ERR(CAM_ISP, "Error, Invalid args");
+		return -EINVAL;
+	}
+
+	cdm_util_ops =
+		(struct cam_cdm_utils_ops *)cdm_args->res->cdm_ops;
+
+	if (!cdm_util_ops) {
+		CAM_ERR(CAM_ISP, "Invalid CDM ops");
+		return -EINVAL;
+	}
+
+	size = cdm_util_ops->cdm_required_size_comp_wait();
+	/* since cdm returns dwords, we need to convert it into bytes */
+	if ((size * 4) > cdm_args->cmd.size) {
+		CAM_ERR(CAM_ISP, "buf size:%d is not sufficient, expected: %d",
+			cdm_args->cmd.size, size);
+		return -EINVAL;
+	}
+
+	cdm_util_ops->cdm_write_wait_comp_event(cdm_args->cmd.cmd_buf_addr,
+		0, CAM_CDM_WAIT_COMP_EVENT_BIT);
+	cdm_args->cmd.used_bytes = (size * 4);
+
+	return 0;
+}
+
+static int cam_vfe_top_add_wait_trigger(struct cam_vfe_top_ver3_priv *top_priv,
+	void *cmd_args, uint32_t arg_size)
+{
+	uint32_t                          size = 0;
+	uint32_t                          reg_val_pair[2];
+	struct cam_isp_hw_get_cmd_update *cdm_args  = cmd_args;
+	struct cam_cdm_utils_ops         *cdm_util_ops = NULL;
+	struct cam_vfe_top_ver3_reg_offset_common *reg_common = NULL;
+	uint32_t set_cdm_trigger_event;
+
+	if (arg_size != sizeof(struct cam_isp_hw_get_cmd_update)) {
+		CAM_ERR(CAM_ISP, "Error, Invalid arg size = %d expected = %d",
+			arg_size, sizeof(struct cam_isp_hw_get_cmd_update));
+		return -EINVAL;
+	}
+
+	if (!cdm_args || !cdm_args->res || !top_priv ||
+		!top_priv->common_data.soc_info) {
+		CAM_ERR(CAM_ISP, "Error, Invalid args");
+		return -EINVAL;
+	}
+
+	cdm_util_ops =
+		(struct cam_cdm_utils_ops *)cdm_args->res->cdm_ops;
+
+	if (!cdm_util_ops) {
+		CAM_ERR(CAM_ISP, "Invalid CDM ops");
+		return -EINVAL;
+	}
+
+	size = cdm_util_ops->cdm_required_size_reg_random(1);
+	/* since cdm returns dwords, we need to convert it into bytes */
+	if ((size * 4) > cdm_args->cmd.size) {
+		CAM_ERR(CAM_ISP, "buf size:%d is not sufficient, expected: %d",
+			cdm_args->cmd.size, size);
+		return -EINVAL;
+	}
+
+	if (cdm_args->trigger_cdm_en == true)
+		set_cdm_trigger_event = 1;
+	else
+		set_cdm_trigger_event = 0;
+
+	reg_common = top_priv->common_data.common_reg;
+	reg_val_pair[0] = reg_common->trigger_cdm_events;
+	reg_val_pair[1] = set_cdm_trigger_event;
+
+	cdm_util_ops->cdm_write_regrandom(cdm_args->cmd.cmd_buf_addr,
+		1, reg_val_pair);
+	cdm_args->cmd.used_bytes = (size * 4);
+
+	return 0;
 }
 
 int cam_vfe_top_ver3_get_hw_caps(void *device_priv,
@@ -560,6 +657,12 @@ int cam_vfe_top_ver3_process_cmd(void *device_priv, uint32_t cmd_type,
 		break;
 	case CAM_ISP_HW_CMD_CORE_CONFIG:
 		rc = cam_vfe_core_config_control(top_priv, cmd_args, arg_size);
+		break;
+	case CAM_ISP_HW_CMD_ADD_WAIT:
+		rc = cam_vfe_top_wait_comp_event(top_priv, cmd_args, arg_size);
+		break;
+	case CAM_ISP_HW_CMD_ADD_WAIT_TRIGGER:
+		rc = cam_vfe_top_add_wait_trigger(top_priv, cmd_args, arg_size);
 		break;
 	default:
 		rc = -EINVAL;
