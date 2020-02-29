@@ -11,6 +11,7 @@
 #include "cam_ife_csid175_200.h"
 #include "cam_ife_csid480.h"
 #include "cam_ife_csid_dev.h"
+#include "camera_main.h"
 
 #define CAM_CSID_DRV_NAME                    "csid_17x"
 #define CAM_CSID_VERSION_V170                 0x10070000
@@ -63,7 +64,7 @@ static const struct of_device_id cam_ife_csid17x_dt_match[] = {
 
 MODULE_DEVICE_TABLE(of, cam_ife_csid17x_dt_match);
 
-static struct platform_driver cam_ife_csid17x_driver = {
+struct platform_driver cam_ife_csid17x_driver = {
 	.probe = cam_ife_csid_probe,
 	.remove = cam_ife_csid_remove,
 	.driver = {

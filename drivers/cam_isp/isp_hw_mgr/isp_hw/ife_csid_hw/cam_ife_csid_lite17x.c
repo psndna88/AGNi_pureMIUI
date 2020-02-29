@@ -8,6 +8,7 @@
 #include "cam_ife_csid_lite480.h"
 #include "cam_ife_csid_core.h"
 #include "cam_ife_csid_dev.h"
+#include "camera_main.h"
 
 #define CAM_CSID_LITE_DRV_NAME                    "csid_lite"
 
@@ -40,7 +41,7 @@ static const struct of_device_id cam_ife_csid_lite_dt_match[] = {
 };
 MODULE_DEVICE_TABLE(of, cam_ife_csid_lite_dt_match);
 
-static struct platform_driver cam_ife_csid_lite_driver = {
+struct platform_driver cam_ife_csid_lite_driver = {
 	.probe = cam_ife_csid_probe,
 	.remove = cam_ife_csid_remove,
 	.driver = {

@@ -17,6 +17,7 @@
 #include "cam_subdev.h"
 #include "cam_cpas_hw_intf.h"
 #include "cam_cpas_soc.h"
+#include "camera_main.h"
 
 #define CAM_CPAS_DEV_NAME    "cam-cpas"
 #define CAM_CPAS_INTF_INITIALIZED() (g_cpas_intf && g_cpas_intf->probe_done)
@@ -651,14 +652,16 @@ static int cam_cpas_subdev_register(struct platform_device *pdev)
 	return rc;
 }
 
-static int cam_cpas_dev_probe(struct platform_device *pdev)
+static int cam_cpas_dev_component_bind(struct device *dev,
+	struct device *master_dev, void *data)
 {
 	struct cam_cpas_hw_caps *hw_caps;
 	struct cam_hw_intf *hw_intf;
 	int rc;
+	struct platform_device *pdev = to_platform_device(dev);
 
 	if (g_cpas_intf) {
-		CAM_ERR(CAM_CPAS, "cpas dev proble already done");
+		CAM_ERR(CAM_CPAS, "cpas component already binded");
 		return -EALREADY;
 	}
 
@@ -695,7 +698,7 @@ static int cam_cpas_dev_probe(struct platform_device *pdev)
 
 	g_cpas_intf->probe_done = true;
 	CAM_DBG(CAM_CPAS,
-		"CPAS INTF Probe success %d, %d.%d.%d, %d.%d.%d, 0x%x",
+		"Component bound successfully %d, %d.%d.%d, %d.%d.%d, 0x%x",
 		hw_caps->camera_family, hw_caps->camera_version.major,
 		hw_caps->camera_version.minor, hw_caps->camera_version.incr,
 		hw_caps->cpas_version.major, hw_caps->cpas_version.minor,
@@ -709,15 +712,16 @@ error_destroy_mem:
 	mutex_destroy(&g_cpas_intf->intf_lock);
 	kfree(g_cpas_intf);
 	g_cpas_intf = NULL;
-	CAM_ERR(CAM_CPAS, "CPAS probe failed");
+	CAM_ERR(CAM_CPAS, "CPAS component bind failed");
 	return rc;
 }
 
-static int cam_cpas_dev_remove(struct platform_device *dev)
+static void cam_cpas_dev_component_unbind(struct device *dev,
+	struct device *master_dev, void *data)
 {
 	if (!CAM_CPAS_INTF_INITIALIZED()) {
 		CAM_ERR(CAM_CPAS, "cpas intf not initialized");
-		return -ENODEV;
+		return;
 	}
 
 	mutex_lock(&g_cpas_intf->intf_lock);
@@ -728,7 +732,28 @@ static int cam_cpas_dev_remove(struct platform_device *dev)
 	mutex_destroy(&g_cpas_intf->intf_lock);
 	kfree(g_cpas_intf);
 	g_cpas_intf = NULL;
+}
 
+const static struct component_ops cam_cpas_dev_component_ops = {
+	.bind = cam_cpas_dev_component_bind,
+	.unbind = cam_cpas_dev_component_unbind,
+};
+
+static int cam_cpas_dev_probe(struct platform_device *pdev)
+{
+	int rc = 0;
+
+	CAM_DBG(CAM_CPAS, "Adding CPAS INTF component");
+	rc = component_add(&pdev->dev, &cam_cpas_dev_component_ops);
+	if (rc)
+		CAM_ERR(CAM_CPAS, "failed to add component rc: %d", rc);
+
+	return rc;
+}
+
+static int cam_cpas_dev_remove(struct platform_device *pdev)
+{
+	component_del(&pdev->dev, &cam_cpas_dev_component_ops);
 	return 0;
 }
 
@@ -737,7 +762,7 @@ static const struct of_device_id cam_cpas_dt_match[] = {
 	{}
 };
 
-static struct platform_driver cam_cpas_driver = {
+struct platform_driver cam_cpas_driver = {
 	.probe = cam_cpas_dev_probe,
 	.remove = cam_cpas_dev_remove,
 	.driver = {

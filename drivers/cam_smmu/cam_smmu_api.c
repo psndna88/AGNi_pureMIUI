@@ -22,6 +22,7 @@
 #include "cam_compat.h"
 #include "cam_smmu_api.h"
 #include "cam_debug_util.h"
+#include "camera_main.h"
 
 #define SHARED_MEM_POOL_GRANULARITY 16
 
@@ -3639,62 +3640,106 @@ err:
 	return -ENOMEM;
 }
 
-static int cam_smmu_probe(struct platform_device *pdev)
+static int cam_smmu_fw_dev_component_bind(struct device *dev,
+	struct device *master_dev, void *data)
 {
-	int rc = 0;
-	struct device *dev = &pdev->dev;
+	struct platform_device *pdev = to_platform_device(dev);
 
-	dev->dma_parms = NULL;
-	if (of_device_is_compatible(dev->of_node, "qcom,msm-cam-smmu")) {
-		rc = cam_alloc_smmu_context_banks(dev);
-		if (rc < 0) {
-			CAM_ERR(CAM_SMMU, "Error: allocating context banks");
-			return -ENOMEM;
-		}
-	}
-	if (of_device_is_compatible(dev->of_node, "qcom,msm-cam-smmu-cb")) {
-		rc = cam_populate_smmu_context_banks(dev, CAM_ARM_SMMU);
-		if (rc < 0) {
-			CAM_ERR(CAM_SMMU, "Error: populating context banks");
-			cam_smmu_release_cb(pdev);
-			return -ENOMEM;
-		}
-		return rc;
-	}
-	if (of_device_is_compatible(dev->of_node, "qcom,qsmmu-cam-cb")) {
-		rc = cam_populate_smmu_context_banks(dev, CAM_QSMMU);
-		if (rc < 0) {
-			CAM_ERR(CAM_SMMU, "Error: populating context banks");
-			return -ENOMEM;
-		}
-		return rc;
-	}
+	icp_fw.fw_dev = &pdev->dev;
+	icp_fw.fw_kva = NULL;
+	icp_fw.fw_hdl = 0;
 
-	if (of_device_is_compatible(dev->of_node, "qcom,msm-cam-smmu-fw-dev")) {
-		icp_fw.fw_dev = &pdev->dev;
-		icp_fw.fw_kva = NULL;
-		icp_fw.fw_hdl = 0;
-		return rc;
-	}
-
-	/* probe through all the subdevices */
-	rc = of_platform_populate(pdev->dev.of_node, msm_cam_smmu_dt_match,
-				NULL, &pdev->dev);
-	if (rc < 0) {
-		CAM_ERR(CAM_SMMU, "Error: populating devices");
-	} else {
-		INIT_WORK(&iommu_cb_set.smmu_work, cam_smmu_page_fault_work);
-		mutex_init(&iommu_cb_set.payload_list_lock);
-		INIT_LIST_HEAD(&iommu_cb_set.payload_list);
-	}
-
-	cam_smmu_create_debug_fs();
-	return rc;
+	CAM_DBG(CAM_SMMU, "FW dev component bound successfully");
+	return 0;
 }
 
-static int cam_smmu_remove(struct platform_device *pdev)
+static void cam_smmu_fw_dev_component_unbind(struct device *dev,
+	struct device *master_dev, void *data)
 {
-	struct device *dev = &pdev->dev;
+	struct platform_device *pdev = to_platform_device(dev);
+
+	CAM_DBG(CAM_SMMU, "Unbinding component: %s", pdev->name);
+}
+
+const static struct component_ops cam_smmu_fw_dev_component_ops = {
+	.bind = cam_smmu_fw_dev_component_bind,
+	.unbind = cam_smmu_fw_dev_component_unbind,
+};
+
+static int cam_smmu_cb_component_bind(struct device *dev,
+	struct device *master_dev, void *data)
+{
+	int rc = 0;
+	struct platform_device *pdev = to_platform_device(dev);
+
+	rc = cam_populate_smmu_context_banks(dev, CAM_ARM_SMMU);
+	if (rc < 0) {
+		CAM_ERR(CAM_SMMU, "Error: populating context banks");
+		cam_smmu_release_cb(pdev);
+		return -ENOMEM;
+	}
+
+	CAM_DBG(CAM_SMMU, "CB component bound successfully");
+	return 0;
+}
+
+static void cam_smmu_cb_component_unbind(struct device *dev,
+	struct device *master_dev, void *data)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+
+	CAM_DBG(CAM_SMMU, "Unbinding component: %s", pdev->name);
+}
+
+const static struct component_ops cam_smmu_cb_component_ops = {
+	.bind = cam_smmu_cb_component_bind,
+	.unbind = cam_smmu_cb_component_unbind,
+};
+
+static int cam_smmu_cb_qsmmu_component_bind(struct device *dev,
+	struct device *master_dev, void *data)
+{
+	int rc = 0;
+
+	rc = cam_populate_smmu_context_banks(dev, CAM_QSMMU);
+	if (rc < 0) {
+		CAM_ERR(CAM_SMMU, "Failed in populating context banks");
+		return -ENOMEM;
+	}
+
+	CAM_DBG(CAM_SMMU, "QSMMU CB component bound successfully");
+	return 0;
+}
+
+static void cam_smmu_cb_qsmmu_component_unbind(struct device *dev,
+	struct device *master_dev, void *data)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+
+	CAM_DBG(CAM_SMMU, "Unbinding component: %s", pdev->name);
+}
+
+const static struct component_ops cam_smmu_cb_qsmmu_component_ops = {
+	.bind = cam_smmu_cb_qsmmu_component_bind,
+	.unbind = cam_smmu_cb_qsmmu_component_unbind,
+};
+
+static int cam_smmu_component_bind(struct device *dev,
+	struct device *master_dev, void *data)
+{
+	INIT_WORK(&iommu_cb_set.smmu_work, cam_smmu_page_fault_work);
+	mutex_init(&iommu_cb_set.payload_list_lock);
+	INIT_LIST_HEAD(&iommu_cb_set.payload_list);
+	cam_smmu_create_debug_fs();
+
+	CAM_DBG(CAM_SMMU, "Main component bound successfully");
+	return 0;
+}
+
+static void cam_smmu_component_unbind(struct device *dev,
+	struct device *master_dev, void *data)
+{
+	struct platform_device *pdev = to_platform_device(dev);
 
 	/* release all the context banks and memory allocated */
 	cam_smmu_reset_iommu_table(CAM_SMMU_TABLE_DEINIT);
@@ -3703,15 +3748,75 @@ static int cam_smmu_remove(struct platform_device *pdev)
 		dev->dma_parms = NULL;
 	}
 
-	if (of_device_is_compatible(pdev->dev.of_node, "qcom,msm-cam-smmu"))
-		cam_smmu_release_cb(pdev);
-
+	cam_smmu_release_cb(pdev);
 	debugfs_remove_recursive(iommu_cb_set.dentry);
 	iommu_cb_set.dentry = NULL;
+}
+
+const static struct component_ops cam_smmu_component_ops = {
+	.bind = cam_smmu_component_bind,
+	.unbind = cam_smmu_component_unbind,
+};
+
+static int cam_smmu_probe(struct platform_device *pdev)
+{
+	int rc = 0;
+	struct device *dev = &pdev->dev;
+
+	dev->dma_parms = NULL;
+	CAM_DBG(CAM_SMMU, "Adding SMMU component: %s", pdev->name);
+	if (of_device_is_compatible(dev->of_node, "qcom,msm-cam-smmu")) {
+		rc = cam_alloc_smmu_context_banks(dev);
+		if (rc < 0) {
+			CAM_ERR(CAM_SMMU, "Failed in allocating context banks");
+			return -ENOMEM;
+		}
+
+		rc = component_add(&pdev->dev, &cam_smmu_component_ops);
+	} else if (of_device_is_compatible(dev->of_node,
+		"qcom,msm-cam-smmu-cb")) {
+		rc = component_add(&pdev->dev, &cam_smmu_cb_component_ops);
+	} else if (of_device_is_compatible(dev->of_node, "qcom,qsmmu-cam-cb")) {
+		rc = component_add(&pdev->dev,
+			&cam_smmu_cb_qsmmu_component_ops);
+	} else if (of_device_is_compatible(dev->of_node,
+		"qcom,msm-cam-smmu-fw-dev")) {
+		rc = component_add(&pdev->dev, &cam_smmu_fw_dev_component_ops);
+	} else {
+		CAM_ERR(CAM_SMMU, "Unrecognized child device: %s", pdev->name);
+		rc = -ENODEV;
+	}
+
+	if (rc < 0)
+		CAM_ERR(CAM_SMMU, "failed to add component rc: %d", rc);
+
+	return rc;
+}
+
+static int cam_smmu_remove(struct platform_device *pdev)
+{
+	struct device *dev = &pdev->dev;
+
+	CAM_DBG(CAM_SMMU, "Removing SMMU component: %s", pdev->name);
+	if (of_device_is_compatible(dev->of_node, "qcom,msm-cam-smmu")) {
+		component_del(&pdev->dev, &cam_smmu_component_ops);
+	} else if (of_device_is_compatible(dev->of_node,
+		"qcom,msm-cam-smmu-cb")) {
+		component_del(&pdev->dev, &cam_smmu_cb_component_ops);
+	} else if (of_device_is_compatible(dev->of_node, "qcom,qsmmu-cam-cb")) {
+		component_del(&pdev->dev, &cam_smmu_cb_qsmmu_component_ops);
+	} else if (of_device_is_compatible(dev->of_node,
+		"qcom,msm-cam-smmu-fw-dev")) {
+		component_del(&pdev->dev, &cam_smmu_fw_dev_component_ops);
+	} else {
+		CAM_ERR(CAM_SMMU, "Unrecognized child device: %s", pdev->name);
+		return -ENODEV;
+	}
+
 	return 0;
 }
 
-static struct platform_driver cam_smmu_driver = {
+struct platform_driver cam_smmu_driver = {
 	.probe = cam_smmu_probe,
 	.remove = cam_smmu_remove,
 	.driver = {

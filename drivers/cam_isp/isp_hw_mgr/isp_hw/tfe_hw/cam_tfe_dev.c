@@ -10,12 +10,14 @@
 #include "cam_tfe_core.h"
 #include "cam_tfe_soc.h"
 #include "cam_debug_util.h"
+#include "camera_main.h"
 
 static struct cam_hw_intf *cam_tfe_hw_list[CAM_TFE_HW_NUM_MAX] = {0, 0, 0};
 
 static char tfe_dev_name[8];
 
-int cam_tfe_probe(struct platform_device *pdev)
+static int cam_tfe_component_bind(struct device *dev,
+	struct device *master_dev, void *data)
 {
 	struct cam_hw_info                *tfe_hw = NULL;
 	struct cam_hw_intf                *tfe_hw_intf = NULL;
@@ -23,6 +25,7 @@ int cam_tfe_probe(struct platform_device *pdev)
 	struct cam_tfe_hw_core_info       *core_info = NULL;
 	struct cam_tfe_hw_info            *hw_info = NULL;
 	int                                rc = 0;
+	struct platform_device *pdev = to_platform_device(dev);
 
 	tfe_hw_intf = kzalloc(sizeof(struct cam_hw_intf), GFP_KERNEL);
 	if (!tfe_hw_intf) {
@@ -60,7 +63,7 @@ int cam_tfe_probe(struct platform_device *pdev)
 	tfe_hw_intf->hw_ops.process_cmd = cam_tfe_process_cmd;
 	tfe_hw_intf->hw_type = CAM_ISP_HW_TYPE_TFE;
 
-	CAM_DBG(CAM_ISP, "type %d index %d",
+	CAM_DBG(CAM_ISP, "TFE component bind,type %d index %d",
 		tfe_hw_intf->hw_type, tfe_hw_intf->hw_idx);
 
 	platform_set_drvdata(pdev, tfe_hw_intf);
@@ -110,8 +113,8 @@ int cam_tfe_probe(struct platform_device *pdev)
 	cam_tfe_init_hw(tfe_hw, NULL, 0);
 	cam_tfe_deinit_hw(tfe_hw, NULL, 0);
 
-	CAM_DBG(CAM_ISP, "TFE%d probe successful", tfe_hw_intf->hw_idx);
-
+	CAM_DBG(CAM_ISP, "TFE:%d component bound successfully",
+		tfe_hw_intf->hw_idx);
 	return rc;
 
 deinit_soc:
@@ -127,17 +130,19 @@ end:
 	return rc;
 }
 
-int cam_tfe_remove(struct platform_device *pdev)
+static void cam_tfe_component_unbind(struct device *dev,
+	struct device *master_dev, void *data)
 {
-	struct cam_hw_info                *tfe_hw = NULL;
-	struct cam_hw_intf                *tfe_hw_intf = NULL;
-	struct cam_tfe_hw_core_info       *core_info = NULL;
-	int                                rc = 0;
+	struct cam_hw_info		  *tfe_hw = NULL;
+	struct cam_hw_intf		  *tfe_hw_intf = NULL;
+	struct cam_tfe_hw_core_info	  *core_info = NULL;
+	int				   rc = 0;
+	struct platform_device *pdev = to_platform_device(dev);
 
 	tfe_hw_intf = platform_get_drvdata(pdev);
 	if (!tfe_hw_intf) {
 		CAM_ERR(CAM_ISP, "Error! No data in pdev");
-		return -EINVAL;
+		return;
 	}
 
 	CAM_DBG(CAM_ISP, "type %d index %d",
@@ -149,14 +154,12 @@ int cam_tfe_remove(struct platform_device *pdev)
 	tfe_hw = tfe_hw_intf->hw_priv;
 	if (!tfe_hw) {
 		CAM_ERR(CAM_ISP, "Error! HW data is NULL");
-		rc = -ENODEV;
 		goto free_tfe_hw_intf;
 	}
 
 	core_info = (struct cam_tfe_hw_core_info *)tfe_hw->core_info;
 	if (!core_info) {
 		CAM_ERR(CAM_ISP, "Error! core data NULL");
-		rc = -EINVAL;
 		goto deinit_soc;
 	}
 
@@ -174,12 +177,33 @@ deinit_soc:
 	mutex_destroy(&tfe_hw->hw_mutex);
 	kfree(tfe_hw);
 
-	CAM_DBG(CAM_ISP, "TFE%d remove successful", tfe_hw_intf->hw_idx);
+	CAM_DBG(CAM_ISP, "TFE%d component unbound", tfe_hw_intf->hw_idx);
 
 free_tfe_hw_intf:
 	kfree(tfe_hw_intf);
+}
+
+const static struct component_ops cam_tfe_component_ops = {
+	.bind = cam_tfe_component_bind,
+	.unbind = cam_tfe_component_unbind,
+};
+
+int cam_tfe_probe(struct platform_device *pdev)
+{
+	int rc = 0;
+
+	CAM_DBG(CAM_ISP, "Adding TFE component");
+	rc = component_add(&pdev->dev, &cam_tfe_component_ops);
+	if (rc)
+		CAM_ERR(CAM_ISP, "failed to add component rc: %d", rc);
 
 	return rc;
+}
+
+int cam_tfe_remove(struct platform_device *pdev)
+{
+	component_del(&pdev->dev, &cam_tfe_component_ops);
+	return 0;
 }
 
 int cam_tfe_hw_init(struct cam_hw_intf **tfe_hw, uint32_t hw_idx)

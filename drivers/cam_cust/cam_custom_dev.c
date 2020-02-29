@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/delay.h>
@@ -20,6 +20,7 @@
 #include "cam_node.h"
 #include "cam_debug_util.h"
 #include "cam_smmu_api.h"
+#include "camera_main.h"
 
 static struct cam_custom_dev g_custom_dev;
 
@@ -92,34 +93,15 @@ static const struct v4l2_subdev_internal_ops cam_custom_subdev_internal_ops = {
 	.open = cam_custom_subdev_open,
 };
 
-static int cam_custom_dev_remove(struct platform_device *pdev)
-{
-	int rc = 0;
-	int i;
-
-	/* clean up resources */
-	for (i = 0; i < CAM_CUSTOM_HW_MAX_INSTANCES; i++) {
-		rc = cam_custom_dev_context_deinit(&g_custom_dev.ctx_custom[i]);
-		if (rc)
-			CAM_ERR(CAM_CUSTOM,
-				"Custom context %d deinit failed", i);
-	}
-
-	rc = cam_subdev_remove(&g_custom_dev.sd);
-	if (rc)
-		CAM_ERR(CAM_CUSTOM, "Unregister failed");
-
-	memset(&g_custom_dev, 0, sizeof(g_custom_dev));
-	return 0;
-}
-
-static int cam_custom_dev_probe(struct platform_device *pdev)
+static int cam_custom_component_bind(struct device *dev,
+	struct device *master_dev, void *data)
 {
 	int rc = -EINVAL;
 	int i;
 	struct cam_hw_mgr_intf         hw_mgr_intf;
-	struct cam_node               *node;
+	struct cam_node                *node;
 	int iommu_hdl = -1;
+	struct platform_device *pdev = to_platform_device(dev);
 
 	g_custom_dev.sd.internal_ops = &cam_custom_subdev_internal_ops;
 
@@ -163,7 +145,7 @@ static int cam_custom_dev_probe(struct platform_device *pdev)
 
 	mutex_init(&g_custom_dev.custom_dev_mutex);
 
-	CAM_DBG(CAM_CUSTOM, "Camera custom HW probe complete");
+	CAM_DBG(CAM_CUSTOM, "%s component bound successfully", pdev->name);
 
 	return 0;
 unregister:
@@ -172,8 +154,51 @@ err:
 	return rc;
 }
 
+static void cam_custom_component_unbind(struct device *dev,
+	struct device *master_dev, void *data)
+{
+	int rc = 0;
+	int i;
 
-static struct platform_driver custom_driver = {
+	/* clean up resources */
+	for (i = 0; i < CAM_CUSTOM_HW_MAX_INSTANCES; i++) {
+		rc = cam_custom_dev_context_deinit(&g_custom_dev.ctx_custom[i]);
+		if (rc)
+			CAM_ERR(CAM_CUSTOM,
+				"Custom context %d deinit failed", i);
+	}
+
+	rc = cam_subdev_remove(&g_custom_dev.sd);
+	if (rc)
+		CAM_ERR(CAM_CUSTOM, "Unregister failed");
+
+	memset(&g_custom_dev, 0, sizeof(g_custom_dev));
+}
+
+const static struct component_ops cam_custom_component_ops = {
+	.bind = cam_custom_component_bind,
+	.unbind = cam_custom_component_unbind,
+};
+
+static int cam_custom_dev_remove(struct platform_device *pdev)
+{
+	component_del(&pdev->dev, &cam_custom_component_ops);
+	return 0;
+}
+
+static int cam_custom_dev_probe(struct platform_device *pdev)
+{
+	int rc = 0;
+
+	CAM_DBG(CAM_CUSTOM, "Adding Custom HW component");
+	rc = component_add(&pdev->dev, &cam_custom_component_ops);
+	if (rc)
+		CAM_ERR(CAM_CUSTOM, "failed to add component rc: %d", rc);
+
+	return rc;
+}
+
+struct platform_driver custom_driver = {
 	.probe = cam_custom_dev_probe,
 	.remove = cam_custom_dev_remove,
 	.driver = {

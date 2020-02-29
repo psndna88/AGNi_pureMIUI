@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include "cam_cci_dev.h"
 #include "cam_req_mgr_dev.h"
 #include "cam_cci_soc.h"
 #include "cam_cci_core.h"
+#include "camera_main.h"
 
 #define CCI_MAX_DELAY 1000000
 
@@ -82,7 +83,9 @@ irqreturn_t cam_cci_irq(int irq_num, void *data)
 				false;
 			if (!cci_master_info->status)
 				complete(&cci_master_info->reset_complete);
-			cci_master_info->status = 0;
+
+			complete_all(&cci_master_info->rd_done);
+			complete_all(&cci_master_info->th_complete);
 		}
 		if (cci_dev->cci_master_info[MASTER_1].reset_pending == true) {
 			cci_master_info = &cci_dev->cci_master_info[MASTER_1];
@@ -90,7 +93,9 @@ irqreturn_t cam_cci_irq(int irq_num, void *data)
 				false;
 			if (!cci_master_info->status)
 				complete(&cci_master_info->reset_complete);
-			cci_master_info->status = 0;
+
+			complete_all(&cci_master_info->rd_done);
+			complete_all(&cci_master_info->th_complete);
 		}
 	}
 
@@ -223,9 +228,18 @@ irqreturn_t cam_cci_irq(int irq_num, void *data)
 	}
 	if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M0_ERROR_BMSK) {
 		cci_dev->cci_master_info[MASTER_0].status = -EINVAL;
-		if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M0_NACK_ERROR_BMSK)
-			CAM_ERR(CAM_CCI, "Base:%pK, M0 NACK ERROR: 0x%x",
+		if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M0_Q0_NACK_ERROR_BMSK) {
+			CAM_ERR(CAM_CCI, "Base:%pK, M0_Q0 NACK ERROR: 0x%x",
 				base, irq_status0);
+			complete_all(&cci_dev->cci_master_info[MASTER_0]
+				.report_q[QUEUE_0]);
+		}
+		if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M0_Q1_NACK_ERROR_BMSK) {
+			CAM_ERR(CAM_CCI, "Base:%pK, M0_Q1 NACK ERROR: 0x%x",
+				base, irq_status0);
+			complete_all(&cci_dev->cci_master_info[MASTER_0]
+			.report_q[QUEUE_1]);
+		}
 		if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M0_Q0Q1_ERROR_BMSK)
 			CAM_ERR(CAM_CCI,
 			"Base:%pK, M0 QUEUE_OVER/UNDER_FLOW OR CMD ERR: 0x%x",
@@ -234,22 +248,35 @@ irqreturn_t cam_cci_irq(int irq_num, void *data)
 			CAM_ERR(CAM_CCI,
 				"Base: %pK, M0 RD_OVER/UNDER_FLOW ERROR: 0x%x",
 				base, irq_status0);
-		cam_io_w_mb(CCI_M0_HALT_REQ_RMSK, base + CCI_HALT_REQ_ADDR);
+
+		cci_dev->cci_master_info[MASTER_0].reset_pending = true;
+		cam_io_w_mb(CCI_M0_RESET_RMSK, base + CCI_RESET_CMD_ADDR);
 	}
 	if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M1_ERROR_BMSK) {
 		cci_dev->cci_master_info[MASTER_1].status = -EINVAL;
-		if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M0_NACK_ERROR_BMSK)
-			CAM_ERR(CAM_CCI, "Base:%pK, M1 NACK ERROR: 0x%x",
+		if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M1_Q0_NACK_ERROR_BMSK) {
+			CAM_ERR(CAM_CCI, "Base:%pK, M1_Q0 NACK ERROR: 0x%x",
 				base, irq_status0);
-		if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M0_Q0Q1_ERROR_BMSK)
+			complete_all(&cci_dev->cci_master_info[MASTER_1]
+			.report_q[QUEUE_0]);
+		}
+		if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M1_Q1_NACK_ERROR_BMSK) {
+			CAM_ERR(CAM_CCI, "Base:%pK, M1_Q1 NACK ERROR: 0x%x",
+				base, irq_status0);
+			complete_all(&cci_dev->cci_master_info[MASTER_1]
+			.report_q[QUEUE_1]);
+		}
+		if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M1_Q0Q1_ERROR_BMSK)
 			CAM_ERR(CAM_CCI,
 			"Base:%pK, M1 QUEUE_OVER_UNDER_FLOW OR CMD ERROR:0x%x",
 				base, irq_status0);
-		if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M0_RD_ERROR_BMSK)
+		if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M1_RD_ERROR_BMSK)
 			CAM_ERR(CAM_CCI,
 				"Base:%pK, M1 RD_OVER/UNDER_FLOW ERROR: 0x%x",
 				base, irq_status0);
-		cam_io_w_mb(CCI_M1_HALT_REQ_RMSK, base + CCI_HALT_REQ_ADDR);
+
+		cci_dev->cci_master_info[MASTER_1].reset_pending = true;
+		cam_io_w_mb(CCI_M1_RESET_RMSK, base + CCI_RESET_CMD_ADDR);
 	}
 
 	cam_io_w_mb(irq_status0, base + CCI_IRQ_CLEAR_0_ADDR);
@@ -340,12 +367,14 @@ static const struct v4l2_subdev_ops cci_subdev_ops = {
 
 static const struct v4l2_subdev_internal_ops cci_subdev_intern_ops;
 
-static int cam_cci_platform_probe(struct platform_device *pdev)
+static int cam_cci_component_bind(struct device *dev,
+	struct device *master_dev, void *data)
 {
 	struct cam_cpas_register_params cpas_parms;
 	struct cci_device *new_cci_dev;
 	struct cam_hw_soc_info *soc_info = NULL;
 	int rc = 0;
+	struct platform_device *pdev = to_platform_device(dev);
 
 	new_cci_dev = kzalloc(sizeof(struct cci_device),
 		GFP_KERNEL);
@@ -409,18 +438,22 @@ static int cam_cci_platform_probe(struct platform_device *pdev)
 		CAM_ERR(CAM_CCI, "CPAS registration failed");
 		goto cci_no_resource;
 	}
+
 	CAM_DBG(CAM_CCI, "CPAS registration successful handle=%d",
 		cpas_parms.client_handle);
 	new_cci_dev->cpas_handle = cpas_parms.client_handle;
-
+	CAM_DBG(CAM_CCI, "Component bound successfully");
 	return rc;
 cci_no_resource:
 	kfree(new_cci_dev);
 	return rc;
 }
 
-static int cam_cci_device_remove(struct platform_device *pdev)
+static void cam_cci_component_unbind(struct device *dev,
+	struct device *master_dev, void *data)
 {
+	struct platform_device *pdev = to_platform_device(dev);
+
 	struct v4l2_subdev *subdev = platform_get_drvdata(pdev);
 	struct cci_device *cci_dev =
 		v4l2_get_subdevdata(subdev);
@@ -428,6 +461,28 @@ static int cam_cci_device_remove(struct platform_device *pdev)
 	cam_cpas_unregister_client(cci_dev->cpas_handle);
 	cam_cci_soc_remove(pdev, cci_dev);
 	devm_kfree(&pdev->dev, cci_dev);
+}
+
+const static struct component_ops cam_cci_component_ops = {
+	.bind = cam_cci_component_bind,
+	.unbind = cam_cci_component_unbind,
+};
+
+static int cam_cci_platform_probe(struct platform_device *pdev)
+{
+	int rc = 0;
+
+	CAM_DBG(CAM_CCI, "Adding CCI component");
+	rc = component_add(&pdev->dev, &cam_cci_component_ops);
+	if (rc)
+		CAM_ERR(CAM_CCI, "failed to add component rc: %d", rc);
+
+	return rc;
+}
+
+static int cam_cci_device_remove(struct platform_device *pdev)
+{
+	component_del(&pdev->dev, &cam_cci_component_ops);
 	return 0;
 }
 
@@ -438,7 +493,7 @@ static const struct of_device_id cam_cci_dt_match[] = {
 
 MODULE_DEVICE_TABLE(of, cam_cci_dt_match);
 
-static struct platform_driver cci_driver = {
+struct platform_driver cci_driver = {
 	.probe = cam_cci_platform_probe,
 	.remove = cam_cci_device_remove,
 	.driver = {

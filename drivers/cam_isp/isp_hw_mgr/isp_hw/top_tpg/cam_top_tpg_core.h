@@ -3,12 +3,15 @@
  * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  */
 
-#ifndef _CAM_TOP_TPG_HW_H_
-#define _CAM_TOP_TPG_HW_H_
+#ifndef _CAM_TOP_TPG_CORE_H_
+#define _CAM_TOP_TPG_CORE_H_
 
 #include "cam_hw.h"
 #include "cam_top_tpg_hw_intf.h"
 #include "cam_top_tpg_soc.h"
+
+#define CAM_TOP_TPG_VERSION_1             0x10000001
+#define CAM_TOP_TPG_VERSION_2             0x10000002
 
 enum cam_top_tpg_encode_format {
 	CAM_TOP_TPG_ENCODE_FORMAT_RAW6,
@@ -18,48 +21,6 @@ enum cam_top_tpg_encode_format {
 	CAM_TOP_TPG_ENCODE_FORMAT_RAW14,
 	CAM_TOP_TPG_ENCODE_FORMAT_RAW16,
 	CAM_TOP_TPG_ENCODE_FORMAT_MAX,
-};
-
-struct cam_top_tpg_reg_offset {
-	uint32_t tpg_hw_version;
-	uint32_t tpg_hw_status;
-	uint32_t tpg_ctrl;
-	uint32_t tpg_vc_cfg0;
-	uint32_t tpg_vc_cfg1;
-	uint32_t tpg_lfsr_seed;
-	uint32_t tpg_dt_0_cfg_0;
-	uint32_t tpg_dt_1_cfg_0;
-	uint32_t tpg_dt_2_cfg_0;
-	uint32_t tpg_dt_3_cfg_0;
-	uint32_t tpg_dt_0_cfg_1;
-	uint32_t tpg_dt_1_cfg_1;
-	uint32_t tpg_dt_2_cfg_1;
-	uint32_t tpg_dt_3_cfg_1;
-	uint32_t tpg_dt_0_cfg_2;
-	uint32_t tpg_dt_1_cfg_2;
-	uint32_t tpg_dt_2_cfg_2;
-	uint32_t tpg_dt_3_cfg_2;
-	uint32_t tpg_color_bar_cfg;
-	uint32_t tpg_common_gen_cfg;
-	uint32_t tpg_vbi_cfg;
-	uint32_t tpg_test_bus_crtl;
-	uint32_t tpg_spare;
-	/* configurations */
-	uint32_t major_version;
-	uint32_t minor_version;
-	uint32_t version_incr;
-	uint32_t tpg_en_shift_val;
-	uint32_t tpg_phy_sel_shift_val;
-	uint32_t tpg_num_active_lines_shift;
-	uint32_t tpg_fe_pkt_en_shift;
-	uint32_t tpg_fs_pkt_en_shift;
-	uint32_t tpg_line_interleaving_mode_shift;
-	uint32_t tpg_num_dts_shift_val;
-	uint32_t tpg_v_blank_cnt_shift;
-	uint32_t tpg_dt_encode_format_shift;
-	uint32_t tpg_payload_mode_color;
-	uint32_t tpg_split_en_shift;
-	uint32_t top_mux_reg_offset;
 };
 
 /**
@@ -72,7 +33,7 @@ struct cam_top_tpg_reg_offset {
  *
  */
 struct cam_top_tpg_hw_info {
-	const struct cam_top_tpg_reg_offset    *tpg_reg;
+	void                                   *tpg_reg;
 	uint32_t                                hw_dts_version;
 	uint32_t                                csid_max_clk;
 	uint32_t                                phy_max_clk;
@@ -86,15 +47,24 @@ struct cam_top_tpg_hw_info {
  * @data_type:       data type(dt) value
  * @encode_format:   encode format for this data type
  * @payload_mode     payload data, such color bar, color box etc
+ * @bayer_pattern:   Bayer patter information
+ * @rotate_period:   period value for repeating color, 0 for no rotate
+ * @split_en:        enables split mode
+ * @unicolor_en:     enables unicolor value
+ * @unicolor_sel:    select color used in unicolor mode
  *
  */
-
 struct cam_top_tpg_dt_cfg {
 	uint32_t                               frame_width;
 	uint32_t                               frame_height;
 	uint32_t                               data_type;
 	uint32_t                               encode_format;
 	uint32_t                               payload_mode;
+	uint32_t                               bayer_pattern;
+	uint32_t                               rotate_period;
+	uint32_t                               split_en;
+	uint32_t                               unicolor_en;
+	uint32_t                               unicolor_sel;
 };
 
 /**
@@ -107,6 +77,7 @@ struct cam_top_tpg_dt_cfg {
  * @h_blank_count:   vertical blanking count value
  * @vbi_cnt:         vbi count
  * @num_active_dts:  number of active dts need to configure
+ * @num_frames:      number of output frames
  * @dt_cfg:          dt configuration values
  *
  */
@@ -119,6 +90,7 @@ struct cam_top_tpg_cfg {
 	uint32_t                        h_blank_count;
 	uint32_t                        vbi_cnt;
 	uint32_t                        num_active_dts;
+	uint32_t                        num_frames;
 	struct cam_top_tpg_dt_cfg       dt_cfg[4];
 };
 
@@ -145,9 +117,9 @@ struct cam_top_tpg_hw {
 	struct completion                tpg_complete;
 };
 
-int cam_top_tpg_hw_probe_init(struct cam_hw_intf  *tpg_hw_intf,
+int cam_top_tpg_probe_init(struct cam_hw_intf *tpg_hw_intf,
 	uint32_t tpg_idx);
 
-int cam_top_tpg_hw_deinit(struct cam_top_tpg_hw *top_tpg_hw);
+int cam_top_tpg_deinit(struct cam_top_tpg_hw *top_tpg_hw);
 
-#endif /* _CAM_TOP_TPG_HW_H_ */
+#endif /* _CAM_TOP_TPG_CORE_H_ */

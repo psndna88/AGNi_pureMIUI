@@ -12,6 +12,7 @@
 #include "cam_sync_util.h"
 #include "cam_debug_util.h"
 #include "cam_common_util.h"
+#include "camera_main.h"
 
 #ifdef CONFIG_MSM_GLOBAL_SYNX
 #include <synx_api.h>
@@ -1016,10 +1017,12 @@ static void cam_sync_register_synx_bind_ops(void)
 }
 #endif
 
-static int cam_sync_probe(struct platform_device *pdev)
+static int cam_sync_component_bind(struct device *dev,
+	struct device *master_dev, void *data)
 {
 	int rc;
 	int idx;
+	struct platform_device *pdev = to_platform_device(dev);
 
 	sync_dev = kzalloc(sizeof(*sync_dev), GFP_KERNEL);
 	if (!sync_dev)
@@ -1091,6 +1094,7 @@ static int cam_sync_probe(struct platform_device *pdev)
 #ifdef CONFIG_MSM_GLOBAL_SYNX
 	cam_sync_register_synx_bind_ops();
 #endif
+	CAM_DBG(CAM_SYNC, "Component bound successfully");
 	return rc;
 
 v4l2_fail:
@@ -1105,7 +1109,8 @@ vdev_fail:
 	return rc;
 }
 
-static int cam_sync_remove(struct platform_device *pdev)
+static void cam_sync_component_unbind(struct device *dev,
+	struct device *master_dev, void *data)
 {
 	int i;
 
@@ -1117,9 +1122,31 @@ static int cam_sync_remove(struct platform_device *pdev)
 
 	for (i = 0; i < CAM_SYNC_MAX_OBJS; i++)
 		spin_lock_init(&sync_dev->row_spinlocks[i]);
+
 	kfree(sync_dev);
 	sync_dev = NULL;
+}
 
+const static struct component_ops cam_sync_component_ops = {
+	.bind = cam_sync_component_bind,
+	.unbind = cam_sync_component_unbind,
+};
+
+static int cam_sync_probe(struct platform_device *pdev)
+{
+	int rc = 0;
+
+	CAM_DBG(CAM_SYNC, "Adding Sync component");
+	rc = component_add(&pdev->dev, &cam_sync_component_ops);
+	if (rc)
+		CAM_ERR(CAM_SYNC, "failed to add component rc: %d", rc);
+
+	return rc;
+}
+
+static int cam_sync_remove(struct platform_device *pdev)
+{
+	component_del(&pdev->dev, &cam_sync_component_ops);
 	return 0;
 }
 
@@ -1130,7 +1157,7 @@ static const struct of_device_id cam_sync_dt_match[] = {
 
 MODULE_DEVICE_TABLE(of, cam_sync_dt_match);
 
-static struct platform_driver cam_sync_driver = {
+struct platform_driver cam_sync_driver = {
 	.probe = cam_sync_probe,
 	.remove = cam_sync_remove,
 	.driver = {

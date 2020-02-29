@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -17,6 +17,7 @@
 #include "cam_icp_hw_mgr_intf.h"
 #include "cam_cpas_api.h"
 #include "cam_debug_util.h"
+#include "camera_main.h"
 
 struct a5_soc_info cam_a5_soc_info;
 EXPORT_SYMBOL(cam_a5_soc_info);
@@ -100,7 +101,8 @@ int cam_a5_register_cpas(struct cam_hw_soc_info *soc_info,
 	return rc;
 }
 
-int cam_a5_probe(struct platform_device *pdev)
+static int cam_a5_component_bind(struct device *dev,
+	struct device *master_dev, void *data)
 {
 	int rc = 0;
 	struct cam_hw_info *a5_dev = NULL;
@@ -108,6 +110,7 @@ int cam_a5_probe(struct platform_device *pdev)
 	const struct of_device_id *match_dev = NULL;
 	struct cam_a5_device_core_info *core_info = NULL;
 	struct cam_a5_device_hw_info *hw_info = NULL;
+	struct platform_device *pdev = to_platform_device(dev);
 
 	a5_dev_intf = kzalloc(sizeof(struct cam_hw_intf), GFP_KERNEL);
 	if (!a5_dev_intf)
@@ -177,7 +180,7 @@ int cam_a5_probe(struct platform_device *pdev)
 	spin_lock_init(&a5_dev->hw_lock);
 	init_completion(&a5_dev->hw_complete);
 
-	CAM_DBG(CAM_ICP, "A5%d probe successful",
+	CAM_DBG(CAM_ICP, "A5:%d component bound successfully",
 		a5_dev_intf->hw_idx);
 	return 0;
 
@@ -191,6 +194,32 @@ a5_dev_alloc_failure:
 	kfree(a5_dev_intf);
 
 	return rc;
+
+}
+
+static void cam_a5_component_unbind(struct device *dev,
+	struct device *master_dev, void *data)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+
+	CAM_DBG(CAM_ICP, "Unbinding component: %s", pdev->name);
+}
+
+const static struct component_ops cam_a5_component_ops = {
+	.bind = cam_a5_component_bind,
+	.unbind = cam_a5_component_unbind,
+};
+
+int cam_a5_probe(struct platform_device *pdev)
+{
+	int rc = 0;
+
+	CAM_DBG(CAM_ICP, "Adding A5 component");
+	rc = component_add(&pdev->dev, &cam_a5_component_ops);
+	if (rc)
+		CAM_ERR(CAM_ICP, "failed to add component rc: %d", rc);
+
+	return rc;
 }
 
 static const struct of_device_id cam_a5_dt_match[] = {
@@ -202,7 +231,7 @@ static const struct of_device_id cam_a5_dt_match[] = {
 };
 MODULE_DEVICE_TABLE(of, cam_a5_dt_match);
 
-static struct platform_driver cam_a5_driver = {
+struct platform_driver cam_a5_driver = {
 	.probe = cam_a5_probe,
 	.driver = {
 		.name = "cam-a5",

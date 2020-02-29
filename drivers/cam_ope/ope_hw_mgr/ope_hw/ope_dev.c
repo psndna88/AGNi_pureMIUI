@@ -19,6 +19,7 @@
 #include "cam_debug_util.h"
 #include "ope_hw_100.h"
 #include "ope_dev_intf.h"
+#include "camera_main.h"
 
 static struct cam_ope_device_hw_info ope_hw_info;
 static struct ope_dev_soc ope_soc_info;
@@ -105,7 +106,8 @@ int cam_ope_register_cpas(struct cam_hw_soc_info *soc_info,
 	return rc;
 }
 
-int cam_ope_probe(struct platform_device *pdev)
+static int cam_ope_component_bind(struct device *dev,
+	struct device *master_dev, void *data)
 {
 	struct cam_hw_intf                *ope_dev_intf = NULL;
 	struct cam_hw_info                *ope_dev = NULL;
@@ -115,6 +117,7 @@ int cam_ope_probe(struct platform_device *pdev)
 	uint32_t hw_idx;
 	struct cam_ope_dev_probe ope_probe;
 	struct cam_ope_cpas_vote cpas_vote;
+	struct platform_device *pdev = to_platform_device(dev);
 
 	of_property_read_u32(pdev->dev.of_node,
 		"cell-index", &hw_idx);
@@ -225,7 +228,7 @@ int cam_ope_probe(struct platform_device *pdev)
 	spin_lock_init(&ope_dev->hw_lock);
 	init_completion(&ope_dev->hw_complete);
 
-	CAM_DBG(CAM_OPE, "OPE%d probe successful",
+	CAM_DBG(CAM_OPE, "OPE:%d component bound successfully"
 		ope_dev_intf->hw_idx);
 	return rc;
 
@@ -242,6 +245,32 @@ ope_dev_alloc_failed:
 	return rc;
 }
 
+static void cam_ope_component_unbind(struct device *dev,
+	struct device *master_dev, void *data)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+
+	CAM_DBG(CAM_OPE, "Unbinding component: %s", pdev->name);
+}
+
+
+const static struct component_ops cam_ope_component_ops = {
+	.bind = cam_ope_component_bind,
+	.unbind = cam_ope_component_unbind,
+};
+
+int cam_ope_probe(struct platform_device *pdev)
+{
+	int rc = 0;
+
+	CAM_DBG(CAM_OPE, "Adding OPE component");
+	rc = component_add(&pdev->dev, &cam_vfe_component_ops);
+	if (rc)
+		CAM_ERR(CAM_OPE, "failed to add component rc: %d", rc);
+
+	return rc;
+}
+
 static const struct of_device_id cam_ope_dt_match[] = {
 	{
 		.compatible = "qcom,ope",
@@ -251,7 +280,7 @@ static const struct of_device_id cam_ope_dt_match[] = {
 };
 MODULE_DEVICE_TABLE(of, cam_ope_dt_match);
 
-static struct platform_driver cam_ope_driver = {
+struct platform_driver cam_ope_driver = {
 	.probe = cam_ope_probe,
 	.driver = {
 		.name = "ope",

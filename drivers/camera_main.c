@@ -50,9 +50,10 @@
 
 #include "ope_dev_intf.h"
 
-#include "cam_top_tpg_v1.h"
+#include "cam_top_tpg.h"
 #include "cam_tfe_dev.h"
 #include "cam_tfe_csid530.h"
+#include "camera_main.h"
 
 struct camera_submodule_component {
 	int (*init)(void);
@@ -76,6 +77,7 @@ static const struct camera_submodule_component camera_base[] = {
 
 static const struct camera_submodule_component camera_isp[] = {
 #ifdef CONFIG_SPECTRA_ISP
+	{&cam_top_tpg_init_module, &cam_top_tpg_exit_module},
 	{&cam_ife_csid17x_init_module, &cam_ife_csid17x_exit_module},
 	{&cam_ife_csid_lite_init_module, &cam_ife_csid_lite_exit_module},
 	{&cam_vfe_init_module, &cam_vfe_exit_module},
@@ -85,7 +87,7 @@ static const struct camera_submodule_component camera_isp[] = {
 
 static const struct camera_submodule_component camera_tfe[] = {
 #if IS_ENABLED(CONFIG_SPECTRA_TFE)
-	{&cam_top_tpg_v1_init_module, &cam_top_tpg_v1_exit_module},
+	{&cam_top_tpg_init_module, &cam_top_tpg_exit_module},
 	{&cam_tfe_init_module, &cam_tfe_exit_module},
 	{&cam_tfe_csid530_init_module, &cam_tfe_csid530_exit_module},
 #endif
@@ -204,6 +206,111 @@ static const struct camera_submodule submodule_table[] = {
 		.component = camera_custom,
 	}
 };
+
+/*
+ * Drivers to be bound by component framework in this order with
+ * CRM as master
+ */
+static struct platform_driver *const cam_component_drivers[] = {
+/* BASE */
+	&cam_sync_driver,
+	&cam_smmu_driver,
+	&cam_cpas_driver,
+	&cam_cdm_intf_driver,
+	&cam_hw_cdm_driver,
+#ifdef CONFIG_SPECTRA_ISP
+	&cam_top_tpg_driver,
+	&cam_ife_csid17x_driver,
+	&cam_ife_csid_lite_driver,
+	&cam_vfe_driver,
+	&isp_driver,
+#endif
+#ifdef CONFIG_SPECTRA_TFE
+	&cam_top_tpg_driver,
+	&cam_tfe_driver,
+	&cam_tfe_csid530_driver,
+#endif
+#ifdef CONFIG_SPECTRA_SENSOR
+	&cam_res_mgr_driver,
+	&cci_driver,
+	&csiphy_driver,
+	&cam_actuator_platform_driver,
+	&cam_sensor_platform_driver,
+	&cam_eeprom_platform_driver,
+	&cam_ois_platform_driver,
+#if IS_REACHABLE(CONFIG_LEDS_QPNP_FLASH_V2)
+	&cam_flash_platform_driver,
+#endif
+#endif
+#ifdef CONFIG_SPECTRA_ICP
+	&cam_a5_driver,
+	&cam_ipe_driver,
+	&cam_bps_driver,
+	&cam_icp_driver,
+#endif
+#ifdef CONFIG_SPECTRA_OPE
+	&cam_ope_driver,
+	&cam_ope_subdev_driver,
+#endif
+#ifdef CONFIG_SPECTRA_JPEG
+	&cam_jpeg_enc_driver,
+	&cam_jpeg_dma_driver,
+	&jpeg_driver,
+#endif
+#ifdef CONFIG_SPECTRA_FD
+	&cam_fd_hw_driver,
+	&cam_fd_driver,
+#endif
+#ifdef CONFIG_SPECTRA_LRME
+	&cam_lrme_hw_driver,
+	&cam_lrme_driver,
+#endif
+#ifdef CONFIG_SPECTRA_CUSTOM
+	&cam_custom_hw_sub_mod_driver,
+	&cam_custom_csid_driver,
+	&custom_driver,
+#endif
+};
+
+/* Callback to compare device from match list before adding as component */
+static int camera_component_compare_dev(struct device *dev, void *data)
+{
+	return dev == data;
+}
+
+/* Add component matches to list for master of aggregate driver */
+int camera_component_match_add_drivers(struct device *master_dev,
+	struct component_match **match_list)
+{
+	int i, rc = 0;
+	struct platform_device *pdev = NULL;
+
+	if (!master_dev || !match_list) {
+		CAM_ERR(CAM_UTIL, "Invalid parameters for component match add");
+		rc = -EINVAL;
+		goto end;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(cam_component_drivers); i++) {
+		struct device_driver *drv = &cam_component_drivers[i]->driver;
+		struct device *start_dev = NULL, *match_dev;
+
+		while ((match_dev = bus_find_device(&platform_bus_type,
+			start_dev, drv, (void *)platform_bus_type.match))) {
+			put_device(start_dev);
+			pdev = to_platform_device(match_dev);
+			CAM_DBG(CAM_UTIL, "Adding matched component:%s",
+				pdev->name);
+			component_match_add(master_dev, match_list,
+				camera_component_compare_dev, match_dev);
+			start_dev = match_dev;
+		}
+		put_device(start_dev);
+	}
+
+end:
+	return rc;
+}
 
 static int camera_verify_submodules(void)
 {

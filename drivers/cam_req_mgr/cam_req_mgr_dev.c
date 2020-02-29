@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -24,6 +24,7 @@
 #include "cam_mem_mgr.h"
 #include "cam_debug_util.h"
 #include "cam_common_util.h"
+#include "camera_main.h"
 
 #define CAM_REQ_MGR_EVENT_MAX 30
 
@@ -523,6 +524,30 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			rc = -EINVAL;
 		}
 		break;
+	case CAM_REQ_MGR_REQUEST_DUMP: {
+		struct cam_dump_req_cmd cmd;
+
+		if (k_ioctl->size != sizeof(cmd))
+			return -EINVAL;
+
+		if (copy_from_user(&cmd,
+			u64_to_user_ptr(k_ioctl->handle),
+			sizeof(struct cam_dump_req_cmd))) {
+			rc = -EFAULT;
+			break;
+		}
+		rc = cam_req_mgr_dump_request(&cmd);
+		if (rc) {
+			CAM_ERR(CAM_CORE, "dump fail for dev %d req %llu rc %d",
+				cmd.dev_handle, cmd.issue_req_id, rc);
+			break;
+		}
+		if (copy_to_user(
+			u64_to_user_ptr(k_ioctl->handle),
+			&cmd, sizeof(struct cam_dump_req_cmd)))
+			rc = -EFAULT;
+		}
+		break;
 	default:
 		return -ENOIOCTLCMD;
 	}
@@ -689,28 +714,16 @@ int cam_unregister_subdev(struct cam_subdev *csd)
 }
 EXPORT_SYMBOL(cam_unregister_subdev);
 
-static int cam_req_mgr_remove(struct platform_device *pdev)
+static int cam_req_mgr_component_master_bind(struct device *dev)
 {
-	cam_req_mgr_core_device_deinit();
-	cam_req_mgr_util_deinit();
-	cam_media_device_cleanup();
-	cam_video_device_cleanup();
-	cam_v4l2_device_cleanup();
-	mutex_destroy(&g_dev.dev_lock);
-	g_dev.state = false;
+	int rc = 0;
 
-	return 0;
-}
-
-static int cam_req_mgr_probe(struct platform_device *pdev)
-{
-	int rc;
-
-	rc = cam_v4l2_device_setup(&pdev->dev);
+	CAM_DBG(CAM_CRM, "Master bind called");
+	rc = cam_v4l2_device_setup(dev);
 	if (rc)
 		return rc;
 
-	rc = cam_media_device_setup(&pdev->dev);
+	rc = cam_media_device_setup(dev);
 	if (rc)
 		goto media_setup_fail;
 
@@ -749,6 +762,16 @@ static int cam_req_mgr_probe(struct platform_device *pdev)
 	}
 
 	g_dev.state = true;
+
+	CAM_DBG(CAM_CRM, "Binding all slave components");
+	rc = component_bind_all(dev, NULL);
+	if (rc) {
+		CAM_ERR(CAM_CRM,
+			"Error in binding all components rc: %d, Camera initialization failed!",
+			rc);
+		goto req_mgr_core_fail;
+	}
+
 	return rc;
 
 req_mgr_core_fail:
@@ -764,13 +787,67 @@ media_setup_fail:
 	return rc;
 }
 
+static void cam_req_mgr_component_master_unbind(struct device *dev)
+{
+	/* Unbinding all slave components first */
+	component_unbind_all(dev, NULL);
+
+	/* Now proceed with unbinding master */
+	cam_req_mgr_core_device_deinit();
+	cam_req_mgr_util_deinit();
+	cam_media_device_cleanup();
+	cam_video_device_cleanup();
+	cam_v4l2_device_cleanup();
+	mutex_destroy(&g_dev.dev_lock);
+	g_dev.state = false;
+}
+
+static const struct component_master_ops cam_req_mgr_component_master_ops = {
+	.bind = cam_req_mgr_component_master_bind,
+	.unbind = cam_req_mgr_component_master_unbind,
+};
+
+static int cam_req_mgr_remove(struct platform_device *pdev)
+{
+	component_master_del(&pdev->dev, &cam_req_mgr_component_master_ops);
+	return 0;
+}
+
+static int cam_req_mgr_probe(struct platform_device *pdev)
+{
+	int rc = 0;
+	struct component_match *match_list = NULL;
+	struct device *dev = &pdev->dev;
+
+	rc = camera_component_match_add_drivers(dev, &match_list);
+	if (rc) {
+		CAM_ERR(CAM_CRM,
+			"Unable to match components, probe failed rc: %d",
+			rc);
+		goto end;
+	}
+
+	/* Supply match_list to master for handing over control */
+	rc = component_master_add_with_match(dev,
+		&cam_req_mgr_component_master_ops, match_list);
+	if (rc) {
+		CAM_ERR(CAM_CRM,
+			"Unable to add master, probe failed rc: %d",
+			rc);
+		goto end;
+	}
+
+end:
+	return rc;
+}
+
 static const struct of_device_id cam_req_mgr_dt_match[] = {
 	{.compatible = "qcom,cam-req-mgr"},
 	{}
 };
 MODULE_DEVICE_TABLE(of, cam_req_mgr_dt_match);
 
-static struct platform_driver cam_req_mgr_driver = {
+struct platform_driver cam_req_mgr_driver = {
 	.probe = cam_req_mgr_probe,
 	.remove = cam_req_mgr_remove,
 	.driver = {

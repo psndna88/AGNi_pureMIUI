@@ -140,7 +140,9 @@ static int cam_tfe_mgr_handle_reg_dump(struct cam_tfe_hw_mgr_ctx *ctx,
 			rc = cam_soc_util_reg_dump_to_cmd_buf(ctx,
 				&reg_dump_buf_desc[i],
 				ctx->applied_req_id,
-				cam_tfe_mgr_regspace_data_cb);
+				cam_tfe_mgr_regspace_data_cb,
+				NULL,
+				false);
 			if (rc) {
 				CAM_ERR(CAM_ISP,
 					"Reg dump failed at idx: %d, rc: %d req_id: %llu meta type: %u",
@@ -1348,7 +1350,7 @@ static int cam_tfe_hw_mgr_acquire_tpg(
 	uint32_t i, j = 0;
 	struct cam_tfe_hw_mgr                        *tfe_hw_mgr;
 	struct cam_hw_intf                           *hw_intf;
-	struct cam_top_tpg_hw_reserve_resource_args   tpg_reserve;
+	struct cam_top_tpg_ver1_reserve_args          tpg_reserve;
 
 	tfe_hw_mgr = tfe_ctx->hw_mgr;
 
@@ -3807,6 +3809,7 @@ static int cam_tfe_mgr_prepare_hw_update(void *hw_mgr_priv,
 	uint32_t                                 i;
 	bool                                     fill_fence = true;
 	struct cam_isp_prepare_hw_update_data   *prepare_hw_data;
+	struct cam_isp_frame_header_info         frame_header_info;
 
 	if (!hw_mgr_priv || !prepare_hw_update_args) {
 		CAM_ERR(CAM_ISP, "Invalid args");
@@ -3884,13 +3887,18 @@ static int cam_tfe_mgr_prepare_hw_update(void *hw_mgr_priv,
 			}
 		}
 
+		memset(&frame_header_info, 0,
+			sizeof(struct cam_isp_frame_header_info));
+		frame_header_info.frame_header_enable = false;
+
 		/* get IO buffers */
 		rc = cam_isp_add_io_buffers(hw_mgr->mgr_common.img_iommu_hdl,
 			hw_mgr->mgr_common.img_iommu_hdl_secure,
 			prepare, ctx->base[i].idx,
 			&kmd_buf, ctx->res_list_tfe_out,
 			NULL,
-			CAM_TFE_HW_OUT_RES_MAX, fill_fence);
+			CAM_TFE_HW_OUT_RES_MAX, fill_fence,
+			&frame_header_info);
 
 		if (rc) {
 			CAM_ERR(CAM_ISP,

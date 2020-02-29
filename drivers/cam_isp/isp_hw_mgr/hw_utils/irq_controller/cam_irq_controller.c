@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/slab.h>
@@ -695,8 +695,9 @@ irqreturn_t cam_irq_controller_handle_irq(int irq_num, void *priv)
 	if (!controller)
 		return IRQ_NONE;
 
-	CAM_DBG(CAM_IRQ_CTRL, "locking controller %pK name %s lock %pK",
-		controller, controller->name, &controller->lock);
+	CAM_DBG(CAM_IRQ_CTRL,
+		"Locking: %s IRQ Controller: [%pK], lock handle: %pK",
+		controller->name, controller, &controller->lock);
 	spin_lock(&controller->lock);
 	for (i = 0; i < controller->num_registers; i++) {
 		irq_register = &controller->irq_register_arr[i];
@@ -743,8 +744,9 @@ irqreturn_t cam_irq_controller_handle_irq(int irq_num, void *priv)
 		}
 	}
 	spin_unlock(&controller->lock);
-	CAM_DBG(CAM_IRQ_CTRL, "unlocked controller %pK name %s lock %pK",
-		controller, controller->name, &controller->lock);
+	CAM_DBG(CAM_IRQ_CTRL,
+		"Unlocked: %s IRQ Controller: %pK, lock handle: %pK",
+		controller->name, controller, &controller->lock);
 
 	return IRQ_HANDLED;
 }

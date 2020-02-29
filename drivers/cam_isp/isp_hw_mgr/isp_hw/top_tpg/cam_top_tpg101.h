@@ -3,12 +3,13 @@
  * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  */
 
-#ifndef _CAM_TOP_TPG_V1_H_
-#define _CAM_TOP_TPG_V1_H_
+#ifndef _CAM_TOP_TPG101_H_
+#define _CAM_TOP_TPG101_H_
 
+#include "cam_top_tpg_ver1.h"
 #include "cam_top_tpg_core.h"
 
-static struct cam_top_tpg_reg_offset   cam_top_tpg_v1_reg_offset = {
+static struct cam_top_tpg_ver1_reg_offset cam_top_tpg101_reg = {
 	.tpg_hw_version = 0x0,
 	.tpg_hw_status = 0x4,
 	.tpg_ctrl = 0x60,
@@ -50,7 +51,11 @@ static struct cam_top_tpg_reg_offset   cam_top_tpg_v1_reg_offset = {
 	.top_mux_reg_offset = 0x1C,
 };
 
-int cam_top_tpg_v1_init_module(void);
-void cam_top_tpg_v1_exit_module(void);
+struct cam_top_tpg_hw_info cam_top_tpg101_hw_info = {
+	.tpg_reg = &cam_top_tpg101_reg,
+	.hw_dts_version = CAM_TOP_TPG_VERSION_1,
+	.csid_max_clk = 426400000,
+	.phy_max_clk = 384000000,
+};
 
-#endif /*_CAM_TOP_TPG_V1_H_ */
+#endif /* _CAM_TOP_TPG101_H_ */

@@ -8,6 +8,7 @@
 #include "cam_tfe_hw_intf.h"
 #include "cam_tfe_core.h"
 #include "cam_tfe_dev.h"
+#include "camera_main.h"
 
 static const struct of_device_id cam_tfe_dt_match[] = {
 	{
@@ -18,7 +19,7 @@ static const struct of_device_id cam_tfe_dt_match[] = {
 };
 MODULE_DEVICE_TABLE(of, cam_tfe_dt_match);
 
-static struct platform_driver cam_tfe_driver = {
+struct platform_driver cam_tfe_driver = {
 	.probe = cam_tfe_probe,
 	.remove = cam_tfe_remove,
 	.driver = {

@@ -18,6 +18,7 @@
 #include "cam_node.h"
 #include "cam_debug_util.h"
 #include "cam_smmu_api.h"
+#include "camera_main.h"
 
 static struct cam_isp_dev g_isp_dev;
 
@@ -90,28 +91,8 @@ static const struct v4l2_subdev_internal_ops cam_isp_subdev_internal_ops = {
 	.open = cam_isp_subdev_open,
 };
 
-static int cam_isp_dev_remove(struct platform_device *pdev)
-{
-	int rc = 0;
-	int i;
-
-	/* clean up resources */
-	for (i = 0; i < CAM_CTX_MAX; i++) {
-		rc = cam_isp_context_deinit(&g_isp_dev.ctx_isp[i]);
-		if (rc)
-			CAM_ERR(CAM_ISP, "ISP context %d deinit failed",
-				 i);
-	}
-
-	rc = cam_subdev_remove(&g_isp_dev.sd);
-	if (rc)
-		CAM_ERR(CAM_ISP, "Unregister failed");
-
-	memset(&g_isp_dev, 0, sizeof(g_isp_dev));
-	return 0;
-}
-
-static int cam_isp_dev_probe(struct platform_device *pdev)
+static int cam_isp_dev_component_bind(struct device *dev,
+	struct device *master_dev, void *data)
 {
 	int rc = -1;
 	int i;
@@ -119,6 +100,7 @@ static int cam_isp_dev_probe(struct platform_device *pdev)
 	struct cam_node               *node;
 	const char                    *compat_str = NULL;
 	uint32_t                       isp_device_type;
+	struct platform_device *pdev = to_platform_device(dev);
 
 	int iommu_hdl = -1;
 
@@ -179,7 +161,7 @@ static int cam_isp_dev_probe(struct platform_device *pdev)
 
 	mutex_init(&g_isp_dev.isp_mutex);
 
-	CAM_INFO(CAM_ISP, "Camera ISP probe complete");
+	CAM_INFO(CAM_ISP, "ISP HW component bound successfully");
 
 	return 0;
 unregister:
@@ -188,8 +170,51 @@ err:
 	return rc;
 }
 
+static void cam_isp_dev_component_unbind(struct device *dev,
+	struct device *master_dev, void *data)
+{
+	int rc = 0;
+	int i;
 
-static struct platform_driver isp_driver = {
+	/* clean up resources */
+	for (i = 0; i < CAM_CTX_MAX; i++) {
+		rc = cam_isp_context_deinit(&g_isp_dev.ctx_isp[i]);
+		if (rc)
+			CAM_ERR(CAM_ISP, "ISP context %d deinit failed",
+				 i);
+	}
+
+	rc = cam_subdev_remove(&g_isp_dev.sd);
+	if (rc)
+		CAM_ERR(CAM_ISP, "Unregister failed rc: %d", rc);
+
+	memset(&g_isp_dev, 0, sizeof(g_isp_dev));
+}
+
+const static struct component_ops cam_isp_dev_component_ops = {
+	.bind = cam_isp_dev_component_bind,
+	.unbind = cam_isp_dev_component_unbind,
+};
+
+static int cam_isp_dev_remove(struct platform_device *pdev)
+{
+	component_del(&pdev->dev, &cam_isp_dev_component_ops);
+	return 0;
+}
+
+static int cam_isp_dev_probe(struct platform_device *pdev)
+{
+	int rc = 0;
+
+	CAM_DBG(CAM_ISP, "Adding ISP dev component");
+	rc = component_add(&pdev->dev, &cam_isp_dev_component_ops);
+	if (rc)
+		CAM_ERR(CAM_ISP, "failed to add component rc: %d", rc);
+
+	return rc;
+}
+
+struct platform_driver isp_driver = {
 	.probe = cam_isp_dev_probe,
 	.remove = cam_isp_dev_remove,
 	.driver = {

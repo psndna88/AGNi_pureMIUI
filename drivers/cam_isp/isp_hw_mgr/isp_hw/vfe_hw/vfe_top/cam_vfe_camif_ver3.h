@@ -53,6 +53,7 @@ struct cam_vfe_camif_ver3_reg_data {
 	uint32_t     error_irq_mask0;
 	uint32_t     error_irq_mask2;
 	uint32_t     subscribe_irq_mask1;
+	uint32_t     frame_id_irq_mask;
 
 	uint32_t     enable_diagnostic_hw;
 	uint32_t     pp_camif_cfg_en_shift;

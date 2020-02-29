@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/slab.h>
@@ -14,6 +14,7 @@
 #include "cam_hw_intf.h"
 #include "cam_custom_csid480.h"
 #include "cam_debug_util.h"
+#include "camera_main.h"
 
 #define CAM_CUSTOM_CSID_DRV_NAME  "custom_csid"
 
@@ -27,16 +28,18 @@ static struct cam_ife_csid_hw_info cam_custom_csid480_hw_info = {
 	.hw_dts_version = CAM_CSID_VERSION_V480,
 };
 
-static int cam_custom_csid_probe(struct platform_device *pdev)
+static int cam_custom_csid_component_bind(struct device *dev,
+	struct device *master_dev, void *data)
 {
 
-	struct cam_hw_intf             *csid_hw_intf;
-	struct cam_hw_info             *csid_hw_info;
-	struct cam_ife_csid_hw         *csid_dev = NULL;
+	struct cam_hw_intf	       *csid_hw_intf;
+	struct cam_hw_info	       *csid_hw_info;
+	struct cam_ife_csid_hw	       *csid_dev = NULL;
 	const struct of_device_id      *match_dev = NULL;
 	struct cam_ife_csid_hw_info    *csid_hw_data = NULL;
-	uint32_t                        csid_dev_idx;
-	int                             rc = 0;
+	uint32_t			csid_dev_idx;
+	int				rc = 0;
+	struct platform_device *pdev = to_platform_device(dev);
 
 	csid_hw_intf = kzalloc(sizeof(*csid_hw_intf), GFP_KERNEL);
 	if (!csid_hw_intf) {
@@ -90,13 +93,14 @@ static int cam_custom_csid_probe(struct platform_device *pdev)
 		goto free_dev;
 
 	platform_set_drvdata(pdev, csid_dev);
-	CAM_DBG(CAM_CUSTOM, "CSID:%d probe successful for dev %s",
-		csid_hw_intf->hw_idx, csid_dev_name);
 
 	if (csid_hw_intf->hw_idx < CAM_IFE_CSID_HW_NUM_MAX)
 		cam_custom_csid_hw_list[csid_hw_intf->hw_idx] = csid_hw_intf;
 	else
 		goto free_dev;
+
+	CAM_DBG(CAM_CUSTOM, "CSID:%d component bound successfully",
+		csid_hw_intf->hw_idx);
 
 	return 0;
 
@@ -110,17 +114,19 @@ err:
 	return rc;
 }
 
-static int cam_custom_csid_remove(struct platform_device *pdev)
+static void cam_custom_csid_component_unbind(struct device *dev,
+	struct device *master_dev, void *data)
 {
 	struct cam_ife_csid_hw         *csid_dev = NULL;
 	struct cam_hw_intf             *csid_hw_intf;
 	struct cam_hw_info             *csid_hw_info;
+	struct platform_device *pdev = to_platform_device(dev);
 
 	csid_dev = (struct cam_ife_csid_hw *)platform_get_drvdata(pdev);
 	csid_hw_intf = csid_dev->hw_intf;
 	csid_hw_info = csid_dev->hw_info;
 
-	CAM_DBG(CAM_CUSTOM, "CSID:%d remove",
+	CAM_DBG(CAM_CUSTOM, "CSID:%d component unbind",
 		csid_dev->hw_intf->hw_idx);
 
 	cam_ife_csid_hw_deinit(csid_dev);
@@ -129,6 +135,28 @@ static int cam_custom_csid_remove(struct platform_device *pdev)
 	kfree(csid_dev);
 	kfree(csid_hw_info);
 	kfree(csid_hw_intf);
+}
+
+const static struct component_ops cam_custom_csid_component_ops = {
+	.bind = cam_custom_csid_component_bind,
+	.unbind = cam_custom_csid_component_unbind,
+};
+
+static int cam_custom_csid_probe(struct platform_device *pdev)
+{
+	int rc = 0;
+
+	CAM_DBG(CAM_CUSTOM, "Adding Custom CSID component");
+	rc = component_add(&pdev->dev, &cam_custom_csid_component_ops);
+	if (rc)
+		CAM_ERR(CAM_CUSTOM, "failed to add component rc: %d", rc);
+
+	return rc;
+}
+
+static int cam_custom_csid_remove(struct platform_device *pdev)
+{
+	component_del(&pdev->dev, &cam_custom_csid_component_ops);
 	return 0;
 }
 
@@ -142,7 +170,7 @@ static const struct of_device_id cam_custom_csid_dt_match[] = {
 
 MODULE_DEVICE_TABLE(of, cam_custom_csid_dt_match);
 
-static struct platform_driver cam_custom_csid_driver = {
+struct platform_driver cam_custom_csid_driver = {
 	.probe = cam_custom_csid_probe,
 	.driver = {
 		.name = "qcom,custom-csid",

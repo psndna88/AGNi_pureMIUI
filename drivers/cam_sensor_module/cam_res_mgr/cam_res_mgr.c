@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/init.h>
@@ -12,6 +12,7 @@
 #include "cam_debug_util.h"
 #include "cam_res_mgr_api.h"
 #include "cam_res_mgr_private.h"
+#include "camera_main.h"
 
 static struct cam_res_mgr *cam_res;
 
@@ -664,9 +665,11 @@ static int cam_res_mgr_parse_dt(struct device *dev)
 	return rc;
 }
 
-static int cam_res_mgr_probe(struct platform_device *pdev)
+static int cam_res_mgr_component_bind(struct device *dev,
+	struct device *master_dev, void *data)
 {
 	int rc = 0;
+	struct platform_device *pdev = to_platform_device(dev);
 
 	cam_res = kzalloc(sizeof(*cam_res), GFP_KERNEL);
 	if (!cam_res)
@@ -692,17 +695,40 @@ static int cam_res_mgr_probe(struct platform_device *pdev)
 	INIT_LIST_HEAD(&cam_res->gpio_res_list);
 	INIT_LIST_HEAD(&cam_res->flash_res_list);
 
+	CAM_DBG(CAM_RES, "Component bound successfully");
 	return 0;
 }
 
-static int cam_res_mgr_remove(struct platform_device *pdev)
+static void cam_res_mgr_component_unbind(struct device *dev,
+	struct device *master_dev, void *data)
 {
 	if (cam_res) {
 		cam_res_mgr_free_res();
 		kfree(cam_res);
 		cam_res = NULL;
 	}
+}
 
+const static struct component_ops cam_res_mgr_component_ops = {
+	.bind = cam_res_mgr_component_bind,
+	.unbind = cam_res_mgr_component_unbind,
+};
+
+static int cam_res_mgr_probe(struct platform_device *pdev)
+{
+	int rc = 0;
+
+	CAM_DBG(CAM_RES, "Adding Res mgr component");
+	rc = component_add(&pdev->dev, &cam_res_mgr_component_ops);
+	if (rc)
+		CAM_ERR(CAM_RES, "failed to add component rc: %d", rc);
+
+	return rc;
+}
+
+static int cam_res_mgr_remove(struct platform_device *pdev)
+{
+	component_del(&pdev->dev, &cam_res_mgr_component_ops);
 	return 0;
 }
 
@@ -712,7 +738,7 @@ static const struct of_device_id cam_res_mgr_dt_match[] = {
 };
 MODULE_DEVICE_TABLE(of, cam_res_mgr_dt_match);
 
-static struct platform_driver cam_res_mgr_driver = {
+struct platform_driver cam_res_mgr_driver = {
 	.probe = cam_res_mgr_probe,
 	.remove = cam_res_mgr_remove,
 	.driver = {

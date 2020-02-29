@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include "cam_eeprom_dev.h"
@@ -8,6 +8,7 @@
 #include "cam_eeprom_soc.h"
 #include "cam_eeprom_core.h"
 #include "cam_debug_util.h"
+#include "camera_main.h"
 
 static long cam_eeprom_subdev_ioctl(struct v4l2_subdev *sd,
 	unsigned int cmd, void *arg)
@@ -409,12 +410,13 @@ static int cam_eeprom_spi_driver_remove(struct spi_device *sdev)
 	return 0;
 }
 
-static int32_t cam_eeprom_platform_driver_probe(
-	struct platform_device *pdev)
+static int cam_eeprom_component_bind(struct device *dev,
+	struct device *master_dev, void *data)
 {
 	int32_t                         rc = 0;
 	struct cam_eeprom_ctrl_t       *e_ctrl = NULL;
 	struct cam_eeprom_soc_private  *soc_private = NULL;
+	struct platform_device *pdev = to_platform_device(dev);
 
 	e_ctrl = kzalloc(sizeof(struct cam_eeprom_ctrl_t), GFP_KERNEL);
 	if (!e_ctrl)
@@ -469,6 +471,7 @@ static int32_t cam_eeprom_platform_driver_probe(
 	e_ctrl->bridge_intf.ops.apply_req = NULL;
 	platform_set_drvdata(pdev, e_ctrl);
 	e_ctrl->cam_eeprom_state = CAM_EEPROM_INIT;
+	CAM_DBG(CAM_EEPROM, "Component bound successfully");
 
 	return rc;
 free_soc:
@@ -481,16 +484,18 @@ free_e_ctrl:
 	return rc;
 }
 
-static int cam_eeprom_platform_driver_remove(struct platform_device *pdev)
+static void cam_eeprom_component_unbind(struct device *dev,
+	struct device *master_dev, void *data)
 {
 	int                        i;
 	struct cam_eeprom_ctrl_t  *e_ctrl;
 	struct cam_hw_soc_info    *soc_info;
+	struct platform_device *pdev = to_platform_device(dev);
 
 	e_ctrl = platform_get_drvdata(pdev);
 	if (!e_ctrl) {
 		CAM_ERR(CAM_EEPROM, "eeprom device is NULL");
-		return -EINVAL;
+		return;
 	}
 
 	CAM_INFO(CAM_EEPROM, "Platform driver remove invoked");
@@ -509,7 +514,29 @@ static int cam_eeprom_platform_driver_remove(struct platform_device *pdev)
 	platform_set_drvdata(pdev, NULL);
 	v4l2_set_subdevdata(&e_ctrl->v4l2_dev_str.sd, NULL);
 	kfree(e_ctrl);
+}
 
+const static struct component_ops cam_eeprom_component_ops = {
+	.bind = cam_eeprom_component_bind,
+	.unbind = cam_eeprom_component_unbind,
+};
+
+static int32_t cam_eeprom_platform_driver_probe(
+	struct platform_device *pdev)
+{
+	int rc = 0;
+
+	CAM_DBG(CAM_EEPROM, "Adding EEPROM Sensor component");
+	rc = component_add(&pdev->dev, &cam_eeprom_component_ops);
+	if (rc)
+		CAM_ERR(CAM_EEPROM, "failed to add component rc: %d", rc);
+
+	return rc;
+}
+
+static int cam_eeprom_platform_driver_remove(struct platform_device *pdev)
+{
+	component_del(&pdev->dev, &cam_eeprom_component_ops);
 	return 0;
 }
 
@@ -521,7 +548,7 @@ static const struct of_device_id cam_eeprom_dt_match[] = {
 
 MODULE_DEVICE_TABLE(of, cam_eeprom_dt_match);
 
-static struct platform_driver cam_eeprom_platform_driver = {
+struct platform_driver cam_eeprom_platform_driver = {
 	.driver = {
 		.name = "qcom,eeprom",
 		.owner = THIS_MODULE,
