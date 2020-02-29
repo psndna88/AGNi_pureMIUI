@@ -360,6 +360,7 @@
 				<&aggre1_noc MASTER_USB3_1 &config_noc SLAVE_IPA_CFG>,
 				<&gem_noc MASTER_APPSS_PROC &config_noc SLAVE_USB3_1>;
 
+		status = "disabled";
 		dwc3@a800000 {
 			compatible = "snps,dwc3";
 			reg = <0xa800000 0xcd00>;
@@ -530,5 +531,13 @@
 				USB3_UNI_PCS_EQ_CONFIG5 0x10 0
 				USB3_UNI_PCS_REFGEN_REQ_CONFIG1 0x21 0
 				0xffffffff 0xffffffff 0x00>;
+	};
+
+	usb_audio_qmi_dev {
+		compatible = "qcom,usb-audio-qmi-dev";
+		iommus = <&apps_smmu 0x180f 0x0>;
+		qcom,iommu-dma = "disabled";
+		qcom,usb-audio-stream-id = <0xf>;
+		qcom,usb-audio-intr-num = <2>;
 	};
 };

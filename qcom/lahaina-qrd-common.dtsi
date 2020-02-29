@@ -7,6 +7,14 @@
 	status = "ok";
 };
 
+&spmi_glink_debug {
+	status = "ok";
+};
+
+&smb1398_debug {
+	status = "ok";
+};
+
 &soc {
 	gpio_keys {
 		compatible = "gpio-keys";
@@ -25,5 +33,25 @@
 			linux,can-disable;
 		};
 	};
+	qcom,qbt_handler {
+		compatible = "qcom,qbt-handler";
+		qcom,ipc-gpio = <&tlmm 38 0>;
+		qcom,finger-detect-gpio = <&tlmm 39 0>;
+	};
 };
 
+&pm8350c_switch0 {
+	qcom,led-mask = <9>; /* Channels 1 & 4 */
+};
+
+&pm8350c_switch1 {
+	qcom,led-mask = <6>; /* Channels 2 & 3 */
+};
+
+&pm8350c_switch2 {
+	qcom,led-mask = <15>; /* All Channels */
+};
+
+&pm8350c_flash {
+	status = "ok";
+};
