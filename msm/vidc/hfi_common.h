@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef __HFI_COMMON_H__
@@ -296,6 +296,8 @@ void __dump(struct dump dump[], int len, u32 sid);
 
 void __write_register(struct venus_hfi_device *device,
 		u32 reg, u32 value, u32 sid);
+void __write_register_masked(struct venus_hfi_device *device,
+		u32 reg, u32 value, u32 mask, u32 sid);
 int __read_register(struct venus_hfi_device *device, u32 reg, u32 sid);
 void __disable_unprepare_clks(struct venus_hfi_device *device);
 int __disable_regulators(struct venus_hfi_device *device);

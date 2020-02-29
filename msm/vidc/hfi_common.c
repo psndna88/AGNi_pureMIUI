@@ -787,6 +787,51 @@ void __write_register(struct venus_hfi_device *device,
 	wmb();
 }
 
+/*
+ * Argument mask is used to specify which bits to update. In case mask is 0x11,
+ * only bits 0 & 4 will be updated with corresponding bits from value. To update
+ * entire register with value, set mask = 0xFFFFFFFF.
+ */
+void __write_register_masked(struct venus_hfi_device *device,
+		u32 reg, u32 value, u32 mask, u32 sid)
+{
+	u32 prev_val, new_val;
+	u8 *base_addr;
+
+	if (!device) {
+		s_vpr_e(sid, "%s: invalid params\n", __func__);
+		return;
+	}
+
+	__strict_check(device);
+
+	if (!device->power_enabled) {
+		s_vpr_e(sid, "%s: register write failed, power is off\n",
+			__func__);
+		msm_vidc_res_handle_fatal_hw_error(device->res, true);
+		return;
+	}
+
+	base_addr = device->hal_data->register_base;
+	base_addr += reg;
+
+	prev_val = readl_relaxed(base_addr);
+	/*
+	 * Memory barrier to ensure register read is correct
+	 */
+	rmb();
+
+	new_val = (prev_val & ~mask) | (value & mask);
+	s_vpr_l(sid,
+		"Base addr: %pK, writing to: %#x, previous-value: %#x, value: %#x, mask: %#x, new-value: %#x...\n",
+		base_addr, reg, prev_val, value, mask, new_val);
+	writel_relaxed(new_val, base_addr);
+	/*
+	 * Memory barrier to make sure value is written into the register.
+	 */
+	wmb();
+}
+
 int __read_register(struct venus_hfi_device *device, u32 reg, u32 sid)
 {
 	int rc = 0;
@@ -831,8 +876,9 @@ static void __set_registers(struct venus_hfi_device *device, u32 sid)
 
 	reg_set = &device->res->reg_set;
 	for (i = 0; i < reg_set->count; i++) {
-		__write_register(device, reg_set->reg_tbl[i].reg,
-				reg_set->reg_tbl[i].value, sid);
+		__write_register_masked(device, reg_set->reg_tbl[i].reg,
+				reg_set->reg_tbl[i].value,
+				reg_set->reg_tbl[i].mask, sid);
 	}
 }
 
