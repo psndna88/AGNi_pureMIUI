@@ -29,9 +29,6 @@
 
 #define SDE_ERROR_CONN(c, fmt, ...) SDE_ERROR("conn%d " fmt,\
 		(c) ? (c)->base.base.id : -1, ##__VA_ARGS__)
-static u32 dither_matrix[DITHER_MATRIX_SZ] = {
-	15, 7, 13, 5, 3, 11, 1, 9, 12, 4, 14, 6, 0, 8, 2, 10
-};
 
 static const struct drm_prop_enum_list e_topology_name[] = {
 	{SDE_RM_TOPOLOGY_NONE,	"sde_none"},
@@ -245,60 +242,12 @@ void sde_connector_unregister_event(struct drm_connector *connector,
 	(void)sde_connector_register_event(connector, event_idx, 0, 0);
 }
 
-static int _sde_connector_get_default_dither_cfg_v1(
-		struct sde_connector *c_conn, void *cfg)
-{
-	struct drm_msm_dither *dither_cfg = (struct drm_msm_dither *)cfg;
-	enum dsi_pixel_format dst_format = DSI_PIXEL_FORMAT_MAX;
-
-	if (!c_conn || !cfg) {
-		SDE_ERROR("invalid argument(s), c_conn %pK, cfg %pK\n",
-				c_conn, cfg);
-		return -EINVAL;
-	}
-
-	if (!c_conn->ops.get_dst_format) {
-		SDE_DEBUG("get_dst_format is unavailable\n");
-		return 0;
-	}
-
-	dst_format = c_conn->ops.get_dst_format(&c_conn->base, c_conn->display);
-	switch (dst_format) {
-	case DSI_PIXEL_FORMAT_RGB888:
-		dither_cfg->c0_bitdepth = 8;
-		dither_cfg->c1_bitdepth = 8;
-		dither_cfg->c2_bitdepth = 8;
-		dither_cfg->c3_bitdepth = 8;
-		break;
-	case DSI_PIXEL_FORMAT_RGB666:
-	case DSI_PIXEL_FORMAT_RGB666_LOOSE:
-		dither_cfg->c0_bitdepth = 6;
-		dither_cfg->c1_bitdepth = 6;
-		dither_cfg->c2_bitdepth = 6;
-		dither_cfg->c3_bitdepth = 6;
-		break;
-	default:
-		SDE_DEBUG("no default dither config for dst_format %d\n",
-			dst_format);
-		return -ENODATA;
-	}
-
-	memcpy(&dither_cfg->matrix, dither_matrix,
-			sizeof(u32) * DITHER_MATRIX_SZ);
-	dither_cfg->temporal_en = 0;
-	return 0;
-}
-
 static void _sde_connector_install_dither_property(struct drm_device *dev,
 		struct sde_kms *sde_kms, struct sde_connector *c_conn)
 {
 	char prop_name[DRM_PROP_NAME_LEN];
 	struct sde_mdss_cfg *catalog = NULL;
-	struct drm_property_blob *blob_ptr;
-	void *cfg;
-	int ret = 0;
-	u32 version = 0, len = 0;
-	bool defalut_dither_needed = false;
+	u32 version = 0;
 
 	if (!dev || !sde_kms || !c_conn) {
 		SDE_ERROR("invld args (s), dev %pK, sde_kms %pK, c_conn %pK\n",
@@ -313,57 +262,55 @@ static void _sde_connector_install_dither_property(struct drm_device *dev,
 			"SDE_PP_DITHER_V", version);
 	switch (version) {
 	case 1:
+	case 2:
 		msm_property_install_blob(&c_conn->property_info, prop_name,
 			DRM_MODE_PROP_BLOB,
 			CONNECTOR_PROP_PP_DITHER);
-		len = sizeof(struct drm_msm_dither);
-		cfg = kzalloc(len, GFP_KERNEL);
-		if (!cfg)
-			return;
-
-		ret = _sde_connector_get_default_dither_cfg_v1(c_conn, cfg);
-		if (!ret)
-			defalut_dither_needed = true;
 		break;
 	default:
 		SDE_ERROR("unsupported dither version %d\n", version);
 		return;
 	}
-
-	if (defalut_dither_needed) {
-		blob_ptr = drm_property_create_blob(dev, len, cfg);
-		if (IS_ERR_OR_NULL(blob_ptr))
-			goto exit;
-		c_conn->blob_dither = blob_ptr;
-	}
-exit:
-	kfree(cfg);
 }
 
 int sde_connector_get_dither_cfg(struct drm_connector *conn,
 			struct drm_connector_state *state, void **cfg,
-			size_t *len)
+			size_t *len, bool idle_pc)
 {
 	struct sde_connector *c_conn = NULL;
 	struct sde_connector_state *c_state = NULL;
 	size_t dither_sz = 0;
+	bool is_dirty;
 	u32 *p = (u32 *)cfg;
 
-	if (!conn || !state || !p)
+	if (!conn || !state || !p) {
+		SDE_ERROR("invalid arguments\n");
 		return -EINVAL;
+	}
 
 	c_conn = to_sde_connector(conn);
 	c_state = to_sde_connector_state(state);
 
-	/* try to get user config data first */
-	*cfg = msm_property_get_blob(&c_conn->property_info,
-					&c_state->property_state,
-					&dither_sz,
-					CONNECTOR_PROP_PP_DITHER);
-	/* if user config data doesn't exist, use default dither blob */
-	if (*cfg == NULL && c_conn->blob_dither) {
-		*cfg = &c_conn->blob_dither->data;
-		dither_sz = c_conn->blob_dither->length;
+	is_dirty = msm_property_is_dirty(&c_conn->property_info,
+			&c_state->property_state,
+			CONNECTOR_PROP_PP_DITHER);
+
+	if (!is_dirty && !idle_pc) {
+		return -ENODATA;
+	} else if (is_dirty || idle_pc) {
+		*cfg = msm_property_get_blob(&c_conn->property_info,
+				&c_state->property_state,
+				&dither_sz,
+				CONNECTOR_PROP_PP_DITHER);
+		/*
+		 * in idle_pc use case return early,
+		 * when dither is already disabled.
+		 */
+		if (idle_pc && *cfg == NULL)
+			return -ENODATA;
+		/* disable dither based on user config data */
+		else if (*cfg == NULL)
+			return 0;
 	}
 	*len = dither_sz;
 	return 0;
@@ -1237,7 +1184,6 @@ static int _sde_connector_set_ext_hdr_info(
 	void __user *usr_ptr)
 {
 	int rc = 0;
-	struct drm_connector *connector;
 	struct drm_msm_ext_hdr_metadata *hdr_meta;
 	size_t payload_size = 0;
 	u8 *payload = NULL;
@@ -1249,9 +1195,7 @@ static int _sde_connector_set_ext_hdr_info(
 		goto end;
 	}
 
-	connector = &c_conn->base;
-
-	if (!connector->hdr_supported) {
+	if (!c_conn->hdr_supported) {
 		SDE_ERROR_CONN(c_conn, "sink doesn't support HDR\n");
 		rc = -ENOTSUPP;
 		goto end;
@@ -1278,7 +1222,7 @@ static int _sde_connector_set_ext_hdr_info(
 	if (!hdr_meta->hdr_plus_payload_size || !hdr_meta->hdr_plus_payload)
 		goto skip_dhdr;
 
-	if (!connector->hdr_plus_app_ver) {
+	if (!c_conn->hdr_plus_app_ver) {
 		SDE_ERROR_CONN(c_conn, "sink doesn't support dynamic HDR\n");
 		rc = -ENOTSUPP;
 		goto end;
@@ -1568,13 +1512,13 @@ static void sde_connector_update_hdr_props(struct drm_connector *connector)
 	struct sde_connector *c_conn = to_sde_connector(connector);
 	struct drm_msm_ext_hdr_properties hdr = {0};
 
-	hdr.hdr_metadata_type_one = connector->hdr_metadata_type_one ? 1 : 0;
-	hdr.hdr_supported = connector->hdr_supported ? 1 : 0;
-	hdr.hdr_eotf = connector->hdr_eotf;
-	hdr.hdr_max_luminance = connector->hdr_max_luminance;
-	hdr.hdr_avg_luminance = connector->hdr_avg_luminance;
-	hdr.hdr_min_luminance = connector->hdr_min_luminance;
-	hdr.hdr_plus_supported = connector->hdr_plus_app_ver;
+	hdr.hdr_metadata_type_one = c_conn->hdr_metadata_type_one ? 1 : 0;
+	hdr.hdr_supported = c_conn->hdr_supported ? 1 : 0;
+	hdr.hdr_eotf = c_conn->hdr_eotf;
+	hdr.hdr_max_luminance = c_conn->hdr_max_luminance;
+	hdr.hdr_avg_luminance = c_conn->hdr_avg_luminance;
+	hdr.hdr_min_luminance = c_conn->hdr_min_luminance;
+	hdr.hdr_plus_supported = c_conn->hdr_plus_app_ver;
 
 	msm_property_set_blob(&c_conn->property_info, &c_conn->blob_ext_hdr,
 			&hdr, sizeof(hdr), CONNECTOR_PROP_EXT_HDR_INFO);
@@ -1583,12 +1527,13 @@ static void sde_connector_update_hdr_props(struct drm_connector *connector)
 static void sde_connector_update_colorspace(struct drm_connector *connector)
 {
 	int ret;
+	struct sde_connector *c_conn = to_sde_connector(connector);
 
 	ret = msm_property_set_property(
 			sde_connector_get_propinfo(connector),
 			sde_connector_get_property_state(connector->state),
 			CONNECTOR_PROP_SUPPORTED_COLORSPACES,
-				connector->color_enc_fmt);
+				c_conn->color_enc_fmt);
 
 	if (ret)
 		SDE_ERROR("failed to set colorspace property for connector\n");
@@ -2440,7 +2385,6 @@ static int _sde_connector_install_properties(struct drm_device *dev,
 {
 	struct dsi_display *dsi_display;
 	int rc;
-	struct drm_connector *connector;
 
 	msm_property_install_blob(&c_conn->property_info, "capabilities",
 			DRM_MODE_PROP_IMMUTABLE, CONNECTOR_PROP_SDE_INFO);
@@ -2452,8 +2396,6 @@ static int _sde_connector_install_properties(struct drm_device *dev,
 			"failed to setup connector info, rc = %d\n", rc);
 		return rc;
 	}
-
-	connector = &c_conn->base;
 
 	msm_property_install_blob(&c_conn->property_info, "mode_properties",
 			DRM_MODE_PROP_IMMUTABLE, CONNECTOR_PROP_MODE_INFO);
@@ -2498,11 +2440,6 @@ static int _sde_connector_install_properties(struct drm_device *dev,
 			      &hdr,
 			      sizeof(hdr),
 			      CONNECTOR_PROP_EXT_HDR_INFO);
-
-		/* create and attach colorspace property for DP */
-		if (!drm_mode_create_colorspace_property(connector))
-			drm_object_attach_property(&connector->base,
-				connector->colorspace_property, 0);
 	}
 
 	msm_property_install_volatile_range(&c_conn->property_info,

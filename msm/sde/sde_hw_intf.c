@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
  */
 #include <linux/iopoll.h>
 
@@ -38,28 +38,28 @@
 #define INTF_ACTIVE_DATA_HCTL           0x068
 #define INTF_FRAME_LINE_COUNT_EN        0x0A8
 #define INTF_FRAME_COUNT                0x0AC
-#define   INTF_LINE_COUNT               0x0B0
+#define INTF_LINE_COUNT                 0x0B0
 
-#define   INTF_DEFLICKER_CONFIG         0x0F0
-#define   INTF_DEFLICKER_STRNG_COEFF    0x0F4
-#define   INTF_DEFLICKER_WEAK_COEFF     0x0F8
+#define INTF_DEFLICKER_CONFIG           0x0F0
+#define INTF_DEFLICKER_STRNG_COEFF      0x0F4
+#define INTF_DEFLICKER_WEAK_COEFF       0x0F8
 
-#define   INTF_REG_SPLIT_LINK           0x080
-#define   INTF_DSI_CMD_MODE_TRIGGER_EN  0x084
-#define   INTF_PANEL_FORMAT             0x090
-#define   INTF_TPG_ENABLE               0x100
-#define   INTF_TPG_MAIN_CONTROL         0x104
-#define   INTF_TPG_VIDEO_CONFIG         0x108
-#define   INTF_TPG_COMPONENT_LIMITS     0x10C
-#define   INTF_TPG_RECTANGLE            0x110
-#define   INTF_TPG_INITIAL_VALUE        0x114
-#define   INTF_TPG_BLK_WHITE_PATTERN_FRAMES   0x118
-#define   INTF_TPG_RGB_MAPPING          0x11C
-#define   INTF_PROG_FETCH_START         0x170
-#define   INTF_PROG_ROT_START           0x174
+#define INTF_REG_SPLIT_LINK             0x080
+#define INTF_DSI_CMD_MODE_TRIGGER_EN    0x084
+#define INTF_PANEL_FORMAT               0x090
+#define INTF_TPG_ENABLE                 0x100
+#define INTF_TPG_MAIN_CONTROL           0x104
+#define INTF_TPG_VIDEO_CONFIG           0x108
+#define INTF_TPG_COMPONENT_LIMITS       0x10C
+#define INTF_TPG_RECTANGLE              0x110
+#define INTF_TPG_INITIAL_VALUE          0x114
+#define INTF_TPG_BLK_WHITE_PATTERN_FRAMES   0x118
+#define INTF_TPG_RGB_MAPPING            0x11C
+#define INTF_PROG_FETCH_START           0x170
+#define INTF_PROG_ROT_START             0x174
 
-#define INTF_MISR_CTRL			0x180
-#define INTF_MISR_SIGNATURE		0x184
+#define INTF_MISR_CTRL                  0x180
+#define INTF_MISR_SIGNATURE             0x184
 
 #define INTF_MUX                        0x25C
 #define INTF_STATUS                     0x26C
@@ -177,6 +177,16 @@ static void sde_hw_intf_avr_ctrl(struct sde_hw_intf *ctx,
 	SDE_REG_WRITE(c, INTF_AVR_MODE, avr_mode);
 }
 
+static inline void _check_and_set_comp_bit(struct sde_hw_intf *ctx,
+		bool dsc_4hs_merge, bool compression_en, u32 *intf_cfg2)
+{
+	if (((SDE_HW_MAJOR(ctx->mdss->hwversion) >=
+				SDE_HW_MAJOR(SDE_HW_VER_700)) &&
+				compression_en) ||
+			(IS_SDE_MAJOR_SAME(ctx->mdss->hwversion,
+				SDE_HW_VER_600) && dsc_4hs_merge))
+		(*intf_cfg2) |= BIT(12);
+}
 
 static void sde_hw_intf_setup_timing_engine(struct sde_hw_intf *ctx,
 		const struct intf_timing_params *p,
@@ -255,6 +265,9 @@ static void sde_hw_intf_setup_timing_engine(struct sde_hw_intf *ctx,
 	}
 
 	intf_cfg2 = 0;
+
+	_check_and_set_comp_bit(ctx, p->dsc_4hs_merge, p->compression_en,
+			&intf_cfg2);
 
 	if (dp_intf && p->compression_en) {
 		active_data_hctl = (hsync_start_x + p->extra_dto_cycles) << 16;
@@ -648,6 +661,30 @@ static void sde_hw_intf_vsync_sel(struct sde_hw_intf *intf,
 	SDE_REG_WRITE(c, INTF_TEAR_MDP_VSYNC_SEL, (vsync_source & 0xf));
 }
 
+static void sde_hw_intf_enable_compressed_input(struct sde_hw_intf *intf,
+		bool compression_en, bool dsc_4hs_merge)
+{
+	struct sde_hw_blk_reg_map *c;
+	u32 intf_cfg2;
+
+	if (!intf)
+		return;
+
+	/*
+	 * callers can either call this function to enable/disable the 64 bit
+	 * compressed input or this configuration can be applied along
+	 * with timing generation parameters
+	 */
+
+	c = &intf->hw;
+	intf_cfg2 = SDE_REG_READ(c, INTF_CONFIG2);
+
+	_check_and_set_comp_bit(intf, dsc_4hs_merge, compression_en,
+			&intf_cfg2);
+
+	SDE_REG_WRITE(c, INTF_CONFIG2, intf_cfg2);
+}
+
 static void _setup_intf_ops(struct sde_hw_intf_ops *ops,
 		unsigned long cap)
 {
@@ -661,6 +698,7 @@ static void _setup_intf_ops(struct sde_hw_intf_ops *ops,
 	ops->avr_setup = sde_hw_intf_avr_setup;
 	ops->avr_trigger = sde_hw_intf_avr_trigger;
 	ops->avr_ctrl = sde_hw_intf_avr_ctrl;
+	ops->enable_compressed_input = sde_hw_intf_enable_compressed_input;
 
 	if (cap & BIT(SDE_INTF_INPUT_CTRL))
 		ops->bind_pingpong_blk = sde_hw_intf_bind_pingpong_blk;

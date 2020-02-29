@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _SDE_REG_DMA_H
@@ -57,6 +57,7 @@ enum sde_reg_dma_read_sel {
  * @LTM_INIT: LTM INIT
  * @LTM_ROI: LTM ROI
  * @LTM_VLUT: LTM VLUT
+ * @RC_DATA: Rounded corner data
  * @REG_DMA_FEATURES_MAX: invalid selection
  */
 enum sde_reg_dma_features {
@@ -75,6 +76,7 @@ enum sde_reg_dma_features {
 	LTM_INIT,
 	LTM_ROI,
 	LTM_VLUT,
+	RC_DATA,
 	REG_DMA_FEATURES_MAX,
 };
 
@@ -88,6 +90,22 @@ enum sde_reg_dma_queue {
 	DMA_CTL_QUEUE0,
 	DMA_CTL_QUEUE1,
 	DMA_CTL_QUEUE_MAX,
+};
+
+#define LUTBUS_TABLE_SELECT_MAX 2
+#define LUTBUS_IGC_TRANS_SIZE 3
+#define LUTBUS_GAMUT_TRANS_SIZE 6
+
+/**
+ * enum sde_reg_dma_lutbus_block - block select values for lutbus op
+ * @LUTBUS_BLOCK_IGC: select IGC block
+ * @LUTBUS_BLOCK_GAMUT: select GAMUT block
+ * @LUTBUS_BLOCK_MAX: invalid selection
+ */
+enum sde_reg_dma_lutbus_block {
+	LUTBUS_BLOCK_IGC = 0,
+	LUTBUS_BLOCK_GAMUT,
+	LUTBUS_BLOCK_MAX,
 };
 
 /**
@@ -117,8 +135,11 @@ enum sde_reg_dma_trigger_mode {
  *                        register
  * @REG_BLK_WRITE_MULTIPLE: op for writing hw index based registers at
  *                         non-consecutive location
- * @REG_SINGLE_MODIFY: op for modifying single register value
- *                    with bitmask at the address provided
+ * @REG_SINGLE_MODIFY: op for modifying single register value with bitmask at
+ *                    the address provided(Reg = (Reg & Mask) | Data),
+ *                    broadcast feature is not supported with this opcode.
+ * @REG_BLK_LUT_WRITE: op for specific faster LUT writes, currently only
+ *                     supports DSPP/SSPP Gamut and DSPP IGC.
  * @REG_DMA_SETUP_OPS_MAX: invalid operation
  */
 enum sde_reg_dma_setup_ops {
@@ -128,8 +149,11 @@ enum sde_reg_dma_setup_ops {
 	REG_BLK_WRITE_INC,
 	REG_BLK_WRITE_MULTIPLE,
 	REG_SINGLE_MODIFY,
+	REG_BLK_LUT_WRITE,
 	REG_DMA_SETUP_OPS_MAX,
 };
+
+#define REG_DMA_BLK_MAX 32
 
 /**
  * enum sde_reg_dma_blk - defines blocks for which reg dma op should be
@@ -231,7 +255,12 @@ struct sde_reg_dma_buffer {
  *                                performed
  * @data: pointer to payload which has to be written into reg dma buffer for
  *        selected op.
+ * @mask: mask value for REG_SINGLE_MODIFY op
  * @data_size: size of payload in data
+ * @table_sel: table select value for REG_BLK_LUT_WRITE opcode
+ * @block_sel: block select value for REG_BLK_LUT_WRITE opcode
+ * @trans_size: transfer size for REG_BLK_LUT_WRITE opcode
+ * @lut_size: lut size in terms of transfer size
  */
 struct sde_reg_dma_setup_ops_cfg {
 	enum sde_reg_dma_setup_ops ops;
@@ -244,6 +273,10 @@ struct sde_reg_dma_setup_ops_cfg {
 	u32 *data;
 	u32 mask;
 	u32 data_size;
+	u32 table_sel;
+	u32 block_sel;
+	u32 trans_size;
+	u32 lut_size;
 };
 
 /**
@@ -253,6 +286,7 @@ struct sde_reg_dma_setup_ops_cfg {
  * @block_select: histogram read select
  * @trigger_mode: reg dma ops trigger mode
  * @queue_select: queue on which reg dma buffer will be submitted
+ * @dma_type: DB or SB LUT DMA block selection
  * @last_command: last command for this vsync
  */
 struct sde_reg_dma_kickoff_cfg {
@@ -262,6 +296,7 @@ struct sde_reg_dma_kickoff_cfg {
 	enum sde_reg_dma_read_sel block_select;
 	enum sde_reg_dma_trigger_mode trigger_mode;
 	enum sde_reg_dma_queue queue_select;
+	enum sde_reg_dma_type dma_type;
 	u32 last_command;
 };
 
@@ -279,6 +314,7 @@ struct sde_reg_dma_kickoff_cfg {
  * @dealloc_reg_dma: de-allocate reg dma buffer
  * @reset_reg_dma_buf: reset the buffer to init state
  * @last_command: notify control that last command is queued
+ * @last_command_sb: notify control that last command for SB LUTDMA is queued
  * @dump_regs: dump reg dma registers
  */
 struct sde_hw_reg_dma_ops {
@@ -293,18 +329,22 @@ struct sde_hw_reg_dma_ops {
 	int (*reset_reg_dma_buf)(struct sde_reg_dma_buffer *buf);
 	int (*last_command)(struct sde_hw_ctl *ctl, enum sde_reg_dma_queue q,
 			enum sde_reg_dma_last_cmd_mode mode);
+	int (*last_command_sb)(struct sde_hw_ctl *ctl, enum sde_reg_dma_queue q,
+			enum sde_reg_dma_last_cmd_mode mode);
 	void (*dump_regs)(void);
 };
 
 /**
  * struct sde_hw_reg_dma - structure to hold reg dma hw info
  * @drm_dev: drm driver dev handle
- * @caps: reg dma hw caps on the platform
+ * @reg_dma_count: number of LUTDMA hw instances
+ * @caps: LUTDMA hw caps on the platform
  * @ops: reg dma ops supported on the platform
  * @addr: reg dma hw block base address
  */
 struct sde_hw_reg_dma {
 	struct drm_device *drm_dev;
+	u32 reg_dma_count;
 	const struct sde_reg_dma_cfg *caps;
 	struct sde_hw_reg_dma_ops ops;
 	void __iomem *addr;

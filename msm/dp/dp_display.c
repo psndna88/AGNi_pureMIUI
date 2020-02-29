@@ -1827,9 +1827,11 @@ end:
 static void dp_display_clear_colorspaces(struct dp_display *dp_display)
 {
 	struct drm_connector *connector;
+	struct sde_connector *sde_conn;
 
 	connector = dp_display->base_connector;
-	connector->color_enc_fmt = 0;
+	sde_conn = to_sde_connector(connector);
+	sde_conn->color_enc_fmt = 0;
 }
 
 static int dp_display_pre_disable(struct dp_display *dp_display, void *panel)
@@ -2059,6 +2061,7 @@ static enum drm_mode_status dp_display_validate_mode(
 	bool dsc_en;
 	u32 num_lm = 0;
 	int rc = 0;
+	u32 pclk_khz = 0;
 
 	if (!dp_display || !mode || !panel ||
 			!avail_res || !avail_res->max_mixer_width) {
@@ -2099,8 +2102,12 @@ static enum drm_mode_status dp_display_validate_mode(
 		goto end;
 	}
 
-	if (mode->clock > dp_display->max_pclk_khz) {
-		DP_MST_DEBUG("clk:%d, max:%d\n", mode->clock,
+	pclk_khz = dp_mode.timing.widebus_en ?
+		(dp_mode.timing.pixel_clk_khz >> 1) :
+		(dp_mode.timing.pixel_clk_khz);
+
+	if (pclk_khz > dp_display->max_pclk_khz) {
+		DP_MST_DEBUG("clk:%d, max:%d\n", pclk_khz,
 				dp_display->max_pclk_khz);
 		goto end;
 	}

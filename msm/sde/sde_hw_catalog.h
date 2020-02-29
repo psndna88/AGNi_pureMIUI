@@ -319,7 +319,7 @@ enum {
  * @SDE_DSPP_HSIC            Global HSIC block
  * @SDE_DSPP_MEMCOLOR        Memory Color block
  * @SDE_DSPP_SIXZONE         Six zone block
- * @SDE_DSPP_GAMUT           Gamut bloc
+ * @SDE_DSPP_GAMUT           Gamut block
  * @SDE_DSPP_DITHER          Dither block
  * @SDE_DSPP_HIST            Histogram block
  * @SDE_DSPP_VLUT            PA VLUT block
@@ -367,12 +367,13 @@ enum {
 
 /**
  * PINGPONG sub-blocks
- * @SDE_PINGPONG_TE         Tear check block
- * @SDE_PINGPONG_TE2        Additional tear check block for split pipes
- * @SDE_PINGPONG_SPLIT      PP block supports split fifo
- * @SDE_PINGPONG_SLAVE      PP block is a suitable slave for split fifo
- * @SDE_PINGPONG_DSC,       Display stream compression blocks
- * @SDE_PINGPONG_DITHER,    Dither blocks
+ * @SDE_PINGPONG_TE              Tear check block
+ * @SDE_PINGPONG_TE2             Additional tear check block for split pipes
+ * @SDE_PINGPONG_SPLIT           PP block supports split fifo
+ * @SDE_PINGPONG_SLAVE           PP block is a suitable slave for split fifo
+ * @SDE_PINGPONG_DSC,            Display stream compression blocks
+ * @SDE_PINGPONG_DITHER,         Dither blocks
+ * @SDE_PINGPONG_DITHER_LUMA,    Dither sub-blocks and features
  * @SDE_PINGPONG_MERGE_3D,  Separate MERGE_3D block exists
  * @SDE_PINGPONG_MAX
  */
@@ -383,6 +384,7 @@ enum {
 	SDE_PINGPONG_SLAVE,
 	SDE_PINGPONG_DSC,
 	SDE_PINGPONG_DITHER,
+	SDE_PINGPONG_DITHER_LUMA,
 	SDE_PINGPONG_MERGE_3D,
 	SDE_PINGPONG_MAX
 };
@@ -753,6 +755,20 @@ struct sde_lm_sub_blks {
 	struct sde_pp_blk gc;
 };
 
+/**
+ * struct sde_dspp_rc: Pixel processing rounded corner sub-blk information
+ * @info: HW register and features supported by this sub-blk.
+ * @version: HW Algorithm version.
+ * @idx: HW block instance id.
+ * @mem_total_size: data memory size.
+ */
+struct sde_dspp_rc {
+	SDE_HW_SUBBLK_INFO;
+	u32 version;
+	u32 idx;
+	u32 mem_total_size;
+};
+
 struct sde_dspp_sub_blks {
 	struct sde_pp_blk igc;
 	struct sde_pp_blk pcc;
@@ -766,6 +782,7 @@ struct sde_dspp_sub_blks {
 	struct sde_pp_blk ad;
 	struct sde_pp_blk ltm;
 	struct sde_pp_blk vlut;
+	struct sde_dspp_rc rc;
 };
 
 struct sde_pingpong_sub_blks {
@@ -1186,12 +1203,35 @@ struct sde_vbif_cfg {
 	u32 memtype_count;
 	u32 memtype[MAX_XIN_COUNT];
 };
+
 /**
- * struct sde_reg_dma_cfg - information of lut dma blocks
- * @id                 enum identifying this block
- * @base               register offset of this block
- * @features           bit mask identifying sub-blocks/features
- * @version            version of lutdma hw block
+ * enum sde_reg_dma_type - defines reg dma block type
+ * @REG_DMA_TYPE_DB: DB LUT DMA block
+ * @REG_DMA_TYPE_SB: SB LUT DMA block
+ * @REG_DMA_TYPE_MAX: invalid selection
+ */
+enum sde_reg_dma_type {
+	REG_DMA_TYPE_DB,
+	REG_DMA_TYPE_SB,
+	REG_DMA_TYPE_MAX,
+};
+
+/**
+ * struct sde_reg_dma_blk_info - definition of lut dma block.
+ * @valid              bool indicating if the definiton is valid.
+ * @base               register offset of this block.
+ * @features           bit mask identifying sub-blocks/features.
+ */
+struct sde_reg_dma_blk_info {
+	bool valid;
+	u32 base;
+	u32 features;
+};
+
+/**
+ * struct sde_reg_dma_cfg - overall config struct of lut dma blocks.
+ * @reg_dma_blks       Reg DMA blk info for each possible block type
+ * @version            version of lutdma hw blocks
  * @trigger_sel_off    offset to trigger select registers of lutdma
  * @broadcast_disabled flag indicating if broadcast usage should be avoided
  * @xin_id             VBIF xin client-id for LUTDMA
@@ -1199,7 +1239,7 @@ struct sde_vbif_cfg {
  * @clk_ctrl           VBIF xin client clk-ctrl
  */
 struct sde_reg_dma_cfg {
-	SDE_HW_BLK_INFO;
+	struct sde_reg_dma_blk_info reg_dma_blks[REG_DMA_TYPE_MAX];
 	u32 version;
 	u32 trigger_sel_off;
 	u32 broadcast_disabled;
@@ -1361,6 +1401,8 @@ struct sde_limit_cfg {
  * @has_cdp            Client driven prefetch feature status
  * @has_wb_ubwc        UBWC feature supported on WB
  * @has_cwb_support    indicates if device supports primary capture through CWB
+ * @cwb_blk_off        CWB offset address
+ * @cwb_blk_stride     offset between each CWB blk
  * @ubwc_version       UBWC feature version (0x0 for not supported)
  * @ubwc_bw_calc_version indicate how UBWC BW has to be calculated
  * @has_idle_pc        indicate if idle power collapse feature is supported
@@ -1384,6 +1426,7 @@ struct sde_limit_cfg {
  * @has_mixer_combined_alpha     Mixer has single register for FG & BG alpha
  * @vbif_disable_inner_outer_shareable     VBIF requires disabling shareables
  * @inline_disable_const_clr     Disable constant color during inline rotate
+ * @dither_luma_mode_support   Enables dither luma mode
  * @sc_cfg: system cache configuration
  * @uidle_cfg		Settings for uidle feature
  * @sui_misr_supported  indicate if secure-ui-misr is supported
@@ -1400,6 +1443,7 @@ struct sde_limit_cfg {
  * @has_vig_p010  indicates if vig pipe supports p010 format
  * @inline_rot_formats	formats supported by the inline rotator feature
  * @irq_offset_list     list of sde_intr_irq_offsets to initialize irq table
+ * @rc_count	number of rounded corner hardware instances
  */
 struct sde_mdss_cfg {
 	u32 hwversion;
@@ -1425,6 +1469,8 @@ struct sde_mdss_cfg {
 	bool has_dim_layer;
 	bool has_wb_ubwc;
 	bool has_cwb_support;
+	u32 cwb_blk_off;
+	u32 cwb_blk_stride;
 	u32 ubwc_version;
 	u32 ubwc_bw_calc_version;
 	bool has_idle_pc;
@@ -1441,6 +1487,7 @@ struct sde_mdss_cfg {
 	bool has_mixer_combined_alpha;
 	bool vbif_disable_inner_outer_shareable;
 	bool inline_disable_const_clr;
+	bool dither_luma_mode_support;
 
 	struct sde_sc_cfg sc_cfg;
 
@@ -1509,6 +1556,7 @@ struct sde_mdss_cfg {
 
 	u32 ad_count;
 	u32 ltm_count;
+	u32 rc_count;
 
 	u32 merge_3d_count;
 	struct sde_merge_3d_cfg merge_3d[MAX_BLOCKS];
@@ -1556,6 +1604,7 @@ struct sde_mdss_hw_cfg_handler {
 #define BLK_WB(s) ((s)->wb)
 #define BLK_AD(s) ((s)->ad)
 #define BLK_LTM(s) ((s)->ltm)
+#define BLK_RC(s) ((s)->rc)
 
 /**
  * sde_hw_set_preference: populate the individual hw lm preferences,
