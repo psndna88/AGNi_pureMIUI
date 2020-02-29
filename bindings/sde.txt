@@ -308,6 +308,13 @@ Optional properties:
 				DSPP offsets. Since LTM hardware is represented as part of
 				DSPP block, the LTM offsets are calculated based on the
 				corresponding DSPP base.
+- qcom,sde-dspp-rc-version:	A u32 value indicating the version of the RC hardware.
+- qcom,sde-dspp-rc-off:	Array of u32 offsets indicate the RC block offsets from the
+				DSPP offsets. Since RC hardware is represented as part of
+				DSPP block, the RC offsets are calculated based on the
+				corresponding DSPP base.
+- qcom,sde-dspp-rc-size:	A u32 value indicating the RC block address range.
+- qcom,sde-dspp-rc-mem-size:	A u32 value indicating the RC block shared memory size.
 - qcom,sde-vbif-id:		Array of vbif ids corresponding to the
 				offsets defined in property: qcom,sde-vbif-off.
 - qcom,sde-vbif-default-ot-rd-limit:	A u32 value indicates the default read OT limit
@@ -331,9 +338,11 @@ Optional properties:
 				control register. Number of offsets defined should
 				match the number of offsets defined in
 				property: qcom,sde-wb-off
-- qcom,sde-reg-dma-off:         Offset of the register dma hardware block from
-				"regdma_phys" defined in reg property.
-- qcom,sde-reg-dma-version:	Version of the reg dma hardware block.
+- qcom,sde-reg-dma-off:         Array of u32 offset addresses of the dma hardware blocks,
+				relative to "regdma_phys" defined in reg property.
+- qcom,sde-reg-dma-id:		Array of u32 DMA block type ids corresponding to the
+				offsets declared in property: qcom,sde-reg-dma-off
+- qcom,sde-reg-dma-version:	Version of the reg dma hardware blocks.
 - qcom,sde-reg-dma-trigger-off: Offset of the lut dma trigger reg from "mdp_phys"
 				defined in reg property.
 - qcom,sde-reg-dma-broadcast-disabled: Boolean property to indicate if broadcast
@@ -598,6 +607,10 @@ Example:
     qcom,sde-dspp-off = <0x00055000 0x00057000>;
     qcom,sde-dspp-ad-off = <0x24000 0x22800>;
     qcom,sde-dspp-ad-version = <0x00030000>;
+    qcom,sde-dspp-rc-version = <0x00010000>;
+    qcom,sde-dspp-rc-off = <0x15800 0x14c00>;
+    qcom,sde-dspp-rc-size = <0x100>;
+    qcom,sde-dspp-rc-mem-size = <2720>;
     qcom,sde-dest-scaler-top-off = <0x00061000>;
     qcom,sde-dest-scaler-off = <0x800 0x1000>;
     qcom,sde-wb-off = <0x00066000>;
@@ -791,8 +804,9 @@ Example:
     qcom,sde-vbif-qos-cwb-remap = <3 3 4 4 5 5 6 3>;
     qcom,sde-vbif-qos-lutdma-remap = <3 3 3 3 4 4 4 4>;
 
-    qcom,sde-reg-dma-off = <0>;
-    qcom,sde-reg-dma-version = <0x00010002>;
+    qcom,sde-reg-dma-off = <0 0x400>;
+    qcom,sde-reg-dma-id = <0 1>;
+    qcom,sde-reg-dma-version = <0x00020000>;
     qcom,sde-reg-dma-trigger-off = <0x119c>;
     qcom,sde-reg-dma-broadcast-disabled = <0>;
     qcom,sde-reg-dma-xin-id = <7>;
