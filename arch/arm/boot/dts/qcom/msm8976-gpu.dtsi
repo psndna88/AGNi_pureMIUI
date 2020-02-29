@@ -55,8 +55,8 @@
 		qcom,idle-timeout = <64>; //msecs
 		qcom,strtstp-sleepwake;
 
-		qcom,pm-qos-active-latency = <401>;
-		qcom,pm-qos-wakeup-latency = <101>;
+		qcom,pm-qos-active-latency = <50>;
+		qcom,pm-qos-wakeup-latency = <50>;
 
 		/* Avoid L2PC on big cluster CPUs (CPU 4,5,6,7) */
 		qcom,l2pc-cpu-mask = <0x000000F0>;
