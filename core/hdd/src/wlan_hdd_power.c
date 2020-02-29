@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -81,6 +81,7 @@
 #include "wlan_p2p_ucfg_api.h"
 #include "wlan_mlme_ucfg_api.h"
 #include "wlan_osif_request_manager.h"
+#include <wlan_hdd_sar_limits.h>
 
 /* Preprocessor definitions and constants */
 #ifdef QCA_WIFI_NAPIER_EMULATION
@@ -120,6 +121,46 @@ void hdd_wlan_offload_event(uint8_t type, uint8_t state)
 	host_offload.state = state;
 
 	WLAN_HOST_DIAG_EVENT_REPORT(&host_offload, EVENT_WLAN_OFFLOAD_REQ);
+}
+#endif
+
+#ifdef WLAN_FEATURE_PKT_CAPTURE
+
+/* timeout in msec to wait for RX_THREAD to suspend */
+#define HDD_MONTHREAD_SUSPEND_TIMEOUT 200
+
+void wlan_hdd_mon_thread_resume(struct hdd_context *hdd_ctx)
+{
+	if (hdd_ctx->is_ol_mon_thread_suspended) {
+		cds_resume_mon_thread();
+		hdd_ctx->is_ol_mon_thread_suspended = false;
+	}
+}
+
+int wlan_hdd_mon_thread_suspend(struct hdd_context *hdd_ctx)
+{
+	p_cds_sched_context cds_sched_context = get_cds_sched_ctxt();
+	int rc;
+
+	if (!cds_sched_context)
+		return -EINVAL;
+
+	set_bit(RX_SUSPEND_EVENT,
+		&cds_sched_context->sched_mon_ctx.ol_mon_event_flag);
+	wake_up_interruptible(&cds_sched_context->
+			      sched_mon_ctx.ol_mon_wait_queue);
+	rc = wait_for_completion_timeout(
+			&cds_sched_context->sched_mon_ctx.ol_suspend_mon_event,
+			msecs_to_jiffies(HDD_MONTHREAD_SUSPEND_TIMEOUT));
+	if (!rc) {
+		clear_bit(RX_SUSPEND_EVENT,
+			  &cds_sched_context->sched_mon_ctx.ol_mon_event_flag);
+		hdd_err("Failed to stop tl_shim mon thread");
+		return -EINVAL;
+	}
+	hdd_ctx->is_ol_mon_thread_suspended = true;
+
+	return 0;
 }
 #endif
 
@@ -241,8 +282,7 @@ static void __wlan_hdd_ipv6_changed(struct net_device *net_dev)
 		goto exit;
 
 	if (adapter->device_mode == QDF_STA_MODE ||
-	    adapter->device_mode == QDF_P2P_CLIENT_MODE ||
-	    adapter->device_mode == QDF_NDI_MODE) {
+	    adapter->device_mode == QDF_P2P_CLIENT_MODE) {
 		hdd_debug("invoking sme_dhcp_done_ind");
 		sme_dhcp_done_ind(hdd_ctx->mac_handle, adapter->vdev_id);
 		schedule_work(&adapter->ipv6_notifier_work);
@@ -870,8 +910,7 @@ static void __wlan_hdd_ipv4_changed(struct net_device *net_dev)
 		goto exit;
 
 	if (adapter->device_mode == QDF_STA_MODE ||
-	    adapter->device_mode == QDF_P2P_CLIENT_MODE ||
-	    adapter->device_mode == QDF_NDI_MODE) {
+	    adapter->device_mode == QDF_P2P_CLIENT_MODE) {
 		hdd_debug("invoking sme_dhcp_done_ind");
 		sme_dhcp_done_ind(hdd_ctx->mac_handle, adapter->vdev_id);
 
@@ -905,6 +944,44 @@ int wlan_hdd_ipv4_changed(struct notifier_block *nb,
 
 	return NOTIFY_DONE;
 }
+
+#ifdef FEATURE_RUNTIME_PM
+int wlan_hdd_pm_qos_notify(struct notifier_block *nb, unsigned long curr_val,
+			   void *context)
+{
+	struct hdd_context *hdd_ctx = container_of(nb, struct hdd_context,
+						   pm_qos_notifier);
+	void *hif_ctx;
+
+	if (hdd_ctx->driver_status != DRIVER_MODULES_ENABLED) {
+		hdd_debug_rl("Driver Module closed; skipping pm qos notify");
+		return 0;
+	}
+
+	hif_ctx = cds_get_context(QDF_MODULE_ID_HIF);
+	if (!hif_ctx) {
+		hdd_err("Hif context is Null");
+		return -EINVAL;
+	}
+
+	hdd_debug("PM QOS update. Current value: %ld", curr_val);
+	qdf_spin_lock_irqsave(&hdd_ctx->pm_qos_lock);
+
+	if (!hdd_ctx->runtime_pm_prevented &&
+	    curr_val != PM_QOS_CPU_DMA_LAT_DEFAULT_VALUE) {
+		hif_pm_runtime_get_noresume(hif_ctx);
+		hdd_ctx->runtime_pm_prevented = true;
+	} else if (hdd_ctx->runtime_pm_prevented &&
+		   curr_val == PM_QOS_CPU_DMA_LAT_DEFAULT_VALUE) {
+		hif_pm_runtime_put_noidle(hif_ctx);
+		hdd_ctx->runtime_pm_prevented = false;
+	}
+
+	qdf_spin_unlock_irqrestore(&hdd_ctx->pm_qos_lock);
+
+	return NOTIFY_DONE;
+}
+#endif
 
 /**
  * hdd_get_ipv4_local_interface() - get ipv4 local interafce from iface list
@@ -1041,7 +1118,7 @@ void hdd_enable_mc_addr_filtering(struct hdd_adapter *adapter,
 							  adapter->vdev_id,
 							  trigger);
 	if (QDF_IS_STATUS_ERROR(status))
-		hdd_err("failed to enable mc list; status:%d", status);
+		hdd_debug("failed to enable mc list; status:%d", status);
 
 out:
 	hdd_exit();
@@ -1098,7 +1175,7 @@ void hdd_disable_and_flush_mc_addr_list(struct hdd_adapter *adapter,
 							   adapter->vdev_id,
 							   trigger);
 	if (QDF_IS_STATUS_ERROR(status))
-		hdd_err("failed to disable mc list; status:%d", status);
+		hdd_debug("failed to disable mc list; status:%d", status);
 
 flush_mc_list:
 	status = ucfg_pmo_flush_mc_addr_list(hdd_ctx->psoc,
@@ -1186,6 +1263,9 @@ hdd_suspend_wlan(void)
 		return -EAGAIN;
 
 	hdd_ctx->hdd_wlan_suspended = true;
+
+	hdd_configure_sar_sleep_index(hdd_ctx);
+
 	hdd_wlan_suspend_resume_event(HDD_WLAN_EARLY_SUSPEND);
 
 	return 0;
@@ -1243,6 +1323,8 @@ static int hdd_resume_wlan(void)
 						     QDF_SYSTEM_SUSPEND);
 	if (QDF_IS_STATUS_ERROR(status))
 		return qdf_status_to_os_return(status);
+
+	hdd_configure_sar_resume_index(hdd_ctx);
 
 	return 0;
 }
@@ -1312,6 +1394,9 @@ QDF_STATUS hdd_wlan_shutdown(void)
 	wlan_hdd_rx_thread_resume(hdd_ctx);
 
 	dp_txrx_resume(cds_get_context(QDF_MODULE_ID_SOC));
+
+	if (cds_is_pktcapture_enabled())
+		wlan_hdd_mon_thread_resume(hdd_ctx);
 
 	/*
 	 * After SSR, FW clear its txrx stats. In host,
@@ -1681,12 +1766,6 @@ static int __wlan_hdd_cfg80211_resume_wlan(struct wiphy *wiphy)
 		goto exit_with_code;
 	}
 
-	exit_code = wlan_hdd_validate_context(hdd_ctx);
-	if (exit_code) {
-		hdd_err("Invalid HDD context");
-		goto exit_with_code;
-	}
-
 	if (hdd_ctx->config->is_wow_disabled) {
 		hdd_err("wow is disabled");
 		return -EINVAL;
@@ -1717,6 +1796,9 @@ static int __wlan_hdd_cfg80211_resume_wlan(struct wiphy *wiphy)
 
 	if (hdd_ctx->enable_dp_rx_threads)
 		dp_txrx_resume(cds_get_context(QDF_MODULE_ID_SOC));
+
+	if (cds_is_pktcapture_enabled())
+		wlan_hdd_mon_thread_resume(hdd_ctx);
 
 	qdf_mtrace(QDF_MODULE_ID_HDD, QDF_MODULE_ID_HDD,
 		   TRACE_CODE_HDD_CFG80211_RESUME_WLAN,
@@ -1914,6 +1996,11 @@ static int __wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
 	if (hdd_ctx->enable_dp_rx_threads)
 		dp_txrx_suspend(cds_get_context(QDF_MODULE_ID_SOC));
 
+	if (cds_is_pktcapture_enabled()) {
+		if (wlan_hdd_mon_thread_suspend(hdd_ctx))
+			goto resume_ol_mon;
+	}
+
 	qdf_mtrace(QDF_MODULE_ID_HDD, QDF_MODULE_ID_HDD,
 		   TRACE_CODE_HDD_CFG80211_SUSPEND_WLAN,
 		   NO_SESSION, hdd_ctx->is_wiphy_suspended);
@@ -1933,6 +2020,11 @@ static int __wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
 resume_dp_thread:
 	if (hdd_ctx->enable_dp_rx_threads)
 		dp_txrx_resume(cds_get_context(QDF_MODULE_ID_SOC));
+
+resume_ol_mon:
+	/* Resume tlshim MON thread */
+	if (cds_is_pktcapture_enabled())
+		wlan_hdd_mon_thread_resume(hdd_ctx);
 
 resume_ol_rx:
 	/* Resume tlshim Rx thread */
@@ -2407,7 +2499,7 @@ static int __wlan_hdd_cfg80211_get_txpower(struct wiphy *wiphy,
 	case QDF_SAP_MODE:
 	case QDF_P2P_GO_MODE:
 		if (!test_bit(SOFTAP_BSS_STARTED, &adapter->event_flags)) {
-			hdd_err("SAP is not started yet");
+			hdd_debug("SAP is not started yet");
 			return 0;
 		}
 		break;

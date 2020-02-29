@@ -41,6 +41,21 @@ ifeq ($(CONFIG_CNSS_QCA6490), y)
 	CONFIG_WDI3_IPA_OVER_GSI :=y
 endif
 
+ifeq ($(CONFIG_CNSS_QCA6750), y)
+	ifeq ($(CONFIG_CNSS_EMULATION), y)
+		CONFIG_QCA_WIFI_NAPIER_EMULATION := y
+	endif
+	CONFIG_LITHIUM := y
+	CONFIG_WLAN_FEATURE_11AX := y
+	CONFIG_WLAN_FEATURE_DFS_OFFLOAD := y
+	ifeq ($(CONFIG_ARCH_SDM845), y)
+		CONFIG_IPA3 := n
+	endif
+	CONFIG_SCALE_INCLUDES := y
+	CONFIG_HASTINGS_BT_WAR := y
+	CONFIG_WDI3_IPA_OVER_GSI :=y
+endif
+
 ifeq ($(CONFIG_CLD_HL_SDIO_CORE), y)
 	CONFIG_QCA_WIFI_SDIO := y
 ifndef CONFIG_SDIO_TRANSFER
@@ -54,6 +69,10 @@ endif
 
 ifdef CONFIG_ICNSS
 	CONFIG_ROME_IF = snoc
+endif
+
+ifdef CONFIG_ICNSS2
+	CONFIG_ROME_IF = ipci
 endif
 
 ifeq (y,$(findstring y,$(CONFIG_CNSS) $(CONFIG_CNSS2)))
@@ -148,7 +167,6 @@ endif
 CONFIG_WLAN_DISABLE_EXPORT_SYMBOL := y
 
 CONFIG_QCACLD_FEATURE_GREEN_AP := y
-CONFIG_CRYPTO_COMPONENT := y
 #Flag to enable Android Packet Filtering
 CONFIG_QCACLD_FEATURE_APF := y
 
@@ -198,6 +216,10 @@ ifeq ($(CONFIG_ARCH_LITO), y)
 CONFIG_QCACLD_FEATURE_METERING := y
 endif
 
+ifeq ($(CONFIG_ARCH_BENGAL), y)
+CONFIG_QCACLD_FEATURE_METERING := y
+endif
+
 ifeq ($(CONFIG_ARCH_KONA), y)
 CONFIG_QCACLD_FEATURE_METERING := y
 CONFIG_WDI3_STATS_UPDATE := y
@@ -216,7 +238,7 @@ CONFIG_ADAPTIVE_11R := y
 #Flag to enable FILS Feature (11ai)
 CONFIG_WLAN_FEATURE_FILS := y
 ifneq ($(CONFIG_QCA_CLD_WLAN),)
-	ifeq (y,$(findstring y,$(CONFIG_CNSS) $(CONFIG_CNSS2) $(CONFIG_ICNSS)))
+	ifeq (y,$(findstring y,$(CONFIG_CNSS) $(CONFIG_CNSS2) $(CONFIG_ICNSS)$(CONFIG_ICNSS2)))
 	#Flag to enable Protected Management Frames (11w) feature
 	CONFIG_WLAN_FEATURE_11W := y
 	#Flag to enable LTE CoEx feature
@@ -227,7 +249,7 @@ ifneq ($(CONFIG_QCA_CLD_WLAN),)
 		endif
 	endif
 
-	ifeq (m,$(findstring m,$(CONFIG_CNSS2)))
+	ifeq (m,$(findstring m,$(CONFIG_CNSS2) $(CONFIG_ICNSS2)))
 	#Flag to enable Protected Management Frames (11w) feature
 	CONFIG_WLAN_FEATURE_11W := y
 	#Flag to enable LTE CoEx feature
@@ -276,15 +298,15 @@ CONFIG_WLAN_FEATURE_DSRC := y
 endif
 
 ifneq ($(CONFIG_ROME_IF),usb)
+	#Flag to enable SAE
+	CONFIG_WLAN_FEATURE_SAE := y
+
 ifneq ($(CONFIG_ROME_IF),sdio)
 	#Flag to enable DISA
 	CONFIG_WLAN_FEATURE_DISA := y
 
 	#Flag to enable FIPS
 	CONFIG_WLAN_FEATURE_FIPS := y
-
-	#Flag to enable SAE
-	CONFIG_WLAN_FEATURE_SAE := y
 
 	#Flag to enable Fast Path feature
 	ifneq ($(CONFIG_LITHIUM), y)
@@ -401,6 +423,11 @@ ifeq ($(CONFIG_CNSS_QCA6490), y)
 	CONFIG_QCA_WIFI_QCA6490 := y
 endif
 
+ifeq ($(CONFIG_CNSS_QCA6750), y)
+	CONFIG_QCA6750_HEADERS_DEF := y
+	CONFIG_QCA_WIFI_QCA6750 := y
+endif
+
 ifeq ($(CONFIG_LITHIUM), y)
 #
 # Enable VERBOSE debug INI mechanism
@@ -424,6 +451,7 @@ CONFIG_DP_TXRX_SOC_ATTACH := y
 CONFIG_WLAN_CLD_PM_QOS := y
 CONFIG_DISABLE_DP_STATS := n
 CONFIG_REO_DESC_DEFER_FREE := y
+CONFIG_RXDMA_ERR_PKT_DROP := y
 
 ifeq ($(CONFIG_FEATURE_TSO), y)
 	CONFIG_FEATURE_TSO_STATS := y
@@ -515,6 +543,10 @@ ifeq ($(CONFIG_ROME_IF),pci)
 	CONFIG_ATH_11AC_TXCOMPACT := y
 endif
 
+ifeq ($(CONFIG_ROME_IF),ipci)
+	CONFIG_ATH_11AC_TXCOMPACT := y
+endif
+
 ifeq ($(CONFIG_ROME_IF),usb)
 	CONFIG_ATH_11AC_TXCOMPACT := n
 endif
@@ -522,6 +554,10 @@ endif
 #Enable PCI specific APIS (dma, etc)
 ifeq ($(CONFIG_ROME_IF),pci)
 	CONFIG_HIF_PCI := y
+endif
+
+ifeq ($(CONFIG_ROME_IF),ipci)
+	CONFIG_HIF_IPCI := y
 endif
 
 #Enable USB specific APIS
@@ -577,6 +613,12 @@ CONFIG_ATH_SUPPORT_SPECTRAL := n
 ifeq ($(CONFIG_REMOVE_PKT_LOG), n)
 ifeq ($(CONFIG_HELIUMPLUS), y)
 CONFIG_PKTLOG_LEGACY := y
+endif
+
+#Customize DSCP_to-UP map based on RFC8325
+ifeq ($(CONFIG_HELIUMPLUS), y)
+CONFIG_WLAN_CUSTOM_DSCP_UP_MAP := y
+CONFIG_WLAN_SEND_DSCP_UP_MAP_TO_FW := y
 endif
 
 ifeq ($(CONFIG_ROME_IF), sdio)
@@ -721,6 +763,12 @@ CONFIG_ENABLE_SMMU_S1_TRANSLATION := y
 endif
 endif
 
+ifeq ($(CONFIG_ARCH_BENGAL), y)
+ifeq ($(CONFIG_IPA_OFFLOAD), y)
+CONFIG_ENABLE_SMMU_S1_TRANSLATION := y
+endif
+endif
+
 ifeq ($(CONFIG_ARCH_SDX20), y)
 ifeq ($(CONFIG_QCA_WIFI_SDIO), y)
 ifeq ($(CONFIG_WCNSS_SKB_PRE_ALLOC), y)
@@ -796,6 +844,9 @@ CONFIG_HOST_OPCLASS := y
 #Flag to enable Dynamic Voltage WDCVS (Config Voltage Mode)
 CONFIG_WLAN_DYNAMIC_CVM := y
 
+#Flag to enable SAR Safety Feature
+CONFIG_SAR_SAFETY_FEATURE := y
+
 CONFIG_WIFI_POS_CONVERGED := y
 ifneq ($(CONFIG_WIFI_POS_CONVERGED), y)
 CONFIG_WIFI_POS_LEGACY := y
@@ -840,6 +891,7 @@ CONFIG_WMI_CMD_STRINGS := y
 CONFIG_FEATURE_MONITOR_MODE_SUPPORT := y
 CONFIG_WLAN_ALLOCATE_GLOBAL_BUFFERS_DYNAMICALLY := n
 CONFIG_WLAN_FEATURE_TWT := y
+CONFIG_FW_THERMAL_THROTTLE := y
 
 ifeq (y,$(findstring y,$(CONFIG_LITHIUM) $(CONFIG_ICNSS)))
 CONFIG_WLAN_FEATURE_BMI := n
@@ -903,6 +955,7 @@ ifeq ($(CONFIG_LITHIUM), y)
 	endif
 	CONFIG_WLAN_SUPPORT_DATA_STALL := y
 	CONFIG_WLAN_DP_PER_RING_TYPE_CONFIG := y
+	CONFIG_WLAN_CE_INTERRUPT_THRESHOLD_CONFIG := y
 	#Enable WMI TX/RX over QMI
 	CONFIG_WMI_SEND_RECV_QMI := y
 	CONFIG_WLAN_DP_PENDING_MEM_FLUSH := y
@@ -951,6 +1004,10 @@ endif
 ifeq ($(CONFIG_HIF_PCI), y)
 CONFIG_PLD_PCIE_CNSS_FLAG := y
 endif
+endif
+
+ifeq ($(CONFIG_ICNSS2), y)
+CONFIG_PLD_IPCI_ICNSS_FLAG := y
 endif
 
 ifeq ($(CONFIG_CNSS2), y)
@@ -1002,3 +1059,7 @@ CONFIG_SAP_DHCP_FW_IND := y
 
 #Enable support to get ANI level
 CONFIG_ANI_LEVEL_REQUEST := y
+
+ifeq ($(CONFIG_ARCH_QCS405), y)
+CONFIG_FEATURE_WLAN_TIME_SYNC_FTM := y
+endif

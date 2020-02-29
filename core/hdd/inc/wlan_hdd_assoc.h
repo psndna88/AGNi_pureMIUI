@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -355,15 +355,6 @@ inline QDF_STATUS hdd_roam_deregister_tdlssta(struct hdd_adapter *adapter,
 }
 #endif
 
-
-/**
- * hdd_perform_roam_set_key_complete() - perform set key complete
- * @adapter: pointer to adapter
- *
- * Return: none
- */
-void hdd_perform_roam_set_key_complete(struct hdd_adapter *adapter);
-
 #ifdef FEATURE_WLAN_ESE
 /**
  * hdd_indicate_ese_bcn_report_no_results() - beacon report no scan results
@@ -409,14 +400,14 @@ static inline bool hdd_is_roam_sync_in_progress(struct csr_roam_info *roaminfo)
 /**
  * hdd_update_dp_vdev_flags() - update datapath vdev flags
  * @cbk_data: callback data
- * @mac_addr: mac address of the station
+ * @vdev_id: virtual interface id
  * @vdev_param: vdev parameter
  * @is_link_up: link state up or down
  *
  * Return: QDF status
  */
 QDF_STATUS hdd_update_dp_vdev_flags(void *cbk_data,
-				    struct qdf_mac_addr *mac_addr,
+				    uint8_t vdev_id,
 				    uint32_t vdev_param,
 				    bool is_link_up);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -128,15 +128,14 @@ int find_ie_location(struct mac_context *mac, tpSirRSNie pRsnIe, uint8_t EID)
 	bytesLeft = pRsnIe->length;
 
 	while (1) {
-		if (EID == pRsnIe->rsnIEdata[idx]) {
+		if (EID == pRsnIe->rsnIEdata[idx])
 			/* Found it */
 			return idx;
-		} else if (EID != pRsnIe->rsnIEdata[idx] &&
-			/* & if no more IE, */
-			   bytesLeft <= (uint16_t) (ieLen)) {
-			pe_debug("No IE (%d)", EID);
+		if (EID != pRsnIe->rsnIEdata[idx] &&
+		    /* & if no more IE, */
+		    bytesLeft <= (uint16_t)(ieLen))
 			return ret_val;
-		}
+
 		bytesLeft -= ieLen;
 		ieLen = pRsnIe->rsnIEdata[idx + 1] + 2;
 		idx += ieLen;
@@ -180,29 +179,47 @@ void populate_dot_11_f_ext_chann_switch_ann(struct mac_context *mac_ptr,
 		struct pe_session *session_entry)
 {
 	uint8_t ch_offset;
+	uint8_t op_class = 0;
+	uint8_t chan_num = 0;
+	uint32_t sw_target_freq;
+	uint8_t primary_channel;
+	enum phy_ch_width ch_width;
 
-	if (session_entry->gLimChannelSwitch.ch_width == CH_WIDTH_80MHZ)
+	ch_width = session_entry->gLimChannelSwitch.ch_width;
+	if (ch_width == CH_WIDTH_80MHZ)
 		ch_offset = BW80;
 	else
 		ch_offset = session_entry->gLimChannelSwitch.sec_ch_offset;
 
 	dot_11_ptr->switch_mode = session_entry->gLimChannelSwitch.switchMode;
-	dot_11_ptr->new_reg_class = wlan_reg_dmn_get_opclass_from_channel(
-			mac_ptr->scan.countryCodeCurrent,
-			session_entry->gLimChannelSwitch.primaryChannel,
-			ch_offset);
+	sw_target_freq = session_entry->gLimChannelSwitch.sw_target_freq;
+	primary_channel = session_entry->gLimChannelSwitch.primaryChannel;
+	if (WLAN_REG_IS_6GHZ_CHAN_FREQ(sw_target_freq)) {
+		wlan_reg_freq_width_to_chan_op_class
+			(mac_ptr->pdev, sw_target_freq,
+			 ch_width_in_mhz(ch_width),
+			 true, BIT(BEHAV_NONE), &op_class, &chan_num);
+		dot_11_ptr->new_reg_class = op_class;
+	} else {
+		dot_11_ptr->new_reg_class =
+			wlan_reg_dmn_get_opclass_from_channel
+				(mac_ptr->scan.countryCodeCurrent,
+				 primary_channel, ch_offset);
+	}
+
 	dot_11_ptr->new_channel =
 		session_entry->gLimChannelSwitch.primaryChannel;
 	dot_11_ptr->switch_count =
 		session_entry->gLimChannelSwitch.switchCount;
 	dot_11_ptr->present = 1;
 
-	pe_debug("country:%s chan:%d width:%d reg:%d off:%d",
-			mac_ptr->scan.countryCodeCurrent,
-			session_entry->gLimChannelSwitch.primaryChannel,
-			session_entry->gLimChannelSwitch.ch_width,
-			dot_11_ptr->new_reg_class,
-			session_entry->gLimChannelSwitch.sec_ch_offset);
+	pe_debug("country:%s chan:%d freq %d width:%d reg:%d off:%d",
+		 mac_ptr->scan.countryCodeCurrent,
+		 session_entry->gLimChannelSwitch.primaryChannel,
+		 sw_target_freq,
+		 session_entry->gLimChannelSwitch.ch_width,
+		 dot_11_ptr->new_reg_class,
+		 session_entry->gLimChannelSwitch.sec_ch_offset);
 }
 
 void
@@ -1157,13 +1174,10 @@ populate_dot11f_ext_cap(struct mac_context *mac,
 		pe_debug("11MC support enabled");
 		pDot11f->num_bytes = DOT11F_IE_EXTCAP_MAX_LEN;
 	} else {
-		if (eLIM_AP_ROLE != pe_session->limSystemRole) {
-			pe_debug("11MC support enabled");
+		if (eLIM_AP_ROLE != pe_session->limSystemRole)
 			pDot11f->num_bytes = DOT11F_IE_EXTCAP_MAX_LEN;
-		} else  {
-			pe_debug("11MC support disabled");
+		else
 			pDot11f->num_bytes = DOT11F_IE_EXTCAP_MIN_LEN;
-		}
 	}
 
 	p_ext_cap = (struct s_ext_cap *)pDot11f->bytes;
@@ -2797,6 +2811,12 @@ sir_convert_assoc_req_frame2_struct(struct mac_context *mac,
 		QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
 				   &pAssocReq->he_cap, sizeof(tDot11fIEhe_cap));
 	}
+	if (ar->he_6ghz_band_cap.present) {
+		qdf_mem_copy(&pAssocReq->he_6ghz_band_cap,
+			     &ar->he_6ghz_band_cap,
+			     sizeof(tDot11fIEhe_6ghz_band_cap));
+		pe_debug("Received Assoc Req with HE Band Capability IE");
+	}
 	qdf_mem_free(ar);
 	return QDF_STATUS_SUCCESS;
 
@@ -3261,6 +3281,13 @@ sir_convert_assoc_resp_frame2_struct(struct mac_context *mac,
 				pAssocRsp->he_op.bss_col_disabled);
 	}
 
+	if (ar->he_6ghz_band_cap.present) {
+		pe_debug("11AX: HE Band Capability IE present");
+		qdf_mem_copy(&pAssocRsp->he_6ghz_band_cap,
+			     &ar->he_6ghz_band_cap,
+			     sizeof(tDot11fIEhe_6ghz_band_cap));
+	}
+
 	if (ar->mu_edca_param_set.present) {
 		pe_debug("11AX: HE MU EDCA param IE present");
 		pAssocRsp->mu_edca_present = true;
@@ -3463,6 +3490,12 @@ sir_convert_reassoc_req_frame2_struct(struct mac_context *mac,
 		qdf_mem_copy(&pAssocReq->he_cap, &ar->he_cap,
 			     sizeof(tDot11fIEhe_cap));
 	}
+	if (ar->he_6ghz_band_cap.present) {
+		qdf_mem_copy(&pAssocReq->he_6ghz_band_cap,
+			     &ar->he_6ghz_band_cap,
+			     sizeof(tDot11fIEhe_6ghz_band_cap));
+	}
+
 	qdf_mem_free(ar);
 
 	return QDF_STATUS_SUCCESS;
@@ -3796,8 +3829,7 @@ sir_parse_beacon_ie(struct mac_context *mac,
 		qdf_mem_free(pBies);
 		return QDF_STATUS_E_FAILURE;
 	} else if (DOT11F_WARNED(status)) {
-		pe_debug("There were warnings while unpacking Beacon IEs (0x%08x, %d bytes):",
-			status, nPayload);
+		pe_debug("warnings (0x%08x, %d bytes):", status, nPayload);
 	}
 	/* & "transliterate" from a 'tDot11fBeaconIEs' to a 'tSirProbeRespBeacon'... */
 	if (!pBies->SSID.present) {

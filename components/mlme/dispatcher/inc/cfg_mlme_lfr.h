@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1165,7 +1165,7 @@
  * <ini>
  * RoamRssiDiff - Enable roam based on rssi
  * @Min: 0
- * @Max: 30
+ * @Max: 100
  * @Default: 5
  *
  * This INI is used to decide whether to Roam or not based on RSSI. AP1 is the
@@ -1185,7 +1185,7 @@
 #define CFG_LFR_ROAM_RSSI_DIFF CFG_INI_UINT( \
 	"RoamRssiDiff", \
 	0, \
-	30, \
+	100, \
 	5, \
 	CFG_VALUE_OR_DEFAULT, \
 	"Enable roam based on rssi")
@@ -2212,7 +2212,7 @@
  * rssi delta and if other criteria of ini "enable_idle_roam" is met
  * @Min: 0
  * @Max: 50
- * @Default: 5
+ * @Default: 3
  *
  * Related: enable_idle_roam
  *
@@ -2226,7 +2226,7 @@
 	"idle_roam_rssi_delta", \
 	0, \
 	50, \
-	5, \
+	3, \
 	CFG_VALUE_OR_DEFAULT, \
 	"Configure RSSI delta to start idle roam")
 

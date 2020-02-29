@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1721,7 +1721,6 @@ static void lim_process_messages(struct mac_context *mac_ctx,
 	case eWNI_SME_START_BSS_REQ:
 	case eWNI_SME_STOP_BSS_REQ:
 	case eWNI_SME_SWITCH_CHL_IND:
-	case eWNI_SME_SETCONTEXT_REQ:
 	case eWNI_SME_DISASSOC_CNF:
 	case eWNI_SME_DEAUTH_CNF:
 	case eWNI_SME_ASSOC_CNF:
@@ -1734,7 +1733,6 @@ static void lim_process_messages(struct mac_context *mac_ctx,
 #if defined FEATURE_WLAN_ESE
 	case eWNI_SME_ESE_ADJACENT_AP_REPORT:
 #endif
-	case eWNI_SME_FT_UPDATE_KEY:
 	case eWNI_SME_FT_PRE_AUTH_REQ:
 	case eWNI_SME_FT_AGGR_QOS_REQ:
 	case eWNI_SME_REGISTER_MGMT_FRAME_REQ:
@@ -1747,6 +1745,7 @@ static void lim_process_messages(struct mac_context *mac_ctx,
 		/* fall through */
 	case eWNI_SME_ROAM_SCAN_OFFLOAD_REQ:
 	case eWNI_SME_ROAM_INIT_PARAM:
+	case eWNI_SME_ROAM_SEND_PER_REQ:
 	case eWNI_SME_SET_ADDBA_ACCEPT:
 	case eWNI_SME_UPDATE_EDCA_PROFILE:
 	case WNI_SME_UPDATE_MU_EDCA_PARAMS:

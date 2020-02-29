@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -829,7 +829,6 @@ static void lim_print_ht_cap(struct mac_context *mac_ctx, struct pe_session *ses
 	}
 }
 
-#ifdef WLAN_CONV_CRYPTO_IE_SUPPORT
 static
 enum mac_status_code lim_check_rsn_ie(struct pe_session *session,
 				      struct mac_context *mac_ctx,
@@ -895,27 +894,6 @@ static enum mac_status_code lim_check_wpa_ie(struct pe_session *session,
 
 	return eSIR_MAC_INVALID_IE_STATUS;
 }
-#else
-static enum mac_status_code lim_check_rsn_ie(struct pe_session *session,
-					     struct mac_context *mac_ctx,
-					     tpSirAssocReq assoc_req,
-					     tDot11fIERSN *rsn,
-					     bool *pmf_connection)
-{
-	return lim_check_rx_rsn_ie_match(mac_ctx, rsn, session,
-					 assoc_req->HTCaps.present,
-					 pmf_connection);
-}
-
-static enum mac_status_code lim_check_wpa_ie(struct pe_session *session,
-					     struct mac_context *mac_ctx,
-					     tpSirAssocReq assoc_req,
-					     tDot11fIEWPA *wpa)
-{
-	return lim_check_rx_wpa_ie_match(mac_ctx, wpa, session,
-					 assoc_req->HTCaps.present);
-}
-#endif
 
 /**
   * lim_check_sae_pmf_cap() - check pmf capability for SAE STA
@@ -929,7 +907,7 @@ static enum mac_status_code lim_check_wpa_ie(struct pe_session *session,
   *
   * Return: mac_status_code
   */
-#ifdef WLAN_FEATURE_SAE
+#if defined(WLAN_FEATURE_SAE) && defined(WLAN_FEATURE_11W)
 static enum mac_status_code lim_check_sae_pmf_cap(struct pe_session *session,
 						  tDot11fIERSN *rsn,
 						  enum ani_akm_type akm_type)
@@ -984,8 +962,8 @@ static bool lim_check_wpa_rsn_ie(struct pe_session *session,
 	 */
 	qdf_mem_zero((uint8_t *) &dot11f_ie_rsn, sizeof(dot11f_ie_rsn));
 	qdf_mem_zero((uint8_t *) &dot11f_ie_wpa, sizeof(dot11f_ie_wpa));
-	pe_err("RSN enabled auth, Re/Assoc req from STA: "
-		QDF_MAC_ADDR_STR, QDF_MAC_ADDR_ARRAY(hdr->sa));
+	pe_debug("RSN enabled auth, Re/Assoc req from STA: "
+		 QDF_MAC_ADDR_STR, QDF_MAC_ADDR_ARRAY(hdr->sa));
 
 	if (assoc_req->rsnPresent) {
 		if (!(assoc_req->rsn.length)) {
@@ -1219,6 +1197,36 @@ static bool lim_process_assoc_req_no_sta_ctx(struct mac_context *mac_ctx,
 	return true;
 }
 
+#ifdef WLAN_DEBUG
+static inline void
+lim_update_assoc_drop_count(struct mac_context *mac_ctx, uint8_t sub_type)
+{
+	if (sub_type == LIM_ASSOC)
+		mac_ctx->lim.gLimNumAssocReqDropInvldState++;
+	else
+		mac_ctx->lim.gLimNumReassocReqDropInvldState++;
+}
+#else
+static inline void
+lim_update_assoc_drop_count(struct mac_context *mac_ctx, uint8_t sub_type) {}
+#endif
+
+#ifdef WLAN_FEATURE_11W
+static inline void
+lim_delete_pmf_query_timer(tpDphHashNode sta_ds)
+{
+	if (!sta_ds->rmfEnabled)
+		return;
+
+	if (tx_timer_running(&sta_ds->pmfSaQueryTimer))
+		tx_timer_deactivate(&sta_ds->pmfSaQueryTimer);
+	tx_timer_delete(&sta_ds->pmfSaQueryTimer);
+}
+#else
+static inline void
+lim_delete_pmf_query_timer(tpDphHashNode sta_ds) {}
+#endif
+
 /**
  * lim_process_assoc_req_sta_ctx() - process assoc req for sta context present
  * @mac_ctx: pointer to Global MAC structure
@@ -1243,29 +1251,16 @@ static bool lim_process_assoc_req_sta_ctx(struct mac_context *mac_ctx,
 				tpDphHashNode sta_ds, uint16_t peer_idx,
 				tAniAuthType *auth_type, uint8_t *update_ctx)
 {
-	/* STA context does exist for this STA */
-	if (sta_ds->mlmStaContext.mlmState != eLIM_MLM_LINK_ESTABLISHED_STATE) {
-		/*
-		 * Requesting STA is in some 'transient' state? Ignore the
-		 * Re/Assoc Req frame by incrementing debug counter & logging
-		 * error.
-		 */
-		if (sub_type == LIM_ASSOC) {
-#ifdef WLAN_DEBUG
-			mac_ctx->lim.gLimNumAssocReqDropInvldState++;
-#endif
-			pe_debug("received Assoc req in state: %X from",
-				sta_ds->mlmStaContext.mlmState);
-		} else {
-#ifdef WLAN_DEBUG
-			mac_ctx->lim.gLimNumReassocReqDropInvldState++;
-#endif
-			pe_debug("received ReAssoc req in state: %X from",
-				sta_ds->mlmStaContext.mlmState);
-		}
-		lim_print_mac_addr(mac_ctx, hdr->sa, LOGD);
-		lim_print_mlm_state(mac_ctx, LOGD,
-			(tLimMlmStates) sta_ds->mlmStaContext.mlmState);
+	/* Drop if STA deletion is in progress or not in established state */
+	if (sta_ds->sta_deletion_in_progress ||
+	    (sta_ds->mlmStaContext.mlmState !=
+	     eLIM_MLM_LINK_ESTABLISHED_STATE)) {
+		pe_debug("%s: peer:%pM in mlmState %d (%s) and sta del %d",
+			 (sub_type == LIM_ASSOC) ? "Assoc" : "ReAssoc",
+			 sta_ds->staAddr, sta_ds->mlmStaContext.mlmState,
+			 lim_mlm_state_str(sta_ds->mlmStaContext.mlmState),
+			 sta_ds->sta_deletion_in_progress);
+		lim_update_assoc_drop_count(mac_ctx, sub_type);
 		return false;
 	}
 
@@ -1335,31 +1330,34 @@ static bool lim_process_assoc_req_sta_ctx(struct mac_context *mac_ctx,
 		pe_err("Received Assoc req in state: %X STAid: %d",
 			sta_ds->mlmStaContext.mlmState, peer_idx);
 		return false;
-	} else {
-		/*
-		 * STA sent Re/association Request frame while already in
-		 * 'associated' state. Update STA capabilities and send
-		 * Association response frame with same AID
-		 */
-		pe_debug("Rcvd Assoc req from STA already connected");
-		sta_ds->mlmStaContext.capabilityInfo =
-			assoc_req->capabilityInfo;
-		if (sta_pre_auth_ctx && (sta_pre_auth_ctx->mlmState ==
-			eLIM_MLM_AUTHENTICATED_STATE)) {
-			/* STA has triggered pre-auth again */
-			*auth_type = sta_pre_auth_ctx->authType;
-			lim_delete_pre_auth_node(mac_ctx, hdr->sa);
-		} else {
-			*auth_type = sta_ds->mlmStaContext.authType;
-		}
-
-		*update_ctx = true;
-		if (dph_init_sta_state(mac_ctx, hdr->sa, peer_idx,
-				       &session->dph.dphHashTable) == NULL) {
-			pe_err("could not Init STAid: %d", peer_idx);
-			return false;
-		}
 	}
+
+	/*
+	 * STA sent Re/association Request frame while already in
+	 * 'associated' state. Update STA capabilities and send
+	 * Association response frame with same AID
+	 */
+	pe_debug("Rcvd Assoc req from STA already connected");
+	sta_ds->mlmStaContext.capabilityInfo =
+		assoc_req->capabilityInfo;
+	if (sta_pre_auth_ctx && (sta_pre_auth_ctx->mlmState ==
+		eLIM_MLM_AUTHENTICATED_STATE)) {
+		/* STA has triggered pre-auth again */
+		*auth_type = sta_pre_auth_ctx->authType;
+		lim_delete_pre_auth_node(mac_ctx, hdr->sa);
+	} else {
+		*auth_type = sta_ds->mlmStaContext.authType;
+	}
+
+	*update_ctx = true;
+	/* Free pmf query timer before resetting the sta_ds */
+	lim_delete_pmf_query_timer(sta_ds);
+	if (dph_init_sta_state(mac_ctx, hdr->sa, peer_idx,
+			       &session->dph.dphHashTable) == NULL) {
+		pe_err("could not Init STAid: %d", peer_idx);
+		return false;
+	}
+
 	return true;
 }
 
@@ -1782,22 +1780,24 @@ static bool lim_update_sta_ds(struct mac_context *mac_ctx, tpSirMacMgmtHdr hdr,
 	if (cfg_min(CFG_PMF_SA_QUERY_RETRY_INTERVAL) > retry_interval) {
 		retry_interval = cfg_default(CFG_PMF_SA_QUERY_RETRY_INTERVAL);
 	}
-	if (sta_ds->rmfEnabled &&
-		tx_timer_create(mac_ctx, &sta_ds->pmfSaQueryTimer,
-			"PMF SA Query timer", lim_pmf_sa_query_timer_handler,
-			timer_id.value,
-			SYS_MS_TO_TICKS((retry_interval * 1024) / 1000),
-			0, TX_NO_ACTIVATE) != TX_SUCCESS) {
-		pe_err("could not create PMF SA Query timer");
-		lim_reject_association(mac_ctx, hdr->sa, sub_type,
-			true, auth_type, peer_idx, false,
-			eSIR_MAC_UNSPEC_FAILURE_STATUS,
-			session);
-		return false;
+	if (sta_ds->rmfEnabled) {
+		/* Try to delete it before, creating.*/
+		lim_delete_pmf_query_timer(sta_ds);
+		if (tx_timer_create(mac_ctx, &sta_ds->pmfSaQueryTimer,
+		    "PMF SA Query timer", lim_pmf_sa_query_timer_handler,
+		    timer_id.value,
+		    SYS_MS_TO_TICKS((retry_interval * 1024) / 1000),
+		    0, TX_NO_ACTIVATE) != TX_SUCCESS) {
+			pe_err("could not create PMF SA Query timer");
+			lim_reject_association(mac_ctx, hdr->sa, sub_type,
+					       true, auth_type, peer_idx, false,
+					       eSIR_MAC_UNSPEC_FAILURE_STATUS,
+					       session);
+			return false;
+		}
+		pe_debug("Created pmf timer assoc-id:%d sta mac" QDF_MAC_ADDR_STR,
+			 sta_ds->assocId, QDF_MAC_ADDR_ARRAY(sta_ds->staAddr));
 	}
-	if (sta_ds->rmfEnabled)
-	    pe_debug("Created pmf timer assoc-id:%d sta mac" QDF_MAC_ADDR_STR,
-		     sta_ds->assocId, QDF_MAC_ADDR_ARRAY(sta_ds->staAddr));
 #endif
 
 	if (assoc_req->ExtCap.present) {

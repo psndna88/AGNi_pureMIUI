@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -217,6 +217,20 @@ static uint32_t wma_get_number_of_tids_supported(uint8_t no_of_peers_supported,
 }
 #endif
 
+#if (defined(IPA_DISABLE_OVERRIDE)) && (!defined(IPA_OFFLOAD))
+static void wma_set_ipa_disable_config(
+					target_resource_config *tgt_cfg)
+{
+	tgt_cfg->ipa_disable = true;
+}
+#else
+static void wma_set_ipa_disable_config(
+					target_resource_config *tgt_cfg)
+{
+	tgt_cfg->ipa_disable = false;
+}
+#endif
+
 #ifndef NUM_OF_ADDITIONAL_FW_PEERS
 #define NUM_OF_ADDITIONAL_FW_PEERS	2
 #endif
@@ -302,6 +316,8 @@ static void wma_set_default_tgt_config(tp_wma_handle wma_handle,
 
 	if (cds_get_conparam() == QDF_GLOBAL_MONITOR_MODE)
 		tgt_cfg->rx_decap_mode = CFG_TGT_RX_DECAP_MODE_RAW;
+
+	wma_set_ipa_disable_config(tgt_cfg);
 }
 
 /**
@@ -604,6 +620,10 @@ QDF_STATUS wma_form_unit_test_cmd_and_send(uint32_t vdev_id,
 	QDF_STATUS status;
 
 	WMA_LOGD(FL("enter"));
+
+	if (!wma_is_vdev_valid(vdev_id))
+		return QDF_STATUS_E_FAILURE;
+
 	if (arg_count > WMA_MAX_NUM_ARGS) {
 		WMA_LOGE(FL("arg_count is crossed the boundary"));
 		return QDF_STATUS_E_FAILURE;
@@ -1773,9 +1793,6 @@ static void wma_state_info_dump(char **buf_ptr, uint16_t *size)
 		iface = &wma->interfaces[vdev_id];
 		vdev = iface->vdev;
 		if (!vdev)
-			continue;
-
-		if (!wlan_vdev_get_dp_handle(iface->vdev))
 			continue;
 
 		status = wma_get_vdev_rate_flag(iface->vdev, &rate_flag);
@@ -3246,6 +3263,8 @@ QDF_STATUS wma_open(struct wlan_objmgr_psoc *psoc,
 					   wmi_roam_stats_event_id,
 					   wma_roam_stats_event_handler,
 					   WMA_RX_SERIALIZER_CTX);
+
+	wma_register_pmkid_req_event_handler(wma_handle);
 #endif /* WLAN_FEATURE_ROAM_OFFLOAD */
 	wmi_unified_register_event_handler(wma_handle->wmi_handle,
 				wmi_rssi_breach_event_id,
@@ -4091,7 +4110,7 @@ QDF_STATUS wma_start(void)
 			goto end;
 		}
 	} else {
-		WMA_LOGE("Target does not support cesium network");
+		WMA_LOGD("Target does not support cesium network");
 	}
 
 	qdf_status = wma_tx_attach(wma_handle);
@@ -4257,10 +4276,10 @@ QDF_STATUS wma_stop(void)
 		vdev = wma_handle->interfaces[i].vdev;
 		if (!vdev)
 			continue;
-		if (wlan_vdev_get_dp_handle(vdev) && wma_is_vdev_up(i)) {
+
+		if (wma_is_vdev_up(i))
 			cdp_fc_vdev_flush(cds_get_context(QDF_MODULE_ID_SOC),
 					  i);
-		}
 	}
 
 	if (!mac->mlme_cfg->gen.enable_remove_time_stamp_sync_cmd &&
@@ -5235,6 +5254,9 @@ static void wma_update_nan_target_caps(tp_wma_handle wma_handle,
 	if (wmi_service_enabled(wma_handle->wmi_handle,
 				wmi_service_ndi_sap_support))
 		tgt_cfg->nan_caps.ndi_sap_supported = 1;
+
+	if (wmi_service_enabled(wma_handle->wmi_handle, wmi_service_nan_vdev))
+		tgt_cfg->nan_caps.nan_vdev_allowed = 1;
 }
 #else
 static void wma_update_nan_target_caps(tp_wma_handle wma_handle,
@@ -5373,6 +5395,10 @@ static int wma_update_hdd_cfg(tp_wma_handle wma_handle)
 		WMA_LOGE("%s: wlan_res_cfg is null", __func__);
 		return -EINVAL;
 	}
+
+	wlan_res_cfg->nan_separate_iface_support =
+		ucfg_nan_is_vdev_creation_allowed(wma_handle->psoc) &&
+		ucfg_nan_get_is_separate_nan_iface(wma_handle->psoc);
 
 	service_ext_param =
 			target_psoc_get_service_ext_param(tgt_hdl);
@@ -6646,7 +6672,8 @@ int wma_rx_service_ready_ext_event(void *handle, uint8_t *event,
 		wlan_res_cfg->new_htt_msg_format = false;
 	}
 
-	if (cfg_get(wma_handle->psoc, CFG_DP_ENABLE_PEER_UMAP_CONF_SUPPORT) &&
+	if (QDF_GLOBAL_FTM_MODE  != cds_get_conparam() &&
+	    ucfg_mlme_get_peer_unmap_conf(wma_handle->psoc) &&
 	    wmi_service_enabled(wmi_handle,
 				wmi_service_peer_unmap_cnf_support)) {
 		wlan_res_cfg->peer_unmap_conf_support = true;
@@ -7093,7 +7120,8 @@ static void wma_set_wifi_start_packet_stats(void *wma_handle,
 	log_state = ATH_PKTLOG_ANI | ATH_PKTLOG_RCUPDATE | ATH_PKTLOG_RCFIND |
 		ATH_PKTLOG_RX | ATH_PKTLOG_TX |
 		ATH_PKTLOG_TEXT | ATH_PKTLOG_SW_EVENT;
-#elif defined(QCA_WIFI_QCA6390) || defined(QCA_WIFI_QCA6490)
+#elif defined(QCA_WIFI_QCA6390) || defined(QCA_WIFI_QCA6490) || \
+      defined(QCA_WIFI_QCA6750)
 	log_state = ATH_PKTLOG_RCFIND | ATH_PKTLOG_RCUPDATE |
 		    ATH_PKTLOG_TX | ATH_PKTLOG_LITE_T2H |
 		    ATH_PKTLOG_SW_EVENT | ATH_PKTLOG_RX;
@@ -8253,12 +8281,6 @@ static QDF_STATUS wma_mc_process_msg(struct scheduler_msg *msg)
 			(struct send_peer_unmap_conf_params *)msg->bodyptr);
 		qdf_mem_free(msg->bodyptr);
 		break;
-	case WMA_SET_BSSKEY_REQ:
-		wma_set_bsskey(wma_handle, (tpSetBssKeyParams) msg->bodyptr);
-		break;
-	case WMA_SET_STAKEY_REQ:
-		wma_set_stakey(wma_handle, (tpSetStaKeyParams) msg->bodyptr);
-		break;
 	case WMA_DELETE_STA_REQ:
 		wma_delete_sta(wma_handle, (tpDeleteStaParams) msg->bodyptr);
 		break;
@@ -8301,16 +8323,6 @@ static QDF_STATUS wma_mc_process_msg(struct scheduler_msg *msg)
 		qdf_mem_free(msg->bodyptr);
 		break;
 #endif /* REMOVE_PKT_LOG */
-	case WMA_ENTER_PS_REQ:
-		wma_enable_sta_ps_mode(wma_handle,
-				       (tpEnablePsParams) msg->bodyptr);
-		qdf_mem_free(msg->bodyptr);
-		break;
-	case WMA_EXIT_PS_REQ:
-		wma_disable_sta_ps_mode(wma_handle,
-					(tpDisablePsParams) msg->bodyptr);
-		qdf_mem_free(msg->bodyptr);
-		break;
 	case WMA_ENABLE_UAPSD_REQ:
 		wma_enable_uapsd_mode(wma_handle,
 				      (tpEnableUapsdParams) msg->bodyptr);

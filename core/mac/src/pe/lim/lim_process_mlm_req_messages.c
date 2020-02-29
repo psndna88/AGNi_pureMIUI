@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -47,7 +47,6 @@
 static void lim_process_mlm_auth_req(struct mac_context *, uint32_t *);
 static void lim_process_mlm_assoc_req(struct mac_context *, uint32_t *);
 static void lim_process_mlm_disassoc_req(struct mac_context *, uint32_t *);
-static void lim_process_mlm_set_keys_req(struct mac_context *, uint32_t *);
 
 /* MLM Timeout event handler templates */
 static void lim_process_auth_rsp_timeout(struct mac_context *, uint32_t);
@@ -127,9 +126,6 @@ void lim_process_mlm_req_messages(struct mac_context *mac_ctx,
 	case LIM_MLM_DISASSOC_REQ:
 		lim_process_mlm_disassoc_req(mac_ctx, msg->bodyptr);
 		break;
-	case LIM_MLM_SETKEYS_REQ:
-		lim_process_mlm_set_keys_req(mac_ctx, msg->bodyptr);
-		break;
 	case SIR_LIM_JOIN_FAIL_TIMEOUT:
 		lim_process_join_failure_timeout(mac_ctx);
 		break;
@@ -165,6 +161,19 @@ void lim_process_mlm_req_messages(struct mac_context *mac_ctx,
 		break;
 	} /* switch (msg->type) */
 }
+
+#ifdef WLAN_FEATURE_11W
+static void update_rmfEnabled(struct bss_params *addbss_param,
+			      struct pe_session *session)
+{
+	addbss_param->rmfEnabled = session->limRmfEnabled;
+}
+#else
+static void update_rmfEnabled(struct bss_params *addbss_param,
+			      struct pe_session *session)
+{
+}
+#endif
 
 /**
  * lim_mlm_add_bss() - HAL interface for WMA_ADD_BSS_REQ
@@ -217,7 +226,7 @@ lim_mlm_add_bss(struct mac_context *mac_ctx,
 	addbss_param->vhtCapable = mlm_start_req->htCapable;
 	addbss_param->htCapable = session->vhtCapability;
 	addbss_param->ch_width = session->ch_width;
-	addbss_param->rmfEnabled = session->limRmfEnabled;
+	update_rmfEnabled(addbss_param, session);
 	addbss_param->staContext.fShortGI20Mhz =
 		lim_get_ht_capability(mac_ctx, eHT_SHORT_GI_20MHZ, session);
 	addbss_param->staContext.fShortGI40Mhz =
@@ -321,10 +330,6 @@ static void lim_post_join_set_link_state_callback(
 		return;
 	}
 
-	pe_debug("Sessionid %d set link state(%d) cb status: %d",
-		session_entry->peSessionId, session_entry->limMlmState,
-			status);
-
 	if (QDF_IS_STATUS_ERROR(status)) {
 		pe_err("failed to find pe session for session id:%d",
 			session_entry->peSessionId);
@@ -338,12 +343,6 @@ static void lim_post_join_set_link_state_callback(
 	session_entry->channelChangeReasonCode =
 			 LIM_SWITCH_CHANNEL_JOIN;
 	session_entry->pLimMlmReassocRetryReq = NULL;
-	pe_debug("[lim_process_mlm_join_req]: suspend link success(%d) "
-		 "on sessionid: %d setting channel to: freq %d with ch_width :%d "
-		 "and maxtxPower: %d", status, session_entry->peSessionId,
-		 session_entry->curr_op_freq,
-		 session_entry->ch_width,
-		 session_entry->maxTxPower);
 	lim_send_switch_chnl_params(mac, session_entry);
 
 	return;
@@ -361,10 +360,8 @@ failure:
 /**
  * lim_process_mlm_post_join_suspend_link() - This function is called after the
  * suspend link while joining off channel.
- *
  * @mac_ctx:    Pointer to Global MAC structure
- * @status:  status of suspend link.
- * @ctx:     passed while calling suspend link(session)
+ * @session:     session
  *
  * This function does following:
  *   Check for suspend state.
@@ -377,15 +374,10 @@ failure:
  */
 static void
 lim_process_mlm_post_join_suspend_link(struct mac_context *mac_ctx,
-				       QDF_STATUS status,
-				       uint32_t *ctx)
+				       struct pe_session *session)
 {
-	struct pe_session *session = (struct pe_session *) ctx;
+	QDF_STATUS status;
 
-	if (QDF_STATUS_SUCCESS != status) {
-		pe_err("Sessionid %d Suspend link(NOTIFY_BSS) failed. Still proceeding with join",
-			session->peSessionId);
-	}
 	lim_deactivate_and_change_timer(mac_ctx, eLIM_JOIN_FAIL_TIMER);
 
 	/* assign appropriate sessionId to the timer object */
@@ -447,42 +439,20 @@ void lim_process_mlm_join_req(struct mac_context *mac_ctx,
 		(mlm_join_req->bssDescription.capabilityInfo) !=
 		SIR_MAC_GET_IBSS(mlm_join_req->bssDescription.
 			capabilityInfo))) {
-		/* Hold onto Join request parameters */
-
 		session->pLimMlmJoinReq = mlm_join_req;
-		if (is_lim_session_off_channel(mac_ctx, sessionid)) {
-			pe_debug("SessionId:%d LimSession is on OffChannel",
-				sessionid);
-			/* suspend link */
-			pe_debug("Suspend link, sessionid %d is off channel",
-				sessionid);
-			lim_process_mlm_post_join_suspend_link(mac_ctx,
-				QDF_STATUS_SUCCESS, (uint32_t *)session);
-		} else {
-			pe_debug("No need to Suspend link");
-			 /*
-			  * No need to Suspend link as LimSession is not
-			  * off channel, calling
-			  * lim_process_mlm_post_join_suspend_link with
-			  * status as SUCCESS.
-			  */
-			pe_debug("SessionId:%d Join req on current chan",
-				sessionid);
-			lim_process_mlm_post_join_suspend_link(mac_ctx,
-				QDF_STATUS_SUCCESS, (uint32_t *)session);
-		}
+		lim_process_mlm_post_join_suspend_link(mac_ctx, session);
 		return;
-	} else {
-		/**
-		 * Should not have received JOIN req in states other than
-		 * Idle state or on AP.
-		 * Return join confirm with invalid parameters code.
-		 */
-		pe_err("Session:%d Unexpected Join req, role %d state %X",
-			session->peSessionId, GET_LIM_SYSTEM_ROLE(session),
-			session->limMlmState);
-		lim_print_mlm_state(mac_ctx, LOGE, session->limMlmState);
 	}
+
+	/**
+	 * Should not have received JOIN req in states other than
+	 * Idle state or on AP.
+	 * Return join confirm with invalid parameters code.
+	 */
+	pe_err("Session:%d Unexpected Join req, role %d state %X",
+		session->peSessionId, GET_LIM_SYSTEM_ROLE(session),
+		session->limMlmState);
+	lim_print_mlm_state(mac_ctx, LOGE, session->limMlmState);
 
 error:
 	qdf_mem_free(mlm_join_req);
@@ -691,12 +661,11 @@ static void lim_process_mlm_auth_req(struct mac_context *mac_ctx, uint32_t *msg)
 		return;
 	}
 
-	pe_debug("Process Auth Req sessionID %d Systemrole %d"
-		       "mlmstate %d from: " QDF_MAC_ADDR_STR
-		       " with authtype %d", session_id,
-		GET_LIM_SYSTEM_ROLE(session), session->limMlmState,
-		QDF_MAC_ADDR_ARRAY(mac_ctx->lim.gpLimMlmAuthReq->peerMacAddr),
-		mac_ctx->lim.gpLimMlmAuthReq->authType);
+	pe_debug("vdev %d Systemrole %d mlmstate %d from: " QDF_MAC_ADDR_STR "with authtype %d",
+		 session->vdev_id, GET_LIM_SYSTEM_ROLE(session),
+		 session->limMlmState,
+		 QDF_MAC_ADDR_ARRAY(mac_ctx->lim.gpLimMlmAuthReq->peerMacAddr),
+		 mac_ctx->lim.gpLimMlmAuthReq->authType);
 
 	sir_copy_mac_addr(curr_bssid, session->bssId);
 
@@ -893,8 +862,7 @@ static void lim_process_mlm_assoc_req(struct mac_context *mac_ctx, uint32_t *msg
 	MTRACE(mac_trace(mac_ctx, TRACE_CODE_MLM_STATE,
 			 session_entry->peSessionId,
 			 session_entry->limMlmState));
-	pe_debug("SessionId:%d Sending Assoc_Req Frame",
-		session_entry->peSessionId);
+	pe_debug("vdev %d Sending Assoc_Req Frame", session_entry->vdev_id);
 
 	/* Prepare and send Association request frame */
 	lim_send_assoc_req_mgmt_frame(mac_ctx, mlm_assoc_req, session_entry);
@@ -1556,201 +1524,6 @@ void lim_process_mlm_deauth_req(struct mac_context *mac_ctx, uint32_t *msg_buf)
 	}
 	lim_process_mlm_deauth_req_ntf(mac_ctx, QDF_STATUS_SUCCESS,
 				       (uint32_t *) msg_buf);
-}
-
-/**
- * lim_process_mlm_set_keys_req() - This function is called to process
- * MLM_SETKEYS_REQ message from SME
- *
- * @mac_ctx:      Pointer to Global MAC structure
- * @msg_buf:      A pointer to the MLM message buffer
- *
- * This function is called to process MLM_SETKEYS_REQ message from SME
- *
- * @Return: None
- */
-static void
-lim_process_mlm_set_keys_req(struct mac_context *mac_ctx, uint32_t *msg_buf)
-{
-	uint16_t aid;
-	uint32_t default_key_id = 0;
-	struct qdf_mac_addr curr_bssid;
-	tpDphHashNode sta_ds;
-	tLimMlmSetKeysReq *mlm_set_keys_req;
-	tLimMlmSetKeysCnf mlm_set_keys_cnf;
-	struct pe_session *session;
-
-	if (!msg_buf) {
-		pe_err("Buffer is Pointing to NULL");
-		return;
-	}
-
-	mlm_set_keys_req = (tLimMlmSetKeysReq *) msg_buf;
-	if (mac_ctx->lim.gpLimMlmSetKeysReq) {
-		qdf_mem_zero(mac_ctx->lim.gpLimMlmSetKeysReq,
-			     sizeof(*mlm_set_keys_req));
-		qdf_mem_free(mac_ctx->lim.gpLimMlmSetKeysReq);
-		mac_ctx->lim.gpLimMlmSetKeysReq = NULL;
-	}
-	/* Hold onto the SetKeys request parameters */
-	mac_ctx->lim.gpLimMlmSetKeysReq = (void *)mlm_set_keys_req;
-	session = pe_find_session_by_session_id(mac_ctx,
-				mlm_set_keys_req->sessionId);
-	if (!session) {
-		pe_err("session does not exist for given sessionId");
-		qdf_mem_zero(mlm_set_keys_req->key,
-			     sizeof(mlm_set_keys_req->key));
-		mlm_set_keys_req->numKeys = 0;
-		qdf_mem_free(mlm_set_keys_req);
-		mac_ctx->lim.gpLimMlmSetKeysReq = NULL;
-		return;
-	}
-
-	pe_debug("Received MLM_SETKEYS_REQ with parameters:"
-		   "AID [%d], ED Type [%d], # Keys [%d] & Peer MAC Addr - ",
-		mlm_set_keys_req->aid, mlm_set_keys_req->edType,
-		mlm_set_keys_req->numKeys);
-	lim_print_mac_addr(mac_ctx, mlm_set_keys_req->peer_macaddr.bytes, LOGD);
-	qdf_mem_copy(curr_bssid.bytes, session->bssId, QDF_MAC_ADDR_SIZE);
-
-	switch (GET_LIM_SYSTEM_ROLE(session)) {
-	case eLIM_STA_ROLE:
-		/*
-		 * In case of TDLS, peerMac address need not be BssId. Skip this
-		 * check if TDLS is enabled.
-		 */
-#ifndef FEATURE_WLAN_TDLS
-		if ((!qdf_is_macaddr_broadcast(
-				&mlm_set_keys_req->peer_macaddr)) &&
-		    (!qdf_is_macaddr_equal(&mlm_set_keys_req->peer_macaddr,
-					   &curr_bssid))) {
-			pe_debug("Received MLM_SETKEYS_REQ with invalid BSSID"
-				QDF_MAC_ADDR_STR,
-				QDF_MAC_ADDR_ARRAY(mlm_set_keys_req->
-						peer_macaddr.bytes));
-			/*
-			 * Prepare and Send LIM_MLM_SETKEYS_CNF with error code
-			 */
-			mlm_set_keys_cnf.resultCode =
-				eSIR_SME_INVALID_PARAMETERS;
-			goto end;
-		}
-#endif
-		break;
-	case eLIM_STA_IN_IBSS_ROLE:
-		/*
-		 * update the IBSS PE session encrption type based on the
-		 * key type
-		 */
-		session->encryptType = mlm_set_keys_req->edType;
-		break;
-	default:
-		break;
-	}
-
-	/*
-	 * Use the "unicast" parameter to determine if the "Group Keys"
-	 * are being set.
-	 * mlm_set_keys_req->key.unicast = 0 -> Multicast/broadcast
-	 * mlm_set_keys_req->key.unicast - 1 -> Unicast keys are being set
-	 */
-	if (qdf_is_macaddr_broadcast(&mlm_set_keys_req->peer_macaddr)) {
-		pe_debug("Trying to set Group Keys...%d",
-			mlm_set_keys_req->sessionId);
-		/*
-		 * When trying to set Group Keys for any security mode other
-		 * than WEP, use the STA Index corresponding to the AP...
-		 */
-		switch (mlm_set_keys_req->edType) {
-		case eSIR_ED_CCMP:
-		case eSIR_ED_GCMP:
-		case eSIR_ED_GCMP_256:
-#ifdef WLAN_FEATURE_11W
-		case eSIR_ED_AES_128_CMAC:
-		case eSIR_ED_AES_GMAC_128:
-		case eSIR_ED_AES_GMAC_256:
-#endif
-			break;
-		default:
-			break;
-		}
-	} else {
-		pe_debug("Trying to set Unicast Keys...");
-		/*
-		 * Check if there exists a context for the
-		 * peer entity for which keys need to be set.
-		 */
-		sta_ds = dph_lookup_hash_entry(mac_ctx,
-				mlm_set_keys_req->peer_macaddr.bytes, &aid,
-				&session->dph.dphHashTable);
-		if ((!sta_ds) ||
-		    ((sta_ds->mlmStaContext.mlmState !=
-		    eLIM_MLM_LINK_ESTABLISHED_STATE) &&
-		    !LIM_IS_AP_ROLE(session))) {
-			/*
-			 * Received LIM_MLM_SETKEYS_REQ for STA that does not
-			 * have context or in some transit state.
-			 */
-			pe_debug("Invalid MLM_SETKEYS_REQ, Addr = "
-				   QDF_MAC_ADDR_STR,
-				QDF_MAC_ADDR_ARRAY(mlm_set_keys_req->
-						peer_macaddr.bytes));
-			/* Prepare and Send LIM_MLM_SETKEYS_CNF */
-			mlm_set_keys_cnf.resultCode =
-				eSIR_SME_INVALID_PARAMETERS;
-			goto end;
-		}
-	}
-
-	if ((mlm_set_keys_req->numKeys == 0)
-	    && (mlm_set_keys_req->edType != eSIR_ED_NONE)) {
-		/*
-		 * Broadcast/Multicast Keys (for WEP!!) are NOT sent
-		 * via this interface!! This indicates to HAL that the WEP Keys
-		 * need to be extracted from the CFG and applied to hardware
-		 */
-		default_key_id = 0xff;
-	} else if (mlm_set_keys_req->key[0].keyId &&
-		   ((mlm_set_keys_req->edType == eSIR_ED_WEP40) ||
-		    (mlm_set_keys_req->edType == eSIR_ED_WEP104))) {
-		/*
-		 * If the Key Id is non zero and encryption mode is WEP,
-		 * the key index is coming from the upper layers so that key
-		 * only need to be used as the default tx key, This is being
-		 * used only in case of WEP mode in HAL
-		 */
-		default_key_id = mlm_set_keys_req->key[0].keyId;
-	} else {
-		default_key_id = 0;
-	}
-	pe_debug("Trying to set keys using default_key_id [%d] sta mac "
-		 QDF_MAC_ADDR_STR, default_key_id,
-		 QDF_MAC_ADDR_ARRAY(mlm_set_keys_req->peer_macaddr.bytes));
-
-	if (qdf_is_macaddr_broadcast(&mlm_set_keys_req->peer_macaddr)) {
-		session->limPrevMlmState = session->limMlmState;
-		session->limMlmState = eLIM_MLM_WT_SET_BSS_KEY_STATE;
-		MTRACE(mac_trace(mac_ctx, TRACE_CODE_MLM_STATE,
-				 session->peSessionId, session->limMlmState));
-		pe_debug("Trying to set Group Keys...%d",
-			session->peSessionId);
-		/* Package WMA_SET_BSSKEY_REQ message parameters */
-		lim_send_set_bss_key_req(mac_ctx, mlm_set_keys_req, session);
-
-		return;
-	} else {
-		/*
-		 * Package WMA_SET_STAKEY_REQ / WMA_SET_STA_BCASTKEY_REQ message
-		 * parameters
-		 */
-		lim_send_set_sta_key_req(mac_ctx, mlm_set_keys_req,
-					 (uint8_t) default_key_id, session,
-					 true);
-		return;
-	}
-end:
-	mlm_set_keys_cnf.sessionId = mlm_set_keys_req->sessionId;
-	lim_post_sme_set_keys_cnf(mac_ctx, mlm_set_keys_req, &mlm_set_keys_cnf);
 }
 
 void lim_process_join_failure_timeout(struct mac_context *mac_ctx)

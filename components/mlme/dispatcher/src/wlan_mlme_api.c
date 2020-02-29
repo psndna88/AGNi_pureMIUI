@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -939,7 +939,7 @@ QDF_STATUS wlan_mlme_configure_chain_mask(struct wlan_objmgr_psoc *psoc,
 
 	if (enable2x2 || !enable_bt_chain_sep || as_enabled ||
 	   (!hw_dbs_2x2_cap && dual_mac_feature != DISABLE_DBS_CXN_AND_SCAN)) {
-		mlme_legacy_err("Cannot configure chainmask to FW");
+		mlme_legacy_debug("Cannot configure chainmask to FW");
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -1730,6 +1730,21 @@ wlan_mlme_get_sap_bcast_deauth_enabled(struct wlan_objmgr_psoc *psoc,
 	return QDF_STATUS_SUCCESS;
 }
 
+QDF_STATUS
+wlan_mlme_is_6g_sap_fd_enabled(struct wlan_objmgr_psoc *psoc,
+			       bool *value)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_FAILURE;
+
+	*value = mlme_obj->cfg.sap_cfg.is_6g_sap_fd_enabled;
+
+	return QDF_STATUS_SUCCESS;
+}
+
 QDF_STATUS wlan_mlme_get_sap_allow_all_channels(struct wlan_objmgr_psoc *psoc,
 						bool *value)
 {
@@ -2453,7 +2468,6 @@ QDF_STATUS wlan_mlme_get_edca_params(struct wlan_mlme_edca_params *edca_params,
 	return QDF_STATUS_SUCCESS;
 }
 
-#ifdef CRYPTO_SET_KEY_CONVERGED
 QDF_STATUS mlme_get_wep_key(struct wlan_objmgr_vdev *vdev,
 			    struct wlan_mlme_wep_cfg *wep_params,
 			    enum wep_key_id wep_keyid, uint8_t *default_key,
@@ -2480,45 +2494,6 @@ QDF_STATUS mlme_get_wep_key(struct wlan_objmgr_vdev *vdev,
 
 	return QDF_STATUS_SUCCESS;
 }
-#else
-QDF_STATUS mlme_get_wep_key(struct wlan_objmgr_vdev *vdev,
-			    struct wlan_mlme_wep_cfg *wep_params,
-			    enum wep_key_id wep_keyid, uint8_t *default_key,
-			    qdf_size_t *key_len)
-{
-	switch (wep_keyid) {
-	case MLME_WEP_DEFAULT_KEY_1:
-		wlan_mlme_get_cfg_str(default_key,
-				      &wep_params->wep_default_key_1,
-				      key_len);
-		break;
-
-	case MLME_WEP_DEFAULT_KEY_2:
-		wlan_mlme_get_cfg_str(default_key,
-				      &wep_params->wep_default_key_2,
-				      key_len);
-		break;
-
-	case MLME_WEP_DEFAULT_KEY_3:
-		wlan_mlme_get_cfg_str(default_key,
-				      &wep_params->wep_default_key_3,
-				      key_len);
-		break;
-
-	case MLME_WEP_DEFAULT_KEY_4:
-		wlan_mlme_get_cfg_str(default_key,
-				      &wep_params->wep_default_key_4,
-				      key_len);
-		break;
-
-	default:
-		mlme_legacy_err("Invalid key id:%d", wep_keyid);
-		return QDF_STATUS_E_INVAL;
-	}
-	mlme_legacy_debug("key_id:%d key_len:%zd", wep_keyid, *key_len);
-	return QDF_STATUS_SUCCESS;
-}
-#endif /* CRYPTO_SET_KEY_CONVERGED */
 
 QDF_STATUS mlme_set_wep_key(struct wlan_mlme_wep_cfg *wep_params,
 			    enum wep_key_id wep_keyid, uint8_t *key_to_set,
@@ -3637,14 +3612,38 @@ char *mlme_get_roam_fail_reason_str(uint32_t result)
 		return "Received Re-Assoc resp with Failure status";
 	case WMI_ROAM_FAIL_REASON_NO_REASSOC_RESP:
 		return "No Re-assoc response from AP";
-	case WMI_ROAM_FAIL_REASON_EAPOL_TIMEOUT:
-		return "EAPOL timed out";
+	case WMI_ROAM_FAIL_REASON_EAPOL_M1_TIMEOUT:
+		return "EAPOL M1 timed out";
 	case WMI_ROAM_FAIL_REASON_MLME:
 		return "MLME error";
 	case WMI_ROAM_FAIL_REASON_INTERNAL_ABORT:
-		return "Target aborted roam";
+		return "Fw aborted roam";
+	case WMI_ROAM_FAIL_REASON_SCAN_START:
+		return "Unable to start roam scan";
+	case WMI_ROAM_FAIL_REASON_AUTH_NO_ACK:
+		return "No ACK for Auth req";
+	case WMI_ROAM_FAIL_REASON_AUTH_INTERNAL_DROP:
+		return "Auth req dropped internally";
+	case WMI_ROAM_FAIL_REASON_REASSOC_NO_ACK:
+		return "No ACK for Re-assoc req";
+	case WMI_ROAM_FAIL_REASON_REASSOC_INTERNAL_DROP:
+		return "Re-assoc dropped internally";
+	case WMI_ROAM_FAIL_REASON_EAPOL_M2_SEND:
+		return "Unable to send M2 frame";
+	case WMI_ROAM_FAIL_REASON_EAPOL_M2_INTERNAL_DROP:
+		return "M2 Frame dropped internally";
+	case WMI_ROAM_FAIL_REASON_EAPOL_M2_NO_ACK:
+		return "No ACK for M2 frame";
+	case WMI_ROAM_FAIL_REASON_EAPOL_M3_TIMEOUT:
+		return "EAPOL M3 timed out";
+	case WMI_ROAM_FAIL_REASON_EAPOL_M4_SEND:
+		return "Unable to send M4 frame";
+	case WMI_ROAM_FAIL_REASON_EAPOL_M4_INTERNAL_DROP:
+		return "M4 frame dropped internally";
+	case WMI_ROAM_FAIL_REASON_EAPOL_M4_NO_ACK:
+		return "No ACK for M4 frame";
 	default:
-		return "NONE";
+		return "UNKNOWN";
 	}
 }
 
@@ -3659,6 +3658,10 @@ char *mlme_get_sub_reason_str(uint32_t sub_reason)
 		return "BTM DISASSOC TIMER";
 	case WMI_ROAM_TRIGGER_SUB_REASON_FULL_SCAN:
 		return "FULL SCAN";
+	case WMI_ROAM_TRIGGER_SUB_REASON_LOW_RSSI_PERIODIC:
+		return "LOW RSSI PERIODIC SCAN";
+	case WMI_ROAM_TRIGGER_SUB_REASON_CU_PERIODIC:
+		return "CU PERIODIC SCAN";
 	default:
 		return "NONE";
 	}
@@ -3696,4 +3699,15 @@ wlan_mlme_get_status_ring_buffer(struct wlan_objmgr_psoc *psoc,
 
 	*enable_ring_buffer = mlme_obj->cfg.gen.enable_ring_buffer;
 	return QDF_STATUS_SUCCESS;
+}
+
+bool wlan_mlme_get_peer_unmap_conf(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return false;
+
+	return mlme_obj->cfg.gen.enable_peer_unmap_conf_support;
 }

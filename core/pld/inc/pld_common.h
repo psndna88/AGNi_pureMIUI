@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -51,6 +51,7 @@
  * @PLD_BUS_TYPE_USB : USB bus
  * @PLD_BUS_TYPE_SNOC_FW_SIM : SNOC FW SIM bus
  * @PLD_BUS_TYPE_PCIE_FW_SIM : PCIE FW SIM bus
+ * @PLD_BUS_TYPE_IPCI : IPCI bus
  */
 enum pld_bus_type {
 	PLD_BUS_TYPE_NONE = -1,
@@ -60,6 +61,7 @@ enum pld_bus_type {
 	PLD_BUS_TYPE_USB,
 	PLD_BUS_TYPE_SNOC_FW_SIM,
 	PLD_BUS_TYPE_PCIE_FW_SIM,
+	PLD_BUS_TYPE_IPCI,
 };
 
 #define PLD_MAX_FIRMWARE_SIZE (1 * 1024 * 1024)
@@ -332,6 +334,18 @@ enum pld_recovery_reason {
 	PLD_REASON_LINK_DOWN
 };
 
+#ifdef FEATURE_WLAN_TIME_SYNC_FTM
+/**
+ * enum pld_wlan_time_sync_trigger_type - WLAN time sync trigger type
+ * @PLD_TRIGGER_POSITIVE_EDGE: Positive edge trigger
+ * @PLD_TRIGGER_NEGATIVE_EDGE: Negative edge trigger
+ */
+enum pld_wlan_time_sync_trigger_type {
+	PLD_TRIGGER_POSITIVE_EDGE,
+	PLD_TRIGGER_NEGATIVE_EDGE
+};
+#endif /* FEATURE_WLAN_TIME_SYNC_FTM */
+
 /**
  * struct pld_driver_ops - driver callback functions
  * @probe: required operation, will be called when device is detected
@@ -417,6 +431,13 @@ void pld_is_pci_link_down(struct device *dev);
 int pld_shadow_control(struct device *dev, bool enable);
 void pld_schedule_recovery_work(struct device *dev,
 				enum pld_recovery_reason reason);
+
+#ifdef FEATURE_WLAN_TIME_SYNC_FTM
+int pld_get_audio_wlan_timestamp(struct device *dev,
+				 enum pld_wlan_time_sync_trigger_type type,
+				 uint64_t *ts);
+#endif /* FEATURE_WLAN_TIME_SYNC_FTM */
+
 #ifdef CONFIG_CNSS_UTILS
 /**
  * pld_set_wlan_unsafe_channel() - Set unsafe channel
@@ -858,7 +879,7 @@ static inline void pfrm_enable_irq(struct device *dev, int irq)
 	pld_srng_enable_irq(dev, irq);
 }
 
-static inline void pfrm_disable_irq(struct device *dev, int irq)
+static inline void pfrm_disable_irq_nosync(struct device *dev, int irq)
 {
 	pld_srng_disable_irq(dev, irq);
 }

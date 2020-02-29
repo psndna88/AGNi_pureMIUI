@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -522,7 +522,6 @@ tdls_add_peer_serialize_callback(struct wlan_serialization_command *cmd,
 	}
 
 	req = cmd->umac_cmd;
-	tdls_debug("reason: %d, req %pK", reason, req);
 
 	switch (reason) {
 	case WLAN_SER_CB_ACTIVATE_CMD:
@@ -757,7 +756,7 @@ int tdls_validate_mgmt_request(struct tdls_action_frame_request *tdls_mgmt_req)
 		}
 	}
 
-	tdls_notice("tdls_mgmt" QDF_MAC_ADDR_STR " action %d, dialog_token %d status %d, len = %zu",
+	tdls_debug("tdls_mgmt" QDF_MAC_ADDR_STR " action %d, dialog_token %d status %d, len = %zu",
 		   QDF_MAC_ADDR_ARRAY(tdls_validate->peer_mac),
 		   tdls_validate->action_code, tdls_validate->dialog_token,
 		   tdls_validate->status_code, tdls_validate->len);
@@ -983,7 +982,6 @@ tdls_update_peer_serialize_callback(struct wlan_serialization_command *cmd,
 	}
 
 	req = cmd->umac_cmd;
-	tdls_debug("reason: %d, req %pK", reason, req);
 
 	switch (reason) {
 	case WLAN_SER_CB_ACTIVATE_CMD:
@@ -1107,7 +1105,6 @@ tdls_del_peer_serialize_callback(struct wlan_serialization_command *cmd,
 	}
 
 	req = cmd->umac_cmd;
-	tdls_debug("reason: %d, req %pK", reason, req);
 
 	switch (reason) {
 	case WLAN_SER_CB_ACTIVATE_CMD:
@@ -1187,9 +1184,9 @@ QDF_STATUS tdls_process_del_peer(struct tdls_oper_request *req)
 
 	if (soc_obj->tdls_dp_vdev_update)
 		soc_obj->tdls_dp_vdev_update(&soc_obj->soc,
-					&peer->peer_mac,
-					soc_obj->tdls_update_dp_vdev_flags,
-					false);
+					     wlan_vdev_get_id(vdev),
+					     soc_obj->tdls_update_dp_vdev_flags,
+					     false);
 
 	cmd.cmd_type = WLAN_SER_CMD_TDLS_DEL_PEER;
 	cmd.cmd_id = 0;
@@ -1425,10 +1422,10 @@ static QDF_STATUS tdls_add_peer_rsp(struct tdls_add_sta_rsp *rsp)
 				conn_rec[sta_idx].index = sta_idx;
 				qdf_copy_macaddr(&conn_rec[sta_idx].peer_mac,
 						 &rsp->peermac);
-				tdls_warn("TDLS: Add sta mac "
-					  QDF_MAC_ADDR_STR,
-					  QDF_MAC_ADDR_ARRAY
-					  (rsp->peermac.bytes));
+				tdls_debug("TDLS: Add sta mac "
+					   QDF_MAC_ADDR_STR,
+					   QDF_MAC_ADDR_ARRAY
+					   (rsp->peermac.bytes));
 				break;
 			}
 		}
@@ -1510,7 +1507,7 @@ QDF_STATUS tdls_process_del_peer_rsp(struct tdls_del_sta_rsp *rsp)
 			continue;
 
 		macaddr = rsp->peermac.bytes;
-		tdls_warn("TDLS: del STA");
+		tdls_debug("TDLS: del STA");
 		curr_peer = tdls_find_peer(vdev_obj, macaddr);
 		if (curr_peer) {
 			tdls_debug(QDF_MAC_ADDR_STR " status is %d",
@@ -1674,11 +1671,12 @@ QDF_STATUS tdls_process_enable_link(struct tdls_oper_request *req)
 	feature = soc_obj->tdls_configs.tdls_feature_flags;
 
 	if (soc_obj->tdls_dp_vdev_update)
-		soc_obj->tdls_dp_vdev_update(&soc_obj->soc,
-					&peer->peer_mac,
-					soc_obj->tdls_update_dp_vdev_flags,
-					((peer->link_status ==
-					TDLS_LINK_CONNECTED) ? true : false));
+		soc_obj->tdls_dp_vdev_update(
+				&soc_obj->soc,
+				wlan_vdev_get_id(vdev),
+				soc_obj->tdls_update_dp_vdev_flags,
+				((peer->link_status == TDLS_LINK_CONNECTED) ?
+				 true : false));
 
 	tdls_debug("TDLS buffer sta: %d, uapsd_mask %d",
 		   TDLS_IS_BUFFER_STA_ENABLED(feature),
@@ -1712,6 +1710,7 @@ static QDF_STATUS tdls_config_force_peer(
 	const uint8_t *macaddr;
 	uint32_t feature;
 	QDF_STATUS status;
+	uint32_t chan_freq;
 	struct tdls_peer_update_state *peer_update_param;
 
 	macaddr = req->peer_addr;
@@ -1769,9 +1768,10 @@ static QDF_STATUS tdls_config_force_peer(
 	}
 
 	soc_obj->tdls_external_peer_count++;
+	chan_freq = wlan_reg_legacy_chan_to_freq(pdev, req->chan);
 
 	/* Validate if off channel is DFS channel */
-	if (wlan_reg_is_dfs_ch(pdev, req->chan)) {
+	if (wlan_reg_is_dfs_for_freq(pdev, chan_freq)) {
 		tdls_err("Resetting TDLS off-channel from %d to %d",
 			 req->chan, WLAN_TDLS_PREFERRED_OFF_CHANNEL_NUM_DEF);
 		req->chan = WLAN_TDLS_PREFERRED_OFF_CHANNEL_NUM_DEF;
@@ -1890,8 +1890,9 @@ QDF_STATUS tdls_process_remove_force_peer(struct tdls_oper_request *req)
 					  TDLS_LINK_UNSPECIFIED);
 
 	if (soc_obj->tdls_dp_vdev_update)
-		soc_obj->tdls_dp_vdev_update(&soc_obj->soc,
-				&peer->peer_mac,
+		soc_obj->tdls_dp_vdev_update(
+				&soc_obj->soc,
+				wlan_vdev_get_id(vdev),
 				soc_obj->tdls_update_dp_vdev_flags,
 				false);
 

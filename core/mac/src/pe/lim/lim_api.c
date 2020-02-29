@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1307,7 +1307,8 @@ void pe_register_callbacks_with_wma(struct mac_context *mac,
 			ready_req->csr_roam_synch_cb,
 			ready_req->csr_roam_auth_event_handle_cb,
 			ready_req->pe_roam_synch_cb,
-			ready_req->pe_disconnect_cb);
+			ready_req->pe_disconnect_cb,
+			ready_req->csr_roam_pmkid_req_cb);
 	if (status != QDF_STATUS_SUCCESS)
 		pe_err("Registering roaming callbacks with WMA failed");
 }
@@ -2613,9 +2614,8 @@ tMgmtFrmDropReason lim_is_pkt_candidate_for_drop(struct mac_context *mac,
 	} else if ((subType == SIR_MAC_MGMT_ASSOC_REQ) ||
 		   (subType == SIR_MAC_MGMT_DISASSOC) ||
 		   (subType == SIR_MAC_MGMT_DEAUTH)) {
-		uint16_t assoc_id;
-		struct dph_hash_table *dph_table;
-		tDphHashNode *sta_ds;
+		struct peer_mlme_priv_obj *peer_priv;
+		struct wlan_objmgr_peer *peer;
 		qdf_time_t *timestamp;
 
 		pHdr = WMA_GET_RX_MAC_HEADER(pRxPacketInfo);
@@ -2623,20 +2623,34 @@ tMgmtFrmDropReason lim_is_pkt_candidate_for_drop(struct mac_context *mac,
 				&sessionId);
 		if (!pe_session)
 			return eMGMT_DROP_SPURIOUS_FRAME;
-		dph_table = &pe_session->dph.dphHashTable;
-		sta_ds = dph_lookup_hash_entry(mac, pHdr->sa, &assoc_id,
-					       dph_table);
-		if (!sta_ds) {
+
+		peer = wlan_objmgr_get_peer_by_mac(mac->psoc,
+						   pHdr->sa,
+						   WLAN_LEGACY_MAC_ID);
+		if (!peer) {
 			if (subType == SIR_MAC_MGMT_ASSOC_REQ)
 				return eMGMT_DROP_NO_DROP;
-			else
-				return eMGMT_DROP_SPURIOUS_FRAME;
+
+			return eMGMT_DROP_SPURIOUS_FRAME;
+		}
+
+		peer_priv = wlan_objmgr_peer_get_comp_private_obj(peer,
+							WLAN_UMAC_COMP_MLME);
+		if (!peer_priv) {
+			wlan_objmgr_peer_release_ref(peer, WLAN_LEGACY_MAC_ID);
+			if (subType == SIR_MAC_MGMT_ASSOC_REQ)
+				return eMGMT_DROP_NO_DROP;
+
+			return eMGMT_DROP_SPURIOUS_FRAME;
 		}
 
 		if (subType == SIR_MAC_MGMT_ASSOC_REQ)
-			timestamp = &sta_ds->last_assoc_received_time;
+			timestamp =
+			   &peer_priv->last_assoc_received_time;
 		else
-			timestamp = &sta_ds->last_disassoc_deauth_received_time;
+			timestamp =
+			   &peer_priv->last_disassoc_deauth_received_time;
+
 		if (*timestamp > 0 &&
 		    qdf_system_time_before(qdf_get_system_timestamp(),
 					   *timestamp +
@@ -2646,10 +2660,12 @@ tMgmtFrmDropReason lim_is_pkt_candidate_for_drop(struct mac_context *mac,
 				    (int)(qdf_get_system_timestamp() - *timestamp),
 				    "of last frame. Allow it only after",
 				    LIM_DOS_PROTECTION_TIME);
+			wlan_objmgr_peer_release_ref(peer, WLAN_LEGACY_MAC_ID);
 			return eMGMT_DROP_EXCESSIVE_MGMT_FRAME;
 		}
 
 		*timestamp = qdf_get_system_timestamp();
+		wlan_objmgr_peer_release_ref(peer, WLAN_LEGACY_MAC_ID);
 
 	}
 
@@ -2789,7 +2805,7 @@ QDF_STATUS lim_update_ext_cap_ie(struct mac_context *mac_ctx, uint8_t *ie_data,
 		populate_dot11f_twt_extended_caps(mac_ctx, session,
 						  &driver_ext_cap);
 	else
-		pe_err("Session NULL, cannot set TWT caps");
+		pe_debug("Session NULL, cannot set TWT caps");
 
 	local_ie_buf[*local_ie_len + 1] = driver_ext_cap.num_bytes;
 

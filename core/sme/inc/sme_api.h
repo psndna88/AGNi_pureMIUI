@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -549,10 +549,6 @@ QDF_STATUS sme_roam_get_connect_profile(mac_handle_t mac_handle,
 					uint8_t sessionId,
 					tCsrRoamConnectedProfile *pProfile);
 void sme_roam_free_connect_profile(tCsrRoamConnectedProfile *profile);
-QDF_STATUS sme_roam_set_pmkid_cache(mac_handle_t mac_handle, uint8_t sessionId,
-		tPmkidCacheInfo *pPMKIDCache,
-		uint32_t numItems,
-		bool update_entire_cache);
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 /**
@@ -668,8 +664,6 @@ void sme_deregister_oem_data_rsp_callback(mac_handle_t mac_handle)
 
 #endif
 
-QDF_STATUS sme_roam_set_key(mac_handle_t mac_handle, uint8_t sessionId,
-			    tCsrRoamSetKey *pSetKey, uint32_t *pRoamId);
 QDF_STATUS sme_get_country_code(mac_handle_t mac_handle, uint8_t *pBuf,
 				uint8_t *pbLen);
 
@@ -1020,6 +1014,16 @@ sme_modify_roam_cand_sel_criteria(mac_handle_t mac_handle,
  */
 QDF_STATUS sme_roam_control_restore_default_config(mac_handle_t mac_handle,
 						   uint8_t vdev_id);
+
+/**
+ * sme_roam_reset_configs() - API to reset roam config
+ * @mac_handle: Opaque handle to the global MAC context
+ * @vdev_id: vdev Identifier
+ *
+ * Return: void
+ */
+void sme_roam_reset_configs(mac_handle_t mac_handle, uint8_t vdev_id);
+
 QDF_STATUS sme_set_neighbor_scan_min_chan_time(mac_handle_t mac_handle,
 		const uint16_t nNeighborScanMinChanTime,
 		uint8_t sessionId);
@@ -3008,6 +3012,17 @@ int sme_set_no_ack_policy(mac_handle_t mac_handle, uint8_t session_id,
  */
 int sme_set_auto_rate_he_sgi(mac_handle_t mac_handle, uint8_t session_id,
 			     uint8_t cfg_val);
+
+/**
+ * sme_set_auto_rate_ldpc() - Sets LDPC for auto rate
+ * @mac_handle: Opaque handle to the global MAC context
+ * @session_id: SME session id
+ * @ldpc_disable: LDPC configuration value
+ *
+ * Return: 0 on success else err code
+ */
+int sme_set_auto_rate_ldpc(mac_handle_t mac_handle, uint8_t session_id,
+			   uint8_t ldpc_disable);
 
 /**
  * sme_set_auto_rate_he_ltf() - Sets HE LTF for auto rate

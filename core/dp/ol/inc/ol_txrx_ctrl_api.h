@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -303,32 +303,6 @@ ol_txrx_data_tx_cb_set(struct cdp_soc_t *soc, uint8_t vdev_id,
  */
 void ol_txrx_discard_tx_pending(ol_txrx_pdev_handle pdev);
 
-/**
- * @brief set the safemode of the device
- * @details
- *  This flag is used to bypass the encrypt and decrypt processes when send and
- *  receive packets. It works like open AUTH mode, HW will treate all packets
- *  as non-encrypt frames because no key installed. For rx fragmented frames,
- *  it bypasses all the rx defragmentaion.
- *
- * @param vdev - the data virtual device object
- * @param val - the safemode state
- * @return - void
- */
-void ol_txrx_set_safemode(ol_txrx_vdev_handle vdev, uint32_t val);
-
-/**
- * @brief configure the drop unencrypted frame flag
- * @details
- *  Rx related. When set this flag, all the unencrypted frames
- *  received over a secure connection will be discarded
- *
- * @param vdev - the data virtual device object
- * @param val - flag
- * @return - void
- */
-void ol_txrx_set_drop_unenc(ol_txrx_vdev_handle vdev, uint32_t val);
-
 void
 ol_txrx_peer_keyinstalled_state_update(ol_txrx_peer_handle data_peer,
 				       uint8_t val);
@@ -523,7 +497,7 @@ static inline void ol_tx_flow_pool_resize_handler(uint8_t flow_pool_id,
 void ol_tx_register_flow_control(struct ol_txrx_pdev_t *pdev);
 void ol_tx_deregister_flow_control(struct ol_txrx_pdev_t *pdev);
 void ol_tx_dump_flow_pool_info(struct cdp_soc_t *soc_hdl);
-void ol_tx_dump_flow_pool_info_compact(void *pdev);
+void ol_tx_dump_flow_pool_info_compact(struct ol_txrx_pdev_t *pdev);
 void ol_tx_clear_flow_pool_stats(void);
 void ol_tx_flow_pool_map_handler(uint8_t flow_id, uint8_t flow_type,
 				 uint8_t flow_pool_id, uint16_t flow_pool_size);
@@ -570,14 +544,14 @@ static inline void ol_tx_deregister_flow_control(struct ol_txrx_pdev_t *pdev)
 
 #if defined(CONFIG_HL_SUPPORT) && defined(QCA_HL_NETDEV_FLOW_CONTROL)
 void ol_tx_dump_flow_pool_info(struct cdp_soc_t *soc_hdl);
-void ol_tx_dump_flow_pool_info_compact(void *pdev);
+void ol_tx_dump_flow_pool_info_compact(struct ol_txrx_pdev_t *pdev);
 #else
 static inline void ol_tx_dump_flow_pool_info(struct cdp_soc_t *soc_hdl)
 {
 }
 
 static inline
-void ol_tx_dump_flow_pool_info_compact(void *ctx)
+void ol_tx_dump_flow_pool_info_compact(struct ol_txrx_pdev_t *pdev)
 {
 }
 #endif

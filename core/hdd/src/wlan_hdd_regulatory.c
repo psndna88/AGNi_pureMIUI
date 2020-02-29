@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1454,6 +1454,8 @@ static void hdd_regulatory_dyn_cbk(struct wlan_objmgr_psoc *psoc,
 		hdd_ch_avoid_ind(hdd_ctx, &avoid_freq_ind->chan_list,
 				&avoid_freq_ind->freq_list);
 	} else {
+		hdd_config_tdls_with_band_switch(hdd_ctx);
+
 		sme_generic_change_country_code(hdd_ctx->mac_handle,
 				hdd_ctx->reg.alpha2);
 		/*Check whether need restart SAP/P2p Go*/
@@ -1503,6 +1505,7 @@ int hdd_regulatory_init(struct hdd_context *hdd_ctx, struct wiphy *wiphy)
 		hdd_ctx->reg_offload = true;
 		ucfg_reg_get_current_chan_list(hdd_ctx->pdev,
 					       cur_chan_list);
+		hdd_regulatory_chanlist_dump(cur_chan_list);
 		fill_wiphy_band_channels(wiphy, cur_chan_list,
 					 NL80211_BAND_2GHZ);
 		fill_wiphy_band_channels(wiphy, cur_chan_list,

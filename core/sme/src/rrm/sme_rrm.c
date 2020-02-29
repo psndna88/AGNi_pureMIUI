@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -450,10 +450,15 @@ static QDF_STATUS sme_rrm_send_scan_result(struct mac_context *mac_ctx,
 	if (!filter)
 		return QDF_STATUS_E_NOMEM;
 
-	/* update filter to get scan result with just target BSSID */
-	filter->num_of_bssid = 1;
-	qdf_mem_copy(filter->bssid_list[0].bytes,
-		     rrm_ctx->bssId, sizeof(struct qdf_mac_addr));
+	if (qdf_is_macaddr_zero(filter->bssid_list) ||
+	    qdf_is_macaddr_group(filter->bssid_list)) {
+		filter->num_of_bssid = 0;
+	} else {
+		/* update filter to get scan result with just target BSSID */
+		filter->num_of_bssid = 1;
+		qdf_mem_copy(filter->bssid_list[0].bytes,
+			     rrm_ctx->bssId, sizeof(struct qdf_mac_addr));
+	}
 
 	if (rrm_ctx->ssId.length) {
 		filter->num_of_ssid = 1;
@@ -1053,11 +1058,10 @@ QDF_STATUS sme_rrm_process_beacon_report_req_ind(struct mac_context *mac,
 	else
 		country[2] = OP_CLASS_GLOBAL;
 
-	sme_debug("Channel = %d", beacon_req->channel_info.chan_num);
-
-	sme_debug("Request Reg class %d, AP's country code %c%c 0x%x",
+	sme_debug("Request Reg class %d, AP's country code %c%c 0x%x, channel = %d",
 		  beacon_req->channel_info.reg_class,
-		  country[0], country[1], country[2]);
+		  country[0], country[1], country[2],
+		  beacon_req->channel_info.chan_num);
 
 	if (beacon_req->channel_list.num_channels > SIR_ESE_MAX_MEAS_IE_REQS) {
 		sme_err("Beacon report request numChannels:%u exceeds max num channels",
@@ -1180,12 +1184,11 @@ QDF_STATUS sme_rrm_process_beacon_report_req_ind(struct mac_context *mac,
 		     (uint8_t *)&beacon_req->measurementDuration,
 		     SIR_ESE_MAX_MEAS_IE_REQS);
 
-	sme_debug("token: %d regClass: %d randnIntvl: %d msgSource: %d measurementduration %d, rrm_ctx duration %d Meas_mode: %s",
-		sme_rrm_ctx->token, sme_rrm_ctx->regClass,
-		sme_rrm_ctx->randnIntvl, sme_rrm_ctx->msgSource,
-		beacon_req->measurementDuration[0],
-		sme_rrm_ctx->duration[0],
-		sme_rrm_get_meas_mode_string(sme_rrm_ctx->measMode[0]));
+	sme_debug("token: %d randnIntvl: %d msgSource: %d measurementduration %d, rrm_ctx duration %d Meas_mode: %s",
+		  sme_rrm_ctx->token, sme_rrm_ctx->randnIntvl,
+		  sme_rrm_ctx->msgSource, beacon_req->measurementDuration[0],
+		  sme_rrm_ctx->duration[0],
+		  sme_rrm_get_meas_mode_string(sme_rrm_ctx->measMode[0]));
 
 	return sme_rrm_issue_scan_req(mac);
 
@@ -1557,7 +1560,7 @@ static void rrm_iter_meas_timer_handle(void *userData)
 {
 	struct mac_context *mac = (struct mac_context *) userData;
 
-	sme_warn("Randomization timer expired...send on next channel");
+	sme_debug("Randomization timer expired...send on next channel");
 	/* Issue a scan req for next channel. */
 	sme_rrm_issue_scan_req(mac);
 }

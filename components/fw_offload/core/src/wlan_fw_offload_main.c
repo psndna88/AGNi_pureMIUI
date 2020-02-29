@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -132,14 +132,20 @@ fwol_init_thermal_temp_in_cfg(struct wlan_objmgr_psoc *psoc,
 	thermal_temp->thermal_mitigation_enable =
 				cfg_get(psoc, CFG_THERMAL_MITIGATION_ENABLE);
 	thermal_temp->throttle_period = cfg_get(psoc, CFG_THROTTLE_PERIOD);
+	thermal_temp->thermal_sampling_time =
+				cfg_get(psoc, CFG_THERMAL_SAMPLING_TIME);
 	thermal_temp->throttle_dutycycle_level[0] =
 				cfg_get(psoc, CFG_THROTTLE_DUTY_CYCLE_LEVEL0);
-	thermal_temp->throttle_dutycycle_level[1]=
+	thermal_temp->throttle_dutycycle_level[1] =
 				cfg_get(psoc, CFG_THROTTLE_DUTY_CYCLE_LEVEL1);
-	thermal_temp->throttle_dutycycle_level[2]=
+	thermal_temp->throttle_dutycycle_level[2] =
 				cfg_get(psoc, CFG_THROTTLE_DUTY_CYCLE_LEVEL2);
-	thermal_temp->throttle_dutycycle_level[3]=
+	thermal_temp->throttle_dutycycle_level[3] =
 				cfg_get(psoc, CFG_THROTTLE_DUTY_CYCLE_LEVEL3);
+	thermal_temp->throttle_dutycycle_level[4] =
+				cfg_get(psoc, CFG_THROTTLE_DUTY_CYCLE_LEVEL4);
+	thermal_temp->throttle_dutycycle_level[5] =
+				cfg_get(psoc, CFG_THROTTLE_DUTY_CYCLE_LEVEL5);
 }
 
 QDF_STATUS fwol_init_neighbor_report_cfg(struct wlan_objmgr_psoc *psoc,
@@ -241,7 +247,7 @@ static void fwol_parse_probe_req_ouis(struct wlan_objmgr_psoc *psoc,
 	whitelist->no_of_probe_req_ouis = 0;
 
 	if (!qdf_str_len(str)) {
-		fwol_info("NO OUIs to parse");
+		fwol_debug("NO OUIs to parse");
 		return;
 	}
 

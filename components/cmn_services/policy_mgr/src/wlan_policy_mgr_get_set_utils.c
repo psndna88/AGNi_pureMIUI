@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -951,10 +951,8 @@ bool policy_mgr_is_dbs_scan_allowed(struct wlan_objmgr_psoc *psoc)
 	}
 
 	if (!policy_mgr_find_if_fw_supports_dbs(psoc) ||
-	    !policy_mgr_find_if_hwlist_has_dbs(psoc)) {
-		policy_mgr_debug("HW mode list has no DBS");
+	    !policy_mgr_find_if_hwlist_has_dbs(psoc))
 		return false;
-	}
 
 	policy_mgr_get_dual_mac_feature(psoc, &dbs_type);
 	/*
@@ -1500,8 +1498,8 @@ bool policy_mgr_current_concurrency_is_mcc(struct wlan_objmgr_psoc *psoc)
 		}
 		break;
 	default:
-		policy_mgr_err("unexpected num_connections value %d",
-			num_connections);
+		policy_mgr_debug("unexpected num_connections value %d",
+				 num_connections);
 		break;
 	}
 
@@ -1585,8 +1583,8 @@ void policy_mgr_set_concurrency_mode(struct wlan_objmgr_psoc *psoc,
 		break;
 	}
 
-	policy_mgr_info("concurrency_mode = 0x%x Number of open sessions for mode %d = %d",
-		pm_ctx->concurrency_mode, mode,
+	policy_mgr_debug("concurrency_mode = 0x%x Number of open sessions for mode %d = %d",
+			 pm_ctx->concurrency_mode, mode,
 		pm_ctx->no_of_open_sessions[mode]);
 }
 
@@ -1624,9 +1622,9 @@ void policy_mgr_clear_concurrency_mode(struct wlan_objmgr_psoc *psoc,
 		break;
 	}
 
-	policy_mgr_info("concurrency_mode = 0x%x Number of open sessions for mode %d = %d",
-		pm_ctx->concurrency_mode, mode,
-		pm_ctx->no_of_open_sessions[mode]);
+	policy_mgr_debug("concurrency_mode = 0x%x Number of open sessions for mode %d = %d",
+			 pm_ctx->concurrency_mode, mode,
+			 pm_ctx->no_of_open_sessions[mode]);
 }
 
 void policy_mgr_incr_active_session(struct wlan_objmgr_psoc *psoc,
@@ -1668,7 +1666,7 @@ void policy_mgr_incr_active_session(struct wlan_objmgr_psoc *psoc,
 
 	policy_mgr_debug("No.# of active sessions for mode %d = %d",
 		mode, pm_ctx->no_of_active_sessions[mode]);
-	policy_mgr_incr_connection_count(psoc, session_id);
+	policy_mgr_incr_connection_count(psoc, session_id, mode);
 	if ((policy_mgr_mode_specific_connection_count(
 		psoc, PM_STA_MODE, NULL) > 0) && (mode != QDF_STA_MODE)) {
 		qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
@@ -1805,8 +1803,9 @@ QDF_STATUS policy_mgr_decr_active_session(struct wlan_objmgr_psoc *psoc,
 	return qdf_status;
 }
 
-QDF_STATUS policy_mgr_incr_connection_count(
-		struct wlan_objmgr_psoc *psoc, uint32_t vdev_id)
+QDF_STATUS policy_mgr_incr_connection_count(struct wlan_objmgr_psoc *psoc,
+					    uint32_t vdev_id,
+					    enum QDF_OPMODE op_mode)
 {
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
 	uint32_t conn_index;
@@ -1832,7 +1831,7 @@ QDF_STATUS policy_mgr_incr_connection_count(
 		return status;
 	}
 
-	if (vdev_id == NAN_PSEUDO_VDEV_ID) {
+	if (op_mode == QDF_NAN_DISC_MODE) {
 		status = wlan_nan_get_connection_info(psoc, &conn_table_entry);
 		if (QDF_IS_STATUS_ERROR(status)) {
 			policy_mgr_err("Can't get NAN Connection info");
@@ -2615,8 +2614,8 @@ uint32_t policy_mgr_get_concurrency_mode(struct wlan_objmgr_psoc *psoc)
 		return QDF_STA_MASK;
 	}
 
-	policy_mgr_info("concurrency_mode: 0x%x",
-			pm_ctx->concurrency_mode);
+	policy_mgr_debug("concurrency_mode: 0x%x",
+			 pm_ctx->concurrency_mode);
 
 	return pm_ctx->concurrency_mode;
 }
@@ -2875,7 +2874,7 @@ QDF_STATUS policy_mgr_change_mcc_go_beacon_interval(
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	policy_mgr_info("UPDATE Beacon Params");
+	policy_mgr_debug("UPDATE Beacon Params");
 
 	if (QDF_SAP_MODE == dev_mode) {
 		if (pm_ctx->sme_cbacks.sme_change_mcc_beacon_interval
@@ -3151,44 +3150,6 @@ uint32_t policy_mgr_get_dfs_beaconing_session_id(
 	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
 
 	return session_id;
-}
-
-bool policy_mgr_is_dfs_beaconing_present_except_vdev(
-		struct wlan_objmgr_psoc *psoc, uint32_t *ch_freq,
-		uint8_t vdev_id)
-{
-	struct policy_mgr_conc_connection_info *conn_info;
-	bool status = false;
-	uint32_t conn_index = 0;
-	struct policy_mgr_psoc_priv_obj *pm_ctx;
-	struct policy_mgr_conc_connection_info info;
-	uint8_t num_cxn_del;
-
-	pm_ctx = policy_mgr_get_context(psoc);
-	if (!pm_ctx) {
-		policy_mgr_err("Invalid Context");
-		return false;
-	}
-	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
-	policy_mgr_store_and_del_conn_info_by_vdev_id(
-		psoc, vdev_id, &info, &num_cxn_del);
-
-	for (conn_index = 0; conn_index < MAX_NUMBER_OF_CONC_CONNECTIONS;
-			conn_index++) {
-		conn_info = &pm_conc_connection_list[conn_index];
-		if (conn_info->in_use &&
-		    wlan_reg_is_dfs_for_freq(pm_ctx->pdev, conn_info->freq) &&
-		    (conn_info->mode == PM_SAP_MODE ||
-		     conn_info->mode == PM_P2P_GO_MODE)) {
-			*ch_freq = pm_conc_connection_list[conn_index].freq;
-			status = true;
-		}
-	}
-	if (num_cxn_del)
-		policy_mgr_restore_deleted_conn_info(psoc, &info, num_cxn_del);
-	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
-
-	return status;
 }
 
 bool policy_mgr_is_any_dfs_beaconing_session_present(
@@ -4256,3 +4217,16 @@ bool policy_mgr_is_sap_go_on_2g(struct wlan_objmgr_psoc *psoc)
 	return ret;
 }
 
+bool policy_mgr_get_5g_scc_prefer(
+	struct wlan_objmgr_psoc *psoc, enum policy_mgr_con_mode mode)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid Context");
+		return false;
+	}
+
+	return pm_ctx->cfg.prefer_5g_scc_to_dbs & (1 << mode);
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -186,6 +186,42 @@ void wma_process_roam_synch_fail(WMA_HANDLE handle,
 int wma_roam_synch_event_handler(void *handle, uint8_t *event,
 					uint32_t len);
 
+#ifdef WLAN_FEATURE_FIPS
+/**
+ * wma_register_pmkid_req_event_handler() - Register pmkid request event handler
+ * @wma_handle: wma_handle
+ *
+ * This function register pmkid request event handler.
+ */
+void wma_register_pmkid_req_event_handler(tp_wma_handle wma_handle);
+
+/**
+ * wma_roam_pmkid_request_event_handler() - Handles roam pmkid request event
+ * @handle: wma_handle
+ * @event: pmkid request event data pointer
+ * @len: length of the data
+ *
+ * Handles pmkid request event from firmware which is triggered after roam
+ * candidate selection.
+ */
+int wma_roam_pmkid_request_event_handler(void *handle,
+					 uint8_t *event,
+					 uint32_t len);
+#else
+static inline void
+wma_register_pmkid_req_event_handler(tp_wma_handle wma_handle)
+{
+}
+
+static inline int
+wma_roam_pmkid_request_event_handler(void *handle,
+				     uint8_t *event,
+				     uint32_t len)
+{
+	return 0;
+}
+#endif /* WLAN_FEATURE_FIPS */
+
 /**
  * wma_roam_auth_offload_event_handler() - Handle LFR-3.0 Roam authentication
  * offload event.
@@ -252,6 +288,14 @@ static inline int wma_mlme_roam_synch_event_handler_cb(void *handle,
 static inline int
 wma_roam_stats_event_handler(WMA_HANDLE handle, uint8_t *event,
 			     uint32_t len)
+{
+	return 0;
+}
+
+static inline int
+wma_roam_pmkid_request_event_handler(void *handle,
+				     uint8_t *event,
+				     uint32_t len)
 {
 	return 0;
 }
@@ -568,35 +612,15 @@ static inline bool wma_is_roam_synch_in_progress(tp_wma_handle wma,
  */
 
 /**
- * wma_find_vdev_by_addr() - find vdev_id from mac address
+ * wma_find_vdev_id_by_addr() - find vdev_id from mac address
  * @wma: wma handle
  * @addr: mac address
  * @vdev_id: return vdev_id
  *
- * Return: Returns vdev handle or NULL if mac address don't match
+ * Return: SUCCESS or FAILURE
  */
-struct cdp_vdev *wma_find_vdev_by_addr(tp_wma_handle wma, uint8_t *addr,
-				   uint8_t *vdev_id);
-
-/**
- * wma_find_vdev_by_id() - Returns vdev handle for given vdev id.
- * @wma - wma handle
- * @vdev_id - vdev ID
- *
- * Return: Returns vdev handle if given vdev id is valid.
- *         Otherwise returns NULL.
- */
-static inline
-struct cdp_vdev *wma_find_vdev_by_id(tp_wma_handle wma, uint8_t vdev_id)
-{
-	if (vdev_id >= wma->max_bssid)
-		return NULL;
-
-	if (!wma->interfaces[vdev_id].vdev)
-		return NULL;
-
-	return wlan_vdev_get_dp_handle(wma->interfaces[vdev_id].vdev);
-}
+QDF_STATUS wma_find_vdev_id_by_addr(tp_wma_handle wma, uint8_t *addr,
+				    uint8_t *vdev_id);
 
 bool wma_is_vdev_in_ap_mode(tp_wma_handle wma, uint8_t vdev_id);
 
@@ -739,15 +763,15 @@ static inline uint8_t *wma_find_bssid_by_vdev_id(tp_wma_handle wma,
 }
 
 /**
- * wma_find_vdev_by_bssid() - Get the corresponding vdev_id from BSSID
+ * wma_find_vdev_id_by_bssid() - Get the corresponding vdev_id from BSSID
  * @wma - wma handle
+ * @bssid - bssid address
  * @vdev_id - vdev ID
  *
- * Return: fill vdev_id with appropriate vdev id and return vdev
- *         handle or NULL if not found.
+ * Return: SUCCESS or FAILURE.
  */
-struct cdp_vdev *wma_find_vdev_by_bssid(tp_wma_handle wma, uint8_t *bssid,
-				    uint8_t *vdev_id);
+QDF_STATUS wma_find_vdev_id_by_bssid(tp_wma_handle wma, uint8_t *bssid,
+				     uint8_t *vdev_id);
 
 /**
  * wma_vdev_detach() - send vdev delete command to fw
@@ -762,18 +786,16 @@ QDF_STATUS wma_vdev_detach(tp_wma_handle wma_handle,
 QDF_STATUS wma_vdev_set_param(wmi_unified_t wmi_handle, uint32_t if_id,
 				uint32_t param_id, uint32_t param_value);
 
-QDF_STATUS wma_remove_peer(tp_wma_handle wma, uint8_t *bssid,
-			   uint8_t vdev_id, void *peer,
-			   bool roam_synch_in_progress);
+QDF_STATUS wma_remove_peer(tp_wma_handle wma, uint8_t *mac_addr,
+			   uint8_t vdev_id, bool roam_synch_in_progress);
 
 QDF_STATUS wma_peer_unmap_conf_send(tp_wma_handle wma,
 				    struct send_peer_unmap_conf_params *msg);
 
-QDF_STATUS wma_create_peer(tp_wma_handle wma, struct cdp_pdev *pdev,
-			  struct cdp_vdev *vdev,
-			  uint8_t peer_addr[QDF_MAC_ADDR_SIZE],
-			  uint32_t peer_type, uint8_t vdev_id,
-			  bool roam_synch_in_progress);
+QDF_STATUS wma_create_peer(tp_wma_handle wma,
+			   uint8_t peer_addr[QDF_MAC_ADDR_SIZE],
+			   uint32_t peer_type, uint8_t vdev_id,
+			   bool roam_synch_in_progress);
 
 /**
  * wma_send_del_bss_response() - send delete bss resp
@@ -960,39 +982,6 @@ void wma_update_rts_params(tp_wma_handle wma, uint32_t value);
  */
 void wma_update_frag_params(tp_wma_handle wma, uint32_t value);
 
-#ifdef CRYPTO_SET_KEY_CONVERGED
-static inline void wma_set_stakey(tp_wma_handle wma_handle,
-				  tpSetStaKeyParams key_info)
-{
-}
-
-static inline void wma_set_bsskey(tp_wma_handle wma_handle,
-				  tpSetBssKeyParams key_info)
-{
-}
-#else
-/**
- * wma_set_stakey() - set encryption key
- * @wma_handle: wma handle
- * @key_info: station key info
- *
- * This function sets encryption key for WEP/WPA/WPA2
- * encryption mode in firmware and send response to upper layer.
- *
- * Return: none
- */
-void wma_set_stakey(tp_wma_handle wma_handle, tpSetStaKeyParams key_info);
-
-/**
- * wma_set_bsskey() - set encryption key to fw.
- * @wma_handle: wma handle
- * @key_info: key info
- *
- * Return: none
- */
-void wma_set_bsskey(tp_wma_handle wma_handle, tpSetBssKeyParams key_info);
-#endif
-
 QDF_STATUS wma_process_update_edca_param_req(WMA_HANDLE handle,
 						    tEdcaParams *edca_params);
 
@@ -1045,12 +1034,11 @@ void wma_process_update_userpos(tp_wma_handle wma_handle,
 
 /**
  * wma_enable_sta_ps_mode() - enable sta powersave params in fw
- * @wma: wma handle
  * @ps_req: power save request
  *
  * Return: none
  */
-void wma_enable_sta_ps_mode(tp_wma_handle wma, tpEnablePsParams ps_req);
+void wma_enable_sta_ps_mode(tpEnablePsParams ps_req);
 
 QDF_STATUS wma_unified_set_sta_ps_param(wmi_unified_t wmi_handle,
 					    uint32_t vdev_id, uint32_t param,
@@ -1070,7 +1058,7 @@ void wma_set_tx_power(WMA_HANDLE handle,
 void wma_set_max_tx_power(WMA_HANDLE handle,
 				 tMaxTxPowerParams *tx_pwr_params);
 
-void wma_disable_sta_ps_mode(tp_wma_handle wma, tpDisablePsParams ps_req);
+void wma_disable_sta_ps_mode(tpDisablePsParams ps_req);
 
 /**
  * wma_enable_uapsd_mode() - enable uapsd mode in fw

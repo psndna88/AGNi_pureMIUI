@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -373,9 +373,8 @@ static const char *ol_tx_flow_pool_status_to_str
 	}
 }
 
-void ol_tx_dump_flow_pool_info_compact(void *ctx)
+void ol_tx_dump_flow_pool_info_compact(struct ol_txrx_pdev_t *pdev)
 {
-	struct ol_txrx_pdev_t *pdev = cds_get_context(QDF_MODULE_ID_TXRX);
 	char *comb_log_str;
 	int bytes_written = 0;
 	uint32_t free_size;
@@ -834,7 +833,7 @@ static void ol_tx_flow_pool_vdev_unmap(struct ol_tx_flow_pool_t *pool,
 
 	vdev = (struct ol_txrx_vdev_t *)ol_txrx_get_vdev_from_vdev_id(vdev_id);
 	if (!vdev) {
-		ol_txrx_err("invalid vdev_id %d", vdev_id);
+		ol_txrx_dbg("invalid vdev_id %d", vdev_id);
 		return;
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -3046,7 +3046,7 @@ static int hdd_check_wext_control(enum hdd_wext_control wext_control,
 		hdd_err_rl("Rejecting disabled ioctl %x", info->cmd);
 		return -ENOTSUPP;
 	case hdd_wext_deprecated:
-		hdd_warn_rl("Using deprecated ioctl %x", info->cmd);
+		hdd_nofl_debug("Using deprecated ioctl %x", info->cmd);
 		return 0;
 	case hdd_wext_enabled:
 		return 0;
@@ -3460,6 +3460,8 @@ int hdd_set_ldpc(struct hdd_adapter *adapter, int value)
 	ret = sme_update_he_ldpc_supp(mac_handle, adapter->vdev_id, value);
 	if (ret)
 		hdd_err("Failed to set HE LDPC value");
+	ret = sme_set_auto_rate_ldpc(mac_handle, adapter->vdev_id,
+				     (value ? 0 : 1));
 
 	return ret;
 }
@@ -5975,12 +5977,12 @@ static int __iw_setchar_getnone(struct net_device *dev,
 	case WE_WOWL_ADD_PTRN:
 		hdd_debug("ADD_PTRN");
 		if (!hdd_add_wowl_ptrn(adapter, str_arg))
-			return -EINVAL;
+			ret = -EINVAL;
 		break;
 	case WE_WOWL_DEL_PTRN:
 		hdd_debug("DEL_PTRN");
 		if (!hdd_del_wowl_ptrn(adapter, str_arg))
-			return -EINVAL;
+			ret = -EINVAL;
 		break;
 	case WE_NEIGHBOR_REPORT_REQUEST:
 	{
@@ -7509,6 +7511,7 @@ hdd_policy_mgr_set_hw_mode_ut(struct hdd_context *hdd_ctx,
 	enum hw_mode_bandwidth mac1_bw;
 	enum hw_mode_mac_band_cap mac0_band_cap;
 	enum hw_mode_dbs_capab dbs;
+	enum policy_mgr_conc_next_action action;
 
 	switch (cmd) {
 	case 0:
@@ -7519,6 +7522,7 @@ hdd_policy_mgr_set_hw_mode_ut(struct hdd_context *hdd_ctx,
 		mac1_bw = HW_MODE_BW_NONE;
 		mac0_band_cap = HW_MODE_MAC_BAND_NONE;
 		dbs = HW_MODE_DBS_NONE;
+		action = PM_SINGLE_MAC;
 		break;
 	case 1:
 		hdd_debug("set hw mode for dual mac");
@@ -7528,6 +7532,7 @@ hdd_policy_mgr_set_hw_mode_ut(struct hdd_context *hdd_ctx,
 		mac1_bw = HW_MODE_40_MHZ;
 		mac0_band_cap = HW_MODE_MAC_BAND_NONE;
 		dbs = HW_MODE_DBS;
+		action = PM_DBS;
 		break;
 	case 2:
 		hdd_debug("set hw mode for 2x2 5g + 1x1 2g");
@@ -7537,6 +7542,7 @@ hdd_policy_mgr_set_hw_mode_ut(struct hdd_context *hdd_ctx,
 		mac1_bw = HW_MODE_40_MHZ;
 		mac0_band_cap = HW_MODE_MAC_BAND_5G;
 		dbs = HW_MODE_DBS;
+		action = PM_DBS1;
 		break;
 	case 3:
 		hdd_debug("set hw mode for 2x2 2g + 1x1 5g");
@@ -7546,6 +7552,7 @@ hdd_policy_mgr_set_hw_mode_ut(struct hdd_context *hdd_ctx,
 		mac1_bw = HW_MODE_40_MHZ;
 		mac0_band_cap = HW_MODE_MAC_BAND_2G;
 		dbs = HW_MODE_DBS;
+		action = PM_DBS2;
 		break;
 	default:
 		hdd_err("unknown cmd %d", cmd);
@@ -7555,7 +7562,8 @@ hdd_policy_mgr_set_hw_mode_ut(struct hdd_context *hdd_ctx,
 				    mac0_ss, mac0_bw, mac1_ss, mac1_bw,
 				    mac0_band_cap, dbs, HW_MODE_AGILE_DFS_NONE,
 				    HW_MODE_SBS_NONE,
-				    POLICY_MGR_UPDATE_REASON_UT, PM_NOP);
+				    POLICY_MGR_UPDATE_REASON_UT, PM_NOP,
+				    action);
 }
 
 static int iw_get_policy_manager_ut_ops(struct hdd_context *hdd_ctx,
@@ -7932,14 +7940,20 @@ static int __iw_set_var_ints_getnone(struct net_device *dev,
 
 		if ((apps_args[0] < WLAN_MODULE_ID_MIN) ||
 		    (apps_args[0] >= WLAN_MODULE_ID_MAX)) {
-			hdd_err("Invalid MODULE ID %d", apps_args[0]);
+			hdd_err_rl("Invalid MODULE ID %d", apps_args[0]);
 			return -EINVAL;
 		}
 		if ((apps_args[1] > (WMA_MAX_NUM_ARGS)) ||
 		    (apps_args[1] < 0)) {
-			hdd_err("Too Many/Few args %d", apps_args[1]);
+			hdd_err_rl("Too Many/Few args %d", apps_args[1]);
 			return -EINVAL;
 		}
+
+		if (adapter->vdev_id >= WLAN_MAX_VDEVS) {
+			hdd_err_rl("Invalid vdev id");
+			return -EINVAL;
+		}
+
 		status = sme_send_unit_test_cmd(adapter->vdev_id,
 						apps_args[0],
 						apps_args[1],

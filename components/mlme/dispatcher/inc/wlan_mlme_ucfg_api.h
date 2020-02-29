@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -807,6 +807,17 @@ ucfg_mlme_set_dfs_filter_offload(struct wlan_objmgr_psoc *psoc,
 				 bool dfs_filter_offload);
 
 /**
+ * ucfg_mlme_get_oem_6g_supported() - Get oem 6Ghz supported
+ * @psoc: pointer to psoc object
+ * @oem_6g_supported: Pointer to the value which will be filled for the caller
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+ucfg_mlme_get_oem_6g_supported(struct wlan_objmgr_psoc *psoc,
+			       bool *oem_6g_supported);
+
+/**
  * ucfg_mlme_get_fine_time_meas_cap() - Get fine timing measurement capability
  * @psoc: pointer to psoc object
  * @fine_time_meas_cap: Pointer to the value which will be filled for the caller
@@ -1424,6 +1435,23 @@ ucfg_mlme_get_sap_bcast_deauth_enabled(struct wlan_objmgr_psoc *psoc,
 				       bool *value)
 {
 	return wlan_mlme_get_sap_bcast_deauth_enabled(psoc, value);
+}
+
+/**
+ * ucfg_mlme_is_6g_sap_fd_enabled() - get the sap fils discovery
+ *                                           enabled value
+ * @psoc: pointer to psoc object
+ * @value: Value that needs to be get from the caller
+ *
+ * Inline UCFG API to be used by HDD/OSIF callers
+ *
+ * Return: QDF Status
+ */
+static inline QDF_STATUS
+ucfg_mlme_is_6g_sap_fd_enabled(struct wlan_objmgr_psoc *psoc,
+			       bool *value)
+{
+	return wlan_mlme_is_6g_sap_fd_enabled(psoc, value);
 }
 
 /**
@@ -3929,4 +3957,16 @@ ucfg_mlme_get_ignore_fw_reg_offload_ind(struct wlan_objmgr_psoc *psoc,
 	return wlan_mlme_get_ignore_fw_reg_offload_ind(psoc, disabled);
 }
 
+/**
+ * ucfg_mlme_get_peer_unmap_conf() - Indicate if peer unmap confirmation
+ * support is enabled or disabled
+ * @psoc: pointer to psoc object
+ *
+ * Return: true if peer unmap confirmation support is enabled, else false
+ */
+static inline
+QDF_STATUS ucfg_mlme_get_peer_unmap_conf(struct wlan_objmgr_psoc *psoc)
+{
+	return wlan_mlme_get_peer_unmap_conf(psoc);
+}
 #endif /* _WLAN_MLME_UCFG_API_H_ */

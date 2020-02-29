@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -661,6 +661,7 @@ struct wlan_mlme_wps_params {
  * @go_11ac_override: Override GO bandwidth to 11ac
  * @sap_sae_enabled: enable sae in sap mode
  * @is_sap_bcast_deauth_enabled: enable bcast deauth for sap
+ * @is_6g_sap_fd_enabled: enable fils discovery on sap
  */
 struct wlan_mlme_cfg_sap {
 	uint8_t cfg_ssid[WLAN_SSID_MAX_LEN];
@@ -698,6 +699,7 @@ struct wlan_mlme_cfg_sap {
 	bool go_11ac_override;
 	bool sap_sae_enabled;
 	bool is_sap_bcast_deauth_enabled;
+	bool is_6g_sap_fd_enabled;
 };
 
 /**
@@ -1124,6 +1126,7 @@ struct wlan_mlme_chainmask {
  * @bmiss_skip_full_scan: Decide if full scan can be skipped in firmware if no
  * candidate is found in partial scan based on channel map
  * @enable_ring_buffer: Decide to enable/disable ring buffer for bug report
+ * @enable_peer_unmap_conf_support: Indicate whether to send conf for peer unmap
  */
 struct wlan_mlme_generic {
 	enum band_info band_capability;
@@ -1158,6 +1161,7 @@ struct wlan_mlme_generic {
 	uint8_t mgmt_retry_max;
 	bool bmiss_skip_full_scan;
 	bool enable_ring_buffer;
+	bool enable_peer_unmap_conf_support;
 };
 
 /*
@@ -2055,9 +2059,11 @@ struct wlan_mlme_wep_cfg {
 /**
  * struct wlan_mlme_wifi_pos_cfg - WIFI POS configs
  * @fine_time_meas_cap: fine timing measurement capability information
+ * @oem_6g_support_disable: oem is 6Ghz disabled if set
  */
 struct wlan_mlme_wifi_pos_cfg {
 	uint32_t fine_time_meas_cap;
+	bool oem_6g_support_disable;
 };
 
 #define MLME_SET_BIT(value, bit_offset) ((value) |= (1 << (bit_offset)))
@@ -2296,6 +2302,11 @@ struct wlan_mlme_cfg {
 	struct wlan_mlme_reg reg;
 	struct roam_trigger_score_delta trig_score_delta[NUM_OF_ROAM_TRIGGERS];
 	struct roam_trigger_min_rssi trig_min_rssi[NUM_OF_ROAM_TRIGGERS];
+};
+
+enum pkt_origin {
+	FW,
+	HOST
 };
 
 /**

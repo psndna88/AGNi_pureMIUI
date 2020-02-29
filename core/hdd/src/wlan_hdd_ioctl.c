@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1540,6 +1540,11 @@ hdd_sendactionframe(struct hdd_adapter *adapter, const uint8_t *bssid,
 	struct cfg80211_mgmt_tx_params params;
 #endif
 
+	if (payload_len < sizeof(tSirMacVendorSpecificFrameHdr)) {
+		hdd_warn("Invalid payload length: %d", payload_len);
+		return -EINVAL;
+	}
+
 	if (QDF_STA_MODE != adapter->device_mode) {
 		hdd_warn("Unsupported in mode %s(%d)",
 			 qdf_opmode_str(adapter->device_mode),
@@ -1875,12 +1880,10 @@ hdd_parse_channellist(struct hdd_context *hdd_ctx,
 		in_ptr = strpbrk(in_ptr, " ");
 		/* no channel list after the number of channels argument */
 		if (!in_ptr) {
-			if (0 != j) {
-				*num_channels = j;
+			if ((j != 0) && (*num_channels == j))
 				return 0;
-			} else {
-				return -EINVAL;
-			}
+			else
+				goto cnt_mismatch;
 		}
 
 		/* remove empty space */
@@ -1892,12 +1895,10 @@ hdd_parse_channellist(struct hdd_context *hdd_ctx,
 		 * argument and spaces
 		 */
 		if ('\0' == *in_ptr) {
-			if (0 != j) {
-				*num_channels = j;
+			if ((j != 0) && (*num_channels == j))
 				return 0;
-			} else {
-				return -EINVAL;
-			}
+			else
+				goto cnt_mismatch;
 		}
 
 		v = sscanf(in_ptr, "%31s ", buf);
@@ -1918,6 +1919,12 @@ hdd_parse_channellist(struct hdd_context *hdd_ctx,
 	}
 
 	return 0;
+
+cnt_mismatch:
+	hdd_debug("Mismatch in ch cnt: %d and num of ch: %d", *num_channels, j);
+	*num_channels = 0;
+	return -EINVAL;
+
 }
 
 /**
@@ -4576,7 +4583,7 @@ static int drv_cmd_get_scan_home_away_time(struct hdd_adapter *adapter,
 {
 	int ret = 0;
 	uint16_t val;
-	char extra[32];
+	char extra[32] = {0};
 	uint8_t len = 0;
 	QDF_STATUS status;
 
@@ -4864,6 +4871,7 @@ static int drv_cmd_fast_reassoc(struct hdd_adapter *adapter,
 	int ret = 0;
 	uint8_t *value = command;
 	uint8_t channel = 0;
+	uint32_t ch_freq;
 	tSirMacAddr bssid;
 	uint32_t roam_id = INVALID_ROAM_ID;
 	tCsrRoamModifyProfileFields mod_fields;
@@ -4896,7 +4904,6 @@ static int drv_cmd_fast_reassoc(struct hdd_adapter *adapter,
 	}
 
 	mac_handle = hdd_ctx->mac_handle;
-
 	/*
 	 * if the target bssid is same as currently associated AP,
 	 * issue reassoc to same AP
@@ -4905,11 +4912,8 @@ static int drv_cmd_fast_reassoc(struct hdd_adapter *adapter,
 			 QDF_MAC_ADDR_SIZE)) {
 		hdd_warn("Reassoc BSSID is same as currently associated AP bssid");
 		if (roaming_offload_enabled(hdd_ctx)) {
-			channel = wlan_reg_freq_to_chan(
-					hdd_ctx->pdev,
-					sta_ctx->conn_info.chan_freq);
-			hdd_wma_send_fastreassoc_cmd(adapter, bssid,
-						     channel);
+			ch_freq = sta_ctx->conn_info.chan_freq;
+			hdd_wma_send_fastreassoc_cmd(adapter, bssid, ch_freq);
 		} else {
 			sme_get_modify_profile_fields(mac_handle,
 				adapter->vdev_id,
@@ -4927,12 +4931,13 @@ static int drv_cmd_fast_reassoc(struct hdd_adapter *adapter,
 		return -EINVAL;
 	}
 
+	ch_freq = wlan_reg_chan_to_freq(hdd_ctx->pdev, channel);
 	if (roaming_offload_enabled(hdd_ctx)) {
-		hdd_wma_send_fastreassoc_cmd(adapter, bssid, (int)channel);
+		hdd_wma_send_fastreassoc_cmd(adapter, bssid, ch_freq);
 		goto exit;
 	}
 	/* Proceed with reassoc */
-	req.ch_freq = wlan_reg_chan_to_freq(hdd_ctx->pdev, channel);
+	req.ch_freq = ch_freq;
 	req.src = FASTREASSOC;
 	qdf_mem_copy(req.bssid.bytes, bssid, sizeof(tSirMacAddr));
 	sme_handoff_request(mac_handle, adapter->vdev_id, &req);
@@ -6463,7 +6468,7 @@ static int hdd_driver_rxfilter_command_handler(uint8_t *command,
 		ret = hdd_set_rx_filter(adapter, action, 0x01);
 		break;
 	default:
-		hdd_warn("Unsupported RXFILTER type %d", type);
+		hdd_debug("Unsupported RXFILTER type %d", type);
 		break;
 	}
 

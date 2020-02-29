@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -104,7 +104,7 @@ static void dp_rx_tm_thread_dump_stats(struct dp_rx_thread *rx_thread)
 	if (!total_queued)
 		return;
 
-	dp_info("thread:%u - qlen:%u queued:(total:%u %s) dequeued:%u stack:%u gro_flushes: %u rx_flushes: %u max_len:%u invalid(peer:%u vdev:%u rx-handle:%u others:%u)",
+	dp_info("thread:%u - qlen:%u queued:(total:%u %s) dequeued:%u stack:%u gro_flushes: %u gro_flushes_by_vdev_del: %u rx_flushes: %u max_len:%u invalid(peer:%u vdev:%u rx-handle:%u others:%u)",
 		rx_thread->id,
 		qdf_nbuf_queue_head_qlen(&rx_thread->nbuf_queue),
 		total_queued,
@@ -112,6 +112,7 @@ static void dp_rx_tm_thread_dump_stats(struct dp_rx_thread *rx_thread)
 		rx_thread->stats.nbuf_dequeued,
 		rx_thread->stats.nbuf_sent_to_stack,
 		rx_thread->stats.gro_flushes,
+		rx_thread->stats.gro_flushes_by_vdev_del,
 		rx_thread->stats.rx_flushed,
 		rx_thread->stats.nbufq_max_len,
 		rx_thread->stats.dropped_invalid_peer,
@@ -152,6 +153,7 @@ static QDF_STATUS dp_rx_tm_thread_enqueue(struct dp_rx_thread *rx_thread,
 	qdf_nbuf_t head_ptr, next_ptr_list;
 	uint32_t temp_qlen;
 	uint32_t num_elements_in_nbuf;
+	uint32_t nbuf_queued;
 	struct dp_rx_tm_handle_cmn *tm_handle_cmn;
 	uint8_t reo_ring_num = QDF_NBUF_CB_RX_CTX_ID(nbuf_list);
 	qdf_wait_queue_head_t *wait_q_ptr;
@@ -173,6 +175,7 @@ static QDF_STATUS dp_rx_tm_thread_enqueue(struct dp_rx_thread *rx_thread,
 	}
 
 	num_elements_in_nbuf = QDF_NBUF_CB_RX_NUM_ELEMENTS_IN_LIST(nbuf_list);
+	nbuf_queued = num_elements_in_nbuf;
 
 	dp_rx_tm_walk_skb_list(nbuf_list);
 
@@ -192,6 +195,8 @@ static QDF_STATUS dp_rx_tm_thread_enqueue(struct dp_rx_thread *rx_thread,
 	if (!head_ptr)
 		goto enq_done;
 
+	QDF_NBUF_CB_RX_NUM_ELEMENTS_IN_LIST(head_ptr) = num_elements_in_nbuf;
+
 	next_ptr_list = head_ptr->next;
 
 	if (next_ptr_list) {
@@ -208,7 +213,7 @@ static QDF_STATUS dp_rx_tm_thread_enqueue(struct dp_rx_thread *rx_thread,
 enq_done:
 	temp_qlen = qdf_nbuf_queue_head_qlen(&rx_thread->nbuf_queue);
 
-	rx_thread->stats.nbuf_queued[reo_ring_num] += num_elements_in_nbuf;
+	rx_thread->stats.nbuf_queued[reo_ring_num] += nbuf_queued;
 
 	if (temp_qlen > rx_thread->stats.nbufq_max_len)
 		rx_thread->stats.nbufq_max_len = temp_qlen;
@@ -384,9 +389,17 @@ static int dp_rx_thread_sub_loop(struct dp_rx_thread *rx_thread, bool *shutdown)
 
 		dp_rx_thread_process_nbufq(rx_thread);
 
-		if (qdf_atomic_read(&rx_thread->gro_flush_ind)) {
+		if (qdf_atomic_read(&rx_thread->gro_flush_ind) |
+		    qdf_atomic_test_bit(RX_VDEV_DEL_EVENT,
+					&rx_thread->event_flag)) {
 			dp_rx_thread_gro_flush(rx_thread);
 			qdf_atomic_set(&rx_thread->gro_flush_ind, 0);
+		}
+
+		if (qdf_atomic_test_and_clear_bit(RX_VDEV_DEL_EVENT,
+						  &rx_thread->event_flag)) {
+			rx_thread->stats.gro_flushes_by_vdev_del++;
+			qdf_event_set(&rx_thread->vdev_del_event);
 		}
 
 		if (qdf_atomic_test_and_clear_bit(RX_SUSPEND_EVENT,
@@ -441,6 +454,8 @@ static int dp_rx_thread_loop(void *arg)
 				 qdf_atomic_test_bit(RX_POST_EVENT,
 						     &rx_thread->event_flag) ||
 				 qdf_atomic_test_bit(RX_SUSPEND_EVENT,
+						     &rx_thread->event_flag) ||
+				 qdf_atomic_test_bit(RX_VDEV_DEL_EVENT,
 						     &rx_thread->event_flag));
 		dp_debug("woken up");
 
@@ -528,6 +543,7 @@ static QDF_STATUS dp_rx_tm_thread_init(struct dp_rx_thread *rx_thread,
 	qdf_event_create(&rx_thread->suspend_event);
 	qdf_event_create(&rx_thread->resume_event);
 	qdf_event_create(&rx_thread->shutdown_event);
+	qdf_event_create(&rx_thread->vdev_del_event);
 	qdf_atomic_init(&rx_thread->gro_flush_ind);
 	qdf_init_waitqueue_head(&rx_thread->wait_q);
 	qdf_scnprintf(thread_name, sizeof(thread_name), "dp_rx_thread_%u", id);
@@ -567,6 +583,7 @@ static QDF_STATUS dp_rx_tm_thread_deinit(struct dp_rx_thread *rx_thread)
 	qdf_event_destroy(&rx_thread->suspend_event);
 	qdf_event_destroy(&rx_thread->resume_event);
 	qdf_event_destroy(&rx_thread->shutdown_event);
+	qdf_event_destroy(&rx_thread->vdev_del_event);
 
 	if (cdp_cfg_get(dp_rx_tm_get_soc_handle(rx_thread->rtm_handle_cmn),
 			cfg_dp_gro_enable))
@@ -647,6 +664,7 @@ QDF_STATUS dp_rx_tm_suspend(struct dp_rx_tm_handle *rx_tm_hdl)
 	for (i = 0; i < rx_tm_hdl->num_dp_rx_threads; i++) {
 		if (!rx_tm_hdl->rx_thread[i])
 			continue;
+		qdf_event_reset(&rx_tm_hdl->rx_thread[i]->suspend_event);
 		qdf_set_bit(RX_SUSPEND_EVENT,
 			    &rx_tm_hdl->rx_thread[i]->event_flag);
 		qdf_wake_up_interruptible(&rx_tm_hdl->rx_thread[i]->wait_q);
@@ -680,6 +698,10 @@ QDF_STATUS dp_rx_tm_suspend(struct dp_rx_tm_handle *rx_tm_hdl)
  *              to be flushed out
  * @vdev_id: vdev id for which packets are to be flushed
  *
+ * The function will flush the RX packets by vdev_id in a particular
+ * RX thead queue. And will notify and wait the TX thread to flush the
+ * packets in the NAPI RX GRO hash list
+ *
  * Return: void
  */
 static inline
@@ -688,6 +710,7 @@ void dp_rx_thread_flush_by_vdev_id(struct dp_rx_thread *rx_thread,
 {
 	qdf_nbuf_t nbuf_list, tmp_nbuf_list;
 	uint32_t num_list_elements = 0;
+	QDF_STATUS qdf_status;
 
 	qdf_nbuf_queue_head_lock(&rx_thread->nbuf_queue);
 	QDF_NBUF_QUEUE_WALK_SAFE(&rx_thread->nbuf_queue, nbuf_list,
@@ -703,6 +726,21 @@ void dp_rx_thread_flush_by_vdev_id(struct dp_rx_thread *rx_thread,
 		}
 	}
 	qdf_nbuf_queue_head_unlock(&rx_thread->nbuf_queue);
+
+	qdf_set_bit(RX_VDEV_DEL_EVENT, &rx_thread->event_flag);
+	qdf_wake_up_interruptible(&rx_thread->wait_q);
+
+	qdf_status = qdf_wait_single_event(&rx_thread->vdev_del_event,
+					   DP_RX_THREAD_WAIT_TIMEOUT);
+	if (QDF_IS_STATUS_SUCCESS(qdf_status))
+		dp_debug("thread:%d napi gro flush successfully",
+			 rx_thread->id);
+	else if (qdf_status == QDF_STATUS_E_TIMEOUT)
+		dp_err("thread:%d timed out waiting for napi gro flush",
+		       rx_thread->id);
+	else
+		dp_err("thread:%d failed while waiting for napi gro flush",
+		       rx_thread->id);
 }
 
 /**

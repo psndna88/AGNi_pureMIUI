@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -283,13 +283,6 @@ static inline uint16_t wma_mcs_rate_match(uint16_t raw_rate,
 	uint8_t gi_index_max = 2;
 	uint16_t ret_rate = 0;
 
-	WMA_LOGD("%s raw_rate: %u, %u %u %u %u",
-		 __func__, raw_rate, nss1_rate[0],
-		 nss1_rate[1], nss2_rate[0], nss2_rate[1]);
-	if (is_he)
-		WMA_LOGD("%s : is_he %u,  %u, %u",
-			 __func__, is_he, nss1_rate[2], nss2_rate[2]);
-
 	if (is_he)
 		gi_index_max = 3;
 
@@ -314,9 +307,6 @@ static inline uint16_t wma_mcs_rate_match(uint16_t raw_rate,
 		else
 			*guard_interval = TXRATE_GI_0_8_US;
 	}
-
-	WMA_LOGD("%s ret_rate: %u, guard interval %u nss %u",
-		 __func__, ret_rate, *guard_interval, *nss);
 
 	return ret_rate;
 }
@@ -460,8 +450,8 @@ uint8_t wma_get_mcs_idx(uint16_t raw_rate, enum tx_rate_info rate_flags,
 	uint16_t *nss1_rate;
 	uint16_t *nss2_rate;
 
-	WMA_LOGD("%s enter:  raw_rate:%d rate_flgs: 0x%x, nss: %d",
-		 __func__, raw_rate, rate_flags, *nss);
+	wma_debug("Rates from FW:  raw_rate:%d rate_flgs: 0x%x, nss: %d",
+		  raw_rate, rate_flags, *nss);
 
 	*mcs_rate_flag = rate_flags;
 
@@ -567,7 +557,7 @@ rate_found:
 	else
 		*mcs_rate_flag &= ~TX_RATE_SGI;
 
-	WMA_LOGD("%s exit: match_rate %d index: %d"
+	WMA_LOGD("%s Matched rate in table: %d index: %d"
 		 " mcs_rate_flag: 0x%x nss %d guard interval %d",
 		 __func__, match_rate, index, *mcs_rate_flag,
 		 *nss, *guard_interval);
@@ -1699,23 +1689,23 @@ static int wma_unified_link_peer_stats_event_handler(void *handle,
 }
 
 /**
- * wma_unified_radio_tx_mem_free() - Free radio tx power stats memory
- * @handle: WMI handle
+ * wma_unified_link_stats_results_mem_free() - Free link stats results memory
+ * #link_stats_results: pointer to link stats result
  *
  * Return: 0 on success, error number otherwise.
  */
-int wma_unified_radio_tx_mem_free(void *handle)
+void wma_unified_link_stats_results_mem_free(
+			tSirLLStatsResults *link_stats_results)
 {
-	tp_wma_handle wma_handle = (tp_wma_handle) handle;
 	struct wifi_radio_stats *rs_results;
 	uint32_t i = 0;
 
-	if (!wma_handle->link_stats_results)
-		return 0;
+	if (!link_stats_results)
+		return;
 
 	rs_results = (struct wifi_radio_stats *)
-				&wma_handle->link_stats_results->results[0];
-	for (i = 0; i < wma_handle->link_stats_results->num_radio; i++) {
+				&link_stats_results->results[0];
+	for (i = 0; i < link_stats_results->num_radio; i++) {
 		if (rs_results->tx_time_per_power_level) {
 			qdf_mem_free(rs_results->tx_time_per_power_level);
 			rs_results->tx_time_per_power_level = NULL;
@@ -1727,6 +1717,22 @@ int wma_unified_radio_tx_mem_free(void *handle)
 		}
 		rs_results++;
 	}
+}
+
+/**
+ * wma_unified_radio_tx_mem_free() - Free radio tx power stats memory
+ * @handle: WMI handle
+ *
+ * Return: 0 on success, error number otherwise.
+ */
+int wma_unified_radio_tx_mem_free(void *handle)
+{
+	tp_wma_handle wma_handle = (tp_wma_handle) handle;
+
+	if (!wma_handle->link_stats_results)
+		return 0;
+
+	wma_unified_link_stats_results_mem_free(wma_handle->link_stats_results);
 
 	qdf_mem_free(wma_handle->link_stats_results);
 	wma_handle->link_stats_results = NULL;
@@ -1952,6 +1958,28 @@ static int wma_unified_link_radio_stats_event_handler(void *handle,
 	 * num_channels * size of(struct wmi_channel_stats)
 	 */
 	fixed_param = param_tlvs->fixed_param;
+	if (fixed_param && !fixed_param->num_radio &&
+	    !fixed_param->more_radio_events) {
+		WMA_LOGD("FW indicates dummy link radio stats");
+		if (!wma_handle->link_stats_results) {
+			wma_handle->link_stats_results = qdf_mem_malloc(
+						sizeof(*link_stats_results));
+			if (!wma_handle->link_stats_results)
+				return -ENOMEM;
+		}
+
+		/*
+		 * Free the already allocated memory, if any, before setting
+		 * the num_radio to 0
+		 */
+		wma_unified_link_stats_results_mem_free(
+					wma_handle->link_stats_results);
+
+		link_stats_results = wma_handle->link_stats_results;
+		link_stats_results->num_radio = fixed_param->num_radio;
+		goto link_radio_stats_cb;
+	}
+
 	radio_stats = param_tlvs->radio_stats;
 	channel_stats = param_tlvs->channel_stats;
 
@@ -2006,38 +2034,20 @@ static int wma_unified_link_radio_stats_event_handler(void *handle,
 		return -EINVAL;
 	}
 
-	WMA_LOGD("Radio stats Fixed Param:");
-	WMA_LOGD("req_id: %u num_radio: %u more_radio_events: %u",
+	WMA_LOGD("Radio stats Fixed Param: req_id: %u num_radio: %u more_radio_events: %u",
 		 fixed_param->request_id, fixed_param->num_radio,
 		 fixed_param->more_radio_events);
 
-	WMA_LOGD("Radio Info: radio_id: %u on_time: %u tx_time: %u rx_time: %u on_time_scan: %u",
-		radio_stats->radio_id, radio_stats->on_time,
-		radio_stats->tx_time, radio_stats->rx_time,
-		radio_stats->on_time_scan);
-	WMA_LOGD("on_time_nbd: %u on_time_gscan: %u on_time_roam_scan: %u",
-		radio_stats->on_time_nbd,
-		radio_stats->on_time_gscan, radio_stats->on_time_roam_scan);
-	WMA_LOGD("on_time_pno_scan: %u on_time_hs20: %u num_channels: %u",
-		radio_stats->on_time_pno_scan, radio_stats->on_time_hs20,
-		radio_stats->num_channels);
-	WMA_LOGD("on_time_host_scan: %u, on_time_lpi_scan: %u",
-		radio_stats->on_time_host_scan, radio_stats->on_time_lpi_scan);
+	WMA_LOGD("Radio Info: radio_id: %u on_time: %u tx_time: %u rx_time: %u on_time_scan: %u on_time_nbd: %u on_time_gscan: %u on_time_roam_scan: %u",
+		 radio_stats->radio_id, radio_stats->on_time,
+		 radio_stats->tx_time, radio_stats->rx_time,
+		 radio_stats->on_time_scan, radio_stats->on_time_nbd,
+		 radio_stats->on_time_gscan, radio_stats->on_time_roam_scan);
 
-	link_stats_results->paramId = WMI_LINK_STATS_RADIO;
-	link_stats_results->rspId = fixed_param->request_id;
-	link_stats_results->ifaceId = 0;
-	link_stats_results->peer_event_number = 0;
-
-	/*
-	 * Backward compatibility:
-	 * There are firmware(s) which will send Radio stats only with
-	 * more_radio_events set to 0 and firmware which sends Radio stats
-	 * followed by tx_power level stats with more_radio_events set to 1.
-	 * if more_radio_events is set to 1, buffer the radio stats and
-	 * wait for tx_power_level stats.
-	 */
-	link_stats_results->moreResultToFollow = fixed_param->more_radio_events;
+	WMA_LOGD("on_time_pno_scan: %u on_time_hs20: %u num_channels: %u on_time_host_scan: %u, on_time_lpi_scan: %u",
+		 radio_stats->on_time_pno_scan, radio_stats->on_time_hs20,
+		 radio_stats->num_channels, radio_stats->on_time_host_scan,
+		 radio_stats->on_time_lpi_scan);
 
 	results = (uint8_t *) link_stats_results->results;
 	t_radio_stats = (uint8_t *) radio_stats;
@@ -2097,15 +2107,34 @@ static int wma_unified_link_radio_stats_event_handler(void *handle,
 		}
 	}
 
+link_radio_stats_cb:
+	link_stats_results->paramId = WMI_LINK_STATS_RADIO;
+	link_stats_results->rspId = fixed_param->request_id;
+	link_stats_results->ifaceId = 0;
+	link_stats_results->peer_event_number = 0;
+
+	/*
+	 * Backward compatibility:
+	 * There are firmware(s) which will send Radio stats only with
+	 * more_radio_events set to 0 and firmware which sends Radio stats
+	 * followed by tx_power level stats with more_radio_events set to 1.
+	 * if more_radio_events is set to 1, buffer the radio stats and
+	 * wait for tx_power_level stats.
+	 */
+	link_stats_results->moreResultToFollow = fixed_param->more_radio_events;
+
 	if (link_stats_results->moreResultToFollow) {
 		/* More results coming, don't post yet */
 		return 0;
 	}
-	link_stats_results->nr_received++;
+	if (link_stats_results->num_radio) {
+		link_stats_results->nr_received++;
 
-	if (link_stats_results->num_radio != link_stats_results->nr_received) {
-		/* Not received all radio stats yet, don't post yet */
-		return 0;
+		if (link_stats_results->num_radio !=
+		    link_stats_results->nr_received) {
+			/* Not received all radio stats yet, don't post yet */
+			return 0;
+		}
 	}
 
 	mac->sme.link_layer_stats_cb(mac->hdd_handle,
@@ -2279,12 +2308,6 @@ QDF_STATUS wma_process_ll_stats_clear_req(tp_wma_handle wma,
 	vdev = wma->interfaces[clearReq->staId].vdev;
 	if (!vdev) {
 		WMA_LOGE("%s: vdev is NULL for vdev_%d",
-			 __func__, clearReq->staId);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	if (!wlan_vdev_get_dp_handle(vdev)) {
-		WMA_LOGE("%s: vdev_id %d dp handle is NULL",
 			 __func__, clearReq->staId);
 		return QDF_STATUS_E_FAILURE;
 	}
@@ -4200,8 +4223,7 @@ QDF_STATUS wma_get_roam_scan_stats(WMA_HANDLE handle,
 void wma_remove_bss_peer_on_vdev_start_failure(tp_wma_handle wma,
 					       uint8_t vdev_id)
 {
-	struct cdp_pdev *pdev;
-	void *peer = NULL;
+	uint8_t pdev_id = WMI_PDEV_ID_SOC;
 	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
 	QDF_STATUS status;
 	struct qdf_mac_addr bss_peer;
@@ -4217,21 +4239,13 @@ void wma_remove_bss_peer_on_vdev_start_failure(tp_wma_handle wma,
 
 	WMA_LOGE("%s: ADD BSS failure for vdev %d", __func__, vdev_id);
 
-	pdev = cds_get_context(QDF_MODULE_ID_TXRX);
-	if (!pdev) {
-		WMA_LOGE("%s: Failed to get pdev", __func__);
-		return;
-	}
-
-	peer = cdp_peer_find_by_addr(soc, pdev, bss_peer.bytes);
-
-	if (!peer) {
+	if (!cdp_find_peer_exist(soc, pdev_id, bss_peer.bytes)) {
 		WMA_LOGE("%s Failed to find peer %pM",
 			 __func__, bss_peer.bytes);
 		return;
 	}
 
-	wma_remove_peer(wma, bss_peer.bytes, vdev_id, peer, false);
+	wma_remove_peer(wma, bss_peer.bytes, vdev_id, false);
 }
 
 QDF_STATUS wma_sta_vdev_up_send(struct vdev_mlme_obj *vdev_mlme,

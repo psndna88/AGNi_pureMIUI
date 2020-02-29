@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -333,6 +333,11 @@ csr_update_pmf_cap_from_connected_profile(tCsrRoamConnectedProfile *profile,
 	if (profile->MFPRequired)
 		filter->pmf_cap = WLAN_PMF_REQUIRED;
 }
+#else
+void
+csr_update_pmf_cap_from_connected_profile(tCsrRoamConnectedProfile *profile,
+					  struct scan_filter *filter)
+{}
 #endif
 
 QDF_STATUS
@@ -613,6 +618,29 @@ void csr_roam_reset_roam_params(struct mac_context *mac_ctx)
 			sizeof(tSirMacSSid) * MAX_SSID_ALLOWED_LIST);
 }
 
+#if defined(WLAN_FEATURE_HOST_ROAM) || defined(WLAN_FEATURE_ROAM_OFFLOAD)
+static void csr_roam_restore_default_config(tpAniSirGlobal mac_ctx,
+					    uint8_t vdev_id)
+{
+	struct roam_triggers triggers;
+
+	sme_debug("Disable roam control config done through SET");
+	sme_set_roam_config_enable(MAC_HANDLE(mac_ctx), vdev_id, 0);
+
+	triggers.vdev_id = vdev_id;
+	triggers.trigger_bitmap = 0xff;
+	sme_debug("Reset roam trigger bitmap to 0x%x", triggers.trigger_bitmap);
+	sme_set_roam_triggers(MAC_HANDLE(mac_ctx), &triggers);
+	sme_roam_control_restore_default_config(MAC_HANDLE(mac_ctx),
+						vdev_id);
+}
+#else
+static void csr_roam_restore_default_config(tpAniSirGlobal mac_ctx,
+					    uint8_t vdev_id)
+{
+}
+#endif
+
 /**
  * csr_neighbor_roam_indicate_disconnect() - To indicate disconnect
  * @mac: The handle returned by mac_open
@@ -654,8 +682,10 @@ QDF_STATUS csr_neighbor_roam_indicate_disconnect(struct mac_context *mac,
 	 * clear the roaming parameters that are per connection.
 	 * For a new connection, they have to be programmed again.
 	 */
-	if (!csr_neighbor_middle_of_roaming(mac, sessionId))
+	if (!csr_neighbor_middle_of_roaming(mac, sessionId)) {
 		csr_roam_reset_roam_params(mac);
+		csr_roam_restore_default_config(mac, sessionId);
+	}
 	if (pSession) {
 		roam_session = &mac->roam.roamSession[sessionId];
 		if (pSession->pCurRoamProfile && (QDF_STA_MODE !=
@@ -900,9 +930,9 @@ QDF_STATUS csr_neighbor_roam_indicate_connect(
 	/* Bail out if this is NOT a STA persona */
 	if (mac->roam.roamSession[session_id].pCurRoamProfile->csrPersona !=
 	QDF_STA_MODE) {
-		sme_err("Ignoring Connect ind received from a non STA. session_id: %d, csrPersonna %d",
-			session_id,
-			(int)session->pCurRoamProfile->csrPersona);
+		sme_debug("Ignoring Connect ind received from a non STA. session_id: %d, csrPersonna %d",
+			  session_id,
+			  (int)session->pCurRoamProfile->csrPersona);
 		return QDF_STATUS_SUCCESS;
 	}
 	/* if a concurrent session is running */

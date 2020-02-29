@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -391,6 +391,7 @@ struct sme_ready_req {
 					uint8_t vdev_id,
 					uint8_t *deauth_disassoc_frame,
 					uint16_t deauth_disassoc_frame_len);
+	void *csr_roam_pmkid_req_cb;
 };
 
 /**
@@ -4502,6 +4503,7 @@ struct adaptive_dwelltime_params {
  */
 struct csa_offload_params {
 	uint8_t channel;
+	uint32_t csa_chan_freq;
 	uint8_t switch_mode;
 	uint8_t sec_chan_offset;
 	uint8_t new_ch_width;
@@ -5307,6 +5309,8 @@ struct wow_enable_params {
 #define AUTO_RATE_GI_800NS	9
 #define AUTO_RATE_GI_1600NS	10
 #define AUTO_RATE_GI_3200NS	11
+
+#define AUTO_RATE_LDPC_DIS_BIT	16
 
 #define SET_AUTO_RATE_SGI_VAL(set_val, bit_mask) \
 	(set_val = (set_val & HE_LTF_ALL) | bit_mask)

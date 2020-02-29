@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1622,19 +1622,6 @@ ol_tx_hl_pdev_queue_send_all(struct ol_txrx_pdev_t *pdev)
  *
  * Return: none
  */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0)
-void
-ol_tx_hl_vdev_bundle_timer(struct timer_list *t)
-{
-	qdf_nbuf_t msdu_list;
-	struct ol_txrx_vdev_t *vdev = from_timer(vdev, t, bundle_queue.timer);
-
-	vdev->no_of_bundle_sent_in_timer++;
-	msdu_list = ol_tx_hl_vdev_queue_send_all(vdev, true, true);
-	if (msdu_list)
-		qdf_nbuf_tx_free(msdu_list, 1/*error*/);
-}
-#else
 void
 ol_tx_hl_vdev_bundle_timer(void *ctx)
 {
@@ -1646,7 +1633,6 @@ ol_tx_hl_vdev_bundle_timer(void *ctx)
 	if (msdu_list)
 		qdf_nbuf_tx_free(msdu_list, 1/*error*/);
 }
-#endif
 
 qdf_nbuf_t
 ol_tx_hl(struct ol_txrx_vdev_t *vdev, qdf_nbuf_t msdu_list)
@@ -1715,16 +1701,15 @@ qdf_nbuf_t ol_tx_non_std_hl(struct ol_txrx_vdev_t *vdev,
 }
 
 #ifdef FEATURE_WLAN_TDLS
-/**
- * ol_txrx_copy_mac_addr_raw() - copy raw mac addr
- * @vdev: the data virtual device
- * @bss_addr: bss address
- *
- * Return: None
- */
-void ol_txrx_copy_mac_addr_raw(struct cdp_vdev *pvdev, uint8_t *bss_addr)
+void ol_txrx_copy_mac_addr_raw(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
+			       uint8_t *bss_addr)
 {
-	struct ol_txrx_vdev_t *vdev = (struct ol_txrx_vdev_t  *)pvdev;
+	struct ol_txrx_soc_t *soc = cdp_soc_t_to_ol_txrx_soc_t(soc_hdl);
+	ol_txrx_vdev_handle vdev = ol_txrx_get_vdev_from_soc_vdev_id(soc,
+								     vdev_id);
+
+	if (!vdev)
+		return;
 
 	qdf_spin_lock_bh(&vdev->pdev->last_real_peer_mutex);
 	if (bss_addr && vdev->last_real_peer &&
@@ -1737,20 +1722,18 @@ void ol_txrx_copy_mac_addr_raw(struct cdp_vdev *pvdev, uint8_t *bss_addr)
 	qdf_spin_unlock_bh(&vdev->pdev->last_real_peer_mutex);
 }
 
-/**
- * ol_txrx_add_last_real_peer() - add last peer
- * @pdev: the data physical device
- * @vdev: virtual device
- *
- * Return: None
- */
 void
-ol_txrx_add_last_real_peer(struct cdp_pdev *ppdev,
-			   struct cdp_vdev *pvdev)
+ol_txrx_add_last_real_peer(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+			   uint8_t vdev_id)
 {
-	struct ol_txrx_pdev_t *pdev = (struct ol_txrx_pdev_t *)ppdev;
-	struct ol_txrx_vdev_t *vdev = (struct ol_txrx_vdev_t *)pvdev;
+	struct ol_txrx_soc_t *soc = cdp_soc_t_to_ol_txrx_soc_t(soc_hdl);
+	ol_txrx_pdev_handle pdev = ol_txrx_get_pdev_from_pdev_id(soc, pdev_id);
+	ol_txrx_vdev_handle vdev = ol_txrx_get_vdev_from_soc_vdev_id(soc,
+								     vdev_id);
 	ol_txrx_peer_handle peer;
+
+	if (!pdev || !vdev)
+		return;
 
 	peer = ol_txrx_find_peer_by_addr(
 		(struct cdp_pdev *)pdev,
@@ -1766,37 +1749,34 @@ ol_txrx_add_last_real_peer(struct cdp_pdev *ppdev,
 	qdf_spin_unlock_bh(&pdev->last_real_peer_mutex);
 }
 
-/**
- * is_vdev_restore_last_peer() - check for vdev last peer
- * @peer: peer object
- *
- * Return: true if last peer is not null
- */
-bool is_vdev_restore_last_peer(void *ppeer)
+bool is_vdev_restore_last_peer(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
+			       uint8_t *peer_mac)
 {
-	struct ol_txrx_peer_t *peer = ppeer;
-	struct ol_txrx_vdev_t *vdev;
+	struct ol_txrx_peer_t *peer;
+	struct ol_txrx_pdev_t *pdev;
+	struct ol_txrx_soc_t *soc = cdp_soc_t_to_ol_txrx_soc_t(soc_hdl);
+	ol_txrx_vdev_handle vdev = ol_txrx_get_vdev_from_soc_vdev_id(soc,
+								     vdev_id);
 
-	vdev = peer->vdev;
+	if (!vdev)
+		return false;
+
+	pdev = vdev->pdev;
+	peer = ol_txrx_find_peer_by_addr((struct cdp_pdev *)pdev, peer_mac);
+
 	return vdev->last_real_peer && (vdev->last_real_peer == peer);
 }
 
-/**
- * ol_txrx_update_last_real_peer() - check for vdev last peer
- * @pdev: the data physical device
- * @peer: peer device
- * @restore_last_peer: restore last peer flag
- *
- * Return: None
- */
-void ol_txrx_update_last_real_peer(struct cdp_pdev *ppdev, void *pvdev,
-				   bool restore_last_peer)
+void ol_txrx_update_last_real_peer(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+				   uint8_t vdev_id, bool restore_last_peer)
 {
-	struct ol_txrx_pdev_t *pdev = (struct ol_txrx_pdev_t *)ppdev;
-	struct ol_txrx_vdev_t *vdev = (struct ol_txrx_vdev_t *)pvdev;
+	struct ol_txrx_soc_t *soc = cdp_soc_t_to_ol_txrx_soc_t(soc_hdl);
+	ol_txrx_pdev_handle pdev = ol_txrx_get_pdev_from_pdev_id(soc, pdev_id);
+	ol_txrx_vdev_handle vdev = ol_txrx_get_vdev_from_soc_vdev_id(soc,
+								     vdev_id);
 	struct ol_txrx_peer_t *peer;
 
-	if (!restore_last_peer)
+	if (!restore_last_peer || !pdev || !vdev)
 		return;
 
 	peer = ol_txrx_find_peer_by_addr((struct cdp_pdev *)pdev,
@@ -1812,40 +1792,49 @@ void ol_txrx_update_last_real_peer(struct cdp_pdev *ppdev, void *pvdev,
 	qdf_spin_unlock_bh(&pdev->last_real_peer_mutex);
 }
 
-/**
- * ol_txrx_set_peer_as_tdls_peer() - mark peer as tdls peer
- * @ppeer: cdp peer
- * @value: false/true
- *
- * Return: None
- */
-void ol_txrx_set_peer_as_tdls_peer(void *ppeer, bool val)
+void ol_txrx_set_peer_as_tdls_peer(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
+				   uint8_t *peer_mac, bool val)
 {
-	ol_txrx_peer_handle peer = ppeer;
+	ol_txrx_peer_handle peer;
+	struct ol_txrx_pdev_t *pdev;
+	struct ol_txrx_soc_t *soc = cdp_soc_t_to_ol_txrx_soc_t(soc_hdl);
+	ol_txrx_vdev_handle vdev = ol_txrx_get_vdev_from_soc_vdev_id(soc,
+								     vdev_id);
+
+	if (!vdev)
+		return;
+
+	pdev = vdev->pdev;
+	peer = ol_txrx_find_peer_by_addr((struct cdp_pdev *)pdev, peer_mac);
 
 	ol_txrx_info_high("peer %pK, peer->ref_cnt %d",
 			  peer, qdf_atomic_read(&peer->ref_cnt));
 
 	/* Mark peer as tdls */
-	peer->is_tdls_peer = val;
+	if (peer)
+		peer->is_tdls_peer = val;
 }
 
-/**
- * ol_txrx_set_tdls_offchan_enabled() - set tdls offchan enabled
- * @ppeer: cdp peer
- * @value: false/true
- *
- * Return: None
- */
-void ol_txrx_set_tdls_offchan_enabled(void *ppeer, bool val)
+void ol_txrx_set_tdls_offchan_enabled(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
+				      uint8_t *peer_mac, bool val)
 {
-	ol_txrx_peer_handle peer = ppeer;
+	ol_txrx_peer_handle peer;
+	struct ol_txrx_pdev_t *pdev;
+	struct ol_txrx_soc_t *soc = cdp_soc_t_to_ol_txrx_soc_t(soc_hdl);
+	ol_txrx_vdev_handle vdev = ol_txrx_get_vdev_from_soc_vdev_id(soc,
+								     vdev_id);
+
+	if (!vdev)
+		return;
+
+	pdev = vdev->pdev;
+	peer = ol_txrx_find_peer_by_addr((struct cdp_pdev *)pdev, peer_mac);
 
 	ol_txrx_info_high("peer %pK, peer->ref_cnt %d",
 			  peer, qdf_atomic_read(&peer->ref_cnt));
 
 	/* Set TDLS Offchan operation enable/disable */
-	if (peer->is_tdls_peer)
+	if (peer && peer->is_tdls_peer)
 		peer->tdls_offchan_enabled = val;
 }
 #endif
@@ -2274,9 +2263,8 @@ int ol_txrx_set_vdev_tx_desc_limit(struct cdp_soc_t *soc_hdl, u8 vdev_id,
 	return 0;
 }
 
-void ol_tx_dump_flow_pool_info_compact(void *ctx)
+void ol_tx_dump_flow_pool_info_compact(struct ol_txrx_pdev_t *pdev)
 {
-	struct ol_txrx_pdev_t *pdev = cds_get_context(QDF_MODULE_ID_TXRX);
 	char *comb_log_str;
 	int bytes_written = 0;
 	uint32_t free_size;

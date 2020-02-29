@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -243,6 +243,7 @@ typedef struct {
 	bool he_capable;
 	tDot11fIEhe_cap he_config;
 	tDot11fIEhe_op he_op;
+	tDot11fIEhe_6ghz_band_cap he_6ghz_band_caps;
 #endif
 	uint8_t stbc_capable;
 #ifdef WLAN_SUPPORT_TWT
@@ -362,7 +363,6 @@ struct bss_params {
 
 	uint8_t extSetStaKeyParamValid;
 	tSetStaKeyParams extSetStaKeyParam;
-	uint8_t bSpectrumMgtEnabled;
 	uint8_t vhtCapable;
 	enum phy_ch_width ch_width;
 	uint8_t nonRoamReassoc;
@@ -787,6 +787,16 @@ struct roam_blacklist_timeout {
 struct roam_blacklist_event {
 	uint32_t num_entries;
 	struct roam_blacklist_timeout roam_blacklist[];
+};
+
+/*
+ * struct roam_pmkid_req_event - Pmkid event with entries destination structure
+ * @num_entries: total entries sent over the event
+ * @ap_bssid: bssid list
+ */
+struct roam_pmkid_req_event {
+	uint32_t num_entries;
+	struct qdf_mac_addr ap_bssid[];
 };
 
 #endif /* _HALMSGAPI_H_ */

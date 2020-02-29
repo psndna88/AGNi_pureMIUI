@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -331,13 +331,45 @@ QDF_STATUS lim_start_channel_switch(struct mac_context *mac,
 void lim_update_channel_switch(struct mac_context *, tpSirProbeRespBeacon,
 		struct pe_session *pe_session);
 
-void lim_switch_primary_channel(struct mac_context *, uint8_t, struct pe_session *);
+/**
+ * lim_switch_primary_channel() - switch primary channel of session
+ * @mac: Global MAC structure
+ * @new_channel_freq: new chnannel freq in Mhz
+ * @pe_session: pe session context
+ *
+ * This function changes the current operating channel frequency.
+ *
+ * return NONE
+ */
+void lim_switch_primary_channel(struct mac_context *mac,
+				uint32_t new_channel_freq,
+				struct pe_session *pe_session);
+
+/**
+ * lim_switch_primary_secondary_channel() - switch primary and secondary
+ * channel of session
+ * @mac: Global MAC structure
+ * @pe_session: session context
+ * @new_channel_freq: new channel frequency (MHz)
+ * @ch_center_freq_seg0: channel center freq seg0
+ * @ch_center_freq_seg1: channel center freq seg1
+ * @ch_width: ch width of enum phy_ch_width
+ *
+ *  This function changes the primary and secondary channel.
+ *  If 11h is enabled and user provides a "new channel freq"
+ *  that is different from the current operating channel,
+ *  then we must set this new channel in session context and
+ *  assign notify LIM of such change.
+ *
+ * @return NONE
+ */
 void lim_switch_primary_secondary_channel(struct mac_context *mac,
-					struct pe_session *pe_session,
-					uint8_t newChannel,
-					uint8_t ch_center_freq_seg0,
-					uint8_t ch_center_freq_seg1,
-					enum phy_ch_width ch_width);
+					  struct pe_session *pe_session,
+					  uint32_t new_channel_freq,
+					  uint8_t ch_center_freq_seg0,
+					  uint8_t ch_center_freq_seg1,
+					  enum phy_ch_width ch_width);
+
 void lim_update_sta_run_time_ht_capability(struct mac_context *mac,
 		tDot11fIEHTCaps *pHTCaps);
 void lim_update_sta_run_time_ht_info(struct mac_context *mac,
@@ -345,8 +377,20 @@ void lim_update_sta_run_time_ht_info(struct mac_context *mac,
 		struct pe_session *pe_session);
 void lim_cancel_dot11h_channel_switch(struct mac_context *mac,
 		struct pe_session *pe_session);
+
+/**
+ * lim_is_channel_valid_for_channel_switch - check channel valid for switching
+ * @mac: Global mac context
+ * @channel_freq: channel freq (MHz)
+ *
+ * This function checks if the channel to which AP is expecting us to switch,
+ * is a valid channel for us.
+ *
+ * Return bool, true if channel is valid
+ */
 bool lim_is_channel_valid_for_channel_switch(struct mac_context *mac,
-		uint8_t channel);
+					     uint32_t channel_freq);
+
 QDF_STATUS lim_restore_pre_channel_switch_state(struct mac_context *mac,
 		struct pe_session *pe_session);
 
@@ -589,6 +633,26 @@ struct pe_session *lim_is_ibss_session_active(struct mac_context *mac)
 	return NULL;
 }
 #endif
+
+static inline uint8_t ch_width_in_mhz(enum phy_ch_width ch_width)
+{
+	switch (ch_width) {
+	case CH_WIDTH_40MHZ:
+		return 40;
+	case CH_WIDTH_80MHZ:
+		return 80;
+	case CH_WIDTH_160MHZ:
+		return 160;
+	case CH_WIDTH_80P80MHZ:
+		return 160;
+	case CH_WIDTH_5MHZ:
+		return 5;
+	case CH_WIDTH_10MHZ:
+		return 10;
+	default:
+		return 20;
+	}
+}
 
 struct pe_session *lim_is_ap_session_active(struct mac_context *mac);
 void lim_handle_heart_beat_failure_timeout(struct mac_context *mac);
@@ -857,6 +921,19 @@ void lim_merge_extcap_struct(tDot11fIEExtCap *dst, tDot11fIEExtCap *src,
  * Return: none
  */
 void lim_del_pmf_sa_query_timer(struct mac_context *mac_ctx, struct pe_session *pe_session);
+
+/**
+ * lim_get_vdev_rmf_capable() - get rmf capable - MFPC
+ * @mac: mac context
+ * @session: pe session
+ *
+ * Get intersection of local & peer (BSS) RSN caps
+ * and check MFPC bit.
+ *
+ * Return: bool
+ */
+bool lim_get_vdev_rmf_capable(struct mac_context *mac,
+			      struct pe_session *session);
 #else
 /**
  * lim_del_pmf_sa_query_timer() - This function deletes SA query timer
@@ -870,6 +947,13 @@ void lim_del_pmf_sa_query_timer(struct mac_context *mac_ctx, struct pe_session *
 static inline void
 lim_del_pmf_sa_query_timer(struct mac_context *mac_ctx, struct pe_session *pe_session)
 {
+}
+
+static inline
+bool lim_get_vdev_rmf_capable(struct mac_context *mac,
+			      struct pe_session *session)
+{
+	return false;
 }
 #endif
 
@@ -986,12 +1070,15 @@ void lim_intersect_sta_he_caps(tpSirAssocReq assoc_req, struct pe_session *sessi
 
 /**
  * lim_add_he_cap() - Copy HE capability into Add sta params
+ * @mac_ctx: Global MAC context
+ * @pe_session: pe session entry
  * @add_sta_params: pointer to add sta params
  * @assoc_req: pointer to Assoc request
  *
  * Return: None
  */
-void lim_add_he_cap(tpAddStaParams add_sta_params, tpSirAssocReq assoc_req);
+void lim_add_he_cap(struct mac_context *mac_ctx, struct pe_session *pe_session,
+		    tpAddStaParams add_sta_params, tpSirAssocReq assoc_req);
 
 /**
  * lim_add_self_he_cap() - Copy HE capability into add sta from PE session
@@ -1213,6 +1300,20 @@ void lim_update_stads_he_capable(tpDphHashNode sta_ds, tpSirAssocReq assoc_req);
 void lim_update_session_he_capable(struct mac_context *mac, struct pe_session *session);
 
 /**
+ * lim_update_session_he_capable_chan_switch(): Update he_capable in PE session
+ * @mac: pointer to MAC context
+ * @session: pointer to PE session
+ * @new_chan_freq: new channel frequency Mhz
+ *
+ * Update session he capable during AP channel switching
+ *
+ * Return: None
+ */
+void lim_update_session_he_capable_chan_switch(struct mac_context *mac,
+					       struct pe_session *session,
+					       uint32_t new_chan_freq);
+
+/**
  * lim_set_he_caps() - update HE caps to be sent to FW as part of scan IE
  * @mac: pointer to MAC
  * @session: pointer to PE session
@@ -1266,8 +1367,25 @@ QDF_STATUS lim_populate_he_mcs_set(struct mac_context *mac_ctx,
  */
 void lim_update_stads_he_6ghz_op(struct pe_session *session,
 				 tpDphHashNode sta_ds);
+
+/**
+ * lim_update_he_6ghz_band_caps() - Update he 6ghz band caps
+ * @mac_ctx: Global MAC context
+ * @pAssocRsp: contains the structured assoc/reassoc Response got from AP
+ * @add_bss: pointer to ADD BSS params
+ *
+ * Update 6ghz band caps based on HE capability
+ *
+ * Return: none
+ */
+void lim_update_he_6ghz_band_caps(struct mac_context *mac,
+				  tDot11fIEhe_6ghz_band_cap *he_6ghz_band_cap,
+				  tpAddStaParams params);
+
 #else
-static inline void lim_add_he_cap(tpAddStaParams add_sta_params,
+static inline void lim_add_he_cap(struct mac_context *mac_ctx,
+				  struct pe_session *pe_session,
+				  tpAddStaParams add_sta_params,
 				  tpSirAssocReq assoc_req)
 {
 }
@@ -1390,6 +1508,13 @@ static inline void lim_update_session_he_capable(struct mac_context *mac,
 {
 }
 
+static inline
+void lim_update_session_he_capable_chan_switch(struct mac_context *mac,
+					       struct pe_session *session,
+					       uint32_t new_chan_freq)
+{
+}
+
 static inline void lim_set_he_caps(struct mac_context *mac, struct pe_session *session,
 				   uint8_t *ie_start, uint32_t num_bytes)
 {
@@ -1415,6 +1540,13 @@ QDF_STATUS lim_populate_he_mcs_set(struct mac_context *mac_ctx,
 static inline void
 lim_update_stads_he_6ghz_op(struct pe_session *session,
 			    tpDphHashNode sta_ds)
+{
+}
+
+static inline void
+lim_update_he_6ghz_band_caps(struct mac_context *mac,
+			     tDot11fIEhe_6ghz_band_cap *he_6ghz_band_cap,
+			     tpAddStaParams params)
 {
 }
 #endif
@@ -1529,16 +1661,38 @@ void lim_send_start_bss_confirm(struct mac_context *mac_ctx,
  * sta capability.
  *
  * @mac_ctx: pointer to global mac structure
- * @new_channel: new channel to switch to.
- * @ch_bandwidth: BW of channel to calculate op_class
+ * @new_channel_freq: new channel freq(Mhz) to switch to.
+ * @ch_bandwidth: ch bw of enum phy_ch_width
+ * @offset: BW of type enum offset_t
  * @session_entry: pe session
  *
  * Return: void
  */
 void lim_send_chan_switch_action_frame(struct mac_context *mac_ctx,
-				       uint16_t new_channel,
-				       uint8_t ch_bandwidth,
+				       uint16_t new_channel_freq,
+				       enum phy_ch_width ch_bandwidth,
+				       enum offset_t offset,
 				       struct pe_session *session_entry);
+
+/**
+ * send_extended_chan_switch_action_frame()- function to send ECSA
+ * action frame for each sta connected to SAP/GO and AP in case of
+ * STA .
+ * @mac_ctx: pointer to global mac structure
+ * @new_channel_freq: new channel to switch to.
+ * @ch_bandwidth: channel bw of type enum phy_ch_width
+ * @offset: BW of enum offset_t
+ * @session_entry: pe session
+ *
+ * This function is called to send ECSA frame for STA/CLI and SAP/GO.
+ *
+ * Return: void
+ */
+void send_extended_chan_switch_action_frame(struct mac_context *mac_ctx,
+					    uint16_t new_channel_freq,
+					    enum phy_ch_width ch_bandwidth,
+					    enum offset_t offset,
+					    struct pe_session *session_entry);
 
 /**
  * lim_process_obss_detection_ind() - Process obss detection indication
@@ -1824,29 +1978,6 @@ QDF_STATUS lim_ap_mlme_vdev_start_req_failed(struct vdev_mlme_obj *vdev_mlme,
  */
 QDF_STATUS lim_mon_mlme_vdev_start_send(struct vdev_mlme_obj *vdev_mlme,
 					uint16_t data_len, void *event);
-
-#ifdef CRYPTO_SET_KEY_CONVERGED
-static inline bool lim_is_set_key_req_converged(void)
-{
-	return true;
-}
-
-static inline void lim_copy_set_key_req_mac_addr(struct qdf_mac_addr *dst,
-						 struct qdf_mac_addr *src)
-{
-	qdf_copy_macaddr(dst, src);
-}
-#else
-static inline bool lim_is_set_key_req_converged(void)
-{
-	return false;
-}
-
-static inline void lim_copy_set_key_req_mac_addr(struct qdf_mac_addr *dst,
-						 struct qdf_mac_addr *src)
-{
-}
-#endif
 
 /**
  * lim_get_capability_info() - Get capability information

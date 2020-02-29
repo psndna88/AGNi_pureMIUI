@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -391,6 +391,7 @@ typedef enum {
 	eCSR_ROAM_SAE_COMPUTE,
 	/* LFR3 Roam sync complete */
 	eCSR_ROAM_SYNCH_COMPLETE,
+	eCSR_ROAM_FIPS_PMK_REQUEST,
 } eRoamCmdStatus;
 
 /* comment inside indicates what roaming callback gets */
@@ -1498,9 +1499,8 @@ void
 csr_update_pmf_cap_from_connected_profile(tCsrRoamConnectedProfile *profile,
 					  struct scan_filter *filter);
 #else
-inline void
+void
 csr_update_pmf_cap_from_connected_profile(tCsrRoamConnectedProfile *profile,
-					  struct scan_filter *filter)
-{}
+					  struct scan_filter *filter);
 #endif
 #endif

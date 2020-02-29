@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -244,7 +244,7 @@ blm_filter_bssid(struct wlan_objmgr_pdev *pdev, qdf_list_t *scan_list)
 	qdf_list_node_t *cur_node = NULL, *next_node = NULL;
 
 	if (!scan_list || !qdf_list_size(scan_list)) {
-		blm_err("Scan list is NULL or No BSSIDs present");
+		blm_debug("Scan list is NULL or No BSSIDs present");
 		return QDF_STATUS_E_EMPTY;
 	}
 
@@ -716,6 +716,12 @@ blm_add_bssid_to_reject_list(struct wlan_objmgr_pdev *pdev,
 
 	if (!blm_ctx || !blm_psoc_obj) {
 		blm_err("blm_ctx or blm_psoc_obj is NULL");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (qdf_is_macaddr_zero(&ap_info->bssid) ||
+	    qdf_is_macaddr_group(&ap_info->bssid)) {
+		blm_err("Zero/Broadcast BSSID received, entry not added");
 		return QDF_STATUS_E_INVAL;
 	}
 

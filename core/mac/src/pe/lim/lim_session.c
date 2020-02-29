@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -754,6 +754,25 @@ struct pe_session *pe_find_session_by_vdev_id(struct mac_context *mac,
 	return NULL;
 }
 
+struct pe_session
+*pe_find_session_by_vdev_id_and_state(struct mac_context *mac,
+				      uint8_t vdev_id,
+				      enum eLimMlmStates lim_state)
+{
+	uint8_t i;
+
+	for (i = 0; i < mac->lim.maxBssId; i++) {
+		if (mac->lim.gpSession[i].valid &&
+		    mac->lim.gpSession[i].vdev_id == vdev_id &&
+		    mac->lim.gpSession[i].limMlmState == lim_state)
+			return &mac->lim.gpSession[i];
+	}
+	pe_debug("Session lookup fails for vdev_id: %d, mlm state: %d",
+		 vdev_id, lim_state);
+
+	return NULL;
+}
+
 /*--------------------------------------------------------------------------
    \brief pe_find_session_by_session_id() - looks up the PE session given the session ID.
 
@@ -798,7 +817,7 @@ void pe_delete_session(struct mac_context *mac_ctx, struct pe_session *session)
 	struct wlan_objmgr_vdev *vdev;
 
 	if (!session || (session && !session->valid)) {
-		pe_err("session already deleted or not valid");
+		pe_debug("session already deleted or not valid");
 		return;
 	}
 

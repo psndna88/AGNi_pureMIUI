@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -787,7 +787,7 @@ static QDF_STATUS p2p_tx_update_connection_status(
 
 	if (tx_frame_info->public_action_type !=
 		P2P_PUBLIC_ACTION_NOT_SUPPORT)
-		p2p_info("%s ---> OTA to " QDF_MAC_ADDR_STR,
+		p2p_debug("%s ---> OTA to " QDF_MAC_ADDR_STR,
 			  p2p_get_frame_type_str(tx_frame_info),
 			  QDF_MAC_ADDR_ARRAY(mac_to));
 
@@ -795,13 +795,13 @@ static QDF_STATUS p2p_tx_update_connection_status(
 	     P2P_PUBLIC_ACTION_PROV_DIS_REQ) &&
 	    (p2p_soc_obj->connection_status == P2P_NOT_ACTIVE)) {
 		p2p_soc_obj->connection_status = P2P_GO_NEG_PROCESS;
-		p2p_info("[P2P State]Inactive state to GO negotiation progress state");
+		p2p_debug("[P2P State]Inactive state to GO negotiation progress state");
 	} else if ((tx_frame_info->public_action_type ==
 		    P2P_PUBLIC_ACTION_NEG_CNF) &&
 		   (p2p_soc_obj->connection_status ==
 		    P2P_GO_NEG_PROCESS)) {
 		p2p_soc_obj->connection_status = P2P_GO_NEG_COMPLETED;
-		p2p_info("[P2P State]GO nego progress to GO nego completed state");
+		p2p_debug("[P2P State]GO nego progress to GO nego completed state");
 	}
 
 	return QDF_STATUS_SUCCESS;
@@ -1032,9 +1032,8 @@ static QDF_STATUS p2p_mgmt_tx(struct tx_action_context *tx_ctx,
 		tx_ota_comp_cb = tgt_p2p_mgmt_ota_comp_cb;
 	}
 
-	p2p_debug("length:%d, vdev_id:%d, chanfreq:%d, no_ack:%d",
-		mgmt_param.frm_len, mgmt_param.vdev_id,
-		mgmt_param.chanfreq, tx_ctx->no_ack);
+	p2p_debug("length:%d, chanfreq:%d", mgmt_param.frm_len,
+		  mgmt_param.chanfreq);
 
 	tx_ctx->nbuf = packet;
 

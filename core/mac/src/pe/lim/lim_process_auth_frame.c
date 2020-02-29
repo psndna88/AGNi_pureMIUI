@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -103,7 +103,6 @@ static inline unsigned int is_auth_valid(struct mac_context *mac,
  *
  * Return: QDF_STATUS
  */
-#ifdef CRYPTO_SET_KEY_CONVERGED
 static QDF_STATUS lim_get_wep_key_sap(struct pe_session *pe_session,
 				      struct wlan_mlme_wep_cfg *wep_params,
 				      uint8_t key_id,
@@ -116,20 +115,6 @@ static QDF_STATUS lim_get_wep_key_sap(struct pe_session *pe_session,
 				default_key,
 				key_len);
 }
-#else
-static QDF_STATUS lim_get_wep_key_sap(struct pe_session *pe_session,
-				      struct wlan_mlme_wep_cfg *wep_params,
-				      uint8_t key_id,
-				      uint8_t *default_key,
-				      qdf_size_t *key_len)
-{
-	*key_len = pe_session->WEPKeyMaterial[key_id].key[0].keyLength;
-	qdf_mem_copy(default_key, pe_session->WEPKeyMaterial[key_id].key[0].key,
-		     *key_len);
-
-	return QDF_STATUS_SUCCESS;
-}
-#endif
 
 static void lim_process_auth_shared_system_algo(struct mac_context *mac_ctx,
 		tpSirMacMgmtHdr mac_hdr,
@@ -373,8 +358,9 @@ static void lim_process_sae_auth_frame(struct mac_context *mac_ctx,
 	body_ptr = WMA_GET_RX_MPDU_DATA(rx_pkt_info);
 	frame_len = WMA_GET_RX_PAYLOAD_LEN(rx_pkt_info);
 
-	pe_debug("Received SAE Auth frame type %d subtype %d",
-		mac_hdr->fc.type, mac_hdr->fc.subType);
+	pe_nofl_info("SAE Auth RX type %d subtype %d from %pM",
+		     mac_hdr->fc.type, mac_hdr->fc.subType,
+		     mac_hdr->sa);
 
 	if (LIM_IS_STA_ROLE(pe_session) &&
 	    pe_session->limMlmState != eLIM_MLM_WT_SAE_AUTH_STATE)
@@ -807,8 +793,7 @@ static void lim_process_auth_frame_type2(struct mac_context *mac_ctx,
 			return;
 		}
 
-		pe_debug("Alloc new data: %pK peer", auth_node);
-		lim_print_mac_addr(mac_ctx, mac_hdr->sa, LOGD);
+		pe_debug("add new auth node: for %pM", mac_hdr->sa);
 		qdf_mem_copy((uint8_t *) auth_node->peerMacAddr,
 				mac_ctx->lim.gpLimMlmAuthReq->peerMacAddr,
 				sizeof(tSirMacAddr));
@@ -1264,11 +1249,6 @@ lim_process_auth_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 	curr_seq_num = (mac_hdr->seqControl.seqNumHi << 4) |
 		(mac_hdr->seqControl.seqNumLo);
 
-	pe_debug("Sessionid: %d System role: %d limMlmState: %d: Auth response Received BSSID: "QDF_MAC_ADDR_STR" RSSI: %d",
-		 pe_session->peSessionId, GET_LIM_SYSTEM_ROLE(pe_session),
-		 pe_session->limMlmState, QDF_MAC_ADDR_ARRAY(mac_hdr->bssId),
-		 (uint) abs((int8_t) WMA_GET_RX_RSSI_NORMALIZED(rx_pkt_info)));
-
 	if (pe_session->prev_auth_seq_num == curr_seq_num &&
 	    mac_hdr->fc.retry) {
 		pe_debug("auth frame, seq num: %d is already processed, drop it",
@@ -1286,7 +1266,13 @@ lim_process_auth_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 		return;
 	}
 	auth_alg = *(uint16_t *) body_ptr;
-	pe_debug("auth_alg %d ", auth_alg);
+
+	pe_nofl_info("Auth RX: vdev %d sys role %d lim_state %d from " QDF_MAC_ADDR_STR " rssi %d auth_alg %d seq %d",
+		     pe_session->vdev_id, GET_LIM_SYSTEM_ROLE(pe_session),
+		     pe_session->limMlmState,
+		     QDF_MAC_ADDR_ARRAY(mac_hdr->bssId),
+		     WMA_GET_RX_RSSI_NORMALIZED(rx_pkt_info),
+		     auth_alg, curr_seq_num);
 
 	/* Restore default failure timeout */
 	if (QDF_P2P_CLIENT_MODE == pe_session->opmode &&
@@ -1541,12 +1527,6 @@ lim_process_auth_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 	}
 
 	rx_auth_frm_body = rx_auth_frame;
-
-	pe_debug("Received Auth frame with type: %d seqnum: %d status: %d %d",
-		(uint32_t) rx_auth_frm_body->authAlgoNumber,
-		(uint32_t) rx_auth_frm_body->authTransactionSeqNumber,
-		(uint32_t) rx_auth_frm_body->authStatusCode,
-		(uint32_t) mac_ctx->lim.gLimNumPreAuthContexts);
 
 	if (!lim_is_valid_fils_auth_frame(mac_ctx, pe_session,
 			rx_auth_frm_body)) {

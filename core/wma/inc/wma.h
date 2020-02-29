@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -632,7 +632,6 @@ struct wma_version_info {
 	u_int32_t revision;
 };
 
-#ifdef WLAN_FEATURE_11W
 #define CMAC_IPN_LEN         (6)
 #define WMA_IGTK_KEY_INDEX_4 (4)
 #define WMA_IGTK_KEY_INDEX_5 (5)
@@ -647,15 +646,10 @@ typedef struct {
 
 /**
  * struct wma_igtk_key_t - GTK key
- * @key_length: key length
- * @key: key
  * @key_id: key id
  * @key_cipher: key type
  */
 typedef struct {
-	uint16_t key_length;
-	uint8_t key[CSR_AES_GMAC_256_KEY_LEN];
-
 	/* IPN is maintained per iGTK keyID
 	 * 0th index for iGTK keyID = 4;
 	 * 1st index for iGTK KeyID = 5
@@ -663,7 +657,6 @@ typedef struct {
 	wma_igtk_ipn_t key_id[2];
 	uint32_t key_cipher;
 } wma_igtk_key_t;
-#endif
 
 struct roam_synch_frame_ind {
 	uint32_t bcn_probe_rsp_len;
@@ -759,9 +752,7 @@ struct wma_txrx_node {
 	tAddStaParams *addBssStaContext;
 	uint8_t aid;
 	uint8_t rmfEnabled;
-#ifdef WLAN_FEATURE_11W
 	wma_igtk_key_t key;
-#endif /* WLAN_FEATURE_11W */
 	uint32_t uapsd_cached_val;
 	void *del_staself_req;
 	bool is_del_sta_defered;
@@ -1097,6 +1088,8 @@ typedef struct {
 					uint8_t vdev_id,
 					uint8_t *deauth_disassoc_frame,
 					uint16_t deauth_disassoc_frame_len);
+	QDF_STATUS (*csr_roam_pmkid_req_cb)(uint8_t vdev_id,
+		struct roam_pmkid_req_event *bss_list);
 	qdf_wake_lock_t wmi_cmd_rsp_wake_lock;
 	qdf_runtime_lock_t wmi_cmd_rsp_runtime_lock;
 	qdf_runtime_lock_t sap_prevent_runtime_pm_lock;
@@ -1127,6 +1120,9 @@ typedef struct {
 	qdf_mc_timer_t wma_fw_time_sync_timer;
 	bool fw_therm_throt_support;
 	bool enable_tx_compl_tsf64;
+#ifdef WLAN_FEATURE_PKT_CAPTURE
+	bool is_pktcapture_enabled;
+#endif
 } t_wma_handle, *tp_wma_handle;
 
 /**
@@ -1734,12 +1730,10 @@ void wma_process_set_pdev_ht_ie_req(tp_wma_handle wma,
 void wma_process_set_pdev_vht_ie_req(tp_wma_handle wma,
 		struct set_ie_param *ie_params);
 
-QDF_STATUS wma_remove_peer(tp_wma_handle wma, uint8_t *bssid,
-			   uint8_t vdev_id, void *peer,
-			   bool roam_synch_in_progress);
+QDF_STATUS wma_remove_peer(tp_wma_handle wma, uint8_t *mac_addr,
+			   uint8_t vdev_id, bool roam_synch_in_progress);
 
-QDF_STATUS wma_create_peer(tp_wma_handle wma, struct cdp_pdev *pdev,
-			    struct cdp_vdev *vdev, uint8_t peer_addr[6],
+QDF_STATUS wma_create_peer(tp_wma_handle wma, uint8_t peer_addr[6],
 			   u_int32_t peer_type, u_int8_t vdev_id,
 			   bool roam_synch_in_progress);
 
@@ -1907,13 +1901,8 @@ void wma_vdev_update_pause_bitmap(uint8_t vdev_id, uint16_t value)
 
 	iface = &wma->interfaces[vdev_id];
 
-	if (!iface || !iface->vdev) {
-		WMA_LOGE("%s: Vdev is NULL", __func__);
-		return;
-	}
-
-	if (!wlan_vdev_get_dp_handle(iface->vdev)) {
-		WMA_LOGE("%s: Failed to get dp handle", __func__);
+	if (!iface) {
+		WMA_LOGE("%s: Interface is NULL", __func__);
 		return;
 	}
 
@@ -1939,13 +1928,8 @@ uint16_t wma_vdev_get_pause_bitmap(uint8_t vdev_id)
 
 	iface = &wma->interfaces[vdev_id];
 
-	if (!iface || !iface->vdev) {
-		WMA_LOGE("%s: Vdev is NULL", __func__);
-		return 0;
-	}
-
-	if (!wlan_vdev_get_dp_handle(iface->vdev)) {
-		WMA_LOGE("%s: Failed to get dp handle", __func__);
+	if (!iface) {
+		WMA_LOGE("%s: Interface is NULL", __func__);
 		return 0;
 	}
 
@@ -1970,13 +1954,8 @@ static inline bool wma_vdev_is_device_in_low_pwr_mode(uint8_t vdev_id)
 
 	iface = &wma->interfaces[vdev_id];
 
-	if (!iface || !iface->vdev) {
-		WMA_LOGE("%s: Vdev is NULL", __func__);
-		return 0;
-	}
-
-	if (!wlan_vdev_get_dp_handle(iface->vdev)) {
-		WMA_LOGE("%s: Failed to get dp handle", __func__);
+	if (!iface) {
+		WMA_LOGE("%s: Interface is NULL", __func__);
 		return 0;
 	}
 
@@ -2006,7 +1985,7 @@ QDF_STATUS wma_vdev_get_dtim_period(uint8_t vdev_id, uint8_t *value)
 
 	iface = &wma->interfaces[vdev_id];
 
-	if (!iface || !iface->vdev || !wlan_vdev_get_dp_handle(iface->vdev))
+	if (!iface)
 		return QDF_STATUS_E_FAILURE;
 
 	*value = iface->dtimPeriod;
@@ -2036,7 +2015,7 @@ QDF_STATUS wma_vdev_get_beacon_interval(uint8_t  vdev_id, uint16_t *value)
 
 	iface = &wma->interfaces[vdev_id];
 
-	if (!iface || !iface->vdev || !wlan_vdev_get_dp_handle(iface->vdev))
+	if (!iface)
 		return QDF_STATUS_E_FAILURE;
 
 	*value = iface->beaconInterval;
@@ -2093,13 +2072,8 @@ void wma_vdev_set_pause_bit(uint8_t vdev_id, wmi_tx_pause_type bit_pos)
 
 	iface = &wma->interfaces[vdev_id];
 
-	if (!iface || !iface->vdev) {
-		WMA_LOGE("%s: Vdev is NULL", __func__);
-		return;
-	}
-
-	if (!wlan_vdev_get_dp_handle(iface->vdev)) {
-		WMA_LOGE("%s: Failed to get dp handle", __func__);
+	if (!iface) {
+		WMA_LOGE("%s: Interface is NULL", __func__);
 		return;
 	}
 
@@ -2126,13 +2100,8 @@ void wma_vdev_clear_pause_bit(uint8_t vdev_id, wmi_tx_pause_type bit_pos)
 
 	iface = &wma->interfaces[vdev_id];
 
-	if (!iface || !iface->vdev) {
-		WMA_LOGE("%s: Vdev is NULL", __func__);
-		return;
-	}
-
-	if (!wlan_vdev_get_dp_handle(iface->vdev)) {
-		WMA_LOGE("%s: Failed to get dp handle", __func__);
+	if (!iface) {
+		WMA_LOGE("%s: Interface is NULL", __func__);
 		return;
 	}
 
@@ -2429,8 +2398,6 @@ bool wma_is_roam_in_progress(uint32_t vdev_id);
  */
 struct wlan_objmgr_psoc *wma_get_psoc_from_scn_handle(void *scn_handle);
 
-#ifdef CRYPTO_SET_KEY_CONVERGED
-
 /**
  * wma_set_peer_ucast_cipher() - Update unicast cipher fof the peer
  * @mac_addr: peer mac address
@@ -2453,7 +2420,6 @@ void wma_set_peer_ucast_cipher(uint8_t *mac_addr,
 void wma_update_set_key(uint8_t session_id, bool pairwise,
 			uint8_t key_index,
 			enum wlan_crypto_cipher_type cipher_type);
-#endif
 
 /**
  * wma_get_igtk() - Get the IGTK that was stored in the session earlier
