@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -127,41 +127,7 @@ cdp_soc_attach_target(ol_txrx_soc_handle soc)
 
 }
 
-static inline int
-cdp_soc_get_nss_cfg(ol_txrx_soc_handle soc)
-{
-	if (!soc || !soc->ops) {
-		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
-				"%s: Invalid Instance:", __func__);
-		QDF_BUG(0);
-		return 0;
-	}
-
-	if (!soc->ops->cmn_drv_ops ||
-	    !soc->ops->cmn_drv_ops->txrx_soc_get_nss_cfg)
-		return 0;
-
-	return soc->ops->cmn_drv_ops->txrx_soc_get_nss_cfg(soc);
-}
-
-static inline void
-cdp_soc_set_nss_cfg(ol_txrx_soc_handle soc, uint32_t config)
-{
-	if (!soc || !soc->ops) {
-		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
-				"%s: Invalid Instance:", __func__);
-		QDF_BUG(0);
-		return;
-	}
-
-	if (!soc->ops->cmn_drv_ops ||
-	    !soc->ops->cmn_drv_ops->txrx_soc_set_nss_cfg)
-		return;
-
-	soc->ops->cmn_drv_ops->txrx_soc_set_nss_cfg(soc, config);
-}
-
-static inline struct cdp_vdev *
+static inline QDF_STATUS
 cdp_vdev_attach(ol_txrx_soc_handle soc, uint8_t pdev_id,
 		uint8_t *vdev_mac_addr, uint8_t vdev_id,
 		enum wlan_op_mode op_mode, enum wlan_op_subtype subtype)
@@ -170,12 +136,12 @@ cdp_vdev_attach(ol_txrx_soc_handle soc, uint8_t pdev_id,
 		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
 				"%s: Invalid Instance:", __func__);
 		QDF_BUG(0);
-		return NULL;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	if (!soc->ops->cmn_drv_ops ||
 	    !soc->ops->cmn_drv_ops->txrx_vdev_attach)
-		return NULL;
+		return QDF_STATUS_E_FAILURE;
 
 	return soc->ops->cmn_drv_ops->txrx_vdev_attach(soc, pdev_id,
 						       vdev_mac_addr, vdev_id,
@@ -276,7 +242,7 @@ cdp_pdev_attach_target(ol_txrx_soc_handle soc, uint8_t pdev_id)
 	return soc->ops->cmn_drv_ops->txrx_pdev_attach_target(soc, pdev_id);
 }
 
-static inline struct cdp_pdev *cdp_pdev_attach
+static inline QDF_STATUS cdp_pdev_attach
 	(ol_txrx_soc_handle soc, HTC_HANDLE htc_pdev, qdf_device_t osdev,
 	 uint8_t pdev_id)
 {
@@ -284,12 +250,12 @@ static inline struct cdp_pdev *cdp_pdev_attach
 		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
 				"%s: Invalid Instance:", __func__);
 		QDF_BUG(0);
-		return NULL;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	if (!soc->ops->cmn_drv_ops ||
 	    !soc->ops->cmn_drv_ops->txrx_pdev_attach)
-		return NULL;
+		return QDF_STATUS_E_FAILURE;
 
 	return soc->ops->cmn_drv_ops->txrx_pdev_attach(soc, htc_pdev, osdev,
 						       pdev_id);
@@ -385,7 +351,7 @@ cdp_pdev_deinit(ol_txrx_soc_handle soc, uint8_t pdev_id, int force)
 	soc->ops->cmn_drv_ops->txrx_pdev_deinit(soc, pdev_id, force);
 }
 
-static inline void *cdp_peer_create
+static inline QDF_STATUS cdp_peer_create
 	(ol_txrx_soc_handle soc, uint8_t vdev_id,
 	uint8_t *peer_mac_addr)
 {
@@ -393,12 +359,12 @@ static inline void *cdp_peer_create
 		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
 				"%s: Invalid Instance:", __func__);
 		QDF_BUG(0);
-		return NULL;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	if (!soc->ops->cmn_drv_ops ||
 	    !soc->ops->cmn_drv_ops->txrx_peer_create)
-		return NULL;
+		return QDF_STATUS_E_FAILURE;
 
 	return soc->ops->cmn_drv_ops->txrx_peer_create(soc, vdev_id,
 			peer_mac_addr);
@@ -820,12 +786,13 @@ cdp_set_privacy_filters(ol_txrx_soc_handle soc, uint8_t vdev_id,
 }
 
 static inline int
-cdp_set_monitor_filter(ol_txrx_soc_handle soc, struct cdp_pdev *pdev,
-		struct cdp_monitor_filter *filter_val)
+cdp_set_monitor_filter(ol_txrx_soc_handle soc, uint8_t pdev_id,
+		       struct cdp_monitor_filter *filter_val)
 {
 	if (soc->ops->mon_ops->txrx_set_advance_monitor_filter)
-		return soc->ops->mon_ops->txrx_set_advance_monitor_filter(pdev,
-					filter_val);
+		return soc->ops->mon_ops->txrx_set_advance_monitor_filter(soc,
+								pdev_id,
+								filter_val);
 	return 0;
 }
 
@@ -942,24 +909,6 @@ cdp_peer_unmap_sync_cb_set(ol_txrx_soc_handle soc,
 
 	soc->ops->cmn_drv_ops->txrx_peer_unmap_sync_cb_set(soc, pdev_id,
 							   unmap_resp_cb);
-}
-
-static inline int cdp_get_tx_pending(ol_txrx_soc_handle soc,
-struct cdp_pdev *pdev)
-{
-	if (!soc || !soc->ops) {
-		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
-				"%s: Invalid Instance:", __func__);
-		QDF_BUG(0);
-		return 0;
-	}
-
-	if (!soc->ops->cmn_drv_ops ||
-	    !soc->ops->cmn_drv_ops->txrx_get_tx_pending)
-		return 0;
-
-
-	return soc->ops->cmn_drv_ops->txrx_get_tx_pending(pdev);
 }
 
 /*
@@ -1591,56 +1540,6 @@ static inline void cdp_set_pdev_dscp_tid_map(ol_txrx_soc_handle soc,
 }
 
 /**
- * cdp_hmmc_tid_override_en(): Function to enable hmmc tid override.
- * @soc : soc handle
- * @pdev: pdev handle
- * @val: hmmc-dscp flag value
- *
- * Return: void
- */
-static inline void cdp_hmmc_tid_override_en(ol_txrx_soc_handle soc,
-					    struct cdp_pdev *pdev, bool val)
-{
-	if (!soc || !soc->ops) {
-		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
-			  "%s: Invalid Instance:", __func__);
-		QDF_BUG(0);
-		return;
-	}
-
-	if (!soc->ops->cmn_drv_ops ||
-	    !soc->ops->cmn_drv_ops->hmmc_tid_override_en)
-		return;
-
-	soc->ops->cmn_drv_ops->hmmc_tid_override_en(pdev, val);
-}
-
-/**
- * cdp_set_hmmc_tid_val(): Function to set hmmc tid value.
- * @soc : soc handle
- * @pdev: pdev handle
- * @tid: tid value
- *
- * Return: void
- */
-static inline void cdp_set_hmmc_tid_val(ol_txrx_soc_handle soc,
-					struct cdp_pdev *pdev, uint8_t tid)
-{
-	if (!soc || !soc->ops) {
-		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
-			  "%s: Invalid Instance:", __func__);
-		QDF_BUG(0);
-		return;
-	}
-
-	if (!soc->ops->cmn_drv_ops ||
-	    !soc->ops->cmn_drv_ops->set_hmmc_tid_val)
-		return;
-
-	soc->ops->cmn_drv_ops->set_hmmc_tid_val(pdev, tid);
-}
-
-/**
  * cdp_flush_cache_rx_queue() - flush cache rx queue frame
  *
  * Return: None
@@ -1778,24 +1677,25 @@ static inline int cdp_set_pn_check(ol_txrx_soc_handle soc,
 	return 0;
 }
 
-static inline int cdp_set_key(ol_txrx_soc_handle soc,
-			      struct cdp_peer *peer_handle,
-			      bool is_unicast, uint32_t *key)
+static inline QDF_STATUS
+cdp_set_key(ol_txrx_soc_handle soc,
+	    uint8_t vdev_id,
+	    uint8_t *mac,
+	    bool is_unicast, uint32_t *key)
 {
 	if (!soc || !soc->ops) {
 		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
 			  "%s: Invalid Instance:", __func__);
 		QDF_BUG(0);
-		return 0;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	if (!soc->ops->ctrl_ops ||
 	    !soc->ops->ctrl_ops->set_key)
-		return 0;
+		return QDF_STATUS_E_FAILURE;
 
-	soc->ops->ctrl_ops->set_key(peer_handle,
+	return soc->ops->ctrl_ops->set_key(soc, vdev_id, mac,
 			is_unicast, key);
-	return 0;
 }
 
 /**
@@ -1876,6 +1776,58 @@ cdp_pdev_set_dp_txrx_handle(ol_txrx_soc_handle soc, uint8_t pdev_id,
 	soc->ops->cmn_drv_ops->set_dp_txrx_handle(soc, pdev_id, dp_hdl);
 }
 
+/**
+ * cdp_vdev_get_dp_ext_txrx_handle() - get extended dp handle from vdev
+ * @soc: opaque soc handle
+ * @vdev_id: vdev id
+ *
+ * Return: opaque dp handle
+ */
+static inline void *
+cdp_vdev_get_dp_ext_txrx_handle(ol_txrx_soc_handle soc, uint8_t vdev_id)
+{
+	if (!soc || !soc->ops) {
+		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
+			  "%s: Invalid Instance:", __func__);
+		QDF_BUG(0);
+		return 0;
+	}
+
+	if (soc->ops->cmn_drv_ops->get_vdev_dp_ext_txrx_handle)
+		return soc->ops->cmn_drv_ops->get_vdev_dp_ext_txrx_handle(
+							soc, vdev_id);
+
+	return 0;
+}
+
+/**
+ * cdp_vdev_set_dp_ext_txrx_handle() - set extended dp handle in vdev
+ * @soc: opaque soc handle
+ * @vdev_id: vdev id
+ * @size: size of the advance dp handle
+ *
+ * Return: QDF_STATUS
+ */
+static inline QDF_STATUS
+cdp_vdev_set_dp_ext_txrx_handle(ol_txrx_soc_handle soc, uint8_t vdev_id,
+				uint16_t size)
+{
+	if (!soc || !soc->ops) {
+		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
+			  "%s: Invalid Instance:", __func__);
+		QDF_BUG(0);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!soc->ops->cmn_drv_ops ||
+	    !soc->ops->cmn_drv_ops->set_vdev_dp_ext_txrx_handle)
+		return QDF_STATUS_E_FAILURE;
+
+	return soc->ops->cmn_drv_ops->set_vdev_dp_ext_txrx_handle(soc,
+								  vdev_id,
+								  size);
+}
+
 /*
  * cdp_soc_get_dp_txrx_handle() - get extended dp handle from soc
  * @soc: opaque soc handle
@@ -1925,11 +1877,36 @@ cdp_soc_set_dp_txrx_handle(ol_txrx_soc_handle soc, void *dp_handle)
 }
 
 /**
+ * cdp_soc_handle_mode_change() - Update pdev_id to lmac_id mapping
+ * @soc: opaque soc handle
+ * @pdev_id: id of data path pdev handle
+ * @lmac_id: lmac id
+ * Return: QDF_STATUS
+ */
+static inline QDF_STATUS
+cdp_soc_handle_mode_change(ol_txrx_soc_handle soc, uint8_t pdev_id,
+			   uint32_t lmac_id)
+{
+	if (!soc || !soc->ops) {
+		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
+			  "%s: Invalid Instance:", __func__);
+		QDF_BUG(0);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!soc->ops->cmn_drv_ops ||
+	    !soc->ops->cmn_drv_ops->map_pdev_to_lmac)
+		return QDF_STATUS_E_FAILURE;
+
+	return soc->ops->cmn_drv_ops->handle_mode_change(soc, pdev_id,
+							 lmac_id);
+}
+
+/**
  * cdp_soc_map_pdev_to_lmac() - Save pdev_id to lmac_id mapping
  * @soc: opaque soc handle
  * @pdev_id: id of data path pdev handle
  * @lmac_id: lmac id
- *
  * Return: QDF_STATUS
  */
 static inline QDF_STATUS
@@ -2007,89 +1984,6 @@ cdp_tx_send(ol_txrx_soc_handle soc, uint8_t vdev_id, qdf_nbuf_t nbuf)
 	soc->ops->cmn_drv_ops->tx_send(soc, vdev_id, nbuf);
 }
 
-/*
- * cdp_get_pdev_id_frm_pdev() - return pdev_id from pdev
- * @soc: opaque soc handle
- * @pdev: data path pdev handle
- *
- * Return: pdev_id
- */
-static inline
-uint8_t cdp_get_pdev_id_frm_pdev(ol_txrx_soc_handle soc,
-	struct cdp_pdev *pdev)
-{
-	if (soc->ops->cmn_drv_ops->txrx_get_pdev_id_frm_pdev)
-		return soc->ops->cmn_drv_ops->txrx_get_pdev_id_frm_pdev(pdev);
-	return 0;
-}
-
-/*
- * cdp_get_vow_config_frm_pdev() - return carrier_vow_config from pdev
- * @soc: opaque soc handle
- * @pdev: data path pdev handle
- *
- * Return: carrier_vow_config
- */
-static inline
-bool cdp_get_vow_config_frm_pdev(ol_txrx_soc_handle soc,
-				 struct cdp_pdev *pdev)
-{
-	if (soc->ops->cmn_drv_ops->txrx_get_vow_config_frm_pdev)
-		return soc->ops->cmn_drv_ops->txrx_get_vow_config_frm_pdev(
-				pdev);
-	return 0;
-}
-
-/**
- * cdp_pdev_set_chan_noise_floor() - Set channel noise floor to DP layer
- * @soc: opaque soc handle
- * @pdev: data path pdev handle
- * @chan_noise_floor: Channel Noise Floor (in dbM) obtained from control path
- *
- * Return: None
- */
-static inline
-void cdp_pdev_set_chan_noise_floor(ol_txrx_soc_handle soc,
-				   struct cdp_pdev *pdev,
-				   int16_t chan_noise_floor)
-{
-	if (soc->ops->cmn_drv_ops->txrx_pdev_set_chan_noise_floor)
-		return soc->ops->cmn_drv_ops->txrx_pdev_set_chan_noise_floor(
-				pdev, chan_noise_floor);
-}
-
-/**
- * cdp_set_nac() - set nac
- * @soc: opaque soc handle
- * @vdev_id: id of vdev handle
- * @peer_mac: mac of data path peer handle
- *
- */
-static inline
-void cdp_set_nac(ol_txrx_soc_handle soc, uint8_t vdev_id, uint8_t *peer_mac)
-{
-	if (soc->ops->cmn_drv_ops->txrx_set_nac)
-		soc->ops->cmn_drv_ops->txrx_set_nac(soc, vdev_id, peer_mac);
-}
-
-/**
- * cdp_set_pdev_tx_capture() - set pdev tx_capture
- * @soc: opaque soc handle
- * @pdev: data path pdev handle
- * @val: value of pdev_tx_capture
- *
- * Return: status: 0 - Success, non-zero: Failure
- */
-static inline
-QDF_STATUS cdp_set_pdev_tx_capture(ol_txrx_soc_handle soc,
-				   struct cdp_pdev *pdev, int val)
-{
-	if (soc->ops->cmn_drv_ops->txrx_set_pdev_tx_capture)
-		return soc->ops->cmn_drv_ops->txrx_set_pdev_tx_capture(pdev,
-				val);
-	return QDF_STATUS_SUCCESS;
-}
-
 /**
  * cdp_set_pdev_pcp_tid_map() - set pdev pcp-tid-map
  * @soc: opaque soc handle
@@ -2119,37 +2013,6 @@ QDF_STATUS cdp_set_pdev_pcp_tid_map(ol_txrx_soc_handle soc,
 
 	return soc->ops->cmn_drv_ops->set_pdev_pcp_tid_map(soc, pdev_id,
 							   pcp, tid);
-}
-
-/**
- * cdp_set_pdev_pcp_tidmap_prty() - set pdev tidmap priority
- * @soc: opaque soc handle
- * @pdev: data path pdev handle
- * @val: priority value
- *
- * This API is used to configure the tidmap priority for a pdev.
- * The tidmap priority decides which mapping, namely DSCP-TID, SVLAN_PCP-TID,
- * CVLAN_PCP-TID will be used.
- *
- * Return: QDF_STATUS_SUCCESS if value set successfully
- *          QDF_STATUS_E_INVAL false if error
- */
-static inline
-QDF_STATUS  cdp_set_pdev_tidmap_prty(ol_txrx_soc_handle soc,
-				     struct cdp_pdev *pdev_handle,
-				     uint32_t val)
-{
-	if (!soc || !soc->ops) {
-		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
-			  "%s: Invalid Instance", __func__);
-		return QDF_STATUS_E_INVAL;
-	}
-
-	if (!soc->ops->cmn_drv_ops ||
-	    !soc->ops->cmn_drv_ops->set_pdev_tidmap_prty)
-		return QDF_STATUS_E_INVAL;
-
-	return soc->ops->cmn_drv_ops->set_pdev_tidmap_prty(pdev_handle, val);
 }
 
 /**
@@ -2591,66 +2454,65 @@ QDF_STATUS cdp_set_vdev_pcp_tid_map(ol_txrx_soc_handle soc,
 }
 
 /**
- * cdp_set_vdev_tidmap_tbl_id() - set vdev tidmap table id
+ * cdp_tx_send_exc() - Transmit a frame on a given vdev in exception path
  *
  * @soc: opaque soc handle
- * @vdev: data path vdev handle
- * @mapid: value of mapid
+ * @vdev_id: vdev id
+ * @nbuf: skb
+ * @tx_exc_metadata: Handle that holds exception path meta data
  *
- * This API is used to configure the table-id of the tid-mapping for a vdev.
- * Table '0' is for using the pdev's pcp-tid mapping and '1' is for using
- * the vdev's pcp-tid mapping.
- *
- * Return: QDF_STATUS_SUCCESS if value set successfully
- *          QDF_STATUS_E_INVAL false if error
+ * Return: NULL on success
+ *         nbuf when it fails to send
  */
-static inline
-QDF_STATUS cdp_set_vdev_tidmap_tbl_id(ol_txrx_soc_handle soc,
-				      struct cdp_vdev *vdev_handle,
-				      uint8_t mapid)
+static inline qdf_nbuf_t
+cdp_tx_send_exc(ol_txrx_soc_handle soc,
+		uint8_t vdev_id,
+		qdf_nbuf_t nbuf,
+		struct cdp_tx_exception_metadata *tx_exc_metadata)
 {
 	if (!soc || !soc->ops) {
 		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
 			  "%s: Invalid Instance", __func__);
-		return QDF_STATUS_E_INVAL;
+		QDF_BUG(0);
+		return 0;
 	}
 
 	if (!soc->ops->cmn_drv_ops ||
-	    !soc->ops->cmn_drv_ops->set_vdev_tidmap_tbl_id)
-		return QDF_STATUS_E_INVAL;
+	    !soc->ops->cmn_drv_ops->tx_send_exc)
+		return 0;
 
-	return soc->ops->cmn_drv_ops->set_vdev_tidmap_tbl_id(vdev_handle,
-							     mapid);
+	return soc->ops->cmn_drv_ops->tx_send_exc
+			(soc, vdev_id, nbuf, tx_exc_metadata);
 }
 
 /**
- * cdp_set_vdev_tidmap_prty() - set vdev tidmap priority
- * @soc: opaque soc handle
- * @vdev: data path vdev handle
- * @prio: tidmap priority value
+ * cdp_vdev_get_peer_mac_list(): function to get peer mac list of vdev
+ * @soc: Datapath soc handle
+ * @vdev_id: vdev id
+ * @newmac: Table of the clients mac
+ * @mac_cnt: No. of MACs required
  *
- * This API is used to configure the tidmap priority for a vdev.
- * The tidmap priority decides which mapping, namely DSCP-TID, SVLAN_PCP-TID,
- * CVLAN_PCP-TID will be used.
- * The vdev tidmap priority will be used only when the tidmap_tbl_id is '1'.
- *
- * Return: QDF_STATUS_SUCCESS if value set successfully
- *          QDF_STATUS_E_INVAL false if error
+ * return: no of clients
  */
-static inline
-QDF_STATUS cdp_set_vdev_tidmap_prty(ol_txrx_soc_handle soc,
-				    struct cdp_vdev *vdev_handle, uint8_t prio)
+static inline uint16_t
+cdp_vdev_get_peer_mac_list(ol_txrx_soc_handle soc,
+			   uint8_t vdev_id,
+			   uint8_t newmac[][QDF_MAC_ADDR_SIZE],
+			   uint16_t mac_cnt)
 {
 	if (!soc || !soc->ops) {
 		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
 			  "%s: Invalid Instance", __func__);
-		return QDF_STATUS_E_INVAL;
+		QDF_BUG(0);
+		return 0;
 	}
 
 	if (!soc->ops->cmn_drv_ops ||
-	    !soc->ops->cmn_drv_ops->set_vdev_tidmap_prty)
-		return QDF_STATUS_E_INVAL;
+	    !soc->ops->cmn_drv_ops->get_peer_mac_list)
+		return 0;
 
-	return soc->ops->cmn_drv_ops->set_vdev_tidmap_prty(vdev_handle, prio);
+	return soc->ops->cmn_drv_ops->get_peer_mac_list
+			(soc, vdev_id, newmac, mac_cnt);
 }
+
 #endif /* _CDP_TXRX_CMN_H_ */

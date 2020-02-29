@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -148,6 +148,12 @@ void dp_peer_free_hmwds_cb(struct cdp_ctrl_objmgr_psoc *ctrl_psoc,
 void dp_peer_ast_hash_remove(struct dp_soc *soc,
 			     struct dp_ast_entry *ase);
 
+void dp_peer_free_ast_entry(struct dp_soc *soc,
+			    struct dp_ast_entry *ast_entry);
+
+void dp_peer_unlink_ast_entry(struct dp_soc *soc,
+			      struct dp_ast_entry *ast_entry);
+
 /*
  * dp_peer_find_by_id_exist - check if peer exists for given id
  * @soc: core DP soc context
@@ -179,6 +185,7 @@ dp_peer_update_inactive_time(struct dp_pdev *pdev, uint32_t tag_type,
 /**
  * dp_peer_set_vlan_id: set vlan_id for this peer
  * @cdp_soc: soc handle
+ * @vdev_id: id of vdev object
  * @peer_mac: mac address
  * @vlan_id: vlan id for peer
  *
@@ -186,16 +193,16 @@ dp_peer_update_inactive_time(struct dp_pdev *pdev, uint32_t tag_type,
  */
 static inline
 void dp_peer_set_vlan_id(struct cdp_soc_t *cdp_soc,
-			 struct cdp_vdev *vdev_handle, uint8_t *peer_mac,
+			 uint8_t vdev_id, uint8_t *peer_mac,
 			 uint16_t vlan_id)
 {
 }
 
 /**
  * dp_set_vlan_groupkey: set vlan map for vdev
- * @cdp_soc: soc handle
- * @vdev_id: vdev_id
- * @vlan_id: vlan_id of peer
+ * @soc: pointer to soc
+ * @vdev_id: id of vdev handle
+ * @vlan_id: vlan_id
  * @group_key: group key for vlan
  *
  * return: set success/failure
@@ -230,7 +237,7 @@ void dp_peer_multipass_list_remove(struct dp_peer *peer)
 }
 #else
 void dp_peer_set_vlan_id(struct cdp_soc_t *cdp_soc,
-			 struct cdp_vdev *vdev_handle, uint8_t *peer_mac,
+			 uint8_t vdev_id, uint8_t *peer_mac,
 			 uint16_t vlan_id);
 QDF_STATUS dp_set_vlan_groupkey(struct cdp_soc_t *soc, uint8_t vdev_id,
 				uint16_t vlan_id, uint16_t group_key);
@@ -238,8 +245,46 @@ void dp_peer_multipass_list_init(struct dp_vdev *vdev);
 void dp_peer_multipass_list_remove(struct dp_peer *peer);
 #endif
 
+
+#ifndef QCA_PEER_MULTIQ_SUPPORT
+/**
+ * dp_peer_reset_flowq_map() - reset peer flowq map table
+ * @peer - dp peer handle
+ *
+ * Return: none
+ */
+static inline
+void dp_peer_reset_flowq_map(struct dp_peer *peer)
+{
+}
+
+/**
+ * dp_peer_ast_index_flow_queue_map_create() - create ast index flow queue map
+ * @soc - genereic soc handle
+ * @is_wds - flag to indicate if peer is wds
+ * @peer_id - peer_id from htt peer map message
+ * @peer_mac_addr - mac address of the peer
+ * @ast_info - ast flow override information from peer map
+ *
+ * Return: none
+ */
+static inline
+void dp_peer_ast_index_flow_queue_map_create(void *soc_hdl,
+		    bool is_wds, uint16_t peer_id, uint8_t *peer_mac_addr,
+		    struct dp_ast_flow_override_info *ast_info)
+{
+}
+#else
+void dp_peer_reset_flowq_map(struct dp_peer *peer);
+void dp_peer_ast_index_flow_queue_map_create(void *soc_hdl,
+		    bool is_wds, uint16_t peer_id, uint8_t *peer_mac_addr,
+		    struct dp_ast_flow_override_info *ast_info);
+#endif
+
 /**
  * dp_peer_update_pkt_capture_params: Set Rx & Tx Capture flags for a peer
+ * @soc: DP SOC handle
+ * @pdev_id: id of DP pdev handle
  * @is_rx_pkt_cap_enable: enable/disable Rx packet capture in monitor mode
  * @is_tx_pkt_cap_enable: enable/disable Tx packet capture in monitor mode
  * @peer_mac: MAC address for which the above need to be enabled/disabled
@@ -247,7 +292,8 @@ void dp_peer_multipass_list_remove(struct dp_peer *peer);
  * Return: Success if Rx & Tx capture is enabled for peer, false otherwise
  */
 QDF_STATUS
-dp_peer_update_pkt_capture_params(struct cdp_pdev *pdev,
+dp_peer_update_pkt_capture_params(ol_txrx_soc_handle soc,
+				  uint8_t pdev_id,
 				  bool is_rx_pkt_cap_enable,
 				  bool is_tx_pkt_cap_enable,
 				  uint8_t *peer_mac);

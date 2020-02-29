@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -4041,6 +4041,118 @@ void dp_htt_stats_copy_tag(struct dp_pdev *pdev, uint8_t tag_type, uint32_t *tag
 		qdf_mem_copy(dest_ptr, tag_buf, size);
 }
 
+#ifdef VDEV_PEER_PROTOCOL_COUNT
+#ifdef VDEV_PEER_PROTOCOL_COUNT_TESTING
+static QDF_STATUS dp_peer_stats_update_protocol_test_cnt(struct dp_vdev *vdev,
+							 bool is_egress,
+							 bool is_rx)
+{
+	int mask;
+
+	if (is_egress)
+		if (is_rx)
+			mask = VDEV_PEER_PROTOCOL_RX_EGRESS_MASK;
+		else
+			mask = VDEV_PEER_PROTOCOL_TX_EGRESS_MASK;
+	else
+		if (is_rx)
+			mask = VDEV_PEER_PROTOCOL_RX_INGRESS_MASK;
+		else
+			mask = VDEV_PEER_PROTOCOL_TX_INGRESS_MASK;
+
+	if (qdf_unlikely(vdev->peer_protocol_count_dropmask & mask)) {
+		dp_info("drop mask set %x", vdev->peer_protocol_count_dropmask);
+		return QDF_STATUS_SUCCESS;
+	}
+	return QDF_STATUS_E_FAILURE;
+}
+
+#else
+static QDF_STATUS dp_peer_stats_update_protocol_test_cnt(struct dp_vdev *vdev,
+							 bool is_egress,
+							 bool is_rx)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+#endif
+
+void dp_vdev_peer_stats_update_protocol_cnt(struct dp_vdev *vdev,
+					    qdf_nbuf_t nbuf,
+					    struct dp_peer *peer,
+					    bool is_egress,
+					    bool is_rx)
+{
+	struct cdp_peer_stats *peer_stats;
+	struct protocol_trace_count *protocol_trace_cnt;
+	enum cdp_protocol_trace prot;
+	struct dp_soc *soc;
+	struct ether_header *eh;
+	char *mac;
+	bool new_peer_ref = false;
+
+	if (qdf_likely(!vdev->peer_protocol_count_track))
+		return;
+	if (qdf_unlikely(dp_peer_stats_update_protocol_test_cnt(vdev,
+								is_egress,
+								is_rx) ==
+					       QDF_STATUS_SUCCESS))
+		return;
+
+	soc = vdev->pdev->soc;
+	eh = (struct ether_header *)qdf_nbuf_data(nbuf);
+	if (is_rx)
+		mac = eh->ether_shost;
+	else
+		mac = eh->ether_dhost;
+
+	if (!peer) {
+		peer = dp_peer_find_hash_find(soc, mac, 0, vdev->vdev_id);
+		new_peer_ref = true;
+		if (!peer)
+			return;
+	}
+	peer_stats = &peer->stats;
+
+	if (qdf_nbuf_is_icmp_pkt(nbuf) == true)
+		prot = CDP_TRACE_ICMP;
+	else if (qdf_nbuf_is_ipv4_arp_pkt(nbuf) == true)
+		prot = CDP_TRACE_ARP;
+	else if (qdf_nbuf_is_ipv4_eapol_pkt(nbuf) == true)
+		prot = CDP_TRACE_EAP;
+	else
+		goto dp_vdev_peer_stats_update_protocol_cnt_free_peer;
+
+	if (is_rx)
+		protocol_trace_cnt = peer_stats->rx.protocol_trace_cnt;
+	else
+		protocol_trace_cnt = peer_stats->tx.protocol_trace_cnt;
+
+	if (is_egress)
+		protocol_trace_cnt[prot].egress_cnt++;
+	else
+		protocol_trace_cnt[prot].ingress_cnt++;
+dp_vdev_peer_stats_update_protocol_cnt_free_peer:
+	if (new_peer_ref)
+		dp_peer_unref_delete(peer);
+}
+
+void dp_peer_stats_update_protocol_cnt(struct cdp_soc_t *soc,
+				       int8_t vdev_id,
+				       qdf_nbuf_t nbuf,
+				       bool is_egress,
+				       bool is_rx)
+{
+	struct dp_vdev *vdev;
+
+	vdev = dp_get_vdev_from_soc_vdev_id_wifi3((struct dp_soc *)soc,
+						  vdev_id);
+	if (qdf_likely(!vdev->peer_protocol_count_track))
+		return;
+	dp_vdev_peer_stats_update_protocol_cnt(vdev, nbuf, NULL, is_egress,
+					       is_rx);
+}
+#endif
+
 QDF_STATUS dp_peer_stats_notify(struct dp_pdev *dp_pdev, struct dp_peer *peer)
 {
 	struct cdp_interface_peer_stats peer_stats_intf;
@@ -4750,19 +4862,19 @@ void dp_print_mon_ring_stat_from_hal(struct dp_pdev *pdev, uint8_t mac_id)
 {
 	if (pdev->soc->wlan_cfg_ctx->rxdma1_enable) {
 		dp_print_ring_stat_from_hal(pdev->soc,
-					    &pdev->rxdma_mon_buf_ring[mac_id],
-					    RXDMA_MONITOR_BUF);
+			&pdev->soc->rxdma_mon_buf_ring[mac_id],
+			RXDMA_MONITOR_BUF);
 		dp_print_ring_stat_from_hal(pdev->soc,
-					    &pdev->rxdma_mon_dst_ring[mac_id],
-					    RXDMA_MONITOR_DST);
+			&pdev->soc->rxdma_mon_dst_ring[mac_id],
+			RXDMA_MONITOR_DST);
 		dp_print_ring_stat_from_hal(pdev->soc,
-					    &pdev->rxdma_mon_desc_ring[mac_id],
-					    RXDMA_MONITOR_DESC);
+			&pdev->soc->rxdma_mon_desc_ring[mac_id],
+			RXDMA_MONITOR_DESC);
 	}
 
 	dp_print_ring_stat_from_hal(pdev->soc,
-				    &pdev->rxdma_mon_status_ring[mac_id],
-				    RXDMA_MONITOR_STATUS);
+				    &pdev->soc->rxdma_mon_status_ring[mac_id],
+					RXDMA_MONITOR_STATUS);
 }
 
 void
@@ -4770,6 +4882,7 @@ dp_print_ring_stats(struct dp_pdev *pdev)
 {
 	uint32_t i;
 	int mac_id;
+	int lmac_id;
 
 	if (hif_pm_runtime_get_sync(pdev->soc->hif_handle))
 		return;
@@ -4812,9 +4925,10 @@ dp_print_ring_stats(struct dp_pdev *pdev)
 					    &pdev->soc->tx_comp_ring[i],
 					    WBM2SW_RELEASE);
 
+	lmac_id = dp_get_lmac_id_for_pdev_id(pdev->soc, 0, pdev->pdev_id);
 	dp_print_ring_stat_from_hal(pdev->soc,
-				    &pdev->rx_refill_buf_ring,
-				    RXDMA_BUF);
+				&pdev->soc->rx_refill_buf_ring[lmac_id],
+				RXDMA_BUF);
 
 	dp_print_ring_stat_from_hal(pdev->soc,
 				    &pdev->rx_refill_buf_ring2,
@@ -4825,14 +4939,22 @@ dp_print_ring_stats(struct dp_pdev *pdev)
 					    &pdev->rx_mac_buf_ring[i],
 					    RXDMA_BUF);
 
-	for (mac_id = 0; mac_id < NUM_RXDMA_RINGS_PER_PDEV; mac_id++)
-		dp_print_mon_ring_stat_from_hal(pdev, mac_id);
+	for (mac_id = 0; mac_id < NUM_RXDMA_RINGS_PER_PDEV; mac_id++) {
+		lmac_id = dp_get_lmac_id_for_pdev_id(pdev->soc,
+						     mac_id, pdev->pdev_id);
 
-	for (i = 0; i < NUM_RXDMA_RINGS_PER_PDEV; i++)
+		dp_print_mon_ring_stat_from_hal(pdev, lmac_id);
+	}
+
+	for (i = 0; i < NUM_RXDMA_RINGS_PER_PDEV; i++)	{
+		lmac_id = dp_get_lmac_id_for_pdev_id(pdev->soc,
+						     i, pdev->pdev_id);
+
 		dp_print_ring_stat_from_hal(pdev->soc,
-					    &pdev->rxdma_err_dst_ring[i],
+					    &pdev->soc->rxdma_err_dst_ring
+					    [lmac_id],
 					    RXDMA_DST);
-
+	}
 	hif_pm_runtime_put(pdev->soc->hif_handle);
 }
 
@@ -5272,6 +5394,8 @@ void dp_print_peer_stats(struct dp_peer *peer)
 		       peer->stats.rx.rx_byte_rate);
 	DP_PRINT_STATS("	Data received in last sec: %d",
 		       peer->stats.rx.rx_data_rate);
+	DP_PRINT_STATS("Multipass Rx Packet Drop = %d",
+		       peer->stats.rx.multipass_rx_pkt_drop);
 }
 
 void dp_print_per_ring_stats(struct dp_soc *soc)
@@ -5670,8 +5794,6 @@ dp_print_pdev_rx_stats(struct dp_pdev *pdev)
 	DP_PRINT_STATS("Replenished:");
 	DP_PRINT_STATS("	Packets = %d",
 		       pdev->stats.replenish.pkts.num);
-	DP_PRINT_STATS("	Bytes = %llu",
-		       pdev->stats.replenish.pkts.bytes);
 	DP_PRINT_STATS("	Buffers Added To Freelist = %d",
 		       pdev->stats.buf_freelist);
 	DP_PRINT_STATS("	Low threshold intr = %d",
@@ -5907,6 +6029,12 @@ dp_print_soc_rx_stats(struct dp_soc *soc)
 
 	DP_PRINT_STATS("RXDMA ERR DUP DESC: %d",
 		       soc->stats.rx.err.hal_rxdma_err_dup);
+
+	DP_PRINT_STATS("RX scatter msdu: %d",
+		       soc->stats.rx.err.scatter_msdu);
+
+	DP_PRINT_STATS("RX wait completed msdu break: %d",
+		       soc->stats.rx.msdu_scatter_wait_break);
 
 	for (i = 0; i < HAL_RXDMA_ERR_MAX; i++) {
 		index += qdf_snprint(&rxdma_error[index],

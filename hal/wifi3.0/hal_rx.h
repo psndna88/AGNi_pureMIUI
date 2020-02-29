@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -30,14 +30,13 @@
 	HAL_RX_MASk(block, field)) >> \
 	HAL_RX_LSB(block, field))
 
-#ifdef NO_RX_PKT_HDR_TLV
-/* RX_BUFFER_SIZE = 1536 data bytes + 256 RX TLV bytes. We are avoiding
- * 128 bytes of RX_PKT_HEADER_TLV.
- */
-#define RX_BUFFER_SIZE			1792
-#else
-/* RX_BUFFER_SIZE = 1536 data bytes + 384 RX TLV bytes + some spare bytes */
-#define RX_BUFFER_SIZE			2048
+/* BUFFER_SIZE = 1536 data bytes + 384 RX TLV bytes + some spare bytes */
+#ifndef RX_DATA_BUFFER_SIZE
+#define RX_DATA_BUFFER_SIZE     2048
+#endif
+
+#ifndef RX_MONITOR_BUFFER_SIZE
+#define RX_MONITOR_BUFFER_SIZE  2048
 #endif
 
 /* HAL_RX_NON_QOS_TID = NON_QOS_TID which is 16 */
@@ -71,6 +70,22 @@ struct hal_wbm_err_desc_info {
 	uint8_t wbm_err_src:3,
 		pool_id:2,
 		reserved_2:3;
+};
+
+/**
+ * struct hal_rx_msdu_metadata:Structure to hold rx fast path information.
+ *
+ * @l3_hdr_pad:	l3 header padding
+ * @reserved:	Reserved bits
+ * @sa_sw_peer_id: sa sw peer id
+ * @sa_idx: sa index
+ * @da_idx: da index
+ */
+struct hal_rx_msdu_metadata {
+	uint32_t l3_hdr_pad:16,
+		 sa_sw_peer_id:16;
+	uint32_t sa_idx:16,
+		 da_idx:16;
 };
 
 /**
@@ -577,6 +592,9 @@ struct rx_pkt_hdr_tlv {
 
 #define RXDMA_OPTIMIZATION
 
+/* rx_pkt_tlvs structure should be used to process Data buffers, monitor status
+ * buffers, monitor destination buffers and monitor descriptor buffers.
+ */
 #ifdef RXDMA_OPTIMIZATION
 /*
  * The RX_PADDING_BYTES is required so that the TLV's don't
@@ -611,7 +629,33 @@ struct rx_pkt_tlvs {
 };
 #endif /* RXDMA_OPTIMIZATION */
 
-#define RX_PKT_TLVS_LEN		(sizeof(struct rx_pkt_tlvs))
+/* rx_mon_pkt_tlvs structure should be used to process monitor data buffers */
+#ifdef RXDMA_OPTIMIZATION
+struct rx_mon_pkt_tlvs {
+	struct rx_msdu_end_tlv   msdu_end_tlv;	/*  72 bytes */
+	struct rx_attention_tlv  attn_tlv;	/*  16 bytes */
+	struct rx_msdu_start_tlv msdu_start_tlv;/*  40 bytes */
+	uint8_t rx_padding0[RX_PADDING0_BYTES];	/*   4 bytes */
+	struct rx_mpdu_start_tlv mpdu_start_tlv;/*  96 bytes */
+	struct rx_mpdu_end_tlv   mpdu_end_tlv;	/*  12 bytes */
+	uint8_t rx_padding1[RX_PADDING1_BYTES];	/*  16 bytes */
+	struct rx_pkt_hdr_tlv	 pkt_hdr_tlv;	/* 128 bytes */
+};
+#else /* RXDMA_OPTIMIZATION */
+struct rx_mon_pkt_tlvs {
+	struct rx_attention_tlv  attn_tlv;
+	struct rx_mpdu_start_tlv mpdu_start_tlv;
+	struct rx_msdu_start_tlv msdu_start_tlv;
+	struct rx_msdu_end_tlv   msdu_end_tlv;
+	struct rx_mpdu_end_tlv   mpdu_end_tlv;
+	struct rx_pkt_hdr_tlv	 pkt_hdr_tlv;
+};
+#endif
+
+#define SIZE_OF_MONITOR_TLV sizeof(struct rx_mon_pkt_tlvs)
+#define SIZE_OF_DATA_RX_TLV sizeof(struct rx_pkt_tlvs)
+
+#define RX_PKT_TLVS_LEN		SIZE_OF_DATA_RX_TLV
 
 #ifdef NO_RX_PKT_HDR_TLV
 static inline uint8_t
@@ -1137,7 +1181,10 @@ hal_rx_msdu_start_toeplitz_get(uint8_t *buf)
  * @ HAL_MPDU_SW_FRAME_GROUP_UNICAST_DATA: unicast data frame
  * @ HAL_MPDU_SW_FRAME_GROUP_NULL_DATA: NULL data frame
  * @ HAL_MPDU_SW_FRAME_GROUP_MGMT: management frame
+ * @ HAL_MPDU_SW_FRAME_GROUP_MGMT_PROBE_REQ: probe req frame
  * @ HAL_MPDU_SW_FRAME_GROUP_CTRL: control frame
+ * @ HAL_MPDU_SW_FRAME_GROUP_CTRL_BAR: BAR frame
+ * @ HAL_MPDU_SW_FRAME_GROUP_CTRL_RTS: RTS frame
  * @ HAL_MPDU_SW_FRAME_GROUP_UNSUPPORTED: unsupported
  * @ HAL_MPDU_SW_FRAME_GROUP_MAX: max limit
  */
@@ -1147,8 +1194,11 @@ enum hal_rx_mpdu_info_sw_frame_group_id_type {
 	HAL_MPDU_SW_FRAME_GROUP_UNICAST_DATA,
 	HAL_MPDU_SW_FRAME_GROUP_NULL_DATA,
 	HAL_MPDU_SW_FRAME_GROUP_MGMT,
+	HAL_MPDU_SW_FRAME_GROUP_MGMT_PROBE_REQ = 8,
 	HAL_MPDU_SW_FRAME_GROUP_MGMT_BEACON = 12,
 	HAL_MPDU_SW_FRAME_GROUP_CTRL = 20,
+	HAL_MPDU_SW_FRAME_GROUP_CTRL_BAR = 28,
+	HAL_MPDU_SW_FRAME_GROUP_CTRL_RTS = 31,
 	HAL_MPDU_SW_FRAME_GROUP_UNSUPPORTED = 36,
 	HAL_MPDU_SW_FRAME_GROUP_MAX = 37,
 };
@@ -1702,6 +1752,7 @@ struct hal_rx_msdu_list {
 struct hal_buf_info {
 	uint64_t paddr;
 	uint32_t sw_cookie;
+	uint8_t rbm;
 };
 
 /**
@@ -2096,7 +2147,7 @@ static inline void hal_dump_wbm_rel_desc(void *src_srng_desc)
 static inline
 void hal_rx_msdu_link_desc_set(hal_soc_handle_t hal_soc_hdl,
 			       void *src_srng_desc,
-			       hal_link_desc_t buf_addr_info,
+			       hal_buff_addrinfo_t buf_addr_info,
 			       uint8_t bm_action)
 {
 	struct wbm_release_ring *wbm_rel_srng =
@@ -2821,7 +2872,7 @@ void hal_rx_defrag_save_info_from_ring_desc(void *msdu_link_desc_va,
 static inline
 uint16_t hal_rx_get_desc_len(void)
 {
-	return sizeof(struct rx_pkt_tlvs);
+	return SIZE_OF_DATA_RX_TLV;
 }
 
 /*
@@ -3081,10 +3132,13 @@ HAL_RX_DESC_GET_DECAP_FORMAT(void *hw_desc_addr) {
 static inline
 uint8_t *
 HAL_RX_DESC_GET_80211_HDR(void *hw_desc_addr) {
-	QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_DEBUG,
-		  "[%s][%d] decap format not raw", __func__, __LINE__);
-	QDF_ASSERT(0);
-	return 0;
+	uint8_t *rx_pkt_hdr;
+	struct rx_mon_pkt_tlvs *rx_desc =
+		(struct rx_mon_pkt_tlvs *)hw_desc_addr;
+
+	rx_pkt_hdr = &rx_desc->pkt_hdr_tlv.rx_pkt_hdr[0];
+
+	return rx_pkt_hdr;
 }
 #else
 static inline
@@ -3099,7 +3153,6 @@ HAL_RX_DESC_GET_80211_HDR(void *hw_desc_addr) {
 }
 #endif
 
-#ifdef NO_RX_PKT_HDR_TLV
 static inline
 bool HAL_IS_DECAP_FORMAT_RAW(hal_soc_handle_t hal_soc_hdl,
 			     uint8_t *rx_tlv_hdr)
@@ -3114,14 +3167,6 @@ bool HAL_IS_DECAP_FORMAT_RAW(hal_soc_handle_t hal_soc_hdl,
 
 	return false;
 }
-#else
-static inline
-bool HAL_IS_DECAP_FORMAT_RAW(hal_soc_handle_t hal_soc_hdl,
-			     uint8_t *rx_tlv_hdr)
-{
-	return true;
-}
-#endif
 
 /**
  * hal_rx_msdu_fse_metadata_get: API to get FSE metadata
@@ -3375,5 +3420,45 @@ uint16_t hal_rx_get_rx_sequence(hal_soc_handle_t hal_soc_hdl,
 	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
 
 	return hal_soc->ops->hal_rx_get_rx_sequence(buf);
+}
+
+static inline void
+hal_rx_get_bb_info(hal_soc_handle_t hal_soc_hdl,
+		   void *rx_tlv,
+		   void *ppdu_info)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+
+	if (hal_soc->ops->hal_rx_get_bb_info)
+		hal_soc->ops->hal_rx_get_bb_info(rx_tlv, ppdu_info);
+}
+
+static inline void
+hal_rx_get_rtt_info(hal_soc_handle_t hal_soc_hdl,
+		    void *rx_tlv,
+		    void *ppdu_info)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+
+	if (hal_soc->ops->hal_rx_get_rtt_info)
+		hal_soc->ops->hal_rx_get_rtt_info(rx_tlv, ppdu_info);
+}
+
+/**
+ * hal_rx_msdu_metadata_get(): API to get the
+ * fast path information from rx_msdu_end TLV
+ *
+ * @ hal_soc_hdl: DP soc handle
+ * @ buf: pointer to the start of RX PKT TLV headers
+ * @ msdu_metadata: Structure to hold msdu end information
+ * Return: none
+ */
+static inline void
+hal_rx_msdu_metadata_get(hal_soc_handle_t hal_soc_hdl, uint8_t *buf,
+			 struct hal_rx_msdu_metadata *msdu_md)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+
+	return hal_soc->ops->hal_rx_msdu_packet_metadata_get(buf, msdu_md);
 }
 #endif /* _HAL_RX_H */

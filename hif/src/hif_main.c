@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -30,7 +30,8 @@
 #include <a_debug.h>
 #include "hif_main.h"
 #include "hif_hw_version.h"
-#if defined(HIF_PCI) || defined(HIF_SNOC) || defined(HIF_AHB)
+#if (defined(HIF_PCI) || defined(HIF_SNOC) || defined(HIF_AHB) || \
+     defined(HIF_IPCI))
 #include "ce_tasklet.h"
 #include "ce_api.h"
 #endif
@@ -395,20 +396,41 @@ void *hif_get_dev_ba(struct hif_opaque_softc *hif_handle)
 	return scn->mem;
 }
 qdf_export_symbol(hif_get_dev_ba);
+
+#ifdef WLAN_CE_INTERRUPT_THRESHOLD_CONFIG
 /**
- * hif_open(): hif_open
- * @qdf_ctx: QDF Context
- * @mode: Driver Mode
- * @bus_type: Bus Type
- * @cbk: CDS Callbacks
+ * hif_get_cfg_from_psoc() - Retrieve ini cfg from psoc
+ * @scn: hif context
+ * @psoc: psoc objmgr handle
  *
- * API to open HIF Context
- *
- * Return: HIF Opaque Pointer
+ * Return: None
  */
-struct hif_opaque_softc *hif_open(qdf_device_t qdf_ctx, uint32_t mode,
+static inline
+void hif_get_cfg_from_psoc(struct hif_softc *scn,
+			   struct wlan_objmgr_psoc *psoc)
+{
+	if (psoc) {
+		scn->ini_cfg.ce_status_ring_timer_threshold =
+			cfg_get(psoc,
+				CFG_CE_STATUS_RING_TIMER_THRESHOLD);
+		scn->ini_cfg.ce_status_ring_batch_count_threshold =
+			cfg_get(psoc,
+				CFG_CE_STATUS_RING_BATCH_COUNT_THRESHOLD);
+	}
+}
+#else
+static inline
+void hif_get_cfg_from_psoc(struct hif_softc *scn,
+			   struct wlan_objmgr_psoc *psoc)
+{
+}
+#endif /* WLAN_CE_INTERRUPT_THRESHOLD_CONFIG */
+
+struct hif_opaque_softc *hif_open(qdf_device_t qdf_ctx,
+				  uint32_t mode,
 				  enum qdf_bus_type bus_type,
-				  struct hif_driver_state_callbacks *cbk)
+				  struct hif_driver_state_callbacks *cbk,
+				  struct wlan_objmgr_psoc *psoc)
 {
 	struct hif_softc *scn;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
@@ -435,6 +457,9 @@ struct hif_opaque_softc *hif_open(qdf_device_t qdf_ctx, uint32_t mode,
 	qdf_mem_copy(&scn->callbacks, cbk,
 		     sizeof(struct hif_driver_state_callbacks));
 	scn->bus_type  = bus_type;
+
+	hif_get_cfg_from_psoc(scn, psoc);
+
 	hif_set_event_hist_mask(GET_HIF_OPAQUE_HDL(scn));
 	status = hif_bus_open(scn, bus_type);
 	if (status != QDF_STATUS_SUCCESS) {
@@ -495,12 +520,14 @@ void hif_close(struct hif_opaque_softc *hif_ctx)
 	hif_uninit_rri_on_ddr(scn);
 
 	hif_bus_close(scn);
+
 	qdf_mem_free(scn);
 }
 
-#if defined(QCA_WIFI_QCA8074) || defined(QCA_WIFI_QCA6018) || \
-	defined(QCA_WIFI_QCA6290) || defined(QCA_WIFI_QCA6390) || \
-	defined(QCA_WIFI_QCN9000) || defined(QCA_WIFI_QCA6490)
+#if (defined(QCA_WIFI_QCA8074) || defined(QCA_WIFI_QCA6018) || \
+     defined(QCA_WIFI_QCA6290) || defined(QCA_WIFI_QCA6390) || \
+     defined(QCA_WIFI_QCN9000) || defined(QCA_WIFI_QCA6490) || \
+     defined(QCA_WIFI_QCA6750))
 static QDF_STATUS hif_hal_attach(struct hif_softc *scn)
 {
 	if (ce_srng_based(scn)) {
@@ -626,10 +653,24 @@ void hif_disable(struct hif_opaque_softc *hif_ctx, enum hif_disable_type type)
 	HIF_DBG("%s: X", __func__);
 }
 
+#ifdef CE_TASKLET_DEBUG_ENABLE
+void hif_enable_ce_latency_stats(struct hif_opaque_softc *hif_ctx, uint8_t val)
+{
+	struct hif_softc *scn = HIF_GET_SOFTC(hif_ctx);
+
+	if (!scn)
+		return;
+
+	scn->ce_latency_stats = val;
+}
+#endif
+
 void hif_display_stats(struct hif_opaque_softc *hif_ctx)
 {
 	hif_display_bus_stats(hif_ctx);
 }
+
+qdf_export_symbol(hif_display_stats);
 
 void hif_clear_stats(struct hif_opaque_softc *hif_ctx)
 {
@@ -855,6 +896,13 @@ int hif_get_device_type(uint32_t device_id,
 		*hif_type = HIF_TYPE_QCA6490;
 		*target_type = TARGET_TYPE_QCA6490;
 		HIF_INFO(" *********** QCA6490 *************\n");
+		break;
+
+	case QCA6750_DEVICE_ID:
+	case QCA6750_EMULATION_DEVICE_ID:
+		*hif_type = HIF_TYPE_QCA6750;
+		*target_type = TARGET_TYPE_QCA6750;
+		HIF_INFO(" *********** QCA6750 *************\n");
 		break;
 
 	case QCA8074V2_DEVICE_ID:
@@ -1116,7 +1164,8 @@ bool hif_is_recovery_in_progress(struct hif_softc *scn)
 	return false;
 }
 
-#if defined(HIF_PCI) || defined(HIF_SNOC) || defined(HIF_AHB)
+#if defined(HIF_PCI) || defined(HIF_SNOC) || defined(HIF_AHB) || \
+    defined(HIF_IPCI)
 
 /**
  * hif_update_pipe_callback() - API to register pipe specific callbacks

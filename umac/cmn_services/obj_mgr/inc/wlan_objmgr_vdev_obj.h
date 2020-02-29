@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -166,6 +166,8 @@
 #define WLAN_VDEV_FEXT_MAT                  0x20000000
 	/* VDEV is wired PSTA*/
 #define WLAN_VDEV_FEXT_WIRED_PSTA           0x40000000
+	/* Fils discovery on 6G SAP*/
+#define WLAN_VDEV_FEXT_FILS_DISC_6G_SAP     0x80000000
 
 /* VDEV OP flags  */
   /* if the vap destroyed by user */
@@ -253,11 +255,11 @@ struct wlan_vdev_create_params {
  * struct wlan_channel - channel structure
  * @ch_freq:      Channel in Mhz.
  * @ch_ieee:      IEEE channel number.
- * @ch_flags:     Channel flags.
- * @ch_flagext:   Channel extension flags.
- * @ch_maxpower:  Maximum tx power in dBm.
  * @ch_freq_seg1: Channel Center frequeny for VHT80/160 and HE80/160.
  * @ch_freq_seg2: Second channel Center frequency applicable for 80+80MHz mode.
+ * @ch_maxpower:  Maximum tx power in dBm.
+ * @ch_flagext:   Channel extension flags.
+ * @ch_flags:     Channel flags.
  * @ch_cfreq1:    channel center frequency for primary
  * @ch_cfreq2:    channel center frequency for secondary
  * @ch_width:     Channel width.
@@ -266,11 +268,11 @@ struct wlan_vdev_create_params {
 struct wlan_channel {
 	uint16_t     ch_freq;
 	uint8_t      ch_ieee;
-	uint64_t     ch_flags;
-	uint16_t     ch_flagext;
-	int8_t       ch_maxpower;
 	uint8_t      ch_freq_seg1;
 	uint8_t      ch_freq_seg2;
+	int8_t       ch_maxpower;
+	uint16_t     ch_flagext;
+	uint64_t     ch_flags;
 	uint32_t     ch_cfreq1;
 	uint32_t     ch_cfreq2;
 	enum phy_ch_width ch_width;
@@ -335,6 +337,7 @@ struct wlan_objmgr_vdev_nif {
  *  @c_flags:           creation specific flags
  *  @ref_cnt:           Ref count
  *  @ref_id_dbg:        Array to track Ref count
+ *  @wlan_objmgr_trace: Trace ref and deref
  */
 struct wlan_objmgr_vdev_objmgr {
 	uint8_t vdev_id;
@@ -348,6 +351,9 @@ struct wlan_objmgr_vdev_objmgr {
 	uint32_t c_flags;
 	qdf_atomic_t ref_cnt;
 	qdf_atomic_t ref_id_dbg[WLAN_REF_ID_MAX];
+#ifdef WLAN_OBJMGR_REF_ID_TRACE
+	struct wlan_objmgr_trace trace;
+#endif
 };
 
 /**
@@ -359,7 +365,6 @@ struct wlan_objmgr_vdev_objmgr {
  * @vdev_comp_priv_obj[]:Component's private objects list
  * @obj_status[]:   Component object status
  * @obj_state:      VDEV object state
- * @dp_handle:      DP module handle
  * @vdev_lock:      VDEV lock
  */
 struct wlan_objmgr_vdev {
@@ -370,7 +375,6 @@ struct wlan_objmgr_vdev {
 	void *vdev_comp_priv_obj[WLAN_UMAC_MAX_COMPONENTS];
 	QDF_STATUS obj_status[WLAN_UMAC_MAX_COMPONENTS];
 	WLAN_OBJ_STATE obj_state;
-	void *dp_handle;
 	qdf_spinlock_t vdev_lock;
 };
 
@@ -1399,40 +1403,6 @@ static inline uint16_t wlan_vdev_get_max_peer_count(
 }
 
 /**
- * wlan_vdev_set_dp_handle() - set dp handle
- * @vdev: vdev object pointer
- * @dp_handle: Data path module handle
- *
- * Return: void
- */
-static inline void wlan_vdev_set_dp_handle(struct wlan_objmgr_vdev *vdev,
-		void *dp_handle)
-{
-	if (qdf_unlikely(!vdev)) {
-		QDF_BUG(0);
-		return;
-	}
-
-	vdev->dp_handle = dp_handle;
-}
-
-/**
- * wlan_vdev_get_dp_handle() - get dp handle
- * @vdev: vdev object pointer
- *
- * Return: dp handle
- */
-static inline void *wlan_vdev_get_dp_handle(struct wlan_objmgr_vdev *vdev)
-{
-	if (qdf_unlikely(!vdev)) {
-		QDF_BUG(0);
-		return NULL;
-	}
-
-	return vdev->dp_handle;
-}
-
-/**
  * wlan_print_vdev_info() - print vdev members
  * @vdev: vdev object pointer
  *
@@ -1442,6 +1412,63 @@ static inline void *wlan_vdev_get_dp_handle(struct wlan_objmgr_vdev *vdev)
 void wlan_print_vdev_info(struct wlan_objmgr_vdev *vdev);
 #else
 static inline void wlan_print_vdev_info(struct wlan_objmgr_vdev *vdev) {}
+#endif
+
+/**
+ * wlan_objmgr_vdev_trace_init_lock() - Initialize trace lock
+ * @vdev: vdev object pointer
+ *
+ * Return: void
+ */
+#ifdef WLAN_OBJMGR_TRACE
+static inline void
+wlan_objmgr_vdev_trace_init_lock(struct wlan_objmgr_vdev *vdev)
+{
+	wlan_objmgr_trace_init_lock(&vdev->vdev_objmgr.trace);
+}
+#else
+static inline void
+wlan_objmgr_vdev_trace_init_lock(struct wlan_objmgr_vdev *vdev)
+{
+}
+#endif
+
+/**
+ * wlan_objmgr_vdev_trace_deinit_lock() - Deinitialize trace lock
+ * @vdev: vdev object pointer
+ *
+ * Return: void
+ */
+#ifdef WLAN_OBJMGR_TRACE
+static inline void
+wlan_objmgr_vdev_trace_deinit_lock(struct wlan_objmgr_vdev *vdev)
+{
+	wlan_objmgr_trace_deinit_lock(&vdev->vdev_objmgr.trace);
+}
+#else
+static inline void
+wlan_objmgr_vdev_trace_deinit_lock(struct wlan_objmgr_vdev *vdev)
+{
+}
+#endif
+
+/**
+ * wlan_objmgr_vdev_trace_del_ref_list() - Delete trace ref list
+ * @vdev: vdev object pointer
+ *
+ * Return: void
+ */
+#ifdef WLAN_OBJMGR_REF_ID_TRACE
+static inline void
+wlan_objmgr_vdev_trace_del_ref_list(struct wlan_objmgr_vdev *vdev)
+{
+	wlan_objmgr_trace_del_ref_list(&vdev->vdev_objmgr.trace);
+}
+#else
+static inline void
+wlan_objmgr_vdev_trace_del_ref_list(struct wlan_objmgr_vdev *vdev)
+{
+}
 #endif
 
 #endif /* _WLAN_OBJMGR_VDEV_OBJ_H_*/

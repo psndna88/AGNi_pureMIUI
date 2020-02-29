@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -546,6 +546,21 @@ QDF_STATUS wlan_reg_get_domain_from_country_code(v_REGDOMAIN_t *reg_domain_ptr,
 uint16_t wlan_reg_dmn_get_opclass_from_channel(uint8_t *country,
 					       uint8_t channel,
 					       uint8_t offset);
+
+/**
+ * wlan_reg_get_opclass_from_freq_width() - Get operating class from frequency
+ * @country: Country code.
+ * @freq: Channel center frequency.
+ * @ch_width: Channel width.
+ * @behav_limit: Behaviour limit.
+ *
+ * Return: Error code.
+ */
+uint8_t wlan_reg_get_opclass_from_freq_width(uint8_t *country,
+					     qdf_freq_t freq,
+					     uint8_t ch_width,
+					     uint16_t behav_limit);
+
 /**
  * wlan_reg_dmn_print_channels_in_opclass() - Print channels in op-class
  * @country: country alpha2
@@ -589,6 +604,23 @@ uint16_t wlan_reg_dmn_set_curr_opclasses(uint8_t num_classes,
 uint16_t wlan_reg_dmn_get_curr_opclasses(uint8_t *num_classes,
 					 uint8_t *class);
 
+
+/**
+ * wlan_reg_get_opclass_details() - Get details about the current opclass table.
+ * @pdev: Pointer to pdev.
+ * @reg_ap_cap: Pointer to reg_ap_cap.
+ * @n_opclasses: Pointer to number of opclasses.
+ * @max_supp_op_class: Maximum number of operating classes supported.
+ * @global_tbl_lookup: Whether to lookup global op class tbl.
+ *
+ * Return: QDF_STATUS_SUCCESS if success, else return QDF_STATUS_FAILURE.
+ */
+QDF_STATUS
+wlan_reg_get_opclass_details(struct wlan_objmgr_pdev *pdev,
+			     struct regdmn_ap_cap_opclass_t *reg_ap_cap,
+			     uint8_t *n_opclasses,
+			     uint8_t max_supp_op_class,
+			     bool global_tbl_lookup);
 
 /**
  * wlan_regulatory_init() - init regulatory component
@@ -649,15 +681,6 @@ void wlan_reg_update_nol_ch(struct wlan_objmgr_pdev *pdev,
 			    uint8_t *ch_list,
 			    uint8_t num_ch,
 			    bool nol_ch);
-
-/**
- * wlan_reg_is_dfs_ch () - Checks the channel state for DFS
- * @pdev: pdev ptr
- * @chan: channel
- *
- * Return: true or false
- */
-bool wlan_reg_is_dfs_ch(struct wlan_objmgr_pdev *pdev, uint8_t chan);
 
 /**
  * wlan_reg_is_dsrc_chan () - Checks if the channel is dsrc channel or not

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -310,6 +310,30 @@ hal_rx_populate_mu_user_info(void *rx_tlv, void *ppduinfo,
 	hal_rx_populate_byte_count(rx_tlv, ppdu_info, mon_rx_user_status);
 }
 
+#ifdef WLAN_TX_PKT_CAPTURE_ENH
+static inline void
+hal_rx_populate_tx_capture_user_info(void *ppduinfo,
+				     uint32_t user_id)
+{
+	struct hal_rx_ppdu_info *ppdu_info;
+	struct mon_rx_info *mon_rx_info;
+	struct mon_rx_user_info *mon_rx_user_info;
+
+	ppdu_info = (struct hal_rx_ppdu_info *)ppduinfo;
+	mon_rx_info = &ppdu_info->rx_info;
+	mon_rx_user_info = &ppdu_info->rx_user_info[user_id];
+	mon_rx_user_info->qos_control_info_valid =
+		mon_rx_info->qos_control_info_valid;
+	mon_rx_user_info->qos_control =  mon_rx_info->qos_control;
+}
+#else
+static inline void
+hal_rx_populate_tx_capture_user_info(void *ppduinfo,
+				     uint32_t user_id)
+{
+}
+#endif
+
 #define HAL_RX_UPDATE_RSSI_PER_CHAIN_BW(chain, word_1, word_2, \
 					ppdu_info, rssi_info_tlv) \
 	{						\
@@ -357,6 +381,50 @@ hal_rx_update_rssi_chain(struct hal_rx_ppdu_info *ppdu_info,
 	return 0;
 }
 
+#ifdef WLAN_TX_PKT_CAPTURE_ENH
+static inline void
+hal_get_qos_control(void *rx_tlv,
+		    struct hal_rx_ppdu_info *ppdu_info)
+{
+	ppdu_info->rx_info.qos_control_info_valid =
+		HAL_RX_GET(rx_tlv, RX_PPDU_END_USER_STATS_3,
+			   QOS_CONTROL_INFO_VALID);
+
+	if (ppdu_info->rx_info.qos_control_info_valid)
+		ppdu_info->rx_info.qos_control =
+			HAL_RX_GET(rx_tlv,
+				   RX_PPDU_END_USER_STATS_5,
+				   QOS_CONTROL_FIELD);
+}
+
+static inline void
+hal_get_mac_addr1(uint8_t *rx_mpdu_start,
+		  struct hal_rx_ppdu_info *ppdu_info)
+{
+	if (ppdu_info->sw_frame_group_id
+	    == HAL_MPDU_SW_FRAME_GROUP_MGMT_PROBE_REQ) {
+		ppdu_info->rx_info.mac_addr1_valid =
+				HAL_RX_GET_MAC_ADDR1_VALID(rx_mpdu_start);
+
+		*(uint32_t *)&ppdu_info->rx_info.mac_addr1[0] =
+			HAL_RX_GET(rx_mpdu_start,
+				   RX_MPDU_INFO_15,
+				   MAC_ADDR_AD1_31_0);
+	}
+}
+#else
+static inline void
+hal_get_qos_control(void *rx_tlv,
+		    struct hal_rx_ppdu_info *ppdu_info)
+{
+}
+
+static inline void
+hal_get_mac_addr1(uint8_t *rx_mpdu_start,
+		  struct hal_rx_ppdu_info *ppdu_info)
+{
+}
+#endif
 /**
  * hal_rx_status_get_tlv_info() - process receive info TLV
  * @rx_tlv_hdr: pointer to TLV header
@@ -402,8 +470,11 @@ hal_rx_status_get_tlv_info_generic(void *rx_tlv_hdr, void *ppduinfo,
 				PHY_PPDU_ID);
 		/* channel number is set in PHY meta data */
 		ppdu_info->rx_status.chan_num =
-			HAL_RX_GET(rx_tlv, RX_PPDU_START_1,
-				SW_PHY_META_DATA);
+			(HAL_RX_GET(rx_tlv, RX_PPDU_START_1,
+				SW_PHY_META_DATA) & 0x0000FFFF);
+		ppdu_info->rx_status.chan_freq =
+			(HAL_RX_GET(rx_tlv, RX_PPDU_START_1,
+				SW_PHY_META_DATA) & 0xFFFF0000)>>16;
 		ppdu_info->com_info.ppdu_timestamp =
 			HAL_RX_GET(rx_tlv, RX_PPDU_START_2,
 				PPDU_START_TIMESTAMP);
@@ -439,6 +510,10 @@ hal_rx_status_get_tlv_info_generic(void *rx_tlv_hdr, void *ppduinfo,
 		ppdu_info->rx_state = HAL_RX_MON_PPDU_END;
 		break;
 
+	case WIFIPHYRX_PKT_END_E:
+		hal_rx_get_rtt_info(hal_soc_hdl, rx_tlv, ppdu_info);
+		break;
+
 	case WIFIRXPCU_PPDU_END_INFO_E:
 		ppdu_info->rx_status.rx_antenna =
 			HAL_RX_GET(rx_tlv, RXPCU_PPDU_END_INFO_2, RX_ANTENNA);
@@ -451,6 +526,7 @@ hal_rx_status_get_tlv_info_generic(void *rx_tlv_hdr, void *ppduinfo,
 		ppdu_info->rx_status.duration =
 			HAL_RX_GET(rx_tlv, UNIFIED_RXPCU_PPDU_END_INFO_8,
 				RX_PPDU_DURATION);
+		hal_rx_get_bb_info(hal_soc_hdl, rx_tlv, ppdu_info);
 		break;
 
 	/*
@@ -496,6 +572,8 @@ hal_rx_status_get_tlv_info_generic(void *rx_tlv_hdr, void *ppduinfo,
 					HAL_RX_GET(rx_tlv,
 						   RX_PPDU_END_USER_STATS_4,
 						   FRAME_CONTROL_FIELD);
+
+			hal_get_qos_control(rx_tlv, ppdu_info);
 		}
 
 		ppdu_info->rx_status.data_sequence_control_info_valid =
@@ -556,6 +634,10 @@ hal_rx_status_get_tlv_info_generic(void *rx_tlv_hdr, void *ppduinfo,
 
 			hal_rx_populate_mu_user_info(rx_tlv, ppdu_info,
 						     mon_rx_user_status);
+
+			hal_rx_populate_tx_capture_user_info(ppdu_info,
+							     user_id);
+
 		}
 		break;
 	}
@@ -763,6 +845,7 @@ hal_rx_status_get_tlv_info_generic(void *rx_tlv_hdr, void *ppduinfo,
 #endif
 			break;
 		case TARGET_TYPE_QCA6490:
+		case TARGET_TYPE_QCA6750:
 			ppdu_info->rx_status.nss = 0;
 			break;
 		default:
@@ -1383,6 +1466,9 @@ hal_rx_status_get_tlv_info_generic(void *rx_tlv_hdr, void *ppduinfo,
 				ppdu_info->nac_info.frame_control;
 		}
 
+		hal_get_mac_addr1(rx_mpdu_start,
+				  ppdu_info);
+
 		ppdu_info->nac_info.mac_addr2_valid =
 				HAL_RX_GET_MAC_ADDR2_VALID(rx_mpdu_start);
 
@@ -1857,6 +1943,24 @@ static inline uint8_t hal_tx_comp_get_release_reason_generic(void *hal_desc)
 }
 
 /**
+ * hal_get_wbm_internal_error_generic() - is WBM internal error
+ * @hal_desc: completion ring descriptor pointer
+ *
+ * This function will return 0 or 1  - is it WBM internal error or not
+ *
+ * Return: uint8_t
+ */
+static inline uint8_t hal_get_wbm_internal_error_generic(void *hal_desc)
+{
+	uint32_t comp_desc =
+		*(uint32_t *)(((uint8_t *)hal_desc) +
+			      WBM_RELEASE_RING_2_WBM_INTERNAL_ERROR_OFFSET);
+
+	return (comp_desc & WBM_RELEASE_RING_2_WBM_INTERNAL_ERROR_MASK) >>
+		WBM_RELEASE_RING_2_WBM_INTERNAL_ERROR_LSB;
+}
+
+/**
  * hal_rx_dump_mpdu_start_tlv_generic: dump RX mpdu_start TLV in structured
  *			       human readable format.
  * @mpdu_start: pointer the rx_attention TLV in pkt.
@@ -2212,4 +2316,27 @@ void hal_tx_update_tidmap_prty_generic(struct hal_soc *soc, uint8_t value)
 		      (value & HWIO_TCL_R0_TID_MAP_PRTY_RMSK));
 }
 
+/**
+ * hal_rx_msdu_packet_metadata_get(): API to get the
+ * msdu information from rx_msdu_end TLV
+ *
+ * @ buf: pointer to the start of RX PKT TLV headers
+ * @ hal_rx_msdu_metadata: pointer to the msdu info structure
+ */
+static void
+hal_rx_msdu_packet_metadata_get_generic(uint8_t *buf,
+					void *pkt_msdu_metadata)
+{
+	struct rx_pkt_tlvs *pkt_tlvs = (struct rx_pkt_tlvs *)buf;
+	struct rx_msdu_end *msdu_end = &pkt_tlvs->msdu_end_tlv.rx_msdu_end;
+	struct hal_rx_msdu_metadata *msdu_metadata =
+		(struct hal_rx_msdu_metadata *)pkt_msdu_metadata;
+
+	msdu_metadata->l3_hdr_pad =
+		HAL_RX_MSDU_END_L3_HEADER_PADDING_GET(msdu_end);
+	msdu_metadata->sa_idx = HAL_RX_MSDU_END_SA_IDX_GET(msdu_end);
+	msdu_metadata->da_idx = HAL_RX_MSDU_END_DA_IDX_GET(msdu_end);
+	msdu_metadata->sa_sw_peer_id =
+		HAL_RX_MSDU_END_SA_SW_PEER_ID_GET(msdu_end);
+}
 #endif /* _HAL_GENERIC_API_H_ */

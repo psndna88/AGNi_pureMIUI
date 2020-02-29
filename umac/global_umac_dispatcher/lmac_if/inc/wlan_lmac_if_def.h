@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -802,6 +802,7 @@ struct wlan_lmac_if_reg_tx_ops {
  * @dfs_send_avg_radar_params_to_fw:    Send average radar parameters to FW.
  * @dfs_send_usenol_pdev_param:         Send usenol pdev param to FW.
  * @dfs_send_subchan_marking_pdev_param: Send subchan marking pdev param to FW.
+ * @dfs_check_mode_switch_state:        Find if HW mode switch is in progress.
  */
 
 struct wlan_lmac_if_dfs_tx_ops {
@@ -855,6 +856,9 @@ struct wlan_lmac_if_dfs_tx_ops {
 	QDF_STATUS (*dfs_send_subchan_marking_pdev_param)(
 			struct wlan_objmgr_pdev *pdev,
 			bool subchanmark);
+	QDF_STATUS (*dfs_check_mode_switch_state)(
+			struct wlan_objmgr_pdev *pdev,
+			bool *is_hw_mode_switch_in_progress);
 };
 
 /**
@@ -912,6 +916,19 @@ struct wlan_lmac_if_green_ap_tx_ops {
 };
 #endif
 
+#ifdef FEATURE_COEX
+struct coex_config_params;
+
+/**
+ * struct wlan_lmac_if_coex_tx_ops - south bound tx function pointers for coex
+ * @coex_config_send: function pointer to send coex config to fw
+ */
+struct wlan_lmac_if_coex_tx_ops {
+	QDF_STATUS (*coex_config_send)(struct wlan_objmgr_pdev *pdev,
+				       struct coex_config_params *param);
+};
+#endif
+
 /**
  * struct wlan_lmac_if_tx_ops - south bound tx function pointers
  * @mgmt_txrx_tx_ops: mgmt txrx tx ops
@@ -919,9 +936,10 @@ struct wlan_lmac_if_green_ap_tx_ops {
  * @dfs_tx_ops: dfs tx ops.
  * @green_ap_tx_ops: green_ap tx_ops
  * @cp_stats_tx_ops: cp stats tx_ops
+ * @coex_ops: coex tx_ops
  *
  * Callback function tabled to be registered with umac.
- * umac will use the functional table to send events/frames to lmac/wmi
+ * umac will use the functional table to send events/frames to wmi
  */
 
 struct wlan_lmac_if_tx_ops {
@@ -990,6 +1008,10 @@ struct wlan_lmac_if_tx_ops {
 #endif
 
 	struct wlan_lmac_if_ftm_tx_ops ftm_tx_ops;
+
+#ifdef FEATURE_COEX
+	struct wlan_lmac_if_coex_tx_ops coex_ops;
+#endif
 };
 
 /**
@@ -1356,6 +1378,12 @@ struct wlan_lmac_if_wifi_pos_rx_ops {
  * @dfs_is_hw_pulses_allowed:         Check if HW pulses are allowed or not.
  * @dfs_set_fw_adfs_support:          Set the agile DFS FW support in DFS.
  * @dfs_reset_dfs_prevchan:           Reset DFS previous channel structure.
+ * @dfs_init_tmp_psoc_nol:            Init temporary PSOC NOL structure.
+ * @dfs_deinit_tmp_psoc_nol:          Deinit temporary PSOC NOL structure.
+ * @dfs_save_dfs_nol_in_psoc:         Copy DFS NOL data to the PSOC copy.
+ * @dfs_reinit_nol_from_psoc_copy:    Reinit DFS NOL from the PSOC NOL copy.
+ * @dfs_reinit_precac_lists:          Reinit precac lists from other pdev.
+ * @dfs_complete_deferred_tasks:      Process mode switch completion in DFS.
  */
 struct wlan_lmac_if_dfs_rx_ops {
 	QDF_STATUS (*dfs_get_radars)(struct wlan_objmgr_pdev *pdev);
@@ -1523,6 +1551,20 @@ struct wlan_lmac_if_dfs_rx_ops {
 					bool fw_adfs_support_160,
 					bool fw_adfs_support_non_160);
 	void (*dfs_reset_dfs_prevchan)(struct wlan_objmgr_pdev *pdev);
+	void (*dfs_init_tmp_psoc_nol)(struct wlan_objmgr_pdev *pdev,
+				      uint8_t num_radios);
+	void (*dfs_deinit_tmp_psoc_nol)(struct wlan_objmgr_pdev *pdev);
+	void (*dfs_save_dfs_nol_in_psoc)(struct wlan_objmgr_pdev *pdev,
+					 uint8_t pdev_id,
+					 uint16_t low_5ghz_freq,
+					 uint16_t high_5ghz_freq);
+	void (*dfs_reinit_nol_from_psoc_copy)(struct wlan_objmgr_pdev *pdev,
+					      uint8_t pdev_id);
+	void (*dfs_reinit_precac_lists)(struct wlan_objmgr_pdev *src_pdev,
+					struct wlan_objmgr_pdev *dest_pdev,
+					uint16_t low_5g_freq,
+					uint16_t high_5g_freq);
+	void (*dfs_complete_deferred_tasks)(struct wlan_objmgr_pdev *pdev);
 };
 
 /**
@@ -1538,6 +1580,7 @@ struct wlan_lmac_if_dfs_rx_ops {
  * @psoc_get_wakelock_info: function to get wakelock info
  * @psoc_get_vdev_response_timer_info: function to get vdev response timer
  * structure for a specific vdev id
+ * @vdev_mgr_multi_vdev_restart_resp: function to handle mvr response
  */
 struct wlan_lmac_if_mlme_rx_ops {
 	QDF_STATUS (*vdev_mgr_start_response)(
@@ -1558,6 +1601,9 @@ struct wlan_lmac_if_mlme_rx_ops {
 	QDF_STATUS (*vdev_mgr_peer_delete_all_response)(
 					struct wlan_objmgr_psoc *psoc,
 					struct peer_delete_all_response *rsp);
+	QDF_STATUS (*vdev_mgr_multi_vdev_restart_resp)(
+					struct wlan_objmgr_psoc *psoc,
+					struct multi_vdev_restart_resp *rsp);
 #ifdef FEATURE_VDEV_RSP_WAKELOCK
 	struct vdev_mlme_wakelock *(*psoc_get_wakelock_info)(
 				    struct wlan_objmgr_psoc *psoc);

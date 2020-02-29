@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -138,6 +138,8 @@
 #define WLAN_SOC_CEXT_DYNAMIC_HW_MODE  0x00080000
 	/* Restricted 80+80 MHz support */
 #define WLAN_SOC_RESTRICTED_80P80_SUPPORT 0x00100000
+	/* Indicates Firmware supports sending NSS ratio info to host */
+#define WLAN_SOC_NSS_RATIO_TO_HOST_SUPPORT 0x00200000
 
 /* feature_flags */
 	/* CONF: ATH FF enabled */
@@ -201,6 +203,25 @@
 
 	/* Invalid VHT cap */
 #define WLAN_SOC_OP_VHT_INVALID_CAP    0x00000001
+
+/* enum wlan_nss_ratio - NSS ratio received from FW during service ready ext
+ *                       event.
+ * WLAN_NSS_RATIO_1BY2_NSS : Max nss of 160MHz is equals to half of the max nss
+ *                           of 80MHz
+ * WLAN_NSS_RATIO_3BY4_NSS : Max nss of 160MHz is equals to 3/4 of the max nss
+ *                           of 80MHz
+ * WLAN_NSS_RATIO_1_NSS    : Max nss of 160MHz is equals to the max nss of 80MHz
+ * WLAN_NSS_RATIO_2_NSS    : Max nss of 160MHz is equals to two times the max
+ *                           nss of 80MHz
+ * Values of this enum should be in sync with WMI_NSS_RATIO_INFO value provided
+ * in wmi_unified.h.
+ */
+enum wlan_nss_ratio {
+	WLAN_NSS_RATIO_1BY2_NSS = 0x0,
+	WLAN_NSS_RATIO_3BY4_NSS = 0x1,
+	WLAN_NSS_RATIO_1_NSS = 0x2,
+	WLAN_NSS_RATIO_2_NSS = 0x3,
+};
 
 /**
  * struct wlan_objmgr_psoc_regulatory -  Regulatory sub structure of PSOC
@@ -1610,25 +1631,33 @@ QDF_STATUS wlan_objmgr_psoc_set_user_config(struct wlan_objmgr_psoc *psoc,
  * wlan_objmgr_psoc_check_for_pdev_leaks() - Assert no pdevs attached to @psoc
  * @psoc: The psoc to check
  *
- * Return: None
+ * Return: No. of psoc leaks
  */
-void wlan_objmgr_psoc_check_for_pdev_leaks(struct wlan_objmgr_psoc *psoc);
+uint32_t wlan_objmgr_psoc_check_for_pdev_leaks(struct wlan_objmgr_psoc *psoc);
 
 /**
  * wlan_objmgr_psoc_check_for_vdev_leaks() - Assert no vdevs attached to @psoc
  * @psoc: The psoc to check
  *
- * Return: None
+ * Return: No. of vdev leaks
  */
-void wlan_objmgr_psoc_check_for_vdev_leaks(struct wlan_objmgr_psoc *psoc);
+uint32_t wlan_objmgr_psoc_check_for_vdev_leaks(struct wlan_objmgr_psoc *psoc);
 
 /**
  * wlan_objmgr_psoc_check_for_peer_leaks() - Assert no peers attached to @psoc
  * @psoc: The psoc to check
  *
+ * Return: No. of peer leaks
+ */
+uint32_t wlan_objmgr_psoc_check_for_peer_leaks(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * wlan_objmgr_psoc_check_for_leaks() - Assert on leak
+ * @psoc: The psoc to check
+ *
  * Return: None
  */
-void wlan_objmgr_psoc_check_for_peer_leaks(struct wlan_objmgr_psoc *psoc);
+void wlan_objmgr_psoc_check_for_leaks(struct wlan_objmgr_psoc *psoc);
 
 /**
 * wlan_objmgr_psoc_get_band_capability () - get user config

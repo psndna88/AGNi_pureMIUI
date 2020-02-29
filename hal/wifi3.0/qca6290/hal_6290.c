@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1010,6 +1010,7 @@ struct hal_hw_txrx_ops qca6290_hal_hw_txrx_ops = {
 	hal_tx_desc_set_cache_set_num_generic,
 	hal_tx_comp_get_status_generic,
 	hal_tx_comp_get_release_reason_generic,
+	hal_get_wbm_internal_error_generic,
 	hal_tx_desc_set_mesh_en_6290,
 	/* rx */
 	hal_rx_msdu_start_nss_get_6290,
@@ -1076,6 +1077,10 @@ struct hal_hw_txrx_ops qca6290_hal_hw_txrx_ops = {
 	hal_rx_msdu_get_flow_params_6290,
 	hal_rx_tlv_get_tcp_chksum_6290,
 	hal_rx_get_rx_sequence_6290,
+	NULL,
+	NULL,
+	/* rx - msdu end fast path info fields */
+	hal_rx_msdu_packet_metadata_get_generic,
 };
 
 struct hal_hw_srng_config hw_srng_table_6290[] = {

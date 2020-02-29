@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -702,8 +702,6 @@ QDF_STATUS dp_ipa_set_doorbell_paddr(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 		(void *)ipa_res->tx_comp_doorbell_paddr,
 		(void *)ipa_res->tx_comp_doorbell_vaddr);
 
-	hal_srng_dst_init_hp(wbm_srng, ipa_res->tx_comp_doorbell_vaddr);
-
 	/*
 	 * For RX, REO module on Napier/Hastings does reordering on incoming
 	 * Ethernet packets and writes one or more descriptors to REO2IPA Rx
@@ -1233,6 +1231,8 @@ QDF_STATUS dp_ipa_setup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 	ipa_res->rx_ready_doorbell_paddr =
 		QDF_IPA_WDI_CONN_OUT_PARAMS_RX_UC_DB_PA(&pipe_out);
 
+	soc->ipa_first_tx_db_access = true;
+
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -1445,6 +1445,8 @@ QDF_STATUS dp_ipa_setup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 	ipa_res->rx_ready_doorbell_paddr =
 		QDF_IPA_WDI_CONN_OUT_PARAMS_RX_UC_DB_PA(&pipe_out);
 
+	soc->ipa_first_tx_db_access = true;
+
 	QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_DEBUG,
 		  "%s: Tx: %s=%pK, %s=%d, %s=%pK, %s=%pK, %s=%d, %s=%pK, %s=%d, %s=%pK",
 		  __func__,
@@ -1604,12 +1606,17 @@ QDF_STATUS dp_ipa_enable_pipes(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 	struct dp_soc *soc = cdp_soc_t_to_dp_soc(soc_hdl);
 	struct dp_pdev *pdev =
 		dp_get_pdev_from_soc_pdev_id_wifi3(soc, pdev_id);
+	struct hal_srng *wbm_srng = (struct hal_srng *)
+			soc->tx_comp_ring[IPA_TX_COMP_RING_IDX].hal_srng;
+	struct dp_ipa_resources *ipa_res;
 	QDF_STATUS result;
 
 	if (!pdev) {
 		dp_err("%s invalid instance", __func__);
 		return QDF_STATUS_E_FAILURE;
 	}
+
+	ipa_res = &pdev->ipa_resource;
 
 	qdf_atomic_set(&soc->ipa_pipes_enabled, 1);
 	dp_ipa_handle_rx_buf_pool_smmu_mapping(soc, pdev, true);
@@ -1622,6 +1629,11 @@ QDF_STATUS dp_ipa_enable_pipes(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 		qdf_atomic_set(&soc->ipa_pipes_enabled, 0);
 		dp_ipa_handle_rx_buf_pool_smmu_mapping(soc, pdev, false);
 		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (soc->ipa_first_tx_db_access) {
+		hal_srng_dst_init_hp(wbm_srng, ipa_res->tx_comp_doorbell_vaddr);
+		soc->ipa_first_tx_db_access = false;
 	}
 
 	return QDF_STATUS_SUCCESS;
@@ -1802,6 +1814,69 @@ bool dp_ipa_is_mdm_platform(void)
 #endif
 
 /**
+ * dp_ipa_frag_nbuf_linearize - linearize nbuf for IPA
+ * @soc: soc
+ * @nbuf: source skb
+ *
+ * Return: new nbuf if success and otherwise NULL
+ */
+static qdf_nbuf_t dp_ipa_frag_nbuf_linearize(struct dp_soc *soc,
+					     qdf_nbuf_t nbuf)
+{
+	uint8_t *src_nbuf_data;
+	uint8_t *dst_nbuf_data;
+	qdf_nbuf_t dst_nbuf;
+	qdf_nbuf_t temp_nbuf = nbuf;
+	uint32_t nbuf_len = qdf_nbuf_len(nbuf);
+	bool is_nbuf_head = true;
+	uint32_t copy_len = 0;
+
+	dst_nbuf = qdf_nbuf_alloc(soc->osdev, RX_DATA_BUFFER_SIZE,
+				  RX_BUFFER_RESERVATION,
+				  RX_DATA_BUFFER_ALIGNMENT, FALSE);
+
+	if (!dst_nbuf) {
+		dp_err_rl("nbuf allocate fail");
+		return NULL;
+	}
+
+	if ((nbuf_len + L3_HEADER_PADDING) > RX_DATA_BUFFER_SIZE) {
+		qdf_nbuf_free(dst_nbuf);
+		dp_err_rl("nbuf is jumbo data");
+		return NULL;
+	}
+
+	/* prepeare to copy all data into new skb */
+	dst_nbuf_data = qdf_nbuf_data(dst_nbuf);
+	while (temp_nbuf) {
+		src_nbuf_data = qdf_nbuf_data(temp_nbuf);
+		/* first head nbuf */
+		if (is_nbuf_head) {
+			qdf_mem_copy(dst_nbuf_data, src_nbuf_data,
+				     RX_PKT_TLVS_LEN);
+			/* leave extra 2 bytes L3_HEADER_PADDING */
+			dst_nbuf_data += (RX_PKT_TLVS_LEN + L3_HEADER_PADDING);
+			src_nbuf_data += RX_PKT_TLVS_LEN;
+			copy_len = qdf_nbuf_headlen(temp_nbuf) -
+						RX_PKT_TLVS_LEN;
+			temp_nbuf = qdf_nbuf_get_ext_list(temp_nbuf);
+			is_nbuf_head = false;
+		} else {
+			copy_len = qdf_nbuf_len(temp_nbuf);
+			temp_nbuf = qdf_nbuf_queue_next(temp_nbuf);
+		}
+		qdf_mem_copy(dst_nbuf_data, src_nbuf_data, copy_len);
+		dst_nbuf_data += copy_len;
+	}
+
+	qdf_nbuf_set_len(dst_nbuf, nbuf_len);
+	/* copy is done, free original nbuf */
+	qdf_nbuf_free(nbuf);
+
+	return dst_nbuf;
+}
+
+/**
  * dp_ipa_handle_rx_reo_reinject - Handle RX REO reinject skb buffer
  * @soc: soc
  * @nbuf: skb
@@ -1810,7 +1885,6 @@ bool dp_ipa_is_mdm_platform(void)
  */
 qdf_nbuf_t dp_ipa_handle_rx_reo_reinject(struct dp_soc *soc, qdf_nbuf_t nbuf)
 {
-	uint8_t *rx_pkt_tlvs;
 
 	if (!wlan_cfg_is_ipa_enabled(soc->wlan_cfg_ctx))
 		return nbuf;
@@ -1819,33 +1893,11 @@ qdf_nbuf_t dp_ipa_handle_rx_reo_reinject(struct dp_soc *soc, qdf_nbuf_t nbuf)
 	if (!qdf_atomic_read(&soc->ipa_pipes_enabled))
 		return nbuf;
 
-	/* Linearize the skb since IPA assumes linear buffer */
-	if (qdf_likely(qdf_nbuf_is_frag(nbuf))) {
-		if (qdf_nbuf_linearize(nbuf)) {
-			dp_err_rl("nbuf linearize failed");
-			return NULL;
-		}
-	}
+	if (!qdf_nbuf_is_frag(nbuf))
+		return nbuf;
 
-	rx_pkt_tlvs = qdf_mem_malloc(RX_PKT_TLVS_LEN);
-	if (!rx_pkt_tlvs) {
-		dp_err_rl("rx_pkt_tlvs alloc failed");
-		return NULL;
-	}
-
-	qdf_mem_copy(rx_pkt_tlvs, qdf_nbuf_data(nbuf), RX_PKT_TLVS_LEN);
-
-	/* Pad L3_HEADER_PADDING before ethhdr and after rx_pkt_tlvs */
-	qdf_nbuf_push_head(nbuf, L3_HEADER_PADDING);
-
-	qdf_mem_copy(qdf_nbuf_data(nbuf), rx_pkt_tlvs, RX_PKT_TLVS_LEN);
-
-	/* L3_HEADDING_PADDING is not accounted for real skb length */
-	qdf_nbuf_set_len(nbuf, qdf_nbuf_len(nbuf) - L3_HEADER_PADDING);
-
-	qdf_mem_free(rx_pkt_tlvs);
-
-	return nbuf;
+	/* linearize skb for IPA */
+	return dp_ipa_frag_nbuf_linearize(soc, nbuf);
 }
 
 #endif

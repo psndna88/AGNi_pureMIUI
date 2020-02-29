@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -165,6 +165,7 @@ struct wlan_objmgr_pdev_mlme {
  * @wlan_peer_count:   Peer count
  * @max_peer_count:    Max Peer count
  * @temp_peer_count:   Temporary peer count
+ * @max_monitor_vdev_count: Max monitor vdev count
  * @wlan_psoc:         back pointer to PSOC, its attached to
  * @ref_cnt:           Ref count
  * @ref_id_dbg:        Array to track Ref count
@@ -178,6 +179,7 @@ struct wlan_objmgr_pdev_objmgr {
 	uint16_t wlan_peer_count;
 	uint16_t max_peer_count;
 	uint16_t temp_peer_count;
+	uint8_t max_monitor_vdev_count;
 	struct wlan_objmgr_psoc *wlan_psoc;
 	qdf_atomic_t ref_cnt;
 	qdf_atomic_t ref_id_dbg[WLAN_REF_ID_MAX];
@@ -193,7 +195,6 @@ struct wlan_objmgr_pdev_objmgr {
  * @obj_status[]:      object status of each component object
  * @obj_state:         object state
  * @tgt_if_handle:     Target interface handle
- * @dp_handle:         DP module handle
  * @pdev_lock:         lock to protect object
 */
 struct wlan_objmgr_pdev {
@@ -205,7 +206,6 @@ struct wlan_objmgr_pdev {
 	QDF_STATUS obj_status[WLAN_UMAC_MAX_COMPONENTS];
 	WLAN_OBJ_STATE obj_state;
 	target_pdev_info_t *tgt_if_handle;
-	void *dp_handle;
 	qdf_spinlock_t pdev_lock;
 };
 
@@ -949,6 +949,36 @@ static inline uint16_t wlan_pdev_get_max_peer_count(
 }
 
 /**
+ * wlan_pdev_set_max_monitor_vdev_count() - set max monitor vdev count
+ * @pdev: PDEV object
+ * @count: Max monitor vdev count
+ *
+ * API to set max monitor vdev count of PDEV
+ *
+ * Return: void
+ */
+static inline void wlan_pdev_set_max_monitor_vdev_count(
+		struct wlan_objmgr_pdev *pdev,
+		uint16_t count)
+{
+	pdev->pdev_objmgr.max_monitor_vdev_count = count;
+}
+
+/**
+ * wlan_pdev_get_max_monitor_vdev_count() - get max monitor vdev count
+ * @pdev: PDEV object
+ *
+ * API to get max monitor vdev count of PDEV
+ *
+ * Return: max monitor vdev count
+ */
+static inline uint16_t wlan_pdev_get_max_monitor_vdev_count(
+		struct wlan_objmgr_pdev *pdev)
+{
+	return pdev->pdev_objmgr.max_monitor_vdev_count;
+}
+
+/**
  * wlan_pdev_get_peer_count() - get pdev peer count
  * @pdev: PDEV object
  *
@@ -1038,40 +1068,6 @@ static inline void wlan_pdev_decr_temp_peer_count(struct wlan_objmgr_pdev *pdev)
 static inline uint8_t wlan_pdev_get_vdev_count(struct wlan_objmgr_pdev *pdev)
 {
 	return pdev->pdev_objmgr.wlan_vdev_count;
-}
-
-/**
- * wlan_pdev_set_dp_handle() - set dp handle
- * @pdev: pdev object pointer
- * @dp_handle: Data path module handle
- *
- * Return: void
- */
-static inline void wlan_pdev_set_dp_handle(struct wlan_objmgr_pdev *pdev,
-		void *dp_handle)
-{
-	if (qdf_unlikely(!pdev)) {
-		QDF_BUG(0);
-		return;
-	}
-
-	pdev->dp_handle = dp_handle;
-}
-
-/**
- * wlan_pdev_get_dp_handle() - get dp handle
- * @pdev: pdev object pointer
- *
- * Return: dp handle
- */
-static inline void *wlan_pdev_get_dp_handle(struct wlan_objmgr_pdev *pdev)
-{
-	if (qdf_unlikely(!pdev)) {
-		QDF_BUG(0);
-		return NULL;
-	}
-
-	return pdev->dp_handle;
 }
 
 /**

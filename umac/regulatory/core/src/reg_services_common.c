@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -34,6 +34,7 @@
 #include "reg_db_parser.h"
 #include "reg_build_chan_list.h"
 #include <wlan_objmgr_pdev_obj.h>
+#include <target_if.h>
 
 const struct chan_map *channel_map;
 #ifdef CONFIG_CHAN_NUM_API
@@ -254,11 +255,21 @@ const struct chan_map channel_map_us[NUM_CHANNELS] = {
 	[CHAN_ENUM_5805] = {5805, 161, 2, 160},
 	[CHAN_ENUM_5825] = {5825, 165, 2, 160},
 	[CHAN_ENUM_5845] = {5845, 169, 2, 160},
+#ifdef WLAN_FEATURE_DSRC
 	[CHAN_ENUM_5850] = {5850, 170, 2, 160},
 	[CHAN_ENUM_5855] = {5855, 171, 2, 160},
 	[CHAN_ENUM_5860] = {5860, 172, 2, 160},
+#else
+	[CHAN_ENUM_5850] = {5850, INVALID_CHANNEL_NUM, 2, 160},
+	[CHAN_ENUM_5855] = {5855, INVALID_CHANNEL_NUM, 2, 160},
+	[CHAN_ENUM_5860] = {5860, INVALID_CHANNEL_NUM, 2, 160},
+#endif
 	[CHAN_ENUM_5865] = {5865, 173, 2, 160},
+#ifdef WLAN_FEATURE_DSRC
 	[CHAN_ENUM_5870] = {5870, 174, 2, 160},
+#else
+	[CHAN_ENUM_5870] = {5870, INVALID_CHANNEL_NUM, 2, 160},
+#endif
 	[CHAN_ENUM_5875] = {5875, 175, 2, 160},
 	[CHAN_ENUM_5880] = {5880, 176, 2, 160},
 	[CHAN_ENUM_5885] = {5885, 177, 2, 160},
@@ -1071,6 +1082,8 @@ QDF_STATUS reg_get_channel_list_with_power(struct wlan_objmgr_pdev *pdev,
 		    reg_channels[i].chan_flags != REGULATORY_CHAN_DISABLED) {
 			ch_list[count].chan_num =
 				reg_channels[i].chan_num;
+			ch_list[count].center_freq =
+				reg_channels[i].center_freq;
 			ch_list[count++].tx_power =
 				reg_channels[i].tx_power;
 		}
@@ -2654,11 +2667,13 @@ QDF_STATUS reg_modify_pdev_chan_range(struct wlan_objmgr_pdev *pdev)
 	struct wlan_lmac_if_reg_tx_ops *reg_tx_ops;
 	struct wlan_psoc_host_hal_reg_capabilities_ext *reg_cap_ptr;
 	uint32_t cnt;
-	uint32_t pdev_id;
+	uint32_t phy_id;
 	enum direction dir;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	struct target_pdev_info *tgt_pdev;
 
-	pdev_id = wlan_objmgr_pdev_get_pdev_id(pdev);
+	tgt_pdev = wlan_pdev_get_tgt_if_handle(pdev);
+	phy_id = (uint32_t)target_pdev_get_phy_idx(tgt_pdev);
 	pdev_priv_obj = reg_get_pdev_obj(pdev);
 	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
 		reg_err("pdev reg component is NULL");
@@ -2686,7 +2701,7 @@ QDF_STATUS reg_modify_pdev_chan_range(struct wlan_objmgr_pdev *pdev)
 			return QDF_STATUS_E_FAULT;
 		}
 
-		if (reg_cap_ptr->phy_id == pdev_id)
+		if (reg_cap_ptr->phy_id == phy_id)
 			break;
 		reg_cap_ptr++;
 	}
@@ -2851,6 +2866,36 @@ enum channel_enum reg_get_chan_enum_for_freq(qdf_freq_t freq)
 	reg_err("invalid channel center frequency %d", freq);
 
 	return INVALID_CHANNEL;
+}
+
+bool
+reg_is_freq_present_in_cur_chan_list(struct wlan_objmgr_pdev *pdev,
+				     qdf_freq_t freq)
+{
+	enum channel_enum chan_enum;
+	struct regulatory_channel *cur_chan_list;
+	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
+
+	pdev_priv_obj = reg_get_pdev_obj(pdev);
+
+	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
+		reg_err_rl("pdev reg obj is NULL");
+		return false;
+	}
+
+	cur_chan_list = pdev_priv_obj->cur_chan_list;
+
+	for (chan_enum = 0; chan_enum < NUM_CHANNELS; chan_enum++)
+		if (cur_chan_list[chan_enum].center_freq == freq)
+			if ((cur_chan_list[chan_enum].state !=
+			     CHANNEL_STATE_DISABLE) &&
+			    !(cur_chan_list[chan_enum].chan_flags &
+			      REGULATORY_CHAN_DISABLED))
+				return true;
+
+	reg_debug_rl("Channel center frequency %d not found", freq);
+
+	return false;
 }
 
 enum channel_state reg_get_channel_state_for_freq(struct wlan_objmgr_pdev *pdev,
@@ -3474,7 +3519,37 @@ enum reg_wifi_band reg_freq_to_band(qdf_freq_t freq)
 		return REG_BAND_6G;
 	return REG_BAND_UNKNOWN;
 }
+
 #endif /* CONFIG_CHAN_FREQ_API */
+
+uint8_t  reg_get_max_tx_power(struct wlan_objmgr_pdev *pdev)
+{
+	struct regulatory_channel *cur_chan_list;
+	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
+	uint8_t i, max_tx_power = 0;
+
+	pdev_priv_obj = reg_get_pdev_obj(pdev);
+
+	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
+		reg_err("reg pdev private obj is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	cur_chan_list = pdev_priv_obj->cur_chan_list;
+
+	for (i = 0; i < NUM_CHANNELS; i++) {
+		if (cur_chan_list[i].state != CHANNEL_STATE_DISABLE &&
+		    cur_chan_list[i].chan_flags != REGULATORY_CHAN_DISABLED) {
+			if (cur_chan_list[i].tx_power > max_tx_power)
+				max_tx_power = cur_chan_list[i].tx_power;
+		}
+	}
+
+	if (!max_tx_power)
+		reg_err_rl("max_tx_power is zero");
+
+	return max_tx_power;
+}
 
 QDF_STATUS reg_set_ignore_fw_reg_offload_ind(struct wlan_objmgr_psoc *psoc)
 {

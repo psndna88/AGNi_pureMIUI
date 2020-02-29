@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -201,8 +201,11 @@ QDF_STATUS reg_set_country(struct wlan_objmgr_pdev *pdev,
 	}
 
 	if (!qdf_mem_cmp(psoc_reg->cur_country, country, REG_ALPHA2_LEN)) {
-		reg_err("country is not different");
-		return QDF_STATUS_SUCCESS;
+		if (psoc_reg->cc_src == SOURCE_USERSPACE ||
+		    psoc_reg->cc_src == SOURCE_CORE) {
+			reg_debug("country is not different");
+			return QDF_STATUS_SUCCESS;
+		}
 	}
 
 	reg_debug("programming new country: %s to firmware", country);
@@ -333,7 +336,7 @@ bool reg_is_passive_or_disable_for_freq(struct wlan_objmgr_pdev *pdev,
 #ifdef CONFIG_CHAN_FREQ_API
 bool reg_is_dsrc_freq(qdf_freq_t freq)
 {
-	if (!REG_IS_5GHZ_FREQ(chan))
+	if (!REG_IS_5GHZ_FREQ(freq))
 		return false;
 
 	if (!(freq >= REG_DSRC_START_FREQ && freq <= REG_DSRC_END_FREQ))

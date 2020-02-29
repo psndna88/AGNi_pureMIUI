@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -143,6 +143,7 @@ struct wlan_objmgr_peer_mlme {
  * @ref_cnt:           Ref count
  * @ref_id_dbg:        Array to track Ref count
  * @print_cnt:         Count to throttle Logical delete prints
+ * @wlan_objmgr_trace: Trace ref and deref
  */
 struct wlan_objmgr_peer_objmgr {
 	struct wlan_objmgr_vdev *vdev;
@@ -151,6 +152,9 @@ struct wlan_objmgr_peer_objmgr {
 	qdf_atomic_t ref_id_dbg[WLAN_REF_ID_MAX];
 #endif
 	uint8_t print_cnt;
+#ifdef WLAN_OBJMGR_REF_ID_TRACE
+	struct wlan_objmgr_trace trace;
+#endif
 };
 
 /**
@@ -163,7 +167,6 @@ struct wlan_objmgr_peer_objmgr {
  * @peer_comp_priv_obj[]:  Component's private object pointers
  * @obj_status[]:     status of each component object
  * @obj_state:        Status of Peer object
- * @dp_handle:        DP module handle
  * @pdev_id:          Pdev ID
  * @peer_lock:        Lock for access/update peer contents
  */
@@ -177,7 +180,6 @@ struct wlan_objmgr_peer {
 	void *peer_comp_priv_obj[WLAN_UMAC_MAX_COMPONENTS];
 	QDF_STATUS obj_status[WLAN_UMAC_MAX_COMPONENTS];
 	WLAN_OBJ_STATE obj_state;
-	void *dp_handle;
 	qdf_spinlock_t peer_lock;
 };
 
@@ -901,7 +903,7 @@ static inline void wlan_peer_set_vdev(struct wlan_objmgr_peer *peer,
  * Return: void
  */
 static inline void wlan_peer_mlme_flag_set(struct wlan_objmgr_peer *peer,
-				uint32_t flag)
+					   uint32_t flag)
 {
 	peer->peer_mlme.peer_flags |= flag;
 }
@@ -1053,40 +1055,6 @@ static inline void wlan_peer_mlme_reset_seq_num(
 }
 
 /**
- * wlan_peer_set_dp_handle() - set dp handle
- * @peer: peer object pointer
- * @dp_handle: Data path module handle
- *
- * Return: void
- */
-static inline void wlan_peer_set_dp_handle(struct wlan_objmgr_peer *peer,
-		void *dp_handle)
-{
-	if (qdf_unlikely(!peer)) {
-		QDF_BUG(0);
-		return;
-	}
-
-	peer->dp_handle = dp_handle;
-}
-
-/**
- * wlan_peer_get_dp_handle() - get dp handle
- * @peer: peer object pointer
- *
- * Return: dp handle
- */
-static inline void *wlan_peer_get_dp_handle(struct wlan_objmgr_peer *peer)
-{
-	if (qdf_unlikely(!peer)) {
-		QDF_BUG(0);
-		return NULL;
-	}
-
-	return peer->dp_handle;
-}
-
-/**
  * wlan_peer_get_psoc() - get psoc
  * @peer: PEER object
  *
@@ -1153,5 +1121,62 @@ void wlan_objmgr_print_peer_ref_ids(struct wlan_objmgr_peer *peer,
 uint32_t
 wlan_objmgr_peer_get_comp_ref_cnt(struct wlan_objmgr_peer *peer,
 				  enum wlan_umac_comp_id id);
+
+/**
+ * wlan_objmgr_peer_trace_init_lock() - Initialize peer trace lock
+ * @peer: peer object pointer
+ *
+ * Return: void
+ */
+#ifdef WLAN_OBJMGR_TRACE
+static inline void
+wlan_objmgr_peer_trace_init_lock(struct wlan_objmgr_peer *peer)
+{
+	wlan_objmgr_trace_init_lock(&peer->peer_objmgr.trace);
+}
+#else
+static inline void
+wlan_objmgr_peer_trace_init_lock(struct wlan_objmgr_peer *peer)
+{
+}
+#endif
+
+/**
+ * wlan_objmgr_peer_trace_deinit_lock() - Deinitialize peer trace lock
+ * @peer: peer object pointer
+ *
+ * Return: void
+ */
+#ifdef WLAN_OBJMGR_TRACE
+static inline void
+wlan_objmgr_peer_trace_deinit_lock(struct wlan_objmgr_peer *peer)
+{
+	wlan_objmgr_trace_deinit_lock(&peer->peer_objmgr.trace);
+}
+#else
+static inline void
+wlan_objmgr_peer_trace_deinit_lock(struct wlan_objmgr_peer *peer)
+{
+}
+#endif
+
+/**
+ * wlan_objmgr_peer_trace_del_ref_list() - Delete peer trace reference list
+ * @peer: peer object pointer
+ *
+ * Return: void
+ */
+#ifdef WLAN_OBJMGR_REF_ID_TRACE
+static inline void
+wlan_objmgr_peer_trace_del_ref_list(struct wlan_objmgr_peer *peer)
+{
+	wlan_objmgr_trace_del_ref_list(&peer->peer_objmgr.trace);
+}
+#else
+static inline void
+wlan_objmgr_peer_trace_del_ref_list(struct wlan_objmgr_peer *peer)
+{
+}
+#endif
 
 #endif /* _WLAN_OBJMGR_PEER_OBJ_H_*/

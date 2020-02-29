@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -591,6 +591,8 @@ static inline void dp_update_pdev_stats(struct dp_pdev *tgtobj,
 		srcobj->tx.last_ack_rssi;
 	tgtobj->stats.rx.mec_drop.num += srcobj->rx.mec_drop.num;
 	tgtobj->stats.rx.mec_drop.bytes += srcobj->rx.mec_drop.bytes;
+	tgtobj->stats.rx.multipass_rx_pkt_drop +=
+		srcobj->rx.multipass_rx_pkt_drop;
 }
 
 static inline void dp_update_pdev_ingress_stats(struct dp_pdev *tgtobj,
@@ -774,6 +776,8 @@ static inline void dp_update_vdev_stats(struct cdp_vdev_stats *tgtobj,
 		srcobj->stats.tx.last_ack_rssi;
 	tgtobj->rx.mec_drop.num += srcobj->stats.rx.mec_drop.num;
 	tgtobj->rx.mec_drop.bytes += srcobj->stats.rx.mec_drop.bytes;
+	tgtobj->rx.multipass_rx_pkt_drop +=
+		srcobj->stats.rx.multipass_rx_pkt_drop;
 }
 
 #define DP_UPDATE_STATS(_tgtobj, _srcobj)	\
@@ -868,6 +872,7 @@ static inline void dp_update_vdev_stats(struct cdp_vdev_stats *tgtobj,
 								  \
 		_tgtobj->stats.tx.last_ack_rssi =	\
 			_srcobj->stats.tx.last_ack_rssi; \
+		DP_STATS_AGGR(_tgtobj, _srcobj, rx.multipass_rx_pkt_drop); \
 	}  while (0)
 
 extern int dp_peer_find_attach(struct dp_soc *soc);
@@ -905,27 +910,133 @@ extern struct dp_peer *dp_peer_find_hash_find(struct dp_soc *soc,
 	uint8_t *peer_mac_addr, int mac_addr_is_aligned, uint8_t vdev_id);
 
 #ifdef DP_PEER_EXTENDED_API
-QDF_STATUS dp_register_peer(struct cdp_pdev *pdev_handle,
-		struct ol_txrx_desc_type *sta_desc);
-QDF_STATUS dp_clear_peer(struct cdp_pdev *pdev_handle,
+/**
+ * dp_register_peer() - Register peer into physical device
+ * @soc_hdl - data path soc handle
+ * @pdev_id - device instance id
+ * @sta_desc - peer description
+ *
+ * Register peer into physical device
+ *
+ * Return: QDF_STATUS_SUCCESS registration success
+ *         QDF_STATUS_E_FAULT peer not found
+ */
+QDF_STATUS dp_register_peer(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+			    struct ol_txrx_desc_type *sta_desc);
+
+/**
+ * dp_clear_peer() - remove peer from physical device
+ * @soc_hdl - data path soc handle
+ * @pdev_id - device instance id
+ * @peer_addr - peer mac address
+ *
+ * remove peer from physical device
+ *
+ * Return: QDF_STATUS_SUCCESS registration success
+ *         QDF_STATUS_E_FAULT peer not found
+ */
+QDF_STATUS dp_clear_peer(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 			 struct qdf_mac_addr peer_addr);
+
+/*
+ * dp_find_peer_exist - find peer if already exists
+ * @soc: datapath soc handle
+ * @pdev_id: physical device instance id
+ * @peer_mac_addr: peer mac address
+ *
+ * Return: true or false
+ */
+bool dp_find_peer_exist(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+			uint8_t *peer_addr);
+
+/*
+ * dp_find_peer_exist_on_vdev - find if peer exists on the given vdev
+ * @soc: datapath soc handle
+ * @vdev_id: vdev instance id
+ * @peer_mac_addr: peer mac address
+ *
+ * Return: true or false
+ */
+bool dp_find_peer_exist_on_vdev(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
+				uint8_t *peer_addr);
+
+/*
+ * dp_find_peer_exist_on_other_vdev - find if peer exists
+ * on other than the given vdev
+ * @soc: datapath soc handle
+ * @vdev_id: vdev instance id
+ * @peer_mac_addr: peer mac address
+ * @max_bssid: max number of bssids
+ *
+ * Return: true or false
+ */
+bool dp_find_peer_exist_on_other_vdev(struct cdp_soc_t *soc_hdl,
+				      uint8_t vdev_id, uint8_t *peer_addr,
+				      uint16_t max_bssid);
+
 void *dp_find_peer_by_addr_and_vdev(struct cdp_pdev *pdev_handle,
 		struct cdp_vdev *vdev,
 		uint8_t *peer_addr);
-QDF_STATUS dp_peer_state_update(struct cdp_pdev *pdev_handle, uint8_t *peer_mac,
-		enum ol_txrx_peer_state state);
-QDF_STATUS dp_get_vdevid(void *peer_handle, uint8_t *vdev_id);
+
+/**
+ * dp_peer_state_update() - update peer local state
+ * @pdev - data path device instance
+ * @peer_addr - peer mac address
+ * @state - new peer local state
+ *
+ * update peer local state
+ *
+ * Return: QDF_STATUS_SUCCESS registration success
+ */
+QDF_STATUS dp_peer_state_update(struct cdp_soc_t *soc, uint8_t *peer_mac,
+				enum ol_txrx_peer_state state);
+
+/**
+ * dp_get_vdevid() - Get virtual interface id which peer registered
+ * @soc - datapath soc handle
+ * @peer_mac - peer mac address
+ * @vdev_id - virtual interface id which peer registered
+ *
+ * Get virtual interface id which peer registered
+ *
+ * Return: QDF_STATUS_SUCCESS registration success
+ */
+QDF_STATUS dp_get_vdevid(struct cdp_soc_t *soc_hdl, uint8_t *peer_mac,
+			 uint8_t *vdev_id);
 struct cdp_vdev *dp_get_vdev_by_peer_addr(struct cdp_pdev *pdev_handle,
 		struct qdf_mac_addr peer_addr);
 struct cdp_vdev *dp_get_vdev_for_peer(void *peer);
 uint8_t *dp_peer_get_peer_mac_addr(void *peer);
-int dp_get_peer_state(void *peer_handle);
+
+/**
+ * dp_get_peer_state() - Get local peer state
+ * @soc - datapath soc handle
+ * @vdev_id - vdev id
+ * @peer_mac - peer mac addr
+ *
+ * Get local peer state
+ *
+ * Return: peer status
+ */
+int dp_get_peer_state(struct cdp_soc_t *soc, uint8_t vdev_id,
+		      uint8_t *peer_mac);
 void dp_local_peer_id_pool_init(struct dp_pdev *pdev);
 void dp_local_peer_id_alloc(struct dp_pdev *pdev, struct dp_peer *peer);
 void dp_local_peer_id_free(struct dp_pdev *pdev, struct dp_peer *peer);
 #else
+/**
+ * dp_get_vdevid() - Get virtual interface id which peer registered
+ * @soc - datapath soc handle
+ * @peer_mac - peer mac address
+ * @vdev_id - virtual interface id which peer registered
+ *
+ * Get virtual interface id which peer registered
+ *
+ * Return: QDF_STATUS_SUCCESS registration success
+ */
 static inline
-QDF_STATUS dp_get_vdevid(void *peer_handle, uint8_t *vdev_id)
+QDF_STATUS dp_get_vdevid(struct cdp_soc_t *soc_hdl, uint8_t *peer_mac,
+			 uint8_t *vdev_id)
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }
@@ -1007,6 +1118,13 @@ void dp_rx_tid_stats_cb(struct dp_soc *soc, void *cb_ctxt,
 	union hal_reo_status *reo_status);
 void dp_rx_bar_stats_cb(struct dp_soc *soc, void *cb_ctxt,
 		union hal_reo_status *reo_status);
+uint16_t dp_tx_me_send_convert_ucast(struct cdp_soc_t *soc, uint8_t vdev_id,
+				     qdf_nbuf_t nbuf,
+				     uint8_t newmac[][QDF_MAC_ADDR_SIZE],
+				     uint8_t new_mac_cnt);
+void dp_tx_me_alloc_descriptor(struct cdp_soc_t *soc, uint8_t pdev_id);
+
+void dp_tx_me_free_descriptor(struct cdp_soc_t *soc, uint8_t pdev_id);
 QDF_STATUS dp_h2t_ext_stats_msg_send(struct dp_pdev *pdev,
 		uint32_t stats_type_upload_mask, uint32_t config_param_0,
 		uint32_t config_param_1, uint32_t config_param_2,
@@ -1023,8 +1141,11 @@ dp_set_pn_check_wifi3(struct cdp_soc_t *soc, uint8_t vdev_id,
 		      uint32_t *rx_pn);
 
 void *dp_get_pdev_for_mac_id(struct dp_soc *soc, uint32_t mac_id);
-void dp_set_michael_key(struct cdp_peer *peer_handle,
-			bool is_unicast, uint32_t *key);
+
+QDF_STATUS
+dp_set_michael_key(struct cdp_soc_t *soc, uint8_t vdev_id,
+		   uint8_t *peer_mac,
+		   bool is_unicast, uint32_t *key);
 
 /**
  * dp_check_pdev_exists() - Validate pdev before use
@@ -1202,6 +1323,121 @@ static inline int dp_get_mac_id_for_pdev(uint32_t mac_id, uint32_t pdev_id)
 	return (mac_id + pdev_id);
 }
 
+/**
+ * dp_get_lmac_id_for_pdev_id() -  Return lmac id corresponding to host pdev id
+ * @soc: soc pointer
+ * @mac_id: MAC id
+ * @pdev_id: pdev_id corresponding to pdev, 0 for MCL
+ *
+ * For MCL, Single pdev using both MACs will operate on both MAC rings.
+ *
+ * For WIN, each PDEV will operate one ring.
+ *
+ */
+static inline int
+dp_get_lmac_id_for_pdev_id
+	(struct dp_soc *soc, uint32_t mac_id, uint32_t pdev_id)
+{
+	if (!wlan_cfg_per_pdev_lmac_ring(soc->wlan_cfg_ctx)) {
+		if (mac_id && pdev_id) {
+			qdf_print("Both mac_id and pdev_id cannot be non zero");
+			QDF_BUG(0);
+			return 0;
+		}
+		return (mac_id + pdev_id);
+	}
+
+	return soc->pdev_list[pdev_id]->lmac_id;
+}
+
+/**
+ * dp_get_pdev_for_lmac_id() -  Return pdev pointer corresponding to lmac id
+ * @soc: soc pointer
+ * @lmac_id: LMAC id
+ *
+ * For MCL, Single pdev exists
+ *
+ * For WIN, each PDEV will operate one ring.
+ *
+ */
+static inline struct dp_pdev *
+	dp_get_pdev_for_lmac_id(struct dp_soc *soc, uint32_t lmac_id)
+{
+	int i = 0;
+
+	if (wlan_cfg_per_pdev_lmac_ring(soc->wlan_cfg_ctx)) {
+		i = wlan_cfg_get_pdev_idx(soc->wlan_cfg_ctx, lmac_id);
+		qdf_assert_always(i < MAX_PDEV_CNT);
+
+		return soc->pdev_list[i];
+	}
+
+	/* Typically for MCL as there only 1 PDEV*/
+	return soc->pdev_list[0];
+}
+
+/**
+ * dp_get_target_pdev_id_for_host_pdev_id() - Return target pdev corresponding
+ *                                         to host pdev id
+ * @soc: soc pointer
+ * @mac_for_pdev: pdev_id corresponding to host pdev for WIN, mac id for MCL
+ *
+ * returns target pdev_id for host pdev id. For WIN, this is derived through
+ * a two step process:
+ * 1. Get lmac_id corresponding to host pdev_id (lmac_id can change
+ *    during mode switch)
+ * 2. Get target pdev_id (set up during WMI ready) from lmac_id
+ *
+ * For MCL, return the offset-1 translated mac_id
+ */
+static inline int
+dp_get_target_pdev_id_for_host_pdev_id
+	(struct dp_soc *soc, uint32_t mac_for_pdev)
+{
+	struct dp_pdev *pdev;
+
+	if (!wlan_cfg_per_pdev_lmac_ring(soc->wlan_cfg_ctx))
+		return DP_SW2HW_MACID(mac_for_pdev);
+
+	pdev = soc->pdev_list[mac_for_pdev];
+
+	/*non-MCL case, get original target_pdev mapping*/
+	return wlan_cfg_get_target_pdev_id(soc->wlan_cfg_ctx, pdev->lmac_id);
+}
+
+/**
+ * dp_get_host_pdev_id_for_target_pdev_id() - Return host pdev corresponding
+ *                                         to target pdev id
+ * @soc: soc pointer
+ * @pdev_id: pdev_id corresponding to target pdev
+ *
+ * returns host pdev_id for target pdev id. For WIN, this is derived through
+ * a two step process:
+ * 1. Get lmac_id corresponding to target pdev_id
+ * 2. Get host pdev_id (set up during WMI ready) from lmac_id
+ *
+ * For MCL, return the 0-offset pdev_id
+ */
+static inline int
+dp_get_host_pdev_id_for_target_pdev_id
+	(struct dp_soc *soc, uint32_t pdev_id)
+{
+	struct dp_pdev *pdev;
+	int lmac_id;
+
+	if (!wlan_cfg_per_pdev_lmac_ring(soc->wlan_cfg_ctx))
+		return DP_HW2SW_MACID(pdev_id);
+
+	/*non-MCL case, get original target_lmac mapping from target pdev*/
+	lmac_id = wlan_cfg_get_hw_mac_idx(soc->wlan_cfg_ctx,
+					  DP_HW2SW_MACID(pdev_id));
+
+	/*Get host pdev from lmac*/
+	pdev = dp_get_pdev_for_lmac_id(soc, lmac_id);
+
+	return pdev->pdev_id;
+}
+
 /*
  * dp_get_mac_id_for_mac() -  Return mac corresponding WIN and MCL mac_ids
  *
@@ -1257,13 +1493,13 @@ QDF_STATUS dp_h2t_cfg_stats_msg_send(struct dp_pdev *pdev,
 				uint32_t stats_type_upload_mask,
 				uint8_t mac_id);
 
-int dp_wdi_event_unsub(struct cdp_pdev *txrx_pdev_handle,
-	void *event_cb_sub_handle,
-	uint32_t event);
+int dp_wdi_event_unsub(struct cdp_soc_t *soc, uint8_t pdev_id,
+		       wdi_event_subscribe *event_cb_sub_handle,
+		       uint32_t event);
 
-int dp_wdi_event_sub(struct cdp_pdev *txrx_pdev_handle,
-	void *event_cb_sub_handle,
-	uint32_t event);
+int dp_wdi_event_sub(struct cdp_soc_t *soc, uint8_t pdev_id,
+		     wdi_event_subscribe *event_cb_sub_handle,
+		     uint32_t event);
 
 void dp_wdi_event_handler(enum WDI_EVENT event, struct dp_soc *soc,
 			  void *data, u_int16_t peer_id,
@@ -1273,7 +1509,15 @@ int dp_wdi_event_attach(struct dp_pdev *txrx_pdev);
 int dp_wdi_event_detach(struct dp_pdev *txrx_pdev);
 int dp_set_pktlog_wifi3(struct dp_pdev *pdev, uint32_t event,
 	bool enable);
-void *dp_get_pldev(struct cdp_pdev *txrx_pdev);
+
+/**
+ * dp_get_pldev() - function to get pktlog device handle
+ * @soc_hdl: datapath soc handle
+ * @pdev_id: physical device id
+ *
+ * Return: pktlog device handle or NULL
+ */
+void *dp_get_pldev(struct cdp_soc_t *soc_hdl, uint8_t pdev_id);
 void dp_pkt_log_init(struct cdp_soc_t *soc_hdl, uint8_t pdev_id, void *scn);
 
 static inline void
@@ -1298,16 +1542,16 @@ dp_hif_update_pipe_callback(struct dp_soc *dp_soc,
 QDF_STATUS dp_peer_stats_notify(struct dp_pdev *pdev, struct dp_peer *peer);
 
 #else
-static inline int dp_wdi_event_unsub(struct cdp_pdev *txrx_pdev_handle,
-	void *event_cb_sub_handle,
-	uint32_t event)
+static inline int dp_wdi_event_unsub(struct cdp_soc_t *soc, uint8_t pdev_id,
+				     wdi_event_subscribe *event_cb_sub_handle,
+				     uint32_t event)
 {
 	return 0;
 }
 
-static inline int dp_wdi_event_sub(struct cdp_pdev *txrx_pdev_handle,
-	void *event_cb_sub_handle,
-	uint32_t event)
+static inline int dp_wdi_event_sub(struct cdp_soc_t *soc, uint8_t pdev_id,
+				   wdi_event_subscribe *event_cb_sub_handle,
+				   uint32_t event)
 {
 	return 0;
 }
@@ -1355,6 +1599,48 @@ static inline QDF_STATUS dp_peer_stats_notify(struct dp_pdev *pdev,
 }
 
 #endif /* CONFIG_WIN */
+
+#ifdef VDEV_PEER_PROTOCOL_COUNT
+/**
+ * dp_vdev_peer_stats_update_protocol_cnt() - update per-peer protocol counters
+ * @vdev: VDEV DP object
+ * @nbuf: data packet
+ * @peer: Peer DP object
+ * @is_egress: whether egress or ingress
+ * @is_rx: whether rx or tx
+ *
+ * This function updates the per-peer protocol counters
+ * Return: void
+ */
+void dp_vdev_peer_stats_update_protocol_cnt(struct dp_vdev *vdev,
+					    qdf_nbuf_t nbuf,
+					    struct dp_peer *peer,
+					    bool is_egress,
+					    bool is_rx);
+
+/**
+ * dp_vdev_peer_stats_update_protocol_cnt() - update per-peer protocol counters
+ * @soc: SOC DP object
+ * @vdev_id: vdev_id
+ * @nbuf: data packet
+ * @is_egress: whether egress or ingress
+ * @is_rx: whether rx or tx
+ *
+ * This function updates the per-peer protocol counters
+ * Return: void
+ */
+
+void dp_peer_stats_update_protocol_cnt(struct cdp_soc_t *soc,
+				       int8_t vdev_id,
+				       qdf_nbuf_t nbuf,
+				       bool is_egress,
+				       bool is_rx);
+
+#else
+#define dp_vdev_peer_stats_update_protocol_cnt(vdev, nbuf, peer, \
+					       is_egress, is_rx)
+#endif
+
 #ifdef QCA_LL_TX_FLOW_CONTROL_V2
 void dp_tx_dump_flow_pool_info(struct cdp_soc_t *soc_hdl);
 int dp_tx_delete_flow_pool(struct dp_soc *soc, struct dp_tx_desc_pool_s *pool,
@@ -1720,5 +2006,28 @@ dp_get_pdev_from_soc_pdev_id_wifi3(struct dp_soc *soc,
  */
 QDF_STATUS dp_rx_tid_update_wifi3(struct dp_peer *peer, int tid, uint32_t
 					 ba_window_size, uint32_t start_seq);
+
+/**
+ * dp_get_peer_mac_list(): function to get peer mac list of vdev
+ * @soc: Datapath soc handle
+ * @vdev_id: vdev id
+ * @newmac: Table of the clients mac
+ * @mac_cnt: No. of MACs required
+ *
+ * return: no of clients
+ */
+uint16_t dp_get_peer_mac_list(ol_txrx_soc_handle soc, uint8_t vdev_id,
+			      u_int8_t newmac[][QDF_MAC_ADDR_SIZE],
+			      u_int16_t mac_cnt);
+/*
+ * dp_is_hw_dbs_enable() - Procedure to check if DBS is supported
+ * @soc:		DP SoC context
+ * @max_mac_rings:	No of MAC rings
+ *
+ * Return: None
+ */
+void dp_is_hw_dbs_enable(struct dp_soc *soc,
+				int *max_mac_rings);
+
 
 #endif /* #ifndef _DP_INTERNAL_H_ */

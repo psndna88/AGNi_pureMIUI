@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -153,6 +153,20 @@ struct dp_tx_msdu_info_s {
 	uint8_t is_tx_sniffer;
 };
 
+/**
+ * dp_tx_deinit_pair_by_index() - Deinit TX rings based on index
+ * @soc: core txrx context
+ * @index: index of ring to deinit
+ *
+ * Deinit 1 TCL and 1 WBM2SW release ring on as needed basis using
+ * index of the respective TCL/WBM2SW release in soc structure.
+ * For example, if the index is 2 then &soc->tcl_data_ring[2]
+ * and &soc->tx_comp_ring[2] will be deinitialized.
+ *
+ * Return: none
+ */
+void dp_tx_deinit_pair_by_index(struct dp_soc *soc, int index);
+
 QDF_STATUS dp_tx_vdev_attach(struct dp_vdev *vdev);
 QDF_STATUS dp_tx_vdev_detach(struct dp_vdev *vdev);
 void dp_tx_vdev_update_search_flags(struct dp_vdev *vdev);
@@ -186,7 +200,9 @@ QDF_STATUS dp_tx_pdev_detach(struct dp_pdev *pdev);
 QDF_STATUS dp_tx_pdev_attach(struct dp_pdev *pdev);
 
 qdf_nbuf_t dp_tx_send(struct cdp_soc_t *soc, uint8_t vdev_id, qdf_nbuf_t nbuf);
-qdf_nbuf_t dp_tx_send_exception(struct cdp_vdev *data_vdev, qdf_nbuf_t nbuf,
+
+qdf_nbuf_t dp_tx_send_exception(struct cdp_soc_t *soc, uint8_t vdev_id,
+				qdf_nbuf_t nbuf,
 				struct cdp_tx_exception_metadata *tx_exc);
 qdf_nbuf_t dp_tx_send_mesh(struct cdp_soc_t *soc, uint8_t vdev_id,
 			   qdf_nbuf_t nbuf);
@@ -352,4 +368,11 @@ static inline void dp_tx_comp_process_exception(struct dp_tx_desc_s *tx_desc)
 	return;
 }
 /* TODO TX_FEATURE_NOT_YET */
+
+#ifndef WLAN_TX_PKT_CAPTURE_ENH
+static inline
+void dp_peer_set_tx_capture_enabled(struct dp_peer *peer_handle, bool value)
+{
+}
+#endif
 #endif

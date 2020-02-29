@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -134,6 +134,7 @@ union dp_rx_desc_list_elem_t;
 struct cdp_peer_rate_stats_ctx;
 struct cdp_soc_rate_stats_ctx;
 struct dp_rx_fst;
+struct dp_mon_filter;
 
 #define DP_PDEV_ITERATE_VDEV_LIST(_pdev, _vdev) \
 	TAILQ_FOREACH((_vdev), &(_pdev)->vdev_list, vdev_list_elem)
@@ -200,12 +201,12 @@ enum dp_fl_ctrl_threshold {
 
 /**
  * enum dp_intr_mode
- * @DP_INTR_LEGACY: Legacy/Line interrupts, for WIN
- * @DP_INTR_MSI: MSI interrupts, for MCL
+ * @DP_INTR_INTEGRATED: Line interrupts
+ * @DP_INTR_MSI: MSI interrupts
  * @DP_INTR_POLL: Polling
  */
 enum dp_intr_mode {
-	DP_INTR_LEGACY = 0,
+	DP_INTR_INTEGRATED = 0,
 	DP_INTR_MSI,
 	DP_INTR_POLL,
 };
@@ -292,6 +293,8 @@ enum dp_cpu_ring_map_types {
  * @freelist: pointer to free RX descriptor link list
  * @lock: Protection for the RX descriptor pool
  * @owner: owner for nbuf
+ * @buf_size: Buffer size
+ * @buf_alignment: Buffer alignment
  */
 struct rx_desc_pool {
 	uint32_t pool_size;
@@ -304,6 +307,8 @@ struct rx_desc_pool {
 	union dp_rx_desc_list_elem_t *freelist;
 	qdf_spinlock_t lock;
 	uint8_t owner;
+	uint16_t buf_size;
+	uint8_t buf_alignment;
 };
 
 /**
@@ -735,6 +740,9 @@ struct dp_soc_stats {
 		uint32_t hp_oos2;
 		/* Rx ring near full */
 		uint32_t near_full;
+		/* Break ring reaping as not all scattered msdu received */
+		uint32_t msdu_scatter_wait_break;
+
 		struct {
 			/* Invalid RBM error count */
 			uint32_t invalid_rbm;
@@ -775,6 +783,8 @@ struct dp_soc_stats {
 			uint32_t hal_rxdma_err_dup;
 			/* REO cmd send fail/requeue count */
 			uint32_t reo_cmd_send_fail;
+			/* RX msdu drop count due to scatter */
+			uint32_t scatter_msdu;
 		} err;
 
 		/* packet count per core - per ring */
@@ -906,6 +916,32 @@ struct dp_soc {
 
 	/* PDEVs on this SOC */
 	struct dp_pdev *pdev_list[MAX_PDEV_CNT];
+
+	/* Ring used to replenish rx buffers (maybe to the firmware of MAC) */
+	struct dp_srng rx_refill_buf_ring[MAX_PDEV_CNT];
+
+	struct dp_srng rxdma_mon_desc_ring[MAX_NUM_LMAC_HW];
+
+	/* RXDMA error destination ring */
+	struct dp_srng rxdma_err_dst_ring[MAX_NUM_LMAC_HW];
+
+	/* Link descriptor memory banks */
+	struct {
+		void *base_vaddr_unaligned;
+		void *base_vaddr;
+		qdf_dma_addr_t base_paddr_unaligned;
+		qdf_dma_addr_t base_paddr;
+		uint32_t size;
+	} mon_link_desc_banks[MAX_NUM_LMAC_HW][MAX_MON_LINK_DESC_BANKS];
+
+	/* RXDMA monitor buffer replenish ring */
+	struct dp_srng rxdma_mon_buf_ring[MAX_NUM_LMAC_HW];
+
+	/* RXDMA monitor destination ring */
+	struct dp_srng rxdma_mon_dst_ring[MAX_NUM_LMAC_HW];
+
+	/* RXDMA monitor status ring. TBD: Check format of this ring */
+	struct dp_srng rxdma_mon_status_ring[MAX_NUM_LMAC_HW];
 
 	/* Number of PDEVs */
 	uint8_t pdev_count;
@@ -1115,8 +1151,11 @@ struct dp_soc {
 	/*interrupt timer*/
 	qdf_timer_t mon_reap_timer;
 	uint8_t reap_timer_init;
+	qdf_timer_t lmac_reap_timer;
+	uint8_t lmac_timer_init;
 	qdf_timer_t int_timer;
 	uint8_t intr_mode;
+	uint8_t lmac_polled_mode;
 
 	qdf_list_t reo_desc_freelist;
 	qdf_spinlock_t reo_desc_freelist_lock;
@@ -1161,6 +1200,18 @@ struct dp_soc {
 	} ipa_uc_rx_rsc;
 
 	qdf_atomic_t ipa_pipes_enabled;
+	bool ipa_first_tx_db_access;
+#endif
+
+#ifdef WLAN_FEATURE_STATS_EXT
+	struct {
+		uint32_t rx_mpdu_received;
+		uint32_t rx_mpdu_missed;
+	} ext_stats;
+	qdf_event_t rx_hw_stats_event;
+
+	/* Ignore reo command queue status during peer delete */
+	bool ignore_reo_status_cb;
 #endif
 
 	/* Smart monitor capability for HKv2 */
@@ -1393,32 +1444,6 @@ struct dp_pdev {
 	/* TXRX SOC handle */
 	struct dp_soc *soc;
 
-	/* Ring used to replenish rx buffers (maybe to the firmware of MAC) */
-	struct dp_srng rx_refill_buf_ring;
-
-	/* RXDMA error destination ring */
-	struct dp_srng rxdma_err_dst_ring[NUM_RXDMA_RINGS_PER_PDEV];
-
-	/* Link descriptor memory banks */
-	struct {
-		void *base_vaddr_unaligned;
-		void *base_vaddr;
-		qdf_dma_addr_t base_paddr_unaligned;
-		qdf_dma_addr_t base_paddr;
-		uint32_t size;
-	} link_desc_banks[NUM_RXDMA_RINGS_PER_PDEV][MAX_MON_LINK_DESC_BANKS];
-
-	/* RXDMA monitor buffer replenish ring */
-	struct dp_srng rxdma_mon_buf_ring[NUM_RXDMA_RINGS_PER_PDEV];
-
-	/* RXDMA monitor destination ring */
-	struct dp_srng rxdma_mon_dst_ring[NUM_RXDMA_RINGS_PER_PDEV];
-
-	/* RXDMA monitor status ring. TBD: Check format of this ring */
-	struct dp_srng rxdma_mon_status_ring[NUM_RXDMA_RINGS_PER_PDEV];
-
-	struct dp_srng rxdma_mon_desc_ring[NUM_RXDMA_RINGS_PER_PDEV];
-
 	/* Stuck count on monitor destination ring MPDU process */
 	uint32_t mon_dest_ring_stuck_cnt;
 
@@ -1479,6 +1504,9 @@ struct dp_pdev {
 
 	/* Monitor mode operation channel */
 	int mon_chan_num;
+
+	/* Monitor mode operation frequency */
+	qdf_freq_t mon_chan_freq;
 
 	/* monitor mode lock */
 	qdf_spinlock_t mon_lock;
@@ -1617,6 +1645,7 @@ struct dp_pdev {
 	bool tx_sniffer_enable;
 	/* mirror copy mode */
 	bool mcopy_mode;
+	bool cfr_rcc_mode;
 	bool bpr_enable;
 
 	/* enable time latency check for tx completion */
@@ -1746,6 +1775,8 @@ struct dp_pdev {
 #ifdef WLAN_SUPPORT_DATA_STALL
 	data_stall_detect_cb data_stall_detect_callback;
 #endif /* WLAN_SUPPORT_DATA_STALL */
+
+	struct dp_mon_filter **filter;	/* Monitor Filter pointer */
 };
 
 struct dp_peer;
@@ -1896,7 +1927,7 @@ struct dp_vdev {
 	struct dp_tx_desc_pool_s *pool;
 #endif
 	/* AP BRIDGE enabled */
-	uint32_t ap_bridge_enabled;
+	bool ap_bridge_enabled;
 
 	enum cdp_sec_type  sec_type;
 
@@ -1937,6 +1968,23 @@ struct dp_vdev {
 	TAILQ_HEAD(, dp_peer) mpass_peer_list;
 	DP_MUTEX_TYPE mpass_peer_mutex;
 #endif
+	/* Extended data path handle */
+	struct cdp_ext_vdev *vdev_dp_ext_handle;
+#ifdef VDEV_PEER_PROTOCOL_COUNT
+	/*
+	 * Rx-Ingress and Tx-Egress are in the lower level DP layer
+	 * Rx-Egress and Tx-ingress are handled in osif layer for DP
+	 * So
+	 * Rx-Egress and Tx-ingress mask definitions are in OSIF layer
+	 * Rx-Ingress and Tx-Egress definitions are here below
+	 */
+#define VDEV_PEER_PROTOCOL_RX_INGRESS_MASK 1
+#define VDEV_PEER_PROTOCOL_TX_INGRESS_MASK 2
+#define VDEV_PEER_PROTOCOL_RX_EGRESS_MASK 4
+#define VDEV_PEER_PROTOCOL_TX_EGRESS_MASK 8
+	bool peer_protocol_count_track;
+	int peer_protocol_count_dropmask;
+#endif
 };
 
 
@@ -1970,6 +2018,51 @@ struct dp_peer_cached_bufq {
 	uint32_t thresh;
 	uint32_t entries;
 	uint32_t dropped;
+};
+
+/**
+ * enum dp_peer_ast_flowq
+ * @DP_PEER_AST_FLOWQ_HI_PRIO: Hi Priority flow queue
+ * @DP_PEER_AST_FLOWQ_LOW_PRIO: Low priority flow queue
+ * @DP_PEER_AST_FLOWQ_UDP: flow queue type is UDP
+ * @DP_PEER_AST_FLOWQ_NON_UDP: flow queue type is Non UDP
+ */
+enum dp_peer_ast_flowq {
+	DP_PEER_AST_FLOWQ_HI_PRIO,
+	DP_PEER_AST_FLOWQ_LOW_PRIO,
+	DP_PEER_AST_FLOWQ_UDP,
+	DP_PEER_AST_FLOWQ_NON_UDP,
+	DP_PEER_AST_FLOWQ_MAX,
+};
+
+/*
+ * struct dp_ast_flow_override_info - ast override info
+ * @ast_index - ast indexes in peer map message
+ * @ast_valid_mask - ast valid mask for each ast index
+ * @ast_flow_mask - ast flow mask for each ast index
+ * @tid_valid_low_pri_mask - per tid mask for low priority flow
+ * @tid_valid_hi_pri_mask - per tid mask for hi priority flow
+ */
+struct dp_ast_flow_override_info {
+	uint16_t ast_idx[DP_PEER_AST_FLOWQ_MAX];
+	uint8_t ast_valid_mask;
+	uint8_t ast_flow_mask[DP_PEER_AST_FLOWQ_MAX];
+	uint8_t tid_valid_low_pri_mask;
+	uint8_t tid_valid_hi_pri_mask;
+};
+
+/*
+ * struct dp_peer_ast_params - ast parameters for a msdu flow-queue
+ * @ast_index - ast index populated by FW
+ * @is_valid - ast flow valid mask
+ * @valid_tid_mask - per tid mask for this ast index
+ * @flowQ - flow queue id associated with this ast index
+ */
+struct dp_peer_ast_params {
+	uint16_t ast_idx;
+	uint8_t is_valid;
+	uint8_t valid_tid_mask;
+	uint8_t flowQ;
 };
 
 /* Peer structure for data path state */
@@ -2070,6 +2163,9 @@ struct dp_peer {
 	bool last_delayed_ba;
 	/* delayed ba ppdu id */
 	uint32_t last_delayed_ba_ppduid;
+#endif
+#ifdef QCA_PEER_MULTIQ_SUPPORT
+	struct dp_peer_ast_params peer_ast_flowq_idx[DP_PEER_AST_FLOWQ_MAX];
 #endif
 };
 

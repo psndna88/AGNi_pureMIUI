@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -267,6 +267,15 @@ uint16_t wlan_reg_dmn_get_opclass_from_channel(uint8_t *country,
 						offset);
 }
 
+uint8_t wlan_reg_get_opclass_from_freq_width(uint8_t *country,
+					     qdf_freq_t freq,
+					     uint8_t ch_width,
+					     uint16_t behav_limit)
+{
+	return reg_dmn_get_opclass_from_freq_width(country, freq, ch_width,
+						   behav_limit);
+}
+
 void wlan_reg_dmn_print_channels_in_opclass(uint8_t *country,
 					    uint8_t opclass)
 {
@@ -291,6 +300,18 @@ uint16_t wlan_reg_dmn_get_curr_opclasses(uint8_t *num_classes,
 					 uint8_t *class)
 {
 	return reg_dmn_get_curr_opclasses(num_classes, class);
+}
+
+QDF_STATUS
+wlan_reg_get_opclass_details(struct wlan_objmgr_pdev *pdev,
+			     struct regdmn_ap_cap_opclass_t *reg_ap_cap,
+			     uint8_t *n_opclasses,
+			     uint8_t max_supp_op_class,
+			     bool global_tbl_lookup)
+{
+	return reg_get_opclass_details(pdev, reg_ap_cap, n_opclasses,
+				       max_supp_op_class,
+				       global_tbl_lookup);
 }
 
 QDF_STATUS wlan_regulatory_init(void)
@@ -465,12 +486,6 @@ void wlan_reg_update_nol_history_ch(struct wlan_objmgr_pdev *pdev,
 				    bool nol_history_ch)
 {
 	reg_update_nol_history_ch(pdev, ch_list, num_ch, nol_history_ch);
-}
-
-bool wlan_reg_is_dfs_ch(struct wlan_objmgr_pdev *pdev,
-			uint8_t chan)
-{
-	return reg_is_dfs_ch(pdev, chan);
 }
 
 bool wlan_reg_is_passive_or_disable_ch(struct wlan_objmgr_pdev *pdev,

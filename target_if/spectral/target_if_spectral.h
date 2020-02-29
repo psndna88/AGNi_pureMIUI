@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011,2017-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011,2017-2020 The Linux Foundation. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -81,12 +81,13 @@
 #define OFFSET_CH_WIDTH_160	50
 
 /* Min and max for relevant Spectral params */
-#define SPECTRAL_PARAM_FFT_SIZE_MIN_GEN2   (1)
-#define SPECTRAL_PARAM_FFT_SIZE_MAX_GEN2   (9)
-#define SPECTRAL_PARAM_FFT_SIZE_MIN_GEN3   (5)
-#define SPECTRAL_PARAM_FFT_SIZE_MAX_GEN3   (9)
-#define SPECTRAL_PARAM_RPT_MODE_MIN        (0)
-#define SPECTRAL_PARAM_RPT_MODE_MAX        (3)
+#define SPECTRAL_PARAM_FFT_SIZE_MIN_GEN2          (1)
+#define SPECTRAL_PARAM_FFT_SIZE_MAX_GEN2          (9)
+#define SPECTRAL_PARAM_FFT_SIZE_MIN_GEN3          (5)
+#define SPECTRAL_PARAM_FFT_SIZE_MAX_GEN3_DEFAULT  (9)
+#define SPECTRAL_PARAM_FFT_SIZE_MAX_GEN3_QCN9000  (10)
+#define SPECTRAL_PARAM_RPT_MODE_MIN               (0)
+#define SPECTRAL_PARAM_RPT_MODE_MAX               (3)
 
 /* DBR ring debug size for Spectral */
 #define SPECTRAL_DBR_RING_DEBUG_SIZE 512
@@ -252,13 +253,20 @@ struct spectral_phyerr_fft_gen2 {
 #define SSCAN_SUMMARY_REPORT_HDR_A_INBAND_PWR_DB_SIZE_GEN3      (10)
 #define SSCAN_SUMMARY_REPORT_HDR_A_PRI80_POS_GEN3               (31)
 #define SSCAN_SUMMARY_REPORT_HDR_A_PRI80_SIZE_GEN3              (1)
-#define SSCAN_SUMMARY_REPORT_HDR_B_GAINCHANGE_POS_GEN3          (30)
-#define SSCAN_SUMMARY_REPORT_HDR_B_GAINCHANGE_SIZE_GEN3         (1)
+#define SSCAN_SUMMARY_REPORT_HDR_B_GAINCHANGE_POS_GEN3_V1       (30)
+#define SSCAN_SUMMARY_REPORT_HDR_B_GAINCHANGE_SIZE_GEN3_V1      (1)
+#define SSCAN_SUMMARY_REPORT_HDR_C_GAINCHANGE_POS_GEN3_V2       (16)
+#define SSCAN_SUMMARY_REPORT_HDR_C_GAINCHANGE_SIZE_GEN3_V2      (1)
 
 #define SPECTRAL_PHYERR_SIGNATURE_GEN3                          (0xFA)
 #define TLV_TAG_SPECTRAL_SUMMARY_REPORT_GEN3                    (0x02)
 #define TLV_TAG_SEARCH_FFT_REPORT_GEN3                          (0x03)
 #define SPECTRAL_PHYERR_TLVSIZE_GEN3                            (4)
+
+#define FFT_REPORT_HEADER_LENGTH_GEN3_V2                   (24)
+#define FFT_REPORT_HEADER_LENGTH_GEN3_V1                   (16)
+#define NUM_PADDING_BYTES_SSCAN_SUMARY_REPORT_GEN3_V1      (0)
+#define NUM_PADDING_BYTES_SSCAN_SUMARY_REPORT_GEN3_V2      (16)
 
 #define PHYERR_HDR_SIG_POS    \
 	(offsetof(struct spectral_phyerr_fft_report_gen3, fft_hdr_sig))
@@ -374,7 +382,7 @@ struct sscan_report_fields_gen3 {
  * @hdr_a:          Header[0:31]
  * @resv:           Header[32:63]
  * @hdr_b:          Header[64:95]
- * @resv:           Header[96:127]
+ * @hdr_c:          Header[96:127]
  */
 struct spectral_sscan_summary_report_gen3 {
 	u_int32_t sscan_timestamp;
@@ -390,7 +398,7 @@ struct spectral_sscan_summary_report_gen3 {
 	u_int32_t hdr_a;
 	u_int32_t res1;
 	u_int32_t hdr_b;
-	u_int32_t res2;
+	u_int32_t hdr_c;
 } __ATTRIB_PACK;
 
 #ifdef DIRECT_BUF_RX_ENABLE
@@ -436,6 +444,89 @@ enum spectral_fftbin_size_war {
 	SPECTRAL_FFTBIN_SIZE_NO_WAR = 0,
 	SPECTRAL_FFTBIN_SIZE_WAR_2BYTE_TO_1BYTE = 1,
 	SPECTRAL_FFTBIN_SIZE_WAR_4BYTE_TO_1BYTE = 2,
+};
+
+/**
+ * enum spectral_report_format_version - This represents the report format
+ * version number within each Spectral generation.
+ * @SPECTRAL_REPORT_FORMAT_VERSION_1 : version 1
+ * @SPECTRAL_REPORT_FORMAT_VERSION_2 : version 2
+ */
+enum spectral_report_format_version {
+	SPECTRAL_REPORT_FORMAT_VERSION_1,
+	SPECTRAL_REPORT_FORMAT_VERSION_2,
+};
+
+/**
+ * struct spectral_fft_bin_len_adj_swar - Encapsulate information required for
+ * Spectral FFT bin length adjusting software WARS.
+ * @inband_fftbin_size_adj: Whether to carry out FFT bin size adjustment for
+ * in-band report format. This would be required on some chipsets under the
+ * following circumstances: In report mode 2 only the in-band bins are DMA'ed.
+ * Scatter/gather is used. However, the HW generates all bins, not just in-band,
+ * and reports the number of bins accordingly. The subsystem arranging for the
+ * DMA cannot change this value. On such chipsets the adjustment required at the
+ * host driver is to check if report format is 2, and if so halve the number of
+ * bins reported to get the number actually DMA'ed.
+ * @null_fftbin_adj: Whether to remove NULL FFT bins for report mode (1) in
+ * which only summary of metrics for each completed FFT + spectral scan summary
+ * report are to be provided. This would be required on some chipsets under the
+ * following circumstances: In report mode 1, HW reports a length corresponding
+ * to all bins, and provides bins with value 0. This is because the subsystem
+ * arranging for the FFT information does not arrange for DMA of FFT bin values
+ * (as expected), but cannot arrange for a smaller length to be reported by HW.
+ * In these circumstances, the driver would have to disregard the NULL bins and
+ * report a bin count of 0 to higher layers.
+ * @packmode_fftbin_size_adj: Pack mode in HW refers to packing of each Spectral
+ * FFT bin into 2 bytes. But due to a bug HW reports 2 times the expected length
+ * when packmode is enabled. This SWAR compensates this bug by dividing the
+ * length with 2.
+ * @fftbin_size_war: Type of FFT bin size SWAR
+ */
+struct spectral_fft_bin_len_adj_swar {
+	u_int8_t inband_fftbin_size_adj;
+	u_int8_t null_fftbin_adj;
+	uint8_t packmode_fftbin_size_adj;
+	enum spectral_fftbin_size_war fftbin_size_war;
+};
+
+/**
+ * struct spectral_report_params - Parameters related to format of Spectral
+ * report.
+ * @version: This represents the report format version number within each
+ * Spectral generation.
+ * @ssumaary_padding_bytes: Number of bytes of padding after Spectral summary
+ * report
+ * @fft_report_hdr_len: Number of bytes in the header of the FFT report. This
+ * has to be subtracted from the length field of FFT report to find the length
+ * of FFT bins.
+ */
+struct spectral_report_params {
+	enum spectral_report_format_version version;
+	uint8_t ssumaary_padding_bytes;
+	uint8_t fft_report_hdr_len;
+};
+
+/**
+ * struct spectral_param_min_max - Spectral parameter minimum and maximum values
+ * @fft_size_min: Minimum value of fft_size
+ * @fft_size_max: Maximum value of fft_size for each BW
+ */
+struct spectral_param_min_max {
+	uint16_t fft_size_min;
+	uint16_t fft_size_max[CH_WIDTH_MAX];
+};
+
+/**
+ * struct spectral_timestamp_swar - Spectral time stamp WAR related parameters
+ * @timestamp_war_offset: Offset to be added to correct timestamp
+ * @target_reset_count: Number of times target exercised the reset routine
+ * @last_fft_timestamp: last fft report timestamp
+ */
+struct spectral_timestamp_war {
+	uint32_t timestamp_war_offset[SPECTRAL_SCAN_MODE_MAX];
+	uint64_t target_reset_count;
+	uint32_t last_fft_timestamp[SPECTRAL_SCAN_MODE_MAX];
 };
 
 #if ATH_PERF_PWR_OFFLOAD
@@ -796,8 +887,7 @@ struct spectral_param_properties {
  * @chaninfo: Channel statistics
  * @tsf64: Latest TSF Value
  * @param_info: Offload architecture Spectral parameter cache information
- * @ch_width: Indicates Channel Width 20/40/80/160 MHz with values 0, 1, 2, 3
- * respectively
+ * @ch_width: Indicates Channel Width 20/40/80/160 MHz for each Spectral mode
  * @diag_stats: Diagnostic statistics
  * @is_160_format:  Indicates whether information provided by HW is in altered
  * format for 802.11ac 160/80+80 MHz support (QCA9984 onwards)
@@ -820,31 +910,15 @@ struct spectral_param_properties {
  * @nl_cb: Netlink callbacks
  * @use_nl_bcast: Whether to use Netlink broadcast/unicast
  * @send_phy_data: Send data to the application layer for a particular msg type
- * @inband_fftbin_size_adj: Whether to carry out FFT bin size adjustment for
- * in-band report format. This would be required on some chipsets under the
- * following circumstances: In report mode 2 only the in-band bins are DMA'ed.
- * Scatter/gather is used. However, the HW generates all bins, not just in-band,
- * and reports the number of bins accordingly. The subsystem arranging for the
- * DMA cannot change this value. On such chipsets the adjustment required at the
- * host driver is to check if report format is 2, and if so halve the number of
- * bins reported to get the number actually DMA'ed.
- * @null_fftbin_adj: Whether to remove NULL FFT bins for report mode (1) in
- * which only summary of metrics for each completed FFT + spectral scan summary
- * report are to be provided. This would be required on some chipsets under the
- * following circumstances: In report mode 1, HW reports a length corresponding
- * to all bins, and provides bins with value 0. This is because the subsystem
- * arranging for the FFT information does not arrange for DMA of FFT bin values
- * (as expected), but cannot arrange for a smaller length to be reported by HW.
- * In these circumstances, the driver would have to disregard the NULL bins and
- * report a bin count of 0 to higher layers.
- * @last_fft_timestamp: last fft report timestamp
- * @timestamp_war_offset: Offset to be added to correct timestamp
+ * @len_adj_swar: Spectral fft bin length adjustment SWAR related info
+ * @timestamp_war: Spectral time stamp WAR related info
  * @dbr_ring_debug: Whether Spectral DBR ring debug is enabled
  * @dbr_buff_debug: Whether Spectral DBR buffer debug is enabled
  * @direct_dma_support: Whether Direct-DMA is supported on the current radio
  * @prev_tstamp: Timestamp of the previously received sample, which has to be
  * compared with the current tstamp to check descrepancy
- * @target_reset_count: Number of times target excercised the reset routine
+ * @rparams: Parameters related to Spectral report structure
+ * @param_min_max: Spectral parameter's minimum and maximum values
  */
 struct target_if_spectral {
 	struct wlan_objmgr_pdev *pdev_obj;
@@ -931,8 +1005,7 @@ struct target_if_spectral {
 	struct target_if_spectral_param_state_info
 					param_info[SPECTRAL_SCAN_MODE_MAX];
 #endif
-	uint32_t                               ch_width;
-	uint32_t                               agile_ch_width;
+	enum phy_ch_width ch_width[SPECTRAL_SCAN_MODE_MAX];
 	struct spectral_diag_stats              diag_stats;
 	bool                                    is_160_format;
 	bool                                    is_lb_edge_extrabins_format;
@@ -951,20 +1024,15 @@ struct target_if_spectral {
 	bool use_nl_bcast;
 	int (*send_phy_data)(struct wlan_objmgr_pdev *pdev,
 			     enum spectral_msg_type smsg_type);
-	enum spectral_fftbin_size_war          fftbin_size_war;
-	u_int8_t                               inband_fftbin_size_adj;
-	u_int8_t                               null_fftbin_adj;
+	struct spectral_fft_bin_len_adj_swar len_adj_swar;
+	struct spectral_timestamp_war timestamp_war;
 	enum spectral_160mhz_report_delivery_state state_160mhz_delivery;
-	void *spectral_report_cache;
-	uint32_t last_fft_timestamp[SPECTRAL_SCAN_MODE_MAX];
-	uint32_t timestamp_war_offset[SPECTRAL_SCAN_MODE_MAX];
-	uint16_t fft_size_min;
-	uint16_t fft_size_max;
 	bool dbr_ring_debug;
 	bool dbr_buff_debug;
 	bool direct_dma_support;
 	uint32_t prev_tstamp;
-	uint32_t target_reset_count;
+	struct spectral_report_params rparams;
+	struct spectral_param_min_max param_min_max;
 };
 
 /**
@@ -1262,22 +1330,6 @@ int target_if_spectral_dump_phyerr_data_gen2(
 	bool is_160_format);
 
 /**
- * target_if_dump_fft_report_gen3() - Dump FFT Report for gen3
- * @spectral: Pointer to Spectral object
- * @smode: Spectral scan mode
- * @p_fft_report: Pointer to fft report
- * @p_sfft: Pointer to search fft report
- *
- * Dump FFT Report for gen3
- *
- * Return: Success/Failure
- */
-int target_if_dump_fft_report_gen3(struct target_if_spectral *spectral,
-		enum spectral_scan_mode smode,
-		struct spectral_phyerr_fft_report_gen3 *p_fft_report,
-		struct spectral_search_fft_info_gen3 *p_sfft);
-
-/**
  * target_if_dbg_print_samp_msg() - Print contents of SAMP Message
  * @p: Pointer to SAMP message
  *
@@ -1286,19 +1338,6 @@ int target_if_dump_fft_report_gen3(struct target_if_spectral *spectral,
  * Return: Void
  */
 void target_if_dbg_print_samp_msg(struct spectral_samp_msg *pmsg);
-
-/**
- * target_if_process_sfft_report_gen3() - Process Search FFT Report for gen3
- * @p_fft_report: Pointer to fft report
- * @p_sfft: Pointer to search fft report
- *
- * Process Search FFT Report for gen3
- *
- * Return: Success/Failure
- */
-int target_if_process_sfft_report_gen3(
-	struct spectral_phyerr_fft_report_gen3 *p_fft_report,
-	struct spectral_search_fft_info_gen3 *p_fft_info);
 
 /**
  * get_target_if_spectral_handle_from_pdev() - Get handle to target_if internal
@@ -1564,7 +1603,7 @@ reset_160mhz_delivery_state_machine(struct target_if_spectral *spectral,
 	enum spectral_msg_type smsg_type;
 	QDF_STATUS ret;
 
-	if (spectral->ch_width == CH_WIDTH_160MHZ) {
+	if (spectral->ch_width[SPECTRAL_SCAN_MODE_NORMAL] == CH_WIDTH_160MHZ) {
 		spectral->state_160mhz_delivery =
 			SPECTRAL_REPORT_WAIT_PRIMARY80;
 
@@ -1591,7 +1630,7 @@ static inline
 bool is_secondaryseg_expected(struct target_if_spectral *spectral)
 {
 	return
-	((spectral->ch_width == CH_WIDTH_160MHZ) &&
+	((spectral->ch_width[SPECTRAL_SCAN_MODE_NORMAL] == CH_WIDTH_160MHZ) &&
 	(spectral->state_160mhz_delivery == SPECTRAL_REPORT_WAIT_SECONDARY80));
 }
 
@@ -1608,8 +1647,8 @@ static inline
 bool is_primaryseg_expected(struct target_if_spectral *spectral)
 {
 	return
-	((spectral->ch_width != CH_WIDTH_160MHZ) ||
-	((spectral->ch_width == CH_WIDTH_160MHZ) &&
+	((spectral->ch_width[SPECTRAL_SCAN_MODE_NORMAL] != CH_WIDTH_160MHZ) ||
+	((spectral->ch_width[SPECTRAL_SCAN_MODE_NORMAL] == CH_WIDTH_160MHZ) &&
 	(spectral->state_160mhz_delivery == SPECTRAL_REPORT_WAIT_PRIMARY80)));
 }
 
@@ -1625,8 +1664,8 @@ static inline
 bool is_primaryseg_rx_inprog(struct target_if_spectral *spectral)
 {
 	return
-	((spectral->ch_width != CH_WIDTH_160MHZ) ||
-	((spectral->ch_width == CH_WIDTH_160MHZ) &&
+	((spectral->ch_width[SPECTRAL_SCAN_MODE_NORMAL] != CH_WIDTH_160MHZ) ||
+	((spectral->ch_width[SPECTRAL_SCAN_MODE_NORMAL] == CH_WIDTH_160MHZ) &&
 	((spectral->spectral_gen == SPECTRAL_GEN2) ||
 	((spectral->spectral_gen == SPECTRAL_GEN3) &&
 	(spectral->state_160mhz_delivery == SPECTRAL_REPORT_RX_PRIMARY80)))));
@@ -1644,7 +1683,7 @@ static inline
 bool is_secondaryseg_rx_inprog(struct target_if_spectral *spectral)
 {
 	return
-	((spectral->ch_width == CH_WIDTH_160MHZ) &&
+	((spectral->ch_width[SPECTRAL_SCAN_MODE_NORMAL] == CH_WIDTH_160MHZ) &&
 	((spectral->spectral_gen == SPECTRAL_GEN2) ||
 	((spectral->spectral_gen == SPECTRAL_GEN3) &&
 	(spectral->state_160mhz_delivery == SPECTRAL_REPORT_RX_SECONDARY80))));

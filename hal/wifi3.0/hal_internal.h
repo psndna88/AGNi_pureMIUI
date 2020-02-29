@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -372,6 +372,7 @@ struct hal_hw_txrx_ops {
 	void (*hal_tx_comp_get_status)(void *desc, void *ts,
 				       struct hal_soc *hal);
 	uint8_t (*hal_tx_comp_get_release_reason)(void *hal_desc);
+	uint8_t (*hal_get_wbm_internal_error)(void *hal_desc);
 	void (*hal_tx_desc_set_mesh_en)(void *desc, uint8_t en);
 
 	/* rx */
@@ -459,6 +460,10 @@ struct hal_hw_txrx_ops {
 					  uint32_t *flow_index);
 	uint16_t (*hal_rx_tlv_get_tcp_chksum)(uint8_t *buf);
 	uint16_t (*hal_rx_get_rx_sequence)(uint8_t *buf);
+	void (*hal_rx_get_bb_info)(void *rx_tlv, void *ppdu_info_handle);
+	void (*hal_rx_get_rtt_info)(void *rx_tlv, void *ppdu_info_handle);
+	void (*hal_rx_msdu_packet_metadata_get)(uint8_t *buf,
+						void *msdu_pkt_metadata);
 };
 
 /**
@@ -512,6 +517,7 @@ struct hal_soc {
 	bool init_phase;
 };
 
+void hal_qca6750_attach(struct hal_soc *hal_soc);
 void hal_qca6490_attach(struct hal_soc *hal_soc);
 void hal_qca6390_attach(struct hal_soc *hal_soc);
 void hal_qca6290_attach(struct hal_soc *hal_soc);

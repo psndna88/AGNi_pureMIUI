@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -447,12 +447,12 @@ cdp_update_pdev_host_stats(ol_txrx_soc_handle soc,
 /**
  * @brief Update vdev host stats
  *
- * @param soc	   - soc handle
- * @param vdev_id  - id of the virtual device object
- * @param data     - pdev stats
- * @param stats_id - type of stats
+ * @soc: soc handle
+ * @vdev_id: id of the virtual device object
+ * @data: pdev stats
+ * @stats_id: type of stats
  *
- * @return - QDF_STATUS
+ * Return: QDF_STATUS
  */
 static inline QDF_STATUS
 cdp_update_vdev_host_stats(ol_txrx_soc_handle soc,
@@ -474,6 +474,40 @@ cdp_update_vdev_host_stats(ol_txrx_soc_handle soc,
 	return soc->ops->host_stats_ops->txrx_update_vdev_stats(soc, vdev_id,
 								data,
 								stats_id);
+}
+
+/**
+ * @brief Call to get specified peer stats
+ *
+ * @param soc - soc handle
+ * @param vdev_id - vdev_id of vdev object
+ * @param peer_mac - mac address of the peer
+ * @param type - enum of required stats
+ * @param buf - buffer to hold the value
+ * @return - QDF_STATUS
+ */
+static inline QDF_STATUS
+cdp_txrx_get_peer_stats_param(ol_txrx_soc_handle soc, uint8_t vdev_id,
+			      uint8_t *peer_mac,
+			      enum cdp_peer_stats_type type,
+			      cdp_peer_stats_param_t *buf)
+{
+	if (!soc || !soc->ops) {
+		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
+			  "%s: Invalid Instance", __func__);
+		QDF_BUG(0);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!soc->ops->host_stats_ops ||
+	    !soc->ops->host_stats_ops->txrx_get_peer_stats_param)
+		return QDF_STATUS_E_FAILURE;
+
+	return soc->ops->host_stats_ops->txrx_get_peer_stats_param(soc,
+								   vdev_id,
+								   peer_mac,
+								   type,
+								   buf);
 }
 
 /**
@@ -705,29 +739,4 @@ cdp_host_get_radio_stats(ol_txrx_soc_handle soc,
 	return soc->ops->host_stats_ops->txrx_get_radio_stats(soc, pdev_id,
 							      buf);
 }
-
-/**
- * @brief confgure rate stats at soc
- *
- * @param soc - opaque soc handle
- * @param val - capabilities
- * @return - QDF_STATUS
- */
-static inline QDF_STATUS
-cdp_soc_configure_rate_stats(ol_txrx_soc_handle soc, uint8_t val)
-{
-	if (!soc || !soc->ops) {
-		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
-			  "%s: Invalid Instance", __func__);
-		QDF_BUG(0);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	if (!soc->ops->host_stats_ops ||
-	    !soc->ops->host_stats_ops->configure_rate_stats)
-		return QDF_STATUS_E_FAILURE;
-
-	return soc->ops->host_stats_ops->configure_rate_stats(soc, val);
-}
-
 #endif /* _CDP_TXRX_HOST_STATS_H_ */

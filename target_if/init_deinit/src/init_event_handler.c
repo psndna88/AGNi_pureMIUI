@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -129,6 +129,11 @@ static int init_deinit_service_ready_event_handler(ol_scn_t scn_handle,
 	if (wmi_service_enabled(wmi_handle, wmi_service_bw_165mhz_support))
 		wlan_psoc_nif_fw_ext_cap_set(psoc,
 					     WLAN_SOC_RESTRICTED_80P80_SUPPORT);
+
+	if (wmi_service_enabled(wmi_handle,
+				wmi_service_nss_ratio_to_host_support))
+		wlan_psoc_nif_fw_ext_cap_set(
+				psoc, WLAN_SOC_NSS_RATIO_TO_HOST_SUPPORT);
 
 	target_if_debug(" TT support %d, Wide BW Scan %d, SW cal %d",
 		wlan_psoc_nif_fw_ext_cap_get(psoc, WLAN_SOC_CEXT_TT_SUPPORT),
@@ -353,11 +358,6 @@ static int init_deinit_service_ext_ready_event_handler(ol_scn_t scn_handle,
 
 	target_if_set_twt_ap_pdev_count(info, tgt_hdl);
 
-	info->wlan_res_cfg.num_vdevs = (target_psoc_get_num_radios(tgt_hdl) *
-					info->wlan_res_cfg.num_vdevs);
-	info->wlan_res_cfg.beacon_tx_offload_max_vdev =
-				(target_psoc_get_num_radios(tgt_hdl) *
-				info->wlan_res_cfg.beacon_tx_offload_max_vdev);
 	info->wlan_res_cfg.max_bssid_indicator =
 				info->service_ext_param.max_bssid_indicator;
 
@@ -471,8 +471,26 @@ static int init_deinit_ready_event_handler(ol_scn_t scn_handle,
 	else
 		info->wlan_res_cfg.agile_capability = ready_ev.agile_capability;
 
+	/* Indicate to the waiting thread that the ready
+	 * event was received
+	 */
+	info->wlan_init_status = wmi_ready_extract_init_status(
+						wmi_handle, event);
+
+	legacy_callback = target_if_get_psoc_legacy_service_ready_cb();
+	if (legacy_callback)
+		if (legacy_callback(wmi_ready_event_id,
+				    scn_handle, event, data_len)) {
+			target_if_err("Legacy callback returned error!");
+			tgt_hdl->info.wmi_ready = FALSE;
+			goto exit;
+		}
+
+	num_radios = target_psoc_get_num_radios(tgt_hdl);
+
 	if ((ready_ev.num_total_peer != 0) &&
 	    (info->wlan_res_cfg.num_peers != ready_ev.num_total_peer)) {
+		uint16_t num_peers = 0;
 		/* FW allocated number of peers is different than host
 		 * requested. Update host max with FW reported value.
 		 */
@@ -480,6 +498,22 @@ static int init_deinit_ready_event_handler(ol_scn_t scn_handle,
 			       info->wlan_res_cfg.num_peers,
 			       ready_ev.num_total_peer);
 		info->wlan_res_cfg.num_peers = ready_ev.num_total_peer;
+		num_peers = info->wlan_res_cfg.num_peers / num_radios;
+
+		for (i = 0; i < num_radios; i++) {
+			pdev = wlan_objmgr_get_pdev_by_id(psoc, i,
+							  WLAN_INIT_DEINIT_ID);
+			if (!pdev) {
+				target_if_err(" PDEV %d is NULL", i);
+				return -EINVAL;
+			}
+
+			wlan_pdev_set_max_peer_count(pdev, num_peers);
+			wlan_objmgr_pdev_release_ref(pdev, WLAN_INIT_DEINIT_ID);
+		}
+
+		wlan_psoc_set_max_peer_count(psoc,
+					     info->wlan_res_cfg.num_peers);
 	}
 
 	/* for non legacy  num_total_peer will be non zero
@@ -499,22 +533,6 @@ static int init_deinit_ready_event_handler(ol_scn_t scn_handle,
 		}
 	}
 
-	/* Indicate to the waiting thread that the ready
-	 * event was received
-	 */
-	info->wlan_init_status = wmi_ready_extract_init_status(
-						wmi_handle, event);
-
-	legacy_callback = target_if_get_psoc_legacy_service_ready_cb();
-	if (legacy_callback)
-		if (legacy_callback(wmi_ready_event_id,
-				    scn_handle, event, data_len)) {
-			target_if_err("Legacy callback returned error!");
-			tgt_hdl->info.wmi_ready = FALSE;
-			goto exit;
-		}
-
-	num_radios = target_psoc_get_num_radios(tgt_hdl);
 
 	if (ready_ev.pktlog_defs_checksum) {
 		for (i = 0; i < num_radios; i++) {

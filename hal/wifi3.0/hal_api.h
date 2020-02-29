@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -25,23 +25,27 @@
 #include "hal_internal.h"
 #include "hif.h"
 #include "hif_io32.h"
+#include "qdf_platform.h"
 
 /* calculate the register address offset from bar0 of shadow register x */
-#if defined(QCA_WIFI_QCA6390) || defined(QCA_WIFI_QCA6490)
+#if defined(QCA_WIFI_QCA6390) || defined(QCA_WIFI_QCA6490) || \
+    defined(QCA_WIFI_QCA6750)
 #define SHADOW_REGISTER_START_ADDRESS_OFFSET 0x000008FC
 #define SHADOW_REGISTER_END_ADDRESS_OFFSET \
 	((SHADOW_REGISTER_START_ADDRESS_OFFSET) + (4 * (MAX_SHADOW_REGISTERS)))
 #define SHADOW_REGISTER(x) ((SHADOW_REGISTER_START_ADDRESS_OFFSET) + (4 * (x)))
-#elif defined(QCA_WIFI_QCA6290)
+#elif defined(QCA_WIFI_QCA6290) || defined(QCA_WIFI_QCN9000)
 #define SHADOW_REGISTER_START_ADDRESS_OFFSET 0x00003024
 #define SHADOW_REGISTER_END_ADDRESS_OFFSET \
 	((SHADOW_REGISTER_START_ADDRESS_OFFSET) + (4 * (MAX_SHADOW_REGISTERS)))
 #define SHADOW_REGISTER(x) ((SHADOW_REGISTER_START_ADDRESS_OFFSET) + (4 * (x)))
-#endif /* QCA_WIFI_QCA6390 || QCA_WIFI_QCA6490 */
+#else
+#define SHADOW_REGISTER(x) 0
+#endif /* QCA_WIFI_QCA6390 || QCA_WIFI_QCA6490 || QCA_WIFI_QCA6750 */
 
 #define MAX_UNWINDOWED_ADDRESS 0x80000
 #if defined(QCA_WIFI_QCA6390) || defined(QCA_WIFI_QCA6490) || \
-	defined(QCA_WIFI_QCN9000)
+    defined(QCA_WIFI_QCN9000) || defined(QCA_WIFI_QCA6750)
 #define WINDOW_ENABLE_BIT 0x40000000
 #else
 #define WINDOW_ENABLE_BIT 0x80000000
@@ -75,6 +79,12 @@ typedef struct hal_link_desc *hal_link_desc_t;
  */
 struct hal_rxdma_desc;
 typedef struct hal_rxdma_desc *hal_rxdma_desc_t;
+
+/**
+ * hal_buff_addrinfo - opaque handle for DP buffer address info
+ */
+struct hal_buff_addrinfo;
+typedef struct hal_buff_addrinfo *hal_buff_addrinfo_t;
 
 #ifdef ENABLE_VERBOSE_DEBUG
 static inline void
@@ -110,7 +120,8 @@ static inline void hal_reg_write_result_check(struct hal_soc *hal_soc,
 	}
 }
 
-#if !defined(QCA_WIFI_QCA6390) && !defined(QCA_WIFI_QCA6490)
+#if !defined(QCA_WIFI_QCA6390) && !defined(QCA_WIFI_QCA6490) || \
+    !defined(QCA_WIFI_QCA6750)
 static inline void hal_lock_reg_access(struct hal_soc *soc,
 				       unsigned long *flags)
 {
@@ -225,7 +236,8 @@ static inline qdf_iomem_t hal_get_window_address(struct hal_soc *hal_soc,
  * note3: WINDOW_VALUE_MASK = big enough that trying to write past
  *                            that window would be a bug
  */
-#if !defined(QCA_WIFI_QCA6390) && !defined(QCA_WIFI_QCA6490)
+#if !defined(QCA_WIFI_QCA6390) && !defined(QCA_WIFI_QCA6490) && \
+    !defined(QCA_WIFI_QCA6750)
 static inline void hal_write32_mb(struct hal_soc *hal_soc, uint32_t offset,
 				  uint32_t value)
 {
@@ -290,7 +302,7 @@ static inline void hal_write32_mb(struct hal_soc *hal_soc, uint32_t offset,
 		ret = hif_force_wake_request(hal_soc->hif_handle);
 		if (ret) {
 			hal_err("Wake up request failed");
-			QDF_BUG(0);
+			qdf_check_state_before_panic();
 			return;
 		}
 	}
@@ -309,8 +321,8 @@ static inline void hal_write32_mb(struct hal_soc *hal_soc, uint32_t offset,
 	if (!hal_soc->init_phase) {
 		ret = hif_force_wake_release(hal_soc->hif_handle);
 		if (ret) {
-			hal_err("Wake up request failed");
-			QDF_BUG(0);
+			hal_err("Wake up release failed");
+			qdf_check_state_before_panic();
 			return;
 		}
 	}
@@ -338,7 +350,7 @@ static inline void hal_write32_mb_confirm(struct hal_soc *hal_soc,
 		ret = hif_force_wake_request(hal_soc->hif_handle);
 		if (ret) {
 			hal_err("Wake up request failed");
-			QDF_BUG(0);
+			qdf_check_state_before_panic();
 			return;
 		}
 	}
@@ -364,8 +376,8 @@ static inline void hal_write32_mb_confirm(struct hal_soc *hal_soc,
 	if (!hal_soc->init_phase) {
 		ret = hif_force_wake_release(hal_soc->hif_handle);
 		if (ret) {
-			hal_err("Wake up request failed");
-			QDF_BUG(0);
+			hal_err("Wake up release failed");
+			qdf_check_state_before_panic();
 			return;
 		}
 	}
@@ -396,7 +408,8 @@ void hal_write_address_32_mb(struct hal_soc *hal_soc,
 		hal_write_address_32_mb(_a, _b, _c)
 #endif
 
-#if !defined(QCA_WIFI_QCA6390) && !defined(QCA_WIFI_QCA6490)
+#if !defined(QCA_WIFI_QCA6390) && !defined(QCA_WIFI_QCA6490) && \
+    !defined(QCA_WIFI_QCA6750)
 /**
  * hal_read32_mb() - Access registers to read configuration
  * @hal_soc: hal soc handle
@@ -455,7 +468,7 @@ uint32_t hal_read32_mb(struct hal_soc *hal_soc, uint32_t offset)
 	if ((!hal_soc->init_phase) &&
 	    hif_force_wake_request(hal_soc->hif_handle)) {
 		hal_err("Wake up request failed");
-		QDF_BUG(0);
+		qdf_check_state_before_panic();
 		return 0;
 	}
 
@@ -473,7 +486,7 @@ uint32_t hal_read32_mb(struct hal_soc *hal_soc, uint32_t offset)
 	if ((!hal_soc->init_phase) &&
 	    hif_force_wake_release(hal_soc->hif_handle)) {
 		hal_err("Wake up release failed");
-		QDF_BUG(0);
+		qdf_check_state_before_panic();
 		return 0;
 	}
 

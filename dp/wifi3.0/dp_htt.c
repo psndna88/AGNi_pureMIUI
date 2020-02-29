@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -765,6 +765,8 @@ int htt_srng_setup(struct htt_soc *soc, int mac_id,
 		hal_srng_get_entrysize(soc->hal_soc, hal_ring_type);
 	int htt_ring_type, htt_ring_id;
 	uint8_t *htt_logger_bufp;
+	int target_pdev_id;
+	int lmac_id = dp_get_lmac_id_for_pdev_id(soc->dp_soc, 0, mac_id);
 
 	/* Sizes should be set in 4-byte words */
 	ring_entry_size = ring_entry_size >> 2;
@@ -796,7 +798,7 @@ int htt_srng_setup(struct htt_soc *soc, int mac_id,
 #else
 		if (srng_params.ring_id ==
 			(HAL_SRNG_WMAC1_SW2RXDMA0_BUF0 +
-			  (mac_id * HAL_MAX_RINGS_PER_LMAC))) {
+			(lmac_id * HAL_MAX_RINGS_PER_LMAC))) {
 			htt_ring_id = HTT_RXDMA_HOST_BUF_RING;
 			htt_ring_type = HTT_SW_TO_HW_RING;
 #endif
@@ -806,7 +808,7 @@ int htt_srng_setup(struct htt_soc *soc, int mac_id,
 #else
 			 (HAL_SRNG_WMAC1_SW2RXDMA1_BUF +
 #endif
-			  (mac_id * HAL_MAX_RINGS_PER_LMAC))) {
+			(lmac_id * HAL_MAX_RINGS_PER_LMAC))) {
 			htt_ring_id = HTT_RXDMA_HOST_BUF_RING;
 			htt_ring_type = HTT_SW_TO_HW_RING;
 		} else {
@@ -870,11 +872,12 @@ int htt_srng_setup(struct htt_soc *soc, int mac_id,
 	*msg_word = 0;
 	htt_logger_bufp = (uint8_t *)msg_word;
 	HTT_H2T_MSG_TYPE_SET(*msg_word, HTT_H2T_MSG_TYPE_SRING_SETUP);
+	target_pdev_id =
+	dp_get_target_pdev_id_for_host_pdev_id(soc->dp_soc, mac_id);
 
 	if ((htt_ring_type == HTT_SW_TO_HW_RING) ||
 			(htt_ring_type == HTT_HW_TO_SW_RING))
-		HTT_SRING_SETUP_PDEV_ID_SET(*msg_word,
-			 DP_SW2HW_MACID(mac_id));
+		HTT_SRING_SETUP_PDEV_ID_SET(*msg_word, target_pdev_id);
 	else
 		HTT_SRING_SETUP_PDEV_ID_SET(*msg_word, mac_id);
 
@@ -1011,7 +1014,7 @@ fail0:
  * htt_h2t_rx_ring_cfg() - Send SRNG packet and TLV filter
  * config message to target
  * @htt_soc:	HTT SOC handle
- * @pdev_id:	PDEV Id
+ * @pdev_id:	WIN- PDEV Id, MCL- mac id
  * @hal_srng:	Opaque HAL SRNG pointer
  * @hal_ring_type:	SRNG ring type
  * @ring_buf_size:	SRNG buffer size
@@ -1033,6 +1036,7 @@ int htt_h2t_rx_ring_cfg(struct htt_soc *htt_soc, int pdev_id,
 	uint8_t *htt_logger_bufp;
 	struct wlan_cfg_dp_soc_ctxt *wlan_cfg_ctx = soc->dp_soc->wlan_cfg_ctx;
 	uint32_t mon_drop_th = wlan_cfg_get_mon_drop_thresh(wlan_cfg_ctx);
+	int target_pdev_id;
 
 	htt_msg = qdf_nbuf_alloc(soc->osdev,
 		HTT_MSG_BUF_SIZE(HTT_RX_RING_SELECTION_CFG_SZ),
@@ -1102,10 +1106,13 @@ int htt_h2t_rx_ring_cfg(struct htt_soc *htt_soc, int pdev_id,
 	 * pdev_id is indexed from 0 whereas mac_id is indexed from 1
 	 * SW_TO_SW and SW_TO_HW rings are unaffected by this
 	 */
+	target_pdev_id =
+	dp_get_target_pdev_id_for_host_pdev_id(soc->dp_soc, pdev_id);
+
 	if (htt_ring_type == HTT_SW_TO_SW_RING ||
 			htt_ring_type == HTT_SW_TO_HW_RING)
 		HTT_RX_RING_SELECTION_CFG_PDEV_ID_SET(*msg_word,
-						DP_SW2HW_MACID(pdev_id));
+						      target_pdev_id);
 
 	/* TODO: Discuss with FW on changing this to unique ID and using
 	 * htt_ring_type to send the type of ring
@@ -2809,10 +2816,19 @@ dp_process_ppdu_stats_tx_mgmtctrl_payload_tlv(struct dp_pdev *pdev,
 	uint8_t trim_size;
 	size_t head_size;
 	struct cdp_tx_mgmt_comp_info *ptr_mgmt_comp_info;
+	uint32_t *msg_word;
+	uint32_t tsf_hdr;
 
 	if ((!pdev->tx_sniffer_enable) && (!pdev->mcopy_mode) &&
 	    (!pdev->bpr_enable) && (!pdev->tx_capture_enabled))
 		return QDF_STATUS_SUCCESS;
+
+	/*
+	 * get timestamp from htt_t2h_ppdu_stats_ind_hdr_t
+	 */
+	msg_word = (uint32_t *)qdf_nbuf_data(tag_buf);
+	msg_word = msg_word + 2;
+	tsf_hdr = *msg_word;
 
 	trim_size = ((pdev->mgmtctrl_frm_info.mgmt_buf +
 		      HTT_MGMT_CTRL_TLV_HDR_RESERVERD_LEN) -
@@ -2837,6 +2853,7 @@ dp_process_ppdu_stats_tx_mgmtctrl_payload_tlv(struct dp_pdev *pdev,
 		qdf_assert_always(ptr_mgmt_comp_info);
 		ptr_mgmt_comp_info->ppdu_id = ppdu_id;
 		ptr_mgmt_comp_info->is_sgen_pkt = true;
+		ptr_mgmt_comp_info->tx_tsf = tsf_hdr;
 	} else {
 		head_size = sizeof(ppdu_id);
 		nbuf_ptr = (uint32_t *)qdf_nbuf_push_head(tag_buf, head_size);
@@ -3646,10 +3663,12 @@ dp_ppdu_stats_ind_handler(struct htt_soc *soc,
 				qdf_nbuf_t htt_t2h_msg)
 {
 	u_int8_t pdev_id;
+	u_int8_t target_pdev_id;
 	bool free_buf;
 	qdf_nbuf_set_pktlen(htt_t2h_msg, HTT_T2H_MAX_MSG_SIZE);
-	pdev_id = HTT_T2H_PPDU_STATS_PDEV_ID_GET(*msg_word);
-	pdev_id = DP_HW2SW_MACID(pdev_id);
+	target_pdev_id = HTT_T2H_PPDU_STATS_PDEV_ID_GET(*msg_word);
+	pdev_id = dp_get_host_pdev_id_for_target_pdev_id(soc->dp_soc,
+							 target_pdev_id);
 	free_buf = dp_txrx_ppdu_stats_handler(soc->dp_soc, pdev_id,
 					      htt_t2h_msg);
 	dp_wdi_event_handler(WDI_EVENT_LITE_T2H, soc->dp_soc,
@@ -3681,10 +3700,12 @@ dp_pktlog_msg_handler(struct htt_soc *soc,
 		      uint32_t *msg_word)
 {
 	uint8_t pdev_id;
+	uint8_t target_pdev_id;
 	uint32_t *pl_hdr;
 
-	pdev_id = HTT_T2H_PKTLOG_PDEV_ID_GET(*msg_word);
-	pdev_id = DP_HW2SW_MACID(pdev_id);
+	target_pdev_id = HTT_T2H_PKTLOG_PDEV_ID_GET(*msg_word);
+	pdev_id = dp_get_host_pdev_id_for_target_pdev_id(soc->dp_soc,
+							 target_pdev_id);
 	pl_hdr = (msg_word + 1);
 	dp_wdi_event_handler(WDI_EVENT_OFFLOAD_ALL, soc->dp_soc,
 		pl_hdr, HTT_INVALID_PEER, WDI_NO_VAL,
@@ -3751,6 +3772,7 @@ static void dp_htt_bkp_event_alert(u_int32_t *msg_word, struct htt_soc *soc)
 {
 	u_int8_t ring_type;
 	u_int8_t pdev_id;
+	uint8_t target_pdev_id;
 	u_int8_t ring_id;
 	u_int16_t hp_idx;
 	u_int16_t tp_idx;
@@ -3766,8 +3788,9 @@ static void dp_htt_bkp_event_alert(u_int32_t *msg_word, struct htt_soc *soc)
 	dpsoc = (struct dp_soc *)soc->dp_soc;
 	msg_type = HTT_T2H_MSG_TYPE_GET(*msg_word);
 	ring_type = HTT_T2H_RX_BKPRESSURE_RING_TYPE_GET(*msg_word);
-	pdev_id = HTT_T2H_RX_BKPRESSURE_PDEV_ID_GET(*msg_word);
-	pdev_id = DP_HW2SW_MACID(pdev_id);
+	target_pdev_id = HTT_T2H_RX_BKPRESSURE_PDEV_ID_GET(*msg_word);
+	pdev_id = dp_get_host_pdev_id_for_target_pdev_id(soc->dp_soc,
+							 target_pdev_id);
 	pdev = (struct dp_pdev *)dpsoc->pdev_list[pdev_id];
 	ring_id = HTT_T2H_RX_BKPRESSURE_RINGID_GET(*msg_word);
 	hp_idx = HTT_T2H_RX_BKPRESSURE_HEAD_IDX_GET(*(msg_word + 1));
@@ -3995,6 +4018,10 @@ static void dp_htt_t2h_msg_handler(void *context, HTC_PACKET *pkt)
 			u_int8_t vdev_id;
 			bool is_wds;
 			u_int16_t ast_hash;
+			struct dp_ast_flow_override_info ast_flow_info;
+
+			qdf_mem_set(&ast_flow_info, 0,
+					    sizeof(struct dp_ast_flow_override_info));
 
 			peer_id = HTT_RX_PEER_MAP_V2_SW_PEER_ID_GET(*msg_word);
 			hw_peer_id =
@@ -4007,6 +4034,40 @@ static void dp_htt_t2h_msg_handler(void *context, HTC_PACKET *pkt)
 			HTT_RX_PEER_MAP_V2_NEXT_HOP_GET(*(msg_word + 3));
 			ast_hash =
 			HTT_RX_PEER_MAP_V2_AST_HASH_VALUE_GET(*(msg_word + 3));
+			/*
+			 * Update 4 ast_index per peer, ast valid mask
+			 * and TID flow valid mask.
+			 * AST valid mask is 3 bit field corresponds to
+			 * ast_index[3:1]. ast_index 0 is always valid.
+			 */
+			ast_flow_info.ast_valid_mask =
+			HTT_RX_PEER_MAP_V2_AST_VALID_MASK_GET(*(msg_word + 3));
+			ast_flow_info.ast_idx[0] = hw_peer_id;
+			ast_flow_info.ast_flow_mask[0] =
+			HTT_RX_PEER_MAP_V2_AST_0_FLOW_MASK_GET(*(msg_word + 4));
+			ast_flow_info.ast_idx[1] =
+			HTT_RX_PEER_MAP_V2_AST_INDEX_1_GET(*(msg_word + 4));
+			ast_flow_info.ast_flow_mask[1] =
+			HTT_RX_PEER_MAP_V2_AST_1_FLOW_MASK_GET(*(msg_word + 4));
+			ast_flow_info.ast_idx[2] =
+			HTT_RX_PEER_MAP_V2_AST_INDEX_2_GET(*(msg_word + 5));
+			ast_flow_info.ast_flow_mask[2] =
+			HTT_RX_PEER_MAP_V2_AST_2_FLOW_MASK_GET(*(msg_word + 4));
+			ast_flow_info.ast_idx[3] =
+			HTT_RX_PEER_MAP_V2_AST_INDEX_3_GET(*(msg_word + 6));
+			ast_flow_info.ast_flow_mask[3] =
+			HTT_RX_PEER_MAP_V2_AST_3_FLOW_MASK_GET(*(msg_word + 4));
+			/*
+			 * TID valid mask is applicable only
+			 * for HI and LOW priority flows.
+			 * tid_valid_mas is 8 bit field corresponds
+			 * to TID[7:0]
+			 */
+			ast_flow_info.tid_valid_low_pri_mask =
+			HTT_RX_PEER_MAP_V2_TID_VALID_LOW_PRI_GET(*(msg_word + 5));
+			ast_flow_info.tid_valid_hi_pri_mask =
+			HTT_RX_PEER_MAP_V2_TID_VALID_HI_PRI_GET(*(msg_word + 5));
+
 			QDF_TRACE(QDF_MODULE_ID_TXRX,
 				  QDF_TRACE_LEVEL_INFO,
 				  "HTT_T2H_MSG_TYPE_PEER_MAP msg for peer id %d vdev id %d n",
@@ -4016,6 +4077,16 @@ static void dp_htt_t2h_msg_handler(void *context, HTC_PACKET *pkt)
 					       hw_peer_id, vdev_id,
 					       peer_mac_addr, ast_hash,
 					       is_wds);
+
+			/*
+			 * Update ast indexes for flow override support
+			 * Applicable only for non wds peers
+			 */
+			dp_peer_ast_index_flow_queue_map_create(
+					    soc->dp_soc, is_wds,
+					    peer_id, peer_mac_addr,
+					    &ast_flow_info);
+
 			break;
 		}
 	case HTT_T2H_MSG_TYPE_PEER_UNMAP_V2:
@@ -4258,6 +4329,8 @@ QDF_STATUS dp_h2t_ext_stats_msg_send(struct dp_pdev *pdev,
 	uint32_t *msg_word;
 	uint8_t pdev_mask = 0;
 	uint8_t *htt_logger_bufp;
+	int mac_for_pdev;
+	int target_pdev_id;
 
 	msg = qdf_nbuf_alloc(
 			soc->osdev,
@@ -4273,9 +4346,11 @@ QDF_STATUS dp_h2t_ext_stats_msg_send(struct dp_pdev *pdev,
 	 * Bit 2: Pdev stats for pdev id 1
 	 * Bit 3: Pdev stats for pdev id 2
 	 */
-	mac_id = dp_get_mac_id_for_pdev(mac_id, pdev->pdev_id);
+	mac_for_pdev = dp_get_mac_id_for_pdev(mac_id, pdev->pdev_id);
+	target_pdev_id =
+	dp_get_target_pdev_id_for_host_pdev_id(pdev->soc, mac_for_pdev);
 
-	pdev_mask = 1 << DP_SW2HW_MACID(mac_id);
+	pdev_mask = 1 << target_pdev_id;
 	/*
 	 * Set the length of the message.
 	 * The contribution from the HTC_HDR_ALIGNMENT_PADDING is added
@@ -4402,7 +4477,8 @@ QDF_STATUS dp_h2t_cfg_stats_msg_send(struct dp_pdev *pdev,
 	 * Bit 2: Pdev stats for pdev id 1
 	 * Bit 3: Pdev stats for pdev id 2
 	 */
-	pdev_mask = 1 << DP_SW2HW_MACID(mac_id);
+	pdev_mask = 1 << dp_get_target_pdev_id_for_host_pdev_id(pdev->soc,
+								mac_id);
 
 	/*
 	 * Set the length of the message.

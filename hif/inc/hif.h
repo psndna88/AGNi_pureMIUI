@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -38,6 +38,7 @@ extern "C" {
 #ifdef IPA_OFFLOAD
 #include <linux/ipa.h>
 #endif
+#include "cfg_ucfg_api.h"
 #define ENABLE_MBOX_DUMMY_SPACE_FEATURE 1
 
 typedef void __iomem *A_target_id_t;
@@ -64,6 +65,7 @@ typedef void *hif_handle_t;
 #define HIF_TYPE_QCA6018  20
 #define HIF_TYPE_QCN9000 21
 #define HIF_TYPE_QCA6490 22
+#define HIF_TYPE_QCA6750 23
 
 #ifdef IPA_OFFLOAD
 #define DMA_COHERENT_MASK_IPA_VER_3_AND_ABOVE   37
@@ -284,7 +286,7 @@ struct qca_napi_data {
 struct hif_config_info {
 	bool enable_self_recovery;
 #ifdef FEATURE_RUNTIME_PM
-	bool enable_runtime_pm;
+	uint8_t enable_runtime_pm;
 	u_int32_t runtime_pm_delay;
 #endif
 	uint64_t rx_softirq_max_yield_duration_ns;
@@ -833,15 +835,35 @@ void hif_disable_isr(struct hif_opaque_softc *hif_ctx);
 void hif_reset_soc(struct hif_opaque_softc *hif_ctx);
 void hif_save_htc_htt_config_endpoint(struct hif_opaque_softc *hif_ctx,
 				      int htc_htt_tx_endpoint);
-struct hif_opaque_softc *hif_open(qdf_device_t qdf_ctx, uint32_t mode,
+
+/**
+ * hif_open() - Create hif handle
+ * @qdf_ctx: qdf context
+ * @mode: Driver Mode
+ * @bus_type: Bus Type
+ * @cbk: CDS Callbacks
+ * @psoc: psoc object manager
+ *
+ * API to open HIF Context
+ *
+ * Return: HIF Opaque Pointer
+ */
+struct hif_opaque_softc *hif_open(qdf_device_t qdf_ctx,
+				  uint32_t mode,
 				  enum qdf_bus_type bus_type,
-				  struct hif_driver_state_callbacks *cbk);
+				  struct hif_driver_state_callbacks *cbk,
+				  struct wlan_objmgr_psoc *psoc);
+
 void hif_close(struct hif_opaque_softc *hif_ctx);
 QDF_STATUS hif_enable(struct hif_opaque_softc *hif_ctx, struct device *dev,
 		      void *bdev, const struct hif_bus_id *bid,
 		      enum qdf_bus_type bus_type,
 		      enum hif_enable_type type);
 void hif_disable(struct hif_opaque_softc *hif_ctx, enum hif_disable_type type);
+#ifdef CE_TASKLET_DEBUG_ENABLE
+void hif_enable_ce_latency_stats(struct hif_opaque_softc *hif_ctx,
+				 uint8_t value);
+#endif
 void hif_display_stats(struct hif_opaque_softc *hif_ctx);
 void hif_clear_stats(struct hif_opaque_softc *hif_ctx);
 #ifdef FEATURE_RUNTIME_PM
@@ -853,6 +875,7 @@ int hif_pm_runtime_request_resume(struct hif_opaque_softc *hif_ctx);
 int hif_pm_runtime_get(struct hif_opaque_softc *hif_ctx);
 void hif_pm_runtime_get_noresume(struct hif_opaque_softc *hif_ctx);
 int hif_pm_runtime_put(struct hif_opaque_softc *hif_ctx);
+int hif_pm_runtime_put_noidle(struct hif_opaque_softc *hif_ctx);
 void hif_pm_runtime_mark_last_busy(struct hif_opaque_softc *hif_ctx);
 int hif_runtime_lock_init(qdf_runtime_lock_t *lock, const char *name);
 void hif_runtime_lock_deinit(struct hif_opaque_softc *hif_ctx,
@@ -870,6 +893,7 @@ void hif_pm_runtime_set_monitor_wake_intr(struct hif_opaque_softc *hif_ctx,
 void hif_pm_runtime_mark_dp_rx_busy(struct hif_opaque_softc *hif_ctx);
 int hif_pm_runtime_is_dp_rx_busy(struct hif_opaque_softc *hif_ctx);
 qdf_time_t hif_pm_runtime_get_dp_rx_busy_mark(struct hif_opaque_softc *hif_ctx);
+int hif_pm_runtime_sync_resume(struct hif_opaque_softc *hif_ctx);
 #else
 struct hif_pm_runtime_lock {
 	const char *name;
@@ -889,6 +913,8 @@ static inline void hif_pm_runtime_get_noresume(struct hif_opaque_softc *hif_ctx)
 static inline int hif_pm_runtime_get(struct hif_opaque_softc *hif_ctx)
 { return 0; }
 static inline int hif_pm_runtime_put(struct hif_opaque_softc *hif_ctx)
+{ return 0; }
+static inline int hif_pm_runtime_put_noidle(struct hif_opaque_softc *hif_ctx)
 { return 0; }
 static inline void
 hif_pm_runtime_mark_last_busy(struct hif_opaque_softc *hif_ctx) {};
@@ -924,6 +950,8 @@ hif_pm_runtime_is_dp_rx_busy(struct hif_opaque_softc *hif_ctx)
 { return 0; }
 static inline qdf_time_t
 hif_pm_runtime_get_dp_rx_busy_mark(struct hif_opaque_softc *hif_ctx)
+{ return 0; }
+static inline int hif_pm_runtime_sync_resume(struct hif_opaque_softc *hif_ctx)
 { return 0; }
 #endif
 
@@ -1236,7 +1264,8 @@ hif_get_ce_service_max_yield_time(struct hif_opaque_softc *hif);
  * Return: void
  */
 void hif_set_ce_service_max_rx_ind_flush(struct hif_opaque_softc *hif,
-				       uint8_t ce_service_max_rx_ind_flush);
+					 uint8_t ce_service_max_rx_ind_flush);
+
 #ifdef OL_ATH_SMART_LOGGING
 /*
  * hif_log_ce_dump() - Copy all the CE DEST ring to buf

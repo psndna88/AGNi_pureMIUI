@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -412,7 +412,7 @@ static QDF_STATUS wifi_pos_process_ch_info_req(struct wlan_objmgr_psoc *psoc,
 		ch_info[idx].band_center_freq1 = ch_info[idx].mhz;
 		ch_info[idx].band_center_freq2 = 0;
 		ch_info[idx].info = 0;
-		if (wlan_reg_is_dfs_ch(pdev, valid_channel_list[idx]))
+		if (wlan_reg_is_dfs_for_freq(pdev, ch_info[idx].mhz))
 			WIFI_POS_SET_DFS(ch_info[idx].info);
 
 		wifi_update_channel_bw_info(psoc, pdev,
@@ -442,14 +442,66 @@ static void wifi_pos_vdev_iterator(struct wlan_objmgr_psoc *psoc,
 	vdev_idx++;
 }
 
+#ifdef CNSS_GENL
+static uint8_t *
+wifi_pos_prepare_reg_resp(uint32_t *rsp_len,
+			  struct app_reg_rsp_vdev_info *vdevs_info)
+{
+	uint32_t *nl_sign;
+	uint8_t *resp_buf;
+	struct wifi_app_reg_rsp *app_reg_rsp;
+
+	/*
+	 * allocate ENHNC_FLAGS_LEN i.e. 4bytes extra memory in app_reg_resp
+	 * to indicate NLA type resoponse is supported for OEM request
+	 * commands.
+	 */
+	*rsp_len = (sizeof(struct app_reg_rsp_vdev_info) * vdev_idx)
+			+ sizeof(uint8_t) + ENHNC_FLAGS_LEN;
+	resp_buf = qdf_mem_malloc(*rsp_len);
+	if (!resp_buf)
+		return NULL;
+
+	app_reg_rsp = (struct wifi_app_reg_rsp *)resp_buf;
+	app_reg_rsp->num_inf = vdev_idx;
+	qdf_mem_copy(&app_reg_rsp->vdevs, vdevs_info,
+		     sizeof(struct app_reg_rsp_vdev_info) * vdev_idx);
+
+	nl_sign = (uint32_t *)&app_reg_rsp->vdevs[vdev_idx];
+	*nl_sign |= NL_ENABLE_OEM_REQ_RSP;
+
+	return resp_buf;
+}
+#else
+static uint8_t *
+wifi_pos_prepare_reg_resp(uint32_t *rsp_len,
+			  struct app_reg_rsp_vdev_info *vdevs_info)
+{
+	uint8_t *resp_buf;
+	struct wifi_app_reg_rsp *app_reg_rsp;
+
+	*rsp_len = (sizeof(struct app_reg_rsp_vdev_info) * vdev_idx)
+			+ sizeof(uint8_t);
+	resp_buf = qdf_mem_malloc(*rsp_len);
+	if (!resp_buf)
+		return NULL;
+
+	app_reg_rsp = (struct wifi_app_reg_rsp *)resp_buf;
+	app_reg_rsp->num_inf = vdev_idx;
+	qdf_mem_copy(&app_reg_rsp->vdevs, vdevs_info,
+		     sizeof(struct app_reg_rsp_vdev_info) * vdev_idx);
+
+	return resp_buf;
+}
+#endif
+
 static QDF_STATUS wifi_pos_process_app_reg_req(struct wlan_objmgr_psoc *psoc,
 					struct wifi_pos_req_msg *req)
 {
 	QDF_STATUS ret = QDF_STATUS_SUCCESS;
-	uint8_t err = 0;
+	uint8_t err = 0, *app_reg_rsp;
 	uint32_t rsp_len;
 	char *sign_str = NULL;
-	struct wifi_app_reg_rsp *app_reg_rsp;
 	struct app_reg_rsp_vdev_info vdevs_info[WLAN_UMAC_PSOC_MAX_VDEVS]
 								= { { 0 } };
 	struct wifi_pos_psoc_priv_obj *wifi_pos_obj =
@@ -484,18 +536,14 @@ static QDF_STATUS wifi_pos_process_app_reg_req(struct wlan_objmgr_psoc *psoc,
 	wlan_objmgr_iterate_obj_list(psoc, WLAN_VDEV_OP,
 				     wifi_pos_vdev_iterator,
 				     vdevs_info, true, WLAN_WIFI_POS_CORE_ID);
-	rsp_len = (sizeof(struct app_reg_rsp_vdev_info) * vdev_idx)
-			+ sizeof(uint8_t);
-	app_reg_rsp = qdf_mem_malloc(rsp_len);
+
+	app_reg_rsp = wifi_pos_prepare_reg_resp(&rsp_len, vdevs_info);
 	if (!app_reg_rsp) {
 		ret = QDF_STATUS_E_NOMEM;
 		err = OEM_ERR_NULL_CONTEXT;
 		goto app_reg_failed;
 	}
 
-	app_reg_rsp->num_inf = vdev_idx;
-	qdf_mem_copy(&app_reg_rsp->vdevs, vdevs_info,
-		     sizeof(struct app_reg_rsp_vdev_info) * vdev_idx);
 	if (!vdev_idx)
 		wifi_pos_debug("no active vdev");
 
@@ -714,10 +762,13 @@ static void wifi_pos_pdev_iterator(struct wlan_objmgr_psoc *psoc,
 				   void *obj, void *arg)
 {
 	QDF_STATUS status;
-	uint8_t i, num_channels, size;
+	uint8_t i, num_channels, size, valid_ch = 0;
 	struct wlan_objmgr_pdev *pdev = obj;
 	struct wifi_pos_driver_caps *caps = arg;
 	struct channel_power *ch_list;
+	bool oem_6g_support_disable;
+	struct wifi_pos_psoc_priv_obj *wifi_pos_obj =
+					wifi_pos_get_psoc_priv_obj(psoc);
 
 	size = QDF_MAX(OEM_CAP_MAX_NUM_CHANNELS, NUM_CHANNELS);
 	ch_list = qdf_mem_malloc(size * sizeof(*ch_list));
@@ -735,9 +786,17 @@ static void wifi_pos_pdev_iterator(struct wlan_objmgr_psoc *psoc,
 	if (num_channels > OEM_CAP_MAX_NUM_CHANNELS)
 		num_channels = OEM_CAP_MAX_NUM_CHANNELS;
 
-	for (i = 0; i < num_channels; i++)
-		caps->channel_list[i] = ch_list[i].chan_num;
-	caps->num_channels = num_channels;
+	qdf_spin_lock_bh(&wifi_pos_obj->wifi_pos_lock);
+	oem_6g_support_disable = wifi_pos_obj->oem_6g_support_disable;
+	qdf_spin_unlock_bh(&wifi_pos_obj->wifi_pos_lock);
+
+	for (i = 0; i < num_channels; i++) {
+		if (oem_6g_support_disable &&
+		    WLAN_REG_IS_6GHZ_CHAN_FREQ(ch_list[i].center_freq))
+			continue;
+		caps->channel_list[valid_ch++] = ch_list[i].chan_num;
+	}
+	caps->num_channels = valid_ch;
 	qdf_mem_free(ch_list);
 }
 

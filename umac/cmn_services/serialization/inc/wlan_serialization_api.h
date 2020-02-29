@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -191,6 +191,7 @@ typedef QDF_STATUS (*wlan_ser_umac_cmd_cb)(void *umac_cmd);
  * @WLAN_SER_CMD_VDEV_DISCONNECT: Cmd to stop a STA VDEV
  * @WLAN_SER_CMD_VDEV_RESTART: Cmd to restart a VDEV
  * @WLAN_SER_CMD_PDEV_RESTART: Cmd to restart all VDEVs of a PDEV
+ * @WLAN_SER_CMD_PDEV_CSA_RESTART: Cmd to CSA restart all AP VDEVs of a PDEV
  */
 enum wlan_serialization_cmd_type {
 	/* all scan command before non-scan */
@@ -227,6 +228,7 @@ enum wlan_serialization_cmd_type {
 	WLAN_SER_CMD_VDEV_DISCONNECT,
 	WLAN_SER_CMD_VDEV_RESTART,
 	WLAN_SER_CMD_PDEV_RESTART,
+	WLAN_SER_CMD_PDEV_CSA_RESTART,
 	WLAN_SER_CMD_MAX
 };
 
@@ -383,22 +385,6 @@ wlan_serialization_cancel_request(
  * Return: None
  */
 void wlan_serialization_remove_cmd(
-		struct wlan_serialization_queued_cmd_info *cmd);
-
-/**
- * wlan_serialization_flush_cmd() - Request to flush command
- * @cmd: Command information
- *
- * This API is used to flush a cmd sitting in the queue. It
- * simply flushes the cmd from the queue and does not call
- * any callbacks in between. If the request is for active
- * queue, and if the active queue becomes empty upon flush,
- * then it will pick the next pending cmd and put in the active
- * queue before returning.
- *
- * Return: None
- */
-void wlan_serialization_flush_cmd(
 		struct wlan_serialization_queued_cmd_info *cmd);
 
 /**
