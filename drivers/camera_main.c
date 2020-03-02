@@ -23,7 +23,8 @@
 #include "cam_eeprom_dev.h"
 #include "cam_ois_dev.h"
 
-#if IS_REACHABLE(CONFIG_LEDS_QPNP_FLASH_V2)
+#if IS_REACHABLE(CONFIG_LEDS_QPNP_FLASH_V2) || \
+	IS_REACHABLE(CONFIG_LEDS_QTI_FLASH)
 #include "cam_flash_dev.h"
 #endif
 
@@ -102,7 +103,8 @@ static const struct camera_submodule_component camera_sensor[] = {
 	{&cam_sensor_driver_init, &cam_sensor_driver_exit},
 	{&cam_eeprom_driver_init, &cam_eeprom_driver_exit},
 	{&cam_ois_driver_init, &cam_ois_driver_exit},
-#if IS_REACHABLE(CONFIG_LEDS_QPNP_FLASH_V2)
+#if IS_REACHABLE(CONFIG_LEDS_QPNP_FLASH_V2) || \
+	IS_REACHABLE(CONFIG_LEDS_QTI_FLASH)
 	{&cam_flash_init_module, &cam_flash_exit_module},
 #endif
 #endif
@@ -238,7 +240,8 @@ static struct platform_driver *const cam_component_drivers[] = {
 	&cam_sensor_platform_driver,
 	&cam_eeprom_platform_driver,
 	&cam_ois_platform_driver,
-#if IS_REACHABLE(CONFIG_LEDS_QPNP_FLASH_V2)
+#if IS_REACHABLE(CONFIG_LEDS_QPNP_FLASH_V2) || \
+	IS_REACHABLE(CONFIG_LEDS_QTI_FLASH)
 	&cam_flash_platform_driver,
 #endif
 #endif
