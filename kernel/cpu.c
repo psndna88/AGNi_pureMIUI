@@ -1264,8 +1264,8 @@ int freeze_secondary_cpus(int primary)
 {
 	int cpu, error = 0;
 
-	unaffine_perf_irqs();
 	cpu_maps_update_begin();
+	unaffine_perf_irqs();
 	if (!cpu_online(primary))
 		primary = cpumask_first(cpu_online_mask);
 	/*
@@ -1355,9 +1355,9 @@ void enable_nonboot_cpus(void)
 	arch_enable_nonboot_cpus_end();
 
 	cpumask_clear(frozen_cpus);
+	reaffine_perf_irqs();
 out:
 	cpu_maps_update_done();
-	reaffine_perf_irqs();
 }
 
 static int __init alloc_frozen_cpus(void)
