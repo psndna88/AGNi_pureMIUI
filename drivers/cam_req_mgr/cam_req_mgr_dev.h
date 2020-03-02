@@ -12,6 +12,7 @@
  *
  * @video: pointer to struct video device.
  * @v4l2_dev: pointer to struct v4l2 device.
+ * @subdev_nodes_created: all subdev nodes are created for this device
  * @count: number of subdevices registered.
  * @dev_lock: lock for the subdevice count.
  * @state: state of the root device.
@@ -23,6 +24,7 @@
 struct cam_req_mgr_device {
 	struct video_device *video;
 	struct v4l2_device *v4l2_dev;
+	bool subdev_nodes_created;
 	int count;
 	struct mutex dev_lock;
 	bool state;

@@ -205,7 +205,7 @@ static int cam_icp_component_bind(struct device *dev,
 	g_icp_dev.open_cnt = 0;
 	mutex_init(&g_icp_dev.icp_lock);
 
-	CAM_DBG(CAM_ICP, "Component bound successfully");
+	CAM_INFO(CAM_ICP, "Component bound successfully");
 
 	return rc;
 
