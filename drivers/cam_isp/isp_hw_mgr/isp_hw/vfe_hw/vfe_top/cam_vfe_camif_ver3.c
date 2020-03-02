@@ -259,18 +259,21 @@ int cam_vfe_camif_ver3_acquire_resource(
 	camif_data->last_line      = acquire_data->vfe_in.in_port->line_stop;
 	camif_data->is_fe_enabled  = acquire_data->vfe_in.is_fe_enabled;
 	camif_data->is_offline     = acquire_data->vfe_in.is_offline;
+	camif_data->is_dual        = acquire_data->vfe_in.is_dual;
 	camif_data->event_cb       = acquire_data->event_cb;
 	camif_data->priv           = acquire_data->priv;
 	camif_data->qcfa_bin       = acquire_data->vfe_in.in_port->qcfa_bin;
 	camif_data->horizontal_bin =
 		acquire_data->vfe_in.in_port->horizontal_bin;
 
-	if (acquire_data->vfe_in.is_dual)
+	if (camif_data->is_dual)
 		camif_data->dual_hw_idx = acquire_data->vfe_in.dual_hw_idx;
 
-	CAM_DBG(CAM_ISP, "VFE:%d CAMIF pix_pattern:%d dsp_mode=%d",
+	CAM_DBG(CAM_ISP,
+		"VFE:%d CAMIF pix_pattern:%d dsp_mode=%d is_dual:%d dual_hw_idx:%d",
 		camif_res->hw_intf->hw_idx,
-		camif_data->pix_pattern, camif_data->dsp_mode);
+		camif_data->pix_pattern, camif_data->dsp_mode,
+		camif_data->is_dual, camif_data->dual_hw_idx);
 
 	return rc;
 }
