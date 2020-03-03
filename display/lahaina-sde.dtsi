@@ -552,6 +552,8 @@
 		reg-names = "dsi_phy", "pll_base", "gdsc_base", "dyn_refresh_base";
 		pll-label = "dsi_pll_5nm";
 		vdda-0p9-supply = <&L5B>;
+		qcom,dsi-pll-ssc-en;
+		qcom,dsi-pll-ssc-mode = "down-spread";
 		qcom,platform-strength-ctrl = [55 03
 						55 03
 						55 03
@@ -589,6 +591,8 @@
 		reg-names = "dsi_phy", "pll_base", "gdsc_base", "dyn_refresh_base";
 		pll-label = "dsi_pll_5nm";
 		vdda-0p9-supply = <&L5B>;
+		qcom,dsi-pll-ssc-en;
+		qcom,dsi-pll-ssc-mode = "down-spread";
 		qcom,platform-strength-ctrl = [55 03
 						55 03
 						55 03
