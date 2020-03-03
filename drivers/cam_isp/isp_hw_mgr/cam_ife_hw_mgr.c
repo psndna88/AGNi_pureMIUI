@@ -1629,7 +1629,8 @@ static int cam_ife_mgr_acquire_cid_res(
 
 	/* Acquire Left if not already acquired */
 	/* For dual IFE cases, start acquiring the lower idx first */
-	if (ife_ctx->is_fe_enabled || in_port->usage_type)
+	if (ife_ctx->is_fe_enabled || in_port->usage_type ||
+		ife_ctx->dsp_enabled)
 		rc = cam_ife_hw_mgr_acquire_csid_hw(ife_hw_mgr,
 			&csid_acquire, true);
 	else
