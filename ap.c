@@ -3287,6 +3287,13 @@ static void get_if_name(struct sigma_dut *dut, char *ifname_str,
 }
 
 
+static int sae_pw_id_used(struct sigma_dut *dut)
+{
+	return dut->ap_sae_passwords &&
+		strchr(dut->ap_sae_passwords, ':');
+}
+
+
 static int owrt_ap_config_vap(struct sigma_dut *dut)
 {
 	char buf[256], *temp;
@@ -4133,7 +4140,9 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 	if (dut->sae_pwe != SAE_PWE_DEFAULT || dut->sae_h2e_default) {
 		const char *sae_pwe = NULL;
 
-		if (dut->sae_pwe == SAE_PWE_LOOP)
+		if (dut->sae_pwe == SAE_PWE_LOOP && sae_pw_id_used(dut))
+			sae_pwe = "3";
+		else if (dut->sae_pwe == SAE_PWE_LOOP)
 			sae_pwe = "0";
 		else if (dut->sae_pwe == SAE_PWE_H2E)
 			sae_pwe = "1";
@@ -7933,7 +7942,9 @@ skip_key_mgmt:
 	if (dut->sae_pwe != SAE_PWE_DEFAULT || dut->sae_h2e_default) {
 		const char *sae_pwe = NULL;
 
-		if (dut->sae_pwe == SAE_PWE_LOOP)
+		if (dut->sae_pwe == SAE_PWE_LOOP && sae_pw_id_used(dut))
+			sae_pwe = "3";
+		else if (dut->sae_pwe == SAE_PWE_LOOP)
 			sae_pwe = "0";
 		else if (dut->sae_pwe == SAE_PWE_H2E)
 			sae_pwe = "1";
