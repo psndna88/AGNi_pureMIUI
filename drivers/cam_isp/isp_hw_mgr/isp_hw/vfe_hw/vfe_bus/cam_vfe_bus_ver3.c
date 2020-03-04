@@ -3524,8 +3524,12 @@ static int cam_vfe_bus_ver3_update_wm_config(
 		}
 
 		wm_data->en_cfg = (wm_config->wm_mode << 16) | 0x1;
-		wm_data->height = wm_config->height;
 		wm_data->width  = wm_config->width;
+
+		if (i == PLANE_C)
+			wm_data->height = wm_config->height / 2;
+		else
+			wm_data->height = wm_config->height;
 
 		CAM_DBG(CAM_ISP,
 			"WM:%d en_cfg:0x%X height:%d width:%d",
