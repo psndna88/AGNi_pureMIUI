@@ -31,6 +31,9 @@
 #define MAX_QP_PACKED 0x7F7F7F
 #define DEFAULT_QP 0xA
 #define DEFAULT_QP_PACKED 0xA0A0A
+#define MIN_CHROMA_QP_OFFSET -12
+#define MAX_CHROMA_QP_OFFSET 0
+#define DEFAULT_CHROMA_QP_OFFSET 0
 #define MAX_INTRA_REFRESH_MBS ((7680 * 4320) >> 8)
 #define MAX_LTR_FRAME_COUNT 10
 #define MAX_NUM_B_FRAMES 1
@@ -916,6 +919,15 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		(1 << V4L2_MPEG_VIDEO_HEVC_SIZE_4)
 		),
 		.qmenu = mpeg_video_stream_format,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_H264_CHROMA_QP_INDEX_OFFSET,
+		.name = "Chroma QP Index Offset",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.minimum = MIN_CHROMA_QP_OFFSET,
+		.maximum = MAX_CHROMA_QP_OFFSET,
+		.default_value = DEFAULT_CHROMA_QP_OFFSET,
+		.step = 1,
 	},
 	{
 		.id = V4L2_CID_MPEG_VIDC_VENC_BITRATE_SAVINGS,
@@ -1982,6 +1994,7 @@ int msm_venc_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 	case V4L2_CID_MPEG_VIDEO_CYCLIC_INTRA_REFRESH_MB:
 	case V4L2_CID_MPEG_VIDC_VENC_RC_TIMESTAMP_DISABLE:
 	case V4L2_CID_MPEG_VIDEO_VBV_DELAY:
+	case V4L2_CID_MPEG_VIDEO_H264_CHROMA_QP_INDEX_OFFSET:
 	case V4L2_CID_MPEG_VIDC_VENC_BITRATE_SAVINGS:
 	case V4L2_CID_MPEG_VIDC_VENC_BITRATE_BOOST:
 	case V4L2_CID_MPEG_VIDC_SUPERFRAME:
@@ -3201,6 +3214,69 @@ int msm_venc_set_intra_refresh_mode(struct msm_vidc_inst *inst)
 	rc = call_hfi_op(hdev, session_set_property, inst->session,
 		HFI_PROPERTY_PARAM_VENC_INTRA_REFRESH, &intra_refresh,
 		sizeof(intra_refresh));
+	if (rc)
+		s_vpr_e(inst->sid, "%s: set property failed\n", __func__);
+
+	return rc;
+}
+
+int msm_venc_set_chroma_qp_offset(struct msm_vidc_inst *inst)
+{
+	int rc = 0;
+	struct hfi_device *hdev;
+	struct v4l2_ctrl *chr;
+	struct v4l2_ctrl *ctrl_cs;
+	struct hfi_chroma_qp_offset chroma_qp;
+	struct v4l2_format *f;
+	u32 codec, width, height, mbpf;
+
+	if (!inst || !inst->core) {
+		d_vpr_e("%s: invalid params %pK\n", __func__, inst);
+		return -EINVAL;
+	}
+	hdev = inst->core->device;
+
+	chr = get_ctrl(inst, V4L2_CID_MPEG_VIDEO_H264_CHROMA_QP_INDEX_OFFSET);
+	if (chr->val != MIN_CHROMA_QP_OFFSET)
+		return 0;
+
+	f = &inst->fmts[INPUT_PORT].v4l2_fmt;
+	width = f->fmt.pix_mp.width;
+	height = f->fmt.pix_mp.height;
+	mbpf = NUM_MBS_PER_FRAME(width, height);
+	ctrl_cs = get_ctrl(inst, V4L2_CID_MPEG_VIDC_VIDEO_COLOR_SPACE);
+	codec = get_v4l2_codec(inst);
+
+	/**
+	 * Set chroma qp offset to HEVC & VBR_CFR rc
+	 * 10 bit: only BT2020
+	 *  8 bit: only mbpf >= num_mbs(7680, 3840)
+	 */
+	if (codec != V4L2_PIX_FMT_HEVC ||
+		inst->rc_type != V4L2_MPEG_VIDEO_BITRATE_MODE_VBR)
+		return 0;
+
+	if ((inst->bit_depth == MSM_VIDC_BIT_DEPTH_10 &&
+		ctrl_cs->val != MSM_VIDC_BT2020) ||
+		(inst->bit_depth == MSM_VIDC_BIT_DEPTH_8 &&
+		mbpf < NUM_MBS_PER_FRAME(7680, 3840)))
+		return 0;
+
+	/**
+	 * client sets one chroma offset only in range [-12, 0]
+	 * firmware expects chroma cb offset and cr offset in
+	 * range [0, 12], firmware subtracts 12 from driver set values.
+	 */
+	chroma_qp.chroma_offset = (chr->val + 12) << 16 | (chr->val + 12);
+	s_vpr_h(inst->sid, "%s: %x\n", __func__, chroma_qp.chroma_offset);
+
+	/* TODO: Remove this check after firmware support added for 8-bit */
+	if (inst->bit_depth == MSM_VIDC_BIT_DEPTH_8)
+		return 0;
+
+	rc = call_hfi_op(hdev, session_set_property, inst->session,
+		HFI_PROPERTY_PARAM_HEVC_PPS_CB_CR_OFFSET, &chroma_qp,
+		sizeof(chroma_qp));
 	if (rc)
 		s_vpr_e(inst->sid, "%s: set property failed\n", __func__);
 
@@ -4617,6 +4693,9 @@ int msm_venc_set_properties(struct msm_vidc_inst *inst)
 	 * than blur.
 	 */
 	rc = msm_venc_set_rotation(inst);
+	if (rc)
+		goto exit;
+	rc = msm_venc_set_chroma_qp_offset(inst);
 	if (rc)
 		goto exit;
 	rc = msm_venc_set_blur_resolution(inst);
