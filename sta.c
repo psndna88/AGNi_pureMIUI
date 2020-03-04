@@ -2229,7 +2229,9 @@ static enum sigma_cmd_result cmd_sta_set_psk(struct sigma_dut *dut,
 			return STATUS_SENT_ERROR;
 		}
 	}
-	if (dut->sae_pwe == SAE_PWE_LOOP)
+	if (dut->sae_pwe == SAE_PWE_LOOP && get_param(cmd, "PasswordId"))
+		sae_pwe = 3;
+	else if (dut->sae_pwe == SAE_PWE_LOOP)
 		sae_pwe = 0;
 	else if (dut->sae_pwe == SAE_PWE_H2E)
 		sae_pwe = 1;
