@@ -12771,7 +12771,7 @@ static enum sigma_cmd_result cmd_sta_scan(struct sigma_dut *dut,
 					  struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
-	const char *val, *bssid, *ssid;
+	const char *val, *bssid, *ssid, *scan_freq;
 	char buf[4096];
 	char ssid_hex[65];
 	int wildcard_ssid = 0;
@@ -12828,12 +12828,16 @@ static enum sigma_cmd_result cmd_sta_scan(struct sigma_dut *dut,
 		ascii2hexstr(ssid, ssid_hex);
 	}
 
-	res = snprintf(buf, sizeof(buf), "SCAN%s%s%s%s%s",
+	scan_freq = get_param(cmd, "ChnlFreq");
+
+	res = snprintf(buf, sizeof(buf), "SCAN%s%s%s%s%s%s%s",
 			bssid ? " bssid=": "",
 			bssid ? bssid : "",
 			ssid ? " ssid " : "",
 			ssid ? ssid_hex : "",
-			wildcard_ssid ? " wildcard_ssid=1" : "");
+			wildcard_ssid ? " wildcard_ssid=1" : "",
+			scan_freq ? " freq=" : "",
+			scan_freq ? scan_freq : "");
 	if (res < 0 || res >= (int) sizeof(buf))
 		return -1;
 
