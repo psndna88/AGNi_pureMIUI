@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -266,8 +266,7 @@ struct reg_dmn_op_class_map_t *reg_get_class_from_country(uint8_t *country)
 {
 	const struct reg_dmn_op_class_map_t *class = NULL;
 
-	qdf_debug("Country %c%c 0x%x",
-		  country[0], country[1], country[2]);
+	reg_debug_rl("Country %c%c 0x%x", country[0], country[1], country[2]);
 
 	switch (country[2]) {
 	case OP_CLASS_US:
@@ -434,6 +433,30 @@ uint16_t reg_dmn_get_curr_opclasses(uint8_t *num_classes, uint8_t *class)
 }
 
 #ifdef CONFIG_CHAN_FREQ_API
+void reg_freq_width_to_chan_op_class_auto(struct wlan_objmgr_pdev *pdev,
+					  qdf_freq_t freq,
+					  uint16_t chan_width,
+					  bool global_tbl_lookup,
+					  uint16_t behav_limit,
+					  uint8_t *op_class,
+					  uint8_t *chan_num)
+{
+	if (reg_freq_to_band(freq) == REG_BAND_6G) {
+		global_tbl_lookup = true;
+		if (chan_width == BW_40_MHZ)
+			behav_limit = BIT(BEHAV_NONE);
+	} else {
+		global_tbl_lookup = false;
+	}
+
+	reg_freq_width_to_chan_op_class(pdev, freq,
+					chan_width,
+					global_tbl_lookup,
+					behav_limit,
+					op_class,
+					chan_num);
+}
+
 void reg_freq_width_to_chan_op_class(struct wlan_objmgr_pdev *pdev,
 				     qdf_freq_t freq,
 				     uint16_t chan_width,
@@ -449,7 +472,7 @@ void reg_freq_width_to_chan_op_class(struct wlan_objmgr_pdev *pdev,
 	chan_enum = reg_get_chan_enum_for_freq(freq);
 
 	if (chan_enum == INVALID_CHANNEL) {
-		reg_err(" channel enumeration is invalid %d", chan_enum);
+		reg_err_rl("Invalid chan enum %d", chan_enum);
 		return;
 	}
 
@@ -504,7 +527,7 @@ void reg_freq_to_chan_op_class(struct wlan_objmgr_pdev *pdev,
 	pdev_priv_obj = reg_get_pdev_obj(pdev);
 
 	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
-		reg_err("pdev reg obj is NULL");
+		reg_err_rl("NULL pdev reg obj");
 		return;
 	}
 
@@ -513,7 +536,7 @@ void reg_freq_to_chan_op_class(struct wlan_objmgr_pdev *pdev,
 	chan_enum = reg_get_chan_enum_for_freq(freq);
 
 	if (chan_enum == INVALID_CHANNEL) {
-		reg_err(" channel enumeration is invalid %d", chan_enum);
+		reg_err_rl("Invalid chan enum %d", chan_enum);
 		return;
 	}
 
@@ -526,6 +549,32 @@ void reg_freq_to_chan_op_class(struct wlan_objmgr_pdev *pdev,
 					op_class,
 					chan_num);
 }
+
+bool reg_country_opclass_freq_check(struct wlan_objmgr_pdev *pdev,
+				    const uint8_t country[3],
+				    uint8_t op_class,
+				    qdf_freq_t chan_freq)
+{
+	const struct reg_dmn_op_class_map_t *op_class_tbl;
+	uint8_t i;
+
+	op_class_tbl = reg_get_class_from_country((uint8_t *)country);
+
+	while (op_class_tbl && op_class_tbl->op_class) {
+		if  (op_class_tbl->op_class == op_class) {
+			for (i = 0; (i < REG_MAX_CHANNELS_PER_OPERATING_CLASS &&
+				     op_class_tbl->channels[i]); i++) {
+				if (op_class_tbl->channels[i] *
+				    FREQ_TO_CHAN_SCALE +
+				    op_class_tbl->start_freq == chan_freq)
+					return true;
+			}
+		}
+		op_class_tbl++;
+	}
+	return false;
+}
+
 #endif
 
 uint16_t reg_get_op_class_width(struct wlan_objmgr_pdev *pdev,
@@ -599,7 +648,7 @@ uint16_t reg_chan_opclass_to_freq(uint8_t chan,
 		}
 		op_class_tbl++;
 	}
-	reg_err_rl("Invalid opclass given as input");
+	reg_err_rl("Invalid opclass");
 	return 0;
 }
 
@@ -617,6 +666,68 @@ reg_get_op_class_tbl_by_chan_map(const struct
 		*op_class_tbl = japan_op_class;
 	else
 		*op_class_tbl = global_op_class;
+}
+
+/**
+ * reg_get_channel_cen - Calculate central channel in the channel set.
+ *
+ * @op_class_tbl - Pointer to op_class_tbl.
+ * @idx - Pointer to channel index.
+ * @num_channels - Number of channels.
+ * @center_chan - Pointer to center channel number
+ *
+ * Return : void
+ */
+static void reg_get_channel_cen(const struct
+				reg_dmn_op_class_map_t *op_class_tbl,
+				uint8_t *idx,
+				uint8_t num_channels,
+				uint8_t *center_chan)
+{
+	uint8_t i;
+	uint16_t new_chan = 0;
+
+	for (i = *idx; i < (*idx + num_channels); i++)
+		new_chan += op_class_tbl->channels[i];
+
+	new_chan = new_chan / num_channels;
+	*center_chan = new_chan;
+	*idx = *idx + num_channels;
+}
+
+/**
+ * reg_get_chan_or_chan_center - Calculate central channel in the channel set.
+ *
+ * @op_class_tbl - Pointer to op_class_tbl.
+ * @idx - Pointer to channel index.
+ *
+ * Return : Center channel number
+ */
+static uint8_t reg_get_chan_or_chan_center(const struct
+					   reg_dmn_op_class_map_t *op_class_tbl,
+					   uint8_t *idx)
+{
+	uint8_t center_chan;
+
+	if (((op_class_tbl->chan_spacing == BW_80_MHZ) &&
+	     (op_class_tbl->behav_limit == BIT(BEHAV_NONE))) ||
+	    ((op_class_tbl->chan_spacing == BW_80_MHZ) &&
+	     (op_class_tbl->behav_limit == BIT(BEHAV_BW80_PLUS)))) {
+		reg_get_channel_cen(op_class_tbl,
+				    idx,
+				    NUM_20_MHZ_CHAN_IN_80_MHZ_CHAN,
+				    &center_chan);
+	} else if (op_class_tbl->chan_spacing == BW_160_MHZ) {
+		reg_get_channel_cen(op_class_tbl,
+				    idx,
+				    NUM_20_MHZ_CHAN_IN_160_MHZ_CHAN,
+				    &center_chan);
+	} else {
+		center_chan = op_class_tbl->channels[*idx];
+		*idx = *idx + 1;
+	}
+
+	return center_chan;
 }
 
 /**
@@ -653,17 +764,16 @@ reg_get_channels_from_opclassmap(
 			reg_is_freq_present_in_cur_chan_list(pdev, search_freq);
 
 		if (!is_freq_present) {
-			reg_ap_cap[index].
-					non_sup_chan_list[n_unsup_chans++] =
-					op_class_tbl->channels[chan_idx];
+			reg_ap_cap[index].non_sup_chan_list[n_unsup_chans++] =
+				reg_get_chan_or_chan_center(op_class_tbl,
+							    &chan_idx);
 			reg_ap_cap[index].num_non_supported_chan++;
 		} else {
 			reg_ap_cap[index].sup_chan_list[n_sup_chans++] =
-					op_class_tbl->channels[chan_idx];
+				reg_get_chan_or_chan_center(op_class_tbl,
+							    &chan_idx);
 			reg_ap_cap[index].num_supported_chan++;
 		}
-
-		chan_idx++;
 	}
 
 	if (reg_ap_cap[index].num_supported_chan >= 1)
@@ -720,4 +830,5 @@ QDF_STATUS reg_get_opclass_details(struct wlan_objmgr_pdev *pdev,
 
 	return QDF_STATUS_SUCCESS;
 }
+
 #endif

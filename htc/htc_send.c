@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -129,7 +129,7 @@ static void send_packet_completion(HTC_TARGET *target, HTC_PACKET *pPacket)
 	 * In case of SSR, we cannot call the upper layer completion
 	 * callbacks, hence just free the nbuf and HTC packet here.
 	 */
-	if (hif_get_target_status(target->hif_dev)) {
+	if (target->hif_dev && hif_get_target_status(target->hif_dev)) {
 		htc_free_control_tx_packet(target, pPacket);
 		return;
 	}
@@ -795,9 +795,6 @@ static QDF_STATUS htc_issue_packets(HTC_TARGET *target,
 			 * frames, since data frames were already mapped as they
 			 * entered into the driver.
 			 */
-			pPacket->PktInfo.AsTx.Flags |=
-				HTC_TX_PACKET_FLAG_FIXUP_NETBUF;
-
 			ret = qdf_nbuf_map(target->osdev,
 				GET_HTC_PACKET_NET_BUF_CONTEXT(pPacket),
 				QDF_DMA_TO_DEVICE);
@@ -809,6 +806,8 @@ static QDF_STATUS htc_issue_packets(HTC_TARGET *target,
 				status = QDF_STATUS_E_FAILURE;
 				break;
 			}
+			pPacket->PktInfo.AsTx.Flags |=
+				HTC_TX_PACKET_FLAG_FIXUP_NETBUF;
 		}
 
 		if (!pEndpoint->async_update) {

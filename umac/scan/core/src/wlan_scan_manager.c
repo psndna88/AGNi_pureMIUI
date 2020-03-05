@@ -434,6 +434,7 @@ scm_update_dbs_scan_ctrl_ext_flag(struct scan_start_request *req)
 {
 	struct wlan_objmgr_psoc *psoc;
 	uint32_t scan_dbs_policy = SCAN_DBS_POLICY_DEFAULT;
+	bool ndi_present;
 
 	psoc = wlan_vdev_get_psoc(req->vdev);
 
@@ -444,6 +445,15 @@ scm_update_dbs_scan_ctrl_ext_flag(struct scan_start_request *req)
 
 	if (!wlan_scan_cfg_honour_nl_scan_policy_flags(psoc)) {
 		scm_debug_rl("nl scan policy flags not honoured, goto end");
+		goto end;
+	}
+
+	ndi_present = policy_mgr_mode_specific_connection_count(psoc,
+								PM_NDI_MODE,
+								NULL);
+
+	if (ndi_present && !policy_mgr_is_hw_dbs_2x2_capable(psoc)) {
+		scm_debug("NDP present go for DBS scan");
 		goto end;
 	}
 
@@ -549,6 +559,8 @@ int scm_scan_get_burst_duration(int max_ch_time, bool miracast_enabled)
 	}
 	return burst_duration;
 }
+
+#define SCM_ACTIVE_DWELL_TIME_NAN      40
 
 /**
  * scm_req_update_concurrency_params() - update scan req params depending on
@@ -758,6 +770,17 @@ static void scm_req_update_concurrency_params(struct wlan_objmgr_vdev *vdev,
 					SCAN_BURST_SCAN_MAX_NUM_OFFCHANNELS *
 					req->scan_req.dwell_time_active;
 		}
+	}
+
+	if (ndi_present) {
+		req->scan_req.dwell_time_active =
+			QDF_MIN(req->scan_req.dwell_time_active,
+				SCM_ACTIVE_DWELL_TIME_NAN);
+		req->scan_req.dwell_time_active_2g =
+			QDF_MIN(req->scan_req.dwell_time_active_2g,
+			SCM_ACTIVE_DWELL_TIME_NAN);
+		scm_debug("NDP active modify dwell time 2ghz %d",
+			req->scan_req.dwell_time_active_2g);
 	}
 }
 
@@ -1262,8 +1285,9 @@ static inline void scm_print_scan_req_info(struct scan_req_params *req)
 	uint32_t buff_len;
 	char *chan_buff;
 	uint32_t len = 0;
-	uint8_t idx;
+	uint8_t idx, count = 0;
 	struct chan_list *chan_lst;
+#define MAX_SCAN_FREQ_TO_PRINT 60
 
 	scm_nofl_debug("Scan start: scan id %d vdev %d Dwell time: act %d pass %d act_2G %d act_6G %d pass_6G %d, probe time %d n_probes %d flags %x ext_flag %x events %x policy %d wide_bw %d pri %d",
 		       req->scan_id, req->vdev_id, req->dwell_time_active,
@@ -1286,16 +1310,25 @@ static inline void scm_print_scan_req_info(struct scan_req_params *req)
 	 * Buffer of (num channl * 5) + 1  to consider the 4 char freq and
 	 * 1 space after it for each channel and 1 to end the string with NULL.
 	 */
-	buff_len = (chan_lst->num_chan * 5) + 1;
+	buff_len =
+		(QDF_MIN(MAX_SCAN_FREQ_TO_PRINT, chan_lst->num_chan) * 5) + 1;
 	chan_buff = qdf_mem_malloc(buff_len);
 	if (!chan_buff)
 		return;
-
-	for (idx = 0; idx < chan_lst->num_chan; idx++)
+	scm_nofl_debug("Total freq %d", chan_lst->num_chan);
+	for (idx = 0; idx < chan_lst->num_chan; idx++) {
 		len += qdf_scnprintf(chan_buff + len, buff_len - len, "%d ",
 				     chan_lst->chan[idx].freq);
-
-	scm_nofl_debug("Freq list[%d]: %s", chan_lst->num_chan, chan_buff);
+		count++;
+		if (count >= MAX_SCAN_FREQ_TO_PRINT) {
+			/* Print the MAX_SCAN_FREQ_TO_PRINT channels */
+			scm_nofl_debug("Freq list: %s", chan_buff);
+			len = 0;
+			count = 0;
+		}
+	}
+	if (len)
+		scm_nofl_debug("Freq list: %s", chan_buff);
 
 	qdf_mem_free(chan_buff);
 }

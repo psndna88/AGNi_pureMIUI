@@ -487,6 +487,8 @@ static const uint32_t vdev_param_tlv[] = {
 	[wmi_vdev_param_max_group_keys] = WMI_VDEV_PARAM_NUM_GROUP_KEYS,
 	[wmi_vdev_param_enable_mcast_rc] = WMI_VDEV_PARAM_ENABLE_MCAST_RC,
 	[wmi_vdev_param_6ghz_params] = WMI_VDEV_PARAM_6GHZ_PARAMS,
+	[wmi_vdev_param_enable_disable_roam_reason_vsie] =
+				WMI_VDEV_PARAM_ENABLE_DISABLE_ROAM_REASON_VSIE,
 };
 #endif
 
@@ -1626,7 +1628,12 @@ send_pdev_param_cmd_tlv(wmi_unified_t wmi_handle,
 		       WMITLV_TAG_STRUC_wmi_pdev_set_param_cmd_fixed_param,
 		       WMITLV_GET_STRUCT_TLVLEN
 			       (wmi_pdev_set_param_cmd_fixed_param));
-	cmd->pdev_id = wmi_handle->ops->convert_pdev_id_host_to_target(
+	if (param->is_host_pdev_id)
+		cmd->pdev_id = wmi_handle->ops->convert_host_pdev_id_to_target(
+								wmi_handle,
+								mac_id);
+	else
+		cmd->pdev_id = wmi_handle->ops->convert_pdev_id_host_to_target(
 								wmi_handle,
 								mac_id);
 	cmd->param_id = pdev_param;
@@ -3166,26 +3173,26 @@ static void wmi_scan_chanlist_dump(struct scan_chan_list_params *scan_chan_list)
 {
 	uint32_t i;
 	uint8_t info[WMI_MAX_CHAN_INFO_LOG];
-	int len = 0;
+	uint32_t len = 0;
 	struct channel_param *chan;
 	int ret;
 
-	WMI_LOGD(FL("start (freq MHz, tx power dBm):"));
+	wmi_debug("Total chan %d", scan_chan_list->nallchans);
 	for (i = 0; i < scan_chan_list->nallchans; i++) {
 		chan = &scan_chan_list->ch_param[i];
-		ret = scnprintf(info + len, sizeof(info) - len, "%d %d ",
-				chan->mhz, chan->maxregpower);
+		ret = qdf_scnprintf(info + len, sizeof(info) - len,
+				    " %d[%d][%d]", chan->mhz, chan->maxregpower,
+				    chan->dfs_set);
 		if (ret <= 0)
 			break;
 		len += ret;
 		if (len >= (sizeof(info) - 20)) {
-			WMI_LOGD(FL("%s"), info);
+			wmi_nofl_debug("Chan[TXPwr][DFS]:%s", info);
 			len = 0;
 		}
 	}
-	if (len > 0)
-		WMI_LOGD(FL("%s"), info);
-	WMI_LOGD(FL("end total_count %d"), scan_chan_list->nallchans);
+	if (len)
+		wmi_nofl_debug("Chan[TXPwr][DFS]:%s", info);
 }
 
 static QDF_STATUS send_scan_chan_list_cmd_tlv(wmi_unified_t wmi_handle,
@@ -7656,6 +7663,142 @@ send_pdev_fips_cmd_tlv(wmi_unified_t wmi_handle,
 }
 
 /**
+ * send_wlan_profile_enable_cmd_tlv() - send wlan profile enable command
+ * to fw
+ * @wmi_handle: wmi handle
+ * @param: pointer to wlan profile param
+ *
+ * Return: 0 for success or error code
+ */
+static QDF_STATUS
+send_wlan_profile_enable_cmd_tlv(wmi_unified_t wmi_handle,
+				 struct wlan_profile_params *param)
+{
+	wmi_buf_t buf;
+	uint16_t len;
+	QDF_STATUS ret;
+	wmi_wlan_profile_enable_profile_id_cmd_fixed_param *profile_enable_cmd;
+
+	len = sizeof(wmi_wlan_profile_enable_profile_id_cmd_fixed_param);
+	buf = wmi_buf_alloc(wmi_handle, len);
+	if (!buf) {
+		WMI_LOGE("Failed to send WMI_WLAN_PROFILE_ENABLE_PROFILE_ID_CMDID");
+		return QDF_STATUS_E_NOMEM;
+	}
+
+	profile_enable_cmd =
+		(wmi_wlan_profile_enable_profile_id_cmd_fixed_param *)
+			wmi_buf_data(buf);
+	WMITLV_SET_HDR(&profile_enable_cmd->tlv_header,
+	    WMITLV_TAG_STRUC_wmi_wlan_profile_enable_profile_id_cmd_fixed_param,
+	    WMITLV_GET_STRUCT_TLVLEN
+	    (wmi_wlan_profile_enable_profile_id_cmd_fixed_param));
+
+	profile_enable_cmd->profile_id = param->profile_id;
+	profile_enable_cmd->enable = param->enable;
+	wmi_mtrace(WMI_WLAN_PROFILE_ENABLE_PROFILE_ID_CMDID,
+		   NO_SESSION, 0);
+	ret = wmi_unified_cmd_send(wmi_handle, buf, len,
+				   WMI_WLAN_PROFILE_ENABLE_PROFILE_ID_CMDID);
+	if (ret) {
+		WMI_LOGE("Failed to send PROFILE_ENABLE_PROFILE_ID_CMDID");
+		wmi_buf_free(buf);
+	}
+	return ret;
+}
+
+/**
+ * send_wlan_profile_trigger_cmd_tlv() - send wlan profile trigger command
+ * to fw
+ * @wmi_handle: wmi handle
+ * @param: pointer to wlan profile param
+ *
+ * Return: 0 for success or error code
+ */
+static QDF_STATUS
+send_wlan_profile_trigger_cmd_tlv(wmi_unified_t wmi_handle,
+				  struct wlan_profile_params *param)
+{
+	wmi_buf_t buf;
+	uint16_t len;
+	QDF_STATUS ret;
+	wmi_wlan_profile_trigger_cmd_fixed_param *prof_trig_cmd;
+
+	len = sizeof(wmi_wlan_profile_trigger_cmd_fixed_param);
+	buf = wmi_buf_alloc(wmi_handle, len);
+	if (!buf) {
+		WMI_LOGE("Failed to send WMI_WLAN_PROFILE_TRIGGER_CMDID");
+		return QDF_STATUS_E_NOMEM;
+	}
+
+	prof_trig_cmd =
+		(wmi_wlan_profile_trigger_cmd_fixed_param *)
+			wmi_buf_data(buf);
+
+	WMITLV_SET_HDR(&prof_trig_cmd->tlv_header,
+	     WMITLV_TAG_STRUC_wmi_wlan_profile_trigger_cmd_fixed_param,
+	     WMITLV_GET_STRUCT_TLVLEN
+			(wmi_wlan_profile_trigger_cmd_fixed_param));
+
+	prof_trig_cmd->enable = param->enable;
+	wmi_mtrace(WMI_WLAN_PROFILE_TRIGGER_CMDID, NO_SESSION, 0);
+	ret = wmi_unified_cmd_send(wmi_handle, buf, len,
+				   WMI_WLAN_PROFILE_TRIGGER_CMDID);
+	if (ret) {
+		WMI_LOGE("Failed to send WMI_WLAN_PROFILE_TRIGGER_CMDID");
+		wmi_buf_free(buf);
+	}
+	return ret;
+}
+
+/**
+ * send_wlan_profile_hist_intvl_cmd_tlv() - send wlan profile interval command
+ * to fw
+ * @wmi_handle: wmi handle
+ * @param: pointer to wlan profile param
+ *
+ * Return: 0 for success or error code
+ */
+static QDF_STATUS
+send_wlan_profile_hist_intvl_cmd_tlv(wmi_unified_t wmi_handle,
+				     struct wlan_profile_params *param)
+{
+	wmi_buf_t buf;
+	int32_t len = 0;
+	QDF_STATUS ret;
+	wmi_wlan_profile_set_hist_intvl_cmd_fixed_param *hist_intvl_cmd;
+
+	len = sizeof(wmi_wlan_profile_set_hist_intvl_cmd_fixed_param);
+	buf = wmi_buf_alloc(wmi_handle, len);
+	if (!buf) {
+		WMI_LOGE("Failed to send WMI_WLAN_PROFILE_SET_HIST_INTVL_CMDID");
+		return QDF_STATUS_E_NOMEM;
+	}
+
+	hist_intvl_cmd =
+		(wmi_wlan_profile_set_hist_intvl_cmd_fixed_param *)
+			wmi_buf_data(buf);
+
+	WMITLV_SET_HDR(&hist_intvl_cmd->tlv_header,
+	      WMITLV_TAG_STRUC_wmi_wlan_profile_set_hist_intvl_cmd_fixed_param,
+	      WMITLV_GET_STRUCT_TLVLEN
+	      (wmi_wlan_profile_set_hist_intvl_cmd_fixed_param));
+
+	hist_intvl_cmd->profile_id = param->profile_id;
+	hist_intvl_cmd->value = param->enable;
+	wmi_mtrace(WMI_WLAN_PROFILE_SET_HIST_INTVL_CMDID,
+		   NO_SESSION, 0);
+
+	ret = wmi_unified_cmd_send(wmi_handle, buf, len,
+				   WMI_WLAN_PROFILE_SET_HIST_INTVL_CMDID);
+	if (ret) {
+		WMI_LOGE("Failed to send PROFILE_SET_HIST_INTVL_CMDID");
+		wmi_buf_free(buf);
+	}
+	return ret;
+}
+
+/**
  * send_fw_test_cmd_tlv() - send fw test command to fw.
  * @wmi_handle: wmi handle
  * @wmi_fwtest: fw test command
@@ -8357,10 +8500,8 @@ static QDF_STATUS extract_cca_stats_tlv(wmi_unified_t wmi_handle,
 
 	param_buf = (WMI_UPDATE_STATS_EVENTID_param_tlvs *)evt_buf;
 	congestion_stats = param_buf->congestion_stats;
-	if (!congestion_stats) {
-		WMI_LOGD("%s: no cca stats in event buffer", __func__);
+	if (!congestion_stats)
 		return QDF_STATUS_E_INVAL;
-	}
 
 	out_buff->vdev_id = congestion_stats->vdev_id;
 	out_buff->congestion = congestion_stats->congestion;
@@ -9972,6 +10113,26 @@ static QDF_STATUS extract_mib_stats_tlv(wmi_unified_t wmi_handle,
 static QDF_STATUS extract_profile_ctx_tlv(wmi_unified_t wmi_handle,
 	void *evt_buf, wmi_host_wlan_profile_ctx_t *profile_ctx)
 {
+	WMI_WLAN_PROFILE_DATA_EVENTID_param_tlvs *param_buf;
+
+	wmi_wlan_profile_ctx_t *ev;
+
+	param_buf = (WMI_WLAN_PROFILE_DATA_EVENTID_param_tlvs *)evt_buf;
+	if (!param_buf) {
+		WMI_LOGE("%s: Invalid profile data event buf", __func__);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	ev = param_buf->profile_ctx;
+
+	profile_ctx->tot = ev->tot;
+	profile_ctx->tx_msdu_cnt = ev->tx_msdu_cnt;
+	profile_ctx->tx_mpdu_cnt = ev->tx_mpdu_cnt;
+	profile_ctx->tx_ppdu_cnt = ev->tx_ppdu_cnt;
+	profile_ctx->rx_msdu_cnt = ev->rx_msdu_cnt;
+	profile_ctx->rx_mpdu_cnt = ev->rx_mpdu_cnt;
+	profile_ctx->bin_count   = ev->bin_count;
+
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -9986,6 +10147,29 @@ static QDF_STATUS extract_profile_ctx_tlv(wmi_unified_t wmi_handle,
 static QDF_STATUS extract_profile_data_tlv(wmi_unified_t wmi_handle,
 	void *evt_buf, uint8_t idx, wmi_host_wlan_profile_t *profile_data)
 {
+	WMI_WLAN_PROFILE_DATA_EVENTID_param_tlvs *param_buf;
+	wmi_wlan_profile_t *ev;
+	uint8_t *buf_ptr;
+
+	param_buf = (WMI_WLAN_PROFILE_DATA_EVENTID_param_tlvs *)evt_buf;
+	if (!param_buf) {
+		WMI_LOGE("%s: Invalid profile data event buf", __func__);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	buf_ptr = (uint8_t *)param_buf->profile_ctx;
+	buf_ptr = buf_ptr + sizeof(wmi_wlan_profile_ctx_t) + WMI_TLV_HDR_SIZE;
+
+	buf_ptr = buf_ptr + (sizeof(wmi_wlan_profile_t) * idx);
+	ev = (wmi_wlan_profile_t *)buf_ptr;
+
+	profile_data->id  = ev->id;
+	profile_data->cnt = ev->cnt;
+	profile_data->tot = ev->tot;
+	profile_data->min = ev->min;
+	profile_data->max = ev->max;
+	profile_data->hist_intvl = ev->hist_intvl;
+	qdf_mem_copy(profile_data->hist, ev->hist, sizeof(profile_data->hist));
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -11010,7 +11194,11 @@ static struct cur_reg_rule
 	struct cur_reg_rule *reg_rule_ptr;
 	uint32_t count;
 
-	reg_rule_ptr = qdf_mem_malloc(num_reg_rules * sizeof(*reg_rule_ptr));
+	if (!num_reg_rules)
+		return NULL;
+
+	reg_rule_ptr = qdf_mem_malloc(num_reg_rules *
+				      sizeof(*reg_rule_ptr));
 
 	if (!reg_rule_ptr)
 		return NULL;
@@ -11834,6 +12022,46 @@ send_roam_scan_stats_cmd_tlv(wmi_unified_t wmi_handle,
 	}
 
 	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * send_roam_scan_ch_list_req_cmd_tlv() - send wmi cmd to get roam scan
+ * channel list from firmware
+ * @wmi_handle: wmi handler
+ * @vdev_id: vdev id
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS send_roam_scan_ch_list_req_cmd_tlv(wmi_unified_t wmi_handle,
+						     uint32_t vdev_id)
+{
+	wmi_buf_t buf;
+	wmi_roam_get_scan_channel_list_cmd_fixed_param *cmd;
+	uint16_t len = sizeof(*cmd);
+	int ret;
+
+	buf = wmi_buf_alloc(wmi_handle, len);
+	if (!buf) {
+		WMI_LOGE("%s: Failed to allocate wmi buffer", __func__);
+		return QDF_STATUS_E_NOMEM;
+	}
+
+	cmd = (wmi_roam_get_scan_channel_list_cmd_fixed_param *)
+					wmi_buf_data(buf);
+	WMITLV_SET_HDR(&cmd->tlv_header,
+	WMITLV_TAG_STRUC_wmi_roam_get_scan_channel_list_cmd_fixed_param,
+		WMITLV_GET_STRUCT_TLVLEN(
+		wmi_roam_get_scan_channel_list_cmd_fixed_param));
+	cmd->vdev_id = vdev_id;
+	wmi_mtrace(WMI_ROAM_GET_SCAN_CHANNEL_LIST_CMDID, vdev_id, 0);
+	ret = wmi_unified_cmd_send(wmi_handle, buf, len,
+				   WMI_ROAM_GET_SCAN_CHANNEL_LIST_CMDID);
+	if (QDF_IS_STATUS_ERROR(ret)) {
+		WMI_LOGE("Failed to send get roam scan channels request = %d",
+			 ret);
+		wmi_buf_free(buf);
+	}
+	return ret;
 }
 
 /**
@@ -12997,6 +13225,36 @@ extract_roam_scan_stats_tlv(wmi_unified_t wmi_handle, void *evt_buf,
 }
 #endif
 
+#ifdef WLAN_FEATURE_PKT_CAPTURE
+static QDF_STATUS
+extract_vdev_mgmt_offload_event_tlv(void *handle, void *evt_buf,
+				    struct mgmt_offload_event_params *params)
+{
+	WMI_VDEV_MGMT_OFFLOAD_EVENTID_param_tlvs *param_tlvs;
+	wmi_mgmt_hdr *hdr;
+
+	param_tlvs = (WMI_VDEV_MGMT_OFFLOAD_EVENTID_param_tlvs *)evt_buf;
+	if (!param_tlvs)
+		return QDF_STATUS_E_INVAL;
+
+	hdr = param_tlvs->fixed_param;
+	if (!hdr)
+		return QDF_STATUS_E_INVAL;
+
+	if (hdr->buf_len > param_tlvs->num_bufp)
+		return QDF_STATUS_E_INVAL;
+
+	params->tsf_l32 = hdr->tsf_l32;
+	params->chan_freq = hdr->chan_freq;
+	params->rate_kbps = hdr->rate_kbps;
+	params->rssi = hdr->rssi;
+	params->buf_len = hdr->buf_len;
+	params->tx_status = hdr->tx_status;
+	params->buf = param_tlvs->bufp;
+	return QDF_STATUS_SUCCESS;
+}
+#endif /* WLAN_FEATURE_PKT_CAPTURE */
+
 #ifdef FEATURE_WLAN_TIME_SYNC_FTM
 /**
  * send_wlan_ts_ftm_trigger_cmd_tlv(): send wlan time sync cmd to FW
@@ -13357,9 +13615,13 @@ struct wmi_ops tlv_ops =  {
 	.send_pdev_fips_cmd = send_pdev_fips_cmd_tlv,
 	.extract_get_pn_data = extract_get_pn_data_tlv,
 	.send_pdev_get_pn_cmd = send_pdev_get_pn_cmd_tlv,
+	.send_wlan_profile_enable_cmd = send_wlan_profile_enable_cmd_tlv,
 #ifdef WLAN_FEATURE_DISA
 	.send_encrypt_decrypt_send_cmd = send_encrypt_decrypt_send_cmd_tlv,
 #endif
+	.send_wlan_profile_trigger_cmd = send_wlan_profile_trigger_cmd_tlv,
+	.send_wlan_profile_hist_intvl_cmd =
+				send_wlan_profile_hist_intvl_cmd_tlv,
 	.is_management_record = is_management_record_tlv,
 	.is_diag_event = is_diag_event_tlv,
 #ifdef WLAN_FEATURE_ACTION_OUI
@@ -13457,6 +13719,9 @@ struct wmi_ops tlv_ops =  {
 	.extract_roam_scan_stats = extract_roam_scan_stats_tlv,
 	.extract_roam_result_stats = extract_roam_result_stats_tlv,
 	.extract_roam_11kv_stats = extract_roam_11kv_stats_tlv,
+#ifdef WLAN_FEATURE_PKT_CAPTURE
+	.extract_vdev_mgmt_offload_event = extract_vdev_mgmt_offload_event_tlv,
+#endif
 
 #ifdef FEATURE_WLAN_TIME_SYNC_FTM
 	.send_wlan_time_sync_ftm_trigger_cmd = send_wlan_ts_ftm_trigger_cmd_tlv,
@@ -13466,6 +13731,7 @@ struct wmi_ops tlv_ops =  {
 	.extract_time_sync_ftm_offset_event =
 					extract_time_sync_ftm_offset_event_tlv,
 #endif /* FEATURE_WLAN_TIME_SYNC_FTM */
+	.send_roam_scan_ch_list_req_cmd = send_roam_scan_ch_list_req_cmd_tlv,
 };
 
 /**
@@ -13820,6 +14086,8 @@ static void populate_tlv_events_id(uint32_t *event_ids)
 	event_ids[wmi_oem_data_event_id] = WMI_OEM_DATA_EVENTID;
 	event_ids[wmi_mgmt_offload_data_event_id] =
 				WMI_VDEV_MGMT_OFFLOAD_EVENTID;
+	event_ids[wmi_nan_dmesg_event_id] =
+				WMI_NAN_DMESG_EVENTID;
 	event_ids[wmi_pdev_multi_vdev_restart_response_event_id] =
 				WMI_PDEV_MULTIPLE_VDEV_RESTART_RESP_EVENTID;
 	event_ids[wmi_roam_pmkid_request_event_id] =
@@ -13830,6 +14098,8 @@ static void populate_tlv_events_id(uint32_t *event_ids)
 	event_ids[wmi_wlan_time_sync_q_master_slave_offset_eventid] =
 			WMI_VDEV_AUDIO_SYNC_Q_MASTER_SLAVE_OFFSET_EVENTID;
 #endif
+event_ids[wmi_roam_scan_chan_list_id] =
+			WMI_ROAM_SCAN_CHANNEL_LIST_EVENTID;
 }
 
 /**
@@ -14108,6 +14378,8 @@ static void populate_tlv_service(uint32_t *wmi_service)
 			WMI_SERVICE_6GHZ_SUPPORT;
 	wmi_service[wmi_service_bw_165mhz_support] =
 			WMI_SERVICE_BW_165MHZ_SUPPORT;
+	wmi_service[wmi_service_bw_restricted_80p80_support] =
+			WMI_SERVICE_BW_RESTRICTED_80P80_SUPPORT;
 	wmi_service[wmi_service_packet_capture_support] =
 			WMI_SERVICE_PACKET_CAPTURE_SUPPORT;
 	wmi_service[wmi_service_nan_vdev] = WMI_SERVICE_NAN_VDEV_SUPPORT;
@@ -14119,6 +14391,8 @@ static void populate_tlv_service(uint32_t *wmi_service)
 			WMI_SERVICE_AUDIO_SYNC_SUPPORT;
 	wmi_service[wmi_service_nss_ratio_to_host_support] =
 			WMI_SERVICE_NSS_RATIO_TO_HOST_SUPPORT;
+	wmi_service[wmi_roam_scan_chan_list_to_host_support] =
+			WMI_SERVICE_ROAM_SCAN_CHANNEL_LIST_TO_HOST_SUPPORT;
 }
 
 /**
@@ -14165,6 +14439,7 @@ void wmi_tlv_attach(wmi_unified_t wmi_handle)
 	wmi_nan_attach_tlv(wmi_handle);
 	wmi_p2p_attach_tlv(wmi_handle);
 	wmi_interop_issues_ap_attach_tlv(wmi_handle);
+	wmi_dcs_attach_tlv(wmi_handle);
 	wmi_roam_attach_tlv(wmi_handle);
 	wmi_concurrency_attach_tlv(wmi_handle);
 	wmi_pmo_attach_tlv(wmi_handle);

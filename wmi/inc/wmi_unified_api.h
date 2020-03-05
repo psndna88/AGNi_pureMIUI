@@ -100,6 +100,10 @@
 #include "wmi_unified_fwol_api.h"
 #endif
 
+#ifdef WLAN_FEATURE_PKT_CAPTURE
+#include "wlan_pkt_capture_public_structs.h"
+#endif
+
 typedef qdf_nbuf_t wmi_buf_t;
 #define wmi_buf_data(_buf) qdf_nbuf_data(_buf)
 
@@ -1815,6 +1819,18 @@ wmi_unified_wlan_profile_enable_cmd_send(wmi_unified_t wmi_handle,
 QDF_STATUS
 wmi_unified_wlan_profile_trigger_cmd_send(wmi_unified_t wmi_handle,
 					  struct wlan_profile_params *param);
+
+/**
+ *  wmi_unified_wlan_profile_hist_intvl_cmd_send() - WMI wlan profile history
+ *						  cmd function
+ *  @wmi_handle: handle to WMI.
+ *  @param: pointer to hold wlan profile param
+ *
+ *  Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS
+wmi_unified_wlan_profile_hist_intvl_cmd_send(wmi_unified_t wmi_handle,
+					     struct wlan_profile_params *param);
 
 /**
  *  wmi_unified_set_chan_cmd_send() - WMI set channel cmd function
@@ -3817,6 +3833,22 @@ QDF_STATUS wmi_unified_extract_ani_level(wmi_unified_t wmi_handle,
 					 struct wmi_host_ani_level_event **info,
 					 uint32_t *num_freqs);
 #endif /* FEATURE_ANI_LEVEL_REQUEST */
+
+#ifdef WLAN_FEATURE_PKT_CAPTURE
+/**
+ * wmi_unified_extract_vdev_mgmt_offload_event() - Extract mgmt offload params
+ * @wmi: WMI handle
+ * @evt_buf: Event buffer
+ * @params: Management offload event params
+ *
+ * WMI function to extract management offload event params
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wmi_unified_extract_vdev_mgmt_offload_event(wmi_unified_t wmi, void *evt_buf,
+				struct mgmt_offload_event_params *params);
+#endif
 
 #ifdef FEATURE_WLAN_TIME_SYNC_FTM
 /**

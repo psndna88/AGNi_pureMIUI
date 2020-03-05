@@ -774,6 +774,8 @@ qdf_freq_t wlan_reg_chan_band_to_freq(struct wlan_objmgr_pdev *pdev,
 	return reg_chan_band_to_freq(pdev, chan, band_mask);
 }
 
+qdf_export_symbol(wlan_reg_chan_band_to_freq);
+
 bool wlan_reg_is_49ghz_freq(qdf_freq_t freq)
 {
 	return reg_is_49ghz_freq(freq);
@@ -995,6 +997,21 @@ void wlan_reg_freq_width_to_chan_op_class(struct wlan_objmgr_pdev *pdev,
 					       chan_num);
 }
 
+void wlan_reg_freq_width_to_chan_op_class_auto(struct wlan_objmgr_pdev *pdev,
+					       qdf_freq_t freq,
+					       uint16_t chan_width,
+					       bool global_tbl_lookup,
+					       uint16_t behav_limit,
+					       uint8_t *op_class,
+					       uint8_t *chan_num)
+{
+	reg_freq_width_to_chan_op_class_auto(pdev, freq, chan_width,
+					     global_tbl_lookup,
+					     behav_limit,
+					     op_class,
+					     chan_num);
+}
+
 void wlan_reg_freq_to_chan_op_class(struct wlan_objmgr_pdev *pdev,
 				    qdf_freq_t freq,
 				    bool global_tbl_lookup,
@@ -1007,6 +1024,15 @@ void wlan_reg_freq_to_chan_op_class(struct wlan_objmgr_pdev *pdev,
 					 behav_limit,
 					 op_class,
 					 chan_num);
+}
+
+bool wlan_reg_country_opclass_freq_check(struct wlan_objmgr_pdev *pdev,
+					 const uint8_t country[3],
+					 uint8_t op_class,
+					 qdf_freq_t chan_freq)
+{
+	return reg_country_opclass_freq_check(pdev, country,
+					      op_class, chan_freq);
 }
 
 enum channel_state

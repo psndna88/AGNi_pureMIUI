@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1394,6 +1394,28 @@ bool ce_check_rx_pending(struct CE_state *CE_state)
 qdf_export_symbol(ce_check_rx_pending);
 
 #ifdef IPA_OFFLOAD
+#ifdef QCN7605_SUPPORT
+static qdf_dma_addr_t ce_ipa_get_wr_index_addr(struct CE_state *CE_state)
+{
+	u_int32_t ctrl_addr = CE_state->ctrl_addr;
+	struct hif_softc *scn = CE_state->scn;
+	qdf_dma_addr_t wr_index_addr;
+
+	wr_index_addr = shadow_sr_wr_ind_addr(scn, ctrl_addr);
+	return wr_index_addr;
+}
+#else
+static qdf_dma_addr_t ce_ipa_get_wr_index_addr(struct CE_state *CE_state)
+{
+	struct hif_softc *scn = CE_state->scn;
+	qdf_dma_addr_t wr_index_addr;
+
+	wr_index_addr = CE_BASE_ADDRESS(CE_state->id) +
+			SR_WR_INDEX_ADDRESS;
+	return wr_index_addr;
+}
+#endif
+
 /**
  * ce_ipa_get_resource() - get uc resource on copyengine
  * @ce: copyengine context
@@ -1442,9 +1464,10 @@ void ce_ipa_get_resource(struct CE_handle *ce,
 	*ce_sr = CE_state->scn->ipa_ce_ring;
 	*ce_sr_ring_size = (uint32_t)(CE_state->src_ring->nentries *
 		sizeof(struct CE_src_desc));
-	*ce_reg_paddr = phy_mem_base + CE_BASE_ADDRESS(CE_state->id) +
-			SR_WR_INDEX_ADDRESS;
+	*ce_reg_paddr = phy_mem_base + ce_ipa_get_wr_index_addr(CE_state);
+
 }
+
 #endif /* IPA_OFFLOAD */
 
 #ifdef HIF_CE_DEBUG_DATA_BUF

@@ -1133,12 +1133,26 @@ QDF_STATUS dp_h2t_ext_stats_msg_send(struct dp_pdev *pdev,
 void dp_htt_stats_print_tag(struct dp_pdev *pdev,
 			    uint8_t tag_type, uint32_t *tag_buf);
 void dp_htt_stats_copy_tag(struct dp_pdev *pdev, uint8_t tag_type, uint32_t *tag_buf);
-void dp_peer_rxtid_stats(struct dp_peer *peer, void (*callback_fn),
-		void *cb_ctxt);
+QDF_STATUS dp_h2t_3tuple_config_send(struct dp_pdev *pdev, uint32_t tuple_mask,
+				     uint8_t mac_id);
+/**
+ * dp_rxtid_stats_cmd_cb - function pointer for peer
+ *			   rx tid stats cmd call_back
+ */
+typedef void (*dp_rxtid_stats_cmd_cb)(struct dp_soc *soc, void *cb_ctxt,
+				      union hal_reo_status *reo_status);
+int dp_peer_rxtid_stats(struct dp_peer *peer,
+			dp_rxtid_stats_cmd_cb dp_stats_cmd_cb,
+			void *cb_ctxt);
 QDF_STATUS
 dp_set_pn_check_wifi3(struct cdp_soc_t *soc, uint8_t vdev_id,
 		      uint8_t *peer_mac, enum cdp_sec_type sec_type,
 		      uint32_t *rx_pn);
+
+QDF_STATUS
+dp_set_key_sec_type_wifi3(struct cdp_soc_t *soc, uint8_t vdev_id,
+			  uint8_t *peer_mac, enum cdp_sec_type sec_type,
+			  bool is_unicast);
 
 void *dp_get_pdev_for_mac_id(struct dp_soc *soc, uint32_t mac_id);
 
@@ -1802,6 +1816,19 @@ void dp_print_pdev_tx_capture_stats(struct dp_pdev *pdev)
 {
 }
 
+/*
+ * dp_peer_tx_capture_filter_check: check filter is enable for the filter
+ * and update tx_cap_enabled flag
+ * @pdev: DP PDEV handle
+ * @peer: DP PEER handle
+ *
+ * return: void
+ */
+static inline
+void dp_peer_tx_capture_filter_check(struct dp_pdev *pdev,
+				     struct dp_peer *peer)
+{
+}
 #endif
 
 #ifdef FEATURE_PERPKT_INFO
@@ -1875,7 +1902,7 @@ struct dp_soc *cdp_soc_t_to_dp_soc(struct cdp_soc_t *psoc)
 	return (struct dp_soc *)psoc;
 }
 
-#ifdef WLAN_SUPPORT_RX_FLOW_TAG
+#if defined(WLAN_SUPPORT_RX_FLOW_TAG) || defined(WLAN_SUPPORT_RX_FISA)
 /**
  * dp_rx_flow_update_fse_stats() - Update a flow's statistics
  * @pdev: pdev handle
@@ -1934,7 +1961,8 @@ void dp_rx_fst_detach(struct dp_soc *soc, struct dp_pdev *pdev);
  */
 QDF_STATUS dp_rx_flow_send_fst_fw_setup(struct dp_soc *soc,
 					struct dp_pdev *pdev);
-#else
+#else /* !((WLAN_SUPPORT_RX_FLOW_TAG) || defined(WLAN_SUPPORT_RX_FISA)) */
+
 /**
  * dp_rx_fst_attach() - Initialize Rx FST and setup necessary parameters
  * @soc: SoC handle
@@ -1959,7 +1987,7 @@ static inline
 void dp_rx_fst_detach(struct dp_soc *soc, struct dp_pdev *pdev)
 {
 }
-#endif /* WLAN_SUPPORT_RX_FLOW_TAG */
+#endif
 
 /**
  * dp_get_vdev_from_soc_vdev_id_wifi3() - Returns vdev object given the vdev id
@@ -2030,4 +2058,45 @@ void dp_is_hw_dbs_enable(struct dp_soc *soc,
 				int *max_mac_rings);
 
 
+#if defined(WLAN_SUPPORT_RX_FISA)
+void dp_rx_dump_fisa_table(struct dp_soc *soc);
+#endif /* WLAN_SUPPORT_RX_FISA */
+
+#ifdef MAX_ALLOC_PAGE_SIZE
+/**
+ * dp_set_page_size() - Set the max page size for hw link desc.
+ * For MCL the page size is set to OS defined value and for WIN
+ * the page size is set to the max_alloc_size cfg ini
+ * param.
+ * This is to ensure that WIN gets contiguous memory allocations
+ * as per requirement.
+ * @pages: link desc page handle
+ * @max_alloc_size: max_alloc_size
+ *
+ * Return: None
+ */
+static inline
+void dp_set_max_page_size(struct qdf_mem_multi_page_t *pages,
+			  uint32_t max_alloc_size)
+{
+	pages->page_size = qdf_page_size;
+}
+
+#else
+static inline
+void dp_set_max_page_size(struct qdf_mem_multi_page_t *pages,
+			  uint32_t max_alloc_size)
+{
+	pages->page_size = max_alloc_size;
+}
+#endif /* MAX_ALLOC_PAGE_SIZE */
+
+/**
+ * dp_rx_skip_tlvs() - Skip TLVs len + L2 hdr_offset, save in nbuf->cb
+ * @nbuf: nbuf cb to be updated
+ * @l2_hdr_offset: l2_hdr_offset
+ *
+ * Return: None
+ */
+void dp_rx_skip_tlvs(qdf_nbuf_t nbuf, uint32_t l3_padding);
 #endif /* #ifndef _DP_INTERNAL_H_ */

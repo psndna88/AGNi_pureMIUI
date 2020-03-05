@@ -546,6 +546,9 @@ void dp_rx_fill_mesh_stats(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 	uint32_t nss;
 	uint32_t rate_mcs;
 	uint32_t bw;
+	uint8_t primary_chan_num;
+	uint32_t center_chan_freq;
+	struct dp_soc *soc;
 
 	/* fill recv mesh stats */
 	rx_info = qdf_mem_malloc(sizeof(struct mesh_recv_hdr_s));
@@ -577,7 +580,18 @@ void dp_rx_fill_mesh_stats(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 	}
 
 	rx_info->rs_rssi = hal_rx_msdu_start_get_rssi(rx_tlv_hdr);
-	rx_info->rs_channel = hal_rx_msdu_start_get_freq(rx_tlv_hdr);
+
+	soc = vdev->pdev->soc;
+	primary_chan_num = hal_rx_msdu_start_get_freq(rx_tlv_hdr);
+	center_chan_freq = hal_rx_msdu_start_get_freq(rx_tlv_hdr) >> 16;
+
+	if (soc->cdp_soc.ol_ops && soc->cdp_soc.ol_ops->freq_to_band) {
+		rx_info->rs_band = soc->cdp_soc.ol_ops->freq_to_band(
+							soc->ctrl_psoc,
+							vdev->pdev->pdev_id,
+							center_chan_freq);
+	}
+	rx_info->rs_channel = primary_chan_num;
 	pkt_type = hal_rx_msdu_start_get_pkt_type(rx_tlv_hdr);
 	rate_mcs = hal_rx_msdu_start_rate_mcs_get(rx_tlv_hdr);
 	bw = hal_rx_msdu_start_bw_get(rx_tlv_hdr);
@@ -910,7 +924,7 @@ free:
 	}
 
 	/* Reset the head and tail pointers */
-	pdev = dp_get_pdev_for_mac_id(soc, mac_id);
+	pdev = dp_get_pdev_for_lmac_id(soc, mac_id);
 	if (pdev) {
 		pdev->invalid_peer_head_msdu = NULL;
 		pdev->invalid_peer_tail_msdu = NULL;
@@ -1348,7 +1362,13 @@ void dp_rx_deliver_to_stack(struct dp_soc *soc,
 		vdev->osif_rsim_rx_decap(vdev->osif_vdev, &nbuf_head,
 				&nbuf_tail, peer->mac_addr.raw);
 	}
-	vdev->osif_rx(vdev->osif_vdev, nbuf_head);
+
+	/* Function pointer initialized only when FISA is enabled */
+	if (vdev->osif_fisa_rx)
+		/* on failure send it via regular path */
+		vdev->osif_fisa_rx(soc, vdev, nbuf_head);
+	else
+		vdev->osif_rx(vdev->osif_vdev, nbuf_head);
 }
 
 /**
@@ -1738,6 +1758,20 @@ uint32_t dp_rx_srng_get_num_pending(hal_soc_handle_t hal_soc,
 
 	return num_pending;
 }
+
+#ifdef WLAN_SUPPORT_RX_FISA
+void dp_rx_skip_tlvs(qdf_nbuf_t nbuf, uint32_t l3_padding)
+{
+	QDF_NBUF_CB_RX_PACKET_L3_HDR_PAD(nbuf) = l3_padding;
+	qdf_nbuf_pull_head(nbuf, l3_padding + RX_PKT_TLVS_LEN);
+}
+#else
+void dp_rx_skip_tlvs(qdf_nbuf_t nbuf, uint32_t l3_padding)
+{
+	qdf_nbuf_pull_head(nbuf, l3_padding + RX_PKT_TLVS_LEN);
+}
+#endif
+
 
 /**
  * dp_rx_process() - Brain of the Rx processing functionality
@@ -2185,9 +2219,7 @@ done:
 				  RX_PKT_TLVS_LEN;
 
 			qdf_nbuf_set_pktlen(nbuf, pkt_len);
-			qdf_nbuf_pull_head(nbuf,
-					   RX_PKT_TLVS_LEN +
-					   msdu_metadata.l3_hdr_pad);
+			dp_rx_skip_tlvs(nbuf, msdu_metadata.l3_hdr_pad);
 		}
 
 		/*
@@ -2354,6 +2386,9 @@ done:
 				}
 			}
 		}
+
+		if (vdev && vdev->osif_fisa_flush)
+			vdev->osif_fisa_flush(soc, reo_ring_num);
 
 		if (vdev && vdev->osif_gro_flush && rx_ol_pkt_cnt) {
 			vdev->osif_gro_flush(vdev->osif_vdev,

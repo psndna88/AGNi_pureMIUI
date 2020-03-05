@@ -878,10 +878,12 @@ struct suspend_params {
  * struct pdev_params - pdev set cmd parameter
  * @param_id: parameter id
  * @param_value: parameter value
+ * @is_host_pdev_id: indicate whether pdev_id is host pdev_id or not
  */
 struct pdev_params {
 	uint32_t param_id;
 	uint32_t param_value;
+	bool is_host_pdev_id;
 };
 
 /**
@@ -1672,6 +1674,8 @@ struct roam_fils_params {
  * roam candidate table are valid
  * @roam_scan_inactivity_time: inactivity monitoring time in ms for which the
  * device is considered to be inactive
+ * @is_sae_same_pmk: Flag to indicate fw whether WLAN_SAE_SINGLE_PMK feature is
+ * enable or not
  * @roam_inactive_data_packet_count: Maximum allowed data packets count during
  * roam_scan_inactivity_time.
  * @roam_scan_period_after_inactivity: Roam scan period in ms after device is
@@ -1699,6 +1703,7 @@ struct roam_offload_scan_params {
 	bool fw_pmksa_cache;
 	uint32_t rct_validity_timer;
 	bool is_adaptive_11r;
+	bool is_sae_same_pmk;
 #endif
 	uint32_t min_delay_btw_roam_scans;
 	uint32_t roam_trigger_reason_bitmask;
@@ -4524,6 +4529,7 @@ typedef enum {
 	wmi_ndp_responder_rsp_event_id,
 	wmi_ndp_end_indication_event_id,
 	wmi_ndp_end_rsp_event_id,
+	wmi_nan_dmesg_event_id,
 	wmi_ndl_schedule_update_event_id,
 	wmi_ndp_event_id,
 	wmi_oem_response_event_id,
@@ -4596,6 +4602,7 @@ typedef enum {
 	wmi_wlan_time_sync_ftm_start_stop_event_id,
 	wmi_wlan_time_sync_q_master_slave_offset_eventid,
 #endif
+	wmi_roam_scan_chan_list_id,
 	wmi_events_max,
 } wmi_conv_event_id;
 
@@ -4896,6 +4903,7 @@ typedef enum {
 	wmi_vdev_param_max_group_keys,
 	wmi_vdev_param_enable_mcast_rc,
 	wmi_vdev_param_6ghz_params,
+	wmi_vdev_param_enable_disable_roam_reason_vsie,
 } wmi_conv_vdev_param_id;
 
 /**
@@ -5098,12 +5106,14 @@ typedef enum {
 	wmi_service_ext2_msg,
 	wmi_service_6ghz_support,
 	wmi_service_bw_165mhz_support,
+	wmi_service_bw_restricted_80p80_support,
 	wmi_service_packet_capture_support,
 	wmi_service_nan_vdev,
 	wmi_service_multiple_vdev_restart_ext,
 	wmi_service_peer_delete_no_peer_flush_tids_cmd,
 	wmi_service_time_sync_ftm,
 	wmi_service_nss_ratio_to_host_support,
+	wmi_roam_scan_chan_list_to_host_support,
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF

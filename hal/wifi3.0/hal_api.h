@@ -94,6 +94,40 @@ hal_set_verbose_debug(bool flag)
 }
 #endif
 
+#ifdef ENABLE_HAL_SOC_STATS
+#define HAL_STATS_INC(_handle, _field, _delta) \
+{ \
+	if (likely(_handle)) \
+		_handle->stats._field += _delta; \
+}
+#else
+#define HAL_STATS_INC(_handle, _field, _delta)
+#endif
+
+#ifdef ENABLE_HAL_REG_WR_HISTORY
+#define HAL_REG_WRITE_FAIL_HIST_ADD(hal_soc, offset, wr_val, rd_val) \
+	hal_reg_wr_fail_history_add(hal_soc, offset, wr_val, rd_val)
+
+void hal_reg_wr_fail_history_add(struct hal_soc *hal_soc,
+				 uint32_t offset,
+				 uint32_t wr_val,
+				 uint32_t rd_val);
+
+static inline int hal_history_get_next_index(qdf_atomic_t *table_index,
+					     int array_size)
+{
+	int record_index = qdf_atomic_inc_return(table_index);
+
+	return record_index & (array_size - 1);
+}
+#else
+#define HAL_REG_WRITE_FAIL_HIST_ADD(hal_soc, offset, wr_val, rd_val) \
+	hal_err("write failed at reg offset 0x%x, write 0x%x read 0x%x\n", \
+		offset,	\
+		wr_val,	\
+		rd_val)
+#endif
+
 /**
  * hal_reg_write_result_check() - check register writing result
  * @hal_soc: HAL soc handle
@@ -111,12 +145,8 @@ static inline void hal_reg_write_result_check(struct hal_soc *hal_soc,
 
 	value = qdf_ioread32(hal_soc->dev_base_addr + offset);
 	if (exp_val != value) {
-		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_INFO_HIGH,
-			  "register offset 0x%x write failed!\n", offset);
-		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_INFO_HIGH,
-			  "the expectation 0x%x, actual value 0x%x\n",
-			  exp_val,
-			  value);
+		HAL_REG_WRITE_FAIL_HIST_ADD(hal_soc, offset, exp_val, value);
+		HAL_STATS_INC(hal_soc, reg_write_fail, 1);
 	}
 }
 
@@ -260,28 +290,6 @@ static inline void hal_write32_mb(struct hal_soc *hal_soc, uint32_t offset,
 	}
 }
 
-/**
- * hal_write_address_32_mb - write a value to a register
- *
- */
-static inline
-void hal_write_address_32_mb(struct hal_soc *hal_soc,
-			     qdf_iomem_t addr, uint32_t value)
-{
-	uint32_t offset;
-	qdf_iomem_t new_addr;
-
-	if (!hal_soc->use_register_windowing)
-		return qdf_iowrite32(addr, value);
-
-	offset = addr - hal_soc->dev_base_addr;
-	if (hal_soc->static_window_map) {
-		new_addr = hal_get_window_address(hal_soc, addr);
-		return qdf_iowrite32(new_addr, value);
-	}
-	hal_write32_mb(hal_soc, offset, value);
-}
-
 #define hal_write32_mb_confirm(_hal_soc, _offset, _value) \
 		hal_write32_mb(_hal_soc, _offset, _value)
 #else
@@ -290,6 +298,7 @@ static inline void hal_write32_mb(struct hal_soc *hal_soc, uint32_t offset,
 {
 	int ret;
 	unsigned long flags;
+	qdf_iomem_t new_addr;
 
 	/* Region < BAR + 4K can be directly accessed */
 	if (offset < MAPPED_REF_OFF) {
@@ -310,6 +319,11 @@ static inline void hal_write32_mb(struct hal_soc *hal_soc, uint32_t offset,
 	if (!hal_soc->use_register_windowing ||
 	    offset < MAX_UNWINDOWED_ADDRESS) {
 		qdf_iowrite32(hal_soc->dev_base_addr + offset, value);
+	} else if (hal_soc->static_window_map) {
+		new_addr = hal_get_window_address(
+					hal_soc,
+					hal_soc->dev_base_addr + offset);
+		qdf_iowrite32(new_addr, value);
 	} else {
 		hal_lock_reg_access(hal_soc, &flags);
 		hal_select_window(hal_soc, offset);
@@ -338,6 +352,7 @@ static inline void hal_write32_mb_confirm(struct hal_soc *hal_soc,
 {
 	int ret;
 	unsigned long flags;
+	qdf_iomem_t new_addr;
 
 	/* Region < BAR + 4K can be directly accessed */
 	if (offset < MAPPED_REF_OFF) {
@@ -359,6 +374,14 @@ static inline void hal_write32_mb_confirm(struct hal_soc *hal_soc,
 	    offset < MAX_UNWINDOWED_ADDRESS) {
 		qdf_iowrite32(hal_soc->dev_base_addr + offset, value);
 		hal_reg_write_result_check(hal_soc, offset,
+					   value);
+	} else if (hal_soc->static_window_map) {
+		new_addr = hal_get_window_address(
+					hal_soc,
+					hal_soc->dev_base_addr + offset);
+		qdf_iowrite32(new_addr, value);
+		hal_reg_write_result_check(hal_soc,
+					   new_addr - hal_soc->dev_base_addr,
 					   value);
 	} else {
 		hal_lock_reg_access(hal_soc, &flags);
@@ -382,6 +405,7 @@ static inline void hal_write32_mb_confirm(struct hal_soc *hal_soc,
 		}
 	}
 }
+#endif
 
 /**
  * hal_write_address_32_mb - write a value to a register
@@ -399,7 +423,6 @@ void hal_write_address_32_mb(struct hal_soc *hal_soc,
 	offset = addr - hal_soc->dev_base_addr;
 	hal_write32_mb(hal_soc, offset, value);
 }
-#endif
 
 #ifdef DP_HAL_MULTIWINDOW_DIRECT_ACCESS
 #define hal_srng_write_address_32_mb(_a, _b, _c) qdf_iowrite32(_b, _c)
@@ -460,6 +483,7 @@ uint32_t hal_read32_mb(struct hal_soc *hal_soc, uint32_t offset)
 {
 	uint32_t ret;
 	unsigned long flags;
+	qdf_iomem_t new_addr;
 
 	/* Region < BAR + 4K can be directly accessed */
 	if (offset < MAPPED_REF_OFF)
@@ -475,6 +499,11 @@ uint32_t hal_read32_mb(struct hal_soc *hal_soc, uint32_t offset)
 	if (!hal_soc->use_register_windowing ||
 	    offset < MAX_UNWINDOWED_ADDRESS) {
 		ret = qdf_ioread32(hal_soc->dev_base_addr + offset);
+	} else if (hal_soc->static_window_map) {
+		new_addr = hal_get_window_address(
+					hal_soc,
+					hal_soc->dev_base_addr + offset);
+		ret = qdf_ioread32(new_addr);
 	} else {
 		hal_lock_reg_access(hal_soc, &flags);
 		hal_select_window(hal_soc, offset);
@@ -507,17 +536,11 @@ uint32_t hal_read_address_32_mb(struct hal_soc *soc,
 {
 	uint32_t offset;
 	uint32_t ret;
-	qdf_iomem_t new_addr;
 
 	if (!soc->use_register_windowing)
 		return qdf_ioread32(addr);
 
 	offset = addr - soc->dev_base_addr;
-	if (soc->static_window_map) {
-		new_addr = hal_get_window_address(soc, addr);
-		return qdf_ioread32(new_addr);
-	}
-
 	ret = hal_read32_mb(soc, offset);
 	return ret;
 }
@@ -552,7 +575,7 @@ enum hal_ring_type {
 	REO_CMD = 3,
 	REO_STATUS = 4,
 	TCL_DATA = 5,
-	TCL_CMD = 6,
+	TCL_CMD_CREDIT = 6,
 	TCL_STATUS = 7,
 	CE_SRC = 8,
 	CE_DST = 9,
