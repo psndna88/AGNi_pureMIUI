@@ -12771,11 +12771,12 @@ static enum sigma_cmd_result cmd_sta_scan(struct sigma_dut *dut,
 					  struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
-	const char *val, *bssid, *ssid, *scan_freq;
+	const char *val, *bssid, *ssid, *scan_freq, *short_ssid;
 	char buf[4096];
 	char ssid_hex[65];
 	int wildcard_ssid = 0;
 	int res;
+	enum sigma_cmd_result status;
 
 	start_sta_mode(dut);
 
@@ -12828,6 +12829,27 @@ static enum sigma_cmd_result cmd_sta_scan(struct sigma_dut *dut,
 		ascii2hexstr(ssid, ssid_hex);
 	}
 
+	short_ssid = get_param(cmd, "ShortSSID");
+	if (short_ssid) {
+		uint32_t short_ssid_hex;
+
+		short_ssid_hex = strtoul(short_ssid, NULL, 16);
+		short_ssid_hex = ((short_ssid_hex & 0xFF) << 24) |
+			(((short_ssid_hex >> 8) & 0xFF) << 16) |
+			(((short_ssid_hex >> 16) & 0xFF) << 8) |
+			((short_ssid_hex >> 24) & 0xFF);
+
+		res = snprintf(buf, sizeof(buf),
+			       "VENDOR_ELEM_ADD 14 ff053a%08x",
+			       short_ssid_hex);
+		if (res < 0 || res >= (int) sizeof(buf) ||
+		    wpa_command(intf, buf)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to add short SSID");
+			return STATUS_SENT_ERROR;
+		}
+	}
+
 	scan_freq = get_param(cmd, "ChnlFreq");
 
 	res = snprintf(buf, sizeof(buf), "SCAN%s%s%s%s%s%s%s",
@@ -12838,16 +12860,27 @@ static enum sigma_cmd_result cmd_sta_scan(struct sigma_dut *dut,
 			wildcard_ssid ? " wildcard_ssid=1" : "",
 			scan_freq ? " freq=" : "",
 			scan_freq ? scan_freq : "");
-	if (res < 0 || res >= (int) sizeof(buf))
-		return -1;
+	if (res < 0 || res >= (int) sizeof(buf)) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Could not build scan command");
+		status = STATUS_SENT_ERROR;
+		goto remove_s_ssid;
+	}
 
 	if (wpa_command(intf, buf)) {
 		send_resp(dut, conn, SIGMA_ERROR, "errorCode,Could not start "
 			  "scan");
-		return 0;
+		status = STATUS_SENT_ERROR;
+	} else {
+		status = SUCCESS_SEND_STATUS;
 	}
 
-	return 1;
+remove_s_ssid:
+	if (short_ssid && wpa_command(intf, "VENDOR_ELEM_REMOVE 14 *"))
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to delete vendor element");
+
+	return status;
 }
 
 
