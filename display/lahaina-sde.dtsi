@@ -5,7 +5,7 @@
 		compatible = "qcom,sde-kms";
 		reg = <0x0ae00000 0x84000>,
 		      <0x0aeb0000 0x2008>,
-		      <0x0aeac000 0x648>,
+		      <0x0aeac000 0x214>,
 		      <0x0ae8f000 0x02c>,
 		      <0x0af50000 0x038>;
 		reg-names = "mdp_phys",
@@ -221,9 +221,8 @@
 
 		/* offsets are relative to "mdp_phys + qcom,sde-off */
 
-		qcom,sde-reg-dma-off = <0 0x400>;
-		qcom,sde-reg-dma-id = <0 1>;
-		qcom,sde-reg-dma-version = <0x00020000>;
+		qcom,sde-reg-dma-off = <0>;
+		qcom,sde-reg-dma-version = <0x00010002>;
 		qcom,sde-reg-dma-trigger-off = <0x119c>;
 		qcom,sde-reg-dma-xin-id = <7>;
 		qcom,sde-reg-dma-clk-ctrl = <0x2bc 20>;
@@ -243,7 +242,7 @@
 			qcom,sde-vig-csc-off = <0x1a00>;
 			qcom,sde-vig-qseed-off = <0xa00>;
 			qcom,sde-vig-qseed-size = <0xa0>;
-			qcom,sde-vig-gamut = <0x1d00 0x00060001>;
+			qcom,sde-vig-gamut = <0x1d00 0x00060000>;
 			qcom,sde-vig-igc = <0x1d00 0x00060000>;
 			qcom,sde-vig-inverse-pma;
 		};
@@ -265,13 +264,13 @@
 		};
 
 		qcom,sde-dspp-blocks {
-			qcom,sde-dspp-igc = <0x1260 0x00030002>;
+			qcom,sde-dspp-igc = <0x0 0x00030001>;
 			qcom,sde-dspp-hsic = <0x800 0x00010007>;
 			qcom,sde-dspp-memcolor = <0x880 0x00010007>;
 			qcom,sde-dspp-hist = <0x800 0x00010007>;
 			qcom,sde-dspp-sixzone= <0x900 0x00010007>;
 			qcom,sde-dspp-vlut = <0xa00 0x00010008>;
-			qcom,sde-dspp-gamut = <0x1000 0x00040003>;
+			qcom,sde-dspp-gamut = <0x1000 0x00040002>;
 			qcom,sde-dspp-pcc = <0x1700 0x00040000>;
 			qcom,sde-dspp-gc = <0x17c0 0x00010008>;
 			qcom,sde-dspp-dither = <0x82c 0x00010007>;
