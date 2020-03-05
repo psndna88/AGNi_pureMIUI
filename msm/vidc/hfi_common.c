@@ -3397,6 +3397,7 @@ static int __protect_cp_mem(struct venus_hfi_device *device)
 	memprot.cp_nonpixel_start = 0x0;
 	memprot.cp_nonpixel_size = 0x0;
 
+	mutex_lock(&device->res->cb_lock);
 	list_for_each_entry(cb, &device->res->context_banks, list) {
 		if (!strcmp(cb->name, "venus_ns")) {
 			memprot.cp_size = cb->addr_range.start;
@@ -3414,6 +3415,7 @@ static int __protect_cp_mem(struct venus_hfi_device *device)
 				memprot.cp_nonpixel_size);
 		}
 	}
+	mutex_unlock(&device->res->cb_lock);
 
 	rc = qcom_scm_mem_protect_video(memprot.cp_start, memprot.cp_size,
 			memprot.cp_nonpixel_start, memprot.cp_nonpixel_size);

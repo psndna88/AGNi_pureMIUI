@@ -850,7 +850,6 @@ int read_platform_resources_from_dt(
 	if (rc)
 		return rc;
 
-
 	INIT_LIST_HEAD(&res->context_banks);
 
 	res->firmware_base = (phys_addr_t)firmware_base;
@@ -989,7 +988,6 @@ int msm_vidc_smmu_fault_handler(struct iommu_domain *domain,
 		struct device *dev, unsigned long iova, int flags, void *token)
 {
 	struct msm_vidc_core *core = token;
-	struct msm_vidc_inst *inst;
 
 	if (!domain || !core) {
 		d_vpr_e("%s: invalid params %pK %pK\n",
@@ -1008,12 +1006,8 @@ int msm_vidc_smmu_fault_handler(struct iommu_domain *domain,
 
 	d_vpr_e("%s: faulting address: %lx\n", __func__, iova);
 
-	mutex_lock(&core->lock);
-	list_for_each_entry(inst, &core->instances, list) {
-		msm_comm_print_inst_info(inst);
-	}
 	core->smmu_fault_handled = true;
-	mutex_unlock(&core->lock);
+	msm_comm_print_insts_info(core);
 	/*
 	 * Return -EINVAL to elicit the default behaviour of smmu driver.
 	 * If we return -EINVAL, then smmu driver assumes page fault handler
@@ -1043,7 +1037,10 @@ static int msm_vidc_populate_context_bank(struct device *dev,
 	}
 
 	INIT_LIST_HEAD(&cb->list);
+
+	mutex_lock(&core->resources.cb_lock);
 	list_add_tail(&cb->list, &core->resources.context_banks);
+	mutex_unlock(&core->resources.cb_lock);
 
 	rc = of_property_read_string(np, "label", &cb->name);
 	if (rc) {
@@ -1123,7 +1120,10 @@ static int msm_vidc_populate_legacy_context_bank(
 			return -ENOMEM;
 		}
 		INIT_LIST_HEAD(&cb->list);
+
+		mutex_lock(&res->cb_lock);
 		list_add_tail(&cb->list, &res->context_banks);
+		mutex_unlock(&res->cb_lock);
 
 		ctx_node = of_parse_phandle(domains_child_node,
 				"qcom,vidc-domain-phandle", 0);

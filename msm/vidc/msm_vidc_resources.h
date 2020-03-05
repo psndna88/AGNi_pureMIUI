@@ -167,6 +167,7 @@ struct msm_vidc_platform_resources {
 	bool sw_power_collapsible;
 	bool slave_side_cp;
 	struct list_head context_banks;
+	struct mutex cb_lock;
 	bool thermal_mitigable;
 	const char *fw_name;
 	const char *hfi_version;
