@@ -12774,6 +12774,7 @@ static enum sigma_cmd_result cmd_sta_scan(struct sigma_dut *dut,
 	const char *val, *bssid, *ssid;
 	char buf[4096];
 	char ssid_hex[65];
+	int wildcard_ssid = 0;
 	int res;
 
 	start_sta_mode(dut);
@@ -12812,6 +12813,12 @@ static enum sigma_cmd_result cmd_sta_scan(struct sigma_dut *dut,
 	bssid = get_param(cmd, "Bssid");
 	ssid = get_param(cmd, "Ssid");
 
+	if (ssid && strcasecmp(ssid, "ZeroLength") == 0 &&
+	    dut->device_type == STA_testbed) {
+		ssid = NULL;
+		wildcard_ssid = 1;
+	}
+
 	if (ssid) {
 		if (2 * strlen(ssid) >= sizeof(ssid_hex)) {
 			send_resp(dut, conn, SIGMA_ERROR,
@@ -12821,11 +12828,12 @@ static enum sigma_cmd_result cmd_sta_scan(struct sigma_dut *dut,
 		ascii2hexstr(ssid, ssid_hex);
 	}
 
-	res = snprintf(buf, sizeof(buf), "SCAN%s%s%s%s",
+	res = snprintf(buf, sizeof(buf), "SCAN%s%s%s%s%s",
 			bssid ? " bssid=": "",
 			bssid ? bssid : "",
 			ssid ? " ssid " : "",
-			ssid ? ssid_hex : "");
+			ssid ? ssid_hex : "",
+			wildcard_ssid ? " wildcard_ssid=1" : "");
 	if (res < 0 || res >= (int) sizeof(buf))
 		return -1;
 
