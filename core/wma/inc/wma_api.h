@@ -133,6 +133,16 @@ int wma_cli_set2_command(int vdev_id, int param_id, int sval1,
 			 int sval2, int vpdev);
 
 /**
+ * wma_get_fw_phy_mode_for_freq_cb() - Callback to get current PHY Mode.
+ * @freq: channel freq
+ * @chan_width: maximum channel width possible
+ * @phy_mode: firmware PHY Mode
+ *
+ * Return: None
+ */
+void wma_get_fw_phy_mode_for_freq_cb(uint32_t freq, uint32_t chan_width,
+				     uint32_t  *phy_mode);
+/**
  * wma_get_phy_mode_cb() - Callback to get current PHY Mode.
  * @chan: channel number
  * @chan_width: maximum channel width possible
@@ -284,6 +294,25 @@ void wma_process_pdev_hw_mode_trans_ind(void *wma,
  */
 QDF_STATUS wma_set_cts2self_for_p2p_go(void *wma_handle,
 		uint32_t cts2self_for_p2p_go);
+
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
+/**
+ * wma_get_roam_scan_ch() - API to get roam scan channel list.
+ * @wma_handle: pointer to wma handle.
+ * @vdev_id: vdev id
+ *
+ * Return: QDF_STATUS.
+ */
+QDF_STATUS wma_get_roam_scan_ch(wmi_unified_t wma,
+				uint8_t vdev_id);
+#else
+static inline
+QDF_STATUS wma_get_roam_scan_ch(wmi_unified_t wma,
+				uint8_t vdev_id)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+#endif
 
 /**
  * wma_set_tx_rx_aggr_size() - set tx rx aggregation size

@@ -1087,7 +1087,8 @@ typedef struct {
 	QDF_STATUS (*pe_disconnect_cb) (struct mac_context *mac,
 					uint8_t vdev_id,
 					uint8_t *deauth_disassoc_frame,
-					uint16_t deauth_disassoc_frame_len);
+					uint16_t deauth_disassoc_frame_len,
+					uint16_t reason_code);
 	QDF_STATUS (*csr_roam_pmkid_req_cb)(uint8_t vdev_id,
 		struct roam_pmkid_req_event *bss_list);
 	qdf_wake_lock_t wmi_cmd_rsp_wake_lock;
@@ -1120,9 +1121,6 @@ typedef struct {
 	qdf_mc_timer_t wma_fw_time_sync_timer;
 	bool fw_therm_throt_support;
 	bool enable_tx_compl_tsf64;
-#ifdef WLAN_FEATURE_PKT_CAPTURE
-	bool is_pktcapture_enabled;
-#endif
 } t_wma_handle, *tp_wma_handle;
 
 /**
@@ -2459,13 +2457,13 @@ int wma_motion_det_base_line_host_event_handler(void *handle, u_int8_t *event,
 
 /**
  * wma_add_bss_peer_sta() - creat bss peer when sta connect
- * @self_mac: self mac address
+ * @vdev_id: vdev id
  * @bssid: AP bssid
  * @roam_sync: if roam sync is in progress
  *
  * Return: 0 on success, else error on failure
  */
-QDF_STATUS wma_add_bss_peer_sta(uint8_t *self_mac, uint8_t *bssid,
+QDF_STATUS wma_add_bss_peer_sta(uint8_t vdev_id, uint8_t *bssid,
 				bool roam_sync);
 
 /**

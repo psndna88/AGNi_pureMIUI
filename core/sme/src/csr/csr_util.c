@@ -1000,8 +1000,6 @@ uint16_t csr_check_concurrent_channel_overlap(struct mac_context *mac_ctx,
 	uint32_t sap_lfreq, sap_hfreq, intf_lfreq, intf_hfreq;
 	QDF_STATUS status;
 
-	sme_debug("sap_ch_freq: %d sap_phymode: %d", sap_ch_freq, sap_phymode);
-
 	if (mac_ctx->roam.configParam.cc_switch_mode ==
 			QDF_MCC_TO_SCC_SWITCH_DISABLE)
 		return 0;
@@ -1022,7 +1020,7 @@ uint16_t csr_check_concurrent_channel_overlap(struct mac_context *mac_ctx,
 	}
 
 	sme_debug("sap_ch:%d sap_phymode:%d sap_cch:%d sap_hbw:%d chb:%d",
-		sap_ch_freq, sap_phymode, sap_cfreq, sap_hbw, chb);
+		  sap_ch_freq, sap_phymode, sap_cfreq, sap_hbw, chb);
 
 	for (i = 0; i < WLAN_MAX_VDEVS; i++) {
 		if (!CSR_IS_SESSION_VALID(mac_ctx, i))
@@ -1055,11 +1053,6 @@ uint16_t csr_check_concurrent_channel_overlap(struct mac_context *mac_ctx,
 					session, &sap_ch_freq, &sap_hbw,
 					&sap_cfreq, &intf_ch_freq, &intf_hbw,
 					&intf_cfreq);
-
-			sme_debug("%d: sap_ch:%d sap_hbw:%d sap_cfreq:%d"
-				  " intf_ch:%d intf_hbw:%d, intf_cfreq:%d",
-				  i, sap_ch_freq, sap_hbw, sap_cfreq,
-				  intf_ch_freq, intf_hbw, intf_cfreq);
 		}
 		if (intf_ch_freq &&
 		    ((intf_ch_freq <= wlan_reg_ch_to_freq(CHAN_ENUM_2484) &&
@@ -1070,8 +1063,8 @@ uint16_t csr_check_concurrent_channel_overlap(struct mac_context *mac_ctx,
 	}
 
 	sme_debug("intf_ch:%d sap_ch:%d cc_switch_mode:%d, dbs:%d",
-			intf_ch_freq, sap_ch_freq, cc_switch_mode,
-			policy_mgr_is_dbs_enable(mac_ctx->psoc));
+		  intf_ch_freq, sap_ch_freq, cc_switch_mode,
+		  policy_mgr_is_dbs_enable(mac_ctx->psoc));
 
 	if (intf_ch_freq && sap_ch_freq != intf_ch_freq &&
 	    !policy_mgr_is_force_scc(mac_ctx->psoc)) {
@@ -2696,22 +2689,32 @@ bool csr_is_pmkid_found_for_peer(struct mac_context *mac,
 {
 	uint32_t i, index;
 	uint8_t *session_pmkid;
-	tPmkidCacheInfo pmkid_cache;
+	tPmkidCacheInfo *pmkid_cache;
 
-	qdf_mem_zero(&pmkid_cache, sizeof(pmkid_cache));
-	qdf_mem_copy(pmkid_cache.BSSID.bytes, peer_mac_addr,
+	pmkid_cache = qdf_mem_malloc(sizeof(*pmkid_cache));
+	if (!pmkid_cache)
+		return false;
+
+	qdf_mem_copy(pmkid_cache->BSSID.bytes, peer_mac_addr,
 		     QDF_MAC_ADDR_SIZE);
 
-	if (!csr_lookup_pmkid_using_bssid(mac, session, &pmkid_cache, &index))
+	if (!csr_lookup_pmkid_using_bssid(mac, session, pmkid_cache, &index)) {
+		qdf_mem_free(pmkid_cache);
 		return false;
-	session_pmkid = &pmkid_cache.PMKID[0];
+	}
+
+	session_pmkid = pmkid_cache->PMKID;
 	for (i = 0; i < pmkid_count; i++) {
 		if (!qdf_mem_cmp(pmkid + (i * PMKID_LEN),
-				 session_pmkid, PMKID_LEN))
+				 session_pmkid, PMKID_LEN)) {
+			qdf_mem_free(pmkid_cache);
 			return true;
+		}
 	}
 
 	sme_debug("PMKID in PmkidCacheInfo doesn't match with PMKIDs of peer");
+	qdf_mem_free(pmkid_cache);
+
 	return false;
 }
 
@@ -2743,6 +2746,56 @@ bool csr_lookup_pmkid_using_bssid(struct mac_context *mac,
 	return true;
 }
 
+/**
+ * csr_update_session_pmk() - Update the pmk len and pmk in the roam session
+ * @session: pointer to the CSR Roam session
+ * @pmkid_cache: pointer to the pmkid cache
+ *
+ * Return: None
+ */
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
+static void csr_update_session_pmk(struct csr_roam_session *session,
+				   struct wlan_crypto_pmksa *pmksa)
+{
+	session->pmk_len = pmksa->pmk_len;
+	qdf_mem_zero(session->psk_pmk, sizeof(session->psk_pmk));
+	qdf_mem_copy(session->psk_pmk, pmksa->pmk, session->pmk_len);
+}
+#else
+static inline void csr_update_session_pmk(struct csr_roam_session *session,
+					  struct wlan_crypto_pmksa *pmksa)
+{
+}
+#endif
+
+#ifdef WLAN_FEATURE_FILS_SK
+/**
+ * csr_update_pmksa_to_profile() - update pmk and pmkid to profile which will be
+ * used in case of fils session
+ * @profile: profile
+ * @pmkid_cache: pmksa cache
+ *
+ * Return: None
+ */
+static inline void csr_update_pmksa_to_profile(struct csr_roam_profile *profile,
+					       struct wlan_crypto_pmksa *pmksa)
+{
+	if (!profile->fils_con_info)
+		return;
+
+	profile->fils_con_info->pmk_len = pmksa->pmk_len;
+	qdf_mem_copy(profile->fils_con_info->pmk,
+		     pmksa->pmk, pmksa->pmk_len);
+	qdf_mem_copy(profile->fils_con_info->pmkid,
+		     pmksa->pmkid, PMKID_LEN);
+}
+#else
+static inline void csr_update_pmksa_to_profile(struct csr_roam_profile *profile,
+					       struct wlan_crypto_pmksa *pmksa)
+{
+}
+#endif
+
 uint8_t csr_construct_rsn_ie(struct mac_context *mac, uint32_t sessionId,
 			     struct csr_roam_profile *pProfile,
 			     struct bss_description *pSirBssDesc,
@@ -2754,7 +2807,8 @@ uint8_t csr_construct_rsn_ie(struct mac_context *mac, uint32_t sessionId,
 	uint8_t ie_len = 0;
 	tDot11fBeaconIEs *local_ap_ie = ap_ie;
 	uint16_t rsn_cap = 0;
-	struct qdf_mac_addr bssid;
+	struct wlan_crypto_pmksa pmksa, *pmksa_peer;
+	struct csr_roam_session *session = &mac->roam.roamSession[sessionId];
 
 	if (!local_ap_ie &&
 	    (!QDF_IS_STATUS_SUCCESS(csr_get_parsed_bss_description_ies
@@ -2780,16 +2834,42 @@ uint8_t csr_construct_rsn_ie(struct mac_context *mac, uint32_t sessionId,
 	rsn_cap &= (uint16_t)wlan_crypto_get_param(vdev,
 						   WLAN_CRYPTO_PARAM_RSN_CAP);
 	wlan_crypto_set_vdev_param(vdev, WLAN_CRYPTO_PARAM_RSN_CAP, rsn_cap);
-	qdf_mem_copy(bssid.bytes, pSirBssDesc->bssId, QDF_MAC_ADDR_SIZE);
-
+	qdf_mem_zero(&pmksa, sizeof(pmksa));
+	if (pSirBssDesc->fils_info_element.is_cache_id_present) {
+		pmksa.ssid_len =
+			pProfile->SSIDs.SSIDList[0].SSID.length;
+		qdf_mem_copy(pmksa.ssid,
+			     pProfile->SSIDs.SSIDList[0].SSID.ssId,
+			     pProfile->SSIDs.SSIDList[0].SSID.length);
+		qdf_mem_copy(pmksa.cache_id,
+			     pSirBssDesc->fils_info_element.cache_id,
+			     CACHE_ID_LEN);
+		qdf_mem_copy(&pmksa.bssid,
+			     pSirBssDesc->bssId, QDF_MAC_ADDR_SIZE);
+	} else {
+		qdf_mem_copy(&pmksa.bssid,
+			     pSirBssDesc->bssId, QDF_MAC_ADDR_SIZE);
+	}
+	pmksa_peer = wlan_crypto_get_peer_pmksa(vdev, &pmksa);
+	qdf_mem_zero(&pmksa, sizeof(pmksa));
 	/*
 	 * TODO: Add support for Adaptive 11r connection after
 	 * call to csr_get_rsn_information is added here
 	 */
-	rsn_ie_end = wlan_crypto_build_rsnie(vdev, rsn_ie, &bssid);
-
+	rsn_ie_end = wlan_crypto_build_rsnie_with_pmksa(vdev, rsn_ie,
+							pmksa_peer);
 	if (rsn_ie_end)
 		ie_len = rsn_ie_end - rsn_ie;
+
+	/*
+	 * If a PMK cache is found for the BSSID, then
+	 * update the PMK in CSR session also as this
+	 * will be sent to the FW during RSO.
+	 */
+	if (pmksa_peer) {
+		csr_update_session_pmk(session, pmksa_peer);
+		csr_update_pmksa_to_profile(pProfile, pmksa_peer);
+	}
 
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
 

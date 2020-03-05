@@ -1139,12 +1139,6 @@ QDF_STATUS cds_post_disable(void)
 		return QDF_STATUS_E_INVAL;
 	}
 
-	qdf_status = cds_close_mon_thread();
-	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
-		cds_err("Failed to close MON thread!");
-		return QDF_STATUS_E_INVAL;
-	}
-
 	cdp_pdev_pre_detach(cds_get_context(QDF_MODULE_ID_SOC),
 			    OL_TXRX_PDEV_ID, 1);
 
@@ -2301,7 +2295,7 @@ QDF_STATUS cds_flush_logs(uint32_t is_fatal,
 		  is_fatal, indicator, reason_code);
 
 	if (dump_mac_trace)
-		qdf_trace_dump_all(p_cds_context->mac_context, 0, 0, 500, 0);
+		qdf_trace_dump_all(p_cds_context->mac_context, 0, 0, 100, 0);
 
 	if (WLAN_LOG_INDICATOR_HOST_ONLY == indicator) {
 		cds_wlan_flush_host_logs_for_fatal();
@@ -2880,31 +2874,3 @@ int cds_smmu_map_unmap(bool map, uint32_t num_buf, qdf_mem_info_t *buf_arr)
 	return 0;
 }
 #endif
-
-#ifdef WLAN_FEATURE_PKT_CAPTURE
-bool cds_is_pktcapture_enabled(void)
-{
-	struct hdd_context *hdd_ctx;
-
-	hdd_ctx = gp_cds_context->hdd_context;
-	if (!hdd_ctx) {
-		cds_err("HDD context is NULL");
-		return false;
-	}
-
-	return hdd_ctx->enable_pkt_capture_support;
-}
-
-uint8_t cds_get_pktcapture_mode(void)
-{
-	struct hdd_context *hdd_ctx;
-
-	hdd_ctx = gp_cds_context->hdd_context;
-	if (!hdd_ctx) {
-		cds_err("HDD context is NULL");
-		return false;
-	}
-
-	return hdd_ctx->val_pkt_capture_mode;
-}
-#endif /* WLAN_FEATURE_PKT_CAPTURE */

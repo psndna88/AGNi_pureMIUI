@@ -294,7 +294,7 @@ static void hdd_wmm_notify_app(struct hdd_wmm_qos_context *qos_context)
 
 	/* send the event */
 	hdd_debug("Sending [%s]", buf);
-	wireless_send_event(adapter->dev, IWEVCUSTOM, &wrqu, buf);
+	hdd_wext_send_event(adapter->dev, IWEVCUSTOM, &wrqu, buf);
 }
 
 #ifdef FEATURE_WLAN_ESE
@@ -1561,8 +1561,6 @@ QDF_STATUS hdd_wmm_init(struct hdd_adapter *adapter)
 	struct wlan_objmgr_psoc *psoc = adapter->hdd_ctx->psoc;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 
-	hdd_enter();
-
 	if (!psoc) {
 		hdd_err("Invalid psoc handle");
 		return QDF_STATUS_E_FAILURE;
@@ -2271,8 +2269,6 @@ QDF_STATUS hdd_wmm_connect(struct hdd_adapter *adapter,
 	uint8_t acm_mask;
 	mac_handle_t mac_handle;
 
-	hdd_enter();
-
 	if ((eCSR_BSS_TYPE_INFRASTRUCTURE == bss_type) &&
 	    roam_info && roam_info->u.pConnectedProfile) {
 		qap = roam_info->u.pConnectedProfile->qap;
@@ -2331,8 +2327,6 @@ QDF_STATUS hdd_wmm_connect(struct hdd_adapter *adapter,
 		}
 
 	}
-
-	hdd_exit();
 
 	return QDF_STATUS_SUCCESS;
 }

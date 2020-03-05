@@ -301,6 +301,27 @@ wma_roam_pmkid_request_event_handler(void *handle,
 }
 #endif
 
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
+/**
+ * wma_roam_scan_chan_list_event_handler() - roam scan chan list event handler
+ * @handle: wma handle
+ * @event: pointer to fw event
+ * @len: length of event
+ *
+ * Return: Success or Failure status
+ */
+int wma_roam_scan_chan_list_event_handler(WMA_HANDLE handle,
+					  uint8_t *event,
+					  uint32_t len);
+#else
+static inline int
+wma_roam_scan_chan_list_event_handler(WMA_HANDLE handle, uint8_t *event,
+				      uint32_t len)
+{
+	return 0;
+}
+#endif
+
 /**
  * wma_update_per_roam_config() -per roam config parameter updation to FW
  * @handle: wma handle
@@ -1205,6 +1226,14 @@ int wma_fast_tx_fail_event_handler(void *handle, uint8_t *data,
  */
 
 #ifdef WLAN_FEATURE_STATS_EXT
+/**
+ * wma_stats_ext_event_handler() - extended stats event handler
+ * @handle:     wma handle
+ * @event_buf:  event buffer received from fw
+ * @len:        length of data
+ *
+ * Return: 0 for success or error code
+ */
 int wma_stats_ext_event_handler(void *handle, uint8_t *event_buf,
 				       uint32_t len);
 #endif
@@ -1457,6 +1486,13 @@ QDF_STATUS wma_process_del_periodic_tx_ptrn_ind(WMA_HANDLE handle,
 						pDelPeriodicTxPtrnParams);
 
 #ifdef WLAN_FEATURE_STATS_EXT
+/**
+ * wma_stats_ext_req() - request ext stats from fw
+ * @wma_ptr: wma handle
+ * @preq: stats ext params
+ *
+ * Return: QDF status
+ */
 QDF_STATUS wma_stats_ext_req(void *wma_ptr, tpStatsExtRequest preq);
 #endif
 
@@ -1782,6 +1818,16 @@ int wma_fill_beacon_interval_reset_req(tp_wma_handle wma, uint8_t vdev_id,
  * Return: 'true' on valid vdev else 'false'
  */
 bool wma_is_vdev_valid(uint32_t vdev_id);
+
+/*
+ * wma_is_vdev_started() - check whether vdev is started or not
+ * @vdev: pointer to vdev object
+ *
+ * This function verifies the vdev is started nor not
+ *
+ * Return: 'true' if vdev is started else 'false'
+ */
+bool wma_is_vdev_started(struct wlan_objmgr_vdev *vdev);
 
 /**
  * wma_vdev_obss_detection_info_handler - event handler to handle obss detection

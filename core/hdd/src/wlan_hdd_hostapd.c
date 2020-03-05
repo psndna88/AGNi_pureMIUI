@@ -92,15 +92,19 @@
 #include "nan_ucfg_api.h"
 #include <wlan_reg_services_api.h>
 #include "wlan_hdd_sta_info.h"
+#include "ftm_time_sync_ucfg_api.h"
 
 #define ACS_SCAN_EXPIRY_TIMEOUT_S 4
 
-/* Defines the BIT position of HT caps is support mode field of stainfo */
-#define HDD_HT_CAPS_PRESENT 0
-/* Defines the BIT position of VHT caps is support mode field of stainfo */
-#define HDD_VHT_CAPS_PRESENT 1
-/* Defines the BIT position of HE caps is support mode field of stainfo */
-#define HDD_HE_CAPS_PRESENT 2
+/*
+ * Defines the BIT position of 11bg/11abg/11abgn 802.11 support mode field
+ * of stainfo
+ */
+#define HDD_80211_MODE_ABGN 0
+/* Defines the BIT position of 11ac support mode field of stainfo */
+#define HDD_80211_MODE_AC 1
+/* Defines the BIT position of 11ax support mode field of stainfo */
+#define HDD_80211_MODE_AX 2
 
 #define HDD_MAX_CUSTOM_START_EVENT_SIZE 64
 
@@ -531,6 +535,9 @@ static int __hdd_hostapd_stop(struct net_device *dev)
 				     WLAN_STOP_ALL_NETIF_QUEUE_N_CARRIER,
 				     WLAN_CONTROL_PATH);
 
+	if (!hdd_is_any_interface_open(hdd_ctx))
+		hdd_psoc_idle_timer_start(hdd_ctx);
+
 	hdd_exit();
 	return 0;
 }
@@ -836,18 +843,13 @@ QDF_STATUS hdd_chan_change_notify(struct hdd_adapter *adapter,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	hdd_debug("chan_freq:%d width:%d sec_ch_offset:%d seg0:%d seg1:%d",
-		chan_change.chan_freq, chan_change.chan_params.ch_width,
-		chan_change.chan_params.sec_ch_offset,
-		chan_change.chan_params.center_freq_seg0,
-		chan_change.chan_params.center_freq_seg1);
-
 	freq = chan_change.chan_freq;
 
 	chan = ieee80211_get_channel(adapter->wdev.wiphy, freq);
 
 	if (!chan) {
-		hdd_err("Invalid input frequency for channel conversion");
+		hdd_err("Invalid input frequency %d for channel conversion",
+			freq);
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -1451,6 +1453,7 @@ static void hdd_fill_station_info(struct hdd_adapter *adapter,
 	struct hdd_station_info *oldest_disassoc_sta_info = NULL;
 	uint8_t index = 0;
 	qdf_time_t oldest_disassoc_sta_ts = 0;
+	bool is_dot11_mode_abgn;
 
 	stainfo = hdd_get_sta_info_by_mac(&adapter->sta_info_list,
 					  event->staMac.bytes);
@@ -1493,20 +1496,27 @@ static void hdd_fill_station_info(struct hdd_adapter *adapter,
 	/* expect max_phy_rate report in kbps */
 	stainfo->max_phy_rate *= 100;
 
+	/*
+	 * Connected Peer always supports atleast one of the
+	 * 802.11 mode out of 11bg/11abg/11abgn, hence this field
+	 * should always be true.
+	 */
+	is_dot11_mode_abgn = true;
+	stainfo->support_mode |= is_dot11_mode_abgn << HDD_80211_MODE_ABGN;
+
 	if (event->vht_caps.present) {
 		stainfo->vht_present = true;
 		hdd_copy_vht_caps(&stainfo->vht_caps, &event->vht_caps);
 		stainfo->support_mode |=
-				(stainfo->vht_present << HDD_VHT_CAPS_PRESENT);
+				(stainfo->vht_present << HDD_80211_MODE_AC);
 	}
 	if (event->ht_caps.present) {
 		stainfo->ht_present = true;
 		hdd_copy_ht_caps(&stainfo->ht_caps, &event->ht_caps);
-		stainfo->support_mode |=
-				(stainfo->ht_present << HDD_HT_CAPS_PRESENT);
 	}
+
 	stainfo->support_mode |=
-			(event->he_caps_present << HDD_HE_CAPS_PRESENT);
+			(event->he_caps_present << HDD_80211_MODE_AX);
 
 	/* Initialize DHCP info */
 	stainfo->dhcp_phase = DHCP_PHASE_ACK;
@@ -1522,6 +1532,13 @@ static void hdd_fill_station_info(struct hdd_adapter *adapter,
 			return;
 
 		qdf_mem_copy(cache_sta_info, stainfo, sizeof(*cache_sta_info));
+		cache_sta_info->assoc_req_ies.data =
+				qdf_mem_malloc(event->ies_len);
+		if (cache_sta_info->assoc_req_ies.data) {
+			qdf_mem_copy(cache_sta_info->assoc_req_ies.data,
+				     event->ies, event->ies_len);
+			cache_sta_info->assoc_req_ies.len = event->ies_len;
+		}
 		qdf_mem_zero(&cache_sta_info->sta_node,
 			     sizeof(cache_sta_info->sta_node));
 
@@ -2302,6 +2319,11 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 						disassoc_comp->rx_mc_bc_cnt;
 			cache_stainfo->reason_code = disassoc_comp->reason_code;
 			cache_stainfo->disassoc_ts = qdf_system_ticks();
+			hdd_debug("Cache_stainfo rssi %d txrate %d rxrate %d reason_code %d",
+				  cache_stainfo->rssi,
+				  cache_stainfo->tx_rate,
+				  cache_stainfo->rx_rate,
+				  cache_stainfo->reason_code);
 		}
 		hdd_nofl_info("SAP disassociated " QDF_MAC_ADDR_STR,
 			      QDF_MAC_ADDR_ARRAY(wrqu.addr.sa_data));
@@ -2461,11 +2483,10 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 		return QDF_STATUS_SUCCESS;
 
 	case eSAP_CHANNEL_CHANGE_EVENT:
-		hdd_debug("Received eSAP_CHANNEL_CHANGE_EVENT event");
 		if (hostapd_state->bss_state != BSS_STOP) {
 			/* Allow suspend for old channel */
 			hdd_hostapd_channel_allow_suspend(adapter,
-				ap_ctx->operating_chan_freq);
+				ap_ctx->sap_context->freq_before_ch_switch);
 			/* Prevent suspend for new channel */
 			hdd_hostapd_channel_prevent_suspend(adapter,
 				sap_event->sapevt.sap_ch_selected.pri_ch_freq);
@@ -2514,7 +2535,6 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 
 		phy_mode = wlan_sap_get_phymode(
 				WLAN_HDD_GET_SAP_CTX_PTR(adapter));
-		hdd_debug("phy_mode:%d", phy_mode);
 
 		switch (phy_mode) {
 		case eCSR_DOT11_MODE_11n:
@@ -2617,7 +2637,7 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 		goto stopbss;
 		return QDF_STATUS_SUCCESS;
 	}
-	wireless_send_event(dev, we_event, &wrqu,
+	hdd_wext_send_event(dev, we_event, &wrqu,
 			    (char *)we_custom_event_generic);
 	qdf_mem_free(we_custom_start_event);
 	qdf_mem_free(unknownSTAEvent);
@@ -2680,7 +2700,7 @@ stopbss:
 		wrqu.data.length = event_len;
 		we_event = IWEVCUSTOM;
 		we_custom_event_generic = we_custom_event;
-		wireless_send_event(dev, we_event, &wrqu,
+		hdd_wext_send_event(dev, we_event, &wrqu,
 				    (char *)we_custom_event_generic);
 
 		qdf_mem_free(we_custom_start_event);
@@ -3487,21 +3507,6 @@ void hdd_deinit_ap_mode(struct hdd_context *hdd_ctx,
 	qdf_atomic_set(&adapter->session.ap.acs_in_progress, 0);
 
 	hdd_softap_deinit_tx_rx(adapter);
-	/*
-	 * if we are being called during driver unload,
-	 * then the dev has already been invalidated.
-	 * if we are being called at other times, then we can
-	 * detach the wireless device handlers
-	 */
-	if (adapter->dev) {
-		if (rtnl_held) {
-			adapter->dev->wireless_handlers = NULL;
-		} else {
-			rtnl_lock();
-			adapter->dev->wireless_handlers = NULL;
-			rtnl_unlock();
-		}
-	}
 	if (hdd_hostapd_deinit_sap_session(adapter))
 		hdd_err("Failed:hdd_hostapd_deinit_sap_session");
 
@@ -4648,8 +4653,9 @@ static int wlan_hdd_setup_driver_overrides(struct hdd_adapter *ap_adapter)
 		return 0;
 }
 
-void hdd_check_and_disconnect_sta_on_invalid_channel(
-		struct hdd_context *hdd_ctx)
+void
+hdd_check_and_disconnect_sta_on_invalid_channel(struct hdd_context *hdd_ctx,
+						tSirMacReasonCodes reason)
 {
 	struct hdd_adapter *sta_adapter;
 	uint32_t sta_chan_freq;
@@ -4676,7 +4682,7 @@ void hdd_check_and_disconnect_sta_on_invalid_channel(
 
 	hdd_err("chan %d not valid, issue disconnect", sta_chan_freq);
 	/* Issue Disconnect request */
-	wlan_hdd_disconnect(sta_adapter, eCSR_DISCONNECT_REASON_DEAUTH);
+	wlan_hdd_disconnect(sta_adapter, eCSR_DISCONNECT_REASON_DEAUTH, reason);
 }
 
 #ifdef DISABLE_CHANNEL_LIST
@@ -5094,7 +5100,8 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 		/* check if STA is on indoor channel*/
 		if (policy_mgr_is_force_scc(hdd_ctx->psoc))
 			hdd_check_and_disconnect_sta_on_invalid_channel(
-								       hdd_ctx);
+					hdd_ctx,
+					eSIR_MAC_OPER_CHANNEL_DISABLED_INDOOR);
 	}
 
 	beacon = adapter->session.ap.beacon;
@@ -5669,6 +5676,9 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 	/* Check and restart SAP if it is on unsafe channel */
 	hdd_unsafe_channel_restart_sap(hdd_ctx);
 
+	ucfg_ftm_time_sync_update_bss_state(adapter->vdev,
+					    FTM_TIME_SYNC_BSS_STARTED);
+
 	hdd_set_connection_in_progress(false);
 	policy_mgr_nan_sap_post_enable_conc_check(hdd_ctx->psoc);
 	ret = 0;
@@ -5881,6 +5891,8 @@ static int __wlan_hdd_cfg80211_stop_ap(struct wiphy *wiphy,
 	hdd_destroy_acs_timer(adapter);
 
 	ucfg_p2p_status_stop_bss(adapter->vdev);
+	ucfg_ftm_time_sync_update_bss_state(adapter->vdev,
+					    FTM_TIME_SYNC_BSS_STOPPED);
 
 	hdd_exit();
 

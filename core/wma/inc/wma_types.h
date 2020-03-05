@@ -165,6 +165,8 @@
 #define WMA_TSM_STATS_RSP              SIR_HAL_TSM_STATS_RSP
 #endif
 
+#define WMA_ROAM_SCAN_CH_REQ              SIR_HAL_ROAM_SCAN_CH_REQ
+
 #define WMA_HT40_OBSS_SCAN_IND                  SIR_HAL_HT40_OBSS_SCAN_IND
 
 #define WMA_SET_MIMOPS_REQ                      SIR_HAL_SET_MIMOPS_REQ
@@ -730,7 +732,8 @@ QDF_STATUS wma_register_roaming_callbacks(
 		QDF_STATUS (*pe_disconnect_cb) (struct mac_context *mac,
 			uint8_t vdev_id,
 			uint8_t *deauth_disassoc_frame,
-			uint16_t deauth_disassoc_frame_len),
+			uint16_t deauth_disassoc_frame_len,
+			uint16_t reason_code),
 		QDF_STATUS (*csr_roam_pmkid_req_cb)(uint8_t vdev_id,
 			struct roam_pmkid_req_event *bss_list));
 #else
@@ -750,7 +753,8 @@ static inline QDF_STATUS wma_register_roaming_callbacks(
 		QDF_STATUS (*pe_disconnect_cb) (struct mac_context *mac,
 			uint8_t vdev_id,
 			uint8_t *deauth_disassoc_frame,
-			uint16_t deauth_disassoc_frame_len),
+			uint16_t deauth_disassoc_frame_len,
+			uint16_t reason_code),
 		QDF_STATUS (*csr_roam_pmkid_req_cb)(uint8_t vdev_id,
 			struct roam_pmkid_req_event *bss_list))
 {

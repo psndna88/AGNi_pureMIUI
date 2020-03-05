@@ -412,6 +412,13 @@ void sme_cleanup_session(mac_handle_t mac_handle, uint8_t vdev_id);
 void sme_set_curr_device_mode(mac_handle_t mac_handle,
 			      enum QDF_OPMODE curr_device_mode);
 
+/**
+ * sme_update_nud_config() - update nud config
+ * @mac_handle: The handle returned by mac_open.
+ * @nud_fail_behavior: Vlaue of nud fail behaviour
+ */
+void sme_update_nud_config(mac_handle_t mac_handle, uint8_t nud_fail_behavior);
+
 QDF_STATUS sme_update_roam_params(mac_handle_t mac_handle,
 				  uint8_t session_id,
 				  struct roam_ext_params *roam_params_src,
@@ -533,11 +540,13 @@ QDF_STATUS sme_roam_reassoc(mac_handle_t mac_handle, uint8_t sessionId,
  * @mac_handle: Opaque handle to the global MAC context
  * @session: SME session identifier
  * @reason: Reason to disconnect
+ * @mac_reason: Reason to disconnect as per enum eSirMacReasonCodes
  *
  * Return: QDF Status success or failure
  */
 QDF_STATUS sme_roam_disconnect(mac_handle_t mac_handle, uint8_t session,
-			       eCsrRoamDisconnectReason reason);
+			       eCsrRoamDisconnectReason reason,
+			       tSirMacReasonCodes mac_reason);
 
 void sme_dhcp_done_ind(mac_handle_t mac_handle, uint8_t session_id);
 QDF_STATUS sme_roam_stop_bss(mac_handle_t mac_handle, uint8_t sessionId);
@@ -551,6 +560,32 @@ QDF_STATUS sme_roam_get_connect_profile(mac_handle_t mac_handle,
 void sme_roam_free_connect_profile(tCsrRoamConnectedProfile *profile);
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
+/**
+ * sme_set_roam_scan_ch_event_cb() - Register roam scan ch callback
+ * @mac_handle: Opaque handle to the MAC context
+ * @cb: callback to be registered
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+sme_set_roam_scan_ch_event_cb(mac_handle_t mac_handle,
+			      sme_get_raom_scan_ch_callback cb);
+
+/**
+ * sme_get_roam_scan_ch() -API to get roam scan channels
+ * @mac_handle: Pointer to mac handle
+ * @sta_id: vdev id
+ * @pcontext: pointer to the context
+ *
+ * Extract number of frequencies and frequency list from chan_info and print
+ * to the logs.
+ *
+ * Return: None
+ */
+QDF_STATUS
+sme_get_roam_scan_ch(mac_handle_t mac_handle,
+		     uint8_t vdev_id, void *pcontext);
+
 /**
  * sme_get_pmk_info(): A wrapper function to request CSR to save PMK
  * @mac_handle: Global structure
@@ -569,6 +604,27 @@ static inline
 void sme_get_pmk_info(mac_handle_t mac_handle, uint8_t session_id,
 		      tPmkidCacheInfo *pmk_cache)
 {}
+
+static inline QDF_STATUS
+sme_get_roam_scan_ch(mac_handle_t mac_handle,
+		     uint8_t vdev_id, void *pcontext)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+
+static inline QDF_STATUS
+sme_set_roam_scan_ch_event_cb(mac_handle_t mac_handle,
+			      void *cb)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+
+static inline
+QDF_STATUS sme_roam_set_psk_pmk(mac_handle_t mac_handle, uint8_t sessionId,
+				uint8_t *pPSK_PMK, size_t pmk_len)
+{
+	return QDF_STATUS_SUCCESS;
+}
 #endif
 
 /**
@@ -1097,6 +1153,7 @@ QDF_STATUS sme_get_roam_scan_channel_list(mac_handle_t mac_handle,
 					  uint32_t *freq_list,
 					  uint8_t *pNumChannels,
 					  uint8_t sessionId);
+
 /**
  * sme_dump_freq_list() - Dump the frequencies from given chan info
  * @chan_info: Contains the frequency list and number of frequencies
@@ -2706,16 +2763,32 @@ QDF_STATUS sme_set_vc_mode_config(uint32_t vc_bitmap);
 
 /**
  * sme_set_del_pmkid_cache() - API to update PMKID cache
- * @mac_handle: Opaque handle to the global MAC context
+ * @psoc: psoc common object
  * @session_id: Session id
  * @pmk_cache_info: Pointer to PMK cache info
  * @is_add: boolean that implies whether to add or delete PMKID entry
  *
  * Return: QDF_STATUS
  */
-QDF_STATUS sme_set_del_pmkid_cache(mac_handle_t mac_handle, uint8_t session_id,
+QDF_STATUS sme_set_del_pmkid_cache(struct wlan_objmgr_psoc *psoc,
+				   uint8_t session_id,
 				   tPmkidCacheInfo *pmk_cache_info,
 				   bool is_add);
+
+/**
+ * sme_clear_sae_single_pmk_info() - Clear sae_single_pmk onfo
+ * @psoc: Psoc object
+ * @session_id: session id
+ * @pmk_cache_info: pmk cache info
+ *
+ * This function will clear sae_single_pmk info while processing delete pmk
+ * command from userspace.
+ *
+ * Return: None
+ */
+void sme_clear_sae_single_pmk_info(struct wlan_objmgr_psoc *psoc,
+				   uint8_t session_id,
+				   tPmkidCacheInfo *pmk_cache_info);
 
 /**
  * sme_send_hlp_ie_info() - API to send HLP IE info to fw
@@ -4052,4 +4125,19 @@ static inline void sme_reset_oem_data_event_handler_cb(mac_handle_t  mac_handle)
 }
 #endif
 
+/**
+ * sme_get_prev_connected_bss_ies() - Get the previous connected AP IEs
+ * @mac_handle: The handle returned by mac_open.
+ * @vdev_id: vdev id
+ * @ies: IEs of the disconnected AP. Currently to carry beacon IEs.
+ * @ie_len: Length of the @ies
+ *
+ * This API extracts the IEs from the previous connected AP info and update
+ * them to the ies and ie_len.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS sme_get_prev_connected_bss_ies(mac_handle_t mac_handle,
+					  uint8_t vdev_id,
+					  uint8_t **ies, uint32_t *ie_len);
 #endif /* #if !defined( __SME_API_H ) */

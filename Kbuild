@@ -273,6 +273,14 @@ ifeq ($(CONFIG_FW_THERMAL_THROTTLE), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_thermal.o
 endif
 
+ifeq ($(CONFIG_QCACLD_FEATURE_BTC_CHAIN_MODE), y)
+HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_btc_chain_mode.o
+endif
+
+ifeq ($(CONFIG_FEATURE_WLAN_TIME_SYNC_FTM), y)
+HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_ftm_time_sync.o
+endif
+
 ###### OSIF_SYNC ########
 SYNC_DIR := os_if/sync
 SYNC_INC_DIR := $(SYNC_DIR)/inc
@@ -1039,12 +1047,19 @@ endif
 ######## PACKET CAPTURE ########
 
 PKT_CAPTURE_DIR := components/pkt_capture
+PKT_CAPTURE_TARGET_IF_DIR := components/target_if/pkt_capture/
 PKT_CAPTURE_INC := -I$(WLAN_ROOT)/$(PKT_CAPTURE_DIR)/core/inc \
-		  -I$(WLAN_ROOT)/$(PKT_CAPTURE_DIR)/dispatcher/inc
+		  -I$(WLAN_ROOT)/$(PKT_CAPTURE_DIR)/dispatcher/inc \
+		  -I$(WLAN_ROOT)/$(PKT_CAPTURE_TARGET_IF_DIR)/inc
 
 ifeq ($(CONFIG_WLAN_FEATURE_PKT_CAPTURE), y)
 PKT_CAPTURE_OBJS := $(PKT_CAPTURE_DIR)/core/src/wlan_pkt_capture_main.o \
-		$(PKT_CAPTURE_DIR)/dispatcher/src/wlan_pkt_capture_ucfg_api.o
+		$(PKT_CAPTURE_DIR)/core/src/wlan_pkt_capture_mon_thread.o \
+		$(PKT_CAPTURE_DIR)/dispatcher/src/wlan_pkt_capture_ucfg_api.o \
+		$(PKT_CAPTURE_DIR)/core/src/wlan_pkt_capture_mgmt_txrx.o \
+		$(PKT_CAPTURE_DIR)/core/src/wlan_pkt_capture_data_txrx.o \
+		$(PKT_CAPTURE_DIR)/dispatcher/src/wlan_pkt_capture_ucfg_api.o \
+		$(PKT_CAPTURE_TARGET_IF_DIR)/src/target_if_pkt_capture.o
 endif
 
 ########## FTM TIME SYNC ##########
@@ -1055,7 +1070,8 @@ FTM_TIME_SYNC_INC := -I$(WLAN_ROOT)/$(FTM_TIME_SYNC_DIR)/core/inc \
 
 ifeq ($(CONFIG_FEATURE_WLAN_TIME_SYNC_FTM), y)
 FTM_TIME_SYNC_OBJS := $(FTM_TIME_SYNC_DIR)/core/src/ftm_time_sync_main.o \
-		$(FTM_TIME_SYNC_DIR)/dispatcher/src/ftm_time_sync_ucfg_api.o
+		$(FTM_TIME_SYNC_DIR)/dispatcher/src/ftm_time_sync_ucfg_api.o \
+		$(FTM_TIME_SYNC_DIR)/dispatcher/src/wlan_ftm_time_sync_tgt_api.o
 endif
 
 ########## CLD TARGET_IF #######
@@ -1392,6 +1408,12 @@ TXRX3.0_DIR :=     core/dp/txrx3.0
 TXRX3.0_INC :=     -I$(WLAN_ROOT)/$(TXRX3.0_DIR)
 TXRX3.0_OBJS := $(TXRX3.0_DIR)/dp_txrx.o \
 		$(TXRX3.0_DIR)/dp_rx_thread.o
+
+ifeq ($(CONFIG_RX_FISA), y)
+TXRX3.0_OBJS += $(TXRX3.0_DIR)/dp_fisa_rx.o
+TXRX3.0_OBJS += $(TXRX3.0_DIR)/dp_rx_fst.o
+endif
+
 ifeq ($(CONFIG_LITHIUM), y)
 ############ DP 3.0 ############
 DP_INC := -I$(WLAN_COMMON_INC)/dp/inc \
@@ -1625,6 +1647,26 @@ WLAN_NAN_OBJS := $(NAN_CORE_DIR)/nan_main.o \
 endif
 #######################################################
 
+###### COEX ########
+COEX_OS_IF_SRC      := $(WLAN_COMMON_ROOT)/os_if/linux/coex/src
+COEX_TGT_SRC        := $(WLAN_COMMON_ROOT)/target_if/coex/src
+COEX_CORE_SRC       := $(WLAN_COMMON_ROOT)/umac/coex/core/src
+COEX_DISPATCHER_SRC := $(WLAN_COMMON_ROOT)/umac/coex/dispatcher/src
+
+COEX_OS_IF_INC      := -I$(WLAN_COMMON_INC)/os_if/linux/coex/inc
+COEX_TGT_INC        := -I$(WLAN_COMMON_INC)/target_if/coex/inc
+COEX_DISPATCHER_INC := -I$(WLAN_COMMON_INC)/umac/coex/dispatcher/inc
+COEX_CORE_INC       := -I$(WLAN_COMMON_INC)/umac/coex/core/inc
+
+ifeq ($(CONFIG_FEATURE_COEX), y)
+COEX_OBJS := $(COEX_TGT_SRC)/target_if_coex.o                 \
+		 $(COEX_CORE_SRC)/wlan_coex_main.o                 \
+		 $(COEX_OS_IF_SRC)/wlan_cfg80211_coex.o           \
+		 $(COEX_DISPATCHER_SRC)/wlan_coex_tgt_api.o       \
+		 $(COEX_DISPATCHER_SRC)/wlan_coex_utils_api.o       \
+		 $(COEX_DISPATCHER_SRC)/wlan_coex_ucfg_api.o
+endif
+
 ############## HTC ##########
 HTC_DIR := htc
 HTC_INC := -I$(WLAN_COMMON_INC)/$(HTC_DIR)
@@ -1812,6 +1854,10 @@ HAL_INC :=	-I$(WLAN_COMMON_INC)/$(HAL_DIR)/inc \
 
 HAL_OBJS :=	$(WLAN_COMMON_ROOT)/$(HAL_DIR)/wifi3.0/hal_srng.o \
 		$(WLAN_COMMON_ROOT)/$(HAL_DIR)/wifi3.0/hal_reo.o
+
+ifeq ($(CONFIG_RX_FISA), y)
+DP_OBJS += $(WLAN_COMMON_ROOT)/$(HAL_DIR)/wifi3.0/hal_rx_flow.o
+endif
 
 ifeq ($(CONFIG_CNSS_QCA6290), y)
 HAL_INC += -I$(WLAN_COMMON_INC)/$(HAL_DIR)/wifi3.0/qca6290
@@ -2052,6 +2098,11 @@ INCS +=		$(UMAC_TARGET_SPECTRAL_INC)
 INCS +=		$(UMAC_DBR_INC)
 INCS +=		$(UMAC_CRYPTO_INC)
 
+INCS +=		$(COEX_OS_IF_INC)
+INCS +=		$(COEX_TGT_INC)
+INCS +=		$(COEX_DISPATCHER_INC)
+INCS +=		$(COEX_CORE_INC)
+
 OBJS :=		$(HDD_OBJS) \
 		$(SYNC_OBJS) \
 		$(DSC_OBJS) \
@@ -2123,6 +2174,7 @@ ifeq ($(CONFIG_WLAN_FW_OFFLOAD), y)
 OBJS +=		$(FWOL_OBJS)
 endif
 OBJS +=		$(BLM_OBJS)
+OBJS +=		$(COEX_OBJS)
 
 ifeq ($(CONFIG_WLAN_FEATURE_DSRC), y)
 OBJS +=		$(OCB_OBJS)
@@ -2236,6 +2288,7 @@ cppflags-$(CONFIG_FEATURE_OEM_DATA) += -DFEATURE_OEM_DATA
 cppflags-$(CONFIG_FEATURE_MOTION_DETECTION) += -DWLAN_FEATURE_MOTION_DETECTION
 cppflags-$(CONFIG_WLAN_FW_OFFLOAD) += -DWLAN_FW_OFFLOAD
 cppflags-$(CONFIG_WLAN_FEATURE_ELNA) += -DWLAN_FEATURE_ELNA
+cppflags-$(CONFIG_FEATURE_COEX) += -DFEATURE_COEX
 
 cppflags-$(CONFIG_PLD_IPCI_ICNSS_FLAG) += -DCONFIG_PLD_IPCI_ICNSS
 cppflags-$(CONFIG_PLD_SDIO_CNSS_FLAG) += -DCONFIG_PLD_SDIO_CNSS
@@ -2579,6 +2632,7 @@ cppflags-$(CONFIG_CHECKSUM_OFFLOAD) += -DCHECKSUM_OFFLOAD
 cppflags-$(CONFIG_IPA_OFFLOAD) += -DIPA_OFFLOAD
 
 cppflags-$(CONFIG_WDI3_IPA_OVER_GSI) += -DIPA_WDI3_GSI
+cppflags-$(CONFIG_WDI2_IPA_OVER_GSI) += -DIPA_WDI2_GSI
 
 ifeq ($(CONFIG_ARCH_SDX20), y)
 cppflags-y += -DSYNC_IPA_READY
@@ -2695,6 +2749,7 @@ cppflags-y += -DMAX_IPA_IFACE=$(NUM_IPA_IFACE)
 endif
 endif
 
+
 cppflags-$(CONFIG_TUFELLO_DUAL_FW_SUPPORT) += -DCONFIG_TUFELLO_DUAL_FW_SUPPORT
 cppflags-$(CONFIG_CHANNEL_HOPPING_ALL_BANDS) += -DCHANNEL_HOPPING_ALL_BANDS
 
@@ -2801,6 +2856,8 @@ endif
 ifeq ($(CONFIG_LITHIUM), y)
 cppflags-$(CONFIG_WLAN_TX_FLOW_CONTROL_V2) += -DQCA_AC_BASED_FLOW_CONTROL
 cppflags-y += -DHAL_DISABLE_NON_BA_2K_JUMP_ERROR
+cppflags-y += -DENABLE_HAL_SOC_STATS
+cppflags-y += -DENABLE_HAL_REG_WR_HISTORY
 endif
 
 cppflags-$(CONFIG_WLAN_CLD_PM_QOS) += -DCLD_PM_QOS
@@ -2809,6 +2866,7 @@ cppflags-$(CONFIG_WLAN_FEATURE_11AX) += -DWLAN_FEATURE_11AX
 cppflags-$(CONFIG_WLAN_FEATURE_11AX) += -DWLAN_FEATURE_11AX_BSS_COLOR
 cppflags-$(CONFIG_WLAN_FEATURE_11AX) += -DSUPPORT_11AX_D3
 cppflags-$(CONFIG_RXDMA_ERR_PKT_DROP) += -DRXDMA_ERR_PKT_DROP
+cppflags-$(CONFIG_MAX_ALLOC_PAGE_SIZE) += -DMAX_ALLOC_PAGE_SIZE
 
 cppflags-$(CONFIG_LITHIUM) += -DFEATURE_AST
 cppflags-$(CONFIG_LITHIUM) += -DPEER_PROTECTED_ACCESS
@@ -2816,6 +2874,7 @@ cppflags-$(CONFIG_LITHIUM) += -DSERIALIZE_QUEUE_SETUP
 cppflags-$(CONFIG_LITHIUM) += -DDP_RX_PKT_NO_PEER_DELIVER
 cppflags-$(CONFIG_LITHIUM) += -DFEATURE_ALIGN_STATS_FROM_DP
 cppflags-$(CONFIG_LITHIUM) += -DDROP_RXDMA_DECRYPT_ERR
+cppflags-$(CONFIG_LITHIUM) += -DFEATURE_STATS_EXT_V2
 cppflags-$(CONFIG_VERBOSE_DEBUG) += -DENABLE_VERBOSE_DEBUG
 cppflags-$(CONFIG_RX_DESC_DEBUG_CHECK) += -DRX_DESC_DEBUG_CHECK
 cppflags-$(CONFIG_REGISTER_OP_DEBUG) += -DHAL_REGISTER_WRITE_DEBUG
@@ -2896,6 +2955,9 @@ cppflags-$(CONFIG_ENABLE_MTRACE_LOG) += -DENABLE_MTRACE_LOG
 #Flag to enable/disable Adaptive 11r feature
 cppflags-$(CONFIG_ADAPTIVE_11R) += -DWLAN_ADAPTIVE_11R
 
+#Flag to enable/disable sae single pmk feature feature
+cppflags-$(CONFIG_SAE_SINGLE_PMK) += -DWLAN_SAE_SINGLE_PMK
+
 #Flag to enable NUD tracking
 cppflags-$(CONFIG_WLAN_NUD_TRACKING) += -DWLAN_NUD_TRACKING
 
@@ -2935,6 +2997,9 @@ cppflags-$(CONFIG_QCACLD_FEATURE_MPTA_HELPER) += -DFEATURE_MPTA_HELPER
 #Flag to enable get hw capability
 cppflags-$(CONFIG_QCACLD_FEATURE_HW_CAPABILITY) += -DFEATURE_HW_CAPABILITY
 
+#Flag to enable set btc chain mode feature
+cppflags-$(CONFIG_QCACLD_FEATURE_BTC_CHAIN_MODE) += -DFEATURE_BTC_CHAIN_MODE
+
 cppflags-$(CONFIG_DATA_CE_SW_INDEX_NO_INLINE_UPDATE) += -DDATA_CE_SW_INDEX_NO_INLINE_UPDATE
 
 #Flag to enable Multi page memory allocation for RX descriptor pool
@@ -2950,6 +3015,7 @@ cppflags-$(CONFIG_SAP_DHCP_FW_IND) += -DSAP_DHCP_FW_IND
 cppflags-$(CONFIG_WLAN_DP_PENDING_MEM_FLUSH) += -DWLAN_DP_PENDING_MEM_FLUSH
 cppflags-$(CONFIG_WLAN_SUPPORT_DATA_STALL) += -DWLAN_SUPPORT_DATA_STALL
 cppflags-$(CONFIG_WLAN_SUPPORT_TXRX_HL_BUNDLE) += -DWLAN_SUPPORT_TXRX_HL_BUNDLE
+cppflags-$(CONFIG_QCN7605_PCIE_SHADOW_REG_SUPPORT) += -DQCN7605_PCIE_SHADOW_REG_SUPPORT
 
 ifdef CONFIG_MAX_LOGS_PER_SEC
 ccflags-y += -DWLAN_MAX_LOGS_PER_SEC=$(CONFIG_MAX_LOGS_PER_SEC)
@@ -3135,6 +3201,8 @@ cppflags-y += -DCONFIG_CHAN_FREQ_API
 
 cppflags-$(CONFIG_BAND_6GHZ) += -DCONFIG_BAND_6GHZ
 cppflags-$(CONFIG_6G_SCAN_CHAN_SORT_ALGO) += -DFEATURE_6G_SCAN_CHAN_SORT_ALGO
+
+cppflags-$(CONFIG_RX_FISA) += -DWLAN_SUPPORT_RX_FISA
 
 ccflags-$(CONFIG_HASTINGS_BT_WAR) += -DHASTINGS_BT_WAR
 

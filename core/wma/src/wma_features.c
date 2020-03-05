@@ -1205,10 +1205,9 @@ int wma_csa_offload_handler(void *handle, uint8_t *event, uint32_t len)
 
 	csa_offload_event->ies_present_flag = csa_event->ies_present_flag;
 
-	WMA_LOGD("CSA: New Channel = %d freq %d BSSID:%pM",
-		 csa_offload_event->channel, csa_offload_event->csa_chan_freq,
-		 csa_offload_event->bssId);
-	WMA_LOGD("CSA: IEs Present Flag = 0x%x new ch width = %d ch center freq1 = %d ch center freq2 = %d new op class = %d",
+	WMA_LOGD("CSA: BSSID %pM chan %d freq %d flag 0x%x width = %d freq1 = %d freq2 = %d op class = %d",
+		 csa_offload_event->bssId, csa_offload_event->channel,
+		 csa_offload_event->csa_chan_freq,
 		 csa_event->ies_present_flag,
 		 csa_offload_event->new_ch_width,
 		 csa_offload_event->new_ch_freq_seg1,
@@ -2443,9 +2442,8 @@ static int wma_wake_event_packet(
 		break;
 
 	default:
-		WMA_LOGE("Wake reason %s(%u) is not a packet event",
-			 wma_wow_wake_reason_str(wake_info->wake_reason),
-			 wake_info->wake_reason);
+		WMA_LOGE("Wake reason %s is not a packet event",
+			 wma_wow_wake_reason_str(wake_info->wake_reason));
 		return -EINVAL;
 	}
 
@@ -3389,13 +3387,6 @@ QDF_STATUS wma_process_del_periodic_tx_ptrn_ind(WMA_HANDLE handle,
 }
 
 #ifdef WLAN_FEATURE_STATS_EXT
-/**
- * wma_stats_ext_req() - request ext stats from fw
- * @wma_ptr: wma handle
- * @preq: stats ext params
- *
- * Return: QDF status
- */
 QDF_STATUS wma_stats_ext_req(void *wma_ptr, tpStatsExtRequest preq)
 {
 	tp_wma_handle wma = (tp_wma_handle) wma_ptr;

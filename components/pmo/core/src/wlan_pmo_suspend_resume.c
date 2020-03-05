@@ -531,18 +531,10 @@ QDF_STATUS pmo_core_psoc_user_space_suspend_req(struct wlan_objmgr_psoc *psoc,
 		goto out;
 	}
 
-	/* Suspend all components before sending target suspend command */
-	status = pmo_suspend_all_components(psoc, type);
-	if (status != QDF_STATUS_SUCCESS) {
-		pmo_err("Failed to suspend all component");
-		goto dec_psoc_ref;
-	}
-
 	status = pmo_core_psoc_configure_suspend(psoc, false);
 	if (status != QDF_STATUS_SUCCESS)
 		pmo_err("Failed to configure suspend");
 
-dec_psoc_ref:
 	pmo_psoc_put_ref(psoc);
 out:
 	pmo_exit();
@@ -712,18 +704,10 @@ QDF_STATUS pmo_core_psoc_user_space_resume_req(struct wlan_objmgr_psoc *psoc,
 		goto out;
 	}
 
-	/* Resume all components */
-	status = pmo_resume_all_components(psoc, type);
-	if (status != QDF_STATUS_SUCCESS) {
-		pmo_err("Failed to resume all the components");
-		goto dec_psoc_ref;
-	}
-
 	status = pmo_core_psoc_configure_resume(psoc, false);
 	if (status != QDF_STATUS_SUCCESS)
 		pmo_err("Failed to configure resume");
 
-dec_psoc_ref:
 	pmo_psoc_put_ref(psoc);
 out:
 	pmo_exit();
@@ -1308,7 +1292,7 @@ QDF_STATUS pmo_core_psoc_bus_resume_req(struct wlan_objmgr_psoc *psoc,
 	wow_mode = pmo_core_is_wow_enabled(psoc_ctx);
 	pmo_debug("wow mode %d", wow_mode);
 
-	pmo_core_update_wow_initial_wake_up(psoc_ctx, false);
+	pmo_core_update_wow_initial_wake_up(psoc_ctx, 0);
 
 	/* If target was not suspended, bail out */
 	if (!pmo_tgt_is_target_suspended(psoc)) {
@@ -1440,7 +1424,7 @@ int pmo_core_psoc_clear_target_wake_up(struct wlan_objmgr_psoc *psoc)
 	}
 
 	psoc_ctx = pmo_psoc_get_priv(psoc);
-	pmo_core_update_wow_initial_wake_up(psoc_ctx, false);
+	pmo_core_update_wow_initial_wake_up(psoc_ctx, 0);
 
 	pmo_psoc_put_ref(psoc);
 out:
@@ -1461,7 +1445,7 @@ void pmo_core_psoc_handle_initial_wake_up(void *cb_ctx)
 	}
 
 	psoc_ctx = pmo_psoc_get_priv(psoc);
-	pmo_core_update_wow_initial_wake_up(psoc_ctx, true);
+	pmo_core_update_wow_initial_wake_up(psoc_ctx, 1);
 
 out:
 	pmo_exit();

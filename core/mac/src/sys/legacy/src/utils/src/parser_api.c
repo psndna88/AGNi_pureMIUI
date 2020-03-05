@@ -764,10 +764,9 @@ populate_dot11f_ht_caps(struct mac_context *mac,
 	if (pe_session) {
 		disable_high_ht_mcs_2x2 =
 				mac->mlme_cfg->rates.disable_high_ht_mcs_2x2;
-		pe_debug("disable HT high MCS INI param[%d]",
-			 disable_high_ht_mcs_2x2);
 		if (pe_session->nss == NSS_1x1_MODE) {
 			pDot11f->supportedMCSSet[1] = 0;
+			pDot11f->txSTBC = 0;
 		} else if (wlan_reg_is_24ghz_ch_freq(
 			   pe_session->curr_op_freq) &&
 			   disable_high_ht_mcs_2x2 &&
@@ -921,18 +920,15 @@ static void lim_log_qos_map_set(struct mac_context *mac,
 
 	pe_debug("num of dscp exceptions: %d",
 		pQosMapSet->num_dscp_exceptions);
-	for (i = 0; i < pQosMapSet->num_dscp_exceptions; i++) {
-		pe_debug("dscp value: %d",
-			pQosMapSet->dscp_exceptions[i][0]);
-		pe_debug("User priority value: %d",
-			pQosMapSet->dscp_exceptions[i][1]);
-	}
-	for (i = 0; i < 8; i++) {
-		pe_debug("dscp low for up %d: %d", i,
-			pQosMapSet->dscp_range[i][0]);
-		pe_debug("dscp high for up %d: %d", i,
-			pQosMapSet->dscp_range[i][1]);
-	}
+	for (i = 0; i < pQosMapSet->num_dscp_exceptions; i++)
+		pe_nofl_debug("dscp value: %d, User priority value: %d",
+			      pQosMapSet->dscp_exceptions[i][0],
+			      pQosMapSet->dscp_exceptions[i][1]);
+
+	for (i = 0; i < 8; i++)
+		pe_nofl_debug("For up %d: dscp low: %d, dscp high: %d", i,
+			       pQosMapSet->dscp_range[i][0],
+			       pQosMapSet->dscp_range[i][1]);
 }
 
 QDF_STATUS
@@ -1107,6 +1103,7 @@ populate_dot11f_vht_caps(struct mac_context *mac,
 				DISABLE_VHT_MCS_9(pDot11f->rxMCSMap,
 						NSS_1x1_MODE);
 			}
+			pDot11f->txSTBC = 0;
 		} else {
 			if (!pe_session->ch_width &&
 			    !vht_cap_info->enable_vht20_mcs9 &&
@@ -1119,6 +1116,7 @@ populate_dot11f_vht_caps(struct mac_context *mac,
 			}
 		}
 	}
+
 	lim_log_vht_cap(mac, pDot11f);
 	return QDF_STATUS_SUCCESS;
 }
@@ -1128,6 +1126,9 @@ populate_dot11f_vht_operation(struct mac_context *mac,
 			      struct pe_session *pe_session,
 			      tDot11fIEVHTOperation *pDot11f)
 {
+	uint32_t mcs_set;
+	struct mlme_vht_capabilities_info *vht_cap_info;
+
 	if (!pe_session || !pe_session->vhtCapability)
 		return QDF_STATUS_SUCCESS;
 
@@ -1149,9 +1150,16 @@ populate_dot11f_vht_operation(struct mac_context *mac,
 		pDot11f->chan_center_freq_seg1 = 0;
 	}
 
-	pDot11f->basicMCSSet =
-		(uint16_t)mac->mlme_cfg->vht_caps.vht_cap_info.basic_mcs_set;
+	vht_cap_info = &mac->mlme_cfg->vht_caps.vht_cap_info;
+	mcs_set = vht_cap_info->basic_mcs_set;
+	mcs_set = (mcs_set & 0xFFFC) | vht_cap_info->rx_mcs;
 
+	if (pe_session->nss == NSS_1x1_MODE)
+		mcs_set |= 0x000C;
+	else
+		mcs_set = (mcs_set & 0xFFF3) | (vht_cap_info->rx_mcs2x2 << 2);
+
+	pDot11f->basicMCSSet = (uint16_t)mcs_set;
 	lim_log_vht_operation(mac, pDot11f);
 
 	return QDF_STATUS_SUCCESS;
@@ -6067,21 +6075,27 @@ QDF_STATUS populate_dot11f_he_caps(struct mac_context *mac_ctx, struct pe_sessio
 				   tDot11fIEhe_cap *he_cap)
 {
 	uint8_t *ppet;
-	uint32_t value = 0;
+	uint32_t value = WNI_CFG_HE_PPET_LEN;
 
 	he_cap->present = 1;
 
 	if (!session) {
 		qdf_mem_copy(he_cap, &mac_ctx->mlme_cfg->he_caps.dot11_he_cap,
 			     sizeof(tDot11fIEhe_cap));
+		qdf_mem_copy(he_cap->ppet.ppe_threshold.ppe_th,
+			     mac_ctx->mlme_cfg->he_caps.he_ppet_5g,
+			     value);
+
+		ppet = he_cap->ppet.ppe_threshold.ppe_th;
+		he_cap->ppet.ppe_threshold.num_ppe_th =
+						lim_truncate_ppet(ppet, value);
 		return QDF_STATUS_SUCCESS;
 	}
 	/** TODO: String items needs attention. **/
 	qdf_mem_copy(he_cap, &session->he_config, sizeof(*he_cap));
 	if (he_cap->ppet_present) {
-		value = WNI_CFG_HE_PPET_LEN;
 		/* if session is present, populate PPET based on band */
-		if (wlan_reg_is_5ghz_ch_freq(session->curr_op_freq))
+		if (!wlan_reg_is_24ghz_ch_freq(session->curr_op_freq))
 			qdf_mem_copy(he_cap->ppet.ppe_threshold.ppe_th,
 				     mac_ctx->mlme_cfg->he_caps.he_ppet_5g,
 				     value);
@@ -6096,8 +6110,6 @@ QDF_STATUS populate_dot11f_he_caps(struct mac_context *mac_ctx, struct pe_sessio
 	} else {
 		he_cap->ppet.ppe_threshold.num_ppe_th = 0;
 	}
-
-	lim_log_he_cap(mac_ctx, he_cap);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -6166,7 +6178,7 @@ populate_dot11f_he_6ghz_cap(struct mac_context *mac_ctx,
 	struct mlme_ht_capabilities_info *ht_cap_info;
 	struct mlme_vht_capabilities_info *vht_cap_info;
 
-	if (!session || !session->he_6ghz_band)
+	if (session && !session->he_6ghz_band)
 		return QDF_STATUS_SUCCESS;
 
 	ht_cap_info = &mac_ctx->mlme_cfg->ht_caps.ht_cap_info;
@@ -6175,8 +6187,12 @@ populate_dot11f_he_6ghz_cap(struct mac_context *mac_ctx,
 	he_6g_cap->present = 1;
 	he_6g_cap->min_mpdu_start_spacing =
 		mac_ctx->mlme_cfg->ht_caps.ampdu_params.mpdu_density;
-	he_6g_cap->max_ampdu_len_exp =
-		session->vht_config.max_ampdu_lenexp;
+	if (session)
+		he_6g_cap->max_ampdu_len_exp =
+			session->vht_config.max_ampdu_lenexp;
+	else
+		he_6g_cap->max_ampdu_len_exp =
+			vht_cap_info->ampdu_len_exponent & 0x7;
 	he_6g_cap->max_mpdu_len = vht_cap_info->ampdu_len;
 	he_6g_cap->sm_pow_save = ht_cap_info->mimo_power_save;
 	he_6g_cap->rd_responder = 0;

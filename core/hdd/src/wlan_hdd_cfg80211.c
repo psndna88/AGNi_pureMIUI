@@ -146,6 +146,7 @@
 #include "sme_api.h"
 #include "wlan_hdd_thermal.h"
 #include <ol_defines.h>
+#include "wlan_hdd_btc_chain_mode.h"
 
 #define g_mode_rates_size (12)
 #define a_mode_rates_size (8)
@@ -1584,7 +1585,10 @@ static const struct nl80211_vendor_cmd_info wlan_hdd_cfg80211_vendor_events[] = 
 		.vendor_id = QCA_NL80211_VENDOR_ID,
 		.subcmd = QCA_NL80211_VENDOR_SUBCMD_GET_SAR_LIMITS_EVENT,
 	},
-
+	[QCA_NL80211_VENDOR_SUBCMD_UPDATE_STA_INFO_INDEX] = {
+		.vendor_id = QCA_NL80211_VENDOR_ID,
+		.subcmd = QCA_NL80211_VENDOR_SUBCMD_UPDATE_STA_INFO,
+	}
 };
 
 /**
@@ -1742,15 +1746,22 @@ int wlan_hdd_sap_cfg_dfs_override(struct hdd_adapter *adapter)
 		 * MCC restriction. So free ch list allocated in do_acs
 		 * func for Sec AP and realloc for Pri AP ch list size
 		 */
-		if (sap_config->acs_cfg.freq_list)
+		if (sap_config->acs_cfg.freq_list) {
 			qdf_mem_free(sap_config->acs_cfg.freq_list);
+			sap_config->acs_cfg.freq_list = NULL;
+		}
+		if (sap_config->acs_cfg.master_freq_list) {
+			qdf_mem_free(sap_config->acs_cfg.master_freq_list);
+			sap_config->acs_cfg.master_freq_list = NULL;
+		}
 
 		qdf_mem_copy(&sap_config->acs_cfg,
 			     &con_sap_config->acs_cfg,
 			     sizeof(struct sap_acs_cfg));
-		sap_config->acs_cfg.freq_list = qdf_mem_malloc(
-						sizeof(uint32_t) *
-					con_sap_config->acs_cfg.ch_list_count);
+
+		sap_config->acs_cfg.freq_list =
+			qdf_mem_malloc(sizeof(uint32_t) *
+				con_sap_config->acs_cfg.ch_list_count);
 		if (!sap_config->acs_cfg.freq_list) {
 			sap_config->acs_cfg.ch_list_count = 0;
 			return -ENOMEM;
@@ -1758,10 +1769,21 @@ int wlan_hdd_sap_cfg_dfs_override(struct hdd_adapter *adapter)
 		qdf_mem_copy(sap_config->acs_cfg.freq_list,
 			     con_sap_config->acs_cfg.freq_list,
 			     con_sap_config->acs_cfg.ch_list_count *
-			     sizeof(uint32_t));
-		sap_config->acs_cfg.ch_list_count =
-					con_sap_config->acs_cfg.ch_list_count;
+				sizeof(uint32_t));
 
+		sap_config->acs_cfg.master_freq_list =
+			qdf_mem_malloc(sizeof(uint32_t) *
+				con_sap_config->acs_cfg.master_ch_list_count);
+		if (!sap_config->acs_cfg.master_freq_list) {
+			sap_config->acs_cfg.master_ch_list_count = 0;
+			qdf_mem_free(sap_config->acs_cfg.freq_list);
+			sap_config->acs_cfg.freq_list = NULL;
+			return -ENOMEM;
+		}
+		qdf_mem_copy(sap_config->acs_cfg.master_freq_list,
+			     con_sap_config->acs_cfg.master_freq_list,
+			     con_sap_config->acs_cfg.master_ch_list_count *
+				sizeof(uint32_t));
 	} else {
 		sap_config->acs_cfg.pri_ch_freq = con_ch_freq;
 		if (sap_config->acs_cfg.ch_width > eHT_CHANNEL_WIDTH_20MHZ)
@@ -3174,12 +3196,7 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 	sap_config->acs_cfg.is_ht_enabled = ht_enabled;
 	sap_config->acs_cfg.is_vht_enabled = vht_enabled;
 
-	if (sap_config->acs_cfg.ch_list_count) {
-		hdd_nofl_debug("ACS freq list: len: %d",
-			       sap_config->acs_cfg.ch_list_count);
-		for (i = 0; i < sap_config->acs_cfg.ch_list_count; i++)
-			hdd_nofl_debug("%d ", sap_config->acs_cfg.freq_list[i]);
-	}
+	sap_dump_acs_channel(&sap_config->acs_cfg);
 
 	qdf_status = ucfg_mlme_get_vendor_acs_support(hdd_ctx->psoc,
 						&is_vendor_acs_support);
@@ -6211,6 +6228,41 @@ wlan_hdd_add_fils_params_roam_auth_event(struct sk_buff *skb,
 #endif
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
+void hdd_send_roam_scan_ch_list_event(struct hdd_context *hdd_ctx,
+				      uint16_t buf_len, uint8_t *buf)
+{
+	struct sk_buff *vendor_event;
+	uint32_t len, ret;
+
+	if (!hdd_ctx) {
+		hdd_err_rl("hdd context is null");
+		return;
+	}
+
+	len = nla_total_size(buf_len) + NLMSG_HDRLEN;
+	vendor_event =
+		cfg80211_vendor_event_alloc(
+			hdd_ctx->wiphy, NULL, len,
+			QCA_NL80211_VENDOR_SUBCMD_UPDATE_STA_INFO_INDEX,
+			GFP_KERNEL);
+
+	if (!vendor_event) {
+		hdd_err("cfg80211_vendor_event_alloc failed");
+		return;
+	}
+
+	ret = nla_put(vendor_event,
+		      QCA_WLAN_VENDOR_ATTR_UPDATE_STA_INFO_CONNECT_CHANNELS,
+		      buf_len, buf);
+	if (ret) {
+		hdd_err("OEM event put fails status %d", ret);
+		kfree_skb(vendor_event);
+		return;
+	}
+
+	cfg80211_vendor_event(vendor_event, GFP_KERNEL);
+}
+
 /**
  * wlan_hdd_send_roam_auth_event() - Send the roamed and authorized event
  * @adapter: Pointer to adapter struct
@@ -9087,7 +9139,7 @@ static int __wlan_hdd_cfg80211_wifi_logger_get_ring_data(struct wiphy *wiphy,
 		status = cds_flush_logs(WLAN_LOG_TYPE_NON_FATAL,
 				WLAN_LOG_INDICATOR_FRAMEWORK,
 				WLAN_LOG_REASON_CODE_UNUSED,
-				true, false);
+				false, false);
 		if (QDF_STATUS_SUCCESS != status) {
 			hdd_err("Failed to trigger bug report");
 			return -EINVAL;
@@ -14784,6 +14836,7 @@ const struct wiphy_vendor_command hdd_wiphy_vendor_commands[] = {
 	FEATURE_MPTA_HELPER_COMMANDS
 	FEATURE_HW_CAPABILITY_COMMANDS
 	FEATURE_THERMAL_VENDOR_COMMANDS
+	FEATURE_BTC_CHAIN_MODE_COMMANDS
 };
 
 struct hdd_context *hdd_cfg80211_wiphy_alloc(void)
@@ -16006,6 +16059,7 @@ static int __wlan_hdd_cfg80211_change_bss(struct wiphy *wiphy,
 			ret = -EINVAL;
 
 		ucfg_ipa_set_ap_ibss_fwd(hdd_ctx->pdev,
+					 adapter->vdev_id,
 					 adapter->session.ap.
 					 disable_intrabss_fwd);
 	}
@@ -17343,7 +17397,7 @@ wlan_hdd_cfg80211_roam_metrics_preauth(struct hdd_adapter *adapter,
 				     "QCOM: LFR_PREAUTH_INIT " QDF_MAC_ADDR_STR,
 				     QDF_MAC_ADDR_ARRAY(roam_info->bssid.bytes));
 
-	wireless_send_event(adapter->dev, IWEVCUSTOM, &wrqu,
+	hdd_wext_send_event(adapter->dev, IWEVCUSTOM, &wrqu,
 			    metrics_notification);
 
 	hdd_exit();
@@ -17394,7 +17448,7 @@ wlan_hdd_cfg80211_roam_metrics_preauth_status(struct hdd_adapter *adapter,
 	wrqu.data.pointer = metrics_notification;
 	wrqu.data.length = strlen(metrics_notification);
 
-	wireless_send_event(adapter->dev, IWEVCUSTOM, &wrqu,
+	hdd_wext_send_event(adapter->dev, IWEVCUSTOM, &wrqu,
 			    metrics_notification);
 
 	hdd_exit();
@@ -17436,7 +17490,7 @@ wlan_hdd_cfg80211_roam_metrics_handover(struct hdd_adapter *adapter,
 				     QDF_MAC_ADDR_STR,
 				     QDF_MAC_ADDR_ARRAY(roam_info->bssid.bytes));
 
-	wireless_send_event(adapter->dev, IWEVCUSTOM, &wrqu,
+	hdd_wext_send_event(adapter->dev, IWEVCUSTOM, &wrqu,
 			    metrics_notification);
 
 	hdd_exit();
@@ -17755,6 +17809,7 @@ static int wlan_hdd_cfg80211_connect_start(struct hdd_adapter *adapter,
 	 */
 	hdd_sta_ctx->conn_info.gtk_installed = false;
 	hdd_sta_ctx->conn_info.ptk_installed = false;
+	adapter->last_disconnect_reason = 0;
 
 	roam_profile = hdd_roam_profile(adapter);
 	if (roam_profile) {
@@ -17942,6 +17997,30 @@ static int wlan_hdd_cfg80211_connect_start(struct hdd_adapter *adapter,
 				&adapter->scan_info.scan_add_ie.addIEdata[0];
 			roam_profile->nAddIEScanLength =
 				adapter->scan_info.scan_add_ie.length;
+		}
+
+		/*
+		 * When connecting between two profiles there could be scenario
+		 * when the vdev create and vdev destroy clears the additional
+		 * scan IEs in roam profile and when the supplicant doesn't
+		 * issue scan request. So the unicast frames that are sent from
+		 * the STA doesn't have the additional MBO IE.
+		 */
+		if (adapter->device_mode == QDF_STA_MODE &&
+		    (adapter->scan_info.default_scan_ies ||
+		     adapter->scan_info.scan_add_ie.length) &&
+		    !roam_profile->nAddIEScanLength) {
+			if (adapter->scan_info.default_scan_ies) {
+				roam_profile->pAddIEScan =
+					adapter->scan_info.default_scan_ies;
+				roam_profile->nAddIEScanLength =
+					adapter->scan_info.default_scan_ies_len;
+			} else if (adapter->scan_info.scan_add_ie.length) {
+				roam_profile->pAddIEScan =
+					adapter->scan_info.scan_add_ie.addIEdata;
+				roam_profile->nAddIEScanLength =
+					adapter->scan_info.scan_add_ie.length;
+			}
 		}
 
 		if ((policy_mgr_is_hw_dbs_capable(hdd_ctx->psoc) == true)
@@ -19393,7 +19472,8 @@ static int __wlan_hdd_cfg80211_join_ibss(struct wiphy *wiphy,
 	}
 
 	/*Try disconnecting if already in connected state */
-	status = wlan_hdd_try_disconnect(adapter);
+	status = wlan_hdd_try_disconnect(adapter,
+					 eSIR_MAC_UNSPEC_FAILURE_REASON);
 	if (0 > status) {
 		hdd_err("Failed to disconnect the existing IBSS connection");
 		return -EALREADY;
@@ -19568,7 +19648,8 @@ static int __wlan_hdd_cfg80211_leave_ibss(struct wiphy *wiphy,
 	INIT_COMPLETION(adapter->disconnect_comp_var);
 	status = sme_roam_disconnect(mac_handle,
 				     adapter->vdev_id,
-				     eCSR_DISCONNECT_REASON_IBSS_LEAVE);
+				     eCSR_DISCONNECT_REASON_IBSS_LEAVE,
+				     eSIR_MAC_UNSPEC_FAILURE_REASON);
 	if (!QDF_IS_STATUS_SUCCESS(status)) {
 		hdd_err("sme_roam_disconnect failed status: %d",
 		       status);
@@ -19838,7 +19919,8 @@ static void wlan_hdd_cfg80211_clear_privacy(struct hdd_adapter *adapter)
 
 static int wlan_hdd_wait_for_disconnect(mac_handle_t mac_handle,
 					struct hdd_adapter *adapter,
-					uint16_t reason)
+					uint16_t reason,
+					tSirMacReasonCodes mac_reason)
 {
 	eConnectionState prev_conn_state;
 	struct hdd_station_ctx *sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
@@ -19860,7 +19942,8 @@ static int wlan_hdd_wait_for_disconnect(mac_handle_t mac_handle,
 	prev_conn_state = sta_ctx->conn_info.conn_state;
 	hdd_conn_set_connection_state(adapter, eConnectionState_Disconnecting);
 
-	status = sme_roam_disconnect(mac_handle, adapter->vdev_id, reason);
+	status = sme_roam_disconnect(mac_handle, adapter->vdev_id, reason,
+				     mac_reason);
 	if (status == QDF_STATUS_CMD_NOT_QUEUED &&
 	    prev_conn_state == eConnectionState_Connecting) {
 		/*
@@ -19940,7 +20023,8 @@ static void wlan_hdd_wait_for_roaming(mac_handle_t mac_handle,
 	}
 }
 
-int wlan_hdd_try_disconnect(struct hdd_adapter *adapter)
+int wlan_hdd_try_disconnect(struct hdd_adapter *adapter,
+			    enum eSirMacReasonCodes reason)
 {
 	mac_handle_t mac_handle;
 
@@ -19948,7 +20032,8 @@ int wlan_hdd_try_disconnect(struct hdd_adapter *adapter)
 	wlan_hdd_wait_for_roaming(mac_handle, adapter);
 
 	return wlan_hdd_wait_for_disconnect(mac_handle, adapter,
-					    eCSR_DISCONNECT_REASON_UNSPECIFIED);
+					    eCSR_DISCONNECT_REASON_UNSPECIFIED,
+					    reason);
 }
 
 /**
@@ -20213,7 +20298,8 @@ static int __wlan_hdd_cfg80211_connect(struct wiphy *wiphy,
 		return status;
 
 	/* Try disconnecting if already in connected state */
-	status = wlan_hdd_try_disconnect(adapter);
+	status = wlan_hdd_try_disconnect(adapter,
+					 eSIR_MAC_UNSPEC_FAILURE_REASON);
 	if (0 > status) {
 		hdd_err("Failed to disconnect the existing connection");
 		return -EALREADY;
@@ -20272,7 +20358,75 @@ static int wlan_hdd_cfg80211_connect(struct wiphy *wiphy,
 	return errno;
 }
 
-int wlan_hdd_disconnect(struct hdd_adapter *adapter, u16 reason)
+/**
+ * wlan_hdd_get_ieee80211_disconnect_reason() - Get ieee80211 disconnect reason
+ * @adapter: pointer to adapter structure
+ * @reason: Mac Disconnect reason code as per @enum eSirMacReasonCodes
+ *
+ * Reason codes that are greater than eSIR_MAC_REASON_PROP_START are internal
+ * reason codes. Cache the same in hdd_ctx and return UNSPECIFIED.
+ * Rest of the reason codes are valid ieee80211 reason codes.
+ *
+ * Return: Reason code of type ieee80211_reasoncode.
+ */
+static enum ieee80211_reasoncode
+wlan_hdd_get_cfg80211_disconnect_reason(struct hdd_adapter *adapter,
+					enum eSirMacReasonCodes reason)
+{
+	enum ieee80211_reasoncode ieee80211_reason = WLAN_REASON_UNSPECIFIED;
+
+	/*
+	 * Cache internal reason code in adapter. This can be sent to
+	 * userspace with a vendor event.
+	 */
+	if (reason >= eSIR_MAC_REASON_PROP_START)
+		adapter->last_disconnect_reason = reason;
+	else
+		ieee80211_reason = (enum ieee80211_reasoncode)reason;
+
+	return ieee80211_reason;
+}
+
+#if defined(CFG80211_DISCONNECTED_V2) || \
+(LINUX_VERSION_CODE >= KERNEL_VERSION(4, 2, 0))
+void
+wlan_hdd_cfg80211_indicate_disconnect(struct hdd_adapter *adapter,
+				      bool locally_generated,
+				      enum eSirMacReasonCodes reason,
+				      uint8_t *disconnect_ies,
+				      uint16_t disconnect_ies_len)
+{
+	enum ieee80211_reasoncode ieee80211_reason;
+
+	ieee80211_reason = wlan_hdd_get_cfg80211_disconnect_reason(adapter,
+								   reason);
+	hdd_debug("Disconnect reason code - MAC: %u, IEEE80211: %u locally_generated: %u",
+		  reason, ieee80211_reason, locally_generated);
+	cfg80211_disconnected(adapter->dev, ieee80211_reason, disconnect_ies,
+			      disconnect_ies_len, locally_generated,
+			      GFP_KERNEL);
+}
+#else
+void
+wlan_hdd_cfg80211_indicate_disconnect(struct hdd_adapter *adapter,
+				      bool locally_generated,
+				      enum eSirMacReasonCodes reason,
+				      uint8_t *disconnect_ies,
+				      uint16_t disconnect_ies_len)
+{
+	enum ieee80211_reasoncode ieee80211_reason;
+
+	ieee80211_reason = wlan_hdd_get_cfg80211_disconnect_reason(adapter,
+								   reason);
+	hdd_debug("Disconnect reason code - MAC: %u, IEEE80211: %u locally_generated: %u",
+		  reason, ieee80211_reason, locally_generated);
+	cfg80211_disconnected(adapter->dev, ieee80211_reason, disconnect_ies,
+			      disconnect_ies_len, GFP_KERNEL);
+}
+#endif
+
+int wlan_hdd_disconnect(struct hdd_adapter *adapter, u16 reason,
+			tSirMacReasonCodes mac_reason)
 {
 	int ret;
 	mac_handle_t mac_handle;
@@ -20285,15 +20439,15 @@ int wlan_hdd_disconnect(struct hdd_adapter *adapter, u16 reason)
 	wlan_hdd_netif_queue_control(adapter,
 		WLAN_STOP_ALL_NETIF_QUEUE_N_CARRIER, WLAN_CONTROL_PATH);
 
-	ret = wlan_hdd_wait_for_disconnect(mac_handle, adapter, reason);
+	ret = wlan_hdd_wait_for_disconnect(mac_handle, adapter, reason,
+					   mac_reason);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0)
 	/* Sending disconnect event to userspace for kernel version < 3.11
 	 * is handled by __cfg80211_disconnect call to __cfg80211_disconnected
 	 */
-	hdd_debug("Send disconnected event to userspace");
-	wlan_hdd_cfg80211_indicate_disconnect(adapter->dev, true,
-					      WLAN_REASON_UNSPECIFIED, NULL, 0);
+	wlan_hdd_cfg80211_indicate_disconnect(adapter, true,
+					      mac_reason, NULL, 0);
 #endif
 
 	return ret;
@@ -20384,8 +20538,6 @@ static int __wlan_hdd_cfg80211_disconnect(struct wiphy *wiphy,
 	struct wlan_objmgr_vdev *vdev;
 	bool enable_deauth_to_disassoc_map;
 
-	hdd_enter();
-
 	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
 		hdd_err("Command not allowed in FTM mode");
 		return -EINVAL;
@@ -20399,10 +20551,6 @@ static int __wlan_hdd_cfg80211_disconnect(struct wiphy *wiphy,
 		   adapter->vdev_id, reason);
 
 	hdd_print_netdev_txq_status(dev);
-	hdd_debug("Device_mode %s(%d) reason code(%d)",
-		  qdf_opmode_str(adapter->device_mode),
-		  adapter->device_mode, reason);
-
 	status = wlan_hdd_validate_context(hdd_ctx);
 
 	if (0 != status)
@@ -20465,13 +20613,11 @@ static int __wlan_hdd_cfg80211_disconnect(struct wiphy *wiphy,
 		vdev = hdd_objmgr_get_vdev(adapter);
 		if (!vdev)
 			return -EINVAL;
-		if (ucfg_scan_get_vdev_status(vdev) !=
-				SCAN_NOT_IN_PROGRESS) {
-			hdd_debug("Disconnect is in progress, Aborting Scan");
+		if (ucfg_scan_get_vdev_status(vdev) != SCAN_NOT_IN_PROGRESS)
 			wlan_abort_scan(hdd_ctx->pdev, INVAL_PDEV_ID,
 					adapter->vdev_id, INVALID_SCAN_ID,
 					false);
-		}
+
 		wlan_hdd_cleanup_remain_on_channel_ctx(adapter);
 		/* First clean up the tdls peers if any */
 		hdd_notify_sta_disconnect(adapter->vdev_id,
@@ -20479,8 +20625,9 @@ static int __wlan_hdd_cfg80211_disconnect(struct wiphy *wiphy,
 		hdd_objmgr_put_vdev(vdev);
 
 		hdd_info("%s(vdevid-%d): Disconnect from userspace; reason:%d (%s)",
-			 dev->name, adapter->vdev_id, reason, hdd_ieee80211_reason_code_to_str(reason));
-		status = wlan_hdd_disconnect(adapter, reasonCode);
+			 dev->name, adapter->vdev_id, reason,
+			 hdd_ieee80211_reason_code_to_str(reason));
+		status = wlan_hdd_disconnect(adapter, reasonCode, reason);
 		if (0 != status) {
 			hdd_err("wlan_hdd_disconnect failed, status: %d", status);
 			hdd_set_disconnect_status(adapter, false);
@@ -21083,12 +21230,57 @@ static int wlan_hdd_cfg80211_add_station(struct wiphy *wiphy,
 	return errno;
 }
 
+#if defined(WLAN_SAE_SINGLE_PMK) && defined(WLAN_FEATURE_ROAM_OFFLOAD)
+/**
+ * wlan_update_sae_single_pmk_info() - Update a separate pmk information
+ * structure to support sae roaming using same pmk
+ * @vdev: vdev common object
+ * @pmk_cache: Pointer to pmk cache info
+ *
+ * Return: None
+ */
+static void wlan_update_sae_single_pmk_info(struct wlan_objmgr_vdev *vdev,
+					    tPmkidCacheInfo *pmk_cache)
+{
+	struct mlme_pmk_info *pmk_info;
+
+	pmk_info = qdf_mem_malloc(sizeof(*pmk_info));
+	if (!pmk_info)
+		return;
+
+	qdf_mem_copy(pmk_info->pmk, pmk_cache->pmk, pmk_cache->pmk_len);
+	pmk_info->pmk_len = pmk_cache->pmk_len;
+
+	ucfg_mlme_update_sae_single_pmk_info(vdev, pmk_info);
+
+	qdf_mem_zero(pmk_info, sizeof(*pmk_info));
+	qdf_mem_free(pmk_info);
+
+}
+#else
+static void wlan_update_sae_single_pmk_info(struct wlan_objmgr_vdev *vdev,
+					    tPmkidCacheInfo *pmk_cache)
+{
+}
+#endif
 static QDF_STATUS wlan_hdd_set_pmksa_cache(struct hdd_adapter *adapter,
 					   tPmkidCacheInfo *pmk_cache)
 {
 	QDF_STATUS result;
 	struct wlan_crypto_pmksa *pmksa;
 	struct wlan_objmgr_vdev *vdev;
+	mac_handle_t mac_handle;
+	struct hdd_context *hdd_ctx;
+
+	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	if (!hdd_ctx) {
+		hdd_err("HDD context is null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (wlan_hdd_validate_context(hdd_ctx))
+		return QDF_STATUS_E_INVAL;
+	mac_handle = hdd_ctx->mac_handle;
 
 	vdev = hdd_objmgr_get_vdev(adapter);
 	if (!vdev)
@@ -21099,7 +21291,15 @@ static QDF_STATUS wlan_hdd_set_pmksa_cache(struct hdd_adapter *adapter,
 		hdd_objmgr_put_vdev(vdev);
 		return QDF_STATUS_E_NOMEM;
 	}
-	qdf_copy_macaddr(&pmksa->bssid, &pmk_cache->BSSID);
+
+	if (!pmk_cache->ssid_len) {
+		qdf_copy_macaddr(&pmksa->bssid, &pmk_cache->BSSID);
+	} else {
+		qdf_mem_copy(pmksa->ssid, pmk_cache->ssid, pmk_cache->ssid_len);
+		qdf_mem_copy(pmksa->cache_id, pmk_cache->cache_id,
+			     WLAN_CACHE_ID_LEN);
+		pmksa->ssid_len = pmk_cache->ssid_len;
+	}
 	qdf_mem_copy(pmksa->pmkid, pmk_cache->PMKID, PMKID_LEN);
 	qdf_mem_copy(pmksa->pmk, pmk_cache->pmk, pmk_cache->pmk_len);
 	pmksa->pmk_len = pmk_cache->pmk_len;
@@ -21109,6 +21309,12 @@ static QDF_STATUS wlan_hdd_set_pmksa_cache(struct hdd_adapter *adapter,
 		qdf_mem_zero(pmksa, sizeof(*pmksa));
 		qdf_mem_free(pmksa);
 	}
+
+	wlan_update_sae_single_pmk_info(vdev, pmk_cache);
+
+	if (result == QDF_STATUS_SUCCESS && pmk_cache->pmk_len)
+		sme_roam_set_psk_pmk(mac_handle, adapter->vdev_id,
+				     pmk_cache->pmk, pmk_cache->pmk_len);
 	hdd_objmgr_put_vdev(vdev);
 
 	return result;
@@ -21158,11 +21364,9 @@ QDF_STATUS wlan_hdd_flush_pmksa_cache(struct hdd_adapter *adapter)
 static inline bool wlan_hdd_is_pmksa_valid(struct cfg80211_pmksa *pmksa)
 {
 	if (!pmksa->bssid) {
-		hdd_warn("bssid (%pK) is NULL",
-					pmksa->bssid);
+		hdd_warn("bssid is NULL");
 		if (!pmksa->ssid || !pmksa->cache_id) {
-			hdd_err("either ssid (%pK) or cache_id (%pK) are NULL",
-					pmksa->ssid, pmksa->cache_id);
+			hdd_err("either ssid or cache_id are NULL");
 			return false;
 		}
 	}
@@ -21267,10 +21471,9 @@ static int __wlan_hdd_cfg80211_set_pmksa(struct wiphy *wiphy,
 {
 	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
-	mac_handle_t mac_handle;
 	QDF_STATUS result = QDF_STATUS_SUCCESS;
 	int status;
-	tPmkidCacheInfo pmk_cache;
+	tPmkidCacheInfo *pmk_cache;
 
 	hdd_enter();
 
@@ -21301,11 +21504,11 @@ static int __wlan_hdd_cfg80211_set_pmksa(struct wiphy *wiphy,
 	if (0 != status)
 		return status;
 
-	mac_handle = hdd_ctx->mac_handle;
+	pmk_cache = qdf_mem_malloc(sizeof(*pmk_cache));
+	if (!pmk_cache)
+		return -ENOMEM;
 
-	qdf_mem_zero(&pmk_cache, sizeof(pmk_cache));
-
-	hdd_fill_pmksa_info(adapter, &pmk_cache, pmksa, false);
+	hdd_fill_pmksa_info(adapter, pmk_cache, pmksa, false);
 
 	/*
 	 * Add to the PMKSA Cache in CSR
@@ -21314,16 +21517,18 @@ static int __wlan_hdd_cfg80211_set_pmksa(struct wiphy *wiphy,
 	 * 2. pmk
 	 * 3. bssid or cache identifier
 	 */
-	result = wlan_hdd_set_pmksa_cache(adapter, &pmk_cache);
+	result = wlan_hdd_set_pmksa_cache(adapter, pmk_cache);
 
 	qdf_mtrace(QDF_MODULE_ID_HDD, QDF_MODULE_ID_HDD,
 		   TRACE_CODE_HDD_CFG80211_SET_PMKSA,
 		   adapter->vdev_id, result);
 
-	sme_set_del_pmkid_cache(mac_handle, adapter->vdev_id,
-				&pmk_cache, true);
+	sme_set_del_pmkid_cache(hdd_ctx->psoc, adapter->vdev_id,
+				pmk_cache, true);
 
-	qdf_mem_zero(&pmk_cache, sizeof(pmk_cache));
+	qdf_mem_zero(pmk_cache, sizeof(pmk_cache));
+
+	qdf_mem_free(pmk_cache);
 	hdd_exit();
 
 	return QDF_IS_STATUS_SUCCESS(result) ? 0 : -EINVAL;
@@ -21369,9 +21574,8 @@ static int __wlan_hdd_cfg80211_del_pmksa(struct wiphy *wiphy,
 {
 	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
-	mac_handle_t mac_handle;
 	int status = 0;
-	tPmkidCacheInfo pmk_cache;
+	tPmkidCacheInfo *pmk_cache;
 
 	hdd_enter();
 
@@ -21396,29 +21600,39 @@ static int __wlan_hdd_cfg80211_del_pmksa(struct wiphy *wiphy,
 	if (0 != status)
 		return status;
 
-	mac_handle = hdd_ctx->mac_handle;
+	pmk_cache = qdf_mem_malloc(sizeof(*pmk_cache));
+	if (!pmk_cache)
+		return -ENOMEM;
 
 	qdf_mtrace(QDF_MODULE_ID_HDD, QDF_MODULE_ID_HDD,
 		   TRACE_CODE_HDD_CFG80211_DEL_PMKSA,
 		   adapter->vdev_id, 0);
 
-	qdf_mem_zero(&pmk_cache, sizeof(pmk_cache));
+	hdd_fill_pmksa_info(adapter, pmk_cache, pmksa, true);
 
-	hdd_fill_pmksa_info(adapter, &pmk_cache, pmksa, true);
+	/* clear single_pmk_info information */
+	sme_clear_sae_single_pmk_info(hdd_ctx->psoc,adapter->vdev_id,
+				      pmk_cache);
 
 	/* Delete the PMKID CSR cache */
 	if (QDF_STATUS_SUCCESS !=
-	    wlan_hdd_del_pmksa_cache(adapter, &pmk_cache)) {
-		hdd_err("Failed to delete PMKSA for " QDF_MAC_ADDR_STR,
-		       QDF_MAC_ADDR_ARRAY(pmksa->bssid));
+	    wlan_hdd_del_pmksa_cache(adapter, pmk_cache)) {
+		if (!pmksa->bssid)
+			hdd_err("Failed to delete PMKSA for null bssid");
+		else
+			hdd_err("Failed to delete PMKSA for " QDF_MAC_ADDR_STR,
+				QDF_MAC_ADDR_ARRAY(pmksa->bssid));
 		status = -EINVAL;
 	}
 
-	sme_set_del_pmkid_cache(mac_handle, adapter->vdev_id, &pmk_cache,
+	sme_set_del_pmkid_cache(hdd_ctx->psoc, adapter->vdev_id, pmk_cache,
 				false);
-	qdf_mem_zero(&pmk_cache, sizeof(pmk_cache));
+
+	qdf_mem_zero(pmk_cache, sizeof(*pmk_cache));
+	qdf_mem_free(pmk_cache);
 
 	hdd_exit();
+
 	return status;
 }
 
@@ -21461,7 +21675,6 @@ static int __wlan_hdd_cfg80211_flush_pmksa(struct wiphy *wiphy,
 {
 	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
-	mac_handle_t mac_handle;
 	int errno;
 	QDF_STATUS status;
 
@@ -21482,15 +21695,13 @@ static int __wlan_hdd_cfg80211_flush_pmksa(struct wiphy *wiphy,
 	if (errno)
 		return errno;
 
-	mac_handle = hdd_ctx->mac_handle;
-
 	status = wlan_hdd_flush_pmksa_cache(adapter);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		hdd_err("Cannot flush PMKIDCache");
 		errno = -EINVAL;
 	}
 
-	sme_set_del_pmkid_cache(mac_handle, adapter->vdev_id, NULL, false);
+	sme_set_del_pmkid_cache(hdd_ctx->psoc, adapter->vdev_id, NULL, false);
 	hdd_exit();
 	return errno;
 }
@@ -22854,18 +23065,25 @@ wlan_hdd_extauth_cache_pmkid(struct hdd_adapter *adapter,
 			     mac_handle_t mac_handle,
 			     struct cfg80211_external_auth_params *params)
 {
-	tPmkidCacheInfo pmk_cache;
+	tPmkidCacheInfo *pmk_cache;
 	QDF_STATUS result;
+
 	if (params->pmkid) {
-		qdf_mem_zero(&pmk_cache, sizeof(pmk_cache));
-		qdf_mem_copy(pmk_cache.BSSID.bytes, params->bssid,
+		pmk_cache = qdf_mem_malloc(sizeof(*pmk_cache));
+		if (!pmk_cache)
+			return;
+
+		qdf_mem_copy(pmk_cache->BSSID.bytes, params->bssid,
 			     QDF_MAC_ADDR_SIZE);
-		qdf_mem_copy(pmk_cache.PMKID, params->pmkid,
+		qdf_mem_copy(pmk_cache->PMKID, params->pmkid,
 			     PMKID_LEN);
-		result = wlan_hdd_set_pmksa_cache(adapter, &pmk_cache);
+		result = wlan_hdd_set_pmksa_cache(adapter, pmk_cache);
 		if (!QDF_IS_STATUS_SUCCESS(result))
 			hdd_debug("external_auth: Failed to cache PMKID");
+
+		qdf_mem_free(pmk_cache);
 	}
+
 }
 
 /**

@@ -48,7 +48,6 @@
 #include <cdp_txrx_cmn.h>
 #include <cdp_txrx_peer_ops.h>
 #include <cdp_txrx_flow_ctrl_v2.h>
-#include <cdp_txrx_mon.h>
 #include "wlan_hdd_nan_datapath.h"
 #include "pld_common.h"
 #include <cdp_txrx_misc.h>
@@ -61,6 +60,9 @@
 
 #include "wlan_hdd_nud_tracking.h"
 #include "dp_txrx.h"
+#if defined(WLAN_SUPPORT_RX_FISA)
+#include "dp_fisa_rx.h"
+#endif
 #include <ol_defines.h>
 #include "cfg_ucfg_api.h"
 #include "target_type.h"
@@ -1350,18 +1352,7 @@ QDF_STATUS hdd_deinit_tx_rx(struct hdd_adapter *adapter)
 }
 
 #ifdef FEATURE_MONITOR_MODE_SUPPORT
-/**
- * hdd_mon_rx_packet_cbk() - Receive callback registered with OL layer.
- * @context: [in] pointer to qdf context
- * @rxBuf:      [in] pointer to rx qdf_nbuf
- *
- * TL will call this to notify the HDD when one or more packets were
- * received for a registered STA.
- *
- * Return: QDF_STATUS_E_FAILURE if any errors encountered, QDF_STATUS_SUCCESS
- * otherwise
- */
-static QDF_STATUS hdd_mon_rx_packet_cbk(void *context, qdf_nbuf_t rxbuf)
+QDF_STATUS hdd_mon_rx_packet_cbk(void *context, qdf_nbuf_t rxbuf)
 {
 	struct hdd_adapter *adapter;
 	int rxstat;
@@ -1994,6 +1985,9 @@ QDF_STATUS hdd_rx_deliver_to_stack(struct hdd_adapter *adapter,
 		       hdd_ctx->enable_rxthread)) {
 		local_bh_disable();
 		netif_status = netif_receive_skb(skb);
+		if (netif_status)
+			hdd_err("netif_receive_skb return dropped skb %pk",
+				skb);
 		local_bh_enable();
 	} else if (qdf_unlikely(QDF_NBUF_CB_RX_PEER_CACHED_FRM(skb))) {
 		/*
@@ -2054,6 +2048,19 @@ QDF_STATUS hdd_rx_flush_packet_cbk(void *adapter_context, uint8_t vdev_id)
 
 	return QDF_STATUS_SUCCESS;
 }
+
+#if defined(WLAN_SUPPORT_RX_FISA)
+QDF_STATUS hdd_rx_fisa_cbk(void *dp_soc, void *dp_vdev, qdf_nbuf_t nbuf_list)
+{
+	return dp_fisa_rx((struct dp_soc *)dp_soc, (struct dp_vdev *)dp_vdev,
+			  nbuf_list);
+}
+
+QDF_STATUS hdd_rx_fisa_flush(void *dp_soc, int ring_num)
+{
+	return dp_rx_fisa_flush((struct dp_soc *)dp_soc, ring_num);
+}
+#endif
 
 QDF_STATUS hdd_rx_packet_cbk(void *adapter_context,
 			     qdf_nbuf_t rxBuf)
@@ -2709,37 +2716,6 @@ void hdd_print_netdev_txq_status(struct net_device *dev)
 	}
 }
 
-#ifdef WLAN_FEATURE_PKT_CAPTURE
-/**
- * hdd_set_pktcapture_cb() - Set pkt capture mode callback
- * @dev: Pointer to net_device structure
- * @pdev_id: pdev id
- *
- * Return: 0 on success; non-zero for failure
- */
-int hdd_set_pktcapture_cb(struct net_device *dev, uint8_t pdev_id)
-{
-	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
-	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
-
-	return cdp_register_pktcapture_cb(soc, pdev_id, adapter,
-					  hdd_mon_rx_packet_cbk);
-}
-
-/**
- * hdd_reset_pktcapture_cb() - Reset pkt capture mode callback
- * @pdev_id: pdev id
- *
- * Return: None
- */
-void hdd_reset_pktcapture_cb(uint8_t pdev_id)
-{
-	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
-
-	cdp_deregister_pktcapture_cb(soc, pdev_id);
-}
-#endif /* WLAN_FEATURE_PKT_CAPTURE */
-
 #ifdef FEATURE_MONITOR_MODE_SUPPORT
 /**
  * hdd_set_mon_rx_cb() - Set Monitor mode Rx callback
@@ -3214,6 +3190,7 @@ void hdd_dp_cfg_update(struct wlan_objmgr_psoc *psoc,
 		cfg_get(psoc, CFG_DP_RX_THREAD_UL_CPU_MASK);
 	config->rx_thread_affinity_mask =
 		cfg_get(psoc, CFG_DP_RX_THREAD_CPU_MASK);
+	config->fisa_enable = cfg_get(psoc, CFG_DP_RX_FISA_ENABLE);
 	qdf_uint8_array_parse(cfg_get(psoc, CFG_DP_RPS_RX_QUEUE_CPU_MAP_LIST),
 			      config->cpu_map_list,
 			      sizeof(config->cpu_map_list), &array_out_size);

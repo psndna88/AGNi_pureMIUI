@@ -3589,6 +3589,116 @@ void mlme_get_converted_timestamp(uint32_t timestamp, char *time)
 		     (timestamp % 1000) * 1000);
 }
 
+#if defined(WLAN_SAE_SINGLE_PMK) && defined(WLAN_FEATURE_ROAM_OFFLOAD)
+void wlan_mlme_set_sae_single_pmk_bss_cap(struct wlan_objmgr_psoc *psoc,
+					  uint8_t vdev_id, bool val)
+{
+	struct mlme_legacy_priv *mlme_priv;
+	struct wlan_objmgr_vdev *vdev;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_MLME_OBJMGR_ID);
+
+	if (!vdev) {
+		mlme_err("get vdev failed");
+		return;
+	}
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
+		mlme_legacy_err("vdev legacy private object is NULL");
+		return;
+	}
+
+	mlme_priv->mlme_roam.sae_single_pmk.sae_single_pmk_ap = val;
+
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
+}
+
+void wlan_mlme_update_sae_single_pmk(struct wlan_objmgr_vdev *vdev,
+				     struct mlme_pmk_info *sae_single_pmk)
+{
+	struct mlme_legacy_priv *mlme_priv;
+	uint32_t keymgmt;
+	bool is_sae_connection = false;
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_legacy_err("vdev legacy private object is NULL");
+		return;
+	}
+
+	keymgmt = wlan_crypto_get_param(vdev, WLAN_CRYPTO_PARAM_KEY_MGMT);
+
+	if (keymgmt & (1 << WLAN_CRYPTO_KEY_MGMT_SAE))
+		is_sae_connection = true;
+
+	if (mlme_priv->mlme_roam.sae_single_pmk.sae_single_pmk_ap &&
+	    is_sae_connection)
+		mlme_priv->mlme_roam.sae_single_pmk.pmk_info = *sae_single_pmk;
+}
+
+void wlan_mlme_get_sae_single_pmk_info(struct wlan_objmgr_vdev *vdev,
+				       struct wlan_mlme_sae_single_pmk *pmksa)
+{
+	struct mlme_legacy_priv *mlme_priv;
+	struct mlme_pmk_info pmk_info;
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_legacy_err("vdev legacy private object is NULL");
+		return;
+	}
+
+	pmk_info = mlme_priv->mlme_roam.sae_single_pmk.pmk_info;
+
+	pmksa->sae_single_pmk_ap =
+		mlme_priv->mlme_roam.sae_single_pmk.sae_single_pmk_ap;
+
+	if (pmk_info.pmk_len) {
+		qdf_mem_copy(pmksa->pmk_info.pmk, pmk_info.pmk,
+			     pmk_info.pmk_len);
+		pmksa->pmk_info.pmk_len = pmk_info.pmk_len;
+		return;
+	}
+
+	qdf_mem_zero(pmksa->pmk_info.pmk, sizeof(*pmksa->pmk_info.pmk));
+	pmksa->pmk_info.pmk_len = 0;
+}
+
+void wlan_mlme_clear_sae_single_pmk_info(struct wlan_objmgr_vdev *vdev,
+					 struct mlme_pmk_info *pmk_recv)
+{
+	struct mlme_legacy_priv *mlme_priv;
+	struct wlan_mlme_sae_single_pmk sae_single_pmk;
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_legacy_err("vdev legacy private object is NULL");
+		return;
+	}
+
+	sae_single_pmk = mlme_priv->mlme_roam.sae_single_pmk;
+
+	if (!pmk_recv) {
+		/* Process flush pmk cmd */
+		mlme_legacy_debug("Flush sae_single_pmk info");
+		qdf_mem_zero(&sae_single_pmk.pmk_info,
+			     sizeof(sae_single_pmk.pmk_info));
+	} else if (pmk_recv->pmk_len != sae_single_pmk.pmk_info.pmk_len) {
+		mlme_legacy_debug("Invalid pmk len");
+		return;
+	} else if (!qdf_mem_cmp(&sae_single_pmk.pmk_info.pmk, pmk_recv->pmk,
+		   pmk_recv->pmk_len)) {
+			/* Process delete pmk cmd */
+			mlme_legacy_debug("Clear sae_single_pmk info");
+			qdf_mem_zero(&sae_single_pmk.pmk_info,
+				     sizeof(sae_single_pmk.pmk_info));
+	}
+}
+#endif
+
 char *mlme_get_roam_fail_reason_str(uint32_t result)
 {
 	switch (result) {

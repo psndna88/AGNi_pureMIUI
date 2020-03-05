@@ -42,6 +42,7 @@
 #include "wlan_mlme_ucfg_api.h"
 #include "wlan_mlme_ucfg_api.h"
 #include "wlan_hdd_sta_info.h"
+#include "cdp_txrx_misc.h"
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 0, 0)) && !defined(WITH_BACKPORTS)
 #define HDD_INFO_SIGNAL                 STATION_INFO_SIGNAL
@@ -631,8 +632,8 @@ static void hdd_link_layer_process_peer_stats(struct hdd_adapter *adapter,
 	if (0 != status)
 		return;
 
-	hdd_debug("LL_STATS_PEER_ALL : num_peers %u, more data = %u",
-		  peer_stat->num_peers, more_data);
+	hdd_nofl_debug("LL_STATS_PEER_ALL : num_peers %u, more data = %u",
+		       peer_stat->num_peers, more_data);
 
 	/*
 	 * Allocate a size of 4096 for the peer stats comprising
@@ -967,7 +968,7 @@ hdd_link_layer_process_radio_stats(struct hdd_adapter *adapter,
 		return;
 
 	for (i = 0; i < num_radio; i++) {
-		hdd_debug("LL_STATS_RADIO"
+		hdd_nofl_debug("LL_STATS_RADIO"
 		       " radio: %u on_time: %u tx_time: %u rx_time: %u"
 		       " on_time_scan: %u on_time_nbd: %u"
 		       " on_time_gscan: %u on_time_roam_scan: %u"
@@ -1093,18 +1094,13 @@ void wlan_hdd_cfg80211_link_layer_stats_callback(hdd_handle_t hdd_handle,
 		return;
 	}
 
-	hdd_debug("Link Layer Indication Type: %d", indication_type);
-
 	switch (indication_type) {
 	case SIR_HAL_LL_STATS_RESULTS_RSP:
 	{
-		hdd_debug("LL_STATS RESP paramID = 0x%x, ifaceId = %u, respId= %u , moreResultToFollow = %u, num radio = %u result = %pK",
-			results->paramId,
-			results->ifaceId,
-			results->rspId,
-			results->moreResultToFollow,
-			results->num_radio,
-			results->results);
+		hdd_nofl_debug("LL_STATS RESP paramID = 0x%x, ifaceId = %u, respId= %u , moreResultToFollow = %u, num radio = %u result = %pK",
+			       results->paramId, results->ifaceId,
+			       results->rspId, results->moreResultToFollow,
+			       results->num_radio, results->results);
 
 		request = osif_request_get(cookie);
 		if (!request) {
@@ -2892,6 +2888,7 @@ static int __wlan_hdd_cfg80211_stats_ext_request(struct wiphy *wiphy,
 	int ret_val;
 	QDF_STATUS status;
 	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
+	ol_txrx_soc_handle soc = cds_get_context(QDF_MODULE_ID_SOC);
 
 	hdd_enter_dev(dev);
 
@@ -2907,10 +2904,19 @@ static int __wlan_hdd_cfg80211_stats_ext_request(struct wiphy *wiphy,
 	stats_ext_req.request_data_len = data_len;
 	stats_ext_req.request_data = (void *)data;
 
+	status = cdp_request_rx_hw_stats(soc, adapter->vdev_id);
+
+	if (QDF_STATUS_SUCCESS != status) {
+		hdd_err_rl("Failed to get hw stats: %u", status);
+		ret_val = -EINVAL;
+	}
+
 	status = sme_stats_ext_request(adapter->vdev_id, &stats_ext_req);
 
-	if (QDF_STATUS_SUCCESS != status)
+	if (QDF_STATUS_SUCCESS != status) {
+		hdd_err_rl("Failed to get fw stats: %u", status);
 		ret_val = -EINVAL;
+	}
 
 	return ret_val;
 }

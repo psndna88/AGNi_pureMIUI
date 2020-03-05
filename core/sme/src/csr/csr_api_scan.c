@@ -357,8 +357,6 @@ static void csr_add_to_occupied_channels(struct mac_context *mac,
 					       num_occupied_ch, ch_freq);
 	if (QDF_IS_STATUS_SUCCESS(status)) {
 		occupied_ch->numChannels++;
-		sme_debug("Added channel freq %d to the list (count=%d)",
-			  ch_freq, occupied_ch->numChannels);
 		if (occupied_ch->numChannels >
 		    CSR_BG_SCAN_OCCUPIED_CHANNEL_LIST_LEN)
 			occupied_ch->numChannels =
@@ -1553,16 +1551,10 @@ static void csr_save_tx_power_to_cfg(struct mac_context *mac,
 			for (idx = 0; idx < ch_set->numChannels; idx++) {
 				ch_pwr_set->first_freq =
 					ch_set->first_chan_freq;
-				sme_debug(
-					"Setting Channel freq %d",
-					ch_pwr_set->first_freq);
 				ch_pwr_set->numChannels = 1;
 				ch_pwr_set->maxTxPower =
 					QDF_MIN(ch_set->txPower,
 					mac->mlme_cfg->power.max_tx_power);
-				sme_debug(
-					"Setting Max Transmit Power %d",
-					ch_pwr_set->maxTxPower);
 				cbLen += sizeof(tSirMacChanInfo);
 				ch_pwr_set++;
 				count++;
@@ -1578,14 +1570,9 @@ static void csr_save_tx_power_to_cfg(struct mac_context *mac,
 				break;
 			}
 			ch_pwr_set->first_freq = ch_set->first_chan_freq;
-			sme_debug("Setting Channel Freq %d", ch_pwr_set->first_freq);
 			ch_pwr_set->numChannels = ch_set->numChannels;
 			ch_pwr_set->maxTxPower = QDF_MIN(ch_set->txPower,
 					mac->mlme_cfg->power.max_tx_power);
-			sme_debug(
-				"Setting Max Tx Power %d, nTxPower %d",
-				ch_pwr_set->maxTxPower,
-				mac->mlme_cfg->power.max_tx_power);
 			cbLen += sizeof(tSirMacChanInfo);
 			ch_pwr_set++;
 			count++;
@@ -1624,7 +1611,7 @@ static void csr_set_cfg_country_code(struct mac_context *mac,
 	uint8_t cc[CFG_COUNTRY_CODE_LEN];
 	/* v_REGDOMAIN_t DomainId */
 
-	sme_debug("Setting Country Code in Cfg %s", countryCode);
+	sme_debug("Set Country in Cfg %s", countryCode);
 	qdf_mem_copy(cc, countryCode, CFG_COUNTRY_CODE_LEN);
 
 	/*
@@ -1650,7 +1637,6 @@ static void csr_set_cfg_country_code(struct mac_context *mac,
 	 */
 	qdf_mem_copy(mac->mlme_cfg->reg.country_code, cc, CFG_COUNTRY_CODE_LEN);
 	mac->mlme_cfg->reg.country_code_len = CFG_COUNTRY_CODE_LEN;
-	sme_debug("CFG_COUNTRY_CODE changed");
 	sch_edca_profile_update_all(mac);
 	/*
 	 * Need to let HALPHY know about the current domain so it can apply some
@@ -2352,6 +2338,29 @@ static bool csr_is_assoc_disallowed(struct mac_context *mac_ctx,
 	return mbo_ie.assoc_disallowed.present;
 }
 
+#if defined(WLAN_SAE_SINGLE_PMK) && defined(WLAN_FEATURE_ROAM_OFFLOAD)
+/**
+ * csr_fill_single_pmk_ap_cap_from_scan_entry() - WAP3_SPMK VSIE from scan
+ * entry
+ * @bss_desc: BSS Descriptor
+ * @scan_entry: scan entry
+ *
+ * Return: None
+ */
+static void
+csr_fill_single_pmk_ap_cap_from_scan_entry(struct bss_description *bss_desc,
+					   struct scan_cache_entry *scan_entry)
+{
+	bss_desc->is_single_pmk = util_scan_entry_single_pmk(scan_entry);
+}
+
+#else
+static inline void
+csr_fill_single_pmk_ap_cap_from_scan_entry(struct bss_description *bss_desc,
+					   struct scan_cache_entry *scan_entry)
+{
+}
+#endif
 static QDF_STATUS csr_fill_bss_from_scan_entry(struct mac_context *mac_ctx,
 					struct scan_cache_entry *scan_entry,
 					struct tag_csrscan_result **p_result)
@@ -2449,6 +2458,9 @@ static QDF_STATUS csr_fill_bss_from_scan_entry(struct mac_context *mac_ctx,
 	bss_desc->assoc_disallowed = csr_is_assoc_disallowed(mac_ctx,
 							     scan_entry);
 	bss_desc->adaptive_11r_ap = scan_entry->adaptive_11r_ap;
+
+	csr_fill_single_pmk_ap_cap_from_scan_entry(bss_desc, scan_entry);
+
 	qdf_mem_copy(&bss_desc->mbssid_info, &scan_entry->mbssid_info,
 		     sizeof(struct scan_mbssid_info));
 
@@ -2728,6 +2740,27 @@ void csr_remove_bssid_from_scan_list(struct mac_context *mac_ctx,
 	csr_flush_bssid(mac_ctx, bssid);
 }
 
+static void csr_dump_occupied_chan_list(struct csr_channel *occupied_ch)
+{
+	uint8_t idx;
+	uint32_t buff_len;
+	char *chan_buff;
+	uint32_t len = 0;
+
+	buff_len = (occupied_ch->numChannels * 5) + 1;
+	chan_buff = qdf_mem_malloc(buff_len);
+	if (!chan_buff)
+		return;
+
+	for (idx = 0; idx < occupied_ch->numChannels; idx++)
+		len += qdf_scnprintf(chan_buff + len, buff_len - len, " %d",
+				     occupied_ch->channel_freq_list[idx]);
+
+	sme_nofl_debug("Occupied chan list[%d]:%s",
+		       occupied_ch->numChannels, chan_buff);
+
+	qdf_mem_free(chan_buff);
+}
 void csr_init_occupied_channels_list(struct mac_context *mac_ctx,
 				     uint8_t sessionId)
 {
@@ -2800,11 +2833,12 @@ void csr_init_occupied_channels_list(struct mac_context *mac_ctx,
 	if (list)
 		sme_debug("num_entries %d", qdf_list_size(list));
 	if (!list || (list && !qdf_list_size(list))) {
-		sme_err("get scan result failed");
 		wlan_objmgr_pdev_release_ref(pdev, WLAN_LEGACY_MAC_ID);
 		qdf_mem_free(filter);
 		if (list)
 			ucfg_scan_purge_results(list);
+		csr_dump_occupied_chan_list(
+			&mac_ctx->scan.occupiedChannels[sessionId]);
 		return;
 	}
 
@@ -2821,6 +2855,7 @@ void csr_init_occupied_channels_list(struct mac_context *mac_ctx,
 		cur_lst = next_lst;
 		next_lst = NULL;
 	}
+	csr_dump_occupied_chan_list(&mac_ctx->scan.occupiedChannels[sessionId]);
 
 	qdf_mem_free(filter);
 	ucfg_scan_purge_results(list);

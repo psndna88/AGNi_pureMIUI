@@ -1039,6 +1039,8 @@ struct hdd_context;
  * @cache_sta_count: number of currently cached stations
  * @acs_complete_event: acs complete event
  * @latency_level: 0 - normal, 1 - moderate, 2 - low, 3 - ultralow
+ * @last_disconnect_reason: Last disconnected internal reason code
+ *                          as per enum eSirMacReasonCodes
  */
 struct hdd_adapter {
 	/* Magic cookie for adapter sanity verification.  Note that this
@@ -1312,6 +1314,7 @@ struct hdd_adapter {
 	bool motion_det_in_progress;
 	uint32_t motion_det_baseline_value;
 #endif /* WLAN_FEATURE_MOTION_DETECTION */
+	enum eSirMacReasonCodes last_disconnect_reason;
 };
 
 #define WLAN_HDD_GET_STATION_CTX_PTR(adapter) (&(adapter)->session.station)
@@ -1621,10 +1624,6 @@ struct hdd_context {
 
 	bool is_scheduler_suspended;
 
-#ifdef WLAN_FEATURE_PKT_CAPTURE
-	bool is_ol_mon_thread_suspended;
-#endif
-
 #ifdef QCA_CONFIG_SMP
 	bool is_ol_rx_thread_suspended;
 #endif
@@ -1901,6 +1900,7 @@ struct hdd_context {
 	/* value for packet capturte mode */
 	uint8_t val_pkt_capture_mode;
 #endif
+	bool roam_ch_from_fw_supported;
 };
 
 /**

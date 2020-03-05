@@ -104,6 +104,12 @@
 	QCA_WLAN_VENDOR_ATTR_GET_STATION_INFO_REMOTE_RX_RETRY_COUNT
 #define REMOTE_RX_BC_MC_COUNT \
 	QCA_WLAN_VENDOR_ATTR_GET_STATION_INFO_REMOTE_RX_BC_MC_COUNT
+#define DISCONNECT_REASON \
+	QCA_WLAN_VENDOR_ATTR_GET_STATION_INFO_DRIVER_DISCONNECT_REASON
+#define BEACON_IES \
+	QCA_WLAN_VENDOR_ATTR_GET_STATION_INFO_BEACON_IES
+#define ASSOC_REQ_IES \
+	QCA_WLAN_VENDOR_ATTR_GET_STATION_INFO_ASSOC_REQ_IES
 
 /*
  * MSB of rx_mc_bc_cnt indicates whether FW supports rx_mc_bc_cnt
@@ -576,6 +582,81 @@ fail:
 }
 
 /**
+ * wlan_hdd_sir_mac_to_qca_reason() - Convert to qca internal disconnect reason
+ * @internal_reason: Mac reason code of type @enum eSirMacReasonCodes
+ *
+ * Check if it is internal reason code and convert it to the
+ * enum qca_disconnect_reason_codes.
+ *
+ * Return: Reason code of type enum qca_disconnect_reason_codes
+ */
+static enum qca_disconnect_reason_codes
+wlan_hdd_sir_mac_to_qca_reason(enum eSirMacReasonCodes internal_reason)
+{
+	enum qca_disconnect_reason_codes reason =
+					QCA_DISCONNECT_REASON_UNSPECIFIED;
+	switch (internal_reason) {
+	case eSIR_MAC_HOST_TRIGGERED_ROAM_FAILURE:
+		reason = QCA_DISCONNECT_REASON_INTERNAL_ROAM_FAILURE;
+		break;
+	case eSIR_MAC_FW_TRIGGERED_ROAM_FAILURE:
+		reason = QCA_DISCONNECT_REASON_EXTERNAL_ROAM_FAILURE;
+		break;
+	case eSIR_MAC_GATEWAY_REACHABILITY_FAILURE:
+		reason =
+		QCA_DISCONNECT_REASON_GATEWAY_REACHABILITY_FAILURE;
+		break;
+	case eSIR_MAC_UNSUPPORTED_CHANNEL_CSA:
+		reason = QCA_DISCONNECT_REASON_UNSUPPORTED_CHANNEL_CSA;
+		break;
+	case eSIR_MAC_OPER_CHANNEL_DISABLED_INDOOR:
+		reason =
+		QCA_DISCONNECT_REASON_OPER_CHANNEL_DISABLED_INDOOR;
+		break;
+	case eSIR_MAC_OPER_CHANNEL_USER_DISABLED:
+		reason =
+		QCA_DISCONNECT_REASON_OPER_CHANNEL_USER_DISABLED;
+		break;
+	case eSIR_MAC_DEVICE_RECOVERY:
+		reason = QCA_DISCONNECT_REASON_DEVICE_RECOVERY;
+		break;
+	case eSIR_MAC_KEY_TIMEOUT:
+		reason = QCA_DISCONNECT_REASON_KEY_TIMEOUT;
+		break;
+	case eSIR_MAC_OPER_CHANNEL_BAND_CHANGE:
+		reason = QCA_DISCONNECT_REASON_OPER_CHANNEL_BAND_CHANGE;
+		break;
+	case eSIR_MAC_IFACE_DOWN:
+		reason = QCA_DISCONNECT_REASON_IFACE_DOWN;
+		break;
+	case eSIR_MAC_PEER_XRETRY_FAIL:
+		reason = QCA_DISCONNECT_REASON_PEER_XRETRY_FAIL;
+		break;
+	case eSIR_MAC_PEER_INACTIVITY:
+		reason = QCA_DISCONNECT_REASON_PEER_INACTIVITY;
+		break;
+	case eSIR_MAC_SA_QUERY_TIMEOUT:
+		reason = QCA_DISCONNECT_REASON_SA_QUERY_TIMEOUT;
+		break;
+	case eSIR_MAC_CHANNEL_SWITCH_FAILED:
+		reason = QCA_DISCONNECT_REASON_CHANNEL_SWITCH_FAILURE;
+		break;
+	case eSIR_MAC_BEACON_MISSED:
+		reason = QCA_DISCONNECT_REASON_BEACON_MISS_FAILURE;
+		break;
+	case eSIR_MAC_USER_TRIGGERED_ROAM_FAILURE:
+		reason = QCA_DISCONNECT_REASON_USER_TRIGGERED;
+		break;
+	default:
+		hdd_debug("No QCA reason code for mac reason: %u",
+			  internal_reason);
+		/* Unspecified reason by default */
+	}
+
+	return reason;
+}
+
+/**
  * hdd_get_station_info() - send BSS information to supplicant
  * @hdd_ctx: pointer to hdd context
  * @adapter: pointer to adapter
@@ -586,9 +667,12 @@ static int hdd_get_station_info(struct hdd_context *hdd_ctx,
 				struct hdd_adapter *adapter)
 {
 	struct sk_buff *skb = NULL;
-	uint8_t *tmp_hs20 = NULL;
-	uint32_t nl_buf_len;
+	uint8_t *tmp_hs20 = NULL, *ies = NULL;
+	uint32_t nl_buf_len, ie_len = 0;
 	struct hdd_station_ctx *hdd_sta_ctx;
+	QDF_STATUS status;
+	enum qca_disconnect_reason_codes disconnect_reason =
+					QCA_DISCONNECT_REASON_UNSPECIFIED;
 
 	hdd_sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
 
@@ -603,7 +687,8 @@ static int hdd_get_station_info(struct hdd_context *hdd_ctx,
 		      sizeof(hdd_sta_ctx->cache_conn_info.txrate.nss) +
 		      sizeof(hdd_sta_ctx->cache_conn_info.roam_count) +
 		      sizeof(hdd_sta_ctx->cache_conn_info.last_auth_type) +
-		      sizeof(hdd_sta_ctx->cache_conn_info.dot11mode);
+		      sizeof(hdd_sta_ctx->cache_conn_info.dot11mode) +
+		      sizeof(adapter->last_disconnect_reason);
 	if (hdd_sta_ctx->cache_conn_info.conn_flag.vht_present)
 		nl_buf_len += sizeof(hdd_sta_ctx->cache_conn_info.vht_caps);
 	if (hdd_sta_ctx->cache_conn_info.conn_flag.ht_present)
@@ -620,6 +705,11 @@ static int hdd_get_station_info(struct hdd_context *hdd_ctx,
 	if (hdd_sta_ctx->cache_conn_info.conn_flag.vht_op_present)
 		nl_buf_len += sizeof(hdd_sta_ctx->
 						cache_conn_info.vht_operation);
+	status = sme_get_prev_connected_bss_ies(hdd_ctx->mac_handle,
+						adapter->vdev_id,
+						&ies, &ie_len);
+	if (QDF_IS_STATUS_SUCCESS(status))
+		nl_buf_len += ie_len;
 
 	skb = cfg80211_vendor_cmd_alloc_reply_skb(hdd_ctx->wiphy, nl_buf_len);
 	if (!skb) {
@@ -671,11 +761,35 @@ static int hdd_get_station_info(struct hdd_context *hdd_ctx,
 			hdd_err("put fail");
 			goto fail;
 		}
+	/*
+	 * adapter->last_disconnect_reason maintains the reason code of type
+	 * enum eSirMacReasonCodes and internal reason codes are defined from
+	 * eSIR_MAC_REASON_PROP_START. Check if it is internal reason code and
+	 * convert it to the enum qca_disconnect_reason_codes.
+	 */
+	if (adapter->last_disconnect_reason >= eSIR_MAC_REASON_PROP_START)
+		disconnect_reason =
+		wlan_hdd_sir_mac_to_qca_reason(adapter->last_disconnect_reason);
+	if (nla_put_u32(skb, DISCONNECT_REASON, disconnect_reason)) {
+		hdd_err("Failed to put disconect reason");
+		goto fail;
+	}
+
+	if (ie_len) {
+		if (nla_put(skb, BEACON_IES, ie_len, ies)) {
+			hdd_err("Failed to put beacon IEs");
+			goto fail;
+		}
+		qdf_mem_free(ies);
+		ie_len = 0;
+	}
 
 	return cfg80211_vendor_cmd_reply(skb);
 fail:
 	if (skb)
 		kfree_skb(skb);
+	qdf_mem_free(ies);
+	ie_len = 0;
 	return -EINVAL;
 }
 
@@ -1024,6 +1138,9 @@ static int hdd_get_cached_station_remote(struct hdd_context *hdd_ctx,
 			 NLA_HDRLEN) +
 			(sizeof(stainfo->rx_retry_cnt) +
 			 NLA_HDRLEN);
+	if (stainfo->assoc_req_ies.len)
+		nl_buf_len += stainfo->assoc_req_ies.len + NLA_HDRLEN;
+
 	skb = cfg80211_vendor_cmd_alloc_reply_skb(hdd_ctx->wiphy, nl_buf_len);
 	if (!skb) {
 		hdd_err("cfg80211_vendor_cmd_alloc_reply_skb failed");
@@ -1084,6 +1201,13 @@ static int hdd_get_cached_station_remote(struct hdd_context *hdd_ctx,
 		}
 	}
 
+	if (stainfo->assoc_req_ies.len) {
+		if (nla_put(skb, ASSOC_REQ_IES, stainfo->assoc_req_ies.len,
+			    stainfo->assoc_req_ies.data)) {
+			hdd_err("Failed to put assoc req IEs");
+			goto fail;
+		}
+	}
 	hdd_sta_info_detach(&adapter->cache_sta_info_list, &stainfo);
 	qdf_atomic_dec(&adapter->cache_sta_count);
 

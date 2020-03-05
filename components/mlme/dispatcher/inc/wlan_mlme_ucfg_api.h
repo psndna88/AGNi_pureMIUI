@@ -1206,6 +1206,26 @@ ucfg_mlme_get_delay_before_vdev_stop(struct wlan_objmgr_psoc *psoc,
 QDF_STATUS
 ucfg_mlme_get_roam_bmiss_final_bcnt(struct wlan_objmgr_psoc *psoc,
 				    uint8_t *val);
+
+#if defined(WLAN_SAE_SINGLE_PMK) && defined(WLAN_FEATURE_ROAM_OFFLOAD)
+/**
+ * ucfg_mlme_update_sae_single_pmk_info() - Update sae_single_pmk_info
+ * @vdev: pointer to VDEV common object
+ * @pmk_info:  Pointer mlme pmkid info
+ *
+ * Return: None
+ */
+void
+ucfg_mlme_update_sae_single_pmk_info(struct wlan_objmgr_vdev *vdev,
+				     struct mlme_pmk_info *pmk_info);
+#else
+static inline void
+ucfg_mlme_update_sae_single_pmk_info(struct wlan_objmgr_vdev *vdev,
+				     struct mlme_pmk_info *pmk_info)
+{
+}
+#endif
+
 /**
  * ucfg_mlme_get_roam_bmiss_first_bcnt() - Get roam bmiss final count
  * @psoc: pointer to psoc object
@@ -3685,6 +3705,30 @@ ucfg_mlme_get_mws_coex_4g_quick_tdm(struct wlan_objmgr_psoc *psoc,
 QDF_STATUS
 ucfg_mlme_get_mws_coex_5g_nr_pwr_limit(struct wlan_objmgr_psoc *psoc,
 				       uint32_t *val);
+
+/**
+ * ucfg_mlme_get_mws_coex_pcc_channel_avoid_delay() - Get mws coex pcc
+ *                                                    avoid channel delay
+ * @psoc: pointer to psoc object
+ * @val:  Pointer to the value which will be filled for the caller
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+ucfg_mlme_get_mws_coex_pcc_channel_avoid_delay(struct wlan_objmgr_psoc *psoc,
+					       uint32_t *val);
+
+/**
+ * ucfg_mlme_get_mws_coex_scc_channel_avoid_delay() - Get mws coex scc
+ *                                                    avoidance channel delay
+ * @psoc: pointer to psoc object
+ * @val:  Pointer to the value which will be filled for the caller
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+ucfg_mlme_get_mws_coex_scc_channel_avoid_delay(struct wlan_objmgr_psoc *psoc,
+					       uint32_t *val);
 #endif
 
 /**
@@ -3968,5 +4012,26 @@ static inline
 QDF_STATUS ucfg_mlme_get_peer_unmap_conf(struct wlan_objmgr_psoc *psoc)
 {
 	return wlan_mlme_get_peer_unmap_conf(psoc);
+}
+
+/**
+ * ucfg_mlme_get_discon_reason_n_from_ap() - Get disconnect reason and from ap
+ * @psoc: PSOC pointer
+ * @vdev_id: vdev id
+ * @from_ap: Get the from_ap cached through mlme_set_discon_reason_n_from_ap
+ *           and copy to this buffer.
+ * @reason_code: Get the reason_code cached through
+ *               mlme_set_discon_reason_n_from_ap and copy to this buffer.
+ *
+ * Fetch the contents of from_ap and reason_codes.
+ *
+ * Return: void
+ */
+static inline void
+ucfg_mlme_get_discon_reason_n_from_ap(struct wlan_objmgr_psoc *psoc,
+				      uint8_t vdev_id, bool *from_ap,
+				      uint32_t *reason_code)
+{
+	mlme_get_discon_reason_n_from_ap(psoc, vdev_id, from_ap, reason_code);
 }
 #endif /* _WLAN_MLME_UCFG_API_H_ */
