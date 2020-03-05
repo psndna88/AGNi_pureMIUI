@@ -1321,6 +1321,7 @@ typedef struct tagCsrConfigParam {
 	uint32_t btm_solicited_timeout;
 	uint32_t btm_max_attempt_cnt;
 	uint32_t btm_sticky_time;
+	uint32_t btm_query_bitmask;
 	uint32_t btm_trig_min_candidate_score;
 	uint32_t offload_11k_enable_bitmask;
 	bool wep_tkip_in_he;
@@ -1345,6 +1346,7 @@ typedef struct tagCsrConfigParam {
 	bool enable_adaptive_11r;
 #endif
 	bool enable_pending_list_req;
+	bool disable_4way_hs_offload;
 } tCsrConfigParam;
 
 /* Tush */
@@ -1352,6 +1354,11 @@ typedef struct tagCsrUpdateConfigParam {
 	tCsr11dinfo Csr11dinfo;
 } tCsrUpdateConfigParam;
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
+typedef void (*sme_get_raom_scan_ch_Callback)(
+				hdd_handle_t hdd_handle,
+				struct roam_scan_ch_resp *roam_ch,
+				void *context);
+
 #define csr_roamIsRoamOffloadEnabled(pMac) \
 	(pMac->roam.configParam.isRoamOffloadEnabled)
 #define DEFAULT_REASSOC_FAILURE_TIMEOUT 1000
@@ -1540,6 +1547,8 @@ typedef struct sSirSmeAssocIndToUpperLayerCnf {
 	/* Extended capabilities of STA */
 	uint8_t              ecsa_capable;
 
+	uint32_t ies_len;
+	uint8_t *ies;
 	tDot11fIEHTCaps ht_caps;
 	tDot11fIEVHTCaps vht_caps;
 	tSirMacCapabilityInfo capability_info;

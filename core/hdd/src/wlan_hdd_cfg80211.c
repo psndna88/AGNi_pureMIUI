@@ -1464,6 +1464,10 @@ static const struct nl80211_vendor_cmd_info wlan_hdd_cfg80211_vendor_events[] = 
 	[QCA_NL80211_VENDOR_SUBCMD_REQUEST_SAR_LIMITS_INDEX] = {
 		.vendor_id = QCA_NL80211_VENDOR_ID,
 		.subcmd = QCA_NL80211_VENDOR_SUBCMD_GET_SAR_LIMITS_EVENT,
+	},
+	[QCA_NL80211_VENDOR_SUBCMD_UPDATE_STA_INFO_INDEX] = {
+		.vendor_id = QCA_NL80211_VENDOR_ID,
+		.subcmd = QCA_NL80211_VENDOR_SUBCMD_UPDATE_STA_INFO,
 	}
 };
 
@@ -1827,7 +1831,6 @@ int wlan_hdd_cfg80211_start_acs(struct hdd_adapter *adapter)
 
 	qdf_mem_copy(sap_config->self_macaddr.bytes,
 		adapter->mac_addr.bytes, sizeof(struct qdf_mac_addr));
-	hdd_debug("ACS Started for %s", adapter->dev->name);
 	status = wlansap_acs_chselect(
 		WLAN_HDD_GET_SAP_CTX_PTR(adapter),
 		acs_event_callback, sap_config, adapter->dev);
@@ -2426,8 +2429,6 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 	 * config shall be set only from start_acs.
 	 */
 
-	hdd_enter_dev(ndev);
-
 	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
 		hdd_err("Command not allowed in FTM mode");
 		return -EPERM;
@@ -2436,8 +2437,6 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 	ret = wlan_hdd_validate_context(hdd_ctx);
 	if (ret)
 		return ret;
-
-	hdd_debug("current country is %s", hdd_ctx->reg.alpha2);
 
 	if (!((adapter->device_mode == QDF_SAP_MODE) ||
 	      (adapter->device_mode == QDF_P2P_GO_MODE))) {
@@ -2487,7 +2486,6 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 	else
 		ht40_enabled = 0;
 
-	hdd_debug("ht40_enabled %d", ht40_enabled);
 	if (tb[QCA_WLAN_VENDOR_ATTR_ACS_VHT_ENABLED])
 		vht_enabled =
 			nla_get_flag(tb[QCA_WLAN_VENDOR_ATTR_ACS_VHT_ENABLED]);
@@ -2529,7 +2527,6 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 	qdf_mem_zero(&sap_config->acs_cfg, sizeof(struct sap_acs_cfg));
 	sap_config->acs_cfg.dfs_master_mode =
 			hdd_ctx->config->enableDFSMasterCap;
-	hdd_debug("channel width =%d", ch_width);
 	if (ch_width == 160)
 		sap_config->acs_cfg.ch_width = CH_WIDTH_160MHZ;
 	else if (ch_width == 80)
@@ -2623,7 +2620,6 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 		}
 		sap_config->acs_cfg.ch_list_count = ch_cnt;
 	}
-	hdd_debug("get pcl for DO_ACS vendor command");
 
 	/* consult policy manager to get PCL */
 	qdf_status = policy_mgr_get_pcl(hdd_ctx->psoc, PM_SAP_MODE,
@@ -2631,19 +2627,6 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 				&sap_config->acs_cfg.pcl_ch_count,
 				sap_config->acs_cfg.pcl_channels_weight_list,
 				QDF_MAX_NUM_CHAN);
-	if (qdf_status != QDF_STATUS_SUCCESS)
-		hdd_err("Get PCL failed");
-
-	if (sap_config->acs_cfg.pcl_ch_count) {
-		hdd_debug("ACS config PCL: len: %d",
-			  sap_config->acs_cfg.pcl_ch_count);
-		for (i = 0; i < sap_config->acs_cfg.pcl_ch_count; i++)
-			hdd_debug("channel:%d, weight:%d ",
-				  sap_config->acs_cfg.
-				  pcl_channels[i],
-				  sap_config->acs_cfg.
-				  pcl_channels_weight_list[i]);
-	}
 
 	if (hw_mode == QCA_ACS_MODE_IEEE80211ANY)
 		policy_mgr_trim_acs_channel_list(hdd_ctx->psoc,
@@ -2682,11 +2665,13 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 		hdd_debug("resetting to 40Mhz in 2.4Ghz");
 	}
 
-	hdd_debug("ACS Config for %s: HW_MODE: %d ACS_BW: %d HT: %d VHT: %d START_CH: %d END_CH: %d band %d",
-		adapter->dev->name, sap_config->acs_cfg.hw_mode,
-		sap_config->acs_cfg.ch_width, ht_enabled, vht_enabled,
-		sap_config->acs_cfg.start_ch, sap_config->acs_cfg.end_ch,
-		sap_config->acs_cfg.band);
+	hdd_nofl_debug("ACS Config country %s ch_width %d hw_mode %d ACS_BW: %d HT: %d VHT: %d START_CH: %d END_CH: %d band %d",
+		       hdd_ctx->reg.alpha2, ch_width,
+		       sap_config->acs_cfg.hw_mode,
+		       sap_config->acs_cfg.ch_width,
+		       ht_enabled, vht_enabled, sap_config->acs_cfg.start_ch,
+		       sap_config->acs_cfg.end_ch,
+		       sap_config->acs_cfg.band);
 	host_log_acs_req_event(adapter->dev->name,
 			  csr_phy_mode_str(sap_config->acs_cfg.hw_mode),
 			  ch_width, ht_enabled, vht_enabled,
@@ -2699,13 +2684,7 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 	sap_config->acs_cfg.is_ht_enabled = ht_enabled;
 	sap_config->acs_cfg.is_vht_enabled = vht_enabled;
 
-	if (sap_config->acs_cfg.ch_list_count) {
-		hdd_debug("ACS channel list: len: %d",
-					sap_config->acs_cfg.ch_list_count);
-		for (i = 0; i < sap_config->acs_cfg.ch_list_count; i++)
-			hdd_debug("%d ", sap_config->acs_cfg.ch_list[i]);
-	}
-
+	sap_dump_acs_channel(&sap_config->acs_cfg);
 	conc_channel = policy_mgr_mode_specific_get_channel(hdd_ctx->psoc,
 							    PM_STA_MODE);
 	if ((hdd_ctx->config->external_acs_policy ==
@@ -4235,16 +4214,17 @@ hdd_set_roam_with_control_config(struct hdd_context *hdd_ctx,
 
 	attr = tb2[QCA_ATTR_ROAM_CONTROL_ENABLE];
 	if (attr) {
-		hdd_debug("Parse and send roam control enable/disable");
 		status = sme_set_roam_config_enable(hdd_ctx->mac_handle,
 						    vdev_id,
 						    nla_get_u8(attr));
 		if (QDF_IS_STATUS_ERROR(status))
 			hdd_err("failed to enable/disable roam control config");
 
+		hdd_debug("Parse and send roam control %s:",
+			  nla_get_u8(attr) ? "Enable" : "Disable");
+
 		attr = tb2[QCA_ATTR_ROAM_CONTROL_SCAN_PERIOD];
 		if (attr) {
-			hdd_debug("Parse and send scan period to firmware");
 			/* Default value received as part of Roam control enable
 			 * Set this only if user hasn't configured any value so
 			 * far.
@@ -4259,7 +4239,6 @@ hdd_set_roam_with_control_config(struct hdd_context *hdd_ctx,
 
 		attr = tb2[QCA_ATTR_ROAM_CONTROL_FULL_SCAN_PERIOD];
 		if (attr) {
-			hdd_debug("Parse and send full scan period to firmware");
 			value = nla_get_u32(attr);
 			/* Default value received as part of Roam control enable
 			 * Set this only if user hasn't configured any value so
@@ -4275,7 +4254,6 @@ hdd_set_roam_with_control_config(struct hdd_context *hdd_ctx,
 	} else {
 		attr = tb2[QCA_ATTR_ROAM_CONTROL_SCAN_PERIOD];
 		if (attr) {
-			hdd_debug("Parse and send scan period to firmware");
 			/* User configured value, cache the value directly */
 			value = nla_get_u32(attr);
 			status = hdd_send_roam_scan_period_to_sme(hdd_ctx,
@@ -4287,7 +4265,6 @@ hdd_set_roam_with_control_config(struct hdd_context *hdd_ctx,
 
 		attr = tb2[QCA_ATTR_ROAM_CONTROL_FULL_SCAN_PERIOD];
 		if (attr) {
-			hdd_debug("Parse and send full scan period to firmware");
 			value = nla_get_u32(attr);
 			/* User configured value, cache the value directly */
 			status = hdd_send_roam_full_scan_period_to_sme(hdd_ctx,
@@ -4302,7 +4279,6 @@ hdd_set_roam_with_control_config(struct hdd_context *hdd_ctx,
 	/* Scoring and roam candidate selection criteria */
 	attr = tb2[QCA_ATTR_ROAM_CONTROL_SELECTION_CRITERIA];
 	if (attr) {
-		hdd_debug("Send candidate selection criteria to firmware");
 		status = hdd_send_roam_cand_sel_criteria_to_sme(hdd_ctx,
 								vdev_id, attr);
 		if (QDF_IS_STATUS_ERROR(status))
@@ -4310,7 +4286,6 @@ hdd_set_roam_with_control_config(struct hdd_context *hdd_ctx,
 	}
 
 	if (tb2[QCA_ATTR_ROAM_CONTROL_TRIGGERS]) {
-		hdd_debug("Parse and send roam triggers to firmware");
 		value = nla_get_u32(tb2[QCA_ATTR_ROAM_CONTROL_TRIGGERS]);
 		hdd_debug("Received roam trigger bitmap: 0x%x", value);
 		status = hdd_send_roam_triggers_to_sme(hdd_ctx,
@@ -4370,8 +4345,10 @@ hdd_roam_control_config_fill_data(struct hdd_context *hdd_ctx, uint8_t vdev_id,
 	uint32_t full_roam_scan_period;
 
 	config = nla_nest_start(skb, PARAM_ROAM_CONTROL_CONFIG);
-	if (!config)
+	if (!config) {
+		hdd_err("nla nest start failure");
 		return -EINVAL;
+	}
 
 	if (tb[QCA_ATTR_ROAM_CONTROL_STATUS]) {
 		status = sme_get_roam_config_status(hdd_ctx->mac_handle,
@@ -4428,7 +4405,6 @@ hdd_send_roam_control_config(struct hdd_context *hdd_ctx,
 	uint16_t skb_len;
 	int status;
 
-	hdd_enter();
 	skb_len = hdd_roam_control_config_buf_size(hdd_ctx, tb);
 	if (!skb_len) {
 		hdd_err("No data requested");
@@ -4446,7 +4422,6 @@ hdd_send_roam_control_config(struct hdd_context *hdd_ctx,
 	if (status)
 		goto fail;
 
-	hdd_exit();
 	return cfg80211_vendor_cmd_reply(skb);
 
 fail:
@@ -4470,7 +4445,6 @@ static int hdd_get_roam_control_config(struct hdd_context *hdd_ctx,
 	QDF_STATUS status;
 	struct nlattr *tb2[QCA_ATTR_ROAM_CONTROL_MAX + 1];
 
-	hdd_enter();
 	/* The command must carry PARAM_ROAM_CONTROL_CONFIG */
 	if (!tb[PARAM_ROAM_CONTROL_CONFIG]) {
 		hdd_err("Attribute CONTROL_CONFIG is not present");
@@ -4745,8 +4719,6 @@ __wlan_hdd_cfg80211_set_ext_roam_params(struct wiphy *wiphy,
 	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
 	struct roam_ext_params *roam_params = NULL;
 	int ret;
-
-	hdd_enter_dev(dev);
 
 	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
 		hdd_err("Command not allowed in FTM mode");
@@ -5248,6 +5220,12 @@ static int wlan_hdd_cfg80211_handle_wisa_cmd(struct wiphy *wiphy,
 	#define REMOTE_PAD\
 	QCA_WLAN_VENDOR_ATTR_GET_STATION_INFO_PAD
 #endif
+#define DISCONNECT_REASON \
+	QCA_WLAN_VENDOR_ATTR_GET_STATION_INFO_DRIVER_DISCONNECT_REASON
+#define BEACON_IES \
+	QCA_WLAN_VENDOR_ATTR_GET_STATION_INFO_BEACON_IES
+#define ASSOC_REQ_IES \
+	QCA_WLAN_VENDOR_ATTR_GET_STATION_INFO_ASSOC_REQ_IES
 
 static const struct nla_policy
 hdd_get_station_policy[STATION_MAX + 1] = {
@@ -5647,6 +5625,81 @@ fail:
 }
 
 /**
+ * wlan_hdd_sir_mac_to_qca_reason() - Convert to qca internal disconnect reason
+ * @internal_reason: Mac reason code of type @enum eSirMacReasonCodes
+ *
+ * Check if it is internal reason code and convert it to the
+ * enum qca_disconnect_reason_codes.
+ *
+ * Return: Reason code of type enum qca_disconnect_reason_codes
+ */
+static enum qca_disconnect_reason_codes
+wlan_hdd_sir_mac_to_qca_reason(enum eSirMacReasonCodes internal_reason)
+{
+	enum qca_disconnect_reason_codes reason =
+					QCA_DISCONNECT_REASON_UNSPECIFIED;
+	switch (internal_reason) {
+	case eSIR_MAC_HOST_TRIGGERED_ROAM_FAILURE:
+		reason = QCA_DISCONNECT_REASON_INTERNAL_ROAM_FAILURE;
+		break;
+	case eSIR_MAC_FW_TRIGGERED_ROAM_FAILURE:
+		reason = QCA_DISCONNECT_REASON_EXTERNAL_ROAM_FAILURE;
+		break;
+	case eSIR_MAC_GATEWAY_REACHABILITY_FAILURE:
+		reason =
+		QCA_DISCONNECT_REASON_GATEWAY_REACHABILITY_FAILURE;
+		break;
+	case eSIR_MAC_UNSUPPORTED_CHANNEL_CSA:
+		reason = QCA_DISCONNECT_REASON_UNSUPPORTED_CHANNEL_CSA;
+		break;
+	case eSIR_MAC_OPER_CHANNEL_DISABLED_INDOOR:
+		reason =
+		QCA_DISCONNECT_REASON_OPER_CHANNEL_DISABLED_INDOOR;
+		break;
+	case eSIR_MAC_OPER_CHANNEL_USER_DISABLED:
+		reason =
+		QCA_DISCONNECT_REASON_OPER_CHANNEL_USER_DISABLED;
+		break;
+	case eSIR_MAC_DEVICE_RECOVERY:
+		reason = QCA_DISCONNECT_REASON_DEVICE_RECOVERY;
+		break;
+	case eSIR_MAC_KEY_TIMEOUT:
+		reason = QCA_DISCONNECT_REASON_KEY_TIMEOUT;
+		break;
+	case eSIR_MAC_OPER_CHANNEL_BAND_CHANGE:
+		reason = QCA_DISCONNECT_REASON_OPER_CHANNEL_BAND_CHANGE;
+		break;
+	case eSIR_MAC_IFACE_DOWN:
+		reason = QCA_DISCONNECT_REASON_IFACE_DOWN;
+		break;
+	case eSIR_MAC_PEER_XRETRY_FAIL:
+		reason = QCA_DISCONNECT_REASON_PEER_XRETRY_FAIL;
+		break;
+	case eSIR_MAC_PEER_INACTIVITY:
+		reason = QCA_DISCONNECT_REASON_PEER_INACTIVITY;
+		break;
+	case eSIR_MAC_SA_QUERY_TIMEOUT:
+		reason = QCA_DISCONNECT_REASON_SA_QUERY_TIMEOUT;
+		break;
+	case eSIR_MAC_CHANNEL_SWITCH_FAILED:
+		reason = QCA_DISCONNECT_REASON_CHANNEL_SWITCH_FAILURE;
+		break;
+	case eSIR_MAC_BEACON_MISSED:
+		reason = QCA_DISCONNECT_REASON_BEACON_MISS_FAILURE;
+		break;
+	case eSIR_MAC_USER_TRIGGERED_ROAM_FAILURE:
+		reason = QCA_DISCONNECT_REASON_USER_TRIGGERED;
+		break;
+	default:
+		hdd_debug("No QCA reason code for mac reason: %u",
+			  internal_reason);
+		/* Unspecified reason by default */
+	}
+
+	return reason;
+}
+
+/**
  * hdd_get_station_info() - send BSS information to supplicant
  * @hdd_ctx: pointer to hdd context
  * @adapter: pointer to adapter
@@ -5657,9 +5710,12 @@ static int hdd_get_station_info(struct hdd_context *hdd_ctx,
 					 struct hdd_adapter *adapter)
 {
 	struct sk_buff *skb = NULL;
-	uint8_t *tmp_hs20 = NULL;
-	uint32_t nl_buf_len;
+	uint8_t *tmp_hs20 = NULL, *ies = NULL;
+	uint32_t nl_buf_len, ie_len = 0;
 	struct hdd_station_ctx *hdd_sta_ctx;
+	QDF_STATUS status;
+	enum qca_disconnect_reason_codes disconnect_reason =
+					QCA_DISCONNECT_REASON_UNSPECIFIED;
 
 	hdd_sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
 
@@ -5674,7 +5730,8 @@ static int hdd_get_station_info(struct hdd_context *hdd_ctx,
 		      sizeof(hdd_sta_ctx->cache_conn_info.txrate.nss) +
 		      sizeof(hdd_sta_ctx->cache_conn_info.roam_count) +
 		      sizeof(hdd_sta_ctx->cache_conn_info.last_auth_type) +
-		      sizeof(hdd_sta_ctx->cache_conn_info.dot11Mode);
+		      sizeof(hdd_sta_ctx->cache_conn_info.dot11Mode) +
+		      sizeof(adapter->last_disconnect_reason);
 	if (hdd_sta_ctx->cache_conn_info.conn_flag.vht_present)
 		nl_buf_len += sizeof(hdd_sta_ctx->cache_conn_info.vht_caps);
 	if (hdd_sta_ctx->cache_conn_info.conn_flag.ht_present)
@@ -5691,7 +5748,11 @@ static int hdd_get_station_info(struct hdd_context *hdd_ctx,
 	if (hdd_sta_ctx->cache_conn_info.conn_flag.vht_op_present)
 		nl_buf_len += sizeof(hdd_sta_ctx->
 						cache_conn_info.vht_operation);
-
+	status = sme_get_prev_connected_bss_ies(hdd_ctx->mac_handle,
+						adapter->session_id,
+						&ies, &ie_len);
+	if (QDF_IS_STATUS_SUCCESS(status))
+		nl_buf_len += ie_len;
 
 	skb = cfg80211_vendor_cmd_alloc_reply_skb(hdd_ctx->wiphy, nl_buf_len);
 	if (!skb) {
@@ -5744,10 +5805,35 @@ static int hdd_get_station_info(struct hdd_context *hdd_ctx,
 			goto fail;
 		}
 
+	/*
+	 * adapter->last_disconnect_reason maintains the reason code of type
+	 * enum eSirMacReasonCodes and internal reason codes are defined from
+	 * eSIR_MAC_REASON_PROP_START. Check if it is internal reason code and
+	 * convert it to the enum qca_disconnect_reason_codes.
+	 */
+	if (adapter->last_disconnect_reason >= eSIR_MAC_REASON_PROP_START)
+		disconnect_reason =
+		wlan_hdd_sir_mac_to_qca_reason(adapter->last_disconnect_reason);
+	if (nla_put_u32(skb, DISCONNECT_REASON, disconnect_reason)) {
+		hdd_err("Failed to put disconect reason");
+		goto fail;
+	}
+
+	if (ie_len) {
+		if (nla_put(skb, BEACON_IES, ie_len, ies)) {
+			hdd_err("Failed to put beacon IEs");
+			goto fail;
+		}
+		qdf_mem_free(ies);
+		ie_len = 0;
+	}
+
 	return cfg80211_vendor_cmd_reply(skb);
 fail:
 	if (skb)
 		kfree_skb(skb);
+	qdf_mem_free(ies);
+	ie_len = 0;
 	return -EINVAL;
 }
 
@@ -6108,6 +6194,8 @@ static int hdd_get_cached_station_remote(struct hdd_context *hdd_ctx,
 			(sizeof(stainfo->tx_rate) + NLA_HDRLEN) +
 			(sizeof(stainfo->rx_rate) + NLA_HDRLEN) +
 			(sizeof(stainfo->support_mode) + NLA_HDRLEN);
+	if (stainfo->assoc_req_ies.len)
+		nl_buf_len += stainfo->assoc_req_ies.len + NLA_HDRLEN;
 
 	skb = cfg80211_vendor_cmd_alloc_reply_skb(hdd_ctx->wiphy, nl_buf_len);
 	if (!skb) {
@@ -6148,6 +6236,16 @@ static int hdd_get_cached_station_remote(struct hdd_context *hdd_ctx,
 		hdd_err("dot11 mode put fail");
 		goto fail;
 	}
+	if (stainfo->assoc_req_ies.len) {
+		if (nla_put(skb, ASSOC_REQ_IES, stainfo->assoc_req_ies.len,
+			    stainfo->assoc_req_ies.data)) {
+			hdd_err("Failed to put assoc req IEs");
+			goto fail;
+		}
+		qdf_mem_free(stainfo->assoc_req_ies.data);
+		stainfo->assoc_req_ies.data = NULL;
+		stainfo->assoc_req_ies.len = 0;
+	}
 
 	qdf_mem_zero(stainfo, sizeof(*stainfo));
 
@@ -6155,6 +6253,9 @@ static int hdd_get_cached_station_remote(struct hdd_context *hdd_ctx,
 fail:
 	if (skb)
 		kfree_skb(skb);
+	qdf_mem_free(stainfo->assoc_req_ies.data);
+	stainfo->assoc_req_ies.data = NULL;
+	stainfo->assoc_req_ies.len = 0;
 
 	return -EINVAL;
 }
@@ -6885,6 +6986,41 @@ wlan_hdd_add_fils_params_roam_auth_event(struct sk_buff *skb,
 #endif
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
+void hdd_send_roam_scan_ch_list_event(struct hdd_context *hdd_ctx,
+				      uint16_t buf_len, uint8_t *buf)
+{
+	struct sk_buff *vendor_event;
+	uint32_t len, ret;
+
+	if (!hdd_ctx) {
+		hdd_err_rl("hdd context is null");
+		return;
+	}
+
+	len = nla_total_size(buf_len) + NLMSG_HDRLEN;
+	vendor_event =
+		cfg80211_vendor_event_alloc(
+			hdd_ctx->wiphy, NULL, len,
+			QCA_NL80211_VENDOR_SUBCMD_UPDATE_STA_INFO_INDEX,
+			GFP_KERNEL);
+
+	if (!vendor_event) {
+		hdd_err("cfg80211_vendor_event_alloc failed");
+		return;
+	}
+
+	ret = nla_put(vendor_event,
+		      QCA_WLAN_VENDOR_ATTR_UPDATE_STA_INFO_CONNECT_CHANNELS,
+		      buf_len, buf);
+	if (ret) {
+		hdd_err("OEM event put fails status %d", ret);
+		kfree_skb(vendor_event);
+		return;
+	}
+
+	cfg80211_vendor_event(vendor_event, GFP_KERNEL);
+}
+
 /**
  * wlan_hdd_send_roam_auth_event() - Send the roamed and authorized event
  * @adapter: Pointer to adapter struct
@@ -8684,7 +8820,7 @@ static int __wlan_hdd_cfg80211_wifi_logger_get_ring_data(struct wiphy *wiphy,
 		status = cds_flush_logs(WLAN_LOG_TYPE_NON_FATAL,
 				WLAN_LOG_INDICATOR_FRAMEWORK,
 				WLAN_LOG_REASON_CODE_UNUSED,
-				true, false);
+				false, false);
 		if (QDF_STATUS_SUCCESS != status) {
 			hdd_err("Failed to trigger bug report");
 			return -EINVAL;
@@ -17724,6 +17860,9 @@ static int __wlan_hdd_cfg80211_change_iface(struct wiphy *wiphy,
 	if (0 != status)
 		return status;
 
+	if (wlan_hdd_check_mon_concurrency())
+		return -EINVAL;
+
 	if (cds_is_fw_down()) {
 		hdd_err("Ignore if FW is already down");
 		return -EINVAL;
@@ -19481,6 +19620,7 @@ static int wlan_hdd_cfg80211_connect_start(struct hdd_adapter *adapter,
 	 */
 	hdd_sta_ctx->conn_info.gtk_installed = false;
 	hdd_sta_ctx->conn_info.ptk_installed = false;
+	adapter->last_disconnect_reason = 0;
 
 	roam_profile = hdd_roam_profile(adapter);
 	if (roam_profile) {
@@ -20918,7 +21058,8 @@ static void wlan_hdd_cfg80211_clear_privacy(struct hdd_adapter *adapter)
 
 static int wlan_hdd_wait_for_disconnect(mac_handle_t mac_handle,
 					struct hdd_adapter *adapter,
-					uint16_t reason)
+					uint16_t reason,
+					tSirMacReasonCodes mac_reason)
 {
 	eConnectionState prev_conn_state;
 	struct hdd_station_ctx *sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
@@ -20940,7 +21081,8 @@ static int wlan_hdd_wait_for_disconnect(mac_handle_t mac_handle,
 	prev_conn_state = sta_ctx->conn_info.connState;
 	hdd_conn_set_connection_state(adapter, eConnectionState_Disconnecting);
 
-	status = sme_roam_disconnect(mac_handle, adapter->session_id, reason);
+	status = sme_roam_disconnect(mac_handle, adapter->session_id, reason,
+				     mac_reason);
 	if (status == QDF_STATUS_CMD_NOT_QUEUED &&
 	    prev_conn_state == eConnectionState_Connecting) {
 		/*
@@ -21015,7 +21157,8 @@ static void wlan_hdd_wait_for_roaming(mac_handle_t mac_handle,
 	}
 }
 
-int wlan_hdd_try_disconnect(struct hdd_adapter *adapter)
+int wlan_hdd_try_disconnect(struct hdd_adapter *adapter,
+			    enum eSirMacReasonCodes reason)
 {
 	mac_handle_t mac_handle;
 
@@ -21023,7 +21166,8 @@ int wlan_hdd_try_disconnect(struct hdd_adapter *adapter)
 	wlan_hdd_wait_for_roaming(mac_handle, adapter);
 
 	return wlan_hdd_wait_for_disconnect(mac_handle, adapter,
-					    eCSR_DISCONNECT_REASON_UNSPECIFIED);
+					    eCSR_DISCONNECT_REASON_UNSPECIFIED,
+					    reason);
 }
 
 /**
@@ -21262,7 +21406,8 @@ static int __wlan_hdd_cfg80211_connect(struct wiphy *wiphy,
 		return status;
 
 	/* Try disconnecting if already in connected state */
-	status = wlan_hdd_try_disconnect(adapter);
+	status = wlan_hdd_try_disconnect(adapter,
+					 eSIR_MAC_UNSPEC_FAILURE_REASON);
 	if (0 > status) {
 		hdd_err("Failed to disconnect the existing connection");
 		return -EALREADY;
@@ -21315,7 +21460,75 @@ static int wlan_hdd_cfg80211_connect(struct wiphy *wiphy,
 	return ret;
 }
 
-int wlan_hdd_disconnect(struct hdd_adapter *adapter, u16 reason)
+/**
+ * wlan_hdd_get_ieee80211_disconnect_reason() - Get ieee80211 disconnect reason
+ * @adapter: pointer to adapter structure
+ * @reason: Mac Disconnect reason code as per @enum eSirMacReasonCodes
+ *
+ * Reason codes that are greater than eSIR_MAC_REASON_PROP_START are internal
+ * reason codes. Cache the same in hdd_ctx and return UNSPECIFIED.
+ * Rest of the reason codes are valid ieee80211 reason codes.
+ *
+ * Return: Reason code of type ieee80211_reasoncode.
+ */
+static enum ieee80211_reasoncode
+wlan_hdd_get_cfg80211_disconnect_reason(struct hdd_adapter *adapter,
+					enum eSirMacReasonCodes reason)
+{
+	enum ieee80211_reasoncode ieee80211_reason = WLAN_REASON_UNSPECIFIED;
+
+	/*
+	 * Cache internal reason code in adapter. This can be sent to
+	 * userspace with a vendor event.
+	 */
+	if (reason >= eSIR_MAC_REASON_PROP_START)
+		adapter->last_disconnect_reason = reason;
+	else
+		ieee80211_reason = (enum ieee80211_reasoncode)reason;
+
+	return ieee80211_reason;
+}
+
+#if defined(CFG80211_DISCONNECTED_V2) || \
+(LINUX_VERSION_CODE >= KERNEL_VERSION(4, 2, 0))
+void
+wlan_hdd_cfg80211_indicate_disconnect(struct hdd_adapter *adapter,
+				      bool locally_generated,
+				      enum eSirMacReasonCodes reason,
+				      uint8_t *disconnect_ies,
+				      uint16_t disconnect_ies_len)
+{
+	enum ieee80211_reasoncode ieee80211_reason;
+
+	ieee80211_reason = wlan_hdd_get_cfg80211_disconnect_reason(adapter,
+								   reason);
+	hdd_debug("Disconnect reason code - MAC: %u, IEEE80211: %u locally_generated: %u",
+		  reason, ieee80211_reason, locally_generated);
+	cfg80211_disconnected(adapter->dev, ieee80211_reason, disconnect_ies,
+			      disconnect_ies_len, locally_generated,
+			      GFP_KERNEL);
+}
+#else
+void
+wlan_hdd_cfg80211_indicate_disconnect(struct hdd_adapter *adapter,
+				      bool locally_generated,
+				      enum eSirMacReasonCodes reason,
+				      uint8_t *disconnect_ies,
+				      uint16_t disconnect_ies_len)
+{
+	enum ieee80211_reasoncode ieee80211_reason;
+
+	ieee80211_reason = wlan_hdd_get_cfg80211_disconnect_reason(adapter,
+								   reason);
+	hdd_debug("Disconnect reason code - MAC: %u, IEEE80211: %u locally_generated: %u",
+		  reason, ieee80211_reason, locally_generated);
+	cfg80211_disconnected(adapter->dev, ieee80211_reason, disconnect_ies,
+			      disconnect_ies_len, GFP_KERNEL);
+}
+#endif
+
+int wlan_hdd_disconnect(struct hdd_adapter *adapter, u16 reason,
+			tSirMacReasonCodes mac_reason)
 {
 	int ret;
 	mac_handle_t mac_handle;
@@ -21328,15 +21541,15 @@ int wlan_hdd_disconnect(struct hdd_adapter *adapter, u16 reason)
 	wlan_hdd_netif_queue_control(adapter,
 		WLAN_STOP_ALL_NETIF_QUEUE_N_CARRIER, WLAN_CONTROL_PATH);
 
-	ret = wlan_hdd_wait_for_disconnect(mac_handle, adapter, reason);
+	ret = wlan_hdd_wait_for_disconnect(mac_handle, adapter, reason,
+					   mac_reason);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0)
 	/* Sending disconnect event to userspace for kernel version < 3.11
 	 * is handled by __cfg80211_disconnect call to __cfg80211_disconnected
 	 */
-	hdd_debug("Send disconnected event to userspace");
-	wlan_hdd_cfg80211_indicate_disconnect(adapter->dev, true,
-					      WLAN_REASON_UNSPECIFIED, NULL, 0);
+	wlan_hdd_cfg80211_indicate_disconnect(adapter, true,
+					      mac_reason, NULL, 0);
 #endif
 
 	return ret;
@@ -21452,8 +21665,6 @@ static int __wlan_hdd_cfg80211_disconnect(struct wiphy *wiphy,
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	struct wlan_objmgr_vdev *vdev;
 
-	hdd_enter();
-
 	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
 		hdd_err("Command not allowed in FTM mode");
 		return -EINVAL;
@@ -21467,10 +21678,6 @@ static int __wlan_hdd_cfg80211_disconnect(struct wiphy *wiphy,
 		   adapter->session_id, reason);
 
 	hdd_print_netdev_txq_status(dev);
-	hdd_debug("Device_mode %s(%d) reason code(%d)",
-		hdd_device_mode_to_string(adapter->device_mode),
-		adapter->device_mode, reason);
-
 	status = wlan_hdd_validate_context(hdd_ctx);
 
 	if (0 != status)
@@ -21527,12 +21734,11 @@ static int __wlan_hdd_cfg80211_disconnect(struct wiphy *wiphy,
 
 		vdev = hdd_objmgr_get_vdev(adapter);
 		if (vdev &&
-		    ucfg_scan_get_vdev_status(vdev) != SCAN_NOT_IN_PROGRESS) {
-			hdd_debug("Disconnect is in progress, Aborting Scan");
+		    ucfg_scan_get_vdev_status(vdev) != SCAN_NOT_IN_PROGRESS)
 			wlan_abort_scan(hdd_ctx->pdev, INVAL_PDEV_ID,
 					adapter->session_id, INVALID_SCAN_ID,
 					false);
-		}
+
 		wlan_hdd_cleanup_remain_on_channel_ctx(adapter);
 		/* First clean up the tdls peers if any */
 		hdd_notify_sta_disconnect(adapter->session_id,
@@ -21543,7 +21749,7 @@ static int __wlan_hdd_cfg80211_disconnect(struct wiphy *wiphy,
 		hdd_info("%s(vdevid-%d): Disconnect from userspace; reason:%d (%s)",
 			 dev->name, adapter->session_id, reason,
 			 hdd_ieee80211_reason_code_to_str(reason));
-		status = wlan_hdd_disconnect(adapter, reasonCode);
+		status = wlan_hdd_disconnect(adapter, reasonCode, reason);
 		if (0 != status) {
 			hdd_err("wlan_hdd_disconnect failed, status: %d", status);
 			hdd_set_disconnect_status(adapter, false);
@@ -21786,7 +21992,8 @@ static int __wlan_hdd_cfg80211_join_ibss(struct wiphy *wiphy,
 	}
 
 	/*Try disconnecting if already in connected state */
-	status = wlan_hdd_try_disconnect(adapter);
+	status = wlan_hdd_try_disconnect(adapter,
+					 eSIR_MAC_UNSPEC_FAILURE_REASON);
 	if (0 > status) {
 		hdd_err("Failed to disconnect the existing IBSS connection");
 		return -EALREADY;
@@ -21910,8 +22117,6 @@ static int __wlan_hdd_cfg80211_leave_ibss(struct wiphy *wiphy,
 	unsigned long rc;
 	tSirUpdateIE updateIE;
 
-	hdd_enter();
-
 	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
 		hdd_err("Command not allowed in FTM mode");
 		return -EINVAL;
@@ -21961,7 +22166,8 @@ static int __wlan_hdd_cfg80211_leave_ibss(struct wiphy *wiphy,
 	INIT_COMPLETION(adapter->disconnect_comp_var);
 	status = sme_roam_disconnect(mac_handle,
 				     adapter->session_id,
-				     eCSR_DISCONNECT_REASON_IBSS_LEAVE);
+				     eCSR_DISCONNECT_REASON_IBSS_LEAVE,
+				     eSIR_MAC_UNSPEC_FAILURE_REASON);
 	if (!QDF_IS_STATUS_SUCCESS(status)) {
 		hdd_err("sme_roam_disconnect failed status: %d",
 		       status);

@@ -90,6 +90,44 @@ struct hdd_context;
 #define CFG_ENABLE_CONNECTED_SCAN_MAX         (1)
 #define CFG_ENABLE_CONNECTED_SCAN_DEFAULT     (1)
 
+/*
+ * <ini>
+ * mws_coex_pcc_channel_avoid_delay - configures the duration, when WWAN PCC
+ * (Primary Component Carrier) conflicts with WLAN channel.
+ * @Min: 0x00
+ * @Max: 0xFF
+ * @Default: 0x3C
+ *
+ * It is used to set MWS-COEX WWAN PCC channel avoidance delay
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_MWS_COEX_PCC_CHANNEL_AVOID_DELAY		"mws_coex_pcc_channel_avoid_delay"
+#define CFG_MWS_COEX_PCC_CHANNEL_AVOID_DELAY_DEFAULT	(0x3C)
+#define CFG_MWS_COEX_PCC_CHANNEL_AVOID_DELAY_MAX	(0xFF)
+#define CFG_MWS_COEX_PCC_CHANNEL_AVOID_DELAY_MIN	(0)
+
+/*
+ * <ini>
+ * mws_coex_scc_channel_avoid_delay - configures the duration, when WWAN SCC
+ * (Secondary Component Carrier) conflicts with WLAN channel.
+ * @Min: 0x00
+ * @Max: 0xFF
+ * @Default: 0x78
+ *
+ * It is used to set MWS-COEX WWAN SCC channel avoidance delay
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_MWS_COEX_SCC_CHANNEL_AVOID_DELAY "mws_coex_scc_channel_avoid_delay"
+#define CFG_MWS_COEX_SCC_CHANNEL_AVOID_DELAY_DEFAULT 0x00
+#define CFG_MWS_COEX_SCC_CHANNEL_AVOID_DELAY_MAX 0xFF
+#define CFG_MWS_COEX_SCC_CHANNEL_AVOID_DELAY_MIN 0x00
+
 #ifdef WLAN_NUD_TRACKING
 /*
  * <ini>
@@ -14955,9 +14993,22 @@ enum hdd_external_acs_policy {
  *
  * BIT 6: Set this to 1 will send BTM query frame and 0 not sent.
  *
- * BIT 7-31: Reserved
+ * BIT 7: Roam to BTM candidates based on the roam score instead of BTM
+ * preferred value
  *
- * Supported Feature: STA
+ * BIT 8: If AP does not support Neighbor report response, STA should
+ * request BTM query to get BTM request and check neighbor report exists
+ * or not. If Neighbor report exists, STA can use this information to update
+ * cached channel information
+ *
+ * BIT 9: When ever roaming is triggered after a successful roam scan a BTM
+ * query is sends to current connected AP which is 11v capable including the
+ * preferred candidate list obtained as part of roam scan with preference filled
+ * based on our internal scoring logic.
+ *
+ * BIT 10-31: Reserved
+ *
+ * Supported Feature: Roaming
  *
  * Usage: External
  *
@@ -14978,7 +15029,7 @@ enum hdd_external_acs_policy {
  * This ini is used to configure timeout value for waiting BTM request.
  * Unit: millionsecond
  *
- * Supported Feature: STA
+ * Supported Feature: Roaming
  *
  * Usage: External
  *
@@ -14998,7 +15049,7 @@ enum hdd_external_acs_policy {
  *
  * This ini is used to configure maximum attempt for sending BTM query to ESS.
  *
- * Supported Feature: STA
+ * Supported Feature: Roaming
  *
  * Usage: External
  *
@@ -15019,7 +15070,7 @@ enum hdd_external_acs_policy {
  * This ini is used to configure Stick time after roaming to new AP by BTM.
  * Unit: seconds
  *
- * Supported Feature: STA
+ * Supported Feature: Roaming
  *
  * Usage: External
  *
@@ -15029,6 +15080,36 @@ enum hdd_external_acs_policy {
 #define CFG_BTM_STICKY_TIME_MIN       (0x00000000)
 #define CFG_BTM_STICKY_TIME_MAX       (0x0000FFFF)
 #define CFG_BTM_STICKY_TIME_DEFAULT   (300)
+
+/*
+ * <ini>
+ * btm_query_bitmask - To send BTM query with candidate list on various roam
+ * scans reasons
+ * @Min: 0
+ * @Max: 0xFFFFFFFF
+ * @Default: 0x8
+ *
+ * This new ini is introduced to configure the bitmask for various roam scan
+ * reasons. Fw sends "BTM query with preferred candidate list" only for those
+ * roam scans which are enable through this bitmask.
+
+ * For Example:
+ * Bitmask : 0x8 (LOW_RSSI) refer enum WMI_ROAM_TRIGGER_REASON_ID
+ * Bitmask : 0xDA (PER, LOW_RSSI, HIGH_RSSI, MAWC, DENSE)
+ * refer enum WMI_ROAM_TRIGGER_REASON_ID
+ *
+ * Related: None
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_BTM_QUERY_BITMASK_NAME    "btm_query_bitmask"
+#define CFG_BTM_QUERY_BITMASK_MIN     (0)
+#define CFG_BTM_QUERY_BITMASK_MAX     (0xFFFFFFFF)
+#define CFG_BTM_QUERY_BITMASK_DEFAULT (0x8)
 
 /*
  * <ini>
@@ -16635,7 +16716,7 @@ enum hdd_external_acs_policy {
  * rssi delta and if other criteria of ini "enable_idle_roam" is met
  * @Min: 0
  * @Max: 50
- * @Default: 5
+ * @Default: 3
  *
  * Related: enable_idle_roam
  *
@@ -16648,7 +16729,7 @@ enum hdd_external_acs_policy {
 #define CFG_LFR_IDLE_ROAM_RSSI_DELTA   "idle_roam_rssi_delta"
 #define CFG_LFR_IDLE_ROAM_RSSI_DELTA_MIN      (0)
 #define CFG_LFR_IDLE_ROAM_RSSI_DELTA_MAX      (50)
-#define CFG_LFR_IDLE_ROAM_RSSI_DELTA_DEFAULT  (5)
+#define CFG_LFR_IDLE_ROAM_RSSI_DELTA_DEFAULT  (3)
 
 /*
  * <ini>
@@ -17302,6 +17383,118 @@ enum hdd_external_acs_policy {
 #define CFG_CONFIG_SAR_SAFETY_SLEEP_MODE_INDEX_MAX       (1)
 #define CFG_CONFIG_SAR_SAFETY_SLEEP_MODE_INDEX_DEFAULT   (0)
 #endif
+
+#define CFG_PKT_CAPTURE_MODE_MGMT_PKT	BIT(0)
+#define CFG_PKT_CAPTURE_MODE_DATA_PKT	BIT(1)
+
+/*
+ * <ini>
+ * packet_capture_mode - Packet capture mode
+ * @Min: 0
+ * @Max: 3
+ * Default: 0 - Capture no packets
+ *
+ * This ini is used to decide packet capture mode
+ *
+ * packet_capture_mode = 0 - Capture no packets
+ * packet_capture_mode = 1 - Capture management packets only
+ * packet_capture_mode = 2 - Capture data packets only
+ * packet_capture_mode = 3 - Capture both data and management packets
+ *
+ * Supported Feature: packet capture
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_PKT_CAPTURE_MODE		"packet_capture_mode"
+#define CFG_PKT_CAPTURE_MODE_MIN	0
+#define CFG_PKT_CAPTURE_MODE_MAX	(CFG_PKT_CAPTURE_MODE_MGMT_PKT | \
+					 CFG_PKT_CAPTURE_MODE_DATA_PKT)
+#define CFG_PKT_CAPTURE_MODE_DEFAULT	0
+
+/*
+ * <ini>
+ * disable_4way_hs_offload - Enable/Disable 4 way handshake offload to firmware
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * 0  4-way HS to be handled in firmware
+ * 1  4-way HS to be handled in supplicant
+ *
+ * Related: None
+ *
+ * Supported Feature: STA Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_DISABLE_4WAY_HS_OFFLOAD           "disable_4way_hs_offload"
+#define CFG_DISABLE_4WAY_HS_OFFLOAD_MIN       (0)
+#define CFG_DISABLE_4WAY_HS_OFFLOAD_MAX       (1)
+#define CFG_DISABLE_4WAY_HS_OFFLOAD_DEFAULT   (0)
+
+/*
+ * <ini>
+ * enable_time_sync_ftm - Time Sync FTM feature support
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0 - Disable feature
+ *
+ * When set to 1 Time Sync FTM feature will be enabled.
+ *
+ * Supported Feature: Time Sync FTM
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_ENABLE_TIME_SYNC_FTM		"enable_time_sync_ftm"
+#define CFG_ENABLE_TIME_SYNC_FTM_MIN		(0)
+#define CFG_ENABLE_TIME_SYNC_FTM_MAX		(1)
+#define CFG_ENABLE_TIME_SYNC_FTM_DEFAULT	(0)
+
+/*
+ * <ini>
+ * time_sync_ftm_mode- Time Sync FTM feature Mode configuration
+ * @Min: 0 - Aggregated Mode
+ * @Max: 1 - Burst Mode
+ * @Default: 0
+ *
+ * This ini is applicable only if enable_time_sync_ftm  is set to 1.
+ *
+ * Supported Feature: Time Sync FTM
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_TIME_SYNC_FTM_MODE			"time_sync_ftm_mode"
+#define CFG_TIME_SYNC_FTM_MODE_MIN		(0)
+#define CFG_TIME_SYNC_FTM_MODE_MAX		(1)
+#define CFG_TIME_SYNC_FTM_MODE_DEFAULT		(0)
+
+/*
+ * <ini>
+ * time_sync_ftm_role- Time Sync FTM feature Role configuration
+ * @Min: 0 - Slave Role
+ * @Max: 1 - Master Role
+ * @Default: 0
+ *
+ * This ini is applicable only if enable_time_sync_ftm is set to 1.
+ *
+ * Supported Feature: Time Sync FTM
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_TIME_SYNC_FTM_ROLE			"time_sync_ftm_role"
+#define CFG_TIME_SYNC_FTM_ROLE_MIN		(0)
+#define CFG_TIME_SYNC_FTM_ROLE_MAX		(1)
+#define CFG_TIME_SYNC_FTM_ROLE_DEFAULT		(0)
 
 /*
  * Type declarations
@@ -18208,6 +18401,7 @@ struct hdd_config {
 	uint32_t btm_solicited_timeout;
 	uint32_t btm_max_attempt_cnt;
 	uint32_t btm_sticky_time;
+	uint32_t btm_query_bitmask;
 	uint32_t btm_trig_min_candidate_score;
 	bool gcmp_enabled;
 	bool is_11k_offload_supported;
@@ -18325,7 +18519,17 @@ struct hdd_config {
 	bool enable_sar_safety;
 	bool config_sar_safety_sleep_index;
 #endif
+	uint32_t pkt_capture_mode;
 
+	uint32_t mws_coex_scc_channel_avoid_delay;
+	uint32_t mws_coex_pcc_channel_avoid_delay;
+
+	bool disable_4way_hs_offload;
+#ifdef FEATURE_WLAN_TIME_SYNC_FTM
+	bool time_sync_ftm_enable;
+	bool time_sync_ftm_mode;
+	bool time_sync_ftm_role;
+#endif
 };
 
 #define VAR_OFFSET(_Struct, _Var) (offsetof(_Struct, _Var))

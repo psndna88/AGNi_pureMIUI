@@ -91,6 +91,7 @@
 #include "wlan_cp_stats_mc_ucfg_api.h"
 #include "init_cmd_api.h"
 #include "wma_coex.h"
+#include <ftm_time_sync_ucfg_api.h>
 
 #define WMA_LOG_COMPLETION_TIMER 3000 /* 3 seconds */
 #define WMI_TLV_HEADROOM 128
@@ -997,10 +998,8 @@ static void wma_process_cli_set_cmd(tp_wma_handle wma,
 	struct target_psoc_info *tgt_hdl;
 	struct sir_set_tx_rx_aggregation_size aggr;
 
-	WMA_LOGD("wmihandle %pK", wma->wmi_handle);
 	qdf_mem_zero(&aggr, sizeof(aggr));
-
-	if (NULL == pMac) {
+	if (!pMac) {
 		WMA_LOGE("%s: Failed to get pMac", __func__);
 		return;
 	}
@@ -3684,6 +3683,10 @@ QDF_STATUS wma_open(struct wlan_objmgr_psoc *psoc,
 					   wmi_roam_stats_event_id,
 					   wma_roam_stats_event_handler,
 					   WMA_RX_SERIALIZER_CTX);
+	wmi_unified_register_event_handler(wma_handle->wmi_handle,
+					   wmi_roam_scan_chan_list_id,
+					   wma_roam_scan_chan_event_handler,
+					   WMA_RX_SERIALIZER_CTX);
 #endif /* WLAN_FEATURE_ROAM_OFFLOAD */
 	wmi_unified_register_event_handler(wma_handle->wmi_handle,
 				wmi_rssi_breach_event_id,
@@ -5099,6 +5102,9 @@ static inline void wma_update_target_services(struct wmi_unified *wmi_handle,
 		cfg->bcn_reception_stats = true;
 	if (wmi_service_enabled(wmi_handle, wmi_service_vdev_latency_config))
 		g_fw_wlan_feat_caps |= (1 << VDEV_LATENCY_CONFIG);
+	if (wmi_service_enabled(wmi_handle,
+				wmi_roam_scan_chan_list_to_host_support))
+		cfg->is_roam_scan_ch_to_host = true;
 }
 
 /**
@@ -6917,6 +6923,15 @@ int wma_rx_service_ready_ext_event(void *handle, uint8_t *event,
 		wlan_res_cfg->three_way_coex_config_legacy_en = false;
 	}
 
+	if (ucfg_is_ftm_time_sync_enable(wma_handle->psoc) &&
+	    wmi_service_enabled(wmi_handle, wmi_service_time_sync_ftm)) {
+		wlan_res_cfg->time_sync_ftm = true;
+		ucfg_ftm_time_sync_set_enable(wma_handle->psoc, true);
+	} else {
+		wlan_res_cfg->time_sync_ftm = false;
+		ucfg_ftm_time_sync_set_enable(wma_handle->psoc, false);
+	}
+
 	return 0;
 }
 
@@ -8294,16 +8309,6 @@ static QDF_STATUS wma_mc_process_msg(struct scheduler_msg *msg)
 		qdf_mem_free(msg->bodyptr);
 		break;
 #endif /* REMOVE_PKT_LOG */
-	case WMA_ENTER_PS_REQ:
-		wma_enable_sta_ps_mode(wma_handle,
-				       (tpEnablePsParams) msg->bodyptr);
-		qdf_mem_free(msg->bodyptr);
-		break;
-	case WMA_EXIT_PS_REQ:
-		wma_disable_sta_ps_mode(wma_handle,
-					(tpDisablePsParams) msg->bodyptr);
-		qdf_mem_free(msg->bodyptr);
-		break;
 	case WMA_ENABLE_UAPSD_REQ:
 		wma_enable_uapsd_mode(wma_handle,
 				      (tpEnableUapsdParams) msg->bodyptr);
@@ -8890,6 +8895,9 @@ static QDF_STATUS wma_mc_process_msg(struct scheduler_msg *msg)
 		wma_set_roam_triggers(wma_handle, msg->bodyptr);
 		qdf_mem_free(msg->bodyptr);
 		break;
+	case WMA_ROAM_SCAN_CH_REQ:
+		wma_get_roam_scan_ch(wma_handle, msg->bodyval);
+		break;
 	default:
 		WMA_LOGD("Unhandled WMA message of type %d", msg->type);
 		if (msg->bodyptr)
@@ -9008,15 +9016,16 @@ QDF_STATUS wma_send_pdev_set_pcl_cmd(tp_wma_handle wma_handle,
 		    WLAN_REG_IS_5GHZ_CH(msg->chan_weights.saved_chan_list[i]))
 			msg->chan_weights.weighed_valid_list[i] =
 				WEIGHT_OF_DISALLOWED_CHANNELS;
-		WMA_LOGD("%s: chan:%d weight[%d]=%d", __func__,
-			 msg->chan_weights.saved_chan_list[i], i,
-			 msg->chan_weights.weighed_valid_list[i]);
 	}
 
 	if (!QDF_IS_STATUS_SUCCESS(status)) {
 		WMA_LOGE("%s: Error in creating weighed pcl", __func__);
 		return status;
 	}
+	wma_debug("Dump channel list send to wmi");
+	policy_mgr_dump_channel_list(msg->chan_weights.saved_num_chan,
+				     msg->chan_weights.saved_chan_list,
+				     msg->chan_weights.weighed_valid_list);
 
 	if (wmi_unified_pdev_set_pcl_cmd(wma_handle->wmi_handle,
 					 &msg->chan_weights))

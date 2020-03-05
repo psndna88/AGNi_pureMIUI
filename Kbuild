@@ -193,6 +193,10 @@ ifeq ($(CONFIG_QCACLD_FEATURE_HW_CAPABILITY), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_hw_capability.o
 endif
 
+ifeq ($(CONFIG_FEATURE_WLAN_TIME_SYNC_FTM), y)
+HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_ftm_time_sync.o
+endif
+
 #Flag to enable SAR Safety Feature
 cppflags-$(CONFIG_SAR_SAFETY_FEATURE) += -DSAR_SAFETY_FEATURE
 
@@ -779,12 +783,19 @@ endif
 ######## PACKET CAPTURE ########
 
 PKT_CAPTURE_DIR := components/pkt_capture
+PKT_CAPTURE_TARGET_IF_DIR := components/target_if/pkt_capture/
 PKT_CAPTURE_INC := -I$(WLAN_ROOT)/$(PKT_CAPTURE_DIR)/core/inc \
-		  -I$(WLAN_ROOT)/$(PKT_CAPTURE_DIR)/dispatcher/inc
+		  -I$(WLAN_ROOT)/$(PKT_CAPTURE_DIR)/dispatcher/inc \
+		  -I$(WLAN_ROOT)/$(PKT_CAPTURE_TARGET_IF_DIR)/inc
 
 ifeq ($(CONFIG_WLAN_FEATURE_PKT_CAPTURE), y)
 PKT_CAPTURE_OBJS := $(PKT_CAPTURE_DIR)/core/src/wlan_pkt_capture_main.o \
-		$(PKT_CAPTURE_DIR)/dispatcher/src/wlan_pkt_capture_ucfg_api.o
+		$(PKT_CAPTURE_DIR)/core/src/wlan_pkt_capture_mon_thread.o \
+		$(PKT_CAPTURE_DIR)/dispatcher/src/wlan_pkt_capture_ucfg_api.o \
+		$(PKT_CAPTURE_DIR)/core/src/wlan_pkt_capture_mgmt_txrx.o \
+		$(PKT_CAPTURE_DIR)/core/src/wlan_pkt_capture_data_txrx.o \
+		$(PKT_CAPTURE_DIR)/dispatcher/src/wlan_pkt_capture_ucfg_api.o \
+		$(PKT_CAPTURE_TARGET_IF_DIR)/src/target_if_pkt_capture.o
 endif
 
 ########## FTM TIME SYNC ##########
@@ -795,7 +806,8 @@ FTM_TIME_SYNC_INC := -I$(WLAN_ROOT)/$(FTM_TIME_SYNC_DIR)/core/inc \
 
 ifeq ($(CONFIG_FEATURE_WLAN_TIME_SYNC_FTM), y)
 FTM_TIME_SYNC_OBJS := $(FTM_TIME_SYNC_DIR)/core/src/ftm_time_sync_main.o \
-		$(FTM_TIME_SYNC_DIR)/dispatcher/src/ftm_time_sync_ucfg_api.o
+		$(FTM_TIME_SYNC_DIR)/dispatcher/src/ftm_time_sync_ucfg_api.o \
+		$(FTM_TIME_SYNC_DIR)/dispatcher/src/wlan_ftm_time_sync_tgt_api.o
 endif
 
 ########## CLD TARGET_IF #######
@@ -836,6 +848,11 @@ endif
 ifeq ($(CONFIG_WLAN_FEATURE_ACTION_OUI), y)
 CLD_TARGET_IF_INC += -I$(WLAN_ROOT)/$(CLD_TARGET_IF_DIR)/action_oui/inc
 CLD_TARGET_IF_OBJ += $(CLD_TARGET_IF_DIR)/action_oui/src/target_if_action_oui.o
+endif
+
+ifeq ($(CONFIG_FEATURE_WLAN_TIME_SYNC_FTM), y)
+CLD_TARGET_IF_INC += -I$(WLAN_ROOT)/$(CLD_TARGET_IF_DIR)/ftm_time_sync/inc
+CLD_TARGET_IF_OBJ += $(CLD_TARGET_IF_DIR)/ftm_time_sync/src/target_if_ftm_time_sync.o
 endif
 
 ############## UMAC P2P ###########

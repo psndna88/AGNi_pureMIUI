@@ -377,8 +377,6 @@ static void csr_add_to_occupied_channels(tpAniSirGlobal pMac,
 					       num_occupied_ch, ch);
 	if (QDF_IS_STATUS_SUCCESS(status)) {
 		occupied_ch->numChannels++;
-		sme_debug("Added channel %d to the list (count=%d)",
-			ch, occupied_ch->numChannels);
 		if (occupied_ch->numChannels >
 		    CSR_BG_SCAN_OCCUPIED_CHANNEL_LIST_LEN)
 			occupied_ch->numChannels =
@@ -1652,16 +1650,10 @@ static void csr_save_tx_power_to_cfg(tpAniSirGlobal pMac, tDblLinkList *pList,
 				ch_pwr_set->firstChanNum = (tSirMacChanNum)
 					(ch_set->firstChannel + (idx *
 						ch_set->interChannelOffset));
-				sme_debug(
-					"Setting Channel Number %d",
-					ch_pwr_set->firstChanNum);
 				ch_pwr_set->numChannels = 1;
 				ch_pwr_set->maxTxPower =
 					QDF_MIN(ch_set->txPower,
 					pMac->roam.configParam.nTxPowerCap);
-				sme_debug(
-					"Setting Max Transmit Power %d",
-					ch_pwr_set->maxTxPower);
 				cbLen += sizeof(tSirMacChanInfo);
 				ch_pwr_set++;
 			}
@@ -1676,15 +1668,9 @@ static void csr_save_tx_power_to_cfg(tpAniSirGlobal pMac, tDblLinkList *pList,
 				break;
 			}
 			ch_pwr_set->firstChanNum = ch_set->firstChannel;
-			sme_debug("Setting Channel Number %d",
-				ch_pwr_set->firstChanNum);
 			ch_pwr_set->numChannels = ch_set->numChannels;
 			ch_pwr_set->maxTxPower = QDF_MIN(ch_set->txPower,
 					pMac->roam.configParam.nTxPowerCap);
-			sme_debug(
-				"Setting Max Tx Power %d, nTxPower %d",
-				ch_pwr_set->maxTxPower,
-				pMac->roam.configParam.nTxPowerCap);
 			cbLen += sizeof(tSirMacChanInfo);
 			ch_pwr_set++;
 		}
@@ -1701,7 +1687,7 @@ static void csr_set_cfg_country_code(tpAniSirGlobal pMac, uint8_t *countryCode)
 	uint8_t cc[WNI_CFG_COUNTRY_CODE_LEN];
 	/* v_REGDOMAIN_t DomainId */
 
-	sme_debug("Setting Country Code in Cfg %s", countryCode);
+	sme_debug("Set Country in Cfg %s", countryCode);
 	qdf_mem_copy(cc, countryCode, WNI_CFG_COUNTRY_CODE_LEN);
 
 	/*
@@ -3178,6 +3164,28 @@ void csr_remove_bssid_from_scan_list(tpAniSirGlobal mac_ctx,
 	csr_flush_bssid(mac_ctx, bssid);
 }
 
+static void csr_dump_occupied_chan_list(struct csr_channel *occupied_ch)
+{
+	uint8_t idx;
+	uint32_t buff_len;
+	char *chan_buff;
+	uint32_t len = 0;
+
+	buff_len = (occupied_ch->numChannels * 5) + 1;
+	chan_buff = qdf_mem_malloc(buff_len);
+	if (!chan_buff)
+		return;
+
+	for (idx = 0; idx < occupied_ch->numChannels; idx++)
+		len += qdf_scnprintf(chan_buff + len, buff_len - len, " %d",
+				     occupied_ch->channelList[idx]);
+
+	sme_nofl_debug("Occupied chan list[%d]:%s",
+		       occupied_ch->numChannels, chan_buff);
+
+	qdf_mem_free(chan_buff);
+}
+
 void csr_init_occupied_channels_list(tpAniSirGlobal mac_ctx,
 	uint8_t sessionId)
 {
@@ -3250,11 +3258,12 @@ void csr_init_occupied_channels_list(tpAniSirGlobal mac_ctx,
 	if (list)
 		sme_debug("num_entries %d", qdf_list_size(list));
 	if (!list || (list && !qdf_list_size(list))) {
-		sme_err("get scan result failed");
 		wlan_objmgr_pdev_release_ref(pdev, WLAN_LEGACY_MAC_ID);
 		qdf_mem_free(filter);
 		if (list)
 			ucfg_scan_purge_results(list);
+		csr_dump_occupied_chan_list(
+			&mac_ctx->scan.occupiedChannels[sessionId]);
 		return;
 	}
 
@@ -3272,6 +3281,7 @@ void csr_init_occupied_channels_list(tpAniSirGlobal mac_ctx,
 		cur_lst = next_lst;
 		next_lst = NULL;
 	}
+	csr_dump_occupied_chan_list(&mac_ctx->scan.occupiedChannels[sessionId]);
 
 	qdf_mem_free(filter);
 	ucfg_scan_purge_results(list);

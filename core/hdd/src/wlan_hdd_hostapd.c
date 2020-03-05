@@ -87,6 +87,7 @@
 #include <wlan_cfg80211_mc_cp_stats.h>
 #include <wlan_cp_stats_mc_ucfg_api.h>
 #include "wlan_action_oui_ucfg_api.h"
+#include "ftm_time_sync_ucfg_api.h"
 
 #define    IS_UP(_dev) \
 	(((_dev)->flags & (IFF_RUNNING|IFF_UP)) == (IFF_RUNNING|IFF_UP))
@@ -107,12 +108,15 @@
 #define SAP_24GHZ_CH_COUNT (14)
 #define ACS_SCAN_EXPIRY_TIMEOUT_S 4
 
-/* Defines the BIT position of HT caps is support mode field of stainfo */
-#define HDD_HT_CAPS_PRESENT 0
-/* Defines the BIT position of VHT caps is support mode field of stainfo */
-#define HDD_VHT_CAPS_PRESENT 1
-/* Defines the BIT position of HE caps is support mode field of stainfo */
-#define HDD_HE_CAPS_PRESENT 2
+/*
+ * Defines the BIT position of 11bg/11abg/11abgn 802.11 support mode field
+ * of stainfo
+ */
+#define HDD_80211_MODE_ABGN 0
+/* Defines the BIT position of 11ac support mode field of stainfo */
+#define HDD_80211_MODE_AC 1
+/* Defines the BIT position of 11ax support mode field of stainfo */
+#define HDD_80211_MODE_AX 2
 
 /*
  * 11B, 11G Rate table include Basic rate and Extended rate
@@ -838,18 +842,12 @@ QDF_STATUS hdd_chan_change_notify(struct hdd_adapter *adapter,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	hdd_debug("chan:%d width:%d sec_ch_offset:%d seg0:%d seg1:%d",
-		chan_change.chan, chan_change.chan_params.ch_width,
-		chan_change.chan_params.sec_ch_offset,
-		chan_change.chan_params.center_freq_seg0,
-		chan_change.chan_params.center_freq_seg1);
-
 	freq = cds_chan_to_freq(chan_change.chan);
-
 	chan = ieee80211_get_channel(adapter->wdev.wiphy, freq);
 
 	if (!chan) {
-		hdd_err("Invalid input frequency for channel conversion");
+		hdd_err("Invalid input frequency %d for channel conversion",
+			freq);
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -1456,6 +1454,7 @@ static void hdd_fill_station_info(struct hdd_adapter *adapter,
 	struct hdd_station_info *stainfo;
 	uint8_t i = 0, oldest_disassoc_sta_idx = WLAN_MAX_STA_COUNT + 1;
 	qdf_time_t oldest_disassoc_sta_ts = 0;
+	bool is_dot11_mode_abgn;
 
 	if (event->staId >= WLAN_MAX_STA_COUNT) {
 		hdd_err("invalid sta id");
@@ -1502,20 +1501,27 @@ static void hdd_fill_station_info(struct hdd_adapter *adapter,
 	/* expect max_phy_rate report in kbps */
 	stainfo->max_phy_rate *= 100;
 
+	/*
+	 * Connected Peer always supports atleast one of the
+	 * 802.11 mode out of 11bg/11abg/11abgn, hence this field
+	 * should always be true.
+	 */
+	is_dot11_mode_abgn = true;
+	stainfo->support_mode |= is_dot11_mode_abgn << HDD_80211_MODE_ABGN;
+
 	if (event->vht_caps.present) {
 		stainfo->vht_present = true;
 		hdd_copy_vht_caps(&stainfo->vht_caps, &event->vht_caps);
 		stainfo->support_mode |=
-				(stainfo->vht_present << HDD_VHT_CAPS_PRESENT);
+				(stainfo->vht_present << HDD_80211_MODE_AC);
 	}
 	if (event->ht_caps.present) {
 		stainfo->ht_present = true;
 		hdd_copy_ht_caps(&stainfo->ht_caps, &event->ht_caps);
-		stainfo->support_mode |=
-				(stainfo->ht_present << HDD_HT_CAPS_PRESENT);
 	}
+
 	stainfo->support_mode |=
-			(event->he_caps_present << HDD_HE_CAPS_PRESENT);
+			(event->he_caps_present << HDD_80211_MODE_AX);
 
 	/* Initialize DHCP info */
 	stainfo->dhcp_phase = DHCP_PHASE_ACK;
@@ -1554,11 +1560,25 @@ static void hdd_fill_station_info(struct hdd_adapter *adapter,
 		i = oldest_disassoc_sta_idx;
 	}
 	if (i < WLAN_MAX_STA_COUNT) {
+		if (adapter->cache_sta_info[i].assoc_req_ies.data) {
+			qdf_mem_free(
+				adapter->cache_sta_info[i].assoc_req_ies.data);
+			adapter->cache_sta_info[i].assoc_req_ies.data = NULL;
+			adapter->cache_sta_info[i].assoc_req_ies.len = 0;
+		}
 		qdf_mem_zero(&adapter->cache_sta_info[i],
 			     sizeof(*stainfo));
 		qdf_mem_copy(&adapter->cache_sta_info[i],
 				     stainfo, sizeof(struct hdd_station_info));
-
+		adapter->cache_sta_info[i].assoc_req_ies.data =
+				qdf_mem_malloc(event->ies_len);
+		if (adapter->cache_sta_info[i].assoc_req_ies.data) {
+			qdf_mem_copy(
+				adapter->cache_sta_info[i].assoc_req_ies.data,
+				event->ies, event->ies_len);
+			adapter->cache_sta_info[i].assoc_req_ies.len =
+				event->ies_len;
+		}
 	} else {
 		hdd_debug("reached max staid, stainfo can't be cached");
 	}
@@ -2226,32 +2246,28 @@ QDF_STATUS hdd_hostapd_sap_event_cb(tpSap_Event pSapEvent,
 					      HDD_SAP_WAKE_LOCK_DURATION);
 		{
 			struct station_info *sta_info;
-			uint16_t iesLen = event->iesLen;
+			uint32_t ies_len = event->ies_len;
 
 			sta_info = qdf_mem_malloc(sizeof(*sta_info));
 			if (!sta_info) {
 				hdd_err("Failed to allocate station info");
 				return QDF_STATUS_E_FAILURE;
 			}
-			if (iesLen <= MAX_ASSOC_IND_IE_LEN) {
-				sta_info->assoc_req_ies =
-					(const u8 *)&event->ies[0];
-				sta_info->assoc_req_ies_len = iesLen;
+
+			sta_info->assoc_req_ies = event->ies;
+			sta_info->assoc_req_ies_len = ies_len;
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 0, 0)) && !defined(WITH_BACKPORTS)
-				/*
-				 * After Kernel 4.0, it's no longer need to set
-				 * STATION_INFO_ASSOC_REQ_IES flag, as it
-				 * changed to use assoc_req_ies_len length to
-				 * check the existence of request IE.
-				 */
-				sta_info->filled |= STATION_INFO_ASSOC_REQ_IES;
+			/*
+			 * After Kernel 4.0, it's no longer need to set
+			 * STATION_INFO_ASSOC_REQ_IES flag, as it
+			 * changed to use assoc_req_ies_len length to
+			 * check the existence of request IE.
+			 */
+			sta_info->filled |= STATION_INFO_ASSOC_REQ_IES;
 #endif
-				cfg80211_new_sta(dev,
-					(const u8 *)&event->staMac.bytes[0],
-					sta_info, GFP_KERNEL);
-			} else {
-				hdd_err("Assoc Ie length is too long");
-			}
+			cfg80211_new_sta(dev,
+				(const u8 *)&event->staMac.bytes[0],
+				sta_info, GFP_KERNEL);
 			qdf_mem_free(sta_info);
 		}
 
@@ -2475,7 +2491,6 @@ QDF_STATUS hdd_hostapd_sap_event_cb(tpSap_Event pSapEvent,
 		return QDF_STATUS_SUCCESS;
 
 	case eSAP_CHANNEL_CHANGE_EVENT:
-		hdd_debug("Received eSAP_CHANNEL_CHANGE_EVENT event");
 		if (hostapd_state->bss_state != BSS_STOP) {
 			/* Prevent suspend for new channel */
 			hdd_hostapd_channel_prevent_suspend(adapter,
@@ -7598,8 +7613,9 @@ static int wlan_hdd_setup_driver_overrides(struct hdd_adapter *ap_adapter)
 		return 0;
 }
 
-void hdd_check_and_disconnect_sta_on_invalid_channel(
-		struct hdd_context *hdd_ctx)
+void
+hdd_check_and_disconnect_sta_on_invalid_channel(struct hdd_context *hdd_ctx,
+						tSirMacReasonCodes reason)
 {
 	struct hdd_adapter *sta_adapter;
 	uint8_t sta_chan;
@@ -7627,7 +7643,7 @@ void hdd_check_and_disconnect_sta_on_invalid_channel(
 
 	hdd_err("chan %d not valid, issue disconnect", sta_chan);
 	/* Issue Disconnect request */
-	wlan_hdd_disconnect(sta_adapter, eCSR_DISCONNECT_REASON_DEAUTH);
+	wlan_hdd_disconnect(sta_adapter, eCSR_DISCONNECT_REASON_DEAUTH, reason);
 }
 
 #ifdef DISABLE_CHANNEL_LIST
@@ -7933,7 +7949,8 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 		/* check if STA is on indoor channel*/
 		if (policy_mgr_is_force_scc(hdd_ctx->psoc))
 			hdd_check_and_disconnect_sta_on_invalid_channel(
-								       hdd_ctx);
+					hdd_ctx,
+					eSIR_MAC_OPER_CHANNEL_DISABLED_INDOOR);
 	}
 
 	pBeacon = adapter->session.ap.beacon;
@@ -8511,6 +8528,9 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 	/* Check and restart SAP if it is on unsafe channel */
 	hdd_unsafe_channel_restart_sap(hdd_ctx);
 
+	ucfg_ftm_time_sync_update_bss_state(adapter->vdev,
+					    FTM_TIME_SYNC_BSS_STARTED);
+
 	hdd_set_connection_in_progress(false);
 
 	ret = 0;
@@ -8740,6 +8760,8 @@ static int __wlan_hdd_cfg80211_stop_ap(struct wiphy *wiphy,
 	hdd_destroy_acs_timer(adapter);
 
 	ucfg_p2p_status_stop_bss(adapter->vdev);
+	ucfg_ftm_time_sync_update_bss_state(adapter->vdev,
+					    FTM_TIME_SYNC_BSS_STOPPED);
 
 	hdd_exit();
 

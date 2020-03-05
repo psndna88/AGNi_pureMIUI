@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018, 2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -332,7 +332,7 @@ struct roam_cmd {
 	bool fStopWds;
 	tSirMacAddr peerMac;
 	tSirMacReasonCodes reason;
-	eCsrRoamDisconnectReason disconnect_reason;
+	tSirMacReasonCodes disconnect_reason;
 };
 
 struct setkey_cmd {
@@ -623,6 +623,7 @@ struct csr_config {
 	uint32_t btm_solicited_timeout;
 	uint32_t btm_max_attempt_cnt;
 	uint32_t btm_sticky_time;
+	uint32_t btm_query_bitmask;
 	uint32_t btm_trig_min_candidate_score;
 	uint32_t offload_11k_enable_bitmask;
 	bool wep_tkip_in_he;
@@ -649,6 +650,7 @@ struct csr_config {
 	bool enable_adaptive_11r;
 #endif
 	bool enable_pending_list_req;
+	bool disable_4way_hs_offload;
 };
 
 struct csr_channel_powerinfo {

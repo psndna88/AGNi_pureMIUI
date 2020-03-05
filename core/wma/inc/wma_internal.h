@@ -319,10 +319,44 @@ QDF_STATUS wma_update_channel_list(WMA_HANDLE handle,
 				   tSirUpdateChanList *chan_list);
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
+/**
+ * wma_roam_scan_chan_event_handler() - roam scan ch list event handler
+ * @handle: wma handle
+ * @event: pointer to event buf
+ * @len: length of event
+ *
+ * Return: Success or Failure status
+ */
+int wma_roam_scan_chan_event_handler(WMA_HANDLE handle, uint8_t *event,
+				     uint32_t len);
+
+/**
+ * wma_get_roam_scan_ch() - API to get roam scan ch list from fw
+ * @wma: wma handle
+ * @vdev_id: vdev id
+ *
+ * Return: none
+ */
+QDF_STATUS wma_get_roam_scan_ch(tp_wma_handle wma,
+				uint8_t vdev_id);
+
 QDF_STATUS wma_roam_scan_fill_self_caps(tp_wma_handle wma_handle,
 					roam_offload_param *
 					roam_offload_params,
 					tSirRoamOffloadScanReq *roam_req);
+#else
+static inline QDF_STATUS wma_get_roam_scan_ch(tp_wma_handle wma,
+					      uint8_t vdev_id)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+
+static inline int
+wma_roam_scan_chan_event_handler(WMA_HANDLE handle, uint8_t *event,
+				 uint32_t len)
+{
+	return -EINVAL;
+}
 #endif
 
 QDF_STATUS wma_roam_scan_offload_mode(tp_wma_handle wma_handle,
@@ -758,7 +792,13 @@ void wma_hidden_ssid_vdev_restart(tp_wma_handle wma_handle,
  * wma_power.c functions declarations
  */
 
-void wma_enable_sta_ps_mode(tp_wma_handle wma, tpEnablePsParams ps_req);
+/**
+ * wma_enable_sta_ps_mode() - enable sta powersave params in fw
+ * @ps_req: power save request
+ *
+ * Return: none
+ */
+void wma_enable_sta_ps_mode(tpEnablePsParams ps_req);
 
 QDF_STATUS wma_unified_set_sta_ps_param(wmi_unified_t wmi_handle,
 					    uint32_t vdev_id, uint32_t param,
@@ -781,7 +821,7 @@ void wma_set_tx_power(WMA_HANDLE handle,
 void wma_set_max_tx_power(WMA_HANDLE handle,
 				 tMaxTxPowerParams *tx_pwr_params);
 
-void wma_disable_sta_ps_mode(tp_wma_handle wma, tpDisablePsParams ps_req);
+void wma_disable_sta_ps_mode(tpDisablePsParams ps_req);
 
 void wma_enable_uapsd_mode(tp_wma_handle wma, tpEnableUapsdParams ps_req);
 

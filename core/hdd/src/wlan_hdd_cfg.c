@@ -5672,6 +5672,14 @@ struct reg_table_entry g_registry_table[] = {
 		     CFG_BTM_STICKY_TIME_MIN,
 		     CFG_BTM_STICKY_TIME_MAX),
 
+	REG_VARIABLE(CFG_BTM_QUERY_BITMASK_NAME,
+		     WLAN_PARAM_HexInteger, struct hdd_config,
+		     btm_query_bitmask,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_BTM_QUERY_BITMASK_DEFAULT,
+		     CFG_BTM_QUERY_BITMASK_MIN,
+		     CFG_BTM_QUERY_BITMASK_MAX),
+
 	REG_VARIABLE(CFG_ENABLE_GCMP_NAME, WLAN_PARAM_Integer,
 		     struct hdd_config, gcmp_enabled,
 		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
@@ -6267,6 +6275,57 @@ struct reg_table_entry g_registry_table[] = {
 		     CFG_CONFIG_SAR_SAFETY_SLEEP_MODE_INDEX_MAX),
 #endif
 
+#ifdef WLAN_FEATURE_PKT_CAPTURE
+	REG_VARIABLE(CFG_PKT_CAPTURE_MODE, WLAN_PARAM_Integer,
+		     struct hdd_config, pkt_capture_mode,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_PKT_CAPTURE_MODE_DEFAULT,
+		     CFG_PKT_CAPTURE_MODE_MIN,
+		     CFG_PKT_CAPTURE_MODE_MAX),
+#endif
+
+	REG_VARIABLE(CFG_MWS_COEX_PCC_CHANNEL_AVOID_DELAY, WLAN_PARAM_Integer,
+		     struct hdd_config, mws_coex_pcc_channel_avoid_delay,
+		     VAR_FLAGS_OPTIONAL,
+		     CFG_MWS_COEX_PCC_CHANNEL_AVOID_DELAY_DEFAULT,
+		     CFG_MWS_COEX_PCC_CHANNEL_AVOID_DELAY_MIN,
+		     CFG_MWS_COEX_PCC_CHANNEL_AVOID_DELAY_MAX),
+
+	REG_VARIABLE(CFG_MWS_COEX_SCC_CHANNEL_AVOID_DELAY, WLAN_PARAM_Integer,
+		     struct hdd_config, mws_coex_scc_channel_avoid_delay,
+		     VAR_FLAGS_OPTIONAL,
+		     CFG_MWS_COEX_SCC_CHANNEL_AVOID_DELAY_DEFAULT,
+		     CFG_MWS_COEX_SCC_CHANNEL_AVOID_DELAY_MIN,
+		     CFG_MWS_COEX_SCC_CHANNEL_AVOID_DELAY_MAX),
+
+	REG_VARIABLE(CFG_DISABLE_4WAY_HS_OFFLOAD, WLAN_PARAM_Integer,
+		     struct hdd_config, disable_4way_hs_offload,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_DISABLE_4WAY_HS_OFFLOAD_DEFAULT,
+		     CFG_DISABLE_4WAY_HS_OFFLOAD_MIN,
+		     CFG_DISABLE_4WAY_HS_OFFLOAD_MAX),
+#ifdef FEATURE_WLAN_TIME_SYNC_FTM
+	REG_VARIABLE(CFG_ENABLE_TIME_SYNC_FTM, WLAN_PARAM_Integer,
+		     struct hdd_config, time_sync_ftm_enable,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_ENABLE_TIME_SYNC_FTM_DEFAULT,
+		     CFG_ENABLE_TIME_SYNC_FTM_MIN,
+		     CFG_ENABLE_TIME_SYNC_FTM_MAX),
+
+	REG_VARIABLE(CFG_TIME_SYNC_FTM_MODE, WLAN_PARAM_Integer,
+		     struct hdd_config, time_sync_ftm_mode,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_TIME_SYNC_FTM_MODE_DEFAULT,
+		     CFG_TIME_SYNC_FTM_MODE_MIN,
+		     CFG_TIME_SYNC_FTM_MODE_MAX),
+
+	REG_VARIABLE(CFG_TIME_SYNC_FTM_ROLE, WLAN_PARAM_Integer,
+		     struct hdd_config, time_sync_ftm_role,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_TIME_SYNC_FTM_ROLE_DEFAULT,
+		     CFG_TIME_SYNC_FTM_ROLE_MIN,
+		     CFG_TIME_SYNC_FTM_ROLE_MAX),
+#endif
 };
 
 /**
@@ -8268,6 +8327,8 @@ void hdd_cfg_print(struct hdd_context *hdd_ctx)
 		  hdd_ctx->config->btm_max_attempt_cnt);
 	hdd_debug("Name = [btm_sticky_time] value = [0x%x]",
 		  hdd_ctx->config->btm_sticky_time);
+	hdd_debug("Name = [btm_query_bitmask] value = [0x%x]",
+		  hdd_ctx->config->btm_query_bitmask);
 	hdd_debug("Name = [%s] value = [%d]",
 		  CFG_ENABLE_GCMP_NAME,
 		  hdd_ctx->config->gcmp_enabled);
@@ -8327,6 +8388,23 @@ void hdd_cfg_print(struct hdd_context *hdd_ctx)
 		  hdd_ctx->config->enable_ring_buffer);
 	hdd_debug("Name = [num_vdevs] value = [0x%x]",
 		  hdd_ctx->config->num_vdevs);
+	hdd_debug("Name = [%s] Value =[%x]",
+		  CFG_PKT_CAPTURE_MODE,
+		  hdd_ctx->config->pkt_capture_mode);
+	hdd_debug("Name = [%s] value = [%d]",
+		  CFG_DISABLE_4WAY_HS_OFFLOAD,
+		  hdd_ctx->config->disable_4way_hs_offload);
+#ifdef FEATURE_WLAN_TIME_SYNC_FTM
+	hdd_debug("Name = [%s] Value =[%d]",
+		  CFG_ENABLE_TIME_SYNC_FTM,
+		  hdd_ctx->config->time_sync_ftm_enable);
+	hdd_debug("Name = [%s] Value =[%d]",
+		  CFG_TIME_SYNC_FTM_MODE,
+		  hdd_ctx->config->time_sync_ftm_mode);
+	hdd_debug("Name = [%s] Value =[%d]",
+		  CFG_TIME_SYNC_FTM_ROLE,
+		  hdd_ctx->config->time_sync_ftm_role);
+#endif
 }
 
 /**
@@ -10199,6 +10277,11 @@ QDF_STATUS hdd_set_sme_config(struct hdd_context *hdd_ctx)
 			hdd_ctx->config->btm_max_attempt_cnt;
 	smeConfig->csrConfig.btm_sticky_time =
 			hdd_ctx->config->btm_sticky_time;
+	smeConfig->csrConfig.btm_query_bitmask =
+			hdd_ctx->config->btm_query_bitmask;
+	smeConfig->csrConfig.disable_4way_hs_offload =
+			hdd_ctx->config->disable_4way_hs_offload;
+
 	hdd_update_bss_score_params(hdd_ctx->config,
 			&smeConfig->csrConfig.bss_score_params);
 
