@@ -3472,6 +3472,12 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 					owrt_ap_set_list_vap(dut, vap_count +
 							     (wlan_tag - 1),
 							     "owe_groups", buf);
+					if (dut->owe_ptk_workaround)
+						owrt_ap_set_list_vap(
+							dut, vap_count +
+							(wlan_tag - 1),
+							"owe_ptk_workaround",
+							"1");
 				}
 			}
 		}
@@ -3778,6 +3784,10 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 					 dut->ap_sae_groups);
 				owrt_ap_set_list_vap(dut, vap_count,
 						     "owe_groups", buf);
+				if (dut->owe_ptk_workaround)
+					owrt_ap_set_list_vap(
+						dut, vap_count,
+						"owe_ptk_workaround", "1");
 			}
 
 			if (dut->ap_key_mgmt == AP_WPA2_OWE &&
@@ -7826,8 +7836,11 @@ enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 		fprintf(f, "wpa_key_mgmt=OWE\n");
 		fprintf(f, "rsn_pairwise=%s\n",
 			hostapd_cipher_name(dut->ap_cipher));
-		if (dut->ap_sae_groups)
+		if (dut->ap_sae_groups) {
 			fprintf(f, "owe_groups=%s\n", dut->ap_sae_groups);
+			if (dut->owe_ptk_workaround)
+				fprintf(f, "owe_ptk_workaround=1\n");
+		}
 		break;
 	case AP_OSEN:
 		fprintf(f, "osen=1\n");
@@ -8308,8 +8321,11 @@ skip_key_mgmt:
 		fprintf(f, "rsn_pairwise=CCMP\n");
 		fprintf(f, "ieee80211w=2\n");
 		fprintf(f, "ignore_broadcast_ssid=1\n");
-		if (dut->ap_sae_groups)
+		if (dut->ap_sae_groups) {
 			fprintf(f, "owe_groups=%s\n", dut->ap_sae_groups);
+			if (dut->owe_ptk_workaround)
+				fprintf(f, "owe_ptk_workaround=1\n");
+		}
 	}
 
 	if (dut->program == PROGRAM_OCE) {

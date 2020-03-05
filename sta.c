@@ -2933,9 +2933,12 @@ static int sta_set_owe(struct sigma_dut *dut, struct sigma_conn *conn,
 					"Failed to set OWE DH Param element override");
 			return -2;
 		}
-	} else if (val && set_network(ifname, id, "owe_group", val) < 0) {
+	} else if (val &&
+		   (set_network(ifname, id, "owe_group", val) < 0 ||
+		    (dut->owe_ptk_workaround &&
+		     set_network(ifname, id, "owe_ptk_workaround", "1") < 0))) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"Failed to clear owe_group");
+				"Failed to set owe_group");
 		return -2;
 	}
 

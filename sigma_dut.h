@@ -938,6 +938,7 @@ struct sigma_dut {
 		SAE_PWE_LOOP,
 		SAE_PWE_H2E
 	} sae_pwe;
+	int owe_ptk_workaround;
 };
 
 
