@@ -34,6 +34,9 @@
 #include <linux/kthread.h>
 #include <linux/interrupt.h>
 #include "synaptics_tcm_core.h"
+#ifdef CONFIG_TOUCHSCREEN_COMMON
+#include <linux/input/tp_common.h>
+#endif
 
 #ifdef CONFIG_KERNEL_CUSTOM_FACTORY
 #include "../lct_tp_work.h"
@@ -406,6 +409,33 @@ exit:
 	LOG_DONE();
 	return retval;
 }
+
+#ifdef CONFIG_TOUCHSCREEN_COMMON
+static ssize_t double_tap_show(struct kobject *kobj,
+                   struct kobj_attribute *attr, char *buf)
+{
+    return sprintf(buf, "%d\n", synaptics_gesture_enable_flag);
+}
+
+static ssize_t double_tap_store(struct kobject *kobj,
+                struct kobj_attribute *attr, const char *buf,
+                size_t count)
+{
+    int rc, val;
+    
+    rc = kstrtoint(buf, 10, &val);
+    if (rc)
+    return -EINVAL;
+    
+    synaptics_gesture_enable_flag = !!val;
+    return count;
+}
+
+static struct tp_common_ops double_tap_ops = {
+    .show = double_tap_show,
+    .store = double_tap_store
+};
+#endif
 
 static ssize_t syna_tcm_sysfs_reset_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
@@ -3472,6 +3502,15 @@ static int syna_tcm_probe(struct platform_device *pdev)
 				"Failed to configure GPIO's\n");
 		goto err_config_gpio;
 	}
+    
+#ifdef CONFIG_TOUCHSCREEN_COMMON
+    retval = tp_common_set_double_tap_ops(&double_tap_ops);
+    if (retval < 0) {
+        dev_err(&pdev->dev,
+                "%s: Failed to create double_tap node err=%d\n",
+                __func__, retval);
+    }
+#endif
 
 #ifdef CONFIG_KERNEL_CUSTOM_FACTORY
 	retval = init_lct_tp_work(lct_tp_work_node_callback);
