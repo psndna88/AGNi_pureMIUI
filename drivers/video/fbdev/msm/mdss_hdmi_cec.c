@@ -17,6 +17,7 @@
 #include <linux/slab.h>
 #include <linux/device.h>
 #include <linux/input.h>
+#include <linux/circ_buf.h>
 
 #include "mdss_hdmi_cec.h"
 #include "mdss_panel.h"
@@ -33,6 +34,9 @@
 #define CEC_OP_KEY_PRESS        0x44
 #define CEC_OP_STANDBY          0x36
 
+#define CEC_RECV_Q_SIZE		4
+#define CEC_RECV_Q_MASK		3
+
 struct hdmi_cec_ctrl {
 	bool cec_enabled;
 	bool cec_wakeup_en;
@@ -40,7 +44,9 @@ struct hdmi_cec_ctrl {
 	bool cec_clear_logical_addr;
 
 	u32 cec_msg_wr_status;
-	struct cec_msg recv_msg;
+	struct cec_msg recv_msg[CEC_RECV_Q_SIZE];
+	u32 head;
+	u32 tail;
 	spinlock_t lock;
 	struct work_struct cec_read_work;
 	struct completion cec_msg_wr_done;
@@ -172,6 +178,8 @@ static int hdmi_cec_msg_read(struct hdmi_cec_ctrl *cec_ctrl)
 	struct cec_msg *msg;
 	u32 data;
 	int i;
+	u32 head;
+	u32 tail;
 
 	if (!cec_ctrl || !cec_ctrl->init_data.io) {
 		DEV_ERR("%s: invalid input\n", __func__);
@@ -183,7 +191,15 @@ static int hdmi_cec_msg_read(struct hdmi_cec_ctrl *cec_ctrl)
 		return -ENODEV;
 	}
 
-	msg = &cec_ctrl->recv_msg;
+	head = cec_ctrl->head;
+	tail = READ_ONCE(cec_ctrl->tail);
+	if (CIRC_SPACE(head, tail, CEC_RECV_Q_SIZE) < 1) {
+		DEV_ERR("%s: no more space to hold the buffer\n", __func__);
+		return 0; /* Let's just kick the thread */
+	}
+
+	msg = &cec_ctrl->recv_msg[head];
+
 	io = cec_ctrl->init_data.io;
 	data = DSS_REG_R(io, HDMI_CEC_RD_DATA);
 
@@ -220,6 +236,9 @@ static int hdmi_cec_msg_read(struct hdmi_cec_ctrl *cec_ctrl)
 	if (cec_ctrl->cec_clear_logical_addr)
 		return -EINVAL;
 
+	/* Update head */
+	smp_store_release(&cec_ctrl->head, (head + 1) & CEC_RECV_Q_MASK);
+
 	DEV_DBG("%s: opcode 0x%x, wakup_en %d, device_suspend %d\n", __func__,
 		msg->opcode, cec_ctrl->cec_wakeup_en,
 		cec_ctrl->cec_device_suspend);
@@ -232,6 +251,8 @@ static void hdmi_cec_msg_recv(struct work_struct *work)
 	struct hdmi_cec_ctrl *cec_ctrl = NULL;
 	struct cec_msg msg;
 	struct cec_cbs *cbs;
+	u32 head;
+	u32 tail;
 
 	cec_ctrl = container_of(work, struct hdmi_cec_ctrl, cec_read_work);
 	if (!cec_ctrl || !cec_ctrl->init_data.io) {
@@ -240,31 +261,41 @@ static void hdmi_cec_msg_recv(struct work_struct *work)
 	}
 
 	cbs = cec_ctrl->init_data.cbs;
-	memcpy(&msg, &cec_ctrl->recv_msg, sizeof(msg));
 
-	if ((msg.opcode == CEC_OP_SET_STREAM_PATH ||
-		msg.opcode == CEC_OP_KEY_PRESS) &&
-		cec_ctrl->input && cec_ctrl->cec_wakeup_en &&
-		cec_ctrl->cec_device_suspend) {
-		DEV_DBG("%s: Sending power on at wakeup\n", __func__);
-		input_report_key(cec_ctrl->input, KEY_POWER, 1);
-		input_sync(cec_ctrl->input);
-		input_report_key(cec_ctrl->input, KEY_POWER, 0);
-		input_sync(cec_ctrl->input);
+	/* Read head before reading contents */
+	head = smp_load_acquire(&cec_ctrl->head);
+	tail = cec_ctrl->tail;
+	while (CIRC_CNT(head, tail, CEC_RECV_Q_SIZE) >= 1) {
+		memcpy(&msg, &cec_ctrl->recv_msg[tail], sizeof(msg));
+		tail = (tail + 1) & CEC_RECV_Q_MASK;
+
+		/* Finishing reading before incrementing tail */
+		smp_store_release(&cec_ctrl->tail, tail);
+
+		if ((msg.opcode == CEC_OP_SET_STREAM_PATH ||
+			msg.opcode == CEC_OP_KEY_PRESS) &&
+			cec_ctrl->input && cec_ctrl->cec_wakeup_en &&
+			cec_ctrl->cec_device_suspend) {
+			DEV_DBG("%s: Sending power on at wakeup\n", __func__);
+			input_report_key(cec_ctrl->input, KEY_POWER, 1);
+			input_sync(cec_ctrl->input);
+			input_report_key(cec_ctrl->input, KEY_POWER, 0);
+			input_sync(cec_ctrl->input);
+		}
+
+		if ((msg.opcode == CEC_OP_STANDBY) &&
+			cec_ctrl->input && cec_ctrl->cec_wakeup_en &&
+			!cec_ctrl->cec_device_suspend) {
+			DEV_DBG("%s: Sending power off on standby\n", __func__);
+			input_report_key(cec_ctrl->input, KEY_POWER, 1);
+			input_sync(cec_ctrl->input);
+			input_report_key(cec_ctrl->input, KEY_POWER, 0);
+			input_sync(cec_ctrl->input);
+		}
+
+		if (cbs && cbs->msg_recv_notify)
+			cbs->msg_recv_notify(cbs->data, &msg);
 	}
-
-	if ((msg.opcode == CEC_OP_STANDBY) &&
-		cec_ctrl->input && cec_ctrl->cec_wakeup_en &&
-		!cec_ctrl->cec_device_suspend) {
-		DEV_DBG("%s: Sending power off on standby\n", __func__);
-		input_report_key(cec_ctrl->input, KEY_POWER, 1);
-		input_sync(cec_ctrl->input);
-		input_report_key(cec_ctrl->input, KEY_POWER, 0);
-		input_sync(cec_ctrl->input);
-	}
-
-	if (cbs && cbs->msg_recv_notify)
-		cbs->msg_recv_notify(cbs->data, &msg);
 }
 
 /**
