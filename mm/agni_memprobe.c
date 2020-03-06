@@ -10,6 +10,7 @@
  * v1.3: feed actual zram usage of ram as addition for available ram
  * v1.4: use charging & battery % detection to decide swap behaviour by voting. Rewrite.
  * v1.5: Rewrite Logic cleanly, optimise. Drop caches aswell as needed.
+ * v1.6: Allow zram swapping on gaming and increase swappiness for 4 gb ram device variants
  */
 
 #include <asm/page.h>
@@ -68,19 +69,24 @@ bool agni_memprober(void) {
 		else
 			vote = false; /* Allow charging faster by keeping swapping off and thus less cpu usage */
 	}
-	if (adreno_load_perc > GPULOADTRIGGER) /* High GPU usage - typically while gaming */
-		vote = false;
+
+	if (adreno_load_perc > GPULOADTRIGGER) { /* High GPU usage - typically while gaming */
+		if (fourgb)
+			vote = true; /* big games need more ram so zram swapping is beneficial on 4gb devices */
+		else
+			vote = false;
+	}
 
 	if (low_batt_swap_stall) /* Battery below 25% */
 		vote = false;
 		
 	if (vote) {
 		if (fourgb) {
-			agni_swappiness = 20;
+			agni_swappiness = 30;
 		} else {
 			agni_swappiness = 15;
 		}
-		if (mem_avail_perc < 10)
+		if (fourgb && (mem_avail_perc < 10))
 			mm_drop_caches(3);
 	} else {
 		agni_swappiness = 1;

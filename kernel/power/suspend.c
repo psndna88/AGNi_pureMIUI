@@ -514,7 +514,6 @@ static int enter_state(suspend_state_t state)
 	printk("done.\n");
 	trace_suspend_resume(TPS("sync_filesystems"), 0, false);
 #endif
-	mm_drop_caches(3);
 
 	pr_debug("PM: Preparing system for sleep (%s)\n", pm_states[state]);
 	pm_suspend_clear_flags();
