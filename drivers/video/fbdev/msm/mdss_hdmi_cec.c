@@ -37,6 +37,7 @@ struct hdmi_cec_ctrl {
 	bool cec_enabled;
 	bool cec_wakeup_en;
 	bool cec_device_suspend;
+	bool cec_clear_logical_addr;
 
 	u32 cec_msg_wr_status;
 	struct cec_msg recv_msg;
@@ -212,6 +213,13 @@ static int hdmi_cec_msg_read(struct hdmi_cec_ctrl *cec_ctrl)
 	for (; i < MAX_OPERAND_SIZE; i++)
 		msg->operand[i] = 0;
 
+	/*
+	 * Clearing the logical address is used when the system doesn't
+	 * need to process CEC command any more.
+	 */
+	if (cec_ctrl->cec_clear_logical_addr)
+		return -EINVAL;
+
 	DEV_DBG("%s: opcode 0x%x, wakup_en %d, device_suspend %d\n", __func__,
 		msg->opcode, cec_ctrl->cec_wakeup_en,
 		cec_ctrl->cec_device_suspend);
@@ -379,6 +387,19 @@ static void hdmi_cec_write_logical_addr(void *input, u8 addr)
 		DSS_REG_W(cec_ctrl->init_data.io, HDMI_CEC_ADDR, addr & 0xF);
 }
 
+static void hdmi_cec_clear_logical_addr(void *input, bool clear_flag)
+{
+	struct hdmi_cec_ctrl *cec_ctrl = (struct hdmi_cec_ctrl *)input;
+
+	if (!cec_ctrl || !cec_ctrl->init_data.io) {
+		DEV_ERR("%s: Invalid input\n", __func__);
+		return;
+	}
+
+	if (cec_ctrl->cec_enabled)
+		cec_ctrl->cec_clear_logical_addr = clear_flag;
+}
+
 static int hdmi_cec_enable(void *input, bool enable)
 {
 	int ret = 0;
@@ -489,6 +510,7 @@ void *hdmi_cec_init(struct hdmi_cec_init_data *init_data)
 	/* populate hardware specific operations to client */
 	ops->send_msg = hdmi_cec_msg_send;
 	ops->wt_logical_addr = hdmi_cec_write_logical_addr;
+	ops->clear_logical_addr = hdmi_cec_clear_logical_addr;
 	ops->enable = hdmi_cec_enable;
 	ops->data = cec_ctrl;
 	ops->wakeup_en = hdmi_cec_wakeup_en;
