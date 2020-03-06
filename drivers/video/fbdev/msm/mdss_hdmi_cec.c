@@ -42,7 +42,7 @@ struct hdmi_cec_ctrl {
 	bool cec_wakeup_en;
 	bool cec_device_suspend;
 	bool cec_clear_logical_addr;
-
+	u32 cec_logical_addr;
 	u32 cec_msg_wr_status;
 	struct cec_msg recv_msg[CEC_RECV_Q_SIZE];
 	u32 head;
@@ -65,6 +65,20 @@ static int hdmi_cec_msg_send(void *data, struct cec_msg *msg)
 
 	if (!cec_ctrl || !cec_ctrl->init_data.io || !msg) {
 		DEV_ERR("%s: Invalid input\n", __func__);
+		return -EINVAL;
+	}
+
+	if (msg->sender_id != cec_ctrl->cec_logical_addr &&
+		msg->recvr_id == 0xF) {
+		/*
+		 * If the current logical address is not the
+		 * same as the sender_id and if the message is
+		 * broadcasting, the message is looping back.
+		 * Abort the message sending in that case
+		 */
+		DEV_ERR("%s: abort potential MAL msg %d:%d logical %d\n",
+			__func__, msg->sender_id, msg->recvr_id,
+			cec_ctrl->cec_logical_addr);
 		return -EINVAL;
 	}
 
@@ -414,8 +428,10 @@ static void hdmi_cec_write_logical_addr(void *input, u8 addr)
 		return;
 	}
 
-	if (cec_ctrl->cec_enabled)
+	if (cec_ctrl->cec_enabled) {
 		DSS_REG_W(cec_ctrl->init_data.io, HDMI_CEC_ADDR, addr & 0xF);
+		cec_ctrl->cec_logical_addr = addr & 0xF;
+	}
 }
 
 static void hdmi_cec_clear_logical_addr(void *input, bool clear_flag)
