@@ -563,4 +563,9 @@ static inline void udp_state_bpf(struct sock *sk)
 }
 // XIAOMI: Add by zhoulei8. It will been use bpf called every voip states.--end
 
+#ifdef CONFIG_BPF_STREAM_PARSER
+struct sk_psock;
+struct proto *udp_bpf_get_proto(struct sock *sk, struct sk_psock *psock);
+#endif /* BPF_STREAM_PARSER */
+
 #endif	/* _UDP_H */
