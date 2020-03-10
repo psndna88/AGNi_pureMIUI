@@ -449,6 +449,7 @@
 &dsi_sim_cmd {
 	qcom,ulps-enabled;
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,poms-align-panel-vsync;
 	qcom,mdss-dsi-display-timings {
 		timing@0 { /* WQHD 60FPS cmd mode*/
 			qcom,mdss-dsi-panel-phy-timings = [00 15 06 05 0a 09 06
