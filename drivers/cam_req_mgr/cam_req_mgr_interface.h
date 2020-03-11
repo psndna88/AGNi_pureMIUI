@@ -210,6 +210,7 @@ enum cam_req_mgr_link_evt_type {
  *             only to the devices which subscribe to this point.
  * @sof_timestamp_val: Captured time stamp value at sof hw event
  * @req_id   : req id which returned buf_done
+ * @trigger_id: ID to differentiate between the trigger devices
  */
 struct cam_req_mgr_trigger_notify {
 	int32_t  link_hdl;
@@ -218,6 +219,7 @@ struct cam_req_mgr_trigger_notify {
 	uint32_t trigger;
 	uint64_t sof_timestamp_val;
 	uint64_t req_id;
+	int32_t  trigger_id;
 };
 
 /**
@@ -286,6 +288,7 @@ struct cam_req_mgr_notify_stop {
  * @dev_id  : device id info
  * @p_delay : delay between time settings applied and take effect
  * @trigger : Trigger point for the client
+ * @trigger_on : This device provides trigger
  */
 struct cam_req_mgr_device_info {
 	int32_t                     dev_hdl;
@@ -293,6 +296,7 @@ struct cam_req_mgr_device_info {
 	enum cam_req_mgr_device_id  dev_id;
 	enum cam_pipeline_delay     p_delay;
 	uint32_t                    trigger;
+	bool                        trigger_on;
 };
 
 /**
@@ -303,6 +307,7 @@ struct cam_req_mgr_device_info {
  * @max_delay       : max pipeline delay on this link
  * @crm_cb          : callback funcs to communicate with req mgr
  * @subscribe_event : the mask of trigger points this link subscribes
+ * @trigger_id      : Unique ID provided to the triggering device
  */
 struct cam_req_mgr_core_dev_link_setup {
 	int32_t                    link_enable;
@@ -311,6 +316,7 @@ struct cam_req_mgr_core_dev_link_setup {
 	enum cam_pipeline_delay    max_delay;
 	struct cam_req_mgr_crm_cb *crm_cb;
 	uint32_t                   subscribe_event;
+	int32_t                    trigger_id;
 };
 
 /**
