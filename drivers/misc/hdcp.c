@@ -2085,7 +2085,8 @@ static void hdcp_lib_clean(struct hdcp_lib_handle *handle)
 	handle->authenticated = false;
 
 	/* AV mute the sink first to avoid artifacts */
-	handle->client_ops->mute_sink(handle->client_ctx);
+	if (handle->client_ops->mute_sink)
+		handle->client_ops->mute_sink(handle->client_ctx);
 
 	hdcp_lib_txmtr_deinit(handle);
 	if (!handle->legacy_app)
