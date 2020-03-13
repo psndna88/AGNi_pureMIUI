@@ -7434,3 +7434,58 @@ int msm_comm_memory_drain(struct msm_vidc_inst *inst)
 
 	return rc;
 }
+
+int msm_comm_check_prefetch_sufficient(struct msm_vidc_inst *inst)
+{
+	int rc = 0;
+	struct msm_vidc_platform_resources *res;
+	struct v4l2_plane_pix_format *fmt;
+	u32 i, internal_buf_sz = 0;
+	u32 prefetch_npix_sz = 0;
+	u32 prefetch_pix_sz = 0;
+
+	if (!inst || !inst->core) {
+		d_vpr_e("%s: invalid parameters\n", __func__);
+		return -EINVAL;
+	}
+	res = &inst->core->resources;
+	fmt = inst->fmts[OUTPUT_PORT].v4l2_fmt.fmt.pix_mp.plane_fmt;
+
+	if (!is_secure_session(inst) || !is_decode_session(inst))
+		return rc;
+
+	if (!(inst->memory_ops & MEMORY_PREFETCH))
+		return -ENOMEM;
+
+	prefetch_npix_sz = res->prefetch_non_pix_buf_count *
+				res->prefetch_non_pix_buf_size;
+	prefetch_pix_sz = res->prefetch_pix_buf_count *
+				res->prefetch_pix_buf_size;
+
+	for (i = 0; i < HAL_BUFFER_MAX; i++) {
+		struct hal_buffer_requirements *req;
+
+		req = &inst->buff_req.buffer[i];
+		if (req->buffer_type == HAL_BUFFER_INTERNAL_SCRATCH ||
+			req->buffer_type == HAL_BUFFER_INTERNAL_SCRATCH_1 ||
+			req->buffer_type == HAL_BUFFER_INTERNAL_SCRATCH_2 ||
+			req->buffer_type == HAL_BUFFER_INTERNAL_PERSIST ||
+			req->buffer_type == HAL_BUFFER_INTERNAL_PERSIST_1)
+			internal_buf_sz += req->buffer_size;
+	}
+
+	if (prefetch_npix_sz < internal_buf_sz) {
+		s_vpr_e(inst->sid,
+			"insufficient non-pix region prefetched %u, required %u",
+			internal_buf_sz, prefetch_npix_sz);
+		rc = -ENOMEM;
+	}
+	if (prefetch_pix_sz < fmt->sizeimage) {
+		s_vpr_e(inst->sid,
+			"insufficient pix region prefetched %u, required %u",
+			fmt->sizeimage, prefetch_pix_sz);
+		rc = -ENOMEM;
+	}
+
+	return rc;
+}
