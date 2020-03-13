@@ -339,4 +339,6 @@ void msm_comm_release_timestamps(struct msm_vidc_inst *inst);
 u32 msm_comm_get_max_framerate(struct msm_vidc_inst *inst);
 u32 msm_comm_calc_framerate(struct msm_vidc_inst *inst,	u64 timestamp_us,
 	u64 prev_ts);
+int msm_comm_memory_prefetch(struct msm_vidc_inst *inst);
+int msm_comm_memory_drain(struct msm_vidc_inst *inst);
 #endif

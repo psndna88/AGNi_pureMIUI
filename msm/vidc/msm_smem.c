@@ -9,7 +9,6 @@
 #include "msm_vidc_debug.h"
 #include "msm_vidc_resources.h"
 
-
 static int msm_dma_get_device_address(struct dma_buf *dbuf, unsigned long align,
 	dma_addr_t *iova, unsigned long *buffer_size,
 	unsigned long flags, enum hal_buffer buffer_type,
@@ -599,3 +598,73 @@ struct context_bank_info *msm_smem_get_context_bank(u32 session_type,
 	return match;
 }
 
+int msm_smem_memory_prefetch(struct msm_vidc_inst *inst)
+{
+	int i, rc = 0;
+	struct memory_regions *vidc_regions = NULL;
+	struct ion_prefetch_region ion_region[MEMORY_REGIONS_MAX];
+
+	if (!inst) {
+		d_vpr_e("%s: invalid parameters\n", __func__);
+		return -EINVAL;
+	}
+
+	vidc_regions = &inst->regions;
+	if (vidc_regions->num_regions > MEMORY_REGIONS_MAX) {
+		s_vpr_e(inst->sid, "%s: invalid num_regions %d, max %d\n",
+			__func__, vidc_regions->num_regions,
+			MEMORY_REGIONS_MAX);
+		return -EINVAL;
+	}
+
+	memset(ion_region, 0, sizeof(ion_region));
+	for (i = 0; i < vidc_regions->num_regions; i++) {
+		ion_region[i].size = vidc_regions->region[i].size;
+		ion_region[i].vmid = vidc_regions->region[i].vmid;
+	}
+
+	rc = msm_ion_heap_prefetch(ION_SECURE_HEAP_ID, ion_region,
+		vidc_regions->num_regions);
+	if (rc)
+		s_vpr_e(inst->sid, "%s: prefetch failed, ret: %d\n",
+			__func__, rc);
+	else
+		s_vpr_l(inst->sid, "%s: prefetch succeeded\n", __func__);
+
+	return rc;
+}
+
+int msm_smem_memory_drain(struct msm_vidc_inst *inst)
+{
+	int i, rc = 0;
+	struct memory_regions *vidc_regions = NULL;
+	struct ion_prefetch_region ion_region[MEMORY_REGIONS_MAX];
+
+	if (!inst) {
+		d_vpr_e("%s: invalid parameters\n", __func__);
+		return -EINVAL;
+	}
+
+	vidc_regions = &inst->regions;
+	if (vidc_regions->num_regions > MEMORY_REGIONS_MAX) {
+		s_vpr_e(inst->sid, "%s: invalid num_regions %d, max %d\n",
+			__func__, vidc_regions->num_regions,
+			MEMORY_REGIONS_MAX);
+		return -EINVAL;
+	}
+
+	memset(ion_region, 0, sizeof(ion_region));
+	for (i = 0; i < vidc_regions->num_regions; i++) {
+		ion_region[i].size = vidc_regions->region[i].size;
+		ion_region[i].vmid = vidc_regions->region[i].vmid;
+	}
+
+	rc = msm_ion_heap_drain(ION_SECURE_HEAP_ID, ion_region,
+		vidc_regions->num_regions);
+	if (rc)
+		s_vpr_e(inst->sid, "%s: drain failed, ret: %d\n", __func__, rc);
+	else
+		s_vpr_l(inst->sid, "%s: drain succeeded\n", __func__);
+
+	return rc;
+}

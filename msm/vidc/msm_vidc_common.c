@@ -7351,3 +7351,94 @@ int msm_comm_fetch_framerate(struct msm_vidc_inst *inst,
 	}
 	return rc;
 }
+
+static int msm_comm_memory_regions_prepare(struct msm_vidc_inst *inst)
+{
+	u32 i = 0;
+	struct msm_vidc_platform_resources *res;
+
+	if (!inst || !inst->core) {
+		d_vpr_e("%s: invalid parameters\n", __func__);
+		return -EINVAL;
+	}
+	res = &inst->core->resources;
+
+	inst->regions.num_regions = res->prefetch_non_pix_buf_count +
+		res->prefetch_pix_buf_count;
+	if (inst->regions.num_regions > MEMORY_REGIONS_MAX) {
+		s_vpr_e(inst->sid, "%s: invalid num_regions: %d, max: %d\n",
+			__func__, inst->regions.num_regions,
+			MEMORY_REGIONS_MAX);
+		return -EINVAL;
+	}
+
+	s_vpr_h(inst->sid,
+		"%s: preparing %d nonpixel memory regions of %ld bytes each and %d pixel memory regions of %ld bytes each\n",
+		__func__, res->prefetch_non_pix_buf_count,
+		res->prefetch_non_pix_buf_size, res->prefetch_pix_buf_count,
+		res->prefetch_pix_buf_size);
+
+	for (i = 0; i < res->prefetch_non_pix_buf_count; i++) {
+		inst->regions.region[i].size = res->prefetch_non_pix_buf_size;
+		inst->regions.region[i].vmid = ION_FLAG_CP_NON_PIXEL;
+	}
+
+	for (i = res->prefetch_non_pix_buf_count;
+		i < inst->regions.num_regions; i++) {
+		inst->regions.region[i].size = res->prefetch_pix_buf_size;
+		inst->regions.region[i].vmid = ION_FLAG_CP_PIXEL;
+	}
+
+	return 0;
+}
+
+int msm_comm_memory_prefetch(struct msm_vidc_inst *inst)
+{
+	int rc = 0;
+
+	if (!inst || !inst->smem_ops) {
+		d_vpr_e("%s: invalid parameters\n", __func__);
+		return -EINVAL;
+	}
+
+	if (inst->memory_ops & MEMORY_PREFETCH) {
+		s_vpr_h(inst->sid, "%s: prefetch done already\n", __func__);
+		return 0;
+	}
+
+	rc = msm_comm_memory_regions_prepare(inst);
+	if (rc)
+		return rc;
+
+	if (inst->regions.num_regions == 0)
+		return 0;
+
+	rc = inst->smem_ops->smem_prefetch(inst);
+	if (rc)
+		return rc;
+
+	inst->memory_ops |= MEMORY_PREFETCH;
+
+	return rc;
+}
+
+int msm_comm_memory_drain(struct msm_vidc_inst *inst)
+{
+	int rc = 0;
+
+	if (!inst || !inst->smem_ops) {
+		d_vpr_e("%s: invalid parameters\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!(inst->memory_ops & MEMORY_PREFETCH))
+		return 0;
+
+	rc = inst->smem_ops->smem_drain(inst);
+	if (rc)
+		return rc;
+
+	inst->memory_ops &= ~MEMORY_PREFETCH;
+
+	return rc;
+}

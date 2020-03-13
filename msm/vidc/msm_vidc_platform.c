@@ -431,6 +431,33 @@ static struct msm_vidc_common_data lahaina_common_data[] = {
 		.key = "qcom,avsync-window-size",
 		.value = 40,
 	},
+	{
+		.key = "qcom,prefetch_non_pix_buf_count",
+		.value = 1,
+	},
+	{
+		.key = "qcom,prefetch_non_pix_buf_size",
+		/*
+		 * Internal buffer size is calculated for secure decode session
+		 * of resolution 4k (4096x2160)
+		 * Internal buf size = calculate_scratch_size() +
+		 *	calculate_scratch1_size() + calculate_persist1_size()
+		 * Take maximum between VP9 10bit, HEVC 10bit, AVC, MPEG2 secure
+		 * decoder sessions
+		 */
+		.value = 209715200,
+	},
+	{
+		.key = "qcom,prefetch_pix_buf_count",
+		.value = 18,
+	},
+	{
+		.key = "qcom,prefetch_pix_buf_size",
+		/*
+		 * Calculated by VENUS_BUFFER_SIZE for 4096x2160 UBWC
+		 */
+		.value = 13434880,
+	},
 };
 
 static struct msm_vidc_common_data bengal_common_data_v0[] = {

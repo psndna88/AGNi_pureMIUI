@@ -775,6 +775,15 @@ int read_platform_resources_from_drv_data(
 	res->max_secure_inst_count = find_key_value(platform_data,
 			"qcom,max-secure-instances");
 
+	res->prefetch_pix_buf_count = find_key_value(platform_data,
+			"qcom,prefetch_pix_buf_count");
+	res->prefetch_pix_buf_size = find_key_value(platform_data,
+			"qcom,prefetch_pix_buf_size");
+	res->prefetch_non_pix_buf_count = find_key_value(platform_data,
+			"qcom,prefetch_non_pix_buf_count");
+	res->prefetch_non_pix_buf_size = find_key_value(platform_data,
+			"qcom,prefetch_non_pix_buf_size");
+
 	res->slave_side_cp = find_key_value(platform_data,
 			"qcom,slave-side-cp");
 	res->thermal_mitigable = find_key_value(platform_data,

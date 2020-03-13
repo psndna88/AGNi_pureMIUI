@@ -485,6 +485,8 @@ struct msm_vidc_inst_smem_ops {
 		struct msm_smem *smem);
 	int (*smem_unmap_dma_buf)(struct msm_vidc_inst *inst,
 		struct msm_smem *smem);
+	int (*smem_prefetch)(struct msm_vidc_inst *inst);
+	int (*smem_drain)(struct msm_vidc_inst *inst);
 };
 
 struct msm_vidc_inst {
@@ -552,6 +554,8 @@ struct msm_vidc_inst {
 	struct batch_mode batch;
 	struct delayed_work batch_work;
 	struct msm_vidc_inst_smem_ops *smem_ops;
+	enum memory_ops memory_ops;
+	struct memory_regions regions;
 	int (*buffer_size_calculators)(struct msm_vidc_inst *inst);
 	bool all_intra;
 	bool is_perf_eligible_session;
@@ -612,6 +616,8 @@ void msm_smem_put_dma_buf(void *dma_buf, u32 sid);
 int msm_smem_cache_operations(struct dma_buf *dbuf,
 	enum smem_cache_ops cache_op, unsigned long offset,
 	unsigned long size, u32 sid);
+int msm_smem_memory_prefetch(struct msm_vidc_inst *inst);
+int msm_smem_memory_drain(struct msm_vidc_inst *inst);
 void msm_vidc_fw_unload_handler(struct work_struct *work);
 void msm_vidc_ssr_handler(struct work_struct *work);
 /*

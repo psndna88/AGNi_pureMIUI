@@ -13,6 +13,7 @@
 
 #define HAL_BUFFER_MAX 0xe
 #define CVP_FRAME_RATE_MAX (60)
+#define MEMORY_REGIONS_MAX 30
 
 enum smem_type {
 	SMEM_DMA = 1,
@@ -73,6 +74,19 @@ enum smem_cache_ops {
 	SMEM_CACHE_CLEAN,
 	SMEM_CACHE_INVALIDATE,
 	SMEM_CACHE_CLEAN_INVALIDATE,
+};
+
+struct memory_regions {
+	u32 num_regions;
+	struct {
+		u64 size;
+		u32 vmid;
+	} region[MEMORY_REGIONS_MAX];
+};
+
+enum memory_ops {
+	MEMORY_PREFETCH = 1,
+	MEMORY_DRAIN,
 };
 
 enum core_id {
