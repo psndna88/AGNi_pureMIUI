@@ -24,7 +24,7 @@
 #include "cam_mem_mgr.h"
 #include "cam_debug_util.h"
 #include "cam_common_util.h"
-#include "camera_main.h"
+#include "cam_compat.h"
 
 #define CAM_REQ_MGR_EVENT_MAX 30
 
