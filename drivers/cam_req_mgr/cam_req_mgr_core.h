@@ -49,6 +49,7 @@ enum crm_workq_task_type {
 	CRM_WORKQ_TASK_DEV_ADD_REQ,
 	CRM_WORKQ_TASK_APPLY_REQ,
 	CRM_WORKQ_TASK_NOTIFY_SOF,
+	CRM_WORKQ_TASK_NOTIFY_EOF,
 	CRM_WORKQ_TASK_NOTIFY_ERR,
 	CRM_WORKQ_TASK_NOTIFY_FREEZE,
 	CRM_WORKQ_TASK_SCHED_REQ,
@@ -179,24 +180,38 @@ struct cam_req_mgr_apply {
 };
 
 /**
+ * struct crm_tbl_slot_special_ops
+ * @dev_hdl         : Device handle who requested for special ops
+ * @apply_at_eof    : Boolean Identifier for request to be applied at EOF
+ * @skip_next_frame : Flag to drop the frame after skip_before_apply frame
+ * @is_applied      : Flag to identify if request is already applied to device
+ *                    in previous frame
+ */
+struct crm_tbl_slot_special_ops {
+	int32_t dev_hdl;
+	bool apply_at_eof;
+	bool skip_next_frame;
+	bool is_applied;
+};
+
+/**
  * struct cam_req_mgr_tbl_slot
  * @idx             : slot index
  * @req_ready_map   : mask tracking which all devices have request ready
  * @state           : state machine for life cycle of a slot
  * @inject_delay    : insert extra bubbling for flash type of use cases
- * @dev_hdl         : stores the dev_hdl, who is having higher inject delay
- * @skip_next_frame : flag to drop the frame after skip_before_apply frame
- * @is_applied      : flag to identify if request is already applied to
- *                    device.
+ * @ops             : special operation for the table slot
+ *                    e.g.
+ *                    skip_next frame: in case of applying one device
+ *                    and skip others
+ *                    apply_at_eof: device that needs to apply at EOF
  */
 struct cam_req_mgr_tbl_slot {
-	int32_t             idx;
-	uint32_t            req_ready_map;
-	enum crm_req_state  state;
-	uint32_t            inject_delay;
-	int32_t             dev_hdl;
-	bool                skip_next_frame;
-	bool                is_applied;
+	int32_t                                idx;
+	uint32_t                               req_ready_map;
+	enum crm_req_state                     state;
+	uint32_t                               inject_delay;
+	struct  crm_tbl_slot_special_ops       ops;
 };
 
 /**
@@ -348,6 +363,7 @@ struct cam_req_mgr_connected_device {
  * @dual_trigger         : Links needs to wait for two triggers prior to
  *                         applying the settings
  * @trigger_cnt          : trigger count value per device initiating the trigger
+ * @eof_event_cnt        : Atomic variable to track the number of EOF requests
  */
 struct cam_req_mgr_core_link {
 	int32_t                              link_hdl;
@@ -380,7 +396,7 @@ struct cam_req_mgr_core_link {
 	uint64_t                             prev_sof_timestamp;
 	bool                                 dual_trigger;
 	uint32_t    trigger_cnt[CAM_REQ_MGR_MAX_TRIGGERS];
-
+	atomic_t                             eof_event_cnt;
 };
 
 /**

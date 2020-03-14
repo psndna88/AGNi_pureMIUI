@@ -3910,6 +3910,7 @@ static int __cam_isp_ctx_config_dev_in_top_state(
 			add_req.dev_hdl  = ctx->dev_hdl;
 			add_req.req_id   = req->request_id;
 			add_req.skip_before_applying = 0;
+			add_req.trigger_eof = false;
 			rc = ctx->ctx_crm_intf->add_req(&add_req);
 			if (rc) {
 				CAM_ERR(CAM_ISP, "Add req failed: req id=%llu",
@@ -4525,7 +4526,8 @@ static int __cam_isp_ctx_link_in_acquired(struct cam_context *ctx,
 
 	ctx->link_hdl = link->link_hdl;
 	ctx->ctx_crm_intf = link->crm_cb;
-	ctx_isp->subscribe_event = link->subscribe_event;
+	ctx_isp->subscribe_event =
+		CAM_TRIGGER_POINT_SOF | CAM_TRIGGER_POINT_EOF;
 	ctx_isp->trigger_id = link->trigger_id;
 
 	/* change state only if we had the init config */

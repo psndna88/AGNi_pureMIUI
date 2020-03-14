@@ -186,12 +186,13 @@ enum cam_req_mgr_device_id {
 
 /**
  * enum cam_req_mgr_link_evt_type
- * @CAM_REQ_MGR_LINK_EVT_ERR        : error on the link from any of the
- *                                    connected devices
- * @CAM_REQ_MGR_LINK_EVT_PAUSE      : to pause the link
- * @CAM_REQ_MGR_LINK_EVT_RESUME     : resumes the link which was paused
- * @CAM_REQ_MGR_LINK_EVT_SOF_FREEZE : request manager has detected an sof freeze
- * @CAM_REQ_MGR_LINK_EVT_MAX        : invalid event type
+ * @CAM_REQ_MGR_LINK_EVT_ERR             : error on the link from any of the
+ *                                         connected devices
+ * @CAM_REQ_MGR_LINK_EVT_PAUSE           : to pause the link
+ * @CAM_REQ_MGR_LINK_EVT_RESUME          : resumes the link which was paused
+ * @CAM_REQ_MGR_LINK_EVT_SOF_FREEZE      : request manager has detected an
+ *                                         sof freeze
+ * @CAM_REQ_MGR_LINK_EVT_MAX             : invalid event type
  */
 enum cam_req_mgr_link_evt_type {
 	CAM_REQ_MGR_LINK_EVT_ERR,
@@ -261,12 +262,15 @@ struct cam_req_mgr_error_notify {
  * @req_id               : req id which device is ready to process
  * @skip_before_applying : before applying req mgr introduce bubble
  *                         by not sending request to devices. ex: IFE and Flash
+ * @trigger_eof          : to identify that one of the device at this slot needs
+ *                         to be apply at EOF
  */
 struct cam_req_mgr_add_request {
 	int32_t  link_hdl;
 	int32_t  dev_hdl;
 	uint64_t req_id;
 	uint32_t skip_before_applying;
+	bool     trigger_eof;
 };
 
 
@@ -355,15 +359,14 @@ struct cam_req_mgr_flush_request {
 
 /**
  * struct cam_req_mgr_event_data
- * @link_hdl : link handle
- * @req_id   : request id
- * @evt_type : link event
+ * @link_hdl          : link handle
+ * @req_id            : request id
+ * @evt_type          : link event
  */
 struct cam_req_mgr_link_evt_data {
 	int32_t  link_hdl;
 	int32_t  dev_hdl;
 	uint64_t req_id;
-
 	enum cam_req_mgr_link_evt_type evt_type;
 	union {
 		enum cam_req_mgr_device_error error;

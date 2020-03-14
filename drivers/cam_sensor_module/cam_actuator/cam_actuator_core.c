@@ -370,6 +370,7 @@ static void cam_actuator_update_req_mgr(
 	add_req.req_id = csl_packet->header.request_id;
 	add_req.dev_hdl = a_ctrl->bridge_intf.device_hdl;
 	add_req.skip_before_applying = 0;
+	add_req.trigger_eof = false;
 
 	if (a_ctrl->bridge_intf.crm_cb &&
 		a_ctrl->bridge_intf.crm_cb->add_req) {
