@@ -3239,41 +3239,61 @@ static int set_anqp_elem_value(struct sigma_dut *dut, const char *ifname,
 }
 
 
+static const char * get_hostapd_ifname(struct sigma_dut *dut)
+{
+	enum driver_type drv;
+
+	/* Use the configured hostapd ifname */
+	if (dut->hostapd_ifname && if_nametoindex(dut->hostapd_ifname) > 0)
+		return dut->hostapd_ifname;
+
+	/* Use configured main ifname */
+	if (dut->main_ifname) {
+		if (dut->use_5g && dut->main_ifname_5g &&
+		    if_nametoindex(dut->main_ifname_5g) > 0)
+			return dut->main_ifname_5g;
+		if (!dut->use_5g && dut->main_ifname_2g &&
+		    if_nametoindex(dut->main_ifname_2g) > 0)
+			return dut->main_ifname_2g;
+		if (if_nametoindex(dut->main_ifname) > 0)
+			return dut->main_ifname;
+	}
+
+	/* Return based on driver type (indirectly started hostapd) */
+	drv = get_driver_type(dut);
+	if (drv == DRIVER_ATHEROS) {
+		if (dut->use_5g && if_nametoindex("ath1") > 0)
+			return "ath1";
+		return "ath0";
+	}
+
+	if (drv == DRIVER_OPENWRT) {
+		if (sigma_radio_ifname[0] &&
+		    strcmp(sigma_radio_ifname[0], "wifi2") == 0)
+			return "ath2";
+		if (sigma_radio_ifname[0] &&
+		    strcmp(sigma_radio_ifname[0], "wifi1") == 0)
+			return "ath1";
+		return "ath0";
+	}
+
+	/* wlan1-is-likely-5-GHz design */
+	if (dut->use_5g && if_nametoindex("wlan1") > 0)
+		return "wlan1";
+
+	/* If nothing else matches, hope for the best and guess this is wlan0 */
+	return "wlan0";
+}
+
+
 static void get_if_name(struct sigma_dut *dut, char *ifname_str,
 			size_t str_size, int wlan_tag)
 {
 	const char *ifname;
 	enum driver_type drv;
 
+	ifname = get_hostapd_ifname(dut);
 	drv = get_driver_type(dut);
-	if (dut->hostapd_ifname && if_nametoindex(dut->hostapd_ifname) > 0) {
-		ifname = dut->hostapd_ifname;
-	} else if (drv == DRIVER_ATHEROS) {
-		if ((dut->ap_mode == AP_11a || dut->ap_mode == AP_11na ||
-		     dut->ap_mode == AP_11ac) &&
-		    if_nametoindex("ath1") > 0)
-			ifname = "ath1";
-		else
-			ifname = "ath0";
-	} else if (drv == DRIVER_OPENWRT) {
-		if (sigma_radio_ifname[0] &&
-		    strcmp(sigma_radio_ifname[0], "wifi2") == 0)
-			ifname = "ath2";
-		else if (sigma_radio_ifname[0] &&
-			 strcmp(sigma_radio_ifname[0], "wifi1") == 0)
-			ifname = "ath1";
-		else
-			ifname = "ath0";
-	} else if (drv == DRIVER_WIL6210) {
-		ifname = get_main_ifname(dut);
-	} else {
-		if ((dut->ap_mode == AP_11a || dut->ap_mode == AP_11na ||
-		     dut->ap_mode == AP_11ac) &&
-		    if_nametoindex("wlan1") > 0)
-			ifname = "wlan1";
-		else
-			ifname = "wlan0";
-	}
 
 	if (drv == DRIVER_OPENWRT && wlan_tag > 1) {
 		/* Handle tagged-ifname only on OPENWRT for now */
@@ -7435,60 +7455,24 @@ enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 				__func__);
 		return -2;
 	}
+
+	ifname = get_hostapd_ifname(dut);
+
 	switch (dut->ap_mode) {
 	case AP_11g:
 	case AP_11b:
 	case AP_11ng:
-		ifname = (drv == DRIVER_MAC80211) ? "wlan0" : "ath0";
-		if ((drv == DRIVER_QNXNTO || drv == DRIVER_LINUX_WCN) &&
-		    dut->main_ifname)
-			ifname = get_main_ifname(dut);
-		if (dut->main_ifname_2g)
-			ifname = dut->main_ifname_2g;
 		fprintf(f, "hw_mode=g\n");
 		break;
 	case AP_11a:
 	case AP_11na:
 	case AP_11ac:
-		if (dut->main_ifname_5g) {
-			ifname = dut->main_ifname_5g;
-		} else if (drv == DRIVER_QNXNTO || drv == DRIVER_LINUX_WCN) {
-			if (dut->main_ifname)
-				ifname = get_main_ifname(dut);
-			else
-				ifname = "wlan0";
-		} else if (drv == DRIVER_MAC80211) {
-			if (if_nametoindex("wlan1") > 0)
-				ifname = "wlan1";
-			else
-				ifname = "wlan0";
-		} else {
-			ifname = get_main_ifname(dut);
-		}
 		fprintf(f, "hw_mode=a\n");
 		break;
 	case AP_11ad:
-		ifname = get_main_ifname(dut);
 		fprintf(f, "hw_mode=ad\n");
 		break;
 	case AP_11ax:
-		if (dut->use_5g && dut->main_ifname_5g) {
-			ifname = dut->main_ifname_5g;
-		} else if (!dut->use_5g && dut->main_ifname_2g) {
-			ifname = dut->main_ifname_2g;
-		} else if (drv == DRIVER_QNXNTO || drv == DRIVER_LINUX_WCN) {
-			if (dut->main_ifname)
-				ifname = get_main_ifname(dut);
-			else
-				ifname = "wlan0";
-		} else if (drv == DRIVER_MAC80211) {
-			if (if_nametoindex("wlan1") > 0)
-				ifname = "wlan1";
-			else
-				ifname = "wlan0";
-		} else {
-			ifname = get_main_ifname(dut);
-		}
 		if (dut->use_5g)
 			fprintf(f, "hw_mode=a\n");
 		else
@@ -7498,8 +7482,6 @@ enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 		fclose(f);
 		return -1;
 	}
-	if (dut->hostapd_ifname)
-		ifname = dut->hostapd_ifname;
 
 	if (drv == DRIVER_MAC80211 || drv == DRIVER_LINUX_WCN)
 		fprintf(f, "driver=nl80211\n");
