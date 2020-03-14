@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
 /*
- * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef __UAPI_CAM_SENSOR_H__
@@ -11,7 +11,7 @@
 #include <media/cam_defs.h>
 
 #define CAM_SENSOR_PROBE_CMD   (CAM_COMMON_OPCODE_MAX + 1)
-#define CAM_FLASH_MAX_LED_TRIGGERS 3
+#define CAM_FLASH_MAX_LED_TRIGGERS 2
 #define MAX_OIS_NAME_SIZE 32
 #define CAM_CSIPHY_SECURE_MODE_ENABLED 1
 /**
@@ -434,13 +434,14 @@ struct cam_flash_set_rer {
 /**
  * struct cam_flash_set_on_off : led turn on/off command buffer
  *
- * @count              :   Number of Flash leds
- * @opcode             :   command buffer opcodes
- *			CAM_FLASH_FIRE_LOW
- *			CAM_FLASH_FIRE_HIGH
- *			CAM_FLASH_OFF
- * @cmd_type           :   command buffer operation type
- * @led_current_ma     :   flash led current in ma
+ * @count                  : Number of Flash leds
+ * @opcode                 : Command buffer opcodes
+ *			     CAM_FLASH_FIRE_LOW
+ *			     CAM_FLASH_FIRE_HIGH
+ *			     CAM_FLASH_OFF
+ * @cmd_type               : Command buffer operation type
+ * @led_current_ma         : Flash led current in ma
+ * @time_on_duration_ms    : Flash time on duration in ns
  *
  */
 struct cam_flash_set_on_off {
@@ -449,6 +450,7 @@ struct cam_flash_set_on_off {
 	uint8_t     cmd_type;
 	uint16_t    reserved;
 	uint32_t    led_current_ma[CAM_FLASH_MAX_LED_TRIGGERS];
+	uint64_t    time_on_duration_ns;
 } __attribute__((packed));
 
 /**
