@@ -6402,7 +6402,6 @@ static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
 			goto close_mon_conn;
 		}
 	} else if (wifi_chip_type == DRIVER_WCN && fastreassoc) {
-#ifdef ANDROID
 		if (chan) {
 			unsigned int freq;
 
@@ -6460,17 +6459,6 @@ static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
 				  "errorCode,Failed to run DRIVER FASTREASSOC");
 			goto close_mon_conn;
 		}
-#else /* ANDROID */
-		sigma_dut_print(dut, DUT_MSG_DEBUG,
-				"Reassoc using iwpriv - skip chan=%d info",
-				chan);
-		snprintf(buf, sizeof(buf), "iwpriv %s reassoc", intf);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR, "%s failed", buf);
-			status = ERROR_SEND_STATUS;
-			goto close_mon_conn;
-		}
-#endif /* ANDROID */
 		sigma_dut_print(dut, DUT_MSG_INFO,
 				"sta_reassoc: Run %s successful", buf);
 	} else if (wpa_command(intf, "REASSOCIATE")) {
