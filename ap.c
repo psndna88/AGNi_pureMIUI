@@ -7297,7 +7297,7 @@ static int is_ht40minus_chan(int chan)
 {
 	return chan == 40 || chan == 48 || chan == 56 || chan == 64 ||
 		chan == 104 || chan == 112 || chan == 120 || chan == 128 ||
-		chan == 136 || chan == 153 || chan == 161;
+		chan == 136 || chan == 144 || chan == 153 || chan == 161;
 }
 
 
