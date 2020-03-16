@@ -21,9 +21,6 @@
 #include "cam_csiphy_dev.h"
 #include "cam_csiphy_core.h"
 
-#undef CDBG
-#define CDBG(fmt, args...) pr_debug(fmt, ##args)
-
 #define CSI_3PHASE_HW                               1
 #define CSIPHY_VERSION_V35                        0x35
 #define CSIPHY_VERSION_V10                        0x10
@@ -55,7 +52,7 @@ int cam_csiphy_parse_dt_info(struct platform_device *pdev,
  *
  * This API enables SOC related parameters
  */
-int cam_csiphy_enable_hw(struct csiphy_device *csiphy_dev);
+int cam_csiphy_enable_hw(struct csiphy_device *csiphy_dev, int32_t index);
 
 /**
  * @csiphy_dev: CSIPhy device structure
