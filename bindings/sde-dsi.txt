@@ -3,17 +3,18 @@ Qualcomm Technologies, Inc.
 mdss-dsi is the master DSI device which supports multiple DSI host controllers
 that are compatible with MIPI display serial interface specification.
 
-DSI Controller:
+DSI Controller and PHY:
 Required properties:
 - compatible:           Should be "qcom,dsi-ctrl-hw-v<version>". Supported
 			versions include 1.4, 2.0 and 2.2.
 			eg: qcom,dsi-ctrl-hw-v1.4, qcom,dsi-ctrl-hw-v2.0,
 			qcom,dsi-ctrl-hw-v2.2, qcom,dsi-ctrl-hw-v2.3,
-			qcom,dsi-ctrl-hw-v2.4
+			qcom,dsi-ctrl-hw-v2.4, qcom,dsi-ctrl-hw-v2.5
 			And for dsi phy driver:
 			qcom,dsi-phy-v0.0-hpm, qcom,dsi-phy-v0.0-lpm,
 			qcom,dsi-phy-v1.0, qcom,dsi-phy-v2.0,
-			qcom,dsi-phy-v3.0, qcom,dsi-phy-v4.0, qcom,dsi-phy-v4.1
+			qcom,dsi-phy-v3.0, qcom,dsi-phy-v4.0,
+			qcom,dsi-phy-v4.1, qcom,dsi-phy-v4.2
 - reg:                  Base address and length of DSI controller's memory
 			mapped regions.
 - reg-names:            A list of strings that name the list of regs.
@@ -32,6 +33,8 @@ Required properties:
 			"core_clk"
 			"byte_clk_rcg"
 			"pixel_clk_rcg"
+- pll-label             Supported versions of DSI PLL:
+                        dsi_pll_5nm
 - gdsc-supply:		phandle to gdsc regulator node.
 - vdda-supply:		phandle to vdda regulator node.
 - vcca-supply:		phandle to vcca regulator node.
@@ -116,3 +119,10 @@ Optional properties:
 					specified in Documentation/devicetree/bindings/graph.txt.
 					Video port 0 reg 0 is for the bridge output. The remote
 					endpoint phandle should be mipi_dsi_device device node.
+- qcom,dsi-pll-ssc-en:                  Boolean property to indicate that ssc is enabled.
+- qcom,dsi-pll-ssc-mode:		Spread-spectrum clocking. It can be either "down-spread"
+					or "center-spread". Default is "down-spread" if it is not specified.
+- qcom,ssc-frequency-hz:		Integer property to specify the spread frequency
+					to be programmed for the SSC.
+- qcom,ssc-ppm:                         Integer property to specify the Parts per Million
+					value of SSC.
