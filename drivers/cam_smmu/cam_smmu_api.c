@@ -1933,7 +1933,7 @@ static int cam_smmu_map_buffer_validate(struct dma_buf *buf,
 	} else {
 		CAM_ERR(CAM_SMMU, "Error: Wrong region id passed");
 		rc = -EINVAL;
-		goto err_unmap_sg;
+		goto err_detach;
 	}
 
 	CAM_DBG(CAM_SMMU,
@@ -1988,6 +1988,10 @@ static int cam_smmu_map_buffer_validate(struct dma_buf *buf,
 	CAM_DBG(CAM_SMMU, "idx=%d, dma_buf=%pK, dev=%pK, paddr=%pK, len=%u",
 		idx, buf, (void *)iommu_cb_set.cb_info[idx].dev,
 		(void *)*paddr_ptr, (unsigned int)*len_ptr);
+
+	/* Unmap the mapping in dma region as this is not used anyway */
+	if (region_id == CAM_SMMU_REGION_SHARED)
+		dma_buf_unmap_attachment(attach, table, dma_dir);
 
 	return 0;
 
@@ -2135,14 +2139,16 @@ static int cam_smmu_unmap_buf_and_remove_from_list(
 		iommu_cb_set.cb_info[idx].shared_mapping_size -=
 			mapping_info->len;
 	} else if (mapping_info->region_id == CAM_SMMU_REGION_IO) {
+		if (mapping_info->is_internal)
+			mapping_info->attach->dma_map_attrs |=
+				DMA_ATTR_SKIP_CPU_SYNC;
+
+		dma_buf_unmap_attachment(mapping_info->attach,
+			mapping_info->table, mapping_info->dir);
 		iommu_cb_set.cb_info[idx].io_mapping_size -= mapping_info->len;
 	}
 
-	if (mapping_info->is_internal)
-		mapping_info->attach->dma_map_attrs |= DMA_ATTR_SKIP_CPU_SYNC;
 
-	dma_buf_unmap_attachment(mapping_info->attach,
-		mapping_info->table, mapping_info->dir);
 	dma_buf_detach(mapping_info->buf, mapping_info->attach);
 	dma_buf_put(mapping_info->buf);
 
