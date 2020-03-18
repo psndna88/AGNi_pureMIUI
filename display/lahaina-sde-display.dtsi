@@ -3,6 +3,7 @@
 #include "dsi-panel-sw43404-amoled-dsc-fhd-plus-cmd.dtsi"
 #include "dsi-panel-sharp-dsc-4k-cmd.dtsi"
 #include "dsi-panel-sharp-dsc-4k-video.dtsi"
+#include "dsi-panel-sharp-dsc-qhd-plus-cmd.dtsi"
 #include "dsi-panel-sharp-qsync-wqhd-cmd.dtsi"
 #include "dsi-panel-sharp-qsync-wqhd-video.dtsi"
 #include "dsi-panel-sharp-1080p-cmd.dtsi"
@@ -394,6 +395,18 @@
 		timing@0 {
 			qcom,mdss-dsi-panel-phy-timings = [00 13 06 05 09 08 06
 				06 03 02 04 00 11 0a];
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+&dsi_sharp_qhd_plus_dsc_cmd {
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 19 06 06 15 15 06
+				06 04 02 04 00 14 0b];
 			qcom,display-topology = <2 2 2>;
 			qcom,default-topology-index = <0>;
 		};
