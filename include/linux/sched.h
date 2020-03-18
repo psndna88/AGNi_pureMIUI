@@ -555,7 +555,6 @@ extern int
 register_cpu_cycle_counter_cb(struct cpu_cycle_counter_cb *cb);
 extern void
 sched_update_cpu_freq_min_max(const cpumask_t *cpus, u32 fmin, u32 fmax);
-extern void free_task_load_ptrs(struct task_struct *p);
 extern int set_task_boost(int boost, u64 period);
 extern void walt_update_cluster_topology(void);
 
@@ -603,7 +602,7 @@ struct walt_task_struct {
 	u32				sum, demand;
 	u32				coloc_demand;
 	u32				sum_history[RAVG_HIST_SIZE_MAX];
-	u32				*curr_window_cpu, *prev_window_cpu;
+	u32				curr_window_cpu[CONFIG_NR_CPUS], prev_window_cpu[CONFIG_NR_CPUS];
 	u32				curr_window, prev_window;
 	u32				pred_demand;
 	u8				busy_buckets[NUM_BUSY_BUCKETS];
@@ -637,8 +636,6 @@ register_cpu_cycle_counter_cb(struct cpu_cycle_counter_cb *cb)
 {
 	return 0;
 }
-
-static inline void free_task_load_ptrs(struct task_struct *p) { }
 
 static inline void sched_update_cpu_freq_min_max(const cpumask_t *cpus,
 					u32 fmin, u32 fmax) { }
