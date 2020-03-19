@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/slab.h>
@@ -48,6 +48,7 @@ struct cam_vfe_mux_camif_data {
 	bool                               enable_sof_irq_debug;
 	uint32_t                           irq_debug_cnt;
 	uint32_t                           camif_debug;
+	uint32_t                           is_dual;
 };
 
 static int cam_vfe_camif_get_evt_payload(
@@ -256,6 +257,7 @@ int cam_vfe_camif_ver2_acquire_resource(
 	camif_data->last_line   = acquire_data->vfe_in.in_port->line_stop;
 	camif_data->event_cb    = acquire_data->event_cb;
 	camif_data->priv        = acquire_data->priv;
+	camif_data->is_dual     = acquire_data->vfe_in.is_dual;
 
 	CAM_DBG(CAM_ISP, "hw id:%d pix_pattern:%d dsp_mode=%d",
 		camif_res->hw_intf->hw_idx,
@@ -433,6 +435,10 @@ static int cam_vfe_camif_resource_start(
 			rsrc_data->camif_reg->vfe_diag_config);
 	}
 
+	if ((rsrc_data->sync_mode == CAM_ISP_HW_SYNC_SLAVE) &&
+		rsrc_data->is_dual)
+		goto subscribe_err;
+
 	if (!rsrc_data->irq_handle) {
 		rsrc_data->irq_handle = cam_irq_controller_subscribe_irq(
 			rsrc_data->vfe_irq_controller,
@@ -450,6 +456,7 @@ static int cam_vfe_camif_resource_start(
 		}
 	}
 
+subscribe_err:
 	if (!rsrc_data->irq_err_handle) {
 		rsrc_data->irq_err_handle = cam_irq_controller_subscribe_irq(
 			rsrc_data->vfe_irq_controller,

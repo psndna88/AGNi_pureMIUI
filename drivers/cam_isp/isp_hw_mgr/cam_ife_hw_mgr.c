@@ -6900,63 +6900,6 @@ static int cam_ife_hw_mgr_handle_hw_rup(
 	return 0;
 }
 
-static int cam_ife_hw_mgr_check_irq_for_dual_vfe(
-	struct cam_ife_hw_mgr_ctx            *ife_hw_mgr_ctx,
-	uint32_t                              hw_event_type)
-{
-	int32_t                               rc = -1;
-	uint32_t                             *event_cnt = NULL;
-	uint32_t                              master_hw_idx;
-	uint32_t                              slave_hw_idx;
-
-	if (!ife_hw_mgr_ctx->is_dual)
-		return 0;
-
-	switch (hw_event_type) {
-	case CAM_ISP_HW_EVENT_SOF:
-		event_cnt = ife_hw_mgr_ctx->sof_cnt;
-		break;
-	case CAM_ISP_HW_EVENT_EPOCH:
-		event_cnt = ife_hw_mgr_ctx->epoch_cnt;
-		break;
-	case CAM_ISP_HW_EVENT_EOF:
-		event_cnt = ife_hw_mgr_ctx->eof_cnt;
-		break;
-	default:
-		return 0;
-	}
-
-	master_hw_idx = ife_hw_mgr_ctx->master_hw_idx;
-	slave_hw_idx =  ife_hw_mgr_ctx->slave_hw_idx;
-
-	if (event_cnt[master_hw_idx] == event_cnt[slave_hw_idx]) {
-
-		event_cnt[master_hw_idx] = 0;
-		event_cnt[slave_hw_idx] = 0;
-
-		rc = 0;
-		return rc;
-	}
-
-	if ((event_cnt[master_hw_idx] &&
-		(event_cnt[master_hw_idx] - event_cnt[slave_hw_idx] > 1)) ||
-		(event_cnt[slave_hw_idx] &&
-		(event_cnt[slave_hw_idx] - event_cnt[master_hw_idx] > 1))) {
-
-		CAM_ERR_RATE_LIMIT(CAM_ISP,
-			"One of the VFE could not generate hw event %d master[%d] core_cnt %d slave[%d] core_cnt %d",
-			hw_event_type, master_hw_idx, event_cnt[master_hw_idx],
-			slave_hw_idx, event_cnt[slave_hw_idx]);
-		rc = -1;
-		return rc;
-	}
-
-	CAM_DBG(CAM_ISP, "Only one core_index has given hw event %d",
-			hw_event_type);
-
-	return rc;
-}
-
 static int cam_ife_hw_mgr_handle_hw_epoch(
 	void                                 *ctx,
 	void                                 *evt_info)
@@ -6965,25 +6908,19 @@ static int cam_ife_hw_mgr_handle_hw_epoch(
 	struct cam_ife_hw_mgr_ctx            *ife_hw_mgr_ctx = ctx;
 	cam_hw_event_cb_func                  ife_hw_irq_epoch_cb;
 	struct cam_isp_hw_epoch_event_data    epoch_done_event_data;
-	int                                   rc = 0;
 
 	ife_hw_irq_epoch_cb =
 		ife_hw_mgr_ctx->common.event_cb[CAM_ISP_HW_EVENT_EPOCH];
 
 	switch (event_info->res_id) {
 	case CAM_ISP_HW_VFE_IN_CAMIF:
-		ife_hw_mgr_ctx->epoch_cnt[event_info->hw_idx]++;
-		rc = cam_ife_hw_mgr_check_irq_for_dual_vfe(ife_hw_mgr_ctx,
-			CAM_ISP_HW_EVENT_EPOCH);
-		if (!rc) {
-			if (atomic_read(&ife_hw_mgr_ctx->overflow_pending))
-				break;
+		if (atomic_read(&ife_hw_mgr_ctx->overflow_pending))
+			break;
 
-			epoch_done_event_data.frame_id_meta =
-				event_info->th_reg_val;
-			ife_hw_irq_epoch_cb(ife_hw_mgr_ctx->common.cb_priv,
-				CAM_ISP_HW_EVENT_EPOCH, &epoch_done_event_data);
-		}
+		epoch_done_event_data.frame_id_meta = event_info->th_reg_val;
+		ife_hw_irq_epoch_cb(ife_hw_mgr_ctx->common.cb_priv,
+			CAM_ISP_HW_EVENT_EPOCH, &epoch_done_event_data);
+
 		break;
 
 	case CAM_ISP_HW_VFE_IN_RDI0:
@@ -7014,7 +6951,6 @@ static int cam_ife_hw_mgr_handle_hw_sof(
 	struct cam_ife_hw_mgr_ctx            *ife_hw_mgr_ctx = ctx;
 	cam_hw_event_cb_func                  ife_hw_irq_sof_cb;
 	struct cam_isp_hw_sof_event_data      sof_done_event_data;
-	int                                   rc = 0;
 
 	memset(&sof_done_event_data, 0, sizeof(sof_done_event_data));
 
@@ -7024,30 +6960,26 @@ static int cam_ife_hw_mgr_handle_hw_sof(
 	switch (event_info->res_id) {
 	case CAM_ISP_HW_VFE_IN_CAMIF:
 	case CAM_ISP_HW_VFE_IN_RD:
-		ife_hw_mgr_ctx->sof_cnt[event_info->hw_idx]++;
-		rc = cam_ife_hw_mgr_check_irq_for_dual_vfe(ife_hw_mgr_ctx,
-			CAM_ISP_HW_EVENT_SOF);
-		if (!rc) {
-			if (ife_hw_mgr_ctx->is_offline)
-				cam_ife_hw_mgr_get_offline_sof_timestamp(
-					&sof_done_event_data.timestamp,
-					&sof_done_event_data.boot_time);
-			else
-				cam_ife_mgr_cmd_get_sof_timestamp(
-					ife_hw_mgr_ctx,
-					&sof_done_event_data.timestamp,
-					&sof_done_event_data.boot_time);
+		if (ife_hw_mgr_ctx->is_offline)
+			cam_ife_hw_mgr_get_offline_sof_timestamp(
+				&sof_done_event_data.timestamp,
+				&sof_done_event_data.boot_time);
+		else
+			cam_ife_mgr_cmd_get_sof_timestamp(
+				ife_hw_mgr_ctx,
+				&sof_done_event_data.timestamp,
+				&sof_done_event_data.boot_time);
 
-			/* if frame header is enabled reset qtimer ts */
-			if (ife_hw_mgr_ctx->use_frame_header_ts)
-				sof_done_event_data.timestamp = 0x0;
+		/* if frame header is enabled reset qtimer ts */
+		if (ife_hw_mgr_ctx->use_frame_header_ts)
+			sof_done_event_data.timestamp = 0x0;
 
-			if (atomic_read(&ife_hw_mgr_ctx->overflow_pending))
-				break;
+		if (atomic_read(&ife_hw_mgr_ctx->overflow_pending))
+			break;
 
-			ife_hw_irq_sof_cb(ife_hw_mgr_ctx->common.cb_priv,
-				CAM_ISP_HW_EVENT_SOF, &sof_done_event_data);
-		}
+		ife_hw_irq_sof_cb(ife_hw_mgr_ctx->common.cb_priv,
+			CAM_ISP_HW_EVENT_SOF, &sof_done_event_data);
+
 		break;
 
 	case CAM_ISP_HW_VFE_IN_RDI0:
@@ -7089,22 +7021,18 @@ static int cam_ife_hw_mgr_handle_hw_eof(
 	struct cam_ife_hw_mgr_ctx            *ife_hw_mgr_ctx = ctx;
 	cam_hw_event_cb_func                  ife_hw_irq_eof_cb;
 	struct cam_isp_hw_eof_event_data      eof_done_event_data;
-	int                                   rc = 0;
 
 	ife_hw_irq_eof_cb =
 		ife_hw_mgr_ctx->common.event_cb[CAM_ISP_HW_EVENT_EOF];
 
 	switch (event_info->res_id) {
 	case CAM_ISP_HW_VFE_IN_CAMIF:
-		ife_hw_mgr_ctx->eof_cnt[event_info->hw_idx]++;
-		rc = cam_ife_hw_mgr_check_irq_for_dual_vfe(ife_hw_mgr_ctx,
-			CAM_ISP_HW_EVENT_EOF);
-		if (!rc) {
-			if (atomic_read(&ife_hw_mgr_ctx->overflow_pending))
-				break;
-			ife_hw_irq_eof_cb(ife_hw_mgr_ctx->common.cb_priv,
-				CAM_ISP_HW_EVENT_EOF, &eof_done_event_data);
-		}
+		if (atomic_read(&ife_hw_mgr_ctx->overflow_pending))
+			break;
+
+		ife_hw_irq_eof_cb(ife_hw_mgr_ctx->common.cb_priv,
+			CAM_ISP_HW_EVENT_EOF, &eof_done_event_data);
+
 		break;
 
 	case CAM_ISP_HW_VFE_IN_RDI0:

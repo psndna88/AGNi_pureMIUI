@@ -500,6 +500,10 @@ static int cam_vfe_camif_ver3_resource_start(
 	err_irq_mask[CAM_IFE_IRQ_CAMIF_REG_STATUS2] =
 		rsrc_data->reg_data->error_irq_mask2;
 
+	if ((rsrc_data->sync_mode == CAM_ISP_HW_SYNC_SLAVE) &&
+		rsrc_data->is_dual)
+		goto subscribe_err;
+
 	irq_mask[CAM_IFE_IRQ_CAMIF_REG_STATUS1] =
 		rsrc_data->reg_data->epoch0_irq_mask |
 		rsrc_data->reg_data->eof_irq_mask;
@@ -546,6 +550,7 @@ static int cam_vfe_camif_ver3_resource_start(
 		}
 	}
 
+subscribe_err:
 	if (!rsrc_data->irq_err_handle) {
 		rsrc_data->irq_err_handle = cam_irq_controller_subscribe_irq(
 			rsrc_data->vfe_irq_controller,
