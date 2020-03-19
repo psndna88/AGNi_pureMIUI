@@ -34,7 +34,6 @@ static const char drv_name[] = "vfe_bus";
 
 #define CAM_VFE_RDI_BUS_DEFAULT_WIDTH               0xFFFF
 #define CAM_VFE_RDI_BUS_DEFAULT_STRIDE              0xFFFF
-#define CAM_VFE_BUS_VER3_INTRA_CLIENT_MASK          0x3
 
 #define MAX_BUF_UPDATE_REG_NUM   \
 	((sizeof(struct cam_vfe_bus_ver3_reg_offset_bus_client) +  \
@@ -251,57 +250,6 @@ static int cam_vfe_bus_ver3_put_evt_payload(
 
 	CAM_DBG(CAM_ISP, "Done");
 	return 0;
-}
-
-static int cam_vfe_bus_ver3_get_intra_client_mask(
-	enum cam_vfe_bus_ver3_vfe_core_id  dual_slave_core,
-	enum cam_vfe_bus_ver3_vfe_core_id  current_core,
-	uint32_t                          *intra_client_mask)
-{
-	int rc = 0;
-	uint32_t version_based_intra_client_mask = 0x1;
-
-	*intra_client_mask = 0;
-
-	if (dual_slave_core == current_core) {
-		CAM_ERR(CAM_ISP,
-			"Invalid params. Same core as Master and Slave");
-		return -EINVAL;
-	}
-
-	switch (current_core) {
-	case CAM_VFE_BUS_VER3_VFE_CORE_0:
-		switch (dual_slave_core) {
-		case CAM_VFE_BUS_VER3_VFE_CORE_1:
-			*intra_client_mask = version_based_intra_client_mask;
-			break;
-		default:
-			CAM_ERR(CAM_ISP, "Invalid value for slave core %u",
-				dual_slave_core);
-			rc = -EINVAL;
-			break;
-		}
-		break;
-	case CAM_VFE_BUS_VER3_VFE_CORE_1:
-		switch (dual_slave_core) {
-		case CAM_VFE_BUS_VER3_VFE_CORE_0:
-			*intra_client_mask = version_based_intra_client_mask;
-			break;
-		default:
-			CAM_ERR(CAM_ISP, "Invalid value for slave core %u",
-				dual_slave_core);
-			rc = -EINVAL;
-			break;
-		}
-		break;
-	default:
-		CAM_ERR(CAM_ISP,
-			"Invalid value for master core %u", current_core);
-		rc = -EINVAL;
-		break;
-	}
-
-	return rc;
 }
 
 static bool cam_vfe_bus_ver3_can_be_secure(uint32_t out_type)
@@ -1558,15 +1506,7 @@ static int cam_vfe_bus_ver3_acquire_comp_grp(
 	rsrc_data = comp_grp_local->res_priv;
 
 	if (!previously_acquired) {
-		if (is_dual) {
-			rc = cam_vfe_bus_ver3_get_intra_client_mask(
-				dual_slave_core,
-				comp_grp_local->hw_intf->hw_idx,
-				&rsrc_data->intra_client_mask);
-			if (rc)
-				return rc;
-		}
-
+		rsrc_data->intra_client_mask = 0x1;
 		comp_grp_local->tasklet_info = tasklet;
 		comp_grp_local->res_state = CAM_ISP_RESOURCE_STATE_RESERVED;
 
