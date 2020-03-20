@@ -43,14 +43,6 @@
 };
 
 &soc {
-	ext_disp: qcom,msm-ext-disp {
-		compatible = "qcom,msm-ext-disp";
-
-		ext_disp_audio_codec: qcom,msm-ext-disp-audio-codec-rx {
-			compatible = "qcom,msm-ext-disp-audio-codec-rx";
-		};
-	};
-
 	dsi_panel_pwr_supply: dsi_panel_pwr_supply {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -149,7 +141,7 @@
 };
 
 &mdss_mdp {
-	connectors = <&sde_wb &sde_dsi>;
+	connectors = <&sde_dp &sde_wb &sde_dsi>;
 };
 
 /* PHY TIMINGS REVISION YB */
