@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2017, 2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -564,6 +564,67 @@ int msm_hdmi_get_timing_info(
 	}
 
 	return ret;
+}
+
+static u32 cea_mode_alternate_clock(struct msm_hdmi_mode_timing_info *info)
+{
+	u32 clock = info->pixel_freq;
+
+	if (info->refresh_rate % 6 != 0)
+		return clock;
+
+	clock = DIV_ROUND_CLOSEST(clock * 1000, 1001);
+
+	return clock;
+}
+
+bool hdmi_util_is_ce_mode(u32 vic)
+{
+	struct msm_hdmi_mode_timing_info info1 = {0};
+	struct msm_hdmi_mode_timing_info info2 = {0};
+	u32 mode = 0;
+	u32 clock1, clock2, clock2_alt;
+	bool is_ce_mode = false;
+
+	if (vic <= HDMI_VFRMT_640x480p60_4_3) {
+		is_ce_mode = false;
+		goto end;
+	}
+
+	if (vic >= HDMI_VFRMT_720x480p60_4_3 &&
+			vic <= HDMI_VFRMT_3840x2160p60_64_27) {
+		is_ce_mode = true;
+		goto end;
+	}
+
+	msm_hdmi_get_timing_info(&info1, vic);
+
+	for (mode = HDMI_VFRMT_720x480p60_4_3; mode < HDMI_VFRMT_END; mode++) {
+
+		msm_hdmi_get_timing_info(&info2, mode);
+
+		clock1 = info1.pixel_freq;
+		clock2 = info2.pixel_freq;
+		clock2_alt = cea_mode_alternate_clock(&info2);
+
+		if ((clock1 == clock2) || (clock1 == clock2_alt)) {
+			if (info1.active_h == info2.active_h &&
+				info1.front_porch_h == info2.front_porch_h &&
+				info1.pulse_width_h == info2.pulse_width_h &&
+				info1.back_porch_h == info2.back_porch_h &&
+				info1.active_v == info2.active_v &&
+				info1.front_porch_v == info2.front_porch_v &&
+				info1.pulse_width_v == info2.pulse_width_v &&
+				info1.back_porch_v == info2.back_porch_v) {
+				is_ce_mode = true;
+				break;
+			}
+		}
+		continue;
+	}
+end:
+	pr_debug("%s: vic = %d, is_ce_mode = %d\n", __func__, vic, is_ce_mode);
+	return is_ce_mode;
 }
 
 int hdmi_get_supported_mode(struct msm_hdmi_mode_timing_info *info,

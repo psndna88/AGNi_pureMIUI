@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -93,6 +93,12 @@ struct hdmi_tx_ctrl {
 	struct work_struct fps_work;
 	struct mdp_hdr_stream_ctrl hdr_ctrl;
 
+	int pending_event;
+	bool handle_pe;
+	atomic_t notification_pending;
+	struct completion notification_comp;
+	u32 notification_status;
+
 	spinlock_t hpd_state_lock;
 
 	u32 panel_power_on;
@@ -132,6 +138,7 @@ struct hdmi_tx_ctrl {
 	bool power_data_enable[HDMI_TX_MAX_PM];
 	bool dc_support;
 	bool dc_feature_on;
+	bool use_bt2020;
 
 	void (*hdmi_tx_hpd_done)(void *data);
 	void *downstream_data;

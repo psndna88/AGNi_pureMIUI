@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -271,10 +271,12 @@ enum mdss_mdp_csc_type {
 	MDSS_MDP_CSC_RGB2YUV_601L,
 	MDSS_MDP_CSC_RGB2YUV_601FR,
 	MDSS_MDP_CSC_RGB2YUV_709L,
+	MDSS_MDP_CSC_RGB2YUV_709FR,
 	MDSS_MDP_CSC_RGB2YUV_2020L,
 	MDSS_MDP_CSC_RGB2YUV_2020FR,
 	MDSS_MDP_CSC_YUV2YUV,
 	MDSS_MDP_CSC_RGB2RGB,
+	MDSS_MDP_CSC_RGB2RGB_L,
 	MDSS_MDP_MAX_CSC
 };
 
