@@ -319,6 +319,10 @@ Optional properties:
 				corresponding DSPP base.
 - qcom,sde-dspp-rc-size:	A u32 value indicating the RC block address range.
 - qcom,sde-dspp-rc-mem-size:	A u32 value indicating the RC block shared memory size.
+- qcom,sde-dspp-spr-off:    Array of u32 offsets indicate the SPR block offsets from the
+                corresponding DSPP block offset as base.
+- qcom,sde-dspp-spr-size:    A u32 value indicating the SPR block register address range
+- qcom,sde-dspp-spr-version:    A u32 value indicating the version of SPR hardware.
 - qcom,sde-vbif-id:		Array of vbif ids corresponding to the
 				offsets defined in property: qcom,sde-vbif-off.
 - qcom,sde-vbif-default-ot-rd-limit:	A u32 value indicates the default read OT limit
@@ -598,6 +602,9 @@ Example:
     qcom,sde-dspp-rc-version = <0x00010000>;
     qcom,sde-dspp-rc-off = <0x15800 0x14c00>;
     qcom,sde-dspp-rc-size = <0x100>;
+    qcom,sde-dspp-spr-off = <0x15400 0x14400>;
+    qcom,sde-dspp-spr-size = <0x200>;
+    qcom,sde-dspp-spr-version = <0x00010000>:
     qcom,sde-dspp-rc-mem-size = <2720>;
     qcom,sde-dest-scaler-top-off = <0x00061000>;
     qcom,sde-dest-scaler-off = <0x800 0x1000>;
