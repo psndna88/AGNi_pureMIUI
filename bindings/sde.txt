@@ -342,9 +342,11 @@ Optional properties:
 				control register. Number of offsets defined should
 				match the number of offsets defined in
 				property: qcom,sde-wb-off
-- qcom,sde-reg-dma-off:         Offset of the register dma hardware block from
-				"regdma_phys" defined in reg property.
-- qcom,sde-reg-dma-version:	Version of the reg dma hardware block.
+- qcom,sde-reg-dma-off:         Array of u32 offset addresses of the dma hardware blocks,
+				relative to "regdma_phys" defined in reg property.
+- qcom,sde-reg-dma-id:		Array of u32 DMA block type ids corresponding to the
+				offsets declared in property: qcom,sde-reg-dma-off
+- qcom,sde-reg-dma-version:	Version of the reg dma hardware blocks.
 - qcom,sde-reg-dma-trigger-off: Offset of the lut dma trigger reg from "mdp_phys"
 				defined in reg property.
 - qcom,sde-reg-dma-broadcast-disabled: Boolean property to indicate if broadcast
@@ -770,8 +772,9 @@ Example:
     qcom,sde-vbif-qos-cwb-remap = <3 3 4 4 5 5 6 3>;
     qcom,sde-vbif-qos-lutdma-remap = <3 3 3 3 4 4 4 4>;
 
-    qcom,sde-reg-dma-off = <0>;
-    qcom,sde-reg-dma-version = <0x00010002>;
+    qcom,sde-reg-dma-off = <0 0x400>;
+    qcom,sde-reg-dma-id = <0 1>;
+    qcom,sde-reg-dma-version = <0x00020000>;
     qcom,sde-reg-dma-trigger-off = <0x119c>;
     qcom,sde-reg-dma-broadcast-disabled = <0>;
     qcom,sde-reg-dma-xin-id = <7>;
