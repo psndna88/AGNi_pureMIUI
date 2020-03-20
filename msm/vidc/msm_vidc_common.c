@@ -538,6 +538,25 @@ int msm_comm_get_v4l2_level(int fourcc, int level, u32 sid)
 	}
 }
 
+static bool is_priv_ctrl(u32 id)
+{
+	if (IS_PRIV_CTRL(id))
+		return true;
+
+	/*
+	 * Treat below standard controls as private because
+	 * we have added custom values to the controls
+	 */
+	switch (id) {
+	case V4L2_CID_MPEG_VIDEO_BITRATE_MODE:
+	case V4L2_CID_MPEG_VIDEO_H264_PROFILE:
+	case V4L2_CID_MPEG_VIDEO_H264_LEVEL:
+		return true;
+	}
+
+	return false;
+}
+
 int msm_comm_ctrl_init(struct msm_vidc_inst *inst,
 		struct msm_vidc_ctrl *drv_ctrls, u32 num_ctrls,
 		const struct v4l2_ctrl_ops *ctrl_ops)
@@ -569,7 +588,7 @@ int msm_comm_ctrl_init(struct msm_vidc_inst *inst,
 	for (; idx < (int) num_ctrls; idx++) {
 		struct v4l2_ctrl *ctrl = NULL;
 
-		if (IS_PRIV_CTRL(drv_ctrls[idx].id)) {
+		if (is_priv_ctrl(drv_ctrls[idx].id)) {
 			/*add private control*/
 			ctrl_cfg.def = drv_ctrls[idx].default_value;
 			ctrl_cfg.flags = 0;
