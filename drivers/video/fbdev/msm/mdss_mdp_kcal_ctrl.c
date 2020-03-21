@@ -82,6 +82,10 @@ int mode_kcal_min, mode_kcal_sat, mode_kcal_val, mode_kcal_cont;
 bool prev_backlight_dimmer, mode_backlight_dimmer;
 extern bool backlight_dimmer;
 
+#ifdef CONFIG_KLAPSE
+struct kcal_lut_data *lut_cpy;
+#endif
+
 struct mdss_mdp_ctl *fb0_ctl = 0;
 
 static void kcal_mode_save_prev(struct device *dev) {
@@ -716,6 +720,33 @@ static int mdss_mdp_kcal_update_queue(struct device *dev)
 	return 0;
 }
 
+#ifdef CONFIG_KLAPSE
+void klapse_kcal_push(int r, int g, int b)
+{
+	lut_cpy->red = r;
+	lut_cpy->green = g;
+	lut_cpy->blue = b;
+
+	mdss_mdp_kcal_update_pcc(lut_cpy);
+}
+
+/* kcal_get_color() :
+ * @param : 0 = red; 1 = green; 2 = blue;
+ * @return : Value of color corresponding to @param, or 0 if not found
+ */
+unsigned short kcal_get_color(unsigned short int code)
+{
+  if (code == 0)
+    return lut_cpy->red;
+  else if (code == 1)
+    return lut_cpy->green;
+  else if (code == 2)
+    return lut_cpy->blue;
+
+  return 0;
+}
+#endif
+
 #if defined(CONFIG_FB) && !defined(CONFIG_MMI_PANEL_NOTIFICATIONS)
 static int fb_notifier_callback(struct notifier_block *nb,
 	unsigned long event, void *data)
@@ -765,6 +796,10 @@ static int kcal_ctrl_probe(struct platform_device *pdev)
 	mdss_mdp_kcal_update_pcc(lut_data);
 	mdss_mdp_kcal_update_pa(lut_data);
 	mdss_mdp_kcal_display_commit();
+
+#ifdef CONFIG_KLAPSE
+	lut_cpy = lut_data;
+#endif
 
 #if defined(CONFIG_MMI_PANEL_NOTIFICATIONS)
 	lut_data->panel_nb.display_on = mdss_mdp_kcal_update_queue;

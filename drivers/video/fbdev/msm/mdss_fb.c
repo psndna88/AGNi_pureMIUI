@@ -59,6 +59,10 @@
 #include "mdss_smmu.h"
 #include "mdss_mdp.h"
 #include "dsi_access.h"
+#ifdef CONFIG_KLAPSE
+#include <linux/klapse.h>
+#endif
+#include "mdss_livedisplay.h"
 
 #ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
 #define MDSS_FB_NUM 3
@@ -360,6 +364,10 @@ static void mdss_fb_set_bl_brightness(struct led_classdev *led_cdev,
 		mutex_unlock(&mfd->bl_lock);
 	}
 	mfd->bl_level_usr = bl_lvl;
+
+#ifdef CONFIG_KLAPSE
+	set_rgb_slider(bl_lvl);
+#endif
 }
 
 static enum led_brightness mdss_fb_get_bl_brightness(
