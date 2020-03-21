@@ -2821,7 +2821,9 @@ QDF_STATUS sap_fsm(struct sap_context *sap_ctx, ptWLAN_SAPEvent sap_event)
 
 	mac_ctx = PMAC_STRUCT(hal);
 
+#ifdef WLAN_DEBUG
 	sap_debug("state=%d handle event=%d", state_var, msg);
+#endif
 
 	switch (state_var) {
 	case SAP_INIT:
