@@ -80,6 +80,7 @@ int user_kcal_min, user_kcal_sat, user_kcal_val, user_kcal_cont;
 int mode_kcal_r, mode_kcal_g, mode_kcal_b;
 int mode_kcal_min, mode_kcal_sat, mode_kcal_val, mode_kcal_cont;
 bool prev_backlight_dimmer, mode_backlight_dimmer;
+extern bool backlight_dimmer;
 
 struct mdss_mdp_ctl *fb0_ctl = 0;
 
