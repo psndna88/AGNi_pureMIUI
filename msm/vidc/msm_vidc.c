@@ -885,6 +885,8 @@ static inline int start_streaming(struct msm_vidc_inst *inst)
 		goto fail_start;
 	}
 
+	msm_comm_check_prefetch_sufficient(inst);
+
 	rc = msm_comm_set_scratch_buffers(inst);
 	if (rc) {
 		s_vpr_e(inst->sid, "Failed to set scratch buffers: %d\n", rc);
