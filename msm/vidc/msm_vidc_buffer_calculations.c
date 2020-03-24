@@ -563,6 +563,7 @@ int msm_vidc_get_encoder_internal_buffer_sizes(struct msm_vidc_inst *inst)
 			HAL_BUFFER_INTERNAL_PERSIST) {
 			curr_req->buffer_size =
 				enc_calculators->calculate_persist_size();
+			valid_buffer_type = true;
 		}
 
 		if (valid_buffer_type) {
