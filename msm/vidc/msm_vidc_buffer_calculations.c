@@ -78,7 +78,7 @@
 #define MAX_TILE_COLUMNS 32     /* 8K/256 */
 
 #define VPP_CMD_MAX_SIZE (1 << 20)
-#define NUM_HW_PIC_BUF 10
+#define NUM_HW_PIC_BUF 32
 #define BIN_BUFFER_THRESHOLD (1280 * 736)
 #define H264D_MAX_SLICE 1800
 #define SIZE_H264D_BUFTAB_T  256 // sizeof(h264d_buftab_t) aligned to 256
@@ -139,7 +139,7 @@
 #define LCU_MAX_SIZE_PELS 64
 #define LCU_MIN_SIZE_PELS 16
 
-#define H265D_MAX_SLICE 600
+#define H265D_MAX_SLICE 1200
 #define SIZE_H265D_HW_PIC_T SIZE_H264D_HW_PIC_T
 #define SIZE_H265D_BSE_CMD_PER_BUF (16 * sizeof(u32))
 #define SIZE_H265D_VPP_CMD_PER_BUF 256
@@ -232,7 +232,7 @@
 #define VPX_DECODER_FRAME_BIN_RES_BUDGET_RATIO_DEN 2
 
 #define VP8_NUM_FRAME_INFO_BUF (5 + 1)
-#define VP9_NUM_FRAME_INFO_BUF (8 + 2 + 1 + 8)
+#define VP9_NUM_FRAME_INFO_BUF (32)
 #define VP8_NUM_PROBABILITY_TABLE_BUF (VP8_NUM_FRAME_INFO_BUF)
 #define VP9_NUM_PROBABILITY_TABLE_BUF (VP9_NUM_FRAME_INFO_BUF + 4)
 #define VP8_PROB_TABLE_SIZE 3840
@@ -373,6 +373,7 @@ int msm_vidc_get_decoder_internal_buffer_sizes(struct msm_vidc_inst *inst)
 	struct msm_vidc_dec_buff_size_calculators *dec_calculators;
 	u32 width, height, i, out_min_count, num_vpp_pipes;
 	struct v4l2_format *f;
+	u32 vpp_delay = 2 + 1;
 
 	if (!inst || !inst->core || !inst->core->platform_data) {
 		d_vpr_e("%s: Instance is null!", __func__);
@@ -426,6 +427,8 @@ int msm_vidc_get_decoder_internal_buffer_sizes(struct msm_vidc_inst *inst)
 
 			fmt = &inst->fmts[OUTPUT_PORT];
 			out_min_count = fmt->count_min;
+			out_min_count =
+				max(vpp_delay, out_min_count);
 			curr_req->buffer_size =
 				dec_calculators->calculate_scratch1_size(
 					inst, width, height, out_min_count,
@@ -1117,6 +1120,7 @@ static inline u32 size_h264d_hw_bin_buffer(u32 width, u32 height)
 	u32 size_yuv, size_bin_hdr, size_bin_res;
 	u32 size = 0;
 	u32 product;
+	u32 delay = 2;
 
 	product = width * height;
 	size_yuv = (product <= BIN_BUFFER_THRESHOLD) ?
@@ -1125,6 +1129,8 @@ static inline u32 size_h264d_hw_bin_buffer(u32 width, u32 height)
 
 	size_bin_hdr = size_yuv * H264_CABAC_HDR_RATIO_HD_TOT;
 	size_bin_res = size_yuv * H264_CABAC_RES_RATIO_HD_TOT;
+	size_bin_hdr = size_bin_hdr * (((((u32)(delay)) & 31) / 10) + 2) / 2;
+	size_bin_res = size_bin_res * (((((u32)(delay)) & 31) / 10) + 2) / 2;
 	size_bin_hdr = ALIGN(size_bin_hdr, VENUS_DMA_ALIGNMENT);
 	size_bin_res = ALIGN(size_bin_res, VENUS_DMA_ALIGNMENT);
 	size = size_bin_hdr + size_bin_res;
@@ -1233,6 +1239,7 @@ static inline u32 size_h265d_hw_bin_buffer(u32 width, u32 height)
 	u32 size = 0;
 	u32 size_yuv, size_bin_hdr, size_bin_res;
 	u32 product;
+	u32 delay = 2;
 
 	product = width * height;
 	size_yuv = (product <= BIN_BUFFER_THRESHOLD) ?
@@ -1240,6 +1247,8 @@ static inline u32 size_h265d_hw_bin_buffer(u32 width, u32 height)
 		((product * 3) >> 1);
 	size_bin_hdr = size_yuv * H265_CABAC_HDR_RATIO_HD_TOT;
 	size_bin_res = size_yuv * H265_CABAC_RES_RATIO_HD_TOT;
+	size_bin_hdr = size_bin_hdr * (((((u32)(delay)) & 31) / 10) + 2) / 2;
+	size_bin_res = size_bin_res * (((((u32)(delay)) & 31) / 10) + 2) / 2;
 	size_bin_hdr = ALIGN(size_bin_hdr, VENUS_DMA_ALIGNMENT);
 	size_bin_res = ALIGN(size_bin_res, VENUS_DMA_ALIGNMENT);
 	size = size_bin_hdr + size_bin_res;
