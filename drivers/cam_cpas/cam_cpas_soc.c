@@ -343,6 +343,9 @@ static int cam_cpas_parse_node_tree(struct cam_cpas *cpas_core,
 					}
 				}
 
+				cpas_core->axi_port[mnoc_idx].axi_port_name =
+					cpas_core->axi_port[mnoc_idx]
+						.bus_client.common_data.name;
 				cpas_core->axi_port
 					[mnoc_idx].ib_bw_voting_needed
 					= of_property_read_bool(curr_node,
