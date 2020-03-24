@@ -11,6 +11,7 @@
  * v1.4: use charging & battery % detection to decide swap behaviour by voting. Rewrite.
  * v1.5: Rewrite Logic cleanly, optimise. Drop caches aswell as needed.
  * v1.6: Allow zram swapping on gaming and increase swappiness for 4 gb ram device variants
+ * v1.7: Increased swappiness values with increased zram disksize
  */
 
 #include <asm/page.h>
@@ -82,9 +83,9 @@ bool agni_memprober(void) {
 		
 	if (vote) {
 		if (fourgb) {
-			agni_swappiness = 30;
+			agni_swappiness = 60;
 		} else {
-			agni_swappiness = 15;
+			agni_swappiness = 30;
 		}
 		if (fourgb && (mem_avail_perc < 10))
 			mm_drop_caches(3);
