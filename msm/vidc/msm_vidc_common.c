@@ -1582,6 +1582,43 @@ static void msm_vidc_queue_rbr_event(struct msm_vidc_inst *inst,
 	v4l2_event_queue_fh(&inst->event_handler, &buf_event);
 }
 
+static void handle_event_change_insufficient(struct msm_vidc_inst *inst,
+					struct msm_vidc_format *fmt,
+					struct msm_vidc_cb_event *event_notify,
+					u32 codec)
+{
+	int extra_buff_count = 0;
+
+	s_vpr_h(inst->sid,
+		"seq: V4L2_EVENT_SEQ_CHANGED_INSUFFICIENT\n");
+
+	/* decide batching as configuration changed */
+	inst->batch.enable = is_batching_allowed(inst);
+	s_vpr_hp(inst->sid, "seq : batching %s\n",
+		inst->batch.enable ? "enabled" : "disabled");
+	msm_dcvs_try_enable(inst);
+	extra_buff_count = msm_vidc_get_extra_buff_count(inst,
+		HAL_BUFFER_OUTPUT);
+	fmt->count_min = event_notify->fw_min_cnt;
+
+	if (inst->core->resources.has_vpp_delay &&
+		is_decode_session(inst) &&
+		(codec == V4L2_PIX_FMT_H264
+		|| codec == V4L2_PIX_FMT_HEVC))	{
+		fmt->count_min =
+			max(fmt->count_min, (u32)MAX_BSE_VPP_DELAY);
+		fmt->count_min =
+			max(fmt->count_min,
+			(u32)(msm_vidc_vpp_delay & 0x1F));
+	}
+
+	fmt->count_min_host = fmt->count_min + extra_buff_count;
+	s_vpr_h(inst->sid,
+		"seq: hal buffer[%d] count: min %d min_host %d\n",
+		HAL_BUFFER_OUTPUT, fmt->count_min,
+		fmt->count_min_host);
+}
+
 static void handle_event_change(enum hal_command_response cmd, void *data)
 {
 	struct msm_vidc_inst *inst = NULL;
@@ -1593,7 +1630,6 @@ static void handle_event_change(enum hal_command_response cmd, void *data)
 	u32 *ptr = NULL;
 	struct msm_vidc_format *fmt;
 	struct v4l2_format *f;
-	int extra_buff_count = 0;
 	u32 codec;
 
 	if (!event_notify) {
@@ -1754,24 +1790,9 @@ static void handle_event_change(enum hal_command_response cmd, void *data)
 	fmt->v4l2_fmt.fmt.pix_mp.width = event_notify->width;
 	mutex_unlock(&inst->lock);
 
-	if (event == V4L2_EVENT_SEQ_CHANGED_INSUFFICIENT) {
-		s_vpr_h(inst->sid,
-			"seq: V4L2_EVENT_SEQ_CHANGED_INSUFFICIENT\n");
-
-		/* decide batching as configuration changed */
-		inst->batch.enable = is_batching_allowed(inst);
-		s_vpr_hp(inst->sid, "seq : batching %s\n",
-			inst->batch.enable ? "enabled" : "disabled");
-		msm_dcvs_try_enable(inst);
-		extra_buff_count = msm_vidc_get_extra_buff_count(inst,
-				HAL_BUFFER_OUTPUT);
-		fmt->count_min = event_notify->fw_min_cnt;
-		fmt->count_min_host = fmt->count_min + extra_buff_count;
-		s_vpr_h(inst->sid,
-			"seq: hal buffer[%d] count: min %d min_host %d\n",
-			HAL_BUFFER_OUTPUT, fmt->count_min,
-			fmt->count_min_host);
-	}
+	if (event == V4L2_EVENT_SEQ_CHANGED_INSUFFICIENT)
+		handle_event_change_insufficient(inst, fmt,
+						event_notify, codec);
 
 	rc = msm_vidc_check_session_supported(inst);
 	if (!rc) {
@@ -2636,6 +2657,17 @@ static void handle_fbd(enum hal_command_response cmd, void *data)
 		break;
 	default:
 		break;
+	}
+
+	if (inst->core->resources.ubwc_stats_in_fbd == 1) {
+		mutex_lock(&inst->ubwc_stats_lock);
+		inst->ubwc_stats.is_valid =
+			fill_buf_done->ubwc_cr_stat.is_valid;
+		inst->ubwc_stats.worst_cr =
+			fill_buf_done->ubwc_cr_stat.worst_cr;
+		inst->ubwc_stats.worst_cf =
+			fill_buf_done->ubwc_cr_stat.worst_cf;
+		mutex_unlock(&inst->ubwc_stats_lock);
 	}
 
 	/*

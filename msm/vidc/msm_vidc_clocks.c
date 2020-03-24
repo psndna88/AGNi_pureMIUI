@@ -9,6 +9,7 @@
 #include "msm_vidc_clocks.h"
 #include "msm_vidc_buffer_calculations.h"
 #include "msm_vidc_bus.h"
+#include "vidc_hfi.h"
 
 #define MSM_VIDC_MIN_UBWC_COMPLEXITY_FACTOR (1 << 16)
 #define MSM_VIDC_MAX_UBWC_COMPLEXITY_FACTOR (4 << 16)
@@ -162,6 +163,9 @@ void update_recon_stats(struct msm_vidc_inst *inst,
 	u32 CR = 0, CF = 0;
 	u32 frame_size;
 
+	if (inst->core->resources.ubwc_stats_in_fbd == 1)
+		return;
+
 	/* do not consider recon stats in case of superframe */
 	ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDC_SUPERFRAME);
 	if (ctrl->val)
@@ -199,25 +203,37 @@ static int fill_dynamic_stats(struct msm_vidc_inst *inst,
 	u32 min_input_cr = MSM_VIDC_MAX_UBWC_COMPRESSION_RATIO;
 	u32 min_cr = MSM_VIDC_MAX_UBWC_COMPRESSION_RATIO;
 
-	mutex_lock(&inst->refbufs.lock);
-	list_for_each_entry_safe(binfo, nextb, &inst->refbufs.list, list) {
-		if (binfo->CR) {
-			min_cr = min(min_cr, binfo->CR);
-			max_cr = max(max_cr, binfo->CR);
+	if (inst->core->resources.ubwc_stats_in_fbd == 1) {
+		mutex_lock(&inst->ubwc_stats_lock);
+		if (inst->ubwc_stats.is_valid == 1) {
+			min_cr = inst->ubwc_stats.worst_cr;
+			max_cf = inst->ubwc_stats.worst_cf;
+			min_input_cr = inst->ubwc_stats.worst_cr;
 		}
-		if (binfo->CF) {
-			min_cf = min(min_cf, binfo->CF);
-			max_cf = max(max_cf, binfo->CF);
+		mutex_unlock(&inst->ubwc_stats_lock);
+	} else {
+		mutex_lock(&inst->refbufs.lock);
+		list_for_each_entry_safe(binfo, nextb,
+						&inst->refbufs.list, list) {
+			if (binfo->CR) {
+				min_cr = min(min_cr, binfo->CR);
+				max_cr = max(max_cr, binfo->CR);
+			}
+			if (binfo->CF) {
+				min_cf = min(min_cf, binfo->CF);
+				max_cf = max(max_cf, binfo->CF);
+			}
 		}
-	}
-	mutex_unlock(&inst->refbufs.lock);
+		mutex_unlock(&inst->refbufs.lock);
 
-	mutex_lock(&inst->input_crs.lock);
-	list_for_each_entry_safe(temp, next, &inst->input_crs.list, list) {
-		min_input_cr = min(min_input_cr, temp->input_cr);
-		max_input_cr = max(max_input_cr, temp->input_cr);
+		mutex_lock(&inst->input_crs.lock);
+		list_for_each_entry_safe(temp, next,
+						&inst->input_crs.list, list) {
+			min_input_cr = min(min_input_cr, temp->input_cr);
+			max_input_cr = max(max_input_cr, temp->input_cr);
+		}
+		mutex_unlock(&inst->input_crs.lock);
 	}
-	mutex_unlock(&inst->input_crs.lock);
 
 	/* Sanitize CF values from HW . */
 	max_cf = min_t(u32, max_cf, MSM_VIDC_MAX_UBWC_COMPLEXITY_FACTOR);
@@ -1032,6 +1048,7 @@ void msm_clock_data_reset(struct msm_vidc_inst *inst)
 		i = 0;
 
 	inst->clk_data.buffer_counter = 0;
+	inst->ubwc_stats.is_valid = 0;
 
 	rc = msm_comm_scale_clocks_and_bus(inst, 1);
 
@@ -1157,6 +1174,62 @@ decision_done:
 
 	rc = msm_comm_scale_clocks_and_bus(inst, 1);
 
+	return rc;
+}
+
+int msm_vidc_set_bse_vpp_delay(struct msm_vidc_inst *inst)
+{
+	int rc = 0;
+	struct hfi_device *hdev;
+	u32 delay = 0;
+	u32 mbpf = 0, codec = 0;
+
+	if (!inst || !inst->core) {
+		d_vpr_e("%s: invalid params %pK\n", __func__, inst);
+		return -EINVAL;
+	}
+
+	if (!inst->core->resources.has_vpp_delay ||
+		inst->session_type != MSM_VIDC_DECODER ||
+		inst->clk_data.work_mode != HFI_WORKMODE_2 ||
+		inst->first_reconfig) {
+		s_vpr_hp(inst->sid, "%s: Skip bse-vpp\n", __func__);
+		return 0;
+	}
+
+	hdev = inst->core->device;
+
+	/* Decide VPP delay only on first reconfig */
+	if (in_port_reconfig(inst))
+		inst->first_reconfig = 1;
+
+	codec = get_v4l2_codec(inst);
+	if (codec != V4L2_PIX_FMT_HEVC && codec != V4L2_PIX_FMT_H264) {
+		s_vpr_hp(inst->sid, "%s: Skip bse-vpp, codec %u\n",
+			__func__, codec);
+		goto exit;
+	}
+
+	mbpf = msm_vidc_get_mbs_per_frame(inst);
+	if (mbpf >= NUM_MBS_PER_FRAME(7680, 3840))
+		delay = MAX_BSE_VPP_DELAY;
+	else
+		delay = DEFAULT_BSE_VPP_DELAY;
+
+	/* DebugFS override [1-31] */
+	if (msm_vidc_vpp_delay & 0x1F)
+		delay = msm_vidc_vpp_delay & 0x1F;
+
+	s_vpr_hp(inst->sid, "%s: bse-vpp delay %u\n", __func__, delay);
+	rc = call_hfi_op(hdev, session_set_property, inst->session,
+		HFI_PROPERTY_PARAM_VDEC_VSP_VPP_DELAY, &delay,
+		sizeof(u32));
+	if (rc)
+		s_vpr_e(inst->sid, "%s: set property failed\n", __func__);
+	else
+		inst->bse_vpp_delay = delay;
+
+exit:
 	return rc;
 }
 

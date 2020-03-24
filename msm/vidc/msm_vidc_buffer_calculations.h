@@ -12,7 +12,7 @@
 
 struct msm_vidc_dec_buff_size_calculators {
 	u32 (*calculate_scratch_size)(struct msm_vidc_inst *inst, u32 width,
-		u32 height, bool is_interlaced);
+		u32 height, bool is_interlaced, u32 delay);
 	u32 (*calculate_scratch1_size)(struct msm_vidc_inst *inst, u32 width,
 		u32 height, u32 min_buf_count, bool split_mode_enabled,
 		u32 num_vpp_pipes);

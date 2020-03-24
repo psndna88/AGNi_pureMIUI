@@ -23,6 +23,7 @@ int msm_vidc_clock_voting = !1;
 bool msm_vidc_syscache_disable = !true;
 bool msm_vidc_cvp_usage = true;
 int msm_vidc_err_recovery_disable = !1;
+int msm_vidc_vpp_delay;
 
 #define MAX_DBG_BUF_SIZE 4096
 
@@ -211,6 +212,8 @@ struct dentry *msm_vidc_debugfs_init_drv(void)
 	bool ok = false;
 	struct dentry *dir = NULL;
 
+	msm_vidc_vpp_delay = 0;
+
 	dir = debugfs_create_dir("msm_vidc", NULL);
 	if (IS_ERR_OR_NULL(dir)) {
 		dir = NULL;
@@ -241,7 +244,8 @@ struct dentry *msm_vidc_debugfs_init_drv(void)
 	__debugfs_create(bool, "lossless_encoding",
 			&msm_vidc_lossless_encode) &&
 	__debugfs_create(u32, "disable_err_recovery",
-			&msm_vidc_err_recovery_disable);
+			&msm_vidc_err_recovery_disable) &&
+	__debugfs_create(u32, "vpp_delay", &msm_vidc_vpp_delay);
 
 #undef __debugfs_create
 

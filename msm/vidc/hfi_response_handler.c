@@ -798,13 +798,13 @@ static int hfi_process_session_ftb_done(
 		hfi_msg_session_fill_buffer_done_compressed_packet) + 4;
 	is_encoder = (msg_hdr->size == struct_size) ||
 		(msg_hdr->size == (struct_size +
-				   sizeof(struct hfi_ubwc_cr_stat) - 4));
+				   sizeof(struct hfi_ubwc_cr_stats) - 4));
 
 	struct_size = sizeof(struct
 		hfi_msg_session_fbd_uncompressed_plane0_packet) + 4;
 	is_decoder = (msg_hdr->size == struct_size) ||
 		(msg_hdr->size == (struct_size +
-				   sizeof(struct hfi_ubwc_cr_stat) - 4));
+				   sizeof(struct hfi_ubwc_cr_stats) - 4));
 
 	if (!(is_encoder ^ is_decoder)) {
 		d_vpr_e("Ambiguous packet (%#x) received (size %d)\n",
@@ -846,6 +846,17 @@ static int hfi_process_session_ftb_done(
 		data_done.output_done.extra_data_buffer =
 			pkt->extra_data_buffer;
 		data_done.output_done.buffer_type = HAL_BUFFER_OUTPUT;
+		/* FBD packet is extended only when stats=1. */
+		if (pkt->stats == 1) {
+			struct hfi_ubwc_cr_stats *ubwc_stat =
+				(struct hfi_ubwc_cr_stats *)pkt->rgData;
+			data_done.output_done.ubwc_cr_stat.is_valid =
+				ubwc_stat->is_valid;
+			data_done.output_done.ubwc_cr_stat.worst_cr =
+				ubwc_stat->worst_compression_ratio;
+			data_done.output_done.ubwc_cr_stat.worst_cf =
+				ubwc_stat->worst_complexity_number;
+		}
 	} else /* if (is_decoder) */ {
 		struct hfi_msg_session_fbd_uncompressed_plane0_packet *pkt =
 		(struct	hfi_msg_session_fbd_uncompressed_plane0_packet *)
@@ -882,6 +893,18 @@ static int hfi_process_session_ftb_done(
 		data_done.output_done.packet_buffer1 = pkt->packet_buffer;
 		data_done.output_done.extra_data_buffer =
 			pkt->extra_data_buffer;
+
+		/* FBD packet is extended only when view_id=1. */
+		if (pkt->view_id == 1) {
+			struct hfi_ubwc_cr_stats *ubwc_stat =
+				(struct hfi_ubwc_cr_stats *)pkt->rgData;
+			data_done.output_done.ubwc_cr_stat.is_valid =
+				ubwc_stat->is_valid;
+			data_done.output_done.ubwc_cr_stat.worst_cr =
+				ubwc_stat->worst_compression_ratio;
+			data_done.output_done.ubwc_cr_stat.worst_cf =
+				ubwc_stat->worst_complexity_number;
+		}
 
 		if (!pkt->stream_id)
 			data_done.output_done.buffer_type = HAL_BUFFER_OUTPUT;

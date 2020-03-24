@@ -458,6 +458,14 @@ static struct msm_vidc_common_data lahaina_common_data[] = {
 		 */
 		.value = 13434880,
 	},
+	{
+		.key = "qcom,ubwc_stats_in_fbd",
+		.value = 1,
+	},
+	{
+		.key = "qcom,vpp_delay_supported",
+		.value = 1,
+	},
 };
 
 static struct msm_vidc_common_data bengal_common_data_v0[] = {
@@ -509,6 +517,14 @@ static struct msm_vidc_common_data bengal_common_data_v0[] = {
 		.key = "qcom,fw-vpp-cycles",
 		.value = 225975,
 	},
+	{
+		.key = "qcom,ubwc_stats_in_fbd",
+		.value = 0,
+	},
+	{
+		.key = "qcom,vpp_delay_supported",
+		.value = 0,
+	},
 };
 
 static struct msm_vidc_common_data bengal_common_data_v1[] = {
@@ -559,6 +575,14 @@ static struct msm_vidc_common_data bengal_common_data_v1[] = {
 	{
 		.key = "qcom,fw-vpp-cycles",
 		.value = 225975,
+	},
+	{
+		.key = "qcom,ubwc_stats_in_fbd",
+		.value = 0,
+	},
+	{
+		.key = "qcom,vpp_delay_supported",
+		.value = 0,
 	},
 };
 
