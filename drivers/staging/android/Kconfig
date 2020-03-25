@@ -106,6 +106,13 @@ config SYNC_DEBUG
 	---help---
 	  This makes the sync driver keep track of fence names.
 
+config ANDROID_WHETSTONE
+    bool "Android Whetstone MIUI"
+    default y
+    depends on MACH_XIAOMI_AGNI_MIUI
+    ---help---
+        report to whetstone the memory state when reach target limit value.
+
 source "drivers/staging/android/ion/Kconfig"
 
 endif # if ANDROID
