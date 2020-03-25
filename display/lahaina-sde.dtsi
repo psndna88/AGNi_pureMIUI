@@ -236,12 +236,13 @@
 
 		/* data and reg bus scale settings */
 		interconnects =
-			<&mmss_noc MASTER_MDP0 &mc_virt SLAVE_EBI1>,
-			<&mmss_noc MASTER_MDP1 &mc_virt SLAVE_EBI1>,
+			<&mmss_noc MASTER_MDP0 &gem_noc SLAVE_LLCC>,
+			<&mmss_noc MASTER_MDP1 &gem_noc SLAVE_LLCC>,
+			<&mc_virt MASTER_LLCC &mc_virt SLAVE_EBI1>,
 			<&gem_noc MASTER_APPSS_PROC
-				&config_noc SLAVE_DISPLAY_CFG>;
+					&config_noc SLAVE_DISPLAY_CFG>;
 		interconnect-names = "qcom,sde-data-bus0", "qcom,sde-data-bus1",
-			"qcom,sde-reg-bus";
+				"qcom,sde-ebi-bus", "qcom,sde-reg-bus";
 
 		qcom,sde-sspp-vig-blocks {
 			qcom,sde-vig-csc-off = <0x1a00>;
