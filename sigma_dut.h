@@ -676,6 +676,7 @@ struct sigma_dut {
 	unsigned int ap_akm_values;
 	int ap_pmksa;
 	int ap_pmksa_caching;
+	int ap_beacon_prot;
 	int ap_80plus80;
 	int ap_oper_chn;
 

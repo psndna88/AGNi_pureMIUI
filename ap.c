@@ -2485,6 +2485,10 @@ static enum sigma_cmd_result cmd_ap_set_security(struct sigma_dut *dut,
 		}
 	}
 
+	val = get_param(cmd, "BeaconProtection");
+	if (val)
+		dut->ap_beacon_prot = atoi(val);
+
 	return 1;
 }
 
@@ -4147,6 +4151,9 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 		snprintf(buf, sizeof(buf), "%d", dut->ap_pmksa_caching);
 		owrt_ap_set_vap(dut, vap_id, "disable_pmksa_caching", buf);
 	}
+
+	if (dut->ap_beacon_prot)
+		owrt_ap_set_vap(dut, vap_id, "beacon_prot", "1");
 
 	if (dut->rsne_override) {
 		snprintf(buf, sizeof(buf), "%s", dut->rsne_override);
@@ -7876,6 +7883,9 @@ skip_key_mgmt:
 	if (dut->ap_pmksa && dut->ap_pmksa_caching)
 		fprintf(f, "disable_pmksa_caching=1\n");
 
+	if (dut->ap_beacon_prot)
+		fprintf(f, "beacon_prot=1\n");
+
 	switch (dut->ap_pmf) {
 	case AP_PMF_DISABLED:
 		break;
@@ -9176,6 +9186,7 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 	dut->ap_group_mgmt_cipher = AP_NO_GROUP_MGMT_CIPHER_SET;
 	dut->ap_passphrase[0] = '\0';
 	dut->ap_psk[0] = '\0';
+	dut->ap_beacon_prot = 0;
 
 	dut->dpp_conf_id = -1;
 	free(dut->ap_dpp_conf_addr);
