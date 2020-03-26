@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
 # auto-detect subdirs
+ifneq ($(CONFIG_ARCH_QTI_VM), y)
 ifeq ($(CONFIG_ARCH_KONA), y)
 include $(srctree)/techpack/camera/config/konacamera.conf
 endif
@@ -35,6 +36,7 @@ endif
 ifeq ($(CONFIG_ARCH_LAHAINA), y)
 LINUXINCLUDE    += \
 		-include $(srctree)/techpack/camera/config/lahainacameraconf.h
+endif
 endif
 
 ifneq (,$(filter $(CONFIG_SPECTRA_CAMERA), y m))
