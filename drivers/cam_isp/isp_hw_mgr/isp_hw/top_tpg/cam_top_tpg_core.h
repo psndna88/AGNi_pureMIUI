@@ -12,6 +12,8 @@
 
 #define CAM_TOP_TPG_VERSION_1             0x10000001
 #define CAM_TOP_TPG_VERSION_2             0x10000002
+#define CAM_TOP_TPG_VERSION_3             0x20000000
+
 
 enum cam_top_tpg_encode_format {
 	CAM_TOP_TPG_ENCODE_FORMAT_RAW6,
@@ -85,12 +87,13 @@ struct cam_top_tpg_cfg {
 	uint32_t                        pix_pattern;
 	uint32_t                        phy_sel;
 	uint32_t                        num_active_lanes;
-	uint32_t                        vc_num;
+	uint32_t                        vc_num[4];
 	uint32_t                        v_blank_count;
 	uint32_t                        h_blank_count;
 	uint32_t                        vbi_cnt;
 	uint32_t                        num_active_dts;
 	uint32_t                        num_frames;
+	uint32_t                        vc_dt_pattern_id;
 	struct cam_top_tpg_dt_cfg       dt_cfg[4];
 };
 
@@ -116,6 +119,8 @@ struct cam_top_tpg_hw {
 	spinlock_t                       lock_state;
 	struct completion                tpg_complete;
 };
+
+int cam_top_tpg_get_format(uint32_t    in_format, uint32_t *tpg_encode_format);
 
 int cam_top_tpg_probe_init(struct cam_hw_intf *tpg_hw_intf,
 	uint32_t tpg_idx);

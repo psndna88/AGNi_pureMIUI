@@ -2946,7 +2946,8 @@ static int cam_ife_mgr_acquire_hw(void *hw_mgr_priv, void *acquire_hw_args)
 		}
 
 		if ((in_port->res_type == CAM_ISP_IFE_IN_RES_CPHY_TPG_0) ||
-			(in_port->res_type == CAM_ISP_IFE_IN_RES_CPHY_TPG_1))
+			(in_port->res_type == CAM_ISP_IFE_IN_RES_CPHY_TPG_1) ||
+			(in_port->res_type == CAM_ISP_IFE_IN_RES_CPHY_TPG_2))
 			rc  = cam_ife_hw_mgr_acquire_tpg(ife_ctx, in_port,
 				acquire_hw_info->num_inputs);
 

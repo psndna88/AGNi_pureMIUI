@@ -90,6 +90,7 @@ camera-$(CONFIG_SPECTRA_ISP) += \
 	cam_isp/isp_hw_mgr/isp_hw/top_tpg/cam_top_tpg_core.o \
 	cam_isp/isp_hw_mgr/isp_hw/top_tpg/cam_top_tpg_ver1.o \
 	cam_isp/isp_hw_mgr/isp_hw/top_tpg/cam_top_tpg_ver2.o \
+	cam_isp/isp_hw_mgr/isp_hw/top_tpg/cam_top_tpg_ver3.o \
 	cam_isp/isp_hw_mgr/isp_hw/top_tpg/cam_top_tpg.o \
 	cam_isp/isp_hw_mgr/cam_isp_hw_mgr.o \
 	cam_isp/isp_hw_mgr/cam_ife_hw_mgr.o \

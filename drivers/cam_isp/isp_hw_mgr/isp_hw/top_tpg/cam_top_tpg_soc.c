@@ -8,7 +8,7 @@
 #include "cam_debug_util.h"
 
 int cam_top_tpg_init_soc_resources(struct cam_hw_soc_info *soc_info,
-	void *irq_data)
+	irq_handler_t tpg_irq_handler, void *irq_data)
 {
 	int rc = 0;
 	struct cam_cpas_register_params   cpas_register_param;
@@ -26,7 +26,7 @@ int cam_top_tpg_init_soc_resources(struct cam_hw_soc_info *soc_info,
 		return rc;
 
 	/* Need to see if we want post process the clock list */
-	rc = cam_soc_util_request_platform_resource(soc_info, NULL,
+	rc = cam_soc_util_request_platform_resource(soc_info, tpg_irq_handler,
 		irq_data);
 
 	if (rc < 0) {
