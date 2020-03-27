@@ -213,6 +213,7 @@ static int dpp_hostapd_conf_update(struct sigma_dut *dut,
 		"DPP-CONFOBJ-PSK",
 		NULL
 	};
+	unsigned int old_timeout;
 
 	sigma_dut_print(dut, DUT_MSG_INFO,
 			"Update hostapd configuration based on DPP Config Object");
@@ -243,6 +244,12 @@ static int dpp_hostapd_conf_update(struct sigma_dut *dut,
 	if (wpa_command(ifname, buf2) < 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Failed to update AP SSID");
+		goto out;
+	}
+
+	if (wpa_command(ifname, "SET utf8_ssid 1") < 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Failed to update AP UTF-8 SSID capa");
 		goto out;
 	}
 
@@ -360,6 +367,11 @@ static int dpp_hostapd_conf_update(struct sigma_dut *dut,
 	}
 skip_dpp_akm:
 
+	/* Wait for a possible Configuration Result to be sent */
+	old_timeout = dut->default_timeout;
+	dut->default_timeout = 1;
+	get_wpa_cli_event(dut, ctrl, "DPP-TX-STATUS", buf, sizeof(buf));
+	dut->default_timeout = old_timeout;
 	if (wpa_command(ifname, "DISABLE") < 0 ||
 	    wpa_command(ifname, "ENABLE") < 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
@@ -874,6 +886,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	const char *action_type = get_param(cmd, "DPPActionType");
 	const char *tcp = get_param(cmd, "DPPOverTCP");
 	const char *role;
+	const char *netrole = NULL;
 	const char *val;
 	const char *conf_role;
 	int conf_index = -1;
@@ -912,6 +925,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	const char *result;
 	int check_mutual = 0;
 	int enrollee_ap;
+	int enrollee_configurator;
 	int force_gas_fragm = 0;
 	int not_dpp_akm = 0;
 	int akm_use_selector = 0;
@@ -935,10 +949,28 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	}
 
 	val = get_param(cmd, "DPPConfEnrolleeRole");
-	if (val)
+	if (val) {
 		enrollee_ap = strcasecmp(val, "AP") == 0;
-	else
+		enrollee_configurator = strcasecmp(val, "Configurator") == 0;
+	} else {
 		enrollee_ap = sigma_dut_is_ap(dut);
+		enrollee_configurator = 0;
+	}
+
+	val = get_param(cmd, "DPPNetworkRole");
+	if (val) {
+		if (strcasecmp(val, "AP") == 0) {
+			netrole = "ap";
+		} else if (strcasecmp(val, "STA") == 0) {
+			netrole = "sta";
+		} else if (strcasecmp(val, "Configurator") == 0) {
+			netrole = "configurator";
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported DPPNetworkRole value");
+			return 0;
+		}
+	}
 
 	if ((step || frametype) && (!step || !frametype)) {
 		send_resp(dut, conn, SIGMA_ERROR,
@@ -1057,12 +1089,17 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	conf_pass[0] = '\0';
 	group_id[0] = '\0';
 	conf2[0] = '\0';
-	val = get_param(cmd, "DPPConfIndex");
-	if (val)
-		conf_index = atoi(val);
+	if (!enrollee_configurator) {
+		val = get_param(cmd, "DPPConfIndex");
+		if (val)
+			conf_index = atoi(val);
+	}
 	switch (conf_index) {
 	case -1:
-		conf_role = NULL;
+		if (enrollee_configurator)
+			conf_role = "configurator";
+		else
+			conf_role = NULL;
 		break;
 	case 1:
 		ascii2hexstr("DPPNET01", buf);
@@ -1329,8 +1366,10 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 				goto out;
 			}
 			snprintf(buf, sizeof(buf),
-				 "DPP_AUTH_INIT peer=%d%s role=%s conf=%s %s %s configurator=%d%s%s%s%s%s",
+				 "DPP_AUTH_INIT peer=%d%s role=%s%s%s conf=%s %s %s configurator=%d%s%s%s%s%s",
 				 dpp_peer_bootstrap, own_txt, role,
+				 netrole ? " netrole=" : "",
+				 netrole ? netrole : "",
 				 conf_role, conf_ssid, conf_pass,
 				 dut->dpp_conf_id, neg_freq, group_id,
 				 akm_use_selector ? " akm_use_selector=1" : "",
@@ -1338,13 +1377,17 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 				 conf2);
 		} else if (tcp && strcasecmp(bs, "QR") == 0) {
 			snprintf(buf, sizeof(buf),
-				 "DPP_AUTH_INIT peer=%d%s role=%s tcp_addr=%s%s%s",
-				 dpp_peer_bootstrap, own_txt, role, tcp,
-				 neg_freq, group_id);
+				 "DPP_AUTH_INIT peer=%d%s role=%s%s%s tcp_addr=%s%s%s",
+				 dpp_peer_bootstrap, own_txt, role,
+				 netrole ? " netrole=" : "",
+				 netrole ? netrole : "",
+				 tcp, neg_freq, group_id);
 		} else if (strcasecmp(bs, "QR") == 0) {
 			snprintf(buf, sizeof(buf),
-				 "DPP_AUTH_INIT peer=%d%s role=%s%s%s",
+				 "DPP_AUTH_INIT peer=%d%s role=%s%s%s%s%s",
 				 dpp_peer_bootstrap, own_txt, role,
+				 netrole ? " netrole=" : "",
+				 netrole ? netrole : "",
 				 neg_freq, group_id);
 		} else if (strcasecmp(bs, "PKEX") == 0 &&
 			   (strcasecmp(prov_role, "Configurator") == 0 ||
@@ -1446,10 +1489,13 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		if (tcp && strcasecmp(tcp, "yes") == 0) {
 			snprintf(buf, sizeof(buf), "DPP_CONTROLLER_START");
 		} else {
-			snprintf(buf, sizeof(buf), "DPP_LISTEN %d role=%s%s",
+			snprintf(buf, sizeof(buf),
+				 "DPP_LISTEN %d role=%s%s%s%s",
 				 freq, role,
 				 (strcasecmp(bs, "QR") == 0 && mutual) ?
-				 " qr=mutual" : "");
+				 " qr=mutual" : "",
+				 netrole ? " netrole=" : "",
+				 netrole ? netrole : "");
 		}
 		if (wpa_command(ifname, buf) < 0) {
 			send_resp(dut, conn, SIGMA_ERROR,
@@ -1809,8 +1855,25 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		goto out;
 	}
 
-	if (sigma_dut_is_ap(dut) &&
-	    strcasecmp(prov_role, "Enrollee") == 0) {
+	if (strcasecmp(prov_role, "Enrollee") == 0 && netrole &&
+	    strcmp(netrole, "configurator") == 0) {
+		res = get_wpa_cli_event(dut, ctrl, "DPP-CONFIGURATOR-ID",
+					buf, sizeof(buf));
+		if (res < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,No DPP-CONFIGURATOR-ID");
+			goto out;
+		}
+		pos = strchr(buf, ' ');
+		if (!pos) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Invalid DPP-CONFIGURATOR-ID");
+			goto out;
+		}
+		pos++;
+		dut->dpp_conf_id = atoi(pos);
+	} else if (sigma_dut_is_ap(dut) &&
+		   strcasecmp(prov_role, "Enrollee") == 0) {
 	update_ap:
 		res = dpp_hostapd_conf_update(dut, conn, ifname, ctrl);
 		if (res == 0)

@@ -243,6 +243,47 @@ done:
 }
 
 
+static enum sigma_cmd_result wpa3_dev_exec_action(struct sigma_dut *dut,
+						  struct sigma_conn *conn,
+						  struct sigma_cmd *cmd)
+{
+	const char *val;
+	char buf[4000], buf2[100], *pos, *end;
+
+	val = get_param(cmd, "Rejected_DH_Groups");
+	if (val) {
+		val = get_param(cmd, "Dest_MAC");
+		if (!val)
+			return ERROR_SEND_STATUS;
+		snprintf(buf2, sizeof(buf2), "STA %s", val);
+		if (wpa_command_resp(dut->hostapd_ifname, buf2,
+				     buf, sizeof(buf)) < 0)
+			return ERROR_SEND_STATUS;
+		pos = buf;
+		while (pos) {
+			if (strncmp(pos, "sae_rejected_groups=", 20) == 0)
+				break;
+			pos = strchr(pos, '\n');
+			if (pos)
+				pos++;
+		}
+		if (pos) {
+			pos += 20;
+			end = strchr(pos, '\n');
+			if (end)
+				*end = '\0';
+		}
+		snprintf(buf2, sizeof(buf2), "DHGroupVerResult,%s",
+			 pos ? pos : "");
+		send_resp(dut, conn, SIGMA_COMPLETE, buf2);
+		return STATUS_SENT;
+
+	}
+
+	return ERROR_SEND_STATUS;
+}
+
+
 static enum sigma_cmd_result cmd_dev_exec_action(struct sigma_dut *dut,
 						 struct sigma_conn *conn,
 						 struct sigma_cmd *cmd)
@@ -265,6 +306,9 @@ static enum sigma_cmd_result cmd_dev_exec_action(struct sigma_dut *dut,
 	val = get_param(cmd, "ServerCertTrust");
 	if (val)
 		return sta_server_cert_trust(dut, conn, val);
+
+	if (program && strcasecmp(program, "WPA3") == 0)
+		return wpa3_dev_exec_action(dut, conn, cmd);
 
 	return ERROR_SEND_STATUS;
 }
