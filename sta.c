@@ -7969,6 +7969,9 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 #endif /* ANDROID */
 	}
 
+	if (dut->program == PROGRAM_QM)
+		wpa_command(intf, "SET interworking 1");
+
 	dut->akm_values = 0;
 	dut->sta_ft_ds = 0;
 

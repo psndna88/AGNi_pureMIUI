@@ -817,6 +817,7 @@ struct sigma_dut {
 		PROGRAM_WPA3,
 		PROGRAM_HE,
 		PROGRAM_HS2_R3,
+		PROGRAM_QM,
 	} program;
 
 	enum device_type {
