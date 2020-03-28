@@ -1654,8 +1654,7 @@ static int cam_hw_cdm_component_bind(struct device *dev,
 
 	platform_set_drvdata(pdev, cdm_hw_intf);
 
-	snprintf(cdm_name, sizeof(cdm_name), "%s%d",
-		cdm_hw->soc_info.label_name, cdm_hw->soc_info.index);
+	snprintf(cdm_name, sizeof(cdm_name), "%s", cdm_hw->soc_info.label_name);
 
 	rc = cam_smmu_get_handle(cdm_name, &cdm_core->iommu_hdl.non_secure);
 	if (rc < 0) {
@@ -1765,6 +1764,15 @@ static int cam_hw_cdm_component_bind(struct device *dev,
 		goto cpas_stop;
 	}
 	cdm_hw->open_count++;
+
+	cdm_core->ops = cam_cdm_get_ops(cdm_core->hw_version, NULL,
+		false);
+
+	if (!cdm_core->ops) {
+		CAM_ERR(CAM_CDM, "Failed to util ops for hw");
+		rc = -EINVAL;
+		goto deinit;
+	}
 
 	if (!cam_cdm_set_cam_hw_version(cdm_core->hw_version,
 		&cdm_core->version)) {
