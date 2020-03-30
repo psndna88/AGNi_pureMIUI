@@ -1130,6 +1130,7 @@ int get_wps_forced_version(struct sigma_dut *dut, const char *str);
 int base64_encode(const char *src, size_t len, char *out, size_t out_len);
 int random_get_bytes(char *buf, size_t len);
 int get_enable_disable(const char *val);
+int wcn_driver_cmd(const char *ifname, char *buf);
 
 /* uapsd_stream.c */
 void receive_uapsd(struct sigma_stream *s);
