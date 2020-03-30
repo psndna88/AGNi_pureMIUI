@@ -7188,6 +7188,7 @@ void msm_comm_release_timestamps(struct msm_vidc_inst *inst)
 int msm_comm_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us)
 {
 	struct msm_vidc_timestamps *entry, *node, *prev = NULL;
+	struct msm_vidc_timestamps *duplicate;
 	int count = 0;
 	int rc = 0;
 	bool inserted = false;
@@ -7199,22 +7200,25 @@ int msm_comm_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us)
 	}
 
 	mutex_lock(&inst->timestamps.lock);
+	duplicate = NULL;
 	list_for_each_entry(node, &inst->timestamps.list, list) {
 		count++;
-		/* Skip adding duplicate entries */
-		if (node->timestamp_us == timestamp_us) {
-			s_vpr_e(inst->sid, "%s: skip ts duplicate entry %lld\n",
-				__func__, node->timestamp_us);
-			goto unlock;
-		}
+		if (node->timestamp_us == timestamp_us)
+			duplicate = node;
 	}
 
-	/* Maintain a sliding window of size 32 */
+	/* Maintain a sliding window of size 64 */
 	entry = NULL;
-	if (count >= TIMESTAMPS_WINDOW_SIZE) {
+	if (count >= VIDEO_MAX_FRAME) {
 		entry = list_first_entry(&inst->timestamps.list,
 			struct msm_vidc_timestamps, list);
-		list_del_init(&entry->list);
+		if (!entry->is_valid) {
+			list_del_init(&entry->list);
+		} else {
+			s_vpr_e(inst->sid, "%s: first entry still valid %d\n",
+				__func__, count);
+			entry = NULL;
+		}
 	}
 	if (!entry) {
 		entry = kzalloc(sizeof(*entry), GFP_KERNEL);
@@ -7225,8 +7229,18 @@ int msm_comm_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us)
 			goto unlock;
 		}
 	}
+
+	if (duplicate) {
+		entry->timestamp_us = duplicate->timestamp_us;
+		entry->framerate = duplicate->framerate;
+		entry->is_valid = true;
+		/* add entry next to duplicate */
+		list_add(&entry->list, &duplicate->list);
+		goto unlock;
+	}
 	entry->timestamp_us = timestamp_us;
 	entry->framerate = DEFAULT_FPS << 16;
+	entry->is_valid = true;
 
 	/* add new entry into the list in sorted order */
 	prev = NULL;
@@ -7247,7 +7261,6 @@ int msm_comm_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us)
 		prev = node;
 	}
 
-	/* inserted will be false if list is empty */
 	if (!inserted)
 		list_add_tail(&entry->list, &inst->timestamps.list);
 
@@ -7311,36 +7324,54 @@ u32 msm_comm_get_max_framerate(struct msm_vidc_inst *inst)
 	return max_framerate;
 }
 
-int msm_comm_fetch_framerate(struct msm_vidc_inst *inst,
-	u64 timestamp_us, u32 *framerate)
+int msm_comm_fetch_ts_framerate(struct msm_vidc_inst *inst,
+	struct v4l2_buffer *b)
 {
 	struct msm_vidc_timestamps *node;
-	bool found_fps = false;
-	u32 count = 0;
 	int rc = 0;
+	bool invalidate_extra = false;
+	u32 input_tag = 0, input_tag2 = 0;
 
-	if (!inst || !framerate) {
+	if (!inst || !b) {
 		d_vpr_e("%s: invalid parameters\n", __func__);
 		return -EINVAL;
 	}
 
+	input_tag = b->m.planes[0].reserved[MSM_VIDC_INPUT_TAG_1];
+	input_tag2 = b->m.planes[0].reserved[MSM_VIDC_INPUT_TAG_2];
+
+	/* nothing to do for flushed buffers */
+	if (!input_tag)
+		return 0;
+
+	/* set default framerate */
+	b->m.planes[0].reserved[MSM_VIDC_FRAMERATE] = DEFAULT_FPS << 16;
+
+	/* to handle interlace, 2 input buffers and 1 output buffer*/
+	if (input_tag2 && input_tag2 != input_tag)
+		invalidate_extra = true;
+
 	mutex_lock(&inst->timestamps.lock);
 	list_for_each_entry(node, &inst->timestamps.list, list) {
-		count++;
-		if (timestamp_us == node->timestamp_us) {
-			*framerate = node->framerate;
-			found_fps = true;
-			break;
+		if (!node->is_valid)
+			continue;
+
+		if (invalidate_extra) {
+			node->is_valid = false;
+			invalidate_extra = false;
+			continue;
 		}
+
+		/* do not update is_valid flag for subframe buffer */
+		if (!(b->flags & HAL_BUFFERFLAG_ENDOFSUBFRAME))
+			node->is_valid = false;
+
+		b->timestamp.tv_sec = node->timestamp_us / 1000000ull;
+		b->timestamp.tv_usec = node->timestamp_us % 1000000ull;
+		b->m.planes[0].reserved[MSM_VIDC_FRAMERATE] = node->framerate;
+		break;
 	}
 	mutex_unlock(&inst->timestamps.lock);
-
-	if (!found_fps) {
-		if (!inst->flush_timestamps)
-			s_vpr_e(inst->sid, "%s:ts %lld not found,listsize %d\n",
-				__func__, timestamp_us, count);
-		rc = -EINVAL;
-	}
 	return rc;
 }
 
