@@ -97,6 +97,11 @@ camera-$(CONFIG_SPECTRA_ISP) += \
 	cam_isp/cam_isp_dev.o \
 	cam_isp/cam_isp_context.o
 
+camera-$(CONFIG_SPECTRA_SFE) += \
+	cam_isp/isp_hw_mgr/isp_hw/sfe_hw/cam_sfe_soc.o \
+	cam_isp/isp_hw_mgr/isp_hw/sfe_hw/cam_sfe_dev.o \
+	cam_isp/isp_hw_mgr/isp_hw/sfe_hw/cam_sfe_core.o
+
 camera-$(CONFIG_SPECTRA_ICP) += \
 	cam_icp/icp_hw/icp_hw_mgr/cam_icp_hw_mgr.o \
 	cam_icp/icp_hw/ipe_hw/ipe_dev.o \
