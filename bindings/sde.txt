@@ -323,6 +323,10 @@ Optional properties:
                 corresponding DSPP block offset as base.
 - qcom,sde-dspp-spr-size:    A u32 value indicating the SPR block register address range
 - qcom,sde-dspp-spr-version:    A u32 value indicating the version of SPR hardware.
+- qcom,sde-dspp-demura-off:    Array of u32 offsets indicate the demura block offsets from the
+                corresponding DSPP block offset as base.
+- qcom,sde-dspp-demura-size:    A u32 value indicating the demura block register address range
+- qcom,sde-dspp-demura-version:    A u32 value indicating the version of demura hardware.
 - qcom,sde-vbif-id:		Array of vbif ids corresponding to the
 				offsets defined in property: qcom,sde-vbif-off.
 - qcom,sde-vbif-default-ot-rd-limit:	A u32 value indicates the default read OT limit
@@ -605,6 +609,9 @@ Example:
     qcom,sde-dspp-spr-off = <0x15400 0x14400>;
     qcom,sde-dspp-spr-size = <0x200>;
     qcom,sde-dspp-spr-version = <0x00010000>:
+    qcom,sde-dspp-demura-off = <0x15600 0x14800>;
+    qcom,sde-dspp-demura-size = <0x200>;
+    qcom,sde-dspp-demura-version = <0x00010000>:
     qcom,sde-dspp-rc-mem-size = <2720>;
     qcom,sde-dest-scaler-top-off = <0x00061000>;
     qcom,sde-dest-scaler-off = <0x800 0x1000>;
