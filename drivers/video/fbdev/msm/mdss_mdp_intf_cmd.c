@@ -1230,11 +1230,12 @@ static int mdss_mdp_cmd_intf_callback(void *data, int event)
 			__func__, atomic_read(&ctx->rdptr_cnt), event);
 
 		/*
-		 * if we are going to suspended or pp split is not enabled,
-		 * just return
+		 * if we are going to suspended, just return
 		 */
-		if (ctx->intf_stopped || !is_pingpong_split(ctx->ctl->mfd))
+		if (ctx->intf_stopped) {
+			pr_debug("%s: Intf stopped\n", __func__);
 			return -EINVAL;
+		}
 		atomic_inc(&ctx->rdptr_cnt);
 
 		/* enable clks and rd_ptr interrupt */

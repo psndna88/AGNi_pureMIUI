@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2018, 2020, The Linux Foundation. All rights reserved.
  * Copyright (C) 2019 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -2675,7 +2675,7 @@ int mdss_dsi_cmdlist_rx(struct mdss_dsi_ctrl_pdata *ctrl,
 }
 
 static inline bool mdss_dsi_delay_cmd(struct mdss_dsi_ctrl_pdata *ctrl,
-	bool from_mdp)
+	bool from_mdp, struct dcs_cmd_req *req)
 {
 	unsigned long flags;
 	bool mdp_busy = false;
@@ -2685,9 +2685,9 @@ static inline bool mdss_dsi_delay_cmd(struct mdss_dsi_ctrl_pdata *ctrl,
 		goto exit;
 
 	/* delay only for split dsi, cmd mode and burst mode enabled cases */
-	if (!mdss_dsi_is_hw_config_split(ctrl->shared_data) ||
+	if ((!mdss_dsi_is_hw_config_split(ctrl->shared_data) ||
 	    !(ctrl->panel_mode == DSI_CMD_MODE) ||
-	    !ctrl->burst_mode_enabled)
+	    !ctrl->burst_mode_enabled) && !(req->flags & CMD_REQ_DCS))
 		goto exit;
 
 	/* delay only if cmd is not from mdp and panel has been initialized */
@@ -2696,8 +2696,10 @@ static inline bool mdss_dsi_delay_cmd(struct mdss_dsi_ctrl_pdata *ctrl,
 
 	/* if broadcast enabled, apply delay only if this is the ctrl trigger */
 	if (mdss_dsi_sync_wait_enable(ctrl) &&
-	   !mdss_dsi_sync_wait_trigger(ctrl))
+	   (!mdss_dsi_sync_wait_trigger(ctrl) && !(req->flags & CMD_REQ_DCS)))
 		goto exit;
+	else
+		need_wait = true;
 
 	spin_lock_irqsave(&ctrl->mdp_lock, flags);
 	if (ctrl->mdp_busy == true)
@@ -2838,7 +2840,7 @@ int mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp)
 	 * mdp path
 	 */
 	mutex_lock(&ctrl->mutex);
-	if (mdss_dsi_delay_cmd(ctrl, from_mdp))
+	if (mdss_dsi_delay_cmd(ctrl, from_mdp, req))
 		ctrl->mdp_callback->fxn(ctrl->mdp_callback->data,
 			MDP_INTF_CALLBACK_DSI_WAIT);
 	mutex_unlock(&ctrl->mutex);
