@@ -373,13 +373,9 @@
 		msm_cam_smmu_ife {
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0x800 0x400>,
-				<&apps_smmu 0x801 0x400>,
 				<&apps_smmu 0x840 0x400>,
-				<&apps_smmu 0x841 0x400>,
 				<&apps_smmu 0xC00 0x400>,
-				<&apps_smmu 0xC01 0x400>,
-				<&apps_smmu 0xC40 0x400>,
-				<&apps_smmu 0xC41 0x400>;
+				<&apps_smmu 0xC40 0x400>;
 			qcom,iommu-dma-addr-pool = <0x7400000 0xd8c00000>;
 			label = "ife", "ife-cdm";
 			multiple-client-devices;
