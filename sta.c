@@ -2234,6 +2234,16 @@ static enum sigma_cmd_result cmd_sta_set_psk(struct sigma_dut *dut,
 			return STATUS_SENT_ERROR;
 		}
 	}
+
+	val = get_param(cmd, "Clear_RSNXE");
+	if (val && strcmp(val, "1") == 0 &&
+	    (wpa_command(intf, "SET rsnxe_override_assoc ") ||
+	     wpa_command(intf, "SET rsnxe_override_eapol "))) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Failed to clear RSNXE");
+		return ERROR_SEND_STATUS;
+	}
+
 	if (dut->sae_pwe == SAE_PWE_LOOP && get_param(cmd, "PasswordId"))
 		sae_pwe = 3;
 	else if (dut->sae_pwe == SAE_PWE_LOOP)
