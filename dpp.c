@@ -211,9 +211,17 @@ static int dpp_hostapd_conf_update(struct sigma_dut *dut,
 		"DPP-CONNECTOR",
 		"DPP-CONFOBJ-PASS",
 		"DPP-CONFOBJ-PSK",
+		"DPP-C-SIGN-KEY",
+		"DPP-NET-ACCESS-KEY",
 		NULL
 	};
 	unsigned int old_timeout;
+	int legacy_akm, dpp_akm;
+	char *connector = NULL, *psk = NULL, *csign = NULL,
+		*net_access_key = NULL;
+	char pass[64];
+	int pass_len = 0;
+	int ret = 0;
 
 	sigma_dut_print(dut, DUT_MSG_INFO,
 			"Update hostapd configuration based on DPP Config Object");
@@ -226,6 +234,21 @@ static int dpp_hostapd_conf_update(struct sigma_dut *dut,
 			  "errorCode,Failed to update AP security parameters");
 		goto out;
 	}
+
+	res = get_wpa_cli_event(dut, ctrl, "DPP-CONFOBJ-AKM", buf, sizeof(buf));
+	if (res < 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,No DPP-CONFOBJ-AKM");
+		goto out;
+	}
+	pos = strchr(buf, ' ');
+	if (!pos)
+		return -2;
+	pos++;
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"DPP: Config Object AKM: %s", pos);
+	legacy_akm = strstr(pos, "psk") != NULL || strstr(pos, "sae") != NULL;
+	dpp_akm = strstr(pos, "dpp") != NULL;
 
 	res = get_wpa_cli_event(dut, ctrl, "DPP-CONFOBJ-SSID",
 				buf, sizeof(buf));
@@ -253,119 +276,149 @@ static int dpp_hostapd_conf_update(struct sigma_dut *dut,
 		goto out;
 	}
 
-	res = get_wpa_cli_events(dut, ctrl, conf_data_events, buf, sizeof(buf));
-	if (res < 0) {
-		send_resp(dut, conn, SIGMA_ERROR,
-			  "errorCode,No DPP-CONNECTOR/DPP-CONFOBJ-PASS/PSK");
-		goto out;
-	}
-
-	if (!strstr(buf, "DPP-CONNECTOR")) {
-		if (wpa_command(ifname, "SET wpa_key_mgmt WPA-PSK") < 0) {
+	while ((dpp_akm && (!connector || !csign || !net_access_key)) ||
+	       (legacy_akm && !pass_len && !psk)) {
+		res = get_wpa_cli_events(dut, ctrl, conf_data_events,
+					 buf, sizeof(buf));
+		if (res < 0) {
 			send_resp(dut, conn, SIGMA_ERROR,
-				  "errorCode,Failed to update AP security parameters");
+				  "errorCode,Not all config object information received");
 			goto out;
 		}
 
-		pos = strchr(buf, ' ');
-		if (!pos)
-			return -2;
-		pos++;
-		if (strstr(buf, "DPP-CONFOBJ-PASS")) {
-			char pass[64];
-			int pass_len;
-
+		if (strstr(buf, "DPP-CONNECTOR")) {
+			pos = strchr(buf, ' ');
+			if (!pos) {
+				ret = -2;
+				goto out;
+			}
+			pos++;
+			sigma_dut_print(dut, DUT_MSG_INFO, "DPP: Connector: %s",
+					pos);
+			if (!connector)
+				connector = strdup(pos);
+		} else if (strstr(buf, "DPP-C-SIGN-KEY")) {
+			pos = strchr(buf, ' ');
+			if (!pos) {
+				ret = -2;
+				goto out;
+			}
+			pos++;
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"DPP: C-sign-key: %s", pos);
+			if (!csign)
+				csign = strdup(pos);
+		} else if (strstr(buf, "DPP-NET-ACCESS-KEY")) {
+			pos = strchr(buf, ' ');
+			if (!pos) {
+				ret = -2;
+				goto out;
+			}
+			pos++;
+			if (!net_access_key)
+				net_access_key = strdup(pos);
+		} else if (strstr(buf, "DPP-CONFOBJ-PASS")) {
+			pos = strchr(buf, ' ');
+			if (!pos) {
+				ret = -2;
+				goto out;
+			}
+			pos++;
 			pass_len = parse_hexstr(pos, (u8 *) pass, sizeof(pass));
-			if (pass_len < 0 || (size_t) pass_len >= sizeof(pass))
-				return -2;
+			if (pass_len < 0 || (size_t) pass_len >= sizeof(pass)) {
+				ret = -2;
+				goto out;
+			}
 			pass[pass_len] = '\0';
 			sigma_dut_print(dut, DUT_MSG_INFO,
 					"DPP: Passphrase: %s", pass);
-			snprintf(buf2, sizeof(buf2), "SET wpa_passphrase %s",
-				 pass);
-			if (wpa_command(ifname, buf2) < 0) {
-				send_resp(dut, conn, SIGMA_ERROR,
-					  "errorCode,Failed to set passphrase");
-				goto out;
-			}
 		} else if (strstr(buf, "DPP-CONFOBJ-PSK")) {
-			sigma_dut_print(dut, DUT_MSG_INFO,
-					"DPP: PSK: %s", pos);
-			snprintf(buf2, sizeof(buf2), "SET wpa_psk %s", pos);
-			if (wpa_command(ifname, buf2) < 0) {
-				send_resp(dut, conn, SIGMA_ERROR,
-					  "errorCode,Failed to set PSK");
+			pos = strchr(buf, ' ');
+			if (!pos) {
+				ret = -2;
 				goto out;
 			}
+			pos++;
+			sigma_dut_print(dut, DUT_MSG_INFO, "DPP: PSK: %s", pos);
+			if (!psk)
+				psk = strdup(pos);
 		}
-
-		goto skip_dpp_akm;
 	}
 
-	pos = strchr(buf, ' ');
-	if (!pos)
-		return -2;
-	pos++;
-	sigma_dut_print(dut, DUT_MSG_INFO, "DPP: Connector: %s", pos);
-	snprintf(buf2, sizeof(buf2), "SET dpp_connector %s", pos);
-	if (wpa_command(ifname, buf2) < 0) {
+	if ((!connector || !dpp_akm) &&
+	    wpa_command(ifname, "SET wpa_key_mgmt WPA-PSK") < 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
-			  "errorCode,Failed to update AP Connector");
+			  "errorCode,Failed to update AP security parameters");
 		goto out;
 	}
 
-	res = get_wpa_cli_event(dut, ctrl, "DPP-C-SIGN-KEY",
-				buf, sizeof(buf));
-	if (res < 0) {
+	if (connector && dpp_akm && legacy_akm &&
+	    wpa_command(ifname, "SET wpa_key_mgmt DPP WPA-PSK") < 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
-			  "errorCode,No DPP-C-SIGN-KEY");
-		goto out;
-	}
-	pos = strchr(buf, ' ');
-	if (!pos)
-		return -2;
-	pos++;
-	sigma_dut_print(dut, DUT_MSG_INFO, "DPP: C-sign-key: %s", pos);
-	snprintf(buf2, sizeof(buf2), "SET dpp_csign %s", pos);
-	if (wpa_command(ifname, buf2) < 0) {
-		send_resp(dut, conn, SIGMA_ERROR,
-			  "errorCode,Failed to update AP C-sign-key");
+			  "errorCode,Failed to update AP security parameters");
 		goto out;
 	}
 
-	res = get_wpa_cli_event(dut, ctrl, "DPP-NET-ACCESS-KEY",
-				buf, sizeof(buf));
-	if (res < 0) {
-		send_resp(dut, conn, SIGMA_ERROR,
-			  "errorCode,No DPP-NET-ACCESS-KEY");
-		goto out;
-	}
-	pos = strchr(buf, ' ');
-	if (!pos)
-		return -2;
-	pos++;
-	pos2 = strchr(pos, ' ');
-	if (pos2)
-		*pos2++ = '\0';
-	sigma_dut_print(dut, DUT_MSG_INFO, "DPP: netAccessKey: %s", pos);
-	snprintf(buf2, sizeof(buf2), "SET dpp_netaccesskey %s", pos);
-	if (wpa_command(ifname, buf2) < 0) {
-		send_resp(dut, conn, SIGMA_ERROR,
-			  "errorCode,Failed to update AP netAccessKey");
-		goto out;
-	}
-	if (pos2) {
-		sigma_dut_print(dut, DUT_MSG_INFO,
-				"DPP: netAccessKey expiry: %s", pos2);
-		snprintf(buf2, sizeof(buf2), "SET dpp_netaccesskey_expiry %s",
-			 pos2);
+	if (pass_len) {
+		snprintf(buf2, sizeof(buf2), "SET wpa_passphrase %s",
+			 pass);
 		if (wpa_command(ifname, buf2) < 0) {
 			send_resp(dut, conn, SIGMA_ERROR,
-				  "errorCode,Failed to update AP netAccessKey expiry");
+				  "errorCode,Failed to set passphrase");
+			goto out;
+		}
+	} else if (psk) {
+		snprintf(buf2, sizeof(buf2), "SET wpa_psk %s", psk);
+		if (wpa_command(ifname, buf2) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to set PSK");
 			goto out;
 		}
 	}
-skip_dpp_akm:
+
+	if (connector) {
+		snprintf(buf2, sizeof(buf2), "SET dpp_connector %s", connector);
+		if (wpa_command(ifname, buf2) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to update AP Connector");
+			goto out;
+		}
+	}
+
+	if (csign) {
+		snprintf(buf2, sizeof(buf2), "SET dpp_csign %s", csign);
+		if (wpa_command(ifname, buf2) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to update AP C-sign-key");
+			goto out;
+		}
+	}
+
+	if (net_access_key) {
+		pos2 = strchr(net_access_key, ' ');
+		if (pos2)
+			*pos2++ = '\0';
+		sigma_dut_print(dut, DUT_MSG_INFO, "DPP: netAccessKey: %s",
+				net_access_key);
+		snprintf(buf2, sizeof(buf2), "SET dpp_netaccesskey %s",
+			 net_access_key);
+		if (wpa_command(ifname, buf2) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to update AP netAccessKey");
+			goto out;
+		}
+		if (pos2) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"DPP: netAccessKey expiry: %s", pos2);
+			snprintf(buf2, sizeof(buf2),
+				 "SET dpp_netaccesskey_expiry %s", pos2);
+			if (wpa_command(ifname, buf2) < 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to update AP netAccessKey expiry");
+				goto out;
+			}
+		}
+	}
 
 	/* Wait for a possible Configuration Result to be sent */
 	old_timeout = dut->default_timeout;
@@ -385,9 +438,13 @@ skip_dpp_akm:
 		goto out;
 	}
 
-	return 1;
+	ret = 1;
 out:
-	return 0;
+	free(connector);
+	free(psk);
+	free(csign);
+	free(net_access_key);
+	return ret;
 }
 
 
