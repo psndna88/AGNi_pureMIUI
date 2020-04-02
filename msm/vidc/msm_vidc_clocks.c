@@ -1118,7 +1118,8 @@ int msm_vidc_decide_work_route_iris2(struct msm_vidc_inst *inst)
 	u32 codec;
 	uint32_t vpu;
 
-	if (!inst || !inst->core || !inst->core->device) {
+	if (!inst || !inst->core || !inst->core->device ||
+		!inst->core->platform_data) {
 		d_vpr_e("%s: Invalid args: Inst = %pK\n",
 			__func__, inst);
 		return -EINVAL;
@@ -1127,7 +1128,7 @@ int msm_vidc_decide_work_route_iris2(struct msm_vidc_inst *inst)
 	vpu = inst->core->platform_data->vpu_ver;
 	hdev = inst->core->device;
 	is_legacy_cbr = inst->clk_data.is_legacy_cbr;
-	pdata.video_work_route = 4;
+	pdata.video_work_route = inst->core->platform_data->num_vpp_pipes;
 
 	if (vpu == VPU_VERSION_IRIS2_1) {
 		pdata.video_work_route = 1;
