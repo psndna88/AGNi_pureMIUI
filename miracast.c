@@ -18,9 +18,7 @@
 #include "miracast.h"
 #ifdef ANDROID
 #include "properties.h"
-#ifndef MIRACAST_DHCP_M
 #include <netutils/ifc.h>
-#endif /* MIRACAST_DHCP_M */
 #endif /* ANDROID */
 
 #define HUNDRED_SECOND_TIMEOUT   100 /* 100 seconds */
@@ -31,7 +29,6 @@ static int session_management_control_port = 7236;
 /* Followingng stores p2p interface name after P2P group formation */
 static char wfd_ifname[32];
 
-#ifndef MIRACAST_DHCP_M
 extern void get_dhcp_info(uint32_t *ipaddr, uint32_t *gateway,
 			  uint32_t *prefixLength, uint32_t *dns1,
 			  uint32_t *dns2, uint32_t *server,
@@ -45,7 +42,6 @@ const char *ipaddr (in_addr_t addr)
 	in_addr.s_addr = addr;
 	return inet_ntoa(in_addr);
 }
-#endif /* MIRACAST_DHCP_M */
 
 
 
@@ -177,101 +173,20 @@ static int get_peer_ip_p2p_go(struct sigma_dut *dut, char *ipaddr,
 
 static int miracast_start_dhcp_client(struct sigma_dut *dut, const char *ifname)
 {
-#ifdef MIRACAST_DHCP_M
-	 start_dhcp(dut, ifname, 0);
-#else /* MIRACAST_DHCP_M */
 	int ret = ifc_init();
 
 	sigma_dut_print(dut, DUT_MSG_DEBUG, "ifc init returned %d", ret);
 	ret = do_dhcp((char *) ifname);
 	sigma_dut_print(dut, DUT_MSG_DEBUG, "do dhcp returned %d", ret);
-#endif /* MIRACAST_DHCP_M */
 	return 0;
 }
 
 
 static void miracast_stop_dhcp_client(struct sigma_dut *dut, const char *ifname)
 {
-#ifdef MIRACAST_DHCP_M
-	stop_dhcp(dut, ifname, 0);
-#else /* MIRACAST_DHCP_M */
 	ifc_close();
-#endif /* MIRACAST_DHCP_M */
 }
 
-
-#ifdef MIRACAST_DHCP_M
-
-static int get_local_ip_address(struct sigma_dut *dut,
-				char *local_ip_addr, size_t buflen,
-				const char *intf, int size)
-{
-	struct ifreq ifr;
-	int s;
-
-	memset(&ifr, 0, sizeof(struct ifreq));
-	strlcpy(ifr.ifr_name, intf, IFNAMSIZ);
-	ifr.ifr_name[IFNAMSIZ-1] = 0;
-
-	if ((s = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-		sigma_dut_print(dut, DUT_MSG_INFO,
-				"%s: Error in creating socket", __func__);
-		return -1;
-	}
-
-	if (ioctl(s, SIOCGIFADDR, &ifr) < 0) {
-		sigma_dut_print(dut, DUT_MSG_INFO, "ioctl failed: %s",
-				strerror(errno));
-		close(s);
-		return -1;
-	}
-
-	strlcpy(local_ip_addr,
-		inet_ntoa(((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr),
-		buflen);
-	close(s);
-	return 0;
-}
-
-
-static int get_peer_ip_p2p_client(struct sigma_dut *dut, char *ip_addr,
-				  const char *intf, unsigned int wait_limit)
-{
-	char prop_name[128];
-	char prop_name_self[128];
-	char self_ip[128];
-
-	memset(self_ip, 0, sizeof(self_ip));
-	/* For P2P Client read the server property */
-	snprintf(prop_name, sizeof(prop_name), "%s.%s.server", "dhcp", "p2p");
-	snprintf(prop_name_self, sizeof(prop_name_self),
-		 "%s.%s.ipaddress", "dhcp", "p2p");
-
-	while (wait_limit > 0) {
-#ifdef ANDROID
-		property_get(prop_name, ip_addr, NULL);
-#else /* ANDROID */
-		ip_addr[0] = '\0';
-#endif /* ANDROID */
-		get_local_ip_address(dut, self_ip, sizeof(self_ip), intf, 20);
-		sigma_dut_print(dut, DUT_MSG_INFO, "Peer IP, self IP: %s %s",
-				ip_addr, self_ip);
-		if (strlen(ip_addr) > 8 &&
-		    ip_addr[0] == '1' && ip_addr[1] == '9' &&
-		    self_ip[0] == '1' && self_ip[1] == '9')
-			break; /* connected */
-
-		/* What if DHCP server was started before Client was started?
-		 * Request DHCP yet again */
-		miracast_start_dhcp_client(dut, intf);
-		sleep(5); /* Sleep always helps */
-		wait_limit--;
-	}
-
-	return wait_limit > 0 ? 0 : -1;
-}
-
-#else /* MIRACAST_DHCP_M */
 
 static int get_peer_ip_p2p_client(struct sigma_dut *dut, char *ipAddr,
 				  const char *intf, unsigned int wait_limit)
@@ -293,8 +208,6 @@ static int get_peer_ip_p2p_client(struct sigma_dut *dut, char *ipAddr,
 	}
 	return wait_limit == 0 ? -1 : 0;
 }
-
-#endif /* MIRACAST_DHCP_M */
 
 
 static int get_p2p_connection_event(struct sigma_dut *dut,

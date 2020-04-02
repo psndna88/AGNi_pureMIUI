@@ -80,7 +80,7 @@ endif
 
 ifdef MIRACAST
 OBJS += miracast.o
-CFLAGS += -DMIRACAST -DMIRACAST_DHCP_M
+CFLAGS += -DMIRACAST
 LIBS += -ldl
 endif
 

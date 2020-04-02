@@ -32,11 +32,6 @@ endif
 ### MIRACAST ###
 OBJS += miracast.c
 CFLAGS += -DMIRACAST
-dhcpver = $(filter N%,$(PLATFORM_VERSION))
-dhcpver += $(filter 7.%,$(PLATFORM_VERSION))
-ifeq (,$(strip $(dhcpver)))
- CFLAGS += -DMIRACAST_DHCP_M
-endif
 CFLAGS += -DCONFIG_CTRL_IFACE_CLIENT_DIR=\"/data/misc/wifi/sockets\"
 CFLAGS += -DSIGMA_TMPDIR=\"/data\"
 
@@ -79,10 +74,8 @@ LOCAL_C_INCLUDES += \
 
 LOCAL_SHARED_LIBRARIES := libc libcutils libnl
 LOCAL_STATIC_LIBRARIES := libpcap
-ifneq (,$(strip $(dhcpver)))
 LOCAL_SHARED_LIBRARIES += libnetutils
 LOCAL_C_INCLUDES += $(LOCAL_PATH) system/core/include/netutils
-endif
 LOCAL_SHARED_LIBRARIES += libhardware_legacy
 ifeq ($(BOARD_WLAN_DEVICE),qcwcn)
 ifneq ($(wildcard hardware/qcom/wlan/qcwcn/wifi_hal/nan_cert.h),)
