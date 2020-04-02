@@ -1,7 +1,7 @@
 /*
  * Sigma Control API DUT - Miracast interface
  * Copyright (c) 2017, Qualcomm Atheros, Inc.
- * Copyright (c) 2018, The Linux Foundation
+ * Copyright (c) 2018-2019, The Linux Foundation
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  *
@@ -92,11 +92,57 @@ static int miracast_unload(struct sigma_dut *dut)
 }
 
 
+static void get_modified_peer_mac_address(struct sigma_dut *dut)
+{
+	struct wpa_ctrl *ctrl;
+	char event_buf[64];
+	char *peer;
+	int res;
+
+	dut->modified_peer_mac_address[0] = '\0';
+	ctrl = open_wpa_mon(wfd_ifname); /* Refer to wfd_ifname */
+	if (!ctrl) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to open wpa_supplicant monitor connection");
+		return;
+	}
+	res = get_wpa_cli_event(dut, ctrl, "AP-STA-CONNECTED",
+				event_buf, sizeof(event_buf));
+	wpa_ctrl_detach(ctrl);
+	wpa_ctrl_close(ctrl);
+
+	if (res < 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Could not get event before timeout");
+		return;
+	}
+
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "STA connected event: '%s'",
+			event_buf);
+	peer = strchr(event_buf, ' ');
+	if (!peer) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Could not find STA MAC address");
+		return;
+	}
+
+	peer++;
+	strlcpy(dut->modified_peer_mac_address, peer,
+		sizeof(dut->modified_peer_mac_address));
+}
+
+
 static int get_peer_ip_p2p_go(struct sigma_dut *dut, char *ipaddr,
-			      const char *macaddr, unsigned int wait_limit)
+			      unsigned int wait_limit)
 {
 
 	FILE *fp;
+	char *macaddr;
+
+	if (dut->modified_peer_mac_address[0])
+		macaddr = dut->modified_peer_mac_address;
+	else
+		macaddr = dut->peer_mac_address;
 
 	fp = fopen(DHCP_LEASE_FILE_PATH, "r");
 	if (!fp) {
@@ -143,13 +189,8 @@ static int get_peer_ip_p2p_go(struct sigma_dut *dut, char *ipaddr,
 					"Peer IP Address obtained and mac %s %s",
 					ipaddr, dummy_macaddress);
 
-			/*
-			 * The idea is that the p2p mac address may differ by 1
-			 * nibble mostly it is the first byte, hence try the
-			 * middle two octets.
-			 */
-			if (strncasecmp(macaddr + 6, dummy_macaddress + 6,
-					5) == 0) {
+			/* Match all the octets of MAC address */
+			if (strncasecmp(macaddr, dummy_macaddress, 17) == 0) {
 				ip_found = 1;
 				sigma_dut_print(dut, DUT_MSG_INFO,
 						"Obtained the IP address %s",
@@ -290,8 +331,10 @@ static int get_p2p_connection_event(struct sigma_dut *dut,
 	*pos++ = '\0';
 	sigma_dut_print(dut, DUT_MSG_DEBUG, "Group Role %s", mode_string);
 
-	if (strcmp(mode_string, "GO") == 0)
+	if (strcmp(mode_string, "GO") == 0) {
 		*is_group_owner = 1;
+		get_modified_peer_mac_address(dut);
+	}
 	sigma_dut_print(dut, DUT_MSG_DEBUG, "Value of is_group_owner %d",
 			*is_group_owner);
 	return 0;
@@ -362,8 +405,7 @@ static void * miracast_rtsp_thread_entry(void *ptr)
 				"Waiting to start dhcp server");
 		start_dhcp(dut, output_ifname, 1);
 		sleep(5);
-		if (get_peer_ip_p2p_go(dut, peer_ip_address,
-				       dut->peer_mac_address, wait_limit) < 0) {
+		if (get_peer_ip_p2p_go(dut, peer_ip_address, wait_limit) < 0) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Could not get peer IP");
 			goto EXIT;
@@ -533,7 +575,7 @@ static void * auto_go_thread_entry(void *ptr)
 
 	peer++;
 	strlcpy(macaddress, peer, sizeof(macaddress));
-	if (get_peer_ip_p2p_go(dut, peer_ip_address, macaddress, 30) < 0) {
+	if (get_peer_ip_p2p_go(dut, peer_ip_address, 30) < 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR, "Could not get peer IP");
 		goto THR_EXIT;
 	}
@@ -1123,8 +1165,7 @@ static enum sigma_cmd_result cmd_start_wfd_connection(struct sigma_dut *dut,
 			return 0;
 		}
 	} else {
-		if (get_peer_ip_p2p_go(dut, peer_ip_address, peer_address,
-				       30) < 0) {
+		if (get_peer_ip_p2p_go(dut, peer_ip_address, 30) < 0) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "Could not get remote IP");
 			return 0;
@@ -1477,8 +1518,7 @@ static enum sigma_cmd_result cmd_reinvoke_wfd_session(struct sigma_dut *dut,
 	sigma_dut_print(dut, DUT_MSG_INFO, "Waiting to start DHCP server");
 	start_dhcp(dut, intf, 1);
 	sleep(5);
-	if (get_peer_ip_p2p_go(dut, peer_ip_address, dut->peer_mac_address,
-			       wait_limit) < 0) {
+	if (get_peer_ip_p2p_go(dut, peer_ip_address, wait_limit) < 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR, "Could not get peer IP");
 		return -2;
 	}

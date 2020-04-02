@@ -788,6 +788,7 @@ struct sigma_dut {
 	pthread_t rtsp_thread_handle;
 	int wfd_device_type; /* 0 for source, 1 for sink */
 	char peer_mac_address[32];
+	char modified_peer_mac_address[32];
 	void *miracast_lib;
 	const char *miracast_lib_path;
 	char mdns_instance_name[64];
