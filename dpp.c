@@ -1528,7 +1528,9 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		}
 	} else if ((nfc_handover &&
 		    strcasecmp(nfc_handover, "Negotiated_Selector") == 0) ||
-		   (!nfc_handover && strcasecmp(auth_role, "Responder") == 0)) {
+		   ((!nfc_handover ||
+		     strcasecmp(nfc_handover, "Static") == 0) &&
+		    strcasecmp(auth_role, "Responder") == 0)) {
 		const char *delay_qr_resp;
 		int mutual;
 		int freq = 2462; /* default: channel 11 */
@@ -1557,7 +1559,11 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			}
 		}
 
-		if (strcasecmp(bs, "NFC") == 0) {
+		if (strcasecmp(bs, "NFC") == 0 && nfc_handover &&
+		    strcasecmp(nfc_handover, "Static") == 0) {
+			/* No steps needed here - waiting for peer to initiate
+			 * once it reads the URI from the NFC Tag */
+		} else if (strcasecmp(bs, "NFC") == 0) {
 			if (!dut->dpp_peer_uri) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "errorCode,Missing peer bootstrapping info");
