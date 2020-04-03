@@ -825,7 +825,9 @@ static int get_p2p_peers(struct sigma_dut *dut, char *respbuf, size_t bufsize)
 		addr[17] = '\0';
 		strlcpy(respbuf, addr, bufsize);
 		pos += strlen(respbuf);
-		snprintf(cmd, sizeof(cmd), "P2P_PEER NEXT-%s", addr);
+		ret = snprintf(cmd, sizeof(cmd), "P2P_PEER NEXT-%s", addr);
+		if (ret < 0 || ret >= sizeof(cmd))
+			return -1;
 		memset(addr, 0, sizeof(addr));
 		while (wpa_command_resp(intf, cmd, addr, sizeof(addr)) >= 0) {
 			if (memcmp(addr, "FAIL", 4) == 0)
@@ -835,7 +837,10 @@ static int get_p2p_peers(struct sigma_dut *dut, char *respbuf, size_t bufsize)
 			if (ret < 0 || ret >= end - pos)
 				break;
 			pos += ret;
-			snprintf(cmd, sizeof(cmd), "P2P_PEER NEXT-%s", addr);
+			ret = snprintf(cmd, sizeof(cmd), "P2P_PEER NEXT-%s",
+				       addr);
+			if (ret < 0 || ret >= sizeof(cmd))
+				break;
 			memset(addr, 0, sizeof(addr));
 		}
 	}
