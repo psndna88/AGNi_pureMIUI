@@ -953,7 +953,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	const char *val;
 	const char *conf_role;
 	int conf_index = -1;
-	char buf[2000], *pos;
+	char buf[2000], *pos, *pos2;
 	char buf2[200];
 	char conf_ssid[100];
 	char conf_pass[100];
@@ -1506,7 +1506,9 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 				  "errorCode,Failed to initiate DPP authentication");
 			goto out;
 		}
-	} else if (strcasecmp(auth_role, "Responder") == 0) {
+	} else if ((nfc_handover &&
+		    strcasecmp(nfc_handover, "Negotiated_Selector") == 0) ||
+		   (!nfc_handover && strcasecmp(auth_role, "Responder") == 0)) {
 		const char *delay_qr_resp;
 		int mutual;
 		int freq = 2462; /* default: channel 11 */
@@ -1535,7 +1537,54 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			}
 		}
 
-		if (!delay_qr_resp && dut->dpp_peer_uri) {
+		if (strcasecmp(bs, "NFC") == 0) {
+			if (!dut->dpp_peer_uri) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Missing peer bootstrapping info");
+				goto out;
+			}
+			if (dut->dpp_local_bootstrap < 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Missing own bootstrapping info");
+				goto out;
+			}
+
+			snprintf(buf, sizeof(buf),
+				 "DPP_NFC_HANDOVER_REQ own=%d uri=%s",
+				 dut->dpp_local_bootstrap, dut->dpp_peer_uri);
+			if (wpa_command(ifname, buf) < 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to process NFC Handover Request");
+				goto out;
+			}
+
+			snprintf(buf, sizeof(buf), "DPP_BOOTSTRAP_INFO %d",
+				 dut->dpp_local_bootstrap);
+			if (wpa_command_resp(ifname, buf,
+					     buf, sizeof(buf)) < 0 ||
+			    strncmp(buf, "FAIL", 4) == 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to get bootstrap information");
+				goto out;
+			}
+			pos = buf;
+			while (pos) {
+				pos2 = strchr(pos, '\n');
+				if (pos2)
+					*pos2 = '\0';
+				if (strncmp(pos, "use_freq=", 9) == 0) {
+					freq = atoi(pos + 9);
+					sigma_dut_print(dut, DUT_MSG_DEBUG,
+							"DPP negotiation frequency from NFC handover: %d MHz",
+							freq);
+					break;
+				}
+
+				if (!pos2)
+					break;
+				pos = pos2 + 1;
+			}
+		} else if (!delay_qr_resp && dut->dpp_peer_uri) {
 			snprintf(buf, sizeof(buf), "DPP_QR_CODE %s",
 				 dut->dpp_peer_uri);
 			if (wpa_command_resp(ifname, buf, buf,
