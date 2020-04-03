@@ -70,10 +70,15 @@ static int dpp_get_local_bootstrap(struct sigma_dut *dut,
 	char *pos, mac[50], buf[200], resp[1000], hex[2000];
 	const char *ifname = get_station_ifname(dut);
 	int res;
+	const char *type;
 
 	if (success)
 		*success = 0;
-	if (strcasecmp(bs, "QR") != 0) {
+	if (strcasecmp(bs, "QR") == 0) {
+		type = "qrcode";
+	} else if (strcasecmp(bs, "NFC") == 0) {
+		type ="nfc-uri";
+	} else {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Unsupported DPPBS");
 		return 0;
@@ -120,8 +125,8 @@ static int dpp_get_local_bootstrap(struct sigma_dut *dut,
 	    (strcmp(chan_list, "0/0") == 0 || chan_list[0] == '\0')) {
 		/* No channel list */
 		res = snprintf(buf, sizeof(buf),
-			       "DPP_BOOTSTRAP_GEN type=qrcode curve=%s mac=%s",
-			       curve, mac);
+			       "DPP_BOOTSTRAP_GEN type=%s curve=%s mac=%s",
+			       type, curve, mac);
 	} else if (chan_list) {
 		/* Channel list override (CTT case) - space separated tuple(s)
 		 * of OperatingClass/Channel; convert to wpa_supplicant/hostapd
@@ -132,8 +137,8 @@ static int dpp_get_local_bootstrap(struct sigma_dut *dut,
 				*pos = ',';
 		}
 		res = snprintf(buf, sizeof(buf),
-			       "DPP_BOOTSTRAP_GEN type=qrcode curve=%s chan=%s mac=%s",
-			       curve, resp, mac);
+			       "DPP_BOOTSTRAP_GEN type=%s curve=%s chan=%s mac=%s",
+			       type, curve, resp, mac);
 	} else {
 		int channel = 11;
 
@@ -143,8 +148,8 @@ static int dpp_get_local_bootstrap(struct sigma_dut *dut,
 		    dut->ap_channel > 0 && dut->ap_channel <= 13)
 			channel = dut->ap_channel;
 		res = snprintf(buf, sizeof(buf),
-			       "DPP_BOOTSTRAP_GEN type=qrcode curve=%s chan=81/%d mac=%s",
-			       curve, channel, mac);
+			       "DPP_BOOTSTRAP_GEN type=%s curve=%s chan=81/%d mac=%s",
+			       type, curve, channel, mac);
 	}
 
 	if (res < 0 || res >= sizeof(buf) ||
