@@ -947,6 +947,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	const char *attr = get_param(cmd, "DPPIEAttribute");
 	const char *action_type = get_param(cmd, "DPPActionType");
 	const char *tcp = get_param(cmd, "DPPOverTCP");
+	const char *nfc_handover = get_param(cmd, "DPPNFCHandover");
 	const char *role;
 	const char *netrole = NULL;
 	const char *val;
@@ -1360,7 +1361,9 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		if (sigma_dut_is_ap(dut))
 			goto update_ap;
 		goto wait_connect;
-	} else if (strcasecmp(auth_role, "Initiator") == 0) {
+	} else if ((nfc_handover &&
+		    strcasecmp(nfc_handover, "Negotiated_Requestor") == 0) ||
+		   (!nfc_handover && strcasecmp(auth_role, "Initiator") == 0)) {
 		char own_txt[20];
 		int dpp_peer_bootstrap = -1;
 		char neg_freq[30];
@@ -1412,6 +1415,29 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 				goto out;
 			}
 			dpp_peer_bootstrap = atoi(buf);
+		} else if (strcasecmp(bs, "NFC") == 0) {
+			if (!dut->dpp_peer_uri) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Missing peer bootstrapping info");
+				goto out;
+			}
+			if (dut->dpp_local_bootstrap < 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Missing own bootstrapping info");
+				goto out;
+			}
+
+			snprintf(buf, sizeof(buf),
+				 "DPP_NFC_HANDOVER_SEL own=%d uri=%s",
+				 dut->dpp_local_bootstrap, dut->dpp_peer_uri);
+			if (wpa_command_resp(ifname, buf,
+					     buf, sizeof(buf)) < 0 ||
+			    strncmp(buf, "FAIL", 4) == 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to process NFC Handover Select");
+				goto out;
+			}
+			dpp_peer_bootstrap = atoi(buf);
 		}
 
 		if (dut->dpp_local_bootstrap >= 0)
@@ -1419,7 +1445,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 				 dut->dpp_local_bootstrap);
 		else
 			own_txt[0] = '\0';
-		if (strcasecmp(bs, "QR") == 0 &&
+		if ((strcasecmp(bs, "QR") == 0 || strcasecmp(bs, "NFC") == 0) &&
 		    (strcasecmp(prov_role, "Configurator") == 0 ||
 		     strcasecmp(prov_role, "Both") == 0)) {
 			if (!conf_role) {
@@ -1437,14 +1463,16 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 				 akm_use_selector ? " akm_use_selector=1" : "",
 				 conn_status ? " conn_status=1" : "",
 				 conf2);
-		} else if (tcp && strcasecmp(bs, "QR") == 0) {
+		} else if (tcp && (strcasecmp(bs, "QR") == 0 ||
+				   strcasecmp(bs, "NFC") == 0)) {
 			snprintf(buf, sizeof(buf),
 				 "DPP_AUTH_INIT peer=%d%s role=%s%s%s tcp_addr=%s%s%s",
 				 dpp_peer_bootstrap, own_txt, role,
 				 netrole ? " netrole=" : "",
 				 netrole ? netrole : "",
 				 tcp, neg_freq, group_id);
-		} else if (strcasecmp(bs, "QR") == 0) {
+		} else if (strcasecmp(bs, "QR") == 0 ||
+			   strcasecmp(bs, "NFC") == 0) {
 			snprintf(buf, sizeof(buf),
 				 "DPP_AUTH_INIT peer=%d%s role=%s%s%s%s%s",
 				 dpp_peer_bootstrap, own_txt, role,
