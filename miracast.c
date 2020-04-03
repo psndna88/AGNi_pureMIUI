@@ -601,7 +601,7 @@ void miracast_sta_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 				struct sigma_cmd *cmd)
 {
 	const char *intf = dut->station_ifname;
-	int (*extn_sta_reset_default)(char *);
+	int (*extn_sta_reset_default)(const char *);
 	char string_cmd[MIRACAST_CMD_LEN] = { 0 };
 
 	if (dut->main_ifname != NULL)
