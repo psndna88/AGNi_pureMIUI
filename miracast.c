@@ -307,13 +307,13 @@ static void * miracast_rtsp_thread_entry(void *ptr)
 	const char *intf = dut->station_ifname;
 	unsigned int wait_limit;
 	char peer_ip_address[32];
-	char rtsp_session_id[12];
+	int rtsp_session_id = -1;
 	int (*extn_start_wfd_connection)(const char *,
 					 const char *, /* Peer IP */
 					 int, /* RTSP port number */
 					 int, /* WFD Device Type; 0-Source,
 						 1-P-Sink, 2-Secondary Sink */
-					 char *); /* for returning session ID */
+					 int *); /* for returning session ID */
 
 	miracast_load(dut);
 
@@ -376,7 +376,7 @@ static void * miracast_rtsp_thread_entry(void *ptr)
 		extn_start_wfd_connection(NULL, peer_ip_address,
 					  session_management_control_port,
 					  1 - dut->wfd_device_type,
-					  rtsp_session_id);
+					  &rtsp_session_id);
 	} else {
 		sigma_dut_print(dut, DUT_MSG_INFO,
 				"dlsym seems to have error %p %p",
@@ -492,13 +492,13 @@ static void * auto_go_thread_entry(void *ptr)
 	int res = 0;
 	char macaddress[32];
 	char peer_ip_address[32];
-	char rtsp_session_id[12];
+	int rtsp_session_id = -1;
 	int (*extn_start_wfd_connection)(const char *,
 					 const char *, /* Peer IP */
 					 int, /* RTSP port number */
 					 int, /* WFD Device Type; 0-Source,
 						1-P-Sink, 2-Secondary Sink */
-					 char *); /* for returning session ID */
+					 int *); /* for returning session ID */
 
 	stop_dhcp(dut, wfd_ifname, 1);
 	/* For auto-GO, start the DHCP server and wait for 5 seconds */
@@ -547,7 +547,7 @@ static void * auto_go_thread_entry(void *ptr)
 		extn_start_wfd_connection(NULL, peer_ip_address,
 					  session_management_control_port,
 					  1 - dut->wfd_device_type,
-					  rtsp_session_id);
+					  &rtsp_session_id);
 
 THR_EXIT:
 	sigma_dut_print(dut, DUT_MSG_INFO, "Reached auto GO thread exit");
@@ -838,14 +838,14 @@ int miracast_mdns_start_wfd_connection(struct sigma_dut *dut,
 {
 	const char *init_wfd = get_param(cmd, "init_wfd");
 	int int_init_wfd = -1;
-	char rtsp_session_id[12];
+	int rtsp_session_id = -1;
 	char cmd_response[128];
 	int (*extn_start_wfd_connection)(const char *,
 					 const char *, /* Peer IP */
 					 int, /* RTSP port number */
 					 int, /* WFD Device Type; 0-Source,
 						1-P-Sink, 2-Secondary Sink */
-					 char *); /* for returning session ID */
+					 int *); /* for returning session ID */
 	int count = 0;
 	char *sig_resp = NULL;
 
@@ -856,22 +856,21 @@ int miracast_mdns_start_wfd_connection(struct sigma_dut *dut,
 					  "start_wfd_connection");
 	if (!extn_start_wfd_connection)
 		return -1;
-	rtsp_session_id[0] = '\0';
 	if (int_init_wfd != 0) {
 		extn_start_wfd_connection(NULL, NULL, -100,
 					  1 - dut->wfd_device_type,
-					  rtsp_session_id);
-		while (strlen(rtsp_session_id) == 0 && count < 60) {
+					  &rtsp_session_id);
+		while (rtsp_session_id == -1 && count < 60) {
 			count++;
 			sleep(1);
 		}
 		snprintf(cmd_response, sizeof(cmd_response),
-			 "result,NULL,GroupID,NULL,WFDSessionID,%s",
-			 count == 60 ? "NULL" : rtsp_session_id);
+			 "result,NULL,GroupID,NULL,WFDSessionID,%.8d",
+			 rtsp_session_id);
 		sig_resp = cmd_response;
 	} else {
 		extn_start_wfd_connection(NULL, NULL, -100,
-					  1 - dut->wfd_device_type, NULL);
+					  1 - dut->wfd_device_type, 0);
 		sig_resp = "result,NULL,GroupID,NULL,WFDSessionID,NULL";
 	}
 
@@ -910,13 +909,13 @@ static enum sigma_cmd_result cmd_start_wfd_connection(struct sigma_dut *dut,
 	int is_group_owner = 0;
 	char peer_ip_address[32];
 	int sm_control_port = 7236;
-	char rtsp_session_id[12] = { '\0' };
+	int rtsp_session_id = -1;
 	int (*extn_start_wfd_connection)(const char *,
 					 const char *, /* Peer IP */
 					 int, /* RTSP port number */
 					 int, /* WFD Device Type; 0-Source,
 						 1-P-Sink, 2-Secondary Sink */
-					 char *); /* for returning session ID */
+					 int *); /* for returning session ID */
 	int count = 0;
 
 	if (r2_connection) {
@@ -1142,18 +1141,16 @@ static enum sigma_cmd_result cmd_start_wfd_connection(struct sigma_dut *dut,
 	if (!extn_start_wfd_connection)
 		return -1;
 	extn_start_wfd_connection(NULL, peer_ip_address, sm_control_port,
-				  1 - dut->wfd_device_type, rtsp_session_id);
+				  1 - dut->wfd_device_type, &rtsp_session_id);
 
-	while (strlen(rtsp_session_id) == 0 && count < 60) {
+	while (rtsp_session_id == -1 && count < 60) {
 		count++;
 		sleep(1);
 	}
 
-	if (count == 60)
-		strlcpy(rtsp_session_id, "00000000", sizeof(rtsp_session_id));
-
-	strlcat(sig_resp_buf, rtsp_session_id,
-		sizeof(sig_resp_buf) - strlen(sig_resp_buf));
+	snprintf(sig_resp_buf + strlen(sig_resp_buf),
+		 sizeof(sig_resp_buf) - strlen(sig_resp_buf), "%.8d",
+		 rtsp_session_id);
 	send_resp(dut, conn, SIGMA_COMPLETE, sig_resp_buf);
 	return 0;
 }
@@ -1175,13 +1172,13 @@ static enum sigma_cmd_result cmd_connect_go_start_wfd(struct sigma_dut *dut,
 	int res = 0;
 	char output_ifname[32];
 	char peer_ip_address[32];
-	char rtsp_session_id[12];
+	int rtsp_session_id = -1;
 	int (*extn_connect_go_start_wfd)(const char *,
 					 const char * /* Peer IP */,
 					 int /* RTSP port number */,
 					 int /* WFD Device Type; 0-Source,
 						1-P-Sink, 2-Secondary Sink */,
-					 char *); /* for returning session ID */
+					 int *); /* for returning session ID */
 
 	snprintf(cmd_buf, sizeof(cmd_buf), "P2P_CONNECT %s", p2p_dev_id);
 
@@ -1294,13 +1291,11 @@ static enum sigma_cmd_result cmd_connect_go_start_wfd(struct sigma_dut *dut,
 					  "connect_go_start_wfd");
 	if (!extn_connect_go_start_wfd)
 		return -1;
-	rtsp_session_id[0] = '\0';
 	extn_connect_go_start_wfd(NULL, peer_ip_address,
 				  session_management_control_port,
-				  1 - dut->wfd_device_type, rtsp_session_id);
+				  1 - dut->wfd_device_type, &rtsp_session_id);
 	/* Null terminating regardless of what was returned */
-	rtsp_session_id[sizeof(rtsp_session_id) - 1] = '\0';
-	snprintf(sig_resp_buf, sizeof(sig_resp_buf), "WFDSessionId,%s",
+	snprintf(sig_resp_buf, sizeof(sig_resp_buf), "WFDSessionId,%.8d",
 		 rtsp_session_id);
 
 	send_resp(dut, conn, SIGMA_COMPLETE, sig_resp_buf);
@@ -1373,13 +1368,13 @@ static enum sigma_cmd_result cmd_reinvoke_wfd_session(struct sigma_dut *dut,
 	char *ssid, *pos;
 	unsigned int wait_limit;
 	char peer_ip_address[32];
-	char rtsp_session_id[12];
+	int rtsp_session_id = -1;
 	int (*extn_start_wfd_connection)(const char *,
 					 const char *, /* Peer IP */
 					 int, /* RTSP port number */
 					 int, /* WFD Device Type; 0-Source,
 						 1-P-Sink, 2-Secondary Sink */
-					 char *); /* for returning session ID */
+					 int *); /* for returning session ID */
 
 	/* All are compulsory parameters */
 	if (!intf || !grp_id || !invitation_action || !peer_address) {
@@ -1494,7 +1489,7 @@ static enum sigma_cmd_result cmd_reinvoke_wfd_session(struct sigma_dut *dut,
 		extn_start_wfd_connection(NULL, peer_ip_address,
 					  session_management_control_port,
 					  1 - dut->wfd_device_type,
-					  rtsp_session_id);
+					  &rtsp_session_id);
 	} else {
 		sigma_dut_print(dut, DUT_MSG_INFO,
 				"dlsym seems to have error %p %p",
