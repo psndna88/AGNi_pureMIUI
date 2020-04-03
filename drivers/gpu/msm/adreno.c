@@ -1996,7 +1996,7 @@ int adreno_set_constraint(struct kgsl_device *device,
 //				context->id,
 //				KGSL_CONSTRAINT_NONE,
 //				context->pwr_constraint.sub_type);
-//		context->pwr_constraint.type = KGSL_CONSTRAINT_NONE;
+		context->pwr_constraint.type = KGSL_CONSTRAINT_NONE;
 		break;
 
 	default:

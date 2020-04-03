@@ -147,7 +147,7 @@ static uint32_t msm_lmh_mitigation_notify(struct msm_lmh_dcvs_hw *hw)
 	rcu_read_unlock();
 	max_limit = FREQ_HZ_TO_KHZ(freq_val);
 
-	trace_lmh_dcvs_freq(cpumask_first(&hw->core_map), max_limit);
+//	trace_lmh_dcvs_freq(cpumask_first(&hw->core_map), max_limit);
 
 notify_exit:
 	hw->hw_freq_limit = max_limit;

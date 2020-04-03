@@ -183,17 +183,17 @@ static bool can_stop_full_tick(void)
 	WARN_ON_ONCE(!irqs_disabled());
 
 	if (!sched_can_stop_tick()) {
-		trace_tick_stop(0, "more than 1 task in runqueue\n");
+//		trace_tick_stop(0, "more than 1 task in runqueue\n");
 		return false;
 	}
 
 	if (!posix_cpu_timers_can_stop_tick(current)) {
-		trace_tick_stop(0, "posix timers running\n");
+//		trace_tick_stop(0, "posix timers running\n");
 		return false;
 	}
 
 	if (!perf_event_can_stop_tick()) {
-		trace_tick_stop(0, "perf events running\n");
+//		trace_tick_stop(0, "perf events running\n");
 		return false;
 	}
 
@@ -204,7 +204,7 @@ static bool can_stop_full_tick(void)
 	 * sched_clock_stable is set.
 	 */
 	if (!sched_clock_stable()) {
-		trace_tick_stop(0, "unstable sched clock\n");
+//		trace_tick_stop(0, "unstable sched clock\n");
 		/*
 		 * Don't allow the user to think they can get
 		 * full NO_HZ with this machine.
@@ -707,7 +707,7 @@ static ktime_t tick_nohz_stop_sched_tick(struct tick_sched *ts,
 
 		ts->last_tick = hrtimer_get_expires(&ts->sched_timer);
 		ts->tick_stopped = 1;
-		trace_tick_stop(1, " ");
+//		trace_tick_stop(1, " ");
 	}
 
 	/*

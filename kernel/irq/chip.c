@@ -723,9 +723,9 @@ void handle_percpu_devid_irq(struct irq_desc *desc)
 	if (chip->irq_ack)
 		chip->irq_ack(&desc->irq_data);
 
-	trace_irq_handler_entry(irq, action);
+//	trace_irq_handler_entry(irq, action);
 	res = action->handler(irq, dev_id);
-	trace_irq_handler_exit(irq, action, res);
+//	trace_irq_handler_exit(irq, action, res);
 
 	if (chip->irq_eoi)
 		chip->irq_eoi(&desc->irq_data);

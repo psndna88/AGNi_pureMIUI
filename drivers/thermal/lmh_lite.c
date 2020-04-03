@@ -69,7 +69,6 @@
 	do {								\
 		int idx = 0;						\
 		desc_arg.args[cmd_idx] = cmd_buf.list_start = next;	\
-		trace_lmh_event_call("GET_TYPE enter");			\
 		dmac_flush_range(payload, (void *)payload +             \
 				sizeof(uint32_t) * LMH_SCM_PAYLOAD_SIZE);\
 		if (!is_scm_armv8()) {					\
@@ -85,7 +84,6 @@
 		mb();							\
 		dmac_inv_range(payload, (void *)payload +               \
 				sizeof(uint32_t) * LMH_SCM_PAYLOAD_SIZE);\
-		trace_lmh_event_call("GET_TYPE exit");			\
 		if (ret) {						\
 			pr_err("Error in SCM v%d get type. cmd:%x err:%d\n", \
 				(is_scm_armv8()) ? 8 : 7, cmd_id, ret);	\
@@ -224,14 +222,14 @@ static int lmh_ctrl_qpmda(uint32_t enable)
 	desc_arg.args[0] = cmd_buf.enable = enable;
 	desc_arg.args[1] = cmd_buf.rate = lmh_data->log_delay;
 	desc_arg.arginfo = SCM_ARGS(2, SCM_VAL, SCM_VAL);
-	trace_lmh_event_call("CTRL_QPMDA enter");
+	//trace_lmh_event_call("CTRL_QPMDA enter");
 	if (!is_scm_armv8())
 		ret = scm_call(SCM_SVC_LMH, LMH_CTRL_QPMDA,
 			(void *) &cmd_buf, SCM_BUFFER_SIZE(cmd_buf), NULL, 0);
 	else
 		ret = scm_call2(SCM_SIP_FNID(SCM_SVC_LMH,
 			LMH_CTRL_QPMDA), &desc_arg);
-	trace_lmh_event_call("CTRL_QPMDA exit");
+	//trace_lmh_event_call("CTRL_QPMDA exit");
 	if (ret) {
 		pr_err("Error in SCM v%d %s QPMDA call. err:%d\n",
 			(is_scm_armv8()) ? 8 : 7, (enable) ? "enable" :
@@ -284,15 +282,15 @@ static void lmh_update(struct lmh_driver_data *lmh_dat,
 		& BIT(lmh_sensor->sensor_sw_id))) {
 		pr_debug("Sensor:[%s] interrupt triggered\n",
 			lmh_sensor->sensor_name);
-		trace_lmh_sensor_interrupt(lmh_sensor->sensor_name,
-			lmh_sensor->last_read_value);
+		//trace_lmh_sensor_interrupt(lmh_sensor->sensor_name,
+		//	lmh_sensor->last_read_value);
 		lmh_dat->intr_status_val |= BIT(lmh_sensor->sensor_sw_id);
 	} else if (lmh_sensor->last_read_value == 0 && (lmh_dat->intr_status_val
 		& BIT(lmh_sensor->sensor_sw_id))) {
 		pr_debug("Sensor:[%s] interrupt clear\n",
 			lmh_sensor->sensor_name);
-		trace_lmh_sensor_interrupt(lmh_sensor->sensor_name,
-			lmh_sensor->last_read_value);
+		//trace_lmh_sensor_interrupt(lmh_sensor->sensor_name,
+		//	lmh_sensor->last_read_value);
 
 		lmh_data->intr_status_val ^= BIT(lmh_sensor->sensor_sw_id);
 	}
@@ -322,7 +320,7 @@ static void lmh_read_and_update(struct lmh_driver_data *lmh_dat)
 	desc_arg.args[1] = cmd_buf.size
 			= SCM_BUFFER_SIZE(struct lmh_sensor_packet);
 	desc_arg.arginfo = SCM_ARGS(2, SCM_RW, SCM_VAL);
-	trace_lmh_event_call("GET_INTENSITY enter");
+	//trace_lmh_event_call("GET_INTENSITY enter");
 	dmac_flush_range(&payload, (void *)&payload +
 			sizeof(struct lmh_sensor_packet));
 	if (!is_scm_armv8())
@@ -333,7 +331,7 @@ static void lmh_read_and_update(struct lmh_driver_data *lmh_dat)
 			LMH_GET_INTENSITY), &desc_arg);
 	/* Have memory barrier before we access the TZ data */
 	mb();
-	trace_lmh_event_call("GET_INTENSITY exit");
+	//trace_lmh_event_call("GET_INTENSITY exit");
 	dmac_inv_range(&payload, (void *)&payload +
 			sizeof(struct lmh_sensor_packet));
 	if (ret) {
@@ -355,9 +353,9 @@ static void lmh_read_and_update(struct lmh_driver_data *lmh_dat)
 					((payload.sensor[idx].intensity * 100)
 					/ payload.sensor[idx].max_intensity)
 					: payload.sensor[idx].intensity;
-				trace_lmh_sensor_reading(
-					lmh_sensor->sensor_name,
-					lmh_sensor->last_read_value);
+				//trace_lmh_sensor_reading(
+				//	lmh_sensor->sensor_name,
+				//	lmh_sensor->last_read_value);
 				break;
 			}
 		}
@@ -383,7 +381,7 @@ static void lmh_poll(struct work_struct *work)
 	if (!lmh_data->intr_status_val) {
 		lmh_data->intr_state = LMH_ISR_MONITOR;
 		pr_debug("Zero throttling. Re-enabling interrupt\n");
-		trace_lmh_event_call("Lmh Interrupt Clear");
+		//trace_lmh_event_call("Lmh Interrupt Clear");
 		enable_irq(lmh_data->irq_num);
 		goto poll_exit;
 	} else {
@@ -404,13 +402,13 @@ static void lmh_trim_error(void)
 	WARN_ON(1);
 	pr_err("LMH hardware trim error\n");
 	desc_arg.arginfo = SCM_ARGS(0);
-	trace_lmh_event_call("TRIM_ERROR enter");
+	//trace_lmh_event_call("TRIM_ERROR enter");
 	if (!is_scm_armv8())
 		ret = scm_call(SCM_SVC_LMH, LMH_TRIM_ERROR, NULL, 0, NULL, 0);
 	else
 		ret = scm_call2(SCM_SIP_FNID(SCM_SVC_LMH,
 			LMH_TRIM_ERROR), &desc_arg);
-	trace_lmh_event_call("TRIM_ERROR exit");
+	//trace_lmh_event_call("TRIM_ERROR exit");
 	if (ret)
 		pr_err("Error in SCM v%d trim error call. err:%d\n",
 					(is_scm_armv8()) ? 8 : 7, ret);
@@ -423,13 +421,13 @@ static irqreturn_t lmh_isr_thread(int irq, void *data)
 	struct lmh_driver_data *lmh_dat = data;
 
 	pr_debug("LMH Interrupt triggered\n");
-	trace_lmh_event_call("Lmh Interrupt");
+	//trace_lmh_event_call("Lmh Interrupt");
 
 	disable_irq_nosync(irq);
 	down_write(&lmh_sensor_access);
 	if (lmh_dat->intr_state != LMH_ISR_MONITOR) {
 		pr_err("Invalid software state\n");
-		trace_lmh_event_call("Invalid software state");
+		//trace_lmh_event_call("Invalid software state");
 		WARN_ON(1);
 		goto isr_unlock_exit;
 	}
@@ -438,7 +436,7 @@ static irqreturn_t lmh_isr_thread(int irq, void *data)
 		lmh_dat->intr_reg_val = readl_relaxed(lmh_dat->intr_addr);
 		pr_debug("Lmh hw interrupt:%d\n", lmh_dat->intr_reg_val);
 		if (lmh_dat->intr_reg_val & BIT(lmh_dat->trim_err_offset)) {
-			trace_lmh_event_call("Lmh trim error");
+			//trace_lmh_event_call("Lmh trim error");
 			lmh_trim_error();
 			lmh_dat->intr_state = LMH_ISR_MONITOR;
 			goto decide_next_action;
@@ -448,7 +446,7 @@ static irqreturn_t lmh_isr_thread(int irq, void *data)
 	if (!lmh_dat->intr_status_val) {
 		pr_debug("LMH not throttling. Enabling interrupt\n");
 		lmh_dat->intr_state = LMH_ISR_MONITOR;
-		trace_lmh_event_call("Lmh Zero throttle Interrupt Clear");
+		//trace_lmh_event_call("Lmh Zero throttle Interrupt Clear");
 		goto decide_next_action;
 	}
 
@@ -668,7 +666,7 @@ static int lmh_get_sensor_list(void)
 		desc_arg.args[1] = cmd_buf.size = SCM_BUFFER_SIZE(struct
 				lmh_sensor_packet);
 		desc_arg.arginfo = SCM_ARGS(2, SCM_RW, SCM_VAL);
-		trace_lmh_event_call("GET_SENSORS enter");
+		//trace_lmh_event_call("GET_SENSORS enter");
 		dmac_flush_range(payload, (void *)payload + buf_size);
 		if (!is_scm_armv8())
 			ret = scm_call(SCM_SVC_LMH, LMH_GET_SENSORS,
@@ -680,7 +678,7 @@ static int lmh_get_sensor_list(void)
 				LMH_GET_SENSORS), &desc_arg);
 		/* Have memory barrier before we access the TZ data */
 		mb();
-		trace_lmh_event_call("GET_SENSORS exit");
+		//trace_lmh_event_call("GET_SENSORS exit");
 		dmac_inv_range(payload, (void *)payload + buf_size);
 		if (ret < 0) {
 			pr_err("Error in SCM v%d call. err:%d\n",
@@ -864,7 +862,7 @@ static int lmh_debug_read(struct lmh_debug_ops *ops, uint32_t **buf)
 	} cmd_buf;
 
 	desc_arg.arginfo = SCM_ARGS(0);
-	trace_lmh_event_call("GET_DEBUG_READ_SIZE enter");
+	//trace_lmh_event_call("GET_DEBUG_READ_SIZE enter");
 	if (!is_scm_armv8()) {
 		ret = scm_call(SCM_SVC_LMH, LMH_DEBUG_READ_BUF_SIZE,
 			NULL, 0, &size, SCM_BUFFER_SIZE(size));
@@ -873,7 +871,7 @@ static int lmh_debug_read(struct lmh_debug_ops *ops, uint32_t **buf)
 			LMH_DEBUG_READ_BUF_SIZE), &desc_arg);
 		size = desc_arg.ret[0];
 	}
-	trace_lmh_event_call("GET_DEBUG_READ_SIZE exit");
+	//trace_lmh_event_call("GET_DEBUG_READ_SIZE exit");
 	if (ret) {
 		pr_err("Error in SCM v%d get debug buffer size call. err:%d\n",
 				(is_scm_armv8()) ? 8 : 7, ret);
@@ -903,7 +901,7 @@ static int lmh_debug_read(struct lmh_debug_ops *ops, uint32_t **buf)
 	desc_arg.args[0] = SCM_BUFFER_PHYS(payload);
 	desc_arg.args[1] = cmd_buf.buf_size = curr_size;
 	desc_arg.arginfo = SCM_ARGS(2, SCM_RW, SCM_VAL);
-	trace_lmh_event_call("GET_DEBUG_READ enter");
+	//trace_lmh_event_call("GET_DEBUG_READ enter");
 	dmac_flush_range(payload, (void *)payload + curr_size);
 	if (!is_scm_armv8()) {
 		ret = scm_call(SCM_SVC_LMH, LMH_DEBUG_READ,
@@ -917,7 +915,7 @@ static int lmh_debug_read(struct lmh_debug_ops *ops, uint32_t **buf)
 	/* Have memory barrier before we access the TZ data */
 	mb();
 	dmac_inv_range(payload, (void *)payload + curr_size);
-	trace_lmh_event_call("GET_DEBUG_READ exit");
+	//trace_lmh_event_call("GET_DEBUG_READ exit");
 	if (ret) {
 		pr_err("Error in SCM v%d get debug read. err:%d\n",
 				(is_scm_armv8()) ? 8 : 7, ret);
@@ -928,8 +926,8 @@ static int lmh_debug_read(struct lmh_debug_ops *ops, uint32_t **buf)
 		ret = tz_ret;
 		goto get_dbg_exit;
 	}
-	trace_lmh_debug_data("Debug read", payload,
-		curr_size / sizeof(uint32_t));
+	//trace_lmh_debug_data("Debug read", payload,
+	//	curr_size / sizeof(uint32_t));
 
 get_dbg_exit:
 	if (ret && payload) {
@@ -955,7 +953,7 @@ static int lmh_debug_config_write(uint32_t cmd_id, uint32_t *buf, int size)
 		uint32_t read_type;
 	} cmd_buf;
 
-	trace_lmh_debug_data("Config LMH", buf, size);
+	//trace_lmh_debug_data("Config LMH", buf, size);
 	size_bytes = (size - 3) * sizeof(uint32_t);
 	payload = devm_kzalloc(lmh_data->dev, PAGE_ALIGN(size_bytes),
 			       GFP_KERNEL);
@@ -974,7 +972,7 @@ static int lmh_debug_config_write(uint32_t cmd_id, uint32_t *buf, int size)
 	desc_arg.args[4] = cmd_buf.read_type = buf[2];
 	desc_arg.arginfo = SCM_ARGS(5, SCM_RO, SCM_VAL, SCM_VAL, SCM_VAL,
 					SCM_VAL);
-	trace_lmh_event_call("CONFIG_DEBUG_WRITE enter");
+	//trace_lmh_event_call("CONFIG_DEBUG_WRITE enter");
 	dmac_flush_range(payload, (void *)payload + size_bytes);
 	if (!is_scm_armv8())
 		ret = scm_call(SCM_SVC_LMH, cmd_id, (void *) &cmd_buf,
@@ -984,7 +982,7 @@ static int lmh_debug_config_write(uint32_t cmd_id, uint32_t *buf, int size)
 	/* Have memory barrier before we access the TZ data */
 	mb();
 	dmac_inv_range(payload, (void *)payload + size_bytes);
-	trace_lmh_event_call("CONFIG_DEBUG_WRITE exit");
+	//trace_lmh_event_call("CONFIG_DEBUG_WRITE exit");
 	if (ret) {
 		pr_err("Error in SCM v%d config debug read. err:%d\n",
 				(is_scm_armv8()) ? 8 : 7, ret);
@@ -1017,15 +1015,15 @@ static int lmh_debug_get_types(struct lmh_debug_ops *ops, bool is_read,
 
 	if (is_read && lmh_data->debug_info.read_type) {
 		*buf = lmh_data->debug_info.read_type;
-		trace_lmh_debug_data("Data type",
-			lmh_data->debug_info.read_type,
-			lmh_data->debug_info.read_type_count);
+		//trace_lmh_debug_data("Data type",
+		//	lmh_data->debug_info.read_type,
+		//	lmh_data->debug_info.read_type_count);
 		return lmh_data->debug_info.read_type_count;
 	} else if (!is_read && lmh_data->debug_info.config_type) {
 		*buf = lmh_data->debug_info.config_type;
-		trace_lmh_debug_data("Config type",
-			lmh_data->debug_info.config_type,
-			lmh_data->debug_info.config_type_count);
+		//trace_lmh_debug_data("Config type",
+		//	lmh_data->debug_info.config_type,
+		//	lmh_data->debug_info.config_type_count);
 		return lmh_data->debug_info.config_type_count;
 	}
 	payload = devm_kzalloc(lmh_data->dev, sizeof(uint32_t) *
@@ -1050,11 +1048,11 @@ static int lmh_debug_get_types(struct lmh_debug_ops *ops, bool is_read,
 	if (is_read) {
 		lmh_data->debug_info.read_type = *buf = dest_buf;
 		lmh_data->debug_info.read_type_count = size;
-		trace_lmh_debug_data("Data type", dest_buf, size);
+		//trace_lmh_debug_data("Data type", dest_buf, size);
 	} else {
 		lmh_data->debug_info.config_type = *buf = dest_buf;
 		lmh_data->debug_info.config_type_count = size;
-		trace_lmh_debug_data("Config type", dest_buf, size);
+		//trace_lmh_debug_data("Config type", dest_buf, size);
 	}
 
 get_type_exit:
@@ -1084,7 +1082,7 @@ static void lmh_voltage_scale_set(uint32_t voltage)
 	snprintf(trace_buf, MAX_TRACE_EVENT_MSG_LEN,
 		"DPM voltage scale %d mV", voltage);
 	pr_debug("%s\n", trace_buf);
-	trace_lmh_event_call(trace_buf);
+	//trace_lmh_event_call(trace_buf);
 }
 
 static void write_to_odcm(bool enable)

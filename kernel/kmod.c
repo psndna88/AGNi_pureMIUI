@@ -178,7 +178,7 @@ int __request_module(bool wait, const char *fmt, ...)
 		return -ENOMEM;
 	}
 
-	trace_module_request(module_name, wait, _RET_IP_);
+//	trace_module_request(module_name, wait, _RET_IP_);
 
 	ret = call_modprobe(module_name, wait ? UMH_WAIT_PROC : UMH_WAIT_EXEC);
 

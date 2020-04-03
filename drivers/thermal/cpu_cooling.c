@@ -639,9 +639,9 @@ static int cpufreq_get_requested_power(struct thermal_cooling_device *cdev,
 	}
 
 	if (load_cpu) {
-		trace_thermal_power_cpu_get_power(
-			&cpufreq_device->allowed_cpus,
-			freq, load_cpu, i, dynamic_power, static_power);
+//		trace_thermal_power_cpu_get_power(
+//			&cpufreq_device->allowed_cpus,
+//			freq, load_cpu, i, dynamic_power, static_power);
 
 		kfree(load_cpu);
 	}
@@ -752,8 +752,8 @@ static int cpufreq_power2state(struct thermal_cooling_device *cdev,
 		return -EINVAL;
 	}
 
-	trace_thermal_power_cpu_limit(&cpufreq_device->allowed_cpus,
-				      target_freq, *state, power);
+//	trace_thermal_power_cpu_limit(&cpufreq_device->allowed_cpus,
+//				      target_freq, *state, power);
 	return 0;
 }
 

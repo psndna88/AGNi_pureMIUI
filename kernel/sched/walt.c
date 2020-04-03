@@ -625,7 +625,7 @@ static void update_history(struct rq *rq, struct task_struct *p,
 	p->ravg.demand = demand;
 
 done:
-	trace_walt_update_history(rq, p, runtime, samples, event);
+//	trace_walt_update_history(rq, p, runtime, samples, event);
 	return;
 }
 
@@ -758,7 +758,7 @@ void walt_update_task_ravg(struct task_struct *p, struct rq *rq,
 	update_cpu_busy_time(p, rq, event, wallclock, irqtime);
 
 done:
-	trace_walt_update_task_ravg(p, rq, event, wallclock, irqtime);
+//	trace_walt_update_task_ravg(p, rq, event, wallclock, irqtime);
 
 	p->ravg.mark_start = wallclock;
 }
@@ -871,8 +871,8 @@ void walt_fixup_busy_time(struct task_struct *p, int new_cpu)
 		WARN_ON(1);
 	}
 
-	trace_walt_migration_update_sum(src_rq, p);
-	trace_walt_migration_update_sum(dest_rq, p);
+//	trace_walt_migration_update_sum(src_rq, p);
+//	trace_walt_migration_update_sum(dest_rq, p);
 
 	if (p->state == TASK_WAKING)
 		double_rq_unlock(src_rq, dest_rq);
