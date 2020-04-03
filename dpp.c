@@ -1363,7 +1363,9 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		goto wait_connect;
 	} else if ((nfc_handover &&
 		    strcasecmp(nfc_handover, "Negotiated_Requestor") == 0) ||
-		   (!nfc_handover && strcasecmp(auth_role, "Initiator") == 0)) {
+		   ((!nfc_handover ||
+		     strcasecmp(nfc_handover, "Static") == 0) &&
+		    strcasecmp(auth_role, "Initiator") == 0)) {
 		char own_txt[20];
 		int dpp_peer_bootstrap = -1;
 		char neg_freq[30];
@@ -1412,6 +1414,24 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			    strncmp(buf, "FAIL", 4) == 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "errorCode,Failed to parse URI");
+				goto out;
+			}
+			dpp_peer_bootstrap = atoi(buf);
+		} else if (strcasecmp(bs, "NFC") == 0 && nfc_handover &&
+			   strcasecmp(nfc_handover, "Static") == 0) {
+			if (!dut->dpp_peer_uri) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Missing peer bootstrapping info");
+				goto out;
+			}
+
+			snprintf(buf, sizeof(buf), "DPP_NFC_URI %s",
+				 dut->dpp_peer_uri);
+			if (wpa_command_resp(ifname, buf,
+					     buf, sizeof(buf)) < 0 ||
+			    strncmp(buf, "FAIL", 4) == 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to process URI from NFC Tag");
 				goto out;
 			}
 			dpp_peer_bootstrap = atoi(buf);
