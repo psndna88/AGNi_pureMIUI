@@ -117,6 +117,14 @@ void msm_vidc_free_platform_resources(
 	msm_vidc_free_buffer_usage_table(res);
 }
 
+static int msm_vidc_load_fw_name(struct msm_vidc_platform_resources *res)
+{
+	struct platform_device *pdev = res->pdev;
+
+	return of_property_read_string_index(pdev->dev.of_node,
+				"vidc,firmware-name", 0, &res->fw_name);
+}
+
 static int msm_vidc_load_reg_table(struct msm_vidc_platform_resources *res)
 {
 	struct reg_set *reg_set;
@@ -734,10 +742,6 @@ int read_platform_resources_from_drv_data(
 
 	res->sku_version = platform_data->sku_version;
 
-	res->fw_name = "venus";
-
-	d_vpr_h("Firmware filename: %s\n", res->fw_name);
-
 	res->max_load = find_key_value(platform_data,
 			"qcom,max-hw-load");
 
@@ -770,6 +774,15 @@ int read_platform_resources_from_drv_data(
 
 	res->max_secure_inst_count = find_key_value(platform_data,
 			"qcom,max-secure-instances");
+
+	res->prefetch_pix_buf_count = find_key_value(platform_data,
+			"qcom,prefetch_pix_buf_count");
+	res->prefetch_pix_buf_size = find_key_value(platform_data,
+			"qcom,prefetch_pix_buf_size");
+	res->prefetch_non_pix_buf_count = find_key_value(platform_data,
+			"qcom,prefetch_non_pix_buf_count");
+	res->prefetch_non_pix_buf_size = find_key_value(platform_data,
+			"qcom,prefetch_non_pix_buf_size");
 
 	res->slave_side_cp = find_key_value(platform_data,
 			"qcom,slave-side-cp");
@@ -835,6 +848,11 @@ int read_platform_resources_from_dt(
 
 	kres = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	res->irq = kres ? kres->start : -1;
+
+	rc = msm_vidc_load_fw_name(res);
+	if (rc)
+		d_vpr_e("%s: failed to load fw name, rc %d, using default fw\n",
+			__func__, rc);
 
 	rc = msm_vidc_load_subcache_info(res);
 	if (rc)

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -381,11 +381,11 @@ static struct msm_vidc_common_data lahaina_common_data[] = {
 	},
 	{
 		.key = "qcom,max-hq-mbs-per-frame",
-		.value = 34816,		/* 4096x2176 */
+		.value = 8160, /* ((1920x1088)/256) */
 	},
 	{
 		.key = "qcom,max-hq-mbs-per-sec",
-		.value = 1044480,	/* 4096x2176@30fps */
+		.value = 489600, /* ((1920x1088)/256)@60fps */
 	},
 	{
 		.key = "qcom,max-b-frame-mbs-per-frame",
@@ -430,6 +430,33 @@ static struct msm_vidc_common_data lahaina_common_data[] = {
 	{
 		.key = "qcom,avsync-window-size",
 		.value = 40,
+	},
+	{
+		.key = "qcom,prefetch_non_pix_buf_count",
+		.value = 1,
+	},
+	{
+		.key = "qcom,prefetch_non_pix_buf_size",
+		/*
+		 * Internal buffer size is calculated for secure decode session
+		 * of resolution 4k (4096x2160)
+		 * Internal buf size = calculate_scratch_size() +
+		 *	calculate_scratch1_size() + calculate_persist1_size()
+		 * Take maximum between VP9 10bit, HEVC 10bit, AVC, MPEG2 secure
+		 * decoder sessions
+		 */
+		.value = 209715200,
+	},
+	{
+		.key = "qcom,prefetch_pix_buf_count",
+		.value = 18,
+	},
+	{
+		.key = "qcom,prefetch_pix_buf_size",
+		/*
+		 * Calculated by VENUS_BUFFER_SIZE for 4096x2160 UBWC
+		 */
+		.value = 13434880,
 	},
 };
 
@@ -552,6 +579,7 @@ static struct msm_vidc_platform_data default_data = {
 	.efuse_data_length = 0,
 	.sku_version = 0,
 	.vpu_ver = VPU_VERSION_IRIS2,
+	.num_vpp_pipes = 0x4,
 	.ubwc_config = 0x0,
 };
 
@@ -567,6 +595,7 @@ static struct msm_vidc_platform_data lahaina_data = {
 	.efuse_data_length = 0,
 	.sku_version = 0,
 	.vpu_ver = VPU_VERSION_IRIS2,
+	.num_vpp_pipes = 0x4,
 	.ubwc_config = lahaina_ubwc_data,
 	.codecs = default_codecs,
 	.codecs_count = ARRAY_SIZE(default_codecs),
@@ -586,6 +615,7 @@ static struct msm_vidc_platform_data bengal_data = {
 	.efuse_data_length = 0,
 	.sku_version = 0,
 	.vpu_ver = VPU_VERSION_AR50_LITE,
+	.num_vpp_pipes = 0x1,
 	.ubwc_config = 0x0,
 	.codecs = bengal_codecs,
 	.codecs_count = ARRAY_SIZE(bengal_codecs),

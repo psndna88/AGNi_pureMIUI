@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  */
 #include "msm_venc.h"
 #include "msm_vidc_internal.h"
@@ -46,13 +46,59 @@
 #define MIN_NUM_ENC_CAPTURE_BUFFERS 5
 
 static const char *const mpeg_video_rate_control[] = {
-	"VBR CFR",
-	"CBR CFR",
-	"MBR CFR",
+	"VBR",
+	"CBR",
 	"CBR VFR",
+	"MBR",
 	"MBR VFR",
 	"CQ",
 	NULL
+};
+
+static const char *const mpeg_video_h264_profile[] = {
+	"Baseline",
+	"Constrained Baseline",
+	"Main",
+	"Extended",
+	"High",
+	"High 10",
+	"High 422",
+	"High 444 Predictive",
+	"High 10 Intra",
+	"High 422 Intra",
+	"High 444 Intra",
+	"CAVLC 444 Intra",
+	"Scalable Baseline",
+	"Scalable High",
+	"Scalable High Intra",
+	"Stereo High",
+	"Multiview High",
+	"Constrained High",
+	NULL,
+};
+
+static const char *const mpeg_video_h264_level[] = {
+	"1",
+	"1b",
+	"1.1",
+	"1.2",
+	"1.3",
+	"2",
+	"2.1",
+	"2.2",
+	"3",
+	"3.1",
+	"3.2",
+	"4",
+	"4.1",
+	"4.2",
+	"5",
+	"5.1",
+	"5.2",
+	"6.0",
+	"6.1",
+	"6.2",
+	NULL,
 };
 
 static const char *const vp8_profile_level[] = {
@@ -275,7 +321,7 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		(1 << V4L2_MPEG_VIDEO_H264_PROFILE_HIGH) |
 		(1 << V4L2_MPEG_VIDEO_H264_PROFILE_CONSTRAINED_HIGH)
 		),
-		.qmenu = NULL,
+		.qmenu = mpeg_video_h264_profile,
 	},
 	{
 		.id = V4L2_CID_MPEG_VIDEO_H264_LEVEL,
@@ -306,7 +352,7 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		(1 << V4L2_MPEG_VIDEO_H264_LEVEL_6_1) |
 		(1 << V4L2_MPEG_VIDEO_H264_LEVEL_6_2)
 		),
-		.qmenu = NULL,
+		.qmenu = mpeg_video_h264_level,
 	},
 	{
 		.id = V4L2_CID_MPEG_VIDEO_VP8_PROFILE,
@@ -1670,16 +1716,17 @@ int msm_venc_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 		}
 		break;
 	case V4L2_CID_MPEG_VIDC_VIDEO_OPERATING_RATE:
-		inst->clk_data.operating_rate = ctrl->val;
+		inst->flags &= ~VIDC_TURBO;
+		if (ctrl->val == INT_MAX)
+			inst->flags |= VIDC_TURBO;
+		else
+			inst->clk_data.operating_rate = ctrl->val;
 		/* For HEIC image encode, set operating rate to 1 */
 		if (is_grid_session(inst)) {
 			s_vpr_h(sid, "%s: set operating rate to 1 for HEIC\n",
 					__func__);
 			inst->clk_data.operating_rate = 1 << 16;
 		}
-		inst->flags &= ~VIDC_TURBO;
-		if (ctrl->val == INT_MAX)
-			inst->flags |= VIDC_TURBO;
 		if (inst->state < MSM_VIDC_LOAD_RESOURCES)
 			msm_vidc_calculate_buffer_counts(inst);
 		if (inst->state == MSM_VIDC_START_DONE) {

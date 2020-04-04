@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _MSM_VIDC_INTERNAL_H_
@@ -204,12 +204,6 @@ struct msm_vidc_window_data {
 	u32 etb_count;
 };
 
-struct msm_vidc_client_data {
-	struct list_head list;
-	u32 id;
-	u32 input_tag;
-};
-
 struct msm_vidc_common_data {
 	char key[128];
 	int value;
@@ -236,6 +230,12 @@ struct msm_vidc_codec_capability {
 struct msm_vidc_codec {
 	enum hal_domain domain;
 	enum hal_video_codec codec;
+};
+
+struct msm_vidc_timestamps {
+	struct list_head list;
+	u64 timestamp_us;
+	u32 framerate;
 };
 
 enum efuse_purpose {
@@ -294,6 +294,7 @@ struct msm_vidc_platform_data {
 	unsigned int efuse_data_length;
 	unsigned int sku_version;
 	uint32_t vpu_ver;
+	uint32_t num_vpp_pipes;
 	struct msm_vidc_ubwc_config_data *ubwc_config;
 };
 
@@ -484,6 +485,8 @@ struct msm_vidc_inst_smem_ops {
 		struct msm_smem *smem);
 	int (*smem_unmap_dma_buf)(struct msm_vidc_inst *inst,
 		struct msm_smem *smem);
+	int (*smem_prefetch)(struct msm_vidc_inst *inst);
+	int (*smem_drain)(struct msm_vidc_inst *inst);
 };
 
 struct msm_vidc_inst {
@@ -509,6 +512,7 @@ struct msm_vidc_inst {
 	struct msm_vidc_list fbd_data;
 	struct msm_vidc_list window_data;
 	struct msm_vidc_list client_data;
+	struct msm_vidc_list timestamps;
 	struct buffer_requirements buff_req;
 	struct vidc_frame_data superframe_data[VIDC_SUPERFRAME_MAX];
 	struct v4l2_ctrl_handler ctrl_handler;
@@ -529,11 +533,11 @@ struct msm_vidc_inst {
 	enum multi_stream stream_output_mode;
 	struct v4l2_ctrl **ctrls;
 	u32 num_ctrls;
-	u32 etb_counter;
 	int bit_depth;
 	struct kref kref;
 	bool in_flush;
 	bool out_flush;
+	bool flush_timestamps;
 	u32 pic_struct;
 	u32 colour_space;
 	u32 profile;
@@ -550,6 +554,8 @@ struct msm_vidc_inst {
 	struct batch_mode batch;
 	struct delayed_work batch_work;
 	struct msm_vidc_inst_smem_ops *smem_ops;
+	enum memory_ops memory_ops;
+	struct memory_regions regions;
 	int (*buffer_size_calculators)(struct msm_vidc_inst *inst);
 	bool all_intra;
 	bool is_perf_eligible_session;
@@ -610,6 +616,8 @@ void msm_smem_put_dma_buf(void *dma_buf, u32 sid);
 int msm_smem_cache_operations(struct dma_buf *dbuf,
 	enum smem_cache_ops cache_op, unsigned long offset,
 	unsigned long size, u32 sid);
+int msm_smem_memory_prefetch(struct msm_vidc_inst *inst);
+int msm_smem_memory_drain(struct msm_vidc_inst *inst);
 void msm_vidc_fw_unload_handler(struct work_struct *work);
 void msm_vidc_ssr_handler(struct work_struct *work);
 /*

@@ -24,6 +24,7 @@ static void handle_session_error(enum hal_command_response cmd, void *data);
 static void msm_vidc_print_running_insts(struct msm_vidc_core *core);
 
 #define V4L2_VP9_LEVEL_61 V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_61
+#define TIMESTAMPS_WINDOW_SIZE 32
 
 int msm_comm_g_ctrl_for_id(struct msm_vidc_inst *inst, int id)
 {
@@ -537,6 +538,25 @@ int msm_comm_get_v4l2_level(int fourcc, int level, u32 sid)
 	}
 }
 
+static bool is_priv_ctrl(u32 id)
+{
+	if (IS_PRIV_CTRL(id))
+		return true;
+
+	/*
+	 * Treat below standard controls as private because
+	 * we have added custom values to the controls
+	 */
+	switch (id) {
+	case V4L2_CID_MPEG_VIDEO_BITRATE_MODE:
+	case V4L2_CID_MPEG_VIDEO_H264_PROFILE:
+	case V4L2_CID_MPEG_VIDEO_H264_LEVEL:
+		return true;
+	}
+
+	return false;
+}
+
 int msm_comm_ctrl_init(struct msm_vidc_inst *inst,
 		struct msm_vidc_ctrl *drv_ctrls, u32 num_ctrls,
 		const struct v4l2_ctrl_ops *ctrl_ops)
@@ -568,7 +588,7 @@ int msm_comm_ctrl_init(struct msm_vidc_inst *inst,
 	for (; idx < (int) num_ctrls; idx++) {
 		struct v4l2_ctrl *ctrl = NULL;
 
-		if (IS_PRIV_CTRL(drv_ctrls[idx].id)) {
+		if (is_priv_ctrl(drv_ctrls[idx].id)) {
 			/*add private control*/
 			ctrl_cfg.def = drv_ctrls[idx].default_value;
 			ctrl_cfg.flags = 0;
@@ -2042,7 +2062,6 @@ static void handle_session_flush(enum hal_command_response cmd, void *data)
 
 	if (flush_type == HAL_FLUSH_ALL) {
 		msm_comm_clear_window_data(inst);
-		msm_comm_release_client_data(inst, false);
 		inst->clk_data.buffer_counter = 0;
 	}
 
@@ -2511,6 +2530,7 @@ static void handle_fbd(enum hal_command_response cmd, void *data)
 	u64 time_usec = 0;
 	u32 planes[VIDEO_MAX_PLANES] = {0};
 	struct v4l2_format *f;
+	int rc = 0;
 
 	if (!response) {
 		d_vpr_e("Invalid response from vidc_hal\n");
@@ -2574,8 +2594,11 @@ static void handle_fbd(enum hal_command_response cmd, void *data)
 
 	vb->timestamp = (time_usec * NSEC_PER_USEC);
 
-	msm_comm_store_input_tag(&inst->fbd_data, vb->index,
-		fill_buf_done->input_tag, fill_buf_done->input_tag2, inst->sid);
+	rc = msm_comm_store_input_tag(&inst->fbd_data, vb->index,
+			fill_buf_done->input_tag,
+			fill_buf_done->input_tag2, inst->sid);
+	if (rc)
+		s_vpr_e(inst->sid, "Failed to store input tag");
 
 	if (inst->session_type == MSM_VIDC_ENCODER) {
 		if (inst->max_filled_len < fill_buf_done->filled_len1)
@@ -5361,8 +5384,20 @@ int msm_comm_flush(struct msm_vidc_inst *inst, u32 flags)
 		/* disable in_flush & out_flush */
 		inst->in_flush = false;
 		inst->out_flush = false;
+		goto exit;
 	}
-
+	/*
+	 * Set inst->flush_timestamps to true when flush is issued
+	 * Use this variable to clear timestamps list, everytime
+	 * flush is issued, before adding the next buffer's timestamp
+	 * to the list.
+	 */
+	if (is_decode_session(inst) && inst->in_flush) {
+		inst->flush_timestamps = true;
+		s_vpr_h(inst->sid,
+			"Setting flush variable to clear timestamp list: %d\n",
+			inst->flush_timestamps);
+	}
 exit:
 	return rc;
 }
@@ -6291,40 +6326,33 @@ int msm_comm_qbuf_cache_operations(struct msm_vidc_inst *inst,
 		unsigned long offset, size;
 		enum smem_cache_ops cache_op;
 
-		skip = true;
+		offset = vb->planes[i].data_offset;
+		size = vb->planes[i].length - offset;
+		cache_op = SMEM_CACHE_INVALIDATE;
+		skip = false;
+
 		if (inst->session_type == MSM_VIDC_DECODER) {
 			if (vb->type == INPUT_MPLANE) {
 				if (!i) { /* bitstream */
-					skip = false;
-					offset = vb->planes[i].data_offset;
 					size = vb->planes[i].bytesused;
 					cache_op = SMEM_CACHE_CLEAN_INVALIDATE;
 				}
 			} else if (vb->type == OUTPUT_MPLANE) {
 				if (!i) { /* yuv */
-					skip = false;
-					offset = 0;
-					size = vb->planes[i].length;
-					cache_op = SMEM_CACHE_INVALIDATE;
+					/* all values are correct */
 				}
 			}
 		} else if (inst->session_type == MSM_VIDC_ENCODER) {
 			if (vb->type == INPUT_MPLANE) {
 				if (!i) { /* yuv */
-					skip = false;
-					offset = vb->planes[i].data_offset;
 					size = vb->planes[i].bytesused;
+					cache_op = SMEM_CACHE_CLEAN_INVALIDATE;
+				} else { /* extradata */
 					cache_op = SMEM_CACHE_CLEAN_INVALIDATE;
 				}
 			} else if (vb->type == OUTPUT_MPLANE) {
-				if (!i) { /* bitstream */
-					skip = false;
-					offset = 0;
-					size = vb->planes[i].length;
-					if (inst->max_filled_len)
-						size = inst->max_filled_len;
-					cache_op = SMEM_CACHE_INVALIDATE;
-				}
+				if (!i && inst->max_filled_len)
+					size = inst->max_filled_len;
 			}
 		}
 
@@ -6359,26 +6387,26 @@ int msm_comm_dqbuf_cache_operations(struct msm_vidc_inst *inst,
 		unsigned long offset, size;
 		enum smem_cache_ops cache_op;
 
-		skip = true;
+		offset = vb->planes[i].data_offset;
+		size = vb->planes[i].length - offset;
+		cache_op = SMEM_CACHE_INVALIDATE;
+		skip = false;
+
 		if (inst->session_type == MSM_VIDC_DECODER) {
 			if (vb->type == INPUT_MPLANE) {
-				/* bitstream and extradata */
-				/* we do not need cache operations */
+				if (!i) /* bitstream */
+					skip = true;
 			} else if (vb->type == OUTPUT_MPLANE) {
 				if (!i) { /* yuv */
-					skip = false;
-					offset = vb->planes[i].data_offset;
-					size = vb->planes[i].bytesused;
-					cache_op = SMEM_CACHE_INVALIDATE;
+					/* All values are correct */
 				}
 			}
 		} else if (inst->session_type == MSM_VIDC_ENCODER) {
 			if (vb->type == INPUT_MPLANE) {
 				/* yuv and extradata */
-				/* we do not need cache operations */
+				skip = true;
 			} else if (vb->type == OUTPUT_MPLANE) {
 				if (!i) { /* bitstream */
-					skip = false;
 					/*
 					 * Include vp8e header bytes as well
 					 * by making offset equal to zero
@@ -6386,7 +6414,6 @@ int msm_comm_dqbuf_cache_operations(struct msm_vidc_inst *inst,
 					offset = 0;
 					size = vb->planes[i].bytesused +
 						vb->planes[i].data_offset;
-					cache_op = SMEM_CACHE_INVALIDATE;
 				}
 			}
 		}
@@ -6783,120 +6810,16 @@ bool kref_get_mbuf(struct msm_vidc_inst *inst, struct msm_vidc_buffer *mbuf)
 	return ret;
 }
 
-struct msm_vidc_client_data *msm_comm_store_client_data(
-	struct msm_vidc_inst *inst, u32 itag)
-{
-	struct msm_vidc_client_data *data = NULL, *temp = NULL;
-
-	if (!inst) {
-		d_vpr_e("%s: invalid params\n", __func__);
-		return NULL;
-	}
-
-	mutex_lock(&inst->client_data.lock);
-	list_for_each_entry(temp, &inst->client_data.list, list) {
-		if (!temp->id) {
-			data = temp;
-			break;
-		}
-	}
-	if (!data) {
-		data = kzalloc(sizeof(*data), GFP_KERNEL);
-		if (!data) {
-			s_vpr_e(inst->sid, "%s: No memory avilable", __func__);
-			goto exit;
-		}
-		INIT_LIST_HEAD(&data->list);
-		list_add_tail(&data->list, &inst->client_data.list);
-	}
-
-	/**
-	 * Special handling, if etb_counter reaches to 2^32 - 1,
-	 * then start next value from 1 not 0.
-	 */
-	if (!inst->etb_counter)
-		inst->etb_counter = 1;
-
-	data->id =  inst->etb_counter++;
-	data->input_tag = itag;
-
-exit:
-	mutex_unlock(&inst->client_data.lock);
-
-	return data;
-}
-
-void msm_comm_fetch_client_data(struct msm_vidc_inst *inst, bool remove,
-	u32 itag, u32 itag2, u32 *otag, u32 *otag2)
-{
-	struct msm_vidc_client_data *temp, *next;
-	bool found_itag = false, found_itag2 = false;
-
-	if (!inst || !otag || !otag2) {
-		d_vpr_e("%s: invalid params %pK %x %x\n",
-			__func__, inst, otag, otag2);
-		return;
-	}
-	/**
-	 * Some interlace clips, both BF & TF is available in single ETB buffer.
-	 * In that case, firmware copies same input_tag value to both input_tag
-	 * and input_tag2 at FBD.
-	 */
-	if (!itag2 || itag == itag2)
-		found_itag2 = true;
-	mutex_lock(&inst->client_data.lock);
-	list_for_each_entry_safe(temp, next, &inst->client_data.list, list) {
-		if (temp->id == itag) {
-			*otag = temp->input_tag;
-			found_itag = true;
-			if (remove)
-				temp->id = 0;
-		} else if (!found_itag2 && temp->id == itag2) {
-			*otag2 = temp->input_tag;
-			found_itag2 = true;
-			if (remove)
-				temp->id = 0;
-		}
-		if (found_itag && found_itag2)
-			break;
-	}
-	mutex_unlock(&inst->client_data.lock);
-
-	if (!found_itag || !found_itag2) {
-		s_vpr_e(inst->sid, "%s: client data not found - %u, %u\n",
-			__func__, itag, itag2);
-	}
-}
-
-void msm_comm_release_client_data(struct msm_vidc_inst *inst, bool remove)
-{
-	struct msm_vidc_client_data *temp, *next;
-
-	if (!inst) {
-		d_vpr_e("%s: invalid params\n", __func__);
-		return;
-	}
-
-	mutex_lock(&inst->client_data.lock);
-	list_for_each_entry_safe(temp, next, &inst->client_data.list, list) {
-		temp->id = 0;
-		if (remove) {
-			list_del(&temp->list);
-			kfree(temp);
-		}
-	}
-	mutex_unlock(&inst->client_data.lock);
-}
-
-void msm_comm_store_input_tag(struct msm_vidc_list *data_list,
+int msm_comm_store_input_tag(struct msm_vidc_list *data_list,
 		u32 index, u32 itag, u32 itag2, u32 sid)
 {
 	struct msm_vidc_buf_data *pdata = NULL;
 	bool found = false;
+	int rc = 0;
 
 	if (!data_list) {
 		s_vpr_e(sid, "%s: invalid params\n", __func__);
-		return;
+		return -EINVAL;
 	}
 
 	mutex_lock(&data_list->lock);
@@ -6913,6 +6836,7 @@ void msm_comm_store_input_tag(struct msm_vidc_list *data_list,
 		pdata = kzalloc(sizeof(*pdata), GFP_KERNEL);
 		if (!pdata)  {
 			s_vpr_e(sid, "%s: malloc failure.\n", __func__);
+			rc = -ENOMEM;
 			goto exit;
 		}
 		pdata->index = index;
@@ -6923,6 +6847,8 @@ void msm_comm_store_input_tag(struct msm_vidc_list *data_list,
 
 exit:
 	mutex_unlock(&data_list->lock);
+
+	return rc;
 }
 
 int msm_comm_fetch_input_tag(struct msm_vidc_list *data_list,
@@ -7258,4 +7184,327 @@ void msm_comm_release_window_data(struct msm_vidc_inst *inst)
 		kfree(pdata);
 	}
 	mutex_unlock(&inst->window_data.lock);
+}
+
+void msm_comm_release_timestamps(struct msm_vidc_inst *inst)
+{
+	struct msm_vidc_timestamps *node, *next;
+
+	if (!inst) {
+		d_vpr_e("%s: invalid parameters\n", __func__);
+		return;
+	}
+
+	mutex_lock(&inst->timestamps.lock);
+	list_for_each_entry_safe(node, next, &inst->timestamps.list, list) {
+		list_del(&node->list);
+		kfree(node);
+	}
+	INIT_LIST_HEAD(&inst->timestamps.list);
+	mutex_unlock(&inst->timestamps.lock);
+}
+
+int msm_comm_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us)
+{
+	struct msm_vidc_timestamps *entry, *node, *prev = NULL;
+	int count = 0;
+	int rc = 0;
+	bool inserted = false;
+	bool update_next = false;
+
+	if (!inst) {
+		d_vpr_e("%s: invalid parameters\n", __func__);
+		return -EINVAL;
+	}
+
+	mutex_lock(&inst->timestamps.lock);
+	list_for_each_entry(node, &inst->timestamps.list, list) {
+		count++;
+		/* Skip adding duplicate entries */
+		if (node->timestamp_us == timestamp_us) {
+			s_vpr_e(inst->sid, "%s: skip ts duplicate entry %lld\n",
+				__func__, node->timestamp_us);
+			goto unlock;
+		}
+	}
+
+	/* Maintain a sliding window of size 32 */
+	entry = NULL;
+	if (count >= TIMESTAMPS_WINDOW_SIZE) {
+		entry = list_first_entry(&inst->timestamps.list,
+			struct msm_vidc_timestamps, list);
+		list_del_init(&entry->list);
+	}
+	if (!entry) {
+		entry = kzalloc(sizeof(*entry), GFP_KERNEL);
+		if (!entry) {
+			s_vpr_e(inst->sid, "%s: ts malloc failure\n",
+				__func__);
+			rc = -ENOMEM;
+			goto unlock;
+		}
+	}
+	entry->timestamp_us = timestamp_us;
+	entry->framerate = DEFAULT_FPS << 16;
+
+	/* add new entry into the list in sorted order */
+	prev = NULL;
+	inserted = false;
+	list_for_each_entry(node, &inst->timestamps.list, list) {
+		if (entry->timestamp_us < node->timestamp_us) {
+			/*
+			 * if prev available add entry next to prev else
+			 * entry is first so add it at head.
+			 */
+			if (prev)
+				list_add(&entry->list, &prev->list);
+			else
+				list_add(&entry->list, &inst->timestamps.list);
+			inserted = true;
+			break;
+		}
+		prev = node;
+	}
+
+	/* inserted will be false if list is empty */
+	if (!inserted)
+		list_add_tail(&entry->list, &inst->timestamps.list);
+
+	/* update framerate for both entry and entry->next (if any) */
+	prev = NULL;
+	update_next = false;
+	list_for_each_entry(node, &inst->timestamps.list, list) {
+		if (update_next) {
+			node->framerate = msm_comm_calc_framerate(inst,
+				node->timestamp_us, prev->timestamp_us);
+			break;
+		}
+		if (node->timestamp_us == entry->timestamp_us) {
+			if (prev)
+				node->framerate = msm_comm_calc_framerate(inst,
+					node->timestamp_us, prev->timestamp_us);
+			update_next = true;
+		}
+		prev = node;
+	}
+
+unlock:
+	mutex_unlock(&inst->timestamps.lock);
+	return rc;
+}
+
+u32 msm_comm_calc_framerate(struct msm_vidc_inst *inst,
+	u64 timestamp_us, u64 prev_ts)
+{
+	u32 framerate = DEFAULT_FPS << 16;
+
+	if (timestamp_us <= prev_ts) {
+		s_vpr_e(inst->sid, "%s: invalid ts %lld, prev ts %lld\n",
+			__func__, timestamp_us, prev_ts);
+		return framerate;
+	}
+	framerate = (1000000 / (timestamp_us - prev_ts)) << 16;
+	return framerate;
+}
+
+u32 msm_comm_get_max_framerate(struct msm_vidc_inst *inst)
+{
+	struct msm_vidc_timestamps *node;
+	u32 max_framerate = 1 << 16;
+	int count = 0;
+
+	if (!inst) {
+		d_vpr_e("%s: invalid parameters\n", __func__);
+		return max_framerate;
+	}
+
+	mutex_lock(&inst->timestamps.lock);
+	list_for_each_entry(node, &inst->timestamps.list, list) {
+		count++;
+		max_framerate = max_framerate < node->framerate ?
+			node->framerate : max_framerate;
+	}
+	s_vpr_l(inst->sid, "%s: fps %u, list size %d\n",
+		__func__, max_framerate, count);
+	mutex_unlock(&inst->timestamps.lock);
+	return max_framerate;
+}
+
+int msm_comm_fetch_framerate(struct msm_vidc_inst *inst,
+	u64 timestamp_us, u32 *framerate)
+{
+	struct msm_vidc_timestamps *node;
+	bool found_fps = false;
+	u32 count = 0;
+	int rc = 0;
+
+	if (!inst || !framerate) {
+		d_vpr_e("%s: invalid parameters\n", __func__);
+		return -EINVAL;
+	}
+
+	mutex_lock(&inst->timestamps.lock);
+	list_for_each_entry(node, &inst->timestamps.list, list) {
+		count++;
+		if (timestamp_us == node->timestamp_us) {
+			*framerate = node->framerate;
+			found_fps = true;
+			break;
+		}
+	}
+	mutex_unlock(&inst->timestamps.lock);
+
+	if (!found_fps) {
+		if (!inst->flush_timestamps)
+			s_vpr_e(inst->sid, "%s:ts %lld not found,listsize %d\n",
+				__func__, timestamp_us, count);
+		rc = -EINVAL;
+	}
+	return rc;
+}
+
+static int msm_comm_memory_regions_prepare(struct msm_vidc_inst *inst)
+{
+	u32 i = 0;
+	struct msm_vidc_platform_resources *res;
+
+	if (!inst || !inst->core) {
+		d_vpr_e("%s: invalid parameters\n", __func__);
+		return -EINVAL;
+	}
+	res = &inst->core->resources;
+
+	inst->regions.num_regions = res->prefetch_non_pix_buf_count +
+		res->prefetch_pix_buf_count;
+	if (inst->regions.num_regions > MEMORY_REGIONS_MAX) {
+		s_vpr_e(inst->sid, "%s: invalid num_regions: %d, max: %d\n",
+			__func__, inst->regions.num_regions,
+			MEMORY_REGIONS_MAX);
+		return -EINVAL;
+	}
+
+	s_vpr_h(inst->sid,
+		"%s: preparing %d nonpixel memory regions of %ld bytes each and %d pixel memory regions of %ld bytes each\n",
+		__func__, res->prefetch_non_pix_buf_count,
+		res->prefetch_non_pix_buf_size, res->prefetch_pix_buf_count,
+		res->prefetch_pix_buf_size);
+
+	for (i = 0; i < res->prefetch_non_pix_buf_count; i++) {
+		inst->regions.region[i].size = res->prefetch_non_pix_buf_size;
+		inst->regions.region[i].vmid = ION_FLAG_CP_NON_PIXEL;
+	}
+
+	for (i = res->prefetch_non_pix_buf_count;
+		i < inst->regions.num_regions; i++) {
+		inst->regions.region[i].size = res->prefetch_pix_buf_size;
+		inst->regions.region[i].vmid = ION_FLAG_CP_PIXEL;
+	}
+
+	return 0;
+}
+
+int msm_comm_memory_prefetch(struct msm_vidc_inst *inst)
+{
+	int rc = 0;
+
+	if (!inst || !inst->smem_ops) {
+		d_vpr_e("%s: invalid parameters\n", __func__);
+		return -EINVAL;
+	}
+
+	if (inst->memory_ops & MEMORY_PREFETCH) {
+		s_vpr_h(inst->sid, "%s: prefetch done already\n", __func__);
+		return 0;
+	}
+
+	rc = msm_comm_memory_regions_prepare(inst);
+	if (rc)
+		return rc;
+
+	if (inst->regions.num_regions == 0)
+		return 0;
+
+	rc = inst->smem_ops->smem_prefetch(inst);
+	if (rc)
+		return rc;
+
+	inst->memory_ops |= MEMORY_PREFETCH;
+
+	return rc;
+}
+
+int msm_comm_memory_drain(struct msm_vidc_inst *inst)
+{
+	int rc = 0;
+
+	if (!inst || !inst->smem_ops) {
+		d_vpr_e("%s: invalid parameters\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!(inst->memory_ops & MEMORY_PREFETCH))
+		return 0;
+
+	rc = inst->smem_ops->smem_drain(inst);
+	if (rc)
+		return rc;
+
+	inst->memory_ops &= ~MEMORY_PREFETCH;
+
+	return rc;
+}
+
+int msm_comm_check_prefetch_sufficient(struct msm_vidc_inst *inst)
+{
+	int rc = 0;
+	struct msm_vidc_platform_resources *res;
+	struct v4l2_plane_pix_format *fmt;
+	u32 i, internal_buf_sz = 0;
+	u32 prefetch_npix_sz = 0;
+	u32 prefetch_pix_sz = 0;
+
+	if (!inst || !inst->core) {
+		d_vpr_e("%s: invalid parameters\n", __func__);
+		return -EINVAL;
+	}
+	res = &inst->core->resources;
+	fmt = inst->fmts[OUTPUT_PORT].v4l2_fmt.fmt.pix_mp.plane_fmt;
+
+	if (!is_secure_session(inst) || !is_decode_session(inst))
+		return rc;
+
+	if (!(inst->memory_ops & MEMORY_PREFETCH))
+		return -ENOMEM;
+
+	prefetch_npix_sz = res->prefetch_non_pix_buf_count *
+				res->prefetch_non_pix_buf_size;
+	prefetch_pix_sz = res->prefetch_pix_buf_count *
+				res->prefetch_pix_buf_size;
+
+	for (i = 0; i < HAL_BUFFER_MAX; i++) {
+		struct hal_buffer_requirements *req;
+
+		req = &inst->buff_req.buffer[i];
+		if (req->buffer_type == HAL_BUFFER_INTERNAL_SCRATCH ||
+			req->buffer_type == HAL_BUFFER_INTERNAL_SCRATCH_1 ||
+			req->buffer_type == HAL_BUFFER_INTERNAL_SCRATCH_2 ||
+			req->buffer_type == HAL_BUFFER_INTERNAL_PERSIST ||
+			req->buffer_type == HAL_BUFFER_INTERNAL_PERSIST_1)
+			internal_buf_sz += req->buffer_size;
+	}
+
+	if (prefetch_npix_sz < internal_buf_sz) {
+		s_vpr_e(inst->sid,
+			"insufficient non-pix region prefetched %u, required %u",
+			internal_buf_sz, prefetch_npix_sz);
+		rc = -ENOMEM;
+	}
+	if (prefetch_pix_sz < fmt->sizeimage) {
+		s_vpr_e(inst->sid,
+			"insufficient pix region prefetched %u, required %u",
+			fmt->sizeimage, prefetch_pix_sz);
+		rc = -ENOMEM;
+	}
+
+	return rc;
 }

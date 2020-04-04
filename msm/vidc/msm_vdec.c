@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  */
 
 #include "msm_vdec.h"
@@ -18,6 +18,52 @@
 /* Y=16(0-9bits), Cb(10-19bits)=Cr(20-29bits)=128, black by default */
 #define DEFAULT_VIDEO_CONCEAL_COLOR_BLACK 0x8020010
 #define MAX_VP9D_INST_COUNT 6
+
+static const char *const mpeg_video_h264_profile[] = {
+	"Baseline",
+	"Constrained Baseline",
+	"Main",
+	"Extended",
+	"High",
+	"High 10",
+	"High 422",
+	"High 444 Predictive",
+	"High 10 Intra",
+	"High 422 Intra",
+	"High 444 Intra",
+	"CAVLC 444 Intra",
+	"Scalable Baseline",
+	"Scalable High",
+	"Scalable High Intra",
+	"Stereo High",
+	"Multiview High",
+	"Constrained High",
+	NULL,
+};
+
+static const char *const mpeg_video_h264_level[] = {
+	"1",
+	"1b",
+	"1.1",
+	"1.2",
+	"1.3",
+	"2",
+	"2.1",
+	"2.2",
+	"3",
+	"3.1",
+	"3.2",
+	"4",
+	"4.1",
+	"4.2",
+	"5",
+	"5.1",
+	"5.2",
+	"6.0",
+	"6.1",
+	"6.2",
+	NULL,
+};
 
 static const char *const vp8_profile_level[] = {
 	"Unused",
@@ -134,7 +180,7 @@ static struct msm_vidc_ctrl msm_vdec_ctrls[] = {
 		(1 << V4L2_MPEG_VIDEO_H264_PROFILE_HIGH) |
 		(1 << V4L2_MPEG_VIDEO_H264_PROFILE_CONSTRAINED_HIGH)
 		),
-		.qmenu = NULL,
+		.qmenu = mpeg_video_h264_profile,
 	},
 	{
 		.id = V4L2_CID_MPEG_VIDEO_H264_LEVEL,
@@ -165,7 +211,7 @@ static struct msm_vidc_ctrl msm_vdec_ctrls[] = {
 		(1 << V4L2_MPEG_VIDEO_H264_LEVEL_6_1) |
 		(1 << V4L2_MPEG_VIDEO_H264_LEVEL_6_2)
 		),
-		.qmenu = NULL,
+		.qmenu = mpeg_video_h264_level,
 	},
 	{
 		.id = V4L2_CID_MPEG_VIDEO_HEVC_PROFILE,
@@ -354,16 +400,6 @@ static struct msm_vidc_ctrl msm_vdec_ctrls[] = {
 		.minimum = SINGLE_INPUT_BUFFER,
 		.maximum = MAX_NUM_INPUT_BUFFERS,
 		.default_value = SINGLE_INPUT_BUFFER,
-		.step = 1,
-		.qmenu = NULL,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDC_VIDEO_FRAME_RATE,
-		.name = "Frame Rate",
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.minimum = (MINIMUM_FPS << 16),
-		.maximum = (MAXIMUM_FPS << 16),
-		.default_value = (DEFAULT_FPS << 16),
 		.step = 1,
 		.qmenu = NULL,
 	},
@@ -893,9 +929,7 @@ int msm_vdec_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 				__func__);
 			return -ENOTSUPP;
 		}
-		break;
-	case V4L2_CID_MPEG_VIDC_VIDEO_FRAME_RATE:
-		inst->clk_data.frame_rate = ctrl->val;
+		msm_comm_memory_prefetch(inst);
 		break;
 	case V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA:
 		if (ctrl->val == EXTRADATA_NONE)
@@ -914,10 +948,11 @@ int msm_vdec_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 	case V4L2_CID_MPEG_VIDC_VIDEO_PRIORITY:
 		break;
 	case V4L2_CID_MPEG_VIDC_VIDEO_OPERATING_RATE:
-		inst->clk_data.operating_rate = ctrl->val;
 		inst->flags &= ~VIDC_TURBO;
 		if (ctrl->val == INT_MAX)
 			inst->flags |= VIDC_TURBO;
+		else
+			inst->clk_data.operating_rate = ctrl->val;
 		break;
 	case V4L2_CID_MPEG_VIDC_VIDEO_LOWLATENCY_MODE:
 		inst->clk_data.low_latency_mode = !!ctrl->val;
