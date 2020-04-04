@@ -908,8 +908,8 @@ static void utils_dfs_get_channel_list(struct wlan_objmgr_pdev *pdev,
 				       struct dfs_channel *chan_list,
 				       uint32_t *num_chan)
 {
-	uint32_t pcl_ch[QDF_MAX_NUM_CHAN] = {0};
-	uint8_t weight_list[QDF_MAX_NUM_CHAN] = {0};
+	uint32_t pcl_ch[NUM_CHANNELS] = {0};
+	uint8_t weight_list[NUM_CHANNELS] = {0};
 	uint32_t len;
 	uint32_t weight_len;
 	int i;
@@ -964,6 +964,12 @@ void utils_dfs_get_chan_list(struct wlan_objmgr_pdev *pdev,
 {
 	utils_dfs_get_channel_list(pdev, NULL, (struct dfs_channel *)clist,
 				   num_chan);
+}
+
+bool utils_dfs_can_ignore_radar_event(struct wlan_objmgr_pdev *pdev)
+{
+	return !policy_mgr_get_dfs_master_dynamic_enabled(
+		wlan_pdev_get_psoc(pdev), INVALID_VDEV_ID);
 }
 #endif
 
@@ -1053,7 +1059,6 @@ QDF_STATUS utils_dfs_get_vdev_random_channel_for_freq(
 	struct wlan_dfs *dfs = NULL;
 	struct wlan_objmgr_psoc *psoc;
 	struct dfs_channel *chan_list = NULL;
-	struct dfs_channel cur_chan;
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
 
 	*target_chan_freq = 0;
@@ -1080,23 +1085,13 @@ QDF_STATUS utils_dfs_get_vdev_random_channel_for_freq(
 		goto random_chan_error;
 	}
 
-	cur_chan.dfs_ch_vhtop_ch_freq_seg1 = chan_params->center_freq_seg0;
-	cur_chan.dfs_ch_vhtop_ch_freq_seg2 = chan_params->center_freq_seg1;
-	cur_chan.dfs_ch_mhz_freq_seg1 = chan_params->mhz_freq_seg0;
-	cur_chan.dfs_ch_mhz_freq_seg2 = chan_params->mhz_freq_seg1;
-
 	if (!chan_params->ch_width)
 		utils_dfs_get_max_sup_width(pdev,
 					    (uint8_t *)&chan_params->ch_width);
 
-	*target_chan_freq = dfs_prepare_random_channel_for_freq(dfs, chan_list,
-		num_chan, flags, (uint8_t *)&chan_params->ch_width,
-		&cur_chan, (uint8_t)dfs_reg, acs_info);
-
-	chan_params->center_freq_seg0 = cur_chan.dfs_ch_vhtop_ch_freq_seg1;
-	chan_params->center_freq_seg1 = cur_chan.dfs_ch_vhtop_ch_freq_seg2;
-	chan_params->mhz_freq_seg0 =  cur_chan.dfs_ch_mhz_freq_seg1;
-	chan_params->mhz_freq_seg1 =  cur_chan.dfs_ch_mhz_freq_seg2;
+	*target_chan_freq = dfs_prepare_random_channel_for_freq(
+			dfs, chan_list, num_chan, flags, chan_params,
+			(uint8_t)dfs_reg, acs_info);
 
 	dfs_info(dfs, WLAN_DEBUG_DFS_RANDOM_CHAN,
 		 "input width=%d", chan_params->ch_width);

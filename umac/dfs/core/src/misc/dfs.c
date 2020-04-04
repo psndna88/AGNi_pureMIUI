@@ -341,6 +341,43 @@ static inline bool dfs_get_disable_radar_marking(struct wlan_dfs *dfs)
 	return QDF_STATUS_SUCCESS;
 }
 #endif
+
+static QDF_STATUS
+dfs_check_bangradar_sanity(struct wlan_dfs *dfs,
+			   struct dfs_bangradar_params *bangradar_params)
+{
+	if (!bangradar_params) {
+		dfs_info(dfs, WLAN_DEBUG_DFS_ALWAYS,
+			 "bangradar params is NULL");
+		return -EINVAL;
+	}
+	if (dfs_is_true_160mhz_supported(dfs)) {
+		if (abs(bangradar_params->freq_offset) >
+		    FREQ_OFFSET_BOUNDARY_FOR_160MHZ) {
+			dfs_info(dfs, WLAN_DEBUG_DFS_ALWAYS,
+				 "Frequency Offset out of bound");
+			return -EINVAL;
+		}
+	} else if (abs(bangradar_params->freq_offset) >
+		   FREQ_OFFSET_BOUNDARY_FOR_80MHZ) {
+		dfs_info(dfs, WLAN_DEBUG_DFS_ALWAYS,
+			 "Frequency Offset out of bound");
+		return -EINVAL;
+	}
+	if (bangradar_params->seg_id > SEG_ID_SECONDARY) {
+		dfs_info(dfs, WLAN_DEBUG_DFS_ALWAYS, "Invalid segment ID");
+		return -EINVAL;
+	}
+	if ((bangradar_params->detector_id > dfs_get_agile_detector_id(dfs)) ||
+	    ((bangradar_params->detector_id ==
+	      dfs_get_agile_detector_id(dfs)) &&
+	      !dfs->dfs_is_offload_enabled)) {
+		dfs_info(dfs, WLAN_DEBUG_DFS_ALWAYS, "Invalid detector ID");
+		return -EINVAL;
+	}
+	return QDF_STATUS_SUCCESS;
+}
+
 int dfs_control(struct wlan_dfs *dfs,
 		u_int id,
 		void *indata,
@@ -356,10 +393,7 @@ int dfs_control(struct wlan_dfs *dfs,
 	struct dfsreq_nolinfo *nol;
 	uint32_t *data = NULL;
 	int i;
-	struct dfs_emulate_bang_radar_test_cmd dfs_unit_test;
 	int usenol_pdev_param;
-
-	qdf_mem_zero(&dfs_unit_test, sizeof(dfs_unit_test));
 
 	if (!dfs) {
 		dfs_err(NULL, WLAN_DEBUG_DFS_ALWAYS,  "dfs is NULL");
@@ -436,40 +470,21 @@ int dfs_control(struct wlan_dfs *dfs,
 			break;
 		}
 		bangradar_params = (struct dfs_bangradar_params *)indata;
-		if (bangradar_params) {
-			if (abs(bangradar_params->freq_offset) >
-			    FREQ_OFFSET_BOUNDARY_FOR_80MHZ) {
-				dfs_info(dfs, WLAN_DEBUG_DFS_ALWAYS,
-					 "Frequency Offset out of bound");
-				error = -EINVAL;
-				break;
-			} else if (bangradar_params->seg_id >
-				   SEG_ID_SECONDARY) {
-				dfs_info(dfs, WLAN_DEBUG_DFS_ALWAYS,
-					 "Illegal segment ID");
-				error = -EINVAL;
-				break;
-			}
-			dfs->dfs_bangradar_type =
-				bangradar_params->bangradar_type;
-			dfs->dfs_seg_id = bangradar_params->seg_id;
-			dfs->dfs_is_chirp = bangradar_params->is_chirp;
-			dfs->dfs_freq_offset = bangradar_params->freq_offset;
+		error = dfs_check_bangradar_sanity(dfs, bangradar_params);
+		if (error != QDF_STATUS_SUCCESS)
+			break;
+		dfs->dfs_bangradar_type = bangradar_params->bangradar_type;
+		dfs->dfs_seg_id = bangradar_params->seg_id;
+		dfs->dfs_is_chirp = bangradar_params->is_chirp;
+		dfs->dfs_freq_offset = bangradar_params->freq_offset;
 
-			if (dfs->dfs_is_offload_enabled) {
-				error = dfs_fill_emulate_bang_radar_test
-							(dfs, dfs->dfs_seg_id,
-							 dfs->dfs_is_chirp,
-							 dfs->dfs_freq_offset,
-							 &dfs_unit_test);
-			} else {
-				error = dfs_start_host_based_bangradar(dfs);
-			}
+		if (dfs->dfs_is_offload_enabled) {
+			error = dfs_fill_emulate_bang_radar_test(
+					dfs,
+					bangradar_params);
 		} else {
-			dfs_info(dfs, WLAN_DEBUG_DFS_ALWAYS,
-				 "bangradar_params is NULL");
+			error = dfs_start_host_based_bangradar(dfs);
 		}
-
 		break;
 	case DFS_GET_THRESH:
 		if (!outdata || !outsize ||
@@ -940,4 +955,30 @@ void dfs_complete_deferred_tasks(struct wlan_dfs *dfs)
 		dfs_process_cac_completion(dfs);
 		dfs->dfs_defer_params.is_cac_completed = false;
 	}
+}
+
+#ifdef WLAN_DFS_TRUE_160MHZ_SUPPORT
+bool dfs_is_true_160mhz_supported(struct wlan_dfs *dfs)
+{
+	struct wlan_objmgr_psoc *psoc = dfs->dfs_soc_obj->psoc;
+	struct wlan_lmac_if_target_tx_ops *tx_ops;
+	uint32_t target_type;
+
+	target_type = lmac_get_target_type(dfs->dfs_pdev_obj);
+	tx_ops = &psoc->soc_cb.tx_ops.target_tx_ops;
+	if (tx_ops->tgt_is_tgt_type_qcn9000)
+		return tx_ops->tgt_is_tgt_type_qcn9000(target_type);
+	return false;
+}
+
+bool dfs_is_restricted_80p80mhz_supported(struct wlan_dfs *dfs)
+{
+	return wlan_psoc_nif_fw_ext_cap_get(dfs->dfs_soc_obj->psoc,
+					    WLAN_SOC_RESTRICTED_80P80_SUPPORT);
+}
+#endif
+
+uint8_t dfs_get_agile_detector_id(struct wlan_dfs *dfs)
+{
+	return dfs->dfs_agile_detector_id;
 }

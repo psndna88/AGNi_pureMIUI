@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -92,9 +92,6 @@
 
 /* Start channel and center channel freq diff in 80Mhz */
 #define DFS_80MHZ_START_CENTER_CH_FREQ_DIFF     30
-
-/* Max number of channels */
-#define DFS_MAX_NUM_CHAN                        128
 
 /* Bitmap mask for 80MHz */
 #define DFS_80MHZ_MASK                          0x0F
@@ -292,8 +289,7 @@ uint16_t dfs_prepare_random_channel_for_freq(struct wlan_dfs *dfs,
 					     struct dfs_channel *ch_list,
 					     uint32_t chan_count,
 					     uint32_t flags,
-					     uint8_t *chan_wd,
-					     struct dfs_channel *cur_chan,
+					     struct ch_params *chan_params,
 					     uint8_t dfs_region,
 					     struct dfs_acs_info *acs_info);
 #endif

@@ -1477,7 +1477,7 @@ QDF_STATUS
 #endif
 
 QDF_STATUS (*extract_vdev_start_resp)(wmi_unified_t wmi_handle, void *evt_buf,
-	wmi_host_vdev_start_resp *vdev_rsp);
+				      struct vdev_start_response *vdev_rsp);
 
 QDF_STATUS (*extract_vdev_delete_resp)(wmi_unified_t wmi_handle, void *evt_buf,
 	struct wmi_host_vdev_delete_resp *delete_rsp);
@@ -1496,6 +1496,10 @@ QDF_STATUS (*extract_tbttoffset_num_vdevs)(wmi_unified_t wmi_hdl, void *evt_buf,
 QDF_STATUS (*extract_ext_tbttoffset_num_vdevs)(wmi_unified_t wmi_hdl,
 					       void *evt_buf,
 					       uint32_t *num_vdevs);
+
+QDF_STATUS (*extract_muedca_params_handler)(wmi_unified_t wmi_hdl,
+					    void *evt_buf,
+					    struct muedca_params *muedca_param_list);
 
 QDF_STATUS (*extract_mgmt_rx_params)(wmi_unified_t wmi_handle, void *evt_buf,
 	struct mgmt_rx_event_params *hdr, uint8_t **bufp);
@@ -1837,13 +1841,12 @@ QDF_STATUS (*extract_peer_delete_response_event)(
 QDF_STATUS (*extract_vdev_peer_delete_all_resp)(
 		wmi_unified_t wmi_handle,
 		void *evt_buf,
-		struct wmi_host_vdev_peer_delete_all_response_event
-						*peer_delete_all_rsp);
+		struct peer_delete_all_response *peer_delete_all_rsp);
 
 QDF_STATUS (*extract_vdev_peer_delete_all_response_event)(
 		wmi_unified_t wmi_handle,
 		void *evt_buf,
-		struct wmi_host_vdev_peer_delete_all_response_event *param);
+		struct peer_delete_all_response *param);
 
 bool (*is_management_record)(uint32_t cmd_id);
 bool (*is_diag_event)(uint32_t event_id);
@@ -2250,6 +2253,9 @@ QDF_STATUS (*extract_time_sync_ftm_offset_event)(
 #endif /* FEATURE_WLAN_TIME_SYNC_FTM */
 QDF_STATUS (*send_roam_scan_ch_list_req_cmd)(wmi_unified_t wmi_hdl,
 					     uint32_t vdev_id);
+
+QDF_STATUS (*send_injector_config_cmd)(wmi_unified_t wmi_handle,
+				struct wmi_host_injector_frame_params *params);
 };
 
 /* Forward declartion for psoc*/

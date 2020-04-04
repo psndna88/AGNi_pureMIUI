@@ -425,6 +425,7 @@ static QDF_STATUS send_roam_scan_filter_cmd_tlv(wmi_unified_t wmi_handle,
 			roam_req->num_bssid_preferred_list;
 	roam_filter->num_rssi_rejection_ap =
 			roam_req->num_rssi_rejection_ap;
+	roam_filter->delta_rssi = roam_req->delta_rssi;
 	buf_ptr += sizeof(wmi_roam_filter_fixed_param);
 
 	WMITLV_SET_HDR((buf_ptr),
@@ -870,6 +871,10 @@ static QDF_STATUS send_roam_invoke_cmd_tlv(wmi_unified_t wmi_handle,
 		cmd->num_chan = 0;
 		cmd->num_bssid = 0;
 		cmd->roam_scan_mode = WMI_ROAM_INVOKE_SCAN_MODE_CACHE_MAP;
+		cmd->flags |= (1 << WMI_ROAM_INVOKE_FLAG_FULL_SCAN_IF_NO_CANDIDATE);
+		cmd->reason = ROAM_INVOKE_REASON_NUD_FAILURE;
+	} else {
+		cmd->reason = ROAM_INVOKE_REASON_USER_SPACE;
 	}
 
 	buf_ptr += sizeof(wmi_roam_invoke_cmd_fixed_param);
@@ -1592,10 +1597,12 @@ send_roam_scan_offload_ap_profile_cmd_tlv(wmi_unified_t wmi_handle,
 	score_param->pcl_weightage_pcnt = ap_profile->param.pcl_weightage;
 	score_param->oce_wan_weightage_pcnt =
 			ap_profile->param.oce_wan_weightage;
+	score_param->oce_ap_tx_pwr_weightage_pcnt =
+				ap_profile->param.oce_ap_tx_pwr_weightage;
 	score_param->vendor_roam_score_algorithm_id =
 			ap_profile->param.vendor_roam_score_algorithm;
 
-	WMI_LOGD("Score params weightage: disable_bitmap %x rssi %d ht %d vht %d he %d BW %d band %d NSS %d ESP %d BF %d PCL %d OCE WAN %d roam score algo %d",
+	WMI_LOGD("Score params weightage: disable_bitmap %x rssi %d ht %d vht %d he %d BW %d band %d NSS %d ESP %d BF %d PCL %d OCE WAN %d APTX %d roam score algo %d",
 		 score_param->disable_bitmap, score_param->rssi_weightage_pcnt,
 		 score_param->ht_weightage_pcnt,
 		 score_param->vht_weightage_pcnt,
@@ -1606,6 +1613,7 @@ send_roam_scan_offload_ap_profile_cmd_tlv(wmi_unified_t wmi_handle,
 		 score_param->beamforming_weightage_pcnt,
 		 score_param->pcl_weightage_pcnt,
 		 score_param->oce_wan_weightage_pcnt,
+		 score_param->oce_ap_tx_pwr_weightage_pcnt,
 		 score_param->vendor_roam_score_algorithm_id);
 
 	score_param->bw_scoring.score_pcnt = ap_profile->param.bw_index_score;
@@ -2474,33 +2482,57 @@ convert_control_roam_trigger_reason_bitmap(uint32_t trigger_reason_bitmap)
 	/* Enable the complete trigger bitmap when all bits are set in
 	 * the control config bitmap
 	 */
-	all_bitmap = (ROAM_CONTROL_TRIGGER_REASON_BSS_LOAD << 1) - 1;
+	all_bitmap = BIT(ROAM_TRIGGER_REASON_MAX) - 1;
 	if (trigger_reason_bitmap == all_bitmap)
-		return (BIT(WMI_ROAM_TRIGGER_REASON_MAX) - 1);
+		return BIT(WMI_ROAM_TRIGGER_EXT_REASON_MAX) - 1;
 
-	if (trigger_reason_bitmap & ROAM_CONTROL_TRIGGER_REASON_PER)
+	if (trigger_reason_bitmap & BIT(ROAM_TRIGGER_REASON_NONE))
+		fw_trigger_bitmap |= BIT(WMI_ROAM_TRIGGER_REASON_NONE);
+
+	if (trigger_reason_bitmap & BIT(ROAM_TRIGGER_REASON_PER))
 		fw_trigger_bitmap |= BIT(WMI_ROAM_TRIGGER_REASON_PER);
 
-	if (trigger_reason_bitmap & ROAM_CONTROL_TRIGGER_REASON_BEACON_MISS)
+	if (trigger_reason_bitmap & BIT(ROAM_TRIGGER_REASON_BMISS))
 		fw_trigger_bitmap |= BIT(WMI_ROAM_TRIGGER_REASON_BMISS);
 
-	if (trigger_reason_bitmap & ROAM_CONTROL_TRIGGER_REASON_POOR_RSSI)
+	if (trigger_reason_bitmap & BIT(ROAM_TRIGGER_REASON_LOW_RSSI))
 		fw_trigger_bitmap |= BIT(WMI_ROAM_TRIGGER_REASON_LOW_RSSI);
 
-	if (trigger_reason_bitmap & ROAM_CONTROL_TRIGGER_REASON_BETTER_RSSI)
+	if (trigger_reason_bitmap & BIT(ROAM_TRIGGER_REASON_HIGH_RSSI))
 		fw_trigger_bitmap |= BIT(WMI_ROAM_TRIGGER_REASON_HIGH_RSSI);
 
-	if (trigger_reason_bitmap & ROAM_CONTROL_TRIGGER_REASON_PERIODIC)
+	if (trigger_reason_bitmap & BIT(ROAM_TRIGGER_REASON_PERIODIC))
 		fw_trigger_bitmap |= BIT(WMI_ROAM_TRIGGER_REASON_PERIODIC);
 
-	if (trigger_reason_bitmap & ROAM_CONTROL_TRIGGER_REASON_DENSE)
+	if (trigger_reason_bitmap & BIT(ROAM_TRIGGER_REASON_MAWC))
+		fw_trigger_bitmap |= BIT(WMI_ROAM_TRIGGER_REASON_MAWC);
+
+	if (trigger_reason_bitmap & BIT(ROAM_TRIGGER_REASON_DENSE))
 		fw_trigger_bitmap |= BIT(WMI_ROAM_TRIGGER_REASON_DENSE);
 
-	if (trigger_reason_bitmap & ROAM_CONTROL_TRIGGER_REASON_BTM)
+	if (trigger_reason_bitmap & BIT(ROAM_TRIGGER_REASON_BACKGROUND))
+		fw_trigger_bitmap |= BIT(WMI_ROAM_TRIGGER_REASON_BACKGROUND);
+
+	if (trigger_reason_bitmap & BIT(ROAM_TRIGGER_REASON_FORCED))
+		fw_trigger_bitmap |= BIT(WMI_ROAM_TRIGGER_REASON_FORCED);
+
+	if (trigger_reason_bitmap & BIT(ROAM_TRIGGER_REASON_BTM))
 		fw_trigger_bitmap |= BIT(WMI_ROAM_TRIGGER_REASON_BTM);
 
-	if (trigger_reason_bitmap & ROAM_CONTROL_TRIGGER_REASON_BSS_LOAD)
+	if (trigger_reason_bitmap & BIT(ROAM_TRIGGER_REASON_UNIT_TEST))
+		fw_trigger_bitmap |= BIT(WMI_ROAM_TRIGGER_REASON_UNIT_TEST);
+
+	if (trigger_reason_bitmap & BIT(ROAM_TRIGGER_REASON_BSS_LOAD))
 		fw_trigger_bitmap |= BIT(WMI_ROAM_TRIGGER_REASON_BSS_LOAD);
+
+	if (trigger_reason_bitmap & BIT(ROAM_TRIGGER_REASON_DEAUTH))
+		fw_trigger_bitmap |= BIT(WMI_ROAM_TRIGGER_REASON_DEAUTH);
+
+	if (trigger_reason_bitmap & BIT(ROAM_TRIGGER_REASON_IDLE))
+		fw_trigger_bitmap |= BIT(WMI_ROAM_TRIGGER_REASON_IDLE);
+
+	if (trigger_reason_bitmap & BIT(ROAM_TRIGGER_REASON_STA_KICKOUT))
+		fw_trigger_bitmap |= BIT(WMI_ROAM_TRIGGER_REASON_STA_KICKOUT);
 
 	return fw_trigger_bitmap;
 }

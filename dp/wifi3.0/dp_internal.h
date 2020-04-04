@@ -1377,13 +1377,11 @@ dp_get_lmac_id_for_pdev_id
 static inline struct dp_pdev *
 	dp_get_pdev_for_lmac_id(struct dp_soc *soc, uint32_t lmac_id)
 {
-	int i = 0;
+	uint8_t i = 0;
 
 	if (wlan_cfg_per_pdev_lmac_ring(soc->wlan_cfg_ctx)) {
 		i = wlan_cfg_get_pdev_idx(soc->wlan_cfg_ctx, lmac_id);
-		qdf_assert_always(i < MAX_PDEV_CNT);
-
-		return soc->pdev_list[i];
+		return ((i < MAX_PDEV_CNT) ? soc->pdev_list[i] : NULL);
 	}
 
 	/* Typically for MCL as there only 1 PDEV*/
@@ -1449,7 +1447,7 @@ dp_get_host_pdev_id_for_target_pdev_id
 	/*Get host pdev from lmac*/
 	pdev = dp_get_pdev_for_lmac_id(soc, lmac_id);
 
-	return pdev->pdev_id;
+	return pdev ? pdev->pdev_id : INVALID_PDEV_ID;
 }
 
 /*
@@ -2099,4 +2097,16 @@ void dp_set_max_page_size(struct qdf_mem_multi_page_t *pages,
  * Return: None
  */
 void dp_rx_skip_tlvs(qdf_nbuf_t nbuf, uint32_t l3_padding);
+
+/**
+ * dp_soc_is_full_mon_enable () - Return if full monitor mode is enabled
+ * @soc: DP soc handle
+ *
+ * Return: Full monitor mode status
+ */
+static inline bool dp_soc_is_full_mon_enable(struct dp_pdev *pdev)
+{
+	return (pdev->soc->full_mon_mode && pdev->monitor_configured) ?
+			true : false;
+}
 #endif /* #ifndef _DP_INTERNAL_H_ */

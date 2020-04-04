@@ -849,6 +849,7 @@ add_ast_entry:
 				soc->ctrl_psoc,
 				peer->vdev->vdev_id,
 				peer->mac_addr.raw,
+				peer->peer_ids[0],
 				mac_addr,
 				next_node_mac,
 				flags,
@@ -3053,8 +3054,6 @@ dp_set_pn_check_wifi3(struct cdp_soc_t *soc, uint8_t vdev_id,
 	params.u.upd_queue_params.update_svld = 1;
 	params.u.upd_queue_params.svld = 0;
 
-	peer->security[dp_sec_ucast].sec_type = sec_type;
-
 	switch (sec_type) {
 	case cdp_sec_type_tkip_nomic:
 	case cdp_sec_type_aes_ccmp:
@@ -3559,7 +3558,7 @@ bool dp_find_peer_exist_on_other_vdev(struct cdp_soc_t *soc_hdl,
 	struct dp_vdev *vdev;
 
 	for (i = 0; i < max_bssid; i++) {
-		vdev = dp_get_vdev_from_soc_vdev_id_wifi3(soc, vdev_id);
+		vdev = dp_get_vdev_from_soc_vdev_id_wifi3(soc, i);
 		/* Need to check vdevs other than the vdev_id */
 		if (vdev_id == i || !vdev)
 			continue;
@@ -3567,9 +3566,8 @@ bool dp_find_peer_exist_on_other_vdev(struct cdp_soc_t *soc_hdl,
 					dp_pdev_to_cdp_pdev(vdev->pdev),
 					dp_vdev_to_cdp_vdev(vdev),
 					peer_addr)) {
-			QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_INFO_HIGH,
-				  "%s: Duplicate peer %pM already exist on vdev %d",
-				  __func__, peer_addr, i);
+			dp_err("%s: Duplicate peer %pM already exist on vdev %d",
+			       __func__, peer_addr, i);
 			return true;
 		}
 	}

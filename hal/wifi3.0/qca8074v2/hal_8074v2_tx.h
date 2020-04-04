@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -128,13 +128,12 @@ static void hal_tx_set_dscp_tid_map_8074v2(struct hal_soc *soc,
 static void hal_tx_update_dscp_tid_8074v2(struct hal_soc *soc, uint8_t tid,
 					  uint8_t id, uint8_t dscp)
 {
-	uint32_t addr, addr1, cmn_reg_addr;
+	uint32_t addr, addr1, cmn_reg_addr, regmask = 0xFFFFFFFF;
 	uint32_t start_value = 0, end_value = 0;
 	uint32_t regval;
 	uint8_t end_bits = 0;
 	uint8_t start_bits = 0;
 	uint32_t start_index, end_index;
-
 	cmn_reg_addr = HWIO_TCL_R0_CONS_RING_CMN_CTRL_REG_ADDR(
 					SEQ_WCSS_UMAC_MAC_TCL_REG_OFFSET);
 
@@ -171,7 +170,7 @@ static void hal_tx_update_dscp_tid_8074v2(struct hal_soc *soc, uint8_t tid,
 	regval = HAL_REG_READ(soc, addr);
 
 	if (end_index < start_index)
-		regval &= (~0) >> start_bits;
+		regval &= (regmask >> start_bits);
 	else
 		regval &= ~(7 << start_index);
 
@@ -212,3 +211,32 @@ static void hal_tx_desc_set_lmac_id_8074v2(void *desc, uint8_t lmac_id)
 		HAL_TX_SM(TCL_DATA_CMD_4, LMAC_ID, lmac_id);
 }
 
+/**
+ * hal_tx_init_cmd_credit_ring_8074v2() - Initialize command/credit SRNG
+ * @hal_soc_hdl: Handle to HAL SoC structure
+ * @hal_srng: Handle to HAL SRNG structure
+ *
+ * Return: none
+ */
+static inline void hal_tx_init_cmd_credit_ring_8074v2(hal_soc_handle_t hal_soc_hdl,
+						      hal_ring_handle_t hal_ring_hdl)
+{
+	uint8_t *desc_addr;
+	struct hal_srng_params srng_params;
+	uint32_t desc_size;
+	uint32_t num_desc;
+
+	hal_get_srng_params(hal_soc_hdl, hal_ring_hdl, &srng_params);
+
+	desc_addr = (uint8_t *)srng_params.ring_base_vaddr;
+	desc_size = sizeof(struct tcl_data_cmd);
+	num_desc = srng_params.num_entries;
+
+	while (num_desc) {
+		/* using CMD/CREDIT Ring to send DATA CMD tag */
+		HAL_TX_DESC_SET_TLV_HDR(desc_addr, WIFITCL_DATA_CMD_E,
+					desc_size);
+		desc_addr += (desc_size + sizeof(struct tlv_32_hdr));
+		num_desc--;
+	}
+}

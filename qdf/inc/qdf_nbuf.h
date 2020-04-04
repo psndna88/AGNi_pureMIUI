@@ -242,6 +242,9 @@
  * @rxpcu_filter_pass: Flag which indicates whether RX packets are received in
  *						BSS mode(not in promisc mode)
  * @rssi_chain: Rssi chain per nss per bw
+ * @tx_status: packet tx status
+ * @tx_retry_cnt: tx retry count
+ * @add_rtap_ext: add radio tap extension
  */
 struct mon_rx_status {
 	uint64_t tsft;
@@ -323,6 +326,9 @@ struct mon_rx_status {
 	uint8_t rxpcu_filter_pass;
 	int8_t rssi_chain[8][8];
 	uint32_t rx_antenna;
+	uint8_t  tx_status;
+	uint8_t  tx_retry_cnt;
+	bool add_rtap_ext;
 };
 
 /**
@@ -1691,7 +1697,31 @@ static inline qdf_nbuf_t qdf_nbuf_copy_expand(qdf_nbuf_t buf, int headroom,
 {
 	return __qdf_nbuf_copy_expand(buf, headroom, tailroom);
 }
+
 #endif /* NBUF_MEMORY_DEBUG */
+
+/**
+ * qdf_nbuf_copy_expand_fraglist() - copy and expand nbuf and
+ * get reference of the fraglist.
+ * @buf: Network buf instance
+ * @headroom: Additional headroom to be added
+ * @tailroom: Additional tailroom to be added
+ *
+ * Return: New nbuf that is a copy of buf, with additional head and tailroom
+ *	or NULL if there is no memory
+ */
+static inline qdf_nbuf_t
+qdf_nbuf_copy_expand_fraglist(qdf_nbuf_t buf, int headroom,
+			      int tailroom)
+{
+	buf = qdf_nbuf_copy_expand(buf, headroom, tailroom);
+
+	/* get fraglist reference */
+	if (buf)
+		__qdf_nbuf_get_ref_fraglist(buf);
+
+	return buf;
+}
 
 #ifdef WLAN_FEATURE_FASTPATH
 /**

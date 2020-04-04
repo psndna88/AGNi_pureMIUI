@@ -1021,6 +1021,7 @@ struct hal_hw_txrx_ops qca8074_hal_hw_txrx_ops = {
 	hal_reo_setup_generic,
 	hal_setup_link_idle_list_generic,
 	hal_get_window_address_8074,
+	NULL,
 
 	/* tx */
 	hal_tx_desc_set_dscp_tid_table_id_8074,
@@ -1035,6 +1036,8 @@ struct hal_hw_txrx_ops qca8074_hal_hw_txrx_ops = {
 	hal_tx_comp_get_release_reason_generic,
 	hal_get_wbm_internal_error_generic,
 	hal_tx_desc_set_mesh_en_8074v1,
+	hal_tx_init_cmd_credit_ring_8074v1,
+
 	/* rx */
 	hal_rx_msdu_start_nss_get_8074,
 	hal_rx_mon_hw_desc_get_mpdu_status_8074,
@@ -1111,6 +1114,7 @@ struct hal_hw_txrx_ops qca8074_hal_hw_txrx_ops = {
 	NULL,
 	NULL,
 	hal_rx_mpdu_start_tlv_tag_valid_8074v1,
+	NULL,
 };
 
 struct hal_hw_srng_config hw_srng_table_8074[] = {
@@ -1248,7 +1252,7 @@ struct hal_hw_srng_config hw_srng_table_8074[] = {
 		.start_ring_id = HAL_SRNG_SW2TCL_CMD,
 		.max_rings = 1,
 		.entry_size = (sizeof(struct tlv_32_hdr) +
-			sizeof(struct tcl_gse_cmd)) >> 2,
+			sizeof(struct tcl_data_cmd)) >> 2,
 		.lmac_ring =  FALSE,
 		.ring_dir = HAL_SRNG_SRC_RING,
 		.reg_start = {

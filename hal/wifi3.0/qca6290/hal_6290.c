@@ -1000,6 +1000,7 @@ struct hal_hw_txrx_ops qca6290_hal_hw_txrx_ops = {
 	hal_reo_setup_generic,
 	hal_setup_link_idle_list_generic,
 	hal_get_window_address_6290,
+	NULL,
 
 	/* tx */
 	hal_tx_desc_set_dscp_tid_table_id_6290,
@@ -1014,6 +1015,8 @@ struct hal_hw_txrx_ops qca6290_hal_hw_txrx_ops = {
 	hal_tx_comp_get_release_reason_generic,
 	hal_get_wbm_internal_error_generic,
 	hal_tx_desc_set_mesh_en_6290,
+	hal_tx_init_cmd_credit_ring_6290,
+
 	/* rx */
 	hal_rx_msdu_start_nss_get_6290,
 	hal_rx_mon_hw_desc_get_mpdu_status_6290,

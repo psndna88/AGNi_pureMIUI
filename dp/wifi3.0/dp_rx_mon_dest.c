@@ -28,6 +28,47 @@
 #include "dp_rx_mon.h"
 #include "wlan_cfg.h"
 #include "dp_internal.h"
+#ifdef WLAN_TX_PKT_CAPTURE_ENH
+#include "dp_rx_mon_feature.h"
+
+static inline void
+dp_handle_tx_capture(struct dp_soc *soc, struct dp_pdev *pdev,
+		     qdf_nbuf_t mon_mpdu)
+{
+	struct hal_rx_ppdu_info *ppdu_info = &pdev->ppdu_info;
+
+	if (pdev->tx_capture_enabled
+	    == CDP_TX_ENH_CAPTURE_DISABLED)
+		return;
+
+	if ((ppdu_info->sw_frame_group_id ==
+	      HAL_MPDU_SW_FRAME_GROUP_CTRL_NDPA) ||
+	     (ppdu_info->sw_frame_group_id ==
+	      HAL_MPDU_SW_FRAME_GROUP_CTRL_BAR))
+		dp_handle_tx_capture_from_dest(soc, pdev, mon_mpdu);
+}
+
+static void
+dp_tx_capture_get_user_id(struct dp_pdev *dp_pdev, void *rx_desc_tlv)
+{
+	if (dp_pdev->tx_capture_enabled
+	    != CDP_TX_ENH_CAPTURE_DISABLED)
+		dp_pdev->ppdu_info.rx_info.user_id =
+			HAL_RX_HW_DESC_MPDU_USER_ID(rx_desc_tlv);
+}
+#else
+static inline void
+dp_handle_tx_capture(struct dp_soc *soc, struct dp_pdev *pdev,
+		     qdf_nbuf_t mon_mpdu)
+{
+}
+
+static void
+dp_tx_capture_get_user_id(struct dp_pdev *dp_pdev, void *rx_desc_tlv)
+{
+}
+#endif
+
 
 /* The maxinum buffer length allocated for radio tap */
 #define MAX_MONITOR_HEADER (512)
@@ -53,7 +94,7 @@
  * @buf_addr_info: void pointer to monitor link descriptor buf addr info
  * Return: QDF_STATUS
  */
-static QDF_STATUS
+QDF_STATUS
 dp_rx_mon_link_desc_return(struct dp_pdev *dp_pdev,
 	hal_buff_addrinfo_t buf_addr_info, int mac_id)
 {
@@ -102,142 +143,6 @@ done:
 }
 
 /**
- * dp_mon_adjust_frag_len() - MPDU and MSDU may spread across
- *				multiple nbufs. This function
- *                              is to return data length in
- *				fragmented buffer
- *
- * @total_len: pointer to remaining data length.
- * @frag_len: pointer to data length in this fragment.
-*/
-static inline void dp_mon_adjust_frag_len(uint32_t *total_len,
-uint32_t *frag_len)
-{
-	if (*total_len >= (RX_MONITOR_BUFFER_SIZE - RX_PKT_TLVS_LEN)) {
-		*frag_len = RX_MONITOR_BUFFER_SIZE - RX_PKT_TLVS_LEN;
-		*total_len -= *frag_len;
-	} else {
-		*frag_len = *total_len;
-		*total_len = 0;
-	}
-}
-
-/**
- * dp_rx_cookie_2_mon_link_desc() - Retrieve Link descriptor based on target
- * @pdev: core physical device context
- * @hal_buf_info: structure holding the buffer info
- * mac_id: mac number
- *
- * Return: link descriptor address
- */
-static inline
-void *dp_rx_cookie_2_mon_link_desc(struct dp_pdev *pdev,
-				   struct hal_buf_info buf_info,
-				   uint8_t mac_id)
-{
-	if (pdev->soc->wlan_cfg_ctx->rxdma1_enable)
-		return dp_rx_cookie_2_mon_link_desc_va(pdev, &buf_info,
-						       mac_id);
-
-	return dp_rx_cookie_2_link_desc_va(pdev->soc, &buf_info);
-}
-
-/**
- * dp_rx_monitor_link_desc_return() - Return Link descriptor based on target
- * @pdev: core physical device context
- * @p_last_buf_addr_info: MPDU Link descriptor
- * mac_id: mac number
- *
- * Return: QDF_STATUS
- */
-static inline
-QDF_STATUS dp_rx_monitor_link_desc_return(struct dp_pdev *pdev,
-					  hal_buff_addrinfo_t
-					  p_last_buf_addr_info,
-					  uint8_t mac_id, uint8_t bm_action)
-{
-	if (pdev->soc->wlan_cfg_ctx->rxdma1_enable)
-		return dp_rx_mon_link_desc_return(pdev, p_last_buf_addr_info,
-						  mac_id);
-
-	return dp_rx_link_desc_return_by_addr(pdev->soc, p_last_buf_addr_info,
-				      bm_action);
-}
-
-/**
- * dp_rxdma_get_mon_dst_ring() - Return the pointer to rxdma_err_dst_ring
- *					or mon_dst_ring based on the target
- * @pdev: core physical device context
- * @mac_for_pdev: mac_id number
- *
- * Return: ring address
- */
-static inline
-void *dp_rxdma_get_mon_dst_ring(struct dp_pdev *pdev,
-				uint8_t mac_for_pdev)
-{
-	if (pdev->soc->wlan_cfg_ctx->rxdma1_enable)
-		return pdev->soc->rxdma_mon_dst_ring[mac_for_pdev].hal_srng;
-
-	return pdev->soc->rxdma_err_dst_ring[mac_for_pdev].hal_srng;
-}
-
-/**
- * dp_rxdma_get_mon_buf_ring() - Return monitor buf ring address
- *				    based on target
- * @pdev: core physical device context
- * @mac_for_pdev: mac id number
- *
- * Return: ring address
- */
-static inline
-struct dp_srng *dp_rxdma_get_mon_buf_ring(struct dp_pdev *pdev,
-					  uint8_t mac_for_pdev)
-{
-	if (pdev->soc->wlan_cfg_ctx->rxdma1_enable)
-		return &pdev->soc->rxdma_mon_buf_ring[mac_for_pdev];
-
-	return &pdev->soc->rx_refill_buf_ring[mac_for_pdev];
-}
-
-/**
- * dp_rx_get_mon_desc_pool() - Return monitor descriptor pool
- *			       based on target
- * @soc: soc handle
- * @mac_id: mac id number
- * @pdev_id: pdev id number
- *
- * Return: descriptor pool address
- */
-static inline
-struct rx_desc_pool *dp_rx_get_mon_desc_pool(struct dp_soc *soc,
-					     uint8_t mac_id,
-					     uint8_t pdev_id)
-{
-	if (soc->wlan_cfg_ctx->rxdma1_enable)
-		return &soc->rx_desc_mon[mac_id];
-
-	return &soc->rx_desc_buf[pdev_id];
-}
-
-/**
- * dp_rx_get_mon_desc() - Return Rx descriptor based on target
- * @soc: soc handle
- * @cookie: cookie value
- *
- * Return: Rx descriptor
- */
-static inline
-struct dp_rx_desc *dp_rx_get_mon_desc(struct dp_soc *soc,
-				      uint32_t cookie)
-{
-	if (soc->wlan_cfg_ctx->rxdma1_enable)
-		return dp_rx_cookie_2_va_mon_buf(soc, cookie);
-
-	return dp_rx_cookie_2_va_rxdma_buf(soc, cookie);
-}
-
-/**
  * dp_rx_mon_mpdu_pop() - Return a MPDU link descriptor to HW
  *			      (WBM), following error handling
  *
@@ -279,6 +184,12 @@ dp_rx_mon_mpdu_pop(struct dp_soc *soc, uint32_t mac_id,
 	uint8_t bm_action = HAL_BM_ACTION_PUT_IN_IDLE_LIST;
 	uint64_t nbuf_paddr = 0;
 	uint32_t rx_link_buf_info[HAL_RX_BUFFINFO_NUM_DWORDS];
+
+	if (qdf_unlikely(!dp_pdev)) {
+		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_DEBUG,
+			  "pdev is null for mac_id = %d", mac_id);
+		return rx_bufs_used;
+	}
 
 	msdu = 0;
 
@@ -412,6 +323,10 @@ dp_rx_mon_mpdu_pop(struct dp_soc *soc, uint32_t mac_id,
 					*ppdu_id = msdu_ppdu_id;
 					return rx_bufs_used;
 				}
+
+				dp_tx_capture_get_user_id(dp_pdev,
+							  rx_desc_tlv);
+
 				dp_pdev->mon_last_linkdesc_paddr =
 					buf_info.paddr;
 			}
@@ -561,6 +476,12 @@ qdf_nbuf_t dp_rx_mon_restitch_mpdu_from_msdus(struct dp_soc *soc,
 	struct dp_pdev *dp_pdev = dp_get_pdev_for_lmac_id(soc, mac_id);
 	head_frag_list = NULL;
 	mpdu_buf = NULL;
+
+	if (qdf_unlikely(!dp_pdev)) {
+		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_DEBUG,
+			  "pdev is null for mac_id = %d", mac_id);
+		return NULL;
+	}
 
 	/* The nbuf has been pulled just beyond the status and points to the
 	   * payload
@@ -942,7 +863,7 @@ QDF_STATUS dp_rx_mon_deliver(struct dp_soc *soc, uint32_t mac_id,
 	qdf_nbuf_t mon_skb, skb_next;
 	qdf_nbuf_t mon_mpdu = NULL;
 
-	if (!pdev->monitor_vdev && !pdev->mcopy_mode)
+	if (!pdev || (!pdev->monitor_vdev && !pdev->mcopy_mode))
 		goto mon_deliver_fail;
 
 	/* restitch mon MPDU for delivery via monitor interface */
@@ -962,6 +883,8 @@ QDF_STATUS dp_rx_mon_deliver(struct dp_soc *soc, uint32_t mac_id,
 		pdev->ppdu_info.rx_status.device_id = soc->device_id;
 		pdev->ppdu_info.rx_status.chan_noise_floor =
 			pdev->chan_noise_floor;
+
+		dp_handle_tx_capture(soc, pdev, mon_mpdu);
 
 		if (!qdf_nbuf_update_radiotap(&pdev->ppdu_info.rx_status,
 					      mon_mpdu,
@@ -1017,7 +940,7 @@ QDF_STATUS dp_rx_mon_deliver_non_std(struct dp_soc *soc,
 	qdf_nbuf_t dummy_msdu;
 
 	/* Sanity checking */
-	if ((!pdev->monitor_vdev) || (!pdev->monitor_vdev->osif_rx_mon))
+	if (!pdev || !pdev->monitor_vdev || !pdev->monitor_vdev->osif_rx_mon)
 		goto mon_deliver_non_std_fail;
 
 	/* Generate a dummy skb_buff */
@@ -1086,6 +1009,12 @@ void dp_rx_mon_dest_process(struct dp_soc *soc, uint32_t mac_id, uint32_t quota)
 	uint32_t mpdu_rx_bufs_used;
 	int mac_for_pdev = mac_id;
 	struct cdp_pdev_mon_stats *rx_mon_stats;
+
+	if (!pdev) {
+		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_DEBUG,
+			  "pdev is null for mac_id = %d", mac_id);
+		return;
+	}
 
 	mon_dst_srng = dp_rxdma_get_mon_dst_ring(pdev, mac_for_pdev);
 
@@ -1672,6 +1601,9 @@ dp_rx_pdev_mon_attach(struct dp_pdev *pdev) {
 	pdev->mon_last_linkdesc_paddr = 0;
 	pdev->mon_last_buf_cookie = DP_RX_DESC_COOKIE_MAX + 1;
 	qdf_spinlock_create(&pdev->mon_lock);
+
+	/* Attach full monitor mode resources */
+	dp_full_mon_attach(pdev);
 	return QDF_STATUS_SUCCESS;
 
 fail:
@@ -1720,6 +1652,8 @@ dp_rx_pdev_mon_detach(struct dp_pdev *pdev) {
 		dp_rx_pdev_mon_status_detach(pdev, mac_for_pdev);
 		dp_rx_pdev_mon_buf_detach(pdev, mac_for_pdev);
 	}
+	/* Detach full monitor mode resources */
+	dp_full_mon_detach(pdev);
 
 	return QDF_STATUS_SUCCESS;
 }

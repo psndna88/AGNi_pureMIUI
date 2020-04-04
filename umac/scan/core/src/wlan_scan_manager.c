@@ -561,6 +561,7 @@ int scm_scan_get_burst_duration(int max_ch_time, bool miracast_enabled)
 }
 
 #define SCM_ACTIVE_DWELL_TIME_NAN      40
+#define SCM_ACTIVE_DWELL_TIME_SAP      40
 
 /**
  * scm_req_update_concurrency_params() - update scan req params depending on
@@ -649,7 +650,7 @@ static void scm_req_update_concurrency_params(struct wlan_objmgr_vdev *vdev,
 	 * time for 2g channels instead of dwell_time_active_2g
 	 */
 	if (vdev->vdev_mlme.vdev_opmode == QDF_SAP_MODE)
-		req->scan_req.dwell_time_active_2g = 0;
+		req->scan_req.dwell_time_active_2g = SCM_ACTIVE_DWELL_TIME_SAP;
 
 	if (req->scan_req.scan_type == SCAN_TYPE_DEFAULT) {
 		/*
@@ -941,6 +942,7 @@ static void scm_sort_6ghz_channel_list(struct wlan_objmgr_vdev *vdev,
 	struct chan_info temp_list[MAX_6GHZ_CHANNEL];
 	struct rnr_chan_weight *rnr_chan_info, *temp;
 	uint32_t weight;
+	struct wlan_objmgr_psoc *psoc;
 
 	rnr_chan_info = qdf_mem_malloc(sizeof(rnr_chan_info) * MAX_6GHZ_CHANNEL);
 	if (!rnr_chan_info)
@@ -959,13 +961,24 @@ static void scm_sort_6ghz_channel_list(struct wlan_objmgr_vdev *vdev,
 		return;
 	}
 
+	psoc = wlan_vdev_get_psoc(vdev);
+	if (!psoc) {
+		scm_err("Psoc is NULL");
+		return;
+	}
+
 	/* compute the weightage */
-	for (i = 0; i < tmp_list_count; i++) {
-		channel = scm_get_chan_meta(temp_list[i].freq);
+	for (i = 0, j = 0; i < tmp_list_count; i++) {
+		channel = scm_get_chan_meta(psoc, temp_list[i].freq);
+		if (!channel)
+			continue;
 		weight = channel->bss_beacon_probe_count * BCN_PROBE_WEIGHTAGE +
 			 channel->saved_profile_count * SAVED_PROFILE_WEIGHTAGE;
-		rnr_chan_info[i].weight = weight;
-		rnr_chan_info[i].chan_freq = temp_list[i].freq;
+		rnr_chan_info[j].weight = weight;
+		rnr_chan_info[j].chan_freq = temp_list[i].freq;
+		j++;
+		scm_debug("Freq %d weight %d bcn_cnt %d", temp_list[i].freq,
+			  weight, channel->bss_beacon_probe_count);
 	}
 
 	/* Sort the channel using selection sort */
@@ -988,15 +1001,15 @@ static void scm_sort_6ghz_channel_list(struct wlan_objmgr_vdev *vdev,
 	}
 
 	/* update the 6g list based on the weightage */
-	for (i = 0, j = 0;
-		(i < NUM_CHANNELS && j < NUM_6GHZ_CHANNELS); i++) {
+	for (i = 0, j = tmp_list_count - 1; (i < NUM_CHANNELS && j > 0); i++) {
 		if (wlan_reg_is_6ghz_chan_freq(chan_list->chan[i].freq))
-			chan_list->chan[i].freq = rnr_chan_info[j++].chan_freq;
+			chan_list->chan[i].freq = rnr_chan_info[j--].chan_freq;
 	}
 	qdf_mem_free(rnr_chan_info);
 }
 
-static void scm_update_rnr_info(struct scan_start_request *req)
+static void scm_update_rnr_info(struct wlan_objmgr_psoc *psoc,
+				struct scan_start_request *req)
 {
 	uint8_t i, num_bssid = 0, num_ssid = 0;
 	uint8_t total_count = MAX_HINTS_PER_SCAN_REQ;
@@ -1013,10 +1026,8 @@ static void scm_update_rnr_info(struct scan_start_request *req)
 	chan_list = &req->scan_req.chan_list;
 	for (i = 0; i < chan_list->num_chan; i++) {
 		freq = chan_list->chan[i].freq;
-		if (!wlan_reg_is_6ghz_chan_freq(freq))
-			continue;
 
-		chan = scm_get_chan_meta(freq);
+		chan = scm_get_chan_meta(psoc, freq);
 		if (!chan) {
 			scm_debug("Failed to get meta, freq %d", freq);
 			continue;
@@ -1029,13 +1040,17 @@ static void scm_update_rnr_info(struct scan_start_request *req)
 			rnr_node = qdf_container_of(cur_node,
 						    struct scan_rnr_node,
 						    node);
-			if (!qdf_is_macaddr_zero(&rnr_node->entry.bssid)) {
+			if (!qdf_is_macaddr_zero(&rnr_node->entry.bssid) &&
+			    req->scan_req.num_hint_bssid <
+			    WLAN_SCAN_MAX_HINT_BSSID) {
 				qdf_mem_copy(&req->scan_req.hint_bssid[num_bssid++].bssid,
 					     &rnr_node->entry.bssid,
 					     QDF_MAC_ADDR_SIZE);
 				req->scan_req.num_hint_bssid++;
 				total_count--;
-			} else if (rnr_node->entry.short_ssid) {
+			} else if (rnr_node->entry.short_ssid &&
+				   req->scan_req.num_hint_s_ssid <
+				   WLAN_SCAN_MAX_HINT_S_SSID) {
 				req->scan_req.hint_s_ssid[num_ssid++].short_ssid =
 						rnr_node->entry.short_ssid;
 				req->scan_req.num_hint_s_ssid++;
@@ -1050,13 +1065,38 @@ static void scm_update_rnr_info(struct scan_start_request *req)
 		}
 	}
 }
+
+static void scm_add_rnr_info(struct wlan_objmgr_pdev *pdev,
+			     struct scan_start_request *req)
+{
+	struct wlan_objmgr_psoc *psoc;
+	struct channel_list_db *rnr_db;
+
+	psoc = wlan_pdev_get_psoc(pdev);
+	if (!psoc)
+		return;
+	rnr_db = scm_get_rnr_channel_db(psoc);
+	if (!rnr_db)
+		return;
+
+	rnr_db->scan_count++;
+	if (rnr_db->scan_count >= RNR_UPDATE_SCAN_CNT_THRESHOLD) {
+		rnr_db->scan_count = 0;
+		scm_rnr_db_flush(psoc);
+		scm_update_rnr_from_scan_cache(pdev);
+	}
+
+	scm_update_rnr_info(psoc, req);
+}
+
 #else
 static void scm_sort_6ghz_channel_list(struct wlan_objmgr_vdev *vdev,
 				       struct chan_list *chan_list)
 {
 }
 
-static void scm_update_rnr_info(struct scan_start_request *req)
+static void scm_add_rnr_info(struct wlan_objmgr_pdev *pdev,
+			     struct scan_start_request *req)
 {
 }
 #endif
@@ -1276,8 +1316,9 @@ scm_scan_req_update_params(struct wlan_objmgr_vdev *vdev,
 	else if (!req->scan_req.chan_list.num_chan)
 		ucfg_scan_init_chanlist_params(req, 0, NULL, NULL);
 
+	if (scan_obj->scan_def.scan_mode_6g != SCAN_MODE_6G_NO_CHANNEL)
+		scm_add_rnr_info(pdev, req);
 	scm_update_channel_list(req, scan_obj);
-	scm_update_rnr_info(req);
 }
 
 static inline void scm_print_scan_req_info(struct scan_req_params *req)

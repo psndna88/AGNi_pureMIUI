@@ -268,6 +268,7 @@ qdf_export_symbol(qdf_wake_lock_name);
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
 QDF_STATUS qdf_wake_lock_create(qdf_wake_lock_t *lock, const char *name)
 {
+	qdf_mem_zero(lock, sizeof(*lock));
 	lock->priv = wakeup_source_register(lock->lock.dev, name);
 	if (!(lock->priv)) {
 		QDF_BUG(0);
@@ -579,6 +580,10 @@ qdf_export_symbol(__qdf_runtime_lock_init);
 void qdf_runtime_lock_deinit(qdf_runtime_lock_t *lock)
 {
 	void *hif_ctx = cds_get_context(QDF_MODULE_ID_HIF);
+
+	if (!lock)
+		return;
+
 	hif_runtime_lock_deinit(hif_ctx, lock->lock);
 }
 qdf_export_symbol(qdf_runtime_lock_deinit);

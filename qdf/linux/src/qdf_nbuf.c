@@ -2801,6 +2801,59 @@ struct qdf_tso_cmn_seg_info_t {
 };
 
 /**
+ * qdf_nbuf_adj_tso_frag() - adjustment for buffer address of tso fragment
+ *
+ * @skb: network buffer
+ *
+ * Return: byte offset length of 8 bytes aligned.
+ */
+#ifdef WAR_TXDMA_LIMITATION
+static uint8_t qdf_nbuf_adj_tso_frag(struct sk_buff *skb)
+{
+	uint32_t eit_hdr_len;
+	uint8_t *eit_hdr;
+	uint8_t byte_8_align_offset;
+
+	/*
+	 * Workaround for TXDMA HW limitation.
+	 * ADDR0&0x1FFFFFFF8 should not equal ADDR1&0x1FFFFFFF8.
+	 * Otherwise, TXDMA will run into exception, which cause TX fail.
+	 * ADDR0: the address of last words in previous buffer;
+	 * ADDR1: the address of first words in next buffer;
+	 * To avoid this, shift several bytes for ADDR0.
+	 */
+	eit_hdr = skb->data;
+	eit_hdr_len = (skb_transport_header(skb)
+		 - skb_mac_header(skb)) + tcp_hdrlen(skb);
+	byte_8_align_offset = ((unsigned long)(eit_hdr) + eit_hdr_len) & 0x7L;
+	if (qdf_unlikely(byte_8_align_offset)) {
+		TSO_DEBUG("%pK,Len %d %d",
+			  eit_hdr, eit_hdr_len, byte_8_align_offset);
+		if (unlikely(skb_headroom(skb) < byte_8_align_offset)) {
+			TSO_DEBUG("[%d]Insufficient headroom,[%pK],[%pK],[%d]",
+				  __LINE__, skb->head, skb->data,
+				 byte_8_align_offset);
+			return 0;
+		}
+		qdf_nbuf_push_head(skb, byte_8_align_offset);
+		qdf_mem_move(skb->data,
+			     skb->data + byte_8_align_offset,
+			     eit_hdr_len);
+		skb->len -= byte_8_align_offset;
+		skb->mac_header -= byte_8_align_offset;
+		skb->network_header -= byte_8_align_offset;
+		skb->transport_header -= byte_8_align_offset;
+	}
+	return byte_8_align_offset;
+}
+#else
+static uint8_t qdf_nbuf_adj_tso_frag(struct sk_buff *skb)
+{
+	return 0;
+}
+#endif
+
+/**
  * __qdf_nbuf_get_tso_cmn_seg_info() - get TSO common
  * information
  * @osdev: qdf device handle
@@ -2970,11 +3023,14 @@ uint32_t __qdf_nbuf_get_tso_info(qdf_device_t osdev, struct sk_buff *skb,
 	uint32_t skb_proc = skb->len; /* bytes of skb pending processing */
 	uint32_t tso_seg_size = skb_shinfo(skb)->gso_size;
 	int j = 0; /* skb fragment index */
+	uint8_t byte_8_align_offset;
 
 	memset(&tso_cmn_info, 0x0, sizeof(tso_cmn_info));
 	total_num_seg = tso_info->tso_num_seg_list;
 	curr_seg = tso_info->tso_seg_list;
 	total_num_seg->num_seg.tso_cmn_num_seg = 0;
+
+	byte_8_align_offset = qdf_nbuf_adj_tso_frag(skb);
 
 	if (qdf_unlikely(__qdf_nbuf_get_tso_cmn_seg_info(osdev,
 						skb, &tso_cmn_info))) {
@@ -2991,7 +3047,9 @@ uint32_t __qdf_nbuf_get_tso_info(qdf_device_t osdev, struct sk_buff *skb,
 	skb_proc -= tso_cmn_info.eit_hdr_len;
 
 	/* get the address to the next tso fragment */
-	tso_frag_vaddr = skb->data + tso_cmn_info.eit_hdr_len;
+	tso_frag_vaddr = skb->data +
+			 tso_cmn_info.eit_hdr_len +
+			 byte_8_align_offset;
 	/* get the length of the next tso fragment */
 	tso_frag_len = min(skb_frag_len, tso_seg_size);
 
@@ -3974,11 +4032,11 @@ qdf_nbuf_update_radiotap_he_flags(struct mon_rx_status *rx_status,
 
 	put_unaligned_le16(rx_status->he_data6, &rtap_buf[rtap_len]);
 	rtap_len += 2;
-	qdf_debug("he data %x %x %x %x %x %x",
-		  rx_status->he_data1,
-		  rx_status->he_data2, rx_status->he_data3,
-		  rx_status->he_data4, rx_status->he_data5,
-		  rx_status->he_data6);
+	qdf_rl_debug("he data %x %x %x %x %x %x",
+		     rx_status->he_data1,
+		     rx_status->he_data2, rx_status->he_data3,
+		     rx_status->he_data4, rx_status->he_data5,
+		     rx_status->he_data6);
 	return rtap_len;
 }
 
@@ -4067,6 +4125,8 @@ qdf_nbuf_update_radiotap_he_mu_other_flags(struct mon_rx_status *rx_status,
 	return rtap_len;
 }
 
+#define IEEE80211_RADIOTAP_TX_STATUS 0
+#define IEEE80211_RADIOTAP_RETRY_COUNT 1
 
 /**
  * This is the length for radiotap, combined length
@@ -4085,6 +4145,11 @@ qdf_nbuf_update_radiotap_he_mu_other_flags(struct mon_rx_status *rx_status,
 #define RADIOTAP_AMPDU_STATUS_LEN (8 + 3)
 #define RADIOTAP_VENDOR_NS_LEN \
 	(sizeof(struct qdf_radiotap_vendor_ns_ath) + 1)
+/* This is Radio Tap Header Extension Length.
+ * 4 Bytes for Extended it_present bit map +
+ * 4 bytes padding for alignment
+ */
+#define RADIOTAP_HEADER_EXT_LEN (2 * sizeof(uint32_t))
 #define RADIOTAP_HEADER_LEN (sizeof(struct ieee80211_radiotap_header) + \
 				RADIOTAP_FIXED_HEADER_LEN + \
 				RADIOTAP_HT_FLAGS_LEN + \
@@ -4093,7 +4158,8 @@ qdf_nbuf_update_radiotap_he_mu_other_flags(struct mon_rx_status *rx_status,
 				RADIOTAP_HE_FLAGS_LEN + \
 				RADIOTAP_HE_MU_FLAGS_LEN + \
 				RADIOTAP_HE_MU_OTHER_FLAGS_LEN + \
-				RADIOTAP_VENDOR_NS_LEN)
+				RADIOTAP_VENDOR_NS_LEN + \
+				RADIOTAP_HEADER_EXT_LEN)
 
 #define IEEE80211_RADIOTAP_HE 23
 #define IEEE80211_RADIOTAP_HE_MU	24
@@ -4152,6 +4218,14 @@ unsigned int qdf_nbuf_update_radiotap(struct mon_rx_status *rx_status,
 	uint32_t rtap_len = rtap_hdr_len;
 	uint8_t length = rtap_len;
 	struct qdf_radiotap_vendor_ns_ath *radiotap_vendor_ns_ath;
+	uint32_t *rtap_ext = NULL;
+
+	/* Adding Extended Header space */
+	if (rx_status->add_rtap_ext) {
+		rtap_hdr_len += RADIOTAP_HEADER_EXT_LEN;
+		rtap_len = rtap_hdr_len;
+	}
+	length = rtap_len;
 
 	/* IEEE80211_RADIOTAP_TSFT              __le64       microseconds*/
 	rthdr->it_present = (1 << IEEE80211_RADIOTAP_TSFT);
@@ -4334,6 +4408,20 @@ unsigned int qdf_nbuf_update_radiotap(struct mon_rx_status *rx_status,
 	radiotap_vendor_ns_ath->ppdu_start_timestamp =
 				cpu_to_le32(rx_status->ppdu_timestamp);
 	rtap_len += sizeof(*radiotap_vendor_ns_ath);
+
+	/* Add Extension to Radiotap Header & corresponding data */
+	if (rx_status->add_rtap_ext) {
+		rthdr->it_present |= cpu_to_le32(1 << IEEE80211_RADIOTAP_EXT);
+		rtap_ext = (uint32_t *)&rthdr->it_present;
+		rtap_ext++;
+		*rtap_ext = cpu_to_le32(1 << IEEE80211_RADIOTAP_TX_STATUS);
+		*rtap_ext |= cpu_to_le32(1 << IEEE80211_RADIOTAP_RETRY_COUNT);
+
+		rtap_buf[rtap_len] = rx_status->tx_status;
+		rtap_len += 1;
+		rtap_buf[rtap_len] = rx_status->tx_retry_cnt;
+		rtap_len += 1;
+	}
 
 	rthdr->it_len = cpu_to_le16(rtap_len);
 	rthdr->it_present = cpu_to_le32(rthdr->it_present);

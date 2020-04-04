@@ -89,6 +89,51 @@ void dp_rx_dump_info_and_assert(struct dp_soc *soc,
 }
 #endif
 
+#ifdef RX_DESC_SANITY_WAR
+static inline
+QDF_STATUS dp_rx_desc_sanity(struct dp_soc *soc, hal_soc_handle_t hal_soc,
+			     hal_ring_handle_t hal_ring_hdl,
+			     hal_ring_desc_t ring_desc,
+			     struct dp_rx_desc *rx_desc)
+{
+	uint8_t return_buffer_manager;
+
+	if (qdf_unlikely(!rx_desc)) {
+		/*
+		 * This is an unlikely case where the cookie obtained
+		 * from the ring_desc is invalid and hence we are not
+		 * able to find the corresponding rx_desc
+		 */
+		goto fail;
+	}
+
+	return_buffer_manager = hal_rx_ret_buf_manager_get(ring_desc);
+	if (qdf_unlikely(!(return_buffer_manager == HAL_RX_BUF_RBM_SW1_BM ||
+			 return_buffer_manager == HAL_RX_BUF_RBM_SW3_BM))) {
+		goto fail;
+	}
+
+	return QDF_STATUS_SUCCESS;
+
+fail:
+	DP_STATS_INC(soc, rx.err.invalid_cookie, 1);
+	dp_err("Ring Desc:");
+	hal_srng_dump_ring_desc(hal_soc, hal_ring_hdl,
+				ring_desc);
+	return QDF_STATUS_E_NULL_VALUE;
+
+}
+#else
+static inline
+QDF_STATUS dp_rx_desc_sanity(struct dp_soc *soc, hal_soc_handle_t hal_soc,
+			     hal_ring_handle_t hal_ring_hdl,
+			     hal_ring_desc_t ring_desc,
+			     struct dp_rx_desc *rx_desc)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 /*
  * dp_rx_buffers_replenish() - replenish rxdma ring with rx nbufs
  *			       called during dp rx initialization
@@ -1631,25 +1676,6 @@ static inline bool dp_rx_enable_eol_data_check(struct dp_soc *soc)
 
 #endif /* WLAN_FEATURE_RX_SOFTIRQ_TIME_LIMIT */
 
-/**
- * dp_is_special_data() - check is the pkt special like eapol, dhcp, etc
- *
- * @nbuf: pkt skb pointer
- *
- * Return: true if matched, false if not
- */
-static inline
-bool dp_is_special_data(qdf_nbuf_t nbuf)
-{
-	if (qdf_nbuf_is_ipv4_arp_pkt(nbuf) ||
-	    qdf_nbuf_is_ipv4_dhcp_pkt(nbuf) ||
-	    qdf_nbuf_is_ipv4_eapol_pkt(nbuf) ||
-	    qdf_nbuf_is_ipv6_dhcp_pkt(nbuf))
-		return true;
-	else
-		return false;
-}
-
 #ifdef DP_RX_PKT_NO_PEER_DELIVER
 /**
  * dp_rx_deliver_to_stack_no_peer() - try deliver rx data even if
@@ -1663,7 +1689,7 @@ bool dp_is_special_data(qdf_nbuf_t nbuf)
  *
  * Return: None
  */
-static inline
+static
 void dp_rx_deliver_to_stack_no_peer(struct dp_soc *soc, qdf_nbuf_t nbuf)
 {
 	uint16_t peer_id;
@@ -1673,6 +1699,8 @@ void dp_rx_deliver_to_stack_no_peer(struct dp_soc *soc, qdf_nbuf_t nbuf)
 	uint16_t msdu_len = 0;
 	uint32_t pkt_len = 0;
 	uint8_t *rx_tlv_hdr;
+	uint32_t frame_mask = FRAME_MASK_IPV4_ARP | FRAME_MASK_IPV4_DHCP |
+				FRAME_MASK_IPV4_EAPOL | FRAME_MASK_IPV6_DHCP;
 
 	peer_id = QDF_NBUF_CB_RX_PEER_ID(nbuf);
 	if (peer_id > soc->max_peers)
@@ -1683,29 +1711,27 @@ void dp_rx_deliver_to_stack_no_peer(struct dp_soc *soc, qdf_nbuf_t nbuf)
 	if (!vdev || vdev->delete.pending || !vdev->osif_rx)
 		goto deliver_fail;
 
+	if (qdf_unlikely(qdf_nbuf_is_frag(nbuf)))
+		goto deliver_fail;
+
 	rx_tlv_hdr = qdf_nbuf_data(nbuf);
 	l2_hdr_offset =
 		hal_rx_msdu_end_l3_hdr_padding_get(soc->hal_soc, rx_tlv_hdr);
 
 	msdu_len = QDF_NBUF_CB_RX_PKT_LEN(nbuf);
 	pkt_len = msdu_len + l2_hdr_offset + RX_PKT_TLVS_LEN;
+	QDF_NBUF_CB_RX_NUM_ELEMENTS_IN_LIST(nbuf) = 1;
 
-	if (qdf_unlikely(qdf_nbuf_is_frag(nbuf))) {
-		qdf_nbuf_pull_head(nbuf, RX_PKT_TLVS_LEN);
-	} else {
-		qdf_nbuf_set_pktlen(nbuf, pkt_len);
-		qdf_nbuf_pull_head(nbuf,
-				   RX_PKT_TLVS_LEN +
-				   l2_hdr_offset);
+	qdf_nbuf_set_pktlen(nbuf, pkt_len);
+	qdf_nbuf_pull_head(nbuf,
+			   RX_PKT_TLVS_LEN +
+			   l2_hdr_offset);
+
+	if (dp_rx_is_special_frame(nbuf, frame_mask)) {
+		vdev->osif_rx(vdev->osif_vdev, nbuf);
+		DP_STATS_INC(soc, rx.err.pkt_delivered_no_peer, 1);
+		return;
 	}
-
-	/* only allow special frames */
-	if (!dp_is_special_data(nbuf))
-		goto deliver_fail;
-
-	vdev->osif_rx(vdev->osif_vdev, nbuf);
-	DP_STATS_INC(soc, rx.err.pkt_delivered_no_peer, 1);
-	return;
 
 deliver_fail:
 	DP_STATS_INC_PKT(soc, rx.err.rx_invalid_peer, 1,
@@ -1831,6 +1857,7 @@ uint32_t dp_rx_process(struct dp_intr *int_ctx, hal_ring_handle_t hal_ring_hdl,
 	uint32_t rx_ol_pkt_cnt = 0;
 	uint32_t num_entries = 0;
 	struct hal_rx_msdu_metadata msdu_metadata;
+	QDF_STATUS status;
 
 	DP_HIST_INIT();
 
@@ -1894,7 +1921,14 @@ more_data:
 		rx_buf_cookie = HAL_RX_REO_BUF_COOKIE_GET(ring_desc);
 
 		rx_desc = dp_rx_cookie_2_va_rxdma_buf(soc, rx_buf_cookie);
-		qdf_assert(rx_desc);
+		status = dp_rx_desc_sanity(soc, hal_soc, hal_ring_hdl,
+					   ring_desc, rx_desc);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			hal_srng_dst_get_next(hal_soc, hal_ring_hdl);
+			continue;
+		}
+
+		dp_rx_desc_nbuf_sanity_check(ring_desc, rx_desc);
 
 		/*
 		 * this is a unlikely scenario where the host is reaping
@@ -1922,28 +1956,11 @@ more_data:
 						   ring_desc, rx_desc);
 		}
 
-		dp_rx_desc_nbuf_sanity_check(ring_desc, rx_desc);
-
-		/* TODO */
-		/*
-		 * Need a separate API for unmapping based on
-		 * phyiscal address
-		 */
-		qdf_nbuf_unmap_single(soc->osdev, rx_desc->nbuf,
-					QDF_DMA_FROM_DEVICE);
-		rx_desc->unmapped = 1;
-
-		core_id = smp_processor_id();
-		DP_STATS_INC(soc, rx.ring_packets[core_id][ring_id], 1);
-
 		/* Get MPDU DESC info */
 		hal_rx_mpdu_desc_info_get(ring_desc, &mpdu_desc_info);
 
 		/* Get MSDU DESC info */
 		hal_rx_msdu_desc_info_get(ring_desc, &msdu_desc_info);
-
-		if (mpdu_desc_info.mpdu_flags & HAL_MPDU_F_RETRY_BIT)
-			qdf_nbuf_set_rx_retry_flag(rx_desc->nbuf, 1);
 
 		if (qdf_unlikely(msdu_desc_info.msdu_flags &
 				 HAL_MSDU_F_MSDU_CONTINUATION)) {
@@ -1974,6 +1991,20 @@ more_data:
 			}
 
 		}
+
+		/*
+		 * move unmap after scattered msdu waiting break logic
+		 * in case double skb unmap happened.
+		 */
+		qdf_nbuf_unmap_single(soc->osdev, rx_desc->nbuf,
+				      QDF_DMA_FROM_DEVICE);
+		rx_desc->unmapped = 1;
+
+		core_id = smp_processor_id();
+		DP_STATS_INC(soc, rx.ring_packets[core_id][ring_id], 1);
+
+		if (mpdu_desc_info.mpdu_flags & HAL_MPDU_F_RETRY_BIT)
+			qdf_nbuf_set_rx_retry_flag(rx_desc->nbuf, 1);
 
 		if (qdf_unlikely(mpdu_desc_info.mpdu_flags &
 				 HAL_MPDU_F_RAW_AMPDU))
@@ -2041,7 +2072,12 @@ more_data:
 						rx_desc);
 
 		num_rx_bufs_reaped++;
-		if (dp_rx_reap_loop_pkt_limit_hit(soc, num_rx_bufs_reaped))
+		/*
+		 * only if complete msdu is received for scatter case,
+		 * then allow break.
+		 */
+		if (is_prev_msdu_last &&
+		    dp_rx_reap_loop_pkt_limit_hit(soc, num_rx_bufs_reaped))
 			break;
 	}
 done:
@@ -2735,3 +2771,36 @@ dp_rx_nbuf_prepare(struct dp_soc *soc, struct dp_pdev *pdev)
 
 	return nbuf;
 }
+
+#ifdef DP_RX_SPECIAL_FRAME_NEED
+bool dp_rx_deliver_special_frame(struct dp_soc *soc, struct dp_peer *peer,
+				 qdf_nbuf_t nbuf, uint32_t frame_mask)
+{
+	uint32_t l2_hdr_offset = 0;
+	uint16_t msdu_len = 0;
+	uint32_t pkt_len = 0;
+	uint8_t *rx_tlv_hdr;
+
+	if (qdf_unlikely(qdf_nbuf_is_frag(nbuf)))
+		return false;
+
+	rx_tlv_hdr = qdf_nbuf_data(nbuf);
+	l2_hdr_offset =
+		hal_rx_msdu_end_l3_hdr_padding_get(soc->hal_soc, rx_tlv_hdr);
+
+	msdu_len = QDF_NBUF_CB_RX_PKT_LEN(nbuf);
+	pkt_len = msdu_len + l2_hdr_offset + RX_PKT_TLVS_LEN;
+	QDF_NBUF_CB_RX_NUM_ELEMENTS_IN_LIST(nbuf) = 1;
+
+	qdf_nbuf_set_pktlen(nbuf, pkt_len);
+	dp_rx_skip_tlvs(nbuf, l2_hdr_offset);
+
+	if (dp_rx_is_special_frame(nbuf, frame_mask)) {
+		dp_rx_deliver_to_stack(soc, peer->vdev, peer,
+				       nbuf, NULL);
+		return true;
+	}
+
+	return false;
+}
+#endif

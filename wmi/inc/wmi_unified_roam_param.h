@@ -200,6 +200,8 @@ struct wmi_mawc_roam_params {
  *                             AP's, in units of db
  * @num_disallowed_aps: How many APs the target should maintain in its LCA
  *                      list
+ * @delta_rssi: (dB units) when AB in RSSI blacklist improved by at least
+ *              delta_rssi,it will be removed from blacklist
  *
  * This structure holds all the key parameters related to
  * initial connection and roaming connections.
@@ -222,6 +224,7 @@ struct roam_scan_filter_params {
 	uint32_t num_rssi_rejection_ap;
 	struct reject_ap_config_params
 				rssi_rejection_ap[MAX_RSSI_AVOID_BSSID_LIST];
+	uint32_t delta_rssi;
 };
 
 #define WMI_CFG_VALID_CHANNEL_LIST_LEN    100
@@ -372,6 +375,7 @@ struct param_slot_scoring {
  * @beamforming_weightage: Beamforming weightage out of total score in %.
  * @pcl_weightage: PCL weightage out of total score in %.
  * @oce_wan_weightage OCE WAN metrics weightage out of total score in %.
+ * @oce_ap_tx_pwr_weightage: OCE AP TX power score in %
  * @bw_index_score: channel BW scoring percentage information.
  *                 BITS 0-7   :- It contains scoring percentage of 20MHz   BW
  *                 BITS 8-15  :- It contains scoring percentage of 40MHz   BW
@@ -413,6 +417,7 @@ struct scoring_param {
 	int32_t beamforming_weightage;
 	int32_t pcl_weightage;
 	int32_t oce_wan_weightage;
+	uint32_t oce_ap_tx_pwr_weightage;
 	uint32_t bw_index_score;
 	uint32_t band_index_score;
 	uint32_t nss_index_score;
@@ -462,6 +467,7 @@ struct scoring_param {
  * ROAM_TRIGGER_REASON_DEAUTH: Roam triggered due to deauth received from the
  * current connected AP.
  * ROAM_TRIGGER_REASON_IDLE: Roam triggered due to inactivity of the device.
+ * ROAM_TRIGGER_REASON_STA_KICKOUT: Roam triggered due to sta kickout event.
  * ROAM_TRIGGER_REASON_MAX: Maximum number of roam triggers
  */
 enum roam_trigger_reason {
@@ -480,6 +486,7 @@ enum roam_trigger_reason {
 	ROAM_TRIGGER_REASON_BSS_LOAD,
 	ROAM_TRIGGER_REASON_DEAUTH,
 	ROAM_TRIGGER_REASON_IDLE,
+	ROAM_TRIGGER_REASON_STA_KICKOUT,
 	ROAM_TRIGGER_REASON_MAX,
 };
 
@@ -763,41 +770,6 @@ struct wmi_invoke_neighbor_report_params {
 	uint32_t vdev_id;
 	uint32_t send_resp_to_host;
 	struct mac_ssid ssid;
-};
-
-/**
- * enum roam_control_trigger_reason - Bitmap of roaming triggers
- *
- * @ROAM_TRIGGER_REASON_PER: Set if the roam has to be triggered based on
- *     a bad packet error rates (PER).
- * @ROAM_TRIGGER_REASON_BEACON_MISS: Set if the roam has to be triggered
- *     based on beacon misses from the connected AP.
- * @ROAM_TRIGGER_REASON_POOR_RSSI: Set if the roam has to be triggered
- *     due to poor RSSI of the connected AP.
- * @ROAM_TRIGGER_REASON_BETTER_RSSI: Set if the roam has to be triggered
- *     upon finding a BSSID with a better RSSI than the connected BSSID.
- *     Here the RSSI of the current BSSID need not be poor.
- * @ROAM_TRIGGER_REASON_PERIODIC: Set if the roam has to be triggered
- *     by triggering a periodic scan to find a better AP to roam.
- * @ROAM_TRIGGER_REASON_DENSE: Set if the roam has to be triggered
- *     when the connected channel environment is too noisy/congested.
- * @ROAM_TRIGGER_REASON_BTM: Set if the roam has to be triggered
- *     when BTM Request frame is received from the connected AP.
- * @ROAM_TRIGGER_REASON_BSS_LOAD: Set if the roam has to be triggered
- *     when the channel utilization is goes above the configured threshold.
- *
- * Set the corresponding roam trigger reason bit to consider it for roam
- * trigger.
- */
-enum roam_control_trigger_reason {
-	ROAM_CONTROL_TRIGGER_REASON_PER			= 1 << 0,
-	ROAM_CONTROL_TRIGGER_REASON_BEACON_MISS		= 1 << 1,
-	ROAM_CONTROL_TRIGGER_REASON_POOR_RSSI		= 1 << 2,
-	ROAM_CONTROL_TRIGGER_REASON_BETTER_RSSI		= 1 << 3,
-	ROAM_CONTROL_TRIGGER_REASON_PERIODIC		= 1 << 4,
-	ROAM_CONTROL_TRIGGER_REASON_DENSE		= 1 << 5,
-	ROAM_CONTROL_TRIGGER_REASON_BTM			= 1 << 6,
-	ROAM_CONTROL_TRIGGER_REASON_BSS_LOAD		= 1 << 7,
 };
 
 /**

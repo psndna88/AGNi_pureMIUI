@@ -134,6 +134,7 @@ struct cdp_peer_rate_stats_ctx;
 struct cdp_soc_rate_stats_ctx;
 struct dp_rx_fst;
 struct dp_mon_filter;
+struct dp_mon_mpdu;
 
 #define DP_PDEV_ITERATE_VDEV_LIST(_pdev, _vdev) \
 	TAILQ_FOREACH((_vdev), &(_pdev)->vdev_list, vdev_list_elem)
@@ -369,20 +370,20 @@ struct dp_tx_ext_desc_pool_s {
 struct dp_tx_desc_s {
 	struct dp_tx_desc_s *next;
 	qdf_nbuf_t nbuf;
-	struct dp_tx_ext_desc_elem_s *msdu_ext_desc;
-	uint32_t  id;
+	uint32_t id;
 	struct dp_vdev *vdev;
 	struct dp_pdev *pdev;
-	uint8_t  pool_id;
+	struct dp_tx_ext_desc_elem_s *msdu_ext_desc;
 	uint16_t flags;
-	struct hal_tx_desc_comp_s comp;
 	uint16_t tx_encap_type;
 	uint8_t frm_type;
 	uint8_t pkt_offset;
+	uint8_t  pool_id;
 	void *me_buffer;
 	void *tso_desc;
 	void *tso_num_desc;
 	uint64_t timestamp;
+	struct hal_tx_desc_comp_s comp;
 };
 
 /**
@@ -599,6 +600,14 @@ struct dp_rx_tid {
 	/* Delba reason code for retries */
 	uint8_t delba_rcode;
 
+#ifdef WLAN_PEER_JITTER
+	/* Tx Jitter stats */
+	uint32_t tx_avg_jitter;
+	uint32_t tx_avg_delay;
+	uint64_t tx_avg_err;
+	uint64_t tx_total_success;
+	uint64_t tx_drop;
+#endif /* WLAN_PEER_JITTER */
 };
 
 /**
@@ -784,6 +793,18 @@ struct dp_soc_stats {
 			uint32_t reo_cmd_send_fail;
 			/* RX msdu drop count due to scatter */
 			uint32_t scatter_msdu;
+			/* RX msdu drop count due to invalid cookie */
+			uint32_t invalid_cookie;
+			/* Delba sent count due to RX 2k jump */
+			uint32_t rx_2k_jump_delba_sent;
+			/* RX 2k jump msdu indicated to stack count */
+			uint32_t rx_2k_jump_to_stack;
+			/* RX 2k jump msdu dropped count */
+			uint32_t rx_2k_jump_drop;
+			/* REO OOR msdu drop count */
+			uint32_t reo_err_oor_drop;
+			/* REO OOR msdu indicated to stack count */
+			uint32_t reo_err_oor_to_stack;
 		} err;
 
 		/* packet count per core - per ring */
@@ -901,6 +922,9 @@ struct dp_soc {
 	/* OS device abstraction */
 	qdf_device_t osdev;
 
+	/*cce disable*/
+	bool cce_disable;
+
 	/* WLAN config context */
 	struct wlan_cfg_dp_soc_ctxt *wlan_cfg_ctx;
 
@@ -944,9 +968,6 @@ struct dp_soc {
 
 	/* Number of PDEVs */
 	uint8_t pdev_count;
-
-	/*cce disable*/
-	bool cce_disable;
 
 	/*ast override support in HW*/
 	bool ast_override_support;
@@ -1249,6 +1270,11 @@ struct dp_soc {
 	uint8_t fisa_enable;
 #endif
 #endif /* WLAN_SUPPORT_RX_FLOW_TAG || WLAN_SUPPORT_RX_FISA */
+
+	/* Full monitor mode support */
+	bool full_mon_mode;
+	/* SG supported for msdu continued packets from wbm release ring */
+	bool wbm_release_desc_rx_sg_support;
 };
 
 #ifdef IPA_OFFLOAD
@@ -1663,6 +1689,7 @@ struct dp_pdev {
 	/* mirror copy mode */
 	bool mcopy_mode;
 	bool cfr_rcc_mode;
+	bool enable_reap_timer_non_pkt;
 	bool bpr_enable;
 
 	/* enable time latency check for tx completion */
@@ -1794,6 +1821,16 @@ struct dp_pdev {
 #endif /* WLAN_SUPPORT_DATA_STALL */
 
 	struct dp_mon_filter **filter;	/* Monitor Filter pointer */
+
+#ifdef QCA_SUPPORT_FULL_MON
+	/* List to maintain all MPDUs for a PPDU in monitor mode */
+	TAILQ_HEAD(, dp_mon_mpdu) mon_mpdu_q;
+
+	/* TODO: define per-user mpdu list
+	 * struct dp_mon_mpdu_list mpdu_list[MAX_MU_USERS];
+	 */
+	struct hal_rx_mon_desc_info *mon_desc;
+#endif
 };
 
 struct dp_peer;
@@ -1802,14 +1839,75 @@ struct dp_peer;
 struct dp_vdev {
 	/* OS device abstraction */
 	qdf_device_t osdev;
+
 	/* physical device that is the parent of this virtual device */
 	struct dp_pdev *pdev;
+
+	/* VDEV operating mode */
+	enum wlan_op_mode opmode;
+
+	/* VDEV subtype */
+	enum wlan_op_subtype subtype;
+
+	/* Tx encapsulation type for this VAP */
+	enum htt_cmn_pkt_type tx_encap_type;
+
+	/* Rx Decapsulation type for this VAP */
+	enum htt_cmn_pkt_type rx_decap_type;
+
+	/* BSS peer */
+	struct dp_peer *vap_bss_peer;
+
+	/* WDS enabled */
+	bool wds_enabled;
+
+	/* MEC enabled */
+	bool mec_enabled;
+
+	/* WDS Aging timer period */
+	uint32_t wds_aging_timer_val;
+
+	/* NAWDS enabled */
+	bool nawds_enabled;
+
+	/* Multicast enhancement enabled */
+	uint8_t mcast_enhancement_en;
+
+	/* vdev_id - ID used to specify a particular vdev to the target */
+	uint8_t vdev_id;
+
+	/* Default HTT meta data for this VDEV */
+	/* TBD: check alignment constraints */
+	uint16_t htt_tcl_metadata;
+
+	/* Mesh mode vdev */
+	uint32_t mesh_vdev;
+
+	/* Mesh mode rx filter setting */
+	uint32_t mesh_rx_filter;
+
+	/* DSCP-TID mapping table ID */
+	uint8_t dscp_tid_map_id;
+
+	/* Address search type to be set in TX descriptor */
+	uint8_t search_type;
+
+	/* AST hash value for BSS peer in HW valid for STA VAP*/
+	uint16_t bss_ast_hash;
+
+	/* vdev lmac_id */
+	int lmac_id;
+
+	bool multipass_en;
+
+	/* Address search flags to be configured in HAL descriptor */
+	uint8_t hal_desc_addr_search_flags;
 
 	/* Handle to the OS shim SW's virtual device */
 	ol_osif_vdev_handle osif_vdev;
 
-	/* vdev_id - ID used to specify a particular vdev to the target */
-	uint8_t vdev_id;
+	/* Handle to the UMAC handle */
+	struct cdp_ctrl_objmgr_vdev *ctrl_vdev;
 
 	/* MAC address */
 	union dp_align_mac_addr mac_addr;
@@ -1884,49 +1982,6 @@ struct dp_vdev {
 	bool tdls_link_connected;
 	bool is_tdls_frame;
 
-
-	/* VDEV operating mode */
-	enum wlan_op_mode opmode;
-
-	/* VDEV subtype */
-	enum wlan_op_subtype subtype;
-
-	/* Tx encapsulation type for this VAP */
-	enum htt_cmn_pkt_type tx_encap_type;
-	/* Rx Decapsulation type for this VAP */
-	enum htt_cmn_pkt_type rx_decap_type;
-
-	/* BSS peer */
-	struct dp_peer *vap_bss_peer;
-
-	/* WDS enabled */
-	bool wds_enabled;
-
-	/* MEC enabled */
-	bool mec_enabled;
-
-	/* WDS Aging timer period */
-	uint32_t wds_aging_timer_val;
-
-	/* NAWDS enabled */
-	bool nawds_enabled;
-
-	/* Default HTT meta data for this VDEV */
-	/* TBD: check alignment constraints */
-	uint16_t htt_tcl_metadata;
-
-	/* Mesh mode vdev */
-	uint32_t mesh_vdev;
-
-	/* Mesh mode rx filter setting */
-	uint32_t mesh_rx_filter;
-
-	/* DSCP-TID mapping table ID */
-	uint8_t dscp_tid_map_id;
-
-	/* Multicast enhancement enabled */
-	uint8_t mcast_enhancement_en;
-
 	/* per vdev rx nbuf queue */
 	qdf_nbuf_queue_t rxq;
 
@@ -1942,8 +1997,6 @@ struct dp_vdev {
 	/* Is isolation mode enabled */
 	bool isolation_vdev;
 
-	/* Address search flags to be configured in HAL descriptor */
-	uint8_t hal_desc_addr_search_flags;
 #ifdef QCA_LL_TX_FLOW_CONTROL_V2
 	struct dp_tx_desc_pool_s *pool;
 #endif
@@ -1955,11 +2008,6 @@ struct dp_vdev {
 	/* SWAR for HW: Enable WEP bit in the AMSDU frames for RAW mode */
 	bool raw_mode_war;
 
-	/* Address search type to be set in TX descriptor */
-	uint8_t search_type;
-
-	/* AST hash value for BSS peer in HW valid for STA VAP*/
-	uint16_t bss_ast_hash;
 
 	/* AST hash index for BSS peer in HW valid for STA VAP*/
 	uint16_t bss_ast_idx;
@@ -1981,7 +2029,6 @@ struct dp_vdev {
 	/* Self Peer in STA mode */
 	struct dp_peer *vap_self_peer;
 
-	bool multipass_en;
 #ifdef QCA_MULTIPASS_SUPPORT
 	uint16_t *iv_vlan_map;
 

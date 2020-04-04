@@ -148,7 +148,7 @@ static const struct reg_dmn_op_class_map_t us_op_class[] = {
 	{23, 40, BW40_LOW_PRIMARY, BIT(BEHAV_BW40_LOW_PRIMARY), 5000,
 	 {52, 60} },
 	{24, 40, BW40_LOW_PRIMARY, BIT(BEHAV_BW40_LOW_PRIMARY), 5000,
-	 {100, 108, 116, 124, 132} },
+	 {100, 108, 116, 124, 132, 140} },
 	{26, 40, BW40_LOW_PRIMARY, BIT(BEHAV_BW40_LOW_PRIMARY), 5000,
 	 {149, 157} },
 	{27, 40, BW40_HIGH_PRIMARY, BIT(BEHAV_BW40_HIGH_PRIMARY), 5000,
@@ -156,7 +156,7 @@ static const struct reg_dmn_op_class_map_t us_op_class[] = {
 	{28, 40, BW40_HIGH_PRIMARY, BIT(BEHAV_BW40_HIGH_PRIMARY), 5000,
 	 {56, 64} },
 	{29, 40, BW40_HIGH_PRIMARY, BIT(BEHAV_BW40_HIGH_PRIMARY), 5000,
-	 {104, 112, 120, 128, 136} },
+	 {104, 112, 120, 128, 136, 144} },
 	{30, 40, BW40_HIGH_PRIMARY, BIT(BEHAV_BW40_HIGH_PRIMARY), 5000,
 	 {153, 161} },
 	{31, 40, BW40_HIGH_PRIMARY, BIT(BEHAV_BW40_HIGH_PRIMARY), 5000,
@@ -261,8 +261,8 @@ static const struct reg_dmn_op_class_map_t japan_op_class[] = {
  *
  * Return: class.
  */
-static const
-struct reg_dmn_op_class_map_t *reg_get_class_from_country(uint8_t *country)
+static const struct reg_dmn_op_class_map_t
+*reg_get_class_from_country(const uint8_t *country)
 {
 	const struct reg_dmn_op_class_map_t *class = NULL;
 
@@ -367,6 +367,51 @@ uint8_t reg_dmn_get_opclass_from_freq_width(uint8_t *country,
 	}
 
 	return 0;
+}
+
+static void
+reg_get_band_cap_from_chan_set(const struct reg_dmn_op_class_map_t
+			       *op_class_tbl,
+			       uint8_t *supported_band)
+{
+	qdf_freq_t chan_freq = op_class_tbl->start_freq +
+						(op_class_tbl->channels[0] *
+						 FREQ_TO_CHAN_SCALE);
+
+	if (reg_is_24ghz_ch_freq(chan_freq))
+		*supported_band |= BIT(REG_BAND_2G);
+	else if (reg_is_5ghz_ch_freq(chan_freq))
+		*supported_band |= BIT(REG_BAND_5G);
+	else if (reg_is_6ghz_chan_freq(chan_freq))
+		*supported_band |= BIT(REG_BAND_6G);
+	else
+		reg_err_rl("Unknown band");
+}
+
+uint8_t reg_get_band_cap_from_op_class(const uint8_t *country,
+				       uint8_t num_of_opclass,
+				       const uint8_t *opclass)
+{
+	const struct reg_dmn_op_class_map_t *op_class_tbl;
+	uint8_t supported_band = 0, opclassidx;
+
+	op_class_tbl = reg_get_class_from_country(country);
+
+	while (op_class_tbl && op_class_tbl->op_class) {
+		for (opclassidx = 0; opclassidx < num_of_opclass;
+		     opclassidx++) {
+			if (op_class_tbl->op_class == opclass[opclassidx]) {
+				reg_get_band_cap_from_chan_set(op_class_tbl,
+							       &supported_band);
+			}
+		}
+		op_class_tbl++;
+	}
+
+	if (!supported_band)
+		reg_err_rl("None of the operating classes is found");
+
+	return supported_band;
 }
 
 void reg_dmn_print_channels_in_opclass(uint8_t *country, uint8_t op_class)
@@ -651,6 +696,64 @@ uint16_t reg_chan_opclass_to_freq(uint8_t chan,
 	reg_err_rl("Invalid opclass");
 	return 0;
 }
+
+qdf_freq_t reg_chan_opclass_to_freq_auto(uint8_t chan, uint8_t op_class,
+					 bool global_tbl_lookup)
+{
+	if ((op_class >= MIN_6GHZ_OPER_CLASS) &&
+	    (op_class <= MAX_6GHZ_OPER_CLASS)) {
+		global_tbl_lookup = true;
+	}
+
+	return reg_chan_opclass_to_freq(chan, op_class, global_tbl_lookup);
+}
+
+#ifdef HOST_OPCLASS_EXT
+qdf_freq_t reg_country_chan_opclass_to_freq(struct wlan_objmgr_pdev *pdev,
+					    const uint8_t country[3],
+					    uint8_t chan, uint8_t op_class,
+					    bool strict)
+{
+	const struct reg_dmn_op_class_map_t *op_class_tbl, *op_class_tbl_org;
+	uint16_t i;
+
+	if (reg_is_6ghz_op_class(pdev, op_class))
+		op_class_tbl_org = global_op_class;
+	else
+		op_class_tbl_org =
+			reg_get_class_from_country((uint8_t *)country);
+	op_class_tbl = op_class_tbl_org;
+	while (op_class_tbl && op_class_tbl->op_class) {
+		if  (op_class_tbl->op_class == op_class) {
+			for (i = 0; (i < REG_MAX_CHANNELS_PER_OPERATING_CLASS &&
+				     op_class_tbl->channels[i]); i++) {
+				if (op_class_tbl->channels[i] == chan)
+					return op_class_tbl->start_freq +
+						(chan * FREQ_TO_CHAN_SCALE);
+			}
+		}
+		op_class_tbl++;
+	}
+	reg_debug_rl("Not found ch %d in op class %d ch list, strict %d",
+		     chan, op_class, strict);
+	if (strict)
+		return 0;
+
+	op_class_tbl = op_class_tbl_org;
+	while (op_class_tbl && op_class_tbl->op_class) {
+		for (i = 0; (i < REG_MAX_CHANNELS_PER_OPERATING_CLASS &&
+			     op_class_tbl->channels[i]); i++) {
+			if (op_class_tbl->channels[i] == chan)
+				return op_class_tbl->start_freq +
+					(chan * FREQ_TO_CHAN_SCALE);
+		}
+		op_class_tbl++;
+	}
+	reg_debug_rl("Got invalid freq 0 for ch %d", chan);
+
+	return 0;
+}
+#endif
 
 static void
 reg_get_op_class_tbl_by_chan_map(const struct

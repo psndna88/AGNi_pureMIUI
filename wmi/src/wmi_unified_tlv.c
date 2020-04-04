@@ -61,10 +61,6 @@
 #include "wmi_unified_ap_api.h"
 #endif
 
-#ifdef WLAN_CFR_ENABLE
-#include "wmi_unified_cfr_api.h"
-#endif
-
 #include <wmi_unified_vdev_api.h>
 #include <wmi_unified_vdev_tlv.h>
 
@@ -1013,7 +1009,7 @@ static QDF_STATUS send_vdev_start_cmd_tlv(wmi_unified_t wmi_handle,
 
 	cmd->bcn_tx_rate = req->bcn_tx_rate_code;
 	if (req->bcn_tx_rate_code)
-		wmi_enable_bcn_ratecode(cmd->flags);
+		wmi_enable_bcn_ratecode(&cmd->flags);
 
 	if (!req->is_restart) {
 		if (req->pmf_enabled)
@@ -4842,9 +4838,6 @@ static QDF_STATUS send_pno_start_cmd_tlv(wmi_unified_t wmi_handle,
 	cmd->delay_start_time = WMI_SEC_TO_MSEC(pno->delay_start_time);
 	cmd->fast_scan_max_cycles = pno->fast_scan_max_cycles;
 	cmd->scan_backoff_multiplier = pno->scan_backoff_multiplier;
-	WMI_LOGD("fast_scan_period: %d msec slow_scan_period: %d msec",
-			cmd->fast_scan_period, cmd->slow_scan_period);
-	WMI_LOGD("fast_scan_max_cycles: %d", cmd->fast_scan_max_cycles);
 
 	/* mac randomization attributes */
 	if (pno->scan_random.randomize) {
@@ -4859,7 +4852,7 @@ static QDF_STATUS send_pno_start_cmd_tlv(wmi_unified_t wmi_handle,
 	buf_ptr += sizeof(wmi_nlo_config_cmd_fixed_param);
 
 	cmd->no_of_ssids = QDF_MIN(pno->networks_cnt, WMI_NLO_MAX_SSIDS);
-	WMI_LOGD("SSID count : %d", cmd->no_of_ssids);
+
 	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC,
 		       cmd->no_of_ssids * sizeof(nlo_configured_parameters));
 	buf_ptr += WMI_TLV_HDR_SIZE;
@@ -4877,10 +4870,6 @@ static QDF_STATUS send_pno_start_cmd_tlv(wmi_unified_t wmi_handle,
 		qdf_mem_copy(nlo_list[i].ssid.ssid.ssid,
 			     pno->networks_list[i].ssid.ssid,
 			     nlo_list[i].ssid.ssid.ssid_len);
-		WMI_LOGD("index: %d ssid: %.*s len: %d", i,
-			 nlo_list[i].ssid.ssid.ssid_len,
-			 (char *)nlo_list[i].ssid.ssid.ssid,
-			 nlo_list[i].ssid.ssid.ssid_len);
 
 		/* Copy rssi threshold */
 		if (pno->networks_list[i].rssi_thresh &&
@@ -4889,21 +4878,16 @@ static QDF_STATUS send_pno_start_cmd_tlv(wmi_unified_t wmi_handle,
 			nlo_list[i].rssi_cond.valid = true;
 			nlo_list[i].rssi_cond.rssi =
 				pno->networks_list[i].rssi_thresh;
-			WMI_LOGD("RSSI threshold : %d dBm",
-				 nlo_list[i].rssi_cond.rssi);
 		}
 		nlo_list[i].bcast_nw_type.valid = true;
 		nlo_list[i].bcast_nw_type.bcast_nw_type =
 			pno->networks_list[i].bc_new_type;
-		WMI_LOGD("Broadcast NW type (%u)",
-			 nlo_list[i].bcast_nw_type.bcast_nw_type);
 	}
 	buf_ptr += cmd->no_of_ssids * sizeof(nlo_configured_parameters);
 
 	/* Copy channel info */
 	cmd->num_of_channels = QDF_MIN(pno->networks_list[0].channel_cnt,
 				       WMI_NLO_MAX_CHAN);
-	WMI_LOGD("Channel count: %d", cmd->num_of_channels);
 	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_UINT32,
 		       (cmd->num_of_channels * sizeof(uint32_t)));
 	buf_ptr += WMI_TLV_HDR_SIZE;
@@ -4916,8 +4900,6 @@ static QDF_STATUS send_pno_start_cmd_tlv(wmi_unified_t wmi_handle,
 			channel_list[i] =
 				wlan_chan_to_freq(pno->
 					networks_list[0].channels[i]);
-
-		WMI_LOGD("Ch[%d]: %d MHz", i, channel_list[i]);
 	}
 	buf_ptr += cmd->num_of_channels * sizeof(uint32_t);
 	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC,
@@ -4963,7 +4945,6 @@ static QDF_STATUS send_pno_start_cmd_tlv(wmi_unified_t wmi_handle,
 		WMITLV_TAG_STRUC_wmi_connected_nlo_rssi_params,
 		WMITLV_GET_STRUCT_TLVLEN(connected_nlo_rssi_params));
 	nlo_relative_rssi->relative_rssi = pno->relative_rssi;
-	WMI_LOGD("relative_rssi %d", nlo_relative_rssi->relative_rssi);
 	buf_ptr += sizeof(*nlo_relative_rssi);
 
 	/*
@@ -4985,9 +4966,6 @@ static QDF_STATUS send_pno_start_cmd_tlv(wmi_unified_t wmi_handle,
 				connected_nlo_bss_band_rssi_pref));
 		nlo_band_rssi[i].band = pno->band_rssi_pref.band;
 		nlo_band_rssi[i].rssi_pref = pno->band_rssi_pref.rssi;
-		WMI_LOGI("band_pref %d, rssi_pref %d",
-			nlo_band_rssi[i].band,
-			nlo_band_rssi[i].rssi_pref);
 	}
 	buf_ptr += cmd->num_cnlo_band_pref * sizeof(*nlo_band_rssi);
 
@@ -5096,9 +5074,9 @@ static QDF_STATUS send_process_ll_stats_set_cmd_tlv(wmi_unified_t wmi_handle,
 	cmd->aggressive_statistics_gathering =
 		set_req->aggressive_statistics_gathering;
 
-	WMI_LOGD("LINK_LAYER_STATS - Start/Set Request Params");
-	WMI_LOGD("MPDU Size Thresh : %d", cmd->mpdu_size_threshold);
-	WMI_LOGD("Aggressive Gather: %d", cmd->aggressive_statistics_gathering);
+	WMI_LOGD("LINK_LAYER_STATS - Start/Set Params MPDU Size Thresh : %d Aggressive Gather: %d",
+		 cmd->mpdu_size_threshold,
+		 cmd->aggressive_statistics_gathering);
 
 	wmi_mtrace(WMI_START_LINK_STATS_CMDID, NO_SESSION, 0);
 	ret = wmi_unified_cmd_send(wmi_handle, buf, len,
@@ -5150,11 +5128,9 @@ static QDF_STATUS send_process_ll_stats_get_cmd_tlv(wmi_unified_t wmi_handle,
 	WMI_CHAR_ARRAY_TO_MAC_ADDR(get_req->peer_macaddr.bytes,
 				   &cmd->peer_macaddr);
 
-	WMI_LOGD("LINK_LAYER_STATS - Get Request Params");
-	WMI_LOGD("Request ID: %u", cmd->request_id);
-	WMI_LOGD("Stats Type: %0x", cmd->stats_type);
-	WMI_LOGD("Vdev ID: %d", cmd->vdev_id);
-	WMI_LOGD("Peer MAC Addr: %pM", get_req->peer_macaddr.bytes);
+	WMI_LOGD("LINK_LAYER_STATS - Get Request Params Request ID: %u Stats Type: %0x Vdev ID: %d Peer MAC Addr: %pM",
+		 cmd->request_id, cmd->stats_type, cmd->vdev_id,
+		 get_req->peer_macaddr.bytes);
 
 	wmi_mtrace(WMI_REQUEST_LINK_STATS_CMDID, cmd->vdev_id, 0);
 	ret = wmi_unified_cmd_send_pm_chk(wmi_handle, buf, len,
@@ -8091,7 +8067,8 @@ QDF_STATUS send_adfs_ch_cfg_cmd_tlv(wmi_unified_t wmi_handle,
 
 	cmd->vdev_id = param->vdev_id;
 	cmd->ocac_mode = param->ocac_mode;
-	cmd->center_freq = param->center_freq;
+	cmd->center_freq1 = param->center_freq1;
+	cmd->center_freq2 = param->center_freq2;
 	cmd->chan_freq = param->chan_freq;
 	cmd->chan_width = param->chan_width;
 	cmd->min_duration_ms = param->min_duration_ms;
@@ -8483,6 +8460,46 @@ QDF_STATUS send_obss_spatial_reuse_set_cmd_tlv(wmi_unified_t wmi_handle,
 }
 #endif
 
+static
+QDF_STATUS send_injector_config_cmd_tlv(wmi_unified_t wmi_handle,
+		struct wmi_host_injector_frame_params *inject_config_params)
+{
+	wmi_buf_t buf;
+	wmi_frame_inject_cmd_fixed_param *cmd;
+	QDF_STATUS ret;
+	uint32_t len;
+
+	len = sizeof(*cmd);
+
+	buf = wmi_buf_alloc(wmi_handle, len);
+	if (!buf)
+		return QDF_STATUS_E_NOMEM;
+
+	cmd = (wmi_frame_inject_cmd_fixed_param *)wmi_buf_data(buf);
+	WMITLV_SET_HDR(&cmd->tlv_header,
+		WMITLV_TAG_STRUC_wmi_frame_inject_cmd_fixed_param,
+		WMITLV_GET_STRUCT_TLVLEN
+		(wmi_frame_inject_cmd_fixed_param));
+
+	cmd->vdev_id = inject_config_params->vdev_id;
+	cmd->enable = inject_config_params->enable;
+	cmd->frame_type = inject_config_params->frame_type;
+	cmd->frame_inject_period = inject_config_params->frame_inject_period;
+	WMI_CHAR_ARRAY_TO_MAC_ADDR(inject_config_params->dstmac,
+			&cmd->frame_addr1);
+
+	ret = wmi_unified_cmd_send(wmi_handle, buf, len,
+			WMI_PDEV_FRAME_INJECT_CMDID);
+
+	if (QDF_IS_STATUS_ERROR(ret)) {
+		WMI_LOGE(
+		 "WMI_PDEV_FRAME_INJECT_CMDID send returned Error %d",
+		 ret);
+		wmi_buf_free(buf);
+	}
+
+	return ret;
+}
 #ifdef QCA_SUPPORT_CP_STATS
 /**
  * extract_cca_stats_tlv - api to extract congestion stats from event buffer
@@ -13251,6 +13268,7 @@ extract_vdev_mgmt_offload_event_tlv(void *handle, void *evt_buf,
 	params->buf_len = hdr->buf_len;
 	params->tx_status = hdr->tx_status;
 	params->buf = param_tlvs->bufp;
+	params->tx_retry_cnt = hdr->tx_retry_cnt;
 	return QDF_STATUS_SUCCESS;
 }
 #endif /* WLAN_FEATURE_PKT_CAPTURE */
@@ -13732,6 +13750,7 @@ struct wmi_ops tlv_ops =  {
 					extract_time_sync_ftm_offset_event_tlv,
 #endif /* FEATURE_WLAN_TIME_SYNC_FTM */
 	.send_roam_scan_ch_list_req_cmd = send_roam_scan_ch_list_req_cmd_tlv,
+	.send_injector_config_cmd = send_injector_config_cmd_tlv,
 };
 
 /**
@@ -14100,6 +14119,8 @@ static void populate_tlv_events_id(uint32_t *event_ids)
 #endif
 event_ids[wmi_roam_scan_chan_list_id] =
 			WMI_ROAM_SCAN_CHANNEL_LIST_EVENTID;
+	event_ids[wmi_muedca_params_config_eventid] =
+			WMI_MUEDCA_PARAMS_CONFIG_EVENTID;
 }
 
 /**

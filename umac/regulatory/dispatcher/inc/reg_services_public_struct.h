@@ -34,6 +34,7 @@
 
 #define REG_MAX_SUPP_OPER_CLASSES 32
 #define REG_MAX_CHAN_CHANGE_CBKS 30
+#define REG_INVALID_TXPOWER 255
 #define MAX_STA_VDEV_CNT 4
 #define INVALID_VDEV_ID 0xFF
 #define INVALID_CHANNEL_NUM 0x0
@@ -647,6 +648,15 @@ struct reg_start_11d_scan_req {
 	uint32_t start_interval_msec;
 };
 
+/**
+ * struct reg_11d_scan_msg: 11d scan message structure
+ * @psoc: pointer to psoc object
+ * @enable_11d_supp: enable 11d scan or disable 11d scan
+ */
+struct reg_11d_scan_msg {
+	struct wlan_objmgr_psoc *psoc;
+	bool enable_11d_supp;
+};
 /**
  * struct reg_stop_11d_scan_req: stop 11d scan request
  * @vdev_id: vdev id

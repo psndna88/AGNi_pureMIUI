@@ -5131,6 +5131,45 @@ static void dp_print_nss(char *nss, uint32_t *pnss, uint32_t ss_count)
 	}
 }
 
+/**
+ * dp_print_jitter_stats(): Print per-tid jitter stats
+ * @peer: DP peer object
+ * @pdev: DP pdev object
+ *
+ * Return: void
+ */
+#ifdef WLAN_PEER_JITTER
+static void dp_print_jitter_stats(struct dp_peer *peer, struct dp_pdev *pdev)
+{
+	uint8_t tid = 0;
+
+	if (pdev && !wlan_cfg_get_dp_pdev_nss_enabled(pdev->wlan_cfg_ctx))
+		return;
+
+	DP_PRINT_STATS("Per TID Tx HW Enqueue-Comp Jitter Stats:\n");
+	for (tid = 0; tid < qdf_min(CDP_DATA_TID_MAX, DP_MAX_TIDS); tid++) {
+		struct dp_rx_tid *rx_tid = &peer->rx_tid[tid];
+
+		DP_PRINT_STATS("Node tid = %d\n"
+				"Average Jiiter            : %u (us)\n"
+				"Average Delay             : %u (us)\n"
+				"Total Average error count : %llu\n"
+				"Total Success Count       : %llu\n"
+				"Total Drop                : %llu\n",
+				rx_tid->tid,
+				rx_tid->tx_avg_jitter,
+				rx_tid->tx_avg_delay,
+				rx_tid->tx_avg_err,
+				rx_tid->tx_total_success,
+				rx_tid->tx_drop);
+	}
+}
+#else
+static void dp_print_jitter_stats(struct dp_peer *peer, struct dp_pdev *pdev)
+{
+}
+#endif /* WLAN_PEER_JITTER */
+
 void dp_print_peer_stats(struct dp_peer *peer)
 {
 	uint8_t i;
@@ -5279,6 +5318,8 @@ void dp_print_peer_stats(struct dp_peer *peer)
 		       peer->stats.tx.tx_byte_rate);
 	DP_PRINT_STATS("	Data transmitted in last sec: %d",
 		       peer->stats.tx.tx_data_rate);
+
+	dp_print_jitter_stats(peer, pdev);
 
 	DP_PRINT_STATS("Node Rx Stats:");
 	DP_PRINT_STATS("Packets Sent To Stack = %d",
@@ -5531,6 +5572,18 @@ void dp_txrx_path_stats(struct dp_soc *soc)
 			       pdev->soc->stats.rx.err.defrag_peer_uninit);
 		DP_PRINT_STATS("pkts delivered no peer %u",
 			       pdev->soc->stats.rx.err.pkt_delivered_no_peer);
+		DP_PRINT_STATS("RX invalid cookie: %d",
+			       soc->stats.rx.err.invalid_cookie);
+		DP_PRINT_STATS("2k jump delba sent: %u",
+			       pdev->soc->stats.rx.err.rx_2k_jump_delba_sent);
+		DP_PRINT_STATS("2k jump msdu to stack: %u",
+			       pdev->soc->stats.rx.err.rx_2k_jump_to_stack);
+		DP_PRINT_STATS("2k jump msdu drop: %u",
+			       pdev->soc->stats.rx.err.rx_2k_jump_drop);
+		DP_PRINT_STATS("REO err oor msdu to stack %u",
+			       pdev->soc->stats.rx.err.reo_err_oor_to_stack);
+		DP_PRINT_STATS("REO err oor msdu drop: %u",
+			       pdev->soc->stats.rx.err.reo_err_oor_drop);
 
 		DP_PRINT_STATS("Reo Statistics");
 		DP_PRINT_STATS("near_full: %u ", soc->stats.rx.near_full);
@@ -5875,6 +5928,12 @@ dp_print_pdev_rx_mon_stats(struct dp_pdev *pdev)
 		       rx_mon_stats->dup_mon_linkdesc_cnt);
 	DP_PRINT_STATS("dup_mon_buf_cnt = %d",
 		       rx_mon_stats->dup_mon_buf_cnt);
+	DP_PRINT_STATS("ppdu_id_mismatch = %u",
+		       rx_mon_stats->ppdu_id_mismatch);
+	DP_PRINT_STATS("mon_rx_buf_reaped = %u",
+		       rx_mon_stats->mon_rx_bufs_reaped_dest);
+	DP_PRINT_STATS("mon_rx_buf_replenished = %u",
+		       rx_mon_stats->mon_rx_bufs_replenished_dest);
 	stat_ring_ppdu_ids =
 		(uint32_t *)qdf_mem_malloc(sizeof(uint32_t) * MAX_PPDU_ID_HIST);
 	dest_ring_ppdu_ids =
@@ -6033,8 +6092,26 @@ dp_print_soc_rx_stats(struct dp_soc *soc)
 	DP_PRINT_STATS("RX scatter msdu: %d",
 		       soc->stats.rx.err.scatter_msdu);
 
+	DP_PRINT_STATS("RX invalid cookie: %d",
+		       soc->stats.rx.err.invalid_cookie);
+
 	DP_PRINT_STATS("RX wait completed msdu break: %d",
 		       soc->stats.rx.msdu_scatter_wait_break);
+
+	DP_PRINT_STATS("2k jump delba sent: %d",
+		       soc->stats.rx.err.rx_2k_jump_delba_sent);
+
+	DP_PRINT_STATS("2k jump msdu to stack: %d",
+		       soc->stats.rx.err.rx_2k_jump_to_stack);
+
+	DP_PRINT_STATS("2k jump msdu drop: %d",
+		       soc->stats.rx.err.rx_2k_jump_drop);
+
+	DP_PRINT_STATS("REO err oor msdu to stack %d",
+		       soc->stats.rx.err.reo_err_oor_to_stack);
+
+	DP_PRINT_STATS("REO err oor msdu drop: %d",
+		       soc->stats.rx.err.reo_err_oor_drop);
 
 	for (i = 0; i < HAL_RXDMA_ERR_MAX; i++) {
 		index += qdf_snprint(&rxdma_error[index],

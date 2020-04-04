@@ -95,7 +95,12 @@ int htt_wbm_event_record(struct htt_logger *h, uint8_t tx_status,
 #define HTT_PPDU_DESC_MAX_DEPTH 16
 #define DP_SCAN_PEER_ID 0xFFFF
 
-#define DP_HTT_HTC_PKT_MISCLIST_SIZE          256
+/*
+ * Set the base misclist size to HTT copy engine source ring size
+ * to guarantee that a packet on the misclist wont be freed while it
+ * is sitting in the copy engine.
+ */
+#define DP_HTT_HTC_PKT_MISCLIST_SIZE          2048
 #define HTT_T2H_MAX_MSG_SIZE 2048
 
 #define HTT_T2H_EXT_STATS_TLV_START_OFFSET    3
@@ -123,6 +128,17 @@ int htt_wbm_event_record(struct htt_logger *h, uint8_t tx_status,
 /* get index for field in htt_ppdu_stats_common_tlv */
 #define HTT_GET_STATS_CMN_INDEX(index) \
 	HTT_PPDU_STATS_COMMON_TLV_##index##_OFFSET
+
+/**
+ * enum dp_full_mon_config - enum to enable/disable full monitor mode
+ *
+ * @DP_FULL_MON_DISABLE: Disable full monitor mode
+ * @DP_FULL_MON_ENABLE: Enable full monitor mode
+ */
+enum dp_full_mon_config {
+	DP_FULL_MON_DISABLE,
+	DP_FULL_MON_ENABLE,
+};
 
 struct dp_htt_htc_pkt {
 	void *soc_ctxt;
@@ -442,4 +458,17 @@ dp_htt_rx_flow_fst_setup(struct dp_pdev *pdev,
 QDF_STATUS
 dp_htt_rx_flow_fse_operation(struct dp_pdev *pdev,
 			     struct dp_htt_rx_flow_fst_operation *op_info);
+
+/**
+ * htt_h2t_full_mon_cfg() - Send full monitor configuarion msg to FW
+ *
+ * @htt_soc: HTT Soc handle
+ * @pdev_id: Radio id
+ * @dp_full_mon_config: enabled/disable configuration
+ *
+ * Return: Success when HTT message is sent, error on failure
+ */
+int htt_h2t_full_mon_cfg(struct htt_soc *htt_soc,
+			 uint8_t pdev_id,
+			 enum dp_full_mon_config);
 #endif /* _DP_HTT_H_ */

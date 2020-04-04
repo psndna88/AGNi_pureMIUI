@@ -954,14 +954,16 @@ static uint32_t hal_rx_tid_get_6750(hal_soc_handle_t hal_soc_hdl, uint8_t *buf)
 
 /**
  * hal_rx_hw_desc_get_ppduid_get_6750(): retrieve ppdu id
- * @hw_desc_addr: hw addr
+ * @rx_tlv_hdr: rx tlv header
+ * @rxdma_dst_ring_desc: rxdma HW descriptor
  *
  * Return: ppdu id
  */
-static uint32_t hal_rx_hw_desc_get_ppduid_get_6750(void *hw_desc_addr)
+static uint32_t hal_rx_hw_desc_get_ppduid_get_6750(void *rx_tlv_hdr,
+						   void *rxdma_dst_ring_desc)
 {
 	struct rx_mpdu_info *rx_mpdu_info;
-	struct rx_pkt_tlvs *rx_desc = (struct rx_pkt_tlvs *)hw_desc_addr;
+	struct rx_pkt_tlvs *rx_desc = (struct rx_pkt_tlvs *)rx_tlv_hdr;
 
 	rx_mpdu_info =
 		&rx_desc->mpdu_start_tlv.rx_mpdu_start.rx_mpdu_info_details;
@@ -1328,6 +1330,7 @@ struct hal_hw_txrx_ops qca6750_hal_hw_txrx_ops = {
 	hal_reo_setup_generic,
 	hal_setup_link_idle_list_generic,
 	hal_get_window_address_6750,
+	NULL,
 
 	/* tx */
 	hal_tx_desc_set_dscp_tid_table_id_6750,
@@ -1342,6 +1345,7 @@ struct hal_hw_txrx_ops qca6750_hal_hw_txrx_ops = {
 	hal_tx_comp_get_release_reason_generic,
 	hal_get_wbm_internal_error_generic,
 	hal_tx_desc_set_mesh_en_6750,
+	hal_tx_init_cmd_credit_ring_6750,
 
 	/* rx */
 	hal_rx_msdu_start_nss_get_6750,
@@ -1412,6 +1416,14 @@ struct hal_hw_txrx_ops qca6750_hal_hw_txrx_ops = {
 	NULL,
 	/* rx - msdu end fast path info fields */
 	hal_rx_msdu_packet_metadata_get_generic,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
 };
 
 struct hal_hw_srng_config hw_srng_table_6750[] = {

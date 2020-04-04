@@ -1125,7 +1125,11 @@ struct scan_chan_list_params {
  * @max_duration_ms: Maximum Off channel CAC duration
  * @chan_freq: channel number of precac channel
  * @chan_width: Precac Channel width
- * @center_freq: Center frequency of precac channel
+ * @center_freq1: Agile preCAC channel frequency in MHz for 20/40/80/160
+ *                and left center frequency(5690MHz) for restricted 80p80.
+ * @center_freq2: Second segment Agile frequency if applicable. 0 for
+ *                20/40/80/160 and right center frequency(5775MHz) for
+ *                restricted 80p80.
  */
 struct vdev_adfs_ch_cfg_params {
 	uint32_t vdev_id;
@@ -1134,7 +1138,8 @@ struct vdev_adfs_ch_cfg_params {
 	uint32_t max_duration_ms;
 	uint32_t chan_freq;
 	uint32_t chan_width;
-	uint32_t center_freq; /* in MHz */
+	uint32_t center_freq1; /* in MHz */
+	uint32_t center_freq2; /* in MHz */
 };
 
 /**
@@ -2550,8 +2555,8 @@ struct wmi_wifi_start_log {
  * @pcl_len: Number of channels in the PCL
  */
 struct wmi_pcl_list {
-	uint8_t pcl_list[128];
-	uint8_t weight_list[128];
+	uint8_t pcl_list[NUM_CHANNELS];
+	uint8_t weight_list[NUM_CHANNELS];
 	uint32_t pcl_len;
 };
 
@@ -4603,6 +4608,7 @@ typedef enum {
 	wmi_wlan_time_sync_q_master_slave_offset_eventid,
 #endif
 	wmi_roam_scan_chan_list_id,
+	wmi_muedca_params_config_eventid,
 	wmi_events_max,
 } wmi_conv_event_id;
 
@@ -5373,31 +5379,6 @@ typedef enum {
 	/* Event respose of RESTART CMD */
 	WMI_HOST_VDEV_RESTART_RESP_EVENT,
 } WMI_HOST_START_EVENT_PARAM;
-
-/**
- * struct wmi_host_vdev_start_resp - VDEV start response
- * @vdev_id: vdev id
- * @requestor_id: requestor id that requested the VDEV start request
- * @resp_type: Respose of Event type START/RESTART
- * @status: status of the response
- * @chain_mask: Vdev chain mask
- * @smps_mode: Vdev mimo power save mode
- * @mac_id: mac_id field contains the MAC identifier that the
- *          VDEV is bound to. The valid range is 0 to (num_macs-1).
- * @cfgd_tx_streams: Configured Transmit Streams
- * @cfgd_rx_streams: Configured Receive Streams
- */
-typedef struct {
-	uint32_t vdev_id;
-	uint32_t requestor_id;
-	WMI_HOST_START_EVENT_PARAM resp_type;
-	uint32_t status;
-	uint32_t chain_mask;
-	uint32_t smps_mode;
-	uint32_t mac_id;
-	uint32_t cfgd_tx_streams;
-	uint32_t cfgd_rx_streams;
-} wmi_host_vdev_start_resp;
 
 /**
  * struct wmi_host_vdev_delete_resp - VDEV delete response
@@ -6953,20 +6934,6 @@ struct wmi_host_peer_delete_response_event {
 };
 
 /**
- * struct wmi_host_vdev_peer_delete_all_response_event -
- * VDEV peer delete all response
- * @vdev_id: vdev id
- * @status: status of request
- * 0 - OK; command successful
- * 1 - EINVAL; Requested invalid vdev_id
- * 2 - EFAILED; Delete all peer failed
- */
-struct wmi_host_vdev_peer_delete_all_response_event {
-	uint32_t vdev_id;
-	uint32_t status;
-};
-
-/**
  * @struct wmi_host_dcs_interference_param
  * @interference_type: Type of DCS Interference
  * @uint32_t pdev_id: pdev id
@@ -7350,6 +7317,22 @@ struct wmi_host_obss_spatial_reuse_set_def_thresh {
 	uint32_t vdev_type;
 };
 #endif
+
+/**
+ * struct wmi_host_injector_frame_params - Injector frame configuration params
+ * @vdev_id: vdev identifer of VAP
+ * @enable: Enable/disable flag for the frame
+ * @frame_type: Frame type to be enabled
+ * @frame_inject_period: Periodicity of injector frame transmission
+ * @dstmac: Destination address to be used for the frame
+ */
+struct wmi_host_injector_frame_params {
+	uint32_t vdev_id;
+	uint32_t enable;
+	uint32_t frame_type;
+	uint32_t frame_inject_period;
+	uint8_t dstmac[QDF_MAC_ADDR_SIZE];
+};
 
 /**
  * struct wds_entry - WDS entry structure
