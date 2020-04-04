@@ -82,6 +82,8 @@ struct dsi_dyn_clk_caps {
 	bool dyn_clk_support;
 	u32 *bit_clk_list;
 	u32 bit_clk_list_len;
+	enum dsi_dyn_clk_feature_type type;
+	bool maintain_const_fps;
 };
 
 struct dsi_pinctrl_info {
@@ -155,6 +157,11 @@ struct drm_panel_esd_config {
 	u32 groups;
 };
 
+struct dsi_panel_spr_info {
+	bool enable;
+	enum msm_display_spr_pack_type pack_type;
+};
+
 struct dsi_panel {
 	const char *name;
 	const char *type;
@@ -171,6 +178,7 @@ struct dsi_panel {
 	struct dsi_cmd_engine_cfg cmd_config;
 	enum dsi_op_mode panel_mode;
 	bool panel_mode_switch_enabled;
+	bool poms_align_vsync;
 
 	struct dsi_dfps_capabilities dfps_caps;
 	struct dsi_dyn_clk_caps dyn_clk_caps;
@@ -201,6 +209,8 @@ struct dsi_panel {
 
 	char dce_pps_cmd[DSI_CMD_PPS_SIZE];
 	enum dsi_dms_mode dms_mode;
+
+	struct dsi_panel_spr_info spr_info;
 
 	bool sync_broadcast_en;
 

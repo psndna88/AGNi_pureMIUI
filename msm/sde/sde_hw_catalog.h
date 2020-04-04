@@ -66,6 +66,9 @@
 
 #define SDE_HW_BLK_NAME_LEN	16
 
+/* default size of valid register space for MDSS_HW block (offset 0) */
+#define DEFAULT_MDSS_HW_BLOCK_SIZE 0x5C
+
 #define MAX_IMG_WIDTH 0x3fff
 #define MAX_IMG_HEIGHT 0x3fff
 
@@ -270,7 +273,6 @@ enum {
  * @SDE_PERF_SSPP_TS_PREFILL      Supports prefill with traffic shaper
  * @SDE_PERF_SSPP_TS_PREFILL_REC1 Supports prefill with traffic shaper multirec
  * @SDE_PERF_SSPP_CDP             Supports client driven prefetch
- * @SDE_PERF_SSPP_QOS_FL_NOCALC   Avoid fill level calc for QoS/danger/safe
  * @SDE_PERF_SSPP_SYS_CACHE,      SSPP supports system cache
  * @SDE_PERF_SSPP_UIDLE,          sspp supports uidle
  * @SDE_PERF_SSPP_MAX             Maximum value
@@ -281,7 +283,6 @@ enum {
 	SDE_PERF_SSPP_TS_PREFILL,
 	SDE_PERF_SSPP_TS_PREFILL_REC1,
 	SDE_PERF_SSPP_CDP,
-	SDE_PERF_SSPP_QOS_FL_NOCALC,
 	SDE_PERF_SSPP_SYS_CACHE,
 	SDE_PERF_SSPP_UIDLE,
 	SDE_PERF_SSPP_MAX
@@ -448,11 +449,13 @@ enum {
  * @SDE_INTF_INPUT_CTRL         Supports the setting of pp block from which
  *                              pixel data arrives to this INTF
  * @SDE_INTF_TE                 INTF block has TE configuration support
+ * @SDE_INTF_TE_ALIGN_VSYNC     INTF block has POMS Align vsync support
  * @SDE_INTF_MAX
  */
 enum {
 	SDE_INTF_INPUT_CTRL = 0x1,
 	SDE_INTF_TE,
+	SDE_INTF_TE_ALIGN_VSYNC,
 	SDE_INTF_MAX
 };
 
@@ -640,27 +643,8 @@ enum sde_qos_lut_usage {
 	SDE_QOS_LUT_USAGE_NRT,
 	SDE_QOS_LUT_USAGE_CWB,
 	SDE_QOS_LUT_USAGE_MACROTILE_QSEED,
+	SDE_QOS_LUT_USAGE_LINEAR_QSEED,
 	SDE_QOS_LUT_USAGE_MAX,
-};
-
-/**
- * struct sde_qos_lut_entry - define QoS LUT table entry
- * @fl: fill level, or zero on last entry to indicate default lut
- * @lut: lut to use if equal to or less than fill level
- */
-struct sde_qos_lut_entry {
-	u32 fl;
-	u64 lut;
-};
-
-/**
- * struct sde_qos_lut_tbl - define QoS LUT table
- * @nentry: number of entry in this table
- * @entries: Pointer to table entries
- */
-struct sde_qos_lut_tbl {
-	u32 nentry;
-	struct sde_qos_lut_entry *entries;
 };
 
 /**
@@ -696,8 +680,10 @@ struct sde_qos_lut_tbl {
  * @in_rot_maxdwnscale_rt_denom: max downscale ratio for inline rotation
  *                                 rt clients - denominator
  * @in_rot_maxdwnscale_nrt: max downscale ratio for inline rotation nrt clients
- * @in_rot_minpredwnscale_num: min downscale ratio to enable pre-downscale
- * @in_rot_minpredwnscale_denom: min downscale ratio to enable pre-downscale
+ * @in_rot_maxdwnscale_rt_nopd_num: downscale threshold for when pre-downscale
+ *                                    must be enabled on HW with this support.
+ * @in_rot_maxdwnscale_rt_nopd_denom: downscale threshold for when pre-downscale
+ *                                    must be enabled on HW with this support.
  * @in_rot_maxheight: max pre rotated height for inline rotation
  * @llcc_scid: scid for the system cache
  * @llcc_slice size: slice size of the system cache
@@ -734,8 +720,8 @@ struct sde_sspp_sub_blks {
 	u32 in_rot_maxdwnscale_rt_num;
 	u32 in_rot_maxdwnscale_rt_denom;
 	u32 in_rot_maxdwnscale_nrt;
-	u32 in_rot_minpredwnscale_num;
-	u32 in_rot_minpredwnscale_denom;
+	u32 in_rot_maxdwnscale_rt_nopd_num;
+	u32 in_rot_maxdwnscale_rt_nopd_denom;
 	u32 in_rot_maxheight;
 	int llcc_scid;
 	size_t llcc_slice_size;
@@ -781,6 +767,7 @@ struct sde_dspp_sub_blks {
 	struct sde_pp_blk hist;
 	struct sde_pp_blk ad;
 	struct sde_pp_blk ltm;
+	struct sde_pp_blk spr;
 	struct sde_pp_blk vlut;
 	struct sde_dspp_rc rc;
 };
@@ -980,7 +967,7 @@ struct sde_dspp_top_cfg  {
  */
 struct sde_dspp_cfg  {
 	SDE_HW_BLK_INFO;
-	const struct sde_dspp_sub_blks *sblk;
+	struct sde_dspp_sub_blks *sblk;
 };
 
 /**
@@ -1302,9 +1289,11 @@ struct sde_sc_cfg {
  * @downscaling_prefill_lines  downscaling latency in lines
  * @amortizable_theshold minimum y position for traffic shaping prefill
  * @min_prefill_lines  minimum pipeline latency in lines
- * @danger_lut_tbl: LUT tables for danger signals
- * @sfe_lut_tbl: LUT tables for safe signals
- * @qos_lut_tbl: LUT tables for QoS signals
+ * @danger_lut: liner, linear_qseed, macrotile, etc. danger luts
+ * @sfe_lut: linear, macrotile, macrotile_qseed, etc. safe luts
+ * @creq_lut: linear, macrotile, non_realtime, cwb, etc. creq luts
+ * @qos_refresh_count: total refresh count for possible different luts
+ * @qos_refresh_rate: different refresh rates for luts
  * @cdp_cfg            cdp use case configurations
  * @cpu_mask:          pm_qos cpu mask value
  * @cpu_dma_latency:   pm_qos cpu dma latency value
@@ -1330,9 +1319,11 @@ struct sde_perf_cfg {
 	u32 downscaling_prefill_lines;
 	u32 amortizable_threshold;
 	u32 min_prefill_lines;
-	u32 danger_lut_tbl[SDE_QOS_LUT_USAGE_MAX];
-	struct sde_qos_lut_tbl sfe_lut_tbl[SDE_QOS_LUT_USAGE_MAX];
-	struct sde_qos_lut_tbl qos_lut_tbl[SDE_QOS_LUT_USAGE_MAX];
+	u64 *danger_lut;
+	u64 *safe_lut;
+	u64 *creq_lut;
+	u32 qos_refresh_count;
+	u32 *qos_refresh_rate;
 	struct sde_perf_cdp_cfg cdp_cfg[SDE_PERF_CDP_USAGE_MAX];
 	u32 cpu_mask;
 	u32 cpu_dma_latency;
@@ -1422,11 +1413,11 @@ struct sde_limit_cfg {
  * @has_qsync	       Supports qsync feature
  * @has_3d_merge_reset Supports 3D merge reset
  * @has_decimation     Supports decimation
- * @has_qos_fl_nocalc  flag to indicate QoS fill level needs no calculation
  * @has_mixer_combined_alpha     Mixer has single register for FG & BG alpha
  * @vbif_disable_inner_outer_shareable     VBIF requires disabling shareables
  * @inline_disable_const_clr     Disable constant color during inline rotate
  * @dither_luma_mode_support   Enables dither luma mode
+ * @has_base_layer     Supports staging layer as base layer
  * @sc_cfg: system cache configuration
  * @uidle_cfg		Settings for uidle feature
  * @sui_misr_supported  indicate if secure-ui-misr is supported
@@ -1441,6 +1432,7 @@ struct sde_limit_cfg {
  * @has_sui_blendstage  flag to indicate secure-ui has a blendstage restriction
  * @has_cursor    indicates if hardware cursor is supported
  * @has_vig_p010  indicates if vig pipe supports p010 format
+ * @mdss_hw_block_size  Max offset of MDSS_HW block (0 offset), used for debug
  * @inline_rot_formats	formats supported by the inline rotator feature
  * @irq_offset_list     list of sde_intr_irq_offsets to initialize irq table
  * @rc_count	number of rounded corner hardware instances
@@ -1483,11 +1475,11 @@ struct sde_mdss_cfg {
 	bool has_qsync;
 	bool has_3d_merge_reset;
 	bool has_decimation;
-	bool has_qos_fl_nocalc;
 	bool has_mixer_combined_alpha;
 	bool vbif_disable_inner_outer_shareable;
 	bool inline_disable_const_clr;
 	bool dither_luma_mode_support;
+	bool has_base_layer;
 
 	struct sde_sc_cfg sc_cfg;
 
@@ -1504,6 +1496,7 @@ struct sde_mdss_cfg {
 	bool has_hdr_plus;
 	bool has_cursor;
 	bool has_vig_p010;
+	u32 mdss_hw_block_size;
 	u32 mdss_count;
 	struct sde_mdss_base_cfg mdss[MAX_BLOCKS];
 
@@ -1557,6 +1550,7 @@ struct sde_mdss_cfg {
 	u32 ad_count;
 	u32 ltm_count;
 	u32 rc_count;
+	u32 spr_count;
 
 	u32 merge_3d_count;
 	struct sde_merge_3d_cfg merge_3d[MAX_BLOCKS];

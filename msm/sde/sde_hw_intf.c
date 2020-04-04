@@ -62,6 +62,7 @@
 #define INTF_MISR_SIGNATURE             0x184
 
 #define INTF_MUX                        0x25C
+#define INTF_UNDERRUN_COUNT             0x268
 #define INTF_STATUS                     0x26C
 #define INTF_AVR_CONTROL                0x270
 #define INTF_AVR_MODE                   0x274
@@ -308,6 +309,11 @@ static void sde_hw_intf_setup_timing_engine(struct sde_hw_intf *ctx,
 	if (p->wide_bus_en)
 		intf_cfg2 |= BIT(0);
 
+	/* Synchronize timing engine enable to TE */
+	if ((ctx->cap->features & BIT(SDE_INTF_TE_ALIGN_VSYNC))
+			&& p->poms_align_vsync)
+		intf_cfg2 |= BIT(16);
+
 	if (ctx->cfg.split_link_en)
 		SDE_REG_WRITE(c, INTF_REG_SPLIT_LINK, 0x3);
 
@@ -484,6 +490,23 @@ static u32 sde_hw_intf_get_line_count(struct sde_hw_intf *intf)
 	return SDE_REG_READ(c, INTF_LINE_COUNT);
 }
 
+static u32 sde_hw_intf_get_underrun_line_count(struct sde_hw_intf *intf)
+{
+	struct sde_hw_blk_reg_map *c;
+	u32 hsync_period;
+
+	if (!intf)
+		return 0;
+
+	c = &intf->hw;
+	hsync_period = SDE_REG_READ(c, INTF_HSYNC_CTL);
+	hsync_period = ((hsync_period & 0xffff0000) >> 16);
+
+	return hsync_period ?
+		SDE_REG_READ(c, INTF_UNDERRUN_COUNT) / hsync_period :
+		0xebadebad;
+}
+
 static int sde_hw_intf_setup_te_config(struct sde_hw_intf *intf,
 		struct sde_hw_tear_check *te)
 {
@@ -527,10 +550,11 @@ static int sde_hw_intf_setup_autorefresh_config(struct sde_hw_intf *intf,
 
 	c = &intf->hw;
 
+	refresh_cfg = SDE_REG_READ(c, INTF_TEAR_AUTOREFRESH_CONFIG);
 	if (cfg->enable)
 		refresh_cfg = BIT(31) | cfg->frame_count;
 	else
-		refresh_cfg = 0;
+		refresh_cfg &= ~BIT(31);
 
 	SDE_REG_WRITE(c, INTF_TEAR_AUTOREFRESH_CONFIG, refresh_cfg);
 
@@ -648,6 +672,27 @@ static int sde_hw_intf_get_vsync_info(struct sde_hw_intf *intf,
 	return 0;
 }
 
+static int sde_hw_intf_v1_check_and_reset_tearcheck(struct sde_hw_intf *intf,
+		struct intf_tear_status *status)
+{
+	struct sde_hw_blk_reg_map *c = &intf->hw;
+	u32 start_pos;
+
+	if (!intf || !status)
+		return -EINVAL;
+
+	c = &intf->hw;
+
+	status->read_count = SDE_REG_READ(c, INTF_TEAR_INT_COUNT_VAL);
+	start_pos = SDE_REG_READ(c, INTF_TEAR_START_POS);
+	status->write_count = SDE_REG_READ(c, INTF_TEAR_SYNC_WRCOUNT);
+	status->write_count &= 0xffff0000;
+	status->write_count |= start_pos;
+	SDE_REG_WRITE(c, INTF_TEAR_SYNC_WRCOUNT, status->write_count);
+
+	return 0;
+}
+
 static void sde_hw_intf_vsync_sel(struct sde_hw_intf *intf,
 		u32 vsync_source)
 {
@@ -695,6 +740,7 @@ static void _setup_intf_ops(struct sde_hw_intf_ops *ops,
 	ops->setup_misr = sde_hw_intf_setup_misr;
 	ops->collect_misr = sde_hw_intf_collect_misr;
 	ops->get_line_count = sde_hw_intf_get_line_count;
+	ops->get_underrun_line_count = sde_hw_intf_get_underrun_line_count;
 	ops->avr_setup = sde_hw_intf_avr_setup;
 	ops->avr_trigger = sde_hw_intf_avr_trigger;
 	ops->avr_ctrl = sde_hw_intf_avr_ctrl;
@@ -714,6 +760,8 @@ static void _setup_intf_ops(struct sde_hw_intf_ops *ops,
 		ops->poll_timeout_wr_ptr = sde_hw_intf_poll_timeout_wr_ptr;
 		ops->vsync_sel = sde_hw_intf_vsync_sel;
 		ops->get_status = sde_hw_intf_v1_get_status;
+		ops->check_and_reset_tearcheck =
+			sde_hw_intf_v1_check_and_reset_tearcheck;
 	}
 }
 

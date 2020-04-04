@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _DSI_CLK_H_
@@ -106,11 +106,13 @@ struct dsi_link_lp_clk_info {
 /**
  * struct link_clk_freq - Clock frequency information for Link clocks
  * @byte_clk_rate:   Frequency of DSI byte_clk in KHz.
+ * @byte_intf_clk_rate:   Frequency of DSI byte_intf_clk in KHz.
  * @pixel_clk_rate:  Frequency of DSI pixel_clk in KHz.
  * @esc_clk_rate:    Frequency of DSI escape clock in KHz.
  */
 struct link_clk_freq {
 	u32 byte_clk_rate;
+	u32 byte_intf_clk_rate;
 	u32 pix_clk_rate;
 	u32 esc_clk_rate;
 };
@@ -264,8 +266,7 @@ int dsi_display_link_clk_force_update_ctrl(void *handle);
  *
  * return: error code in case of failure or 0 for success.
  */
-int dsi_display_clk_ctrl(void *handle,
-	enum dsi_clk_type clk_type, enum dsi_clk_state clk_state);
+int dsi_display_clk_ctrl(void *handle, u32 clk_type, u32 clk_state);
 
 /**
  * dsi_clk_set_link_frequencies() - set frequencies for link clks
@@ -293,10 +294,12 @@ int dsi_clk_set_pixel_clk_rate(void *client, u64 pixel_clk, u32 index);
  * dsi_clk_set_byte_clk_rate() - set frequency for byte clock
  * @client:       DSI clock client pointer.
  * @byte_clk: Pixel clock rate in Hz.
+ * @byte_intf_clk: Byte interface clock rate in Hz.
  * @index:      Index of the DSI controller.
  * return: error code in case of failure or 0 for success.
  */
-int dsi_clk_set_byte_clk_rate(void *client, u64 byte_clk, u32 index);
+int dsi_clk_set_byte_clk_rate(void *client, u64 byte_clk,
+				u64 byte_intf_clk, u32 index);
 
 /**
  * dsi_clk_update_parent() - update parent clocks for specified clock

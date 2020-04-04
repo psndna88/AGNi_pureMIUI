@@ -235,248 +235,88 @@ void sde_plane_setup_src_split_order(struct drm_plane *plane,
 }
 
 /**
- * _sde_plane_calc_fill_level - calculate fill level of the given source format
+ * _sde_plane_set_qos_lut - set danger, safe and creq LUT of the given plane
  * @plane:		Pointer to drm plane
- * @fmt:		Pointer to source buffer format
- * @src_wdith:		width of source buffer
- * Return: fill level corresponding to the source buffer/format or 0 if error
- */
-static inline int _sde_plane_calc_fill_level(struct drm_plane *plane,
-		const struct sde_format *fmt, u32 src_width)
-{
-	struct sde_plane *psde, *tmp;
-	struct sde_plane_state *pstate;
-	u32 fixed_buff_size;
-	u32 total_fl;
-	u32 hflip_bytes;
-	u32 unused_space;
-
-	if (!plane || !fmt || !plane->state || !src_width || !fmt->bpp) {
-		SDE_ERROR("invalid arguments\n");
-		return 0;
-	}
-
-	psde = to_sde_plane(plane);
-	if (psde->perf_features & BIT(SDE_PERF_SSPP_QOS_FL_NOCALC))
-		return 0;
-
-	pstate = to_sde_plane_state(plane->state);
-	fixed_buff_size = psde->pipe_sblk->pixel_ram_size;
-
-	list_for_each_entry(tmp, &psde->mplane_list, mplane_list) {
-		if (!sde_plane_enabled(tmp->base.state))
-			continue;
-		SDE_DEBUG("plane%d/%d src_width:%d/%d\n",
-				psde->base.base.id, tmp->base.base.id,
-				src_width, tmp->pipe_cfg.src_rect.w);
-		src_width = max_t(u32, src_width, tmp->pipe_cfg.src_rect.w);
-	}
-
-	if ((pstate->rotation & DRM_MODE_REFLECT_X) &&
-			SDE_FORMAT_IS_LINEAR(fmt))
-		hflip_bytes = (src_width + 32) * fmt->bpp;
-	else
-		hflip_bytes = 0;
-
-	if (fmt->fetch_planes == SDE_PLANE_PSEUDO_PLANAR) {
-
-		unused_space = 23 * 128;
-		if (fmt->chroma_sample == SDE_CHROMA_420) {
-			/* NV12 */
-			total_fl = (fixed_buff_size / 2 - hflip_bytes -
-				unused_space) / ((src_width + 32) * fmt->bpp);
-		} else {
-			/* non NV12 */
-			total_fl = (fixed_buff_size / 2 - hflip_bytes -
-				unused_space) * 2 / ((src_width + 32) *
-				fmt->bpp);
-		}
-	} else {
-
-		unused_space = 6 * 128;
-		if (pstate->multirect_mode == SDE_SSPP_MULTIRECT_PARALLEL) {
-			total_fl = (fixed_buff_size / 2 - hflip_bytes -
-				unused_space) * 2 / ((src_width + 32) *
-				fmt->bpp);
-		} else {
-			total_fl = (fixed_buff_size - hflip_bytes -
-				unused_space) * 2 / ((src_width + 32) *
-				fmt->bpp);
-		}
-	}
-
-	SDE_DEBUG("plane%u: pnum:%d fmt: %4.4s w:%u hf:%d us:%d fl:%u\n",
-			plane->base.id, psde->pipe - SSPP_VIG0,
-			(char *)&fmt->base.pixel_format,
-			src_width, hflip_bytes, unused_space, total_fl);
-
-	return total_fl;
-}
-
-/**
- * _sde_plane_get_qos_lut - get LUT mapping based on fill level
- * @tbl:		Pointer to LUT table
- * @total_fl:		fill level
- * Return: LUT setting corresponding to the fill level
- */
-static u64 _sde_plane_get_qos_lut(const struct sde_qos_lut_tbl *tbl,
-		u32 total_fl)
-{
-	int i;
-
-	if (!tbl || !tbl->nentry || !tbl->entries)
-		return 0;
-
-	for (i = 0; i < tbl->nentry; i++)
-		if (total_fl <= tbl->entries[i].fl)
-			return tbl->entries[i].lut;
-
-	/* if last fl is zero, use as default */
-	if (!tbl->entries[i-1].fl)
-		return tbl->entries[i-1].lut;
-
-	return 0;
-}
-
-/**
- * _sde_plane_set_qos_lut - set QoS LUT of the given plane
- * @plane:		Pointer to drm plane
+ * @crtc:		Pointer to drm crtc to find refresh rate on mode
  * @fb:			Pointer to framebuffer associated with the given plane
  */
 static void _sde_plane_set_qos_lut(struct drm_plane *plane,
+		struct drm_crtc *crtc,
 		struct drm_framebuffer *fb)
 {
 	struct sde_plane *psde;
 	const struct sde_format *fmt = NULL;
-	u64 qos_lut;
-	u32 total_fl = 0, lut_usage;
+	u32 frame_rate, qos_count, fps_index = 0, lut_index, index;
+	struct sde_perf_cfg *perf;
+	struct sde_plane_state *pstate;
 
 	if (!plane || !fb) {
-		SDE_ERROR("invalid arguments plane %d fb %d\n",
-				!plane, !fb);
+		SDE_ERROR("invalid arguments\n");
 		return;
 	}
 
 	psde = to_sde_plane(plane);
+	pstate = to_sde_plane_state(plane->state);
 
 	if (!psde->pipe_hw || !psde->pipe_sblk || !psde->catalog) {
 		SDE_ERROR("invalid arguments\n");
 		return;
-	} else if (!psde->pipe_hw->ops.setup_creq_lut) {
+	} else if (!psde->pipe_hw->ops.setup_qos_lut) {
 		return;
 	}
 
+	frame_rate = crtc->mode.vrefresh;
+	perf = &psde->catalog->perf;
+	qos_count = perf->qos_refresh_count;
+	while (qos_count && perf->qos_refresh_rate) {
+		if (frame_rate >= perf->qos_refresh_rate[qos_count - 1]) {
+			fps_index = qos_count - 1;
+			break;
+		}
+		qos_count--;
+	}
+
 	if (!psde->is_rt_pipe) {
-		lut_usage = SDE_QOS_LUT_USAGE_NRT;
+		lut_index = SDE_QOS_LUT_USAGE_NRT;
 	} else {
 		fmt = sde_get_sde_format_ext(
 				fb->format->format,
 				fb->modifier);
-		total_fl = _sde_plane_calc_fill_level(plane, fmt,
-				psde->pipe_cfg.src_rect.w);
 
-		if (fmt && SDE_FORMAT_IS_LINEAR(fmt))
-			lut_usage = SDE_QOS_LUT_USAGE_LINEAR;
-		else if (psde->features & BIT(SDE_SSPP_SCALER_QSEED3) ||
-			psde->features & BIT(SDE_SSPP_SCALER_QSEED3LITE))
-			lut_usage = SDE_QOS_LUT_USAGE_MACROTILE_QSEED;
+		if (fmt && SDE_FORMAT_IS_LINEAR(fmt) &&
+		    pstate->scaler3_cfg.enable)
+			lut_index = SDE_QOS_LUT_USAGE_LINEAR_QSEED;
+		else if (fmt && SDE_FORMAT_IS_LINEAR(fmt))
+			lut_index = SDE_QOS_LUT_USAGE_LINEAR;
+		else if (pstate->scaler3_cfg.enable)
+			lut_index = SDE_QOS_LUT_USAGE_MACROTILE_QSEED;
 		else
-			lut_usage = SDE_QOS_LUT_USAGE_MACROTILE;
+			lut_index = SDE_QOS_LUT_USAGE_MACROTILE;
 	}
 
-	qos_lut = _sde_plane_get_qos_lut(
-			&psde->catalog->perf.qos_lut_tbl[lut_usage], total_fl);
-
-	psde->pipe_qos_cfg.creq_lut = qos_lut;
+	index = (fps_index * SDE_QOS_LUT_USAGE_MAX) + lut_index;
+	psde->pipe_qos_cfg.danger_lut = perf->danger_lut[index];
+	psde->pipe_qos_cfg.safe_lut = perf->safe_lut[index];
+	psde->pipe_qos_cfg.creq_lut = perf->creq_lut[index];
 
 	trace_sde_perf_set_qos_luts(psde->pipe - SSPP_VIG0,
 			(fmt) ? fmt->base.pixel_format : 0,
-			psde->is_rt_pipe, total_fl, qos_lut, lut_usage);
-
-	SDE_DEBUG("plane%u: pnum:%d fmt: %4.4s rt:%d fl:%u lut:0x%llx\n",
-			plane->base.id,
-			psde->pipe - SSPP_VIG0,
-			fmt ? (char *)&fmt->base.pixel_format : NULL,
-			psde->is_rt_pipe, total_fl, qos_lut);
-
-	psde->pipe_hw->ops.setup_creq_lut(psde->pipe_hw, &psde->pipe_qos_cfg);
-}
-
-/**
- * _sde_plane_set_panic_lut - set danger/safe LUT of the given plane
- * @plane:		Pointer to drm plane
- * @fb:			Pointer to framebuffer associated with the given plane
- */
-static void _sde_plane_set_danger_lut(struct drm_plane *plane,
-		struct drm_framebuffer *fb)
-{
-	struct sde_plane *psde;
-	const struct sde_format *fmt = NULL;
-	u32 danger_lut, safe_lut;
-	u32 total_fl = 0, lut_usage;
-
-	if (!plane || !fb) {
-		SDE_ERROR("invalid arguments\n");
-		return;
-	}
-
-	psde = to_sde_plane(plane);
-
-	if (!psde->pipe_hw || !psde->pipe_sblk || !psde->catalog) {
-		SDE_ERROR("invalid arguments\n");
-		return;
-	} else if (!psde->pipe_hw->ops.setup_danger_safe_lut) {
-		return;
-	}
-
-	if (!psde->is_rt_pipe) {
-		danger_lut = psde->catalog->perf.danger_lut_tbl
-				[SDE_QOS_LUT_USAGE_NRT];
-		lut_usage = SDE_QOS_LUT_USAGE_NRT;
-	} else {
-		fmt = sde_get_sde_format_ext(
-				fb->format->format,
-				fb->modifier);
-		total_fl = _sde_plane_calc_fill_level(plane, fmt,
-				psde->pipe_cfg.src_rect.w);
-
-		if (fmt && SDE_FORMAT_IS_LINEAR(fmt)) {
-			danger_lut = psde->catalog->perf.danger_lut_tbl
-					[SDE_QOS_LUT_USAGE_LINEAR];
-			lut_usage = SDE_QOS_LUT_USAGE_LINEAR;
-		} else if (psde->features & BIT(SDE_SSPP_SCALER_QSEED3)) {
-			danger_lut = psde->catalog->perf.danger_lut_tbl
-					[SDE_QOS_LUT_USAGE_MACROTILE_QSEED];
-			lut_usage = SDE_QOS_LUT_USAGE_MACROTILE_QSEED;
-		} else {
-			danger_lut = psde->catalog->perf.danger_lut_tbl
-					[SDE_QOS_LUT_USAGE_MACROTILE];
-			lut_usage = SDE_QOS_LUT_USAGE_MACROTILE;
-		}
-	}
-
-	safe_lut = (u32) _sde_plane_get_qos_lut(
-			&psde->catalog->perf.sfe_lut_tbl[lut_usage], total_fl);
-
-	psde->pipe_qos_cfg.danger_lut = danger_lut;
-	psde->pipe_qos_cfg.safe_lut = safe_lut;
-
-	trace_sde_perf_set_danger_luts(psde->pipe - SSPP_VIG0,
-			(fmt) ? fmt->base.pixel_format : 0,
 			(fmt) ? fmt->fetch_mode : 0,
 			psde->pipe_qos_cfg.danger_lut,
-			psde->pipe_qos_cfg.safe_lut);
+			psde->pipe_qos_cfg.safe_lut,
+			psde->pipe_qos_cfg.creq_lut);
 
-	SDE_DEBUG("plane%u: pnum:%d fmt:%4.4s mode:%d fl:%d luts[0x%x,0x%x]\n",
+	SDE_DEBUG(
+		"plane%u: pnum:%d fmt:%4.4s fps:%d mode:%d luts[0x%x,0x%x 0x%llx]\n",
 		plane->base.id,
 		psde->pipe - SSPP_VIG0,
-		fmt ? (char *)&fmt->base.pixel_format : NULL,
-		fmt ? fmt->fetch_mode : -1, total_fl,
+		fmt ? (char *)&fmt->base.pixel_format : NULL, frame_rate,
+		fmt ? fmt->fetch_mode : -1,
 		psde->pipe_qos_cfg.danger_lut,
-		psde->pipe_qos_cfg.safe_lut);
+		psde->pipe_qos_cfg.safe_lut,
+		psde->pipe_qos_cfg.creq_lut);
 
-	psde->pipe_hw->ops.setup_danger_safe_lut(psde->pipe_hw,
-			&psde->pipe_qos_cfg);
+	psde->pipe_hw->ops.setup_qos_lut(psde->pipe_hw, &psde->pipe_qos_cfg);
 }
 
 /**
@@ -2435,11 +2275,17 @@ static int _sde_atomic_check_pre_downscale(struct sde_plane *psde,
 	int ret = 0;
 	u32 min_ratio_numer, min_ratio_denom;
 	struct sde_hw_inline_pre_downscale_cfg *pd_cfg = &pstate->pre_down;
-	bool pd_x = pd_cfg->pre_downscale_x_0 > 1;
-	bool pd_y = pd_cfg->pre_downscale_y_0 > 1;
+	bool pd_x;
+	bool pd_y;
 
-	min_ratio_numer = psde->pipe_sblk->in_rot_minpredwnscale_num;
-	min_ratio_denom = psde->pipe_sblk->in_rot_minpredwnscale_denom;
+	if (!_sde_plane_is_pre_downscale_enabled(pd_cfg))
+		return ret;
+
+	pd_x = pd_cfg->pre_downscale_x_0 > 1;
+	pd_y = pd_cfg->pre_downscale_y_0 > 1;
+
+	min_ratio_numer = psde->pipe_sblk->in_rot_maxdwnscale_rt_nopd_num;
+	min_ratio_denom = psde->pipe_sblk->in_rot_maxdwnscale_rt_nopd_denom;
 
 	if (pd_x && !_sde_plane_has_pre_downscale(psde)) {
 		SDE_ERROR_PLANE(psde,
@@ -2474,6 +2320,47 @@ static int _sde_atomic_check_pre_downscale(struct sde_plane *psde,
 	return ret;
 }
 
+static void _sde_plane_get_max_downscale_limits(struct sde_plane *psde,
+		struct sde_plane_state *pstate, bool rt_client,
+		u32 *max_numer_w, u32 *max_denom_w,
+		u32 *max_numer_h, u32 *max_denom_h)
+{
+	bool rotated, has_predown;
+	const struct sde_sspp_sub_blks *sblk;
+	struct sde_hw_inline_pre_downscale_cfg *pd;
+
+	rotated = pstate->rotation & DRM_MODE_ROTATE_90;
+	sblk = psde->pipe_sblk;
+	*max_numer_w = sblk->maxdwnscale;
+	*max_denom_w = 1;
+	*max_numer_h = sblk->maxdwnscale;
+	*max_denom_h = 1;
+
+	has_predown = _sde_plane_has_pre_downscale(psde);
+	if (has_predown)
+		pd = &pstate->pre_down;
+
+	/**
+	 * Inline rotation has different max vertical downscaling limits since
+	 * the source-width becomes the scaler's pre-downscaled source-height.
+	 **/
+	if (rotated) {
+		if (rt_client && has_predown) {
+			*max_numer_h = pd->pre_downscale_x_0 ?
+				sblk->in_rot_maxdwnscale_rt_num :
+				sblk->in_rot_maxdwnscale_rt_nopd_num;
+			*max_denom_h = pd->pre_downscale_x_0 ?
+				sblk->in_rot_maxdwnscale_rt_denom :
+				sblk->in_rot_maxdwnscale_rt_nopd_denom;
+		} else if (rt_client) {
+			*max_numer_h = sblk->in_rot_maxdwnscale_rt_num;
+			*max_denom_h = sblk->in_rot_maxdwnscale_rt_denom;
+		} else {
+			*max_numer_h = sblk->in_rot_maxdwnscale_nrt;
+		}
+	}
+}
+
 static int _sde_atomic_check_decimation_scaler(struct drm_plane_state *state,
 	struct sde_plane *psde, const struct sde_format *fmt,
 	struct sde_plane_state *pstate, struct sde_rect *src,
@@ -2482,11 +2369,13 @@ static int _sde_atomic_check_decimation_scaler(struct drm_plane_state *state,
 	int ret = 0;
 	uint32_t deci_w, deci_h, src_deci_w, src_deci_h;
 	uint32_t scaler_src_w, scaler_src_h;
-	uint32_t max_downscale_num, max_downscale_denom;
+	uint32_t max_downscale_num_w, max_downscale_denom_w;
+	uint32_t max_downscale_num_h, max_downscale_denom_h;
 	uint32_t max_upscale, max_linewidth;
-	bool inline_rotation, rt_client, has_predown, pre_down_en = false;
+	bool inline_rotation, rt_client;
 	struct drm_crtc *crtc;
 	struct drm_crtc_state *new_cstate;
+	const struct sde_sspp_sub_blks *sblk;
 
 	if (!state || !state->state || !state->crtc) {
 		SDE_ERROR_PLANE(psde, "invalid arguments\n");
@@ -2508,45 +2397,22 @@ static int _sde_atomic_check_decimation_scaler(struct drm_plane_state *state,
 		scaler_src_w = src_deci_w;
 		scaler_src_h = src_deci_h;
 	}
-
-	max_upscale = psde->pipe_sblk->maxupscale;
-	max_linewidth = psde->pipe_sblk->maxlinewidth;
-	has_predown = _sde_plane_has_pre_downscale(psde);
-	if (has_predown)
-		pre_down_en = _sde_plane_is_pre_downscale_enabled(
-				&pstate->pre_down);
+	sblk = psde->pipe_sblk;
+	max_upscale = sblk->maxupscale;
+	max_linewidth = sblk->maxlinewidth;
 
 	crtc = state->crtc;
 	new_cstate = drm_atomic_get_new_crtc_state(state->state, crtc);
-
 	rt_client = sde_crtc_is_rt_client(crtc, new_cstate);
 
-	max_downscale_num = psde->pipe_sblk->maxdwnscale;
-	max_downscale_denom = 1;
-	/* inline rotation RT clients have a different max downscaling limit */
-	if (inline_rotation) {
-		if (rt_client && has_predown) {
-			max_downscale_num = pre_down_en ?
-				psde->pipe_sblk->in_rot_maxdwnscale_rt_num :
-				psde->pipe_sblk->in_rot_minpredwnscale_num;
-			max_downscale_denom = pre_down_en ?
-				psde->pipe_sblk->in_rot_maxdwnscale_rt_denom :
-				psde->pipe_sblk->in_rot_minpredwnscale_denom;
-		} else if (rt_client) {
-			max_downscale_num =
-				psde->pipe_sblk->in_rot_maxdwnscale_rt_num;
-			max_downscale_denom =
-				psde->pipe_sblk->in_rot_maxdwnscale_rt_denom;
-		} else {
-			max_downscale_num =
-				psde->pipe_sblk->in_rot_maxdwnscale_nrt;
-		}
-	}
+	_sde_plane_get_max_downscale_limits(psde, pstate, rt_client,
+		&max_downscale_num_w, &max_downscale_denom_w,
+		&max_downscale_num_h, &max_downscale_denom_h);
 
 	/* decimation validation */
 	if ((deci_w || deci_h)
-			&& ((deci_w > psde->pipe_sblk->maxhdeciexp)
-				|| (deci_h > psde->pipe_sblk->maxvdeciexp))) {
+			&& ((deci_w > sblk->maxhdeciexp)
+				|| (deci_h > sblk->maxvdeciexp))) {
 		SDE_ERROR_PLANE(psde, "too much decimation requested\n");
 		ret = -EINVAL;
 
@@ -2572,21 +2438,21 @@ static int _sde_atomic_check_decimation_scaler(struct drm_plane_state *state,
 	/* check max scaler capability */
 	} else if (((scaler_src_w * max_upscale) < dst->w) ||
 		((scaler_src_h * max_upscale) < dst->h) ||
-		(mult_frac(dst->w, max_downscale_num, max_downscale_denom)
+		(mult_frac(dst->w, max_downscale_num_w, max_downscale_denom_w)
 			< scaler_src_w) ||
-		(mult_frac(dst->h, max_downscale_num, max_downscale_denom)
+		(mult_frac(dst->h, max_downscale_num_h, max_downscale_denom_h)
 			< scaler_src_h)) {
 		SDE_ERROR_PLANE(psde,
-			"too much scaling %ux%u->%ux%u rot:%d dwn:%d/%d\n",
+			"too much scaling %ux%u->%ux%u rot:%d dwn:%d/%d %d/%d\n",
 			scaler_src_w, scaler_src_h, dst->w, dst->h,
-			inline_rotation, max_downscale_num,
-			max_downscale_denom);
+			inline_rotation, max_downscale_num_w,
+			max_downscale_denom_w, max_downscale_num_h,
+			max_downscale_denom_h);
 		ret = -E2BIG;
 
 	/* check inline pre-downscale support */
-	} else if (inline_rotation && pre_down_en &&
-			_sde_atomic_check_pre_downscale(psde, pstate, dst,
-			src_deci_w, src_deci_h)) {
+	} else if (inline_rotation && _sde_atomic_check_pre_downscale(psde,
+			pstate, dst, src_deci_w, src_deci_h)) {
 		ret = -EINVAL;
 
 	/* QSEED validation */
@@ -2630,6 +2496,44 @@ static int _sde_atomic_check_excl_rect(struct sde_plane *psde,
 	}
 
 	return ret;
+}
+
+
+static int _sde_plane_validate_shared_crtc(struct sde_plane *psde,
+				struct drm_plane_state *state)
+{
+	struct sde_kms *sde_kms;
+	struct sde_splash_display *splash_display;
+	int i, j;
+
+	sde_kms = _sde_plane_get_kms(&psde->base);
+
+	if (!sde_kms || !state->crtc)
+		return 0;
+
+	for (i = 0; i < MAX_DSI_DISPLAYS; i++) {
+		splash_display = &sde_kms->splash_data.splash_display[i];
+
+		if (splash_display && splash_display->cont_splash_enabled &&
+			splash_display->encoder &&
+			state->crtc != splash_display->encoder->crtc) {
+
+			for (j = 0; j < MAX_DATA_PATH_PER_DSIPLAY; j++) {
+
+				if (splash_display->pipes[j].sspp ==
+						psde->pipe) {
+					SDE_ERROR_PLANE(psde,
+					"pipe:%d used in cont-splash on crtc:%d\n",
+					psde->pipe,
+					splash_display->encoder->crtc->base.id);
+					return -EINVAL;
+				}
+			}
+		}
+	}
+
+	return 0;
+
 }
 
 static int sde_plane_sspp_atomic_check(struct drm_plane *plane,
@@ -2731,6 +2635,11 @@ static int sde_plane_sspp_atomic_check(struct drm_plane *plane,
 
 	ret = _sde_atomic_check_excl_rect(psde, pstate,
 		&src, fmt, ret);
+
+	if (ret)
+		return ret;
+
+	ret = _sde_plane_validate_shared_crtc(psde, state);
 
 	if (ret)
 		return ret;
@@ -3202,8 +3111,7 @@ static void _sde_plane_update_properties(struct drm_plane *plane,
 		psde->pipe_hw->ops.setup_sharpening)
 		_sde_plane_update_sharpening(psde);
 
-	_sde_plane_set_qos_lut(plane, fb);
-	_sde_plane_set_danger_lut(plane, fb);
+	_sde_plane_set_qos_lut(plane, crtc, fb);
 
 	if (plane->type != DRM_PLANE_TYPE_CURSOR) {
 		_sde_plane_set_qos_ctrl(plane, true, SDE_PLANE_QOS_PANIC_CTRL);
@@ -3556,7 +3464,10 @@ static void _sde_plane_install_properties(struct drm_plane *plane,
 		if (catalog->mixer_count &&
 				catalog->mixer[0].sblk->maxblendstages) {
 			zpos_max = catalog->mixer[0].sblk->maxblendstages - 1;
-			if (zpos_max > SDE_STAGE_MAX - SDE_STAGE_0 - 1)
+			if (catalog->has_base_layer &&
+					(zpos_max > SDE_STAGE_MAX - 1))
+				zpos_max = SDE_STAGE_MAX - 1;
+			else if (zpos_max > SDE_STAGE_MAX - SDE_STAGE_0 - 1)
 				zpos_max = SDE_STAGE_MAX - SDE_STAGE_0 - 1;
 		}
 	} else if (plane->type != DRM_PLANE_TYPE_PRIMARY) {
@@ -4130,6 +4041,28 @@ static void sde_plane_destroy(struct drm_plane *plane)
 
 		kfree(psde);
 	}
+}
+
+void sde_plane_destroy_fb(struct drm_plane_state *state)
+{
+	struct sde_plane_state *pstate;
+
+	if (!state) {
+		SDE_ERROR("invalid arg state %d\n", !state);
+		return;
+	}
+
+	pstate = to_sde_plane_state(state);
+
+	if (sde_plane_get_property(pstate, PLANE_PROP_FB_TRANSLATION_MODE) ==
+			SDE_DRM_FB_SEC) {
+		/* remove ref count for frame buffers */
+		if (state->fb) {
+			drm_framebuffer_put(state->fb);
+			state->fb = NULL;
+		}
+	}
+
 }
 
 static void sde_plane_destroy_state(struct drm_plane *plane,

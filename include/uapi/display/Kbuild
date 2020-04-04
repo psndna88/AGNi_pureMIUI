@@ -2,3 +2,4 @@
 
 header-y += media/
 header-y += drm/
+header-y += hdcp/

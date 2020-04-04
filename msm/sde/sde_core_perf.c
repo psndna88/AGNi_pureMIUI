@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  */
 
 #define pr_fmt(fmt)	"[drm:%s:%d] " fmt, __func__, __LINE__
@@ -879,7 +879,7 @@ void sde_core_perf_crtc_update(struct drm_crtc *crtc,
 
 		if ((params_changed &&
 				(new->core_clk_rate > old->core_clk_rate)) ||
-				(!params_changed &&
+				(!params_changed && new->core_clk_rate &&
 				(new->core_clk_rate < old->core_clk_rate))) {
 			old->core_clk_rate = new->core_clk_rate;
 			update_clk = 1;
@@ -1037,11 +1037,18 @@ static ssize_t _sde_core_perf_mode_write(struct file *file,
 
 		ret = sde_power_clk_set_rate(perf->phandle,
 				perf->clk_name, perf->max_core_clk_rate);
-		if (ret)
+		if (ret) {
 			SDE_ERROR("failed to set %s clock rate %llu\n",
 					perf->clk_name,
 					perf->max_core_clk_rate);
-		DRM_INFO("minimum performance mode\n");
+
+			perf->perf_tune.min_core_clk = 0;
+			perf->perf_tune.min_bus_vote = 0;
+			perf_mode = SDE_PERF_MODE_NORMAL;
+		} else {
+			DRM_INFO("minimum performance mode\n");
+		}
+		SDE_EVT32(perf->max_core_clk_rate, ret);
 	} else if (perf_mode == SDE_PERF_MODE_NORMAL) {
 		/* reset the perf tune params to 0 */
 		perf->perf_tune.min_core_clk = 0;

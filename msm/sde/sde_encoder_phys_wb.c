@@ -136,25 +136,6 @@ static void sde_encoder_phys_wb_set_qos_remap(
 	sde_vbif_set_qos_remap(phys_enc->sde_kms, &qos_params);
 }
 
-static u64 _sde_encoder_phys_wb_get_qos_lut(const struct sde_qos_lut_tbl *tbl,
-		u32 total_fl)
-{
-	int i;
-
-	if (!tbl || !tbl->nentry || !tbl->entries)
-		return 0;
-
-	for (i = 0; i < tbl->nentry; i++)
-		if (total_fl <= tbl->entries[i].fl)
-			return tbl->entries[i].lut;
-
-	/* if last fl is zero, use as default */
-	if (!tbl->entries[i-1].fl)
-		return tbl->entries[i-1].lut;
-
-	return 0;
-}
-
 /**
  * sde_encoder_phys_wb_set_qos - set QoS/danger/safe LUTs for writeback
  * @phys_enc:	Pointer to physical encoder
@@ -163,14 +144,14 @@ static void sde_encoder_phys_wb_set_qos(struct sde_encoder_phys *phys_enc)
 {
 	struct sde_encoder_phys_wb *wb_enc;
 	struct sde_hw_wb *hw_wb;
-	struct sde_hw_wb_qos_cfg qos_cfg;
-	struct sde_mdss_cfg *catalog;
+	struct sde_hw_wb_qos_cfg qos_cfg = {0};
+	struct sde_perf_cfg *perf;
+	u32 fps_index = 0, lut_index, index, frame_rate, qos_count;
 
 	if (!phys_enc || !phys_enc->sde_kms || !phys_enc->sde_kms->catalog) {
 		SDE_ERROR("invalid parameter(s)\n");
 		return;
 	}
-	catalog = phys_enc->sde_kms->catalog;
 
 	wb_enc = to_sde_encoder_phys_wb(phys_enc);
 	if (!wb_enc->hw_wb) {
@@ -178,35 +159,38 @@ static void sde_encoder_phys_wb_set_qos(struct sde_encoder_phys *phys_enc)
 		return;
 	}
 
+	perf = &phys_enc->sde_kms->catalog->perf;
+	frame_rate = phys_enc->cached_mode.vrefresh;
+
 	hw_wb = wb_enc->hw_wb;
+	qos_count = perf->qos_refresh_count;
+	while (qos_count && perf->qos_refresh_rate) {
+		if (frame_rate >= perf->qos_refresh_rate[qos_count - 1]) {
+			fps_index = qos_count - 1;
+			break;
+		}
+		qos_count--;
+	}
 
-	memset(&qos_cfg, 0, sizeof(struct sde_hw_wb_qos_cfg));
 	qos_cfg.danger_safe_en = true;
-	qos_cfg.danger_lut =
-		catalog->perf.danger_lut_tbl[SDE_QOS_LUT_USAGE_NRT];
 
 	if (phys_enc->in_clone_mode)
-		qos_cfg.safe_lut = (u32) _sde_encoder_phys_wb_get_qos_lut(
-			&catalog->perf.sfe_lut_tbl[SDE_QOS_LUT_USAGE_CWB], 0);
+		lut_index = SDE_QOS_LUT_USAGE_CWB;
 	else
-		qos_cfg.safe_lut = (u32) _sde_encoder_phys_wb_get_qos_lut(
-			&catalog->perf.sfe_lut_tbl[SDE_QOS_LUT_USAGE_NRT], 0);
+		lut_index = SDE_QOS_LUT_USAGE_NRT;
+	index = (fps_index * SDE_QOS_LUT_USAGE_MAX) + lut_index;
 
-	if (phys_enc->in_clone_mode)
-		qos_cfg.creq_lut = _sde_encoder_phys_wb_get_qos_lut(
-			&catalog->perf.qos_lut_tbl[SDE_QOS_LUT_USAGE_CWB], 0);
-	else
-		qos_cfg.creq_lut = _sde_encoder_phys_wb_get_qos_lut(
-			&catalog->perf.qos_lut_tbl[SDE_QOS_LUT_USAGE_NRT], 0);
+	qos_cfg.danger_lut = perf->danger_lut[index];
+	qos_cfg.safe_lut = (u32) perf->safe_lut[index];
+	qos_cfg.creq_lut = perf->creq_lut[index];
 
-	if (hw_wb->ops.setup_danger_safe_lut)
-		hw_wb->ops.setup_danger_safe_lut(hw_wb, &qos_cfg);
+	SDE_DEBUG("wb_enc:%d hw idx:%d fps:%d mode:%d luts[0x%x,0x%x 0x%llx]\n",
+		DRMID(phys_enc->parent), hw_wb->idx - WB_0,
+		frame_rate, phys_enc->in_clone_mode,
+		qos_cfg.danger_lut, qos_cfg.safe_lut, qos_cfg.creq_lut);
 
-	if (hw_wb->ops.setup_creq_lut)
-		hw_wb->ops.setup_creq_lut(hw_wb, &qos_cfg);
-
-	if (hw_wb->ops.setup_qos_ctrl)
-		hw_wb->ops.setup_qos_ctrl(hw_wb, &qos_cfg);
+	if (hw_wb->ops.setup_qos_lut)
+		hw_wb->ops.setup_qos_lut(hw_wb, &qos_cfg);
 }
 
 /**
@@ -866,11 +850,13 @@ static void _sde_encoder_phys_wb_update_cwb_flush(
 		return;
 	}
 
-	if (hw_ctl->ops.update_bitmask_wb)
-		hw_ctl->ops.update_bitmask_wb(hw_ctl, hw_wb->idx, 1);
+	if (hw_ctl->ops.update_bitmask)
+		hw_ctl->ops.update_bitmask(hw_ctl, SDE_HW_FLUSH_WB,
+				hw_wb->idx, 1);
 
-	if (hw_ctl->ops.update_bitmask_cdm && hw_cdm)
-		hw_ctl->ops.update_bitmask_cdm(hw_ctl, hw_cdm->idx, 1);
+	if (hw_ctl->ops.update_bitmask && hw_cdm)
+		hw_ctl->ops.update_bitmask(hw_ctl, SDE_HW_FLUSH_CDM,
+				hw_cdm->idx, 1);
 
 	if (test_bit(SDE_WB_CWB_CTRL, &hw_wb->caps->features)) {
 		for (i = 0; i < crtc->num_mixers; i++) {
@@ -881,14 +867,15 @@ static void _sde_encoder_phys_wb_update_cwb_flush(
 				hw_wb->ops.program_cwb_ctrl(hw_wb, cwb_idx,
 						src_pp_idx, dspp_out, enable);
 
-			if (hw_ctl->ops.update_bitmask_cwb)
-				hw_ctl->ops.update_bitmask_cwb(hw_ctl,
-						cwb_idx, 1);
+			if (hw_ctl->ops.update_bitmask)
+				hw_ctl->ops.update_bitmask(hw_ctl,
+						SDE_HW_FLUSH_CWB, cwb_idx, 1);
 		}
 
-		if (need_merge && hw_ctl->ops.update_bitmask_merge3d
+		if (need_merge && hw_ctl->ops.update_bitmask
 				&& hw_pp && hw_pp->merge_3d)
-			hw_ctl->ops.update_bitmask_merge3d(hw_ctl,
+			hw_ctl->ops.update_bitmask(hw_ctl,
+					SDE_HW_FLUSH_MERGE_3D,
 					hw_pp->merge_3d->idx, 1);
 	} else {
 		phys_enc->hw_mdptop->ops.set_cwb_ppb_cntl(phys_enc->hw_mdptop,
@@ -930,14 +917,16 @@ static void _sde_encoder_phys_wb_update_flush(struct sde_encoder_phys *phys_enc)
 		return;
 	}
 
-	if (hw_ctl->ops.update_bitmask_wb)
-		hw_ctl->ops.update_bitmask_wb(hw_ctl, hw_wb->idx, 1);
+	if (hw_ctl->ops.update_bitmask)
+		hw_ctl->ops.update_bitmask(hw_ctl, SDE_HW_FLUSH_WB,
+				hw_wb->idx, 1);
 
-	if (hw_ctl->ops.update_bitmask_cdm && hw_cdm)
-		hw_ctl->ops.update_bitmask_cdm(hw_ctl, hw_cdm->idx, 1);
+	if (hw_ctl->ops.update_bitmask && hw_cdm)
+		hw_ctl->ops.update_bitmask(hw_ctl, SDE_HW_FLUSH_CDM,
+				hw_cdm->idx, 1);
 
-	if (hw_ctl->ops.update_bitmask_merge3d && hw_pp && hw_pp->merge_3d)
-		hw_ctl->ops.update_bitmask_merge3d(hw_ctl,
+	if (hw_ctl->ops.update_bitmask && hw_pp && hw_pp->merge_3d)
+		hw_ctl->ops.update_bitmask(hw_ctl, SDE_HW_FLUSH_MERGE_3D,
 				hw_pp->merge_3d->idx, 1);
 
 	if (hw_ctl->ops.get_pending_flush)
@@ -1043,14 +1032,16 @@ static void _sde_encoder_phys_wb_frame_done_helper(void *arg, bool frame_error)
 		event |= SDE_ENCODER_FRAME_EVENT_DONE |
 			SDE_ENCODER_FRAME_EVENT_SIGNAL_RETIRE_FENCE;
 
-		if (!phys_enc->in_clone_mode)
+		if (phys_enc->in_clone_mode)
+			event |= SDE_ENCODER_FRAME_EVENT_CWB_DONE;
+		else
 			event |= SDE_ENCODER_FRAME_EVENT_SIGNAL_RELEASE_FENCE;
 
 		phys_enc->parent_ops.handle_frame_done(phys_enc->parent,
 				phys_enc, event);
 	}
 
-	if (phys_enc->parent_ops.handle_vblank_virt)
+	if (!phys_enc->in_clone_mode && phys_enc->parent_ops.handle_vblank_virt)
 		phys_enc->parent_ops.handle_vblank_virt(phys_enc->parent,
 				phys_enc);
 
@@ -1198,7 +1189,9 @@ static int sde_encoder_phys_wb_frame_timeout(struct sde_encoder_phys *phys_enc)
 		event = SDE_ENCODER_FRAME_EVENT_SIGNAL_RETIRE_FENCE
 			| SDE_ENCODER_FRAME_EVENT_ERROR;
 
-		if (!phys_enc->in_clone_mode)
+		if (phys_enc->in_clone_mode)
+			event |= SDE_ENCODER_FRAME_EVENT_CWB_DONE;
+		else
 			event |= SDE_ENCODER_FRAME_EVENT_SIGNAL_RELEASE_FENCE;
 
 		phys_enc->parent_ops.handle_frame_done(
@@ -1613,6 +1606,8 @@ exit:
 
 	phys_enc->enable_state = SDE_ENC_DISABLED;
 	wb_enc->crtc = NULL;
+	phys_enc->hw_cdm = NULL;
+	phys_enc->hw_ctl = NULL;
 }
 
 /**

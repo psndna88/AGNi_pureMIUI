@@ -88,6 +88,7 @@ static void drm_mode_to_intf_timing_params(
 					vid_enc->base.comp_ratio);
 	}
 
+	timing->poms_align_vsync = phys_enc->poms_align_vsync;
 	timing->height = mode->vdisplay;	/* active height */
 	timing->xres = timing->width;
 	timing->yres = timing->height;
@@ -755,14 +756,13 @@ static void sde_encoder_phys_vid_enable(struct sde_encoder_phys *phys_enc)
 	vid_enc = to_sde_encoder_phys_vid(phys_enc);
 	intf = phys_enc->hw_intf;
 	ctl = phys_enc->hw_ctl;
-	if (!phys_enc->hw_intf || !phys_enc->hw_ctl) {
-		SDE_ERROR("invalid hw_intf %d hw_ctl %d\n",
-				!phys_enc->hw_intf, !phys_enc->hw_ctl);
+	if (!phys_enc->hw_intf || !phys_enc->hw_ctl || !phys_enc->hw_pp) {
+		SDE_ERROR("invalid hw_intf %d hw_ctl %d hw_pp %d\n",
+				!phys_enc->hw_intf, !phys_enc->hw_ctl,
+				!phys_enc->hw_pp);
 		return;
 	}
-	if (!ctl->ops.update_bitmask_intf ||
-		(test_bit(SDE_CTL_ACTIVE_CFG, &ctl->caps->features) &&
-		!ctl->ops.update_bitmask_merge3d)) {
+	if (!ctl->ops.update_bitmask) {
 		SDE_ERROR("invalid hw_ctl ops %d\n", ctl->idx);
 		return;
 	}
@@ -800,16 +800,16 @@ static void sde_encoder_phys_vid_enable(struct sde_encoder_phys *phys_enc)
 		goto skip_flush;
 	}
 
-	ctl->ops.update_bitmask_intf(ctl, intf->idx, 1);
+	ctl->ops.update_bitmask(ctl, SDE_HW_FLUSH_INTF, intf->idx, 1);
 
-	if (ctl->ops.update_bitmask_merge3d && phys_enc->hw_pp->merge_3d)
-		ctl->ops.update_bitmask_merge3d(ctl,
+	if (phys_enc->hw_pp->merge_3d)
+		ctl->ops.update_bitmask(ctl, SDE_HW_FLUSH_MERGE_3D,
 			phys_enc->hw_pp->merge_3d->idx, 1);
 
 	if (phys_enc->hw_intf->cap->type == INTF_DP &&
 		phys_enc->comp_type == MSM_DISPLAY_COMPRESSION_DSC &&
-		phys_enc->comp_ratio && ctl->ops.update_bitmask_periph)
-		ctl->ops.update_bitmask_periph(ctl, intf->idx, 1);
+		phys_enc->comp_ratio)
+		ctl->ops.update_bitmask(ctl, SDE_HW_FLUSH_PERIPH, intf->idx, 1);
 
 skip_flush:
 	SDE_DEBUG_VIDENC(vid_enc, "update pending flush ctl %d intf %d\n",
@@ -1174,6 +1174,33 @@ static int sde_encoder_phys_vid_get_line_count(
 	return phys_enc->hw_intf->ops.get_line_count(phys_enc->hw_intf);
 }
 
+static u32 sde_encoder_phys_vid_get_underrun_line_count(
+		struct sde_encoder_phys *phys_enc)
+{
+	u32 underrun_linecount = 0xebadebad;
+	struct intf_status intf_status = {0};
+
+	if (!phys_enc)
+		return -EINVAL;
+
+	if (!sde_encoder_phys_vid_is_master(phys_enc) || !phys_enc->hw_intf)
+		return -EINVAL;
+
+	if (phys_enc->hw_intf->ops.get_status)
+		phys_enc->hw_intf->ops.get_status(phys_enc->hw_intf,
+			&intf_status);
+
+	if (phys_enc->hw_intf->ops.get_underrun_line_count)
+		underrun_linecount =
+		  phys_enc->hw_intf->ops.get_underrun_line_count(
+			phys_enc->hw_intf);
+
+	SDE_EVT32(DRMID(phys_enc->parent), underrun_linecount,
+		intf_status.frame_count, intf_status.line_count);
+
+	return underrun_linecount;
+}
+
 static int sde_encoder_phys_vid_wait_for_active(
 			struct sde_encoder_phys *phys_enc)
 {
@@ -1268,6 +1295,8 @@ static void sde_encoder_phys_vid_init_ops(struct sde_encoder_phys_ops *ops)
 	ops->wait_dma_trigger = sde_encoder_phys_vid_wait_dma_trigger;
 	ops->wait_for_active = sde_encoder_phys_vid_wait_for_active;
 	ops->prepare_commit = sde_encoder_phys_vid_prepare_for_commit;
+	ops->get_underrun_line_count =
+		sde_encoder_phys_vid_get_underrun_line_count;
 }
 
 struct sde_encoder_phys *sde_encoder_phys_vid_init(

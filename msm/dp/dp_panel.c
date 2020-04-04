@@ -268,13 +268,10 @@ static u8 get_misc_colorimetry_val(struct dp_panel_private *panel,
 	case DRM_MODE_COLORIMETRY_DCI_P3_RGB_THEATER:
 		colorimetry = 0x7;
 		break;
-	case DRM_MODE_DP_COLORIMETRY_SRGB:
-		colorimetry = 0x4;
-		break;
-	case DRM_MODE_DP_COLORIMETRY_RGB_WIDE_GAMUT:
+	case DRM_MODE_COLORIMETRY_RGB_WIDE_FIXED:
 		colorimetry = 0x3;
 		break;
-	case DRM_MODE_DP_COLORIMETRY_SCRGB:
+	case DRM_MODE_COLORIMETRY_RGB_WIDE_FLOAT:
 		colorimetry = 0xb;
 		break;
 	case DRM_MODE_COLORIMETRY_OPRGB:
@@ -1211,7 +1208,7 @@ static void dp_panel_dsc_pclk_param_calc(struct dp_panel *dp_panel,
 		u8 ratio,
 		struct dp_display_mode *dp_mode)
 {
-	int comp_ratio, intf_width;
+	int comp_ratio = 100, intf_width;
 	int slice_per_pkt, slice_per_intf;
 	s64 temp1_fp, temp2_fp;
 	s64 numerator_fp, denominator_fp;
@@ -1219,8 +1216,8 @@ static void dp_panel_dsc_pclk_param_calc(struct dp_panel *dp_panel,
 	u32 dsc_byte_count, temp1, temp2;
 
 	intf_width = dp_mode->timing.h_active;
-	if (!dsc || !dsc->slice_width || !dsc->slice_per_pkt ||
-			 (intf_width < dsc->slice_width))
+	if (!dsc || !dsc->config.slice_width || !dsc->slice_per_pkt ||
+			 (intf_width < dsc->config.slice_width))
 		return;
 
 	slice_per_pkt = dsc->slice_per_pkt;
@@ -1530,6 +1527,18 @@ skip_dpcd_read:
 			drm_dp_bw_code_to_link_rate(dpcd[DP_MAX_LINK_RATE]));
 
 	link_info->num_lanes = dpcd[DP_MAX_LANE_COUNT] & DP_MAX_LANE_COUNT_MASK;
+
+	if (is_link_rate_valid(panel->dp_panel.link_bw_code)) {
+		DP_DEBUG("debug link bandwidth code: 0x%x\n",
+				panel->dp_panel.link_bw_code);
+		link_info->rate = drm_dp_bw_code_to_link_rate(
+				panel->dp_panel.link_bw_code);
+	}
+
+	if (is_lane_count_valid(panel->dp_panel.lane_count)) {
+		DP_DEBUG("debug lane count: %d\n", panel->dp_panel.lane_count);
+		link_info->num_lanes = panel->dp_panel.lane_count;
+	}
 
 	if (multi_func)
 		link_info->num_lanes = min_t(unsigned int,
@@ -1969,12 +1978,7 @@ static void dp_panel_handle_sink_request(struct dp_panel *dp_panel)
 	panel = container_of(dp_panel, struct dp_panel_private, dp_panel);
 
 	if (panel->link->sink_request & DP_TEST_LINK_EDID_READ) {
-		u8 checksum;
-
-		if (dp_panel->edid_ctrl->edid)
-			checksum = sde_get_edid_checksum(dp_panel->edid_ctrl);
-		else
-			checksum = dp_panel->connector->checksum;
+		u8 checksum = sde_get_edid_checksum(dp_panel->edid_ctrl);
 
 		panel->link->send_edid_checksum(panel->link, checksum);
 		panel->link->send_test_response(panel->link);
@@ -2280,11 +2284,6 @@ static int dp_panel_deinit_panel_info(struct dp_panel *dp_panel, u32 flags)
 	struct drm_connector *connector;
 	struct sde_connector_state *c_state;
 
-	if (!dp_panel) {
-		DP_ERR("invalid input\n");
-		return -EINVAL;
-	}
-
 	if (flags & DP_PANEL_SRC_INITIATED_POWER_DOWN) {
 		DP_DEBUG("retain states in src initiated power down request\n");
 		return 0;
@@ -2325,6 +2324,9 @@ static int dp_panel_deinit_panel_info(struct dp_panel *dp_panel, u32 flags)
 
 	memset(&c_state->hdr_meta, 0, sizeof(c_state->hdr_meta));
 	memset(&c_state->dyn_hdr_meta, 0, sizeof(c_state->dyn_hdr_meta));
+
+	dp_panel->link_bw_code = 0;
+	dp_panel->lane_count = 0;
 
 	return rc;
 }
@@ -3009,6 +3011,8 @@ struct dp_panel *dp_panel_get(struct dp_panel_in *in)
 	dp_panel = &panel->dp_panel;
 	dp_panel->max_bw_code = DP_LINK_BW_8_1;
 	dp_panel->spd_enabled = true;
+	dp_panel->link_bw_code = 0;
+	dp_panel->lane_count = 0;
 	memcpy(panel->spd_vendor_name, vendor_name, (sizeof(u8) * 8));
 	memcpy(panel->spd_product_description, product_desc, (sizeof(u8) * 16));
 	dp_panel->connector = in->connector;

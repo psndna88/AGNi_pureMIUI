@@ -37,6 +37,7 @@ struct intf_timing_params {
 	bool compression_en;
 	u32 extra_dto_cycles;	/* for DP only */
 	bool dsc_4hs_merge;	/* DSC 4HS merge */
+	bool poms_align_vsync;	/* poms with vsync aligned */
 };
 
 struct intf_prog_fetch {
@@ -49,6 +50,11 @@ struct intf_status {
 	u8 is_en;		/* interface timing engine is enabled or not */
 	u32 frame_count;	/* frame count since timing engine enabled */
 	u32 line_count;		/* current line count including blanking */
+};
+
+struct intf_tear_status {
+	u32 read_count;		/* frame & line count for tear init value */
+	u32 write_count;	/* frame & line count for tear write */
 };
 
 struct intf_avr_params {
@@ -68,6 +74,8 @@ struct intf_avr_params {
  * @ setup_misr: enables/disables MISR in HW register
  * @ collect_misr: reads and stores MISR data from HW register
  * @ get_line_count: reads current vertical line counter
+ * @ get_underrun_line_count: reads current underrun pixel clock count and
+ *                            converts it into line count
  * @bind_pingpong_blk: enable/disable the connection with pingpong which will
  *                     feed pixels to this interface
  */
@@ -100,6 +108,7 @@ struct sde_hw_intf_ops {
 	 * is used for command mode panels
 	 */
 	u32 (*get_line_count)(struct sde_hw_intf *intf);
+	u32 (*get_underrun_line_count)(struct sde_hw_intf *intf);
 
 	void (*bind_pingpong_blk)(struct sde_hw_intf *intf,
 			bool enable,
@@ -184,6 +193,12 @@ struct sde_hw_intf_ops {
 	 */
 	void (*enable_compressed_input)(struct sde_hw_intf *intf,
 		bool compression_en, bool dsc_4hs_merge);
+
+	/**
+	 * Check the intf tear check status and reset it to start_pos
+	 */
+	int (*check_and_reset_tearcheck)(struct sde_hw_intf *intf,
+			struct intf_tear_status *status);
 };
 
 struct sde_hw_intf {

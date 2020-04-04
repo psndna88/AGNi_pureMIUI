@@ -37,6 +37,7 @@
 #include "sde_wb.h"
 #include "dp_display.h"
 #include "dp_drm.h"
+#include "dp_mst_drm.h"
 
 #include "sde_kms.h"
 #include "sde_core_irq.h"
@@ -601,6 +602,7 @@ static int sde_kms_prepare_secure_transition(struct msm_kms *kms,
 {
 	struct drm_crtc *crtc;
 	struct drm_crtc_state *old_crtc_state;
+	struct drm_plane_state *old_plane_state, *new_plane_state;
 
 	struct drm_plane *plane;
 	struct drm_plane_state *plane_state;
@@ -662,6 +664,9 @@ static int sde_kms_prepare_secure_transition(struct msm_kms *kms,
 		if (ops & SDE_KMS_OPS_CLEANUP_PLANE_FB) {
 			SDE_DEBUG("cleanup planes\n");
 			drm_atomic_helper_cleanup_planes(dev, state);
+			for_each_oldnew_plane_in_state(state, plane,
+					old_plane_state, new_plane_state, i)
+				sde_plane_destroy_fb(old_plane_state);
 		}
 		if (ops & SDE_KMS_OPS_SECURE_STATE_CHANGE) {
 			SDE_DEBUG("secure ctrl\n");
@@ -884,7 +889,12 @@ static void sde_kms_prepare_commit(struct msm_kms *kms,
 			if (encoder->crtc != crtc)
 				continue;
 
-			sde_encoder_prepare_commit(encoder);
+			if (sde_encoder_prepare_commit(encoder) == -ETIMEDOUT) {
+				SDE_ERROR("crtc:%d, initiating hw reset\n",
+						DRMID(crtc));
+				sde_encoder_needs_hw_reset(encoder);
+				sde_crtc_set_needs_hw_reset(crtc);
+			}
 		}
 	}
 
@@ -2522,7 +2532,7 @@ end:
 static void _sde_kms_pm_suspend_idle_helper(struct sde_kms *sde_kms,
 	struct device *dev)
 {
-	int i, ret;
+	int i, ret, crtc_id = 0;
 	struct drm_device *ddev = dev_get_drvdata(dev);
 	struct drm_connector *conn;
 	struct drm_connector_list_iter conn_iter;
@@ -2536,14 +2546,22 @@ static void _sde_kms_pm_suspend_idle_helper(struct sde_kms *sde_kms,
 		if (lp != SDE_MODE_DPMS_LP2)
 			continue;
 
+		if (sde_encoder_in_clone_mode(conn->encoder))
+			continue;
+
 		ret = sde_encoder_wait_for_event(conn->encoder,
 						MSM_ENC_TX_COMPLETE);
-		if (ret && ret != -EWOULDBLOCK)
+		if (ret && ret != -EWOULDBLOCK) {
 			SDE_ERROR(
 				"[conn: %d] wait for commit done returned %d\n",
 				conn->base.id, ret);
-		else if (!ret)
+		} else if (!ret) {
+			crtc_id = drm_crtc_index(conn->state->crtc);
+			if (priv->event_thread[crtc_id].thread)
+				kthread_flush_worker(
+					&priv->event_thread[crtc_id].worker);
 			sde_encoder_idle_request(conn->encoder);
+		}
 	}
 	drm_connector_list_iter_end(&conn_iter);
 
@@ -2622,7 +2640,8 @@ retry:
 		uint64_t lp;
 
 		if (!conn->state || !conn->state->crtc ||
-				conn->dpms != DRM_MODE_DPMS_ON)
+			conn->dpms != DRM_MODE_DPMS_ON ||
+			sde_encoder_in_clone_mode(conn->encoder))
 			continue;
 
 		lp = sde_connector_get_lp(conn);
@@ -2948,6 +2967,8 @@ static void sde_kms_handle_power_event(u32 event_type, void *usr)
 		sde_irq_update(msm_kms, false);
 		sde_kms->first_kickoff = false;
 		_sde_kms_active_override(sde_kms, true);
+		if (!is_sde_rsc_available(SDE_RSC_INDEX))
+			sde_vbif_axi_halt_request(sde_kms);
 	}
 }
 
@@ -2988,7 +3009,7 @@ static int _sde_kms_get_splash_data(struct sde_splash_data *data)
 	int ret = 0;
 	struct device_node *parent, *node, *node1;
 	struct resource r, r1;
-	const char *node_name = "cont_splash_region";
+	const char *node_name = "splash_region";
 	struct sde_splash_mem *mem;
 	bool share_splash_mem = false;
 	int num_displays, num_regions;
@@ -3011,7 +3032,7 @@ static int _sde_kms_get_splash_data(struct sde_splash_data *data)
 		return -EINVAL;
 	}
 
-	node1 = of_find_node_by_name(parent, "disp_rdump_region");
+	node1 = of_find_node_by_name(NULL, "disp_rdump_region");
 	if (!node1)
 		SDE_DEBUG("failed to find disp ramdump memory reservation\n");
 
@@ -3191,11 +3212,6 @@ static int _sde_kms_hw_init_blocks(struct sde_kms *sde_kms,
 {
 	struct sde_rm *rm = NULL;
 	int i, rc = -EINVAL;
-
-	for (i = 0; i < SDE_POWER_HANDLE_DBUS_ID_MAX; i++)
-		sde_power_data_bus_set_quota(&priv->phandle, i,
-			SDE_POWER_HANDLE_CONT_SPLASH_BUS_AB_QUOTA,
-			SDE_POWER_HANDLE_CONT_SPLASH_BUS_IB_QUOTA);
 
 	_sde_kms_core_hw_rev_init(sde_kms);
 
@@ -3407,6 +3423,8 @@ static int sde_kms_hw_init(struct msm_kms *kms)
 	dev->mode_config.max_height = sde_kms->catalog->max_display_height;
 
 	mutex_init(&sde_kms->secure_transition_lock);
+	mutex_init(&sde_kms->vblank_ctl_global_lock);
+
 	atomic_set(&sde_kms->detach_sec_cb, 0);
 	atomic_set(&sde_kms->detach_all_cb, 0);
 

@@ -362,7 +362,8 @@ static int vblank_ctrl_queue_work(struct msm_drm_private *priv,
 	cur_work->enable = enable;
 	cur_work->priv = priv;
 
-	kthread_queue_work(&priv->disp_thread[crtc_id].worker, &cur_work->work);
+	kthread_queue_work(&priv->event_thread[crtc_id].worker,
+						&cur_work->work);
 
 	return 0;
 }
@@ -669,9 +670,10 @@ static int msm_drm_display_thread_create(struct sched_param param,
 	return 0;
 
 }
-static struct msm_kms *_msm_drm_init_helper(struct msm_drm_private *priv,
-	struct drm_device *ddev, struct device *dev,
-	struct platform_device *pdev)
+static struct msm_kms *_msm_drm_component_init_helper(
+		struct msm_drm_private *priv,
+		struct drm_device *ddev, struct device *dev,
+		struct platform_device *pdev)
 {
 	int ret;
 	struct msm_kms *kms;
@@ -722,15 +724,13 @@ static struct msm_kms *_msm_drm_init_helper(struct msm_drm_private *priv,
 	return kms;
 }
 
-static int msm_drm_init(struct device *dev, struct drm_driver *drv)
+static int msm_drm_device_init(struct platform_device *pdev,
+		struct drm_driver *drv)
 {
-	struct platform_device *pdev = to_platform_device(dev);
+	struct device *dev = &pdev->dev;
 	struct drm_device *ddev;
 	struct msm_drm_private *priv;
-	struct msm_kms *kms = NULL;
-	int ret;
-	struct sched_param param = { 0 };
-	struct drm_crtc *crtc;
+	int i, ret;
 
 	ddev = drm_dev_alloc(drv, dev);
 	if (IS_ERR(ddev)) {
@@ -750,16 +750,6 @@ static int msm_drm_init(struct device *dev, struct drm_driver *drv)
 	ddev->dev_private = priv;
 	priv->dev = ddev;
 
-	ret = msm_mdss_init(ddev);
-	if (ret)
-		goto mdss_init_fail;
-
-	priv->wq = alloc_ordered_workqueue("msm_drm", 0);
-	init_waitqueue_head(&priv->pending_crtcs_event);
-
-	INIT_LIST_HEAD(&priv->client_event_list);
-	INIT_LIST_HEAD(&priv->inactive_list);
-
 	ret = sde_power_resource_init(pdev, &priv->phandle);
 	if (ret) {
 		pr_err("sde power resource init failed\n");
@@ -771,6 +761,42 @@ static int msm_drm_init(struct device *dev, struct drm_driver *drv)
 		dev_err(dev, "failed to init sde dbg: %d\n", ret);
 		goto dbg_init_fail;
 	}
+
+	for (i = 0; i < SDE_POWER_HANDLE_DBUS_ID_MAX; i++)
+		sde_power_data_bus_set_quota(&priv->phandle, i,
+			SDE_POWER_HANDLE_CONT_SPLASH_BUS_AB_QUOTA,
+			SDE_POWER_HANDLE_CONT_SPLASH_BUS_IB_QUOTA);
+
+	return ret;
+
+dbg_init_fail:
+	sde_power_resource_deinit(pdev, &priv->phandle);
+power_init_fail:
+priv_alloc_fail:
+	drm_dev_put(ddev);
+	kfree(priv);
+	return ret;
+}
+
+static int msm_drm_component_init(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct drm_device *ddev = platform_get_drvdata(pdev);
+	struct msm_drm_private *priv = ddev->dev_private;
+	struct msm_kms *kms = NULL;
+	int ret;
+	struct sched_param param = { 0 };
+	struct drm_crtc *crtc;
+
+	ret = msm_mdss_init(ddev);
+	if (ret)
+		goto mdss_init_fail;
+
+	priv->wq = alloc_ordered_workqueue("msm_drm", 0);
+	init_waitqueue_head(&priv->pending_crtcs_event);
+
+	INIT_LIST_HEAD(&priv->client_event_list);
+	INIT_LIST_HEAD(&priv->inactive_list);
 
 	/* Bind all our sub-components: */
 	ret = msm_component_bind_all(dev, ddev);
@@ -784,9 +810,9 @@ static int msm_drm_init(struct device *dev, struct drm_driver *drv)
 	ddev->mode_config.funcs = &mode_config_funcs;
 	ddev->mode_config.helper_private = &mode_config_helper_funcs;
 
-	kms = _msm_drm_init_helper(priv, ddev, dev, pdev);
+	kms = _msm_drm_component_init_helper(priv, ddev, dev, pdev);
 	if (IS_ERR_OR_NULL(kms)) {
-		dev_err(dev, "msm_drm_init_helper failed\n");
+		dev_err(dev, "msm_drm_component_init_helper failed\n");
 		goto fail;
 	}
 
@@ -879,15 +905,13 @@ fail:
 	msm_drm_uninit(dev);
 	return ret;
 bind_fail:
-	sde_dbg_destroy();
-dbg_init_fail:
-	sde_power_resource_deinit(pdev, &priv->phandle);
-power_init_fail:
 	msm_mdss_destroy(ddev);
 mdss_init_fail:
-	kfree(priv);
-priv_alloc_fail:
+	sde_dbg_destroy();
+	sde_power_resource_deinit(pdev, &priv->phandle);
 	drm_dev_put(ddev);
+	kfree(priv);
+
 	return ret;
 }
 
@@ -1212,8 +1236,8 @@ static int msm_event_client_count(struct drm_device *dev,
 	if (!locked)
 		spin_lock_irqsave(&dev->event_lock, flag);
 	list_for_each_entry(node, &priv->client_event_list, base.link) {
-		if (node->event.type == req_event->event &&
-			node->info.object_id == req_event->object_id)
+		if (node->event.base.type == req_event->event &&
+			node->event.info.object_id == req_event->object_id)
 			count++;
 	}
 	if (!locked)
@@ -1244,10 +1268,11 @@ static int msm_ioctl_register_event(struct drm_device *dev, void *data,
 	list_for_each_entry(node, &priv->client_event_list, base.link) {
 		if (node->base.file_priv != file)
 			continue;
-		if (node->event.type == req_event->event &&
-			node->info.object_id == req_event->object_id) {
+		if (node->event.base.type == req_event->event &&
+			node->event.info.object_id == req_event->object_id) {
 			DRM_DEBUG("duplicate request for event %x obj id %d\n",
-				node->event.type, node->info.object_id);
+				node->event.base.type,
+				node->event.info.object_id);
 			dup_request = true;
 			break;
 		}
@@ -1262,9 +1287,9 @@ static int msm_ioctl_register_event(struct drm_device *dev, void *data,
 		return -ENOMEM;
 
 	client->base.file_priv = file;
-	client->base.event = &client->event;
-	client->event.type = req_event->event;
-	memcpy(&client->info, req_event, sizeof(client->info));
+	client->base.event = &client->event.base;
+	client->event.base.type = req_event->event;
+	memcpy(&client->event.info, req_event, sizeof(client->event.info));
 
 	/* Get the count of clients that have registered for event.
 	 * Event should be enabled for first client, for subsequent enable
@@ -1314,8 +1339,8 @@ static int msm_ioctl_deregister_event(struct drm_device *dev, void *data,
 	spin_lock_irqsave(&dev->event_lock, flag);
 	list_for_each_entry_safe(node, temp, &priv->client_event_list,
 			base.link) {
-		if (node->event.type == req_event->event &&
-		    node->info.object_id == req_event->object_id &&
+		if (node->event.base.type == req_event->event &&
+		    node->event.info.object_id == req_event->object_id &&
 		    node->base.file_priv == file) {
 			client = node;
 			list_del(&client->base.link);
@@ -1358,8 +1383,8 @@ void msm_mode_object_event_notify(struct drm_mode_object *obj,
 
 	spin_lock_irqsave(&dev->event_lock, flags);
 	list_for_each_entry(node, &priv->client_event_list, base.link) {
-		if (node->event.type != event->type ||
-			obj->id != node->info.object_id)
+		if (node->event.base.type != event->type ||
+			obj->id != node->event.info.object_id)
 			continue;
 		len = event->length + sizeof(struct msm_drm_event);
 		if (node->base.file_priv->event_space < len) {
@@ -1372,14 +1397,15 @@ void msm_mode_object_event_notify(struct drm_mode_object *obj,
 		if (!notify)
 			continue;
 		notify->base.file_priv = node->base.file_priv;
-		notify->base.event = &notify->event;
-		notify->event.type = node->event.type;
-		notify->event.length = event->length +
+		notify->base.event = &notify->event.base;
+		notify->event.base.type = node->event.base.type;
+		notify->event.base.length = event->length +
 					sizeof(struct drm_msm_event_resp);
-		memcpy(&notify->info, &node->info, sizeof(notify->info));
-		memcpy(notify->data, payload, event->length);
+		memcpy(&notify->event.info, &node->event.info,
+			sizeof(notify->event.info));
+		memcpy(notify->event.data, payload, event->length);
 		ret = drm_event_reserve_init_locked(dev, node->base.file_priv,
-			&notify->base, &notify->event);
+			&notify->base, &notify->event.base);
 		if (ret) {
 			kfree(notify);
 			continue;
@@ -1413,16 +1439,18 @@ static int msm_release(struct inode *inode, struct file *filp)
 	list_for_each_entry_safe(node, temp, &tmp_head,
 			base.link) {
 		list_del(&node->base.link);
-		count = msm_event_client_count(dev, &node->info, false);
+		count = msm_event_client_count(dev, &node->event.info, false);
 
 		list_for_each_entry(tmp_node, &tmp_head, base.link) {
-			if (tmp_node->event.type == node->info.event &&
-				tmp_node->info.object_id ==
-					node->info.object_id)
+			if (tmp_node->event.base.type ==
+					node->event.info.event &&
+					tmp_node->event.info.object_id ==
+					node->event.info.object_id)
 				count++;
 		}
 		if (!count)
-			msm_register_event(dev, &node->info, file_priv, false);
+			msm_register_event(dev, &node->event.info, file_priv,
+						false);
 		kfree(node);
 	}
 
@@ -1895,7 +1923,7 @@ int msm_get_mixer_count(struct msm_drm_private *priv,
 
 static int msm_drm_bind(struct device *dev)
 {
-	return msm_drm_init(dev, &msm_driver);
+	return msm_drm_component_init(dev);
 }
 
 static void msm_drm_unbind(struct device *dev)
@@ -1916,6 +1944,10 @@ static int msm_pdev_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct component_match *match = NULL;
+
+	ret = msm_drm_device_init(pdev, &msm_driver);
+	if (ret)
+		return ret;
 
 	ret = add_display_components(&pdev->dev, &match);
 	if (ret)
@@ -2002,7 +2034,7 @@ static void __exit msm_drm_unregister(void)
 	msm_smmu_driver_cleanup();
 }
 
-late_initcall(msm_drm_register);
+module_init(msm_drm_register);
 module_exit(msm_drm_unregister);
 
 MODULE_AUTHOR("Rob Clark <robdclark@gmail.com");

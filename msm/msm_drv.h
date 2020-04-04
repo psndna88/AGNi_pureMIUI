@@ -232,6 +232,32 @@ enum msm_display_compression_type {
 #define MSM_DISPLAY_COMPRESSION_RATIO_MAX 5
 
 /**
+ * enum msm_display_spr_pack_type - sub pixel rendering pack patterns supported
+ * @MSM_DISPLAY_SPR_TYPE_NONE:	        Bypass, no special packing
+ * @MSM_DISPLAY_SPR_TYPE_PENTILE:	pentile pack pattern
+ * @MSM_DISPLAY_SPR_TYPE_RGBW:		RGBW pack pattern
+ * @MSM_DISPLAY_SPR_TYPE_YYGM:		YYGM pack pattern
+ * @MSM_DISPLAY_SPR_TYPE_YYGW:		YYGW pack patterm
+ * @MSM_DISPLAY_SPR_TYPE_MAX:		max and invalid
+ */
+enum msm_display_spr_pack_type {
+	MSM_DISPLAY_SPR_TYPE_NONE,
+	MSM_DISPLAY_SPR_TYPE_PENTILE,
+	MSM_DISPLAY_SPR_TYPE_RGBW,
+	MSM_DISPLAY_SPR_TYPE_YYGM,
+	MSM_DISPLAY_SPR_TYPE_YYGW,
+	MSM_DISPLAY_SPR_TYPE_MAX
+};
+
+static const char *msm_spr_pack_type_str[MSM_DISPLAY_SPR_TYPE_MAX] = {
+	[MSM_DISPLAY_SPR_TYPE_NONE] = "",
+	[MSM_DISPLAY_SPR_TYPE_PENTILE] = "pentile",
+	[MSM_DISPLAY_SPR_TYPE_RGBW] = "rgbw",
+	[MSM_DISPLAY_SPR_TYPE_YYGM] = "yygm",
+	[MSM_DISPLAY_SPR_TYPE_YYGW] = "yygw"
+};
+
+/**
  * enum msm_display_caps - features/capabilities supported by displays
  * @MSM_DISPLAY_CAP_VID_MODE:           Video or "active" mode supported
  * @MSM_DISPLAY_CAP_CMD_MODE:           Command mode supported
@@ -679,6 +705,7 @@ struct msm_resource_caps_info {
  * @display_type:       Enum for type of display
  * @is_te_using_watchdog_timer:  Boolean to indicate watchdog TE is
  *				 used instead of panel TE in cmd mode panels
+ * @poms_align_vsync:   poms with vsync aligned
  * @roi_caps:           Region of interest capability info
  * @qsync_min_fps	Minimum fps supported by Qsync feature
  * @te_source		vsync source pin information
@@ -701,6 +728,7 @@ struct msm_display_info {
 
 	uint32_t display_type;
 	bool is_te_using_watchdog_timer;
+	bool poms_align_vsync;
 	struct msm_roi_caps roi_caps;
 
 	uint32_t qsync_min_fps;
@@ -742,15 +770,10 @@ struct msm_display_conn_params {
  * struct msm_drm_event - defines custom event notification struct
  * @base: base object required for event notification by DRM framework.
  * @event: event object required for event notification by DRM framework.
- * @info: contains information of DRM object for which events has been
- *        requested.
- * @data: memory location which contains response payload for event.
  */
 struct msm_drm_event {
 	struct drm_pending_event base;
-	struct drm_event event;
-	struct drm_msm_event_req info;
-	u8 data[];
+	struct drm_msm_event_resp event;
 };
 
 /* Commit/Event thread specific structure */

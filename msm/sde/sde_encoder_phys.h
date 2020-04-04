@@ -133,6 +133,8 @@ struct sde_encoder_virt_ops {
  *                              unitl transaction is complete.
  * @wait_for_active:		Wait for display scan line to be in active area
  * @setup_vsync_source:		Configure vsync source selection for cmd mode.
+ * @get_underrun_line_count:	Obtain and log current internal vertical line
+ *                              count and underrun line count
  */
 
 struct sde_encoder_phys_ops {
@@ -185,6 +187,7 @@ struct sde_encoder_phys_ops {
 	int (*wait_for_active)(struct sde_encoder_phys *phys);
 	void (*setup_vsync_source)(struct sde_encoder_phys *phys,
 			u32 vsync_source, bool is_dummy);
+	u32 (*get_underrun_line_count)(struct sde_encoder_phys *phys);
 };
 
 /**
@@ -268,6 +271,7 @@ struct sde_encoder_irq {
  * @dsc_extra_pclk_cycle_cnt: Extra pclk cycle count for DSC over DP
  * @dsc_extra_disp_width: Additional display width for DSC over DP
  * @wide_bus_en:	Wide-bus configuraiton
+ * @poms_align_vsync:   poms with vsync aligned
  * @enc_spinlock:	Virtual-Encoder-Wide Spin Lock for IRQ purposes
  * @enable_state:	Enable state tracking
  * @vblank_refcount:	Reference count of vblank request
@@ -314,6 +318,7 @@ struct sde_encoder_phys {
 	u32 dsc_extra_pclk_cycle_cnt;
 	u32 dsc_extra_disp_width;
 	bool wide_bus_en;
+	bool poms_align_vsync;
 	spinlock_t *enc_spinlock;
 	enum sde_enc_enable_state enable_state;
 	struct mutex *vblank_ctl_lock;
@@ -529,12 +534,6 @@ void sde_encoder_phys_setup_cdm(struct sde_encoder_phys *phys_enc,
  */
 void sde_encoder_helper_get_pp_line_count(struct drm_encoder *drm_enc,
 		struct sde_hw_pp_vsync_info *info);
-
-/**
- * sde_encoder_helper_needs_hw_reset - hw reset helper function
- * @drm_enc:    Pointer to drm encoder structure
- */
-void sde_encoder_helper_needs_hw_reset(struct drm_encoder *drm_enc);
 
 /**
  * sde_encoder_helper_trigger_flush - control flush helper function

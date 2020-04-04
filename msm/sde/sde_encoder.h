@@ -45,6 +45,7 @@
 #define SDE_ENCODER_FRAME_EVENT_PANEL_DEAD		BIT(2)
 #define SDE_ENCODER_FRAME_EVENT_SIGNAL_RELEASE_FENCE	BIT(3)
 #define SDE_ENCODER_FRAME_EVENT_SIGNAL_RETIRE_FENCE	BIT(4)
+#define SDE_ENCODER_FRAME_EVENT_CWB_DONE		BIT(5)
 
 #define IDLE_POWERCOLLAPSE_DURATION	(66 - 16/2)
 #define IDLE_POWERCOLLAPSE_IN_EARLY_WAKEUP (200 - 16/2)
@@ -430,7 +431,7 @@ void sde_encoder_destroy(struct drm_encoder *drm_enc);
  *	atomic commit, before any registers are written
  * @drm_enc:    Pointer to previously created drm encoder structure
  */
-void sde_encoder_prepare_commit(struct drm_encoder *drm_enc);
+int sde_encoder_prepare_commit(struct drm_encoder *drm_enc);
 
 /**
  * sde_encoder_update_caps_for_cont_splash - update encoder settings during
@@ -513,6 +514,12 @@ void sde_encoder_control_idle_pc(struct drm_encoder *enc, bool enable);
  * @Return:     true if display in continuous splash
  */
 int sde_encoder_in_cont_splash(struct drm_encoder *enc);
+
+/**
+ * sde_encoder_helper_hw_reset - hw reset helper function
+ * @drm_enc:    Pointer to drm encoder structure
+ */
+void sde_encoder_needs_hw_reset(struct drm_encoder *enc);
 
 /**
  * sde_encoder_uidle_enable - control enable/disable of uidle
