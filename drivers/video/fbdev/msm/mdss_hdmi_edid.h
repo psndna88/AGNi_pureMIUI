@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2017,2019-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -69,6 +69,7 @@ struct hdmi_edid_override_data {
 };
 
 int hdmi_edid_parser(void *edid_ctrl);
+int hdmi_edid_reset_parser(void *edid_ctrl);
 u32 hdmi_edid_get_raw_data(void *edid_ctrl, u8 *buf, u32 size);
 u8 hdmi_edid_get_sink_scaninfo(void *edid_ctrl, u32 resolution);
 bool hdmi_edid_is_dvi_mode(void *input);
