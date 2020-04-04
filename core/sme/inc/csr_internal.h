@@ -539,6 +539,7 @@ struct csr_config {
 	uint8_t allowDFSChannelRoam;
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 	bool isRoamOffloadEnabled;
+	uint32_t roam_triggers;
 	bool enable_disconnect_roam_offload;
 	bool enable_idle_roam;
 	uint32_t idle_roam_rssi_delta;
@@ -649,8 +650,12 @@ struct csr_config {
 #ifdef WLAN_ADAPTIVE_11R
 	bool enable_adaptive_11r;
 #endif
+#if defined(WLAN_SAE_SINGLE_PMK) && defined(WLAN_FEATURE_ROAM_OFFLOAD)
+	bool sae_single_pmk_feature_enabled;
+#endif
 	bool enable_pending_list_req;
 	bool disable_4way_hs_offload;
+	uint32_t sta_disable_roam;
 };
 
 struct csr_channel_powerinfo {
@@ -861,10 +866,32 @@ struct csr_disconnect_stats {
 };
 
 /**
+ * struct sme_pmk_info - SAE Roaming using single pmk info
+ * @pmk: pmk
+ * @pmk_len: pmk length
+ */
+struct sme_pmk_info {
+	uint8_t pmk[SIR_ROAM_SCAN_PSK_SIZE];
+	size_t pmk_len;
+};
+
+/**
+ * struct csr_sae_single_pmk_info - SAE Roaming using single pmk configurations
+ * structure
+ * @sae_single_pmk_ap: Current connected AP has VSIE or not
+ * @pmk_info: pmk information
+ */
+struct csr_sae_single_pmk_info {
+	bool sae_single_pmk_ap;
+	struct sme_pmk_info pmk_info;
+};
+
+/**
  * struct csr_roam_session - CSR per-vdev context
  * @vdev_id: ID of the vdev for which this entry is applicable
  * @is_bcn_recv_start: Allow to process bcn recv indication
  * @beacon_report_do_not_resume: Do not resume the beacon reporting after scan
+ * @single_pmk_info: Details for sae roaming using single pmk
  */
 struct csr_roam_session {
 	uint8_t sessionId;      /* Session ID */
@@ -999,6 +1026,9 @@ struct csr_roam_session {
 	bool discon_in_progress;
 	bool is_adaptive_11r_connection;
 	struct csr_disconnect_stats disconnect_stats;
+#if defined(WLAN_SAE_SINGLE_PMK) && defined(WLAN_FEATURE_ROAM_OFFLOAD)
+	struct csr_sae_single_pmk_info single_pmk_info;
+#endif
 };
 
 struct csr_roamstruct {

@@ -93,6 +93,10 @@
 #include "wma_coex.h"
 #include <ftm_time_sync_ucfg_api.h>
 
+#ifdef WLAN_FEATURE_PKT_CAPTURE
+#include "wlan_pkt_capture_ucfg_api.h"
+#endif
+
 #define WMA_LOG_COMPLETION_TIMER 3000 /* 3 seconds */
 #define WMI_TLV_HEADROOM 128
 
@@ -3186,6 +3190,23 @@ void wma_get_phy_mode_cb(uint8_t chan, uint32_t chan_width, uint32_t *phy_mode)
 	*phy_mode = wma_chan_phy_mode(chan, chan_width, dot11_mode);
 }
 
+#ifdef WLAN_FEATURE_PKT_CAPTURE
+static void
+wma_register_pkt_capture_callbacks(tp_wma_handle wma_handle)
+{
+	struct pkt_capture_callbacks cb_obj = {0};
+
+	cb_obj.get_rmf_status = wma_get_rmf_status;
+
+	ucfg_pkt_capture_register_wma_callbacks(wma_handle->psoc, &cb_obj);
+}
+#else
+static inline void
+wma_register_pkt_capture_callbacks(tp_wma_handle wma_handle)
+{
+}
+#endif
+
 /**
  * wma_open() - Allocate wma context and initialize it.
  * @cds_context:  cds context
@@ -3344,7 +3365,8 @@ QDF_STATUS wma_open(struct wlan_objmgr_psoc *psoc,
 
 	wma_handle->enable_three_way_coex_config_legacy =
 			cds_cfg->enable_three_way_coex_config_legacy;
-
+	wma_handle->bmiss_skip_full_scan =
+			cds_cfg->bmiss_skip_full_scan;
 	/* Register Converged Event handlers */
 	init_deinit_register_tgt_psoc_ev_handlers(psoc);
 
@@ -3769,6 +3791,7 @@ QDF_STATUS wma_open(struct wlan_objmgr_psoc *psoc,
 	pmo_register_get_beacon_interval_callback(wma_handle->psoc,
 						  wma_vdev_get_beacon_interval);
 	wma_cbacks.wma_get_connection_info = wma_get_connection_info;
+	wma_register_pkt_capture_callbacks(wma_handle);
 	qdf_status = policy_mgr_register_wma_cb(wma_handle->psoc, &wma_cbacks);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		WMA_LOGE("Failed to register wma cb with Policy Manager");
@@ -5795,10 +5818,6 @@ static int wma_update_hdd_cfg(tp_wma_handle wma_handle)
 	if (wmi_service_enabled(wma_handle->wmi_handle, wmi_service_nan_vdev))
 		tgt_cfg.nan_seperate_vdev_support = true;
 
-	wlan_res_cfg->nan_separate_iface_support =
-			tgt_cfg.nan_seperate_vdev_support &&
-			wma_get_separate_iface_support(wma_handle);
-
 	ret = wma_handle->tgt_cfg_update_cb(hdd_ctx, &tgt_cfg);
 	if (ret)
 		return -EINVAL;
@@ -6931,6 +6950,10 @@ int wma_rx_service_ready_ext_event(void *handle, uint8_t *event,
 		wlan_res_cfg->time_sync_ftm = false;
 		ucfg_ftm_time_sync_set_enable(wma_handle->psoc, false);
 	}
+
+	if (wmi_service_enabled(wma_handle->wmi_handle, wmi_service_nan_vdev) &&
+	    wma_get_separate_iface_support(wma_handle))
+		wlan_res_cfg->nan_separate_iface_support = true;
 
 	return 0;
 }

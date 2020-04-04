@@ -787,7 +787,7 @@ static void csr_roam_restore_default_config(tpAniSirGlobal mac_ctx,
 	sme_set_roam_config_enable(MAC_HANDLE(mac_ctx), vdev_id, 0);
 
 	triggers.vdev_id = vdev_id;
-	triggers.trigger_bitmap = 0xff;
+	triggers.trigger_bitmap =  mac_ctx->roam.configParam.roam_triggers;
 	sme_debug("Reset roam trigger bitmap to 0x%x", triggers.trigger_bitmap);
 	sme_set_roam_triggers(MAC_HANDLE(mac_ctx), &triggers);
 	sme_roam_control_restore_default_config(MAC_HANDLE(mac_ctx),
@@ -837,14 +837,7 @@ QDF_STATUS csr_neighbor_roam_indicate_disconnect(tpAniSirGlobal pMac,
 	 */
 	csr_roam_free_connect_profile(pPrevProfile);
 	csr_roam_copy_connect_profile(pMac, sessionId, pPrevProfile);
-	/*
-	 * clear the roaming parameters that are per connection.
-	 * For a new connection, they have to be programmed again.
-	 */
-	if (!csr_neighbor_middle_of_roaming(pMac, sessionId)) {
-		csr_roam_reset_roam_params(pMac);
-		csr_roam_restore_default_config(pMac, sessionId);
-	}
+
 	if (NULL != pSession) {
 		roam_session = &pMac->roam.roamSession[sessionId];
 		if (NULL != pSession->pCurRoamProfile && (QDF_STA_MODE !=
@@ -933,6 +926,16 @@ QDF_STATUS csr_neighbor_roam_indicate_disconnect(tpAniSirGlobal pMac,
 			pNeighborRoamInfo->uOsRequestedHandoff = 0;
 		break;
 	}
+
+	/*
+	 * clear the roaming parameters that are per connection.
+	 * For a new connection, they have to be programmed again.
+	 */
+	if (!csr_neighbor_middle_of_roaming(pMac, sessionId)) {
+		csr_roam_reset_roam_params(pMac);
+		csr_roam_restore_default_config(pMac, sessionId);
+	}
+
 	/*Inform the Firmware to STOP Scanning as the host has a disconnect. */
 	if (csr_roam_is_sta_mode(pMac, sessionId)) {
 		csr_roam_offload_scan(pMac, sessionId, ROAM_SCAN_OFFLOAD_STOP,
@@ -1063,9 +1066,14 @@ static void csr_neighbor_roam_info_ctx_init(
 		} else
 #endif
 		{
-			csr_roam_offload_scan(pMac, session_id,
-				ROAM_SCAN_OFFLOAD_START,
-				REASON_CTX_INIT);
+			if (!ngbr_roam_info->b_roam_scan_offload_started)
+				csr_roam_offload_scan(pMac, session_id,
+					ROAM_SCAN_OFFLOAD_START,
+					REASON_CTX_INIT);
+			else
+				csr_roam_offload_scan(pMac, session_id,
+					ROAM_SCAN_OFFLOAD_UPDATE_CFG,
+					REASON_CONNECT);
 
 			if (roam_profile &&
 				roam_profile->supplicant_disabled_roaming) {
@@ -1289,6 +1297,8 @@ QDF_STATUS csr_neighbor_roam_init(tpAniSirGlobal pMac, uint8_t sessionId)
 	pNeighborRoamInfo->cfgParams.full_roam_scan_period =
 		pMac->roam.configParam.neighborRoamConfig.
 		full_roam_scan_period;
+	pNeighborRoamInfo->cfgParams.roam_trigger_bitmap =
+		pMac->roam.configParam.roam_triggers;
 
 	specific_chan_info = &pNeighborRoamInfo->cfgParams.specific_chan_info;
 	specific_chan_info->numOfChannels =

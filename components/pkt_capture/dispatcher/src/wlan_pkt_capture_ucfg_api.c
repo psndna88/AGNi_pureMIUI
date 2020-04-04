@@ -213,6 +213,15 @@ ucfg_pkt_capture_process_mgmt_tx_data(struct wlan_objmgr_pdev *pdev,
 					pkt_capture_mgmt_status_map(status));
 }
 
+void
+ucfg_pkt_capture_mgmt_tx(struct wlan_objmgr_pdev *pdev,
+			 qdf_nbuf_t nbuf,
+			 uint16_t chan_freq,
+			 uint8_t preamble_type)
+{
+	pkt_capture_mgmt_tx(pdev, nbuf, chan_freq, preamble_type);
+}
+
 /**
  * ucfg_process_pktcapture_mgmt_tx_completion(): process mgmt tx completion
  * for pkt capture mode
@@ -267,7 +276,7 @@ int ucfg_pkt_capture_enable_ops(struct wlan_objmgr_vdev *vdev)
 		return -EINVAL;
 	}
 
-	mode = ucfg_pkt_capture_get_mode(psoc);
+	mode = pkt_capture_get_mode(psoc);
 	ret = tx_ops->pkt_capture_send_mode(psoc,
 					    vdev->vdev_objmgr.vdev_id,
 					    mode);
@@ -329,4 +338,25 @@ ucfg_pkt_capture_tx_completion_process(
 				mon_buf_list, TXRX_PROCESS_TYPE_DATA_TX_COMPL,
 				tid, status, pkt_format, bssid, pdev,
 				tx_retry_cnt);
+}
+
+void ucfg_pkt_capture_record_channel(void)
+{
+	pkt_capture_record_channel();
+}
+
+int
+ucfg_pkt_capture_register_wma_callbacks(struct wlan_objmgr_psoc *psoc,
+					struct pkt_capture_callbacks *cb_obj)
+{
+	struct pkt_psoc_priv *psoc_priv = pkt_capture_psoc_get_priv(psoc);
+
+	if (!psoc_priv) {
+		pkt_capture_err("psoc priv is NULL");
+		return -EINVAL;
+	}
+
+	psoc_priv->cb_obj.get_rmf_status = cb_obj->get_rmf_status;
+
+	return 0;
 }

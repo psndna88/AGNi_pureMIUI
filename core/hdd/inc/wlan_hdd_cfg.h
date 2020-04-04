@@ -2058,6 +2058,47 @@ enum hdd_dot11_mode {
 #define CFG_ROAMING_OFFLOAD_MIN                 (0)
 #define CFG_ROAMING_OFFLOAD_MAX                 (1)
 #define CFG_ROAMING_OFFLOAD_DEFAULT             (1)
+
+/*
+ * <ini>
+ * roam_triggers - Bitmap of roaming triggers. Setting this to
+ * zero will disable roaming altogether for the STA interface.
+ * @Min: 0
+ * @Max: 0xFFFFFFFF
+ * @Default: 0xFFFF
+ *
+ * ROAM_TRIGGER_REASON_NONE        BIT 0
+ * ROAM_TRIGGER_REASON_PER         BIT 1
+ * ROAM_TRIGGER_REASON_BMISS       BIT 2
+ * ROAM_TRIGGER_REASON_LOW_RSSI    BIT 3
+ * ROAM_TRIGGER_REASON_HIGH_RSSI   BIT 4
+ * ROAM_TRIGGER_REASON_PERIODIC    BIT 5
+ * ROAM_TRIGGER_REASON_MAWC        BIT 6
+ * ROAM_TRIGGER_REASON_DENSE       BIT 7
+ * ROAM_TRIGGER_REASON_BACKGROUND  BIT 8
+ * ROAM_TRIGGER_REASON_FORCED      BIT 9
+ * ROAM_TRIGGER_REASON_BTM         BIT 10
+ * ROAM_TRIGGER_REASON_UNIT_TEST   BIT 11
+ * ROAM_TRIGGER_REASON_BSS_LOAD    BIT 12
+ * ROAM_TRIGGER_REASON_DEAUTH      BIT 13
+ * ROAM_TRIGGER_REASON_IDLE        BIT 14
+ * ROAM_TRIGGER_REASON_STA_KICKOUT BIT 15
+ * ROAM_TRIGGER_EXT_REASON_MAX     BIT 16
+ * Bitmap corresponds to the enum roam_trigger_reason
+ *
+ * Related: none
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
+#define CFG_ROAM_TRIGGER_BITMAP        "roam_triggers"
+#define CFG_ROAM_TRIGGER_BITMAP_MIN       0
+#define CFG_ROAM_TRIGGER_BITMAP_MAX       0xFFFFFFFF
+#define CFG_ROAM_TRIGGER_BITMAP_DEFAULT   0xFFFF
+
 #endif
 
 /*
@@ -10177,7 +10218,7 @@ enum dot11p_mode {
  * g_sta_sap_scc_on_lte_coex_chan - Allow STA+SAP SCC on LTE coex channel
  * @Min: 0
  * @Max: 1
- * @Default: 0
+ * @Default: 1
  *
  * This ini is used to allow STA+SAP SCC on LTE coex channel
  * 0 - Disallow STA+SAP SCC on LTE coex channel
@@ -10194,7 +10235,7 @@ enum dot11p_mode {
 #define CFG_STA_SAP_SCC_ON_LTE_COEX_CHAN              "g_sta_sap_scc_on_lte_coex_chan"
 #define CFG_STA_SAP_SCC_ON_LTE_COEX_CHAN_MIN          (0)
 #define CFG_STA_SAP_SCC_ON_LTE_COEX_CHAN_MAX          (1)
-#define CFG_STA_SAP_SCC_ON_LTE_COEX_CHAN_DEFAULT      (0)
+#define CFG_STA_SAP_SCC_ON_LTE_COEX_CHAN_DEFAULT      (1)
 
 /*
  * gPNOChannelPrediction will allow user to enable/disable the
@@ -10849,7 +10890,7 @@ enum dot11p_mode {
 #define CFG_DP_PROTO_EVENT_BITMAP		"dp_proto_event_bitmap"
 #define CFG_DP_PROTO_EVENT_BITMAP_MIN		(0x0)
 #define CFG_DP_PROTO_EVENT_BITMAP_MAX		(0x17)
-#define CFG_DP_PROTO_EVENT_BITMAP_DEFAULT	(0x6)
+#define CFG_DP_PROTO_EVENT_BITMAP_DEFAULT	(0x17)
 #endif
 
 /*
@@ -16861,6 +16902,30 @@ enum hdd_external_acs_policy {
 #define CFG_ADAPTIVE_11R_DEFAULT  (false)
 #endif
 
+#if defined(WLAN_SAE_SINGLE_PMK) && defined(WLAN_FEATURE_ROAM_OFFLOAD)
+/*
+ * <ini>
+ * sae_single_pmk_feature_enabled - Enable/disable sae single pmk feature.
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * This INI is to enable/disable SAE Roaming with same PMK/PMKID feature support
+ *
+ * Related: None
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
+#define CFG_SAE_SINGLE_PMK          "sae_single_pmk_feature_enabled"
+#define CFG_SAE_SINGLE_PMK_MIN      (false)
+#define CFG_SAE_SINGLE_PMK_MAX      (true)
+#define CFG_SAE_SINGLE_PMK_DEFAULT  (false)
+#endif
+
 /*
  * <ini>
  * bss_load_trigger_5g_rssi_threshold - Current AP minimum RSSI in dBm below
@@ -17265,7 +17330,7 @@ enum hdd_external_acs_policy {
  */
 #define CFG_SAR_SAFETY_REQ_RESP_TIMEOUT          "gSarSafetyReqRespTimeout"
 #define CFG_SAR_SAFETY_REQ_RESP_TIMEOUT_MIN      (500)
-#define CFG_SAR_SAFETY_REQ_RESP_TIMEOUT_MAX      (3000)
+#define CFG_SAR_SAFETY_REQ_RESP_TIMEOUT_MAX      (1000)
 #define CFG_SAR_SAFETY_REQ_RESP_TIMEOUT_DEFAULT  (1000)
 
 /*
@@ -17291,7 +17356,7 @@ enum hdd_external_acs_policy {
  */
 #define CFG_SAR_SAFETY_REQ_RESP_RETRIES             "gSarSafetyReqRespRetry"
 #define CFG_SAR_SAFETY_REQ_RESP_RETRIES_MIN         (1)
-#define CFG_SAR_SAFETY_REQ_RESP_RETRIES_MAX         (10)
+#define CFG_SAR_SAFETY_REQ_RESP_RETRIES_MAX         (5)
 #define CFG_SAR_SAFETY_REQ_RESP_RETRIES_DEFAULT     (5)
 
 /*
@@ -17495,6 +17560,137 @@ enum hdd_external_acs_policy {
 #define CFG_TIME_SYNC_FTM_ROLE_MIN		(0)
 #define CFG_TIME_SYNC_FTM_ROLE_MAX		(1)
 #define CFG_TIME_SYNC_FTM_ROLE_DEFAULT		(0)
+
+/*
+ * <ini>
+ * bmiss_skip_full_scan - To decide whether firmware does channel map based
+ * partial scan or partial scan followed by full scan in case no candidate is
+ * found in partial scan.
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * 0 : Based on the channel map , firmware does scan to find new AP. if AP is
+ *     not found then it does a full scan on all valid channels.
+ * 1 : Firmware does channel map based partial scan only.
+ *
+ * Related: None
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_BMISS_SKIP_FULL_SCAN               "bmiss_skip_full_scan"
+#define CFG_BMISS_SKIP_FULL_SCAN_MIN           0
+#define CFG_BMISS_SKIP_FULL_SCAN_MAX           1
+#define CFG_BMISS_SKIP_FULL_SCAN_DEFAULT       0
+
+#ifdef WLAN_FEATURE_PERIODIC_STA_STATS
+/*
+ * <ini>
+ * periodic_stats_timer_interval - Print selective stats on this specified
+ *				   interval
+ *
+ * @Min: 0
+ * @Max: 10000
+ * Default: 3000
+ *
+ * This ini is used to specify interval in milliseconds for periodic stats
+ * timer. This timer will print selective stats after expiration of each
+ * interval. STA starts this periodic timer after initial connection or after
+ * roaming is successful. This will be restarted for every
+ * periodic_stats_timer_interval till the periodic_stats_timer_duration expires.
+ *
+ * Supported Feature: STA
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
+#define CFG_PERIODIC_STATS_TIMER_INTERVAL		"periodic_stats_timer_interval"
+#define CFG_PERIODIC_STATS_TIMER_INTERVAL_MIN		(0)
+#define CFG_PERIODIC_STATS_TIMER_INTERVAL_MAX		(10000)
+#define CFG_PERIODIC_STATS_TIMER_INTERVAL_DEFAULT	(3000)
+
+/*
+ * <ini>
+ * periodic_stats_timer_duration - Used as duration for which periodic timer
+ *				   should run
+ *
+ * @Min: 0
+ * @Max: 60000
+ * Default: 30000
+ *
+ * This ini is used as duration in milliseconds for which periodic stats timer
+ * should run. This periodic timer will print selective stats for every
+ * periodic_stats_timer_interval until this duration is reached.
+ *
+ * Supported Feature: STA
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
+#define CFG_PERIODIC_STATS_TIMER_DURATION		"periodic_stats_timer_duration"
+#define CFG_PERIODIC_STATS_TIMER_DURATION_MIN		(0)
+#define CFG_PERIODIC_STATS_TIMER_DURATION_MAX		(60000)
+#define CFG_PERIODIC_STATS_TIMER_DURATION_DEFAULT	(30000)
+
+#endif /* WLAN_FEATURE_PERIODIC_STA_STATS */
+
+/*
+ * <ini>
+ * sta_disable_roam - Disable Roam on sta interface
+ * @Min: 0 - Roam Enabled on sta interface
+ * @Max: 0xffffffff - Roam Disabled on sta interface irrespective
+ * of other interface connections
+ * @Default: 0x00
+ *
+ * Disable roaming on STA iface to avoid audio glitches on p2p and ndp if
+ * those are in connected state. Each bit for "sta_disable_roam" INI represents
+ * an interface for which sta roaming can be disabled.
+ *
+ * LFR3_STA_ROAM_DISABLE_BY_P2P BIT(0)
+ * LFR3_STA_ROAM_DISABLE_BY_NAN BIT(1)
+ *
+ * Related: None.
+ *
+ * Supported Feature: ROAM
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
+#define CFG_STA_DISABLE_ROAM            "sta_disable_roam"
+#define CFG_STA_DISABLE_ROAM_MIN         (0)
+#define CFG_STA_DISABLE_ROAM_MAX         (0XFFFFFFFF)
+#define CFG_STA_DISABLE_ROAM_DEFAULT     (0X00)
+
+/*
+ * <ini>
+ * dfs_chan_ageout_time - Set DFS Channel ageout time(in seconds)
+ * @Min: 0
+ * @Max: 8
+ * Default: 0
+ *
+ * Ageout time is the time upto which DFS channel information such as beacon
+ * found is remembered. So that Firmware performs Active scan instead of the
+ * Passive to reduce the Dwell time.
+ * This ini Parameter used to set ageout timer value from host to FW.
+ * If not set, Firmware will disable ageout time.
+ *
+ * Supported Feature: STA scan in DFS channels
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_DFS_CHAN_AGEOUT_TIME		"dfs_chan_ageout_time"
+#define CFG_DFS_CHAN_AGEOUT_TIME_MIN		(0)
+#define CFG_DFS_CHAN_AGEOUT_TIME_MAX		(8)
+#define CFG_DFS_CHAN_AGEOUT_TIME_DEFAULT	(0)
 
 /*
  * Type declarations
@@ -18006,8 +18202,9 @@ struct hdd_config {
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 	bool isRoamOffloadEnabled;
+	uint32_t roam_triggers;
 #endif
-
+	bool bmiss_skip_full_scan;
 	uint32_t IpaUcTxBufCount;
 	uint32_t IpaUcTxBufSize;
 	uint32_t IpaUcRxIndRingCount;
@@ -18503,6 +18700,9 @@ struct hdd_config {
 #ifdef WLAN_ADAPTIVE_11R
 	bool enable_adaptive_11r;
 #endif
+#if defined(WLAN_SAE_SINGLE_PMK) && defined(WLAN_FEATURE_ROAM_OFFLOAD)
+	bool sae_single_pmk_feature_enabled;
+#endif
 	uint32_t num_vdevs;
 	bool ShortGI80MhzEnable;
 	bool ShortGI160MhzEnable;
@@ -18530,6 +18730,15 @@ struct hdd_config {
 	bool time_sync_ftm_mode;
 	bool time_sync_ftm_role;
 #endif
+	uint32_t sta_disable_roam;
+
+#ifdef WLAN_FEATURE_PERIODIC_STA_STATS
+	/* Periodicity of logging */
+	uint32_t periodic_stats_timer_interval;
+	/* Duration for which periodic logging should be done */
+	uint32_t periodic_stats_timer_duration;
+#endif /* WLAN_FEATURE_PERIODIC_STA_STATS */
+	uint8_t dfs_chan_ageout_time;
 };
 
 #define VAR_OFFSET(_Struct, _Var) (offsetof(_Struct, _Var))
