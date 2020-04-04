@@ -1027,6 +1027,17 @@ ucfg_mlme_is_override_ht20_40_24g(struct wlan_objmgr_psoc *psoc, bool *val);
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 /**
+ * ucfg_mlme_get_roam_disable_config() - Get sta roam disable value
+ * @psoc: pointer to psoc object
+ * @val:  Pointer to bitmap of interfaces for those sta roaming is disabled
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+ucfg_mlme_get_roam_disable_config(struct wlan_objmgr_psoc *psoc,
+				  uint32_t *val);
+
+/**
  * ucfg_mlme_get_roaming_offload() - Get roaming offload setting
  * @psoc: pointer to psoc object
  * @val:  Pointer to enable/disable roaming offload
@@ -1047,7 +1058,27 @@ ucfg_mlme_get_roaming_offload(struct wlan_objmgr_psoc *psoc,
 QDF_STATUS
 ucfg_mlme_set_roaming_offload(struct wlan_objmgr_psoc *psoc,
 			      bool val);
+
+/**
+ * ucfg_mlme_get_roaming_triggers() - Get roaming triggers bitmap
+ * value
+ * @psoc: pointer to psoc object
+ *
+ * Return: Roaming triggers value
+ */
+static inline uint32_t
+ucfg_mlme_get_roaming_triggers(struct wlan_objmgr_psoc *psoc)
+{
+	return wlan_mlme_get_roaming_triggers(psoc);
+}
 #else
+static inline QDF_STATUS
+ucfg_mlme_get_roam_disable_config(struct wlan_objmgr_psoc *psoc,
+				  uint32_t *val)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+
 static inline QDF_STATUS
 ucfg_mlme_get_roaming_offload(struct wlan_objmgr_psoc *psoc,
 			      bool *val)
@@ -1062,6 +1093,12 @@ ucfg_mlme_set_roaming_offload(struct wlan_objmgr_psoc *psoc,
 			      bool val)
 {
 	return QDF_STATUS_SUCCESS;
+}
+
+static inline uint32_t
+ucfg_mlme_get_roaming_triggers(struct wlan_objmgr_psoc *psoc)
+{
+	return 0;
 }
 #endif
 
@@ -4034,4 +4071,39 @@ ucfg_mlme_get_discon_reason_n_from_ap(struct wlan_objmgr_psoc *psoc,
 {
 	mlme_get_discon_reason_n_from_ap(psoc, vdev_id, from_ap, reason_code);
 }
+
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
+/**
+ * ucfg_mlme_get_roam_reason_vsie_status() - Get roam reason vsie is
+ * enabled or disabled
+ * @psoc: pointer to psoc object
+ * @roam_reason_vsie_enabled: pointer to hold value of roam reason vsie
+ *
+ * Return: Success if able to get bcn rpt err vsie value, else failure
+ */
+static inline QDF_STATUS
+ucfg_mlme_get_roam_reason_vsie_status(struct wlan_objmgr_psoc *psoc,
+				      uint8_t *roam_reason_vsie_enabled)
+{
+	return wlan_mlme_get_roam_reason_vsie_status(psoc,
+					roam_reason_vsie_enabled);
+}
+
+/**
+ * ucfg_mlme_set_roam_reason_vsie_status() - Update roam reason vsie status
+ * value with user configured value
+ * @psoc: pointer to psoc object
+ * @roam_reason_vsie_enabled: value of roam reason vsie status
+ *
+ * Return: Success if able to get bcn rpt err vsie value, else failure
+ */
+static inline QDF_STATUS
+ucfg_mlme_set_roam_reason_vsie_status(struct wlan_objmgr_psoc *psoc,
+				      uint8_t roam_reason_vsie_enabled)
+{
+	return wlan_mlme_set_roam_reason_vsie_status(psoc,
+					roam_reason_vsie_enabled);
+}
+
+#endif
 #endif /* _WLAN_MLME_UCFG_API_H_ */

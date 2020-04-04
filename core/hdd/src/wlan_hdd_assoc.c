@@ -72,8 +72,10 @@
 #include "wlan_blm_ucfg_api.h"
 #include "wlan_hdd_sta_info.h"
 #include "wlan_hdd_ftm_time_sync.h"
+#include "wlan_hdd_periodic_sta_stats.h"
 
 #include <ol_defines.h>
+#include "wlan_pkt_capture_ucfg_api.h"
 
 /* These are needed to recognize WPA and RSN suite types */
 #define HDD_WPA_OUI_SIZE 4
@@ -927,7 +929,8 @@ static void hdd_save_bss_info(struct hdd_adapter *adapter,
 	} else {
 		hdd_sta_ctx->conn_info.conn_flag.ht_present = false;
 	}
-	if (roam_info->reassoc)
+	if (roam_info->reassoc ||
+	    hdd_is_roam_sync_in_progress(roam_info))
 		hdd_sta_ctx->conn_info.roam_count++;
 	if (roam_info->hs20vendor_ie.present) {
 		hdd_sta_ctx->conn_info.conn_flag.hs20_present = true;
@@ -1451,6 +1454,9 @@ static void hdd_send_association_event(struct net_device *dev,
 		/* start timer in sta/p2p_cli */
 		hdd_bus_bw_compute_prev_txrx_stats(adapter);
 		hdd_bus_bw_compute_timer_start(hdd_ctx);
+
+		if (ucfg_pkt_capture_get_pktcap_mode(hdd_ctx->psoc))
+			ucfg_pkt_capture_record_channel(adapter->vdev);
 	} else if (eConnectionState_IbssConnected ==    /* IBss Associated */
 			sta_ctx->conn_info.conn_state) {
 		policy_mgr_update_connection_info(hdd_ctx->psoc,
@@ -1719,6 +1725,8 @@ static QDF_STATUS hdd_dis_connect_handler(struct hdd_adapter *adapter,
 				  WLAN_IPA_STA_DISCONNECT,
 				  sta_ctx->conn_info.bssid.bytes);
 
+	hdd_periodic_sta_stats_stop(adapter);
+
 #ifdef FEATURE_WLAN_AUTO_SHUTDOWN
 	wlan_hdd_auto_shutdown_enable(hdd_ctx, true);
 #endif
@@ -1753,6 +1761,20 @@ static QDF_STATUS hdd_dis_connect_handler(struct hdd_adapter *adapter,
 
 	/* indicate 'disconnect' status to wpa_supplicant... */
 	hdd_send_association_event(dev, roam_info);
+
+	/*
+	 * Due to audio share glitch with P2P clients due
+	 * to roam scan on concurrent interface, disable
+	 * roaming if "p2p_disable_roam" ini is enabled.
+	 * Re-enable roaming again once the p2p client
+	 * gets disconnected.
+	 */
+	if (ucfg_p2p_is_roam_config_disabled(hdd_ctx->psoc) &&
+	    adapter->device_mode == QDF_P2P_CLIENT_MODE) {
+		hdd_debug("P2P client disconnected, enable roam");
+		wlan_hdd_enable_roaming(adapter, RSO_CONNECT_START);
+	}
+
 	/* indicate disconnected event to nl80211 */
 	if (roam_status != eCSR_ROAM_IBSS_LEAVE) {
 		/*
@@ -2932,11 +2954,23 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 		}
 
 		/*
-		 * Enable roaming on other STA iface except this one.
-		 * Firmware dosent support connection on one STA iface while
-		 * roaming on other STA iface
+		 * Due to audio share glitch with P2P clients due
+		 * to roam scan on concurrent interface, disable
+		 * roaming if "p2p_disable_roam" ini is enabled.
+		 * Donot re-enable roaming again on other STA interface
+		 * if p2p client connection is active on any vdev.
 		 */
-		wlan_hdd_enable_roaming(adapter, RSO_CONNECT_START);
+		if (ucfg_p2p_is_roam_config_disabled(hdd_ctx->psoc) &&
+		    adapter->device_mode == QDF_P2P_CLIENT_MODE) {
+			hdd_debug("p2p cli active keep roam disabled");
+		} else {
+			/*
+			 * Enable roaming on other STA iface except this one.
+			 * Firmware dosent support connection on one STA iface
+			 * while roaming on other STA iface
+			 */
+			wlan_hdd_enable_roaming(adapter, RSO_CONNECT_START);
+		}
 
 		/* Save the connection info from CSR... */
 		hdd_conn_save_connect_info(adapter, roam_info,
@@ -3523,7 +3557,7 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 			/* inform association failure event to nl80211 */
 			if (eCSR_ROAM_RESULT_ASSOC_FAIL_CON_CHANNEL ==
 			    roam_result) {
-				if (roam_info)
+				if (roam_info && assoc_req && assoc_rsp)
 					hdd_connect_result(dev,
 						roam_info->bssid.bytes,
 						roam_info, assoc_req,
@@ -3543,7 +3577,7 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 						connect_timeout,
 						timeout_reason);
 			} else {
-				if (roam_info)
+				if (roam_info && assoc_req && assoc_rsp)
 					hdd_connect_result(dev,
 						roam_info->bssid.bytes,
 						roam_info, assoc_req,
@@ -3637,6 +3671,8 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 		policy_mgr_check_concurrent_intf_and_restart_sap(hdd_ctx->psoc);
 	}
 
+	hdd_periodic_sta_stats_start(adapter);
+
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -3726,7 +3762,7 @@ static bool roam_remove_ibss_station(struct hdd_adapter *adapter,
 	if (successful) {
 		if (del_idx == 0) {
 			if (hdd_is_valid_mac_address(
-			    sta_ctx->conn_info.peer_macaddr[idx].bytes)) {
+			    sta_ctx->conn_info.peer_macaddr[valid_idx].bytes)) {
 				qdf_copy_macaddr(&sta_ctx->conn_info.
 						 peer_macaddr[0],
 						 &sta_ctx->conn_info.
@@ -4564,9 +4600,9 @@ static void hdd_roam_channel_switch_handler(struct hdd_adapter *adapter,
 		roam_info->chan_info.ch_width;
 	chan_change.chan_params.sec_ch_offset =
 		roam_info->chan_info.sec_ch_offset;
-	chan_change.chan_params.center_freq_seg0 =
+	chan_change.chan_params.mhz_freq_seg0 =
 		roam_info->chan_info.band_center_freq1;
-	chan_change.chan_params.center_freq_seg1 =
+	chan_change.chan_params.mhz_freq_seg1 =
 		roam_info->chan_info.band_center_freq2;
 
 	bss = wlan_hdd_cfg80211_update_bss_db(adapter, roam_info);

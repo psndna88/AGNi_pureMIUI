@@ -136,7 +136,23 @@ ucfg_pkt_capture_process_mgmt_tx_data(struct wlan_objmgr_pdev *pdev,
 				      uint8_t status);
 
 /**
- * ucfg_pkt_capture_mgmt_tx_completion(): process mgmt tx completion
+ * ucfg_pkt_capture_mgmt_tx() - process mgmt tx completion
+ * for pkt capture mode
+ * @pdev: pointer to pdev object
+ * @nbuf: netbuf
+ * @chan_freq: channel freq
+ * @preamble_type: preamble_type
+ *
+ * Return: none
+ */
+void
+ucfg_pkt_capture_mgmt_tx(struct wlan_objmgr_pdev *pdev,
+			 qdf_nbuf_t nbuf,
+			 uint16_t chan_freq,
+			 uint8_t preamble_type);
+
+/**
+ * ucfg_pkt_capture_mgmt_tx_completion() - process mgmt tx completion
  * for pkt capture mode
  * @pdev: pointer to pdev object
  * @desc_id: desc_id
@@ -227,6 +243,7 @@ struct htt_tx_data_hdr_information *ucfg_pkt_capture_tx_get_txcomplete_data_hdr(
  * @pktformat: Frame format
  * @bssid: bssid
  * @pdev: pdev handle
+ * @tx_retry_cnt: tx retry count
  *
  * Return: none
  */
@@ -235,8 +252,28 @@ void ucfg_pkt_capture_tx_completion_process(
 			qdf_nbuf_t mon_buf_list,
 			enum pkt_capture_data_process_type type,
 			uint8_t tid, uint8_t status, bool pkt_format,
-			uint8_t *bssid, htt_pdev_handle pdev);
+			uint8_t *bssid, htt_pdev_handle pdev,
+			uint8_t tx_retry_cnt);
 
+/**
+ * ucfg_pkt_capture_record_channel() - Update Channel Information
+ * for packet capture mode
+ * @vdev: pointer to vdev
+ *
+ * Return: None
+ */
+void ucfg_pkt_capture_record_channel(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_pkt_capture_register_callbacks - ucfg API to register WMA callbacks
+ * @psoc - pointer to psoc object
+ * @cb_obj - Pointer to packet capture callback structure
+ *
+ * Return: status of operation
+ */
+int
+ucfg_pkt_capture_register_wma_callbacks(struct wlan_objmgr_psoc *psoc,
+					struct pkt_capture_callbacks *cb_obj);
 #else
 static inline
 QDF_STATUS ucfg_pkt_capture_init(void)
@@ -302,6 +339,14 @@ ucfg_pkt_capture_process_mgmt_tx_data(
 }
 
 static inline void
+ucfg_pkt_capture_mgmt_tx(struct wlan_objmgr_pdev *pdev,
+			 qdf_nbuf_t nbuf,
+			 uint16_t chan_freq,
+			 uint8_t preamble_type)
+{
+}
+
+static inline void
 ucfg_pkt_capture_mgmt_tx_completion(struct wlan_objmgr_pdev *pdev,
 				    uint32_t desc_id,
 				    uint32_t status,
@@ -349,8 +394,13 @@ ucfg_pkt_capture_tx_completion_process(
 			qdf_nbuf_t mon_buf_list,
 			enum pkt_capture_data_process_type type,
 			uint8_t tid, uint8_t status, bool pkt_format,
-			uint8_t *bssid, htt_pdev_handle pdev)
+			uint8_t *bssid, htt_pdev_handle pdev,
+			uint8_t tx_retry_cnt)
+{
+}
 
+static inline void
+ucfg_pkt_capture_record_channel(struct wlan_objmgr_vdev *vdev)
 {
 }
 #endif /* WLAN_FEATURE_PKT_CAPTURE */

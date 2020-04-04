@@ -64,7 +64,9 @@
 #include "dp_txrx.h"
 #ifdef ENABLE_SMMU_S1_TRANSLATION
 #include "pld_common.h"
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0))
 #include <asm/dma-iommu.h>
+#endif
 #include <linux/iommu.h>
 #endif
 
@@ -87,6 +89,14 @@ static struct __qdf_device g_qdf_ctx;
 static uint8_t cds_multicast_logging;
 
 #ifdef QCA_WIFI_QCA8074
+static inline int
+cds_send_delba(struct cdp_ctrl_objmgr_psoc *psoc,
+	       uint8_t vdev_id, uint8_t *peer_macaddr,
+	       uint8_t tid, uint8_t reason_code)
+{
+	return wma_dp_send_delba_ind(vdev_id, peer_macaddr, tid, reason_code);
+}
+
 static struct ol_if_ops  dp_ol_if_ops = {
 	.peer_set_default_routing = target_if_peer_set_default_routing,
 	.peer_rx_reorder_queue_setup = target_if_peer_rx_reorder_queue_setup,
@@ -95,7 +105,8 @@ static struct ol_if_ops  dp_ol_if_ops = {
 	.lro_hash_config = target_if_lro_hash_config,
 	.rx_invalid_peer = wma_rx_invalid_peer_ind,
 	.is_roam_inprogress = wma_is_roam_in_progress,
-	.get_con_mode = cds_get_conparam
+	.get_con_mode = cds_get_conparam,
+	.send_delba = cds_send_delba,
     /* TODO: Add any other control path calls required to OL_IF/WMA layer */
 };
 #else
@@ -195,7 +206,7 @@ QDF_STATUS cds_init(void)
 
 	gp_cds_context->qdf_ctx = &g_qdf_ctx;
 
-	qdf_register_self_recovery_callback(__cds_trigger_recovery);
+	qdf_register_self_recovery_callback(cds_trigger_recovery_psoc);
 	qdf_register_fw_down_callback(cds_is_fw_down);
 	qdf_register_is_driver_unloading_callback(cds_is_driver_unloading);
 	qdf_register_recovering_state_query_callback(cds_is_driver_recovering);
@@ -1808,6 +1819,8 @@ static void cds_trigger_recovery_work(void *context)
 void __cds_trigger_recovery(enum qdf_hang_reason reason, const char *func,
 			    const uint32_t line)
 {
+	bool is_work_queue_needed = false;
+
 	if (!gp_cds_context) {
 		cds_err("gp_cds_context is null");
 		return;
@@ -1815,7 +1828,11 @@ void __cds_trigger_recovery(enum qdf_hang_reason reason, const char *func,
 
 	gp_cds_context->recovery_reason = reason;
 
-	if (in_atomic()) {
+	if (in_atomic() ||
+	    (QDF_RESUME_TIMEOUT == reason || QDF_SUSPEND_TIMEOUT == reason))
+		is_work_queue_needed = true;
+
+	if (is_work_queue_needed) {
 		__cds_recovery_caller.func = func;
 		__cds_recovery_caller.line = line;
 		qdf_queue_work(0, gp_cds_context->cds_recovery_wq,
@@ -1825,6 +1842,13 @@ void __cds_trigger_recovery(enum qdf_hang_reason reason, const char *func,
 
 	cds_trigger_recovery_handler(func, line);
 }
+
+void cds_trigger_recovery_psoc(void *psoc, enum qdf_hang_reason reason,
+			       const char *func, const uint32_t line)
+{
+	__cds_trigger_recovery(reason, func, line);
+}
+
 
 /**
  * cds_get_recovery_reason() - get self recovery reason

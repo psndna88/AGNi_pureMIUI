@@ -212,14 +212,39 @@ policy_mgr_reg_chan_change_callback(struct wlan_objmgr_psoc *psoc,
 			 pm_ctx->unsafe_channel_count);
 }
 
+QDF_STATUS policy_mgr_init_chan_avoidance(struct wlan_objmgr_psoc *psoc,
+					  qdf_freq_t *chan_freq_list,
+					  uint16_t chan_cnt)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	uint32_t i;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid Context");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	pm_ctx->unsafe_channel_count = chan_cnt >= NUM_CHANNELS ?
+			NUM_CHANNELS : chan_cnt;
+
+	for (i = 0; i < pm_ctx->unsafe_channel_count; i++)
+		pm_ctx->unsafe_channel_list[i] = chan_freq_list[i];
+
+	policy_mgr_debug("Channel list init, received %d avoided channels",
+			 pm_ctx->unsafe_channel_count);
+
+	return QDF_STATUS_SUCCESS;
+}
+
 void policy_mgr_update_with_safe_channel_list(struct wlan_objmgr_psoc *psoc,
 					      uint32_t *pcl_channels,
 					      uint32_t *len,
 					      uint8_t *weight_list,
 					      uint32_t weight_len)
 {
-	uint32_t current_channel_list[QDF_MAX_NUM_CHAN];
-	uint8_t org_weight_list[QDF_MAX_NUM_CHAN];
+	uint32_t current_channel_list[NUM_CHANNELS];
+	uint8_t org_weight_list[NUM_CHANNELS];
 	uint8_t is_unsafe = 1;
 	uint8_t i, j;
 	uint32_t safe_channel_count = 0, current_channel_count = 0;
@@ -233,7 +258,7 @@ void policy_mgr_update_with_safe_channel_list(struct wlan_objmgr_psoc *psoc,
 	}
 
 	if (len) {
-		current_channel_count = QDF_MIN(*len, QDF_MAX_NUM_CHAN);
+		current_channel_count = QDF_MIN(*len, NUM_CHANNELS);
 	} else {
 		policy_mgr_err("invalid number of channel length");
 		return;
@@ -249,7 +274,7 @@ void policy_mgr_update_with_safe_channel_list(struct wlan_objmgr_psoc *psoc,
 	qdf_mem_zero(pcl_channels,
 		     current_channel_count * sizeof(*pcl_channels));
 
-	qdf_mem_copy(org_weight_list, weight_list, QDF_MAX_NUM_CHAN);
+	qdf_mem_copy(org_weight_list, weight_list, NUM_CHANNELS);
 	qdf_mem_zero(weight_list, weight_len);
 
 	policy_mgr_get_sta_sap_scc_lte_coex_chnl(psoc, &scc_on_lte_coex);
@@ -313,12 +338,12 @@ static QDF_STATUS policy_mgr_modify_pcl_based_on_dnbs(
 						uint32_t *pcl_len_org)
 {
 	uint32_t i, pcl_len = 0;
-	uint32_t pcl_list[QDF_MAX_NUM_CHAN];
-	uint8_t weight_list[QDF_MAX_NUM_CHAN];
+	uint32_t pcl_list[NUM_CHANNELS];
+	uint8_t weight_list[NUM_CHANNELS];
 	bool ok;
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
 
-	if (*pcl_len_org > QDF_MAX_NUM_CHAN) {
+	if (*pcl_len_org > NUM_CHANNELS) {
 		policy_mgr_err("Invalid PCL List Length %d", *pcl_len_org);
 		return status;
 	}
@@ -444,7 +469,7 @@ static QDF_STATUS policy_mgr_modify_sap_pcl_based_on_dfs(
 		policy_mgr_err("Invalid Context");
 		return QDF_STATUS_E_FAILURE;
 	}
-	if (*pcl_len_org > QDF_MAX_NUM_CHAN) {
+	if (*pcl_len_org > NUM_CHANNELS) {
 		policy_mgr_err("Invalid PCL List Length %d", *pcl_len_org);
 		return QDF_STATUS_E_FAILURE;
 	}
@@ -479,8 +504,8 @@ static QDF_STATUS policy_mgr_modify_sap_pcl_based_on_nol(
 		uint32_t *pcl_len_org)
 {
 	uint32_t i, pcl_len = 0;
-	uint32_t pcl_list[QDF_MAX_NUM_CHAN];
-	uint8_t weight_list[QDF_MAX_NUM_CHAN];
+	uint32_t pcl_list[NUM_CHANNELS];
+	uint8_t weight_list[NUM_CHANNELS];
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
 
 	pm_ctx = policy_mgr_get_context(psoc);
@@ -488,7 +513,7 @@ static QDF_STATUS policy_mgr_modify_sap_pcl_based_on_nol(
 		policy_mgr_err("Invalid Context");
 		return QDF_STATUS_E_FAILURE;
 	}
-	if (*pcl_len_org > QDF_MAX_NUM_CHAN) {
+	if (*pcl_len_org > NUM_CHANNELS) {
 		policy_mgr_err("Invalid PCL List Length %d", *pcl_len_org);
 		return QDF_STATUS_E_FAILURE;
 	}
@@ -517,8 +542,8 @@ policy_mgr_modify_pcl_based_on_srd(struct wlan_objmgr_psoc *psoc,
 				   uint32_t *pcl_len_org)
 {
 	uint32_t i, pcl_len = 0;
-	uint32_t pcl_list[QDF_MAX_NUM_CHAN];
-	uint8_t weight_list[QDF_MAX_NUM_CHAN];
+	uint32_t pcl_list[NUM_CHANNELS];
+	uint8_t weight_list[NUM_CHANNELS];
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
 	bool is_etsi13_srd_chan_allowed_in_mas_mode = true;
 
@@ -533,7 +558,7 @@ policy_mgr_modify_pcl_based_on_srd(struct wlan_objmgr_psoc *psoc,
 	if (is_etsi13_srd_chan_allowed_in_mas_mode)
 		return QDF_STATUS_SUCCESS;
 
-	if (*pcl_len_org > QDF_MAX_NUM_CHAN) {
+	if (*pcl_len_org > NUM_CHANNELS) {
 		policy_mgr_err("Invalid PCL List Length %d", *pcl_len_org);
 		return QDF_STATUS_E_FAILURE;
 	}
@@ -678,13 +703,23 @@ static enum policy_mgr_pcl_type policy_mgr_get_pcl_4_port(
 {
 	enum policy_mgr_three_connection_mode fourth_index = 0;
 	enum policy_mgr_pcl_type pcl;
+	enum policy_mgr_con_mode pm_mode;
 
 	/* Will be enhanced for other types of 4 port conc (NaN etc.)
 	 * in future.
 	 */
-	if (mode != PM_STA_MODE && mode != PM_SAP_MODE &&
-	    mode != PM_P2P_GO_MODE) {
-		policy_mgr_err("Can't start 4th port if not STA, SAP");
+	if (!policy_mgr_is_hw_dbs_capable(psoc)) {
+		policy_mgr_err("Can't find index for 4th port pcl table for non dbs capable");
+		return PM_MAX_PCL_TYPE;
+	}
+
+	/* SAP and P2P Go have same result in 4th port pcl table */
+	if (mode == PM_SAP_MODE || mode == PM_P2P_GO_MODE) {
+		pm_mode = PM_SAP_MODE;
+	} else if (mode == PM_STA_MODE) {
+		pm_mode = PM_STA_MODE;
+	} else {
+		policy_mgr_err("Can't start 4th port of type: %d", mode);
 		return PM_MAX_PCL_TYPE;
 	}
 
@@ -696,14 +731,9 @@ static enum policy_mgr_pcl_type policy_mgr_get_pcl_4_port(
 	}
 	policy_mgr_debug("Index for 4th port pcl table: %d", fourth_index);
 
-	if (policy_mgr_is_hw_dbs_capable(psoc) == true) {
-		pcl = fourth_connection_pcl_dbs_table
-			[fourth_index][mode][pref];
-		return pcl;
-	}
-	policy_mgr_err("Can't find index for 4th port pcl table for non dbs capable");
+	pcl = fourth_connection_pcl_dbs_table[fourth_index][pm_mode][pref];
 
-	return PM_MAX_PCL_TYPE;
+	return pcl;
 }
 #else
 static inline enum policy_mgr_pcl_type policy_mgr_get_pcl_4_port(
@@ -1955,8 +1985,8 @@ policy_mgr_get_nondfs_preferred_channel(struct wlan_objmgr_psoc *psoc,
 					enum policy_mgr_con_mode mode,
 					bool for_existing_conn)
 {
-	uint32_t pcl_channels[QDF_MAX_NUM_CHAN];
-	uint8_t pcl_weight[QDF_MAX_NUM_CHAN];
+	uint32_t pcl_channels[NUM_CHANNELS];
+	uint8_t pcl_weight[NUM_CHANNELS];
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
 
 	/*
@@ -2031,7 +2061,7 @@ QDF_STATUS policy_mgr_get_valid_chans_from_range(
 		struct wlan_objmgr_psoc *psoc, uint32_t *ch_freq_list,
 		uint32_t *ch_cnt, enum policy_mgr_con_mode mode)
 {
-	uint8_t ch_weight_list[QDF_MAX_NUM_CHAN] = {0};
+	uint8_t ch_weight_list[NUM_CHANNELS] = {0};
 	uint32_t ch_weight_len;
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
 	size_t chan_index = 0;
@@ -2193,8 +2223,8 @@ QDF_STATUS policy_mgr_modify_sap_pcl_based_on_mandatory_channel(
 
 	for (i = 0; i < *pcl_len_org; i++) {
 		found = false;
-		if (i >= QDF_MAX_NUM_CHAN) {
-			policy_mgr_debug("index is exceeding QDF_MAX_NUM_CHAN");
+		if (i >= NUM_CHANNELS) {
+			policy_mgr_debug("index is exceeding NUM_CHANNELS");
 			break;
 		}
 		for (j = 0; j < pm_ctx->sap_mandatory_channels_len; j++) {
@@ -2204,7 +2234,7 @@ QDF_STATUS policy_mgr_modify_sap_pcl_based_on_mandatory_channel(
 				break;
 			}
 		}
-		if (found && (pcl_len < QDF_MAX_NUM_CHAN)) {
+		if (found && (pcl_len < NUM_CHANNELS)) {
 			pcl_list_org[pcl_len] = pcl_list_org[i];
 			weight_list_org[pcl_len++] = weight_list_org[i];
 		}
@@ -2285,7 +2315,7 @@ QDF_STATUS policy_mgr_get_valid_chan_weights(struct wlan_objmgr_psoc *psoc,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	qdf_mem_set(weight->weighed_valid_list, QDF_MAX_NUM_CHAN,
+	qdf_mem_set(weight->weighed_valid_list, NUM_CHANNELS,
 		    WEIGHT_OF_DISALLOWED_CHANNELS);
 	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
 	if (policy_mgr_mode_specific_connection_count(
@@ -2360,8 +2390,8 @@ uint32_t policy_mgr_get_alternate_channel_for_sap(
 	struct wlan_objmgr_psoc *psoc, uint8_t sap_vdev_id,
 	uint32_t sap_ch_freq)
 {
-	uint32_t pcl_channels[QDF_MAX_NUM_CHAN];
-	uint8_t pcl_weight[QDF_MAX_NUM_CHAN];
+	uint32_t pcl_channels[NUM_CHANNELS];
+	uint8_t pcl_weight[NUM_CHANNELS];
 	uint32_t ch_freq = 0;
 	uint32_t pcl_len = 0;
 	struct policy_mgr_conc_connection_info info;

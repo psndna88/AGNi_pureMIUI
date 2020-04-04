@@ -112,6 +112,7 @@
 
 #define HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME 0x40      /* Bit 6 will be used to control BD rate for Management frames */
 #define HAL_USE_PEER_STA_REQUESTED_MASK   0x80  /* bit 7 will be used to control frames for p2p interface */
+#define HAL_USE_PMF   0x20
 
 #define LIM_DOS_PROTECTION_TIME 1000 //1000ms
 #define LIM_MIN_RSSI 0 /* 0dbm */
@@ -1142,11 +1143,42 @@ typedef enum sHalBitVal         /* For Bit operations */
 	eHAL_SET
 } tHalBitVal;
 
+/**
+ * lim_send_addba_response_frame(): Send ADDBA response action frame to peer
+ * @mac_ctx: mac context
+ * @peer_mac: Peer MAC address
+ * @tid: TID for which addba response is being sent
+ * @session: PE session entry
+ * @addba_extn_present: ADDBA extension present flag
+ * @amsdu_support: amsdu in ampdu support
+ * @is_wep: protected bit in fc
+ *
+ * This function is called when ADDBA request is successful. ADDBA response is
+ * setup by calling addba_response_setup API and frame is then sent out OTA.
+ *
+ * Return: QDF_STATUS
+ */
 QDF_STATUS lim_send_addba_response_frame(struct mac_context *mac_ctx,
 					 tSirMacAddr peer_mac, uint16_t tid,
 					 struct pe_session *session,
 					 uint8_t addba_extn_present,
-					 uint8_t amsdu_support);
+					 uint8_t amsdu_support, uint8_t is_wep);
+
+/**
+ * lim_send_delba_action_frame() - Send delba to peer
+ * @mac_ctx: mac context
+ * @vdev_id: vdev id
+ * @peer_macaddr: Peer mac addr
+ * @tid: Tid number
+ * @reason_code: reason code
+ *
+ * Return: 0 for success, non-zero for failure
+ */
+QDF_STATUS lim_send_delba_action_frame(struct mac_context *mac_ctx,
+				       uint8_t vdev_id,
+				       uint8_t *peer_macaddr, uint8_t tid,
+				       uint8_t reason_code);
+
 /**
  * lim_process_join_failure_timeout() - This function is called to process
  * JoinFailureTimeout

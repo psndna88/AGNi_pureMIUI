@@ -51,6 +51,7 @@
 #include <cdp_txrx_cmn.h>
 #include <cdp_txrx_peer_ops.h>
 #include "dot11f.h"
+#include "wlan_p2p_cfg_api.h"
 
 static last_processed_msg rrm_link_action_frm;
 
@@ -1660,6 +1661,11 @@ static void lim_process_addba_req(struct mac_context *mac_ctx, uint8_t *rx_pkt_i
 		pe_warn("warning: unpack addba Req(0x%08x, %d bytes)",
 			status, frame_len);
 	}
+	pe_debug("token %d tid %d timeout %d buff_size %d ssn %d",
+		 addba_req->DialogToken.token, addba_req->addba_param_set.tid,
+		 addba_req->ba_timeout.timeout,
+		 addba_req->addba_param_set.buff_size,
+		 addba_req->ba_start_seq_ctrl.ssn);
 
 	qdf_status = cdp_addba_requestprocess(
 					soc, mac_hdr->sa,
@@ -1676,7 +1682,8 @@ static void lim_process_addba_req(struct mac_context *mac_ctx, uint8_t *rx_pkt_i
 			addba_req->addba_param_set.tid,
 			session,
 			addba_req->addba_extn_element.present,
-			addba_req->addba_param_set.amsdu_supp);
+			addba_req->addba_param_set.amsdu_supp,
+			mac_hdr->fc.wep);
 		if (qdf_status != QDF_STATUS_SUCCESS) {
 			pe_err("Failed to send addba response frame");
 			cdp_addba_resp_tx_completion(
@@ -1911,6 +1918,15 @@ void lim_process_action_frame(struct mac_context *mac_ctx,
 		case WNM_BSS_TM_QUERY:
 		case WNM_BSS_TM_REQUEST:
 		case WNM_BSS_TM_RESPONSE:
+			if (cfg_p2p_is_roam_config_disabled(mac_ctx->psoc) &&
+			    session && LIM_IS_STA_ROLE(session) &&
+			    (policy_mgr_mode_specific_connection_count(
+				mac_ctx->psoc, PM_P2P_CLIENT_MODE, NULL) ||
+			     policy_mgr_mode_specific_connection_count(
+				mac_ctx->psoc, PM_P2P_GO_MODE, NULL))) {
+				pe_debug("p2p session active drop BTM frame");
+				break;
+			}
 		case WNM_NOTIF_REQUEST:
 		case WNM_NOTIF_RESPONSE:
 			rssi = WMA_GET_RX_RSSI_NORMALIZED(rx_pkt_info);

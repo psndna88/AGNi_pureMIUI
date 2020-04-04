@@ -831,6 +831,11 @@ QDF_STATUS mlme_update_tgt_he_caps_in_cfg(struct wlan_objmgr_psoc *psoc,
 		     HE_MAX_PPET_SIZE);
 
 	mlme_obj->cfg.he_caps.he_cap_orig = mlme_obj->cfg.he_caps.dot11_he_cap;
+	mlme_obj->cfg.he_caps.he_mcs_12_13_supp_2g =
+				wma_cfg->he_mcs_12_13_supp_2g;
+	mlme_obj->cfg.he_caps.he_mcs_12_13_supp_5g =
+				wma_cfg->he_mcs_12_13_supp_5g;
+
 	return status;
 }
 #endif
@@ -3570,6 +3575,8 @@ char *mlme_get_roam_trigger_str(uint32_t roam_scan_trigger)
 		return "DEAUTH RECEIVED";
 	case WMI_ROAM_TRIGGER_REASON_IDLE:
 		return "IDLE STATE SCAN";
+	case WMI_ROAM_TRIGGER_REASON_STA_KICKOUT:
+		return "STA KICKOUT";
 	case WMI_ROAM_TRIGGER_REASON_NONE:
 		return "NONE";
 	default:
@@ -3671,7 +3678,7 @@ void wlan_mlme_clear_sae_single_pmk_info(struct wlan_objmgr_vdev *vdev,
 					 struct mlme_pmk_info *pmk_recv)
 {
 	struct mlme_legacy_priv *mlme_priv;
-	struct wlan_mlme_sae_single_pmk sae_single_pmk;
+	struct wlan_mlme_sae_single_pmk *sae_single_pmk;
 
 	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
 	if (!mlme_priv) {
@@ -3679,22 +3686,22 @@ void wlan_mlme_clear_sae_single_pmk_info(struct wlan_objmgr_vdev *vdev,
 		return;
 	}
 
-	sae_single_pmk = mlme_priv->mlme_roam.sae_single_pmk;
+	sae_single_pmk = &mlme_priv->mlme_roam.sae_single_pmk;
 
 	if (!pmk_recv) {
 		/* Process flush pmk cmd */
 		mlme_legacy_debug("Flush sae_single_pmk info");
-		qdf_mem_zero(&sae_single_pmk.pmk_info,
-			     sizeof(sae_single_pmk.pmk_info));
-	} else if (pmk_recv->pmk_len != sae_single_pmk.pmk_info.pmk_len) {
+		qdf_mem_zero(&sae_single_pmk->pmk_info,
+			     sizeof(sae_single_pmk->pmk_info));
+	} else if (pmk_recv->pmk_len != sae_single_pmk->pmk_info.pmk_len) {
 		mlme_legacy_debug("Invalid pmk len");
 		return;
-	} else if (!qdf_mem_cmp(&sae_single_pmk.pmk_info.pmk, pmk_recv->pmk,
+	} else if (!qdf_mem_cmp(&sae_single_pmk->pmk_info.pmk, pmk_recv->pmk,
 		   pmk_recv->pmk_len)) {
 			/* Process delete pmk cmd */
 			mlme_legacy_debug("Clear sae_single_pmk info");
-			qdf_mem_zero(&sae_single_pmk.pmk_info,
-				     sizeof(sae_single_pmk.pmk_info));
+			qdf_mem_zero(&sae_single_pmk->pmk_info,
+				     sizeof(sae_single_pmk->pmk_info));
 	}
 }
 #endif
@@ -3752,6 +3759,20 @@ char *mlme_get_roam_fail_reason_str(uint32_t result)
 		return "M4 frame dropped internally";
 	case WMI_ROAM_FAIL_REASON_EAPOL_M4_NO_ACK:
 		return "No ACK for M4 frame";
+	case WMI_ROAM_FAIL_REASON_NO_SCAN_FOR_FINAL_BMISS:
+		return "No scan on final BMISS";
+	case WMI_ROAM_FAIL_REASON_DISCONNECT:
+		return "Disconnect received during handoff";
+	case WMI_ROAM_FAIL_REASON_SYNC:
+		return "Previous roam sync pending";
+	case WMI_ROAM_FAIL_REASON_SAE_INVALID_PMKID:
+		return "Reason assoc reject - invalid PMKID";
+	case WMI_ROAM_FAIL_REASON_SAE_PREAUTH_TIMEOUT:
+		return "SAE preauth timed out";
+	case WMI_ROAM_FAIL_REASON_SAE_PREAUTH_FAIL:
+		return "SAE preauth failed";
+	case WMI_ROAM_FAIL_REASON_UNABLE_TO_START_ROAM_HO:
+		return "Start handoff failed- internal error";
 	default:
 		return "UNKNOWN";
 	}
@@ -3820,4 +3841,67 @@ bool wlan_mlme_get_peer_unmap_conf(struct wlan_objmgr_psoc *psoc)
 		return false;
 
 	return mlme_obj->cfg.gen.enable_peer_unmap_conf_support;
+}
+
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
+QDF_STATUS
+wlan_mlme_get_roam_reason_vsie_status(struct wlan_objmgr_psoc *psoc,
+				      uint8_t *roam_reason_vsie_enable)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj) {
+		*roam_reason_vsie_enable =
+			cfg_default(CFG_ENABLE_ROAM_REASON_VSIE);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	*roam_reason_vsie_enable = mlme_obj->cfg.lfr.enable_roam_reason_vsie;
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+wlan_mlme_set_roam_reason_vsie_status(struct wlan_objmgr_psoc *psoc,
+				      uint8_t roam_reason_vsie_enable)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_FAILURE;
+
+	mlme_obj->cfg.lfr.enable_roam_reason_vsie = roam_reason_vsie_enable;
+	return QDF_STATUS_SUCCESS;
+}
+
+uint32_t wlan_mlme_get_roaming_triggers(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return cfg_default(CFG_ROAM_TRIGGER_BITMAP);
+
+	return mlme_obj->cfg.lfr.roam_trigger_bitmap;
+}
+#endif
+
+QDF_STATUS
+wlan_mlme_get_dfs_chan_ageout_time(struct wlan_objmgr_psoc *psoc,
+				   uint8_t *dfs_chan_ageout_time)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+
+	if (!mlme_obj) {
+		*dfs_chan_ageout_time =
+			cfg_default(CFG_DFS_CHAN_AGEOUT_TIME);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	*dfs_chan_ageout_time = mlme_obj->cfg.gen.dfs_chan_ageout_time;
+
+	return QDF_STATUS_SUCCESS;
 }

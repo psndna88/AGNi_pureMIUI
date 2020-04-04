@@ -352,10 +352,11 @@ lim_send_probe_req_mgmt_frame(struct mac_context *mac_ctx,
 	}
 	/* Add qcn_ie only if qcn ie is not present in additional_ie */
 	if (!qcn_ie)
-		populate_dot11f_qcn_ie(mac_ctx, &pr.qcn_ie, QCN_IE_ATTR_ID_ALL);
+		populate_dot11f_qcn_ie(mac_ctx, pesession,
+				       &pr.qcn_ie, QCN_IE_ATTR_ID_ALL);
 	else
-		populate_dot11f_qcn_ie(mac_ctx, &pr.qcn_ie,
-				       QCN_IE_ATTR_ID_VHT_MCS11);
+		populate_dot11f_qcn_ie(mac_ctx, pesession,
+				       &pr.qcn_ie, QCN_IE_ATTR_ID_VHT_MCS11);
 
 	/*
 	 * Extcap IE now support variable length, merge Extcap IE from addn_ie
@@ -852,7 +853,7 @@ lim_send_probe_rsp_mgmt_frame(struct mac_context *mac_ctx,
 			      addn_ie_len, p2p_ie, noa_ie, total_noalen,
 			      noa_stream, noalen);
 
-	if (wlan_reg_is_5ghz_ch_freq(pe_session->curr_op_freq) ||
+	if (!wlan_reg_is_24ghz_ch_freq(pe_session->curr_op_freq) ||
 	    pe_session->opmode == QDF_P2P_CLIENT_MODE ||
 	    pe_session->opmode == QDF_P2P_GO_MODE)
 		tx_flag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
@@ -1060,7 +1061,7 @@ lim_send_addts_req_action_frame(struct mac_context *mac,
 	pe_debug("Sending an Add TS Request frame to");
 	lim_print_mac_addr(mac, peerMacAddr, LOGD);
 
-	if (wlan_reg_is_5ghz_ch_freq(pe_session->curr_op_freq) ||
+	if (!wlan_reg_is_24ghz_ch_freq(pe_session->curr_op_freq) ||
 	    pe_session->opmode == QDF_P2P_CLIENT_MODE ||
 	    pe_session->opmode == QDF_P2P_GO_MODE)
 		txFlag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
@@ -1374,7 +1375,7 @@ lim_send_assoc_rsp_mgmt_frame(
 			populate_dot11f_vht_operation(mac_ctx, pe_session,
 					&frm.vendor_vht_ie.VHTOperation);
 			is_vht = true;
-			populate_dot11f_qcn_ie(mac_ctx, &frm.qcn_ie,
+			populate_dot11f_qcn_ie(mac_ctx, pe_session, &frm.qcn_ie,
 					       QCN_IE_ATTR_ID_ALL);
 		}
 		populate_dot11f_ext_cap(mac_ctx, is_vht, &frm.ExtCap,
@@ -1541,7 +1542,7 @@ lim_send_assoc_rsp_mgmt_frame(
 			     sta->mlmStaContext.owe_ie,
 			     sta->mlmStaContext.owe_ie_len);
 
-	if (wlan_reg_is_5ghz_ch_freq(pe_session->curr_op_freq) ||
+	if (!wlan_reg_is_24ghz_ch_freq(pe_session->curr_op_freq) ||
 	    pe_session->opmode == QDF_P2P_CLIENT_MODE ||
 	    pe_session->opmode == QDF_P2P_GO_MODE)
 		tx_flag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
@@ -1698,7 +1699,7 @@ lim_send_delts_req_action_frame(struct mac_context *mac,
 	pe_debug("Sending DELTS REQ (size %d) to ", nBytes);
 	lim_print_mac_addr(mac, pMacHdr->da, LOGD);
 
-	if (wlan_reg_is_5ghz_ch_freq(pe_session->curr_op_freq) ||
+	if (!wlan_reg_is_24ghz_ch_freq(pe_session->curr_op_freq) ||
 	    pe_session->opmode == QDF_P2P_CLIENT_MODE ||
 	    pe_session->opmode == QDF_P2P_GO_MODE)
 		txFlag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
@@ -2088,7 +2089,8 @@ lim_send_assoc_req_mgmt_frame(struct mac_context *mac_ctx,
 		populate_dot11f_ext_cap(mac_ctx, vht_enabled,
 				&frm->ExtCap, pe_session);
 
-	populate_dot11f_qcn_ie(mac_ctx, &frm->qcn_ie, QCN_IE_ATTR_ID_ALL);
+	populate_dot11f_qcn_ie(mac_ctx, pe_session,
+			       &frm->qcn_ie, QCN_IE_ATTR_ID_ALL);
 
 	if (lim_is_session_he_capable(pe_session)) {
 		pe_debug("Populate HE IEs");
@@ -2400,7 +2402,7 @@ lim_send_assoc_req_mgmt_frame(struct mac_context *mac_ctx,
 		pe_session->assocReqLen = payload;
 	}
 
-	if (wlan_reg_is_5ghz_ch_freq(pe_session->curr_op_freq) ||
+	if (!wlan_reg_is_24ghz_ch_freq(pe_session->curr_op_freq) ||
 	    pe_session->opmode == QDF_P2P_CLIENT_MODE ||
 	    pe_session->opmode == QDF_P2P_GO_MODE)
 		tx_flag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
@@ -2842,7 +2844,7 @@ alloc_packet:
 	    (!wlan_reg_is_24ghz_ch_freq(
 	     session->ftPEContext.pFTPreAuthReq->pre_auth_channel_freq)))
 		tx_flag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
-	else if (wlan_reg_is_5ghz_ch_freq(session->curr_op_freq) ||
+	else if (!wlan_reg_is_24ghz_ch_freq(session->curr_op_freq) ||
 		 session->opmode == QDF_P2P_CLIENT_MODE ||
 		 session->opmode == QDF_P2P_GO_MODE)
 		tx_flag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
@@ -3281,7 +3283,7 @@ lim_send_disassoc_mgmt_frame(struct mac_context *mac,
 		     QDF_MAC_ADDR_ARRAY(pMacHdr->da),
 		     QDF_MAC_ADDR_ARRAY(pe_session->self_mac_addr));
 
-	if (wlan_reg_is_5ghz_ch_freq(pe_session->curr_op_freq) ||
+	if (!wlan_reg_is_24ghz_ch_freq(pe_session->curr_op_freq) ||
 	    pe_session->opmode == QDF_P2P_CLIENT_MODE ||
 	    pe_session->opmode == QDF_P2P_GO_MODE)
 		txFlag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
@@ -3469,7 +3471,7 @@ lim_send_deauth_mgmt_frame(struct mac_context *mac,
 		     QDF_MAC_ADDR_ARRAY(pMacHdr->da),
 		     QDF_MAC_ADDR_ARRAY(pe_session->self_mac_addr));
 
-	if (wlan_reg_is_5ghz_ch_freq(pe_session->curr_op_freq) ||
+	if (!wlan_reg_is_24ghz_ch_freq(pe_session->curr_op_freq) ||
 	    pe_session->opmode == QDF_P2P_CLIENT_MODE ||
 	    pe_session->opmode == QDF_P2P_GO_MODE)
 		txFlag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
@@ -3899,7 +3901,7 @@ lim_send_channel_switch_mgmt_frame(struct mac_context *mac,
 			nStatus);
 	}
 
-	if (wlan_reg_is_5ghz_ch_freq(pe_session->curr_op_freq) ||
+	if (!wlan_reg_is_24ghz_ch_freq(pe_session->curr_op_freq) ||
 	    pe_session->opmode == QDF_P2P_CLIENT_MODE ||
 	    pe_session->opmode == QDF_P2P_GO_MODE)
 		txFlag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
@@ -4038,7 +4040,7 @@ lim_send_extended_chan_switch_action_frame(struct mac_context *mac_ctx,
 		 status);
 	}
 
-	if (wlan_reg_is_5ghz_ch_freq(session_entry->curr_op_freq) ||
+	if (!wlan_reg_is_24ghz_ch_freq(session_entry->curr_op_freq) ||
 	    session_entry->opmode == QDF_P2P_CLIENT_MODE ||
 	    session_entry->opmode == QDF_P2P_GO_MODE)
 		txFlag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
@@ -4190,7 +4192,7 @@ lim_p2p_oper_chan_change_confirm_action_frame(struct mac_context *mac_ctx,
 		 status);
 	}
 
-	if (wlan_reg_is_5ghz_ch_freq(session_entry->curr_op_freq) ||
+	if (!wlan_reg_is_24ghz_ch_freq(session_entry->curr_op_freq) ||
 	    session_entry->opmode == QDF_P2P_CLIENT_MODE ||
 	    session_entry->opmode == QDF_P2P_GO_MODE) {
 		tx_flag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
@@ -4325,7 +4327,7 @@ lim_send_neighbor_report_request_frame(struct mac_context *mac,
 	pe_debug("Sending a Neighbor Report Request to");
 	lim_print_mac_addr(mac, peer, LOGD);
 
-	if (wlan_reg_is_5ghz_ch_freq(pe_session->curr_op_freq) ||
+	if (!wlan_reg_is_24ghz_ch_freq(pe_session->curr_op_freq) ||
 	    pe_session->opmode == QDF_P2P_CLIENT_MODE ||
 	    pe_session->opmode == QDF_P2P_GO_MODE)
 		txFlag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
@@ -4452,7 +4454,7 @@ lim_send_link_report_action_frame(struct mac_context *mac,
 
 	pe_warn("RRM: Sending Link Report to %pM on vdev[%d]", peer, vdev_id);
 
-	if (wlan_reg_is_5ghz_ch_freq(pe_session->curr_op_freq) ||
+	if (!wlan_reg_is_24ghz_ch_freq(pe_session->curr_op_freq) ||
 	    pe_session->opmode == QDF_P2P_CLIENT_MODE ||
 	    pe_session->opmode == QDF_P2P_GO_MODE)
 		txFlag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
@@ -4627,7 +4629,7 @@ lim_send_radio_measure_report_action_frame(struct mac_context *mac,
 		     dialog_token, frm->num_MeasurementReport,
 		     is_last_report, num_report, peer);
 
-	if (wlan_reg_is_5ghz_ch_freq(pe_session->curr_op_freq) ||
+	if (!wlan_reg_is_24ghz_ch_freq(pe_session->curr_op_freq) ||
 	    pe_session->opmode == QDF_P2P_CLIENT_MODE ||
 	    pe_session->opmode == QDF_P2P_GO_MODE)
 		txFlag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
@@ -4756,7 +4758,7 @@ QDF_STATUS lim_send_sa_query_request_frame(struct mac_context *mac, uint8_t *tra
 	pe_debug("Sending an SA Query Request from ");
 	lim_print_mac_addr(mac, pe_session->self_mac_addr, LOGD);
 
-	if (wlan_reg_is_5ghz_ch_freq(pe_session->curr_op_freq) ||
+	if (!wlan_reg_is_24ghz_ch_freq(pe_session->curr_op_freq) ||
 	    pe_session->opmode == QDF_P2P_CLIENT_MODE ||
 	    pe_session->opmode == QDF_P2P_GO_MODE)
 		txFlag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
@@ -4884,7 +4886,7 @@ QDF_STATUS lim_send_sa_query_response_frame(struct mac_context *mac,
 	pe_debug("Sending a SA Query Response to");
 	lim_print_mac_addr(mac, peer, LOGD);
 
-	if (wlan_reg_is_5ghz_ch_freq(pe_session->curr_op_freq) ||
+	if (!wlan_reg_is_24ghz_ch_freq(pe_session->curr_op_freq) ||
 	    pe_session->opmode == QDF_P2P_CLIENT_MODE ||
 	    pe_session->opmode == QDF_P2P_GO_MODE)
 		txFlag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
@@ -4926,24 +4928,10 @@ returnAfterError:
 #define IS_PE_SESSION_HE_MODE(_session) false
 #endif
 
-/**
- * lim_send_addba_response_frame(): Send ADDBA response action frame to peer
- * @mac_ctx: mac context
- * @peer_mac: Peer MAC address
- * @tid: TID for which addba response is being sent
- * @session: PE session entry
- * @addba_extn_present: ADDBA extension present flag
- * @amsdu_support: amsdu in ampdu support
- *
- * This function is called when ADDBA request is successful. ADDBA response is
- * setup by calling addba_response_setup API and frame is then sent out OTA.
- *
- * Return: QDF_STATUS
- */
 QDF_STATUS lim_send_addba_response_frame(struct mac_context *mac_ctx,
 		tSirMacAddr peer_mac, uint16_t tid,
 		struct pe_session *session, uint8_t addba_extn_present,
-		uint8_t amsdu_support)
+		uint8_t amsdu_support, uint8_t is_wep)
 {
 
 	tDot11faddba_rsp frm;
@@ -4980,12 +4968,10 @@ QDF_STATUS lim_send_addba_response_frame(struct mac_context *mac_ctx,
 	}
 	frm.addba_param_set.tid = tid;
 
-	if (lim_is_session_he_capable(session)) {
-		sta_ds = dph_lookup_hash_entry(mac_ctx, peer_mac, &aid,
-					       &session->dph.dphHashTable);
-		if (sta_ds)
-			he_cap = lim_is_sta_he_capable(sta_ds);
-	}
+	sta_ds = dph_lookup_hash_entry(mac_ctx, peer_mac, &aid,
+				       &session->dph.dphHashTable);
+	if (sta_ds && lim_is_session_he_capable(session))
+		he_cap = lim_is_sta_he_capable(sta_ds);
 
 	if (he_cap)
 		frm.addba_param_set.buff_size = MAX_BA_BUFF_SIZE;
@@ -5006,7 +4992,7 @@ QDF_STATUS lim_send_addba_response_frame(struct mac_context *mac_ctx,
 	} else if (!session->active_ba_64_session) {
 		session->active_ba_64_session = true;
 	}
-	if (frm.addba_param_set.buff_size > buff_size) {
+	if (buff_size && (frm.addba_param_set.buff_size > buff_size)) {
 		pe_debug("buff size: %d larger than peer's capability: %d",
 			 frm.addba_param_set.buff_size, buff_size);
 		frm.addba_param_set.buff_size = buff_size;
@@ -5016,7 +5002,7 @@ QDF_STATUS lim_send_addba_response_frame(struct mac_context *mac_ctx,
 	if (mac_ctx->is_usr_cfg_amsdu_enabled &&
 	    ((IS_PE_SESSION_HE_MODE(session) &&
 	      WLAN_REG_IS_24GHZ_CH_FREQ(session->curr_op_freq)) ||
-	     WLAN_REG_IS_5GHZ_CH_FREQ(session->curr_op_freq)))
+	     !WLAN_REG_IS_24GHZ_CH_FREQ(session->curr_op_freq)))
 		frm.addba_param_set.amsdu_supp = amsdu_support;
 	else
 		frm.addba_param_set.amsdu_supp = 0;
@@ -5038,9 +5024,10 @@ QDF_STATUS lim_send_addba_response_frame(struct mac_context *mac_ctx,
 
 	pe_debug("Sending a ADDBA Response from %pM to %pM",
 		session->self_mac_addr, peer_mac);
-	pe_debug("tid: %d, dialog_token: %d, status: %d, buff_size: %d",
-		tid, frm.DialogToken.token, frm.Status.status,
-		frm.addba_param_set.buff_size);
+	pe_debug("tid %d dialog_token %d status %d buff_size %d amsdu_supp %d",
+		 tid, frm.DialogToken.token, frm.Status.status,
+		 frm.addba_param_set.buff_size,
+		 frm.addba_param_set.amsdu_supp);
 	pe_debug("addba_extn %d he_capable %d no_frag %d he_frag %d",
 		addba_extn_present,
 		lim_is_session_he_capable(session),
@@ -5079,6 +5066,11 @@ QDF_STATUS lim_send_addba_response_frame(struct mac_context *mac_ctx,
 	 */
 	lim_set_protected_bit(mac_ctx, session, peer_mac, mgmt_hdr);
 
+	if (is_wep && sta_ds && sta_ds->staType == STA_ENTRY_NDI_PEER) {
+		mgmt_hdr->fc.wep = 1;
+		tx_flag |= HAL_USE_PMF;
+	}
+
 	status = dot11f_pack_addba_rsp(mac_ctx, &frm,
 			frame_ptr + sizeof(tSirMacMgmtHdr), payload_size,
 			&payload_size);
@@ -5094,7 +5086,7 @@ QDF_STATUS lim_send_addba_response_frame(struct mac_context *mac_ctx,
 	}
 
 
-	if (wlan_reg_is_5ghz_ch_freq(session->curr_op_freq) ||
+	if (!wlan_reg_is_24ghz_ch_freq(session->curr_op_freq) ||
 	    session->opmode == QDF_P2P_CLIENT_MODE ||
 	    session->opmode == QDF_P2P_GO_MODE)
 		tx_flag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
@@ -5121,6 +5113,165 @@ QDF_STATUS lim_send_addba_response_frame(struct mac_context *mac_ctx,
 
 error_addba_rsp:
 	cds_packet_free((void *)pkt_ptr);
+	return qdf_status;
+}
+
+/**
+ * lim_delba_tx_complete_cnf() - Confirmation for Delba OTA
+ * @context: pointer to global mac
+ * @buf: netbuf of Del BA frame
+ * @tx_complete : Sent status
+ * @params; tx completion params
+ *
+ * Return: This returns QDF_STATUS
+ */
+static QDF_STATUS lim_delba_tx_complete_cnf(void *context,
+					    qdf_nbuf_t buf,
+					    uint32_t tx_complete,
+					    void *params)
+{
+	struct mac_context *mac_ctx = (struct mac_context *)context;
+	tSirMacMgmtHdr *mac_hdr;
+	struct sDot11fdelba_req frm;
+	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
+	uint32_t frame_len;
+	QDF_STATUS status;
+	uint8_t *data;
+	struct wmi_mgmt_params *mgmt_params = (struct wmi_mgmt_params *)params;
+
+	if (!mgmt_params || !mac_ctx || !buf || !soc) {
+		pe_err("delba tx cnf invalid parameters");
+		goto error;
+	}
+	data = qdf_nbuf_data(buf);
+	if (!data) {
+		pe_err("Delba frame is NULL");
+		goto error;
+	}
+
+	mac_hdr = (tSirMacMgmtHdr *)data;
+	qdf_mem_zero((void *)&frm, sizeof(struct sDot11fdelba_req));
+	frame_len = sizeof(frm);
+	status = dot11f_unpack_delba_req(mac_ctx, (uint8_t *)data +
+					 sizeof(*mac_hdr), frame_len,
+					 &frm, false);
+	if (DOT11F_FAILED(status)) {
+		pe_err("Failed to unpack and parse delba (0x%08x, %d bytes)",
+		       status, frame_len);
+		goto error;
+	}
+	pe_debug("delba ota done vdev %d %pM tid %d desc_id %d status %d",
+		 mgmt_params->vdev_id, mac_hdr->da, frm.delba_param_set.tid,
+		 mgmt_params->desc_id, tx_complete);
+	cdp_delba_tx_completion(soc, mac_hdr->da, mgmt_params->vdev_id,
+				frm.delba_param_set.tid, tx_complete);
+
+error:
+	if (buf)
+		qdf_nbuf_free(buf);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS lim_send_delba_action_frame(struct mac_context *mac_ctx,
+				       uint8_t vdev_id, uint8_t *peer_macaddr,
+				       uint8_t tid, uint8_t reason_code)
+{
+	struct pe_session *session;
+	struct sDot11fdelba_req frm;
+	QDF_STATUS qdf_status;
+	tpSirMacMgmtHdr mgmt_hdr;
+	uint32_t num_bytes, payload_size = 0;
+	uint32_t status;
+	void *pkt_ptr = NULL;
+	uint8_t *frame_ptr;
+	uint8_t tx_flag = 0;
+
+	session = pe_find_session_by_vdev_id(mac_ctx, vdev_id);
+	if (!session) {
+		pe_debug("delba invalid vdev id %d ", vdev_id);
+		return QDF_STATUS_E_INVAL;
+	}
+	pe_debug("send delba vdev %d %pM tid %d reason %d", vdev_id,
+		 peer_macaddr, tid, reason_code);
+	qdf_mem_zero((uint8_t *)&frm, sizeof(frm));
+	frm.Category.category = ACTION_CATEGORY_BACK;
+	frm.Action.action = DELBA;
+	frm.delba_param_set.initiator = 0;
+	frm.delba_param_set.tid = tid;
+	frm.Reason.code = reason_code;
+
+	status = dot11f_get_packed_delba_req_size(mac_ctx, &frm, &payload_size);
+	if (DOT11F_FAILED(status)) {
+		pe_err("Failed to calculate the packed size for a DELBA(0x%08x).",
+		       status);
+		/* We'll fall back on the worst case scenario: */
+		payload_size = sizeof(struct sDot11fdelba_req);
+	} else if (DOT11F_WARNED(status)) {
+		pe_warn("Warnings in calculating the packed size for a DELBA (0x%08x).",
+			status);
+	}
+	num_bytes = payload_size + sizeof(*mgmt_hdr);
+	qdf_status = cds_packet_alloc(num_bytes, (void **)&frame_ptr,
+				      (void **)&pkt_ptr);
+	if (!QDF_IS_STATUS_SUCCESS(qdf_status) || !pkt_ptr) {
+		pe_err("Failed to allocate %d bytes for a DELBA",
+		       num_bytes);
+		return QDF_STATUS_E_FAILURE;
+	}
+	qdf_mem_zero(frame_ptr, num_bytes);
+
+	lim_populate_mac_header(mac_ctx, frame_ptr, SIR_MAC_MGMT_FRAME,
+				SIR_MAC_MGMT_ACTION, peer_macaddr,
+				session->self_mac_addr);
+
+	/* Update A3 with the BSSID */
+	mgmt_hdr = (tpSirMacMgmtHdr)frame_ptr;
+	sir_copy_mac_addr(mgmt_hdr->bssId, session->bssId);
+
+	/* DEL is a robust mgmt action frame,
+	 * set the "protect" (aka WEP) bit in the FC
+	 */
+	lim_set_protected_bit(mac_ctx, session, peer_macaddr, mgmt_hdr);
+
+	status = dot11f_pack_delba_req(mac_ctx, &frm,
+				       frame_ptr + sizeof(tSirMacMgmtHdr),
+				       payload_size, &payload_size);
+	if (DOT11F_FAILED(status)) {
+		pe_err("Failed to pack a DELBA (0x%08x)",
+		       status);
+		qdf_status = QDF_STATUS_E_FAILURE;
+		goto error_delba;
+	} else if (DOT11F_WARNED(status)) {
+		pe_warn("There were warnings while packing DELBA (0x%08x)",
+			status);
+	}
+	if (wlan_reg_is_5ghz_ch_freq(session->curr_op_freq) ||
+	    wlan_reg_is_6ghz_chan_freq(session->curr_op_freq) ||
+	    session->opmode == QDF_P2P_CLIENT_MODE ||
+	    session->opmode == QDF_P2P_GO_MODE)
+		tx_flag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
+	MTRACE(qdf_trace(QDF_MODULE_ID_PE, TRACE_CODE_TX_MGMT,
+			 session->peSessionId, mgmt_hdr->fc.subType));
+	qdf_status = wma_tx_frameWithTxComplete(mac_ctx, pkt_ptr,
+						(uint16_t)num_bytes,
+						TXRX_FRM_802_11_MGMT,
+						ANI_TXDIR_TODS, 7,
+						NULL, frame_ptr,
+						lim_delba_tx_complete_cnf,
+						tx_flag, vdev_id,
+						false, 0, RATEID_DEFAULT);
+	if (qdf_status != QDF_STATUS_SUCCESS) {
+		pe_err("delba wma_tx_frame FAILED! Status [%d]", qdf_status);
+		return qdf_status;
+	} else {
+		return QDF_STATUS_SUCCESS;
+	}
+
+error_delba:
+	if (pkt_ptr)
+		cds_packet_free((void *)pkt_ptr);
+
 	return qdf_status;
 }
 

@@ -72,6 +72,7 @@ typedef const enum policy_mgr_conc_next_action
  * @CSA_REASON_LTE_COEX: LTE coex.
  * @CSA_REASON_CONCURRENT_NAN_EVENT: NAN concurrency.
  * @CSA_REASON_BAND_RESTRICTED: band disabled or re-enabled
+ * @CSA_REASON_DCS: DCS
  *
  */
 enum sap_csa_reason_code {
@@ -84,7 +85,8 @@ enum sap_csa_reason_code {
 	CSA_REASON_UNSAFE_CHANNEL,
 	CSA_REASON_LTE_COEX,
 	CSA_REASON_CONCURRENT_NAN_EVENT,
-	CSA_REASON_BAND_RESTRICTED
+	CSA_REASON_BAND_RESTRICTED,
+	CSA_REASON_DCS,
 };
 
 /**
@@ -634,6 +636,18 @@ QDF_STATUS policy_mgr_get_pcl(struct wlan_objmgr_psoc *psoc,
 			      enum policy_mgr_con_mode mode,
 			      uint32_t *pcl_channels, uint32_t *len,
 			      uint8_t *pcl_weight, uint32_t weight_len);
+
+/**
+ * policy_mgr_init_chan_avoidance() - init channel avoidance in policy manager.
+ * @psoc: PSOC object information
+ * @chan_freq_list: channel frequency list
+ * @chan_cnt: channel count
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS policy_mgr_init_chan_avoidance(struct wlan_objmgr_psoc *psoc,
+					  qdf_freq_t *chan_freq_list,
+					  uint16_t chan_cnt);
 
 /**
  * policy_mgr_update_with_safe_channel_list() - provides the safe
@@ -1320,6 +1334,7 @@ struct policy_mgr_sme_cbacks {
  * progress
  * @wlan_hdd_set_sap_csa_reason: Set the sap csa reason in cases like NAN.
  * @hdd_get_ap_6ghz_capable: get ap vdev 6ghz capable info from hdd ap adapter.
+ * @wlan_hdd_indicate_active_ndp_cnt: indicate active ndp cnt to hdd
  */
 struct policy_mgr_hdd_cbacks {
 	void (*sap_restart_chan_switch_cb)(struct wlan_objmgr_psoc *psoc,
@@ -1340,6 +1355,8 @@ struct policy_mgr_hdd_cbacks {
 					    uint8_t vdev_id, uint8_t reason);
 	uint32_t (*hdd_get_ap_6ghz_capable)(struct wlan_objmgr_psoc *psoc,
 					    uint8_t vdev_id);
+	void (*wlan_hdd_indicate_active_ndp_cnt)(struct wlan_objmgr_psoc *psoc,
+						 uint8_t vdev_id, uint8_t cnt);
 };
 
 
@@ -1877,6 +1894,33 @@ bool policy_mgr_is_any_mode_active_on_band_along_with_session(
 QDF_STATUS policy_mgr_get_chan_by_session_id(struct wlan_objmgr_psoc *psoc,
 					     uint8_t session_id,
 					     uint32_t *ch_freq);
+
+/**
+ * policy_mgr_get_sap_go_count_on_mac() - Provide the count of sap and go on
+ * given mac
+ * @psoc: PSOC object information
+ * @list: To provide the vdev_id of the satisfied sap and go (optional)
+ * @mac_id: MAC ID
+ *
+ * This function provides the count of the matched sap and go
+ *
+ * Return: count of the satisfied sap and go
+ */
+uint32_t policy_mgr_get_sap_go_count_on_mac(struct wlan_objmgr_psoc *psoc,
+					    uint32_t *list, uint8_t mac_id);
+
+/**
+ * policy_mgr_is_sta_gc_active_on_mac() - Is there active sta/gc for a
+ * given mac id
+ * @psoc: PSOC object information
+ * @mac_id: MAC ID
+ *
+ * Checks if there is active sta/gc for a given mac id
+ *
+ * Return: true if there is active sta/gc for a given mac id, false otherwise
+ */
+bool policy_mgr_is_sta_gc_active_on_mac(struct wlan_objmgr_psoc *psoc,
+					uint8_t mac_id);
 
 /**
  * policy_mgr_get_mac_id_by_session_id() - Get MAC ID for a given session ID
@@ -3314,5 +3358,22 @@ bool policy_mgr_get_5g_scc_prefer(
 bool policy_mgr_dump_channel_list(uint32_t len,
 				  uint32_t *pcl_channels,
 				  uint8_t *pcl_weight);
+
+/**
+ * policy_mgr_is_restart_sap_required() - check whether sap need restart
+ * @psoc: psoc pointer
+ * @vdev_id: vdev id
+ * @freq: sap current freq
+ * @scc_mode: mcc to scc switch mode
+ *
+ * If there is no STA/P2P CLI on same MAC of SAP/P2P GO,
+ * SAP/P2P Go needn't switch channel to force scc.
+ *
+ * Return: True or false
+ */
+bool policy_mgr_is_restart_sap_required(struct wlan_objmgr_psoc *psoc,
+					uint8_t vdev_id,
+					qdf_freq_t freq,
+					tQDF_MCC_TO_SCC_SWITCH_MODE scc_mode);
 
 #endif /* __WLAN_POLICY_MGR_API_H */

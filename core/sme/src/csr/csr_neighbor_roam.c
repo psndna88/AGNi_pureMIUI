@@ -34,6 +34,7 @@
 #include "csr_neighbor_roam.h"
 #include "mac_trace.h"
 #include "wlan_policy_mgr_api.h"
+#include "wlan_mlme_api.h"
 
 static const char *lfr_get_config_item_string(uint8_t reason)
 {
@@ -411,8 +412,8 @@ csr_neighbor_roam_get_scan_filter_from_profile(struct mac_context *mac,
 	num_ch = chan_info->numOfChannels;
 	if (num_ch) {
 		filter->num_of_channels = num_ch;
-		if (filter->num_of_channels > QDF_MAX_NUM_CHAN)
-			filter->num_of_channels = QDF_MAX_NUM_CHAN;
+		if (filter->num_of_channels > NUM_CHANNELS)
+			filter->num_of_channels = NUM_CHANNELS;
 		qdf_mem_copy(filter->chan_freq_list, chan_info->freq_list,
 			     filter->num_of_channels *
 			     sizeof(filter->chan_freq_list[0]));
@@ -616,7 +617,7 @@ void csr_roam_reset_roam_params(struct mac_context *mac_ctx)
 }
 
 #if defined(WLAN_FEATURE_HOST_ROAM) || defined(WLAN_FEATURE_ROAM_OFFLOAD)
-static void csr_roam_restore_default_config(tpAniSirGlobal mac_ctx,
+static void csr_roam_restore_default_config(struct mac_context *mac_ctx,
 					    uint8_t vdev_id)
 {
 	struct roam_triggers triggers;
@@ -624,14 +625,14 @@ static void csr_roam_restore_default_config(tpAniSirGlobal mac_ctx,
 	sme_set_roam_config_enable(MAC_HANDLE(mac_ctx), vdev_id, 0);
 
 	triggers.vdev_id = vdev_id;
-	triggers.trigger_bitmap = 0xff;
+	triggers.trigger_bitmap = wlan_mlme_get_roaming_triggers(mac_ctx->psoc);
 	sme_debug("Reset roam trigger bitmap to 0x%x", triggers.trigger_bitmap);
 	sme_set_roam_triggers(MAC_HANDLE(mac_ctx), &triggers);
 	sme_roam_control_restore_default_config(MAC_HANDLE(mac_ctx),
 						vdev_id);
 }
 #else
-static void csr_roam_restore_default_config(tpAniSirGlobal mac_ctx,
+static void csr_roam_restore_default_config(struct mac_context *mac_ctx,
 					    uint8_t vdev_id)
 {
 }
@@ -674,14 +675,7 @@ QDF_STATUS csr_neighbor_roam_indicate_disconnect(struct mac_context *mac,
 	 */
 	csr_roam_free_connect_profile(pPrevProfile);
 	csr_roam_copy_connect_profile(mac, sessionId, pPrevProfile);
-	/*
-	 * clear the roaming parameters that are per connection.
-	 * For a new connection, they have to be programmed again.
-	 */
-	if (!csr_neighbor_middle_of_roaming(mac, sessionId)) {
-		csr_roam_reset_roam_params(mac);
-		csr_roam_restore_default_config(mac, sessionId);
-	}
+
 	if (pSession) {
 		roam_session = &mac->roam.roamSession[sessionId];
 		if (pSession->pCurRoamProfile && (QDF_STA_MODE !=
@@ -768,6 +762,16 @@ QDF_STATUS csr_neighbor_roam_indicate_disconnect(struct mac_context *mac,
 			pNeighborRoamInfo->uOsRequestedHandoff = 0;
 		break;
 	}
+
+	/*
+	 * clear the roaming parameters that are per connection.
+	 * For a new connection, they have to be programmed again.
+	 */
+	if (!csr_neighbor_middle_of_roaming(mac, sessionId)) {
+		csr_roam_reset_roam_params(mac);
+		csr_roam_restore_default_config(mac, sessionId);
+	}
+
 	/*Inform the Firmware to STOP Scanning as the host has a disconnect. */
 	if (csr_roam_is_sta_mode(mac, sessionId))
 		csr_post_roam_state_change(mac, sessionId, ROAM_DEINIT,

@@ -123,13 +123,11 @@ typedef struct last_processed_frame {
  * struct lim_max_tx_pwr_attr - List of tx powers from various sources
  * @reg_max: power from regulatory database
  * @ap_tx_power: local power constraint adjusted value
- * @ini_tx_power: Max tx power from ini config
  * @frequency: current operating frequency for which above powers are defined
  */
 struct lim_max_tx_pwr_attr {
 	int8_t reg_max;
 	int8_t ap_tx_power;
-	uint8_t ini_tx_power;
 	uint32_t frequency;
 };
 
@@ -1059,14 +1057,17 @@ void lim_intersect_ap_he_caps(struct pe_session *session, struct bss_params *add
 
 /**
  * lim_intersect_sta_he_caps() - Intersect STA capability with SAP capability
+ * @mac_ctx: pointer to the MAC context
  * @assoc_req: pointer to assoc request
  * @session: pointer to PE session
  * @sta_ds: pointer to STA dph hash table entry
  *
  * Return: None
  */
-void lim_intersect_sta_he_caps(tpSirAssocReq assoc_req, struct pe_session *session,
-		tpDphHashNode sta_ds);
+void lim_intersect_sta_he_caps(struct mac_context *mac_ctx,
+			       tpSirAssocReq assoc_req,
+			       struct pe_session *session,
+			       tpDphHashNode sta_ds);
 
 /**
  * lim_add_he_cap() - Copy HE capability into Add sta params
@@ -1193,13 +1194,15 @@ void lim_log_he_cap(struct mac_context *mac, tDot11fIEhe_cap *he_cap);
 
 /**
  * lim_update_stads_he_caps() - Copy HE capability into STA DPH hash table entry
+ * @mac_ctx: pointer to mac context
  * @sta_ds: pointer to sta dph hash table entry
  * @assoc_rsp: pointer to assoc response
  * @session_entry: pointer to PE session
  *
  * Return: None
  */
-void lim_update_stads_he_caps(tpDphHashNode sta_ds, tpSirAssocRsp assoc_rsp,
+void lim_update_stads_he_caps(struct mac_context *mac_ctx,
+			      tpDphHashNode sta_ds, tpSirAssocRsp assoc_rsp,
 			      struct pe_session *session_entry);
 
 /**
@@ -1420,13 +1423,17 @@ static inline void lim_intersect_ap_he_caps(struct pe_session *session,
 	return;
 }
 
-static inline void lim_intersect_sta_he_caps(tpSirAssocReq assoc_req,
-		struct pe_session *session, tpDphHashNode sta_ds)
+static inline void lim_intersect_sta_he_caps(struct mac_context *mac_ctx,
+					     tpSirAssocReq assoc_req,
+					     struct pe_session *session,
+					     tpDphHashNode sta_ds)
 {
 }
 
-static inline void lim_update_stads_he_caps(tpDphHashNode sta_ds, tpSirAssocRsp assoc_rsp,
-		struct pe_session *session_entry)
+static inline void lim_update_stads_he_caps(struct mac_context *mac_ctx,
+					    tpDphHashNode sta_ds,
+					    tpSirAssocRsp assoc_rsp,
+					    struct pe_session *session_entry)
 {
 	return;
 }
@@ -1796,6 +1803,18 @@ static inline void lim_set_peer_twt_cap(struct pe_session *session,
  */
 void lim_rx_invalid_peer_process(struct mac_context *mac_ctx,
 				 struct scheduler_msg *lim_msg);
+
+/**
+ * lim_req_send_delba_ind_process() - process send delba indication
+ * @mac_ctx: mac context
+ * @lim_msg: lim message
+ *
+ * This function will process the send delba indication from DP.
+ *
+ * Return: None
+ */
+void lim_req_send_delba_ind_process(struct mac_context *mac_ctx,
+				    struct scheduler_msg *lim_msg);
 
 /**
  * lim_send_beacon() - send beacon indication to firmware

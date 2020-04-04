@@ -42,6 +42,7 @@
 #include "nan_datapath.h"
 #include "wlan_reg_services_api.h"
 #include "wma.h"
+#include "wlan_pkt_capture_ucfg_api.h"
 
 #define MAX_SUPPORTED_PEERS_WEP 16
 
@@ -2815,6 +2816,8 @@ error:
 static void lim_handle_mon_switch_channel_rsp(struct pe_session *session,
 					      QDF_STATUS status)
 {
+	struct scheduler_msg message = {0};
+
 	if (session->bssType != eSIR_MONITOR_MODE)
 		return;
 
@@ -2828,6 +2831,17 @@ static void lim_handle_mon_switch_channel_rsp(struct pe_session *session,
 
 	wlan_vdev_mlme_sm_deliver_evt(session->vdev,
 				      WLAN_VDEV_SM_EV_START_SUCCESS, 0, NULL);
+
+	message.type = eWNI_SME_MONITOR_MODE_VDEV_UP;
+	message.bodyval = session->vdev_id;
+	pe_debug("vdev id %d ", session->vdev_id);
+
+	if (QDF_STATUS_SUCCESS !=
+	    scheduler_post_message(QDF_MODULE_ID_PE,
+				   QDF_MODULE_ID_SME,
+				   QDF_MODULE_ID_SME, &message)) {
+		pe_err("Failed to post message montior mode vdev up");
+	}
 }
 
 /**
@@ -2903,6 +2917,9 @@ void lim_process_switch_channel_rsp(struct mac_context *mac,
 			pe_debug("Send p2p operating channel change conf action frame once first beacon is received on new channel");
 			pe_session->send_p2p_conf_frame = true;
 		}
+
+		if (ucfg_pkt_capture_get_pktcap_mode(mac->psoc))
+			ucfg_pkt_capture_record_channel(pe_session->vdev);
 		break;
 	case LIM_SWITCH_CHANNEL_SAP_DFS:
 		/* Note: This event code specific to SAP mode
@@ -2929,6 +2946,8 @@ void lim_process_switch_channel_rsp(struct mac_context *mac,
 		 */
 		policy_mgr_update_connection_info(mac->psoc,
 						  pe_session->smeSessionId);
+		if (ucfg_pkt_capture_get_pktcap_mode(mac->psoc))
+			ucfg_pkt_capture_record_channel(pe_session->vdev);
 		break;
 	default:
 		break;

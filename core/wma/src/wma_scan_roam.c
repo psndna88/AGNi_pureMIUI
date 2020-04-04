@@ -80,6 +80,7 @@
 #include <wlan_crypto_global_api.h>
 #include <cdp_txrx_mon.h>
 #include <cdp_txrx_ctrl.h>
+#include "wlan_blm_api.h"
 
 #ifdef FEATURE_WLAN_DIAG_SUPPORT    /* FEATURE_WLAN_DIAG_SUPPORT */
 #include "host_diag_core_log.h"
@@ -1426,6 +1427,7 @@ static QDF_STATUS wma_roam_scan_filter(tp_wma_handle wma_handle,
 	params->num_ssid_white_list = num_ssid_white_list;
 	params->num_bssid_preferred_list = num_bssid_preferred_list;
 	params->num_rssi_rejection_ap = num_rssi_rejection_ap;
+	params->delta_rssi = wlan_blm_get_rssi_blacklist_threshold(wma_handle->pdev);
 	qdf_mem_copy(params->bssid_avoid_list, roam_params->bssid_avoid_list,
 			MAX_BSSID_AVOID_LIST * sizeof(struct qdf_mac_addr));
 
@@ -1780,6 +1782,35 @@ wma_send_idle_roam_params(tp_wma_handle wma_handle,
 {}
 #endif
 
+/* wma_set_vdev_roam_reason_vsie: set vdev param
+ *WMI_VDEV_PARAM_ENABLE_DISABLE_ROAM_REASON_VSIE
+ *
+ *@wma: wma handler
+ *@vdev_id: vdev id
+ *@is_roam_reason_vsie_enabled: enable_roam_reason_vsie ini value
+ *
+ * Return: Void
+ */
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
+static void wma_set_vdev_roam_reason_vsie(tp_wma_handle wma, uint8_t vdev_id,
+					  bool is_roam_reason_vsie_enabled)
+{
+	int ret;
+
+	ret = wma_vdev_set_param(wma->wmi_handle, vdev_id,
+				 WMI_VDEV_PARAM_ENABLE_DISABLE_ROAM_REASON_VSIE,
+				 is_roam_reason_vsie_enabled);
+	if (ret)
+		WMA_LOGE("Failed to set vdev param %d",
+			 WMI_VDEV_PARAM_ENABLE_DISABLE_ROAM_REASON_VSIE);
+}
+#else
+static void wma_set_vdev_roam_reason_vsie(tp_wma_handle wma, uint8_t vdev_id,
+					  bool is_roam_reason_vsie_enabled)
+{
+}
+#endif
+
 /**
  * wma_process_roaming_config() - process roam request
  * @wma_handle: wma handle
@@ -1796,6 +1827,7 @@ QDF_STATUS wma_process_roaming_config(tp_wma_handle wma_handle,
 	wmi_start_scan_cmd_fixed_param scan_params;
 	struct mac_context *mac = cds_get_context(QDF_MODULE_ID_PE);
 	uint32_t mode = 0;
+	uint8_t enable_roam_reason_vsie = 0;
 	struct wma_txrx_node *intr = NULL;
 	struct wmi_bss_load_config *bss_load_cfg;
 
@@ -1837,6 +1869,12 @@ QDF_STATUS wma_process_roaming_config(tp_wma_handle wma_handle,
 					     roam_req->sessionId);
 		if (qdf_status != QDF_STATUS_SUCCESS)
 			break;
+
+		wlan_mlme_get_roam_reason_vsie_status(wma_handle->psoc,
+						      &enable_roam_reason_vsie);
+		wma_set_vdev_roam_reason_vsie(wma_handle, roam_req->sessionId,
+					      enable_roam_reason_vsie);
+		wma_set_roam_triggers(wma_handle, &roam_req->roam_triggers);
 
 		/* Opportunistic scan runs on a timer, value set by
 		 * EmptyRefreshScanPeriod. Age out the entries after 3 such
@@ -2035,6 +2073,18 @@ QDF_STATUS wma_process_roaming_config(tp_wma_handle wma_handle,
 
 		wma_send_disconnect_roam_params(wma_handle, roam_req);
 		wma_send_idle_roam_params(wma_handle, roam_req);
+
+		/*
+		 * Disable all roaming triggers if RSO stop is as part of
+		 * disconnect
+		 */
+		if (mode == WMI_ROAM_SCAN_MODE_NONE) {
+			struct roam_triggers roam_triggers;
+
+			roam_triggers.vdev_id = roam_req->sessionId;
+			roam_triggers.trigger_bitmap = 0;
+			wma_set_roam_triggers(wma_handle, &roam_triggers);
+		}
 
 		if (roam_req->reason ==
 		    REASON_OS_REQUESTED_ROAMING_NOW) {
@@ -2767,7 +2817,7 @@ int wma_mlme_roam_synch_event_handler_cb(void *handle, uint8_t *event,
 	A_UINT32 reassoc_rsp_len;
 	A_UINT32 reassoc_req_len;
 
-	WMA_LOGD("LFR3:%s", __func__);
+	WMA_LOGD("LFR3: Received WMA_ROAM_OFFLOAD_SYNCH_IND");
 	if (!event) {
 		WMA_LOGE("%s: event param null", __func__);
 		goto cleanup_label;
@@ -2825,7 +2875,6 @@ int wma_mlme_roam_synch_event_handler_cb(void *handle, uint8_t *event,
 				__func__);
 		goto cleanup_label;
 	}
-	WMA_LOGD("LFR3: Received WMA_ROAM_OFFLOAD_SYNCH_IND");
 
 	/*
 	 * All below length fields are unsigned and hence positive numbers.
@@ -2889,11 +2938,6 @@ int wma_mlme_roam_synch_event_handler_cb(void *handle, uint8_t *event,
 
 		roam_synch_data_len += sizeof(struct roam_offload_synch_ind);
 	}
-
-	WMA_LOGD("synch payload: LEN bcn:%d, req:%d, rsp:%d",
-			bcn_probe_rsp_len,
-			reassoc_req_len,
-			reassoc_rsp_len);
 
 	cds_host_diag_log_work(&wma->roam_ho_wl,
 			       WMA_ROAM_HO_WAKE_LOCK_DURATION,
@@ -2983,6 +3027,9 @@ cleanup_label:
 			roam_req->Command = ROAM_SCAN_OFFLOAD_STOP;
 			roam_req->reason = REASON_ROAM_SYNCH_FAILED;
 			roam_req->sessionId = synch_event->vdev_id;
+			wma_debug("In cleanup: RSO Command:%d, reason %d vdev %d",
+				  roam_req->Command, roam_req->reason,
+				  roam_req->sessionId);
 			wma_process_roaming_config(wma, roam_req);
 		}
 	}
@@ -3593,15 +3640,17 @@ wma_rso_print_11kv_info(struct wmi_neighbor_report_data *neigh_rpt,
 		return;
 
 	tmp = buf;
-	for (i = 0; i < num_ch; i++) {
+	if (num_ch) {
 		buf_cons = qdf_snprint(tmp, buf_left, "{ ");
 		buf_left -= buf_cons;
 		tmp += buf_cons;
 
-		buf_cons = qdf_snprint(tmp, buf_left, "%d ",
-				       neigh_rpt->freq[i]);
-		buf_left -= buf_cons;
-		tmp += buf_cons;
+		for (i = 0; i < num_ch; i++) {
+			buf_cons = qdf_snprint(tmp, buf_left, "%d ",
+					       neigh_rpt->freq[i]);
+			buf_left -= buf_cons;
+			tmp += buf_cons;
+		}
 
 		buf_cons = qdf_snprint(tmp, buf_left, "}");
 		buf_left -= buf_cons;
@@ -6001,7 +6050,6 @@ int wma_roam_event_callback(WMA_HANDLE handle, uint8_t *event_buf,
 	case WMI_ROAM_REASON_DEAUTH:
 		WMA_LOGD("%s: Received disconnect roam event reason:%d",
 			 __func__, wmi_event->notif_params);
-
 		if (wmi_event->notif_params1)
 			frame = param_buf->deauth_disassoc_frame;
 		wma_handle->pe_disconnect_cb(wma_handle->mac_context,
@@ -6261,11 +6309,8 @@ int wma_handle_btm_blacklist_event(void *handle, uint8_t *cmd_param_info,
 QDF_STATUS wma_set_roam_triggers(tp_wma_handle wma,
 				 struct roam_triggers *triggers)
 {
-	if (!wma_is_vdev_valid(triggers->vdev_id)) {
-		WMA_LOGE("%s: vdev_id: %d is not active", __func__,
-			 triggers->vdev_id);
+	if (!wma_is_vdev_valid(triggers->vdev_id))
 		return QDF_STATUS_E_INVAL;
-	}
 
 	return wmi_unified_set_roam_triggers(wma->wmi_handle, triggers);
 }

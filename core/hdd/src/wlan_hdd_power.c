@@ -925,7 +925,8 @@ int wlan_hdd_pm_qos_notify(struct notifier_block *nb, unsigned long curr_val,
 		return -EINVAL;
 	}
 
-	hdd_debug("PM QOS update. Current value: %ld", curr_val);
+	hdd_debug("PM QOS update: runtime_pm_prevented %d Current value: %ld",
+		  hdd_ctx->runtime_pm_prevented, curr_val);
 	qdf_spin_lock_irqsave(&hdd_ctx->pm_qos_lock);
 
 	if (!hdd_ctx->runtime_pm_prevented &&
@@ -983,11 +984,9 @@ void hdd_enable_arp_offload(struct hdd_adapter *adapter,
 	struct pmo_arp_req *arp_req;
 	struct in_ifaddr *ifa;
 
-	hdd_enter();
-
 	arp_req = qdf_mem_malloc(sizeof(*arp_req));
 	if (!arp_req)
-		goto out;
+		return;
 
 	arp_req->psoc = psoc;
 	arp_req->vdev_id = adapter->vdev_id;
@@ -1024,9 +1023,6 @@ void hdd_enable_arp_offload(struct hdd_adapter *adapter,
 
 free_req:
 	qdf_mem_free(arp_req);
-
-out:
-	hdd_exit();
 }
 
 void hdd_disable_arp_offload(struct hdd_adapter *adapter,

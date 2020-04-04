@@ -62,6 +62,7 @@
 #include "wma.h"
 #include "wma_internal.h"
 #include "../../core/src/vdev_mgr_ops.h"
+#include "wlan_p2p_cfg_api.h"
 
 void lim_log_session_states(struct mac_context *mac);
 static void lim_process_normal_hdd_msg(struct mac_context *mac_ctx,
@@ -1089,12 +1090,15 @@ lim_check_mgmt_registered_frames(struct mac_context *mac_ctx, uint8_t *buff_desc
 	uint16_t frm_len;
 	uint8_t type, sub_type;
 	bool match = false;
+	tpSirMacActionFrameHdr action_hdr;
+	uint8_t actionID, category;
 	QDF_STATUS qdf_status;
 
 	hdr = WMA_GET_RX_MAC_HEADER(buff_desc);
 	fc = hdr->fc;
 	frm_type = (fc.type << 2) | (fc.subType << 4);
 	body = WMA_GET_RX_MPDU_DATA(buff_desc);
+	action_hdr = (tpSirMacActionFrameHdr)body;
 	frm_len = WMA_GET_RX_PAYLOAD_LEN(buff_desc);
 
 	qdf_mutex_acquire(&mac_ctx->lim.lim_frame_register_lock);
@@ -1138,10 +1142,36 @@ lim_check_mgmt_registered_frames(struct mac_context *mac_ctx, uint8_t *buff_desc
 		mgmt_frame = next_frm;
 		next_frm = NULL;
 	}
-
 	if (match) {
-		QDF_TRACE(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-			FL("rcvd frame match with registered frame params"));
+		pe_debug("rcvd frame match with registered frame params");
+
+		/*
+		 * Drop BTM frame received on STA interface if concurrent
+		 * P2P connection is active and p2p_disable_roam ini is
+		 * enabled. This will help to avoid scan triggered by
+		 * userspace after processing the BTM frame from AP so the
+		 * audio glitches are not seen in P2P connection.
+		 */
+		if (cfg_p2p_is_roam_config_disabled(mac_ctx->psoc) &&
+		    session_entry && LIM_IS_STA_ROLE(session_entry) &&
+		    (policy_mgr_mode_specific_connection_count(mac_ctx->psoc,
+						PM_P2P_CLIENT_MODE, NULL) ||
+		     policy_mgr_mode_specific_connection_count(mac_ctx->psoc,
+						PM_P2P_GO_MODE, NULL))) {
+			if (frm_len >= sizeof(*action_hdr) && action_hdr &&
+			    fc.type == SIR_MAC_MGMT_FRAME &&
+			    fc.subType == SIR_MAC_MGMT_ACTION) {
+				actionID = action_hdr->actionID;
+				category = action_hdr->category;
+				if (category == ACTION_CATEGORY_WNM &&
+				    (actionID == WNM_BSS_TM_QUERY ||
+				     actionID == WNM_BSS_TM_REQUEST ||
+				     actionID == WNM_BSS_TM_RESPONSE)) {
+					pe_debug("p2p session active drop BTM frame");
+					return match;
+				}
+			}
+		}
 		/* Indicate this to SME */
 		lim_send_sme_mgmt_frame_ind(mac_ctx, hdr->fc.subType,
 			(uint8_t *) hdr,
@@ -1547,20 +1577,6 @@ static void lim_process_sme_obss_scan_ind(struct mac_context *mac_ctx,
 	return;
 }
 
-static void
-lim_process_vdev_delete(struct mac_context *mac_ctx,
-			struct del_vdev_params *vdev_param)
-{
-	tp_wma_handle wma_handle;
-
-	wma_handle = cds_get_context(QDF_MODULE_ID_WMA);
-	if (!wma_handle) {
-		WMA_LOGE("%s: WMA context is invalid", __func__);
-		return;
-	}
-	wma_vdev_detach(wma_handle, vdev_param);
-}
-
 /**
  * lim_process_messages() - Process messages from upper layers.
  *
@@ -1825,6 +1841,9 @@ static void lim_process_messages(struct mac_context *mac_ctx,
 	case SIR_LIM_RX_INVALID_PEER:
 		lim_rx_invalid_peer_process(mac_ctx, msg);
 		break;
+	case SIR_HAL_REQ_SEND_DELBA_REQ_IND:
+		lim_req_send_delba_ind_process(mac_ctx, msg);
+		break;
 	case SIR_LIM_JOIN_FAIL_TIMEOUT:
 	case SIR_LIM_PERIODIC_JOIN_PROBE_REQ_TIMEOUT:
 	case SIR_LIM_AUTH_FAIL_TIMEOUT:
@@ -2086,11 +2105,6 @@ static void lim_process_messages(struct mac_context *mac_ctx,
 					  (struct roam_blacklist_event *)
 					  msg->bodyptr);
 		qdf_mem_free((void *)msg->bodyptr);
-		msg->bodyptr = NULL;
-		break;
-	case eWNI_SME_VDEV_DELETE_REQ:
-		lim_process_vdev_delete(mac_ctx, msg->bodyptr);
-		/* Do not free msg->bodyptr, same memory used to send resp */
 		msg->bodyptr = NULL;
 		break;
 	default:

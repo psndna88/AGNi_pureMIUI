@@ -106,6 +106,10 @@
 #include <target_if_direct_buf_rx_api.h>
 #endif
 
+#ifdef WLAN_FEATURE_PKT_CAPTURE
+#include "wlan_pkt_capture_ucfg_api.h"
+#endif
+
 #define WMA_LOG_COMPLETION_TIMER 3000 /* 3 seconds */
 #define WMI_TLV_HEADROOM 128
 
@@ -1952,27 +1956,6 @@ static void wma_target_if_close(tp_wma_handle wma_handle)
 }
 
 /**
- * wma_get_pdev_from_scn_handle() - API to get pdev from scn handle
- * @scn_handle: opaque wma handle
- *
- * API to get pdev from scn handle
- *
- * Return: None
- */
-static struct wlan_objmgr_pdev *wma_get_pdev_from_scn_handle(void *scn_handle)
-{
-	tp_wma_handle wma_handle;
-
-	if (!scn_handle) {
-		WMA_LOGE("invalid scn handle");
-		return NULL;
-	}
-	wma_handle = (tp_wma_handle)scn_handle;
-
-	return wma_handle->pdev;
-}
-
-/**
  * wma_legacy_service_ready_event_handler() - legacy (ext)service ready handler
  * @event_id: event_id
  * @handle: wma handle
@@ -2844,6 +2827,23 @@ static void wma_register_nan_callbacks(tp_wma_handle wma_handle)
 }
 #endif
 
+#ifdef WLAN_FEATURE_PKT_CAPTURE
+static void
+wma_register_pkt_capture_callbacks(tp_wma_handle wma_handle)
+{
+	struct pkt_capture_callbacks cb_obj = {0};
+
+	cb_obj.get_rmf_status = wma_get_rmf_status;
+
+	ucfg_pkt_capture_register_wma_callbacks(wma_handle->psoc, &cb_obj);
+}
+#else
+static inline void
+wma_register_pkt_capture_callbacks(tp_wma_handle wma_handle)
+{
+}
+#endif
+
 /**
  * wma_open() - Allocate wma context and initialize it.
  * @cds_context:  cds context
@@ -3373,6 +3373,7 @@ QDF_STATUS wma_open(struct wlan_objmgr_psoc *psoc,
 						  wma_vdev_get_beacon_interval);
 	wma_cbacks.wma_get_connection_info = wma_get_connection_info;
 	wma_register_nan_callbacks(wma_handle);
+	wma_register_pkt_capture_callbacks(wma_handle);
 	qdf_status = policy_mgr_register_wma_cb(wma_handle->psoc, &wma_cbacks);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		WMA_LOGE("Failed to register wma cb with Policy Manager");
@@ -5431,10 +5432,6 @@ static int wma_update_hdd_cfg(tp_wma_handle wma_handle)
 		return -EINVAL;
 	}
 
-	wlan_res_cfg->nan_separate_iface_support =
-		ucfg_nan_is_vdev_creation_allowed(wma_handle->psoc) &&
-		ucfg_nan_get_is_separate_nan_iface(wma_handle->psoc);
-
 	service_ext_param =
 			target_psoc_get_service_ext_param(tgt_hdl);
 	wmi_handle = get_wmi_unified_hdl_from_psoc(wma_handle->psoc);
@@ -5510,9 +5507,7 @@ static int wma_update_hdd_cfg(tp_wma_handle wma_handle)
 	ret = wma_handle->tgt_cfg_update_cb(hdd_ctx, &tgt_cfg);
 	if (ret)
 		return -EINVAL;
-	target_if_store_pdev_target_if_ctx(wma_get_pdev_from_scn_handle);
-	target_pdev_set_wmi_handle(wma_handle->pdev->tgt_if_handle,
-				   wma_handle->wmi_handle);
+
 	wma_green_ap_register_handlers(wma_handle);
 
 	return ret;
@@ -6737,6 +6732,10 @@ int wma_rx_service_ready_ext_event(void *handle, uint8_t *event,
 		ucfg_ftm_time_sync_set_enable(wma_handle->psoc, false);
 	}
 
+	if (wmi_service_enabled(wma_handle->wmi_handle, wmi_service_nan_vdev) &&
+	    ucfg_nan_get_is_separate_nan_iface(wma_handle->psoc))
+		wlan_res_cfg->nan_separate_iface_support = true;
+
 	wma_init_dbr_params(wma_handle);
 
 	wma_set_coex_res_cfg(wma_handle, wmi_handle, wlan_res_cfg);
@@ -7601,6 +7600,11 @@ static void wma_set_arp_req_stats(WMA_HANDLE handle,
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(wma_handle->psoc,
 						    req_buf->vdev_id,
 						    WLAN_LEGACY_WMA_ID);
+	if (!vdev) {
+		WMA_LOGE("Can't get vdev by vdev_id:%d", req_buf->vdev_id);
+		return;
+	}
+
 	if (!wma_is_vdev_started(vdev)) {
 		WMA_LOGD("vdev id:%d is not started", req_buf->vdev_id);
 		goto release_ref;

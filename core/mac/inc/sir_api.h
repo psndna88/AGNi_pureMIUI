@@ -2250,6 +2250,7 @@ struct roam_offload_scan_req {
 	struct wmi_disconnect_roam_params disconnect_roam_params;
 #endif
 	struct roam_ext_params roam_params;
+	struct roam_triggers roam_triggers;
 	uint8_t  middle_of_roaming;
 	uint32_t hi_rssi_scan_max_count;
 	uint32_t hi_rssi_scan_rssi_delta;
@@ -2347,8 +2348,8 @@ struct sir_wifi_start_log {
  */
 struct sir_pcl_list {
 	uint32_t pcl_len;
-	uint8_t pcl_list[128];
-	uint8_t weight_list[128];
+	uint8_t pcl_list[NUM_CHANNELS];
+	uint8_t weight_list[NUM_CHANNELS];
 };
 
 /**
@@ -2364,12 +2365,12 @@ struct sir_pcl_list {
  * @weight_list: Weights assigned by policy manager
  */
 struct sir_pcl_chan_weights {
-	uint8_t pcl_list[128];
+	uint8_t pcl_list[NUM_CHANNELS];
 	uint32_t pcl_len;
-	uint8_t saved_chan_list[128];
+	uint8_t saved_chan_list[NUM_CHANNELS];
 	uint32_t saved_num_chan;
-	uint8_t weighed_valid_list[128];
-	uint8_t weight_list[128];
+	uint8_t weighed_valid_list[NUM_CHANNELS];
+	uint8_t weight_list[NUM_CHANNELS];
 };
 
 /**

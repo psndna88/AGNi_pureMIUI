@@ -44,7 +44,7 @@
 /* Roam debugging related macro defines */
 #define MAX_ROAM_DEBUG_BUF_SIZE    250
 #define MAX_ROAM_EVENTS_SUPPORTED  5
-#define ROAM_FAILURE_BUF_SIZE      40
+#define ROAM_FAILURE_BUF_SIZE      60
 #define TIME_STRING_LEN            24
 
 #define ROAM_CHANNEL_BUF_SIZE      300
@@ -280,6 +280,7 @@ enum mlme_ts_info_ack_policy {
  * @RSO_CHANNEL_SWITCH: disable roaming due to STA channel switch
  * @RSO_CONNECT_START: disable roaming temporarily due to connect
  * @RSO_SAP_CHANNEL_CHANGE: disable roaming due to SAP channel change
+ * @RSO_NDP_CON_ON_NDI: disable roaming due to NDP connection on NDI
  */
 enum roam_control_requestor {
 	RSO_INVALID_REQUESTOR,
@@ -287,6 +288,7 @@ enum roam_control_requestor {
 	RSO_CHANNEL_SWITCH     = BIT(1),
 	RSO_CONNECT_START      = BIT(2),
 	RSO_SAP_CHANNEL_CHANGE = BIT(3),
+	RSO_NDP_CON_ON_NDI     = BIT(4),
 };
 
 /**
@@ -927,6 +929,8 @@ struct wlan_mlme_he_caps {
 	uint8_t enable_ul_mimo;
 	uint8_t enable_ul_ofdm;
 	uint32_t he_sta_obsspd;
+	uint16_t he_mcs_12_13_supp_2g;
+	uint16_t he_mcs_12_13_supp_5g;
 };
 #endif
 
@@ -1129,6 +1133,7 @@ struct wlan_mlme_chainmask {
  * candidate is found in partial scan based on channel map
  * @enable_ring_buffer: Decide to enable/disable ring buffer for bug report
  * @enable_peer_unmap_conf_support: Indicate whether to send conf for peer unmap
+ * @dfs_chan_ageout_time: Set DFS Channel ageout time
  */
 struct wlan_mlme_generic {
 	enum band_info band_capability;
@@ -1164,6 +1169,7 @@ struct wlan_mlme_generic {
 	bool bmiss_skip_full_scan;
 	bool enable_ring_buffer;
 	bool enable_peer_unmap_conf_support;
+	uint8_t dfs_chan_ageout_time;
 };
 
 /*
@@ -1224,7 +1230,7 @@ struct wlan_mlme_acs {
 	bool is_vendor_acs_support;
 	bool is_acs_support_for_dfs_ltecoex;
 	bool is_external_acs_policy;
-	struct acs_weight normalize_weight_chan[QDF_MAX_NUM_CHAN];
+	struct acs_weight normalize_weight_chan[NUM_CHANNELS];
 	uint16_t normalize_weight_num_chan;
 	struct acs_weight_range normalize_weight_range[MAX_ACS_WEIGHT_RANGE];
 	uint16_t num_weight_range;
@@ -1422,6 +1428,9 @@ struct bss_load_trigger {
 #define AKM_SAE              3
 #define AKM_OWE              4
 
+#define LFR3_STA_ROAM_DISABLE_BY_P2P BIT(0)
+#define LFR3_STA_ROAM_DISABLE_BY_NAN BIT(1)
+
 /*
  * @mawc_roam_enabled:              Enable/Disable MAWC during roaming
  * @enable_fast_roam_in_concurrency:Enable LFR roaming on STA during concurrency
@@ -1436,6 +1445,10 @@ struct bss_load_trigger {
  * below which the connection is idle.
  * @idle_roam_min_rssi: Minimum rssi of connected AP to be considered for
  * idle roam trigger.
+ * @enable_roam_reason_vsie:        Enable/disable incluison of roam reason
+ * vsie in Re(assoc) frame
+ * @roam_trigger_bitmap:            Bitmap of roaming triggers.
+ * @sta_roam_disable                STA roaming disabled by interfaces
  * @early_stop_scan_enable:         Set early stop scan
  * @enable_5g_band_pref:            Enable preference for 5G from INI
  * @ese_enabled:                    Enable ESE feature
@@ -1538,6 +1551,9 @@ struct wlan_mlme_lfr_cfg {
 	uint32_t idle_data_packet_count;
 	uint32_t idle_roam_band;
 	int32_t idle_roam_min_rssi;
+	bool enable_roam_reason_vsie;
+	uint32_t roam_trigger_bitmap;
+	uint32_t sta_roam_disable;
 #endif
 	bool early_stop_scan_enable;
 	bool enable_5g_band_pref;
@@ -1795,6 +1811,7 @@ struct wlan_mlme_wmm_params {
  * @pcl_weightage: PCL weightage
  * @channel_congestion_weightage: channel congestion weightage
  * @oce_wan_weightage: OCE WAN metrics weightage
+ * @oce_ap_tx_pwr_weightage: weightage based on ap tx power
  */
 struct  wlan_mlme_weight_config {
 	uint8_t rssi_weightage;
@@ -1808,6 +1825,7 @@ struct  wlan_mlme_weight_config {
 	uint8_t pcl_weightage;
 	uint8_t channel_congestion_weightage;
 	uint8_t oce_wan_weightage;
+	uint8_t oce_ap_tx_pwr_weightage;
 };
 
 /**
@@ -1962,7 +1980,6 @@ struct mlme_power_usage {
  * @power_usage: power usage mode, min, max, mod
  * @tx_power_2g: limit tx power in 2.4 ghz
  * @tx_power_5g: limit tx power in 5 ghz
- * @max_tx_power: WLAN max tx power
  * @current_tx_power_level: current tx power level
  * @local_power_constraint: local power constraint
  */
@@ -1974,7 +1991,6 @@ struct wlan_mlme_power {
 	struct mlme_power_usage power_usage;
 	uint8_t tx_power_2g;
 	uint8_t tx_power_5g;
-	uint8_t max_tx_power;
 	uint8_t current_tx_power_level;
 	uint8_t local_power_constraint;
 };

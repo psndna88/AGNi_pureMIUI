@@ -52,6 +52,7 @@
  * @PLD_BUS_TYPE_SNOC_FW_SIM : SNOC FW SIM bus
  * @PLD_BUS_TYPE_PCIE_FW_SIM : PCIE FW SIM bus
  * @PLD_BUS_TYPE_IPCI : IPCI bus
+ * @PLD_BUS_TYPE_IPCI_FW_SIM : IPCI FW SIM bus
  */
 enum pld_bus_type {
 	PLD_BUS_TYPE_NONE = -1,
@@ -62,6 +63,7 @@ enum pld_bus_type {
 	PLD_BUS_TYPE_SNOC_FW_SIM,
 	PLD_BUS_TYPE_PCIE_FW_SIM,
 	PLD_BUS_TYPE_IPCI,
+	PLD_BUS_TYPE_IPCI_FW_SIM,
 };
 
 #define PLD_MAX_FIRMWARE_SIZE (1 * 1024 * 1024)
@@ -427,6 +429,8 @@ void pld_get_default_fw_files(struct pld_fw_files *pfw_files);
 int pld_get_fw_files_for_target(struct device *dev,
 				struct pld_fw_files *pfw_files,
 				u32 target_type, u32 target_version);
+int pld_prevent_l1(struct device *dev);
+void pld_allow_l1(struct device *dev);
 void pld_is_pci_link_down(struct device *dev);
 int pld_shadow_control(struct device *dev, bool enable);
 void pld_schedule_recovery_work(struct device *dev,
@@ -659,6 +663,16 @@ void *pld_smmu_get_mapping(struct device *dev);
 #endif
 int pld_smmu_map(struct device *dev, phys_addr_t paddr,
 		 uint32_t *iova_addr, size_t size);
+#ifdef CONFIG_SMMU_S1_UNMAP
+int pld_smmu_unmap(struct device *dev,
+		   uint32_t iova_addr, size_t size);
+#else
+static inline int pld_smmu_unmap(struct device *dev,
+				 uint32_t iova_addr, size_t size)
+{
+	return 0;
+}
+#endif
 int pld_get_user_msi_assignment(struct device *dev, char *user_name,
 				int *num_vectors, uint32_t *user_base_data,
 				uint32_t *base_vector);

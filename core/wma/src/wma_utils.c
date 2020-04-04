@@ -592,9 +592,6 @@ void wma_lost_link_info_handler(tp_wma_handle wma, uint32_t vdev_id,
 		sme_msg.type = eWNI_SME_LOST_LINK_INFO_IND;
 		sme_msg.bodyptr = lost_link_info;
 		sme_msg.bodyval = 0;
-		WMA_LOGD("%s: post msg to SME, bss_idx %d, rssi %d",  __func__,
-			 lost_link_info->vdev_id, lost_link_info->rssi);
-
 		qdf_status = scheduler_post_message(QDF_MODULE_ID_WMA,
 						    QDF_MODULE_ID_SME,
 						    QDF_MODULE_ID_SME,
@@ -3600,6 +3597,21 @@ struct wma_txrx_node  *wma_get_interface_by_vdev_id(uint8_t vdev_id)
 
 	return &wma->interfaces[vdev_id];
 }
+
+#ifdef WLAN_FEATURE_PKT_CAPTURE
+int wma_get_rmf_status(uint8_t vdev_id)
+{
+	struct wma_txrx_node *iface;
+
+	iface = wma_get_interface_by_vdev_id(vdev_id);
+	if (!iface) {
+		WMA_LOGE("Unable to get wma interface");
+		return -EINVAL;
+	}
+
+	return iface->rmfEnabled;
+}
+#endif
 
 /**
  * wma_update_intf_hw_mode_params() - Update WMA params

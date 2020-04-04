@@ -1671,7 +1671,7 @@ static QDF_STATUS policy_mgr_get_sbs_channels(
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	uint32_t conn_index = 0, num_channels = 0;
 	uint32_t num_5g_channels = 0, cur_5g_ch_freq = 0;
-	uint32_t remaining_5g_ch_freqs[QDF_MAX_NUM_CHAN] = {};
+	uint32_t remaining_5g_ch_freqs[NUM_CHANNELS] = {};
 	uint32_t remaining_channel_index = 0;
 	uint32_t j = 0, i = 0, weight1, weight2;
 
@@ -1995,7 +1995,7 @@ void policy_mgr_set_weight_of_dfs_passive_channels_to_zero(
 		return;
 
 	if (len)
-		orig_channel_count = QDF_MIN(*len, QDF_MAX_NUM_CHAN);
+		orig_channel_count = QDF_MIN(*len, NUM_CHANNELS);
 	else {
 		policy_mgr_err("invalid number of channel length");
 		return;
@@ -2700,7 +2700,7 @@ bool policy_mgr_allow_new_home_channel(
 		  (IEEE80211_CHAN_DFS | IEEE80211_CHAN_DFS_CFREQ2)) ||
 		 (pm_conc_connection_list[1].ch_flagext &
 		  (IEEE80211_CHAN_DFS | IEEE80211_CHAN_DFS_CFREQ2)))) {
-			policy_mgr_err("Existing DFS connection, new 3-port DFS connection is not allowed");
+			policy_mgr_rl_debug("Existing DFS connection, new 3-port DFS connection is not allowed");
 			status = false;
 
 		} else if (((pm_conc_connection_list[0].freq !=
@@ -2714,7 +2714,7 @@ bool policy_mgr_allow_new_home_channel(
 				    pm_conc_connection_list[0].freq &&
 				    ch_freq !=
 				    pm_conc_connection_list[1].freq) {
-					policy_mgr_err("don't allow 3rd home channel on same MAC");
+					policy_mgr_rl_debug("don't allow 3rd home channel on same MAC");
 					status = false;
 				}
 			} else if ((pm_conc_connection_list[0].mode ==
@@ -2742,7 +2742,7 @@ bool policy_mgr_allow_new_home_channel(
 				   (pm_conc_connection_list[0].freq)) &&
 				   (WLAN_REG_IS_5GHZ_CH_FREQ
 				   (pm_conc_connection_list[1].freq)))) {
-				policy_mgr_err("don't allow 3rd home channel on same MAC");
+				policy_mgr_rl_debug("don't allow 3rd home channel on same MAC");
 				status = false;
 			}
 		} else if (pm_conc_connection_list[0].mac ==
@@ -2750,8 +2750,8 @@ bool policy_mgr_allow_new_home_channel(
 			/* Existing two connections are SCC */
 			if (policy_mgr_is_hw_dbs_capable(psoc) == false) {
 				/* keep legacy chip "allow" as it is */
-				policy_mgr_debug("allow 2 intf SCC + new intf ch %d for legacy hw",
-						 ch_freq);
+				policy_mgr_rl_debug("allow 2 intf SCC + new intf ch %d for legacy hw",
+						    ch_freq);
 			} else if ((pm_conc_connection_list[0].mode ==
 							    PM_NAN_DISC_MODE &&
 				    pm_conc_connection_list[1].mode ==
@@ -2772,7 +2772,7 @@ bool policy_mgr_allow_new_home_channel(
 					pm_conc_connection_list[0].mode,
 					pm_conc_connection_list[1].mode,
 					mode)) {
-				policy_mgr_err("don't allow 3rd home channel on same MAC - sta existing");
+				policy_mgr_rl_debug("don't allow 3rd home channel on same MAC - sta existing");
 				status = false;
 			}
 		}
@@ -2783,7 +2783,7 @@ bool policy_mgr_allow_new_home_channel(
 		(pm_conc_connection_list[0].ch_flagext &
 		 (IEEE80211_CHAN_DFS | IEEE80211_CHAN_DFS_CFREQ2))) {
 
-		policy_mgr_err("Existing DFS connection, new 2-port DFS connection is not allowed");
+		policy_mgr_rl_debug("Existing DFS connection, new 2-port DFS connection is not allowed");
 		status = false;
 	}
 	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
@@ -3001,7 +3001,7 @@ QDF_STATUS policy_mgr_complete_action(struct wlan_objmgr_psoc *psoc,
 	enum policy_mgr_band downgrade_band;
 
 	if (policy_mgr_is_hw_dbs_capable(psoc) == false) {
-		policy_mgr_err("driver isn't dbs capable, no further action needed");
+		policy_mgr_rl_debug("driver isn't dbs capable, no further action needed");
 		return QDF_STATUS_E_NOSUPPORT;
 	}
 
@@ -3360,7 +3360,7 @@ uint32_t policy_mgr_get_sap_mandatory_chan_list_len(
 
 void  policy_mgr_init_sap_mandatory_2g_chan(struct wlan_objmgr_psoc *psoc)
 {
-	uint32_t ch_freq_list[QDF_MAX_NUM_CHAN] = {0};
+	uint32_t ch_freq_list[NUM_CHANNELS] = {0};
 	uint32_t len = 0;
 	int i;
 	QDF_STATUS status;
@@ -3379,7 +3379,7 @@ void  policy_mgr_init_sap_mandatory_2g_chan(struct wlan_objmgr_psoc *psoc)
 	}
 	pm_ctx->sap_mandatory_channels_len = 0;
 
-	for (i = 0; (i < len) && (i < QDF_MAX_NUM_CHAN); i++) {
+	for (i = 0; (i < len) && (i < NUM_CHANNELS); i++) {
 		if (WLAN_REG_IS_24GHZ_CH_FREQ(ch_freq_list[i])) {
 			policy_mgr_debug("Add chan %hu to mandatory list",
 					ch_freq_list[i]);
@@ -3393,7 +3393,7 @@ void  policy_mgr_init_sap_mandatory_2g_chan(struct wlan_objmgr_psoc *psoc)
 void policy_mgr_remove_sap_mandatory_chan(struct wlan_objmgr_psoc *psoc,
 					  uint32_t ch_freq)
 {
-	uint32_t ch_freq_list[QDF_MAX_NUM_CHAN] = {0};
+	uint32_t ch_freq_list[NUM_CHANNELS] = {0};
 	uint32_t num_chan = 0;
 	int i;
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
@@ -3404,7 +3404,7 @@ void policy_mgr_remove_sap_mandatory_chan(struct wlan_objmgr_psoc *psoc,
 		return;
 	}
 
-	if (pm_ctx->sap_mandatory_channels_len >= QDF_MAX_NUM_CHAN) {
+	if (pm_ctx->sap_mandatory_channels_len >= NUM_CHANNELS) {
 		policy_mgr_err("Invalid channel len %d ",
 				pm_ctx->sap_mandatory_channels_len);
 		return;

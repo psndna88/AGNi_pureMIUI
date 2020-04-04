@@ -53,6 +53,20 @@
 #define PKT_CAPTURE_EXIT() pkt_capture_debug("exit")
 
 /**
+ * enum pkt_capture_tx_status - packet capture tx status
+ * @pktcapture_tx_status_ok: successfully sent + acked
+ * @pktcapture_tx_status_discard: discard - not sent
+ * @pktcapture_tx_status_no_ack: no_ack - sent, but no ack
+ *
+ * This enum has tx status types for packet capture mode
+ */
+enum pkt_capture_tx_status {
+	pkt_capture_tx_status_ok,
+	pkt_capture_tx_status_discard,
+	pkt_capture_tx_status_no_ack,
+};
+
+/**
  * pkt_capture_get_vdev() - Get pkt capture objmgr vdev.
  *
  * Return: pkt capture objmgr vdev
@@ -162,4 +176,13 @@ pkt_capture_get_pktcap_mode(struct wlan_objmgr_psoc *psoc);
  * Return: number of buffers dropped
  */
 uint32_t pkt_capture_drop_nbuf_list(qdf_nbuf_t buf_list);
+
+/**
+ * pkt_capture_record_channel() - Update Channel Information
+ * for packet capture mode
+ * @vdev: pointer to vdev
+ *
+ * Return: None
+ */
+void pkt_capture_record_channel(struct wlan_objmgr_vdev *vdev);
 #endif /* end of _WLAN_PKT_CAPTURE_MAIN_H_ */

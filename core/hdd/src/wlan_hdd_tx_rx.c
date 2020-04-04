@@ -39,7 +39,6 @@
 #include <wlan_hdd_p2p.h>
 #include <linux/wireless.h>
 #include <net/cfg80211.h>
-#include <net/ieee80211_radiotap.h>
 #include "sap_api.h"
 #include "wlan_hdd_wmm.h"
 #include "wlan_hdd_tdls.h"
@@ -62,6 +61,8 @@
 #include "dp_txrx.h"
 #if defined(WLAN_SUPPORT_RX_FISA)
 #include "dp_fisa_rx.h"
+#else
+#include <net/ieee80211_radiotap.h>
 #endif
 #include <ol_defines.h>
 #include "cfg_ucfg_api.h"
@@ -132,7 +133,6 @@ void hdd_tx_resume_timer_expired_handler(void *adapter_context)
 {
 	struct hdd_adapter *adapter = (struct hdd_adapter *)adapter_context;
 	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
-	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	u32 p_qpaused;
 	u32 np_qpaused;
 
@@ -143,8 +143,7 @@ void hdd_tx_resume_timer_expired_handler(void *adapter_context)
 
 	cdp_display_stats(soc, CDP_DUMP_TX_FLOW_POOL_INFO,
 			  QDF_STATS_VERBOSITY_LEVEL_LOW);
-	wlan_hdd_display_netif_queue_history(hdd_ctx,
-					     QDF_STATS_VERBOSITY_LEVEL_LOW);
+	wlan_hdd_display_adapter_netif_queue_history(adapter);
 	hdd_debug("Enabling queues");
 	spin_lock_bh(&adapter->pause_map_lock);
 	p_qpaused = adapter->pause_map & BIT(WLAN_DATA_FLOW_CONTROL_PRIORITY);
@@ -948,15 +947,15 @@ static void __hdd_hard_start_xmit(struct sk_buff *skb,
 
 	if (cds_is_driver_recovering() || cds_is_driver_in_bad_state() ||
 	    cds_is_load_or_unload_in_progress()) {
-		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_INFO_HIGH,
-			  "Recovery/(Un)load in progress, dropping the packet");
+		QDF_TRACE_DEBUG_RL(QDF_MODULE_ID_HDD_DATA,
+				   "Recovery/(Un)load in progress, dropping the packet");
 		goto drop_pkt;
 	}
 
 	hdd_ctx = adapter->hdd_ctx;
 	if (wlan_hdd_validate_context(hdd_ctx)) {
-		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_INFO_HIGH,
-			  "Invalid HDD context");
+		QDF_TRACE_DEBUG_RL(QDF_MODULE_ID_HDD_DATA,
+				   "Invalid HDD context");
 		goto drop_pkt;
 	}
 
@@ -1245,8 +1244,8 @@ static void __hdd_tx_timeout(struct net_device *dev)
 
 	hdd_debug("carrier state: %d", netif_carrier_ok(dev));
 
-	wlan_hdd_display_netif_queue_history(hdd_ctx,
-					     QDF_STATS_VERBOSITY_LEVEL_HIGH);
+	wlan_hdd_display_adapter_netif_queue_history(adapter);
+
 	cdp_dump_flow_pool_info(cds_get_context(QDF_MODULE_ID_SOC));
 
 	++adapter->hdd_stats.tx_rx_stats.tx_timeout_cnt;
@@ -1985,9 +1984,6 @@ QDF_STATUS hdd_rx_deliver_to_stack(struct hdd_adapter *adapter,
 		       hdd_ctx->enable_rxthread)) {
 		local_bh_disable();
 		netif_status = netif_receive_skb(skb);
-		if (netif_status)
-			hdd_err("netif_receive_skb return dropped skb %pk",
-				skb);
 		local_bh_enable();
 	} else if (qdf_unlikely(QDF_NBUF_CB_RX_PEER_CACHED_FRM(skb))) {
 		/*

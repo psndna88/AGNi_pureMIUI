@@ -838,14 +838,13 @@ QDF_STATUS sap_channel_sel(struct sap_context *sap_context)
 	struct scan_start_request *req;
 	struct wlan_objmgr_vdev *vdev = NULL;
 	uint8_t i;
-	uint8_t pdev_id;
 	uint32_t *freq_list = NULL;
 	uint8_t num_of_channels = 0;
 	mac_handle_t mac_handle;
 	uint32_t con_ch_freq;
 	uint8_t vdev_id;
 	uint32_t scan_id;
-	uint8_t *self_mac;
+	uint32_t default_op_freq;
 
 	mac_handle = cds_get_context(QDF_MODULE_ID_SME);
 	if (!mac_handle) {
@@ -861,7 +860,7 @@ QDF_STATUS sap_channel_sel(struct sap_context *sap_context)
 			  FL("Invalid MAC context"));
 		return QDF_STATUS_E_FAILURE;
 	}
-	if (sap_context->chan_freq)
+	if (sap_context->fsm_state != SAP_STARTED && sap_context->chan_freq)
 		return sap_validate_chan(sap_context, true, false);
 
 	if (policy_mgr_concurrent_beaconing_sessions_running(mac_ctx->psoc) ||
@@ -916,11 +915,10 @@ QDF_STATUS sap_channel_sel(struct sap_context *sap_context)
 			return QDF_STATUS_E_NOMEM;
 		}
 
-		pdev_id = wlan_objmgr_pdev_get_pdev_id(mac_ctx->pdev);
-		self_mac = sap_context->self_mac_addr;
-		vdev = wlan_objmgr_get_vdev_by_macaddr_from_psoc(mac_ctx->psoc,
-							pdev_id, self_mac,
-							WLAN_LEGACY_SME_ID);
+		vdev_id = sap_context->sessionId;
+		vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac_ctx->psoc,
+							    vdev_id,
+							    WLAN_LEGACY_SME_ID);
 		if (!vdev) {
 			QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_ERROR,
 				  FL("Invalid vdev objmgr"));
@@ -933,7 +931,6 @@ QDF_STATUS sap_channel_sel(struct sap_context *sap_context)
 		ucfg_scan_init_default_params(vdev, req);
 		scan_id = ucfg_scan_get_scan_id(mac_ctx->psoc);
 		req->scan_req.scan_id = scan_id;
-		vdev_id = wlan_vdev_get_id(vdev);
 		req->scan_req.vdev_id = vdev_id;
 		req->scan_req.scan_f_passive = false;
 		req->scan_req.scan_req_id = sap_context->req_id;
@@ -956,12 +953,13 @@ QDF_STATUS sap_channel_sel(struct sap_context *sap_context)
 			QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_INFO_HIGH,
 				  FL("SAP Configuring default ch, Ch_freq=%d"),
 				  sap_context->chan_freq);
-			sap_context->chan_freq = sap_select_default_oper_chan(
-					sap_context->acs_cfg);
+			default_op_freq = sap_select_default_oper_chan(
+						sap_context->acs_cfg);
+			wlansap_set_acs_ch_freq(sap_context, default_op_freq);
 
 			if (sap_context->freq_list) {
-				sap_context->chan_freq =
-					sap_context->freq_list[0];
+				wlansap_set_acs_ch_freq(
+					sap_context, sap_context->freq_list[0]);
 				qdf_mem_free(sap_context->freq_list);
 				sap_context->freq_list = NULL;
 				sap_context->num_of_channel = 0;
@@ -974,6 +972,7 @@ QDF_STATUS sap_channel_sel(struct sap_context *sap_context)
 			qdf_ret_status = QDF_STATUS_E_FAILURE;
 			goto release_vdev_ref;
 		} else {
+			wlansap_dump_acs_ch_freq(sap_context);
 			host_log_acs_scan_start(scan_id, vdev_id);
 		}
 #ifdef FEATURE_WLAN_AP_AP_ACS_OPTIMIZE
@@ -989,6 +988,8 @@ QDF_STATUS sap_channel_sel(struct sap_context *sap_context)
 				eCSR_SCAN_SUCCESS);
 	}
 #endif
+
+	wlansap_dump_acs_ch_freq(sap_context);
 
 	qdf_ret_status = QDF_STATUS_SUCCESS;
 
@@ -1756,7 +1757,15 @@ QDF_STATUS sap_signal_hdd_event(struct sap_context *sap_ctx,
 
 	case eSAP_CHANNEL_CHANGE_RESP:
 		sap_ap_event.sapHddEventCode = eSAP_CHANNEL_CHANGE_RESP;
-		sap_ap_event.sapevt.ch_change_rsp_status = (QDF_STATUS)context;
+		acs_selected = &sap_ap_event.sapevt.sap_ch_selected;
+		acs_selected->pri_ch_freq = sap_ctx->chan_freq;
+		acs_selected->ht_sec_ch_freq = sap_ctx->sec_ch_freq;
+		acs_selected->ch_width =
+			sap_ctx->csr_roamProfile.ch_params.ch_width;
+		acs_selected->vht_seg0_center_ch_freq =
+			sap_ctx->csr_roamProfile.ch_params.mhz_freq_seg0;
+		acs_selected->vht_seg1_center_ch_freq =
+			sap_ctx->csr_roamProfile.ch_params.mhz_freq_seg1;
 		QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_INFO_HIGH,
 			  "In %s, SAP event callback event = %s",
 			 __func__, "eSAP_CHANNEL_CHANGE_RESP");
@@ -1897,8 +1906,7 @@ static QDF_STATUS sap_cac_start_notify(mac_handle_t mac_handle)
 		    (false == sap_context->isCacStartNotified)) {
 			/* Don't start CAC for non-dfs channel, its violation */
 			profile = &sap_context->csr_roamProfile;
-			ch_freq = wlan_reg_legacy_chan_to_freq(mac->pdev,
-						profile->op_freq);
+			ch_freq = profile->op_freq;
 			if (!wlan_reg_is_dfs_for_freq(mac->pdev,
 						      ch_freq))
 				continue;
@@ -3807,8 +3815,7 @@ bool sap_is_conc_sap_doing_scc_dfs(mac_handle_t mac_handle,
 	uint8_t intf = 0, scc_dfs_counter = 0;
 	qdf_freq_t ch_freq;
 
-	ch_freq = wlan_reg_legacy_chan_to_freq(mac->pdev,
-				given_sapctx->csr_roamProfile.op_freq);
+	ch_freq = given_sapctx->csr_roamProfile.op_freq;
 	/*
 	 * current SAP persona's channel itself is not DFS, so no need to check
 	 * what other persona's channel is

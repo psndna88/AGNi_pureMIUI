@@ -447,13 +447,6 @@ csr_scan_save_bss_description(struct mac_context *mac,
 	if (!pCsrBssDescription)
 		return false;
 
-	pCsrBssDescription->AgingCount =
-		(int32_t) mac->roam.configParam.agingCount;
-	sme_debug(
-		"Set Aging Count = %d for BSS " QDF_MAC_ADDR_STR " ",
-		pCsrBssDescription->AgingCount,
-		QDF_MAC_ADDR_ARRAY(pCsrBssDescription->Result.BssDescriptor.
-			       bssId));
 	qdf_mem_copy(&pCsrBssDescription->Result.BssDescriptor,
 		     pBSSDescription, cbBSSDesc);
 	csr_scan_add_result(mac, pCsrBssDescription);
@@ -535,8 +528,7 @@ QDF_STATUS csr_save_to_channel_power2_g_5_g(struct mac_context *mac,
 			qdf_mem_free(pChannelSet);
 			return QDF_STATUS_E_FAILURE;
 		}
-		pChannelSet->txPower = QDF_MIN(pChannelInfo->maxTxPower,
-					mac->mlme_cfg->power.max_tx_power);
+		pChannelSet->txPower = pChannelInfo->maxTxPower;
 		if (f2GHzInfoFound) {
 			if (!f2GListPurged) {
 				/* purge previous results if found new */
@@ -641,9 +633,8 @@ static void csr_diag_reset_country_information(struct mac_context *mac)
 		     Index++) {
 			p11dLog->Channels[Index] =
 				wlan_reg_freq_to_chan(mac->pdev, mac->scan.base_channels.channel_freq_list[Index]);
-			p11dLog->TxPwr[Index] = QDF_MIN(
-				mac->scan.defaultPowerTable[Index].tx_power,
-				mac->mlme_cfg->power.max_tx_power);
+			p11dLog->TxPwr[Index] =
+				mac->scan.defaultPowerTable[Index].tx_power;
 		}
 	}
 	if (!mac->mlme_cfg->gen.enabled_11d)
@@ -839,8 +830,7 @@ void csr_save_channel_power_for_band(struct mac_context *mac, bool fill_5f)
 			mac->scan.defaultPowerTable[idx].center_freq;
 		chan_info->numChannels = 1;
 		chan_info->maxTxPower =
-			QDF_MIN(mac->scan.defaultPowerTable[idx].tx_power,
-				mac->mlme_cfg->power.max_tx_power);
+			mac->scan.defaultPowerTable[idx].tx_power;
 		chan_info++;
 		count++;
 	}
@@ -1122,9 +1112,6 @@ static QDF_STATUS csr_save_profile(struct mac_context *mac_ctx,
 	if (!temp)
 		goto error;
 
-	temp->AgingCount = scan_result->AgingCount;
-	temp->preferValue = scan_result->preferValue;
-	temp->capValue = scan_result->capValue;
 	temp->ucEncryptionType = scan_result->ucEncryptionType;
 	temp->mcEncryptionType = scan_result->mcEncryptionType;
 	temp->authType = scan_result->authType;
@@ -1552,9 +1539,7 @@ static void csr_save_tx_power_to_cfg(struct mac_context *mac,
 				ch_pwr_set->first_freq =
 					ch_set->first_chan_freq;
 				ch_pwr_set->numChannels = 1;
-				ch_pwr_set->maxTxPower =
-					QDF_MIN(ch_set->txPower,
-					mac->mlme_cfg->power.max_tx_power);
+				ch_pwr_set->maxTxPower = ch_set->txPower;
 				cbLen += sizeof(tSirMacChanInfo);
 				ch_pwr_set++;
 				count++;
@@ -1571,8 +1556,7 @@ static void csr_save_tx_power_to_cfg(struct mac_context *mac,
 			}
 			ch_pwr_set->first_freq = ch_set->first_chan_freq;
 			ch_pwr_set->numChannels = ch_set->numChannels;
-			ch_pwr_set->maxTxPower = QDF_MIN(ch_set->txPower,
-					mac->mlme_cfg->power.max_tx_power);
+			ch_pwr_set->maxTxPower = ch_set->txPower;
 			cbLen += sizeof(tSirMacChanInfo);
 			ch_pwr_set++;
 			count++;
@@ -2398,8 +2382,6 @@ static QDF_STATUS csr_fill_bss_from_scan_entry(struct mac_context *mac_ctx,
 	if (!bss)
 		return QDF_STATUS_E_NOMEM;
 
-	bss->AgingCount =
-		(int32_t) mac_ctx->roam.configParam.agingCount;
 	bss->ucEncryptionType =
 		csr_covert_enc_type_old(scan_entry->neg_sec_info.uc_enc);
 	bss->mcEncryptionType =

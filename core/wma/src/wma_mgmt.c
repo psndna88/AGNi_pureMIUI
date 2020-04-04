@@ -307,7 +307,7 @@ wma_beacon_swba_handler(void *handle, uint8_t *event, uint32_t len)
 
 #ifdef FEATURE_WLAN_DIAG_SUPPORT
 void wma_sta_kickout_event(uint32_t kickout_reason, uint8_t vdev_id,
-							uint8_t *macaddr)
+			   uint8_t *macaddr)
 {
 	WLAN_HOST_DIAG_EVENT_DEF(sta_kickout, struct host_event_wlan_kickout);
 	qdf_mem_zero(&sta_kickout, sizeof(sta_kickout));
@@ -315,7 +315,7 @@ void wma_sta_kickout_event(uint32_t kickout_reason, uint8_t vdev_id,
 	sta_kickout.vdev_id = vdev_id;
 	if (macaddr)
 		qdf_mem_copy(sta_kickout.peer_mac, macaddr,
-							QDF_MAC_ADDR_SIZE);
+			     QDF_MAC_ADDR_SIZE);
 	WLAN_HOST_DIAG_EVENT_REPORT(&sta_kickout, EVENT_WLAN_STA_KICKOUT);
 }
 #endif
@@ -2387,6 +2387,10 @@ QDF_STATUS wma_set_ap_vdev_up(tp_wma_handle wma, uint8_t vdev_id)
 	iface = &wma->interfaces[vdev_id];
 	vdev = iface->vdev;
 	mlme_obj = wlan_vdev_mlme_get_cmpt_obj(vdev);
+	if (!mlme_obj) {
+		WMA_LOGE(FL("failed to get mlme_obj"));
+		return QDF_STATUS_E_INVAL;
+	}
 	mlme_obj->proto.sta.assoc_id = 0;
 
 	status = vdev_mgr_up_send(mlme_obj);
@@ -2656,6 +2660,7 @@ static void wma_extract_mgmt_offload_event_params(
 	params->rssi = hdr->rssi;
 	params->buf_len = hdr->buf_len;
 	params->tx_status = hdr->tx_status;
+	params->tx_retry_cnt = hdr->tx_retry_cnt;
 }
 
 /**
@@ -2682,8 +2687,8 @@ int wma_mgmt_tx_completion_handler(void *handle, uint8_t *cmpl_event_params,
 	}
 	cmpl_params = param_buf->fixed_param;
 
-	if (ucfg_pkt_capture_get_pktcap_mode(wma_handle->psoc) &
-	    PKT_CAPTURE_MODE_MGMT_ONLY) {
+	if ((ucfg_pkt_capture_get_pktcap_mode(wma_handle->psoc) &
+	    PKT_CAPTURE_MODE_MGMT_ONLY) && param_buf->mgmt_hdr) {
 		struct mgmt_offload_event_params params = {0};
 
 		wma_extract_mgmt_offload_event_params(
@@ -2757,8 +2762,8 @@ int wma_mgmt_tx_bundle_completion_handler(void *handle, uint8_t *buf,
 	}
 
 	for (i = 0; i < num_reports; i++) {
-		if (ucfg_pkt_capture_get_pktcap_mode(wma_handle->psoc) &
-		    PKT_CAPTURE_MODE_MGMT_ONLY) {
+		if ((ucfg_pkt_capture_get_pktcap_mode(wma_handle->psoc) &
+		    PKT_CAPTURE_MODE_MGMT_ONLY) && param_buf->mgmt_hdr) {
 			struct mgmt_offload_event_params params = {0};
 
 			wma_extract_mgmt_offload_event_params(
@@ -3045,7 +3050,8 @@ wma_is_ccmp_pn_replay_attack(void *cds_ctx, struct ieee80211_frame *wh,
 	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
 	bool ret = false;
 
-	if (wma_find_vdev_id_by_bssid(cds_ctx, wh->i_addr3, &vdev_id)) {
+	if (wma_find_vdev_id_by_bssid(cds_ctx, wh->i_addr3, &vdev_id) &&
+	    wma_find_vdev_id_by_addr(cds_ctx, wh->i_addr1, &vdev_id)) {
 		WMA_LOGE("%s: Failed to find vdev", __func__);
 		return true;
 	}
@@ -3222,14 +3228,20 @@ int wma_process_rmf_frame(tp_wma_handle wma_handle,
 			return -EINVAL;
 		}
 
-		pdev_id = wlan_objmgr_pdev_get_pdev_id(wma_handle->pdev);
-		status = mlme_get_peer_mic_len(wma_handle->psoc, pdev_id,
-					       wh->i_addr2, &mic_len,
-					       &hdr_len);
-		if (QDF_IS_STATUS_ERROR(status)) {
-			WMA_LOGE("Failed to get mic hdr and length");
-			cds_pkt_return_packet(rx_pkt);
-			return -EINVAL;
+		if (iface->type == WMI_VDEV_TYPE_NDI) {
+			hdr_len = IEEE80211_CCMP_HEADERLEN;
+			mic_len = IEEE80211_CCMP_MICLEN;
+		} else {
+			pdev_id =
+				wlan_objmgr_pdev_get_pdev_id(wma_handle->pdev);
+			status = mlme_get_peer_mic_len(wma_handle->psoc,
+						       pdev_id, wh->i_addr2,
+						       &mic_len, &hdr_len);
+			if (QDF_IS_STATUS_ERROR(status)) {
+				WMA_LOGE("Failed to get mic hdr and length");
+				cds_pkt_return_packet(rx_pkt);
+				return -EINVAL;
+			}
 		}
 
 		if (qdf_nbuf_len(wbuf) < (sizeof(*wh) + hdr_len + mic_len)) {
@@ -3368,12 +3380,14 @@ wma_check_and_process_rmf_frame(tp_wma_handle wma_handle,
 	struct ieee80211_frame *hdr = *wh;
 
 	iface = &(wma_handle->interfaces[vdev_id]);
-	if (!iface->rmfEnabled)
+	if (iface->type != WMI_VDEV_TYPE_NDI && !iface->rmfEnabled)
 		return 0;
 
 	if (qdf_is_macaddr_group((struct qdf_mac_addr *)(hdr->i_addr1)) ||
 	    qdf_is_macaddr_broadcast((struct qdf_mac_addr *)(hdr->i_addr1)) ||
-	    wma_get_peer_pmf_status(wma_handle, hdr->i_addr2)) {
+	    wma_get_peer_pmf_status(wma_handle, hdr->i_addr2) ||
+	    (iface->type == WMI_VDEV_TYPE_NDI &&
+	    (hdr->i_fc[1] & IEEE80211_FC1_WEP))) {
 		status = wma_process_rmf_frame(wma_handle, iface, hdr,
 					       rx_pkt, buf);
 		if (status)
@@ -3575,6 +3589,15 @@ int wma_form_rx_packet(qdf_nbuf_t buf,
 	     mgt_subtype == MGMT_SUBTYPE_DEAUTH ||
 	     mgt_subtype == MGMT_SUBTYPE_ACTION)) {
 		if (wma_find_vdev_id_by_bssid(wma_handle, wh->i_addr3,
+					      &vdev_id) == QDF_STATUS_SUCCESS) {
+			status = wma_check_and_process_rmf_frame(wma_handle,
+								 vdev_id,
+								 &wh,
+								 rx_pkt,
+								 buf);
+			if (status)
+				return status;
+		} else if (wma_find_vdev_id_by_addr(wma_handle, wh->i_addr1,
 					      &vdev_id) == QDF_STATUS_SUCCESS) {
 			status = wma_check_and_process_rmf_frame(wma_handle,
 								 vdev_id,
@@ -4008,5 +4031,30 @@ void wma_mgmt_nbuf_unmap_cb(struct wlan_objmgr_pdev *pdev,
 	dev = wlan_psoc_get_qdf_dev(psoc);
 	if (wlan_psoc_nif_fw_ext_cap_get(psoc, WLAN_SOC_CEXT_WMI_MGMT_REF))
 		qdf_nbuf_unmap_single(dev, buf, QDF_DMA_TO_DEVICE);
+}
+
+QDF_STATUS wma_mgmt_frame_fill_peer_cb(struct wlan_objmgr_peer *peer,
+				       qdf_nbuf_t buf)
+{
+	struct wlan_objmgr_psoc *psoc;
+	struct wlan_objmgr_pdev *pdev;
+
+	psoc = wlan_peer_get_psoc(peer);
+	if (!psoc) {
+		WMA_LOGE("%s: Psoc handle NULL", __func__);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	pdev = wlan_objmgr_get_pdev_by_id((struct wlan_objmgr_psoc *)psoc,
+					  wlan_peer_get_pdev_id(peer),
+					  WLAN_LEGACY_WMA_ID);
+	if (!pdev) {
+		WMA_LOGE("%s: Pdev handle NULL", __func__);
+		return QDF_STATUS_E_INVAL;
+	}
+	wma_mgmt_nbuf_unmap_cb(pdev, buf);
+	wlan_objmgr_pdev_release_ref(pdev, WLAN_LEGACY_WMA_ID);
+
+	return QDF_STATUS_SUCCESS;
 }
 #endif

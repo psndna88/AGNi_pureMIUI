@@ -46,6 +46,7 @@ enum pkt_capture_mode {
  *             4: fifo underrun
  *             8: swabort
  * @buf: management frame buffer
+ * @tx_retry_cnt: tx retry count
  */
 struct mgmt_offload_event_params {
 	uint32_t tsf_l32;
@@ -55,5 +56,14 @@ struct mgmt_offload_event_params {
 	uint32_t buf_len;
 	uint32_t tx_status;
 	uint8_t *buf;
+	uint8_t tx_retry_cnt;
+};
+
+/**
+ * struct pkt_capture_callbacks - callbacks to non-converged driver
+ * @get_rmf_status: callback to get rmf status
+ */
+struct pkt_capture_callbacks {
+	int (*get_rmf_status)(uint8_t vdev_id);
 };
 #endif /* _WLAN_PKT_CAPTURE_PUBLIC_STRUCTS_H_ */

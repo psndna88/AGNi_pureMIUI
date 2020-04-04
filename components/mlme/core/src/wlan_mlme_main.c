@@ -321,6 +321,8 @@ static void mlme_init_generic_cfg(struct wlan_objmgr_psoc *psoc,
 	gen->enable_ring_buffer = cfg_get(psoc, CFG_ENABLE_RING_BUFFER);
 	gen->enable_peer_unmap_conf_support =
 		cfg_get(psoc, CFG_DP_ENABLE_PEER_UMAP_CONF_SUPPORT);
+	gen->dfs_chan_ageout_time =
+		cfg_get(psoc, CFG_DFS_CHAN_AGEOUT_TIME);
 }
 
 static void mlme_init_edca_ani_cfg(struct wlan_mlme_edca_params *edca_params)
@@ -1078,6 +1080,8 @@ static void mlme_init_he_cap_in_cfg(struct wlan_objmgr_psoc *psoc,
 			cfg_get(psoc, CFG_HE_STA_OBSSPD);
 	qdf_mem_zero(he_caps->he_ppet_2g, MLME_HE_PPET_LEN);
 	qdf_mem_zero(he_caps->he_ppet_5g, MLME_HE_PPET_LEN);
+	mlme_cfg->he_caps.he_mcs_12_13_supp_2g = 0;
+	mlme_cfg->he_caps.he_mcs_12_13_supp_5g = 0;
 }
 #else
 static void mlme_init_he_cap_in_cfg(struct wlan_objmgr_psoc *psoc,
@@ -1253,6 +1257,8 @@ mlme_acs_parse_weight_list(struct wlan_objmgr_psoc *psoc,
 			sscanf(str2, "%d", &freq1);
 			sscanf(str1, "%d", &freq2);
 			strsep(&str1, "=");
+			if (!str1)
+				goto end;
 			sscanf(str1, "%d", &normalize_factor);
 
 			if (num_acs_weight_range == MAX_ACS_WEIGHT_RANGE)
@@ -1264,6 +1270,8 @@ mlme_acs_parse_weight_list(struct wlan_objmgr_psoc *psoc,
 		} else {
 			sscanf(str1, "%d", &freq1);
 			strsep(&str1, "=");
+			if (!str1)
+				goto end;
 			sscanf(str1, "%d", &normalize_factor);
 			if (mlme_is_freq_present_in_list(weight_list,
 							 num_acs_weight, freq1,
@@ -1271,7 +1279,7 @@ mlme_acs_parse_weight_list(struct wlan_objmgr_psoc *psoc,
 				weight_list[index].normalize_weight =
 							normalize_factor;
 			} else {
-				if (num_acs_weight == QDF_MAX_NUM_CHAN)
+				if (num_acs_weight == NUM_CHANNELS)
 					continue;
 
 				weight_list[num_acs_weight].chan_freq = freq1;
@@ -1462,7 +1470,8 @@ static void mlme_init_roam_offload_cfg(struct wlan_objmgr_psoc *psoc,
 {
 	lfr->lfr3_roaming_offload =
 		cfg_get(psoc, CFG_LFR3_ROAMING_OFFLOAD);
-
+	lfr->enable_roam_reason_vsie =
+		cfg_get(psoc, CFG_ENABLE_ROAM_REASON_VSIE);
 	lfr->enable_disconnect_roam_offload =
 		cfg_get(psoc, CFG_LFR_ENABLE_DISCONNECT_ROAM);
 	lfr->enable_idle_roam =
@@ -1474,7 +1483,10 @@ static void mlme_init_roam_offload_cfg(struct wlan_objmgr_psoc *psoc,
 	lfr->idle_data_packet_count =
 		cfg_get(psoc, CFG_LFR_IDLE_ROAM_PACKET_COUNT);
 	lfr->idle_roam_min_rssi = cfg_get(psoc, CFG_LFR_IDLE_ROAM_MIN_RSSI);
+	lfr->roam_trigger_bitmap =
+		cfg_get(psoc, CFG_ROAM_TRIGGER_BITMAP);
 	lfr->idle_roam_band = cfg_get(psoc, CFG_LFR_IDLE_ROAM_BAND);
+	lfr->sta_roam_disable = cfg_get(psoc, CFG_STA_DISABLE_ROAM);
 	mlme_init_sae_single_pmk_cfg(psoc, lfr);
 }
 
@@ -1748,7 +1760,6 @@ static void mlme_init_power_cfg(struct wlan_objmgr_psoc *psoc,
 	power->power_usage.len = CFG_POWER_USAGE_MAX_LEN;
 	qdf_mem_copy(power->power_usage.data, cfg_get(psoc, CFG_POWER_USAGE),
 		     power->power_usage.len);
-	power->max_tx_power = cfg_get(psoc, CFG_MAX_TX_POWER);
 	power->current_tx_power_level =
 			(uint8_t)cfg_default(CFG_CURRENT_TX_POWER_LEVEL);
 	power->local_power_constraint =
@@ -1786,6 +1797,8 @@ static void mlme_init_scoring_cfg(struct wlan_objmgr_psoc *psoc,
 		cfg_get(psoc, CFG_SCORING_CHAN_CONGESTION_WEIGHTAGE);
 	scoring_cfg->weight_cfg.oce_wan_weightage =
 		cfg_get(psoc, CFG_SCORING_OCE_WAN_WEIGHTAGE);
+	scoring_cfg->weight_cfg.oce_ap_tx_pwr_weightage =
+				cfg_get(psoc, CFG_OCE_AP_TX_PWR_WEIGHTAGE);
 
 	total_weight =  scoring_cfg->weight_cfg.rssi_weightage +
 			scoring_cfg->weight_cfg.ht_caps_weightage +
@@ -1797,7 +1810,8 @@ static void mlme_init_scoring_cfg(struct wlan_objmgr_psoc *psoc,
 			scoring_cfg->weight_cfg.beamforming_cap_weightage +
 			scoring_cfg->weight_cfg.pcl_weightage +
 			scoring_cfg->weight_cfg.channel_congestion_weightage +
-			scoring_cfg->weight_cfg.oce_wan_weightage;
+			scoring_cfg->weight_cfg.oce_wan_weightage +
+			scoring_cfg->weight_cfg.oce_ap_tx_pwr_weightage;
 
 	/*
 	 * If configured weights are greater than max weight,
@@ -1823,6 +1837,8 @@ static void mlme_init_scoring_cfg(struct wlan_objmgr_psoc *psoc,
 		scoring_cfg->weight_cfg.channel_congestion_weightage =
 						CHANNEL_CONGESTION_WEIGHTAGE;
 		scoring_cfg->weight_cfg.oce_wan_weightage = OCE_WAN_WEIGHTAGE;
+		scoring_cfg->weight_cfg.oce_ap_tx_pwr_weightage =
+			OCE_AP_TX_POWER_WEIGHTAGE;
 	}
 
 	scoring_cfg->rssi_score.best_rssi_threshold =
@@ -1885,7 +1901,7 @@ static void mlme_init_scoring_cfg(struct wlan_objmgr_psoc *psoc,
 		mlme_limit_max_per_index_score(
 			cfg_get(psoc, CFG_SCORING_OCE_WAN_SCORE_IDX_15_TO_12));
 	scoring_cfg->roam_trigger_bitmap =
-				cfg_get(psoc, CFG_ROAM_TRIGGER_BITMAP);
+			cfg_get(psoc, CFG_ROAM_SCORE_DELTA_TRIGGER_BITMAP);
 	scoring_cfg->roam_score_delta = cfg_get(psoc, CFG_ROAM_SCORE_DELTA);
 	scoring_cfg->apsd_enabled = (bool)cfg_default(CFG_APSD_ENABLED);
 	scoring_cfg->min_roam_score_delta =

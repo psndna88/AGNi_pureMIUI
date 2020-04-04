@@ -240,7 +240,6 @@ rrm_process_link_measurement_request(struct mac_context *mac,
 
 	tx_pwr_attr.reg_max = pe_session->def_max_tx_pwr;
 	tx_pwr_attr.ap_tx_power = pLinkReq->MaxTxPower.maxTxPower;
-	tx_pwr_attr.ini_tx_power = mac->mlme_cfg->power.max_tx_power;
 
 	LinkReport.txPower = lim_get_max_tx_power(mac, &tx_pwr_attr);
 
@@ -465,6 +464,44 @@ rrm_process_neighbor_report_req(struct mac_context *mac,
 	return status;
 }
 
+/**
+ * rrm_get_country_code_from_connected_profile() - Get country code
+ * from connected profile
+ * @mac: Mac context
+ * @pe_session: pe session
+ * @country_code: country code
+ *
+ * Return: void
+ */
+static inline void
+rrm_get_country_code_from_connected_profile(
+				struct mac_context *mac,
+				struct pe_session *pe_session,
+				uint8_t country_code[WNI_CFG_COUNTRY_CODE_LEN])
+{
+	uint8_t id;
+	uint8_t *country;
+
+	qdf_mem_zero(country_code, sizeof(country_code[0]) *
+					WNI_CFG_COUNTRY_CODE_LEN);
+	if (!pe_session) {
+		pe_err("pe_session is NULL");
+		return;
+	}
+	id = pe_session->smeSessionId;
+	if (!CSR_IS_SESSION_VALID(mac, id)) {
+		pe_err("smeSessionId %d is invalid", id);
+		return;
+	}
+	country =
+		mac->roam.roamSession[id].connectedProfile.country_code;
+	if (country[0])
+		qdf_mem_copy(country_code, country, sizeof(country_code[0]) *
+						WNI_CFG_COUNTRY_CODE_LEN);
+	else
+		country_code[2] = OP_CLASS_GLOBAL;
+}
+
 #define ABS(x)      ((x < 0) ? -x : x)
 /* -------------------------------------------------------------------- */
 /**
@@ -498,9 +535,14 @@ rrm_process_beacon_report_req(struct mac_context *mac,
 	tDot11fIEAPChannelReport *ie_ap_chan_rpt;
 	uint8_t tmp_idx, buf_left, buf_cons;
 	uint16_t ch_ctr = 0;
-	char req_ssid[WLAN_SSID_MAX_LEN] = {0};
 	char ch_buf[RRM_CH_BUF_LEN];
 	char *tmp_buf = NULL;
+	uint8_t country[WNI_CFG_COUNTRY_CODE_LEN];
+
+	if (!pe_session) {
+		pe_err("pe_session is NULL");
+		return eRRM_INCAPABLE;
+	}
 
 	if (pBeaconReq->measurement_request.Beacon.BeaconReporting.present &&
 	    (pBeaconReq->measurement_request.Beacon.BeaconReporting.
@@ -536,12 +578,11 @@ rrm_process_beacon_report_req(struct mac_context *mac,
 
 	measDuration = pBeaconReq->measurement_request.Beacon.meas_duration;
 
-	if (pBeaconReq->measurement_request.Beacon.SSID.present)
-		qdf_snprintf(req_ssid, WLAN_SSID_MAX_LEN, "%s",
-			     pBeaconReq->measurement_request.Beacon.SSID.ssid);
-
-	pe_nofl_info("RX: [802.11 BCN_RPT] SSID:%s BSSID:%pM Token:%d op_class:%d ch:%d meas_mode:%d meas_duration:%d max_dur: %d sign: %d max_meas_dur: %d",
-		     req_ssid, pBeaconReq->measurement_request.Beacon.BSSID,
+	pe_nofl_info("RX: [802.11 BCN_RPT] seq:%d SSID:%.*s BSSID:%pM Token:%d op_class:%d ch:%d meas_mode:%d meas_duration:%d max_dur: %d sign: %d max_meas_dur: %d",
+		     mac->rrm.rrmPEContext.prev_rrm_report_seq_num,
+		     pBeaconReq->measurement_request.Beacon.SSID.num_ssid,
+		     pBeaconReq->measurement_request.Beacon.SSID.ssid,
+		     pBeaconReq->measurement_request.Beacon.BSSID,
 		     pBeaconReq->measurement_token,
 		     pBeaconReq->measurement_request.Beacon.regClass,
 		     pBeaconReq->measurement_request.Beacon.channel,
@@ -625,14 +666,36 @@ rrm_process_beacon_report_req(struct mac_context *mac,
 		return eRRM_FAILURE;
 	}
 
+	rrm_get_country_code_from_connected_profile(mac, pe_session,
+						    country);
 	psbrr->channel_info.chan_num =
 		pBeaconReq->measurement_request.Beacon.channel;
 	psbrr->channel_info.reg_class =
 		pBeaconReq->measurement_request.Beacon.regClass;
-	psbrr->channel_info.chan_freq =
-		wlan_reg_chan_opclass_to_freq(psbrr->channel_info.chan_num,
-					      psbrr->channel_info.reg_class,
-					      false);
+	if (psbrr->channel_info.chan_num &&
+	    psbrr->channel_info.chan_num != 255) {
+		psbrr->channel_info.chan_freq =
+			wlan_reg_country_chan_opclass_to_freq(
+				mac->pdev,
+				country,
+				psbrr->channel_info.chan_num,
+				psbrr->channel_info.reg_class,
+				false);
+		if (!psbrr->channel_info.chan_freq) {
+			pe_debug("invalid ch freq, chan_num %d",
+				  psbrr->channel_info.chan_num);
+			qdf_mem_free(psbrr);
+			return eRRM_FAILURE;
+		}
+	} else {
+		psbrr->channel_info.chan_freq = 0;
+	}
+	sme_debug("opclass %d, ch %d freq %d AP's country code %c%c 0x%x",
+		  psbrr->channel_info.reg_class,
+		  psbrr->channel_info.chan_num,
+		  psbrr->channel_info.chan_freq,
+		  country[0], country[1], country[2]);
+
 	psbrr->measurementDuration[0] = measDuration;
 	psbrr->fMeasurementtype[0] =
 		pBeaconReq->measurement_request.Beacon.meas_mode;
@@ -764,7 +827,7 @@ rrm_fill_beacon_ies(struct mac_context *mac, uint8_t *pIes,
 		pIes += sizeof(uint16_t);
 	}
 
-	while (BcnNumIes > 0) {
+	while (BcnNumIes >= 2) {
 		len = *(pBcnIes + 1);
 		len += 2;       /* element id + length. */
 		pe_debug("EID = %d, len = %d total = %d",

@@ -29,13 +29,6 @@
 #include "cds_reg_service.h"
 #include "wlan_objmgr_vdev_obj.h"
 
-/* This number minus 1 means the number of times a channel is scanned before
- * a BSS is removed from cache scan result
- */
-#define CSR_AGING_COUNT     3
-
-/* These are going against the signed RSSI (int8_t) so it is between -+127 */
-#define CSR_BEST_RSSI_VALUE         (-30)       /* RSSI >= this is in CAT4 */
 #define CSR_DEFAULT_RSSI_DB_GAP     30  /* every 30 dbm for one category */
 
 #ifdef QCA_WIFI_3_0_EMU
@@ -77,26 +70,13 @@ enum csr_roamcomplete_result {
 
 struct tag_csrscan_result {
 	tListElem Link;
-	/* This BSS is removed when it reaches 0 or less */
-	int32_t AgingCount;
-	/* The bigger the number, the better the BSS.
-	 * This value override capValue
-	 */
-	uint32_t preferValue;
-	/* The biggger the better. This value is in use only if we have
-	 * equal preferValue
-	 */
-	uint32_t capValue;
-	/* This member must be the last in the structure because the end of
-	 * struct bss_description (inside) is an
-	 * array with nonknown size at this time
-	 */
 	/* Preferred Encryption type that matched with profile. */
 	eCsrEncryptionType ucEncryptionType;
 	eCsrEncryptionType mcEncryptionType;
 	/* Preferred auth type that matched with the profile. */
 	enum csr_akm_type authType;
 	int  bss_score;
+	uint8_t retry_count;
 
 	tCsrScanResultInfo Result;
 	/*
@@ -214,16 +194,31 @@ QDF_STATUS csr_roam_issue_reassoc(struct mac_context *mac, uint32_t sessionId,
 				  bool fImediate);
 void csr_roam_complete(struct mac_context *mac, enum csr_roamcomplete_result Result,
 		       void *Context, uint8_t session_id);
+
+/**
+ * csr_issue_set_context_req_helper  - Function to fill unicast/broadcast keys
+ * request to set the keys to fw
+ * @mac:         Poiner to mac context
+ * @profile:     Pointer to connected profile
+ * @vdev_id:     vdev id
+ * @bssid:       Connected BSSID
+ * @addkey:      Is add key request to crypto
+ * @unicast:     Unicast(1) or broadcast key(0)
+ * @key_direction: Key used in TX or RX or both Tx and RX path
+ * @key_id:       Key index
+ * @key_length:   Key length
+ * @key:          Pointer to the key
+ *
+ * Return: QDF_STATUS
+ */
 QDF_STATUS
-csr_roam_issue_set_context_req_helper(struct mac_context *mac,
-				      uint32_t session_id,
-				      eCsrEncryptionType encr_type,
-				      struct bss_description *bss_descr,
-				      tSirMacAddr *bssid, bool addkey,
-				      bool unicast,
-				      tAniKeyDirection key_direction,
-				      uint8_t key_id, uint16_t key_length,
-				      uint8_t *key, uint8_t pae_role);
+csr_issue_set_context_req_helper(struct mac_context *mac,
+				 struct csr_roam_profile *profile,
+				 uint32_t session_id,
+				 tSirMacAddr *bssid, bool addkey,
+				 bool unicast, tAniKeyDirection key_direction,
+				 uint8_t key_id, uint16_t key_length,
+				 uint8_t *key);
 
 QDF_STATUS csr_roam_process_disassoc_deauth(struct mac_context *mac,
 						tSmeCmd *pCommand,
@@ -349,8 +344,6 @@ void csr_apply_channel_power_info_to_fw(struct mac_context *mac,
 					struct csr_channel *pChannelList,
 					uint8_t *countryCode);
 void csr_apply_power2_current(struct mac_context *mac);
-void csr_assign_rssi_for_category(struct mac_context *mac, int8_t bestApRssi,
-				  uint8_t catOffset);
 
 /* return a bool to indicate whether roaming completed or continue. */
 bool csr_roam_complete_roaming(struct mac_context *mac, uint32_t sessionId,
@@ -366,15 +359,15 @@ QDF_STATUS csr_save_to_channel_power2_g_5_g(struct mac_context *mac,
 					*channelTable);
 
 /*
- * csr_roam_vdev_delete() - CSR api to delete vdev
+ * csr_prepare_vdev_delete() - CSR api to delete vdev
  * @mac_ctx: pointer to mac context
  * @vdev_id: vdev id to be deleted.
  * @cleanup: clean up vdev session on true
  *
  * Return QDF_STATUS
  */
-QDF_STATUS csr_roam_vdev_delete(struct mac_context *mac_ctx,
-				uint8_t vdev_id, bool cleanup);
+QDF_STATUS csr_prepare_vdev_delete(struct mac_context *mac_ctx,
+				   uint8_t vdev_id, bool cleanup);
 
 /*
  * csr_cleanup_vdev_session() - CSR api to cleanup vdev
