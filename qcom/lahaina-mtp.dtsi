@@ -4,6 +4,7 @@
 #include "lahaina-pmic-overlay.dtsi"
 #include "lahaina-audio-overlay.dtsi"
 #include "display/lahaina-sde-display-mtp.dtsi"
+#include "lahaina-thermal-overlay.dtsi"
 
 &spmi_debug_bus {
 	status = "ok";
@@ -78,6 +79,26 @@
 	};
 };
 
+&i3c3 {
+	se-clock-frequency = <19200000>;
+	i3c-scl-hz = <3500000>;
+	i2c-scl-hz = <400000>;
+	status = "ok";
+
+	sn@0,23600000000 {
+		compatible = "qcom,sn-nci-i3c";
+		reg = <0x0 0x236 0x00000000>;
+		qcom,sn-ven = <&tlmm 62 0x00>;
+		qcom,sn-firm = <&tlmm 86 0x00>;
+		qcom,sn-clkreq = <&tlmm 63 0x00>;
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&nfc_enable_active &nfc_fwdl_active
+					&nfc_clk_req_active>;
+		pinctrl-1 = <&nfc_enable_suspend &nfc_fwdl_suspend
+					&nfc_clk_req_suspend>;
+	};
+};
+
 &sdhc_2 {
 	vdd-supply = <&pm8350c_l9>;
 	qcom,vdd-voltage-level = <2950000 2960000>;
@@ -87,13 +108,13 @@
 	qcom,vdd-io-voltage-level = <1808000 2960000>;
 	qcom,vdd-io-current-level = <200 22000>;
 
-	pinctrl-names = "active", "sleep";
-	pinctrl-0 = <&sdc2_clk_on  &sdc2_cmd_on &sdc2_data_on &storage_cd>;
-	pinctrl-1 = <&sdc2_clk_off &sdc2_cmd_off &sdc2_data_off &storage_cd>;
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdc2_on>;
+	pinctrl-1 = <&sdc2_off>;
 
 	cd-gpios = <&tlmm 92 GPIO_ACTIVE_LOW>;
 
-	status = "disabled";
+	status = "ok";
 };
 
 
@@ -158,6 +179,14 @@
 
 &usb1 {
 	extcon = <&extcon_usb1>;
+};
+
+&battery_charger {
+	qcom,thermal-mitigation = <3000000 1500000 1000000 500000>;
+};
+
+&wil6210 {
+	status = "ok";
 };
 
 #include "camera/lahaina-camera-sensor-mtp.dtsi"

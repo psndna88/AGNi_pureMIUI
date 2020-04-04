@@ -108,6 +108,12 @@ The following properties are only required when LRA actuator is used:
 		is selected. Please refer to:
 		include/dt-bindings/input/qcom,hv-haptics.h.
 
+A child node named "qcom,hap-swr-slave-reg" can be defined to export a regulator
+device which is used for swr-haptics module to control the online status of SWR
+slave. The child node should have following property for this regulator device:
+
+- regulator-name: Please refer to: bindings/regulator/regulator.txt.
+
 The following properties should be specified in child nodes for defining
 different vibration effects:
 
@@ -160,10 +166,11 @@ different vibration effects:
 - qcom,wf-fifo-data:
   Usage:	optional
   Value type:	<prop-encoded-array>
-  Definition:	Defines a 9-bit data array of patterns which will be filled
-		into the FIFO memory and played when FIFO mode is selected.
-		The array needs to be specified as 16-bit using '/bits/ 16'
-		parameter. Either "qcom,wf-pattern-data" or "qcom,wf-fifo-data"
+  Definition:	Defines a byte array of patterns which will be filled into
+		the FIFO memory and played when FIFO mode is selected.
+		The array needs to be specified as 8-bit using '/bits/ 8'
+		parameter, or using '[]' instead of '<>'.
+		Either "qcom,wf-pattern-data" or "qcom,wf-fifo-data"
 		need to be defined in one effect child node. If both are
 		defined, then the FIFO data defined in this property will be
 		ignored.
@@ -222,6 +229,10 @@ Example:
 		qcom,drv-sig-shape = <WF_SINE>;
 		qcom,brake-sig-shape = <WF_SINE>;
 
+		qcom,hap-swr-slave-reg {
+			regulator-name = "hap-swr-slave-reg";
+		};
+
 		effect_0 {
 			/* CLICK effect */
 			qcom,effect-id = <0>;
@@ -244,9 +255,9 @@ Example:
 			/* DOUBLE_CLICK effect */
 			qcom,effect-id = <1>;
 			qcom,wf-vmax-mv = <5000>;
-			qcom,wf-fifo-data = /bits/ 16 <0x1ff 0x1ff 0x1ff 0x1ff 0x1ff
-					    0x1ff 0x1ff 0x1ff 0x1ff 0x1ff
-					    0x1ff 0x1ff 0x1ff 0x1ff 0x1ff>;
+			qcom,wf-fifo-data = /bits/ 8 <0xff 0xff 0xff 0xff 0xff
+					    0xff 0xff 0xff 0xff 0xff
+					    0xff 0xff 0xff 0xff 0xff>;
 			qcom,wf-fifo-period = <S_PERIOD_F_8KHZ>;
 			qcom,wf-brake-pattern = /bits/ 8 <0x7f 0x5f 0x3f>;
 			qcom,wf-auto-res-disable;

@@ -2,6 +2,7 @@
 #include "display/lahaina-sde-display-qrd.dtsi"
 #include "camera/lahaina-camera-sensor-mtp.dtsi"
 #include "lahaina-audio-overlay.dtsi"
+#include "lahaina-thermal-overlay.dtsi"
 
 &ufsphy_mem {
 	compatible = "qcom,ufs-phy-qmp-v4-lahaina";
@@ -30,6 +31,24 @@
 	qcom,vddp-ref-clk-max-microamp = <100>;
 
 	status = "ok";
+};
+
+&sdhc_2 {
+	vdd-supply = <&pm8350c_l9>;
+	qcom,vdd-voltage-level = <2950000 2960000>;
+	qcom,vdd-current-level = <200 800000>;
+
+	vdd-io-supply = <&pm8350c_l6>;
+	qcom,vdd-io-voltage-level = <1808000 2960000>;
+	qcom,vdd-io-current-level = <200 22000>;
+
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdc2_on>;
+	pinctrl-1 = <&sdc2_off>;
+
+	cd-gpios = <&tlmm 92 GPIO_ACTIVE_LOW>;
+
+	status = "disabled";
 };
 
 &swr_dmic_01 {
@@ -157,6 +176,26 @@
 	};
 };
 
+&i3c3 {
+	se-clock-frequency = <19200000>;
+	i3c-scl-hz = <3500000>;
+	i2c-scl-hz = <400000>;
+	status = "ok";
+
+	sn@0,23600000000 {
+		compatible = "qcom,sn-nci-i3c";
+		reg = <0x0 0x236 0x00000000>;
+		qcom,sn-ven = <&tlmm 62 0x00>;
+		qcom,sn-firm = <&tlmm 86 0x00>;
+		qcom,sn-clkreq = <&tlmm 63 0x00>;
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&nfc_enable_active &nfc_fwdl_active
+					&nfc_clk_req_active>;
+		pinctrl-1 = <&nfc_enable_suspend &nfc_fwdl_suspend
+					&nfc_clk_req_suspend>;
+	};
+};
+
 &dai_mi2s2 {
 	qcom,msm-mi2s-tx-lines = <1>;
 	pinctrl-names = "default", "sleep";
@@ -164,4 +203,8 @@
 			&tert_mi2s_sd0_active>;
 	pinctrl-1 = <&tert_mi2s_sck_sleep &tert_mi2s_ws_sleep
 			&tert_mi2s_sd0_sleep>;
+};
+
+&wil6210 {
+	status = "ok";
 };

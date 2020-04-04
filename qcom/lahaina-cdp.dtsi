@@ -4,6 +4,7 @@
 #include "lahaina-pmic-overlay.dtsi"
 #include "lahaina-audio-overlay.dtsi"
 #include "display/lahaina-sde-display-cdp.dtsi"
+#include "lahaina-thermal-overlay.dtsi"
 
 &spmi_debug_bus {
 	status = "ok";
@@ -74,6 +75,69 @@
 		qcom,ipc-gpio = <&tlmm 38 0>;
 		qcom,finger-detect-gpio = <&tlmm 39 0>;
 	};
+
+	focaltech@38 {
+		compatible = "focaltech,fts_ts";
+		reg = <0x38>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <23 0x2008>;
+		focaltech,reset-gpio = <&tlmm 22 0x00>;
+		focaltech,irq-gpio = <&tlmm 23 0x2008>;
+		focaltech,max-touch-number = <5>;
+		focaltech,display-coords = <0 0 1080 2340>;
+
+		vdd-supply = <&L3C>;
+		vcc_i2c-supply = <&L8C>;
+
+		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend","pmx_ts_release";
+		pinctrl-0 = <&ts_active>;
+		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+		pinctrl-2 = <&ts_release>;
+
+		panel = <&dsi_r66451_amoled_cmd
+			 &dsi_r66451_amoled_video>;
+	};
+
+	atmel_mxt_ts@4a {
+		compatible = "atmel,maxtouch";
+		reg = <0x4a>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <23 0x2008>;
+		avdd-supply = <&L3C>;
+		vdd-supply = <&L8C>;
+		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend";
+		pinctrl-0 = <&ts_active>;
+		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+
+		atmel,xy_switch;
+		atmel,inverty;
+		atmel,invertx;
+		reset-gpios = <&tlmm 22 0x00>;
+		irq-gpios = <&tlmm 23 0x2008>;
+		atmel,panel-coords = <0 0 479 799>;
+		atmel,display-coords = <0 0 339 729>;
+		panel = <&dsi_sharp_qhd_plus_dsc_cmd>;
+	};
+};
+
+&i3c3 {
+	se-clock-frequency = <19200000>;
+	i3c-scl-hz = <3500000>;
+	i2c-scl-hz = <400000>;
+	status = "ok";
+
+	sn@0,23600000000 {
+		compatible = "qcom,sn-nci-i3c";
+		reg = <0x0 0x236 0x00000000>;
+		qcom,sn-ven = <&tlmm 62 0x00>;
+		qcom,sn-firm = <&tlmm 86 0x00>;
+		qcom,sn-clkreq = <&tlmm 63 0x00>;
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&nfc_enable_active &nfc_fwdl_active
+					&nfc_clk_req_active>;
+		pinctrl-1 = <&nfc_enable_suspend &nfc_fwdl_suspend
+					&nfc_clk_req_suspend>;
+	};
 };
 
 &sdhc_2 {
@@ -85,13 +149,13 @@
 	qcom,vdd-io-voltage-level = <1808000 2960000>;
 	qcom,vdd-io-current-level = <200 22000>;
 
-	pinctrl-names = "active", "sleep";
-	pinctrl-0 = <&sdc2_clk_on  &sdc2_cmd_on &sdc2_data_on &storage_cd>;
-	pinctrl-1 = <&sdc2_clk_off &sdc2_cmd_off &sdc2_data_off &storage_cd>;
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdc2_on>;
+	pinctrl-1 = <&sdc2_off>;
 
 	cd-gpios = <&tlmm 92 GPIO_ACTIVE_LOW>;
 
-	status = "disabled";
+	status = "ok";
 };
 
 
@@ -156,6 +220,10 @@
 
 &usb1 {
 	extcon = <&extcon_usb1>;
+};
+
+&wil6210 {
+	status = "ok";
 };
 
 #include "camera/lahaina-camera-sensor-cdp.dtsi"
