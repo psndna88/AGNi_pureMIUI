@@ -1,17 +1,20 @@
 #include <dt-bindings/clock/mdss-5nm-pll-clk.h>
 
 &soc {
+	disp_rdump_memory: disp_rdump_region@e1000000 {
+		reg = <0x0 0xe1000000 0x0 0x00800000>;
+		label = "disp_rdump_region";
+	};
+
 	mdss_mdp: qcom,mdss_mdp@ae00000 {
 		compatible = "qcom,sde-kms";
 		reg = <0x0ae00000 0x84000>,
 		      <0x0aeb0000 0x2008>,
-		      <0x0aeac000 0x214>,
-		      <0x0ae8f000 0x02c>,
+		      <0x0aeac000 0x800>,
 		      <0x0af50000 0x038>;
 		reg-names = "mdp_phys",
 			"vbif_phys",
 			"regdma_phys",
-			"sid_phys",
 			"swfuse_phys";
 
 		clocks =
@@ -97,11 +100,13 @@
 		qcom,sde-cdm-size = <0x224>;
 
 		qcom,sde-dsc-off = <0x81000 0x81000 0x82000 0x82000>;
-		qcom,sde-dsc-size = <0x140>;
+		qcom,sde-dsc-size = <0x10>;
 		qcom,sde-dsc-pair-mask = <2 1 4 3>;
 		qcom,sde-dsc-hw-rev = "dsc_1_2";
 		qcom,sde-dsc-enc = <0x100 0x200 0x100 0x200>;
+		qcom,sde-dsc-enc-size = <0x100>;
 		qcom,sde-dsc-ctl = <0xF00 0xF80 0xF00 0xF80>;
+		qcom,sde-dsc-ctl-size = <0x10>;
 		qcom,sde-dsc-native422-supp = <0 0 1 1>;
 
 		qcom,sde-dither-off = <0xe0 0xe0 0xe0
@@ -110,10 +115,12 @@
 		qcom,sde-dither-size = <0x20>;
 
 		qcom,sde-vdc-off = <0x7C000>;
-		qcom,sde-vdc-size = <0xf10>;
+		qcom,sde-vdc-size = <0x10>;
 		qcom,sde-vdc-hw-rev = "vdc_1_1";
 		qcom,sde-vdc-enc = <0x200>;
+		qcom,sde-vdc-enc-size = <0x1C8>;
 		qcom,sde-vdc-ctl = <0xf00>;
+		qcom,sde-vdc-ctl-size = <0x10>;
 
 		qcom,sde-sspp-type = "vig", "vig", "vig", "vig",
 					"dma", "dma", "dma", "dma";
@@ -134,15 +141,15 @@
 		qcom,sde-mixer-blend-op-off = <0x20 0x38 0x50 0x68 0x80 0x98
 						0xb0 0xc8 0xe0 0xf8 0x110>;
 
-		qcom,sde-max-per-pipe-bw-kbps = <4400000 4400000
-						 4400000 4400000
-						 4400000 4400000
-						 4400000 4400000>;
+		qcom,sde-max-per-pipe-bw-kbps = <3900000 3900000
+						 3900000 3900000
+						 3900000 3900000
+						 3900000 3900000>;
 
-		qcom,sde-max-per-pipe-bw-high-kbps = <5300000 5300000
-						      5300000 5300000
-						      5300000 5300000
-						      5300000 5300000>;
+		qcom,sde-max-per-pipe-bw-high-kbps = <5200000 5200000
+						      5200000 5200000
+						      5200000 5200000
+						      5200000 5200000>;
 
 		/* offsets are relative to "mdp_phys + qcom,sde-off */
 		qcom,sde-sspp-clk-ctrl =
@@ -172,9 +179,9 @@
 		qcom,sde-has-idle-pc;
 		qcom,sde-max-dest-scaler-input-linewidth = <2048>;
 		qcom,sde-max-dest-scaler-output-linewidth = <2560>;
-		qcom,sde-max-bw-low-kbps = <13700000>;
-		qcom,sde-max-bw-high-kbps = <16600000>;
-		qcom,sde-min-core-ib-kbps = <4800000>;
+		qcom,sde-max-bw-low-kbps = <11800000>;
+		qcom,sde-max-bw-high-kbps = <15500000>;
+		qcom,sde-min-core-ib-kbps = <2500000>;
 		qcom,sde-min-llcc-ib-kbps = <0>;
 		qcom,sde-min-dram-ib-kbps = <800000>;
 		qcom,sde-dram-channels = <2>;
@@ -182,6 +189,10 @@
 		qcom,sde-dspp-ltm-version = <0x00010000>;
 		/* offsets are based off dspp 0 and dspp 1 */
 		qcom,sde-dspp-ltm-off = <0x15300 0x14300>;
+
+		qcom,sde-dspp-spr-off = <0x15400 0x14400>;
+		qcom,sde-dspp-spr-size = <0x200>;
+		qcom,sde-dspp-spr-version = <0x00010000>;
 
 		qcom,sde-uidle-off = <0x80000>;
 		qcom,sde-uidle-size = <0x70>;
@@ -195,24 +206,22 @@
 		qcom,sde-vbif-qos-rt-remap = <3 3 4 4 5 5 6 6>;
 		qcom,sde-vbif-qos-nrt-remap = <3 3 3 3 3 3 3 3>;
 		qcom,sde-vbif-qos-cwb-remap = <3 3 4 4 5 5 6 3>;
-		qcom,sde-vbif-qos-lutdma-remap = <3 3 3 3 4 4 4 4>;
+		qcom,sde-vbif-qos-lutdma-remap = <3 3 3 3 4 4 4 6>;
 
-		/* macrotile & macrotile-qseed has the same configs */
-		qcom,sde-danger-lut = <0x000000ff 0x0000ffff
-			0x00000000 0x00000000 0x0000ffff>;
+		qcom,sde-danger-lut = <0x0000ffff 0x0000ffff 0x00000000
+			0x00000000 0x0000ffff 0x0000ffff>, <0x0003ffff
+			0x0003ffff 0x00000000 0x00000000 0x0003ffff 0x0003ffff>;
 
-		qcom,sde-safe-lut-linear = <0 0xfff0>;
-		qcom,sde-safe-lut-macrotile = <0 0xff00>;
-		/* same as safe-lut-macrotile */
-		qcom,sde-safe-lut-macrotile-qseed = <0 0xff00>;
-		qcom,sde-safe-lut-nrt = <0 0xffff>;
-		qcom,sde-safe-lut-cwb = <0 0x3ff>;
+		qcom,sde-safe-lut = <0xfff0 0xff00 0xffff 0x3ff 0xff00 0xff00>,
+			<0xfe00 0xfe00 0xffff 0x3ff 0xfe00 0xfe00>;
 
-		qcom,sde-qos-lut-linear = <0 0x00112222 0x22335777>;
-		qcom,sde-qos-lut-macrotile = <0 0x00112233 0x44556677>;
-		qcom,sde-qos-lut-macrotile-qseed = <0 0x00112233 0x66777777>;
-		qcom,sde-qos-lut-nrt = <0 0x00000000 0x00000000>;
-		qcom,sde-qos-lut-cwb = <0 0x66666541 0x00000000>;
+		qcom,sde-qos-lut-linear = <0x00112233 0x44556677>, <0x00112234 0x45566777>;
+		qcom,sde-qos-lut-macrotile = <0x00112233 0x44556677>, <0x00112234 0x45566777>;
+		qcom,sde-qos-lut-macrotile-qseed = <0x00112233 0x66777777>, <0x00112236 0x67777777>;
+		qcom,sde-qos-lut-linear-qseed = <0x00112233 0x66777777>, <0x00112236 0x67777777>;
+		qcom,sde-qos-lut-nrt = <0x0 0x0>, <0x0 0x0>;
+		qcom,sde-qos-lut-cwb = <0x66666541 0x0>, <0x66666541 0x0>;
+		qcom,sde-qos-refresh-rates = <60 120>;
 
 		qcom,sde-cdp-setting = <1 1>, <1 0>;
 
@@ -221,8 +230,9 @@
 
 		/* offsets are relative to "mdp_phys + qcom,sde-off */
 
-		qcom,sde-reg-dma-off = <0>;
-		qcom,sde-reg-dma-version = <0x00010002>;
+		qcom,sde-reg-dma-off = <0 0x400>;
+		qcom,sde-reg-dma-id = <0 1>;
+		qcom,sde-reg-dma-version = <0x00020000>;
 		qcom,sde-reg-dma-trigger-off = <0x119c>;
 		qcom,sde-reg-dma-xin-id = <7>;
 		qcom,sde-reg-dma-clk-ctrl = <0x2bc 20>;
@@ -264,13 +274,13 @@
 		};
 
 		qcom,sde-dspp-blocks {
-			qcom,sde-dspp-igc = <0x0 0x00030001>;
+			qcom,sde-dspp-igc = <0x1260 0x00030002>;
 			qcom,sde-dspp-hsic = <0x800 0x00010007>;
 			qcom,sde-dspp-memcolor = <0x880 0x00010007>;
 			qcom,sde-dspp-hist = <0x800 0x00010007>;
 			qcom,sde-dspp-sixzone= <0x900 0x00010007>;
 			qcom,sde-dspp-vlut = <0xa00 0x00010008>;
-			qcom,sde-dspp-gamut = <0x1000 0x00040002>;
+			qcom,sde-dspp-gamut = <0x1000 0x00040003>;
 			qcom,sde-dspp-pcc = <0x1700 0x00040000>;
 			qcom,sde-dspp-gc = <0x17c0 0x00010008>;
 			qcom,sde-dspp-dither = <0x82c 0x00010007>;
@@ -317,10 +327,22 @@
 
 	};
 
+	ext_disp: qcom,msm-ext-disp {
+		compatible = "qcom,msm-ext-disp";
+
+		ext_disp_audio_codec: qcom,msm-ext-disp-audio-codec-rx {
+			compatible = "qcom,msm-ext-disp-audio-codec-rx";
+		};
+	};
+
 	sde_dp: qcom,dp_display@ae90000 {
 		cell-index = <0>;
 		compatible = "qcom,dp-display";
-		status = "disabled";
+
+		qcom,dp-aux-switch = <&fsa4480>;
+		qcom,ext-disp = <&ext_disp>;
+		qcom,altmode-parent = "altmode_0";
+		usb-controller = <&usb0>;
 
 		reg =   <0xae90000 0x0dc>,
 			<0xae90200 0x0c0>,
@@ -330,33 +352,36 @@
 			<0x88ea200 0x200>,
 			<0x88ea600 0x200>,
 			<0xaf02000 0x1a0>,
-			<0x88ea040 0x10>,
+			<0x88ea000 0x200>,
 			<0x88e8000 0x20>,
 			<0x0aee1000 0x034>,
-			<0xae91400 0x094>;
-		/* dp_ctrl: dp_ahb, dp_aux, dp_link, dp_p0 */
+			<0xae91400 0x094>,
+			<0xaf03000 0x8>;
 		reg-names = "dp_ahb", "dp_aux", "dp_link",
 			"dp_p0", "dp_phy", "dp_ln_tx0", "dp_ln_tx1",
-			"dp_mmss_cc", "dp_pll",
-			"usb3_dp_com", "hdcp_physical", "dp_p1";
+			"dp_mmss_cc", "dp_pll", "usb3_dp_com",
+			"hdcp_physical", "dp_p1", "gdsc";
 
 		interrupt-parent = <&mdss_mdp>;
 		interrupts = <12 0>;
 
+		#clock-cells = <1>;
 		clocks =  <&clock_dispcc DISP_CC_MDSS_DP_AUX_CLK>,
 			<&clock_rpmh RPMH_CXO_CLK>,
 			<&clock_gcc GCC_USB3_PRIM_PHY_PIPE_CLK>,
 			<&clock_dispcc DISP_CC_MDSS_DP_LINK_CLK>,
 			<&clock_dispcc DISP_CC_MDSS_DP_LINK_INTF_CLK>,
 			<&clock_dispcc DISP_CC_MDSS_DP_PIXEL_CLK_SRC>,
+			<&sde_dp DP_PHY_PLL_VCO_DIV_CLK>,
 			<&clock_dispcc DISP_CC_MDSS_DP_PIXEL1_CLK_SRC>,
 			<&clock_dispcc DISP_CC_MDSS_DP_PIXEL_CLK>,
 			<&clock_dispcc DISP_CC_MDSS_DP_PIXEL1_CLK>;
 		clock-names = "core_aux_clk", "core_usb_ref_clk_src",
 			"core_usb_pipe_clk", "link_clk", "link_iface_clk",
-			"pixel_clk_rcg", "pixel1_clk_rcg",
+			"pixel_clk_rcg", "pixel_parent", "pixel1_clk_rcg",
 			"strm0_pixel_clk", "strm1_pixel_clk";
 
+		qcom,pll-revision = "5nm-v1";
 		qcom,phy-version = <0x420>;
 		qcom,aux-cfg0-settings = [20 00];
 		qcom,aux-cfg1-settings = [24 13];
@@ -371,12 +396,12 @@
 
 		qcom,max-pclk-frequency-khz = <675000>;
 
-		qcom,mst-enable;
-		qcom,widebus-enable;
-		qcom,dsc-feature-enable;
-		qcom,fec-feature-enable;
 		qcom,max-dp-dsc-blks = <2>;
 		qcom,max-dp-dsc-input-width-pixs = <2048>;
+
+		vdda-1p2-supply = <&L6B>;
+		vdda-0p9-supply = <&L1B>;
+		vdd_mx-supply = <&VDD_MXA_LEVEL>;
 
 		qcom,ctrl-supply-entries {
 			#address-cells = <1>;
@@ -387,7 +412,7 @@
 				qcom,supply-name = "vdda-1p2";
 				qcom,supply-min-voltage = <1200000>;
 				qcom,supply-max-voltage = <1200000>;
-				qcom,supply-enable-load = <33000>;
+				qcom,supply-enable-load = <21700>;
 				qcom,supply-disable-load = <0>;
 			};
 		};
@@ -401,7 +426,7 @@
 				qcom,supply-name = "vdda-0p9";
 				qcom,supply-min-voltage = <912000>;
 				qcom,supply-max-voltage = <912000>;
-				qcom,supply-enable-load = <126000>;
+				qcom,supply-enable-load = <115000>;
 				qcom,supply-disable-load = <0>;
 			};
 		};
@@ -415,6 +440,22 @@
 				qcom,supply-name = "refgen";
 				qcom,supply-min-voltage = <0>;
 				qcom,supply-max-voltage = <0>;
+				qcom,supply-enable-load = <0>;
+				qcom,supply-disable-load = <0>;
+			};
+		};
+
+		qcom,pll-supply-entries {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			qcom,pll-supply-entry@0 {
+				reg = <0>;
+				qcom,supply-name = "vdd_mx";
+				qcom,supply-min-voltage =
+						<RPMH_REGULATOR_LEVEL_TURBO>;
+				qcom,supply-max-voltage =
+						<RPMH_REGULATOR_LEVEL_MAX>;
 				qcom,supply-enable-load = <0>;
 				qcom,supply-disable-load = <0>;
 			};
@@ -554,6 +595,8 @@
 		reg-names = "dsi_phy", "pll_base", "gdsc_base", "dyn_refresh_base";
 		pll-label = "dsi_pll_5nm";
 		vdda-0p9-supply = <&L5B>;
+		qcom,dsi-pll-ssc-en;
+		qcom,dsi-pll-ssc-mode = "down-spread";
 		qcom,platform-strength-ctrl = [55 03
 						55 03
 						55 03
@@ -591,6 +634,8 @@
 		reg-names = "dsi_phy", "pll_base", "gdsc_base", "dyn_refresh_base";
 		pll-label = "dsi_pll_5nm";
 		vdda-0p9-supply = <&L5B>;
+		qcom,dsi-pll-ssc-en;
+		qcom,dsi-pll-ssc-mode = "down-spread";
 		qcom,platform-strength-ctrl = [55 03
 						55 03
 						55 03

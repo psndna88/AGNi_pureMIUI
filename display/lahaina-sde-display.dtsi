@@ -3,6 +3,7 @@
 #include "dsi-panel-sw43404-amoled-dsc-fhd-plus-cmd.dtsi"
 #include "dsi-panel-sharp-dsc-4k-cmd.dtsi"
 #include "dsi-panel-sharp-dsc-4k-video.dtsi"
+#include "dsi-panel-sharp-dsc-qhd-plus-cmd.dtsi"
 #include "dsi-panel-sharp-qsync-wqhd-cmd.dtsi"
 #include "dsi-panel-sharp-qsync-wqhd-video.dtsi"
 #include "dsi-panel-sharp-1080p-cmd.dtsi"
@@ -42,14 +43,6 @@
 };
 
 &soc {
-	ext_disp: qcom,msm-ext-disp {
-		compatible = "qcom,msm-ext-disp";
-
-		ext_disp_audio_codec: qcom,msm-ext-disp-audio-codec-rx {
-			compatible = "qcom,msm-ext-disp-audio-codec-rx";
-		};
-	};
-
 	dsi_panel_pwr_supply: dsi_panel_pwr_supply {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -148,11 +141,18 @@
 };
 
 &mdss_mdp {
-	connectors = <&sde_wb &sde_dsi>;
+	connectors = <&sde_dp &sde_wb &sde_dsi>;
 };
 
 /* PHY TIMINGS REVISION YB */
 &dsi_sw43404_amoled_cmd {
+	qcom,ulps-enabled;
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 
 	qcom,mdss-dsi-display-timings {
@@ -166,6 +166,13 @@
 };
 
 &dsi_sw43404_amoled_video {
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+	qcom,mdss-dsi-qsync-min-refresh-rate = <55>;
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 
 	qcom,mdss-dsi-display-timings {
@@ -181,6 +188,13 @@
 &dsi_r66451_amoled_video {
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 	qcom,mdss-dsi-display-timings {
+		/*
+		 * CDP could not display using the old HFP(96) and HSYNC(32).
+		 * Modified HFP to 95 and HSYNC to 1, but using the new porch
+		 * to caculator the PHY timing based on version YB, 90hz could
+		 * not display, need to keep the PHY timing(which based on
+		 * HFP=96, HSYNC=32).
+		 */
 		timing@0 {
 			qcom,mdss-dsi-panel-phy-timings = [00 15 06 06 0a 09 06
 				06 04 02 04 00 12 0b];
@@ -191,11 +205,29 @@
 };
 
 &dsi_r66451_amoled_cmd {
+	qcom,ulps-enabled;
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
-			qcom,mdss-dsi-panel-phy-timings = [00 15 06 06 0a 09 06
-				06 04 02 04 00 12 0b];
+			qcom,mdss-dsi-panel-phy-timings = [00 19 08 07 0c 0b 07
+				07 05 02 04 00 16 0c];
+			qcom,display-topology = <2 2 1>;
+			qcom,default-topology-index = <0>;
+		};
+
+		timing@1 {
+			qcom,mdss-dsi-panel-phy-timings = [00 13 06 05 09 1f 06
+				06 03 02 04 00 11 0a];
+			qcom,display-topology = <2 2 1>;
+			qcom,default-topology-index = <0>;
+		};
+		/*
+		 * Using PHY Timings version YB 60hz could not display,
+		 * refer to version W, changed T_HS_ZERO from 0x06 to 0x1e.
+		 */
+		timing@2 {
+			qcom,mdss-dsi-panel-phy-timings = [00 0d 04 04 07 1e 04
+				04 02 02 04 00 0c 09];
 			qcom,display-topology = <2 2 1>;
 			qcom,default-topology-index = <0>;
 		};
@@ -203,24 +235,34 @@
 };
 
 &dsi_sharp_4k_dsc_cmd {
+	qcom,ulps-enabled;
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0c];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
+	qcom,mdss-dsi-panel-status-value = <0x77>;
+	qcom,mdss-dsi-panel-on-check-value = <0x77>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
-			qcom,mdss-dsi-panel-phy-timings = [00 12 05 05 09 08 05
-				05 03 02 04 00 10 0a];
+			qcom,mdss-dsi-panel-phy-timings = [00 10 05 04 08 07 05
+				05 03 02 04 00 0f 09];
 			qcom,display-topology = <2 2 2>;
 			qcom,default-topology-index = <0>;
-			/*
-			 * Using same clock as Video mode panel as a
-			 * temporary solution for PHY timing issue that causes
-			 * corruption.
-			 */
-			qcom,mdss-dsi-panel-clockrate = <685751040>;
 		};
 	};
 };
 
 &dsi_sharp_4k_dsc_video {
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0c];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+	qcom,mdss-dsi-panel-status-value = <0x77>;
+	qcom,mdss-dsi-panel-on-check-value = <0x77>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
@@ -233,6 +275,14 @@
 };
 
 &dsi_sharp_1080_cmd {
+	qcom,ulps-enabled;
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9c>;
+	qcom,mdss-dsi-panel-on-check-value = <0x9c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
@@ -245,7 +295,125 @@
 	};
 };
 
+&dsi_sharp_qsync_wqhd_cmd {
+	qcom,ulps-enabled;
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,mdss-dsi-display-timings {
+		timing@0 { /* WQHD 60FPS CMD */
+			qcom,mdss-dsi-panel-phy-timings = [00 13 06 05 09 08 06
+				06 03 02 04 00 11 0a];
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+			qcom,partial-update-enabled = "single_roi";
+			qcom,panel-roi-alignment = <720 8 8 8 1440 8>;
+		};
+
+		timing@1 { /* WQHD 60FPS VID */
+			qcom,mdss-dsi-panel-phy-timings = [00 13 06 05 09 08 06
+				06 03 02 04 00 11 0a];
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+		};
+
+		timing@2 { /* FHD 60FPS CMD */
+			qcom,mdss-dsi-panel-phy-timings = [00 0a 01 02 1b 1c 02
+				02 00 02 04 00 0a 12];
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+			qcom,partial-update-enabled = "single_roi";
+			qcom,panel-roi-alignment = <540 8 8 8 1080 8>;
+		};
+
+		timing@3 { /* WQHD 90FPS CMD */
+			qcom,mdss-dsi-panel-phy-timings = [00 0f 04 04 07 07 04
+				05 02 02 04 00 0d 09];
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+			qcom,partial-update-enabled = "single_roi";
+			qcom,panel-roi-alignment = <720 8 8 8 1440 8>;
+		};
+
+		timing@4 { /* WQHD 120FPS CMD */
+			qcom,mdss-dsi-panel-phy-timings = [00 26 0b 0a 11 0f 0b
+				 0b 07 02 04 00 1f 0f];
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+			qcom,partial-update-enabled = "single_roi";
+			qcom,panel-roi-alignment = <720 8 8 8 1440 8>;
+		};
+
+		timing@5 { /* WQHD 120FPS VID */
+			qcom,mdss-dsi-panel-phy-timings = [00 13 06 05 09 08 06
+				06 03 02 04 00 11 0a];
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+		};
+
+		timing@6 { /* FHD 120FPS CMD */
+			qcom,mdss-dsi-panel-phy-timings = [00 0e 03 03 1e 1d 04
+				04 02 02 04 00 0e 13];
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+			qcom,partial-update-enabled = "single_roi";
+			qcom,panel-roi-alignment = <540 8 8 8 1080 8>;
+		};
+
+		timing@7 { /* FHD 90FPS CMD */
+			qcom,mdss-dsi-panel-phy-timings = [00 0b 02 02 1c 1c 03
+				02 01 02 04 00 0c 12];
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+			qcom,partial-update-enabled = "single_roi";
+			qcom,panel-roi-alignment = <540 8 8 8 1080 8>;
+		};
+	};
+};
+
+&dsi_sharp_qsync_wqhd_video {
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 13 06 05 09 08 06
+				06 03 02 04 00 11 0a];
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+&dsi_sharp_qhd_plus_dsc_cmd {
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 19 06 06 15 15 06
+				06 04 02 04 00 14 0b];
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
 &dsi_dual_nt35597_truly_cmd {
+	qcom,ulps-enabled;
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9c>;
+	qcom,mdss-dsi-panel-on-check-value = <0x9c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
@@ -264,6 +432,18 @@
 };
 
 &dsi_dual_nt35597_truly_video {
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9c>;
+	qcom,mdss-dsi-panel-on-check-value = <0x9c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+	qcom,dsi-supported-dfps-list = <60 57 55>;
+	qcom,mdss-dsi-pan-enable-dynamic-fps;
+	qcom,mdss-dsi-min-refresh-rate = <53>;
+	qcom,mdss-dsi-max-refresh-rate = <60>;
+	qcom,mdss-dsi-pan-fps-update = "dfps_immediate_porch_mode_vfp";
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
@@ -277,6 +457,14 @@
 };
 
 &dsi_nt35695b_truly_fhd_cmd {
+	qcom,ulps-enabled;
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9c>;
+	qcom,mdss-dsi-panel-on-check-value = <0x9c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
@@ -289,7 +477,9 @@
 };
 
 &dsi_sim_cmd {
+	qcom,ulps-enabled;
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,poms-align-panel-vsync;
 	qcom,mdss-dsi-display-timings {
 		timing@0 { /* WQHD 60FPS cmd mode*/
 			qcom,mdss-dsi-panel-phy-timings = [00 15 06 05 0a 09 06
@@ -347,6 +537,7 @@
 };
 
 &dsi_sim_dsc_375_cmd {
+	qcom,ulps-enabled;
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 	qcom,mdss-dsi-display-timings {
 		timing@0 { /* 1080p */
@@ -368,6 +559,7 @@
 };
 
 &dsi_sim_dsc_10b_cmd {
+	qcom,ulps-enabled;
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 	qcom,mdss-dsi-display-timings {
 		timing@0 { /* QHD 60fps */
@@ -396,6 +588,7 @@
 };
 
 &dsi_dual_sim_cmd {
+	qcom,ulps-enabled;
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 
 	qcom,mdss-dsi-display-timings {
@@ -444,6 +637,7 @@
 };
 
 &dsi_dual_sim_dsc_375_cmd {
+	qcom,ulps-enabled;
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 	qcom,mdss-dsi-display-timings {
 		timing@0 { /* 4k  30 FPS*/
