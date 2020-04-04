@@ -666,10 +666,20 @@ int set_cred_quoted(const char *ifname, int id, const char *field,
 }
 
 
+const char * concat_sigma_tmpdir(struct sigma_dut *dut, const char *src,
+				 char *dst, size_t len)
+{
+	snprintf(dst, len, "%s%s", dut->sigma_tmpdir, src);
+
+	return dst;
+}
+
+
 int start_sta_mode(struct sigma_dut *dut)
 {
 	FILE *f;
 	char buf[256];
+	char sta_conf_path[100];
 	const char *ifname;
 	char *tmp, *pos;
 
@@ -719,7 +729,8 @@ int start_sta_mode(struct sigma_dut *dut)
 		return 0; /* wpa_supplicant is already running */
 
 	/* Start wpa_supplicant */
-	f = fopen(SIGMA_TMPDIR "/sigma_dut-sta.conf", "w");
+	f = fopen(concat_sigma_tmpdir(dut, "/sigma_dut-sta.conf", sta_conf_path,
+				      sizeof(sta_conf_path)), "w");
 	if (f == NULL)
 		return -1;
 
@@ -745,19 +756,26 @@ int start_sta_mode(struct sigma_dut *dut)
 	fclose(f);
 
 #ifdef  __QNXNTO__
-	snprintf(buf, sizeof(buf), "wpa_supplicant -Dqca -i%s -B %s%s"
-		 "-c" SIGMA_TMPDIR "/sigma_dut-sta.conf", ifname,
-		 dut->wpa_supplicant_debug_log ? "-K -t -ddd -f " : "",
+	snprintf(buf, sizeof(buf),
+		 "wpa_supplicant -Dqca -i%s -B %s%s%s -c %s/sigma_dut-sta.conf",
+		 ifname,
+		 dut->wpa_supplicant_debug_log ? "-K -t -ddd " : "",
+		 (dut->wpa_supplicant_debug_log &&
+		  dut->wpa_supplicant_debug_log[0]) ? "-f " : "",
 		 dut->wpa_supplicant_debug_log ?
-		 dut->wpa_supplicant_debug_log : "");
+		 dut->wpa_supplicant_debug_log : "",
+		 dut->sigma_tmpdir);
 #else /*__QNXNTO__*/
-	snprintf(buf, sizeof(buf), "%swpa_supplicant -Dnl80211 -i%s -B %s%s "
-		 "-c" SIGMA_TMPDIR "/sigma_dut-sta.conf",
+	snprintf(buf, sizeof(buf),
+		 "%swpa_supplicant -Dnl80211 -i%s -B %s%s%s -c %s/sigma_dut-sta.conf",
 		 file_exists("wpa_supplicant") ? "./" : "",
 		 ifname,
-		 dut->wpa_supplicant_debug_log ? "-K -t -ddd -f " : "",
+		 dut->wpa_supplicant_debug_log ? "-K -t -ddd " : "",
+		 (dut->wpa_supplicant_debug_log &&
+		  dut->wpa_supplicant_debug_log[0]) ? "-f " : "",
 		 dut->wpa_supplicant_debug_log ?
-		 dut->wpa_supplicant_debug_log : "");
+		 dut->wpa_supplicant_debug_log : "",
+		 dut->sigma_tmpdir);
 #endif /*__QNXNTO__*/
 	if (system(buf) != 0) {
 		sigma_dut_print(dut, DUT_MSG_INFO, "Failed to run '%s'", buf);

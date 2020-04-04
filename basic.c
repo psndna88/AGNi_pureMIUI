@@ -82,8 +82,8 @@ static enum sigma_cmd_result cmd_device_get_info(struct sigma_dut *dut,
 #ifdef __linux__
 	char model_buf[128];
 	char ver_buf[512];
-	int res;
 #endif /* __linux__ */
+	int res;
 	char resp[512];
 
 #ifdef __linux__
@@ -119,9 +119,10 @@ static enum sigma_cmd_result cmd_device_get_info(struct sigma_dut *dut,
 					pos = path;
 				else
 					pos++;
-				snprintf(model_buf, sizeof(model_buf),
-					 "Linux/%s", pos);
-				model = model_buf;
+				res = snprintf(model_buf, sizeof(model_buf),
+					       "Linux/%s", pos);
+				if (res >= 0 && res < sizeof(model_buf))
+					model = model_buf;
 			}
 		} else
 			model = "Linux";
@@ -205,8 +206,10 @@ static enum sigma_cmd_result cmd_device_get_info(struct sigma_dut *dut,
 		model = dut->model_name;
 	if (dut->version_name)
 		version = dut->version_name;
-	snprintf(resp, sizeof(resp), "vendor,%s,model,%s,version,%s",
-		 vendor, model, version);
+	res = snprintf(resp, sizeof(resp), "vendor,%s,model,%s,version,%s",
+		       vendor, model, version);
+	if (res < 0 || res >= sizeof(resp))
+		return ERROR_SEND_STATUS;
 
 	send_resp(dut, conn, SIGMA_COMPLETE, resp);
 	return STATUS_SENT;

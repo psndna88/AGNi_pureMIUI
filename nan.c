@@ -573,6 +573,9 @@ int sigma_nan_enable(struct sigma_dut *dut, struct sigma_conn *conn,
 		req.sdf_2dot4g_val = 1;
 	}
 
+	if (if_nametoindex(NAN_AWARE_IFACE))
+		run_system_wrapper(dut, "ifconfig %s up", NAN_AWARE_IFACE);
+
 	nan_enable_request(0, dut->wifi_hal_iface_handle, &req);
 
 	if (nan_availability) {
@@ -2208,6 +2211,9 @@ void nan_event_disabled(NanDisabledInd *event)
 	sigma_dut_print(global_dut, DUT_MSG_INFO, "%s: reason %d",
 			__func__, event->reason);
 	/* pthread_cond_signal(&gCondition); */
+	if (if_nametoindex(NAN_AWARE_IFACE))
+		run_system_wrapper(global_dut, "ifconfig %s down",
+				   NAN_AWARE_IFACE);
 }
 
 

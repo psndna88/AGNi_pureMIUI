@@ -60,6 +60,7 @@ int wifi_hal_initialize(struct sigma_dut *dut)
 {
 	pthread_t thread1;
 	wifi_error err;
+	const char *ifname;
 
 	if (dut->wifi_hal_initialized)
 		return 0;
@@ -71,8 +72,14 @@ int wifi_hal_initialize(struct sigma_dut *dut)
 		return -1;
 	}
 
+	if (if_nametoindex(NAN_AWARE_IFACE))
+		ifname = NAN_AWARE_IFACE;
+	else
+		ifname = "wlan0";
+
 	dut->wifi_hal_iface_handle = wifi_get_iface_handle(dut->wifi_hal_handle,
-							   (char *) "wlan0");
+							   (char *) ifname);
+
 	pthread_create(&thread1, NULL, &wifi_hal_event_thread, (void *) dut);
 	dut->wifi_hal_initialized = true;
 
@@ -828,6 +835,7 @@ static void set_defaults(struct sigma_dut *dut)
 	/* by default, enable writing of traffic stream stats */
 	dut->write_stats = 1;
 	dut->priv_cmd = "iwpriv";
+	dut->sigma_tmpdir = SIGMA_TMPDIR;
 }
 
 
@@ -839,6 +847,8 @@ static void deinit_sigma_dut(struct sigma_dut *dut)
 	dut->btm_query_cand_list = NULL;
 	free(dut->rsne_override);
 	dut->rsne_override = NULL;
+	free(dut->rsnxe_override_eapol);
+	dut->rsnxe_override_eapol = NULL;
 	free(dut->ap_sae_groups);
 	dut->ap_sae_groups = NULL;
 	free(dut->dpp_peer_uri);
@@ -957,7 +967,7 @@ static void print_license(void)
 
 static void usage(void)
 {
-	printf("usage: sigma_dut [-aABdfGqDIntuVW2] [-p<port>] "
+	printf("usage: sigma_dut [-aABdfGqDIntuVW23] [-p<port>] "
 	       "[-s<sniffer>] [-m<set_maccaddr.sh>] \\\n"
 	       "       [-M<main ifname>] [-R<radio ifname>] "
 	       "[-S<station ifname>] [-P<p2p_ifname>]\\\n"
@@ -985,6 +995,7 @@ static void usage(void)
 #endif /* MIRACAST */
 	       "       [-z <client socket directory path \\\n"
 	       "       Ex: </data/vendor/wifi/sockets>] \\\n"
+	       "       [-Z <Override default tmp dir path>] \\\n"
 	       "       [-r <HT40 or 2.4_HT40>]\n");
 	printf("local command: sigma_dut [-p<port>] <-l<cmd>>\n");
 }
@@ -1008,7 +1019,7 @@ int main(int argc, char *argv[])
 
 	for (;;) {
 		c = getopt(argc, argv,
-			   "aAb:Bc:C:dDE:e:fF:gGhH:j:J:i:Ik:K:l:L:m:M:nN:o:O:p:P:qr:R:s:S:tT:uv:VWw:x:y:z:2");
+			   "aAb:Bc:C:dDE:e:fF:gGhH:j:J:i:Ik:K:l:L:m:M:nN:o:O:p:P:qQr:R:s:S:tT:uv:VWw:x:y:z:2");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -1203,8 +1214,14 @@ int main(int argc, char *argv[])
 		case 'z':
 			client_socket_path = optarg;
 			break;
+		case 'Z':
+			sigma_dut.sigma_tmpdir = optarg;
+			break;
 		case '2':
 			sigma_dut.sae_h2e_default = 1;
+			break;
+		case '3':
+			sigma_dut.owe_ptk_workaround = 1;
 			break;
 		case 'h':
 		default:

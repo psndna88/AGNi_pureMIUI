@@ -1336,8 +1336,8 @@ static void write_frame_stats(struct sigma_dut *dut, struct sigma_stream *s,
 	FILE *f;
 	unsigned int i;
 
-	snprintf(fname, sizeof(fname), SIGMA_TMPDIR "/e2e%u-%d.txt",
-		 (unsigned int) time(NULL), id);
+	snprintf(fname, sizeof(fname), "%s/e2e%u-%d.txt",
+		 dut->sigma_tmpdir, (unsigned int) time(NULL), id);
 	f = fopen(fname, "w");
 	if (f == NULL) {
 		sigma_dut_print(dut, DUT_MSG_INFO, "Could not write %s",

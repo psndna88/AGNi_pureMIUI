@@ -81,6 +81,8 @@ struct sigma_dut;
 #define MAX_PARAMS 100
 #define MAX_RADIO 3
 
+#define NAN_AWARE_IFACE "wifi-aware0"
+
 /* Set default operating channel width 80 MHz */
 #define VHT_DEFAULT_OPER_CHWIDTH AP_80_VHT_OPER_CHWIDTH
 
@@ -352,6 +354,8 @@ struct sigma_dut {
 	int stdout_debug;
 	struct sigma_cmd_handler *cmds;
 	int response_sent;
+
+	const char *sigma_tmpdir;
 
 	/* Default timeout value (seconds) for commands */
 	unsigned int default_timeout;
@@ -672,6 +676,8 @@ struct sigma_dut {
 	unsigned int ap_akm_values;
 	int ap_pmksa;
 	int ap_pmksa_caching;
+	int ap_beacon_prot;
+	u8 ap_transition_disable;
 	int ap_80plus80;
 	int ap_oper_chn;
 
@@ -687,6 +693,7 @@ struct sigma_dut {
 	unsigned int he_mcsnssmap;
 	int he_ul_mcs;
 	int he_mmss;
+	int he_srctrl_allow;
 
 	enum value_not_set_enabled_disabled ap_oce;
 	enum value_not_set_enabled_disabled ap_filsdscv;
@@ -704,6 +711,7 @@ struct sigma_dut {
 	enum value_not_set_enabled_disabled ap_mbssid;
 	enum value_not_set_enabled_disabled ap_twtresp;
 	enum value_not_set_enabled_disabled he_sounding;
+	enum value_not_set_enabled_disabled he_set_sta_1x1;
 
 	enum ppdu {
 		PPDU_NOT_SET,
@@ -890,6 +898,7 @@ struct sigma_dut {
 
 	char *sae_commit_override;
 	char *rsne_override;
+	char *rsnxe_override_eapol;
 	int sta_associate_wait_connect;
 	char server_cert_hash[65];
 	int server_cert_tod;
@@ -933,6 +942,7 @@ struct sigma_dut {
 		SAE_PWE_LOOP,
 		SAE_PWE_H2E
 	} sae_pwe;
+	int owe_ptk_workaround;
 };
 
 
@@ -1067,6 +1077,12 @@ int wil6210_set_ese(struct sigma_dut *dut, int count,
 int sta_extract_60g_ese(struct sigma_dut *dut, struct sigma_cmd *cmd,
 			struct sigma_ese_alloc *allocs, int *allocs_size);
 int wil6210_set_force_mcs(struct sigma_dut *dut, int force, int mcs);
+int sta_set_addba_buf_size(struct sigma_dut *dut,
+			   const char *intf, int bufsize);
+#ifdef NL80211_SUPPORT
+int wcn_set_he_ltf(struct sigma_dut *dut, const char *intf,
+		   enum qca_wlan_he_ltf_cfg ltf);
+#endif /* NL80211_SUPPORT */
 
 /* p2p.c */
 void p2p_register_cmds(void);
