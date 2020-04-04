@@ -31,6 +31,20 @@
 #include <wlan_cp_stats_utils_api.h>
 #include "../../core/src/wlan_cp_stats_defs.h"
 
+static bool tgt_mc_cp_stats_is_last_event(struct stats_event *ev)
+{
+	bool is_last_event;
+
+	if (IS_MSB_SET(ev->last_event)) {
+		is_last_event = IS_LSB_SET(ev->last_event);
+		cp_stats_debug("is_last_event %d", is_last_event);
+	} else {
+		cp_stats_debug("FW does not support last event bit");
+		is_last_event = !!ev->peer_stats;
+	}
+	return is_last_event;
+}
+
 void tgt_cp_stats_register_rx_ops(struct wlan_lmac_if_rx_ops *rx_ops)
 {
 	rx_ops->cp_stats_rx_ops.process_stats_event =
@@ -115,8 +129,8 @@ static void peer_rssi_iterator(struct wlan_objmgr_pdev *pdev,
 	struct peer_cp_stats *peer_cp_stats_priv;
 
 	if (WLAN_PEER_SELF == wlan_peer_get_peer_type(peer)) {
-		cp_stats_err("ignore self peer: %pM",
-			     wlan_peer_get_macaddr(peer));
+		cp_stats_debug("ignore self peer: %pM",
+			       wlan_peer_get_macaddr(peer));
 		return;
 	}
 
@@ -396,8 +410,10 @@ complete:
 	if (is_station_stats)
 		return;
 
-	tgt_mc_cp_stats_prepare_raw_peer_rssi(psoc, &last_req);
-	ucfg_mc_cp_stats_reset_pending_req(psoc, TYPE_PEER_STATS);
+	if (tgt_mc_cp_stats_is_last_event(ev)) {
+		tgt_mc_cp_stats_prepare_raw_peer_rssi(psoc, &last_req);
+		ucfg_mc_cp_stats_reset_pending_req(psoc, TYPE_PEER_STATS);
+	}
 }
 
 static void tgt_mc_cp_stats_extract_cca_stats(struct wlan_objmgr_psoc *psoc,
@@ -464,7 +480,7 @@ static void tgt_mc_cp_stats_extract_vdev_summary_stats(
 	}
 
 	if (i == ev->num_summary_stats) {
-		cp_stats_err("vdev_id %d not found", last_req.vdev_id);
+		cp_stats_debug("vdev_id %d not found", last_req.vdev_id);
 		return;
 	}
 
@@ -540,7 +556,7 @@ static void tgt_mc_cp_stats_extract_vdev_chain_rssi_stats(
 	}
 
 	if (i == ev->num_chain_rssi_stats) {
-		cp_stats_err("vdev_id %d not found", last_req.vdev_id);
+		cp_stats_debug("vdev_id %d not found", last_req.vdev_id);
 		return;
 	}
 
@@ -676,13 +692,7 @@ static void tgt_mc_cp_stats_extract_station_stats(
 				struct stats_event *ev)
 {
 	QDF_STATUS status;
-	bool is_last_event;
 	struct request_info last_req = {0};
-
-	if (IS_MSB_SET(ev->last_event))
-		is_last_event = IS_LSB_SET(ev->last_event);
-	else
-		is_last_event = !!ev->peer_stats;
 
 	status = ucfg_mc_cp_stats_get_pending_req(psoc,
 						  TYPE_STATION_STATS,
@@ -701,10 +711,10 @@ static void tgt_mc_cp_stats_extract_station_stats(
 	 * PEER stats are the last stats sent for get_station statistics.
 	 * reset type_map bit for station stats .
 	 */
-	if (is_last_event) {
+	if (tgt_mc_cp_stats_is_last_event(ev)) {
+		ucfg_mc_cp_stats_reset_pending_req(psoc, TYPE_STATION_STATS);
 		tgt_mc_cp_stats_prepare_n_send_raw_station_stats(psoc,
 								 &last_req);
-		ucfg_mc_cp_stats_reset_pending_req(psoc, TYPE_STATION_STATS);
 	}
 }
 

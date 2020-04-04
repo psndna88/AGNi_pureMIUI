@@ -33,6 +33,7 @@
 #include "wlan_objmgr_pdev_obj.h"
 #include "wlan_objmgr_vdev_obj.h"
 #include "wlan_reg_services_api.h"
+#include "nan_ucfg_api.h"
 
 /* invalid channel id. */
 #define INVALID_CHANNEL_ID 0
@@ -630,7 +631,7 @@ QDF_STATUS policy_mgr_get_dbs_hw_modes(struct wlan_objmgr_psoc *psoc,
 	*two_by_two_dbs = false;
 
 	if (policy_mgr_is_hw_dbs_capable(psoc) == false) {
-		policy_mgr_err("HW is not DBS capable");
+		policy_mgr_rl_debug("HW is not DBS capable");
 		/* Caller will understand that DBS is disabled */
 		return QDF_STATUS_SUCCESS;
 
@@ -1223,12 +1224,23 @@ QDF_STATUS policy_mgr_decr_active_session(struct wlan_objmgr_psoc *psoc,
 	if (pm_ctx->tdls_cbacks.tdls_notify_decrement_session)
 		pm_ctx->tdls_cbacks.tdls_notify_decrement_session(psoc);
 	/* Enable LRO/GRO if there no concurrency */
-	if ((policy_mgr_mode_specific_connection_count(psoc, PM_STA_MODE, NULL) == 1) &&
-	    (policy_mgr_mode_specific_connection_count(psoc, PM_SAP_MODE, NULL) == 0) &&
-	    (policy_mgr_mode_specific_connection_count(psoc, PM_P2P_CLIENT_MODE, NULL) ==
-									0) &&
-	    (policy_mgr_mode_specific_connection_count(psoc, PM_P2P_GO_MODE, NULL) == 0) &&
-	    (policy_mgr_mode_specific_connection_count(psoc, PM_IBSS_MODE, NULL) == 0)) {
+	if ((policy_mgr_get_connection_count(psoc) == 0) ||
+	    ((policy_mgr_mode_specific_connection_count(psoc,
+							PM_STA_MODE,
+							NULL) == 1) &&
+	     (policy_mgr_mode_specific_connection_count(psoc,
+							PM_SAP_MODE,
+							NULL) == 0) &&
+	     (policy_mgr_mode_specific_connection_count(psoc,
+							PM_P2P_CLIENT_MODE,
+							NULL) == 0) &&
+	     (policy_mgr_mode_specific_connection_count(psoc,
+							PM_P2P_GO_MODE,
+							NULL) == 0) &&
+	     (policy_mgr_mode_specific_connection_count(psoc,
+							PM_IBSS_MODE,
+							NULL) == 0) &&
+	     !(wlan_nan_is_ndp_peer_active(pm_ctx->pdev)))) {
 		if (pm_ctx->dp_cbacks.hdd_disable_rx_ol_in_concurrency != NULL)
 			pm_ctx->dp_cbacks.hdd_disable_rx_ol_in_concurrency(false);
 	};
@@ -1571,14 +1583,14 @@ bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 	num_connections = policy_mgr_get_connection_count(psoc);
 
 	if (num_connections && policy_mgr_is_sub_20_mhz_enabled(psoc)) {
-		policy_mgr_err("dont allow concurrency if Sub 20 MHz is enabled");
+		policy_mgr_rl_debug("dont allow concurrency if Sub 20 MHz is enabled");
 		status = false;
 		goto done;
 	}
 
 	if (policy_mgr_max_concurrent_connections_reached(psoc)) {
-		policy_mgr_err("Reached max concurrent connections: %d",
-			pm_ctx->user_cfg.max_concurrent_active_sessions);
+		policy_mgr_rl_debug("Reached max concurrent connections: %d",
+				    pm_ctx->user_cfg.max_concurrent_active_sessions);
 		goto done;
 	}
 
@@ -1614,7 +1626,7 @@ bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 				match = policy_mgr_disallow_mcc(psoc, channel);
 		}
 		if (true == match) {
-			policy_mgr_err("No MCC, SAP/GO about to come up on DFS channel");
+			policy_mgr_rl_debug("No MCC, SAP/GO about to come up on DFS channel");
 			goto done;
 		}
 	}
@@ -1624,7 +1636,7 @@ bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 							  list);
 	if (mode == PM_STA_MODE && count) {
 		if (count >= 2) {
-			policy_mgr_err("3rd STA isn't permitted");
+			policy_mgr_rl_debug("3rd STA isn't permitted");
 			goto done;
 		}
 		chan = pm_conc_connection_list[list[0]].chan;
@@ -1642,23 +1654,23 @@ bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 	if ((PM_IBSS_MODE == mode) &&
 		(policy_mgr_mode_specific_connection_count(psoc,
 		PM_IBSS_MODE, list)) && count) {
-		policy_mgr_err("No 2nd IBSS, we already have STA + IBSS");
+		policy_mgr_rl_debug("No 2nd IBSS, we already have STA + IBSS");
 		goto done;
 	}
 	if ((PM_IBSS_MODE == mode) &&
 		(wlan_reg_is_dfs_ch(pm_ctx->pdev, channel)) && count) {
-		policy_mgr_err("No IBSS + STA SCC/MCC, IBSS is on DFS channel");
+		policy_mgr_rl_debug("No IBSS + STA SCC/MCC, IBSS is on DFS channel");
 		goto done;
 	}
 	if (PM_IBSS_MODE == mode) {
 		if (policy_mgr_is_hw_dbs_capable(psoc) == true) {
 			if (num_connections > 1) {
-				policy_mgr_err("No IBSS, we have concurrent connections already");
+				policy_mgr_rl_debug("No IBSS, we have concurrent connections already");
 				goto done;
 			}
 			qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
 			if (PM_STA_MODE != pm_conc_connection_list[0].mode) {
-				policy_mgr_err("No IBSS, we've a non-STA connection");
+				policy_mgr_rl_debug("No IBSS, we've a non-STA connection");
 				qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
 				goto done;
 			}
@@ -1672,12 +1684,12 @@ bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 				WLAN_REG_IS_SAME_BAND_CHANNELS(
 				pm_conc_connection_list[0].chan, channel)) {
 				qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
-				policy_mgr_err("No IBSS + STA MCC");
+				policy_mgr_rl_debug("No IBSS + STA MCC");
 				goto done;
 			}
 			qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
 		} else if (num_connections) {
-			policy_mgr_err("No IBSS, we have one connection already");
+			policy_mgr_rl_debug("No IBSS, we have one connection already");
 			goto done;
 		}
 	}
@@ -1685,7 +1697,7 @@ bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 	if ((PM_STA_MODE == mode) &&
 		(policy_mgr_mode_specific_connection_count(psoc,
 		PM_IBSS_MODE, list)) && count) {
-		policy_mgr_err("No 2nd STA, we already have STA + IBSS");
+		policy_mgr_rl_debug("No 2nd STA, we already have STA + IBSS");
 		goto done;
 	}
 
@@ -1694,7 +1706,7 @@ bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 		PM_IBSS_MODE, list))) {
 		if (policy_mgr_is_hw_dbs_capable(psoc) == true) {
 			if (num_connections > 1) {
-				policy_mgr_err("No 2nd STA, we already have IBSS concurrency");
+				policy_mgr_rl_debug("No 2nd STA, we already have IBSS concurrency");
 				goto done;
 			}
 			qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
@@ -1703,7 +1715,7 @@ bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 				pm_conc_connection_list[0].chan))
 				&& (WLAN_REG_IS_5GHZ_CH(channel))) {
 				qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
-				policy_mgr_err("No IBSS + STA SCC/MCC, IBSS is on DFS channel");
+				policy_mgr_rl_debug("No IBSS + STA SCC/MCC, IBSS is on DFS channel");
 				goto done;
 			}
 			/*
@@ -1720,14 +1732,14 @@ bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 			}
 			qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
 		} else {
-			policy_mgr_err("No STA, we have IBSS connection already");
+			policy_mgr_rl_debug("No STA, we have IBSS connection already");
 			goto done;
 		}
 	}
 
 	if (!policy_mgr_allow_sap_go_concurrency(psoc, mode, channel,
 						 WLAN_INVALID_VDEV_ID)) {
-		policy_mgr_err("This concurrency combination is not allowed");
+		policy_mgr_rl_debug("This concurrency combination is not allowed");
 		goto done;
 	}
 
@@ -1740,7 +1752,7 @@ bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 		while (index < count) {
 			if (WLAN_REG_IS_SAME_BAND_CHANNELS(channel,
 				pm_conc_connection_list[list[index]].chan)) {
-				policy_mgr_err("Don't allow P2P GO on same band");
+				policy_mgr_rl_debug("Don't allow P2P GO on same band");
 				qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
 				goto done;
 			}
@@ -1750,7 +1762,7 @@ bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 	}
 
 	if (!policy_mgr_check_privacy_for_new_conn(pm_ctx)) {
-		policy_mgr_err("Don't allow new conn when wapi security conn existing");
+		policy_mgr_rl_debug("Don't allow new conn when wapi security conn existing");
 		goto done;
 	}
 
@@ -3018,8 +3030,8 @@ bool policy_mgr_scan_trim_5g_chnls_for_dfs_ap(struct wlan_objmgr_psoc *psoc)
 	    policy_mgr_get_single_mac_scan_with_dfs_config(psoc))
 		return false;
 
-	policy_mgr_err("scan skip 5g chan due to dfs ap(ch %d) present",
-		       ap_dfs_channel);
+	policy_mgr_debug("scan skip 5g chan due to dfs ap(ch %d) present",
+			 ap_dfs_channel);
 
 	return true;
 }
