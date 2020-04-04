@@ -376,7 +376,7 @@ static int cam_cci_component_bind(struct device *dev,
 	int rc = 0;
 	struct platform_device *pdev = to_platform_device(dev);
 
-	new_cci_dev = kzalloc(sizeof(struct cci_device),
+	new_cci_dev = devm_kzalloc(&pdev->dev, sizeof(struct cci_device),
 		GFP_KERNEL);
 	if (!new_cci_dev)
 		return -ENOMEM;
@@ -445,13 +445,14 @@ static int cam_cci_component_bind(struct device *dev,
 	CAM_DBG(CAM_CCI, "Component bound successfully");
 	return rc;
 cci_no_resource:
-	kfree(new_cci_dev);
+	devm_kfree(&pdev->dev, new_cci_dev);
 	return rc;
 }
 
 static void cam_cci_component_unbind(struct device *dev,
 	struct device *master_dev, void *data)
 {
+	int rc = 0;
 	struct platform_device *pdev = to_platform_device(dev);
 
 	struct v4l2_subdev *subdev = platform_get_drvdata(pdev);
@@ -460,6 +461,10 @@ static void cam_cci_component_unbind(struct device *dev,
 
 	cam_cpas_unregister_client(cci_dev->cpas_handle);
 	cam_cci_soc_remove(pdev, cci_dev);
+	rc = cam_unregister_subdev(&(cci_dev->v4l2_dev_str));
+	if (rc < 0)
+		CAM_ERR(CAM_CCI, "Fail with cam_unregister_subdev");
+
 	devm_kfree(&pdev->dev, cci_dev);
 }
 

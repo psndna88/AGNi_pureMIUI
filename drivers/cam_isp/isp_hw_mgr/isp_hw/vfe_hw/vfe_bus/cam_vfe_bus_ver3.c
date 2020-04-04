@@ -34,7 +34,6 @@ static const char drv_name[] = "vfe_bus";
 
 #define CAM_VFE_RDI_BUS_DEFAULT_WIDTH               0xFFFF
 #define CAM_VFE_RDI_BUS_DEFAULT_STRIDE              0xFFFF
-#define CAM_VFE_BUS_VER3_INTRA_CLIENT_MASK          0x3
 
 #define MAX_BUF_UPDATE_REG_NUM   \
 	((sizeof(struct cam_vfe_bus_ver3_reg_offset_bus_client) +  \
@@ -251,57 +250,6 @@ static int cam_vfe_bus_ver3_put_evt_payload(
 
 	CAM_DBG(CAM_ISP, "Done");
 	return 0;
-}
-
-static int cam_vfe_bus_ver3_get_intra_client_mask(
-	enum cam_vfe_bus_ver3_vfe_core_id  dual_slave_core,
-	enum cam_vfe_bus_ver3_vfe_core_id  current_core,
-	uint32_t                          *intra_client_mask)
-{
-	int rc = 0;
-	uint32_t version_based_intra_client_mask = 0x1;
-
-	*intra_client_mask = 0;
-
-	if (dual_slave_core == current_core) {
-		CAM_ERR(CAM_ISP,
-			"Invalid params. Same core as Master and Slave");
-		return -EINVAL;
-	}
-
-	switch (current_core) {
-	case CAM_VFE_BUS_VER3_VFE_CORE_0:
-		switch (dual_slave_core) {
-		case CAM_VFE_BUS_VER3_VFE_CORE_1:
-			*intra_client_mask = version_based_intra_client_mask;
-			break;
-		default:
-			CAM_ERR(CAM_ISP, "Invalid value for slave core %u",
-				dual_slave_core);
-			rc = -EINVAL;
-			break;
-		}
-		break;
-	case CAM_VFE_BUS_VER3_VFE_CORE_1:
-		switch (dual_slave_core) {
-		case CAM_VFE_BUS_VER3_VFE_CORE_0:
-			*intra_client_mask = version_based_intra_client_mask;
-			break;
-		default:
-			CAM_ERR(CAM_ISP, "Invalid value for slave core %u",
-				dual_slave_core);
-			rc = -EINVAL;
-			break;
-		}
-		break;
-	default:
-		CAM_ERR(CAM_ISP,
-			"Invalid value for master core %u", current_core);
-		rc = -EINVAL;
-		break;
-	}
-
-	return rc;
 }
 
 static bool cam_vfe_bus_ver3_can_be_secure(uint32_t out_type)
@@ -1558,15 +1506,7 @@ static int cam_vfe_bus_ver3_acquire_comp_grp(
 	rsrc_data = comp_grp_local->res_priv;
 
 	if (!previously_acquired) {
-		if (is_dual) {
-			rc = cam_vfe_bus_ver3_get_intra_client_mask(
-				dual_slave_core,
-				comp_grp_local->hw_intf->hw_idx,
-				&rsrc_data->intra_client_mask);
-			if (rc)
-				return rc;
-		}
-
+		rsrc_data->intra_client_mask = 0x1;
 		comp_grp_local->tasklet_info = tasklet;
 		comp_grp_local->res_state = CAM_ISP_RESOURCE_STATE_RESERVED;
 
@@ -2400,9 +2340,6 @@ static int cam_vfe_bus_ver3_deinit_vfe_out_resource(
 		 * This is not error. It can happen if the resource is
 		 * never supported in the HW.
 		 */
-		CAM_DBG(CAM_ISP, "VFE:%d out_type:%d already deinitialized",
-			rsrc_data->common_data->core_index,
-			rsrc_data->out_type);
 		return 0;
 	}
 
@@ -3527,8 +3464,12 @@ static int cam_vfe_bus_ver3_update_wm_config(
 		}
 
 		wm_data->en_cfg = (wm_config->wm_mode << 16) | 0x1;
-		wm_data->height = wm_config->height;
 		wm_data->width  = wm_config->width;
+
+		if (i == PLANE_C)
+			wm_data->height = wm_config->height / 2;
+		else
+			wm_data->height = wm_config->height;
 
 		CAM_DBG(CAM_ISP,
 			"WM:%d en_cfg:0x%X height:%d width:%d",
@@ -3692,6 +3633,7 @@ static int cam_vfe_bus_ver3_process_cmd(
 {
 	int rc = -EINVAL;
 	struct cam_vfe_bus_ver3_priv		 *bus_priv;
+	uint32_t top_mask_0 = 0;
 
 	if (!priv || !cmd_args) {
 		CAM_ERR_RATE_LIMIT(CAM_ISP, "Invalid input arguments");
@@ -3728,6 +3670,14 @@ static int cam_vfe_bus_ver3_process_cmd(
 	case CAM_ISP_HW_CMD_WM_CONFIG_UPDATE:
 		rc = cam_vfe_bus_ver3_update_wm_config(cmd_args);
 		break;
+	case CAM_ISP_HW_CMD_UNMASK_BUS_WR_IRQ:
+		bus_priv = (struct cam_vfe_bus_ver3_priv *) priv;
+		top_mask_0 = cam_io_r_mb(bus_priv->common_data.mem_base +
+			bus_priv->common_data.common_reg->top_irq_mask_0);
+		top_mask_0 |= (1 << bus_priv->top_irq_shift);
+		cam_io_w_mb(top_mask_0, bus_priv->common_data.mem_base +
+			bus_priv->common_data.common_reg->top_irq_mask_0);
+		break;
 	default:
 		CAM_ERR_RATE_LIMIT(CAM_ISP, "Invalid camif process command:%d",
 			cmd_type);
@@ -3749,6 +3699,7 @@ int cam_vfe_bus_ver3_init(
 	struct cam_vfe_bus              *vfe_bus_local;
 	struct cam_vfe_bus_ver3_hw_info *ver3_hw_info = bus_hw_info;
 	struct cam_vfe_soc_private      *soc_private = NULL;
+	static const char rup_controller_name[] = "vfe_bus_rup";
 
 	CAM_DBG(CAM_ISP, "Enter");
 
@@ -3814,7 +3765,7 @@ int cam_vfe_bus_ver3_init(
 		goto free_bus_priv;
 	}
 
-	rc = cam_irq_controller_init("vfe_bus_rup",
+	rc = cam_irq_controller_init(rup_controller_name,
 		bus_priv->common_data.mem_base,
 		&ver3_hw_info->common_reg.irq_reg_info,
 		&bus_priv->common_data.rup_irq_controller, false);

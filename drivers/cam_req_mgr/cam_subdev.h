@@ -34,7 +34,6 @@
  * @ent_function:          Media entity function type. Can be:
  *                             %CAM_IFE_DEVICE_TYPE - identifies as IFE device.
  *                             %CAM_ICP_DEVICE_TYPE - identifies as ICP device.
- * @subdev_node_created:   Enabled sub-device
  *
  * Each instance of a subdev driver should create this struct, either
  * stand-alone or embedded in a larger struct. This structure should be
@@ -50,7 +49,6 @@ struct cam_subdev {
 	u32                                    sd_flags;
 	void                                  *token;
 	u32                                    ent_function;
-	bool                                   subdev_node_created;
 };
 
 /**

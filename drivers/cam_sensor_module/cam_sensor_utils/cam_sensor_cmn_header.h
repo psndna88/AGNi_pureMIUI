@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_SENSOR_CMN_HEADER_
@@ -77,6 +77,7 @@ enum camera_flash_opcode {
 	CAMERA_SENSOR_FLASH_OP_OFF,
 	CAMERA_SENSOR_FLASH_OP_FIRELOW,
 	CAMERA_SENSOR_FLASH_OP_FIREHIGH,
+	CAMERA_SENSOR_FLASH_OP_FIREDURATION,
 	CAMERA_SENSOR_FLASH_OP_MAX,
 };
 
@@ -338,6 +339,9 @@ enum msm_sensor_camera_id_t {
 	CAMERA_4,
 	CAMERA_5,
 	CAMERA_6,
+	CAMERA_7,
+	CAMERA_8,
+	CAMERA_9,
 	MAX_CAMERAS,
 };
 

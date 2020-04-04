@@ -26,8 +26,8 @@
 #define CAM_IFE_CSID_TPG_DT_VAL                        0x2B
 
 /* CSIPHY TPG VC/DT values */
-#define CAM_IFE_CSI_TPG_VC_VAL                         0x0
-#define CAM_IFE_CSI_TPG_DT_VAL                         0x2B
+#define CAM_IFE_CPHY_TPG_VC_VAL                         0x0
+#define CAM_IFE_CPHY_TPG_DT_VAL                         0x2B
 
 /* Timeout values in usec */
 #define CAM_IFE_CSID_TIMEOUT_SLEEP_US                  1000
@@ -1142,10 +1142,12 @@ int cam_ife_csid_path_reserve(struct cam_ife_csid_hw *csid_hw,
 		path_data->crop_enable);
 
 	if ((reserve->in_port->res_type == CAM_ISP_IFE_IN_RES_CPHY_TPG_0) ||
-		(reserve->in_port->res_type == CAM_ISP_IFE_IN_RES_CPHY_TPG_1) ||
-		(reserve->in_port->res_type == CAM_ISP_IFE_IN_RES_TPG)) {
-		path_data->dt = CAM_IFE_CSI_TPG_DT_VAL;
-		path_data->vc = CAM_IFE_CSI_TPG_VC_VAL;
+		(reserve->in_port->res_type == CAM_ISP_IFE_IN_RES_CPHY_TPG_1)) {
+		path_data->dt = CAM_IFE_CPHY_TPG_DT_VAL;
+		path_data->vc = CAM_IFE_CPHY_TPG_VC_VAL;
+	} else if (reserve->in_port->res_type == CAM_ISP_IFE_IN_RES_TPG) {
+		path_data->dt = CAM_IFE_CSID_TPG_DT_VAL;
+		path_data->vc = CAM_IFE_CSID_TPG_VC_VAL;
 	} else {
 		path_data->dt = reserve->in_port->dt[0];
 		path_data->vc = reserve->in_port->vc[0];
@@ -3280,7 +3282,7 @@ static int cam_ife_csid_reset_regs(
 		csid_hw->csid_info->csid_reg;
 	struct cam_hw_soc_info          *soc_info;
 	uint32_t val = 0;
-	unsigned long flags;
+	unsigned long flags, rem_jiffies = 0;
 
 	soc_info = &csid_hw->hw_info->soc_info;
 
@@ -3323,9 +3325,10 @@ static int cam_ife_csid_reset_regs(
 
 	spin_unlock_irqrestore(&csid_hw->hw_info->hw_lock, flags);
 	CAM_DBG(CAM_ISP, "CSID reset start");
-	rc = wait_for_completion_timeout(&csid_hw->csid_top_complete,
+
+	rem_jiffies = wait_for_completion_timeout(&csid_hw->csid_top_complete,
 		msecs_to_jiffies(CAM_IFE_CSID_RESET_TIMEOUT_MS));
-	if (rc <= 0) {
+	if (rem_jiffies == 0) {
 		val = cam_io_r_mb(soc_info->reg_map[0].mem_base +
 			csid_reg->cmn_reg->csid_top_irq_status_addr);
 		if (val & 0x1) {
@@ -3337,19 +3340,18 @@ static int cam_ife_csid_reset_regs(
 			CAM_DBG(CAM_ISP, "CSID:%d %s reset completed %d",
 				csid_hw->hw_intf->hw_idx,
 				reset_hw ? "hw" : "sw",
-				rc);
-			rc = 0;
+				rem_jiffies);
 			goto end;
 		}
 		CAM_ERR(CAM_ISP, "CSID:%d csid_reset %s fail rc = %d",
-			csid_hw->hw_intf->hw_idx, reset_hw ? "hw" : "sw", rc);
+			csid_hw->hw_intf->hw_idx, reset_hw ? "hw" : "sw",
+			rem_jiffies);
 		rc = -ETIMEDOUT;
 		goto end;
-	} else {
+	} else
 		CAM_DBG(CAM_ISP, "CSID:%d %s reset completed %d",
-			csid_hw->hw_intf->hw_idx, reset_hw ? "hw" : "sw", rc);
-		rc = 0;
-	}
+			csid_hw->hw_intf->hw_idx, reset_hw ? "hw" : "sw",
+			rem_jiffies);
 
 end:
 	return rc;

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_VFE_BUS_VER2_H_
@@ -83,6 +83,7 @@ struct cam_vfe_bus_ver2_reg_offset_common {
 	uint32_t addr_sync_no_sync;
 	uint32_t debug_status_cfg;
 	uint32_t debug_status_0;
+	uint32_t top_irq_mask_0;
 };
 
 /*
@@ -177,6 +178,7 @@ struct cam_vfe_bus_ver2_vfe_out_hw_info {
  * @bus_client_reg:   Bus client register info
  * @comp_reg_grp:     Composite group register info
  * @vfe_out_hw_info:  VFE output capability
+ * @top_irq_shift:    Mask shift for top level BUS WR irq
  */
 struct cam_vfe_bus_ver2_hw_info {
 	struct cam_vfe_bus_ver2_reg_offset_common common_reg;
@@ -188,6 +190,7 @@ struct cam_vfe_bus_ver2_hw_info {
 	uint32_t num_out;
 	struct cam_vfe_bus_ver2_vfe_out_hw_info
 		vfe_out_hw_info[CAM_VFE_BUS_VER2_VFE_OUT_MAX];
+	uint32_t top_irq_shift;
 };
 
 /*

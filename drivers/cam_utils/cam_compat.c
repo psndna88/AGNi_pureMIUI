@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/dma-mapping.h>
@@ -9,6 +9,7 @@
 #include "cam_compat.h"
 #include "cam_debug_util.h"
 #include "cam_cpas_api.h"
+#include "camera_main.h"
 
 #if KERNEL_VERSION(5, 4, 0) <= LINUX_VERSION_CODE
 int cam_reserve_icp_fw(struct cam_fw_alloc_info *icp_fw, size_t fw_length)
@@ -96,6 +97,11 @@ void cam_cpastop_scm_write(struct cam_cpas_hw_errata_wa *errata_wa)
 	reg_val |= errata_wa->data.reg_info.value;
 	qcom_scm_io_writel(errata_wa->data.reg_info.offset, reg_val);
 }
+
+static int camera_platform_compare_dev(struct device *dev, const void *data)
+{
+	return platform_bus_type.match(dev, (struct device_driver *) data);
+}
 #else
 int cam_reserve_icp_fw(struct cam_fw_alloc_info *icp_fw, size_t fw_length)
 {
@@ -174,4 +180,56 @@ void cam_cpastop_scm_write(struct cam_cpas_hw_errata_wa *errata_wa)
 	reg_val |= errata_wa->data.reg_info.value;
 	scm_io_write(errata_wa->data.reg_info.offset, reg_val);
 }
+
+static int camera_platform_compare_dev(struct device *dev, void *data)
+{
+	return platform_bus_type.match(dev, (struct device_driver *) data);
+}
 #endif
+
+/* Callback to compare device from match list before adding as component */
+static inline int camera_component_compare_dev(struct device *dev, void *data)
+{
+	return dev == data;
+}
+
+/* Add component matches to list for master of aggregate driver */
+int camera_component_match_add_drivers(struct device *master_dev,
+	struct component_match **match_list)
+{
+	int i, rc = 0;
+	struct platform_device *pdev = NULL;
+
+	if (!master_dev || !match_list) {
+		CAM_ERR(CAM_UTIL, "Invalid parameters for component match add");
+		rc = -EINVAL;
+		goto end;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(cam_component_drivers); i++) {
+#if KERNEL_VERSION(5, 4, 0) <= LINUX_VERSION_CODE
+		struct device_driver const *drv =
+			&cam_component_drivers[i]->driver;
+		const void *drv_ptr = (const void *)drv;
+#else
+		struct device_driver *drv = &cam_component_drivers[i]->driver;
+		void *drv_ptr = (void *)drv;
+#endif
+		struct device *start_dev = NULL, *match_dev;
+
+		while ((match_dev = bus_find_device(&platform_bus_type,
+			start_dev, drv_ptr, &camera_platform_compare_dev))) {
+			put_device(start_dev);
+			pdev = to_platform_device(match_dev);
+			CAM_DBG(CAM_UTIL, "Adding matched component:%s",
+				pdev->name);
+			component_match_add(master_dev, match_list,
+				camera_component_compare_dev, match_dev);
+			start_dev = match_dev;
+		}
+		put_device(start_dev);
+	}
+
+end:
+	return rc;
+}

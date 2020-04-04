@@ -239,6 +239,7 @@ static struct cam_vfe_bus_ver3_hw_info vfe48x_bus_hw_info = {
 		.debug_status_top_cfg             = 0x00001AD4,
 		.debug_status_top                 = 0x00001AD8,
 		.test_bus_ctrl                    = 0x00001ADC,
+		.top_irq_mask_0                   = 0x00000028,
 		.irq_reg_info = {
 			.num_registers            = 2,
 			.irq_reg_set              = vfe48x_bus_irq_reg,

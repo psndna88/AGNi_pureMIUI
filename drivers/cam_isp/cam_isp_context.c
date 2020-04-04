@@ -1047,13 +1047,21 @@ static int __cam_isp_ctx_handle_buf_done_in_activated_state(
 }
 
 static int __cam_isp_ctx_apply_req_offline(
-	struct cam_context *ctx, uint32_t next_state,
-	struct cam_isp_context *ctx_isp)
+	void *priv, void *data)
 {
 	int rc = 0;
-	struct cam_ctx_request          *req;
-	struct cam_isp_ctx_req          *req_isp;
-	struct cam_hw_config_args        cfg;
+	struct cam_context *ctx = NULL;
+	struct cam_isp_context *ctx_isp = priv;
+	struct cam_ctx_request *req;
+	struct cam_isp_ctx_req *req_isp;
+	struct cam_hw_config_args cfg;
+
+	if (!ctx_isp) {
+		CAM_ERR(CAM_ISP, "Invalid ctx_isp:%pK", ctx);
+		rc = -EINVAL;
+		goto end;
+	}
+	ctx = ctx_isp->base;
 
 	if (list_empty(&ctx->pending_req_list)) {
 		CAM_DBG(CAM_ISP, "No pending requests to apply");
@@ -1067,8 +1075,10 @@ static int __cam_isp_ctx_apply_req_offline(
 	if (ctx_isp->active_req_cnt >= 2)
 		goto end;
 
+	spin_lock_bh(&ctx->lock);
 	req = list_first_entry(&ctx->pending_req_list, struct cam_ctx_request,
 		list);
+	spin_unlock_bh(&ctx->lock);
 
 	CAM_DBG(CAM_REQ, "Apply request %lld in substate %d ctx %u",
 		req->request_id, ctx_isp->substate_activated, ctx->ctx_id);
@@ -1087,19 +1097,47 @@ static int __cam_isp_ctx_apply_req_offline(
 	if (rc) {
 		CAM_ERR_RATE_LIMIT(CAM_ISP, "Can not apply the configuration");
 	} else {
+		spin_lock_bh(&ctx->lock);
+
 		atomic_set(&ctx_isp->rxd_epoch, 0);
-		ctx_isp->substate_activated = next_state;
+
+		ctx_isp->substate_activated = CAM_ISP_CTX_ACTIVATED_APPLIED;
 		ctx_isp->last_applied_req_id = req->request_id;
+
 		list_del_init(&req->list);
 		list_add_tail(&req->list, &ctx->wait_req_list);
+
+		spin_unlock_bh(&ctx->lock);
+
 		CAM_DBG(CAM_ISP, "New substate state %d, applied req %lld",
-			next_state, ctx_isp->last_applied_req_id);
+			CAM_ISP_CTX_ACTIVATED_APPLIED,
+			ctx_isp->last_applied_req_id);
 
 		__cam_isp_ctx_update_state_monitor_array(ctx_isp,
 			CAM_ISP_STATE_CHANGE_TRIGGER_APPLIED,
 			req->request_id);
 	}
 end:
+	return rc;
+}
+
+static int __cam_isp_ctx_schedule_apply_req_offline(
+	struct cam_isp_context *ctx_isp)
+{
+	int rc = 0;
+	struct crm_workq_task *task;
+
+	task = cam_req_mgr_workq_get_task(ctx_isp->workq);
+	if (!task) {
+		CAM_ERR(CAM_ISP, "No task for worker");
+		return -ENOMEM;
+	}
+
+	task->process_cb = __cam_isp_ctx_apply_req_offline;
+	rc = cam_req_mgr_workq_enqueue_task(task, ctx_isp, CRM_TASK_PRIORITY_0);
+	if (rc)
+		CAM_ERR(CAM_ISP, "Failed to schedule task rc:%d", rc);
+
 	return rc;
 }
 
@@ -1123,8 +1161,7 @@ static int __cam_isp_ctx_offline_epoch_in_activated_state(
 		}
 	}
 
-	__cam_isp_ctx_apply_req_offline(ctx, CAM_ISP_CTX_ACTIVATED_APPLIED,
-		ctx_isp);
+	__cam_isp_ctx_schedule_apply_req_offline(ctx_isp);
 
 	__cam_isp_ctx_send_sof_timestamp(ctx_isp, request_id,
 		CAM_REQ_MGR_SOF_EVENT_SUCCESS);
@@ -1276,6 +1313,7 @@ static int __cam_isp_ctx_notify_sof_in_activated_state(
 			notify.trigger = CAM_TRIGGER_POINT_SOF;
 			notify.req_id = ctx_isp->req_info.last_bufdone_req_id;
 			notify.sof_timestamp_val = ctx_isp->sof_timestamp_val;
+			notify.trigger_id = ctx_isp->trigger_id;
 
 			ctx->ctx_crm_intf->notify_trigger(&notify);
 			CAM_DBG(CAM_ISP, "Notify CRM  SOF frame %lld ctx %u",
@@ -2447,6 +2485,14 @@ static int __cam_isp_ctx_apply_req_in_activated_state(
 		rc = -EAGAIN;
 		goto end;
 	}
+
+	if (apply->re_apply)
+		if (apply->request_id <= ctx_isp->last_applied_req_id) {
+			CAM_INFO(CAM_ISP,
+				"Trying to reapply the same request %llu again",
+				apply->request_id);
+			return 0;
+		}
 
 	spin_lock_bh(&ctx->lock);
 	req = list_first_entry(&ctx->pending_req_list, struct cam_ctx_request,
@@ -3864,6 +3910,7 @@ static int __cam_isp_ctx_config_dev_in_top_state(
 			add_req.dev_hdl  = ctx->dev_hdl;
 			add_req.req_id   = req->request_id;
 			add_req.skip_before_applying = 0;
+			add_req.trigger_eof = false;
 			rc = ctx->ctx_crm_intf->add_req(&add_req);
 			if (rc) {
 				CAM_ERR(CAM_ISP, "Add req failed: req id=%llu",
@@ -3887,10 +3934,7 @@ static int __cam_isp_ctx_config_dev_in_top_state(
 		req->request_id, ctx->ctx_id);
 
 	if (ctx_isp->offline_context && atomic_read(&ctx_isp->rxd_epoch)) {
-		spin_lock_bh(&ctx->lock);
-		__cam_isp_ctx_apply_req_offline(ctx,
-			CAM_ISP_CTX_ACTIVATED_APPLIED, ctx_isp);
-		spin_unlock_bh(&ctx->lock);
+		__cam_isp_ctx_schedule_apply_req_offline(ctx_isp);
 	}
 
 	return rc;
@@ -4336,6 +4380,13 @@ static int __cam_isp_ctx_acquire_hw_v2(struct cam_context *ctx,
 			cam_isp_ctx_offline_state_machine_irq;
 		ctx_isp->substate_machine = NULL;
 		ctx_isp->offline_context = true;
+
+		rc = cam_req_mgr_workq_create("offline_ife", 20,
+			&ctx_isp->workq, CRM_WORKQ_USAGE_IRQ, 0);
+		if (rc)
+			CAM_ERR(CAM_ISP,
+				"Failed to create workq for offline IFE rc:%d",
+				rc);
 	} else {
 		CAM_DBG(CAM_ISP, "Session has PIX or PIX and RDI resources");
 		ctx_isp->substate_machine_irq =
@@ -4475,7 +4526,9 @@ static int __cam_isp_ctx_link_in_acquired(struct cam_context *ctx,
 
 	ctx->link_hdl = link->link_hdl;
 	ctx->ctx_crm_intf = link->crm_cb;
-	ctx_isp->subscribe_event = link->subscribe_event;
+	ctx_isp->subscribe_event =
+		CAM_TRIGGER_POINT_SOF | CAM_TRIGGER_POINT_EOF;
+	ctx_isp->trigger_id = link->trigger_id;
 
 	/* change state only if we had the init config */
 	if (ctx_isp->init_received) {
@@ -4492,9 +4545,12 @@ static int __cam_isp_ctx_unlink_in_acquired(struct cam_context *ctx,
 	struct cam_req_mgr_core_dev_link_setup *unlink)
 {
 	int rc = 0;
+	struct cam_isp_context *ctx_isp =
+		(struct cam_isp_context *) ctx->ctx_priv;
 
 	ctx->link_hdl = -1;
 	ctx->ctx_crm_intf = NULL;
+	ctx_isp->trigger_id = -1;
 
 	return rc;
 }
@@ -4509,6 +4565,7 @@ static int __cam_isp_ctx_get_dev_info_in_acquired(struct cam_context *ctx,
 	dev_info->dev_id = CAM_REQ_MGR_DEVICE_IFE;
 	dev_info->p_delay = 1;
 	dev_info->trigger = CAM_TRIGGER_POINT_SOF;
+	dev_info->trigger_on = true;
 
 	return rc;
 }
@@ -5252,6 +5309,7 @@ int cam_isp_context_init(struct cam_isp_context *ctx,
 		atomic64_set(&ctx->event_record_head[i], -1);
 
 	cam_isp_context_debug_register();
+
 err:
 	return rc;
 }

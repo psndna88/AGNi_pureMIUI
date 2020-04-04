@@ -153,6 +153,7 @@ static struct cam_vfe_bus_ver2_hw_info vfe17x_bus_hw_info = {
 		.addr_sync_cfg                = 0x0000207C,
 		.addr_sync_frame_hdr          = 0x00002080,
 		.addr_sync_no_sync            = 0x00002084,
+		.top_irq_mask_0               = 0x0000005C,
 	},
 	.num_client = 4,
 	.bus_client_reg = {
@@ -322,6 +323,7 @@ static struct cam_vfe_bus_ver2_hw_info vfe17x_bus_hw_info = {
 			.max_height    = -1,
 		},
 	},
+	.top_irq_shift = 9,
 };
 
 static struct cam_vfe_hw_info cam_vfe_lite17x_hw_info = {

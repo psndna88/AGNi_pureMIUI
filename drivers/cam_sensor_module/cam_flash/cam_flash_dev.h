@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_FLASH_DEV_H_
@@ -13,12 +13,18 @@
 #include <linux/of.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
-#include <linux/leds-qpnp-flash.h>
 #include <media/v4l2-subdev.h>
 #include <media/v4l2-ioctl.h>
 #include <media/v4l2-event.h>
 #include <media/cam_sensor.h>
 #include <media/cam_req_mgr.h>
+
+#if IS_REACHABLE(CONFIG_LEDS_QPNP_FLASH_V2)
+#include <linux/leds-qpnp-flash.h>
+#elif IS_REACHABLE(CONFIG_LEDS_QTI_FLASH)
+#include <linux/leds-qti-flash.h>
+#endif
+
 #include "cam_req_mgr_util.h"
 #include "cam_req_mgr_interface.h"
 #include "cam_subdev.h"
@@ -102,13 +108,13 @@ struct cam_flash_init_packet {
 
 /**
  * struct flash_frame_setting
- * @cmn_attr         : Provides common attributes
- * @num_iterations   : Iterations used to perform RER
- * @led_on_delay_ms  : LED on time in milisec
- * @led_off_delay_ms : LED off time in milisec
- * @opcode           : Command buffer opcode
- * @led_current_ma[] : LED current array in miliamps
- *
+ * @cmn_attr             : Provides common attributes
+ * @num_iterations       : Iterations used to perform RER
+ * @led_on_delay_ms      : LED on time in milisec
+ * @led_off_delay_ms     : LED off time in milisec
+ * @opcode               : Command buffer opcode
+ * @led_current_ma[]     : LED current array in miliamps
+ * @flash_active_time_ms : Flash_On time with precise flash
  */
 struct cam_flash_frame_setting {
 	struct cam_flash_common_attr cmn_attr;
@@ -117,6 +123,7 @@ struct cam_flash_frame_setting {
 	uint16_t                     led_off_delay_ms;
 	int8_t                       opcode;
 	uint32_t                     led_current_ma[CAM_FLASH_MAX_LED_TRIGGERS];
+	uint64_t                     flash_active_time_ms;
 };
 
 /**

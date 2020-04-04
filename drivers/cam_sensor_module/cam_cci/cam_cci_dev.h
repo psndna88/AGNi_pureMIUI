@@ -58,8 +58,8 @@
 /* Max bytes that can be read per CCI read transaction */
 #define CCI_READ_MAX 256
 #define CCI_I2C_READ_MAX_RETRIES 3
-#define CCI_I2C_MAX_READ 8192
-#define CCI_I2C_MAX_WRITE 8192
+#define CCI_I2C_MAX_READ 10240
+#define CCI_I2C_MAX_WRITE 10240
 #define CCI_I2C_MAX_BYTE_COUNT 65535
 
 #define CAMX_CCI_DEV_NAME "cam-cci-driver"

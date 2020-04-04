@@ -498,7 +498,7 @@ static void cam_eeprom_component_unbind(struct device *dev,
 		return;
 	}
 
-	CAM_INFO(CAM_EEPROM, "Platform driver remove invoked");
+	CAM_DBG(CAM_EEPROM, "Component unbind called for: %s", pdev->name);
 	soc_info = &e_ctrl->soc_info;
 
 	for (i = 0; i < soc_info->num_clk; i++)
