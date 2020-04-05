@@ -689,6 +689,7 @@
 
 		qcom,secure_align_mask = <0xfff>;
 		qcom,retention;
+		qcom,unmap_fast;
 		qcom,hyp_secure_alloc;
 
 		gfx3d_user: gfx3d_user {
