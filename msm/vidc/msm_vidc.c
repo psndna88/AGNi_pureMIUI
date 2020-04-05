@@ -387,6 +387,8 @@ int msm_vidc_qbuf(void *instance, struct media_device *mdev,
 		return -EINVAL;
 	}
 
+	inst->last_qbuf_time_ns = ktime_get_ns();
+
 	for (i = 0; i < b->length; i++) {
 		b->m.planes[i].m.fd =
 				b->m.planes[i].reserved[MSM_VIDC_BUFFER_FD];
@@ -1510,6 +1512,7 @@ void *msm_vidc_open(int core_id, int session_type)
 	inst->full_range = COLOR_RANGE_UNSPECIFIED;
 	inst->bse_vpp_delay = DEFAULT_BSE_VPP_DELAY;
 	inst->first_reconfig = 0;
+	inst->active = true;
 
 	for (i = SESSION_MSG_INDEX(SESSION_MSG_START);
 		i <= SESSION_MSG_INDEX(SESSION_MSG_END); i++) {

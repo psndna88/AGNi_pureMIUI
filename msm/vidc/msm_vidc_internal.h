@@ -569,6 +569,8 @@ struct msm_vidc_inst {
 	struct msm_vidc_ubwc_stats ubwc_stats;
 	u32 bse_vpp_delay;
 	u32 first_reconfig;
+	u64 last_qbuf_time_ns;
+	bool active;
 };
 
 extern struct msm_vidc_drv *vidc_driver;
