@@ -396,7 +396,7 @@
 		qcom,widebus-enable;
 		qcom,dsc-feature-enable;
 		qcom,fec-feature-enable;
-		qcom,max-dp-dsc-blks = <2>;
+		qcom,max-dp-dsc-blks = <4>;
 		qcom,max-dp-dsc-input-width-pixs = <2048>;
 
 		vdda-1p2-supply = <&L6B>;
