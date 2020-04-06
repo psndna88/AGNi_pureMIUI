@@ -88,6 +88,7 @@ camera-$(CONFIG_SPECTRA_ISP) += \
 	cam_isp/isp_hw_mgr/isp_hw/top_tpg/cam_top_tpg_dev.o \
 	cam_isp/isp_hw_mgr/isp_hw/top_tpg/cam_top_tpg_soc.o \
 	cam_isp/isp_hw_mgr/isp_hw/top_tpg/cam_top_tpg_core.o \
+	cam_isp/isp_hw_mgr/isp_hw/top_tpg/cam_top_tpg_ver1.o \
 	cam_isp/isp_hw_mgr/isp_hw/top_tpg/cam_top_tpg_ver2.o \
 	cam_isp/isp_hw_mgr/isp_hw/top_tpg/cam_top_tpg.o \
 	cam_isp/isp_hw_mgr/cam_isp_hw_mgr.o \
@@ -195,8 +196,7 @@ camera-$(CONFIG_SPECTRA_OPE) += \
 	cam_ope/ope_hw_mgr/ope_hw/bus_rd/ope_bus_rd.o\
 	cam_ope/ope_hw_mgr/ope_hw/bus_wr/ope_bus_wr.o
 
-camera-$(CONFIG_SPECTRA_CAMERA) += \
-	cam_isp/isp_hw_mgr/cam_tfe_hw_mgr.o \
+camera-$(CONFIG_SPECTRA_TFE) += \
 	cam_isp/isp_hw_mgr/isp_hw/tfe_hw/cam_tfe_soc.o \
 	cam_isp/isp_hw_mgr/isp_hw/tfe_hw/cam_tfe_dev.o \
 	cam_isp/isp_hw_mgr/isp_hw/tfe_hw/cam_tfe_core.o \
@@ -206,11 +206,7 @@ camera-$(CONFIG_SPECTRA_CAMERA) += \
 	cam_isp/isp_hw_mgr/isp_hw/tfe_csid_hw/cam_tfe_csid_soc.o \
 	cam_isp/isp_hw_mgr/isp_hw/tfe_csid_hw/cam_tfe_csid_core.o \
 	cam_isp/isp_hw_mgr/isp_hw/tfe_csid_hw/cam_tfe_csid530.o \
-	cam_isp/isp_hw_mgr/isp_hw/top_tpg/cam_top_tpg_dev.o \
-	cam_isp/isp_hw_mgr/isp_hw/top_tpg/cam_top_tpg_soc.o \
-	cam_isp/isp_hw_mgr/isp_hw/top_tpg/cam_top_tpg_core.o \
-	cam_isp/isp_hw_mgr/isp_hw/top_tpg/cam_top_tpg_ver1.o \
-	cam_isp/isp_hw_mgr/isp_hw/top_tpg/cam_top_tpg.o
+	cam_isp/isp_hw_mgr/cam_tfe_hw_mgr.o
 
 
 camera-y += camera_main.o

@@ -191,6 +191,14 @@ struct cam_tfe_hw_event_recovery_data {
  * @iommu_hdl:          Iommu handle to be returned
  *
  */
+#ifdef CONFIG_SPECTRA_TFE
 int cam_tfe_hw_mgr_init(struct cam_hw_mgr_intf *hw_mgr_intf, int *iommu_hdl);
+
+#else
+static inline int cam_tfe_hw_mgr_init(struct cam_hw_mgr_intf *hw_mgr_intf,
+	int *iommu_hdl) {
+	return -EINVAL;
+}
+#endif
 
 #endif /* _CAM_TFE_HW_MGR_H_ */
