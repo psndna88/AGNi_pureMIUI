@@ -162,7 +162,7 @@
 };
 
 &mdss_mdp {
-	connectors = <&sde_dp &sde_wb &sde_dsi>;
+	connectors = <&sde_dp &sde_wb &sde_dsi &sde_rscc>;
 };
 
 /* PHY TIMINGS REVISION YB */
