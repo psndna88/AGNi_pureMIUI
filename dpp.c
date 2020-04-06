@@ -70,10 +70,15 @@ static int dpp_get_local_bootstrap(struct sigma_dut *dut,
 	char *pos, mac[50], buf[200], resp[1000], hex[2000];
 	const char *ifname = get_station_ifname(dut);
 	int res;
+	const char *type;
 
 	if (success)
 		*success = 0;
-	if (strcasecmp(bs, "QR") != 0) {
+	if (strcasecmp(bs, "QR") == 0) {
+		type = "qrcode";
+	} else if (strcasecmp(bs, "NFC") == 0) {
+		type ="nfc-uri";
+	} else {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Unsupported DPPBS");
 		return 0;
@@ -120,8 +125,8 @@ static int dpp_get_local_bootstrap(struct sigma_dut *dut,
 	    (strcmp(chan_list, "0/0") == 0 || chan_list[0] == '\0')) {
 		/* No channel list */
 		res = snprintf(buf, sizeof(buf),
-			       "DPP_BOOTSTRAP_GEN type=qrcode curve=%s mac=%s",
-			       curve, mac);
+			       "DPP_BOOTSTRAP_GEN type=%s curve=%s mac=%s",
+			       type, curve, mac);
 	} else if (chan_list) {
 		/* Channel list override (CTT case) - space separated tuple(s)
 		 * of OperatingClass/Channel; convert to wpa_supplicant/hostapd
@@ -132,8 +137,8 @@ static int dpp_get_local_bootstrap(struct sigma_dut *dut,
 				*pos = ',';
 		}
 		res = snprintf(buf, sizeof(buf),
-			       "DPP_BOOTSTRAP_GEN type=qrcode curve=%s chan=%s mac=%s",
-			       curve, resp, mac);
+			       "DPP_BOOTSTRAP_GEN type=%s curve=%s chan=%s mac=%s",
+			       type, curve, resp, mac);
 	} else {
 		int channel = 11;
 
@@ -143,8 +148,8 @@ static int dpp_get_local_bootstrap(struct sigma_dut *dut,
 		    dut->ap_channel > 0 && dut->ap_channel <= 13)
 			channel = dut->ap_channel;
 		res = snprintf(buf, sizeof(buf),
-			       "DPP_BOOTSTRAP_GEN type=qrcode curve=%s chan=81/%d mac=%s",
-			       curve, channel, mac);
+			       "DPP_BOOTSTRAP_GEN type=%s curve=%s chan=81/%d mac=%s",
+			       type, curve, channel, mac);
 	}
 
 	if (res < 0 || res >= sizeof(buf) ||
@@ -211,9 +216,17 @@ static int dpp_hostapd_conf_update(struct sigma_dut *dut,
 		"DPP-CONNECTOR",
 		"DPP-CONFOBJ-PASS",
 		"DPP-CONFOBJ-PSK",
+		"DPP-C-SIGN-KEY",
+		"DPP-NET-ACCESS-KEY",
 		NULL
 	};
 	unsigned int old_timeout;
+	int legacy_akm, dpp_akm;
+	char *connector = NULL, *psk = NULL, *csign = NULL,
+		*net_access_key = NULL;
+	char pass[64];
+	int pass_len = 0;
+	int ret = 0;
 
 	sigma_dut_print(dut, DUT_MSG_INFO,
 			"Update hostapd configuration based on DPP Config Object");
@@ -226,6 +239,21 @@ static int dpp_hostapd_conf_update(struct sigma_dut *dut,
 			  "errorCode,Failed to update AP security parameters");
 		goto out;
 	}
+
+	res = get_wpa_cli_event(dut, ctrl, "DPP-CONFOBJ-AKM", buf, sizeof(buf));
+	if (res < 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,No DPP-CONFOBJ-AKM");
+		goto out;
+	}
+	pos = strchr(buf, ' ');
+	if (!pos)
+		return -2;
+	pos++;
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"DPP: Config Object AKM: %s", pos);
+	legacy_akm = strstr(pos, "psk") != NULL || strstr(pos, "sae") != NULL;
+	dpp_akm = strstr(pos, "dpp") != NULL;
 
 	res = get_wpa_cli_event(dut, ctrl, "DPP-CONFOBJ-SSID",
 				buf, sizeof(buf));
@@ -253,119 +281,149 @@ static int dpp_hostapd_conf_update(struct sigma_dut *dut,
 		goto out;
 	}
 
-	res = get_wpa_cli_events(dut, ctrl, conf_data_events, buf, sizeof(buf));
-	if (res < 0) {
-		send_resp(dut, conn, SIGMA_ERROR,
-			  "errorCode,No DPP-CONNECTOR/DPP-CONFOBJ-PASS/PSK");
-		goto out;
-	}
-
-	if (!strstr(buf, "DPP-CONNECTOR")) {
-		if (wpa_command(ifname, "SET wpa_key_mgmt WPA-PSK") < 0) {
+	while ((dpp_akm && (!connector || !csign || !net_access_key)) ||
+	       (legacy_akm && !pass_len && !psk)) {
+		res = get_wpa_cli_events(dut, ctrl, conf_data_events,
+					 buf, sizeof(buf));
+		if (res < 0) {
 			send_resp(dut, conn, SIGMA_ERROR,
-				  "errorCode,Failed to update AP security parameters");
+				  "errorCode,Not all config object information received");
 			goto out;
 		}
 
-		pos = strchr(buf, ' ');
-		if (!pos)
-			return -2;
-		pos++;
-		if (strstr(buf, "DPP-CONFOBJ-PASS")) {
-			char pass[64];
-			int pass_len;
-
+		if (strstr(buf, "DPP-CONNECTOR")) {
+			pos = strchr(buf, ' ');
+			if (!pos) {
+				ret = -2;
+				goto out;
+			}
+			pos++;
+			sigma_dut_print(dut, DUT_MSG_INFO, "DPP: Connector: %s",
+					pos);
+			if (!connector)
+				connector = strdup(pos);
+		} else if (strstr(buf, "DPP-C-SIGN-KEY")) {
+			pos = strchr(buf, ' ');
+			if (!pos) {
+				ret = -2;
+				goto out;
+			}
+			pos++;
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"DPP: C-sign-key: %s", pos);
+			if (!csign)
+				csign = strdup(pos);
+		} else if (strstr(buf, "DPP-NET-ACCESS-KEY")) {
+			pos = strchr(buf, ' ');
+			if (!pos) {
+				ret = -2;
+				goto out;
+			}
+			pos++;
+			if (!net_access_key)
+				net_access_key = strdup(pos);
+		} else if (strstr(buf, "DPP-CONFOBJ-PASS")) {
+			pos = strchr(buf, ' ');
+			if (!pos) {
+				ret = -2;
+				goto out;
+			}
+			pos++;
 			pass_len = parse_hexstr(pos, (u8 *) pass, sizeof(pass));
-			if (pass_len < 0 || (size_t) pass_len >= sizeof(pass))
-				return -2;
+			if (pass_len < 0 || (size_t) pass_len >= sizeof(pass)) {
+				ret = -2;
+				goto out;
+			}
 			pass[pass_len] = '\0';
 			sigma_dut_print(dut, DUT_MSG_INFO,
 					"DPP: Passphrase: %s", pass);
-			snprintf(buf2, sizeof(buf2), "SET wpa_passphrase %s",
-				 pass);
-			if (wpa_command(ifname, buf2) < 0) {
-				send_resp(dut, conn, SIGMA_ERROR,
-					  "errorCode,Failed to set passphrase");
-				goto out;
-			}
 		} else if (strstr(buf, "DPP-CONFOBJ-PSK")) {
-			sigma_dut_print(dut, DUT_MSG_INFO,
-					"DPP: PSK: %s", pos);
-			snprintf(buf2, sizeof(buf2), "SET wpa_psk %s", pos);
-			if (wpa_command(ifname, buf2) < 0) {
-				send_resp(dut, conn, SIGMA_ERROR,
-					  "errorCode,Failed to set PSK");
+			pos = strchr(buf, ' ');
+			if (!pos) {
+				ret = -2;
 				goto out;
 			}
+			pos++;
+			sigma_dut_print(dut, DUT_MSG_INFO, "DPP: PSK: %s", pos);
+			if (!psk)
+				psk = strdup(pos);
 		}
-
-		goto skip_dpp_akm;
 	}
 
-	pos = strchr(buf, ' ');
-	if (!pos)
-		return -2;
-	pos++;
-	sigma_dut_print(dut, DUT_MSG_INFO, "DPP: Connector: %s", pos);
-	snprintf(buf2, sizeof(buf2), "SET dpp_connector %s", pos);
-	if (wpa_command(ifname, buf2) < 0) {
+	if ((!connector || !dpp_akm) &&
+	    wpa_command(ifname, "SET wpa_key_mgmt WPA-PSK") < 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
-			  "errorCode,Failed to update AP Connector");
+			  "errorCode,Failed to update AP security parameters");
 		goto out;
 	}
 
-	res = get_wpa_cli_event(dut, ctrl, "DPP-C-SIGN-KEY",
-				buf, sizeof(buf));
-	if (res < 0) {
+	if (connector && dpp_akm && legacy_akm &&
+	    wpa_command(ifname, "SET wpa_key_mgmt DPP WPA-PSK") < 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
-			  "errorCode,No DPP-C-SIGN-KEY");
-		goto out;
-	}
-	pos = strchr(buf, ' ');
-	if (!pos)
-		return -2;
-	pos++;
-	sigma_dut_print(dut, DUT_MSG_INFO, "DPP: C-sign-key: %s", pos);
-	snprintf(buf2, sizeof(buf2), "SET dpp_csign %s", pos);
-	if (wpa_command(ifname, buf2) < 0) {
-		send_resp(dut, conn, SIGMA_ERROR,
-			  "errorCode,Failed to update AP C-sign-key");
+			  "errorCode,Failed to update AP security parameters");
 		goto out;
 	}
 
-	res = get_wpa_cli_event(dut, ctrl, "DPP-NET-ACCESS-KEY",
-				buf, sizeof(buf));
-	if (res < 0) {
-		send_resp(dut, conn, SIGMA_ERROR,
-			  "errorCode,No DPP-NET-ACCESS-KEY");
-		goto out;
-	}
-	pos = strchr(buf, ' ');
-	if (!pos)
-		return -2;
-	pos++;
-	pos2 = strchr(pos, ' ');
-	if (pos2)
-		*pos2++ = '\0';
-	sigma_dut_print(dut, DUT_MSG_INFO, "DPP: netAccessKey: %s", pos);
-	snprintf(buf2, sizeof(buf2), "SET dpp_netaccesskey %s", pos);
-	if (wpa_command(ifname, buf2) < 0) {
-		send_resp(dut, conn, SIGMA_ERROR,
-			  "errorCode,Failed to update AP netAccessKey");
-		goto out;
-	}
-	if (pos2) {
-		sigma_dut_print(dut, DUT_MSG_INFO,
-				"DPP: netAccessKey expiry: %s", pos2);
-		snprintf(buf2, sizeof(buf2), "SET dpp_netaccesskey_expiry %s",
-			 pos2);
+	if (pass_len) {
+		snprintf(buf2, sizeof(buf2), "SET wpa_passphrase %s",
+			 pass);
 		if (wpa_command(ifname, buf2) < 0) {
 			send_resp(dut, conn, SIGMA_ERROR,
-				  "errorCode,Failed to update AP netAccessKey expiry");
+				  "errorCode,Failed to set passphrase");
+			goto out;
+		}
+	} else if (psk) {
+		snprintf(buf2, sizeof(buf2), "SET wpa_psk %s", psk);
+		if (wpa_command(ifname, buf2) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to set PSK");
 			goto out;
 		}
 	}
-skip_dpp_akm:
+
+	if (connector) {
+		snprintf(buf2, sizeof(buf2), "SET dpp_connector %s", connector);
+		if (wpa_command(ifname, buf2) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to update AP Connector");
+			goto out;
+		}
+	}
+
+	if (csign) {
+		snprintf(buf2, sizeof(buf2), "SET dpp_csign %s", csign);
+		if (wpa_command(ifname, buf2) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to update AP C-sign-key");
+			goto out;
+		}
+	}
+
+	if (net_access_key) {
+		pos2 = strchr(net_access_key, ' ');
+		if (pos2)
+			*pos2++ = '\0';
+		sigma_dut_print(dut, DUT_MSG_INFO, "DPP: netAccessKey: %s",
+				net_access_key);
+		snprintf(buf2, sizeof(buf2), "SET dpp_netaccesskey %s",
+			 net_access_key);
+		if (wpa_command(ifname, buf2) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to update AP netAccessKey");
+			goto out;
+		}
+		if (pos2) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"DPP: netAccessKey expiry: %s", pos2);
+			snprintf(buf2, sizeof(buf2),
+				 "SET dpp_netaccesskey_expiry %s", pos2);
+			if (wpa_command(ifname, buf2) < 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to update AP netAccessKey expiry");
+				goto out;
+			}
+		}
+	}
 
 	/* Wait for a possible Configuration Result to be sent */
 	old_timeout = dut->default_timeout;
@@ -385,9 +443,13 @@ skip_dpp_akm:
 		goto out;
 	}
 
-	return 1;
+	ret = 1;
 out:
-	return 0;
+	free(connector);
+	free(psk);
+	free(csign);
+	free(net_access_key);
+	return ret;
 }
 
 
@@ -885,12 +947,13 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	const char *attr = get_param(cmd, "DPPIEAttribute");
 	const char *action_type = get_param(cmd, "DPPActionType");
 	const char *tcp = get_param(cmd, "DPPOverTCP");
+	const char *nfc_handover = get_param(cmd, "DPPNFCHandover");
 	const char *role;
 	const char *netrole = NULL;
 	const char *val;
 	const char *conf_role;
 	int conf_index = -1;
-	char buf[2000], *pos;
+	char buf[2000], *pos, *pos2;
 	char buf2[200];
 	char conf_ssid[100];
 	char conf_pass[100];
@@ -1298,7 +1361,11 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		if (sigma_dut_is_ap(dut))
 			goto update_ap;
 		goto wait_connect;
-	} else if (strcasecmp(auth_role, "Initiator") == 0) {
+	} else if ((nfc_handover &&
+		    strcasecmp(nfc_handover, "Negotiated_Requestor") == 0) ||
+		   ((!nfc_handover ||
+		     strcasecmp(nfc_handover, "Static") == 0) &&
+		    strcasecmp(auth_role, "Initiator") == 0)) {
 		char own_txt[20];
 		int dpp_peer_bootstrap = -1;
 		char neg_freq[30];
@@ -1350,6 +1417,47 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 				goto out;
 			}
 			dpp_peer_bootstrap = atoi(buf);
+		} else if (strcasecmp(bs, "NFC") == 0 && nfc_handover &&
+			   strcasecmp(nfc_handover, "Static") == 0) {
+			if (!dut->dpp_peer_uri) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Missing peer bootstrapping info");
+				goto out;
+			}
+
+			snprintf(buf, sizeof(buf), "DPP_NFC_URI %s",
+				 dut->dpp_peer_uri);
+			if (wpa_command_resp(ifname, buf,
+					     buf, sizeof(buf)) < 0 ||
+			    strncmp(buf, "FAIL", 4) == 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to process URI from NFC Tag");
+				goto out;
+			}
+			dpp_peer_bootstrap = atoi(buf);
+		} else if (strcasecmp(bs, "NFC") == 0) {
+			if (!dut->dpp_peer_uri) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Missing peer bootstrapping info");
+				goto out;
+			}
+			if (dut->dpp_local_bootstrap < 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Missing own bootstrapping info");
+				goto out;
+			}
+
+			snprintf(buf, sizeof(buf),
+				 "DPP_NFC_HANDOVER_SEL own=%d uri=%s",
+				 dut->dpp_local_bootstrap, dut->dpp_peer_uri);
+			if (wpa_command_resp(ifname, buf,
+					     buf, sizeof(buf)) < 0 ||
+			    strncmp(buf, "FAIL", 4) == 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to process NFC Handover Select");
+				goto out;
+			}
+			dpp_peer_bootstrap = atoi(buf);
 		}
 
 		if (dut->dpp_local_bootstrap >= 0)
@@ -1357,7 +1465,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 				 dut->dpp_local_bootstrap);
 		else
 			own_txt[0] = '\0';
-		if (strcasecmp(bs, "QR") == 0 &&
+		if ((strcasecmp(bs, "QR") == 0 || strcasecmp(bs, "NFC") == 0) &&
 		    (strcasecmp(prov_role, "Configurator") == 0 ||
 		     strcasecmp(prov_role, "Both") == 0)) {
 			if (!conf_role) {
@@ -1375,14 +1483,16 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 				 akm_use_selector ? " akm_use_selector=1" : "",
 				 conn_status ? " conn_status=1" : "",
 				 conf2);
-		} else if (tcp && strcasecmp(bs, "QR") == 0) {
+		} else if (tcp && (strcasecmp(bs, "QR") == 0 ||
+				   strcasecmp(bs, "NFC") == 0)) {
 			snprintf(buf, sizeof(buf),
 				 "DPP_AUTH_INIT peer=%d%s role=%s%s%s tcp_addr=%s%s%s",
 				 dpp_peer_bootstrap, own_txt, role,
 				 netrole ? " netrole=" : "",
 				 netrole ? netrole : "",
 				 tcp, neg_freq, group_id);
-		} else if (strcasecmp(bs, "QR") == 0) {
+		} else if (strcasecmp(bs, "QR") == 0 ||
+			   strcasecmp(bs, "NFC") == 0) {
 			snprintf(buf, sizeof(buf),
 				 "DPP_AUTH_INIT peer=%d%s role=%s%s%s%s%s",
 				 dpp_peer_bootstrap, own_txt, role,
@@ -1416,7 +1526,11 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 				  "errorCode,Failed to initiate DPP authentication");
 			goto out;
 		}
-	} else if (strcasecmp(auth_role, "Responder") == 0) {
+	} else if ((nfc_handover &&
+		    strcasecmp(nfc_handover, "Negotiated_Selector") == 0) ||
+		   ((!nfc_handover ||
+		     strcasecmp(nfc_handover, "Static") == 0) &&
+		    strcasecmp(auth_role, "Responder") == 0)) {
 		const char *delay_qr_resp;
 		int mutual;
 		int freq = 2462; /* default: channel 11 */
@@ -1445,7 +1559,58 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			}
 		}
 
-		if (!delay_qr_resp && dut->dpp_peer_uri) {
+		if (strcasecmp(bs, "NFC") == 0 && nfc_handover &&
+		    strcasecmp(nfc_handover, "Static") == 0) {
+			/* No steps needed here - waiting for peer to initiate
+			 * once it reads the URI from the NFC Tag */
+		} else if (strcasecmp(bs, "NFC") == 0) {
+			if (!dut->dpp_peer_uri) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Missing peer bootstrapping info");
+				goto out;
+			}
+			if (dut->dpp_local_bootstrap < 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Missing own bootstrapping info");
+				goto out;
+			}
+
+			snprintf(buf, sizeof(buf),
+				 "DPP_NFC_HANDOVER_REQ own=%d uri=%s",
+				 dut->dpp_local_bootstrap, dut->dpp_peer_uri);
+			if (wpa_command(ifname, buf) < 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to process NFC Handover Request");
+				goto out;
+			}
+
+			snprintf(buf, sizeof(buf), "DPP_BOOTSTRAP_INFO %d",
+				 dut->dpp_local_bootstrap);
+			if (wpa_command_resp(ifname, buf,
+					     buf, sizeof(buf)) < 0 ||
+			    strncmp(buf, "FAIL", 4) == 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to get bootstrap information");
+				goto out;
+			}
+			pos = buf;
+			while (pos) {
+				pos2 = strchr(pos, '\n');
+				if (pos2)
+					*pos2 = '\0';
+				if (strncmp(pos, "use_freq=", 9) == 0) {
+					freq = atoi(pos + 9);
+					sigma_dut_print(dut, DUT_MSG_DEBUG,
+							"DPP negotiation frequency from NFC handover: %d MHz",
+							freq);
+					break;
+				}
+
+				if (!pos2)
+					break;
+				pos = pos2 + 1;
+			}
+		} else if (!delay_qr_resp && dut->dpp_peer_uri) {
 			snprintf(buf, sizeof(buf), "DPP_QR_CODE %s",
 				 dut->dpp_peer_uri);
 			if (wpa_command_resp(ifname, buf, buf,
