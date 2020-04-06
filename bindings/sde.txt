@@ -463,6 +463,9 @@ Optional properties:
 				<read enable, write enable> for cdp use cases in
 				order of <real_time>, and <non_real_time>.
 - qcom,sde-qos-cpu-mask:	A u32 value indicating desired PM QoS CPU affine mask.
+- qcom,sde-qos-cpu-mask-performance:	Each bit represents a CPU mask. For example
+					0xf represents 4 cpu cores. These cores can be
+					silver or gold or gold+.
 - qcom,sde-qos-cpu-dma-latency:	A u32 value indicating desired PM QoS CPU DMA latency in usec.
 - qcom,sde-inline-rot-xin:	An integer array of xin-ids related to inline
 				rotation.
@@ -734,6 +737,7 @@ Example:
     qcom,sde-cdp-setting = <1 1>, <1 0>;
 
     qcom,sde-qos-cpu-mask = <0x3>;
+    qcom,sde-qos-cpu-mask-performance = <0xf>;
     qcom,sde-qos-cpu-dma-latency = <300>;
 
     qcom,sde-vbif-off = <0 0>;
