@@ -109,6 +109,7 @@ struct dugov_cpu {
 
 static DEFINE_PER_CPU(struct dugov_cpu, dugov_cpu);
 static unsigned int stale_ns;
+__read_mostly static unsigned int _walt_ravg_window = (20000000 / TICK_NSEC) * TICK_NSEC;
 
 /************************ Governor internals ***********************/
 
@@ -291,8 +292,10 @@ static void dugov_get_util(unsigned long *util, unsigned long *max, u64 time)
 
 	*util = min(rq->cfs.avg.util_avg + rt, max_cap);
 
+#ifdef CONFIG_SCHED_WALT
 	if (!walt_disabled && sysctl_sched_use_walt_cpu_util)
 		*util = boosted_cpu_util(cpu);
+#endif
 
 	*max = max_cap;
 }
@@ -1027,7 +1030,7 @@ tunables->iowait_boost_enable = policy->iowait_boost_enable;
 	}
 
 	policy->governor_data = du_policy;
-	stale_ns = walt_ravg_window + (walt_ravg_window >> 3);
+	stale_ns = _walt_ravg_window + (_walt_ravg_window >> 3);
 	du_policy->tunables = tunables;
 
 	ret = kobject_init_and_add(&tunables->attr_set.kobj, &dugov_tunables_ktype,
