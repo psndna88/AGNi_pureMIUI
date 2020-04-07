@@ -127,7 +127,10 @@ static bool migrate_one_irq(struct irq_desc *desc)
 			return false;
 		}
 
-		default_affinity = desc->affinity_hint ? : irq_default_affinity;
+		if (irqd_has_set(&desc->irq_data, IRQF_PERF_CRITICAL))
+			default_affinity = cpu_perf_mask;
+		else
+			default_affinity = desc->affinity_hint ? : irq_default_affinity;
 		/*
 		 * The order of preference for selecting a fallback CPU is
 		 *
@@ -200,6 +203,8 @@ void irq_migrate_all_off_this_cpu(void)
 		raw_spin_lock(&desc->lock);
 		affinity_broken = migrate_one_irq(desc);
 		raw_spin_unlock(&desc->lock);
+		if (cpumask_intersects(cpumask_of(smp_processor_id()), cpu_perf_mask))
+			reaffine_perf_irqs();
 
 		if (affinity_broken) {
 			pr_info_ratelimited("IRQ %u: no longer affine to CPU%u\n",
@@ -246,6 +251,8 @@ int irq_affinity_online_cpu(unsigned int cpu)
 		raw_spin_lock_irq(&desc->lock);
 		irq_restore_affinity_of_irq(desc, cpu);
 		raw_spin_unlock_irq(&desc->lock);
+		if (cpumask_intersects(cpumask_of(cpu), cpu_perf_mask))
+			reaffine_perf_irqs();
 	}
 	irq_unlock_sparse();
 
