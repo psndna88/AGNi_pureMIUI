@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 #include <linux/slab.h>
 #include "cam_ife_csid_soc.h"
@@ -110,6 +110,9 @@ int cam_ife_csid_deinit_soc_resources(
 		CAM_ERR(CAM_ISP, "CPAS unregistration failed rc=%d", rc);
 
 	rc = cam_soc_util_release_platform_resource(soc_info);
+	if (rc)
+		CAM_WARN(CAM_ISP,
+			"soc release platform resource fail rc: %d", rc);
 
 	return rc;
 }

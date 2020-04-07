@@ -17,6 +17,10 @@
 #include <media/v4l2-event.h>
 #include <media/v4l2-ioctl.h>
 
+#if IS_REACHABLE(CONFIG_MSM_GLOBAL_SYNX)
+#include <synx_api.h>
+#endif
+
 #ifdef CONFIG_CAM_SYNC_DBG
 #define CDBG(fmt, args...) pr_err(fmt, ##args)
 #else
@@ -177,6 +181,7 @@ struct cam_signalable_info {
  * @work_queue      : Work queue used for dispatching kernel callbacks
  * @cam_sync_eventq : Event queue used to dispatch user payloads to user space
  * @bitmap          : Bitmap representation of all sync objects
+ * @params          : Parameters for synx call back registration
  */
 struct sync_device {
 	struct video_device *vdev;
@@ -190,6 +195,9 @@ struct sync_device {
 	struct v4l2_fh *cam_sync_eventq;
 	spinlock_t cam_sync_eventq_lock;
 	DECLARE_BITMAP(bitmap, CAM_SYNC_MAX_OBJS);
+#if IS_REACHABLE(CONFIG_MSM_GLOBAL_SYNX)
+	struct synx_register_params params;
+#endif
 };
 
 

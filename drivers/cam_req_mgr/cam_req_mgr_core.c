@@ -4220,6 +4220,7 @@ int cam_req_mgr_core_device_deinit(void)
 	}
 
 	CAM_DBG(CAM_CRM, "g_crm_core_dev %pK", g_crm_core_dev);
+	cam_req_mgr_debug_unregister();
 	mutex_destroy(&g_crm_core_dev->crm_lock);
 	kfree(g_crm_core_dev);
 	g_crm_core_dev = NULL;

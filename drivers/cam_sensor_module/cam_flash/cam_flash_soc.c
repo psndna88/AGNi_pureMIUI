@@ -8,6 +8,57 @@
 #include "cam_flash_soc.h"
 #include "cam_res_mgr_api.h"
 
+void cam_flash_put_source_node_data(struct cam_flash_ctrl *fctrl)
+{
+	uint32_t count = 0, i = 0;
+	struct cam_flash_private_soc *soc_private = NULL;
+
+	if (!fctrl) {
+		CAM_ERR(CAM_FLASH, "NULL flash control structure");
+		return;
+	}
+
+	soc_private = fctrl->soc_info.soc_private;
+
+	if (fctrl->switch_trigger) {
+		CAM_DBG(CAM_FLASH, "switch trigger: %s",
+			soc_private->switch_trigger_name);
+		cam_res_mgr_led_trigger_unregister(fctrl->switch_trigger);
+	}
+
+	if (fctrl->flash_num_sources) {
+		if (fctrl->flash_num_sources > CAM_FLASH_MAX_LED_TRIGGERS) {
+			CAM_ERR(CAM_FLASH, "Invalid LED count: %d", count);
+			return;
+		}
+
+		count = fctrl->flash_num_sources;
+
+		for (i = 0; i < count; i++) {
+			CAM_DBG(CAM_FLASH, "Flash default trigger %s",
+				soc_private->flash_trigger_name[i]);
+			cam_res_mgr_led_trigger_unregister(
+				fctrl->flash_trigger[i]);
+		}
+	}
+
+	if (fctrl->torch_num_sources) {
+		if (fctrl->torch_num_sources > CAM_FLASH_MAX_LED_TRIGGERS) {
+			CAM_ERR(CAM_FLASH, "Invalid LED count: %d", count);
+			return;
+		}
+
+		count = fctrl->torch_num_sources;
+
+		for (i = 0; i < count; i++) {
+			CAM_DBG(CAM_FLASH, "Flash default trigger %s",
+				soc_private->flash_trigger_name[i]);
+			cam_res_mgr_led_trigger_unregister(
+				fctrl->torch_trigger[i]);
+		}
+	}
+}
+
 static int32_t cam_get_source_node_info(
 	struct device_node *of_node,
 	struct cam_flash_ctrl *fctrl,

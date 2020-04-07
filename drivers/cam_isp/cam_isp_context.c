@@ -5302,7 +5302,7 @@ static int cam_isp_context_debug_register(void)
 	isp_ctx_debug.dentry = debugfs_create_dir("camera_isp_ctx",
 		NULL);
 
-	if (!isp_ctx_debug.dentry) {
+	if (IS_ERR_OR_NULL(isp_ctx_debug.dentry)) {
 		CAM_ERR(CAM_ISP, "failed to create dentry");
 		return -ENOMEM;
 	}
@@ -5383,7 +5383,8 @@ int cam_isp_context_init(struct cam_isp_context *ctx,
 	for (i = 0; i < CAM_ISP_CTX_EVENT_MAX; i++)
 		atomic64_set(&ctx->event_record_head[i], -1);
 
-	cam_isp_context_debug_register();
+	if (!isp_ctx_debug.dentry)
+		cam_isp_context_debug_register();
 
 err:
 	return rc;
@@ -5391,8 +5392,6 @@ err:
 
 int cam_isp_context_deinit(struct cam_isp_context *ctx)
 {
-	int rc = 0;
-
 	if (ctx->base)
 		cam_context_deinit(ctx->base);
 
@@ -5401,6 +5400,9 @@ int cam_isp_context_deinit(struct cam_isp_context *ctx)
 			__cam_isp_ctx_substate_val_to_type(
 			ctx->substate_activated));
 
+	debugfs_remove_recursive(isp_ctx_debug.dentry);
+	isp_ctx_debug.dentry = NULL;
 	memset(ctx, 0, sizeof(*ctx));
-	return rc;
+
+	return 0;
 }

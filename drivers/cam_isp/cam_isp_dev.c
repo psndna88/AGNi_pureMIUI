@@ -175,7 +175,13 @@ static void cam_isp_dev_component_unbind(struct device *dev,
 {
 	int rc = 0;
 	int i;
+	const char *compat_str = NULL;
+	struct platform_device *pdev = to_platform_device(dev);
 
+	rc = of_property_read_string_index(pdev->dev.of_node, "arch-compat", 0,
+		(const char **)&compat_str);
+
+	cam_isp_hw_mgr_deinit(compat_str);
 	/* clean up resources */
 	for (i = 0; i < CAM_CTX_MAX; i++) {
 		rc = cam_isp_context_deinit(&g_isp_dev.ctx_isp[i]);

@@ -195,11 +195,16 @@ struct cam_tfe_hw_event_recovery_data {
  */
 #ifdef CONFIG_SPECTRA_TFE
 int cam_tfe_hw_mgr_init(struct cam_hw_mgr_intf *hw_mgr_intf, int *iommu_hdl);
-
+void cam_tfe_hw_mgr_deinit(void);
 #else
 static inline int cam_tfe_hw_mgr_init(struct cam_hw_mgr_intf *hw_mgr_intf,
-	int *iommu_hdl) {
+	int *iommu_hdl)
+{
 	return -EINVAL;
+}
+
+static inline void cam_tfe_hw_mgr_deinit(void)
+{
 }
 #endif
 
