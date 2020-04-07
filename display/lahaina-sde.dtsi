@@ -342,7 +342,7 @@
 
 		qcom,dp-aux-switch = <&fsa4480>;
 		qcom,ext-disp = <&ext_disp>;
-		qcom,altmode-parent = "altmode_0";
+		qcom,altmode-dev = <&altmode 0>;
 		usb-controller = <&usb0>;
 
 		reg =   <0xae90000 0x0dc>,
