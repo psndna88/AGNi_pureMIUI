@@ -332,6 +332,10 @@
 		};
 	};
 
+	qcom_msmhdcp: qcom,msm_hdcp {
+		compatible = "qcom,msm-hdcp";
+	};
+
 	sde_dp: qcom,dp_display@ae90000 {
 		cell-index = <0>;
 		compatible = "qcom,dp-display";
