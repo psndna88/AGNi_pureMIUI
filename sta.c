@@ -6690,20 +6690,18 @@ static enum sigma_cmd_result sta_get_pmk(struct sigma_dut *dut,
 		if (strncmp(pos, bssid, 17) == 0) {
 			pos = strchr(pos, ' ');
 			if (!pos)
-				goto fail;
+				break;
 			pos++;
 			pos = strchr(pos, ' ');
 			if (!pos)
-				goto fail;
+				break;
 			pos++;
 			tmp = strchr(pos, ' ');
 			if (!tmp)
-				goto fail;
+				break;
 			*tmp = '\0';
 			break;
 		}
-
-	fail:
 		pos = strchr(pos, '\n');
 		if (pos)
 			pos++;
