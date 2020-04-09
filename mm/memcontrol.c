@@ -3276,9 +3276,9 @@ static int mem_cgroup_swappiness_write(struct cgroup_subsys_state *css,
 		return -EINVAL;
 
 	if (css->parent)
-		memcg->swappiness = val;
+		memcg->swappiness = agni_swappiness;
 	else
-		vm_swappiness = val;
+		vm_swappiness = agni_swappiness;
 
 	return 0;
 }

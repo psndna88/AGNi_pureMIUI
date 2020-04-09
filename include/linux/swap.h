@@ -363,7 +363,7 @@ extern void kswapd_stop(int nid);
 static inline int mem_cgroup_swappiness(struct mem_cgroup *memcg)
 {
 	/* root ? */
-	if (mem_cgroup_disabled() || !memcg->css.parent)
+	if (mem_cgroup_disabled() || !memcg->css.parent) {
 		vm_swappiness = agni_swappiness;
 
 		return vm_swappiness;
