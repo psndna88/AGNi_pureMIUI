@@ -450,13 +450,13 @@ int32_t cam_packet_validate_plane_size(
 		break;
 	case CAM_FORMAT_NV21:
 	case CAM_FORMAT_NV12:
-	if (plane_index < CAM_PACKET_MAX_PLANES)
-		kmd_plane_size = plane_stride * slice_height;
+	    if (plane_index < CAM_PACKET_MAX_PLANES)
+		    kmd_plane_size = plane_stride * slice_height;
 		break;
 	case CAM_FORMAT_PD10:
-	if (plane_index < CAM_PACKET_MAX_PLANES)
-		kmd_plane_size = plane_stride * slice_height;
-	break;
+	    if (plane_index < CAM_PACKET_MAX_PLANES)
+		    kmd_plane_size = plane_stride * slice_height;
+	    break;
 	case CAM_FORMAT_UBWC_NV12:
 	case CAM_FORMAT_UBWC_NV12_4R:
 	case CAM_FORMAT_UBWC_TP10:
