@@ -1334,6 +1334,13 @@ static struct msm_vidc_common_data holi_common_data[] = {
 	},
 };
 
+static struct msm_vidc_efuse_data shima_efuse_data[] = {
+	/* IRIS_4K60_FMAX_LIMIT_EFUSE - max 4K@60 */
+	EFUSE_ENTRY(0x007801E0, 4, 0x00200000, 0x15, SKU_VERSION),
+	/* IRIS_MULTIPIPE_DISABLE - max 4K@30 */
+	EFUSE_ENTRY(0x007801E0, 4, 0x00001000, 0x0B, SKU_VERSION),
+};
+
 /* Default UBWC config for LPDDR5 */
 static struct msm_vidc_ubwc_config_data lahaina_ubwc_data[] = {
 	UBWC_CONFIG(1, 1, 1, 0, 0, 0, 8, 32, 16, 0, 0),
@@ -1403,8 +1410,8 @@ static struct msm_vidc_platform_data shima_data = {
 	.csc_data.vpe_csc_custom_bias_coeff = vpe_csc_custom_bias_coeff,
 	.csc_data.vpe_csc_custom_matrix_coeff = vpe_csc_custom_matrix_coeff,
 	.csc_data.vpe_csc_custom_limit_coeff = vpe_csc_custom_limit_coeff,
-	.efuse_data = NULL,
-	.efuse_data_length = 0,
+	.efuse_data = shima_efuse_data,
+	.efuse_data_length = ARRAY_SIZE(shima_efuse_data),
 	.sku_version = 0,
 	.vpu_ver = VPU_VERSION_IRIS2,
 	.num_vpp_pipes = 0x2,
