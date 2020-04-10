@@ -51,6 +51,7 @@ static unsigned int num_devices = 1;
  */
 static size_t huge_class_size;
 
+bool miuirom = false;
 static void zram_free_page(struct zram *zram, size_t index);
 
 static void zram_slot_lock(struct zram *zram, u32 index)
@@ -1512,8 +1513,12 @@ static ssize_t disksize_store(struct device *dev,
 		goto out_unlock;
 	}
 
-	if (disksize != 2361393152) /* Miui Sets 2361393152 = 2252MB */
-		disksize = 2361393152;
+	if (disksize == 2361393152) {
+		miuirom = true;
+	} else {
+		miuirom = false;
+		disksize = 2361393152; /* Miui Sets 2361393152 = 2252MB */
+	}
 
 	disksize = PAGE_ALIGN(disksize);
 	if (!zram_meta_alloc(zram, disksize)) {

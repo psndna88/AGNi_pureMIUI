@@ -46,6 +46,7 @@
 
 /* Master structure to hold all the information about the DSI/panel */
 static struct mdss_dsi_data *mdss_dsi_res;
+extern bool miuirom;
 
 #define DSI_DISABLE_PC_LATENCY 100
 #define DSI_ENABLE_PC_LATENCY PM_QOS_DEFAULT_VALUE
@@ -2196,7 +2197,8 @@ static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
 	}
 #if defined(CONFIG_KERNEL_CUSTOM_F7A)|| defined(CONFIG_KERNEL_DRIVER_D2S_CN) || defined(CONFIG_KERNEL_CUSTOM_E7T) || defined(CONFIG_KERNEL_CUSTOM_F7S)
 #else
-    mdss_first_set_feature(pdata, -1,1,-1, -1, -1, -1);
+	if (miuirom)
+		mdss_first_set_feature(pdata, -1,1,-1, -1, -1, -1);
 #endif
 
 	if ((pdata->panel_info.type == MIPI_CMD_PANEL) &&

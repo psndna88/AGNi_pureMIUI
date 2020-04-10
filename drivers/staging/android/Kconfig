@@ -109,7 +109,6 @@ config SYNC_DEBUG
 config ANDROID_WHETSTONE
     bool "Android Whetstone MIUI"
     default y
-    depends on MACH_XIAOMI_AGNI_MIUI
     ---help---
         report to whetstone the memory state when reach target limit value.
 
