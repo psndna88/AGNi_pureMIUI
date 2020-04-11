@@ -92,6 +92,7 @@ static void dyn_fsync_force_flush(void)
 }
 
 
+#ifndef CONFIG_REBOOT_AUTO_FSYNC
 static int dyn_fsync_panic_event(struct notifier_block *this,
 		unsigned long event, void *ptr)
 {
@@ -114,6 +115,7 @@ static int dyn_fsync_notify_sys(struct notifier_block *this, unsigned long code,
 	}
 	return NOTIFY_DONE;
 }
+#endif
 
 static int fb_notifier_cb(struct notifier_block *nb, unsigned long action,
 			  void *data)
@@ -145,10 +147,12 @@ static int fb_notifier_cb(struct notifier_block *nb, unsigned long action,
 
 // Module structures
 
+#ifndef CONFIG_REBOOT_AUTO_FSYNC
 static struct notifier_block dyn_fsync_notifier = 
 {
 	.notifier_call = dyn_fsync_notify_sys,
 };
+#endif
 
 static struct kobj_attribute dyn_fsync_active_attribute = 
 	__ATTR(Dyn_fsync_active, 0660,
@@ -174,11 +178,13 @@ static struct attribute_group dyn_fsync_active_attr_group =
 	.attrs = dyn_fsync_active_attrs,
 };
 
+#ifndef CONFIG_REBOOT_AUTO_FSYNC
 static struct notifier_block dyn_fsync_panic_block = 
 {
 	.notifier_call  = dyn_fsync_panic_event,
 	.priority       = INT_MAX,
 };
+#endif
 
 static struct kobject *dyn_fsync_kobj;
 
@@ -190,10 +196,12 @@ static int dyn_fsync_init(void)
 	int sysfs_result;
 	int ret;
 
+#ifndef CONFIG_REBOOT_AUTO_FSYNC
 	register_reboot_notifier(&dyn_fsync_notifier);
 	
 	atomic_notifier_chain_register(&panic_notifier_list,
 		&dyn_fsync_panic_block);
+#endif
 
 	dyn_fsync_kobj = kobject_create_and_add("dyn_fsync", kernel_kobj);
 
@@ -218,10 +226,12 @@ static int dyn_fsync_init(void)
 	{
 		pr_err("%s: Failed to register msm_drm_notifier callback\n", __func__);
 
+#ifndef CONFIG_REBOOT_AUTO_FSYNC
 		unregister_reboot_notifier(&dyn_fsync_notifier);
 
 		atomic_notifier_chain_unregister(&panic_notifier_list,
 			&dyn_fsync_panic_block);
+#endif
 
 		if (dyn_fsync_kobj != NULL)
 			kobject_put(dyn_fsync_kobj);
@@ -237,10 +247,12 @@ static int dyn_fsync_init(void)
 
 static void dyn_fsync_exit(void)
 {
+#ifndef CONFIG_REBOOT_AUTO_FSYNC
 	unregister_reboot_notifier(&dyn_fsync_notifier);
 
 	atomic_notifier_chain_unregister(&panic_notifier_list,
 		&dyn_fsync_panic_block);
+#endif
 
 	if (dyn_fsync_kobj != NULL)
 		kobject_put(dyn_fsync_kobj);
