@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2017,2019-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -740,6 +740,14 @@ static void hdmi_hdcp2p2_recv_msg(struct hdmi_hdcp2p2_ctrl *ctrl)
 		goto exit;
 	}
 
+	if (ddc_data->ddc_max_retries_fail) {
+		pr_debug("rxstatus ddc failed\n");
+
+		ddc_data->ddc_max_retries_fail = false;
+		rc = -ENOLINK;
+		goto exit;
+	}
+
 	if (ddc_data->reauth_req) {
 		ddc_data->reauth_req = false;
 
@@ -896,6 +904,15 @@ static void hdmi_hdcp2p2_link_work(struct kthread_work *work)
 	}
 
 	ddc_data = &ddc_ctrl->hdcp2p2_ddc_data;
+
+	if (ddc_data->ddc_max_retries_fail) {
+		pr_debug("rxstatus ddc failed\n");
+
+		ddc_data->ddc_max_retries_fail = false;
+		rc = -ENOLINK;
+		cdata.cmd = HDCP_LIB_WKUP_CMD_STOP;
+		goto exit;
+	}
 
 	if (ddc_data->reauth_req) {
 		pr_debug("reauth triggered by sink\n");
