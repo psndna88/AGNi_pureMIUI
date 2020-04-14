@@ -9,6 +9,7 @@
 #include <camera/media/cam_defs.h>
 #include <camera/media/cam_isp_vfe.h>
 #include <camera/media/cam_isp_ife.h>
+#include <camera/media/cam_isp_sfe.h>
 #include <camera/media/cam_cpas.h>
 
 /* ISP driver name */
@@ -22,7 +23,8 @@
 #define CAM_ISP_HW_ISPIF                        4
 #define CAM_ISP_HW_IFE_LITE                     5
 #define CAM_ISP_HW_CSID_LITE                    6
-#define CAM_ISP_HW_MAX                          7
+#define CAM_ISP_HW_SFE                          7
+#define CAM_ISP_HW_MAX                          8
 
 /* Color Pattern */
 #define CAM_ISP_PATTERN_BAYER_RGRGRG            0
@@ -87,6 +89,16 @@
 #define CAM_ISP_PACKET_META_REG_DUMP_PER_REQUEST  13
 #define CAM_ISP_PACKET_META_REG_DUMP_ON_FLUSH     14
 #define CAM_ISP_PACKET_META_REG_DUMP_ON_ERROR     15
+#define CAM_ISP_PACKET_META_MODE_SWITCH_CONFIG    16
+#define CAM_ISP_PACKET_META_CSID_LEFT             17
+#define CAM_ISP_PACKET_META_CSID_RIGHT            18
+#define CAM_ISP_PACKET_META_CSID_COMMON           19
+
+/* SFE packet meta_data type for command buffer */
+#define CAM_ISP_SFE_PACKET_META_LEFT              0x15
+#define CAM_ISP_SFE_PACKET_META_RIGHT             0x16
+#define CAM_ISP_SFE_PACKET_META_COMMON            0x17
+#define CAM_ISP_SFE_PACKET_META_DUAL_CONFIG       0x18
 
 /* DSP mode */
 #define CAM_ISP_DSP_MODE_NONE                   0
@@ -108,6 +120,13 @@
 #define CAM_ISP_GENERIC_BLOB_TYPE_SENSOR_DIMENSION_CONFIG   11
 #define CAM_ISP_GENERIC_BLOB_TYPE_CSID_QCFA_CONFIG          12
 #define CAM_ISP_GENERIC_BLOB_TYPE_SENSOR_BLANKING_CONFIG    13
+#define CAM_ISP_GENERIC_BLOB_TYPE_TPG_CORE_CONFIG           14
+#define CAM_ISP_GENERIC_BLOB_TYPE_SFE_CLOCK_CONFIG          21
+#define CAM_ISP_GENERIC_BLOB_TYPE_SFE_CORE_CONFIG           22
+#define CAM_ISP_GENERIC_BLOB_TYPE_SFE_OUT_CONFIG            23
+#define CAM_ISP_GENERIC_BLOB_TYPE_SFE_HFR_CONFIG            24
+#define CAM_ISP_GENERIC_BLOB_TYPE_SFE_FE_CONFIG             25
+#define CAM_ISP_GENERIC_BLOB_TYPE_SFE_SCRATCH_BUF_CFG       26
 
 #define CAM_ISP_VC_DT_CFG    4
 
@@ -119,6 +138,8 @@
 #define CAM_ISP_IFE3_LITE_HW     0x20
 #define CAM_ISP_IFE4_LITE_HW     0x40
 #define CAM_ISP_IFE2_HW          0x100
+#define CAM_ISP_SFE0_HW          0x1000
+#define CAM_ISP_SFE1_HW          0x2000
 
 #define CAM_ISP_PXL_PATH          0x1
 #define CAM_ISP_PPP_PATH          0x2
@@ -133,6 +154,9 @@
 #define CAM_ISP_USAGE_LEFT_PX     1
 #define CAM_ISP_USAGE_RIGHT_PX    2
 #define CAM_ISP_USAGE_RDI         3
+#define CAM_ISP_USAGE_SFE_LEFT    4
+#define CAM_ISP_USAGE_SFE_RIGHT   5
+#define CAM_ISP_USAGE_SFE_RDI     6
 
 /* Acquire with custom hw */
 #define CAM_ISP_ACQ_CUSTOM_NONE       0
@@ -140,6 +164,13 @@
 #define CAM_ISP_ACQ_CUSTOM_SECONDARY  2
 
 #define CAM_IFE_CSID_RDI_MAX          4
+
+/* Feature Flag indicators */
+#define CAM_ISP_PARAM_FETCH_SECURITY_MODE  BIT(0)
+
+/* ISP core cfg flag params */
+#define CAM_ISP_PARAM_CORE_CFG_HDR_MUX_SEL BIT(0)
+#define CAM_ISP_PARAM_CORE_CFG_PP_FORMAT   BIT(16)
 
 /* Query devices */
 /**
@@ -327,9 +358,15 @@ struct cam_isp_in_port_info {
  * @num_out_res:                number of the output resource associated
  * @horizontal_bin:             Horizontal Binning info
  * @qcfa_bin:                   Quadra Binning info
- * @csid_res_1:                 payload for future use
- * @csid_res_2:                 payload for future use
- * @ife_res_1:                  payload for future use
+ * @sfe_in_path_type:           SFE input path type
+ *                              0:15 - refer to cam_isp_sfe.h for SFE paths
+ *                              16:31 - Corresponding IFE i/p path type
+ *                              Example:((CAM_ISP_PXL_PATH << 16) |
+ *                                        CAM_ISP_SFE_INLINE_PIX)
+ *                              This will acquire SFE inline IPP and IFE IPP
+ *                              PPP is an exception CSID PPP -> IFE PPP
+ * @vc_dt_pattern_id:           TPG pattern - SparsePD, sHDR etc.
+ * @feature_flag:               See the macros defined under feature flag above
  * @ife_res_2:                  payload for future use
  * @data:                       payload that contains the output resources
  *
@@ -363,9 +400,9 @@ struct cam_isp_in_port_info_v2 {
 	__u32                           offline_mode;
 	__u32                           horizontal_bin;
 	__u32                           qcfa_bin;
-	__u32                           csid_res_1;
-	__u32                           csid_res_2;
-	__u32                           ife_res_1;
+	__u32                           sfe_in_path_type;
+	__u32                           vc_dt_pattern_id;
+	__u32                           feature_flag;
 	__u32                           ife_res_2;
 	struct cam_isp_out_port_info_v2 data[1];
 };
@@ -659,7 +696,8 @@ struct cam_isp_sensor_config {
  * @hdr_bhist_src_sel:          Selects input for HDR BHIST module
  * @input_mux_sel_pdaf:         Selects input for PDAF
  * @input_mux_sel_pp:           Selects input for Pixel Pipe
- * @reserved:                   Reserved
+ * @core_cfg_flag:              Core config flag to set HDR mux/PP
+ *                              input format type
  */
 struct cam_isp_core_config {
 	__u32     version;
@@ -673,7 +711,79 @@ struct cam_isp_core_config {
 	__u32     hdr_bhist_src_sel;
 	__u32     input_mux_sel_pdaf;
 	__u32     input_mux_sel_pp;
-	__u32     reserved;
+	__u32     core_cfg_flag;
+} __attribute__((packed));
+
+/**
+ * struct cam_isp_sfe_core_config - SFE core registers configuration
+ *
+ * @version       : Version info
+ * @mode_sel      : Selects core for sHDR/non-sHDR mode
+ * @ops_mode_cfg  : Selects core if is inline/offline mode
+ * @fs_mode_cfg   : Selects output in fast shutter mode
+ * @sfe_params    : SFE params for future use
+ */
+struct cam_isp_sfe_core_config {
+	__u32   version;
+	__u32   mode_sel;
+	__u32   ops_mode_cfg;
+	__u32   fs_mode_cfg;
+	__u32   sfe_params[6];
+} __attribute__((packed));
+
+/**
+ * struct cam_isp_sfe_scratch_buf_info - Scratch buf info
+ *
+ * @mem_handle             : Scratch buffer handle
+ * @offset                 : Offset to the buffer
+ * @width                  : Width in pixels
+ * @height                 : Height in pixels
+ * @stride                 : Stride in pixels
+ * @slice_height           : Slice height in lines
+ * @resource_type          : rsrc type
+ * @scratch_buf_params     : for future use
+ */
+struct cam_isp_sfe_scratch_buf_info {
+	__s32     mem_handle;
+	__u32     offset;
+	__u32     width;
+	__u32     height;
+	__u32     stride;
+	__u32     slice_height;
+	__u32     resource_type;
+	__u32     scratch_buf_params[5];
+};
+
+/**
+ * struct cam_isp_sfe_init_scratch_buf_config - SFE init buffer cfg
+ *        Provides scratch buffer info for SFE ports
+ *        as part of INIT packet
+ *
+ * @num_ports         : Number of ports
+ * @reserved          : reserved
+ * @port_scratch_cfg  : scratch buffer info
+ */
+struct cam_isp_sfe_init_scratch_buf_config {
+	__u32  num_ports;
+	__u32  reserved;
+	struct cam_isp_sfe_scratch_buf_info port_scratch_cfg[1];
+};
+
+/**
+ * struct cam_isp_tpg_core_config - TPG core registers configuration
+ *
+ * @version          : Version info
+ * @vc_dt_pattern_id : TPG pattern - SparsePD, sHDR etc.
+ * @qcfa_en          : Selects qcfa in color bar
+ * @pix_pattern      : Pix pattern color bar cfg
+ * @tpg_params       : TPG params for future use
+ */
+struct cam_isp_tpg_core_config {
+	__u32   version;
+	__u32   vc_dt_pattern_id;
+	__u32   qcfa_en;
+	__u32   pix_pattern;
+	__u32   tpg_params[6];
 } __attribute__((packed));
 
 /**
@@ -715,7 +825,8 @@ struct cam_isp_acquire_hw_info {
  *                     being sent to NOC
  * @stride           : Write master stride
  * @offset           : Write master offset
- * @reserved_1       : Reserved field for Write master config
+ * @addr_reuse_en    : Enabling addr-reuse will write output to the same addr
+ *                     after the last addr that was read from FIFO.
  * @reserved_2       : Reserved field for Write master config
  * @reserved_3       : Reserved field for Write master config
  * @reserved_4       : Reserved field for Write master config
@@ -729,7 +840,7 @@ struct cam_isp_vfe_wm_config {
 	__u32                      virtual_frame_en;
 	__u32                      stride;
 	__u32                      offset;
-	__u32                      reserved_1;
+	__u32                      addr_reuse_en;
 	__u32                      reserved_2;
 	__u32                      reserved_3;
 	__u32                      reserved_4;
