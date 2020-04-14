@@ -2637,6 +2637,9 @@ int msm_venc_set_bitrate(struct msm_vidc_inst *inst)
 	}
 	hdev = inst->core->device;
 
+	if (inst->rc_type == V4L2_MPEG_VIDEO_BITRATE_MODE_CQ)
+		return 0;
+
 	if (inst->layer_bitrate) {
 		s_vpr_h(inst->sid, "%s: Layer bitrate is enabled\n", __func__);
 		return 0;
