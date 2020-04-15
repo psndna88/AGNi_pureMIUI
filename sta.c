@@ -12016,6 +12016,28 @@ static int cmd_sta_set_rfeature_60g(const char *intf, struct sigma_dut *dut,
 }
 
 
+static enum sigma_cmd_result
+cmd_sta_set_rfeature_wpa3(const char *intf, struct sigma_dut *dut,
+			  struct sigma_conn *conn,
+			  struct sigma_cmd *cmd)
+{
+	const char *val;
+
+	val = get_param(cmd, "Reassoc_RSNXE_Used");
+	if (val && atoi(val) == 1) {
+		if (wpa_command(intf, "SET ft_rsnxe_used 1") < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to set ft_rsnxe_used");
+			return STATUS_SENT_ERROR;
+		}
+		return SUCCESS_SEND_STATUS;
+	}
+	send_resp(dut, conn, SIGMA_ERROR,
+		  "errorCode,Unsupported WPA3 rfeature");
+	return STATUS_SENT_ERROR;
+}
+
+
 static enum sigma_cmd_result cmd_sta_set_rfeature(struct sigma_dut *dut,
 						  struct sigma_conn *conn,
 						  struct sigma_cmd *cmd)
@@ -12056,6 +12078,9 @@ static enum sigma_cmd_result cmd_sta_set_rfeature(struct sigma_dut *dut,
 
 	if (strcasecmp(prog, "60GHz") == 0)
 		return cmd_sta_set_rfeature_60g(intf, dut, conn, cmd);
+
+	if (strcasecmp(prog, "WPA3") == 0)
+		return cmd_sta_set_rfeature_wpa3(intf, dut, conn, cmd);
 
 	send_resp(dut, conn, SIGMA_ERROR, "errorCode,Unsupported Prog");
 	return 0;
