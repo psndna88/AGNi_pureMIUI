@@ -303,7 +303,12 @@ config DYNAMIC_FSYNC
 	help
 	  An experimental file sync control using new power_suspend driver 
 
-endmenu
+config DYNAMIC_FSYNC_SYSCHANGES_SYNC
+	bool "dynamic file sync - force sync on reboot/panic/power off"
+	depends on DYNAMIC_FSYNC
+	default n
+	help
+	  An experimental file sync control using new power_suspend driver
 
 config BLOCK_UNWANTED_FILES
 	bool "Allow blocking files from executing from kernel"
@@ -311,3 +316,4 @@ config BLOCK_UNWANTED_FILES
 	help
 	  This option allows you to make files from certain folders un-openable.
 
+endmenu
