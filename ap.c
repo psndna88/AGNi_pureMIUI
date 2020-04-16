@@ -12748,6 +12748,23 @@ static enum sigma_cmd_result cmd_ap_set_rfeature(struct sigma_dut *dut,
 {
 	/* const char *name = get_param(cmd, "NAME"); */
 	/* const char *type = get_param(cmd, "Type"); */
+	const char *val;
+	char buf[100];
+
+	val = get_param(cmd, "ReassocResp_RSNXE_Used");
+	if (val) {
+		const char *ifname = get_hostapd_ifname(dut);
+
+		if (atoi(val) == 0)
+			snprintf(buf, sizeof(buf), "SET ft_rsnxe_used 2");
+		else
+			snprintf(buf, sizeof(buf), "SET ft_rsnxe_used 1");
+		if (hapd_command(ifname, buf) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to set ft_rsnxe_used");
+			return STATUS_SENT_ERROR;
+		}
+	}
 
 	switch (get_driver_type(dut)) {
 	case DRIVER_ATHEROS:
