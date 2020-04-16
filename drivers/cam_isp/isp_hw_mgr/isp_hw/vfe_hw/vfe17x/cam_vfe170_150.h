@@ -79,25 +79,25 @@ static struct cam_vfe_camif_reg_data vfe_170_150_camif_reg_data = {
 	.dual_vfe_sync_mask              = 0x3,
 };
 
-struct cam_vfe_top_ver2_reg_offset_module_ctrl lens_170_150_reg = {
+static struct cam_vfe_top_ver2_reg_offset_module_ctrl lens_170_150_reg = {
 	.reset    = 0x0000001C,
 	.cgc_ovd  = 0x0000002C,
 	.enable   = 0x00000040,
 };
 
-struct cam_vfe_top_ver2_reg_offset_module_ctrl stats_170_150_reg = {
+static struct cam_vfe_top_ver2_reg_offset_module_ctrl stats_170_150_reg = {
 	.reset    = 0x00000020,
 	.cgc_ovd  = 0x00000030,
 	.enable   = 0x00000044,
 };
 
-struct cam_vfe_top_ver2_reg_offset_module_ctrl color_170_150_reg = {
+static struct cam_vfe_top_ver2_reg_offset_module_ctrl color_170_150_reg = {
 	.reset    = 0x00000024,
 	.cgc_ovd  = 0x00000034,
 	.enable   = 0x00000048,
 };
 
-struct cam_vfe_top_ver2_reg_offset_module_ctrl zoom_170_150_reg = {
+static struct cam_vfe_top_ver2_reg_offset_module_ctrl zoom_170_150_reg = {
 	.reset    = 0x00000028,
 	.cgc_ovd  = 0x00000038,
 	.enable   = 0x0000004C,
@@ -830,7 +830,7 @@ static struct cam_vfe_bus_ver2_hw_info vfe170_150_bus_hw_info = {
 	},
 };
 
-struct cam_vfe_hw_info cam_vfe170_150_hw_info = {
+static struct cam_vfe_hw_info cam_vfe170_150_hw_info = {
 	.irq_reg_info                  = &vfe170_150_top_irq_reg_info,
 
 	.bus_version                   = CAM_VFE_BUS_VER_2_0,
