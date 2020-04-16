@@ -12023,7 +12023,7 @@ cmd_sta_set_rfeature_wpa3(const char *intf, struct sigma_dut *dut,
 {
 	const char *val;
 
-	val = get_param(cmd, "Reassoc_RSNXE_Used");
+	val = get_param(cmd, "ReassocReq_RSNXE_Used");
 	if (val && atoi(val) == 1) {
 		if (wpa_command(intf, "SET ft_rsnxe_used 1") < 0) {
 			send_resp(dut, conn, SIGMA_ERROR,
