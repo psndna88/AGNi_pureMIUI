@@ -2606,6 +2606,7 @@ void cam_ife_cam_cdm_callback(uint32_t handle, void *userdata,
 	struct cam_ife_hw_mgr_ctx               *ctx = NULL;
 	int                                      i;
 	uint32_t                                 idx = 0;
+	int                                      reg_dump_done;
 
 	if (!userdata) {
 		CAM_ERR(CAM_ISP, "Invalid args");
@@ -2633,9 +2634,10 @@ void cam_ife_cam_cdm_callback(uint32_t handle, void *userdata,
 
 	if (status == CAM_CDM_CB_STATUS_BL_SUCCESS) {
 		complete_all(&ctx->config_done_complete[idx]);
+		reg_dump_done = atomic_read(&ctx->cdm_done);
 		atomic_set(&ctx->cdm_done, 1);
 		if ((g_ife_hw_mgr.debug_cfg.per_req_reg_dump) &&
-			(idx == ctx->master_hw_idx))
+			(!reg_dump_done))
 			cam_ife_mgr_handle_reg_dump(ctx,
 				hw_update_data->reg_dump_buf_desc,
 				hw_update_data->num_reg_dump_buf,
