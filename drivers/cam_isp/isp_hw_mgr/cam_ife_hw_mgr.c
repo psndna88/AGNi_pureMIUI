@@ -1639,9 +1639,7 @@ static int cam_ife_mgr_acquire_cid_res(
 			&csid_acquire, false);
 
 	if (rc || !csid_acquire.node_res) {
-		CAM_ERR(CAM_ISP,
-			"Can not acquire ife cid resource for path %d",
-			path_res_id);
+		CAM_ERR(CAM_ISP, "No %d paths available", path_res_id);
 		goto put_res;
 	}
 	cid_res_temp->hw_res[acquired_cnt++] = csid_acquire.node_res;

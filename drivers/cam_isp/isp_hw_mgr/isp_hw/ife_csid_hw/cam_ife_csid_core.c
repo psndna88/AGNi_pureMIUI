@@ -1018,7 +1018,7 @@ int cam_ife_csid_path_reserve(struct cam_ife_csid_hw *csid_hw,
 	case CAM_IFE_PIX_PATH_RES_IPP:
 		if (csid_hw->ipp_res.res_state !=
 			CAM_ISP_RESOURCE_STATE_AVAILABLE) {
-			CAM_ERR(CAM_ISP,
+			CAM_DBG(CAM_ISP,
 				"CSID:%d IPP resource not available %d",
 				csid_hw->hw_intf->hw_idx,
 				csid_hw->ipp_res.res_state);
@@ -1046,7 +1046,7 @@ int cam_ife_csid_path_reserve(struct cam_ife_csid_hw *csid_hw,
 	case CAM_IFE_PIX_PATH_RES_PPP:
 		if (csid_hw->ppp_res.res_state !=
 			CAM_ISP_RESOURCE_STATE_AVAILABLE) {
-			CAM_ERR(CAM_ISP,
+			CAM_DBG(CAM_ISP,
 				"CSID:%d PPP resource not available %d",
 				csid_hw->hw_intf->hw_idx,
 				csid_hw->ppp_res.res_state);
@@ -1077,7 +1077,7 @@ int cam_ife_csid_path_reserve(struct cam_ife_csid_hw *csid_hw,
 	case CAM_IFE_PIX_PATH_RES_RDI_3:
 		if (csid_hw->rdi_res[reserve->res_id].res_state !=
 			CAM_ISP_RESOURCE_STATE_AVAILABLE) {
-			CAM_ERR(CAM_ISP,
+			CAM_DBG(CAM_ISP,
 				"CSID:%d RDI:%d resource not available %d",
 				csid_hw->hw_intf->hw_idx,
 				reserve->res_id,
@@ -1100,7 +1100,7 @@ int cam_ife_csid_path_reserve(struct cam_ife_csid_hw *csid_hw,
 		id = reserve->res_id - CAM_IFE_PIX_PATH_RES_UDI_0;
 		if (csid_hw->udi_res[id].res_state !=
 			CAM_ISP_RESOURCE_STATE_AVAILABLE) {
-			CAM_ERR(CAM_ISP,
+			CAM_DBG(CAM_ISP,
 				"CSID:%d UDI:%d resource not available %d",
 				csid_hw->hw_intf->hw_idx,
 				reserve->res_id,
