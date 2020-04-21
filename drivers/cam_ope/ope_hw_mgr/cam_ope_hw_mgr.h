@@ -60,6 +60,8 @@
 #define CLK_HW_MAX                 0x1
 
 #define OPE_DEVICE_IDLE_TIMEOUT    400
+#define OPE_REQUEST_TIMEOUT        200
+
 
 
 /**
@@ -223,12 +225,14 @@ struct cdm_dmi_cmd {
  * @iova_addr:        IOVA address
  * @len:              Buffer length
  * @size:             Buffer Size
+ * @offset:	      buffer offset
  */
 struct ope_debug_buffer {
 	uintptr_t cpu_addr;
 	dma_addr_t iova_addr;
 	size_t len;
 	uint32_t size;
+	uint32_t offset;
 };
 
 /**
@@ -238,6 +242,7 @@ struct ope_debug_buffer {
  * @cpu_addr:         CPU address
  * @iova_addr:        IOVA address
  * @iova_cdm_addr:    CDM IOVA address
+ * @offset:           Offset of buffer
  * @len:              Buffer length
  * @size:             Buffer Size
  */
@@ -246,6 +251,7 @@ struct ope_kmd_buffer {
 	uintptr_t cpu_addr;
 	dma_addr_t iova_addr;
 	dma_addr_t iova_cdm_addr;
+	uint32_t offset;
 	size_t len;
 	uint32_t size;
 };
@@ -383,6 +389,7 @@ struct ope_io_buf {
  * @cdm_cmd:             CDM command for OPE CDM
  * @clk_info:            Clock Info V1
  * @clk_info_v2:         Clock Info V2
+ * @hang_data:           Debug data for HW error
  */
 struct cam_ope_request {
 	uint64_t request_id;
@@ -398,10 +405,11 @@ struct cam_ope_request {
 	uint8_t num_stripe_cmd_bufs[OPE_MAX_BATCH_SIZE][OPE_MAX_STRIPES];
 	struct ope_kmd_buffer ope_kmd_buf;
 	struct ope_debug_buffer ope_debug_buf;
-	struct ope_io_buf io_buf[OPE_MAX_BATCH_SIZE][OPE_MAX_IO_BUFS];
+	struct ope_io_buf *io_buf[OPE_MAX_BATCH_SIZE][OPE_MAX_IO_BUFS];
 	struct cam_cdm_bl_request *cdm_cmd;
 	struct cam_ope_clk_bw_request clk_info;
 	struct cam_ope_clk_bw_req_internal_v2 clk_info_v2;
+	struct cam_hw_mgr_dump_pf_data hang_data;
 };
 
 /**
@@ -431,11 +439,13 @@ struct cam_ope_cdm {
  * @ctxt_event_cb:   Callback of a context
  * @req_list:        Request List
  * @ope_cdm:         OPE CDM info
+ * @last_req_time:   Timestamp of last request
  * @req_watch_dog:   Watchdog for requests
  * @req_watch_dog_reset_counter: Request reset counter
  * @clk_info:        OPE Ctx clock info
  * @clk_watch_dog:   Clock watchdog
  * @clk_watch_dog_reset_counter: Reset counter
+ * @last_flush_req: last flush req for this ctx
  */
 struct cam_ope_ctx {
 	void *context_priv;
@@ -451,11 +461,13 @@ struct cam_ope_ctx {
 	cam_hw_event_cb_func ctxt_event_cb;
 	struct cam_ope_request *req_list[CAM_CTX_REQ_MAX];
 	struct cam_ope_cdm ope_cdm;
+	uint64_t last_req_time;
 	struct cam_req_mgr_timer *req_watch_dog;
 	uint32_t req_watch_dog_reset_counter;
 	struct cam_ctx_clk_info clk_info;
 	struct cam_req_mgr_timer *clk_watch_dog;
 	uint32_t clk_watch_dog_reset_counter;
+	uint64_t last_flush_req;
 };
 
 /**
@@ -506,6 +518,7 @@ struct cam_ope_hw_mgr {
 	struct cam_ope_ctx  ctx[OPE_CTX_MAX];
 	struct cam_hw_intf  **devices[OPE_DEV_MAX];
 	struct ope_query_cap_cmd ope_caps;
+	uint64_t last_callback_time;
 
 	struct cam_req_mgr_core_workq *cmd_work;
 	struct cam_req_mgr_core_workq *msg_work;
@@ -518,4 +531,68 @@ struct cam_ope_hw_mgr {
 	struct cam_ope_clk_info clk_info;
 };
 
+/**
+ * struct cam_ope_buf_entry
+ *
+ * @fd:                FD of cmd buffer
+ * @memhdl:           Memhandle of cmd buffer
+ * @iova:              IOVA address of cmd buffer
+ * @offset:            Offset of cmd buffer
+ * @len:               Length of cmd buffer
+ * @size:              Size of cmd buffer
+ */
+struct cam_ope_buf_entry {
+	uint32_t          fd;
+	uint64_t          memhdl;
+	uint64_t          iova;
+	uint64_t          offset;
+	uint64_t          len;
+	uint64_t          size;
+};
+
+/**
+ * struct cam_ope_bl_entry
+ *
+ * @base:              Base IOVA address of BL
+ * @len:               Length of BL
+ * @arbitration:       Arbitration bit
+ */
+struct cam_ope_bl_entry {
+	uint32_t         base;
+	uint32_t         len;
+	uint32_t         arbitration;
+};
+
+/**
+ * struct cam_ope_output_info
+ *
+ * @iova:              IOVA address of output buffer
+ * @offset:            Offset of buffer
+ * @len:               Length of buffer
+ */
+struct cam_ope_output_info {
+	uint64_t    iova;
+	uint64_t    offset;
+	uint64_t    len;
+};
+
+/**
+ * struct cam_ope_hang_dump
+ *
+ * @num_bls:           count of BLs for request
+ * @num_bufs:          Count of buffer related to request
+ * @num_outputs:       Count of output beffers
+ * @entries:           Buffers info
+ * @bl_entries:        BLs info
+ * @outputs:           Output info
+ */
+struct cam_ope_hang_dump {
+	uint32_t num_bls;
+	uint32_t num_bufs;
+	uint64_t num_outputs;
+	struct cam_ope_buf_entry entries[OPE_MAX_BATCH_SIZE * OPE_MAX_CMD_BUFS];
+	struct cam_ope_bl_entry bl_entries[OPE_MAX_CDM_BLS];
+	struct cam_ope_output_info outputs
+		[OPE_MAX_BATCH_SIZE * OPE_OUT_RES_MAX];
+};
 #endif /* CAM_OPE_HW_MGR_H */

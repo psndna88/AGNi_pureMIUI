@@ -83,6 +83,11 @@
 #define CAM_ISP_TFE_USAGE_RIGHT_PX    2
 #define CAM_ISP_TFE_USAGE_RDI         3
 
+/* Bus write master modes */
+#define CAM_ISP_TFE_WM_FRAME_BASED_MODE    0
+#define CAM_ISP_TFE_WM_LINE_BASED_MODE     1
+#define CAM_ISP_TFE_WM_INDEX_BASED_MODE    2
+
 /* Query devices */
 /**
  * struct cam_isp_tfe_dev_cap_info - A cap info for particular hw type

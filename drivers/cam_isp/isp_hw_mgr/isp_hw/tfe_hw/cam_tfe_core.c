@@ -48,6 +48,10 @@ struct cam_tfe_top_priv {
 		axi_vote_control[CAM_TFE_TOP_IN_PORT_MAX];
 	uint32_t                          irq_prepared_mask[3];
 	void                            *tasklet_info;
+	struct timeval                    sof_ts;
+	struct timeval                    epoch_ts;
+	struct timeval                    eof_ts;
+	struct timeval                    error_ts;
 };
 
 struct cam_tfe_camif_data {
@@ -64,9 +68,11 @@ struct cam_tfe_camif_data {
 	enum cam_isp_hw_sync_mode          sync_mode;
 	uint32_t                           dsp_mode;
 	uint32_t                           pix_pattern;
-	uint32_t                           first_pixel;
+	uint32_t                           left_first_pixel;
+	uint32_t                           left_last_pixel;
+	uint32_t                           right_first_pixel;
+	uint32_t                           right_last_pixel;
 	uint32_t                           first_line;
-	uint32_t                           last_pixel;
 	uint32_t                           last_line;
 	bool                               enable_sof_irq_debug;
 	uint32_t                           irq_debug_cnt;
@@ -85,6 +91,10 @@ struct cam_tfe_rdi_data {
 	void                                        *priv;
 	enum cam_isp_hw_sync_mode                    sync_mode;
 	uint32_t                                     pix_pattern;
+	uint32_t                                     left_first_pixel;
+	uint32_t                                     left_last_pixel;
+	uint32_t                                     first_line;
+	uint32_t                                     last_line;
 };
 
 static int cam_tfe_validate_pix_pattern(uint32_t pattern)
@@ -211,68 +221,15 @@ int cam_tfe_irq_config(void     *tfe_core_data,
 	return 0;
 }
 
-static void cam_tfe_log_error_irq_status(
-	struct cam_tfe_hw_core_info          *core_info,
-	struct cam_tfe_top_priv              *top_priv,
-	struct cam_tfe_irq_evt_payload       *evt_payload)
+static void cam_tfe_log_tfe_in_debug_status(
+	struct cam_tfe_top_priv              *top_priv)
 {
-	struct cam_tfe_hw_info               *hw_info;
 	void __iomem                         *mem_base;
-	struct cam_hw_soc_info               *soc_info;
-	struct cam_tfe_soc_private           *soc_private;
 	struct cam_tfe_camif_data            *camif_data;
 	struct cam_tfe_rdi_data              *rdi_data;
-	uint32_t  i, val_0, val_1, val_2, val_3;
+	uint32_t  i, val_0, val_1;
 
-	hw_info = core_info->tfe_hw_info;
 	mem_base = top_priv->common_data.soc_info->reg_map[0].mem_base;
-	soc_info = top_priv->common_data.soc_info;
-	soc_private = top_priv->common_data.soc_info->soc_private;
-
-	val_0 = cam_io_r(mem_base  +
-		top_priv->common_data.common_reg->debug_0);
-	val_1 = cam_io_r(mem_base  +
-		top_priv->common_data.common_reg->debug_1);
-	val_2 = cam_io_r(mem_base  +
-		top_priv->common_data.common_reg->debug_2);
-	val_3 = cam_io_r(mem_base  +
-		top_priv->common_data.common_reg->debug_3);
-
-	CAM_INFO(CAM_ISP, "TOP IRQ[0]:0x%x IRQ[1]:0x%x IRQ[2]:0x%x",
-		evt_payload->irq_reg_val[0], evt_payload->irq_reg_val[1],
-		evt_payload->irq_reg_val[2]);
-
-	CAM_INFO(CAM_ISP, "BUS IRQ[0]:0x%x BUS IRQ[1]:0x%x",
-		evt_payload->bus_irq_val[0], evt_payload->bus_irq_val[1]);
-
-	CAM_INFO(CAM_ISP, "ccif violation:0x%x image size:0x%x overflow:0x%x",
-		evt_payload->ccif_violation_status,
-		evt_payload->image_size_violation_status,
-		evt_payload->overflow_status);
-
-	cam_cpas_reg_read(soc_private->cpas_handle,
-		CAM_CPAS_REG_CAMNOC, 0x20, true, &val_0);
-	CAM_INFO(CAM_ISP, "tfe_niu_MaxWr_Low offset 0x20 val 0x%x",
-		val_0);
-
-	CAM_INFO(CAM_ISP, "Top debug [0]:0x%x [1]:0x%x [2]:0x%x [3]:0x%x",
-		val_0, val_1, val_2, val_3);
-
-	val_0 = cam_io_r(mem_base  +
-		top_priv->common_data.common_reg->perf_pixel_count);
-
-	val_1 = cam_io_r(mem_base  +
-		top_priv->common_data.common_reg->perf_line_count);
-
-	val_2 = cam_io_r(mem_base  +
-		top_priv->common_data.common_reg->perf_stall_count);
-
-	val_3 = cam_io_r(mem_base  +
-		top_priv->common_data.common_reg->perf_always_count);
-
-	CAM_INFO(CAM_ISP,
-		"Top perf cnt pix:0x%x line:0x%x stall:0x%x always:0x%x",
-		val_0, val_1, val_2, val_3);
 
 	for (i = 0; i < CAM_TFE_TOP_IN_PORT_MAX; i++) {
 		if ((top_priv->in_rsrc[i].res_state !=
@@ -291,6 +248,23 @@ static void cam_tfe_log_error_irq_status(
 				val_1,
 				((val_0 >> 16) & 0x1FFF),
 				(val_0 & 0x1FFF));
+			CAM_INFO(CAM_ISP,
+				"Acquired sync mode:%d left start pxl:0x%x end_pixel:0x%x",
+				camif_data->sync_mode,
+				camif_data->left_first_pixel,
+				camif_data->left_last_pixel);
+
+			if (camif_data->sync_mode == CAM_ISP_HW_SYNC_SLAVE)
+				CAM_INFO(CAM_ISP,
+					"sync mode:%d right start pxl:0x%x end_pixel:0x%x",
+					camif_data->sync_mode,
+					camif_data->right_first_pixel,
+					camif_data->right_last_pixel);
+
+			CAM_INFO(CAM_ISP,
+				"Acquired line start:0x%x line end:0x%x",
+				camif_data->first_line,
+				camif_data->last_line);
 		} else if ((top_priv->in_rsrc[i].res_id >=
 			CAM_ISP_HW_TFE_IN_RDI0) ||
 			(top_priv->in_rsrc[i].res_id <=
@@ -306,10 +280,103 @@ static void cam_tfe_log_error_irq_status(
 				top_priv->in_rsrc[i].res_id,
 				val_1, ((val_0 >> 16) & 0x1FFF),
 				(val_0 & 0x1FFF));
+			CAM_INFO(CAM_ISP,
+				"sync mode:%d left start pxl:0x%x end_pixel:0x%x",
+				rdi_data->sync_mode,
+				rdi_data->left_first_pixel,
+				rdi_data->left_last_pixel);
+			CAM_INFO(CAM_ISP,
+				"sync mode:%d line start:0x%x line end:0x%x",
+				rdi_data->sync_mode,
+				rdi_data->first_line,
+				rdi_data->last_line);
 		}
 	}
+}
+static void cam_tfe_log_error_irq_status(
+	struct cam_tfe_hw_core_info          *core_info,
+	struct cam_tfe_top_priv              *top_priv,
+	struct cam_tfe_irq_evt_payload       *evt_payload)
+{
+	struct cam_tfe_hw_info               *hw_info;
+	void __iomem                         *mem_base;
+	struct cam_hw_soc_info               *soc_info;
+	struct cam_tfe_soc_private           *soc_private;
+
+	struct cam_tfe_clc_hw_status         *clc_hw_status;
+	struct timespec64 ts;
+	uint32_t  i, val_0, val_1, val_2, val_3;
+
+
+	ktime_get_boottime_ts64(&ts);
+	hw_info = core_info->tfe_hw_info;
+	mem_base = top_priv->common_data.soc_info->reg_map[0].mem_base;
+	soc_info = top_priv->common_data.soc_info;
+	soc_private = top_priv->common_data.soc_info->soc_private;
+
+	CAM_INFO(CAM_ISP, "current monotonic time stamp seconds %lld:%lld",
+		ts.tv_sec, ts.tv_nsec/1000);
+	CAM_INFO(CAM_ISP,
+		"ERROR time %lld:%lld SOF %lld:%lld EPOCH %lld:%lld EOF %lld:%lld",
+		top_priv->error_ts.tv_sec,
+		top_priv->error_ts.tv_usec,
+		top_priv->sof_ts.tv_sec,
+		top_priv->sof_ts.tv_usec,
+		top_priv->epoch_ts.tv_sec,
+		top_priv->epoch_ts.tv_usec,
+		top_priv->eof_ts.tv_sec,
+		top_priv->eof_ts.tv_usec);
+
 	val_0 = cam_io_r(mem_base  +
+		top_priv->common_data.common_reg->debug_0);
+	val_1 = cam_io_r(mem_base  +
+		top_priv->common_data.common_reg->debug_1);
+	val_2 = cam_io_r(mem_base  +
+		top_priv->common_data.common_reg->debug_2);
+	val_3 = cam_io_r(mem_base  +
+		top_priv->common_data.common_reg->debug_3);
+
+	CAM_INFO(CAM_ISP, "TOP IRQ[0]:0x%x IRQ[1]:0x%x IRQ[2]:0x%x",
+		evt_payload->irq_reg_val[0], evt_payload->irq_reg_val[1],
+		evt_payload->irq_reg_val[2]);
+
+	CAM_INFO(CAM_ISP, "Top debug [0]:0x%x [1]:0x%x [2]:0x%x [3]:0x%x",
+		val_0, val_1, val_2, val_3);
+
+	cam_cpas_reg_read(soc_private->cpas_handle,
+		CAM_CPAS_REG_CAMNOC, 0x20, true, &val_0);
+	CAM_INFO(CAM_ISP, "tfe_niu_MaxWr_Low offset 0x20 val 0x%x",
+		val_0);
+
+	val_0 = cam_io_r(mem_base  +
+		top_priv->common_data.common_reg->perf_pixel_count);
+
+	val_1 = cam_io_r(mem_base  +
+		top_priv->common_data.common_reg->perf_line_count);
+
+	val_2 = cam_io_r(mem_base  +
 		top_priv->common_data.common_reg->perf_stall_count);
+
+	val_3 = cam_io_r(mem_base  +
+		top_priv->common_data.common_reg->perf_always_count);
+
+	CAM_INFO(CAM_ISP,
+		"Top perf cnt pix:0x%x line:0x%x stall:0x%x always:0x%x",
+		val_0, val_1, val_2, val_3);
+
+	clc_hw_status = hw_info->clc_hw_status_info;
+	for (i = 0; i < hw_info->num_clc; i++) {
+		val_0 = cam_io_r(mem_base  +
+			clc_hw_status[i].hw_status_reg);
+		if (val_0)
+			CAM_INFO(CAM_ISP,
+				"CLC HW status :name:%s offset:0x%x value:0x%x",
+				clc_hw_status[i].name,
+				clc_hw_status[i].hw_status_reg,
+				val_0);
+	}
+
+	cam_tfe_log_tfe_in_debug_status(top_priv);
 
 	/* Check the overflow errors */
 	if (evt_payload->irq_reg_val[0] & hw_info->error_irq_mask[0]) {
@@ -363,22 +430,13 @@ static void cam_tfe_log_error_irq_status(
 		CAM_INFO(CAM_ISP, "TOP Violation status:0x%x", val_0);
 	}
 
-	/* Check the bus errors */
-	if (evt_payload->bus_irq_val[0] & BIT(29))
-		CAM_INFO(CAM_ISP, "CONS_VIOLATION");
+	core_info->tfe_bus->bottom_half_handler(
+		core_info->tfe_bus->bus_priv, false, evt_payload, true);
 
-	if (evt_payload->bus_irq_val[0] & BIT(30))
-		CAM_INFO(CAM_ISP, "VIOLATION val 0x%x",
-		evt_payload->ccif_violation_status);
-
-	if (evt_payload->bus_irq_val[0] & BIT(31))
-		CAM_INFO(CAM_ISP, "IMAGE_SIZE_VIOLATION val :0x%x",
-		evt_payload->image_size_violation_status);
-
-	/* clear the bus irq overflow status*/
-	if (evt_payload->overflow_status)
-		cam_io_w_mb(1, mem_base  +
-		core_info->tfe_hw_info->bus_overflow_clear_cmd);
+	CAM_INFO(CAM_ISP,
+		"TFE clock rate:%d TFE total bw applied:%lld",
+		top_priv->hw_clk_rate,
+		top_priv->total_bw_applied);
 
 }
 
@@ -391,33 +449,31 @@ static int cam_tfe_error_irq_bottom_half(
 {
 	struct cam_isp_hw_event_info         evt_info;
 	struct cam_tfe_hw_info              *hw_info;
+	uint32_t   error_detected = 0;
 
 	hw_info = core_info->tfe_hw_info;
 	evt_info.hw_idx = core_info->core_index;
 	evt_info.res_type = CAM_ISP_RESOURCE_TFE_IN;
 
 	if (evt_payload->irq_reg_val[0] & hw_info->error_irq_mask[0]) {
-		CAM_ERR(CAM_ISP, "TFE:%d Overflow error irq_status[0]:%x",
-			core_info->core_index,
-			evt_payload->irq_reg_val[0]);
-
 		evt_info.err_type = CAM_TFE_IRQ_STATUS_OVERFLOW;
-		cam_tfe_log_error_irq_status(core_info, top_priv, evt_payload);
-		if (event_cb)
-			event_cb(event_cb_priv,
-				CAM_ISP_HW_EVENT_ERROR, (void *)&evt_info);
-		else
-			CAM_ERR(CAM_ISP, "TFE:%d invalid eventcb:",
-				core_info->core_index);
+		error_detected = 1;
 	}
 
-	if (evt_payload->irq_reg_val[2] & hw_info->error_irq_mask[2]) {
-		CAM_ERR(CAM_ISP, "TFE:%d Violation error irq_status[2]:%x",
-			core_info->core_index, evt_payload->irq_reg_val[2]);
-
+	if ((evt_payload->bus_irq_val[0] & hw_info->bus_error_irq_mask[0]) ||
+		(evt_payload->irq_reg_val[2] & hw_info->error_irq_mask[2])) {
 		evt_info.err_type = CAM_TFE_IRQ_STATUS_VIOLATION;
-		cam_tfe_log_error_irq_status(core_info, top_priv, evt_payload);
+		error_detected = 1;
+	}
 
+	if (error_detected) {
+		evt_info.err_type = CAM_TFE_IRQ_STATUS_OVERFLOW;
+		top_priv->error_ts.tv_sec =
+			evt_payload->ts.mono_time.tv_sec;
+		top_priv->error_ts.tv_usec =
+			evt_payload->ts.mono_time.tv_usec;
+
+		cam_tfe_log_error_irq_status(core_info, top_priv, evt_payload);
 		if (event_cb)
 			event_cb(event_cb_priv,
 				CAM_ISP_HW_EVENT_ERROR, (void *)&evt_info);
@@ -430,6 +486,7 @@ static int cam_tfe_error_irq_bottom_half(
 }
 
 static int cam_tfe_rdi_irq_bottom_half(
+	struct cam_tfe_top_priv              *top_priv,
 	struct cam_isp_resource_node         *rdi_node,
 	bool                                  epoch_process,
 	struct cam_tfe_irq_evt_payload       *evt_payload)
@@ -448,6 +505,11 @@ static int cam_tfe_rdi_irq_bottom_half(
 	if ((!epoch_process) && (evt_payload->irq_reg_val[1] &
 		rdi_priv->reg_data->eof_irq_mask)) {
 		CAM_DBG(CAM_ISP, "Received EOF");
+		top_priv->eof_ts.tv_sec =
+			evt_payload->ts.mono_time.tv_sec;
+		top_priv->eof_ts.tv_usec =
+			evt_payload->ts.mono_time.tv_usec;
+
 		if (rdi_priv->event_cb)
 			rdi_priv->event_cb(rdi_priv->priv,
 				CAM_ISP_HW_EVENT_EOF, (void *)&evt_info);
@@ -456,6 +518,11 @@ static int cam_tfe_rdi_irq_bottom_half(
 	if ((!epoch_process) && (evt_payload->irq_reg_val[1] &
 		rdi_priv->reg_data->sof_irq_mask)) {
 		CAM_DBG(CAM_ISP, "Received SOF");
+		top_priv->sof_ts.tv_sec =
+			evt_payload->ts.mono_time.tv_sec;
+		top_priv->sof_ts.tv_usec =
+			evt_payload->ts.mono_time.tv_usec;
+
 		if (rdi_priv->event_cb)
 			rdi_priv->event_cb(rdi_priv->priv,
 				CAM_ISP_HW_EVENT_SOF, (void *)&evt_info);
@@ -464,6 +531,10 @@ static int cam_tfe_rdi_irq_bottom_half(
 	if (epoch_process && (evt_payload->irq_reg_val[1] &
 		rdi_priv->reg_data->epoch0_irq_mask)) {
 		CAM_DBG(CAM_ISP, "Received EPOCH0");
+		top_priv->epoch_ts.tv_sec =
+			evt_payload->ts.mono_time.tv_sec;
+		top_priv->epoch_ts.tv_usec =
+			evt_payload->ts.mono_time.tv_usec;
 
 		if (rdi_priv->event_cb)
 			rdi_priv->event_cb(rdi_priv->priv,
@@ -474,6 +545,7 @@ static int cam_tfe_rdi_irq_bottom_half(
 }
 
 static int cam_tfe_camif_irq_bottom_half(
+	struct cam_tfe_top_priv              *top_priv,
 	struct cam_isp_resource_node         *camif_node,
 	bool                                  epoch_process,
 	struct cam_tfe_irq_evt_payload       *evt_payload)
@@ -492,6 +564,11 @@ static int cam_tfe_camif_irq_bottom_half(
 	if ((!epoch_process) && (evt_payload->irq_reg_val[1] &
 		camif_priv->reg_data->eof_irq_mask)) {
 		CAM_DBG(CAM_ISP, "Received EOF");
+
+		top_priv->eof_ts.tv_sec =
+			evt_payload->ts.mono_time.tv_sec;
+		top_priv->eof_ts.tv_usec =
+			evt_payload->ts.mono_time.tv_usec;
 
 		if (camif_priv->event_cb)
 			camif_priv->event_cb(camif_priv->priv,
@@ -515,6 +592,11 @@ static int cam_tfe_camif_irq_bottom_half(
 		} else
 			CAM_DBG(CAM_ISP, "Received SOF");
 
+		top_priv->sof_ts.tv_sec =
+			evt_payload->ts.mono_time.tv_sec;
+		top_priv->sof_ts.tv_usec =
+			evt_payload->ts.mono_time.tv_usec;
+
 		if (camif_priv->event_cb)
 			camif_priv->event_cb(camif_priv->priv,
 				CAM_ISP_HW_EVENT_SOF, (void *)&evt_info);
@@ -523,6 +605,11 @@ static int cam_tfe_camif_irq_bottom_half(
 	if (epoch_process  && (evt_payload->irq_reg_val[1] &
 		camif_priv->reg_data->epoch0_irq_mask)) {
 		CAM_DBG(CAM_ISP, "Received EPOCH");
+
+		top_priv->epoch_ts.tv_sec =
+			evt_payload->ts.mono_time.tv_sec;
+		top_priv->epoch_ts.tv_usec =
+			evt_payload->ts.mono_time.tv_usec;
 
 		if (camif_priv->event_cb)
 			camif_priv->event_cb(camif_priv->priv,
@@ -575,7 +662,7 @@ static int cam_tfe_irq_bottom_half(void *handler_priv,
 
 			if (camif_priv->reg_data->subscribe_irq_mask[1] &
 				evt_payload->irq_reg_val[1])
-				cam_tfe_camif_irq_bottom_half(
+				cam_tfe_camif_irq_bottom_half(top_priv,
 					&top_priv->in_rsrc[i], false,
 					evt_payload);
 
@@ -584,7 +671,8 @@ static int cam_tfe_irq_bottom_half(void *handler_priv,
 			(top_priv->in_rsrc[i].res_id <=
 			CAM_ISP_HW_TFE_IN_RDI2) &&
 			(top_priv->in_rsrc[i].res_state ==
-			CAM_ISP_RESOURCE_STATE_STREAMING)) {
+			CAM_ISP_RESOURCE_STATE_STREAMING) &&
+			top_priv->in_rsrc[i].rdi_only_ctx) {
 			rdi_priv = (struct cam_tfe_rdi_data *)
 				top_priv->in_rsrc[i].res_priv;
 			event_cb = rdi_priv->event_cb;
@@ -592,7 +680,7 @@ static int cam_tfe_irq_bottom_half(void *handler_priv,
 
 			if (rdi_priv->reg_data->subscribe_irq_mask[1] &
 				evt_payload->irq_reg_val[1])
-				cam_tfe_rdi_irq_bottom_half(
+				cam_tfe_rdi_irq_bottom_half(top_priv,
 					&top_priv->in_rsrc[i], false,
 					evt_payload);
 		}
@@ -606,7 +694,7 @@ static int cam_tfe_irq_bottom_half(void *handler_priv,
 	if (evt_payload->irq_reg_val[0] &
 		core_info->tfe_hw_info->bus_reg_irq_mask[0]) {
 		core_info->tfe_bus->bottom_half_handler(
-			core_info->tfe_bus->bus_priv, true, evt_payload);
+			core_info->tfe_bus->bus_priv, true, evt_payload, false);
 	}
 
 	/* process the epoch */
@@ -619,7 +707,7 @@ static int cam_tfe_irq_bottom_half(void *handler_priv,
 				top_priv->in_rsrc[i].res_priv;
 			if (camif_priv->reg_data->subscribe_irq_mask[1] &
 				evt_payload->irq_reg_val[1])
-				cam_tfe_camif_irq_bottom_half(
+				cam_tfe_camif_irq_bottom_half(top_priv,
 					&top_priv->in_rsrc[i], true,
 					evt_payload);
 		} else if ((top_priv->in_rsrc[i].res_id >=
@@ -632,7 +720,7 @@ static int cam_tfe_irq_bottom_half(void *handler_priv,
 				top_priv->in_rsrc[i].res_priv;
 			if (rdi_priv->reg_data->subscribe_irq_mask[1] &
 				evt_payload->irq_reg_val[1])
-				cam_tfe_rdi_irq_bottom_half(
+				cam_tfe_rdi_irq_bottom_half(top_priv,
 					&top_priv->in_rsrc[i], true,
 					evt_payload);
 		}
@@ -642,7 +730,8 @@ static int cam_tfe_irq_bottom_half(void *handler_priv,
 	if (evt_payload->irq_reg_val[0] &
 		core_info->tfe_hw_info->bus_reg_irq_mask[0]) {
 		core_info->tfe_bus->bottom_half_handler(
-			core_info->tfe_bus->bus_priv, false, evt_payload);
+			core_info->tfe_bus->bus_priv, false, evt_payload,
+			false);
 	}
 
 	cam_tfe_put_evt_payload(core_info, &evt_payload);
@@ -653,16 +742,24 @@ static int cam_tfe_irq_bottom_half(void *handler_priv,
 static int cam_tfe_irq_err_top_half(
 	struct cam_tfe_hw_core_info       *core_info,
 	void __iomem                      *mem_base,
-	uint32_t                          *irq_status)
+	uint32_t                          *top_irq_status,
+	uint32_t                          *bus_irq_status)
 {
 	uint32_t i;
 
-	if (irq_status[0] &  core_info->tfe_hw_info->error_irq_mask[0] ||
-		irq_status[2] &  core_info->tfe_hw_info->error_irq_mask[2]) {
+	if ((top_irq_status[0] &  core_info->tfe_hw_info->error_irq_mask[0]) ||
+		(top_irq_status[2] &
+		core_info->tfe_hw_info->error_irq_mask[2]) ||
+		(bus_irq_status[0] &
+		core_info->tfe_hw_info->bus_error_irq_mask[0])) {
 		CAM_ERR(CAM_ISP,
 			"Encountered Error: tfe:%d: Irq_status0=0x%x status2=0x%x",
-			core_info->core_index, irq_status[0],
-			irq_status[2]);
+			core_info->core_index, top_irq_status[0],
+			top_irq_status[2]);
+		CAM_ERR(CAM_ISP,
+			"Encountered Error: tfe:%d:BUS Irq_status0=0x%x",
+			core_info->core_index, bus_irq_status[0]);
+
 		for (i = 0; i < CAM_TFE_TOP_IRQ_REG_NUM; i++)
 			cam_io_w(0, mem_base +
 				core_info->tfe_hw_info->top_irq_mask[i]);
@@ -755,7 +852,8 @@ irqreturn_t cam_tfe_irq(int irq_num, void *data)
 	}
 
 	/* Check the irq errors  */
-	cam_tfe_irq_err_top_half(core_info, mem_base, top_irq_status);
+	cam_tfe_irq_err_top_half(core_info, mem_base, top_irq_status,
+		bus_irq_status);
 
 	rc  = cam_tfe_get_evt_payload(core_info, &evt_payload);
 	if (rc) {
@@ -877,7 +975,7 @@ static int cam_tfe_top_set_axi_bw_vote(
 	struct cam_tfe_top_priv *top_priv,
 	bool start_stop)
 {
-	struct cam_axi_vote agg_vote = {0};
+	struct cam_axi_vote *agg_vote = NULL;
 	struct cam_axi_vote *to_be_applied_axi_vote = NULL;
 	struct cam_hw_soc_info   *soc_info = top_priv->common_data.soc_info;
 	struct cam_tfe_soc_private *soc_private = soc_info->soc_private;
@@ -893,6 +991,12 @@ static int cam_tfe_top_set_axi_bw_vote(
 		return -EINVAL;
 	}
 
+	agg_vote = kzalloc(sizeof(struct cam_axi_vote), GFP_KERNEL);
+	if (!agg_vote) {
+		CAM_ERR(CAM_ISP, "Out of memory");
+		return -ENOMEM;
+	}
+
 	for (i = 0; i < CAM_TFE_TOP_IN_PORT_MAX; i++) {
 		if (top_priv->axi_vote_control[i] ==
 			CAM_TFE_BW_CONTROL_INCLUDE) {
@@ -904,10 +1008,11 @@ static int cam_tfe_top_set_axi_bw_vote(
 					num_paths +
 					top_priv->req_axi_vote[i].num_paths,
 					CAM_CPAS_MAX_PATHS_PER_CLIENT);
-				return -EINVAL;
+				rc = -EINVAL;
+				goto free_mem;
 			}
 
-			memcpy(&agg_vote.axi_path[num_paths],
+			memcpy(&agg_vote->axi_path[num_paths],
 				&top_priv->req_axi_vote[i].axi_path[0],
 				top_priv->req_axi_vote[i].num_paths *
 				sizeof(
@@ -916,31 +1021,31 @@ static int cam_tfe_top_set_axi_bw_vote(
 		}
 	}
 
-	agg_vote.num_paths = num_paths;
+	agg_vote->num_paths = num_paths;
 
-	for (i = 0; i < agg_vote.num_paths; i++) {
+	for (i = 0; i < agg_vote->num_paths; i++) {
 		CAM_DBG(CAM_PERF,
 			"tfe[%d] : New BW Vote : counter[%d] [%s][%s] [%llu %llu %llu]",
 			top_priv->common_data.hw_intf->hw_idx,
 			top_priv->last_counter,
 			cam_cpas_axi_util_path_type_to_string(
-			agg_vote.axi_path[i].path_data_type),
+			agg_vote->axi_path[i].path_data_type),
 			cam_cpas_axi_util_trans_type_to_string(
-			agg_vote.axi_path[i].transac_type),
-			agg_vote.axi_path[i].camnoc_bw,
-			agg_vote.axi_path[i].mnoc_ab_bw,
-			agg_vote.axi_path[i].mnoc_ib_bw);
+			agg_vote->axi_path[i].transac_type),
+			agg_vote->axi_path[i].camnoc_bw,
+			agg_vote->axi_path[i].mnoc_ab_bw,
+			agg_vote->axi_path[i].mnoc_ib_bw);
 
-		total_bw_new_vote += agg_vote.axi_path[i].camnoc_bw;
+		total_bw_new_vote += agg_vote->axi_path[i].camnoc_bw;
 	}
 
-	memcpy(&top_priv->last_vote[top_priv->last_counter], &agg_vote,
+	memcpy(&top_priv->last_vote[top_priv->last_counter], agg_vote,
 		sizeof(struct cam_axi_vote));
 	top_priv->last_counter = (top_priv->last_counter + 1) %
 		(CAM_TFE_TOP_IN_PORT_MAX *
 		CAM_TFE_DELAY_BW_REDUCTION_NUM_FRAMES);
 
-	if ((agg_vote.num_paths != top_priv->applied_axi_vote.num_paths) ||
+	if ((agg_vote->num_paths != top_priv->applied_axi_vote.num_paths) ||
 		(total_bw_new_vote != top_priv->total_bw_applied))
 		bw_unchanged = false;
 
@@ -952,18 +1057,19 @@ static int cam_tfe_top_set_axi_bw_vote(
 
 	if (bw_unchanged) {
 		CAM_DBG(CAM_ISP, "BW config unchanged");
-		return 0;
+		rc = 0;
+		goto free_mem;
 	}
 
 	if (start_stop) {
 		/* need to vote current request immediately */
-		to_be_applied_axi_vote = &agg_vote;
+		to_be_applied_axi_vote = agg_vote;
 		/* Reset everything, we can start afresh */
 		memset(top_priv->last_vote, 0x0, sizeof(struct cam_axi_vote) *
 			(CAM_TFE_TOP_IN_PORT_MAX *
 			CAM_TFE_DELAY_BW_REDUCTION_NUM_FRAMES));
 		top_priv->last_counter = 0;
-		top_priv->last_vote[top_priv->last_counter] = agg_vote;
+		top_priv->last_vote[top_priv->last_counter] = *agg_vote;
 		top_priv->last_counter = (top_priv->last_counter + 1) %
 			(CAM_TFE_TOP_IN_PORT_MAX *
 			CAM_TFE_DELAY_BW_REDUCTION_NUM_FRAMES);
@@ -977,7 +1083,8 @@ static int cam_tfe_top_set_axi_bw_vote(
 			&total_bw_new_vote);
 		if (!to_be_applied_axi_vote) {
 			CAM_ERR(CAM_ISP, "to_be_applied_axi_vote is NULL");
-			return -EINVAL;
+			rc = -EINVAL;
+			goto free_mem;
 		}
 	}
 
@@ -1018,6 +1125,9 @@ static int cam_tfe_top_set_axi_bw_vote(
 		}
 	}
 
+free_mem:
+	kzfree(agg_vote);
+	agg_vote = NULL;
 	return rc;
 }
 
@@ -1381,6 +1491,234 @@ static int cam_tfe_top_get_reg_dump(
 	return 0;
 }
 
+static int cam_tfe_hw_dump(
+	struct cam_tfe_hw_core_info *core_info,
+	void                        *cmd_args,
+	uint32_t                     arg_size)
+{
+	int                                i, j;
+	uint8_t                           *dst;
+	uint32_t                           reg_start_offset;
+	uint32_t                           reg_dump_size = 0;
+	uint32_t                           lut_dump_size = 0;
+	uint32_t                           num_lut_dump_entries = 0;
+	uint32_t                           num_reg;
+	uint32_t                           lut_word_size, lut_size;
+	uint32_t                           lut_bank_sel, lut_dmi_reg;
+	uint32_t                           val;
+	void __iomem                      *reg_base;
+	void __iomem                      *mem_base;
+	uint32_t                          *addr, *start;
+	uint64_t                          *clk_waddr, *clk_wstart;
+	size_t                             remain_len;
+	uint32_t                           min_len;
+	struct cam_hw_info                *tfe_hw_info;
+	struct cam_hw_soc_info            *soc_info;
+	struct cam_tfe_top_priv           *top_priv;
+	struct cam_tfe_soc_private        *soc_private;
+	struct cam_tfe_reg_dump_data      *reg_dump_data;
+	struct cam_isp_hw_dump_header     *hdr;
+	struct cam_isp_hw_dump_args       *dump_args =
+		(struct cam_isp_hw_dump_args *)cmd_args;
+
+	if (!dump_args || !core_info) {
+		CAM_ERR(CAM_ISP, "Invalid args");
+		return -EINVAL;
+	}
+
+	if (!dump_args->cpu_addr || !dump_args->buf_len) {
+		CAM_ERR(CAM_ISP,
+			"Invalid params %pK %zu",
+			(void *)dump_args->cpu_addr,
+			dump_args->buf_len);
+		return -EINVAL;
+	}
+
+	if (dump_args->buf_len <= dump_args->offset) {
+		CAM_WARN(CAM_ISP,
+			"Dump offset overshoot offset %zu buf_len %zu",
+			dump_args->offset, dump_args->buf_len);
+		return -ENOSPC;
+	}
+
+	top_priv = (struct cam_tfe_top_priv  *)core_info->top_priv;
+	tfe_hw_info =
+		(struct cam_hw_info *)(top_priv->common_data.hw_intf->hw_priv);
+	reg_dump_data = top_priv->common_data.reg_dump_data;
+	soc_info = top_priv->common_data.soc_info;
+	soc_private = top_priv->common_data.soc_info->soc_private;
+	mem_base = soc_info->reg_map[TFE_CORE_BASE_IDX].mem_base;
+
+	if (dump_args->is_dump_all) {
+
+		/*Dump registers size*/
+		for (i = 0; i < reg_dump_data->num_reg_dump_entries; i++)
+			reg_dump_size +=
+				(reg_dump_data->reg_entry[i].end_offset -
+				reg_dump_data->reg_entry[i].start_offset);
+
+		/*
+		 * We dump the offset as well, so the total size dumped becomes
+		 * multiplied by 2
+		 */
+		reg_dump_size *= 2;
+
+		/* LUT dump size */
+		for (i = 0; i < reg_dump_data->num_lut_dump_entries; i++)
+			lut_dump_size +=
+				((reg_dump_data->lut_entry[i].lut_addr_size) *
+				(reg_dump_data->lut_entry[i].lut_word_size/8));
+
+		num_lut_dump_entries = reg_dump_data->num_lut_dump_entries;
+	}
+
+	/*Minimum len comprises of:
+	 * lut_dump_size + reg_dump_size + sizeof dump_header +
+	 * (num_lut_dump_entries--> represents number of banks) +
+	 *  (misc number of words) * sizeof(uint32_t)
+	 */
+	min_len = lut_dump_size + reg_dump_size +
+		sizeof(struct cam_isp_hw_dump_header) +
+		(num_lut_dump_entries * sizeof(uint32_t)) +
+		(sizeof(uint32_t) * CAM_TFE_CORE_DUMP_MISC_NUM_WORDS);
+
+	remain_len = dump_args->buf_len - dump_args->offset;
+	if (remain_len < min_len) {
+		CAM_WARN(CAM_ISP, "Dump buffer exhaust remain %zu, min %u",
+			remain_len, min_len);
+		return -ENOSPC;
+	}
+
+	mutex_lock(&tfe_hw_info->hw_mutex);
+	if (tfe_hw_info->hw_state != CAM_HW_STATE_POWER_UP) {
+		CAM_ERR(CAM_ISP, "TFE:%d HW not powered up",
+			core_info->core_index);
+		mutex_unlock(&tfe_hw_info->hw_mutex);
+		return -EPERM;
+	}
+
+	if (!dump_args->is_dump_all)
+		goto dump_bw;
+
+	dst = (uint8_t *)dump_args->cpu_addr + dump_args->offset;
+	hdr = (struct cam_isp_hw_dump_header *)dst;
+	hdr->word_size = sizeof(uint32_t);
+	scnprintf(hdr->tag, CAM_ISP_HW_DUMP_TAG_MAX_LEN, "TFE_REG:");
+	addr = (uint32_t *)(dst + sizeof(struct cam_isp_hw_dump_header));
+	start = addr;
+	*addr++ = soc_info->index;
+	for (i = 0; i < reg_dump_data->num_reg_dump_entries; i++) {
+		num_reg  = (reg_dump_data->reg_entry[i].end_offset -
+			reg_dump_data->reg_entry[i].start_offset)/4;
+		reg_start_offset = reg_dump_data->reg_entry[i].start_offset;
+		reg_base = mem_base + reg_start_offset;
+		for (j = 0; j < num_reg; j++) {
+			addr[0] =
+				soc_info->mem_block[TFE_CORE_BASE_IDX]->start +
+				reg_start_offset + (j*4);
+			addr[1] = cam_io_r(reg_base + (j*4));
+			addr += 2;
+		}
+	}
+
+	/*Dump bus top registers*/
+	num_reg  = (reg_dump_data->bus_write_top_end_addr -
+			reg_dump_data->bus_start_addr)/4;
+	reg_base = mem_base + reg_dump_data->bus_start_addr;
+	reg_start_offset = soc_info->mem_block[TFE_CORE_BASE_IDX]->start +
+		reg_dump_data->bus_start_addr;
+	for (i = 0; i < num_reg; i++) {
+		addr[0] = reg_start_offset + (i*4);
+		addr[1] = cam_io_r(reg_base + (i*4));
+		addr += 2;
+	}
+
+	/* Dump bus clients */
+	reg_base = mem_base + reg_dump_data->bus_client_start_addr;
+	reg_start_offset = soc_info->mem_block[TFE_CORE_BASE_IDX]->start +
+		reg_dump_data->bus_client_start_addr;
+	for (j = 0; j < reg_dump_data->num_bus_clients; j++) {
+
+		for (i = 0; i <= 0x3c; i += 4) {
+			addr[0] = reg_start_offset + i;
+			addr[1] = cam_io_r(reg_base + i);
+			addr += 2;
+		}
+		for (i = 0x60; i <= 0x80; i += 4) {
+			addr[0] = reg_start_offset + (i*4);
+			addr[1] = cam_io_r(reg_base + (i*4));
+			addr += 2;
+		}
+		reg_base += reg_dump_data->bus_client_offset;
+		reg_start_offset += reg_dump_data->bus_client_offset;
+	}
+
+	hdr->size = hdr->word_size * (addr - start);
+	dump_args->offset +=  hdr->size +
+		sizeof(struct cam_isp_hw_dump_header);
+
+	/* Dump LUT entries */
+	for (i = 0; i < reg_dump_data->num_lut_dump_entries; i++) {
+
+		lut_bank_sel = reg_dump_data->lut_entry[i].lut_bank_sel;
+		lut_size = reg_dump_data->lut_entry[i].lut_addr_size;
+		lut_word_size = reg_dump_data->lut_entry[i].lut_word_size;
+		lut_dmi_reg = reg_dump_data->lut_entry[i].dmi_reg_offset;
+		dst = (char *)dump_args->cpu_addr + dump_args->offset;
+		hdr = (struct cam_isp_hw_dump_header *)dst;
+		scnprintf(hdr->tag, CAM_ISP_HW_DUMP_TAG_MAX_LEN, "LUT_REG:");
+		hdr->word_size = lut_word_size/8;
+		addr = (uint32_t *)(dst +
+			sizeof(struct cam_isp_hw_dump_header));
+		start = addr;
+		*addr++ = lut_bank_sel;
+		cam_io_w_mb(lut_bank_sel, mem_base + lut_dmi_reg + 4);
+		cam_io_w_mb(0, mem_base + 0xC28);
+		for (j = 0; j < lut_size; j++) {
+			*addr = cam_io_r_mb(mem_base + 0xc30);
+			addr++;
+		}
+		hdr->size = hdr->word_size * (addr - start);
+		dump_args->offset +=  hdr->size +
+			sizeof(struct cam_isp_hw_dump_header);
+	}
+	cam_io_w_mb(0, mem_base + 0xC24);
+	cam_io_w_mb(0, mem_base + 0xC28);
+
+dump_bw:
+	dst = (char *)dump_args->cpu_addr + dump_args->offset;
+	hdr = (struct cam_isp_hw_dump_header *)dst;
+	scnprintf(hdr->tag, CAM_ISP_HW_DUMP_TAG_MAX_LEN, "TFE_CLK_RATE_BW:");
+	clk_waddr = (uint64_t *)(dst +
+		sizeof(struct cam_isp_hw_dump_header));
+	clk_wstart = clk_waddr;
+	hdr->word_size = sizeof(uint64_t);
+	*clk_waddr++ = top_priv->hw_clk_rate;
+	*clk_waddr++ = top_priv->total_bw_applied;
+
+	hdr->size = hdr->word_size * (clk_waddr - clk_wstart);
+	dump_args->offset +=  hdr->size +
+		sizeof(struct cam_isp_hw_dump_header);
+
+	dst = (char *)dump_args->cpu_addr + dump_args->offset;
+	hdr = (struct cam_isp_hw_dump_header *)dst;
+	scnprintf(hdr->tag, CAM_ISP_HW_DUMP_TAG_MAX_LEN, "TFE_NIU_MAXWR:");
+	addr = (uint32_t *)(dst +
+		sizeof(struct cam_isp_hw_dump_header));
+	start = addr;
+	hdr->word_size = sizeof(uint32_t);
+	cam_cpas_reg_read(soc_private->cpas_handle,
+		CAM_CPAS_REG_CAMNOC, 0x20, true, &val);
+	*addr++ = val;
+	hdr->size = hdr->word_size * (addr - start);
+	dump_args->offset +=  hdr->size +
+		sizeof(struct cam_isp_hw_dump_header);
+	mutex_unlock(&tfe_hw_info->hw_mutex);
+
+	CAM_DBG(CAM_ISP, "offset %zu", dump_args->offset);
+	return 0;
+}
+
 static int cam_tfe_camif_irq_reg_dump(
 	struct cam_tfe_hw_core_info    *core_info,
 	void *cmd_args, uint32_t arg_size)
@@ -1465,10 +1803,14 @@ int cam_tfe_top_reserve(void *device_priv,
 					acquire_args->in_port->pix_pattern;
 				camif_data->dsp_mode =
 					acquire_args->in_port->dsp_mode;
-				camif_data->first_pixel =
+				camif_data->left_first_pixel =
 					acquire_args->in_port->left_start;
-				camif_data->last_pixel =
+				camif_data->left_last_pixel =
 					acquire_args->in_port->left_end;
+				camif_data->right_first_pixel =
+					acquire_args->in_port->right_start;
+				camif_data->right_last_pixel =
+					acquire_args->in_port->right_end;
 				camif_data->first_line =
 					acquire_args->in_port->line_start;
 				camif_data->last_line =
@@ -1494,6 +1836,14 @@ int cam_tfe_top_reserve(void *device_priv,
 				rdi_data->sync_mode = acquire_args->sync_mode;
 				rdi_data->event_cb = args->event_cb;
 				rdi_data->priv = args->priv;
+				rdi_data->left_first_pixel =
+					acquire_args->in_port->left_start;
+				rdi_data->left_last_pixel =
+					acquire_args->in_port->left_end;
+				rdi_data->first_line =
+					acquire_args->in_port->line_start;
+				rdi_data->last_line =
+					acquire_args->in_port->line_end;
 			}
 
 			top_priv->in_rsrc[i].cdm_ops = acquire_args->cdm_ops;
@@ -1603,6 +1953,9 @@ static int cam_tfe_camif_resource_start(
 
 	if (!rsrc_data->camif_pd_enable)
 		val |= (1 << rsrc_data->reg_data->camif_pd_rdi2_src_sel_shift);
+
+	/* enables the Delay Line CLC in the pixel pipeline */
+	val |= BIT(rsrc_data->reg_data->delay_line_en_shift);
 
 	cam_io_w_mb(val, rsrc_data->mem_base +
 		rsrc_data->common_reg->core_cfg_0);
@@ -1755,10 +2108,19 @@ int cam_tfe_top_start(struct cam_tfe_hw_core_info *core_info,
 	}
 
 	core_info->irq_err_config_cnt++;
-	if (core_info->irq_err_config_cnt == 1)
+	if (core_info->irq_err_config_cnt == 1)  {
 		cam_tfe_irq_config(core_info,
 			core_info->tfe_hw_info->error_irq_mask,
 			CAM_TFE_TOP_IRQ_REG_NUM, true);
+		top_priv->error_ts.tv_sec = 0;
+		top_priv->error_ts.tv_usec = 0;
+		top_priv->sof_ts.tv_sec = 0;
+		top_priv->sof_ts.tv_usec = 0;
+		top_priv->epoch_ts.tv_sec = 0;
+		top_priv->epoch_ts.tv_usec = 0;
+		top_priv->eof_ts.tv_sec = 0;
+		top_priv->eof_ts.tv_usec = 0;
+	}
 
 end:
 	return rc;
@@ -2079,8 +2441,9 @@ int cam_tfe_reset(void *hw_priv, void *reset_core_args, uint32_t arg_size)
 
 	CAM_DBG(CAM_ISP, "TFE:%d waiting for tfe reset complete",
 		core_info->core_index);
-	/* Wait for Completion or Timeout of 500ms */
-	rc = wait_for_completion_timeout(&core_info->reset_complete, 500);
+	/* Wait for Completion or Timeout of 100ms */
+	rc = wait_for_completion_timeout(&core_info->reset_complete,
+		msecs_to_jiffies(100));
 	if (rc <= 0) {
 		CAM_ERR(CAM_ISP, "TFE:%d Error Reset Timeout",
 			core_info->core_index);
@@ -2435,6 +2798,10 @@ int cam_tfe_process_cmd(void *hw_priv, uint32_t cmd_type,
 		break;
 	case CAM_ISP_HW_CMD_QUERY_REGSPACE_DATA:
 		*((struct cam_hw_soc_info **)cmd_args) = soc_info;
+		break;
+	case CAM_ISP_HW_CMD_DUMP_HW:
+		rc = cam_tfe_hw_dump(core_info,
+			cmd_args, arg_size);
 		break;
 	case CAM_ISP_HW_CMD_GET_BUF_UPDATE:
 	case CAM_ISP_HW_CMD_GET_HFR_UPDATE:

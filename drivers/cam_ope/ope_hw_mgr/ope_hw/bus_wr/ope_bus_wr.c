@@ -29,6 +29,24 @@
 
 static struct ope_bus_wr *wr_info;
 
+enum cam_ope_bus_packer_format {
+	PACKER_FMT_PLAIN_128                   = 0x0,
+	PACKER_FMT_PLAIN_8                     = 0x1,
+	PACKER_FMT_PLAIN_8_ODD_EVEN            = 0x2,
+	PACKER_FMT_PLAIN_8_LSB_MSB_10          = 0x3,
+	PACKER_FMT_PLAIN_8_LSB_MSB_10_ODD_EVEN = 0x4,
+	PACKER_FMT_PLAIN_16_10BPP              = 0x5,
+	PACKER_FMT_PLAIN_16_12BPP              = 0x6,
+	PACKER_FMT_PLAIN_16_14BPP              = 0x7,
+	PACKER_FMT_PLAIN_16_16BPP              = 0x8,
+	PACKER_FMT_PLAIN_32                    = 0x9,
+	PACKER_FMT_PLAIN_64                    = 0xA,
+	PACKER_FMT_TP_10                       = 0xB,
+	PACKER_FMT_MIPI_10                     = 0xC,
+	PACKER_FMT_MIPI_12                     = 0xD,
+	PACKER_FMT_MAX                         = 0xE,
+};
+
 static int cam_ope_bus_en_port_idx(
 	struct cam_ope_request *ope_request,
 	uint32_t batch_idx,
@@ -43,7 +61,7 @@ static int cam_ope_bus_en_port_idx(
 	}
 
 	for (i = 0; i < ope_request->num_io_bufs[batch_idx]; i++) {
-		io_buf = &ope_request->io_buf[batch_idx][i];
+		io_buf = ope_request->io_buf[batch_idx][i];
 		if (io_buf->direction != CAM_BUF_OUTPUT)
 			continue;
 		if (io_buf->resource_type == output_port_id)
@@ -133,25 +151,15 @@ static int cam_ope_bus_wr_subsample(
 static int cam_ope_bus_wr_release(struct ope_hw *ope_hw_info,
 	int32_t ctx_id, void *data)
 {
-	int rc = 0, i;
-	struct ope_acquire_dev_info *in_acquire;
-	struct ope_bus_wr_ctx *bus_wr_ctx;
+	int rc = 0;
 
-	if (ctx_id < 0) {
+	if (ctx_id < 0 || ctx_id >= OPE_CTX_MAX) {
 		CAM_ERR(CAM_OPE, "Invalid data: %d", ctx_id);
 		return -EINVAL;
 	}
 
-	in_acquire = wr_info->bus_wr_ctx[ctx_id].ope_acquire;
-	wr_info->bus_wr_ctx[ctx_id].ope_acquire = NULL;
-	bus_wr_ctx = &wr_info->bus_wr_ctx[ctx_id];
-	bus_wr_ctx->num_out_ports = 0;
-
-	for (i = 0; i < bus_wr_ctx->num_out_ports; i++) {
-		bus_wr_ctx->io_port_info.output_port_id[i] = 0;
-		bus_wr_ctx->io_port_info.output_format_type[i - 1] = 0;
-		bus_wr_ctx->io_port_info.pixel_pattern[i - 1] = 0;
-	}
+	vfree(wr_info->bus_wr_ctx[ctx_id]);
+	wr_info->bus_wr_ctx[ctx_id] = NULL;
 
 	return rc;
 }
@@ -208,7 +216,7 @@ static uint32_t *cam_ope_bus_wr_update(struct ope_hw *ope_hw_info,
 	cdm_ops = ctx_data->ope_cdm.cdm_ops;
 
 	ope_request = ctx_data->req_list[req_idx];
-	bus_wr_ctx = &wr_info->bus_wr_ctx[ctx_id];
+	bus_wr_ctx = wr_info->bus_wr_ctx[ctx_id];
 	io_port_cdm_batch = &bus_wr_ctx->io_port_cdm_batch;
 	wr_reg = ope_hw_info->bus_wr_reg;
 	wr_reg_val = ope_hw_info->bus_wr_reg_val;
@@ -217,7 +225,7 @@ static uint32_t *cam_ope_bus_wr_update(struct ope_hw *ope_hw_info,
 		kmd_buf, req_idx, ope_request->request_id,
 		prepare->kmd_buf_offset);
 
-	io_buf = &ope_request->io_buf[batch_idx][io_idx];
+	io_buf = ope_request->io_buf[batch_idx][io_idx];
 	CAM_DBG(CAM_OPE, "batch = %d io buf num = %d dir = %d",
 		batch_idx, io_idx, io_buf->direction);
 
@@ -286,6 +294,16 @@ static uint32_t *cam_ope_bus_wr_update(struct ope_hw *ope_hw_info,
 			temp_reg[count++] = wr_reg->offset +
 				wr_reg_client->pack_cfg;
 			temp = 0;
+
+			/*
+			 * In case of NV12, change the packer format of chroma
+			 * plane to odd even byte swapped format
+			 */
+
+			if (k == 1 && stripe_io->format == CAM_FORMAT_NV12)
+				stripe_io->pack_format =
+					PACKER_FMT_PLAIN_8_ODD_EVEN;
+
 			temp |= ((stripe_io->pack_format &
 				wr_res_val_client->format_mask) <<
 				wr_res_val_client->format_shift);
@@ -376,7 +394,7 @@ static uint32_t *cam_ope_bus_wm_disable(struct ope_hw *ope_hw_info,
 	req_idx = prepare->req_idx;
 	cdm_ops = ctx_data->ope_cdm.cdm_ops;
 
-	bus_wr_ctx = &wr_info->bus_wr_ctx[ctx_id];
+	bus_wr_ctx = wr_info->bus_wr_ctx[ctx_id];
 	io_port_cdm_batch = &bus_wr_ctx->io_port_cdm_batch;
 	wr_reg = ope_hw_info->bus_wr_reg;
 
@@ -466,7 +484,7 @@ static int cam_ope_bus_wr_prepare(struct ope_hw *ope_hw_info,
 	prepare = data;
 	ctx_data = prepare->ctx_data;
 	req_idx = prepare->req_idx;
-	bus_wr_ctx = &wr_info->bus_wr_ctx[ctx_id];
+	bus_wr_ctx = wr_info->bus_wr_ctx[ctx_id];
 
 	ope_request = ctx_data->req_list[req_idx];
 	kmd_buf = (uint32_t *)ope_request->ope_kmd_buf.cpu_addr +
@@ -477,13 +495,13 @@ static int cam_ope_bus_wr_prepare(struct ope_hw *ope_hw_info,
 		kmd_buf, req_idx, ope_request->request_id,
 		prepare->kmd_buf_offset);
 
-	io_port_cdm_batch = &wr_info->bus_wr_ctx[ctx_id].io_port_cdm_batch;
+	io_port_cdm_batch = &wr_info->bus_wr_ctx[ctx_id]->io_port_cdm_batch;
 	memset(io_port_cdm_batch, 0,
 		sizeof(struct ope_bus_wr_io_port_cdm_batch));
 
 	for (i = 0; i < ope_request->num_batch; i++) {
 		for (j = 0; j < ope_request->num_io_bufs[i]; j++) {
-			io_buf = &ope_request->io_buf[i][j];
+			io_buf = ope_request->io_buf[i][j];
 			CAM_DBG(CAM_OPE, "batch = %d io buf num = %d dir = %d",
 				i, j, io_buf->direction);
 			if (io_buf->direction != CAM_BUF_OUTPUT)
@@ -533,14 +551,20 @@ static int cam_ope_bus_wr_acquire(struct ope_hw *ope_hw_info,
 	int combo_idx;
 	int out_port_idx;
 
-	if (ctx_id < 0 || !data) {
+	if (ctx_id < 0 || !data || ctx_id >= OPE_CTX_MAX) {
 		CAM_ERR(CAM_OPE, "Invalid data: %d %x", ctx_id, data);
 		return -EINVAL;
 	}
 
-	wr_info->bus_wr_ctx[ctx_id].ope_acquire = data;
+	wr_info->bus_wr_ctx[ctx_id] = vzalloc(sizeof(struct ope_bus_wr_ctx));
+	if (!wr_info->bus_wr_ctx[ctx_id]) {
+		CAM_ERR(CAM_OPE, "Out of memory");
+		return -ENOMEM;
+	}
+
+	wr_info->bus_wr_ctx[ctx_id]->ope_acquire = data;
 	in_acquire = data;
-	bus_wr_ctx = &wr_info->bus_wr_ctx[ctx_id];
+	bus_wr_ctx = wr_info->bus_wr_ctx[ctx_id];
 	bus_wr_ctx->num_out_ports = in_acquire->num_out_res;
 	bus_wr_ctx->security_flag = in_acquire->secure_mode;
 
@@ -688,11 +712,12 @@ static int cam_ope_bus_wr_isr(struct ope_hw *ope_hw_info,
 	int32_t ctx_id, void *data)
 {
 	int rc = 0;
-	uint32_t irq_status_0, irq_status_1;
+	uint32_t irq_status_0, irq_status_1, violation_status;
 	struct cam_ope_bus_wr_reg *bus_wr_reg;
 	struct cam_ope_bus_wr_reg_val *bus_wr_reg_val;
+	struct cam_ope_irq_data *irq_data = data;
 
-	if (!ope_hw_info) {
+	if (!ope_hw_info || !irq_data) {
 		CAM_ERR(CAM_OPE, "Invalid ope_hw_info");
 		return -EINVAL;
 	}
@@ -712,15 +737,26 @@ static int cam_ope_bus_wr_isr(struct ope_hw *ope_hw_info,
 		bus_wr_reg->base + bus_wr_reg->irq_cmd);
 
 	if (irq_status_0 & bus_wr_reg_val->cons_violation) {
+		irq_data->error = 1;
 		CAM_ERR(CAM_OPE, "ope bus wr cons_violation");
 	}
 
 	if (irq_status_0 & bus_wr_reg_val->violation) {
-		CAM_ERR(CAM_OPE, "ope bus wr  vioalation");
+		irq_data->error = 1;
+		violation_status = cam_io_r_mb(bus_wr_reg->base +
+			bus_wr_reg->violation_status);
+		CAM_ERR(CAM_OPE,
+			"ope bus wr violation, violation_status 0x%x",
+			violation_status);
 	}
 
 	if (irq_status_0 & bus_wr_reg_val->img_size_violation) {
-		CAM_ERR(CAM_OPE, "ope bus wr  img_size_violation");
+		irq_data->error = 1;
+		violation_status = cam_io_r_mb(bus_wr_reg->base +
+			bus_wr_reg->image_size_violation_status);
+		CAM_ERR(CAM_OPE,
+			"ope bus wr img_size_violation, violation_status 0x%x",
+			violation_status);
 	}
 
 	return rc;
@@ -769,7 +805,7 @@ int cam_ope_bus_wr_process(struct ope_hw *ope_hw_info,
 		CAM_DBG(CAM_OPE, "Unhandled cmds: %d", cmd_id);
 		break;
 	case OPE_HW_ISR:
-		rc = cam_ope_bus_wr_isr(ope_hw_info, 0, NULL);
+		rc = cam_ope_bus_wr_isr(ope_hw_info, 0, data);
 		break;
 	default:
 		CAM_ERR(CAM_OPE, "Unsupported cmd: %d", cmd_id);
