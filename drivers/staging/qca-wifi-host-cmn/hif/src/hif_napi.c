@@ -585,7 +585,7 @@ int hif_napi_event(struct hif_opaque_softc *hif_ctx, enum qca_napi_event event,
 	}
 
 	case NAPI_EVT_TPUT_STATE: {
-		tput_mode = (enum qca_napi_tput_state)data;
+		tput_mode = (enum qca_napi_tput_state) (size_t) data;
 		if (tput_mode == QCA_NAPI_TPUT_LO) {
 			/* from TPUT_HI -> TPUT_LO */
 			NAPI_DEBUG("%s: Moving to napi_tput_LO state",
