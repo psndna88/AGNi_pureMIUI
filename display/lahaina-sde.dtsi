@@ -250,9 +250,9 @@
 		interconnect-names = "qcom,sde-data-bus0", "qcom,sde-data-bus1",
 				"qcom,sde-reg-bus";
 		qcom,sde-reg-bus,vectors-KBps = <0 0>,
-				<0 76800>,
-				<0 150000>,
-				<0 300000>;
+				<0 74000>,
+				<0 148000>,
+				<0 265000>;
 
 		qcom,sde-sspp-vig-blocks {
 			qcom,sde-vig-csc-off = <0x1a00>;
