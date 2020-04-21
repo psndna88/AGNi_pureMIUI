@@ -404,6 +404,16 @@ static struct msm_vidc_ctrl msm_vdec_ctrls[] = {
 		.qmenu = NULL,
 	},
 	{
+		.id = V4L2_CID_MPEG_VIDC_VIDEO_FRAME_RATE,
+		.name = "Frame Rate",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.minimum = (MINIMUM_FPS << 16),
+		.maximum = (MAXIMUM_FPS << 16),
+		.default_value = (DEFAULT_FPS << 16),
+		.step = 1,
+		.qmenu = NULL,
+	},
+	{
 		.id = V4L2_CID_MPEG_VIDC_VIDEO_PRIORITY,
 		.name = "Session Priority",
 		.type = V4L2_CTRL_TYPE_BOOLEAN,
@@ -904,6 +914,7 @@ int msm_vdec_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 	case V4L2_CID_MPEG_VIDC_VIDEO_DECODE_ORDER:
 	case V4L2_CID_MPEG_VIDC_VIDEO_CONCEAL_COLOR_8BIT:
 	case V4L2_CID_MPEG_VIDC_VIDEO_CONCEAL_COLOR_10BIT:
+	case V4L2_CID_MPEG_VIDC_VIDEO_FRAME_RATE:
 		break;
 	case V4L2_CID_MPEG_VIDC_VIDEO_SYNC_FRAME_DECODE:
 		inst->flags &= ~VIDC_THUMBNAIL;
