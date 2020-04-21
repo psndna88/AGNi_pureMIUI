@@ -1549,7 +1549,7 @@ QDF_STATUS sap_signal_hdd_event(struct sap_context *sap_ctx,
 			return QDF_STATUS_E_INVAL;
 		}
 
-		bss_complete->status = (eSapStatus) context;
+		bss_complete->status = (eSapStatus) (size_t) context;
 		bss_complete->staId = sap_ctx->sap_sta_id;
 
 		QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_INFO_HIGH,
@@ -1568,16 +1568,16 @@ QDF_STATUS sap_signal_hdd_event(struct sap_context *sap_ctx,
 	case eSAP_DFS_NO_AVAILABLE_CHANNEL:
 		sap_ap_event.sapHddEventCode = sap_hddevent;
 		sap_ap_event.sapevt.sapStopBssCompleteEvent.status =
-			(eSapStatus) context;
+			(eSapStatus) (size_t) context;
 		break;
 	case eSAP_ACS_SCAN_SUCCESS_EVENT:
 		sap_handle_acs_scan_event(sap_ctx, &sap_ap_event,
-			(eSapStatus)context);
+			(eSapStatus) (size_t) context);
 		break;
 	case eSAP_ACS_CHANNEL_SELECTED:
 		sap_ap_event.sapHddEventCode = sap_hddevent;
 		acs_selected = &sap_ap_event.sapevt.sap_ch_selected;
-		if (eSAP_STATUS_SUCCESS == (eSapStatus)context) {
+		if (eSAP_STATUS_SUCCESS == (eSapStatus) (size_t) context) {
 			acs_selected->pri_ch = sap_ctx->acs_cfg->pri_ch;
 			acs_selected->ht_sec_ch = sap_ctx->acs_cfg->ht_sec_ch;
 			acs_selected->ch_width = sap_ctx->acs_cfg->ch_width;
@@ -1585,7 +1585,7 @@ QDF_STATUS sap_signal_hdd_event(struct sap_context *sap_ctx,
 				sap_ctx->acs_cfg->vht_seg0_center_ch;
 			acs_selected->vht_seg1_center_ch =
 				sap_ctx->acs_cfg->vht_seg1_center_ch;
-		} else if (eSAP_STATUS_FAILURE == (eSapStatus)context) {
+		} else if (eSAP_STATUS_FAILURE == (eSapStatus) (size_t) context) {
 			acs_selected->pri_ch = 0;
 		}
 		break;
@@ -1593,7 +1593,7 @@ QDF_STATUS sap_signal_hdd_event(struct sap_context *sap_ctx,
 	case eSAP_STOP_BSS_EVENT:
 		sap_ap_event.sapHddEventCode = eSAP_STOP_BSS_EVENT;
 		sap_ap_event.sapevt.sapStopBssCompleteEvent.status =
-			(eSapStatus) context;
+			(eSapStatus) (size_t) context;
 		break;
 
 	case eSAP_STA_ASSOC_EVENT:
@@ -1668,7 +1668,7 @@ QDF_STATUS sap_signal_hdd_event(struct sap_context *sap_ctx,
 		chaninfo->rate_flags = csr_roaminfo->chan_info.rate_flags;
 
 		reassoc_complete->wmmEnabled = csr_roaminfo->wmmEnabledSta;
-		reassoc_complete->status = (eSapStatus) context;
+		reassoc_complete->status = (eSapStatus) (size_t) context;
 		reassoc_complete->timingMeasCap = csr_roaminfo->timingMeasCap;
 		reassoc_complete->ampdu = csr_roaminfo->ampdu;
 		reassoc_complete->sgi_enable = csr_roaminfo->sgi_enable;
@@ -1712,7 +1712,7 @@ QDF_STATUS sap_signal_hdd_event(struct sap_context *sap_ctx,
 			disassoc_comp->reason = eSAP_MAC_INITATED_DISASSOC;
 
 		disassoc_comp->statusCode = csr_roaminfo->statusCode;
-		disassoc_comp->status = (eSapStatus) context;
+		disassoc_comp->status = (eSapStatus) (size_t) context;
 		disassoc_comp->rssi = csr_roaminfo->rssi;
 		disassoc_comp->rx_rate = csr_roaminfo->rx_rate;
 		disassoc_comp->tx_rate = csr_roaminfo->tx_rate;
@@ -1729,7 +1729,7 @@ QDF_STATUS sap_signal_hdd_event(struct sap_context *sap_ctx,
 		sap_ap_event.sapHddEventCode = eSAP_STA_SET_KEY_EVENT;
 		key_complete =
 			&sap_ap_event.sapevt.sapStationSetKeyCompleteEvent;
-		key_complete->status = (eSapStatus) context;
+		key_complete->status = (eSapStatus) (size_t) context;
 		qdf_copy_macaddr(&key_complete->peerMacAddr,
 				 &csr_roaminfo->peerMac);
 		break;
@@ -1782,13 +1782,13 @@ QDF_STATUS sap_signal_hdd_event(struct sap_context *sap_ctx,
 	case eSAP_DISCONNECT_ALL_P2P_CLIENT:
 		sap_ap_event.sapHddEventCode = eSAP_DISCONNECT_ALL_P2P_CLIENT;
 		sap_ap_event.sapevt.sapActionCnf.actionSendSuccess =
-			(eSapStatus) context;
+			(eSapStatus) (size_t) context;
 		break;
 
 	case eSAP_MAC_TRIG_STOP_BSS_EVENT:
 		sap_ap_event.sapHddEventCode = eSAP_MAC_TRIG_STOP_BSS_EVENT;
 		sap_ap_event.sapevt.sapActionCnf.actionSendSuccess =
-			(eSapStatus) context;
+			(eSapStatus) (size_t) context;
 		break;
 
 	case eSAP_UNKNOWN_STA_JOIN:
@@ -1864,7 +1864,7 @@ QDF_STATUS sap_signal_hdd_event(struct sap_context *sap_ctx,
 
 	case eSAP_CHANNEL_CHANGE_RESP:
 		sap_ap_event.sapHddEventCode = eSAP_CHANNEL_CHANGE_RESP;
-		sap_ap_event.sapevt.ch_change_rsp_status = (QDF_STATUS)context;
+		sap_ap_event.sapevt.ch_change_rsp_status = (QDF_STATUS) (size_t) context;
 		QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_INFO_HIGH,
 			  "In %s, SAP event callback event = %s",
 			 __func__, "eSAP_CHANNEL_CHANGE_RESP");
