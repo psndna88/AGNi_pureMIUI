@@ -996,5 +996,7 @@ qcom,mdss-dsi-srgb-on-command = [
 		qcom,mdss-dsi-panel-status-value = <0x9c>;
 		qcom,mdss-dsi-panel-max-error-count = <3>;
 		qcom,panel-ack-disabled;
+		qcom,ulps-enabled;
+		qcom,suspend-ulps-enabled;
 	};
 };
