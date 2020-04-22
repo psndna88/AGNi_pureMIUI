@@ -347,9 +347,6 @@ void __init init_cpu_topology(void)
 
 	parse_dt_topology();
 
-	for_each_possible_cpu(cpu)
-		update_siblings_masks(cpu);
-
 	/* Set scheduler topology descriptor */
 	set_sched_topology(arm_topology);
 }
