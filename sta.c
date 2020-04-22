@@ -231,6 +231,20 @@ static int android_keystore_get(char cmd, const char *key, unsigned char *val)
 #endif /* ANDROID */
 
 
+static int set_power_save_wcn(struct sigma_dut *dut, const char *intf, int ps)
+{
+	char buf[100];
+
+	snprintf(buf, sizeof(buf), "iwpriv %s setPower %d", intf, ps);
+	if (system(buf) != 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"iwpriv setPower %d failed", ps);
+		return -1;
+	}
+	return 0;
+}
+
+
 int set_ps(const char *intf, struct sigma_dut *dut, int enabled)
 {
 #ifdef __linux__
@@ -238,18 +252,14 @@ int set_ps(const char *intf, struct sigma_dut *dut, int enabled)
 
 	if (wifi_chip_type == DRIVER_WCN) {
 		if (enabled) {
-			snprintf(buf, sizeof(buf), "iwpriv %s setPower 1",
-				 intf);
-			if (system(buf) != 0) {
+			if (set_power_save_wcn(dut, intf, 1) < 0) {
 				snprintf(buf, sizeof(buf),
 					 "iwpriv wlan0 dump 906");
 				if (system(buf) != 0)
 					goto set_power_save;
 			}
 		} else {
-			snprintf(buf, sizeof(buf), "iwpriv %s setPower 2",
-				 intf);
-			if (system(buf) != 0) {
+			if (set_power_save_wcn(dut, intf, 2) < 0) {
 				snprintf(buf, sizeof(buf),
 					 "iwpriv wlan0 dump 905");
 				if (system(buf) != 0)
@@ -4957,17 +4967,10 @@ cmd_sta_preset_testparameters(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	val = get_param(cmd, "Powersave");
 	if (val) {
-		char buf[60];
-
 		if (strcmp(val, "0") == 0 || strcasecmp(val, "off") == 0) {
 			if (get_driver_type(dut) == DRIVER_WCN) {
-				snprintf(buf, sizeof(buf),
-					 "iwpriv %s setPower 2", intf);
-				if (system(buf) != 0) {
-					sigma_dut_print(dut, DUT_MSG_ERROR,
-							"iwpriv setPower 2 failed");
+				if (set_power_save_wcn(dut, intf, 2) < 0)
 					return 0;
-				}
 			}
 
 			if (wpa_command(get_station_ifname(dut),
@@ -4980,13 +4983,8 @@ cmd_sta_preset_testparameters(struct sigma_dut *dut, struct sigma_conn *conn,
 			   strcasecmp(val, "PSPoll") == 0 ||
 			   strcasecmp(val, "on") == 0) {
 			if (get_driver_type(dut) == DRIVER_WCN) {
-				snprintf(buf, sizeof(buf),
-					 "iwpriv %s setPower 1", intf);
-				if (system(buf) != 0) {
-					sigma_dut_print(dut, DUT_MSG_ERROR,
-							"iwpriv setPower 1 failed");
+				if (set_power_save_wcn(dut, intf, 1) < 0)
 					return 0;
-				}
 			}
 			/* Disable default power save mode */
 			wpa_command(get_station_ifname(dut), "P2P_SET ps 0");
@@ -7533,11 +7531,7 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 		}
 
 		/* reset the power save setting */
-		snprintf(buf, sizeof(buf), "iwpriv %s setPower 2", intf);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv %s  setPower 2 failed", intf);
-		}
+		set_power_save_wcn(dut, intf, 2);
 
 		/* remove all network profiles */
 		remove_wpa_networks(intf);
@@ -11711,30 +11705,20 @@ static int wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 
 	val = get_param(cmd, "Powersave");
 	if (val) {
-		char buf[60];
+		int ps;
 
 		if (strcasecmp(val, "off") == 0) {
-			snprintf(buf, sizeof(buf),
-					"iwpriv %s setPower 2", intf);
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"iwpriv setPower 2 failed");
-				return 0;
-			}
+			ps = 2;
 		} else if (strcasecmp(val, "on") == 0) {
-			snprintf(buf, sizeof(buf),
-					"iwpriv %s setPower 1", intf);
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"iwpriv setPower 1 failed");
-				return 0;
-			}
+			ps = 1;
 		} else {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Unsupported Powersave value '%s'",
 					val);
 			return -1;
 		}
+		if (set_power_save_wcn(dut, intf, ps) < 0)
+			return 0;
 	}
 
 	val = get_param(cmd, "MU_EDCA");
@@ -11785,29 +11769,19 @@ static int cmd_sta_set_power_save_he(const char *intf, struct sigma_dut *dut,
 
 	val = get_param(cmd, "powersave");
 	if (val) {
-		char buf[60];
+		int ps;
 
 		if (strcasecmp(val, "off") == 0) {
-			snprintf(buf, sizeof(buf), "iwpriv %s setPower 2",
-				 intf);
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"iwpriv setPower 2 failed");
-				return 0;
-			}
+			ps = 2;
 		} else if (strcasecmp(val, "on") == 0) {
-			snprintf(buf, sizeof(buf), "iwpriv %s setPower 1",
-				 intf);
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"iwpriv setPower 1 failed");
-				return 0;
-			}
+			ps = 1;
 		} else {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Unsupported power save config");
 			return -1;
 		}
+		if (set_power_save_wcn(dut, intf, ps) < 0)
+			return 0;
 		return 1;
 	}
 
