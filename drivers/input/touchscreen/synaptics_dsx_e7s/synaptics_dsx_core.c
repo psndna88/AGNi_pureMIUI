@@ -1000,6 +1000,8 @@ static int synaptics_rmi4_proc_init(struct kernfs_node *sysfs_node_parent)
 		sprintf(double_tap_sysfs_node, "/sys%s/%s", path, "wake_gesture");
 	proc_symlink_tmp = proc_symlink("wake_node",
 			proc_entry_tp, double_tap_sysfs_node);
+	proc_symlink_tmp = proc_symlink("double_tap_enable",
+			proc_entry_tp, double_tap_sysfs_node);
 	if (proc_symlink_tmp == NULL) {
 		ret = -ENOMEM;
 		pr_err("%s: Couldn't create wake_node symlink\n", __func__);

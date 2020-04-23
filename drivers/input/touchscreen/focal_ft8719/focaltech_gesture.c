@@ -243,6 +243,7 @@ static ssize_t fts_gesture_write(struct file *file, const char __user *buf,
 	.read = seq_read,
 	.llseek = seq_lseek,
 };
+#define FTS_GESTURE_NAME "fts_wake_gesture"
 
 /*****************************************************************************
 *   Name: fts_create_gesture_sysfs
@@ -600,6 +601,7 @@ int fts_gesture_init(struct fts_ts_data *ts_data)
 
     fts_create_gesture_sysfs(client);
     proc_create("wake_node", 0666, NULL, &fts_gesture_fops);
+    proc_create(FTS_GESTURE_NAME, 0666, NULL, &fts_gesture_fops);
     fts_gesture_data.mode = ENABLE;
     fts_gesture_data.active = DISABLE;
 

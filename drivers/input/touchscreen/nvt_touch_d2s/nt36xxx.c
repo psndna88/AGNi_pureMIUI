@@ -1402,7 +1402,6 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 
 	if(proc_create("wake_node", 0666, NULL, &nvt_gesture_fops) == NULL)
 		NVT_ERR("error while create gesture");
-
 	if(proc_create(NVT_GESTURE_NAME, 0666, NULL, &nvt_gesture_fops) == NULL)
 		NVT_ERR("error while create gesture");
 
