@@ -138,7 +138,7 @@
  * Glove mode enable
  * 1: enable, 0:disable(default)
  */
-#define FTS_GLOVE_EN                            0
+#define FTS_GLOVE_EN                            1
 /*
  * cover enable
  * 1: enable, 0:disable(default)
