@@ -6996,7 +6996,7 @@ unsigned long sysctl_reclaim_pages;
  * /proc/sys/vm/reclaim_pages
  */
 int sysctl_reclaim_pages_handler(struct ctl_table *table, int write,
-			void __user *buffer, size_t *length, loff_t *ppos)
+			void *buffer, size_t *length, loff_t *ppos)
 {
 	int ret;
 	unsigned long nr_reclaimed;

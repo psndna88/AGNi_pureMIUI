@@ -41,20 +41,15 @@ static unsigned long max_autoclose_max =
 	? UINT_MAX : MAX_SCHEDULE_TIMEOUT / HZ;
 
 static int proc_sctp_do_hmac_alg(struct ctl_table *ctl, int write,
-				void __user *buffer, size_t *lenp,
-				loff_t *ppos);
+				 void *buffer, size_t *lenp, loff_t *ppos);
 static int proc_sctp_do_rto_min(struct ctl_table *ctl, int write,
-				void __user *buffer, size_t *lenp,
-				loff_t *ppos);
-static int proc_sctp_do_rto_max(struct ctl_table *ctl, int write,
-				void __user *buffer, size_t *lenp,
-				loff_t *ppos);
+				void *buffer, size_t *lenp, loff_t *ppos);
+static int proc_sctp_do_rto_max(struct ctl_table *ctl, int write, void *buffer,
+				size_t *lenp, loff_t *ppos);
 static int proc_sctp_do_alpha_beta(struct ctl_table *ctl, int write,
-				   void __user *buffer, size_t *lenp,
-				   loff_t *ppos);
+				   void *buffer, size_t *lenp, loff_t *ppos);
 static int proc_sctp_do_auth(struct ctl_table *ctl, int write,
-			     void __user *buffer, size_t *lenp,
-			     loff_t *ppos);
+			     void *buffer, size_t *lenp, loff_t *ppos);
 
 static struct ctl_table sctp_table[] = {
 	{
@@ -323,8 +318,7 @@ static struct ctl_table sctp_net_table[] = {
 };
 
 static int proc_sctp_do_hmac_alg(struct ctl_table *ctl, int write,
-				void __user *buffer, size_t *lenp,
-				loff_t *ppos)
+				 void *buffer, size_t *lenp, loff_t *ppos)
 {
 	struct net *net = container_of(ctl->data, struct net,
 				       sctp.sctp_hmac_alg);
@@ -370,8 +364,7 @@ static int proc_sctp_do_hmac_alg(struct ctl_table *ctl, int write,
 }
 
 static int proc_sctp_do_rto_min(struct ctl_table *ctl, int write,
-				void __user *buffer, size_t *lenp,
-				loff_t *ppos)
+				void *buffer, size_t *lenp, loff_t *ppos)
 {
 	struct net *net = container_of(ctl->data, struct net, sctp.rto_min);
 	unsigned int min = *(unsigned int *) ctl->extra1;
@@ -399,8 +392,7 @@ static int proc_sctp_do_rto_min(struct ctl_table *ctl, int write,
 }
 
 static int proc_sctp_do_rto_max(struct ctl_table *ctl, int write,
-				void __user *buffer, size_t *lenp,
-				loff_t *ppos)
+				void *buffer, size_t *lenp, loff_t *ppos)
 {
 	struct net *net = container_of(ctl->data, struct net, sctp.rto_max);
 	unsigned int min = *(unsigned int *) ctl->extra1;
@@ -428,8 +420,7 @@ static int proc_sctp_do_rto_max(struct ctl_table *ctl, int write,
 }
 
 static int proc_sctp_do_alpha_beta(struct ctl_table *ctl, int write,
-				   void __user *buffer, size_t *lenp,
-				   loff_t *ppos)
+				   void *buffer, size_t *lenp, loff_t *ppos)
 {
 	if (write)
 		pr_warn_once("Changing rto_alpha or rto_beta may lead to "
@@ -439,8 +430,7 @@ static int proc_sctp_do_alpha_beta(struct ctl_table *ctl, int write,
 }
 
 static int proc_sctp_do_auth(struct ctl_table *ctl, int write,
-			     void __user *buffer, size_t *lenp,
-			     loff_t *ppos)
+			     void *buffer, size_t *lenp, loff_t *ppos)
 {
 	struct net *net = container_of(ctl->data, struct net, sctp.auth_enable);
 	struct ctl_table tbl;
