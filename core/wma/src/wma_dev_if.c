@@ -1553,6 +1553,24 @@ QDF_STATUS wma_peer_unmap_conf_cb(uint8_t vdev_id,
 	return qdf_status;
 }
 
+static bool wma_objmgr_peer_exist(tp_wma_handle wma, uint8_t vdev_id,
+				  uint8_t *peer_addr, uint8_t *peer_vdev_id)
+{
+	struct wlan_objmgr_peer *peer;
+
+	peer = wlan_objmgr_get_peer_by_mac(wma->psoc, peer_addr,
+					   WLAN_LEGACY_WMA_ID);
+	if (!peer)
+		return false;
+
+	if (peer_vdev_id)
+		*peer_vdev_id = wlan_vdev_get_id(wlan_peer_get_vdev(peer));
+
+	wlan_objmgr_peer_release_ref(peer, WLAN_LEGACY_WMA_ID);
+
+	return true;
+}
+
 /**
  * wma_remove_peer() - remove peer information from host driver and fw
  * @wma: wma handle
@@ -1596,6 +1614,13 @@ QDF_STATUS wma_remove_peer(tp_wma_handle wma, uint8_t *bssid,
 
 	if (!peer) {
 		WMA_LOGE("%s: PEER is NULL for vdev_id: %d", __func__, vdev_id);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (!wma_objmgr_peer_exist(wma, vdev_id, peer_addr, NULL)) {
+		wma_err("peer doesn't exist peer_addr %pM vdevid %d peer_count %d",
+			 peer_addr, vdev_id,
+			 wma->interfaces[vdev_id].peer_count);
 		return QDF_STATUS_E_INVAL;
 	}
 	peer_unmap_conf_support_enabled =
@@ -3355,11 +3380,13 @@ int wma_peer_delete_handler(void *handle, uint8_t *cmd_param_info,
 	return status;
 }
 
-static void wma_trigger_recovery_assert_on_fw_timeout(uint16_t wma_msg)
+static
+void wma_trigger_recovery_assert_on_fw_timeout(uint16_t wma_msg,
+					       enum qdf_hang_reason reason)
 {
 	WMA_LOGE("%s timed out, triggering recovery",
 		 mac_trace_get_wma_msg_string(wma_msg));
-	cds_trigger_recovery(QDF_REASON_UNSPECIFIED);
+	qdf_trigger_self_recovery(NULL, reason);
 }
 
 static inline bool wma_crash_on_fw_timeout(bool crash_enabled)
@@ -3419,7 +3446,8 @@ void wma_hold_req_timer(void *data)
 			 params->staMac, params->status);
 		if (wma_crash_on_fw_timeout(wma->fw_timeout_crash))
 			wma_trigger_recovery_assert_on_fw_timeout(
-				WMA_ADD_STA_REQ);
+				WMA_ADD_STA_REQ,
+				QDF_AP_STA_CONNECT_REQ_TIMEOUT);
 		wma_send_msg_high_priority(wma, WMA_ADD_STA_RSP,
 					   (void *)params, 0);
 	} else if (tgt_req->msg_type == WMA_ADD_BSS_REQ) {
@@ -3431,7 +3459,8 @@ void wma_hold_req_timer(void *data)
 			params->selfMacAddr, params->status);
 		if (wma_crash_on_fw_timeout(wma->fw_timeout_crash))
 			wma_trigger_recovery_assert_on_fw_timeout(
-				WMA_ADD_BSS_REQ);
+				WMA_ADD_BSS_REQ,
+				QDF_STA_AP_CONNECT_REQ_TIMEOUT);
 		wma_send_msg_high_priority(wma, WMA_ADD_BSS_RSP,
 					   (void *)params, 0);
 	} else if ((tgt_req->msg_type == WMA_DELETE_STA_REQ) &&
@@ -3445,7 +3474,8 @@ void wma_hold_req_timer(void *data)
 
 		if (wma_crash_on_fw_timeout(wma->fw_timeout_crash))
 			wma_trigger_recovery_assert_on_fw_timeout(
-				WMA_DELETE_STA_REQ);
+				WMA_DELETE_STA_REQ,
+				QDF_PEER_DELETION_TIMEDOUT);
 		wma_send_msg_high_priority(wma, WMA_DELETE_STA_RSP,
 					   (void *)params, 0);
 	} else if ((tgt_req->msg_type == WMA_DELETE_STA_REQ) &&
@@ -3459,7 +3489,8 @@ void wma_hold_req_timer(void *data)
 
 		if (wma_crash_on_fw_timeout(wma->fw_timeout_crash))
 			wma_trigger_recovery_assert_on_fw_timeout(
-				WMA_DELETE_STA_REQ);
+				WMA_DELETE_STA_REQ,
+				QDF_PEER_DELETION_TIMEDOUT);
 		wma_handle_vdev_detach(wma, del_sta->self_sta_param,
 				       del_sta->generate_rsp);
 		qdf_mem_free(tgt_req->user_data);
@@ -3472,7 +3503,8 @@ void wma_hold_req_timer(void *data)
 		WMA_LOGA(FL("wma delete peer for set link timed out"));
 		if (wma_crash_on_fw_timeout(wma->fw_timeout_crash))
 			wma_trigger_recovery_assert_on_fw_timeout(
-				WMA_DELETE_STA_REQ);
+				WMA_DELETE_STA_REQ,
+				QDF_PEER_DELETION_TIMEDOUT);
 		wma_send_msg(wma, WMA_SET_LINK_STATE_RSP, params, 0);
 	} else if ((tgt_req->msg_type == WMA_DELETE_STA_REQ) &&
 			(tgt_req->type == WMA_DELETE_PEER_RSP)) {
@@ -3484,8 +3516,8 @@ void wma_hold_req_timer(void *data)
 
 		if (wma_crash_on_fw_timeout(wma->fw_timeout_crash))
 			wma_trigger_recovery_assert_on_fw_timeout(
-				WMA_DELETE_STA_REQ);
-
+				WMA_DELETE_STA_REQ,
+				QDF_PEER_DELETION_TIMEDOUT);
 		wma_send_del_bss_response(wma, tgt_req, tgt_req->vdev_id);
 	} else if ((tgt_req->msg_type == SIR_HAL_PDEV_SET_HW_MODE) &&
 			(tgt_req->type == WMA_PDEV_SET_HW_MODE_RESP)) {
@@ -3496,7 +3528,8 @@ void wma_hold_req_timer(void *data)
 
 		if (wma_crash_on_fw_timeout(wma->fw_timeout_crash))
 			wma_trigger_recovery_assert_on_fw_timeout(
-						SIR_HAL_PDEV_SET_HW_MODE);
+			  SIR_HAL_PDEV_SET_HW_MODE,
+			  QDF_MAC_HW_MODE_CHANGE_TIMEOUT);
 		if (!params) {
 			WMA_LOGE(FL("Failed to allocate memory for params"));
 			goto timer_destroy;
@@ -3514,7 +3547,8 @@ void wma_hold_req_timer(void *data)
 		WMA_LOGE(FL("set dual mac config timeout"));
 		if (wma_crash_on_fw_timeout(wma->fw_timeout_crash))
 			wma_trigger_recovery_assert_on_fw_timeout(
-						SIR_HAL_PDEV_DUAL_MAC_CFG_REQ);
+				SIR_HAL_PDEV_DUAL_MAC_CFG_REQ,
+				QDF_MAC_HW_MODE_CONFIG_TIMEOUT);
 		if (!resp) {
 			WMA_LOGE(FL("Failed to allocate memory for resp"));
 			goto timer_destroy;
@@ -3673,7 +3707,8 @@ void wma_vdev_resp_timer(void *data)
 		 */
 		if (wma_crash_on_fw_timeout(wma->fw_timeout_crash) == true)
 			wma_trigger_recovery_assert_on_fw_timeout(
-				WMA_CHNL_SWITCH_REQ);
+				WMA_CHNL_SWITCH_REQ,
+				QDF_REASON_CHANNEL_SWITCH_TIMEOUT);
 		wma_send_msg_high_priority(wma, WMA_SWITCH_CHANNEL_RSP,
 					   (void *)params, 0);
 		if (wma->interfaces[tgt_req->vdev_id].is_channel_switch) {
@@ -3708,7 +3743,8 @@ void wma_vdev_resp_timer(void *data)
 		 */
 		if (wma_crash_on_fw_timeout(wma->fw_timeout_crash))
 			wma_trigger_recovery_assert_on_fw_timeout(
-				WMA_DELETE_BSS_REQ);
+				WMA_DELETE_BSS_REQ,
+				QDF_VDEV_DELETE_RESPONSE_TIMED_OUT);
 
 		status = wma_remove_bss_peer(wma, pdev, tgt_req->vdev_id,
 					     params);
@@ -3783,7 +3819,8 @@ void wma_vdev_resp_timer(void *data)
 
 		if (wma_crash_on_fw_timeout(wma->fw_timeout_crash) == true) {
 			wma_trigger_recovery_assert_on_fw_timeout(
-				WMA_DEL_STA_SELF_REQ);
+				WMA_DEL_STA_SELF_REQ,
+				QDF_VDEV_DELETE_RESPONSE_TIMED_OUT);
 		} else if (!cds_is_driver_unloading() &&
 			   (cds_is_fw_down() || cds_is_driver_recovering())) {
 			qdf_mem_free(iface->del_staself_req);
@@ -3805,7 +3842,8 @@ void wma_vdev_resp_timer(void *data)
 			 tgt_req->vdev_id);
 		if (wma_crash_on_fw_timeout(wma->fw_timeout_crash) == true)
 			wma_trigger_recovery_assert_on_fw_timeout(
-				WMA_ADD_BSS_REQ);
+				WMA_ADD_BSS_REQ,
+				QDF_STA_AP_CONNECT_REQ_TIMEOUT);
 		if (wma_send_vdev_stop_to_fw(wma, tgt_req->vdev_id))
 			WMA_LOGE("%s: Failed to send vdev stop to fw",
 				 __func__);

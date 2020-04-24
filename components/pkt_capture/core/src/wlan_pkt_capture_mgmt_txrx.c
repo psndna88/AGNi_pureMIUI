@@ -60,7 +60,7 @@ pkt_capture_mgmt_status_map(uint8_t status)
  * @nbuf_list: netbuf list
  * @vdev_id: vdev id for which packet is captured
  * @tid:  tid number
- * @status: Tx status
+ * @chan_num: Channel number
  * @pkt_format: Frame format
  * @tx_retry_cnt: tx retry count
  *
@@ -68,7 +68,7 @@ pkt_capture_mgmt_status_map(uint8_t status)
  */
 static void
 pkt_capture_mgmtpkt_cb(void *context, void *ppdev, void *nbuf_list,
-		       uint8_t vdev_id, uint8_t tid, uint8_t status,
+		       uint8_t vdev_id, uint8_t tid, uint8_t chan_num,
 		       bool pkt_format, uint8_t *bssid, uint8_t tx_retry_cnt)
 {
 	struct pkt_capture_vdev_priv *vdev_priv;
@@ -102,11 +102,7 @@ pkt_capture_mgmtpkt_cb(void *context, void *ppdev, void *nbuf_list,
 	while (msdu) {
 		next_buf = qdf_nbuf_queue_next(msdu);
 		qdf_nbuf_set_next(msdu, NULL);   /* Add NULL terminator */
-		if (QDF_STATUS_SUCCESS !=
-		    cb_ctx->mon_cb(cb_ctx->mon_ctx, msdu)) {
-			pkt_capture_err("Frame Rx to HDD failed");
-			qdf_nbuf_free(msdu);
-		}
+		pkt_capture_mon(cb_ctx, msdu, vdev, chan_num);
 		msdu = next_buf;
 	}
 
@@ -164,7 +160,7 @@ pkt_capture_mgmtpkt_process(struct wlan_objmgr_psoc *psoc,
 	pkt->monpkt = nbuf;
 	pkt->vdev_id = WLAN_INVALID_VDEV_ID;
 	pkt->tid = WLAN_INVALID_TID;
-	pkt->status = status;
+	pkt->status = txrx_status->chan_num;
 	pkt->pkt_format = PKTCAPTURE_PKT_FORMAT_80211;
 	pkt_capture_indicate_monpkt(vdev, pkt);
 
@@ -260,14 +256,11 @@ pkt_capture_process_mgmt_tx_data(struct wlan_objmgr_pdev *pdev,
 	txrx_status.chan_freq = params->chan_freq;
 	/* params->rate is in Kbps, convert into Mbps */
 	txrx_status.rate = (params->rate_kbps / 1000);
-	if (params->rssi == INVALID_RSSI_FOR_TX)
-		/* RSSI -128 is invalid rssi for TX, make it 0 here,
-		 * will be normalized during radiotap updation
-		 */
-		txrx_status.ant_signal_db = 0;
-	else
-		txrx_status.ant_signal_db = params->rssi;
 
+	/* RSSI is filled with TPC which will be normalized
+	 * during radiotap updation, so add 96 here
+	 */
+	txrx_status.ant_signal_db = params->rssi - NORMALIZED_TO_NOISE_FLOOR;
 	txrx_status.rssi_comb = txrx_status.ant_signal_db;
 	txrx_status.nr_ant = 1;
 	txrx_status.rtap_flags |=
