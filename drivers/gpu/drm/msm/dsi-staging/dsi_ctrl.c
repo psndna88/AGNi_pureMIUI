@@ -2580,9 +2580,6 @@ static int _dsi_ctrl_setup_isr(struct dsi_ctrl *dsi_ctrl)
 		} else {
 			dsi_ctrl->irq_info.irq_num = irq_num;
 			disable_irq_nosync(irq_num);
-
-			pr_info("[DSI_%d] IRQ %d registered\n",
-					dsi_ctrl->cell_index, irq_num);
 		}
 	}
 	return rc;
