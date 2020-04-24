@@ -231,9 +231,60 @@ static int android_keystore_get(char cmd, const char *key, unsigned char *val)
 #endif /* ANDROID */
 
 
+#ifdef NL80211_SUPPORT
+static int nl80211_sta_set_power_save(struct sigma_dut *dut,
+				      const char *intf,
+				      enum nl80211_ps_state ps_state)
+{
+	struct nl_msg *msg;
+	int ifindex, ret;
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s not found",
+				__func__, intf);
+		return -1;
+	}
+
+	msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+			      NL80211_CMD_SET_POWER_SAVE);
+	if (!msg) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in creating nl80211 msg", __func__);
+		return -1;
+	}
+
+	if (nla_put_u32(msg, NL80211_ATTR_PS_STATE, ps_state)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in populating nl80211 msg", __func__);
+		nlmsg_free(msg);
+		return -1;
+	}
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in send_and_recv_msgs, ret=%d (%s)",
+				__func__, ret, strerror(-ret));
+		return -1;
+	}
+
+	return 0;
+}
+#endif /* NL80211_SUPPORT */
+
+
 static int set_power_save_wcn(struct sigma_dut *dut, const char *intf, int ps)
 {
 	char buf[100];
+#ifdef NL80211_SUPPORT
+	enum nl80211_ps_state ps_state;
+
+	ps_state = ps == 1 ? NL80211_PS_ENABLED : NL80211_PS_DISABLED;
+	if (nl80211_sta_set_power_save(dut, intf, ps_state) == 0)
+		return 0;
+#endif /* NL80211_SUPPORT */
 
 	snprintf(buf, sizeof(buf), "iwpriv %s setPower %d", intf, ps);
 	if (system(buf) != 0) {
