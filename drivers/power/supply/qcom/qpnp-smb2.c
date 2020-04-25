@@ -30,38 +30,9 @@
 #include "storm-watch.h"
 #include <linux/pmic-voter.h>
 
-#ifdef THERMAL_CONFIG_FB
-#include <linux/notifier.h>
-#include <linux/fb.h>
-
-union power_supply_propval lct_therm_lvl_reserved;
-union power_supply_propval lct_therm_level;
-#if defined(CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A) || defined(CONFIG_KERNEL_CUSTOM_E7S)
-union power_supply_propval lct_therm_call_level = {4,};
-#elif defined(CONFIG_KERNEL_CUSTOM_E7T)
-union power_supply_propval lct_therm_call_level = {5,};
-#else
-union power_supply_propval lct_therm_call_level = {3,};
-#endif
-#if defined(CONFIG_KERNEL_CUSTOM_E7T) || defined(CONFIG_KERNEL_CUSTOM_E7S)
-union power_supply_propval lct_therm_globe_level = {1,};
-union power_supply_propval lct_therm_india_level = {2,};
-#else
-union power_supply_propval lct_therm_globe_level = {2,};
-union power_supply_propval lct_therm_india_level = {1,};
-#endif
-
-bool lct_backlight_off;
-int LctIsInCall = 0;
-#if defined(CONFIG_KERNEL_CUSTOM_D2S)
-int LctIsInVideo = 0; 
-#endif
-int LctThermal =0;
 extern int hwc_check_india;
 extern int hwc_check_global;
 extern bool is_poweroff_charge;
-#endif
-
 #define SMB2_DEFAULT_WPWR_UW	8000000
 
 #ifdef CONFIG_CHARGER_RUNIN
@@ -2417,178 +2388,6 @@ static void smb2_create_debugfs(struct smb2 *chip)
 
 #endif
 
-#ifdef THERMAL_CONFIG_FB
-#if defined(CONFIG_KERNEL_CUSTOM_D2S)
-static ssize_t lct_thermal_video_status_show(struct device *dev,
-					struct device_attribute *attr, char *buf)
-{
-	return sprintf(buf, "%d\n", LctIsInVideo);
-}
-static ssize_t lct_thermal_video_status_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
-{
-	int retval;
-	unsigned int input;
-
-	if (sscanf(buf, "%u", &input) != 1)
-		retval = -EINVAL;
-	else
-	        LctIsInVideo = input;
-
-	pr_err("LctIsInVideo = %d\n", LctIsInVideo);
-
-	return retval;
-}
-#endif
-
-static ssize_t lct_thermal_call_status_show(struct device *dev,
-					struct device_attribute *attr, char *buf)
-{
-	return sprintf(buf, "%d\n", LctIsInCall);
-}
-static ssize_t lct_thermal_call_status_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
-{
-	int retval;
-	unsigned int input;
-
-	if (sscanf(buf, "%u", &input) != 1)
-		retval = -EINVAL;
-	else
-	        LctIsInCall = input;
-
-	pr_err("IsInCall = %d\n", LctIsInCall);
-
-	return retval;
-}
-static struct device_attribute attrs2[] = {
-	__ATTR(thermalcall, S_IRUGO | S_IWUSR,
-			lct_thermal_call_status_show, lct_thermal_call_status_store),
-#if defined(CONFIG_KERNEL_CUSTOM_D2S)
-	__ATTR(thermalvideo, S_IRUGO | S_IWUSR,
-			lct_thermal_video_status_show, lct_thermal_video_status_store),
-#endif
-};
-	
-static void thermal_fb_notifier_resume_work(struct work_struct *work)
-{
-	struct smb_charger *chg = container_of(work, struct smb_charger, fb_notify_work);
-	
-	LctThermal = 1;
-#if defined(CONFIG_KERNEL_CUSTOM_E7S)
-	if ((lct_backlight_off) && (LctIsInCall == 0) /*&& (hwc_check_india == 1)*/)
-	{
-		if (hwc_check_india == 1) {				
-			if (lct_therm_lvl_reserved.intval >= 2)
-				smblib_set_prop_system_temp_level(chg,&lct_therm_india_level);
-			else
-				smblib_set_prop_system_temp_level(chg,&lct_therm_lvl_reserved);
-		}
-		else {
-			if (lct_therm_lvl_reserved.intval >= 1)
-				smblib_set_prop_system_temp_level(chg,&lct_therm_globe_level);
-			else
-				smblib_set_prop_system_temp_level(chg,&lct_therm_lvl_reserved);
-		}
-	}
-	else if (LctIsInCall == 1)
-		smblib_set_prop_system_temp_level(chg,&lct_therm_call_level);
-	else
-		smblib_set_prop_system_temp_level(chg,&lct_therm_lvl_reserved);
-	LctThermal = 0;
-#elif defined(CONFIG_KERNEL_CUSTOM_E7T)
-	if (LctIsInCall == 1)
-		smblib_set_prop_system_temp_level(chg,&lct_therm_call_level);
-	else
-		smblib_set_prop_system_temp_level(chg,&lct_therm_lvl_reserved);
-	LctThermal = 0;
-#elif defined(CONFIG_KERNEL_CUSTOM_D2S)
-	if ((lct_backlight_off) && (LctIsInCall == 0) )
-	{
-		if (lct_therm_lvl_reserved.intval >= 2)
-			smblib_set_prop_system_temp_level(chg,&lct_therm_globe_level);
-		else
-			smblib_set_prop_system_temp_level(chg,&lct_therm_level);
-	}
-	else if (LctIsInCall == 1)
-		smblib_set_prop_system_temp_level(chg,&lct_therm_call_level);
-	else
-		smblib_set_prop_system_temp_level(chg,&lct_therm_lvl_reserved);
-	LctThermal = 0;
-#elif  defined(CONFIG_KERNEL_CUSTOM_F7A)
-		if ((lct_backlight_off) && (LctIsInCall == 0) )
-		{
-			if (lct_therm_lvl_reserved.intval >= 2)
-			smblib_set_prop_system_temp_level(chg,&lct_therm_globe_level);
-		else
-			smblib_set_prop_system_temp_level(chg,&lct_therm_lvl_reserved);
-		}
-		else if (LctIsInCall == 1)
-			smblib_set_prop_system_temp_level(chg,&lct_therm_call_level);
-		else
-			smblib_set_prop_system_temp_level(chg,&lct_therm_lvl_reserved);
-		LctThermal = 0;
-
-#else
-	if((lct_backlight_off) && (LctIsInCall == 0) && (hwc_check_india == 0))
-		smblib_set_prop_system_temp_level(chg,&lct_therm_level);
-	else if ((lct_backlight_off) && (LctIsInCall == 0) && (hwc_check_india == 1))
-	{
-		if (lct_therm_lvl_reserved.intval >= 1)
-			smblib_set_prop_system_temp_level(chg,&lct_therm_india_level);
-		else
-			smblib_set_prop_system_temp_level(chg,&lct_therm_level);
-	}
-	else if (LctIsInCall == 1)
-		smblib_set_prop_system_temp_level(chg,&lct_therm_call_level);
-	else
-		smblib_set_prop_system_temp_level(chg,&lct_therm_lvl_reserved);
-	LctThermal = 0;
-#endif
-}
-
-/* frame buffer notifier block control the suspend/resume procedure */
-static int thermal_notifier_callback(struct notifier_block *noti, unsigned long event, void *data)
-{
-	struct fb_event *ev_data = data;
-	struct smb_charger *chg = container_of(noti, struct smb_charger, notifier);
-	int *blank;
-	if (ev_data && ev_data->data && chg) {
-		blank = ev_data->data;
-		if (event == FB_EARLY_EVENT_BLANK && *blank == FB_BLANK_UNBLANK) {
-			
-			lct_backlight_off = false;
-			schedule_work(&chg->fb_notify_work);
-		}
-		else if (event == FB_EVENT_BLANK && *blank == FB_BLANK_POWERDOWN) {
-			lct_backlight_off = true;
-			schedule_work(&chg->fb_notify_work);
-		}
-	}
-
-	return 0;
-}
-
-static int lct_register_powermanger(struct smb_charger *chg)
-{
-#if defined(CONFIG_FB)
-	chg->notifier.notifier_call = thermal_notifier_callback;
-	fb_register_client(&chg->notifier);
-#endif	
-
-	return 0;
-}
-
-static int lct_unregister_powermanger(struct smb_charger *chg)
-{
-#if defined(CONFIG_FB)
-	fb_unregister_client(&chg->notifier);		
-#endif
-
-	return 0;
-}
-#endif
-
 static int smb2_probe(struct platform_device *pdev)
 {
 	struct smb2 *chip;
@@ -2708,17 +2507,6 @@ static int smb2_probe(struct platform_device *pdev)
 		goto cleanup;
 	}
 
-#ifdef THERMAL_CONFIG_FB
-	pr_info("enter sysfs create file thermal\n");
-	for (attr_count2 = 0; attr_count2 < ARRAY_SIZE(attrs2); attr_count2++) {
-		    rc = sysfs_create_file(&chg->dev->kobj,
-						&attrs2[attr_count2].attr);
-			if (rc < 0) {
-		        sysfs_remove_file(&chg->dev->kobj,
-						&attrs2[attr_count2].attr);
-			} 
-		}
-#endif
 	rc = smb2_determine_initial_status(chip);
 	if (rc < 0) {
 		pr_err("Couldn't determine initial status rc=%d\n",
@@ -2770,15 +2558,6 @@ static int smb2_probe(struct platform_device *pdev)
 
 	device_init_wakeup(chg->dev, true);
 
-#ifdef THERMAL_CONFIG_FB
- 	lct_therm_lvl_reserved.intval= 0;
- 	lct_therm_level.intval= 0;
-	lct_backlight_off = false;
-	INIT_WORK(&chg->fb_notify_work, thermal_fb_notifier_resume_work);
-	/* register suspend and resume fucntion*/
-	lct_register_powermanger(chg);
-#endif
-
 #ifdef XIAOMI_CHARGER_RUNIN
 	chg->charging_enabled = true;
 #endif
@@ -2815,9 +2594,6 @@ static int smb2_remove(struct platform_device *pdev)
 {
 	struct smb2 *chip = platform_get_drvdata(pdev);
 	struct smb_charger *chg = &chip->chg;
-#ifdef THERMAL_CONFIG_FB
-	unsigned char attr_count2;
-#endif
 	
 #ifdef CONFIG_CHARGER_RUNIN
 	unsigned char attr_count;
@@ -2825,13 +2601,6 @@ static int smb2_remove(struct platform_device *pdev)
 			    sysfs_remove_file(&chg->dev->kobj,
 							&attrs[attr_count].attr);
 			}
-#endif
-#ifdef THERMAL_CONFIG_FB
-		for (attr_count2 = 0; attr_count2 < ARRAY_SIZE(attrs2); attr_count2++) {
-			  sysfs_remove_file(&chg->dev->kobj,
-							&attrs2[attr_count2].attr);
-			}
-	lct_unregister_powermanger(chg);
 #endif
 
 	power_supply_unregister(chg->batt_psy);

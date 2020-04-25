@@ -307,32 +307,12 @@ reschedule:
 	return (STEP_CHG_HYSTERISIS_DELAY_US - elapsed_us + 1000);
 }
 
-#if defined(CONFIG_KERNEL_CUSTOM_D2S)
-extern union power_supply_propval lct_therm_lvl_reserved;
-extern int LctIsInVideo;
-extern int hwc_check_india;
-union power_supply_propval lct_therm_video_level = {6,};
-#endif
-
 static int handle_jeita(struct step_chg_info *chip)
 {
 	union power_supply_propval pval = {0, };
 	int rc = 0, fcc_ua = 0, fv_uv = 0;
 	u64 elapsed_us;
 	int temp = 1;
-
-#if defined(CONFIG_KERNEL_CUSTOM_D2S)
-	if (hwc_check_india) {
-		pr_err("lct video LctIsInVideo=%d, lct_therm_lvl_reserved=%d\n",
-					LctIsInVideo, lct_therm_lvl_reserved.intval);
-	    if (LctIsInVideo== 1)
-			rc = power_supply_set_property(chip->batt_psy,
-			POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL, &lct_therm_video_level);
-		else
-			rc = power_supply_set_property(chip->batt_psy,
-			POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL, &lct_therm_lvl_reserved);
-	}
-#endif
 
 	rc = power_supply_get_property(chip->batt_psy,
 		POWER_SUPPLY_PROP_SW_JEITA_ENABLED, &pval);

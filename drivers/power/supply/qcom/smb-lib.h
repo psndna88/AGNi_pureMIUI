@@ -355,10 +355,6 @@ struct smb_charger {
 	bool			use_extcon;
 	bool			otg_present;
 	bool			fcc_stepper_mode;
-#ifdef THERMAL_CONFIG_FB
-	struct notifier_block notifier;
-	struct work_struct fb_notify_work;
-#endif
 
 	/* workaround flag */
 	u32			wa_flags;
