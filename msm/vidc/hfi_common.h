@@ -8,7 +8,6 @@
 
 #include <linux/clk.h>
 #include <linux/regulator/consumer.h>
-#include <linux/pm_qos.h>
 #include <linux/clk-provider.h>
 #include <linux/iommu.h>
 #include <linux/qcom_scm.h>
@@ -279,7 +278,6 @@ struct venus_hfi_device {
 	enum hfi_packetization_type packetization_type;
 	struct msm_vidc_cb_info *response_pkt;
 	u8 *raw_packet;
-	struct pm_qos_request qos;
 	unsigned int skip_pc_count;
 	struct venus_hfi_vpu_ops *vpu_ops;
 };
