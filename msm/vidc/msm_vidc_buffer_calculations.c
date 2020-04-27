@@ -1523,7 +1523,7 @@ static inline u32 calculate_enc_scratch1_size(struct msm_vidc_inst *inst,
 	u32 leftline_buf_ctrl_size_FE, line_buf_recon_pix_size;
 	u32 leftline_buf_recon_pix_size, lambda_lut_size, override_buffer_size;
 	u32 col_mv_buf_size, vpp_reg_buffer_size, ir_buffer_size;
-	u32 vpss_line_buf, leftline_buf_meta_recony, h265e_colrcbuf_size;
+	u32 vpss_line_buf, leftline_buf_meta_recony, col_rc_buf_size;
 	u32 h265e_framerc_bufsize, h265e_lcubitcnt_bufsize;
 	u32 h265e_lcubitmap_bufsize, se_stats_bufsize;
 	u32 bse_reg_buffer_size, bse_slice_cmd_buffer_size, slice_info_bufsize;
@@ -1533,6 +1533,8 @@ static inline u32 calculate_enc_scratch1_size(struct msm_vidc_inst *inst,
 	u32 output_mv_bufsize = 0, temp_scratch_mv_bufsize = 0;
 	u32 size, bit_depth, num_LCUMB;
 	u32 vpss_lineBufferSize_1 = 0;
+	u32 width_mb_num = ((width + 15) >> 4);
+	u32 height_mb_num = ((height + 15) >> 4);
 
 	width_lcu_num = ((width)+(lcu_size)-1) / (lcu_size);
 	height_lcu_num = ((height)+(lcu_size)-1) / (lcu_size);
@@ -1598,12 +1600,9 @@ static inline u32 calculate_enc_scratch1_size(struct msm_vidc_inst *inst,
 		BUFFER_ALIGNMENT_SIZE(32)));
 	col_mv_buf_size = ALIGN(col_mv_buf_size, VENUS_DMA_ALIGNMENT)
 		* (num_ref + 1);
-	h265e_colrcbuf_size = (((width_lcu_num + 7) >> 3) *
-		16 * 2 * height_lcu_num);
-	if (num_vpp_pipes > 1)
-		h265e_colrcbuf_size = ALIGN(h265e_colrcbuf_size,
-			VENUS_DMA_ALIGNMENT) * num_vpp_pipes;
-	h265e_colrcbuf_size = ALIGN(h265e_colrcbuf_size,
+	col_rc_buf_size = (((width_mb_num + 7) >> 3) *
+		16 * 2 * height_mb_num);
+	col_rc_buf_size = ALIGN(col_rc_buf_size,
 		VENUS_DMA_ALIGNMENT) * HFI_MAX_COL_FRAME;
 	h265e_framerc_bufsize = (is_h265) ? (256 + 16 *
 		(14 + (((height_coded >> 5) + 7) >> 3))) :
@@ -1651,7 +1650,7 @@ static inline u32 calculate_enc_scratch1_size(struct msm_vidc_inst *inst,
 		vpss_line_buf + col_mv_buf_size + topline_buf_ctrl_size_FE +
 		leftline_buf_ctrl_size_FE + line_buf_recon_pix_size +
 		leftline_buf_recon_pix_size + leftline_buf_meta_recony +
-		linebuf_meta_recon_uv + h265e_colrcbuf_size +
+		linebuf_meta_recon_uv + col_rc_buf_size +
 		h265e_framerc_bufsize + h265e_lcubitcnt_bufsize +
 		h265e_lcubitmap_bufsize + line_buf_sde_size +
 		topline_bufsize_fe_1stg_sao + override_buffer_size +
