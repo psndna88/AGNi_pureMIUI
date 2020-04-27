@@ -8275,6 +8275,10 @@ static void cmd_set_max_he_mcs(struct sigma_dut *dut, const char *intf,
 }
 
 
+#define TWT_REQUEST_CMD     0
+#define TWT_SUGGEST_CMD     1
+#define TWT_DEMAND_CMD      2
+
 static int sta_twt_request(struct sigma_dut *dut, struct sigma_conn *conn,
 			   struct sigma_cmd *cmd)
 {
@@ -8289,7 +8293,7 @@ static int sta_twt_request(struct sigma_dut *dut, struct sigma_conn *conn,
 	int wake_interval_exp = 10, nominal_min_wake_dur = 255,
 		wake_interval_mantissa = 512;
 	int flow_type = 0, twt_trigger = 0, target_wake_time = 0,
-		protection = 0;
+		protection = 0, cmd_type = QCA_WLAN_VENDOR_TWT_SETUP_SUGGEST;
 
 	ifindex = if_nametoindex(intf);
 	if (ifindex == 0) {
@@ -8331,6 +8335,21 @@ static int sta_twt_request(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
+	val = get_param(cmd, "SetupCommand");
+	if (val) {
+		cmd_type = atoi(val);
+		if (cmd_type == TWT_REQUEST_CMD)
+			cmd_type = QCA_WLAN_VENDOR_TWT_SETUP_REQUEST;
+		else if (cmd_type == TWT_SUGGEST_CMD)
+			cmd_type = QCA_WLAN_VENDOR_TWT_SETUP_SUGGEST;
+		else if (cmd_type == TWT_DEMAND_CMD)
+			cmd_type = QCA_WLAN_VENDOR_TWT_SETUP_DEMAND;
+		else
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Default suggest is used for cmd %d",
+					cmd_type);
+	}
+
 	val = get_param(cmd, "TargetWakeTime");
 	if (val)
 		target_wake_time = atoi(val);
@@ -8359,7 +8378,7 @@ static int sta_twt_request(struct sigma_dut *dut, struct sigma_conn *conn,
 	    !(attr1 = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
 	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_INTVL_EXP,
 		       wake_interval_exp) ||
-	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_REQ_TYPE, 1) ||
+	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_REQ_TYPE, cmd_type) ||
 	    (twt_trigger &&
 	     nla_put_flag(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_TRIGGER)) ||
 	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_FLOW_TYPE,
