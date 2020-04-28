@@ -201,8 +201,10 @@ static void cam_context_sync_callback(int32_t sync_obj, int status, void *data)
 		 * in a critical section which is provided by this
 		 * mutex.
 		 */
-		if (status == CAM_SYNC_STATE_SIGNALED_ERROR) {
-			CAM_DBG(CAM_CTXT, "fence error: %d", sync_obj);
+		if ((status == CAM_SYNC_STATE_SIGNALED_ERROR) ||
+			(status == CAM_SYNC_STATE_SIGNALED_CANCEL)) {
+			CAM_DBG(CAM_CTXT, "fence error: %d on obj %d",
+				status, sync_obj);
 			flush_cmd.req_id = req->request_id;
 			cam_context_flush_req_to_hw(ctx, &flush_cmd);
 		}
@@ -660,7 +662,7 @@ int32_t cam_context_flush_ctx_to_hw(struct cam_context *ctx)
 			if (req->out_map_entries[i].sync_id != -1) {
 				rc = cam_sync_signal(
 					req->out_map_entries[i].sync_id,
-					CAM_SYNC_STATE_SIGNALED_ERROR);
+					CAM_SYNC_STATE_SIGNALED_CANCEL);
 				if (rc == -EALREADY) {
 					CAM_ERR(CAM_CTXT,
 					"Req: %llu already signalled, sync_id:%d",
@@ -732,7 +734,7 @@ int32_t cam_context_flush_ctx_to_hw(struct cam_context *ctx)
 			if (req->out_map_entries[i].sync_id != -1) {
 				rc = cam_sync_signal(
 					req->out_map_entries[i].sync_id,
-					CAM_SYNC_STATE_SIGNALED_ERROR);
+					CAM_SYNC_STATE_SIGNALED_CANCEL);
 				if (rc == -EALREADY) {
 					CAM_ERR(CAM_CTXT,
 						"Req: %llu already signalled ctx: %pK dev_name: %s dev_handle: %d ctx_state: %d",
@@ -845,7 +847,7 @@ int32_t cam_context_flush_req_to_hw(struct cam_context *ctx,
 					req->out_map_entries[i].sync_id;
 				if (sync_id != -1) {
 					rc = cam_sync_signal(sync_id,
-						CAM_SYNC_STATE_SIGNALED_ERROR);
+						CAM_SYNC_STATE_SIGNALED_CANCEL);
 					if (rc == -EALREADY) {
 						CAM_ERR(CAM_CTXT,
 						"Req: %llu already signalled, sync_id:%d",

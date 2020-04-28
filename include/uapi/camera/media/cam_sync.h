@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
 /*
- * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018, 2020 The Linux Foundation. All rights reserved.
  */
 
 #ifndef __UAPI_CAM_SYNC_H__
@@ -35,6 +35,7 @@
 #define CAM_SYNC_STATE_ACTIVE                    1
 #define CAM_SYNC_STATE_SIGNALED_SUCCESS          2
 #define CAM_SYNC_STATE_SIGNALED_ERROR            3
+#define CAM_SYNC_STATE_SIGNALED_CANCEL           4
 
 /**
  * struct cam_sync_ev_header - Event header for sync event notification

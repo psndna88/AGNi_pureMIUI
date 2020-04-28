@@ -2953,7 +2953,7 @@ static int __cam_isp_ctx_flush_req(struct cam_context *ctx,
 					req_isp->fence_map_out[i].sync_id);
 				rc = cam_sync_signal(
 					req_isp->fence_map_out[i].sync_id,
-					CAM_SYNC_STATE_SIGNALED_ERROR);
+					CAM_SYNC_STATE_SIGNALED_CANCEL);
 				if (rc) {
 					tmp = req_isp->fence_map_out[i].sync_id;
 					CAM_ERR_RATE_LIMIT(CAM_ISP,
@@ -4832,7 +4832,7 @@ static int __cam_isp_ctx_stop_dev_in_activated_unlock(
 			if (req_isp->fence_map_out[i].sync_id != -1) {
 				cam_sync_signal(
 					req_isp->fence_map_out[i].sync_id,
-					CAM_SYNC_STATE_SIGNALED_ERROR);
+					CAM_SYNC_STATE_SIGNALED_CANCEL);
 			}
 		list_add_tail(&req->list, &ctx->free_req_list);
 	}
@@ -4848,7 +4848,7 @@ static int __cam_isp_ctx_stop_dev_in_activated_unlock(
 			if (req_isp->fence_map_out[i].sync_id != -1) {
 				cam_sync_signal(
 					req_isp->fence_map_out[i].sync_id,
-					CAM_SYNC_STATE_SIGNALED_ERROR);
+					CAM_SYNC_STATE_SIGNALED_CANCEL);
 			}
 		list_add_tail(&req->list, &ctx->free_req_list);
 	}
@@ -4864,7 +4864,7 @@ static int __cam_isp_ctx_stop_dev_in_activated_unlock(
 			if (req_isp->fence_map_out[i].sync_id != -1) {
 				cam_sync_signal(
 					req_isp->fence_map_out[i].sync_id,
-					CAM_SYNC_STATE_SIGNALED_ERROR);
+					CAM_SYNC_STATE_SIGNALED_CANCEL);
 			}
 		list_add_tail(&req->list, &ctx->free_req_list);
 	}
