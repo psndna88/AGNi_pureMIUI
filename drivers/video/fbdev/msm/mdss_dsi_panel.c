@@ -28,7 +28,9 @@
 #include "mdss_dsi.h"
 #include "mdss_dba_utils.h"
 #include "mdss_debug.h"
+#ifdef CONFIG_FB_MSM_MDSS_LIVEDISPLAY
 #include "mdss_livedisplay.h"
+#endif
 #include <linux/agni_meminfo.h>
 
 #ifdef CONFIG_POWERSUSPEND
@@ -1163,9 +1165,11 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	/* Ensure low persistence mode is set as before */
 	mdss_dsi_panel_apply_display_setting(pdata, pinfo->persist_mode);
 
+#ifdef CONFIG_FB_MSM_MDSS_LIVEDISPLAY
 	if (pdata->event_handler)
 		pdata->event_handler(pdata, MDSS_EVENT_UPDATE_LIVEDISPLAY,
 				(void *)(unsigned long) MODE_UPDATE_ALL);
+#endif
 
 end:
 	pr_debug("%s:-\n", __func__);
@@ -3292,7 +3296,9 @@ static int mdss_panel_parse_dt(struct device_node *np,
 		pinfo->esc_clk_rate_hz = MDSS_DSI_MAX_ESC_CLK_RATE_HZ;
 	pr_debug("%s: esc clk %d\n", __func__, pinfo->esc_clk_rate_hz);
 
+#ifdef CONFIG_FB_MSM_MDSS_LIVEDISPLAY
 	mdss_livedisplay_parse_dt(np, pinfo);
+#endif
 
 	return 0;
 

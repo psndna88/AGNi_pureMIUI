@@ -129,4 +129,15 @@ config FB_MSM_MDSS_KCAL_CTRL
 	  Enable sysfs for post-processing control of mdss-mdp5 display
 	  controllers in MDSS.
 
+config FB_MSM_MDSS_LIVEDISPLAY
+	depends on FB_MSM_MDSS
+	bool "Lineage OS Livedisplay driver"
+	default n
+	---help---
+	   * Bring in a lightweight version of the LiveDisplay driver which
+	     works for this chipset, and remove all the OEM spaghetti code.
+	   * This version of the driver does not include the generic
+	     RGB offset postprocessing, since we're going to do this using
+	     the official QDCM APIs.
+
 endif
