@@ -11259,6 +11259,138 @@ static enum sigma_cmd_result cmd_sta_send_frame_wpa3(struct sigma_dut *dut,
 }
 
 
+static enum sigma_cmd_result
+cmd_sta_send_frame_mscs(struct sigma_dut *dut, struct sigma_conn *conn,
+			const char *intf, struct sigma_cmd *cmd)
+{
+	char buf[128], *pos;
+	const char *val, *classifier_type = "04", *type;
+	int len, rem_len;
+	u8 up_bitmap;
+
+	val = get_param(cmd, "FrameName");
+	type = get_param(cmd, "Request_Type");
+	if (!val || !type || strcasecmp(val, "MSCSReq") != 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: frame name or type not valid", __func__);
+		return INVALID_SEND_STATUS;
+	}
+
+	rem_len = sizeof(buf);
+	pos = buf;
+	if (strcasecmp(type, "add") == 0) {
+		len = snprintf(pos, rem_len, "MSCS add");
+	} else if (strcasecmp(type, "update") == 0) {
+		len = snprintf(pos, rem_len, "MSCS change");
+	} else if (strcasecmp(type, "remove") == 0) {
+		if (wpa_command(intf, "MSCS remove") != 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to send MSCS frame req");
+			return STATUS_SENT_ERROR;
+		}
+		return SUCCESS_SEND_STATUS;
+	} else {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: request type invalid", __func__);
+		return INVALID_SEND_STATUS;
+	}
+
+	if (len < 0 || len >= rem_len)
+		goto fail;
+
+	pos += len;
+	rem_len -= len;
+
+	val = get_param(cmd, "User_Priority_Bitmap");
+	if (!val) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: user priority bitmap empty", __func__);
+		return INVALID_SEND_STATUS;
+	}
+
+	switch (atoi(val)) {
+	case 0:
+		up_bitmap = 0x00;
+		break;
+	case 1:
+		up_bitmap = 0xF0;
+		break;
+	case 2:
+		up_bitmap = 0xF6;
+		break;
+	default:
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Unknown User_Priority_Bitmap value %d",
+				__func__, atoi(val));
+		return INVALID_SEND_STATUS;
+	}
+
+	len = snprintf(pos, rem_len, " up_bitmap=%02x", up_bitmap);
+	if (len < 0 || len >= rem_len)
+		goto fail;
+
+	pos += len;
+	rem_len -= len;
+
+	val = get_param(cmd, "User_Priority_Limit");
+	if (!val) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: invalid user priority limit", __func__);
+		return INVALID_SEND_STATUS;
+	}
+
+	len = snprintf(pos, rem_len, " up_limit=%s", val);
+	if (len < 0 || len >= rem_len)
+		goto fail;
+
+	pos += len;
+	rem_len -= len;
+
+	val = get_param(cmd, "Stream_Timeout");
+	if (!val)
+		val = get_param(cmd, "Stream_Timtout");
+	if (!val) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: invalid stream timeout", __func__);
+		return INVALID_SEND_STATUS;
+	}
+
+	len = snprintf(pos, rem_len, " stream_timeout=%s", val);
+	if (len < 0 || len >= rem_len)
+		goto fail;
+
+	pos += len;
+	rem_len -= len;
+
+	val = get_param(cmd, "TCLAS_Mask");
+	if (!val) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: invalid tclas mask", __func__);
+		return INVALID_SEND_STATUS;
+	}
+
+	len = snprintf(pos, rem_len, " frame_classifier=%s%lx%032x",
+		       classifier_type, strtol(val, NULL, 2), 0);
+	if (len < 0 || len >= rem_len)
+		goto fail;
+
+	if (wpa_command(intf, buf) != 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "ErrorCode,Failed to send MSCS frame req");
+		return STATUS_SENT_ERROR;
+	}
+
+	sigma_dut_print(dut, DUT_MSG_DEBUG,
+			"MSCS frame request sent: %s", buf);
+
+	return SUCCESS_SEND_STATUS;
+fail:
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"Failed to create MSCS frame req");
+	return ERROR_SEND_STATUS;
+}
+
+
 enum sigma_cmd_result cmd_sta_send_frame(struct sigma_dut *dut,
 					 struct sigma_conn *conn,
 					 struct sigma_cmd *cmd)
@@ -11298,6 +11430,8 @@ enum sigma_cmd_result cmd_sta_send_frame(struct sigma_dut *dut,
 	}
 	if (val && strcasecmp(val, "WPA3") == 0)
 		return cmd_sta_send_frame_wpa3(dut, conn, intf, cmd);
+	if (val && strcasecmp(val, "QM") == 0)
+		return cmd_sta_send_frame_mscs(dut, conn, intf, cmd);
 
 	val = get_param(cmd, "TD_DISC");
 	if (val) {
