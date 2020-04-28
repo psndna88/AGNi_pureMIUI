@@ -12,14 +12,17 @@
  */
 
 #include "sdm660-pinctrl.dtsi"
-#include "sdm660-camera-sensor-mtp.dtsi"
-#include "sdm660-novatek-i2c_d2s.dtsi"
+#include "sdm660-camera-sensor-mtp_f7a.dtsi"
+#include "sdm660-novatek-i2c_f7a.dtsi"
+#include "sdm660-synaptics-tcm-i2c_f7a.dtsi"
+#include "sdm660-smb1355-mtp.dtsi"
 / {
 	mtp_batterydata: qcom,battery-data {
 		qcom,batt-id-range-pct = <15>;
-		#include "fg-gen3-batterydata-l8866sun-3000mah.dtsi"
-		#include "fg-gen3-batterydata-l8866cos-3000mah.dtsi"
-		#include "fg-gen3-batterydata-l8866default-3000mah.dtsi"
+		#include "fg-gen3-batterydata-m6100atl-4000mah.dtsi"
+		#include "fg-gen3-batterydata-m6100cos-4000mah.dtsi"
+		#include "fg-gen3-batterydata-m6100sun-4000mah.dtsi"
+		#include "fg-gen3-batterydata-m6100default-4000mah.dtsi"
 	};
 };
 
@@ -102,7 +105,7 @@
 };
 
 &mdss_dsi0 {
-	qcom,dsi-pref-prim-pan = <&dsi_nt36672_tianma_fhd_video>;
+	qcom,dsi-pref-prim-pan = <&dsi_td4320_boe_fhdplus_video>;
 	pinctrl-names = "mdss_default", "mdss_sleep";
 	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
 	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
@@ -120,6 +123,7 @@
 };
 
 &pm660l_wled {
+	qcom,fs-curr-ua = <25000>;
 	qcom,led-strings-list = [00 01];
 };
 
@@ -127,6 +131,7 @@
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 	qcom,mdss-dsi-bl-min-level = <1>;
 	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,mdss-brightness-max-level = <4095>;
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
 };
 
@@ -141,6 +146,14 @@
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 	qcom,mdss-dsi-bl-min-level = <1>;
 	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,mdss-brightness-max-level = <4095>;
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
+};
+
+&dsi_nt36672a_shenchao_fhdplus_video {
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
 };
 
@@ -148,27 +161,7 @@
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 	qcom,mdss-dsi-bl-min-level = <1>;
 	qcom,mdss-dsi-bl-max-level = <4095>;
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
-};
-
-&dsi_td4310_tianma_fhd_video {
-	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
-	qcom,mdss-dsi-bl-min-level = <1>;
-	qcom,mdss-dsi-bl-max-level = <4095>;
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
-};
-
-&dsi_nt36672_huaxing_fhd_video {
-	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
-	qcom,mdss-dsi-bl-min-level = <1>;
-	qcom,mdss-dsi-bl-max-level = <4095>;
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
-};
-
-&dsi_td4310_shenchao_fhd_video {
-	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
-	qcom,mdss-dsi-bl-min-level = <1>;
-	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,mdss-brightness-max-level = <4095>;
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
 };
 
@@ -294,7 +287,12 @@
 };
 
 &soc {
-        
+
+	simtray {
+	compatible = "xiaomi,simtray-status";
+	status-gpio = <&tlmm 90 0x00>;
+	};
+
 	goodix_fp {
 	compatible = "goodix,fingerprint";
 	interrupt-parent = <&tlmm>;
@@ -306,7 +304,7 @@
 	fp-gpio-reset = <&tlmm 20 0x00>;
 	status = "okay";
 	};
-	
+
 	fpc1020 {
 		status = "ok";
 		compatible = "fpc,fpc1020";
@@ -346,14 +344,14 @@
 	qcom,battery-data = <&mtp_batterydata>;
 };
 
-&i2c_2 {
-	status = "ok";
-	smb1351-charger@1d {
-		compatible = "qcom,smb1351-charger";
-		reg = <0x1d>;
-		qcom,parallel-charger;
-		qcom,float-voltage-mv = <4400>;
-		qcom,recharge-mv = <100>;
-		qcom,parallel-en-pin-polarity = <1>;
-	};
-};
+//&i2c_2 {
+//	status = "ok";
+//	smb1351-charger@1d {
+//		compatible = "qcom,smb1351-charger";
+//		reg = <0x1d>;
+//		qcom,parallel-charger;
+//		qcom,float-voltage-mv = <4400>;
+//		qcom,recharge-mv = <100>;
+//		qcom,parallel-en-pin-polarity = <1>;
+//	};
+//};

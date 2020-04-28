@@ -119,3 +119,11 @@ obj-$(CONFIG_KERNEL_CUSTOM_E7S)	+= lct_ctp_selftest.o
 obj-$(CONFIG_KERNEL_CUSTOM_E7S)	+= lct_ctp_upgrade.o
 obj-$(CONFIG_KERNEL_CUSTOM_E7S)	+= lct_if_ctp_upgrade.o
 obj-$(CONFIG_KERNEL_CUSTOM_E7S)	+= lct_tp_gesture.o
+# HMI_M6100_A01
+obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_TCM_F7A)	+= synaptics_tcm_f7a/
+obj-$(CONFIG_TOUCHSCREEN_NVT_F7A) 	+= nvt_touch_f7a/
+obj-$(CONFIG_KERNEL_CUSTOM_F7A)	+= lct_tp_selftest.o
+obj-$(CONFIG_KERNEL_CUSTOM_F7A)	+= lct_tp_info.o
+obj-$(CONFIG_KERNEL_CUSTOM_F7A)	+= lct_tp_work.o
+obj-$(CONFIG_KERNEL_CUSTOM_F7A)	+= lct_tp_gesture.o
+obj-$(CONFIG_KERNEL_CUSTOM_F7A)	+= lct_tp_grip_area.o

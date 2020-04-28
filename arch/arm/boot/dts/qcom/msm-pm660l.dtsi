@@ -272,6 +272,7 @@
 			qcom,loop-auto-gm-en;
 			qcom,en-cabc;
 			qcom,pmic-revid = <&pm660l_revid>;
+			qcom,auto-calibration-enable;
 			status = "ok";
 		};
 

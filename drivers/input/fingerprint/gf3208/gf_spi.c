@@ -42,6 +42,9 @@
 #include <linux/cpufreq.h>
 #include <linux/mdss_io_util.h>
 #include <linux/wakelock.h>
+#ifdef CONFIG_KERNEL_CUSTOM_D2S_JASMINE
+#include <linux/proc_fs.h>
+#endif
 #include "gf_spi.h"
 
 #if defined(USE_SPI_BUS)
@@ -66,6 +69,10 @@
 #define	CHRD_DRIVER_NAME	"goodix_fp_spi"
 #define	CLASS_NAME		    "goodix_fp"
 
+#ifdef CONFIG_KERNEL_CUSTOM_D2S_JASMINE
+#define PROC_NAME  "hwinfo"
+#endif
+
 #define N_SPI_MINORS		32	/* ... up to 256 */
 static int SPIDEV_MAJOR;
 
@@ -74,6 +81,9 @@ static LIST_HEAD(device_list);
 static DEFINE_MUTEX(device_list_lock);
 static struct wake_lock fp_wakelock;
 static struct gf_dev gf;
+#ifdef CONFIG_KERNEL_CUSTOM_D2S_JASMINE
+static struct proc_dir_entry *proc_entry;
+#endif
 
 #if 0
 static struct gf_key_map maps[] = {
@@ -608,6 +618,21 @@ err_parse_dt:
 	return status;
 }
 
+#ifdef CONFIG_KERNEL_CUSTOM_D2S_JASMINE
+static int proc_show_ver(struct seq_file *file,void *v)
+{
+	seq_printf(file,"Fingerprint: Goodix\n");
+	return 0;
+}
+
+static int proc_open(struct inode *inode,struct file *file)
+{
+	printk("gf3208 proc_open\n");
+	single_open(file,proc_show_ver,NULL);
+	return 0;
+}
+#endif
+
 #ifdef GF_FASYNC
 static int gf_fasync(int fd, struct file *filp, int mode)
 {
@@ -661,6 +686,15 @@ static const struct file_operations gf_fops = {
 	.fasync = gf_fasync,
 #endif
 };
+
+#ifdef CONFIG_KERNEL_CUSTOM_D2S_JASMINE
+static const struct file_operations proc_file_ops = {
+	.owner = THIS_MODULE,
+	.open = proc_open,
+	.read = seq_read,
+	.release = single_release,
+};
+#endif
 
 static int goodix_fb_state_chg_callback(struct notifier_block *nb,
 		unsigned long val, void *data)
@@ -831,7 +865,17 @@ static int gf_probe(struct platform_device *pdev)
 
 	wake_lock_init(&fp_wakelock, WAKE_LOCK_SUSPEND, "fp_wakelock");
 
-        printk("adasdad\n");
+#ifdef CONFIG_KERNEL_CUSTOM_D2S_JASMINE
+	proc_entry = proc_create(PROC_NAME, 0644, NULL, &proc_file_ops);
+	if (NULL == proc_entry) {
+		printk("gf3208 Couldn't create proc entry!");
+		return -ENOMEM;
+	} else {
+		printk("gf3208 Create proc entry success!");
+	}
+#endif
+
+    printk("adasdad\n");
 	pr_info("version V%d.%d.%02d\n", VER_MAJOR, VER_MINOR, PATCH_LEVEL);
 
 	return status;
@@ -879,6 +923,9 @@ static int gf_remove(struct platform_device *pdev)
 	list_del(&gf_dev->device_entry);
 	device_destroy(gf_class, gf_dev->devt);
 	clear_bit(MINOR(gf_dev->devt), minors);
+#ifdef CONFIG_KERNEL_CUSTOM_D2S_JASMINE
+	remove_proc_entry(PROC_NAME,NULL);
+#endif
 	mutex_unlock(&device_list_lock);
 
 	return 0;

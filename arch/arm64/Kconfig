@@ -230,6 +230,12 @@ config KERNEL_CUSTOM_D2S
 	    help
 	            Custom for D2S_pcb.
 
+config KERNEL_CUSTOM_D2S_JASMINE
+    default n
+        bool "Custom for hardware D2s_pcb Jasmine"
+	    help
+	            Custom for D2S_pcb Jasmine MI A2.
+
 config KERNEL_CUSTOM_F7A
     default n
         bool "Custom for hardware F7A_pcb"

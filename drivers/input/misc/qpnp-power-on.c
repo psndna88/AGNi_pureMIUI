@@ -156,6 +156,8 @@
 
 #define QPNP_PON_BUFFER_SIZE			9
 
+#define QPNP_PON_SET_PS_HOLD			0x2
+#define QPNP_PON_SET_POWER_KEY			0x80
 #define QPNP_POFF_REASON_UVLO			13
 
 enum qpnp_pon_version {
@@ -696,6 +698,13 @@ int qpnp_pon_is_ps_hold_reset(void)
 		return 0;
 	}
 
+#ifdef CONFIG_KERNEL_CUSTOM_D2S_JASMINE
+	dev_info(&pon->pdev->dev, "hw_reset reason1 is 0x%x\n", reg);
+
+	/* The bit 1 is 1, means by PS_HOLD/MSM controlled shutdown */
+	if (reg & QPNP_PON_SET_PS_HOLD)
+		return 1;
+#else
 	/* The bit 1 is 1, means by PS_HOLD/MSM controlled shutdown */
 	if (reg & (1<<POFF_REASON_EVENT_PS_HOLD))
 		return 1;
@@ -709,6 +718,7 @@ int qpnp_pon_is_ps_hold_reset(void)
 	dev_info(&pon->pdev->dev,
 			"hw_reset reason2 is 0x%x\n",
 			reg);
+#endif
 	return 0;
 }
 EXPORT_SYMBOL(qpnp_pon_is_ps_hold_reset);
@@ -730,6 +740,14 @@ int qpnp_pon_is_lpk(void)
 		return 0;
 	}
 
+#ifdef CONFIG_KERNEL_CUSTOM_D2S_JASMINE
+	dev_info(&pon->pdev->dev,
+		"hw_reset reason1 is 0x%x\n", reg);
+
+	/* The bit 7 is 1, means the off reason is powerkey */
+	if (reg & QPNP_PON_SET_POWER_KEY)
+		return 1;
+#else
 	/* The bit 7 is 1, means the off reason is powerkey */
 	if (reg & (1<<POFF_REASON_EVENT_KPDPWR_N))
 		return 1;
@@ -743,6 +761,7 @@ int qpnp_pon_is_lpk(void)
 	dev_info(&pon->pdev->dev,
 			"hw_reset reason2 is 0x%x\n",
 			reg);
+#endif
 	return 0;
 }
 EXPORT_SYMBOL(qpnp_pon_is_lpk);
