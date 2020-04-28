@@ -2910,6 +2910,7 @@ static int cam_ife_mgr_acquire_hw(void *hw_mgr_priv, void *acquire_hw_args)
 	}
 
 	ife_ctx->custom_enabled = false;
+	ife_ctx->custom_config = 0;
 	memset(ife_ctx->cdm_handle, 0, sizeof(ife_ctx->cdm_handle));
 
 	ife_ctx->common.cb_priv = acquire_args->context_data;
@@ -2941,8 +2942,11 @@ static int cam_ife_mgr_acquire_hw(void *hw_mgr_priv, void *acquire_hw_args)
 
 		if ((in_port->cust_node) && (!ife_ctx->custom_enabled)) {
 			ife_ctx->custom_enabled = true;
-			/* This can be obtained from uapi */
-			ife_ctx->use_frame_header_ts = true;
+			/* These can be obtained from uapi */
+			ife_ctx->custom_config |=
+				CAM_IFE_CUSTOM_CFG_FRAME_HEADER_TS;
+			ife_ctx->custom_config |=
+				CAM_IFE_CUSTOM_CFG_SW_SYNC_ON;
 		}
 
 		if ((in_port->res_type == CAM_ISP_IFE_IN_RES_CPHY_TPG_0) ||
@@ -3034,7 +3038,8 @@ static int cam_ife_mgr_acquire_hw(void *hw_mgr_priv, void *acquire_hw_args)
 
 	acquire_args->ctxt_to_hw_map = ife_ctx;
 	acquire_args->custom_enabled = ife_ctx->custom_enabled;
-	acquire_args->use_frame_header_ts = ife_ctx->use_frame_header_ts;
+	acquire_args->use_frame_header_ts =
+		(ife_ctx->custom_config & CAM_IFE_CUSTOM_CFG_FRAME_HEADER_TS);
 	ife_ctx->ctx_in_use = 1;
 	ife_ctx->num_reg_dump_buf = 0;
 
@@ -3689,7 +3694,8 @@ static int cam_ife_config_hw_internal_cdm(struct cam_ife_hw_mgr_ctx *ctx,
 
 	for (i = 0; i < ctx->num_base; i++) {
 		idx = ctx->base[i].idx;
-		if (cfg->init_packet) {
+		if ((cfg->init_packet) ||
+			(ctx->custom_config & CAM_IFE_CUSTOM_CFG_SW_SYNC_ON)) {
 			rem_jiffies = wait_for_completion_timeout(
 				&ctx->config_done_complete[idx],
 				msecs_to_jiffies(30));
@@ -3779,7 +3785,8 @@ static int cam_ife_config_hw_external_cdm(struct cam_ife_hw_mgr_ctx *ctx,
 		return rc;
 	}
 
-	if (cfg->init_packet) {
+	if ((cfg->init_packet) ||
+		(ctx->custom_config & CAM_IFE_CUSTOM_CFG_SW_SYNC_ON)) {
 		rem_jiffies = wait_for_completion_timeout(
 				&ctx->config_done_complete[0],
 				msecs_to_jiffies(30));
@@ -4681,7 +4688,7 @@ static int cam_ife_mgr_release_hw(void *hw_mgr_priv,
 	ctx->cdm_ops = NULL;
 	ctx->num_reg_dump_buf = 0;
 	ctx->custom_enabled = false;
-	ctx->use_frame_header_ts = false;
+	ctx->custom_config = 0;
 	ctx->num_reg_dump_buf = 0;
 	ctx->is_dual = false;
 	ctx->dsp_enabled = false;
@@ -6163,7 +6170,7 @@ static int cam_ife_mgr_prepare_hw_update(void *hw_mgr_priv,
 	if (rc)
 		return rc;
 
-	if (ctx->use_frame_header_ts) {
+	if (ctx->custom_config & CAM_IFE_CUSTOM_CFG_FRAME_HEADER_TS) {
 		rc = cam_ife_mgr_util_insert_frame_header(&kmd_buf,
 			prepare_hw_data);
 		if (rc)
@@ -7350,7 +7357,8 @@ static int cam_ife_hw_mgr_handle_hw_sof(
 				&sof_done_event_data.boot_time);
 
 		/* if frame header is enabled reset qtimer ts */
-		if (ife_hw_mgr_ctx->use_frame_header_ts)
+		if (ife_hw_mgr_ctx->custom_config &
+			CAM_IFE_CUSTOM_CFG_FRAME_HEADER_TS)
 			sof_done_event_data.timestamp = 0x0;
 
 		if (atomic_read(&ife_hw_mgr_ctx->overflow_pending))

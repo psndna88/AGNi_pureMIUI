@@ -28,6 +28,10 @@ enum cam_ife_res_master_slave {
 #define CAM_IFE_HW_OUT_RES_MAX           (CAM_ISP_IFE_OUT_RES_MAX & 0xFF)
 #define CAM_IFE_HW_RES_POOL_MAX          64
 
+/* IFE_HW_MGR custom config */
+#define CAM_IFE_CUSTOM_CFG_FRAME_HEADER_TS   BIT(0)
+#define CAM_IFE_CUSTOM_CFG_SW_SYNC_ON        BIT(1)
+
 /**
  * struct cam_ife_hw_mgr_debug - contain the debug information
  *
@@ -94,7 +98,7 @@ struct cam_ife_hw_mgr_debug {
  * @is_fe_enabled           Indicate whether fetch engine\read path is enabled
  * @is_dual                 indicate whether context is in dual VFE mode
  * @custom_enabled          update the flag if context is connected to custom HW
- * @use_frame_header_ts     obtain qtimer ts using frame header
+ * @custom_config           ife ctx config if custom is enabled [bit field]
  * @ts                      captured timestamp when the ctx is acquired
  * @is_tpg                  indicate whether context is using PHY TPG
  * @is_offline              Indicate whether context is for offline IFE
@@ -152,7 +156,7 @@ struct cam_ife_hw_mgr_ctx {
 	bool                            is_fe_enabled;
 	bool                            is_dual;
 	bool                            custom_enabled;
-	bool                            use_frame_header_ts;
+	uint32_t                        custom_config;
 	struct timespec64               ts;
 	bool                            is_tpg;
 	bool                            is_offline;
