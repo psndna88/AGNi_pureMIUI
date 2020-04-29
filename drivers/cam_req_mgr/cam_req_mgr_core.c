@@ -50,6 +50,7 @@ void cam_req_mgr_core_link_reset(struct cam_req_mgr_core_link *link)
 	link->sof_timestamp = 0;
 	link->prev_sof_timestamp = 0;
 	link->enable_apply_default = false;
+	link->skip_init_frame = false;
 	atomic_set(&link->eof_event_cnt, 0);
 }
 
@@ -561,6 +562,13 @@ static void __cam_req_mgr_validate_crm_wd_timer(
 	int next_frame_timeout = 0, current_frame_timeout = 0;
 	struct cam_req_mgr_req_queue *in_q = link->req.in_q;
 
+	if (link->skip_init_frame) {
+		CAM_DBG(CAM_CRM,
+			"skipping modifying wd timer for first frame after streamon");
+		link->skip_init_frame = false;
+		return;
+	}
+
 	idx = in_q->rd_idx;
 	__cam_req_mgr_dec_idx(
 		&idx, (link->max_delay - 1),
@@ -599,8 +607,8 @@ static void __cam_req_mgr_validate_crm_wd_timer(
 			crm_timer_modify(link->watchdog,
 				current_frame_timeout +
 				CAM_REQ_MGR_WATCHDOG_TIMEOUT);
-		} else if (link->watchdog->expires >
-			CAM_REQ_MGR_WATCHDOG_TIMEOUT) {
+		} else if (!next_frame_timeout && (link->watchdog->expires >
+			CAM_REQ_MGR_WATCHDOG_TIMEOUT)) {
 			CAM_DBG(CAM_CRM,
 				"Reset wd timer to default from %d ms to %d ms",
 				link->watchdog->expires,
@@ -4045,6 +4053,7 @@ int cam_req_mgr_link_control(struct cam_req_mgr_link_control *control)
 
 	struct cam_req_mgr_connected_device *dev = NULL;
 	struct cam_req_mgr_link_evt_data     evt_data;
+	int                                init_timeout = 0;
 
 	if (!control) {
 		CAM_ERR(CAM_CRM, "Control command is NULL");
@@ -4076,10 +4085,13 @@ int cam_req_mgr_link_control(struct cam_req_mgr_link_control *control)
 			spin_lock_bh(&link->link_state_spin_lock);
 			link->state = CAM_CRM_LINK_STATE_READY;
 			spin_unlock_bh(&link->link_state_spin_lock);
+			if (control->init_timeout[i])
+				link->skip_init_frame = true;
+			init_timeout = (2 * control->init_timeout[i]);
 			/* Start SOF watchdog timer */
 			rc = crm_timer_init(&link->watchdog,
-				CAM_REQ_MGR_WATCHDOG_TIMEOUT_DEFAULT, link,
-				&__cam_req_mgr_sof_freeze);
+				(init_timeout + CAM_REQ_MGR_WATCHDOG_TIMEOUT),
+				link, &__cam_req_mgr_sof_freeze);
 			if (rc < 0) {
 				CAM_ERR(CAM_CRM,
 					"SOF timer start fails: link=0x%x",
@@ -4110,6 +4122,7 @@ int cam_req_mgr_link_control(struct cam_req_mgr_link_control *control)
 			/* Destroy SOF watchdog timer */
 			spin_lock_bh(&link->link_state_spin_lock);
 			link->state = CAM_CRM_LINK_STATE_IDLE;
+			link->skip_init_frame = false;
 			crm_timer_exit(&link->watchdog);
 			spin_unlock_bh(&link->link_state_spin_lock);
 		} else {
