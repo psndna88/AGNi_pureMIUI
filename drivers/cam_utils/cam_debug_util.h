@@ -6,6 +6,8 @@
 #ifndef _CAM_DEBUG_UTIL_H_
 #define _CAM_DEBUG_UTIL_H_
 
+#include <linux/platform_device.h>
+
 #define CAM_CDM        (1 << 0)
 #define CAM_CORE       (1 << 1)
 #define CAM_CPAS       (1 << 2)
@@ -43,6 +45,32 @@
 #define CAM_PRESIL     (1 << 27)
 
 #define STR_BUFFER_MAX_LENGTH  1024
+
+/**
+ * struct cam_cpas_debug_settings - Sysfs debug settings for cpas driver
+ */
+struct cam_cpas_debug_settings {
+	uint64_t mnoc_hf_0_ab_bw;
+	uint64_t mnoc_hf_0_ib_bw;
+	uint64_t mnoc_hf_1_ab_bw;
+	uint64_t mnoc_hf_1_ib_bw;
+	uint64_t mnoc_sf_0_ab_bw;
+	uint64_t mnoc_sf_0_ib_bw;
+	uint64_t mnoc_sf_1_ab_bw;
+	uint64_t mnoc_sf_1_ib_bw;
+	uint64_t mnoc_sf_icp_ab_bw;
+	uint64_t mnoc_sf_icp_ib_bw;
+	uint64_t camnoc_bw;
+};
+
+/**
+ * struct camera_debug_settings - Sysfs debug settings for camera
+ *
+ * @cpas_settings: Debug settings for cpas driver.
+ */
+struct camera_debug_settings {
+	struct cam_cpas_debug_settings cpas_settings;
+};
 
 /*
  *  cam_debug_log()
@@ -210,5 +238,18 @@ const char *cam_get_module_name(unsigned int module_id);
 				cam_get_module_name(__module), __func__,   \
 				__LINE__, ##args);                         \
 	})
+
+/**
+ * @brief : API to get camera debug settings
+ * @return const struct camera_debug_settings pointer.
+ */
+const struct camera_debug_settings *cam_debug_get_settings(void);
+
+/**
+ * @brief : API to parse and store input from sysfs debug node
+ * @return Number of bytes read from buffer on success, or -EPERM on error.
+ */
+ssize_t cam_debug_sysfs_node_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count);
 
 #endif /* _CAM_DEBUG_UTIL_H_ */

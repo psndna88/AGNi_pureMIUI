@@ -13,10 +13,63 @@
 #include "cam_cpas_hw.h"
 #include "cam_cpas_hw_intf.h"
 #include "cam_cpas_soc.h"
+#include "cam_req_mgr_dev.h"
 
 static uint cam_min_camnoc_ib_bw;
 module_param(cam_min_camnoc_ib_bw, uint, 0644);
 
+static void cam_cpas_process_bw_overrides(
+	struct cam_cpas_bus_client *bus_client, uint64_t *ab, uint64_t *ib,
+	const struct cam_cpas_debug_settings *cpas_settings)
+{
+	uint64_t curr_ab = *ab;
+	uint64_t curr_ib = *ib;
+	size_t name_len = strlen(bus_client->common_data.name);
+
+	if (!cpas_settings) {
+		CAM_ERR(CAM_CPAS, "Invalid cpas debug settings");
+		return;
+	}
+
+	if (strnstr(bus_client->common_data.name, "cam_hf_0", name_len)) {
+		if (cpas_settings->mnoc_hf_0_ab_bw)
+			*ab = cpas_settings->mnoc_hf_0_ab_bw;
+		if (cpas_settings->mnoc_hf_0_ib_bw)
+			*ib = cpas_settings->mnoc_hf_0_ib_bw;
+	} else if (strnstr(bus_client->common_data.name, "cam_hf_1",
+		name_len)) {
+		if (cpas_settings->mnoc_hf_1_ab_bw)
+			*ab = cpas_settings->mnoc_hf_1_ab_bw;
+		if (cpas_settings->mnoc_hf_0_ib_bw)
+			*ib = cpas_settings->mnoc_hf_1_ib_bw;
+	} else if (strnstr(bus_client->common_data.name, "cam_sf_0",
+		name_len)) {
+		if (cpas_settings->mnoc_sf_0_ab_bw)
+			*ab = cpas_settings->mnoc_sf_0_ab_bw;
+		if (cpas_settings->mnoc_sf_0_ib_bw)
+			*ib = cpas_settings->mnoc_sf_0_ib_bw;
+	} else if (strnstr(bus_client->common_data.name, "cam_sf_1",
+		name_len)) {
+		if (cpas_settings->mnoc_sf_1_ab_bw)
+			*ab = cpas_settings->mnoc_sf_1_ab_bw;
+		if (cpas_settings->mnoc_sf_1_ib_bw)
+			*ib = cpas_settings->mnoc_sf_1_ib_bw;
+	} else if (strnstr(bus_client->common_data.name, "cam_sf_icp",
+		name_len)) {
+		if (cpas_settings->mnoc_sf_icp_ab_bw)
+			*ab = cpas_settings->mnoc_sf_icp_ab_bw;
+		if (cpas_settings->mnoc_sf_icp_ib_bw)
+			*ib = cpas_settings->mnoc_sf_icp_ib_bw;
+	} else {
+		CAM_ERR(CAM_CPAS, "unknown mnoc port: %s, bw override failed",
+			bus_client->common_data.name);
+		return;
+	}
+
+	CAM_INFO(CAM_CPAS,
+		"Overriding mnoc bw for: %s with ab: %llu, ib: %llu, curr_ab: %llu, curr_ib: %llu",
+		bus_client->common_data.name, *ab, *ib, curr_ab, curr_ib);
+}
 
 int cam_cpas_util_reg_update(struct cam_hw_info *cpas_hw,
 	enum cam_cpas_reg_base reg_base, struct cam_cpas_reg *reg_info)
@@ -85,6 +138,7 @@ static int cam_cpas_util_vote_bus_client_bw(
 {
 	int rc = 0;
 	uint64_t min_camnoc_ib_bw = CAM_CPAS_AXI_MIN_CAMNOC_IB_BW;
+	const struct camera_debug_settings *cam_debug = NULL;
 
 	if (!bus_client->valid) {
 		CAM_ERR(CAM_CPAS, "bus client: %s not valid",
@@ -115,6 +169,21 @@ static int cam_cpas_util_vote_bus_client_bw(
 		if ((ib > 0) && (ib < CAM_CPAS_AXI_MIN_MNOC_IB_BW))
 			ib = CAM_CPAS_AXI_MIN_MNOC_IB_BW;
 	}
+
+	cam_debug = cam_debug_get_settings();
+
+	if (cam_debug && (cam_debug->cpas_settings.mnoc_hf_0_ab_bw ||
+		cam_debug->cpas_settings.mnoc_hf_0_ib_bw ||
+		cam_debug->cpas_settings.mnoc_hf_1_ab_bw ||
+		cam_debug->cpas_settings.mnoc_hf_1_ib_bw ||
+		cam_debug->cpas_settings.mnoc_sf_0_ab_bw ||
+		cam_debug->cpas_settings.mnoc_sf_0_ib_bw ||
+		cam_debug->cpas_settings.mnoc_sf_1_ab_bw ||
+		cam_debug->cpas_settings.mnoc_sf_1_ib_bw ||
+		cam_debug->cpas_settings.mnoc_sf_icp_ab_bw ||
+		cam_debug->cpas_settings.mnoc_sf_icp_ib_bw))
+		cam_cpas_process_bw_overrides(bus_client, &ab, &ib,
+			&cam_debug->cpas_settings);
 
 	rc = cam_soc_bus_client_update_bw(bus_client->soc_bus_client, ab, ib);
 	if (rc) {
@@ -376,6 +445,8 @@ static int cam_cpas_util_set_camnoc_axi_clk_rate(
 	struct cam_cpas *cpas_core = (struct cam_cpas *) cpas_hw->core_info;
 	struct cam_cpas_tree_node *tree_node = NULL;
 	int rc = 0, i = 0;
+	const struct camera_debug_settings *cam_debug = NULL;
+
 
 	CAM_DBG(CAM_CPAS, "control_camnoc_axi_clk=%d",
 		soc_private->control_camnoc_axi_clk);
@@ -414,6 +485,19 @@ static int cam_cpas_util_set_camnoc_axi_clk_rate(
 			(required_camnoc_bw <
 			soc_private->camnoc_axi_min_ib_bw))
 			required_camnoc_bw = soc_private->camnoc_axi_min_ib_bw;
+
+		cam_debug = cam_debug_get_settings();
+		if (cam_debug && cam_debug->cpas_settings.camnoc_bw) {
+			if (cam_debug->cpas_settings.camnoc_bw <
+				soc_private->camnoc_bus_width)
+				required_camnoc_bw =
+					soc_private->camnoc_bus_width;
+			else
+				required_camnoc_bw =
+					cam_debug->cpas_settings.camnoc_bw;
+			CAM_INFO(CAM_CPAS, "Overriding camnoc bw: %llu",
+				required_camnoc_bw);
+		}
 
 		intermediate_result = required_camnoc_bw;
 		do_div(intermediate_result, soc_private->camnoc_bus_width);
