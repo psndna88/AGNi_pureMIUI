@@ -813,7 +813,7 @@ static int cam_req_mgr_component_master_bind(struct device *dev)
 		goto req_mgr_device_deinit;
 	}
 
-	CAM_INFO(CAM_CRM, "All camera components bound successfully");
+	CAM_DBG(CAM_CRM, "All camera components bound successfully");
 	rc = sysfs_create_file(&dev->kobj, &camera_debug_sysfs_attr.attr);
 	if (rc < 0) {
 		CAM_ERR(CAM_CPAS,

@@ -3581,7 +3581,7 @@ static int cam_vfe_bus_ver3_init_hw(void *hw_priv,
 	}
 
 	/* no clock gating at bus input */
-	CAM_INFO(CAM_ISP, "Overriding clock gating at bus input");
+	CAM_DBG(CAM_ISP, "Overriding clock gating at bus input");
 	cam_io_w_mb(0x3FFFFFF, bus_priv->common_data.mem_base +
 		bus_priv->common_data.common_reg->cgc_ovd);
 

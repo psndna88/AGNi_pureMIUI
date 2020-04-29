@@ -143,7 +143,7 @@ static int cam_jpeg_dev_component_bind(struct device *dev,
 
 	mutex_init(&g_jpeg_dev.jpeg_mutex);
 
-	CAM_INFO(CAM_JPEG, "Component bound successfully");
+	CAM_DBG(CAM_JPEG, "Component bound successfully");
 
 	return rc;
 

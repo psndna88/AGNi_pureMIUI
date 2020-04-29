@@ -771,7 +771,7 @@ static int cam_smmu_create_add_handle_in_table(char *name,
 					*hdl = iommu_cb_set.cb_info[i].handle;
 					mutex_unlock(
 						&iommu_cb_set.cb_info[i].lock);
-					CAM_INFO(CAM_SMMU,
+					CAM_DBG(CAM_SMMU,
 						"%s already got handle 0x%x",
 						name,
 						iommu_cb_set.cb_info[i].handle);

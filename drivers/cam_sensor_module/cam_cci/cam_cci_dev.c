@@ -426,7 +426,7 @@ static int cam_cci_component_bind(struct device *dev,
 
 	g_cci_subdev[soc_info->index] = &new_cci_dev->v4l2_dev_str.sd;
 	mutex_init(&(new_cci_dev->init_mutex));
-	CAM_INFO(CAM_CCI, "Device Type :%d", soc_info->index);
+	CAM_DBG(CAM_CCI, "Device Type :%d", soc_info->index);
 
 	cpas_parms.cam_cpas_client_cb = NULL;
 	cpas_parms.cell_index = soc_info->index;

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/of.h>
@@ -57,13 +57,13 @@ int32_t cam_actuator_parse_dt(struct cam_actuator_ctrl_t *a_ctrl,
 	}
 
 	if (!soc_info->gpio_data) {
-		CAM_INFO(CAM_ACTUATOR, "No GPIO found");
+		CAM_DBG(CAM_ACTUATOR, "No GPIO found");
 		rc = 0;
 		return rc;
 	}
 
 	if (!soc_info->gpio_data->cam_gpio_common_tbl_size) {
-		CAM_INFO(CAM_ACTUATOR, "No GPIO found");
+		CAM_DBG(CAM_ACTUATOR, "No GPIO found");
 		return -EINVAL;
 	}
 

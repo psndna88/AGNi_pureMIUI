@@ -112,7 +112,7 @@ static int32_t cam_get_source_node_info(
 				"qcom,current-ma",
 				&soc_private->flash_op_current[i]);
 			if (rc) {
-				CAM_INFO(CAM_FLASH, "op-current: read failed");
+				CAM_DBG(CAM_FLASH, "op-current: read failed");
 				rc = 0;
 			}
 
@@ -121,7 +121,7 @@ static int32_t cam_get_source_node_info(
 				"qcom,duration-ms",
 				&soc_private->flash_max_duration[i]);
 			if (rc) {
-				CAM_INFO(CAM_FLASH,
+				CAM_DBG(CAM_FLASH,
 					"max-duration prop unavailable: %d",
 					rc);
 				rc = 0;
