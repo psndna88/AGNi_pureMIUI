@@ -168,12 +168,13 @@
 	eeprom_ext_rgb0: qcom,eeprom7 {
 		cell-index = <8>;
 		compatible = "qcom,eeprom";
+		cam_vio-supply = <&pm8008j_l3>;
 		cam_clk-supply = <&cam_cc_titan_top_gdsc>;
-		regulator-names = "cam_clk";
+		regulator-names = "cam_vio", "cam_clk";
 		rgltr-cntrl-support;
-		rgltr-min-voltage = <0>;
-		rgltr-max-voltage = <0>;
-		rgltr-load-current = <0>;
+		rgltr-min-voltage = <1800000 0>;
+		rgltr-max-voltage = <1800000 0>;
+		rgltr-load-current = <10000 0>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk3_active
@@ -377,12 +378,13 @@
 		eeprom-src = <&eeprom_ext_rgb0>;
 		actuator-src = <&actuator_triple_tele>;
 		led-flash-src = <&led_flash_triple_rear_aux>;
+		cam_vio-supply = <&pm8008j_l3>;
 		cam_clk-supply = <&cam_cc_titan_top_gdsc>;
-		regulator-names = "cam_clk";
+		regulator-names = "cam_vio", "cam_clk";
 		rgltr-cntrl-support;
-		rgltr-min-voltage = <0>;
-		rgltr-max-voltage = <0>;
-		rgltr-load-current = <0>;
+		rgltr-min-voltage = <1800000 0>;
+		rgltr-max-voltage = <1800000 0>;
+		rgltr-load-current = <10000 0>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk3_active
@@ -526,12 +528,13 @@
 	eeprom_ext_rgb1: qcom,eeprom8 {
 		cell-index = <9>;
 		compatible = "qcom,eeprom";
+		cam_vio-supply = <&pm8008j_l3>;
 		cam_clk-supply = <&cam_cc_titan_top_gdsc>;
-		regulator-names = "cam_clk";
+		regulator-names = "cam_vio", "cam_clk";
 		rgltr-cntrl-support;
-		rgltr-min-voltage = <0>;
-		rgltr-max-voltage = <0>;
-		rgltr-load-current = <0>;
+		rgltr-min-voltage = <1800000 0>;
+		rgltr-max-voltage = <1800000 0>;
+		rgltr-load-current = <10000 0>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk4_active
@@ -540,8 +543,8 @@
 		pinctrl-1 = <&cam_sensor_mclk4_suspend
 				 &cam_sensor_suspend_rst4
 				 &cam_sensor_suspend_ext_regs1>;
-		gpios = <&tlmm 105 0>,
-			<&tlmm 115 0>,
+		gpios = <&tlmm 104 0>,
+			<&tlmm 116 0>,
 			<&tlmm 29 0>;
 		gpio-reset = <1>;
 		gpio-custom1 = <2>;
@@ -686,12 +689,13 @@
 		eeprom-src = <&eeprom_ext_rgb1>;
 		actuator-src = <&actuator_triple_uw>;
 		led-flash-src = <&led_flash_triple_rear_aux>;
+		cam_vio-supply = <&pm8008j_l3>;
 		cam_clk-supply = <&cam_cc_titan_top_gdsc>;
-		regulator-names = "cam_clk";
+		regulator-names = "cam_vio", "cam_clk";
 		rgltr-cntrl-support;
-		rgltr-min-voltage = <0>;
-		rgltr-max-voltage = <0>;
-		rgltr-load-current = <0>;
+		rgltr-min-voltage = <1800000 0>;
+		rgltr-max-voltage = <1800000 0>;
+		rgltr-load-current = <10000 0>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk4_active
@@ -700,8 +704,8 @@
 		pinctrl-1 = <&cam_sensor_mclk4_suspend
 				&cam_sensor_suspend_rst4
 				&cam_sensor_suspend_ext_regs1>;
-		gpios = <&tlmm 105 0>,
-			<&tlmm 115 0>,
+		gpios = <&tlmm 104 0>,
+			<&tlmm 116 0>,
 			<&tlmm 29 0>;
 		gpio-reset = <1>;
 		gpio-custom1 = <2>;
