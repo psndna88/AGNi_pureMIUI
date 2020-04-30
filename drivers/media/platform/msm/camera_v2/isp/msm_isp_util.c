@@ -2469,9 +2469,9 @@ void msm_isp_irq_debug_dump(struct vfe_device *vfe_dev)
 	dump_index = vfe_dev->common_data->vfe_irq_dump.
 		current_irq_index;
 	for (i = 0; i < MAX_VFE_IRQ_DEBUG_DUMP_SIZE; i++) {
-		trace_msm_cam_ping_pong_debug_dump(
-			vfe_dev->common_data->vfe_irq_dump.
-			irq_debug[dump_index % MAX_VFE_IRQ_DEBUG_DUMP_SIZE]);
+//		trace_msm_cam_ping_pong_debug_dump(
+//			vfe_dev->common_data->vfe_irq_dump.
+//			irq_debug[dump_index % MAX_VFE_IRQ_DEBUG_DUMP_SIZE]);
 		dump_index++;
 	}
 	spin_unlock_irqrestore(&vfe_dev->common_data->vfe_irq_dump.
@@ -2490,10 +2490,10 @@ void msm_isp_tasklet_debug_dump(struct vfe_device *vfe_dev)
 	dump_index = vfe_dev->common_data->vfe_irq_dump.
 		current_tasklet_index;
 	for (i = 0; i < MAX_VFE_IRQ_DEBUG_DUMP_SIZE; i++) {
-		trace_msm_cam_tasklet_debug_dump(
-			vfe_dev->common_data->vfe_irq_dump.
-			tasklet_debug[
-			dump_index % MAX_VFE_IRQ_DEBUG_DUMP_SIZE]);
+//		trace_msm_cam_tasklet_debug_dump(
+//			vfe_dev->common_data->vfe_irq_dump.
+//			tasklet_debug[
+//			dump_index % MAX_VFE_IRQ_DEBUG_DUMP_SIZE]);
 		dump_index++;
 	}
 	spin_unlock_irqrestore(&vfe_dev->common_data->vfe_irq_dump.
@@ -2503,8 +2503,8 @@ void msm_isp_tasklet_debug_dump(struct vfe_device *vfe_dev)
 void msm_isp_dump_ping_pong_mismatch(struct vfe_device *vfe_dev)
 {
 
-	trace_msm_cam_string(" ***** msm_isp_dump_irq_debug ****");
+//	trace_msm_cam_string(" ***** msm_isp_dump_irq_debug ****");
 	msm_isp_irq_debug_dump(vfe_dev);
-	trace_msm_cam_string(" ***** msm_isp_dump_taskelet_debug ****");
+//	trace_msm_cam_string(" ***** msm_isp_dump_taskelet_debug ****");
 	msm_isp_tasklet_debug_dump(vfe_dev);
 }

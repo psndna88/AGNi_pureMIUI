@@ -2174,21 +2174,21 @@ static int sde_rotator_process_buffers(struct sde_rotator_ctx *ctx,
 
 	ts[SDE_ROTATOR_TS_FENCE] = ktime_get();
 
-	trace_rot_entry_fence(
-		ctx->session_id, vbinfo_cap->fence_ts,
-		ctx->fh.prio,
-		(ctx->rotate << 0) | (ctx->hflip << 8) |
-			(ctx->hflip << 9) | (ctx->secure << 10),
-		ctx->format_out.fmt.pix.pixelformat,
-		ctx->format_out.fmt.pix.width,
-		ctx->format_out.fmt.pix.height,
-		ctx->crop_out.left, ctx->crop_out.top,
-		ctx->crop_out.width, ctx->crop_out.height,
-		ctx->format_cap.fmt.pix.pixelformat,
-		ctx->format_cap.fmt.pix.width,
-		ctx->format_cap.fmt.pix.height,
-		ctx->crop_cap.left, ctx->crop_cap.top,
-		ctx->crop_cap.width, ctx->crop_cap.height);
+//	trace_rot_entry_fence(
+//		ctx->session_id, vbinfo_cap->fence_ts,
+//		ctx->fh.prio,
+//		(ctx->rotate << 0) | (ctx->hflip << 8) |
+//			(ctx->hflip << 9) | (ctx->secure << 10),
+//		ctx->format_out.fmt.pix.pixelformat,
+//		ctx->format_out.fmt.pix.width,
+//		ctx->format_out.fmt.pix.height,
+//		ctx->crop_out.left, ctx->crop_out.top,
+//		ctx->crop_out.width, ctx->crop_out.height,
+//		ctx->format_cap.fmt.pix.pixelformat,
+//		ctx->format_cap.fmt.pix.width,
+//		ctx->format_cap.fmt.pix.height,
+//		ctx->crop_cap.left, ctx->crop_cap.top,
+//		ctx->crop_cap.width, ctx->crop_cap.height);
 
 	if (vbinfo_out->fence) {
 		sde_rot_mgr_unlock(rot_dev->mgr);

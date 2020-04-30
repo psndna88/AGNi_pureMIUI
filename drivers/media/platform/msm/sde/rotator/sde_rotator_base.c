@@ -270,7 +270,7 @@ void sde_mdp_set_ot_limit(struct sde_mdp_set_ot_params *params)
 		}
 	}
 
-	trace_rot_perf_set_ot(params->num, params->xin_id, ot_lim);
+//	trace_rot_perf_set_ot(params->num, params->xin_id, ot_lim);
 
 	forced_on = force_on_xin_clk(params->bit_off_mdp_clk_ctrl,
 		params->reg_off_mdp_clk_ctrl, true);

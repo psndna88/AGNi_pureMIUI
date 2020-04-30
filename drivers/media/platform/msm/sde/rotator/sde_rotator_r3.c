@@ -1872,9 +1872,9 @@ static int sde_hw_rotator_config(struct sde_rot_hw_resource *hw,
 	if (test_bit(SDE_QOS_PER_PIPE_LUT, mdata->sde_qos_map))	{
 		u32 qos_lut = 0; /* low priority for nrt read client */
 
-		trace_rot_perf_set_qos_luts(mdata->vbif_xin_id[XIN_SSPP],
-			sspp_cfg.fmt->format, qos_lut,
-			sde_mdp_is_linear_format(sspp_cfg.fmt));
+//		trace_rot_perf_set_qos_luts(mdata->vbif_xin_id[XIN_SSPP],
+//			sspp_cfg.fmt->format, qos_lut,
+//			sde_mdp_is_linear_format(sspp_cfg.fmt));
 
 		SDE_ROTREG_WRITE(rot->mdss_base, ROT_SSPP_CREQ_LUT, qos_lut);
 	}

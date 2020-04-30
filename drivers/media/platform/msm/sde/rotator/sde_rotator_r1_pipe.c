@@ -58,8 +58,8 @@ static int sde_mdp_pipe_qos_lut(struct sde_mdp_pipe *pipe)
 
 	qos_lut = QOS_LUT_NRT_READ; /* low priority for nrt */
 
-	trace_rot_perf_set_qos_luts(pipe->num, pipe->src_fmt->format,
-		qos_lut, sde_mdp_is_linear_format(pipe->src_fmt));
+//	trace_rot_perf_set_qos_luts(pipe->num, pipe->src_fmt->format,
+//		qos_lut, sde_mdp_is_linear_format(pipe->src_fmt));
 
 	sde_mdp_pipe_write(pipe, SDE_MDP_REG_SSPP_CREQ_LUT,
 		qos_lut);
