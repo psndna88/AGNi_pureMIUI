@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_CSIPHY_DEV_H_
@@ -137,7 +137,7 @@ struct csiphy_intf_params {
  * struct csiphy_reg_t
  * @reg_addr: Register address
  * @reg_data: Register data
- * @delay: Delay
+ * @delay: Delay in us
  * @csiphy_param_type: CSIPhy parameter type
  */
 struct csiphy_reg_t {
