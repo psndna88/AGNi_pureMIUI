@@ -12,6 +12,8 @@
  * v1.5: Rewrite Logic cleanly, optimise. Drop caches aswell as needed.
  * v1.6: Allow zram swapping on gaming and increase swappiness for 4 gb ram device variants
  * v1.7: Increased swappiness values with increased zram disksize
+ * v1.8: Turn off the swappiness control routine when zram disksize set to zero
+ *       Also enable dynamic fsync when zram enabled
  */
 
 #include <asm/page.h>
@@ -97,6 +99,11 @@ bool agni_memprober(void) {
 }
 
 void agni_memprobe(void) {
+
+	if (zramzero) {
+		agni_swappiness = 0;
+		return;
+	}
 
 	triggerswapping = agni_memprober();
 }

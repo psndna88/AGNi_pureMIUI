@@ -52,6 +52,7 @@ static unsigned int num_devices = 1;
 static size_t huge_class_size;
 
 bool miuirom = false;
+bool zramzero = true;
 static void zram_free_page(struct zram *zram, size_t index);
 
 static void zram_slot_lock(struct zram *zram, u32 index)
@@ -1503,8 +1504,11 @@ static ssize_t disksize_store(struct device *dev,
 	int err;
 
 	disksize = memparse(buf, NULL);
-	if (!disksize)
+	if (!disksize) {
+		zramzero = true;
+		dyn_fsync_active = false;
 		return -EINVAL;
+	}
 
 	down_write(&zram->init_lock);
 	if (init_done(zram)) {
@@ -1514,11 +1518,13 @@ static ssize_t disksize_store(struct device *dev,
 	}
 
 	if (disksize == 2361393152) {
-		miuirom = true;
+		miuirom = true; /* Miui Sets 2361393152 = 2252MB */
 	} else {
 		miuirom = false;
-		disksize = 2361393152; /* Miui Sets 2361393152 = 2252MB */
+		disksize = 2361393152; /* AGNi Memory management forces this value */
 	}
+	zramzero = false;
+	dyn_fsync_active = true;
 
 	disksize = PAGE_ALIGN(disksize);
 	if (!zram_meta_alloc(zram, disksize)) {

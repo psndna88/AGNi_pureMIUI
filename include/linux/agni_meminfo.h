@@ -19,5 +19,7 @@ extern int agni_swappiness;
 extern void mm_drop_caches(int val);
 extern unsigned long adreno_load_perc;
 extern bool fourgb;
+extern bool zramzero;
+extern bool dyn_fsync_active;
 
 #endif /* _LINUX_AGNI_MEMINFO_H */
