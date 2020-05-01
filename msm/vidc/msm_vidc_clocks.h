@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _MSM_VIDC_CLOCKS_H_
@@ -39,4 +39,5 @@ bool res_is_greater_than(u32 width, u32 height,
 		u32 ref_width, u32 ref_height);
 bool res_is_less_than(u32 width, u32 height,
 		u32 ref_width, u32 ref_height);
+int msm_vidc_set_bse_vpp_delay(struct msm_vidc_inst *inst);
 #endif

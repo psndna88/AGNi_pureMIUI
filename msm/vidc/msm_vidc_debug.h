@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef __MSM_VIDC_DEBUG__
@@ -132,6 +132,7 @@ extern bool msm_vidc_syscache_disable;
 extern bool msm_vidc_lossless_encode;
 extern bool msm_vidc_cvp_usage;
 extern int msm_vidc_err_recovery_disable;
+extern int msm_vidc_vpp_delay;
 
 struct log_cookie {
 	u32 used;

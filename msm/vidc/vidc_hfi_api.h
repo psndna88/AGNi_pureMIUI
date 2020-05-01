@@ -472,6 +472,12 @@ enum hal_command_response {
 	HAL_RESPONSE_UNUSED = 0x10000000,
 };
 
+struct msm_vidc_ubwc_stats {
+	u32 is_valid;
+	u32 worst_cr;
+	u32 worst_cf;
+};
+
 struct ubwc_cr_stats_info_type {
 	u32 cr_stats_info0;
 	u32 cr_stats_info1;
@@ -534,6 +540,7 @@ struct vidc_hal_fbd {
 	u32 offset3;
 	u32 packet_buffer3;
 	enum hal_buffer buffer_type;
+	struct msm_vidc_ubwc_stats ubwc_cr_stat;
 };
 
 struct msm_vidc_capability {

@@ -191,6 +191,8 @@ struct hfi_extradata_header {
 	(HFI_PROPERTY_PARAM_VDEC_OX_START + 0x0022)
 #define HFI_PROPERTY_PARAM_VDEC_HDR10_HIST_EXTRADATA \
 	(HFI_PROPERTY_PARAM_VDEC_OX_START + 0x0023)
+#define HFI_PROPERTY_PARAM_VDEC_VSP_VPP_DELAY \
+	(HFI_PROPERTY_PARAM_VDEC_OX_START + 0x0024)
 
 #define HFI_PROPERTY_CONFIG_VDEC_OX_START				\
 	(HFI_DOMAIN_BASE_VDEC + HFI_ARCH_OX_OFFSET + 0x4000)
@@ -548,7 +550,7 @@ struct hfi_msg_session_flush_done_packet {
 	u32 flush_type;
 };
 
-struct hfi_ubwc_cr_stat {
+struct hfi_ubwc_cr_stats {
 	u32 is_valid;
 	u32 worst_compression_ratio;
 	u32 worst_complexity_number;
