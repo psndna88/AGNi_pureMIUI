@@ -20,6 +20,7 @@
 #define MEMSW_EXTRA_KB     (16 << (PAGE_SHIFT - 10))
 
 static uint32_t check_pending_times;
+extern bool miuirom;
 
 static int memsw_dev_open(struct inode *inode, struct file *file)
 {
@@ -32,6 +33,8 @@ static int memsw_dev_open(struct inode *inode, struct file *file)
 	if (memsw_dev == NULL)
 		return -ENODEV;
 
+	if (!miuirom)
+		miuirom = true;
 
 	if (!(file->f_mode & FMODE_READ))
 		ret = -EBADF;

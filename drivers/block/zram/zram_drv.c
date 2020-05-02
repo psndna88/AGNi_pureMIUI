@@ -1510,6 +1510,11 @@ static ssize_t disksize_store(struct device *dev,
 		return -EINVAL;
 	}
 
+	if (disksize == 2361393152) {
+		if (!miuirom)
+			miuirom = true; /* Miui Sets 2361393152 = 2252MB ON 4GB devices*/
+	}
+
 	down_write(&zram->init_lock);
 	if (init_done(zram)) {
 		pr_info("Cannot change disksize for initialized device\n");
@@ -1517,12 +1522,7 @@ static ssize_t disksize_store(struct device *dev,
 		goto out_unlock;
 	}
 
-	if (disksize == 2361393152) {
-		miuirom = true; /* Miui Sets 2361393152 = 2252MB */
-	} else {
-		miuirom = false;
-		disksize = 2361393152; /* AGNi Memory management forces this value */
-	}
+	disksize = 2361393152; /* AGNi Memory management forces this value */
 	zramzero = false;
 	dyn_fsync_active = true;
 
