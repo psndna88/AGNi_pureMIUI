@@ -2630,7 +2630,7 @@ static int therm_get_temp(uint32_t id, enum sensor_id_type type, int *temp)
 		goto get_temp_exit;
 	}
 
-	if (id == -19) {
+	if ((id == -19) || (id == -517)) {
 		ret = -EINVAL;
 		goto get_temp_exit;
 	}
@@ -2698,7 +2698,7 @@ int sensor_mgr_set_threshold(uint32_t zone_id,
 		goto set_threshold_exit;
 	}
 
-	if (zone_id == -19) {
+	if ((zone_id == -19) || (zone_id == -517)) {
 		ret = -EINVAL;
 		goto set_threshold_exit;
 	}
@@ -3773,7 +3773,7 @@ static int hotplug_init_cpu_offlined(void)
 	for_each_possible_cpu(cpu) {
 		if (!(msm_thermal_info.core_control_mask & BIT(cpus[cpu].cpu)))
 			continue;
-		if (cpus[cpu].sensor_id == -19)
+		if ((cpus[cpu].sensor_id == -19) || (cpus[cpu].sensor_id == -517))
 			continue;
 		if (therm_get_temp(cpus[cpu].sensor_id, cpus[cpu].id_type,
 					&temp)) {
