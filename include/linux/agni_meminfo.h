@@ -11,6 +11,7 @@ extern long si_mem_available(void);
 extern bool triggerswapping;
 extern bool agni_memprober(void);
 extern void agni_memprobe(void);
+extern void device_totalram(void);
 extern unsigned long zram_ram_usage;
 extern bool batt_swap_push;
 extern bool low_batt_swap_stall;
@@ -18,7 +19,7 @@ extern bool low_batt_swap_stall;
 extern int agni_swappiness;
 extern void mm_drop_caches(int val);
 extern unsigned long adreno_load_perc;
-extern bool fourgb;
+extern int ramgb;
 extern bool zramzero;
 extern bool dyn_fsync_active;
 

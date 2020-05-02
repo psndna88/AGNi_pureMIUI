@@ -14,6 +14,7 @@
  * v1.7: Increased swappiness values with increased zram disksize
  * v1.8: Turn off the swappiness control routine when zram disksize set to zero
  *       Also enable dynamic fsync when zram enabled
+ * v1.9: Account for 3GB ram devices and tune zram disksize accordingly
  */
 
 #include <asm/page.h>
@@ -25,23 +26,26 @@ bool triggerswapping = false;
 int agni_swappiness = 1;
 long totalmemk,mem_avail_perc;
 int trigthreshold;
-bool device_fourgbdone = false;
-bool fourgb;
+bool ramchecked = false;
+int ramgb;
 
-void device_fourgb(void) {
+void device_totalram(void) {
 
-	if (!device_fourgbdone) {
+	if (!ramchecked) {
 		totalmemk = totalram_pages << (PAGE_SHIFT - 10);
 	
 		if (totalmemk > 5000000) {
-			fourgb = false; /* 6GB device */
+			ramgb = 6; /* 6GB device */
 			trigthreshold = 15;
-		} else {
-			fourgb = true; /* 4GB device */
+		} else if ((totalmemk > 3000000) && (totalmemk < 5000000)) {
+			ramgb = 4; /* 4GB device */
 			trigthreshold = 20;
+		} else {
+			ramgb = 3; /* 3GB device */
+			trigthreshold = 25;
 		}
 
-		device_fourgbdone = true;
+		ramchecked = true;
 	}
 }
 
@@ -57,7 +61,6 @@ void availmem_prober(void) {
 bool agni_memprober(void) {
 	bool vote = false;
 
-	device_fourgb();
 	availmem_prober();
 
 	/* Decide voting */
@@ -74,7 +77,7 @@ bool agni_memprober(void) {
 	}
 
 	if (adreno_load_perc > GPULOADTRIGGER) { /* High GPU usage - typically while gaming */
-		if (fourgb)
+		if (ramgb <= 4)
 			vote = true; /* big games need more ram so zram swapping is beneficial on 4gb devices */
 		else
 			vote = false;
@@ -84,12 +87,12 @@ bool agni_memprober(void) {
 		vote = false;
 		
 	if (vote) {
-		if (fourgb) {
+		if (ramgb <= 4) {
 			agni_swappiness = 60;
 		} else {
 			agni_swappiness = 30;
 		}
-		if (fourgb && (mem_avail_perc < 10))
+		if ((ramgb <= 4) && (mem_avail_perc < 10))
 			mm_drop_caches(3);
 	} else {
 		agni_swappiness = 1;
