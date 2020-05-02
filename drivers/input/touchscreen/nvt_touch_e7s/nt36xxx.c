@@ -28,6 +28,8 @@
 #include <linux/wakelock.h>
 #include <linux/of_gpio.h>
 #include <linux/of_irq.h>
+#include <linux/kthread.h>
+#include <linux/sched/rt.h>
 
 #if defined(CONFIG_FB)
 #include <linux/notifier.h>
@@ -64,7 +66,9 @@ extern int32_t nvt_mp_proc_init(void);
 
 struct nvt_ts_data *ts;
 
-static struct workqueue_struct *nvt_wq;
+static struct kthread_work work;
+static struct kthread_worker touch_worker;
+static struct task_struct *touch_worker_thread;
 
 #if BOOT_UPDATE_FIRMWARE
 static struct workqueue_struct *nvt_fwu_wq;
@@ -1015,7 +1019,7 @@ Description:
 return:
 	n.a.
 *******************************************************/
-static void nvt_ts_work_func(struct work_struct *work)
+static void nvt_ts_work_func(struct kthread_work *work)
 {
 	int32_t ret = -1;
 	uint8_t point_data[POINT_DATA_LEN + 1] = {0};
@@ -1173,7 +1177,7 @@ static irqreturn_t nvt_ts_irq_handler(int32_t irq, void *dev_id)
 	}
 #endif
 
-	queue_work(nvt_wq, &ts->nvt_work);
+	queue_kthread_work(&touch_worker, &work);
 
 	return IRQ_HANDLED;
 }
@@ -1286,6 +1290,7 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	int32_t retry = 0;
 #endif
 	char fw_version[64];
+	struct sched_param param = { .sched_priority = MAX_RT_PRIO / 2 };
 
 	NVT_LOG("start\n");
 
@@ -1354,13 +1359,16 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	mutex_unlock(&ts->lock);
 
 
-	nvt_wq = create_workqueue("nvt_wq");
-	if (!nvt_wq) {
-		NVT_ERR("nvt_wq create workqueue failed\n");
-		ret = -ENOMEM;
+	init_kthread_worker(&touch_worker);
+	touch_worker_thread = kthread_create(kthread_worker_fn,&touch_worker,"nvt_thread");
+	if (IS_ERR(touch_worker_thread)) {
+		pr_err("%s: Cannot set nvt touch_worker_thread", __func__);
+		ret = -EFAULT;
 		goto err_create_nvt_wq_failed;
 	}
-	INIT_WORK(&ts->nvt_work, nvt_ts_work_func);
+	sched_setscheduler(touch_worker_thread, SCHED_FIFO, &param);
+	wake_up_process(touch_worker_thread);
+	init_kthread_work(&work, nvt_ts_work_func);
 
 
 
@@ -1855,8 +1863,8 @@ static void __exit nvt_driver_exit(void)
 {
 	i2c_del_driver(&nvt_i2c_driver);
 
-	if (nvt_wq)
-		destroy_workqueue(nvt_wq);
+	if (touch_worker_thread)
+		kthread_destroy_worker(&touch_worker);
 
 #if BOOT_UPDATE_FIRMWARE
 	if (nvt_fwu_wq)
