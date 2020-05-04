@@ -1046,6 +1046,16 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		return 0;
 	}
 
+	val = get_param(cmd, "MUDURL");
+	if (val) {
+		snprintf(buf, sizeof(buf), "SET dpp_mud_url %s", val);
+		if (wpa_command(ifname, buf) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to set MUD URL");
+			return 0;
+		}
+	}
+
 	if (sigma_dut_is_ap(dut)) {
 		if (!dut->hostapd_ifname) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
