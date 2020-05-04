@@ -993,6 +993,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	int not_dpp_akm = 0;
 	int akm_use_selector = 0;
 	int conn_status;
+	int chirp = 0;
 
 	if (!wait_conn)
 		wait_conn = "no";
@@ -1034,6 +1035,10 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			return 0;
 		}
 	}
+
+	val = get_param(cmd, "DPPChirp");
+	if (val)
+		chirp = get_enable_disable(val);
 
 	if ((step || frametype) && (!step || !frametype)) {
 		send_resp(dut, conn, SIGMA_ERROR,
@@ -1465,9 +1470,60 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 				 dut->dpp_local_bootstrap);
 		else
 			own_txt[0] = '\0';
-		if ((strcasecmp(bs, "QR") == 0 || strcasecmp(bs, "NFC") == 0) &&
-		    (strcasecmp(prov_role, "Configurator") == 0 ||
-		     strcasecmp(prov_role, "Both") == 0)) {
+		if (chirp) {
+			int freq = 2462; /* default: channel 6 */
+
+			val = get_param(cmd, "DPPChirpChannel");
+			if (val) {
+				freq = channel_to_freq(dut, atoi(val));
+				if (!freq) {
+					send_resp(dut, conn, SIGMA_ERROR,
+						  "errorCode,Unsupported DPPChirpChannel channel");
+					goto out;
+				}
+			}
+
+			if (strcasecmp(prov_role, "Configurator") == 0 ||
+			    strcasecmp(prov_role, "Both") == 0) {
+				if (!conf_role) {
+					send_resp(dut, conn, SIGMA_ERROR,
+						  "errorCode,Missing DPPConfIndex");
+					goto out;
+				}
+				snprintf(buf, sizeof(buf),
+					 "SET dpp_configurator_params  conf=%s %s %s configurator=%d%s%s%s%s",
+					 conf_role, conf_ssid, conf_pass,
+					 dut->dpp_conf_id, group_id,
+					 akm_use_selector ?
+					 " akm_use_selector=1" : "",
+					 conn_status ? " conn_status=1" : "",
+					 conf2);
+				if (wpa_command(ifname, buf) < 0) {
+					send_resp(dut, conn, SIGMA_ERROR,
+						  "errorCode,Failed to set configurator parameters");
+					goto out;
+				}
+			}
+
+			if (tcp && strcasecmp(tcp, "yes") == 0) {
+				snprintf(buf, sizeof(buf),
+					 "DPP_CONTROLLER_START");
+			} else {
+				snprintf(buf, sizeof(buf),
+					 "DPP_LISTEN %d role=%s%s%s",
+					 freq, role,
+					 netrole ? " netrole=" : "",
+					 netrole ? netrole : "");
+			}
+			if (wpa_command(ifname, buf) < 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to start DPP listen");
+				goto out;
+			}
+		} else if ((strcasecmp(bs, "QR") == 0 ||
+			    strcasecmp(bs, "NFC") == 0) &&
+			   (strcasecmp(prov_role, "Configurator") == 0 ||
+			    strcasecmp(prov_role, "Both") == 0)) {
 			if (!conf_role) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "errorCode,Missing DPPConfIndex");
@@ -1651,7 +1707,10 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			}
 		}
 
-		if (tcp && strcasecmp(tcp, "yes") == 0) {
+		if (chirp) {
+			snprintf(buf, sizeof(buf), "DPP_CHIRP own=%d listen=%d",
+				 dut->dpp_local_bootstrap, freq);
+		} else if (tcp && strcasecmp(tcp, "yes") == 0) {
 			snprintf(buf, sizeof(buf), "DPP_CONTROLLER_START");
 		} else {
 			snprintf(buf, sizeof(buf),
@@ -1664,7 +1723,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		}
 		if (wpa_command(ifname, buf) < 0) {
 			send_resp(dut, conn, SIGMA_ERROR,
-				  "errorCode,Failed to start DPP listen");
+				  "errorCode,Failed to start DPP listen/chirp");
 			goto out;
 		}
 
