@@ -49,12 +49,17 @@ int blkdev_issue_discard(struct block_device *bdev, sector_t sector,
 	struct bio *bio;
 	int ret = 0;
 	struct blk_plug plug;
+	sector_t bs_mask;
 
 	if (!q)
 		return -ENXIO;
 
 	if (!blk_queue_discard(q))
 		return -EOPNOTSUPP;
+
+	bs_mask = (bdev_logical_block_size(bdev) >> 9) - 1;
+	if ((sector | nr_sects) & bs_mask)
+		return -EINVAL;
 
 	/* Zero-sector (unknown) and one-sector granularities are the same.  */
 	granularity = max(q->limits.discard_granularity >> 9, 1U);
@@ -151,9 +156,14 @@ int blkdev_issue_write_same(struct block_device *bdev, sector_t sector,
 	struct bio_batch bb;
 	struct bio *bio;
 	int ret = 0;
+	sector_t bs_mask;
 
 	if (!q)
 		return -ENXIO;
+
+	bs_mask = (bdev_logical_block_size(bdev) >> 9) - 1;
+	if ((sector | nr_sects) & bs_mask)
+		return -EINVAL;
 
 	/* Ensure that max_write_same_sectors doesn't overflow bi_size */
 	max_write_same_sectors = UINT_MAX >> 9;
@@ -219,11 +229,16 @@ static int __blkdev_issue_zeroout(struct block_device *bdev, sector_t sector,
 	struct bio *bio;
 	struct bio_batch bb;
 	unsigned int sz;
+    sector_t bs_mask;
 	DECLARE_COMPLETION_ONSTACK(wait);
 
 	atomic_set(&bb.done, 1);
 	bb.error = 0;
 	bb.wait = &wait;
+
+    bs_mask = (bdev_logical_block_size(bdev) >> 9) - 1;
+    if ((sector | nr_sects) & bs_mask)
+        return -EINVAL;
 
 	ret = 0;
 	while (nr_sects != 0) {

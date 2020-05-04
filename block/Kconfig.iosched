@@ -108,7 +108,7 @@ choice
 		bool "Anxiety" if IOSCHED_ANXIETY=y
 
 	config DEFAULT_NOOP
-		bool "No-op"
+		bool "No-op" if IOSCHED_NOOP=y
 
 	config DEFAULT_DEPRESSION
 		bool "Depression" if IOSCHED_DEPRESSION=y
