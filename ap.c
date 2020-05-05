@@ -7628,6 +7628,8 @@ enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 		fprintf(f, "ssid=QCA AP OOB\n");
 	if (dut->ap_bcnint)
 		fprintf(f, "beacon_int=%d\n", dut->ap_bcnint);
+	if (dut->ap_start_disabled)
+		fprintf(f, "start_disabled=1\n");
 
 	if (dut->ap_akm_values) {
 		struct {
@@ -9219,6 +9221,7 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 	dut->ap_dpp_conf_addr = NULL;
 	free(dut->ap_dpp_conf_pkhash);
 	dut->ap_dpp_conf_pkhash = NULL;
+	dut->ap_start_disabled = 0;
 
 	if (is_60g_sigma_dut(dut)) {
 		dut->ap_mode = AP_11ad;

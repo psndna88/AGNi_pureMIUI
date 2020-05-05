@@ -38,7 +38,27 @@ static int dpp_hostapd_run(struct sigma_dut *dut)
 	dut->ap_mode = dut->ap_channel <= 14 ? AP_11ng : AP_11na;
 	dut->ap_key_mgmt = AP_OPEN;
 	dut->ap_cipher = AP_PLAIN;
+	if (!dut->ap_dpp_conf_addr || !dut->ap_dpp_conf_pkhash)
+		dut->ap_start_disabled = 1;
 	return cmd_ap_config_commit(dut, NULL, NULL) == 1 ? 0 : -1;
+}
+
+
+static int dpp_hostapd_beacon(struct sigma_dut *dut)
+{
+	const char *ifname = dut->hostapd_ifname;
+
+	if (!dut->ap_start_disabled)
+		return 0;
+
+	if (!ifname ||
+	    wpa_command(ifname, "SET start_disabled 0") < 0 ||
+	    wpa_command(ifname, "DISABLE") < 0 ||
+	    wpa_command(ifname, "ENABLE") < 0)
+		return -1;
+
+	dut->ap_start_disabled = 0;
+	return 0;
 }
 
 
@@ -424,6 +444,14 @@ static int dpp_hostapd_conf_update(struct sigma_dut *dut,
 			}
 		}
 	}
+
+	if (wpa_command(ifname, "SET start_disabled 0") < 0 &&
+	    dut->ap_start_disabled) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Failed to update AP security parameters");
+		goto out;
+	}
+	dut->ap_start_disabled = 0;
 
 	/* Wait for a possible Configuration Result to be sent */
 	old_timeout = dut->default_timeout;
@@ -1604,6 +1632,12 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		if (sigma_dut_is_ap(dut) && dut->hostapd_running &&
 		    dut->ap_oper_chn)
 			freq = channel_to_freq(dut, dut->ap_channel);
+
+		if (sigma_dut_is_ap(dut) && dpp_hostapd_beacon(dut) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to start AP mode listen");
+			goto out;
+		}
 
 		if (strcasecmp(bs, "PKEX") == 0) {
 			/* default: channel 6 for PKEX */

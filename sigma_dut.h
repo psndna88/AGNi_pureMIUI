@@ -452,6 +452,7 @@ struct sigma_dut {
 	int ap_rts;
 	int ap_frgmnt;
 	int ap_bcnint;
+	int ap_start_disabled;
 	struct qos_params {
 		int ac;
 		int cwmin;
