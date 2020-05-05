@@ -482,6 +482,8 @@ int cam_hw_cdm_set_cdm_core_cfg(struct cam_hw_info *cdm_hw)
 	uint32_t cfg_mask = 0;
 	int rc;
 	struct cam_cdm *core = (struct cam_cdm *)cdm_hw->core_info;
+	struct cam_cdm_private_dt_data *pvt_data =
+		pvt_data = cdm_hw->soc_info.soc_private;
 
 	cfg_mask = cfg_mask |
 			CAM_CDM_AHB_STOP_ON_ERROR|
@@ -497,28 +499,26 @@ int cam_hw_cdm_set_cdm_core_cfg(struct cam_hw_info *cdm_hw)
 		goto end;
 	}
 
-	if (cdm_version < CAM_CDM_VERSION_2_0) {
-		rc = cam_cdm_write_hw_reg(cdm_hw,
-				core->offsets->cmn_reg->core_cfg, cfg_mask);
-		if (rc) {
-			CAM_ERR(CAM_CDM, "Error writing cdm core cfg");
-			rc = -EIO;
-			goto end;
-		}
-	} else {
+	if (cdm_version >= CAM_CDM_VERSION_2_0) {
 		if (core->id != CAM_CDM_CPAS)
 			cfg_mask = cfg_mask | CAM_CDM_IMPLICIT_WAIT_EN;
 
 		if (core->arbitration == CAM_CDM_ARBITRATION_ROUND_ROBIN)
 			cfg_mask = cfg_mask | CAM_CDM_ARB_SEL_RR;
 
-		rc = cam_cdm_write_hw_reg(cdm_hw,
-				core->offsets->cmn_reg->core_cfg, cfg_mask);
-		if (rc) {
-			CAM_ERR(CAM_CDM, "Error writing cdm core cfg");
-			rc = -EIO;
-			goto end;
-		}
+	}
+
+	if (cdm_version >= CAM_CDM_VERSION_2_1) {
+		cfg_mask = cfg_mask | ((uint32_t)pvt_data->priority_group <<
+			core->offsets->cmn_reg->priority_group_bit_offset);
+	}
+
+	rc = cam_cdm_write_hw_reg(cdm_hw,
+			core->offsets->cmn_reg->core_cfg, cfg_mask);
+	if (rc) {
+		CAM_ERR(CAM_CDM, "Error writing cdm core cfg");
+		rc = -EIO;
+		goto end;
 	}
 
 end:

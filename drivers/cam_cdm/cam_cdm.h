@@ -310,6 +310,7 @@ struct cam_cdm_common_reg_data {
  * @icl_reg:             registers to read information related to good
  *                       and invalid commands in FIFO
  * @spare:               spare register
+ * @priority_group_bit_offset offset of priority group bits
  *
  */
 struct cam_cdm_common_regs {
@@ -349,6 +350,7 @@ struct cam_cdm_common_regs {
 	const struct cam_cdm_perf_regs *perf_reg;
 	const struct cam_cdm_icl_regs *icl_reg;
 	uint32_t spare;
+	uint32_t priority_group_bit_offset;
 };
 
 /**
@@ -530,10 +532,11 @@ struct cam_cdm {
 /* struct cam_cdm_private_dt_data - CDM hw custom dt data */
 struct cam_cdm_private_dt_data {
 	bool dt_cdm_shared;
+	bool config_fifo;
+	uint8_t priority_group;
+	uint32_t fifo_depth[CAM_CDM_BL_FIFO_MAX];
 	uint32_t dt_num_supported_clients;
 	const char *dt_cdm_client_name[CAM_PER_CDM_MAX_REGISTERED_CLIENTS];
-	bool config_fifo;
-	uint32_t fifo_depth[CAM_CDM_BL_FIFO_MAX];
 };
 
 /* struct cam_cdm_intf_devices - CDM mgr interface devices */

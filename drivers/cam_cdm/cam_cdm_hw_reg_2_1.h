@@ -225,6 +225,7 @@ static struct cam_cdm_common_regs cdm_hw_2_1_cmn_reg_offset = {
 	.perf_reg = NULL,
 	.icl_reg = &cdm_2_1_icl,
 	.spare = 0x3fc,
+	.priority_group_bit_offset = 20,
 };
 
 static struct cam_cdm_common_reg_data cdm_hw_2_1_cmn_reg_data = {
