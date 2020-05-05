@@ -2339,9 +2339,12 @@ struct page *buffered_rmqueue(struct zone *preferred_zone,
 		pcp = &this_cpu_ptr(zone->pageset)->pcp;
 
 		/* First try to get CMA pages */
-		if (migratetype == MIGRATE_MOVABLE)
+		if (migratetype == MIGRATE_MOVABLE &&
+			gfp_flags & __GFP_CMA) {
 			list = get_populated_pcp_list(zone, 0, pcp,
 					get_cma_migrate_type(), cold);
+		}
+
 		if (list == NULL) {
 			/*
 			 * Either CMA is not suitable or there are no free CMA
