@@ -114,6 +114,8 @@ Optional properties:
 				each interface.
 - qcom,sde-sspp-linewidth:	A u32 value indicates the max sspp line width.
 - qcom,sde-vig-sspp-linewidth:  A u32 value indicates the max vig sspp line width.
+- qcom,sde-scaling-linewidth:	A u32 value indicates the max vig source pipe line width
+				for scaling purposes.
 - qcom,sde-mixer-linewidth:	A u32 value indicates the max mixer line width.
 - qcom,sde-wb-linewidth:	A u32 value indicates the max writeback line width.
 - qcom,sde-sspp-scale-size:	A u32 value indicates the scaling block size on sspp.
@@ -651,6 +653,7 @@ Example:
 			  <0x2c4 0>, <0x2ac 4>, <0x2b4 4>, <0x2bc 4>,
 			  <0x2c4 4>, <0x2ac 8>, <0x2b4 8>, <0x3a8 16>,
 			  <0x3b0 16>;
+    qcom,sde-scaling-linewidth = <2560>;
     qcom,sde-mixer-linewidth = <2560>;
     qcom,sde-sspp-linewidth = <2560>;
     qcom,sde-mixer-blendstages = <0x7>;
