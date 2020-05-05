@@ -1,12 +1,12 @@
 /* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef __UAPI_CAM_CUSTOM_H__
 #define __UAPI_CAM_CUSTOM_H__
 
-#include "cam_defs.h"
+#include <camera/media/cam_defs.h>
 
 /* Custom driver name */
 #define CAM_CUSTOM_DEV_NAME                    "cam-custom"
@@ -53,8 +53,8 @@
  *
  */
 struct cam_custom_dev_cap_info {
-	uint32_t              hw_type;
-	uint32_t              hw_version;
+	__u32              hw_type;
+	__u32              hw_version;
 };
 
 /**
@@ -68,11 +68,11 @@ struct cam_custom_dev_cap_info {
  *
  */
 struct cam_custom_query_cap_cmd {
-	struct cam_iommu_handle         device_iommu;
-	struct cam_iommu_handle         cdm_iommu;
-	int32_t                         num_dev;
-	uint32_t                        reserved;
-	struct cam_custom_dev_cap_info  dev_caps[CAM_CUSTOM_NUM_SUB_DEVICES];
+	struct cam_iommu_handle        device_iommu;
+	struct cam_iommu_handle        cdm_iommu;
+	__s32                          num_dev;
+	__u32                          reserved;
+	struct cam_custom_dev_cap_info dev_caps[CAM_CUSTOM_NUM_SUB_DEVICES];
 };
 
 /* Acquire Device */
@@ -86,12 +86,12 @@ struct cam_custom_query_cap_cmd {
  *
  */
 struct cam_custom_out_port_info {
-	uint32_t                res_type;
-	uint32_t                format;
-	uint32_t                custom_info1;
-	uint32_t                custom_info2;
-	uint32_t                custom_info3;
-	uint32_t                reserved;
+	__u32                res_type;
+	__u32                format;
+	__u32                custom_info1;
+	__u32                custom_info2;
+	__u32                custom_info3;
+	__u32                reserved;
 };
 
 /**
@@ -125,30 +125,30 @@ struct cam_custom_out_port_info {
  *
  */
 struct cam_custom_in_port_info {
-	uint32_t                        res_type;
-	uint32_t                        lane_type;
-	uint32_t                        lane_num;
-	uint32_t                        lane_cfg;
-	uint32_t                        vc[CAM_CUSTOM_VC_DT_CFG_MAX];
-	uint32_t                        dt[CAM_CUSTOM_VC_DT_CFG_MAX];
-	uint32_t                        num_valid_vc_dt;
-	uint32_t                        format;
-	uint32_t                        test_pattern;
-	uint32_t                        usage_type;
-	uint32_t                        left_start;
-	uint32_t                        left_stop;
-	uint32_t                        left_width;
-	uint32_t                        right_start;
-	uint32_t                        right_stop;
-	uint32_t                        right_width;
-	uint32_t                        line_start;
-	uint32_t                        line_stop;
-	uint32_t                        height;
-	uint32_t                        pixel_clk;
-	uint32_t                        num_bytes_out;
-	uint32_t                        custom_info1;
-	uint32_t                        custom_info2;
-	uint32_t                        num_out_res;
+	__u32                           res_type;
+	__u32                           lane_type;
+	__u32                           lane_num;
+	__u32                           lane_cfg;
+	__u32                           vc[CAM_CUSTOM_VC_DT_CFG_MAX];
+	__u32                           dt[CAM_CUSTOM_VC_DT_CFG_MAX];
+	__u32                           num_valid_vc_dt;
+	__u32                           format;
+	__u32                           test_pattern;
+	__u32                           usage_type;
+	__u32                           left_start;
+	__u32                           left_stop;
+	__u32                           left_width;
+	__u32                           right_start;
+	__u32                           right_stop;
+	__u32                           right_width;
+	__u32                           line_start;
+	__u32                           line_stop;
+	__u32                           height;
+	__u32                           pixel_clk;
+	__u32                           num_bytes_out;
+	__u32                           custom_info1;
+	__u32                           custom_info2;
+	__u32                           num_out_res;
 	struct cam_custom_out_port_info data[1];
 };
 
@@ -163,11 +163,11 @@ struct cam_custom_in_port_info {
  *                              resource array;
  */
 struct cam_custom_resource {
-	uint32_t                       resource_id;
-	uint32_t                       length;
-	uint32_t                       handle_type;
-	uint32_t                       reserved;
-	uint64_t                       res_hdl;
+	__u32                       resource_id;
+	__u32                       length;
+	__u32                       handle_type;
+	__u32                       reserved;
+	__u64                       res_hdl;
 };
 
 /**
@@ -180,11 +180,11 @@ struct cam_custom_resource {
  * @data                 : Start of data region
  */
 struct cam_custom_acquire_hw_info {
-	uint32_t                num_inputs;
-	uint32_t                input_info_size;
-	uint32_t                input_info_offset;
-	uint32_t                reserved;
-	uint64_t                data;
+	__u32                num_inputs;
+	__u32                input_info_size;
+	__u32                input_info_offset;
+	__u32                reserved;
+	__u64                data;
 };
 
 /**
@@ -194,8 +194,8 @@ struct cam_custom_acquire_hw_info {
  * @reserved:                   reserved
  */
 struct cam_custom_cmd_buf_type_1 {
-	uint32_t                       custom_info;
-	uint32_t                       reserved;
+	__u32                       custom_info;
+	__u32                       reserved;
 };
 
 /**
@@ -207,9 +207,9 @@ struct cam_custom_cmd_buf_type_1 {
  * @reserved:                   reserved
  */
 struct cam_custom_cmd_buf_type_2 {
-	uint32_t                       custom_info1;
-	uint32_t                       custom_info2;
-	uint32_t                       custom_info3;
-	uint32_t                       reserved;
+	__u32                       custom_info1;
+	__u32                       custom_info2;
+	__u32                       custom_info3;
+	__u32                       reserved;
 };
 #endif /* __UAPI_CAM_CUSTOM_H__ */
