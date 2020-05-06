@@ -450,10 +450,12 @@ static unsigned long msm_cpp_queue_buffer_info(struct cpp_device *cpp_dev,
 	buff->map_info.buff_info = *buffer_info;
 	buff->map_info.buf_fd = buffer_info->fd;
 
+#if defined(CONFIG_TRACING) && defined(DEBUG)
 	trace_printk("fd %d index %d native_buff %d ssid %d %d\n",
 		buffer_info->fd, buffer_info->index,
 		buffer_info->native_buff, buff_queue->session_id,
 		buff_queue->stream_id);
+#endif
 
 	if (buff_queue->security_mode == SECURE_MODE)
 		rc = cam_smmu_get_stage2_phy_addr(cpp_dev->iommu_hdl,
@@ -485,10 +487,12 @@ static void msm_cpp_dequeue_buffer_info(struct cpp_device *cpp_dev,
 {
 	int ret = -1;
 
+#if defined(CONFIG_TRACING) && defined(DEBUG)
 	trace_printk("fd %d index %d native_buf %d ssid %d %d\n",
 		buff->map_info.buf_fd, buff->map_info.buff_info.index,
 		buff->map_info.buff_info.native_buff, buff_queue->session_id,
 		buff_queue->stream_id);
+#endif
 
 	if (buff_queue->security_mode == SECURE_MODE)
 		ret = cam_smmu_put_stage2_phy_addr(cpp_dev->iommu_hdl,
@@ -1498,6 +1502,8 @@ static int cpp_close_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
 	uint32_t i;
 	int rc = -1;
+	int counter = 0;
+	u32 result = 0;
 	struct cpp_device *cpp_dev = NULL;
 	struct msm_device_queue *processing_q = NULL;
 	struct msm_device_queue *eventData_q = NULL;
@@ -1578,6 +1584,54 @@ static int cpp_close_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 			msm_camera_io_r(cpp_dev->cpp_hw_base + 0x88));
 		pr_debug("DEBUG_R1: 0x%x\n",
 			msm_camera_io_r(cpp_dev->cpp_hw_base + 0x8C));
+
+		/* mask IRQ status */
+		msm_camera_io_w(0xB, cpp_dev->cpp_hw_base + 0xC);
+
+		/* clear IRQ status */
+		msm_camera_io_w(0xFFFFF, cpp_dev->cpp_hw_base + 0x14);
+
+		/* MMSS_A_CPP_AXI_CMD = 0x16C, reset 0x1*/
+		msm_camera_io_w(0x1, cpp_dev->cpp_hw_base + 0x16C);
+
+		while (counter < MSM_CPP_POLL_RETRIES) {
+			result = msm_camera_io_r(cpp_dev->cpp_hw_base + 0x10);
+			if (result & 0x2)
+				break;
+			/*
+			 * Below usleep values are chosen based on experiments
+			 * and this was the smallest number which works. This
+			 * sleep is needed to leave enough time for hardware
+			 * to update status register.
+			 */
+			usleep_range(200, 250);
+			counter++;
+		}
+
+		pr_debug("CPP AXI done counter %d result 0x%x\n",
+			counter, result);
+
+		/* clear IRQ status */
+		msm_camera_io_w(0xFFFFF, cpp_dev->cpp_hw_base + 0x14);
+		counter = 0;
+		/* MMSS_A_CPP_RST_CMD_0 = 0x8, firmware reset = 0x3DF77 */
+		msm_camera_io_w(0x3DF77, cpp_dev->cpp_hw_base + 0x8);
+
+		while (counter < MSM_CPP_POLL_RETRIES) {
+			result = msm_camera_io_r(cpp_dev->cpp_hw_base + 0x10);
+			if (result & 0x1)
+				break;
+			/*
+			 * Below usleep values are chosen based on experiments
+			 * and this was the smallest number which works. This
+			 * sleep is needed to leave enough time for hardware
+			 * to update status register.
+			 */
+			usleep_range(200, 250);
+			counter++;
+		}
+		pr_debug("CPP reset done counter %d result 0x%x\n",
+			counter, result);
 
 		msm_camera_io_w(0x0, cpp_dev->base + MSM_CPP_MICRO_CLKEN_CTL);
 		msm_cpp_clear_timer(cpp_dev);

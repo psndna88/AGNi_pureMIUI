@@ -30,6 +30,7 @@
 #include <linux/regulator/spm-regulator.h>
 #include <soc/qcom/spm.h>
 #include <linux/arm-smccc.h>
+#include <linux/psci.h>
 
 #if defined(CONFIG_ARM64) || (defined(CONFIG_ARM) && defined(CONFIG_ARM_PSCI))
 #else
