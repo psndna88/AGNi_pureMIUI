@@ -28,7 +28,6 @@
 #include <qdf_types.h>
 #include <i_qdf_mem.h>
 
-#define QDF_ALLOC_GRANULARITY (PAGE_SIZE * 16)
 #define QDF_CACHE_LINE_SZ __qdf_cache_line_sz
 
 /**
