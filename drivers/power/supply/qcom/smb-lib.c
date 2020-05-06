@@ -641,7 +641,6 @@ static const struct apsd_result *smblib_update_usb_type(struct smb_charger *chg)
 	/* if PD is active, APSD is disabled so won't have a valid result */
 	if (chg->pd_active) {
 		chg->real_charger_type = POWER_SUPPLY_TYPE_USB_PD;
-    chg->usb_psy_desc.type = POWER_SUPPLY_TYPE_USB_PD;
 	} else {
 		/*
 		 * Update real charger type only if its not FLOAT
@@ -650,7 +649,6 @@ static const struct apsd_result *smblib_update_usb_type(struct smb_charger *chg)
 		if (!(apsd_result->pst == POWER_SUPPLY_TYPE_USB_FLOAT &&
 			chg->real_charger_type == POWER_SUPPLY_TYPE_USB))
 		chg->real_charger_type = apsd_result->pst;
-    	chg->usb_psy_desc.type = apsd_result->pst;
 	}
 
 	smblib_err(chg, "lct battery charge APSD=%s PD=%d\n",

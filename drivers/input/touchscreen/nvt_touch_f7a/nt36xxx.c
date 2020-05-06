@@ -60,9 +60,9 @@ static struct work_struct g_resume_work;
 #if NVT_TOUCH_ESD_PROTECT
 static struct delayed_work nvt_esd_check_work;
 static struct workqueue_struct *nvt_esd_check_wq;
-static unsigned long irq_timer;
-uint8_t esd_check;
-uint8_t esd_retry;
+static unsigned long irq_timer = 0;
+uint8_t esd_check = false;
+uint8_t esd_retry = 0;
 uint8_t esd_retry_max = 5;
 #endif /* #if NVT_TOUCH_ESD_PROTECT */
 
@@ -137,8 +137,8 @@ const uint16_t gesture_key_array[] = {
 
 bool enable_gesture_mode = false; // for gesture
 EXPORT_SYMBOL(enable_gesture_mode);
-bool delay_gesture;
-bool suspend_state;
+bool delay_gesture = false;
+bool suspend_state = false;
 #define WAKEUP_OFF 4
 #define WAKEUP_ON 5
 #define ENABLE_TOUCH_SZIE 0//disable touch size report
@@ -170,7 +170,7 @@ int nvt_gesture_switch(struct input_dev *dev, unsigned int type, unsigned int co
 
 #endif
 
-static uint8_t bTouchIsAwake;
+static uint8_t bTouchIsAwake = 0;
 
 /*******************************************************
 Description:

@@ -1830,7 +1830,7 @@ static irqreturn_t syna_tcm_isr(int irq, void *data)
 	int retval;
 	struct syna_tcm_hcd *tcm_hcd = data;
 	const struct syna_tcm_board_data *bdata = tcm_hcd->hw_if->bdata;
-	static int syna_tcm_isr_err_count;
+	static int syna_tcm_isr_err_count = 0;
 
 	LOG_ENTRY();
 

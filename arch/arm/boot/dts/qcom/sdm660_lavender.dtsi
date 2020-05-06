@@ -388,11 +388,6 @@
 	firmware: firmware {
 		android {
 			compatible = "android,firmware";
-				vbmeta {
-				compatible = "android,vbmeta";
-				parts = "vbmeta,boot,system,vendor,dtbo,recovery";
-			};
-
 			fstab {
 				compatible = "android,fstab";
 				vendor {
@@ -400,7 +395,7 @@
 					dev = "/dev/block/platform/soc/c0c4000.sdhci/by-name/vendor";
 					type = "ext4";
 					mnt_flags = "ro,barrier=1,discard";
-					fsmgr_flags = "wait,avb";
+					fsmgr_flags = "wait";
 					status = "ok";
 				};
 			};
@@ -499,11 +494,6 @@
 		cont_splash_mem: splash_region@9d400000 {
 			reg = <0x0 0x9d400000 0x0 0x02400000>;
 			label = "cont_splash_mem";
-		};
-
-		dfps_data_mem: dfps_data_mem@0x9f7ff000 {
-		       reg = <0 0x9f7ff000 0 0x00001000>;
-		       label = "dfps_data_mem";
 		};
 
 		pstore_reserve_mem: pstore_reserve_mem_region@0 {
@@ -1427,7 +1417,7 @@
 			<  1401600000 0x04040049 0x073a003a 0x2 5 >,
 			<  1536000000 0x04040050 0x08400040 0x2 6 >,
 			<  1747200000 0x0404005b 0x09480048 0x2 7 >,
-			<  1843200000 0x04040060 0x094c004c 0x3 8 >;
+			<  2208000000 0x04040073 0x0b5c005c 0x3 6 >;
 
 		qcom,perfcl-speedbin0-v0 =
 			<   300000000 0x0004000f 0x01200020 0x1 1 >,
@@ -1436,7 +1426,7 @@
 			<  1747200000 0x0404005b 0x09480048 0x2 4 >,
 			<  1958400000 0x04040066 0x0a510051 0x2 5 >,
 			<  2150400000 0x04040070 0x0b590059 0x2 6 >,
-			<  2457600000 0x04040080 0x0c660066 0x3 7 >;
+			<  2208000000 0x04040073 0x0b5c005c 0x3 6 >;
 
 		qcom,perfcl-speedbin1-v0 =
 			<   300000000 0x0004000f 0x01200020 0x1 1 >,
@@ -1696,11 +1686,12 @@
 		};
 	};
 
-	qcom,rmtfs_sharedmem@85e00000 {
+	qcom,rmtfs_sharedmem@0 {
 		compatible = "qcom,sharedmem-uio";
-		reg = <0x85e00000 0x200000>;
+		reg = <0x0 0x200000>;
 		reg-names = "rmtfs";
 		qcom,client-id = <0x00000001>;
+		qcom,guard-memory;
 	};
 
 	qcom,rmnet-ipa {
@@ -2227,6 +2218,7 @@
 		qcom,qdsp6v62-1-5;
 		memory-region = <&modem_fw_mem>;
 		qcom,mem-protect-id = <0xF>;
+		qcom,complete-ramdump;
 		qcom,cx-ipeak-vote;
 
 		/* GPIO inputs from mss */
@@ -2336,7 +2328,7 @@
 		qcom,qsee-ce-hw-instance = <0>;
 		qcom,disk-encrypt-pipe-pair = <2>;
 		qcom,support-fde;
-		qcom,fde-key-size;
+		/*qcom,fde-key-size;*/
 		qcom,no-clock-support;
 		qcom,msm-bus,name = "qseecom-noc";
 		qcom,msm-bus,num-cases = <4>;
@@ -2653,7 +2645,7 @@
 
 #include "sdm660-ion.dtsi"
 #include "sdm660-bus.dtsi"
-#include "msm-pm660_f7a.dtsi"
+#include "msm-pm660_lavender.dtsi"
 #include "msm-pm660l.dtsi"
 #include "msm-pm660-rpm-regulator.dtsi"
 #include "msm-pm660l-rpm-regulator.dtsi"
@@ -2751,7 +2743,7 @@
 
 #include "msm-arm-smmu-660.dtsi"
 #include "msm-arm-smmu-impl-defs-660.dtsi"
-#include "sdm660-common_f7a.dtsi"
+#include "sdm660-common.dtsi"
 #include "sdm660-blsp.dtsi"
 #include "msm-rdbg.dtsi"
 #include "sdm660-camera.dtsi"
