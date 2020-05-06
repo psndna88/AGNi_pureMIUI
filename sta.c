@@ -3511,6 +3511,11 @@ static enum sigma_cmd_result cmd_sta_associate(struct sigma_dut *dut,
 	    (strcmp(wps_param, "1") == 0 || strcasecmp(wps_param, "On") == 0))
 		wps = 1;
 
+	if (dut->ocvc &&
+	    set_network(get_station_ifname(dut), dut->infra_network_id,
+			"ocv", "1") < 0)
+		return ERROR_SEND_STATUS;
+
 	if (wps) {
 		if (dut->program == PROGRAM_60GHZ && network_mode &&
 		    strcasecmp(network_mode, "PBSS") == 0 &&
@@ -8042,6 +8047,8 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 
 	wpa_command(intf, "SET setband AUTO");
 
+	dut->ocvc = 0;
+
 	if (dut->program != PROGRAM_VHT)
 		return cmd_sta_p2p_reset(dut, conn, cmd);
 
@@ -9063,6 +9070,20 @@ static int sta_set_wireless_oce(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int sta_set_wireless_wpa3(struct sigma_dut *dut, struct sigma_conn *conn,
+				 struct sigma_cmd *cmd)
+{
+	const char *intf = get_param(cmd, "Interface");
+	const char *val;
+
+	val = get_param(cmd, "ocvc");
+	if (val)
+		dut->ocvc = atoi(val);
+
+	return cmd_sta_set_wireless_common(intf, dut, conn, cmd);
+}
+
+
 static enum sigma_cmd_result cmd_sta_set_wireless(struct sigma_dut *dut,
 						  struct sigma_conn *conn,
 						  struct sigma_cmd *cmd)
@@ -9082,6 +9103,8 @@ static enum sigma_cmd_result cmd_sta_set_wireless(struct sigma_dut *dut,
 		/* sta_set_wireless in WPS program is only used for 60G */
 		if (is_60g_sigma_dut(dut))
 			return sta_set_wireless_60g(dut, conn, cmd);
+		if (strcasecmp(val, "WPA3") == 0)
+			return sta_set_wireless_wpa3(dut, conn, cmd);
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "ErrorCode,Program value not supported");
 	} else {
