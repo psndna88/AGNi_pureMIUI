@@ -418,7 +418,7 @@
 		};
 
 		dfps_data_mem: dfps_data_mem@0x9f7ff000 {
-		       reg = <0 0x9f7ff000 0 0x00001000>;
+		       reg = <0 0x9f8ff000 0 0x00001000>;
 		       label = "dfps_data_mem";
 		};
 
