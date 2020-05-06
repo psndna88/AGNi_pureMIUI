@@ -53,8 +53,11 @@ static ssize_t brightness_store(struct device *dev,
 	if (ret)
 		goto unlock;
 
+#ifdef CONFIG_KERNEL_CUSTOM_E7T
+#else
 	if (state == LED_OFF && !(led_cdev->flags & LED_KEEP_TRIGGER))
 		led_trigger_remove(led_cdev);
+#endif
 	led_set_brightness(led_cdev, state);
 	led_cdev->usr_brightness_req = state;
 

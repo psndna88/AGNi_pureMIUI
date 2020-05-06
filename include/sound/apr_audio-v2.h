@@ -1,4 +1,5 @@
 /* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2019 XiaoMi, Inc.
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License version 2 and
@@ -660,7 +661,7 @@ struct adm_cmd_set_pp_params {
 #define ADM_CMD_GET_MTMX_STRTR_DEV_PARAMS_V1	0x00010368
 #define ADM_CMDRSP_GET_MTMX_STRTR_DEV_PARAMS_V1	0x00010369
 
-/* Payload of the #define ADM_CMD_SET_MTMX_STRTR_DEV_PARAMS_V1 command.
+/* Payload of the #defineï¿½ADM_CMD_SET_MTMX_STRTR_DEV_PARAMS_V1 command.
  * If the data_payload_addr_lsw and data_payload_addr_msw element
  * are NULL, a series of struct param_hdr_v3 structures immediately
  * follows, whose total size is payload_size bytes.
@@ -1968,6 +1969,30 @@ struct afe_port_cmd_set_param_v3 {
 	 * Must include param_hdr packed correctly.
 	 */
 	u8 param_data[0];
+} __packed;
+
+struct afe_port_param_data_v2 {
+	u32 module_id;
+/* ID of the module to be configured.
+ * Supported values: Valid module ID
+ */
+
+u32 param_id;
+/* ID of the parameter corresponding to the supported parameters
+ * for the module ID.
+ * Supported values: Valid parameter ID
+ */
+
+u16 param_size;
+/* Actual size of the data for the
+ * module_id/param_id pair. The size is a
+ * multiple of four bytes.
+ * Supported values: > 0
+ */
+
+u16 reserved;
+/* This field must be set to zero.
+ */
 } __packed;
 
 /* Payload of the #AFE_PARAM_ID_LOOPBACK_GAIN_PER_PATH parameter,
@@ -10033,6 +10058,36 @@ struct afe_spkr_prot_calib_get_resp {
 	struct asm_calib_res_cfg res_cfg;
 } __packed;
 
+#ifdef CONFIG_SND_SOC_MAX98937
+/*Maxim DSM module and parameters IDs*/
+#define AFE_RX_TOPOLOGY_ID_DSM                              0x10001061
+#define AFE_TX_TOPOLOGY_ID_DSM                              0x10001060
+#define AFE_MODULE_DSM_TX                                   0x10001068
+#define AFE_MODULE_DSM_RX                                   0x10001062
+#define AFE_PARAM_ID_DSM_ENABLE                             0x10001063
+#define AFE_PARAM_ID_CALIB                                  0x10001065
+#define AFE_PARAM_ID_DSM_CFG                                0x10001066
+#define AFE_PARAM_ID_DSM_INFO                               0x10001067
+#define AFE_PARAM_ID_DSM_STAT                               0x10001069
+
+#define DSM_RX_PORT_ID      AFE_PORT_ID_PRIMARY_MI2S_RX
+#define DSM_TX_PORT_ID      AFE_PORT_ID_PRIMARY_MI2S_TX
+
+struct afe_dsm_param_array {
+    uint32_t    data[112];
+} __packed;
+struct afe_dsm_get_param {
+	struct param_hdr_v3 pdata;
+    struct afe_dsm_param_array param;
+} __packed;
+
+struct afe_dsm_get_resp {
+	uint32_t status;
+	struct param_hdr_v3 pdata;
+	struct afe_dsm_param_array param;
+} __packed;
+
+#endif
 
 /* SRS TRUMEDIA start */
 /* topology */
@@ -10650,7 +10705,7 @@ struct afe_clk_set {
 	 * for enable and disable clock.
 	 *	"clk_freq_in_hz", "clk_attri", and "clk_root"
 	 *	are ignored in disable clock case.
-	 *	@values 
+	 *	@valuesï¿½
 	 *	- 0 -- Disabled
 	 *	- 1 -- Enabled  @tablebulletend
 	 */
@@ -10730,6 +10785,13 @@ struct afe_digital_clk_cfg {
 
 /* This field must be set to zero. */
 	u16                  reserved;
+} __packed;
+
+struct afe_lpass_digital_clk_config_command {
+	struct apr_hdr			 hdr;
+	struct afe_port_cmd_set_param_v2 param;
+	struct afe_port_param_data_v2    pdata;
+	struct afe_digital_clk_cfg clk_cfg;
 } __packed;
 
 /*
