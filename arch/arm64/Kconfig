@@ -224,6 +224,11 @@ config THERMAL_SWITCH
 	    help
 	            Support themral config switch.
 
+config AGNI_ANDROID_9
+	bool "AGNi Android 9 PIE configuration"
+	depends on ARM64
+	default n
+
 config KERNEL_CUSTOM_D2S
     default n
         bool "Custom for hardware D2S_pcb"
