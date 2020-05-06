@@ -20,7 +20,6 @@ source "drivers/input/touchscreen/focal_ft8719/Kconfig"
 # HMI_L6653_A01
 source "drivers/input/touchscreen/nvt_touch_e7s/Kconfig"
 source "drivers/input/touchscreen/synaptics_dsx_e7s/Kconfig"
-source "drivers/input/touchscreen/synaptics_dsx/Kconfig"
 
 # HMI_M6100_A01
 source "drivers/input/touchscreen/nvt_touch_f7a/Kconfig"
