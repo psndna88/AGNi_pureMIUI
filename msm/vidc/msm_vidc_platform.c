@@ -57,11 +57,9 @@ static struct msm_vidc_codec_data default_codec_data[] =  {
 static struct msm_vidc_codec_data lahaina_codec_data[] =  {
 	CODEC_ENTRY(V4L2_PIX_FMT_H264, MSM_VIDC_ENCODER, 25, 675, 320),
 	CODEC_ENTRY(V4L2_PIX_FMT_HEVC, MSM_VIDC_ENCODER, 25, 675, 320),
-	CODEC_ENTRY(V4L2_PIX_FMT_VP8, MSM_VIDC_ENCODER, 60, 675, 320),
 	CODEC_ENTRY(V4L2_PIX_FMT_MPEG2, MSM_VIDC_DECODER, 25, 200, 200),
 	CODEC_ENTRY(V4L2_PIX_FMT_H264, MSM_VIDC_DECODER, 25, 200, 200),
 	CODEC_ENTRY(V4L2_PIX_FMT_HEVC, MSM_VIDC_DECODER, 25, 200, 200),
-	CODEC_ENTRY(V4L2_PIX_FMT_VP8, MSM_VIDC_DECODER, 60, 200, 200),
 	CODEC_ENTRY(V4L2_PIX_FMT_VP9, MSM_VIDC_DECODER, 60, 200, 200),
 };
 
@@ -77,13 +75,11 @@ static struct msm_vidc_codec_data bengal_codec_data[] =  {
 #define DEC     HAL_VIDEO_DOMAIN_DECODER
 #define H264    HAL_VIDEO_CODEC_H264
 #define HEVC    HAL_VIDEO_CODEC_HEVC
-#define VP8     HAL_VIDEO_CODEC_VP8
 #define VP9     HAL_VIDEO_CODEC_VP9
 #define MPEG2   HAL_VIDEO_CODEC_MPEG2
 #define DOMAINS_ALL    (HAL_VIDEO_DOMAIN_ENCODER | HAL_VIDEO_DOMAIN_DECODER)
 #define CODECS_ALL     (HAL_VIDEO_CODEC_H264 | HAL_VIDEO_CODEC_HEVC | \
-			HAL_VIDEO_CODEC_VP8 | HAL_VIDEO_CODEC_VP9 | \
-			HAL_VIDEO_CODEC_MPEG2)
+			HAL_VIDEO_CODEC_VP9 | HAL_VIDEO_CODEC_MPEG2)
 
 static struct msm_vidc_codec bengal_codecs[] = {
 	/* {domain, codec} */
@@ -93,8 +89,8 @@ static struct msm_vidc_codec bengal_codecs[] = {
 
 static struct msm_vidc_codec default_codecs[] = {
 	/* {domain, codec} */
-	{DEC, H264}, {DEC, HEVC}, {DEC, VP8}, {DEC, VP9}, {DEC, MPEG2},
-	{ENC, H264}, {ENC, HEVC}, {ENC, VP8},
+	{DEC, H264}, {DEC, HEVC}, {DEC, VP9}, {DEC, MPEG2},
+	{ENC, H264}, {ENC, HEVC},
 };
 
 static struct msm_vidc_codec_capability bengal_capabilities_v0[] = {
@@ -242,26 +238,13 @@ static struct msm_vidc_codec_capability lahaina_capabilities[] = {
 	{CAP_I_FRAME_QP, ENC, H264|HEVC, 0, 51, 1, 10},
 	{CAP_P_FRAME_QP, ENC, H264|HEVC, 0, 51, 1, 20},
 	{CAP_B_FRAME_QP, ENC, H264|HEVC, 0, 51, 1, 20},
-	{CAP_I_FRAME_QP, ENC, VP8|VP9, 0, 127, 1, 20},
-	{CAP_P_FRAME_QP, ENC, VP8|VP9, 0, 127, 1, 40},
-	{CAP_B_FRAME_QP, ENC, VP8|VP9, 0, 127, 1, 40},
+	{CAP_I_FRAME_QP, ENC, VP9, 0, 127, 1, 20},
+	{CAP_P_FRAME_QP, ENC, VP9, 0, 127, 1, 40},
+	{CAP_B_FRAME_QP, ENC, VP9, 0, 127, 1, 40},
 	/* 10 slices */
 	{CAP_SLICE_BYTE, ENC, H264|HEVC, 1, 10, 1, 10},
 	{CAP_SLICE_MB, ENC, H264|HEVC, 1, 10, 1, 10},
 	{CAP_MAX_VIDEOCORES, DOMAINS_ALL, CODECS_ALL, 0, 1, 1, 1},
-
-	/* VP8 specific */
-	{CAP_FRAME_WIDTH, ENC|DEC, VP8, 128, 4096, 1, 1920},
-	{CAP_FRAME_HEIGHT, ENC|DEC, VP8, 128, 4096, 1, 1080},
-	/* (4096 * 2304) / 256 */
-	{CAP_MBS_PER_FRAME, ENC|DEC, VP8, 64, 36864, 1, 8160},
-	/* ((4096 * 2304) / 256) * 120 */
-	{CAP_MBS_PER_SECOND, ENC|DEC, VP8, 64, 4423680, 1, 244800},
-	{CAP_BFRAME, ENC, VP8, 0, 0, 1, 0},
-	{CAP_FRAMERATE, ENC, VP8, 1, 60, 1, 30},
-	{CAP_FRAMERATE, DEC, VP8, 1, 120, 1, 30},
-	{CAP_BITRATE, ENC, VP8, 1, 74000000, 1, 20000000},
-	{CAP_BITRATE, DEC, VP8, 1, 100000000, 1, 20000000},
 
 	/* Mpeg2 decoder specific */
 	{CAP_FRAME_WIDTH, DEC, MPEG2, 128, 1920, 1, 1920},

@@ -155,21 +155,6 @@ int msm_comm_hfi_to_v4l2(int id, int value, u32 sid)
 	default:
 		goto unknown_value;
 	}
-	case V4L2_CID_MPEG_VIDC_VIDEO_VP8_PROFILE_LEVEL:
-		switch (value) {
-		case HFI_VP8_LEVEL_VERSION_0:
-			return V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_0;
-		case HFI_VP8_LEVEL_VERSION_1:
-			return V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_1;
-		case HFI_VP8_LEVEL_VERSION_2:
-			return V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_2;
-		case HFI_VP8_LEVEL_VERSION_3:
-			return V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_3;
-		case HFI_LEVEL_UNKNOWN:
-			return V4L2_MPEG_VIDC_VIDEO_VP8_UNUSED;
-		default:
-			goto unknown_value;
-		}
 	case V4L2_CID_MPEG_VIDEO_VP9_PROFILE:
 		switch (value) {
 		case HFI_VP9_PROFILE_P0:
@@ -400,28 +385,6 @@ int msm_comm_v4l2_to_hfi(int id, int value, u32 sid)
 		default:
 			return HFI_H264_ENTROPY_CABAC;
 		}
-	case V4L2_CID_MPEG_VIDEO_VP8_PROFILE:
-		switch (value) {
-		case V4L2_MPEG_VIDEO_VP8_PROFILE_0:
-			return HFI_VP8_PROFILE_MAIN;
-		default:
-			return HFI_VP8_PROFILE_MAIN;
-		}
-	case V4L2_CID_MPEG_VIDC_VIDEO_VP8_PROFILE_LEVEL:
-		switch (value) {
-		case V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_0:
-			return HFI_VP8_LEVEL_VERSION_0;
-		case V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_1:
-			return HFI_VP8_LEVEL_VERSION_1;
-		case V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_2:
-			return HFI_VP8_LEVEL_VERSION_2;
-		case V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_3:
-			return HFI_VP8_LEVEL_VERSION_3;
-		case V4L2_MPEG_VIDC_VIDEO_VP8_UNUSED:
-			return HFI_LEVEL_UNKNOWN;
-		default:
-			return HFI_LEVEL_UNKNOWN;
-		}
 	case V4L2_CID_MPEG_VIDEO_VP9_PROFILE:
 		switch (value) {
 		case V4L2_MPEG_VIDEO_VP9_PROFILE_0:
@@ -503,7 +466,6 @@ int msm_comm_get_v4l2_profile(int fourcc, int profile, u32 sid)
 		return msm_comm_hfi_to_v4l2(
 			V4L2_CID_MPEG_VIDEO_HEVC_PROFILE,
 			profile, sid);
-	case V4L2_PIX_FMT_VP8:
 	case V4L2_PIX_FMT_VP9:
 	case V4L2_PIX_FMT_MPEG2:
 		return 0;
@@ -524,10 +486,6 @@ int msm_comm_get_v4l2_level(int fourcc, int level, u32 sid)
 		level &= ~(0xF << 28);
 		return msm_comm_hfi_to_v4l2(
 			V4L2_CID_MPEG_VIDEO_HEVC_LEVEL,
-			level, sid);
-	case V4L2_PIX_FMT_VP8:
-		return msm_comm_hfi_to_v4l2(
-			V4L2_CID_MPEG_VIDC_VIDEO_VP8_PROFILE_LEVEL,
 			level, sid);
 	case V4L2_PIX_FMT_VP9:
 	case V4L2_PIX_FMT_MPEG2:
@@ -867,9 +825,6 @@ enum hal_video_codec get_hal_codec(int fourcc, u32 sid)
 		break;
 	case V4L2_PIX_FMT_MPEG2:
 		codec = HAL_VIDEO_CODEC_MPEG2;
-		break;
-	case V4L2_PIX_FMT_VP8:
-		codec = HAL_VIDEO_CODEC_VP8;
 		break;
 	case V4L2_PIX_FMT_VP9:
 		codec = HAL_VIDEO_CODEC_VP9;

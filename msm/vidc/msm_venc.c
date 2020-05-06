@@ -101,15 +101,6 @@ static const char *const mpeg_video_h264_level[] = {
 	NULL,
 };
 
-static const char *const vp8_profile_level[] = {
-	"Unused",
-	"0.0",
-	"1.0",
-	"2.0",
-	"3.0",
-	NULL
-};
-
 static const char *const mpeg_video_stream_format[] = {
 	"NAL Format Start Codes",
 	"NAL Format One NAL Per Buffer",
@@ -353,32 +344,6 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		(1 << V4L2_MPEG_VIDEO_H264_LEVEL_6_2)
 		),
 		.qmenu = mpeg_video_h264_level,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDEO_VP8_PROFILE,
-		.name = "VP8 Profile",
-		.type = V4L2_CTRL_TYPE_MENU,
-		.minimum = V4L2_MPEG_VIDEO_VP8_PROFILE_0,
-		.maximum = V4L2_MPEG_VIDEO_VP8_PROFILE_0,
-		.default_value = V4L2_MPEG_VIDEO_VP8_PROFILE_0,
-		.menu_skip_mask = ~(1 << V4L2_MPEG_VIDEO_VP8_PROFILE_0),
-		.qmenu = NULL,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDC_VIDEO_VP8_PROFILE_LEVEL,
-		.name = "VP8 Profile Level",
-		.type = V4L2_CTRL_TYPE_MENU,
-		.minimum = V4L2_MPEG_VIDC_VIDEO_VP8_UNUSED,
-		.maximum = V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_3,
-		.default_value = V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_3,
-		.menu_skip_mask = ~(
-		(1 << V4L2_MPEG_VIDC_VIDEO_VP8_UNUSED) |
-		(1 << V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_0) |
-		(1 << V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_1) |
-		(1 << V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_2) |
-		(1 << V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_3)
-		),
-		.qmenu = vp8_profile_level,
 	},
 	{
 		.id = V4L2_CID_MPEG_VIDEO_HEVC_PROFILE,
@@ -761,16 +726,6 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		.qmenu = NULL,
 	},
 	{
-		.id = V4L2_CID_MPEG_VIDC_VIDEO_VPX_ERROR_RESILIENCE,
-		.name = "VP8 Error Resilience mode",
-		.type = V4L2_CTRL_TYPE_BOOLEAN,
-		.minimum = V4L2_MPEG_MSM_VIDC_DISABLE,
-		.maximum = V4L2_MPEG_MSM_VIDC_ENABLE,
-		.default_value = V4L2_MPEG_MSM_VIDC_DISABLE,
-		.step = 1,
-		.qmenu = NULL,
-	},
-	{
 		.id = V4L2_CID_MPEG_VIDC_VIDEO_BASELAYER_ID,
 		.name = "Set Base Layer Priority ID for Hier-P",
 		.type = V4L2_CTRL_TYPE_INTEGER,
@@ -1063,11 +1018,6 @@ static struct msm_vidc_format_desc venc_output_formats[] = {
 		.name = "H264",
 		.description = "H264 compressed format",
 		.fourcc = V4L2_PIX_FMT_H264,
-	},
-	{
-		.name = "VP8",
-		.description = "VP8 compressed format",
-		.fourcc = V4L2_PIX_FMT_VP8,
 	},
 	{
 		.name = "HEVC",
@@ -1467,8 +1417,6 @@ int msm_venc_set_default_profile(struct msm_vidc_inst *inst)
 
 	if (get_v4l2_codec(inst) == V4L2_PIX_FMT_HEVC)
 		inst->profile = HFI_HEVC_PROFILE_MAIN;
-	else if (get_v4l2_codec(inst) == V4L2_PIX_FMT_VP8)
-		inst->profile = HFI_VP8_PROFILE_MAIN;
 	else if (get_v4l2_codec(inst) == V4L2_PIX_FMT_H264)
 		inst->profile = HFI_H264_PROFILE_HIGH;
 	else
@@ -1808,12 +1756,10 @@ int msm_venc_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_MPEG_VIDEO_H264_PROFILE:
 	case V4L2_CID_MPEG_VIDEO_HEVC_PROFILE:
-	case V4L2_CID_MPEG_VIDEO_VP8_PROFILE:
 		inst->profile = msm_comm_v4l2_to_hfi(ctrl->id, ctrl->val, sid);
 		break;
 	case V4L2_CID_MPEG_VIDEO_H264_LEVEL:
 	case V4L2_CID_MPEG_VIDEO_HEVC_LEVEL:
-	case V4L2_CID_MPEG_VIDC_VIDEO_VP8_PROFILE_LEVEL:
 		inst->level = msm_comm_v4l2_to_hfi(ctrl->id, ctrl->val, sid);
 		break;
 	case V4L2_CID_MPEG_VIDEO_HEVC_TIER:
@@ -2543,10 +2489,6 @@ int msm_venc_set_vbv_delay(struct msm_vidc_inst *inst)
 		inst->rc_type != V4L2_MPEG_VIDEO_BITRATE_MODE_CBR_VFR)
 		return 0;
 
-	/* vbv delay is not required for VP8 encoder */
-	if (codec == V4L2_PIX_FMT_VP8)
-		return 0;
-
 	/* Default behavior */
 	is_legacy_cbr = false;
 	buf_size = CBR_PLUS_BUF_SIZE;
@@ -2822,10 +2764,6 @@ int msm_venc_set_frame_qp(struct msm_vidc_inst *inst)
 		if (!(inst->client_set_ctrls & CLIENT_SET_B_QP))
 			b_qp->val = i_qp->val;
 	}
-
-	/* B frame QP is not supported for VP8. */
-	if (get_v4l2_codec(inst) == V4L2_PIX_FMT_VP8)
-		qp.enable &= ~QP_ENABLE_B;
 
 	qp.qp_packed = i_qp->val | p_qp->val << 8 | b_qp->val << 16;
 
@@ -3552,35 +3490,6 @@ int msm_venc_set_hp_layer(struct msm_vidc_inst *inst)
 	return rc;
 }
 
-int msm_venc_set_vpx_error_resilience(struct msm_vidc_inst *inst)
-{
-	int rc = 0;
-	struct hfi_device *hdev;
-	struct v4l2_ctrl *ctrl;
-	struct hfi_enable enable;
-
-	if (!inst || !inst->core) {
-		d_vpr_e("%s: invalid params %pK\n", __func__, inst);
-		return -EINVAL;
-	}
-	hdev = inst->core->device;
-
-	if (get_v4l2_codec(inst) != V4L2_PIX_FMT_VP8)
-		return 0;
-
-	ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDC_VIDEO_VPX_ERROR_RESILIENCE);
-	enable.enable = !!ctrl->val;
-
-	s_vpr_h(inst->sid, "%s: %d\n", __func__, enable.enable);
-	rc = call_hfi_op(hdev, session_set_property, inst->session,
-		HFI_PROPERTY_PARAM_VENC_VPX_ERROR_RESILIENCE_MODE, &enable,
-		sizeof(enable));
-	if (rc)
-		s_vpr_e(inst->sid, "%s: set property failed\n", __func__);
-
-	return rc;
-}
-
 int msm_venc_set_video_signal_info(struct msm_vidc_inst *inst)
 {
 	int rc = 0;
@@ -4098,10 +4007,6 @@ int msm_venc_set_dyn_qp(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 	qp.enable = QP_ENABLE_I | QP_ENABLE_P | QP_ENABLE_B;
 	qp.layer_id = MSM_VIDC_ALL_LAYER_ID;
 
-	/* B frame QP is not supported for VP8. */
-	if (get_v4l2_codec(inst) == V4L2_PIX_FMT_VP8)
-		qp.enable &= ~QP_ENABLE_B;
-
 	s_vpr_h(inst->sid, "%s: %#x\n", __func__,
 		ctrl->val);
 	rc = call_hfi_op(hdev, session_set_property, inst->session,
@@ -4532,9 +4437,6 @@ int msm_venc_set_properties(struct msm_vidc_inst *inst)
 	if (rc)
 		goto exit;
 	rc = msm_venc_set_hdr_info(inst);
-	if (rc)
-		goto exit;
-	rc = msm_venc_set_vpx_error_resilience(inst);
 	if (rc)
 		goto exit;
 	rc = msm_venc_set_nal_stream_format(inst);

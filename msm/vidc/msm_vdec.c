@@ -65,15 +65,6 @@ static const char *const mpeg_video_h264_level[] = {
 	NULL,
 };
 
-static const char *const vp8_profile_level[] = {
-	"Unused",
-	"0.0",
-	"1.0",
-	"2.0",
-	"3.0",
-	NULL
-};
-
 static const char *const vp9_level[] = {
 	"Unused",
 	"1.0",
@@ -275,22 +266,6 @@ static struct msm_vidc_ctrl msm_vdec_ctrls[] = {
 		.qmenu = NULL,
 	},
 	{
-		.id = V4L2_CID_MPEG_VIDC_VIDEO_VP8_PROFILE_LEVEL,
-		.name = "VP8 Profile Level",
-		.type = V4L2_CTRL_TYPE_MENU,
-		.minimum = V4L2_MPEG_VIDC_VIDEO_VP8_UNUSED,
-		.maximum = V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_3,
-		.default_value = V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_3,
-		.menu_skip_mask = ~(
-		(1 << V4L2_MPEG_VIDC_VIDEO_VP8_UNUSED) |
-		(1 << V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_0) |
-		(1 << V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_1) |
-		(1 << V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_2) |
-		(1 << V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_3)
-		),
-		.qmenu = vp8_profile_level,
-	},
-	{
 		.id = V4L2_CID_MPEG_VIDEO_VP9_PROFILE,
 		.name = "VP9 Profile",
 		.type = V4L2_CTRL_TYPE_MENU,
@@ -483,11 +458,6 @@ struct msm_vidc_format_desc vdec_input_formats[] = {
 		.name = "HEVC",
 		.description = "HEVC compressed format",
 		.fourcc = V4L2_PIX_FMT_HEVC,
-	},
-	{
-		.name = "VP8",
-		.description = "VP8 compressed format",
-		.fourcc = V4L2_PIX_FMT_VP8,
 	},
 	{
 		.name = "VP9",
@@ -882,7 +852,6 @@ int msm_vdec_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 	switch (ctrl->id) {
 	case V4L2_CID_MPEG_VIDEO_H264_PROFILE:
 	case V4L2_CID_MPEG_VIDEO_HEVC_PROFILE:
-	case V4L2_CID_MPEG_VIDEO_VP8_PROFILE:
 	case V4L2_CID_MPEG_VIDEO_VP9_PROFILE:
 	case V4L2_CID_MPEG_VIDC_VIDEO_MPEG2_PROFILE:
 		inst->profile = msm_comm_v4l2_to_hfi(ctrl->id, ctrl->val,
@@ -890,7 +859,6 @@ int msm_vdec_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_MPEG_VIDEO_H264_LEVEL:
 	case V4L2_CID_MPEG_VIDEO_HEVC_LEVEL:
-	case V4L2_CID_MPEG_VIDC_VIDEO_VP8_PROFILE_LEVEL:
 	case V4L2_CID_MPEG_VIDC_VIDEO_VP9_LEVEL:
 	case V4L2_CID_MPEG_VIDC_VIDEO_MPEG2_LEVEL:
 		inst->level = msm_comm_v4l2_to_hfi(ctrl->id, ctrl->val,
@@ -1378,7 +1346,6 @@ int msm_vdec_set_extradata(struct msm_vidc_inst *inst)
 	case V4L2_PIX_FMT_HEVC:
 		display_info = HFI_PROPERTY_PARAM_VUI_DISPLAY_INFO_EXTRADATA;
 		break;
-	case V4L2_PIX_FMT_VP8:
 	case V4L2_PIX_FMT_VP9:
 		display_info =
 			HFI_PROPERTY_PARAM_VDEC_VPX_COLORSPACE_EXTRADATA;
