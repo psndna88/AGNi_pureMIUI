@@ -121,8 +121,22 @@ $(obj)/configs.o: $(obj)/config_data.h
 # config_data.h contains the same information as ikconfig.h but gzipped.
 # Info from config_data can be extracted from /proc/config*
 targets += config_data.gz
+ifeq ($(CONFIG_KERNEL_CUSTOM_E7S),y)
+$(obj)/config_data.gz: arch/arm64/configs/whyred-stock_defconfig FORCE
+	$(call if_changed,gzip)
+else ifeq ($(CONFIG_KERNEL_CUSTOM_E7T),y)
+$(obj)/config_data.gz: arch/arm64/configs/tulip-stock_defconfig FORCE
+	$(call if_changed,gzip)
+else ifeq ($(CONFIG_KERNEL_CUSTOM_D2S),y)
+$(obj)/config_data.gz: arch/arm64/configs/wayne-stock_defconfig FORCE
+	$(call if_changed,gzip)
+else ifeq ($(CONFIG_KERNEL_CUSTOM_F7A),y)
+$(obj)/config_data.gz: arch/arm64/configs/lavender-stock_defconfig FORCE
+	$(call if_changed,gzip)
+else
 $(obj)/config_data.gz: $(KCONFIG_CONFIG) FORCE
 	$(call if_changed,gzip)
+endif
 
       filechk_ikconfiggz = (echo "static const char kernel_config_data[] __used = MAGIC_START"; cat $< | scripts/basic/bin2c; echo "MAGIC_END;")
 targets += config_data.h
