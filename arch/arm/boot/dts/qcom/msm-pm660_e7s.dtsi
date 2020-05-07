@@ -588,7 +588,7 @@
 			qcom,rradc-base = <0x4500>;
 			qcom,fg-cutoff-voltage = <3400>;
 			qcom,fg-chg-term-current = <200>;
-			qcom,fg-sys-term-current = <600>;
+			qcom,fg-sys-term-current = <800>;
 			qcom,fg-recharge-voltage = <4320>;
 			qcom,fg-esr-timer-awake = <96 96>;
 			qcom,fg-esr-timer-asleep = <256 256>;
