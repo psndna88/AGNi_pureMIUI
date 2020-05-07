@@ -2562,7 +2562,7 @@ static int thermal_notifier_callback(struct notifier_block *noti, unsigned long 
 		blank = ev_data->data;
 		if (event == FB_EARLY_EVENT_BLANK && *blank == FB_BLANK_UNBLANK) {
 			
-			lct_backlight_off = false;
+			lct_backlight_off = true; // fake as display off to fasten charging rate
 			schedule_work(&chg->fb_notify_work);
 		}
 		else if (event == FB_EVENT_BLANK && *blank == FB_BLANK_POWERDOWN) {
