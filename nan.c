@@ -1768,8 +1768,6 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 		tlv_len += len;
 
 		cfg_debug.cmd = NAN_TEST_MODE_CMD_TRANSPORT_IP_PARAM;
-		memcpy(cfg_debug.debug_cmd_data, &ndp_ip_trans_param,
-		       sizeof(NdpIpTransParams));
 		nan_debug_command_config(0, dut->wifi_hal_iface_handle,
 					 cfg_debug, tlv_len + sizeof(u32));
 	}
