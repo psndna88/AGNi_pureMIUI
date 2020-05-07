@@ -480,12 +480,16 @@ static int smb2_usb_get_prop(struct power_supply *psy,
 		rc = smblib_get_prop_input_current_settled(chg, val);
 		break;
 	case POWER_SUPPLY_PROP_TYPE:
+#ifdef CONFIG_KERNEL_CUSTOM_F7A
 		if ((chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP) || (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3))
 		{
 			val->intval = chg->real_charger_type;
 		} else {
+#endif
 			val->intval = POWER_SUPPLY_TYPE_USB_PD;
+#ifdef CONFIG_KERNEL_CUSTOM_F7A
 		}
+#endif
 		break;
 	case POWER_SUPPLY_PROP_REAL_TYPE:
 		if (chip->bad_part)
@@ -1650,9 +1654,14 @@ static int smb2_init_hw(struct smb2 *chip)
 		return rc;
 	}
 
+#ifndef CONFIG_KERNEL_CUSTOM_F7A
 	if((is_poweroff_charge == false) && (stat != 0x01)) {
+#endif
 		smblib_rerun_apsd_if_required(chg);
+#ifndef CONFIG_KERNEL_CUSTOM_F7A
 	}
+#endif
+
 
 	/* clear the ICL override if it is set */
 	if (smblib_icl_override(chg, false) < 0) {
