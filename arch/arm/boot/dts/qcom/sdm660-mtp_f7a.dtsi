@@ -15,7 +15,7 @@
 #include "sdm660-camera-sensor-mtp_f7a.dtsi"
 #include "sdm660-novatek-i2c_f7a.dtsi"
 #include "sdm660-synaptics-tcm-i2c_f7a.dtsi"
-#include "sdm660-smb1355-mtp.dtsi"
+//#include "sdm660-smb1355-mtp.dtsi"
 / {
 	mtp_batterydata: qcom,battery-data {
 		qcom,batt-id-range-pct = <15>;
