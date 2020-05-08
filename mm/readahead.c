@@ -90,7 +90,7 @@ int read_cache_pages(struct address_space *mapping, struct list_head *pages,
 		page = list_to_page(pages);
 		list_del(&page->lru);
 		if (add_to_page_cache_lru(page, mapping, page->index,
-				readahead_gfp_mask(mapping))) {
+				mapping_gfp_constraint(mapping, GFP_KERNEL))) {
 			read_cache_pages_invalidate_page(mapping, page);
 			continue;
 		}
@@ -109,7 +109,7 @@ int read_cache_pages(struct address_space *mapping, struct list_head *pages,
 EXPORT_SYMBOL(read_cache_pages);
 
 static int read_pages(struct address_space *mapping, struct file *filp,
-		struct list_head *pages, unsigned int nr_pages, gfp_t gfp)
+		struct list_head *pages, unsigned nr_pages)
 {
 	struct blk_plug plug;
 	unsigned page_idx;
@@ -127,8 +127,10 @@ static int read_pages(struct address_space *mapping, struct file *filp,
 	for (page_idx = 0; page_idx < nr_pages; page_idx++) {
 		struct page *page = list_to_page(pages);
 		list_del(&page->lru);
-		if (!add_to_page_cache_lru(page, mapping, page->index, gfp))
+		if (!add_to_page_cache_lru(page, mapping, page->index,
+				mapping_gfp_constraint(mapping, GFP_KERNEL))) {
 			mapping->a_ops->readpage(filp, page);
+		}
 		page_cache_release(page);
 	}
 	ret = 0;
@@ -158,7 +160,6 @@ int __do_page_cache_readahead(struct address_space *mapping, struct file *filp,
 	int page_idx;
 	int ret = 0;
 	loff_t isize = i_size_read(inode);
-	gfp_t gfp_mask = readahead_gfp_mask(mapping);
 
 	if (isize == 0)
 		goto out;
@@ -180,7 +181,7 @@ int __do_page_cache_readahead(struct address_space *mapping, struct file *filp,
 		if (page && !radix_tree_exceptional_entry(page))
 			continue;
 
-		page = __page_cache_alloc(gfp_mask);
+		page = page_cache_alloc_readahead(mapping);
 		if (!page)
 			break;
 		page->index = page_offset;
@@ -196,7 +197,7 @@ int __do_page_cache_readahead(struct address_space *mapping, struct file *filp,
 	 * will then handle the error.
 	 */
 	if (ret)
-		read_pages(mapping, filp, &page_pool, ret, gfp_mask);
+		read_pages(mapping, filp, &page_pool, ret);
 	BUG_ON(!list_empty(&page_pool));
 out:
 	return ret;
