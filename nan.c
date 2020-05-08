@@ -2446,6 +2446,10 @@ int nan_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 
 		memcpy(cfg_debug.debug_cmd_data, &device_type_val, sizeof(u32));
 		size = sizeof(u32) + sizeof(u32);
+
+		if (if_nametoindex(NAN_AWARE_IFACE))
+		    run_system_wrapper(dut, "ifconfig %s up", NAN_AWARE_IFACE);
+
 		sigma_dut_print(dut, DUT_MSG_INFO,
 				"%s: Device Type: cmd type = %d and command data = %u",
 				__func__, cfg_debug.cmd, device_type_val);
