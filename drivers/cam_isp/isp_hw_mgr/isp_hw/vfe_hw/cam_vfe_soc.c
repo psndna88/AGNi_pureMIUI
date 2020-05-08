@@ -149,7 +149,7 @@ int cam_vfe_init_soc_resources(struct cam_hw_soc_info *soc_info,
 		CAM_VFE_DSP_CLK_NAME, &soc_private->dsp_clk,
 		&soc_private->dsp_clk_index, &soc_private->dsp_clk_rate);
 	if (rc)
-		CAM_WARN(CAM_ISP, "Option clk get failed with rc %d", rc);
+		CAM_DBG(CAM_ISP, "Option clk get failed with rc %d", rc);
 
 	rc = cam_vfe_request_platform_resource(soc_info, vfe_irq_handler,
 		irq_data);

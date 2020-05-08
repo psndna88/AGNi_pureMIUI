@@ -556,7 +556,7 @@ int cam_soc_util_get_option_clk_by_name(struct cam_hw_soc_info *soc_info,
 		clk_name);
 
 	if (index < 0) {
-		CAM_INFO(CAM_UTIL, "No clk data for %s", clk_name);
+		CAM_DBG(CAM_UTIL, "No clk data for %s", clk_name);
 		*clk_index = -1;
 		*clk = ERR_PTR(-EINVAL);
 		return -EINVAL;

@@ -278,7 +278,7 @@ static int camera_init(void)
 		}
 	}
 
-	CAM_INFO(CAM_UTIL, "Spectra camera driver initcalls done");
+	CAM_INFO(CAM_UTIL, "Spectra camera driver initialized");
 
 end_init:
 	return rc;
