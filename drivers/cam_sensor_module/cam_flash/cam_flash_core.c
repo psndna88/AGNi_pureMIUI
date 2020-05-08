@@ -20,7 +20,7 @@ int cam_flash_led_prepare(struct led_trigger *trigger, int options,
 	int rc = 0;
 
 	if (is_wled) {
-#ifdef CONFIG_BACKLIGHT_QCOM_SPMI_WLED
+#if IS_REACHABLE(CONFIG_BACKLIGHT_QCOM_SPMI_WLED)
 		rc = wled_flash_led_prepare(trigger, options, max_current);
 		if (rc) {
 			CAM_ERR(CAM_FLASH, "enable reg failed: rc: %d",
