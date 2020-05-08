@@ -3805,7 +3805,7 @@ static int cam_ife_config_hw_external_cdm(struct cam_ife_hw_mgr_ctx *ctx,
 static int cam_ife_mgr_config_hw(void *hw_mgr_priv,
 					void *config_hw_args)
 {
-	int rc = -1, i, idx;
+	int rc = -1, i;
 	struct cam_isp_hw_config_args *cfg;
 	struct cam_ife_hw_mgr_ctx *ctx;
 	struct cam_isp_prepare_hw_update_data *hw_update_data;
@@ -3844,18 +3844,17 @@ static int cam_ife_mgr_config_hw(void *hw_mgr_priv,
 	CAM_DBG(CAM_ISP, "Ctx[%pK][%d] : Applying Req %lld, init_packet=%d",
 		ctx, ctx->ctx_index, cfg->request_id, cfg->init_packet);
 
-	for (i = 0; i < ctx->num_base; i++) {
-		idx = ctx->base[i].idx;
-		if (hw_update_data->bw_config_valid[idx] == true) {
+	for (i = 0; i < CAM_IFE_HW_NUM_MAX; i++) {
+		if (hw_update_data->bw_config_valid[i]) {
 
 			CAM_DBG(CAM_PERF, "idx=%d, bw_config_version=%d",
-				idx, hw_update_data->bw_config_version);
+				i, hw_update_data->bw_config_version);
 
 			if (hw_update_data->bw_config_version ==
 				CAM_ISP_BW_CONFIG_V1) {
 				rc = cam_isp_blob_bw_update(
 					(struct cam_isp_bw_config *)
-					&hw_update_data->bw_config[idx], ctx);
+					&hw_update_data->bw_config[i], ctx);
 				if (rc)
 					CAM_ERR(CAM_PERF,
 					"Bandwidth Update Failed rc: %d", rc);
@@ -3863,7 +3862,7 @@ static int cam_ife_mgr_config_hw(void *hw_mgr_priv,
 				CAM_ISP_BW_CONFIG_V2) {
 				rc = cam_isp_blob_bw_update_v2(
 					(struct cam_isp_bw_config_v2 *)
-					&hw_update_data->bw_config_v2[idx],
+					&hw_update_data->bw_config_v2[i],
 					ctx);
 				if (rc)
 					CAM_ERR(CAM_PERF,
