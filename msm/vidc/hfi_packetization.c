@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  */
 #include "hfi_packetization.h"
 #include "msm_vidc_debug.h"
@@ -41,9 +41,6 @@ u32 vidc_get_hfi_codec(enum hal_video_codec hal_codec, u32 sid)
 		break;
 	case HAL_VIDEO_CODEC_MPEG2:
 		hfi_codec = HFI_VIDEO_CODEC_MPEG2;
-		break;
-	case HAL_VIDEO_CODEC_VP8:
-		hfi_codec = HFI_VIDEO_CODEC_VP8;
 		break;
 	case HAL_VIDEO_CODEC_HEVC:
 		hfi_codec = HFI_VIDEO_CODEC_HEVC;
