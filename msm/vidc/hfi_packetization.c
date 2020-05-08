@@ -477,6 +477,8 @@ int create_pkt_cmd_session_etb_decoder(
 	pkt->filled_len = input_frame->filled_len;
 	pkt->input_tag = input_frame->input_tag;
 	pkt->packet_buffer = (u32)input_frame->device_addr;
+	pkt->extra_data_buffer = 0;
+	pkt->rgData[0] = 0;
 
 	trace_msm_v4l2_vidc_buffer_event_start("ETB",
 		input_frame->device_addr, input_frame->timestamp,
@@ -511,6 +513,7 @@ int create_pkt_cmd_session_etb_encoder(
 	pkt->input_tag = input_frame->input_tag;
 	pkt->packet_buffer = (u32)input_frame->device_addr;
 	pkt->extra_data_buffer = (u32)input_frame->extradata_addr;
+	pkt->rgData[0] = input_frame->extradata_size;
 
 	trace_msm_v4l2_vidc_buffer_event_start("ETB",
 		input_frame->device_addr, input_frame->timestamp,
