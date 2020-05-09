@@ -304,73 +304,70 @@
 		};
 	};
 
-	energy_costs: energy-costs {
-		compatible = "sched-energy";
+		energy_costs: energy-costs {
+			compatible = "sched-energy";
 
-		CPU_COST_0: core-cost0 {
-			busy-cost-data = <
-				633600 1091
-				902400 1579
-				1113600 2065
-				1401600 3034
-				1536000 3686
-				1612800 4204
-				1747200 5105
-				1843200 5959
-			>;
-			idle-cost-data = <
-				4 4 0 0
-			>;
+			CPU_COST_0: core-cost0 {
+				busy-cost-data = <
+					633600  41
+					902400  70
+					1113600 83
+					1401600 146
+					1536000 158
+					1612800 183
+					1747200 228
+					1843200 285
+				>;
+				idle-cost-data = <
+					20 16 12 8
+				>;
+			};
+			CPU_COST_1: core-cost1 {
+				busy-cost-data = <
+					1113600 307
+					1401600 485
+					1747200 857
+					1804800 883
+					1958400 1222
+					2150400 1592
+					2208000 1632
+					2457600 2080
+				>;
+				idle-cost-data = <
+					100 80 60 40
+				>;
+			};
+			CLUSTER_COST_0: cluster-cost0 {
+				busy-cost-data = <
+					633600  4
+					902400  5
+					1113600 7
+					1401600 9
+					1536000 9
+					1612800 10
+					1747200 11
+					1843200 13
+				>;
+				idle-cost-data = <
+					4 3 2 1
+				>;
+			};
+			CLUSTER_COST_1: cluster-cost1 {
+				busy-cost-data = <
+					1113600 14
+					1401600 17
+					1747200 25
+					1804800 31
+					1958400 31
+					2150400 37
+					2208000 44
+					2457600 45
+				>;
+				idle-cost-data = <
+					4 3 2 1
+				>;
+			};
 		};
-
-		CPU_COST_1: core-cost1 {
-			busy-cost-data = <
-				1113600 4943
-				1401600 7789
-				1747200 13766
-                1804800 15181
-				1958400 19758
-				2150400 27509
-				2208000 30369
-				2457600 33802
-			>;
-			idle-cost-data = <
-				6 6 0 0
-			>;
-		};
-
-		CLUSTER_COST_0: cluster-cost0 {
-			busy-cost-data = <
-				633600 22
-				902400 27
-				1113600 32
-				1401600 40
-				1536000 45
-				1612800 49
-				1747200 55
-				1843200 61
-			>;
-			idle-cost-data = <
-				41 41 41 0
-			>;
-		};
-
-		CLUSTER_COST_1: cluster-cost1 {
-			busy-cost-data = <
-				1113600 54
-				1401600 74
-				1747200 116
-                1804800 125
-				1958400 157
-				2150400 209
-				2208000 229
-				2457600 255
-			>;
-			idle-cost-data = <
-				50 50 50 0
-			>;
-		};
-	};
 
 	clocks {
 		xo_board {
