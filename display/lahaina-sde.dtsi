@@ -605,6 +605,7 @@
 		vdda-0p9-supply = <&L5B>;
 		qcom,dsi-pll-ssc-en;
 		qcom,dsi-pll-ssc-mode = "down-spread";
+		memory-region = <&dfps_data_memory>;
 		qcom,platform-strength-ctrl = [55 03
 						55 03
 						55 03
