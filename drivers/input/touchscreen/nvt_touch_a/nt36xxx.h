@@ -33,7 +33,7 @@
 #include "../lct_tp_fm_info.h"
 #include "../lct_ctp_upgrade.h"
 #endif
-#define NVT_DEBUG 1
+#define NVT_DEBUG 0
 
 
 #define NVTTOUCH_RST_PIN 66

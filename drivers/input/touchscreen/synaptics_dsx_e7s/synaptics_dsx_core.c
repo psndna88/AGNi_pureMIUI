@@ -4430,7 +4430,7 @@ static int synaptics_rmi4_probe(struct platform_device *pdev)
 			create_singlethread_workqueue("dsx_rebuild_workqueue");
 	INIT_DELAYED_WORK(&rmi4_data->rb_work, synaptics_rmi4_rebuild_work);
 
-	exp_data.workqueue = create_singlethread_workqueue("dsx_exp_workqueue");
+	exp_data.workqueue = alloc_workqueue("dsx_exp_workqueue", WQ_FREEZABLE | WQ_HIGHPRI | WQ_UNBOUND, 0);
 	INIT_DELAYED_WORK(&exp_data.work, synaptics_rmi4_exp_fn_work);
 	exp_data.rmi4_data = rmi4_data;
 	exp_data.queue_work = true;
