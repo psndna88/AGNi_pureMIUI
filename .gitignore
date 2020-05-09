@@ -38,6 +38,8 @@ modules.builtin
 Module.symvers
 *.dwo
 *.su
+READY_ZIP/
+BUILT-*/
 
 #
 # Top-level generic files
