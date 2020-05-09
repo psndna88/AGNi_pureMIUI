@@ -222,7 +222,7 @@ module_param_named(
 	debug_mask, __debug_mask, int, S_IRUSR | S_IWUSR
 );
 
-static int __weak_chg_icl_ua = 500000;
+static int __weak_chg_icl_ua = 900000;
 module_param_named(
 	weak_chg_icl_ua, __weak_chg_icl_ua, int, S_IRUSR | S_IWUSR);
 
