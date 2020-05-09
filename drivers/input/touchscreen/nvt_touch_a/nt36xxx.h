@@ -33,7 +33,7 @@
 #include "../lct_tp_fm_info.h"
 #include "../lct_ctp_upgrade.h"
 #endif
-#define NVT_DEBUG 0
+#define NVT_DEBUG 1
 
 
 #define NVTTOUCH_RST_PIN 66
@@ -100,6 +100,7 @@ extern const uint16_t gesture_key_array[];
 struct nvt_ts_data {
 	struct i2c_client *client;
 	struct input_dev *input_dev;
+	struct work_struct nvt_work;
 	struct delayed_work nvt_fwu_work;
 	uint16_t addr;
 	int8_t phys[32];

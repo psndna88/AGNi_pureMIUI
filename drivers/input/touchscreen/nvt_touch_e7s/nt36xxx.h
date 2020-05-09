@@ -49,7 +49,7 @@
 #if NVT_DEBUG
 #define NVT_LOG(fmt, args...)    pr_err("[%s] %s %d: " fmt, NVT_I2C_NAME, __func__, __LINE__, ##args)
 #else
-#define NVT_LOG(fmt, args...)    pr_debug("[%s] %s %d: " fmt, NVT_I2C_NAME, __func__, __LINE__, ##args)
+#define NVT_LOG(fmt, args...)    pr_info("[%s] %s %d: " fmt, NVT_I2C_NAME, __func__, __LINE__, ##args)
 #endif
 #define NVT_ERR(fmt, args...)    pr_err("[%s] %s %d: " fmt, NVT_I2C_NAME, __func__, __LINE__, ##args)
 
@@ -112,6 +112,7 @@ struct nvt_ts_mem_map {
 struct nvt_ts_data {
 	struct i2c_client *client;
 	struct input_dev *input_dev;
+	struct work_struct nvt_work;
 	struct delayed_work nvt_fwu_work;
 	uint16_t addr;
 	int8_t phys[32];
