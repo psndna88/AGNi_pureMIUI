@@ -920,10 +920,10 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 	{
 		.id = V4L2_CID_MPEG_VIDC_VENC_BITRATE_SAVINGS,
 		.name = "Enable/Disable bitrate savings",
-		.type = V4L2_CTRL_TYPE_BOOLEAN,
-		.minimum = V4L2_MPEG_MSM_VIDC_DISABLE,
-		.maximum = V4L2_MPEG_MSM_VIDC_ENABLE,
-		.default_value = V4L2_MPEG_MSM_VIDC_ENABLE,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.minimum = V4L2_MPEG_VIDC_VIDEO_BRS_DISABLE,
+		.maximum = V4L2_MPEG_VIDC_VIDEO_BRS_ENABLE_ALL,
+		.default_value = V4L2_MPEG_VIDC_VIDEO_BRS_ENABLE_ALL,
 		.step = 1,
 	},
 	{
@@ -1191,6 +1191,7 @@ int msm_venc_inst_init(struct msm_vidc_inst *inst)
 	inst->buff_req.buffer[13].buffer_type = HAL_BUFFER_INTERNAL_RECON;
 	msm_vidc_init_buffer_size_calculators(inst);
 	inst->static_rotation_flip_enabled = false;
+	inst->external_blur = false;
 	return rc;
 }
 
@@ -1860,11 +1861,33 @@ int msm_venc_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 		}
 		break;
 	case V4L2_CID_MPEG_VIDC_VIDEO_BLUR_DIMENSIONS:
-		if (inst->state == MSM_VIDC_START_DONE) {
-			rc = msm_venc_set_blur_resolution(inst);
-			if (rc)
-				s_vpr_e(sid, "%s: set blur resolution failed\n",
+		if (inst->state < MSM_VIDC_START_DONE) {
+			if ((ctrl->val != MSM_VIDC_BLUR_INTERNAL) &&
+				(ctrl->val != MSM_VIDC_BLUR_DISABLE)) {
+				inst->external_blur = true;
+			}
+		} else if (inst->state == MSM_VIDC_START_DONE) {
+			if (!inst->external_blur) {
+				s_vpr_e(sid, "external blur not enabled");
+				break;
+			}
+			if (ctrl->val == MSM_VIDC_BLUR_EXTERNAL_DYNAMIC) {
+				s_vpr_h(sid,
+					"external blur setting already enabled\n",
 					__func__);
+				break;
+			} else if (ctrl->val == MSM_VIDC_BLUR_INTERNAL) {
+				s_vpr_e(sid,
+					"cannot change to internal blur config dynamically\n",
+					__func__);
+				break;
+			} else {
+				rc = msm_venc_set_blur_resolution(inst);
+				if (rc)
+					s_vpr_e(sid,
+						"%s: set blur resolution failed\n",
+						__func__);
+			}
 		}
 		break;
 	case V4L2_CID_HFLIP:
@@ -3172,8 +3195,10 @@ int msm_venc_set_bitrate_savings_mode(struct msm_vidc_inst *inst)
 {
 	int rc = 0;
 	struct hfi_device *hdev;
-	struct v4l2_ctrl *ctrl = NULL;
+	struct v4l2_ctrl *cac = NULL;
+	struct v4l2_ctrl *profile = NULL;
 	struct hfi_enable enable;
+	u32 codec;
 
 	if (!inst || !inst->core) {
 		d_vpr_e("%s: invalid params %pK\n", __func__, inst);
@@ -3181,14 +3206,24 @@ int msm_venc_set_bitrate_savings_mode(struct msm_vidc_inst *inst)
 	}
 	hdev = inst->core->device;
 
-	ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDC_VENC_BITRATE_SAVINGS);
-	enable.enable = !!ctrl->val;
-	if (!ctrl->val && inst->rc_type != V4L2_MPEG_VIDEO_BITRATE_MODE_VBR) {
+	enable.enable = 0;
+	if (inst->rc_type != V4L2_MPEG_VIDEO_BITRATE_MODE_VBR) {
 		s_vpr_h(inst->sid,
-			"Can't disable bitrate savings for non-VBR_CFR\n");
-		enable.enable = 1;
+			"Disable bitrate savings for non-VBR_CFR\n");
+		goto setprop;
 	}
 
+	codec = get_v4l2_codec(inst);
+	profile = get_ctrl(inst, V4L2_CID_MPEG_VIDEO_HEVC_PROFILE);
+	cac = get_ctrl(inst, V4L2_CID_MPEG_VIDC_VENC_BITRATE_SAVINGS);
+
+	if (codec == V4L2_PIX_FMT_HEVC &&
+		profile->val == V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN_10)
+		enable.enable = !!(cac->val & V4L2_MPEG_VIDC_VIDEO_BRS_ENABLE_10BIT);
+	else
+		enable.enable = !!(cac->val & V4L2_MPEG_VIDC_VIDEO_BRS_ENABLE_8BIT);
+
+setprop:
 	s_vpr_h(inst->sid, "%s: %d\n", __func__, enable.enable);
 	rc = call_hfi_op(hdev, session_set_property, inst->session,
 		HFI_PROPERTY_PARAM_VENC_BITRATE_SAVINGS, &enable,
@@ -4059,9 +4094,10 @@ int msm_venc_set_blur_resolution(struct msm_vidc_inst *inst)
 {
 	int rc = 0;
 	struct hfi_device *hdev;
-	struct v4l2_ctrl *ctrl;
+	struct v4l2_ctrl *ctrl = NULL;
 	struct hfi_frame_size frame_sz;
 	struct v4l2_format *f;
+	bool disable_blur = false;
 
 	if (!inst || !inst->core) {
 		d_vpr_e("%s: invalid params %pK\n", __func__, inst);
@@ -4075,33 +4111,48 @@ int msm_venc_set_blur_resolution(struct msm_vidc_inst *inst)
 	frame_sz.height = ctrl->val & 0xFFFF;
 	frame_sz.width = (ctrl->val & 0x7FFF0000) >> 16;
 
+	f = &inst->fmts[INPUT_PORT].v4l2_fmt;
+
 	/*
 	 * 0x0 is default value, internal blur enabled, external blur disabled
 	 * 0x1 means dynamic external blur, blur resolution will be set
 	 *     after start, internal blur disabled
 	 * 0x2 means disable both internal and external blur
 	 */
-	if (ctrl->val == 0x2) {
-		if (inst->state == MSM_VIDC_START_DONE) {
-			s_vpr_e(inst->sid,
-				"Dynamic disable all blur not supported\n");
-			return -EINVAL;
+	if (ctrl->val == MSM_VIDC_BLUR_DISABLE) {
+		s_vpr_h(inst->sid,
+			"Disable internal/external blur\n");
+		disable_blur = true;
+	} else if (ctrl->val == MSM_VIDC_BLUR_INTERNAL) {
+		if (check_blur_restrictions(inst)) {
+			s_vpr_h(inst->sid,
+				"Internal blur restrictions not met. Disabling blur..\n");
+			disable_blur = true;
 		}
-		f = &inst->fmts[INPUT_PORT].v4l2_fmt;
+	} else {
+		if (check_blur_restrictions(inst)) {
+			s_vpr_e(inst->sid,
+				"External blur is unsupported with rotation/flip/scalar\n");
+			disable_blur = true;
+		} else if (frame_sz.width > f->fmt.pix_mp.width ||
+			frame_sz.height > f->fmt.pix_mp.height) {
+			s_vpr_e(inst->sid,
+				"external blur wxh[%ux%u] exceeds input wxh[%ux%u]\n",
+				frame_sz.width, frame_sz.height,
+				f->fmt.pix_mp.width, f->fmt.pix_mp.height);
+			disable_blur = true;
+		}
+		if (inst->state < MSM_VIDC_START_DONE && disable_blur)
+			inst->external_blur = false;
+	}
+
+	if (disable_blur) {
 		/*
 		 * Use original input width/height (before VPSS) to inform FW
 		 * to disable all blur.
 		 */
 		frame_sz.width = f->fmt.pix_mp.width;
 		frame_sz.height = f->fmt.pix_mp.height;
-		s_vpr_h(inst->sid, "Disable both auto and external blur\n");
-	} else if (ctrl->val != 0){
-		if (check_blur_restrictions(inst)) {
-			/* reject external blur */
-			s_vpr_e(inst->sid,
-				"External blur is unsupported with rotation/flip/scalar\n");
-			return -EINVAL;
-		}
 	}
 
 	s_vpr_h(inst->sid, "%s: type %u, height %u, width %u\n", __func__,
@@ -4330,43 +4381,61 @@ int handle_all_intra_restrictions(struct msm_vidc_inst *inst)
 
 int check_blur_restrictions(struct msm_vidc_inst *inst)
 {
-	struct v4l2_ctrl *rotation = NULL;
-	struct v4l2_ctrl *hflip = NULL;
-	struct v4l2_ctrl *vflip = NULL;
+	struct v4l2_ctrl *cac = NULL;
+	struct v4l2_ctrl *profile = NULL;
+	struct v4l2_ctrl *blur = NULL;
 	struct v4l2_format *f;
-	u32 output_height, output_width, input_height, input_width;
 	bool scalar_enable = false;
-	bool rotation_enable = false;
-	bool flip_enable = false;
+	bool sup_resolution = false;
+	bool sup_codec = false;
+	bool is_10_bit = false;
+	u32 input_height, input_width;
+	u32 codec;
 
 	/* Only need to check static VPSS conditions */
 	if (inst->state == MSM_VIDC_START_DONE)
 		return 0;
 
-	f = &inst->fmts[OUTPUT_PORT].v4l2_fmt;
-	output_height = f->fmt.pix_mp.height;
-	output_width = f->fmt.pix_mp.width;
+	scalar_enable = vidc_scalar_enabled(inst);
+	blur = get_ctrl(inst, V4L2_CID_MPEG_VIDC_VIDEO_BLUR_DIMENSIONS);
+	/* Minimum restrictions to enable any type of blur */
+	if (scalar_enable || inst->static_rotation_flip_enabled) {
+		return -ENOTSUPP;
+	}
+	if (blur->val != MSM_VIDC_BLUR_INTERNAL) {
+		/* below restrictions applicable for internal blur only */
+		return 0;
+	}
+
 	f = &inst->fmts[INPUT_PORT].v4l2_fmt;
 	input_height = f->fmt.pix_mp.height;
 	input_width = f->fmt.pix_mp.width;
 
-	if (output_height != input_height || output_width != input_width)
-		scalar_enable = true;
+	/* Adaptive blur restrictions */
+	cac = get_ctrl(inst, V4L2_CID_MPEG_VIDC_VENC_BITRATE_SAVINGS);
+	codec = get_v4l2_codec(inst);
+	profile = get_ctrl(inst, V4L2_CID_MPEG_VIDEO_HEVC_PROFILE);
 
-	rotation = get_ctrl(inst, V4L2_CID_ROTATE);
-	if (rotation->val != 0)
-		rotation_enable = true;
+	if (codec == V4L2_PIX_FMT_HEVC &&
+		profile->val == V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN_10) {
+		is_10_bit = true;
+	}
+	if (res_is_greater_than(input_width, input_height, 352, 240) &&
+		res_is_less_than_or_equal_to(input_width, input_height,
+		3840, 2160)) {
+		sup_resolution = true;
+	}
 
-	hflip = get_ctrl(inst, V4L2_CID_HFLIP);
-	vflip = get_ctrl(inst, V4L2_CID_VFLIP);
-	if ((hflip->val == V4L2_MPEG_MSM_VIDC_ENABLE) ||
-		(vflip->val == V4L2_MPEG_MSM_VIDC_ENABLE))
-		flip_enable = true;
+	if (codec == V4L2_PIX_FMT_HEVC || codec == V4L2_PIX_FMT_H264)
+		sup_codec = true;
 
-	if (scalar_enable || rotation_enable || flip_enable)
+	if (inst->rc_type != V4L2_MPEG_VIDEO_BITRATE_MODE_VBR ||
+		!cac->val || is_10_bit || !sup_codec || inst->all_intra ||
+		!sup_resolution) {
 		return -ENOTSUPP;
-	else
-		return 0;
+	}
+
+	return 0;
 }
 
 int msm_venc_set_properties(struct msm_vidc_inst *inst)
@@ -4488,6 +4557,13 @@ int msm_venc_set_properties(struct msm_vidc_inst *inst)
 	rc = msm_venc_set_video_csc(inst);
 	if (rc)
 		goto exit;
+	/*
+	 * Downscalar and Static rotation/flip has higher priority
+	 * than blur.
+	 */
+	rc = msm_venc_set_rotation(inst);
+	if (rc)
+		goto exit;
 	rc = msm_venc_set_blur_resolution(inst);
 	if (rc)
 		goto exit;
@@ -4498,9 +4574,6 @@ int msm_venc_set_properties(struct msm_vidc_inst *inst)
 	if (rc)
 		goto exit;
 	rc = msm_venc_set_buffer_counts(inst);
-	if (rc)
-		goto exit;
-	rc = msm_venc_set_rotation(inst);
 	if (rc)
 		goto exit;
 	rc = msm_venc_set_lossless(inst);

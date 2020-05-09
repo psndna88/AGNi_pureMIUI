@@ -47,6 +47,12 @@ enum hal_buffer {
 	HAL_BUFFER_INTERNAL_RECON = 0x1000,
 };
 
+enum msm_vidc_blur_type {
+	MSM_VIDC_BLUR_INTERNAL = 0x0,
+	MSM_VIDC_BLUR_EXTERNAL_DYNAMIC = 0x1,
+	MSM_VIDC_BLUR_DISABLE = 0x2,
+};
+
 struct dma_mapping_info {
 	struct device *dev;
 	struct iommu_domain *domain;
