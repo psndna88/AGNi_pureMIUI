@@ -1485,9 +1485,6 @@ static int fg_load_learned_cap_from_sram(struct fg_chip *chip)
 
 	chip->cl.learned_cc_uah = act_cap_mah * 1000;
 
-#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T) || defined (CONFIG_KERNEL_CUSTOM_D2S)
-	chip->cl.learned_cc_uah = (chip->cl.learned_cc_uah > 4000000) ? chip->cl.learned_cc_uah : 4000000;
-#endif
 	if (chip->cl.learned_cc_uah != chip->cl.nom_cap_uah) {
 		if (chip->cl.learned_cc_uah == 0)
 			chip->cl.learned_cc_uah = chip->cl.nom_cap_uah;
@@ -3231,9 +3228,6 @@ done:
 			NOM_CAP_OFFSET, rc);
 	} else {
 		chip->cl.nom_cap_uah = (int)(buf[0] | buf[1] << 8) * 1000;
-#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T) || defined (CONFIG_KERNEL_CUSTOM_D2S)
-		chip->cl.nom_cap_uah = (chip->cl.nom_cap_uah > 4000000) ? chip->cl.nom_cap_uah : 4000000;
-#endif
 		rc = fg_load_learned_cap_from_sram(chip);
 		if (rc < 0)
 			pr_err("Error in loading capacity learning data, rc:%d\n",
