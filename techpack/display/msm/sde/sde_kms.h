@@ -47,22 +47,19 @@
  * SDE_DEBUG - macro for kms/plane/crtc/encoder/connector logs
  * @fmt: Pointer to format string
  */
-#define SDE_DEBUG(fmt, ...)                                                \
-	no_printk(fmt, ##__VA_ARGS__)
+#define SDE_DEBUG(fmt, ...)
 
 /**
  * SDE_INFO - macro for kms/plane/crtc/encoder/connector logs
  * @fmt: Pointer to format string
  */
-#define SDE_INFO(fmt, ...)                                                \
-	no_printk(fmt, ##__VA_ARGS__)
+#define SDE_INFO(fmt, ...)
 
 /**
  * SDE_DEBUG_DRIVER - macro for hardware driver logging
  * @fmt: Pointer to format string
  */
-#define SDE_DEBUG_DRIVER(fmt, ...)                                         \
-	no_printk(fmt, ##__VA_ARGS__)
+#define SDE_DEBUG_DRIVER(fmt, ...)
 
 #define SDE_ERROR(fmt, ...) pr_err("[sde error]" fmt, ##__VA_ARGS__)
 
