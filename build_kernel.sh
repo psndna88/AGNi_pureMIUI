@@ -113,6 +113,13 @@ if [ $choice -eq 1 ]; then
 	echo "          BATCH MODE: Built AGNi lavender Pie variant!!!"
 	echo $HORIZONTALLINE
 	echo " "
+	echo $HORIZONTALLINE
+	echo "          BATCH MODE: Building AGNi lavender Pie OldCam variant..."
+	./scripts/agni/build_kernel_lavender_pie-oldcam.sh || exit 1
+	rm $COUT/.config $COUT/.config.old
+	echo "          BATCH MODE: Built AGNi lavender Pie OldCam variant!!!"
+	echo $HORIZONTALLINE
+	echo " "
 	#### --ALL WAYNE
 	echo $HORIZONTALLINE
 	echo "          BATCH MODE: Building AGNi wayne Q variant..."
@@ -241,6 +248,14 @@ elif [ $choice -eq 5 ];	then
 	echo "          BATCH MODE: Built AGNi lavender Pie variant!!!"
 	echo $HORIZONTALLINE
 	echo "          BATCH MODE: Built ALL LAVENDER variants !!!"
+	echo " "
+	echo $HORIZONTALLINE
+	echo "          BATCH MODE: Building AGNi lavender Pie OldCam variant..."
+	./scripts/agni/build_kernel_lavender_pie-oldcam.sh || exit 1
+	rm $COUT/.config $COUT/.config.old
+	echo "          BATCH MODE: Built AGNi lavender Pie OldCam variant!!!"
+	echo $HORIZONTALLINE
+	echo " "
 elif [ $choice -eq 6 ];	then
 	#### ALL WAYNE
 	echo $HORIZONTALLINE
