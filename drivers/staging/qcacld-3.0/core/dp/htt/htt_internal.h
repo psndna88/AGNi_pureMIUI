@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011, 2014-2018, 2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -127,7 +127,13 @@ struct htt_host_rx_desc_base {
 
 #ifdef DEBUG_RX_RING_BUFFER
 #define NBUF_MAP_ID(skb) \
-	(((struct qdf_nbuf_cb *)((skb)->cb))->u.rx.map_index)
+	(((struct qdf_nbuf_cb *)((skb)->cb))->u.rx.dev.priv_cb_m.map_index)
+
+#ifdef MSM_PLATFORM
+#define HTT_ADDRESS_MASK   0xfffffffffffffffe
+#else
+#define HTT_ADDRESS_MASK   0xfffffffe
+#endif /* MSM_PLATFORM */
 
 /**
  * rx_buf_debug: rx_ring history
@@ -154,7 +160,7 @@ struct htt_host_rx_desc_base {
  *    @posted: time-stamp when HTT message is recived
  *    @recvd : 0x48545452584D5367 ('HTTRXMSG')
  */
-#define HTT_RX_RING_BUFF_DBG_LIST          (2 * 1024)
+#define HTT_RX_RING_BUFF_DBG_LIST          (8 * 1024)
 struct rx_buf_debug {
 	qdf_dma_addr_t paddr;
 	qdf_nbuf_t     nbuf;
@@ -214,7 +220,7 @@ static inline void htt_print_rx_desc_lro(struct htt_host_rx_desc_base *rx_desc)
 }
 
 /**
- * htt_rx_extract_lro_info() - extract LRO information from the rx
+ * htt_print_rx_desc_lro() - extract LRO information from the rx
  * descriptor
  * @msdu: network buffer
  * @rx_desc: HTT rx descriptor
@@ -248,24 +254,19 @@ static inline void htt_rx_extract_lro_info(qdf_nbuf_t msdu,
 			rx_desc->msdu_start.tcp_proto;
 		QDF_NBUF_CB_RX_IPV6_PROTO(msdu) =
 			rx_desc->msdu_start.ipv6_proto;
-		QDF_NBUF_CB_RX_IP_OFFSET(msdu) =
-			rx_desc->msdu_start.l3_offset;
 		QDF_NBUF_CB_RX_TCP_OFFSET(msdu) =
 			rx_desc->msdu_start.l4_offset;
-		QDF_NBUF_CB_RX_FLOW_ID_TOEPLITZ(msdu) =
+		QDF_NBUF_CB_RX_FLOW_ID(msdu) =
 			rx_desc->msdu_start.flow_id_toeplitz;
 	}
 }
-#else /* !HELIUMPLUS */
-static inline void htt_rx_extract_lro_info(qdf_nbuf_t msdu,
-	 struct htt_host_rx_desc_base *rx_desc)
-{
-}
-
+#else
 static inline void htt_print_rx_desc_lro(struct htt_host_rx_desc_base *rx_desc)
-{
-}
-#endif /* !HELIUMPLUS */
+{}
+static inline void htt_rx_extract_lro_info(qdf_nbuf_t msdu,
+	 struct htt_host_rx_desc_base *rx_desc) {}
+#endif /* HELIUMPLUS */
+
 static inline void htt_print_rx_desc(struct htt_host_rx_desc_base *rx_desc)
 {
 	qdf_print
@@ -375,6 +376,14 @@ static inline void htt_print_rx_desc(struct htt_host_rx_desc_base *rx_desc)
 #define HTT_MAX_SEND_QUEUE_DEPTH 64
 
 #define IS_PWR2(value) (((value) ^ ((value)-1)) == ((value) << 1) - 1)
+
+/*
+ * HTT_RX_PRE_ALLOC_POOL_SIZE -
+ * How many Rx Buffer should be there in pre-allocated pool of buffers.
+ * This is mainly for low memory condition where kernel fails to alloc
+ * SKB buffer to the Rx ring.
+ */
+#define HTT_RX_PRE_ALLOC_POOL_SIZE 64
 
 /* Max rx MSDU size including L2 headers */
 #define MSDU_SIZE 1560
@@ -539,7 +548,7 @@ void htt_htc_pkt_free(struct htt_pdev_t *pdev, struct htt_htc_pkt *pkt);
 void htt_htc_pkt_pool_free(struct htt_pdev_t *pdev);
 
 #ifdef ATH_11AC_TXCOMPACT
-void htt_htc_misc_pkt_list_trim(struct htt_pdev_t *pdev);
+void htt_htc_misc_pkt_list_trim(struct htt_pdev_t *pdev, int level);
 
 void
 htt_htc_misc_pkt_list_add(struct htt_pdev_t *pdev, struct htt_htc_pkt *pkt);
@@ -547,10 +556,20 @@ htt_htc_misc_pkt_list_add(struct htt_pdev_t *pdev, struct htt_htc_pkt *pkt);
 void htt_htc_misc_pkt_pool_free(struct htt_pdev_t *pdev);
 #endif
 
+#ifdef CONFIG_HL_SUPPORT
+static inline int
+htt_rx_hash_list_insert(struct htt_pdev_t *pdev,
+			qdf_dma_addr_t paddr,
+			qdf_nbuf_t netbuf)
+{
+	return 0;
+}
+#else
 int
 htt_rx_hash_list_insert(struct htt_pdev_t *pdev,
 			qdf_dma_addr_t paddr,
 			qdf_nbuf_t netbuf);
+#endif
 
 qdf_nbuf_t
 htt_rx_hash_list_lookup(struct htt_pdev_t *pdev, qdf_dma_addr_t paddr);
@@ -692,8 +711,8 @@ static inline int htt_display_rx_buf_debug(struct htt_pdev_t *pdev)
 		buf = pdev->rx_buff_list;
 		for (i = 0; i < HTT_RX_RING_BUFF_DBG_LIST; i++) {
 			if (buf[i].posted != 0)
-				QDF_TRACE(QDF_MODULE_ID_HTT,
-					  QDF_TRACE_LEVEL_INFO,
+				QDF_TRACE(QDF_MODULE_ID_TXRX,
+					  QDF_TRACE_LEVEL_ERROR,
 					  "[%d][0x%x] %pK %lu %pK %llu %llu",
 					  i, buf[i].cpu,
 					  buf[i].nbuf_data,
@@ -703,14 +722,14 @@ static inline int htt_display_rx_buf_debug(struct htt_pdev_t *pdev)
 					  buf[i].recved);
 		}
 
-		QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_INFO,
+		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
 		"rxbuf_idx %d all_posted: %d all_recvd: %d recv_err: %d",
 		pdev->rx_buff_index,
 		pdev->rx_buff_posted_cum,
 		pdev->rx_buff_recvd_cum,
 		pdev->rx_buff_recvd_err);
 
-		QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_INFO,
+		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
 		"timer kicks :%d actual  :%d restarts:%d debtors: %d fill_n: %d",
 		pdev->refill_retry_timer_starts,
 		pdev->refill_retry_timer_calls,
@@ -885,4 +904,161 @@ void htt_rx_dbg_rxbuf_deinit(struct htt_pdev_t *pdev)
 	return;
 }
 #endif
+
+#ifndef CONFIG_HL_SUPPORT
+
+#ifdef HTT_DEBUG_DATA
+#define HTT_PKT_DUMP(x) x
+#else
+#define HTT_PKT_DUMP(x) /* no-op */
+#endif
+
+#ifdef RX_HASH_DEBUG
+#define HTT_RX_CHECK_MSDU_COUNT(msdu_count) HTT_ASSERT_ALWAYS(msdu_count)
+#else
+#define HTT_RX_CHECK_MSDU_COUNT(msdu_count)     /* no-op */
+#endif
+
+#if HTT_PADDR64
+#define NEXT_FIELD_OFFSET_IN32 2
+#else /* ! HTT_PADDR64 */
+#define NEXT_FIELD_OFFSET_IN32 1
+#endif /* HTT_PADDR64 */
+
+#define RX_PADDR_MAGIC_PATTERN 0xDEAD0000
+
+#if HTT_PADDR64
+static inline qdf_dma_addr_t htt_paddr_trim_to_37(qdf_dma_addr_t paddr)
+{
+	qdf_dma_addr_t ret = paddr;
+
+	if (sizeof(paddr) > 4)
+		ret &= 0x1fffffffff;
+	return ret;
+}
+#else /* not 64 bits */
+static inline qdf_dma_addr_t htt_paddr_trim_to_37(qdf_dma_addr_t paddr)
+{
+	return paddr;
+}
+#endif /* HTT_PADDR64 */
+
+#ifdef ENABLE_DEBUG_ADDRESS_MARKING
+static inline qdf_dma_addr_t
+htt_rx_paddr_unmark_high_bits(qdf_dma_addr_t paddr)
+{
+	uint32_t markings;
+
+	if (sizeof(qdf_dma_addr_t) > 4) {
+		markings = (uint32_t)((paddr >> 16) >> 16);
+		/*
+		 * check if it is marked correctly:
+		 * See the mark_high_bits function above for the expected
+		 * pattern.
+		 * the LS 5 bits are the high bits of physical address
+		 * padded (with 0b0) to 8 bits
+		 */
+		if ((markings & 0xFFFF0000) != RX_PADDR_MAGIC_PATTERN) {
+			qdf_print("%s: paddr not marked correctly: 0x%pK!\n",
+				  __func__, (void *)paddr);
+			HTT_ASSERT_ALWAYS(0);
+		}
+
+		/* clear markings  for further use */
+		paddr = htt_paddr_trim_to_37(paddr);
+	}
+	return paddr;
+}
+
+static inline
+qdf_dma_addr_t htt_rx_in_ord_paddr_get(uint32_t *u32p)
+{
+	qdf_dma_addr_t paddr = 0;
+
+	paddr = (qdf_dma_addr_t)HTT_RX_IN_ORD_PADDR_IND_PADDR_GET(*u32p);
+	if (sizeof(qdf_dma_addr_t) > 4) {
+		u32p++;
+		/* 32 bit architectures dont like <<32 */
+		paddr |= (((qdf_dma_addr_t)
+			  HTT_RX_IN_ORD_PADDR_IND_PADDR_GET(*u32p))
+			  << 16 << 16);
+	}
+	paddr = htt_rx_paddr_unmark_high_bits(paddr);
+
+	return paddr;
+}
+#else
+#if HTT_PADDR64
+static inline
+qdf_dma_addr_t htt_rx_in_ord_paddr_get(uint32_t *u32p)
+{
+	qdf_dma_addr_t paddr = 0;
+
+	paddr = (qdf_dma_addr_t)HTT_RX_IN_ORD_PADDR_IND_PADDR_GET(*u32p);
+	if (sizeof(qdf_dma_addr_t) > 4) {
+		u32p++;
+		/* 32 bit architectures dont like <<32 */
+		paddr |= (((qdf_dma_addr_t)
+			  HTT_RX_IN_ORD_PADDR_IND_PADDR_GET(*u32p))
+			  << 16 << 16);
+	}
+	return paddr;
+}
+#else
+static inline
+qdf_dma_addr_t htt_rx_in_ord_paddr_get(uint32_t *u32p)
+{
+	return HTT_RX_IN_ORD_PADDR_IND_PADDR_GET(*u32p);
+}
+#endif
+#endif /* ENABLE_DEBUG_ADDRESS_MARKING */
+
+static inline qdf_nbuf_t
+htt_rx_in_order_netbuf_pop(htt_pdev_handle pdev, qdf_dma_addr_t paddr)
+{
+	HTT_ASSERT1(htt_rx_in_order_ring_elems(pdev) != 0);
+	pdev->rx_ring.fill_cnt--;
+	paddr = htt_paddr_trim_to_37(paddr);
+	return htt_rx_hash_list_lookup(pdev, paddr);
+}
+
+#ifdef FEATURE_MONITOR_MODE_SUPPORT
+int htt_rx_mon_amsdu_rx_in_order_pop_ll(htt_pdev_handle pdev,
+					qdf_nbuf_t rx_ind_msg,
+					qdf_nbuf_t *head_msdu,
+					qdf_nbuf_t *tail_msdu,
+					uint32_t *replenish_cnt);
+
+/**
+ * htt_rx_mon_get_rx_status() - Update information about the rx status,
+ * which is used later for radiotap updation.
+ * @pdev: Pointer to pdev handle
+ * @rx_desc: Pointer to struct htt_host_rx_desc_base
+ * @rx_status: Return variable updated with rx_status
+ *
+ * Return: None
+ */
+void htt_rx_mon_get_rx_status(htt_pdev_handle pdev,
+			      struct htt_host_rx_desc_base *rx_desc,
+			      struct mon_rx_status *rx_status);
+#else
+static inline
+int htt_rx_mon_amsdu_rx_in_order_pop_ll(htt_pdev_handle pdev,
+					qdf_nbuf_t rx_ind_msg,
+					qdf_nbuf_t *head_msdu,
+					qdf_nbuf_t *tail_msdu,
+					uint32_t *replenish_cnt)
+{
+	return 0;
+}
+
+static inline
+void htt_rx_mon_get_rx_status(htt_pdev_handle pdev,
+			      struct htt_host_rx_desc_base *rx_desc,
+			      struct mon_rx_status *rx_status)
+{
+}
+#endif
+#endif
+
 #endif /* _HTT_INTERNAL__H_ */

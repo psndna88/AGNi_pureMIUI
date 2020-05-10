@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014, 2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -26,11 +26,9 @@
 typedef enum {
 	eSAP_TIMER_CONNECT_ACCEPT_TIMEOUT = 0U,
 	eSAP_MAC_CONNECT_COMPLETED,
-	eSAP_CHANNEL_SELECTION_FAILED,
 	eSAP_MAC_CONNECT_INDICATION,
 	eSAP_MAC_KEY_SET_SUCCESS,
 	eSAP_RSN_FAILURE,
-	eSAP_MAC_SCAN_COMPLETE,
 	eSAP_HDD_START_INFRA_BSS,
 	eSAP_MAC_READY_FOR_CONNECTIONS,
 	eSAP_MAC_START_BSS_SUCCESS,
@@ -44,7 +42,6 @@ typedef enum {
 	eSAP_DFS_CHANNEL_CAC_END,
 	eSAP_DFS_CHNL_SWITCH_ANNOUNCEMENT_START,
 	eSAP_OPERATING_CHANNEL_CHANGED,
-	eSAP_CHANNEL_SELECTION_RETRY,
 	eSAP_CHANNEL_SWITCH_ANNOUNCEMENT_START,
 
 	eSAP_NO_MSG

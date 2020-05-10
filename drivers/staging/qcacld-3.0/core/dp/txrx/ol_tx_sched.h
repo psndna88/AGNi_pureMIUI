@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, 2016-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013, 2016-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -72,6 +72,10 @@ void ol_tx_sched_stats_display(struct ol_txrx_pdev_t *pdev);
 void ol_tx_sched_cur_state_display(struct ol_txrx_pdev_t *pdev);
 
 void ol_tx_sched_stats_clear(struct ol_txrx_pdev_t *pdev);
+
+void
+ol_txrx_set_wmm_param(struct cdp_pdev *data_pdev,
+		      struct ol_tx_wmm_param_t wmm_param);
 
 #else
 

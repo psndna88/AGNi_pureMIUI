@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -118,7 +118,7 @@ QDF_STATUS hif_dev_send_buffer(struct hif_sdio_device *pdev,
 	frag_count = qdf_nbuf_get_num_frags(buf);
 
 	if (frag_count > 1) {
-		/* header data length should be total sending length substract
+		/* header data length should be total sending length subtract
 		 * internal data length of netbuf
 		 */
 		head_data_len = sizeof(struct hif_sendContext) +
@@ -147,7 +147,7 @@ QDF_STATUS hif_dev_send_buffer(struct hif_sdio_device *pdev,
 		} else {
 			AR_DEBUG_PRINTF(ATH_DEBUG_ERR,
 				("Allocate send context fail %d\n",
-				sizeof(struct hif_sendContext) +
+				(int) sizeof(struct hif_sendContext) +
 				padded_length));
 			return QDF_STATUS_E_NOMEM;
 		}

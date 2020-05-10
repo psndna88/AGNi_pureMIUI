@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -29,6 +29,15 @@
 #include <i_qdf_mem.h>
 
 #define QDF_CACHE_LINE_SZ __qdf_cache_line_sz
+
+/**
+ * qdf_align() - align to the given size.
+ * @a: input that needs to be aligned.
+ * @align_size: boundary on which 'a' has to be alinged.
+ *
+ * Return: aligned value.
+ */
+#define qdf_align(a, align_size)   __qdf_align(a, align_size)
 
 /**
  * struct qdf_mem_dma_page_t - Allocated dmaable page
@@ -77,44 +86,7 @@ void qdf_mem_init(void);
  */
 void qdf_mem_exit(void);
 
-/**
- * struct qdf_mem_domain - memory domains for tracking memory allocations
- * @QDF_MEM_DOMAIN_INIT: The default memory domain
- * @QDF_MEM_DOMAIN_ACTIVE: The network interface active memory domain
- * @QDF_MEM_DOMAIN_MAX_COUNT: The number of memory domains for iterating, etc.
- */
-enum qdf_mem_domain {
-	QDF_MEM_DOMAIN_INIT,
-	QDF_MEM_DOMAIN_ACTIVE,
-	QDF_MEM_DOMAIN_MAX_COUNT,
-};
-
-/**
- * qdf_mem_get_domain() - Get the current memory domain
- *
- * Return: the current memory domain
- */
-enum qdf_mem_domain qdf_mem_get_domain(void);
-
-/**
- * qdf_mem_set_domain() - Set the current memory domain
- * @domain: the domain to change to
- *
- * This function changes the memory domain associated with future memory
- * allocations. This can be used to check for memory leaks when combined with
- * qdf_mem_check_for_leaks().
- *
- * Return: None
- */
-void qdf_mem_set_domain(enum qdf_mem_domain domain);
-
-/**
- * qdf_mem_domain_name() - Get the human readable name of a memory domain
- * @domain: The domain to return the name of
- *
- * Return: name of the given domain
- */
-const uint8_t *qdf_mem_domain_name(enum qdf_mem_domain domain);
+#define QDF_MEM_FILE_NAME_SIZE 48
 
 #ifdef MEMORY_DEBUG
 /**
@@ -122,6 +94,8 @@ const uint8_t *qdf_mem_domain_name(enum qdf_mem_domain domain);
  * @size: Number of bytes of memory to allocate.
  * @file: File name of the call site
  * @line: Line number of the call site
+ * @caller: Address of the caller function
+ * @@flag: GFP flag
  *
  * This function will dynamicallly allocate the specified number of bytes of
  * memory and add it to the qdf tracking list to check for memory leaks and
@@ -129,16 +103,22 @@ const uint8_t *qdf_mem_domain_name(enum qdf_mem_domain domain);
  *
  * Return: A valid memory location on success, or NULL on failure
  */
-void *qdf_mem_malloc_debug(size_t size, const char *file, uint32_t line);
+void *qdf_mem_malloc_debug(size_t size, const char *file, uint32_t line,
+			   void *caller, uint32_t flag);
 
 #define qdf_mem_malloc(size) \
-	qdf_mem_malloc_debug(size, __FILE__, __LINE__)
+	qdf_mem_malloc_debug(size, __FILE__, __LINE__, QDF_RET_IP, 0)
 
+#define qdf_mem_malloc_atomic(size) \
+	qdf_mem_malloc_debug(size, __FILE__, __LINE__, QDF_RET_IP, GFP_ATOMIC)
 /**
  * qdf_mem_free_debug() - debug version of qdf_mem_free
  * @ptr: Pointer to the starting address of the memory to be freed.
  *
- * Return: None
+ * This function will free the memory pointed to by 'ptr'. It also checks for
+ * memory corruption, underrun, overrun, double free, domain mismatch, etc.
+ *
+ * Return: none
  */
 void qdf_mem_free_debug(void *ptr, const char *file, uint32_t line);
 
@@ -149,12 +129,12 @@ void qdf_mem_free_debug(void *ptr, const char *file, uint32_t line);
  * qdf_mem_check_for_leaks() - Assert that the current memory domain is empty
  *
  * Call this to ensure there are no active memory allocations being tracked
- * against the current memory domain. For example, one should call this function
- * immediately before a call to qdf_mem_set_domain() as a memory leak detection
- * mechanism.
+ * against the current debug domain. For example, one should call this function
+ * immediately before a call to qdf_debug_domain_set() as a memory leak
+ * detection mechanism.
  *
  * e.g.
- *	qdf_mem_set_domain(QDF_MEM_DOMAIN_ACTIVE);
+ *	qdf_debug_domain_set(QDF_DEBUG_DOMAIN_ACTIVE);
  *
  *	...
  *
@@ -165,42 +145,17 @@ void qdf_mem_free_debug(void *ptr, const char *file, uint32_t line);
  *	// before transitioning back to inactive state,
  *	// make sure all active memory has been freed
  *	qdf_mem_check_for_leaks();
- *	qdf_mem_set_domain(QDF_MEM_DOMAIN_INIT);
+ *	qdf_debug_domain_set(QDF_DEBUG_DOMAIN_INIT);
  *
  *	...
  *
- *	// before program exit, make sure init time memory is freed
+ *	// also, before program exit, make sure init time memory is freed
  *	qdf_mem_check_for_leaks();
  *	exit();
  *
  * Return: None
  */
 void qdf_mem_check_for_leaks(void);
-#else
-void *qdf_mem_malloc(qdf_size_t size);
-
-/**
- * qdf_mem_free() - free QDF memory
- * @ptr: Pointer to the starting address of the memory to be free'd.
- *
- * Return: None
- */
-void qdf_mem_free(void *ptr);
-
-static inline void qdf_mem_check_for_leaks(void) { }
-#endif /* MEMORY_DEBUG */
-
-void *qdf_mem_alloc_outline(qdf_device_t osdev, qdf_size_t size);
-
-void qdf_mem_set(void *ptr, uint32_t num_bytes, uint32_t value);
-
-void qdf_mem_zero(void *ptr, uint32_t num_bytes);
-
-void qdf_mem_copy(void *dst_addr, const void *src_addr, uint32_t num_bytes);
-
-void qdf_mem_move(void *dst_addr, const void *src_addr, uint32_t num_bytes);
-
-void qdf_mem_free_outline(void *buf);
 
 /**
  * qdf_mem_alloc_consistent_debug() - allocates consistent qdf memory
@@ -210,15 +165,19 @@ void qdf_mem_free_outline(void *buf);
  * @paddr: Physical address
  * @file: file name of the call site
  * @line: line numbe rof the call site
+ * @caller: Address of the caller function
+ * @flag: GFP flag
  *
  * Return: pointer of allocated memory or null if memory alloc fails
  */
 void *qdf_mem_alloc_consistent_debug(qdf_device_t osdev, void *dev,
-				 qdf_size_t size, qdf_dma_addr_t *paddr,
-				 const char *file, uint32_t line);
+				     qdf_size_t size, qdf_dma_addr_t *paddr,
+				     const char *file, uint32_t line,
+				     void *caller);
 
 #define qdf_mem_alloc_consistent(osdev, dev, size, paddr) \
-	qdf_mem_alloc_consistent_debug(osdev, dev, size, paddr, __FILE__, __LINE__)
+	qdf_mem_alloc_consistent_debug(osdev, dev, size, paddr, \
+				       __FILE__, __LINE__, QDF_RET_IP)
 
 /**
  * qdf_mem_free_consistent_debug() - free consistent qdf memory
@@ -233,15 +192,52 @@ void *qdf_mem_alloc_consistent_debug(qdf_device_t osdev, void *dev,
  * Return: none
  */
 void qdf_mem_free_consistent_debug(qdf_device_t osdev, void *dev,
-			       qdf_size_t size, void *vaddr,
-			       qdf_dma_addr_t paddr, qdf_dma_context_t memctx,
-			       const char *file, uint32_t line);
+				   qdf_size_t size, void *vaddr,
+				   qdf_dma_addr_t paddr,
+				   qdf_dma_context_t memctx,
+				   const char *file, uint32_t line);
 
 #define qdf_mem_free_consistent(osdev, dev, size, vaddr, paddr, memctx) \
 	qdf_mem_free_consistent_debug(osdev, dev, size, vaddr, paddr, memctx, \
 				  __FILE__, __LINE__)
+#else
+void *qdf_mem_malloc(qdf_size_t size);
+void *qdf_mem_malloc_atomic(qdf_size_t size);
+
+/**
+ * qdf_mem_free() - free QDF memory
+ * @ptr: Pointer to the starting address of the memory to be freed.
+ *
+ * Return: None
+ */
+void qdf_mem_free(void *ptr);
+
+static inline void qdf_mem_check_for_leaks(void) { }
+
+void *qdf_mem_alloc_consistent(qdf_device_t osdev, void *dev,
+			       qdf_size_t size, qdf_dma_addr_t *paddr);
+
+void qdf_mem_free_consistent(qdf_device_t osdev, void *dev,
+			     qdf_size_t size, void *vaddr,
+			     qdf_dma_addr_t paddr, qdf_dma_context_t memctx);
+
+#endif /* MEMORY_DEBUG */
+
+void *qdf_mem_alloc_outline(qdf_device_t osdev, qdf_size_t size);
+
+void qdf_mem_set(void *ptr, uint32_t num_bytes, uint32_t value);
+
+void qdf_mem_zero(void *ptr, uint32_t num_bytes);
+
+void qdf_mem_copy(void *dst_addr, const void *src_addr, uint32_t num_bytes);
+
+void qdf_mem_move(void *dst_addr, const void *src_addr, uint32_t num_bytes);
+
+void qdf_mem_free_outline(void *buf);
 
 void qdf_mem_zero_outline(void *buf, qdf_size_t size);
+
+void qdf_ether_addr_copy(void *dst_addr, const void *src_addr);
 
 /**
  * qdf_mem_cmp() - memory compare
@@ -265,31 +261,6 @@ static inline int32_t qdf_mem_cmp(const void *memory1, const void *memory2,
 }
 
 /**
- * qdf_str_cmp - Compare two strings
- * @str1: First string
- * @str2: Second string
- * Return: =0 equal
- * >0    not equal, if  str1  sorts lexicographically after str2
- * <0    not equal, if  str1  sorts lexicographically before str2
- */
-static inline int32_t qdf_str_cmp(const char *str1, const char *str2)
-{
-	return __qdf_str_cmp(str1, str2);
-}
-
-/**
- * qdf_str_lcopy - Copy from one string to another
- * @dest: destination string
- * @src: source string
- * @bytes: limit of num bytes to copy
- * Return: =0 returns the initial value of dest
- */
-static inline uint32_t qdf_str_lcopy(char *dest, const char *src, uint32_t bytes)
-{
-	return __qdf_str_lcopy(dest, src, bytes);
-}
-
-/**
  * qdf_mem_map_nbytes_single - Map memory for DMA
  * @osdev: pomter OS device context
  * @buf: pointer to memory to be dma mapped
@@ -301,7 +272,7 @@ static inline uint32_t qdf_str_lcopy(char *dest, const char *src, uint32_t bytes
  */
 static inline uint32_t qdf_mem_map_nbytes_single(qdf_device_t osdev, void *buf,
 						 qdf_dma_dir_t dir, int nbytes,
-						 uint32_t *phy_addr)
+						 qdf_dma_addr_t *phy_addr)
 {
 #if defined(HIF_PCI)
 	return __qdf_mem_map_nbytes_single(osdev, buf, dir, nbytes, phy_addr);
@@ -320,7 +291,7 @@ static inline uint32_t qdf_mem_map_nbytes_single(qdf_device_t osdev, void *buf,
  * Return: none
  */
 static inline void qdf_mem_unmap_nbytes_single(qdf_device_t osdev,
-					       uint32_t phy_addr,
+					       qdf_dma_addr_t phy_addr,
 					       qdf_dma_dir_t dir,
 					       int nbytes)
 {
@@ -384,22 +355,12 @@ static inline void qdf_mempool_free(qdf_device_t osdev, qdf_mempool_t pool,
 void qdf_mem_dma_sync_single_for_device(qdf_device_t osdev,
 					qdf_dma_addr_t bus_addr,
 					qdf_size_t size,
-					qdf_dma_dir_t direction);
+					__dma_data_direction direction);
 
 void qdf_mem_dma_sync_single_for_cpu(qdf_device_t osdev,
 					qdf_dma_addr_t bus_addr,
 					qdf_size_t size,
-					qdf_dma_dir_t direction);
-/**
- * qdf_str_len() - returns the length of a string
- * @str: input string
- * Return:
- * length of string
- */
-static inline int32_t qdf_str_len(const char *str)
-{
-	return __qdf_str_len(str);
-}
+					__dma_data_direction direction);
 
 void qdf_mem_multi_pages_alloc(qdf_device_t osdev,
 			       struct qdf_mem_multi_page_t *pages,
@@ -408,7 +369,9 @@ void qdf_mem_multi_pages_alloc(qdf_device_t osdev,
 void qdf_mem_multi_pages_free(qdf_device_t osdev,
 			      struct qdf_mem_multi_page_t *pages,
 			      qdf_dma_context_t memctxt, bool cacheable);
-
+int qdf_mem_multi_page_link(qdf_device_t osdev,
+		struct qdf_mem_multi_page_t *pages,
+		uint32_t elem_size, uint32_t elem_count, uint8_t cacheable);
 /**
  * qdf_mem_skb_inc() - increment total skb allocation size
  * @size: size to be added
@@ -438,7 +401,7 @@ static inline qdf_mem_info_t *qdf_mem_map_table_alloc(uint32_t num)
 {
 	qdf_mem_info_t *mem_info_arr;
 
-	mem_info_arr = qdf_mem_malloc(num * sizeof(qdf_mem_info_t));
+	mem_info_arr = qdf_mem_malloc(num * sizeof(mem_info_arr[0]));
 	return mem_info_arr;
 }
 
@@ -463,16 +426,14 @@ static inline void qdf_update_mem_map_table(qdf_device_t osdev,
 		return;
 	}
 
-	mem_info->pa = __qdf_mem_paddr_from_dmaaddr(osdev, dma_addr);
-	mem_info->iova = dma_addr;
-	mem_info->size = mem_size;
+	__qdf_update_mem_map_table(osdev, mem_info, dma_addr, mem_size);
 }
 
 /**
  * qdf_mem_smmu_s1_enabled() - Return SMMU stage 1 translation enable status
  * @osdev parent device instance
  *
- * @Return: true if smmu s1 enabled, false if smmu s1 is bypassed
+ * Return: true if smmu s1 enabled, false if smmu s1 is bypassed
  */
 static inline bool qdf_mem_smmu_s1_enabled(qdf_device_t osdev)
 {
@@ -505,7 +466,7 @@ static inline qdf_dma_addr_t qdf_mem_paddr_from_dmaaddr(qdf_device_t osdev,
  * @dma_addr: dma address
  * @size: allocated memory size
  *
- * @Return: status
+ * Return: physical address
  */
 static inline int
 qdf_mem_dma_get_sgtable(struct device *dev, void *sgt, void *cpu_addr,
@@ -518,7 +479,7 @@ qdf_mem_dma_get_sgtable(struct device *dev, void *sgt, void *cpu_addr,
  * qdf_mem_free_sgtable() - Free a previously allocated sg table
  * @sgt: the mapped sg table header
  *
- * @Return: None
+ * Return: None
  */
 static inline void
 qdf_mem_free_sgtable(struct sg_table *sgt)
@@ -530,12 +491,12 @@ qdf_mem_free_sgtable(struct sg_table *sgt)
  * qdf_dma_get_sgtable_dma_addr() - Assigns DMA address to scatterlist elements
  * @sgt: scatter gather table pointer
  *
- * @Return: None
+ * Return: None
  */
 static inline void
 qdf_dma_get_sgtable_dma_addr(struct sg_table *sgt)
 {
-	return __qdf_dma_get_sgtable_dma_addr(sgt);
+	__qdf_dma_get_sgtable_dma_addr(sgt);
 }
 
 /**
@@ -547,7 +508,7 @@ qdf_dma_get_sgtable_dma_addr(struct sg_table *sgt)
  * tranlation is enabled, DMA APIs return IO virtual address otherwise
  * returns physical address.
  *
- * @Return: dma address
+ * Return: dma address
  */
 static inline qdf_dma_addr_t qdf_mem_get_dma_addr(qdf_device_t osdev,
 						  qdf_mem_info_t *mem_info)
@@ -563,12 +524,73 @@ static inline qdf_dma_addr_t qdf_mem_get_dma_addr(qdf_device_t osdev,
  * Based on smmu stage 1 translation enablement, return corresponding dma
  * address storage pointer.
  *
- * @Return: dma address storage pointer
+ * Return: dma address storage pointer
  */
 static inline qdf_dma_addr_t *qdf_mem_get_dma_addr_ptr(qdf_device_t osdev,
 						       qdf_mem_info_t *mem_info)
 {
 	return __qdf_mem_get_dma_addr_ptr(osdev, mem_info);
+}
+
+
+/**
+ * qdf_mem_get_dma_size() - Return DMA memory size
+ * @osdev: parent device instance
+ * @mem_info: Pointer to allocated memory information
+ *
+ * Return: DMA memory size
+ */
+static inline uint32_t
+qdf_mem_get_dma_size(qdf_device_t osdev,
+		       qdf_mem_info_t *mem_info)
+{
+	return __qdf_mem_get_dma_size(osdev, mem_info);
+}
+
+/**
+ * qdf_mem_set_dma_size() - Set DMA memory size
+ * @osdev: parent device instance
+ * @mem_info: Pointer to allocated memory information
+ * @mem_size: memory size allocated
+ *
+ * Return: none
+ */
+static inline void
+qdf_mem_set_dma_size(qdf_device_t osdev,
+		       qdf_mem_info_t *mem_info,
+		       uint32_t mem_size)
+{
+	__qdf_mem_set_dma_size(osdev, mem_info, mem_size);
+}
+
+/**
+ * qdf_mem_get_dma_size() - Return DMA physical address
+ * @osdev: parent device instance
+ * @mem_info: Pointer to allocated memory information
+ *
+ * Return: DMA physical address
+ */
+static inline qdf_dma_addr_t
+qdf_mem_get_dma_pa(qdf_device_t osdev,
+		     qdf_mem_info_t *mem_info)
+{
+	return __qdf_mem_get_dma_pa(osdev, mem_info);
+}
+
+/**
+ * qdf_mem_set_dma_size() - Set DMA physical address
+ * @osdev: parent device instance
+ * @mem_info: Pointer to allocated memory information
+ * @dma_pa: DMA phsical address
+ *
+ * Return: none
+ */
+static inline void
+qdf_mem_set_dma_pa(qdf_device_t osdev,
+		     qdf_mem_info_t *mem_info,
+		     qdf_dma_addr_t dma_pa)
+{
+	__qdf_mem_set_dma_pa(osdev, mem_info, dma_pa);
 }
 
 /**
@@ -580,57 +602,9 @@ static inline qdf_dma_addr_t *qdf_mem_get_dma_addr_ptr(qdf_device_t osdev,
  * Allocate DMA memory which will be shared with external kernel module. This
  * information is needed for SMMU mapping.
  *
- * @Return: 0 suceess
+ * Return: 0 success
  */
-static inline qdf_shared_mem_t *qdf_mem_shared_mem_alloc(qdf_device_t osdev,
-							 uint32_t size)
-{
-	qdf_shared_mem_t *shared_mem;
-	int ret;
-
-	shared_mem = qdf_mem_malloc(sizeof(qdf_shared_mem_t));
-	if (!shared_mem) {
-		__qdf_print("%s: Unable to allocate memory for shared resource struct\n",
-			    __func__);
-		return NULL;
-	}
-
-	shared_mem->vaddr = qdf_mem_alloc_consistent(osdev, osdev->dev, size,
-				(qdf_dma_addr_t *)&shared_mem->mem_info.iova);
-	if (!shared_mem->vaddr) {
-		__qdf_print("%s; Unable to allocate DMA memory for shared resource\n",
-			    __func__);
-		qdf_mem_free(shared_mem);
-		return NULL;
-	}
-
-	shared_mem->mem_info.size = size;
-	qdf_mem_zero(shared_mem->vaddr, shared_mem->mem_info.size);
-	shared_mem->mem_info.pa = __qdf_mem_paddr_from_dmaaddr(osdev,
-				    (qdf_dma_addr_t)shared_mem->mem_info.iova);
-	ret = qdf_mem_dma_get_sgtable(osdev->dev,
-				(void *)&shared_mem->sgtable,
-				shared_mem->vaddr,
-				qdf_mem_get_dma_addr(osdev,
-						     &shared_mem->mem_info),
-				shared_mem->mem_info.size);
-	if (ret) {
-		__qdf_print("%s; Unable to get DMA sgtable\n", __func__);
-		qdf_mem_free_consistent(osdev, osdev->dev,
-					shared_mem->mem_info.size,
-					shared_mem->vaddr,
-					qdf_mem_get_dma_addr(osdev,
-						&shared_mem->mem_info),
-					qdf_get_dma_mem_context(shared_mem,
-								memctx));
-		qdf_mem_free(shared_mem);
-		return NULL;
-	}
-
-	qdf_dma_get_sgtable_dma_addr(&shared_mem->sgtable);
-
-	return shared_mem;
-}
+qdf_shared_mem_t *qdf_mem_shared_mem_alloc(qdf_device_t osdev, uint32_t size);
 
 /**
  * qdf_mem_shared_mem_free() - Free shared memory
@@ -639,7 +613,7 @@ static inline qdf_shared_mem_t *qdf_mem_shared_mem_alloc(qdf_device_t osdev,
  *
  * Free DMA shared memory resource
  *
- * @Return: None
+ * Return: None
  */
 static inline void qdf_mem_shared_mem_free(qdf_device_t osdev,
 					   qdf_shared_mem_t *shared_mem)
@@ -652,14 +626,15 @@ static inline void qdf_mem_shared_mem_free(qdf_device_t osdev,
 
 	if (shared_mem->vaddr) {
 		qdf_mem_free_consistent(osdev, osdev->dev,
-					shared_mem->mem_info.size,
+					qdf_mem_get_dma_size(osdev,
+						&shared_mem->mem_info),
 					shared_mem->vaddr,
 					qdf_mem_get_dma_addr(osdev,
 						&shared_mem->mem_info),
 					qdf_get_dma_mem_context(shared_mem,
 								memctx));
 	}
-	qdf_mem_free_sgtable(&(shared_mem->sgtable));
+	qdf_mem_free_sgtable(&shared_mem->sgtable);
 	qdf_mem_free(shared_mem);
 }
 

@@ -127,22 +127,6 @@ void deinit_tasklet_workers(struct hif_opaque_softc *scn)
 	work_initialized = false;
 }
 
-#ifdef CONFIG_SLUB_DEBUG_ON
-/**
- * ce_schedule_tasklet() - schedule ce tasklet
- * @tasklet_entry: struct ce_tasklet_entry
- *
- * Return: N/A
- */
-static inline void ce_schedule_tasklet(struct ce_tasklet_entry *tasklet_entry)
-{
-	if (work_initialized && (tasklet_entry->ce_id < CE_ID_MAX))
-		schedule_work(&tasklet_workers[tasklet_entry->ce_id].work);
-	else
-		HIF_ERROR("%s: work_initialized = %d, ce_id = %d",
-			__func__, work_initialized, tasklet_entry->ce_id);
-}
-#else
 /**
  * ce_schedule_tasklet() - schedule ce tasklet
  * @tasklet_entry: struct ce_tasklet_entry
@@ -153,7 +137,6 @@ static inline void ce_schedule_tasklet(struct ce_tasklet_entry *tasklet_entry)
 {
 	tasklet_schedule(&tasklet_entry->intr_tq);
 }
-#endif
 
 /**
  * ce_tasklet() - ce_tasklet
@@ -170,7 +153,7 @@ static void ce_tasklet(unsigned long data)
 	struct CE_state *CE_state = scn->ce_id_to_state[tasklet_entry->ce_id];
 
 	hif_record_ce_desc_event(scn, tasklet_entry->ce_id,
-			HIF_CE_TASKLET_ENTRY, NULL, NULL, 0);
+			HIF_CE_TASKLET_ENTRY, NULL, NULL, 0, 0);
 
 	if (qdf_atomic_read(&scn->link_suspended)) {
 		HIF_ERROR("%s: ce %d tasklet fired after link suspend.",
@@ -180,9 +163,6 @@ static void ce_tasklet(unsigned long data)
 
 	ce_per_engine_service(scn, tasklet_entry->ce_id);
 
-	if (CE_state->lro_flush_cb != NULL)
-		CE_state->lro_flush_cb(CE_state->lro_data);
-
 	if (ce_check_rx_pending(CE_state)) {
 		/*
 		 * There are frames pending, schedule tasklet to process them.
@@ -190,7 +170,8 @@ static void ce_tasklet(unsigned long data)
 		 * any of the Copy Engine pipes.
 		 */
 		hif_record_ce_desc_event(scn, tasklet_entry->ce_id,
-				HIF_CE_TASKLET_RESCHEDULE, NULL, NULL, 0);
+				HIF_CE_TASKLET_RESCHEDULE, NULL, NULL, 0, 0);
+
 		ce_schedule_tasklet(tasklet_entry);
 		return;
 	}
@@ -199,7 +180,7 @@ static void ce_tasklet(unsigned long data)
 		hif_irq_enable(scn, tasklet_entry->ce_id);
 
 	hif_record_ce_desc_event(scn, tasklet_entry->ce_id, HIF_CE_TASKLET_EXIT,
-				 NULL, NULL, 0);
+				 NULL, NULL, 0, 0);
 
 	qdf_atomic_dec(&scn->active_tasklet_cnt);
 }
@@ -247,7 +228,7 @@ void ce_tasklet_kill(struct hif_softc *scn)
 
 #define HIF_CE_DRAIN_WAIT_CNT          20
 /**
- * hif_drain_tasklets(): wait untill no tasklet is pending
+ * hif_drain_tasklets(): wait until no tasklet is pending
  * @scn: hif context
  *
  * Let running tasklets clear pending trafic.
@@ -272,6 +253,40 @@ int hif_drain_tasklets(struct hif_softc *scn)
 	}
 	return 0;
 }
+
+#ifdef WLAN_SUSPEND_RESUME_TEST
+/**
+ * hif_interrupt_is_ut_resume(): Tests if an irq on the given copy engine should
+ *	trigger a unit-test resume.
+ * @scn: The HIF context to operate on
+ * @ce_id: The copy engine Id from the originating interrupt
+ *
+ * Return: true if the raised irq should trigger a unit-test resume
+ */
+static bool hif_interrupt_is_ut_resume(struct hif_softc *scn, int ce_id)
+{
+	int errno;
+	uint8_t wake_ce_id;
+
+	if (!hif_is_ut_suspended(scn))
+		return false;
+
+	/* ensure passed ce_id matches wake ce_id */
+	errno = hif_get_wake_ce_id(scn, &wake_ce_id);
+	if (errno) {
+		HIF_ERROR("%s: failed to get wake CE Id: %d", __func__, errno);
+		return false;
+	}
+
+	return ce_id == wake_ce_id;
+}
+#else
+static inline bool
+hif_interrupt_is_ut_resume(struct hif_softc *scn, int ce_id)
+{
+	return false;
+}
+#endif /* WLAN_SUSPEND_RESUME_TEST */
 
 /**
  * hif_snoc_interrupt_handler() - hif_snoc_interrupt_handler
@@ -369,22 +384,21 @@ irqreturn_t ce_dispatch_interrupt(int ce_id,
 			  __func__, tasklet_entry->ce_id, CE_COUNT_MAX);
 		return IRQ_NONE;
 	}
+
 	hif_irq_disable(scn, ce_id);
 
-	if (!TARGET_REGISTER_ACCESS_ALLOW(scn))
+	if (!TARGET_REGISTER_ACCESS_ALLOWED(scn))
 		return IRQ_HANDLED;
 
-	hif_record_ce_desc_event(scn, ce_id, HIF_IRQ_EVENT, NULL, NULL, 0);
+	hif_record_ce_desc_event(scn, ce_id, HIF_IRQ_EVENT,
+				NULL, NULL, 0, 0);
 	hif_ce_increment_interrupt_count(hif_ce_state, ce_id);
 
-	if (unlikely(hif_interrupt_is_fake_apps_resume(hif_hdl, ce_id))) {
-		hif_trigger_fake_apps_resume(hif_hdl);
+	if (unlikely(hif_interrupt_is_ut_resume(scn, ce_id))) {
+		hif_ut_fw_resume(scn);
 		hif_irq_enable(scn, ce_id);
 		return IRQ_HANDLED;
 	}
-
-	if (qdf_tasklet_is_scheduled(&tasklet_entry->intr_tq))
-		return IRQ_HANDLED;
 
 	qdf_atomic_inc(&scn->active_tasklet_cnt);
 
@@ -447,6 +461,8 @@ QDF_STATUS ce_unregister_irq(struct HIF_CE_state *hif_ce_state, uint32_t mask)
 			  __func__, ret);
 	/* this is not fatal, continue */
 
+	/* filter mask to free only for ce's with irq registered */
+	mask &= hif_ce_state->ce_register_irq_done;
 	for (id = 0; id < ce_count; id++) {
 		if ((mask & (1 << id)) && hif_ce_state->tasklets[id].inited) {
 			ret = pld_ce_free_irq(scn->qdf_dev->dev, id,
@@ -457,6 +473,8 @@ QDF_STATUS ce_unregister_irq(struct HIF_CE_state *hif_ce_state, uint32_t mask)
 					__func__, id, ret);
 		}
 	}
+	hif_ce_state->ce_register_irq_done &= ~mask;
+
 	return QDF_STATUS_SUCCESS;
 }
 /**
@@ -496,6 +514,7 @@ QDF_STATUS ce_register_irq(struct HIF_CE_state *hif_ce_state, uint32_t mask)
 			done_mask |= 1 << id;
 		}
 	}
+	hif_ce_state->ce_register_irq_done |= done_mask;
 
 	return QDF_STATUS_SUCCESS;
 }

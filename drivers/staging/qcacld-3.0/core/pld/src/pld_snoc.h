@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -95,15 +95,32 @@ static inline int pld_snoc_athdiag_write(struct device *dev, uint32_t offset,
 {
 	return 0;
 }
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
+static inline void *pld_snoc_smmu_get_domain(struct device *dev)
+{
+	return NULL;
+}
+
+#else
 static inline void *pld_snoc_smmu_get_mapping(struct device *dev)
 {
 	return NULL;
 }
+#endif
+
 static inline int pld_snoc_smmu_map(struct device *dev, phys_addr_t paddr,
 				    uint32_t *iova_addr, size_t size)
 {
 	return 0;
 }
+
+static inline int pld_snoc_smmu_unmap(struct device *dev,
+				      uint32_t iova_addr, size_t size)
+{
+	return 0;
+}
+
 static inline
 unsigned int pld_snoc_socinfo_get_serial_number(struct device *dev)
 {
@@ -113,7 +130,12 @@ static inline int pld_snoc_is_qmi_disable(struct device *dev)
 {
 	return 0;
 }
-static inline int pld_snoc_is_fw_down(void)
+
+static inline int pld_snoc_is_fw_down(struct device *dev)
+{
+	return 0;
+}
+static inline int pld_snoc_set_fw_log_mode(struct device *dev, u8 fw_log_mode)
 {
 	return 0;
 }
@@ -121,7 +143,8 @@ static inline int pld_snoc_force_assert_target(struct device *dev)
 {
 	return 0;
 }
-static inline int pld_snoc_set_fw_log_mode(struct device *dev, u8 fw_log_mode)
+
+static inline int pld_snoc_is_pdr(void)
 {
 	return 0;
 }
@@ -131,9 +154,16 @@ static inline int pld_snoc_is_fw_rejuvenate(void)
 	return 0;
 }
 
-static inline void pld_snoc_block_shutdown(bool status)
+#ifdef FEATURE_WLAN_TIME_SYNC_FTM
+static inline int
+pld_snoc_get_audio_wlan_timestamp(struct device *dev,
+				  enum pld_wlan_time_sync_trigger_type type,
+				  uint64_t *ts)
 {
+	return 0;
 }
+#endif /* FEATURE_WLAN_TIME_SYNC_FTM */
+
 #else
 int pld_snoc_register_driver(void);
 void pld_snoc_unregister_driver(void);
@@ -142,6 +172,37 @@ int pld_snoc_wlan_enable(struct device *dev,
 			 enum pld_driver_mode mode, const char *host_version);
 int pld_snoc_wlan_disable(struct device *dev, enum pld_driver_mode mode);
 int pld_snoc_get_soc_info(struct device *dev, struct pld_soc_info *info);
+
+#ifdef FEATURE_WLAN_TIME_SYNC_FTM
+/**
+ * pld_snoc_get_audio_wlan_timestamp() - Get audio timestamp
+ * @dev: device
+ * @type: trigger type
+ * @ts: timestamp
+ *
+ * Return audio timestamp to the ts.
+ *
+ * Return: 0 for success
+ *         Non zero failure code for errors
+ */
+static inline int
+pld_snoc_get_audio_wlan_timestamp(struct device *dev,
+				  enum pld_wlan_time_sync_trigger_type type,
+				  uint64_t *ts)
+{
+	enum wlan_time_sync_trigger_type edge_type;
+
+	if (!dev)
+		return -ENODEV;
+
+	if (type == PLD_TRIGGER_POSITIVE_EDGE)
+		edge_type = CNSS_POSITIVE_EDGE_TRIGGER;
+	else
+		edge_type = CNSS_NEGATIVE_EDGE_TRIGGER;
+
+	return cnss_get_audio_wlan_timestamp(dev, edge_type, ts);
+}
+#endif /* FEATURE_WLAN_TIME_SYNC_FTM */
 
 static inline int pld_snoc_ce_request_irq(struct device *dev,
 					  unsigned int ce_id,
@@ -212,22 +273,48 @@ static inline int pld_snoc_athdiag_write(struct device *dev, uint32_t offset,
 {
 	return icnss_athdiag_write(dev, offset, memtype, datalen, input);
 }
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
+static inline void *pld_snoc_smmu_get_domain(struct device *dev)
+{
+	return icnss_smmu_get_domain(dev);
+}
+
+#else
 static inline void *pld_snoc_smmu_get_mapping(struct device *dev)
 {
 	return icnss_smmu_get_mapping(dev);
 }
+#endif
+
 static inline int pld_snoc_smmu_map(struct device *dev, phys_addr_t paddr,
 				    uint32_t *iova_addr, size_t size)
 {
 	return icnss_smmu_map(dev, paddr, iova_addr, size);
 }
+
+#ifdef CONFIG_SMMU_S1_UNMAP
+static inline int pld_snoc_smmu_unmap(struct device *dev,
+				      uint32_t iova_addr, size_t size)
+{
+	return icnss_smmu_unmap(dev, iova_addr, size);
+}
+
+#else
+static inline int pld_snoc_smmu_unmap(struct device *dev,
+				      uint32_t iova_addr, size_t size)
+{
+	return 0;
+}
+#endif
+
 static inline
 unsigned int pld_snoc_socinfo_get_serial_number(struct device *dev)
 {
 	return icnss_socinfo_get_serial_number(dev);
 }
 
-static inline int pld_snoc_is_fw_down(void)
+static inline int pld_snoc_is_fw_down(struct device *dev)
 {
 	return icnss_is_fw_down();
 }
@@ -253,14 +340,23 @@ static inline int pld_snoc_force_assert_target(struct device *dev)
 	return icnss_trigger_recovery(dev);
 }
 
+static inline int pld_snoc_is_pdr(void)
+{
+	return icnss_is_pdr();
+}
+
 static inline int pld_snoc_is_fw_rejuvenate(void)
 {
 	return icnss_is_rejuvenate();
 }
-
-static inline void pld_snoc_block_shutdown(bool status)
+static inline int pld_snoc_idle_restart(struct device *dev)
 {
-	icnss_block_shutdown(status);
+	return icnss_idle_restart(dev);
+}
+
+static inline int pld_snoc_idle_shutdown(struct device *dev)
+{
+	return icnss_idle_shutdown(dev);
 }
 #endif
 #endif

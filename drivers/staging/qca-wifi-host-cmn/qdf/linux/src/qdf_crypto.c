@@ -210,7 +210,7 @@ int qdf_aes_s2v(const uint8_t *key, unsigned int key_len, const uint8_t *s[],
 		/* len(Sn) < 128 */
 		/* T = qdf_update_dbl(D) xor pad(Sn) */
 		qdf_update_dbl(d);
-		qdf_mem_set(buf, 0, AES_BLOCK_SIZE);
+		qdf_mem_set(buf, AES_BLOCK_SIZE, 0);
 		qdf_mem_copy(buf, s[i], s_len[i]);
 		buf[s_len[i]] = 0x80;
 		xor(d, s[i], AES_BLOCK_SIZE);
@@ -237,7 +237,7 @@ int qdf_aes_ctr(const uint8_t *key, unsigned int key_len, uint8_t *siv,
 	struct scatterlist sg_in, sg_out;
 	int ret;
 
-	if (key_len != 16 && key_len != 24 && key_len != 32) {
+	if (!IS_VALID_CTR_KEY_LEN(key_len)) {
 		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
 			  FL("Invalid key length: %u"), key_len);
 		return -EINVAL;
@@ -296,7 +296,7 @@ int qdf_aes_ctr(const uint8_t *key, unsigned int key_len, uint8_t *siv,
 	struct scatterlist sg_in, sg_out;
 	int ret;
 
-	if (key_len != 16 && key_len != 24 && key_len != 32) {
+	if (!IS_VALID_CTR_KEY_LEN(key_len)) {
 		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
 			  FL("Invalid key length: %u"), key_len);
 		return -EINVAL;
@@ -355,8 +355,7 @@ int qdf_aes_ctr(const uint8_t *key, unsigned int key_len, uint8_t *siv,
 }
 #endif
 
-#if defined(WLAN_FEATURE_GMAC) && \
-		(LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
 int qdf_crypto_aes_gmac(uint8_t *key, uint16_t key_length,
 			uint8_t *iv, uint8_t *aad, uint8_t *data,
 			uint16_t data_len, uint8_t *mic)

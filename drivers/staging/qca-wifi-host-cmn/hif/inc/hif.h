@@ -26,6 +26,7 @@ extern "C" {
 /* Header files */
 #include <qdf_status.h>
 #include "qdf_nbuf.h"
+#include "qdf_lro.h"
 #include "ol_if_athvar.h"
 #include <linux/platform_device.h>
 #ifdef HIF_PCI
@@ -42,9 +43,6 @@ extern "C" {
 typedef void __iomem *A_target_id_t;
 typedef void *hif_handle_t;
 
-#define HIF_DBG_PRINT_RATE 1000
-#define HIF_RATE_LIMIT_CE_ACCESS_LOG (64)
-
 #define HIF_TYPE_AR6002   2
 #define HIF_TYPE_AR6003   3
 #define HIF_TYPE_AR6004   5
@@ -58,60 +56,103 @@ typedef void *hif_handle_t;
 #define HIF_TYPE_QCA9984 12
 #define HIF_TYPE_IPQ4019 13
 #define HIF_TYPE_QCA9888 14
-
-/* TARGET definition needs to be abstracted in fw common
- * header files, below is the placeholder till WIN codebase
- * moved to latest copy of fw common header files.
- */
-#ifdef CONFIG_WIN
-#define TARGET_TYPE_UNKNOWN   0
-#define TARGET_TYPE_AR6001    1
-#define TARGET_TYPE_AR6002    2
-#define TARGET_TYPE_AR6003    3
-#define TARGET_TYPE_AR6004    5
-#define TARGET_TYPE_AR6006    6
-#define TARGET_TYPE_AR9888    7
-#define TARGET_TYPE_AR6320    8
-#define TARGET_TYPE_AR900B    9
-#define TARGET_TYPE_QCA9984   10
-#define TARGET_TYPE_IPQ4019   11
-#define TARGET_TYPE_QCA9888   12
-/* For attach Peregrine 2.0 board target_reg_tbl only */
-#define TARGET_TYPE_AR9888V2  13
-/* For attach Rome1.0 target_reg_tbl only*/
-#define TARGET_TYPE_AR6320V1    14
-/* For Rome2.0/2.1 target_reg_tbl ID*/
-#define TARGET_TYPE_AR6320V2    15
-/* For Rome3.0 target_reg_tbl ID*/
-#define TARGET_TYPE_AR6320V3    16
-/* For Tufello1.0 target_reg_tbl ID*/
-#define TARGET_TYPE_QCA9377V1   17
-#endif /* CONFIG_WIN */
-
-/* For Adrastea target */
-#define TARGET_TYPE_ADRASTEA     19
+#define HIF_TYPE_QCA8074 15
+#define HIF_TYPE_QCA6290 16
 
 #ifdef IPA_OFFLOAD
 #define DMA_COHERENT_MASK_IPA_VER_3_AND_ABOVE   37
 #define DMA_COHERENT_MASK_BELOW_IPA_VER_3       32
 #endif
 
+/* enum hif_ic_irq - enum defining integrated chip irq numbers
+ * defining irq nubers that can be used by external modules like datapath
+ */
+enum hif_ic_irq {
+	host2wbm_desc_feed = 18,
+	host2reo_re_injection,
+	host2reo_command,
+	host2rxdma_monitor_ring3,
+	host2rxdma_monitor_ring2,
+	host2rxdma_monitor_ring1,
+	reo2host_exception,
+	wbm2host_rx_release,
+	reo2host_status,
+	reo2host_destination_ring4,
+	reo2host_destination_ring3,
+	reo2host_destination_ring2,
+	reo2host_destination_ring1,
+	rxdma2host_monitor_destination_mac3,
+	rxdma2host_monitor_destination_mac2,
+	rxdma2host_monitor_destination_mac1,
+	ppdu_end_interrupts_mac3,
+	ppdu_end_interrupts_mac2,
+	ppdu_end_interrupts_mac1,
+	rxdma2host_monitor_status_ring_mac3,
+	rxdma2host_monitor_status_ring_mac2,
+	rxdma2host_monitor_status_ring_mac1,
+	host2rxdma_host_buf_ring_mac3,
+	host2rxdma_host_buf_ring_mac2,
+	host2rxdma_host_buf_ring_mac1,
+	rxdma2host_destination_ring_mac3,
+	rxdma2host_destination_ring_mac2,
+	rxdma2host_destination_ring_mac1,
+	host2tcl_input_ring4,
+	host2tcl_input_ring3,
+	host2tcl_input_ring2,
+	host2tcl_input_ring1,
+	wbm2host_tx_completions_ring3,
+	wbm2host_tx_completions_ring2,
+	wbm2host_tx_completions_ring1,
+	tcl2host_status_ring,
+};
+
 struct CE_state;
 #define CE_COUNT_MAX 12
+#define HIF_MAX_GRP_IRQ 16
+#define HIF_MAX_GROUP 8
 
 #ifdef CONFIG_SLUB_DEBUG_ON
-#define QCA_NAPI_BUDGET    64
-#define QCA_NAPI_DEF_SCALE  2
-#else  /* PERF build */
-#define QCA_NAPI_BUDGET    64
-#define QCA_NAPI_DEF_SCALE 16
-#endif /* SLUB_DEBUG_ON */
-#define HIF_NAPI_MAX_RECEIVES (QCA_NAPI_BUDGET * QCA_NAPI_DEF_SCALE)
+#ifndef CONFIG_WIN
+#define HIF_CONFIG_SLUB_DEBUG_ON
+#endif
+#endif
 
+#ifndef NAPI_YIELD_BUDGET_BASED
+#ifdef HIF_CONFIG_SLUB_DEBUG_ON
+#define QCA_NAPI_DEF_SCALE_BIN_SHIFT 1
+#else  /* PERF build */
+#ifdef CONFIG_WIN
+#define QCA_NAPI_DEF_SCALE_BIN_SHIFT 1
+#else
+#define QCA_NAPI_DEF_SCALE_BIN_SHIFT 4
+#endif /* CONFIG_WIN */
+#endif /* SLUB_DEBUG_ON */
+#else  /* NAPI_YIELD_BUDGET_BASED */
+#define QCA_NAPI_DEF_SCALE_BIN_SHIFT 2
+#endif /* NAPI_YIELD_BUDGET_BASED */
+#define QCA_NAPI_BUDGET    64
+#define QCA_NAPI_DEF_SCALE  \
+	(1 << QCA_NAPI_DEF_SCALE_BIN_SHIFT)
+
+#define HIF_NAPI_MAX_RECEIVES (QCA_NAPI_BUDGET * QCA_NAPI_DEF_SCALE)
 /* NOTE: "napi->scale" can be changed,
  * but this does not change the number of buckets
  */
 #define QCA_NAPI_NUM_BUCKETS 4
+/**
+ * qca_napi_stat - stats structure for execution contexts
+ * @napi_schedules - number of times the schedule function is called
+ * @napi_polls - number of times the execution context runs
+ * @napi_completes - number of times that the generating interrupt is reenabled
+ * @napi_workdone - cumulative of all work done reported by handler
+ * @cpu_corrected - incremented when execution context runs on a different core
+ *			than the one that its irq is affined to.
+ * @napi_budget_uses - histogram of work done per execution run
+ * @time_limit_reache - count of yields due to time limit threshholds
+ * @rxpkt_thresh_reached - count of yields due to a work limit
+ *
+ * needs to be renamed
+ */
 struct qca_napi_stat {
 	uint32_t napi_schedules;
 	uint32_t napi_polls;
@@ -123,6 +164,7 @@ struct qca_napi_stat {
 	uint32_t rxpkt_thresh_reached;
 	unsigned long long napi_max_poll_time;
 };
+
 
 /**
  * per NAPI instance data structure
@@ -139,11 +181,26 @@ struct qca_napi_info {
 	uint8_t              id;
 	uint8_t              cpu;
 	int                  irq;
+	cpumask_t            cpumask;
 	struct qca_napi_stat stats[NR_CPUS];
+#ifdef RECEIVE_OFFLOAD
 	/* will only be present for data rx CE's */
-	void (*offld_flush_cb)(void *arg);
-	void                 *offld_ctx;
+	void (*offld_flush_cb)(void *);
+	struct napi_struct   rx_thread_napi;
+	struct net_device    rx_thread_netdev;
+#endif /* RECEIVE_OFFLOAD */
+	qdf_lro_ctx_t        lro_ctx;
 };
+
+enum qca_napi_tput_state {
+	QCA_NAPI_TPUT_UNINITIALIZED,
+	QCA_NAPI_TPUT_LO,
+	QCA_NAPI_TPUT_HI
+};
+enum qca_napi_cpu_state {
+	QCA_NAPI_CPU_UNINITIALIZED,
+	QCA_NAPI_CPU_DOWN,
+	QCA_NAPI_CPU_UP };
 
 /**
  * struct qca_napi_cpu - an entry of the napi cpu table
@@ -154,6 +211,7 @@ struct qca_napi_info {
  * @max_freq:    maximum clock this core can be clocked at
  *               same for all cpus of the same core.
  * @napis:       bitmap of napi instances on this core
+ * @execs:       bitmap of execution contexts on this core
  * cluster_nxt:  chain to link cores within the same cluster
  *
  * This structure represents a single entry in the napi cpu
@@ -163,15 +221,6 @@ struct qca_napi_info {
  * notifier and when cpu affinity decisions are made (by throughput
  * detection), and deleted when the last napi instance is removed.
  */
-enum qca_napi_tput_state {
-	QCA_NAPI_TPUT_UNINITIALIZED,
-	QCA_NAPI_TPUT_LO,
-	QCA_NAPI_TPUT_HI
-};
-enum qca_napi_cpu_state {
-	QCA_NAPI_CPU_UNINITIALIZED,
-	QCA_NAPI_CPU_DOWN,
-	QCA_NAPI_CPU_UP };
 struct qca_napi_cpu {
 	enum qca_napi_cpu_state state;
 	int			core_id;
@@ -180,22 +229,35 @@ struct qca_napi_cpu {
 	cpumask_t		thread_mask;
 	unsigned int		max_freq;
 	uint32_t		napis;
+	uint32_t		execs;
 	int			cluster_nxt;  /* index, not pointer */
 };
 
 /**
- * NAPI data-structure common to all NAPI instances.
- *
- * A variable of this type will be stored in hif module context.
+ * struct qca_napi_data - collection of napi data for a single hif context
+ * @hif_softc: pointer to the hif context
+ * @lock: spinlock used in the event state machine
+ * @state: state variable used in the napi stat machine
+ * @ce_map: bit map indicating which ce's have napis running
+ * @exec_map: bit map of instanciated exec contexts
+ * @user_cpu_affin_map: CPU affinity map from INI config.
+ * @napi_cpu: cpu info for irq affinty
+ * @lilcl_head:
+ * @bigcl_head:
+ * @napi_mode: irq affinity & clock voting mode
+ * @cpuhp_handler: CPU hotplug event registration handle
  */
 struct qca_napi_data {
-	qdf_spinlock_t           lock;
+	struct               hif_softc *hif_softc;
+	qdf_spinlock_t       lock;
 	uint32_t             state;
-	uint32_t             ce_map; /* bitmap of created/registered NAPI
-				      * instances, indexed by pipe_id,
-				      * not used by clients (clients use an
-				      * id returned by create)
-				      */
+
+	/* bitmap of created/registered NAPI instances, indexed by pipe_id,
+	 * not used by clients (clients use an id returned by create)
+	 */
+	uint32_t             ce_map;
+	uint32_t             exec_map;
+	uint32_t             user_cpu_affin_mask;
 	struct qca_napi_info *napis[CE_COUNT_MAX];
 	struct qca_napi_cpu  napi_cpu[NR_CPUS];
 	int                  lilcl_head, bigcl_head;
@@ -390,7 +452,7 @@ QDF_STATUS hif_exchange_bmi_msg(struct hif_opaque_softc *hif_ctx,
 				uint8_t *pSendMessage, uint32_t Length,
 				uint8_t *pResponseMessage,
 				uint32_t *pResponseLength, uint32_t TimeoutMS);
-
+void hif_register_bmi_callbacks(struct hif_softc *hif_sc);
 /*
  * APIs to handle HIF specific diagnostic read accesses. These APIs are
  * synchronous and only allowed to be called from a context that
@@ -424,6 +486,9 @@ QDF_STATUS hif_diag_write_mem(struct hif_opaque_softc *hif_ctx,
 			uint32_t address, uint8_t *data, int nbytes);
 
 typedef void (*fastpath_msg_handler)(void *, qdf_nbuf_t *, uint32_t);
+
+void hif_enable_polled_mode(struct hif_opaque_softc *hif_ctx);
+bool hif_is_polled_mode_enabled(struct hif_opaque_softc *hif_ctx);
 
 /*
  * Set the FASTPATH_mode_on flag in sc, for use by data path
@@ -480,6 +545,18 @@ enum hif_target_status {
 	TARGET_STATUS_RESET,  /* target got reset */
 	TARGET_STATUS_EJECT,  /* target got ejected */
 	TARGET_STATUS_SUSPEND /*target got suspend */
+};
+
+/**
+ * enum hif_attribute_flags: configure hif
+ *
+ * @HIF_LOWDESC_CE_CFG: Configure HIF with Low descriptor CE
+ * @HIF_LOWDESC_CE_NO_PKTLOG_CFG: Configure HIF with Low descriptor
+ *  							+ No pktlog CE
+ */
+enum hif_attribute_flags {
+	HIF_LOWDESC_CE_CFG = 1,
+	HIF_LOWDESC_CE_NO_PKTLOG_CFG
 };
 
 #define HIF_DATA_ATTR_SET_TX_CLASSIFY(attr, v) \
@@ -574,6 +651,28 @@ int hif_check_soc_status(struct hif_opaque_softc *hif_ctx);
 #endif
 void hif_get_hw_info(struct hif_opaque_softc *hif_ctx, u32 *version,
 			u32 *revision, const char **target_name);
+
+#ifdef RECEIVE_OFFLOAD
+/**
+ * hif_offld_flush_cb_register() - Register the offld flush callback
+ * @scn: HIF opaque context
+ * @offld_flush_handler: Flush callback is either ol_flush, incase of rx_thread
+ *			 Or GRO/LRO flush when RxThread is not enabled. Called
+ *			 with corresponding context for flush.
+ * Return: None
+ */
+void hif_offld_flush_cb_register(struct hif_opaque_softc *scn,
+				 void (offld_flush_handler)(void *ol_ctx));
+
+/**
+ * hif_offld_flush_cb_deregister() - deRegister the offld flush callback
+ * @scn: HIF opaque context
+ *
+ * Return: None
+ */
+void hif_offld_flush_cb_deregister(struct hif_opaque_softc *scn);
+#endif
+
 void hif_disable_isr(struct hif_opaque_softc *hif_ctx);
 void hif_reset_soc(struct hif_opaque_softc *hif_ctx);
 void hif_save_htc_htt_config_endpoint(struct hif_opaque_softc *hif_ctx,
@@ -591,6 +690,7 @@ void hif_display_stats(struct hif_opaque_softc *hif_ctx);
 void hif_clear_stats(struct hif_opaque_softc *hif_ctx);
 #ifdef FEATURE_RUNTIME_PM
 struct hif_pm_runtime_lock;
+void hif_fastpath_resume(struct hif_opaque_softc *hif_ctx);
 int hif_pm_runtime_get(struct hif_opaque_softc *hif_ctx);
 void hif_pm_runtime_get_noresume(struct hif_opaque_softc *hif_ctx);
 int hif_pm_runtime_put(struct hif_opaque_softc *hif_ctx);
@@ -607,7 +707,7 @@ int hif_pm_runtime_prevent_suspend_timeout(struct hif_opaque_softc *ol_sc,
 struct hif_pm_runtime_lock {
 	const char *name;
 };
-
+static inline void hif_fastpath_resume(struct hif_opaque_softc *hif_ctx) {}
 static inline void hif_pm_runtime_get_noresume(struct hif_opaque_softc *hif_ctx)
 {}
 
@@ -688,6 +788,50 @@ int hif_bus_suspend(struct hif_opaque_softc *hif_ctx);
 int hif_bus_resume_noirq(struct hif_opaque_softc *hif_ctx);
 int hif_bus_suspend_noirq(struct hif_opaque_softc *hif_ctx);
 
+/**
+ * hif_apps_irqs_enable() - Enables all irqs from the APPS side
+ * @hif_ctx: an opaque HIF handle to use
+ *
+ * As opposed to the standard hif_irq_enable, this function always applies to
+ * the APPS side kernel interrupt handling.
+ *
+ * Return: errno
+ */
+int hif_apps_irqs_enable(struct hif_opaque_softc *hif_ctx);
+
+/**
+ * hif_apps_irqs_disable() - Disables all irqs from the APPS side
+ * @hif_ctx: an opaque HIF handle to use
+ *
+ * As opposed to the standard hif_irq_disable, this function always applies to
+ * the APPS side kernel interrupt handling.
+ *
+ * Return: errno
+ */
+int hif_apps_irqs_disable(struct hif_opaque_softc *hif_ctx);
+
+/**
+ * hif_apps_wake_irq_enable() - Enables the wake irq from the APPS side
+ * @hif_ctx: an opaque HIF handle to use
+ *
+ * As opposed to the standard hif_irq_enable, this function always applies to
+ * the APPS side kernel interrupt handling.
+ *
+ * Return: errno
+ */
+int hif_apps_wake_irq_enable(struct hif_opaque_softc *hif_ctx);
+
+/**
+ * hif_apps_wake_irq_disable() - Disables the wake irq from the APPS side
+ * @hif_ctx: an opaque HIF handle to use
+ *
+ * As opposed to the standard hif_irq_disable, this function always applies to
+ * the APPS side kernel interrupt handling.
+ *
+ * Return: errno
+ */
+int hif_apps_wake_irq_disable(struct hif_opaque_softc *hif_ctx);
+
 #ifdef FEATURE_RUNTIME_PM
 int hif_pre_runtime_suspend(struct hif_opaque_softc *hif_ctx);
 void hif_pre_runtime_resume(struct hif_opaque_softc *hif_ctx);
@@ -698,17 +842,12 @@ void hif_process_runtime_suspend_failure(struct hif_opaque_softc *hif_ctx);
 void hif_process_runtime_resume_success(struct hif_opaque_softc *hif_ctx);
 #endif
 
-int hif_dump_registers(struct hif_opaque_softc *hif_ctx);
-int ol_copy_ramdump(struct hif_opaque_softc *hif_ctx);
+int hif_get_irq_num(struct hif_opaque_softc *scn, int *irq, uint32_t size);
+int hif_dump_registers(struct hif_opaque_softc *scn);
+int ol_copy_ramdump(struct hif_opaque_softc *scn);
 void hif_crash_shutdown(struct hif_opaque_softc *hif_ctx);
 void hif_get_hw_info(struct hif_opaque_softc *hif_ctx, u32 *version,
 		     u32 *revision, const char **target_name);
-
-void hif_offld_flush_cb_register(struct hif_opaque_softc *scn,
-			       void (offld_flush_handler)(void *),
-			       void *(offld_init_handler)(void));
-void hif_offld_flush_cb_deregister(struct hif_opaque_softc *hif_ctx,
-				 void (offld_deinit_cb)(void *arg));
 bool hif_needs_bmi(struct hif_opaque_softc *hif_ctx);
 enum qdf_bus_type hif_get_bus_type(struct hif_opaque_softc *hif_hdl);
 struct hif_target_info *hif_get_target_info_handle(struct hif_opaque_softc *
@@ -743,46 +882,66 @@ void hif_set_bundle_mode(struct hif_opaque_softc *hif_ctx, bool enabled,
 				int rx_bundle_cnt);
 int hif_bus_reset_resume(struct hif_opaque_softc *hif_ctx);
 
+void hif_set_attribute(struct hif_opaque_softc *osc, uint8_t hif_attrib);
+
 void *hif_get_lro_info(int ctx_id, struct hif_opaque_softc *hif_hdl);
 
-typedef void (*hif_fake_resume_callback)(uint32_t val);
-#ifdef WLAN_SUSPEND_RESUME_TEST
-void hif_fake_apps_suspend(struct hif_opaque_softc *hif_ctx,
-			   hif_fake_resume_callback callback);
-void hif_fake_apps_resume(struct hif_opaque_softc *hif_ctx);
-#else
-static inline void hif_fake_apps_suspend(struct hif_opaque_softc *hif_ctx,
-			   hif_fake_resume_callback callback)
-{
-}
+enum hif_exec_type {
+	HIF_EXEC_NAPI_TYPE,
+	HIF_EXEC_TASKLET_TYPE,
+};
 
-static inline void hif_fake_apps_resume(struct hif_opaque_softc *hif_ctx)
-{
-}
-#endif /* End of WLAN_SUSPEND_RESUME_TEST */
+typedef uint32_t (*ext_intr_handler)(void *, uint32_t);
+uint32_t hif_configure_ext_group_interrupts(struct hif_opaque_softc *hif_ctx);
+uint32_t  hif_register_ext_group(struct hif_opaque_softc *hif_ctx,
+		uint32_t numirq, uint32_t irq[], ext_intr_handler handler,
+		void *cb_ctx, const char *context_name,
+		enum hif_exec_type type, uint32_t scale);
 
-#ifdef HIF_SDIO
-/**
- * hif_reg_based_get_target_info - to retrieve target info
- * @hif_ctx: hif context
- * @targ_info: bmi target info
- *
- * Return: QDF_STATUS_SUCCESS for success.
- */
-QDF_STATUS hif_reg_based_get_target_info(struct hif_opaque_softc *hif_ctx,
-		  struct bmi_target_info *targ_info);
-#else
-static inline QDF_STATUS
-hif_reg_based_get_target_info(struct hif_opaque_softc *hif_ctx,
-		  struct bmi_target_info *targ_info)
-{
-	return QDF_STATUS_SUCCESS;
-}
-#endif
+void hif_deregister_exec_group(struct hif_opaque_softc *hif_ctx,
+				const char *context_name);
 
+void hif_update_pipe_callback(struct hif_opaque_softc *osc,
+				u_int8_t pipeid,
+				struct hif_msg_callbacks *callbacks);
+
+void hif_print_napi_stats(struct hif_opaque_softc *hif_ctx);
 #ifdef __cplusplus
 }
 #endif
+
+void *hif_get_dev_ba(struct hif_opaque_softc *hif_handle);
+
+/**
+ * hif_set_initial_wakeup_cb() - set the initial wakeup event handler function
+ * @hif_ctx - the HIF context to assign the callback to
+ * @callback - the callback to assign
+ * @priv - the private data to pass to the callback when invoked
+ *
+ * Return: None
+ */
+void hif_set_initial_wakeup_cb(struct hif_opaque_softc *hif_ctx,
+			       void (*callback)(void *),
+			       void *priv);
+#ifndef CONFIG_WIN
+#ifndef HIF_CE_DEBUG_DATA_BUF
+#define HIF_CE_DEBUG_DATA_BUF 0
+#endif
+#endif
+/*
+ * Note: For MCL, #if defined (HIF_CONFIG_SLUB_DEBUG_ON) needs to be checked
+ * for defined here
+ */
+#if defined(HIF_CONFIG_SLUB_DEBUG_ON) || defined(HIF_CE_DEBUG_DATA_BUF)
+ssize_t hif_dump_desc_trace_buf(struct device *dev,
+				struct device_attribute *attr, char *buf);
+ssize_t hif_input_desc_trace_buf_index(struct hif_softc *scn,
+					const char *buf, size_t size);
+ssize_t hif_ce_en_desc_hist(struct hif_softc *scn,
+				const char *buf, size_t size);
+ssize_t hif_disp_ce_enable_desc_data_hist(struct hif_softc *scn, char *buf);
+ssize_t hif_dump_desc_event(struct hif_softc *scn, char *buf);
+#endif /* Note: for MCL, #if defined(HIF_CONFIG_SLUB_DEBUG_ON) || HIF_CE_DEBUG_DATA_BUF */
 
 /**
  * hif_set_ce_service_max_yield_time() - sets CE service max yield time

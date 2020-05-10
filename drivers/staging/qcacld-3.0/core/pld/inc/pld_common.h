@@ -57,7 +57,7 @@ enum pld_bus_type {
 #define PLD_MAX_FIRMWARE_SIZE (1 * 1024 * 1024)
 
 /**
- * enum pld_bus_width_type - bus bandwith
+ * enum pld_bus_width_type - bus bandwidth
  * @PLD_BUS_WIDTH_NONE: don't vote for bus bandwidth
  * @PLD_BUS_WIDTH_LOW: vote for low bus bandwidth
  * @PLD_BUS_WIDTH_MEDIUM: vote for medium bus bandwidth
@@ -108,18 +108,6 @@ enum pld_platform_cap_flag {
 };
 
 /**
- * enum pld_cc_src - platform country code source
- * @PLD_SOURCE_CORE: coutry code from core
- * @PLD_SOURCE_11D: counry code from 11d
- * @PLD_SOURCE_USER: country code from user
- */
-enum pld_cc_src {
-	PLD_SOURCE_CORE,
-	PLD_SOURCE_11D,
-	PLD_SOURCE_USER
-};
-
-/**
  * struct pld_platform_cap - platform capabilities
  * @cap_flag: capabilities flag
  *
@@ -128,18 +116,6 @@ enum pld_cc_src {
  */
 struct pld_platform_cap {
 	u32 cap_flag;
-};
-
-/**
- * enum pld_driver_status - WLAN driver status
- * @PLD_UNINITIALIZED: driver is uninitialized
- * @PLD_INITIALIZED: driver is initialized
- * @PLD_LOAD_UNLOADL: driver is in load-unload status
- */
-enum pld_driver_status {
-	PLD_UNINITIALIZED,
-	PLD_INITIALIZED,
-	PLD_LOAD_UNLOAD,
 };
 
 /**
@@ -215,6 +191,17 @@ struct pld_shadow_reg_cfg {
 };
 
 /**
+ * struct pld_shadow_reg_v2_cfg - shadow register version 2 configuration
+ * @addr: shadow register physical address
+ *
+ * pld_shadow_reg_v2_cfg is used to store shadow register version 2
+ * configuration.
+ */
+struct pld_shadow_reg_v2_cfg {
+	u32 addr;
+};
+
+/**
  * struct pld_wlan_enable_cfg - WLAN FW configuration
  * @num_ce_tgt_cfg: number of CE target configuration
  * @ce_tgt_cfg: CE target configuration
@@ -222,6 +209,8 @@ struct pld_shadow_reg_cfg {
  * @ce_svc_cfg: CE service configuration
  * @num_shadow_reg_cfg: number of shadow register configuration
  * @shadow_reg_cfg: shadow register configuration
+ * @num_shadow_reg_v2_cfg: number of shadow register version 2 configuration
+ * @shadow_reg_v2_cfg: shadow register version 2 configuration
  *
  * pld_wlan_enable_cfg stores WLAN FW configurations. It will be
  * passed to WLAN FW when WLAN host driver calls wlan_enable.
@@ -233,6 +222,8 @@ struct pld_wlan_enable_cfg {
 	struct pld_ce_svc_pipe_cfg *ce_svc_cfg;
 	u32 num_shadow_reg_cfg;
 	struct pld_shadow_reg_cfg *shadow_reg_cfg;
+	u32 num_shadow_reg_v2_cfg;
+	struct pld_shadow_reg_v2_cfg *shadow_reg_v2_cfg;
 };
 
 /**
@@ -248,7 +239,8 @@ enum pld_driver_mode {
 	PLD_FTM,
 	PLD_EPPING,
 	PLD_WALTEST,
-	PLD_OFF
+	PLD_OFF,
+	PLD_COLDBOOT_CALIBRATION = 7
 };
 
 #define PLD_MAX_TIMESTAMP_LEN 32
@@ -278,6 +270,28 @@ struct pld_soc_info {
 };
 
 /**
+ * enum pld_recovery_reason - WLAN host driver recovery reason
+ * @PLD_REASON_DEFAULT: default
+ * @PLD_REASON_LINK_DOWN: PCIe link down
+ */
+enum pld_recovery_reason {
+	PLD_REASON_DEFAULT,
+	PLD_REASON_LINK_DOWN
+};
+
+#ifdef FEATURE_WLAN_TIME_SYNC_FTM
+/**
+ * enum pld_wlan_time_sync_trigger_type - WLAN time sync trigger type
+ * @PLD_TRIGGER_POSITIVE_EDGE: Positive edge trigger
+ * @PLD_TRIGGER_NEGATIVE_EDGE: Negative edge trigger
+ */
+enum pld_wlan_time_sync_trigger_type {
+	PLD_TRIGGER_POSITIVE_EDGE,
+	PLD_TRIGGER_NEGATIVE_EDGE
+};
+#endif /* FEATURE_WLAN_TIME_SYNC_FTM */
+
+/**
  * struct pld_driver_ops - driver callback functions
  * @probe: required operation, will be called when device is detected
  * @remove: required operation, will be called when device is removed
@@ -292,7 +306,7 @@ struct pld_soc_info {
  * @modem_status: optional operation, will be called when platform driver
  *                sending modem power status to WLAN FW
  * @uevent: optional operation, will be called when platform driver
- *          updating driver status
+ *                 updating driver status
  * @runtime_suspend: optional operation, prepare the device for a condition
  *                   in which it won't be able to communicate with the CPU(s)
  *                   and RAM due to power management.
@@ -301,11 +315,6 @@ struct pld_soc_info {
  *                  hardware or at the request of software.
  * @suspend_noirq: optional operation, complete the actions started by suspend()
  * @resume_noirq: optional operation, prepare for the execution of resume()
- * @set_curr_therm_state: optional operation, will be called when there is a
- *                        change in the thermal level triggered by the thermal
- *                        subsystem thus requiring mitigation actions. This will
- *                        be called every time there is a change in the state
- *                        and after driver load.
  */
 struct pld_driver_ops {
 	int (*probe)(struct device *dev,
@@ -339,7 +348,10 @@ struct pld_driver_ops {
 			     enum pld_bus_type bus_type);
 	int (*resume_noirq)(struct device *dev,
 			    enum pld_bus_type bus_type);
-	int (*set_curr_therm_state)(struct device *dev, int state);
+	int (*idle_shutdown)(struct device *dev,
+			     enum pld_bus_type bus_type);
+	int (*idle_restart)(struct device *dev,
+			    enum pld_bus_type bus_type);
 };
 
 int pld_init(void);
@@ -358,6 +370,15 @@ int pld_get_fw_files_for_target(struct device *dev,
 				u32 target_type, u32 target_version);
 void pld_is_pci_link_down(struct device *dev);
 int pld_shadow_control(struct device *dev, bool enable);
+void pld_schedule_recovery_work(struct device *dev,
+				enum pld_recovery_reason reason);
+
+#ifdef FEATURE_WLAN_TIME_SYNC_FTM
+int pld_get_audio_wlan_timestamp(struct device *dev,
+				 enum pld_wlan_time_sync_trigger_type type,
+				 uint64_t *ts);
+#endif /* FEATURE_WLAN_TIME_SYNC_FTM */
+
 #ifdef CONFIG_CNSS_UTILS
 /**
  * pld_set_wlan_unsafe_channel() - Set unsafe channel
@@ -526,17 +547,16 @@ static inline int pld_get_driver_load_cnt(struct device *dev)
 	return -EINVAL;
 }
 #endif
-void pld_schedule_recovery_work(struct device *dev);
 int pld_wlan_pm_control(struct device *dev, bool vote);
 void *pld_get_virt_ramdump_mem(struct device *dev, unsigned long *size);
 void pld_device_crashed(struct device *dev);
-void pld_device_self_recovery(struct device *dev);
+void pld_device_self_recovery(struct device *dev,
+			      enum pld_recovery_reason reason);
 void pld_intr_notify_q6(struct device *dev);
 void pld_request_pm_qos(struct device *dev, u32 qos_val);
 void pld_remove_pm_qos(struct device *dev);
 int pld_request_bus_bandwidth(struct device *dev, int bandwidth);
 int pld_get_platform_cap(struct device *dev, struct pld_platform_cap *cap);
-void pld_set_driver_status(struct device *dev, enum pld_driver_status status);
 int pld_get_sha_hash(struct device *dev, const u8 *data,
 		     u32 data_len, u8 *hash_idx, u8 *out);
 void *pld_get_fw_ptr(struct device *dev);
@@ -560,15 +580,45 @@ int pld_athdiag_read(struct device *dev, uint32_t offset, uint32_t memtype,
 		     uint32_t datalen, uint8_t *output);
 int pld_athdiag_write(struct device *dev, uint32_t offset, uint32_t memtype,
 		      uint32_t datalen, uint8_t *input);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
+void *pld_smmu_get_domain(struct device *dev);
+#else
 void *pld_smmu_get_mapping(struct device *dev);
+#endif
 int pld_smmu_map(struct device *dev, phys_addr_t paddr,
 		 uint32_t *iova_addr, size_t size);
+#ifdef CONFIG_SMMU_S1_UNMAP
+int pld_smmu_unmap(struct device *dev,
+		   uint32_t iova_addr, size_t size);
+#else
+static inline int pld_smmu_unmap(struct device *dev,
+				 uint32_t iova_addr, size_t size)
+{
+	return 0;
+}
+#endif
+int pld_get_user_msi_assignment(struct device *dev, char *user_name,
+				int *num_vectors, uint32_t *user_base_data,
+				uint32_t *base_vector);
+int pld_get_msi_irq(struct device *dev, unsigned int vector);
+void pld_get_msi_address(struct device *dev, uint32_t *msi_addr_low,
+			 uint32_t *msi_addr_high);
 unsigned int pld_socinfo_get_serial_number(struct device *dev);
 int pld_is_qmi_disable(struct device *dev);
-int pld_is_fw_down(void);
-void pld_block_shutdown(struct device *dev, bool status);
+int pld_is_fw_down(struct device *dev);
 int pld_force_assert_target(struct device *dev);
 bool pld_is_fw_dump_skipped(struct device *dev);
+
+/**
+ * pld_is_pdr() - Check WLAN PD is Restarted
+ *
+ * Help the driver decide whether FW down is due to
+ * WLAN PD Restart.
+ *
+ * Return: 1 WLAN PD is Restarted
+ *         0 WLAN PD is not Restarted
+ */
+int pld_is_pdr(struct device *dev);
 
 /**
  * pld_is_fw_rejuvenate() - Check WLAN fw is rejuvenating
@@ -579,10 +629,7 @@ bool pld_is_fw_dump_skipped(struct device *dev);
  * Return: 1 FW is rejuvenating
  *         0 FW is not rejuvenating
  */
-int pld_is_fw_rejuvenate(void);
-
-void pld_set_cc_source(struct device *dev, enum pld_cc_src cc_source);
-enum pld_cc_src pld_get_cc_source(struct device *dev);
+int pld_is_fw_rejuvenate(struct device *dev);
 
 #if defined(CONFIG_WCNSS_MEM_PRE_ALLOC) && defined(FEATURE_SKB_PRE_ALLOC)
 
@@ -622,31 +669,23 @@ static inline int pld_nbuf_pre_alloc_free(struct sk_buff *skb)
 	return 0;
 }
 #endif
+/**
+ * pld_idle_shutdown - request idle shutdown callback from platform driver
+ * @dev: pointer to struct dev
+ * @shutdown_cb: pointer to hdd psoc idle shutdown callback handler
+ *
+ * Return: 0 for success and non-zero negative error code for failure
+ */
+int pld_idle_shutdown(struct device *dev,
+		      int (*shutdown_cb)(struct device *dev));
 
 /**
- * pld_thermal_register() - Register the thermal device with the thermal system
- * @dev: The device structure
- * @state: The max state to be configured on registration
+ * pld_idle_restart - request idle restart callback from platform driver
+ * @dev: pointer to struct dev
+ * @restart_cb: pointer to hdd psoc idle restart callback handler
  *
- * Return: Error code on error
+ * Return: 0 for success and non-zero negative error code for failure
  */
-int pld_thermal_register(struct device *dev, int state);
-
-/**
- * pld_thermal_unregister() - Unregister the device with the thermal system
- * @dev: The device structure
- *
- * Return: None
- */
-void pld_thermal_unregister(struct device *dev);
-
-/**
- * pld_get_thermal_state() - Get the current thermal state from the PLD
- * @dev: The device structure
- * @thermal_state: param to store the current thermal state
- *
- * Return: Non-zero code for error; zero for success
- */
-int pld_get_thermal_state(struct device *dev, uint16_t *thermal_state);
-
+int pld_idle_restart(struct device *dev,
+		     int (*restart_cb)(struct device *dev));
 #endif

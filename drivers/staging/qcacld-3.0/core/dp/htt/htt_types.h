@@ -27,7 +27,7 @@
 #include <qdf_nbuf.h>           /* qdf_nbuf_t */
 #include <htc_api.h>            /* HTC_PACKET */
 #include <ol_htt_api.h>
-
+#include <cdp_txrx_handle.h>
 #define DEBUG_DMA_DONE
 
 #define HTT_TX_MUTEX_TYPE qdf_spinlock_t
@@ -220,7 +220,7 @@ struct mon_channel {
 };
 
 struct htt_pdev_t {
-	ol_pdev_handle ctrl_pdev;
+	struct cdp_cfg *ctrl_pdev;
 	ol_txrx_pdev_handle txrx_pdev;
 	HTC_HANDLE htc_pdev;
 	qdf_device_t osdev;
@@ -359,9 +359,18 @@ struct htt_pdev_t {
 		qdf_spinlock_t rx_hash_lock;
 		struct htt_rx_hash_bucket **hash_table;
 		uint32_t listnode_offset;
-
 		bool smmu_map;
 	} rx_ring;
+
+#ifndef CONFIG_HL_SUPPORT
+	struct {
+		qdf_atomic_t fill_cnt;          /* # of buffers in pool */
+		qdf_atomic_t refill_low_mem;    /* if set refill the ring */
+		qdf_nbuf_t *netbufs_ring;
+		qdf_spinlock_t rx_buff_pool_lock;
+	} rx_buff_pool;
+#endif
+
 #ifdef CONFIG_HL_SUPPORT
 	int rx_desc_size_hl;
 #endif
@@ -432,8 +441,8 @@ struct htt_pdev_t {
 
 	struct mon_channel mon_ch_info;
 
-	struct htt_htc_pkt_union *last_misc_pkt;
-	int last_misc_num;
+	/* Flag to indicate whether new htt format is supported */
+	bool new_htt_format_enabled;
 };
 
 #define HTT_EPID_GET(_htt_pdev_hdl)  \

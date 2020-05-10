@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -28,6 +28,8 @@
 
 #include <wlan_hdd_includes.h>
 
+#ifdef WLAN_DEBUGFS
+
 #define DEBUGFS_CONNECT_INFO_BUF_SIZE    (4 * 1024)
 #define DEBUGFS_OFFLOAD_INFO_BUF_SIZE    (4 * 1024)
 #define DEBUGFS_ROAM_SCAN_STATS_INFO_BUF_SIZE (4 * 1024)
@@ -48,7 +50,7 @@ struct wlan_hdd_debugfs_buffer_info {
 	ssize_t max_buf_len;
 	enum hdd_debugfs_file_id id;
 	uint8_t *data;
-	hdd_adapter_t *adapter;
+	struct hdd_adapter *adapter;
 };
 
 /**
@@ -59,14 +61,13 @@ struct hdd_roam_scan_stats_debugfs_priv {
 	struct wmi_roam_scan_stats_res *roam_scan_stats_res;
 };
 
-#ifdef WLAN_DEBUGFS
 /**
  * wlan_hdd_debugfs_csr_init() - Create wifi diagnostic debugfs files
  * @adapter: pointer to adapter for which debugfs files are to be created
  *
  * Return: None
  */
-void wlan_hdd_debugfs_csr_init(hdd_adapter_t *adapter);
+void wlan_hdd_debugfs_csr_init(struct hdd_adapter *adapter);
 
 /**
  * wlan_hdd_debugfs_csr_deinit() - Remove wifi diagnostic debugfs files
@@ -74,7 +75,7 @@ void wlan_hdd_debugfs_csr_init(hdd_adapter_t *adapter);
  *
  * Return: None
  */
-void wlan_hdd_debugfs_csr_deinit(hdd_adapter_t *adapter);
+void wlan_hdd_debugfs_csr_deinit(struct hdd_adapter *adapter);
 
 /**
  * wlan_hdd_current_time_info_debugfs() - API to get time into user buffer
@@ -95,8 +96,8 @@ wlan_hdd_current_time_info_debugfs(uint8_t *buf, ssize_t buf_avail_len);
  * Return: No.of bytes copied
  */
 ssize_t
-wlan_hdd_debugfs_update_connect_info(hdd_context_t *hdd_ctx,
-				     hdd_adapter_t *adapter,
+wlan_hdd_debugfs_update_connect_info(struct hdd_context *hdd_ctx,
+				     struct hdd_adapter *adapter,
 				     uint8_t *buf, ssize_t buf_avail_len);
 
 /**
@@ -108,8 +109,8 @@ wlan_hdd_debugfs_update_connect_info(hdd_context_t *hdd_ctx,
  * Return: No.of bytes copied
  */
 ssize_t
-wlan_hdd_debugfs_update_filters_info(hdd_context_t *hdd_ctx,
-				     hdd_adapter_t *adapter,
+wlan_hdd_debugfs_update_filters_info(struct hdd_context *hdd_ctx,
+				     struct hdd_adapter *adapter,
 				     uint8_t *buf, ssize_t buf_avail_len);
 
 /**
@@ -121,8 +122,8 @@ wlan_hdd_debugfs_update_filters_info(hdd_context_t *hdd_ctx,
  * Return: No.of bytes copied
  */
 ssize_t
-wlan_hdd_debugfs_update_roam_stats(hdd_context_t *hdd_ctx,
-				   hdd_adapter_t *adapter,
+wlan_hdd_debugfs_update_roam_stats(struct hdd_context *hdd_ctx,
+				   struct hdd_adapter *adapter,
 				   uint8_t *buf, ssize_t buf_avail_len);
 
 #else
@@ -132,7 +133,7 @@ wlan_hdd_debugfs_update_roam_stats(hdd_context_t *hdd_ctx,
  *
  * Return: None
  */
-static inline void wlan_hdd_debugfs_csr_init(hdd_adapter_t *adapter)
+static inline void wlan_hdd_debugfs_csr_init(struct hdd_adapter *adapter)
 {
 }
 
@@ -142,7 +143,7 @@ static inline void wlan_hdd_debugfs_csr_init(hdd_adapter_t *adapter)
  *
  * Return: None
  */
-static inline void wlan_hdd_debugfs_csr_deinit(hdd_adapter_t *adapter)
+static inline void wlan_hdd_debugfs_csr_deinit(struct hdd_adapter *adapter)
 {
 }
 
@@ -168,8 +169,8 @@ wlan_hdd_current_time_info_debugfs(uint8_t *buf, ssize_t buf_avail_len)
  * Return: No.of bytes copied
  */
 static inline ssize_t
-wlan_hdd_debugfs_update_connect_info(hdd_context_t *hdd_ctx,
-				     hdd_adapter_t *adapter,
+wlan_hdd_debugfs_update_connect_info(struct hdd_context *hdd_ctx,
+				     struct hdd_adapter *adapter,
 				     uint8_t *buf, ssize_t buf_avail_len)
 {
 	return 0;
@@ -184,8 +185,8 @@ wlan_hdd_debugfs_update_connect_info(hdd_context_t *hdd_ctx,
  * Return: No.of bytes copied
  */
 static inline ssize_t
-wlan_hdd_debugfs_update_filters_info(hdd_context_t *hdd_ctx,
-				     hdd_adapter_t *adapter,
+wlan_hdd_debugfs_update_filters_info(struct hdd_context *hdd_ctx,
+				     struct hdd_adapter *adapter,
 				     uint8_t *buf, ssize_t buf_avail_len)
 {
 	return 0;
@@ -200,8 +201,8 @@ wlan_hdd_debugfs_update_filters_info(hdd_context_t *hdd_ctx,
  * Return: No.of bytes copied
  */
 static inline ssize_t
-wlan_hdd_debugfs_update_roam_stats(hdd_context_t *hdd_ctx,
-				   hdd_adapter_t *adapter,
+wlan_hdd_debugfs_update_roam_stats(struct hdd_context *hdd_ctx,
+				   struct hdd_adapter *adapter,
 				   uint8_t *buf, ssize_t buf_avail_len)
 {
 	return 0;

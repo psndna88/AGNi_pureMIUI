@@ -21,7 +21,7 @@
  * Header file for linux-specific thead abstractions
  */
 
-#if !defined(__I_QDF_THREADS_H)
+#ifndef __I_QDF_THREADS_H
 #define __I_QDF_THREADS_H
 
 typedef struct task_struct __qdf_thread_t;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -27,8 +27,9 @@
 #if !defined(__CDS_CONFIG_H)
 #define __CDS_CONFIG_H
 
-#include "cdp_txrx_cmn.h"
-#include "cdp_txrx_cfg.h"
+#include "osdep.h"
+#include "cdp_txrx_mob_def.h"
+#include "wlan_pmo_common_public_struct.h"
 
 /**
  * enum cfg_sub_20_channel_width: ini values for su 20 mhz channel width
@@ -56,50 +57,6 @@ enum active_apf_mode {
 };
 
 /**
- * enum cds_hang_reason - host hang/ssr reason
- * @CDS_REASON_UNSPECIFIED: Unspecified reason
- * @CDS_RX_HASH_NO_ENTRY_FOUND: No Map for the MAC entry for the received frame
- * @CDS_PEER_DELETION_TIMEDOUT: peer deletion timeout happened
- * @CDS_PEER_UNMAP_TIMEDOUT: peer unmap timeout
- * @CDS_SCAN_REQ_EXPIRED: Scan request timed out
- * @CDS_SCAN_ATTEMPT_FAILURES: Consecutive Scan attempt failures
- * @CDS_GET_MSG_BUFF_FAILURE: Unable to get the message buffer
- * @CDS_ACTIVE_LIST_TIMEOUT: Current command processing is timedout
- * @CDS_SUSPEND_TIMEOUT: Timeout for an ACK from FW for suspend request
- * @CDS_RESUME_TIMEOUT: Timeout for an ACK from FW for resume request
- */
-enum cds_hang_reason {
-	CDS_REASON_UNSPECIFIED = 0,
-	CDS_RX_HASH_NO_ENTRY_FOUND = 1,
-	CDS_PEER_DELETION_TIMEDOUT = 2,
-	CDS_PEER_UNMAP_TIMEDOUT = 3,
-	CDS_SCAN_REQ_EXPIRED = 4,
-	CDS_SCAN_ATTEMPT_FAILURES = 5,
-	CDS_GET_MSG_BUFF_FAILURE = 6,
-	CDS_ACTIVE_LIST_TIMEOUT = 7,
-	CDS_SUSPEND_TIMEOUT = 8,
-	CDS_RESUME_TIMEOUT = 9,
-};
-
-/**
- * enum cds_auto_pwr_detect_failure_mode_t - auto detect failure modes
- * @CDS_FW_TO_CRASH_ON_PWR_FAILURE: Don't register wow wakeup event and FW
- * crashes on power failure
- * @CDS_FW_TO_SEND_WOW_IND_ON_PWR_FAILURE: Register wow wakeup event and FW
- * sends failure event to host on power failure
- * @CDS_FW_TO_REJUVENATE_ON_PWR_FAILURE: Don't register wow wakeup event and
- * FW silently rejuvenate on power failure
- * @CDS_AUTO_PWR_FAILURE_DETECT_DISABLE: Don't register wow wakeup event and the
- * auto power failure detect feature is disabled in FW.
- */
-enum cds_auto_pwr_detect_failure_mode_t {
-	CDS_FW_TO_CRASH_ON_PWR_FAILURE,
-	CDS_FW_TO_SEND_WOW_IND_ON_PWR_FAILURE,
-	CDS_FW_TO_REJUVENATE_ON_PWR_FAILURE,
-	CDS_AUTO_PWR_FAILURE_DETECT_DISABLE
-};
-
-/**
  * struct cds_config_info - Place Holder for cds configuration
  * @max_station: Max station supported
  * @max_bssid: Max Bssid Supported
@@ -108,9 +65,7 @@ enum cds_auto_pwr_detect_failure_mode_t {
  * @sta_mod_dtim: station mode DTIM
  * @sta_dynamic_dtim: station dynamic DTIM
  * @driver_type: Enumeration of Driver Type whether FTM or Mission mode
- * @max_wow_filters: Max wow filters to be configured to fw
  * @wow_enable: Indicate whether wow is enabled or not
- * @ol_ini_info: Status of offload enabled from ini 1st bit for arm,2nd for NS
  * currently rest of bits are not used
  * @ssdp: Indicate ssdp is enabled or not
  * @enable_mc_list : To Check if Multicast list filtering is enabled in FW
@@ -138,26 +93,24 @@ enum cds_auto_pwr_detect_failure_mode_t {
  * @tx_flow_start_queue_offset: Start queue offset in percentage
  * @is_lpass_enabled: Indicate whether LPASS is enabled or not
  * @is_nan_enabled: Indicate whether NAN is enabled or not
+ * @nan_separate_iface_support: Indicate whether separate iface for NAN is
+ * enabled or not
  * @bool apf_packet_filter_enable; Indicate apf filter enabled or not
  * @tx_chain_mask_cck: Tx chain mask enabled or not
  * @self_gen_frm_pwr: Self gen from power
  * @sub_20_channel_width: Sub 20 MHz ch width, ini intersected with fw cap
  * @flow_steering_enabled: Receive flow steering.
  * @is_fw_timeout: Indicate whether crash host when fw timesout or not
- * @force_target_assert_enabled: Indicate whether target assert enabled or not
  * @active_uc_apf_mode: Setting that determines how APF is applied in active
- * mode for uc packets
+ *	mode for uc packets
  * @active_mc_bc_apf_mode: Setting that determines how APF is applied in
- * active mode for MC/BC packets
+ *	active mode for MC/BC packets
+ * @auto_power_save_fail_mode: auto detect power save failure mode
+ * @ito_repeat_count: Indicates ito repeated count
+ * @force_target_assert_enabled: Indicate whether target assert enabled or not
+ * @bandcapability: Configured band by user
  * @rps_enabled: RPS enabled in SAP mode
  * @delay_before_vdev_stop: wait time for tx complete before vdev stop
- * @ito_repeat_count: Indicates ito repeated count
- * @bandcapability: Configured band by user
- * @etsi_srd_chan_in_master_mode: Use of ETSI SRD chan in SAP/P2P-GO ACS/PCL
- * @dot11p_mode: dot11p user configuration
- * @dfs_master_enable: DFS master capability
- * @thermal_sampling_time: Thermal throttling sampling time in ms
- * @thermal_throt_dc: Thermal throttling duty cycle to be enforced
  * Structure for holding cds ini parameters.
  */
 
@@ -169,9 +122,7 @@ struct cds_config_info {
 	uint8_t sta_mod_dtim;
 	uint8_t sta_dynamic_dtim;
 	enum qdf_driver_type driver_type;
-	uint8_t max_wow_filters;
 	uint8_t wow_enable;
-	uint8_t ol_ini_info;
 	bool ssdp;
 	bool enable_mc_list;
 	uint8_t dfs_phyerr_filter_offload;
@@ -193,7 +144,7 @@ struct cds_config_info {
 	bool ip_tcp_udp_checksum_offload;
 	bool ce_classify_enabled;
 	uint8_t max_scan;
-#ifdef QCA_LL_TX_FLOW_CONTROL_V2
+#if defined(QCA_LL_TX_FLOW_CONTROL_V2) || defined(QCA_LL_PDEV_TX_FLOW_CONTROL)
 	uint32_t tx_flow_stop_queue_th;
 	uint32_t tx_flow_start_queue_offset;
 #endif
@@ -202,6 +153,7 @@ struct cds_config_info {
 #endif
 #ifdef WLAN_FEATURE_NAN
 	bool is_nan_enabled;
+	bool nan_separate_iface_support;
 #endif
 	bool apf_packet_filter_enable;
 	bool tx_chain_mask_cck;
@@ -211,24 +163,20 @@ struct cds_config_info {
 	uint8_t max_msdus_per_rxinorderind;
 	bool self_recovery_enabled;
 	bool fw_timeout_crash;
-
 	struct ol_tx_sched_wrr_ac_specs_t ac_specs[TX_WMM_AC_NUM];
-
-	bool force_target_assert_enabled;
 	enum active_apf_mode active_uc_apf_mode;
 	enum active_apf_mode active_mc_bc_apf_mode;
+	enum pmo_auto_pwr_detect_failure_mode auto_power_save_fail_mode;
+	uint8_t ito_repeat_count;
+	bool force_target_assert_enabled;
+	uint8_t bandcapability;
 	bool rps_enabled;
 	uint8_t delay_before_vdev_stop;
-	enum cds_auto_pwr_detect_failure_mode_t auto_power_save_fail_mode;
-	uint8_t ito_repeat_count;
-	uint8_t bandcapability;
-	bool etsi_srd_chan_in_master_mode;
-	uint8_t dot11p_mode;
-	bool dfs_master_enable;
-#ifdef FW_THERMAL_THROTTLE_SUPPORT
-	uint16_t thermal_sampling_time;
-	uint16_t thermal_throt_dc;
-#endif
+	bool enable_peer_unmap_conf_support;
+	bool enable_tx_compl_tsf64;
+	bool enable_three_way_coex_config_legacy;
+	uint32_t num_vdevs;
+	bool bmiss_skip_full_scan;
 };
 
 #ifdef WLAN_FEATURE_FILS_SK

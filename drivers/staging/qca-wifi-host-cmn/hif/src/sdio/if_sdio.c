@@ -33,21 +33,21 @@
 #include <linux/mmc/sd.h>
 #include <linux/wait.h>
 #include <qdf_mem.h>
-#include "bmi_msg.h"            /* TARGET_TYPE_ */
 #include "if_sdio.h"
 #include <qdf_trace.h>
 #include <cds_api.h>
 #include "regtable_sdio.h"
 #include <hif_debug.h>
+#include "target_type.h"
+#include "epping_main.h"
+#include "pld_sdio.h"
+#include "targaddrs.h"
+#include "sdio_api.h"
 #ifndef REMOVE_PKT_LOG
 #include "ol_txrx_types.h"
 #include "pktlog_ac_api.h"
 #include "pktlog_ac.h"
 #endif
-#include "epping_main.h"
-#include "sdio_api.h"
-#include "pld_sdio.h"
-#include "targaddrs.h"
 
 #ifndef ATH_BUS_PM
 #ifdef CONFIG_PM
@@ -178,6 +178,8 @@ static A_STATUS hif_sdio_probe(void *context, void *hif_handle)
 	if (athdiag_procfs_init(scn) != 0) {
 		QDF_TRACE(QDF_MODULE_ID_HIF, QDF_TRACE_LEVEL_ERROR,
 			  "%s athdiag_procfs_init failed", __func__);
+		ret = QDF_STATUS_E_FAILURE;
+		goto err_attach1;
 	}
 
 	atomic_set(&hif_sdio_load_state, true);
@@ -185,6 +187,10 @@ static A_STATUS hif_sdio_probe(void *context, void *hif_handle)
 
 	return 0;
 
+err_attach1:
+	if (scn->ramdump_base)
+		pld_hif_sdio_release_ramdump_mem(scn->ramdump_base);
+	qdf_mem_free(ol_sc);
 err_attach:
 	qdf_mem_free(scn);
 	scn = NULL;
@@ -343,6 +349,15 @@ int hif_sdio_bus_resume(struct hif_softc *hif_ctx)
 }
 
 /**
+ * hif_enable_power_gating() - enable HW power gating
+ *
+ * Return: n/a
+ */
+void hif_enable_power_gating(void *hif_ctx)
+{
+}
+
+/**
  * hif_sdio_close() - hif_bus_close
  *
  * Return: None
@@ -406,9 +421,8 @@ void hif_get_target_revision(struct hif_softc *ol_sc)
  * Return: QDF_STATUS
  */
 QDF_STATUS hif_sdio_enable_bus(struct hif_softc *hif_sc,
-			struct device *dev, void *bdev,
-			const struct hif_bus_id *bid,
-			enum hif_enable_type type)
+		struct device *dev, void *bdev, const struct hif_bus_id *bid,
+		enum hif_enable_type type)
 {
 	int ret = 0;
 	const struct sdio_device_id *id = (const struct sdio_device_id *)bid;
@@ -423,11 +437,6 @@ QDF_STATUS hif_sdio_enable_bus(struct hif_softc *hif_sc,
 	wait_event_interruptible_timeout(sync_wait_queue,
 			  atomic_read(&hif_sdio_load_state) == true,
 			  HIF_SDIO_LOAD_TIMEOUT);
-
-	if (!ol_sc || !scn) {
-		HIF_ERROR("wlan: %s ol_sc or scn is null", __func__);
-		return QDF_STATUS_E_INVAL;
-	}
 	hif_sc->hostdef = ol_sc->hostdef;
 	hif_sc->targetdef = ol_sc->targetdef;
 	hif_sc->bus_type = ol_sc->bus_type;
@@ -468,7 +477,7 @@ void hif_sdio_disable_bus(struct hif_softc *hif_sc)
  * @config: configuration value to set
  * @config_len: configuration length
  *
- * Return: QDF_STATUS_SUCCESS for sucess
+ * Return: QDF_STATUS_SUCCESS for success
  */
 QDF_STATUS hif_sdio_get_config_item(struct hif_softc *hif_sc,
 		     int opcode, void *config, uint32_t config_len)
@@ -567,4 +576,15 @@ int hif_check_fw_reg(struct hif_opaque_softc *hif_ctx)
  */
 void hif_wlan_disable(struct hif_softc *scn)
 {
+}
+
+/**
+ * hif_sdio_needs_bmi() - return true if the soc needs bmi through the driver
+ * @scn: hif context
+ *
+ * Return: true if soc needs driver bmi otherwise false
+ */
+bool hif_sdio_needs_bmi(struct hif_softc *scn)
+{
+	return true;
 }

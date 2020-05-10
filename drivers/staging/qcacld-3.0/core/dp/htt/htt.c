@@ -37,6 +37,7 @@
 #include <ol_htt_tx_api.h>
 #include <cds_api.h>
 #include "hif.h"
+#include <cdp_txrx_handle.h>
 
 #define HTT_HTC_PKT_POOL_INIT_SIZE 100  /* enough for a large A-MPDU */
 
@@ -113,28 +114,32 @@ void htt_htc_pkt_pool_free(struct htt_pdev_t *pdev)
 
 #ifdef ATH_11AC_TXCOMPACT
 
-void htt_htc_misc_pkt_list_trim(struct htt_pdev_t *pdev)
+void
+htt_htc_misc_pkt_list_trim(struct htt_pdev_t *pdev, int level)
 {
-	struct htt_htc_pkt_union *pkt, *next;
+	struct htt_htc_pkt_union *pkt, *next, *prev = NULL;
+	int i = 0;
 	qdf_nbuf_t netbuf;
 
-	// skip if first come
-	if(!pdev->last_misc_pkt->u.next)
-		goto out;
-
-	pkt = pdev->last_misc_pkt->u.next;
-	pdev->last_misc_pkt->u.next = NULL;
+	HTT_TX_MUTEX_ACQUIRE(&pdev->htt_tx_mutex);
+	pkt = pdev->htt_htc_pkt_misclist;
 	while (pkt) {
 		next = pkt->u.next;
-		netbuf = (qdf_nbuf_t) (pkt->u.pkt.htc_pkt.pNetBufContext);
-		qdf_nbuf_unmap(pdev->osdev, netbuf, QDF_DMA_TO_DEVICE);
-		qdf_nbuf_free(netbuf);
-		qdf_mem_free(pkt);
+		/* trim the out grown list*/
+		if (++i > level) {
+			netbuf =
+				(qdf_nbuf_t)(pkt->u.pkt.htc_pkt.pNetBufContext);
+			qdf_nbuf_unmap(pdev->osdev, netbuf, QDF_DMA_TO_DEVICE);
+			qdf_nbuf_free(netbuf);
+			qdf_mem_free(pkt);
+			pkt = NULL;
+			if (prev)
+				prev->u.next = NULL;
+		}
+		prev = pkt;
 		pkt = next;
 	}
-out:
-	pdev->last_misc_pkt = pdev->htt_htc_pkt_misclist;
-	pdev->last_misc_num = 1;
+	HTT_TX_MUTEX_RELEASE(&pdev->htt_tx_mutex);
 }
 
 void htt_htc_misc_pkt_list_add(struct htt_pdev_t *pdev, struct htt_htc_pkt *pkt)
@@ -148,16 +153,15 @@ void htt_htc_misc_pkt_list_add(struct htt_pdev_t *pdev, struct htt_htc_pkt *pkt)
 	if (pdev->htt_htc_pkt_misclist) {
 		u_pkt->u.next = pdev->htt_htc_pkt_misclist;
 		pdev->htt_htc_pkt_misclist = u_pkt;
-		pdev->last_misc_num++;
 	} else {
 		pdev->htt_htc_pkt_misclist = u_pkt;
-		pdev->last_misc_pkt = u_pkt;
-		pdev->last_misc_num = 1;
 	}
-
-	if (pdev->last_misc_num > misclist_trim_level)
-		htt_htc_misc_pkt_list_trim(pdev);
 	HTT_TX_MUTEX_RELEASE(&pdev->htt_tx_mutex);
+
+	/* only ce pipe size + tx_queue_depth could possibly be in use
+	 * free older packets in the msiclist
+	 */
+	htt_htc_misc_pkt_list_trim(pdev, misclist_trim_level);
 }
 
 void htt_htc_misc_pkt_pool_free(struct htt_pdev_t *pdev)
@@ -215,8 +219,8 @@ htt_htc_tx_htt2_service_start(struct htt_pdev_t *pdev,
 {
 	QDF_STATUS status;
 
-	qdf_mem_set(connect_req, 0, sizeof(struct htc_service_connect_req));
-	qdf_mem_set(connect_resp, 0, sizeof(struct htc_service_connect_resp));
+	qdf_mem_zero(connect_req, sizeof(struct htc_service_connect_req));
+	qdf_mem_zero(connect_resp, sizeof(struct htc_service_connect_resp));
 
 	/* The same as HTT service but no RX. */
 	connect_req->EpCallbacks.pContext = pdev;
@@ -365,7 +369,7 @@ htt_htc_attach_all(struct htt_pdev_t *pdev)
  */
 htt_pdev_handle
 htt_pdev_alloc(ol_txrx_pdev_handle txrx_pdev,
-	   ol_pdev_handle ctrl_pdev,
+	   struct cdp_cfg *ctrl_pdev,
 	   HTC_HANDLE htc_pdev, qdf_device_t osdev)
 {
 	struct htt_pdev_t *pdev;
@@ -395,13 +399,13 @@ htt_pdev_alloc(ol_txrx_pdev_handle txrx_pdev,
 
 	pdev->cfg.is_full_reorder_offload =
 			ol_cfg_is_full_reorder_offload(pdev->ctrl_pdev);
-	QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_INFO,
+	QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_INFO_LOW,
 		  "full_reorder_offloaded %d",
 		  (int)pdev->cfg.is_full_reorder_offload);
 
 	pdev->cfg.ce_classify_enabled =
 		ol_cfg_is_ce_classify_enabled(ctrl_pdev);
-	QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_INFO,
+	QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_INFO_LOW,
 		  "ce_classify %d",
 		  pdev->cfg.ce_classify_enabled);
 
@@ -463,6 +467,13 @@ htt_attach(struct htt_pdev_t *pdev, int desc_pool_size)
 	pdev->is_ipa_uc_enabled = false;
 	if (ol_cfg_ipa_uc_offload_enabled(pdev->ctrl_pdev))
 		pdev->is_ipa_uc_enabled = true;
+
+	pdev->new_htt_format_enabled = false;
+	if (ol_cfg_is_htt_new_format_enabled(pdev->ctrl_pdev))
+		pdev->new_htt_format_enabled = true;
+
+	htc_enable_hdr_length_check(pdev->htc_pdev,
+				    pdev->new_htt_format_enabled);
 
 	ret = htt_tx_attach(pdev, desc_pool_size);
 	if (ret)
@@ -735,8 +746,8 @@ int htt_htc_attach(struct htt_pdev_t *pdev, uint16_t service_id)
 	struct htc_service_connect_resp response;
 	QDF_STATUS status;
 
-	qdf_mem_set(&connect, sizeof(connect), 0);
-	qdf_mem_set(&response, sizeof(response), 0);
+	qdf_mem_zero(&connect, sizeof(connect));
+	qdf_mem_zero(&response, sizeof(response));
 
 	connect.pMetaData = NULL;
 	connect.MetaDataLength = 0;
@@ -867,7 +878,7 @@ int htt_ipa_uc_attach(struct htt_pdev_t *pdev)
 	}
 
 	QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_DEBUG, "%s: exit",
-		  __func__);
+		__func__);
 	return 0;               /* success */
 }
 
@@ -880,7 +891,7 @@ int htt_ipa_uc_attach(struct htt_pdev_t *pdev)
 void htt_ipa_uc_detach(struct htt_pdev_t *pdev)
 {
 	QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_DEBUG, "%s: enter",
-		  __func__);
+		__func__);
 
 	/* TX IPA micro controller detach */
 	htt_tx_ipa_uc_detach(pdev);
@@ -889,7 +900,7 @@ void htt_ipa_uc_detach(struct htt_pdev_t *pdev)
 	htt_rx_ipa_uc_detach(pdev);
 
 	QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_DEBUG, "%s: exit",
-		  __func__);
+		__func__);
 }
 
 int

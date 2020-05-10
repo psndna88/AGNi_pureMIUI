@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -46,7 +46,7 @@
  * mempool, for example, data using Interface Memory,
  * desc and other using DRAM, they need different SDIO
  * mbox channels.
- * b) currently, tx mempool in LL case is seperated from
+ * b) currently, tx mempool in LL case is separated from
  * main mempool, the structure (descs at the beginning
  * of every pool buffer) is different, because they only
  * need store tx desc from host. To align with LL case,
@@ -181,10 +181,7 @@ HTC_PACKET *hif_dev_alloc_rx_buffer(struct hif_sdio_device *pdev)
 	headsize = sizeof(HTC_PACKET);
 	netbuf = qdf_nbuf_alloc(NULL, bufsize + headsize, 0, 4, false);
 	if (netbuf == NULL) {
-		QDF_TRACE_RATE_LIMITED(HIF_DBG_PRINT_RATE, QDF_MODULE_ID_HIF,
-				       QDF_TRACE_LEVEL_ERROR,
-				       "(%s)Allocate netbuf failed\n",
-				       __func__);
+		hif_err_rl("Allocate netbuf failed");
 		return NULL;
 	}
 	packet = (HTC_PACKET *) qdf_nbuf_data(netbuf);

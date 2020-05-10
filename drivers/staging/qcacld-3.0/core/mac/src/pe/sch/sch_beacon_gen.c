@@ -41,37 +41,46 @@
 #include "sch_api.h"
 
 #include "parser_api.h"
+#include "wlan_utility.h"
 
 /* Offset of Channel Switch count field in CSA/ECSA IE */
-#define SCH_CSA_SWITCH_COUNT_OFFSET 2;
-#define SCH_ECSA_SWITCH_COUNT_OFFSET 3;
+#define SCH_CSA_SWITCH_COUNT_OFFSET 2
+#define SCH_ECSA_SWITCH_COUNT_OFFSET 3
 
 const uint8_t p2p_oui[] = { 0x50, 0x6F, 0x9A, 0x9 };
 
-static tSirRetStatus sch_get_p2p_ie_offset(uint8_t *pExtraIe,
-					   uint32_t extraIeLen,
-					   uint16_t *pP2pIeOffset)
+static QDF_STATUS sch_get_p2p_ie_offset(uint8_t *pextra_ie,
+					uint32_t extra_ie_len,
+					uint16_t *pie_offset)
 {
-	tSirRetStatus status = eSIR_FAILURE;
-	*pP2pIeOffset = 0;
+	uint8_t elem_id;
+	uint8_t elem_len;
+	uint8_t *ie_ptr = pextra_ie;
+	uint8_t oui_size = sizeof(p2p_oui);
+	uint32_t p2p_ie_offset = 0;
+	uint32_t left_len = extra_ie_len;
+	QDF_STATUS status = QDF_STATUS_E_FAILURE;
 
-	/* Extra IE is not present */
-	if (0 == extraIeLen) {
-		return status;
-	}
-	/* Calculate the P2P IE Offset */
-	do {
-		if (*pExtraIe == 0xDD) {
-			if (!qdf_mem_cmp
-				    ((void *)(pExtraIe + 2), &p2p_oui, sizeof(p2p_oui))) {
-				status = eSIR_SUCCESS;
-				break;
+	*pie_offset = 0;
+	while (left_len > 2) {
+		elem_id  = ie_ptr[0];
+		elem_len = ie_ptr[1];
+		left_len -= 2;
+
+		if (elem_len > left_len)
+			return status;
+
+		if ((elem_id == 0xDD) && (elem_len >= oui_size)) {
+			if (!qdf_mem_cmp(&ie_ptr[2], &p2p_oui, oui_size)) {
+				*pie_offset = p2p_ie_offset;
+				return QDF_STATUS_SUCCESS;
 			}
 		}
 
-		(*pP2pIeOffset)++;
-		pExtraIe++;
-	} while (--extraIeLen > 0);
+		left_len -= elem_len;
+		ie_ptr += (elem_len + 2);
+		p2p_ie_offset += (elem_len + 2);
+	};
 
 	return status;
 }
@@ -84,16 +93,16 @@ static tSirRetStatus sch_get_p2p_ie_offset(uint8_t *pExtraIe,
  * @max_bcn_size:  max beacon size
  * @num_bytes:     final size
  * @addn_ie:       pointer to additional IE
- * @addn_ielen:    lenght of additional IE
+ * @addn_ielen:    length of additional IE
  *
  * Return: status of operation
  */
-static tSirRetStatus
+static QDF_STATUS
 sch_append_addn_ie(tpAniSirGlobal mac_ctx, tpPESession session,
 		   uint8_t *frm, uint32_t max_bcn_size, uint32_t *num_bytes,
 		   uint8_t *addn_ie, uint16_t addn_ielen)
 {
-	tSirRetStatus status = eSIR_FAILURE;
+	QDF_STATUS status = QDF_STATUS_E_FAILURE;
 	uint8_t add_ie[WNI_CFG_PROBE_RSP_BCN_ADDNIE_DATA_LEN];
 	uint8_t *p2p_ie = NULL;
 	uint8_t noa_len = 0;
@@ -120,15 +129,16 @@ sch_append_addn_ie(tpAniSirGlobal mac_ctx, tpPESession session,
 
 	qdf_mem_copy(&add_ie[0], addn_ie, addn_ielen);
 
-	if (status == eSIR_SUCCESS && ext_p2p_ie[0] == SIR_MAC_EID_VENDOR &&
+	if (status == QDF_STATUS_SUCCESS &&
+	    ext_p2p_ie[0] == SIR_MAC_EID_VENDOR &&
 	    !qdf_mem_cmp(&ext_p2p_ie[2], SIR_MAC_P2P_OUI,
-	    SIR_MAC_P2P_OUI_SIZE)) {
+			 SIR_MAC_P2P_OUI_SIZE)) {
 		qdf_mem_copy(&add_ie[addn_ielen], ext_p2p_ie,
 			     ext_p2p_ie[1] + 2);
 		addn_ielen += ext_p2p_ie[1] + 2;
 	}
 
-	p2p_ie = limGetP2pIEPtr(mac_ctx, &add_ie[0], addn_ielen);
+	p2p_ie = (uint8_t *)limGetP2pIEPtr(mac_ctx, &add_ie[0], addn_ielen);
 	if ((p2p_ie != NULL) && !mac_ctx->beacon_offload) {
 		/* get NoA attribute stream P2P IE */
 		noa_len = lim_get_noa_attr_stream(mac_ctx, noa_strm, session);
@@ -167,8 +177,8 @@ sch_append_addn_ie(tpAniSirGlobal mac_ctx, tpPESession session,
  * Return: None
  */
 static void sch_get_csa_ecsa_count_offset(uint8_t *ie, uint32_t ie_len,
-				uint32_t *csa_count_offset,
-				uint32_t *ecsa_count_offset)
+					  uint32_t *csa_count_offset,
+					  uint32_t *ecsa_count_offset)
 {
 	uint8_t *ptr = ie;
 	uint8_t elem_id;
@@ -211,7 +221,7 @@ static void sch_get_csa_ecsa_count_offset(uint8_t *ie, uint32_t ie_len,
  * Return: status of operation
  */
 
-tSirRetStatus
+QDF_STATUS
 sch_set_fixed_beacon_fields(tpAniSirGlobal mac_ctx, tpPESession session)
 {
 	tpAniBeaconStruct bcn_struct = (tpAniBeaconStruct)
@@ -230,7 +240,7 @@ sch_set_fixed_beacon_fields(tpAniSirGlobal mac_ctx, tpPESession session)
 	uint16_t p2p_ie_offset = 0;
 	uint32_t csa_count_offset = 0;
 	uint32_t ecsa_count_offset = 0;
-	tSirRetStatus status = eSIR_SUCCESS;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	bool is_vht_enabled = false;
 	uint16_t addn_ielen = 0;
 	uint8_t *addn_ie = NULL;
@@ -240,14 +250,14 @@ sch_set_fixed_beacon_fields(tpAniSirGlobal mac_ctx, tpPESession session)
 	bcn_1 = qdf_mem_malloc(sizeof(tDot11fBeacon1));
 	if (NULL == bcn_1) {
 		pe_err("Failed to allocate memory");
-		return eSIR_MEM_ALLOC_FAILED;
+		return QDF_STATUS_E_NOMEM;
 	}
 
 	bcn_2 = qdf_mem_malloc(sizeof(tDot11fBeacon2));
 	if (NULL == bcn_2) {
 		pe_err("Failed to allocate memory");
 		qdf_mem_free(bcn_1);
-		return eSIR_MEM_ALLOC_FAILED;
+		return QDF_STATUS_E_NOMEM;
 	}
 
 	wsc_prb_res = qdf_mem_malloc(sizeof(tDot11fIEWscProbeRes));
@@ -255,7 +265,7 @@ sch_set_fixed_beacon_fields(tpAniSirGlobal mac_ctx, tpPESession session)
 		pe_err("Failed to allocate memory");
 		qdf_mem_free(bcn_1);
 		qdf_mem_free(bcn_2);
-		return eSIR_MEM_ALLOC_FAILED;
+		return QDF_STATUS_E_NOMEM;
 	}
 
 	pe_debug("Setting fixed beacon fields");
@@ -264,7 +274,7 @@ sch_set_fixed_beacon_fields(tpAniSirGlobal mac_ctx, tpPESession session)
 	 * First set the fixed fields:
 	 * set the TFP headers, set the mac header
 	 */
-	qdf_mem_set((uint8_t *) &bcn_struct->macHdr, sizeof(tSirMacMgmtHdr), 0);
+	qdf_mem_zero((uint8_t *) &bcn_struct->macHdr, sizeof(tSirMacMgmtHdr));
 	mac = (tpSirMacMgmtHdr) &bcn_struct->macHdr;
 	mac->fc.type = SIR_MAC_MGMT_FRAME;
 	mac->fc.subType = SIR_MAC_MGMT_BEACON;
@@ -304,19 +314,19 @@ sch_set_fixed_beacon_fields(tpAniSirGlobal mac_ctx, tpPESession session)
 
 	if (LIM_IS_AP_ROLE(session)) {
 		/* Initialize the default IE bitmap to zero */
-		qdf_mem_set((uint8_t *) &(session->DefProbeRspIeBitmap),
-			    (sizeof(uint32_t) * 8), 0);
+		qdf_mem_zero((uint8_t *) &(session->DefProbeRspIeBitmap),
+			    (sizeof(uint32_t) * 8));
 
 		/* Initialize the default IE bitmap to zero */
-		qdf_mem_set((uint8_t *) &(session->probeRespFrame),
-			    sizeof(session->probeRespFrame), 0);
+		qdf_mem_zero((uint8_t *) &(session->probeRespFrame),
+			    sizeof(session->probeRespFrame));
 
 		/*
 		 * Can be efficiently updated whenever new IE added in Probe
 		 * response in future
 		 */
 		if (lim_update_probe_rsp_template_ie_bitmap_beacon1(mac_ctx,
-					bcn_1, session) != eSIR_SUCCESS)
+					bcn_1, session) != QDF_STATUS_SUCCESS)
 			pe_err("Failed to build ProbeRsp template");
 	}
 
@@ -328,7 +338,7 @@ sch_set_fixed_beacon_fields(tpAniSirGlobal mac_ctx, tpPESession session)
 		qdf_mem_free(bcn_1);
 		qdf_mem_free(bcn_2);
 		qdf_mem_free(wsc_prb_res);
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	} else if (DOT11F_WARNED(n_status)) {
 		pe_warn("Warnings while packing a tDot11fBeacon1(0x%08x)",
 			n_status);
@@ -339,26 +349,28 @@ sch_set_fixed_beacon_fields(tpAniSirGlobal mac_ctx, tpPESession session)
 	/* Initialize the 'new' fields at the end of the beacon */
 
 	if ((session->limSystemRole == eLIM_AP_ROLE) &&
-		session->dfsIncludeChanSwIe == true) {
-	    if (!CHAN_HOP_ALL_BANDS_ENABLE ||
-		session->lim_non_ecsa_cap_num == 0) {
-		populate_dot_11_f_ext_chann_switch_ann(mac_ctx,
-				&bcn_2->ext_chan_switch_ann,
-				session);
-		pe_debug("ecsa: mode:%d reg:%d chan:%d count:%d",
-			bcn_2->ext_chan_switch_ann.switch_mode,
-			bcn_2->ext_chan_switch_ann.new_reg_class,
-			bcn_2->ext_chan_switch_ann.new_channel,
-			bcn_2->ext_chan_switch_ann.switch_count);
-	    } else {
-		populate_dot11f_chan_switch_ann(mac_ctx,
-						&bcn_2->ChanSwitchAnn,
-						session);
-		pe_info("csa: mode:%d chan:%d count:%d",
-			bcn_2->ChanSwitchAnn.switchMode,
-			bcn_2->ChanSwitchAnn.newChannel,
-			bcn_2->ChanSwitchAnn.switchCount);
-	    }
+	    session->dfsIncludeChanSwIe == true) {
+		if (!CHAN_HOP_ALL_BANDS_ENABLE ||
+		    session->lim_non_ecsa_cap_num == 0) {
+			tDot11fIEext_chan_switch_ann *ext_csa =
+						&bcn_2->ext_chan_switch_ann;
+			populate_dot_11_f_ext_chann_switch_ann(mac_ctx,
+							       ext_csa,
+							       session);
+			pe_debug("ecsa: mode:%d reg:%d chan:%d count:%d",
+				 ext_csa->switch_mode,
+				 ext_csa->new_reg_class,
+				 ext_csa->new_channel,
+				 ext_csa->switch_count);
+		} else {
+			populate_dot11f_chan_switch_ann(mac_ctx,
+							&bcn_2->ChanSwitchAnn,
+							session);
+			pe_debug("csa: mode:%d chan:%d count:%d",
+				 bcn_2->ChanSwitchAnn.switchMode,
+				 bcn_2->ChanSwitchAnn.newChannel,
+				 bcn_2->ChanSwitchAnn.switchCount);
+		}
 	}
 
 	populate_dot11_supp_operating_classes(mac_ctx,
@@ -382,12 +394,11 @@ sch_set_fixed_beacon_fields(tpAniSirGlobal mac_ctx, tpPESession session)
 			 * in beacon and probe responses
 			 */
 			populate_dot11f_chan_switch_ann(mac_ctx,
-				&bcn_2->ChanSwitchAnn, session);
+						&bcn_2->ChanSwitchAnn, session);
 			pe_debug("csa: mode:%d chan:%d count:%d",
-				bcn_2->ChanSwitchAnn.switchMode,
-				bcn_2->ChanSwitchAnn.newChannel,
-				bcn_2->ChanSwitchAnn.switchCount);
-
+				 bcn_2->ChanSwitchAnn.switchMode,
+				 bcn_2->ChanSwitchAnn.newChannel,
+				 bcn_2->ChanSwitchAnn.switchCount);
 			/*
 			 * TODO: depending the CB mode, extended channel switch
 			 * announcement need to be called
@@ -422,6 +433,9 @@ sch_set_fixed_beacon_fields(tpAniSirGlobal mac_ctx, tpPESession session)
 			}
 		}
 	}
+	if (mac_ctx->rrm.rrmSmeContext.rrmConfig.rrm_enabled)
+		populate_dot11f_rrm_ie(mac_ctx, &bcn_2->RRMEnabledCap,
+			session);
 
 #ifdef FEATURE_AP_MCC_CH_AVOIDANCE
 	/* populate proprietary IE for MDM device operating in AP-MCC */
@@ -437,7 +451,6 @@ sch_set_fixed_beacon_fields(tpAniSirGlobal mac_ctx, tpPESession session)
 		populate_dot11f_ht_info(mac_ctx, &bcn_2->HTInfo, session);
 	}
 	if (session->vhtCapability) {
-		pe_debug("Populate VHT IEs in Beacon");
 		populate_dot11f_vht_caps(mac_ctx, session, &bcn_2->VHTCaps);
 		populate_dot11f_vht_operation(mac_ctx, session,
 					      &bcn_2->VHTOperation);
@@ -447,6 +460,17 @@ sch_set_fixed_beacon_fields(tpAniSirGlobal mac_ctx, tpPESession session)
 		populate_dot11f_vht_ext_bss_load( mac_ctx, &bcn2.VHTExtBssLoad);
 		*/
 	}
+
+	if (lim_is_session_he_capable(session)) {
+		pe_warn("Populate HE IEs");
+		populate_dot11f_he_caps(mac_ctx, session,
+					&bcn_2->he_cap);
+		populate_dot11f_he_operation(mac_ctx, session,
+					&bcn_2->he_op);
+		populate_dot11f_he_bss_color_change(mac_ctx, session,
+					&bcn_2->bss_color_change);
+	}
+
 	if (session->limSystemRole != eLIM_STA_IN_IBSS_ROLE)
 		populate_dot11f_ext_cap(mac_ctx, is_vht_enabled, &bcn_2->ExtCap,
 					session);
@@ -471,8 +495,8 @@ sch_set_fixed_beacon_fields(tpAniSirGlobal mac_ctx, tpPESession session)
 						&bcn_2->WscBeacon, session);
 		}
 	} else {
-		if (wlan_cfg_get_int(mac_ctx,
-			(uint16_t) WNI_CFG_WPS_ENABLE, &tmp) != eSIR_SUCCESS)
+		status = wlan_cfg_get_int(mac_ctx, WNI_CFG_WPS_ENABLE, &tmp);
+		if (QDF_IS_STATUS_ERROR(status))
 			pe_err("Failed to cfg get id %d", WNI_CFG_WPS_ENABLE);
 
 		wps_ap_enable = tmp & WNI_CFG_WPS_ENABLE_AP;
@@ -535,7 +559,7 @@ sch_set_fixed_beacon_fields(tpAniSirGlobal mac_ctx, tpPESession session)
 			qdf_mem_free(bcn_1);
 			qdf_mem_free(bcn_2);
 			qdf_mem_free(wsc_prb_res);
-			return eSIR_MEM_ALLOC_FAILED;
+			return QDF_STATUS_E_NOMEM;
 		}
 		qdf_mem_copy(addn_ie,
 			session->addIeParams.probeRespBCNData_buff,
@@ -545,7 +569,7 @@ sch_set_fixed_beacon_fields(tpAniSirGlobal mac_ctx, tpPESession session)
 			     sizeof(tDot11fIEExtCap));
 		status = lim_strip_extcap_update_struct(mac_ctx, addn_ie,
 				&addn_ielen, &extracted_extcap);
-		if (eSIR_SUCCESS != status) {
+		if (QDF_STATUS_SUCCESS != status) {
 			extcap_present = false;
 			pe_debug("extcap not extracted");
 		}
@@ -576,7 +600,7 @@ sch_set_fixed_beacon_fields(tpAniSirGlobal mac_ctx, tpPESession session)
 		qdf_mem_free(bcn_2);
 		qdf_mem_free(wsc_prb_res);
 		qdf_mem_free(addn_ie);
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	} else if (DOT11F_WARNED(n_status)) {
 		pe_err("Warnings while packing a tDot11fBeacon2(0x%08x)",
 			n_status);
@@ -616,7 +640,7 @@ sch_set_fixed_beacon_fields(tpAniSirGlobal mac_ctx, tpPESession session)
 	extra_ie_len = n_bytes - extra_ie_offset;
 	/* Get the p2p Ie Offset */
 	status = sch_get_p2p_ie_offset(extra_ie, extra_ie_len, &p2p_ie_offset);
-	if (eSIR_SUCCESS == status)
+	if (QDF_STATUS_SUCCESS == status)
 		/* Update the P2P Ie Offset */
 		mac_ctx->sch.schObject.p2pIeOffset =
 			session->schBeaconOffsetBegin + TIM_IE_SIZE +
@@ -631,20 +655,20 @@ sch_set_fixed_beacon_fields(tpAniSirGlobal mac_ctx, tpPESession session)
 	qdf_mem_free(bcn_2);
 	qdf_mem_free(wsc_prb_res);
 	qdf_mem_free(addn_ie);
-	return eSIR_SUCCESS;
+	return QDF_STATUS_SUCCESS;
 }
 
-tSirRetStatus lim_update_probe_rsp_template_ie_bitmap_beacon1(tpAniSirGlobal pMac,
-						     tDot11fBeacon1 *beacon1,
-							      tpPESession
-							      psessionEntry)
+QDF_STATUS
+lim_update_probe_rsp_template_ie_bitmap_beacon1(tpAniSirGlobal pMac,
+						tDot11fBeacon1 *beacon1,
+						tpPESession psessionEntry)
 {
 	uint32_t *DefProbeRspIeBitmap;
 	tDot11fProbeResponse *prb_rsp;
 
 	if (!psessionEntry) {
 		pe_debug("PESession is null!");
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	}
 	DefProbeRspIeBitmap = &psessionEntry->DefProbeRspIeBitmap[0];
 	prb_rsp = &psessionEntry->probeRespFrame;
@@ -678,7 +702,7 @@ tSirRetStatus lim_update_probe_rsp_template_ie_bitmap_beacon1(tpAniSirGlobal pMa
 	}
 
 	/* IBSS params will not be present in the Beacons transmitted by AP */
-	return eSIR_SUCCESS;
+	return QDF_STATUS_SUCCESS;
 }
 
 void lim_update_probe_rsp_template_ie_bitmap_beacon2(tpAniSirGlobal pMac,
@@ -844,6 +868,21 @@ void lim_update_probe_rsp_template_ie_bitmap_beacon2(tpAniSirGlobal pMac,
 			     sizeof(beacon2->ExtCap));
 	}
 
+	if (beacon2->he_cap.present) {
+		set_probe_rsp_ie_bitmap(DefProbeRspIeBitmap,
+					DOT11F_EID_HE_CAP);
+		qdf_mem_copy((void *)&prb_rsp->he_cap,
+			     (void *)&beacon2->he_cap,
+			     sizeof(beacon2->he_cap));
+	}
+	if (beacon2->he_op.present) {
+		set_probe_rsp_ie_bitmap(DefProbeRspIeBitmap,
+					DOT11F_EID_HE_OP);
+		qdf_mem_copy((void *)&prb_rsp->he_op,
+			     (void *)&beacon2->he_op,
+			     sizeof(beacon2->he_op));
+	}
+
 }
 
 void set_probe_rsp_ie_bitmap(uint32_t *IeBitmap, uint32_t pos)
@@ -878,7 +917,7 @@ static QDF_STATUS write_beacon_to_memory(tpAniSirGlobal pMac, uint16_t size,
 {
 	uint16_t i;
 	tpAniBeaconStruct pBeacon;
-	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	QDF_STATUS status;
 
 	/* copy end of beacon only if length > 0 */
 	if (length > 0) {
@@ -905,27 +944,17 @@ static QDF_STATUS write_beacon_to_memory(tpAniSirGlobal pMac, uint16_t size,
 	if (!pMac->sch.schObject.fBeaconChanged)
 		return QDF_STATUS_E_FAILURE;
 
-	pMac->sch.gSchGenBeacon = 1;
-	if (pMac->sch.gSchGenBeacon) {
-		pMac->sch.gSchBeaconsSent++;
+	/*
+	 * Copy beacon data to SoftMAC shared memory...
+	 * Do this by sending a message to HAL
+	 */
 
-		/* */
-		/* Copy beacon data to SoftMAC shared memory... */
-		/* Do this by sending a message to HAL */
-		/* */
-
-		size = (size + 3) & (~3);
-		if (QDF_STATUS_SUCCESS !=
-		    sch_send_beacon_req(pMac, psessionEntry->pSchBeaconFrameBegin,
-					size, psessionEntry, reason)) {
-			status = QDF_STATUS_E_FAILURE;
-			pe_err("sch_send_beacon_req() returned an error (zsize %d)",
-			       size);
-		} else {
-			pMac->sch.gSchBeaconsWritten++;
-		}
-	}
-
+	size = (size + 3) & (~3);
+	status = sch_send_beacon_req(pMac, psessionEntry->pSchBeaconFrameBegin,
+				     size, psessionEntry, reason);
+	if (QDF_IS_STATUS_ERROR(status))
+		pe_err("sch_send_beacon_req() returned an error %d, size %d",
+		       status, size);
 	pMac->sch.schObject.fBeaconChanged = 0;
 
 	return status;
@@ -955,7 +984,6 @@ void sch_generate_tim(tpAniSirGlobal pMac, uint8_t **pPtr, uint16_t *timLength,
 	uint32_t val = 0;
 	uint32_t minAid = 1;    /* Always start with AID 1 as minimum */
 	uint32_t maxAid = HAL_NUM_STA;
-
 	/* Generate partial virtual bitmap */
 	uint8_t N1 = minAid / 8;
 	uint8_t N2 = maxAid / 8;
@@ -985,7 +1013,8 @@ void sch_generate_tim(tpAniSirGlobal pMac, uint8_t **pPtr, uint16_t *timLength,
 	*pPtr = ptr;
 }
 
-QDF_STATUS sch_process_pre_beacon_ind(tpAniSirGlobal pMac, tpSirMsgQ limMsg,
+QDF_STATUS sch_process_pre_beacon_ind(tpAniSirGlobal pMac,
+				      struct scheduler_msg *limMsg,
 				      enum sir_bcn_update_reason reason)
 {
 	tpBeaconGenParams pMsg = (tpBeaconGenParams) limMsg->bodyptr;
@@ -1004,8 +1033,8 @@ QDF_STATUS sch_process_pre_beacon_ind(tpAniSirGlobal pMac, tpSirMsgQ limMsg,
 
 	/* If SME is not in normal mode, no need to generate beacon */
 	if (psessionEntry->limSmeState != eLIM_SME_NORMAL_STATE) {
-		pe_err("PreBeaconInd received in invalid state: %d",
-		       psessionEntry->limSmeState);
+		pe_debug("PreBeaconInd received in invalid state: %d",
+			 psessionEntry->limSmeState);
 		goto end;
 	}
 

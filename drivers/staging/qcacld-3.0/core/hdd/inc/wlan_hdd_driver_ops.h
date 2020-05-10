@@ -21,6 +21,8 @@
 
 #include "hif.h"
 
+struct hdd_context;
+
 /**
  * DOC: wlan_hdd_driver_ops.h
  *
@@ -51,14 +53,13 @@ void wlan_hdd_unregister_driver(void);
 
 /**
  * wlan_hdd_bus_suspend() - suspend the wlan bus
- * @state: power management state
  *
  * This function is called by the platform driver to suspend the
  * wlan bus
  *
  * Return: 0 on success, negative errno on error
  */
-int wlan_hdd_bus_suspend(pm_message_t state);
+int wlan_hdd_bus_suspend(void);
 
 /**
  * wlan_hdd_bus_suspend_noirq() - handle .suspend_noirq callback
@@ -95,11 +96,12 @@ int wlan_hdd_bus_resume_noirq(void);
 
 /**
  * hdd_hif_close() - HIF close helper
+ * @hdd_ctx: HDD context
  * @hif_ctx: HIF context
  *
  * Helper function to close HIF
  */
-void hdd_hif_close(void *hif_ctx);
+void hdd_hif_close(struct hdd_context *hdd_ctx, void *hif_ctx);
 
 /**
  * hdd_hif_open() - HIF open helper

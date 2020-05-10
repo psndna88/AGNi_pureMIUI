@@ -284,10 +284,18 @@ QDF_STATUS hif_dev_alloc_and_prepare_rx_packets(struct hif_sdio_device *pdev,
 	/* for NO RESOURCE error, no need to flush data queue */
 	if (QDF_IS_STATUS_ERROR(status)
 		&& (status != QDF_STATUS_E_RESOURCES)) {
-		while (!HTC_QUEUE_EMPTY(queue))
+		while (!HTC_QUEUE_EMPTY(queue)) {
+			qdf_nbuf_t netbuf;
 			packet = htc_packet_dequeue(queue);
+			if (packet == NULL)
+				break;
+			netbuf = (qdf_nbuf_t) packet->pNetBufContext;
+			if (netbuf)
+				qdf_nbuf_free(netbuf);
+		}
 	}
-
+	if (status == QDF_STATUS_E_RESOURCES)
+		status = QDF_STATUS_SUCCESS;
 	return status;
 }
 
@@ -733,8 +741,8 @@ static QDF_STATUS hif_dev_issue_recv_packet_bundle(struct hif_sdio_device *pdev,
 		if (!packet) {
 			break;
 		}
-		padded_length = DEV_CALC_RECV_PADDED_LEN(pdev,
-						packet->ActualLength);
+		padded_length =
+			DEV_CALC_RECV_PADDED_LEN(pdev, packet->ActualLength);
 		if (packet->PktInfo.AsRx.HTCRxFlags &
 				HTC_RX_PKT_LAST_BUNDLED_PKT_HAS_ADDTIONAL_BLOCK)
 			padded_length += HIF_MBOX_BLOCK_SIZE;
@@ -782,7 +790,7 @@ static QDF_STATUS hif_dev_issue_recv_packet_bundle(struct hif_sdio_device *pdev,
 				sync_completion_queue, packet) {
 				padded_length =
 					DEV_CALC_RECV_PADDED_LEN(pdev,
-						 packet->ActualLength);
+						packet->ActualLength);
 				if (packet->PktInfo.AsRx.HTCRxFlags &
 				HTC_RX_PKT_LAST_BUNDLED_PKT_HAS_ADDTIONAL_BLOCK)
 					padded_length +=
@@ -958,8 +966,20 @@ QDF_STATUS hif_dev_recv_message_pending_handler(struct hif_sdio_device *pdev,
 					hif_dev_recv_packet(pdev, packet,
 						    packet->ActualLength,
 						    mail_box_index);
-				if (QDF_IS_STATUS_ERROR(status))
+				if (QDF_IS_STATUS_ERROR(status)) {
+					while (!HTC_QUEUE_EMPTY(&recv_pkt_queue)) {
+						qdf_nbuf_t netbuf;
+						packet =
+						htc_packet_dequeue(&recv_pkt_queue);
+						if (packet == NULL)
+							break;
+						netbuf =
+						(qdf_nbuf_t) packet->pNetBufContext;
+						if (netbuf)
+							qdf_nbuf_free(netbuf);
+					}
 					break;
+				}
 				/* sent synchronously, queue this packet for
 				 * synchronous completion
 				 */

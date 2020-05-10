@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018, 2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -45,9 +45,11 @@
 #include "lim_send_messages.h"
 #include "rrm_api.h"
 #include "lim_session_utils.h"
-#include "cds_concurrency.h"
+#include "wlan_policy_mgr_api.h"
 #include "wma_types.h"
 #include "wma.h"
+#include <cdp_txrx_cmn.h>
+#include <cdp_txrx_peer_ops.h>
 #include "dot11f.h"
 
 #define BA_DEFAULT_TX_BUFFER_SIZE 64
@@ -79,12 +81,9 @@ void lim_stop_tx_and_switch_channel(tpAniSirGlobal pMac, uint8_t sessionId)
 	}
 
 	if (psessionEntry->ftPEContext.pFTPreAuthReq) {
-		pe_err("Avoid Switch Channel req during pre auth");
+		pe_debug("Avoid Switch Channel req during pre auth");
 		return;
 	}
-
-	pe_debug("Channel switch Mode: %d",
-		       psessionEntry->gLimChannelSwitch.switchMode);
 
 	if (psessionEntry->gLimChannelSwitch.switchMode ==
 	    eSIR_CHANSW_MODE_SILENT
@@ -92,14 +91,13 @@ void lim_stop_tx_and_switch_channel(tpAniSirGlobal pMac, uint8_t sessionId)
 	    SIR_CHANSW_TX_STOP_MAX_COUNT) {
 		/* Freeze the transmission */
 		lim_frame_transmission_control(pMac, eLIM_TX_ALL, eLIM_STOP_TX);
-
 	} else {
 		/* Resume the transmission */
 		lim_frame_transmission_control(pMac, eLIM_TX_ALL, eLIM_RESUME_TX);
 	}
 
 	pMac->lim.limTimers.gLimChannelSwitchTimer.sessionId = sessionId;
-	/* change the channel immediatly only if
+	/* change the channel immediately only if
 	 * the channel switch count is 0
 	 */
 	if (psessionEntry->gLimChannelSwitch.switchCount == 0) {
@@ -127,7 +125,7 @@ void lim_stop_tx_and_switch_channel(tpAniSirGlobal pMac, uint8_t sessionId)
    \param  psessionEntry
    \return NONE
    ------------------------------------------------------------*/
-tSirRetStatus lim_start_channel_switch(tpAniSirGlobal pMac,
+QDF_STATUS lim_start_channel_switch(tpAniSirGlobal pMac,
 				       tpPESession psessionEntry)
 {
 	pe_debug("Starting the channel switch");
@@ -139,7 +137,7 @@ tSirRetStatus lim_start_channel_switch(tpAniSirGlobal pMac,
 	     eLIM_11H_CHANSW_RUNNING) || psessionEntry->csaOffloadEnable) {
 		pe_warn("Ignoring channel switch on session: %d",
 			psessionEntry->peSessionId);
-		return eSIR_SUCCESS;
+		return QDF_STATUS_SUCCESS;
 	}
 
 	/* Deactivate and change reconfigure the timeout value */
@@ -148,16 +146,16 @@ tSirRetStatus lim_start_channel_switch(tpAniSirGlobal pMac,
 		       (pMac, TRACE_CODE_TIMER_DEACTIVATE, psessionEntry->peSessionId,
 		       eLIM_CHANNEL_SWITCH_TIMER));
 	if (tx_timer_deactivate(&pMac->lim.limTimers.gLimChannelSwitchTimer) !=
-	    eSIR_SUCCESS) {
+	    QDF_STATUS_SUCCESS) {
 		pe_err("tx_timer_deactivate failed!");
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	if (tx_timer_change(&pMac->lim.limTimers.gLimChannelSwitchTimer,
 			    psessionEntry->gLimChannelSwitch.switchTimeoutValue,
 			    0) != TX_SUCCESS) {
 		pe_err("tx_timer_change failed");
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	/* Follow the channel switch, forget about the previous quiet. */
@@ -170,7 +168,7 @@ tSirRetStatus lim_start_channel_switch(tpAniSirGlobal pMac,
 		if (tx_timer_deactivate(&pMac->lim.limTimers.gLimQuietTimer) !=
 		    TX_SUCCESS) {
 			pe_err("tx_timer_deactivate failed");
-			return eSIR_FAILURE;
+			return QDF_STATUS_E_FAILURE;
 		}
 	} else if (psessionEntry->gLimSpecMgmt.quietState == eLIM_QUIET_RUNNING) {
 		MTRACE(mac_trace
@@ -179,7 +177,7 @@ tSirRetStatus lim_start_channel_switch(tpAniSirGlobal pMac,
 		if (tx_timer_deactivate(&pMac->lim.limTimers.gLimQuietBssTimer)
 		    != TX_SUCCESS) {
 			pe_err("tx_timer_deactivate failed");
-			return eSIR_FAILURE;
+			return QDF_STATUS_E_FAILURE;
 		}
 	}
 	psessionEntry->gLimSpecMgmt.quietState = eLIM_QUIET_INIT;
@@ -190,7 +188,7 @@ tSirRetStatus lim_start_channel_switch(tpAniSirGlobal pMac,
 	/** Dont add any more statements here as we posted finish scan request
 	 * to HAL, wait till we get the response
 	 */
-	return eSIR_SUCCESS;
+	return QDF_STATUS_SUCCESS;
 }
 
 /**
@@ -321,7 +319,7 @@ static void __lim_process_channel_switch_action_frame(tpAniSirGlobal mac_ctx,
 			session->htSupportedChannelWidthSet;
 	}
 
-	if (eSIR_SUCCESS != lim_start_channel_switch(mac_ctx, session))
+	if (QDF_STATUS_SUCCESS != lim_start_channel_switch(mac_ctx, session))
 		pe_err("Could not start channel switch");
 
 	qdf_mem_free(chnl_switch_frame);
@@ -389,18 +387,21 @@ lim_process_ext_channel_switch_action_frame(tpAniSirGlobal mac_ctx,
 	 * and no concurrent session is running.
 	 */
 	if (!((session_entry->currentOperChannel != target_channel) &&
-	 ((cds_get_channel_state(target_channel)
-				== CHANNEL_STATE_ENABLE) ||
-	 (cds_get_channel_state(target_channel) == CHANNEL_STATE_DFS &&
-	 !cds_concurrent_open_sessions_running())))) {
+		((wlan_reg_get_channel_state(mac_ctx->pdev, target_channel) ==
+		  CHANNEL_STATE_ENABLE) ||
+		 (wlan_reg_get_channel_state(mac_ctx->pdev, target_channel) ==
+		  CHANNEL_STATE_DFS &&
+		  !policy_mgr_concurrent_open_sessions_running(
+			  mac_ctx->psoc))))) {
 		pe_err("Channel: %d is not valid", target_channel);
 		return;
 	}
 
-	if (eLIM_AP_ROLE == session_entry->limSystemRole) {
+	if ((eLIM_STA_ROLE == session_entry->limSystemRole) ||
+	    (eLIM_P2P_DEVICE_CLIENT == session_entry->limSystemRole)) {
 
 		struct sir_sme_ext_cng_chan_ind *ext_cng_chan_ind;
-		tSirMsgQ mmh_msg;
+		struct scheduler_msg mmh_msg = {0};
 
 		ext_cng_chan_ind = qdf_mem_malloc(sizeof(*ext_cng_chan_ind));
 		if (NULL == ext_cng_chan_ind) {
@@ -455,6 +456,15 @@ static void __lim_process_operating_mode_action_frame(tpAniSirGlobal mac_ctx,
 	frame_len = WMA_GET_RX_PAYLOAD_LEN(rx_pkt_info);
 
 	pe_debug("Received Operating Mode action frame");
+
+	/*
+	 * Ignore opmode change during channel change The opmode will be updated
+	 * with the beacons on new channel once the AP move to new channel.
+	 */
+	if (session->ch_switch_in_progress) {
+		pe_debug("Ignore opmode change as channel switch is in progress");
+		return;
+	}
 	operating_mode_frm = qdf_mem_malloc(sizeof(*operating_mode_frm));
 	if (NULL == operating_mode_frm) {
 		pe_err("AllocateMemory failed");
@@ -550,9 +560,8 @@ static void __lim_process_operating_mode_action_frame(tpAniSirGlobal mac_ctx,
 				eHT_CHANNEL_WIDTH_20MHZ;
 			ch_bw = eHT_CHANNEL_WIDTH_20MHZ;
 		}
-
 		lim_check_vht_op_mode_change(mac_ctx, session, ch_bw,
-			session->dot11mode, sta_ptr->staIndex, mac_hdr->sa);
+					     sta_ptr->staIndex, mac_hdr->sa);
 	}
 
 update_nss:
@@ -604,7 +613,7 @@ static void __lim_process_gid_management_action_frame(tpAniSirGlobal mac_ctx,
 		return;
 	}
 
-	/* Unpack Gid Mangement Action frame */
+	/* Unpack Gid Management Action frame */
 	status = dot11f_unpack_vht_gid_management_action_frame(mac_ctx,
 			body_ptr, frame_len, gid_mgmt_frame, false);
 	if (DOT11F_FAILED(status)) {
@@ -687,7 +696,7 @@ static void __lim_process_add_ts_rsp(tpAniSirGlobal mac_ctx,
 		uint8_t *rx_pkt_info, tpPESession session)
 {
 	tSirAddtsRspInfo addts;
-	tSirRetStatus retval;
+	QDF_STATUS retval;
 	tpSirMacMgmtHdr mac_hdr;
 	tpDphHashNode sta_ptr;
 	uint16_t aid;
@@ -719,7 +728,7 @@ static void __lim_process_add_ts_rsp(tpAniSirGlobal mac_ctx,
 
 	retval = sir_convert_addts_rsp2_struct(mac_ctx, body_ptr,
 			frameLen, &addts);
-	if (retval != eSIR_SUCCESS) {
+	if (retval != QDF_STATUS_SUCCESS) {
 		pe_err("AddTsRsp parsing failed %d", retval);
 		return;
 	}
@@ -741,7 +750,7 @@ static void __lim_process_add_ts_rsp(tpAniSirGlobal mac_ctx,
 	}
 
 	/*
-	 * for successful addts reponse, try to add the classifier.
+	 * for successful addts response, try to add the classifier.
 	 * if this fails for any reason, we should send a delts request to the
 	 * ap for now, its ok not to send a delts since we are going to add
 	 * support for multiple tclas soon and until then we won't send any
@@ -843,14 +852,14 @@ static void __lim_process_add_ts_rsp(tpAniSirGlobal mac_ctx,
 				   &session->dph.dphHashTable);
 	if (sta_ds_ptr != NULL)
 		lim_send_edca_params(mac_ctx, session->gLimEdcaParamsActive,
-				     sta_ds_ptr->bssId);
+				     sta_ds_ptr->bssId, false);
 	else
 		pe_err("Self entry missing in Hash Table");
 	sir_copy_mac_addr(peer_macaddr, session->bssId);
 	/* if schedule is not present then add TSPEC with svcInterval as 0. */
 	if (!addts.schedulePresent)
 		addts.schedule.svcInterval = 0;
-	if (eSIR_SUCCESS !=
+	if (QDF_STATUS_SUCCESS !=
 	    lim_tspec_add(mac_ctx, sta_ptr->staAddr, sta_ptr->assocId,
 		&addts.tspec, addts.schedule.svcInterval, &tspec_info)) {
 		pe_err("Adding entry in lim Tspec Table failed");
@@ -877,7 +886,7 @@ static void __lim_process_add_ts_rsp(tpAniSirGlobal mac_ctx,
 				sta_ptr->staIndex, tspec_info->idx,
 				addts.tspec, session->peSessionId);
 #endif
-		if (eSIR_SUCCESS != retval) {
+		if (QDF_STATUS_SUCCESS != retval) {
 			lim_admit_control_delete_ts(mac_ctx, sta_ptr->assocId,
 				&addts.tspec.tsinfo, NULL, &tspec_info->idx);
 
@@ -927,7 +936,7 @@ static void __lim_process_add_ts_rsp(tpAniSirGlobal mac_ctx,
 static void __lim_process_del_ts_req(tpAniSirGlobal mac_ctx,
 		uint8_t *rx_pkt_info, tpPESession session)
 {
-	tSirRetStatus retval;
+	QDF_STATUS retval;
 	tSirDeltsReqInfo delts;
 	tpSirMacMgmtHdr mac_hdr;
 	tpDphHashNode sta_ptr;
@@ -953,7 +962,7 @@ static void __lim_process_del_ts_req(tpAniSirGlobal mac_ctx,
 	/* parse the delts request */
 	retval = sir_convert_delts_req2_struct(mac_ctx, body_ptr,
 			frame_len, &delts);
-	if (retval != eSIR_SUCCESS) {
+	if (retval != QDF_STATUS_SUCCESS) {
 		pe_err("DelTs parsing failed %d", retval);
 		return;
 	}
@@ -988,7 +997,7 @@ static void __lim_process_del_ts_req(tpAniSirGlobal mac_ctx,
 		lim_send_sme_delts_ind(mac_ctx, &delts, aid, session);
 
 	/* try to delete the TS */
-	if (eSIR_SUCCESS !=
+	if (QDF_STATUS_SUCCESS !=
 	    lim_admit_control_delete_ts(mac_ctx, sta_ptr->assocId, tsinfo,
 				&ts_status, &tspec_idx)) {
 		pe_warn("Unable to Delete TS");
@@ -997,7 +1006,7 @@ static void __lim_process_del_ts_req(tpAniSirGlobal mac_ctx,
 			|| (tsinfo->traffic.accessPolicy ==
 					SIR_MAC_ACCESSPOLICY_BOTH))){
 		/* send message to HAL to delete TS */
-		if (eSIR_SUCCESS != lim_send_hal_msg_del_ts(mac_ctx,
+		if (QDF_STATUS_SUCCESS != lim_send_hal_msg_del_ts(mac_ctx,
 						sta_ptr->staIndex, tspec_idx,
 						delts, session->peSessionId,
 						session->bssId)) {
@@ -1049,7 +1058,7 @@ static void __lim_process_del_ts_req(tpAniSirGlobal mac_ctx,
 				   &session->dph.dphHashTable);
 	if (sta_ds_ptr != NULL)
 		lim_send_edca_params(mac_ctx, session->gLimEdcaParamsActive,
-				     sta_ds_ptr->bssId);
+				     sta_ds_ptr->bssId, false);
 	else
 		pe_err("Self entry missing in Hash Table");
 
@@ -1075,14 +1084,14 @@ static void __lim_process_qos_map_configure_frame(tpAniSirGlobal mac_ctx,
 	tpSirMacMgmtHdr mac_hdr;
 	uint32_t frame_len;
 	uint8_t *body_ptr;
-	tSirRetStatus retval;
+	QDF_STATUS retval;
 
 	mac_hdr = WMA_GET_RX_MAC_HEADER(rx_pkt_info);
 	body_ptr = WMA_GET_RX_MPDU_DATA(rx_pkt_info);
 	frame_len = WMA_GET_RX_PAYLOAD_LEN(rx_pkt_info);
 	retval = sir_convert_qos_map_configure_frame2_struct(mac_ctx,
 				body_ptr, frame_len, &session->QosMapSet);
-	if (retval != eSIR_SUCCESS) {
+	if (retval != QDF_STATUS_SUCCESS) {
 		pe_err("QosMapConfigure frame parsing fail %d", retval);
 		return;
 	}
@@ -1101,7 +1110,7 @@ __lim_process_basic_meas_req(tpAniSirGlobal pMac,
 {
 	if (lim_send_meas_report_frame(pMac, pMeasReqFrame,
 				       peerMacAddr, psessionEntry) !=
-					 eSIR_SUCCESS) {
+					 QDF_STATUS_SUCCESS) {
 		pe_err("fail to send Basic Meas report");
 		return;
 	}
@@ -1113,7 +1122,7 @@ __lim_process_cca_meas_req(tpAniSirGlobal pMac,
 {
 	if (lim_send_meas_report_frame(pMac, pMeasReqFrame,
 				       peerMacAddr, psessionEntry) !=
-					 eSIR_SUCCESS) {
+					 QDF_STATUS_SUCCESS) {
 		pe_err("fail to send CCA Meas report");
 		return;
 	}
@@ -1125,7 +1134,7 @@ __lim_process_rpi_meas_req(tpAniSirGlobal pMac,
 {
 	if (lim_send_meas_report_frame(pMac, pMeasReqFrame,
 				       peerMacAddr, psessionEntry) !=
-					 eSIR_SUCCESS) {
+					 QDF_STATUS_SUCCESS) {
 		pe_err("fail to send RPI Meas report");
 		return;
 	}
@@ -1151,7 +1160,7 @@ __lim_process_measurement_request_frame(tpAniSirGlobal pMac,
 	}
 
 	if (sir_convert_meas_req_frame2_struct(pMac, pBody, pMeasReqFrame, frameLen)
-	    != eSIR_SUCCESS) {
+	    != QDF_STATUS_SUCCESS) {
 		pe_warn("Rcv invalid Measurement Request Action Frame");
 		return;
 	}
@@ -1194,13 +1203,13 @@ __lim_process_tpc_request_frame(tpAniSirGlobal pMac, uint8_t *pRxPacketInfo,
 		return;
 	}
 	if (sir_convert_tpc_req_frame2_struct(pMac, pBody, pTpcReqFrame, frameLen) !=
-	    eSIR_SUCCESS) {
+	    QDF_STATUS_SUCCESS) {
 		pe_warn("Rcv invalid TPC Req Action Frame");
 		return;
 	}
 	if (lim_send_tpc_report_frame(pMac,
 				      pTpcReqFrame,
-				      pHdr->sa, psessionEntry) != eSIR_SUCCESS) {
+				      pHdr->sa, psessionEntry) != QDF_STATUS_SUCCESS) {
 		pe_err("fail to send TPC Report Frame");
 		return;
 	}
@@ -1248,8 +1257,8 @@ __lim_process_sm_power_save_update(tpAniSirGlobal pMac, uint8_t *pRxPacketInfo,
 			nStatus, frameLen);
 	}
 
-	pe_debug("Received SM Power save Mode update Frame with PS_Enable: %d PS Mode: %d",
-		frmSMPower.SMPowerModeSet.PowerSave_En,
+	pe_debug("Received SM Power save Mode update Frame with PS_Enable: %d"
+		   "PS Mode: %d", frmSMPower.SMPowerModeSet.PowerSave_En,
 		frmSMPower.SMPowerModeSet.Mode);
 
 	/** Update in the DPH Table about the Update in the SM Power Save mode*/
@@ -1330,8 +1339,8 @@ __lim_process_radio_measure_request(tpAniSirGlobal pMac, uint8_t *pRxPacketInfo,
 				   pBody, frameLen);
 		    goto err;
 	} else if (DOT11F_WARNED(nStatus)) {
-		pe_debug("There were warnings while unpacking a Radio Measure request (0x%08x, %d bytes):",
-			nStatus, frameLen);
+		pe_debug("Warnings while unpacking a Radio Measure request (0x%08x, %d bytes):",
+			 nStatus, frameLen);
 	}
 	/* Call rrm function to handle the request. */
 
@@ -1341,7 +1350,7 @@ err:
 	qdf_mem_free(frm);
 }
 
-static tSirRetStatus
+static QDF_STATUS
 __lim_process_link_measurement_req(tpAniSirGlobal pMac, uint8_t *pRxPacketInfo,
 				   tpPESession psessionEntry)
 {
@@ -1355,7 +1364,7 @@ __lim_process_link_measurement_req(tpAniSirGlobal pMac, uint8_t *pRxPacketInfo,
 	frameLen = WMA_GET_RX_PAYLOAD_LEN(pRxPacketInfo);
 
 	if (psessionEntry == NULL) {
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	/**Unpack the received frame */
@@ -1368,7 +1377,7 @@ __lim_process_link_measurement_req(tpAniSirGlobal pMac, uint8_t *pRxPacketInfo,
 			nStatus, frameLen);
 		QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_ERROR,
 				   pBody, frameLen);
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	} else if (DOT11F_WARNED(nStatus)) {
 		pe_debug("There were warnings while unpacking a Link Measure request (0x%08x, %d bytes):",
 			nStatus, frameLen);
@@ -1490,7 +1499,7 @@ static void __lim_process_sa_query_request_action_frame(tpAniSirGlobal pMac,
 	if (lim_send_sa_query_response_frame(pMac,
 					     transId,
 					     pHdr->sa,
-					     psessionEntry) != eSIR_SUCCESS) {
+					     psessionEntry) != QDF_STATUS_SUCCESS) {
 		pe_err("fail to send SA query response action frame");
 		return;
 	}
@@ -1568,7 +1577,7 @@ static void __lim_process_sa_query_response_action_frame(tpAniSirGlobal pMac,
 	if (DPH_SA_QUERY_IN_PROGRESS != pSta->pmfSaQueryState)
 		return;
 
-	/* Extract 11w trsansId from SA query reponse action frame
+	/* Extract 11w trsansId from SA query response action frame
 	   In SA query response action frame:
 	   Category       : 1 byte
 	   Action         : 1 byte
@@ -1595,7 +1604,7 @@ static void __lim_process_sa_query_response_action_frame(tpAniSirGlobal pMac,
  *
  ***FUNCTION:
  * This function checks if an Action frame should be dropped since it is
- * a Robust Managment Frame, it is unprotected, and it is received on a
+ * a Robust Management Frame, it is unprotected, and it is received on a
  * connection where PMF is enabled.
  *
  ***LOGIC:
@@ -1638,54 +1647,162 @@ lim_drop_unprotected_action_frame(tpAniSirGlobal pMac, tpPESession psessionEntry
 }
 #endif
 
-/*
- * lim_process_action_vendor_specific() - Process action frame received
+/**
+ * lim_process_addba_req() - process ADDBA Request
  * @mac_ctx: Pointer to Global MAC structure
- * @pkt_info: A pointer to packet info structure
- * @action_hdr: Pointer to vendor specific action frame hdr
- * @session: PE session entry
+ * @rx_pkt_info: A pointer to packet info structure
+ * @session: PE session pointer
  *
- * Return: none
+ * This routine will be called to process ADDBA request action frame
+ *
+ * Return: None
  */
-static void lim_process_action_vendor_specific(tpAniSirGlobal mac_ctx,
-			uint8_t *pkt_info,
-			tpSirMacVendorSpecificPublicActionFrameHdr action_hdr,
-			tpPESession session)
+static void lim_process_addba_req(tpAniSirGlobal mac_ctx, uint8_t *rx_pkt_info,
+				  tpPESession session)
 {
-	tpSirMacMgmtHdr mac_hdr = NULL;
-	uint32_t frame_len = 0;
-	uint8_t session_id = 0;
-	uint8_t p2p_oui[] = { 0x50, 0x6F, 0x9A, 0x09 };
-	uint8_t dpp_oui[] = { 0x50, 0x6F, 0x9A, 0x1A };
+	tpSirMacMgmtHdr mac_hdr;
+	uint8_t *body_ptr;
+	tDot11faddba_req *addba_req;
+	uint32_t frame_len, status;
+	QDF_STATUS qdf_status;
+	uint8_t peer_id;
+	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
+	void *peer, *pdev;
 
-	mac_hdr = WMA_GET_RX_MAC_HEADER(pkt_info);
-	frame_len = WMA_GET_RX_PAYLOAD_LEN(pkt_info);
-	if (frame_len < sizeof(*action_hdr)) {
-		pe_debug("Received action frame of invalid len %d", frame_len);
+	pdev = cds_get_context(QDF_MODULE_ID_TXRX);
+	if (!pdev) {
+		pe_err("pdev is NULL");
 		return;
 	}
 
-	if (session)
-		session_id = session->smeSessionId;
-	/* Check if it is a P2P or DPP public action frame. */
-	if (!qdf_mem_cmp(action_hdr->Oui, p2p_oui, 4) ||
-	    !qdf_mem_cmp(action_hdr->Oui, dpp_oui, 4)) {
-		/* Forward to the SME to HDD to wpa_supplicant */
-		/* type is ACTION */
-		lim_send_sme_mgmt_frame_ind(mac_ctx, mac_hdr->fc.subType,
-					    (uint8_t *) mac_hdr, frame_len +
-					    sizeof(tSirMacMgmtHdr), session_id,
-					    WMA_GET_RX_CH(pkt_info), session,
-					    WMA_GET_RX_RSSI_NORMALIZED(
-					    pkt_info));
-	} else {
-		pe_debug("Unhandled public action frame (Vendor specific) OUI: %x %x %x %x",
-				action_hdr->Oui[0],
-				action_hdr->Oui[1],
-				action_hdr->Oui[2],
-				action_hdr->Oui[3]);
+	mac_hdr = WMA_GET_RX_MAC_HEADER(rx_pkt_info);
+	body_ptr = WMA_GET_RX_MPDU_DATA(rx_pkt_info);
+	frame_len = WMA_GET_RX_PAYLOAD_LEN(rx_pkt_info);
+
+	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_INFO,
+			   body_ptr, frame_len);
+
+	addba_req = qdf_mem_malloc(sizeof(*addba_req));
+	if (NULL == addba_req) {
+		pe_err("memory allocation failed");
+		return;
 	}
 
+	/* Unpack ADDBA request frame */
+	status = dot11f_unpack_addba_req(mac_ctx, body_ptr, frame_len,
+					 addba_req, false);
+
+	if (DOT11F_FAILED(status)) {
+		pe_err("Failed to unpack and parse (0x%08x, %d bytes)",
+			status, frame_len);
+		goto error;
+	} else if (DOT11F_WARNED(status)) {
+		pe_warn("warning: unpack addba Req(0x%08x, %d bytes)",
+			status, frame_len);
+	}
+
+	peer = cdp_peer_get_ref_by_addr(soc, pdev, mac_hdr->sa, &peer_id,
+					PEER_DEBUG_ID_WMA_ADDBA_REQ);
+	if (!peer) {
+		pe_err("PEER [%pM] not found", mac_hdr->sa);
+		goto error;
+	}
+
+	qdf_status = cdp_addba_requestprocess(soc, peer,
+			addba_req->DialogToken.token,
+			addba_req->addba_param_set.tid,
+			addba_req->ba_timeout.timeout,
+			addba_req->addba_param_set.buff_size,
+			addba_req->ba_start_seq_ctrl.ssn);
+
+	cdp_peer_release_ref(soc, peer, PEER_DEBUG_ID_WMA_ADDBA_REQ);
+
+	if (QDF_STATUS_SUCCESS == qdf_status) {
+		lim_send_addba_response_frame(mac_ctx, mac_hdr->sa,
+			addba_req->addba_param_set.tid, session,
+			addba_req->addba_extn_element.present,
+			addba_req->addba_param_set.amsdu_supp);
+	} else {
+		pe_err("Failed to process addba request");
+	}
+
+error:
+	qdf_mem_free(addba_req);
+	return;
+}
+
+/**
+ * lim_process_delba_req() - process DELBA Request
+ * @mac_ctx: Pointer to Global MAC structure
+ * @rx_pkt_info: A pointer to packet info structure
+ * @session: PE session pointer
+ *
+ * This routine will be called to process ADDBA request action frame
+ *
+ * Return: None
+ */
+static void lim_process_delba_req(tpAniSirGlobal mac_ctx, uint8_t *rx_pkt_info,
+				  tpPESession session)
+{
+	tpSirMacMgmtHdr mac_hdr;
+	uint8_t *body_ptr;
+	tDot11fdelba_req *delba_req;
+	uint32_t frame_len, status;
+	QDF_STATUS qdf_status;
+	uint8_t peer_id;
+	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
+	void *peer, *pdev;
+
+	pdev = cds_get_context(QDF_MODULE_ID_TXRX);
+	if (!pdev) {
+		pe_err("pdev is NULL");
+		return;
+	}
+
+	mac_hdr = WMA_GET_RX_MAC_HEADER(rx_pkt_info);
+	body_ptr = WMA_GET_RX_MPDU_DATA(rx_pkt_info);
+	frame_len = WMA_GET_RX_PAYLOAD_LEN(rx_pkt_info);
+
+	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_INFO,
+			   body_ptr, frame_len);
+
+	delba_req = qdf_mem_malloc(sizeof(*delba_req));
+	if (NULL == delba_req) {
+		pe_err("memory allocation failed");
+		return;
+	}
+
+	/* Unpack DELBA request frame */
+	status = dot11f_unpack_delba_req(mac_ctx, body_ptr, frame_len,
+					 delba_req, false);
+
+	if (DOT11F_FAILED(status)) {
+		pe_err("Failed to unpack and parse (0x%08x, %d bytes)",
+			status, frame_len);
+		goto error;
+	} else if (DOT11F_WARNED(status)) {
+		pe_warn("warning: unpack addba Req(0x%08x, %d bytes)",
+			status, frame_len);
+	}
+
+	peer = cdp_peer_get_ref_by_addr(soc, pdev, mac_hdr->sa, &peer_id,
+					PEER_DEBUG_ID_WMA_DELBA_REQ);
+	if (!peer) {
+		pe_err("PEER [%pM] not found", mac_hdr->sa);
+		goto error;
+	}
+
+	qdf_status = cdp_delba_process(soc, peer,
+			delba_req->delba_param_set.tid, delba_req->Reason.code);
+
+	cdp_peer_release_ref(soc, peer, PEER_DEBUG_ID_WMA_DELBA_REQ);
+
+	if (QDF_STATUS_SUCCESS != qdf_status)
+		pe_err("Failed to process delba request");
+
+error:
+	qdf_mem_free(delba_req);
+	return;
 }
 
 /**
@@ -1712,6 +1829,7 @@ void lim_process_action_frame(tpAniSirGlobal mac_ctx,
 	uint32_t frame_len = WMA_GET_RX_PAYLOAD_LEN(rx_pkt_info);
 	tpSirMacVendorSpecificFrameHdr vendor_specific;
 	uint8_t oui[] = { 0x00, 0x00, 0xf0 };
+	uint8_t dpp_oui[] = { 0x50, 0x6F, 0x9A, 0x1A };
 	tpSirMacVendorSpecificPublicActionFrameHdr pub_action;
 
 	if (frame_len < sizeof(*action_hdr)) {
@@ -1850,6 +1968,16 @@ void lim_process_action_frame(tpAniSirGlobal mac_ctx,
 		case SIR_MAC_WNM_BSS_TM_QUERY:
 		case SIR_MAC_WNM_BSS_TM_REQUEST:
 		case SIR_MAC_WNM_BSS_TM_RESPONSE:
+			if ((mac_ctx->roam.configParam.sta_disable_roam &
+			    LFR3_STA_ROAM_DISABLE_BY_P2P) &&
+			    session && LIM_IS_STA_ROLE(session) &&
+			    (policy_mgr_mode_specific_connection_count(
+				mac_ctx->psoc, PM_P2P_CLIENT_MODE, NULL) ||
+			     policy_mgr_mode_specific_connection_count(
+				mac_ctx->psoc, PM_P2P_GO_MODE, NULL))) {
+				pe_debug("p2p session active drop BTM frame");
+				break;
+			}
 		case SIR_MAC_WNM_NOTIF_REQUEST:
 		case SIR_MAC_WNM_NOTIF_RESPONSE:
 			rssi = WMA_GET_RX_RSSI_NORMALIZED(rx_pkt_info);
@@ -1890,7 +2018,7 @@ void lim_process_action_frame(tpAniSirGlobal mac_ctx,
 				if (__lim_process_link_measurement_req(
 						mac_ctx,
 						(uint8_t *)rx_pkt_info,
-						session) == eSIR_SUCCESS)
+						session) == QDF_STATUS_SUCCESS)
 					lim_update_last_processed_frame(
 							&rrm_link_action_frm,
 							rx_pkt_info);
@@ -1953,7 +2081,11 @@ void lim_process_action_frame(tpAniSirGlobal mac_ctx,
 					WMA_GET_RX_RSSI_NORMALIZED(
 					rx_pkt_info));
 		} else {
-			pe_debug("Dropping the vendor specific action frame beacause of (WES Mode not enabled (WESMODE: %d) or OUI mismatch (%02x %02x %02x) or not received with SelfSta address) system role: %d",
+			pe_debug("Dropping the vendor specific action frame"
+					"beacause of (WES Mode not enabled "
+					"(WESMODE: %d) or OUI mismatch "
+					"(%02x %02x %02x) or not received with"
+					"SelfSta address) system role: %d",
 				IS_WES_MODE_ENABLED(mac_ctx),
 				vendor_specific->Oui[0],
 				vendor_specific->Oui[1],
@@ -1963,46 +2095,54 @@ void lim_process_action_frame(tpAniSirGlobal mac_ctx,
 	break;
 	case SIR_MAC_ACTION_PUBLIC_USAGE:
 		mac_hdr = WMA_GET_RX_MAC_HEADER(rx_pkt_info);
+
 		switch (action_hdr->actionID) {
 		case SIR_MAC_ACTION_EXT_CHANNEL_SWITCH_ID:
 			lim_process_ext_channel_switch_action_frame(mac_ctx,
 							rx_pkt_info, session);
-		break;
+			break;
 		case SIR_MAC_ACTION_VENDOR_SPECIFIC:
 			pub_action =
 				(tpSirMacVendorSpecificPublicActionFrameHdr)
 				action_hdr;
-
-			lim_process_action_vendor_specific(mac_ctx, rx_pkt_info,
-							   pub_action, session);
-		break;
+			if (frame_len < sizeof(*pub_action)) {
+				pe_debug("Received vendor specific public action frame of invalid len %d",
+					 frame_len);
+				return;
+			}
+			/*
+			 * Check if it is a DPP public action frame and fall
+			 * thru, else drop the frame.
+			 */
+			if (qdf_mem_cmp(pub_action->Oui, dpp_oui, 4)) {
+				pe_debug("Unhandled public action frame (Vendor specific) OUI: %x %x %x %x",
+					pub_action->Oui[0], pub_action->Oui[1],
+					pub_action->Oui[2], pub_action->Oui[3]);
+				break;
+			}
+			/* Fall through to send the frame to supplicant */
 		case SIR_MAC_ACTION_VENDOR_SPECIFIC_CATEGORY:
 		case SIR_MAC_ACTION_2040_BSS_COEXISTENCE:
 		case SIR_MAC_ACTION_GAS_INITIAL_REQUEST:
 		case SIR_MAC_ACTION_GAS_INITIAL_RESPONSE:
 		case SIR_MAC_ACTION_GAS_COMEBACK_REQUEST:
 		case SIR_MAC_ACTION_GAS_COMEBACK_RESPONSE:
-#ifdef FEATURE_WLAN_TDLS
-		case SIR_MAC_TDLS_DIS_RSP:
-#endif
 			/*
-			 * Frame forwarded to SME to HDD to supplicant
-			 * type is action
+			 * Forward to the SME to HDD to wpa_supplicant
+			 * type is ACTION
 			 */
-			pe_debug("Public Action Frame %d received",
-				 action_hdr->actionID);
 			lim_send_sme_mgmt_frame_ind(mac_ctx,
-				mac_hdr->fc.subType,
-				(uint8_t *) mac_hdr,
-				frame_len + sizeof(tSirMacMgmtHdr),
-				session->smeSessionId,
-				WMA_GET_RX_CH(rx_pkt_info), session,
-				WMA_GET_RX_RSSI_NORMALIZED(rx_pkt_info));
-		break;
-
+					mac_hdr->fc.subType,
+					(uint8_t *) mac_hdr,
+					frame_len + sizeof(tSirMacMgmtHdr),
+					session->smeSessionId,
+					WMA_GET_RX_CH(rx_pkt_info), session,
+					WMA_GET_RX_RSSI_NORMALIZED(
+					rx_pkt_info));
+			break;
 		default:
-			pe_warn("Unhandled public action frame: %x",
-				action_hdr->actionID);
+			pe_debug("Unhandled public action frame: %d",
+				 action_hdr->actionID);
 			break;
 		}
 		break;
@@ -2083,7 +2223,22 @@ void lim_process_action_frame(tpAniSirGlobal mac_ctx,
 				WMA_GET_RX_CH(rx_pkt_info), session, rssi);
 			break;
 		default:
-			pe_warn("Unhandled - Protected Dual Public Action");
+			pe_debug("Unhandled - Protected Dual Public Action");
+			break;
+		}
+		break;
+	case SIR_MAC_ACTION_BLKACK:
+		pe_debug("Rcvd Block Ack for %pM; action: %d",
+			session->selfMacAddr, action_hdr->actionID);
+		switch (action_hdr->actionID) {
+		case SIR_MAC_ADDBA_REQ:
+			lim_process_addba_req(mac_ctx, rx_pkt_info, session);
+			break;
+		case SIR_MAC_DELBA_REQ:
+			lim_process_delba_req(mac_ctx, rx_pkt_info, session);
+			break;
+		default:
+			pe_err("Unhandle BA action frame");
 			break;
 		}
 		break;
@@ -2113,16 +2268,16 @@ void lim_process_action_frame(tpAniSirGlobal mac_ctx,
  * @param  *pBd - A pointer to Buffer descriptor + associated PDUs
  * @return None
  */
-
 void lim_process_action_frame_no_session(tpAniSirGlobal pMac, uint8_t *pBd)
 {
 	tpSirMacMgmtHdr mac_hdr = WMA_GET_RX_MAC_HEADER(pBd);
 	uint32_t frame_len = WMA_GET_RX_PAYLOAD_LEN(pBd);
 	uint8_t *pBody = WMA_GET_RX_MPDU_DATA(pBd);
+	uint8_t dpp_oui[] = { 0x50, 0x6F, 0x9A, 0x1A };
 	tpSirMacActionFrameHdr action_hdr = (tpSirMacActionFrameHdr) pBody;
 	tpSirMacVendorSpecificPublicActionFrameHdr vendor_specific;
 
-	pe_debug("Received a Action frame -- no session");
+	pe_debug("Received an Action frame -- no session");
 
 	if (frame_len < sizeof(*action_hdr)) {
 		pe_debug("frame_len %d less than action frame header len",
@@ -2137,28 +2292,40 @@ void lim_process_action_frame_no_session(tpAniSirGlobal pMac, uint8_t *pBd)
 			vendor_specific =
 				(tpSirMacVendorSpecificPublicActionFrameHdr)
 				action_hdr;
-			lim_process_action_vendor_specific(pMac, pBd,
-							   vendor_specific,
-							   NULL);
-		break;
+
+			if (frame_len < sizeof(*vendor_specific)) {
+				pe_debug("Received vendor specific public action frame of invalid len %d",
+					 frame_len);
+				return;
+			}
+			/*
+			 * Check if it is a DPP public action frame and fall
+			 * thru, else drop the frame.
+			 */
+			if (qdf_mem_cmp(vendor_specific->Oui, dpp_oui, 4)) {
+				pe_debug("Unhandled public action frame (Vendor specific) OUI: %x %x %x %x",
+					vendor_specific->Oui[0],
+					vendor_specific->Oui[1],
+					vendor_specific->Oui[2],
+					vendor_specific->Oui[3]);
+				break;
+			}
+			/* Fall through to send the frame to supplicant */
 		case SIR_MAC_ACTION_GAS_INITIAL_REQUEST:
 		case SIR_MAC_ACTION_GAS_INITIAL_RESPONSE:
 		case SIR_MAC_ACTION_GAS_COMEBACK_REQUEST:
 		case SIR_MAC_ACTION_GAS_COMEBACK_RESPONSE:
 			/*
-			 * Frame forwarded to SME to HDD to supplicant
-			 * type is action
+			 * Forward the GAS frames to  wpa_supplicant
+			 * type is ACTION
 			 */
-			pe_debug("Public Action Frame %d received",
-				 action_hdr->actionID);
 			lim_send_sme_mgmt_frame_ind(pMac,
-				mac_hdr->fc.subType,
-				(uint8_t *) mac_hdr,
-				frame_len + sizeof(tSirMacMgmtHdr), 0,
-				WMA_GET_RX_CH(pBd), NULL,
-				WMA_GET_RX_RSSI_NORMALIZED(pBd));
-
-		break;
+					mac_hdr->fc.subType,
+					(uint8_t *) mac_hdr,
+					frame_len + sizeof(tSirMacMgmtHdr), 0,
+					WMA_GET_RX_CH(pBd), NULL,
+					WMA_GET_RX_RSSI_NORMALIZED(pBd));
+			break;
 		default:
 			pe_warn("Unhandled public action frame: %x",
 				       action_hdr->actionID);
@@ -2167,7 +2334,8 @@ void lim_process_action_frame_no_session(tpAniSirGlobal pMac, uint8_t *pBd)
 		break;
 	default:
 		pe_warn("Unhandled action frame without session: %x",
-			action_hdr->category);
+			       action_hdr->category);
 		break;
+
 	}
 }

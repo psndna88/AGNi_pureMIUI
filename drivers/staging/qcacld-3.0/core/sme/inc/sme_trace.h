@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, 2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -73,7 +73,6 @@ enum {
 	TRACE_CODE_SME_RX_HDD_GET_RSSI,
 	TRACE_CODE_SME_RX_HDD_GET_CNTRYCODE,
 	TRACE_CODE_SME_RX_HDD_SET_CNTRYCODE,
-	TRACE_CODE_SME_RX_HDD_CHANGE_CNTRYCODE,
 	TRACE_CODE_SME_RX_HDD_SET_CFGPRIVACY,
 	TRACE_CODE_SME_RX_HDD_NEIGHBOR_REPORTREQ,
 	TRACE_CODE_SME_RX_HDD_DBG_READREG,
@@ -131,9 +130,6 @@ enum {
 	TRACE_CODE_SME_RX_HDD_TDLS_DEL_PEER_STA,
 #endif
 	TRACE_CODE_SME_RX_HDD_PREF_NET_LIST,
-#ifdef FEATURE_WLAN_LPHB
-	TRACE_CODE_SME_RX_HDD_LPHB_CONFIG_REQ,
-#endif /* FEATURE_WLAN_LPHB */
 	TRACE_CODE_SME_RX_HDD_ROAM_DEL_PMKIDCACHE,
 	TRACE_CODE_SME_RX_HDD_SEND_MGMT_TX,
 	/*

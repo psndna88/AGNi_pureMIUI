@@ -38,7 +38,7 @@
 #include <ol_txrx_encap.h>      /* OL_TX_ENCAP, etc */
 #include <ol_tx.h>
 #include <ol_cfg.h>
-
+#include <cdp_txrx_handle.h>
 #define INVALID_FLOW_ID 0xFF
 #define MAX_INVALID_BIN 3
 
@@ -119,8 +119,10 @@ void ol_tx_deregister_flow_control(struct ol_txrx_pdev_t *pdev)
 			break;
 		qdf_spin_unlock_bh(&pdev->tx_desc.flow_pool_list_lock);
 		ol_txrx_info("flow pool list is not empty %d!!!\n", i++);
+
 		if (i == 1)
-			ol_tx_dump_flow_pool_info();
+			ol_tx_dump_flow_pool_info((void *)pdev);
+
 		ol_tx_dec_pool_ref(pool, true);
 		qdf_spin_lock_bh(&pdev->tx_desc.flow_pool_list_lock);
 	}
@@ -206,6 +208,8 @@ static int ol_tx_delete_flow_pool(struct ol_tx_flow_pool_t *pool, bool force)
 	}
 	qdf_spin_unlock_bh(&pdev->tx_mutex);
 
+	ol_tx_distribute_descs_to_deficient_pools_from_global_pool();
+
 	return 0;
 }
 
@@ -261,33 +265,58 @@ QDF_STATUS ol_tx_dec_pool_ref(struct ol_tx_flow_pool_t *pool, bool force)
 }
 
 /**
+ * ol_tx_flow_pool_status_to_str() - convert flow pool status to string
+ * @status - flow pool status
+ *
+ * Returns: String corresponding to flow pool status
+ */
+#ifdef WLAN_DEBUG
+static const char *ol_tx_flow_pool_status_to_str
+					(enum flow_pool_status status)
+{
+	switch (status) {
+	CASE_RETURN_STRING(FLOW_POOL_ACTIVE_UNPAUSED);
+	CASE_RETURN_STRING(FLOW_POOL_ACTIVE_PAUSED);
+	CASE_RETURN_STRING(FLOW_POOL_NON_PRIO_PAUSED);
+	CASE_RETURN_STRING(FLOW_POOL_INVALID);
+	CASE_RETURN_STRING(FLOW_POOL_INACTIVE);
+	default:
+		return "unknown";
+	}
+}
+#endif
+
+/**
  * ol_tx_dump_flow_pool_info() - dump global_pool and flow_pool info
+ * @ctx: cdp_soc context, required only in lithium_dp flow control.
+ *	 Remove void * while cleaning up cds_get_context.
  *
  * Return: none
  */
-void ol_tx_dump_flow_pool_info(void)
+void ol_tx_dump_flow_pool_info(void *ctx)
 {
 	struct ol_txrx_pdev_t *pdev = cds_get_context(QDF_MODULE_ID_TXRX);
 	struct ol_tx_flow_pool_t *pool = NULL, *pool_prev = NULL;
 	struct ol_tx_flow_pool_t tmp_pool;
 
 
-	ol_txrx_log(QDF_TRACE_LEVEL_INFO, "Global Pool");
 	if (!pdev) {
 		ol_txrx_err("ERROR: pdev NULL");
 		QDF_ASSERT(0); /* traceback */
 		return;
 	}
-	ol_txrx_log(QDF_TRACE_LEVEL_INFO_LOW, "Total %d :: Available %d",
-		pdev->tx_desc.pool_size, pdev->tx_desc.num_free);
-	ol_txrx_log(QDF_TRACE_LEVEL_INFO_LOW, "Invalid flow_pool %d",
-		pdev->tx_desc.num_invalid_bin);
-	ol_txrx_log(QDF_TRACE_LEVEL_INFO_LOW, "No of pool map received %d",
-		pdev->pool_stats.pool_map_count);
-	ol_txrx_log(QDF_TRACE_LEVEL_INFO_LOW, "No of pool unmap received %d",
-		pdev->pool_stats.pool_unmap_count);
+
 	ol_txrx_log(QDF_TRACE_LEVEL_INFO_LOW,
-		"Pkt dropped due to unavailablity of pool %d",
+		"Global total %d :: avail %d invalid flow_pool %d ",
+		pdev->tx_desc.pool_size,
+		pdev->tx_desc.num_free,
+		pdev->tx_desc.num_invalid_bin);
+
+	ol_txrx_log(QDF_TRACE_LEVEL_INFO_LOW,
+		"maps %d pool unmaps %d pool resize %d pkt drops %d",
+		pdev->pool_stats.pool_map_count,
+		pdev->pool_stats.pool_unmap_count,
+		pdev->pool_stats.pool_resize_count,
 		pdev->pool_stats.pkt_drop_no_pool);
 	/*
 	 * Nested spin lock.
@@ -306,24 +335,22 @@ void ol_tx_dump_flow_pool_info(void)
 		if (pool_prev)
 			ol_tx_dec_pool_ref(pool_prev, false);
 
-		ol_txrx_log(QDF_TRACE_LEVEL_INFO_LOW, "\n");
 		ol_txrx_log(QDF_TRACE_LEVEL_INFO_LOW,
-			"Flow_pool_id %d :: status %d",
-			tmp_pool.flow_pool_id, tmp_pool.status);
-		ol_txrx_info_high(
-			"Total %d :: Available %d :: Deficient %d",
-			tmp_pool.flow_pool_size, tmp_pool.avail_desc,
-			tmp_pool.deficient_desc);
+			"flow_pool_id %d ::", tmp_pool.flow_pool_id);
 		ol_txrx_log(QDF_TRACE_LEVEL_INFO_LOW,
-			"Start threshold %d :: Stop threshold %d",
-			 tmp_pool.start_th, tmp_pool.stop_th);
-		ol_txrx_log(QDF_TRACE_LEVEL_INFO_LOW,
-			"Member flow_id  %d :: flow_type %d",
+			"status %s flow_id %d flow_type %d",
+			ol_tx_flow_pool_status_to_str(tmp_pool.status),
 			tmp_pool.member_flow_id, tmp_pool.flow_type);
 		ol_txrx_log(QDF_TRACE_LEVEL_INFO_LOW,
-			"Pkt dropped due to unavailablity of descriptors %d",
+			"total %d :: available %d :: deficient %d :: overflow %d :: pkt dropped (no desc) %d",
+			tmp_pool.flow_pool_size, tmp_pool.avail_desc,
+			tmp_pool.deficient_desc,
+			tmp_pool.overflow_desc,
 			tmp_pool.pkt_drop_no_desc);
-
+		ol_txrx_log(QDF_TRACE_LEVEL_INFO_LOW,
+			"thresh: start %d stop %d prio start %d prio stop %d",
+			 tmp_pool.start_th, tmp_pool.stop_th,
+			 tmp_pool.start_priority_th, tmp_pool.stop_priority_th);
 		pool_prev = pool;
 		qdf_spin_lock_bh(&pdev->tx_desc.flow_pool_list_lock);
 	}
@@ -412,7 +439,7 @@ static int ol_tx_move_desc_n(struct ol_tx_flow_pool_t *src_pool,
  * Distribute all descriptors of source pool to all
  * deficient pools as per flow_pool_list.
  *
- * Return: 0 for sucess
+ * Return: 0 for success
  */
 static int
 ol_tx_distribute_descs_to_deficient_pools(struct ol_tx_flow_pool_t *src_pool)
@@ -465,7 +492,6 @@ ol_tx_distribute_descs_to_deficient_pools(struct ol_tx_flow_pool_t *src_pool)
 	return 0;
 }
 
-
 /**
  * ol_tx_create_flow_pool() - create flow pool
  * @flow_pool_id: flow pool id
@@ -503,7 +529,14 @@ struct ol_tx_flow_pool_t *ol_tx_create_flow_pool(uint8_t flow_pool_id,
 	pool->status = FLOW_POOL_ACTIVE_UNPAUSED;
 	pool->start_th = (start_threshold * flow_pool_size)/100;
 	pool->stop_th = (stop_threshold * flow_pool_size)/100;
-	pool->stop_priority_th = (TX_STOP_PRIORITY_TH * pool->stop_th)/100;
+	pool->stop_priority_th = (TX_PRIORITY_TH * pool->stop_th)/100;
+	if (pool->stop_priority_th >= MAX_TSO_SEGMENT_DESC)
+		pool->stop_priority_th -= MAX_TSO_SEGMENT_DESC;
+
+	pool->start_priority_th = (TX_PRIORITY_TH * pool->start_th)/100;
+	if (pool->start_priority_th >= MAX_TSO_SEGMENT_DESC)
+			pool->start_priority_th -= MAX_TSO_SEGMENT_DESC;
+
 	qdf_spinlock_create(&pool->flow_pool_lock);
 	qdf_atomic_init(&pool->ref_cnt);
 	ol_tx_inc_pool_ref(pool);
@@ -528,6 +561,8 @@ struct ol_tx_flow_pool_t *ol_tx_create_flow_pool(uint8_t flow_pool_id,
 	pool->freelist = temp_list;
 	pool->avail_desc = size;
 	pool->deficient_desc = pool->flow_pool_size - pool->avail_desc;
+	/* used for resize pool*/
+	pool->overflow_desc = 0;
 
 	/* Add flow_pool to flow_pool_list */
 	qdf_spin_lock_bh(&pdev->tx_desc.flow_pool_list_lock);
@@ -606,7 +641,6 @@ static struct ol_tx_flow_pool_t *ol_tx_get_flow_pool(uint8_t flow_pool_id)
 	return pool;
 }
 
-
 /**
  * ol_tx_flow_pool_vdev_map() - Map flow_pool with vdev
  * @pool: flow_pool
@@ -617,9 +651,9 @@ static struct ol_tx_flow_pool_t *ol_tx_get_flow_pool(uint8_t flow_pool_id)
 static void ol_tx_flow_pool_vdev_map(struct ol_tx_flow_pool_t *pool,
 				     uint8_t vdev_id)
 {
-	ol_txrx_vdev_handle vdev;
+	struct ol_txrx_vdev_t *vdev;
 
-	vdev = ol_txrx_get_vdev_from_vdev_id(vdev_id);
+	vdev = (struct ol_txrx_vdev_t *)ol_txrx_get_vdev_from_vdev_id(vdev_id);
 	if (!vdev) {
 		ol_txrx_err(
 		   "%s: invalid vdev_id %d\n",
@@ -643,13 +677,11 @@ static void ol_tx_flow_pool_vdev_map(struct ol_tx_flow_pool_t *pool,
 static void ol_tx_flow_pool_vdev_unmap(struct ol_tx_flow_pool_t *pool,
 				       uint8_t vdev_id)
 {
-	ol_txrx_vdev_handle vdev;
+	struct ol_txrx_vdev_t *vdev;
 
-	vdev = ol_txrx_get_vdev_from_vdev_id(vdev_id);
+	vdev = (struct ol_txrx_vdev_t *)ol_txrx_get_vdev_from_vdev_id(vdev_id);
 	if (!vdev) {
-		ol_txrx_err(
-		   "%s: invalid vdev_id %d\n",
-		   __func__, vdev_id);
+		ol_txrx_dbg("invalid vdev_id %d", vdev_id);
 		return;
 	}
 
@@ -678,7 +710,6 @@ void ol_tx_flow_pool_map_handler(uint8_t flow_id, uint8_t flow_type,
 	struct ol_tx_flow_pool_t *pool;
 	uint8_t pool_create = 0;
 	enum htt_flow_type type = flow_type;
-
 
 	ol_txrx_dbg(
 		"%s: flow_id %d flow_type %d flow_pool_id %d flow_pool_size %d\n",
@@ -780,4 +811,342 @@ void ol_tx_flow_pool_unmap_handler(uint8_t flow_id, uint8_t flow_type,
 	ol_tx_dec_pool_ref(pool, false);
 }
 
+#ifdef QCA_LL_TX_FLOW_CONTROL_RESIZE
+/**
+ * ol_tx_distribute_descs_to_deficient_pools_from_global_pool()
+ *
+ * Distribute descriptors of global pool to all
+ * deficient pools as per need.
+ *
+ * Return: 0 for success
+ */
+int ol_tx_distribute_descs_to_deficient_pools_from_global_pool(void)
+{
+	struct ol_txrx_pdev_t *pdev = cds_get_context(QDF_MODULE_ID_TXRX);
+	struct ol_tx_flow_pool_t *dst_pool = NULL;
+	struct ol_tx_flow_pool_t *tmp_pool = NULL;
+	uint16_t total_desc_req = 0;
+	uint16_t desc_move_count = 0;
+	uint16_t temp_count = 0, i;
+	union ol_tx_desc_list_elem_t *temp_list = NULL;
+	struct ol_tx_desc_t *tx_desc;
+	uint8_t free_invalid_pool = 0;
 
+	if (!pdev) {
+		ol_txrx_err(
+		   "%s: pdev is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	/* Nested locks: maintain flow_pool_list_lock->flow_pool_lock */
+	/* find out total deficient desc required */
+	qdf_spin_lock_bh(&pdev->tx_desc.flow_pool_list_lock);
+	TAILQ_FOREACH(dst_pool, &pdev->tx_desc.flow_pool_list,
+		      flow_pool_list_elem) {
+		qdf_spin_lock_bh(&dst_pool->flow_pool_lock);
+		total_desc_req += dst_pool->deficient_desc;
+		qdf_spin_unlock_bh(&dst_pool->flow_pool_lock);
+	}
+	qdf_spin_unlock_bh(&pdev->tx_desc.flow_pool_list_lock);
+
+	qdf_spin_lock_bh(&pdev->tx_mutex);
+	desc_move_count = (pdev->tx_desc.num_free >= total_desc_req) ?
+				 total_desc_req : pdev->tx_desc.num_free;
+
+	for (i = 0; i < desc_move_count; i++) {
+		tx_desc = ol_tx_get_desc_global_pool(pdev);
+		((union ol_tx_desc_list_elem_t *)tx_desc)->next = temp_list;
+		temp_list = (union ol_tx_desc_list_elem_t *)tx_desc;
+	}
+	qdf_spin_unlock_bh(&pdev->tx_mutex);
+
+	if (!desc_move_count)
+		return 0;
+
+	/* destribute desc to deficient pool */
+	qdf_spin_lock_bh(&pdev->tx_desc.flow_pool_list_lock);
+	TAILQ_FOREACH(dst_pool, &pdev->tx_desc.flow_pool_list,
+		      flow_pool_list_elem) {
+		qdf_spin_lock_bh(&dst_pool->flow_pool_lock);
+		if (dst_pool->deficient_desc) {
+			temp_count =
+				(dst_pool->deficient_desc > desc_move_count) ?
+				desc_move_count : dst_pool->deficient_desc;
+
+			desc_move_count -= temp_count;
+			for (i = 0; i < temp_count; i++) {
+				tx_desc = &temp_list->tx_desc;
+				temp_list = temp_list->next;
+				ol_tx_put_desc_flow_pool(dst_pool, tx_desc);
+			}
+
+			if (dst_pool->status == FLOW_POOL_ACTIVE_PAUSED) {
+				if (dst_pool->avail_desc > dst_pool->start_th) {
+					pdev->pause_cb(dst_pool->member_flow_id,
+						      WLAN_WAKE_ALL_NETIF_QUEUE,
+						      WLAN_DATA_FLOW_CONTROL);
+					dst_pool->status =
+						FLOW_POOL_ACTIVE_UNPAUSED;
+				}
+			} else if ((dst_pool->status == FLOW_POOL_INVALID) &&
+				   (dst_pool->avail_desc ==
+					 dst_pool->flow_pool_size)) {
+				free_invalid_pool = 1;
+				tmp_pool = dst_pool;
+			}
+		}
+		qdf_spin_unlock_bh(&dst_pool->flow_pool_lock);
+		if (desc_move_count == 0)
+			break;
+	}
+	qdf_spin_unlock_bh(&pdev->tx_desc.flow_pool_list_lock);
+
+	if (free_invalid_pool && tmp_pool)
+		ol_tx_free_invalid_flow_pool(tmp_pool);
+
+	return 0;
+}
+
+/**
+ * ol_tx_flow_pool_update_queue_state() - update network queue for pool based on
+ *                                        new available count.
+ * @pool : pool handle
+ *
+ * Return : none
+ */
+static void ol_tx_flow_pool_update_queue_state(struct ol_txrx_pdev_t *pdev,
+					       struct ol_tx_flow_pool_t *pool)
+{
+	qdf_spin_lock_bh(&pool->flow_pool_lock);
+	if (pool->avail_desc > pool->start_th) {
+		pool->status = FLOW_POOL_ACTIVE_UNPAUSED;
+		qdf_spin_unlock_bh(&pool->flow_pool_lock);
+		pdev->pause_cb(pool->member_flow_id,
+			       WLAN_WAKE_ALL_NETIF_QUEUE,
+			       WLAN_DATA_FLOW_CONTROL);
+	} else if (pool->avail_desc < pool->stop_th &&
+		   pool->avail_desc >= pool->stop_priority_th) {
+		pool->status = FLOW_POOL_NON_PRIO_PAUSED;
+		qdf_spin_unlock_bh(&pool->flow_pool_lock);
+		pdev->pause_cb(pool->member_flow_id,
+			       WLAN_STOP_NON_PRIORITY_QUEUE,
+			       WLAN_DATA_FLOW_CONTROL);
+		pdev->pause_cb(pool->member_flow_id,
+			       WLAN_NETIF_PRIORITY_QUEUE_ON,
+			       WLAN_DATA_FLOW_CONTROL);
+	} else if (pool->avail_desc < pool->stop_priority_th) {
+		pool->status = FLOW_POOL_ACTIVE_PAUSED;
+		qdf_spin_unlock_bh(&pool->flow_pool_lock);
+		pdev->pause_cb(pool->member_flow_id,
+			       WLAN_STOP_ALL_NETIF_QUEUE,
+			       WLAN_DATA_FLOW_CONTROL);
+	} else {
+		qdf_spin_unlock_bh(&pool->flow_pool_lock);
+	}
+}
+
+/**
+ * ol_tx_flow_pool_update() - update pool parameters with new size
+ * @pool : pool handle
+ * @new_pool_size : new pool size
+ * @deficient_count : deficient count
+ * @overflow_count : overflow count
+ *
+ * Return : none
+ */
+static void ol_tx_flow_pool_update(struct ol_tx_flow_pool_t *pool,
+				   uint16_t new_pool_size,
+				   uint16_t deficient_count,
+				   uint16_t overflow_count)
+{
+	struct ol_txrx_pdev_t *pdev = cds_get_context(QDF_MODULE_ID_TXRX);
+	uint32_t stop_threshold =
+			 ol_cfg_get_tx_flow_stop_queue_th(pdev->ctrl_pdev);
+	uint32_t start_threshold = stop_threshold +
+			ol_cfg_get_tx_flow_start_queue_offset(pdev->ctrl_pdev);
+
+	pool->flow_pool_size = new_pool_size;
+	pool->start_th = (start_threshold * new_pool_size) / 100;
+	pool->stop_th = (stop_threshold * new_pool_size) / 100;
+	pool->stop_priority_th = (TX_PRIORITY_TH * pool->stop_th) / 100;
+	if (pool->stop_priority_th >= MAX_TSO_SEGMENT_DESC)
+		pool->stop_priority_th -= MAX_TSO_SEGMENT_DESC;
+
+	pool->start_priority_th = (TX_PRIORITY_TH * pool->start_th) / 100;
+	if (pool->start_priority_th >= MAX_TSO_SEGMENT_DESC)
+		pool->start_priority_th -= MAX_TSO_SEGMENT_DESC;
+
+	if (deficient_count)
+		pool->deficient_desc = deficient_count;
+
+	if (overflow_count)
+		pool->overflow_desc = overflow_count;
+}
+
+/**
+ * ol_tx_flow_pool_resize() - resize pool with new size
+ * @pool: pool pointer
+ * @new_pool_size: new pool size
+ *
+ * Return: none
+ */
+static void ol_tx_flow_pool_resize(struct ol_tx_flow_pool_t *pool,
+				   uint16_t new_pool_size)
+{
+	struct ol_txrx_pdev_t *pdev = cds_get_context(QDF_MODULE_ID_TXRX);
+	uint16_t diff = 0, overflow_count = 0, deficient_count = 0;
+	uint16_t move_desc_to_global = 0, move_desc_from_global = 0;
+	union ol_tx_desc_list_elem_t *temp_list = NULL;
+	int i = 0, update_done = 0;
+	struct ol_tx_desc_t *tx_desc = NULL;
+	uint16_t temp = 0;
+
+	qdf_spin_lock_bh(&pool->flow_pool_lock);
+	if (pool->flow_pool_size == new_pool_size) {
+		qdf_spin_unlock_bh(&pool->flow_pool_lock);
+		ol_txrx_info("pool resize received with same size");
+		return;
+	}
+	qdf_spin_unlock_bh(&pool->flow_pool_lock);
+
+	/* Reduce pool size */
+	/* start_priority_th desc should available after reduction */
+	qdf_spin_lock_bh(&pool->flow_pool_lock);
+	if (pool->flow_pool_size > new_pool_size) {
+		diff = pool->flow_pool_size - new_pool_size;
+		diff += pool->overflow_desc;
+		pool->overflow_desc = 0;
+		temp = QDF_MIN(pool->deficient_desc, diff);
+		pool->deficient_desc -= temp;
+		diff -= temp;
+
+		if (diff) {
+			/* Have enough descriptors */
+			if (pool->avail_desc >=
+				 (diff + pool->start_priority_th)) {
+				move_desc_to_global = diff;
+			}
+			/* Do not have enough descriptors */
+			else if (pool->avail_desc > pool->start_priority_th) {
+				move_desc_to_global = pool->avail_desc -
+						 pool->start_priority_th;
+				overflow_count = diff - move_desc_to_global;
+			}
+
+			/* Move desc to temp_list */
+			for (i = 0; i < move_desc_to_global; i++) {
+				tx_desc = ol_tx_get_desc_flow_pool(pool);
+				((union ol_tx_desc_list_elem_t *)tx_desc)->next
+								 = temp_list;
+				temp_list =
+				  (union ol_tx_desc_list_elem_t *)tx_desc;
+			}
+		}
+
+		/* update pool size and threshold */
+		ol_tx_flow_pool_update(pool, new_pool_size, 0, overflow_count);
+		update_done = 1;
+	}
+	qdf_spin_unlock_bh(&pool->flow_pool_lock);
+
+	if (move_desc_to_global && temp_list) {
+		/* put free descriptors to global pool */
+		qdf_spin_lock_bh(&pdev->tx_mutex);
+		for (i = 0; i < move_desc_to_global; i++) {
+			tx_desc = &temp_list->tx_desc;
+			temp_list = temp_list->next;
+			ol_tx_put_desc_global_pool(pdev, tx_desc);
+		}
+		qdf_spin_unlock_bh(&pdev->tx_mutex);
+	}
+
+	if (update_done)
+		goto update_done;
+
+	/* Increase pool size */
+	qdf_spin_lock_bh(&pool->flow_pool_lock);
+	if (pool->flow_pool_size < new_pool_size) {
+		diff = new_pool_size - pool->flow_pool_size;
+		diff += pool->deficient_desc;
+		pool->deficient_desc = 0;
+		temp = QDF_MIN(pool->overflow_desc, diff);
+		pool->overflow_desc -= temp;
+		diff -= temp;
+	}
+	qdf_spin_unlock_bh(&pool->flow_pool_lock);
+
+	if (diff) {
+		/* take descriptors from global pool */
+		qdf_spin_lock_bh(&pdev->tx_mutex);
+
+		if (pdev->tx_desc.num_free >= diff) {
+			move_desc_from_global = diff;
+		} else {
+			move_desc_from_global = pdev->tx_desc.num_free;
+			deficient_count = diff - move_desc_from_global;
+		}
+
+		for (i = 0; i < move_desc_from_global; i++) {
+			tx_desc = ol_tx_get_desc_global_pool(pdev);
+			((union ol_tx_desc_list_elem_t *)tx_desc)->next =
+								 temp_list;
+			temp_list = (union ol_tx_desc_list_elem_t *)tx_desc;
+		}
+		qdf_spin_unlock_bh(&pdev->tx_mutex);
+	}
+	/* update desc to pool */
+	qdf_spin_lock_bh(&pool->flow_pool_lock);
+	if (move_desc_from_global && temp_list) {
+		for (i = 0; i < move_desc_from_global; i++) {
+			tx_desc = &temp_list->tx_desc;
+			temp_list = temp_list->next;
+			ol_tx_put_desc_flow_pool(pool, tx_desc);
+		}
+	}
+	/* update pool size and threshold */
+	ol_tx_flow_pool_update(pool, new_pool_size, deficient_count, 0);
+	qdf_spin_unlock_bh(&pool->flow_pool_lock);
+
+update_done:
+
+	ol_tx_flow_pool_update_queue_state(pdev, pool);
+}
+
+/**
+ * ol_tx_flow_pool_resize_handler() - Resize pool with new size
+ * @flow_pool_id: pool id
+ * @flow_pool_size: pool size
+ *
+ * Process below target to host message
+ * HTT_T2H_MSG_TYPE_FLOW_POOL_RESIZE
+ *
+ * Return: none
+ */
+void ol_tx_flow_pool_resize_handler(uint8_t flow_pool_id,
+				    uint16_t flow_pool_size)
+{
+	struct ol_txrx_pdev_t *pdev = cds_get_context(QDF_MODULE_ID_TXRX);
+	struct ol_tx_flow_pool_t *pool;
+
+	ol_txrx_dbg("%s: flow_pool_id %d flow_pool_size %d\n",
+		    __func__, flow_pool_id, flow_pool_size);
+
+	if (qdf_unlikely(!pdev)) {
+		ol_txrx_err(
+			"%s: pdev is NULL", __func__);
+		return;
+	}
+	pdev->pool_stats.pool_resize_count++;
+
+	pool = ol_tx_get_flow_pool(flow_pool_id);
+	if (!pool) {
+		ol_txrx_err("%s: resize for flow_pool %d size %d failed\n",
+			    __func__, flow_pool_id, flow_pool_size);
+		return;
+	}
+
+	ol_tx_inc_pool_ref(pool);
+	ol_tx_flow_pool_resize(pool, flow_pool_size);
+	ol_tx_dec_pool_ref(pool, false);
+}
+#endif

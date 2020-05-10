@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -24,6 +24,7 @@
 #include "hif_debug.h"
 
 struct hif_softc;
+struct hif_exec_context;
 
 struct hif_bus_ops {
 	QDF_STATUS (*hif_bus_open)(struct hif_softc *hif_sc,
@@ -57,6 +58,8 @@ struct hif_bus_ops {
 	void (*hif_cancel_deferred_target_sleep)(struct hif_softc *hif_sc);
 	void (*hif_irq_disable)(struct hif_softc *hif_sc, int ce_id);
 	void (*hif_irq_enable)(struct hif_softc *hif_sc, int ce_id);
+	int (*hif_grp_irq_configure)(struct hif_softc *hif_sc,
+				     struct hif_exec_context *exec);
 	int (*hif_dump_registers)(struct hif_softc *hif_sc);
 	void (*hif_dump_target_memory)(struct hif_softc *hif_sc,
 				       void *ramdump_base,
@@ -74,7 +77,9 @@ struct hif_bus_ops {
 	void (*hif_set_bundle_mode)(struct hif_softc *hif_ctx, bool enabled,
 					int rx_bundle_cnt);
 	int (*hif_bus_reset_resume)(struct hif_softc *hif_ctx);
+	int (*hif_map_ce_to_irq)(struct hif_softc *hif_sc, int ce_id);
 	int (*hif_addr_in_boundary)(struct hif_softc *scn, uint32_t offset);
+	bool (*hif_needs_bmi)(struct hif_softc *hif_sc);
 };
 
 #ifdef HIF_SNOC
@@ -170,6 +175,8 @@ static inline int hif_sdio_get_context_size(void)
 }
 #endif /* HIF_SDIO */
 
+int hif_grp_irq_configure(struct hif_softc *hif_sc,
+			  struct hif_exec_context *hif_exec);
 #ifdef HIF_USB
 QDF_STATUS hif_initialize_usb_ops(struct hif_bus_ops *bus_ops);
 int hif_usb_get_context_size(void);

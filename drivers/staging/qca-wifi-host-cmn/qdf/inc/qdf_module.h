@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -55,5 +55,11 @@ typedef uint32_t (*module_init_func_t)(void);
  * qdf_declare_param - Declare a module parameter.
  */
 #define qdf_declare_param(name, _type) __qdf_declare_param(name, _type)
+
+/**
+ * qdf_declare_param_array - Declare a module parameter.
+ */
+#define qdf_declare_param_array(name, _type, _num) \
+	__qdf_declare_param_array(name, _type, _num)
 
 #endif /*_QDF_MODULE_H*/

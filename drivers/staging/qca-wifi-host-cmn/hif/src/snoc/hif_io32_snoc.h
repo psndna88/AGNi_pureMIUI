@@ -38,9 +38,8 @@ static inline void ce_enable_irq_in_individual_register(struct hif_softc *scn,
 	uint32_t offset;
 
 	offset = HOST_IE_ADDRESS + CE_BASE_ADDRESS(ce_id);
-	if (!TARGET_REGISTER_ACCESS_ALLOW(scn)) {
-		HIF_ERROR_RL(HIF_RATE_LIMIT_CE_ACCESS_LOG,
-			"%s: target access is not allowed", __func__);
+	if (!TARGET_REGISTER_ACCESS_ALLOWED(scn)) {
+		hif_err_rl("%s: target access is not allowed", __func__);
 		return;
 	}
 	hif_write32_mb(scn->mem + offset, 1);
@@ -52,16 +51,14 @@ static inline void ce_disable_irq_in_individual_register(struct hif_softc *scn,
 	uint32_t offset;
 
 	offset = HOST_IE_ADDRESS + CE_BASE_ADDRESS(ce_id);
-	if (!TARGET_REGISTER_ACCESS_ALLOW(scn)) {
-		HIF_ERROR_RL(HIF_RATE_LIMIT_CE_ACCESS_LOG,
-			"%s: target access is not allowed", __func__);
+	if (!TARGET_REGISTER_ACCESS_ALLOWED(scn)) {
+		hif_err_rl("%s: target access is not allowed", __func__);
 		return;
 	}
 	hif_write32_mb(scn->mem + offset, 0);
 
-	if (!TARGET_REGISTER_ACCESS_ALLOW(scn)) {
-		HIF_ERROR_RL(HIF_RATE_LIMIT_CE_ACCESS_LOG,
-			"%s: target access is not allowed", __func__);
+	if (!TARGET_REGISTER_ACCESS_ALLOWED(scn)) {
+		hif_err_rl("%s: target access is not allowed", __func__);
 		return;
 	}
 	hif_read32_mb(scn->mem + offset);

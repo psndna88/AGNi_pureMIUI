@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011, 2014-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -32,7 +32,8 @@
 #include <htc_api.h>            /* HTC_HANDLE */
 #include "htt.h"                /* htt_dbg_stats_type, etc. */
 #include <cdp_txrx_cmn.h>       /* ol_pdev_handle */
-
+#include <ol_defines.h>
+#include <cdp_txrx_handle.h>
 /* TID */
 #define OL_HTT_TID_NON_QOS_UNICAST     16
 #define OL_HTT_TID_NON_QOS_MCAST_BCAST 18
@@ -42,7 +43,7 @@ typedef struct htt_pdev_t *htt_pdev_handle;
 
 htt_pdev_handle
 htt_pdev_alloc(ol_txrx_pdev_handle txrx_pdev,
-	ol_pdev_handle ctrl_pdev,
+	struct cdp_cfg *ctrl_pdev,
 	HTC_HANDLE htc_pdev, qdf_device_t osdev);
 
 /**
@@ -161,7 +162,7 @@ htt_h2t_dbg_stats_get(struct htt_pdev_t *pdev,
  * @brief Get the fields from HTT T2H stats upload message's stats info header
  * @details
  *  Parse the a HTT T2H message's stats info tag-length-value header,
- *  to obtain the stats type, status, data lenght, and data address.
+ *  to obtain the stats type, status, data length, and data address.
  *
  * @param stats_info_list - address of stats record's header
  * @param[out] type - which type of FW stats are contained in the record
@@ -359,13 +360,17 @@ static inline void htt_ipa_uc_detach(struct htt_pdev_t *pdev)
 }
 #endif /* IPA_OFFLOAD */
 
+#ifdef FEATURE_MONITOR_MODE_SUPPORT
 void htt_rx_mon_note_capture_channel(htt_pdev_handle pdev, int mon_ch);
 
-void htt_rx_mon_get_rx_status(htt_pdev_handle pdev,
-			      void *rx_desc,
-			      struct mon_rx_status *rx_status);
+void ol_htt_mon_note_chan(struct cdp_pdev *ppdev, int mon_ch);
+#else
+static inline
+void htt_rx_mon_note_capture_channel(htt_pdev_handle pdev, int mon_ch) {}
 
-void ol_htt_mon_note_chan(ol_txrx_pdev_handle pdev, int mon_ch);
+static inline
+void ol_htt_mon_note_chan(struct cdp_pdev *ppdev, int mon_ch) {}
+#endif
 
 #if defined(DEBUG_HL_LOGGING) && defined(CONFIG_HL_SUPPORT)
 
@@ -383,11 +388,30 @@ static inline void htt_clear_bundle_stats(struct htt_pdev_t *pdev)
 #endif
 
 void htt_mark_first_wakeup_packet(htt_pdev_handle pdev, uint8_t value);
+
 typedef void (*tp_rx_pkt_dump_cb)(qdf_nbuf_t msdu, uint8_t peer_id,
 			uint8_t status);
+#ifdef REMOVE_PKT_LOG
+static inline
 void htt_register_rx_pkt_dump_callback(struct htt_pdev_t *pdev,
-		tp_rx_pkt_dump_cb ol_rx_pkt_dump_call);
+				       tp_rx_pkt_dump_cb ol_rx_pkt_dump_call)
+{
+}
+
+static inline
+void htt_deregister_rx_pkt_dump_callback(struct htt_pdev_t *pdev)
+{
+}
+
+static inline
+void ol_rx_pkt_dump_call(qdf_nbuf_t msdu, uint8_t peer_id, uint8_t status)
+{
+}
+#else
+void htt_register_rx_pkt_dump_callback(struct htt_pdev_t *pdev,
+				       tp_rx_pkt_dump_cb ol_rx_pkt_dump_call);
 void htt_deregister_rx_pkt_dump_callback(struct htt_pdev_t *pdev);
 void ol_rx_pkt_dump_call(qdf_nbuf_t msdu, uint8_t peer_id, uint8_t status);
+#endif
 
 #endif /* _OL_HTT_API__H_ */

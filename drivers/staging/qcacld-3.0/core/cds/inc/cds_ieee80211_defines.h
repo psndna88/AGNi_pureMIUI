@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014-2015, 2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011, 2014-2015, 2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -129,7 +129,7 @@ typedef struct ieee80211_rx_status {
 	int rs_rateieee;
 	int rs_ratephy;
 
-#define IEEE80211_MAX_ANTENNA       4   /* Keep the same as ATH_MAX_ANTENNA */
+#define IEEE80211_MAX_ANTENNA       3   /* Keep the same as ATH_MAX_ANTENNA */
 	uint8_t rs_rssictl[IEEE80211_MAX_ANTENNA];      /* RSSI (noise floor ajusted) */
 	uint8_t rs_rssiextn[IEEE80211_MAX_ANTENNA];     /* RSSI (noise floor ajusted) */
 	uint8_t rs_isvalidrssi; /* rs_rssi is valid or not */
@@ -738,7 +738,7 @@ typedef enum _ieee80211_param {
 	IEEE80211_PERSTA_KEYTABLE_SIZE, /* IBSS-only, read-only: persta key table size */
 	IEEE80211_RECEIVE_80211,        /* deliver std 802.11 frames 802.11 instead of ethernet frames on the rx */
 	IEEE80211_SEND_80211,   /* OS sends std 802.11 frames 802.11 instead of ethernet frames on tx side */
-	IEEE80211_MIN_BEACON_COUNT,     /* minumum number beacons to tx/rx before vap can pause */
+	IEEE80211_MIN_BEACON_COUNT,     /* minimum number beacons to tx/rx before vap can pause */
 	IEEE80211_IDLE_TIME,    /* minimun no activity time before vap can pause */
 	IEEE80211_MIN_FRAMESIZE,        /* smallest frame size we are allowed to receive */
 	/* features. 0:feature is off. 1:feature is on. */
@@ -748,7 +748,7 @@ typedef enum _ieee80211_param {
 	IEEE80211_FEATURE_WDS,  /* dynamic WDS feature */
 	IEEE80211_FEATURE_PRIVACY,      /* encryption */
 	IEEE80211_FEATURE_DROP_UNENC,   /* drop un encrypted frames */
-	IEEE80211_FEATURE_COUNTER_MEASURES,     /* turn on couter measures */
+	IEEE80211_FEATURE_COUNTER_MEASURES,     /* turn on counter measures */
 	IEEE80211_FEATURE_HIDE_SSID,    /* turn on hide ssid feature */
 	IEEE80211_FEATURE_APBRIDGE,     /* turn on internal mcast traffic bridging for AP */
 	IEEE80211_FEATURE_PUREB,        /* turn on pure B mode for AP */
@@ -766,7 +766,7 @@ typedef enum _ieee80211_param {
 #ifdef ATH_COALESCING
 	IEEE80211_FEATURE_TX_COALESCING,        /* enable tx coalescing */
 #endif
-	IEEE80211_FEATURE_VAP_IND,      /* Repeater independant VAP */
+	IEEE80211_FEATURE_VAP_IND,      /* Repeater independent VAP */
 	IEEE80211_FIXED_RETRIES,        /* fixed retries  0-4 */
 	IEEE80211_SHORT_GI,     /* short gi on/off */
 	IEEE80211_HT40_INTOLERANT,
@@ -1078,7 +1078,7 @@ enum {
  */
 
 /*
- * flag defintions for wlan_mlme_stop_bss(vap) API.
+ * flag definitions for wlan_mlme_stop_bss(vap) API.
  */
 #define WLAN_MLME_STOP_BSS_F_SEND_DEAUTH                0x01
 #define WLAN_MLME_STOP_BSS_F_CLEAR_ASSOC_STATE          0x02
@@ -1362,19 +1362,4 @@ enum {
 	IEEE80211_MACCMD_POLICY_RADIUS = 5,     /* set policy: RADIUS managed ACLs */
 };
 
-/*
- * MBO transition reason codes
- */
-enum {
-	MBO_TRANSITION_REASON_UNSPECIFIED,
-	MBO_TRANSITION_REASON_EXCESSIVE_FRAME_LOSS_RATE,
-	MBO_TRANSITION_REASON_EXCESSIVE_DELAY_FOR_CURRENT_TRAFFIC,
-	MBO_TRANSITION_REASON_INSUFFICIENT_BANDWIDTH_FOR_CURRENT_TRAFFIC,
-	MBO_TRANSITION_REASON_LOAD_BALANCING,
-	MBO_TRANSITION_REASON_LOW_RSSI,
-	MBO_TRANSITION_REASON_RECEIVED_EXCESSIVE_RETRANSMISSIONS,
-	MBO_TRANSITION_REASON_HIGH_INTERFERENCE,
-	MBO_TRANSITION_REASON_GRAY_ZONE,
-	MBO_TRANSITION_REASON_TRANSITIONING_TO_PREMIUM_AP,
-};
 #endif

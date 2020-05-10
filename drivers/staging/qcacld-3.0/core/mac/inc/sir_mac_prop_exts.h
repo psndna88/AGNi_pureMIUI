@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2015 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2015, 2017-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -40,11 +40,20 @@
 	  (dot11Mode ==  WNI_CFG_DOT11_MODE_11N_ONLY) || \
 	  (dot11Mode ==  WNI_CFG_DOT11_MODE_11AC) || \
 	  (dot11Mode ==  WNI_CFG_DOT11_MODE_11AC_ONLY) || \
+	  (dot11Mode ==  WNI_CFG_DOT11_MODE_11AX) || \
+	  (dot11Mode ==  WNI_CFG_DOT11_MODE_11AX_ONLY) || \
 	  (dot11Mode ==  WNI_CFG_DOT11_MODE_ALL)) ? true:false)
 
 #define IS_DOT11_MODE_VHT(dot11Mode) \
 	(((dot11Mode == WNI_CFG_DOT11_MODE_11AC) || \
 	  (dot11Mode ==  WNI_CFG_DOT11_MODE_11AC_ONLY) || \
+	  (dot11Mode ==  WNI_CFG_DOT11_MODE_11AX) || \
+	  (dot11Mode ==  WNI_CFG_DOT11_MODE_11AX_ONLY) || \
+	  (dot11Mode ==  WNI_CFG_DOT11_MODE_ALL)) ? true:false)
+
+#define IS_DOT11_MODE_HE(dot11Mode) \
+	(((dot11Mode == WNI_CFG_DOT11_MODE_11AX) || \
+	  (dot11Mode ==  WNI_CFG_DOT11_MODE_11AX_ONLY) || \
 	  (dot11Mode ==  WNI_CFG_DOT11_MODE_ALL)) ? true:false)
 
 #define IS_DOT11_MODE_11B(dot11Mode)  \
@@ -80,9 +89,6 @@ typedef struct sSirMacPropVersion {
 	/* build version string */
 	uint8_t build_version[SIR_PROP_VERSION_STR_MAX];
 } tSirMacPropVersion, *tpSirMacPropVersion;
-
-/* Default value for gLimRestoreCBNumScanInterval */
-#define LIM_RESTORE_CB_NUM_SCAN_INTERVAL_DEFAULT        2
 
 /* generic proprietary IE structure definition */
 typedef struct sSirPropIEStruct {

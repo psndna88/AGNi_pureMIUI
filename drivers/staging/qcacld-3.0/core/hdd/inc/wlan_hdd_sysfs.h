@@ -15,30 +15,105 @@
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
-
 #ifndef _WLAN_HDD_SYSFS_H_
 #define _WLAN_HDD_SYSFS_H_
 
 #ifdef WLAN_SYSFS
 /**
- * hdd_sysfs_create_version_interface - create version interface
+ * hdd_sysfs_create_driver_root_obj() - create driver root kobject
  *
  * Return: none
  */
-void hdd_sysfs_create_version_interface(void);
+void hdd_sysfs_create_driver_root_obj(void);
 
 /**
- * hdd_sysfs_destroy_version_interface - destroy version interface
+ * hdd_sysfs_destroy_driver_root_obj() - destroy driver root kobject
+ *
+ * Return: none
+ */
+void hdd_sysfs_destroy_driver_root_obj(void);
+
+/**
+ * hdd_sysfs_create_version_interface() - create version interface
+ * @psoc: PSOC ptr
+ *
+ * Return: none
+ */
+void hdd_sysfs_create_version_interface(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * hdd_sysfs_destroy_version_interface() - destroy version interface
  *
  * Return: none
  */
 void hdd_sysfs_destroy_version_interface(void);
+/**
+ * hdd_sysfs_create_powerstats_interface() - create power_stats interface
+ *
+ * Return: none
+ */
+void hdd_sysfs_create_powerstats_interface(void);
+/**
+ * hdd_sysfs_destroy_powerstats_interface() - destroy power_stats interface
+ *
+ * Return: none
+ */
+void hdd_sysfs_destroy_powerstats_interface(void);
 #else
-static inline void hdd_sysfs_create_version_interface(void)
+static inline
+void hdd_sysfs_create_driver_root_obj(void)
 {
 }
 
-static inline void hdd_sysfs_destroy_version_interface(void)
+static inline
+void hdd_sysfs_destroy_driver_root_obj(void)
+{
+}
+
+static inline
+void hdd_sysfs_create_version_interface(struct wlan_objmgr_psoc *psoc)
+{
+}
+
+static inline
+void hdd_sysfs_destroy_version_interface(void)
+{
+}
+
+static inline
+void hdd_sysfs_create_powerstats_interface(void)
+{
+}
+
+static inline
+void hdd_sysfs_destroy_powerstats_interface(void)
+{
+}
+#endif
+
+#ifdef WLAN_FEATURE_BEACON_RECEPTION_STATS
+/**
+ * hdd_sysfs_create_adapter_root_obj() - create adapter sysfs entries
+ * @adapter: HDD adapter
+ *
+ * Return: none
+ */
+void hdd_sysfs_create_adapter_root_obj(struct hdd_adapter *adapter);
+/**
+ * hdd_sysfs_destroy_adapter_root_obj() - Destroy adapter sysfs entries
+ * @adapter: HDD adapter
+ *
+ * Return: none
+ */
+void hdd_sysfs_destroy_adapter_root_obj(struct hdd_adapter *adapter);
+#else
+static inline
+void hdd_sysfs_create_adapter_root_obj(struct hdd_adapter *adapter)
+{
+}
+
+static inline
+void hdd_sysfs_destroy_adapter_root_obj(struct hdd_adapter *adapter)
 {
 }
 #endif

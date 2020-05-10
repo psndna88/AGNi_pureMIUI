@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018, 2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -43,7 +43,8 @@
 #include <ol_htt_tx_api.h>
 
 #include <htt_internal.h>
-#include <cds_concurrency.h>
+#include <wlan_policy_mgr_api.h>
+#include <ol_htt_rx_api.h>
 
 #define HTT_MSG_BUF_SIZE(msg_bytes) \
 	((msg_bytes) + HTC_HEADER_LEN + HTC_HDR_ALIGNMENT_PADDING)
@@ -56,8 +57,13 @@
 #ifdef ATH_11AC_TXCOMPACT
 #define HTT_SEND_HTC_PKT(pdev, pkt)                              \
 do {                                                             \
-	if (htc_send_pkt(pdev->htc_pdev, &pkt->htc_pkt) == QDF_STATUS_SUCCESS) \
+	if (htc_send_pkt(pdev->htc_pdev, &pkt->htc_pkt) ==       \
+	    QDF_STATUS_SUCCESS) {                                \
 		htt_htc_misc_pkt_list_add(pdev, pkt);            \
+	} else {                                                 \
+		qdf_nbuf_free((qdf_nbuf_t)(pkt->htc_pkt.pNetBufContext));   \
+		htt_htc_pkt_free(pdev, pkt);                     \
+	}                                                        \
 } while (0)
 #else
 #define HTT_SEND_HTC_PKT(pdev, ppkt) \
@@ -199,8 +205,12 @@ QDF_STATUS htt_h2t_frag_desc_bank_cfg_msg(struct htt_pdev_t *pdev)
 
 	rc = htc_send_pkt(pdev->htc_pdev, &pkt->htc_pkt);
 #ifdef ATH_11AC_TXCOMPACT
-	if (rc == QDF_STATUS_SUCCESS)
+	if (rc == QDF_STATUS_SUCCESS) {
 		htt_htc_misc_pkt_list_add(pdev, pkt);
+	} else {
+		qdf_nbuf_free(msg);
+		htt_htc_pkt_free(pdev, pkt);
+	}
 #endif
 
 	return rc;
@@ -304,7 +314,7 @@ QDF_STATUS htt_h2t_rx_ring_rfs_cfg_msg_ll(struct htt_pdev_t *pdev)
 	uint32_t  msg_local;
 	struct cds_config_info *cds_cfg;
 
-	QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_INFO,
+	QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_INFO_LOW,
 		  "Receive flow steering configuration, disable gEnableFlowSteering(=0) in ini if FW doesnot support it\n");
 	pkt = htt_htc_pkt_alloc(pdev);
 	if (!pkt)
@@ -340,22 +350,22 @@ QDF_STATUS htt_h2t_rx_ring_rfs_cfg_msg_ll(struct htt_pdev_t *pdev)
 	HTT_H2T_MSG_TYPE_SET(msg_local, HTT_H2T_MSG_TYPE_RFS_CONFIG);
 	if (ol_cfg_is_flow_steering_enabled(pdev->ctrl_pdev)) {
 		HTT_RX_RFS_CONFIG_SET(msg_local, 1);
-		QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_INFO,
+		QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_INFO_LOW,
 			  "Enable Rx flow steering");
 	} else {
-	    QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_INFO,
+	    QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_INFO_LOW,
 		      "Disable Rx flow steering");
 	}
 	cds_cfg = cds_get_ini_config();
 	if (cds_cfg != NULL) {
 		msg_local |= ((cds_cfg->max_msdus_per_rxinorderind & 0xff)
 			      << 16);
-		QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_INFO,
+		QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_INFO_LOW,
 			  "Updated maxMSDUsPerRxInd");
 	}
 
 	*msg_word = msg_local;
-	QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_INFO,
+	QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_INFO_LOW,
 		  "%s: Sending msg_word: 0x%08x",
 		  __func__, *msg_word);
 
@@ -490,7 +500,7 @@ QDF_STATUS htt_h2t_rx_ring_cfg_msg_ll(struct htt_pdev_t *pdev)
 		enable_hdr = 1;
 		enable_ppdu_start = 1;
 		enable_ppdu_end = 1;
-		QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_INFO,
+		QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_INFO_LOW,
 			  "%s : %d Pkt log is enabled\n",  __func__, __LINE__);
 	} else {
 		QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_INFO,
@@ -526,6 +536,7 @@ QDF_STATUS htt_h2t_rx_ring_cfg_msg_ll(struct htt_pdev_t *pdev)
 			  __func__, __LINE__);
 	}
 
+	htt_rx_enable_ppdu_end(&enable_ppdu_end);
 	HTT_RX_RING_CFG_ENABLED_802_11_HDR_SET(*msg_word, enable_hdr);
 	HTT_RX_RING_CFG_ENABLED_MSDU_PAYLD_SET(*msg_word, 1);
 	HTT_RX_RING_CFG_ENABLED_PPDU_START_SET(*msg_word, enable_ppdu_start);
@@ -727,8 +738,12 @@ htt_h2t_rx_ring_cfg_msg_hl(struct htt_pdev_t *pdev)
 	SET_HTC_PACKET_NET_BUF_CONTEXT(&pkt->htc_pkt, msg);
 
 #ifdef ATH_11AC_TXCOMPACT
-	if (htc_send_pkt(pdev->htc_pdev, &pkt->htc_pkt) == QDF_STATUS_SUCCESS)
+	if (htc_send_pkt(pdev->htc_pdev, &pkt->htc_pkt) == QDF_STATUS_SUCCESS) {
 		htt_htc_misc_pkt_list_add(pdev, pkt);
+	} else {
+		qdf_nbuf_free(msg);
+		htt_htc_pkt_free(pdev, pkt);
+	}
 #else
 	htc_send_pkt(pdev->htc_pdev, &pkt->htc_pkt);
 #endif
@@ -771,6 +786,7 @@ htt_h2t_dbg_stats_get(struct htt_pdev_t *pdev,
 
 	if (stats_type_upload_mask >= 1 << HTT_DBG_NUM_STATS ||
 	    stats_type_reset_mask >= 1 << HTT_DBG_NUM_STATS) {
+		/* FIX THIS - add more details? */
 		QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_ERROR,
 			  "%#x %#x stats not supported\n",
 			  stats_type_upload_mask, stats_type_reset_mask);
@@ -837,8 +853,12 @@ htt_h2t_dbg_stats_get(struct htt_pdev_t *pdev,
 	SET_HTC_PACKET_NET_BUF_CONTEXT(&pkt->htc_pkt, msg);
 
 #ifdef ATH_11AC_TXCOMPACT
-	if (htc_send_pkt(pdev->htc_pdev, &pkt->htc_pkt) == QDF_STATUS_SUCCESS)
+	if (htc_send_pkt(pdev->htc_pdev, &pkt->htc_pkt) == QDF_STATUS_SUCCESS) {
 		htt_htc_misc_pkt_list_add(pdev, pkt);
+	} else {
+		qdf_nbuf_free(msg);
+		htt_htc_pkt_free(pdev, pkt);
+	}
 #else
 	htc_send_pkt(pdev->htc_pdev, &pkt->htc_pkt);
 #endif
@@ -962,8 +982,12 @@ htt_h2t_aggr_cfg_msg(struct htt_pdev_t *pdev,
 	SET_HTC_PACKET_NET_BUF_CONTEXT(&pkt->htc_pkt, msg);
 
 #ifdef ATH_11AC_TXCOMPACT
-	if (htc_send_pkt(pdev->htc_pdev, &pkt->htc_pkt) == QDF_STATUS_SUCCESS)
+	if (htc_send_pkt(pdev->htc_pdev, &pkt->htc_pkt) == QDF_STATUS_SUCCESS) {
 		htt_htc_misc_pkt_list_add(pdev, pkt);
+	} else {
+		qdf_nbuf_free(msg);
+		htt_htc_pkt_free(pdev, pkt);
+	}
 #else
 	htc_send_pkt(pdev->htc_pdev, &pkt->htc_pkt);
 #endif

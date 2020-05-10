@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -42,7 +42,9 @@
 #include <ol_txrx_peer_find.h>
 #include <cdp_txrx_ipa.h>
 #include "pktlog_ac.h"
-
+#include <cdp_txrx_handle.h>
+#include <wlan_pkt_capture_ucfg_api.h>
+#include <ol_txrx.h>
 /*--- target->host HTT message dispatch function ----------------------------*/
 
 #ifndef DEBUG_CREDIT
@@ -55,9 +57,9 @@
 
 /**
  * htt_rx_frag_set_last_msdu() - set last msdu bit in rx descriptor
- *				 for recieved frames
+ *				 for received frames
  * @pdev: Handle (pointer) to HTT pdev.
- * @msg: htt recieved msg
+ * @msg: htt received msg
  *
  * Return: None
  */
@@ -142,6 +144,50 @@ static uint8_t *htt_t2h_mac_addr_deswizzle(uint8_t *tgt_mac_addr,
 #endif
 }
 
+/**
+ * htt_ipa_op_response() - invoke an event handler from FW
+ * @pdev: Handle (pointer) to HTT pdev.
+ * @msg_word: htt msg
+ *
+ * Return: None
+ */
+#ifdef IPA_OFFLOAD
+static void htt_ipa_op_response(struct htt_pdev_t *pdev, uint32_t *msg_word)
+{
+	uint8_t op_code;
+	uint16_t len;
+	uint8_t *op_msg_buffer;
+	uint8_t *msg_start_ptr;
+
+	htc_pm_runtime_put(pdev->htc_pdev);
+	msg_start_ptr = (uint8_t *) msg_word;
+	op_code =
+		HTT_WDI_IPA_OP_RESPONSE_OP_CODE_GET(*msg_word);
+	msg_word++;
+	len = HTT_WDI_IPA_OP_RESPONSE_RSP_LEN_GET(*msg_word);
+
+	op_msg_buffer =
+		qdf_mem_malloc(sizeof
+				(struct htt_wdi_ipa_op_response_t) +
+				len);
+	if (!op_msg_buffer) {
+		qdf_print("OPCODE message buffer alloc fail");
+		return;
+	}
+	qdf_mem_copy(op_msg_buffer,
+			msg_start_ptr,
+			sizeof(struct htt_wdi_ipa_op_response_t) +
+			len);
+	cdp_ipa_op_response(cds_get_context(QDF_MODULE_ID_SOC),
+			(struct cdp_pdev *)pdev->txrx_pdev,
+			op_msg_buffer);
+}
+#else
+static void htt_ipa_op_response(struct htt_pdev_t *pdev, uint32_t *msg_word)
+{
+}
+#endif
+
 #define MAX_TARGET_TX_CREDIT    204800
 
 /* Target to host Msg/event  handler  for low priority messages*/
@@ -160,22 +206,22 @@ static void htt_t2h_lp_msg_handler(void *context, qdf_nbuf_t htt_t2h_msg,
 		htc_pm_runtime_put(pdev->htc_pdev);
 		pdev->tgt_ver.major = HTT_VER_CONF_MAJOR_GET(*msg_word);
 		pdev->tgt_ver.minor = HTT_VER_CONF_MINOR_GET(*msg_word);
-		QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_INFO,
-			"target uses HTT version %d.%d; host uses %d.%d",
-			pdev->tgt_ver.major, pdev->tgt_ver.minor,
-			HTT_CURRENT_VERSION_MAJOR,
-			HTT_CURRENT_VERSION_MINOR);
+		QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_INFO_LOW,
+			  "target uses HTT version %d.%d; host uses %d.%d",
+			  pdev->tgt_ver.major, pdev->tgt_ver.minor,
+			  HTT_CURRENT_VERSION_MAJOR,
+			  HTT_CURRENT_VERSION_MINOR);
 		if (pdev->tgt_ver.major != HTT_CURRENT_VERSION_MAJOR)
 			QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_WARN,
-			      "*** Incompatible host/target HTT versions!");
+				  "*** Incompatible host/target HTT versions!");
 		/* abort if the target is incompatible with the host */
 		qdf_assert(pdev->tgt_ver.major ==
 			   HTT_CURRENT_VERSION_MAJOR);
 		if (pdev->tgt_ver.minor != HTT_CURRENT_VERSION_MINOR) {
-			QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_WARN,
-				"*** Warning: host/target HTT versions are ");
-			QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_WARN,
-				" different, though compatible!");
+			QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_INFO_LOW,
+				  "*** Warning: host/target HTT versions are ");
+			QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_INFO_LOW,
+				  "different, though compatible!");
 		}
 		break;
 	}
@@ -376,7 +422,7 @@ static void htt_t2h_lp_msg_handler(void *context, qdf_nbuf_t htt_t2h_msg,
 		int msg_len = qdf_nbuf_len(htt_t2h_msg);
 		if (msg_len < (sizeof(struct htt_mgmt_tx_compl_ind) + sizeof(*msg_word))) {
 			QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_ERROR,
-				  "Invalid msg_word lenght in HTT_T2H_MSG_TYPE_MGMT_TX_COMPL_IND");
+				  "Invalid msg_word length in HTT_T2H_MSG_TYPE_MGMT_TX_COMPL_IND");
 			WARN_ON(1);
 			break;
 		}
@@ -488,38 +534,18 @@ static void htt_t2h_lp_msg_handler(void *context, qdf_nbuf_t htt_t2h_msg,
 
 	case HTT_T2H_MSG_TYPE_WDI_IPA_OP_RESPONSE:
 	{
-		uint8_t op_code;
 		uint16_t len;
-		uint8_t *op_msg_buffer;
-		uint8_t *msg_start_ptr;
 		int msg_len = qdf_nbuf_len(htt_t2h_msg);
-
-		htc_pm_runtime_put(pdev->htc_pdev);
-		msg_start_ptr = (uint8_t *) msg_word;
-		op_code =
-			HTT_WDI_IPA_OP_RESPONSE_OP_CODE_GET(*msg_word);
-		msg_word++;
-		len = HTT_WDI_IPA_OP_RESPONSE_RSP_LEN_GET(*msg_word);
+		len = HTT_WDI_IPA_OP_RESPONSE_RSP_LEN_GET(*(msg_word + 1));
 
 		if (sizeof(struct htt_wdi_ipa_op_response_t) + len > msg_len) {
-			qdf_print("Invalid buffer length");
+			qdf_print("Invalid buf len size %zu len %d, msg_len %d",
+				  sizeof(struct htt_wdi_ipa_op_response_t),
+				  len, msg_len);
 			WARN_ON(1);
 			break;
 		}
-		op_msg_buffer =
-			qdf_mem_malloc(sizeof
-				       (struct htt_wdi_ipa_op_response_t) +
-				       len);
-		if (!op_msg_buffer) {
-			qdf_print("OPCODE messsage buffer alloc fail");
-			break;
-		}
-		qdf_mem_copy(op_msg_buffer,
-			     msg_start_ptr,
-			     sizeof(struct htt_wdi_ipa_op_response_t) +
-			     len);
-		ol_txrx_ipa_uc_op_response(pdev->txrx_pdev,
-					   op_msg_buffer);
+		htt_ipa_op_response(pdev, msg_word);
 		break;
 	}
 
@@ -561,7 +587,7 @@ static void htt_t2h_lp_msg_handler(void *context, qdf_nbuf_t htt_t2h_msg,
 
 		if (msg_len < sizeof(struct htt_flow_pool_unmap_t)) {
 			QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_ERROR,
-				  "Invalid msg_word lenght in HTT_T2H_MSG_TYPE_FLOW_POOL_UNMAP");
+				  "Invalid msg_word length in HTT_T2H_MSG_TYPE_FLOW_POOL_UNMAP");
 			WARN_ON(1);
 			break;
 		}
@@ -637,45 +663,6 @@ static void htt_t2h_lp_msg_handler(void *context, qdf_nbuf_t htt_t2h_msg,
 	if (free_msg_buf)
 		qdf_nbuf_free(htt_t2h_msg);
 }
-
-#if defined(CONFIG_HL_SUPPORT)
-static inline void htt_t2h_rx_in_order_indication_handler(
-		ol_txrx_pdev_handle pdev,
-		qdf_nbuf_t htt_t2h_msg, uint32_t msg_word)
-{
-}
-#else
-static void htt_t2h_rx_in_order_indication_handler(
-		ol_txrx_pdev_handle pdev,
-		qdf_nbuf_t htt_t2h_msg, uint32_t msg_word)
-{
-	u_int16_t peer_id;
-	u_int8_t tid;
-	u_int8_t offload_ind, frag_ind;
-
-	peer_id = HTT_RX_IN_ORD_PADDR_IND_PEER_ID_GET(msg_word);
-	tid = HTT_RX_IN_ORD_PADDR_IND_EXT_TID_GET(msg_word);
-	offload_ind = HTT_RX_IN_ORD_PADDR_IND_OFFLOAD_GET(msg_word);
-	frag_ind = HTT_RX_IN_ORD_PADDR_IND_FRAG_GET(msg_word);
-
-#if defined(HELIUMPLUS_DEBUG)
-	QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_INFO,
-		  "%s %d: peerid %d tid %d offloadind %d fragind %d",
-		  __func__, __LINE__, peer_id, tid, offload_ind, frag_ind);
-
-#endif
-	if (qdf_unlikely(frag_ind)) {
-		ol_rx_frag_indication_handler(pdev,
-				htt_t2h_msg,
-				peer_id, tid);
-		return;
-	}
-
-	ol_rx_in_order_indication_handler(pdev,
-			htt_t2h_msg, peer_id,
-			tid, offload_ind);
-}
-#endif
 
 #define HTT_TX_COMPL_HEAD_SZ			4
 #define HTT_TX_COMPL_BYTES_PER_MSDU_ID		2
@@ -762,7 +749,8 @@ void htt_t2h_msg_handler(void *context, HTC_PACKET *pkt)
 			(HTT_RX_IND_HDR_BYTES + num_msdu_bytes + 3);
 		if (qdf_unlikely(num_msdu_bytes >
 				 rx_mpdu_range_offset_bytes)) {
-			qdf_print("HTT_T2H_MSG_TYPE_RX_IND, invalid num_msdu_bytes %u\n",
+			qdf_print("HTT_T2H_MSG_TYPE_RX_IND, invalid %s %u\n",
+				  "num_msdu_bytes",
 				  num_msdu_bytes);
 			WARN_ON(1);
 			break;
@@ -774,7 +762,8 @@ void htt_t2h_msg_handler(void *context, HTC_PACKET *pkt)
 		pdev->rx_ind_msdu_byte_idx = 0;
 		if (qdf_unlikely(rx_mpdu_range_offset_bytes >
 		    msg_len)) {
-			qdf_print("HTT_T2H_MSG_TYPE_RX_IND, invalid rx_mpdu_range_offset_words %d\n",
+			qdf_print("HTT_T2H_MSG_TYPE_RX_IND, invalid %s %d\n",
+				  "rx_mpdu_range_offset_words",
 				  pdev->rx_mpdu_range_offset_words);
 			WARN_ON(1);
 			break;
@@ -787,13 +776,15 @@ void htt_t2h_msg_handler(void *context, HTC_PACKET *pkt)
 		 */
 		if (qdf_unlikely(calculated_msg_len <
 		    rx_mpdu_range_offset_bytes)) {
-			qdf_print("HTT_T2H_MSG_TYPE_RX_IND, invalid num_mpdu_ranges %u\n",
+			qdf_print("HTT_T2H_MSG_TYPE_RX_IND, invalid %s %u\n",
+				  "num_mpdu_ranges",
 				  (num_mpdu_ranges * (int)sizeof(uint32_t)));
 			WARN_ON(1);
 			break;
 		}
 		if (qdf_unlikely(calculated_msg_len > msg_len)) {
-			qdf_print("HTT_T2H_MSG_TYPE_RX_IND, invalid offset_words + mpdu_ranges %u\n",
+			qdf_print("HTT_T2H_MSG_TYPE_RX_IND, invalid %s %u\n",
+				  "offset_words + mpdu_ranges",
 				  calculated_msg_len);
 			WARN_ON(1);
 			break;
@@ -976,6 +967,10 @@ void htt_t2h_msg_handler(void *context, HTC_PACKET *pkt)
 	}
 	case HTT_T2H_MSG_TYPE_RX_IN_ORD_PADDR_IND:
 	{
+		uint16_t peer_id;
+		uint8_t tid;
+		uint8_t offload_ind, frag_ind;
+
 		if (qdf_unlikely(!pdev->cfg.is_full_reorder_offload)) {
 			qdf_print("HTT_T2H_MSG_TYPE_RX_IN_ORD_PADDR_IND not ");
 			qdf_print("supported when full reorder offload is ");
@@ -989,9 +984,26 @@ void htt_t2h_msg_handler(void *context, HTC_PACKET *pkt)
 			break;
 		}
 
-		htt_t2h_rx_in_order_indication_handler(
-				pdev->txrx_pdev,
-				htt_t2h_msg, *msg_word);
+		peer_id = HTT_RX_IN_ORD_PADDR_IND_PEER_ID_GET(*msg_word);
+		tid = HTT_RX_IN_ORD_PADDR_IND_EXT_TID_GET(*msg_word);
+		offload_ind = HTT_RX_IN_ORD_PADDR_IND_OFFLOAD_GET(*msg_word);
+		frag_ind = HTT_RX_IN_ORD_PADDR_IND_FRAG_GET(*msg_word);
+
+#if defined(HELIUMPLUS_DEBUG)
+		qdf_print("%s %d: peerid %d tid %d offloadind %d fragind %d\n",
+			  __func__, __LINE__, peer_id, tid, offload_ind,
+			  frag_ind);
+#endif
+		if (qdf_unlikely(frag_ind)) {
+			ol_rx_frag_indication_handler(pdev->txrx_pdev,
+						      htt_t2h_msg,
+						      peer_id, tid);
+			break;
+		}
+
+		ol_rx_in_order_indication_handler(pdev->txrx_pdev,
+						  htt_t2h_msg, peer_id,
+						  tid, offload_ind);
 		break;
 	}
 
@@ -1089,7 +1101,8 @@ void htt_t2h_msg_handler_fast(void *context, qdf_nbuf_t *cmpl_msdus,
 				(HTT_RX_IND_HDR_BYTES + num_msdu_bytes + 3);
 			if (qdf_unlikely(num_msdu_bytes >
 					 rx_mpdu_range_offset_bytes)) {
-				qdf_print("HTT_T2H_MSG_TYPE_RX_IND, invalid num_msdu_bytes %u\n",
+				qdf_print("HTT_T2H_MSG_TYPE_RX_IND, %s %u\n",
+					  "invalid num_msdu_bytes",
 					  num_msdu_bytes);
 				WARN_ON(1);
 				break;
@@ -1102,7 +1115,8 @@ void htt_t2h_msg_handler_fast(void *context, qdf_nbuf_t *cmpl_msdus,
 			pdev->rx_ind_msdu_byte_idx = 0;
 			if (qdf_unlikely(rx_mpdu_range_offset_bytes >
 					 msg_len)) {
-				qdf_print("HTT_T2H_MSG_TYPE_RX_IND, invalid rx_mpdu_range_offset_words %d\n",
+				qdf_print("HTT_T2H_MSG_TYPE_RX_IND, %s %d\n",
+					  "invalid rx_mpdu_range_offset_words",
 					  pdev->rx_mpdu_range_offset_words);
 				WARN_ON(1);
 				break;
@@ -1116,14 +1130,16 @@ void htt_t2h_msg_handler_fast(void *context, qdf_nbuf_t *cmpl_msdus,
 			 */
 			if (qdf_unlikely(calculated_msg_len <
 					 rx_mpdu_range_offset_bytes)) {
-				qdf_print("HTT_T2H_MSG_TYPE_RX_IND, invalid num_mpdu_ranges %u\n",
+				qdf_print("HTT_T2H_MSG_TYPE_RX_IND, %s %u\n",
+					  "invalid num_mpdu_ranges",
 					  (num_mpdu_ranges *
 					   (int)sizeof(uint32_t)));
 				WARN_ON(1);
 				break;
 			}
 			if (qdf_unlikely(calculated_msg_len > msg_len)) {
-				qdf_print("HTT_T2H_MSG_TYPE_RX_IND, invalid offset_words + mpdu_ranges %u\n",
+				qdf_print("HTT_T2H_MSG_TYPE_RX_IND, %s %u\n",
+					  "invalid offset_words + mpdu_ranges",
 					  calculated_msg_len);
 				WARN_ON(1);
 				break;
@@ -1182,16 +1198,69 @@ void htt_t2h_msg_handler_fast(void *context, qdf_nbuf_t *cmpl_msdus,
 		}
 		case HTT_T2H_MSG_TYPE_TX_OFFLOAD_DELIVER_IND:
 		{
+			struct htt_tx_offload_deliver_ind_hdr_t
+							*offload_deliver_msg;
+			uint8_t vdev_id;
+			struct ol_txrx_vdev_t *vdev;
+			bool is_pkt_during_roam = false;
+			struct ol_txrx_pdev_t *txrx_pdev = pdev->txrx_pdev;
+			struct ol_txrx_peer_t *peer;
+			uint8_t bssid[QDF_MAC_ADDR_SIZE];
+			uint32_t freq = 0;
+
+			if (!(ucfg_pkt_capture_get_pktcap_mode() &
+			      PKT_CAPTURE_MODE_DATA_ONLY))
+				break;
+
+			offload_deliver_msg =
+			(struct htt_tx_offload_deliver_ind_hdr_t *)msg_word;
+			is_pkt_during_roam =
+			(offload_deliver_msg->reserved_2 ? true : false);
+
 			if (qdf_unlikely(
 				!pdev->cfg.is_full_reorder_offload)) {
 				break;
 			}
 
-			ol_tx_offload_deliver_indication_handler(
-					pdev->txrx_pdev, msg_word);
+			/* Is FW sends offload data during roaming */
+			if (is_pkt_during_roam) {
+				vdev_id = HTT_INVALID_VDEV;
+				freq =
+				(uint32_t)offload_deliver_msg->reserved_3;
+				htt_rx_mon_note_capture_channel(
+						pdev, cds_freq_to_chan(freq));
+			} else {
+				vdev_id = offload_deliver_msg->vdev_id;
+				vdev = (struct ol_txrx_vdev_t *)
+					ol_txrx_get_vdev_from_vdev_id(vdev_id);
+
+				if (vdev) {
+					qdf_spin_lock_bh(
+						&txrx_pdev->peer_ref_mutex);
+					peer = TAILQ_FIRST(&vdev->peer_list);
+					qdf_spin_unlock_bh(
+						&txrx_pdev->peer_ref_mutex);
+					if (peer) {
+						qdf_spin_lock_bh(
+							&peer->peer_info_lock);
+						qdf_mem_copy(
+							bssid,
+							&peer->mac_addr.raw,
+							QDF_MAC_ADDR_SIZE);
+						qdf_spin_unlock_bh(
+							&peer->peer_info_lock);
+					} else {
+						break;
+					}
+				} else {
+					break;
+				}
+			}
+			ucfg_pkt_capture_offload_deliver_indication_handler(
+							msg_word,
+							vdev_id, bssid, pdev);
 			break;
 		}
-
 		case HTT_T2H_MSG_TYPE_RX_PN_IND:
 		{
 			u_int16_t peer_id;
@@ -1280,6 +1349,10 @@ void htt_t2h_msg_handler_fast(void *context, qdf_nbuf_t *cmpl_msdus,
 		}
 		case HTT_T2H_MSG_TYPE_RX_IN_ORD_PADDR_IND:
 		{
+			u_int16_t peer_id;
+			u_int8_t tid;
+			u_int8_t offload_ind, frag_ind;
+
 			if (qdf_unlikely(
 				  !pdev->cfg.is_full_reorder_offload)) {
 				qdf_print("HTT_T2H_MSG_TYPE_RX_IN_ORD_PADDR_IND not supported when full reorder offload is disabled\n");
@@ -1292,9 +1365,26 @@ void htt_t2h_msg_handler_fast(void *context, qdf_nbuf_t *cmpl_msdus,
 				break;
 			}
 
-			htt_t2h_rx_in_order_indication_handler(
-					pdev->txrx_pdev,
-					htt_t2h_msg, *msg_word);
+			peer_id = HTT_RX_IN_ORD_PADDR_IND_PEER_ID_GET(
+							*msg_word);
+			tid = HTT_RX_IN_ORD_PADDR_IND_EXT_TID_GET(
+							*msg_word);
+			offload_ind =
+				HTT_RX_IN_ORD_PADDR_IND_OFFLOAD_GET(
+							*msg_word);
+			frag_ind = HTT_RX_IN_ORD_PADDR_IND_FRAG_GET(
+							*msg_word);
+
+			if (qdf_unlikely(frag_ind)) {
+				ol_rx_frag_indication_handler(
+				pdev->txrx_pdev, htt_t2h_msg, peer_id,
+				tid);
+				break;
+			}
+
+			ol_rx_in_order_indication_handler(
+					pdev->txrx_pdev, htt_t2h_msg,
+					peer_id, tid, offload_ind);
 			break;
 		}
 		default:

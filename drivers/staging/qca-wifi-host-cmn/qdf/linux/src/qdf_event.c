@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -21,13 +21,13 @@
  *
  * This source file contains linux specific definitions for QDF event APIs
  * The APIs mentioned in this file are used for initializing, setting,
- * resetting, destroying an event and waiting on an occurance of an event
+ * resetting, destroying an event and waiting on an occurrence of an event
  * among multiple events.
  */
 
 /* Include Files */
 #include "qdf_event.h"
-#include <linux/export.h>
+#include "qdf_mc_timer.h"
 #include <qdf_module.h>
 
 struct qdf_evt_node {
@@ -59,21 +59,14 @@ static qdf_spinlock_t qdf_wait_event_lock;
  */
 QDF_STATUS qdf_event_create(qdf_event_t *event)
 {
-	/* check for null pointer */
-	if (NULL == event) {
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			  "NULL event passed into %s", __func__);
-		QDF_ASSERT(0);
+	QDF_BUG(event);
+	if (!event)
 		return QDF_STATUS_E_FAULT;
-	}
 
 	/* check for 'already initialized' event */
-	if (LINUX_EVENT_COOKIE == event->cookie) {
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			  "Initialized event passed into %s", __func__);
-		QDF_ASSERT(0);
+	QDF_BUG(event->cookie != LINUX_EVENT_COOKIE);
+	if (event->cookie == LINUX_EVENT_COOKIE)
 		return QDF_STATUS_E_BUSY;
-	}
 
 	/* initialize new event */
 	init_completion(&event->complete);
@@ -98,21 +91,14 @@ qdf_export_symbol(qdf_event_create);
  */
 QDF_STATUS qdf_event_set(qdf_event_t *event)
 {
-	/* check for null pointer */
-	if (NULL == event) {
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			  "NULL event passed into %s", __func__);
-		QDF_ASSERT(0);
+	QDF_BUG(event);
+	if (!event)
 		return QDF_STATUS_E_FAULT;
-	}
 
-	/* check if event refers to an initialized object */
-	if (LINUX_EVENT_COOKIE != event->cookie) {
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			  "Uninitialized event passed into %s", __func__);
-		QDF_ASSERT(0);
+	/* ensure event is initialized */
+	QDF_BUG(event->cookie == LINUX_EVENT_COOKIE);
+	if (event->cookie != LINUX_EVENT_COOKIE)
 		return QDF_STATUS_E_INVAL;
-	}
 
 	complete(&event->complete);
 
@@ -137,24 +123,19 @@ qdf_export_symbol(qdf_event_set);
  */
 QDF_STATUS qdf_event_reset(qdf_event_t *event)
 {
-	/* check for null pointer */
-	if (NULL == event) {
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			  "NULL event passed into %s", __func__);
-		QDF_ASSERT(0);
+	QDF_BUG(event);
+	if (!event)
 		return QDF_STATUS_E_FAULT;
-	}
 
-	/* check to make sure it is an 'already initialized' event */
-	if (LINUX_EVENT_COOKIE != event->cookie) {
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			  "Uninitialized event passed into %s", __func__);
-		QDF_ASSERT(0);
+	/* ensure event is initialized */
+	QDF_BUG(event->cookie == LINUX_EVENT_COOKIE);
+	if (event->cookie != LINUX_EVENT_COOKIE)
 		return QDF_STATUS_E_INVAL;
-	}
 
 	/* (re)initialize event */
+	event->force_set = false;
 	INIT_COMPLETION(event->complete);
+
 	return QDF_STATUS_SUCCESS;
 }
 qdf_export_symbol(qdf_event_reset);
@@ -181,21 +162,14 @@ qdf_export_symbol(qdf_event_reset);
  */
 QDF_STATUS qdf_event_destroy(qdf_event_t *event)
 {
-	/* check for null pointer */
-	if (NULL == event) {
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			  "NULL event passed into %s", __func__);
-		QDF_ASSERT(0);
+	QDF_BUG(event);
+	if (!event)
 		return QDF_STATUS_E_FAULT;
-	}
 
-	/* check to make sure it is an 'already initialized' event */
-	if (LINUX_EVENT_COOKIE != event->cookie) {
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			  "Uninitialized event passed into %s", __func__);
-		QDF_ASSERT(0);
+	/* ensure event is initialized */
+	QDF_BUG(event->cookie == LINUX_EVENT_COOKIE);
+	if (event->cookie != LINUX_EVENT_COOKIE)
 		return QDF_STATUS_E_INVAL;
-	}
 
 	/* make sure nobody is waiting on the event */
 	complete_all(&event->complete);
@@ -221,43 +195,33 @@ qdf_export_symbol(qdf_event_destroy);
  */
 QDF_STATUS qdf_wait_single_event(qdf_event_t *event, uint32_t timeout)
 {
-	if (in_interrupt()) {
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			  "%s cannot be called from interrupt context!!!",
-			  __func__);
-		QDF_ASSERT(0);
+	QDF_BUG(!in_interrupt());
+	if (in_interrupt())
 		return QDF_STATUS_E_FAULT;
-	}
 
-	/* check for null pointer */
-	if (NULL == event) {
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			  "NULL event passed into %s", __func__);
-		QDF_ASSERT(0);
+	QDF_BUG(event);
+	if (!event)
 		return QDF_STATUS_E_FAULT;
-	}
 
-	/* check if cookie is same as that of initialized event */
-	if (LINUX_EVENT_COOKIE != event->cookie) {
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			  "Uninitialized event passed into %s", __func__);
-		QDF_ASSERT(0);
+	/* ensure event is initialized */
+	QDF_BUG(event->cookie == LINUX_EVENT_COOKIE);
+	if (event->cookie != LINUX_EVENT_COOKIE)
 		return QDF_STATUS_E_INVAL;
-	}
 
 	if (timeout) {
 		long ret;
 
+		/* update the timeout if it's on an emulation platform */
+		timeout *= qdf_timer_get_multiplier();
 		ret = wait_for_completion_timeout(&event->complete,
 						  msecs_to_jiffies(timeout));
-		if (0 >= ret)
+
+		if (ret <= 0)
 			return QDF_STATUS_E_TIMEOUT;
 	} else {
 		wait_for_completion(&event->complete);
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_INFO,
-			  "Signaled for completion %s", __func__);
-		return QDF_STATUS_SUCCESS;
 	}
+
 	return QDF_STATUS_SUCCESS;
 }
 qdf_export_symbol(qdf_wait_single_event);
@@ -320,83 +284,64 @@ QDF_STATUS qdf_wait_for_event_completion(qdf_event_t *event, uint32_t timeout)
 	struct qdf_evt_node *event_node;
 	QDF_STATUS status;
 
-	if (in_interrupt()) {
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			  "%s cannot be called from interrupt context!!!",
-			  __func__);
-		QDF_ASSERT(0);
+	QDF_BUG(!in_interrupt());
+	if (in_interrupt())
 		return QDF_STATUS_E_FAULT;
-	}
 
-	/* check for null pointer */
-	if (NULL == event) {
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			  "NULL event passed into %s", __func__);
-		QDF_ASSERT(0);
+	QDF_BUG(event);
+	if (!event)
 		return QDF_STATUS_E_FAULT;
-	}
 
-	/* check if cookie is same as that of initialized event */
-	if (LINUX_EVENT_COOKIE != event->cookie) {
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			  "Uninitialized event passed into %s", __func__);
-		QDF_ASSERT(0);
+	/* ensure event is initialized */
+	QDF_BUG(event->cookie == LINUX_EVENT_COOKIE);
+	if (event->cookie != LINUX_EVENT_COOKIE)
 		return QDF_STATUS_E_INVAL;
-	}
 
 	event_node = qdf_mem_malloc(sizeof(*event_node));
-	if (NULL == event_node) {
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			  "Could not allocate for event node in %s", __func__);
-		QDF_ASSERT(0);
+	if (!event_node) {
+		qdf_err("Out of memory");
 		return QDF_STATUS_E_NOMEM;
 	}
+
 	event_node->pevent = event;
 
 	qdf_spin_lock(&qdf_wait_event_lock);
-	status = qdf_list_insert_back(&qdf_wait_event_list,
-			&event_node->node);
+	status = qdf_list_insert_back(&qdf_wait_event_list, &event_node->node);
 	qdf_spin_unlock(&qdf_wait_event_lock);
 
 	if (QDF_STATUS_SUCCESS != status) {
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			"Failed to add event in the list in %s", __func__);
-		status = QDF_STATUS_E_FAULT;
-		goto err_list_add;
+		qdf_err("Failed to insert event into tracking list");
+		goto free_node;
 	}
 
 	if (timeout) {
 		long ret;
 
+		/* update the timeout if it's on an emulation platform */
+		timeout *= qdf_timer_get_multiplier();
 		ret = wait_for_completion_timeout(&event->complete,
 						  msecs_to_jiffies(timeout));
-		if (0 >= ret)
-			/* Timeout occurred */
+
+		if (ret <= 0) {
 			status = QDF_STATUS_E_TIMEOUT;
-		else {
-			if (event->force_set)
-				/* Event forcefully completed, return fail */
-				status = QDF_STATUS_E_FAULT;
-			else
-				status = QDF_STATUS_SUCCESS;
+			goto list_remove;
 		}
 	} else {
 		wait_for_completion(&event->complete);
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_INFO,
-			"Signaled for completion %s", __func__);
-		if (event->force_set)
-			/* Event forcefully completed, return fail */
-			status = QDF_STATUS_E_FAULT;
-		else
-			status = QDF_STATUS_SUCCESS;
 	}
 
+	/* if event was forcefully completed, return failure */
+	if (event->force_set)
+		status = QDF_STATUS_E_FAULT;
+
+list_remove:
 	qdf_spin_lock(&qdf_wait_event_lock);
-	qdf_list_remove_node(&qdf_wait_event_list,
-			&event_node->node);
+	qdf_list_remove_node(&qdf_wait_event_list, &event_node->node);
 	qdf_spin_unlock(&qdf_wait_event_lock);
-err_list_add:
+
+free_node:
 	qdf_mem_free(event_node);
+
 	return status;
 }
 qdf_export_symbol(qdf_wait_for_event_completion);
@@ -431,3 +376,14 @@ void qdf_event_list_destroy(void)
 	qdf_spinlock_destroy(&qdf_wait_event_lock);
 }
 qdf_export_symbol(qdf_event_list_destroy);
+
+QDF_STATUS qdf_exit_thread(QDF_STATUS status)
+{
+	if (status == QDF_STATUS_SUCCESS)
+		do_exit(0);
+	else
+		do_exit(SIGKILL);
+
+	return QDF_STATUS_SUCCESS;
+}
+qdf_export_symbol(qdf_exit_thread);

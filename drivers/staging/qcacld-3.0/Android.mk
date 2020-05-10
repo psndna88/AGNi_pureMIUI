@@ -36,7 +36,6 @@ endif # platform-sdk-version
 KBUILD_OPTIONS := WLAN_ROOT=$(WLAN_BLD_DIR)/qcacld-3.0
 KBUILD_OPTIONS += WLAN_COMMON_ROOT=../qca-wifi-host-cmn
 KBUILD_OPTIONS += WLAN_COMMON_INC=$(WLAN_BLD_DIR)/qca-wifi-host-cmn
-KBUILD_OPTIONS += WLAN_FW_INC=$(WLAN_BLD_DIR)/fw-api
 
 # We are actually building wlan.ko here, as per the
 # requirement we are specifying <chipset>_wlan.ko as LOCAL_MODULE.
@@ -49,7 +48,6 @@ KBUILD_OPTIONS += $(WLAN_SELECT)
 include $(CLEAR_VARS)
 LOCAL_MODULE              := $(WLAN_CHIPSET)_wlan.ko
 LOCAL_MODULE_KBUILD_NAME  := wlan.ko
-LOCAL_MODULE_TAGS         := optional
 LOCAL_MODULE_DEBUG_ENABLE := true
 ifeq ($(PRODUCT_VENDOR_MOVE_ENABLED),true)
     ifeq ($(WIFI_DRIVER_INSTALL_TO_KERNEL_OUT),true)
@@ -78,11 +76,10 @@ endif
 endif
 
 ifeq ($(PRODUCT_VENDOR_MOVE_ENABLED),true)
-$(shell ln -sf /persist/wlan_mac.bin $(TARGET_OUT_VENDOR)/firmware/wlan/qca_cld/wlan_mac.bin)
+$(shell ln -sf /mnt/vendor/persist/wlan_mac.bin $(TARGET_OUT_VENDOR)/firmware/wlan/qca_cld/wlan_mac.bin)
 else
-$(shell ln -sf /persist/wlan_mac.bin $(TARGET_OUT_ETC)/firmware/wlan/qca_cld/wlan_mac.bin)
+$(shell ln -sf /mnt/vendor/persist/wlan_mac.bin $(TARGET_OUT_ETC)/firmware/wlan/qca_cld/wlan_mac.bin)
 endif
-
 endif # DLKM check
 endif # supported target check
 endif # WLAN enabled check

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2012, 2014-2016, 2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2012, 2014-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -84,7 +84,7 @@ typedef struct sRrmSMEContext {
 	bool eseBcnReqInProgress;
 #endif /* FEATURE_WLAN_ESE */
 	tRrmMsgReqSource msgSource;
-	qdf_wake_lock_t scan_wake_lock;
+	wlan_scan_requester req_id;
 } tRrmSMEContext, *tpRrmSMEContext;
 
 typedef struct sRrmNeighborReq {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -26,10 +26,29 @@
 
 /* Include files */
 #include <qdf_list.h>
-#include <linux/export.h>
 #include <qdf_module.h>
 
 /* Function declarations and documenation */
+
+QDF_STATUS qdf_list_insert_before(qdf_list_t *list,
+	qdf_list_node_t *new_node, qdf_list_node_t *node)
+{
+	list_add_tail(new_node, node);
+	list->count++;
+
+	return QDF_STATUS_SUCCESS;
+}
+qdf_export_symbol(qdf_list_insert_before);
+
+QDF_STATUS qdf_list_insert_after(qdf_list_t *list,
+	qdf_list_node_t *new_node, qdf_list_node_t *node)
+{
+	list_add(new_node, node);
+	list->count++;
+
+	return QDF_STATUS_SUCCESS;
+}
+qdf_export_symbol(qdf_list_insert_after);
 
 /**
  * qdf_list_insert_front() - insert input node at front of the list

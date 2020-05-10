@@ -37,6 +37,7 @@
 #include "host_diag_core_log.h"
 #endif
 #include "wma_if.h"
+#include "wlan_reg_services_api.h"
 #include "lim_process_fils.h"
 
 static void lim_process_mlm_start_req(tpAniSirGlobal, uint32_t *);
@@ -48,7 +49,6 @@ static void lim_process_mlm_deauth_req(tpAniSirGlobal, uint32_t *);
 static void lim_process_mlm_set_keys_req(tpAniSirGlobal, uint32_t *);
 
 /* MLM Timeout event handler templates */
-static void lim_process_periodic_probe_req_timer(tpAniSirGlobal mac_ctx);
 static void lim_process_auth_rsp_timeout(tpAniSirGlobal, uint32_t);
 static void lim_process_periodic_join_probe_req_timer(tpAniSirGlobal);
 static void lim_process_auth_retry_timer(tpAniSirGlobal);
@@ -113,7 +113,8 @@ static void lim_process_sae_auth_timeout(tpAniSirGlobal mac_ctx)
  *
  * Return: None
  */
-void lim_process_mlm_req_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
+void lim_process_mlm_req_messages(tpAniSirGlobal mac_ctx,
+				  struct scheduler_msg *msg)
 {
 	switch (msg->type) {
 	case LIM_MLM_START_REQ:
@@ -140,9 +141,6 @@ void lim_process_mlm_req_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 	case LIM_MLM_SETKEYS_REQ:
 		lim_process_mlm_set_keys_req(mac_ctx, msg->bodyptr);
 		break;
-	case SIR_LIM_PERIODIC_PROBE_REQ_TIMEOUT:
-		lim_process_periodic_probe_req_timer(mac_ctx);
-		break;
 	case SIR_LIM_JOIN_FAIL_TIMEOUT:
 		lim_process_join_failure_timeout(mac_ctx);
 		break;
@@ -161,15 +159,6 @@ void lim_process_mlm_req_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 	case SIR_LIM_FT_PREAUTH_RSP_TIMEOUT:
 		lim_process_ft_preauth_rsp_timeout(mac_ctx);
 		break;
-	case SIR_LIM_REMAIN_CHN_TIMEOUT:
-		lim_process_remain_on_chn_timeout(mac_ctx);
-		break;
-	case SIR_LIM_INSERT_SINGLESHOT_NOA_TIMEOUT:
-		lim_process_insert_single_shot_noa_timeout(mac_ctx);
-		break;
-	case SIR_LIM_CONVERT_ACTIVE_CHANNEL_TO_PASSIVE:
-		lim_convert_active_channel_to_passive_channel(mac_ctx);
-		break;
 	case SIR_LIM_DISASSOC_ACK_TIMEOUT:
 		lim_process_disassoc_ack_timeout(mac_ctx);
 		break;
@@ -186,23 +175,6 @@ void lim_process_mlm_req_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 	default:
 		break;
 	} /* switch (msg->type) */
-}
-
-/* WLAN_SUSPEND_LINK Related */
-
-/**
- * lim_is_link_suspended()- check if link is suspended
- * @mac_ctx: global MAC context
- *
- * This function returns is link is suspended or not.
- * Since Suspend link uses init scan, it just returns
- * gLimSystemInScanLearnMode flag.
- *
- * Return: uint8_t(gLimSystemInScanLearnMode flag)
- */
-uint8_t lim_is_link_suspended(tpAniSirGlobal mac_ctx)
-{
-	return mac_ctx->lim.gLimSystemInScanLearnMode;
 }
 
 /**
@@ -233,139 +205,9 @@ lim_change_channel_with_callback(tpAniSirGlobal mac_ctx, uint8_t new_chan,
 
 	lim_send_switch_chnl_params(mac_ctx, new_chan, 0, 0,
 		CH_WIDTH_20MHZ, session_entry->maxTxPower,
-		session_entry->peSessionId, false);
+		session_entry->peSessionId, false, 0, 0);
 
 	return;
-}
-
-/**
- * lim_covert_channel_scan_type() - switch between ACTIVE and PASSIVE scan type
- * @mac_ctx: global MAC context
- * @chan_num: channel number to change the scan type
- * @passive_to_active: flag to indicate if switch allowed
- *
- * This function is called to get the list,
- * change the channel type and set again.
- * NOTE: If a channel is ACTIVE, this function will make it as PASSIVE
- *       If a channel is PASSIVE, this fucntion will make it as ACTIVE
- *
- * Return: None
- */
-
-void lim_covert_channel_scan_type(tpAniSirGlobal mac_ctx, uint8_t chan_num,
-				  bool passive_to_active)
-{
-
-	uint32_t i;
-	uint8_t chan_pair[WNI_CFG_SCAN_CONTROL_LIST_LEN];
-	uint32_t len = WNI_CFG_SCAN_CONTROL_LIST_LEN;
-	tSirRetStatus status;
-
-	status  = wlan_cfg_get_str(mac_ctx, WNI_CFG_SCAN_CONTROL_LIST,
-				   chan_pair, &len);
-	if (eSIR_SUCCESS != status) {
-		pe_err("Unable to get scan control list");
-		return;
-	}
-	if (len > WNI_CFG_SCAN_CONTROL_LIST_LEN) {
-		pe_err("Invalid scan control list length: %d", len);
-		return;
-	}
-	for (i = 0; (i + 1) < len; i += 2) {
-		if (chan_pair[i] != chan_num) /* skip this channel */
-			continue;
-		if ((eSIR_PASSIVE_SCAN == chan_pair[i + 1]) &&
-		     true == passive_to_active) {
-			pe_debug("Channel %d changed from Passive to Active",
-				chan_num);
-			chan_pair[i + 1] = eSIR_ACTIVE_SCAN;
-			break;
-		}
-		if ((eSIR_ACTIVE_SCAN == chan_pair[i + 1]) &&
-		     false == passive_to_active) {
-			pe_debug("Channel %d changed from Active to Passive",
-				chan_num);
-			chan_pair[i + 1] = eSIR_PASSIVE_SCAN;
-			break;
-		}
-	}
-
-	cfg_set_str_notify(mac_ctx, WNI_CFG_SCAN_CONTROL_LIST,
-			   (uint8_t *) chan_pair, len, false);
-	return;
-}
-
-/**
- * lim_set_dfs_channel_list() - convert dfs channel list to active channel list
- * @mac_ctx: global MAC context.
- * @chan_num: channel number
- * @dfs_ch_list: list of DFS channels
- *
- * This function is called to convert DFS channel list to active channel list
- * when any beacon is present on that channel. This function store time for
- * passive channels which help to know that for how much time channel has been
- * passive.
- *
- * NOTE: If a channel is ACTIVE, it won't store any time
- *       If a channel is PAssive, it will store time as timestamp
- *
- * Return: None
- */
-void lim_set_dfs_channel_list(tpAniSirGlobal mac_ctx, uint8_t chan_num,
-			      tSirDFSChannelList *dfs_ch_list)
-{
-	bool pass_to_active = true;
-
-	if (!((1 <= chan_num) && (165 >= chan_num))) {
-		pe_err("Invalid Channel: %d", chan_num);
-		return;
-	}
-
-	if (true == lim_isconnected_on_dfs_channel(chan_num)) {
-		if (dfs_ch_list->timeStamp[chan_num] == 0) {
-			/*
-			 * Received first beacon;
-			 * Convert DFS channel to Active channel.
-			 */
-			pe_debug("Received first beacon on DFS channel: %d",
-				chan_num);
-			lim_covert_channel_scan_type(mac_ctx, chan_num,
-						     pass_to_active);
-		}
-		dfs_ch_list->timeStamp[chan_num] =
-					qdf_mc_timer_get_system_time();
-	} else {
-		return;
-	}
-
-	if (!tx_timer_running
-		    (&mac_ctx->lim.limTimers.gLimActiveToPassiveChannelTimer)) {
-		tx_timer_activate(
-		    &mac_ctx->lim.limTimers.gLimActiveToPassiveChannelTimer);
-	}
-
-	return;
-}
-
-/**
- * lim_restore_pre_scan_state() - restore HW state prior to scan
- *
- * @mac_ctx: global MAC context
- *
- * This function is called by lim_continue_channel_scan()
- * to restore HW state prior to entering 'scan state'
- *
- * Return: None
- */
-void lim_restore_pre_scan_state(tpAniSirGlobal mac_ctx)
-{
-	/* Deactivate MIN/MAX channel timers if running */
-	lim_deactivate_and_change_timer(mac_ctx, eLIM_MIN_CHANNEL_TIMER);
-	lim_deactivate_and_change_timer(mac_ctx, eLIM_MAX_CHANNEL_TIMER);
-
-	mac_ctx->lim.gLimSystemInScanLearnMode = 0;
-	pe_debug("Scan ended, took %llu tu",
-		(tx_time_get() - mac_ctx->lim.scanStartTime));
 }
 
 /**
@@ -395,12 +237,12 @@ static void mlm_add_sta(tpAniSirGlobal mac_ctx, tpAddStaParams sta_param,
 
 	/* Configuration related parameters to be changed to support BT-AMP */
 
-	if (eSIR_SUCCESS != wlan_cfg_get_int(mac_ctx, WNI_CFG_LISTEN_INTERVAL,
+	if (QDF_STATUS_SUCCESS != wlan_cfg_get_int(mac_ctx, WNI_CFG_LISTEN_INTERVAL,
 					     &val))
 		pe_warn("Couldn't get LISTEN_INTERVAL");
 	sta_param->listenInterval = (uint16_t) val;
 
-	if (eSIR_SUCCESS != wlan_cfg_get_int(mac_ctx, WNI_CFG_SHORT_PREAMBLE,
+	if (QDF_STATUS_SUCCESS != wlan_cfg_get_int(mac_ctx, WNI_CFG_SHORT_PREAMBLE,
 					     &val))
 		pe_warn("Couldn't get SHORT_PREAMBLE");
 	sta_param->shortPreambleSupported = (uint8_t) val;
@@ -463,13 +305,17 @@ static void mlm_add_sta(tpAniSirGlobal mac_ctx, tpAddStaParams sta_param,
 		sta_param->enable_su_tx_bformer =
 				session_entry->vht_config.su_beam_former;
 	}
+
+	if (lim_is_session_he_capable(session_entry))
+		lim_add_self_he_cap(sta_param, session_entry);
+
 	/*
 	 * Since this is Self-STA, need to populate Self MAX_AMPDU_SIZE
 	 * capabilities
 	 */
 	if (IS_DOT11_MODE_VHT(self_dot11mode)) {
 		val = 0;        /* Default 8K AMPDU size */
-		if (eSIR_SUCCESS != wlan_cfg_get_int(mac_ctx,
+		if (QDF_STATUS_SUCCESS != wlan_cfg_get_int(mac_ctx,
 					WNI_CFG_VHT_AMPDU_LEN_EXPONENT, &val))
 			pe_err("Couldn't get WNI_CFG_VHT_AMPDU_LEN_EXPONENT");
 		sta_param->maxAmpduSize = (uint8_t) val;
@@ -481,7 +327,7 @@ static void mlm_add_sta(tpAniSirGlobal mac_ctx, tpAddStaParams sta_param,
 	sta_param->send_smps_action = session_entry->send_smps_action;
 
 	lim_populate_own_rate_set(mac_ctx, &sta_param->supportedRates, NULL,
-				  false, session_entry, NULL);
+				  false, session_entry, NULL, NULL);
 
 	pe_debug("GF: %d, ChnlWidth: %d, MimoPS: %d, lsigTXOP: %d, dsssCCK: %d,"
 		" SGI20: %d, SGI40%d", sta_param->greenFieldCapable,
@@ -507,7 +353,7 @@ tSirResultCodes
 lim_mlm_add_bss(tpAniSirGlobal mac_ctx,
 		tLimMlmStartReq *mlm_start_req, tpPESession session)
 {
-	tSirMsgQ msg_buf;
+	struct scheduler_msg msg_buf = {0};
 	tpAddBssParams addbss_param = NULL;
 	uint32_t retcode;
 	bool is_ch_dfs = false;
@@ -561,6 +407,12 @@ lim_mlm_add_bss(tpAniSirGlobal mac_ctx,
 	addbss_param->nwType = mlm_start_req->nwType;
 	addbss_param->htCapable = mlm_start_req->htCapable;
 	addbss_param->vhtCapable = session->vhtCapability;
+	if (lim_is_session_he_capable(session)) {
+		lim_update_bss_he_capable(mac_ctx, addbss_param);
+		lim_decide_he_op(mac_ctx, addbss_param, session);
+		lim_update_usr_he_cap(mac_ctx, session);
+	}
+
 	addbss_param->ch_width = session->ch_width;
 	addbss_param->ch_center_freq_seg0 =
 		session->ch_center_freq_seg0;
@@ -596,6 +448,7 @@ lim_mlm_add_bss(tpAniSirGlobal mac_ctx,
 	addbss_param->obssProtEnabled = mlm_start_req->obssProtEnabled;
 
 	addbss_param->maxTxPower = session->maxTxPower;
+
 	mlm_add_sta(mac_ctx, &addbss_param->staContext,
 		    addbss_param->bssId, addbss_param->htCapable,
 		    session);
@@ -614,15 +467,18 @@ lim_mlm_add_bss(tpAniSirGlobal mac_ctx,
 	if (session->ch_width == CH_WIDTH_160MHZ) {
 		is_ch_dfs = true;
 	} else if (session->ch_width == CH_WIDTH_80P80MHZ) {
-		if (cds_get_channel_state(mlm_start_req->channelNumber) ==
-							CHANNEL_STATE_DFS ||
-		    cds_get_channel_state(session->ch_center_freq_seg1 -
-					    SIR_80MHZ_START_CENTER_CH_DIFF) ==
-							CHANNEL_STATE_DFS)
+		if (wlan_reg_get_channel_state(mac_ctx->pdev,
+					mlm_start_req->channelNumber) ==
+				CHANNEL_STATE_DFS ||
+				wlan_reg_get_channel_state(mac_ctx->pdev,
+					session->ch_center_freq_seg1 -
+					SIR_80MHZ_START_CENTER_CH_DIFF) ==
+				CHANNEL_STATE_DFS)
 			is_ch_dfs = true;
 	} else {
-		if (cds_get_channel_state(mlm_start_req->channelNumber) ==
-							CHANNEL_STATE_DFS)
+		if (wlan_reg_get_channel_state(mac_ctx->pdev,
+					mlm_start_req->channelNumber) ==
+				CHANNEL_STATE_DFS)
 			is_ch_dfs = true;
 	}
 
@@ -632,6 +488,8 @@ lim_mlm_add_bss(tpAniSirGlobal mac_ctx,
 
 	addbss_param->dot11_mode = session->dot11mode;
 	addbss_param->nss = session->nss;
+	addbss_param->cac_duration_ms = mlm_start_req->cac_duration_ms;
+	addbss_param->dfs_regdomain = mlm_start_req->dfs_regdomain;
 	addbss_param->beacon_tx_rate = session->beacon_tx_rate;
 	if (QDF_IBSS_MODE == addbss_param->halPersona) {
 		addbss_param->nss_2g = mac_ctx->vdev_type_nss_2g.ibss;
@@ -668,7 +526,7 @@ lim_mlm_add_bss(tpAniSirGlobal mac_ctx,
 
 	pe_debug("Sending WMA_ADD_BSS_REQ...");
 	retcode = wma_post_ctrl_msg(mac_ctx, &msg_buf);
-	if (eSIR_SUCCESS != retcode) {
+	if (QDF_STATUS_SUCCESS != retcode) {
 		pe_err("Posting ADD_BSS_REQ to HAL failed, reason=%X",
 			retcode);
 		qdf_mem_free(addbss_param);
@@ -765,23 +623,21 @@ static void lim_post_join_set_link_state_callback(tpAniSirGlobal mac,
 {
 	uint8_t chan_num, sec_chan_offset;
 	struct session_params *session_cb_param =
-					(struct session_params *) callback_arg;
+					(struct session_params *)callback_arg;
 	tLimMlmJoinCnf mlm_join_cnf;
+
 	tpPESession session_entry = pe_find_session_by_session_id(mac,
 					session_cb_param->session_id);
-	if (session_entry == NULL) {
+	if (!session_entry) {
 		pe_err("sessionId:%d does not exist",
-				session_cb_param->session_id);
+		       session_cb_param->session_id);
 		qdf_mem_free(session_cb_param);
 		return;
 	}
+
 	qdf_mem_free(session_cb_param);
-
-	pe_debug("Sessionid %d set link state(%d) cb status: %d",
-			session_entry->peSessionId, session_entry->limMlmState,
-			status);
-
 	if (!status) {
+
 		pe_err("failed to find pe session for session id:%d",
 			session_entry->peSessionId);
 		goto failure;
@@ -796,18 +652,12 @@ static void lim_post_join_set_link_state_callback(tpAniSirGlobal mac,
 	session_entry->channelChangeReasonCode =
 			 LIM_SWITCH_CHANNEL_JOIN;
 	session_entry->pLimMlmReassocRetryReq = NULL;
-	pe_debug("[lim_process_mlm_join_req]: suspend link success(%d) "
-		"on sessionid: %d setting channel to: %d with ch_width :%d "
-		"and maxtxPower: %d", status, session_entry->peSessionId,
-		session_entry->currentOperChannel,
-		session_entry->ch_width,
-		session_entry->maxTxPower);
 	lim_set_channel(mac, session_entry->currentOperChannel,
 		session_entry->ch_center_freq_seg0,
 		session_entry->ch_center_freq_seg1,
 		session_entry->ch_width,
 		session_entry->maxTxPower,
-		session_entry->peSessionId);
+		session_entry->peSessionId, 0, 0);
 	return;
 
 failure:
@@ -830,7 +680,7 @@ failure:
  *
  * This function does following:
  *   Check for suspend state.
- *   If success, proceed with setting link state to recieve the
+ *   If success, proceed with setting link state to receive the
  *   probe response/beacon from intended AP.
  *   Switch to the APs channel.
  *   On an error case, send the MLM_JOIN_CNF with error status.
@@ -858,11 +708,8 @@ lim_process_mlm_post_join_suspend_link(tpAniSirGlobal mac_ctx,
 		session->peSessionId;
 
 	lnk_state = eSIR_LINK_PREASSOC_STATE;
-	pe_debug("[lim_process_mlm_join_req]: lnk_state: %d",
-		lnk_state);
-
 	pe_session_param = qdf_mem_malloc(sizeof(struct session_params));
-	if (pe_session_param != NULL) {
+	if (pe_session_param) {
 		pe_session_param->session_id = session->peSessionId;
 	} else {
 		pe_err("insufficient memory");
@@ -872,7 +719,7 @@ lim_process_mlm_post_join_suspend_link(tpAniSirGlobal mac_ctx,
 			session->pLimMlmJoinReq->bssDescription.bssId,
 			session->selfMacAddr,
 			lim_post_join_set_link_state_callback,
-			pe_session_param) != eSIR_SUCCESS) {
+			pe_session_param) != QDF_STATUS_SUCCESS) {
 		pe_err("SessionId:%d lim_set_link_state to eSIR_LINK_PREASSOC_STATE Failed!!",
 			session->peSessionId);
 		lim_print_mac_addr(mac_ctx,
@@ -944,32 +791,8 @@ static void lim_process_mlm_join_req(tpAniSirGlobal mac_ctx, uint32_t *msg)
 		/* Hold onto Join request parameters */
 
 		session->pLimMlmJoinReq = (tpLimMlmJoinReq) msg;
-		if (is_lim_session_off_channel(mac_ctx, sessionid)) {
-			pe_debug("SessionId:%d LimSession is on OffChannel",
-				sessionid);
-			/* suspend link */
-			pe_debug("Suspend link, sessionid %d is off channel",
-				sessionid);
-			if (lim_is_link_suspended(mac_ctx)) {
-				pe_err("link is already suspended, session %d",
-					sessionid);
-				goto error;
-			}
-			lim_process_mlm_post_join_suspend_link(mac_ctx,
+		lim_process_mlm_post_join_suspend_link(mac_ctx,
 				QDF_STATUS_SUCCESS, (uint32_t *)session);
-		} else {
-			pe_debug("No need to Suspend link");
-			 /*
-			  * No need to Suspend link as LimSession is not
-			  * off channel, calling
-			  * lim_process_mlm_post_join_suspend_link with
-			  * status as SUCCESS.
-			  */
-			pe_debug("SessionId:%d Join req on current chan",
-				sessionid);
-			lim_process_mlm_post_join_suspend_link(mac_ctx,
-				QDF_STATUS_SUCCESS, (uint32_t *)session);
-		}
 		return;
 	} else {
 		/**
@@ -1092,7 +915,7 @@ static QDF_STATUS lim_process_mlm_auth_req_sae(tpAniSirGlobal mac_ctx,
 {
 	QDF_STATUS qdf_status = QDF_STATUS_SUCCESS;
 	struct sir_sae_info *sae_info;
-	cds_msg_t msg;
+	struct scheduler_msg msg = {0};
 
 	sae_info = qdf_mem_malloc(sizeof(*sae_info));
 	if (sae_info == NULL) {
@@ -1155,6 +978,7 @@ static QDF_STATUS lim_process_mlm_auth_req_sae(tpAniSirGlobal mac_ctx,
 }
 #endif
 
+
 /**
  * lim_process_mlm_auth_req() - process lim auth request
  *
@@ -1190,12 +1014,11 @@ static void lim_process_mlm_auth_req(tpAniSirGlobal mac_ctx, uint32_t *msg)
 		return;
 	}
 
-	pe_debug("Process Auth Req sessionID %d Systemrole %d"
-		       "mlmstate %d from: " MAC_ADDRESS_STR
-		       " with authtype %d", session_id,
-		GET_LIM_SYSTEM_ROLE(session), session->limMlmState,
-		MAC_ADDR_ARRAY(mac_ctx->lim.gpLimMlmAuthReq->peerMacAddr),
-		mac_ctx->lim.gpLimMlmAuthReq->authType);
+	pe_debug("vdev %d Systemrole %d mlmstate %d from: " QDF_MAC_ADDR_STR "with authtype %d",
+		 session->smeSessionId, GET_LIM_SYSTEM_ROLE(session),
+		 session->limMlmState,
+		 QDF_MAC_ADDR_ARRAY(mac_ctx->lim.gpLimMlmAuthReq->peerMacAddr),
+		 mac_ctx->lim.gpLimMlmAuthReq->authType);
 
 	sir_copy_mac_addr(curr_bssid, session->bssId);
 
@@ -1224,7 +1047,7 @@ static void lim_process_mlm_auth_req(tpAniSirGlobal mac_ctx, uint32_t *msg)
 		goto end;
 	} else {
 		if (wlan_cfg_get_int(mac_ctx, WNI_CFG_MAX_NUM_PRE_AUTH,
-			(uint32_t *) &num_preauth_ctx) != eSIR_SUCCESS)
+			(uint32_t *) &num_preauth_ctx) != QDF_STATUS_SUCCESS)
 			pe_warn("Could not retrieve NumPreAuthLimit from CFG");
 
 		if (mac_ctx->lim.gLimNumPreAuthContexts == num_preauth_ctx) {
@@ -1253,7 +1076,7 @@ static void lim_process_mlm_auth_req(tpAniSirGlobal mac_ctx, uint32_t *msg)
 			pe_debug("lim_process_mlm_auth_req_sae is successful");
 			lim_diag_event_report(mac_ctx,
 					      WLAN_PE_DIAG_AUTH_ALGO_NUM,
-					      session, eSIR_SUCCESS,
+					      session, QDF_STATUS_SUCCESS,
 					      eSIR_AUTH_TYPE_SAE);
 			return;
 		}
@@ -1271,16 +1094,15 @@ static void lim_process_mlm_auth_req(tpAniSirGlobal mac_ctx, uint32_t *msg)
 		auth_frame_body.authAlgoNumber =
 		(uint8_t) mac_ctx->lim.gpLimMlmAuthReq->authType;
 	}
-	lim_diag_event_report(mac_ctx, WLAN_PE_DIAG_AUTH_ALGO_NUM,
-			      session, eSIR_SUCCESS,
-			      auth_frame_body.authAlgoNumber);
+	lim_diag_event_report(mac_ctx, WLAN_PE_DIAG_AUTH_ALGO_NUM, session,
+			      QDF_STATUS_SUCCESS, auth_frame_body.authAlgoNumber);
 
 	/* Prepare & send Authentication frame */
 	auth_frame_body.authTransactionSeqNumber = SIR_MAC_AUTH_FRAME_1;
 	auth_frame_body.authStatusCode = 0;
 #ifdef FEATURE_WLAN_DIAG_SUPPORT
 	lim_diag_event_report(mac_ctx, WLAN_PE_DIAG_AUTH_START_EVENT, session,
-			      eSIR_SUCCESS, auth_frame_body.authStatusCode);
+			      QDF_STATUS_SUCCESS, auth_frame_body.authStatusCode);
 #endif
 	mac_ctx->auth_ack_status = LIM_AUTH_ACK_NOT_RCD;
 	lim_send_auth_mgmt_frame(mac_ctx,
@@ -1297,6 +1119,7 @@ static void lim_process_mlm_auth_req(tpAniSirGlobal mac_ctx, uint32_t *msg)
 	/* Activate Auth failure timer */
 	MTRACE(mac_trace(mac_ctx, TRACE_CODE_TIMER_ACTIVATE,
 			 session->peSessionId, eLIM_AUTH_FAIL_TIMER));
+	lim_deactivate_and_change_timer(mac_ctx, eLIM_AUTH_FAIL_TIMER);
 	if (tx_timer_activate(&mac_ctx->lim.limTimers.gLimAuthFailureTimer)
 	    != TX_SUCCESS) {
 		pe_err("could not start Auth failure timer");
@@ -1394,8 +1217,7 @@ static void lim_process_mlm_assoc_req(tpAniSirGlobal mac_ctx, uint32_t *msg_buf)
 	MTRACE(mac_trace(mac_ctx, TRACE_CODE_MLM_STATE,
 			 session_entry->peSessionId,
 			 session_entry->limMlmState));
-	pe_debug("SessionId:%d Sending Assoc_Req Frame",
-		session_entry->peSessionId);
+	pe_debug("vdev %d Sending Assoc_Req Frame", session_entry->smeSessionId);
 
 	/* Prepare and send Association request frame */
 	lim_send_assoc_req_mgmt_frame(mac_ctx, mlm_assoc_req, session_entry);
@@ -1460,12 +1282,6 @@ lim_process_mlm_disassoc_req_ntf(tpAniSirGlobal mac_ctx,
 		mlm_disassoccnf.resultCode = eSIR_SME_INVALID_PARAMETERS;
 		goto end;
 	}
-
-	pe_debug("Process DisAssoc Req on sessionID %d Systemrole %d"
-		   "mlmstate %d from: " MAC_ADDRESS_STR,
-		mlm_disassocreq->sessionId, GET_LIM_SYSTEM_ROLE(session),
-		session->limMlmState,
-		MAC_ADDR_ARRAY(mlm_disassocreq->peer_macaddr.bytes));
 
 	qdf_mem_copy(curr_bssid.bytes, session->bssId, QDF_MAC_ADDR_SIZE);
 
@@ -1598,7 +1414,7 @@ lim_process_mlm_disassoc_req_ntf(tpAniSirGlobal mac_ctx,
 		/* Disassoc frame is not sent OTA */
 		send_disassoc_frame = 1;
 		/* Receive path cleanup with dummy packet */
-		if (eSIR_SUCCESS !=
+		if (QDF_STATUS_SUCCESS !=
 		    lim_cleanup_rx_path(mac_ctx, stads, session)) {
 			mlm_disassoccnf.resultCode =
 				eSIR_SME_RESOURCES_UNAVAILABLE;
@@ -1753,10 +1569,6 @@ lim_process_mlm_disassoc_req(tpAniSirGlobal mac_ctx, uint32_t *msg_buf)
 	}
 
 	mlm_disassoc_req = (tLimMlmDisassocReq *) msg_buf;
-	pe_debug("Process disassoc req, sessionID %d from: "MAC_ADDRESS_STR,
-		mlm_disassoc_req->sessionId,
-		MAC_ADDR_ARRAY(mlm_disassoc_req->peer_macaddr.bytes));
-
 	lim_process_mlm_disassoc_req_ntf(mac_ctx, QDF_STATUS_SUCCESS,
 					 (uint32_t *) msg_buf);
 }
@@ -1799,12 +1611,6 @@ lim_process_mlm_deauth_req_ntf(tpAniSirGlobal mac_ctx,
 		qdf_mem_free(mlm_deauth_req);
 		return;
 	}
-	pe_debug("Process Deauth Req on sessionID %d Systemrole %d"
-		       "mlmstate %d from: " MAC_ADDRESS_STR,
-		mlm_deauth_req->sessionId,
-		GET_LIM_SYSTEM_ROLE(session),
-		session->limMlmState,
-		MAC_ADDR_ARRAY(mlm_deauth_req->peer_macaddr.bytes));
 	sir_copy_mac_addr(curr_bssId, session->bssId);
 
 	switch (GET_LIM_SYSTEM_ROLE(session)) {
@@ -1839,11 +1645,6 @@ lim_process_mlm_deauth_req_ntf(tpAniSirGlobal mac_ctx,
 					qdf_mem_free(mlm_deauth_req);
 					return;
 				}
-
-				pe_debug("send deauth rsp with ret code %d for" MAC_ADDRESS_STR,
-					eSIR_SME_DEAUTH_STATUS,
-					MAC_ADDR_ARRAY(
-					  mlm_deauth_req->peer_macaddr.bytes));
 
 				sme_deauth_rsp->messageType =
 						eWNI_SME_DEAUTH_RSP;
@@ -2047,11 +1848,6 @@ lim_process_mlm_deauth_req(tpAniSirGlobal mac_ctx, uint32_t *msg_buf)
 	}
 
 	mlm_deauth_req = (tLimMlmDeauthReq *) msg_buf;
-	pe_debug("Process Deauth Req on sessionID %d from: "
-		   MAC_ADDRESS_STR,
-		mlm_deauth_req->sessionId,
-		MAC_ADDR_ARRAY(mlm_deauth_req->peer_macaddr.bytes));
-
 	session = pe_find_session_by_session_id(mac_ctx,
 				mlm_deauth_req->sessionId);
 	if (NULL == session) {
@@ -2095,7 +1891,7 @@ lim_process_mlm_set_keys_req(tpAniSirGlobal mac_ctx, uint32_t *msg_buf)
 	mlm_set_keys_req = (tLimMlmSetKeysReq *) msg_buf;
 	if (mac_ctx->lim.gpLimMlmSetKeysReq != NULL) {
 		qdf_mem_zero(mac_ctx->lim.gpLimMlmSetKeysReq,
-			     sizeof(tLimMlmSetKeysReq));
+			     sizeof(*mlm_set_keys_req));
 		qdf_mem_free(mac_ctx->lim.gpLimMlmSetKeysReq);
 		mac_ctx->lim.gpLimMlmSetKeysReq = NULL;
 	}
@@ -2105,7 +1901,8 @@ lim_process_mlm_set_keys_req(tpAniSirGlobal mac_ctx, uint32_t *msg_buf)
 				mlm_set_keys_req->sessionId);
 	if (NULL == session) {
 		pe_err("session does not exist for given sessionId");
-		qdf_mem_zero(mlm_set_keys_req->key, sizeof(tSirKeys));
+		qdf_mem_zero(mlm_set_keys_req->key,
+			     sizeof(mlm_set_keys_req->key));
 		mlm_set_keys_req->numKeys = 0;
 		qdf_mem_free(mlm_set_keys_req);
 		mac_ctx->lim.gpLimMlmSetKeysReq = NULL;
@@ -2244,6 +2041,7 @@ lim_process_mlm_set_keys_req(tpAniSirGlobal mac_ctx, uint32_t *msg_buf)
 			session->peSessionId);
 		/* Package WMA_SET_BSSKEY_REQ message parameters */
 		lim_send_set_bss_key_req(mac_ctx, mlm_set_keys_req, session);
+
 		return;
 	} else {
 		/*
@@ -2258,69 +2056,6 @@ lim_process_mlm_set_keys_req(tpAniSirGlobal mac_ctx, uint32_t *msg_buf)
 end:
 	mlm_set_keys_cnf.sessionId = mlm_set_keys_req->sessionId;
 	lim_post_sme_set_keys_cnf(mac_ctx, mlm_set_keys_req, &mlm_set_keys_cnf);
-}
-
-/**
- * lim_process_periodic_probe_req_timer() - This function is called to process
- * periodic probe request to send during scan.
- *
- * @mac_ctx:      Pointer to Global MAC structure
- *
- * This function is called to process periodic probe request to send during scan
- *
- * @Return None
- */
-static void lim_process_periodic_probe_req_timer(tpAniSirGlobal mac_ctx)
-{
-	uint8_t channel_num;
-	uint8_t i = 0;
-	tLimMlmScanReq *mlm_scan_req;
-	tSirRetStatus status = eSIR_SUCCESS;
-	TX_TIMER *probe_req_timer =
-		&mac_ctx->lim.limTimers.gLimPeriodicProbeReqTimer;
-
-	if (qdf_mc_timer_get_current_state(&probe_req_timer->qdf_timer)
-					   != QDF_TIMER_STATE_STOPPED) {
-		pe_debug("Invalid state of timer");
-		return;
-	}
-
-	if (!((mac_ctx->lim.gLimMlmState == eLIM_MLM_WT_PROBE_RESP_STATE)
-	    && (probe_req_timer->sessionId != 0xff)
-	    && (mac_ctx->lim.probeCounter < mac_ctx->lim.maxProbe))) {
-		pe_debug("received unexpected Periodic scan timeout in state %X",
-			mac_ctx->lim.gLimMlmState);
-		return;
-	}
-
-	mlm_scan_req = mac_ctx->lim.gpLimMlmScanReq;
-	mac_ctx->lim.probeCounter++;
-	/* Periodic channel timer timed out to send probe request. */
-	channel_num = lim_get_current_scan_channel(mac_ctx);
-	do {
-		/*
-		 * Prepare and send Probe Request frame for all the SSIDs
-		 * present in the saved MLM
-		 */
-		status = lim_send_probe_req_mgmt_frame(mac_ctx,
-				&mlm_scan_req->ssId[i], mlm_scan_req->bssId,
-				channel_num, mac_ctx->lim.gSelfMacAddr,
-				mlm_scan_req->dot11mode,
-				&mlm_scan_req->uIEFieldLen,
-				(uint8_t *) (mlm_scan_req) +
-					mlm_scan_req->uIEFieldOffset);
-		if (status != eSIR_SUCCESS) {
-			pe_err("send ProbeReq failed for SSID %s on channel: %d",
-				mlm_scan_req->ssId[i].ssId, channel_num);
-			return;
-		}
-		i++;
-	} while (i < mlm_scan_req->numSsid);
-	/* Activate timer again */
-	if (tx_timer_activate(probe_req_timer) != TX_SUCCESS) {
-		pe_warn("could not start periodic probe req timer");
-		return;
-	}
 }
 
 void lim_process_join_failure_timeout(tpAniSirGlobal mac_ctx)
@@ -2430,47 +2165,53 @@ static void lim_process_periodic_join_probe_req_timer(tpAniSirGlobal mac_ctx)
 }
 
 /**
- * lim_process_auth_retry_timer()- function to Retry Auth
+ * lim_process_auth_retry_timer()- function to Retry Auth when auth timeout
+ * occurs
  * @mac_ctx:pointer to global mac
  *
  * Return: void
  */
-
 static void lim_process_auth_retry_timer(tpAniSirGlobal mac_ctx)
 {
-	tpPESession  session_entry;
+	tpPESession session_entry;
+	tAniAuthType auth_type;
+	tLimTimers *lim_timers = &mac_ctx->lim.limTimers;
+	uint16_t vdev_id =
+		lim_timers->g_lim_periodic_auth_retry_timer.sessionId;
 
-	session_entry =
-	  pe_find_session_by_session_id(mac_ctx,
-	  mac_ctx->lim.limTimers.g_lim_periodic_auth_retry_timer.sessionId);
+	session_entry = pe_find_session_by_session_id(mac_ctx, vdev_id);
+
 	if (NULL == session_entry) {
-		pe_err("session does not exist for given SessionId: %d",
-		  mac_ctx->lim.limTimers.
-			g_lim_periodic_auth_retry_timer.sessionId);
+		pe_err("session does not exist for vdev_id: %d", vdev_id);
 		return;
 	}
 
 	if (tx_timer_running(&mac_ctx->lim.limTimers.gLimAuthFailureTimer) &&
-	     (session_entry->limMlmState == eLIM_MLM_WT_AUTH_FRAME2_STATE) &&
-	     (LIM_AUTH_ACK_RCD_SUCCESS != mac_ctx->auth_ack_status)) {
+	    (session_entry->limMlmState == eLIM_MLM_WT_AUTH_FRAME2_STATE) &&
+	    (LIM_AUTH_ACK_RCD_SUCCESS != mac_ctx->auth_ack_status)) {
 		tSirMacAuthFrameBody    auth_frame;
-
 		/*
 		 * Send the auth retry only in case we have received ack failure
 		 * else just restart the retry timer.
 		 */
-		if (LIM_AUTH_ACK_RCD_FAILURE == mac_ctx->auth_ack_status) {
+		if (LIM_AUTH_ACK_RCD_FAILURE == mac_ctx->auth_ack_status &&
+		    mac_ctx->lim.gpLimMlmAuthReq) {
+			auth_type = mac_ctx->lim.gpLimMlmAuthReq->authType;
+
 			/* Prepare & send Authentication frame */
-			auth_frame.authAlgoNumber =
-			    (uint8_t) mac_ctx->lim.gpLimMlmAuthReq->authType;
+			if (session_entry->sae_pmk_cached &&
+			    auth_type == eSIR_AUTH_TYPE_SAE)
+				auth_frame.authAlgoNumber = eSIR_OPEN_SYSTEM;
+			else
+				auth_frame.authAlgoNumber = (uint8_t)auth_type;
+
 			auth_frame.authTransactionSeqNumber =
 						SIR_MAC_AUTH_FRAME_1;
 			auth_frame.authStatusCode = 0;
-			pe_warn("Retry Auth");
+			pe_debug("Retry Auth");
 			mac_ctx->auth_ack_status = LIM_AUTH_ACK_NOT_RCD;
 			lim_increase_fils_sequence_number(session_entry);
-			lim_send_auth_mgmt_frame(mac_ctx,
-				&auth_frame,
+			lim_send_auth_mgmt_frame(mac_ctx, &auth_frame,
 				mac_ctx->lim.gpLimMlmAuthReq->peerMacAddr,
 				LIM_NO_WEP_IN_FC, session_entry);
 		}
@@ -2728,38 +2469,6 @@ void lim_process_assoc_failure_timeout(tpAniSirGlobal mac_ctx,
 }
 
 /**
- * lim_complete_mlm_scan() - This function is called to send MLM_SCAN_CNF
- * message to SME state machine.
- *
- * @mac_ctx:      Pointer to Global MAC structure
- * @ret_code:     Result code to be sent
- *
- * This function is called to send MLM_SCAN_CNF message to SME state machine.
- *
- * @Return: None
- */
-
-void lim_complete_mlm_scan(tpAniSirGlobal mac_ctx, tSirResultCodes ret_code)
-{
-	tLimMlmScanCnf mlm_scan_cnf;
-
-	/* Restore previous MLM state */
-	mac_ctx->lim.gLimMlmState = mac_ctx->lim.gLimPrevMlmState;
-	MTRACE(mac_trace(mac_ctx, TRACE_CODE_MLM_STATE, NO_SESSION,
-			 mac_ctx->lim.gLimMlmState));
-	lim_restore_pre_scan_state(mac_ctx);
-	/* Free up mac_ctx->lim.gLimMlmScanReq */
-	if (NULL != mac_ctx->lim.gpLimMlmScanReq) {
-		qdf_mem_free(mac_ctx->lim.gpLimMlmScanReq);
-		mac_ctx->lim.gpLimMlmScanReq = NULL;
-	}
-
-	mlm_scan_cnf.resultCode = ret_code;
-	lim_post_sme_message(mac_ctx, LIM_MLM_SCAN_CNF,
-			     (uint32_t *) &mlm_scan_cnf);
-}
-
-/**
  * lim_set_channel() - set channel api for lim
  *
  * @mac_ctx:                Pointer to Global MAC structure
@@ -2777,7 +2486,8 @@ void lim_complete_mlm_scan(tpAniSirGlobal mac_ctx, tSirResultCodes ret_code)
 void lim_set_channel(tpAniSirGlobal mac_ctx, uint8_t channel,
 		     uint8_t ch_center_freq_seg0, uint8_t ch_center_freq_seg1,
 		     enum phy_ch_width ch_width, int8_t max_tx_power,
-		     uint8_t pe_session_id)
+		     uint8_t pe_session_id, uint32_t cac_duration_ms,
+		     uint32_t dfs_regdomain)
 {
 	tpPESession pe_session;
 
@@ -2789,5 +2499,6 @@ void lim_set_channel(tpAniSirGlobal mac_ctx, uint8_t channel,
 	}
 	lim_send_switch_chnl_params(mac_ctx, channel, ch_center_freq_seg0,
 				    ch_center_freq_seg1, ch_width,
-				    max_tx_power, pe_session_id, false);
+				    max_tx_power, pe_session_id, false,
+				    cac_duration_ms, dfs_regdomain);
 }

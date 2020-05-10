@@ -19,11 +19,14 @@
 #ifndef _WMI_UNIFIED_APF_TLV_H_
 #define _WMI_UNIFIED_APF_TLV_H_
 
+#ifdef FEATURE_WLAN_APF
+
 #include "wmi_unified.h"
 #include "wmi_unified_api.h"
+#include "wmi_unified_param.h"
 
 /**
- * send_set_active_apf_mode_cmd_tlv() - configure active APF mode in FW
+ * wmi_send_set_active_apf_mode_cmd_tlv() - configure active APF mode in FW
  * @wmi_handle: the WMI handle
  * @vdev_id: the Id of the vdev to apply the configuration to
  * @ucast_mode: the active APF mode to configure for unicast packets
@@ -33,24 +36,27 @@
  * Return: QDF status
  */
 QDF_STATUS
-send_set_active_apf_mode_cmd_tlv(wmi_unified_t wmi_handle,
-				 uint8_t vdev_id,
-				 FW_ACTIVE_BPF_MODE ucast_mode,
-				 FW_ACTIVE_BPF_MODE mcast_bcast_mode);
+wmi_send_set_active_apf_mode_cmd_tlv(wmi_unified_t wmi_handle,
+				     uint8_t vdev_id,
+				     enum wmi_host_active_apf_mode ucast_mode,
+				     enum wmi_host_active_apf_mode
+							      mcast_bcast_mode);
 
 /**
- * send_apf_enable_cmd_tlv() - send cmd to enable/disable APF interpreter
+ * wmi_send_apf_enable_cmd_tlv() - send cmd to enable/disable APF interpreter
  * @wmi_handle: the WMI handle
  * @vdev_id: VDEV on which APF interpreter is to be enabled/disabled
  * @enable: true: enable, false: disable
  *
  * Return: QDF status
  */
-QDF_STATUS send_apf_enable_cmd_tlv(wmi_unified_t wmi_handle,
-				   uint32_t vdev_id, bool enable);
+QDF_STATUS
+wmi_send_apf_enable_cmd_tlv(wmi_unified_t wmi_handle, uint32_t vdev_id,
+			    bool enable);
 
 /**
- * send_apf_write_work_memory_cmd_tlv() - send cmd to write into the APF work
+ * wmi_send_apf_write_work_memory_cmd_tlv() - send cmd to write into the APF
+ * work
  * memory
  * @wmi_handle: the WMI handle
  * @apf_write_params: parameters and buffer pointer for the write
@@ -58,12 +64,12 @@ QDF_STATUS send_apf_enable_cmd_tlv(wmi_unified_t wmi_handle,
  * Return: QDF status
  */
 QDF_STATUS
-send_apf_write_work_memory_cmd_tlv(wmi_unified_t wmi_handle,
-				   struct wmi_apf_write_memory_params
-							*apf_write_params);
+wmi_send_apf_write_work_memory_cmd_tlv(wmi_unified_t wmi_handle,
+				       struct wmi_apf_write_memory_params
+							     *apf_write_params);
 
 /**
- * send_apf_read_work_memory_cmd_tlv() - send cmd to read part of APF
+ * wmi_send_apf_read_work_memory_cmd_tlv() - send cmd to read part of APF
  * work memory
  * @wmi_handle: the WMI handle
  * @apf_read_params: contains relative address and length to read from
@@ -71,12 +77,12 @@ send_apf_write_work_memory_cmd_tlv(wmi_unified_t wmi_handle,
  * Return: QDF status
  */
 QDF_STATUS
-send_apf_read_work_memory_cmd_tlv(wmi_unified_t wmi_handle,
-				  struct wmi_apf_read_memory_params
-							*apf_read_params);
+wmi_send_apf_read_work_memory_cmd_tlv(wmi_unified_t wmi_handle,
+				      struct wmi_apf_read_memory_params
+							      *apf_read_params);
 
 /**
- * extract_apf_read_memory_resp_event_tlv() - extract read memory response
+ * wmi_extract_apf_read_memory_resp_event_tlv() - extract read memory response
  * event into the given structure pointer
  * @wmi_handle: the WMI handle
  * @evt_buf: Pointer to the event buffer
@@ -85,7 +91,10 @@ send_apf_read_work_memory_cmd_tlv(wmi_unified_t wmi_handle,
  * Return: QDF status
  */
 QDF_STATUS
-extract_apf_read_memory_resp_event_tlv(wmi_unified_t wmi_handle, void *evt_buf,
+wmi_extract_apf_read_memory_resp_event_tlv(wmi_unified_t wmi_handle,
+				void *evt_buf,
 				struct wmi_apf_read_memory_resp_event_params
-									*resp);
+									 *resp);
+#endif /* FEATURE_WLAN_APF */
+
 #endif /* _WMI_UNIFIED_APF_TLV_H_ */

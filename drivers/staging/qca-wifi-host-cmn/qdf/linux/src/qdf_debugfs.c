@@ -23,9 +23,9 @@
 
 #include <qdf_debugfs.h>
 #include <i_qdf_debugfs.h>
-#include <qdf_module.h>
 #include <qdf_mem.h>
 #include <qdf_trace.h>
+#include <qdf_module.h>
 
 /* A private structure definition to qdf sequence */
 struct qdf_debugfs_seq_priv {
@@ -62,6 +62,7 @@ qdf_dentry_t qdf_debugfs_get_root(void)
 {
 	return qdf_debugfs_root;
 }
+qdf_export_symbol(qdf_debugfs_get_root);
 
 umode_t qdf_debugfs_get_filemode(uint16_t mode)
 {
@@ -257,15 +258,12 @@ static ssize_t qdf_seq_write(struct file *filp, const char __user *ubuf,
 	fops = seq->private;
 	if (fops && fops->write) {
 		buf = qdf_mem_malloc(len + 1);
-		if (!buf) {
-			QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-				  "Insufficient memory");
-			return rc;
+		if (buf) {
+			buf[len] = '\0';
+			rc = simple_write_to_buffer(buf, len, ppos, ubuf, len);
+			fops->write(fops->priv, buf, len + 1);
+			qdf_mem_free(buf);
 		}
-		buf[len] = '\0';
-		rc = simple_write_to_buffer(buf, len, ppos, ubuf, len);
-		fops->write(fops->priv, buf, len + 1);
-		qdf_mem_free(buf);
 	}
 
 	return rc;

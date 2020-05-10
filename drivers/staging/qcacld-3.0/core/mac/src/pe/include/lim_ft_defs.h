@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -70,7 +70,7 @@ typedef struct sSirFTPreAuthRsp {
 	uint16_t length;
 	uint8_t smeSessionId;
 	tSirMacAddr preAuthbssId;       /* BSSID to preauth to */
-	tSirRetStatus status;
+	QDF_STATUS status;
 	uint16_t ft_ies_length;
 	uint8_t ft_ies[MAX_FTIE_SIZE];
 	uint16_t ric_ies_length;
@@ -102,7 +102,7 @@ typedef struct sSirFTPreAuthKeyInfo {
    ------------------------------------------------------------------------*/
 typedef struct sFTPEContext {
 	tpSirFTPreAuthReq pFTPreAuthReq;        /* Saved FT Pre Auth Req */
-	tSirRetStatus ftPreAuthStatus;
+	QDF_STATUS ftPreAuthStatus;
 	uint16_t saved_auth_rsp_length;
 	uint8_t saved_auth_rsp[MAX_FTIE_SIZE];
 	tSirFTPreAuthKeyInfo PreAuthKeyInfo;
@@ -113,7 +113,7 @@ typedef struct sFTPEContext {
 	uint32_t smeSessionId;
 
 	/* This flag is required to indicate on which session the preauth
-	 * has taken place, since the auth reponse for preauth will come
+	 * has taken place, since the auth response for preauth will come
 	 * for a new BSSID for which there is no session yet. This flag
 	 * will be used to extract the session from the session preauth
 	 * has been initiated

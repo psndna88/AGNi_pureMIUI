@@ -23,6 +23,32 @@
  */
 #ifndef _CDP_TXRX_WDS_H_
 #define _CDP_TXRX_WDS_H_
+#include "cdp_txrx_handle.h"
+/**
+ * @brief set the wds rx filter policy of the device
+ * @details
+ *  This flag sets the wds rx policy on the vdev. Rx frames not compliant
+ *  with the policy will be dropped.
+ *
+ * @param vdev - the data virtual device object
+ * @param val - the wds rx policy bitmask
+ * @return - void
+ */
+static inline void
+cdp_set_wds_rx_policy(ol_txrx_soc_handle soc,
+	struct cdp_vdev *vdev,
+	u_int32_t val)
+{
+	if (!soc || !soc->ops || !soc->ops->wds_ops) {
+		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_FATAL,
+			"%s invalid instance", __func__);
+		return;
+	}
+
+	if (soc->ops->wds_ops->txrx_set_wds_rx_policy)
+		return soc->ops->wds_ops->txrx_set_wds_rx_policy(vdev, val);
+	return;
+}
 
 /**
  * @brief set the wds rx filter policy of the device
@@ -34,10 +60,38 @@
  * @param val - the wds rx policy bitmask
  * @return - void
  */
-#if WDS_VENDOR_EXTENSION
-void
-ol_txrx_set_wds_rx_policy(
-	ol_txrx_vdev_handle vdev,
-	u_int32_t val);
-#endif
+static inline void
+cdp_set_wds_tx_policy_update(ol_txrx_soc_handle soc,
+	struct cdp_peer *peer,
+	int wds_tx_ucast, int wds_tx_mcast)
+{
+	if (!soc || !soc->ops || !soc->ops->wds_ops) {
+		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_FATAL,
+			"%s invalid instance", __func__);
+		return;
+	}
+
+	if (soc->ops->wds_ops->txrx_wds_peer_tx_policy_update)
+		return soc->ops->wds_ops->txrx_wds_peer_tx_policy_update(
+				peer, wds_tx_ucast, wds_tx_mcast);
+	return;
+}
+
+/**
+ * cdp_vdev_set_wds() - Set/unset wds_enable flag in vdev
+ * @soc - data path soc handle
+ * @vdev - data path vap handle
+ * @val - value to be set in wds_en flag
+ *
+ *  This flag enables WDS source port learning feature on a vdev
+ *
+ * return 1 on success
+ */
+static inline int
+cdp_vdev_set_wds(ol_txrx_soc_handle soc, void *vdev, uint32_t val)
+{
+	if (soc->ops->wds_ops->vdev_set_wds)
+		return soc->ops->wds_ops->vdev_set_wds(vdev, val);
+	return 0;
+}
 #endif

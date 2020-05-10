@@ -21,8 +21,6 @@
 #include <qdf_nbuf.h>           /* qdf_nbuf_t, etc. */
 #include <qdf_mem.h>         /* qdf_mem_malloc */
 
-#include <linux/ieee80211.h>          /* IEEE80211_SEQ_MAX */
-
 /* external interfaces */
 #include <ol_txrx_api.h>        /* ol_txrx_pdev_handle */
 #include <ol_txrx_htt_api.h>    /* ol_rx_addba_handler, etc. */
@@ -543,7 +541,7 @@ ol_rx_flush_handler(ol_txrx_pdev_handle pdev,
 			ol_rx_reorder_flush_frag(htt_pdev, peer, tid,
 						 idx_start);
 			/*
-			 * Assuming flush message sent seperately for frags
+			 * Assuming flush message sent separately for frags
 			 * and for normal frames
 			 */
 			OL_RX_REORDER_TIMEOUT_MUTEX_UNLOCK(pdev);

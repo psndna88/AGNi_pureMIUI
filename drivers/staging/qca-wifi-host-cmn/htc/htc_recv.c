@@ -18,10 +18,11 @@
 
 #include "htc_debug.h"
 #include "htc_internal.h"
+#include "htc_credit_history.h"
 #include <qdf_nbuf.h>           /* qdf_nbuf_t */
 
 /* HTC Control message receive timeout msec */
-#define HTC_CONTROL_RX_TIMEOUT     6000
+#define HTC_CONTROL_RX_TIMEOUT     3000
 
 #if defined(WLAN_DEBUG) || defined(DEBUG)
 void debug_dump_bytes(uint8_t *buffer, uint16_t length, char *pDescription)
@@ -105,15 +106,6 @@ static void do_recv_completion(HTC_ENDPOINT *pEndpoint,
 		pPacket = htc_packet_dequeue(pQueueToIndicate);
 		do_recv_completion_pkt(pEndpoint, pPacket);
 	}
-}
-
-static void recv_packet_completion(HTC_TARGET *target, HTC_ENDPOINT *pEndpoint,
-				   HTC_PACKET *pPacket)
-{
-	do_recv_completion_pkt(pEndpoint, pPacket);
-
-	/* recover the packet container */
-	free_htc_packet_container(target, pPacket);
 }
 
 void htc_control_rx_complete(void *Context, HTC_PACKET *pPacket)
@@ -254,6 +246,9 @@ QDF_STATUS htc_rx_completion_handler(void *Context, qdf_nbuf_t netbuf,
 	uint16_t payloadLen;
 	uint32_t trailerlen = 0;
 	uint8_t htc_ep_id;
+#ifdef HTC_MSG_WAKEUP_FROM_SUSPEND_ID
+	struct htc_init_info *info;
+#endif
 
 #ifdef RX_SG_SUPPORT
 	LOCK_HTC_RX(target);
@@ -427,16 +422,14 @@ QDF_STATUS htc_rx_completion_handler(void *Context, qdf_nbuf_t netbuf,
 			case HTC_MSG_WAKEUP_FROM_SUSPEND_ID:
 				AR_DEBUG_PRINTF(ATH_DEBUG_ANY,
 					("Received initial wake up"));
-				LOCK_HTC_CREDIT(target);
 				htc_credit_record(HTC_INITIAL_WAKE_UP,
 					pEndpoint->TxCredits,
 					HTC_PACKET_QUEUE_DEPTH(
-						&pEndpoint->TxQueue));
-				UNLOCK_HTC_CREDIT(target);
-				if (target->HTCInitInfo.
-						target_initial_wakeup_cb)
-					target->HTCInitInfo.
-						target_initial_wakeup_cb();
+					&pEndpoint->TxQueue));
+				info = &target->HTCInitInfo;
+				if (info && info->target_initial_wakeup_cb)
+					info->target_initial_wakeup_cb(
+						info->target_psoc);
 				else
 					AR_DEBUG_PRINTF(ATH_DEBUG_ANY,
 						("No initial wake up cb"));
@@ -444,28 +437,23 @@ QDF_STATUS htc_rx_completion_handler(void *Context, qdf_nbuf_t netbuf,
 #endif
 			case HTC_MSG_SEND_SUSPEND_COMPLETE:
 				wow_nack = false;
-				LOCK_HTC_CREDIT(target);
 				htc_credit_record(HTC_SUSPEND_ACK,
 					pEndpoint->TxCredits,
 					HTC_PACKET_QUEUE_DEPTH(
-						&pEndpoint->TxQueue));
-				UNLOCK_HTC_CREDIT(target);
+					&pEndpoint->TxQueue));
 				target->HTCInitInfo.TargetSendSuspendComplete(
-					target->HTCInitInfo.pContext,
+					target->HTCInitInfo.target_psoc,
 					wow_nack);
 
 				break;
 			case HTC_MSG_NACK_SUSPEND:
 				wow_nack = true;
-				LOCK_HTC_CREDIT(target);
 				htc_credit_record(HTC_SUSPEND_ACK,
 					pEndpoint->TxCredits,
 					HTC_PACKET_QUEUE_DEPTH(
-						&pEndpoint->TxQueue));
-				UNLOCK_HTC_CREDIT(target);
-
+					&pEndpoint->TxQueue));
 				target->HTCInitInfo.TargetSendSuspendComplete(
-					target->HTCInitInfo.pContext,
+					target->HTCInitInfo.target_psoc,
 					wow_nack);
 				break;
 			}
@@ -494,7 +482,11 @@ QDF_STATUS htc_rx_completion_handler(void *Context, qdf_nbuf_t netbuf,
 		qdf_nbuf_pull_head(netbuf, HTC_HEADER_LEN);
 		qdf_nbuf_set_pktlen(netbuf, pPacket->ActualLength);
 
-		recv_packet_completion(target, pEndpoint, pPacket);
+		do_recv_completion_pkt(pEndpoint, pPacket);
+
+		/* recover the packet container */
+		free_htc_packet_container(target, pPacket);
+
 		netbuf = NULL;
 
 	} while (false);
@@ -526,7 +518,10 @@ A_STATUS htc_add_receive_pkt_multiple(HTC_HANDLE HTCHandle,
 		return A_EINVAL;
 	}
 
-	AR_DEBUG_ASSERT(pFirstPacket->Endpoint < ENDPOINT_MAX);
+	if (pFirstPacket->Endpoint >= ENDPOINT_MAX) {
+		A_ASSERT(false);
+		return A_EINVAL;
+	}
 
 	AR_DEBUG_PRINTF(ATH_DEBUG_RECV,
 			("+- htc_add_receive_pkt_multiple : endPointId: %d, cnt:%d, length: %d\n",
@@ -607,6 +602,8 @@ QDF_STATUS htc_wait_recv_ctrl_message(HTC_TARGET *target)
 	/* Wait for BMI request/response transaction to complete */
 	if (qdf_wait_single_event(&target->ctrl_response_valid,
 				  HTC_CONTROL_RX_TIMEOUT)) {
+		AR_DEBUG_PRINTF(ATH_DEBUG_ERR,
+			("Failed to receive control message\n"));
 		return QDF_STATUS_E_FAILURE;
 	}
 

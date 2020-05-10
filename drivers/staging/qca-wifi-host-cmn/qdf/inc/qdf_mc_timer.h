@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -72,7 +72,6 @@ typedef struct qdf_mc_timer_s {
 	qdf_mutex_t lock;
 	QDF_TIMER_TYPE type;
 	QDF_TIMER_STATE state;
-	uint32_t cookie;
 } qdf_mc_timer_t;
 
 
@@ -228,6 +227,22 @@ QDF_STATUS qdf_mc_timer_start(qdf_mc_timer_t *timer, uint32_t expiration_time);
 QDF_STATUS qdf_mc_timer_stop(qdf_mc_timer_t *timer);
 
 /**
+ * qdf_mc_timer_stop_sync() - stop a QDF Timer
+ * @timer: Pointer to timer object
+ * qdf_mc_timer_stop_sync() function stops a timer synchronously
+ * that has been started but has not expired, essentially
+ * cancelling the 'start' request.
+ *
+ * After a timer is stopped, it goes back to the state it was in after it
+ * was created and can be started again via a call to qdf_mc_timer_start().
+ *
+ * Return:
+ * QDF_STATUS_SUCCESS - Timer is initialized successfully
+ * QDF failure status - Timer initialization failed
+ */
+QDF_STATUS qdf_mc_timer_stop_sync(qdf_mc_timer_t *timer);
+
+/**
  * qdf_mc_timer_get_system_ticks() - get the system time in 10ms ticks
  *
  * qdf_mc_timer_get_system_ticks() function returns the current number
@@ -255,7 +270,7 @@ unsigned long qdf_mc_timer_get_system_time(void);
 /**
  * qdf_get_monotonic_boottime_ns() - Get kernel boottime in ns
  *
- * Return: kernel boottime in nano sec
+ * Return: kernel boottime in nano sec (includes time spent in suspend)
  */
 s64 qdf_get_monotonic_boottime_ns(void);
 
@@ -268,6 +283,13 @@ s64 qdf_get_monotonic_boottime_ns(void);
  * Return: none
  */
 void qdf_timer_module_init(void);
+
+/**
+ * qdf_get_time_of_the_day_ms() - get time of the day in millisec
+ *
+ * Return: time of the day in ms
+ */
+qdf_time_t qdf_get_time_of_the_day_ms(void);
 
 /**
  * qdf_timer_module_deinit() - Deinitializes a QDF timer module.
@@ -287,4 +309,22 @@ void qdf_timer_module_deinit(void);
  * Return: None
  */
 void qdf_get_time_of_the_day_in_hr_min_sec_usec(char *tbuf, int len);
+
+void qdf_register_mc_timer_callback(void (*callback) (qdf_mc_timer_t *data));
+
+/**
+ * qdf_timer_set_multiplier() - set the global QDF timer scalar value
+ * @multiplier: the scalar value to apply
+ *
+ * Return: None
+ */
+void qdf_timer_set_multiplier(uint32_t multiplier);
+
+/**
+ * qdf_timer_get_multiplier() - get the global QDF timer scalar value
+ *
+ * Return: the global QDF timer scalar value
+ */
+uint32_t qdf_timer_get_multiplier(void);
+
 #endif /* __QDF_MC_TIMER_H */

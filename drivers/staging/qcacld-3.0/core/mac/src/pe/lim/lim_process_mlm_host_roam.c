@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -152,7 +152,7 @@ void lim_process_mlm_reassoc_req(tpAniSirGlobal mac_ctx, uint32_t *msg)
 			session->ch_center_freq_seg1,
 			session->ch_width,
 			session->maxTxPower,
-			session->peSessionId);
+			session->peSessionId, 0, 0);
 
 	return;
 end:
@@ -216,7 +216,7 @@ static void lim_handle_sme_reaasoc_result(tpAniSirGlobal pMac,
 		}
 	}
 error:
-	/* Delete teh session if REASSOC failure occurred. */
+	/* Delete the session if REASSOC failure occurred. */
 	if (resultCode != eSIR_SME_SUCCESS) {
 		if (NULL != psessionEntry) {
 			pe_delete_session(pMac, psessionEntry);
@@ -353,7 +353,7 @@ void lim_process_mlm_reassoc_cnf(tpAniSirGlobal mac_ctx, uint32_t *msg_buf)
  *Return: None
  */
 void lim_process_sta_mlm_add_bss_rsp_ft(tpAniSirGlobal pMac,
-		tpSirMsgQ limMsgQ, tpPESession psessionEntry)
+		struct scheduler_msg *limMsgQ, tpPESession psessionEntry)
 {
 	tLimMlmReassocCnf mlmReassocCnf; /* keep sme */
 	tpDphHashNode pStaDs = NULL;
@@ -445,8 +445,6 @@ void lim_process_sta_mlm_add_bss_rsp_ft(tpAniSirGlobal pMac,
 	pStaDs->bssId = pAddBssParams->bssIdx;
 	/* STA Index(genr by HAL) for the BSS entry is stored here */
 	pStaDs->staIndex = pAddBssParams->staContext.staIdx;
-	pStaDs->ucUcastSig = pAddBssParams->staContext.ucUcastSig;
-	pStaDs->ucBcastSig = pAddBssParams->staContext.ucBcastSig;
 
 	rrm_cache_mgmt_tx_power(pMac, pAddBssParams->txMgmtPower,
 			psessionEntry);
@@ -483,7 +481,7 @@ void lim_process_sta_mlm_add_bss_rsp_ft(tpAniSirGlobal pMac,
 	pAddStaParams->shortPreambleSupported =
 		(uint8_t) psessionEntry->beaconParams.fShortPreamble;
 	lim_populate_peer_rate_set(pMac, &pAddStaParams->supportedRates, NULL,
-				   false, psessionEntry, NULL);
+				   false, psessionEntry, NULL, NULL);
 
 	if (psessionEntry->htCapability) {
 		pAddStaParams->htCapable = psessionEntry->htCapability;
@@ -525,7 +523,7 @@ void lim_process_sta_mlm_add_bss_rsp_ft(tpAniSirGlobal pMac,
 	}
 
 	if (wlan_cfg_get_int(pMac, WNI_CFG_LISTEN_INTERVAL, &listenInterval) !=
-	    eSIR_SUCCESS)
+	    QDF_STATUS_SUCCESS)
 		pe_err("Couldn't get LISTEN_INTERVAL");
 	pAddStaParams->listenInterval = (uint16_t) listenInterval;
 
@@ -595,8 +593,8 @@ void lim_process_mlm_ft_reassoc_req(tpAniSirGlobal pMac, uint32_t *pMsgBuf,
 	tLimMlmReassocReq *pMlmReassocReq;
 	uint16_t caps;
 	uint32_t val;
-	tSirMsgQ msgQ;
-	tSirRetStatus retCode;
+	struct scheduler_msg msgQ = {0};
+	QDF_STATUS retCode;
 	uint32_t teleBcnEn = 0;
 
 	chanNum = psessionEntry->currentOperChannel;
@@ -631,7 +629,7 @@ void lim_process_mlm_ft_reassoc_req(tpAniSirGlobal pMac, uint32_t *pMsgBuf,
 
 	if (wlan_cfg_get_int(pMac, WNI_CFG_REASSOCIATION_FAILURE_TIMEOUT,
 			(uint32_t *) &pMlmReassocReq->reassocFailureTimeout)
-	    != eSIR_SUCCESS) {
+	    != QDF_STATUS_SUCCESS) {
 		/**
 		 * Could not get ReassocFailureTimeout value
 		 * from CFG. Log error.
@@ -642,7 +640,7 @@ void lim_process_mlm_ft_reassoc_req(tpAniSirGlobal pMac, uint32_t *pMsgBuf,
 	}
 
 	if (cfg_get_capability_info(pMac, &caps, psessionEntry) !=
-			eSIR_SUCCESS) {
+			QDF_STATUS_SUCCESS) {
 		/**
 		 * Could not get Capabilities value
 		 * from CFG. Log error.
@@ -665,7 +663,7 @@ void lim_process_mlm_ft_reassoc_req(tpAniSirGlobal pMac, uint32_t *pMsgBuf,
 	   to WNI_CFG_TELE_BCN_MAX_LI
 	 */
 	if (wlan_cfg_get_int(pMac, WNI_CFG_TELE_BCN_WAKEUP_EN, &teleBcnEn) !=
-	    eSIR_SUCCESS) {
+	    QDF_STATUS_SUCCESS) {
 		pe_err("Couldn't get WNI_CFG_TELE_BCN_WAKEUP_EN");
 		qdf_mem_free(pMlmReassocReq);
 		return;
@@ -673,7 +671,7 @@ void lim_process_mlm_ft_reassoc_req(tpAniSirGlobal pMac, uint32_t *pMsgBuf,
 
 	if (teleBcnEn) {
 		if (wlan_cfg_get_int(pMac, WNI_CFG_TELE_BCN_MAX_LI, &val) !=
-		    eSIR_SUCCESS) {
+		    QDF_STATUS_SUCCESS) {
 			/**
 			 * Could not get ListenInterval value
 			 * from CFG. Log error.
@@ -684,7 +682,7 @@ void lim_process_mlm_ft_reassoc_req(tpAniSirGlobal pMac, uint32_t *pMsgBuf,
 		}
 	} else {
 		if (wlan_cfg_get_int(pMac, WNI_CFG_LISTEN_INTERVAL, &val) !=
-		    eSIR_SUCCESS) {
+		    QDF_STATUS_SUCCESS) {
 			/**
 			 * Could not get ListenInterval value
 			 * from CFG. Log error.
@@ -696,7 +694,7 @@ void lim_process_mlm_ft_reassoc_req(tpAniSirGlobal pMac, uint32_t *pMsgBuf,
 	}
 	if (lim_set_link_state
 		    (pMac, eSIR_LINK_PREASSOC_STATE, psessionEntry->bssId,
-		    psessionEntry->selfMacAddr, NULL, NULL) != eSIR_SUCCESS) {
+		    psessionEntry->selfMacAddr, NULL, NULL) != QDF_STATUS_SUCCESS) {
 		qdf_mem_free(pMlmReassocReq);
 		return;
 	}
@@ -715,7 +713,7 @@ void lim_process_mlm_ft_reassoc_req(tpAniSirGlobal pMac, uint32_t *pMsgBuf,
 	pe_debug("Sending SIR_HAL_ADD_BSS_REQ");
 	MTRACE(mac_trace_msg_tx(pMac, psessionEntry->peSessionId, msgQ.type));
 	retCode = wma_post_ctrl_msg(pMac, &msgQ);
-	if (eSIR_SUCCESS != retCode) {
+	if (QDF_STATUS_SUCCESS != retCode) {
 		qdf_mem_free(psessionEntry->ftPEContext.pAddBssReq);
 		pe_err("Posting ADD_BSS_REQ to HAL failed, reason: %X",
 			retCode);

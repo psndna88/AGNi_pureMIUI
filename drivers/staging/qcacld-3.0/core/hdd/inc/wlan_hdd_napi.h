@@ -32,7 +32,7 @@
 /* Linux headers */
 #include <linux/netdevice.h> /* net_device */
 
-struct hdd_context_s;
+struct hdd_context;
 
 #define HDD_NAPI_ANY (-1)
 
@@ -50,12 +50,12 @@ int hdd_napi_poll(struct napi_struct *napi, int budget);
 struct qca_napi_data *hdd_napi_get_all(void);
 
 #if defined HELIUMPLUS && defined MSM_PLATFORM
-int hdd_napi_apply_throughput_policy(struct hdd_context_s *hddctx,
+int hdd_napi_apply_throughput_policy(struct hdd_context *hddctx,
 				     uint64_t              tx_packets,
 				     uint64_t              rx_packets);
 int hdd_napi_serialize(int is_on);
-#else /* FEATURE_NAPI and NOT HELIUM */
-static inline int hdd_napi_apply_throughput_policy(struct hdd_context_s *hddctx,
+#else
+static inline int hdd_napi_apply_throughput_policy(struct hdd_context *hddctx,
 						   uint64_t tx_packets,
 						   uint64_t rx_packets)
 {
@@ -64,7 +64,7 @@ static inline int hdd_napi_apply_throughput_policy(struct hdd_context_s *hddctx,
 static inline int hdd_napi_serialize(int is_on)
 {
 	return -EINVAL;
-};
+}
 #endif /* HELIUMPLUS && MSM_PLATFORM */
 
 #else /* ! defined(FEATURE_NAPI) */
@@ -91,11 +91,11 @@ static inline int hdd_napi_apply_throughput_policy(void *hdd_ctx,
 {
 	return 0;
 }
+
 static inline int hdd_napi_serialize(int is_on)
 {
-	return 0;
-};
-
+	return -EINVAL;
+}
 #endif /* FEATURE_NAPI */
 
 #endif /*  HDD_NAPI_H__ */

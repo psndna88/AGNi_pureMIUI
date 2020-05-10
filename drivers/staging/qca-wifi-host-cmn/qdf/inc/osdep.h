@@ -76,17 +76,7 @@
 #define QDF_SYSCTL_PROC_DOINTVEC(ctl, write, filp, buffer, lenp, ppos) \
 	__QDF_SYSCTL_PROC_DOINTVEC(ctl, write, filp, buffer, lenp, ppos)
 
-#define QDF_SYSCTL_PROC_DOSTRING(ctl, write, filp, buffer, lenp, ppos) \
-	__QDF_SYSCTL_PROC_DOSTRING(ctl, write, filp, buffer, lenp, ppos)
-
 #define EOK    (0)
-
-#ifndef false
-#define false 0
-#endif
-#ifndef true
-#define true  1
-#endif
 
 #ifndef ARPHRD_IEEE80211
 #define ARPHRD_IEEE80211 801    /* IEEE 802.11.  */
@@ -111,7 +101,6 @@
  * System time interface
  */
 typedef qdf_time_t systime_t;
-typedef qdf_time_t systick_t;
 
 /**
  * os_get_timestamp() - gives the timestamp in ticks
@@ -125,13 +114,6 @@ static inline qdf_time_t os_get_timestamp(void)
 
 struct _NIC_DEV;
 
-static inline unsigned char *os_malloc(osdev_t nic_dev,
-				       unsigned long size_in_bytes,
-				       int32_t gfp)
-{
-	return qdf_mem_malloc(size_in_bytes);
-}
-
 #define OS_FREE(_p)                     qdf_mem_free(_p)
 
 #define OS_DMA_MEM_CONTEXT(context)	    \
@@ -140,33 +122,18 @@ static inline unsigned char *os_malloc(osdev_t nic_dev,
 #define OS_GET_DMA_MEM_CONTEXT(var, field)  \
 		&(var->field)
 
-#define OS_COPY_DMA_MEM_CONTEXT(dst, src)   \
-		*dst = *src
-
-#define OS_ZERO_DMA_MEM_CONTEXT(context)   \
-		*context = 0
-
 /*
  * Timer Interfaces. Use these macros to declare timer
  * and retrieve timer argument. This is mainly for resolving
  * different argument types for timer function in different OS.
  */
 #define os_timer_func(_fn) \
-	void _fn(unsigned long timer_arg)
+	void _fn(void *timer_arg)
 
 #define OS_GET_TIMER_ARG(_arg, _type) \
 	((_arg) = (_type)(timer_arg))
 
-#define OS_DECLARE_TIMER(_fn)                  void _fn(void *)
-
-#define OS_INIT_TIMER(_osdev, _timer, _fn, _ctx, type)  \
-			qdf_timer_init(_osdev, _timer, _fn, _ctx, type)
-
 #define OS_SET_TIMER(_timer, _ms)      qdf_timer_mod(_timer, _ms)
-
-#define OS_CANCEL_TIMER(_timer)        qdf_timer_stop(_timer)
-
-#define OS_FREE_TIMER(_timer)          qdf_timer_stop(_timer)
 
 /*
  * These are required for network manager support

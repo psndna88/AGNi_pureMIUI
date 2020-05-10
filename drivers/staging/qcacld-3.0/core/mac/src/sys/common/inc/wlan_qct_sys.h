@@ -34,7 +34,7 @@
    -------------------------------------------------------------------------*/
 #include <qdf_types.h>
 #include <qdf_status.h>
-#include <cds_mq.h>
+#include <scheduler_api.h>
 
 /*---------------------------------------------------------------------------
    Preprocessor definitions and constants
@@ -54,17 +54,6 @@
  * Return: None
  */
 typedef void (*sys_rsp_cb)(void *user_data);
-
-typedef enum {
-	SYS_MSG_ID_MC_START,
-	SYS_MSG_ID_MC_THR_PROBE,
-	SYS_MSG_ID_MC_TIMER,
-	SYS_MSG_ID_MC_STOP,
-	SYS_MSG_ID_FTM_RSP,
-	SYS_MSG_ID_QVIT,
-	SYS_MSG_ID_DATA_STALL_MSG,
-	SYS_MSG_ID_CLEAN_VDEV_RSP_QUEUE,
-} SYS_MSG_ID;
 
 /*---------------------------------------------------------------------------
    Preprocessor definitions and constants
@@ -98,47 +87,16 @@ typedef enum {
    \sa
 
    --------------------------------------------------------------------------*/
-QDF_STATUS sys_build_message_header(SYS_MSG_ID sysMsgId, cds_msg_t *pMsg);
-
+QDF_STATUS sys_build_message_header(SYS_MSG_ID sysMsgId,
+				    struct scheduler_msg *pMsg);
 /**
  * umac_stop() - send schedule message to mc thread to stop umac (sme and mac)
  * @p_cds_context: cds context
  *
  * Return: status of operation
  */
-QDF_STATUS umac_stop(v_CONTEXT_t p_cds_context);
+QDF_STATUS umac_stop(void);
 
-/*----------------------------------------------------------------------------
-
-   \brief sys_mc_process_msg() - process SYS messages on the Main Controller thread
-
-   This function processes SYS Messages on the Main Controller thread.
-   SYS messages consist of all 'legacy' messages (messages bound for legacy
-   modules like LIM, HAL, PE, etc.) as well as newly defined SYS message
-   types.
-
-   SYS messages are identified by their type (in the SYS_MESSAGES enum) as
-   well as a 'cookie' that is in the reserved field of the message structure.
-   This 'cookie' is introduced to prevent any message type/ID conflicts with
-   the 'legacy' message types.
-
-   Any module attempting to post a message to the SYS module must set the
-   message type to one of the types in the SYS_MESSAGE enum *and* must also
-   set the Reserved field in the message body to SYS_MSG_COOKIE.
-
-   \param p_cds_context - pointer to the CDS Context
-
-   \param pMsg - pointer to the message to be processed.
-
-   \return - QDF_STATUS_SUCCESS - the message was processed successfully.
-
-   QDF_STATUS_E_BADMSG - a bad (unknown type) message was received
-   and subsequently not processed.
-   \sa
-
-   --------------------------------------------------------------------------*/
-QDF_STATUS sys_mc_process_msg(v_CONTEXT_t p_cds_context, cds_msg_t *pMsg);
-
-void wlan_sys_probe(void);
+QDF_STATUS sys_mc_process_handler(struct scheduler_msg *msg);
 
 #endif /* WLAN_QCT_SYS_H__ */

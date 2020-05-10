@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -21,7 +21,6 @@
 
 #include "wlan_hdd_main.h"
 #include "sir_api.h"
-
 
 #ifdef WLAN_FEATURE_DISA
 /**

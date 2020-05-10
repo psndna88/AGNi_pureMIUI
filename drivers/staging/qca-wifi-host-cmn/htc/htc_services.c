@@ -20,6 +20,7 @@
 #include "htc_internal.h"
 #include <hif.h>
 #include <qdf_nbuf.h>           /* qdf_nbuf_t */
+#include "qdf_module.h"
 
 /* use credit flow control over HTC */
 unsigned int htc_credit_flow = 1;
@@ -347,6 +348,7 @@ QDF_STATUS htc_connect_service(HTC_HANDLE HTCHandle,
 
 		/* copy all the callbacks */
 		pEndpoint->EpCallBacks = pConnectReq->EpCallbacks;
+		pEndpoint->async_update = 0;
 
 		status = hif_map_service_to_pipe(target->hif_dev,
 						 pEndpoint->service_id,
@@ -373,17 +375,14 @@ QDF_STATUS htc_connect_service(HTC_HANDLE HTCHandle,
 				QDF_TIMER_TYPE_SW);
 		}
 
-		AR_DEBUG_PRINTF(ATH_DEBUG_INFO,
-				("SVC:0x%4.4X, ULpipe:%d DLpipe:%d id:%d Ready",
-				 pEndpoint->service_id, pEndpoint->UL_PipeID,
-				 pEndpoint->DL_PipeID, pEndpoint->Id));
+		HTC_TRACE("SVC:0x%4.4X, ULpipe:%d DLpipe:%d id:%d Ready",
+			  pEndpoint->service_id, pEndpoint->UL_PipeID,
+			  pEndpoint->DL_PipeID, pEndpoint->Id);
 
 		if (disableCreditFlowCtrl && pEndpoint->TxCreditFlowEnabled) {
 			pEndpoint->TxCreditFlowEnabled = false;
-			AR_DEBUG_PRINTF(ATH_DEBUG_INFO,
-					("SVC:0x%4.4X ep:%d TX flow control disabled",
-					 pEndpoint->service_id,
-					 assignedEndpoint));
+			HTC_TRACE("SVC:0x%4.4X ep:%d TX flow control disabled",
+				  pEndpoint->service_id, assignedEndpoint);
 		}
 
 	} while (false);
@@ -392,6 +391,7 @@ QDF_STATUS htc_connect_service(HTC_HANDLE HTCHandle,
 
 	return status;
 }
+qdf_export_symbol(htc_connect_service);
 
 void htc_set_credit_distribution(HTC_HANDLE HTCHandle,
 				 void *pCreditDistContext,
@@ -415,3 +415,16 @@ void htc_fw_event_handler(void *context, QDF_STATUS status)
 	if (target->HTCInitInfo.TargetFailure != NULL)
 		initInfo->TargetFailure(initInfo->pContext, status);
 }
+
+
+void htc_set_async_ep(HTC_HANDLE HTCHandle,
+			HTC_ENDPOINT_ID htc_ep_id, bool value)
+{
+	HTC_TARGET *target = GET_HTC_TARGET_FROM_HANDLE(HTCHandle);
+	HTC_ENDPOINT *pEndpoint = &target->endpoint[htc_ep_id];
+
+	pEndpoint->async_update = value;
+	qdf_print("%s: htc_handle %pK, ep %d, value %d\n", __func__,
+					HTCHandle, htc_ep_id, value);
+}
+

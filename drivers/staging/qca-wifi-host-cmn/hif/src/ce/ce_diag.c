@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -17,6 +17,7 @@
  */
 
 #include "targcfg.h"
+#include "target_type.h"
 #include "qdf_lock.h"
 #include "qdf_status.h"
 #include "qdf_status.h"
@@ -30,6 +31,7 @@
 #include "ce_api.h"
 #include "qdf_trace.h"
 #include "hif_debug.h"
+#include "qdf_module.h"
 
 void
 hif_ce_dump_target_memory(struct hif_softc *scn, void *ramdump_base,
@@ -159,6 +161,14 @@ QDF_STATUS hif_diag_read_mem(struct hif_opaque_softc *hif_ctx,
 	unsigned int target_type = 0;
 	unsigned int boundary_addr = 0;
 
+	ce_diag = hif_state->ce_diag;
+	if (ce_diag == NULL) {
+		HIF_ERROR("%s: DIAG CE not present", __func__);
+		return QDF_STATUS_E_INVAL;
+	}
+	/* not supporting diag ce on srng based systems, therefore we know this
+	 * isn't an srng based system */
+
 	transaction_id = (mux_id & MUX_ID_MASK) |
 		 (transaction_id & TRANSACTION_ID_MASK);
 #ifdef QCA_WIFI_3_0
@@ -197,7 +207,6 @@ QDF_STATUS hif_diag_read_mem(struct hif_opaque_softc *hif_ctx,
 
 		return status;
 	}
-	ce_diag = hif_state->ce_diag;
 
 	A_TARGET_ACCESS_LIKELY(scn);
 
@@ -307,6 +316,7 @@ done:
 
 	return status;
 }
+qdf_export_symbol(hif_diag_read_mem);
 
 /* Read 4-byte aligned data from Target memory or register */
 QDF_STATUS hif_diag_read_access(struct hif_opaque_softc *hif_ctx,
@@ -359,6 +369,13 @@ QDF_STATUS hif_diag_write_mem(struct hif_opaque_softc *hif_ctx,
 	unsigned int target_type = 0;
 
 	ce_diag = hif_state->ce_diag;
+	if (ce_diag == NULL) {
+		HIF_ERROR("%s: DIAG CE not present", __func__);
+		return QDF_STATUS_E_INVAL;
+	}
+	/* not supporting diag ce on srng based systems, therefore we know this
+	 * isn't an srng based system */
+
 	transaction_id = (mux_id & MUX_ID_MASK) |
 		(transaction_id & TRANSACTION_ID_MASK);
 #ifdef QCA_WIFI_3_0

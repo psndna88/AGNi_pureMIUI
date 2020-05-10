@@ -110,18 +110,6 @@ typedef QDF_STATUS (*wlan_txrx_rssi_cross_thresh)(void *adapter, u8 rssi,
 						  void *usr_ctx,
 						  int8_t avg_rssi);
 
-struct wlan_txrx_ind_req {
-	u16 msgType;            /* message type is same as the request type */
-	u16 msgLen;             /* length of the entire request */
-	u8 sessionId;           /* sme Session Id */
-	u8 rssiNotification;
-	u8 avgRssi;
-	void *tlCallback;
-	void *pAdapter;
-	void *pUserCtxt;
-};
-
-
 /* Rx callback registered with txrx */
 typedef int (*wlan_txrx_cb_type)(void *g_cdsctx, qdf_nbuf_t buf, u8 sta_id,
 				 struct txrx_rx_metainfo *rx_meta_info);
@@ -196,22 +184,4 @@ static inline int wlan_txrx_register_rssi_indcb(void *g_cdsctx,
 	return 0;
 }
 
-/* FIXME: The following stubs will be removed eventually */
-static inline int wlan_txrx_mc_process_msg(void *g_cdsctx, cds_msg_t *msg)
-{
-	return 0;
-}
-
-static inline int wlan_txrx_tx_process_msg(void *g_cdsctx, cds_msg_t *msg)
-{
-	return 0;
-}
-
-static inline void wlan_txrx_mc_free_msg(void *g_cdsctx, cds_msg_t *msg)
-{
-}
-
-static inline void wlan_txrx_tx_free_msg(void *g_cdsctx, cds_msg_t *msg)
-{
-}
 #endif

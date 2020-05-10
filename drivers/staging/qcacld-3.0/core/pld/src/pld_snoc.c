@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -29,6 +29,48 @@
 #include "pld_snoc.h"
 
 #ifdef CONFIG_PLD_SNOC_ICNSS
+
+/**
+ * pld_snoc_idle_restart_cb() - Perform idle restart
+ * @pdev: platform device
+ *
+ * This function will be called if there is an idle restart request
+ *
+ * Return: int
+ */
+static int pld_snoc_idle_restart_cb(struct device *dev)
+{
+	struct pld_context *pld_context;
+
+	pld_context = pld_get_global_context();
+	if (pld_context->ops->idle_restart)
+		return pld_context->ops->idle_restart(dev,
+						      PLD_BUS_TYPE_SNOC);
+
+	return -ENODEV;
+}
+
+/**
+ * pld_snoc_idle_shutdown_cb() - Perform idle shutdown
+ * @pdev: PCIE device
+ * @id: PCIE device ID
+ *
+ * This function will be called if there is an idle shutdown request
+ *
+ * Return: int
+ */
+static int pld_snoc_idle_shutdown_cb(struct device *dev)
+{
+	struct pld_context *pld_context;
+
+	pld_context = pld_get_global_context();
+	if (pld_context->ops->shutdown)
+		return pld_context->ops->idle_shutdown(dev,
+						       PLD_BUS_TYPE_SNOC);
+
+	return -ENODEV;
+}
+
 /**
  * pld_snoc_probe() - Probe function for platform driver
  * @dev: device
@@ -238,7 +280,7 @@ static int pld_snoc_uevent(struct device *dev,
 		return -EINVAL;
 
 	if (!pld_context->ops->uevent)
-		return 0;
+		goto out;
 
 	if (!uevent)
 		return -EINVAL;
@@ -255,41 +297,13 @@ static int pld_snoc_uevent(struct device *dev,
 		data.fw_down.crashed = uevent_data->crashed;
 		break;
 	default:
-		return 0;
+		goto out;
 	}
 
 	pld_context->ops->uevent(dev, &data);
+out:
 	return 0;
 }
-
-#if defined(CONFIG_WLAN_FW_THERMAL_MITIGATION)
-/**
- * pld_snoc_set_thermal_state() - Set thermal state for thermal mitigation
- * @dev: device
- * @thermal_state: Thermal state set by thermal subsystem
- *
- * This function will be called when thermal subsystem notifies platform
- * driver about change in thermal state.
- *
- * Return: 0 for success
- * Non zero failure code for errors
- */
-static int pld_snoc_set_thermal_state(struct device *dev,
-				      unsigned long thermal_state)
-{
-	struct pld_context *pld_context;
-
-	pld_context = pld_get_global_context();
-	if (!pld_context)
-		return -EINVAL;
-
-	if (pld_context->ops->set_curr_therm_state)
-		return pld_context->ops->set_curr_therm_state(dev,
-							      thermal_state);
-
-	return -ENOTSUPP;
-}
-#endif
 
 #ifdef MULTI_IF_NAME
 #define PLD_SNOC_OPS_NAME "pld_snoc_" MULTI_IF_NAME
@@ -309,9 +323,8 @@ struct icnss_driver_ops pld_snoc_ops = {
 	.suspend_noirq = pld_snoc_suspend_noirq,
 	.resume_noirq = pld_snoc_resume_noirq,
 	.uevent = pld_snoc_uevent,
-#if defined(CONFIG_WLAN_FW_THERMAL_MITIGATION)
-	.set_therm_state = pld_snoc_set_thermal_state,
-#endif
+	.idle_restart  = pld_snoc_idle_restart_cb,
+	.idle_shutdown = pld_snoc_idle_shutdown_cb,
 };
 
 /**
@@ -422,7 +435,16 @@ int pld_snoc_get_soc_info(struct device *dev, struct pld_soc_info *info)
 	if (0 != ret)
 		return ret;
 
-	memcpy(info, &icnss_info, sizeof(*info));
+	info->v_addr = icnss_info.v_addr;
+	info->p_addr = icnss_info.p_addr;
+	info->chip_id = icnss_info.chip_id;
+	info->chip_family = icnss_info.chip_family;
+	info->board_id = icnss_info.board_id;
+	info->soc_id = icnss_info.soc_id;
+	info->fw_version = icnss_info.fw_version;
+	strlcpy(info->fw_build_timestamp, icnss_info.fw_build_timestamp,
+		sizeof(info->fw_build_timestamp));
+
 	return 0;
 }
 #endif

@@ -48,7 +48,8 @@ struct htc_init_info {
 	void *pContext;         /* context for target notifications */
 	void (*TargetFailure)(void *Instance, QDF_STATUS Status);
 	void (*TargetSendSuspendComplete)(void *ctx, bool is_nack);
-	void (*target_initial_wakeup_cb)(void);
+	void (*target_initial_wakeup_cb)(void *cb_ctx);
+	void *target_psoc;
 };
 
 /* Struct for HTC layer packet stats*/
@@ -161,10 +162,7 @@ struct htc_ep_callbacks {
 	 * indications (EpTxComplete must be NULL)
 	 */
 	HTC_EP_SEND_PKT_COMP_MULTIPLE EpTxCompleteMultiple;
-	/* OPTIONAL completion handler for multiple
-	 * recv packet indications (EpRecv must be NULL)
-	 */
-	HTC_EP_RECV_PKT_MULTIPLE EpRecvPktMultiple;
+
 	HTC_EP_RESUME_TX_QUEUE ep_resume_tx_queue;
 	/* if EpRecvAllocThresh is non-NULL, HTC will compare the
 	 * threshold value to the current recv packet length and invoke
@@ -178,7 +176,6 @@ struct htc_ep_callbacks {
 	 * are empty
 	 */
 	int RecvRefillWaterMark;
-
 };
 
 /* service connection information */
@@ -637,10 +634,21 @@ bool htc_is_endpoint_active(HTC_HANDLE HTCHandle,
  * @isNodropPkt - indicates whether it is nodrop pkt
  *
  * Return: None
- * Return:
  *
  */
 void htc_set_nodrop_pkt(HTC_HANDLE HTCHandle, A_BOOL isNodropPkt);
+
+/**
+ * htc_enable_hdr_length_check - Set up htc_hdr_length_check flag
+ * @HTCHandle - HTC handle
+ * @htc_hdr_length_check - flag to indicate whether htc header length check is
+ *                         required
+ *
+ * Return: None
+ *
+ */
+void
+htc_enable_hdr_length_check(HTC_HANDLE htc_handle, bool htc_hdr_length_check);
 
 /**
  * htc_get_num_recv_buffers - Get the number of recv buffers currently queued
@@ -752,9 +760,55 @@ static inline int htc_pm_runtime_get(HTC_HANDLE htc_handle) { return 0; }
 static inline int htc_pm_runtime_put(HTC_HANDLE htc_handle) { return 0; }
 #endif
 
-#ifdef WMI_INTERFACE_EVENT_LOGGING
+/**
+  * htc_set_async_ep() - set async HTC end point
+  *           user should call this function after htc_connect_service before
+  *           queing any packets to end point
+  * @HTCHandle: htc handle
+  * @HTC_ENDPOINT_ID: end point id
+  * @value: true or false
+  *
+  * Return: None
+  */
+
+void htc_set_async_ep(HTC_HANDLE HTCHandle,
+			HTC_ENDPOINT_ID htc_ep_id, bool value);
+
+/**
+ * htc_set_wmi_endpoint_count: Set number of WMI endpoint
+ * @htc_handle: HTC handle
+ * @wmi_ep_count: WMI enpoint count
+ *
+ * return: None
+ */
+void htc_set_wmi_endpoint_count(HTC_HANDLE htc_handle, uint8_t wmi_ep_count);
+
+/**
+ * htc_get_wmi_endpoint_count: Get number of WMI endpoint
+ * @htc_handle: HTC handle
+ *
+ * return: WMI enpoint count
+ */
+uint8_t  htc_get_wmi_endpoint_count(HTC_HANDLE htc_handle);
+
+/**
+ * htc_print_credit_history: print HTC credit history in buffer
+ * @htc:        HTC handle
+ * @count:      Number of lines to be copied
+ * @print:      Print callback to print in the buffer
+ * @print_priv: any data required by the print method, e.g. a file handle
+ *
+ * return: None
+ */
+#ifdef FEATURE_HTC_CREDIT_HISTORY
 void htc_print_credit_history(HTC_HANDLE htc, uint32_t count,
 			      qdf_abstract_print * print, void *print_priv);
+#else
+static inline
+void htc_print_credit_history(HTC_HANDLE htc, uint32_t count,
+			      qdf_abstract_print *print, void *print_priv)
+{
+	print(print_priv, "HTC Credit History Feature is disabled");
+}
 #endif
-
 #endif /* _HTC_API_H_ */

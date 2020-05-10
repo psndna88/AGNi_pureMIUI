@@ -46,4 +46,8 @@ obj-$(CONFIG_FB_TFT)		+= fbtft/
 obj-$(CONFIG_FSL_MC_BUS)	+= fsl-mc/
 obj-$(CONFIG_WILC1000)		+= wilc1000/
 obj-$(CONFIG_MOST)		+= most/
+ifdef CONFIG_QCACLD_PIE
+obj-$(CONFIG_QCA_CLD_WLAN)	+= qcacld-3.0_pie/
+else
 obj-$(CONFIG_QCA_CLD_WLAN)	+= qcacld-3.0/
+endif

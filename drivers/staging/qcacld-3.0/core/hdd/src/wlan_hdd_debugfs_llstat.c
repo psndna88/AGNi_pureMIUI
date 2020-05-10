@@ -37,19 +37,20 @@ static struct ll_stats_buf ll_stats;
 
 static DEFINE_MUTEX(llstats_mutex);
 
-void hdd_debugfs_process_iface_stats(hdd_adapter_t *adapter,
+void hdd_debugfs_process_iface_stats(struct hdd_adapter *adapter,
 		void *data, uint32_t num_peers)
 {
 	tpSirWifiIfaceStat iface_stat;
 	tpSirWifiInterfaceInfo iface_info;
-	tpSirWifiWmmAcStat ac_stat;
-	struct wifi_iface_offload_stat *offload_stat;
+	wmi_iface_link_stats *link_stats;
+	wmi_wmm_ac_stats *ac_stats;
+	wmi_iface_offload_stats *offload_stats;
 	uint64_t average_tsf_offset;
 	int i;
 	ssize_t len = 0;
 	uint8_t *buffer;
 
-	ENTER();
+	hdd_enter();
 
 	mutex_lock(&llstats_mutex);
 	if (!ll_stats.result) {
@@ -81,47 +82,50 @@ void hdd_debugfs_process_iface_stats(hdd_adapter_t *adapter,
 			&iface_info->bssid.bytes[0], iface_info->apCountryStr,
 			iface_info->countryStr);
 
-	average_tsf_offset =  iface_stat->avg_bcn_spread_offset_high;
+	link_stats = &iface_stat->link_stats;
+	average_tsf_offset =  link_stats->avg_bcn_spread_offset_high;
 	average_tsf_offset =  (average_tsf_offset << 32) |
-				iface_stat->avg_bcn_spread_offset_low;
+				link_stats->avg_bcn_spread_offset_low;
 
 	buffer += len;
 	ll_stats.len += len;
 	len = scnprintf(buffer, DEBUGFS_LLSTATS_BUF_SIZE - ll_stats.len,
 			"\nbeacon_rx: %u, mgmt_rx: %u, mgmt_action_rx: %u, mgmt_action_tx: %u, rssi_mgmt: %u, rssi_data: %u, rssi_ack: %u, is_leaky_ap: %u, avg_rx_frms_leaked: %u, rx_leak_window: %u, average_tsf_offset: %llu, Tx RTS success count: %u, Tx RTS fail count: %u, Tx ppdu success count: %u, Tx ppdu fail count: %u, Connected duration: %u, Disconnected duration: %u, RTT ranging duration: %u, RTT responder duration: %u, Num tx probes: %u, Num beacon miss: %u,\n\nNumber of AC: %d",
-			iface_stat->beaconRx, iface_stat->mgmtRx,
-			iface_stat->mgmtActionRx, iface_stat->mgmtActionTx,
-			iface_stat->rssiMgmt, iface_stat->rssiData,
-			iface_stat->rssiAck, iface_stat->is_leaky_ap,
-			iface_stat->avg_rx_frms_leaked,
-			iface_stat->rx_leak_window, average_tsf_offset,
-			iface_stat->tx_rts_succ_cnt,
-			iface_stat->tx_rts_fail_cnt,
-			iface_stat->tx_ppdu_succ_cnt,
-			iface_stat->tx_ppdu_fail_cnt,
-			iface_stat->connected_duration,
-			iface_stat->disconnected_duration,
-			iface_stat->rtt_ranging_duration,
-			iface_stat->rtt_responder_duration,
-			iface_stat->num_probes_tx, iface_stat->num_beacon_miss,
-			iface_stat->num_ac);
+			link_stats->beacon_rx, link_stats->mgmt_rx,
+			link_stats->mgmt_action_rx, link_stats->mgmt_action_tx,
+			link_stats->rssi_mgmt, link_stats->rssi_data,
+			link_stats->rssi_ack, link_stats->is_leaky_ap,
+			link_stats->avg_rx_frms_leaked,
+			link_stats->rx_leak_window, average_tsf_offset,
+			link_stats->tx_rts_succ_cnt,
+			link_stats->tx_rts_fail_cnt,
+			link_stats->tx_ppdu_succ_cnt,
+			link_stats->tx_ppdu_fail_cnt,
+			link_stats->connected_duration,
+			link_stats->disconnected_duration,
+			link_stats->rtt_ranging_duration,
+			link_stats->rtt_responder_duration,
+			link_stats->num_probes_tx, link_stats->num_beacon_miss,
+			link_stats->num_ac);
 
-	for (i = 0; i < iface_stat->num_ac; i++) {
-		ac_stat = &iface_stat->AccessclassStats[i];
+	for (i = 0; i < link_stats->num_ac; i++) {
+		ac_stats = &iface_stat->ac_stats[i];
 		buffer += len;
 		ll_stats.len += len;
 		len = scnprintf(buffer,
 				DEBUGFS_LLSTATS_BUF_SIZE - ll_stats.len,
-				"\nAC: %d, tx_mpdu: %u, rx_mpdu: %u, tx_mcast: %u, rx_mcast: %u, rx_ampdu: %u tx_ampdu: %u, mpdu_lost: %u, retries: %u, retries_short: %u, retries_long: %u, contention_time: min-%u max-%u avg-%u, contention num samples: %u",
-				ac_stat->ac, ac_stat->txMpdu, ac_stat->rxMpdu,
-				ac_stat->txMcast, ac_stat->rxMcast,
-				ac_stat->rxAmpdu, ac_stat->txAmpdu,
-				ac_stat->mpduLost, ac_stat->retries,
-				ac_stat->retriesShort, ac_stat->retriesLong,
-				ac_stat->contentionTimeMin,
-				ac_stat->contentionTimeMax,
-				ac_stat->contentionTimeAvg,
-				ac_stat->contentionNumSamples);
+				"\nac_type: %d, tx_mpdu: %u, rx_mpdu: %u, tx_mcast: %u, rx_mcast: %u, rx_ampdu: %u tx_ampdu: %u, mpdu_lost: %u, retries: %u, retries_short: %u, retries_long: %u, contention_time: min-%u max-%u avg-%u, contention num samples: %u, tx_pending_msdu: %u",
+				ac_stats->ac_type,
+				ac_stats->tx_mpdu, ac_stats->rx_mpdu,
+				ac_stats->tx_mcast, ac_stats->rx_mcast,
+				ac_stats->rx_ampdu, ac_stats->rx_ampdu,
+				ac_stats->mpdu_lost, ac_stats->retries,
+				ac_stats->retries_short, ac_stats->retries_long,
+				ac_stats->contention_time_min,
+				ac_stats->contention_time_max,
+				ac_stats->contention_time_avg,
+				ac_stats->contention_num_samples,
+				ac_stats->tx_pending_msdu);
 	}
 
 	buffer += len;
@@ -131,23 +135,23 @@ void hdd_debugfs_process_iface_stats(hdd_adapter_t *adapter,
 			iface_stat->num_offload_stats);
 
 	for (i = 0; i < iface_stat->num_offload_stats; i++) {
-		offload_stat = &iface_stat->offload_stat[i];
+		offload_stats = &iface_stat->offload_stats[i];
 		buffer += len;
 		ll_stats.len += len;
 		len = scnprintf(buffer,
 				DEBUGFS_LLSTATS_BUF_SIZE - ll_stats.len,
 				"\ntype: %d, rx_count: %u, drp_count: %u, fwd_count: %u",
-				offload_stat->type, offload_stat->rx_count,
-				offload_stat->drp_count,
-				offload_stat->fwd_count);
+				offload_stats->type, offload_stats->rx_count,
+				offload_stats->drp_count,
+				offload_stats->fwd_count);
 	}
 
 	ll_stats.len += len;
 	mutex_unlock(&llstats_mutex);
-	EXIT();
+	hdd_exit();
 }
 
-void hdd_debugfs_process_peer_stats(hdd_adapter_t *adapter, void *data)
+void hdd_debugfs_process_peer_stats(struct hdd_adapter *adapter, void *data)
 {
 	tpSirWifiPeerStat peer_stat;
 	tpSirWifiPeerInfo peer_info;
@@ -156,7 +160,7 @@ void hdd_debugfs_process_peer_stats(hdd_adapter_t *adapter, void *data)
 	ssize_t len = 0;
 	uint8_t *buffer;
 
-	ENTER();
+	hdd_enter();
 
 	mutex_lock(&llstats_mutex);
 	if (!ll_stats.result) {
@@ -208,11 +212,11 @@ void hdd_debugfs_process_peer_stats(hdd_adapter_t *adapter, void *data)
 	}
 	ll_stats.len += len;
 	mutex_unlock(&llstats_mutex);
-	EXIT();
+	hdd_exit();
 
 }
 
-void hdd_debugfs_process_radio_stats(hdd_adapter_t *adapter,
+void hdd_debugfs_process_radio_stats(struct hdd_adapter *adapter,
 		uint32_t more_data, void *data, uint32_t num_radio)
 {
 	int i, j;
@@ -221,7 +225,7 @@ void hdd_debugfs_process_radio_stats(hdd_adapter_t *adapter,
 	tSirWifiRadioStat *radio_stat = (tpSirWifiRadioStat) data;
 	tSirWifiChannelStats *chan_stat;
 
-	ENTER();
+	hdd_enter();
 
 	mutex_lock(&llstats_mutex);
 	if (!ll_stats.result) {
@@ -288,7 +292,7 @@ void hdd_debugfs_process_radio_stats(hdd_adapter_t *adapter,
 	}
 	ll_stats.len += len;
 	mutex_unlock(&llstats_mutex);
-	EXIT();
+	hdd_exit();
 }
 
 static inline void wlan_hdd_llstats_free_buf(void)
@@ -335,7 +339,7 @@ static ssize_t hdd_debugfs_stats_update(char __user *buf, size_t count,
 {
 	ssize_t ret_cnt;
 
-	ENTER();
+	hdd_enter();
 	mutex_lock(&llstats_mutex);
 	if (!ll_stats.result) {
 		mutex_unlock(&llstats_mutex);
@@ -348,7 +352,7 @@ static ssize_t hdd_debugfs_stats_update(char __user *buf, size_t count,
 	mutex_unlock(&llstats_mutex);
 	hdd_debug("LL stats read req: count: %zu, pos: %lld", count, *pos);
 
-	EXIT();
+	hdd_exit();
 	return ret_cnt;
 }
 
@@ -364,13 +368,13 @@ static ssize_t hdd_debugfs_stats_update(char __user *buf, size_t count,
 static ssize_t __wlan_hdd_read_ll_stats_debugfs(struct file *file,
 			char __user *buf, size_t count, loff_t *pos)
 {
-	hdd_adapter_t *adapter;
-	hdd_context_t *hdd_ctx;
+	struct hdd_adapter *adapter;
+	struct hdd_context *hdd_ctx;
 	ssize_t ret = 0;
 
-	ENTER();
+	hdd_enter();
 
-	adapter = (hdd_adapter_t *)file->private_data;
+	adapter = (struct hdd_adapter *)file->private_data;
 	if ((!adapter) || (WLAN_HDD_ADAPTER_MAGIC != adapter->magic)) {
 		hdd_err("Invalid adapter or adapter has invalid magic");
 		return -EINVAL;
@@ -383,9 +387,9 @@ static ssize_t __wlan_hdd_read_ll_stats_debugfs(struct file *file,
 
 	/* All the events are received and buffer is populated */
 	ret = hdd_debugfs_stats_update(buf, count, pos);
-	hdd_info("%zu characters written into debugfs", ret);
+	hdd_debug("%zu characters written into debugfs", ret);
 
-	EXIT();
+	hdd_exit();
 	return ret;
 
 }
@@ -422,16 +426,16 @@ static ssize_t wlan_hdd_read_ll_stats_debugfs(struct file *file,
 static int __wlan_hdd_open_ll_stats_debugfs(struct inode *inode,
 					    struct file *file)
 {
-	hdd_adapter_t *adapter;
-	hdd_context_t *hdd_ctx;
+	struct hdd_adapter *adapter;
+	struct hdd_context *hdd_ctx;
 	int errno;
 
-	ENTER();
+	hdd_enter();
 
 	if (inode->i_private)
 		file->private_data = inode->i_private;
 
-	adapter = (hdd_adapter_t *)file->private_data;
+	adapter = (struct hdd_adapter *)file->private_data;
 	errno = hdd_validate_adapter(adapter);
 	if (errno)
 		return errno;
@@ -447,16 +451,20 @@ static int __wlan_hdd_open_ll_stats_debugfs(struct inode *inode,
 
 	errno = wlan_hdd_ll_stats_get(adapter, DEBUGFS_LLSTATS_REQID,
 				      DEBUGFS_LLSTATS_REQMASK);
-	if (errno) {
-		wlan_hdd_llstats_free_buf();
-		return errno;
-	}
+	if (errno)
+		goto free_buf;
 
-	EXIT();
+	hdd_exit();
 
 	return 0;
-}
 
+free_buf:
+	wlan_hdd_llstats_free_buf();
+
+	hdd_exit();
+
+	return errno;
+}
 
 /**
  * wlan_hdd_open_ll_stats_debugfs() - SSR wrapper function to save private
@@ -488,16 +496,16 @@ static int wlan_hdd_open_ll_stats_debugfs(struct inode *inode,
 static int __wlan_hdd_release_ll_stats_debugfs(struct inode *inode,
 					    struct file *file)
 {
-	hdd_adapter_t *adapter;
-	hdd_context_t *hdd_ctx;
+	struct hdd_adapter *adapter;
+	struct hdd_context *hdd_ctx;
 	int ret;
 
-	ENTER();
+	hdd_enter();
 
 	if (inode->i_private)
 		file->private_data = inode->i_private;
 
-	adapter = (hdd_adapter_t *)file->private_data;
+	adapter = (struct hdd_adapter *)file->private_data;
 	if ((NULL == adapter) || (WLAN_HDD_ADAPTER_MAGIC != adapter->magic)) {
 		hdd_err("Invalid adapter or adapter has invalid magic");
 		return -EINVAL;
@@ -510,7 +518,7 @@ static int __wlan_hdd_release_ll_stats_debugfs(struct inode *inode,
 
 	wlan_hdd_llstats_free_buf();
 
-	EXIT();
+	hdd_exit();
 	return 0;
 }
 
@@ -542,7 +550,7 @@ static const struct file_operations fops_ll_stats_debugfs = {
 	.llseek = default_llseek,
 };
 
-int wlan_hdd_create_ll_stats_file(hdd_adapter_t *adapter)
+int wlan_hdd_create_ll_stats_file(struct hdd_adapter *adapter)
 {
 	if (!debugfs_create_file("ll_stats", 0444, adapter->debugfs_phy,
 				 adapter, &fops_ll_stats_debugfs))

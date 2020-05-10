@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, 2016-2017, 2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, 2016-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -32,6 +32,7 @@
 #endif
 #include "hif_debug.h"
 #include "pld_common.h"
+#include "target_type.h"
 
 #define PROCFS_NAME             "athdiagpfs"
 #ifdef MULTI_IF_NAME
@@ -62,6 +63,7 @@ static ssize_t ath_procfs_diag_read(struct file *file, char __user *buf,
 	uint8_t *read_buffer = NULL;
 	struct hif_softc *scn;
 	uint32_t offset = 0, memtype = 0;
+	struct hif_target_info *tgt_info;
 
 	hif_hdl = get_hif_hdl_from_file(file);
 	scn = HIF_GET_SOFTC(hif_hdl);
@@ -78,7 +80,11 @@ static ssize_t ath_procfs_diag_read(struct file *file, char __user *buf,
 	HIF_DBG("rd buff 0x%pK cnt %zu offset 0x%x buf 0x%pK",
 		 read_buffer, count, (int)*pos, buf);
 
-	if (scn->bus_type == QDF_BUS_TYPE_SNOC) {
+	tgt_info = hif_get_target_info_handle(GET_HIF_OPAQUE_HDL(hif_hdl));
+	if (scn->bus_type == QDF_BUS_TYPE_SNOC ||
+			(scn->bus_type ==  QDF_BUS_TYPE_PCI &&
+			 (tgt_info->target_type == TARGET_TYPE_QCA6290 ||
+			  tgt_info->target_type == TARGET_TYPE_QCA8074))) {
 		memtype = ((uint32_t)(*pos) & 0xff000000) >> 24;
 		offset = (uint32_t)(*pos) & 0xffffff;
 		HIF_TRACE("%s: offset 0x%x memtype 0x%x, datalen %zu\n",
@@ -123,6 +129,7 @@ static ssize_t ath_procfs_diag_write(struct file *file,
 	uint8_t *write_buffer = NULL;
 	struct hif_softc *scn;
 	uint32_t offset = 0, memtype = 0;
+	struct hif_target_info *tgt_info;
 
 	hif_hdl = get_hif_hdl_from_file(file);
 	scn = HIF_GET_SOFTC(hif_hdl);
@@ -146,7 +153,11 @@ static ssize_t ath_procfs_diag_write(struct file *file,
 		 write_buffer, buf, count,
 		 (int)*pos, *((uint32_t *) write_buffer));
 
-	if (scn->bus_type == QDF_BUS_TYPE_SNOC) {
+	tgt_info = hif_get_target_info_handle(GET_HIF_OPAQUE_HDL(hif_hdl));
+	if (scn->bus_type == QDF_BUS_TYPE_SNOC ||
+			(scn->bus_type ==  QDF_BUS_TYPE_PCI &&
+			 (tgt_info->target_type == TARGET_TYPE_QCA6290 ||
+			  tgt_info->target_type == TARGET_TYPE_QCA8074))) {
 		memtype = ((uint32_t)(*pos) & 0xff000000) >> 24;
 		offset = (uint32_t)(*pos) & 0xffffff;
 		HIF_TRACE("%s: offset 0x%x memtype 0x%x, datalen %zu\n",

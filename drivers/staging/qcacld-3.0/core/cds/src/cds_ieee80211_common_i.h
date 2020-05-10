@@ -44,6 +44,13 @@
  * @IEEE80211_MODE_2G_AUTO - 2G 11 b/g/n autoselect
  * @IEEE80211_MODE_5G_AUTO - 5G 11 a/n/ac autoselect
  * @IEEE80211_MODE_11AGN - Support 11N in both 2G and 5G
+ * @IEEE80211_MODE_11AX_HE20 - HE20
+ * @IEEE80211_MODE_11AX_HE40 - HE40
+ * @IEEE80211_MODE_11AX_HE40PLUS - HE40 (ext ch +1)
+ * @IEEE80211_MODE_11AX_HE40MINUS - HE40 (ext ch -1)
+ * @IEEE80211_MODE_11AX_HE80 - HE80
+ * @IEEE80211_MODE_11AX_HE80P80 - HE 80P80
+ * @IEEE80211_MODE_11AX_HE160 - HE160
  * @IEEE80211_MODE_MAX - Maximum possible value
  */
 enum ieee80211_phymode {
@@ -70,9 +77,16 @@ enum ieee80211_phymode {
 	IEEE80211_MODE_2G_AUTO = 20,
 	IEEE80211_MODE_5G_AUTO = 21,
 	IEEE80211_MODE_11AGN = 22,
+	IEEE80211_MODE_11AX_HE20 = 23,
+	IEEE80211_MODE_11AX_HE40 = 24,
+	IEEE80211_MODE_11AX_HE40PLUS = 25,
+	IEEE80211_MODE_11AX_HE40MINUS = 26,
+	IEEE80211_MODE_11AX_HE80 = 27,
+	IEEE80211_MODE_11AX_HE80P80 = 28,
+	IEEE80211_MODE_11AX_HE160 = 29,
 
 	/* Do not add after this line */
-	IEEE80211_MODE_MAX = IEEE80211_MODE_11AGN,
+	IEEE80211_MODE_MAX = IEEE80211_MODE_11AX_HE160,
 };
 
 /**
@@ -217,6 +231,14 @@ enum ieee80211_scanmode {
 #define IEEE80211_CHAN_VHT40PLUS        0x00200000      /* VHT 40 with extension channel above */
 #define IEEE80211_CHAN_VHT40MINUS       0x00400000      /* VHT 40 with extension channel below */
 #define IEEE80211_CHAN_VHT80            0x00800000      /* VHT 80 channel */
+/* HT 40 Intolerant mark bit for ACS use */
+#define IEEE80211_CHAN_HT40INTOLMARK    0x01000000
+/* channel temporarily blocked due to noise */
+#define IEEE80211_CHAN_BLOCKED          0x02000000
+/* VHT 160 channel */
+#define IEEE80211_CHAN_VHT160           0x04000000
+/* VHT 80_80 channel */
+#define IEEE80211_CHAN_VHT80_80         0x08000000
 
 /* flagext */
 #define IEEE80211_CHAN_RADAR_FOUND    0x01
@@ -438,10 +460,10 @@ enum ieee80211_scanmode {
 	((_c)->ic_flagext |= IEEE80211_CHAN_11D_EXCLUDED)
 
 /* channel encoding for FH phy */
-#define IEEE80211_FH_CHANMOD            80
-#define IEEE80211_FH_CHAN(set, pat)      (((set)-1)*IEEE80211_FH_CHANMOD+(pat))
-#define IEEE80211_FH_CHANSET(chan)      ((chan)/IEEE80211_FH_CHANMOD+1)
-#define IEEE80211_FH_CHANPAT(chan)      ((chan)%IEEE80211_FH_CHANMOD)
+#define IEEE80211_FH_CHANMOD        80
+#define IEEE80211_FH_CHAN(set, pat) (((set) - 1) * IEEE80211_FH_CHANMOD + (pat))
+#define IEEE80211_FH_CHANSET(chan)  ((chan) / IEEE80211_FH_CHANMOD + 1)
+#define IEEE80211_FH_CHANPAT(chan)  ((chan) % IEEE80211_FH_CHANMOD)
 
 /*
  * 802.11 rate set.
@@ -454,7 +476,7 @@ enum ieee80211_scanmode {
 #define IEEE80211_RATE_MCS      0x8000
 #define IEEE80211_RATE_MCS_VAL  0x7FFF
 
-#define IEEE80211_RATE_IDX_ENTRY(val, idx) (((val&(0xff<<(idx*8)))>>(idx*8)))
+#define IEEE80211_RATE_IDX_ENTRY(val, idx) (((val & (0xff << (idx * 8))) >> (idx * 8)))
 
 /*
  * RSSI range

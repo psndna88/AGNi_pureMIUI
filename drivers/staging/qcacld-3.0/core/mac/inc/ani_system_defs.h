@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -63,12 +63,44 @@ typedef enum eAniAuthType {
 #if defined FEATURE_WLAN_ESE
 	eSIR_LEAP_AUTH = 0x80,
 #endif
-	eSIR_FILS_SK_WITHOUT_PFS = 4,
-	eSIR_FILS_SK_WITH_PFS = 5,
-	eSIR_FILS_PK_AUTH = 6,
+	SIR_FILS_SK_WITHOUT_PFS = 4,
+	SIR_FILS_SK_WITH_PFS = 5,
+	SIR_FILS_PK_AUTH = 6,
+	eSIR_AUTH_TYPE_OWE,
 	eSIR_AUTO_SWITCH,
 	eSIR_DONOT_USE_AUTH_TYPE = SIR_MAX_ENUM_SIZE
 } tAniAuthType;
+
+enum ani_akm_type {
+	ANI_AKM_TYPE_NONE,
+	ANI_AKM_TYPE_RSN,
+	ANI_AKM_TYPE_RSN_PSK,
+	ANI_AKM_TYPE_FT_RSN,
+	ANI_AKM_TYPE_FT_RSN_PSK,
+	ANI_AKM_TYPE_RSN_PSK_SHA256,
+	ANI_AKM_TYPE_RSN_8021X_SHA256,
+#ifdef WLAN_FEATURE_SAE
+	ANI_AKM_TYPE_SAE,
+	ANI_AKM_TYPE_FT_SAE,
+#endif
+	ANI_AKM_TYPE_SUITEB_EAP_SHA256,
+	ANI_AKM_TYPE_SUITEB_EAP_SHA384,
+	ANI_AKM_TYPE_FT_SUITEB_EAP_SHA384,
+	ANI_AKM_TYPE_FILS_SHA256,
+	ANI_AKM_TYPE_FILS_SHA384,
+	ANI_AKM_TYPE_FT_FILS_SHA256,
+	ANI_AKM_TYPE_FT_FILS_SHA384,
+	ANI_AKM_TYPE_OWE,
+#ifdef FEATURE_WLAN_ESE
+	ANI_AKM_TYPE_CCKM,
+#endif
+	ANI_AKM_TYPE_OSEN,
+	ANI_AKM_TYPE_DPP_RSN,
+	ANI_AKM_TYPE_WPA,
+	ANI_AKM_TYPE_WPA_PSK,
+	ANI_NUM_OF_SUPPORT_AKM_TYPE,
+	ANI_AKM_TYPE_UNKNOWN = 0xff,
+};
 
 /* / Encryption type enum used with peer */
 typedef enum eAniEdType {
@@ -91,6 +123,11 @@ typedef enum eAniEdType {
 	eSIR_ED_AES_GMAC_256,
 	eSIR_ED_NOT_IMPLEMENTED = SIR_MAX_ENUM_SIZE
 } tAniEdType;
+
+typedef enum eAniWepType {
+	eSIR_WEP_STATIC,
+	eSIR_WEP_DYNAMIC,
+} tAniWepType;
 
 /* / Enum to specify whether key is used */
 /* / for TX only, RX only or both */

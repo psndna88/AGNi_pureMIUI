@@ -38,7 +38,9 @@
  * For keeping the target awake till the driver is
  * loaded, set this to 1
  */
+#ifndef CONFIG_ATH_PCIE_AWAKE_WHILE_DRIVER_LOAD
 #define CONFIG_ATH_PCIE_AWAKE_WHILE_DRIVER_LOAD 1
+#endif
 
 /*
  * PCI-E L1 ASPPM sub-states

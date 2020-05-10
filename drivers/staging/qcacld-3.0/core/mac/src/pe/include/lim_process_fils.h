@@ -83,12 +83,15 @@ QDF_STATUS lim_create_fils_rik(uint8_t *rrk, uint8_t rrk_len,
 /**
  * lim_update_fils_config()- This API updates fils session info to csr config
  * from join request.
+ * @mac_ctx: pointer to mac context
  * @session: PE session
  * @sme_join_req: pointer to join request
  *
  * Return: None
  */
-void lim_update_fils_config(tpPESession session, tpSirSmeJoinReq sme_join_req);
+void lim_update_fils_config(tpAniSirGlobal mac_ctx,
+			    tpPESession session,
+			    tpSirSmeJoinReq sme_join_req);
 
 /**
  * lim_create_fils_auth_data()- This API creates the fils auth data
@@ -111,6 +114,9 @@ uint32_t lim_create_fils_auth_data(tpAniSirGlobal mac_ctx,
  */
 static inline void lim_increase_fils_sequence_number(tpPESession session_entry)
 {
+	if (!session_entry->fils_info)
+		return;
+
 	if (session_entry->fils_info->is_fils_connection)
 		session_entry->fils_info->sequence_number++;
 }
@@ -128,6 +134,22 @@ static inline void lim_increase_fils_sequence_number(tpPESession session_entry)
 void populate_fils_connect_params(tpAniSirGlobal mac_ctx,
 				  tpPESession session,
 				  tpSirSmeJoinRsp sme_join_rsp);
+
+/**
+ * lim_update_fils_hlp_data() - Update the hlp data from association
+ * response frame to PE session.
+ * @hlp_frm_src_mac: SRC mac address in HLP IE from assoc frame
+ * @hlp_frm_dst_mac: DST mac address in HLP IE from assoc frame
+ * @frm_hlp_len: HLP data length
+ * @frm_hlp_data: Pointer to hlp data
+ * @pe_session: Pointer to pe_session
+ *
+ * Return: None
+ */
+void lim_update_fils_hlp_data(struct qdf_mac_addr *hlp_frm_src_mac,
+			      struct qdf_mac_addr *hlp_frm_dest_mac,
+			      uint16_t frm_hlp_len, uint8_t *frm_hlp_data,
+			      tpPESession pe_session);
 
 /**
  * aead_encrypt_assoc_req() - Encrypt FILS IE's in assoc request
@@ -172,10 +194,6 @@ QDF_STATUS aead_decrypt_assoc_rsp(tpAniSirGlobal mac_ctx,
  */
 static inline bool lim_is_fils_connection(tpPESession pe_session)
 {
-
-	if (!pe_session->fils_info)
-		return false;
-
 	if (pe_session->fils_info->is_fils_connection)
 		return true;
 	return false;
@@ -196,7 +214,7 @@ static inline bool lim_is_fils_connection(tpPESession pe_session)
 bool lim_verify_fils_params_assoc_rsp(tpAniSirGlobal mac_ctx,
 				      tpPESession session_entry,
 				      tpSirAssocRsp assoc_rsp,
-				      tLimMlmAssocCnf *assoc_cnf);
+				      tLimMlmAssocCnf * assoc_cnf);
 
 /**
  * lim_update_fils_rik() - API to update FILS RIK in RSO
@@ -233,7 +251,9 @@ static inline bool lim_is_valid_fils_auth_frame(tpAniSirGlobal mac_ctx,
 }
 
 static inline void
-lim_update_fils_config(tpPESession session, tpSirSmeJoinReq sme_join_req)
+lim_update_fils_config(tpAniSirGlobal mac_ctx,
+		       tpPESession session,
+		       tpSirSmeJoinReq sme_join_req)
 { }
 
 static inline uint32_t lim_create_fils_auth_data(tpAniSirGlobal mac_ctx,
@@ -251,6 +271,13 @@ static inline void populate_fils_connect_params(tpAniSirGlobal mac_ctx,
 						tpPESession session,
 						tpSirSmeJoinRsp sme_join_rsp)
 { }
+
+static inline
+void lim_update_fils_hlp_data(struct qdf_mac_addr *hlp_frm_src_mac,
+			      struct qdf_mac_addr *hlp_frm_dest_mac,
+			      uint16_t frm_hlp_len, uint8_t *frm_hlp_data,
+			      tpPESession pe_session)
+{}
 
 static inline QDF_STATUS aead_encrypt_assoc_req(tpAniSirGlobal mac_ctx,
 						tpPESession pe_session,

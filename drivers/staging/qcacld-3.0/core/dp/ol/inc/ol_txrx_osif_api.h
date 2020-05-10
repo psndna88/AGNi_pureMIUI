@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012, 2014-2017 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -69,39 +69,11 @@ qdf_nbuf_t ol_txrx_osif_tso_segment(ol_txrx_vdev_handle txrx_vdev,
 				    int max_seg_payload_bytes,
 				    qdf_nbuf_t jumbo_tcp_frame);
 
-qdf_nbuf_t ol_tx_data(ol_txrx_vdev_handle data_vdev,
-		      qdf_nbuf_t skb,
-		      bool notify_tx_comp);
+qdf_nbuf_t ol_tx_data(void *data_vdev, qdf_nbuf_t skb);
 
 void ol_rx_data_process(struct ol_txrx_peer_t *peer,
 			qdf_nbuf_t rx_buf_list);
 
-/**
- * ol_txrx_mon_data_process(): process data tx and rx packets
- * for pkt capture mode. (normal tx/rx + offloaded tx/rx)
- * @vdev_id: vdev id for which packet is captured
- * @mon_buf_list: netbuf list
- * @type: data process type
- * @tid:  tid number
- * @pkt_tx_status: Tx status
- * @pktformat: Frame format
- *
- * Return: none
- */
-void ol_txrx_mon_data_process(uint8_t vdev_id,
-			      qdf_nbuf_t mon_buf_list,
-			      enum mon_data_process_type type,
-			      uint8_t tid,
-			      struct ol_mon_tx_status pkt_tx_status,
-			      bool pktformat);
-
 void ol_txrx_flush_rx_frames(struct ol_txrx_peer_t *peer,
 			     bool drop);
-/**
- * ol_txrx_flush_cache_rx_queue() - flush cache rx queue frame
- *
- * Return: None
- */
-void ol_txrx_flush_cache_rx_queue(void);
-
 #endif /* _OL_TXRX_OSIF_API__H_ */

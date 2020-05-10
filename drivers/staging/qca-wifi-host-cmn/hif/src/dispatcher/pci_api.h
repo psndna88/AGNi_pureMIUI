@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -18,13 +18,17 @@
 
 #ifndef _PCI_API_H_
 #define _PCI_API_H_
+struct hif_exec_context;
+
 QDF_STATUS hif_pci_open(struct hif_softc *hif_ctx,
 			enum qdf_bus_type bus_type);
 void hif_pci_close(struct hif_softc *hif_ctx);
 void hif_pci_prevent_linkdown(struct hif_softc *scn, bool flag);
 void hif_pci_reset_soc(struct hif_softc *ol_sc);
 int hif_pci_bus_suspend(struct hif_softc *scn);
+int hif_pci_bus_suspend_noirq(struct hif_softc *scn);
 int hif_pci_bus_resume(struct hif_softc *scn);
+int hif_pci_bus_resume_noirq(struct hif_softc *scn);
 int hif_pci_target_sleep_state_adjust(struct hif_softc *scn,
 			bool sleep_ok, bool wait_for_it);
 
@@ -42,6 +46,10 @@ int hif_pci_dump_registers(struct hif_softc *scn);
 void hif_pci_enable_power_management(struct hif_softc *hif_ctx,
 				 bool is_packet_log_enabled);
 void hif_pci_disable_power_management(struct hif_softc *hif_ctx);
+int hif_pci_configure_grp_irq(struct hif_softc *scn,
+			      struct hif_exec_context *exec);
 void hif_pci_display_stats(struct hif_softc *hif_ctx);
 void hif_pci_clear_stats(struct hif_softc *hif_ctx);
+int hif_pci_legacy_map_ce_to_irq(struct hif_softc *scn, int ce_id);
+bool hif_pci_needs_bmi(struct hif_softc *scn);
 #endif /* _PCI_API_H_ */

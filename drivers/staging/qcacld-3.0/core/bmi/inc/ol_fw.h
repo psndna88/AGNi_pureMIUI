@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2016, 2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -19,9 +19,7 @@
 #ifndef _OL_FW_H_
 #define _OL_FW_H_
 
-#ifdef QCA_WIFI_FTM
 #include "qdf_types.h"
-#endif
 #include "hif.h"
 #include "hif_hw_version.h"
 #include "bmi.h"

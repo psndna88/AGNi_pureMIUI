@@ -23,19 +23,42 @@
  */
 #ifndef _CDP_TXRX_STATS_H_
 #define _CDP_TXRX_STATS_H_
-#include <qdf_status.h>
-#include <qdf_types.h>
+#include <cdp_txrx_ops.h>
 
-/**
- * ol_txrx_display_stats() - Display OL TXRX stats
- * @value: Module id for which stats needs to be displayed
- * @verb_level: verbosity level for tx rx stats
- *
- * Return: QDF_STATUS_SUCCESS on success, QDF_STATUS_E code on failure
- */
-QDF_STATUS ol_txrx_display_stats(uint16_t value,
-			enum qdf_stats_verb_lvl verb_level);
-QDF_STATUS ol_txrx_clear_stats(uint16_t bitmap);
-int ol_txrx_stats(uint8_t vdev_id, char *buffer, unsigned int buf_len);
+static inline void
+cdp_clear_stats(ol_txrx_soc_handle soc, uint16_t bitmap)
+{
+
+	if (!soc || !soc->ops) {
+		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
+				"%s: Invalid Instance", __func__);
+		QDF_BUG(0);
+		return;
+	}
+
+	if (!soc->ops->mob_stats_ops ||
+	    !soc->ops->mob_stats_ops->clear_stats)
+		return;
+
+	soc->ops->mob_stats_ops->clear_stats(bitmap);
+}
+
+static inline int
+cdp_stats(ol_txrx_soc_handle soc, uint8_t vdev_id, char *buffer,
+		unsigned int buf_len)
+{
+	if (!soc || !soc->ops) {
+		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
+				"%s: Invalid Instance", __func__);
+		QDF_BUG(0);
+		return 0;
+	}
+
+	if (!soc->ops->mob_stats_ops ||
+	    !soc->ops->mob_stats_ops->stats)
+		return 0;
+
+	return soc->ops->mob_stats_ops->stats(vdev_id, buffer, buf_len);
+}
 
 #endif /* _CDP_TXRX_STATS_H_ */

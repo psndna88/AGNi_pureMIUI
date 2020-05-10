@@ -18,6 +18,7 @@
 
 #include "htc_debug.h"
 #include "htc_internal.h"
+#include "htc_credit_history.h"
 #include <hif.h>
 #include <qdf_nbuf.h>           /* qdf_nbuf_t */
 #include <qdf_types.h>          /* qdf_print */
@@ -42,6 +43,13 @@ ATH_DEBUG_INSTANTIATE_MODULE_VAR(htc,
 					 (g_htc_debug_description),
 				 g_htc_debug_description);
 
+#endif
+
+#if (defined(CONFIG_MCL) || (QCA_WIFI_QCA8074))
+static const uint32_t svc_id[] = {WMI_CONTROL_SVC, WMI_CONTROL_SVC_WMAC1,
+						WMI_CONTROL_SVC_WMAC2};
+#else
+static const uint32_t svc_id[] = {WMI_CONTROL_SVC};
 #endif
 
 extern unsigned int htc_credit_flow;
@@ -179,7 +187,7 @@ static void htc_cleanup(HTC_TARGET *target)
 	}
 #endif
 
-	htc_flush_endpoint_txlookupQ(target);
+	htc_flush_endpoint_txlookupQ(target, ENDPOINT_0, true);
 
 	qdf_spinlock_destroy(&target->HTCLock);
 	qdf_spinlock_destroy(&target->HTCRxLock);
@@ -267,15 +275,17 @@ HTC_HANDLE htc_create(void *ol_sc, struct htc_init_info *pInfo,
 	}
 
 	htc_runtime_pm_init(target);
+	htc_credit_history_init();
 	qdf_spinlock_create(&target->HTCLock);
 	qdf_spinlock_create(&target->HTCRxLock);
 	qdf_spinlock_create(&target->HTCTxLock);
-	qdf_spinlock_create(&target->HTCCreditLock);
 	for (i = 0; i < ENDPOINT_MAX; i++) {
 		pEndpoint = &target->endpoint[i];
 		qdf_spinlock_create(&pEndpoint->lookup_queue_lock);
 	}
 	target->is_nodrop_pkt = false;
+	target->htc_hdr_length_check = false;
+	target->wmi_ep_count = 1;
 
 	do {
 		qdf_mem_copy(&target->HTCInitInfo, pInfo,
@@ -320,6 +330,9 @@ HTC_HANDLE htc_create(void *ol_sc, struct htc_init_info *pInfo,
 		hif_post_init(target->hif_dev, target, &htcCallbacks);
 		hif_get_default_pipe(target->hif_dev, &pEndpoint->UL_PipeID,
 				     &pEndpoint->DL_PipeID);
+		hif_set_initial_wakeup_cb(target->hif_dev,
+					  pInfo->target_initial_wakeup_cb,
+					  pInfo->target_psoc);
 
 	} while (false);
 
@@ -421,24 +434,23 @@ A_STATUS htc_setup_target_buffer_assignments(HTC_TARGET *target)
 	credits = target->TotalTransmitCredits;
 	pEntry = &target->ServiceTxAllocTable[0];
 
+	status = A_OK;
 	/*
 	 * Allocate all credists/HTC buffers to WMI.
 	 * no buffers are used/required for data. data always
 	 * remains on host.
 	 */
-	status = A_OK;
-	pEntry++;
-	pEntry->service_id = WMI_CONTROL_SVC;
-	pEntry->CreditAllocation = credits;
-
 	if (HTC_IS_EPPING_ENABLED(target->con_mode)) {
+		pEntry++;
+		pEntry->service_id = WMI_CONTROL_SVC;
+		pEntry->CreditAllocation = credits;
 		/* endpoint ping is a testing tool directly on top of HTC in
 		 * both target and host sides.
 		 * In target side, the endppint ping fw has no wlan stack and
 		 * FW mboxping app directly sits on HTC and it simply drops
 		 * or loops back TX packets. For rx perf, FW mboxping app
 		 * generates packets and passes packets to HTC to send to host.
-		 * There is no WMI mesage exchanges between host and target
+		 * There is no WMI message exchanges between host and target
 		 * in endpoint ping case.
 		 * In host side, the endpoint ping driver is a Ethernet driver
 		 * and it directly sits on HTC. Only HIF, HTC, QDF, ADF are
@@ -458,6 +470,24 @@ A_STATUS htc_setup_target_buffer_assignments(HTC_TARGET *target)
 
 		htc_setup_epping_credit_allocation(target->hif_dev,
 						   pEntry, credits);
+	} else {
+		int i;
+		uint32_t max_wmi_svc = (sizeof(svc_id) / sizeof(uint32_t));
+
+		if ((target->wmi_ep_count == 0) ||
+				(target->wmi_ep_count > max_wmi_svc))
+			return A_ERROR;
+
+		/*
+		 * Divide credit among number of endpoints for WMI
+		 */
+		credits = credits / target->wmi_ep_count;
+		for (i = 0; i < target->wmi_ep_count; i++) {
+			status = A_OK;
+			pEntry++;
+			pEntry->service_id = svc_id[i];
+			pEntry->CreditAllocation = credits;
+		}
 	}
 
 	if (A_SUCCESS(status)) {
@@ -615,8 +645,8 @@ QDF_STATUS htc_wait_target(HTC_HANDLE HTCHandle)
 
 	} while (false);
 
-	AR_DEBUG_PRINTF(ATH_DEBUG_TRC,
-			("htc_wait_target - Exit (%d)\n", status));
+	AR_DEBUG_PRINTF(ATH_DEBUG_TRC, ("htc_wait_target - Exit (%d)\n",
+			status));
 	AR_DEBUG_PRINTF(ATH_DEBUG_RSVD1, ("-HWT\n"));
 	return status;
 }
@@ -690,12 +720,12 @@ QDF_STATUS htc_start(HTC_HANDLE HTCHandle)
 			      MESSAGEID, HTC_MSG_SETUP_COMPLETE_EX_ID);
 
 		if (!htc_credit_flow) {
-			AR_DEBUG_PRINTF(ATH_DEBUG_INIT,
+			AR_DEBUG_PRINTF(ATH_DEBUG_TRC,
 					("HTC will not use TX credit flow control"));
 			pSetupComp->SetupFlags |=
 				HTC_SETUP_COMPLETE_FLAGS_DISABLE_TX_CREDIT_FLOW;
 		} else {
-			AR_DEBUG_PRINTF(ATH_DEBUG_INIT,
+			AR_DEBUG_PRINTF(ATH_DEBUG_TRC,
 					("HTC using TX credit flow control"));
 		}
 
@@ -774,6 +804,7 @@ void htc_stop(HTC_HANDLE HTCHandle)
 
 	AR_DEBUG_PRINTF(ATH_DEBUG_TRC, ("+htc_stop\n"));
 
+	HTC_INFO("%s: endpoints cleanup\n", __func__);
 	/* cleanup endpoints */
 	for (i = 0; i < ENDPOINT_MAX; i++) {
 		pEndpoint = &target->endpoint[i];
@@ -792,6 +823,7 @@ void htc_stop(HTC_HANDLE HTCHandle)
 	 * buffer leak
 	 */
 
+	HTC_INFO("%s: stopping hif layer\n", __func__);
 	hif_stop(target->hif_dev);
 
 #ifdef RX_SG_SUPPORT
@@ -801,6 +833,19 @@ void htc_stop(HTC_HANDLE HTCHandle)
 	RESET_RX_SG_CONFIG(target);
 	UNLOCK_HTC_RX(target);
 #endif
+
+	/**
+	 * In SSR case, HTC tx completion callback for wmi will be blocked
+	 * by TARGET_STATUS_RESET and HTC packets will be left unfreed on
+	 * lookup queue.
+	 */
+	HTC_INFO("%s: flush endpoints Tx lookup queue\n", __func__);
+	for (i = 0; i < ENDPOINT_MAX; i++) {
+		pEndpoint = &target->endpoint[i];
+		if (pEndpoint->service_id == WMI_CONTROL_SVC)
+			htc_flush_endpoint_txlookupQ(target, i, false);
+	}
+	HTC_INFO("%s: resetting endpoints state\n", __func__);
 
 	reset_endpoint_states(target);
 
@@ -1034,7 +1079,6 @@ int htc_pm_runtime_get(HTC_HANDLE htc_handle)
 {
 	HTC_TARGET *target = GET_HTC_TARGET_FROM_HANDLE(htc_handle);
 
-	HTC_INFO("%s: %pS\n", __func__, (void *)_RET_IP_);
 	return hif_pm_runtime_get(target->hif_dev);
 }
 
@@ -1042,7 +1086,33 @@ int htc_pm_runtime_put(HTC_HANDLE htc_handle)
 {
 	HTC_TARGET *target = GET_HTC_TARGET_FROM_HANDLE(htc_handle);
 
-	HTC_INFO("%s: %pS\n", __func__, (void *)_RET_IP_);
 	return hif_pm_runtime_put(target->hif_dev);
 }
 #endif
+
+/**
+ * htc_set_wmi_endpoint_count: Set number of WMI endpoint
+ * @htc_handle: HTC handle
+ * @wmi_ep_count: WMI enpoint count
+ *
+ * return: None
+ */
+void htc_set_wmi_endpoint_count(HTC_HANDLE htc_handle, uint8_t wmi_ep_count)
+{
+	HTC_TARGET *target = GET_HTC_TARGET_FROM_HANDLE(htc_handle);
+
+	target->wmi_ep_count = wmi_ep_count;
+}
+
+/**
+ * htc_get_wmi_endpoint_count: Get number of WMI endpoint
+ * @htc_handle: HTC handle
+ *
+ * return: WMI enpoint count
+ */
+uint8_t htc_get_wmi_endpoint_count(HTC_HANDLE htc_handle)
+{
+	HTC_TARGET *target = GET_HTC_TARGET_FROM_HANDLE(htc_handle);
+
+	return target->wmi_ep_count;
+}

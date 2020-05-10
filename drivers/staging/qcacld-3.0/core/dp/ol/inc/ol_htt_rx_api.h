@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -647,13 +647,13 @@ extern int
 (*htt_rx_amsdu_pop)(htt_pdev_handle pdev,
 		    qdf_nbuf_t rx_ind_msg,
 		    qdf_nbuf_t *head_msdu, qdf_nbuf_t *tail_msdu,
-		    qdf_nbuf_t *head_mon_msdu, uint32_t *msdu_count);
+		    uint32_t *msdu_count);
 
 extern int
 (*htt_rx_frag_pop)(htt_pdev_handle pdev,
 		   qdf_nbuf_t rx_ind_msg,
 		   qdf_nbuf_t *head_msdu, qdf_nbuf_t *tail_msdu,
-		   qdf_nbuf_t *head_mon_msdu, uint32_t *msdu_count);
+		   uint32_t *msdu_count);
 
 /**
  * @brief Return the maximum number of available msdus currently
@@ -789,7 +789,6 @@ void htt_rx_msdu_desc_free(htt_pdev_handle htt_pdev, qdf_nbuf_t msdu);
  */
 void htt_rx_msdu_buff_replenish(htt_pdev_handle pdev);
 
-#ifndef CONFIG_HL_SUPPORT
 /**
  * @brief Add new MSDU buffers for the target to fill.
  * @details
@@ -806,13 +805,6 @@ void htt_rx_msdu_buff_replenish(htt_pdev_handle pdev);
  * Return: number of buffers actually replenished
  */
 int htt_rx_msdu_buff_in_order_replenish(htt_pdev_handle pdev, uint32_t num);
-#else
-static inline
-int htt_rx_msdu_buff_in_order_replenish(htt_pdev_handle pdev, uint32_t num)
-{
-	return 0;
-}
-#endif
 
 /**
  * @brief Links list of MSDUs into an single MPDU. Updates RX stats
@@ -832,11 +824,22 @@ int htt_rx_msdu_buff_in_order_replenish(htt_pdev_handle pdev, uint32_t num)
  *      list, else operates on a cloned nbuf
  * @return network buffer handle to the MPDU
  */
+#if !defined(QCA6290_HEADERS_DEF) && defined(FEATURE_MONITOR_MODE_SUPPORT)
 qdf_nbuf_t
 htt_rx_restitch_mpdu_from_msdus(htt_pdev_handle pdev,
 				qdf_nbuf_t head_msdu,
 				struct ieee80211_rx_status *rx_status,
 				unsigned clone_not_reqd);
+#else
+static inline qdf_nbuf_t
+htt_rx_restitch_mpdu_from_msdus(htt_pdev_handle pdev,
+				qdf_nbuf_t head_msdu,
+				struct ieee80211_rx_status *rx_status,
+				unsigned clone_not_reqd)
+{
+	return NULL;
+}
+#endif
 
 /**
  * @brief Return the sequence number of MPDUs to flush.
@@ -869,7 +872,6 @@ uint16_t htt_rx_msdu_rx_desc_size_hl(htt_pdev_handle pdev, void *msdu_desc);
  */
 void htt_rx_get_vowext_stats(qdf_nbuf_t msdu, struct vow_extstats *vowstats);
 
-#ifndef CONFIG_HL_SUPPORT
 /**
  * @brief parses the offload message passed by the target.
  * @param pdev - pdev handle
@@ -891,9 +893,29 @@ htt_rx_offload_paddr_msdu_pop_ll(htt_pdev_handle pdev,
 				 int *tid,
 				 uint8_t *fw_desc,
 				 qdf_nbuf_t *head_buf, qdf_nbuf_t *tail_buf);
-#endif
 
 uint32_t htt_rx_amsdu_rx_in_order_get_pktlog(qdf_nbuf_t rx_ind_msg);
 
-int htt_rx_hash_smmu_map_update(struct htt_pdev_t *pdev, bool map);
+/**
+ * htt_rx_update_smmu_map() - set smmu map/unmap for rx buffers
+ * @pdev: htt pdev handle
+ * @map: value to set smmu map/unmap for rx buffers
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS htt_rx_update_smmu_map(struct htt_pdev_t *pdev, bool map);
+
+/** htt_tx_enable_ppdu_end
+ * @enable_ppdu_end - set it to 1 if WLAN_FEATURE_TSF_PLUS is defined,
+ *                    else do nothing
+ */
+#ifdef WLAN_FEATURE_TSF_PLUS
+void htt_rx_enable_ppdu_end(int *enable_ppdu_end);
+#else
+static inline
+void htt_rx_enable_ppdu_end(int *enable_ppdu_end)
+{
+}
+#endif
+
 #endif /* _OL_HTT_RX_API__H_ */

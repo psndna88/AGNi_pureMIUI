@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -193,11 +193,13 @@ static void lim_delete_sta_util(tpAniSirGlobal mac_ctx, tpDeleteStaContext msg,
  *
  * Return: none
  */
-void lim_delete_sta_context(tpAniSirGlobal mac_ctx, tpSirMsgQ lim_msg)
+void lim_delete_sta_context(tpAniSirGlobal mac_ctx,
+			    struct scheduler_msg *lim_msg)
 {
 	tpDeleteStaContext msg = (tpDeleteStaContext) lim_msg->bodyptr;
 	tpPESession session_entry;
 	tpDphHashNode sta_ds;
+	enum eSirMacReasonCodes reason_code;
 
 	if (NULL == msg) {
 		pe_err("Invalid body pointer in message");
@@ -212,6 +214,8 @@ void lim_delete_sta_context(tpAniSirGlobal mac_ctx, tpSirMsgQ lim_msg)
 
 	switch (msg->reasonCode) {
 	case HAL_DEL_STA_REASON_CODE_KEEP_ALIVE:
+	case HAL_DEL_STA_REASON_CODE_SA_QUERY_TIMEOUT:
+	case HAL_DEL_STA_REASON_CODE_XRETRY:
 		if (LIM_IS_STA_ROLE(session_entry) && !msg->is_tdls) {
 			if (!((session_entry->limMlmState ==
 			    eLIM_MLM_LINK_ESTABLISHED_STATE) &&
@@ -238,9 +242,18 @@ void lim_delete_sta_context(tpAniSirGlobal mac_ctx, tpSirMsgQ lim_msg)
 			lim_send_deauth_mgmt_frame(mac_ctx,
 				eSIR_MAC_DISASSOC_DUE_TO_INACTIVITY_REASON,
 				msg->addr2, session_entry, false);
+			if (msg->reasonCode ==
+				HAL_DEL_STA_REASON_CODE_SA_QUERY_TIMEOUT)
+				reason_code = eSIR_MAC_SA_QUERY_TIMEOUT;
+			else if (msg->reasonCode ==
+				HAL_DEL_STA_REASON_CODE_XRETRY)
+				reason_code = eSIR_MAC_PEER_XRETRY_FAIL;
+			else
+				reason_code = eSIR_MAC_PEER_INACTIVITY;
 			lim_tear_down_link_with_ap(mac_ctx,
-				session_entry->peSessionId,
-				eSIR_MAC_DISASSOC_DUE_TO_INACTIVITY_REASON);
+						   session_entry->peSessionId,
+						   reason_code,
+						   eLIM_LINK_MONITORING_DEAUTH);
 			/* only break for STA role (non TDLS) */
 			break;
 		}
@@ -265,10 +278,11 @@ void lim_delete_sta_context(tpAniSirGlobal mac_ctx, tpSirMsgQ lim_msg)
 			return;
 		}
 		lim_send_deauth_mgmt_frame(mac_ctx,
-				eSIR_MAC_DISASSOC_DUE_TO_INACTIVITY_REASON,
+				eSIR_MAC_BSS_TRANSITION_DISASSOC,
 				session_entry->bssId, session_entry, false);
 		lim_tear_down_link_with_ap(mac_ctx, session_entry->peSessionId,
-					   eSIR_MAC_UNSPEC_FAILURE_REASON);
+					   eSIR_MAC_BSS_TRANSITION_DISASSOC,
+					   eLIM_LINK_MONITORING_DEAUTH);
 		break;
 
 	default:
@@ -335,26 +349,10 @@ lim_trigger_sta_deletion(tpAniSirGlobal mac_ctx, tpDphHashNode sta_ds,
 	lim_send_sme_disassoc_ind(mac_ctx, sta_ds, session_entry);
 } /*** end lim_trigger_st_adeletion() ***/
 
-/**
- * lim_tear_down_link_with_ap()
- *
- ***FUNCTION:
- * This function is called when heartbeat (beacon reception)
- * fails on STA
- *
- ***LOGIC:
- *
- ***ASSUMPTIONS:
- *
- ***NOTE:
- *
- * @param  pMac - Pointer to Global MAC structure
- * @return None
- */
-
 void
 lim_tear_down_link_with_ap(tpAniSirGlobal pMac, uint8_t sessionId,
-			   tSirMacReasonCodes reasonCode)
+			   tSirMacReasonCodes reasonCode,
+			   enum eLimDisassocTrigger trigger)
 {
 	tpDphHashNode pStaDs = NULL;
 
@@ -373,7 +371,9 @@ lim_tear_down_link_with_ap(tpAniSirGlobal pMac, uint8_t sessionId,
 	 */
 	psessionEntry->pmmOffloadInfo.bcnmiss = false;
 
-	pe_debug("No ProbeRsp from AP after HB failure. Tearing down link");
+	pe_info("Session %d Vdev %d reason code %d trigger %d",
+		psessionEntry->peSessionId, psessionEntry->smeSessionId,
+		reasonCode, trigger);
 
 	/* Announce loss of link to Roaming algorithm */
 	/* and cleanup by sending SME_DISASSOC_REQ to SME */
@@ -385,40 +385,47 @@ lim_tear_down_link_with_ap(tpAniSirGlobal pMac, uint8_t sessionId,
 	if (pStaDs != NULL) {
 		tLimMlmDeauthInd mlmDeauthInd;
 
+		if ((pStaDs->mlmStaContext.disassocReason ==
+		    eSIR_MAC_DEAUTH_LEAVING_BSS_REASON) ||
+		    (pStaDs->mlmStaContext.cleanupTrigger ==
+		    eLIM_HOST_DEAUTH)) {
+			pe_err("Host already issued deauth, do nothing");
+			return;
+		}
+
 #ifdef FEATURE_WLAN_TDLS
 		/* Delete all TDLS peers connected before leaving BSS */
 		lim_delete_tdls_peers(pMac, psessionEntry);
 #endif
 
 		pStaDs->mlmStaContext.disassocReason = reasonCode;
-		pStaDs->mlmStaContext.cleanupTrigger =
-			eLIM_LINK_MONITORING_DEAUTH;
+		pStaDs->mlmStaContext.cleanupTrigger = trigger;
 		/* / Issue Deauth Indication to SME. */
 		qdf_mem_copy((uint8_t *) &mlmDeauthInd.peerMacAddr,
 			     pStaDs->staAddr, sizeof(tSirMacAddr));
 
-	/*
-	* if sendDeauthBeforeCon is enabled and reasoncode is
-	* Beacon Missed Store the MAC of AP in the flip flop
-	* buffer. This MAC will be used to send Deauth before
-	* connection, if we connect to same AP after HB failure.
-	*/
-	if (pMac->roam.configParam.sendDeauthBeforeCon &&
-		eSIR_BEACON_MISSED == reasonCode) {
-		int apCount = pMac->lim.gLimHeartBeatApMacIndex;
+		/*
+		 * if send_deauth_before_con is enabled and reasoncode is
+		 * Beacon Missed Store the MAC of AP in the flip flop
+		 * buffer. This MAC will be used to send Deauth before
+		 * connection, if we connect to same AP after HB failure.
+		 */
+		if (pMac->roam.configParam.send_deauth_before_con &&
+		    eSIR_MAC_BEACON_MISSED == reasonCode) {
+			int apCount = pMac->lim.gLimHeartBeatApMacIndex;
 
-		if (pMac->lim.gLimHeartBeatApMacIndex)
-			pMac->lim.gLimHeartBeatApMacIndex = 0;
-		else
-			pMac->lim.gLimHeartBeatApMacIndex = 1;
+			if (pMac->lim.gLimHeartBeatApMacIndex)
+				pMac->lim.gLimHeartBeatApMacIndex = 0;
+			else
+				pMac->lim.gLimHeartBeatApMacIndex = 1;
 
-		pe_debug("HB Failure on MAC "
-			MAC_ADDRESS_STR" Store it on Index %d",
-			MAC_ADDR_ARRAY(pStaDs->staAddr), apCount);
+			pe_debug("HB Failure on MAC "
+				 MAC_ADDRESS_STR" Store it on Index %d",
+				 MAC_ADDR_ARRAY(pStaDs->staAddr), apCount);
 
-		sir_copy_mac_addr(pMac->lim.gLimHeartBeatApMac[apCount],
-							pStaDs->staAddr);
-	}
+			sir_copy_mac_addr(pMac->lim.gLimHeartBeatApMac[apCount],
+					  pStaDs->staAddr);
+		}
 
 		mlmDeauthInd.reasonCode =
 			(uint8_t) pStaDs->mlmStaContext.disassocReason;
@@ -475,15 +482,16 @@ void lim_handle_heart_beat_failure(tpAniSirGlobal mac_ctx,
 	    (session->limMlmState == eLIM_MLM_LINK_ESTABLISHED_STATE) &&
 	    (session->limSmeState != eLIM_SME_WT_DISASSOC_STATE) &&
 	    (session->limSmeState != eLIM_SME_WT_DEAUTH_STATE)) {
-		if (!mac_ctx->sys.gSysEnableLinkMonitorMode)
-			return;
+		if (!mac_ctx->sys.gSysEnableLinkMonitorMode) {
+			goto hb_handler_fail;
+		}
 
 		/* Ignore HB if channel switch is in progress */
 		if (session->gLimSpecMgmt.dot11hChanSwState ==
 		   eLIM_11H_CHANSW_RUNNING) {
 			pe_debug("Ignore Heartbeat failure as Channel switch is in progress");
 			session->pmmOffloadInfo.bcnmiss = false;
-			return;
+			goto hb_handler_fail;
 		}
 		/* Beacon frame not received within heartbeat timeout. */
 		pe_warn("Heartbeat Failure");
@@ -495,7 +503,7 @@ void lim_handle_heart_beat_failure(tpAniSirGlobal mac_ctx,
 		 * down the link
 		 */
 		curr_chan = session->currentOperChannel;
-		if (!lim_isconnected_on_dfs_channel(curr_chan)) {
+		if (!lim_isconnected_on_dfs_channel(mac_ctx, curr_chan)) {
 			/* Detected continuous Beacon Misses */
 			session->LimHBFailureStatus = true;
 
@@ -524,20 +532,14 @@ void lim_handle_heart_beat_failure(tpAniSirGlobal mac_ctx,
 					session->dot11mode, NULL, NULL);
 			}
 		} else {
-			pe_debug("HB missed from AP on DFS chanel moving to passive");
-			if (curr_chan < SIR_MAX_24G_5G_CHANNEL_RANGE) {
-				lim_covert_channel_scan_type(mac_ctx, curr_chan,
-					false);
-				mac_ctx->lim.dfschannelList.
-					timeStamp[curr_chan] = 0;
-			}
 			/*
 			 * Connected on DFS channel so should not send the
 			 * probe request tear down the link directly
 			 */
 			lim_tear_down_link_with_ap(mac_ctx,
 				session->peSessionId,
-				eSIR_BEACON_MISSED);
+				eSIR_MAC_BEACON_MISSED,
+				eLIM_LINK_MONITORING_DEAUTH);
 		}
 	} else {
 		/**
@@ -548,7 +550,15 @@ void lim_handle_heart_beat_failure(tpAniSirGlobal mac_ctx,
 		 */
 		pe_debug("received heartbeat timeout in state %X",
 			session->limMlmState);
-		lim_print_mlm_state(mac_ctx, LOGD, session->limMlmState);
+		lim_print_mlm_state(mac_ctx, LOG1, session->limMlmState);
 		mac_ctx->lim.gLimHBfailureCntInOtherStates++;
 	}
+
+hb_handler_fail:
+	if (mac_ctx->sme.tx_queue_cb)
+		mac_ctx->sme.tx_queue_cb(mac_ctx->hdd_handle,
+					 session->smeSessionId,
+					 WLAN_WAKE_ALL_NETIF_QUEUE,
+					 WLAN_CONTROL_PATH);
 }
+

@@ -65,74 +65,46 @@ uint32_t cfg_need_reload(tpAniSirGlobal pMac, uint16_t cfgId);
 void cfg_process_mb_msg(tpAniSirGlobal, tSirMbMsg *);
 
 /* / Set integer parameter value */
-tSirRetStatus cfg_set_int(tpAniSirGlobal, uint16_t, uint32_t);
+QDF_STATUS cfg_set_int(tpAniSirGlobal, uint16_t, uint32_t);
 
 /* / Check if the parameter is valid */
-tSirRetStatus cfg_check_valid(tpAniSirGlobal, uint16_t, uint32_t *);
+QDF_STATUS cfg_check_valid(tpAniSirGlobal, uint16_t, uint32_t *);
 
 /* / Get integer parameter value */
-tSirRetStatus wlan_cfg_get_int(tpAniSirGlobal, uint16_t, uint32_t *);
+QDF_STATUS wlan_cfg_get_int(tpAniSirGlobal, uint16_t, uint32_t *);
 
 /* / Set string parameter value */
-tSirRetStatus cfg_set_str(tpAniSirGlobal, uint16_t, uint8_t *, uint32_t);
+QDF_STATUS cfg_set_str(tpAniSirGlobal, uint16_t, uint8_t *, uint32_t);
 
-tSirRetStatus cfg_set_str_notify(tpAniSirGlobal, uint16_t, uint8_t *, uint32_t,
-				 int);
+QDF_STATUS cfg_set_str_notify(tpAniSirGlobal, uint16_t, uint8_t *, uint32_t,
+			      int);
 
 /* Cfg Download function for Prima or Integrated solutions. */
 void process_cfg_download_req(tpAniSirGlobal);
 
 /* / Get string parameter value */
-tSirRetStatus wlan_cfg_get_str(tpAniSirGlobal, uint16_t, uint8_t *, uint32_t *);
+QDF_STATUS wlan_cfg_get_str(tpAniSirGlobal, uint16_t, uint8_t *, uint32_t *);
 
 /* / Get string parameter maximum length */
-tSirRetStatus wlan_cfg_get_str_max_len(tpAniSirGlobal, uint16_t, uint32_t *);
+QDF_STATUS wlan_cfg_get_str_max_len(tpAniSirGlobal, uint16_t, uint32_t *);
 
 /* / Get string parameter maximum length */
-tSirRetStatus wlan_cfg_get_str_len(tpAniSirGlobal, uint16_t, uint32_t *);
+QDF_STATUS wlan_cfg_get_str_len(tpAniSirGlobal, uint16_t, uint32_t *);
 
 /* / Get the regulatory tx power on given channel */
 int8_t cfg_get_regulatory_max_transmit_power(tpAniSirGlobal pMac,
 					     uint8_t channel);
 
-/* / Dump CFG data to memory */
-void cfgDump(uint32_t *);
-
-/* / Save parameters with P flag set */
-void cfgSave(void);
-
 /* / Get capability info */
-extern tSirRetStatus cfg_get_capability_info(tpAniSirGlobal pMac, uint16_t *pCap,
-					     tpPESession psessionEntry);
+QDF_STATUS cfg_get_capability_info(tpAniSirGlobal pMac, uint16_t *pCap,
+				   tpPESession psessionEntry);
 
 /* / Set capability info */
-extern void cfg_set_capability_info(tpAniSirGlobal, uint16_t);
+void cfg_set_capability_info(tpAniSirGlobal, uint16_t);
 
 /* / Cleanup CFG module */
 void cfg_cleanup(tpAniSirGlobal pMac);
 
-extern uint8_t *g_cfg_param_name[];
-
-uint8_t *cfg_get_vendor_ie_ptr_from_oui(tpAniSirGlobal mac_ctx,
-					uint8_t *oui,
-					uint8_t oui_size,
-					uint8_t *ie,
-					uint16_t ie_len);
-
-/**
- * wlan_cfg_get_ie_ptr() - to get IE ptr corresponding
- *             to a particular eid
- * @p_ie: ptr to complete IE of beacon/probe response
- * @length: complete IE length
- * @eid: IE id
- * @size_of_len_field: ONE_BYTE/TWO_BYTE
- *
- * This function is called to get IE ptr corresponding
- * to a particular eid
- *
- * @Return: ptr to IE
- */
-uint8_t *wlan_cfg_get_ie_ptr(uint8_t *p_ie, int length, uint8_t eid,
-			     enum size_of_len_field size_of_len_field);
+const char *cfg_get_string(uint16_t cfg_id);
 
 #endif /* __CFGAPI_H */

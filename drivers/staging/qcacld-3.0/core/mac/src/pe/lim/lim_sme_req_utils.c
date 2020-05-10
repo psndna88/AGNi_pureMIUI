@@ -63,11 +63,11 @@ lim_is_rsn_ie_valid_in_sme_req_message(tpAniSirGlobal mac_ctx, tpSirRSNie rsn_ie
 	int len;
 
 	if (wlan_cfg_get_int(mac_ctx, WNI_CFG_PRIVACY_ENABLED,
-			     &privacy) != eSIR_SUCCESS)
+			     &privacy) != QDF_STATUS_SUCCESS)
 		pe_warn("Unable to retrieve POI from CFG");
 
 	if (wlan_cfg_get_int(mac_ctx, WNI_CFG_RSN_ENABLED, &val)
-		!= eSIR_SUCCESS)
+		!= QDF_STATUS_SUCCESS)
 		pe_warn("Unable to retrieve RSN_ENABLED from CFG");
 
 	if (rsn_ie->length && (!privacy || !val)) {
@@ -228,11 +228,11 @@ lim_set_rs_nie_wp_aiefrom_sme_start_bss_req_message(tpAniSirGlobal mac_ctx,
 	uint32_t privacy, val;
 
 	if (wlan_cfg_get_int(mac_ctx, WNI_CFG_PRIVACY_ENABLED,
-			     &privacy) != eSIR_SUCCESS)
+			     &privacy) != QDF_STATUS_SUCCESS)
 		pe_warn("Unable to retrieve POI from CFG");
 
 	if (wlan_cfg_get_int(mac_ctx, WNI_CFG_RSN_ENABLED,
-			     &val) != eSIR_SUCCESS)
+			     &val) != QDF_STATUS_SUCCESS)
 		pe_warn("Unable to retrieve RSN_ENABLED from CFG");
 
 	if (rsn_ie->length && (!privacy || !val)) {
@@ -284,7 +284,6 @@ lim_set_rs_nie_wp_aiefrom_sme_start_bss_req_message(tpAniSirGlobal mac_ctx,
 			return false;
 		}
 		return true;
-
 	} else if ((rsn_ie->length == rsn_ie->rsnIEdata[1] + 2)
 		   && (rsn_ie->rsnIEdata[0] == SIR_MAC_WPA_EID)) {
 		pe_debug("Only WPA IE is present");
@@ -650,79 +649,6 @@ lim_is_sme_deauth_req_valid(tpAniSirGlobal pMac, tpSirSmeDeauthReq pDeauthReq,
 } /*** end lim_is_sme_deauth_req_valid() ***/
 
 /**
- * lim_is_sme_scan_req_valid()
- *
- ***FUNCTION:
- * This function is called by lim_process_sme_req_messages() upon
- * receiving SME_SCAN_REQ message from application.
- *
- ***LOGIC:
- * Message validity checks are performed in this function
- *
- ***ASSUMPTIONS:
- *
- ***NOTE:
- *
- * @param  pScanReq Pointer to received SME_SCAN_REQ message
- * @return true  when received SME_SCAN_REQ is formatted correctly
- *         false otherwise
- */
-
-uint8_t lim_is_sme_scan_req_valid(tpAniSirGlobal pMac, tpSirSmeScanReq pScanReq)
-{
-	uint8_t valid = true;
-	uint8_t i = 0;
-
-	if (pScanReq->numSsid > SIR_SCAN_MAX_NUM_SSID) {
-		valid = false;
-		pe_err("Number of SSIDs > SIR_SCAN_MAX_NUM_SSID");
-		goto end;
-	}
-
-	for (i = 0; i < pScanReq->numSsid; i++) {
-		if (pScanReq->ssId[i].length > SIR_MAC_MAX_SSID_LENGTH) {
-			pe_err("Requested SSID length > SIR_MAC_MAX_SSID_LENGTH");
-			valid = false;
-			goto end;
-		}
-	}
-	if ((pScanReq->bssType < 0) || (pScanReq->bssType > eSIR_AUTO_MODE)) {
-		pe_err("Invalid BSS Type");
-		valid = false;
-	}
-	if (qdf_is_macaddr_group(&pScanReq->bssId) &&
-		!qdf_is_macaddr_broadcast(&pScanReq->bssId)) {
-		valid = false;
-		pe_err("BSSID is group addr and is not Broadcast Addr");
-	}
-	if (!
-	    (pScanReq->scanType == eSIR_PASSIVE_SCAN
-	     || pScanReq->scanType == eSIR_ACTIVE_SCAN)) {
-		valid = false;
-		pe_err("Invalid Scan Type");
-	}
-	if (pScanReq->channelList.numChannels > SIR_MAX_NUM_CHANNELS) {
-		valid = false;
-		pe_err("Number of Channels > SIR_MAX_NUM_CHANNELS");
-	}
-
-	/*
-	** check min/max channelTime range
-	**/
-	if (valid) {
-		if ((pScanReq->scanType == eSIR_ACTIVE_SCAN) &&
-		    (pScanReq->maxChannelTime < pScanReq->minChannelTime)) {
-			pe_err("Max Channel Time < Min Channel Time");
-			valid = false;
-			goto end;
-		}
-	}
-
-end:
-	return valid;
-} /*** end lim_is_sme_scan_req_valid() ***/
-
-/**
  * lim_is_sme_set_context_req_valid()
  *
  ***FUNCTION:
@@ -794,7 +720,7 @@ lim_is_sme_set_context_req_valid(tpAniSirGlobal pMac,
 		uint32_t poi;
 
 		if (wlan_cfg_get_int(pMac, WNI_CFG_PRIVACY_ENABLED,
-				     &poi) != eSIR_SUCCESS)
+				     &poi) != QDF_STATUS_SUCCESS)
 			pe_warn("Unable to retrieve POI from CFG");
 
 		if (!poi) {

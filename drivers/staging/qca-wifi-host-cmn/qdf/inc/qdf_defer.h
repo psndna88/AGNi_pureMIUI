@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -83,16 +83,6 @@ static inline void qdf_destroy_bh(qdf_bh_t *bh)
 	__qdf_disable_bh(bh);
 }
 
-/**
- * qdf_tasklet_is_scheduled - check bh status
- * @bh: pointer to bottom
- * Return: tasklet schedule state
- */
-static inline bool qdf_tasklet_is_scheduled(struct tasklet_struct *bh)
-{
-	return __qdf_tasklet_is_scheduled(bh);
-}
-
 /*********************Non-Interrupt Context deferred Execution***************/
 
 /**
@@ -103,7 +93,7 @@ static inline bool qdf_tasklet_is_scheduled(struct tasklet_struct *bh)
  * @func: deferred function to run at bottom half non-interrupt context.
  * @arg: argument for the deferred function
  *
- * Return: QDF_STATUS
+ * Return: QDF status
  */
 static inline QDF_STATUS qdf_create_work(qdf_handle_t hdl, qdf_work_t  *work,
 				   qdf_defer_fn_t  func, void  *arg)
@@ -141,11 +131,26 @@ static inline qdf_workqueue_t *qdf_create_workqueue(char *name)
  * qdf_create_singlethread_workqueue() - create a single threaded workqueue
  * @name: string
  *
+ * This API creates a dedicated work queue with a single worker thread to avoid
+ * wasting unnecessary resources when works which needs to be submitted in this
+ * queue are not very critical and frequent.
+ *
  * Return: pointer of type qdf_workqueue_t
  */
 static inline qdf_workqueue_t *qdf_create_singlethread_workqueue(char *name)
 {
 	return  __qdf_create_singlethread_workqueue(name);
+}
+
+/**
+ * qdf_alloc_unbound_workqueue - allocate an unbound workqueue
+ * @name: string
+ *
+ * Return: pointer of type qdf_workqueue_t
+ */
+static inline qdf_workqueue_t *qdf_alloc_unbound_workqueue(char *name)
+{
+	return  __qdf_alloc_unbound_workqueue(name);
 }
 
 /**

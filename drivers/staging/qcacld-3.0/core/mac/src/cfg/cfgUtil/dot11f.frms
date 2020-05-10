@@ -104,6 +104,7 @@ const EID_PU_BUFFER_STATUS           = 106;
 const EID_QOS_MAP_SET                = 110;
 const EID_ESE_SPECIFIC               = 150;
 const EID_ESE_CCKM_SPECIFIC          = 156;
+const EID_ADDBA_EXTN_ELEMENT         = 159;
 const EID_VHT_CAPABILITIES           =  191;
 const EID_VHT_OPERATION_ELEMENT      =  192;
 const EID_VHT_EXT_BSS_LOAD           =  193;
@@ -441,6 +442,47 @@ FF ext_chan_switch_ann_action(4)
      new_channel: 8;
      switch_count: 8;
    }
+}
+
+FF addba_param_set(2)
+{
+   {
+     amsdu_supp: 1;
+     policy: 1;
+     tid: 4;
+     buff_size: 10;
+   }
+}
+
+FF ba_timeout(2)
+{
+    timeout, 2;
+}
+
+FF ba_start_seq_ctrl(2)
+{
+    {
+      frag_number: 4;
+      ssn: 12;
+    }
+}
+
+IE addba_extn_element(EID_ADDBA_EXTN_ELEMENT)
+{
+    {
+      no_fragmentation: 1;
+      he_frag_operation: 2;
+      reserved: 5;
+    }
+}
+
+FF delba_param_set(2)
+{
+    {
+      reserved: 11;
+      initiator: 1;
+      tid: 4;
+    }
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -2019,6 +2061,11 @@ IE osen_ie (EID_VENDOR_SPECIFIC) OUI (0x50, 0x6F, 0x9A, 0x12)
     data[0..255];
 }
 
+IE roaming_consortium_sel (EID_VENDOR_SPECIFIC) OUI (0x50, 0x6F, 0x9A, 0x1d)
+{
+    data[0..255];
+}
+
 IE QComVendorIE (EID_VENDOR_SPECIFIC) OUI (0x00, 0xA0, 0xC6)
 {
     type,      1;
@@ -2560,11 +2607,10 @@ IE QCN_IE (EID_VENDOR_SPECIFIC) OUI ( 0x8C, 0xFD, 0xF0, 0x01 )
     version[4];
 }
 
-IE ESP_information (EID_EXTN_ID_ELEMENT) OUI ( 0x0B )
+IE esp_information (EID_EXTN_ID_ELEMENT) OUI ( 0x0B )
 {
-    variable_data[0..96];
+    data[0..96];
 }
-
 IE fils_indication (EID_FILS_INDICATION)
 {
    // FILS Information element
@@ -2786,6 +2832,205 @@ IE MeasurementRequest (EID_MEAS_REQUEST)  // 7.3.2.21
        }
 
     };
+}
+
+IE he_cap (EID_EXTN_ID_ELEMENT) OUI (0x23)
+{
+    {
+      htc_he:1;
+      twt_request:1;
+      twt_responder:1;
+      fragmentation:2;
+      max_num_frag_msdu:3;
+      min_frag_size:2;
+      trigger_frm_mac_pad:2;
+      multi_tid_aggr:3;
+      he_link_adaptation:2;
+      all_ack:1;
+      ul_mu_rsp_sched:1;
+      a_bsr:1;
+      broadcast_twt:1;
+      ba_32bit_bitmap:1;
+      mu_cascade:1;
+      ack_enabled_multitid:1;
+      dl_mu_ba:1;
+      omi_a_ctrl:1;
+      ofdma_ra:1;
+      max_ampdu_len:2;
+      amsdu_frag:1;
+      flex_twt_sched:1;
+      rx_ctrl_frame:1;
+    }
+    {
+      bsrp_ampdu_aggr:1;
+      qtp:1;
+      a_bqr:1;
+      sr_responder:1;
+      ndp_feedback_supp:1;
+      ops_supp:1;
+      amsdu_in_ampdu:1;
+      reserved1:1;
+    }
+    {
+      dual_band:1;
+      chan_width_0:1;
+      chan_width_1:1;
+      chan_width_2:1;
+      chan_width_3:1;
+      chan_width_4:1;
+      chan_width_5:1;
+      chan_width_6:1;
+      rx_pream_puncturing:4;
+      device_class:1;
+      ldpc_coding:1;
+      he_1x_ltf_800_gi_ppdu:1;
+      midamble_rx_max_nsts:2;
+      he_4x_ltf_3200_gi_ndp:1;
+      tx_stbc_lt_80mhz:1;
+      rx_stbc_lt_80mhz:1;
+      doppler:2;
+      ul_mu:2;
+      dcm_enc_tx:3;
+      dcm_enc_rx:3;
+      ul_he_mu:1;
+      su_beamformer:1;
+    }
+    {
+      su_beamformee:1;
+      mu_beamformer:1;
+      bfee_sts_lt_80:3;
+      bfee_sts_gt_80:3;
+      num_sounding_lt_80:3;
+      num_sounding_gt_80:3;
+      su_feedback_tone16:1;
+      mu_feedback_tone16:1;
+      codebook_su:1;
+      codebook_mu:1;
+      beamforming_feedback:3;
+      he_er_su_ppdu:1;
+      dl_mu_mimo_part_bw:1;
+      ppet_present:1;
+      srp:1;
+      power_boost:1;
+      he_ltf_800_gi_4x:1;
+      max_nc:3;
+      tx_stbc_gt_80mhz:1;
+      rx_stbc_gt_80mhz:1;
+    }
+    {
+      er_he_ltf_800_gi_4x:1;
+      he_ppdu_20_in_40Mhz_2G:1;
+      he_ppdu_20_in_160_80p80Mhz:1;
+      he_ppdu_80_in_160_80p80Mhz:1;
+      er_1x_he_ltf_gi:1;
+      midamble_rx_1x_he_ltf:1;
+      reserved2:2;
+    }
+    rx_he_mcs_map_lt_80, 2;
+    tx_he_mcs_map_lt_80, 2;
+    rx_he_mcs_map_160[2][0..1] COUNTIS chan_width_2;
+    tx_he_mcs_map_160[2][0..1] COUNTIS chan_width_2;
+    rx_he_mcs_map_80_80[2][0..1] COUNTIS chan_width_3;
+    tx_he_mcs_map_80_80[2][0..1] COUNTIS chan_width_3;
+    OPTIONAL UNION ppet (DISCRIMINATOR ppet_present)
+    {
+        ppe_threshold (ppet_present IS 1)
+        {
+            ppe_th[1..25];
+        }
+    };
+}
+
+IE he_op (EID_EXTN_ID_ELEMENT) OUI (0x24)
+{
+    {
+        bss_color: 6;
+        default_pe: 3;
+        twt_required: 1;
+        rts_threshold: 10;
+        partial_bss_col: 1;
+        vht_oper_present: 1;
+        reserved1: 6;
+        mbssid_ap: 1;
+        tx_bssid_ind: 1;
+        bss_col_disabled: 1;
+        reserved2: 1;
+    }
+    basic_mcs_nss[2];
+    OPTIONAL UNION vht_oper (DISCRIMINATOR vht_oper_present)
+    {
+        info (vht_oper_present IS 1)
+        {
+            chan_width, 1;
+            center_freq_seg0, 1;
+            center_freq_seg1, 1;
+        }
+    };
+    OPTIONAL UNION maxbssid_ind (DISCRIMINATOR mbssid_ap)
+    {
+        info (mbssid_ap IS 1)
+        {
+            data, 1;
+        }
+    };
+}
+
+IE mu_edca_param_set (EID_EXTN_ID_ELEMENT) OUI (0x26)
+{
+    qos, 1;
+    {
+        acbe_aifsn: 4;
+        acbe_acm:   1;
+        acbe_aci:   2;
+        unused1:    1;
+    }
+    {
+        acbe_acwmin: 4;
+        acbe_acwmax: 4;
+    }
+    acbe_muedca_timer, 1;
+    {
+        acbk_aifsn: 4;
+        acbk_acm:   1;
+        acbk_aci:   2;
+        unused2:    1;
+    }
+    {
+        acbk_acwmin: 4;
+        acbk_acwmax: 4;
+    }
+    acbk_muedca_timer, 1;
+    {
+        acvi_aifsn: 4;
+        acvi_acm:   1;
+        acvi_aci:   2;
+        unused3:    1;
+    }
+    {
+        acvi_acwmin: 4;
+        acvi_acwmax: 4;
+    }
+    acvi_muedca_timer, 1;
+    {
+        acvo_aifsn: 4;
+        acvo_acm:   1;
+        acvo_aci:   2;
+        unused4:    1;
+    }
+    {
+        acvo_acwmin: 4;
+        acvo_acwmax: 4;
+    }
+    acvo_muedca_timer, 1;
+}
+
+IE bss_color_change (EID_EXTN_ID_ELEMENT) OUI (0x2A)
+{
+    countdown, 1;
+    {
+        new_color: 6;
+        reserved: 2;
+    }
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -3194,7 +3439,11 @@ FRAME Beacon                              // C.f. Sec. 7.2.3.1
     OPTIE  ESEVersion;
     OPTIE  MBO_IE;
     OPTIE  QCN_IE;
-    OPTIE  ESP_information;
+    OPTIE  he_cap;
+    OPTIE  he_op;
+    OPTIE  bss_color_change;
+    OPTIE  mu_edca_param_set;
+    OPTIE  esp_information;
 } // End frame Beacon.
 
 // Ok, here's  the story on  Beacon1 & Beacon2.   We presumably beacon  a lot
@@ -3285,7 +3534,11 @@ FRAME Beacon2
     OPTIE  QComVendorIE;
     OPTIE  ESEVersion;
     OPTIE  QCN_IE;
-    OPTIE  ESP_information;
+    OPTIE  he_cap;
+    OPTIE  he_op;
+    OPTIE  bss_color_change;
+    OPTIE  mu_edca_param_set;
+    OPTIE  esp_information;
 }
 
 // This frame is just Beacon with its Fixed Fields stripped out.  It's handy
@@ -3353,7 +3606,11 @@ FRAME BeaconIEs
     OPTIE  QComVendorIE;
     OPTIE  MBO_IE;
     OPTIE  QCN_IE;
-    OPTIE  ESP_information;
+    OPTIE  he_cap;
+    OPTIE  he_op;
+    OPTIE  bss_color_change;
+    OPTIE  mu_edca_param_set;
+    OPTIE  esp_information;
 } // End frame BeaconIEs.
 
 FRAME Disassociation                      // 7.3.3.3
@@ -3376,6 +3633,7 @@ FRAME AssocRequest                        // 7.2.3.4
     OPTIE  RSNOpaque;
     OPTIE  ExtSuppRates;
     OPTIE  MobilityDomain;
+    OPTIE  FTInfo;
     OPTIE  SuppOperatingClasses;
     OPTIE  WAPIOpaque;
     OPTIE  WAPI;
@@ -3400,7 +3658,9 @@ FRAME AssocRequest                        // 7.2.3.4
     OPTIE  vendor_vht_ie;
     OPTIE  hs20vendor_ie;
     OPTIE  QCN_IE;
+    OPTIE  he_cap;
     OPTIE  osen_ie;
+    OPTIE roaming_consortium_sel;
 } // End frame AssocRequest.
 
 FRAME AssocResponse                       // 7.2.3.5
@@ -3441,8 +3701,12 @@ FRAME AssocResponse                       // 7.2.3.5
     OPTIE  fragment_ie;
     OPTIE  fils_kde;
     OPTIE  vendor_vht_ie;
-    OPTIE  MBO_IE;
     OPTIE  QCN_IE;
+    OPTIE  he_cap;
+    OPTIE  he_op;
+    OPTIE  bss_color_change;
+    OPTIE  mu_edca_param_set;
+    OPTIE  MBO_IE;
 } // End frame AssocResponse.
 
 FRAME ReAssocRequest                      // 7.2.3.6
@@ -3481,6 +3745,7 @@ FRAME ReAssocRequest                      // 7.2.3.6
     OPTIE  QosMapSet;
     OPTIE  vendor_vht_ie;
     OPTIE  hs20vendor_ie;
+    OPTIE  he_cap;
 } // End frame ReAssocRequest.
 
 FRAME ReAssocResponse                     // 7.2.3.7
@@ -3516,6 +3781,10 @@ FRAME ReAssocResponse                     // 7.2.3.7
     OPTIE  OBSSScanParameters;
     OPTIE  QosMapSet;
     OPTIE  vendor_vht_ie;
+    OPTIE  he_cap;
+    OPTIE  he_op;
+    OPTIE  bss_color_change;
+    OPTIE  mu_edca_param_set;
     OPTIE  MBO_IE;
 } // End frame ReAssocResponse.
 
@@ -3533,6 +3802,7 @@ FRAME ProbeRequest                        // 7.2.3.8
     OPTIE  VHTCaps;
     OPTIE  ExtCap;
     OPTIE  QCN_IE;
+    OPTIE  he_cap;
 } // End frame ProbeRequest.
 
 FRAME ProbeResponse                       // 7.2.3.9
@@ -3593,7 +3863,11 @@ FRAME ProbeResponse                       // 7.2.3.9
     OPTIE  ESEVersion;
     OPTIE  MBO_IE;
     OPTIE  QCN_IE;
-    OPTIE  ESP_information;
+    OPTIE  he_cap;
+    OPTIE  he_op;
+    OPTIE  bss_color_change;
+    OPTIE  mu_edca_param_set;
+    OPTIE  esp_information;
 } // End frame ProbeResponse.
 
 FRAME Authentication                      // 7.2.3.10
@@ -4010,6 +4284,36 @@ FRAME p2p_oper_chan_change_confirm
     OPTIE HTCaps;
     OPTIE VHTCaps;
     OPTIE OperatingMode;
+}
+
+FRAME addba_req
+{
+    FF    Category;
+    FF    Action;
+    FF    DialogToken;
+    FF    addba_param_set;
+    FF    ba_timeout;
+    FF    ba_start_seq_ctrl;
+    OPTIE addba_extn_element;
+}
+
+FRAME addba_rsp
+{
+    FF    Category;
+    FF    Action;
+    FF    DialogToken;
+    FF    Status;
+    FF    addba_param_set;
+    FF    ba_timeout;
+    OPTIE addba_extn_element;
+}
+
+FRAME delba_req
+{
+    FF    Category;
+    FF    Action;
+    FF    delba_param_set;
+    FF    Reason;
 }
 
 // Local Variables:

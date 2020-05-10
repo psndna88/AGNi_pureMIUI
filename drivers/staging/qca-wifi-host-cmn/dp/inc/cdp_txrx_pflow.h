@@ -25,9 +25,25 @@
 #define _CDP_TXRX_PFLOW_H_
 
 #include <cdp_txrx_stats_struct.h>
-#if PEER_FLOW_CONTROL
-extern uint32_t ol_pflow_update_pdev_params(struct ol_txrx_pdev_t *,
-		ol_ath_param_t, uint32_t, void *);
-#endif
-#endif
+#include "cdp_txrx_ops.h"
+#include "cdp_txrx_handle.h"
 
+static inline uint32_t cdp_pflow_update_pdev_params
+	(ol_txrx_soc_handle soc, struct cdp_pdev *pdev,
+	enum _ol_ath_param_t param, uint32_t val, void *ctx)
+{
+	if (!soc || !soc->ops) {
+		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
+				"%s: Invalid Instance", __func__);
+		QDF_BUG(0);
+		return 0;
+	}
+
+	if (!soc->ops->pflow_ops ||
+	    !soc->ops->pflow_ops->pflow_update_pdev_params)
+		return 0;
+
+	return soc->ops->pflow_ops->pflow_update_pdev_params
+			(pdev, param, val, ctx);
+}
+#endif

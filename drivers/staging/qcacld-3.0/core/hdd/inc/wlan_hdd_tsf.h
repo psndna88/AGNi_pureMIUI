@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -18,8 +18,8 @@
 
 #if !defined WLAN_HDD_TSF_H
 #define WLAN_HDD_TSF_H
-
 #include "wlan_hdd_cfg.h"
+#include "wlan_hdd_main.h"
 
 /**
  * enum hdd_tsf_get_state - status of get tsf action
@@ -61,7 +61,7 @@ enum hdd_tsf_capture_state {
 /**
  * wlan_hdd_tsf_init() - set gpio and callbacks for
  *     capturing tsf and init tsf_plus
- * @hdd_ctx: pointer to the hdd_context_t
+ * @hdd_ctx: pointer to the struct hdd_context
  *
  * This function set the callback to sme module, the callback will be
  * called when a tsf event is reported by firmware; set gpio number
@@ -70,17 +70,17 @@ enum hdd_tsf_capture_state {
  *
  * Return: nothing
  */
-void wlan_hdd_tsf_init(struct hdd_context_s *hdd_ctx);
+void wlan_hdd_tsf_init(struct hdd_context *hdd_ctx);
 
 /**
  * wlan_hdd_tsf_deinit() - reset callbacks for capturing tsf, deinit tsf_plus
- * @hdd_ctx: pointer to the hdd_context_t
+ * @hdd_ctx: pointer to the struct hdd_context
  *
  * This function reset the callback to sme module, and deinit tsf_plus
  *
  * Return: nothing
  */
-void wlan_hdd_tsf_deinit(hdd_context_t *hdd_ctx);
+void wlan_hdd_tsf_deinit(struct hdd_context *hdd_ctx);
 
 /**
  * hdd_capture_tsf() - capture tsf
@@ -92,7 +92,7 @@ void wlan_hdd_tsf_deinit(hdd_context_t *hdd_ctx);
  *
  * Return: 0 for success or non-zero negative failure code
  */
-int hdd_capture_tsf(struct hdd_adapter_s *adapter, uint32_t *buf, int len);
+int hdd_capture_tsf(struct hdd_adapter *adapter, uint32_t *buf, int len);
 
 /**
  * hdd_indicate_tsf() - return tsf to uplayer
@@ -105,7 +105,7 @@ int hdd_capture_tsf(struct hdd_adapter_s *adapter, uint32_t *buf, int len);
  *
  * Return: Describe the execute result of this routine
  */
-int hdd_indicate_tsf(struct hdd_adapter_s *adapter, uint32_t *buf, int len);
+int hdd_indicate_tsf(struct hdd_adapter *adapter, uint32_t *buf, int len);
 
 /**
  * wlan_hdd_cfg80211_handle_tsf_cmd(): Setup TSF operations
@@ -124,23 +124,24 @@ int wlan_hdd_cfg80211_handle_tsf_cmd(struct wiphy *wiphy,
 					int data_len);
 
 int hdd_get_tsf_cb(void *pcb_cxt, struct stsf *ptsf);
+
 #else
-static inline void wlan_hdd_tsf_init(struct hdd_context_s *hdd_ctx)
+static inline void wlan_hdd_tsf_init(struct hdd_context *hdd_ctx)
 {
 }
 
-static inline void wlan_hdd_tsf_deinit(hdd_context_t *hdd_ctx)
+static inline void wlan_hdd_tsf_deinit(struct hdd_context *hdd_ctx)
 {
 }
 
-static inline int hdd_indicate_tsf(struct hdd_adapter_s *adapter, uint32_t *buf,
+static inline int hdd_indicate_tsf(struct hdd_adapter *adapter, uint32_t *buf,
 				int len)
 {
 	return -ENOTSUPP;
 }
 
 static inline int
-hdd_capture_tsf(struct hdd_adapter_s *adapter, uint32_t *buf, int len)
+hdd_capture_tsf(struct hdd_adapter *adapter, uint32_t *buf, int len)
 {
 	return -ENOTSUPP;
 }
@@ -160,39 +161,52 @@ static inline int hdd_get_tsf_cb(void *pcb_cxt, struct stsf *ptsf)
 #endif
 
 #if defined(WLAN_FEATURE_TSF_PLUS) && defined(WLAN_FEATURE_TSF)
-#define HDD_TSF_IS_PTP_ENABLED(hdd) \
-({ \
-	hdd_context_t *hdd_ctx = (hdd); \
-	hdd_ctx && hdd_ctx->config && hdd_ctx->config->tsf_ptp_options; \
-})
+/**
+ * hdd_tsf_is_ptp_enabled() - check ini configuration
+ * @hdd: pointer to hdd context
+ *
+ * This function checks tsf configuration for ptp
+ *
+ * Return: true on enable, false on disable
+ */
+bool hdd_tsf_is_ptp_enabled(struct hdd_context *hdd);
+/**
+ * hdd_tsf_is_tx_set() - check ini configuration
+ * @hdd: pointer to hdd context
+ *
+ * This function checks tsf configuration for ptp on tx
+ *
+ * Return: true on enable, false on disable
+ */
 
-#define HDD_TSF_IS_TX_SET(hdd) \
-({ \
-	hdd_context_t *hdd_ctx = (hdd); \
-	hdd_ctx && hdd_ctx->config && \
-	(hdd_ctx->config->tsf_ptp_options & CFG_SET_TSF_PTP_OPT_TX); \
-})
-
-#define HDD_TSF_IS_RX_SET(hdd) \
-({ \
-	hdd_context_t *hdd_ctx = (hdd); \
-	hdd_ctx && hdd_ctx->config && \
-	(hdd_ctx->config->tsf_ptp_options & CFG_SET_TSF_PTP_OPT_RX); \
-})
-
-#define HDD_TSF_IS_RAW_SET(hdd) \
-({ \
-	hdd_context_t *hdd_ctx = (hdd); \
-	hdd_ctx && hdd_ctx->config && \
-	(hdd_ctx->config->tsf_ptp_options & CFG_SET_TSF_PTP_OPT_RAW); \
-})
-
-#define HDD_TSF_IS_DBG_FS_SET(hdd) \
-({ \
-	hdd_context_t *hdd_ctx = (hdd); \
-	hdd_ctx && hdd_ctx->config && \
-	(hdd_ctx->config->tsf_ptp_options & CFG_SET_TSF_DBG_FS); \
-})
+bool hdd_tsf_is_tx_set(struct hdd_context *hdd);
+/**
+ * hdd_tsf_is_rx_set() - check ini configuration
+ * @hdd: pointer to hdd context
+ *
+ * This function checks tsf configuration for ptp on rx
+ *
+ * Return: true on enable, false on disable
+ */
+bool hdd_tsf_is_rx_set(struct hdd_context *hdd);
+/**
+ * hdd_tsf_is_raw_set() - check ini configuration
+ * @hdd: pointer to hdd context
+ *
+ * This function checks tsf configuration for ptp on raw
+ *
+ * Return: true on enable, false on disable
+ */
+bool hdd_tsf_is_raw_set(struct hdd_context *hdd);
+/**
+ * hdd_tsf_is_dbg_fs_set() - check ini configuration
+ * @hdd: pointer to hdd context
+ *
+ * This function checks tsf configuration for ptp on dbg fs
+ *
+ * Return: true on enable, false on disable
+ */
+bool hdd_tsf_is_dbg_fs_set(struct hdd_context *hdd);
 
 /**
  * hdd_start_tsf_sync() - start tsf sync
@@ -202,7 +216,7 @@ static inline int hdd_get_tsf_cb(void *pcb_cxt, struct stsf *ptsf)
  *
  * Return: Describe the execute result of this routine
  */
-int hdd_start_tsf_sync(hdd_adapter_t *adapter);
+int hdd_start_tsf_sync(struct hdd_adapter *adapter);
 
 /**
  * hdd_stop_tsf_sync() - stop tsf sync
@@ -212,7 +226,7 @@ int hdd_start_tsf_sync(hdd_adapter_t *adapter);
  *
  * Return: Describe the execute result of this routine
  */
-int hdd_stop_tsf_sync(hdd_adapter_t *adapter);
+int hdd_stop_tsf_sync(struct hdd_adapter *adapter);
 
 /**
  * hdd_tsf_notify_wlan_state_change() -
@@ -225,7 +239,7 @@ int hdd_stop_tsf_sync(hdd_adapter_t *adapter);
  *
  * Return: nothing
  */
-void hdd_tsf_notify_wlan_state_change(hdd_adapter_t *adapter,
+void hdd_tsf_notify_wlan_state_change(struct hdd_adapter *adapter,
 				      eConnectionState old_state,
 				      eConnectionState new_state);
 
@@ -254,19 +268,39 @@ int hdd_tx_timestamp(qdf_nbuf_t netbuf, uint64_t target_time);
  * Return: Describe the execute result of this routine
  */
 int hdd_rx_timestamp(qdf_nbuf_t netbuf, uint64_t target_time);
+/**
+ * hdd_capture_req_timer_expired_handler() - capture req timer handler
+ * @arg: pointer to a adapter
+ *
+ * This function set a timeout handler for TSF capture timer.
+ *
+ * Return: none
+ */
+
+void hdd_capture_req_timer_expired_handler(void *arg);
+
+/**
+ * hdd_tsf_is_tsf64_tx_set() - check ini configuration
+ * @hdd: pointer to hdd context
+ *
+ * This function checks tsf configuration for ptp on tsf64 tx
+ *
+ * Return: true on enable, false on disable
+ */
+bool hdd_tsf_is_tsf64_tx_set(struct hdd_context *hdd);
 #else
-static inline int hdd_start_tsf_sync(hdd_adapter_t *adapter)
+static inline int hdd_start_tsf_sync(struct hdd_adapter *adapter)
 {
 	return -ENOTSUPP;
 }
 
-static inline int hdd_stop_tsf_sync(hdd_adapter_t *adapter)
+static inline int hdd_stop_tsf_sync(struct hdd_adapter *adapter)
 {
 	return -ENOTSUPP;
 }
 
 static inline
-void hdd_tsf_notify_wlan_state_change(hdd_adapter_t *adapter,
+void hdd_tsf_notify_wlan_state_change(struct hdd_adapter *adapter,
 				      eConnectionState old_state,
 				      eConnectionState new_state)
 
@@ -283,6 +317,25 @@ static inline
 int hdd_rx_timestamp(qdf_nbuf_t netbuf, uint64_t target_time)
 {
 	return -ENOTSUPP;
+}
+
+static inline
+void hdd_capture_req_timer_expired_handler(void *arg)
+{
+}
+
+/**
+ * hdd_tsf_is_tsf64_tx_set() - check ini configuration
+ * @hdd: pointer to hdd context
+ *
+ * This function checks tsf configuration for ptp on tsf64 tx
+ *
+ * Return: true on enable, false on disable
+ */
+static inline
+bool hdd_tsf_is_tsf64_tx_set(struct hdd_context *hdd)
+{
+	return FALSE;
 }
 #endif
 

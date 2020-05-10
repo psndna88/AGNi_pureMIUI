@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -30,7 +30,7 @@
 #include <ol_txrx.h>
 #include <qdf_types.h>
 #include <qdf_mem.h>         /* qdf_os_mem_alloc_consistent et al */
-
+#include <cdp_txrx_handle.h>
 #if defined(CONFIG_HL_SUPPORT)
 
 #if defined(DEBUG_HL_LOGGING)
@@ -431,7 +431,7 @@ ol_tx_sched_init_rr(
 }
 
 void
-ol_txrx_set_wmm_param(ol_txrx_pdev_handle data_pdev,
+ol_txrx_set_wmm_param(struct cdp_pdev *data_pdev,
 		      struct ol_tx_wmm_param_t wmm_param)
 {
 	QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_INFO_LOW,
@@ -515,7 +515,7 @@ struct ol_tx_sched_wrr_adv_category_info_t {
 		enum { OL_TX_SCHED_WRR_ADV_ ## cat ## _CREDIT_RESERVE = \
 			(credit_reserve) }; \
 		enum { OL_TX_SCHED_WRR_ADV_ ## cat ## _DISCARD_WEIGHT = \
-			(discard_weights) }
+			(discard_weights) };
 /* Rome:
  * For high-volume traffic flows (VI, BE, BK), use a credit threshold
  * roughly equal to a large A-MPDU (occupying half the target memory
@@ -533,7 +533,7 @@ OL_TX_SCHED_WRR_ADV_CAT_CFG_SPEC(VO,           1,     17,    24,     0,  1);
 OL_TX_SCHED_WRR_ADV_CAT_CFG_SPEC(VI,           3,     17,    16,     1,  4);
 OL_TX_SCHED_WRR_ADV_CAT_CFG_SPEC(BE,          10,     17,    16,     1,  8);
 OL_TX_SCHED_WRR_ADV_CAT_CFG_SPEC(BK,          12,      6,     6,     1,  8);
-OL_TX_SCHED_WRR_ADV_CAT_CFG_SPEC(NON_QOS_DATA, 10,     17,    16,     1,  8);
+OL_TX_SCHED_WRR_ADV_CAT_CFG_SPEC(NON_QOS_DATA,10,     17,    16,     1,  8);
 OL_TX_SCHED_WRR_ADV_CAT_CFG_SPEC(UCAST_MGMT,   1,      1,     4,     0,  1);
 OL_TX_SCHED_WRR_ADV_CAT_CFG_SPEC(MCAST_DATA,  10,     17,     4,     1,  4);
 OL_TX_SCHED_WRR_ADV_CAT_CFG_SPEC(MCAST_MGMT,   1,      1,     4,     0,  1);
@@ -1011,10 +1011,11 @@ ol_tx_sched_category_info_wrr_adv(
  * Return: none
  */
 static void ol_tx_sched_wrr_param_update(struct ol_txrx_pdev_t *pdev,
-				struct ol_tx_sched_wrr_adv_t *scheduler)
+					 struct ol_tx_sched_wrr_adv_t *
+					 scheduler)
 {
 	int i;
-	char *tx_sched_wrr_name[4] = {
+	static const char * const tx_sched_wrr_name[4] = {
 		"BE",
 		"BK",
 		"VI",
@@ -1118,9 +1119,10 @@ ol_tx_sched_init_wrr_adv(
  * settings of the scheduler, ie. VO, VI, BE, or BK.
  */
 void
-ol_txrx_set_wmm_param(ol_txrx_pdev_handle data_pdev,
+ol_txrx_set_wmm_param(struct cdp_pdev *pdev,
 		      struct ol_tx_wmm_param_t wmm_param)
 {
+	struct ol_txrx_pdev_t *data_pdev = (struct ol_txrx_pdev_t *)pdev;
 	struct ol_tx_sched_wrr_adv_t def_cfg;
 	struct ol_tx_sched_wrr_adv_t *scheduler =
 					data_pdev->tx_sched.scheduler;

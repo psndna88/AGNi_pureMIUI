@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -194,31 +194,6 @@ typedef enum eLimDot11hChanSwStates {
 	eLIM_11H_CHANSW_END
 } tLimDot11hChanSwStates;
 
-
-/* WLAN_SUSPEND_LINK Related */
-typedef void (*SUSPEND_RESUME_LINK_CALLBACK)(tpAniSirGlobal pMac,
-					     QDF_STATUS status,
-					     uint32_t *data);
-
-/* LIM to HAL SCAN Management Message Interface states */
-typedef enum eLimHalScanState {
-	eLIM_HAL_IDLE_SCAN_STATE,
-	eLIM_HAL_INIT_SCAN_WAIT_STATE,
-	eLIM_HAL_START_SCAN_WAIT_STATE,
-	eLIM_HAL_END_SCAN_WAIT_STATE,
-	eLIM_HAL_FINISH_SCAN_WAIT_STATE,
-	eLIM_HAL_INIT_LEARN_WAIT_STATE,
-	eLIM_HAL_START_LEARN_WAIT_STATE,
-	eLIM_HAL_END_LEARN_WAIT_STATE,
-	eLIM_HAL_FINISH_LEARN_WAIT_STATE,
-	eLIM_HAL_SCANNING_STATE,
-/* WLAN_SUSPEND_LINK Related */
-	eLIM_HAL_SUSPEND_LINK_WAIT_STATE,
-	eLIM_HAL_SUSPEND_LINK_STATE,
-	eLIM_HAL_RESUME_LINK_WAIT_STATE,
-/* end WLAN_SUSPEND_LINK Related */
-} tLimLimHalScanState;
-
 /* MLM Req/Cnf structure definitions */
 typedef struct sLimMlmAuthReq {
 	tSirMacAddr peerMacAddr;
@@ -238,49 +213,6 @@ typedef struct sLimMlmJoinReq {
 	 * description. Adding a variable after this corrupts the ieFields
 	 */
 } tLimMlmJoinReq, *tpLimMlmJoinReq;
-
-typedef struct sLimMlmScanReq {
-	tSirBssType bssType;
-	tSirMacAddr bssId;
-	tSirMacSSid ssId[SIR_SCAN_MAX_NUM_SSID];
-	tSirScanType scanType;
-	uint32_t minChannelTime;
-	uint32_t maxChannelTime;
-	uint32_t dot11mode;
-	/* Number of SSIDs to scan(send Probe request) */
-	uint8_t numSsid;
-
-	bool p2pSearch;
-	uint16_t uIEFieldLen;
-	uint16_t uIEFieldOffset;
-
-	uint8_t sessionId;
-	/* channelList MUST be the last field of this structure */
-	tSirChannelList channelList;
-	/*-----------------------------
-	   tLimMlmScanReq....
-	   -----------------------------
-	   uIEFiledLen
-	   -----------------------------
-	   uIEFiledOffset               ----+
-	   -----------------------------    |
-	   channelList.numChannels          |
-	   -----------------------------    |
-	   ... variable size up to          |
-	   channelNumber[numChannels-1]     |
-	   This can be zero, if             |
-	   numChannel is zero.              |
-	   ----------------------------- <--+
-	   ... variable size uIEFiled
-	   up to uIEFieldLen (can be 0)
-	   -----------------------------*/
-} tLimMlmScanReq, *tpLimMlmScanReq;
-
-typedef struct tLimScanResultNode tLimScanResultNode;
-struct tLimScanResultNode {
-	tLimScanResultNode *next;
-	tSirBssDescription bssDescription;
-};
 
 #ifdef FEATURE_OEM_DATA_SUPPORT
 
@@ -327,25 +259,27 @@ typedef struct sLimMlmStaContext {
 	tAniAuthType authType;
 	uint16_t listenInterval;
 	tSirMacCapabilityInfo capabilityInfo;
-	tSirMacPropRateSet propRateSet;
 	tSirMacReasonCodes disassocReason;
-	uint16_t cleanupTrigger;
 
 	tSirResultCodes resultCode;
-	uint16_t protStatusCode;
 
+	tSirMacPropRateSet propRateSet;
 	uint8_t subType:1;      /* Indicates ASSOC (0) or REASSOC (1) */
 	uint8_t updateContext:1;
 	uint8_t schClean:1;
 	/* 802.11n HT Capability in Station: Enabled 1 or DIsabled 0 */
 	uint8_t htCapability:1;
 	uint8_t vhtCapability:1;
-	bool force_1x1;
+	uint16_t cleanupTrigger;
+	uint16_t protStatusCode;
+#ifdef WLAN_FEATURE_11AX
+	bool he_capable;
+#endif
 } tLimMlmStaContext, *tpLimMlmStaContext;
 
 /* Structure definition to hold deferred messages queue parameters */
 typedef struct sLimDeferredMsgQParams {
-	tSirMsgQ deferredQueue[MAX_DEFERRED_QUEUE_LEN];
+	struct scheduler_msg deferredQueue[MAX_DEFERRED_QUEUE_LEN];
 	uint16_t size;
 	uint16_t read;
 	uint16_t write;

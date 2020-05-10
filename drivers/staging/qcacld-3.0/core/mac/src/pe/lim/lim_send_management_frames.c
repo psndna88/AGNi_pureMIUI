@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018, 2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -53,7 +53,11 @@
 #include "qdf_crypto.h"
 
 #include "wma_types.h"
+#include <cdp_txrx_cmn.h>
+#include <cdp_txrx_peer_ops.h>
 #include "lim_process_fils.h"
+#include "wlan_utility.h"
+#include <wlan_mlme_main.h>
 
 /**
  *
@@ -191,9 +195,9 @@ void lim_populate_mac_header(tpAniSirGlobal mac_ctx, uint8_t *buf,
  * --background scan:    no session
  * --sch_beacon_processing:  to get EDCA parameters:  session needed
  *
- * Return: tSirRetStatus (eSIR_SUCCESS on success and error codes otherwise)
+ * Return: QDF_STATUS (QDF_STATUS_SUCCESS on success and error codes otherwise)
  */
-tSirRetStatus
+QDF_STATUS
 lim_send_probe_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 			      tSirMacSSid *ssid,
 			      tSirMacAddr bssid,
@@ -209,7 +213,7 @@ lim_send_probe_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 	QDF_STATUS qdf_status;
 	tpPESession pesession;
 	uint8_t sessionid;
-	uint8_t *p2pie = NULL;
+	const uint8_t *p2pie = NULL;
 	uint8_t txflag = 0;
 	uint8_t sme_sessionid = 0;
 	bool is_vht_enabled = false;
@@ -217,8 +221,8 @@ lim_send_probe_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 	uint16_t addn_ielen = 0;
 	bool extracted_ext_cap_flag = false;
 	tDot11fIEExtCap extracted_ext_cap;
-	tSirRetStatus sir_status;
-	uint8_t *qcn_ie = NULL;
+	QDF_STATUS sir_status;
+	const uint8_t *qcn_ie = NULL;
 
 	if (additional_ielen)
 		addn_ielen = *additional_ielen;
@@ -251,7 +255,7 @@ lim_send_probe_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 	/* The scheme here is to fill out a 'tDot11fProbeRequest' structure */
 	/* and then hand it off to 'dot11f_pack_probe_request' (for */
 	/* serialization).  We start by zero-initializing the structure: */
-	qdf_mem_set((uint8_t *) &pr, sizeof(pr), 0);
+	qdf_mem_zero((uint8_t *) &pr, sizeof(pr));
 
 	/* & delegating to assorted helpers: */
 	populate_dot11f_ssid(mac_ctx, ssid, &pr.SSID);
@@ -264,12 +268,8 @@ lim_send_probe_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 	 * sent by P2P Client
 	 */
 	if ((WNI_CFG_DOT11_MODE_11B != dot11mode) && (p2pie != NULL) &&
-	    (((mac_ctx->lim.gpLimMlmScanReq != NULL) &&
-	      mac_ctx->lim.gpLimMlmScanReq->p2pSearch) ||
-	     ((pesession != NULL) &&
-	      (QDF_P2P_CLIENT_MODE == pesession->pePersona))
-	    )
-	   ) {
+	    ((pesession != NULL) &&
+	      (QDF_P2P_CLIENT_MODE == pesession->pePersona))) {
 		/*
 		 * In the below API pass channel number > 14, do that it fills
 		 * only 11a rates in supported rates
@@ -342,14 +342,19 @@ lim_send_probe_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 		populate_dot11f_ext_cap(mac_ctx, is_vht_enabled, &pr.ExtCap,
 			pesession);
 
-	if (addn_ielen) {
+	if (IS_DOT11_MODE_HE(dot11mode) && NULL != pesession)
+		lim_update_session_he_capable(mac_ctx, pesession);
+
+	populate_dot11f_he_caps(mac_ctx, pesession, &pr.he_cap);
+
+	if (addn_ielen && additional_ie) {
 		qdf_mem_zero((uint8_t *)&extracted_ext_cap,
 			sizeof(tDot11fIEExtCap));
 		sir_status = lim_strip_extcap_update_struct(mac_ctx,
 					additional_ie,
 					&addn_ielen,
 					&extracted_ext_cap);
-		if (eSIR_SUCCESS != sir_status) {
+		if (QDF_STATUS_SUCCESS != sir_status) {
 			pe_debug("Unable to Stripoff ExtCap IE from Probe Req");
 		} else {
 			struct s_ext_cap *p_ext_cap =
@@ -365,8 +370,8 @@ lim_send_probe_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 			if (additional_ielen)
 				*additional_ielen = addn_ielen;
 		}
-		qcn_ie = cfg_get_vendor_ie_ptr_from_oui(mac_ctx,
-				SIR_MAC_QCN_OUI_TYPE, SIR_MAC_QCN_OUI_TYPE_SIZE,
+		qcn_ie = wlan_get_vendor_ie_ptr_from_oui(SIR_MAC_QCN_OUI_TYPE,
+				SIR_MAC_QCN_OUI_TYPE_SIZE,
 				additional_ie, addn_ielen);
 	}
 	/* Add qcn_ie only if qcn ie is not present in additional_ie */
@@ -400,10 +405,10 @@ lim_send_probe_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 				      (void **)&packet);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		pe_err("Failed to allocate %d bytes for a Probe Request", bytes);
-		return eSIR_MEM_ALLOC_FAILED;
+		return QDF_STATUS_E_NOMEM;
 	}
 	/* Paranoia: */
-	qdf_mem_set(frame, bytes, 0);
+	qdf_mem_zero(frame, bytes);
 
 	/* Next, we fill out the buffer descriptor: */
 	lim_populate_mac_header(mac_ctx, frame, SIR_MAC_MGMT_FRAME,
@@ -416,7 +421,7 @@ lim_send_probe_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 	if (DOT11F_FAILED(status)) {
 		pe_err("Failed to pack a Probe Request (0x%08x)", status);
 		cds_packet_free((void *)packet);
-		return eSIR_FAILURE;    /* allocated! */
+		return QDF_STATUS_E_FAILURE;    /* allocated! */
 	} else if (DOT11F_WARNED(status)) {
 		pe_warn("There were warnings while packing a Probe Request (0x%08x)", status);
 	}
@@ -426,21 +431,22 @@ lim_send_probe_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 			     additional_ie, addn_ielen);
 		payload += addn_ielen;
 	}
+	pe_nofl_debug("Probe req TX: vdev %d seq num %d to " QDF_MAC_ADDR_STR " len %d",
+		      sme_sessionid, mac_ctx->mgmtSeqNum,
+		      QDF_MAC_ADDR_ARRAY(bssid),
+		      (int)sizeof(tSirMacMgmtHdr) + payload);
 
 	/* If this probe request is sent during P2P Search State, then we need
 	 * to send it at OFDM rate.
 	 */
-	if ((SIR_BAND_5_GHZ == lim_get_rf_band(channel))
-	    || ((mac_ctx->lim.gpLimMlmScanReq != NULL) &&
-		mac_ctx->lim.gpLimMlmScanReq->p2pSearch)
+	if ((BAND_5G == lim_get_rf_band(channel)) ||
 		/*
 		 * For unicast probe req mgmt from Join function we don't set
 		 * above variables. So we need to add one more check whether it
 		 * is pePersona is P2P_CLIENT or not
 		 */
-	    || ((pesession != NULL) &&
-		(QDF_P2P_CLIENT_MODE == pesession->pePersona))
-	    ) {
+	    ((pesession != NULL) &&
+		(QDF_P2P_CLIENT_MODE == pesession->pePersona))) {
 		txflag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
 	}
 
@@ -453,13 +459,13 @@ lim_send_probe_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		pe_err("could not send Probe Request frame!");
 		/* Pkt will be freed up by the callback */
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	}
 
-	return eSIR_SUCCESS;
+	return QDF_STATUS_SUCCESS;
 } /* End lim_send_probe_req_mgmt_frame. */
 
-static tSirRetStatus lim_get_addn_ie_for_probe_resp(tpAniSirGlobal pMac,
+static QDF_STATUS lim_get_addn_ie_for_probe_resp(tpAniSirGlobal pMac,
 					     uint8_t *addIE, uint16_t *addnIELen,
 					     uint8_t probeReqP2pIe)
 {
@@ -474,13 +480,13 @@ static tSirRetStatus lim_get_addn_ie_for_probe_resp(tpAniSirGlobal pMac,
 
 		if (NULL == addIE) {
 			pe_err("NULL addIE pointer");
-			return eSIR_FAILURE;
+			return QDF_STATUS_E_FAILURE;
 		}
 
 		tempbuf = qdf_mem_malloc(left);
 		if (NULL == tempbuf) {
 			pe_err("Unable to allocate memory to store addn IE");
-			return eSIR_MEM_ALLOC_FAILED;
+			return QDF_STATUS_E_NOMEM;
 		}
 
 		while (left >= 2) {
@@ -491,7 +497,7 @@ static tSirRetStatus lim_get_addn_ie_for_probe_resp(tpAniSirGlobal pMac,
 				pe_err("Invalid IEs eid: %d elem_len: %d left: %d",
 					elem_id, elem_len, left);
 				qdf_mem_free(tempbuf);
-				return eSIR_FAILURE;
+				return QDF_STATUS_E_FAILURE;
 			}
 			if (!((SIR_MAC_EID_VENDOR == elem_id) &&
 			      (memcmp
@@ -508,7 +514,7 @@ static tSirRetStatus lim_get_addn_ie_for_probe_resp(tpAniSirGlobal pMac,
 		*addnIELen = tempLen;
 		qdf_mem_free(tempbuf);
 	}
-	return eSIR_SUCCESS;
+	return QDF_STATUS_SUCCESS;
 }
 
 /**
@@ -536,7 +542,7 @@ lim_send_probe_rsp_mgmt_frame(tpAniSirGlobal mac_ctx,
 			      tpPESession pe_session, uint8_t preq_p2pie)
 {
 	tDot11fProbeResponse *frm;
-	tSirRetStatus sir_status;
+	QDF_STATUS sir_status;
 	uint32_t cfg, payload, bytes = 0, status;
 	tpSirMacMgmtHdr mac_hdr;
 	uint8_t *frame;
@@ -548,7 +554,7 @@ lim_send_probe_rsp_mgmt_frame(tpAniSirGlobal mac_ctx,
 	uint32_t wps_ap = 0, tmp;
 	uint8_t tx_flag = 0;
 	uint8_t *add_ie = NULL;
-	uint8_t *p2p_ie = NULL;
+	const uint8_t *p2p_ie = NULL;
 	uint8_t noalen = 0;
 	uint8_t total_noalen = 0;
 	uint8_t noa_stream[SIR_MAX_NOA_ATTR_LEN + SIR_P2P_IE_HEADER_LEN];
@@ -587,7 +593,7 @@ lim_send_probe_rsp_mgmt_frame(tpAniSirGlobal mac_ctx,
 	 * Fill out 'frm', after which we'll just hand the struct off to
 	 * 'dot11f_pack_probe_response'.
 	 */
-	qdf_mem_set((uint8_t *) frm, sizeof(tDot11fProbeResponse), 0);
+	qdf_mem_zero((uint8_t *) frm, sizeof(tDot11fProbeResponse));
 
 	/*
 	 * Timestamp to be updated by TFP, below.
@@ -600,7 +606,7 @@ lim_send_probe_rsp_mgmt_frame(tpAniSirGlobal mac_ctx,
 	} else {
 		sir_status = wlan_cfg_get_int(mac_ctx,
 				WNI_CFG_BEACON_INTERVAL, &cfg);
-		if (eSIR_SUCCESS != sir_status) {
+		if (QDF_STATUS_SUCCESS != sir_status) {
 			pe_err("Failed to get WNI_CFG_BEACON_INTERVAL (%d)",
 				sir_status);
 			goto err_ret;
@@ -624,7 +630,7 @@ lim_send_probe_rsp_mgmt_frame(tpAniSirGlobal mac_ctx,
 				pe_session);
 	} else {
 		if (wlan_cfg_get_int(mac_ctx, (uint16_t) WNI_CFG_WPS_ENABLE,
-			&tmp) != eSIR_SUCCESS)
+			&tmp) != QDF_STATUS_SUCCESS)
 			pe_err("Failed to cfg get id %d", WNI_CFG_WPS_ENABLE);
 
 		wps_ap = tmp & WNI_CFG_WPS_ENABLE_AP;
@@ -678,6 +684,14 @@ lim_send_probe_rsp_mgmt_frame(tpAniSirGlobal mac_ctx,
 		is_vht_enabled = true;
 	}
 
+	if (lim_is_session_he_capable(pe_session)) {
+		pe_debug("Populate HE IEs");
+		populate_dot11f_he_caps(mac_ctx, pe_session,
+					&frm->he_cap);
+		populate_dot11f_he_operation(mac_ctx, pe_session,
+					     &frm->he_op);
+	}
+
 	populate_dot11f_ext_cap(mac_ctx, is_vht_enabled, &frm->ExtCap,
 		pe_session);
 
@@ -726,7 +740,7 @@ lim_send_probe_rsp_mgmt_frame(tpAniSirGlobal mac_ctx,
 			     pe_session->addIeParams.probeRespDataLen);
 		addn_ie_len = pe_session->addIeParams.probeRespDataLen;
 
-		if (eSIR_SUCCESS != lim_get_addn_ie_for_probe_resp(mac_ctx,
+		if (QDF_STATUS_SUCCESS != lim_get_addn_ie_for_probe_resp(mac_ctx,
 					add_ie, &addn_ie_len, preq_p2pie)) {
 			pe_err("Unable to get addn_ie");
 			goto err_ret;
@@ -735,7 +749,7 @@ lim_send_probe_rsp_mgmt_frame(tpAniSirGlobal mac_ctx,
 		sir_status = lim_strip_extcap_update_struct(mac_ctx,
 					add_ie, &addn_ie_len,
 					&extracted_ext_cap);
-		if (eSIR_SUCCESS != sir_status) {
+		if (QDF_STATUS_SUCCESS != sir_status) {
 			pe_debug("Unable to strip off ExtCap IE");
 		} else {
 			extracted_ext_cap_flag = true;
@@ -789,7 +803,7 @@ lim_send_probe_rsp_mgmt_frame(tpAniSirGlobal mac_ctx,
 		goto err_ret;
 	}
 	/* Paranoia: */
-	qdf_mem_set(frame, bytes, 0);
+	qdf_mem_zero(frame, bytes);
 
 	/* Next, we fill out the buffer descriptor: */
 	lim_populate_mac_header(mac_ctx, frame, SIR_MAC_MGMT_FRAME,
@@ -816,8 +830,6 @@ lim_send_probe_rsp_mgmt_frame(tpAniSirGlobal mac_ctx,
 	pe_debug("Sending Probe Response frame to");
 	lim_print_mac_addr(mac_ctx, peer_macaddr, LOGD);
 
-	mac_ctx->sys.probeRespond++;
-
 	if (mac_ctx->lim.gpLimRemainOnChanReq)
 		qdf_mem_copy(frame + sizeof(tSirMacMgmtHdr) + payload,
 			     mac_ctx->lim.gpLimRemainOnChanReq->probeRspIe,
@@ -840,7 +852,7 @@ lim_send_probe_rsp_mgmt_frame(tpAniSirGlobal mac_ctx,
 		}
 	}
 
-	if ((SIR_BAND_5_GHZ == lim_get_rf_band(pe_session->currentOperChannel))
+	if ((BAND_5G == lim_get_rf_band(pe_session->currentOperChannel))
 	    || (pe_session->pePersona == QDF_P2P_CLIENT_MODE) ||
 	    (pe_session->pePersona == QDF_P2P_GO_MODE)
 	    )
@@ -901,7 +913,7 @@ lim_send_addts_req_action_frame(tpAniSirGlobal pMac,
 	smeSessionId = psessionEntry->smeSessionId;
 
 	if (!pAddTS->wmeTspecPresent) {
-		qdf_mem_set((uint8_t *) &AddTSReq, sizeof(AddTSReq), 0);
+		qdf_mem_zero((uint8_t *) &AddTSReq, sizeof(AddTSReq));
 
 		AddTSReq.Action.action = SIR_MAC_QOS_ADD_TS_REQ;
 		AddTSReq.DialogToken.token = pAddTS->dialogToken;
@@ -946,7 +958,8 @@ lim_send_addts_req_action_frame(tpAniSirGlobal pMac,
 		nStatus =
 			dot11f_get_packed_add_ts_request_size(pMac, &AddTSReq, &nPayload);
 		if (DOT11F_FAILED(nStatus)) {
-			pe_err("Failed to calculate the packed size for an Add TS Request (0x%08x)", nStatus);
+			pe_err("Failed to calculate the packed size for an Add TS Request (0x%08x)",
+				nStatus);
 			/* We'll fall back on the worst case scenario: */
 			nPayload = sizeof(tDot11fAddTSRequest);
 		} else if (DOT11F_WARNED(nStatus)) {
@@ -954,7 +967,7 @@ lim_send_addts_req_action_frame(tpAniSirGlobal pMac,
 				nStatus);
 		}
 	} else {
-		qdf_mem_set((uint8_t *) &WMMAddTSReq, sizeof(WMMAddTSReq), 0);
+		qdf_mem_zero((uint8_t *) &WMMAddTSReq, sizeof(WMMAddTSReq));
 
 		WMMAddTSReq.Action.action = SIR_MAC_QOS_ADD_TS_REQ;
 		WMMAddTSReq.DialogToken.token = pAddTS->dialogToken;
@@ -1003,7 +1016,7 @@ lim_send_addts_req_action_frame(tpAniSirGlobal pMac,
 		return;
 	}
 	/* Paranoia: */
-	qdf_mem_set(pFrame, nBytes, 0);
+	qdf_mem_zero(pFrame, nBytes);
 
 	/* Next, we fill out the buffer descriptor: */
 	lim_populate_mac_header(pMac, pFrame, SIR_MAC_MGMT_FRAME,
@@ -1048,9 +1061,9 @@ lim_send_addts_req_action_frame(tpAniSirGlobal pMac,
 	}
 
 	pe_debug("Sending an Add TS Request frame to");
-	       lim_print_mac_addr(pMac, peerMacAddr, LOGD);
+	lim_print_mac_addr(pMac, peerMacAddr, LOGD);
 
-	if ((SIR_BAND_5_GHZ ==
+	if ((BAND_5G ==
 	     lim_get_rf_band(psessionEntry->currentOperChannel))
 	    || (psessionEntry->pePersona == QDF_P2P_CLIENT_MODE)
 	    || (psessionEntry->pePersona == QDF_P2P_GO_MODE)
@@ -1060,6 +1073,9 @@ lim_send_addts_req_action_frame(tpAniSirGlobal pMac,
 
 	MTRACE(qdf_trace(QDF_MODULE_ID_PE, TRACE_CODE_TX_MGMT,
 			 psessionEntry->peSessionId, pMacHdr->fc.subType));
+	lim_diag_mgmt_tx_event_report(pMac, pMacHdr,
+				      psessionEntry, QDF_STATUS_SUCCESS,
+				      QDF_STATUS_SUCCESS);
 
 	/* Queue Addts Response frame in high priority WQ */
 	qdf_status = wma_tx_frame(pMac, pPacket, (uint16_t) nBytes,
@@ -1098,7 +1114,7 @@ lim_send_assoc_rsp_mgmt_frame(tpAniSirGlobal mac_ctx,
 	static tDot11fAssocResponse frm;
 	uint8_t *frame;
 	tpSirMacMgmtHdr mac_hdr;
-	tSirRetStatus sir_status;
+	QDF_STATUS sir_status;
 	uint8_t lle_mode = 0, addts;
 	tHalBitVal qos_mode, wme_mode;
 	uint32_t payload, bytes = 0, status;
@@ -1126,7 +1142,7 @@ lim_send_assoc_rsp_mgmt_frame(tpAniSirGlobal mac_ctx,
 
 	sme_session = pe_session->smeSessionId;
 
-	qdf_mem_set((uint8_t *) &frm, sizeof(frm), 0);
+	qdf_mem_zero((uint8_t *) &frm, sizeof(frm));
 
 	limGetQosMode(pe_session, &qos_mode);
 	limGetWmeMode(pe_session, &wme_mode);
@@ -1156,7 +1172,7 @@ lim_send_assoc_rsp_mgmt_frame(tpAniSirGlobal mac_ctx,
 	}
 
 	if (LIM_IS_AP_ROLE(pe_session) && sta != NULL &&
-	    eSIR_SUCCESS == status_code) {
+	    QDF_STATUS_SUCCESS == status_code) {
 		assoc_req = (tpSirAssocReq)
 			pe_session->parsedAssocReq[sta->assocId];
 		/*
@@ -1204,7 +1220,7 @@ lim_send_assoc_rsp_mgmt_frame(tpAniSirGlobal mac_ctx,
 				frm.HTCaps.shortGI40MHz = 0;
 
 			populate_dot11f_ht_info(mac_ctx, &frm.HTInfo,
-						pe_session);
+				pe_session);
 		}
 		pe_debug("SupportedChnlWidth: %d, mimoPS: %d, GF: %d, short GI20:%d, shortGI40: %d, dsssCck: %d, AMPDU Param: %x",
 			frm.HTCaps.supportedChannelWidthSet,
@@ -1222,22 +1238,6 @@ lim_send_assoc_rsp_mgmt_frame(tpAniSirGlobal mac_ctx,
 			populate_dot11f_vht_operation(mac_ctx, pe_session,
 					&frm.VHTOperation);
 			is_vht = true;
-		} else if (sta->mlmStaContext.force_1x1 &&
-			   frm.HTCaps.present) {
-			/*
-			 * WAR: In P2P GO mode, if the P2P client device
-			 * is only HT capable and not VHT capable, but the P2P
-			 * GO device is VHT capable and advertises 2x2 NSS with
-			 * HT capablity client device, which results in IOT
-			 * issues.
-			 * When GO is operating in DBS mode, GO beacons
-			 * advertise 2x2 capability but include OMN IE to
-			 * indicate current operating mode of 1x1. But here
-			 * peer device is only HT capable and will not
-			 * understand OMN IE.
-			 */
-			frm.HTInfo.basicMCSSet[1] = 0;
-			frm.HTCaps.supportedMCSSet[1] = 0;
 		}
 
 		if (pe_session->vhtCapability &&
@@ -1258,16 +1258,24 @@ lim_send_assoc_rsp_mgmt_frame(tpAniSirGlobal mac_ctx,
 		populate_dot11f_ext_cap(mac_ctx, is_vht, &frm.ExtCap,
 			pe_session);
 
+		if (lim_is_sta_he_capable(sta) &&
+		    lim_is_session_he_capable(pe_session)) {
+			pe_debug("Populate HE IEs");
+			populate_dot11f_he_caps(mac_ctx, pe_session,
+						&frm.he_cap);
+			populate_dot11f_he_operation(mac_ctx, pe_session,
+						     &frm.he_op);
+		}
 #ifdef WLAN_FEATURE_11W
 		if (eSIR_MAC_TRY_AGAIN_LATER == status_code) {
 			if (wlan_cfg_get_int
 				    (mac_ctx, WNI_CFG_PMF_SA_QUERY_MAX_RETRIES,
-				    &max_retries) != eSIR_SUCCESS)
+				    &max_retries) != QDF_STATUS_SUCCESS)
 				pe_err("get WNI_CFG_PMF_SA_QUERY_MAX_RETRIES failure");
 			else if (wlan_cfg_get_int
 					 (mac_ctx,
 					 WNI_CFG_PMF_SA_QUERY_RETRY_INTERVAL,
-					 &retry_int) != eSIR_SUCCESS)
+					 &retry_int) != QDF_STATUS_SUCCESS)
 				pe_err("get WNI_CFG_PMF_SA_QUERY_RETRY_INTERVAL failure");
 			else
 				populate_dot11f_timeout_interval(mac_ctx,
@@ -1283,7 +1291,7 @@ lim_send_assoc_rsp_mgmt_frame(tpAniSirGlobal mac_ctx,
 			pe_session->lim_non_ecsa_cap_num++;
 	}
 
-	qdf_mem_set((uint8_t *) &beacon_params, sizeof(beacon_params), 0);
+	qdf_mem_zero((uint8_t *) &beacon_params, sizeof(beacon_params));
 
 	if (LIM_IS_AP_ROLE(pe_session) &&
 		(pe_session->gLimProtectionControl !=
@@ -1311,6 +1319,8 @@ lim_send_assoc_rsp_mgmt_frame(tpAniSirGlobal mac_ctx,
 		lim_send_beacon_params(mac_ctx, &beacon_params, pe_session);
 	}
 
+	lim_obss_send_detection_cfg(mac_ctx, pe_session, false);
+
 	if (assoc_req != NULL) {
 		addn_ie_len = pe_session->addIeParams.assocRespDataLen;
 
@@ -1322,15 +1332,15 @@ lim_send_assoc_rsp_mgmt_frame(tpAniSirGlobal mac_ctx,
 				pe_session->addIeParams.assocRespData_buff,
 				pe_session->addIeParams.assocRespDataLen);
 
-			qdf_mem_set((uint8_t *) &extracted_ext_cap,
-				    sizeof(extracted_ext_cap), 0);
+			qdf_mem_zero((uint8_t *) &extracted_ext_cap,
+				    sizeof(extracted_ext_cap));
 
 			stripoff_len = addn_ie_len;
 			sir_status =
 				lim_strip_extcap_update_struct
 					(mac_ctx, &add_ie[0], &stripoff_len,
 					&extracted_ext_cap);
-			if (eSIR_SUCCESS != sir_status) {
+			if (QDF_STATUS_SUCCESS != sir_status) {
 				pe_debug("strip off extcap IE failed");
 			} else {
 				addn_ie_len = stripoff_len;
@@ -1371,7 +1381,7 @@ lim_send_assoc_rsp_mgmt_frame(tpAniSirGlobal mac_ctx,
 		return;
 	}
 	/* Paranoia: */
-	qdf_mem_set(frame, bytes, 0);
+	qdf_mem_zero(frame, bytes);
 
 	/* Next, we fill out the buffer descriptor: */
 	lim_populate_mac_header(mac_ctx, frame, SIR_MAC_MGMT_FRAME,
@@ -1396,16 +1406,15 @@ lim_send_assoc_rsp_mgmt_frame(tpAniSirGlobal mac_ctx,
 			status);
 	}
 
-	pe_debug("*** Sending Assoc Resp subtype %d status %d aid %d to",
-			subtype, status_code, aid);
-
-	lim_print_mac_addr(mac_ctx, mac_hdr->da, LOGD);
+	pe_nofl_debug("Assoc rsp TX: vdev %d subtype %d to %pM seq num %d status %d aid %d",
+		      pe_session->smeSessionId, subtype, mac_hdr->da,
+		      mac_ctx->mgmtSeqNum, status_code, aid);
 
 	if (addn_ie_len && addn_ie_len <= WNI_CFG_ASSOC_RSP_ADDNIE_DATA_LEN)
 		qdf_mem_copy(frame + sizeof(tSirMacMgmtHdr) + payload,
 			     &add_ie[0], addn_ie_len);
 
-	if ((SIR_BAND_5_GHZ ==
+	if ((BAND_5G ==
 		lim_get_rf_band(pe_session->currentOperChannel)) ||
 			(pe_session->pePersona == QDF_P2P_CLIENT_MODE) ||
 			(pe_session->pePersona == QDF_P2P_GO_MODE))
@@ -1413,6 +1422,8 @@ lim_send_assoc_rsp_mgmt_frame(tpAniSirGlobal mac_ctx,
 
 	MTRACE(qdf_trace(QDF_MODULE_ID_PE, TRACE_CODE_TX_MGMT,
 			 pe_session->peSessionId, mac_hdr->fc.subType));
+	lim_diag_mgmt_tx_event_report(mac_ctx, mac_hdr,
+				      pe_session, QDF_STATUS_SUCCESS, status_code);
 	/* Queue Association Response frame in high priority WQ */
 	qdf_status = wma_tx_frame(mac_ctx, packet, (uint16_t) bytes,
 				TXRX_FRM_802_11_MGMT,
@@ -1460,7 +1471,7 @@ lim_send_delts_req_action_frame(tpAniSirGlobal pMac,
 	smeSessionId = psessionEntry->smeSessionId;
 
 	if (!wmmTspecPresent) {
-		qdf_mem_set((uint8_t *) &DelTS, sizeof(DelTS), 0);
+		qdf_mem_zero((uint8_t *) &DelTS, sizeof(DelTS));
 
 		DelTS.Category.category = SIR_MAC_ACTION_QOS_MGMT;
 		DelTS.Action.action = SIR_MAC_QOS_DEL_TS_REQ;
@@ -1476,7 +1487,7 @@ lim_send_delts_req_action_frame(tpAniSirGlobal pMac,
 				nStatus);
 		}
 	} else {
-		qdf_mem_set((uint8_t *) &WMMDelTS, sizeof(WMMDelTS), 0);
+		qdf_mem_zero((uint8_t *) &WMMDelTS, sizeof(WMMDelTS));
 
 		WMMDelTS.Category.category = SIR_MAC_ACTION_WME;
 		WMMDelTS.Action.action = SIR_MAC_QOS_DEL_TS_REQ;
@@ -1506,7 +1517,7 @@ lim_send_delts_req_action_frame(tpAniSirGlobal pMac,
 		return;
 	}
 	/* Paranoia: */
-	qdf_mem_set(pFrame, nBytes, 0);
+	qdf_mem_zero(pFrame, nBytes);
 
 	/* Next, we fill out the buffer descriptor: */
 	lim_populate_mac_header(pMac, pFrame, SIR_MAC_MGMT_FRAME,
@@ -1549,9 +1560,9 @@ lim_send_delts_req_action_frame(tpAniSirGlobal pMac,
 	}
 
 	pe_debug("Sending DELTS REQ (size %d) to ", nBytes);
-	       lim_print_mac_addr(pMac, pMacHdr->da, LOGD);
+	lim_print_mac_addr(pMac, pMacHdr->da, LOGD);
 
-	if ((SIR_BAND_5_GHZ ==
+	if ((BAND_5G ==
 	     lim_get_rf_band(psessionEntry->currentOperChannel))
 	    || (psessionEntry->pePersona == QDF_P2P_CLIENT_MODE)
 	    || (psessionEntry->pePersona == QDF_P2P_GO_MODE)
@@ -1561,6 +1572,9 @@ lim_send_delts_req_action_frame(tpAniSirGlobal pMac,
 
 	MTRACE(qdf_trace(QDF_MODULE_ID_PE, TRACE_CODE_TX_MGMT,
 			 psessionEntry->peSessionId, pMacHdr->fc.subType));
+	lim_diag_mgmt_tx_event_report(pMac, pMacHdr,
+				      psessionEntry, QDF_STATUS_SUCCESS,
+				      QDF_STATUS_SUCCESS);
 	qdf_status = wma_tx_frame(pMac, pPacket, (uint16_t) nBytes,
 				TXRX_FRM_802_11_MGMT,
 				ANI_TXDIR_TODS,
@@ -1576,32 +1590,121 @@ lim_send_delts_req_action_frame(tpAniSirGlobal pMac,
 
 /**
  * lim_assoc_tx_complete_cnf()- Confirmation for assoc sent over the air
- *
- * @mac_ctx: pointer to global mac
+ * @context: pointer to global mac
+ * @buf: buffer
  * @tx_complete : Sent status
+ * @params; tx completion params
  *
  * Return: This returns QDF_STATUS
  */
 
-static QDF_STATUS lim_assoc_tx_complete_cnf(tpAniSirGlobal mac_ctx,
-					   uint32_t tx_complete)
+static QDF_STATUS lim_assoc_tx_complete_cnf(void *context,
+					   qdf_nbuf_t buf,
+					   uint32_t tx_complete,
+					   void *params)
 {
 	uint16_t assoc_ack_status;
 	uint16_t reason_code;
+	tpAniSirGlobal mac_ctx = (tpAniSirGlobal)context;
 
-	pe_debug("tx_complete= %d", tx_complete);
-	if (tx_complete) {
+	pe_nofl_info("Assoc req TX %s",
+		      (tx_complete == WMI_MGMT_TX_COMP_TYPE_COMPLETE_OK) ?
+		      "success" : "fail");
+
+	if (tx_complete == WMI_MGMT_TX_COMP_TYPE_COMPLETE_OK) {
 		assoc_ack_status = ACKED;
-		reason_code = eSIR_SUCCESS;
+		reason_code = QDF_STATUS_SUCCESS;
 	} else {
 		assoc_ack_status = NOT_ACKED;
-		reason_code = eSIR_FAILURE;
+		reason_code = QDF_STATUS_E_FAILURE;
 	}
+	if (buf)
+		qdf_nbuf_free(buf);
 
 	lim_diag_event_report(mac_ctx, WLAN_PE_DIAG_ASSOC_ACK_EVENT,
 			NULL, assoc_ack_status, reason_code);
 	return QDF_STATUS_SUCCESS;
 }
+
+#ifdef WLAN_ADAPTIVE_11R
+/**
+ * lim_fill_adaptive_11r_ie() - Populate the Vendor secific adaptive 11r
+ * IE to association request frame
+ * @pe_session: pointer to PE session
+ * @ie_buf: buffer to which Adaptive 11r IE will be copied
+ * @ie_len: length of the Adaptive 11r Vendor specific IE
+ *
+ * Return QDF_STATUS
+ */
+static QDF_STATUS lim_fill_adaptive_11r_ie(tpPESession pe_session,
+					   uint8_t **ie_buf, uint8_t *ie_len)
+{
+	uint8_t *buf = NULL, *adaptive_11r_ie = NULL;
+
+	if (!pe_session->is_adaptive_11r_connection)
+		return QDF_STATUS_SUCCESS;
+
+	/*
+	 * Vendor specific Adaptive 11r IE to be advertised in Assoc
+	 * req:
+	 * Type     0xDD
+	 * Length   0x0B
+	 * OUI      0x00 0x00 0x0F
+	 * Type     0x22
+	 * subtype  0x00
+	 * Version  0x01
+	 * Length   0x04
+	 * Data     0x00 00 00 01(0th bit is 1 means adaptive 11r is
+	 * supported)
+	 */
+	adaptive_11r_ie = qdf_mem_malloc(ADAPTIVE_11R_STA_IE_LEN + 2);
+	if (!adaptive_11r_ie)
+		return QDF_STATUS_E_FAILURE;
+
+	/* Fill the Vendor IE Type (0xDD) */
+	buf = adaptive_11r_ie;
+	*buf = IE_EID_VENDOR;
+	buf++;
+
+	/* Fill the Vendor IE length (0x0B) */
+	*buf = ADAPTIVE_11R_STA_IE_LEN;
+	buf++;
+
+	/*
+	 * Fill the Adaptive 11r Vendor specific OUI(0x00 0x00 0x0F 0x22)
+	 */
+	qdf_mem_copy(buf, ADAPTIVE_11R_STA_OUI, ADAPTIVE_11R_OUI_LEN);
+	buf += ADAPTIVE_11R_OUI_LEN;
+
+	/* Fill Adaptive 11r Vendor specific Subtype (0x00) */
+	*buf = ADAPTIVE_11R_OUI_SUBTYPE;
+	buf++;
+
+	/* Fill Adaptive 11r Version (0x01) */
+	*buf = ADAPTIVE_11R_OUI_VERSION;
+	buf++;
+
+	/* Fill Adaptive 11r IE Data length (0x04) */
+	*buf = ADAPTIVE_11R_DATA_LEN;
+	buf++;
+
+	/* Fill Adaptive 11r IE Data (0x00 0x00 0x00 0x01) */
+	qdf_mem_copy(buf, ADAPTIVE_11R_OUI_DATA, ADAPTIVE_11R_DATA_LEN);
+
+	*ie_len = ADAPTIVE_11R_STA_IE_LEN + 2;
+	*ie_buf = adaptive_11r_ie;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+#else
+static inline
+QDF_STATUS lim_fill_adaptive_11r_ie(tpPESession pe_session,
+				    uint8_t **ie_buf, uint8_t *ie_len)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
 
 /**
  * lim_send_assoc_req_mgmt_frame() - Send association request
@@ -1622,15 +1725,15 @@ lim_send_assoc_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 	tDot11fAssocRequest *frm;
 	uint16_t caps;
 	uint8_t *frame;
-	tSirRetStatus sir_status;
+	QDF_STATUS sir_status;
 	tLimMlmAssocCnf assoc_cnf;
 	uint32_t bytes = 0, payload, status;
 	uint8_t qos_enabled, wme_enabled, wsm_enabled;
 	void *packet;
 	QDF_STATUS qdf_status;
-	uint16_t add_ie_len, assoc_ack_status;
+	uint16_t add_ie_len, current_len = 0, vendor_ie_len = 0;
 	uint8_t *add_ie;
-	uint8_t *wps_ie = NULL;
+	const uint8_t *wps_ie = NULL;
 	uint8_t power_caps = false;
 	uint8_t tx_flag = 0;
 	uint8_t sme_sessionid = 0;
@@ -1645,11 +1748,12 @@ lim_send_assoc_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 	uint32_t bcn_ie_len = 0;
 	uint32_t aes_block_size_len = 0;
 	enum rateid min_rid = RATEID_DEFAULT;
-	uint8_t *mbo_ie = NULL;
-	uint8_t mbo_ie_len = 0;
+	uint8_t *mbo_ie = NULL, *vendor_ies = NULL, *adaptive_11r_ie = NULL;
+	uint8_t mbo_ie_len = 0, adaptive_11r_ie_len = 0;
 
 	if (NULL == pe_session) {
 		pe_err("pe_session is NULL");
+		qdf_mem_free(mlm_assoc_req);
 		return;
 	}
 
@@ -1670,14 +1774,14 @@ lim_send_assoc_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 		qdf_mem_free(mlm_assoc_req);
 		return;
 	}
-	qdf_mem_set((uint8_t *) frm, sizeof(tDot11fAssocRequest), 0);
+	qdf_mem_zero((uint8_t *) frm, sizeof(tDot11fAssocRequest));
 
 	if (add_ie_len && pe_session->is_ext_caps_present) {
-		qdf_mem_set((uint8_t *) &extr_ext_cap, sizeof(tDot11fIEExtCap),
-			    0);
+		qdf_mem_zero((uint8_t *) &extr_ext_cap,
+			      sizeof(tDot11fIEExtCap));
 		sir_status = lim_strip_extcap_update_struct(mac_ctx,
 					add_ie, &add_ie_len, &extr_ext_cap);
-		if (eSIR_SUCCESS != sir_status) {
+		if (QDF_STATUS_SUCCESS != sir_status) {
 			extr_ext_flag = false;
 			pe_debug("Unable to Stripoff ExtCap IE from Assoc Req");
 		} else {
@@ -1691,7 +1795,7 @@ lim_send_assoc_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 			extr_ext_flag = (extr_ext_cap.num_bytes > 0);
 		}
 	} else {
-		pe_debug("No addn IE or peer dosen't support addnIE for Assoc Req");
+		pe_debug("No addn IE or peer doesn't support addnIE for Assoc Req");
 		extr_ext_flag = false;
 	}
 
@@ -1810,31 +1914,26 @@ lim_send_assoc_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 	    mac_ctx->lim.htCapabilityPresentInBeacon) {
 		pe_debug("Populate HT Caps in Assoc Request");
 		populate_dot11f_ht_caps(mac_ctx, pe_session, &frm->HTCaps);
-		QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-				   &frm->HTCaps, sizeof(frm->HTCaps));
+	} else if (pe_session->he_with_wep_tkip) {
+		pe_debug("Populate HT Caps in Assoc Request with WEP/TKIP");
+		populate_dot11f_ht_caps(mac_ctx, NULL, &frm->HTCaps);
 	}
-	pe_debug("SupportedChnlWidth: %d, mimoPS: %d, GF: %d, short GI20:%d, shortGI40: %d, dsssCck: %d, AMPDU Param: %x",
-		frm->HTCaps.supportedChannelWidthSet,
-		frm->HTCaps.mimoPowerSave,
-		frm->HTCaps.greenField, frm->HTCaps.shortGI20MHz,
-		frm->HTCaps.shortGI40MHz,
-		frm->HTCaps.dsssCckMode40MHz,
-		frm->HTCaps.maxRxAMPDUFactor);
 
 	if (pe_session->vhtCapability &&
 	    pe_session->vhtCapabilityPresentInBeacon) {
 		pe_debug("Populate VHT IEs in Assoc Request");
 		populate_dot11f_vht_caps(mac_ctx, pe_session, &frm->VHTCaps);
-		QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-				   &frm->VHTCaps, sizeof(frm->VHTCaps));
 		vht_enabled = true;
-		if (pe_session->enableHtSmps &&
-				!pe_session->supported_nss_1x1) {
-			pe_err("VHT OP mode IE in Assoc Req");
+		if (pe_session->gLimOperatingMode.present) {
+			pe_debug("VHT OP mode IE in Assoc Req");
 			populate_dot11f_operating_mode(mac_ctx,
 					&frm->OperatingMode, pe_session);
 		}
+	} else if (pe_session->he_with_wep_tkip) {
+		pe_debug("Populate VHT IEs in Assoc Request with WEP/TKIP");
+		populate_dot11f_vht_caps(mac_ctx, NULL, &frm->VHTCaps);
 	}
+
 	if (!vht_enabled &&
 			pe_session->is_vendor_specific_vhtcaps) {
 		pe_debug("Populate Vendor VHT IEs in Assoc Request");
@@ -1858,6 +1957,15 @@ lim_send_assoc_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 	if (mac_ctx->roam.configParam.qcn_ie_support)
 		populate_dot11f_qcn_ie(&frm->QCN_IE);
 
+	if (lim_is_session_he_capable(pe_session)) {
+		pe_debug("Populate HE IEs");
+		populate_dot11f_he_caps(mac_ctx, pe_session,
+					&frm->he_cap);
+	} else if (pe_session->he_with_wep_tkip) {
+		pe_debug("Populate HE IEs in Assoc Request with WEP/TKIP");
+		populate_dot11f_he_caps(mac_ctx, NULL, &frm->he_cap);
+	}
+
 	if (pe_session->pLimJoinReq->is11Rconnection) {
 		tSirBssDescription *bssdescr;
 
@@ -1868,9 +1976,17 @@ lim_send_assoc_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 			(unsigned int) bssdescr->mdie[2]);
 		populate_mdie(mac_ctx, &frm->MobilityDomain,
 			pe_session->pLimJoinReq->bssDescription.mdie);
-	} else {
-		/* No 11r IEs dont send any MDIE */
-		pe_debug("MDIE not present");
+
+		/*
+		 * IEEE80211-ai [13.2.4 FT initial mobility domain association
+		 * over FILS in an RSN]
+		 * Populate FT IE in association request. This FT IE should be
+		 * same as the FT IE received in auth response frame during the
+		 * FT-FILS authentication.
+		 */
+		if (lim_is_fils_connection(pe_session))
+			populate_fils_ft_info(mac_ctx, &frm->FTInfo,
+					      pe_session);
 	}
 
 #ifdef FEATURE_WLAN_ESE
@@ -1910,18 +2026,25 @@ lim_send_assoc_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 		if (pe_session->beacon && pe_session->bcnLen > ie_offset) {
 			bcn_ie = pe_session->beacon + ie_offset;
 			bcn_ie_len = pe_session->bcnLen - ie_offset;
-			p_ext_cap = wlan_cfg_get_ie_ptr(bcn_ie,
-							bcn_ie_len,
+			p_ext_cap = (uint8_t *)wlan_get_ie_ptr_from_eid(
 							DOT11F_EID_EXTCAP,
-							ONE_BYTE);
+							bcn_ie, bcn_ie_len);
 			lim_update_extcap_struct(mac_ctx, p_ext_cap,
 							&bcn_ext_cap);
 			lim_merge_extcap_struct(&frm->ExtCap, &bcn_ext_cap,
 							false);
 		}
+		/*
+		 * TWT extended capabilities should be populated after the
+		 * intersection of beacon caps and self caps is done because
+		 * the bits for TWT are unique to STA and AP and cannot be
+		 * intersected.
+		 */
+		populate_dot11f_twt_extended_caps(mac_ctx, pe_session,
+						  &frm->ExtCap);
 	}
 
-	if (eSIR_SUCCESS != lim_strip_supp_op_class_update_struct(mac_ctx,
+	if (QDF_STATUS_SUCCESS != lim_strip_supp_op_class_update_struct(mac_ctx,
 			add_ie, &add_ie_len, &frm->SuppOperatingClasses))
 		pe_debug("Unable to Stripoff supp op classes IE from Assoc Req");
 
@@ -1938,7 +2061,7 @@ lim_send_assoc_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 	 * TLVs with same attribute in a single IE.
 	 * Strip off the MBO IE from add_ie and append it at the end.
 	 */
-	if (cfg_get_vendor_ie_ptr_from_oui(mac_ctx, SIR_MAC_MBO_OUI,
+	if (wlan_get_vendor_ie_ptr_from_oui(SIR_MAC_MBO_OUI,
 	    SIR_MAC_MBO_OUI_SIZE, add_ie, add_ie_len)) {
 		mbo_ie = qdf_mem_malloc(DOT11F_IE_MBO_IE_MAX_LEN + 2);
 		if (!mbo_ie) {
@@ -1946,19 +2069,52 @@ lim_send_assoc_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 			goto end;
 		}
 
-		sir_status = lim_strip_ie(mac_ctx, add_ie, &add_ie_len,
+		qdf_status = lim_strip_ie(mac_ctx, add_ie, &add_ie_len,
 					  SIR_MAC_EID_VENDOR, ONE_BYTE,
 					  SIR_MAC_MBO_OUI,
 					  SIR_MAC_MBO_OUI_SIZE,
 					  mbo_ie, DOT11F_IE_MBO_IE_MAX_LEN);
-		if (sir_status != eSIR_SUCCESS) {
+		if (QDF_IS_STATUS_ERROR(qdf_status)) {
 			pe_err("Failed to strip MBO IE");
-			goto free_mbo_ie;
+			goto end;
 		}
 
 		/* Include the EID and length fields */
 		mbo_ie_len = mbo_ie[1] + 2;
 		pe_debug("Stripped MBO IE of length %d", mbo_ie_len);
+	}
+
+	qdf_status = lim_fill_adaptive_11r_ie(pe_session, &adaptive_11r_ie,
+					      &adaptive_11r_ie_len);
+	if (QDF_IS_STATUS_ERROR(qdf_status)) {
+		pe_err("Failed to fill adaptive 11r IE");
+		goto end;
+	}
+
+	/*
+	 * Strip rest of the vendor IEs and append to the assoc request frame.
+	 * Append the IEs just before MBO IEs as MBO IEs have to be at the
+	 * end of the frame.
+	 */
+	if (wlan_get_ie_ptr_from_eid(WLAN_ELEMID_VENDOR, add_ie, add_ie_len)) {
+		vendor_ies = qdf_mem_malloc(MAX_VENDOR_IES_LEN + 2);
+		if (vendor_ies) {
+			current_len = add_ie_len;
+			qdf_status = lim_strip_ie(mac_ctx, add_ie, &add_ie_len,
+						  WLAN_ELEMID_VENDOR, ONE_BYTE,
+						  NULL,
+						  0,
+						  vendor_ies,
+						  MAX_VENDOR_IES_LEN);
+			if (QDF_IS_STATUS_ERROR(qdf_status)) {
+				pe_err("Failed to strip Vendor IEs");
+				goto end;
+			}
+
+			vendor_ie_len = current_len - add_ie_len;
+			pe_debug("Stripped vendor IEs of size: %u",
+				 current_len);
+		}
 	}
 
 	/*
@@ -1987,7 +2143,7 @@ lim_send_assoc_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 	}
 
 	bytes = payload + sizeof(tSirMacMgmtHdr) +
-			aes_block_size_len + mbo_ie_len;
+			aes_block_size_len + mbo_ie_len + vendor_ie_len + adaptive_11r_ie_len;
 
 	qdf_status = cds_packet_alloc((uint16_t) bytes, (void **)&frame,
 				(void **)&packet);
@@ -2010,7 +2166,7 @@ lim_send_assoc_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 		goto end;
 	}
 	/* Paranoia: */
-	qdf_mem_set(frame, bytes, 0);
+	qdf_mem_zero(frame, bytes);
 
 	/* Next, we fill out the buffer descriptor: */
 	lim_populate_mac_header(mac_ctx, frame, SIR_MAC_MGMT_FRAME,
@@ -2027,12 +2183,25 @@ lim_send_assoc_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 		pe_warn("Assoc request pack warning (0x%08x)", status);
 	}
 
+	/* Copy the vendor IEs to the end of the frame */
+	qdf_mem_copy(frame + sizeof(tSirMacMgmtHdr) + payload,
+		     vendor_ies, vendor_ie_len);
+	payload = payload + vendor_ie_len;
+
 	/* Copy the MBO IE to the end of the frame */
 	qdf_mem_copy(frame + sizeof(tSirMacMgmtHdr) + payload,
 		     mbo_ie, mbo_ie_len);
 	payload = payload + mbo_ie_len;
 
-	if (pe_session->assocReq != NULL) {
+	/*
+	 * Copy the Vendor specific Adaptive 11r IE to end of the
+	 * assoc request frame
+	 */
+	qdf_mem_copy(frame + sizeof(tSirMacMgmtHdr) + payload,
+		     adaptive_11r_ie, adaptive_11r_ie_len);
+	payload = payload + adaptive_11r_ie_len;
+
+	if (pe_session->assocReq) {
 		qdf_mem_free(pe_session->assocReq);
 		pe_session->assocReq = NULL;
 		pe_session->assocReqLen = 0;
@@ -2042,11 +2211,6 @@ lim_send_assoc_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 		qdf_status = aead_encrypt_assoc_req(mac_ctx, pe_session,
 						    frame, &payload);
 		if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
-			assoc_ack_status = SENT_FAIL;
-			lim_diag_event_report(mac_ctx,
-					WLAN_PE_DIAG_ASSOC_ACK_EVENT,
-					pe_session, assoc_ack_status,
-					eSIR_FAILURE);
 			cds_packet_free((void *)packet);
 			goto end;
 		}
@@ -2065,7 +2229,7 @@ lim_send_assoc_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 		pe_session->assocReqLen = payload;
 	}
 
-	if ((SIR_BAND_5_GHZ == lim_get_rf_band(pe_session->currentOperChannel))
+	if ((BAND_5G == lim_get_rf_band(pe_session->currentOperChannel))
 	    || (pe_session->pePersona == QDF_P2P_CLIENT_MODE)
 	    || (pe_session->pePersona == QDF_P2P_GO_MODE)
 	    )
@@ -2075,41 +2239,45 @@ lim_send_assoc_req_mgmt_frame(tpAniSirGlobal mac_ctx,
 		pe_session->pePersona == QDF_STA_MODE)
 		tx_flag |= HAL_USE_PEER_STA_REQUESTED_MASK;
 
-#ifdef FEATURE_WLAN_DIAG_SUPPORT
-	lim_diag_event_report(mac_ctx, WLAN_PE_DIAG_ASSOC_START_EVENT,
-			      pe_session, eSIR_SUCCESS, eSIR_SUCCESS);
-#endif
 	mac_hdr = (tpSirMacMgmtHdr) frame;
 	MTRACE(qdf_trace(QDF_MODULE_ID_PE, TRACE_CODE_TX_MGMT,
 			 pe_session->peSessionId, mac_hdr->fc.subType));
 
+	pe_nofl_info("Assoc req TX: vdev %d to %pM seq num %d",
+		     pe_session->smeSessionId,
+		     pe_session->bssId, mac_ctx->mgmtSeqNum);
+	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
+			  frame, (uint16_t)(sizeof(tSirMacMgmtHdr) + payload));
+
 	min_rid = lim_get_min_session_txrate(pe_session);
-	pe_debug("Sending Association Request length %d to ", bytes);
-	qdf_status = wma_tx_frameWithTxComplete(mac_ctx, packet,
-				(uint16_t) (sizeof(tSirMacMgmtHdr) + payload),
-				TXRX_FRM_802_11_MGMT, ANI_TXDIR_TODS, 7,
-				lim_tx_complete, frame,
-				lim_assoc_tx_complete_cnf,
-				tx_flag, sme_sessionid, false, 0, min_rid);
-	MTRACE(qdf_trace(QDF_MODULE_ID_PE, TRACE_CODE_TX_COMPLETE,
-		pe_session->peSessionId, qdf_status));
+	lim_diag_event_report(mac_ctx, WLAN_PE_DIAG_ASSOC_START_EVENT,
+			      pe_session, QDF_STATUS_SUCCESS, QDF_STATUS_SUCCESS);
+	lim_diag_mgmt_tx_event_report(mac_ctx, mac_hdr,
+				      pe_session, QDF_STATUS_SUCCESS, QDF_STATUS_SUCCESS);
+	qdf_status =
+		wma_tx_frameWithTxComplete(mac_ctx, packet,
+			   (uint16_t) (sizeof(tSirMacMgmtHdr) + payload),
+			   TXRX_FRM_802_11_MGMT, ANI_TXDIR_TODS, 7,
+			   lim_tx_complete, frame, lim_assoc_tx_complete_cnf,
+			   tx_flag, sme_sessionid, false, 0, min_rid);
+	MTRACE(qdf_trace
+		       (QDF_MODULE_ID_PE, TRACE_CODE_TX_COMPLETE,
+		       pe_session->peSessionId, qdf_status));
 
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		pe_err("Failed to send Association Request (%X)!",
 			qdf_status);
-		assoc_ack_status = SENT_FAIL;
 		lim_diag_event_report(mac_ctx, WLAN_PE_DIAG_ASSOC_ACK_EVENT,
-				pe_session, assoc_ack_status, eSIR_FAILURE);
+				pe_session, SENT_FAIL, QDF_STATUS_E_FAILURE);
 		/* Pkt will be freed up by the callback */
-		goto end;
 	}
 
-free_mbo_ie:
-	if (mbo_ie)
-		qdf_mem_free(mbo_ie);
-
 end:
+	qdf_mem_free(vendor_ies);
+	qdf_mem_free(mbo_ie);
+
 	/* Free up buffer allocated for mlm_assoc_req */
+	qdf_mem_free(adaptive_11r_ie);
 	qdf_mem_free(mlm_assoc_req);
 	mlm_assoc_req = NULL;
 	qdf_mem_free(frm);
@@ -2118,35 +2286,44 @@ end:
 
 /**
  * lim_auth_tx_complete_cnf()- Confirmation for auth sent over the air
- *
- * @mac_ctx: pointer to global mac
+ * @context: pointer to global mac
+ * @buf: buffer
  * @tx_complete : Sent status
+ * @params; tx completion params
  *
  * Return: This returns QDF_STATUS
  */
 
-static QDF_STATUS lim_auth_tx_complete_cnf(tpAniSirGlobal mac_ctx,
-					   uint32_t tx_complete)
+static QDF_STATUS lim_auth_tx_complete_cnf(void *context,
+					   qdf_nbuf_t buf,
+					   uint32_t tx_complete,
+					   void *params)
 {
+	tpAniSirGlobal mac_ctx = (tpAniSirGlobal)context;
 	uint16_t auth_ack_status;
 	uint16_t reason_code;
 
-	pe_debug("tx_complete = %d %s", tx_complete,
-		(tx_complete ? "success":"fail"));
-	if (tx_complete) {
+	pe_nofl_info("Auth TX: %s",
+		     (tx_complete == WMI_MGMT_TX_COMP_TYPE_COMPLETE_OK) ?
+		     "success" : "fail");
+	if (tx_complete == WMI_MGMT_TX_COMP_TYPE_COMPLETE_OK) {
 		mac_ctx->auth_ack_status = LIM_AUTH_ACK_RCD_SUCCESS;
 		auth_ack_status = ACKED;
-		reason_code = eSIR_SUCCESS;
+		reason_code = QDF_STATUS_SUCCESS;
 		/* 'Change' timer for future activations */
 		lim_deactivate_and_change_timer(mac_ctx, eLIM_AUTH_RETRY_TIMER);
 	} else {
 		mac_ctx->auth_ack_status = LIM_AUTH_ACK_RCD_FAILURE;
 		auth_ack_status = NOT_ACKED;
-		reason_code = eSIR_FAILURE;
+		reason_code = QDF_STATUS_E_FAILURE;
 	}
+
+	if (buf)
+		qdf_nbuf_free(buf);
 
 	lim_diag_event_report(mac_ctx, WLAN_PE_DIAG_AUTH_ACK_EVENT,
 				NULL, auth_ack_status, reason_code);
+
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -2178,7 +2355,7 @@ lim_send_auth_mgmt_frame(tpAniSirGlobal mac_ctx,
 	QDF_STATUS qdf_status;
 	uint8_t tx_flag = 0;
 	uint8_t sme_sessionid = 0;
-	uint16_t ft_ies_length = 0, auth_ack_status;
+	uint16_t ft_ies_length = 0;
 	bool challenge_req = false;
 	enum rateid min_rid = RATEID_DEFAULT;
 
@@ -2199,21 +2376,11 @@ lim_send_auth_mgmt_frame(tpAniSirGlobal mac_ctx,
 		 * status code, 128 bytes for challenge text and
 		 * 4 bytes each for IV & ICV.
 		 */
-		pe_debug("Sending encrypted auth frame to " MAC_ADDRESS_STR,
-				MAC_ADDR_ARRAY(peer_addr));
-
 		body_len = wep_challenge_len + LIM_ENCR_AUTH_INFO_LEN;
 		frame_len = sizeof(tSirMacMgmtHdr) + body_len;
 
 		goto alloc_packet;
 	}
-
-	pe_debug("Sending Auth seq# %d status %d (%d) to "
-		MAC_ADDRESS_STR,
-		auth_frame->authTransactionSeqNumber,
-		auth_frame->authStatusCode,
-		(auth_frame->authStatusCode == eSIR_MAC_SUCCESS_STATUS),
-		MAC_ADDR_ARRAY(peer_addr));
 
 	switch (auth_frame->authTransactionSeqNumber) {
 	case SIR_MAC_AUTH_FRAME_1:
@@ -2239,10 +2406,17 @@ lim_send_auth_mgmt_frame(tpAniSirGlobal mac_ctx,
 				pe_debug("Auth frame, FTIES length added=%d",
 					ft_ies_length);
 			} else {
-				pe_debug("Auth frame, Does not contain FTIES!!!");
+				pe_debug("Auth frame, Does not contain FTIES!");
 				frame_len += (2 + SIR_MDIE_SIZE);
 			}
 		}
+
+		/* include MDIE in FILS authentication frame */
+		if (session->pLimJoinReq &&
+		    session->pLimJoinReq->is11Rconnection &&
+		    auth_frame->authAlgoNumber == SIR_FILS_SK_WITHOUT_PFS &&
+		    session->pLimJoinReq->bssDescription.mdiePresent)
+			frame_len += (2 + SIR_MDIE_SIZE);
 		break;
 
 	case SIR_MAC_AUTH_FRAME_2:
@@ -2341,10 +2515,6 @@ alloc_packet:
 
 	if (wep_challenge_len) {
 		qdf_mem_copy(body, (uint8_t *) auth_frame, body_len);
-
-		pe_debug("Sending Auth seq# 3 to " MAC_ADDRESS_STR,
-			MAC_ADDR_ARRAY(mac_hdr->da));
-
 	} else {
 		*((uint16_t *) (body)) =
 			sir_swap_u16if_needed(auth_frame->authAlgoNumber);
@@ -2387,9 +2557,8 @@ alloc_packet:
 				qdf_mem_copy(body, auth_frame->challengeText,
 					     SIR_MAC_SAP_AUTH_CHALLENGE_LENGTH);
 				body += SIR_MAC_SAP_AUTH_CHALLENGE_LENGTH;
-
 				body_len -= SIR_MAC_SAP_AUTH_CHALLENGE_LENGTH +
-							SIR_MAC_CHALLENGE_ID_LEN;
+					    SIR_MAC_CHALLENGE_ID_LEN;
 			}
 		}
 
@@ -2420,30 +2589,27 @@ alloc_packet:
 						pbssDescription->mdie[0],
 					SIR_MDIE_SIZE);
 			}
-		} else if (auth_frame->authAlgoNumber ==
-				eSIR_FILS_SK_WITHOUT_PFS) {
-			/* TODO MDIE */
-			pe_debug("appending fils Auth data");
+		} else if ((auth_frame->authAlgoNumber ==
+					SIR_FILS_SK_WITHOUT_PFS) &&
+			   (auth_frame->authTransactionSeqNumber ==
+						SIR_MAC_AUTH_FRAME_1)) {
+			pe_debug("FILS: appending fils Auth data");
 			lim_add_fils_data_to_auth_frame(session, body);
 		}
-
-		pe_debug("*** Sending Auth seq# %d status %d (%d) to "
-				MAC_ADDRESS_STR,
-			auth_frame->authTransactionSeqNumber,
-			auth_frame->authStatusCode,
-			(auth_frame->authStatusCode ==
-				eSIR_MAC_SUCCESS_STATUS),
-			MAC_ADDR_ARRAY(mac_hdr->da));
 	}
-	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE,
-			   QDF_TRACE_LEVEL_DEBUG,
+
+	pe_nofl_info("Auth TX: seq %d seq num %d status %d WEP %d to " QDF_MAC_ADDR_STR,
+		     auth_frame->authTransactionSeqNumber, mac_ctx->mgmtSeqNum,
+		     auth_frame->authStatusCode, mac_hdr->fc.wep,
+		     QDF_MAC_ADDR_ARRAY(mac_hdr->da));
+	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
 			   frame, frame_len);
 
 	if ((NULL != session->ftPEContext.pFTPreAuthReq) &&
-	    (SIR_BAND_5_GHZ == lim_get_rf_band(
+	    (BAND_5G == lim_get_rf_band(
 	     session->ftPEContext.pFTPreAuthReq->preAuthchannelNum)))
 		tx_flag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
-	else if ((SIR_BAND_5_GHZ ==
+	else if ((BAND_5G ==
 		  lim_get_rf_band(session->currentOperChannel))
 		  || (session->pePersona == QDF_P2P_CLIENT_MODE)
 		  || (session->pePersona == QDF_P2P_GO_MODE))
@@ -2457,112 +2623,113 @@ alloc_packet:
 			 session->peSessionId, mac_hdr->fc.subType));
 
 	mac_ctx->auth_ack_status = LIM_AUTH_ACK_NOT_RCD;
-
 	min_rid = lim_get_min_session_txrate(session);
+	lim_diag_mgmt_tx_event_report(mac_ctx, mac_hdr,
+				      session, QDF_STATUS_SUCCESS, QDF_STATUS_SUCCESS);
 	qdf_status = wma_tx_frameWithTxComplete(mac_ctx, packet,
-					 (uint16_t)frame_len,
-					 TXRX_FRM_802_11_MGMT, ANI_TXDIR_TODS,
-					 7, lim_tx_complete, frame,
-					 lim_auth_tx_complete_cnf,
-					 tx_flag, sme_sessionid, false, 0,
-					 min_rid);
+				 (uint16_t)frame_len,
+				 TXRX_FRM_802_11_MGMT, ANI_TXDIR_TODS,
+				 7, lim_tx_complete, frame,
+				 lim_auth_tx_complete_cnf,
+				 tx_flag, sme_sessionid, false, 0, min_rid);
 	MTRACE(qdf_trace(QDF_MODULE_ID_PE, TRACE_CODE_TX_COMPLETE,
 		session->peSessionId, qdf_status));
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		pe_err("*** Could not send Auth frame, retCode=%X ***",
 			qdf_status);
 		mac_ctx->auth_ack_status = LIM_AUTH_ACK_RCD_FAILURE;
-		auth_ack_status = SENT_FAIL;
 		lim_diag_event_report(mac_ctx, WLAN_PE_DIAG_AUTH_ACK_EVENT,
-				session, auth_ack_status, eSIR_FAILURE);
+				session, SENT_FAIL, QDF_STATUS_E_FAILURE);
+	/* Pkt will be freed up by the callback */
 	}
 	return;
 }
 
-QDF_STATUS lim_send_deauth_cnf(tpAniSirGlobal pMac)
+QDF_STATUS lim_send_deauth_cnf(tpAniSirGlobal mac_ctx)
 {
 	uint16_t aid;
-	tpDphHashNode pStaDs;
-	tLimMlmDeauthReq *pMlmDeauthReq;
-	tLimMlmDeauthCnf mlmDeauthCnf;
-	tpPESession psessionEntry;
+	tpDphHashNode sta_ds;
+	tLimMlmDeauthReq *deauth_req;
+	tLimMlmDeauthCnf deauth_cnf;
+	tpPESession session_entry;
 
-	pMlmDeauthReq = pMac->lim.limDisassocDeauthCnfReq.pMlmDeauthReq;
-	if (pMlmDeauthReq) {
-		if (tx_timer_running(&pMac->lim.limTimers.gLimDeauthAckTimer)) {
-			lim_deactivate_and_change_timer(pMac,
+	deauth_req = mac_ctx->lim.limDisassocDeauthCnfReq.pMlmDeauthReq;
+	if (deauth_req) {
+		if (tx_timer_running(
+			&mac_ctx->lim.limTimers.gLimDeauthAckTimer))
+			lim_deactivate_and_change_timer(mac_ctx,
 							eLIM_DEAUTH_ACK_TIMER);
-		}
 
-		psessionEntry = pe_find_session_by_session_id(pMac,
-				pMlmDeauthReq->sessionId);
-		if (psessionEntry == NULL) {
+		session_entry = pe_find_session_by_session_id(mac_ctx,
+					deauth_req->sessionId);
+		if (session_entry == NULL) {
 			pe_err("session does not exist for given sessionId");
-			mlmDeauthCnf.resultCode =
+			deauth_cnf.resultCode =
 				eSIR_SME_INVALID_PARAMETERS;
 			goto end;
 		}
 
-		pStaDs =
-			dph_lookup_hash_entry(pMac,
-					      pMlmDeauthReq->peer_macaddr.bytes,
+		sta_ds =
+			dph_lookup_hash_entry(mac_ctx,
+					      deauth_req->peer_macaddr.bytes,
 					      &aid,
-					      &psessionEntry->dph.dphHashTable);
-		if (pStaDs == NULL) {
-			mlmDeauthCnf.resultCode = eSIR_SME_INVALID_PARAMETERS;
+					      &session_entry->dph.dphHashTable);
+		if (sta_ds == NULL) {
+			deauth_cnf.resultCode = eSIR_SME_INVALID_PARAMETERS;
 			goto end;
 		}
 
 		/* / Receive path cleanup with dummy packet */
-		lim_ft_cleanup_pre_auth_info(pMac, psessionEntry);
-		lim_cleanup_rx_path(pMac, pStaDs, psessionEntry);
-		if ((psessionEntry->limSystemRole == eLIM_STA_ROLE) &&
-				(
+		lim_ft_cleanup_pre_auth_info(mac_ctx, session_entry);
+		lim_cleanup_rx_path(mac_ctx, sta_ds, session_entry);
+		if ((session_entry->limSystemRole == eLIM_STA_ROLE) &&
+		    (
 #ifdef FEATURE_WLAN_ESE
-				 (psessionEntry->isESEconnection) ||
+		    (session_entry->isESEconnection) ||
 #endif
-				 (psessionEntry->isFastRoamIniFeatureEnabled) ||
-				 (psessionEntry->is11Rconnection))) {
+		    (session_entry->isFastRoamIniFeatureEnabled) ||
+		    (session_entry->is11Rconnection))) {
 			pe_debug("FT Preauth (%pK,%d) Deauth rc %d src = %d",
-					psessionEntry,
-					psessionEntry->peSessionId,
-					pMlmDeauthReq->reasonCode,
-					pMlmDeauthReq->deauthTrigger);
-			lim_ft_cleanup(pMac, psessionEntry);
+				 session_entry,
+				 session_entry->peSessionId,
+				 deauth_req->reasonCode,
+				 deauth_req->deauthTrigger);
+			lim_ft_cleanup(mac_ctx, session_entry);
 		} else {
 			pe_debug("No FT Preauth Session Cleanup in role %d"
 #ifdef FEATURE_WLAN_ESE
-				" isESE %d"
+				 " isESE %d"
 #endif
-				" isLFR %d"
-				" is11r %d, Deauth reason %d Trigger = %d",
-				psessionEntry->limSystemRole,
+				 " isLFR %d"
+				 " is11r %d, Deauth reason %d Trigger = %d",
+				 session_entry->limSystemRole,
 #ifdef FEATURE_WLAN_ESE
-				psessionEntry->isESEconnection,
+				 session_entry->isESEconnection,
 #endif
-				psessionEntry->isFastRoamIniFeatureEnabled,
-				psessionEntry->is11Rconnection,
-				pMlmDeauthReq->reasonCode,
-				pMlmDeauthReq->deauthTrigger);
+				 session_entry->isFastRoamIniFeatureEnabled,
+				 session_entry->is11Rconnection,
+				 deauth_req->reasonCode,
+				 deauth_req->deauthTrigger);
 		}
 		/* Free up buffer allocated for mlmDeauthReq */
-		qdf_mem_free(pMlmDeauthReq);
-		pMac->lim.limDisassocDeauthCnfReq.pMlmDeauthReq = NULL;
+		qdf_mem_free(deauth_req);
+		mac_ctx->lim.limDisassocDeauthCnfReq.pMlmDeauthReq = NULL;
 	}
 	return QDF_STATUS_SUCCESS;
 end:
-	qdf_copy_macaddr(&mlmDeauthCnf.peer_macaddr,
-			 &pMlmDeauthReq->peer_macaddr);
-	mlmDeauthCnf.deauthTrigger = pMlmDeauthReq->deauthTrigger;
-	mlmDeauthCnf.aid = pMlmDeauthReq->aid;
-	mlmDeauthCnf.sessionId = pMlmDeauthReq->sessionId;
+	qdf_copy_macaddr(&deauth_cnf.peer_macaddr,
+			 &deauth_req->peer_macaddr);
+	deauth_cnf.deauthTrigger = deauth_req->deauthTrigger;
+	deauth_cnf.aid = deauth_req->aid;
+	deauth_cnf.sessionId = deauth_req->sessionId;
 
 	/* Free up buffer allocated */
 	/* for mlmDeauthReq */
-	qdf_mem_free(pMlmDeauthReq);
+	qdf_mem_free(deauth_req);
+	mac_ctx->lim.limDisassocDeauthCnfReq.pMlmDeauthReq = NULL;
 
-	lim_post_sme_message(pMac,
-			     LIM_MLM_DEAUTH_CNF, (uint32_t *) &mlmDeauthCnf);
+	lim_post_sme_message(mac_ctx,
+			     LIM_MLM_DEAUTH_CNF, (uint32_t *) &deauth_cnf);
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -2610,7 +2777,7 @@ QDF_STATUS lim_send_disassoc_cnf(tpAniSirGlobal mac_ctx)
 			goto end;
 		}
 		/* Receive path cleanup with dummy packet */
-		if (eSIR_SUCCESS !=
+		if (QDF_STATUS_SUCCESS !=
 		    lim_cleanup_rx_path(mac_ctx, sta_ds, pe_session)) {
 			disassoc_cnf.resultCode =
 				eSIR_SME_RESOURCES_UNAVAILABLE;
@@ -2618,21 +2785,10 @@ QDF_STATUS lim_send_disassoc_cnf(tpAniSirGlobal mac_ctx)
 			goto end;
 		}
 		if (LIM_IS_STA_ROLE(pe_session) &&
-			(disassoc_req->reasonCode !=
-				eSIR_MAC_DISASSOC_DUE_TO_FTHANDOFF_REASON)) {
-			pe_debug("FT Preauth Session (%pK,%d) Clean up"
-#ifdef FEATURE_WLAN_ESE
-				" isESE %d"
-#endif
-				" isLFR %d"
-				" is11r %d reason %d",
-				pe_session, pe_session->peSessionId,
-#ifdef FEATURE_WLAN_ESE
-				pe_session->isESEconnection,
-#endif
-				pe_session->isFastRoamIniFeatureEnabled,
-				pe_session->is11Rconnection,
-				disassoc_req->reasonCode);
+		    (disassoc_req->reasonCode !=
+		    eSIR_MAC_DISASSOC_DUE_TO_FTHANDOFF_REASON)) {
+			pe_debug("FT Preauth Session (%pK %d) Clean up",
+				 pe_session, pe_session->peSessionId);
 
 			/* Delete FT session if there exists one */
 			lim_ft_cleanup_pre_auth_info(mac_ctx, pe_session);
@@ -2665,18 +2821,100 @@ end:
 	return QDF_STATUS_SUCCESS;
 }
 
-QDF_STATUS lim_disassoc_tx_complete_cnf(tpAniSirGlobal pMac,
-					uint32_t txCompleteSuccess)
+QDF_STATUS lim_disassoc_tx_complete_cnf(void *context,
+					uint32_t tx_success,
+					void *params)
 {
-	pe_debug("txCompleteSuccess: %d", txCompleteSuccess);
-	return lim_send_disassoc_cnf(pMac);
+	tpAniSirGlobal max_ctx = (tpAniSirGlobal)context;
+
+	pe_debug("tx_success: %d", tx_success);
+
+	return lim_send_disassoc_cnf(max_ctx);
 }
 
-QDF_STATUS lim_deauth_tx_complete_cnf(tpAniSirGlobal pMac,
-				      uint32_t txCompleteSuccess)
+static QDF_STATUS lim_disassoc_tx_complete_cnf_handler(void *context,
+						       qdf_nbuf_t buf,
+						       uint32_t tx_success,
+						       void *params)
 {
-	pe_debug("txCompleteSuccess: %d", txCompleteSuccess);
-	return lim_send_deauth_cnf(pMac);
+	tpAniSirGlobal max_ctx = (tpAniSirGlobal)context;
+	QDF_STATUS status_code;
+	struct scheduler_msg msg = {0};
+
+	pe_debug("tx_success: %d", tx_success);
+
+	if (buf)
+		qdf_nbuf_free(buf);
+	msg.type = (uint16_t) WMA_DISASSOC_TX_COMP;
+	msg.bodyptr = params;
+	msg.bodyval = tx_success;
+
+	status_code = lim_post_msg_high_priority(max_ctx, &msg);
+	if (status_code != QDF_STATUS_SUCCESS)
+		pe_err("posting message: %X to LIM failed, reason: %d",
+		       msg.type, status_code);
+	return status_code;
+}
+
+QDF_STATUS lim_deauth_tx_complete_cnf(void *context,
+				      uint32_t tx_success,
+				      void *params)
+{
+	tpAniSirGlobal mac_ctx = (tpAniSirGlobal)context;
+
+	pe_debug("tx_success: %d", tx_success);
+
+	return lim_send_deauth_cnf(mac_ctx);
+}
+
+static QDF_STATUS lim_deauth_tx_complete_cnf_handler(void *context,
+						     qdf_nbuf_t buf,
+						     uint32_t tx_success,
+						     void *params)
+{
+	tpAniSirGlobal mac_ctx = (tpAniSirGlobal)context;
+	QDF_STATUS status_code;
+	struct scheduler_msg msg = {0};
+
+	pe_info("tx_complete = %s tx_success = %d",
+		(tx_success == WMI_MGMT_TX_COMP_TYPE_COMPLETE_OK) ?
+		"success" : "fail", tx_success);
+
+	if (buf)
+		qdf_nbuf_free(buf);
+	msg.type = (uint16_t) WMA_DEAUTH_TX_COMP;
+	msg.bodyptr = params;
+	msg.bodyval = tx_success;
+
+	status_code = lim_post_msg_high_priority(mac_ctx, &msg);
+	if (status_code != QDF_STATUS_SUCCESS)
+		pe_err("posting message: %X to LIM failed, reason: %d",
+		       msg.type, status_code);
+	return status_code;
+}
+
+/**
+ * lim_append_ies_to_frame() - Append IEs to the frame
+ *
+ * @frame: Pointer to the frame buffer that needs to be populated
+ * @frame_len: Pointer for current frame length
+ * @ie: pointer for disconnect IEs
+ *
+ * This function is called by lim_send_disassoc_mgmt_frame and
+ * lim_send_deauth_mgmt_frame APIs as part of disconnection.
+ * Append IEs and update frame length.
+ *
+ * Return: None
+ */
+static void
+lim_append_ies_to_frame(uint8_t *frame, uint32_t *frame_len,
+			struct wlan_ies *ie)
+{
+	if (!ie || !ie->len || !ie->data)
+		return;
+	qdf_mem_copy(frame, ie->data, ie->len);
+	*frame_len += ie->len;
+	pe_debug("Appended IEs len: %u", ie->len);
 }
 
 /**
@@ -2709,6 +2947,7 @@ lim_send_disassoc_mgmt_frame(tpAniSirGlobal pMac,
 	uint8_t txFlag = 0;
 	uint32_t val = 0;
 	uint8_t smeSessionId = 0;
+	struct wlan_ies *discon_ie;
 
 	if (NULL == psessionEntry) {
 		return;
@@ -2728,7 +2967,7 @@ lim_send_disassoc_mgmt_frame(tpAniSirGlobal pMac,
 	}
 	smeSessionId = psessionEntry->smeSessionId;
 
-	qdf_mem_set((uint8_t *) &frm, sizeof(frm), 0);
+	qdf_mem_zero((uint8_t *) &frm, sizeof(frm));
 
 	frm.Reason.code = nReason;
 
@@ -2745,15 +2984,19 @@ lim_send_disassoc_mgmt_frame(tpAniSirGlobal pMac,
 
 	nBytes = nPayload + sizeof(tSirMacMgmtHdr);
 
+	discon_ie = hdd_get_self_disconnect_ies(pMac, smeSessionId);
+	if (discon_ie && discon_ie->len)
+		nBytes += discon_ie->len;
+
 	qdf_status = cds_packet_alloc((uint16_t) nBytes, (void **)&pFrame,
 				      (void **)&pPacket);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
-		pe_err("Failed to allocate %d bytes for a "
-		       "Disassociation", nBytes);
+		pe_err("Failed to allocate %d bytes for a Disassociation",
+			nBytes);
 		return;
 	}
 	/* Paranoia: */
-	qdf_mem_set(pFrame, nBytes, 0);
+	qdf_mem_zero(pFrame, nBytes);
 
 	/* Next, we fill out the buffer descriptor: */
 	lim_populate_mac_header(pMac, pFrame, SIR_MAC_MGMT_FRAME,
@@ -2780,13 +3023,17 @@ lim_send_disassoc_mgmt_frame(tpAniSirGlobal pMac,
 			nStatus);
 	}
 
-	pe_debug("***Sessionid %d Sending Disassociation frame with "
-		   "reason %u and waitForAck %d to " MAC_ADDRESS_STR " ,From "
-		   MAC_ADDRESS_STR, psessionEntry->peSessionId, nReason,
-		waitForAck, MAC_ADDR_ARRAY(pMacHdr->da),
-		MAC_ADDR_ARRAY(psessionEntry->selfMacAddr));
+	/* Copy disconnect IEs to the end of the frame */
+	lim_append_ies_to_frame(pFrame + sizeof(tSirMacMgmtHdr) + nPayload,
+				&nPayload, discon_ie);
+	hdd_free_self_disconnect_ies(pMac, smeSessionId);
 
-	if ((SIR_BAND_5_GHZ == lim_get_rf_band(psessionEntry->currentOperChannel))
+	pe_nofl_info("Disassoc TX: vdev %d seq %d reason %u and waitForAck %d to " QDF_MAC_ADDR_STR " From " QDF_MAC_ADDR_STR,
+		     psessionEntry->smeSessionId, pMac->mgmtSeqNum, nReason,
+		     waitForAck, QDF_MAC_ADDR_ARRAY(pMacHdr->da),
+		     QDF_MAC_ADDR_ARRAY(psessionEntry->selfMacAddr));
+
+	if ((BAND_5G == lim_get_rf_band(psessionEntry->currentOperChannel))
 	    || (psessionEntry->pePersona == QDF_P2P_CLIENT_MODE) ||
 	    (psessionEntry->pePersona == QDF_P2P_GO_MODE)
 	    ) {
@@ -2799,13 +3046,16 @@ lim_send_disassoc_mgmt_frame(tpAniSirGlobal pMac,
 		MTRACE(qdf_trace(QDF_MODULE_ID_PE, TRACE_CODE_TX_MGMT,
 				 psessionEntry->peSessionId,
 				 pMacHdr->fc.subType));
+		lim_diag_mgmt_tx_event_report(pMac, pMacHdr,
+					      psessionEntry, QDF_STATUS_SUCCESS,
+					      QDF_STATUS_SUCCESS);
 		/* Queue Disassociation frame in high priority WQ */
 		/* get the duration from the request */
 		qdf_status =
 			wma_tx_frameWithTxComplete(pMac, pPacket, (uint16_t) nBytes,
 					 TXRX_FRM_802_11_MGMT,
 					 ANI_TXDIR_TODS, 7, lim_tx_complete,
-					 pFrame, lim_disassoc_tx_complete_cnf,
+					 pFrame, lim_disassoc_tx_complete_cnf_handler,
 					 txFlag, smeSessionId, false, 0,
 					 RATEID_DEFAULT);
 		MTRACE(qdf_trace
@@ -2831,6 +3081,9 @@ lim_send_disassoc_mgmt_frame(tpAniSirGlobal pMac,
 		MTRACE(qdf_trace(QDF_MODULE_ID_PE, TRACE_CODE_TX_MGMT,
 				 psessionEntry->peSessionId,
 				 pMacHdr->fc.subType));
+		lim_diag_mgmt_tx_event_report(pMac, pMacHdr,
+					      psessionEntry,
+					      QDF_STATUS_SUCCESS, QDF_STATUS_SUCCESS);
 		/* Queue Disassociation frame in high priority WQ */
 		qdf_status = wma_tx_frame(pMac, pPacket, (uint16_t) nBytes,
 					TXRX_FRM_802_11_MGMT,
@@ -2882,6 +3135,7 @@ lim_send_deauth_mgmt_frame(tpAniSirGlobal pMac,
 	tpDphHashNode pStaDs;
 #endif
 	uint8_t smeSessionId = 0;
+	struct wlan_ies *discon_ie;
 
 	if (NULL == psessionEntry) {
 		return;
@@ -2901,7 +3155,7 @@ lim_send_deauth_mgmt_frame(tpAniSirGlobal pMac,
 	}
 	smeSessionId = psessionEntry->smeSessionId;
 
-	qdf_mem_set((uint8_t *) &frm, sizeof(frm), 0);
+	qdf_mem_zero((uint8_t *) &frm, sizeof(frm));
 
 	frm.Reason.code = nReason;
 
@@ -2917,16 +3171,19 @@ lim_send_deauth_mgmt_frame(tpAniSirGlobal pMac,
 	}
 
 	nBytes = nPayload + sizeof(tSirMacMgmtHdr);
+	discon_ie = hdd_get_self_disconnect_ies(pMac, smeSessionId);
+	if (discon_ie && discon_ie->len)
+		nBytes += discon_ie->len;
 
 	qdf_status = cds_packet_alloc((uint16_t) nBytes, (void **)&pFrame,
 				      (void **)&pPacket);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
-		pe_err("Failed to allocate %d bytes for a "
-		       "De-Authentication", nBytes);
+		pe_err("Failed to allocate %d bytes for a De-Authentication",
+			nBytes);
 		return;
 	}
 	/* Paranoia: */
-	qdf_mem_set(pFrame, nBytes, 0);
+	qdf_mem_zero(pFrame, nBytes);
 
 	/* Next, we fill out the buffer descriptor: */
 	lim_populate_mac_header(pMac, pFrame, SIR_MAC_MGMT_FRAME,
@@ -2951,19 +3208,23 @@ lim_send_deauth_mgmt_frame(tpAniSirGlobal pMac,
 		pe_warn("There were warnings while packing a De-Authentication (0x%08x)",
 			nStatus);
 	}
-	pe_debug("***Sessionid %d Sending Deauth frame with "
-		       "reason %u and waitForAck %d to " MAC_ADDRESS_STR
-		       " ,From " MAC_ADDRESS_STR,
-		psessionEntry->peSessionId, nReason, waitForAck,
-		MAC_ADDR_ARRAY(pMacHdr->da),
-		MAC_ADDR_ARRAY(psessionEntry->selfMacAddr));
 
-	if ((SIR_BAND_5_GHZ == lim_get_rf_band(psessionEntry->currentOperChannel))
+	/* Copy disconnect IEs to the end of the frame */
+	lim_append_ies_to_frame(pFrame + sizeof(tSirMacMgmtHdr) + nPayload,
+				&nPayload, discon_ie);
+	hdd_free_self_disconnect_ies(pMac, smeSessionId);
+
+	pe_nofl_info("Deauth TX: vdev %d seq_num %d reason %u waitForAck %d to " QDF_MAC_ADDR_STR " from " QDF_MAC_ADDR_STR,
+		     psessionEntry->smeSessionId, pMac->mgmtSeqNum, nReason,
+		     waitForAck,
+		     QDF_MAC_ADDR_ARRAY(pMacHdr->da),
+		     QDF_MAC_ADDR_ARRAY(psessionEntry->selfMacAddr));
+
+	if ((BAND_5G == lim_get_rf_band(psessionEntry->currentOperChannel))
 	    || (psessionEntry->pePersona == QDF_P2P_CLIENT_MODE) ||
 	    (psessionEntry->pePersona == QDF_P2P_GO_MODE)
-	    ) {
+	    )
 		txFlag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
-	}
 
 	txFlag |= HAL_USE_PEER_STA_REQUESTED_MASK;
 #ifdef FEATURE_WLAN_TDLS
@@ -2976,12 +3237,15 @@ lim_send_deauth_mgmt_frame(tpAniSirGlobal pMac,
 		MTRACE(qdf_trace(QDF_MODULE_ID_PE, TRACE_CODE_TX_MGMT,
 				 psessionEntry->peSessionId,
 				 pMacHdr->fc.subType));
+		lim_diag_mgmt_tx_event_report(pMac, pMacHdr,
+					      psessionEntry,
+					      QDF_STATUS_SUCCESS, QDF_STATUS_SUCCESS);
 		/* Queue Disassociation frame in high priority WQ */
 		qdf_status =
 			wma_tx_frameWithTxComplete(pMac, pPacket, (uint16_t) nBytes,
 					 TXRX_FRM_802_11_MGMT,
 					 ANI_TXDIR_TODS, 7, lim_tx_complete,
-					 pFrame, lim_deauth_tx_complete_cnf,
+					 pFrame, lim_deauth_tx_complete_cnf_handler,
 					 txFlag, smeSessionId, false, 0,
 					 RATEID_DEFAULT);
 		MTRACE(qdf_trace
@@ -3022,6 +3286,10 @@ lim_send_deauth_mgmt_frame(tpAniSirGlobal pMac,
 		if ((NULL != pStaDs)
 		    && (STA_ENTRY_TDLS_PEER == pStaDs->staType)) {
 			/* Queue Disassociation frame in high priority WQ */
+			lim_diag_mgmt_tx_event_report(pMac, pMacHdr,
+						      psessionEntry,
+						      QDF_STATUS_SUCCESS,
+						      QDF_STATUS_SUCCESS);
 			qdf_status =
 				wma_tx_frame(pMac, pPacket, (uint16_t) nBytes,
 					   TXRX_FRM_802_11_MGMT, ANI_TXDIR_IBSS,
@@ -3029,6 +3297,10 @@ lim_send_deauth_mgmt_frame(tpAniSirGlobal pMac,
 					   smeSessionId, 0, RATEID_DEFAULT);
 		} else {
 #endif
+		lim_diag_mgmt_tx_event_report(pMac, pMacHdr,
+					      psessionEntry,
+					      QDF_STATUS_SUCCESS,
+					      QDF_STATUS_SUCCESS);
 		/* Queue Disassociation frame in high priority WQ */
 		qdf_status =
 			wma_tx_frame(pMac, pPacket, (uint16_t) nBytes,
@@ -3058,25 +3330,25 @@ lim_send_deauth_mgmt_frame(tpAniSirGlobal pMac,
  *
  * \param pMeasReqFrame Address of a tSirMacMeasReqActionFrame
  *
- * \return eSIR_SUCCESS on success, eSIR_FAILURE else
+ * \return QDF_STATUS_SUCCESS on success, QDF_STATUS_E_FAILURE else
  *
  *
  */
 
-tSirRetStatus
+QDF_STATUS
 lim_send_meas_report_frame(tpAniSirGlobal pMac,
 			   tpSirMacMeasReqActionFrame pMeasReqFrame,
 			   tSirMacAddr peer, tpPESession psessionEntry)
 {
 	tDot11fMeasurementReport frm;
 	uint8_t *pFrame;
-	tSirRetStatus nSirStatus;
+	QDF_STATUS nSirStatus;
 	tpSirMacMgmtHdr pMacHdr;
 	uint32_t nBytes, nPayload, nStatus;
 	void *pPacket;
 	QDF_STATUS qdf_status;
 
-	qdf_mem_set((uint8_t *) &frm, sizeof(frm), 0);
+	qdf_mem_zero((uint8_t *) &frm, sizeof(frm));
 
 	frm.Category.category = SIR_MAC_ACTION_SPECTRUM_MGMT;
 	frm.Action.action = SIR_MAC_ACTION_MEASURE_REPORT_ID;
@@ -3102,11 +3374,11 @@ lim_send_meas_report_frame(tpAniSirGlobal pMac,
 		pe_err("Unknown measurement type %d in limSen"
 		       "dMeasReportFrame",
 			pMeasReqFrame->measReqIE.measType);
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	}
 
-	if (eSIR_SUCCESS != nSirStatus)
-		return eSIR_FAILURE;
+	if (QDF_STATUS_SUCCESS != nSirStatus)
+		return QDF_STATUS_E_FAILURE;
 
 	nStatus = dot11f_get_packed_measurement_report_size(pMac, &frm, &nPayload);
 	if (DOT11F_FAILED(nStatus)) {
@@ -3122,16 +3394,16 @@ lim_send_meas_report_frame(tpAniSirGlobal pMac,
 	nBytes = nPayload + sizeof(tSirMacMgmtHdr);
 
 	qdf_status =
-		cds_packet_alloc(pMac->hHdd, TXRX_FRM_802_11_MGMT,
+		cds_packet_alloc(pMac->hdd_handle, TXRX_FRM_802_11_MGMT,
 				 (uint16_t) nBytes, (void **)&pFrame,
 				 (void **)&pPacket);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		pe_err("Failed to allocate %d bytes for a "
 		       "De-Authentication", nBytes);
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	}
 	/* Paranoia: */
-	qdf_mem_set(pFrame, nBytes, 0);
+	qdf_mem_zero(pFrame, nBytes);
 
 	/* Next, we fill out the buffer descriptor: */
 	lim_populate_mac_header(pMac, pFrame, SIR_MAC_MGMT_FRAME,
@@ -3150,9 +3422,9 @@ lim_send_meas_report_frame(tpAniSirGlobal pMac,
 	if (DOT11F_FAILED(nStatus)) {
 		pe_err("Failed to pack a Measurement Report (0x%08x)",
 			nStatus);
-		cds_packet_free(pMac->hHdd, TXRX_FRM_802_11_MGMT,
+		cds_packet_free(pMac->hdd_handle, TXRX_FRM_802_11_MGMT,
 				(void *)pFrame, (void *)pPacket);
-		return eSIR_FAILURE;    /* allocated! */
+		return QDF_STATUS_E_FAILURE;    /* allocated! */
 	} else if (DOT11F_WARNED(nStatus)) {
 		pe_warn("There were warnings while packing a Measurement Report (0x%08x)",
 			nStatus);
@@ -3173,10 +3445,10 @@ lim_send_meas_report_frame(tpAniSirGlobal pMac,
 		pe_err("Failed to send a Measurement Report (%X)!",
 			qdf_status);
 		/* Pkt will be freed up by the callback */
-		return eSIR_FAILURE;    /* just allocated... */
+		return QDF_STATUS_E_FAILURE;    /* just allocated... */
 	}
 
-	return eSIR_SUCCESS;
+	return QDF_STATUS_SUCCESS;
 
 } /* End lim_send_meas_report_frame. */
 
@@ -3202,7 +3474,7 @@ lim_send_tpc_request_frame(tpAniSirGlobal pMac,
 	void *pPacket;
 	QDF_STATUS qdf_status;
 
-	qdf_mem_set((uint8_t *) &frm, sizeof(frm), 0);
+	qdf_mem_zero((uint8_t *) &frm, sizeof(frm));
 
 	frm.Category.category = SIR_MAC_ACTION_SPECTRUM_MGMT;
 	frm.Action.action = SIR_MAC_ACTION_TPC_REQUEST_ID;
@@ -3222,7 +3494,7 @@ lim_send_tpc_request_frame(tpAniSirGlobal pMac,
 	nBytes = nPayload + sizeof(tSirMacMgmtHdr);
 
 	qdf_status =
-		cds_packet_alloc(pMac->hHdd, TXRX_FRM_802_11_MGMT,
+		cds_packet_alloc(pMac->hdd_handle, TXRX_FRM_802_11_MGMT,
 				 (uint16_t) nBytes, (void **)&pFrame,
 				 (void **)&pPacket);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
@@ -3231,7 +3503,7 @@ lim_send_tpc_request_frame(tpAniSirGlobal pMac,
 		return;
 	}
 	/* Paranoia: */
-	qdf_mem_set(pFrame, nBytes, 0);
+	qdf_mem_zero(pFrame, nBytes);
 
 	/* Next, we fill out the buffer descriptor: */
 	lim_populate_mac_header(pMac, pFrame, SIR_MAC_MGMT_FRAME,
@@ -3250,7 +3522,7 @@ lim_send_tpc_request_frame(tpAniSirGlobal pMac,
 	if (DOT11F_FAILED(nStatus)) {
 		pe_err("Failed to pack a TPC Request (0x%08x)",
 			nStatus);
-		cds_packet_free(pMac->hHdd, TXRX_FRM_802_11_MGMT,
+		cds_packet_free(pMac->hdd_handle, TXRX_FRM_802_11_MGMT,
 				(void *)pFrame, (void *)pPacket);
 		return;         /* allocated! */
 	} else if (DOT11F_WARNED(nStatus)) {
@@ -3285,12 +3557,12 @@ lim_send_tpc_request_frame(tpAniSirGlobal pMac,
  *
  * \param pTpcReqFrame Pointer to the received TPC Request
  *
- * \return eSIR_SUCCESS on success, eSIR_FAILURE else
+ * \return QDF_STATUS_SUCCESS on success, QDF_STATUS_E_FAILURE else
  *
  *
  */
 
-tSirRetStatus
+QDF_STATUS
 lim_send_tpc_report_frame(tpAniSirGlobal pMac,
 			  tpSirMacTpcReqActionFrame pTpcReqFrame,
 			  tSirMacAddr peer, tpPESession psessionEntry)
@@ -3302,7 +3574,7 @@ lim_send_tpc_report_frame(tpAniSirGlobal pMac,
 	void *pPacket;
 	QDF_STATUS qdf_status;
 
-	qdf_mem_set((uint8_t *) &frm, sizeof(frm), 0);
+	qdf_mem_zero((uint8_t *) &frm, sizeof(frm));
 
 	frm.Category.category = SIR_MAC_ACTION_SPECTRUM_MGMT;
 	frm.Action.action = SIR_MAC_ACTION_TPC_REPORT_ID;
@@ -3325,16 +3597,16 @@ lim_send_tpc_report_frame(tpAniSirGlobal pMac,
 	nBytes = nPayload + sizeof(tSirMacMgmtHdr);
 
 	qdf_status =
-		cds_packet_alloc(pMac->hHdd, TXRX_FRM_802_11_MGMT,
+		cds_packet_alloc(pMac->hdd_handle, TXRX_FRM_802_11_MGMT,
 				 (uint16_t) nBytes, (void **)&pFrame,
 				 (void **)&pPacket);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		pe_err("Failed to allocate %d bytes for a TPC"
 			" Report", nBytes);
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	}
 	/* Paranoia: */
-	qdf_mem_set(pFrame, nBytes, 0);
+	qdf_mem_zero(pFrame, nBytes);
 
 	/* Next, we fill out the buffer descriptor: */
 	lim_populate_mac_header(pMac, pFrame, SIR_MAC_MGMT_FRAME,
@@ -3354,9 +3626,9 @@ lim_send_tpc_report_frame(tpAniSirGlobal pMac,
 	if (DOT11F_FAILED(nStatus)) {
 		pe_err("Failed to pack a TPC Report (0x%08x)",
 			nStatus);
-		cds_packet_free(pMac->hHdd, TXRX_FRM_802_11_MGMT,
+		cds_packet_free(pMac->hdd_handle, TXRX_FRM_802_11_MGMT,
 				(void *)pFrame, (void *)pPacket);
-		return eSIR_FAILURE;    /* allocated! */
+		return QDF_STATUS_E_FAILURE;    /* allocated! */
 	} else if (DOT11F_WARNED(nStatus)) {
 		pe_warn("There were warnings while packing a TPC Report (0x%08x)",
 			nStatus);
@@ -3376,10 +3648,10 @@ lim_send_tpc_report_frame(tpAniSirGlobal pMac,
 		pe_err("Failed to send a TPC Report (%X)!",
 			qdf_status);
 		/* Pkt will be freed up by the callback */
-		return eSIR_FAILURE;    /* just allocated... */
+		return QDF_STATUS_E_FAILURE;    /* just allocated... */
 	}
 
-	return eSIR_SUCCESS;
+	return QDF_STATUS_SUCCESS;
 
 } /* End lim_send_tpc_report_frame. */
 #endif /* ANI_SUPPORT_11H */
@@ -3398,12 +3670,12 @@ lim_send_tpc_report_frame(tpAniSirGlobal pMac,
  *
  * \param nCount
  *
- * \return eSIR_SUCCESS on success, eSIR_FAILURE else
+ * \return QDF_STATUS_SUCCESS on success, QDF_STATUS_E_FAILURE else
  *
  *
  */
 
-tSirRetStatus
+QDF_STATUS
 lim_send_channel_switch_mgmt_frame(tpAniSirGlobal pMac,
 				   tSirMacAddr peer,
 				   uint8_t nMode,
@@ -3422,11 +3694,11 @@ lim_send_channel_switch_mgmt_frame(tpAniSirGlobal pMac,
 
 	if (psessionEntry == NULL) {
 		pe_err("Session entry is NULL!!!");
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	}
 	smeSessionId = psessionEntry->smeSessionId;
 
-	qdf_mem_set((uint8_t *) &frm, sizeof(frm), 0);
+	qdf_mem_zero((uint8_t *) &frm, sizeof(frm));
 
 	frm.Category.category = SIR_MAC_ACTION_SPECTRUM_MGMT;
 	frm.Action.action = SIR_MAC_ACTION_CHANNEL_SWITCH_ID;
@@ -3452,12 +3724,11 @@ lim_send_channel_switch_mgmt_frame(tpAniSirGlobal pMac,
 		cds_packet_alloc((uint16_t) nBytes, (void **)&pFrame,
 				 (void **)&pPacket);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
-		pe_err("Failed to allocate %d bytes for a TPC"
-			" Report", nBytes);
-		return eSIR_FAILURE;
+		pe_err("Failed to allocate %d bytes for a TPC Report", nBytes);
+		return QDF_STATUS_E_FAILURE;
 	}
 	/* Paranoia: */
-	qdf_mem_set(pFrame, nBytes, 0);
+	qdf_mem_zero(pFrame, nBytes);
 
 	/* Next, we fill out the buffer descriptor: */
 	lim_populate_mac_header(pMac, pFrame, SIR_MAC_MGMT_FRAME,
@@ -3478,13 +3749,13 @@ lim_send_channel_switch_mgmt_frame(tpAniSirGlobal pMac,
 		pe_err("Failed to pack a Channel Switch (0x%08x)",
 			nStatus);
 		cds_packet_free((void *)pPacket);
-		return eSIR_FAILURE;    /* allocated! */
+		return QDF_STATUS_E_FAILURE;    /* allocated! */
 	} else if (DOT11F_WARNED(nStatus)) {
 		pe_warn("There were warnings while packing a Channel Switch (0x%08x)",
 			nStatus);
 	}
 
-	if ((SIR_BAND_5_GHZ == lim_get_rf_band(psessionEntry->currentOperChannel))
+	if ((BAND_5G == lim_get_rf_band(psessionEntry->currentOperChannel))
 	    || (psessionEntry->pePersona == QDF_P2P_CLIENT_MODE) ||
 	    (psessionEntry->pePersona == QDF_P2P_GO_MODE)
 	    ) {
@@ -3504,10 +3775,10 @@ lim_send_channel_switch_mgmt_frame(tpAniSirGlobal pMac,
 		pe_err("Failed to send a Channel Switch (%X)!",
 			qdf_status);
 		/* Pkt will be freed up by the callback */
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	}
 
-	return eSIR_SUCCESS;
+	return QDF_STATUS_SUCCESS;
 
 } /* End lim_send_channel_switch_mgmt_frame. */
 
@@ -3526,13 +3797,12 @@ lim_send_channel_switch_mgmt_frame(tpAniSirGlobal pMac,
  * Return: success if frame is sent else return failure
  */
 
-tSirRetStatus
+QDF_STATUS
 lim_send_extended_chan_switch_action_frame(tpAniSirGlobal mac_ctx,
 		tSirMacAddr peer, uint8_t mode, uint8_t new_op_class,
 		uint8_t new_channel, uint8_t count, tpPESession session_entry)
 {
 	tDot11fext_channel_switch_action_frame frm;
-	tLimWiderBWChannelSwitchInfo *wide_bw_ie;
 	uint8_t                  *frame;
 	tpSirMacMgmtHdr          mac_hdr;
 	uint32_t                 num_bytes, n_payload, status;
@@ -3541,15 +3811,16 @@ lim_send_extended_chan_switch_action_frame(tpAniSirGlobal mac_ctx,
 	uint8_t                  txFlag = 0;
 	uint8_t                  sme_session_id = 0;
 	uint8_t                  ch_spacing;
+	tLimWiderBWChannelSwitchInfo *wide_bw_ie;
 
 	if (session_entry == NULL) {
 		pe_err("Session entry is NULL!!!");
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	sme_session_id = session_entry->smeSessionId;
 
-	qdf_mem_set(&frm, sizeof(frm), 0);
+	qdf_mem_zero(&frm, sizeof(frm));
 
 	frm.Category.category     = SIR_MAC_ACTION_PUBLIC_USAGE;
 	frm.Action.action         = SIR_MAC_ACTION_EXT_CHANNEL_SWITCH_ID;
@@ -3559,10 +3830,9 @@ lim_send_extended_chan_switch_action_frame(tpAniSirGlobal mac_ctx,
 	frm.ext_chan_switch_ann_action.new_channel = new_channel;
 	frm.ext_chan_switch_ann_action.switch_count = count;
 
-	ch_spacing = cds_reg_dmn_get_chanwidth_from_opclass(
+	ch_spacing = wlan_reg_dmn_get_chanwidth_from_opclass(
 			mac_ctx->scan.countryCodeCurrent, new_channel,
 			new_op_class);
-	pe_debug("wrapper: ch_spacing %hu", ch_spacing);
 
 	if ((ch_spacing == 80) || (ch_spacing == 160)) {
 		wide_bw_ie = &session_entry->gLimWiderBWChannelSwitch;
@@ -3599,11 +3869,11 @@ lim_send_extended_chan_switch_action_frame(tpAniSirGlobal mac_ctx,
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		pe_err("Failed to allocate %d bytes for a Ext Channel Switch",
 								 num_bytes);
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	/* Paranoia*/
-	qdf_mem_set(frame, num_bytes, 0);
+	qdf_mem_zero(frame, num_bytes);
 
 	/* Next, we fill out the buffer descriptor */
 	lim_populate_mac_header(mac_ctx, frame, SIR_MAC_MGMT_FRAME,
@@ -3620,25 +3890,25 @@ lim_send_extended_chan_switch_action_frame(tpAniSirGlobal mac_ctx,
 	if (DOT11F_FAILED(status)) {
 		pe_err("Failed to pack a Channel Switch 0x%08x", status);
 		cds_packet_free((void *)packet);
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	} else if (DOT11F_WARNED(status)) {
 		pe_warn("There were warnings while packing a Channel Switch 0x%08x",
 		 status);
 	}
 
-	if ((SIR_BAND_5_GHZ ==
+	if ((BAND_5G ==
 		lim_get_rf_band(session_entry->currentOperChannel)) ||
 		(session_entry->pePersona == QDF_P2P_CLIENT_MODE) ||
 		(session_entry->pePersona == QDF_P2P_GO_MODE)) {
 		txFlag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
 	}
 
-	pe_debug("Send Ext channel Switch to :"MAC_ADDRESS_STR" with swcount %d, swmode %d , newchannel %d newops %d",
-		MAC_ADDR_ARRAY(mac_hdr->da),
-		frm.ext_chan_switch_ann_action.switch_count,
-		frm.ext_chan_switch_ann_action.switch_mode,
-		frm.ext_chan_switch_ann_action.new_channel,
-			 frm.ext_chan_switch_ann_action.op_class);
+	pe_debug("ECSA frame to :" QDF_MAC_ADDR_STR " count %d mode %d chan %d op class %d",
+		 QDF_MAC_ADDR_ARRAY(mac_hdr->da),
+		 frm.ext_chan_switch_ann_action.switch_count,
+		 frm.ext_chan_switch_ann_action.switch_mode,
+		 frm.ext_chan_switch_ann_action.new_channel,
+		 frm.ext_chan_switch_ann_action.op_class);
 
 	MTRACE(qdf_trace(QDF_MODULE_ID_PE, TRACE_CODE_TX_MGMT,
 			session_entry->peSessionId, mac_hdr->fc.subType));
@@ -3655,9 +3925,9 @@ lim_send_extended_chan_switch_action_frame(tpAniSirGlobal mac_ctx,
 		pe_err("Failed to send a Ext Channel Switch %X!",
 							 qdf_status);
 		/* Pkt will be freed up by the callback */
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	}
-	return eSIR_SUCCESS;
+	return QDF_STATUS_SUCCESS;
 } /* End lim_send_extended_chan_switch_action_frame */
 
 
@@ -3665,17 +3935,23 @@ lim_send_extended_chan_switch_action_frame(tpAniSirGlobal mac_ctx,
  * lim_oper_chan_change_confirm_tx_complete_cnf()- Confirmation for oper_chan_change_confirm
  * sent over the air
  *
- * @mac_ctx: pointer to global mac
+ * @context: pointer to global mac
+ * @buf: buffer
  * @tx_complete : Sent status
+ * @params: tx completion params
  *
  * Return: This returns QDF_STATUS
  */
 
 static QDF_STATUS lim_oper_chan_change_confirm_tx_complete_cnf(
-			tpAniSirGlobal mac_ctx,
-			uint32_t tx_complete)
+			void *context,
+			qdf_nbuf_t buf,
+			uint32_t tx_complete,
+			void *params)
 {
 	pe_debug("tx_complete: %d", tx_complete);
+	if (buf)
+		qdf_nbuf_free(buf);
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -3691,7 +3967,7 @@ static QDF_STATUS lim_oper_chan_change_confirm_tx_complete_cnf(
  * Return: success if frame is sent else return failure
  */
 
-tSirRetStatus
+QDF_STATUS
 lim_p2p_oper_chan_change_confirm_action_frame(tpAniSirGlobal mac_ctx,
 		tSirMacAddr peer, tpPESession session_entry)
 {
@@ -3706,12 +3982,12 @@ lim_p2p_oper_chan_change_confirm_action_frame(tpAniSirGlobal mac_ctx,
 
 	if (session_entry == NULL) {
 		pe_err("Session entry is NULL!!!");
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	sme_session_id = session_entry->smeSessionId;
 
-	qdf_mem_set(&frm, sizeof(frm), 0);
+	qdf_mem_zero(&frm, sizeof(frm));
 
 	frm.Category.category     = SIR_MAC_ACTION_VENDOR_SPECIFIC_CATEGORY;
 
@@ -3750,10 +4026,10 @@ lim_p2p_oper_chan_change_confirm_action_frame(tpAniSirGlobal mac_ctx,
 
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		pe_err("Failed to allocate %d bytes", num_bytes);
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	}
 
-	qdf_mem_set(frame, num_bytes, 0);
+	qdf_mem_zero(frame, num_bytes);
 
 	/* Next, fill out the buffer descriptor */
 	lim_populate_mac_header(mac_ctx, frame, SIR_MAC_MGMT_FRAME,
@@ -3768,13 +4044,13 @@ lim_p2p_oper_chan_change_confirm_action_frame(tpAniSirGlobal mac_ctx,
 	if (DOT11F_FAILED(status)) {
 		pe_err("Failed to pack 0x%08x", status);
 		cds_packet_free((void *)packet);
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	} else if (DOT11F_WARNED(status)) {
 		pe_warn("There were warnings while packing 0x%08x",
 		 status);
 	}
 
-	if ((SIR_BAND_5_GHZ ==
+	if ((BAND_5G ==
 		lim_get_rf_band(session_entry->currentOperChannel)) ||
 		(session_entry->pePersona == QDF_P2P_CLIENT_MODE) ||
 		(session_entry->pePersona == QDF_P2P_GO_MODE)) {
@@ -3799,13 +4075,13 @@ lim_p2p_oper_chan_change_confirm_action_frame(tpAniSirGlobal mac_ctx,
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		pe_err("Failed to send status %X!", qdf_status);
 		/* Pkt will be freed up by the callback */
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	}
-		return eSIR_SUCCESS;
+		return QDF_STATUS_SUCCESS;
 }
 
 
-tSirRetStatus
+QDF_STATUS
 lim_send_vht_opmode_notification_frame(tpAniSirGlobal pMac,
 				       tSirMacAddr peer,
 				       uint8_t nMode, tpPESession psessionEntry)
@@ -3822,11 +4098,11 @@ lim_send_vht_opmode_notification_frame(tpAniSirGlobal pMac,
 
 	if (psessionEntry == NULL) {
 		pe_err("Session entry is NULL!!!");
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	}
 	smeSessionId = psessionEntry->smeSessionId;
 
-	qdf_mem_set((uint8_t *) &frm, sizeof(frm), 0);
+	qdf_mem_zero((uint8_t *) &frm, sizeof(frm));
 
 	frm.Category.category = SIR_MAC_ACTION_VHT;
 	frm.Action.action = SIR_MAC_VHT_OPMODE_NOTIFICATION;
@@ -3853,10 +4129,10 @@ lim_send_vht_opmode_notification_frame(tpAniSirGlobal pMac,
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		pe_err("Failed to allocate %d bytes for a Operating Mode Report",
 			nBytes);
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	}
 	/* Paranoia: */
-	qdf_mem_set(pFrame, nBytes, 0);
+	qdf_mem_zero(pFrame, nBytes);
 
 	/* Next, we fill out the buffer descriptor: */
 	if (psessionEntry->pePersona == QDF_SAP_MODE)
@@ -3877,12 +4153,12 @@ lim_send_vht_opmode_notification_frame(tpAniSirGlobal pMac,
 		pe_err("Failed to pack a Operating Mode (0x%08x)",
 			nStatus);
 		cds_packet_free((void *)pPacket);
-		return eSIR_FAILURE;    /* allocated! */
+		return QDF_STATUS_E_FAILURE;    /* allocated! */
 	} else if (DOT11F_WARNED(nStatus)) {
 		pe_warn("There were warnings while packing a Operating Mode (0x%08x)",
 			nStatus);
 	}
-	if ((SIR_BAND_5_GHZ == lim_get_rf_band(psessionEntry->currentOperChannel))
+	if ((BAND_5G == lim_get_rf_band(psessionEntry->currentOperChannel))
 	    || (psessionEntry->pePersona == QDF_P2P_CLIENT_MODE) ||
 	    (psessionEntry->pePersona == QDF_P2P_GO_MODE)
 	    ) {
@@ -3902,10 +4178,10 @@ lim_send_vht_opmode_notification_frame(tpAniSirGlobal pMac,
 		pe_err("Failed to send a Channel Switch (%X)!",
 			qdf_status);
 		/* Pkt will be freed up by the callback */
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	}
 
-	return eSIR_SUCCESS;
+	return QDF_STATUS_SUCCESS;
 }
 
 /**
@@ -3920,17 +4196,17 @@ lim_send_vht_opmode_notification_frame(tpAniSirGlobal pMac,
  *
  * \param psessionEntry address of session entry.
  *
- * \return eSIR_SUCCESS on success, eSIR_FAILURE else
+ * \return QDF_STATUS_SUCCESS on success, QDF_STATUS_E_FAILURE else
  *
  *
  */
 
-tSirRetStatus
+QDF_STATUS
 lim_send_neighbor_report_request_frame(tpAniSirGlobal pMac,
 				       tpSirMacNeighborReportReq pNeighborReq,
 				       tSirMacAddr peer, tpPESession psessionEntry)
 {
-	tSirRetStatus statusCode = eSIR_SUCCESS;
+	QDF_STATUS statusCode = QDF_STATUS_SUCCESS;
 	tDot11fNeighborReportRequest frm;
 	uint8_t *pFrame;
 	tpSirMacMgmtHdr pMacHdr;
@@ -3942,10 +4218,10 @@ lim_send_neighbor_report_request_frame(tpAniSirGlobal pMac,
 
 	if (psessionEntry == NULL) {
 		pe_err("(psession == NULL) in Request to send Neighbor Report request action frame");
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	}
 	smeSessionId = psessionEntry->smeSessionId;
-	qdf_mem_set((uint8_t *) &frm, sizeof(frm), 0);
+	qdf_mem_zero((uint8_t *) &frm, sizeof(frm));
 
 	frm.Category.category = SIR_MAC_ACTION_RRM;
 	frm.Action.action = SIR_MAC_RRM_NEIGHBOR_REQ;
@@ -3975,10 +4251,10 @@ lim_send_neighbor_report_request_frame(tpAniSirGlobal pMac,
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		pe_err("Failed to allocate %d bytes for a Neighbor "
 			   "Report Request", nBytes);
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	}
 	/* Paranoia: */
-	qdf_mem_set(pFrame, nBytes, 0);
+	qdf_mem_zero(pFrame, nBytes);
 
 	/* Copy necessary info to BD */
 	lim_populate_mac_header(pMac, pFrame, SIR_MAC_MGMT_FRAME,
@@ -4004,8 +4280,8 @@ lim_send_neighbor_report_request_frame(tpAniSirGlobal pMac,
 		pe_err("Failed to pack an Neighbor Report Request (0x%08x)",
 			nStatus);
 
-		/* FIXME - Need to convert to tSirRetStatus */
-		statusCode = eSIR_FAILURE;
+		/* FIXME - Need to convert to QDF_STATUS */
+		statusCode = QDF_STATUS_E_FAILURE;
 		goto returnAfterError;
 	} else if (DOT11F_WARNED(nStatus)) {
 		pe_warn("There were warnings while packing Neighbor Report Request (0x%08x)",
@@ -4015,7 +4291,7 @@ lim_send_neighbor_report_request_frame(tpAniSirGlobal pMac,
 	pe_debug("Sending a Neighbor Report Request to");
 	lim_print_mac_addr(pMac, peer, LOGD);
 
-	if ((SIR_BAND_5_GHZ == lim_get_rf_band(psessionEntry->currentOperChannel))
+	if ((BAND_5G == lim_get_rf_band(psessionEntry->currentOperChannel))
 	    || (psessionEntry->pePersona == QDF_P2P_CLIENT_MODE) ||
 	    (psessionEntry->pePersona == QDF_P2P_GO_MODE)
 	    ) {
@@ -4035,11 +4311,11 @@ lim_send_neighbor_report_request_frame(tpAniSirGlobal pMac,
 			 psessionEntry->peSessionId, qdf_status));
 	if (QDF_STATUS_SUCCESS != qdf_status) {
 		pe_err("wma_tx_frame FAILED! Status [%d]", qdf_status);
-		statusCode = eSIR_FAILURE;
+		statusCode = QDF_STATUS_E_FAILURE;
 		/* Pkt will be freed up by the callback */
 		return statusCode;
 	} else
-		return eSIR_SUCCESS;
+		return QDF_STATUS_SUCCESS;
 
 returnAfterError:
 	cds_packet_free((void *)pPacket);
@@ -4059,17 +4335,17 @@ returnAfterError:
  *
  * \param psessionEntry address of session entry.
  *
- * \return eSIR_SUCCESS on success, eSIR_FAILURE else
+ * \return QDF_STATUS_SUCCESS on success, QDF_STATUS_E_FAILURE else
  *
  *
  */
 
-tSirRetStatus
+QDF_STATUS
 lim_send_link_report_action_frame(tpAniSirGlobal pMac,
 				  tpSirMacLinkReport pLinkReport,
 				  tSirMacAddr peer, tpPESession psessionEntry)
 {
-	tSirRetStatus statusCode = eSIR_SUCCESS;
+	QDF_STATUS statusCode = QDF_STATUS_SUCCESS;
 	tDot11fLinkMeasurementReport frm;
 	uint8_t *pFrame;
 	tpSirMacMgmtHdr pMacHdr;
@@ -4081,10 +4357,10 @@ lim_send_link_report_action_frame(tpAniSirGlobal pMac,
 
 	if (psessionEntry == NULL) {
 		pe_err("(psession == NULL) in Request to send Link Report action frame");
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	}
 
-	qdf_mem_set((uint8_t *) &frm, sizeof(frm), 0);
+	qdf_mem_zero((uint8_t *) &frm, sizeof(frm));
 
 	frm.Category.category = SIR_MAC_ACTION_RRM;
 	frm.Action.action = SIR_MAC_RRM_LINK_MEASUREMENT_RPT;
@@ -4124,10 +4400,10 @@ lim_send_link_report_action_frame(tpAniSirGlobal pMac,
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		pe_err("Failed to allocate %d bytes for a Link "
 			"Report", nBytes);
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	}
 	/* Paranoia: */
-	qdf_mem_set(pFrame, nBytes, 0);
+	qdf_mem_zero(pFrame, nBytes);
 
 	/* Copy necessary info to BD */
 	lim_populate_mac_header(pMac, pFrame, SIR_MAC_MGMT_FRAME,
@@ -4152,8 +4428,8 @@ lim_send_link_report_action_frame(tpAniSirGlobal pMac,
 	if (DOT11F_FAILED(nStatus)) {
 		pe_err("Failed to pack an Link Report (0x%08x)", nStatus);
 
-		/* FIXME - Need to convert to tSirRetStatus */
-		statusCode = eSIR_FAILURE;
+		/* FIXME - Need to convert to QDF_STATUS */
+		statusCode = QDF_STATUS_E_FAILURE;
 		goto returnAfterError;
 	} else if (DOT11F_WARNED(nStatus)) {
 		pe_warn("There were warnings while packing Link Report (0x%08x)",
@@ -4163,7 +4439,7 @@ lim_send_link_report_action_frame(tpAniSirGlobal pMac,
 	pe_warn("Sending a Link Report to");
 	lim_print_mac_addr(pMac, peer, LOGW);
 
-	if ((SIR_BAND_5_GHZ == lim_get_rf_band(psessionEntry->currentOperChannel))
+	if ((BAND_5G == lim_get_rf_band(psessionEntry->currentOperChannel))
 	    || (psessionEntry->pePersona == QDF_P2P_CLIENT_MODE) ||
 	    (psessionEntry->pePersona == QDF_P2P_GO_MODE)) {
 		txFlag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
@@ -4182,11 +4458,11 @@ lim_send_link_report_action_frame(tpAniSirGlobal pMac,
 			 psessionEntry->peSessionId, qdf_status));
 	if (QDF_STATUS_SUCCESS != qdf_status) {
 		pe_err("wma_tx_frame FAILED! Status [%d]", qdf_status);
-		statusCode = eSIR_FAILURE;
+		statusCode = QDF_STATUS_E_FAILURE;
 		/* Pkt will be freed up by the callback */
 		return statusCode;
 	} else
-		return eSIR_SUCCESS;
+		return QDF_STATUS_SUCCESS;
 
 returnAfterError:
 	cds_packet_free((void *)pPacket);
@@ -4194,7 +4470,7 @@ returnAfterError:
 	return statusCode;
 } /* End lim_send_link_report_action_frame. */
 
-tSirRetStatus
+QDF_STATUS
 lim_send_radio_measure_report_action_frame(tpAniSirGlobal pMac,
 				uint8_t dialog_token,
 				uint8_t num_report,
@@ -4203,7 +4479,7 @@ lim_send_radio_measure_report_action_frame(tpAniSirGlobal pMac,
 				tSirMacAddr peer,
 				tpPESession psessionEntry)
 {
-	tSirRetStatus statusCode = eSIR_SUCCESS;
+	QDF_STATUS status_code = QDF_STATUS_SUCCESS;
 	uint8_t *pFrame;
 	tpSirMacMgmtHdr pMacHdr;
 	uint32_t nBytes, nPayload, nStatus;
@@ -4212,25 +4488,22 @@ lim_send_radio_measure_report_action_frame(tpAniSirGlobal pMac,
 	uint8_t i;
 	uint8_t txFlag = 0;
 	uint8_t smeSessionId = 0;
-	bool is_last_report = false;
 
 	tDot11fRadioMeasurementReport *frm =
 		qdf_mem_malloc(sizeof(tDot11fRadioMeasurementReport));
 	if (!frm) {
 		pe_err("Not enough memory to allocate tDot11fRadioMeasurementReport");
-		return eSIR_MEM_ALLOC_FAILED;
+		return QDF_STATUS_E_NOMEM;
 	}
 
 	if (psessionEntry == NULL) {
-		pe_err("(psession == NULL) in Request to send Beacon Report action frame");
+		pe_err("(session not found");
 		qdf_mem_free(frm);
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	smeSessionId = psessionEntry->smeSessionId;
 
-	pe_debug("dialog_token %d num_report %d is_last_frame %d",
-		 dialog_token, num_report, is_last_frame);
 
 	frm->Category.category = SIR_MAC_ACTION_RRM;
 	frm->Action.action = SIR_MAC_RRM_RADIO_MEASURE_RPT;
@@ -4247,19 +4520,11 @@ lim_send_radio_measure_report_action_frame(tpAniSirGlobal pMac,
 		frm->MeasurementReport[i].late = 0;     /* IEEE 802.11k section 7.3.22. (always zero in rrm) */
 		switch (pRRMReport[i].type) {
 		case SIR_MAC_RRM_BEACON_TYPE:
-			/*
-			 * Last beacon report indication needs to be set to 1
-			 * only for the last report in the last frame
-			 */
-			if (is_last_frame &&
-			    (i == (frm->num_MeasurementReport - 1)))
-				is_last_report = true;
-
 			populate_dot11f_beacon_report(pMac,
 						     &frm->MeasurementReport[i],
 						     &pRRMReport[i].report.
 						     beaconReport,
-						     is_last_report);
+						     is_last_frame);
 			frm->MeasurementReport[i].incapable =
 				pRRMReport[i].incapable;
 			frm->MeasurementReport[i].refused =
@@ -4276,17 +4541,18 @@ lim_send_radio_measure_report_action_frame(tpAniSirGlobal pMac,
 		}
 	}
 
+
 	nStatus =
 		dot11f_get_packed_radio_measurement_report_size(pMac, frm, &nPayload);
 	if (DOT11F_FAILED(nStatus)) {
-		pe_err("Failed to calculate the packed size for a Radio Measure Report (0x%08x)",
-			nStatus);
+		pe_nofl_err("TX: [802.11 RRM] Failed to get packed size for RM Report (0x%08x)",
+		       nStatus);
 		/* We'll fall back on the worst case scenario: */
 		nPayload = sizeof(tDot11fLinkMeasurementReport);
 		qdf_mem_free(frm);
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	} else if (DOT11F_WARNED(nStatus)) {
-		pe_warn("There were warnings while calculating the packed size for a Radio Measure Report (0x%08x)",
+		pe_warn("Warnings while calculating the size for Radio Measure Report (0x%08x)",
 			nStatus);
 	}
 
@@ -4296,13 +4562,13 @@ lim_send_radio_measure_report_action_frame(tpAniSirGlobal pMac,
 		cds_packet_alloc((uint16_t) nBytes, (void **)&pFrame,
 				 (void **)&pPacket);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
-		pe_err("Failed to allocate %d bytes for a Radio Measure "
+		pe_nofl_err("TX: [802.11 RRM] Allocation of %d bytes failed for RM"
 			   "Report", nBytes);
 		qdf_mem_free(frm);
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	}
 	/* Paranoia: */
-	qdf_mem_set(pFrame, nBytes, 0);
+	qdf_mem_zero(pFrame, nBytes);
 
 	/* Copy necessary info to BD */
 	lim_populate_mac_header(pMac, pFrame, SIR_MAC_MGMT_FRAME,
@@ -4325,21 +4591,28 @@ lim_send_radio_measure_report_action_frame(tpAniSirGlobal pMac,
 						       nPayload, &nPayload);
 
 	if (DOT11F_FAILED(nStatus)) {
-		pe_err("Failed to pack an Radio Measure Report (0x%08x)",
+		pe_nofl_err("Failed to pack an Radio Measure Report (0x%08x)",
 			nStatus);
 
-		/* FIXME - Need to convert to tSirRetStatus */
-		statusCode = eSIR_FAILURE;
+		/* FIXME - Need to convert to QDF_STATUS */
+		status_code = QDF_STATUS_E_FAILURE;
 		goto returnAfterError;
 	} else if (DOT11F_WARNED(nStatus)) {
-		pe_warn("There were warnings while packing Radio Measure Report (0x%08x)",
+		pe_warn("Warnings while packing Radio Measure Report (0x%08x)",
 			nStatus);
 	}
 
-	pe_warn("Sending a Radio Measure Report to");
-	lim_print_mac_addr(pMac, peer, LOGW);
+	pe_debug("Sending Radio Measure Report to %pM", peer);
+	if (frm->MeasurementReport[0].type == SIR_MAC_RRM_BEACON_TYPE)
+		pe_nofl_info("TX: %s seq_no:%d dialog_token:%d no. of APs:%d is_last_rpt:%d num_report %d",
+			     frm->MeasurementReport[0].type == SIR_MAC_RRM_BEACON_TYPE ?
+			     "[802.11 BCN_RPT]" : "[802.11 RRM]",
+			     (pMacHdr->seqControl.seqNumHi << HIGH_SEQ_NUM_OFFSET |
+			      pMacHdr->seqControl.seqNumLo),
+			     dialog_token, frm->num_MeasurementReport,
+			     is_last_frame, num_report);
 
-	if ((SIR_BAND_5_GHZ == lim_get_rf_band(psessionEntry->currentOperChannel))
+	if ((BAND_5G == lim_get_rf_band(psessionEntry->currentOperChannel))
 	    || (psessionEntry->pePersona == QDF_P2P_CLIENT_MODE) ||
 	    (psessionEntry->pePersona == QDF_P2P_GO_MODE)
 	    ) {
@@ -4358,20 +4631,19 @@ lim_send_radio_measure_report_action_frame(tpAniSirGlobal pMac,
 	MTRACE(qdf_trace(QDF_MODULE_ID_PE, TRACE_CODE_TX_COMPLETE,
 			 psessionEntry->peSessionId, qdf_status));
 	if (QDF_STATUS_SUCCESS != qdf_status) {
-		pe_err("wma_tx_frame FAILED! Status [%d]", qdf_status);
-		statusCode = eSIR_FAILURE;
+		pe_nofl_err("TX: [802.11 RRM] Send FAILED! err_status [%d]",
+		       qdf_status);
+		status_code = QDF_STATUS_E_FAILURE;
 		/* Pkt will be freed up by the callback */
-		qdf_mem_free(frm);
-		return statusCode;
-	} else {
-		qdf_mem_free(frm);
-		return eSIR_SUCCESS;
 	}
+
+	qdf_mem_free(frm);
+	return status_code;
 
 returnAfterError:
 	qdf_mem_free(frm);
 	cds_packet_free((void *)pPacket);
-	return statusCode;
+	return status_code;
 }
 
 #ifdef WLAN_FEATURE_11W
@@ -4389,18 +4661,18 @@ returnAfterError:
  *
  * \param psessionEntry The PE session entry
  *
- * \return eSIR_SUCCESS if setup completes successfully
- *         eSIR_FAILURE is some problem is encountered
+ * \return QDF_STATUS_SUCCESS if setup completes successfully
+ *         QDF_STATUS_E_FAILURE is some problem is encountered
  */
 
-tSirRetStatus lim_send_sa_query_request_frame(tpAniSirGlobal pMac, uint8_t *transId,
+QDF_STATUS lim_send_sa_query_request_frame(tpAniSirGlobal pMac, uint8_t *transId,
 					      tSirMacAddr peer,
 					      tpPESession psessionEntry)
 {
 
 	tDot11fSaQueryReq frm;  /* SA query request action frame */
 	uint8_t *pFrame;
-	tSirRetStatus nSirStatus;
+	QDF_STATUS nSirStatus;
 	tpSirMacMgmtHdr pMacHdr;
 	uint32_t nBytes, nPayload, nStatus;
 	void *pPacket;
@@ -4408,7 +4680,7 @@ tSirRetStatus lim_send_sa_query_request_frame(tpAniSirGlobal pMac, uint8_t *tran
 	uint8_t txFlag = 0;
 	uint8_t smeSessionId = 0;
 
-	qdf_mem_set((uint8_t *) &frm, sizeof(frm), 0);
+	qdf_mem_zero((uint8_t *) &frm, sizeof(frm));
 	frm.Category.category = SIR_MAC_ACTION_SA_QUERY;
 	/* 11w action  field is :
 	   action: 0 --> SA Query Request action frame
@@ -4434,10 +4706,10 @@ tSirRetStatus lim_send_sa_query_request_frame(tpAniSirGlobal pMac, uint8_t *tran
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		pe_err("Failed to allocate %d bytes for a SA Query Request "
 			   "action frame", nBytes);
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	}
 	/* Paranoia: */
-	qdf_mem_set(pFrame, nBytes, 0);
+	qdf_mem_zero(pFrame, nBytes);
 
 	/* Copy necessary info to BD */
 	lim_populate_mac_header(pMac, pFrame, SIR_MAC_MGMT_FRAME,
@@ -4461,8 +4733,8 @@ tSirRetStatus lim_send_sa_query_request_frame(tpAniSirGlobal pMac, uint8_t *tran
 	if (DOT11F_FAILED(nStatus)) {
 		pe_err("Failed to pack an SA Query Request (0x%08x)",
 			nStatus);
-		/* FIXME - Need to convert to tSirRetStatus */
-		nSirStatus = eSIR_FAILURE;
+		/* FIXME - Need to convert to QDF_STATUS */
+		nSirStatus = QDF_STATUS_E_FAILURE;
 		goto returnAfterError;
 	} else if (DOT11F_WARNED(nStatus)) {
 		pe_warn("There were warnings while packing SA Query Request (0x%08x)",
@@ -4474,7 +4746,7 @@ tSirRetStatus lim_send_sa_query_request_frame(tpAniSirGlobal pMac, uint8_t *tran
 	pe_debug("Sending an SA Query Request from ");
 	lim_print_mac_addr(pMac, psessionEntry->selfMacAddr, LOGD);
 
-	if ((SIR_BAND_5_GHZ == lim_get_rf_band(psessionEntry->currentOperChannel))
+	if ((BAND_5G == lim_get_rf_band(psessionEntry->currentOperChannel))
 #ifdef WLAN_FEATURE_P2P
 	    || (psessionEntry->pePersona == QDF_P2P_CLIENT_MODE) ||
 	    (psessionEntry->pePersona == QDF_P2P_GO_MODE)
@@ -4493,11 +4765,11 @@ tSirRetStatus lim_send_sa_query_request_frame(tpAniSirGlobal pMac, uint8_t *tran
 				smeSessionId, 0, RATEID_DEFAULT);
 	if (QDF_STATUS_SUCCESS != qdf_status) {
 		pe_err("wma_tx_frame FAILED! Status [%d]", qdf_status);
-		nSirStatus = eSIR_FAILURE;
+		nSirStatus = QDF_STATUS_E_FAILURE;
 		/* Pkt will be freed up by the callback */
 		return nSirStatus;
 	} else {
-		return eSIR_SUCCESS;
+		return QDF_STATUS_SUCCESS;
 	}
 
 returnAfterError:
@@ -4519,18 +4791,18 @@ returnAfterError:
  *
  * \param psessionEntry The PE session entry
  *
- * \return eSIR_SUCCESS if setup completes successfully
- *         eSIR_FAILURE is some problem is encountered
+ * \return QDF_STATUS_SUCCESS if setup completes successfully
+ *         QDF_STATUS_E_FAILURE is some problem is encountered
  */
 
-tSirRetStatus lim_send_sa_query_response_frame(tpAniSirGlobal pMac,
+QDF_STATUS lim_send_sa_query_response_frame(tpAniSirGlobal pMac,
 					       uint8_t *transId, tSirMacAddr peer,
 					       tpPESession psessionEntry)
 {
 
-	tDot11fSaQueryRsp frm;  /* SA query reponse action frame */
+	tDot11fSaQueryRsp frm;  /* SA query response action frame */
 	uint8_t *pFrame;
-	tSirRetStatus nSirStatus;
+	QDF_STATUS nSirStatus;
 	tpSirMacMgmtHdr pMacHdr;
 	uint32_t nBytes, nPayload, nStatus;
 	void *pPacket;
@@ -4540,7 +4812,7 @@ tSirRetStatus lim_send_sa_query_response_frame(tpAniSirGlobal pMac,
 
 	smeSessionId = psessionEntry->smeSessionId;
 
-	qdf_mem_set((uint8_t *) &frm, sizeof(frm), 0);
+	qdf_mem_zero((uint8_t *) &frm, sizeof(frm));
 	frm.Category.category = SIR_MAC_ACTION_SA_QUERY;
 	/*11w action  field is :
 	   action: 0 --> SA query request action frame
@@ -4567,10 +4839,10 @@ tSirRetStatus lim_send_sa_query_response_frame(tpAniSirGlobal pMac,
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		pe_err("Failed to allocate %d bytes for a SA query response"
 			   " action frame", nBytes);
-		return eSIR_FAILURE;
+		return QDF_STATUS_E_FAILURE;
 	}
 	/* Paranoia: */
-	qdf_mem_set(pFrame, nBytes, 0);
+	qdf_mem_zero(pFrame, nBytes);
 
 	/* Copy necessary info to BD */
 	lim_populate_mac_header(pMac, pFrame, SIR_MAC_MGMT_FRAME,
@@ -4594,8 +4866,8 @@ tSirRetStatus lim_send_sa_query_response_frame(tpAniSirGlobal pMac,
 	if (DOT11F_FAILED(nStatus)) {
 		pe_err("Failed to pack an SA Query Response (0x%08x)",
 			nStatus);
-		/* FIXME - Need to convert to tSirRetStatus */
-		nSirStatus = eSIR_FAILURE;
+		/* FIXME - Need to convert to QDF_STATUS */
+		nSirStatus = QDF_STATUS_E_FAILURE;
 		goto returnAfterError;
 	} else if (DOT11F_WARNED(nStatus)) {
 		pe_warn("There were warnings while packing SA Query Response (0x%08x)",
@@ -4605,7 +4877,7 @@ tSirRetStatus lim_send_sa_query_response_frame(tpAniSirGlobal pMac,
 	pe_debug("Sending a SA Query Response to");
 	lim_print_mac_addr(pMac, peer, LOGD);
 
-	if ((SIR_BAND_5_GHZ == lim_get_rf_band(psessionEntry->currentOperChannel))
+	if ((BAND_5G == lim_get_rf_band(psessionEntry->currentOperChannel))
 #ifdef WLAN_FEATURE_P2P
 	    || (psessionEntry->pePersona == QDF_P2P_CLIENT_MODE) ||
 	    (psessionEntry->pePersona == QDF_P2P_GO_MODE)
@@ -4627,11 +4899,11 @@ tSirRetStatus lim_send_sa_query_response_frame(tpAniSirGlobal pMac,
 			 psessionEntry->peSessionId, qdf_status));
 	if (QDF_STATUS_SUCCESS != qdf_status) {
 		pe_err("wma_tx_frame FAILED! Status [%d]", qdf_status);
-		nSirStatus = eSIR_FAILURE;
+		nSirStatus = QDF_STATUS_E_FAILURE;
 		/* Pkt will be freed up by the callback */
 		return nSirStatus;
 	} else {
-		return eSIR_SUCCESS;
+		return QDF_STATUS_SUCCESS;
 	}
 
 returnAfterError:
@@ -4639,6 +4911,193 @@ returnAfterError:
 	return nSirStatus;
 } /* End lim_send_sa_query_response_frame */
 #endif
+
+/**
+ * lim_send_addba_response_frame(): Send ADDBA response action frame to peer
+ * @mac_ctx: mac context
+ * @peer_mac: Peer MAC address
+ * @tid: TID for which addba response is being sent
+ * @session: PE session entry
+ * @addba_extn_present: ADDBA extension present flag
+ * @amsdu_support: amsdu in ampdu support
+ *
+ * This function is called when ADDBA request is successful. ADDBA response is
+ * setup by calling addba_response_setup API and frame is then sent out OTA.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS lim_send_addba_response_frame(tpAniSirGlobal mac_ctx,
+		tSirMacAddr peer_mac, uint16_t tid,
+		tpPESession session, uint8_t addba_extn_present,
+		uint8_t amsdu_support)
+{
+
+	tDot11faddba_rsp frm;
+	uint8_t *frame_ptr;
+	tpSirMacMgmtHdr mgmt_hdr;
+	uint32_t num_bytes, payload_size, status;
+	void *pkt_ptr = NULL;
+	QDF_STATUS qdf_status;
+	uint8_t tx_flag = 0;
+	uint8_t sme_sessionid = 0;
+	uint16_t buff_size, status_code, batimeout;
+	uint8_t peer_id, dialog_token;
+	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
+	void *peer, *pdev;
+	uint8_t he_frag = 0;
+
+	sme_sessionid = session->smeSessionId;
+
+	pdev = cds_get_context(QDF_MODULE_ID_TXRX);
+	if (!pdev) {
+		pe_err("pdev is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	peer = cdp_peer_get_ref_by_addr(soc, pdev, peer_mac, &peer_id,
+					PEER_DEBUG_ID_LIM_SEND_ADDBA_RESP);
+	if (!peer) {
+		pe_err("PEER [%pM] not found", peer_mac);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	cdp_addba_responsesetup(soc, peer, tid, &dialog_token,
+		&status_code, &buff_size, &batimeout);
+
+	cdp_peer_release_ref(soc, peer, PEER_DEBUG_ID_LIM_SEND_ADDBA_RESP);
+	qdf_mem_zero((uint8_t *) &frm, sizeof(frm));
+	frm.Category.category = SIR_MAC_ACTION_BLKACK;
+	frm.Action.action = SIR_MAC_ADDBA_RSP;
+
+	frm.DialogToken.token = dialog_token;
+	frm.Status.status = status_code;
+	if (mac_ctx->reject_addba_req) {
+		frm.Status.status = eSIR_MAC_REQ_DECLINED_STATUS;
+		pe_err("refused addba req");
+	}
+	frm.addba_param_set.tid = tid;
+	frm.addba_param_set.buff_size = SIR_MAC_BA_DEFAULT_BUFF_SIZE;
+	if (mac_ctx->usr_cfg_ba_buff_size)
+		frm.addba_param_set.buff_size = mac_ctx->usr_cfg_ba_buff_size;
+	if (frm.addba_param_set.buff_size > buff_size) {
+		pe_debug("buff size: %d larger than peer's capability: %d",
+			 frm.addba_param_set.buff_size, buff_size);
+		frm.addba_param_set.buff_size = buff_size;
+	}
+
+	if (mac_ctx->is_usr_cfg_amsdu_enabled)
+		frm.addba_param_set.amsdu_supp = amsdu_support;
+	else
+		frm.addba_param_set.amsdu_supp = 0;
+	frm.addba_param_set.policy = SIR_MAC_BA_POLICY_IMMEDIATE;
+	frm.ba_timeout.timeout = batimeout;
+	if (addba_extn_present) {
+		frm.addba_extn_element.present = 1;
+		frm.addba_extn_element.no_fragmentation = 1;
+		if (lim_is_session_he_capable(session)) {
+			he_frag = lim_get_session_he_frag_cap(session);
+			if (he_frag != 0) {
+				frm.addba_extn_element.no_fragmentation = 0;
+				frm.addba_extn_element.he_frag_operation =
+					he_frag;
+			}
+		}
+	}
+
+	pe_debug("Sending a ADDBA Response from %pM to %pM",
+		session->selfMacAddr, peer_mac);
+	pe_debug("tid: %d, dialog_token: %d, status: %d, buff_size: %d",
+		tid, frm.DialogToken.token, frm.Status.status,
+		frm.addba_param_set.buff_size);
+	pe_debug("addba_extn %d he_capable %d no_frag %d he_frag %d",
+		addba_extn_present,
+		lim_is_session_he_capable(session),
+		frm.addba_extn_element.no_fragmentation,
+		frm.addba_extn_element.he_frag_operation);
+
+	status = dot11f_get_packed_addba_rsp_size(mac_ctx, &frm, &payload_size);
+	if (DOT11F_FAILED(status)) {
+		pe_err("Failed to calculate the packed size for a ADDBA Response (0x%08x).",
+			status);
+		/* We'll fall back on the worst case scenario: */
+		payload_size = sizeof(tDot11faddba_rsp);
+	} else if (DOT11F_WARNED(status)) {
+		pe_warn("There were warnings while calculating the packed size for a ADDBA Response (0x%08x).", status);
+	}
+
+	num_bytes = payload_size + sizeof(*mgmt_hdr);
+	qdf_status = cds_packet_alloc(num_bytes, (void **)&frame_ptr,
+				      (void **)&pkt_ptr);
+	if (!QDF_IS_STATUS_SUCCESS(qdf_status) || (!pkt_ptr)) {
+		pe_err("Failed to allocate %d bytes for a ADDBA response action frame",
+			num_bytes);
+		return QDF_STATUS_E_FAILURE;
+	}
+	qdf_mem_zero(frame_ptr, num_bytes);
+
+	lim_populate_mac_header(mac_ctx, frame_ptr, SIR_MAC_MGMT_FRAME,
+		SIR_MAC_MGMT_ACTION, peer_mac, session->selfMacAddr);
+
+	/* Update A3 with the BSSID */
+	mgmt_hdr = (tpSirMacMgmtHdr) frame_ptr;
+	sir_copy_mac_addr(mgmt_hdr->bssId, session->bssId);
+
+	/* ADDBA Response is a robust mgmt action frame,
+	 * set the "protect" (aka WEP) bit in the FC
+	 */
+	lim_set_protected_bit(mac_ctx, session, peer_mac, mgmt_hdr);
+
+	status = dot11f_pack_addba_rsp(mac_ctx, &frm,
+			frame_ptr + sizeof(tSirMacMgmtHdr), payload_size,
+			&payload_size);
+
+	if (DOT11F_FAILED(status)) {
+		pe_err("Failed to pack a ADDBA Response (0x%08x)",
+			status);
+		qdf_status = QDF_STATUS_E_FAILURE;
+		goto error_addba_rsp;
+	} else if (DOT11F_WARNED(status)) {
+		pe_warn("There were warnings while packing ADDBA Response (0x%08x)",
+			status);
+	}
+
+
+	if ((BAND_5G == lim_get_rf_band(session->currentOperChannel))
+#ifdef WLAN_FEATURE_P2P
+	    || (session->pePersona == QDF_P2P_CLIENT_MODE) ||
+	    (session->pePersona == QDF_P2P_GO_MODE)
+#endif
+	    ) {
+		tx_flag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
+	}
+
+	MTRACE(qdf_trace(QDF_MODULE_ID_PE, TRACE_CODE_TX_MGMT,
+			 session->peSessionId, mgmt_hdr->fc.subType));
+	qdf_status = wma_tx_frame(mac_ctx, pkt_ptr, (uint16_t) num_bytes,
+			TXRX_FRM_802_11_MGMT, ANI_TXDIR_TODS, 7,
+			lim_tx_complete, frame_ptr, tx_flag, sme_sessionid, 0,
+			RATEID_DEFAULT);
+	MTRACE(qdf_trace(QDF_MODULE_ID_PE, TRACE_CODE_TX_COMPLETE,
+			 session->peSessionId, qdf_status));
+	if (QDF_STATUS_SUCCESS != qdf_status) {
+		pe_err("wma_tx_frame FAILED! Status [%d]",
+			qdf_status);
+		qdf_status = QDF_STATUS_E_FAILURE;
+		/*
+		 * wma_tx_frame free memory in certain cases, free pkt_ptr
+		 * only if not freed already.
+		 */
+		if (pkt_ptr)
+			cds_packet_free((void *)pkt_ptr);
+		return qdf_status;
+	} else {
+		return QDF_STATUS_SUCCESS;
+	}
+
+error_addba_rsp:
+	cds_packet_free((void *)pkt_ptr);
+	return qdf_status;
+}
 
 /**
  * lim_tx_mgmt_frame() - Transmits Auth mgmt frame
@@ -4670,8 +5129,10 @@ static void lim_tx_mgmt_frame(tpAniSirGlobal mac_ctx,
 		return;
 	}
 
-	MTRACE(qdf_trace(QDF_MODULE_ID_PE, TRACE_CODE_TX_MGMT,
-			 session->peSessionId, fc->subType));
+#ifdef WLAN_DEBUG
+	qdf_mtrace(QDF_MODULE_ID_PE, QDF_MODULE_ID_WMA, TRACE_CODE_TX_MGMT,
+		   session->peSessionId, 0);
+#endif
 
 	mac_ctx->auth_ack_status = LIM_AUTH_ACK_NOT_RCD;
 	min_rid = lim_get_min_session_txrate(session);
@@ -4685,22 +5146,24 @@ static void lim_tx_mgmt_frame(tpAniSirGlobal mac_ctx,
 	MTRACE(qdf_trace(QDF_MODULE_ID_PE, TRACE_CODE_TX_COMPLETE,
 		session->peSessionId, qdf_status));
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
-		pe_err("*** Could not send Auth frame, retCode=%X ***",
-			qdf_status);
+		pe_err("*** Could not send Auth frame (subType: %d), retCode=%X ***",
+			fc->subType, qdf_status);
 		mac_ctx->auth_ack_status = LIM_AUTH_ACK_RCD_FAILURE;
 		auth_ack_status = SENT_FAIL;
 		lim_diag_event_report(mac_ctx, WLAN_PE_DIAG_AUTH_ACK_EVENT,
-				session, auth_ack_status, eSIR_FAILURE);
+				session, auth_ack_status, QDF_STATUS_E_FAILURE);
 		/* Pkt will be freed up by the callback */
 	}
 }
 
 void lim_send_mgmt_frame_tx(tpAniSirGlobal mac_ctx,
-		uint32_t *msg_buf)
+		struct scheduler_msg *msg)
 {
-	struct sir_mgmt_msg *mb_msg = (struct sir_mgmt_msg *)msg_buf;
+	struct sir_mgmt_msg *mb_msg = (struct sir_mgmt_msg *)msg->bodyptr;
 	uint32_t msg_len;
+#ifdef WLAN_DEBUG
 	tpSirMacFrameCtl fc = (tpSirMacFrameCtl) mb_msg->data;
+#endif
 	uint8_t sme_session_id;
 	QDF_STATUS qdf_status;
 	uint8_t *frame;

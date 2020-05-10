@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -24,6 +24,7 @@
 #include <targaddrs.h>
 #include "hif_io32.h"
 #include <hif.h>
+#include <target_type.h>
 #include "regtable.h"
 #define ATH_MODULE_NAME hif
 #include <a_debug.h>
@@ -37,7 +38,12 @@
 #include "qdf_status.h"
 #include "hif_debug.h"
 #include "mp_dev.h"
+#ifdef QCA_WIFI_QCA8074
+#include "hal_api.h"
+#endif
 #include "hif_napi.h"
+#include "hif_unit_test_suspend_i.h"
+#include "qdf_module.h"
 
 void hif_dump(struct hif_opaque_softc *hif_ctx, uint8_t cmd_id, bool start)
 {
@@ -229,6 +235,7 @@ void hif_save_htc_htt_config_endpoint(struct hif_opaque_softc *hif_ctx,
 
 	scn->htc_htt_tx_endpoint = htc_htt_tx_endpoint;
 }
+qdf_export_symbol(hif_save_htc_htt_config_endpoint);
 
 static const struct qwlan_hw qwlan_hw_list[] = {
 	{
@@ -363,6 +370,21 @@ void hif_get_hw_info(struct hif_opaque_softc *scn, u32 *version, u32 *revision,
 }
 
 /**
+ * hif_get_dev_ba(): API to get device base address.
+ * @scn: scn
+ * @version: version
+ * @revision: revision
+ *
+ * Return: n/a
+ */
+void *hif_get_dev_ba(struct hif_opaque_softc *hif_handle)
+{
+	struct hif_softc *scn = (struct hif_softc *)hif_handle;
+
+	return scn->mem;
+}
+qdf_export_symbol(hif_get_dev_ba);
+/**
  * hif_open(): hif_open
  * @qdf_ctx: QDF Context
  * @mode: Driver Mode
@@ -396,6 +418,7 @@ struct hif_opaque_softc *hif_open(qdf_device_t qdf_ctx, uint32_t mode,
 	scn->qdf_dev = qdf_ctx;
 	scn->hif_con_param = mode;
 	qdf_atomic_init(&scn->active_tasklet_cnt);
+	qdf_atomic_init(&scn->active_grp_tasklet_cnt);
 	qdf_atomic_init(&scn->link_suspended);
 	qdf_atomic_init(&scn->tasklet_from_intr);
 	qdf_mem_copy(&scn->callbacks, cbk,
@@ -411,6 +434,24 @@ struct hif_opaque_softc *hif_open(qdf_device_t qdf_ctx, uint32_t mode,
 
 	return GET_HIF_OPAQUE_HDL(scn);
 }
+
+#ifdef ADRASTEA_RRI_ON_DDR
+/**
+ * hif_uninit_rri_on_ddr(): free consistent memory allocated for rri
+ * @scn: hif context
+ *
+ * Return: none
+ */
+void hif_uninit_rri_on_ddr(struct hif_softc *scn)
+{
+	if (scn->vaddr_rri_on_ddr)
+		qdf_mem_free_consistent(scn->qdf_dev, scn->qdf_dev->dev,
+					(CE_COUNT * sizeof(uint32_t)),
+					scn->vaddr_rri_on_ddr,
+					scn->paddr_rri_on_ddr, 0);
+	scn->vaddr_rri_on_ddr = NULL;
+}
+#endif
 
 /**
  * hif_close(): hif_close
@@ -438,9 +479,45 @@ void hif_close(struct hif_opaque_softc *hif_ctx)
 		scn->target_info.hw_name = "ErrUnloading";
 		qdf_mem_free(hw_name);
 	}
+
+	hif_uninit_rri_on_ddr(scn);
+
 	hif_bus_close(scn);
 	qdf_mem_free(scn);
 }
+
+#ifdef QCA_WIFI_QCA8074
+static QDF_STATUS hif_hal_attach(struct hif_softc *scn)
+{
+	if (ce_srng_based(scn)) {
+		scn->hal_soc = hal_attach(scn, scn->qdf_dev);
+		if (scn->hal_soc == NULL)
+			return QDF_STATUS_E_FAILURE;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+static QDF_STATUS hif_hal_detach(struct hif_softc *scn)
+{
+	if (ce_srng_based(scn)) {
+		hal_detach(scn->hal_soc);
+		scn->hal_soc = NULL;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+#else
+static QDF_STATUS hif_hal_attach(struct hif_softc *scn)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static QDF_STATUS hif_hal_detach(struct hif_softc *scn)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
 
 /**
  * hif_enable(): hif_enable
@@ -474,12 +551,19 @@ QDF_STATUS hif_enable(struct hif_opaque_softc *hif_ctx, struct device *dev,
 		return status;
 	}
 
+	status = hif_hal_attach(scn);
+	if (status != QDF_STATUS_SUCCESS) {
+		HIF_ERROR("%s: hal attach failed", __func__);
+		goto disable_bus;
+	}
+
 	if (hif_bus_configure(scn)) {
 		HIF_ERROR("%s: Target probe failed.", __func__);
-		hif_disable_bus(scn);
 		status = QDF_STATUS_E_FAILURE;
-		return status;
+		goto hal_detach;
 	}
+
+	hif_ut_suspend_init(scn);
 
 	/*
 	 * Flag to avoid potential unallocated memory access from MSI
@@ -494,6 +578,12 @@ QDF_STATUS hif_enable(struct hif_opaque_softc *hif_ctx, struct device *dev,
 	HIF_DBG("%s: OK", __func__);
 
 	return QDF_STATUS_SUCCESS;
+
+hal_detach:
+	hif_hal_detach(scn);
+disable_bus:
+	hif_disable_bus(scn);
+	return status;
 }
 
 void hif_disable(struct hif_opaque_softc *hif_ctx, enum hif_disable_type type)
@@ -508,6 +598,8 @@ void hif_disable(struct hif_opaque_softc *hif_ctx, enum hif_disable_type type)
 		hif_shutdown_device(hif_ctx);
 	else
 		hif_stop(hif_ctx);
+
+	hif_hal_detach(scn);
 
 	hif_disable_bus(scn);
 
@@ -613,7 +705,6 @@ int hif_check_fw_reg(struct hif_opaque_softc *scn)
 }
 #endif
 
-#ifdef IPA_OFFLOAD
 /**
  * hif_read_phy_mem_base(): hif_read_phy_mem_base
  * @scn: scn
@@ -625,7 +716,7 @@ void hif_read_phy_mem_base(struct hif_softc *scn, qdf_dma_addr_t *phy_mem_base)
 {
 	*phy_mem_base = scn->mem_pa;
 }
-#endif /* IPA_OFFLOAD */
+qdf_export_symbol(hif_read_phy_mem_base);
 
 /**
  * hif_get_device_type(): hif_get_device_type
@@ -643,7 +734,6 @@ int hif_get_device_type(uint32_t device_id,
 	int ret = 0;
 
 	switch (device_id) {
-	case ADRASTEA_DEVICE_ID:
 	case ADRASTEA_DEVICE_ID_P2_E12:
 
 		*hif_type = HIF_TYPE_ADRASTEA;
@@ -708,6 +798,23 @@ int hif_get_device_type(uint32_t device_id,
 		HIF_INFO(" *********** IPQ4019  *************");
 		break;
 
+	case QCA8074_DEVICE_ID:
+	case RUMIM2M_DEVICE_ID_NODE0:
+	case RUMIM2M_DEVICE_ID_NODE1:
+	case RUMIM2M_DEVICE_ID_NODE2:
+	case RUMIM2M_DEVICE_ID_NODE3:
+		*hif_type = HIF_TYPE_QCA8074;
+		*target_type = TARGET_TYPE_QCA8074;
+		HIF_INFO(" *********** QCA8074  *************\n");
+		break;
+
+	case QCA6290_EMULATION_DEVICE_ID:
+	case QCA6290_DEVICE_ID:
+		*hif_type = HIF_TYPE_QCA6290;
+		*target_type = TARGET_TYPE_QCA6290;
+		HIF_INFO(" *********** QCA6290EMU *************\n");
+		break;
+
 	default:
 		HIF_ERROR("%s: Unsupported device ID!", __func__);
 		ret = -ENODEV;
@@ -720,19 +827,6 @@ int hif_get_device_type(uint32_t device_id,
 	}
 end:
 	return ret;
-}
-
-/**
- * hif_needs_bmi() - return true if the soc needs bmi through the driver
- * @hif_ctx: hif context
- *
- * Return: true if the soc needs driver bmi otherwise false
- */
-bool hif_needs_bmi(struct hif_opaque_softc *hif_ctx)
-{
-	struct hif_softc *hif_sc = HIF_GET_SOFTC(hif_ctx);
-
-	return hif_sc->bus_type != QDF_BUS_TYPE_SNOC;
 }
 
 /**
@@ -782,14 +876,28 @@ struct hif_target_info *hif_get_target_info_handle(
 	return &sc->target_info;
 
 }
+qdf_export_symbol(hif_get_target_info_handle);
 
-/**
- * hif_get_rx_ctx_id - Returns NAPI instance ID based on CE ID
- * @ctx_id: Rx CE context ID
- * @hif_hdl: HIF Context
- *
- * Return: LRO instance ID
- */
+#ifdef RECEIVE_OFFLOAD
+void hif_offld_flush_cb_register(struct hif_opaque_softc *scn,
+				 void (offld_flush_handler)(void *))
+{
+	if (hif_napi_enabled(scn, -1))
+		hif_napi_rx_offld_flush_cb_register(scn, offld_flush_handler);
+	else
+		HIF_ERROR("NAPI not enabled\n");
+}
+qdf_export_symbol(hif_offld_flush_cb_register);
+
+void hif_offld_flush_cb_deregister(struct hif_opaque_softc *scn)
+{
+	if (hif_napi_enabled(scn, -1))
+		hif_napi_rx_offld_flush_cb_deregister(scn);
+	else
+		HIF_ERROR("NAPI not enabled\n");
+}
+qdf_export_symbol(hif_offld_flush_cb_deregister);
+
 int hif_get_rx_ctx_id(int ctx_id, struct hif_opaque_softc *hif_hdl)
 {
 	if (hif_napi_enabled(hif_hdl, -1))
@@ -797,55 +905,15 @@ int hif_get_rx_ctx_id(int ctx_id, struct hif_opaque_softc *hif_hdl)
 	else
 		return ctx_id;
 }
-
-#if defined(HIF_PCI) || defined(HIF_SNOC) || defined(HIF_AHB)
-/**
- * hif_offld_flush_cb_register - API to register for LRO Flush Callback
- * @scn: HIF Context
- * @offld_flush_handler: Flush handler
- * @offld_init_handler: Init handler of Rx offload
- *
- * Return: void
- */
-void hif_offld_flush_cb_register(struct hif_opaque_softc *scn,
-			       void (offld_flush_handler)(void *),
-			       void *(offld_init_handler)(void))
+#else /* RECEIVE_OFFLOAD */
+int hif_get_rx_ctx_id(int ctx_id, struct hif_opaque_softc *hif_hdl)
 {
-	if (hif_napi_enabled(scn, -1))
-		hif_napi_offld_flush_cb_register(scn, offld_flush_handler,
-					       offld_init_handler);
-	else
-		ce_lro_flush_cb_register(scn, offld_flush_handler,
-					offld_init_handler);
+	return 0;
 }
-
-/**
- * hif_offld_flush_cb_deregister - API to deregister offload Flush Callbacks
- * @hif_hdl: HIF Context
- * @offld_deinit_cb: Rx offload deinit callback
- *
- * Return: void
- */
-void hif_offld_flush_cb_deregister(struct hif_opaque_softc *hif_hdl,
-				 void (offld_deinit_cb)(void *))
-{
-	hif_napi_lro_flush_cb_deregister(hif_hdl, offld_deinit_cb);
-	ce_lro_flush_cb_deregister(hif_hdl, offld_deinit_cb);
-}
-#else
-void hif_offld_flush_cb_register(struct hif_opaque_softc *scn,
-			       void (offld_flush_handler)(void *),
-			       void *(offld_init_handler)(void))
-{
-}
-
-void hif_offld_flush_cb_deregister(struct hif_opaque_softc *hif_hdl,
-				 void (offld_deinit_cb)(void *))
-{
-}
-#endif
+#endif /* RECEIVE_OFFLOAD */
 
 #if defined(FEATURE_LRO)
+
 /**
  * hif_get_lro_info - Returns LRO instance for instance ID
  * @ctx_id: LRO instance ID
@@ -864,8 +932,6 @@ void *hif_get_lro_info(int ctx_id, struct hif_opaque_softc *hif_hdl)
 
 	return data;
 }
-
-
 #endif
 
 /**
@@ -880,6 +946,7 @@ enum hif_target_status hif_get_target_status(struct hif_opaque_softc *hif_ctx)
 
 	return scn->target_status;
 }
+qdf_export_symbol(hif_get_target_status);
 
 /**
  * hif_set_target_status() - API to set target status
@@ -987,6 +1054,38 @@ bool hif_is_recovery_in_progress(struct hif_softc *scn)
 	return false;
 }
 
+#if defined(HIF_PCI) || defined(HIF_SNOC) || defined(HIF_AHB)
+
+/**
+ * hif_update_pipe_callback() - API to register pipe specific callbacks
+ * @osc: Opaque softc
+ * @pipeid: pipe id
+ * @callbacks: callbacks to register
+ *
+ * Return: void
+ */
+
+void hif_update_pipe_callback(struct hif_opaque_softc *osc,
+					u_int8_t pipeid,
+					struct hif_msg_callbacks *callbacks)
+{
+	struct hif_softc *scn = HIF_GET_SOFTC(osc);
+	struct HIF_CE_state *hif_state = HIF_GET_CE_STATE(scn);
+	struct HIF_CE_pipe_info *pipe_info;
+
+	QDF_BUG(pipeid < CE_COUNT_MAX);
+
+	HIF_INFO_LO("+%s pipeid %d\n", __func__, pipeid);
+
+	pipe_info = &hif_state->pipe_info[pipeid];
+
+	qdf_mem_copy(&pipe_info->pipe_callbacks,
+			callbacks, sizeof(pipe_info->pipe_callbacks));
+
+	HIF_INFO_LO("-%s\n", __func__);
+}
+qdf_export_symbol(hif_update_pipe_callback);
+
 /**
  * hif_is_target_ready() - API to query if target is in ready state
  * progress
@@ -1003,7 +1102,7 @@ bool hif_is_target_ready(struct hif_softc *scn)
 
 	return false;
 }
-#if defined(HIF_PCI) || defined(SNOC) || defined(HIF_AHB)
+
 /**
  * hif_batch_send() - API to access hif specific function
  * ce_batch_send.
@@ -1022,6 +1121,7 @@ qdf_nbuf_t hif_batch_send(struct hif_opaque_softc *osc, qdf_nbuf_t msdu,
 	return ce_batch_send((struct CE_handle *)ce_tx_hdl, msdu, transfer_id,
 			len, sendhead);
 }
+qdf_export_symbol(hif_batch_send);
 
 /**
  * hif_update_tx_ring() - API to access hif specific function
@@ -1037,6 +1137,7 @@ void hif_update_tx_ring(struct hif_opaque_softc *osc, u_int32_t num_htt_cmpls)
 
 	ce_update_tx_ring(ce_tx_hdl, num_htt_cmpls);
 }
+qdf_export_symbol(hif_update_tx_ring);
 
 
 /**
@@ -1057,7 +1158,9 @@ int hif_send_single(struct hif_opaque_softc *osc, qdf_nbuf_t msdu, uint32_t
 	return ce_send_single((struct CE_handle *)ce_tx_hdl, msdu, transfer_id,
 			len);
 }
+qdf_export_symbol(hif_send_single);
 
+#ifdef WLAN_FEATURE_FASTPATH
 /**
  * hif_send_fast() - API to access hif specific function
  * ce_send_fast.
@@ -1077,6 +1180,8 @@ int hif_send_fast(struct hif_opaque_softc *osc, qdf_nbuf_t nbuf,
 	return ce_send_fast((struct CE_handle *)ce_tx_hdl, nbuf,
 			transfer_id, download_len);
 }
+qdf_export_symbol(hif_send_fast);
+#endif
 #endif
 
 /**
@@ -1096,6 +1201,7 @@ void hif_reg_write(struct hif_opaque_softc *hif_ctx, uint32_t offset,
 	hif_write32_mb(scn->mem + offset, value);
 
 }
+qdf_export_symbol(hif_reg_write);
 
 /**
  * hif_reg_read() - API to access hif specific function
@@ -1112,22 +1218,58 @@ uint32_t hif_reg_read(struct hif_opaque_softc *hif_ctx, uint32_t offset)
 
 	return hif_read32_mb(scn->mem + offset);
 }
+qdf_export_symbol(hif_reg_read);
 
-#if defined(HIF_USB)
 /**
  * hif_ramdump_handler(): generic ramdump handler
  * @scn: struct hif_opaque_softc
  *
  * Return: None
  */
-
 void hif_ramdump_handler(struct hif_opaque_softc *scn)
-
 {
-	if (hif_get_bus_type == QDF_BUS_TYPE_USB)
-		hif_usb_ramdump_handler();
+	if (hif_get_bus_type(scn) == QDF_BUS_TYPE_USB)
+		hif_usb_ramdump_handler(scn);
 }
-#endif
+
+#ifdef WLAN_SUSPEND_RESUME_TEST
+irqreturn_t hif_wake_interrupt_handler(int irq, void *context)
+{
+	struct hif_softc *scn = context;
+
+	HIF_INFO("wake interrupt received on irq %d", irq);
+
+	if (scn->initial_wakeup_cb)
+		scn->initial_wakeup_cb(scn->initial_wakeup_priv);
+
+	if (hif_is_ut_suspended(scn))
+		hif_ut_fw_resume(scn);
+
+	return IRQ_HANDLED;
+}
+#else /* WLAN_SUSPEND_RESUME_TEST */
+irqreturn_t hif_wake_interrupt_handler(int irq, void *context)
+{
+	struct hif_softc *scn = context;
+
+	HIF_INFO("wake interrupt received on irq %d", irq);
+
+	if (scn->initial_wakeup_cb)
+		scn->initial_wakeup_cb(scn->initial_wakeup_priv);
+
+	return IRQ_HANDLED;
+}
+#endif /* WLAN_SUSPEND_RESUME_TEST */
+
+void hif_set_initial_wakeup_cb(struct hif_opaque_softc *hif_ctx,
+			       void (*callback)(void *),
+			       void *priv)
+{
+	struct hif_softc *scn = HIF_GET_SOFTC(hif_ctx);
+
+	scn->initial_wakeup_cb = callback;
+	scn->initial_wakeup_priv = priv;
+}
 
 void hif_set_ce_service_max_yield_time(struct hif_opaque_softc *hif,
 				       uint32_t ce_service_max_yield_time)
@@ -1158,117 +1300,3 @@ void hif_set_ce_service_max_rx_ind_flush(struct hif_opaque_softc *hif,
 		hif_ctx->ce_service_max_rx_ind_flush =
 						ce_service_max_rx_ind_flush;
 }
-
-#ifdef WLAN_SUSPEND_RESUME_TEST
-void hif_fake_apps_init_ctx(struct hif_softc *scn)
-{
-	INIT_WORK(&scn->fake_apps_ctx.resume_work,
-		  hif_fake_apps_resume_work);
-}
-
-/**
- * hif_fake_apps_resume_work() - Work handler for fake apps resume callback
- * @work:	The work struct being passed from the linux kernel
- *
- * Return: none
- */
-void hif_fake_apps_resume_work(struct work_struct *work)
-{
-	struct fake_apps_context *ctx =
-		container_of(work, struct fake_apps_context, resume_work);
-
-	QDF_BUG(ctx->resume_callback);
-	if (!ctx->resume_callback)
-		return;
-
-	ctx->resume_callback(0);
-	ctx->resume_callback = NULL;
-}
-
-/**
- * hif_fake_apps_suspend(): Setup unit-test related suspend state. Call after
- *	a normal WoW suspend has been completed.
- * @hif_ctx:	The HIF context to operate on
- * @callback:	The function to call when fake apps resume is triggered
- *
- * Set the fake suspend flag such that hif knows that it will need
- * to fake the apps resume process using hdd_trigger_fake_apps_resume
- *
- * Return: none
- */
-void hif_fake_apps_suspend(struct hif_opaque_softc *hif_ctx,
-			   hif_fake_resume_callback callback)
-{
-	struct hif_softc *scn = HIF_GET_SOFTC(hif_ctx);
-
-	scn->fake_apps_ctx.resume_callback = callback;
-	set_bit(HIF_FA_SUSPENDED_BIT, &scn->fake_apps_ctx.state);
-}
-
-/**
- * hif_fake_apps_resume(): Cleanup unit-test related suspend state. Call before
- *	doing a normal WoW resume if suspend was initiated via fake apps
- *	suspend.
- * @hif_ctx:	The HIF context to operate on
- *
- * Return: none
- */
-void hif_fake_apps_resume(struct hif_opaque_softc *hif_ctx)
-{
-	struct hif_softc *scn = HIF_GET_SOFTC(hif_ctx);
-
-	clear_bit(HIF_FA_SUSPENDED_BIT, &scn->fake_apps_ctx.state);
-	scn->fake_apps_ctx.resume_callback = NULL;
-}
-
-/**
- * hif_interrupt_is_fake_apps_resume(): Determines if the raised irq should
- *	trigger a fake apps resume.
- * @hif_ctx:	The HIF context to operate on
- * @ce_id:	The copy engine Id from the originating interrupt
- *
- * Return: true if the raised irq should trigger a fake apps resume
- */
-bool hif_interrupt_is_fake_apps_resume(struct hif_opaque_softc *hif_ctx,
-					      int ce_id)
-{
-	struct hif_softc *scn = HIF_GET_SOFTC(hif_ctx);
-	uint8_t ul_pipe, dl_pipe;
-	int ul_is_polled, dl_is_polled;
-	QDF_STATUS status;
-
-	if (!test_bit(HIF_FA_SUSPENDED_BIT, &scn->fake_apps_ctx.state))
-		return false;
-
-	/* ensure passed ce_id matches wake irq */
-	/* dl_pipe will be populated with the wake irq number */
-	status = hif_map_service_to_pipe(hif_ctx, HTC_CTRL_RSVD_SVC,
-					 &ul_pipe, &dl_pipe,
-					 &ul_is_polled, &dl_is_polled);
-
-	if (status) {
-		HIF_ERROR("%s: pipe_mapping failure", __func__);
-		return false;
-	}
-
-	return ce_id == dl_pipe;
-}
-
-/**
- * hif_trigger_fake_apps_resume(): Trigger a fake apps resume by scheduling the
- *	previously registered callback for execution
- * @hif_ctx:	The HIF context to operate on
- *
- * Return: None
- */
-void hif_trigger_fake_apps_resume(struct hif_opaque_softc *hif_ctx)
-{
-	struct hif_softc *scn = HIF_GET_SOFTC(hif_ctx);
-
-	if (!test_and_clear_bit(HIF_FA_SUSPENDED_BIT,
-				&scn->fake_apps_ctx.state))
-		return;
-
-	schedule_work(&scn->fake_apps_ctx.resume_work);
-}
-#endif /* End of WLAN_SUSPEND_RESUME_TEST */

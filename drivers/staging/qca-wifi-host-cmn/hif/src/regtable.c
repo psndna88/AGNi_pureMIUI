@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -17,6 +17,7 @@
  */
 
 #include "targaddrs.h"
+#include "target_type.h"
 #include "cepci.h"
 #include "regtable.h"
 #include "ar6320def.h"
@@ -95,6 +96,20 @@ void hif_target_register_tbl_attach(struct hif_softc *scn, u32 target_type)
 		break;
 #endif
 #endif
+#if defined(QCA8074_HEADERS_DEF)
+	case TARGET_TYPE_QCA8074:
+		scn->targetdef = QCA8074_TARGETdef;
+		scn->target_ce_def = QCA8074_CE_TARGETdef;
+		break;
+#endif
+
+#if defined(QCA6290_HEADERS_DEF)
+	/* use the same defs for HAWKEYE & NAPIER */
+	case TARGET_TYPE_QCA6290:
+		scn->targetdef = QCA6290_TARGETdef;
+		scn->target_ce_def = QCA6290_CE_TARGETdef;
+		break;
+#endif
 
 	default:
 		break;
@@ -158,6 +173,17 @@ void hif_register_tbl_attach(struct hif_softc *scn, u32 hif_type)
 		scn->hostdef = IPQ4019_HOSTdef;
 		break;
 #endif
+#endif
+#if defined(QCA8074_HEADERS_DEF)
+	case HIF_TYPE_QCA8074:
+		scn->hostdef = QCA8074_HOSTdef;
+		break;
+#endif
+
+#if defined(QCA6290_HEADERS_DEF)
+	case HIF_TYPE_QCA6290:
+		scn->hostdef = QCA6290_HOSTdef;
+		break;
 #endif
 
 	default:

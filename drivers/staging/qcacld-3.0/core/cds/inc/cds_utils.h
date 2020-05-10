@@ -62,21 +62,17 @@
 
 #define INVALID_SCAN_ID        0xFFFFFFFF
 
-#define cds_log(level, args...) QDF_TRACE(QDF_MODULE_ID_QDF, level, ## args)
-#define cds_logfl(level, format, args...) cds_log(level, FL(format), ## args)
+#define CDS_DBS_SCAN_CLIENTS_MAX           (7)
+#define CDS_DBS_SCAN_PARAM_PER_CLIENT      (3)
 
-#define cds_alert(format, args...) \
-		cds_logfl(QDF_TRACE_LEVEL_FATAL, format, ## args)
-#define cds_err(format, args...) \
-		cds_logfl(QDF_TRACE_LEVEL_ERROR, format, ## args)
-#define cds_warn(format, args...) \
-		cds_logfl(QDF_TRACE_LEVEL_WARN, format, ## args)
-#define cds_notice(format, args...) \
-		cds_logfl(QDF_TRACE_LEVEL_INFO, format, ## args)
-#define cds_info(format, args...) \
-		cds_logfl(QDF_TRACE_LEVEL_INFO_HIGH, format, ## args)
-#define cds_debug(format, args...) \
-		cds_logfl(QDF_TRACE_LEVEL_DEBUG, format, ## args)
+#define cds_alert(params...) QDF_TRACE_FATAL(QDF_MODULE_ID_QDF, params)
+#define cds_err(params...) QDF_TRACE_ERROR(QDF_MODULE_ID_QDF, params)
+#define cds_warn(params...) QDF_TRACE_WARN(QDF_MODULE_ID_QDF, params)
+#define cds_info(params...) QDF_TRACE_INFO(QDF_MODULE_ID_QDF, params)
+#define cds_debug(params...) QDF_TRACE_DEBUG(QDF_MODULE_ID_QDF, params)
+
+#define cds_enter() cds_debug("enter")
+#define cds_exit() cds_debug("exit")
 
 /**
  * enum cds_band_type - Band type - 2g, 5g or all
@@ -88,33 +84,6 @@ enum cds_band_type {
 	CDS_BAND_ALL = 0,
 	CDS_BAND_2GHZ = 1,
 	CDS_BAND_5GHZ = 2
-};
-
-/**
- * enum dbs_support - structure to define INI values and their meaning
- * ENABLE_DBS_CXN_AND_SCAN: Enable DBS support for connection and scan
- * DISABLE_DBS_CXN_AND_SCAN: Disable DBS support for connection and scan
- * DISABLE_DBS_CXN_AND_ENABLE_DBS_SCAN: disable dbs support for
- *			connection but keep dbs support for scan
- * DISABLE_DBS_CXN_AND_ENABLE_DBS_SCAN_WITH_ASYNC_SCAN_OFF: disable dbs support
- *			for connection but keep dbs for scan but switch
- *			off the async scan
- * ENABLE_DBS_CXN_AND_ENABLE_SCAN_WITH_ASYNC_SCAN_OFF: enable dbs support for
- *			connection and scan but switch off the async scan
- * ENABLE_DBS_CXN_AND_DISABLE_DBS_SCAN: Enable DBS support for connection and
- *          disable DBS support for scan
- * ENABLE_DBS_CXN_AND_DISABLE_SIMULTANEOUS_SCAN: Enable DBS
- *          support for connection and disable simultaneous scan
- *          from upper layer (DBS scan remains enabled in FW)
- */
-enum dbs_support {
-	ENABLE_DBS_CXN_AND_SCAN,
-	DISABLE_DBS_CXN_AND_SCAN,
-	DISABLE_DBS_CXN_AND_ENABLE_DBS_SCAN,
-	DISABLE_DBS_CXN_AND_ENABLE_DBS_SCAN_WITH_ASYNC_SCAN_OFF,
-	ENABLE_DBS_CXN_AND_ENABLE_SCAN_WITH_ASYNC_SCAN_OFF,
-	ENABLE_DBS_CXN_AND_DISABLE_DBS_SCAN,
-	ENABLE_DBS_CXN_AND_DISABLE_SIMULTANEOUS_SCAN,
 };
 
 /*-------------------------------------------------------------------------
@@ -159,7 +128,6 @@ bool cds_is_mmie_valid(uint8_t *key, uint8_t *ipn,
 bool cds_attach_mmie(uint8_t *igtk, uint8_t *ipn, uint16_t key_id,
 		     uint8_t *frm, uint8_t *efrm, uint16_t frmLen);
 uint8_t cds_get_mmie_size(void);
-
 /**
  * cds_is_gmac_mmie_valid: Validates GMAC MIC
  * @igtk: integrity group temporal key

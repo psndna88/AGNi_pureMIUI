@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -21,8 +21,8 @@
 
 struct cds_config_info;
 struct wma_tgt_cfg;
-struct hdd_context_s;
-struct hdd_adapter_s;
+struct hdd_context;
+struct hdd_adapter;
 
 #ifdef WLAN_FEATURE_LPSS
 /**
@@ -35,7 +35,7 @@ struct hdd_adapter_s;
  *
  * Return: none
  */
-void hdd_lpass_target_config(struct hdd_context_s *hdd_ctx,
+void hdd_lpass_target_config(struct hdd_context *hdd_ctx,
 			     struct wma_tgt_cfg *target_config);
 
 /**
@@ -49,7 +49,20 @@ void hdd_lpass_target_config(struct hdd_context_s *hdd_ctx,
  * Return: none
  */
 void hdd_lpass_populate_cds_config(struct cds_config_info *cds_config,
-				   struct hdd_context_s *hdd_ctx);
+				   struct hdd_context *hdd_ctx);
+
+/**
+ * hdd_lpass_populate_pmo_config() - Populate LPASS configuration
+ * @pmo_config: PMO configuration to populate with lpass info
+ * @hdd_ctx: HDD global context which contains lpass information
+ *
+ * This function seeds the PMO configuration structure with
+ * lpass-specific information gleaned from the HDD context.
+ *
+ * Return: none
+ */
+void hdd_lpass_populate_pmo_config(struct pmo_psoc_cfg *pmo_config,
+				   struct hdd_context *hdd_ctx);
 
 /**
  * hdd_lpass_notify_connect() - Notify LPASS of interface connect
@@ -60,7 +73,7 @@ void hdd_lpass_populate_cds_config(struct cds_config_info *cds_config,
  *
  * Return: none
  */
-void hdd_lpass_notify_connect(struct hdd_adapter_s *adapter);
+void hdd_lpass_notify_connect(struct hdd_adapter *adapter);
 
 /**
  * hdd_lpass_notify_disconnect() - Notify LPASS of interface disconnect
@@ -71,7 +84,7 @@ void hdd_lpass_notify_connect(struct hdd_adapter_s *adapter);
  *
  * Return: none
  */
-void hdd_lpass_notify_disconnect(struct hdd_adapter_s *adapter);
+void hdd_lpass_notify_disconnect(struct hdd_adapter *adapter);
 
 /**
  * hdd_lpass_notify_mode_change() - Notify LPASS of interface mode change
@@ -82,19 +95,20 @@ void hdd_lpass_notify_disconnect(struct hdd_adapter_s *adapter);
  *
  * Return: none
  */
-void hdd_lpass_notify_mode_change(struct hdd_adapter_s *adapter);
+void hdd_lpass_notify_mode_change(struct hdd_adapter *adapter);
 
 /**
  * hdd_lpass_notify_start() - Notify LPASS of driver start
  * @hdd_ctx: The global HDD context
+ * @adapter: adapter for which notification is send
  *
  * This function is used to notify the LPASS feature that the wlan
  * driver has (re-)started.
  *
  * Return: none
  */
-void hdd_lpass_notify_start(struct hdd_context_s *hdd_ctx,
-			    struct hdd_adapter_s *adapter);
+void hdd_lpass_notify_start(struct hdd_context *hdd_ctx,
+			    struct hdd_adapter *adapter);
 
 /**
  * hdd_lpass_notify_stop() - Notify LPASS of driver stop
@@ -105,7 +119,7 @@ void hdd_lpass_notify_start(struct hdd_context_s *hdd_ctx,
  *
  * Return: none
  */
-void hdd_lpass_notify_stop(struct hdd_context_s *hdd_ctx);
+void hdd_lpass_notify_stop(struct hdd_context *hdd_ctx);
 
 /**
  * hdd_lpass_is_supported() - Is lpass feature supported?
@@ -114,7 +128,7 @@ void hdd_lpass_notify_stop(struct hdd_context_s *hdd_ctx);
  * Return: true if feature is enabled and supported by firmware, false
  * if the feature is not enabled or not supported by firmware.
  */
-bool hdd_lpass_is_supported(struct hdd_context_s *hdd_ctx);
+bool hdd_lpass_is_supported(struct hdd_context *hdd_ctx);
 
 /*
  * hdd_lpass_notify_wlan_version() - Notify LPASS WLAN Host/FW version
@@ -124,37 +138,49 @@ bool hdd_lpass_is_supported(struct hdd_context_s *hdd_ctx);
  *
  * Return: none
  */
-void hdd_lpass_notify_wlan_version(struct hdd_context_s *hdd_ctx);
+void hdd_lpass_notify_wlan_version(struct hdd_context *hdd_ctx);
 #else
-static inline void hdd_lpass_target_config(struct hdd_context_s *hdd_ctx,
+static inline void hdd_lpass_target_config(struct hdd_context *hdd_ctx,
 					   struct wma_tgt_cfg *target_config)
 {
 }
 static inline
 void hdd_lpass_populate_cds_config(struct cds_config_info *cds_config,
-				   struct hdd_context_s *hdd_ctx)
-{
-}
-static inline void hdd_lpass_notify_connect(struct hdd_adapter_s *adapter)
-{
-}
-static inline void hdd_lpass_notify_disconnect(struct hdd_adapter_s *adapter)
-{
-}
-static inline void hdd_lpass_notify_mode_change(struct hdd_adapter_s *adapter)
+				   struct hdd_context *hdd_ctx)
 {
 }
 
-static inline void hdd_lpass_notify_start(struct hdd_context_s *hdd_ctx,
-					  struct hdd_adapter_s *adapter)
+static inline
+void hdd_lpass_populate_pmo_config(struct pmo_psoc_cfg *pmo_config,
+				   struct hdd_context *hdd_ctx)
 {
 }
-static inline void hdd_lpass_notify_stop(struct hdd_context_s *hdd_ctx) { }
-static inline bool hdd_lpass_is_supported(struct hdd_context_s *hdd_ctx)
+
+static inline void hdd_lpass_notify_connect(struct hdd_adapter *adapter)
+{
+}
+static inline void hdd_lpass_notify_disconnect(struct hdd_adapter *adapter)
+{
+}
+static inline void hdd_lpass_notify_mode_change(struct hdd_adapter *adapter)
+{
+}
+
+static inline void hdd_lpass_notify_start(struct hdd_context *hdd_ctx,
+					  struct hdd_adapter *adapter)
+{
+}
+
+static inline void hdd_lpass_notify_stop(struct hdd_context *hdd_ctx) { }
+static inline bool hdd_lpass_is_supported(struct hdd_context *hdd_ctx)
 {
 	return false;
 }
-static inline void hdd_lpass_notify_wlan_version(struct hdd_context_s *hdd_ctx) {}
+
+static inline void hdd_lpass_notify_wlan_version(struct hdd_context *hdd_ctx)
+{
+}
+
 #endif
 
 #endif /* WLAN_HDD_LPASS_H */

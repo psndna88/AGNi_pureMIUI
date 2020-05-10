@@ -42,7 +42,7 @@
 
 #include "i_bmi.h"
 #include "qwlan_version.h"
-#include "cds_concurrency.h"
+#include "wlan_policy_mgr_api.h"
 #include "dbglog_host.h"
 
 #ifdef FEATURE_SECURE_FIRMWARE
@@ -131,6 +131,36 @@ end:
 }
 #endif
 
+/**
+ * ol_board_id_to_filename() - Auto BDF board_id to filename conversion
+ * @old_name: name of the default board data file
+ * @board_id: board ID
+ *
+ * The API return board filename based on the board_id and chip_id.
+ * eg: input = "bdwlan30.bin", board_id = 0x01, board_file = "bdwlan30.b01"
+ * Return: The buffer with the formated board filename.
+ */
+static char *ol_board_id_to_filename(const char *old_name,
+				     uint16_t board_id)
+{
+	int name_len;
+	char *new_name;
+
+	name_len = strlen(old_name);
+	new_name = qdf_mem_malloc(name_len + 1);
+
+	if (!new_name)
+		goto out;
+
+	if (board_id > 0xFF)
+		board_id = 0x0;
+
+	qdf_mem_copy(new_name, old_name, name_len);
+	snprintf(&new_name[name_len - 2], 3, "%.2x", board_id);
+out:
+	return new_name;
+}
+
 #ifdef QCA_SIGNED_SPLIT_BINARY_SUPPORT
 #define SIGNED_SPLIT_BINARY_VALUE true
 #else
@@ -143,7 +173,7 @@ __ol_transfer_bin_file(struct ol_context *ol_ctx, enum ATH_BIN_FILE file,
 {
 	struct hif_opaque_softc *scn = ol_ctx->scn;
 	int status = EOK;
-	const char *filename = NULL;
+	const char *filename;
 	const struct firmware *fw_entry;
 	uint32_t fw_entry_size;
 	uint8_t *temp_eeprom;
@@ -155,13 +185,23 @@ __ol_transfer_bin_file(struct ol_context *ol_ctx, enum ATH_BIN_FILE file,
 	uint32_t target_type = tgt_info->target_type;
 	struct bmi_info *bmi_ctx = GET_BMI_CONTEXT(ol_ctx);
 	qdf_device_t qdf_dev = ol_ctx->qdf_dev;
-	int ret = 0;
+	int i;
+
+	/*
+	 * If there is no board data file bases on board id, the default
+	 * board data file should be used.
+	 * For factory mode, the sequence for file selection should be
+	 * utfbd.board_id -> utfbd.bin -> bd.board_id -> bd.bin. So we
+	 * need to cache 4 file names.
+	 */
+	uint32_t bd_files = 1;
+	char *bd_id_filename[2] = {NULL, NULL};
+	const char *bd_filename[2] = {NULL, NULL};
 
 	switch (file) {
 	default:
 		BMI_ERR("%s: Unknown file type", __func__);
-		ret = -1;
-		return ret;
+		return -EINVAL;
 	case ATH_OTP_FILE:
 		filename = bmi_ctx->fw_files.otp_data;
 		if (SIGNED_SPLIT_BINARY_VALUE)
@@ -199,6 +239,7 @@ __ol_transfer_bin_file(struct ol_context *ol_ctx, enum ATH_BIN_FILE file,
 		BMI_INFO("%s: no Patch file defined", __func__);
 		return 0;
 	case ATH_BOARD_DATA_FILE:
+		filename = bmi_ctx->fw_files.board_data;
 #ifdef QCA_WIFI_FTM
 		if (cds_get_conparam() == QDF_GLOBAL_FTM_MODE) {
 			filename = bmi_ctx->fw_files.utf_board_data;
@@ -207,13 +248,37 @@ __ol_transfer_bin_file(struct ol_context *ol_ctx, enum ATH_BIN_FILE file,
 
 			BMI_INFO("%s: Loading board data file %s",
 						__func__, filename);
-			break;
+
+			/*
+			 * In FTM mode, if utf files do not exit.
+			 * bdwlan should be used.
+			 */
+			bd_files = 2;
 		}
 #endif /* QCA_WIFI_FTM */
-		filename = bmi_ctx->fw_files.board_data;
 		if (SIGNED_SPLIT_BINARY_VALUE)
 			bin_sign = false;
 
+		bd_filename[0] = filename;
+
+		/*
+		 * For factory mode, we should cache 2 group of file names.
+		 * For mission mode, bd_files==1, only one group of file names.
+		 */
+		bd_filename[bd_files - 1] =
+					bmi_ctx->fw_files.board_data;
+		for (i = 0; i < bd_files; i++) {
+			bd_id_filename[i] =
+				ol_board_id_to_filename(bd_filename[i],
+							bmi_ctx->board_id);
+			if (bd_id_filename[i]) {
+				BMI_INFO("%s: board data file is %s",
+					 __func__, bd_id_filename[i]);
+			} else {
+				BMI_ERR("%s: Fail to allocate board filename",
+					__func__);
+			}
+		}
 		break;
 	case ATH_SETUP_FILE:
 		if (cds_get_conparam() != QDF_GLOBAL_FTM_MODE &&
@@ -221,8 +286,7 @@ __ol_transfer_bin_file(struct ol_context *ol_ctx, enum ATH_BIN_FILE file,
 			filename = bmi_ctx->fw_files.setup_file;
 			if (filename[0] == 0) {
 				BMI_INFO("%s: no Setup file defined", __func__);
-				ret = -1;
-				return ret;
+				return -EPERM;
 			}
 
 			if (SIGNED_SPLIT_BINARY_VALUE)
@@ -232,41 +296,45 @@ __ol_transfer_bin_file(struct ol_context *ol_ctx, enum ATH_BIN_FILE file,
 			       __func__, filename);
 		} else {
 			BMI_INFO("%s: no Setup file needed", __func__);
-			ret = -1;
-			return ret;
+			return -EPERM;
 		}
 		break;
 	}
 
-	if (request_firmware(&fw_entry, filename, qdf_dev->dev) != 0) {
-		BMI_ERR("%s: Failed to get %s", __func__, filename);
-
-		if (file == ATH_OTP_FILE)
-			return -ENOENT;
-
-#if defined(QCA_WIFI_FTM)
-		/* Try default board data file if FTM specific
-		 * board data file is not present.
-		 */
-		if (filename == bmi_ctx->fw_files.utf_board_data) {
-			filename = bmi_ctx->fw_files.board_data;
-			BMI_INFO("%s: Trying to load default %s",
-			       __func__, filename);
-			if (request_firmware(&fw_entry, filename,
-						qdf_dev->dev) != 0) {
-				BMI_ERR("%s: Failed to get %s",
-				       __func__, filename);
-				ret = -1;
-				return ret;
+	/* For FTM mode. bd.bin is used if there is no utf.bin */
+	if (file == ATH_BOARD_DATA_FILE) {
+		for (i = 0; i < bd_files; i++) {
+			if (bd_id_filename[i]) {
+				BMI_DBG("%s: Trying to load %s",
+					 __func__, bd_id_filename[i]);
+				status = request_firmware(&fw_entry,
+							  bd_id_filename[i],
+							  qdf_dev->dev);
+				if (!status)
+					break;
+				BMI_ERR("%s: Failed to get %s:%d",
+					__func__, bd_id_filename[i],
+					status);
 			}
-		} else {
-			ret = -1;
-			return ret;
+
+			/* bd.board_id not exits, using bd.bin */
+			BMI_DBG("%s: Trying to load default %s",
+				 __func__, bd_filename[i]);
+			status = request_firmware(&fw_entry, bd_filename[i],
+						  qdf_dev->dev);
+			if (!status)
+				break;
+			BMI_ERR("%s: Failed to get default %s:%d",
+				__func__, bd_filename[i], status);
 		}
-#else
-		ret = -1;
-		return ret;
-#endif
+	} else {
+		status = request_firmware(&fw_entry, filename, qdf_dev->dev);
+	}
+
+	if (status) {
+		BMI_ERR("%s: Failed to get %s", __func__, filename);
+		status = -ENOENT;
+		goto release_fw;
 	}
 
 	if (!fw_entry || !fw_entry->data) {
@@ -294,8 +362,8 @@ __ol_transfer_bin_file(struct ol_context *ol_ctx, enum ATH_BIN_FILE file,
 		temp_eeprom = qdf_mem_malloc(fw_entry_size);
 		if (!temp_eeprom) {
 			BMI_ERR("%s: Memory allocation failed", __func__);
-			release_firmware(fw_entry);
-			return -ENOMEM;
+			status = -ENOMEM;
+			goto release_fw;
 		}
 
 		qdf_mem_copy(temp_eeprom, (uint8_t *) fw_entry->data,
@@ -429,6 +497,13 @@ end:
 release_fw:
 	if (fw_entry)
 		release_firmware(fw_entry);
+
+	for (i = 0; i < bd_files; i++) {
+		if (bd_id_filename[i]) {
+			qdf_mem_free(bd_id_filename[i]);
+			bd_id_filename[i] = NULL;
+		}
+	}
 
 	if (status != EOK)
 		BMI_ERR("%s, BMI operation failed: %d", __func__, __LINE__);
@@ -584,7 +659,8 @@ void ramdump_work_handler(void *data)
 out_fail:
 	/* Silent SSR on dump failure */
 	if (ini_cfg->enable_self_recovery)
-		pld_device_self_recovery(qdf_dev->dev);
+		pld_device_self_recovery(qdf_dev->dev,
+					 PLD_REASON_DEFAULT);
 	else
 		pld_device_crashed(qdf_dev->dev);
 }
@@ -594,7 +670,8 @@ void fw_indication_work_handler(void *data)
 	struct ol_context *ol_ctx = data;
 	qdf_device_t qdf_dev = ol_ctx->qdf_dev;
 
-	pld_device_self_recovery(qdf_dev->dev);
+	pld_device_self_recovery(qdf_dev->dev,
+				 PLD_REASON_DEFAULT);
 }
 
 void ol_target_failure(void *instance, QDF_STATUS status)
@@ -1271,34 +1348,53 @@ QDF_STATUS ol_download_firmware(struct ol_context *ol_ctx)
 				hi_board_data_initialized)),
 				(uint8_t *) &param, 4, ol_ctx);
 	} else {
-		/* Flash is either not available or invalid */
-		if (ol_transfer_bin_file(ol_ctx, ATH_BOARD_DATA_FILE, address,
-							false) != EOK) {
-			return QDF_STATUS_E_FAILURE;
-		}
-
-		/* Record the fact that Board Data is initialized */
-		param = 1;
-		bmi_write_memory(
-			hif_hia_item_address(target_type,
-			offsetof(struct host_interest_s,
-				hi_board_data_initialized)),
-				(uint8_t *) &param, 4, ol_ctx);
-
 		/* Transfer One Time Programmable data */
 		address = BMI_SEGMENTED_WRITE_ADDR;
 		BMI_INFO("%s: Using 0x%x for the remainder of init",
 				__func__, address);
 
 		status = ol_transfer_bin_file(ol_ctx, ATH_OTP_FILE,
-						address, true);
+					      address, true);
 		/* Execute the OTP code only if entry found and downloaded */
 		if (status == EOK) {
-			param = 0;
+			uint16_t board_id = 0xffff;
+			/* get board id */
+			param = 0x10;
 			bmi_execute(address, &param, ol_ctx);
+			if (!(param & 0xff))
+				board_id = (param >> 8) & 0xffff;
+			BMI_INFO("%s: board ID is 0x%0x", __func__, board_id);
+			bmi_ctx->board_id = board_id;
 		} else if (status < 0) {
 			return status;
 		}
+
+		bmi_read_memory(hif_hia_item_address(target_type,
+				offsetof(struct host_interest_s,
+					hi_board_data)),
+				(uint8_t *)&address, 4, ol_ctx);
+
+		if (!address) {
+			address = AR6004_REV5_BOARD_DATA_ADDRESS;
+			pr_err("%s: Target address not known! Using 0x%x\n",
+			       __func__, address);
+		}
+
+		/* Flash is either not available or invalid */
+		if (ol_transfer_bin_file(ol_ctx, ATH_BOARD_DATA_FILE,
+					 address, false) != EOK) {
+			return QDF_STATUS_E_FAILURE;
+		}
+
+		/* Record the fact that Board Data is initialized */
+		param = 1;
+		bmi_write_memory(hif_hia_item_address(target_type,
+				 offsetof(struct host_interest_s,
+					  hi_board_data_initialized)),
+				 (uint8_t *) &param, 4, ol_ctx);
+		address = BMI_SEGMENTED_WRITE_ADDR;
+		param = 0;
+		bmi_execute(address, &param, ol_ctx);
 	}
 
 	if (ol_transfer_bin_file(ol_ctx, ATH_SETUP_FILE,

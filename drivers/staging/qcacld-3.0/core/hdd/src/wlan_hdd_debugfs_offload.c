@@ -2,6 +2,9 @@
 /*
  * Copyright (c) 2018 The Linux Foundation. All rights reserved.
  *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
+ *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
  * above copyright notice and this permission notice appear in all
@@ -30,7 +33,10 @@
 #include <wma_api.h>
 #include "qwlan_version.h"
 #include "wmi_unified_param.h"
-#include "wlan_hdd_request_manager.h"
+#include "wlan_pmo_common_public_struct.h"
+#include "wlan_pmo_ns_public_struct.h"
+#include "wlan_pmo_mc_addr_filtering_public_struct.h"
+#include "wlan_pmo_ucfg_api.h"
 
 /* IPv6 address string */
 #define IPV6_MAC_ADDRESS_STR_LEN 47  /* Including null terminator */
@@ -45,65 +51,75 @@
  * Return: No.of bytes populated by this function in buffer
  */
 static ssize_t
-wlan_hdd_mc_addr_list_info_debugfs(hdd_context_t *hdd_ctx,
-				   hdd_adapter_t *adapter, uint8_t *buf,
+wlan_hdd_mc_addr_list_info_debugfs(struct hdd_context *hdd_ctx,
+				   struct hdd_adapter *adapter, uint8_t *buf,
 				   ssize_t buf_avail_len)
 {
 	ssize_t length = 0;
-	int ret_val;
+	int ret;
 	uint8_t i;
-	t_multicast_add_list *mc_addr_list;
+	struct pmo_mc_addr_list mc_addr_list = {0};
+	QDF_STATUS status;
 
 	if (!hdd_ctx->config->fEnableMCAddrList) {
-		ret_val = scnprintf(buf, buf_avail_len,
-				    "\nMC addr ini is disabled\n");
-		if (ret_val > 0)
-			length = ret_val;
+		ret = scnprintf(buf, buf_avail_len,
+				"\nMC addr ini is disabled\n");
+		if (ret > 0)
+			length = ret;
 		return length;
 	}
 
-	mc_addr_list = &adapter->mc_addr_list;
-
-	if (mc_addr_list->mc_cnt == 0) {
-		ret_val = scnprintf(buf, buf_avail_len,
-				    "\nMC addr list is empty\n");
-		if (ret_val > 0)
-			length = ret_val;
+	status = pmo_ucfg_get_mc_addr_list(hdd_ctx->psoc,
+					   adapter->session_id,
+					   &mc_addr_list);
+	if (!QDF_IS_STATUS_SUCCESS(status)) {
+		ret = scnprintf(buf, buf_avail_len,
+				"\nMC addr list query is failed\n");
+		if (ret > 0)
+			length = ret;
 		return length;
 	}
 
-	ret_val = scnprintf(buf, buf_avail_len,
-			    "\nMC ADDR LIST DETAILS (mc_cnt = %u)\n",
-			    mc_addr_list->mc_cnt);
-	if (ret_val <= 0)
+	if (mc_addr_list.mc_cnt == 0) {
+		ret = scnprintf(buf, buf_avail_len,
+				"\nMC addr list is empty\n");
+		if (ret > 0)
+			length = ret;
 		return length;
-	length += ret_val;
+	}
 
-	for (i = 0; i < mc_addr_list->mc_cnt; i++) {
+	ret = scnprintf(buf, buf_avail_len,
+			"\nMC ADDR LIST DETAILS (mc_cnt = %u)\n",
+			mc_addr_list.mc_cnt);
+	if (ret <= 0)
+		return length;
+	length += ret;
+
+	for (i = 0; i < mc_addr_list.mc_cnt; i++) {
 		if (length >= buf_avail_len) {
 			hdd_err("No sufficient buf_avail_len");
 			return buf_avail_len;
 		}
 
-		ret_val = scnprintf(buf + length, buf_avail_len - length,
-				    MAC_ADDRESS_STR"\n",
-				    MAC_ADDR_ARRAY(mc_addr_list->addr[i]));
-		if (ret_val <= 0)
+		ret = scnprintf(buf + length, buf_avail_len - length,
+				MAC_ADDRESS_STR "\n",
+				MAC_ADDR_ARRAY(mc_addr_list.mc_addr[i].bytes));
+		if (ret <= 0)
 			return length;
-		length += ret_val;
+		length += ret;
 	}
 
 	if (length >= buf_avail_len) {
 		hdd_err("No sufficient buf_avail_len");
 		return buf_avail_len;
 	}
-	ret_val = scnprintf(buf + length, buf_avail_len - length,
-			    "mc_filter_applied = %u\n",
-			    mc_addr_list->isFilterApplied);
-	if (ret_val <= 0)
+	ret = scnprintf(buf + length, buf_avail_len - length,
+			"mc_filter_applied = %u\n",
+			mc_addr_list.is_filter_applied);
+	if (ret <= 0)
 		return length;
 
-	length += ret_val;
+	length += ret;
 	return length;
 }
 
@@ -117,29 +133,34 @@ wlan_hdd_mc_addr_list_info_debugfs(hdd_context_t *hdd_ctx,
  * Return: No.of bytes populated by this function in buffer
  */
 static ssize_t
-wlan_hdd_arp_offload_info_debugfs(hdd_context_t *hdd_ctx,
-				   hdd_adapter_t *adapter, uint8_t *buf,
-				   ssize_t buf_avail_len)
+wlan_hdd_arp_offload_info_debugfs(struct hdd_context *hdd_ctx,
+				  struct hdd_adapter *adapter, uint8_t *buf,
+				  ssize_t buf_avail_len)
 {
 	ssize_t length = 0;
 	int ret_val;
-	struct hdd_arp_offload_info info = {0};
+	struct pmo_arp_offload_params info = {0};
+	QDF_STATUS status;
 
-	qdf_mutex_acquire(&adapter->arp_offload_info_lock);
-	info = adapter->arp_offload_info;
-	qdf_mutex_release(&adapter->arp_offload_info_lock);
-
-	if (!info.offload)
+	status = pmo_ucfg_get_arp_offload_params(adapter->vdev,
+						 &info);
+	if (!QDF_IS_STATUS_SUCCESS(status)) {
 		ret_val = scnprintf(buf, buf_avail_len,
-			    "\nARP OFFLOAD: DISABLED\n");
+				    "\nARP OFFLOAD QUERY FAILED\n");
+		goto len_adj;
+	}
+
+	if (!info.is_offload_applied)
+		ret_val = scnprintf(buf, buf_avail_len,
+				    "\nARP OFFLOAD: DISABLED\n");
 	else
 		ret_val = scnprintf(buf, buf_avail_len,
-			    "\nARP OFFLOAD: ENABLED (%u.%u.%u.%u)\n",
-			    info.ipv4[0],
-			    info.ipv4[1],
-			    info.ipv4[2],
-			    info.ipv4[3]);
-
+				    "\nARP OFFLOAD: ENABLED (%u.%u.%u.%u)\n",
+				    info.host_ipv4_addr[0],
+				    info.host_ipv4_addr[1],
+				    info.host_ipv4_addr[2],
+				    info.host_ipv4_addr[3]);
+len_adj:
 	if (ret_val <= 0)
 		return length;
 	length = ret_val;
@@ -152,39 +173,39 @@ wlan_hdd_arp_offload_info_debugfs(hdd_context_t *hdd_ctx,
  * ipv6_addr_string() - Get IPv6 addr string from array of octets
  * @buffer: output buffer to hold string, caller should ensure size of
  *          buffer is atleast IPV6_MAC_ADDRESS_STR_LEN
- * @IPv6_addr: IPv6 address array
+ * @ipv6_addr: IPv6 address array
  *
  * Return: None
  */
-static void ipv6_addr_string(uint8_t *buffer, uint8_t *IPv6_addr)
+static void ipv6_addr_string(uint8_t *buffer, uint8_t *ipv6_addr)
 {
-	uint8_t *a = IPv6_addr;
+	uint8_t *a = ipv6_addr;
 
 	scnprintf(buffer, IPV6_MAC_ADDRESS_STR_LEN,
-		 "%02x%02x::%02x%02x::%02x%02x::%02x%02x::%02x%02x::%02x%02x::%02x%02x::%02x%02x",
-		 (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5], (a)[6],
-		 (a)[7], (a)[8], (a)[9], (a)[10], (a)[11], (a)[12], (a)[13],
-		 (a)[14], (a)[15]);
+		  "%02x%02x::%02x%02x::%02x%02x::%02x%02x::%02x%02x::%02x%02x::%02x%02x::%02x%02x",
+		  (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5], (a)[6],
+		  (a)[7], (a)[8], (a)[9], (a)[10], (a)[11], (a)[12], (a)[13],
+		  (a)[14], (a)[15]);
 }
 
 /**
- * hdd_ipv6_scope_str() - Get string for IPv6 Addr scope
- * @scope: scope id from enum sir_ipv6_addr_scope
+ * hdd_ipv6_scope_str() - Get string for PMO NS (IPv6) Addr scope
+ * @scope: scope id from enum pmo_ns_addr_scope
  *
- * Return: Meaningful string for enum sir_ipv6_addr_scope
+ * Return: Meaningful string for enum pmo_ns_addr_scope
  */
-static uint8_t *hdd_ipv6_scope_str(enum sir_ipv6_addr_scope scope)
+static uint8_t *hdd_ipv6_scope_str(enum pmo_ns_addr_scope scope)
 {
 	switch (scope) {
-	case SIR_IPV6_ADDR_SCOPE_NODELOCAL:
+	case PMO_NS_ADDR_SCOPE_NODELOCAL:
 		return "Node Local";
-	case SIR_IPV6_ADDR_SCOPE_LINKLOCAL:
+	case PMO_NS_ADDR_SCOPE_LINKLOCAL:
 		return "Link Local";
-	case SIR_IPV6_ADDR_SCOPE_SITELOCAL:
+	case PMO_NS_ADDR_SCOPE_SITELOCAL:
 		return "Site Local";
-	case SIR_IPV6_ADDR_SCOPE_ORGLOCAL:
+	case PMO_NS_ADDR_SCOPE_ORGLOCAL:
 		return "Org Local";
-	case SIR_IPV6_ADDR_SCOPE_GLOBAL:
+	case PMO_NS_ADDR_SCOPE_GLOBAL:
 		return "Global";
 	default:
 		return "Invalid";
@@ -201,49 +222,56 @@ static uint8_t *hdd_ipv6_scope_str(enum sir_ipv6_addr_scope scope)
  * Return: No.of bytes populated by this function in buffer
  */
 static ssize_t
-wlan_hdd_ns_offload_info_debugfs(hdd_context_t *hdd_ctx,
-				   hdd_adapter_t *adapter, uint8_t *buf,
-				   ssize_t buf_avail_len)
+wlan_hdd_ns_offload_info_debugfs(struct hdd_context *hdd_ctx,
+				 struct hdd_adapter *adapter, uint8_t *buf,
+				 ssize_t buf_avail_len)
 {
 	ssize_t length = 0;
-	int ret_val;
-	struct hdd_ns_offload_info info = {0};
-	tSirNsOffloadReq *ns_info;
+	int ret;
+	struct pmo_ns_offload_params info = {0};
+	QDF_STATUS status;
 	uint32_t i;
 
-	qdf_mutex_acquire(&adapter->ns_offload_info_lock);
-	info = adapter->ns_offload_info;
-	qdf_mutex_release(&adapter->ns_offload_info_lock);
+	status = pmo_ucfg_get_ns_offload_params(adapter->vdev,
+						&info);
+	if (!QDF_IS_STATUS_SUCCESS(status)) {
+		ret = scnprintf(buf, buf_avail_len,
+				"\nNS OFFLOAD QUERY FAILED\n");
+		if (ret <= 0)
+			return length;
+		length += ret;
 
-	ret_val = scnprintf(buf, buf_avail_len,
-			    "\nNS OFFLOAD DETAILS\n");
-	if (ret_val <= 0)
 		return length;
-	length += ret_val;
+	}
+
+	ret = scnprintf(buf, buf_avail_len,
+			"\nNS OFFLOAD DETAILS\n");
+	if (ret <= 0)
+		return length;
+	length += ret;
 
 	if (length >= buf_avail_len) {
 		hdd_err("No sufficient buf_avail_len");
 		return buf_avail_len;
 	}
 
-	if (!info.offload) {
-		ret_val = scnprintf(buf + length, buf_avail_len - length,
-				    "NS offload is not enabled\n");
-		if (ret_val <= 0)
+	if (!info.is_offload_applied) {
+		ret = scnprintf(buf + length, buf_avail_len - length,
+				"NS offload is not enabled\n");
+		if (ret <= 0)
 			return length;
-		length += ret_val;
+		length += ret;
 
 		return length;
 	}
 
-	ret_val = scnprintf(buf + length, buf_avail_len - length,
-			    "NS offload enabled, %u ns addresses offloaded\n",
-			    info.num_ns_offload_count);
-	if (ret_val <= 0)
+	ret = scnprintf(buf + length, buf_avail_len - length,
+			"NS offload enabled, %u ns addresses offloaded\n",
+			info.num_ns_offload_count);
+	if (ret <= 0)
 		return length;
-	length += ret_val;
+	length += ret;
 
-	ns_info = &info.nsOffloadInfo;
 	for (i = 0; i < info.num_ns_offload_count; i++) {
 		uint8_t ipv6_str[IPV6_MAC_ADDRESS_STR_LEN];
 		uint8_t cast_string[12];
@@ -254,22 +282,22 @@ wlan_hdd_ns_offload_info_debugfs(hdd_context_t *hdd_ctx,
 			return buf_avail_len;
 		}
 
-		ipv6_addr_string(ipv6_str, ns_info->targetIPv6Addr[i]);
-		scope_string = hdd_ipv6_scope_str(ns_info->scope[i]);
+		ipv6_addr_string(ipv6_str, info.target_ipv6_addr[i]);
+		scope_string = hdd_ipv6_scope_str(info.scope[i]);
 
-		if (ns_info->target_ipv6_addr_ac_type[i] ==
-		    SIR_IPV6_ADDR_AC_TYPE)
+		if (info.target_ipv6_addr_ac_type[i] ==
+		    PMO_IPV6_ADDR_AC_TYPE)
 			strlcpy(cast_string, "(ANY CAST)", 12);
 		else
 			strlcpy(cast_string, "(UNI CAST)", 12);
 
-		ret_val = scnprintf(buf + length, buf_avail_len - length,
-				    "%u. %s %s and scope is: %s\n",
-				    (i + 1), ipv6_str, cast_string,
-				    scope_string);
-		if (ret_val <= 0)
+		ret = scnprintf(buf + length, buf_avail_len - length,
+				"%u. %s %s and scope is: %s\n",
+				(i + 1), ipv6_str, cast_string,
+				scope_string);
+		if (ret <= 0)
 			return length;
-		length += ret_val;
+		length += ret;
 	}
 
 	return length;
@@ -285,9 +313,9 @@ wlan_hdd_ns_offload_info_debugfs(hdd_context_t *hdd_ctx,
  * Return: No.of bytes populated by this function in buffer
  */
 static ssize_t
-wlan_hdd_ns_offload_info_debugfs(hdd_context_t *hdd_ctx,
-				   hdd_adapter_t *adapter, uint8_t *buf,
-				   ssize_t buf_avail_len)
+wlan_hdd_ns_offload_info_debugfs(struct hdd_context *hdd_ctx,
+				 struct hdd_adapter *adapter, uint8_t *buf,
+				 ssize_t buf_avail_len)
 {
 	return 0;
 }
@@ -303,9 +331,9 @@ wlan_hdd_ns_offload_info_debugfs(hdd_context_t *hdd_ctx,
  * Return: No.of bytes populated by this function in buffer
  */
 static ssize_t
-wlan_hdd_apf_info_debugfs(hdd_context_t *hdd_ctx,
-				   hdd_adapter_t *adapter, uint8_t *buf,
-				   ssize_t buf_avail_len)
+wlan_hdd_apf_info_debugfs(struct hdd_context *hdd_ctx,
+			  struct hdd_adapter *adapter, uint8_t *buf,
+			  ssize_t buf_avail_len)
 {
 	ssize_t length = 0;
 	int ret_val;
@@ -327,13 +355,15 @@ wlan_hdd_apf_info_debugfs(hdd_context_t *hdd_ctx,
 }
 
 ssize_t
-wlan_hdd_debugfs_update_filters_info(hdd_context_t *hdd_ctx,
-				     hdd_adapter_t *adapter,
+wlan_hdd_debugfs_update_filters_info(struct hdd_context *hdd_ctx,
+				     struct hdd_adapter *adapter,
 				     uint8_t *buf, ssize_t buf_avail_len)
 {
 	ssize_t len;
 	int ret_val;
-	hdd_station_ctx_t *hdd_sta_ctx;
+	struct hdd_station_ctx *hdd_sta_ctx;
+
+	hdd_enter();
 
 	len = wlan_hdd_current_time_info_debugfs(buf, buf_avail_len);
 
@@ -386,6 +416,8 @@ wlan_hdd_debugfs_update_filters_info(hdd_context_t *hdd_ctx,
 	}
 	len += wlan_hdd_apf_info_debugfs(hdd_ctx, adapter, buf + len,
 					 buf_avail_len - len);
+
+	hdd_exit();
 
 	return len;
 }

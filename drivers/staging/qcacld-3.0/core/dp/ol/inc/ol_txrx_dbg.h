@@ -72,7 +72,7 @@ void ol_txrx_peer_display(ol_txrx_peer_handle peer, int indent);
  * Return: none
  */
 void ol_txrx_stats_display(ol_txrx_pdev_handle pdev,
-				enum qdf_stats_verb_lvl level);
+			   enum qdf_stats_verbosity_level level);
 
 void ol_txrx_stats_clear(ol_txrx_pdev_handle pdev);
 

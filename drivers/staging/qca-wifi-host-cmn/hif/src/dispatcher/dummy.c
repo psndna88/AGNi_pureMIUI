@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -78,7 +78,7 @@ int hif_dummy_bus_resume(struct hif_softc *hif_ctx)
  * hif_dummy_suspend_noirq() - suspend the bus
  * @hif_ctx: hif context
  *
- * dummy for busses that don't need to syncronize
+ * dummy for busses that don't need to synchronize
  * with interrupt disable.
  *
  * Return: 0 for success and non-zero for failure
@@ -92,7 +92,7 @@ int hif_dummy_bus_suspend_noirq(struct hif_softc *hif_ctx)
  * hif_dummy_resume_noirq() - resume the bus
  * @hif_ctx: hif context
  *
- * dummy for busses that don't need to syncronize
+ * dummy for busses that don't need to synchronize
  * with interrupt disable.
  *
  * Return: 0 for success and non-zero for failure
@@ -154,7 +154,7 @@ void hif_dummy_nointrs(struct hif_softc *hif_sc)
  * hif_dummy_bus_configure - dummy call
  * hif_ctx: hif context
  *
- * Return: 0 for sucess
+ * Return: 0 for success
  */
 int hif_dummy_bus_configure(struct hif_softc *hif_sc)
 {
@@ -168,7 +168,7 @@ int hif_dummy_bus_configure(struct hif_softc *hif_sc)
  * @config: configuration value to set
  * @config_len: configuration length
  *
- * Return: 0 for sucess
+ * Return: 0 for success
  */
 QDF_STATUS
 hif_dummy_get_config_item(struct hif_softc *hif_sc,
@@ -221,6 +221,16 @@ void hif_dummy_irq_enable(struct hif_softc *hif_sc, int irq_id)
 {}
 
 /**
+ * hif_dummy_grp_irq_enable - dummy call
+ * hif_ctx: hif context
+ * @irq_id: grp id
+ *
+ * Return: none
+ */
+void hif_dummy_grp_irq_enable(struct hif_softc *hif_sc, uint32_t grp_id)
+{}
+
+/**
  * hif_dummy_irq_disable - dummy call
  * hif_ctx: hif context
  * @irq_id: irq id
@@ -231,10 +241,32 @@ void hif_dummy_irq_disable(struct hif_softc *hif_sc, int irq_id)
 {}
 
 /**
+ * hif_dummy_grp_irq_disable- dummy call
+ * hif_ctx: hif context
+ * @grp_id: grp id
+ *
+ * Return: none
+ */
+void hif_dummy_grp_irq_disable(struct hif_softc *hif_sc, uint32_t grp_id)
+{}
+
+/**
+ * hif_dummy_grp_irq_configure - dummy call
+ * hif_ctx: hif context
+ *
+ * Return: none
+ */
+int hif_dummy_grp_irq_configure(struct hif_softc *hif_sc,
+				struct hif_exec_context *exec)
+{
+    return 0;
+}
+
+/**
  * hif_dummy_dump_registers - dummy call
  * hif_sc: hif context
  *
- * Return: 0 for sucess
+ * Return: 0 for success
  */
 int hif_dummy_dump_registers(struct hif_softc *hif_sc)
 {
@@ -321,6 +353,14 @@ void hif_dummy_set_bundle_mode(struct hif_softc *hif_ctx,
 int hif_dummy_bus_reset_resume(struct hif_softc *hif_ctx)
 {
 	return 0;
+}
+
+int hif_dummy_map_ce_to_irq(struct hif_softc *scn, int ce_id)
+{
+	HIF_ERROR("%s: hif_map_ce_to_irq is not implemented on this platform",
+		  __func__);
+	QDF_BUG(0);
+	return -(1);
 }
 
 int hif_dummy_addr_in_boundary(struct hif_softc *scn, uint32_t offset)

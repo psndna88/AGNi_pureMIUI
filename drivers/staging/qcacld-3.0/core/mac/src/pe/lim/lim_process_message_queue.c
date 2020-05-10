@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -53,14 +53,17 @@
 #include "qdf_types.h"
 #include "cds_packet.h"
 #include "qdf_mem.h"
-#include "cds_concurrency.h"
+#include "wlan_policy_mgr_api.h"
 #include "nan_datapath.h"
+#include "wlan_reg_services_api.h"
 #include "lim_security_utils.h"
 #include "cds_ieee80211_common.h"
+#include <wlan_scan_ucfg_api.h>
+
 
 void lim_log_session_states(tpAniSirGlobal pMac);
 static void lim_process_normal_hdd_msg(tpAniSirGlobal mac_ctx,
-	struct sSirMsgQ *msg, uint8_t rsp_reqd);
+	struct scheduler_msg *msg, uint8_t rsp_reqd);
 
 #ifdef WLAN_FEATURE_SAE
 /**
@@ -142,7 +145,7 @@ static void lim_process_dual_mac_cfg_resp(tpAniSirGlobal mac, void *body)
 {
 	struct sir_dual_mac_config_resp *resp, *param;
 	uint32_t len, fail_resp = 0;
-	tSirMsgQ msg;
+	struct scheduler_msg msg = {0};
 
 	resp = (struct sir_dual_mac_config_resp *)body;
 	if (!resp) {
@@ -197,7 +200,7 @@ static void lim_process_set_hw_mode_resp(tpAniSirGlobal mac, void *body)
 {
 	struct sir_set_hw_mode_resp *resp, *param;
 	uint32_t len, i, fail_resp = 0;
-	tSirMsgQ msg;
+	struct scheduler_msg msg = {0};
 
 	resp = (struct sir_set_hw_mode_resp *)body;
 	if (!resp) {
@@ -264,7 +267,7 @@ static void lim_process_set_antenna_resp(tpAniSirGlobal mac, void *body)
 {
 	struct sir_antenna_mode_resp *resp, *param;
 	bool fail_resp = false;
-	tSirMsgQ msg;
+	struct scheduler_msg msg = {0};
 
 	resp = (struct sir_antenna_mode_resp *)body;
 	if (!resp) {
@@ -317,8 +320,8 @@ static void lim_process_set_default_scan_ie_request(tpAniSirGlobal mac_ctx,
 	struct vdev_ie_info *wma_ie_params;
 	uint8_t *local_ie_buf;
 	uint16_t local_ie_len;
-	tSirMsgQ msg_q;
-	tSirRetStatus ret_code;
+	struct scheduler_msg msg_q = {0};
+	QDF_STATUS ret_code;
 
 	if (!msg_buf) {
 		pe_err("msg_buf is NULL");
@@ -357,7 +360,7 @@ static void lim_process_set_default_scan_ie_request(tpAniSirGlobal mac_ctx,
 	msg_q.bodyptr = wma_ie_params;
 	msg_q.bodyval = 0;
 	ret_code = wma_post_ctrl_msg(mac_ctx, &msg_q);
-	if (eSIR_SUCCESS != ret_code) {
+	if (QDF_STATUS_SUCCESS != ret_code) {
 		pe_err("fail to send WMA_SET_IE_INFO");
 		qdf_mem_free(wma_ie_params);
 	}
@@ -380,7 +383,7 @@ static void lim_process_hw_mode_trans_ind(tpAniSirGlobal mac, void *body)
 {
 	struct sir_hw_mode_trans_ind *ind, *param;
 	uint32_t len, i;
-	tSirMsgQ msg;
+	struct scheduler_msg msg = {0};
 
 	ind = (struct sir_hw_mode_trans_ind *)body;
 	if (!ind) {
@@ -421,40 +424,43 @@ static void lim_process_hw_mode_trans_ind(tpAniSirGlobal mac, void *body)
    \fn def_msg_decision
    \brief The function decides whether to defer a message or not in limProcessMessage function
    \param   tpAniSirGlobal pMac
-   \param       tSirMsgQ  limMsg
+   \param       struct scheduler_msg  limMsg
    \param       tSirMacTspecIE   *ppInfo
    \return none
    -------------------------------------------------------------*/
 
-uint8_t static def_msg_decision(tpAniSirGlobal pMac, tpSirMsgQ limMsg)
+static uint8_t def_msg_decision(tpAniSirGlobal mac_ctx,
+				struct scheduler_msg *lim_msg)
 {
 	uint8_t type, subtype;
 	QDF_STATUS status;
 	bool mgmt_pkt_defer = true;
 
-/* this function should not changed */
-	if (pMac->lim.gLimSmeState == eLIM_SME_OFFLINE_STATE) {
-		/* Defer processsing this message */
-		if (lim_defer_msg(pMac, limMsg) != TX_SUCCESS) {
+	/* this function should not changed */
+	if (mac_ctx->lim.gLimSmeState == eLIM_SME_OFFLINE_STATE) {
+		/* Defer processing this message */
+		if (lim_defer_msg(mac_ctx, lim_msg) != TX_SUCCESS) {
 			QDF_TRACE(QDF_MODULE_ID_PE, LOGE,
 					FL("Unable to Defer Msg"));
-			lim_log_session_states(pMac);
-			lim_handle_defer_msg_error(pMac, limMsg);
+			lim_log_session_states(mac_ctx);
+			lim_handle_defer_msg_error(mac_ctx, lim_msg);
 		}
 		return true;
 	}
-	/* When defer is requested then defer all the messages except HAL responses. */
-	if ((!lim_is_system_in_scan_state(pMac))
-	    && (true != GET_LIM_PROCESS_DEFD_MESGS(pMac))
-	    && !pMac->lim.gLimSystemInScanLearnMode) {
 
-		if (limMsg->type == SIR_BB_XPORT_MGMT_MSG) {
+	/*
+	 * When defer is requested then defer all the messages except
+	 * HAL responses.
+	 */
+	if (!lim_is_system_in_scan_state(mac_ctx) &&
+	    !GET_LIM_PROCESS_DEFD_MESGS(mac_ctx)) {
+		if (lim_msg->type == SIR_BB_XPORT_MGMT_MSG) {
 			/*
 			 * Dont defer beacon and probe response
 			 * because it will fill the differ queue quickly
 			 */
-			status = lim_util_get_type_subtype(limMsg->bodyptr,
-				&type, &subtype);
+			status = lim_util_get_type_subtype(lim_msg->bodyptr,
+							   &type, &subtype);
 			if (QDF_IS_STATUS_SUCCESS(status) &&
 				(type == SIR_MAC_MGMT_FRAME) &&
 				((subtype == SIR_MAC_MGMT_BEACON) ||
@@ -462,20 +468,19 @@ uint8_t static def_msg_decision(tpAniSirGlobal pMac, tpSirMsgQ limMsg)
 				mgmt_pkt_defer = false;
 		}
 
-		if ((limMsg->type != WMA_ADD_BSS_RSP)
-		    && (limMsg->type != WMA_DELETE_BSS_RSP)
-		    && (limMsg->type != WMA_DELETE_BSS_HO_FAIL_RSP)
-		    && (limMsg->type != WMA_ADD_STA_RSP)
-		    && (limMsg->type != WMA_DELETE_STA_RSP)
-		    && (limMsg->type != WMA_SET_BSSKEY_RSP)
-		    && (limMsg->type != WMA_SET_STAKEY_RSP)
-		    && (limMsg->type != WMA_SET_STA_BCASTKEY_RSP)
-		    && (limMsg->type != WMA_AGGR_QOS_RSP)
-		    && (limMsg->type != WMA_SET_MIMOPS_RSP)
-		    && (limMsg->type != WMA_SWITCH_CHANNEL_RSP)
-		    && (limMsg->type != WMA_P2P_NOA_ATTR_IND)
-		    && (limMsg->type != WMA_P2P_NOA_START_IND) &&
-		    (limMsg->type != WMA_ADD_TS_RSP) &&
+		if ((lim_msg->type != WMA_ADD_BSS_RSP) &&
+		    (lim_msg->type != WMA_DELETE_BSS_RSP) &&
+		    (lim_msg->type != WMA_DELETE_BSS_HO_FAIL_RSP) &&
+		    (lim_msg->type != WMA_ADD_STA_RSP) &&
+		    (lim_msg->type != WMA_DELETE_STA_RSP) &&
+		    (lim_msg->type != WMA_SET_BSSKEY_RSP) &&
+		    (lim_msg->type != WMA_SET_STAKEY_RSP) &&
+		    (lim_msg->type != WMA_SET_STA_BCASTKEY_RSP) &&
+		    (lim_msg->type != WMA_AGGR_QOS_RSP) &&
+		    (lim_msg->type != WMA_SET_MIMOPS_RSP) &&
+		    (lim_msg->type != WMA_SWITCH_CHANNEL_RSP) &&
+		    (lim_msg->type != WMA_P2P_NOA_ATTR_IND) &&
+		    (lim_msg->type != WMA_ADD_TS_RSP) &&
 		    /*
 		     * LIM won't process any defer queue commands if gLimAddtsSent is
 		     * set to TRUE. gLimAddtsSent will be set TRUE to while sending
@@ -488,24 +493,23 @@ uint8_t static def_msg_decision(tpAniSirGlobal pMac, tpSirMsgQ limMsg)
 		     * enabled, so that this will be processed immediately and sets
 		     * gLimAddtsSent to FALSE.
 		     */
-		    (limMsg->type != SIR_LIM_ADDTS_RSP_TIMEOUT) &&
+		    (lim_msg->type != SIR_LIM_ADDTS_RSP_TIMEOUT) &&
 		    /* Allow processing of RX frames while awaiting reception
 		     * of ADD TS response over the air. This logic particularly
 		     * handles the case when host sends ADD BA request to FW
 		     * after ADD TS request is sent over the air and
 		     * ADD TS response received over the air */
-		    !(limMsg->type == SIR_BB_XPORT_MGMT_MSG &&
-			pMac->lim.gLimAddtsSent) &&
-			(mgmt_pkt_defer)) {
+		    !(lim_msg->type == SIR_BB_XPORT_MGMT_MSG &&
+		    mac_ctx->lim.gLimAddtsSent) &&
+		    (mgmt_pkt_defer)) {
 			pe_debug("Defer the current message %s , gLimProcessDefdMsgs is false and system is not in scan/learn mode",
-				       lim_msg_str(limMsg->type));
-			/* Defer processsing this message */
-			if (lim_defer_msg(pMac, limMsg) != TX_SUCCESS) {
+				 lim_msg_str(lim_msg->type));
+			/* Defer processing this message */
+			if (lim_defer_msg(mac_ctx, lim_msg) != TX_SUCCESS) {
 				QDF_TRACE(QDF_MODULE_ID_PE, LOGE,
-					FL("Unable to Defer Msg"));
-				lim_log_session_states(pMac);
-				lim_handle_defer_msg_error(pMac, limMsg);
-
+					  FL("Unable to Defer Msg"));
+				lim_log_session_states(mac_ctx);
+				lim_handle_defer_msg_error(mac_ctx, lim_msg);
 			}
 			return true;
 		}
@@ -521,7 +525,7 @@ __lim_pno_match_fwd_bcn_probepsp(tpAniSirGlobal pmac, uint8_t *rx_pkt_info,
 {
 	struct pno_match_found  *result;
 	uint8_t                 *body;
-	tSirMsgQ                mmh_msg;
+	struct scheduler_msg    mmh_msg = {0};
 	tpSirMacMgmtHdr         hdr;
 	uint32_t num_results = 1, len, i;
 
@@ -579,7 +583,7 @@ __lim_ext_scan_forward_bcn_probe_rsp(tpAniSirGlobal pmac, uint8_t *rx_pkt_info,
 {
 	tpSirWifiFullScanResultEvent result;
 	uint8_t                     *body;
-	tSirMsgQ                     mmh_msg;
+	struct scheduler_msg         mmh_msg = {0};
 	tpSirMacMgmtHdr              hdr;
 	uint32_t frame_len;
 	tSirBssDescription *bssdescr;
@@ -616,29 +620,19 @@ __lim_ext_scan_forward_bcn_probe_rsp(tpAniSirGlobal pmac, uint8_t *rx_pkt_info,
 	qdf_mem_copy((uint8_t *) &result->ap.ieData,
 			body + SIR_MAC_B_PR_SSID_OFFSET, ie_len);
 
-
 	frame_len = sizeof(*bssdescr) + ie_len - sizeof(bssdescr->ieFields[1]);
 	bssdescr = (tSirBssDescription *) qdf_mem_malloc(frame_len);
 
-	if (!bssdescr) {
-		qdf_mem_free(result);
+	if (NULL == bssdescr) {
 		pe_err("qdf_mem_malloc(length=%d) failed", frame_len);
+		qdf_mem_free(result);
 		return;
 	}
 
 	qdf_mem_zero(bssdescr, frame_len);
 
 	lim_collect_bss_description(pmac, bssdescr, frame, rx_pkt_info, false);
-	/*
-	 * Send the beacon to CSR with registered callback routine.
-	 * scan_id and flags parameters are currently unused and set to 0.
-	 * EXT scan results will also be added to scan cache in SME
-	 */
-	if (pmac->lim.add_bssdescr_callback) {
-		(pmac->lim.add_bssdescr_callback) (pmac, bssdescr, 0, 0);
-	} else {
-		pe_err("No CSR callback routine to send beacon/probe response");
-	}
+
 	qdf_mem_free(bssdescr);
 
 	mmh_msg.type = msg_type;
@@ -655,7 +649,7 @@ __lim_process_ext_scan_beacon_probe_rsp(tpAniSirGlobal pmac,
 	tSirProbeRespBeacon  *frame;
 	uint8_t              *body;
 	uint32_t             frm_len;
-	tSirRetStatus        status;
+	QDF_STATUS        status;
 
 	frm_len = WMA_GET_RX_PAYLOAD_LEN(rx_pkt_info);
 	if (frm_len <= SIR_MAC_B_PR_SSID_OFFSET) {
@@ -684,7 +678,7 @@ __lim_process_ext_scan_beacon_probe_rsp(tpAniSirGlobal pmac,
 		return;
 	}
 
-	if (status != eSIR_SUCCESS) {
+	if (status != QDF_STATUS_SUCCESS) {
 		pe_err("Frame parsing failed");
 		qdf_mem_free(frame);
 		return;
@@ -717,10 +711,9 @@ __lim_process_ext_scan_beacon_probe_rsp(tpAniSirGlobal pmac,
  * Not Scanning,
  */
 static void
-__lim_handle_beacon(tpAniSirGlobal pMac, tpSirMsgQ pMsg,
+__lim_handle_beacon(tpAniSirGlobal pMac, struct scheduler_msg *pMsg,
 		    tpPESession psessionEntry)
 {
-	/* checking for global SME state... */
 	uint8_t *pRxPacketInfo;
 
 	lim_get_b_dfrom_rx_packet(pMac, pMsg->bodyptr,
@@ -740,6 +733,175 @@ __lim_handle_beacon(tpAniSirGlobal pMac, tpSirMsgQ pMsg,
 	return;
 }
 
+/*
+ * lim_fill_sap_bcn_pkt_meta(): Fills essential fields in Rx Pkt Meta
+ * @scan_entry: pointer to the scan cache entry of the beacon
+ * @rx_pkt: pointer to the cds pkt allocated
+ *
+ * This API fills only the essential parameters in the Rx Pkt Meta which are
+ * required while converting the beacon frame to struct and while handling
+ * the beacon for implementation of SAP protection mechanisms.
+ *
+ * Return: None
+ */
+static void lim_fill_sap_bcn_pkt_meta(struct scan_cache_entry *scan_entry,
+					cds_pkt_t *rx_pkt)
+{
+	rx_pkt->pkt_meta.channel = scan_entry->channel.chan_idx;
+	rx_pkt->pkt_meta.mpdu_hdr_len = sizeof(struct ieee80211_frame);
+	rx_pkt->pkt_meta.mpdu_len = scan_entry->raw_frame.len;
+	rx_pkt->pkt_meta.mpdu_data_len = rx_pkt->pkt_meta.mpdu_len -
+					rx_pkt->pkt_meta.mpdu_hdr_len;
+
+	rx_pkt->pkt_meta.mpdu_hdr_ptr = scan_entry->raw_frame.ptr;
+	rx_pkt->pkt_meta.mpdu_data_ptr = rx_pkt->pkt_meta.mpdu_hdr_ptr +
+					rx_pkt->pkt_meta.mpdu_hdr_len;
+
+	/*
+	 * The scan_entry->raw_frame contains the qdf_nbuf->data from the SKB
+	 * of the beacon. We set the rx_pkt->pkt_meta.mpdu_hdr_ptr to point
+	 * to this memory directly. However we do not have the pointer to
+	 * the SKB itself here which is usually is pointed by rx_pkt->pkt_buf.
+	 * Also, we always get the pkt data using WMA_GET_RX_MPDU_DATA and
+	 * dont actually use the pkt_buf. So setting this to NULL.
+	 */
+	rx_pkt->pkt_buf = NULL;
+}
+
+/*
+ * lim_allocate_and_get_bcn() - Allocate and get the bcn frame pkt and structure
+ * @mac_ctx: pointer to global mac_ctx
+ * @pkt: pointer to the pkt to be allocated
+ * @rx_pkt_info: pointer to the allocated pkt meta
+ * @bcn: pointer to the beacon struct
+ * @scan_entry: pointer to the scan cache entry from scan module
+ *
+ * Allocates a cds_pkt for beacon frame in scan cache entry,
+ * fills the essential pkt_meta elements and converts the
+ * pkt to beacon strcut.
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS lim_allocate_and_get_bcn(
+				tpAniSirGlobal mac_ctx,
+				cds_pkt_t **pkt,
+				uint8_t **rx_pkt_info,
+				tSchBeaconStruct **bcn,
+				struct scan_cache_entry *scan_entry)
+{
+	QDF_STATUS status;
+	uint8_t *rx_pkt_info_l = NULL;
+	tSchBeaconStruct *bcn_l = NULL;
+	cds_pkt_t *pkt_l = NULL;
+
+	pkt_l = qdf_mem_malloc(sizeof(cds_pkt_t));
+	if (!pkt_l) {
+		pe_err("Failed to allocate pkt");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	status = wma_ds_peek_rx_packet_info(
+		pkt_l, (void *)&rx_pkt_info_l, false);
+	if (!QDF_IS_STATUS_SUCCESS(status)) {
+		pe_err("Failed to get Rx Pkt meta");
+		goto free;
+	}
+
+	bcn_l = qdf_mem_malloc(sizeof(tSchBeaconStruct));
+	if (!bcn_l) {
+		pe_err("Failed to allocate bcn struct");
+		goto free;
+	}
+
+	lim_fill_sap_bcn_pkt_meta(scan_entry, pkt_l);
+
+	/* Convert the beacon frame into a structure */
+	if (sir_convert_beacon_frame2_struct(mac_ctx,
+	    (uint8_t *)rx_pkt_info_l,
+	    bcn_l) != QDF_STATUS_SUCCESS) {
+		pe_err("beacon parsing failed");
+		goto free;
+	}
+
+	*pkt = pkt_l;
+	*bcn = bcn_l;
+	*rx_pkt_info = rx_pkt_info_l;
+
+	return QDF_STATUS_SUCCESS;
+
+free:
+	if (pkt_l) {
+		qdf_mem_free(pkt_l);
+		pkt_l = NULL;
+	}
+
+	if (bcn_l) {
+		qdf_mem_free(bcn_l);
+		bcn_l = NULL;
+	}
+
+	return QDF_STATUS_E_FAILURE;
+}
+
+void lim_handle_sap_beacon(struct wlan_objmgr_pdev *pdev,
+				struct scan_cache_entry *scan_entry)
+{
+	tpAniSirGlobal mac_ctx;
+	cds_pkt_t *pkt = NULL;
+	tSchBeaconStruct *bcn = NULL;
+	struct mgmt_beacon_probe_filter *filter;
+	QDF_STATUS status;
+	uint8_t *rx_pkt_info = NULL;
+	int session_id;
+
+	if (!scan_entry) {
+		pe_err("scan_entry is NULL");
+		return;
+	}
+
+	if (scan_entry->frm_subtype != MGMT_SUBTYPE_BEACON)
+		return;
+
+	mac_ctx = cds_get_context(QDF_MODULE_ID_PE);
+	if (!mac_ctx) {
+		pe_err("Failed to get mac_ctx");
+		return;
+	}
+
+	filter = &mac_ctx->bcn_filter;
+
+	if (!filter->num_sap_sessions) {
+		return;
+	}
+	for (session_id = 0; session_id < mac_ctx->lim.maxBssId; session_id++) {
+		if (filter->sap_channel[session_id] &&
+		    (filter->sap_channel[session_id] ==
+		    scan_entry->channel.chan_idx)) {
+			if (!pkt) {
+				status = lim_allocate_and_get_bcn(
+					mac_ctx, &pkt, &rx_pkt_info,
+					&bcn, scan_entry);
+				if (!QDF_IS_STATUS_SUCCESS(status)) {
+					pe_debug("lim_allocate_and_get_bcn fail!");
+					return;
+				}
+			}
+			sch_beacon_process_for_ap(mac_ctx, session_id,
+						  rx_pkt_info, bcn);
+		}
+	}
+
+	/*
+	 * Free only the pkt memory we allocated and not the pkt->pkt_buf.
+	 * The actual SKB buffer is freed in the scan module from where
+	 * this API is invoked via callback
+	 */
+	if (bcn)
+		qdf_mem_free(bcn);
+	if (pkt)
+		qdf_mem_free(pkt);
+}
+
 /**
  * lim_defer_msg()
  *
@@ -757,11 +919,11 @@ __lim_handle_beacon(tpAniSirGlobal pMac, tpSirMsgQ pMsg,
  * NA
  *
  * @param  pMac - Pointer to Global MAC structure
- * @param  pMsg of type tSirMsgQ - Pointer to the message structure
+ * @param  pMsg of type struct scheduler_msg - Pointer to the message structure
  * @return None
  */
 
-uint32_t lim_defer_msg(tpAniSirGlobal pMac, tSirMsgQ *pMsg)
+uint32_t lim_defer_msg(tpAniSirGlobal pMac, struct scheduler_msg *pMsg)
 {
 	uint32_t retCode = TX_SUCCESS;
 
@@ -769,15 +931,13 @@ uint32_t lim_defer_msg(tpAniSirGlobal pMac, tSirMsgQ *pMsg)
 
 	if (retCode == TX_SUCCESS) {
 		MTRACE(mac_trace_msg_rx
-			       (pMac, NO_SESSION,
-			       LIM_TRACE_MAKE_RXMSG(pMsg->type, LIM_MSG_DEFERRED));
-		       )
+			(pMac, NO_SESSION,
+			LIM_TRACE_MAKE_RXMSG(pMsg->type, LIM_MSG_DEFERRED)));
 	} else {
 		pe_err("Dropped lim message (0x%X) Message %s", pMsg->type, lim_msg_str(pMsg->type));
 		MTRACE(mac_trace_msg_rx
-			       (pMac, NO_SESSION,
-			       LIM_TRACE_MAKE_RXMSG(pMsg->type, LIM_MSG_DROPPED));
-		       )
+			(pMac, NO_SESSION,
+			LIM_TRACE_MAKE_RXMSG(pMsg->type, LIM_MSG_DROPPED)));
 	}
 
 	return retCode;
@@ -853,12 +1013,15 @@ lim_check_mgmt_registered_frames(tpAniSirGlobal mac_ctx, uint8_t *buff_desc,
 	uint16_t frm_len;
 	uint8_t type, sub_type;
 	bool match = false;
+	tpSirMacActionFrameHdr action_hdr;
+	uint8_t actionID, category;
 	QDF_STATUS qdf_status;
 
 	hdr = WMA_GET_RX_MAC_HEADER(buff_desc);
 	fc = hdr->fc;
 	frm_type = (fc.type << 2) | (fc.subType << 4);
 	body = WMA_GET_RX_MPDU_DATA(buff_desc);
+	action_hdr = (tpSirMacActionFrameHdr) body;
 	frm_len = WMA_GET_RX_PAYLOAD_LEN(buff_desc);
 
 	qdf_mutex_acquire(&mac_ctx->lim.lim_frame_register_lock);
@@ -906,6 +1069,29 @@ lim_check_mgmt_registered_frames(tpAniSirGlobal mac_ctx, uint8_t *buff_desc,
 	if (match) {
 		QDF_TRACE(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
 			FL("rcvd frame match with registered frame params"));
+		if ((mac_ctx->roam.configParam.sta_disable_roam &
+		    LFR3_STA_ROAM_DISABLE_BY_P2P) &&
+		    session_entry && LIM_IS_STA_ROLE(session_entry) &&
+		    (policy_mgr_mode_specific_connection_count(mac_ctx->psoc,
+						PM_P2P_CLIENT_MODE, NULL) ||
+		     policy_mgr_mode_specific_connection_count(mac_ctx->psoc,
+						PM_P2P_GO_MODE, NULL))) {
+			if ((frm_len >= sizeof(*action_hdr)) && action_hdr &&
+			     fc.type == SIR_MAC_MGMT_FRAME &&
+			     fc.subType == SIR_MAC_MGMT_ACTION) {
+				actionID = action_hdr->actionID;
+				category = action_hdr->category;
+				pe_debug("category: %d action: %d",
+					 category, actionID);
+				if (category == SIR_MAC_ACTION_WNM &&
+				    (actionID == SIR_MAC_WNM_BSS_TM_QUERY ||
+				     actionID == SIR_MAC_WNM_BSS_TM_REQUEST ||
+				     actionID == SIR_MAC_WNM_BSS_TM_RESPONSE)) {
+					pe_debug("p2p session active drop BTM frame");
+					return match;
+				}
+			}
+		}
 		/* Indicate this to SME */
 		lim_send_sme_mgmt_frame_ind(mac_ctx, hdr->fc.subType,
 			(uint8_t *) hdr,
@@ -927,6 +1113,42 @@ lim_check_mgmt_registered_frames(tpAniSirGlobal mac_ctx, uint8_t *buff_desc,
 	return match;
 }
 
+#ifdef FEATURE_WLAN_DIAG_SUPPORT
+/**
+ * lim_is_mgmt_frame_loggable() - to log non-excessive mgmt frames
+ * @type: type of frames i.e. mgmt, control, data
+ * @subtype: subtype of frames i.e. beacon, probe rsp, probe req and etc
+ *
+ * This API tells if given mgmt frame is expected to come excessive in
+ * amount or not.
+ *
+ * Return: true if mgmt is expected to come not that often, so makes it
+ *         loggable. false if mgmt is expected to come too often, so makes
+ *         it not loggable
+ */
+static bool
+lim_is_mgmt_frame_loggable(uint8_t type, uint8_t subtype)
+{
+	if (type != SIR_MAC_MGMT_FRAME)
+		return false;
+
+	switch (subtype) {
+	case SIR_MAC_MGMT_BEACON:
+	case SIR_MAC_MGMT_PROBE_REQ:
+	case SIR_MAC_MGMT_PROBE_RSP:
+		return false;
+	default:
+		return true;
+	}
+}
+#else
+static bool
+lim_is_mgmt_frame_loggable(uint8_t type, uint8_t subtype)
+{
+	return false;
+}
+#endif
+
 /**
  * lim_handle80211_frames()
  *
@@ -944,12 +1166,13 @@ lim_check_mgmt_registered_frames(tpAniSirGlobal mac_ctx, uint8_t *buff_desc,
  * NA
  *
  * @param  pMac - Pointer to Global MAC structure
- * @param  pMsg of type tSirMsgQ - Pointer to the message structure
+ * @param  pMsg of type struct scheduler_msg - Pointer to the message structure
  * @return None
  */
 
 static void
-lim_handle80211_frames(tpAniSirGlobal pMac, tpSirMsgQ limMsg, uint8_t *pDeferMsg)
+lim_handle80211_frames(tpAniSirGlobal pMac, struct scheduler_msg *limMsg,
+		       uint8_t *pDeferMsg)
 {
 	uint8_t *pRxPacketInfo = NULL;
 	tSirMacFrameCtl fc;
@@ -958,6 +1181,7 @@ lim_handle80211_frames(tpAniSirGlobal pMac, tpSirMsgQ limMsg, uint8_t *pDeferMsg
 	uint8_t sessionId;
 	bool isFrmFt = false;
 	uint8_t channel;
+	bool is_hw_sbs_capable = false;
 
 	*pDeferMsg = false;
 	lim_get_b_dfrom_rx_packet(pMac, limMsg->bodyptr,
@@ -968,7 +1192,11 @@ lim_handle80211_frames(tpAniSirGlobal pMac, tpSirMsgQ limMsg, uint8_t *pDeferMsg
 	channel = WMA_GET_RX_CH(pRxPacketInfo);
 	fc = pHdr->fc;
 
+	is_hw_sbs_capable =
+		policy_mgr_is_hw_sbs_capable(pMac->psoc);
 	if (IS_5G_CH(channel) &&
+	   (!is_hw_sbs_capable ||
+	   (is_hw_sbs_capable && wlan_reg_is_dfs_ch(pMac->pdev, channel))) &&
 	    pMac->sap.SapDfsInfo.is_dfs_cac_timer_running) {
 		psessionEntry = pe_find_session_by_bssid(pMac,
 					pHdr->bssId, &sessionId);
@@ -1015,19 +1243,6 @@ lim_handle80211_frames(tpAniSirGlobal pMac, tpSirMsgQ limMsg, uint8_t *pDeferMsg
 		goto end;
 	}
 #endif
-	if (WMA_GET_OFFLOADSCANLEARN(pRxPacketInfo)) {
-		if (fc.subType == SIR_MAC_MGMT_BEACON) {
-			pe_debug("Learning scan beacon");
-			__lim_handle_beacon(pMac, limMsg, NULL);
-		} else if (fc.subType == SIR_MAC_MGMT_PROBE_RSP) {
-			pe_debug("Learning scan probe rsp");
-			lim_process_probe_rsp_frame_no_session(pMac, pRxPacketInfo);
-		} else {
-			pe_err("Wrong frame Type %d, Subtype %d for LFR",
-				fc.type, fc.subType);
-		}
-		goto end;
-	}
 	/* Added For BT-AMP Support */
 	psessionEntry = pe_find_session_by_bssid(pMac, pHdr->bssId,
 						 &sessionId);
@@ -1036,9 +1251,10 @@ lim_handle80211_frames(tpAniSirGlobal pMac, tpSirMsgQ limMsg, uint8_t *pDeferMsg
 			pe_debug("ProtVersion %d, Type %d, Subtype %d rateIndex=%d",
 				fc.protVer, fc.type, fc.subType,
 				WMA_GET_RX_MAC_RATE_IDX(pRxPacketInfo));
+			lim_print_mac_addr(pMac, pHdr->bssId, LOGD);
 			if (lim_process_auth_frame_no_session
 				    (pMac, pRxPacketInfo,
-				    limMsg->bodyptr) == eSIR_SUCCESS) {
+				    limMsg->bodyptr) == QDF_STATUS_SUCCESS) {
 				goto end;
 			}
 		}
@@ -1144,10 +1360,7 @@ lim_handle80211_frames(tpAniSirGlobal pMac, tpSirMsgQ limMsg, uint8_t *pDeferMsg
 			break;
 
 		case SIR_MAC_MGMT_PROBE_RSP:
-			if (psessionEntry == NULL)
-				lim_process_probe_rsp_frame_no_session(pMac,
-								       pRxPacketInfo);
-			else
+			if (psessionEntry)
 				lim_process_probe_rsp_frame(pMac,
 							    pRxPacketInfo,
 							    psessionEntry);
@@ -1204,87 +1417,56 @@ lim_handle80211_frames(tpAniSirGlobal pMac, tpSirMsgQ limMsg, uint8_t *pDeferMsg
 		break;
 
 	} /* switch (fc.type) */
-
+	if (lim_is_mgmt_frame_loggable(fc.type, fc.subType))
+		lim_diag_mgmt_rx_event_report(pMac, pHdr,
+					      psessionEntry,
+					      QDF_STATUS_SUCCESS, QDF_STATUS_SUCCESS);
 end:
 	lim_pkt_free(pMac, TXRX_FRM_802_11_MGMT, pRxPacketInfo,
 		     (void *)limMsg->bodyptr);
 	return;
 } /*** end lim_handle80211_frames() ***/
 
-/**
- * lim_send_stop_scan_offload_req()
- *
- ***FUNCTION:
- * This function will be called to abort the ongoing offloaded scan
- * request.
- *
- *
- ***NOTE:
- *
- * @param  pMac      Pointer to Global MAC structure
- * @return QDF_STATUS_SUCCESS or QDF_STATUS_E_FAILURE
- */
-static QDF_STATUS lim_send_stop_scan_offload_req(tpAniSirGlobal pMac,
-	uint8_t SessionId, uint32_t scan_id, uint32_t scan_requestor_id)
-{
-	tSirMsgQ msg;
-	tSirRetStatus rc = eSIR_SUCCESS;
-	tAbortScanParams *pAbortScanParams;
-
-	pAbortScanParams = qdf_mem_malloc(sizeof(tAbortScanParams));
-	if (NULL == pAbortScanParams) {
-		pe_err("Memory allocation failed for AbortScanParams");
-		return QDF_STATUS_E_NOMEM;
-	}
-
-	pAbortScanParams->SessionId = SessionId;
-	pAbortScanParams->scan_id = scan_id;
-	pAbortScanParams->scan_requestor_id = scan_requestor_id;
-	msg.type = WMA_STOP_SCAN_OFFLOAD_REQ;
-	msg.bodyptr = pAbortScanParams;
-	msg.bodyval = 0;
-
-	rc = wma_post_ctrl_msg(pMac, &msg);
-	if (rc != eSIR_SUCCESS) {
-		pe_err("wma_post_ctrl_msg() return failure");
-		qdf_mem_free(pAbortScanParams);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	pe_debug("Abort ongoing offload scan");
-	return QDF_STATUS_SUCCESS;
-
-}
-
-/**
- * lim_process_abort_scan_ind() - abort the scan which is presently being run
- *
- * @mac_ctx: Pointer to Global MAC structure
- * @session_id: PE session
- * @scan_id: Scan ID from the scan request
- * @scan_requesor_id: Entity requesting the scan
- *
- * @return: None
- */
 void lim_process_abort_scan_ind(tpAniSirGlobal mac_ctx,
-	uint8_t session_id, uint32_t scan_id, uint32_t scan_requestor_id)
+	uint8_t vdev_id, uint32_t scan_id, uint32_t scan_requestor_id)
 {
-#ifdef FEATURE_WLAN_DIAG_SUPPORT_LIM
-	lim_diag_event_report(mac_ctx, WLAN_PE_DIAG_SCAN_ABORT_IND_EVENT,
-		NULL, 0, 0);
-#endif
+	QDF_STATUS status;
+	struct scan_cancel_request *req;
+	struct wlan_objmgr_vdev *vdev;
 
 	pe_debug("scan_id %d, scan_requestor_id 0x%x",
-		scan_id, scan_requestor_id);
+			scan_id, scan_requestor_id);
 
-	/* send stop scan cmd to firmware */
-	lim_send_stop_scan_offload_req(mac_ctx, session_id, scan_id,
-		scan_requestor_id);
-	return;
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(
+			mac_ctx->psoc, vdev_id,
+			WLAN_LEGACY_MAC_ID);
+	if (!vdev) {
+		pe_debug("vdev is NULL");
+		return;
+	}
+
+	req = qdf_mem_malloc(sizeof(*req));
+	if (!req) {
+		pe_debug("failed to alloc scan cancel request");
+		goto fail;
+	}
+
+	req->vdev = vdev;
+	req->cancel_req.requester = scan_requestor_id;
+	req->cancel_req.scan_id = scan_id;
+	req->cancel_req.vdev_id = vdev_id;
+	req->cancel_req.req_type = WLAN_SCAN_CANCEL_SINGLE;
+
+	status = ucfg_scan_cancel(req);
+	if (QDF_IS_STATUS_ERROR(status))
+		pe_err("Cancel scan request failed");
+
+fail:
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
 }
 
 static void lim_process_sme_obss_scan_ind(tpAniSirGlobal mac_ctx,
-							struct sSirMsgQ *msg)
+					  struct scheduler_msg *msg)
 {
 	struct sPESession *session;
 	uint8_t session_id;
@@ -1323,33 +1505,27 @@ static void lim_process_sme_obss_scan_ind(tpAniSirGlobal mac_ctx,
  *
  * Return:  None.
  */
-static void lim_process_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
+static void lim_process_messages(tpAniSirGlobal mac_ctx,
+				 struct scheduler_msg *msg)
 {
 #ifdef FEATURE_AP_MCC_CH_AVOIDANCE
 	uint8_t vdev_id = 0;
 	tUpdateBeaconParams beacon_params;
 #endif /* FEATURE_AP_MCC_CH_AVOIDANCE */
 	uint8_t i;
-	uint8_t p2p_go_exists = 0;
 	tpPESession session_entry = NULL;
 	uint8_t defer_msg = false;
 	tLinkStateParams *link_state_param;
 	uint16_t pkt_len = 0;
 	cds_pkt_t *body_ptr = NULL;
 	QDF_STATUS qdf_status;
-	tSirMsgQ new_msg;
-	tSirSmeScanAbortReq *req_msg = NULL;
+	struct scheduler_msg new_msg = {0};
 	uint8_t session_id;
-	uint32_t scan_id;
 
 #ifdef FEATURE_WLAN_TDLS
 	tSirTdlsInd *tdls_ind = NULL;
 	tpDphHashNode sta_ds = NULL;
-	tTdlsLinkEstablishParams *tdls_link_params = NULL;
 #endif
-	tSirMbMsgP2p *p2p_msg = NULL;
-	tSirSetActiveModeSetBncFilterReq *bcn_filter_req = NULL;
-
 	if (msg == NULL) {
 		pe_err("Message pointer is Null");
 		QDF_ASSERT(0);
@@ -1386,7 +1562,7 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 		    msg->type != WMA_RX_SCAN_EVENT)
 			MTRACE(mac_trace_msg_rx(mac_ctx, NO_SESSION,
 				LIM_TRACE_MAKE_RXMSG(msg->type,
-				LIM_MSG_PROCESSED));)
+				LIM_MSG_PROCESSED)));
 	}
 
 	switch (msg->type) {
@@ -1400,7 +1576,7 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 			break;
 		}
 		/* System is in DFS (Learn) mode.
-		 * Defer processsing this message
+		 * Defer processing this message
 		 */
 		if (lim_defer_msg(mac_ctx, msg) != TX_SUCCESS) {
 			if (!(mac_ctx->lim.deferredMsgCnt & 0xF))
@@ -1437,7 +1613,7 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 			break;
 		}
 		qdf_mem_copy((uint8_t *) &new_msg,
-			(uint8_t *) msg, sizeof(tSirMsgQ));
+			(uint8_t *) msg, sizeof(struct scheduler_msg));
 		body_ptr = (cds_pkt_t *) new_msg.bodyptr;
 		cds_pkt_get_packet_length(body_ptr, &pkt_len);
 
@@ -1452,7 +1628,6 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 		if (WMA_GET_ROAMCANDIDATEIND(new_msg.bodyptr))
 			pe_debug("roamCandidateInd: %d",
 				 WMA_GET_ROAMCANDIDATEIND(new_msg.bodyptr));
-
 		if (WMA_GET_OFFLOADSCANLEARN(new_msg.bodyptr))
 			pe_debug("offloadScanLearn: %d",
 				 WMA_GET_OFFLOADSCANLEARN(new_msg.bodyptr));
@@ -1479,8 +1654,6 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 			cds_pkt_return_packet(body_ptr);
 		}
 		break;
-	case eWNI_SME_SCAN_REQ:
-	case eWNI_SME_REMAIN_ON_CHANNEL_REQ:
 	case eWNI_SME_DISASSOC_REQ:
 	case eWNI_SME_DEAUTH_REQ:
 #ifdef FEATURE_WLAN_TDLS
@@ -1502,20 +1675,8 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 		/* Need to response to hdd */
 		lim_process_normal_hdd_msg(mac_ctx, msg, true);
 		break;
-	case eWNI_SME_SCAN_ABORT_IND:
-		req_msg = msg->bodyptr;
-		if (req_msg) {
-			session_id = req_msg->sessionId;
-			scan_id = req_msg->scan_id;
-			lim_process_abort_scan_ind(mac_ctx, session_id,
-				scan_id, USER_SCAN_REQUESTOR_ID);
-			qdf_mem_free((void *)msg->bodyptr);
-			msg->bodyptr = NULL;
-		}
-		break;
 	case eWNI_SME_PDEV_SET_HT_VHT_IE:
 	case eWNI_SME_SET_VDEV_IES_PER_BAND:
-	case eWNI_SME_ROAM_INVOKE:
 	case eWNI_SME_SYS_READY_IND:
 	case eWNI_SME_JOIN_REQ:
 	case eWNI_SME_REASSOC_REQ:
@@ -1529,11 +1690,7 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 	case eWNI_SME_ADDTS_REQ:
 	case eWNI_SME_DELTS_REQ:
 	case eWNI_SME_GET_ASSOC_STAS_REQ:
-	case eWNI_SME_TKIP_CNTR_MEAS_REQ:
-	case eWNI_SME_UPDATE_APWPSIE_REQ:
 	case eWNI_SME_SESSION_UPDATE_PARAM:
-	case eWNI_SME_GET_WPSPBC_SESSION_REQ:
-	case eWNI_SME_SET_APWPARSNIEs_REQ:
 	case eWNI_SME_CHNG_MCC_BEACON_INTERVAL:
 	case eWNI_SME_NEIGHBOR_REPORT_REQ_IND:
 	case eWNI_SME_BEACON_REPORT_RESP_XMIT_IND:
@@ -1544,31 +1701,23 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 	case eWNI_SME_FT_PRE_AUTH_REQ:
 	case eWNI_SME_FT_AGGR_QOS_REQ:
 	case eWNI_SME_REGISTER_MGMT_FRAME_REQ:
-	case eWNI_SME_UPDATE_NOA:
-	case eWNI_SME_CLEAR_DFS_CHANNEL_LIST:
 	case eWNI_SME_GET_STATISTICS_REQ:
 #ifdef FEATURE_WLAN_ESE
 	case eWNI_SME_GET_TSM_STATS_REQ:
 #endif  /* FEATURE_WLAN_ESE */
 	case eWNI_SME_REGISTER_MGMT_FRAME_CB:
 	case eWNI_SME_EXT_CHANGE_CHANNEL:
+	case eWNI_SME_ROAM_INVOKE:
+		/* fall through */
 	case eWNI_SME_ROAM_SCAN_OFFLOAD_REQ:
-	case eWNI_SME_NDP_INITIATOR_REQ:
-	case eWNI_SME_NDP_RESPONDER_REQ:
-	case eWNI_SME_NDP_END_REQ:
-	case eWNI_SME_REGISTER_P2P_ACK_CB:
+	case eWNI_SME_SET_ADDBA_ACCEPT:
+	case eWNI_SME_UPDATE_EDCA_PROFILE:
+	case WNI_SME_REGISTER_BCN_REPORT_SEND_CB:
 		/* These messages are from HDD.No need to respond to HDD */
 		lim_process_normal_hdd_msg(mac_ctx, msg, false);
 		break;
-	case eWNI_SME_SEND_ACTION_FRAME_IND:
-		lim_send_p2p_action_frame(mac_ctx, msg);
-		qdf_mem_free(msg->bodyptr);
-		msg->bodyptr = NULL;
-		break;
-	case eWNI_SME_ABORT_REMAIN_ON_CHAN_IND:
-		p2p_msg = (tSirMbMsgP2p *) msg->bodyptr;
-		lim_process_abort_scan_ind(mac_ctx, p2p_msg->sessionId,
-			p2p_msg->scan_id, ROC_SCAN_REQUESTOR_ID);
+	case eWNI_SME_SEND_MGMT_FRAME_TX:
+		lim_send_mgmt_frame_tx(mac_ctx, msg);
 		qdf_mem_free(msg->bodyptr);
 		msg->bodyptr = NULL;
 		break;
@@ -1577,43 +1726,8 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 		qdf_mem_free(msg->bodyptr);
 		msg->bodyptr = NULL;
 		break;
-	case SIR_HAL_P2P_NOA_START_IND:
-		session_entry = &mac_ctx->lim.gpSession[0];
-		pe_debug("LIM received NOA start %x", msg->type);
-
-		/* Since insert NOA is done and NOA start msg received,
-		 * we should deactivate the Insert NOA timer
-		 */
-		lim_deactivate_and_change_timer(mac_ctx,
-			eLIM_INSERT_SINGLESHOT_NOA_TIMER);
-
-		for (i = 0; i < mac_ctx->lim.maxBssId; i++) {
-			session_entry = &mac_ctx->lim.gpSession[i];
-			if ((session_entry != NULL) && (session_entry->valid) &&
-				(session_entry->pePersona == QDF_P2P_GO_MODE)) {
-				/* Save P2P NOA start attribute for Go persona*/
-				p2p_go_exists = 1;
-				qdf_mem_copy(&session_entry->p2pGoPsNoaStartInd,
-					msg->bodyptr, sizeof(tSirP2PNoaStart));
-				qdf_status =
-					session_entry->p2pGoPsNoaStartInd.status;
-				if (qdf_status != QDF_STATUS_SUCCESS)
-					QDF_TRACE(QDF_MODULE_ID_PE, LOGW,
-						FL(
-						"GO NOA start status %d by FW"),
-						qdf_status);
-				break;
-			}
-		}
-
-		if (p2p_go_exists == 0)
-			QDF_TRACE(QDF_MODULE_ID_PE, LOGW,
-				FL(
-				"GO is removed by the time NOA start recvd"));
-
-		/* We received the NOA start indication. Now we can send down
-		 * the SME request which requires off-channel operation */
-		lim_process_regd_defd_sme_req_after_noa_start(mac_ctx);
+	case eWNI_SME_MON_DEINIT_SESSION:
+		lim_mon_deinit_session(mac_ctx, msg->bodyptr);
 		qdf_mem_free(msg->bodyptr);
 		msg->bodyptr = NULL;
 		break;
@@ -1623,7 +1737,7 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 		session_entry = pe_find_session_by_sta_id(mac_ctx,
 			tdls_ind->staIdx, &session_id);
 		if (session_entry == NULL) {
-			pe_err("No session exist for given bssId");
+			pe_debug("No session exist for given bssId");
 				qdf_mem_free(msg->bodyptr);
 				msg->bodyptr = NULL;
 				return;
@@ -1706,7 +1820,6 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 	case SIR_LIM_DELETE_STA_CONTEXT_IND:
 		lim_delete_sta_context(mac_ctx, msg);
 		break;
-	case SIR_LIM_PERIODIC_PROBE_REQ_TIMEOUT:
 	case SIR_LIM_JOIN_FAIL_TIMEOUT:
 	case SIR_LIM_PERIODIC_JOIN_PROBE_REQ_TIMEOUT:
 	case SIR_LIM_AUTH_FAIL_TIMEOUT:
@@ -1714,11 +1827,8 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 	case SIR_LIM_ASSOC_FAIL_TIMEOUT:
 	case SIR_LIM_REASSOC_FAIL_TIMEOUT:
 	case SIR_LIM_FT_PREAUTH_RSP_TIMEOUT:
-	case SIR_LIM_REMAIN_CHN_TIMEOUT:
-	case SIR_LIM_INSERT_SINGLESHOT_NOA_TIMEOUT:
 	case SIR_LIM_DISASSOC_ACK_TIMEOUT:
 	case SIR_LIM_DEAUTH_ACK_TIMEOUT:
-	case SIR_LIM_CONVERT_ACTIVE_CHANNEL_TO_PASSIVE:
 	case SIR_LIM_AUTH_RETRY_TIMEOUT:
 	case SIR_LIM_AUTH_SAE_TIMEOUT:
 		/* These timeout messages are handled by MLM sub module */
@@ -1742,7 +1852,6 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 		break;
 	case SIR_LIM_PROBE_HB_FAILURE_TIMEOUT:
 		lim_handle_heart_beat_failure_timeout(mac_ctx);
-		break;
 		break;
 	case SIR_LIM_CNF_WAIT_TIMEOUT:
 		/* Does not receive CNF or dummy packet */
@@ -1772,17 +1881,6 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 	case SIR_LIM_UPDATE_OLBC_CACHEL_TIMEOUT:
 		lim_handle_update_olbc_cache(mac_ctx);
 		break;
-#ifdef FEATURE_WLAN_TDLS
-	case SIR_HAL_TDLS_SHOULD_DISCOVER:
-	case SIR_HAL_TDLS_SHOULD_TEARDOWN:
-	case SIR_HAL_TDLS_PEER_DISCONNECTED:
-	case SIR_HAL_TDLS_CONNECTION_TRACKER_NOTIFICATION:
-		QDF_TRACE(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-			("%s received tdls event: 0x%x"), __func__, msg->type);
-		lim_send_sme_tdls_event_notify(mac_ctx, msg->type,
-					(void *)msg->bodyptr);
-		break;
-#endif
 	case WMA_ADD_BSS_RSP:
 		lim_process_mlm_add_bss_rsp(mac_ctx, msg);
 		break;
@@ -1855,44 +1953,6 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 		qdf_mem_free((void *)(msg->bodyptr));
 		msg->bodyptr = NULL;
 		break;
-	case eWNI_SME_SET_BCN_FILTER_REQ:
-		bcn_filter_req =
-			(tSirSetActiveModeSetBncFilterReq *) msg->bodyptr;
-		session_entry = pe_find_session_by_bssid(mac_ctx,
-			bcn_filter_req->bssid.bytes, &session_id);
-		if ((session_entry != NULL) &&
-			(lim_send_beacon_filter_info(mac_ctx, session_entry) !=
-			 eSIR_SUCCESS))
-			pe_err("Failied to send Beacon Filter Info");
-		qdf_mem_free((void *)(msg->bodyptr));
-		msg->bodyptr = NULL;
-		break;
-#ifdef FEATURE_WLAN_TDLS
-	case WMA_SET_TDLS_LINK_ESTABLISH_REQ_RSP:
-		tdls_link_params = (tTdlsLinkEstablishParams *) msg->bodyptr;
-		session_entry = pe_find_session_by_sta_id(mac_ctx,
-			tdls_link_params->staIdx, &session_id);
-		if (session_entry == NULL) {
-			pe_err("session %u does not exist", session_id);
-			/* Still send the eWNI_SME_TDLS_LINK_ESTABLISH_RSP
-			 * message to SME with session id as zero and status
-			 * as FAILURE so, that message queued in SME queue
-			 * can be freed to prevent the SME cmd buffer leak
-			 */
-			lim_send_sme_tdls_link_establish_req_rsp(mac_ctx, 0,
-				NULL, NULL, eSIR_FAILURE);
-		} else {
-			lim_send_sme_tdls_link_establish_req_rsp(mac_ctx,
-				session_entry->smeSessionId, NULL, NULL,
-				tdls_link_params->status);
-		}
-		qdf_mem_free((void *)(msg->bodyptr));
-		msg->bodyptr = NULL;
-		break;
-#endif
-	case WMA_RX_SCAN_EVENT:
-		lim_process_rx_scan_event(mac_ctx, msg->bodyptr);
-		break;
 	case WMA_RX_CHN_STATUS_EVENT:
 		lim_process_rx_channel_status_event(mac_ctx, msg->bodyptr);
 		break;
@@ -1901,11 +1961,6 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 		qdf_mem_free((void *)(msg->bodyptr));
 		msg->bodyptr = NULL;
 		break;
-	case WMA_DFS_RADAR_IND:
-		lim_send_sme_dfs_event_notify(mac_ctx, msg->type,
-				(void *)msg->bodyptr);
-		/* msg->bodyptr will be freed up by SME/CSR */
-		break;
 	case WMA_DFS_BEACON_TX_SUCCESS_IND:
 		lim_process_beacon_tx_success_ind(mac_ctx, msg->type,
 				(void *)msg->bodyptr);
@@ -1913,10 +1968,12 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 		msg->bodyptr = NULL;
 		break;
 	case WMA_DISASSOC_TX_COMP:
-		lim_disassoc_tx_complete_cnf(mac_ctx, msg->bodyval);
+		lim_disassoc_tx_complete_cnf(mac_ctx, msg->bodyval,
+					     msg->bodyptr);
 		break;
 	case WMA_DEAUTH_TX_COMP:
-		lim_deauth_tx_complete_cnf(mac_ctx, msg->bodyval);
+		lim_deauth_tx_complete_cnf(mac_ctx, msg->bodyval,
+					   msg->bodyptr);
 		break;
 #ifdef FEATURE_AP_MCC_CH_AVOIDANCE
 	case WMA_UPDATE_Q2Q_IE_IND:
@@ -1942,7 +1999,7 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 			 *    restart, in such a case, beacon params will be
 			 *    reset and thus will not contain Q2Q IE, by default
 			 */
-			if (cds_get_channel_state(
+			if (wlan_reg_get_channel_state(mac_ctx->pdev,
 					session_entry->currentOperChannel)
 					!= CHANNEL_STATE_DFS) {
 				beacon_params.bssIdx = session_entry->bssIdx;
@@ -2027,13 +2084,18 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 		qdf_mem_free((void *)msg->bodyptr);
 		msg->bodyptr = NULL;
 		break;
+	case eWNI_SME_SET_HE_BSS_COLOR:
+		lim_process_set_he_bss_color(mac_ctx, msg->bodyptr);
+		qdf_mem_free((void *)msg->bodyptr);
+		msg->bodyptr = NULL;
+		break;
 	case eWNI_SME_DEL_ALL_TDLS_PEERS:
 		lim_process_sme_del_all_tdls_peers(mac_ctx, msg->bodyptr);
 		qdf_mem_free((void *)msg->bodyptr);
 		msg->bodyptr = NULL;
 		break;
-	case eWNI_SME_SEND_MGMT_FRAME_TX:
-		lim_send_mgmt_frame_tx(mac_ctx, msg->bodyptr);
+	case WMA_OBSS_DETECTION_INFO:
+		lim_process_obss_detection_ind(mac_ctx, msg->bodyptr);
 		qdf_mem_free(msg->bodyptr);
 		msg->bodyptr = NULL;
 		break;
@@ -2042,15 +2104,27 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 		qdf_mem_free((void *)msg->bodyptr);
 		msg->bodyptr = NULL;
 		break;
+	case WMA_OBSS_COLOR_COLLISION_INFO:
+		lim_process_obss_color_collision_info(mac_ctx, msg->bodyptr);
+		qdf_mem_free((void *)msg->bodyptr);
+		msg->bodyptr = NULL;
+		break;
 	case WMA_SEND_BCN_RSP:
 		lim_send_bcn_rsp(mac_ctx, (tpSendbeaconParams)msg->bodyptr);
+		qdf_mem_free((void *)msg->bodyptr);
+		msg->bodyptr = NULL;
+		break;
+	case WMA_ROAM_BLACKLIST_MSG:
+		lim_add_roam_blacklist_ap(mac_ctx,
+					  (struct roam_blacklist_event *)
+					  msg->bodyptr);
 		qdf_mem_free((void *)msg->bodyptr);
 		msg->bodyptr = NULL;
 		break;
 	default:
 		qdf_mem_free((void *)msg->bodyptr);
 		msg->bodyptr = NULL;
-		pe_err("Discarding unexpected message received %X",
+		pe_debug("Discarding unexpected message received %X",
 			msg->type);
 		lim_print_msg_name(mac_ctx, LOGE, msg->type);
 		break;
@@ -2071,9 +2145,8 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 
 static void lim_process_deferred_message_queue(tpAniSirGlobal pMac)
 {
-	tSirMsgQ limMsg = { 0, 0, 0 };
-
-	tSirMsgQ *readMsg;
+	struct scheduler_msg limMsg = {0};
+	struct scheduler_msg *readMsg;
 	uint16_t size;
 
 	/*
@@ -2083,13 +2156,13 @@ static void lim_process_deferred_message_queue(tpAniSirGlobal pMac)
 	if (size > 0) {
 		while ((readMsg = lim_read_deferred_msg_q(pMac)) != NULL) {
 			qdf_mem_copy((uint8_t *) &limMsg,
-				     (uint8_t *) readMsg, sizeof(tSirMsgQ));
+				     (uint8_t *) readMsg,
+				     sizeof(struct scheduler_msg));
 			size--;
 			lim_process_messages(pMac, &limMsg);
 
 			if ((lim_is_system_in_scan_state(pMac))
 			    || (true != GET_LIM_PROCESS_DEFD_MESGS(pMac))
-			    || (pMac->lim.gLimSystemInScanLearnMode)
 			    ||  pMac->lim.gLimAddtsSent)
 				break;
 		}
@@ -2106,7 +2179,7 @@ static void lim_process_deferred_message_queue(tpAniSirGlobal pMac)
  *
  * Return:  None.
  */
-void lim_message_processor(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
+void lim_message_processor(tpAniSirGlobal mac_ctx, struct scheduler_msg *msg)
 {
 	if (eLIM_MLM_OFFLINE_STATE == mac_ctx->lim.gLimMlmState) {
 		pe_free_msg(mac_ctx, msg);
@@ -2134,8 +2207,9 @@ void lim_message_processor(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
  *
  * Return: None
  */
-static void lim_process_normal_hdd_msg(tpAniSirGlobal mac_ctx, tSirMsgQ *msg,
-	uint8_t rsp_reqd)
+static void lim_process_normal_hdd_msg(tpAniSirGlobal mac_ctx,
+				       struct scheduler_msg *msg,
+				       uint8_t rsp_reqd)
 {
 	bool defer_msg = true;
 
@@ -2166,7 +2240,7 @@ static void lim_process_normal_hdd_msg(tpAniSirGlobal mac_ctx, tSirMsgQ *msg,
 		(lim_is_system_in_scan_state(mac_ctx))) && defer_msg) {
 		/*
 		 * System is in DFS (Learn) mode or awaiting addts response or
-		 * if radar is detected, Defer processsing this message
+		 * if radar is detected, Defer processing this message
 		 */
 		if (lim_defer_msg(mac_ctx, msg) != TX_SUCCESS) {
 #ifdef WLAN_DEBUG
@@ -2212,7 +2286,7 @@ handle_ht_capabilityand_ht_info(struct sAniSirGlobal *pMac,
 	uint8_t *ptr;
 
 	if (wlan_cfg_get_int(pMac, WNI_CFG_HT_CAP_INFO, &cfgValue) !=
-	    eSIR_SUCCESS) {
+	    QDF_STATUS_SUCCESS) {
 		pe_err("Fail to retrieve WNI_CFG_HT_CAP_INFO value");
 		return;
 	}
@@ -2232,7 +2306,7 @@ handle_ht_capabilityand_ht_info(struct sAniSirGlobal *pMac,
 		(uint8_t) macHTCapabilityInfo.dsssCckMode40MHz;
 
 	if (wlan_cfg_get_int(pMac, WNI_CFG_HT_AMPDU_PARAMS, &cfgValue) !=
-	    eSIR_SUCCESS) {
+	    QDF_STATUS_SUCCESS) {
 		pe_err("Fail to retrieve WNI_CFG_HT_PARAM_INFO value");
 		return;
 	}
@@ -2244,7 +2318,7 @@ handle_ht_capabilityand_ht_info(struct sAniSirGlobal *pMac,
 
 	/* Get HT IE Info */
 	if (wlan_cfg_get_int(pMac, WNI_CFG_HT_INFO_FIELD1, &cfgValue) !=
-	    eSIR_SUCCESS) {
+	    QDF_STATUS_SUCCESS) {
 		pe_err("Fail to retrieve WNI_CFG_HT_INFO_FIELD1 value");
 		return;
 	}
@@ -2257,7 +2331,7 @@ handle_ht_capabilityand_ht_info(struct sAniSirGlobal *pMac,
 	pMac->lim.gHTRifsMode = (uint8_t) macHTInfoField1.rifsMode;
 
 	if (wlan_cfg_get_int(pMac, WNI_CFG_HT_INFO_FIELD2, &cfgValue) !=
-	    eSIR_SUCCESS) {
+	    QDF_STATUS_SUCCESS) {
 		pe_err("Fail to retrieve WNI_CFG_HT_INFO_FIELD2 value");
 		return;
 	}
@@ -2266,7 +2340,7 @@ handle_ht_capabilityand_ht_info(struct sAniSirGlobal *pMac,
 	pMac->lim.gHTOperMode = (tSirMacHTOperatingMode) macHTInfoField2.opMode;
 
 	if (wlan_cfg_get_int(pMac, WNI_CFG_HT_INFO_FIELD3, &cfgValue) !=
-	    eSIR_SUCCESS) {
+	    QDF_STATUS_SUCCESS) {
 		pe_err("Fail to retrieve WNI_CFG_HT_INFO_FIELD3 value");
 		return;
 	}

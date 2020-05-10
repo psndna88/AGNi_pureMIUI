@@ -96,43 +96,54 @@ int hdd_napi_create(void)
 {
 	struct  hif_opaque_softc *hif_ctx;
 	int     rc = 0;
-	hdd_context_t *hdd_ctx;
+	struct hdd_context *hdd_ctx;
 	uint8_t feature_flags = 0;
+	struct qca_napi_data *napid = hdd_napi_get_all();
 
 	NAPI_DEBUG("-->");
+
+	if (NULL == napid) {
+		hdd_err("unable to retrieve napi structure");
+		rc = -EFAULT;
+		goto exit;
+	}
 
 	hif_ctx = cds_get_context(QDF_MODULE_ID_HIF);
 	if (unlikely(NULL == hif_ctx)) {
 		QDF_ASSERT(NULL != hif_ctx);
 		rc = -EFAULT;
-	} else {
-
-		feature_flags = QCA_NAPI_FEATURE_CPU_CORRECTION |
-				QCA_NAPI_FEATURE_IRQ_BLACKLISTING |
-				QCA_NAPI_FEATURE_CORE_CTL_BOOST;
-
-		rc = hif_napi_create(hif_ctx, hdd_napi_poll,
-				     QCA_NAPI_BUDGET,
-				     QCA_NAPI_DEF_SCALE,
-				     feature_flags);
-		if (rc < 0) {
-			hdd_err("ERR(%d) creating NAPI instances",
-				rc);
-		} else {
-			hdd_debug("napi instances were created. Map=0x%x", rc);
-			hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
-			if (unlikely(NULL == hdd_ctx)) {
-				QDF_ASSERT(0);
-				rc = -EFAULT;
-			} else {
-				rc = hdd_napi_event(NAPI_EVT_INI_FILE,
-					(void *)hdd_ctx->napi_enable);
-			}
-		}
-
+		goto exit;
 	}
-	NAPI_DEBUG("<-- [rc=%d]", rc);
 
+	feature_flags = QCA_NAPI_FEATURE_CPU_CORRECTION |
+		QCA_NAPI_FEATURE_IRQ_BLACKLISTING |
+		QCA_NAPI_FEATURE_CORE_CTL_BOOST;
+
+	rc = hif_napi_create(hif_ctx, hdd_napi_poll,
+			     QCA_NAPI_BUDGET,
+			     QCA_NAPI_DEF_SCALE,
+			     feature_flags);
+	if (rc < 0) {
+		hdd_err("ERR(%d) creating NAPI instances",
+			rc);
+		goto exit;
+	}
+
+	hdd_debug("napi instances were created. Map=0x%x", rc);
+	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
+	if (unlikely(NULL == hdd_ctx)) {
+		QDF_ASSERT(0);
+		rc = -EFAULT;
+		goto exit;
+	}
+
+	rc = hdd_napi_event(NAPI_EVT_INI_FILE,
+			    (void *)hdd_ctx->napi_enable);
+	napid->user_cpu_affin_mask =
+		hdd_ctx->config->napi_cpu_affinity_mask;
+
+ exit:
+	NAPI_DEBUG("<-- [rc=%d]", rc);
 	return rc;
 }
 
@@ -169,10 +180,19 @@ int hdd_napi_destroy(int force)
 						rc++;
 						hdd_napi_map &= ~(0x01 << i);
 					} else
-						hdd_warn("cannot destroy napi %d: (pipe:%d), f=%d\n",
+						hdd_err("cannot destroy napi %d: (pipe:%d), f=%d\n",
 							i,
 							NAPI_PIPE2ID(i), force);
 				}
+	} else {
+		struct hif_opaque_softc *hif_ctx;
+
+		hif_ctx = cds_get_context(QDF_MODULE_ID_HIF);
+
+		if (unlikely(NULL == hif_ctx))
+			QDF_ASSERT(NULL != hif_ctx);
+		else
+			rc = hif_napi_cpu_deinit(hif_ctx);
 	}
 
 	/* if all instances are removed, it is likely that hif_context has been
@@ -263,7 +283,7 @@ static int hdd_napi_perfd_cpufreq(enum qca_napi_tput_state req_state)
 {
 	int rc = 0;
 	struct wlan_core_minfreq req;
-	struct hdd_context_s *hdd_ctx;
+	struct hdd_context *hdd_ctx;
 
 	NAPI_DEBUG("-> (%d)", req_state);
 
@@ -293,7 +313,7 @@ static int hdd_napi_perfd_cpufreq(enum qca_napi_tput_state req_state)
 		goto hnpc_ret;
 	} /* switch */
 
-	NAPI_DEBUG("CPU min freq to %s %d",
+	NAPI_DEBUG("CPU min freq to %d",
 		   (req.freq == 0)?"Resetting":"Setting", req.freq);
 	/* the following service function returns void */
 	wlan_hdd_send_svc_nlink_msg(hdd_ctx->radio_index,
@@ -329,9 +349,9 @@ hnpc_ret:
  *         !0: error, or action error code
  */
 static int napi_tput_policy_delay;
-int hdd_napi_apply_throughput_policy(struct hdd_context_s *hddctx,
-				     uint64_t              tx_packets,
-				     uint64_t              rx_packets)
+int hdd_napi_apply_throughput_policy(struct hdd_context *hddctx,
+				     uint64_t tx_packets,
+				     uint64_t rx_packets)
 {
 	int rc = 0;
 	uint64_t packets = tx_packets + rx_packets;
@@ -403,7 +423,7 @@ int hdd_napi_apply_throughput_policy(struct hdd_context_s *hddctx,
 int hdd_napi_serialize(int is_on)
 {
 	int rc;
-	hdd_context_t *hdd_ctx;
+	struct hdd_context *hdd_ctx;
 #define POLICY_DELAY_FACTOR (1)
 	rc = hif_napi_serialize(cds_get_context(QDF_MODULE_ID_HIF), is_on);
 	if ((rc == 0) && (is_on == 0)) {
@@ -464,8 +484,7 @@ int hdd_display_napi_stats(void)
 		hdd_err("%s unable to retrieve napi structure", __func__);
 		return -EFAULT;
 	}
-	hdd_log(QDF_TRACE_LEVEL_INFO_LOW,
-		"[NAPI %u][BL %d]:  scheds   polls   comps    done t-lim p-lim  corr  max_time napi-buckets(%d)",
+	hdd_debug("[NAPI %u][BL %d]:  scheds   polls   comps    done t-lim p-lim  corr  max_time napi-buckets(%d)",
 		  napid->napi_mode,
 		  hif_napi_cpu_blacklist(napid, BLACKLIST_QUERY),
 		  QCA_NAPI_NUM_BUCKETS);
@@ -488,8 +507,7 @@ int hdd_display_napi_stats(void)
 				}
 
 				if (napis->napi_schedules != 0)
-					hdd_log(QDF_TRACE_LEVEL_INFO_LOW,
-					"NAPI[%2d]CPU[%d]: %7d %7d %7d %7d %5d %5d %5d %9llu %s",
+					hdd_debug("NAPI[%2d]CPU[%d]: %7d %7d %7d %7d %5d %5d %5d %9llu %s",
 						  i, j,
 						  napis->napi_schedules,
 						  napis->napi_polls,

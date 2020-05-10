@@ -27,14 +27,21 @@
 #include <cdp_txrx_cmn.h>       /* ol_txrx_pdev_t, etc. */
 #include <ol_txrx_internal.h>   /* TXRX_ASSERT */
 
+/**
+ * ol_txrx_peer_get_ref() - get peer reference
+ * @peer: peer for removing obj map entries
+ * @dbg_id: debug id to keep track of peer references
+ *
+ * The function increments the peer ref count. The ref count can be reduced by
+ * caling ol_txrx_peer_release_ref function. Callers are responsible for
+ * acquiring the peer_ref_mutex lock when needed.
+ *
+ * Return: peer debug id ref count or error
+ */
+int
+ol_txrx_peer_get_ref(struct ol_txrx_peer_t *peer,
+		     enum peer_debug_id_type dbg_id);
 
-#define OL_TXRX_PEER_INC_REF_CNT(peer) \
-	__ol_txrx_peer_change_ref_cnt(peer, 1, __func__, __LINE__)
-
-void __ol_txrx_peer_change_ref_cnt(struct ol_txrx_peer_t *peer,
-						int change,
-						const char *fname,
-						int line);
 int ol_txrx_peer_find_attach(struct ol_txrx_pdev_t *pdev);
 
 void ol_txrx_peer_find_detach(struct ol_txrx_pdev_t *pdev);
@@ -87,11 +94,13 @@ void
 ol_txrx_peer_find_hash_add(struct ol_txrx_pdev_t *pdev,
 			   struct ol_txrx_peer_t *peer);
 
-struct ol_txrx_peer_t *ol_txrx_peer_find_hash_find_inc_ref(
-					struct ol_txrx_pdev_t *pdev,
-					uint8_t *peer_mac_addr,
-					int mac_addr_is_aligned,
-					uint8_t check_valid);
+struct ol_txrx_peer_t *
+	ol_txrx_peer_find_hash_find_get_ref
+				(struct ol_txrx_pdev_t *pdev,
+				uint8_t *peer_mac_addr,
+				int mac_addr_is_aligned,
+				u8 check_valid,
+				enum peer_debug_id_type dbg_id);
 
 struct
 ol_txrx_peer_t *ol_txrx_peer_vdev_find_hash(struct ol_txrx_pdev_t *pdev,
@@ -105,8 +114,6 @@ ol_txrx_peer_find_hash_remove(struct ol_txrx_pdev_t *pdev,
 			      struct ol_txrx_peer_t *peer);
 
 void ol_txrx_peer_find_hash_erase(struct ol_txrx_pdev_t *pdev);
-
-void ol_txrx_peer_delete_roam_stale_peer(struct ol_txrx_pdev_t *pdev);
 
 struct ol_txrx_peer_t *ol_txrx_assoc_peer_find(struct ol_txrx_vdev_t *vdev);
 void ol_txrx_peer_remove_obj_map_entries(ol_txrx_pdev_handle pdev,

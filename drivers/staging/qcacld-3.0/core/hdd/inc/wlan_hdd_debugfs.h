@@ -20,8 +20,40 @@
 #define _WLAN_HDD_DEBUGFS_H
 
 #ifdef WLAN_DEBUGFS
-QDF_STATUS hdd_debugfs_init(hdd_adapter_t *adapter);
-void hdd_debugfs_exit(hdd_adapter_t *adapter);
+
+#define HDD_DEBUGFS_FILE_NAME_MAX 24
+
+/**
+ * enum hdd_debugfs_file_id - Debugfs file Identifier
+ * @HDD_DEBUFS_FILE_ID_CONNECT_INFO: connect_info file id
+ * @HDD_DEBUFS_FILE_ID_ROAM_SCAN_STATS_INFO: roam_scan_stats file id
+ * @HDD_DEBUFS_FILE_ID_OFFLOAD_INFO: offload_info file id
+ * @HDD_DEBUGFS_FILE_ID_MAX: maximum id of csr debugfs file
+ */
+enum hdd_debugfs_file_id {
+	HDD_DEBUFS_FILE_ID_CONNECT_INFO = 0,
+	HDD_DEBUFS_FILE_ID_ROAM_SCAN_STATS_INFO = 1,
+	HDD_DEBUFS_FILE_ID_OFFLOAD_INFO = 2,
+
+	HDD_DEBUGFS_FILE_ID_MAX,
+};
+
+/**
+ * struct hdd_debugfs_file_info - Debugfs file info
+ * @name: name of debugfs file
+ * @id: id from enum hdd_debugfs_file_id used to identify file
+ * @buf_max_size: max size of buffer from which debugfs file is updated
+ * @entry: dentry pointer to debugfs file
+ */
+struct hdd_debugfs_file_info {
+	uint8_t name[HDD_DEBUGFS_FILE_NAME_MAX];
+	enum hdd_debugfs_file_id id;
+	ssize_t buf_max_size;
+	struct dentry *entry;
+};
+
+QDF_STATUS hdd_debugfs_init(struct hdd_adapter *adapter);
+void hdd_debugfs_exit(struct hdd_adapter *adapter);
 
 /**
  * hdd_wait_for_debugfs_threads_completion() - Wait for debugfs threads
@@ -60,12 +92,12 @@ void hdd_debugfs_thread_increment(void);
 void hdd_debugfs_thread_decrement(void);
 
 #else
-static inline QDF_STATUS hdd_debugfs_init(hdd_adapter_t *pAdapter)
+static inline QDF_STATUS hdd_debugfs_init(struct hdd_adapter *adapter)
 {
 	return QDF_STATUS_SUCCESS;
 }
 
-static inline void hdd_debugfs_exit(hdd_adapter_t *adapter)
+static inline void hdd_debugfs_exit(struct hdd_adapter *adapter)
 {
 }
 

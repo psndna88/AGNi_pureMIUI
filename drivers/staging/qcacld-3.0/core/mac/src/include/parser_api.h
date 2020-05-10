@@ -114,7 +114,7 @@ typedef struct sSirQCNIE {
 #define SIR_HESSID_LEN 6
 #define SIR_MAX_KEY_CNT 7
 #define SIR_MAX_KEY_LEN 48
-
+#define SIR_FILS_IND_ELEM_OFFSET 2
 /*
  * struct public_key_identifier: structure for public key identifier
  * present in fils indication element
@@ -191,76 +191,6 @@ struct sir_fils_indication {
 	struct public_key_identifier key_identifier;
 };
 #endif
-#define ESP_INFORMATION_LIST_LENGTH 3
-/*
- * enum access_category: tells about access category in ESP paramameter
- * @ESP_AC_BK: ESP access category for background
- * @ESP_AC_BE: ESP access category for best effort
- * @ESP_AC_VI: ESP access category for video
- * @ESP_AC_VO: ESP access category for Voice
- */
-enum access_category {
-	ESP_AC_BK,
-	ESP_AC_BE,
-	ESP_AC_VI,
-	ESP_AC_VO,
-
-};
-/*
- * struct sir_esp_info: structure for Esp information parameter
- * @access_category: access category info
- * @reserved: reserved
- * @data_format: two bits in length and tells about data format
- * i.e. 0 = No aggregation is expected to be performed for MSDUs or MPDUs with
- * the Type subfield equal to Data for the corresponding AC
- * 1 = A-MSDU aggregation is expected to be performed for MSDUs for the
- * corresponding AC, but A-MPDU aggregation is not expected to be performed
- * for MPDUs with the Type subfield equal to Data for the corresponding AC
- * 2 = A-MPDU aggregation is expected to be performed for MPDUs with the Type
- * subfield equal to Data for the corresponding AC, but A-MSDU aggregation is
- * not expected to be performed for MSDUs for the corresponding AC
- * 3 = A-MSDU aggregation is expected to be performed for MSDUs for the
- * corresponding AC and A-MPDU aggregation is expected to be performed for
- * MPDUs with the Type subfield equal to Data for the corresponding AC
- * @ba_window_size: BA Window Size subfield is three bits in length and
- * indicates the size of the Block Ack window that is
- * expected for the corresponding access category
- * @estimated_air_fraction: Estimated Air Time Fraction subfield is 8 bits in
- * length and contains an unsigned integer that represents
- * the predicted percentage of time, linearly scaled with 255 representing
- * 100%, that a new STA joining the
- * BSS will be allocated for PPDUs that contain only MPDUs with the Type
- * subfield equal to Data of the
- * corresponding access category for that STA.
- * @ppdu_duration: Data PPDU Duration Target field is 8 bits in length and is
- * an unsigned integer that indicates the
- * expected target duration of PPDUs that contain only MPDUs with the Type
- * subfield equal to Data for the
- * corresponding access category in units of 50 μs.
- */
-struct sir_esp_info {
-	uint8_t access_category:2;
-	uint8_t reserved:1;
-	uint8_t data_format:2;
-	uint8_t ba_window_size:3;
-	uint8_t estimated_air_fraction;
-	uint8_t ppdu_duration;
-};
-/*
- * struct sir_esp_information: struct for ESP information
- * @is_present: If ESP information is present or not
- * @esp_info_AC_BK: ESP information related to BK category
- * @esp_info_AC_BE: ESP information related to BE category
- * @esp_info_AC_VI: ESP information related to VI category
- * @esp_info_AC_VO: ESP information related to VO category
- */
-struct sir_esp_information {
-	bool is_present;
-	struct sir_esp_info esp_info_AC_BK;
-	struct sir_esp_info esp_info_AC_BE;
-	struct sir_esp_info esp_info_AC_VI;
-	struct sir_esp_info esp_info_AC_VO;
-};
 
 /* Structure common to Beacons & Probe Responses */
 typedef struct sSirProbeRespBeacon {
@@ -350,13 +280,15 @@ typedef struct sSirProbeRespBeacon {
 	uint8_t MBO_capability;
 	bool assoc_disallowed;
 	uint8_t assoc_disallowed_reason;
-	bool oce_wan_present;
-	uint8_t oce_wan_downlink_av_cap;
 	tSirQCNIE QCN_IE;
+	tDot11fIEhe_cap he_cap;
+	tDot11fIEhe_op he_op;
+#ifdef WLAN_FEATURE_11AX_BSS_COLOR
+	tDot11fIEbss_color_change vendor_he_bss_color_change;
+#endif
 #ifdef WLAN_FEATURE_FILS_SK
 	struct sir_fils_indication fils_ind;
 #endif
-	struct sir_esp_information esp_information;
 } tSirProbeRespBeacon, *tpSirProbeRespBeacon;
 
 /* probe Request structure */
@@ -372,6 +304,7 @@ typedef struct sSirProbeReq {
 	uint8_t wscIePresent;
 	uint8_t p2pIePresent;
 	tDot11fIEVHTCaps VHTCaps;
+	tDot11fIEhe_cap he_cap;
 } tSirProbeReq, *tpSirProbeReq;
 
 /* / Association Request structure (one day to be replaced by */
@@ -425,7 +358,53 @@ typedef struct sSirAssocReq {
 	tDot11fIEExtCap ExtCap;
 	tDot11fIEvendor_vht_ie vendor_vht_ie;
 	tDot11fIEhs20vendor_ie hs20vendor_ie;
+	tDot11fIEhe_cap he_cap;
 } tSirAssocReq, *tpSirAssocReq;
+
+#define FTIE_SUBELEM_R1KH_ID 1
+#define FTIE_SUBELEM_GTK     2
+#define FTIE_SUBELEM_R0KH_ID 3
+#define FTIE_SUBELEM_IGTK    4
+#define FTIE_SUBELEM_OCI     5
+
+#define FTIE_R1KH_LEN 6
+#define FTIE_R0KH_MAX_LEN 48
+
+/**
+ * struct wlan_sha384_ftinfo_subelem - subelements of FTIE
+ * @r1kh_id: FT R1 Key holder ID
+ * @gtk: Ft group temporal key
+ * @gtk_len: GTK length
+ * @r0kh_id: FT R0 Key Holder ID
+ * @igtk: FT IGTK used for 11w
+ * @igtk_len: IGTK length
+ */
+struct wlan_sha384_ftinfo_subelem {
+	tDot11fIER1KH_ID r1kh_id;
+	uint8_t *gtk;
+	uint8_t gtk_len;
+	tDot11fIER0KH_ID r0kh_id;
+	uint8_t *igtk;
+	uint8_t igtk_len;
+};
+
+#define MIC_CONTROL_BYTES 2
+#define MIC_SHA384_BYTES  24
+#define NONCE_BYTES       32
+
+/**
+ * struct wlan_sha384_ftinfo - FTE for sha384 based AKMs
+ * @mic_control: FTIE mic control field of 2 bytes
+ * @mic: MIC present in the FTIE assoc Response
+ * @anonce: Anonce sent by the AP
+ * @snonce: Snonce field in the FTIE
+ */
+struct wlan_sha384_ftinfo {
+	uint8_t mic_control[MIC_CONTROL_BYTES];
+	uint8_t mic[MIC_SHA384_BYTES];
+	uint8_t anonce[NONCE_BYTES];
+	uint8_t snonce[NONCE_BYTES];
+};
 
 /* / Association Response structure (one day to be replaced by */
 /* / tDot11fAssocRequest) */
@@ -442,6 +421,8 @@ typedef struct sSirAssocRsp {
 	tDot11fIEHTCaps HTCaps;
 	tDot11fIEHTInfo HTInfo;
 	tDot11fIEFTInfo FTInfo;
+	struct wlan_sha384_ftinfo sha384_ft_info;
+	struct wlan_sha384_ftinfo_subelem sha384_ft_subelem;
 	uint8_t mdie[SIR_MDIE_SIZE];
 	uint8_t num_RICData;
 	tDot11fIERICDataDesc RICData[2];
@@ -477,6 +458,10 @@ typedef struct sSirAssocRsp {
 	tDot11fIEOBSSScanParameters obss_scanparams;
 	tDot11fTLVrssi_assoc_rej rssi_assoc_rej;
 	tSirQCNIE QCN_IE;
+	tDot11fIEhe_cap he_cap;
+	tDot11fIEhe_op he_op;
+	bool mu_edca_present;
+	tSirMacEdcaParamSetIE mu_edca;
 #ifdef WLAN_FEATURE_FILS_SK
 	tDot11fIEfils_session fils_session;
 	tDot11fIEfils_key_confirmation fils_key_auth;
@@ -592,13 +577,18 @@ struct s_ext_cap {
 	uint8_t fine_time_meas_responder:1;
 	uint8_t fine_time_meas_initiator:1;
 	uint8_t fils_capability:1;
+	uint8_t ext_spectrum_management:1;
+	uint8_t future_channel_guidance:1;
+	uint8_t reserved7:2;
+	uint8_t twt_requestor_support:1;
+	uint8_t twt_responder_support:1;
 };
 
 uint8_t sirIsPropCapabilityEnabled(struct sAniSirGlobal *pMac, uint32_t bitnum);
 
 #define CFG_GET_INT(nStatus, pMac, nItem, cfg)  do { \
 		(nStatus) = wlan_cfg_get_int((pMac), (nItem), &(cfg)); \
-		if (eSIR_SUCCESS != (nStatus)) { \
+		if (QDF_STATUS_SUCCESS != (nStatus)) { \
 			pe_err("Failed to retrieve nItem from CFG status: %d", (nStatus)); \
 			return nStatus; \
 		} \
@@ -606,7 +596,7 @@ uint8_t sirIsPropCapabilityEnabled(struct sAniSirGlobal *pMac, uint32_t bitnum);
 
 #define CFG_GET_INT_NO_STATUS(nStatus, pMac, nItem, cfg) do { \
 		(nStatus) = wlan_cfg_get_int((pMac), (nItem), &(cfg)); \
-		if (eSIR_SUCCESS != (nStatus)) { \
+		if (QDF_STATUS_SUCCESS != (nStatus)) { \
 			pe_err("Failed to retrieve nItem from CFG status: %d", (nStatus)); \
 			return; \
 		} \
@@ -615,7 +605,7 @@ uint8_t sirIsPropCapabilityEnabled(struct sAniSirGlobal *pMac, uint32_t bitnum);
 #define CFG_GET_STR(nStatus, pMac, nItem, cfg, nCfg, nMaxCfg) do { \
 		(nCfg) = (nMaxCfg); \
 		(nStatus) = wlan_cfg_get_str((pMac), (nItem), (cfg), &(nCfg)); \
-		if (eSIR_SUCCESS != (nStatus)) { \
+		if (QDF_STATUS_SUCCESS != (nStatus)) { \
 			pe_err("Failed to retrieve nItem from CFG status: %d", (nStatus)); \
 			return nStatus; \
 		} \
@@ -624,7 +614,7 @@ uint8_t sirIsPropCapabilityEnabled(struct sAniSirGlobal *pMac, uint32_t bitnum);
 #define CFG_GET_STR_NO_STATUS(nStatus, pMac, nItem, cfg, nCfg, nMaxCfg) do { \
 		(nCfg) = (nMaxCfg); \
 		(nStatus) = wlan_cfg_get_str((pMac), (nItem), (cfg), &(nCfg)); \
-		if (eSIR_SUCCESS != (nStatus)) { \
+		if (QDF_STATUS_SUCCESS != (nStatus)) { \
 			pe_err("Failed to retrieve nItem from CFG status: %d", (nStatus)); \
 			return; \
 		} \
@@ -635,71 +625,84 @@ void swap_bit_field16(uint16_t in, uint16_t *out);
 /* Currently implemented as "shims" between callers & the new framesc- */
 /* generated code: */
 
-tSirRetStatus
+QDF_STATUS
 sir_convert_probe_req_frame2_struct(struct sAniSirGlobal *pMac,
 				uint8_t *frame, uint32_t len,
 				tpSirProbeReq probe);
 
-tSirRetStatus
+QDF_STATUS
 sir_convert_probe_frame2_struct(struct sAniSirGlobal *pMac, uint8_t *frame,
 				uint32_t len, tpSirProbeRespBeacon probe);
 
-tSirRetStatus
+QDF_STATUS
 sir_convert_assoc_req_frame2_struct(struct sAniSirGlobal *pMac,
-				uint8_t *frame, uint32_t len,
-				tpSirAssocReq assoc);
+				    uint8_t *frame, uint32_t len,
+				    tpSirAssocReq assoc);
 
-tSirRetStatus
+/**
+ * wlan_parse_ftie_sha384() - Parse the FT IE if akm uses sha384 KDF
+ * @frame: Pointer to the association response frame
+ * @frame_len: Length of the assoc response frame
+ * @assoc_rsp: Destination assoc response structure in PE to which the FTIE
+ * needs to be parsed and copied
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_parse_ftie_sha384(uint8_t *frame, uint32_t frame_len,
+		       struct sSirAssocRsp *assoc_rsp);
+
+QDF_STATUS
 sir_convert_assoc_resp_frame2_struct(struct sAniSirGlobal *pMac,
 				tpPESession session_entry,
 				uint8_t *frame, uint32_t len,
 				tpSirAssocRsp assoc);
 
-tSirRetStatus
+QDF_STATUS
 sir_convert_reassoc_req_frame2_struct(struct sAniSirGlobal *pMac,
 				uint8_t *frame, uint32_t len,
 				tpSirAssocReq assoc);
 
-tSirRetStatus
+QDF_STATUS
 sir_parse_beacon_ie(struct sAniSirGlobal *pMac,
 		tpSirProbeRespBeacon pBeaconStruct,
 		uint8_t *pPayload, uint32_t payloadLength);
 
-tSirRetStatus
+QDF_STATUS
 sir_convert_beacon_frame2_struct(struct sAniSirGlobal *pMac,
 				uint8_t *pBeaconFrame,
 				tpSirProbeRespBeacon pBeaconStruct);
 
-tSirRetStatus
+QDF_STATUS
 sir_convert_auth_frame2_struct(struct sAniSirGlobal *pMac,
 			uint8_t *frame, uint32_t len,
 			tpSirMacAuthFrameBody auth);
 
-tSirRetStatus
+QDF_STATUS
 sir_convert_addts_req2_struct(struct sAniSirGlobal *pMac,
 			uint8_t *frame, uint32_t len,
 			tSirAddtsReqInfo *addTs);
 
-tSirRetStatus
+QDF_STATUS
 sir_convert_addts_rsp2_struct(struct sAniSirGlobal *pMac,
 			uint8_t *frame, uint32_t len,
 			tSirAddtsRspInfo *addts);
 
-tSirRetStatus
+QDF_STATUS
 sir_convert_delts_req2_struct(struct sAniSirGlobal *pMac,
 			uint8_t *frame, uint32_t len,
 			tSirDeltsReqInfo *delTs);
-tSirRetStatus
+QDF_STATUS
 sir_convert_qos_map_configure_frame2_struct(tpAniSirGlobal pMac,
 					uint8_t *pFrame, uint32_t nFrame,
 					tSirQosMapSet *pQosMapSet);
 
 #ifdef ANI_SUPPORT_11H
-tSirRetStatus
+QDF_STATUS
 sir_convert_tpc_req_frame2_struct(struct sAniSirGlobal *, uint8_t *,
 				tpSirMacTpcReqActionFrame, uint32_t);
 
-tSirRetStatus
+QDF_STATUS
 sir_convert_meas_req_frame2_struct(struct sAniSirGlobal *, uint8_t *,
 				tpSirMacMeasReqActionFrame, uint32_t);
 #endif
@@ -721,7 +724,7 @@ sir_convert_meas_req_frame2_struct(struct sAniSirGlobal *, uint8_t *,
  *
  */
 
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_capabilities(tpAniSirGlobal pMac,
 			tDot11fFfCapabilities *pDot11f,
 			tpPESession psessionEntry);
@@ -747,7 +750,7 @@ populate_dot11f_capabilities(tpAniSirGlobal pMac,
 
 struct sDphHashNode;
 
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_capabilities2(tpAniSirGlobal pMac,
 			tDot11fFfCapabilities *pDot11f,
 			struct sDphHashNode *pSta,
@@ -771,12 +774,12 @@ populate_dot11f_chan_switch_wrapper(tpAniSirGlobal pMac,
 				tpPESession psessionEntry);
 
 /* / Populate a tDot11fIECountry */
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_country(tpAniSirGlobal pMac,
 			tDot11fIECountry *pDot11f, tpPESession psessionEntry);
 
 /* Populated a populate_dot11f_ds_params */
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_ds_params(tpAniSirGlobal pMac,
 			tDot11fIEDSParams *pDot11f, uint8_t channel);
 
@@ -786,11 +789,11 @@ populate_dot11f_edca_param_set(tpAniSirGlobal pMac,
 			tDot11fIEEDCAParamSet *pDot11f,
 			tpPESession psessionEntry);
 
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_erp_info(tpAniSirGlobal pMac,
 			tDot11fIEERPInfo *pDot11f, tpPESession psessionEntry);
 
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_ext_supp_rates(tpAniSirGlobal pMac,
 			uint8_t nChannelNum, tDot11fIEExtSuppRates *pDot11f,
 			tpPESession psessionEntry);
@@ -804,7 +807,7 @@ populate_dot11f_ext_supp_rates(tpAniSirGlobal pMac,
  *
  * Return: Ret Status
  */
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_beacon_report(tpAniSirGlobal pMac,
 			tDot11fIEMeasurementReport *pDot11f,
 			tSirMacBeaconReport *pBeaconReport,
@@ -826,16 +829,16 @@ populate_dot11f_beacon_report(tpAniSirGlobal pMac,
  *
  */
 
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_ext_supp_rates1(tpAniSirGlobal pMac,
 				uint8_t nChannelNum,
 				tDot11fIEExtSuppRates *pDot11f);
 
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_ht_caps(tpAniSirGlobal pMac,
 			tpPESession psessionEntry, tDot11fIEHTCaps *pDot11f);
 
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_ht_info(tpAniSirGlobal pMac,
 			tDot11fIEHTInfo *pDot11f, tpPESession psessionEntry);
 
@@ -844,19 +847,19 @@ void populate_dot11f_ibss_params(tpAniSirGlobal pMac,
 				tpPESession psessionEntry);
 
 #ifdef ANI_SUPPORT_11H
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_measurement_report0(tpAniSirGlobal pMac,
 				tpSirMacMeasReqActionFrame pReq,
 				tDot11fIEMeasurementReport *pDot11f);
 
 /* / Populate a tDot11fIEMeasurementReport when the report type is CCA */
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_measurement_report1(tpAniSirGlobal pMac,
 				tpSirMacMeasReqActionFrame pReq,
 				tDot11fIEMeasurementReport *pDot11f);
 
 /* / Populate a tDot11fIEMeasurementReport when the report type is RPI Hist */
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_measurement_report2(tpAniSirGlobal pMac,
 				tpSirMacMeasReqActionFrame pReq,
 				tDot11fIEMeasurementReport *pDot11f);
@@ -869,7 +872,7 @@ populate_dot11f_power_caps(tpAniSirGlobal pMac,
 			uint8_t nAssocType, tpPESession psessionEntry);
 
 /* / Populate a tDot11fIEPowerConstraints */
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_power_constraints(tpAniSirGlobal pMac,
 				tDot11fIEPowerConstraints *pDot11f);
 
@@ -882,21 +885,21 @@ void
 populate_dot11f_qos_caps_station(tpAniSirGlobal pMac, tpPESession session,
 				tDot11fIEQOSCapsStation *pDot11f);
 
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_rsn(tpAniSirGlobal pMac,
 		tpSirRSNie pRsnIe, tDot11fIERSN *pDot11f);
 
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_rsn_opaque(tpAniSirGlobal pMac,
 		tpSirRSNie pRsnIe, tDot11fIERSNOpaque *pDot11f);
 
 #if defined(FEATURE_WLAN_WAPI)
 
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_wapi(tpAniSirGlobal pMac,
 		tpSirRSNie pRsnIe, tDot11fIEWAPI *pDot11f);
 
-tSirRetStatus populate_dot11f_wapi_opaque(tpAniSirGlobal pMac,
+QDF_STATUS populate_dot11f_wapi_opaque(tpAniSirGlobal pMac,
 					tpSirRSNie pRsnIe,
 					tDot11fIEWAPIOpaque *pDot11f);
 
@@ -908,7 +911,7 @@ populate_dot11f_ssid(tpAniSirGlobal pMac,
 		tSirMacSSid *pInternal, tDot11fIESSID *pDot11f);
 
 /* / Populate a tDot11fIESSID from CFG */
-tSirRetStatus populate_dot11f_ssid2(tpAniSirGlobal pMac,
+QDF_STATUS populate_dot11f_ssid2(tpAniSirGlobal pMac,
 				tDot11fIESSID *pDot11f);
 
 /**
@@ -956,18 +959,18 @@ populate_dot11f_supp_channels(tpAniSirGlobal pMac,
 
 #define POPULATE_DOT11F_RATES_OPERATIONAL (0xff)
 
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_supp_rates(tpAniSirGlobal pMac,
 			uint8_t nChannelNum,
 			tDot11fIESuppRates *pDot11f, tpPESession);
 
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_rates_tdls(tpAniSirGlobal p_mac,
 			tDot11fIESuppRates *p_supp_rates,
 			tDot11fIEExtSuppRates *p_ext_supp_rates,
 			uint8_t curr_oper_channel);
 
-tSirRetStatus populate_dot11f_tpc_report(tpAniSirGlobal pMac,
+QDF_STATUS populate_dot11f_tpc_report(tpAniSirGlobal pMac,
 					tDot11fIETPCReport *pDot11f,
 					tpPESession psessionEntry);
 
@@ -987,7 +990,7 @@ void populate_dot11f_ese_version(tDot11fIEESEVersion *pESEVersion);
 /* Fill the Radio Management Capability */
 void populate_dot11f_ese_rad_mgmt_cap(tDot11fIEESERadMgmtCap *pESERadMgmtCap);
 /* Fill the CCKM IE */
-tSirRetStatus populate_dot11f_ese_cckm_opaque(tpAniSirGlobal pMac,
+QDF_STATUS populate_dot11f_ese_cckm_opaque(tpAniSirGlobal pMac,
 					tpSirCCKMie pCCKMie,
 					tDot11fIEESECckmOpaque *pDot11f);
 
@@ -998,7 +1001,7 @@ void populate_dot11_tsrsie(tpAniSirGlobal pMac,
 void populate_dot11f_re_assoc_tspec(tpAniSirGlobal pMac,
 				tDot11fReAssocRequest *pReassoc,
 				tpPESession psessionEntry);
-tSirRetStatus
+QDF_STATUS
 sir_beacon_ie_ese_bcn_report(tpAniSirGlobal pMac,
 		uint8_t *pPayload, const uint32_t payloadLength,
 		uint8_t **outIeBuf, uint32_t *pOutIeLen);
@@ -1047,11 +1050,11 @@ void
 populate_dot11f_wmm_schedule(tSirMacScheduleIE *pSchedule,
 			tDot11fIEWMMSchedule *pDot11f);
 
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_wpa(tpAniSirGlobal pMac,
 		tpSirRSNie pRsnIe, tDot11fIEWPA *pDot11f);
 
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_wpa_opaque(tpAniSirGlobal pMac,
 			tpSirRSNie pRsnIe, tDot11fIEWPAOpaque *pDot11f);
 
@@ -1059,66 +1062,83 @@ void populate_dot11f_tspec(tSirMacTspecIE *pOld, tDot11fIETSPEC *pDot11f);
 
 void populate_dot11f_wmmtspec(tSirMacTspecIE *pOld, tDot11fIEWMMTSPEC *pDot11f);
 
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_tclas(tpAniSirGlobal pMac,
 		tSirTclasInfo *pOld, tDot11fIETCLAS *pDot11f);
 
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_wmmtclas(tpAniSirGlobal pMac,
 			tSirTclasInfo *pOld, tDot11fIEWMMTCLAS *pDot11f);
 
-tSirRetStatus populate_dot11f_wsc(tpAniSirGlobal pMac,
+QDF_STATUS populate_dot11f_wsc(tpAniSirGlobal pMac,
 			tDot11fIEWscBeacon *pDot11f);
 
-tSirRetStatus populate_dot11f_wsc_registrar_info(tpAniSirGlobal pMac,
+QDF_STATUS populate_dot11f_wsc_registrar_info(tpAniSirGlobal pMac,
 						tDot11fIEWscBeacon *pDot11f);
 
-tSirRetStatus de_populate_dot11f_wsc_registrar_info(tpAniSirGlobal pMac,
+QDF_STATUS de_populate_dot11f_wsc_registrar_info(tpAniSirGlobal pMac,
 						tDot11fIEWscBeacon *pDot11f);
 
-tSirRetStatus populate_dot11f_probe_res_wpsi_es(tpAniSirGlobal pMac,
+QDF_STATUS populate_dot11f_probe_res_wpsi_es(tpAniSirGlobal pMac,
 						tDot11fIEWscProbeRes *pDot11f,
 						tpPESession psessionEntry);
-tSirRetStatus populate_dot11f_assoc_res_wpsi_es(tpAniSirGlobal pMac,
+QDF_STATUS populate_dot11f_assoc_res_wpsi_es(tpAniSirGlobal pMac,
 						tDot11fIEWscAssocRes *pDot11f,
 						tpPESession psessionEntry);
-tSirRetStatus populate_dot11f_beacon_wpsi_es(tpAniSirGlobal pMac,
+QDF_STATUS populate_dot11f_beacon_wpsi_es(tpAniSirGlobal pMac,
 					tDot11fIEWscBeacon *pDot11f,
 					tpPESession psessionEntry);
 
-tSirRetStatus populate_dot11f_wsc_in_probe_res(tpAniSirGlobal pMac,
+QDF_STATUS populate_dot11f_wsc_in_probe_res(tpAniSirGlobal pMac,
 					tDot11fIEWscProbeRes *pDot11f);
 
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_wsc_registrar_info_in_probe_res(tpAniSirGlobal pMac,
 					tDot11fIEWscProbeRes *pDot11f);
 
-tSirRetStatus
+QDF_STATUS
 de_populate_dot11f_wsc_registrar_info_in_probe_res(tpAniSirGlobal pMac,
 						tDot11fIEWscProbeRes *pDot11f);
 
-tSirRetStatus populate_dot11f_assoc_res_wsc_ie(tpAniSirGlobal pMac,
+QDF_STATUS populate_dot11f_assoc_res_wsc_ie(tpAniSirGlobal pMac,
 					tDot11fIEWscAssocRes *pDot11f,
 					tpSirAssocReq pRcvdAssocReq);
 
-tSirRetStatus populate_dot11_assoc_res_p2p_ie(tpAniSirGlobal pMac,
+QDF_STATUS populate_dot11_assoc_res_p2p_ie(tpAniSirGlobal pMac,
 					tDot11fIEP2PAssocRes *pDot11f,
 					tpSirAssocReq pRcvdAssocReq);
 
-tSirRetStatus populate_dot11f_wscInAssocRes(tpAniSirGlobal pMac,
+QDF_STATUS populate_dot11f_wscInAssocRes(tpAniSirGlobal pMac,
 					tDot11fIEWscAssocRes *pDot11f);
 
-tSirRetStatus populate_dot11f_wfatpc(tpAniSirGlobal pMac,
+QDF_STATUS populate_dot11f_wfatpc(tpAniSirGlobal pMac,
 				tDot11fIEWFATPC *pDot11f, uint8_t txPower,
 				uint8_t linkMargin);
 
-tSirRetStatus populate_dot11f_rrm_ie(tpAniSirGlobal pMac,
+QDF_STATUS populate_dot11f_rrm_ie(tpAniSirGlobal pMac,
 				tDot11fIERRMEnabledCap *pDot11f,
 				tpPESession psessionEntry);
 
-void populate_mdie(tpAniSirGlobal pMac,
-		tDot11fIEMobilityDomain * pDot11f, uint8_t mdie[]);
-void populate_ft_info(tpAniSirGlobal pMac, tDot11fIEFTInfo *pDot11f);
+void populate_mdie(tpAniSirGlobal pMac, tDot11fIEMobilityDomain * pDot11f,
+		   uint8_t mdie[]);
+
+#ifdef WLAN_FEATURE_FILS_SK
+/**
+ * populate_fils_ft_info() - Populate FTIE into assoc request frame
+ * @mac: Global mac context
+ * @ft_info: pointer to assoc request frame FT IE buffer
+ * @pe_session: pointer to PE session
+ *
+ * Return: None
+ */
+void populate_fils_ft_info(tpAniSirGlobal mac, tDot11fIEFTInfo *ft_info,
+			   tpPESession pe_session);
+#else
+static inline
+void populate_fils_ft_info(tpAniSirGlobal mac, tDot11fIEFTInfo *ft_info,
+			   tpPESession pe_session)
+{}
+#endif
 
 void populate_dot11f_assoc_rsp_rates(tpAniSirGlobal pMac,
 				tDot11fIESuppRates *pSupp,
@@ -1129,20 +1149,20 @@ int find_ie_location(tpAniSirGlobal pMac, tpSirRSNie pRsnIe, uint8_t EID);
 
 void lim_log_vht_cap(tpAniSirGlobal pMac, tDot11fIEVHTCaps *pDot11f);
 
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_vht_caps(tpAniSirGlobal pMac, tpPESession psessionEntry,
 			tDot11fIEVHTCaps *pDot11f);
 
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_vht_operation(tpAniSirGlobal pMac,
 			tpPESession psessionEntry,
 			tDot11fIEVHTOperation *pDot11f);
 
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_vht_ext_bss_load(tpAniSirGlobal pMac,
 				tDot11fIEVHTExtBssLoad *pDot11f);
 
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_ext_cap(tpAniSirGlobal pMac, bool isVHTEnabled,
 			tDot11fIEExtCap *pDot11f, tpPESession psessionEntry);
 
@@ -1160,7 +1180,7 @@ void populate_dot11f_qcn_ie(tDot11fIEQCN_IE *pDot11f);
  * Return: None
  */
 void populate_dot11f_fils_params(tpAniSirGlobal mac_ctx,
-				 tDot11fAssocRequest *frm,
+				 tDot11fAssocRequest * frm,
 				 tpPESession pe_session);
 #else
 static inline void populate_dot11f_fils_params(tpAniSirGlobal mac_ctx,
@@ -1169,7 +1189,7 @@ static inline void populate_dot11f_fils_params(tpAniSirGlobal mac_ctx,
 { }
 #endif
 
-tSirRetStatus
+QDF_STATUS
 populate_dot11f_operating_mode(tpAniSirGlobal pMac,
 			tDot11fIEOperatingMode *pDot11f,
 			tpPESession psessionEntry);
@@ -1191,12 +1211,12 @@ populate_dot11f_avoid_channel_ie(tpAniSirGlobal mac_ctx,
 				tpPESession session_entry);
 #endif /* FEATURE_AP_MCC_CH_AVOIDANCE */
 
-tSirRetStatus populate_dot11f_timing_advert_frame(tpAniSirGlobal pMac,
+QDF_STATUS populate_dot11f_timing_advert_frame(tpAniSirGlobal pMac,
 	tDot11fTimingAdvertisementFrame *frame);
 void populate_dot11_supp_operating_classes(tpAniSirGlobal mac_ptr,
 	tDot11fIESuppOperatingClasses *dot_11_ptr, tpPESession session_entry);
 
-tSirRetStatus
+QDF_STATUS
 sir_validate_and_rectify_ies(tpAniSirGlobal mac_ctx,
 				uint8_t *mgmt_frame,
 				uint32_t frame_bytes,
@@ -1215,4 +1235,110 @@ sir_validate_and_rectify_ies(tpAniSirGlobal mac_ctx,
 void sir_copy_caps_info(tpAniSirGlobal mac_ctx, tDot11fFfCapabilities caps,
 			tpSirProbeRespBeacon pProbeResp);
 
+#ifdef WLAN_FEATURE_FILS_SK
+/**
+ * update_fils_data: update fils params from beacon/probe response
+ * @fils_ind: pointer to sir_fils_indication
+ * @fils_indication: pointer to tDot11fIEfils_indication
+ *
+ * Return: None
+ */
+void update_fils_data(struct sir_fils_indication *fils_ind,
+				 tDot11fIEfils_indication * fils_indication);
+#endif
+#ifdef WLAN_FEATURE_11AX
+QDF_STATUS populate_dot11f_he_caps(tpAniSirGlobal, tpPESession,
+				   tDot11fIEhe_cap *);
+QDF_STATUS populate_dot11f_he_operation(tpAniSirGlobal, tpPESession,
+					tDot11fIEhe_op *);
+#ifdef WLAN_FEATURE_11AX_BSS_COLOR
+QDF_STATUS populate_dot11f_he_bss_color_change(tpAniSirGlobal mac_ctx,
+				tpPESession session,
+				tDot11fIEbss_color_change *bss_color);
+#else
+static inline QDF_STATUS populate_dot11f_he_bss_color_change(
+				tpAniSirGlobal mac_ctx,
+				tpPESession session,
+				tDot11fIEbss_color_change *bss_color)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+#else
+static inline QDF_STATUS populate_dot11f_he_caps(tpAniSirGlobal mac_ctx,
+			tpPESession session, tDot11fIEhe_cap *he_cap)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS populate_dot11f_he_operation(tpAniSirGlobal mac_ctx,
+			tpPESession session, tDot11fIEhe_op *he_op)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS populate_dot11f_he_bss_color_change(
+				tpAniSirGlobal mac_ctx,
+				tpPESession session,
+				tDot11fIEbss_color_change *bss_color)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
+#ifdef WLAN_SUPPORT_TWT
+/**
+ * populate_dot11f_twt_extended_caps() - populate TWT extended capabilities
+ * @mac_ctx: Global MAC context.
+ * @pe_session: Pointer to the PE session.
+ * @dot11f: Pointer to the extended capabilities of the session.
+ *
+ * Populate the TWT extended capabilities based on the target and INI support.
+ *
+ * Return: QDF_STATUS Success or Failure
+ */
+QDF_STATUS populate_dot11f_twt_extended_caps(tpAniSirGlobal mac_ctx,
+					     tpPESession pe_session,
+					     tDot11fIEExtCap *dot11f);
+#else
+static inline
+QDF_STATUS populate_dot11f_twt_extended_caps(tpAniSirGlobal mac_ctx,
+					     tpPESession pe_session,
+					     tDot11fIEExtCap *dot11f)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
+/**
+ * sir_unpack_beacon_ie: wrapper to unpack beacon and update def RSN params
+ * if optional fields are not present.
+ * @mac_ctx: mac context
+ * @buf: beacon buffer pointer
+ * @buf_len: beacon buffer length
+ * @frame: outframe frame structure
+ * @append_ie: flag to indicate if the frame need to be appended from buf
+ *
+ * Return: parse status
+ */
+uint32_t sir_unpack_beacon_ie(tpAniSirGlobal mac_ctx, uint8_t *buf,
+				       uint32_t buf_len,
+				       tDot11fBeaconIEs *frame, bool append_ie);
+
+/**
+ * lim_truncate_ppet: truncates ppet of trailling zeros
+ * @ppet: ppet to truncate
+ * max_len: max length of ppet
+ *
+ * Return: new length after truncation
+ */
+static inline uint32_t lim_truncate_ppet(uint8_t *ppet, uint32_t max_len)
+{
+	while (max_len) {
+		if (ppet[max_len - 1])
+			break;
+		max_len--;
+	}
+	return max_len;
+}
 #endif /* __PARSE_H__ */
