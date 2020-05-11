@@ -38,7 +38,7 @@ static unsigned int backoff_factor __read_mostly = 42;
 static unsigned int hystart_detect __read_mostly = 3;
 static unsigned int use_ineff __read_mostly = 5;
 static bool use_shadow __read_mostly = true;
-static bool use_tolerance __read_mostly;
+static bool use_tolerance __read_mostly = true;
 
 module_param(window, int, 0444);
 MODULE_PARM_DESC(window, "gradient window size (power of two <= 256)");
