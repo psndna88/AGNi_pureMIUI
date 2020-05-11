@@ -233,6 +233,9 @@ struct cam_req_mgr_sync_mode {
  * @session_hdl:         Input param - Identifier for CSL session
  * @num_links:           Input Param - Num of links
  * @reserved:            reserved field
+ * @init_timeout:        To account for INIT exposure settings (ms)
+ *                       If there is no change in exp settings
+ *                       field needs to assigned to 0ms.
  * @link_hdls:           Input Param - Links to be activated/deactivated
  *
  * @opcode: CAM_REQ_MGR_LINK_CONTROL
@@ -242,6 +245,7 @@ struct cam_req_mgr_link_control {
 	__s32 session_hdl;
 	__s32 num_links;
 	__s32 reserved;
+	__s32 init_timeout[MAX_LINKS_PER_SESSION];
 	__s32 link_hdls[MAX_LINKS_PER_SESSION];
 };
 
