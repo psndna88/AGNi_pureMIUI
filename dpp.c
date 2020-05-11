@@ -931,6 +931,10 @@ static int dpp_process_auth_response(struct sigma_dut *dut,
 		}
 
 		sigma_dut_print(dut, DUT_MSG_DEBUG, "DPP auth result: %s", buf);
+	} else if (strstr(buf, "DPP-AUTH-INIT-FAILED")) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Peer did not reply to DPP Authentication Request");
+		return -1;
 	}
 
 	if (check_mutual) {
@@ -964,6 +968,7 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 					       struct sigma_cmd *cmd)
 {
 	const char *bs = get_param(cmd, "DPPBS");
+	const char *type = get_param(cmd, "DPPActionType");
 	const char *auth_role = get_param(cmd, "DPPAuthRole");
 	const char *prov_role = get_param(cmd, "DPPProvisioningRole");
 	const char *pkex_code = get_param(cmd, "DPPPKEXCode");
@@ -993,6 +998,7 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 	const char *ifname = get_station_ifname(dut);
 	const char *auth_events[] = {
 		"DPP-AUTH-SUCCESS",
+		"DPP-AUTH-INIT-FAILED",
 		"DPP-NOT-COMPATIBLE",
 		"DPP-RESPONSE-PENDING",
 		"DPP-SCAN-PEER-QR-CODE",
@@ -1022,17 +1028,12 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 	int akm_use_selector = 0;
 	int conn_status;
 	int chirp = 0;
+	int manual = strcasecmp(type, "ManualDPP") == 0;
 
 	if (!wait_conn)
 		wait_conn = "no";
 	if (!self_conf)
 		self_conf = "no";
-
-	if (!auth_role) {
-		send_resp(dut, conn, SIGMA_ERROR,
-			  "errorCode,Missing DPPAuthRole");
-		return STATUS_SENT_ERROR;
-	}
 
 	if (!prov_role) {
 		send_resp(dut, conn, SIGMA_ERROR,
@@ -1404,11 +1405,111 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 		if (sigma_dut_is_ap(dut))
 			goto update_ap;
 		goto wait_connect;
+	} else if (manual && strcasecmp(bs, "NFC") == 0) {
+		const char *val = get_param(cmd, "DPPNFCInit");
+		int init = val && atoi(val) > 0;
+		pid_t pid;
+		int pid_status;
+		int wait_sec = dut->default_timeout;
+		int enrollee = 0;
+
+		if (strcasecmp(prov_role, "Configurator") == 0 ||
+		    strcasecmp(prov_role, "Both") == 0) {
+			if (!conf_role) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Missing DPPConfIndex");
+				goto out;
+			}
+			snprintf(buf, sizeof(buf),
+				 "SET dpp_configurator_params  conf=%s %s %s configurator=%d%s%s%s%s",
+				 conf_role, conf_ssid, conf_pass,
+				 dut->dpp_conf_id, group_id,
+				 akm_use_selector ? " akm_use_selector=1" : "",
+				 conn_status ? " conn_status=1" : "", conf2);
+			if (wpa_command(ifname, buf) < 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to set configurator parameters");
+				goto out;
+			}
+			snprintf(buf, sizeof(buf),
+				 "conf=%s %s %s configurator=%d%s%s%s%s",
+				 conf_role, conf_ssid, conf_pass,
+				 dut->dpp_conf_id, group_id,
+				 akm_use_selector ? " akm_use_selector=1" : "",
+				 conn_status ? " conn_status=1" : "", conf2);
+		} else {
+			buf[0] = '\0';
+			enrollee = 1;
+		}
+
+		run_system(dut, "killall dpp-nfc.py");
+		sigma_dut_print(dut, DUT_MSG_INFO, "Manual NFC operation");
+		if (!file_exists("dpp-nfc.py")) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,dpp-nfc.py not found");
+			goto out;
+		}
+
+		pid = fork();
+		if (pid < 0) {
+			perror("fork");
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,fork() failed");
+			goto out;
+		}
+
+		if (pid == 0) {
+			char * argv[] = { "dpp-nfc.py",
+					  "--only-one", "--no-input",
+					  "-i", (char *) ifname,
+					  enrollee ? "--enrollee" :
+					  "--configurator",
+					  "--config-params", buf,
+					  init ? "-I" : NULL,
+					  NULL };
+
+			execv("./dpp-nfc.py", argv);
+			perror("execv");
+			exit(0);
+			return -1;
+		}
+
+		if (wait_sec <= 0)
+			wait_sec = 1;
+		for (;;) {
+			if (waitpid(pid, &pid_status, WNOHANG) > 0) {
+				sigma_dut_print(dut, DUT_MSG_DEBUG,
+						"dpp-nfc.py exited");
+				break;
+			}
+			wait_sec--;
+			if (wait_sec <= 0) {
+				sigma_dut_print(dut, DUT_MSG_DEBUG,
+						"dpp-nfc.py did not exit within timeout - stop it");
+				kill(pid, SIGTERM);
+			}
+
+			old_timeout = dut->default_timeout;
+			dut->default_timeout = 1;
+			res = get_wpa_cli_event(dut, ctrl, "DPP-TX",
+						buf, sizeof(buf));
+			dut->default_timeout = old_timeout;
+			if (res >= 0) {
+				sigma_dut_print(dut, DUT_MSG_DEBUG,
+						"DPP exchange started");
+				kill(pid, SIGTERM);
+			}
+		}
+		if (wait_sec <= 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,dpp-nfc.py did not complete within timeout");
+			goto out;
+		}
 	} else if ((nfc_handover &&
 		    strcasecmp(nfc_handover, "Negotiated_Requestor") == 0) ||
 		   ((!nfc_handover ||
 		     strcasecmp(nfc_handover, "Static") == 0) &&
-		    strcasecmp(auth_role, "Initiator") == 0)) {
+		    auth_role && strcasecmp(auth_role, "Initiator") == 0)) {
 		char own_txt[20];
 		int dpp_peer_bootstrap = -1;
 		char neg_freq[30];
@@ -1624,7 +1725,7 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 		    strcasecmp(nfc_handover, "Negotiated_Selector") == 0) ||
 		   ((!nfc_handover ||
 		     strcasecmp(nfc_handover, "Static") == 0) &&
-		    strcasecmp(auth_role, "Responder") == 0)) {
+		    auth_role && strcasecmp(auth_role, "Responder") == 0)) {
 		const char *delay_qr_resp;
 		int mutual;
 		int freq = 2462; /* default: channel 11 */
@@ -1891,7 +1992,8 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 		}
 
 		if (strcasecmp(frametype, "AuthenticationConfirm") == 0) {
-			if (strcasecmp(auth_role, "Initiator") == 0) {
+			if (auth_role &&
+			    strcasecmp(auth_role, "Initiator") == 0) {
 				/* This special case of DPPStep,Timeout with
 				 * DPPFrameType,AuthenticationConfirm on an
 				 * Initiator is used to cover need for stopping
@@ -1969,7 +2071,7 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 	}
 
 	if (!frametype && strcasecmp(bs, "PKEX") == 0 &&
-	    strcasecmp(auth_role, "Responder") == 0) {
+	    auth_role && strcasecmp(auth_role, "Responder") == 0) {
 		if (dpp_wait_tx_status(dut, ctrl, 10) < 0) {
 			send_resp(dut, conn, SIGMA_COMPLETE,
 				  "BootstrapResult,Timeout");
@@ -1978,7 +2080,7 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 	}
 
 	if (!frametype && strcasecmp(bs, "PKEX") == 0 &&
-	    strcasecmp(auth_role, "Initiator") == 0) {
+	    auth_role && strcasecmp(auth_role, "Initiator") == 0) {
 		if (dpp_wait_tx(dut, ctrl, 0) < 0) {
 			send_resp(dut, conn, SIGMA_COMPLETE,
 				  "BootstrapResult,Timeout");
@@ -2270,6 +2372,7 @@ static enum sigma_cmd_result dpp_manual_dpp(struct sigma_dut *dut,
 	int success;
 	const char *val;
 	unsigned int old_timeout;
+	const char *bs = get_param(cmd, "DPPBS");
 
 	if (!auth_role) {
 		send_resp(dut, conn, SIGMA_ERROR,
@@ -2286,6 +2389,11 @@ static enum sigma_cmd_result dpp_manual_dpp(struct sigma_dut *dut,
 		dut->default_timeout = atoi(val);
 		sigma_dut_print(dut, DUT_MSG_DEBUG, "DPP timeout: %u",
 				dut->default_timeout);
+	}
+
+	if (strcasecmp(bs, "NFC") == 0) {
+		res = dpp_automatic_dpp(dut, conn, cmd);
+		goto out;
 	}
 
 	res = dpp_get_local_bootstrap(dut, conn, cmd, 0, &success);
