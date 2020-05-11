@@ -1168,8 +1168,9 @@ int lowi_cmd_sta_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 			       struct sigma_cmd *cmd);
 
 /* dpp.c */
-int dpp_dev_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
-			struct sigma_cmd *cmd);
+enum sigma_cmd_result dpp_dev_exec_action(struct sigma_dut *dut,
+					  struct sigma_conn *conn,
+					  struct sigma_cmd *cmd);
 
 /* dhcp.c */
 void process_fils_hlp(struct sigma_dut *dut);

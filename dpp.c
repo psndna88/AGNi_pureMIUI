@@ -79,10 +79,9 @@ static const char * dpp_get_curve(struct sigma_cmd *cmd, const char *arg)
 }
 
 
-static int dpp_get_local_bootstrap(struct sigma_dut *dut,
-				   struct sigma_conn *conn,
-				   struct sigma_cmd *cmd, int send_result,
-				   int *success)
+static enum sigma_cmd_result
+dpp_get_local_bootstrap(struct sigma_dut *dut, struct sigma_conn *conn,
+			struct sigma_cmd *cmd, int send_result, int *success)
 {
 	const char *curve = dpp_get_curve(cmd, "DPPCryptoIdentifier");
 	const char *bs = get_param(cmd, "DPPBS");
@@ -101,7 +100,7 @@ static int dpp_get_local_bootstrap(struct sigma_dut *dut,
 	} else {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Unsupported DPPBS");
-		return 0;
+		return STATUS_SENT_ERROR;
 	}
 
 	if (sigma_dut_is_ap(dut)) {
@@ -110,21 +109,21 @@ static int dpp_get_local_bootstrap(struct sigma_dut *dut,
 		if (!dut->hostapd_ifname) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"hostapd ifname not specified (-j)");
-			return -2;
+			return ERROR_SEND_STATUS;
 		}
 		ifname = dut->hostapd_ifname;
 		if (get_hwaddr(dut->hostapd_ifname, bssid) < 0) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Could not get MAC address for %s",
 					dut->hostapd_ifname);
-			return -2;
+			return ERROR_SEND_STATUS;
 		}
 		snprintf(mac, sizeof(mac), "%02x%02x%02x%02x%02x%02x",
 			 bssid[0], bssid[1], bssid[2],
 			 bssid[3], bssid[4], bssid[5]);
 	} else {
 		if (get_wpa_status(ifname, "address", mac, sizeof(mac)) < 0)
-			return -2;
+			return ERROR_SEND_STATUS;
 	}
 
 	pos = mac;
@@ -138,7 +137,7 @@ static int dpp_get_local_bootstrap(struct sigma_dut *dut,
 	if (sigma_dut_is_ap(dut) && dpp_hostapd_run(dut) < 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Failed to start hostapd");
-		return 0;
+		return STATUS_SENT_ERROR;
 	}
 
 	if (chan_list &&
@@ -173,17 +172,15 @@ static int dpp_get_local_bootstrap(struct sigma_dut *dut,
 	}
 
 	if (res < 0 || res >= sizeof(buf) ||
-	    wpa_command_resp(ifname, buf, resp, sizeof(resp)) < 0)
-		return -2;
-	if (strncmp(resp, "FAIL", 4) == 0)
-		return -2;
+	    wpa_command_resp(ifname, buf, resp, sizeof(resp)) < 0 ||
+	    strncmp(resp, "FAIL", 4) == 0)
+		return ERROR_SEND_STATUS;
 	dut->dpp_local_bootstrap = atoi(resp);
 	snprintf(buf, sizeof(buf), "DPP_BOOTSTRAP_GET_URI %d",
 		 atoi(resp));
-	if (wpa_command_resp(ifname, buf, resp, sizeof(resp)) < 0)
-		return -2;
-	if (strncmp(resp, "FAIL", 4) == 0)
-		return -2;
+	if (wpa_command_resp(ifname, buf, resp, sizeof(resp)) < 0 ||
+	    strncmp(resp, "FAIL", 4) == 0)
+		return ERROR_SEND_STATUS;
 
 	sigma_dut_print(dut, DUT_MSG_DEBUG, "URI: %s", resp);
 
@@ -196,13 +193,13 @@ static int dpp_get_local_bootstrap(struct sigma_dut *dut,
 
 	if (success)
 		*success = 1;
-	return 0;
+	return STATUS_SENT;
 }
 
 
-static int dpp_set_peer_bootstrap(struct sigma_dut *dut,
-				  struct sigma_conn *conn,
-				  struct sigma_cmd *cmd)
+static enum sigma_cmd_result dpp_set_peer_bootstrap(struct sigma_dut *dut,
+						    struct sigma_conn *conn,
+						    struct sigma_cmd *cmd)
 {
 	const char *val = get_param(cmd, "DPPBootstrappingdata");
 	char uri[1000];
@@ -211,18 +208,18 @@ static int dpp_set_peer_bootstrap(struct sigma_dut *dut,
 	if (!val) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Missing DPPBootstrappingdata");
-		return 0;
+		return STATUS_SENT_ERROR;
 	}
 
 	res = parse_hexstr(val, (unsigned char *) uri, sizeof(uri));
 	if (res < 0 || (size_t) res >= sizeof(uri))
-		return -2;
+		return ERROR_SEND_STATUS;
 	uri[res] = '\0';
 	sigma_dut_print(dut, DUT_MSG_DEBUG, "URI: %s", uri);
 	free(dut->dpp_peer_uri);
 	dut->dpp_peer_uri = strdup(uri);
 
-	return 1;
+	return SUCCESS_SEND_STATUS;
 }
 
 
@@ -959,9 +956,9 @@ static int dpp_process_auth_response(struct sigma_dut *dut,
 }
 
 
-static int dpp_automatic_dpp(struct sigma_dut *dut,
-			     struct sigma_conn *conn,
-			     struct sigma_cmd *cmd)
+static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
+					       struct sigma_conn *conn,
+					       struct sigma_cmd *cmd)
 {
 	const char *bs = get_param(cmd, "DPPBS");
 	const char *auth_role = get_param(cmd, "DPPAuthRole");
@@ -1031,13 +1028,13 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	if (!auth_role) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Missing DPPAuthRole");
-		return 0;
+		return STATUS_SENT_ERROR;
 	}
 
 	if (!prov_role) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Missing DPPProvisioningRole");
-		return 0;
+		return STATUS_SENT_ERROR;
 	}
 
 	val = get_param(cmd, "DPPConfEnrolleeRole");
@@ -1060,7 +1057,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Unsupported DPPNetworkRole value");
-			return 0;
+			return STATUS_SENT_ERROR;
 		}
 	}
 
@@ -1071,7 +1068,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	if ((step || frametype) && (!step || !frametype)) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Invalid DPPStep,DPPFrameType,DPPIEAttribute combination");
-		return 0;
+		return STATUS_SENT_ERROR;
 	}
 
 	val = get_param(cmd, "MUDURL");
@@ -1080,7 +1077,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		if (wpa_command(ifname, buf) < 0) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Failed to set MUD URL");
-			return 0;
+			return STATUS_SENT_ERROR;
 		}
 	}
 
@@ -1088,14 +1085,14 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		if (!dut->hostapd_ifname) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"hostapd ifname not specified (-j)");
-			return -2;
+			return ERROR_SEND_STATUS;
 		}
 		ifname = dut->hostapd_ifname;
 
 		if (dpp_hostapd_run(dut) < 0) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Failed to start hostapd");
-			return 0;
+			return STATUS_SENT_ERROR;
 		}
 	}
 
@@ -1109,7 +1106,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 					     buf, sizeof(buf)) < 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "errorCode,Failed to set up configurator");
-				return 0;
+				return STATUS_SENT_ERROR;
 			}
 			dut->dpp_conf_id = atoi(buf);
 		}
@@ -1122,7 +1119,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	} else {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Unknown DPPProvisioningRole");
-		return 0;
+		return STATUS_SENT_ERROR;
 	}
 
 	pkex_identifier[0] = '\0';
@@ -1148,14 +1145,14 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 			    wpa_command(ifname, "ENABLE") < 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "errorCode,Failed to update channel");
-				return 0;
+				return STATUS_SENT_ERROR;
 			}
 		}
 
 		if (!pkex_code) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Missing DPPPKEXCode");
-			return 0;
+			return STATUS_SENT_ERROR;
 		}
 
 		if (pkex_code_id)
@@ -1168,7 +1165,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 		if (wpa_command_resp(ifname, buf, buf, sizeof(buf)) < 0) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Failed to set up PKEX");
-			return 0;
+			return STATUS_SENT_ERROR;
 		}
 		own_pkex_id = atoi(buf);
 	}
@@ -1177,7 +1174,7 @@ static int dpp_automatic_dpp(struct sigma_dut *dut,
 	if (!ctrl) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Failed to open wpa_supplicant monitor connection");
-		return -2;
+		return ERROR_SEND_STATUS;
 	}
 
 	old_timeout = dut->default_timeout;
@@ -2253,27 +2250,28 @@ out:
 	    auth_role && strcasecmp(auth_role, "Responder") == 0)
 		wpa_command(ifname, "DPP_CONTROLLER_STOP");
 	dut->default_timeout = old_timeout;
-	return 0;
+	return STATUS_SENT;
 err:
 	send_resp(dut, conn, SIGMA_ERROR, NULL);
 	goto out;
 }
 
 
-static int dpp_manual_dpp(struct sigma_dut *dut,
-			  struct sigma_conn *conn,
-			  struct sigma_cmd *cmd)
+static enum sigma_cmd_result dpp_manual_dpp(struct sigma_dut *dut,
+					    struct sigma_conn *conn,
+					    struct sigma_cmd *cmd)
 {
 	const char *auth_role = get_param(cmd, "DPPAuthRole");
 	const char *self_conf = get_param(cmd, "DPPSelfConfigure");
-	int res = -1, success;
+	enum sigma_cmd_result res = INVALID_SEND_STATUS;
+	int success;
 	const char *val;
 	unsigned int old_timeout;
 
 	if (!auth_role) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Missing DPPAuthRole");
-		return 0;
+		return STATUS_SENT_ERROR;
 	}
 
 	if (!self_conf)
@@ -2288,13 +2286,16 @@ static int dpp_manual_dpp(struct sigma_dut *dut,
 	}
 
 	res = dpp_get_local_bootstrap(dut, conn, cmd, 0, &success);
-	if (res || !success)
+	if (res != STATUS_SENT || !success)
 		goto out;
 
 	if (strcasecmp(auth_role, "Responder") == 0) {
-		res = dpp_display_own_qrcode(dut);
-		if (res < 0)
+		if (dpp_display_own_qrcode(dut) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to display own QR code");
+			res = STATUS_SENT_ERROR;
 			goto out;
+		}
 
 		res = dpp_automatic_dpp(dut, conn, cmd);
 		goto out;
@@ -2302,11 +2303,10 @@ static int dpp_manual_dpp(struct sigma_dut *dut,
 
 	if (strcasecmp(auth_role, "Initiator") == 0) {
 		if (strcasecmp(self_conf, "Yes") != 0) {
-			res = dpp_scan_peer_qrcode(dut);
-			if (res < 0) {
+			if (dpp_scan_peer_qrcode(dut) < 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
-					"errorCode,Failed to scan peer QR Code");
-				res = 0;
+					  "errorCode,Failed to scan peer QR Code");
+				res = STATUS_SENT_ERROR;
 				goto out;
 			}
 		}
@@ -2316,15 +2316,16 @@ static int dpp_manual_dpp(struct sigma_dut *dut,
 	}
 
 	send_resp(dut, conn, SIGMA_ERROR, "errorCode,Unknown DPPAuthRole");
-	res = 0;
+	res = STATUS_SENT_ERROR;
 out:
 	dut->default_timeout = old_timeout;
 	return res;
 }
 
 
-int dpp_dev_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
-			struct sigma_cmd *cmd)
+enum sigma_cmd_result dpp_dev_exec_action(struct sigma_dut *dut,
+					  struct sigma_conn *conn,
+					  struct sigma_cmd *cmd)
 {
 	const char *type = get_param(cmd, "DPPActionType");
 	const char *bs = get_param(cmd, "DPPBS");
@@ -2332,13 +2333,13 @@ int dpp_dev_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (!bs) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Missing DPPBS");
-		return 0;
+		return STATUS_SENT_ERROR;
 	}
 
 	if (!type) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Missing DPPActionType");
-		return 0;
+		return STATUS_SENT_ERROR;
 	}
 
 	if (strcasecmp(type, "GetLocalBootstrap") == 0)
@@ -2352,5 +2353,5 @@ int dpp_dev_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	send_resp(dut, conn, SIGMA_ERROR,
 		  "errorCode,Unsupported DPPActionType");
-	return 0;
+	return STATUS_SENT_ERROR;
 }
