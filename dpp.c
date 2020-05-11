@@ -122,8 +122,11 @@ dpp_get_local_bootstrap(struct sigma_dut *dut, struct sigma_conn *conn,
 			 bssid[0], bssid[1], bssid[2],
 			 bssid[3], bssid[4], bssid[5]);
 	} else {
-		if (get_wpa_status(ifname, "address", mac, sizeof(mac)) < 0)
-			return ERROR_SEND_STATUS;
+		if (get_wpa_status(ifname, "address", mac, sizeof(mac)) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to get own MAC address from wpa_supplicant");
+			return STATUS_SENT_ERROR;
+		}
 	}
 
 	pos = mac;
