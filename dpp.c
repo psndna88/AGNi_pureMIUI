@@ -1669,7 +1669,7 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 				goto out;
 			}
 			snprintf(buf, sizeof(buf),
-				 "DPP_AUTH_INIT peer=%d%s role=%s%s%s conf=%s %s %s configurator=%d%s%s%s%s%s",
+				 "DPP_AUTH_INIT peer=%d%s role=%s%s%s conf=%s %s %s configurator=%d%s%s%s%s%s%s%s",
 				 dpp_peer_bootstrap, own_txt, role,
 				 netrole ? " netrole=" : "",
 				 netrole ? netrole : "",
@@ -1677,6 +1677,8 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 				 dut->dpp_conf_id, neg_freq, group_id,
 				 akm_use_selector ? " akm_use_selector=1" : "",
 				 conn_status ? " conn_status=1" : "",
+				 tcp ? " tcp_addr=" : "",
+				 tcp ? tcp : "",
 				 conf2);
 		} else if (tcp && (strcasecmp(bs, "QR") == 0 ||
 				   strcasecmp(bs, "NFC") == 0)) {
