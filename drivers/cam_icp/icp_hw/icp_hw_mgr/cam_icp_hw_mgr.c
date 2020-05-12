@@ -1836,53 +1836,53 @@ DEFINE_SIMPLE_ATTRIBUTE(cam_icp_debug_default_clk,
 	cam_icp_get_dbg_default_clk,
 	cam_icp_set_dbg_default_clk, "%16llu");
 
-static int cam_icp_set_a5_dbg_lvl(void *data, u64 val)
+static int cam_icp_set_icp_dbg_lvl(void *data, u64 val)
 {
-	icp_hw_mgr.a5_dbg_lvl = val;
+	icp_hw_mgr.icp_dbg_lvl = val;
 	return 0;
 }
 
-static int cam_icp_get_a5_dbg_lvl(void *data, u64 *val)
+static int cam_icp_get_icp_dbg_lvl(void *data, u64 *val)
 {
-	*val = icp_hw_mgr.a5_dbg_lvl;
+	*val = icp_hw_mgr.icp_dbg_lvl;
 	return 0;
 }
 
-DEFINE_SIMPLE_ATTRIBUTE(cam_icp_debug_fs, cam_icp_get_a5_dbg_lvl,
-	cam_icp_set_a5_dbg_lvl, "%08llu");
+DEFINE_SIMPLE_ATTRIBUTE(cam_icp_debug_fs, cam_icp_get_icp_dbg_lvl,
+	cam_icp_set_icp_dbg_lvl, "%08llu");
 
-static int cam_icp_set_a5_dbg_type(void *data, u64 val)
+static int cam_icp_set_icp_dbg_type(void *data, u64 val)
 {
 	if (val <= NUM_HFI_DEBUG_MODE)
-		icp_hw_mgr.a5_debug_type = val;
+		icp_hw_mgr.icp_debug_type = val;
 	return 0;
 }
 
-static int cam_icp_get_a5_dbg_type(void *data, u64 *val)
+static int cam_icp_get_icp_dbg_type(void *data, u64 *val)
 {
-	*val = icp_hw_mgr.a5_debug_type;
+	*val = icp_hw_mgr.icp_debug_type;
 	return 0;
 }
 
 
-DEFINE_SIMPLE_ATTRIBUTE(cam_icp_debug_type_fs, cam_icp_get_a5_dbg_type,
-	cam_icp_set_a5_dbg_type, "%08llu");
+DEFINE_SIMPLE_ATTRIBUTE(cam_icp_debug_type_fs, cam_icp_get_icp_dbg_type,
+	cam_icp_set_icp_dbg_type, "%08llu");
 
-static int cam_icp_set_a5_fw_dump_lvl(void *data, u64 val)
+static int cam_icp_set_icp_fw_dump_lvl(void *data, u64 val)
 {
 	if (val < NUM_HFI_DUMP_LVL)
-		icp_hw_mgr.a5_fw_dump_lvl = val;
+		icp_hw_mgr.icp_fw_dump_lvl = val;
 	return 0;
 }
 
-static int cam_icp_get_a5_fw_dump_lvl(void *data, u64 *val)
+static int cam_icp_get_icp_fw_dump_lvl(void *data, u64 *val)
 {
-	*val = icp_hw_mgr.a5_fw_dump_lvl;
+	*val = icp_hw_mgr.icp_fw_dump_lvl;
 	return 0;
 }
 
-DEFINE_SIMPLE_ATTRIBUTE(cam_icp_debug_fw_dump, cam_icp_get_a5_fw_dump_lvl,
-	cam_icp_set_a5_fw_dump_lvl, "%08llu");
+DEFINE_SIMPLE_ATTRIBUTE(cam_icp_debug_fw_dump, cam_icp_get_icp_fw_dump_lvl,
+	cam_icp_set_icp_fw_dump_lvl, "%08llu");
 
 static int cam_icp_hw_mgr_create_debugfs_entry(void)
 {
@@ -1907,16 +1907,16 @@ static int cam_icp_hw_mgr_create_debugfs_entry(void)
 	dbgfileptr = debugfs_create_file("icp_debug_clk", 0644,
 		icp_hw_mgr.dentry, NULL, &cam_icp_debug_default_clk);
 
-	dbgfileptr = debugfs_create_bool("a5_jtag_debug", 0644,
-		icp_hw_mgr.dentry, &icp_hw_mgr.a5_jtag_debug);
+	dbgfileptr = debugfs_create_bool("icp_jtag_debug", 0644,
+		icp_hw_mgr.dentry, &icp_hw_mgr.icp_jtag_debug);
 
-	dbgfileptr = debugfs_create_file("a5_debug_type", 0644,
+	dbgfileptr = debugfs_create_file("icp_debug_type", 0644,
 		icp_hw_mgr.dentry, NULL, &cam_icp_debug_type_fs);
 
-	dbgfileptr = debugfs_create_file("a5_debug_lvl", 0644,
+	dbgfileptr = debugfs_create_file("icp_debug_lvl", 0644,
 		icp_hw_mgr.dentry, NULL, &cam_icp_debug_fs);
 
-	dbgfileptr = debugfs_create_file("a5_fw_dump_lvl", 0644,
+	dbgfileptr = debugfs_create_file("icp_fw_dump_lvl", 0644,
 		icp_hw_mgr.dentry, NULL, &cam_icp_debug_fw_dump);
 	if (IS_ERR(dbgfileptr)) {
 		if (PTR_ERR(dbgfileptr) == -ENODEV)
@@ -1926,7 +1926,7 @@ static int cam_icp_hw_mgr_create_debugfs_entry(void)
 	}
 end:
 	/* Set default hang dump lvl */
-	icp_hw_mgr.a5_fw_dump_lvl = HFI_FW_DUMP_ON_FAILURE;
+	icp_hw_mgr.icp_fw_dump_lvl = HFI_FW_DUMP_ON_FAILURE;
 	return rc;
 }
 
@@ -2480,7 +2480,7 @@ static int cam_icp_mgr_process_fatal_error(
 			BUG();
 		}
 		rc = cam_icp_mgr_trigger_recovery(hw_mgr);
-		cam_icp_mgr_process_dbg_buf(icp_hw_mgr.a5_dbg_lvl);
+		cam_icp_mgr_process_dbg_buf(icp_hw_mgr.icp_dbg_lvl);
 	}
 
 	return rc;
@@ -2635,7 +2635,7 @@ static int32_t cam_icp_mgr_process_msg(void *priv, void *data)
 		}
 	}
 
-	cam_icp_mgr_process_dbg_buf(icp_hw_mgr.a5_dbg_lvl);
+	cam_icp_mgr_process_dbg_buf(icp_hw_mgr.icp_dbg_lvl);
 
 	if ((task_data->irq_status & A5_WDT_0) ||
 		(task_data->irq_status & A5_WDT_1)) {
@@ -3059,8 +3059,8 @@ static int cam_icp_mgr_proc_resume(struct cam_icp_hw_mgr *hw_mgr)
 
 	return icp_dev_intf->hw_ops.process_cmd(icp_dev_intf->hw_priv,
 						CAM_ICP_CMD_POWER_RESUME,
-						&hw_mgr->a5_jtag_debug,
-						sizeof(hw_mgr->a5_jtag_debug));
+						&hw_mgr->icp_jtag_debug,
+						sizeof(hw_mgr->icp_jtag_debug));
 }
 
 static void cam_icp_mgr_proc_suspend(struct cam_icp_hw_mgr *hw_mgr)
@@ -3323,7 +3323,7 @@ static int cam_icp_mgr_abort_handle(
 			CAM_ERR(CAM_ICP,
 				"FW timeout/err in abort handle command ctx: %u",
 				ctx_data->ctx_id);
-			cam_icp_mgr_process_dbg_buf(icp_hw_mgr.a5_dbg_lvl);
+			cam_icp_mgr_process_dbg_buf(icp_hw_mgr.icp_dbg_lvl);
 			cam_hfi_queue_dump();
 		}
 	}
@@ -3379,7 +3379,7 @@ static int cam_icp_mgr_destroy_handle(
 		rc = -ETIMEDOUT;
 		CAM_ERR(CAM_ICP, "FW response timeout: %d for %u",
 			rc, ctx_data->ctx_id);
-		cam_icp_mgr_process_dbg_buf(icp_hw_mgr.a5_dbg_lvl);
+		cam_icp_mgr_process_dbg_buf(icp_hw_mgr.icp_dbg_lvl);
 		cam_hfi_queue_dump();
 	}
 	kfree(destroy_cmd);
@@ -3705,7 +3705,7 @@ static int cam_icp_mgr_send_fw_init(struct cam_icp_hw_mgr *hw_mgr)
 	if (!rem_jiffies) {
 		rc = -ETIMEDOUT;
 		CAM_ERR(CAM_ICP, "FW response timed out %d", rc);
-		cam_icp_mgr_process_dbg_buf(icp_hw_mgr.a5_dbg_lvl);
+		cam_icp_mgr_process_dbg_buf(icp_hw_mgr.icp_dbg_lvl);
 		cam_hfi_queue_dump();
 	}
 	CAM_DBG(CAM_ICP, "Done Waiting for INIT DONE Message");
@@ -3961,7 +3961,7 @@ static int cam_icp_mgr_send_config_io(struct cam_icp_hw_ctx_data *ctx_data,
 	if (!rem_jiffies) {
 		rc = -ETIMEDOUT;
 		CAM_ERR(CAM_ICP, "FW response timed out %d", rc);
-		cam_icp_mgr_process_dbg_buf(icp_hw_mgr.a5_dbg_lvl);
+		cam_icp_mgr_process_dbg_buf(icp_hw_mgr.icp_dbg_lvl);
 		cam_hfi_queue_dump();
 	}
 
@@ -5130,7 +5130,7 @@ static int cam_icp_mgr_enqueue_abort(
 			CAM_ERR(CAM_ICP,
 				"FW timeout/err in abort handle command ctx: %u",
 				ctx_data->ctx_id);
-			cam_icp_mgr_process_dbg_buf(icp_hw_mgr.a5_dbg_lvl);
+			cam_icp_mgr_process_dbg_buf(icp_hw_mgr.icp_dbg_lvl);
 			cam_hfi_queue_dump();
 			return rc;
 		}
@@ -5408,7 +5408,7 @@ static int cam_icp_mgr_create_handle(uint32_t dev_type,
 	if (!rem_jiffies) {
 		rc = -ETIMEDOUT;
 		CAM_ERR(CAM_ICP, "FW response timed out %d", rc);
-		cam_icp_mgr_process_dbg_buf(icp_hw_mgr.a5_dbg_lvl);
+		cam_icp_mgr_process_dbg_buf(icp_hw_mgr.icp_dbg_lvl);
 		cam_hfi_queue_dump();
 	}
 
@@ -5455,7 +5455,7 @@ static int cam_icp_mgr_send_ping(struct cam_icp_hw_ctx_data *ctx_data)
 	if (!rem_jiffies) {
 		rc = -ETIMEDOUT;
 		CAM_ERR(CAM_ICP, "FW response timed out %d", rc);
-		cam_icp_mgr_process_dbg_buf(icp_hw_mgr.a5_dbg_lvl);
+		cam_icp_mgr_process_dbg_buf(icp_hw_mgr.icp_dbg_lvl);
 		cam_hfi_queue_dump();
 	}
 
@@ -5622,11 +5622,11 @@ static int cam_icp_mgr_acquire_hw(void *hw_mgr_priv, void *acquire_hw_args)
 		if (rc)
 			goto get_io_buf_failed;
 
-		if (icp_hw_mgr.a5_debug_type)
-			hfi_set_debug_level(icp_hw_mgr.a5_debug_type,
-				icp_hw_mgr.a5_dbg_lvl);
+		if (icp_hw_mgr.icp_debug_type)
+			hfi_set_debug_level(icp_hw_mgr.icp_debug_type,
+				icp_hw_mgr.icp_dbg_lvl);
 
-		hfi_set_fw_dump_level(icp_hw_mgr.a5_fw_dump_lvl);
+		hfi_set_fw_dump_level(icp_hw_mgr.icp_fw_dump_lvl);
 
 		rc = cam_icp_send_ubwc_cfg(hw_mgr);
 		if (rc)
@@ -5745,7 +5745,7 @@ get_io_buf_failed:
 	hw_mgr->ctx_data[ctx_id].icp_dev_acquire_info = NULL;
 acquire_info_failed:
 	cam_icp_mgr_put_ctx(ctx_data);
-	cam_icp_mgr_process_dbg_buf(icp_hw_mgr.a5_dbg_lvl);
+	cam_icp_mgr_process_dbg_buf(icp_hw_mgr.icp_dbg_lvl);
 	mutex_unlock(&ctx_data->ctx_mutex);
 	mutex_unlock(&hw_mgr->hw_mgr_mutex);
 	return rc;
