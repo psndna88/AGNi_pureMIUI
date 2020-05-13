@@ -86,7 +86,7 @@ int cam_csiphy_notify_secure_mode(struct csiphy_device *csiphy_dev,
 		rc = -EINVAL;
 	}
 
-	return 0;
+	return rc;
 }
 
 void cam_cpastop_scm_write(struct cam_cpas_hw_errata_wa *errata_wa)
@@ -169,7 +169,7 @@ int cam_csiphy_notify_secure_mode(struct csiphy_device *csiphy_dev,
 		rc = -EINVAL;
 	}
 
-	return 0;
+	return rc;
 }
 
 void cam_cpastop_scm_write(struct cam_cpas_hw_errata_wa *errata_wa)
