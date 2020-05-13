@@ -98,6 +98,7 @@ Optional properties:
 				-- qcom,supply-post-on-sleep: time to sleep (ms) after turning on
 				-- qcom,supply-pre-off-sleep: time to sleep (ms) before turning off
 				-- qcom,supply-post-off-sleep: time to sleep (ms) after turning off
+- qcom,sde-hw-version:      A u32 value indicates the MDSS hw version
 - qcom,sde-sspp-src-size:	A u32 value indicates the address range for each sspp.
 - qcom,sde-mixer-size:		A u32 value indicates the address range for each mixer.
 - qcom,sde-ctl-size:		A u32 value indicates the address range for each ctl.
@@ -578,6 +579,7 @@ Example:
     iommus = <&mdp_smmu 0>;
     #power-domain-cells = <0>;
 
+    qcom,sde-hw-version = <0x70000000>;
     qcom,sde-off = <0x1000>;
     qcom,sde-ctl-off = <0x00002000 0x00002200 0x00002400
 		     0x00002600 0x00002800>;
