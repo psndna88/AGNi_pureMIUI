@@ -381,7 +381,8 @@
 				<&apps_smmu 0xC40 0x440>,
 				<&apps_smmu 0xC41 0x440>;
 			qcom,iommu-dma-addr-pool = <0x7400000 0xd8c00000>;
-			label = "ife";
+			label = "ife", "ife-cdm";
+			multiple-client-devices;
 			ife_iova_mem_map: iova-mem-map {
 				/* IO region is approximately 3.4 GB */
 				iova-mem-region-io {
@@ -489,7 +490,7 @@
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0x20C0 0x400>,
 				<&apps_smmu 0x24C0 0x400>;
-			label = "cpas-cdm0";
+			label = "cpas-cdm";
 			qcom,iommu-dma-addr-pool = <0x7400000 0xd8c00000>;
 			cpas_cdm_iova_mem_map: iova-mem-map {
 				iova-mem-region-io {
@@ -585,7 +586,8 @@
 			"csid0", "csid1", "csid2", "csid3",
 			"csid4", "ife0", "ife1", "ife2", "ife3", "ife4",
 			"custom0", "custom1", "ipe0", "cam-cdm-intf0",
-			"cpas-cdm0", "bps0", "icp0", "jpeg-dma0", "jpeg-enc0",
+			"ife-cdm0", "ife-cdm1", "ife-cdm2", "cpas-cdm0",
+			"bps0", "icp0", "jpeg-dma0", "jpeg-enc0",
 			"tpg0", "tpg1";
 
 		camera-bus-nodes {
@@ -1145,7 +1147,7 @@
 
 	qcom,cpas-cdm0 {
 		cell-index = <0>;
-		compatible = "qcom,cam170-cpas-cdm0";
+		compatible = "qcom,cam-cpas-cdm1_2";
 		label = "cpas-cdm";
 		reg = <0xac4d000 0x1000>;
 		reg-names = "cpas-cdm";
@@ -1160,7 +1162,106 @@
 			<&clock_camcc CAM_CC_CPAS_AHB_CLK>;
 		clock-rates = <0 0>;
 		clock-cntl-level = "svs";
-		cdm-client-names = "ife";
+		cdm-client-names = "ife3", "ife4";
+		status = "ok";
+	};
+
+	qcom,ife-cdm0 {
+		cell-index = <0>;
+		compatible = "qcom,cam-ife-cdm1_2";
+		label = "ife-cdm";
+		reg = <0xacb4200 0x1000>;
+		reg-names = "ife-cdm0";
+		reg-cam-base = <0xb4200>;
+		interrupts = <GIC_SPI 456 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "ife-cdm0";
+		regulator-names = "camss","ife0";
+		camss-supply = <&cam_cc_titan_top_gdsc>;
+		ife0-supply = <&cam_cc_ife_0_gdsc>;
+		clock-names = "ife_0_ahb",
+			"ife_0_areg",
+			"ife_clk",
+			"ife_axi_clk",
+			"cam_cc_cpas_ahb_clk";
+		clocks =
+			<&clock_camcc CAM_CC_IFE_0_AHB_CLK>,
+			<&clock_camcc CAM_CC_IFE_0_AREG_CLK>,
+			<&clock_camcc CAM_CC_IFE_0_CLK>,
+			<&clock_camcc CAM_CC_IFE_0_AXI_CLK>,
+			<&clock_camcc CAM_CC_CPAS_AHB_CLK>;
+		clock-rates =
+			<0 0 0 0 0>,
+			<0 0 0 0 0>,
+			<0 0 0 0 0>,
+			<0 0 0 0 0>;
+		clock-cntl-level = "lowsvs", "svs", "svs_l1", "turbo";
+		cdm-client-names = "ife0";
+		status = "ok";
+	};
+
+	qcom,ife-cdm1 {
+		cell-index = <1>;
+		compatible = "qcom,cam-ife-cdm1_2";
+		label = "ife-cdm";
+		reg = <0xacc3200 0x1000>;
+		reg-names = "ife-cdm1";
+		reg-cam-base = <0xc3200>;
+		interrupts = <GIC_SPI 287 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "ife-cdm1";
+		regulator-names = "camss","ife1";
+		camss-supply = <&cam_cc_titan_top_gdsc>;
+		ife1-supply = <&cam_cc_ife_1_gdsc>;
+		clock-names = "ife_1_ahb",
+			"ife_1_areg",
+			"ife_clk",
+			"ife_axi_clk",
+			"cam_cc_cpas_ahb_clk";
+		clocks =
+			<&clock_camcc CAM_CC_IFE_1_AHB_CLK>,
+			<&clock_camcc CAM_CC_IFE_1_AREG_CLK>,
+			<&clock_camcc CAM_CC_IFE_1_CLK>,
+			<&clock_camcc CAM_CC_IFE_1_AXI_CLK>,
+			<&clock_camcc CAM_CC_CPAS_AHB_CLK>;
+		clock-rates =
+			<0 0 0 0 0>,
+			<0 0 0 0 0>,
+			<0 0 0 0 0>,
+			<0 0 0 0 0>;
+		clock-cntl-level = "lowsvs", "svs", "svs_l1", "turbo";
+		cdm-client-names = "ife1";
+		status = "ok";
+	};
+
+	qcom,ife-cdm2 {
+		cell-index = <2>;
+		compatible = "qcom,cam-ife-cdm1_2";
+		label = "ife-cdm";
+		reg = <0xacef200 0x1000>;
+		reg-names = "ife-cdm2";
+		reg-cam-base = <0xef200>;
+		interrupts = <GIC_SPI 642 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "ife-cdm2";
+		regulator-names = "camss","ife2";
+		camss-supply = <&cam_cc_titan_top_gdsc>;
+		ife2-supply = <&cam_cc_ife_2_gdsc>;
+		clock-names = "ife_2_ahb",
+			"ife_2_areg",
+			"ife_clk",
+			"ife_axi_clk",
+			"cam_cc_cpas_ahb_clk";
+		clocks =
+			<&clock_camcc CAM_CC_IFE_2_AHB_CLK>,
+			<&clock_camcc CAM_CC_IFE_2_AREG_CLK>,
+			<&clock_camcc CAM_CC_IFE_2_CLK>,
+			<&clock_camcc CAM_CC_IFE_2_AXI_CLK>,
+			<&clock_camcc CAM_CC_CPAS_AHB_CLK>;
+		clock-rates =
+			<0 0 0 0 0>,
+			<0 0 0 0 0>,
+			<0 0 0 0 0>,
+			<0 0 0 0 0>;
+		clock-cntl-level = "lowsvs", "svs", "svs_l1", "turbo";
+		cdm-client-names = "ife2";
 		status = "ok";
 	};
 
