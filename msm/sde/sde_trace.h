@@ -63,22 +63,25 @@ TRACE_EVENT(sde_perf_set_ot,
 
 TRACE_EVENT(sde_perf_update_bus,
 	TP_PROTO(u32 bus_id, unsigned long long ab_quota,
-	unsigned long long ib_quota),
-	TP_ARGS(bus_id, ab_quota, ib_quota),
+	unsigned long long ib_quota, u32 paths),
+	TP_ARGS(bus_id, ab_quota, ib_quota, paths),
 	TP_STRUCT__entry(
 			__field(u32, bus_id);
 			__field(u64, ab_quota)
 			__field(u64, ib_quota)
+			__field(u32, paths)
 	),
 	TP_fast_assign(
 			__entry->bus_id = bus_id;
 			__entry->ab_quota = ab_quota;
 			__entry->ib_quota = ib_quota;
+			__entry->paths = paths;
 	),
-	TP_printk("Request bus_id:%d ab=%llu ib=%llu",
+	TP_printk("Request bus_id:%d ab=%llu ib=%llu paths=%d",
 			__entry->bus_id,
 			__entry->ab_quota,
-			__entry->ib_quota)
+			__entry->ib_quota,
+			__entry->paths)
 )
 
 
@@ -110,7 +113,7 @@ TRACE_EVENT(sde_encoder_underrun,
 		__entry->underrun_cnt)
 );
 
-TRACE_EVENT(tracing_mark_write,
+TRACE_EVENT(sde_drm_tracing_mark_write,
 	TP_PROTO(char trace_type, const struct task_struct *task,
 		const char *name, int value),
 	TP_ARGS(trace_type, task, name, value),
@@ -387,7 +390,7 @@ TRACE_EVENT(sde_perf_uidle_status,
 			)
 );
 
-#define sde_atrace trace_tracing_mark_write
+#define sde_atrace trace_sde_drm_tracing_mark_write
 
 #define SDE_ATRACE_END(name) sde_atrace('E', current, name, 0)
 #define SDE_ATRACE_BEGIN(name) sde_atrace('B', current, name, 0)

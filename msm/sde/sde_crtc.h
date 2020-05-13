@@ -71,6 +71,24 @@ enum sde_crtc_idle_pc_state {
 };
 
 /**
+ * enum sde_crtc_cache_state: states of disp system cache
+ * CACHE_STATE_DISABLED: sys cache has been disabled
+ * CACHE_STATE_ENABLED: sys cache has been enabled
+ * CACHE_STATE_NORMAL: sys cache is normal state
+ * CACHE_STATE_PRE_CACHE: frame cache is being prepared
+ * CACHE_STATE_FRAME_WRITE: sys cache is being written to
+ * CACHE_STATE_FRAME_READ: sys cache is being read
+ */
+enum sde_crtc_cache_state {
+	CACHE_STATE_DISABLED,
+	CACHE_STATE_ENABLED,
+	CACHE_STATE_NORMAL,
+	CACHE_STATE_PRE_CACHE,
+	CACHE_STATE_FRAME_WRITE,
+	CACHE_STATE_FRAME_READ
+};
+
+/**
  * @connectors    : Currently associated drm connectors for retire event
  * @num_connectors: Number of associated drm connectors for retire event
  * @list:	event list
@@ -207,6 +225,7 @@ struct sde_crtc_misr_info {
  * @property_defaults : Array of default values for generic property support
  * @output_fence  : output release fence context
  * @stage_cfg     : H/w mixer stage configuration
+ * @active_cfg    : H/w pipes active that shouldn't be staged
  * @debugfs_root  : Parent of debugfs node
  * @priv_handle   : Pointer to external private handle, if present
  * @vblank_cb_count : count of vblank callback since last reset
@@ -218,7 +237,6 @@ struct sde_crtc_misr_info {
  * @enabled       : whether the SDE CRTC is currently enabled. updated in the
  *                  commit-thread, not state-swap time which is earlier, so
  *                  safe to make decisions on during VBLANK on/off work
- * @ds_reconfig   : force reconfiguration of the destination scaler block
  * @feature_list  : list of color processing features supported on a crtc
  * @active_list   : list of color processing features are active
  * @dirty_list    : list of color processing features are dirty
@@ -245,6 +263,7 @@ struct sde_crtc_misr_info {
  * @cur_perf      : current performance committed to clock/bandwidth driver
  * @plane_mask_old: keeps track of the planes used in the previous commit
  * @frame_trigger_mode: frame trigger mode
+ * @cp_pu_feature_mask: mask indicating cp feature enable for partial update
  * @ltm_buffer_cnt  : number of ltm buffers
  * @ltm_buffers     : struct stores ltm buffer related data
  * @ltm_buf_free    : list of LTM buffers that are available
@@ -253,6 +272,10 @@ struct sde_crtc_misr_info {
  * @ltm_buffer_lock : muttx to protect ltm_buffers allcation and free
  * @ltm_lock        : Spinlock to protect ltm buffer_cnt, hist_en and ltm lists
  * @needs_hw_reset  : Initiate a hw ctl reset
+ * @src_bpp         : source bpp used to calculate compression ratio
+ * @target_bpp      : target bpp used to calculate compression ratio
+ * @static_cache_read_work: delayed worker to transition cache state to read
+ * @cache_state     : Current static image cache state
  */
 struct sde_crtc {
 	struct drm_crtc base;
@@ -275,6 +298,7 @@ struct sde_crtc {
 	struct sde_fence_context *output_fence;
 
 	struct sde_hw_stage_cfg stage_cfg;
+	struct sde_hw_stage_cfg active_cfg;
 	struct dentry *debugfs_root;
 	void *priv_handle;
 
@@ -287,7 +311,6 @@ struct sde_crtc {
 	struct kernfs_node *vsync_event_sf;
 	bool enabled;
 
-	bool ds_reconfig;
 	struct list_head feature_list;
 	struct list_head active_list;
 	struct list_head dirty_list;
@@ -323,6 +346,8 @@ struct sde_crtc {
 	struct drm_property_blob *hist_blob;
 	enum frame_trigger_mode_type frame_trigger_mode;
 
+	u32 cp_pu_feature_mask;
+
 	u32 ltm_buffer_cnt;
 	struct sde_ltm_buffer *ltm_buffers[LTM_BUFFER_SIZE];
 	struct list_head ltm_buf_free;
@@ -332,6 +357,18 @@ struct sde_crtc {
 	struct mutex ltm_buffer_lock;
 	spinlock_t ltm_lock;
 	bool needs_hw_reset;
+
+	int src_bpp;
+	int target_bpp;
+
+	struct kthread_delayed_work static_cache_read_work;
+	enum sde_crtc_cache_state cache_state;
+};
+
+enum sde_crtc_dirty_flags {
+	SDE_CRTC_DIRTY_DEST_SCALER,
+	SDE_CRTC_DIRTY_DIM_LAYERS,
+	SDE_CRTC_DIRTY_MAX,
 };
 
 #define to_sde_crtc(x) container_of(x, struct sde_crtc, base)
@@ -360,7 +397,6 @@ struct sde_crtc {
  * @dim_layer: Dim layer configs
  * @num_ds: Number of destination scalers to be configured
  * @num_ds_enabled: Number of destination scalers enabled
- * @ds_dirty: Boolean to indicate if dirty or not
  * @ds_cfg: Destination scaler config
  * @scl3_lut_cfg: QSEED3 lut config
  * @new_perf: new performance state being requested
@@ -383,12 +419,12 @@ struct sde_crtc_state {
 
 	struct msm_property_state property_state;
 	struct msm_property_value property_values[CRTC_PROP_COUNT];
+	DECLARE_BITMAP(dirty, SDE_CRTC_DIRTY_MAX);
 	uint64_t input_fence_timeout_ns;
 	uint32_t num_dim_layers;
 	struct sde_hw_dim_layer dim_layer[SDE_MAX_DIM_LAYERS];
 	uint32_t num_ds;
 	uint32_t num_ds_enabled;
-	bool ds_dirty;
 	struct sde_hw_ds_cfg ds_cfg[SDE_MAX_DS_COUNT];
 	struct sde_hw_scaler3_lut_cfg scl3_lut_cfg;
 
@@ -810,6 +846,13 @@ void sde_crtc_update_cont_splash_settings(
 		struct drm_crtc *crtc);
 
 /**
+ * sde_crtc_set_qos_dirty - update plane dirty flag to include
+ *	QoS reprogramming which is required during fps switch
+ * @crtc: Pointer to drm crtc structure
+ */
+void sde_crtc_set_qos_dirty(struct drm_crtc *crtc);
+
+/**
  * sde_crtc_misr_setup - to configure and enable/disable MISR
  * @crtc: Pointer to drm crtc structure
  * @enable: boolean to indicate enable/disable misr
@@ -824,5 +867,33 @@ void sde_crtc_misr_setup(struct drm_crtc *crtc, bool enable, u32 frame_count);
  */
 void sde_crtc_get_misr_info(struct drm_crtc *crtc,
 		struct sde_crtc_misr_info *crtc_misr_info);
+
+/**
+ * sde_crtc_set_bpp - set src and target bpp values
+ * @sde_crtc: Pointer to sde crtc struct
+ * @src_bpp: source bpp value to be stored
+ * @target_bpp: target value to be stored
+ */
+static inline void sde_crtc_set_bpp(struct sde_crtc *sde_crtc, int src_bpp,
+		int target_bpp)
+{
+	sde_crtc->src_bpp = src_bpp;
+	sde_crtc->target_bpp = target_bpp;
+}
+
+/**
+ * sde_crtc_static_img_control - transition static img cache state
+ * @crtc: Pointer to drm crtc structure
+ * @state: cache state to transition to
+ * @is_vidmode: if encoder is video mode
+ */
+void sde_crtc_static_img_control(struct drm_crtc *crtc,
+		enum sde_crtc_cache_state state, bool is_vidmode);
+
+/**
+ * sde_crtc_static_cache_read_kickoff - kickoff cache read work
+ * @crtc: Pointer to drm crtc structure
+ */
+void sde_crtc_static_cache_read_kickoff(struct drm_crtc *crtc);
 
 #endif /* _SDE_CRTC_H_ */

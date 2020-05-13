@@ -112,7 +112,6 @@ struct sde_plane {
 	struct sde_hw_pipe_cfg pipe_cfg;
 	struct sde_hw_sharp_cfg sharp_cfg;
 	struct sde_hw_pipe_qos_cfg pipe_qos_cfg;
-	struct sde_vbif_set_qos_params cached_qos_params;
 	uint32_t color_fill;
 	bool is_error;
 	bool is_rt_pipe;
@@ -468,9 +467,8 @@ static void _sde_plane_set_ot_limit(struct drm_plane *plane,
 /**
  * _sde_plane_set_vbif_qos - set vbif QoS for the given plane
  * @plane:		Pointer to drm plane
- * @force:		Force update of vbif QoS
  */
-static void _sde_plane_set_qos_remap(struct drm_plane *plane, bool force)
+static void _sde_plane_set_qos_remap(struct drm_plane *plane)
 {
 	struct sde_plane *psde;
 	struct sde_vbif_set_qos_params qos_params;
@@ -502,15 +500,6 @@ static void _sde_plane_set_qos_remap(struct drm_plane *plane, bool force)
 	qos_params.num = psde->pipe_hw->idx - SSPP_VIG0;
 	qos_params.client_type = psde->is_rt_pipe ?
 					VBIF_RT_CLIENT : VBIF_NRT_CLIENT;
-
-	if (!force && !memcmp(&qos_params, &psde->cached_qos_params,
-			sizeof(struct sde_vbif_set_qos_params))) {
-		return;
-	}
-	SDE_DEBUG("changes in vbif QoS parameters, remap it\n");
-
-	memcpy(&psde->cached_qos_params, &qos_params,
-			sizeof(struct sde_vbif_set_qos_params));
 
 	SDE_DEBUG("plane%d pipe:%d vbif:%d xin:%d rt:%d, clk_ctrl:%d\n",
 			plane->base.id, qos_params.num,
@@ -828,8 +817,11 @@ static void _sde_plane_setup_scaler3(struct sde_plane *psde,
 		struct sde_plane_state *pstate, const struct sde_format *fmt,
 		uint32_t chroma_subsmpl_h, uint32_t chroma_subsmpl_v)
 {
-	uint32_t decimated, i, src_w, src_h, dst_w, dst_h;
+	uint32_t decimated, i, src_w, src_h, dst_w, dst_h, src_h_pre_down;
 	struct sde_hw_scaler3_cfg *scale_cfg;
+	struct sde_hw_inline_pre_downscale_cfg *pd_cfg;
+	bool pre_down_supported = (psde->features & BIT(SDE_SSPP_PREDOWNSCALE));
+	bool inline_rotation = (pstate->rotation & DRM_MODE_ROTATE_90);
 
 	if (!psde || !pstate || !fmt ||
 			!chroma_subsmpl_h || !chroma_subsmpl_v) {
@@ -840,6 +832,7 @@ static void _sde_plane_setup_scaler3(struct sde_plane *psde,
 	}
 
 	scale_cfg = &pstate->scaler3_cfg;
+	pd_cfg = &pstate->pre_down;
 	src_w = psde->pipe_cfg.src_rect.w;
 	src_h = psde->pipe_cfg.src_rect.h;
 	dst_w = psde->pipe_cfg.dst_rect.w;
@@ -854,7 +847,7 @@ static void _sde_plane_setup_scaler3(struct sde_plane *psde,
 	 * need pre-rotation settings, this will be corrected below
 	 * when calculating pixel extension settings.
 	 */
-	if (pstate->rotation & DRM_MODE_ROTATE_90)
+	if (inline_rotation)
 		swap(src_w, src_h);
 
 	decimated = DECIMATED_DIMENSION(src_w,
@@ -883,9 +876,21 @@ static void _sde_plane_setup_scaler3(struct sde_plane *psde,
 		scale_cfg->phase_step_y[SDE_SSPP_COMP_0];
 
 	for (i = 0; i < SDE_MAX_PLANES; i++) {
+		/*
+		 * For inline rotation cases with pre-downscaling enabled
+		 * set x pre-downscale value if required. Only x direction
+		 * is currently supported. Use src_h as values have been swapped
+		 * and x direction corresponds to height value.
+		 */
+		src_h_pre_down = src_h;
+		if (pre_down_supported && inline_rotation) {
+			if (i == 0 && (src_h > mult_frac(dst_h, 11, 5)))
+				src_h_pre_down = src_h / 2;
+		}
+
 		scale_cfg->src_width[i] = DECIMATED_DIMENSION(src_w,
 				psde->pipe_cfg.horz_decimation);
-		scale_cfg->src_height[i] = DECIMATED_DIMENSION(src_h,
+		scale_cfg->src_height[i] = DECIMATED_DIMENSION(src_h_pre_down,
 				psde->pipe_cfg.vert_decimation);
 		if (i == SDE_SSPP_COMP_1_2 || i == SDE_SSPP_COMP_2) {
 			scale_cfg->src_width[i] /= chroma_subsmpl_h;
@@ -895,7 +900,7 @@ static void _sde_plane_setup_scaler3(struct sde_plane *psde,
 		scale_cfg->preload_y[i] = psde->pipe_sblk->scaler_blk.v_preload;
 
 		/* For pixel extension we need the pre-rotated orientation */
-		if (pstate->rotation & DRM_MODE_ROTATE_90) {
+		if (inline_rotation) {
 			pstate->pixel_ext.num_ext_pxls_top[i] =
 				scale_cfg->src_width[i];
 			pstate->pixel_ext.num_ext_pxls_left[i] =
@@ -909,7 +914,8 @@ static void _sde_plane_setup_scaler3(struct sde_plane *psde,
 	}
 
 	if ((!(SDE_FORMAT_IS_YUV(fmt)) && (src_h == dst_h)
-		&& (src_w == dst_w)) || pstate->multirect_mode)
+		&& (src_w == dst_w) && !inline_rotation) ||
+		pstate->multirect_mode)
 		return;
 
 	SDE_DEBUG_PLANE(psde,
@@ -1246,7 +1252,7 @@ static void _sde_plane_setup_scaler(struct sde_plane *psde,
 {
 	struct sde_hw_pixel_ext *pe;
 	uint32_t chroma_subsmpl_h, chroma_subsmpl_v;
-	const struct drm_format_info *info = drm_format_info(fmt->base.pixel_format);
+	const struct drm_format_info *info = NULL;
 
 	if (!psde || !fmt || !pstate) {
 		SDE_ERROR("invalid arg(s), plane %d fmt %d state %d\n",
@@ -1254,6 +1260,7 @@ static void _sde_plane_setup_scaler(struct sde_plane *psde,
 		return;
 	}
 
+	info = drm_format_info(fmt->base.pixel_format);
 	pe = &pstate->pixel_ext;
 
 	psde->pipe_cfg.horz_decimation =
@@ -1605,7 +1612,7 @@ void sde_plane_secure_ctrl_xin_client(struct drm_plane *plane,
 		return;
 
 	/* do all VBIF programming for the sec-ui allowed SSPP */
-	_sde_plane_set_qos_remap(plane, true);
+	_sde_plane_set_qos_remap(plane);
 	_sde_plane_set_ot_limit(plane, crtc);
 }
 
@@ -1718,6 +1725,12 @@ int sde_plane_validate_multirect_v2(struct sde_multirect_plane_states *plane)
 		if (src[i].w != dst[i].w || src[i].h != dst[i].h) {
 			SDE_ERROR_PLANE(sde_plane[i],
 				"scaling is not supported in multirect mode\n");
+			return -EINVAL;
+		}
+
+		if (pstate[i]->rotation & DRM_MODE_ROTATE_90) {
+			SDE_ERROR_PLANE(sde_plane[i],
+				"inline rotation is not supported in mulirect mode\n");
 			return -EINVAL;
 		}
 
@@ -2321,8 +2334,8 @@ static int _sde_atomic_check_pre_downscale(struct sde_plane *psde,
 }
 
 static void _sde_plane_get_max_downscale_limits(struct sde_plane *psde,
-		struct sde_plane_state *pstate, bool rt_client,
-		u32 *max_numer_w, u32 *max_denom_w,
+		struct sde_plane_state *pstate, bool rt_client, u32 dst_h,
+		u32 src_h, u32 *max_numer_w, u32 *max_denom_w,
 		u32 *max_numer_h, u32 *max_denom_h)
 {
 	bool rotated, has_predown;
@@ -2346,6 +2359,8 @@ static void _sde_plane_get_max_downscale_limits(struct sde_plane *psde,
 	 **/
 	if (rotated) {
 		if (rt_client && has_predown) {
+			pd->pre_downscale_x_0 = (src_h >
+					mult_frac(dst_h, 11, 5)) ? 2 : 0;
 			*max_numer_h = pd->pre_downscale_x_0 ?
 				sblk->in_rot_maxdwnscale_rt_num :
 				sblk->in_rot_maxdwnscale_rt_nopd_num;
@@ -2399,14 +2414,20 @@ static int _sde_atomic_check_decimation_scaler(struct drm_plane_state *state,
 	}
 	sblk = psde->pipe_sblk;
 	max_upscale = sblk->maxupscale;
-	max_linewidth = sblk->maxlinewidth;
+
+	if (inline_rotation)
+		max_linewidth = sblk->in_rot_maxheight;
+	else if (scaler_src_w != state->crtc_w || scaler_src_h != state->crtc_h)
+		max_linewidth = sblk->scaling_linewidth;
+	else
+		max_linewidth = sblk->maxlinewidth;
 
 	crtc = state->crtc;
 	new_cstate = drm_atomic_get_new_crtc_state(state->state, crtc);
 	rt_client = sde_crtc_is_rt_client(crtc, new_cstate);
 
-	_sde_plane_get_max_downscale_limits(psde, pstate, rt_client,
-		&max_downscale_num_w, &max_downscale_denom_w,
+	_sde_plane_get_max_downscale_limits(psde, pstate, rt_client, dst->h,
+		scaler_src_h, &max_downscale_num_w, &max_downscale_denom_w,
 		&max_downscale_num_h, &max_downscale_denom_h);
 
 	/* decimation validation */
@@ -2428,11 +2449,11 @@ static int _sde_atomic_check_decimation_scaler(struct drm_plane_state *state,
 			src->w, src->h, dst->w, dst->h);
 		ret = -EINVAL;
 
-	/* check decimated source width */
-	} else if (src_deci_w > max_linewidth) {
+	/* check scaler source width */
+	} else if (scaler_src_w > max_linewidth) {
 		SDE_ERROR_PLANE(psde,
-				"invalid src w:%u, deci w:%u, line w:%u\n",
-				src->w, src_deci_w, max_linewidth);
+			"invalid src w:%u, scaler w:%u, line w:%u, rot: %d\n",
+			src->w, scaler_src_w, max_linewidth, inline_rotation);
 		ret = -E2BIG;
 
 	/* check max scaler capability */
@@ -2732,31 +2753,75 @@ void sde_plane_set_error(struct drm_plane *plane, bool error)
 }
 
 static void _sde_plane_sspp_setup_sys_cache(struct sde_plane *psde,
-	struct sde_plane_state *pstate, const struct sde_format *fmt)
+		struct sde_plane_state *pstate, bool is_tp10)
 {
+	struct sde_sc_cfg *sc_cfg = psde->catalog->sc_cfg;
+
 	if (!psde->pipe_hw->ops.setup_sys_cache ||
-	    !(psde->perf_features & BIT(SDE_PERF_SSPP_SYS_CACHE)))
+			!(psde->perf_features & BIT(SDE_PERF_SSPP_SYS_CACHE)))
 		return;
 
 	SDE_DEBUG("features:0x%x rotation:0x%x\n",
 		psde->features, pstate->rotation);
 
-	if ((pstate->rotation & DRM_MODE_ROTATE_90) &&
-			sde_format_is_tp10_ubwc(fmt)) {
+
+	pstate->sc_cfg.rd_en = false;
+	pstate->sc_cfg.rd_scid = 0x0;
+	pstate->sc_cfg.flags = SSPP_SYS_CACHE_EN_FLAG |
+			SSPP_SYS_CACHE_SCID;
+	pstate->sc_cfg.type = SDE_SYS_CACHE_NONE;
+
+	if (pstate->rotation & DRM_MODE_ROTATE_90) {
+		if (is_tp10 && sc_cfg[SDE_SYS_CACHE_ROT].has_sys_cache) {
+			pstate->sc_cfg.rd_en = true;
+			pstate->sc_cfg.rd_scid =
+					sc_cfg[SDE_SYS_CACHE_ROT].llcc_scid;
+			pstate->sc_cfg.flags = SSPP_SYS_CACHE_EN_FLAG |
+					SSPP_SYS_CACHE_SCID;
+			pstate->sc_cfg.type = SDE_SYS_CACHE_ROT;
+		}
+	} else if (pstate->static_cache_state == CACHE_STATE_FRAME_WRITE &&
+			sc_cfg[SDE_SYS_CACHE_DISP].has_sys_cache) {
 		pstate->sc_cfg.rd_en = true;
 		pstate->sc_cfg.rd_scid =
-			psde->pipe_sblk->llcc_scid;
+				sc_cfg[SDE_SYS_CACHE_DISP].llcc_scid;
+		pstate->sc_cfg.rd_noallocate = false;
 		pstate->sc_cfg.flags = SSPP_SYS_CACHE_EN_FLAG |
-			SSPP_SYS_CACHE_SCID;
-	} else {
-		pstate->sc_cfg.rd_en = false;
-		pstate->sc_cfg.rd_scid = 0x0;
+				SSPP_SYS_CACHE_SCID | SSPP_SYS_CACHE_NO_ALLOC;
+		pstate->sc_cfg.type = SDE_SYS_CACHE_DISP;
+	} else if (pstate->static_cache_state == CACHE_STATE_FRAME_READ &&
+			sc_cfg[SDE_SYS_CACHE_DISP].has_sys_cache) {
+		pstate->sc_cfg.rd_en = true;
+		pstate->sc_cfg.rd_scid =
+				sc_cfg[SDE_SYS_CACHE_DISP].llcc_scid;
+		pstate->sc_cfg.rd_noallocate = true;
 		pstate->sc_cfg.flags = SSPP_SYS_CACHE_EN_FLAG |
-			SSPP_SYS_CACHE_SCID;
+				SSPP_SYS_CACHE_SCID | SSPP_SYS_CACHE_NO_ALLOC;
+		pstate->sc_cfg.type = SDE_SYS_CACHE_DISP;
 	}
 
 	psde->pipe_hw->ops.setup_sys_cache(
 		psde->pipe_hw, &pstate->sc_cfg);
+}
+
+void sde_plane_static_img_control(struct drm_plane *plane,
+		enum sde_crtc_cache_state state)
+{
+	struct sde_plane *psde;
+	struct sde_plane_state *pstate;
+
+	if (!plane || !plane->state) {
+		SDE_ERROR("invalid plane\n");
+		return;
+	}
+
+	psde = to_sde_plane(plane);
+	pstate = to_sde_plane_state(plane->state);
+
+	pstate->static_cache_state = state;
+
+	if (state == CACHE_STATE_FRAME_READ)
+		_sde_plane_sspp_setup_sys_cache(psde, pstate, false);
 }
 
 static void _sde_plane_map_prop_to_dirty_bits(void)
@@ -2823,7 +2888,10 @@ static void _sde_plane_setup_uidle(struct drm_crtc *crtc,
 	struct sde_rect *src, struct sde_rect *dst)
 {
 	struct sde_hw_pipe_uidle_cfg cfg;
-	u32 line_time = sde_get_linetime(&crtc->mode); /* nS */
+	struct sde_crtc *sde_crtc = to_sde_crtc(crtc);
+
+	u32 line_time = sde_get_linetime(&crtc->mode,
+			sde_crtc->src_bpp, sde_crtc->target_bpp); /* nS */
 	u32 fal1_target_idle_time_ns =
 		psde->catalog->uidle_cfg.fal1_target_idle_time * 1000; /* nS */
 	u32 fal10_target_idle_time_ns =
@@ -3028,7 +3096,8 @@ static void _sde_plane_update_format_and_rects(struct sde_plane *psde,
 			   pstate->multirect_index);
 	}
 
-	_sde_plane_sspp_setup_sys_cache(psde, pstate, fmt);
+	_sde_plane_sspp_setup_sys_cache(psde, pstate,
+			sde_format_is_tp10_ubwc(fmt));
 
 	/* update csc */
 	if (SDE_FORMAT_IS_YUV(fmt))
@@ -3111,7 +3180,9 @@ static void _sde_plane_update_properties(struct drm_plane *plane,
 		psde->pipe_hw->ops.setup_sharpening)
 		_sde_plane_update_sharpening(psde);
 
-	_sde_plane_set_qos_lut(plane, crtc, fb);
+	if (pstate->dirty & (SDE_PLANE_DIRTY_QOS | SDE_PLANE_DIRTY_RECTS |
+			SDE_PLANE_DIRTY_FORMAT))
+		_sde_plane_set_qos_lut(plane, crtc, fb);
 
 	if (plane->type != DRM_PLANE_TYPE_CURSOR) {
 		_sde_plane_set_qos_ctrl(plane, true, SDE_PLANE_QOS_PANIC_CTRL);
@@ -3120,10 +3191,8 @@ static void _sde_plane_update_properties(struct drm_plane *plane,
 			_sde_plane_set_ts_prefill(plane, pstate);
 	}
 
-	if ((pstate->dirty & SDE_PLANE_DIRTY_ALL) == SDE_PLANE_DIRTY_ALL)
-		_sde_plane_set_qos_remap(plane, true);
-	else
-		_sde_plane_set_qos_remap(plane, false);
+	if (pstate->dirty & SDE_PLANE_DIRTY_QOS)
+		_sde_plane_set_qos_remap(plane);
 
 	/* clear dirty */
 	pstate->dirty = 0x0;
@@ -3140,6 +3209,7 @@ static int sde_plane_sspp_atomic_update(struct drm_plane *plane,
 	struct drm_framebuffer *fb;
 	int idx;
 	int dirty_prop_flag;
+	bool is_rt;
 
 	if (!plane) {
 		SDE_ERROR("invalid plane\n");
@@ -3216,12 +3286,17 @@ static int sde_plane_sspp_atomic_update(struct drm_plane *plane,
 
 	_sde_plane_set_scanout(plane, pstate, &psde->pipe_cfg, fb);
 
+	is_rt = sde_crtc_is_rt_client(crtc, crtc->state);
+	if (is_rt != psde->is_rt_pipe) {
+		psde->is_rt_pipe = is_rt;
+		pstate->dirty |= SDE_PLANE_DIRTY_QOS;
+	}
+
 	/* early out if nothing dirty */
 	if (!pstate->dirty)
 		return 0;
 	pstate->pending = true;
 
-	psde->is_rt_pipe = sde_crtc_is_rt_client(crtc, crtc->state);
 	_sde_plane_set_qos_ctrl(plane, false, SDE_PLANE_QOS_PANIC_CTRL);
 
 	_sde_plane_update_properties(plane, crtc, fb);
@@ -3317,7 +3392,8 @@ void sde_plane_restore(struct drm_plane *plane)
 	sde_plane_atomic_update(plane, plane->state);
 }
 
-bool sde_plane_is_cache_required(struct drm_plane *plane)
+bool sde_plane_is_cache_required(struct drm_plane *plane,
+		enum sde_sys_cache_type type)
 {
 	struct sde_plane_state *pstate;
 
@@ -3329,7 +3405,7 @@ bool sde_plane_is_cache_required(struct drm_plane *plane)
 	pstate = to_sde_plane_state(plane->state);
 
 	/* check if llcc is required for the plane */
-	if (pstate->sc_cfg.rd_en)
+	if (pstate->sc_cfg.rd_en && (pstate->sc_cfg.type == type))
 		return true;
 	else
 		return false;
@@ -3421,7 +3497,8 @@ static void _sde_plane_install_properties(struct drm_plane *plane,
 		{SDE_DRM_BLEND_OP_NOT_DEFINED,    "not_defined"},
 		{SDE_DRM_BLEND_OP_OPAQUE,         "opaque"},
 		{SDE_DRM_BLEND_OP_PREMULTIPLIED,  "premultiplied"},
-		{SDE_DRM_BLEND_OP_COVERAGE,       "coverage"}
+		{SDE_DRM_BLEND_OP_COVERAGE,       "coverage"},
+		{SDE_DRM_BLEND_OP_SKIP,           "skip_blending"},
 	};
 	static const struct drm_prop_enum_list e_src_config[] = {
 		{SDE_DRM_DEINTERLACE, "deinterlace"}
@@ -3444,6 +3521,7 @@ static void _sde_plane_install_properties(struct drm_plane *plane,
 	int zpos_max = 255;
 	int zpos_def = 0;
 	char feature_name[256];
+	uint32_t index;
 
 	if (!plane || !psde) {
 		SDE_ERROR("invalid plane\n");
@@ -3562,6 +3640,13 @@ static void _sde_plane_install_properties(struct drm_plane *plane,
 			psde->pipe_sblk->max_per_pipe_bw * 1000LL);
 	sde_kms_info_add_keyint(info, "max_per_pipe_bw_high",
 			psde->pipe_sblk->max_per_pipe_bw_high * 1000LL);
+	index = (master_plane_id == 0) ? 0 : 1;
+	if (catalog->has_demura &&
+	    catalog->demura_supported[psde->pipe][index] != ~0x0) {
+		sde_kms_info_add_keyint(info, "demura_block", index);
+		sde_kms_info_add_keyint(info, "demura_pipe_id",
+				psde->pipe - SSPP_DMA0);
+	}
 
 	if ((is_master &&
 		(psde->features & BIT(SDE_SSPP_INVERSE_PMA))) ||

@@ -48,6 +48,7 @@
 			(cfg)->dma_buf->index)
 
 #define REL_ADDR_OPCODE (BIT(27))
+#define NO_OP_OPCODE (0)
 #define SINGLE_REG_WRITE_OPCODE (BIT(28))
 #define SINGLE_REG_MODIFY_OPCODE (BIT(29))
 #define HW_INDEX_REG_WRITE_OPCODE (BIT(28) | BIT(29))
@@ -352,6 +353,7 @@ static int write_single_modify(struct sde_reg_dma_setup_ops_cfg *cfg)
 static int write_block_lut_reg(struct sde_reg_dma_setup_ops_cfg *cfg)
 {
 	u32 *loc = NULL;
+	int rc = -EINVAL;
 
 	loc =  (u32 *)((u8 *)cfg->dma_buf->vaddr +
 			cfg->dma_buf->index);
@@ -362,7 +364,22 @@ static int write_block_lut_reg(struct sde_reg_dma_setup_ops_cfg *cfg)
 	loc[1] |= (cfg->lut_size & LUTBUS_LUT_SIZE_MASK);
 	cfg->dma_buf->index += ops_mem_size[cfg->ops];
 
-	return write_multi_reg(cfg);
+	rc = write_multi_reg(cfg);
+	if (rc)
+		return rc;
+
+	/* adding 3 NO OPs as SW workaround for REG_BLK_LUT_WRITE
+	 * HW limitation that requires the residual data plus the
+	 * following opcode to exceed 4 DWORDs length.
+	 */
+	loc =  (u32 *)((u8 *)cfg->dma_buf->vaddr +
+			cfg->dma_buf->index);
+	loc[0] = NO_OP_OPCODE;
+	loc[1] = NO_OP_OPCODE;
+	loc[2] = NO_OP_OPCODE;
+	cfg->dma_buf->index += sizeof(u32) * 3;
+
+	return 0;
 }
 
 static int write_decode_sel(struct sde_reg_dma_setup_ops_cfg *cfg)
@@ -810,6 +827,9 @@ int init_v12(struct sde_hw_reg_dma *cfg)
 			GRP_MDSS_HW_BLK_SELECT);
 	v1_supported[SPR_INIT] = (GRP_DSPP_HW_BLK_SELECT |
 			GRP_MDSS_HW_BLK_SELECT);
+	v1_supported[SPR_PU_CFG] = (GRP_DSPP_HW_BLK_SELECT |
+			GRP_MDSS_HW_BLK_SELECT);
+	v1_supported[DEMURA_CFG] = MDSS | DSPP0 | DSPP1;
 
 	return 0;
 }

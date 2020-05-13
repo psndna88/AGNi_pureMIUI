@@ -433,9 +433,7 @@ static int sde_rsc_resource_disable(struct sde_rsc_priv *rsc)
 	phandle = &rsc->phandle;
 	mp = &phandle->mp;
 	msm_dss_enable_clk(mp->clk_config, mp->num_clk, false);
-	if (phandle->reg_bus_hdl)
-		sde_power_scale_reg_bus(phandle, VOTE_INDEX_DISABLE, false);
-
+	sde_power_scale_reg_bus(phandle, VOTE_INDEX_DISABLE, false);
 	msm_dss_enable_vreg(mp->vreg_config, mp->num_vreg, false);
 
 	return 0;
@@ -463,12 +461,10 @@ static int sde_rsc_resource_enable(struct sde_rsc_priv *rsc)
 		goto end;
 	}
 
-	if (phandle->reg_bus_hdl) {
-		rc = sde_power_scale_reg_bus(phandle, VOTE_INDEX_LOW, false);
-		if (rc) {
-			pr_err("failed to set reg bus vote rc=%d\n", rc);
-			goto reg_bus_hdl_err;
-		}
+	rc = sde_power_scale_reg_bus(phandle, VOTE_INDEX_LOW, false);
+	if (rc) {
+		pr_err("failed to set reg bus vote rc=%d\n", rc);
+		goto reg_bus_hdl_err;
 	}
 
 	rc = msm_dss_enable_clk(mp->clk_config, mp->num_clk, true);
@@ -480,8 +476,7 @@ static int sde_rsc_resource_enable(struct sde_rsc_priv *rsc)
 	return rc;
 
 clk_err:
-	if (phandle->reg_bus_hdl)
-		sde_power_scale_reg_bus(phandle, VOTE_INDEX_DISABLE, false);
+	sde_power_scale_reg_bus(phandle, VOTE_INDEX_DISABLE, false);
 
 reg_bus_hdl_err:
 	msm_dss_enable_vreg(mp->vreg_config, mp->num_vreg, false);
@@ -933,11 +928,7 @@ int sde_rsc_client_state_update(struct sde_rsc_client *caller_client,
 	caller_client->crtc_id = crtc_id;
 	caller_client->current_state = state;
 
-	if (rsc->master_drm == NULL) {
-		pr_err("invalid master component binding\n");
-		rc = -EINVAL;
-		goto end;
-	} else if ((rsc->current_state == state) && !config) {
+	if ((rsc->current_state == state) && !config) {
 		pr_debug("no state change: %d\n", state);
 		goto end;
 	}
@@ -1137,7 +1128,6 @@ void sde_rsc_debug_dump(u32 mux_sel)
 	if (rsc->hw_ops.debug_dump)
 		rsc->hw_ops.debug_dump(rsc, mux_sel);
 }
-#endif /* defined(CONFIG_DEBUG_FS) */
 
 static int _sde_debugfs_status_show(struct seq_file *s, void *data)
 {
@@ -1357,6 +1347,7 @@ static ssize_t _sde_debugfs_mode_ctrl_read(struct file *file, char __user *buf,
 	struct sde_rsc_priv *rsc = file->private_data;
 	char buffer[MAX_BUFFER_SIZE];
 	int blen = 0;
+	size_t max_size = min_t(size_t, count, MAX_BUFFER_SIZE);
 
 	if (*ppos || !rsc || !rsc->hw_ops.mode_ctrl)
 		return 0;
@@ -1364,23 +1355,23 @@ static ssize_t _sde_debugfs_mode_ctrl_read(struct file *file, char __user *buf,
 	mutex_lock(&rsc->client_lock);
 	if (rsc->current_state == SDE_RSC_IDLE_STATE) {
 		pr_debug("debug node is not supported during idle state\n");
-		blen = snprintf(buffer, MAX_BUFFER_SIZE,
+		blen = scnprintf(buffer, max_size,
 				"hw state is not supported during idle pc\n");
 		goto end;
 	}
 
-	blen = rsc->hw_ops.mode_ctrl(rsc, MODE_READ, buffer,
-							MAX_BUFFER_SIZE, 0);
+	blen = rsc->hw_ops.mode_ctrl(rsc, MODE_READ, buffer, max_size, 0);
 
 end:
 	mutex_unlock(&rsc->client_lock);
 	if (blen <= 0)
 		return 0;
 
-	if (blen > count)
+	if (blen > count) {
 		blen = count;
+		buffer[count - 1] = '\0';
+	}
 
-	blen = min_t(size_t, blen, MAX_BUFFER_SIZE);
 	if (copy_to_user(buf, buffer, blen))
 		return -EFAULT;
 
@@ -1447,6 +1438,7 @@ static ssize_t _sde_debugfs_vsync_mode_read(struct file *file, char __user *buf,
 	struct sde_rsc_priv *rsc = file->private_data;
 	char buffer[MAX_BUFFER_SIZE];
 	int blen = 0;
+	size_t max_size = min_t(size_t, count, MAX_BUFFER_SIZE);
 
 	if (*ppos || !rsc || !rsc->hw_ops.hw_vsync)
 		return 0;
@@ -1454,23 +1446,23 @@ static ssize_t _sde_debugfs_vsync_mode_read(struct file *file, char __user *buf,
 	mutex_lock(&rsc->client_lock);
 	if (rsc->current_state == SDE_RSC_IDLE_STATE) {
 		pr_debug("debug node is not supported during idle state\n");
-		blen = snprintf(buffer, MAX_BUFFER_SIZE,
+		blen = scnprintf(buffer, max_size,
 				"hw state is not supported during idle pc\n");
 		goto end;
 	}
 
-	blen = rsc->hw_ops.hw_vsync(rsc, VSYNC_READ, buffer,
-						MAX_BUFFER_SIZE, 0);
+	blen = rsc->hw_ops.hw_vsync(rsc, VSYNC_READ, buffer, max_size, 0);
 
 end:
 	mutex_unlock(&rsc->client_lock);
 	if (blen <= 0)
 		return 0;
 
-	if (blen > count)
+	if (blen > count) {
 		blen = count;
+		buffer[count - 1] = '\0';
+	}
 
-	blen = min_t(size_t, blen, MAX_BUFFER_SIZE);
 	if (copy_to_user(buf, buffer, blen))
 		return -EFAULT;
 
@@ -1584,6 +1576,11 @@ static void _sde_rsc_init_debugfs(struct sde_rsc_priv *rsc, char *name)
 	debugfs_create_x32("debug_mode", 0600, rsc->debugfs_root,
 							&rsc->debug_mode);
 }
+#else
+static void _sde_rsc_init_debugfs(struct sde_rsc_priv *rsc, char *name)
+{
+}
+#endif /* defined(CONFIG_DEBUG_FS) */
 
 static void sde_rsc_deinit(struct platform_device *pdev,
 					struct sde_rsc_priv *rsc)
@@ -1635,10 +1632,6 @@ static int sde_rsc_bind(struct device *dev,
 		return -EINVAL;
 	}
 
-	mutex_lock(&rsc->client_lock);
-	rsc->master_drm = drm;
-	mutex_unlock(&rsc->client_lock);
-
 	sde_dbg_reg_register_base(SDE_RSC_DRV_DBG_NAME, rsc->drv_io.base,
 							rsc->drv_io.len);
 	sde_dbg_reg_register_base(SDE_RSC_WRAPPER_DBG_NAME,
@@ -1668,10 +1661,6 @@ static void sde_rsc_unbind(struct device *dev,
 		pr_err("invalid display rsc\n");
 		return;
 	}
-
-	mutex_lock(&rsc->client_lock);
-	rsc->master_drm = NULL;
-	mutex_unlock(&rsc->client_lock);
 }
 
 static const struct component_ops sde_rsc_comp_ops = {
@@ -1854,8 +1843,6 @@ static const struct of_device_id dt_match[] = {
 	{},
 };
 
-MODULE_DEVICE_TABLE(of, dt_match);
-
 static struct platform_driver sde_rsc_platform_driver = {
 	.probe      = sde_rsc_probe,
 	.remove     = sde_rsc_remove,
@@ -1880,21 +1867,17 @@ static struct platform_driver sde_rsc_rpmh_driver = {
 	},
 };
 
-static int __init sde_rsc_register(void)
+void __init sde_rsc_register(void)
 {
-	return platform_driver_register(&sde_rsc_platform_driver);
+	platform_driver_register(&sde_rsc_platform_driver);
 }
 
-static void __exit sde_rsc_unregister(void)
+void __exit sde_rsc_unregister(void)
 {
 	platform_driver_unregister(&sde_rsc_platform_driver);
 }
 
-static int __init sde_rsc_rpmh_register(void)
+void __init sde_rsc_rpmh_register(void)
 {
-	return platform_driver_register(&sde_rsc_rpmh_driver);
+	platform_driver_register(&sde_rsc_rpmh_driver);
 }
-
-subsys_initcall(sde_rsc_rpmh_register);
-module_init(sde_rsc_register);
-module_exit(sde_rsc_unregister);

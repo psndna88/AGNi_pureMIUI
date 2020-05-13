@@ -72,13 +72,14 @@ static void dspp_hist_install_property(struct drm_crtc *crtc);
 
 static void dspp_dither_install_property(struct drm_crtc *crtc);
 
+static void dspp_demura_install_property(struct drm_crtc *crtc);
+
 typedef void (*dspp_prop_install_func_t)(struct drm_crtc *crtc);
 
 static dspp_prop_install_func_t dspp_prop_install_func[SDE_DSPP_MAX];
 
 static void sde_cp_update_list(struct sde_cp_node *prop_node,
 		struct sde_crtc *crtc, bool dirty_list);
-
 static int sde_cp_ad_validate_prop(struct sde_cp_node *prop_node,
 		struct sde_crtc *crtc);
 
@@ -118,6 +119,7 @@ do { \
 	func[SDE_DSPP_HIST] = dspp_hist_install_property; \
 	func[SDE_DSPP_DITHER] = dspp_dither_install_property; \
 	func[SDE_DSPP_RC] = dspp_rc_install_property; \
+	func[SDE_DSPP_DEMURA] = dspp_demura_install_property; \
 } while (0)
 
 typedef void (*lm_prop_install_func_t)(struct drm_crtc *crtc);
@@ -168,6 +170,8 @@ enum sde_cp_crtc_features {
 	SDE_CP_CRTC_DSPP_SB,
 	SDE_CP_CRTC_DSPP_RC_MASK,
 	SDE_CP_CRTC_DSPP_SPR_INIT,
+	SDE_CP_CRTC_DSPP_DEMURA_INIT,
+	SDE_CP_CRTC_DSPP_DEMURA_BACKLIGHT,
 	SDE_CP_CRTC_DSPP_MAX,
 	/* DSPP features end */
 
@@ -181,6 +185,7 @@ enum sde_cp_crtc_features {
 
 enum sde_cp_crtc_pu_features {
 	SDE_CP_CRTC_DSPP_RC_PU,
+	SDE_CP_CRTC_DSPP_SPR_PU,
 	SDE_CP_CRTC_MAX_PU_FEATURES,
 };
 
@@ -202,6 +207,20 @@ static struct sde_kms *get_kms(struct drm_crtc *crtc)
 	struct msm_drm_private *priv = crtc->dev->dev_private;
 
 	return to_sde_kms(priv->kms);
+}
+
+static void update_pu_feature_enable(struct sde_crtc *sde_crtc,
+		u32 feature, bool enable)
+{
+	if (!sde_crtc || feature > SDE_CP_CRTC_MAX_PU_FEATURES) {
+		DRM_ERROR("invalid args feature %d\n", feature);
+		return;
+	}
+
+	if (enable)
+		sde_crtc->cp_pu_feature_mask |= BIT(feature);
+	else
+		sde_crtc->cp_pu_feature_mask &= ~BIT(feature);
 }
 
 static int set_dspp_vlut_feature(struct sde_hw_dspp *hw_dspp,
@@ -741,6 +760,8 @@ static int set_rc_mask_feature(struct sde_hw_dspp *hw_dspp,
 		}
 	}
 
+	update_pu_feature_enable(sde_crtc, SDE_CP_CRTC_DSPP_RC_PU,
+			hw_cfg->payload != NULL);
 exit:
 	return ret;
 }
@@ -794,6 +815,45 @@ static int check_rc_pu_feature(struct sde_hw_dspp *hw_dspp,
 	return ret;
 }
 
+static int set_spr_pu_feature(struct sde_hw_dspp *hw_dspp,
+	struct sde_hw_cp_cfg *hw_cfg, struct sde_crtc *sde_crtc)
+{
+	if (!hw_dspp || !hw_cfg || !sde_crtc) {
+		DRM_ERROR("invalid argumets\n");
+		return -EINVAL;
+	}
+
+	if (hw_dspp->ops.setup_spr_pu_config)
+		hw_dspp->ops.setup_spr_pu_config(hw_dspp, hw_cfg);
+
+	return 0;
+}
+
+static int check_spr_pu_feature(struct sde_hw_dspp *hw_dspp,
+	struct sde_hw_cp_cfg *hw_cfg, struct sde_crtc *sde_crtc)
+{
+	struct msm_roi_list *roi_list;
+
+	if (!hw_cfg || hw_cfg->len != sizeof(struct sde_drm_roi_v1)) {
+		SDE_ERROR("invalid payload\n");
+		return -EINVAL;
+	}
+
+	roi_list = hw_cfg->payload;
+	if (roi_list->num_rects > 1) {
+		SDE_ERROR("multiple pu regions not supported with spr\n");
+		return -EINVAL;
+	}
+
+	if ((roi_list->roi[0].x2 - roi_list->roi[0].x1) != hw_cfg->displayh) {
+		SDE_ERROR("pu region not full width %d\n",
+				(roi_list->roi[0].x2 - roi_list->roi[0].x1));
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 static int set_spr_init_feature(struct sde_hw_dspp *hw_dspp,
 				struct sde_hw_cp_cfg *hw_cfg,
 				struct sde_crtc *sde_crtc)
@@ -805,7 +865,23 @@ static int set_spr_init_feature(struct sde_hw_dspp *hw_dspp,
 		ret = -EINVAL;
 	} else {
 		hw_dspp->ops.setup_spr_init_config(hw_dspp, hw_cfg);
+		update_pu_feature_enable(sde_crtc, SDE_CP_CRTC_DSPP_SPR_PU,
+				hw_cfg->payload != NULL);
 	}
+
+	return ret;
+}
+
+static int set_demura_feature(struct sde_hw_dspp *hw_dspp,
+				   struct sde_hw_cp_cfg *hw_cfg,
+				   struct sde_crtc *hw_crtc)
+{
+	int ret = 0;
+
+	if (!hw_dspp || !hw_dspp->ops.setup_demura_cfg)
+		ret = -EINVAL;
+	else
+		hw_dspp->ops.setup_demura_cfg(hw_dspp, hw_cfg);
 
 	return ret;
 }
@@ -860,6 +936,7 @@ do { \
 	wrappers[SDE_CP_CRTC_DSPP_LTM_HIST_CTL] = set_ltm_hist_crtl_feature; \
 	wrappers[SDE_CP_CRTC_DSPP_RC_MASK] = set_rc_mask_feature; \
 	wrappers[SDE_CP_CRTC_DSPP_SPR_INIT] = set_spr_init_feature; \
+	wrappers[SDE_CP_CRTC_DSPP_DEMURA_INIT] = set_demura_feature; \
 } while (0)
 
 feature_wrapper set_crtc_pu_feature_wrappers[SDE_CP_CRTC_MAX_PU_FEATURES];
@@ -867,6 +944,7 @@ feature_wrapper set_crtc_pu_feature_wrappers[SDE_CP_CRTC_MAX_PU_FEATURES];
 do { \
 	memset(wrappers, 0, sizeof(wrappers)); \
 	wrappers[SDE_CP_CRTC_DSPP_RC_PU] = set_rc_pu_feature; \
+	wrappers[SDE_CP_CRTC_DSPP_SPR_PU] = set_spr_pu_feature; \
 } while (0)
 
 feature_wrapper check_crtc_pu_feature_wrappers[SDE_CP_CRTC_MAX_PU_FEATURES];
@@ -874,6 +952,7 @@ feature_wrapper check_crtc_pu_feature_wrappers[SDE_CP_CRTC_MAX_PU_FEATURES];
 do { \
 	memset(wrappers, 0, sizeof(wrappers)); \
 	wrappers[SDE_CP_CRTC_DSPP_RC_PU] = check_rc_pu_feature; \
+	wrappers[SDE_CP_CRTC_DSPP_SPR_PU] = check_spr_pu_feature; \
 } while (0)
 
 #define INIT_PROP_ATTACH(p, crtc, prop, node, feature, val) \
@@ -1364,7 +1443,7 @@ static int sde_cp_crtc_checkfeature(struct sde_cp_node *prop_node,
 	bool feature_enabled = false;
 	feature_wrapper check_feature = NULL;
 
-	if (!prop_node || !sde_crtc || !sde_crtc_state) {
+	if (!prop_node) {
 		DRM_ERROR("invalid arguments");
 		return -EINVAL;
 	}
@@ -1522,6 +1601,8 @@ static const int dspp_feature_to_sub_blk_tbl[SDE_CP_CRTC_MAX_FEATURES] = {
 	[SDE_CP_CRTC_DSPP_SB] = SDE_DSPP_SB,
 	[SDE_CP_CRTC_DSPP_SPR_INIT] = SDE_DSPP_SPR,
 	[SDE_CP_CRTC_DSPP_RC_MASK] = SDE_DSPP_RC,
+	[SDE_CP_CRTC_DSPP_DEMURA_INIT] = SDE_DSPP_DEMURA,
+	[SDE_CP_CRTC_DSPP_DEMURA_BACKLIGHT] = SDE_DSPP_DEMURA,
 	[SDE_CP_CRTC_DSPP_MAX] = SDE_DSPP_MAX,
 	[SDE_CP_CRTC_LM_GC] = SDE_DSPP_MAX,
 };
@@ -1618,11 +1699,6 @@ static int sde_cp_crtc_check_pu_features(struct drm_crtc *crtc)
 			DRM_ERROR("invalid ctl in mixer %d\n", i);
 			return -EINVAL;
 		}
-
-		if (!sde_crtc->mixers[i].hw_dspp) {
-			DRM_ERROR("invalid dspp in mixer %d\n", i);
-			return -EINVAL;
-		}
 	}
 
 	/* early return when not a partial update frame */
@@ -1642,7 +1718,8 @@ static int sde_cp_crtc_check_pu_features(struct drm_crtc *crtc)
 		feature_wrapper check_pu_feature =
 				check_crtc_pu_feature_wrappers[i];
 
-		if (!check_pu_feature)
+		if (!check_pu_feature ||
+				!(sde_crtc->cp_pu_feature_mask & BIT(i)))
 			continue;
 
 		for (j = 0; j < hw_cfg.num_of_mixers; j++) {
@@ -1764,11 +1841,6 @@ static int sde_cp_crtc_set_pu_features(struct drm_crtc *crtc, bool *need_flush)
 			DRM_ERROR("invalid ctl in mixer %d\n", i);
 			return -EINVAL;
 		}
-
-		if (!sde_crtc->mixers[i].hw_dspp) {
-			DRM_ERROR("invalid dspp in mixer %d\n", i);
-			return -EINVAL;
-		}
 	}
 
 	/* early return if not a partial update frame or no change in rois */
@@ -1801,7 +1873,8 @@ static int sde_cp_crtc_set_pu_features(struct drm_crtc *crtc, bool *need_flush)
 		feature_wrapper set_pu_feature =
 				set_crtc_pu_feature_wrappers[i];
 
-		if (!set_pu_feature)
+		if (!set_pu_feature ||
+				!(sde_crtc->cp_pu_feature_mask & BIT(i)))
 			continue;
 
 		for (j = 0; j < hw_cfg.num_of_mixers; j++) {
@@ -2295,6 +2368,7 @@ static void dspp_pcc_install_property(struct drm_crtc *crtc)
 	switch (version) {
 	case 1:
 	case 4:
+	case 5:
 		sde_cp_crtc_install_blob_property(crtc, feature_name,
 			SDE_CP_CRTC_DSPP_PCC, sizeof(struct drm_msm_pcc));
 		break;
@@ -2734,6 +2808,31 @@ static void dspp_dither_install_property(struct drm_crtc *crtc)
 		sde_cp_crtc_install_blob_property(crtc, feature_name,
 			SDE_CP_CRTC_DSPP_DITHER,
 			sizeof(struct drm_msm_pa_dither));
+		break;
+	default:
+		DRM_ERROR("version %d not supported\n", version);
+		break;
+	}
+}
+
+static  void dspp_demura_install_property(struct drm_crtc *crtc)
+{
+	struct sde_kms *kms = NULL;
+	struct sde_mdss_cfg *catalog = NULL;
+	u32 version;
+
+	kms = get_kms(crtc);
+	catalog = kms->catalog;
+
+	version = catalog->dspp[0].sblk->demura.version >> 16;
+	switch (version) {
+	case 1:
+		sde_cp_crtc_install_blob_property(crtc, "DEMURA_INIT_V1",
+			SDE_CP_CRTC_DSPP_DEMURA_INIT,
+			sizeof(struct drm_msm_dem_cfg));
+		sde_cp_crtc_install_range_property(crtc, "DEMURA_BACKLIGHT",
+				SDE_CP_CRTC_DSPP_DEMURA_BACKLIGHT,
+				0, 1024, 0);
 		break;
 	default:
 		DRM_ERROR("version %d not supported\n", version);

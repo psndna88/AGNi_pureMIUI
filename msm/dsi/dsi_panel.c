@@ -411,6 +411,9 @@ static int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 		if (cmds->last_command)
 			cmds->msg.flags |= MIPI_DSI_MSG_LASTCOMMAND;
 
+		if (type == DSI_CMD_SET_VID_TO_CMD_SWITCH)
+			cmds->msg.flags |= MIPI_DSI_MSG_ASYNC_OVERRIDE;
+
 		len = ops->transfer(panel->host, &cmds->msg);
 		if (len < 0) {
 			rc = len;
@@ -481,7 +484,8 @@ static int dsi_panel_wled_register(struct dsi_panel *panel,
 
 	bd = backlight_device_get_by_type(BACKLIGHT_RAW);
 	if (!bd) {
-		DSI_ERR("[%s] fail raw backlight register\n", panel->name);
+		DSI_ERR("[%s] fail raw backlight register rc=%d\n",
+				panel->name, -EPROBE_DEFER);
 		return -EPROBE_DEFER;
 	}
 
@@ -727,6 +731,10 @@ static int dsi_panel_parse_timing(struct dsi_mode_info *mode,
 
 	mode->clk_rate_hz = !rc ? tmp64 : 0;
 	display_mode->priv_info->clk_rate_hz = mode->clk_rate_hz;
+
+	mode->pclk_scale.numer = 1;
+	mode->pclk_scale.denom = 1;
+	display_mode->priv_info->pclk_scale = mode->pclk_scale;
 
 	rc = utils->read_u32(utils->data, "qcom,mdss-mdp-transfer-time-us",
 				&mode->mdp_transfer_time_us);
@@ -2416,8 +2424,15 @@ static int dsi_panel_parse_dsc_params(struct dsi_display_mode *mode,
 		goto error;
 	}
 
+	priv_info->pclk_scale.numer =
+			priv_info->dsc.config.bits_per_pixel >> 4;
+	priv_info->pclk_scale.denom = msm_get_src_bpc(
+			priv_info->dsc.chroma_format,
+			priv_info->dsc.config.bits_per_component);
+
 	mode->timing.dsc_enabled = true;
 	mode->timing.dsc = &priv_info->dsc;
+	mode->timing.pclk_scale = priv_info->pclk_scale;
 
 error:
 	return rc;
@@ -2595,8 +2610,15 @@ static int dsi_panel_parse_vdc_params(struct dsi_display_mode *mode,
 		goto error;
 	}
 
+	priv_info->pclk_scale.numer =
+			priv_info->vdc.bits_per_pixel >> 4;
+	priv_info->pclk_scale.denom = msm_get_src_bpc(
+			priv_info->vdc.chroma_format,
+			priv_info->vdc.bits_per_component);
+
 	mode->timing.vdc_enabled = true;
 	mode->timing.vdc = &priv_info->vdc;
+	mode->timing.pclk_scale = priv_info->pclk_scale;
 
 error:
 	return rc;
@@ -3261,6 +3283,13 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	if (rc)
 		DSI_DEBUG("failed to parse esd config, rc=%d\n", rc);
 
+	rc = dsi_panel_vreg_get(panel);
+	if (rc) {
+		DSI_ERR("[%s] failed to get panel regulators, rc=%d\n",
+		       panel->name, rc);
+		goto error;
+	}
+
 	panel->power_mode = SDE_MODE_DPMS_OFF;
 	drm_panel_init(&panel->drm_panel);
 	panel->drm_panel.dev = &panel->mipi_device.dev;
@@ -3268,11 +3297,13 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 
 	rc = drm_panel_add(&panel->drm_panel);
 	if (rc)
-		goto error;
+		goto error_vreg_put;
 
 	mutex_init(&panel->panel_lock);
 
 	return panel;
+error_vreg_put:
+	(void)dsi_panel_vreg_put(panel);
 error:
 	kfree(panel);
 	return ERR_PTR(rc);
@@ -3313,18 +3344,11 @@ int dsi_panel_drv_init(struct dsi_panel *panel,
 	dev->lanes = 4;
 
 	panel->host = host;
-	rc = dsi_panel_vreg_get(panel);
-	if (rc) {
-		DSI_ERR("[%s] failed to get panel regulators, rc=%d\n",
-		       panel->name, rc);
-		goto exit;
-	}
-
 	rc = dsi_panel_pinctrl_init(panel);
 	if (rc) {
 		DSI_ERR("[%s] failed to init pinctrl, rc=%d\n",
 				panel->name, rc);
-		goto error_vreg_put;
+		goto exit;
 	}
 
 	rc = dsi_panel_gpio_request(panel);
@@ -3348,8 +3372,6 @@ error_gpio_release:
 	(void)dsi_panel_gpio_release(panel);
 error_pinctrl_deinit:
 	(void)dsi_panel_pinctrl_deinit(panel);
-error_vreg_put:
-	(void)dsi_panel_vreg_put(panel);
 exit:
 	mutex_unlock(&panel->panel_lock);
 	return rc;
@@ -3406,7 +3428,6 @@ int dsi_panel_get_mode_count(struct dsi_panel *panel)
 	int num_dfps_rates, num_bit_clks;
 	int num_video_modes = 0, num_cmd_modes = 0;
 	int count, rc = 0;
-	void *utils_data = NULL;
 
 	if (!panel) {
 		DSI_ERR("invalid params\n");
@@ -3443,10 +3464,9 @@ int dsi_panel_get_mode_count(struct dsi_panel *panel)
 
 	panel->num_timing_nodes = count;
 	dsi_for_each_child_node(timings_np, child_np) {
-		utils_data = child_np;
-		if (utils->read_bool(utils->data, "qcom,mdss-dsi-video-mode"))
+		if (utils->read_bool(child_np, "qcom,mdss-dsi-video-mode"))
 			num_video_modes++;
-		else if (utils->read_bool(utils->data,
+		else if (utils->read_bool(child_np,
 					"qcom,mdss-dsi-cmd-mode"))
 			num_cmd_modes++;
 		else if (panel->panel_mode == DSI_OP_VIDEO_MODE)
@@ -3461,9 +3481,20 @@ int dsi_panel_get_mode_count(struct dsi_panel *panel)
 	num_bit_clks = !panel->dyn_clk_caps.dyn_clk_support ? 1 :
 					panel->dyn_clk_caps.bit_clk_list_len;
 
-	/* Inflate num_of_modes by fps and bit clks in dfps */
-	panel->num_display_modes = (num_cmd_modes * num_bit_clks) +
-			(num_video_modes * num_bit_clks * num_dfps_rates);
+	/*
+	 * Inflate num_of_modes by fps and bit clks in dfps.
+	 * Single command mode for video mode panels supporting
+	 * panel operating mode switch.
+	 */
+	num_video_modes = num_video_modes * num_bit_clks * num_dfps_rates;
+
+	if ((panel->panel_mode == DSI_OP_VIDEO_MODE) &&
+			(panel->panel_mode_switch_enabled))
+		num_cmd_modes  = 1;
+	else
+		num_cmd_modes = num_cmd_modes * num_bit_clks;
+
+	panel->num_display_modes = num_video_modes + num_cmd_modes;
 
 error:
 	return rc;

@@ -31,9 +31,12 @@ struct drm_msm_pcc_coeff {
 	__u32 rgb;
 };
 
+#define PCC_BEFORE (1 << 0)
+
 /**
  * struct drm_msm_pcc - pcc feature structure
- * @flags: for customizing operations
+ * @flags: for customizing operations. Values can be
+ *         - PCC_BEFORE: Operate PCC using a 'before' arrangement
  * @r: red coefficients.
  * @g: green coefficients.
  * @b: blue coefficients.
@@ -591,6 +594,62 @@ struct drm_msm_spr_init_cfg {
 	__u16 cfg15[SPR_INIT_PARAM_SIZE_5];
 	int cfg16[SPR_INIT_PARAM_SIZE_3];
 	int cfg17[SPR_INIT_PARAM_SIZE_4];
+};
+
+#define FEATURE_DEM
+#define CFG0_PARAM_LEN 8
+#define CFG1_PARAM_LEN 8
+#define CFG1_PARAM0_LEN 153
+#define CFG0_PARAM2_LEN 256
+#define CFG5_PARAM01_LEN 4
+#define CFG3_PARAM01_LEN 4
+
+struct drm_msm_dem_cfg {
+	__u64 flags;
+	__u32 pentile;
+	__u32 cfg0_en;
+	__u32 cfg0_param0_len;
+	__u32 cfg0_param0[CFG0_PARAM_LEN];
+	__u32 cfg0_param1_len;
+	__u32 cfg0_param1[CFG0_PARAM_LEN];
+	__u32 cfg0_param2_len;
+	__u64 cfg0_param2_c0[CFG0_PARAM2_LEN];
+	__u64 cfg0_param2_c1[CFG0_PARAM2_LEN];
+	__u64 cfg0_param2_c2[CFG0_PARAM2_LEN];
+	__u32 cfg0_param3_len;
+	__u32 cfg0_param3_c0[CFG0_PARAM_LEN];
+	__u32 cfg0_param3_c1[CFG0_PARAM_LEN];
+	__u32 cfg0_param3_c2[CFG0_PARAM_LEN];
+	__u32 cfg0_param4_len;
+	__u32 cfg0_param4[CFG0_PARAM_LEN];
+
+	__u32 cfg1_en;
+	__u32 cfg1_high_idx;
+	__u32 cfg1_low_idx;
+	__u32 cfg01_param0_len;
+	__u32 cfg01_param0[CFG1_PARAM_LEN];
+	__u32 cfg1_param0_len;
+	__u32 cfg1_param0_c0[CFG1_PARAM0_LEN];
+	__u32 cfg1_param0_c1[CFG1_PARAM0_LEN];
+	__u32 cfg1_param0_c2[CFG1_PARAM0_LEN];
+
+	__u32 cfg2_en;
+	__u32 cfg3_en;
+	__u32 cfg3_param0_len;
+	__u32 cfg3_param0_a[CFG3_PARAM01_LEN];
+	__u32 cfg3_param0_b[CFG3_PARAM01_LEN];
+	__u32 cfg3_ab_adj;
+	__u32 cfg4_en;
+	__u32 cfg5_en;
+	__u32 cfg5_param0_len;
+	__u32 cfg5_param0[CFG5_PARAM01_LEN];
+	__u32 cfg5_param1_len;
+	__u32 cfg5_param1[CFG5_PARAM01_LEN];
+
+	__u32 c0_depth;
+	__u32 c1_depth;
+	__u32 c2_depth;
+	__u32 src_id;
 };
 
 /**

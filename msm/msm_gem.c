@@ -114,8 +114,14 @@ static struct page **get_pages(struct drm_gem_object *obj)
 		 */
 		if (msm_obj->flags & (MSM_BO_WC|MSM_BO_UNCACHED)) {
 			aspace_dev = msm_gem_get_aspace_device(msm_obj->aspace);
-			dma_map_sg(aspace_dev, msm_obj->sgt->sgl,
-				msm_obj->sgt->nents, DMA_BIDIRECTIONAL);
+			if (aspace_dev)
+				dma_map_sg(aspace_dev, msm_obj->sgt->sgl,
+						msm_obj->sgt->nents,
+						DMA_BIDIRECTIONAL);
+			else
+				dev_err(dev->dev,
+					"failed to get aspace_device\n");
+
 		}
 	}
 
@@ -190,8 +196,12 @@ void msm_gem_sync(struct drm_gem_object *obj)
 	 * scatter/gather mapping for the CPU and device.
 	 */
 	aspace_dev = msm_gem_get_aspace_device(msm_obj->aspace);
-	dma_sync_sg_for_device(aspace_dev, msm_obj->sgt->sgl,
-		       msm_obj->sgt->nents, DMA_BIDIRECTIONAL);
+	if (aspace_dev)
+		dma_sync_sg_for_device(aspace_dev, msm_obj->sgt->sgl,
+				msm_obj->sgt->nents, DMA_BIDIRECTIONAL);
+	else
+		dev_err(obj->dev->dev,
+			"failed to get aspace_device\n");
 }
 
 
@@ -421,8 +431,9 @@ static int msm_gem_get_iova_locked(struct drm_gem_object *obj,
 		bool reattach = false;
 
 		dev = msm_gem_get_aspace_device(aspace);
-		if (dev && obj->import_attach &&
-				(dev != obj->import_attach->dev)) {
+		if ((dev && obj->import_attach) &&
+				((dev != obj->import_attach->dev) ||
+				msm_obj->obj_dirty)) {
 			dmabuf = obj->import_attach->dmabuf;
 
 			DRM_DEBUG("detach nsec-dev:%pK attach sec-dev:%pK\n",
@@ -440,6 +451,7 @@ static int msm_gem_get_iova_locked(struct drm_gem_object *obj,
 						PTR_ERR(obj->import_attach));
 				goto unlock;
 			}
+			msm_obj->obj_dirty = false;
 			reattach = true;
 		}
 
@@ -631,6 +643,7 @@ void msm_gem_aspace_domain_attach_detach_update(
 			if (obj->import_attach) {
 				mutex_lock(&msm_obj->lock);
 				put_iova(obj);
+				msm_obj->obj_dirty = true;
 				mutex_unlock(&msm_obj->lock);
 			}
 		}
@@ -1091,6 +1104,7 @@ static int msm_gem_new_impl(struct drm_device *dev,
 	INIT_LIST_HEAD(&msm_obj->iova_list);
 	msm_obj->aspace = NULL;
 	msm_obj->in_active_list = false;
+	msm_obj->obj_dirty = false;
 
 	if (struct_mutex_locked) {
 		WARN_ON(!mutex_is_locked(&dev->struct_mutex));
@@ -1209,9 +1223,14 @@ int msm_gem_delayed_import(struct drm_gem_object *obj)
 	if (msm_obj->flags & MSM_BO_SKIPSYNC)
 		attach->dma_map_attrs |= DMA_ATTR_SKIP_CPU_SYNC;
 
+	/*
+	 * All SMMU mapping are generated with cache hint.
+	 * SSPP cache hint will control the LLCC access.
+	 */
 	if (msm_obj->flags & MSM_BO_KEEPATTRS)
 		attach->dma_map_attrs |=
-				DMA_ATTR_IOMMU_USE_UPSTREAM_HINT;
+				(DMA_ATTR_IOMMU_USE_UPSTREAM_HINT |
+				DMA_ATTR_IOMMU_USE_LLC_NWA);
 
 	/*
 	 * dma_buf_map_attachment will call dma_map_sg for ion buffer

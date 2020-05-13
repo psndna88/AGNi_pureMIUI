@@ -185,7 +185,8 @@ struct sde_encoder_ops {
  * @recovery_events_enabled:	status of hw recovery feature enable by client
  * @elevated_ahb_vote:		increase AHB bus speed for the first frame
  *				after power collapse
- * @pm_qos_cpu_req:		pm_qos request for cpu frequency
+ * @pm_qos_cpu_req:		qos request for all cpu core frequency
+ * @valid_cpu_mask:		actual voted cpu core mask
  * @mode_info:                  stores the current mode and should be used
  *				only in commit phase
  */
@@ -252,7 +253,8 @@ struct sde_encoder_virt {
 
 	bool recovery_events_enabled;
 	bool elevated_ahb_vote;
-	struct pm_qos_request pm_qos_cpu_req;
+	struct dev_pm_qos_request pm_qos_cpu_req[NR_CPUS];
+	struct cpumask valid_cpu_mask;
 	struct msm_mode_info mode_info;
 };
 
@@ -528,4 +530,40 @@ void sde_encoder_needs_hw_reset(struct drm_encoder *enc);
  */
 void sde_encoder_uidle_enable(struct drm_encoder *drm_enc, bool enable);
 
+/**
+ * sde_encoder_get_kms - retrieve the kms from encoder
+ * @drm_enc:    Pointer to drm encoder structure
+ */
+static inline struct sde_kms *sde_encoder_get_kms(struct drm_encoder *drm_enc)
+{
+	struct msm_drm_private *priv;
+
+	if (!drm_enc || !drm_enc->dev) {
+		SDE_ERROR("invalid encoder\n");
+		return NULL;
+	}
+	priv = drm_enc->dev->dev_private;
+	if (!priv || !priv->kms) {
+		SDE_ERROR("invalid kms\n");
+		return NULL;
+	}
+
+	return to_sde_kms(priv->kms);
+}
+
+/*
+ * sde_encoder_is_widebus_enabled - check if widebus is enabled for current mode
+ * @drm_enc:    Pointer to drm encoder structure
+ * @Return: true if widebus is enabled for current mode
+ */
+static inline bool sde_encoder_is_widebus_enabled(struct drm_encoder *drm_enc)
+{
+	struct sde_encoder_virt *sde_enc;
+
+	if (!drm_enc)
+		return false;
+
+	sde_enc = to_sde_encoder_virt(drm_enc);
+	return sde_enc->mode_info.wide_bus_en;
+}
 #endif /* __SDE_ENCODER_H__ */

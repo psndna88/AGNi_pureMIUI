@@ -52,7 +52,7 @@
 
 #define CTL_MIXER_BORDER_OUT            BIT(24)
 #define CTL_FLUSH_MASK_ROT              BIT(27)
-#define CTL_FLUSH_MASK_CTL              BIT(17)
+#define CTL_FLUSH_CTL                   17
 
 #define CTL_NUM_EXT			4
 #define CTL_SSPP_MAX_RECTS		2
@@ -410,6 +410,16 @@ static inline void sde_hw_ctl_uidle_enable(struct sde_hw_ctl *ctx, bool enable)
 	SDE_REG_WRITE(&ctx->hw, CTL_UIDLE_ACTIVE, val);
 }
 
+static inline int sde_hw_ctl_update_bitmask_ctl(struct sde_hw_ctl *ctx,
+		bool enable)
+{
+	if (!ctx)
+		return -EINVAL;
+
+	UPDATE_MASK(ctx->flush.pending_flush_mask, CTL_FLUSH_CTL, enable);
+	return 0;
+}
+
 static inline int sde_hw_ctl_update_bitmask_sspp(struct sde_hw_ctl *ctx,
 		enum sde_sspp sspp,
 		bool enable)
@@ -439,7 +449,7 @@ static inline int sde_hw_ctl_update_bitmask_mixer(struct sde_hw_ctl *ctx,
 	}
 
 	UPDATE_MASK(ctx->flush.pending_flush_mask, mixer_tbl[lm], enable);
-	ctx->flush.pending_flush_mask |= CTL_FLUSH_MASK_CTL;
+	sde_hw_ctl_update_bitmask_ctl(ctx, true);
 
 	return 0;
 }
@@ -806,7 +816,8 @@ static void sde_hw_ctl_clear_all_blendstages(struct sde_hw_ctl *ctx)
 }
 
 static void sde_hw_ctl_setup_blendstage(struct sde_hw_ctl *ctx,
-	enum sde_lm lm, struct sde_hw_stage_cfg *stage_cfg)
+	enum sde_lm lm, struct sde_hw_stage_cfg *stage_cfg,
+	struct sde_hw_stage_cfg *active_cfg)
 {
 	struct sde_hw_blk_reg_map *c;
 	u32 mixercfg = 0, mixercfg_ext = 0, mix, ext;
@@ -936,6 +947,18 @@ static void sde_hw_ctl_setup_blendstage(struct sde_hw_ctl *ctx,
 
 			if (fetch_tbl[pipe] != CTL_INVALID_BIT)
 				active_fetch_pipes |= BIT(fetch_tbl[pipe]);
+		}
+	}
+
+	for (i = 0; i <= stages && active_cfg; i++) {
+		enum sde_sspp pipe = active_cfg->stage[i][0];
+
+		if (pipe == SSPP_NONE)
+			break;
+		if (fetch_tbl[pipe] != CTL_INVALID_BIT) {
+			active_fetch_pipes |= BIT(fetch_tbl[pipe]);
+			SDE_DEBUG("fetch pipe %d active pipes %x\n",
+				pipe, active_fetch_pipes);
 		}
 	}
 
@@ -1353,6 +1376,7 @@ static void _setup_ctl_ops(struct sde_hw_ctl_ops *ops,
 	ops->clear_all_blendstages = sde_hw_ctl_clear_all_blendstages;
 	ops->setup_blendstage = sde_hw_ctl_setup_blendstage;
 	ops->get_staged_sspp = sde_hw_ctl_get_staged_sspp;
+	ops->update_bitmask_ctl = sde_hw_ctl_update_bitmask_ctl;
 	ops->update_bitmask_sspp = sde_hw_ctl_update_bitmask_sspp;
 	ops->update_bitmask_mixer = sde_hw_ctl_update_bitmask_mixer;
 	ops->reg_dma_flush = sde_hw_reg_dma_flush;

@@ -68,6 +68,14 @@ void reg_dmav1_setup_dspp_igcv31(struct sde_hw_dspp *ctx, void *cfg);
  */
 void reg_dmav1_setup_dspp_pccv4(struct sde_hw_dspp *ctx, void *cfg);
 
+
+/**
+ * reg_dmav1_setup_dspp_pccv5() - pcc v5 implementation using reg dma v1.
+ * @ctx: dspp ctx info
+ * @cfg: pointer to struct sde_hw_cp_cfg
+ */
+void reg_dmav1_setup_dspp_pccv5(struct sde_hw_dspp *ctx, void *cfg);
+
 /**
  * reg_dmav1_setup_dspp_pa_hsicv17() - pa hsic v17 impl using reg dma v1.
  * @ctx: dspp ctx info
@@ -294,5 +302,19 @@ void reg_dmav2_setup_vig_gamutv61(struct sde_hw_pipe *ctx, void *cfg);
  * @cfg: Pointer to configuration
  */
 void reg_dmav1_setup_spr_init_cfgv1(struct sde_hw_dspp *ctx, void *cfg);
+
+/**
+ * reg_dmav1_setup_spr_pu_cfgv1 - function to configure spr pu through LUTDMA
+ * @ctx: Pointer to dspp context
+ * @cfg: Pointer to configuration
+ */
+void reg_dmav1_setup_spr_pu_cfgv1(struct sde_hw_dspp *ctx, void *cfg);
+
+/**
+ * reg_dmav1_setup_demurav1() - function to set up the demurav1 configuration.
+ * @ctx: dspp ctx info
+ * @cfg: pointer to struct sde_hw_cp_cfg
+ */
+void reg_dmav1_setup_demurav1(struct sde_hw_dspp *ctx, void *cfg);
 
 #endif /* _SDE_HW_REG_DMA_V1_COLOR_PROC_H */

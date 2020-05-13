@@ -53,6 +53,7 @@ void msm_hdcp_register_cb(struct device *dev, void *ctx,
 	hdcp->cb = cb;
 	hdcp->client_ctx = ctx;
 }
+EXPORT_SYMBOL(msm_hdcp_register_cb);
 
 void msm_hdcp_notify_topology(struct device *dev)
 {
@@ -82,6 +83,7 @@ void msm_hdcp_notify_topology(struct device *dev)
 
 	kobject_uevent_env(&hdcp->device->kobj, KOBJ_CHANGE, envp);
 }
+EXPORT_SYMBOL(msm_hdcp_notify_topology);
 
 void msm_hdcp_cache_repeater_topology(struct device *dev,
 			struct HDCP_V2V1_MSG_TOPOLOGY *tp)
@@ -102,6 +104,7 @@ void msm_hdcp_cache_repeater_topology(struct device *dev,
 	memcpy(&hdcp->cached_tp, tp,
 		   sizeof(struct HDCP_V2V1_MSG_TOPOLOGY));
 }
+EXPORT_SYMBOL(msm_hdcp_cache_repeater_topology);
 
 static ssize_t tp_show(struct device *dev, struct device_attribute *attr,
 		char *buf)
@@ -325,18 +328,12 @@ static struct platform_driver msm_hdcp_driver = {
 	}
 };
 
-static int __init msm_hdcp_init(void)
+void __init msm_hdcp_register(void)
 {
-	return platform_driver_register(&msm_hdcp_driver);
+	platform_driver_register(&msm_hdcp_driver);
 }
 
-static void __exit msm_hdcp_exit(void)
+void __exit msm_hdcp_unregister(void)
 {
-	return platform_driver_unregister(&msm_hdcp_driver);
+	platform_driver_unregister(&msm_hdcp_driver);
 }
-
-module_init(msm_hdcp_init);
-module_exit(msm_hdcp_exit);
-
-MODULE_DESCRIPTION("MSM HDCP driver");
-MODULE_LICENSE("GPL v2");

@@ -11,6 +11,7 @@
 #include "sde_connector.h"
 #include "dsi_drm.h"
 #include "sde_trace.h"
+#include "sde_encoder.h"
 
 #define to_dsi_bridge(x)     container_of((x), struct dsi_bridge, base)
 #define to_dsi_state(x)      container_of((x), struct dsi_connector_state, base)
@@ -58,6 +59,9 @@ static void convert_to_dsi_mode(const struct drm_display_mode *drm_mode,
 	if (dsi_mode->priv_info) {
 		dsi_mode->timing.dsc_enabled = dsi_mode->priv_info->dsc_enabled;
 		dsi_mode->timing.dsc = &dsi_mode->priv_info->dsc;
+		dsi_mode->timing.vdc_enabled = dsi_mode->priv_info->vdc_enabled;
+		dsi_mode->timing.vdc = &dsi_mode->priv_info->vdc;
+		dsi_mode->timing.pclk_scale = dsi_mode->priv_info->pclk_scale;
 	}
 
 	if (msm_is_mode_seamless(drm_mode))
@@ -340,6 +344,8 @@ static bool dsi_bridge_mode_fixup(struct drm_bridge *bridge,
 	struct dsi_display *display;
 	struct dsi_display_mode dsi_mode, cur_dsi_mode, *panel_dsi_mode;
 	struct drm_crtc_state *crtc_state;
+	bool clone_mode = false;
+	struct drm_encoder *encoder;
 
 	crtc_state = container_of(mode, struct drm_crtc_state, mode);
 
@@ -404,6 +410,14 @@ static bool dsi_bridge_mode_fixup(struct drm_bridge *bridge,
 			return false;
 		}
 
+		drm_for_each_encoder(encoder, crtc_state->crtc->dev) {
+			if (encoder->crtc != crtc_state->crtc)
+				continue;
+
+			if (sde_encoder_in_clone_mode(encoder))
+				clone_mode = true;
+		}
+
 		/* No panel mode switch when drm pipeline is changing */
 		if ((dsi_mode.panel_mode != cur_dsi_mode.panel_mode) &&
 			(!(dsi_mode.dsi_mode_flags & DSI_MODE_FLAG_VRR)) &&
@@ -420,13 +434,16 @@ static bool dsi_bridge_mode_fixup(struct drm_bridge *bridge,
 			dsi_mode.dsi_mode_flags |= DSI_MODE_FLAG_DMS;
 	}
 
-	/* Reject seamless transition when active changed */
-	if (crtc_state->active_changed &&
+	/* Reject seamless transition when active/connectors changed */
+	if ((crtc_state->active_changed ||
+		(crtc_state->connectors_changed && clone_mode)) &&
 		((dsi_mode.dsi_mode_flags & DSI_MODE_FLAG_VRR) ||
 		(dsi_mode.dsi_mode_flags & DSI_MODE_FLAG_POMS) ||
 		(dsi_mode.dsi_mode_flags & DSI_MODE_FLAG_DYN_CLK))) {
-		DSI_ERR("seamless upon active changed 0x%x %d\n",
-			dsi_mode.dsi_mode_flags, crtc_state->active_changed);
+		DSI_ERR("seamless on active/conn(%d/%d) changed 0x%x\n",
+			crtc_state->active_changed,
+			crtc_state->connectors_changed,
+			dsi_mode.dsi_mode_flags);
 		return false;
 	}
 
@@ -470,7 +487,6 @@ int dsi_conn_get_mode_info(struct drm_connector *connector,
 {
 	struct dsi_display_mode dsi_mode;
 	struct dsi_mode_info *timing;
-	int chroma_format;
 	int src_bpp, tar_bpp;
 
 	if (!drm_mode || !mode_info)
@@ -497,26 +513,23 @@ int dsi_conn_get_mode_info(struct drm_connector *connector,
 			sizeof(struct msm_display_topology));
 
 	mode_info->comp_info.comp_type = MSM_DISPLAY_COMPRESSION_NONE;
+
 	if (dsi_mode.priv_info->dsc_enabled) {
-		chroma_format = dsi_mode.priv_info->dsc.chroma_format;
 		mode_info->comp_info.comp_type = MSM_DISPLAY_COMPRESSION_DSC;
 		memcpy(&mode_info->comp_info.dsc_info, &dsi_mode.priv_info->dsc,
 			sizeof(dsi_mode.priv_info->dsc));
-		tar_bpp = dsi_mode.priv_info->dsc.config.bits_per_pixel >> 4;
-		src_bpp = msm_get_src_bpc(chroma_format,
-			dsi_mode.priv_info->dsc.config.bits_per_component);
-		mode_info->comp_info.comp_ratio = mult_frac(1, src_bpp,
-				tar_bpp);
 	} else if (dsi_mode.priv_info->vdc_enabled) {
-		chroma_format = dsi_mode.priv_info->vdc.chroma_format;
 		mode_info->comp_info.comp_type = MSM_DISPLAY_COMPRESSION_VDC;
 		memcpy(&mode_info->comp_info.vdc_info, &dsi_mode.priv_info->vdc,
 			sizeof(dsi_mode.priv_info->vdc));
-		tar_bpp = dsi_mode.priv_info->vdc.bits_per_pixel >> 4;
-		src_bpp = msm_get_src_bpc(chroma_format,
-			dsi_mode.priv_info->vdc.bits_per_component);
+	}
+
+	if (mode_info->comp_info.comp_type) {
+		tar_bpp = dsi_mode.priv_info->pclk_scale.numer;
+		src_bpp = dsi_mode.priv_info->pclk_scale.denom;
 		mode_info->comp_info.comp_ratio = mult_frac(1, src_bpp,
 				tar_bpp);
+		mode_info->wide_bus_en = dsi_mode.priv_info->widebus_support;
 	}
 
 	if (dsi_mode.priv_info->roi_caps.enabled) {
@@ -826,8 +839,8 @@ int dsi_connector_get_modes(struct drm_connector *connector, void *data,
 	struct drm_display_mode drm_mode;
 	struct dsi_display *display = data;
 	struct edid edid;
-	u8 width_mm = connector->display_info.width_mm;
-	u8 height_mm = connector->display_info.height_mm;
+	unsigned int width_mm = connector->display_info.width_mm;
+	unsigned int height_mm = connector->display_info.height_mm;
 	const u8 edid_buf[EDID_LENGTH] = {
 		0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x44, 0x6D,
 		0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x1B, 0x10, 0x01, 0x03,

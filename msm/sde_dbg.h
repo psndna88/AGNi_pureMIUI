@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef SDE_DBG_H_
@@ -34,6 +34,7 @@ enum sde_dbg_evtlog_flag {
 	SDE_EVTLOG_CRITICAL = BIT(0),
 	SDE_EVTLOG_IRQ = BIT(1),
 	SDE_EVTLOG_VERBOSE = BIT(2),
+	SDE_EVTLOG_EXTERNAL = BIT(3),
 	SDE_EVTLOG_ALWAYS = -1
 };
 
@@ -48,7 +49,8 @@ enum sde_dbg_dump_context {
 	SDE_DBG_DUMP_CLK_ENABLED_CTX,
 };
 
-#define SDE_EVTLOG_DEFAULT_ENABLE (SDE_EVTLOG_CRITICAL | SDE_EVTLOG_IRQ)
+#define SDE_EVTLOG_DEFAULT_ENABLE (SDE_EVTLOG_CRITICAL | SDE_EVTLOG_IRQ | \
+		SDE_EVTLOG_EXTERNAL)
 
 /*
  * evtlog will print this number of entries when it is called through
@@ -62,7 +64,7 @@ enum sde_dbg_dump_context {
  * number must be greater than print entry to prevent out of bound evtlog
  * entry array access.
  */
-#define SDE_EVTLOG_ENTRY	(SDE_EVTLOG_PRINT_ENTRY * 8)
+#define SDE_EVTLOG_ENTRY	(SDE_EVTLOG_PRINT_ENTRY * 32)
 #define SDE_EVTLOG_MAX_DATA 15
 #define SDE_EVTLOG_BUF_MAX 512
 #define SDE_EVTLOG_BUF_ALIGN 32
@@ -123,6 +125,14 @@ extern struct sde_dbg_evtlog *sde_dbg_base_evtlog;
  */
 #define SDE_EVT32_IRQ(...) sde_evtlog_log(sde_dbg_base_evtlog, __func__, \
 		__LINE__, SDE_EVTLOG_IRQ, ##__VA_ARGS__, \
+		SDE_EVTLOG_DATA_LIMITER)
+
+/**
+ * SDE_EVT32_EXTERNAL - Write a list of 32bit values for external display events
+ * ... - variable arguments
+ */
+#define SDE_EVT32_EXTERNAL(...) sde_evtlog_log(sde_dbg_base_evtlog, __func__, \
+		__LINE__, SDE_EVTLOG_EXTERNAL, ##__VA_ARGS__, \
 		SDE_EVTLOG_DATA_LIMITER)
 
 /**
@@ -237,10 +247,10 @@ int sde_dbg_init(struct device *dev);
 
 /**
  * sde_dbg_debugfs_register - register entries at the given debugfs dir
- * @debugfs_root:	debugfs root in which to create sde debug entries
+ * @dev:	pointer to device
  * Returns:	0 or -ERROR
  */
-int sde_dbg_debugfs_register(struct dentry *debugfs_root);
+int sde_dbg_debugfs_register(struct device *dev);
 
 /**
  * sde_dbg_destroy - destroy the global sde debug facilities
@@ -318,6 +328,14 @@ void sde_dbg_reg_register_dump_range(const char *base_name,
 		uint32_t xin_id);
 
 /**
+ * sde_dbg_dsi_ctrl_register - register a dsi ctrl for debugbus dumping
+ * @base:	iomem base address for dsi controller
+ * @name:	name of the dsi controller
+ * Returns:	0 or -ERROR
+ */
+int sde_dbg_dsi_ctrl_register(void __iomem *base, const char *name);
+
+/**
  * sde_dbg_set_sde_top_offset - set the target specific offset from mdss base
  *	address of the top registers. Used for accessing debug bus controls.
  * @blk_off: offset from mdss base of the top block
@@ -354,13 +372,6 @@ static inline void sde_rsc_debug_dump(u32 mux_sel)
 void sde_rsc_debug_dump(u32 mux_sel);
 #endif
 
-/**
- * dsi_ctrl_debug_dump - dump dsi debug dump status
- * @entries:	array of debug bus control values
- * @size:	size of the debug bus control array
- */
-void dsi_ctrl_debug_dump(u32 *entries, u32 size);
-
 #else
 static inline struct sde_dbg_evtlog *sde_evtlog_init(void)
 {
@@ -393,17 +404,22 @@ static inline ssize_t sde_evtlog_dump_to_buffer(struct sde_dbg_evtlog *evtlog,
 	return 0;
 }
 
-static inline void sde_dbg_init_dbg_buses(u32 hwversion)
-{
-}
-
-static inline int sde_dbg_init(struct device *dev,
-		struct sde_dbg_power_ctrl *power_ctrl)
+static inline int sde_dbg_dsi_ctrl_register(void __iomem *base,
+		const char *name)
 {
 	return 0;
 }
 
-static inline int sde_dbg_debugfs_register(struct dentry *debugfs_root)
+static inline void sde_dbg_init_dbg_buses(u32 hwversion)
+{
+}
+
+static inline int sde_dbg_init(struct device *dev)
+{
+	return 0;
+}
+
+static inline int sde_dbg_debugfs_register(struct device *dev)
 {
 	return 0;
 }
@@ -412,7 +428,7 @@ static inline void sde_dbg_destroy(void)
 {
 }
 
-static inline void sde_dbg_dump(enum sde_dbg_dump_context,
+static inline void sde_dbg_dump(enum sde_dbg_dump_context mode,
 	const char *name, ...)
 {
 }
@@ -433,7 +449,12 @@ static inline void sde_dbg_reg_register_dump_range(const char *base_name,
 {
 }
 
-void sde_dbg_set_sde_top_offset(u32 blk_off)
+int sde_dbg_register_dsi_ctrl(void __iomem *base, const char *name)
+{
+	return 0;
+}
+
+static inline void sde_dbg_set_sde_top_offset(u32 blk_off)
 {
 }
 
@@ -449,10 +470,6 @@ static inline int sde_evtlog_get_filter(struct sde_dbg_evtlog *evtlog,
 }
 
 static inline void sde_rsc_debug_dump(u32 mux_sel)
-{
-}
-
-static inline void dsi_ctrl_debug_dump(u32 entries, u32 size)
 {
 }
 

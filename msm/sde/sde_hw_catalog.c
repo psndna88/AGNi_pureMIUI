@@ -173,6 +173,7 @@ enum sde_prop {
 	SDE_LEN,
 	SSPP_LINEWIDTH,
 	VIG_SSPP_LINEWIDTH,
+	SCALING_LINEWIDTH,
 	MIXER_LINEWIDTH,
 	MIXER_BLEND,
 	WB_LINEWIDTH,
@@ -220,6 +221,7 @@ enum {
 	PERF_AXI_BUS_WIDTH,
 	PERF_CDP_SETTING,
 	PERF_CPU_MASK,
+	CPU_MASK_PERF,
 	PERF_CPU_DMA_LATENCY,
 	PERF_PROP_MAX,
 };
@@ -408,6 +410,13 @@ enum {
 };
 
 enum {
+	DEMURA_OFF,
+	DEMURA_LEN,
+	DEMURA_VERSION,
+	DEMURA_PROP_MAX,
+};
+
+enum {
 	MIXER_OFF,
 	MIXER_LEN,
 	MIXER_PAIR_MASK,
@@ -457,6 +466,11 @@ enum {
 	UIDLE_OFF,
 	UIDLE_LEN,
 	UIDLE_PROP_MAX,
+};
+
+enum {
+	CACHE_CONTROLLER,
+	CACHE_CONTROLLER_PROP_MAX,
 };
 
 enum {
@@ -524,6 +538,7 @@ static struct sde_prop_type sde_prop[] = {
 	{SDE_LEN, "qcom,sde-len", false, PROP_TYPE_U32},
 	{SSPP_LINEWIDTH, "qcom,sde-sspp-linewidth", false, PROP_TYPE_U32},
 	{VIG_SSPP_LINEWIDTH, "qcom,sde-vig-sspp-linewidth", false, PROP_TYPE_U32},
+	{SCALING_LINEWIDTH, "qcom,sde-scaling-linewidth", false, PROP_TYPE_U32},
 	{MIXER_LINEWIDTH, "qcom,sde-mixer-linewidth", false, PROP_TYPE_U32},
 	{MIXER_BLEND, "qcom,sde-mixer-blendstages", false, PROP_TYPE_U32},
 	{WB_LINEWIDTH, "qcom,sde-wb-linewidth", false, PROP_TYPE_U32},
@@ -586,6 +601,8 @@ static struct sde_prop_type sde_perf_prop[] = {
 	{PERF_CDP_SETTING, "qcom,sde-cdp-setting", false,
 			PROP_TYPE_U32_ARRAY},
 	{PERF_CPU_MASK, "qcom,sde-qos-cpu-mask", false, PROP_TYPE_U32},
+	{CPU_MASK_PERF, "qcom,sde-qos-cpu-mask-performance", false,
+			PROP_TYPE_U32},
 	{PERF_CPU_DMA_LATENCY, "qcom,sde-qos-cpu-dma-latency", false,
 			PROP_TYPE_U32},
 };
@@ -836,6 +853,10 @@ static struct sde_prop_type uidle_prop[] = {
 	{UIDLE_LEN, "qcom,sde-uidle-size", false, PROP_TYPE_U32},
 };
 
+static struct sde_prop_type cache_prop[] = {
+	{CACHE_CONTROLLER, "qcom,llcc-v2", false, PROP_TYPE_NODE},
+};
+
 static struct sde_prop_type reg_dma_prop[REG_DMA_PROP_MAX] = {
 	[REG_DMA_OFF] =  {REG_DMA_OFF, "qcom,sde-reg-dma-off", false,
 		PROP_TYPE_U32_ARRAY},
@@ -870,6 +891,15 @@ static struct sde_prop_type limit_usecase_prop[] = {
 	{LIMIT_ID, "qcom,sde-limit-ids", false, PROP_TYPE_U32_ARRAY},
 	{LIMIT_VALUE, "qcom,sde-limit-values", false,
 			PROP_TYPE_BIT_OFFSET_ARRAY},
+};
+
+static struct sde_prop_type demura_prop[] = {
+	[DEMURA_OFF] = {DEMURA_OFF, "qcom,sde-dspp-demura-off", false,
+			PROP_TYPE_U32_ARRAY},
+	[DEMURA_LEN] = {DEMURA_LEN, "qcom,sde-dspp-demura-size", false,
+			PROP_TYPE_U32},
+	[DEMURA_VERSION] = {DEMURA_VERSION, "qcom,sde-dspp-demura-version",
+			false, PROP_TYPE_U32},
 };
 
 /*************************************************************
@@ -1371,6 +1401,7 @@ static int _sde_sspp_setup_vigs(struct device_node *np,
 	int i;
 	struct sde_dt_props *props;
 	struct device_node *snp = NULL;
+	struct sde_sc_cfg *sc_cfg = sde_cfg->sc_cfg;
 	int vig_count = 0;
 	const char *type;
 
@@ -1393,6 +1424,7 @@ static int _sde_sspp_setup_vigs(struct device_node *np,
 			continue;
 
 		sblk->maxlinewidth = sde_cfg->vig_sspp_linewidth;
+		sblk->scaling_linewidth = sde_cfg->scaling_linewidth;
 		sblk->maxupscale = MAX_UPSCALE_RATIO;
 		sblk->maxdwnscale = MAX_DOWNSCALE_RATIO;
 		sspp->id = SSPP_VIG0 + vig_count;
@@ -1452,15 +1484,19 @@ static int _sde_sspp_setup_vigs(struct device_node *np,
 					MAX_DOWNSCALE_RATIO_INROT_NRT_DEFAULT;
 		}
 
-		if (sde_cfg->sc_cfg.has_sys_cache) {
+		if (sc_cfg[SDE_SYS_CACHE_ROT].has_sys_cache) {
 			set_bit(SDE_PERF_SSPP_SYS_CACHE, &sspp->perf_features);
-			sblk->llcc_scid = sde_cfg->sc_cfg.llcc_scid;
+			sblk->llcc_scid =
+				sc_cfg[SDE_SYS_CACHE_ROT].llcc_scid;
 			sblk->llcc_slice_size =
-				sde_cfg->sc_cfg.llcc_slice_size;
+				sc_cfg[SDE_SYS_CACHE_ROT].llcc_slice_size;
 		}
 
 		if (sde_cfg->inline_disable_const_clr)
 			set_bit(SDE_SSPP_INLINE_CONST_CLR, &sspp->features);
+
+		if (sc_cfg[SDE_SYS_CACHE_DISP].has_sys_cache)
+			set_bit(SDE_PERF_SSPP_SYS_CACHE, &sspp->perf_features);
 	}
 
 	sde_put_dt_props(props);
@@ -2333,62 +2369,6 @@ end:
 	return rc;
 }
 
-static int sde_rot_parse_dt(struct device_node *np,
-	struct sde_mdss_cfg *sde_cfg)
-{
-	struct platform_device *pdev;
-	struct of_phandle_args phargs;
-	struct llcc_slice_desc *slice;
-	int rc = 0;
-
-	rc = of_parse_phandle_with_args(np,
-		"qcom,sde-inline-rotator", "#list-cells",
-		0, &phargs);
-
-	if (rc) {
-		/*
-		 * This is not a fatal error, system cache can be disabled
-		 * in device tree
-		 */
-		SDE_DEBUG("sys cache will be disabled rc:%d\n", rc);
-		rc = 0;
-		goto exit;
-	}
-
-	if (!phargs.np || !phargs.args_count) {
-		SDE_ERROR("wrong phandle args %d %d\n",
-			!phargs.np, !phargs.args_count);
-		rc = -EINVAL;
-		goto exit;
-	}
-
-	pdev = of_find_device_by_node(phargs.np);
-	if (!pdev) {
-		SDE_ERROR("invalid sde rotator node\n");
-		goto exit;
-	}
-
-	slice = llcc_slice_getd(LLCC_ROTATOR);
-	if (IS_ERR_OR_NULL(slice))  {
-		SDE_ERROR("failed to get rotator slice!\n");
-		rc = -EINVAL;
-		goto cleanup;
-	}
-
-	sde_cfg->sc_cfg.llcc_scid = llcc_get_slice_id(slice);
-	sde_cfg->sc_cfg.llcc_slice_size = llcc_get_slice_size(slice);
-	llcc_slice_putd(slice);
-
-	sde_cfg->sc_cfg.has_sys_cache = true;
-
-	SDE_DEBUG("rotator llcc scid:%d slice_size:%zukb\n",
-		sde_cfg->sc_cfg.llcc_scid, sde_cfg->sc_cfg.llcc_slice_size);
-cleanup:
-	of_node_put(phargs.np);
-exit:
-	return rc;
-}
-
 static int sde_dspp_top_parse_dt(struct device_node *np,
 		struct sde_mdss_cfg *sde_cfg)
 {
@@ -2527,6 +2507,46 @@ static int _sde_ltm_parse_dt(struct device_node *np,
 end:
 	sde_put_dt_props(props);
 	return rc;
+}
+
+static int _sde_dspp_demura_parse_dt(struct device_node *np,
+		struct sde_mdss_cfg *sde_cfg)
+{
+	int off_count, i;
+	struct sde_dt_props *props;
+	struct sde_dspp_cfg *dspp;
+	struct sde_dspp_sub_blks *sblk;
+
+	props = sde_get_dt_props(np, DEMURA_PROP_MAX, demura_prop,
+			ARRAY_SIZE(demura_prop), &off_count);
+	if (IS_ERR(props))
+		return PTR_ERR(props);
+
+	sde_cfg->demura_count = off_count;
+	if (off_count > sde_cfg->dspp_count) {
+		SDE_ERROR("limiting %d demura blocks to %d DSPP instances\n",
+				off_count, sde_cfg->dspp_count);
+		sde_cfg->demura_count = sde_cfg->dspp_count;
+	}
+
+	for (i = 0; i < sde_cfg->dspp_count; i++) {
+		dspp = &sde_cfg->dspp[i];
+		sblk = sde_cfg->dspp[i].sblk;
+
+		sblk->demura.id = SDE_DSPP_DEMURA;
+		if (props->exists[DEMURA_OFF] && i < off_count) {
+			sblk->demura.base = PROP_VALUE_ACCESS(props->values,
+					DEMURA_OFF, i);
+			sblk->demura.len = PROP_VALUE_ACCESS(props->values,
+					DEMURA_LEN, 0);
+			sblk->demura.version = PROP_VALUE_ACCESS(props->values,
+					DEMURA_VERSION, 0);
+			set_bit(SDE_DSPP_DEMURA, &dspp->features);
+		}
+	}
+
+	sde_put_dt_props(props);
+	return 0;
 }
 
 static int _sde_dspp_spr_parse_dt(struct device_node *np,
@@ -2750,6 +2770,10 @@ static int sde_dspp_parse_dt(struct device_node *np,
 		goto end;
 
 	rc = _sde_dspp_spr_parse_dt(np, sde_cfg);
+	if (rc)
+		goto end;
+
+	rc = _sde_dspp_demura_parse_dt(np, sde_cfg);
 	if (rc)
 		goto end;
 
@@ -3164,6 +3188,100 @@ end:
 	return 0;
 }
 
+static int sde_cache_parse_dt(struct device_node *np,
+		struct sde_mdss_cfg *sde_cfg)
+{
+	struct llcc_slice_desc *slice;
+	struct platform_device *pdev;
+	struct of_phandle_args phargs;
+	struct sde_sc_cfg *sc_cfg = sde_cfg->sc_cfg;
+	struct sde_dt_props *props;
+	int rc = 0;
+	u32 off_count;
+
+	if (!sde_cfg) {
+		SDE_ERROR("invalid argument\n");
+		return -EINVAL;
+	}
+
+	props = sde_get_dt_props(np, CACHE_CONTROLLER_PROP_MAX, cache_prop,
+			ARRAY_SIZE(cache_prop), &off_count);
+	if (IS_ERR_OR_NULL(props))
+		return PTR_ERR(props);
+
+	if (!props->exists[CACHE_CONTROLLER]) {
+		SDE_DEBUG("cache controller missing, will disable img cache:%d",
+				props->exists[CACHE_CONTROLLER]);
+		rc = 0;
+		goto end;
+	}
+
+	slice = llcc_slice_getd(LLCC_DISP);
+	if (IS_ERR_OR_NULL(slice)) {
+		SDE_ERROR("failed to get system cache %ld\n",
+				PTR_ERR(slice));
+	} else {
+		sc_cfg[SDE_SYS_CACHE_DISP].has_sys_cache = true;
+		sc_cfg[SDE_SYS_CACHE_DISP].llcc_scid = llcc_get_slice_id(slice);
+		sc_cfg[SDE_SYS_CACHE_DISP].llcc_slice_size =
+				llcc_get_slice_size(slice);
+		SDE_DEBUG("img cache scid:%d slice_size:%zu kb\n",
+				sc_cfg[SDE_SYS_CACHE_DISP].llcc_scid,
+				sc_cfg[SDE_SYS_CACHE_DISP].llcc_slice_size);
+		llcc_slice_putd(slice);
+	}
+
+	/* Read inline rot node */
+	rc = of_parse_phandle_with_args(np,
+		"qcom,sde-inline-rotator", "#list-cells", 0, &phargs);
+	if (rc) {
+		/*
+		 * This is not a fatal error, system cache can be disabled
+		 * in device tree
+		 */
+		SDE_DEBUG("sys cache will be disabled rc:%d\n", rc);
+		rc = 0;
+		goto end;
+	}
+
+	if (!phargs.np || !phargs.args_count) {
+		SDE_ERROR("wrong phandle args %d %d\n",
+			!phargs.np, !phargs.args_count);
+		rc = -EINVAL;
+		goto end;
+	}
+
+	pdev = of_find_device_by_node(phargs.np);
+	if (!pdev) {
+		SDE_ERROR("invalid sde rotator node\n");
+		goto end;
+	}
+
+	slice = llcc_slice_getd(LLCC_ROTATOR);
+	if (IS_ERR_OR_NULL(slice))  {
+		SDE_ERROR("failed to get rotator slice!\n");
+		rc = -EINVAL;
+		goto cleanup;
+	}
+
+	sc_cfg[SDE_SYS_CACHE_ROT].llcc_scid = llcc_get_slice_id(slice);
+	sc_cfg[SDE_SYS_CACHE_ROT].llcc_slice_size =
+			llcc_get_slice_size(slice);
+	llcc_slice_putd(slice);
+
+	sc_cfg[SDE_SYS_CACHE_ROT].has_sys_cache = true;
+
+	SDE_DEBUG("rotator llcc scid:%d slice_size:%zukb\n",
+			sc_cfg[SDE_SYS_CACHE_ROT].llcc_scid,
+			sc_cfg[SDE_SYS_CACHE_ROT].llcc_slice_size);
+
+cleanup:
+	of_node_put(phargs.np);
+end:
+	sde_put_dt_props(props);
+	return rc;
+}
+
 static int _sde_vbif_populate_ot_parsing(struct sde_vbif_cfg *vbif,
 	struct sde_prop_value *prop_value, int *prop_count)
 {
@@ -3535,6 +3653,11 @@ static int _sde_parse_prop_check(struct sde_mdss_cfg *cfg,
 			VIG_SSPP_LINEWIDTH, 0);
 	if (!prop_exists[VIG_SSPP_LINEWIDTH])
 		cfg->vig_sspp_linewidth = cfg->max_sspp_linewidth;
+
+	cfg->scaling_linewidth = PROP_VALUE_ACCESS(prop_value,
+			SCALING_LINEWIDTH, 0);
+	if (!prop_exists[SCALING_LINEWIDTH])
+		cfg->scaling_linewidth = cfg->vig_sspp_linewidth;
 
 	cfg->max_mixer_width = PROP_VALUE_ACCESS(prop_value,
 			MIXER_LINEWIDTH, 0);
@@ -4186,6 +4309,10 @@ static int _sde_perf_parse_dt_cfg(struct device_node *np,
 			prop_exists[PERF_CPU_MASK] ?
 			PROP_VALUE_ACCESS(prop_value, PERF_CPU_MASK, 0) :
 			DEFAULT_CPU_MASK;
+	cfg->perf.cpu_mask_perf =
+			prop_exists[CPU_MASK_PERF] ?
+			PROP_VALUE_ACCESS(prop_value, CPU_MASK_PERF, 0) :
+			DEFAULT_CPU_MASK;
 	cfg->perf.cpu_dma_latency =
 			prop_exists[PERF_CPU_DMA_LATENCY] ?
 			PROP_VALUE_ACCESS(prop_value, PERF_CPU_DMA_LATENCY, 0) :
@@ -4510,7 +4637,7 @@ static void _sde_hw_setup_uidle(struct sde_uidle_cfg *uidle_cfg)
 
 static int _sde_hardware_pre_caps(struct sde_mdss_cfg *sde_cfg, uint32_t hw_rev)
 {
-	int rc = 0;
+	int rc = 0, i;
 
 	if (!sde_cfg)
 		return -EINVAL;
@@ -4518,6 +4645,11 @@ static int _sde_hardware_pre_caps(struct sde_mdss_cfg *sde_cfg, uint32_t hw_rev)
 	/* default settings for *MOST* targets */
 	sde_cfg->has_mixer_combined_alpha = true;
 	sde_cfg->mdss_hw_block_size = DEFAULT_MDSS_HW_BLOCK_SIZE;
+
+	for (i = 0; i < SSPP_MAX; i++) {
+		sde_cfg->demura_supported[i][0] = ~0x0;
+		sde_cfg->demura_supported[i][1] = ~0x0;
+	}
 
 	/* target specific settings */
 	if (IS_MSM8996_TARGET(hw_rev)) {
@@ -4684,6 +4816,11 @@ static int _sde_hardware_pre_caps(struct sde_mdss_cfg *sde_cfg, uint32_t hw_rev)
 		sde_cfg->has_sui_blendstage = true;
 		sde_cfg->vbif_disable_inner_outer_shareable = true;
 	} else if (IS_LAHAINA_TARGET(hw_rev)) {
+		sde_cfg->has_demura = true;
+		sde_cfg->demura_supported[SSPP_DMA1][0] = 0;
+		sde_cfg->demura_supported[SSPP_DMA1][1] = 1;
+		sde_cfg->demura_supported[SSPP_DMA3][0] = 0;
+		sde_cfg->demura_supported[SSPP_DMA3][1] = 1;
 		sde_cfg->has_cwb_support = true;
 		sde_cfg->has_wb_ubwc = true;
 		sde_cfg->has_qsync = true;
@@ -4867,15 +5004,15 @@ struct sde_mdss_cfg *sde_hw_catalog_init(struct drm_device *dev, u32 hw_rev)
 	if (rc)
 		goto end;
 
-	rc = sde_rot_parse_dt(np, sde_cfg);
-	if (rc)
-		goto end;
-
 	/* uidle must be done before sspp and ctl,
 	 * so if something goes wrong, we won't
 	 * enable it in ctl and sspp.
 	 */
 	rc = sde_uidle_parse_dt(np, sde_cfg);
+	if (rc)
+		goto end;
+
+	rc = sde_cache_parse_dt(np, sde_cfg);
 	if (rc)
 		goto end;
 

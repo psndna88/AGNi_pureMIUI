@@ -321,10 +321,10 @@ static void _sde_encoder_phys_cmd_setup_irq_hw_idx(
 		struct sde_encoder_phys *phys_enc)
 {
 	struct sde_encoder_irq *irq;
-	struct sde_kms *sde_kms = phys_enc->sde_kms;
+	struct sde_kms *sde_kms;
 	int ret = 0;
 
-	if (!phys_enc || !phys_enc->hw_pp || !phys_enc->hw_ctl) {
+	if (!phys_enc->sde_kms || !phys_enc->hw_pp || !phys_enc->hw_ctl) {
 		SDE_ERROR("invalid args %d %d\n", !phys_enc,
 			phys_enc ? !phys_enc->hw_pp : 0);
 		return;
@@ -334,6 +334,8 @@ static void _sde_encoder_phys_cmd_setup_irq_hw_idx(
 		SDE_ERROR("invalid intf configuration\n");
 		return;
 	}
+
+	sde_kms = phys_enc->sde_kms;
 
 	mutex_lock(&sde_kms->vblank_ctl_global_lock);
 
@@ -1145,6 +1147,10 @@ static void sde_encoder_phys_cmd_enable_helper(
 		hw_intf->ops.enable_compressed_input(phys_enc->hw_intf,
 				(phys_enc->comp_type !=
 				 MSM_DISPLAY_COMPRESSION_NONE), false);
+
+	if (hw_intf->ops.enable_wide_bus)
+		hw_intf->ops.enable_wide_bus(hw_intf,
+			sde_encoder_is_widebus_enabled(phys_enc->parent));
 
 	/*
 	 * For pp-split, skip setting the flush bit for the slave intf, since

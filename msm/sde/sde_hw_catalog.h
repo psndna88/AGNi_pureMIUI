@@ -150,6 +150,18 @@ enum {
 #define SSPP_SYS_CACHE_NO_ALLOC	BIT(4)
 
 /**
+ * sde_sys_cache_type: Types of system cache supported
+ * SDE_SYS_CACHE_ROT: Rotator system cache
+ * SDE_SYS_CACHE_DISP: Static img system cache
+ */
+enum sde_sys_cache_type {
+	SDE_SYS_CACHE_ROT,
+	SDE_SYS_CACHE_DISP,
+	SDE_SYS_CACHE_MAX,
+	SDE_SYS_CACHE_NONE
+};
+
+/**
  * All INTRs relevant for a specific target should be enabled via
  * _add_to_irq_offset_list()
  */
@@ -649,6 +661,8 @@ enum sde_qos_lut_usage {
 
 /**
  * struct sde_sspp_sub_blks : SSPP sub-blocks
+ * @maxlinewidth: max source pipe line width support
+ * @scaling_linewidth: max vig source pipe linewidth for scaling usecases
  * @maxdwnscale: max downscale ratio supported(without DECIMATION)
  * @maxupscale:  maxupscale ratio supported
  * @maxwidth:    max pixelwidth supported by this pipe
@@ -690,6 +704,7 @@ enum sde_qos_lut_usage {
  */
 struct sde_sspp_sub_blks {
 	u32 maxlinewidth;
+	u32 scaling_linewidth;
 	u32 creq_vblank;
 	u32 danger_vblank;
 	u32 pixel_ram_size;
@@ -770,6 +785,7 @@ struct sde_dspp_sub_blks {
 	struct sde_pp_blk spr;
 	struct sde_pp_blk vlut;
 	struct sde_dspp_rc rc;
+	struct sde_pp_blk demura;
 };
 
 struct sde_pingpong_sub_blks {
@@ -1296,6 +1312,7 @@ struct sde_sc_cfg {
  * @qos_refresh_rate: different refresh rates for luts
  * @cdp_cfg            cdp use case configurations
  * @cpu_mask:          pm_qos cpu mask value
+ * @cpu_mask_perf:     pm_qos cpu silver core mask value
  * @cpu_dma_latency:   pm_qos cpu dma latency value
  * @axi_bus_width:     axi bus width value in bytes
  * @num_mnoc_ports:    number of mnoc ports
@@ -1325,7 +1342,8 @@ struct sde_perf_cfg {
 	u32 qos_refresh_count;
 	u32 *qos_refresh_rate;
 	struct sde_perf_cdp_cfg cdp_cfg[SDE_PERF_CDP_USAGE_MAX];
-	u32 cpu_mask;
+	unsigned long cpu_mask;
+	unsigned long cpu_mask_perf;
 	u32 cpu_dma_latency;
 	u32 axi_bus_width;
 	u32 num_mnoc_ports;
@@ -1375,6 +1393,7 @@ struct sde_limit_cfg {
  *
  * @max_sspp_linewidth max source pipe line width support.
  * @vig_sspp_linewidth max vig source pipe line width support.
+ * @scaling_linewidth max vig source pipe linewidth for scaling usecases
  * @max_mixer_width    max layer mixer line width support.
  * @max_mixer_blendstages max layer mixer blend stages or
  *                       supported z order
@@ -1418,6 +1437,7 @@ struct sde_limit_cfg {
  * @inline_disable_const_clr     Disable constant color during inline rotate
  * @dither_luma_mode_support   Enables dither luma mode
  * @has_base_layer     Supports staging layer as base layer
+ * @demura_supported   Demura pipe support flag(~0x00 - Not supported)
  * @sc_cfg: system cache configuration
  * @uidle_cfg		Settings for uidle feature
  * @sui_misr_supported  indicate if secure-ui-misr is supported
@@ -1436,12 +1456,14 @@ struct sde_limit_cfg {
  * @inline_rot_formats	formats supported by the inline rotator feature
  * @irq_offset_list     list of sde_intr_irq_offsets to initialize irq table
  * @rc_count	number of rounded corner hardware instances
+ * @demura_count number of demura hardware instances
  */
 struct sde_mdss_cfg {
 	u32 hwversion;
 
 	u32 max_sspp_linewidth;
 	u32 vig_sspp_linewidth;
+	u32 scaling_linewidth;
 	u32 max_mixer_width;
 	u32 max_mixer_blendstages;
 	u32 max_wb_linewidth;
@@ -1480,8 +1502,10 @@ struct sde_mdss_cfg {
 	bool inline_disable_const_clr;
 	bool dither_luma_mode_support;
 	bool has_base_layer;
+	bool has_demura;
+	u32 demura_supported[SSPP_MAX][2];
 
-	struct sde_sc_cfg sc_cfg;
+	struct sde_sc_cfg sc_cfg[SDE_SYS_CACHE_MAX];
 
 	bool sui_misr_supported;
 	u32 sui_block_xin_mask;
@@ -1551,6 +1575,7 @@ struct sde_mdss_cfg {
 	u32 ltm_count;
 	u32 rc_count;
 	u32 spr_count;
+	u32 demura_count;
 
 	u32 merge_3d_count;
 	struct sde_merge_3d_cfg merge_3d[MAX_BLOCKS];
