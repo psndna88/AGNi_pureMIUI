@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/bitops.h>
@@ -785,6 +785,8 @@ static int hfi_process_session_ftb_done(
 {
 	struct vidc_hal_msg_pkt_hdr *msg_hdr = _pkt;
 	struct msm_vidc_cb_data_done data_done = {0};
+	u32 struct_size = 0;
+
 	bool is_decoder = false, is_encoder = false;
 
 	if (!msg_hdr) {
@@ -792,10 +794,17 @@ static int hfi_process_session_ftb_done(
 		return -EINVAL;
 	}
 
-	is_encoder = msg_hdr->size == sizeof(struct
-			hfi_msg_session_fill_buffer_done_compressed_packet) + 4;
-	is_decoder = msg_hdr->size == sizeof(struct
-			hfi_msg_session_fbd_uncompressed_plane0_packet) + 4;
+	struct_size = sizeof(struct
+		hfi_msg_session_fill_buffer_done_compressed_packet) + 4;
+	is_encoder = (msg_hdr->size == struct_size) ||
+		(msg_hdr->size == (struct_size +
+				   sizeof(struct hfi_ubwc_cr_stat) - 4));
+
+	struct_size = sizeof(struct
+		hfi_msg_session_fbd_uncompressed_plane0_packet) + 4;
+	is_decoder = (msg_hdr->size == struct_size) ||
+		(msg_hdr->size == (struct_size +
+				   sizeof(struct hfi_ubwc_cr_stat) - 4));
 
 	if (!(is_encoder ^ is_decoder)) {
 		d_vpr_e("Ambiguous packet (%#x) received (size %d)\n",

@@ -236,6 +236,7 @@ struct msm_vidc_timestamps {
 	struct list_head list;
 	u64 timestamp_us;
 	u32 framerate;
+	bool is_valid;
 };
 
 enum efuse_purpose {
@@ -339,7 +340,6 @@ struct msm_video_device {
 struct session_prop {
 	u32 fps;
 	u32 bitrate;
-	bool bframe_changed;
 	u32 extradata_ctrls;
 };
 

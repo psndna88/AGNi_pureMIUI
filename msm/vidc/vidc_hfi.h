@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  */
 #ifndef __H_VIDC_HFI_H__
 #define __H_VIDC_HFI_H__
@@ -546,6 +546,12 @@ struct hfi_msg_session_flush_done_packet {
 	u32 sid;
 	u32 error_type;
 	u32 flush_type;
+};
+
+struct hfi_ubwc_cr_stat {
+	u32 is_valid;
+	u32 worst_compression_ratio;
+	u32 worst_complexity_number;
 };
 
 struct hfi_ubwc_cr_stats_info_type {

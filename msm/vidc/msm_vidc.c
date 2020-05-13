@@ -454,7 +454,6 @@ int msm_vidc_dqbuf(void *instance, struct v4l2_buffer *b)
 	int rc = 0;
 	unsigned int i = 0;
 	struct buf_queue *q = NULL;
-	u64 timestamp_us = 0;
 
 	if (!inst || !b || !valid_v4l2_buffer(b, inst)) {
 		d_vpr_e("%s: invalid params, %pK %pK\n",
@@ -495,13 +494,8 @@ int msm_vidc_dqbuf(void *instance, struct v4l2_buffer *b)
 			return -EINVAL;
 		}
 	}
-	if (is_decode_session(inst) && b->type == OUTPUT_MPLANE) {
-		timestamp_us = (u64)((b->timestamp.tv_sec * 1000000ULL) +
-			b->timestamp.tv_usec);
-		b->m.planes[0].reserved[MSM_VIDC_FRAMERATE] = DEFAULT_FPS << 16;
-		msm_comm_fetch_framerate(inst, timestamp_us,
-			&b->m.planes[0].reserved[MSM_VIDC_FRAMERATE]);
-	}
+	if (is_decode_session(inst) && b->type == OUTPUT_MPLANE)
+		msm_comm_fetch_ts_framerate(inst, b);
 
 	return rc;
 }

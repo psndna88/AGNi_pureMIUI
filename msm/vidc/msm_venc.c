@@ -963,15 +963,6 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		.qmenu = mpeg_video_stream_format,
 	},
 	{
-		.id = V4L2_CID_MPEG_VIDC_VENC_NATIVE_RECORDER,
-		.name = "Enable/Disable Native Recorder",
-		.type = V4L2_CTRL_TYPE_BOOLEAN,
-		.minimum = V4L2_MPEG_MSM_VIDC_DISABLE,
-		.maximum = V4L2_MPEG_MSM_VIDC_ENABLE,
-		.default_value = V4L2_MPEG_MSM_VIDC_DISABLE,
-		.step = 1,
-	},
-	{
 		.id = V4L2_CID_MPEG_VIDC_VENC_BITRATE_SAVINGS,
 		.name = "Enable/Disable bitrate savings",
 		.type = V4L2_CTRL_TYPE_BOOLEAN,
@@ -1218,7 +1209,6 @@ int msm_venc_inst_init(struct msm_vidc_inst *inst)
 		sizeof(inst->fmts[INPUT_PORT].name));
 	strlcpy(inst->fmts[INPUT_PORT].description, fmt_desc->description,
 		sizeof(inst->fmts[INPUT_PORT].description));
-	inst->prop.bframe_changed = false;
 	inst->prop.extradata_ctrls = EXTRADATA_NONE;
 	inst->buffer_mode_set[INPUT_PORT] = HAL_BUFFER_MODE_DYNAMIC;
 	inst->buffer_mode_set[OUTPUT_PORT] = HAL_BUFFER_MODE_STATIC;
@@ -2006,7 +1996,6 @@ int msm_venc_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 	case V4L2_CID_MPEG_VIDC_VIDEO_PRIORITY:
 	case V4L2_CID_MPEG_VIDC_VIDEO_INTRA_REFRESH_RANDOM:
 	case V4L2_CID_MPEG_VIDEO_CYCLIC_INTRA_REFRESH_MB:
-	case V4L2_CID_MPEG_VIDC_VENC_NATIVE_RECORDER:
 	case V4L2_CID_MPEG_VIDC_VENC_RC_TIMESTAMP_DISABLE:
 	case V4L2_CID_MPEG_VIDEO_VBV_DELAY:
 	case V4L2_CID_MPEG_VIDC_VENC_BITRATE_SAVINGS:
@@ -2330,95 +2319,6 @@ int msm_venc_set_idr_period(struct msm_vidc_inst *inst)
 	return rc;
 }
 
-void msm_venc_decide_bframe(struct msm_vidc_inst *inst)
-{
-	u32 width;
-	u32 height;
-	u32 num_mbs_per_frame, num_mbs_per_sec;
-	struct v4l2_ctrl *ctrl;
-	struct v4l2_ctrl *bframe_ctrl;
-	struct msm_vidc_platform_resources *res;
-	struct v4l2_format *f;
-
-	res = &inst->core->resources;
-	f = &inst->fmts[INPUT_PORT].v4l2_fmt;
-	width = f->fmt.pix_mp.width;
-	height = f->fmt.pix_mp.height;
-	bframe_ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDEO_B_FRAMES);
-	num_mbs_per_frame = NUM_MBS_PER_FRAME(width, height);
-	if (num_mbs_per_frame > res->max_bframe_mbs_per_frame)
-		goto disable_bframe;
-
-	num_mbs_per_sec = num_mbs_per_frame *
-		(inst->clk_data.frame_rate >> 16);
-	if (num_mbs_per_sec > res->max_bframe_mbs_per_sec)
-		goto disable_bframe;
-
-	ctrl = get_ctrl(inst,
-		V4L2_CID_MPEG_VIDC_VIDEO_HEVC_MAX_HIER_CODING_LAYER);
-	if (ctrl->val > 1)
-		goto disable_bframe;
-
-	ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDC_VIDEO_LTRCOUNT);
-	if (ctrl->val)
-		goto disable_bframe;
-
-	if (inst->rc_type != V4L2_MPEG_VIDEO_BITRATE_MODE_VBR)
-		goto disable_bframe;
-
-	if (get_v4l2_codec(inst) == V4L2_PIX_FMT_H264) {
-		ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDEO_H264_PROFILE);
-		if ((ctrl->val != V4L2_MPEG_VIDEO_H264_PROFILE_MAIN) &&
-			(ctrl->val != V4L2_MPEG_VIDEO_H264_PROFILE_HIGH))
-			goto disable_bframe;
-	} else if (get_v4l2_codec(inst) != V4L2_PIX_FMT_HEVC)
-		goto disable_bframe;
-
-	if (inst->clk_data.low_latency_mode)
-		goto disable_bframe;
-
-	if (!bframe_ctrl->val) {
-		ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDC_VENC_NATIVE_RECORDER);
-		if (ctrl->val) {
-			/*
-			 * Native recorder is enabled and bframe is not enabled
-			 * Hence, forcefully enable bframe
-			 */
-			inst->prop.bframe_changed = true;
-			update_ctrl(bframe_ctrl, MAX_NUM_B_FRAMES, inst->sid);
-			s_vpr_h(inst->sid, "Bframe is forcefully enabled\n");
-		} else {
-			/*
-			 * Native recorder is not enabled
-			 * B-Frame is not enabled by client
-			 */
-			goto disable_bframe;
-		}
-	}
-
-	/* do not enable bframe if superframe is enabled */
-	ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDC_SUPERFRAME);
-	if (ctrl->val)
-		goto disable_bframe;
-
-	s_vpr_h(inst->sid, "Bframe can be enabled!\n");
-
-	return;
-disable_bframe:
-	if (bframe_ctrl->val) {
-		/*
-		 * Client wanted to enable bframe but,
-		 * conditions to enable are not met
-		 * Hence, forcefully disable bframe
-		 */
-		inst->prop.bframe_changed = true;
-		update_ctrl(bframe_ctrl, 0, inst->sid);
-		s_vpr_h(inst->sid, "Bframe is forcefully disabled!\n");
-	} else {
-		s_vpr_h(inst->sid, "Bframe is disabled\n");
-	}
-}
-
 int msm_venc_set_adaptive_bframes(struct msm_vidc_inst *inst)
 {
 	int rc = 0;
@@ -2445,26 +2345,10 @@ int msm_venc_set_adaptive_bframes(struct msm_vidc_inst *inst)
 void msm_venc_adjust_gop_size(struct msm_vidc_inst *inst)
 {
 	struct v4l2_ctrl *hier_ctrl;
-	struct v4l2_ctrl *bframe_ctrl;
 	struct v4l2_ctrl *gop_size_ctrl;
 	s32 val;
 
 	gop_size_ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDEO_GOP_SIZE);
-	if (inst->prop.bframe_changed) {
-		/*
-		 * BFrame size was explicitly change
-		 * Hence, adjust GOP size accordingly
-		 */
-		bframe_ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDEO_B_FRAMES);
-		if (!bframe_ctrl->val)
-			/* Forcefully disabled */
-			val = gop_size_ctrl->val * (1 + MAX_NUM_B_FRAMES);
-		else
-			/* Forcefully enabled */
-			val = gop_size_ctrl->val / (1 + MAX_NUM_B_FRAMES);
-
-		update_ctrl(gop_size_ctrl, val, inst->sid);
-	}
 
 	/*
 	 * Layer encoding needs GOP size to be multiple of subgop size
@@ -2752,6 +2636,9 @@ int msm_venc_set_bitrate(struct msm_vidc_inst *inst)
 		return -EINVAL;
 	}
 	hdev = inst->core->device;
+
+	if (inst->rc_type == V4L2_MPEG_VIDEO_BITRATE_MODE_CQ)
+		return 0;
 
 	if (inst->layer_bitrate) {
 		s_vpr_h(inst->sid, "%s: Layer bitrate is enabled\n", __func__);
@@ -4674,7 +4561,6 @@ int msm_venc_set_properties(struct msm_vidc_inst *inst)
 	rc = msm_venc_set_base_layer_priority_id(inst);
 	if (rc)
 		goto exit;
-	msm_venc_decide_bframe(inst);
 	rc = msm_venc_set_idr_period(inst);
 	if (rc)
 		goto exit;

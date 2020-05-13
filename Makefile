@@ -1,11 +1,9 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
 # auto-detect subdirs
+ifneq ($(CONFIG_ARCH_QTI_VM), y)
 ifeq ($(CONFIG_ARCH_LAHAINA), y)
 include $(srctree)/techpack/video/config/konavid.conf
-endif
-
-ifeq ($(CONFIG_ARCH_LAHAINA), y)
 LINUXINCLUDE    += -include $(srctree)/techpack/video/config/konavidconf.h
 endif
 
@@ -16,6 +14,7 @@ endif
 
 ifeq ($(CONFIG_ARCH_LITO), y)
 LINUXINCLUDE    += -include $(srctree)/techpack/video/config/litovidconf.h
+endif
 endif
 
 LINUXINCLUDE    += -I$(srctree)/techpack/video/include \
