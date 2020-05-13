@@ -2873,6 +2873,19 @@
 				bias-pull-up;
 			};
 		};
+
+		pcie0_clkreq_sleep: pcie0_clkreq_sleep {
+			mux {
+				pins = "gpio95";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio95";
+				drive-strength = <2>;
+				bias-pull-up;
+			};
+		};
 	};
 
 	pcie1 {
@@ -2924,19 +2937,6 @@
 					bias-pull-down;         /* PULL DOWN */
 					drive-strength = <2>;   /* 2 MA */
 				};
-			};
-		};
-
-		usb3phy_portselect_default: usb3phy_portselect_default {
-			mux {
-				pins = "gpio81";
-				function = "usb_phy";
-			};
-
-			config {
-				pins = "gpio81";
-				bias-disable;
-				drive-strength = <2>;
 			};
 		};
 	};
@@ -3588,6 +3588,35 @@
 				drive-strength = <2>;
 				output-low;
 				bias-pull-down;
+			};
+		};
+	};
+
+	usb_phy_ps: usb_phy_ps {
+		usb3phy_portselect_default: usb3phy_portselect_default {
+			mux {
+				pins = "gpio81";
+				function = "usb_phy";
+			};
+
+			config {
+				pins = "gpio81";
+				bias-disable;
+				drive-strength = <2>;
+			};
+		};
+
+		usb3phy_portselect_gpio: usb3phy_portselect_gpio {
+			mux {
+				pins = "gpio81";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio81";
+				drive-strength = <2>;
+				bias-pull-up;
+				input-enable;
 			};
 		};
 	};
