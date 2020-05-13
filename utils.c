@@ -8,12 +8,18 @@
  */
 
 #include "sigma_dut.h"
+#include <sys/ioctl.h>
 #include <sys/stat.h>
 #include "wpa_helpers.h"
 
 enum driver_type wifi_chip_type = DRIVER_NOT_SET;
 enum openwrt_driver_type openwrt_chip_type = OPENWRT_DRIVER_NOT_SET;
 
+struct wcn_drv_priv_cmd {
+	char *buf;
+	int used_len;
+	int total_len;
+};
 
 int file_exists(const char *fname)
 {
@@ -130,6 +136,8 @@ enum sigma_program sigma_program_to_enum(const char *prog)
 		return PROGRAM_WPA3;
 	if (strcasecmp(prog, "HE") == 0)
 		return PROGRAM_HE;
+	if (strcasecmp(prog, "QM") == 0)
+		return PROGRAM_QM;
 
 	return PROGRAM_UNKNOWN;
 }
@@ -705,4 +713,31 @@ int get_enable_disable(const char *val)
 	    strcasecmp(val, "yes") == 0)
 		return 1;
 	return atoi(val);
+}
+
+
+int wcn_driver_cmd(const char *ifname, char *buf)
+{
+	int s, res;
+	size_t buf_len;
+	struct wcn_drv_priv_cmd priv_cmd;
+	struct ifreq ifr;
+
+	s = socket(PF_INET, SOCK_DGRAM, 0);
+	if (s < 0) {
+		perror("socket");
+		return -1;
+	}
+
+	memset(&ifr, 0, sizeof(ifr));
+	memset(&priv_cmd, 0, sizeof(priv_cmd));
+	strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+	buf_len = strlen(buf);
+	priv_cmd.buf = buf;
+	priv_cmd.used_len = buf_len;
+	priv_cmd.total_len = buf_len;
+	ifr.ifr_data = (void *) &priv_cmd;
+	res = ioctl(s, SIOCDEVPRIVATE + 1, &ifr);
+	close(s);
+	return res;
 }
