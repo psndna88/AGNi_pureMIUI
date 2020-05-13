@@ -32,7 +32,7 @@
 #include <wlan_vdev_mlme_main.h>
 #include <wmi_unified_vdev_api.h>
 
-QDF_STATUS target_if_vdev_mgr_rsp_timer_cb(struct vdev_response_timer *vdev_rsp)
+void target_if_vdev_mgr_rsp_timer_cb(struct vdev_response_timer *vdev_rsp)
 {
 	struct wlan_objmgr_psoc *psoc;
 	struct wlan_lmac_if_mlme_rx_ops *rx_ops;
@@ -46,19 +46,19 @@ QDF_STATUS target_if_vdev_mgr_rsp_timer_cb(struct vdev_response_timer *vdev_rsp)
 
 	if (!vdev_rsp) {
 		mlme_err("Vdev response timer is NULL");
-		return QDF_STATUS_E_FAILURE;
+		return;
 	}
 
 	psoc = vdev_rsp->psoc;
 	if (!psoc) {
 		mlme_err("PSOC is NULL");
-		return QDF_STATUS_E_FAILURE;
+		return;
 	}
 
 	rx_ops = target_if_vdev_mgr_get_rx_ops(psoc);
 	if (!rx_ops || !rx_ops->psoc_get_vdev_response_timer_info) {
 		mlme_err("No Rx Ops");
-		return QDF_STATUS_E_FAILURE;
+		return;
 	}
 
 	if (!qdf_atomic_test_bit(START_RESPONSE_BIT, &vdev_rsp->rsp_status) &&
@@ -70,14 +70,14 @@ QDF_STATUS target_if_vdev_mgr_rsp_timer_cb(struct vdev_response_timer *vdev_rsp)
 			&vdev_rsp->rsp_status)) {
 		mlme_debug("No response bit is set, ignoring actions :%d",
 			   vdev_rsp->vdev_id);
-		return QDF_STATUS_E_FAILURE;
+		return;
 	}
 
 	vdev_id = vdev_rsp->vdev_id;
 	if (vdev_id >= WLAN_UMAC_PSOC_MAX_VDEVS) {
 		mlme_err("Invalid VDEV_%d PSOC_%d", vdev_id,
 			 wlan_psoc_get_id(psoc));
-		return QDF_STATUS_E_FAILURE;
+		return;
 	}
 
 	vdev_rsp->timer_status = QDF_STATUS_E_TIMEOUT;
@@ -132,13 +132,13 @@ QDF_STATUS target_if_vdev_mgr_rsp_timer_cb(struct vdev_response_timer *vdev_rsp)
 	} else {
 		mlme_err("PSOC_%d VDEV_%d: Unknown error",
 			 wlan_psoc_get_id(psoc), vdev_id);
-		return QDF_STATUS_E_FAILURE;
+		return;
 	}
 
 	if (!target_if_vdev_mgr_is_panic_allowed()) {
 		mlme_debug("PSOC_%d VDEV_%d: Panic not allowed",
 			   wlan_psoc_get_id(psoc), vdev_id);
-		return QDF_STATUS_SUCCESS;
+		return;
 	}
 
 	/* Trigger recovery */
@@ -147,8 +147,6 @@ QDF_STATUS target_if_vdev_mgr_rsp_timer_cb(struct vdev_response_timer *vdev_rsp)
 		 string_from_rsp_bit(rsp_pos));
 
 	qdf_trigger_self_recovery(psoc, recovery_reason);
-
-	return QDF_STATUS_SUCCESS;
 }
 
 #ifdef SERIALIZE_VDEV_RESP
