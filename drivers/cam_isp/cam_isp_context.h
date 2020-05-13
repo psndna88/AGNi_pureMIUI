@@ -27,12 +27,6 @@
 #define CAM_ISP_CTX_RES_MAX                     24
 
 /*
- * Maximum configuration entry size  - This is based on the
- * worst case DUAL IFE use case plus some margin.
- */
-#define CAM_ISP_CTX_CFG_MAX                     22
-
-/*
  * Maximum entries in state monitoring array for error logging
  */
 #define CAM_ISP_CTX_STATE_MONITOR_MAX_ENTRIES   40
@@ -135,8 +129,8 @@ struct cam_isp_ctx_irq_ops {
  * struct cam_isp_ctx_req - ISP context request object
  *
  * @base:                  Common request object ponter
- * @cfg:                   ISP hardware configuration array
- * @num_cfg:               Number of ISP hardware configuration entries
+ * @cfg_info:              ISP hardware configuration array
+ * @total_num_cfg:         Number of ISP hardware configuration entries
  * @fence_map_out:         Output fence mapping array
  * @num_fence_map_out:     Number of the output fence map
  * @fence_map_in:          Input fence mapping array
@@ -153,9 +147,8 @@ struct cam_isp_ctx_irq_ops {
  */
 struct cam_isp_ctx_req {
 	struct cam_ctx_request               *base;
-
-	struct cam_hw_update_entry            cfg[CAM_ISP_CTX_CFG_MAX];
-	uint32_t                              num_cfg;
+	struct cam_isp_hw_update_info         cfg_info[CAM_IFE_HW_NUM_MAX];
+	uint32_t                              total_num_cfg;
 	struct cam_hw_fence_map_entry         fence_map_out
 						[CAM_ISP_CTX_RES_MAX];
 	uint32_t                              num_fence_map_out;

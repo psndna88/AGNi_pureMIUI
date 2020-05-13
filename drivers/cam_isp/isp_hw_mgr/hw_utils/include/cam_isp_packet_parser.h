@@ -29,7 +29,7 @@ enum cam_isp_cdm_bl_type {
  * @kmd_buf_info:       Kmd buffer to store the custom cmd data
  */
 struct cam_isp_generic_blob_info {
-	struct cam_hw_prepare_update_args     *prepare;
+	struct cam_isp_hw_update_args         *prepare;
 	struct cam_isp_ctx_base_info          *base_info;
 	struct cam_kmd_buf_info               *kmd_buf_info;
 };
@@ -59,12 +59,11 @@ struct cam_isp_frame_header_info {
  * @base_idx:              Base or dev index of the IFE/VFE HW instance for
  *                         which change change base need to be added
  * @kmd_buf_info:          Kmd buffer to store the change base command
- *
  * @return:                0 for success
  *                         -EINVAL for Fail
  */
 int cam_isp_add_change_base(
-	struct cam_hw_prepare_update_args     *prepare,
+	struct cam_isp_hw_update_args         *prepare,
 	struct list_head                      *res_list_isp_src,
 	uint32_t                               base_idx,
 	struct cam_kmd_buf_info               *kmd_buf_info);
@@ -116,7 +115,7 @@ int cam_isp_add_cmd_buf_update(
  *                         Negative for Failure
  */
 int cam_isp_add_command_buffers(
-	struct cam_hw_prepare_update_args  *prepare,
+	struct cam_isp_hw_update_args      *prepare,
 	struct cam_kmd_buf_info            *kmd_buf_info,
 	struct cam_isp_ctx_base_info       *base_info,
 	cam_packet_generic_blob_handler     blob_handler_cb,
@@ -147,7 +146,7 @@ int cam_isp_add_command_buffers(
 int cam_isp_add_io_buffers(
 	int                                   iommu_hdl,
 	int                                   sec_iommu_hdl,
-	struct cam_hw_prepare_update_args    *prepare,
+	struct cam_isp_hw_update_args        *prepare,
 	uint32_t                              base_idx,
 	struct cam_kmd_buf_info              *kmd_buf_info,
 	struct cam_isp_hw_mgr_res            *res_list_isp_out,
@@ -171,10 +170,55 @@ int cam_isp_add_io_buffers(
  *                         -EINVAL for Fail
  */
 int cam_isp_add_reg_update(
-	struct cam_hw_prepare_update_args    *prepare,
+	struct cam_isp_hw_update_args        *prepare,
 	struct list_head                     *res_list_isp_src,
 	uint32_t                              base_idx,
 	struct cam_kmd_buf_info              *kmd_buf_info);
+
+/*
+ * cam_isp_add_comp_wait()
+ *
+ * @brief                  Add reg update in the hw entries list
+ *                         processe the isp source list get the reg update from
+ *                         ISP HW instance
+ *
+ * @prepare:               Contain the  packet and HW update variables
+ * @res_list_isp_src:      Resource list for IFE/VFE source
+ * @base_idx:              Base or dev index of the IFE/VFE HW instance
+ * @kmd_buf_info:          Kmd buffer to store the change base command
+ *
+ * @return:                0 for success
+ *                         -EINVAL for Fail
+ */
+int cam_isp_add_comp_wait(
+	struct cam_isp_hw_update_args        *prepare,
+	struct list_head                     *res_list_isp_src,
+	uint32_t                              base_idx,
+	struct cam_kmd_buf_info              *kmd_buf_info);
+
+/*
+ * cam_isp_add_wait_trigger()
+ *
+ * @brief                  Add reg update in the hw entries list
+ *                         processe the isp source list get the reg update from
+ *                         ISP HW instance
+ *
+ * @prepare:               Contain the  packet and HW update variables
+ * @res_list_isp_src:      Resource list for IFE/VFE source
+ * @base_idx:              Base or dev index of the IFE/VFE HW instance
+ * @kmd_buf_info:          Kmd buffer to store the change base command
+ * @trigger_cdm_en         Used to reset and set trigger_cdm_events register
+ *
+ * @return:                0 for success
+ *                         -EINVAL for Fail
+ */
+int cam_isp_add_wait_trigger(
+	struct cam_isp_hw_update_args        *prepare,
+	struct list_head                     *res_list_isp_src,
+	uint32_t                              base_idx,
+	struct cam_kmd_buf_info              *kmd_buf_info,
+	bool                                  trigger_cdm_en);
+
 
 /*
  * cam_isp_add_go_cmd()
@@ -189,10 +233,9 @@ int cam_isp_add_reg_update(
  *                         -EINVAL for Fail
  */
 int cam_isp_add_go_cmd(
-	struct cam_hw_prepare_update_args    *prepare,
+	struct cam_isp_hw_update_args        *prepare,
 	struct list_head                     *res_list_isp_rd,
 	uint32_t                              base_idx,
 	struct cam_kmd_buf_info              *kmd_buf_info);
-
 
 #endif /*_CAM_ISP_HW_PARSER_H */

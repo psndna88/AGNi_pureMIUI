@@ -5,6 +5,7 @@
 
 #include <linux/module.h>
 #include "cam_vfe170.h"
+#include "cam_vfe170_150.h"
 #include "cam_vfe175.h"
 #include "cam_vfe175_130.h"
 #include "cam_vfe480.h"
@@ -20,6 +21,10 @@ static const struct of_device_id cam_vfe_dt_match[] = {
 	{
 		.compatible = "qcom,vfe170",
 		.data = &cam_vfe170_hw_info,
+	},
+	{
+		.compatible = "qcom,vfe170_150",
+		.data = &cam_vfe170_150_hw_info,
 	},
 	{
 		.compatible = "qcom,vfe175",

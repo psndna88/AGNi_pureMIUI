@@ -22,6 +22,13 @@
 
 /* Appliacble vote paths for dual ife, based on no. of UAPI definitions */
 #define CAM_ISP_MAX_PER_PATH_VOTES 30
+
+/*
+ * Maximum configuration entry size  - This is based on the
+ * worst case DUAL IFE use case plus some margin.
+ */
+ #define CAM_ISP_CTX_CFG_MAX                     25
+
 /**
  *  enum cam_isp_hw_event_type - Collection of the ISP hardware events
  */
@@ -71,18 +78,7 @@ struct cam_isp_stop_args {
 	bool                          stop_only;
 };
 
-/**
- * struct cam_isp_start_args - isp hardware start arguments
- *
- * @config_args:               Hardware configuration commands.
- * @start_only                 Send start only to hw drivers. No init to
- *                             be done.
- *
- */
-struct cam_isp_start_args {
-	struct cam_hw_config_args     hw_config;
-	bool                          start_only;
-};
+
 
 /**
  * struct cam_isp_bw_config_internal_v2 - Bandwidth configuration
@@ -261,6 +257,106 @@ struct cam_isp_hw_cmd_args {
 	} u;
 };
 
+/**
+ * struct cam_isp_hw_update_entry_info - hardware config info
+ *
+ * @hw_update_entries       Entry for hardware config
+ * @num_hw_update_entries:  Number of IFE hw
+ *
+ */
+struct cam_isp_hw_update_entry_info {
+	struct cam_hw_update_entry     *hw_entries;
+	uint32_t                        num_hw_entries;
+};
+
+/**
+ * struct cam_isp_hw_update_info - hardware config info
+ *
+ * @hw_update_entries       Entry for hardware config
+ * @num_hw_update_entries:  number of IFE hw
+ *
+ */
+
+struct cam_isp_hw_update_info {
+	struct cam_hw_update_entry      hw_entries[CAM_ISP_CTX_CFG_MAX];
+	uint32_t                        num_hw_entries;
+};
+
+/**
+ * struct cam_isp_hw_update_args - Payload for prepare command
+ *
+ * @packet:                CSL packet from user mode driver
+ * @remain_len             Remaining length of CPU buffer after config offset
+ * @ctxt_to_hw_map:        HW context from the acquire
+ * @max_hw_update_entries: Maximum hardware update entries supported
+ * @hw_update_info:        Actual hardware update configuration (returned)
+ * @max_out_map_entries:   Maximum output fence mapping supported
+ * @out_map_entries:       Actual output fence mapping list (returned)
+ * @num_out_map_entries:   Number of actual output fence mapping (returned)
+ * @max_in_map_entries:    Maximum input fence mapping supported
+ * @in_map_entries:        Actual input fence mapping list (returned)
+ * @num_in_map_entries:    Number of acutal input fence mapping (returned)
+ * @priv:                  Private pointer of hw update
+ * @pf_data:               Debug data for page fault
+ *
+ */
+
+struct cam_isp_hw_update_args {
+	struct cam_packet                   *packet;
+	uint32_t                             remain_len;
+	void                                *ctxt_to_hw_map;
+	uint32_t                             max_hw_update_entries;
+	struct cam_isp_hw_update_entry_info  hw_update_info[CAM_IFE_HW_NUM_MAX];
+	uint32_t                             max_out_map_entries;
+	struct cam_hw_fence_map_entry       *out_map_entries;
+	uint32_t                             num_out_map_entries;
+	uint32_t                             max_in_map_entries;
+	struct cam_hw_fence_map_entry       *in_map_entries;
+	uint32_t                             num_in_map_entries;
+	void                                *priv;
+	struct cam_hw_mgr_dump_pf_data      *pf_data;
+	struct cam_cmd_buf_desc              reg_dump_buf_desc[
+						CAM_REG_DUMP_MAX_BUF_ENTRIES];
+	uint32_t                             num_reg_dump_buf;
+};
+
+/**
+ * struct cam_isp_hw_config_args - Payload for config command
+ *
+ * @ctxt_to_hw_map:        HW context from the acquire
+ * @hw_update_info:        Hardware update info for every IFE
+ * @out_map_entries:       Out map info
+ * @num_out_map_entries:   Number of out map entries
+ * @priv:                  Private pointer
+ * @request_id:            Request ID
+ * @init_packet:           check init packet or update packet
+ * @reapply:               check if current req is reapplied
+ *
+ */
+
+struct cam_isp_hw_config_args {
+	void                                *ctxt_to_hw_map;
+	struct cam_isp_hw_update_entry_info  hw_update_info[CAM_IFE_HW_NUM_MAX];
+	struct cam_hw_fence_map_entry       *out_map_entries;
+	uint32_t                             num_out_map_entries;
+	void                                *priv;
+	uint64_t                             request_id;
+	bool                                 init_packet;
+	bool                                 reapply;
+};
+
+/**
+ * struct cam_isp_start_args - isp hardware start arguments
+ *
+ * @config_args:               Hardware configuration commands.
+ * @start_only                 Send start only to hw drivers. No init to
+ *                             be done.
+ *
+ */
+struct cam_isp_start_args {
+	struct cam_isp_hw_config_args hw_config;
+	bool                          start_only;
+};
 
 /**
  * cam_isp_hw_mgr_init()

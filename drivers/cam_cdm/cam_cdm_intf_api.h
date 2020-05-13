@@ -223,6 +223,14 @@ int cam_cdm_stream_off(uint32_t handle);
 int cam_cdm_reset_hw(uint32_t handle);
 
 /**
+ * @brief : API to publish CDM ops to HW blocks like IFE
+ *
+ * @return : CDM operations
+ *
+ */
+struct cam_cdm_utils_ops *cam_cdm_publish_ops(void);
+
+/**
  * @brief : API to register CDM hw to platform framework.
  * @return struct platform_device pointer on on success, or ERR_PTR() on error.
  */

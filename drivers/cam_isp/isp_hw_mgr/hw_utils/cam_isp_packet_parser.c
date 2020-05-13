@@ -10,9 +10,10 @@
 #include "cam_vfe_hw_intf.h"
 #include "cam_isp_packet_parser.h"
 #include "cam_debug_util.h"
+#include "cam_isp_hw_mgr_intf.h"
 
 int cam_isp_add_change_base(
-	struct cam_hw_prepare_update_args      *prepare,
+	struct cam_isp_hw_update_args          *prepare,
 	struct list_head                       *res_list_isp_src,
 	uint32_t                                base_idx,
 	struct cam_kmd_buf_info                *kmd_buf_info)
@@ -24,8 +25,8 @@ int cam_isp_add_change_base(
 	struct cam_hw_update_entry      *hw_entry;
 	uint32_t                         num_ent, i;
 
-	hw_entry = prepare->hw_update_entries;
-	num_ent = prepare->num_hw_update_entries;
+	hw_entry = prepare->hw_update_info[base_idx].hw_entries;
+	num_ent = prepare->hw_update_info[base_idx].num_hw_entries;
 
 	/* Max one hw entries required for each base */
 	if (num_ent + 1 >= prepare->max_hw_update_entries) {
@@ -76,7 +77,8 @@ int cam_isp_add_change_base(
 			kmd_buf_info->used_bytes += get_base.cmd.used_bytes;
 			kmd_buf_info->offset     += get_base.cmd.used_bytes;
 			num_ent++;
-			prepare->num_hw_update_entries = num_ent;
+			prepare->hw_update_info[base_idx].num_hw_entries
+				= num_ent;
 
 			/* return success */
 			return 0;
@@ -87,7 +89,7 @@ int cam_isp_add_change_base(
 }
 
 static int cam_isp_update_dual_config(
-	struct cam_hw_prepare_update_args  *prepare,
+	struct cam_isp_hw_update_args      *prepare,
 	struct cam_cmd_buf_desc            *cmd_desc,
 	uint32_t                            split_id,
 	uint32_t                            base_idx,
@@ -241,7 +243,7 @@ int cam_isp_add_cmd_buf_update(
 }
 
 int cam_isp_add_command_buffers(
-	struct cam_hw_prepare_update_args  *prepare,
+	struct cam_isp_hw_update_args      *prepare,
 	struct cam_kmd_buf_info            *kmd_buf_info,
 	struct cam_isp_ctx_base_info       *base_info,
 	cam_packet_generic_blob_handler     blob_handler_cb,
@@ -253,12 +255,13 @@ int cam_isp_add_command_buffers(
 	uint32_t                           base_idx;
 	enum cam_isp_hw_split_id           split_id;
 	struct cam_cmd_buf_desc           *cmd_desc = NULL;
-	struct cam_hw_update_entry        *hw_entry;
+	struct cam_hw_update_entry        *hw_entry = NULL;
+	struct cam_isp_hw_update_entry_info *hw_info;
 
-	hw_entry = prepare->hw_update_entries;
 	split_id = base_info->split_id;
 	base_idx = base_info->idx;
-
+	hw_entry = prepare->hw_update_info[base_idx].hw_entries;
+	hw_info = prepare->hw_update_info;
 	/*
 	 * set the cmd_desc to point the first command descriptor in the
 	 * packet
@@ -271,7 +274,8 @@ int cam_isp_add_command_buffers(
 		split_id, prepare->packet->num_cmd_buf);
 
 	for (i = 0; i < prepare->packet->num_cmd_buf; i++) {
-		num_ent = prepare->num_hw_update_entries;
+		num_ent =
+			prepare->hw_update_info[base_idx].num_hw_entries;
 		if (!cmd_desc[i].length)
 			continue;
 
@@ -358,7 +362,8 @@ int cam_isp_add_command_buffers(
 			if (split_id == CAM_ISP_HW_SPLIT_LEFT) {
 				struct cam_isp_generic_blob_info   blob_info;
 
-				prepare->num_hw_update_entries = num_ent;
+				prepare->hw_update_info[base_idx].num_hw_entries
+					= num_ent;
 				blob_info.prepare = prepare;
 				blob_info.base_info = base_info;
 				blob_info.kmd_buf_info = kmd_buf_info;
@@ -374,14 +379,15 @@ int cam_isp_add_command_buffers(
 					return rc;
 				}
 				hw_entry[num_ent].flags = CAM_ISP_IQ_BL;
-				num_ent = prepare->num_hw_update_entries;
+				num_ent = hw_info[base_idx].num_hw_entries;
 			}
 			break;
 		case CAM_ISP_PACKET_META_GENERIC_BLOB_RIGHT:
 			if (split_id == CAM_ISP_HW_SPLIT_RIGHT) {
 				struct cam_isp_generic_blob_info   blob_info;
 
-				prepare->num_hw_update_entries = num_ent;
+				prepare->hw_update_info[base_idx].num_hw_entries
+					= num_ent;
 				blob_info.prepare = prepare;
 				blob_info.base_info = base_info;
 				blob_info.kmd_buf_info = kmd_buf_info;
@@ -397,13 +403,14 @@ int cam_isp_add_command_buffers(
 					return rc;
 				}
 				hw_entry[num_ent].flags = CAM_ISP_IQ_BL;
-				num_ent = prepare->num_hw_update_entries;
+				num_ent = hw_info[base_idx].num_hw_entries;
 			}
 			break;
 		case CAM_ISP_PACKET_META_GENERIC_BLOB_COMMON: {
 			struct cam_isp_generic_blob_info   blob_info;
 
-			prepare->num_hw_update_entries = num_ent;
+			prepare->hw_update_info[base_idx].num_hw_entries =
+				num_ent;
 			blob_info.prepare = prepare;
 			blob_info.base_info = base_info;
 			blob_info.kmd_buf_info = kmd_buf_info;
@@ -418,7 +425,7 @@ int cam_isp_add_command_buffers(
 				return rc;
 			}
 			hw_entry[num_ent].flags = CAM_ISP_IQ_BL;
-			num_ent = prepare->num_hw_update_entries;
+			num_ent = hw_info[base_idx].num_hw_entries;
 		}
 			break;
 		case CAM_ISP_PACKET_META_REG_DUMP_ON_FLUSH:
@@ -448,7 +455,8 @@ int cam_isp_add_command_buffers(
 				cmd_meta_data);
 			return -EINVAL;
 		}
-		prepare->num_hw_update_entries = num_ent;
+		prepare->hw_update_info[base_idx].num_hw_entries
+			= num_ent;
 	}
 
 	return rc;
@@ -457,7 +465,7 @@ int cam_isp_add_command_buffers(
 int cam_isp_add_io_buffers(
 	int                                   iommu_hdl,
 	int                                   sec_iommu_hdl,
-	struct cam_hw_prepare_update_args    *prepare,
+	struct cam_isp_hw_update_args        *prepare,
 	uint32_t                              base_idx,
 	struct cam_kmd_buf_info              *kmd_buf_info,
 	struct cam_isp_hw_mgr_res            *res_list_isp_out,
@@ -473,6 +481,7 @@ int cam_isp_add_io_buffers(
 	struct cam_isp_hw_mgr_res          *hw_mgr_res;
 	struct cam_isp_hw_get_cmd_update    update_buf;
 	struct cam_isp_hw_get_wm_update     wm_update;
+	struct cam_hw_update_entry         *hw_entry;
 	struct cam_isp_hw_get_wm_update     bus_rd_update;
 	struct cam_hw_fence_map_entry      *out_map_entries;
 	struct cam_hw_fence_map_entry      *in_map_entries;
@@ -495,12 +504,14 @@ int cam_isp_add_io_buffers(
 	num_in_buf  = 0;
 	io_cfg_used_bytes = 0;
 	prepare->pf_data->packet = prepare->packet;
+	hw_entry = prepare->hw_update_info[base_idx].hw_entries;
+	num_ent = prepare->hw_update_info[base_idx].num_hw_entries;
 
 	/* Max one hw entries required for each base */
-	if (prepare->num_hw_update_entries + 1 >=
+	if (num_ent + 1 >=
 			prepare->max_hw_update_entries) {
 		CAM_ERR(CAM_ISP, "Insufficient  HW entries :%d %d",
-			prepare->num_hw_update_entries,
+			prepare->hw_update_info[base_idx].num_hw_entries,
 			prepare->max_hw_update_entries);
 		return -EINVAL;
 	}
@@ -852,25 +863,21 @@ int cam_isp_add_io_buffers(
 		io_cfg_used_bytes, fill_fence);
 	if (io_cfg_used_bytes) {
 		/* Update the HW entries */
-		num_ent = prepare->num_hw_update_entries;
-		prepare->hw_update_entries[num_ent].handle =
-					kmd_buf_info->handle;
-		prepare->hw_update_entries[num_ent].len = io_cfg_used_bytes;
-		prepare->hw_update_entries[num_ent].offset =
-			kmd_buf_info->offset;
-		prepare->hw_update_entries[num_ent].flags =
-			CAM_ISP_IOCFG_BL;
+		hw_entry[num_ent].handle = kmd_buf_info->handle;
+		hw_entry[num_ent].len = io_cfg_used_bytes;
+		hw_entry[num_ent].offset = kmd_buf_info->offset;
+		hw_entry[num_ent].flags = CAM_ISP_IOCFG_BL;
 		CAM_DBG(CAM_ISP,
 			"num_ent=%d handle=0x%x, len=%u, offset=%u",
 			num_ent,
-			prepare->hw_update_entries[num_ent].handle,
-			prepare->hw_update_entries[num_ent].len,
-			prepare->hw_update_entries[num_ent].offset);
+			hw_entry[num_ent].handle,
+			hw_entry[num_ent].len,
+			hw_entry[num_ent].offset);
 		num_ent++;
 
 		kmd_buf_info->used_bytes += io_cfg_used_bytes;
 		kmd_buf_info->offset     += io_cfg_used_bytes;
-		prepare->num_hw_update_entries = num_ent;
+		prepare->hw_update_info[base_idx].num_hw_entries = num_ent;
 	}
 
 	if (fill_fence) {
@@ -881,9 +888,8 @@ int cam_isp_add_io_buffers(
 	return rc;
 }
 
-
 int cam_isp_add_reg_update(
-	struct cam_hw_prepare_update_args    *prepare,
+	struct cam_isp_hw_update_args        *prepare,
 	struct list_head                     *res_list_isp_src,
 	uint32_t                              base_idx,
 	struct cam_kmd_buf_info              *kmd_buf_info)
@@ -895,12 +901,13 @@ int cam_isp_add_reg_update(
 	struct cam_isp_hw_get_cmd_update      get_regup;
 	uint32_t kmd_buf_remain_size, num_ent, i, reg_update_size;
 
-	hw_entry = prepare->hw_update_entries;
+	hw_entry = prepare->hw_update_info[base_idx].hw_entries;
+	num_ent = prepare->hw_update_info[base_idx].num_hw_entries;
+
 	/* Max one hw entries required for each base */
-	if (prepare->num_hw_update_entries + 1 >=
-				prepare->max_hw_update_entries) {
+	if (num_ent + 1 >= prepare->max_hw_update_entries) {
 		CAM_ERR(CAM_ISP, "Insufficient  HW entries :%d %d",
-			prepare->num_hw_update_entries,
+			num_ent,
 			prepare->max_hw_update_entries);
 		return -EINVAL;
 	}
@@ -946,35 +953,32 @@ int cam_isp_add_reg_update(
 			if (rc)
 				return rc;
 
-			CAM_DBG(CAM_ISP, "Reg update added for res %d hw_id %d",
-				res->res_type, res->hw_intf->hw_idx);
+			CAM_DBG(CAM_ISP,
+				"Reg update added for res %d hw_id %d cdm_idx %d",
+				res->res_id, res->hw_intf->hw_idx, base_idx);
 			reg_update_size += get_regup.cmd.used_bytes;
 		}
 	}
 
 	if (reg_update_size) {
 		/* Update the HW entries */
-		num_ent = prepare->num_hw_update_entries;
-		prepare->hw_update_entries[num_ent].handle =
-					kmd_buf_info->handle;
-		prepare->hw_update_entries[num_ent].len = reg_update_size;
-		prepare->hw_update_entries[num_ent].offset =
-			kmd_buf_info->offset;
+		hw_entry[num_ent].handle = kmd_buf_info->handle;
+		hw_entry[num_ent].len = reg_update_size;
+		hw_entry[num_ent].offset = kmd_buf_info->offset;
 
 		/* Marking reg update as IOCFG to reapply on bubble */
-		prepare->hw_update_entries[num_ent].flags =
-			CAM_ISP_IOCFG_BL;
+		hw_entry[num_ent].flags = CAM_ISP_IOCFG_BL;
 		CAM_DBG(CAM_ISP,
 			"num_ent=%d handle=0x%x, len=%u, offset=%u",
 			num_ent,
-			prepare->hw_update_entries[num_ent].handle,
-			prepare->hw_update_entries[num_ent].len,
-			prepare->hw_update_entries[num_ent].offset);
+			hw_entry[num_ent].handle,
+			hw_entry[num_ent].len,
+			hw_entry[num_ent].offset);
 		num_ent++;
 
 		kmd_buf_info->used_bytes += reg_update_size;
 		kmd_buf_info->offset     += reg_update_size;
-		prepare->num_hw_update_entries = num_ent;
+		prepare->hw_update_info[base_idx].num_hw_entries = num_ent;
 		/* reg update is success return status 0 */
 		rc = 0;
 	}
@@ -983,7 +987,7 @@ int cam_isp_add_reg_update(
 }
 
 int cam_isp_add_go_cmd(
-	struct cam_hw_prepare_update_args    *prepare,
+	struct cam_isp_hw_update_args        *prepare,
 	struct list_head                     *res_list_isp_rd,
 	uint32_t                              base_idx,
 	struct cam_kmd_buf_info              *kmd_buf_info)
@@ -995,11 +999,13 @@ int cam_isp_add_go_cmd(
 	struct cam_isp_hw_get_cmd_update      get_regup;
 	uint32_t kmd_buf_remain_size, num_ent, i, reg_update_size;
 
-	hw_entry = prepare->hw_update_entries;
-	if (prepare->num_hw_update_entries + 1 >=
-		prepare->max_hw_update_entries) {
-		CAM_ERR(CAM_ISP, "Insufficient HW entries current: %d max: %d",
-			prepare->num_hw_update_entries,
+	hw_entry = prepare->hw_update_info[base_idx].hw_entries;
+	num_ent = prepare->hw_update_info[base_idx].num_hw_entries;
+
+	/* Max one hw entries required for each base */
+	if (num_ent + 1 >= prepare->max_hw_update_entries) {
+		CAM_ERR(CAM_ISP, "Insufficient  HW entries :%d %d",
+			num_ent,
 			prepare->max_hw_update_entries);
 		return -EINVAL;
 	}
@@ -1052,26 +1058,236 @@ int cam_isp_add_go_cmd(
 
 	if (reg_update_size) {
 		/* Update the HW entries */
-		num_ent = prepare->num_hw_update_entries;
-		prepare->hw_update_entries[num_ent].handle =
-					kmd_buf_info->handle;
-		prepare->hw_update_entries[num_ent].len = reg_update_size;
-		prepare->hw_update_entries[num_ent].offset =
-			kmd_buf_info->offset;
+		hw_entry[num_ent].handle = kmd_buf_info->handle;
+		hw_entry[num_ent].len = reg_update_size;
+		hw_entry[num_ent].offset = kmd_buf_info->offset;
 
-		prepare->hw_update_entries[num_ent].flags =
-			CAM_ISP_IOCFG_BL;
+		hw_entry[num_ent].flags = CAM_ISP_IOCFG_BL;
 		CAM_DBG(CAM_ISP,
 			"num_ent=%d handle=0x%x, len=%u, offset=%u",
 			num_ent,
-			prepare->hw_update_entries[num_ent].handle,
-			prepare->hw_update_entries[num_ent].len,
-			prepare->hw_update_entries[num_ent].offset);
+			hw_entry[num_ent].handle,
+			hw_entry[num_ent].len,
+			hw_entry[num_ent].offset);
 		num_ent++;
 
 		kmd_buf_info->used_bytes += reg_update_size;
 		kmd_buf_info->offset     += reg_update_size;
-		prepare->num_hw_update_entries = num_ent;
+		prepare->hw_update_info[base_idx].num_hw_entries = num_ent;
+
+		rc = 0;
+	}
+
+	return rc;
+}
+
+int cam_isp_add_comp_wait(
+	struct cam_isp_hw_update_args        *prepare,
+	struct list_head                     *res_list_isp_src,
+	uint32_t                              base_idx,
+	struct cam_kmd_buf_info              *kmd_buf_info)
+{
+	int rc = -EINVAL;
+	struct cam_isp_hw_mgr_res            *hw_mgr_res;
+	struct cam_hw_update_entry           *hw_entry;
+	struct cam_isp_hw_get_cmd_update      add_wait;
+	struct cam_hw_intf                   *hw_intf;
+	bool                                  hw_res_valid = false;
+	uint32_t kmd_buf_remain_size, num_ent, add_wait_size;
+
+	hw_entry = prepare->hw_update_info[base_idx].hw_entries;
+	num_ent = prepare->hw_update_info[base_idx].num_hw_entries;
+
+	/* Max one hw entries required for each base */
+	if (num_ent >= prepare->max_hw_update_entries) {
+		CAM_ERR(CAM_ISP, "Insufficient  HW entries");
+		return -EINVAL;
+	}
+
+	add_wait_size = 0;
+	list_for_each_entry(hw_mgr_res, res_list_isp_src, list) {
+		if (hw_mgr_res->res_type == CAM_ISP_RESOURCE_UNINT)
+			continue;
+		if (hw_mgr_res->hw_res[CAM_ISP_HW_SPLIT_LEFT] &&
+			hw_mgr_res->hw_res[CAM_ISP_HW_SPLIT_RIGHT]) {
+			hw_res_valid = true;
+			break;
+		}
+	}
+
+	if (!hw_mgr_res || !hw_res_valid) {
+		CAM_ERR(CAM_ISP, "No src with multi_vfe config");
+		return -EINVAL;
+	}
+
+	hw_intf = hw_mgr_res->hw_res[CAM_ISP_HW_SPLIT_LEFT]->hw_intf;
+
+	if (kmd_buf_info->size > (kmd_buf_info->used_bytes +
+			add_wait_size)) {
+		kmd_buf_remain_size =  kmd_buf_info->size -
+			(kmd_buf_info->used_bytes + add_wait_size);
+	} else {
+		CAM_ERR(CAM_ISP, "no free mem %d %d %d",
+			base_idx, kmd_buf_info->size,
+			kmd_buf_info->used_bytes +
+			add_wait_size);
+		rc = -EINVAL;
+		return rc;
+	}
+
+	add_wait.cmd.cmd_buf_addr = kmd_buf_info->cpu_addr +
+		kmd_buf_info->used_bytes/4 +
+		add_wait_size/4;
+	add_wait.cmd.size = kmd_buf_remain_size;
+	add_wait.cmd_type = CAM_ISP_HW_CMD_ADD_WAIT;
+	add_wait.res = hw_mgr_res->hw_res[CAM_ISP_HW_SPLIT_LEFT];
+
+	rc = hw_intf->hw_ops.process_cmd(
+		hw_intf->hw_priv,
+		CAM_ISP_HW_CMD_ADD_WAIT,
+		&add_wait,
+		sizeof(struct cam_isp_hw_get_cmd_update));
+
+	if (rc) {
+		CAM_ERR(CAM_ISP,
+			"wait_comp_event addition failed for dual vfe");
+		return rc;
+	}
+
+	add_wait_size += add_wait.cmd.used_bytes;
+	if (add_wait_size) {
+		/* Update the HW entries */
+		hw_entry[num_ent].handle =
+			kmd_buf_info->handle;
+		hw_entry[num_ent].len =
+			add_wait_size;
+		hw_entry[num_ent].offset =
+			kmd_buf_info->offset;
+		hw_entry[num_ent].flags = CAM_ISP_IOCFG_BL;
+		CAM_DBG(CAM_ISP,
+			"num_ent=%d handle=0x%x, len=%u, offset=%u",
+			num_ent,
+			hw_entry[num_ent].handle,
+			hw_entry[num_ent].len,
+			hw_entry[num_ent].offset);
+		num_ent++;
+
+		kmd_buf_info->used_bytes += add_wait_size;
+		kmd_buf_info->offset     += add_wait_size;
+		prepare->hw_update_info[base_idx].num_hw_entries
+			= num_ent;
+		/* add wait_comp_event is success return status 0 */
+		rc = 0;
+	}
+
+	return rc;
+}
+
+int cam_isp_add_wait_trigger(
+	struct cam_isp_hw_update_args        *prepare,
+	struct list_head                     *res_list_isp_src,
+	uint32_t                              base_idx,
+	struct cam_kmd_buf_info              *kmd_buf_info,
+	bool                                  trigger_cdm_en)
+{
+	int rc = -EINVAL;
+	struct cam_isp_hw_mgr_res            *hw_mgr_res;
+	struct cam_hw_update_entry           *hw_entry;
+	struct cam_isp_hw_get_cmd_update      add_trigger;
+	struct cam_hw_intf                   *hw_intf;
+	bool                                  hw_res_valid = false;
+	uint32_t kmd_buf_remain_size, num_ent, add_trigger_size;
+
+	hw_entry = prepare->hw_update_info[base_idx].hw_entries;
+	num_ent = prepare->hw_update_info[base_idx].num_hw_entries;
+
+	/* Max one hw entries required for each base */
+	if (num_ent + 1 >=
+				prepare->max_hw_update_entries) {
+		CAM_ERR(CAM_ISP, "Insufficient  HW entries :%d %d");
+		return -EINVAL;
+	}
+
+	add_trigger_size = 0;
+
+	list_for_each_entry(hw_mgr_res, res_list_isp_src, list) {
+		if (hw_mgr_res->res_type == CAM_ISP_RESOURCE_UNINT)
+			continue;
+		if (hw_mgr_res->hw_res[CAM_ISP_HW_SPLIT_LEFT] &&
+			hw_mgr_res->hw_res[CAM_ISP_HW_SPLIT_RIGHT]) {
+			hw_res_valid = true;
+			break;
+		}
+	}
+
+	if (!hw_mgr_res || !hw_res_valid) {
+		CAM_ERR(CAM_ISP, "No src with multi_vfe config");
+		return -EINVAL;
+	}
+
+	hw_intf = hw_mgr_res->hw_res[CAM_ISP_HW_SPLIT_RIGHT]->hw_intf;
+
+	if (kmd_buf_info->size > (kmd_buf_info->used_bytes +
+			add_trigger_size)) {
+		kmd_buf_remain_size =  kmd_buf_info->size -
+			(kmd_buf_info->used_bytes + add_trigger_size);
+	} else {
+		CAM_ERR(CAM_ISP, "no free mem %d %d %d",
+			base_idx, kmd_buf_info->size,
+			kmd_buf_info->used_bytes +
+			add_trigger_size);
+		rc = -EINVAL;
+		return rc;
+	}
+
+	add_trigger.cmd.cmd_buf_addr = kmd_buf_info->cpu_addr +
+		kmd_buf_info->used_bytes/4 +
+		add_trigger_size/4;
+	add_trigger.cmd.size = kmd_buf_remain_size;
+	add_trigger.cmd_type = CAM_ISP_HW_CMD_ADD_WAIT_TRIGGER;
+	add_trigger.res = hw_mgr_res->hw_res[CAM_ISP_HW_SPLIT_RIGHT];
+
+	if (trigger_cdm_en)
+		add_trigger.trigger_cdm_en = true;
+	else
+		add_trigger.trigger_cdm_en = false;
+
+	rc = hw_intf->hw_ops.process_cmd(
+		hw_intf->hw_priv,
+		CAM_ISP_HW_CMD_ADD_WAIT_TRIGGER,
+		&add_trigger,
+		sizeof(struct cam_isp_hw_get_cmd_update));
+
+	if (rc) {
+		CAM_ERR(CAM_ISP,
+			"wait_trigger_event addition failed for dual vfe");
+		return rc;
+	}
+
+	add_trigger_size += add_trigger.cmd.used_bytes;
+
+	if (add_trigger_size) {
+		/* Update the HW entries */
+		hw_entry[num_ent].handle =
+			kmd_buf_info->handle;
+		hw_entry[num_ent].len =
+			add_trigger_size;
+		hw_entry[num_ent].offset =
+			kmd_buf_info->offset;
+		hw_entry[num_ent].flags = CAM_ISP_IOCFG_BL;
+		CAM_DBG(CAM_ISP,
+			"num_ent=%d handle=0x%x, len=%u, offset=%u",
+			num_ent,
+			hw_entry[num_ent].handle,
+			hw_entry[num_ent].len,
+			hw_entry[num_ent].offset);
+		num_ent++;
+
+		kmd_buf_info->used_bytes += add_trigger_size;
+		kmd_buf_info->offset     += add_trigger_size;
+		prepare->hw_update_info[base_idx].num_hw_entries
+			= num_ent;
+		/* add wait trigger is success return status 0 */
 		rc = 0;
 	}
 

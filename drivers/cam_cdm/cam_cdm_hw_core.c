@@ -23,6 +23,7 @@
 #include "cam_cdm_hw_reg_1_2.h"
 #include "cam_cdm_hw_reg_2_0.h"
 #include "camera_main.h"
+#include "cam_trace.h"
 
 #define CAM_CDM_BL_FIFO_WAIT_TIMEOUT 2000
 #define CAM_CDM_DBG_GEN_IRQ_USR_DATA 0xff
@@ -689,6 +690,8 @@ int cam_hw_cdm_submit_gen_irq(
 		rc = -EIO;
 	}
 
+	trace_cam_log_event("CDM_START", "CDM_START_IRQ", req->data->cookie, 0);
+
 end:
 	return rc;
 }
@@ -1159,7 +1162,20 @@ irqreturn_t cam_hw_cdm_irq(int irq_num, void *data)
 		INIT_WORK((struct work_struct *)&payload[i]->work,
 			cam_hw_cdm_work);
 
-		work_status = queue_work(
+	trace_cam_log_event("CDM_DONE", "CDM_DONE_IRQ",
+			payload[i]->irq_status,
+			cdm_hw->soc_info.index);
+
+		if (cam_cdm_write_hw_reg(cdm_hw,
+				cdm_core->offsets->irq_reg[i]->irq_clear,
+				payload[i]->irq_status)) {
+			CAM_ERR(CAM_CDM,
+				"Failed to Write CDM HW IRQ Clear");
+			kfree(payload[i]);
+			return IRQ_HANDLED;
+		}
+
+	work_status = queue_work(
 			cdm_core->bl_fifo[i].work_queue,
 			&payload[i]->work);
 
@@ -1654,8 +1670,7 @@ static int cam_hw_cdm_component_bind(struct device *dev,
 
 	platform_set_drvdata(pdev, cdm_hw_intf);
 
-	snprintf(cdm_name, sizeof(cdm_name), "%s%d",
-		cdm_hw->soc_info.label_name, cdm_hw->soc_info.index);
+	snprintf(cdm_name, sizeof(cdm_name), "%s", cdm_hw->soc_info.label_name);
 
 	rc = cam_smmu_get_handle(cdm_name, &cdm_core->iommu_hdl.non_secure);
 	if (rc < 0) {
@@ -1765,6 +1780,15 @@ static int cam_hw_cdm_component_bind(struct device *dev,
 		goto cpas_stop;
 	}
 	cdm_hw->open_count++;
+
+	cdm_core->ops = cam_cdm_get_ops(cdm_core->hw_version, NULL,
+		false);
+
+	if (!cdm_core->ops) {
+		CAM_ERR(CAM_CDM, "Failed to util ops for hw");
+		rc = -EINVAL;
+		goto deinit;
+	}
 
 	if (!cam_cdm_set_cam_hw_version(cdm_core->hw_version,
 		&cdm_core->version)) {

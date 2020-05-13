@@ -105,7 +105,7 @@ static struct cam_vfe_top_ver3_hw_info vfe580_top_hw_info = {
 	},
 };
 
-struct cam_vfe_hw_info cam_vfe580_hw_info = {
+static struct cam_vfe_hw_info cam_vfe580_hw_info = {
 	.irq_reg_info                  = &vfe480_top_irq_reg_info,
 
 	.bus_version                   = CAM_VFE_BUS_VER_3_0,

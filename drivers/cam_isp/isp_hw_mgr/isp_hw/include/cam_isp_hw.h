@@ -110,6 +110,8 @@ enum cam_isp_hw_cmd_type {
 	CAM_ISP_HW_CMD_CORE_CONFIG,
 	CAM_ISP_HW_CMD_WM_CONFIG_UPDATE,
 	CAM_ISP_HW_CMD_CSID_QCFA_SUPPORTED,
+	CAM_ISP_HW_CMD_ADD_WAIT,
+	CAM_ISP_HW_CMD_ADD_WAIT_TRIGGER,
 	CAM_ISP_HW_CMD_QUERY_REGSPACE_DATA,
 	CAM_ISP_HW_CMD_TPG_PHY_CLOCK_UPDATE,
 	CAM_ISP_HW_CMD_GET_IRQ_REGISTER_DUMP,
@@ -245,6 +247,7 @@ struct cam_isp_hw_get_cmd_update {
 		struct cam_isp_hw_get_wm_update      *wm_update;
 		struct cam_isp_hw_get_wm_update      *rm_update;
 	};
+	bool trigger_cdm_en;
 };
 
 /*
