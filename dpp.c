@@ -1654,11 +1654,6 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 					 netrole ? " netrole=" : "",
 					 netrole ? netrole : "");
 			}
-			if (wpa_command(ifname, buf) < 0) {
-				send_resp(dut, conn, SIGMA_ERROR,
-					  "errorCode,Failed to start DPP listen");
-				goto out;
-			}
 		} else if ((strcasecmp(bs, "QR") == 0 ||
 			    strcasecmp(bs, "NFC") == 0) &&
 			   (strcasecmp(prov_role, "Configurator") == 0 ||
