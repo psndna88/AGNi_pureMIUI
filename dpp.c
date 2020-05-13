@@ -1850,7 +1850,8 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 		}
 
 		if (chirp) {
-			snprintf(buf, sizeof(buf), "DPP_CHIRP own=%d listen=%d",
+			snprintf(buf, sizeof(buf),
+				 "DPP_CHIRP own=%d iter=10 listen=%d",
 				 dut->dpp_local_bootstrap, freq);
 		} else if (tcp && strcasecmp(tcp, "yes") == 0) {
 			snprintf(buf, sizeof(buf), "DPP_CONTROLLER_START");
