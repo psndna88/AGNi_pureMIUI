@@ -323,6 +323,10 @@ Optional properties:
                 corresponding DSPP block offset as base.
 - qcom,sde-dspp-spr-size:    A u32 value indicating the SPR block register address range
 - qcom,sde-dspp-spr-version:    A u32 value indicating the version of SPR hardware.
+- qcom,sde-dspp-demura-off:    Array of u32 offsets indicate the demura block offsets from the
+                corresponding DSPP block offset as base.
+- qcom,sde-dspp-demura-size:    A u32 value indicating the demura block register address range
+- qcom,sde-dspp-demura-version:    A u32 value indicating the version of demura hardware.
 - qcom,sde-vbif-id:		Array of vbif ids corresponding to the
 				offsets defined in property: qcom,sde-vbif-off.
 - qcom,sde-vbif-default-ot-rd-limit:	A u32 value indicates the default read OT limit
@@ -503,30 +507,24 @@ Optional properties:
 				-- qcom,sde-limit-ids: respective ids for the above usecases
 				-- qcom,sde-limit-values: usecase and value for different combinations
 
-Bus Scaling Subnodes:
-- qcom,sde-reg-bus:		Property to provide Bus scaling for register access for
-				mdss blocks.
-- qcom,sde-data-bus:		Property to provide Bus scaling for data bus access for
-				mdss blocks.
-- qcom,sde-llcc-bus:		Property to provide Bus scaling for data bus access for
-				mnoc to llcc.
-- qcom,sde-ebi-bus:		Property to provide Bus scaling for data bus access for
-				llcc to ebi.
-
+Bus Scaling:
+- interconnects                 An array of 4 cell properties with the format of
+				(src-noc master-id dst-noc slave-id) as described in:
+				Documentation/devicetree/bindings/interconnect/interconnect.txt
+				One entry for each interconnect path available.
+				Master/Slave ID bindings can be found at:
+						include/dt-bindings/interconnect/
+- interconnect-names		An array of string properties associated with "interconnects"
+				each with a unique name used to lookup the respective path.
+				The following paths are currently supported: qcom,sde-reg-bus,
+				qcom,sde-data-bus0, qcom,sde-data-bus1, qcom,sde-llcc-bus,
+				qcom,sde-ebi-bus
+- qcom,sde-reg-bus,vectors-KBps:A series of 2 cell properties with a format of
+				(ab, ib) specified in kilobytes-per-second.
+				Used when applying reg-bus votes and must be
+				given whenever "qcom,sde-reg-bus" is used.
 - qcom,sde-inline-rotator:	A 2 cell property, with format of (rotator phandle,
 				instance id), of inline rotator device.
-
-Bus Scaling Data:
-- qcom,msm-bus,name:		String property describing client name.
-- qcom,msm-bus,num-cases:	This is the number of Bus Scaling use cases
-				defined in the vectors property.
-- qcom,msm-bus,num-paths:	This represents the number of paths in each
-				Bus Scaling Usecase.
-- qcom,msm-bus,vectors-KBps:	* A series of 4 cell properties, with a format
-				of (src, dst, ab, ib) which is defined at
-				Documentation/devicetree/bindings/arm/msm/msm_bus.txt
-				* Current values of src & dst are defined at
-				include/linux/msm-bus-board.h
 
 SMMU Subnodes:
 - smmu_sde_****:		Child nodes representing sde smmu virtual
@@ -605,6 +603,9 @@ Example:
     qcom,sde-dspp-spr-off = <0x15400 0x14400>;
     qcom,sde-dspp-spr-size = <0x200>;
     qcom,sde-dspp-spr-version = <0x00010000>:
+    qcom,sde-dspp-demura-off = <0x15600 0x14800>;
+    qcom,sde-dspp-demura-size = <0x200>;
+    qcom,sde-dspp-demura-version = <0x00010000>:
     qcom,sde-dspp-rc-mem-size = <2720>;
     qcom,sde-dest-scaler-top-off = <0x00061000>;
     qcom,sde-dest-scaler-off = <0x800 0x1000>;
@@ -891,48 +892,17 @@ Example:
         };
     };
 
-    qcom,sde-data-bus {
-        qcom,msm-bus,name = "mdss_sde";
-        qcom,msm-bus,num-cases = <3>;
-        qcom,msm-bus,num-paths = <3>;
-        qcom,msm-bus,vectors-KBps =
-            <22 512 0 0>, <23 512 0 0>, <25 512 0 0>,
-            <22 512 0 6400000>, <23 512 0 6400000>,
-                <25 512 0 6400000>,
-            <22 512 0 6400000>, <23 512 0 6400000>,
-                <25 512 0 6400000>;
-    };
-    qcom,sde-llcc-bus {
-        qcom,msm-bus,name = "mdss_sde_llcc";
-        qcom,msm-bus,num-cases = <3>;
-        qcom,msm-bus,num-paths = <1>;
-        qcom,msm-bus,vectors-KBps =
-            <132 770 0 0>,
-            <132 770 0 6400000>,
-            <132 770 0 6400000>;
-    };
-    qcom,sde-ebi-bus {
-        qcom,msm-bus,name = "mdss_sde_ebi";
-        qcom,msm-bus,num-cases = <3>;
-        qcom,msm-bus,num-paths = <1>;
-        qcom,msm-bus,vectors-KBps =
-            <129 512 0 0>,
-            <129 512 0 6400000>,
-            <129 512 0 6400000>;
-    };
-
-    qcom,sde-reg-bus {
-        /* Reg Bus Scale Settings */
-        qcom,msm-bus,name = "mdss_reg";
-        qcom,msm-bus,num-cases = <4>;
-        qcom,msm-bus,num-paths = <1>;
-        qcom,msm-bus,active-only;
-        qcom,msm-bus,vectors-KBps =
-              <1 590 0 0>,
-              <1 590 0 76800>,
-              <1 590 0 160000>,
-              <1 590 0 320000>;
-        };
+    interconnects = <&mmss_noc MASTER_MDP0 &mmss_noc SLAVE_MNOC_HF_MEM_NOC>
+        <&mmss_noc MASTER_MDP1 &mmss_noc SLAVE_MNOC_HF_MEM_NOC>,
+        <&gem_noc MASTER_MNOC_HF_MEM_NOC &gem_noc SLAVE_LLCC>,
+        <&mc_virt MASTER_LLCC &mc_virt SLAVE_EBI1>,
+        <&gem_noc MASTER_APPSS_PROC &config_noc SLAVE_DISPLAY_CFG>;
+    interconnect-names = "qcom,sde-data-bus0", "qcom,sde-data-bus1",
+        "qcom,sde-llcc-bus", "qcom,sde-ebi-bus", "qcom,sde-reg-bus";
+    qcom,sde-reg-bus,vectors-KBps = <0 0>,
+        <0 76800>,
+        <0 150000>,
+        <0 300000>;
 
     smmu_kms_unsec: qcom,smmu_kms_unsec_cb {
         compatible = "qcom,smmu_sde_unsec";

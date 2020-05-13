@@ -66,6 +66,25 @@
 			qcom,supply-disable-load = <0>;
 			qcom,supply-post-on-sleep = <0>;
 		};
+
+		qcom,panel-supply-entry@2 {
+			reg = <2>;
+			qcom,supply-name = "lab";
+			qcom,supply-min-voltage = <4600000>;
+			qcom,supply-max-voltage = <6000000>;
+			qcom,supply-enable-load = <363000>;
+			qcom,supply-disable-load = <100>;
+		};
+
+		qcom,panel-supply-entry@3 {
+			reg = <3>;
+			qcom,supply-name = "ibb";
+			qcom,supply-min-voltage = <4600000>;
+			qcom,supply-max-voltage = <6000000>;
+			qcom,supply-enable-load = <363000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <20>;
+		};
 	};
 
 	dsi_panel_pwr_supply_avdd: dsi_panel_pwr_supply_avdd {
@@ -128,9 +147,39 @@
 		vddio-supply = <&L12C>;
 		vdd-supply = <&L13C>;
 		avdd-supply = <&display_panel_avdd>;
+		lab-supply = <&ab_vreg>;
+		ibb-supply = <&ibb_vreg>;
 
 		qcom,mdp = <&mdss_mdp>;
 		qcom,dsi-default-panel = <&dsi_sw43404_amoled_cmd>;
+	};
+
+	sde_dsi1: qcom,dsi-display-secondary {
+		compatible = "qcom,dsi-display";
+		label = "secondary";
+
+		qcom,dsi-ctrl = <&mdss_dsi0 &mdss_dsi1>;
+		qcom,dsi-phy = <&mdss_dsi_phy0 &mdss_dsi_phy1>;
+
+		clocks = <&mdss_dsi_phy0 BYTECLK_MUX_0_CLK>,
+			 <&mdss_dsi_phy0 PCLK_MUX_0_CLK>,
+			 <&mdss_dsi_phy1 BYTECLK_MUX_1_CLK>,
+			 <&mdss_dsi_phy1 PCLK_MUX_1_CLK>;
+		clock-names = "mux_byte_clk0", "mux_pixel_clk0",
+			      "mux_byte_clk1", "mux_pixel_clk1";
+
+		pinctrl-names = "panel_active", "panel_suspend";
+		pinctrl-0 = <&sde_dsi1_active &sde_te1_active>;
+		pinctrl-1 = <&sde_dsi1_suspend &sde_te1_suspend>;
+
+		qcom,platform-te-gpio = <&tlmm 83 0>;
+		qcom,panel-te-source = <1>;
+
+		vddio-supply = <&L12C>;
+		vdd-supply = <&L13C>;
+		avdd-supply = <&display_panel_avdd>;
+
+		qcom,mdp = <&mdss_mdp>;
 	};
 
 	sde_wb: qcom,wb-display@0 {
@@ -141,7 +190,7 @@
 };
 
 &mdss_mdp {
-	connectors = <&sde_dp &sde_wb &sde_dsi>;
+	connectors = <&sde_dp &sde_wb &sde_dsi &sde_dsi1 &sde_rscc>;
 };
 
 /* PHY TIMINGS REVISION YB */
@@ -161,6 +210,8 @@
 				05 03 02 04 00 0f 0a];
 			qcom,display-topology = <2 2 1>;
 			qcom,default-topology-index = <0>;
+			qcom,partial-update-enabled = "single_roi";
+			qcom,panel-roi-alignment = <720 180 180 180 1440 180>;
 		};
 	};
 };
@@ -188,16 +239,9 @@
 &dsi_r66451_amoled_video {
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 	qcom,mdss-dsi-display-timings {
-		/*
-		 * CDP could not display using the old HFP(96) and HSYNC(32).
-		 * Modified HFP to 95 and HSYNC to 1, but using the new porch
-		 * to caculator the PHY timing based on version YB, 90hz could
-		 * not display, need to keep the PHY timing(which based on
-		 * HFP=96, HSYNC=32).
-		 */
 		timing@0 {
-			qcom,mdss-dsi-panel-phy-timings = [00 15 06 06 0a 09 06
-				06 04 02 04 00 12 0b];
+			qcom,mdss-dsi-panel-phy-timings = [00 16 06 05 14 1f 06
+				06 06 02 04 00 14 0a];
 			qcom,display-topology = <2 2 1>;
 			qcom,default-topology-index = <0>;
 		};
@@ -206,28 +250,32 @@
 
 &dsi_r66451_amoled_cmd {
 	qcom,ulps-enabled;
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+	qcom,mdss-dsi-panel-status-value = <0x1c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,dsi-select-sec-clocks = "mux_byte_clk1", "mux_pixel_clk1";
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
-			qcom,mdss-dsi-panel-phy-timings = [00 19 08 07 0c 0b 07
-				07 05 02 04 00 16 0c];
+			qcom,mdss-dsi-panel-phy-timings = [00 10 04 04 12 1e 04
+				04 03 02 04 00 0e 09];
 			qcom,display-topology = <2 2 1>;
 			qcom,default-topology-index = <0>;
 		};
 
 		timing@1 {
-			qcom,mdss-dsi-panel-phy-timings = [00 13 06 05 09 1f 06
-				06 03 02 04 00 11 0a];
+			qcom,mdss-dsi-panel-phy-timings = [00 16 06 05 14 1f 06
+				06 06 02 04 00 14 0a];
 			qcom,display-topology = <2 2 1>;
 			qcom,default-topology-index = <0>;
 		};
-		/*
-		 * Using PHY Timings version YB 60hz could not display,
-		 * refer to version W, changed T_HS_ZERO from 0x06 to 0x1e.
-		 */
+
 		timing@2 {
-			qcom,mdss-dsi-panel-phy-timings = [00 0d 04 04 07 1e 04
-				04 02 02 04 00 0c 09];
+			qcom,mdss-dsi-panel-phy-timings = [00 1c 08 07 17 16 07
+				07 08 02 04 00 19 0c];
 			qcom,display-topology = <2 2 1>;
 			qcom,default-topology-index = <0>;
 		};
@@ -306,8 +354,8 @@
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 	qcom,mdss-dsi-display-timings {
 		timing@0 { /* WQHD 60FPS CMD */
-			qcom,mdss-dsi-panel-phy-timings = [00 13 06 05 09 08 06
-				06 03 02 04 00 11 0a];
+			qcom,mdss-dsi-panel-phy-timings = [00 0b 03 02 10 1c 03
+				03 02 02 04 00 0b 07];
 			qcom,display-topology = <2 2 2>;
 			qcom,default-topology-index = <0>;
 			qcom,partial-update-enabled = "single_roi";
@@ -315,15 +363,15 @@
 		};
 
 		timing@1 { /* WQHD 60FPS VID */
-			qcom,mdss-dsi-panel-phy-timings = [00 13 06 05 09 08 06
-				06 03 02 04 00 11 0a];
+			qcom,mdss-dsi-panel-phy-timings = [00 13 05 04 13 1e 05
+				05 06 02 04 00 12 09];
 			qcom,display-topology = <2 2 2>;
 			qcom,default-topology-index = <0>;
 		};
 
 		timing@2 { /* FHD 60FPS CMD */
-			qcom,mdss-dsi-panel-phy-timings = [00 0a 01 02 1b 1c 02
-				02 00 02 04 00 0a 12];
+			qcom,mdss-dsi-panel-phy-timings = [00 0a 01 02 0e 1b 02
+				02 01 02 04 00 09 07];
 			qcom,display-topology = <2 2 2>;
 			qcom,default-topology-index = <0>;
 			qcom,partial-update-enabled = "single_roi";
@@ -331,8 +379,8 @@
 		};
 
 		timing@3 { /* WQHD 90FPS CMD */
-			qcom,mdss-dsi-panel-phy-timings = [00 0f 04 04 07 07 04
-				05 02 02 04 00 0d 09];
+			qcom,mdss-dsi-panel-phy-timings = [00 10 03 03 11 1e 04
+				04 03 02 04 00 0e 08];
 			qcom,display-topology = <2 2 2>;
 			qcom,default-topology-index = <0>;
 			qcom,partial-update-enabled = "single_roi";
@@ -340,8 +388,8 @@
 		};
 
 		timing@4 { /* WQHD 120FPS CMD */
-			qcom,mdss-dsi-panel-phy-timings = [00 26 0b 0a 11 0f 0b
-				 0b 07 02 04 00 1f 0f];
+			qcom,mdss-dsi-panel-phy-timings = [00 13 05 04 13 12 05
+				 05 06 02 04 00 12 09];
 			qcom,display-topology = <2 2 2>;
 			qcom,default-topology-index = <0>;
 			qcom,partial-update-enabled = "single_roi";
@@ -349,15 +397,15 @@
 		};
 
 		timing@5 { /* WQHD 120FPS VID */
-			qcom,mdss-dsi-panel-phy-timings = [00 13 06 05 09 08 06
-				06 03 02 04 00 11 0a];
+			qcom,mdss-dsi-panel-phy-timings = [00 13 05 04 13 12 05
+				 05 06 02 04 00 12 09];
 			qcom,display-topology = <2 2 2>;
 			qcom,default-topology-index = <0>;
 		};
 
 		timing@6 { /* FHD 120FPS CMD */
-			qcom,mdss-dsi-panel-phy-timings = [00 0e 03 03 1e 1d 04
-				04 02 02 04 00 0e 13];
+			qcom,mdss-dsi-panel-phy-timings = [00 0d 03 03 10 10 03
+				03 02 02 04 00 0c 08];
 			qcom,display-topology = <2 2 2>;
 			qcom,default-topology-index = <0>;
 			qcom,partial-update-enabled = "single_roi";
@@ -365,8 +413,8 @@
 		};
 
 		timing@7 { /* FHD 90FPS CMD */
-			qcom,mdss-dsi-panel-phy-timings = [00 0b 02 02 1c 1c 03
-				02 01 02 04 00 0c 12];
+			qcom,mdss-dsi-panel-phy-timings = [00 0b 02 02 0f 1c 03
+				02 02 02 04 00 0a 07];
 			qcom,display-topology = <2 2 2>;
 			qcom,default-topology-index = <0>;
 			qcom,partial-update-enabled = "single_roi";
@@ -385,8 +433,8 @@
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
-			qcom,mdss-dsi-panel-phy-timings = [00 13 06 05 09 08 06
-				06 03 02 04 00 11 0a];
+			qcom,mdss-dsi-panel-phy-timings = [00 13 05 04 13 1e 05
+				05 06 02 04 00 12 09];
 			qcom,display-topology = <2 2 2>;
 			qcom,default-topology-index = <0>;
 		};
@@ -466,6 +514,7 @@
 	qcom,mdss-dsi-panel-on-check-value = <0x9c>;
 	qcom,mdss-dsi-panel-status-read-length = <1>;
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,dsi-select-sec-clocks = "mux_byte_clk1", "mux_pixel_clk1";
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
 			qcom,mdss-dsi-panel-phy-timings = [00 1b 08 07 0d 0b 08
@@ -487,6 +536,8 @@
 			qcom,display-topology = <1 1 1>,
 						<2 2 1>;
 			qcom,default-topology-index = <1>;
+			qcom,panel-roi-alignment = <720 40 720 40 720 40>;
+			qcom,partial-update-enabled = "single_roi";
 		};
 
 		timing@1 { /* WQHD 60FPS vid mode*/
@@ -503,6 +554,8 @@
 			qcom,display-topology = <1 1 1>,
 						<2 2 1>;
 			qcom,default-topology-index = <1>;
+			qcom,panel-roi-alignment = <720 40 720 40 720 40>;
+			qcom,partial-update-enabled = "single_roi";
 		};
 
 		timing@3 { /* FHD 60FPS cmd mode*/
@@ -511,6 +564,8 @@
 			qcom,display-topology = <1 1 1>,
 						<2 2 1>;
 			qcom,default-topology-index = <1>;
+			qcom,panel-roi-alignment = <540 40 540 40 540 40>;
+			qcom,partial-update-enabled = "single_roi";
 		};
 
 		timing@4 { /* HD 60FPS cmd mode*/
@@ -519,6 +574,8 @@
 			qcom,display-topology = <1 1 1>,
 						<2 2 1>;
 			qcom,default-topology-index = <1>;
+			qcom,panel-roi-alignment = <360 40 360 40 360 40>;
+			qcom,partial-update-enabled = "single_roi";
 		};
 	};
 };
@@ -531,6 +588,30 @@
 				01 01 02 04 00 06 06];
 			qcom,display-topology = <1 0 1>,
 						<2 0 1>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+&dsi_sim_vdc_cmd {
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [01 05 01 01 03 03 01
+				01 01 02 04 00 06 06];
+			qcom,display-topology = <2 1 1>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+&dsi_sim_vdc_vid {
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [01 05 01 01 03 03 01
+				01 01 02 04 00 06 06];
+			qcom,display-topology = <2 1 1>;
 			qcom,default-topology-index = <0>;
 		};
 	};
@@ -757,6 +838,21 @@
 				03 01 02 04 00 08 07];
 			qcom,display-topology = <2 2 2>;
 			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+&dsi_sim_sec_hd_cmd {
+	qcom,ulps-enabled;
+	qcom,dsi-select-sec-clocks = "mux_byte_clk1", "mux_pixel_clk1";
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 1e 08 07 24 22
+				08 08 05 02 04 00 19 17];
+			qcom,display-topology = <1 0 1>;
+			qcom,default-topology-index = <0>;
+			qcom,panel-roi-alignment = <720 40 720 40 720 40>;
+			qcom,partial-update-enabled = "single_roi";
 		};
 	};
 };

@@ -34,7 +34,6 @@
 					460000000>;
 
 		mmcx-supply = <&VDD_MMCX_LEVEL>;
-		vdd-supply = <&disp_cc_mdss_core_gdsc>;
 
 		/* interrupt config */
 		interrupts = <GIC_SPI 83 IRQ_TYPE_LEVEL_HIGH>;
@@ -194,6 +193,10 @@
 		qcom,sde-dspp-spr-size = <0x200>;
 		qcom,sde-dspp-spr-version = <0x00010000>;
 
+		qcom,sde-dspp-demura-off = <0x15600 0x14800>;
+		qcom,sde-dspp-demura-size = <0x200>;
+		qcom,sde-dspp-demura-version = <0x00010000>;
+
 		qcom,sde-uidle-off = <0x80000>;
 		qcom,sde-uidle-size = <0x70>;
 
@@ -240,19 +243,22 @@
 		qcom,sde-secure-sid-mask = <0x4000821>;
 
 		/* data and reg bus scale settings */
-		interconnects =
-			<&mmss_noc MASTER_MDP0 &mc_virt SLAVE_EBI1>,
-			<&mmss_noc MASTER_MDP1 &mc_virt SLAVE_EBI1>,
-			<&gem_noc MASTER_APPSS_PROC
-				&config_noc SLAVE_DISPLAY_CFG>;
+		interconnects = <&mmss_noc MASTER_MDP0 &mc_virt SLAVE_EBI1>,
+				<&mmss_noc MASTER_MDP1 &mc_virt SLAVE_EBI1>,
+				<&gem_noc MASTER_APPSS_PROC
+					&config_noc SLAVE_DISPLAY_CFG>;
 		interconnect-names = "qcom,sde-data-bus0", "qcom,sde-data-bus1",
-			"qcom,sde-reg-bus";
+				"qcom,sde-reg-bus";
+		qcom,sde-reg-bus,vectors-KBps = <0 0>,
+				<0 76800>,
+				<0 150000>,
+				<0 300000>;
 
 		qcom,sde-sspp-vig-blocks {
 			qcom,sde-vig-csc-off = <0x1a00>;
 			qcom,sde-vig-qseed-off = <0xa00>;
 			qcom,sde-vig-qseed-size = <0xa0>;
-			qcom,sde-vig-gamut = <0x1d00 0x00060000>;
+			qcom,sde-vig-gamut = <0x1d00 0x00060001>;
 			qcom,sde-vig-igc = <0x1d00 0x00060000>;
 			qcom,sde-vig-inverse-pma;
 		};
@@ -293,15 +299,6 @@
 			qcom,platform-supply-entry@0 {
 				reg = <0>;
 				qcom,supply-name = "mmcx";
-				qcom,supply-min-voltage = <0>;
-				qcom,supply-max-voltage = <0>;
-				qcom,supply-enable-load = <0>;
-				qcom,supply-disable-load = <0>;
-			};
-
-			qcom,platform-supply-entry@1 {
-				reg = <0>;
-				qcom,supply-name = "vdd";
 				qcom,supply-min-voltage = <0>;
 				qcom,supply-max-voltage = <0>;
 				qcom,supply-enable-load = <0>;
@@ -396,6 +393,9 @@
 
 		qcom,max-pclk-frequency-khz = <675000>;
 
+		qcom,widebus-enable;
+		qcom,dsc-feature-enable;
+		qcom,fec-feature-enable;
 		qcom,max-dp-dsc-blks = <2>;
 		qcom,max-dp-dsc-input-width-pixs = <2048>;
 
@@ -465,11 +465,10 @@
 	sde_rscc: qcom,sde_rscc@af20000 {
 		cell-index = <0>;
 		compatible = "qcom,sde-rsc";
-		status = "disabled";
-		reg = <0xaf20000 0x3c50>,
+		reg = <0xaf20000 0x4d68>,
 			<0xaf30000 0x3fd4>;
 		reg-names = "drv", "wrapper";
-		qcom,sde-rsc-version = <3>;
+		qcom,sde-rsc-version = <4>;
 
 		qcom,sde-dram-channels = <2>;
 
@@ -478,10 +477,14 @@
 			<&clock_dispcc DISP_CC_MDSS_NON_GDSC_AHB_CLK>,
 			<&clock_dispcc DISP_CC_MDSS_RSCC_AHB_CLK>;
 		clock-names = "vsync_clk", "gdsc_clk", "iface_clk";
+
+		qcom,msm-bus,active-only;
 		interconnects =
-			<&gem_noc MASTER_APPSS_PROC
-				&config_noc SLAVE_DISPLAY_CFG>;
-		interconnect-names = "qcom,sde-reg-bus";
+			<&mmss_noc MASTER_MDP0_DISP &gem_noc SLAVE_LLCC_DISP>,
+			<&mmss_noc MASTER_MDP1_DISP &gem_noc SLAVE_LLCC_DISP>,
+			<&mc_virt MASTER_LLCC_DISP &mc_virt SLAVE_EBI1_DISP>;
+		interconnect-names = "qcom,sde-data-bus0", "qcom,sde-data-bus1",
+				"qcom,sde-ebi-bus";
 	};
 
 	mdss_dsi0: qcom,mdss_dsi_ctrl0@ae94000 {
