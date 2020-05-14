@@ -12932,6 +12932,76 @@ mac80211_he_tx_bandwidth(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int mac80211_he_ltf_mapping(struct sigma_dut *dut,
+				   const char *val)
+{
+	if (strcmp(val, "3.2") == 0)
+		return 0x01;
+	if (strcmp(val, "6.4") == 0)
+		return 0x02;
+	if (strcmp(val, "12.8") == 0)
+		return 0x04;
+
+	sigma_dut_print(dut, DUT_MSG_ERROR, "Unsupported LTF value %s", val);
+	return -1;
+}
+
+
+static enum sigma_cmd_result mac80211_he_ltf(struct sigma_dut *dut,
+					     struct sigma_conn *conn,
+					     const char *ifname,
+					     const char *val)
+{
+	free(dut->ar_ltf);
+	dut->ar_ltf = strdup(val);
+	if (!dut->ar_ltf) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Failed to store new LTF");
+		return STATUS_SENT_ERROR;
+	}
+	return SUCCESS_SEND_STATUS;
+}
+
+
+static enum sigma_cmd_result mac80211_he_gi(struct sigma_dut *dut,
+					    const char *ifname,
+					    const char *val)
+{
+	int16_t he_ltf = 0xFF;
+	char *mode = dut->use_5g ? "5" : "2.4";
+	int ret = -1;
+
+	if (dut->ar_ltf) {
+		he_ltf = mac80211_he_ltf_mapping(dut, dut->ar_ltf);
+		free(dut->ar_ltf);
+		dut->ar_ltf = NULL;
+
+		if (he_ltf < 0)
+			return ERROR_SEND_STATUS;
+
+		if (val) {
+			ret = run_system_wrapper(
+				dut,
+				"iw %s set bitrates he-gi-%s %s he-ltf-%s %u",
+				ifname, mode, val, mode,
+				he_ltf);
+		} else {
+			ret = run_system_wrapper(
+				dut,
+				"iw %s set bitrates he-ltf-%s %u",
+				ifname, mode, he_ltf);
+		}
+	} else if (val) {
+		ret = run_system_wrapper(dut,
+					 "iw %s set bitrates he-gi-%s %s",
+					 ifname, mode, val);
+	}
+	if (ret < 0)
+		return ERROR_SEND_STATUS;
+	return SUCCESS_SEND_STATUS;
+}
+
+
 static enum sigma_cmd_result mac80211_ap_set_rfeature(struct sigma_dut *dut,
 						      struct sigma_conn *conn,
 						      struct sigma_cmd *cmd)
@@ -12954,6 +13024,20 @@ static enum sigma_cmd_result mac80211_ap_set_rfeature(struct sigma_dut *dut,
 	if (val) {
 		res = mac80211_he_tx_bandwidth(dut, conn, ifname, val,
 					       get_param(cmd, "type"));
+		if (res != SUCCESS_SEND_STATUS)
+			return res;
+	}
+
+	val = get_param(cmd, "LTF");
+	if (val) {
+		res = mac80211_he_ltf(dut, conn, ifname, val);
+		if (res != SUCCESS_SEND_STATUS)
+			return res;
+	}
+
+	val = get_param(cmd, "GI");
+	if (val || dut->ar_ltf) {
+		res = mac80211_he_gi(dut, ifname, val);
 		if (res != SUCCESS_SEND_STATUS)
 			return res;
 	}
