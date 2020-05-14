@@ -1207,7 +1207,7 @@ struct dbglog_params {
 	uint32_t val;
 	uint32_t *module_id_bitmap;
 	uint32_t bitmap_len;
-	uint32_t cfgvalid[2];
+	uint32_t cfgvalid[3];
 };
 
 /**
@@ -1650,6 +1650,7 @@ struct roam_fils_params {
  * @mode: stores flags for scan
  * @vdev_id: vdev id
  * @roam_offload_enabled: flag for offload enable
+ * @disable_self_roam: disable roaming to self BSSID
  * @psk_pmk: pre shared key/pairwise master key
  * @pmk_len: length of PMK
  * @prefer_5ghz: prefer select 5G candidate
@@ -1692,6 +1693,7 @@ struct roam_offload_scan_params {
 	uint32_t vdev_id;
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 	uint8_t roam_offload_enabled;
+	bool disable_self_roam;
 	uint8_t psk_pmk[WMI_ROAM_SCAN_PSK_SIZE];
 	uint32_t pmk_len;
 	uint8_t prefer_5ghz;
@@ -4774,6 +4776,8 @@ typedef enum {
 	wmi_pdev_param_set_cmd_obss_pd_per_ac,
 	wmi_pdev_param_set_cong_ctrl_max_msdus,
 	wmi_pdev_param_enable_fw_dynamic_he_edca,
+	wmi_pdev_param_enable_srp,
+	wmi_pdev_param_enable_sr_prohibit,
 	wmi_pdev_param_max,
 } wmi_conv_pdev_params_id;
 
@@ -4910,6 +4914,8 @@ typedef enum {
 	wmi_vdev_param_enable_mcast_rc,
 	wmi_vdev_param_6ghz_params,
 	wmi_vdev_param_enable_disable_roam_reason_vsie,
+	wmi_vdev_param_set_cmd_obss_pd_threshold,
+	wmi_vdev_param_set_cmd_obss_pd_per_ac,
 } wmi_conv_vdev_param_id;
 
 /**
@@ -5120,6 +5126,9 @@ typedef enum {
 	wmi_service_time_sync_ftm,
 	wmi_service_nss_ratio_to_host_support,
 	wmi_roam_scan_chan_list_to_host_support,
+	wmi_beacon_protection_support,
+	wmi_service_sta_nan_ndi_four_port,
+	wmi_service_host_scan_stop_vdev_all,
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF
@@ -5256,6 +5265,7 @@ struct wmi_host_fw_abi_ver {
  * @ast_tid_low_mask_enable: enable tid valid mask for low priority flow
  * @nan_separate_iface_support: Separate iface creation for NAN
  * @time_sync_ftm: enable ftm based time sync
+ * @max_rnr_neighbours: Max supported RNR neighbors in multisoc APs
  */
 typedef struct {
 	uint32_t num_vdevs;
@@ -5354,6 +5364,7 @@ typedef struct {
 		 ast_tid_low_mask_enable:8;
 	bool nan_separate_iface_support;
 	bool time_sync_ftm;
+	uint32_t max_rnr_neighbours;
 } target_resource_config;
 
 /**
@@ -5379,14 +5390,6 @@ typedef enum {
 	/* Event respose of RESTART CMD */
 	WMI_HOST_VDEV_RESTART_RESP_EVENT,
 } WMI_HOST_START_EVENT_PARAM;
-
-/**
- * struct wmi_host_vdev_delete_resp - VDEV delete response
- * @vdev_id: vdev id
- */
-struct wmi_host_vdev_delete_resp {
-	uint32_t vdev_id;
-};
 
 /**
  * struct wmi_host_roam_event - host roam event param
@@ -6262,21 +6265,48 @@ typedef struct _wmi_host_dcs_im_tgt_stats {
 	uint32_t                     reg_rxclr_ext80_cnt;
 } wmi_host_dcs_im_tgt_stats_t;
 
+#ifndef BIT
+#define BIT(n) (1 << (n))
+#endif
+
 /**
  * Enum for pktlog req
  */
+enum {
+	WMI_HOST_PKTLOG_EVENT_RX_BIT,
+	WMI_HOST_PKTLOG_EVENT_TX_BIT,
+	WMI_HOST_PKTLOG_EVENT_RCF_BIT,
+	WMI_HOST_PKTLOG_EVENT_RCU_BIT,
+	WMI_HOST_PKTLOG_EVENT_DBG_PRINT_BIT,
+	WMI_HOST_PKTLOG_EVENT_SMART_ANTENNA_BIT,
+	WMI_HOST_PKTLOG_EVENT_H_INFO_BIT,
+	WMI_HOST_PKTLOG_EVENT_STEERING_BIT,
+	WMI_HOST_PKTLOG_EVENT_TX_DATA_CAPTURE_BIT,
+	WMI_HOST_PKTLOG_EVENT_PHY_LOGGING_BIT,
+};
+
 typedef enum {
-	WMI_HOST_PKTLOG_EVENT_RX	= 0x1,
-	WMI_HOST_PKTLOG_EVENT_TX	= 0x2,
-	WMI_HOST_PKTLOG_EVENT_RCF	= 0x4, /* Rate Control Find */
-	WMI_HOST_PKTLOG_EVENT_RCU	= 0x8, /* Rate Control Update */
-	WMI_HOST_PKTLOG_EVENT_DBG_PRINT = 0x10, /* DEBUG prints */
+	WMI_HOST_PKTLOG_EVENT_RX	= BIT(WMI_HOST_PKTLOG_EVENT_RX_BIT),
+	WMI_HOST_PKTLOG_EVENT_TX	= BIT(WMI_HOST_PKTLOG_EVENT_TX_BIT),
+	WMI_HOST_PKTLOG_EVENT_RCF	=
+		BIT(WMI_HOST_PKTLOG_EVENT_RCF_BIT), /* Rate Control Find */
+	WMI_HOST_PKTLOG_EVENT_RCU	=
+		BIT(WMI_HOST_PKTLOG_EVENT_RCU_BIT), /* Rate Control Update */
+	WMI_HOST_PKTLOG_EVENT_DBG_PRINT =
+		BIT(WMI_HOST_PKTLOG_EVENT_DBG_PRINT_BIT), /* DEBUG prints */
 	/* To support Smart Antenna */
-	WMI_HOST_PKTLOG_EVENT_SMART_ANTENNA = 0x20,
-	WMI_HOST_PKTLOG_EVENT_H_INFO = 0x40,
-	WMI_HOST_PKTLOG_EVENT_STEERING = 0x80,
+	WMI_HOST_PKTLOG_EVENT_SMART_ANTENNA =
+		BIT(WMI_HOST_PKTLOG_EVENT_SMART_ANTENNA_BIT),
+	WMI_HOST_PKTLOG_EVENT_H_INFO =
+		BIT(WMI_HOST_PKTLOG_EVENT_H_INFO_BIT),
+	WMI_HOST_PKTLOG_EVENT_STEERING =
+		BIT(WMI_HOST_PKTLOG_EVENT_STEERING_BIT),
 	/* To support Tx data Capture */
-	WMI_HOST_PKTLOG_EVENT_TX_DATA_CAPTURE = 0x100,
+	WMI_HOST_PKTLOG_EVENT_TX_DATA_CAPTURE =
+		BIT(WMI_HOST_PKTLOG_EVENT_TX_DATA_CAPTURE_BIT),
+	/* To support PHY logging */
+	WMI_HOST_PKTLOG_EVENT_PHY_LOGGING =
+		BIT(WMI_HOST_PKTLOG_EVENT_PHY_LOGGING_BIT),
 } WMI_HOST_PKTLOG_EVENT;
 
 /**
@@ -6748,6 +6778,8 @@ enum wmi_userspace_log_level {
  *                           as in WMI_HW_MODE_SBS, and 3rd on the other band
  * @WMI_HOST_HW_MODE_DBS_OR_SBS: Two PHY with one PHY capabale of both 2G and
  *                        5G. It can support SBS (5G + 5G) OR DBS (5G + 2G).
+ * @WMI_HOST_HW_MODE_FW_INTERNAL: FW specific internal mode
+ * @WMI_HOST_HW_MODE_2G_PHYB: Only one phy is active. 2G mode on PhyB.
  * @WMI_HOST_HW_MODE_MAX: Max hw_mode_id. Used to indicate invalid mode.
  * @WMI_HOST_HW_MODE_DETECT: Mode id used by host to choose mode from target
  *                        supported modes.
@@ -6759,6 +6791,8 @@ enum wmi_host_hw_mode_config_type {
 	WMI_HOST_HW_MODE_SBS          = 3,
 	WMI_HOST_HW_MODE_DBS_SBS      = 4,
 	WMI_HOST_HW_MODE_DBS_OR_SBS   = 5,
+	WMI_HOST_HW_MODE_FW_INTERNAL  = 6,
+	WMI_HOST_HW_MODE_2G_PHYB      = 7,
 	WMI_HOST_HW_MODE_MAX,
 	WMI_HOST_HW_MODE_DETECT,
 };
@@ -8149,4 +8183,13 @@ struct wmi_host_ani_level_event {
 	uint32_t ani_level;
 };
 #endif /* FEATURE_ANI_LEVEL_REQUEST */
+
+#define WMI_HOST_TBTT_OFFSET_INVALID 0xffffffff
+#define MAX_SUPPORTED_NEIGHBORS 16
+
+/* command type for WMI_PDEV_TBTT_OFFSET_SYNC_CMDID */
+enum wmi_host_tbtt_offset_cmd_type {
+	WMI_HOST_PDEV_GET_TBTT_OFFSET,
+	WMI_HOST_PDEV_SET_TBTT_OFFSET,
+};
 #endif /* _WMI_UNIFIED_PARAM_H_ */

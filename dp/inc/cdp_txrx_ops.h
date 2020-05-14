@@ -767,40 +767,6 @@ struct cdp_mon_ops {
 		(*config_full_mon_mode)(struct cdp_soc_t *soc, uint8_t val);
 };
 
-#ifdef WLAN_FEATURE_PKT_CAPTURE
-struct cdp_pktcapture_ops {
-	void (*txrx_pktcapture_set_mode)
-		(struct cdp_soc_t *soc,
-		uint8_t pdev_id,
-		uint8_t mode);
-
-	uint8_t (*txrx_pktcapture_get_mode)
-		(struct cdp_soc_t *soc,
-		uint8_t pdev_id);
-
-	QDF_STATUS (*txrx_pktcapture_cb_register)
-		(struct cdp_soc_t *soc,
-		uint8_t pdev_id,
-		void *context,
-		QDF_STATUS(cb)(void *, qdf_nbuf_t));
-
-	QDF_STATUS (*txrx_pktcapture_cb_deregister)
-		(struct cdp_soc_t *soc,
-		uint8_t pdev_id);
-
-	QDF_STATUS (*txrx_pktcapture_mgmtpkt_process)
-		(struct cdp_soc_t *soc,
-		uint8_t pdev_id,
-		struct mon_rx_status *txrx_status,
-		qdf_nbuf_t nbuf, uint8_t status);
-
-	void (*txrx_pktcapture_record_channel)
-		(struct cdp_soc_t *soc,
-		uint8_t pdev_id,
-		int chan_no);
-};
-#endif /* #ifdef WLAN_FEATURE_PKT_CAPTURE */
-
 struct cdp_host_stats_ops {
 	int (*txrx_host_stats_get)(struct cdp_soc_t *soc, uint8_t vdev_id,
 				   struct ol_txrx_stats_req *req);
@@ -1021,7 +987,8 @@ struct ol_if_ops {
 	void (*peer_del_wds_entry)(struct cdp_ctrl_objmgr_psoc *soc,
 				   uint8_t vdev_id,
 				   uint8_t *wds_macaddr,
-				   uint8_t type);
+				   uint8_t type,
+				   uint8_t delete_in_fw);
 	QDF_STATUS
 	(*lro_hash_config)(struct cdp_ctrl_objmgr_psoc *psoc, uint8_t pdev_id,
 			   struct cdp_lro_hash_config *rx_offld_hash);
@@ -1660,9 +1627,6 @@ struct cdp_ops {
 #endif
 #ifdef RECEIVE_OFFLOAD
 	struct cdp_rx_offld_ops     *rx_offld_ops;
-#endif
-#ifdef WLAN_FEATURE_PKT_CAPTURE
-	struct cdp_pktcapture_ops   *pktcapture_ops;
 #endif
 #if defined(WLAN_CFR_ENABLE) && defined(WLAN_ENH_CFR_ENABLE)
 	struct cdp_cfr_ops          *cfr_ops;

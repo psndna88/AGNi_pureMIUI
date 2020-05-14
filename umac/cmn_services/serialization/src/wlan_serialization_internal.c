@@ -538,7 +538,7 @@ error:
 	return status;
 }
 
-void wlan_serialization_generic_timer_cb(void *arg)
+QDF_STATUS wlan_serialization_generic_timer_cb(void *arg)
 {
 	struct wlan_serialization_timer *timer = arg;
 	struct wlan_serialization_command *cmd = timer->cmd;
@@ -548,13 +548,13 @@ void wlan_serialization_generic_timer_cb(void *arg)
 
 	if (!cmd) {
 		ser_err("Command not found");
-		return;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	vdev = cmd->vdev;
 	if (!vdev) {
 		ser_err("Invalid vdev");
-		return;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	ser_err("Active cmd timeout for cmd_type[%d] vdev[%d]",
@@ -572,6 +572,8 @@ void wlan_serialization_generic_timer_cb(void *arg)
 	/* Release the ref taken before the timer was started */
 	if (status == WLAN_SER_CMD_IN_ACTIVE_LIST)
 		wlan_objmgr_vdev_release_ref(vdev, WLAN_SERIALIZATION_ID);
+
+	return QDF_STATUS_SUCCESS;
 }
 
 static QDF_STATUS wlan_serialization_mc_flush_noop(struct scheduler_msg *msg)
@@ -906,6 +908,7 @@ wlan_serialization_find_and_cancel_cmd(
 				WLAN_SER_CMD_ATTR_NONE);
 		break;
 	case WLAN_SER_CANCEL_VDEV_SCANS:
+	case WLAN_SER_CANCEL_VDEV_HOST_SCANS:
 		/* remove all scan cmds which matches the vdev object */
 		status = wlan_serialization_cmd_cancel_handler(
 				ser_obj, NULL, NULL, cmd->vdev,

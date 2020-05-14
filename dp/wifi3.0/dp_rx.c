@@ -247,8 +247,9 @@ QDF_STATUS dp_rx_buffers_replenish(struct dp_soc *dp_soc, uint32_t mac_id,
 			break;
 		}
 
-		ret = qdf_nbuf_map_single(dp_soc->osdev, rx_netbuf,
-					  QDF_DMA_FROM_DEVICE);
+		ret = qdf_nbuf_map_nbytes_single(dp_soc->osdev, rx_netbuf,
+						 QDF_DMA_FROM_DEVICE, buf_size);
+
 		if (qdf_unlikely(QDF_IS_STATUS_ERROR(ret))) {
 			qdf_nbuf_free(rx_netbuf);
 			DP_STATS_INC(dp_pdev, replenish.map_err, 1);
@@ -1791,10 +1792,28 @@ void dp_rx_skip_tlvs(qdf_nbuf_t nbuf, uint32_t l3_padding)
 	QDF_NBUF_CB_RX_PACKET_L3_HDR_PAD(nbuf) = l3_padding;
 	qdf_nbuf_pull_head(nbuf, l3_padding + RX_PKT_TLVS_LEN);
 }
+
+/**
+ * dp_rx_set_hdr_pad() - set l3 padding in nbuf cb
+ * @nbuf: pkt skb pointer
+ * @l3_padding: l3 padding
+ *
+ * Return: None
+ */
+static inline
+void dp_rx_set_hdr_pad(qdf_nbuf_t nbuf, uint32_t l3_padding)
+{
+	QDF_NBUF_CB_RX_PACKET_L3_HDR_PAD(nbuf) = l3_padding;
+}
 #else
 void dp_rx_skip_tlvs(qdf_nbuf_t nbuf, uint32_t l3_padding)
 {
 	qdf_nbuf_pull_head(nbuf, l3_padding + RX_PKT_TLVS_LEN);
+}
+
+static inline
+void dp_rx_set_hdr_pad(qdf_nbuf_t nbuf, uint32_t l3_padding)
+{
 }
 #endif
 
@@ -1886,7 +1905,7 @@ more_data:
 	qdf_mem_zero(head, sizeof(head));
 	qdf_mem_zero(tail, sizeof(tail));
 
-	if (qdf_unlikely(dp_srng_access_start(int_ctx, soc, hal_ring_hdl))) {
+	if (qdf_unlikely(dp_rx_srng_access_start(int_ctx, soc, hal_ring_hdl))) {
 
 		/*
 		 * Need API to convert from hal_ring pointer to
@@ -1924,6 +1943,20 @@ more_data:
 		status = dp_rx_desc_sanity(soc, hal_soc, hal_ring_hdl,
 					   ring_desc, rx_desc);
 		if (QDF_IS_STATUS_ERROR(status)) {
+			if (qdf_unlikely(rx_desc && rx_desc->nbuf)) {
+				qdf_assert_always(rx_desc->unmapped);
+				qdf_nbuf_unmap_nbytes_single(
+							soc->osdev,
+							rx_desc->nbuf,
+							QDF_DMA_FROM_DEVICE,
+							RX_DATA_BUFFER_SIZE);
+				rx_desc->unmapped = 1;
+				qdf_nbuf_free(rx_desc->nbuf);
+				dp_rx_add_to_free_desc_list(
+							&head[rx_desc->pool_id],
+							&tail[rx_desc->pool_id],
+							rx_desc);
+			}
 			hal_srng_dst_get_next(hal_soc, hal_ring_hdl);
 			continue;
 		}
@@ -1992,14 +2025,6 @@ more_data:
 
 		}
 
-		/*
-		 * move unmap after scattered msdu waiting break logic
-		 * in case double skb unmap happened.
-		 */
-		qdf_nbuf_unmap_single(soc->osdev, rx_desc->nbuf,
-				      QDF_DMA_FROM_DEVICE);
-		rx_desc->unmapped = 1;
-
 		core_id = smp_processor_id();
 		DP_STATS_INC(soc, rx.ring_packets[core_id][ring_id], 1);
 
@@ -2057,6 +2082,15 @@ more_data:
 
 		QDF_NBUF_CB_RX_CTX_ID(rx_desc->nbuf) = reo_ring_num;
 
+		/*
+		 * move unmap after scattered msdu waiting break logic
+		 * in case double skb unmap happened.
+		 */
+		rx_desc_pool = &soc->rx_desc_buf[rx_desc->pool_id];
+		qdf_nbuf_unmap_nbytes_single(soc->osdev, rx_desc->nbuf,
+					     QDF_DMA_FROM_DEVICE,
+					     rx_desc_pool->buf_size);
+		rx_desc->unmapped = 1;
 		DP_RX_LIST_APPEND(nbuf_head, nbuf_tail, rx_desc->nbuf);
 
 		/*
@@ -2081,7 +2115,7 @@ more_data:
 			break;
 	}
 done:
-	dp_srng_access_end(int_ctx, soc, hal_ring_hdl);
+	dp_rx_srng_access_end(int_ctx, soc, hal_ring_hdl);
 
 	for (mac_id = 0; mac_id < MAX_PDEV_CNT; mac_id++) {
 		/*
@@ -2444,7 +2478,7 @@ QDF_STATUS dp_rx_vdev_detach(struct dp_vdev *vdev)
 
 	if (vdev->osif_rx_flush) {
 		ret = vdev->osif_rx_flush(vdev->osif_vdev, vdev->vdev_id);
-		if (!ret) {
+		if (!QDF_IS_STATUS_SUCCESS(ret)) {
 			dp_err("Failed to flush rx pkts for vdev %d\n",
 			       vdev->vdev_id);
 			return ret;
@@ -2466,21 +2500,7 @@ QDF_STATUS dp_rx_vdev_detach(struct dp_vdev *vdev)
 void
 dp_rx_pdev_detach(struct dp_pdev *pdev)
 {
-	uint8_t mac_for_pdev = pdev->lmac_id;
-	struct dp_soc *soc = pdev->soc;
-	struct rx_desc_pool *rx_desc_pool;
-
-	rx_desc_pool = &soc->rx_desc_buf[mac_for_pdev];
-
-	if (rx_desc_pool->pool_size != 0) {
-		if (!dp_is_soc_reinit(soc))
-			dp_rx_desc_nbuf_and_pool_free(soc, mac_for_pdev,
-						      rx_desc_pool);
-		else
-			dp_rx_desc_nbuf_free(soc, rx_desc_pool);
-	}
-
-	return;
+	dp_rx_pdev_desc_pool_free(pdev);
 }
 
 static QDF_STATUS
@@ -2500,8 +2520,10 @@ dp_pdev_nbuf_alloc_and_map(struct dp_soc *dp_soc, qdf_nbuf_t *nbuf,
 		return ret;
 	}
 
-	ret = qdf_nbuf_map_single(dp_soc->osdev, *nbuf,
-				  QDF_DMA_FROM_DEVICE);
+	ret = qdf_nbuf_map_nbytes_single(dp_soc->osdev, *nbuf,
+					 QDF_DMA_FROM_DEVICE,
+					 rx_desc_pool->buf_size);
+
 	if (qdf_unlikely(QDF_IS_STATUS_ERROR(ret))) {
 		qdf_nbuf_free(*nbuf);
 		dp_err("nbuf map failed");
@@ -2513,8 +2535,9 @@ dp_pdev_nbuf_alloc_and_map(struct dp_soc *dp_soc, qdf_nbuf_t *nbuf,
 
 	ret = check_x86_paddr(dp_soc, nbuf, &paddr, rx_desc_pool);
 	if (ret == QDF_STATUS_E_FAILURE) {
-		qdf_nbuf_unmap_single(dp_soc->osdev, *nbuf,
-				      QDF_DMA_FROM_DEVICE);
+		qdf_nbuf_unmap_nbytes_single(dp_soc->osdev, *nbuf,
+					     QDF_DMA_FROM_DEVICE,
+					     rx_desc_pool->buf_size);
 		qdf_nbuf_free(*nbuf);
 		dp_err("nbuf check x86 failed");
 		DP_STATS_INC(dp_pdev, replenish.x86_fail, 1);
@@ -2650,6 +2673,127 @@ dp_pdev_rx_buffers_attach(struct dp_soc *dp_soc, uint32_t mac_id,
 	return QDF_STATUS_SUCCESS;
 }
 
+/*
+ * dp_rx_pdev_desc_pool_alloc() -  allocate memory for software rx descriptor
+ *				   pool
+ *
+ * @pdev: core txrx pdev context
+ *
+ * Return: QDF_STATUS - QDF_STATUS_SUCCESS
+ *			QDF_STATUS_E_NOMEM
+ */
+QDF_STATUS
+dp_rx_pdev_desc_pool_alloc(struct dp_pdev *pdev)
+{
+	struct dp_soc *soc = pdev->soc;
+	uint32_t rxdma_entries;
+	uint32_t rx_sw_desc_weight;
+	struct dp_srng *dp_rxdma_srng;
+	struct rx_desc_pool *rx_desc_pool;
+	uint32_t status = QDF_STATUS_SUCCESS;
+	int mac_for_pdev;
+
+	mac_for_pdev = pdev->lmac_id;
+	if (wlan_cfg_get_dp_pdev_nss_enabled(pdev->wlan_cfg_ctx)) {
+		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_INFO,
+			  "nss-wifi<4> skip Rx refil %d", mac_for_pdev);
+		status = QDF_STATUS_SUCCESS;
+	}
+
+	dp_rxdma_srng = &soc->rx_refill_buf_ring[mac_for_pdev];
+	rxdma_entries = dp_rxdma_srng->num_entries;
+
+	rx_desc_pool = &soc->rx_desc_buf[mac_for_pdev];
+	rx_sw_desc_weight = wlan_cfg_get_dp_soc_rx_sw_desc_weight(soc->wlan_cfg_ctx);
+
+	status = dp_rx_desc_pool_alloc(soc,
+				       rx_sw_desc_weight * rxdma_entries,
+				       rx_desc_pool);
+	if (status != QDF_STATUS_SUCCESS)
+		return status;
+
+	rx_desc_pool->owner = DP_WBM2SW_RBM;
+	rx_desc_pool->buf_size = RX_DATA_BUFFER_SIZE;
+	rx_desc_pool->buf_alignment = RX_DATA_BUFFER_ALIGNMENT;
+
+	return status;
+}
+
+/*
+ * dp_rx_pdev_desc_pool_free() - free software rx descriptor pool
+ *
+ * @pdev: core txrx pdev context
+ */
+void dp_rx_pdev_desc_pool_free(struct dp_pdev *pdev)
+{
+	int mac_for_pdev = pdev->lmac_id;
+	struct dp_soc *soc = pdev->soc;
+	struct rx_desc_pool *rx_desc_pool;
+
+	rx_desc_pool = &soc->rx_desc_buf[mac_for_pdev];
+
+	dp_rx_desc_pool_free(soc, rx_desc_pool);
+}
+
+/*
+ * dp_rx_pdev_desc_pool_init() - initialize software rx descriptors
+ *
+ * @pdev: core txrx pdev context
+ *
+ * Return: QDF_STATUS - QDF_STATUS_SUCCESS
+ *			QDF_STATUS_E_NOMEM
+ */
+QDF_STATUS dp_rx_pdev_desc_pool_init(struct dp_pdev *pdev)
+{
+	int mac_for_pdev = pdev->lmac_id;
+	struct dp_soc *soc = pdev->soc;
+	uint32_t rxdma_entries;
+	uint32_t rx_sw_desc_weight;
+	struct dp_srng *dp_rxdma_srng;
+	struct rx_desc_pool *rx_desc_pool;
+
+	if (wlan_cfg_get_dp_pdev_nss_enabled(pdev->wlan_cfg_ctx)) {
+		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_INFO,
+			  "nss-wifi<4> skip Rx refil %d", mac_for_pdev);
+		return QDF_STATUS_SUCCESS;
+	}
+
+	rx_desc_pool = &soc->rx_desc_buf[mac_for_pdev];
+	if (dp_rx_desc_pool_is_allocated(rx_desc_pool) == QDF_STATUS_E_NOMEM)
+		return QDF_STATUS_E_NOMEM;
+
+	dp_rxdma_srng = &soc->rx_refill_buf_ring[mac_for_pdev];
+	rxdma_entries = dp_rxdma_srng->num_entries;
+
+	soc->process_rx_status = CONFIG_PROCESS_RX_STATUS;
+
+	rx_sw_desc_weight =
+	wlan_cfg_get_dp_soc_rx_sw_desc_weight(soc->wlan_cfg_ctx);
+
+	dp_rx_desc_pool_init(soc, mac_for_pdev,
+			     rx_sw_desc_weight * rxdma_entries,
+			     rx_desc_pool);
+	return QDF_STATUS_SUCCESS;
+}
+
+/*
+ * dp_rx_pdev_desc_pool_deinit() - de-initialize software rx descriptor pools
+ * @pdev: core txrx pdev context
+ *
+ * This function resets the freelist of rx descriptors and destroys locks
+ * associated with this list of descriptors.
+ */
+void dp_rx_pdev_desc_pool_deinit(struct dp_pdev *pdev)
+{
+	int mac_for_pdev = pdev->lmac_id;
+	struct dp_soc *soc = pdev->soc;
+	struct rx_desc_pool *rx_desc_pool;
+
+	rx_desc_pool = &soc->rx_desc_buf[mac_for_pdev];
+
+	dp_rx_desc_pool_deinit(soc, rx_desc_pool);
+}
+
 /**
  * dp_rx_attach() - attach DP RX
  * @pdev: core txrx pdev context
@@ -2664,53 +2808,77 @@ dp_pdev_rx_buffers_attach(struct dp_soc *dp_soc, uint32_t mac_id,
 QDF_STATUS
 dp_rx_pdev_attach(struct dp_pdev *pdev)
 {
-	uint8_t pdev_id = pdev->pdev_id;
 	struct dp_soc *soc = pdev->soc;
-	uint32_t rxdma_entries;
-	uint32_t rx_sw_desc_weight;
-	struct dp_srng *dp_rxdma_srng;
-	struct rx_desc_pool *rx_desc_pool;
 	QDF_STATUS ret_val;
-	int mac_for_pdev;
 
 	if (wlan_cfg_get_dp_pdev_nss_enabled(pdev->wlan_cfg_ctx)) {
 		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_INFO,
-			  "nss-wifi<4> skip Rx refil %d", pdev_id);
+			  "nss-wifi<4> skip Rx refil %d",
+			  pdev->pdev_id);
 		return QDF_STATUS_SUCCESS;
 	}
 
-	pdev = soc->pdev_list[pdev_id];
-	mac_for_pdev = pdev->lmac_id;
-	dp_rxdma_srng = &soc->rx_refill_buf_ring[mac_for_pdev];
+	if (!dp_is_soc_reinit(soc)) {
+		ret_val = dp_rx_pdev_desc_pool_alloc(pdev);
+		if (ret_val != QDF_STATUS_SUCCESS)
+			return ret_val;
+	}
 
-	rxdma_entries = dp_rxdma_srng->num_entries;
-
-	soc->process_rx_status = CONFIG_PROCESS_RX_STATUS;
-
-	rx_desc_pool = &soc->rx_desc_buf[mac_for_pdev];
-	rx_sw_desc_weight = wlan_cfg_get_dp_soc_rx_sw_desc_weight(soc->wlan_cfg_ctx);
-
-	dp_rx_desc_pool_alloc(soc, mac_for_pdev,
-			      rx_sw_desc_weight * rxdma_entries,
-			      rx_desc_pool);
-
-	rx_desc_pool->owner = DP_WBM2SW_RBM;
-	rx_desc_pool->buf_size = RX_DATA_BUFFER_SIZE;
-	rx_desc_pool->buf_alignment = RX_DATA_BUFFER_ALIGNMENT;
-
-	/* For Rx buffers, WBM release ring is SW RING 3,for all pdev's */
+	dp_rx_pdev_desc_pool_init(pdev);
 
 	ret_val = dp_rx_fst_attach(soc, pdev);
 	if ((ret_val != QDF_STATUS_SUCCESS) &&
 	    (ret_val != QDF_STATUS_E_NOSUPPORT)) {
 		QDF_TRACE(QDF_MODULE_ID_ANY, QDF_TRACE_LEVEL_ERROR,
 			  "RX Flow Search Table attach failed: pdev %d err %d",
-			  pdev_id, ret_val);
+			  pdev->pdev_id, ret_val);
 		return ret_val;
 	}
 
+	return dp_rx_pdev_buffers_alloc(pdev);
+}
+
+/*
+ * dp_rx_pdev_buffers_alloc() - Allocate nbufs (skbs) and replenish RxDMA ring
+ *
+ * @pdev: core txrx pdev context
+ *
+ * Return: QDF_STATUS - QDF_STATUS_SUCCESS
+ *			QDF_STATUS_E_NOMEM
+ */
+QDF_STATUS
+dp_rx_pdev_buffers_alloc(struct dp_pdev *pdev)
+{
+	int mac_for_pdev = pdev->lmac_id;
+	struct dp_soc *soc = pdev->soc;
+	struct dp_srng *dp_rxdma_srng;
+	struct rx_desc_pool *rx_desc_pool;
+	uint32_t rxdma_entries;
+
+	dp_rxdma_srng = &soc->rx_refill_buf_ring[mac_for_pdev];
+	rxdma_entries = dp_rxdma_srng->num_entries;
+
+	rx_desc_pool = &soc->rx_desc_buf[mac_for_pdev];
+
 	return dp_pdev_rx_buffers_attach(soc, mac_for_pdev, dp_rxdma_srng,
 					 rx_desc_pool, rxdma_entries - 1);
+}
+
+/*
+ * dp_rx_pdev_buffers_free - Free nbufs (skbs)
+ *
+ * @pdev: core txrx pdev context
+ */
+void
+dp_rx_pdev_buffers_free(struct dp_pdev *pdev)
+{
+	int mac_for_pdev = pdev->lmac_id;
+	struct dp_soc *soc = pdev->soc;
+	struct rx_desc_pool *rx_desc_pool;
+
+	rx_desc_pool = &soc->rx_desc_buf[mac_for_pdev];
+
+	dp_rx_desc_nbuf_free(soc, rx_desc_pool);
 }
 
 /*
@@ -2751,8 +2919,9 @@ dp_rx_nbuf_prepare(struct dp_soc *soc, struct dp_pdev *pdev)
 
 		memset(buf, 0, RX_DATA_BUFFER_SIZE);
 
-		ret = qdf_nbuf_map_single(soc->osdev, nbuf,
-				    QDF_DMA_FROM_DEVICE);
+		ret = qdf_nbuf_map_nbytes_single(soc->osdev, nbuf,
+						 QDF_DMA_FROM_DEVICE,
+						 RX_DATA_BUFFER_SIZE);
 
 		/* nbuf map failed */
 		if (qdf_unlikely(QDF_IS_STATUS_ERROR(ret))) {
@@ -2774,26 +2943,27 @@ dp_rx_nbuf_prepare(struct dp_soc *soc, struct dp_pdev *pdev)
 
 #ifdef DP_RX_SPECIAL_FRAME_NEED
 bool dp_rx_deliver_special_frame(struct dp_soc *soc, struct dp_peer *peer,
-				 qdf_nbuf_t nbuf, uint32_t frame_mask)
+				 qdf_nbuf_t nbuf, uint32_t frame_mask,
+				 uint8_t *rx_tlv_hdr)
 {
 	uint32_t l2_hdr_offset = 0;
 	uint16_t msdu_len = 0;
-	uint32_t pkt_len = 0;
-	uint8_t *rx_tlv_hdr;
+	uint32_t skip_len;
 
-	if (qdf_unlikely(qdf_nbuf_is_frag(nbuf)))
-		return false;
-
-	rx_tlv_hdr = qdf_nbuf_data(nbuf);
 	l2_hdr_offset =
 		hal_rx_msdu_end_l3_hdr_padding_get(soc->hal_soc, rx_tlv_hdr);
 
-	msdu_len = QDF_NBUF_CB_RX_PKT_LEN(nbuf);
-	pkt_len = msdu_len + l2_hdr_offset + RX_PKT_TLVS_LEN;
-	QDF_NBUF_CB_RX_NUM_ELEMENTS_IN_LIST(nbuf) = 1;
+	if (qdf_unlikely(qdf_nbuf_is_frag(nbuf))) {
+		skip_len = l2_hdr_offset;
+	} else {
+		msdu_len = QDF_NBUF_CB_RX_PKT_LEN(nbuf);
+		skip_len = l2_hdr_offset + RX_PKT_TLVS_LEN;
+		qdf_nbuf_set_pktlen(nbuf, msdu_len + skip_len);
+	}
 
-	qdf_nbuf_set_pktlen(nbuf, pkt_len);
-	dp_rx_skip_tlvs(nbuf, l2_hdr_offset);
+	QDF_NBUF_CB_RX_NUM_ELEMENTS_IN_LIST(nbuf) = 1;
+	dp_rx_set_hdr_pad(nbuf, l2_hdr_offset);
+	qdf_nbuf_pull_head(nbuf, skip_len);
 
 	if (dp_rx_is_special_frame(nbuf, frame_mask)) {
 		dp_rx_deliver_to_stack(soc, peer->vdev, peer,

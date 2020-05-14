@@ -1178,14 +1178,106 @@ void dp_peer_ast_send_wds_del(struct dp_soc *soc,
 		  peer->vdev->vdev_id, ast_entry->mac_addr.raw,
 		  ast_entry->next_hop, ast_entry->peer->mac_addr.raw);
 
+	/*
+	 * If peer delete_in_progress is set, the peer is about to get
+	 * teared down with a peer delete command to firmware,
+	 * which will cleanup all the wds ast entries.
+	 * So, no need to send explicit wds ast delete to firmware.
+	 */
 	if (ast_entry->next_hop) {
 		cdp_soc->ol_ops->peer_del_wds_entry(soc->ctrl_psoc,
 						    peer->vdev->vdev_id,
 						    ast_entry->mac_addr.raw,
-						    ast_entry->type);
+						    ast_entry->type,
+						    !peer->delete_in_progress);
 	}
 
 }
+
+#ifdef FEATURE_WDS
+/**
+ * dp_peer_ast_free_wds_entries() - Free wds ast entries associated with peer
+ * @soc: soc handle
+ * @peer: peer handle
+ *
+ * Free all the wds ast entries associated with peer
+ *
+ * Return: Number of wds ast entries freed
+ */
+static uint32_t dp_peer_ast_free_wds_entries(struct dp_soc *soc,
+					     struct dp_peer *peer)
+{
+	TAILQ_HEAD(, dp_ast_entry) ast_local_list = {0};
+	struct dp_ast_entry *ast_entry, *temp_ast_entry;
+	uint32_t num_ast = 0;
+
+	TAILQ_INIT(&ast_local_list);
+	qdf_spin_lock_bh(&soc->ast_lock);
+
+	DP_PEER_ITERATE_ASE_LIST(peer, ast_entry, temp_ast_entry) {
+		if (ast_entry->next_hop) {
+			if (ast_entry->is_mapped)
+				soc->ast_table[ast_entry->ast_idx] = NULL;
+
+			dp_peer_unlink_ast_entry(soc, ast_entry);
+			DP_STATS_INC(soc, ast.deleted, 1);
+			dp_peer_ast_hash_remove(soc, ast_entry);
+			TAILQ_INSERT_TAIL(&ast_local_list, ast_entry,
+					  ase_list_elem);
+			soc->num_ast_entries--;
+			num_ast++;
+		}
+	}
+
+	qdf_spin_unlock_bh(&soc->ast_lock);
+
+	TAILQ_FOREACH_SAFE(ast_entry, &ast_local_list, ase_list_elem,
+			   temp_ast_entry) {
+		if (ast_entry->callback)
+			ast_entry->callback(soc->ctrl_psoc,
+					    dp_soc_to_cdp_soc(soc),
+					    ast_entry->cookie,
+					    CDP_TXRX_AST_DELETED);
+
+		qdf_mem_free(ast_entry);
+	}
+
+	return num_ast;
+}
+/**
+ * dp_peer_clean_wds_entries() - Clean wds ast entries and compare
+ * @soc: soc handle
+ * @peer: peer handle
+ * @free_wds_count - number of wds entries freed by FW with peer delete
+ *
+ * Free all the wds ast entries associated with peer and compare with
+ * the value received from firmware
+ *
+ * Return: Number of wds ast entries freed
+ */
+static void
+dp_peer_clean_wds_entries(struct dp_soc *soc, struct dp_peer *peer,
+			  uint32_t free_wds_count)
+{
+	uint32_t wds_deleted = 0;
+
+	wds_deleted = dp_peer_ast_free_wds_entries(soc, peer);
+	if ((DP_PEER_WDS_COUNT_INVALID != free_wds_count) &&
+	    (free_wds_count != wds_deleted)) {
+		DP_STATS_INC(soc, ast.ast_mismatch, 1);
+		dp_alert("For peer %pK (mac: %pM)number of wds entries deleted by fw = %d during peer delete is not same as the numbers deleted by host = %d",
+			 peer, peer->mac_addr.raw, free_wds_count,
+			 wds_deleted);
+	}
+}
+
+#else
+static void
+dp_peer_clean_wds_entries(struct dp_soc *soc, struct dp_peer *peer,
+			  uint32_t free_wds_count)
+{
+}
+#endif
 
 /**
  * dp_peer_ast_free_entry_by_mac() - find ast entry by MAC address and delete
@@ -1514,6 +1606,8 @@ static inline struct dp_peer *dp_peer_find_add_id(struct dp_soc *soc,
 		if (dp_peer_find_add_id_to_obj(peer, peer_id)) {
 			/* TBDXXX: assert for now */
 			QDF_ASSERT(0);
+		} else {
+			dp_peer_tid_peer_id_update(peer, peer->peer_ids[0]);
 		}
 
 		return peer;
@@ -1646,13 +1740,14 @@ dp_rx_peer_map_handler(struct dp_soc *soc, uint16_t peer_id,
  * @vdev_id - vdev ID
  * @mac_addr - mac address of the peer or wds entry
  * @is_wds - flag to indicate peer map event for WDS ast entry
+ * @free_wds_count - number of wds entries freed by FW with peer delete
  *
  * Return: none
  */
 void
 dp_rx_peer_unmap_handler(struct dp_soc *soc, uint16_t peer_id,
 			 uint8_t vdev_id, uint8_t *mac_addr,
-			 uint8_t is_wds)
+			 uint8_t is_wds, uint32_t free_wds_count)
 {
 	struct dp_peer *peer;
 	uint8_t i;
@@ -1681,6 +1776,8 @@ dp_rx_peer_unmap_handler(struct dp_soc *soc, uint16_t peer_id,
 			 is_wds);
 
 		return;
+	} else {
+		dp_peer_clean_wds_entries(soc, peer, free_wds_count);
 	}
 
 	dp_info("peer_unmap_event (soc:%pK) peer_id %d peer %pK",
@@ -1848,6 +1945,7 @@ static void dp_reo_desc_free(struct dp_soc *soc, void *cb_ctxt,
 	struct reo_desc_list_node *freedesc =
 		(struct reo_desc_list_node *)cb_ctxt;
 	struct dp_rx_tid *rx_tid = &freedesc->rx_tid;
+	unsigned long curr_ts = qdf_get_system_timestamp();
 
 	if ((reo_status->fl_cache_status.header.status !=
 		HAL_REO_CMD_SUCCESS) &&
@@ -1860,7 +1958,8 @@ static void dp_reo_desc_free(struct dp_soc *soc, void *cb_ctxt,
 			  freedesc->rx_tid.tid);
 	}
 	QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_INFO_HIGH,
-		  "%s: hw_qdesc_paddr: %pK, tid:%d", __func__,
+		  "%s:%lu hw_qdesc_paddr: %pK, tid:%d", __func__,
+		  curr_ts,
 		  (void *)(rx_tid->hw_qdesc_paddr), rx_tid->tid);
 	qdf_mem_unmap_nbytes_single(soc->osdev,
 		rx_tid->hw_qdesc_paddr,
@@ -2089,6 +2188,23 @@ static void dp_reo_desc_clean_up(struct dp_soc *soc,
 			     (qdf_list_node_t *)desc);
 }
 
+/*
+ * dp_reo_limit_clean_batch_sz() - Limit number REO CMD queued to cmd
+ * ring in aviod of REO hang
+ *
+ * @list_size: REO desc list size to be cleaned
+ */
+static inline void dp_reo_limit_clean_batch_sz(uint32_t *list_size)
+{
+	unsigned long curr_ts = qdf_get_system_timestamp();
+
+	if ((*list_size) > REO_DESC_FREELIST_SIZE) {
+		dp_err_log("%lu:freedesc number %d in freelist",
+			   curr_ts, *list_size);
+		/* limit the batch queue size */
+		*list_size = REO_DESC_FREELIST_SIZE;
+	}
+}
 #else
 /*
  * dp_reo_desc_clean_up() - If send cmd to REO inorder to flush
@@ -2107,6 +2223,16 @@ static void dp_reo_desc_clean_up(struct dp_soc *soc,
 		reo_status->fl_cache_status.header.status = 0;
 		dp_reo_desc_free(soc, (void *)desc, reo_status);
 	}
+}
+
+/*
+ * dp_reo_limit_clean_batch_sz() - Limit number REO CMD queued to cmd
+ * ring in aviod of REO hang
+ *
+ * @list_size: REO desc list size to be cleaned
+ */
+static inline void dp_reo_limit_clean_batch_sz(uint32_t *list_size)
+{
 }
 #endif
 
@@ -2176,6 +2302,7 @@ void dp_rx_tid_delete_cb(struct dp_soc *soc, void *cb_ctxt,
 		qdf_mem_zero(reo_status, sizeof(*reo_status));
 		reo_status->fl_cache_status.header.status = HAL_REO_CMD_DRAIN;
 		dp_reo_desc_free(soc, (void *)freedesc, reo_status);
+		DP_STATS_INC(soc, rx.err.reo_cmd_send_drain, 1);
 		return;
 	} else if (reo_status->rx_queue_status.header.status !=
 		HAL_REO_CMD_SUCCESS) {
@@ -2196,6 +2323,14 @@ void dp_rx_tid_delete_cb(struct dp_soc *soc, void *cb_ctxt,
 	freedesc->free_ts = curr_ts;
 	qdf_list_insert_back_size(&soc->reo_desc_freelist,
 		(qdf_list_node_t *)freedesc, &list_size);
+
+	/* MCL path add the desc back to reo_desc_freelist when REO FLUSH
+	 * failed. it may cause the number of REO queue pending  in free
+	 * list is even larger than REO_CMD_RING max size and lead REO CMD
+	 * flood then cause REO HW in an unexpected condition. So it's
+	 * needed to limit the number REO cmds in a batch operation.
+	 */
+	dp_reo_limit_clean_batch_sz(&list_size);
 
 	while ((qdf_list_peek_front(&soc->reo_desc_freelist,
 		(qdf_list_node_t **)&desc) == QDF_STATUS_SUCCESS) &&
@@ -2343,37 +2478,6 @@ static void dp_peer_setup_remaining_tids(struct dp_peer *peer)
 }
 #else
 static void dp_peer_setup_remaining_tids(struct dp_peer *peer) {};
-#endif
-
-#ifndef WLAN_TX_PKT_CAPTURE_ENH
-/*
- * dp_peer_tid_queue_init() – Initialize ppdu stats queue per TID
- * @peer: Datapath peer
- *
- */
-static inline void dp_peer_tid_queue_init(struct dp_peer *peer)
-{
-}
-
-/*
- * dp_peer_tid_queue_cleanup() – remove ppdu stats queue per TID
- * @peer: Datapath peer
- *
- */
-static inline void dp_peer_tid_queue_cleanup(struct dp_peer *peer)
-{
-}
-
-/*
- * dp_peer_update_80211_hdr() – dp peer update 80211 hdr
- * @vdev: Datapath vdev
- * @peer: Datapath peer
- *
- */
-static inline void
-dp_peer_update_80211_hdr(struct dp_vdev *vdev, struct dp_peer *peer)
-{
-}
 #endif
 
 /*
@@ -2774,6 +2878,8 @@ static void dp_check_ba_buffersize(struct dp_peer *peer,
 	}
 }
 
+#define DP_RX_BA_SESSION_DISABLE  1
+
 /*
  * dp_addba_requestprocess_wifi3() - Process ADDBA request from peer
  *
@@ -2825,6 +2931,25 @@ int dp_addba_requestprocess_wifi3(struct cdp_soc_t *cdp_soc,
 		status = QDF_STATUS_E_FAILURE;
 		goto fail;
 	}
+
+	if (rx_tid->rx_ba_win_size_override == DP_RX_BA_SESSION_DISABLE) {
+		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_INFO,
+			  "%s disable BA session",
+			    __func__);
+
+		buffersize = 1;
+	} else if (rx_tid->rx_ba_win_size_override) {
+		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_INFO,
+			  "%s override BA win to %d", __func__,
+			      rx_tid->rx_ba_win_size_override);
+
+		buffersize = rx_tid->rx_ba_win_size_override;
+	} else {
+		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_INFO,
+			  "%s restore BA win %d based on addba req",
+			    __func__, buffersize);
+	}
+
 	dp_check_ba_buffersize(peer, tid, buffersize);
 
 	if (dp_rx_tid_setup_wifi3(peer, tid,
@@ -2843,6 +2968,9 @@ int dp_addba_requestprocess_wifi3(struct cdp_soc_t *cdp_soc,
 		rx_tid->statuscode = rx_tid->userstatuscode;
 	else
 		rx_tid->statuscode = IEEE80211_STATUS_SUCCESS;
+
+	if (rx_tid->rx_ba_win_size_override == DP_RX_BA_SESSION_DISABLE)
+		rx_tid->statuscode = IEEE80211_STATUS_REFUSED;
 
 	qdf_spin_unlock_bh(&rx_tid->tid_lock);
 
@@ -3241,6 +3369,65 @@ dp_rx_sec_ind_handler(struct dp_soc *soc, uint16_t peer_id,
 	dp_peer_unref_del_find_by_id(peer);
 }
 
+QDF_STATUS
+dp_rx_delba_ind_handler(void *soc_handle, uint16_t peer_id,
+			uint8_t tid, uint16_t win_sz)
+{
+	struct dp_soc *soc = (struct dp_soc *)soc_handle;
+	struct dp_peer *peer;
+	struct dp_rx_tid *rx_tid;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+
+	peer = dp_peer_find_by_id(soc, peer_id);
+
+	if (!peer) {
+		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
+			  "Couldn't find peer from ID %d",
+			  peer_id);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	qdf_assert_always(tid < DP_MAX_TIDS);
+
+	rx_tid = &peer->rx_tid[tid];
+
+	if (rx_tid->hw_qdesc_vaddr_unaligned) {
+		if (!rx_tid->delba_tx_status) {
+			QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_INFO,
+				  "%s: PEER_ID: %d TID: %d, BA win: %d ",
+				  __func__, peer_id, tid, win_sz);
+
+			qdf_spin_lock_bh(&rx_tid->tid_lock);
+
+			rx_tid->delba_tx_status = 1;
+
+			rx_tid->rx_ba_win_size_override =
+			    qdf_min((uint16_t)63, win_sz);
+
+			rx_tid->delba_rcode =
+			    IEEE80211_REASON_QOS_SETUP_REQUIRED;
+
+			qdf_spin_unlock_bh(&rx_tid->tid_lock);
+
+			if (soc->cdp_soc.ol_ops->send_delba)
+				soc->cdp_soc.ol_ops->send_delba(
+					peer->vdev->pdev->soc->ctrl_psoc,
+					peer->vdev->vdev_id,
+					peer->mac_addr.raw,
+					tid,
+					rx_tid->delba_rcode);
+		}
+	} else {
+		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
+			  "BA session is not setup for TID:%d ", tid);
+		status = QDF_STATUS_E_FAILURE;
+	}
+
+	dp_peer_unref_del_find_by_id(peer);
+
+	return status;
+}
+
 #ifdef DP_PEER_EXTENDED_API
 QDF_STATUS dp_register_peer(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 			    struct ol_txrx_desc_type *sta_desc)
@@ -3279,15 +3466,10 @@ dp_clear_peer(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 		return QDF_STATUS_E_FAULT;
 
 	peer = dp_find_peer_by_addr((struct cdp_pdev *)pdev, peer_addr.bytes);
-	if (!peer)
+	if (!peer || !peer->valid)
 		return QDF_STATUS_E_FAULT;
 
-	qdf_spin_lock_bh(&peer->peer_info_lock);
-	peer->state = OL_TXRX_PEER_STATE_DISC;
-	qdf_spin_unlock_bh(&peer->peer_info_lock);
-
-	dp_rx_flush_rx_cached(peer, true);
-
+	dp_clear_peer_internal(soc, peer);
 	return QDF_STATUS_SUCCESS;
 }
 

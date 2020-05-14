@@ -42,6 +42,9 @@
 #include <osdep.h>
 #include <wlan_cmn.h>
 #include "target_type.h"
+#ifdef QCA_SUPPORT_ADFS_RCAC
+#include <wlan_sm_engine.h> /* for struct wlan_sm */
+#endif
 
 /* File Line and Submodule String */
 #define FLSM(x, str)   #str " : " FL(x)
@@ -412,7 +415,7 @@
  * @DETECTOR_ID_2: Detector ID 2 (Agile detector in 80p80MHZ supported devices).
  * @AGILE_DETECTOR_ID_TRUE_160MHZ:  Agile detector ID in true 160MHz devices.
  * @AGILE_DETECTOR_ID_80p80: Agile detector ID in 80p80MHz supported devices.
- * @DETECTOR_ID_MAX: Maximum detector ID value.
+ * @INVALID_DETECTOR_ID: Invalid detector id.
  */
 enum detector_id {
 	DETECTOR_ID_0,
@@ -420,7 +423,7 @@ enum detector_id {
 	DETECTOR_ID_2,
 	AGILE_DETECTOR_ID_TRUE_160MHZ = DETECTOR_ID_1,
 	AGILE_DETECTOR_ID_80P80 = DETECTOR_ID_2,
-	DETECTOR_ID_MAX,
+	INVALID_DETECTOR_ID,
 };
 
 /**
@@ -752,7 +755,7 @@ struct dfs_state {
  * @nol_dfs           Back pointer to dfs object.
  * @nol_freq:         Centre frequency.
  * @nol_chwidth:      Event width (MHz).
- * @nol_start_ticks:  NOL start time in OS ticks.
+ * @nol_start_us:     NOL start time in us.
  * @nol_timeout_ms:   NOL timeout value in msec.
  * @nol_timer:        Per element NOL timer.
  * @nol_next:         Next element pointer.
@@ -762,7 +765,7 @@ struct dfs_nolelem {
 	struct wlan_dfs *nol_dfs;
 	uint32_t       nol_freq;
 	uint32_t       nol_chwidth;
-	unsigned long  nol_start_ticks;
+	uint64_t       nol_start_us;
 	uint32_t       nol_timeout_ms;
 	qdf_timer_t    nol_timer;
 	struct dfs_nolelem *nol_next;
@@ -933,6 +936,33 @@ struct dfs_mode_switch_defer_params {
 	bool is_radar_detected;
 };
 
+#ifdef QCA_SUPPORT_ADFS_RCAC
+#define DFS_PSOC_NO_IDX 0xFF
+/**
+ * enum dfs_rcac_sm_state - DFS Rolling CAC SM states.
+ * @DFS_RCAC_S_INIT:     Default state, where RCAC not in progress.
+ * @DFS_RCAC_S_RUNNING:  RCAC is in progress.
+ * @DFS_RCAC_S_COMPLETE: RCAC is completed.
+ * @DFS_RCAC_S_MAX:      Max (invalid) state.
+ */
+enum dfs_rcac_sm_state {
+	DFS_RCAC_S_INIT,
+	DFS_RCAC_S_RUNNING,
+	DFS_RCAC_S_COMPLETE,
+	DFS_RCAC_S_MAX,
+};
+
+/**
+ * struct dfs_rcac_params - DFS Rolling CAC channel parameters.
+ * @rcac_pri_freq: Rolling CAC channel's primary frequency.
+ * @rcac_ch_params: Rolling CAC channel parameters.
+ */
+struct dfs_rcac_params {
+	qdf_freq_t rcac_pri_freq;
+	struct ch_params rcac_ch_params;
+};
+#endif
+
 /**
  * struct wlan_dfs -                 The main dfs structure.
  * @dfs_debug_mask:                  Current debug bitmask.
@@ -1090,6 +1120,7 @@ struct dfs_mode_switch_defer_params {
  * @dfs_legacy_precac_ucfg:          User configuration for legacy preCAC in
  *                                   partial offload chipsets.
  * @dfs_agile_precac_ucfg:           User configuration for agile preCAC.
+ * @dfs_agile_rcac_ucfg:             User configuration for Rolling CAC.
  * @dfs_fw_adfs_support_non_160:     Target Agile DFS support for non-160 BWs.
  * @dfs_fw_adfs_support_160:         Target Agile DFS support for 160 BW.
  * @dfs_allow_hw_pulses:             Allow/Block HW pulses. When synthetic
@@ -1101,6 +1132,10 @@ struct dfs_mode_switch_defer_params {
  * @dfs_defer_params:                DFS deferred event parameters (allocated
  *                                   only for the duration of defer alone).
  * @dfs_agile_detector_id:           Agile detector ID for the DFS object.
+ * @dfs_agile_rcac_freq_ucfg:        User programmed Rolling CAC frequency in
+ *                                   MHZ.
+ * @dfs_rcac_param:                  Primary frequency and Channel params of
+ *                                   the selected RCAC channel.
  */
 struct wlan_dfs {
 	uint32_t       dfs_debug_mask;
@@ -1259,6 +1294,9 @@ struct wlan_dfs {
 	bool           dfs_is_nol_ie_sent;
 	uint8_t        dfs_legacy_precac_ucfg:1,
 		       dfs_agile_precac_ucfg:1,
+#if defined(QCA_SUPPORT_ADFS_RCAC)
+		       dfs_agile_rcac_ucfg:1,
+#endif
 		       dfs_fw_adfs_support_non_160:1,
 		       dfs_fw_adfs_support_160:1;
 #if defined(WLAN_DFS_PARTIAL_OFFLOAD) && defined(WLAN_DFS_SYNTHETIC_RADAR)
@@ -1266,6 +1304,11 @@ struct wlan_dfs {
 #endif
 	struct dfs_mode_switch_defer_params dfs_defer_params;
 	uint8_t        dfs_agile_detector_id;
+#if defined(QCA_SUPPORT_ADFS_RCAC)
+	uint16_t       dfs_agile_rcac_freq_ucfg;
+	struct dfs_rcac_params dfs_rcac_param;
+#endif
+	uint16_t       dfs_lowest_pri_limit;
 };
 
 #if defined(QCA_SUPPORT_AGILE_DFS) || defined(ATH_SUPPORT_ZERO_CAC_DFS)
@@ -1297,6 +1340,10 @@ struct wlan_dfs_priv {
  * @dfs_precac_timer_running: precac timer running flag
  * @ocac_status: Off channel CAC complete status
  * @dfs_nol_ctx: dfs NOL data for all radios.
+ * @dfs_rcac_timer: Agile RCAC (Rolling CAC) timer.
+ * @dfs_rcac_sm_hdl: DFS Rolling CAC state machine handle.
+ * @dfs_rcac_curr_state: Current state of DFS rolling CAC state machine.
+ * @dfs_rcac_sm_lock: DFS Rolling CAC state machine lock.
  */
 struct dfs_soc_priv_obj {
 	struct wlan_objmgr_psoc *psoc;
@@ -1312,6 +1359,12 @@ struct dfs_soc_priv_obj {
 	bool ocac_status;
 #endif
 	struct dfsreq_nolinfo *dfs_psoc_nolinfo;
+#if defined(QCA_SUPPORT_ADFS_RCAC)
+	qdf_timer_t dfs_rcac_timer;
+	struct wlan_sm *dfs_rcac_sm_hdl;
+	enum dfs_rcac_sm_state dfs_rcac_curr_state;
+	qdf_spinlock_t dfs_rcac_sm_lock;
+#endif
 };
 
 /**
@@ -1347,6 +1400,7 @@ enum {
 	WLAN_DEBUG_DFS_FALSE_DET  = 0x00080000,
 	WLAN_DEBUG_DFS_FALSE_DET2 = 0x00100000,
 	WLAN_DEBUG_DFS_RANDOM_CHAN = 0x00200000,
+	WLAN_DEBUG_DFS_RCAC       = 0x00400000,
 	WLAN_DEBUG_DFS_MAX        = 0x80000000,
 	WLAN_DEBUG_DFS_ALWAYS     = WLAN_DEBUG_DFS_MAX
 };
@@ -2156,7 +2210,14 @@ int dfs_override_cac_timeout(struct wlan_dfs *dfs,
  *                          all the channels in dfs_ch_channels.
  * @dfs: Pointer to wlan_dfs structure.
  */
+#if !defined(QCA_MCL_DFS_SUPPORT)
 void dfs_clear_nolhistory(struct wlan_dfs *dfs);
+#else
+static inline void
+dfs_clear_nolhistory(struct wlan_dfs *dfs)
+{
+}
+#endif
 
 /**
  * ol_if_dfs_configure() - Initialize the RADAR table for offload chipsets.
@@ -2435,6 +2496,7 @@ void dfs_set_current_channel(struct wlan_dfs *dfs,
  * @dfs_chan_mhz_freq_seg1: Channel center frequency of primary segment in MHZ.
  * @dfs_chan_mhz_freq_seg2: Channel center frequency of secondary segment in MHZ
  *                          applicable only for 80+80MHZ mode of operation.
+ * @is_channel_updated: boolean to represent channel update.
  */
 void dfs_set_current_channel_for_freq(struct wlan_dfs *dfs,
 				      uint16_t dfs_chan_freq,
@@ -2444,7 +2506,8 @@ void dfs_set_current_channel_for_freq(struct wlan_dfs *dfs,
 				      uint8_t dfs_chan_vhtop_freq_seg1,
 				      uint8_t dfs_chan_vhtop_freq_seg2,
 				      uint16_t dfs_chan_mhz_freq_seg1,
-				      uint16_t dfs_chan_mhz_freq_seg2);
+				      uint16_t dfs_chan_mhz_freq_seg2,
+				      bool *is_channel_updated);
 
 #endif
 /**
@@ -2882,5 +2945,39 @@ static inline bool dfs_is_restricted_80p80mhz_supported(struct wlan_dfs *dfs)
  *
  * Return: Agile detector value (uint8_t).
  */
+#ifdef QCA_SUPPORT_AGILE_DFS
 uint8_t dfs_get_agile_detector_id(struct wlan_dfs *dfs);
+#else
+static inline uint8_t dfs_get_agile_detector_id(struct wlan_dfs *dfs)
+{
+	return INVALID_DETECTOR_ID;
+}
+#endif
+
+/**
+ * dfs_is_new_chan_subset_of_old_chan() - Find if new channel is subset of
+ *                                        old channel.
+ * @dfs: Pointer to wlan_dfs structure.
+ * @new_chan: Pointer to new channel of dfs_channel structure.
+ * @old_chan: Pointer to old channel of dfs_channel structure.
+ *
+ * Return: True if new channel is subset of old channel, else false.
+ */
+bool dfs_is_new_chan_subset_of_old_chan(struct wlan_dfs *dfs,
+					struct dfs_channel *new_chan,
+					struct dfs_channel *old_chan);
+
+/**
+ * dfs_find_dfs_sub_channels_for_freq() - Given a dfs channel, find its
+ *                                        HT20 subset channels.
+ * @dfs: Pointer to wlan_dfs structure.
+ * @chan: Pointer to dfs_channel structure.
+ * @subchan_arr: Pointer to subchannels array.
+ *
+ * Return: Number of sub channels.
+ */
+uint8_t dfs_find_dfs_sub_channels_for_freq(struct  wlan_dfs *dfs,
+					   struct dfs_channel *chan,
+					   uint16_t *subchan_arr);
+
 #endif  /* _DFS_H_ */

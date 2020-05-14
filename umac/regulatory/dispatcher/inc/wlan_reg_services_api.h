@@ -930,6 +930,16 @@ bool wlan_reg_is_regdmn_en302502_applicable(struct wlan_objmgr_pdev *pdev);
 QDF_STATUS wlan_reg_modify_pdev_chan_range(struct wlan_objmgr_pdev *pdev);
 
 /**
+ * wlan_reg_update_pdev_wireless_modes() - Update the wireless_modes in the
+ * pdev_priv_obj with the input wireless_modes
+ * @pdev: pointer to wlan_objmgr_pdev.
+ * @wireless_modes: Wireless modes.
+ *
+ * Return : QDF_STATUS
+ */
+QDF_STATUS wlan_reg_update_pdev_wireless_modes(struct wlan_objmgr_pdev *pdev,
+					       uint32_t wireless_modes);
+/**
  * wlan_reg_disable_chan_coex() - Disable Coexisting channels based on the input
  * bitmask
  * @pdev: pointer to wlan_objmgr_pdev.
@@ -1218,7 +1228,7 @@ void wlan_reg_freq_to_chan_op_class(struct wlan_objmgr_pdev *pdev,
 				    uint8_t *chan_num);
 
 /**
- * wlan_reg_country_opclass_freq_check() - checks frequency in (ctry, op class)
+ * wlan_reg_is_freq_in_country_opclass() - checks frequency in (ctry, op class)
  *                                         pair
  * @pdev: pdev ptr
  * @country: country information
@@ -1227,7 +1237,7 @@ void wlan_reg_freq_to_chan_op_class(struct wlan_objmgr_pdev *pdev,
  *
  * Return: bool
  */
-bool wlan_reg_country_opclass_freq_check(struct wlan_objmgr_pdev *pdev,
+bool wlan_reg_is_freq_in_country_opclass(struct wlan_objmgr_pdev *pdev,
 					 const uint8_t country[3],
 					 uint8_t op_class,
 					 qdf_freq_t chan_freq);
@@ -1278,11 +1288,11 @@ bool wlan_reg_is_6ghz_op_class(struct wlan_objmgr_pdev *pdev,
 
 /**
  * wlan_reg_is_6ghz_supported() - Whether 6ghz is supported
- * @pdev: pdev ptr
+ * @psoc: psoc ptr
  *
  * Return: bool
  */
-bool wlan_reg_is_6ghz_supported(struct wlan_objmgr_pdev *pdev);
+bool wlan_reg_is_6ghz_supported(struct wlan_objmgr_psoc *psoc);
 
 #ifdef HOST_OPCLASS_EXT
 /**

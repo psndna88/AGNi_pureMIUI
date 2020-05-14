@@ -650,84 +650,6 @@ enum cb_ftype {
 };
 
 /**
- * enum qdf_proto_subtype - subtype of packet
- * @QDF_PROTO_EAPOL_M1 - EAPOL 1/4
- * @QDF_PROTO_EAPOL_M2 - EAPOL 2/4
- * @QDF_PROTO_EAPOL_M3 - EAPOL 3/4
- * @QDF_PROTO_EAPOL_M4 - EAPOL 4/4
- * @QDF_PROTO_DHCP_DISCOVER - discover
- * @QDF_PROTO_DHCP_REQUEST - request
- * @QDF_PROTO_DHCP_OFFER - offer
- * @QDF_PROTO_DHCP_ACK - ACK
- * @QDF_PROTO_DHCP_NACK - NACK
- * @QDF_PROTO_DHCP_RELEASE - release
- * @QDF_PROTO_DHCP_INFORM - inform
- * @QDF_PROTO_DHCP_DECLINE - decline
- * @QDF_PROTO_ARP_REQ - arp request
- * @QDF_PROTO_ARP_RES - arp response
- * @QDF_PROTO_ICMP_REQ - icmp request
- * @QDF_PROTO_ICMP_RES - icmp response
- * @QDF_PROTO_ICMPV6_REQ - icmpv6 request
- * @QDF_PROTO_ICMPV6_RES - icmpv6 response
- * @QDF_PROTO_ICMPV6_RS - icmpv6 rs packet
- * @QDF_PROTO_ICMPV6_RA - icmpv6 ra packet
- * @QDF_PROTO_ICMPV6_NS - icmpv6 ns packet
- * @QDF_PROTO_ICMPV6_NA - icmpv6 na packet
- * @QDF_PROTO_IPV4_UDP - ipv4 udp
- * @QDF_PROTO_IPV4_TCP - ipv4 tcp
- * @QDF_PROTO_IPV6_UDP - ipv6 udp
- * @QDF_PROTO_IPV6_TCP - ipv6 tcp
- * @QDF_PROTO_MGMT_ASSOC -assoc
- * @QDF_PROTO_MGMT_DISASSOC - disassoc
- * @QDF_PROTO_MGMT_AUTH - auth
- * @QDF_PROTO_MGMT_DEAUTH - deauth
- * @QDF_ROAM_SYNCH - roam synch indication from fw
- * @QDF_ROAM_COMPLETE - roam complete cmd to fw
- * @QDF_ROAM_EVENTID - roam eventid from fw
- * @QDF_PROTO_DNS_QUERY - dns query
- * @QDF_PROTO_DNS_RES -dns response
- */
-enum qdf_proto_subtype {
-	QDF_PROTO_INVALID,
-	QDF_PROTO_EAPOL_M1,
-	QDF_PROTO_EAPOL_M2,
-	QDF_PROTO_EAPOL_M3,
-	QDF_PROTO_EAPOL_M4,
-	QDF_PROTO_DHCP_DISCOVER,
-	QDF_PROTO_DHCP_REQUEST,
-	QDF_PROTO_DHCP_OFFER,
-	QDF_PROTO_DHCP_ACK,
-	QDF_PROTO_DHCP_NACK,
-	QDF_PROTO_DHCP_RELEASE,
-	QDF_PROTO_DHCP_INFORM,
-	QDF_PROTO_DHCP_DECLINE,
-	QDF_PROTO_ARP_REQ,
-	QDF_PROTO_ARP_RES,
-	QDF_PROTO_ICMP_REQ,
-	QDF_PROTO_ICMP_RES,
-	QDF_PROTO_ICMPV6_REQ,
-	QDF_PROTO_ICMPV6_RES,
-	QDF_PROTO_ICMPV6_RS,
-	QDF_PROTO_ICMPV6_RA,
-	QDF_PROTO_ICMPV6_NS,
-	QDF_PROTO_ICMPV6_NA,
-	QDF_PROTO_IPV4_UDP,
-	QDF_PROTO_IPV4_TCP,
-	QDF_PROTO_IPV6_UDP,
-	QDF_PROTO_IPV6_TCP,
-	QDF_PROTO_MGMT_ASSOC,
-	QDF_PROTO_MGMT_DISASSOC,
-	QDF_PROTO_MGMT_AUTH,
-	QDF_PROTO_MGMT_DEAUTH,
-	QDF_ROAM_SYNCH,
-	QDF_ROAM_COMPLETE,
-	QDF_ROAM_EVENTID,
-	QDF_PROTO_DNS_QUERY,
-	QDF_PROTO_DNS_RES,
-	QDF_PROTO_SUBTYPE_MAX
-};
-
-/**
  * @qdf_nbuf_t - Platform indepedent packet abstraction
  */
 typedef __qdf_nbuf_t qdf_nbuf_t;
@@ -1010,6 +932,19 @@ static inline void
 qdf_nbuf_sync_for_cpu(qdf_device_t osdev, qdf_nbuf_t buf, qdf_dma_dir_t dir)
 {
 	__qdf_nbuf_sync_for_cpu(osdev, buf, dir);
+}
+
+/**
+ * qdf_nbuf_dma_inv_range() - Invalidate the specified virtual address range
+ * @buf_start: start address
+ * @buf_end: end address
+ *
+ * Return: none
+ */
+static inline void
+qdf_nbuf_dma_inv_range(const void *buf_start, const void *buf_end)
+{
+	__qdf_nbuf_dma_inv_range(buf_start, buf_end);
 }
 
 static inline int qdf_nbuf_get_num_frags(qdf_nbuf_t buf)
@@ -1534,6 +1469,32 @@ void qdf_net_buf_debug_update_node(qdf_nbuf_t net_buf, const char *func_name,
 void qdf_net_buf_debug_delete_node(qdf_nbuf_t net_buf);
 
 /**
+ * qdf_net_buf_debug_update_map_node() - update nbuf in debug
+ * hash table with the mapping function info
+ * @nbuf: network buffer
+ * @func: function name that requests for mapping the nbuf
+ * @line_num: function line number
+ *
+ * Return: none
+ */
+void qdf_net_buf_debug_update_map_node(qdf_nbuf_t net_buf,
+				       const char *func_name,
+				       uint32_t line_num);
+
+/**
+ * qdf_net_buf_debug_update_unmap_node() - update nbuf in debug
+ * hash table with the unmap function info
+ * @nbuf:   network buffer
+ * @func: function name that requests for unmapping the nbuf
+ * @line_num: function line number
+ *
+ * Return: none
+ */
+void qdf_net_buf_debug_update_unmap_node(qdf_nbuf_t net_buf,
+					 const char *func_name,
+					 uint32_t line_num);
+
+/**
  * qdf_net_buf_debug_acquire_skb() - acquire skb to avoid memory leak
  * @net_buf: Network buf holding head segment (single)
  * @func_name: pointer to function name
@@ -1637,6 +1598,19 @@ qdf_net_buf_debug_update_node(qdf_nbuf_t net_buf, const char *func_name,
 {
 }
 
+static inline void
+qdf_net_buf_debug_update_map_node(qdf_nbuf_t net_buf,
+				  const char *func_name,
+				  uint32_t line_num)
+{
+}
+
+static inline void
+qdf_net_buf_debug_update_unmap_node(qdf_nbuf_t net_buf,
+				    const char *func_name,
+				    uint32_t line_num)
+{
+}
 /* Nbuf allocation rouines */
 
 #define qdf_nbuf_alloc(osdev, size, reserve, align, prio) \

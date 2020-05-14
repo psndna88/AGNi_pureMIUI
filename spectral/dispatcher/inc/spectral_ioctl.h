@@ -173,6 +173,21 @@ enum spectral_cap_hw_gen {
 };
 
 /**
+ * struct spectral_config_frequency - Spectral scan frequency
+ * @cfreq1: Center frequency (in MHz) of the span of interest(primary 80 MHz
+ *          span for 80 + 80 agile scan request) or center frequency (in MHz)
+ *          of any WLAN channel in the span of interest.
+ * @cfreq2: Applicable only for Agile Spectral scan request in 80+80 MHz mode.
+ *          For 80+80 mode it represents  the center frequency (in MHz) of the
+ *          secondary 80 MHz span of interest or center frequency (in MHz) of
+ *          any WLAN channel in the secondary 80 MHz span of interest.
+ */
+struct spectral_config_frequency {
+	uint32_t cfreq1;
+	uint32_t cfreq2;
+};
+
+/**
  * struct spectral_config - spectral config parameters
  * @ss_fft_period:        Skip interval for FFT reports
  * @ss_period:            Spectral scan period
@@ -236,9 +251,16 @@ enum spectral_cap_hw_gen {
  *                          Not applicable. Spectral scan would happen in the
  *                          operating span.
  *                        Agile mode:-
- *                          Center frequency (in MHz) of the interested span
- *                          or center frequency (in MHz) of any WLAN channel
- *                          in the interested span.
+ *                          cfreq1 represents the center frequency (in MHz) of
+ *                          the span of interest(primary 80 MHz span for 80 + 80
+ *                          agile scan request) or center frequency (in MHz) of
+ *                          any WLAN channel in the span of interest. cfreq2 is
+ *                          applicable only for Agile Spectral scan request in
+ *                          80+80 MHz mode. For 80+80 mode it represents  the
+ *                          center frequency (in MHz) of the secondary 80 MHz
+*                           span of interest or center frequency (in MHz) of
+ *                          any WLAN channel in the secondary 80 MHz span of
+ *                          interest.
  */
 struct spectral_config {
 	uint16_t ss_fft_period;
@@ -265,7 +287,7 @@ struct spectral_config {
 	int8_t ss_nf_cal[AH_MAX_CHAINS * 2];
 	int8_t ss_nf_pwr[AH_MAX_CHAINS * 2];
 	int32_t ss_nf_temp_data;
-	uint32_t ss_frequency;
+	struct spectral_config_frequency ss_frequency;
 };
 
 /**
@@ -284,6 +306,11 @@ struct spectral_config {
  * @agile_spectral_cap: agile Spectral capability for 20/40/80
  * @agile_spectral_cap_160: agile Spectral capability for 160 MHz
  * @agile_spectral_cap_80p80: agile Spectral capability for 80p80
+ * @num_detectors_20mhz: number of Spectral detectors in 20 MHz
+ * @num_detectors_40mhz: number of Spectral detectors in 40 MHz
+ * @num_detectors_80mhz: number of Spectral detectors in 80 MHz
+ * @num_detectors_160mhz: number of Spectral detectors in 160 MHz
+ * @num_detectors_80p80mhz: number of Spectral detectors in 80p80 MHz
  */
 struct spectral_caps {
 	uint8_t phydiag_cap;
@@ -300,6 +327,11 @@ struct spectral_caps {
 	bool agile_spectral_cap;
 	bool agile_spectral_cap_160;
 	bool agile_spectral_cap_80p80;
+	uint32_t num_detectors_20mhz;
+	uint32_t num_detectors_40mhz;
+	uint32_t num_detectors_80mhz;
+	uint32_t num_detectors_160mhz;
+	uint32_t num_detectors_80p80mhz;
 };
 
 #define SPECTRAL_IOCTL_PARAM_NOVAL (65535)
@@ -516,9 +548,13 @@ struct spectral_samp_data {
  * @freq:               Operating frequency in MHz
  * @vhtop_ch_freq_seg1: VHT Segment 1 centre frequency in MHz
  * @vhtop_ch_freq_seg2: VHT Segment 2 centre frequency in MHz
- * @agile_freq:         Center frequency in MHz of the entire span across which
+ * @agile_freq1:        Center frequency in MHz of the entire span(for 80+80 MHz
+ *                      agile Scan it is primary 80 MHz span) across which
  *                      Agile Spectral is carried out. Applicable only for Agile
  *                      Spectral samples.
+ * @agile_freq2:        Center frequency in MHz of the secondary 80 MHz span
+ *                      across which Agile Spectral is carried out. Applicable
+ *                      only for Agile Spectral samples in 80+80 MHz mode.
  * @freq_loading:       How busy was the channel
  * @dcs_enabled:        Whether DCS is enabled
  * @int_type:           Interference type indicated by DCS
@@ -530,7 +566,8 @@ struct spectral_samp_msg {
 	uint16_t freq;
 	uint16_t vhtop_ch_freq_seg1;
 	uint16_t vhtop_ch_freq_seg2;
-	uint16_t agile_freq;
+	uint16_t agile_freq1;
+	uint16_t agile_freq2;
 	uint16_t freq_loading;
 	uint16_t dcs_enabled;
 	enum dcs_int_type int_type;

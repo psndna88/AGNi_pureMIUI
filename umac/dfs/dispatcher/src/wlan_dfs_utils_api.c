@@ -968,7 +968,7 @@ void utils_dfs_get_chan_list(struct wlan_objmgr_pdev *pdev,
 
 bool utils_dfs_can_ignore_radar_event(struct wlan_objmgr_pdev *pdev)
 {
-	return !policy_mgr_get_dfs_master_dynamic_enabled(
+	return policy_mgr_get_can_skip_radar_event(
 		wlan_pdev_get_psoc(pdev), INVALID_VDEV_ID);
 }
 #endif
@@ -1618,3 +1618,58 @@ void utils_dfs_reset_dfs_prevchan(struct wlan_objmgr_pdev *pdev)
 
 	dfs_reset_dfs_prevchan(dfs);
 }
+
+#ifdef QCA_SUPPORT_ADFS_RCAC
+void utils_dfs_rcac_sm_deliver_evt(struct wlan_objmgr_pdev *pdev,
+				   enum dfs_rcac_sm_evt event)
+{
+	struct wlan_dfs *dfs;
+	void *event_data;
+
+	if (!tgt_dfs_is_pdev_5ghz(pdev))
+		return;
+
+	dfs = wlan_pdev_get_dfs_obj(pdev);
+	if (!dfs) {
+		dfs_err(dfs, WLAN_DEBUG_DFS_ALWAYS,  "dfs is null");
+		return;
+	}
+
+	if (!dfs_is_agile_rcac_enabled(dfs))
+		return;
+
+	event_data = (void *)dfs;
+
+	dfs_rcac_sm_deliver_evt(dfs->dfs_soc_obj,
+				event,
+				0,
+				event_data);
+}
+
+QDF_STATUS utils_dfs_get_rcac_channel(struct wlan_objmgr_pdev *pdev,
+				      struct ch_params *chan_params,
+				      qdf_freq_t *target_chan_freq)
+{
+	struct wlan_dfs *dfs = NULL;
+	QDF_STATUS status = QDF_STATUS_E_FAILURE;
+
+	if (!target_chan_freq)
+		return status;
+
+	*target_chan_freq = 0;
+
+	dfs = wlan_pdev_get_dfs_obj(pdev);
+	if (!dfs) {
+		dfs_err(dfs, WLAN_DEBUG_DFS_ALWAYS,  "null dfs");
+		return status;
+	}
+
+	if (!dfs_is_agile_rcac_enabled(dfs))
+		return status;
+
+	*target_chan_freq = dfs->dfs_rcac_param.rcac_pri_freq;
+	chan_params = &dfs->dfs_rcac_param.rcac_ch_params;
+
+	return QDF_STATUS_SUCCESS;
+}
+#endif

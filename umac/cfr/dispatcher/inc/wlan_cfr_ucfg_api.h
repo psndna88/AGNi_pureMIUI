@@ -38,6 +38,16 @@ int ucfg_cfr_start_capture(struct wlan_objmgr_pdev *pdev,
 			   struct cfr_capture_params *cfr_params);
 
 /**
+ * ucfg_cfr_get_capture_status() - function to populate capture status
+ * @pdev: pointer to pdev object
+ * @status: capture status
+ *
+ * Return: none
+ */
+void ucfg_cfr_get_capture_status(struct wlan_objmgr_pdev *pdev,
+				 enum cfr_capt_status *status);
+
+/**
  * ucfg_cfr_stop_capture() - function to stop cfr capture for connected client
  * @pdev: pointer to pdev object
  * @peer: pointer to peer object
@@ -95,6 +105,16 @@ int ucfg_cfr_set_timer(struct wlan_objmgr_pdev *pdev, uint32_t value);
  * Return: value of cfr_timer_enable
  */
 int ucfg_cfr_get_timer(struct wlan_objmgr_pdev *pdev);
+
+/**
+ * ucfg_cfr_stop_indication() - User space API to write cfr stop string
+ * @vdev - pointer to vdev object
+ *
+ * Write stop string and indicate to up layer.
+ *
+ * Return: status of write CFR stop string
+ */
+QDF_STATUS ucfg_cfr_stop_indication(struct wlan_objmgr_vdev *vdev);
 
 #ifdef WLAN_ENH_CFR_ENABLE
 /* Channel capture recipe filters */
@@ -263,5 +283,16 @@ QDF_STATUS ucfg_cfr_rcc_clr_dbg_counters(struct wlan_objmgr_vdev *vdev);
  * Return: status
  */
 QDF_STATUS ucfg_cfr_rcc_dump_lut(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_cfr_subscribe_ppdu_desc() - User space interface to
+ * subscribe/unsubscribe WDI PPDU desc event
+ * @pdev: pointer to pdev_object
+ * @is_subscribe: subscribe or unsubscribei
+ *
+ * return QDF status
+ */
+QDF_STATUS ucfg_cfr_subscribe_ppdu_desc(struct wlan_objmgr_pdev *pdev,
+					bool is_subscribe);
 #endif
 #endif

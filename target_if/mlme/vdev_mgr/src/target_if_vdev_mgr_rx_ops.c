@@ -32,7 +32,22 @@
 #include <wlan_vdev_mlme_main.h>
 #include <wmi_unified_vdev_api.h>
 
-void target_if_vdev_mgr_rsp_timer_cb(struct vdev_response_timer *vdev_rsp)
+static inline
+void target_if_vdev_mgr_handle_recovery(struct wlan_objmgr_psoc *psoc,
+					uint8_t vdev_id,
+					enum qdf_hang_reason recovery_reason,
+					uint16_t rsp_pos)
+{
+	mlme_nofl_err("PSOC_%d VDEV_%d: %s rsp timeout", wlan_psoc_get_id(psoc),
+		      vdev_id, string_from_rsp_bit(rsp_pos));
+	if (target_if_vdev_mgr_is_panic_allowed())
+		qdf_trigger_self_recovery(psoc, recovery_reason);
+	else
+		mlme_nofl_debug("PSOC_%d VDEV_%d: Panic not allowed",
+				wlan_psoc_get_id(psoc), vdev_id);
+}
+
+QDF_STATUS target_if_vdev_mgr_rsp_timer_cb(struct vdev_response_timer *vdev_rsp)
 {
 	struct wlan_objmgr_psoc *psoc;
 	struct wlan_lmac_if_mlme_rx_ops *rx_ops;
@@ -46,19 +61,19 @@ void target_if_vdev_mgr_rsp_timer_cb(struct vdev_response_timer *vdev_rsp)
 
 	if (!vdev_rsp) {
 		mlme_err("Vdev response timer is NULL");
-		return;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	psoc = vdev_rsp->psoc;
 	if (!psoc) {
 		mlme_err("PSOC is NULL");
-		return;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	rx_ops = target_if_vdev_mgr_get_rx_ops(psoc);
 	if (!rx_ops || !rx_ops->psoc_get_vdev_response_timer_info) {
 		mlme_err("No Rx Ops");
-		return;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	if (!qdf_atomic_test_bit(START_RESPONSE_BIT, &vdev_rsp->rsp_status) &&
@@ -70,14 +85,14 @@ void target_if_vdev_mgr_rsp_timer_cb(struct vdev_response_timer *vdev_rsp)
 			&vdev_rsp->rsp_status)) {
 		mlme_debug("No response bit is set, ignoring actions :%d",
 			   vdev_rsp->vdev_id);
-		return;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	vdev_id = vdev_rsp->vdev_id;
 	if (vdev_id >= WLAN_UMAC_PSOC_MAX_VDEVS) {
 		mlme_err("Invalid VDEV_%d PSOC_%d", vdev_id,
 			 wlan_psoc_get_id(psoc));
-		return;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	vdev_rsp->timer_status = QDF_STATUS_E_TIMEOUT;
@@ -101,15 +116,18 @@ void target_if_vdev_mgr_rsp_timer_cb(struct vdev_response_timer *vdev_rsp)
 		}
 
 		target_if_vdev_mgr_rsp_timer_stop(psoc, vdev_rsp, rsp_pos);
-
+		target_if_vdev_mgr_handle_recovery(psoc, vdev_id,
+						   recovery_reason, rsp_pos);
 		rx_ops->vdev_mgr_start_response(psoc, &start_rsp);
 	} else if (qdf_atomic_test_bit(STOP_RESPONSE_BIT,
 				       &vdev_rsp->rsp_status)) {
 		rsp_pos = STOP_RESPONSE_BIT;
 		stop_rsp.vdev_id = vdev_id;
 		recovery_reason = QDF_VDEV_STOP_RESPONSE_TIMED_OUT;
-		target_if_vdev_mgr_rsp_timer_stop(psoc, vdev_rsp, rsp_pos);
 
+		target_if_vdev_mgr_rsp_timer_stop(psoc, vdev_rsp, rsp_pos);
+		target_if_vdev_mgr_handle_recovery(psoc, vdev_id,
+						   recovery_reason, rsp_pos);
 		rx_ops->vdev_mgr_stop_response(psoc, &stop_rsp);
 	} else if (qdf_atomic_test_bit(DELETE_RESPONSE_BIT,
 				       &vdev_rsp->rsp_status)) {
@@ -117,7 +135,8 @@ void target_if_vdev_mgr_rsp_timer_cb(struct vdev_response_timer *vdev_rsp)
 		rsp_pos = DELETE_RESPONSE_BIT;
 		recovery_reason = QDF_VDEV_DELETE_RESPONSE_TIMED_OUT;
 		target_if_vdev_mgr_rsp_timer_stop(psoc, vdev_rsp, rsp_pos);
-
+		target_if_vdev_mgr_handle_recovery(psoc, vdev_id,
+						   recovery_reason, rsp_pos);
 		rx_ops->vdev_mgr_delete_response(psoc, &del_rsp);
 	} else if (qdf_atomic_test_bit(PEER_DELETE_ALL_RESPONSE_BIT,
 				&vdev_rsp->rsp_status)) {
@@ -125,28 +144,17 @@ void target_if_vdev_mgr_rsp_timer_cb(struct vdev_response_timer *vdev_rsp)
 		rsp_pos = PEER_DELETE_ALL_RESPONSE_BIT;
 		recovery_reason = QDF_VDEV_PEER_DELETE_ALL_RESPONSE_TIMED_OUT;
 		target_if_vdev_mgr_rsp_timer_stop(psoc, vdev_rsp, rsp_pos);
-
-		rx_ops->vdev_mgr_peer_delete_all_response(
-				psoc,
-				&peer_del_all_rsp);
+		target_if_vdev_mgr_handle_recovery(psoc, vdev_id,
+						   recovery_reason, rsp_pos);
+		rx_ops->vdev_mgr_peer_delete_all_response(psoc,
+							  &peer_del_all_rsp);
 	} else {
 		mlme_err("PSOC_%d VDEV_%d: Unknown error",
 			 wlan_psoc_get_id(psoc), vdev_id);
-		return;
+		return QDF_STATUS_E_FAILURE;
 	}
 
-	if (!target_if_vdev_mgr_is_panic_allowed()) {
-		mlme_debug("PSOC_%d VDEV_%d: Panic not allowed",
-			   wlan_psoc_get_id(psoc), vdev_id);
-		return;
-	}
-
-	/* Trigger recovery */
-	mlme_err("PSOC_%d VDEV_%d: Self recovery, %s rsp timeout",
-		 wlan_psoc_get_id(psoc), vdev_id,
-		 string_from_rsp_bit(rsp_pos));
-
-	qdf_trigger_self_recovery(psoc, recovery_reason);
+	return QDF_STATUS_SUCCESS;
 }
 
 #ifdef SERIALIZE_VDEV_RESP
@@ -363,8 +371,7 @@ static int target_if_vdev_mgr_delete_response_handler(ol_scn_t scn,
 	struct wlan_objmgr_psoc *psoc;
 	struct wmi_unified *wmi_handle;
 	struct wlan_lmac_if_mlme_rx_ops *rx_ops;
-	struct vdev_delete_response rsp = {0};
-	struct wmi_host_vdev_delete_resp vdev_del_resp;
+	struct vdev_delete_response vdev_del_resp = {0};
 	struct vdev_response_timer *vdev_rsp;
 
 	if (!scn || !data) {
@@ -413,8 +420,7 @@ static int target_if_vdev_mgr_delete_response_handler(ol_scn_t scn,
 		goto err;
 	}
 
-	rsp.vdev_id = vdev_del_resp.vdev_id;
-	status = rx_ops->vdev_mgr_delete_response(psoc, &rsp);
+	status = rx_ops->vdev_mgr_delete_response(psoc, &vdev_del_resp);
 
 err:
 	return qdf_status_to_os_return(status);

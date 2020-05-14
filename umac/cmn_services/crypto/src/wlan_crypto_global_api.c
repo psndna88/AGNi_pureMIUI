@@ -55,6 +55,36 @@ const struct wlan_crypto_cipher *wlan_crypto_cipher_ops[WLAN_CRYPTO_CIPHER_MAX];
 	WLAN_CRYPTO_ADDSELECTOR(frm,\
 				wlan_crypto_rsn_keymgmt_to_suite(keymgmt))
 
+static int is_valid_keyix(uint16_t keyix)
+{
+	if (keyix >= (WLAN_CRYPTO_MAXKEYIDX + WLAN_CRYPTO_MAXIGTKKEYIDX
+			+ WLAN_CRYPTO_MAXBIGTKKEYIDX))
+		return 0;
+	else
+		return 1;
+}
+
+static int is_igtk(uint16_t keyix)
+{
+	if (keyix < WLAN_CRYPTO_MAXKEYIDX)
+		return 0;
+	else if (keyix - WLAN_CRYPTO_MAXKEYIDX >= WLAN_CRYPTO_MAXIGTKKEYIDX)
+		return 0;
+	else
+		return 1;
+}
+
+static int is_bigtk(uint16_t keyix)
+{
+	if (keyix < (WLAN_CRYPTO_MAXKEYIDX + WLAN_CRYPTO_MAXIGTKKEYIDX))
+		return 0;
+	if (keyix - WLAN_CRYPTO_MAXKEYIDX - WLAN_CRYPTO_MAXIGTKKEYIDX
+						>= WLAN_CRYPTO_MAXBIGTKKEYIDX)
+		return 0;
+	else
+		return 1;
+}
+
 /**
  * wlan_crypto_vdev_get_crypto_params - called by mlme to get crypto params
  * @vdev:vdev
@@ -588,6 +618,7 @@ QDF_STATUS wlan_crypto_setkey(struct wlan_objmgr_vdev *vdev,
 	bool isbcast;
 	enum QDF_OPMODE vdev_mode;
 	uint8_t igtk_idx = 0;
+	uint8_t bigtk_idx = 0;
 
 	if (!vdev || !req_key || req_key->keylen > (sizeof(req_key->keydata))) {
 		crypto_err("Invalid params vdev%pK, req_key%pK", vdev, req_key);
@@ -679,22 +710,39 @@ QDF_STATUS wlan_crypto_setkey(struct wlan_objmgr_vdev *vdev,
 		}
 
 		if (IS_MGMT_CIPHER(req_key->type)) {
+			struct wlan_crypto_key *crypto_key = NULL;
+
 			igtk_idx = req_key->keyix - WLAN_CRYPTO_MAXKEYIDX;
-			if (igtk_idx >= WLAN_CRYPTO_MAXIGTKKEYIDX) {
-				crypto_err("igtk key invalid keyid %d",
-					   igtk_idx);
+			bigtk_idx = igtk_idx - WLAN_CRYPTO_MAXIGTKKEYIDX;
+			if (!is_igtk(req_key->keyix) &&
+			    !(is_bigtk(req_key->keyix))) {
+				crypto_err("igtk/bigtk key invalid keyid %d",
+					   req_key->keyix);
 				return QDF_STATUS_E_INVAL;
 			}
 			key = qdf_mem_malloc(sizeof(struct wlan_crypto_key));
 			if (!key)
 				return QDF_STATUS_E_NOMEM;
 
-			if (crypto_priv->igtk_key[igtk_idx])
-				qdf_mem_free(crypto_priv->igtk_key[igtk_idx]);
 
-			crypto_priv->igtk_key[igtk_idx] = key;
-			crypto_priv->igtk_key_type = req_key->type;
-			crypto_priv->def_igtk_tx_keyid = igtk_idx;
+			if (is_igtk(req_key->keyix)) {
+				crypto_key = crypto_priv->igtk_key[igtk_idx];
+				if (crypto_key)
+					qdf_mem_free(crypto_key);
+
+				crypto_priv->igtk_key[igtk_idx] = key;
+				crypto_priv->igtk_key_type = req_key->type;
+				crypto_priv->def_igtk_tx_keyid = igtk_idx;
+				bigtk_idx = 0;
+			} else {
+				crypto_key = crypto_priv->bigtk_key[bigtk_idx];
+				if (crypto_key)
+					qdf_mem_free(crypto_key);
+
+				crypto_priv->bigtk_key[bigtk_idx] = key;
+				crypto_priv->def_bigtk_tx_keyid = bigtk_idx;
+				igtk_idx = 0;
+			}
 		} else {
 			if (IS_FILS_CIPHER(req_key->type)) {
 				crypto_err("FILS key is not for BroadCast pkt");
@@ -720,6 +768,8 @@ QDF_STATUS wlan_crypto_setkey(struct wlan_objmgr_vdev *vdev,
 				crypto_err("peer NULL");
 				if (IS_MGMT_CIPHER(req_key->type)) {
 					crypto_priv->igtk_key[igtk_idx] = NULL;
+					crypto_priv->bigtk_key[bigtk_idx]
+						= NULL;
 					crypto_priv->igtk_key_type
 						= WLAN_CRYPTO_CIPHER_NONE;
 				} else
@@ -759,22 +809,36 @@ QDF_STATUS wlan_crypto_setkey(struct wlan_objmgr_vdev *vdev,
 			return QDF_STATUS_E_INVAL;
 		}
 		if (IS_MGMT_CIPHER(req_key->type)) {
+			struct wlan_crypto_key *crypto_key = NULL;
+
 			igtk_idx = req_key->keyix - WLAN_CRYPTO_MAXKEYIDX;
-			if (igtk_idx >= WLAN_CRYPTO_MAXIGTKKEYIDX) {
-				crypto_err("igtk key invalid keyid %d",
-					   igtk_idx);
+			bigtk_idx = igtk_idx - WLAN_CRYPTO_MAXIGTKKEYIDX;
+			if (!is_igtk(req_key->keyix) &&
+			    !(is_bigtk(req_key->keyix))) {
+				crypto_err("igtk/bigtk key invalid keyid %d",
+					   req_key->keyix);
 				return QDF_STATUS_E_INVAL;
 			}
 			key = qdf_mem_malloc(sizeof(struct wlan_crypto_key));
 			if (!key)
 				return QDF_STATUS_E_NOMEM;
 
-			if (crypto_priv->igtk_key[igtk_idx])
-				qdf_mem_free(crypto_priv->igtk_key[igtk_idx]);
+			if (is_igtk(req_key->keyix)) {
+				crypto_key = crypto_priv->igtk_key[igtk_idx];
+				if (crypto_key)
+					qdf_mem_free(crypto_key);
 
-			crypto_priv->igtk_key[igtk_idx] = key;
-			crypto_priv->igtk_key_type = req_key->type;
-			crypto_priv->def_igtk_tx_keyid = igtk_idx;
+				crypto_priv->igtk_key[igtk_idx] = key;
+				crypto_priv->igtk_key_type = req_key->type;
+				crypto_priv->def_igtk_tx_keyid = igtk_idx;
+			} else {
+				crypto_key = crypto_priv->bigtk_key[bigtk_idx];
+				if (crypto_key)
+					qdf_mem_free(crypto_key);
+
+				crypto_priv->bigtk_key[bigtk_idx] = key;
+				crypto_priv->def_bigtk_tx_keyid = bigtk_idx;
+			}
 		} else {
 			uint16_t kid = req_key->keyix;
 			if (kid == WLAN_CRYPTO_KEYIX_NONE)
@@ -853,7 +917,8 @@ QDF_STATUS wlan_crypto_setkey(struct wlan_objmgr_vdev *vdev,
 	key->valid = 1;
 	if ((IS_MGMT_CIPHER(req_key->type))) {
 		if (HAS_CIPHER_CAP(crypto_params,
-					WLAN_CRYPTO_CAP_PMF_OFFLOAD)) {
+					WLAN_CRYPTO_CAP_PMF_OFFLOAD) ||
+					is_bigtk(req_key->keyix)) {
 			if (WLAN_CRYPTO_TX_OPS_SETKEY(psoc)) {
 				WLAN_CRYPTO_TX_OPS_SETKEY(psoc)(vdev,
 						key, macaddr, req_key->type);
@@ -928,10 +993,13 @@ struct wlan_crypto_key *wlan_crypto_vdev_getkey(struct wlan_objmgr_vdev *vdev,
 	 * we return the default key, for all other keyix we return the
 	 * key accordingly.
 	 */
-	if (keyix == WLAN_CRYPTO_KEYIX_NONE ||
-	    keyix >= (WLAN_CRYPTO_MAXKEYIDX + WLAN_CRYPTO_MAXIGTKKEYIDX))
+	if ((keyix == WLAN_CRYPTO_KEYIX_NONE) ||
+	    !is_valid_keyix(keyix))
 		key = crypto_priv->key[crypto_priv->def_tx_keyid];
-	else if (keyix >= WLAN_CRYPTO_MAXKEYIDX)
+	else if (is_bigtk(keyix))
+		key = crypto_priv->bigtk_key[keyix - WLAN_CRYPTO_MAXKEYIDX
+						- WLAN_CRYPTO_MAXIGTKKEYIDX];
+	else if (is_igtk(keyix))
 		key = crypto_priv->igtk_key[keyix - WLAN_CRYPTO_MAXKEYIDX];
 	else
 		key = crypto_priv->key[keyix];
@@ -970,9 +1038,12 @@ struct wlan_crypto_key *wlan_crypto_peer_getkey(struct wlan_objmgr_peer *peer,
 	 * key accordingly.
 	 */
 	if (keyix == WLAN_CRYPTO_KEYIX_NONE ||
-	    keyix >= (WLAN_CRYPTO_MAXKEYIDX + WLAN_CRYPTO_MAXIGTKKEYIDX))
+	    !is_valid_keyix(keyix))
 		key = crypto_priv->key[crypto_priv->def_tx_keyid];
-	else if (keyix >= WLAN_CRYPTO_MAXKEYIDX)
+	else if (is_bigtk(keyix))
+		key = crypto_priv->bigtk_key[keyix - WLAN_CRYPTO_MAXKEYIDX
+						- WLAN_CRYPTO_MAXIGTKKEYIDX];
+	else if (is_igtk(keyix))
 		key = crypto_priv->igtk_key[keyix - WLAN_CRYPTO_MAXKEYIDX];
 	else
 		key = crypto_priv->key[keyix];
@@ -1097,8 +1168,7 @@ QDF_STATUS wlan_crypto_delkey(struct wlan_objmgr_vdev *vdev,
 	uint8_t bssid_mac[QDF_MAC_ADDR_SIZE];
 
 	if (!vdev || !macaddr ||
-		(key_idx >=
-			(WLAN_CRYPTO_MAXKEYIDX + WLAN_CRYPTO_MAXIGTKKEYIDX))) {
+		!is_valid_keyix(key_idx)) {
 		crypto_err("Invalid param vdev %pK macaddr %pK keyidx %d",
 			   vdev, macaddr, key_idx);
 		return QDF_STATUS_E_INVAL;
@@ -1147,12 +1217,19 @@ QDF_STATUS wlan_crypto_delkey(struct wlan_objmgr_vdev *vdev,
 
 	if (key_idx >= WLAN_CRYPTO_MAXKEYIDX) {
 		uint8_t igtk_idx = key_idx - WLAN_CRYPTO_MAXKEYIDX;
-		if (igtk_idx >= WLAN_CRYPTO_MAXIGTKKEYIDX) {
-			crypto_err("Igtk key invalid keyid %d", igtk_idx);
+		uint8_t bigtk_idx = igtk_idx - WLAN_CRYPTO_MAXIGTKKEYIDX;
+
+		if (!is_igtk(key_idx) && !(is_bigtk(key_idx))) {
+			crypto_err("igtk/bigtk key invalid keyid %d", key_idx);
 			return QDF_STATUS_E_INVAL;
 		}
-		key = crypto_priv->igtk_key[igtk_idx];
-		crypto_priv->igtk_key[igtk_idx] = NULL;
+		if (is_igtk(key_idx)) {
+			key = crypto_priv->igtk_key[igtk_idx];
+			crypto_priv->igtk_key[igtk_idx] = NULL;
+		} else {
+			key = crypto_priv->bigtk_key[bigtk_idx];
+			crypto_priv->bigtk_key[bigtk_idx] = NULL;
+		}
 		if (key)
 			key->valid = 0;
 	} else {
@@ -4114,7 +4191,7 @@ QDF_STATUS wlan_crypto_validate_key_params(enum wlan_crypto_cipher_type cipher,
 					   uint8_t key_index, uint8_t key_len,
 					   uint8_t seq_len)
 {
-	if (key_index >= (WLAN_CRYPTO_MAXKEYIDX + WLAN_CRYPTO_MAXIGTKKEYIDX)) {
+	if (!is_valid_keyix(key_index)) {
 		crypto_err("Invalid Key index %d", key_index);
 		return QDF_STATUS_E_INVAL;
 	}
@@ -4158,15 +4235,25 @@ QDF_STATUS wlan_crypto_save_key(struct wlan_objmgr_vdev *vdev,
 		crypto_err("crypto_priv NULL");
 		return QDF_STATUS_E_FAILURE;
 	}
-	if (key_index >= (WLAN_CRYPTO_MAXKEYIDX + WLAN_CRYPTO_MAXIGTKKEYIDX)) {
+	if (!is_valid_keyix(key_index)) {
 		crypto_err("Invalid Key index %d", key_index);
 		return QDF_STATUS_E_FAILURE;
 	}
-	if (key_index < WLAN_CRYPTO_MAXKEYIDX)
+	if (key_index < WLAN_CRYPTO_MAXKEYIDX) {
 		crypto_priv->key[key_index] = crypto_key;
-	else
+	} else if (is_igtk(key_index)) {
 		crypto_priv->igtk_key[key_index - WLAN_CRYPTO_MAXKEYIDX] =
 			crypto_key;
+		crypto_priv->def_igtk_tx_keyid =
+				key_index - WLAN_CRYPTO_MAXKEYIDX;
+		crypto_priv->igtk_key_type = crypto_key->cipher_type;
+	} else {
+		crypto_priv->bigtk_key[key_index - WLAN_CRYPTO_MAXKEYIDX
+				- WLAN_CRYPTO_MAXIGTKKEYIDX] = crypto_key;
+		crypto_priv->def_bigtk_tx_keyid =
+				key_index - WLAN_CRYPTO_MAXKEYIDX
+				- WLAN_CRYPTO_MAXIGTKKEYIDX;
+	}
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -4181,14 +4268,19 @@ struct wlan_crypto_key *wlan_crypto_get_key(struct wlan_objmgr_vdev *vdev,
 		crypto_err("crypto_priv NULL");
 		return NULL;
 	}
-	if (key_index >= (WLAN_CRYPTO_MAXKEYIDX + WLAN_CRYPTO_MAXIGTKKEYIDX)) {
+	if (!is_valid_keyix(key_index)) {
 		crypto_err("Invalid Key index %d", key_index);
 		return NULL;
 	}
 	if (key_index < WLAN_CRYPTO_MAXKEYIDX)
 		return crypto_priv->key[key_index];
+	else if (is_igtk(key_index))
+		return crypto_priv->igtk_key[key_index - WLAN_CRYPTO_MAXKEYIDX];
+	else
+		return crypto_priv->bigtk_key[key_index - WLAN_CRYPTO_MAXKEYIDX
+						- WLAN_CRYPTO_MAXIGTKKEYIDX];
 
-	return crypto_priv->igtk_key[key_index - WLAN_CRYPTO_MAXKEYIDX];
+	return NULL;
 }
 
 QDF_STATUS wlan_crypto_set_key_req(struct wlan_objmgr_vdev *vdev,
@@ -4220,4 +4312,69 @@ void wlan_crypto_update_set_key_peer(struct wlan_objmgr_vdev *vdev,
 
 	qdf_mem_copy(crypto_key->macaddr, peer_mac, QDF_MAC_ADDR_SIZE);
 }
+
+#if defined(WLAN_SAE_SINGLE_PMK) && defined(WLAN_FEATURE_ROAM_OFFLOAD)
+void wlan_crypto_selective_clear_sae_single_pmk_entries(
+			struct wlan_objmgr_vdev *vdev,
+			struct qdf_mac_addr *conn_bssid)
+{
+	struct wlan_crypto_params *crypto_params;
+	struct wlan_crypto_comp_priv *crypto_priv;
+	int i;
+
+	crypto_priv = (struct wlan_crypto_comp_priv *)
+					wlan_get_vdev_crypto_obj(vdev);
+
+	if (!crypto_priv) {
+		crypto_err("crypto_priv NULL");
+		return;
+	}
+
+	crypto_params = &crypto_priv->crypto_params;
+
+	for (i = 0; i < WLAN_CRYPTO_MAX_PMKID; i++) {
+		if (!crypto_params->pmksa[i])
+			continue;
+
+		if (crypto_params->pmksa[i]->single_pmk_supported &&
+		    !qdf_is_macaddr_equal(conn_bssid,
+					  &crypto_params->pmksa[i]->bssid)) {
+			qdf_mem_zero(crypto_params->pmksa[i],
+				     sizeof(struct wlan_crypto_pmksa));
+			qdf_mem_free(crypto_params->pmksa[i]);
+			crypto_params->pmksa[i] = NULL;
+		}
+	}
+}
+
+void wlan_crypto_set_sae_single_pmk_bss_cap(struct wlan_objmgr_vdev *vdev,
+					    struct qdf_mac_addr *bssid,
+					    bool single_pmk_capable_bss)
+{
+	struct wlan_crypto_params *crypto_params;
+	struct wlan_crypto_comp_priv *crypto_priv;
+	int i;
+
+	crypto_priv = (struct wlan_crypto_comp_priv *)
+					wlan_get_vdev_crypto_obj(vdev);
+
+	if (!crypto_priv) {
+		crypto_err("crypto_priv NULL");
+		return;
+	}
+
+	crypto_params = &crypto_priv->crypto_params;
+
+	for (i = 0; i < WLAN_CRYPTO_MAX_PMKID; i++) {
+		if (!crypto_params->pmksa[i])
+			continue;
+
+		if (qdf_is_macaddr_equal(bssid,
+					 &crypto_params->pmksa[i]->bssid))
+			crypto_params->pmksa[i]->single_pmk_supported =
+					single_pmk_capable_bss;
+	}
+}
+#endif
+
 #endif

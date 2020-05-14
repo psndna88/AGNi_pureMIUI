@@ -729,6 +729,16 @@ bool reg_is_regdmn_en302502_applicable(struct wlan_objmgr_pdev *pdev);
  */
 QDF_STATUS reg_modify_pdev_chan_range(struct wlan_objmgr_pdev *pdev);
 
+/**
+ * reg_update_pdev_wireless_modes() - Update the wireless_modes in the
+ * pdev_priv_obj with the input wireless_modes
+ * @pdev: pointer to wlan_objmgr_pdev.
+ * @wireless_modes: Wireless modes.
+ *
+ * Return : QDF_STATUS
+ */
+QDF_STATUS reg_update_pdev_wireless_modes(struct wlan_objmgr_pdev *pdev,
+					  uint32_t wireless_modes);
 #ifdef DISABLE_UNII_SHARED_BANDS
 /**
  * reg_disable_chan_coex() - Disable Coexisting channels based on the input
@@ -999,9 +1009,9 @@ bool reg_is_6ghz_op_class(struct wlan_objmgr_pdev *pdev,
 /**
  * reg_is_6ghz_supported() - Whether 6ghz is supported
  *
- * @pdev: pointer to pdev
+ * @psoc: pointer to psoc
  */
-bool reg_is_6ghz_supported(struct wlan_objmgr_pdev *pdev);
+bool reg_is_6ghz_supported(struct wlan_objmgr_psoc *psoc);
 
 /**
  * reg_get_unii_5g_bitmap() - get unii_5g_bitmap value

@@ -343,6 +343,9 @@ static void wlan_lmac_if_umac_reg_rx_ops_register(
 	rx_ops->reg_rx_ops.reg_modify_pdev_chan_range =
 		wlan_reg_modify_pdev_chan_range;
 
+	rx_ops->reg_rx_ops.reg_update_pdev_wireless_modes =
+		wlan_reg_update_pdev_wireless_modes;
+
 	rx_ops->reg_rx_ops.reg_ignore_fw_reg_offload_ind =
 		tgt_reg_ignore_fw_reg_offload_ind;
 
@@ -478,6 +481,30 @@ static void register_dfs_rx_ops_for_ieee(struct wlan_lmac_if_dfs_rx_ops *rx_ops)
 }
 #endif
 
+/*
+ * register_rcac_dfs_rx_ops() - Register DFS RX-Ops for Rolling CAC specific
+ * APIs.
+ * @rx_ops: Pointer to wlan_lmac_if_dfs_rx_ops.
+ */
+#ifdef QCA_SUPPORT_ADFS_RCAC
+static void register_rcac_dfs_rx_ops(struct wlan_lmac_if_dfs_rx_ops *rx_ops)
+{
+	if (!rx_ops)
+		return;
+
+	rx_ops->dfs_set_rcac_enable = ucfg_dfs_set_rcac_enable;
+	rx_ops->dfs_get_rcac_enable = ucfg_dfs_get_rcac_enable;
+	rx_ops->dfs_set_rcac_freq = ucfg_dfs_set_rcac_freq;
+	rx_ops->dfs_get_rcac_freq = ucfg_dfs_get_rcac_freq;
+	rx_ops->dfs_rcac_sm_deliver_evt = utils_dfs_rcac_sm_deliver_evt;
+}
+#else
+static inline void
+register_rcac_dfs_rx_ops(struct wlan_lmac_if_dfs_rx_ops *rx_ops)
+{
+}
+#endif
+
 static QDF_STATUS
 wlan_lmac_if_umac_dfs_rx_ops_register(struct wlan_lmac_if_rx_ops *rx_ops)
 {
@@ -562,6 +589,7 @@ wlan_lmac_if_umac_dfs_rx_ops_register(struct wlan_lmac_if_rx_ops *rx_ops)
 	register_precac_auto_chan_rx_ops_freq(dfs_rx_ops);
 	register_dfs_rx_ops_for_freq(dfs_rx_ops);
 	register_dfs_rx_ops_for_ieee(dfs_rx_ops);
+	register_rcac_dfs_rx_ops(dfs_rx_ops);
 
 	return QDF_STATUS_SUCCESS;
 }

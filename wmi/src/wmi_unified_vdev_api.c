@@ -83,7 +83,7 @@ wmi_extract_vdev_start_resp(struct wmi_unified *wmi_handle, void *evt_buf,
 
 QDF_STATUS
 wmi_extract_vdev_delete_resp(struct wmi_unified *wmi_handle, void *evt_buf,
-			     struct wmi_host_vdev_delete_resp *delete_rsp)
+			     struct vdev_delete_response *delete_rsp)
 {
 	if (wmi_handle->ops->extract_vdev_delete_resp)
 		return wmi_handle->ops->extract_vdev_delete_resp(wmi_handle,
@@ -164,6 +164,16 @@ QDF_STATUS wmi_extract_multi_vdev_restart_resp_event(
 	if (wmi_handle->ops->extract_multi_vdev_restart_resp_event)
 		return wmi_handle->ops->extract_multi_vdev_restart_resp_event(
 				wmi_handle, evt_buf, restart_rsp);
+
+	return QDF_STATUS_E_FAILURE;
+}
+
+QDF_STATUS wmi_unified_multisoc_tbtt_sync_cmd(wmi_unified_t wmi_handle,
+			struct rnr_tbtt_multisoc_sync_param *param)
+{
+	if (wmi_handle->ops->multisoc_tbtt_sync_cmd)
+		return wmi_handle->ops->multisoc_tbtt_sync_cmd(wmi_handle,
+				param);
 
 	return QDF_STATUS_E_FAILURE;
 }

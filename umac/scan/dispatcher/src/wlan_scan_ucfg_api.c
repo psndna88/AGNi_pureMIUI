@@ -688,11 +688,10 @@ ucfg_scan_cancel_sync(struct scan_cancel_request *req)
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
-	if (req->cancel_req.req_type ==
-	   WLAN_SCAN_CANCEL_PDEV_ALL)
+	if (req->cancel_req.req_type == WLAN_SCAN_CANCEL_PDEV_ALL)
 		cancel_pdev = true;
-	else if (req->cancel_req.req_type ==
-	   WLAN_SCAN_CANCEL_VDEV_ALL)
+	else if (req->cancel_req.req_type == WLAN_SCAN_CANCEL_VDEV_ALL ||
+		 req->cancel_req.req_type == WLAN_SCAN_CANCEL_HOST_VDEV_ALL)
 		cancel_vdev = true;
 
 	vdev = req->vdev;
@@ -1506,7 +1505,6 @@ QDF_STATUS ucfg_scan_update_user_config(struct wlan_objmgr_psoc *psoc,
 
 	qdf_mem_copy(&scan_def->score_config, &scan_cfg->score_config,
 		sizeof(struct scoring_config));
-	scm_validate_scoring_config(&scan_def->score_config);
 
 	return QDF_STATUS_SUCCESS;
 }

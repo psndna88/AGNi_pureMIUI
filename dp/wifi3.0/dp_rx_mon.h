@@ -19,6 +19,19 @@
 #ifndef _DP_RX_MON_H_
 #define _DP_RX_MON_H_
 
+/*
+ * dp_rx_mon_status_process() - Process monitor status ring and
+ *>.....TLV in status ring.
+ *
+ * @soc: core txrx main context
+ * @mac_id: mac_id which is one of 3 mac_ids
+ * @quota: No. of ring entry that can be serviced in one shot.
+
+ * Return: uint32_t: No. of ring entry that is processed.
+ */
+uint32_t
+dp_rx_mon_status_process(struct dp_soc *soc, uint32_t mac_id, uint32_t quota);
+
 /**
 * dp_rx_mon_dest_process() - Brain of the Rx processing functionality
 *	Called from the bottom half (tasklet/NET_RX_SOFTIRQ)
@@ -330,6 +343,7 @@ dp_rx_mon_update_dbg_ppdu_stats(struct hal_rx_ppdu_info *ppdu_info,
 			rx_mon_stats->status_ppdu_end_mis++;
 		rx_mon_stats->status_ppdu_state
 			= CDP_MON_PPDU_START;
+		ppdu_info->rx_state = HAL_RX_MON_PPDU_RESET;
 	} else if (ppdu_info->rx_state ==
 		HAL_RX_MON_PPDU_END) {
 		rx_mon_stats->status_ppdu_end++;
@@ -340,6 +354,7 @@ dp_rx_mon_update_dbg_ppdu_stats(struct hal_rx_ppdu_info *ppdu_info,
 			rx_mon_stats->status_ppdu_compl++;
 		rx_mon_stats->status_ppdu_state
 			= CDP_MON_PPDU_END;
+		ppdu_info->rx_state = HAL_RX_MON_PPDU_RESET;
 	}
 }
 

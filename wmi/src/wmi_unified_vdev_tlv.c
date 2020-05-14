@@ -205,13 +205,14 @@ extract_vdev_start_resp_tlv(struct wmi_unified *wmi_handle, void *evt_buf,
 	vdev_rsp->mac_id = ev->mac_id;
 	vdev_rsp->cfgd_tx_streams = ev->cfgd_tx_streams;
 	vdev_rsp->cfgd_rx_streams = ev->cfgd_rx_streams;
+	vdev_rsp->max_allowed_tx_power = ev->max_allowed_tx_power;
 
 	return QDF_STATUS_SUCCESS;
 }
 
 static QDF_STATUS
 extract_vdev_delete_resp_tlv(struct wmi_unified *wmi_handle, void *evt_buf,
-			     struct wmi_host_vdev_delete_resp *delete_rsp)
+			     struct vdev_delete_response *delete_rsp)
 {
 	WMI_VDEV_DELETE_RESP_EVENTID_param_tlvs *param_buf;
 	wmi_vdev_delete_resp_event_fixed_param *ev;

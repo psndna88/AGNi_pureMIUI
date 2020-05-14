@@ -858,6 +858,7 @@ struct cdp_tx_stats {
 	struct cdp_tx_pkt_info ru_loc[MAX_RU_LOCATIONS];
 
 	uint32_t num_ppdu_cookie_valid;
+	uint32_t no_ack_count[QDF_PROTO_SUBTYPE_MAX];
 };
 
 /* struct cdp_rx_stats - rx Level Stats
@@ -1664,6 +1665,9 @@ struct cdp_cfr_rcc_stats {
  * @nondata_rx_ru_size: UL ofdma non data ru size counter array
  * @data_rx_ppdu: data rx ppdu counter
  * @data_user: data user counter array
+ * @tx_ppdu_proc: stats counter for tx ppdu processed
+ * @ack_ba_comes_twice: stats counter for ack_ba_comes twice
+ * @ppdu_drop: stats counter for ppdu_desc drop once threshold reached
  */
 struct cdp_pdev_stats {
 	struct {
@@ -1726,6 +1730,10 @@ struct cdp_pdev_stats {
 
 	struct cdp_tso_stats tso_stats;
 	struct cdp_cfr_rcc_stats rcc;
+
+	uint64_t tx_ppdu_proc;
+	uint32_t ack_ba_comes_twice;
+	uint32_t ppdu_drop;
 };
 
 #ifdef QCA_ENH_V3_STATS_SUPPORT

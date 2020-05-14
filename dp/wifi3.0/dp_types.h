@@ -49,6 +49,7 @@
 #define MAX_RETRIES 4
 #define MAX_RECEPTION_TYPES 4
 
+#define MINIDUMP_STR_SIZE 25
 #ifndef REMOVE_PKT_LOG
 #include <pktlog.h>
 #endif
@@ -110,6 +111,10 @@
 
 #define REO_CMD_EVENT_HIST_MAX 64
 
+/* 2G PHYB */
+#define PHYB_2G_LMAC_ID 2
+#define PHYB_2G_TARGET_PDEV_ID 2
+
 #ifndef REMOVE_PKT_LOG
 enum rx_pktlog_mode {
 	DP_RX_PKTLOG_DISABLED = 0,
@@ -117,6 +122,15 @@ enum rx_pktlog_mode {
 	DP_RX_PKTLOG_LITE,
 };
 #endif
+
+/* enum m_copy_mode - Available mcopy mode
+ *
+ */
+enum m_copy_mode {
+	M_COPY_DISABLED = 0,
+	M_COPY = 2,
+	M_COPY_EXTENDED = 4,
+};
 
 struct msdu_list {
 	qdf_nbuf_t head;
@@ -370,15 +384,19 @@ struct dp_tx_ext_desc_pool_s {
 struct dp_tx_desc_s {
 	struct dp_tx_desc_s *next;
 	qdf_nbuf_t nbuf;
+	uint16_t length;
+	uint16_t flags;
+	qdf_dma_addr_t dma_addr;
 	uint32_t id;
 	struct dp_vdev *vdev;
 	struct dp_pdev *pdev;
-	struct dp_tx_ext_desc_elem_s *msdu_ext_desc;
-	uint16_t flags;
-	uint16_t tx_encap_type;
+	uint8_t tx_encap_type;
 	uint8_t frm_type;
 	uint8_t pkt_offset;
 	uint8_t  pool_id;
+	uint16_t peer_id;
+	uint16_t tx_status;
+	struct dp_tx_ext_desc_elem_s *msdu_ext_desc;
 	void *me_buffer;
 	void *tso_desc;
 	void *tso_num_desc;
@@ -496,10 +514,24 @@ struct dp_txrx_pool_stats {
 	uint16_t pkt_drop_no_pool;
 };
 
+/**
+ * struct dp_srng - DP srng structure
+ * @hal_srng: hal_srng handle
+ * @base_vaddr_unaligned: un-aligned virtual base address of the srng ring
+ * @base_vaddr_aligned: aligned virtual base address of the srng ring
+ * @base_paddr_unaligned: un-aligned physical base address of the srng ring
+ * @base_paddr_aligned: aligned physical base address of the srng ring
+ * @alloc_size: size of the srng ring
+ * @cached: is the srng ring memory cached or un-cached memory
+ * @irq: irq number of the srng ring
+ * @num_entries: number of entries in the srng ring
+ */
 struct dp_srng {
 	hal_ring_handle_t hal_srng;
 	void *base_vaddr_unaligned;
+	void *base_vaddr_aligned;
 	qdf_dma_addr_t base_paddr_unaligned;
+	qdf_dma_addr_t base_paddr_aligned;
 	uint32_t alloc_size;
 	uint8_t cached;
 	int irq;
@@ -599,6 +631,9 @@ struct dp_rx_tid {
 
 	/* Delba reason code for retries */
 	uint8_t delba_rcode;
+
+	/* Coex Override preserved windows size 1 based */
+	uint16_t rx_ba_win_size_override;
 
 #ifdef WLAN_PEER_JITTER
 	/* Tx Jitter stats */
@@ -701,6 +736,7 @@ struct dp_soc_stats {
 		uint32_t deleted;
 		uint32_t aged_out;
 		uint32_t map_err;
+		uint32_t ast_mismatch;
 	} ast;
 
 	/* SOC level TX stats */
@@ -775,6 +811,8 @@ struct dp_soc_stats {
 			struct cdp_pkt_info rx_invalid_pkt_len;
 			/* HAL ring access Fail error count */
 			uint32_t hal_ring_access_fail;
+			/* HAL ring access full Fail error count */
+			uint32_t hal_ring_access_full_fail;
 			/* RX DMA error count */
 			uint32_t rxdma_error[HAL_RXDMA_ERR_MAX];
 			/* RX REO DEST Desc Invalid Magic count */
@@ -791,6 +829,8 @@ struct dp_soc_stats {
 			uint32_t hal_rxdma_err_dup;
 			/* REO cmd send fail/requeue count */
 			uint32_t reo_cmd_send_fail;
+			/* REO cmd send drain count */
+			uint32_t reo_cmd_send_drain;
 			/* RX msdu drop count due to scatter */
 			uint32_t scatter_msdu;
 			/* RX msdu drop count due to invalid cookie */
@@ -805,6 +845,8 @@ struct dp_soc_stats {
 			uint32_t reo_err_oor_drop;
 			/* REO OOR msdu indicated to stack count */
 			uint32_t reo_err_oor_to_stack;
+			/* REO OOR scattered msdu count */
+			uint32_t reo_err_oor_sg_count;
 		} err;
 
 		/* packet count per core - per ring */
@@ -907,6 +949,14 @@ struct htt_t2h_stats {
 	uint32_t num_stats;
 };
 
+struct link_desc_bank {
+	void *base_vaddr_unaligned;
+	void *base_vaddr;
+	qdf_dma_addr_t base_paddr_unaligned;
+	qdf_dma_addr_t base_paddr;
+	uint32_t size;
+};
+
 /* SOC level structure for data path */
 struct dp_soc {
 	/**
@@ -948,15 +998,6 @@ struct dp_soc {
 	/* RXDMA error destination ring */
 	struct dp_srng rxdma_err_dst_ring[MAX_NUM_LMAC_HW];
 
-	/* Link descriptor memory banks */
-	struct {
-		void *base_vaddr_unaligned;
-		void *base_vaddr;
-		qdf_dma_addr_t base_paddr_unaligned;
-		qdf_dma_addr_t base_paddr;
-		uint32_t size;
-	} mon_link_desc_banks[MAX_NUM_LMAC_HW][MAX_MON_LINK_DESC_BANKS];
-
 	/* RXDMA monitor buffer replenish ring */
 	struct dp_srng rxdma_mon_buf_ring[MAX_NUM_LMAC_HW];
 
@@ -984,6 +1025,20 @@ struct dp_soc {
 	/* Link descriptor pages */
 	struct qdf_mem_multi_page_t link_desc_pages;
 
+	/* total link descriptors for regular RX and TX */
+	uint32_t total_link_descs;
+
+	/* monitor link descriptor pages */
+	struct qdf_mem_multi_page_t mon_link_desc_pages[MAX_NUM_LMAC_HW];
+
+	/* total link descriptors for monitor mode for each radio */
+	uint32_t total_mon_link_descs[MAX_NUM_LMAC_HW];
+
+	/* Monitor Link descriptor memory banks */
+	struct link_desc_bank
+		mon_link_desc_banks[MAX_NUM_LMAC_HW][MAX_MON_LINK_DESC_BANKS];
+	uint32_t num_mon_link_desc_banks[MAX_NUM_LMAC_HW];
+
 	/* Link descriptor Idle list for HW internal use (SRNG mode) */
 	struct dp_srng wbm_idle_link_ring;
 
@@ -991,6 +1046,7 @@ struct dp_soc {
 	 */
 	qdf_dma_addr_t wbm_idle_scatter_buf_base_paddr[MAX_IDLE_SCATTER_BUFS];
 	void *wbm_idle_scatter_buf_base_vaddr[MAX_IDLE_SCATTER_BUFS];
+	uint32_t num_scatter_bufs;
 
 	/* Tx SW descriptor pool */
 	struct dp_tx_desc_pool_s tx_desc[MAX_TXDESC_POOLS];
@@ -1253,6 +1309,8 @@ struct dp_soc {
 	qdf_atomic_t num_tx_outstanding;
 	/* Num Tx allowed */
 	uint32_t num_tx_allowed;
+	/* Preferred HW mode */
+	uint8_t preferred_hw_mode;
 
 	/**
 	 * Flag to indicate whether WAR to address single cache entry
@@ -1366,18 +1424,18 @@ struct dp_neighbour_peer {
 
 /**
  * struct ppdu_info - PPDU Status info descriptor
- * @ppdu_id         - Unique ppduid assigned by firmware for every tx packet
- * @sched_cmdid     - schedule command id, which will be same in a burst
- * @max_ppdu_id     - wrap around for ppdu id
- * @last_tlv_cnt    - Keep track for missing ppdu tlvs
- * @last_user       - last ppdu processed for user
- * @is_ampdu        - set if Ampdu aggregate
- * @nbuf            - ppdu descriptor payload
- * @ppdu_desc       - ppdu descriptor
- * @ppdu_info_list_elem  - linked list of ppdu tlvs
- * @ppdu_info_queue_elem - Singly linked list (queue) of ppdu tlvs
- * @mpdu_compltn_common_tlv  - Successful MPDU counter from COMPLTN COMMON tlv
- * @mpdu_ack_ba_tlv	    - Successful MPDU from ACK BA tlv
+ * @ppdu_id: Unique ppduid assigned by firmware for every tx packet
+ * @sched_cmdid: schedule command id, which will be same in a burst
+ * @max_ppdu_id: wrap around for ppdu id
+ * @last_tlv_cnt: Keep track for missing ppdu tlvs
+ * @last_user: last ppdu processed for user
+ * @is_ampdu: set if Ampdu aggregate
+ * @nbuf: ppdu descriptor payload
+ * @ppdu_desc: ppdu descriptor
+ * @ppdu_info_list_elem: linked list of ppdu tlvs
+ * @ppdu_info_queue_elem: Singly linked list (queue) of ppdu tlvs
+ * @mpdu_compltn_common_tlv: Successful tlv counter from COMPLTN COMMON tlv
+ * @mpdu_ack_ba_tlv: Successful tlv counter from ACK BA tlv
  */
 struct ppdu_info {
 	uint32_t ppdu_id;
@@ -1399,8 +1457,8 @@ struct ppdu_info {
 #else
 	TAILQ_ENTRY(ppdu_info) ppdu_info_list_elem;
 #endif
-	uint16_t mpdu_compltn_common_tlv;
-	uint16_t mpdu_ack_ba_tlv;
+	uint8_t compltn_common_tlv;
+	uint8_t ack_ba_tlv;
 };
 
 /**
@@ -1479,6 +1537,9 @@ struct dp_pdev {
 
 	/* LMAC Id */
 	int lmac_id;
+
+	/* Target pdev  Id */
+	int target_pdev_id;
 
 	/* TXRX SOC handle */
 	struct dp_soc *soc;
@@ -1687,7 +1748,7 @@ struct dp_pdev {
 
 	bool tx_sniffer_enable;
 	/* mirror copy mode */
-	bool mcopy_mode;
+	enum m_copy_mode mcopy_mode;
 	bool cfr_rcc_mode;
 	bool enable_reap_timer_non_pkt;
 	bool bpr_enable;
@@ -1794,15 +1855,9 @@ struct dp_pdev {
 	/* tx packet capture enhancement */
 	enum cdp_tx_enh_capture_mode tx_capture_enabled;
 	struct dp_pdev_tx_capture tx_capture;
-	/* stats counter for tx ppdu processed */
-	uint64_t tx_ppdu_proc;
 
 	uint32_t *ppdu_tlv_buf; /* Buffer to hold HTT ppdu stats TLVs*/
 
-	/* nbuf queue to maintain rx ppdu status buffer
-	 * belonging to one ppdu
-	 */
-	qdf_nbuf_queue_t rx_ppdu_buf_q;
 #ifdef WLAN_SUPPORT_RX_FLOW_TAG
 	/**
 	 * Pointer to DP Flow FST at SOC level if
@@ -1831,6 +1886,7 @@ struct dp_pdev {
 	 */
 	struct hal_rx_mon_desc_info *mon_desc;
 #endif
+	qdf_nbuf_t mcopy_status_nbuf;
 };
 
 struct dp_peer;
@@ -2393,5 +2449,10 @@ struct dp_req_rx_hw_stats_t {
 	bool is_query_timeout;
 };
 #endif
+
+void dp_hw_link_desc_pool_banks_free(struct dp_soc *soc, uint32_t mac_id);
+QDF_STATUS dp_hw_link_desc_pool_banks_alloc(struct dp_soc *soc,
+					    uint32_t mac_id);
+void dp_link_desc_ring_replenish(struct dp_soc *soc, uint32_t mac_id);
 
 #endif /* _DP_TYPES_H_ */

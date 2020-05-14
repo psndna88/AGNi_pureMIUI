@@ -17,15 +17,44 @@
  */
 
 #include <wlan_cfr_ucfg_api.h>
-#include "../../core/inc/cfr_defs_i.h"
+#include "cfr_defs_i.h"
 #include <wlan_cfr_utils_api.h>
 #include <wlan_cfr_tgt_api.h>
 #include <wlan_objmgr_peer_obj.h>
 #include <wlan_objmgr_pdev_obj.h>
+#include <qdf_module.h>
 #ifdef WLAN_ENH_CFR_ENABLE
 #include "cdp_txrx_ctrl.h"
 #endif
 
+#ifdef WLAN_ENH_CFR_ENABLE
+static bool cfr_is_filter_enabled(struct cfr_rcc_param *rcc_param)
+{
+	if (rcc_param->m_directed_ftm ||
+	    rcc_param->m_all_ftm_ack ||
+	    rcc_param->m_ndpa_ndp_directed ||
+	    rcc_param->m_ndpa_ndp_all ||
+	    rcc_param->m_ta_ra_filter ||
+	    rcc_param->m_all_packet)
+		return true;
+	else
+		return false;
+}
+
+static bool cfr_is_rcc_enabled(struct pdev_cfr *pa)
+{
+	if (pa->is_cfr_rcc_capable &&
+	    cfr_is_filter_enabled(&pa->rcc_param))
+		return true;
+	else
+		return false;
+}
+#else
+static bool cfr_is_rcc_enabled(struct pdev_cfr *pa)
+{
+	return false;
+}
+#endif
 int ucfg_cfr_start_capture(struct wlan_objmgr_pdev *pdev,
 			   struct wlan_objmgr_peer *peer,
 			   struct cfr_capture_params *params)
@@ -36,44 +65,50 @@ int ucfg_cfr_start_capture(struct wlan_objmgr_pdev *pdev,
 
 	pa = wlan_objmgr_pdev_get_comp_private_obj(pdev, WLAN_UMAC_COMP_CFR);
 	if (NULL == pa) {
-		cfr_err("PDEV cfr object is NULL!\n");
+		cfr_err("PDEV cfr object is NULL!");
 		return -EINVAL;
 	}
 
 	if (!(pa->is_cfr_capable)) {
-		qdf_info("cfr is not supported on this chip\n");
+		cfr_err("cfr is not supported on this chip");
 		return -EINVAL;
 	}
 
 	/* Get peer private object */
 	pe = wlan_objmgr_peer_get_comp_private_obj(peer, WLAN_UMAC_COMP_CFR);
 	if (NULL == pe) {
-		cfr_err("PEER cfr object is NULL!\n");
+		cfr_err("PEER cfr object is NULL!");
 		return -EINVAL;
 	}
 
 	if ((params->period < 0) || (params->period > MAX_CFR_PRD) ||
 		(params->period % 10)) {
-		cfr_err("Invalid period value: %d\n", params->period);
+		cfr_err("Invalid period value: %d", params->period);
 		return -EINVAL;
 	}
 
 	if (!(params->period) && (pa->cfr_timer_enable)) {
-		cfr_err("Single shot capture is not allowed during periodic capture\n");
+		cfr_err("Single shot capture is not allowed during periodic capture");
 		return -EINVAL;
 	}
 
 	if ((params->period) && !(pa->cfr_timer_enable)) {
-		cfr_err("Global periodic timer is not enabled, configure global cfr timer\n");
+		cfr_err("Global periodic timer is not enabled, configure global cfr timer");
 	}
 
 	if (params->period) {
 		if (pa->cfr_current_sta_count == pa->cfr_max_sta_count) {
-			qdf_info("max periodic cfr clients reached\n");
+			cfr_err("max periodic cfr clients reached");
 			return -EINVAL;
 		}
 		if (!(pe->request))
 			pa->cfr_current_sta_count++;
+	}
+
+	if (cfr_is_rcc_enabled(pa)) {
+		cfr_err("This is not allowed since RCC is enabled");
+		pa->cfr_timer_enable = 0;
+		return -EINVAL;
 	}
 
 	status = tgt_cfr_start_capture(pdev, peer, params);
@@ -166,12 +201,12 @@ int ucfg_cfr_stop_capture_probe_req(struct wlan_objmgr_pdev *pdev,
 
 	pa = wlan_objmgr_pdev_get_comp_private_obj(pdev, WLAN_UMAC_COMP_CFR);
 	if (!pa) {
-		cfr_err("Pdev cfr object is NULL!\n");
+		cfr_err("Pdev cfr object is NULL!");
 		return -EINVAL;
 	}
 
 	if (!(pa->is_cfr_capable)) {
-		cfr_err("CFR is not supported on this chip\n");
+		cfr_err("CFR is not supported on this chip");
 		return -EINVAL;
 	}
 
@@ -200,12 +235,12 @@ int ucfg_cfr_set_timer(struct wlan_objmgr_pdev *pdev, uint32_t value)
 
 	pa = wlan_objmgr_pdev_get_comp_private_obj(pdev, WLAN_UMAC_COMP_CFR);
 	if (pa == NULL) {
-		cfr_err("PDEV cfr object is NULL!\n");
+		cfr_err("PDEV cfr object is NULL!");
 		return -EINVAL;
 	}
 
 	if (!(pa->is_cfr_capable)) {
-		qdf_info("cfr is not supported on this chip\n");
+		cfr_err("cfr is not supported on this chip");
 		return -EINVAL;
 	}
 
@@ -219,18 +254,61 @@ int ucfg_cfr_get_timer(struct wlan_objmgr_pdev *pdev)
 
 	pa = wlan_objmgr_pdev_get_comp_private_obj(pdev, WLAN_UMAC_COMP_CFR);
 	if (pa == NULL) {
-		cfr_err("PDEV cfr object is NULL!\n");
+		cfr_err("PDEV cfr object is NULL!");
 		return -EINVAL;
 	}
 
 	if (!(pa->is_cfr_capable)) {
-		qdf_info("cfr is not supported on this chip\n");
+		cfr_err("cfr is not supported on this chip");
 		return -EINVAL;
 	}
 
 	return pa->cfr_timer_enable;
 }
 qdf_export_symbol(ucfg_cfr_get_timer);
+
+static void cfr_iter_peer_handler(struct wlan_objmgr_pdev *pdev,
+				  void *object, void *arg)
+{
+	struct wlan_objmgr_peer *peer = (struct wlan_objmgr_peer *)object;
+	struct peer_cfr *pe;
+	int *cfr_capt_status = (int *)arg;
+
+	if (*cfr_capt_status == PEER_CFR_CAPTURE_ENABLE)
+		return;
+
+	if (!peer || !pdev) {
+		cfr_err("peer or pdev object is NULL");
+		return;
+	}
+
+	if (wlan_vdev_get_selfpeer(peer->peer_objmgr.vdev) == peer)
+		return;
+
+	pe = wlan_objmgr_peer_get_comp_private_obj(peer, WLAN_UMAC_COMP_CFR);
+	if (!pe) {
+		cfr_err("PEER cfr object is NULL!");
+		return;
+	}
+
+	if (pe->request == PEER_CFR_CAPTURE_ENABLE) {
+		*cfr_capt_status = pe->request;
+		cfr_debug("CFR capture running for peer "
+			  QDF_MAC_ADDR_STR,
+			  QDF_MAC_ADDR_ARRAY(peer->macaddr));
+	}
+}
+
+void ucfg_cfr_get_capture_status(struct wlan_objmgr_pdev *pdev,
+				 enum cfr_capt_status *status)
+{
+	*status = PEER_CFR_CAPTURE_DISABLE;
+
+	wlan_objmgr_pdev_iterate_obj_list(pdev, WLAN_PEER_OP,
+					  cfr_iter_peer_handler,
+					  status, 1, WLAN_CFR_ID);
+}
+qdf_export_symbol(ucfg_cfr_get_capture_status);
 
 int ucfg_cfr_stop_capture(struct wlan_objmgr_pdev *pdev,
 			  struct wlan_objmgr_peer *peer)
@@ -241,25 +319,25 @@ int ucfg_cfr_stop_capture(struct wlan_objmgr_pdev *pdev,
 
 	pa = wlan_objmgr_pdev_get_comp_private_obj(pdev, WLAN_UMAC_COMP_CFR);
 	if (pa == NULL) {
-		cfr_err("PDEV cfr object is NULL!\n");
+		cfr_err("PDEV cfr object is NULL!");
 		return -EINVAL;
 	}
 
 	if (!(pa->is_cfr_capable)) {
-		qdf_info("cfr is not supported on this chip\n");
+		cfr_err("cfr is not supported on this chip");
 		return -EINVAL;
 	}
 
 	pe = wlan_objmgr_peer_get_comp_private_obj(peer, WLAN_UMAC_COMP_CFR);
 	if (pe == NULL) {
-		cfr_err("PEER cfr object is NULL!\n");
+		cfr_err("PEER cfr object is NULL!");
 		return -EINVAL;
 	}
 
 	if ((pe->period) && (pe->request))
 		status = tgt_cfr_stop_capture(pdev, peer);
 	else {
-		qdf_info("periodic cfr not started for the client\n");
+		cfr_err("periodic cfr not started for the client");
 		return -EINVAL;
 	}
 
@@ -276,6 +354,16 @@ int ucfg_cfr_list_peers(struct wlan_objmgr_pdev *pdev)
 	return 0;
 }
 
+QDF_STATUS ucfg_cfr_stop_indication(struct wlan_objmgr_vdev *vdev)
+{
+	if (!vdev) {
+		cfr_err("null vdev");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	return cfr_stop_indication(vdev);
+}
+
 #ifdef WLAN_ENH_CFR_ENABLE
 
 static inline
@@ -286,20 +374,20 @@ QDF_STATUS dev_sanity_check(struct wlan_objmgr_vdev *vdev,
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 
 	if (!vdev) {
-		cfr_err("vdev is NULL\n");
+		cfr_err("vdev is NULL");
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
 	*ppdev = wlan_vdev_get_pdev(vdev);
 
 	if (!*ppdev) {
-		cfr_err("pdev is NULL\n");
+		cfr_err("pdev is NULL");
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
 	status = wlan_objmgr_pdev_try_get_ref(*ppdev, WLAN_CFR_ID);
 	if (status != QDF_STATUS_SUCCESS) {
-		cfr_err("Failed to get pdev reference\n");
+		cfr_err("Failed to get pdev reference");
 		return status;
 	}
 
@@ -313,7 +401,7 @@ QDF_STATUS dev_sanity_check(struct wlan_objmgr_vdev *vdev,
 	}
 
 	if (!(*ppcfr)->is_cfr_rcc_capable) {
-		cfr_err("cfr is not supported on this chip\n");
+		cfr_err("cfr is not supported on this chip");
 		wlan_objmgr_pdev_release_ref(*ppdev, WLAN_CFR_ID);
 		return QDF_STATUS_E_NOSUPPORT;
 	}
@@ -458,7 +546,12 @@ ucfg_cfr_set_capture_interval(struct wlan_objmgr_vdev *vdev,
 	if (status != QDF_STATUS_SUCCESS)
 		return status;
 
-	pcfr->rcc_param.capture_interval = params->cap_intvl;
+	if (pcfr->rcc_param.capture_duration > params->cap_intvl) {
+		cfr_err("Capture interval should be more than capture duration");
+		status = QDF_STATUS_E_INVAL;
+	} else {
+		pcfr->rcc_param.capture_interval = params->cap_intvl;
+	}
 
 	wlan_objmgr_pdev_release_ref(pdev, WLAN_CFR_ID);
 
@@ -482,7 +575,13 @@ ucfg_cfr_set_capture_duration(struct wlan_objmgr_vdev *vdev,
 	if (status != QDF_STATUS_SUCCESS)
 		return status;
 
-	pcfr->rcc_param.capture_duration = params->cap_dur;
+	if (pcfr->rcc_param.capture_interval &&
+	    (params->cap_dur > pcfr->rcc_param.capture_interval)) {
+		cfr_err("Capture duration is exceeding capture interval");
+		status = QDF_STATUS_E_INVAL;
+	} else {
+		pcfr->rcc_param.capture_duration = params->cap_dur;
+	}
 
 	wlan_objmgr_pdev_release_ref(pdev, WLAN_CFR_ID);
 
@@ -604,19 +703,6 @@ QDF_STATUS ucfg_cfr_set_tara_config(struct wlan_objmgr_vdev *vdev,
 	return status;
 }
 
-static bool cfr_is_filter_enabled(struct cfr_rcc_param *rcc_param)
-{
-	if (rcc_param->m_directed_ftm ||
-	    rcc_param->m_all_ftm_ack ||
-	    rcc_param->m_ndpa_ndp_directed ||
-	    rcc_param->m_ndpa_ndp_all ||
-	    rcc_param->m_ta_ra_filter ||
-	    rcc_param->m_all_packet)
-		return true;
-	else
-		return false;
-}
-
 QDF_STATUS ucfg_cfr_get_cfg(struct wlan_objmgr_vdev *vdev)
 {
 	struct pdev_cfr *pcfr = NULL;
@@ -629,7 +715,7 @@ QDF_STATUS ucfg_cfr_get_cfg(struct wlan_objmgr_vdev *vdev)
 	if (status != QDF_STATUS_SUCCESS)
 		return status;
 	if (!cfr_is_filter_enabled(&pcfr->rcc_param)) {
-		cfr_err(" All RCC modes are disabled.\n");
+		cfr_err(" All RCC modes are disabled");
 		wlan_objmgr_pdev_release_ref(pdev, WLAN_CFR_ID);
 		return status;
 	}
@@ -699,14 +785,14 @@ QDF_STATUS ucfg_cfr_get_cfg(struct wlan_objmgr_vdev *vdev)
 			glbl_cfg->ctrl_subtype_filter);
 		cfr_err("Data subtype : 0x%x\n",
 			glbl_cfg->data_subtype_filter);
-		cfr_err("TX Addr : %s\n",
-			ether_sprintf(glbl_cfg->tx_addr));
-		cfr_err("TX Addr Mask : %s\n",
-			ether_sprintf(glbl_cfg->tx_addr_mask));
-		cfr_err("RX Addr : %s\n",
-			ether_sprintf(glbl_cfg->rx_addr));
-		cfr_err("RX Addr Mask: %s\n",
-			ether_sprintf(glbl_cfg->rx_addr_mask));
+		cfr_err("TX Addr: " QDF_MAC_ADDR_STR,
+			QDF_MAC_ADDR_ARRAY(glbl_cfg->tx_addr));
+		cfr_err("TX Addr Mask: " QDF_MAC_ADDR_STR,
+			QDF_MAC_ADDR_ARRAY(glbl_cfg->tx_addr_mask));
+		cfr_err("RX Addr: " QDF_MAC_ADDR_STR,
+			QDF_MAC_ADDR_ARRAY(glbl_cfg->rx_addr));
+		cfr_err("RX Addr Mask: " QDF_MAC_ADDR_STR,
+			QDF_MAC_ADDR_ARRAY(glbl_cfg->rx_addr_mask));
 	}
 
 	wlan_objmgr_pdev_release_ref(pdev, WLAN_CFR_ID);
@@ -869,13 +955,13 @@ QDF_STATUS ucfg_cfr_rcc_dump_lut(struct wlan_objmgr_vdev *vdev)
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 
 	if (!vdev) {
-		cfr_err("vdev is NULL\n");
+		cfr_err("vdev is NULL");
 		return QDF_STATUS_E_INVAL;
 	}
 
 	pdev = wlan_vdev_get_pdev(vdev);
 	if (!pdev) {
-		cfr_err("pdev is NULL\n");
+		cfr_err("pdev is NULL");
 		return QDF_STATUS_E_INVAL;
 	}
 
@@ -884,15 +970,15 @@ QDF_STATUS ucfg_cfr_rcc_dump_lut(struct wlan_objmgr_vdev *vdev)
 		return QDF_STATUS_E_INVAL;
 	}
 
-	cfr_err("LUT table:\n");
+	cfr_err("LUT table:");
 	tgt_cfr_dump_lut_enh(pdev);
 	wlan_objmgr_pdev_release_ref(pdev, WLAN_CFR_ID);
 
 	return status;
 }
 
-void cfr_set_filter(struct wlan_objmgr_pdev *pdev,
-		    bool enable, struct cdp_monitor_filter *filter_val)
+static void cfr_set_filter(struct wlan_objmgr_pdev *pdev, bool enable,
+			   struct cdp_monitor_filter *filter_val)
 {
 	struct wlan_objmgr_psoc *psoc = wlan_pdev_get_psoc(pdev);
 
@@ -934,8 +1020,12 @@ QDF_STATUS ucfg_cfr_committed_rcc_config(struct wlan_objmgr_vdev *vdev)
 
 	if (!psoc) {
 		cfr_err("psoc is null!");
+		wlan_objmgr_pdev_release_ref(pdev, WLAN_CFR_ID);
 		return QDF_STATUS_E_NULL_VALUE;
 	}
+
+	pcfr->rcc_param.vdev_id = wlan_vdev_get_id(vdev);
+
 	/*
 	 * If capture mode is valid, then Host:
 	 * Subscribes for PPDU status TLVs in monitor status ring.
@@ -950,6 +1040,12 @@ QDF_STATUS ucfg_cfr_committed_rcc_config(struct wlan_objmgr_vdev *vdev)
 	 */
 
 	if (cfr_is_filter_enabled(&pcfr->rcc_param)) {
+		if (pcfr->cfr_timer_enable) {
+			cfr_err("Not allowed: Periodic capture is enabled.\n");
+			wlan_objmgr_pdev_release_ref(pdev, WLAN_CFR_ID);
+			return QDF_STATUS_E_NOSUPPORT;
+		}
+
 		if (pcfr->rcc_param.m_all_ftm_ack) {
 			filter_val.mode |= MON_FILTER_PASS |
 					   MON_FILTER_OTHER;
@@ -1022,7 +1118,7 @@ QDF_STATUS ucfg_cfr_committed_rcc_config(struct wlan_objmgr_vdev *vdev)
 		tgt_cfr_default_ta_ra_cfg(pdev, &pcfr->rcc_param,
 					  false, MAX_RESET_CFG_ENTRY);
 	} else {
-		cfr_err("CFR commit failed\n");
+		cfr_err("CFR commit failed");
 	}
 
 	pcfr->rcc_param.num_grp_tlvs = 0;
@@ -1100,5 +1196,11 @@ bool ucfg_cfr_get_rcc_enabled(struct wlan_objmgr_vdev *vdev)
 	wlan_objmgr_pdev_release_ref(pdev, WLAN_CFR_ID);
 
 	return rcc_enabled;
+}
+
+QDF_STATUS ucfg_cfr_subscribe_ppdu_desc(struct wlan_objmgr_pdev *pdev,
+					bool is_subscribe)
+{
+	return tgt_cfr_subscribe_ppdu_desc(pdev, is_subscribe);
 }
 #endif

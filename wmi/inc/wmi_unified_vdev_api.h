@@ -108,7 +108,7 @@ wmi_extract_vdev_stopped_param(struct wmi_unified *wmi_handle, void *evt_buf,
  */
 QDF_STATUS
 wmi_extract_vdev_delete_resp(struct wmi_unified *wmi_handle, void *evt_buf,
-			     struct wmi_host_vdev_delete_resp *vdev_del_resp);
+			     struct vdev_delete_response *vdev_del_resp);
 
 /**
  * wmi_extract_vdev_peer_delete_all_response_event() - extract peer delete all
@@ -161,4 +161,15 @@ QDF_STATUS wmi_extract_multi_vdev_restart_resp_event(
 		struct wmi_unified *wmi_handle,
 		void *evt_buf,
 		struct multi_vdev_restart_resp *restart_rsp);
+
+/**
+ * wmi_unified_multisoc_tbtt_sync_cmd() - Send cmd to sync tbtt in multisoc case
+ * @wmi_handle: wmi handle
+ * @param: params received in rnr_tbtt_multisoc_sync_param
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS
+wmi_unified_multisoc_tbtt_sync_cmd(wmi_unified_t wmi_handle,
+				   struct rnr_tbtt_multisoc_sync_param *param);
 #endif

@@ -192,6 +192,7 @@ typedef QDF_STATUS (*wlan_ser_umac_cmd_cb)(void *umac_cmd);
  * @WLAN_SER_CMD_VDEV_RESTART: Cmd to restart a VDEV
  * @WLAN_SER_CMD_PDEV_RESTART: Cmd to restart all VDEVs of a PDEV
  * @WLAN_SER_CMD_PDEV_CSA_RESTART: Cmd to CSA restart all AP VDEVs of a PDEV
+ * @WLAN_SER_CMD_GET_DISCONNECT_STATS: Cmd to get peer stats on disconnection
  */
 enum wlan_serialization_cmd_type {
 	/* all scan command before non-scan */
@@ -229,6 +230,7 @@ enum wlan_serialization_cmd_type {
 	WLAN_SER_CMD_VDEV_RESTART,
 	WLAN_SER_CMD_PDEV_RESTART,
 	WLAN_SER_CMD_PDEV_CSA_RESTART,
+	WLAN_SER_CMD_GET_DISCONNECT_STATS,
 	WLAN_SER_CMD_MAX
 };
 
@@ -237,6 +239,7 @@ enum wlan_serialization_cmd_type {
  * @WLAN_SER_CANCEL_SINGLE_SCAN: Cancel a single scan with a given ID
  * @WLAN_SER_CANCEL_PDEV_SCANS: Cancel all the scans on a given pdev
  * @WLAN_SER_CANCEL_VDEV_SCANS: Cancel all the scans on given vdev
+ * @WLAN_SER_CANCEL_VDEV_HOST_SCANS: Cancel all host scans on given vdev
  * @WLAN_SER_CANCEL_PDEV_NON_SCAN_CMD: Cancel all non scans on a given pdev
  * @WLAN_SER_CANCEL_VDEV_NON_SCAN_CMD: Cancel all non scans on a given vdev
  * @WLAN_SER_CANCEL_VDEV_NON_SCAN_CMD_TYPE: Cancel all non scans on a given vdev
@@ -249,6 +252,7 @@ enum wlan_serialization_cancel_type {
 	WLAN_SER_CANCEL_SINGLE_SCAN,
 	WLAN_SER_CANCEL_PDEV_SCANS,
 	WLAN_SER_CANCEL_VDEV_SCANS,
+	WLAN_SER_CANCEL_VDEV_HOST_SCANS,
 	WLAN_SER_CANCEL_PDEV_NON_SCAN_CMD,
 	WLAN_SER_CANCEL_VDEV_NON_SCAN_CMD,
 	WLAN_SER_CANCEL_VDEV_NON_SCAN_CMD_TYPE,
@@ -675,6 +679,17 @@ void wlan_serialization_purge_all_cmd(struct wlan_objmgr_psoc *psoc);
 void wlan_serialization_purge_all_pending_cmd_by_vdev_id(
 					struct wlan_objmgr_pdev *pdev,
 					uint8_t vdev_id);
+
+/**
+ * wlan_serialization_purge_all_cmd_by_vdev_id() - Purge all scan and non scan
+ * commands for vdev id
+ * @pdev: pointer to pdev
+ * @vdev_id: vdev_id variable
+ *
+ * Return: none
+ */
+void wlan_serialization_purge_all_cmd_by_vdev_id(struct wlan_objmgr_pdev *pdev,
+						 uint8_t vdev_id);
 
 /**
  * wlan_serialization_purge_all_scan_cmd_by_vdev_id() - Purge all pending/active

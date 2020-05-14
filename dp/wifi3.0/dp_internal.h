@@ -22,7 +22,7 @@
 #include "dp_types.h"
 
 #define RX_BUFFER_SIZE_PKTLOG_LITE 1024
-
+#define DP_PEER_WDS_COUNT_INVALID UINT_MAX
 
 #define DP_RSSI_INVAL 0x80
 #define DP_RSSI_AVG_WEIGHT 2
@@ -109,6 +109,23 @@ extern uint8_t
 dp_cpu_ring_map[DP_NSS_CPU_RING_MAP_MAX][WLAN_CFG_INT_NUM_CONTEXTS_MAX];
 #endif
 
+#define DP_MAX_TIMER_EXEC_TIME_TICKS \
+		(QDF_LOG_TIMESTAMP_CYCLES_PER_10_US * 100 * 20)
+
+/**
+ * enum timer_yield_status - yield status code used in monitor mode timer.
+ * @DP_TIMER_NO_YIELD: do not yield
+ * @DP_TIMER_WORK_DONE: yield because work is done
+ * @DP_TIMER_WORK_EXHAUST: yield because work quota is exhausted
+ * @DP_TIMER_TIME_EXHAUST: yield due to time slot exhausted
+ */
+enum timer_yield_status {
+	DP_TIMER_NO_YIELD,
+	DP_TIMER_WORK_DONE,
+	DP_TIMER_WORK_EXHAUST,
+	DP_TIMER_TIME_EXHAUST,
+};
+
 #if DP_PRINT_ENABLE
 #include <stdarg.h>       /* va_list */
 #include <qdf_types.h> /* qdf_vprint */
@@ -130,7 +147,6 @@ enum {
 	/* INFO2 - include non-fundamental but infrequent events */
 	DP_PRINT_LEVEL_INFO2,
 };
-
 
 #define dp_print(level, fmt, ...) do { \
 	if (level <= g_txrx_print_level) \
@@ -1389,8 +1405,8 @@ static inline struct dp_pdev *
 }
 
 /**
- * dp_get_target_pdev_id_for_host_pdev_id() - Return target pdev corresponding
- *                                         to host pdev id
+ * dp_calculate_target_pdev_id_from_host_pdev_id() - Return target pdev
+ *                                          corresponding to host pdev id
  * @soc: soc pointer
  * @mac_for_pdev: pdev_id corresponding to host pdev for WIN, mac id for MCL
  *
@@ -1403,7 +1419,7 @@ static inline struct dp_pdev *
  * For MCL, return the offset-1 translated mac_id
  */
 static inline int
-dp_get_target_pdev_id_for_host_pdev_id
+dp_calculate_target_pdev_id_from_host_pdev_id
 	(struct dp_soc *soc, uint32_t mac_for_pdev)
 {
 	struct dp_pdev *pdev;
@@ -1415,6 +1431,30 @@ dp_get_target_pdev_id_for_host_pdev_id
 
 	/*non-MCL case, get original target_pdev mapping*/
 	return wlan_cfg_get_target_pdev_id(soc->wlan_cfg_ctx, pdev->lmac_id);
+}
+
+/**
+ * dp_get_target_pdev_id_for_host_pdev_id() - Return target pdev corresponding
+ *                                         to host pdev id
+ * @soc: soc pointer
+ * @mac_for_pdev: pdev_id corresponding to host pdev for WIN, mac id for MCL
+ *
+ * returns target pdev_id for host pdev id.
+ * For WIN, return the value stored in pdev object.
+ * For MCL, return the offset-1 translated mac_id.
+ */
+static inline int
+dp_get_target_pdev_id_for_host_pdev_id
+	(struct dp_soc *soc, uint32_t mac_for_pdev)
+{
+	struct dp_pdev *pdev;
+
+	if (!wlan_cfg_per_pdev_lmac_ring(soc->wlan_cfg_ctx))
+		return DP_SW2HW_MACID(mac_for_pdev);
+
+	pdev = soc->pdev_list[mac_for_pdev];
+
+	return pdev->target_pdev_id;
 }
 
 /**
@@ -1720,6 +1760,55 @@ static inline void dp_srng_access_end(struct dp_intr *int_ctx,
 	return hal_srng_access_end(hal_soc, hal_ring_hdl);
 }
 #endif /* WLAN_FEATURE_DP_EVENT_HISTORY */
+
+#ifdef QCA_CACHED_RING_DESC
+/**
+ * dp_srng_dst_get_next() - Wrapper function to get next ring desc
+ * @dp_socsoc: DP Soc handle
+ * @hal_ring: opaque pointer to the HAL Destination Ring
+ *
+ * Return: HAL ring descriptor
+ */
+static inline void *dp_srng_dst_get_next(struct dp_soc *dp_soc,
+					 hal_ring_handle_t hal_ring_hdl)
+{
+	hal_soc_handle_t hal_soc = dp_soc->hal_soc;
+
+	return hal_srng_dst_get_next_cached(hal_soc, hal_ring_hdl);
+}
+
+/**
+ * dp_srng_dst_inv_cached_descs() - Wrapper function to invalidate cached
+ * descriptors
+ * @dp_socsoc: DP Soc handle
+ * @hal_ring: opaque pointer to the HAL Rx Destination ring
+ * @num_entries: Entry count
+ *
+ * Return: None
+ */
+static inline void dp_srng_dst_inv_cached_descs(struct dp_soc *dp_soc,
+						hal_ring_handle_t hal_ring_hdl,
+						uint32_t num_entries)
+{
+	hal_soc_handle_t hal_soc = dp_soc->hal_soc;
+
+	hal_srng_dst_inv_cached_descs(hal_soc, hal_ring_hdl, num_entries);
+}
+#else
+static inline void *dp_srng_dst_get_next(struct dp_soc *dp_soc,
+					 hal_ring_handle_t hal_ring_hdl)
+{
+	hal_soc_handle_t hal_soc = dp_soc->hal_soc;
+
+	return hal_srng_dst_get_next(hal_soc, hal_ring_hdl);
+}
+
+static inline void dp_srng_dst_inv_cached_descs(struct dp_soc *dp_soc,
+						hal_ring_handle_t hal_ring_hdl,
+						uint32_t num_entries)
+{
+}
+#endif /* QCA_CACHED_RING_DESC */
 
 #ifdef QCA_ENH_V3_STATS_SUPPORT
 /**

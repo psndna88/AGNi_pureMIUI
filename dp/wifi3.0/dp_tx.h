@@ -25,7 +25,7 @@
 
 #define DP_TX_MAX_NUM_FRAGS 6
 
-#define DP_TX_DESC_FLAG_ALLOCATED	0x1
+#define DP_TX_DESC_FLAG_SIMPLE		0x1
 #define DP_TX_DESC_FLAG_TO_FW		0x2
 #define DP_TX_DESC_FLAG_FRAG		0x4
 #define DP_TX_DESC_FLAG_RAW		0x8
@@ -34,6 +34,7 @@
 #define DP_TX_DESC_FLAG_COMPLETED_TX	0x40
 #define DP_TX_DESC_FLAG_ME		0x80
 #define DP_TX_DESC_FLAG_TDLS_FRAME	0x100
+#define DP_TX_DESC_FLAG_ALLOCATED	0x200
 
 #define DP_TX_FREE_SINGLE_BUF(soc, buf)                  \
 do {                                                           \
@@ -316,12 +317,43 @@ static inline void dp_tx_get_queue(struct dp_vdev *vdev,
 				DP_TX_QUEUE_MASK;
 
 	queue->desc_pool_id = queue_offset;
-	queue->ring_id = vdev->pdev->soc->tx_ring_map[queue_offset];
+	queue->ring_id = qdf_get_cpu();
 
 	QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_DEBUG,
 		  "%s, pool_id:%d ring_id: %d",
 		  __func__, queue->desc_pool_id, queue->ring_id);
 }
+
+/*
+ * dp_tx_get_hal_ring_hdl()- Get the hal_tx_ring_hdl for data transmission
+ * @dp_soc - DP soc structure pointer
+ * @ring_id - Transmit Queue/ring_id to be used when XPS is enabled
+ *
+ * Return - HAL ring handle
+ */
+static inline hal_ring_handle_t dp_tx_get_hal_ring_hdl(struct dp_soc *soc,
+						       uint8_t ring_id)
+{
+	if (ring_id == soc->num_tcl_data_rings)
+		return soc->tcl_cmd_credit_ring.hal_srng;
+
+	return soc->tcl_data_ring[ring_id].hal_srng;
+}
+
+/*
+ * dp_tx_get_rbm_id()- Get the RBM ID for data transmission completion.
+ * @dp_soc - DP soc structure pointer
+ * @ring_id - Transmit Queue/ring_id to be used when XPS is enabled
+ *
+ * Return - HAL ring handle
+ */
+static inline uint8_t dp_tx_get_rbm_id(struct dp_soc *doc,
+				       uint8_t ring_id)
+{
+	return (ring_id ? HAL_WBM_SW0_BM_ID + (ring_id - 1) :
+			  HAL_WBM_SW2_BM_ID);
+}
+
 #else /* QCA_OL_TX_MULTIQ_SUPPORT */
 static inline void dp_tx_get_queue(struct dp_vdev *vdev,
 				   qdf_nbuf_t nbuf, struct dp_tx_queue *queue)
@@ -334,7 +366,81 @@ static inline void dp_tx_get_queue(struct dp_vdev *vdev,
 		  "%s, pool_id:%d ring_id: %d",
 		  __func__, queue->desc_pool_id, queue->ring_id);
 }
+
+static inline hal_ring_handle_t dp_tx_get_hal_ring_hdl(struct dp_soc *soc,
+						       uint8_t ring_id)
+{
+	return soc->tcl_data_ring[ring_id].hal_srng;
+}
+
+static inline uint8_t dp_tx_get_rbm_id(struct dp_soc *soc,
+				       uint8_t ring_id)
+{
+	return (ring_id + HAL_WBM_SW0_BM_ID);
+}
 #endif
+
+#ifdef QCA_OL_TX_LOCK_LESS_ACCESS
+/*
+ * dp_tx_hal_ring_access_start()- hal_tx_ring access for data transmission
+ * @dp_soc - DP soc structure pointer
+ * @hal_ring_hdl - HAL ring handle
+ *
+ * Return - None
+ */
+static inline int dp_tx_hal_ring_access_start(struct dp_soc *soc,
+					      hal_ring_handle_t hal_ring_hdl)
+{
+	return hal_srng_access_start_unlocked(soc->hal_soc, hal_ring_hdl);
+}
+
+/*
+ * dp_tx_hal_ring_access_end()- hal_tx_ring access for data transmission
+ * @dp_soc - DP soc structure pointer
+ * @hal_ring_hdl - HAL ring handle
+ *
+ * Return - None
+ */
+static inline void dp_tx_hal_ring_access_end(struct dp_soc *soc,
+					     hal_ring_handle_t hal_ring_hdl)
+{
+	hal_srng_access_end_unlocked(soc->hal_soc, hal_ring_hdl);
+}
+
+/*
+ * dp_tx_hal_ring_access_reap()- hal_tx_ring access for data transmission
+ * @dp_soc - DP soc structure pointer
+ * @hal_ring_hdl - HAL ring handle
+ *
+ * Return - None
+ */
+static inline void dp_tx_hal_ring_access_end_reap(struct dp_soc *soc,
+						  hal_ring_handle_t
+						  hal_ring_hdl)
+{
+}
+
+#else
+static inline int dp_tx_hal_ring_access_start(struct dp_soc *soc,
+					      hal_ring_handle_t hal_ring_hdl)
+{
+	return hal_srng_access_start(soc->hal_soc, hal_ring_hdl);
+}
+
+static inline void dp_tx_hal_ring_access_end(struct dp_soc *soc,
+					     hal_ring_handle_t hal_ring_hdl)
+{
+	hal_srng_access_end(soc->hal_soc, hal_ring_hdl);
+}
+
+static inline void dp_tx_hal_ring_access_end_reap(struct dp_soc *soc,
+						  hal_ring_handle_t
+						  hal_ring_hdl)
+{
+	hal_srng_access_end_reap(soc->hal_soc, hal_ring_hdl);
+}
+#endif
+
 #ifdef FEATURE_PERPKT_INFO
 QDF_STATUS
 dp_get_completion_indication_for_stack(struct dp_soc *soc,

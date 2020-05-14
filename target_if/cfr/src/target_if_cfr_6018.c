@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -20,11 +20,9 @@
 #include <wlan_tgt_def_config.h>
 #include <target_type.h>
 #include <hif_hw_version.h>
-#include <ol_if_athvar.h>
 #include <target_if.h>
 #include <wlan_lmac_if_def.h>
 #include <wlan_osif_priv.h>
-#include <wlan_mlme_dispatcher.h>
 #include <init_deinit_lmac.h>
 #include <wlan_cfr_utils_api.h>
 #ifdef DIRECT_BUF_RX_ENABLE
@@ -32,6 +30,9 @@
 #endif
 #include <target_if_cfr_6018.h>
 #include "cdp_txrx_ctrl.h"
+
+#define CMN_NOISE_FLOOR       (-96)
+#define NUM_CHAINS_FW_TO_HOST(n) ((1 << ((n) + 1)) - 1)
 
 static u_int32_t end_magic = 0xBEAFDEAD;
 /**
@@ -58,8 +59,8 @@ static struct look_up_table *get_lut_entry(struct pdev_cfr *pcfr,
  *
  * Return: status
  */
-int release_lut_entry_enh(struct wlan_objmgr_pdev *pdev,
-			  struct look_up_table *lut)
+static int release_lut_entry_enh(struct wlan_objmgr_pdev *pdev,
+				 struct look_up_table *lut)
 {
 	lut->dbr_recv = false;
 	lut->tx_recv = false;
@@ -105,6 +106,8 @@ void target_if_cfr_dump_lut_enh(struct wlan_objmgr_pdev *pdev)
 		return;
 	}
 
+	qdf_spin_lock_bh(&pcfr->lut_lock);
+
 	for (i = 0; i < NUM_LUT_ENTRIES; i++) {
 		lut = get_lut_entry(pcfr, i);
 		if (!lut)
@@ -122,6 +125,9 @@ void target_if_cfr_dump_lut_enh(struct wlan_objmgr_pdev *pdev)
 		}
 
 	}
+
+	qdf_spin_unlock_bh(&pcfr->lut_lock);
+
 	wlan_objmgr_pdev_release_ref(pdev, WLAN_CFR_ID);
 }
 
@@ -132,7 +138,7 @@ void target_if_cfr_dump_lut_enh(struct wlan_objmgr_pdev *pdev)
  *
  * return: none
  */
-void cfr_free_pending_dbr_events(struct wlan_objmgr_pdev *pdev)
+static void cfr_free_pending_dbr_events(struct wlan_objmgr_pdev *pdev)
 {
 	struct pdev_cfr *pcfr;
 	struct look_up_table *lut = NULL;
@@ -177,7 +183,7 @@ void cfr_free_pending_dbr_events(struct wlan_objmgr_pdev *pdev)
  *
  * Return: none
  */
-void dump_freeze_tlv(void *freeze_tlv, uint32_t cookie)
+static void dump_freeze_tlv(void *freeze_tlv, uint32_t cookie)
 {
 	struct macrx_freeze_capture_channel *freeze =
 		(struct macrx_freeze_capture_channel *)freeze_tlv;
@@ -221,8 +227,9 @@ void dump_freeze_tlv(void *freeze_tlv, uint32_t cookie)
  *
  * Return: none
  */
-void dump_mu_rx_info(void *mu_rx_user_info, uint8_t mu_rx_num_users,
-		     uint32_t cookie)
+static void dump_mu_rx_info(void *mu_rx_user_info,
+			    uint8_t mu_rx_num_users,
+			    uint32_t cookie)
 {
 	uint8_t i;
 	struct uplink_user_setup_info *ul_mu_user_info =
@@ -255,7 +262,7 @@ void dump_mu_rx_info(void *mu_rx_user_info, uint8_t mu_rx_num_users,
 	}
 }
 
-void dump_metadata(struct csi_cfr_header *header, uint32_t cookie)
+static void dump_metadata(struct csi_cfr_header *header, uint32_t cookie)
 {
 	uint8_t user_id, chain_id;
 	struct cfr_metadata_version_3 *meta = &header->u.meta_v3;
@@ -309,13 +316,12 @@ void dump_metadata(struct csi_cfr_header *header, uint32_t cookie)
 	if (meta->is_mu_ppdu) {
 		for (user_id = 0; user_id < meta->num_mu_users; user_id++) {
 			usermac = meta->peer_addr.mu_peer_addr[user_id];
-			cfr_debug("peermac[%d]: %s\n",
-				  user_id,
-				  ether_sprintf(usermac));
+			cfr_debug("peermac[%d]: " QDF_MAC_ADDR_STR,
+				  user_id, QDF_MAC_ADDR_ARRAY(usermac));
 		}
 	} else {
-		cfr_debug("peermac: %s\n",
-			  ether_sprintf(meta->peer_addr.su_peer_addr));
+		cfr_debug("peermac: " QDF_MAC_ADDR_STR,
+			  QDF_MAC_ADDR_ARRAY(meta->peer_addr.su_peer_addr));
 	}
 
 	for (chain_id = 0; chain_id < HOST_MAX_CHAINS; chain_id++) {
@@ -341,12 +347,10 @@ void dump_metadata(struct csi_cfr_header *header, uint32_t cookie)
  *
  * Return: none
  */
-void dump_enh_dma_hdr(struct whal_cfir_enhanced_hdr *dma_hdr,
-		      void *freeze_tlv,
-		      void *mu_rx_user_info,
-		      struct csi_cfr_header *header,
-		      int error,
-		      uint32_t cookie)
+static void dump_enh_dma_hdr(struct whal_cfir_enhanced_hdr *dma_hdr,
+			     void *freeze_tlv, void *mu_rx_user_info,
+			     struct csi_cfr_header *header, int error,
+			     uint32_t cookie)
 {
 	if (!error) {
 		cfr_debug("<DBRCOMP><%u>\n"
@@ -425,7 +429,8 @@ void dump_enh_dma_hdr(struct whal_cfir_enhanced_hdr *dma_hdr,
  *
  * Return: none
  */
-void extract_peer_mac_from_freeze_tlv(void *freeze_tlv, uint8_t *peermac)
+static void
+extract_peer_mac_from_freeze_tlv(void *freeze_tlv, uint8_t *peermac)
 {
 	struct macrx_freeze_capture_channel *freeze =
 		(struct macrx_freeze_capture_channel *)freeze_tlv;
@@ -444,7 +449,7 @@ void extract_peer_mac_from_freeze_tlv(void *freeze_tlv, uint8_t *peermac)
  *
  * Return: QDF_STATUS
  */
-QDF_STATUS check_dma_length(struct look_up_table *lut)
+static QDF_STATUS check_dma_length(struct look_up_table *lut)
 {
 	if (lut->header_length <= CYP_MAX_HEADER_LENGTH_WORDS &&
 	    lut->payload_length <= CYP_MAX_DATA_LENGTH_BYTES) {
@@ -469,8 +474,10 @@ QDF_STATUS check_dma_length(struct look_up_table *lut)
  *	- STATUS_HOLD
  *	- STATUS_STREAM_AND_RELEASE
  */
-int correlate_and_relay_enh(struct wlan_objmgr_pdev *pdev, uint32_t cookie,
-			    struct look_up_table *lut, uint8_t module_id)
+static int correlate_and_relay_enh(struct wlan_objmgr_pdev *pdev,
+				   uint32_t cookie,
+				   struct look_up_table *lut,
+				   uint8_t module_id)
 {
 	struct pdev_cfr *pcfr;
 	uint64_t diff;
@@ -591,12 +598,12 @@ void target_if_cfr_rx_tlv_process(struct wlan_objmgr_pdev *pdev, void *nbuf)
 	uint16_t ch_freq;
 	uint32_t ch_cfreq1;
 	uint32_t ch_cfreq2;
-	uint8_t rx_chainmask;
 	struct wlan_objmgr_vdev *vdev = NULL;
 	int i, status = 0;
 	QDF_STATUS retval = 0;
 	struct wlan_lmac_if_cfr_rx_ops *cfr_rx_ops = NULL;
 	struct cfr_metadata_version_3 *meta = NULL;
+	uint8_t srng_id = 0;
 
 	if (qdf_unlikely(!pdev)) {
 		cfr_err("pdev is null\n");
@@ -615,19 +622,19 @@ void target_if_cfr_rx_tlv_process(struct wlan_objmgr_pdev *pdev, void *nbuf)
 						     WLAN_UMAC_COMP_CFR);
 	if (qdf_unlikely(!pcfr)) {
 		cfr_err("pdev object for CFR is NULL");
-		goto done;
+		goto relref;
 	}
 
 	cdp_rx_ppdu = (struct cdp_rx_indication_ppdu *)qdf_nbuf_data(nbuf);
 	cfr_info = &cdp_rx_ppdu->cfr_info;
 
 	if (!cfr_info->bb_captured_channel)
-		goto done;
+		goto relref;
 
 	psoc = wlan_pdev_get_psoc(pdev);
 	if (qdf_unlikely(!psoc)) {
 		cfr_err("psoc is null\n");
-		goto done;
+		goto relref;
 	}
 
 	cfr_rx_ops = &psoc->soc_cb.rx_ops.cfr_rx_ops;
@@ -635,12 +642,12 @@ void target_if_cfr_rx_tlv_process(struct wlan_objmgr_pdev *pdev, void *nbuf)
 	buf_addr = (cfr_info->rtt_che_buffer_pointer_low32 |
 		    ((uint64_t)buf_addr_extn << 32));
 
-
+	srng_id = pcfr->rcc_param.srng_id;
 	if (target_if_dbr_cookie_lookup(pdev, DBR_MODULE_CFR, buf_addr,
-					&cookie, 0)) {
+					&cookie, srng_id)) {
 		cfr_debug("Cookie lookup failure for addr: 0x%pK",
 			  (void *)((uintptr_t)buf_addr));
-		goto done;
+		goto relref;
 	}
 
 	cfr_debug("<RXTLV><%u>:buffer address: 0x%pK \n"
@@ -659,16 +666,18 @@ void target_if_cfr_rx_tlv_process(struct wlan_objmgr_pdev *pdev, void *nbuf)
 		  cfr_info->rtt_che_buffer_pointer_high8,
 		  cfr_info->chan_capture_status);
 
+	qdf_spin_lock_bh(&pcfr->lut_lock);
+
 	lut = get_lut_entry(pcfr, cookie);
 	if (qdf_unlikely(!lut)) {
 		cfr_err("lut is NULL");
-		goto done;
+		goto unlock;
 	}
 
 	vdev = wlan_objmgr_pdev_get_first_vdev(pdev, WLAN_CFR_ID);
 	if (qdf_unlikely(!vdev)) {
 		cfr_debug("vdev is null\n");
-		goto done;
+		goto unlock;
 	}
 
 	bss_chan = wlan_vdev_mlme_get_bss_chan(vdev);
@@ -676,7 +685,6 @@ void target_if_cfr_rx_tlv_process(struct wlan_objmgr_pdev *pdev, void *nbuf)
 	ch_cfreq1 = bss_chan->ch_cfreq1;
 	ch_cfreq2 = bss_chan->ch_cfreq2;
 	ch_phymode = bss_chan->ch_phymode;
-	rx_chainmask = wlan_vdev_mlme_get_rxchainmask(vdev);
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_CFR_ID);
 
 	pcfr->rx_tlv_evt_cnt++;
@@ -691,18 +699,16 @@ void target_if_cfr_rx_tlv_process(struct wlan_objmgr_pdev *pdev, void *nbuf)
 	header->vendorid               = 0x8cfdf0;
 	header->cfr_metadata_version   = CFR_META_VERSION_3;
 	header->cfr_data_version       = CFR_DATA_VERSION_1;
-	header->chip_type              = CFR_CAPTURE_RADIO_CYP;
+	header->chip_type              = pcfr->chip_type;
 	header->pltform_type           = CFR_PLATFORM_TYPE_ARM;
 	header->Reserved               = 0;
 
 	meta->status       = 1;
-	meta->capture_bw   = cdp_rx_ppdu->u.bw;
 	meta->phy_mode = ch_phymode;
 	meta->prim20_chan  = ch_freq;
 	meta->center_freq1 = ch_cfreq1;
 	meta->center_freq2 = ch_cfreq2;
 	meta->capture_mode = 0;
-	meta->num_rx_chain = rx_chainmask;
 
 	meta->timestamp = cdp_rx_ppdu->timestamp;
 	meta->is_mu_ppdu = (cdp_rx_ppdu->u.ppdu_type == CDP_RX_TYPE_SU) ? 0 : 1;
@@ -712,13 +718,10 @@ void target_if_cfr_rx_tlv_process(struct wlan_objmgr_pdev *pdev, void *nbuf)
 		meta->num_mu_users = CYP_CFR_MU_USERS;
 
 	for (i = 0; i < MAX_CHAIN; i++)
-		meta->chain_rssi[i] = cdp_rx_ppdu->per_chain_rssi[i];
+		meta->chain_rssi[i] =
+			cdp_rx_ppdu->per_chain_rssi[i] + CMN_NOISE_FLOOR;
 
-	if (cdp_rx_ppdu->u.ppdu_type == CDP_RX_TYPE_SU) {
-		qdf_mem_copy(meta->peer_addr.su_peer_addr,
-			     cdp_rx_ppdu->mac_addr,
-			     QDF_MAC_ADDR_SIZE);
-	} else {
+	if (cdp_rx_ppdu->u.ppdu_type != CDP_RX_TYPE_SU) {
 		for (i = 0 ; i < meta->num_mu_users; i++) {
 			rx_stats_peruser = &cdp_rx_ppdu->user[i];
 			qdf_mem_copy(meta->peer_addr.mu_peer_addr[i],
@@ -740,15 +743,18 @@ void target_if_cfr_rx_tlv_process(struct wlan_objmgr_pdev *pdev, void *nbuf)
 		dump_metadata(header, cookie);
 		release_lut_entry_enh(pdev, lut);
 		target_if_dbr_buf_release(pdev, DBR_MODULE_CFR, buf_addr,
-					  cookie, 0);
+					  cookie, srng_id);
 		cfr_debug("Data sent to upper layers, release look up table");
 	} else if (status == STATUS_HOLD) {
 		cfr_debug("HOLD for buffer address: 0x%pK cookie: %u",
 			  (void *)((uintptr_t)buf_addr), cookie);
 	} else {
-		cfr_err("Correlation returned invalid status!!");
+		cfr_debug("Correlation returned invalid status!!");
 	}
-done:
+
+unlock:
+	qdf_spin_unlock_bh(&pcfr->lut_lock);
+relref:
 	qdf_nbuf_free(nbuf);
 	wlan_objmgr_pdev_release_ref(pdev, WLAN_CFR_ID);
 }
@@ -760,7 +766,7 @@ done:
  *
  * Return: cfr type enum
  */
-uint8_t freeze_reason_to_capture_type(void *freeze_tlv)
+static uint8_t freeze_reason_to_capture_type(void *freeze_tlv)
 {
 	struct macrx_freeze_capture_channel *freeze =
 		(struct macrx_freeze_capture_channel *)freeze_tlv;
@@ -792,8 +798,8 @@ uint8_t freeze_reason_to_capture_type(void *freeze_tlv)
  *
  * Return: status
  */
-bool enh_cfr_dbr_event_handler(struct wlan_objmgr_pdev *pdev,
-			       struct direct_buf_rx_data *payload)
+static bool enh_cfr_dbr_event_handler(struct wlan_objmgr_pdev *pdev,
+				      struct direct_buf_rx_data *payload)
 {
 	uint8_t *data = NULL;
 	uint32_t cookie = 0;
@@ -804,7 +810,7 @@ bool enh_cfr_dbr_event_handler(struct wlan_objmgr_pdev *pdev,
 	struct look_up_table *lut = NULL;
 	struct csi_cfr_header *header = NULL;
 	void *mu_rx_user_info = NULL, *freeze_tlv = NULL;
-	uint8_t capture_type;
+	uint8_t capture_type = CFR_TYPE_METHOD_AUTO;
 	uint8_t *peer_macaddr = NULL;
 	struct wlan_lmac_if_cfr_rx_ops *cfr_rx_ops = NULL;
 	struct cfr_metadata_version_3 *meta = NULL;
@@ -854,9 +860,12 @@ bool enh_cfr_dbr_event_handler(struct wlan_objmgr_pdev *pdev,
 	length  = dma_hdr.length * 4;
 	length += dma_hdr.total_bytes; /* size of cfr data */
 
+	qdf_spin_lock_bh(&pcfr->lut_lock);
+
 	lut = get_lut_entry(pcfr, cookie);
 	if (!lut) {
 		cfr_err("lut is NULL");
+		qdf_spin_unlock_bh(&pcfr->lut_lock);
 		return true;
 	}
 
@@ -873,6 +882,7 @@ bool enh_cfr_dbr_event_handler(struct wlan_objmgr_pdev *pdev,
 	header = &lut->header;
 	meta = &header->u.meta_v3;
 	meta->channel_bw = dma_hdr.upload_pkt_bw;
+	meta->num_rx_chain = NUM_CHAINS_FW_TO_HOST(dma_hdr.num_chains);
 	meta->length = length;
 	/* For Tx based captures, capture type is sent from FW */
 	if (capture_type != CFR_TYPE_METHOD_ACK_RESP_TO_TM_FTM) {
@@ -880,15 +890,19 @@ bool enh_cfr_dbr_event_handler(struct wlan_objmgr_pdev *pdev,
 		meta->sts_count = (dma_hdr.nss + 1);
 		if (!dma_hdr.mu_rx_data_incl) {
 			/* extract peer addr from freeze tlv */
-			peer_macaddr =
-				meta->peer_addr.su_peer_addr;
-			extract_peer_mac_from_freeze_tlv(freeze_tlv,
-							 peer_macaddr);
+			peer_macaddr = meta->peer_addr.su_peer_addr;
+			if (dma_hdr.freeze_data_incl) {
+				extract_peer_mac_from_freeze_tlv(freeze_tlv,
+								 peer_macaddr);
+			}
 		}
 	}
 
-	dump_enh_dma_hdr(&dma_hdr, freeze_tlv, mu_rx_user_info,
-			 header, 0, cookie);
+	if (dma_hdr.freeze_data_incl) {
+		dump_enh_dma_hdr(&dma_hdr, freeze_tlv, mu_rx_user_info,
+				 header, 0, cookie);
+	}
+
 	status = correlate_and_relay_enh(pdev, cookie, lut,
 					 CORRELATE_DBR_MODULE_ID);
 	if (status == STATUS_STREAM_AND_RELEASE) {
@@ -913,10 +927,11 @@ bool enh_cfr_dbr_event_handler(struct wlan_objmgr_pdev *pdev,
 			  "Buffer is not released");
 		status = false;
 	} else {
-		cfr_err("Correlation returned invalid status!!");
+		cfr_debug("Correlation returned invalid status!!");
 		status = true;
 	}
 
+	qdf_spin_unlock_bh(&pcfr->lut_lock);
 	return status;
 }
 
@@ -927,7 +942,7 @@ bool enh_cfr_dbr_event_handler(struct wlan_objmgr_pdev *pdev,
  *
  * Return: status
  */
-QDF_STATUS
+static QDF_STATUS
 target_if_register_to_dbr_enh(struct wlan_objmgr_pdev *pdev)
 {
 	struct wlan_objmgr_psoc *psoc;
@@ -953,7 +968,7 @@ target_if_register_to_dbr_enh(struct wlan_objmgr_pdev *pdev)
  *
  * Return: status
  */
-QDF_STATUS
+static QDF_STATUS
 target_if_unregister_to_dbr_enh(struct wlan_objmgr_pdev *pdev)
 {
 	struct wlan_objmgr_psoc *psoc;
@@ -978,13 +993,13 @@ target_if_unregister_to_dbr_enh(struct wlan_objmgr_pdev *pdev)
  *
  * Return: none
  */
-void dump_cfr_peer_tx_event_enh(wmi_cfr_peer_tx_event_param *event,
-				uint32_t cookie)
+static void dump_cfr_peer_tx_event_enh(wmi_cfr_peer_tx_event_param *event,
+				       uint32_t cookie)
 {
-	cfr_debug("<TXCOMP><%u>CFR capture method: %d vdev_id: %d mac: %s\n",
-		  cookie,
+	cfr_debug("<TXCOMP><%u>CFR capture method: %d vdev_id: %d mac: "
+		  QDF_MAC_ADDR_STR, cookie,
 		  event->capture_method, event->vdev_id,
-		  ether_sprintf(&event->peer_mac_addr.bytes[0]));
+		  QDF_MAC_ADDR_ARRAY(event->peer_mac_addr.bytes));
 
 	cfr_debug("<TXCOMP><%u>Chan: %d bw: %d phymode: %d cfreq1: %d cfrq2: %d "
 		  "nss: %d\n",
@@ -1044,7 +1059,6 @@ static int
 target_if_peer_capture_event(ol_scn_t sc, uint8_t *data, uint32_t datalen)
 {
 	QDF_STATUS retval = 0;
-	ol_ath_soc_softc_t *scn = (ol_ath_soc_softc_t *)sc;
 	struct wmi_unified *wmi_handle;
 	struct wlan_objmgr_psoc *psoc;
 	struct wlan_objmgr_pdev *pdev;
@@ -1060,7 +1074,12 @@ target_if_peer_capture_event(ol_scn_t sc, uint8_t *data, uint32_t datalen)
 	struct wlan_channel *bss_chan;
 	struct wlan_lmac_if_cfr_rx_ops *cfr_rx_ops = NULL;
 
-	psoc = scn->psoc_obj;
+	if (!sc || !data) {
+		cfr_err("sc or data is null");
+		return -EINVAL;
+	}
+
+	psoc = target_if_get_psoc_from_scn_hdl(sc);
 	if (!psoc) {
 		cfr_err("psoc is null");
 		return -EINVAL;
@@ -1121,12 +1140,13 @@ target_if_peer_capture_event(ol_scn_t sc, uint8_t *data, uint32_t datalen)
 	if (!pcfr) {
 		cfr_err("pdev object for CFR is NULL");
 		retval = -EINVAL;
-		goto end;
+		goto relref;
 	}
 
 	if ((tx_evt_param.status & PEER_CFR_CAPTURE_EVT_PS_STATUS_MASK) == 1) {
-		cfr_err("CFR capture failed as peer is in powersave : %s",
-			  ether_sprintf(&tx_evt_param.peer_mac_addr.bytes[0]));
+		cfr_err("CFR capture failed as peer is in powersave: "
+			QDF_MAC_ADDR_STR,
+			QDF_MAC_ADDR_ARRAY(tx_evt_param.peer_mac_addr.bytes));
 
 		enh_prepare_cfr_header_txstatus(&tx_evt_param, &header_error);
 		if (cfr_rx_ops->cfr_info_send)
@@ -1137,22 +1157,23 @@ target_if_peer_capture_event(ol_scn_t sc, uint8_t *data, uint32_t datalen)
 						  NULL, 0, &end_magic, 4);
 
 		retval = -EINVAL;
-		goto end;
+		goto relref;
 	}
 
 	if ((tx_evt_param.status & PEER_CFR_CAPTURE_EVT_STATUS_MASK) == 0) {
-		cfr_debug("CFR capture failed for peer : %s",
-			  ether_sprintf(&tx_evt_param.peer_mac_addr.bytes[0]));
+		cfr_debug("CFR capture failed for peer: " QDF_MAC_ADDR_STR,
+			  QDF_MAC_ADDR_ARRAY(tx_evt_param.peer_mac_addr.bytes));
 		retval = -EINVAL;
-		goto end;
+		goto relref;
 	}
 
 	if (tx_evt_param.status & CFR_TX_EVT_STATUS_MASK) {
-		cfr_debug("TX packet returned status %d for peer: %s",
+		cfr_debug("TX packet returned status %d for peer: "
+			  QDF_MAC_ADDR_STR,
 			  tx_evt_param.status & CFR_TX_EVT_STATUS_MASK,
-			  ether_sprintf(&tx_evt_param.peer_mac_addr.bytes[0]));
+			  QDF_MAC_ADDR_ARRAY(tx_evt_param.peer_mac_addr.bytes));
 		retval = -EINVAL;
-		goto end;
+		goto relref;
 	}
 
 	buf_addr_temp = (tx_evt_param.correlation_info_2 & 0x0f);
@@ -1164,7 +1185,7 @@ target_if_peer_capture_event(ol_scn_t sc, uint8_t *data, uint32_t datalen)
 		cfr_debug("Cookie lookup failure for addr: 0x%pK status: 0x%x",
 			  (void *)((uintptr_t)buf_addr), tx_evt_param.status);
 		retval = -EINVAL;
-		goto end;
+		goto relref;
 	}
 
 	cfr_debug("buffer address: 0x%pK cookie: %u",
@@ -1172,11 +1193,13 @@ target_if_peer_capture_event(ol_scn_t sc, uint8_t *data, uint32_t datalen)
 
 	dump_cfr_peer_tx_event_enh(&tx_evt_param, cookie);
 
+	qdf_spin_lock_bh(&pcfr->lut_lock);
+
 	lut = get_lut_entry(pcfr, cookie);
 	if (!lut) {
 		cfr_err("lut is NULL\n");
 		retval = -EINVAL;
-		goto end;
+		goto unlock;
 	}
 
 	pcfr->tx_evt_cnt++;
@@ -1248,12 +1271,13 @@ target_if_peer_capture_event(ol_scn_t sc, uint8_t *data, uint32_t datalen)
 		cfr_debug("HOLD for buffer address: 0x%pK cookie: %u",
 			  (void *)((uintptr_t)buf_addr), cookie);
 	} else {
-		cfr_err("Correlation returned invalid status!!");
+		cfr_debug("Correlation returned invalid status!!");
 		retval = -EINVAL;
-		goto end;
 	}
 
-end:
+unlock:
+	qdf_spin_unlock_bh(&pcfr->lut_lock);
+relref:
 
 	wlan_objmgr_psoc_release_ref(psoc, WLAN_CFR_ID);
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_CFR_ID);
@@ -1276,7 +1300,7 @@ target_if_peer_capture_event(ol_scn_t sc, uint8_t *data, uint32_t datalen)
  *
  * Return: Success/Failure status
  */
-int
+static int
 target_if_register_tx_completion_enh_event_handler(struct wlan_objmgr_psoc
 						   *psoc)
 {
@@ -1311,7 +1335,7 @@ target_if_register_tx_completion_enh_event_handler(struct wlan_objmgr_psoc
  *
  * Return: Success/Failure status
  */
-int
+static int
 target_if_unregister_tx_completion_enh_event_handler(struct wlan_objmgr_psoc
 						     *psoc)
 {
@@ -1342,6 +1366,7 @@ static os_timer_func(lut_ageout_timer_task)
 	struct wlan_objmgr_pdev *pdev = NULL;
 	struct look_up_table *lut = NULL;
 	uint64_t diff, cur_tstamp;
+	uint8_t srng_id = 0;
 
 	OS_GET_TIMER_ARG(pcfr, struct pdev_cfr*);
 
@@ -1356,6 +1381,7 @@ static os_timer_func(lut_ageout_timer_task)
 		return;
 	}
 
+	srng_id = pcfr->rcc_param.srng_id;
 	if (wlan_objmgr_pdev_try_get_ref(pdev, WLAN_CFR_ID)
 	    != QDF_STATUS_SUCCESS) {
 		cfr_err("failed to get pdev reference");
@@ -1363,6 +1389,8 @@ static os_timer_func(lut_ageout_timer_task)
 	}
 
 	cur_tstamp = qdf_ktime_to_ms(qdf_ktime_get());
+
+	qdf_spin_lock_bh(&pcfr->lut_lock);
 
 	for (i = 0; i < NUM_LUT_ENTRIES; i++) {
 		lut = get_lut_entry(pcfr, i);
@@ -1378,12 +1406,14 @@ static os_timer_func(lut_ageout_timer_task)
 					  (void *)((uintptr_t)lut->dbr_address));
 				target_if_dbr_buf_release(pdev, DBR_MODULE_CFR,
 							  lut->dbr_address,
-							  i, 0);
+							  i, srng_id);
 				pcfr->flush_timeout_dbr_cnt++;
 				release_lut_entry_enh(pdev, lut);
 			}
 		}
 	}
+
+	qdf_spin_unlock_bh(&pcfr->lut_lock);
 
 	if (pcfr->lut_timer_init)
 		qdf_timer_mod(&pcfr->lut_age_timer, LUT_AGE_TIMER);
@@ -1534,6 +1564,8 @@ QDF_STATUS cfr_6018_init_pdev(struct wlan_objmgr_psoc *psoc,
 	pcfr->rcc_param.pdev_id = wlan_objmgr_pdev_get_pdev_id(pdev);
 	pcfr->rcc_param.modified_in_curr_session = MAX_RESET_CFG_ENTRY;
 	pcfr->rcc_param.num_grp_tlvs = MAX_TA_RA_ENTRIES;
+	pcfr->rcc_param.vdev_id = CFR_INVALID_VDEV_ID;
+	pcfr->rcc_param.srng_id = 0;
 
 	target_if_cfr_default_ta_ra_config(&pcfr->rcc_param,
 					   true, MAX_RESET_CFG_ENTRY);
@@ -1552,6 +1584,7 @@ QDF_STATUS cfr_6018_init_pdev(struct wlan_objmgr_psoc *psoc,
 	pcfr->cfr_max_sta_count = MAX_CFR_ENABLED_CLIENTS;
 	pcfr->subbuf_size = STREAMFS_MAX_SUBBUF_CYP;
 	pcfr->num_subbufs = STREAMFS_NUM_SUBBUF_CYP;
+	pcfr->chip_type = CFR_CAPTURE_RADIO_CYP;
 
 	if (!pcfr->lut_timer_init) {
 		qdf_timer_init(NULL,
@@ -1560,6 +1593,8 @@ QDF_STATUS cfr_6018_init_pdev(struct wlan_objmgr_psoc *psoc,
 			       QDF_TIMER_TYPE_WAKE_APPS);
 		pcfr->lut_timer_init = 1;
 	}
+
+	qdf_spinlock_create(&pcfr->lut_lock);
 
 	return status;
 }
@@ -1603,6 +1638,7 @@ QDF_STATUS cfr_6018_deinit_pdev(struct wlan_objmgr_psoc *psoc,
 	qdf_mem_zero(&pcfr->rcc_param, sizeof(struct cfr_rcc_param));
 	qdf_mem_zero(&pcfr->global, (sizeof(struct ta_ra_cfr_cfg) *
 				     MAX_TA_RA_ENTRIES));
+	pcfr->cfr_timer_enable = 0;
 
 #ifdef DIRECT_BUF_RX_ENABLE
 	status = target_if_unregister_to_dbr_enh(pdev);
@@ -1613,6 +1649,8 @@ QDF_STATUS cfr_6018_deinit_pdev(struct wlan_objmgr_psoc *psoc,
 	status = target_if_unregister_tx_completion_enh_event_handler(psoc);
 	if (status != QDF_STATUS_SUCCESS)
 		cfr_err("Failed to register with dbr");
+
+	qdf_spinlock_destroy(&pcfr->lut_lock);
 
 	return status;
 }

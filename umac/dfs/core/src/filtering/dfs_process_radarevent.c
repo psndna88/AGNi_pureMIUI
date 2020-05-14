@@ -119,7 +119,8 @@ static inline void dfs_dur_check(
 	uint32_t diff_ts)
 {
 	if ((dfs->dfsdomain == DFS_FCC_DOMAIN ||
-	     dfs->dfsdomain == DFS_MKK4_DOMAIN) &&
+	     dfs->dfsdomain == DFS_MKK4_DOMAIN ||
+		 dfs->dfsdomain == DFS_MKKN_DOMAIN) &&
 	    ((chan->dfs_ch_flags & WLAN_CHAN_VHT80) == WLAN_CHAN_VHT80) &&
 	    (DFS_DIFF(chan->dfs_ch_freq, chan->dfs_ch_mhz_freq_seg1) ==
 	    DFS_WAR_30_MHZ_SEPARATION) &&
@@ -297,7 +298,7 @@ static bool dfs_is_real_radar(struct wlan_dfs *dfs,
 			 * We do not give score to PRI that is lower then the
 			 * limit.
 			 */
-			if (search_bin < DFS_INVALID_PRI_LIMIT)
+			if (search_bin < dfs->dfs_lowest_pri_limit)
 				break;
 
 			/*
@@ -750,7 +751,8 @@ static inline int dfs_handle_missing_pulses(
 		struct wlan_dfs *dfs,
 		struct dfs_channel *chan)
 {
-	if ((dfs->dfsdomain  == DFS_MKK4_DOMAIN) &&
+	if ((dfs->dfsdomain  == DFS_MKK4_DOMAIN ||
+	     dfs->dfsdomain == DFS_MKKN_DOMAIN) &&
 			(dfs->dfs_caps.wlan_chip_is_bb_tlv) &&
 			(chan->dfs_ch_freq < FREQ_5500_MHZ)) {
 		dfs->dfs_pri_multiplier = DFS_W53_DEFAULT_PRI_MULTIPLIER;
@@ -1246,7 +1248,7 @@ static inline void dfs_conditional_clear_delaylines(
 	 * false detects.
 	 */
 
-	if (diff_ts < DFS_INVALID_PRI_LIMIT) {
+	if (diff_ts < dfs->dfs_lowest_pri_limit) {
 		dfs->dfs_seq_num = 0;
 		dfs_reset_alldelaylines(dfs);
 		dfs_reset_radarq(dfs);

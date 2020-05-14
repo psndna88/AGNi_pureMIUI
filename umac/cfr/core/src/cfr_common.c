@@ -18,14 +18,13 @@
 
 #include <cfr_defs_i.h>
 #include <qdf_types.h>
-#include <osif_private.h>
-#include <ol_if_athvar.h>
 #include <wlan_objmgr_pdev_obj.h>
 #include <wlan_objmgr_vdev_obj.h>
 #include <wlan_objmgr_peer_obj.h>
 #include <wlan_cfr_tgt_api.h>
 #include <qdf_streamfs.h>
 #include <target_if.h>
+#include <wlan_osif_priv.h>
 
 QDF_STATUS
 wlan_cfr_psoc_obj_create_handler(struct wlan_objmgr_psoc *psoc, void *arg)
@@ -169,28 +168,52 @@ wlan_cfr_peer_obj_destroy_handler(struct wlan_objmgr_peer *peer, void *arg)
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef CFR_USE_FIXED_FOLDER
+static char *cfr_get_dev_name(struct wlan_objmgr_pdev *pdev)
+{
+	char *default_name = "wlan";
+
+	return default_name;
+}
+#else
+/**
+ * cfr_get_dev_name() - Get net device name from pdev
+ *  @pdev: objmgr pdev
+ *
+ *  Return: netdev name
+ */
+static char *cfr_get_dev_name(struct wlan_objmgr_pdev *pdev)
+{
+	struct pdev_osif_priv *pdev_ospriv;
+	struct qdf_net_if *nif;
+
+	pdev_ospriv = wlan_pdev_get_ospriv(pdev);
+	if (!pdev_ospriv) {
+		cfr_err("pdev_ospriv is NULL\n");
+		return NULL;
+	}
+
+	nif = pdev_ospriv->nif;
+	if (!nif) {
+		cfr_err("pdev nif is NULL\n");
+		return NULL;
+	}
+
+	return  qdf_net_if_get_devname(nif);
+}
+#endif
+
 QDF_STATUS cfr_streamfs_init(struct wlan_objmgr_pdev *pdev)
 {
 	struct pdev_cfr *pa = NULL;
+	char *devname;
 	char folder[32];
-	struct net_device *pdev_netdev;
-	struct ol_ath_softc_net80211 *scn;
-	struct target_pdev_info *tgt_hdl;
 
-	if (pdev == NULL) {
+	if (!pdev) {
 		cfr_err("PDEV is NULL\n");
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	tgt_hdl = wlan_pdev_get_tgt_if_handle(pdev);
-
-	if (!tgt_hdl) {
-		cfr_err("target_pdev_info is NULL\n");
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	scn = target_pdev_get_feature_ptr(tgt_hdl);
-	pdev_netdev = scn->netdev;
 	pa = wlan_objmgr_pdev_get_comp_private_obj(pdev, WLAN_UMAC_COMP_CFR);
 
 	if (pa == NULL) {
@@ -203,7 +226,13 @@ QDF_STATUS cfr_streamfs_init(struct wlan_objmgr_pdev *pdev)
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	snprintf(folder, sizeof(folder), "cfr%s", pdev_netdev->name);
+	devname = cfr_get_dev_name(pdev);
+	if (!devname) {
+		cfr_err("devname is NULL\n");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	snprintf(folder, sizeof(folder), "cfr%s", devname);
 
 	pa->dir_ptr = qdf_streamfs_create_dir((const char *)folder, NULL);
 
@@ -272,4 +301,26 @@ QDF_STATUS cfr_streamfs_flush(struct pdev_cfr *pa)
 		return QDF_STATUS_E_FAILURE;
 
 	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS cfr_stop_indication(struct wlan_objmgr_vdev *vdev)
+{
+	struct pdev_cfr *pa;
+	uint32_t status;
+	struct wlan_objmgr_pdev *pdev;
+
+	pdev = wlan_vdev_get_pdev(vdev);
+	pa = wlan_objmgr_pdev_get_comp_private_obj(pdev, WLAN_UMAC_COMP_CFR);
+	if (!pa) {
+		cfr_err("pdev_cfr is NULL\n");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	status = cfr_streamfs_write(pa, (const void *)CFR_STOP_STR,
+				    sizeof(CFR_STOP_STR));
+
+	status = cfr_streamfs_flush(pa);
+	cfr_debug("stop indication done");
+
+	return status;
 }

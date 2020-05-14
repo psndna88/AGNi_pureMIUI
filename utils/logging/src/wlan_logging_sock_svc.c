@@ -182,7 +182,10 @@ struct wlan_logging {
 	qdf_spinlock_t flush_timer_lock;
 };
 
-static struct wlan_logging gwlan_logging;
+/* This global variable is intentionally not marked static because it
+ * is used by offline tools. Please do not use it outside this file.
+ */
+struct wlan_logging gwlan_logging;
 static struct pkt_stats_msg *gpkt_stats_buffers;
 
 #ifdef WLAN_LOGGING_BUFFERS_DYNAMICALLY
@@ -287,7 +290,7 @@ static int wlan_add_user_log_time_stamp(char *tbuf, size_t tbuf_sz, uint64_t ts)
 
 	qdf_get_time_of_the_day_in_hr_min_sec_usec(time_buf, sizeof(time_buf));
 
-	return scnprintf(tbuf, tbuf_sz, "[%.6s][%llu]%s",
+	return scnprintf(tbuf, tbuf_sz, "[%.6s][0x%llx]%s",
 			 current_process_name(), (unsigned long long)ts,
 			 time_buf);
 }

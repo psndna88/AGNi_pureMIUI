@@ -33,6 +33,9 @@
 #ifdef WLAN_POWER_MANAGEMENT_OFFLOAD
 #include "wmi_unified_pmo_api.h"
 #endif
+#ifdef WLAN_FEATURE_MIB_STATS
+#include "wlan_cp_stats_mc_defs.h"
+#endif
 #include "wlan_scan_public_structs.h"
 #ifdef WLAN_FEATURE_ACTION_OUI
 #include "wlan_action_oui_public_struct.h"
@@ -465,6 +468,15 @@ wmi_stop(wmi_unified_t wmi_handle);
  */
 int
 wmi_start(wmi_unified_t wmi_handle);
+
+/**
+ * wmi_is_blocked() - generic function to check if WMI is blocked
+ * @wmi_handle: handle to WMI.
+ *
+ * @Return: true, if blocked, false if not blocked
+ */
+bool
+wmi_is_blocked(wmi_unified_t wmi_handle);
 
 /**
  * API to flush all the previous packets  associated with the wmi endpoint
