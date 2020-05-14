@@ -1,7 +1,7 @@
 /*
  * Sigma Control API DUT (station/AP/sniffer)
  * Copyright (c) 2017, Qualcomm Atheros, Inc.
- * Copyright (c) 2018, The Linux Foundation
+ * Copyright (c) 2018-2020, The Linux Foundation
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
@@ -10,6 +10,8 @@
 #include <sys/wait.h>
 #include "wpa_ctrl.h"
 #include "wpa_helpers.h"
+
+extern char *sigma_wpas_ctrl;
 
 #ifdef ANDROID
 char *dpp_qrcode_file = "/sdcard/wpadebug_qrdata.txt";
@@ -1464,6 +1466,7 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 			char * argv[] = { "dpp-nfc.py",
 					  "--only-one", "--no-input",
 					  "-i", (char *) ifname,
+					  "--ctrl", sigma_wpas_ctrl,
 					  enrollee ? "--enrollee" :
 					  "--configurator",
 					  "--config-params", buf,
