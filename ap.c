@@ -12886,12 +12886,59 @@ static int mac80211_vht_chnum_band(struct sigma_dut *dut, const char *ifname,
 }
 
 
-static int mac80211_ap_set_rfeature(struct sigma_dut *dut,
-				    struct sigma_conn *conn,
-				    struct sigma_cmd *cmd)
+static enum sigma_cmd_result
+mac80211_he_tx_bandwidth(struct sigma_dut *dut, struct sigma_conn *conn,
+			 const char *ifname, const char *val, const char *type)
+{
+	int width, center_freq_idx, center_freq, channel_freq, res;
+	char *mode, buf[256];
+
+	if (!type) {
+		send_resp(dut, conn, SIGMA_INVALID,
+			  "errorCode,Missing type parameter");
+		return STATUS_SENT_ERROR;
+	}
+
+	if (strcasecmp(type, "HE") == 0) {
+		mode = "he";
+	} else if (strcasecmp(type, "VHT") == 0) {
+		mode = "vht";
+	} else if (strcasecmp(type, "HT") == 0) {
+		mode = "ht";
+	} else {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Unsupported type value");
+		return STATUS_SENT_ERROR;
+	}
+
+	width = atoi(val);
+	center_freq_idx = get_oper_centr_freq_seq_idx(width, dut->ap_channel);
+	if (center_freq_idx < 0)
+		return ERROR_SEND_STATUS;
+
+	center_freq = get_5g_channel_freq(center_freq_idx);
+	channel_freq = get_5g_channel_freq(dut->ap_channel);
+
+	res = snprintf(buf, sizeof(buf),
+		       "CHAN_SWITCH 10 %d sec_channel_offset=1 center_freq1=%d bandwidth=%d blocktx %s",
+		       channel_freq, center_freq, width, mode);
+
+	if (res < 0 || res >= sizeof(buf) || hapd_command(ifname, buf) != 0) {
+		send_resp(dut, conn, SIGMA_ERROR, "CHAN_SWITCH command failed");
+		return STATUS_SENT_ERROR;
+	}
+
+	return SUCCESS_SEND_STATUS;
+}
+
+
+static enum sigma_cmd_result mac80211_ap_set_rfeature(struct sigma_dut *dut,
+						      struct sigma_conn *conn,
+						      struct sigma_cmd *cmd)
 {
 	const char *val;
 	const char *ifname;
+	enum sigma_cmd_result res;
 
 	ifname = get_main_ifname(dut);
 
@@ -12903,7 +12950,15 @@ static int mac80211_ap_set_rfeature(struct sigma_dut *dut,
 	if (val && mac80211_vht_chnum_band(dut, ifname, val) < 0)
 		return -1;
 
-	return 1;
+	val = get_param(cmd, "txBandwidth");
+	if (val) {
+		res = mac80211_he_tx_bandwidth(dut, conn, ifname, val,
+					       get_param(cmd, "type"));
+		if (res != SUCCESS_SEND_STATUS)
+			return res;
+	}
+
+	return SUCCESS_SEND_STATUS;
 }
 
 
