@@ -1416,6 +1416,7 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 		pid_t pid;
 		int pid_status;
 		int enrollee = 0;
+		const char *tx_rx_events[] = { "DPP-TX", "DPP-RX", NULL };
 
 		if (strcasecmp(prov_role, "Configurator") == 0 ||
 		    strcasecmp(prov_role, "Both") == 0) {
@@ -1501,7 +1502,8 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 
 			old_timeout = dut->default_timeout;
 			dut->default_timeout = 2;
-			res = get_wpa_cli_event(dut, ctrl, "DPP-TX",
+
+			res = get_wpa_cli_events(dut, ctrl, tx_rx_events,
 						buf, sizeof(buf));
 			dut->default_timeout = old_timeout;
 			if (res >= 0) {
