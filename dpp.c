@@ -1029,6 +1029,9 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 	int conn_status;
 	int chirp = 0;
 	int manual = strcasecmp(type, "ManualDPP") == 0;
+	time_t start, now;
+
+	time(&start);
 
 	if (!wait_conn)
 		wait_conn = "no";
@@ -1410,7 +1413,6 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 		int init = val && atoi(val) > 0;
 		pid_t pid;
 		int pid_status;
-		int wait_sec = dut->default_timeout;
 		int enrollee = 0;
 
 		if (strcasecmp(prov_role, "Configurator") == 0 ||
@@ -1474,36 +1476,39 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 			return -1;
 		}
 
-		if (wait_sec <= 0)
-			wait_sec = 1;
+		usleep(300000);
 		for (;;) {
 			if (waitpid(pid, &pid_status, WNOHANG) > 0) {
 				sigma_dut_print(dut, DUT_MSG_DEBUG,
 						"dpp-nfc.py exited");
 				break;
 			}
-			wait_sec--;
-			if (wait_sec <= 0) {
+
+			time(&now);
+			if ((unsigned int) (now - start) >=
+			    dut->default_timeout) {
 				sigma_dut_print(dut, DUT_MSG_DEBUG,
 						"dpp-nfc.py did not exit within timeout - stop it");
 				kill(pid, SIGTERM);
+				waitpid(pid, &pid_status, 0);
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,dpp-nfc.py did not complete within timeout");
+				goto out;
 			}
 
 			old_timeout = dut->default_timeout;
-			dut->default_timeout = 1;
+			dut->default_timeout = 2;
 			res = get_wpa_cli_event(dut, ctrl, "DPP-TX",
 						buf, sizeof(buf));
 			dut->default_timeout = old_timeout;
 			if (res >= 0) {
 				sigma_dut_print(dut, DUT_MSG_DEBUG,
 						"DPP exchange started");
+				usleep(500000);
 				kill(pid, SIGTERM);
+				waitpid(pid, &pid_status, 0);
+				break;
 			}
-		}
-		if (wait_sec <= 0) {
-			send_resp(dut, conn, SIGMA_ERROR,
-				  "errorCode,dpp-nfc.py did not complete within timeout");
-			goto out;
 		}
 	} else if ((nfc_handover &&
 		    strcasecmp(nfc_handover, "Negotiated_Requestor") == 0) ||
