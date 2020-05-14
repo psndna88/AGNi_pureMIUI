@@ -124,7 +124,7 @@ struct cam_cci_i2c_queue_info {
 };
 
 struct cam_cci_master_info {
-	uint32_t status;
+	int32_t status;
 	atomic_t q_free[NUM_QUEUES];
 	uint8_t q_lock[NUM_QUEUES];
 	uint8_t reset_pending;
