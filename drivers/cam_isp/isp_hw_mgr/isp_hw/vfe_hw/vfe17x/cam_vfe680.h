@@ -1026,7 +1026,7 @@ static struct cam_vfe_bus_ver3_hw_info vfe680_bus_hw_info = {
 			.ubwc_regs                = NULL,
 		},
 	},
-	.num_out = 25,
+	.num_out = 27,
 	.vfe_out_hw_info = {
 		{
 			.vfe_out_type  = CAM_VFE_BUS_VER3_VFE_OUT_RDI0,
@@ -1179,7 +1179,7 @@ static struct cam_vfe_bus_ver3_hw_info vfe680_bus_hw_info = {
 			.source_group  = CAM_VFE_BUS_VER3_SRC_GRP_0,
 			.num_wm        = 1,
 			.wm_idx        = {
-				17,
+				12,
 			},
 		},
 		{
@@ -1274,6 +1274,16 @@ static struct cam_vfe_bus_ver3_hw_info vfe680_bus_hw_info = {
 			},
 		},
 		{
+			.vfe_out_type  = CAM_VFE_BUS_VER3_VFE_OUT_STATS_AEC_BE,
+			.max_width     = -1,
+			.max_height    = -1,
+			.source_group  = CAM_VFE_BUS_VER3_SRC_GRP_0,
+			.num_wm        = 1,
+			.wm_idx        = {
+				11,
+			},
+		},
+		{
 			.vfe_out_type  = CAM_VFE_BUS_VER3_VFE_OUT_LTM_STATS,
 			.max_width     = -1,
 			.max_height    = -1,
@@ -1283,9 +1293,21 @@ static struct cam_vfe_bus_ver3_hw_info vfe680_bus_hw_info = {
 				27,
 			},
 		},
+		{
+			.vfe_out_type  =
+				CAM_VFE_BUS_VER3_VFE_OUT_STATS_GTM_BHIST,
+			.max_width     = 1920,
+			.max_height    = 1080,
+			.source_group  = CAM_VFE_BUS_VER3_SRC_GRP_0,
+			.num_wm        = 1,
+			.wm_idx        = {
+				17,
+			},
+		},
 	},
-	.comp_done_shift = 6,
-	.top_irq_shift   = 7,
+	.num_comp_grp    = 17,
+	.comp_done_shift = 0,
+	.top_irq_shift   = 1,
 	.max_out_res = CAM_ISP_IFE_OUT_RES_BASE + 33,
 };
 

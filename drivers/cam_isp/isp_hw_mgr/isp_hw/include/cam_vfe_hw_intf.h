@@ -190,6 +190,7 @@ struct cam_vfe_hw_vfe_in_acquire_args {
  *                           with this resource.
  * @priv:                    Context data
  * @event_cb:                Callback function to hw mgr in case of hw events
+ * @buf_done_controller:     Buf done controller for isp
  * @vfe_out:                 Acquire args for VFE_OUT
  * @vfe_bus_rd               Acquire args for VFE_BUS_READ
  * @vfe_in:                  Acquire args for VFE_IN
@@ -199,6 +200,7 @@ struct cam_vfe_acquire_args {
 	void                                *tasklet;
 	void                                *priv;
 	cam_hw_mgr_event_cb_func             event_cb;
+	void                                *buf_done_controller;
 	union {
 		struct cam_vfe_hw_vfe_out_acquire_args     vfe_out;
 		struct cam_vfe_hw_vfe_bus_rd_acquire_args  vfe_bus_rd;
