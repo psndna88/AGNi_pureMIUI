@@ -3447,6 +3447,7 @@ static enum sigma_cmd_result cmd_sta_associate(struct sigma_dut *dut,
 	const char *bssid = get_param(cmd, "bssid");
 	const char *chan = get_param(cmd, "channel");
 	const char *network_mode = get_param(cmd, "network_mode");
+	const char *ifname = get_station_ifname(dut);
 	int wps = 0;
 	char buf[1000], extra[50];
 	int e;
@@ -3541,8 +3542,9 @@ static enum sigma_cmd_result cmd_sta_associate(struct sigma_dut *dut,
 			return 0;
 		}
 
-		if (dut->program == PROGRAM_WPA3 &&
-		    dut->sta_associate_wait_connect) {
+		if ((dut->program == PROGRAM_WPA3 &&
+		     dut->sta_associate_wait_connect) ||
+		    dut->program == PROGRAM_QM) {
 			ctrl = open_wpa_mon(get_station_ifname(dut));
 			if (!ctrl)
 				return ERROR_SEND_STATUS;
@@ -3658,6 +3660,28 @@ static enum sigma_cmd_result cmd_sta_associate(struct sigma_dut *dut,
 						"Network profile TOD policy update: %d -> %d",
 						dut->sta_tod_policy, tod);
 				dut->sta_tod_policy = tod;
+			}
+			if (dut->program == PROGRAM_QM) {
+				unsigned char iface_mac_addr[ETH_ALEN];
+				char ipv6[100];
+
+				if (get_hwaddr(ifname, iface_mac_addr) < 0) {
+					sigma_dut_print(dut, DUT_MSG_ERROR,
+							"%s: get_hwaddr %s failed",
+							__func__, ifname);
+					ret = ERROR_SEND_STATUS;
+					break;
+				}
+
+				convert_mac_addr_to_ipv6_lladdr(iface_mac_addr,
+								ipv6,
+								sizeof(ipv6));
+
+				if (set_ipv6_addr(dut, ipv6, "64", ifname) !=
+				    0) {
+					ret = ERROR_SEND_STATUS;
+					break;
+				}
 			}
 			break;
 		}
