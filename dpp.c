@@ -1620,7 +1620,7 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 		else
 			own_txt[0] = '\0';
 		if (chirp) {
-			int freq = 2462; /* default: channel 6 */
+			int freq = 2437; /* default: channel 6 */
 
 			val = get_param(cmd, "DPPChirpChannel");
 			if (val) {
