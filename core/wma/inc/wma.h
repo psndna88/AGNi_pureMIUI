@@ -647,7 +647,6 @@ typedef struct {
 /**
  * struct wma_igtk_key_t - GTK key
  * @key_id: key id
- * @key_cipher: key type
  */
 typedef struct {
 	/* IPN is maintained per iGTK keyID
@@ -655,7 +654,6 @@ typedef struct {
 	 * 1st index for iGTK KeyID = 5
 	 */
 	wma_igtk_ipn_t key_id[2];
-	uint32_t key_cipher;
 } wma_igtk_key_t;
 
 struct roam_synch_frame_ind {
@@ -1739,6 +1737,9 @@ QDF_STATUS wma_peer_unmap_conf_cb(uint8_t vdev_id,
 				  uint32_t peer_id_cnt,
 				  uint16_t *peer_id_list);
 
+bool wma_objmgr_peer_exist(tp_wma_handle wma,
+			   uint8_t *peer_addr, uint8_t *peer_vdev_id);
+
 /**
  * wma_get_cca_stats() - send request to fw to get CCA
  * @wmi_hdl: wma handle
@@ -2455,10 +2456,12 @@ void wma_update_set_key(uint8_t session_id, bool pairwise,
  * wma_get_igtk() - Get the IGTK that was stored in the session earlier
  * @iface: Interface for which the key is being requested
  * @key_len: key length
+ * @igtk_key_idx: igtk key idx
  *
  * Return: Pointer to the key
  */
-uint8_t *wma_get_igtk(struct wma_txrx_node *iface, uint16_t *key_len);
+uint8_t *wma_get_igtk(struct wma_txrx_node *iface, uint16_t *key_len,
+		      uint16_t igtk_key_idx);
 
 #ifdef WLAN_FEATURE_MOTION_DETECTION
 /**

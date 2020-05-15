@@ -166,8 +166,6 @@ QDF_STATUS csr_scan_for_ssid(struct mac_context *mac, uint32_t sessionId,
  */
 QDF_STATUS csr_scan_abort_mac_scan(struct mac_context *mac, uint32_t vdev_id,
 				   uint32_t scan_id);
-QDF_STATUS csr_remove_nonscan_cmd_from_pending_list(struct mac_context *mac,
-			uint8_t sessionId, eSmeCommandType commandType);
 
 /* If fForce is true we will save the new String that is learn't. */
 /* Typically it will be true in case of Join or user initiated ioctl */
@@ -738,16 +736,19 @@ void csr_get_pmk_info(struct mac_context *mac_ctx, uint8_t session_id,
 		      tPmkidCacheInfo *pmk_cache);
 
 /*
- * csr_roam_set_psk_pmk() -
- * store PSK/PMK
- * mac  - pointer to global structure for MAC
- * sessionId - Sme session id
- * pPSK_PMK - pointer to an array of Psk/Pmk
+ * csr_roam_set_psk_pmk() - store PSK/PMK in CSR session
+ *
+ * @mac  - pointer to global structure for MAC
+ * @sessionId - Sme session id
+ * @psk_pmk - pointer to an array of PSK/PMK
+ * @update_to_fw - Send RSO update config command to firmware to update
+ * PMK
+ *
  * Return QDF_STATUS - usually it succeed unless sessionId is not found
- * Note:
  */
 QDF_STATUS csr_roam_set_psk_pmk(struct mac_context *mac, uint32_t sessionId,
-				uint8_t *pPSK_PMK, size_t pmk_len);
+				uint8_t *psk_pmk, size_t pmk_len,
+				bool update_to_fw);
 
 QDF_STATUS csr_roam_set_key_mgmt_offload(struct mac_context *mac_ctx,
 					 uint32_t session_id,
@@ -924,12 +925,21 @@ QDF_STATUS csr_roam_del_pmkid_from_cache(struct mac_context *mac,
 void csr_clear_sae_single_pmk(struct wlan_objmgr_psoc *psoc,
 			      uint8_t vdev_id, tPmkidCacheInfo *pmksa);
 
+void csr_store_sae_single_pmk_to_global_cache(struct mac_context *mac,
+					      struct csr_roam_session *session,
+					      uint8_t vdev_id);
 #else
 static inline void
 csr_clear_sae_single_pmk(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 			 tPmkidCacheInfo *pmksa)
 {
 }
+
+static inline
+void csr_store_sae_single_pmk_to_global_cache(struct mac_context *mac,
+					      struct csr_roam_session *session,
+					      uint8_t vdev_id)
+{}
 #endif
 
 QDF_STATUS csr_send_ext_change_channel(struct mac_context *mac_ctx,
@@ -1036,14 +1046,12 @@ enum band_info csr_get_rf_band(uint8_t channel);
  * @mac: pointer to mac
  * @session: sme session pointer
  * @pmk_cache: pointer to pmk cache
- * @index: index value needs to be seached
  *
  * Return: true if pmkid is found else false
  */
 bool csr_lookup_pmkid_using_bssid(struct mac_context *mac,
 					struct csr_roam_session *session,
-					tPmkidCacheInfo *pmk_cache,
-					uint32_t *index);
+					tPmkidCacheInfo *pmk_cache);
 
 /**
  * csr_is_pmkid_found_for_peer() - check if pmkid sent by peer is present

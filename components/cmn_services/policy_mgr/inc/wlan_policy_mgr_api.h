@@ -217,6 +217,20 @@ policy_mgr_get_dfs_master_dynamic_enabled(struct wlan_objmgr_psoc *psoc,
 					  uint8_t vdev_id);
 
 /**
+ * policy_mgr_get_can_skip_radar_event - Can skip DFS Radar event or not
+ * @psoc: soc obj
+ * @vdev_id: sap vdev id
+ *
+ * This API is used by dfs component to get decision whether to ignore
+ * the radar event or not.
+ *
+ * Return: true if Radar event should be ignored.
+ */
+bool
+policy_mgr_get_can_skip_radar_event(struct wlan_objmgr_psoc *psoc,
+				    uint8_t vdev_id);
+
+/**
  * policy_mgr_get_sta_sap_scc_lte_coex_chnl() - to find out if STA & SAP
  *						     SCC is allowed on LTE COEX
  * @psoc: pointer to psoc
@@ -342,6 +356,34 @@ QDF_STATUS policy_mgr_set_ch_select_plcy(struct wlan_objmgr_psoc *psoc,
 					 uint32_t ch_select_policy);
 
 /**
+ * policy_mgr_get_dynamic_mcc_adaptive_sch() - to get dynamic mcc adaptive
+ *                                             scheduler
+ * @psoc: pointer to psoc
+ * @dynamic_mcc_adaptive_sched: value to be filled
+ *
+ * This API is used to get dynamic mcc adaptive scheduler
+ *
+ * Return: QDF_STATUS_SUCCESS up on success and any other status for failure.
+ */
+QDF_STATUS policy_mgr_get_dynamic_mcc_adaptive_sch(
+				struct wlan_objmgr_psoc *psoc,
+				bool *dynamic_mcc_adaptive_sched);
+
+/**
+ * policy_mgr_set_dynamic_mcc_adaptive_sch() - to set dynamic mcc adaptive
+ *                                             scheduler
+ * @psoc: pointer to psoc
+ * @dynamic_mcc_adaptive_sched: value to be set
+ *
+ * This API is used to set dynamic mcc adaptive scheduler
+ *
+ * Return: QDF_STATUS_SUCCESS up on success and any other status for failure.
+ */
+QDF_STATUS policy_mgr_set_dynamic_mcc_adaptive_sch(
+				struct wlan_objmgr_psoc *psoc,
+				bool dynamic_mcc_adaptive_sched);
+
+/**
  * policy_mgr_get_mcc_adaptive_sch() - to get mcc adaptive scheduler
  * @psoc: pointer to psoc
  * @enable_mcc_adaptive_sch: value to be filled
@@ -351,7 +393,7 @@ QDF_STATUS policy_mgr_set_ch_select_plcy(struct wlan_objmgr_psoc *psoc,
  * Return: QDF_STATUS_SUCCESS up on success and any other status for failure.
  */
 QDF_STATUS policy_mgr_get_mcc_adaptive_sch(struct wlan_objmgr_psoc *psoc,
-					   uint8_t *enable_mcc_adaptive_sch);
+					   bool *enable_mcc_adaptive_sch);
 
 /**
  * policy_mgr_get_sta_cxn_5g_band() - to get STA's connection in 5G config
@@ -598,6 +640,16 @@ QDF_STATUS policy_mgr_decr_active_session(struct wlan_objmgr_psoc *psoc,
  */
 void policy_mgr_decr_session_set_pcl(struct wlan_objmgr_psoc *psoc,
 		enum QDF_OPMODE mode, uint8_t session_id);
+
+/**
+ * policy_mgr_skip_dfs_ch() - skip dfs channel or not
+ * @psoc: pointer to soc
+ * @skip_dfs_channel: pointer to result
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS policy_mgr_skip_dfs_ch(struct wlan_objmgr_psoc *psoc,
+				  bool *skip_dfs_channel);
 
 /**
  * policy_mgr_get_channel() - provide channel number of given mode and vdevid
@@ -1507,6 +1559,7 @@ void policy_mgr_set_dual_mac_fw_mode_config(struct wlan_objmgr_psoc *psoc,
 
 /**
  * policy_mgr_soc_set_dual_mac_cfg_cb() - Callback for set dual mac config
+ * @psoc: PSOC object information
  * @status: Status of set dual mac config
  * @scan_config: Current scan config whose status is the first param
  * @fw_mode_config: Current FW mode config whose status is the first param
@@ -1515,8 +1568,10 @@ void policy_mgr_set_dual_mac_fw_mode_config(struct wlan_objmgr_psoc *psoc,
  *
  * Return: None
  */
-void policy_mgr_soc_set_dual_mac_cfg_cb(enum set_hw_mode_status status,
-		uint32_t scan_config, uint32_t fw_mode_config);
+void policy_mgr_soc_set_dual_mac_cfg_cb(struct wlan_objmgr_psoc *psoc,
+					enum set_hw_mode_status status,
+					uint32_t scan_config,
+					uint32_t fw_mode_config);
 
 /**
  * policy_mgr_map_concurrency_mode() - to map concurrency mode
@@ -1681,6 +1736,44 @@ QDF_STATUS policy_mgr_reset_connection_update(struct wlan_objmgr_psoc *psoc);
  * Return: QDF_STATUS
  */
 QDF_STATUS policy_mgr_set_connection_update(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * policy_mgr_reset_dual_mac_configuration() - Reset dual MAC configuration
+ * complete event
+ * @psoc: PSOC object information
+ * Resets the concurrent dual MAC configuration complete event
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+policy_mgr_reset_dual_mac_configuration(struct wlan_objmgr_psoc *psoc);
+
+
+/**
+ * policy_mgr_wait_for_dual_mac_configuration() - Wait for set dual MAC
+ * configuration command to get processed
+ * @psoc: PSOC object information
+ * Waits for DUAL_MAC_CONFIG_TIMEOUT duration until
+ * policy_mgr_soc_set_dual_mac_cfg_cb sets the event
+ * dual_mac_configuration_complete_evt
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+policy_mgr_wait_for_dual_mac_configuration(struct wlan_objmgr_psoc *psoc);
+
+
+/**
+ * policy_mgr_dual_mac_configuration_complete() - Complete dual MAC
+ * configuration wait event
+ * @psoc: PSOC object information
+ * Sets the concurrent dual MAC configuration complete event
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+policy_mgr_dual_mac_configuration_complete(struct wlan_objmgr_psoc *psoc);
+
 
 /**
  * policy_mgr_set_chan_switch_complete_evt() - set channel
@@ -2980,6 +3073,17 @@ void policy_mgr_set_weight_of_dfs_passive_channels_to_zero(
  */
 bool policy_mgr_is_sta_sap_scc_allowed_on_dfs_chan(
 		struct wlan_objmgr_psoc *psoc);
+
+/**
+ * policy_mgr_is_special_mode_active_5g() - check if given mode active in 5g
+ * @psoc: pointer to soc
+ * @mode: operating mode of interface to be checked
+ *
+ * Return: true if given mode is active in 5g
+ */
+bool policy_mgr_is_special_mode_active_5g(struct wlan_objmgr_psoc *psoc,
+					  enum policy_mgr_con_mode mode);
+
 /**
  * policy_mgr_is_sta_connected_2g() - check if sta connected in 2g
  * @psoc: pointer to soc

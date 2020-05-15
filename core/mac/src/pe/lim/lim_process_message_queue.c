@@ -874,7 +874,7 @@ static QDF_STATUS lim_allocate_and_get_bcn(
 	tSchBeaconStruct *bcn_l = NULL;
 	cds_pkt_t *pkt_l = NULL;
 
-	pkt_l = qdf_mem_malloc(sizeof(cds_pkt_t));
+	pkt_l = qdf_mem_malloc_atomic(sizeof(cds_pkt_t));
 	if (!pkt_l)
 		return QDF_STATUS_E_FAILURE;
 
@@ -885,7 +885,7 @@ static QDF_STATUS lim_allocate_and_get_bcn(
 		goto free;
 	}
 
-	bcn_l = qdf_mem_malloc(sizeof(tSchBeaconStruct));
+	bcn_l = qdf_mem_malloc_atomic(sizeof(tSchBeaconStruct));
 	if (!bcn_l)
 		goto free;
 
@@ -1880,9 +1880,6 @@ static void lim_process_messages(struct mac_context *mac_ctx,
 	case SIR_LIM_CNF_WAIT_TIMEOUT:
 		/* Does not receive CNF or dummy packet */
 		lim_handle_cnf_wait_timeout(mac_ctx, (uint16_t) msg->bodyval);
-		break;
-	case SIR_LIM_CHANNEL_SWITCH_TIMEOUT:
-		lim_process_channel_switch_timeout(mac_ctx);
 		break;
 	case SIR_LIM_UPDATE_OLBC_CACHEL_TIMEOUT:
 		lim_handle_update_olbc_cache(mac_ctx);

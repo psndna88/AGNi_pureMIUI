@@ -221,7 +221,7 @@ static QDF_STATUS sme_process_set_hw_mode_resp(struct mac_context *mac, uint8_t 
 		csr_sta_continue_csa(mac, session_id);
 	}
 
-	if (reason == POLICY_MGR_UPDATE_REASON_CHANNEL_SWITCH) {
+	if (reason == POLICY_MGR_UPDATE_REASON_CHANNEL_SWITCH_SAP) {
 		sme_info("Continue channel switch for SAP on vdev %d",
 			 session_id);
 		csr_csa_restart(mac, session_id);
@@ -518,6 +518,11 @@ QDF_STATUS sme_ser_handle_active_cmd(struct wlan_serialization_command *cmd)
 		csr_roam_process_wm_status_change_command(mac_ctx,
 					sme_cmd);
 		break;
+	case eSmeCommandGetdisconnectStats:
+		csr_roam_process_get_disconnect_stats_command(mac_ctx,
+							      sme_cmd);
+		break;
+
 	case eSmeCommandAddTs:
 	case eSmeCommandDelTs:
 #ifndef WLAN_MDM_CODE_REDUCTION_OPT
@@ -826,12 +831,12 @@ void sme_update_fine_time_measurement_capab(mac_handle_t mac_handle,
 
 	if (!val) {
 		mac_ctx->rrm.rrmPEContext.rrmEnabledCaps.fine_time_meas_rpt = 0;
-		((tpRRMCaps)mac_ctx->rrm.rrmSmeContext.
-			rrmConfig.rm_capability)->fine_time_meas_rpt = 0;
+		((tpRRMCaps)mac_ctx->rrm.rrmConfig.
+			rm_capability)->fine_time_meas_rpt = 0;
 	} else {
 		mac_ctx->rrm.rrmPEContext.rrmEnabledCaps.fine_time_meas_rpt = 1;
-		((tpRRMCaps)mac_ctx->rrm.rrmSmeContext.
-			rrmConfig.rm_capability)->fine_time_meas_rpt = 1;
+		((tpRRMCaps)mac_ctx->rrm.rrmConfig.
+			rm_capability)->fine_time_meas_rpt = 1;
 	}
 
 	/* Inform this RRM IE change to FW */
@@ -1643,7 +1648,7 @@ QDF_STATUS sme_set_ese_beacon_request(mac_handle_t mac_handle,
 	const tCsrEseBeaconReqParams *bcn_req = NULL;
 	uint8_t counter = 0;
 	struct csr_roam_session *session = CSR_GET_SESSION(mac, sessionId);
-	tpRrmSMEContext sme_rrm_ctx = &mac->rrm.rrmSmeContext;
+	tpRrmSMEContext sme_rrm_ctx = &mac->rrm.rrmSmeContext[0];
 
 	if (sme_rrm_ctx->eseBcnReqInProgress == true) {
 		sme_err("A Beacon Report Req is already in progress");
@@ -1671,6 +1676,7 @@ QDF_STATUS sme_set_ese_beacon_request(mac_handle_t mac_handle,
 	sme_bcn_rpt_req->channel_info.chan_num = 255;
 	sme_bcn_rpt_req->channel_list.num_channels = in_req->numBcnReqIe;
 	sme_bcn_rpt_req->msgSource = eRRM_MSG_SOURCE_ESE_UPLOAD;
+	sme_bcn_rpt_req->measurement_idx = 0;
 
 	for (counter = 0; counter < in_req->numBcnReqIe; counter++) {
 		bcn_req = &in_req->bcnReq[counter];
@@ -1967,7 +1973,7 @@ static QDF_STATUS sme_process_dual_mac_config_resp(struct mac_context *mac,
 			sme_err("Callback failed-Dual mac config is NULL");
 		} else {
 			sme_debug("Calling HDD callback for Dual mac config");
-			callback(param->status,
+			callback(mac->psoc, param->status,
 				command->u.set_dual_mac_cmd.scan_config,
 				command->u.set_dual_mac_cmd.fw_mode_config);
 		}
@@ -3194,19 +3200,23 @@ void sme_get_pmk_info(mac_handle_t mac_handle, uint8_t session_id,
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 /*
- * \fn sme_roam_set_psk_pmk
- * \brief a wrapper function to request CSR to save PSK/PMK
- *  This is a synchronous call.
- * \param mac_handle - Global structure
- * \param sessionId - SME sessionId
- * \param pPSK_PMK - pointer to an array of Psk[]/Pmk
- * \param pmk_len - Length could be only 16 bytes in case if LEAP
- *                  connections. Need to pass this information to
- *                  firmware.
- * \return QDF_STATUS -status whether PSK/PMK is set or not
+ * sme_roam_set_psk_pmk() - a wrapper function to request CSR to save PSK/PMK
+ * This is a synchronous call.
+ * @mac_handle:  Global structure
+ * @sessionId:   SME sessionId
+ * @pPSK_PMK:    pointer to an array of Psk[]/Pmk
+ * @pmk_len:     Length could be only 16 bytes in case if LEAP
+ *               connections. Need to pass this information to
+ *               firmware.
+ * @update_to_fw: True - send RSO update to firmware after updating
+ *                       session->psk_pmk.
+ *                False - Copy the pmk to session->psk_pmk and return
+ *
+ * Return: QDF_STATUS -status whether PSK/PMK is set or not
  */
 QDF_STATUS sme_roam_set_psk_pmk(mac_handle_t mac_handle, uint8_t sessionId,
-				uint8_t *pPSK_PMK, size_t pmk_len)
+				uint8_t *psk_pmk, size_t pmk_len,
+				bool update_to_fw)
 {
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
 	struct mac_context *mac = MAC_CONTEXT(mac_handle);
@@ -3214,8 +3224,8 @@ QDF_STATUS sme_roam_set_psk_pmk(mac_handle_t mac_handle, uint8_t sessionId,
 	status = sme_acquire_global_lock(&mac->sme);
 	if (QDF_IS_STATUS_SUCCESS(status)) {
 		if (CSR_IS_SESSION_VALID(mac, sessionId))
-			status = csr_roam_set_psk_pmk(mac, sessionId, pPSK_PMK,
-						     pmk_len);
+			status = csr_roam_set_psk_pmk(mac, sessionId, psk_pmk,
+						      pmk_len, update_to_fw);
 		else
 			status = QDF_STATUS_E_INVAL;
 		sme_release_global_lock(&mac->sme);
@@ -3402,7 +3412,7 @@ QDF_STATUS sme_oem_update_capability(mac_handle_t mac_handle,
 	struct mac_context *pmac = MAC_CONTEXT(mac_handle);
 	uint8_t *bytes;
 
-	bytes = pmac->rrm.rrmSmeContext.rrmConfig.rm_capability;
+	bytes = pmac->rrm.rrmConfig.rm_capability;
 
 	if (cap->ftm_rr)
 		bytes[4] |= RM_CAP_FTM_RANGE_REPORT;
@@ -3430,7 +3440,7 @@ QDF_STATUS sme_oem_get_capability(mac_handle_t mac_handle,
 	struct mac_context *pmac = MAC_CONTEXT(mac_handle);
 	uint8_t *bytes;
 
-	bytes = pmac->rrm.rrmSmeContext.rrmConfig.rm_capability;
+	bytes = pmac->rrm.rrmConfig.rm_capability;
 
 	cap->ftm_rr = bytes[4] & RM_CAP_FTM_RANGE_REPORT;
 	cap->lci_capability = bytes[4] & RM_CAP_CIVIC_LOC_MEASUREMENT;
@@ -4000,7 +4010,7 @@ sme_fill_nss_chain_params(struct mac_context *mac_ctx,
 	 * If target supports Antenna sharing, set NSS to 1 for 2.4GHz band for
 	 * NDI vdev.
 	 */
-	if (device_mode == QDF_NDI_MODE && mac_ctx->lteCoexAntShare &&
+	if (device_mode == QDF_NDI_MODE && mac_ctx->mlme_cfg->gen.as_enabled &&
 	    band == NSS_CHAINS_BAND_2GHZ)
 		max_supported_nss = NSS_1x1_MODE;
 
@@ -6528,10 +6538,9 @@ QDF_STATUS sme_stop_roaming(mac_handle_t mac_handle, uint8_t session_id,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	if (reason == REASON_DRIVER_DISABLED && requestor) {
-		mlme_set_operations_bitmap(mac_ctx->psoc, session_id, requestor,
-					   false);
-	}
+	if (reason == REASON_DRIVER_DISABLED && requestor)
+		mlme_set_operations_bitmap(mac_ctx->psoc, session_id,
+					   requestor, false);
 
 	status = csr_post_roam_state_change(mac_ctx, session_id,
 					    ROAM_RSO_STOPPED,
@@ -8295,31 +8304,32 @@ QDF_STATUS sme_set_wlm_latency_level(mac_handle_t mac_handle,
 void sme_get_command_q_status(mac_handle_t mac_handle)
 {
 	tSmeCmd *pTempCmd = NULL;
-	tListElem *pEntry;
 	struct mac_context *mac;
+	struct wlan_serialization_command *cmd;
 
 	if (!mac_handle)
 		return;
 
 	mac = MAC_CONTEXT(mac_handle);
 
-	pEntry = csr_nonscan_active_ll_peek_head(mac, LL_ACCESS_LOCK);
-	if (pEntry)
-		pTempCmd = GET_BASE_ADDR(pEntry, tSmeCmd, Link);
+	sme_info("smeCmdPendingList has %d commands",
+		 wlan_serialization_get_pending_list_count(mac->psoc, false));
+	cmd = wlan_serialization_peek_head_active_cmd_using_psoc(mac->psoc,
+								 false);
+	if (cmd)
+		sme_info("Active commaned is %d cmd id %d source %d",
+			 cmd->cmd_type, cmd->cmd_id, cmd->source);
+	if (!cmd || cmd->source != WLAN_UMAC_COMP_MLME)
+		return;
 
-	sme_err("WLAN_BUG_RCA: Currently smeCmdActiveList has command (0x%X)",
-			(pTempCmd) ? pTempCmd->command : eSmeNoCommand);
+	pTempCmd = cmd->umac_cmd;
 	if (pTempCmd) {
 		if (eSmeCsrCommandMask & pTempCmd->command)
 			/* CSR command is stuck. See what the reason code is
 			 * for that command
 			 */
 			dump_csr_command_info(mac, pTempCmd);
-	} /* if(pTempCmd) */
-
-	sme_err("Currently smeCmdPendingList has %d commands",
-		wlan_serialization_get_pending_list_count(mac->psoc, false));
-
+	}
 }
 
 #ifdef WLAN_FEATURE_DSRC
@@ -10795,7 +10805,7 @@ QDF_STATUS sme_ll_stats_set_thresh(mac_handle_t mac_handle,
 
 #endif /* WLAN_FEATURE_LINK_LAYER_STATS */
 
-#ifdef WLAN_POWER_DEBUGFS
+#ifdef WLAN_POWER_DEBUG
 /**
  * sme_power_debug_stats_req() - SME API to collect Power debug stats
  * @callback_fn: Pointer to the callback function for Power stats event
@@ -12055,11 +12065,15 @@ int sme_update_he_tx_bfee_nsts(mac_handle_t mac_handle, uint8_t session_id,
 		sme_err("No session for id %d", session_id);
 		return -EINVAL;
 	}
-	if (cfg_in_range(CFG_HE_BFEE_STS_LT80, cfg_val))
+	if (cfg_in_range(CFG_HE_BFEE_STS_LT80, cfg_val)) {
 		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.bfee_sts_lt_80 =
 		cfg_val;
-	else
+		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.bfee_sts_gt_80 =
+		cfg_val;
+	} else {
 		return -EINVAL;
+	}
+
 
 	csr_update_session_he_cap(mac_ctx, session);
 	return 0;
@@ -12768,7 +12782,6 @@ void sme_update_tgt_services(mac_handle_t mac_handle,
 
 	mac_ctx->obss_scan_offload = cfg->obss_scan_offload;
 	sme_debug("obss_scan_offload: %d", mac_ctx->obss_scan_offload);
-	mac_ctx->lteCoexAntShare = cfg->lte_coex_ant_share;
 	mac_ctx->mlme_cfg->gen.as_enabled = cfg->lte_coex_ant_share;
 	mac_ctx->beacon_offload = cfg->beacon_offload;
 	mac_ctx->pmf_offload = cfg->pmf_offload;
@@ -13798,6 +13811,18 @@ QDF_STATUS sme_send_coex_config_cmd(struct coex_config_params *coex_cfg_params)
 		return QDF_STATUS_E_FAILURE;
 	}
 	return wma_send_coex_config_cmd(wma_handle, coex_cfg_params);
+}
+
+QDF_STATUS sme_send_ocl_cmd(struct ocl_cmd_params *ocl_params)
+{
+	void *wma_handle;
+
+	wma_handle = cds_get_context(QDF_MODULE_ID_WMA);
+	if (!wma_handle) {
+		sme_err("wma handle is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+	return wma_send_ocl_cmd(wma_handle, ocl_params);
 }
 
 #ifdef WLAN_FEATURE_FIPS

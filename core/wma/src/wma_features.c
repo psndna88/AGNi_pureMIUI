@@ -3812,6 +3812,15 @@ int wma_update_tdls_peer_state(WMA_HANDLE handle,
 		goto end_tdls_peer_state;
 	}
 
+
+	if (!wma_objmgr_peer_exist(wma_handle,
+				   peer_state->peer_macaddr, NULL)) {
+		wma_err("peer:" QDF_MAC_ADDR_STR "doesn't exist",
+			QDF_MAC_ADDR_ARRAY(peer_state->peer_macaddr));
+		ret = -EINVAL;
+		goto end_tdls_peer_state;
+	}
+
 	peer_cap = &peer_state->peer_cap;
 
 	/* peer capability info is valid only when peer state is connected */
@@ -4724,6 +4733,25 @@ QDF_STATUS wma_send_coex_config_cmd(WMA_HANDLE wma_handle,
 					       coex_cfg_params);
 }
 
+QDF_STATUS wma_send_ocl_cmd(WMA_HANDLE wma_handle,
+			    struct ocl_cmd_params *ocl_params)
+{
+	tp_wma_handle wma = (tp_wma_handle)wma_handle;
+
+	if (!wma || !wma->wmi_handle) {
+		WMA_LOGE("%s: WMA is closed, can not issue coex config command",
+			 __func__);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (!ocl_params) {
+		WMA_LOGE("%s: ocl params ptr NULL", __func__);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	return wmi_unified_send_ocl_cmd(wma->wmi_handle, ocl_params);
+}
+
 /**
  * wma_get_arp_stats_handler() - handle arp stats data
  * indicated by FW
@@ -4809,7 +4837,7 @@ int wma_get_arp_stats_handler(void *handle, uint8_t *data,
  *
  * Return: 0 on success, error number otherwise
  */
-#ifdef WLAN_POWER_DEBUGFS
+ #ifdef WLAN_POWER_DEBUG
 int wma_unified_power_debug_stats_event_handler(void *handle,
 			uint8_t *cmd_param_info, uint32_t len)
 {
@@ -4883,13 +4911,8 @@ int wma_unified_power_debug_stats_event_handler(void *handle,
 	qdf_mem_free(power_stats_results);
 	return 0;
 }
-#else
-int wma_unified_power_debug_stats_event_handler(void *handle,
-		uint8_t *cmd_param_info, uint32_t len)
-{
-	return 0;
-}
 #endif
+
 #ifdef WLAN_FEATURE_BEACON_RECEPTION_STATS
 int wma_unified_beacon_debug_stats_event_handler(void *handle,
 						 uint8_t *cmd_param_info,
@@ -5392,12 +5415,6 @@ void wma_update_set_key(uint8_t session_id, bool pairwise,
 		wma_err("iface not found for session id %d", session_id);
 		return;
 	}
-
-	if (cipher_type == WLAN_CRYPTO_CIPHER_AES_GMAC ||
-	    cipher_type == WLAN_CRYPTO_CIPHER_AES_GMAC_256 ||
-	    cipher_type == WLAN_CRYPTO_CIPHER_AES_CMAC)
-		iface->key.key_cipher =
-			wlan_crypto_cipher_to_wmi_cipher(cipher_type);
 
 	if (iface) {
 		wma_reset_ipn(iface, key_index);

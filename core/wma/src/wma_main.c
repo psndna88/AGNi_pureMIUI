@@ -239,6 +239,34 @@ static void wma_set_ipa_disable_config(
 #ifndef NUM_OF_ADDITIONAL_FW_PEERS
 #define NUM_OF_ADDITIONAL_FW_PEERS	2
 #endif
+
+/**
+ * wma_update_num_peers_tids() - Update num_peers and tids based on num_vdevs
+ * @wma_handle: wma handle
+ * @tgt_cfg: Resource config given to target
+ *
+ * Get num_vdevs from tgt_cfg and update num_peers and tids based on it.
+ *
+ * Return: none
+ */
+static void wma_update_num_peers_tids(t_wma_handle *wma_handle,
+				      target_resource_config *tgt_cfg)
+
+{
+	uint8_t no_of_peers_supported;
+
+	no_of_peers_supported = wma_get_number_of_peers_supported(wma_handle);
+
+	tgt_cfg->num_peers = no_of_peers_supported + tgt_cfg->num_vdevs +
+				NUM_OF_ADDITIONAL_FW_PEERS;
+	/* The current firmware implementation requires the number of
+	 * offload peers should be (number of vdevs + 1).
+	 */
+	tgt_cfg->num_tids =
+		wma_get_number_of_tids_supported(no_of_peers_supported,
+						 tgt_cfg->num_vdevs);
+}
+
 /**
  * wma_set_default_tgt_config() - set default tgt config
  * @wma_handle: wma handle
@@ -250,15 +278,11 @@ static void wma_set_default_tgt_config(tp_wma_handle wma_handle,
 				       target_resource_config *tgt_cfg,
 				       struct cds_config_info *cds_cfg)
 {
-	uint8_t no_of_peers_supported;
-
-	no_of_peers_supported = wma_get_number_of_peers_supported(wma_handle);
-
 	qdf_mem_zero(tgt_cfg, sizeof(target_resource_config));
+
 	tgt_cfg->num_vdevs = cds_cfg->num_vdevs;
-	tgt_cfg->num_peers = no_of_peers_supported +
-				cds_cfg->num_vdevs +
-				NUM_OF_ADDITIONAL_FW_PEERS;
+	wma_update_num_peers_tids(wma_handle, tgt_cfg);
+
 	/* The current firmware implementation requires the number of
 	 * offload peers should be (number of vdevs + 1).
 	 */
@@ -266,8 +290,6 @@ static void wma_set_default_tgt_config(tp_wma_handle wma_handle,
 	tgt_cfg->num_offload_reorder_buffs =
 				cds_cfg->ap_maxoffload_reorderbuffs + 1;
 	tgt_cfg->num_peer_keys = CFG_TGT_NUM_PEER_KEYS;
-	tgt_cfg->num_tids = wma_get_number_of_tids_supported(
-				no_of_peers_supported, cds_cfg->num_vdevs);
 	tgt_cfg->ast_skid_limit = CFG_TGT_AST_SKID_LIMIT;
 	tgt_cfg->tx_chain_mask = CFG_TGT_DEFAULT_TX_CHAIN_MASK;
 	tgt_cfg->rx_chain_mask = CFG_TGT_DEFAULT_RX_CHAIN_MASK;
@@ -2646,6 +2668,11 @@ void wma_vdev_deinit(struct wma_txrx_node *vdev)
 		vdev->roam_synch_frame_ind.reassoc_rsp = NULL;
 	}
 
+	if (vdev->plink_status_req) {
+		qdf_mem_free(vdev->plink_status_req);
+		vdev->plink_status_req = NULL;
+	}
+
 	qdf_runtime_lock_deinit(&vdev->vdev_set_key_runtime_wakelock);
 	qdf_wake_lock_destroy(&vdev->vdev_set_key_wakelock);
 	vdev->is_waiting_for_key = false;
@@ -3147,7 +3174,7 @@ QDF_STATUS wma_open(struct wlan_objmgr_psoc *psoc,
 					   wma_peer_info_event_handler,
 					   WMA_RX_SERIALIZER_CTX);
 
-#ifdef WLAN_POWER_DEBUGFS
+#ifdef WLAN_POWER_DEBUG
 	/* register for Chip Power stats event */
 	wmi_unified_register_event_handler(wma_handle->wmi_handle,
 				wmi_pdev_chip_power_stats_event_id,
@@ -5291,6 +5318,10 @@ static void wma_update_nan_target_caps(tp_wma_handle wma_handle,
 
 	if (wmi_service_enabled(wma_handle->wmi_handle, wmi_service_nan_vdev))
 		tgt_cfg->nan_caps.nan_vdev_allowed = 1;
+
+	if (wmi_service_enabled(wma_handle->wmi_handle,
+				wmi_service_sta_nan_ndi_four_port))
+		tgt_cfg->nan_caps.sta_nan_ndi_ndi_allowed = 1;
 }
 #else
 static void wma_update_nan_target_caps(tp_wma_handle wma_handle,
@@ -5360,6 +5391,15 @@ static void wma_update_mlme_related_tgt_caps(struct wlan_objmgr_psoc *psoc,
 	mlme_tgt_cfg.data_stall_recovery_fw_support =
 		wmi_service_enabled(wmi_handle,
 				    wmi_service_data_stall_recovery_support);
+
+	mlme_tgt_cfg.bigtk_support =
+		wmi_service_enabled(wmi_handle, wmi_beacon_protection_support);
+
+	mlme_tgt_cfg.stop_all_host_scan_support =
+		wmi_service_enabled(wmi_handle,
+				    wmi_service_host_scan_stop_vdev_all);
+
+	wma_debug("beacon protection support %d", mlme_tgt_cfg.bigtk_support);
 
 	/* Call this at last only after filling all the tgt caps */
 	wlan_mlme_update_cfg_with_tgt_caps(psoc, &mlme_tgt_cfg);
@@ -6732,9 +6772,27 @@ int wma_rx_service_ready_ext_event(void *handle, uint8_t *event,
 		ucfg_ftm_time_sync_set_enable(wma_handle->psoc, false);
 	}
 
-	if (wmi_service_enabled(wma_handle->wmi_handle, wmi_service_nan_vdev) &&
-	    ucfg_nan_get_is_separate_nan_iface(wma_handle->psoc))
+	if (wmi_service_enabled(wma_handle->wmi_handle, wmi_service_nan_vdev))
+		ucfg_nan_set_vdev_creation_supp_by_fw(wma_handle->psoc, true);
+
+	/*
+	 * Firmware can accommodate maximum 4 vdevs and the ini gNumVdevs
+	 * indicates the same.
+	 * If host driver is going to create vdev for NAN, it indicates
+	 * the total no.of vdevs supported to firmware which includes the
+	 * NAN vdev.
+	 * If firmware is going to create NAN discovery vdev, host should
+	 * indicate 3 vdevs and firmware shall add 1 vdev for NAN. So decrement
+	 * the num_vdevs by 1.
+	 */
+	if (ucfg_nan_is_vdev_creation_allowed(wma_handle->psoc)) {
 		wlan_res_cfg->nan_separate_iface_support = true;
+	} else {
+		wlan_res_cfg->num_vdevs--;
+		wma_update_num_peers_tids(wma_handle, wlan_res_cfg);
+	}
+
+	WMA_LOGD("%s: num_vdevs: %u", __func__, wlan_res_cfg->num_vdevs);
 
 	wma_init_dbr_params(wma_handle);
 
@@ -6864,6 +6922,7 @@ QDF_STATUS wma_wait_for_ready_event(WMA_HANDLE handle)
 					       WMA_READY_EVENTID_TIMEOUT);
 	if (!tgt_hdl->info.wmi_ready) {
 		wma_err("Error in pdev creation");
+		QDF_DEBUG_PANIC("FW ready event timed out");
 		return QDF_STATUS_E_INVAL;
 	}
 
@@ -7477,7 +7536,7 @@ static inline QDF_STATUS wma_send_wow_pulse_cmd(tp_wma_handle wma_handle,
  *
  * Return: QDF_STATUS
  */
-#ifdef WLAN_POWER_DEBUGFS
+#ifdef WLAN_POWER_DEBUG
 static QDF_STATUS wma_process_power_debug_stats_req(tp_wma_handle wma_handle)
 {
 	wmi_pdev_get_chip_power_stats_cmd_fixed_param *cmd;
@@ -7605,7 +7664,7 @@ static void wma_set_arp_req_stats(WMA_HANDLE handle,
 		return;
 	}
 
-	if (!wma_is_vdev_started(vdev)) {
+	if (!wma_is_vdev_up(req_buf->vdev_id)) {
 		WMA_LOGD("vdev id:%d is not started", req_buf->vdev_id);
 		goto release_ref;
 	}
@@ -8406,6 +8465,9 @@ static QDF_STATUS wma_mc_process_msg(struct scheduler_msg *msg)
 		wma_set_max_tx_power(wma_handle,
 				     (tpMaxTxPowerParams) msg->bodyptr);
 		break;
+	case WMA_SEND_MAX_TX_POWER:
+		wma_send_max_tx_pwrlmt(wma_handle, msg->bodyval);
+		break;
 	case WMA_SET_KEEP_ALIVE:
 		wma_set_keepalive_req(wma_handle, msg->bodyptr);
 		break;
@@ -9096,7 +9158,7 @@ QDF_STATUS wma_send_pdev_set_pcl_cmd(tp_wma_handle wma_handle,
 				WEIGHT_OF_DISALLOWED_CHANNELS;
 		}
 		if (msg->band_mask == BIT(REG_BAND_2G) &&
-		    WLAN_REG_IS_5GHZ_CH_FREQ(
+		    !WLAN_REG_IS_24GHZ_CH_FREQ(
 		    msg->chan_weights.saved_chan_list[i]))
 			msg->chan_weights.weighed_valid_list[i] =
 				WEIGHT_OF_DISALLOWED_CHANNELS;

@@ -602,8 +602,8 @@ typedef enum {
 
 } eCsrWEPStaticKeyID;
 
-/* Two extra key indicies are used for the IGTK (which is used by BIP) */
-#define CSR_MAX_NUM_KEY     (eCSR_SECURITY_WEP_STATIC_KEY_ID_MAX + 2 + 1)
+/* Two extra key indicies are used for the IGTK, two for BIGTK */
+#define CSR_MAX_NUM_KEY     (eCSR_SECURITY_WEP_STATIC_KEY_ID_MAX + 2 + 1 + 2)
 
 typedef enum {
 	/*
@@ -956,8 +956,6 @@ struct csr_config_params {
 #ifdef FEATURE_AP_MCC_CH_AVOIDANCE
 	bool sap_channel_avoidance;
 #endif /* FEATURE_AP_MCC_CH_AVOIDANCE */
-	uint32_t dual_mac_feature_disable;
-	uint32_t sta_sap_scc_on_dfs_chan;
 	uint32_t roam_dense_rssi_thresh_offset;
 	uint32_t roam_dense_min_aps;
 	int8_t roam_bg_scan_bad_rssi_thresh;
@@ -1085,6 +1083,9 @@ struct csr_roam_info {
 	tDot11fIEhs20vendor_ie hs20vendor_ie;
 	tDot11fIEVHTOperation vht_operation;
 	tDot11fIEHTInfo ht_operation;
+#ifdef WLAN_FEATURE_11AX
+	tDot11fIEhe_op he_operation;
+#endif
 	bool reassoc;
 	bool ampdu;
 	bool sgi_enable;

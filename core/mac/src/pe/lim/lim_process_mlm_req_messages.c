@@ -196,6 +196,11 @@ lim_mlm_add_bss(struct mac_context *mac_ctx,
 	tp_wma_handle wma = cds_get_context(QDF_MODULE_ID_WMA);
 	struct bss_params *addbss_param = NULL;
 
+	if (!wma) {
+		pe_err("Invalid wma handle");
+		return eSIR_SME_INVALID_PARAMETERS;
+	}
+
 	mlme_obj = wlan_vdev_mlme_get_cmpt_obj(vdev);
 	if (!mlme_obj) {
 		pe_err("vdev component object is NULL");
@@ -1232,7 +1237,7 @@ static void
 lim_process_mlm_deauth_req_ntf(struct mac_context *mac_ctx,
 			       QDF_STATUS suspend_status, uint32_t *msg_buf)
 {
-	uint16_t aid;
+	uint16_t aid, i;
 	tSirMacAddr curr_bssId;
 	tpDphHashNode sta_ds;
 	struct tLimPreAuthNode *auth_node;
@@ -1366,56 +1371,90 @@ lim_process_mlm_deauth_req_ntf(struct mac_context *mac_ctx,
 	 */
 	sta_ds = dph_lookup_hash_entry(mac_ctx,
 				       mlm_deauth_req->peer_macaddr.bytes,
-				       &aid, &session->dph.dphHashTable);
+				       &aid,
+				       &session->dph.dphHashTable);
 
-	if (!sta_ds) {
+	if (!sta_ds && (!mac_ctx->mlme_cfg->sap_cfg.is_sap_bcast_deauth_enabled
+	    || (mac_ctx->mlme_cfg->sap_cfg.is_sap_bcast_deauth_enabled &&
+	    !qdf_is_macaddr_broadcast(&mlm_deauth_req->peer_macaddr)))) {
 		/* Check if there exists pre-auth context for this STA */
-		auth_node = lim_search_pre_auth_list(mac_ctx,
-					mlm_deauth_req->peer_macaddr.bytes);
+		auth_node = lim_search_pre_auth_list(mac_ctx, mlm_deauth_req->
+						     peer_macaddr.bytes);
 		if (!auth_node) {
 			/*
 			 * Received DEAUTH REQ for a STA that is neither
 			 * Associated nor Pre-authenticated. Log error,
 			 * Prepare and Send LIM_MLM_DEAUTH_CNF
 			 */
-			pe_warn("received MLM_DEAUTH_REQ in mlme state %d for STA that "
-				   "does not have context, Addr="
-				   QDF_MAC_ADDR_STR,
-				session->limMlmState,
+			pe_warn("rcvd MLM_DEAUTH_REQ in mlme state %d",
+				session->limMlmState);
+			pe_warn("STA does not have context, Addr="
+				QDF_MAC_ADDR_STR,
 				QDF_MAC_ADDR_ARRAY(
-					mlm_deauth_req->peer_macaddr.bytes));
+				mlm_deauth_req->peer_macaddr.bytes));
 			mlm_deauth_cnf.resultCode =
 				eSIR_SME_STA_NOT_AUTHENTICATED;
 		} else {
 			mlm_deauth_cnf.resultCode = eSIR_SME_SUCCESS;
 			/* Delete STA from pre-auth STA list */
 			lim_delete_pre_auth_node(mac_ctx,
-					 mlm_deauth_req->peer_macaddr.bytes);
-			/* Send Deauthentication frame to peer entity */
+						 mlm_deauth_req->
+						 peer_macaddr.bytes);
+			/*Send Deauthentication frame to peer entity*/
 			lim_send_deauth_mgmt_frame(mac_ctx,
-					   mlm_deauth_req->reasonCode,
-					   mlm_deauth_req->peer_macaddr.bytes,
-					   session, false);
+						   mlm_deauth_req->reasonCode,
+						   mlm_deauth_req->
+						   peer_macaddr.bytes,
+						   session, false);
 		}
 		goto end;
-	} else if ((sta_ds->mlmStaContext.mlmState !=
-		    eLIM_MLM_LINK_ESTABLISHED_STATE) &&
+	} else if (sta_ds && (sta_ds->mlmStaContext.mlmState !=
+		   eLIM_MLM_LINK_ESTABLISHED_STATE) &&
 		   (sta_ds->mlmStaContext.mlmState !=
-		    eLIM_MLM_WT_ASSOC_CNF_STATE)) {
+		   eLIM_MLM_WT_ASSOC_CNF_STATE)) {
 		/*
-		 * received MLM_DEAUTH_REQ for STA that either has no context or
-		 * in some transit state
+		 * received MLM_DEAUTH_REQ for STA that either has no
+		 * context or in some transit state
 		 */
-		pe_warn("Invalid MLM_DEAUTH_REQ, Addr="QDF_MAC_ADDR_STR,
-			QDF_MAC_ADDR_ARRAY(mlm_deauth_req->peer_macaddr.bytes));
+		pe_warn("Invalid MLM_DEAUTH_REQ, Addr=" QDF_MAC_ADDR_STR,
+			QDF_MAC_ADDR_ARRAY(mlm_deauth_req->
+			peer_macaddr.bytes));
 		/* Prepare and Send LIM_MLM_DEAUTH_CNF */
 		mlm_deauth_cnf.resultCode = eSIR_SME_INVALID_PARAMETERS;
 		goto end;
+	} else if (sta_ds) {
+		/* sta_ds->mlmStaContext.rxPurgeReq     = 1; */
+		sta_ds->mlmStaContext.disassocReason = (tSirMacReasonCodes)
+						mlm_deauth_req->reasonCode;
+		sta_ds->mlmStaContext.cleanupTrigger =
+						mlm_deauth_req->deauthTrigger;
+
+		/*
+		 * Set state to mlm State to eLIM_MLM_WT_DEL_STA_RSP_STATE
+		 * This is to address the issue of race condition between
+		 * disconnect request from the HDD and disassoc from
+		 * inactivity timer. This will make sure that we will not
+		 * process disassoc if deauth is in progress for the station
+		 * and thus mlmStaContext.cleanupTrigger will not be
+		 * overwritten.
+		 */
+		sta_ds->mlmStaContext.mlmState = eLIM_MLM_WT_DEL_STA_RSP_STATE;
+	} else if (mac_ctx->mlme_cfg->sap_cfg.is_sap_bcast_deauth_enabled &&
+		   qdf_is_macaddr_broadcast(&mlm_deauth_req->peer_macaddr)) {
+		for (i = 0; i < session->dph.dphHashTable.size; i++) {
+			sta_ds = dph_get_hash_entry(mac_ctx, i,
+						   &session->dph.dphHashTable);
+			if (!sta_ds)
+				continue;
+
+			sta_ds->mlmStaContext.disassocReason =
+				(tSirMacReasonCodes)mlm_deauth_req->reasonCode;
+			sta_ds->mlmStaContext.cleanupTrigger =
+						mlm_deauth_req->deauthTrigger;
+			sta_ds->mlmStaContext.mlmState =
+						eLIM_MLM_WT_DEL_STA_RSP_STATE;
+		}
 	}
-	/* sta_ds->mlmStaContext.rxPurgeReq     = 1; */
-	sta_ds->mlmStaContext.disassocReason = (tSirMacReasonCodes)
-					       mlm_deauth_req->reasonCode;
-	sta_ds->mlmStaContext.cleanupTrigger = mlm_deauth_req->deauthTrigger;
 
 	if (mac_ctx->lim.limDisassocDeauthCnfReq.pMlmDeauthReq) {
 		pe_err("pMlmDeauthReq is not NULL, freeing");
@@ -1424,15 +1463,6 @@ lim_process_mlm_deauth_req_ntf(struct mac_context *mac_ctx,
 	}
 	mac_ctx->lim.limDisassocDeauthCnfReq.pMlmDeauthReq = mlm_deauth_req;
 
-	/*
-	 * Set state to mlm State to eLIM_MLM_WT_DEL_STA_RSP_STATE
-	 * This is to address the issue of race condition between
-	 * disconnect request from the HDD and disassoc from
-	 * inactivity timer. This will make sure that we will not
-	 * process disassoc if deauth is in progress for the station
-	 * and thus mlmStaContext.cleanupTrigger will not be overwritten.
-	 */
-	sta_ds->mlmStaContext.mlmState = eLIM_MLM_WT_DEL_STA_RSP_STATE;
 	/* Send Deauthentication frame to peer entity */
 	lim_send_deauth_mgmt_frame(mac_ctx, mlm_deauth_req->reasonCode,
 				   mlm_deauth_req->peer_macaddr.bytes,
@@ -1841,13 +1871,22 @@ void lim_process_assoc_failure_timeout(struct mac_context *mac_ctx,
 	 * when device has missed the assoc resp sent by peer.
 	 * By sending deauth try to clear the session created on peer device.
 	 */
-	pe_debug("Sessionid: %d try sending deauth on channel freq %d to BSSID: "
-		QDF_MAC_ADDR_STR, session->peSessionId,
-		session->curr_op_freq,
-		QDF_MAC_ADDR_ARRAY(session->bssId));
-	lim_send_deauth_mgmt_frame(mac_ctx, eSIR_MAC_UNSPEC_FAILURE_REASON,
-		session->bssId, session, false);
-
+	if (msg_type == LIM_ASSOC &&
+	    mlme_get_reconn_after_assoc_timeout_flag(mac_ctx->psoc,
+						     session->vdev_id)) {
+		pe_debug("vdev: %d skip sending deauth on channel freq %d to BSSID: "
+			QDF_MAC_ADDR_STR, session->vdev_id,
+			session->curr_op_freq,
+			QDF_MAC_ADDR_ARRAY(session->bssId));
+	} else {
+		pe_debug("vdev: %d try sending deauth on channel freq %d to BSSID: "
+			QDF_MAC_ADDR_STR, session->vdev_id,
+			session->curr_op_freq,
+			QDF_MAC_ADDR_ARRAY(session->bssId));
+		lim_send_deauth_mgmt_frame(mac_ctx,
+					   eSIR_MAC_UNSPEC_FAILURE_REASON,
+					   session->bssId, session, false);
+	}
 	if ((LIM_IS_AP_ROLE(session)) ||
 	    ((session->limMlmState != eLIM_MLM_WT_ASSOC_RSP_STATE) &&
 	    (session->limMlmState != eLIM_MLM_WT_REASSOC_RSP_STATE) &&

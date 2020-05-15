@@ -58,7 +58,7 @@ pkt_capture_mgmt_status_map(uint8_t status)
  * @nbuf_list: netbuf list
  * @vdev_id: vdev id for which packet is captured
  * @tid:  tid number
- * @status: Tx status
+ * @ch_freq: channel frequency
  * @pkt_format: Frame format
  * @tx_retry_cnt: tx retry count
  *
@@ -66,7 +66,7 @@ pkt_capture_mgmt_status_map(uint8_t status)
  */
 static void
 pkt_capture_mgmtpkt_cb(void *context, void *ppdev, void *nbuf_list,
-		       uint8_t vdev_id, uint8_t tid, uint8_t status,
+		       uint8_t vdev_id, uint8_t tid, uint16_t ch_freq,
 		       bool pkt_format, uint8_t *bssid, uint8_t tx_retry_cnt)
 {
 	struct pkt_capture_vdev_priv *vdev_priv;
@@ -100,11 +100,7 @@ pkt_capture_mgmtpkt_cb(void *context, void *ppdev, void *nbuf_list,
 	while (msdu) {
 		next_buf = qdf_nbuf_queue_next(msdu);
 		qdf_nbuf_set_next(msdu, NULL);   /* Add NULL terminator */
-		if (QDF_STATUS_SUCCESS !=
-		    cb_ctx->mon_cb(cb_ctx->mon_ctx, msdu)) {
-			pkt_capture_err("Frame Rx to HDD failed");
-			qdf_nbuf_free(msdu);
-		}
+		pkt_capture_mon(cb_ctx, msdu, vdev, ch_freq);
 		msdu = next_buf;
 	}
 
@@ -162,11 +158,101 @@ pkt_capture_mgmtpkt_process(struct wlan_objmgr_psoc *psoc,
 	pkt->monpkt = nbuf;
 	pkt->vdev_id = WLAN_INVALID_VDEV_ID;
 	pkt->tid = WLAN_INVALID_TID;
-	pkt->status = status;
+	pkt->status = txrx_status->chan_freq;
 	pkt->pkt_format = PKTCAPTURE_PKT_FORMAT_80211;
 	pkt_capture_indicate_monpkt(vdev, pkt);
 
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_PKT_CAPTURE_ID);
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * pkt_capture_is_rmf_enabled - API to check if rmf is enabled or not
+ * @pdev: pointer to pdev object
+ * @psoc: pointer to psoc object
+ * @addr: mac address
+ */
+static bool
+pkt_capture_is_rmf_enabled(struct wlan_objmgr_pdev *pdev,
+			   struct wlan_objmgr_psoc *psoc,
+			   uint8_t *addr)
+{
+	struct pkt_psoc_priv *psoc_priv;
+	struct wlan_objmgr_vdev *vdev;
+	uint8_t vdev_id;
+	int rmf_enabled;
+
+	psoc_priv = pkt_capture_psoc_get_priv(psoc);
+	if (!psoc_priv) {
+		pkt_capture_err("psoc priv is NULL");
+		return false;
+	}
+
+	vdev = wlan_objmgr_get_vdev_by_macaddr_from_pdev(pdev,
+							 addr,
+							 WLAN_PKT_CAPTURE_ID);
+	if (!vdev) {
+		pkt_capture_err("vdev is NULL");
+		return false;
+	}
+
+	vdev_id = wlan_vdev_get_id(vdev);
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_PKT_CAPTURE_ID);
+
+	rmf_enabled = psoc_priv->cb_obj.get_rmf_status(vdev_id);
+	if (rmf_enabled < 0) {
+		pkt_capture_err("unable to get rmf status");
+		return false;
+	}
+
+	return true;
+}
+
+/**
+ * pkt_capture_process_rmf_frame - process rmf frame
+ * @pdev: pointer to pdev object
+ * @psoc: pointer to psoc object
+ * @nbuf: netbuf
+ */
+static QDF_STATUS
+pkt_capture_process_rmf_frame(struct wlan_objmgr_pdev *pdev,
+			      struct wlan_objmgr_psoc *psoc,
+			      qdf_nbuf_t nbuf)
+{
+	tpSirMacFrameCtl pfc = (tpSirMacFrameCtl)(qdf_nbuf_data(nbuf));
+	uint8_t mic_len, hdr_len, pdev_id;
+	struct ieee80211_frame *wh;
+	uint8_t *orig_hdr;
+
+	wh = (struct ieee80211_frame *)qdf_nbuf_data(nbuf);
+
+	if (!QDF_IS_ADDR_BROADCAST(wh->i_addr1) &&
+	    !IEEE80211_IS_MULTICAST(wh->i_addr1)) {
+		if (pfc->wep) {
+			QDF_STATUS status;
+
+			orig_hdr = (uint8_t *)qdf_nbuf_data(nbuf);
+			pdev_id = wlan_objmgr_pdev_get_pdev_id(pdev);
+			status = mlme_get_peer_mic_len(psoc, pdev_id,
+						       wh->i_addr1,
+						       &mic_len,
+						       &hdr_len);
+			if (QDF_IS_STATUS_ERROR(status)) {
+				pkt_capture_err("Failed to get mic hdr");
+				return QDF_STATUS_E_FAILURE;
+			}
+
+			/* Strip privacy headers (and trailer)
+			 * for a received frame
+			 */
+			qdf_mem_move(orig_hdr + hdr_len, wh, sizeof(*wh));
+			qdf_nbuf_pull_head(nbuf, hdr_len);
+			qdf_nbuf_trim_tail(nbuf, mic_len);
+		}
+	} else {
+		qdf_nbuf_trim_tail(nbuf, IEEE80211_MMIE_LEN);
+	}
+
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -177,78 +263,30 @@ pkt_capture_process_mgmt_tx_data(struct wlan_objmgr_pdev *pdev,
 				 uint8_t status)
 {
 	struct mon_rx_status txrx_status = {0};
-	struct pkt_psoc_priv *psoc_priv;
-	struct wlan_objmgr_vdev *vdev;
 	struct wlan_objmgr_psoc *psoc;
 	uint16_t channel_flags = 0;
-	tpSirMacFrameCtl pfc = (tpSirMacFrameCtl) (qdf_nbuf_data(nbuf));
+	tpSirMacFrameCtl pfc = (tpSirMacFrameCtl)(qdf_nbuf_data(nbuf));
 	struct ieee80211_frame *wh;
-	uint8_t mgt_type, vdev_id;
-	int rmf_enabled;
 
 	psoc = wlan_pdev_get_psoc(pdev);
-	if (!psoc)
-		return QDF_STATUS_E_FAILURE;
-
-	psoc_priv = pkt_capture_psoc_get_priv(psoc);
-	if (!psoc_priv) {
-		pkt_capture_err("psoc priv is NULL");
+	if (!psoc) {
+		pkt_capture_err("psoc is NULL");
 		return QDF_STATUS_E_FAILURE;
 	}
 
 	wh = (struct ieee80211_frame *)qdf_nbuf_data(nbuf);
 
-	vdev = wlan_objmgr_get_vdev_by_macaddr_from_pdev(pdev,
-							 wh->i_addr2,
-							 WLAN_PKT_CAPTURE_ID);
-	if (!vdev)
-		return QDF_STATUS_E_FAILURE;
-
-	vdev_id = wlan_vdev_get_id(vdev);
-	wlan_objmgr_vdev_release_ref(vdev, WLAN_PKT_CAPTURE_ID);
-
-	rmf_enabled = psoc_priv->cb_obj.get_rmf_status(vdev_id);
-	if (rmf_enabled < 0) {
-		pkt_capture_err("unable to get rmf status");
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	mgt_type = (wh)->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
-
-	if (rmf_enabled &&
-	    (mgt_type == IEEE80211_FC0_TYPE_MGT) &&
+	if ((pfc->type == IEEE80211_FC0_TYPE_MGT) &&
 	    (pfc->subType == SIR_MAC_MGMT_DISASSOC ||
 	     pfc->subType == SIR_MAC_MGMT_DEAUTH ||
 	     pfc->subType == SIR_MAC_MGMT_ACTION)) {
-		uint8_t *orig_hdr;
-		uint8_t mic_len, hdr_len, pdev_id;
+		if (pkt_capture_is_rmf_enabled(pdev, psoc, wh->i_addr2)) {
+			QDF_STATUS status;
 
-		if (!QDF_IS_ADDR_BROADCAST(wh->i_addr1) &&
-		    !IEEE80211_IS_MULTICAST(wh->i_addr1)) {
-			if (pfc->wep) {
-				orig_hdr = (uint8_t *)qdf_nbuf_data(nbuf);
-				pdev_id = wlan_objmgr_pdev_get_pdev_id(pdev);
-				status = mlme_get_peer_mic_len(psoc, pdev_id,
-							       wh->i_addr1,
-							       &mic_len,
-							       &hdr_len);
-				if (QDF_IS_STATUS_ERROR(status)) {
-					pkt_capture_err("Failed to get mic hdr");
-					return QDF_STATUS_E_FAILURE;
-				}
-
-				/* Strip privacy headers (and trailer)
-				 * for a received frame
-				 */
-				qdf_mem_move(orig_hdr +
-					     hdr_len, wh,
-					     sizeof(*wh));
-				qdf_nbuf_pull_head(nbuf,
-						   hdr_len);
-				qdf_nbuf_trim_tail(nbuf, mic_len);
-			}
-		} else {
-			qdf_nbuf_trim_tail(nbuf, IEEE80211_MMIE_LEN);
+			status = pkt_capture_process_rmf_frame(pdev, psoc,
+							       nbuf);
+			if (QDF_IS_STATUS_ERROR(status))
+				return status;
 		}
 	}
 
@@ -392,6 +430,7 @@ pkt_capture_mgmt_rx_data_cb(struct wlan_objmgr_psoc *psoc,
 	struct mon_rx_status txrx_status = {0};
 	uint16_t channel_flags = 0;
 	struct ieee80211_frame *wh;
+	tpSirMacFrameCtl pfc;
 	qdf_nbuf_t nbuf;
 	int buf_len;
 
@@ -407,6 +446,27 @@ pkt_capture_mgmt_rx_data_cb(struct wlan_objmgr_psoc *psoc,
 
 	qdf_nbuf_put_tail(nbuf, buf_len);
 	qdf_mem_copy(qdf_nbuf_data(nbuf), qdf_nbuf_data(wbuf), buf_len);
+
+	pfc = (tpSirMacFrameCtl)(qdf_nbuf_data(nbuf));
+	wh = (struct ieee80211_frame *)qdf_nbuf_data(nbuf);
+
+	if ((pfc->type == IEEE80211_FC0_TYPE_MGT) &&
+	    (pfc->subType == SIR_MAC_MGMT_DISASSOC ||
+	     pfc->subType == SIR_MAC_MGMT_DEAUTH ||
+	     pfc->subType == SIR_MAC_MGMT_ACTION)) {
+		struct wlan_objmgr_pdev *pdev;
+
+		pdev = wlan_vdev_get_pdev(peer->peer_objmgr.vdev);
+		if (pkt_capture_is_rmf_enabled(pdev, psoc, wh->i_addr2)) {
+			QDF_STATUS status;
+
+			status = pkt_capture_process_rmf_frame(pdev, psoc,
+							       nbuf);
+			if (QDF_IS_STATUS_ERROR(status))
+				return status;
+		}
+	}
+
 
 	txrx_status.tsft = (u_int64_t)rx_params->tsf_delta;
 	txrx_status.chan_num = rx_params->channel;

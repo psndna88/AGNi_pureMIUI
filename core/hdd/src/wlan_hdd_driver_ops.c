@@ -44,6 +44,8 @@
 #include "wlan_hdd_debugfs.h"
 #include "cfg_ucfg_api.h"
 #include <linux/suspend.h>
+#include <qdf_notifier.h>
+#include <qdf_hang_event_notifier.h>
 
 #ifdef MODULE
 #define WLAN_MODULE_NAME  module_name(THIS_MODULE)
@@ -82,9 +84,13 @@ static inline void hdd_remove_pm_qos(struct device *dev)
  */
 static int hdd_get_bandwidth_level(void *data)
 {
+	int ret = PLD_BUS_WIDTH_NONE;
 	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
 
-	return hdd_get_current_throughput_level(hdd_ctx);
+	if (hdd_ctx)
+		ret = hdd_get_current_throughput_level(hdd_ctx);
+
+	return ret;
 }
 
 /**
@@ -698,11 +704,12 @@ static inline void hdd_wlan_ssr_shutdown_event(void) { }
 #endif
 
 /**
- * hdd_send_hang_reason() - Send hang reason to the userspace
+ * hdd_send_hang_data() - Send hang data to userspace
+ * @data: Hang data
  *
  * Return: None
  */
-static void hdd_send_hang_reason(void)
+static void hdd_send_hang_data(void *data, size_t data_len)
 {
 	enum qdf_hang_reason reason = QDF_REASON_UNSPECIFIED;
 	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
@@ -712,7 +719,7 @@ static void hdd_send_hang_reason(void)
 
 	cds_get_recovery_reason(&reason);
 	cds_reset_recovery_reason();
-	wlan_hdd_send_hang_reason_event(hdd_ctx, reason);
+	wlan_hdd_send_hang_reason_event(hdd_ctx, reason, data, data_len);
 }
 
 /**
@@ -744,7 +751,6 @@ static void hdd_psoc_shutdown_notify(struct hdd_context *hdd_ctx)
 	cds_shutdown_notifier_purge();
 
 	hdd_wlan_ssr_shutdown_event();
-	hdd_send_hang_reason();
 }
 
 static void __hdd_soc_recovery_shutdown(void)
@@ -1707,6 +1713,9 @@ static void wlan_hdd_pld_notify_handler(struct device *dev,
 static void
 wlan_hdd_pld_uevent(struct device *dev, struct pld_uevent_data *event_data)
 {
+	struct qdf_notifer_data hang_evt_data;
+	enum qdf_hang_reason reason = QDF_REASON_UNSPECIFIED;
+
 	switch (event_data->uevent) {
 	case PLD_FW_DOWN:
 		hdd_info("Received firmware down indication");
@@ -1726,13 +1735,38 @@ wlan_hdd_pld_uevent(struct device *dev, struct pld_uevent_data *event_data)
 		 * on a firmware we already know is down.
 		 */
 		qdf_complete_wait_events();
+		break;
+	case PLD_FW_HANG_EVENT:
+		hdd_info("Received fimrware hang event");
+		cds_get_recovery_reason(&reason);
+		hang_evt_data.hang_data =
+				qdf_mem_malloc(QDF_HANG_EVENT_DATA_SIZE);
+		if (!hang_evt_data.hang_data)
+			return;
+		hang_evt_data.offset = 0;
+		qdf_hang_event_notifier_call(reason, &hang_evt_data);
+		if (event_data->hang_data.hang_event_data_len >=
+		    QDF_HANG_EVENT_DATA_SIZE / 2)
+			event_data->hang_data.hang_event_data_len =
+						QDF_HANG_EVENT_DATA_SIZE / 2;
 
+		hang_evt_data.offset = QDF_WLAN_HANG_FW_OFFSET;
+		if (event_data->hang_data.hang_event_data_len)
+			qdf_mem_copy((hang_evt_data.hang_data +
+				      hang_evt_data.offset),
+				     event_data->hang_data.hang_event_data,
+				     event_data->hang_data.hang_event_data_len);
+
+		hdd_send_hang_data(hang_evt_data.hang_data,
+				   QDF_HANG_EVENT_DATA_SIZE);
+		qdf_mem_free(hang_evt_data.hang_data);
 		break;
 	default:
 		/* other events intentionally not handled */
 		hdd_debug("Received uevent %d", event_data->uevent);
 		break;
 	}
+
 }
 
 #ifdef FEATURE_RUNTIME_PM
@@ -1751,12 +1785,20 @@ static int wlan_hdd_pld_runtime_suspend(struct device *dev,
 
 	errno = osif_psoc_sync_op_start(dev, &psoc_sync);
 	if (errno)
-		return errno;
+		goto out;
 
 	errno = wlan_hdd_runtime_suspend(dev);
 
 	osif_psoc_sync_op_stop(psoc_sync);
 
+out:
+	/* If it returns other errno to kernel, it will treat
+	 * it as critical issue, so all the future runtime
+	 * PM api will return error, pm runtime can't be work
+	 * anymore. Such case found in SSR.
+	 */
+	if (errno && errno != -EAGAIN && errno != -EBUSY)
+		errno = -EAGAIN;
 	return errno;
 }
 

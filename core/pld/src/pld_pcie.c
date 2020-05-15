@@ -242,7 +242,7 @@ static void pld_pcie_notify_handler(struct pci_dev *pdev, int state)
 static void pld_pcie_uevent(struct pci_dev *pdev, uint32_t status)
 {
 	struct pld_context *pld_context;
-	struct pld_uevent_data data;
+	struct pld_uevent_data data = {0};
 
 	pld_context = pld_get_global_context();
 	if (!pld_context)
@@ -265,6 +265,51 @@ static void pld_pcie_uevent(struct pci_dev *pdev, uint32_t status)
 out:
 	return;
 }
+
+/**
+ * pld_pcie_update_event() - update wlan driver status callback function
+ * @pdev: PCIE device
+ * @cnss_uevent_data: driver uevent data
+ *
+ * This function will be called when platform driver wants to update wlan
+ * driver's status.
+ *
+ * Return: void
+ */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
+static int pld_pcie_update_event(struct pci_dev *pdev,
+				 struct cnss_uevent_data *uevent_data)
+{
+	struct pld_context *pld_context;
+	struct pld_uevent_data data = {0};
+	struct cnss_hang_event *hang_event;
+
+	pld_context = pld_get_global_context();
+
+	if (!pld_context || !uevent_data)
+		return -EINVAL;
+
+	switch (uevent_data->status) {
+	case CNSS_HANG_EVENT:
+		if (!uevent_data->data)
+			return -EINVAL;
+		hang_event = (struct cnss_hang_event *)uevent_data->data;
+		data.uevent = PLD_FW_HANG_EVENT;
+		data.hang_data.hang_event_data = hang_event->hang_event_data;
+		data.hang_data.hang_event_data_len =
+					hang_event->hang_event_data_len;
+		break;
+	default:
+		goto out;
+	}
+
+	if (pld_context->ops->uevent)
+		pld_context->ops->uevent(&pdev->dev, &data);
+
+out:
+	return 0;
+}
+#endif
 
 #ifdef FEATURE_RUNTIME_PM
 /**
@@ -491,11 +536,22 @@ static int pld_pcie_pm_resume_noirq(struct device *dev)
 #endif
 
 static struct pci_device_id pld_pcie_id_table[] = {
-	{ 0x168c, 0x003c, PCI_ANY_ID, PCI_ANY_ID },
+#ifdef CONFIG_AR6320_SUPPORT
 	{ 0x168c, 0x003e, PCI_ANY_ID, PCI_ANY_ID },
+#elif defined(QCA_WIFI_QCA6290)
+	{ 0x17cb, 0x1100, PCI_ANY_ID, PCI_ANY_ID },
+#elif defined(QCA_WIFI_QCA6390)
+	{ 0x17cb, 0x1101, PCI_ANY_ID, PCI_ANY_ID },
+#elif defined(QCA_WIFI_QCA6490)
+	{ 0x17cb, 0x1103, PCI_ANY_ID, PCI_ANY_ID },
+#elif defined(QCN7605_SUPPORT)
+	{ 0x17cb, 0x1102, PCI_ANY_ID, PCI_ANY_ID },
+#else
+	{ 0x168c, 0x003c, PCI_ANY_ID, PCI_ANY_ID },
 	{ 0x168c, 0x0041, PCI_ANY_ID, PCI_ANY_ID },
 	{ 0x168c, 0xabcd, PCI_ANY_ID, PCI_ANY_ID },
 	{ 0x168c, 0x7021, PCI_ANY_ID, PCI_ANY_ID },
+#endif
 	{ 0 }
 };
 
@@ -525,6 +581,9 @@ struct cnss_wlan_driver pld_pcie_ops = {
 	.crash_shutdown = pld_pcie_crash_shutdown,
 	.modem_status   = pld_pcie_notify_handler,
 	.update_status  = pld_pcie_uevent,
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
+	.update_event = pld_pcie_update_event,
+#endif
 #ifdef CONFIG_PM
 	.suspend    = pld_pcie_suspend,
 	.resume     = pld_pcie_resume,

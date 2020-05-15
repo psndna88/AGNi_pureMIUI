@@ -1098,7 +1098,7 @@ ucfg_mlme_set_roaming_offload(struct wlan_objmgr_psoc *psoc,
 static inline uint32_t
 ucfg_mlme_get_roaming_triggers(struct wlan_objmgr_psoc *psoc)
 {
-	return 0;
+	return 0xffff;
 }
 #endif
 
@@ -1243,25 +1243,6 @@ ucfg_mlme_get_delay_before_vdev_stop(struct wlan_objmgr_psoc *psoc,
 QDF_STATUS
 ucfg_mlme_get_roam_bmiss_final_bcnt(struct wlan_objmgr_psoc *psoc,
 				    uint8_t *val);
-
-#if defined(WLAN_SAE_SINGLE_PMK) && defined(WLAN_FEATURE_ROAM_OFFLOAD)
-/**
- * ucfg_mlme_update_sae_single_pmk_info() - Update sae_single_pmk_info
- * @vdev: pointer to VDEV common object
- * @pmk_info:  Pointer mlme pmkid info
- *
- * Return: None
- */
-void
-ucfg_mlme_update_sae_single_pmk_info(struct wlan_objmgr_vdev *vdev,
-				     struct mlme_pmk_info *pmk_info);
-#else
-static inline void
-ucfg_mlme_update_sae_single_pmk_info(struct wlan_objmgr_vdev *vdev,
-				     struct mlme_pmk_info *pmk_info)
-{
-}
-#endif
 
 /**
  * ucfg_mlme_get_roam_bmiss_first_bcnt() - Get roam bmiss final count
@@ -1833,6 +1814,23 @@ QDF_STATUS ucfg_mlme_get_oce_sta_enabled_info(struct wlan_objmgr_psoc *psoc,
 					      bool *value)
 {
 	return wlan_mlme_get_oce_sta_enabled_info(psoc, value);
+}
+
+/**
+ * ucfg_mlme_get_bigtk_support() - Get whether bigtk is supported or not.
+ *
+ * @psoc: pointer to psoc object
+ * @value: pointer to the value which will be filled for the caller
+ *
+ * Inline UCFG API to be used by HDD/OSIF callers to get the BIGTK support
+ *
+ * Return: QDF_STATUS_SUCCESS or QDF_STATUS_FAILURE
+ */
+static inline
+QDF_STATUS ucfg_mlme_get_bigtk_support(struct wlan_objmgr_psoc *psoc,
+				       bool *value)
+{
+	return wlan_mlme_get_bigtk_support(psoc, value);
 }
 
 /**
@@ -2500,6 +2498,21 @@ static inline QDF_STATUS
 ucfg_mlme_get_vht_enable2x2(struct wlan_objmgr_psoc *psoc, bool *value)
 {
 	return wlan_mlme_get_vht_enable2x2(psoc, value);
+}
+
+/**
+ * ucfg_mlme_get_force_sap_enabled() - Get the value of force SAP enabled
+ * @psoc: psoc context
+ * @value: data to get
+ *
+ * Get the value of force SAP enabled
+ *
+ * Return: QDF_STATUS_SUCCESS or QDF_STATUS_FAILURE
+ */
+static inline QDF_STATUS
+ucfg_mlme_get_force_sap_enabled(struct wlan_objmgr_psoc *psoc, bool *value)
+{
+	return wlan_mlme_get_force_sap_enabled(psoc, value);
 }
 
 /**

@@ -133,15 +133,15 @@ policy_mgr_get_sta_sap_scc_on_dfs_chnl(struct wlan_objmgr_psoc *psoc,
 	return QDF_STATUS_SUCCESS;
 }
 
-bool
-policy_mgr_get_dfs_master_dynamic_enabled(
+static bool
+policy_mgr_update_dfs_master_dynamic_enabled(
 	struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
 {
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
 	bool sta_on_5g = false;
 	bool sta_on_2g = false;
 	uint32_t i;
-	bool enable;
+	bool enable = true;
 
 	pm_ctx = policy_mgr_get_context(psoc);
 	if (!pm_ctx) {
@@ -149,16 +149,21 @@ policy_mgr_get_dfs_master_dynamic_enabled(
 		return true;
 	}
 
-	if (!pm_ctx->cfg.sta_sap_scc_on_dfs_chnl)
-		return true;
+	if (!pm_ctx->cfg.sta_sap_scc_on_dfs_chnl) {
+		enable = true;
+		goto end;
+	}
 	if (pm_ctx->cfg.sta_sap_scc_on_dfs_chnl ==
-	    PM_STA_SAP_ON_DFS_MASTER_MODE_DISABLED)
-		return false;
+	    PM_STA_SAP_ON_DFS_MASTER_MODE_DISABLED) {
+		enable = false;
+		goto end;
+	}
 	if (pm_ctx->cfg.sta_sap_scc_on_dfs_chnl !=
 	    PM_STA_SAP_ON_DFS_MASTER_MODE_FLEX) {
 		policy_mgr_debug("sta_sap_scc_on_dfs_chnl %d unknown",
 				 pm_ctx->cfg.sta_sap_scc_on_dfs_chnl);
-		return true;
+		enable = true;
+		goto end;
 	}
 
 	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
@@ -181,11 +186,44 @@ policy_mgr_get_dfs_master_dynamic_enabled(
 		enable = true;
 	else
 		enable = false;
-	policy_mgr_debug("sta_sap_scc_on_dfs_chnl %d sta_on_2g %d sta_on_5g %d enable %d",
-			 pm_ctx->cfg.sta_sap_scc_on_dfs_chnl, sta_on_2g,
-			 sta_on_5g, enable);
+end:
+	pm_ctx->dynamic_dfs_master_disabled = !enable;
+	if (!enable)
+		policy_mgr_debug("sta_sap_scc_on_dfs_chnl %d sta_on_2g %d sta_on_5g %d enable %d",
+				 pm_ctx->cfg.sta_sap_scc_on_dfs_chnl, sta_on_2g,
+				 sta_on_5g, enable);
 
 	return enable;
+}
+
+bool
+policy_mgr_get_dfs_master_dynamic_enabled(
+	struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("pm_ctx is NULL");
+		return true;
+	}
+
+	return policy_mgr_update_dfs_master_dynamic_enabled(psoc, vdev_id);
+}
+
+bool
+policy_mgr_get_can_skip_radar_event(struct wlan_objmgr_psoc *psoc,
+				    uint8_t vdev_id)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("pm_ctx is NULL");
+		return false;
+	}
+
+	return pm_ctx->dynamic_dfs_master_disabled;
 }
 
 QDF_STATUS
@@ -340,8 +378,40 @@ QDF_STATUS policy_mgr_set_ch_select_plcy(struct wlan_objmgr_psoc *psoc,
 	return QDF_STATUS_SUCCESS;
 }
 
+QDF_STATUS policy_mgr_set_dynamic_mcc_adaptive_sch(
+				struct wlan_objmgr_psoc *psoc,
+				bool dynamic_mcc_adaptive_sched)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("pm_ctx is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+	pm_ctx->dynamic_mcc_adaptive_sched = dynamic_mcc_adaptive_sched;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS policy_mgr_get_dynamic_mcc_adaptive_sch(
+				struct wlan_objmgr_psoc *psoc,
+				bool *dynamic_mcc_adaptive_sched)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("pm_ctx is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+	*dynamic_mcc_adaptive_sched = pm_ctx->dynamic_mcc_adaptive_sched;
+
+	return QDF_STATUS_SUCCESS;
+}
+
 QDF_STATUS policy_mgr_get_mcc_adaptive_sch(struct wlan_objmgr_psoc *psoc,
-					   uint8_t *enable_mcc_adaptive_sch)
+					   bool *enable_mcc_adaptive_sch)
 {
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
 
@@ -1354,12 +1424,15 @@ QDF_STATUS policy_mgr_check_conn_with_mode_and_vdev_id(
 	return qdf_status;
 }
 
-void policy_mgr_soc_set_dual_mac_cfg_cb(enum set_hw_mode_status status,
-		uint32_t scan_config,
-		uint32_t fw_mode_config)
+void policy_mgr_soc_set_dual_mac_cfg_cb(struct wlan_objmgr_psoc *psoc,
+					enum set_hw_mode_status status,
+					uint32_t scan_config,
+					uint32_t fw_mode_config)
 {
 	policy_mgr_debug("Status:%d for scan_config:%x fw_mode_config:%x",
 			 status, scan_config, fw_mode_config);
+
+	policy_mgr_dual_mac_configuration_complete(psoc);
 }
 
 void policy_mgr_set_dual_mac_scan_config(struct wlan_objmgr_psoc *psoc,
@@ -1706,6 +1779,9 @@ void policy_mgr_incr_active_session(struct wlan_objmgr_psoc *psoc,
 	if (mode == QDF_SAP_MODE)
 		policy_mgr_init_ap_6ghz_capable(psoc, session_id,
 						conn_6ghz_flag);
+	if (mode == QDF_SAP_MODE || mode == QDF_P2P_GO_MODE ||
+	    mode == QDF_STA_MODE || mode == QDF_P2P_CLIENT_MODE)
+		policy_mgr_update_dfs_master_dynamic_enabled(psoc, session_id);
 
 	policy_mgr_dump_current_concurrency(psoc);
 
@@ -1824,6 +1900,10 @@ QDF_STATUS policy_mgr_decr_active_session(struct wlan_objmgr_psoc *psoc,
 	 */
 	if (mode == QDF_STA_MODE || mode == QDF_P2P_CLIENT_MODE)
 		pm_ctx->do_sap_unsafe_ch_check = true;
+
+	if (mode == QDF_SAP_MODE || mode == QDF_P2P_GO_MODE ||
+	    mode == QDF_STA_MODE || mode == QDF_P2P_CLIENT_MODE)
+		policy_mgr_update_dfs_master_dynamic_enabled(psoc, session_id);
 
 	return qdf_status;
 }
@@ -2146,38 +2226,48 @@ static bool policy_mgr_is_concurrency_allowed_4_port(
 {
 	uint32_t i;
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	uint8_t sap_cnt, go_cnt;
 
 	/* new STA may just have ssid, no channel until bssid assigned */
 	if (ch_freq == 0 && mode == PM_STA_MODE)
 		return true;
 
-	pm_ctx = policy_mgr_get_context(psoc);
-	if (!pm_ctx) {
-		policy_mgr_err("context is NULL");
+	sap_cnt = policy_mgr_mode_specific_connection_count(psoc,
+							    PM_SAP_MODE, NULL);
+
+	go_cnt = policy_mgr_mode_specific_connection_count(psoc,
+							   PM_P2P_GO_MODE, NULL);
+	if (sap_cnt || go_cnt) {
+		pm_ctx = policy_mgr_get_context(psoc);
+		if (!pm_ctx) {
+			policy_mgr_err("context is NULL");
+			return false;
+		}
+
+		if (policy_mgr_get_mcc_to_scc_switch_mode(psoc) !=
+		    QDF_MCC_TO_SCC_SWITCH_FORCE_WITHOUT_DISCONNECTION) {
+			policy_mgr_err("couldn't start 4th port for bad force scc cfg");
+			return false;
+		}
+		if (pm_ctx->cfg.dual_mac_feature ||
+		    !pm_ctx->cfg.sta_sap_scc_on_dfs_chnl  ||
+		    !pm_ctx->cfg.sta_sap_scc_on_lte_coex_chnl) {
+			policy_mgr_err(
+				"Couldn't start 4th port for bad cfg of dual mac, dfs scc, lte coex scc");
+			return false;
+		}
+
+		for (i = 0; i < pcl.pcl_len; i++)
+			if (ch_freq == pcl.pcl_list[i])
+				return true;
+
+		policy_mgr_err("4th port failed on ch freq %d with mode %d",
+			       ch_freq, mode);
+
 		return false;
 	}
 
-	if (policy_mgr_get_mcc_to_scc_switch_mode(psoc) !=
-	    QDF_MCC_TO_SCC_SWITCH_FORCE_WITHOUT_DISCONNECTION) {
-		policy_mgr_err("couldn't start 4th port for bad force scc cfg");
-		return false;
-	}
-	if (pm_ctx->cfg.dual_mac_feature ||
-	    !pm_ctx->cfg.sta_sap_scc_on_dfs_chnl  ||
-	    !pm_ctx->cfg.sta_sap_scc_on_lte_coex_chnl) {
-		policy_mgr_err(
-			"Couldn't start 4th port for bad cfg of dual mac, dfs scc, lte coex scc");
-		return false;
-	}
-
-	for (i = 0; i < pcl.pcl_len; i++)
-		if (ch_freq == pcl.pcl_list[i])
-			return true;
-
-	policy_mgr_err("4th port failed on ch freq %d with mode %d",
-		       ch_freq, mode);
-
-	return false;
+	return true;
 }
 #else
 static inline bool policy_mgr_is_concurrency_allowed_4_port(
@@ -2209,8 +2299,10 @@ static bool policy_mgr_allow_multiple_sta_connections(struct wlan_objmgr_psoc *p
 		return false;
 	}
 	if (!wmi_service_enabled(wmi_handle,
-				 wmi_service_sta_plus_sta_support))
+				 wmi_service_sta_plus_sta_support)) {
+		policy_mgr_rl_debug("STA+STA is not supported");
 		return false;
+	}
 
 	return true;
 }
@@ -2253,12 +2345,15 @@ static bool policy_mgr_is_6g_channel_allowed(
 		policy_mgr_err("Invalid Context");
 		return false;
 	}
-	if (!WLAN_REG_IS_6GHZ_CHAN_FREQ(ch_freq))
+	if (!WLAN_REG_IS_6GHZ_CHAN_FREQ(ch_freq)) {
+		policy_mgr_rl_debug("Not a 6Ghz channel Freq");
 		return true;
-
+	}
 	/* Only STA/SAP is supported on 6Ghz currently */
-	if (!policy_mgr_is_6ghz_conc_mode_supported(psoc, mode))
+	if (!policy_mgr_is_6ghz_conc_mode_supported(psoc, mode)) {
+		policy_mgr_rl_debug("mode %d for 6ghz not supported", mode);
 		return false;
+	}
 
 	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
 	for (conn_index = 0; conn_index < MAX_NUMBER_OF_CONC_CONNECTIONS;
@@ -3888,6 +3983,32 @@ bool policy_mgr_is_sta_sap_scc_allowed_on_dfs_chan(
 		status = true;
 
 	return status;
+}
+
+bool policy_mgr_is_special_mode_active_5g(struct wlan_objmgr_psoc *psoc,
+					  enum policy_mgr_con_mode mode)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	uint32_t conn_index;
+	bool ret = false;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid Context");
+		return ret;
+	}
+	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
+	for (conn_index = 0; conn_index < MAX_NUMBER_OF_CONC_CONNECTIONS;
+	     conn_index++) {
+		if (pm_conc_connection_list[conn_index].mode == mode &&
+		    pm_conc_connection_list[conn_index].freq >=
+					WLAN_REG_MIN_5GHZ_CHAN_FREQ &&
+		    pm_conc_connection_list[conn_index].in_use)
+			ret = true;
+	}
+	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
+
+	return ret;
 }
 
 bool policy_mgr_is_sta_connected_2g(struct wlan_objmgr_psoc *psoc)

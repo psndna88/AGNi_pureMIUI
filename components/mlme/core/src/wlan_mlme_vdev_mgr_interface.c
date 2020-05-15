@@ -628,6 +628,34 @@ bool ap_mlme_is_hidden_ssid_restart_in_progress(struct wlan_objmgr_vdev *vdev)
 	return mlme_priv->hidden_ssid_restart_in_progress;
 }
 
+QDF_STATUS mlme_set_bigtk_support(struct wlan_objmgr_vdev *vdev, bool val)
+{
+	struct mlme_legacy_priv *mlme_priv;
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_legacy_err("vdev legacy private object is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	mlme_priv->bigtk_vdev_support = val;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+bool mlme_get_bigtk_support(struct wlan_objmgr_vdev *vdev)
+{
+	struct mlme_legacy_priv *mlme_priv;
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_legacy_err("vdev legacy private object is NULL");
+		return false;
+	}
+
+	return mlme_priv->bigtk_vdev_support;
+}
+
 QDF_STATUS mlme_set_connection_fail(struct wlan_objmgr_vdev *vdev, bool val)
 {
 	struct mlme_legacy_priv *mlme_priv;
@@ -1184,6 +1212,18 @@ vdevmgr_vdev_start_rsp_handle(struct vdev_mlme_obj *vdev_mlme,
 	return status;
 }
 
+static QDF_STATUS
+vdevmgr_vdev_peer_delete_all_rsp_handle(struct vdev_mlme_obj *vdev_mlme,
+					struct peer_delete_all_response *rsp)
+{
+	QDF_STATUS status;
+
+	status = lim_process_mlm_del_all_sta_rsp(vdev_mlme, rsp);
+	if (QDF_IS_STATUS_ERROR(status))
+		mlme_err("Failed to call lim_process_mlm_del_all_sta_rsp");
+	return status;
+}
+
 QDF_STATUS mlme_vdev_self_peer_create(struct wlan_objmgr_vdev *vdev)
 {
 	struct vdev_mlme_obj *vdev_mlme;
@@ -1434,6 +1474,8 @@ static struct vdev_mlme_ops sta_mlme_ops = {
  *                                      to INIT state
  * @mlme_vdev_is_newchan_no_cac:        callback to check if new channel is DFS
  *                                      and cac is not required
+ * @mlme_vdev_ext_peer_delete_all_rsp:  callback to handle vdev delete all peer
+ *                                      response and send result to upper layer
  */
 static struct vdev_mlme_ops ap_mlme_ops = {
 	.mlme_vdev_start_send = ap_mlme_vdev_start_send,
@@ -1453,6 +1495,8 @@ static struct vdev_mlme_ops ap_mlme_ops = {
 	.mlme_vdev_is_newchan_no_cac = ap_mlme_vdev_is_newchan_no_cac,
 	.mlme_vdev_ext_stop_rsp = vdevmgr_vdev_stop_rsp_handle,
 	.mlme_vdev_ext_start_rsp = vdevmgr_vdev_start_rsp_handle,
+	.mlme_vdev_ext_peer_delete_all_rsp =
+				vdevmgr_vdev_peer_delete_all_rsp_handle,
 };
 
 static struct vdev_mlme_ops mon_mlme_ops = {

@@ -452,6 +452,7 @@ int hdd_init_nan_data_mode(struct hdd_adapter *adapter)
 {
 	struct net_device *wlan_dev = adapter->dev;
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	void *soc;
 	QDF_STATUS status;
 	int32_t ret_val;
 	mac_handle_t mac_handle;
@@ -508,6 +509,22 @@ int hdd_init_nan_data_mode(struct hdd_adapter *adapter)
 	if (0 != ret_val)
 		hdd_err("WMI_PDEV_PARAM_BURST_ENABLE set failed %d", ret_val);
 
+	soc = cds_get_context(QDF_MODULE_ID_SOC);
+	/*
+	 * In case of USB tethering, LRO is disabled. If SSR happened
+	 * during that time, then as part of SSR init, do not enable
+	 * the LRO again. Keep the LRO state same as before SSR.
+	 */
+	if (cdp_cfg_get(soc, cfg_dp_lro_enable) &&
+	    !(qdf_atomic_read(&hdd_ctx->vendor_disable_lro_flag)))
+		adapter->dev->features |= NETIF_F_LRO;
+
+	if (cdp_cfg_get(soc, cfg_dp_enable_ip_tcp_udp_checksum_offload))
+		adapter->dev->features |= NETIF_F_IP_CSUM | NETIF_F_IPV6_CSUM;
+
+	adapter->dev->features |= NETIF_F_RXCSUM;
+
+	hdd_set_tso_flags(hdd_ctx, adapter->dev);
 
 	update_ndi_state(adapter, NAN_DATA_NDI_CREATING_STATE);
 	return ret_val;
@@ -565,6 +582,8 @@ int hdd_ndi_open(char *iface_name)
 	adapter = hdd_open_adapter(hdd_ctx, QDF_NDI_MODE, iface_name,
 				   ndi_mac_addr, NET_NAME_UNKNOWN, true);
 	if (!adapter) {
+		if (!cfg_nan_get_ndi_mac_randomize(hdd_ctx->psoc))
+			wlan_hdd_release_intf_addr(hdd_ctx, ndi_mac_addr);
 		hdd_err("hdd_open_adapter failed");
 		return -EINVAL;
 	}
@@ -797,7 +816,6 @@ void hdd_ndi_drv_ndi_delete_rsp_handler(uint8_t vdev_id)
 		return;
 	}
 
-	hdd_roam_deregister_sta(adapter, adapter->mac_addr);
 	hdd_delete_peer(sta_ctx, &bc_mac_addr);
 
 	wlan_hdd_netif_queue_control(adapter,
@@ -934,11 +952,11 @@ void hdd_ndp_peer_departed_handler(uint8_t vdev_id, uint16_t sta_id,
 		return;
 	}
 
-	hdd_roam_deregister_sta(adapter, *peer_mac_addr);
 	hdd_delete_peer(sta_ctx, peer_mac_addr);
 
 	if (last_peer) {
 		hdd_debug("No more ndp peers.");
 		hdd_cleanup_ndi(hdd_ctx, adapter);
+		qdf_event_set(&adapter->peer_cleanup_done);
 	}
 }

@@ -41,7 +41,7 @@
 typedef void (*pkt_capture_mon_thread_cb)(
 			void *context, void *ppdev, void *monpkt,
 			uint8_t vdev_id, uint8_t tid,
-			uint8_t status, bool pkt_format,
+			uint16_t status, bool pkt_format,
 			uint8_t *bssid,
 			uint8_t tx_retry_cnt);
 
@@ -66,7 +66,7 @@ struct pkt_capture_mon_pkt {
 	void *monpkt;
 	uint8_t vdev_id;
 	uint8_t tid;
-	uint8_t status;
+	uint16_t status;
 	bool pkt_format;
 	uint8_t bssid[QDF_MAC_ADDR_SIZE];
 	uint8_t tx_retry_cnt;
@@ -110,6 +110,20 @@ struct pkt_capture_mon_context {
 	struct list_head mon_pkt_freeq;
 	bool is_mon_thread_suspended;
 };
+
+/**
+ * struct radiotap_header - base radiotap header
+ * @it_version: radiotap version, always 0
+ * @it_pad: padding (or alignment)
+ * @it_len: overall radiotap header length
+ * @it_present: (first) present word
+ */
+struct radiotap_header {
+	uint8_t it_version;
+	uint8_t it_pad;
+	__le16 it_len;
+	__le32 it_present;
+} __packed;
 
 /**
  * pkt_capture_suspend_mon_thread() - suspend packet capture mon thread

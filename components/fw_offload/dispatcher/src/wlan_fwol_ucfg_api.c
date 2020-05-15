@@ -520,6 +520,21 @@ QDF_STATUS ucfg_fwol_get_sap_xlna_bypass(struct wlan_objmgr_psoc *psoc,
 	return QDF_STATUS_SUCCESS;
 }
 
+QDF_STATUS ucfg_fwol_get_ocl_cfg(struct wlan_objmgr_psoc *psoc,
+				 uint32_t *ocl_cfg)
+{
+	struct wlan_fwol_psoc_obj *fwol_obj;
+
+	fwol_obj = fwol_get_psoc_obj(psoc);
+	if (!fwol_obj) {
+		fwol_err("Failed to get FWOL obj");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	*ocl_cfg = fwol_obj->cfg.ocl_cfg;
+	return QDF_STATUS_SUCCESS;
+}
+
 #ifdef FEATURE_WLAN_RA_FILTERING
 QDF_STATUS ucfg_fwol_set_is_rate_limit_enabled(struct wlan_objmgr_psoc *psoc,
 					       bool is_rate_limit_enabled)
@@ -943,3 +958,17 @@ QDF_STATUS ucfg_fwol_send_dscp_up_map_to_fw(struct wlan_objmgr_vdev *vdev,
 	return status;
 }
 #endif /* WLAN_SEND_DSCP_UP_MAP_TO_FW */
+
+QDF_STATUS ucfg_fwol_configure_global_params(struct wlan_objmgr_psoc *psoc,
+					     struct wlan_objmgr_pdev *pdev)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS ucfg_fwol_configure_vdev_params(struct wlan_objmgr_psoc *psoc,
+					   struct wlan_objmgr_pdev *pdev,
+					   enum QDF_OPMODE device_mode,
+					   uint8_t vdev_id)
+{
+	return QDF_STATUS_SUCCESS;
+}

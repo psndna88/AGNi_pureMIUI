@@ -445,7 +445,7 @@ tListElem *csr_nonscan_active_ll_peek_head(struct mac_context *mac_ctx,
 
 	cmd = wlan_serialization_peek_head_active_cmd_using_psoc(mac_ctx->psoc,
 								 false);
-	if (!cmd)
+	if (!cmd || cmd->source != WLAN_UMAC_COMP_MLME)
 		return NULL;
 
 	sme_cmd = cmd->umac_cmd;
@@ -461,12 +461,16 @@ tListElem *csr_nonscan_pending_ll_peek_head(struct mac_context *mac_ctx,
 
 	cmd = wlan_serialization_peek_head_pending_cmd_using_psoc(mac_ctx->psoc,
 								  false);
-	if (!cmd)
-		return NULL;
+	while (cmd) {
+		if (cmd->source == WLAN_UMAC_COMP_MLME) {
+			sme_cmd = cmd->umac_cmd;
+			return &sme_cmd->Link;
+		}
+		cmd = wlan_serialization_get_pending_list_next_node_using_psoc(
+						mac_ctx->psoc, cmd, false);
+	}
 
-	sme_cmd = cmd->umac_cmd;
-
-	return &sme_cmd->Link;
+	return NULL;
 }
 
 bool csr_nonscan_active_ll_remove_entry(struct mac_context *mac_ctx,
@@ -499,12 +503,16 @@ tListElem *csr_nonscan_pending_ll_next(struct mac_context *mac_ctx,
 				mac_ctx->psoc, &cmd, false);
 	if (cmd.vdev)
 		wlan_objmgr_vdev_release_ref(cmd.vdev, WLAN_LEGACY_SME_ID);
-	if (!tcmd) {
-		sme_err("No cmd found");
-		return NULL;
+	while (tcmd) {
+		if (tcmd->source == WLAN_UMAC_COMP_MLME) {
+			sme_cmd = tcmd->umac_cmd;
+			return &sme_cmd->Link;
+		}
+		tcmd = wlan_serialization_get_pending_list_next_node_using_psoc(
+						mac_ctx->psoc, tcmd, false);
 	}
-	sme_cmd = tcmd->umac_cmd;
-	return &sme_cmd->Link;
+
+	return NULL;
 }
 
 bool csr_get_bss_id_bss_desc(struct bss_description *pSirBssDesc,
@@ -2687,7 +2695,7 @@ bool csr_is_pmkid_found_for_peer(struct mac_context *mac,
 				 uint8_t *pmkid,
 				 uint16_t pmkid_count)
 {
-	uint32_t i, index;
+	uint32_t i;
 	uint8_t *session_pmkid;
 	tPmkidCacheInfo *pmkid_cache;
 
@@ -2698,7 +2706,7 @@ bool csr_is_pmkid_found_for_peer(struct mac_context *mac,
 	qdf_mem_copy(pmkid_cache->BSSID.bytes, peer_mac_addr,
 		     QDF_MAC_ADDR_SIZE);
 
-	if (!csr_lookup_pmkid_using_bssid(mac, session, pmkid_cache, &index)) {
+	if (!csr_lookup_pmkid_using_bssid(mac, session, pmkid_cache)) {
 		qdf_mem_free(pmkid_cache);
 		return false;
 	}
@@ -2720,8 +2728,7 @@ bool csr_is_pmkid_found_for_peer(struct mac_context *mac,
 
 bool csr_lookup_pmkid_using_bssid(struct mac_context *mac,
 				  struct csr_roam_session *session,
-				  tPmkidCacheInfo *pmk_cache,
-				  uint32_t *index)
+				  tPmkidCacheInfo *pmk_cache)
 {
 	struct wlan_crypto_pmksa *pmksa;
 	struct wlan_objmgr_vdev *vdev;
@@ -2805,21 +2812,8 @@ uint8_t csr_construct_rsn_ie(struct mac_context *mac, uint32_t sessionId,
 	uint8_t *rsn_ie_end = NULL;
 	uint8_t *rsn_ie = (uint8_t *)pRSNIe;
 	uint8_t ie_len = 0;
-	tDot11fBeaconIEs *local_ap_ie = ap_ie;
-	uint16_t rsn_cap = 0;
 	struct wlan_crypto_pmksa pmksa, *pmksa_peer;
 	struct csr_roam_session *session = &mac->roam.roamSession[sessionId];
-
-	if (!local_ap_ie &&
-	    (!QDF_IS_STATUS_SUCCESS(csr_get_parsed_bss_description_ies
-	     (mac, pSirBssDesc, &local_ap_ie))))
-		return ie_len;
-
-	/* get AP RSN cap */
-	qdf_mem_copy(&rsn_cap, local_ap_ie->RSN.RSN_Cap, sizeof(rsn_cap));
-	if (!ap_ie && local_ap_ie)
-		/* locally allocated */
-		qdf_mem_free(local_ap_ie);
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac->psoc, sessionId,
 						    WLAN_LEGACY_SME_ID);
@@ -2827,13 +2821,7 @@ uint8_t csr_construct_rsn_ie(struct mac_context *mac, uint32_t sessionId,
 		sme_err("Invalid vdev");
 		return ie_len;
 	}
-	/*
-	 * Use intersection of the RSN cap sent by user space and
-	 * the AP, so that only common capability are enabled.
-	 */
-	rsn_cap &= (uint16_t)wlan_crypto_get_param(vdev,
-						   WLAN_CRYPTO_PARAM_RSN_CAP);
-	wlan_crypto_set_vdev_param(vdev, WLAN_CRYPTO_PARAM_RSN_CAP, rsn_cap);
+
 	qdf_mem_zero(&pmksa, sizeof(pmksa));
 	if (pSirBssDesc->fils_info_element.is_cache_id_present) {
 		pmksa.ssid_len =

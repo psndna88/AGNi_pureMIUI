@@ -437,7 +437,7 @@ sch_set_fixed_beacon_fields(struct mac_context *mac_ctx, struct pe_session *sess
 			}
 		}
 	}
-	if (mac_ctx->rrm.rrmSmeContext.rrmConfig.rrm_enabled)
+	if (mac_ctx->rrm.rrmConfig.sap_rrm_enabled)
 		populate_dot11f_rrm_ie(mac_ctx, &bcn_2->RRMEnabledCap,
 			session);
 
@@ -856,6 +856,13 @@ void lim_update_probe_rsp_template_ie_bitmap_beacon2(struct mac_context *mac,
 			     (void *)&beacon2->VHTOperation,
 			     sizeof(beacon2->VHTOperation));
 	}
+	if (beacon2->vht_transmit_power_env.present) {
+		set_probe_rsp_ie_bitmap(DefProbeRspIeBitmap,
+					WLAN_ELEMID_VHT_TX_PWR_ENVLP);
+		qdf_mem_copy((void *)&prb_rsp->vht_transmit_power_env,
+			     (void *)&beacon2->vht_transmit_power_env,
+			     sizeof(beacon2->vht_transmit_power_env));
+	}
 	if (beacon2->VHTExtBssLoad.present) {
 		set_probe_rsp_ie_bitmap(DefProbeRspIeBitmap,
 					WLAN_ELEMID_EXT_BSS_LOAD);
@@ -899,6 +906,14 @@ void lim_update_probe_rsp_template_ie_bitmap_beacon2(struct mac_context *mac,
 		qdf_mem_copy((void *)&prb_rsp->he_op,
 			     (void *)&beacon2->he_op,
 			     sizeof(beacon2->he_op));
+	}
+
+	if (beacon2->he_6ghz_band_cap.present) {
+		set_probe_rsp_ie_bitmap(DefProbeRspIeBitmap,
+					DOT11F_EID_HE_6GHZ_BAND_CAP);
+		qdf_mem_copy((void *)&prb_rsp->he_6ghz_band_cap,
+			     (void *)&beacon2->he_6ghz_band_cap,
+			     sizeof(beacon2->he_6ghz_band_cap));
 	}
 
 }

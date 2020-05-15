@@ -692,6 +692,11 @@ lim_send_probe_rsp_mgmt_frame(struct mac_context *mac_ctx,
 		populate_dot11f_vht_caps(mac_ctx, pe_session, &frm->VHTCaps);
 		populate_dot11f_vht_operation(mac_ctx, pe_session,
 			&frm->VHTOperation);
+		populate_dot11f_vht_tx_power_env(
+				mac_ctx,
+				&frm->vht_transmit_power_env,
+				pe_session->ch_width,
+				pe_session->curr_op_freq);
 		/*
 		 * we do not support multi users yet.
 		 * populate_dot11f_vht_ext_bss_load( mac_ctx,
@@ -2058,9 +2063,8 @@ lim_send_assoc_req_mgmt_frame(struct mac_context *mac_ctx,
 		pe_debug("Populate VHT IEs in Assoc Request");
 		populate_dot11f_vht_caps(mac_ctx, pe_session, &frm->VHTCaps);
 		vht_enabled = true;
-		if (pe_session->enableHtSmps &&
-				!pe_session->supported_nss_1x1) {
-			pe_err("VHT OP mode IE in Assoc Req");
+		if (pe_session->gLimOperatingMode.present) {
+			pe_debug("VHT OP mode IE in Assoc Req");
 			populate_dot11f_operating_mode(mac_ctx,
 					&frm->OperatingMode, pe_session);
 		}
@@ -2892,6 +2896,7 @@ QDF_STATUS lim_send_deauth_cnf(struct mac_context *mac_ctx)
 	tLimMlmDeauthReq *deauth_req;
 	tLimMlmDeauthCnf deauth_cnf;
 	struct pe_session *session_entry;
+	QDF_STATUS qdf_status;
 
 	deauth_req = mac_ctx->lim.limDisassocDeauthCnfReq.pMlmDeauthReq;
 	if (deauth_req) {
@@ -2908,12 +2913,21 @@ QDF_STATUS lim_send_deauth_cnf(struct mac_context *mac_ctx)
 				eSIR_SME_INVALID_PARAMETERS;
 			goto end;
 		}
+		if (qdf_is_macaddr_broadcast(&deauth_req->peer_macaddr) &&
+		    mac_ctx->mlme_cfg->sap_cfg.is_sap_bcast_deauth_enabled) {
+			qdf_status = lim_del_sta_all(mac_ctx, session_entry);
+			qdf_mem_free(deauth_req);
+			mac_ctx->lim.limDisassocDeauthCnfReq.pMlmDeauthReq =
+									 NULL;
+			return qdf_status;
+		}
 
 		sta_ds =
 			dph_lookup_hash_entry(mac_ctx,
 					      deauth_req->peer_macaddr.bytes,
 					      &aid,
-					      &session_entry->dph.dphHashTable);
+					      &session_entry->
+					      dph.dphHashTable);
 		if (!sta_ds) {
 			deauth_cnf.resultCode = eSIR_SME_INVALID_PARAMETERS;
 			goto end;
@@ -3723,6 +3737,7 @@ lim_send_tpc_report_frame(struct mac_context *mac,
 	uint32_t nBytes, nPayload, nStatus;
 	void *pPacket;
 	QDF_STATUS qdf_status;
+	struct vdev_mlme_obj *mlme_obj;
 
 	qdf_mem_zero((uint8_t *) &frm, sizeof(frm));
 
@@ -3730,7 +3745,10 @@ lim_send_tpc_report_frame(struct mac_context *mac,
 	frm.Action.action = ACTION_SPCT_TPC_RPRT;
 	frm.DialogToken.token = pTpcReqFrame->actionHeader.dialogToken;
 
-	frm.TPCReport.tx_power = 0;
+	mlme_obj = wlan_vdev_mlme_get_cmpt_obj(pe_session->vdev);
+	if (mlme_obj)
+		frm.TPCReport.tx_power = mlme_obj->mgmt.generic.tx_pwrlimit;
+
 	frm.TPCReport.link_margin = 0;
 	frm.TPCReport.present = 1;
 

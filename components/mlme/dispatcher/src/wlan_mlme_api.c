@@ -455,6 +455,10 @@ wlan_mlme_update_cfg_with_tgt_caps(struct wlan_objmgr_psoc *psoc,
 
 	mlme_obj->cfg.gen.data_stall_recovery_fw_support =
 				tgt_caps->data_stall_recovery_fw_support;
+
+	mlme_obj->cfg.gen.bigtk_support = tgt_caps->bigtk_support;
+	mlme_obj->cfg.gen.stop_all_host_scan_support =
+			tgt_caps->stop_all_host_scan_support;
 }
 
 #ifdef WLAN_FEATURE_11AX
@@ -574,7 +578,8 @@ QDF_STATUS mlme_update_tgt_he_caps_in_cfg(struct wlan_objmgr_psoc *psoc,
 					he_cap->min_frag_size;
 	if (cfg_in_range(CFG_HE_TRIG_PAD, he_cap->trigger_frm_mac_pad))
 		mlme_obj->cfg.he_caps.dot11_he_cap.trigger_frm_mac_pad =
-				he_cap->trigger_frm_mac_pad;
+			QDF_MIN(he_cap->trigger_frm_mac_pad,
+				mlme_obj->cfg.he_caps.dot11_he_cap.trigger_frm_mac_pad);
 	if (cfg_in_range(CFG_HE_MTID_AGGR_RX, he_cap->multi_tid_aggr_rx_supp))
 		mlme_obj->cfg.he_caps.dot11_he_cap.multi_tid_aggr_rx_supp =
 					he_cap->multi_tid_aggr_rx_supp;
@@ -2021,6 +2026,29 @@ QDF_STATUS wlan_mlme_set_go_11ac_override(struct wlan_objmgr_psoc *psoc,
 	return QDF_STATUS_SUCCESS;
 }
 
+QDF_STATUS wlan_mlme_get_bigtk_support(struct wlan_objmgr_psoc *psoc,
+				       bool *value)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj = mlme_get_psoc_ext_obj(psoc);
+
+	if (!mlme_obj)
+		return QDF_STATUS_E_FAILURE;
+
+	*value = mlme_obj->cfg.gen.bigtk_support;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+bool wlan_mlme_get_host_scan_abort_support(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj = mlme_get_psoc_ext_obj(psoc);
+
+	if (!mlme_obj)
+		return false;
+
+	return mlme_obj->cfg.gen.stop_all_host_scan_support;
+}
+
 QDF_STATUS wlan_mlme_get_oce_sta_enabled_info(struct wlan_objmgr_psoc *psoc,
 					      bool *value)
 {
@@ -2094,6 +2122,9 @@ void wlan_mlme_update_oce_flags(struct wlan_objmgr_pdev *pdev)
 	go_connected_peer =
 	wlan_util_get_peer_count_for_mode(pdev, QDF_P2P_GO_MODE);
 	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+
+	if (!mlme_obj)
+		return;
 
 	if (sap_connected_peer || go_connected_peer) {
 		updated_fw_value = mlme_obj->cfg.oce.feature_bitmap;
@@ -2971,6 +3002,20 @@ wlan_mlme_get_vht_enable2x2(struct wlan_objmgr_psoc *psoc, bool *value)
 		return QDF_STATUS_E_FAILURE;
 
 	*value = mlme_obj->cfg.vht_caps.vht_cap_info.enable2x2;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+wlan_mlme_get_force_sap_enabled(struct wlan_objmgr_psoc *psoc, bool *value)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_FAILURE;
+
+	*value = mlme_obj->cfg.acs.force_sap_start;
 
 	return QDF_STATUS_SUCCESS;
 }

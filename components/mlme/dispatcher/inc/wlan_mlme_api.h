@@ -795,6 +795,25 @@ QDF_STATUS wlan_mlme_get_oce_sta_enabled_info(struct wlan_objmgr_psoc *psoc,
 					      bool *value);
 
 /**
+ * wlan_mlme_get_bigtk_support() - Get the BIGTK support
+ * @psoc: pointer to psoc object
+ * @value: pointer to the value which will be filled for the caller
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS wlan_mlme_get_bigtk_support(struct wlan_objmgr_psoc *psoc,
+				       bool *value);
+
+/**
+ * wlan_mlme_get_host_scan_abort_support() - Get support for stop all host
+ * scans service capability.
+ * @psoc: PSOC object pointer
+ *
+ * Return: True if capability is supported, else False
+ */
+bool wlan_mlme_get_host_scan_abort_support(struct wlan_objmgr_psoc *psoc);
+
+/**
  * wlan_mlme_get_oce_sap_enabled_info() - Get the OCE feature enable
  * info for SAP
  * @psoc: pointer to psoc object
@@ -1893,6 +1912,18 @@ QDF_STATUS wlan_mlme_get_vht_tx_mcs_2x2(struct wlan_objmgr_psoc *psoc,
  */
 QDF_STATUS
 wlan_mlme_get_vht20_mcs9(struct wlan_objmgr_psoc *psoc, bool *value);
+
+/**
+ * wlan_mlme_get_force_sap_enabled() - Get the value of force SAP enabled
+ * @psoc: psoc context
+ * @value: data to get
+ *
+ * Get the value of force SAP enabled
+ *
+ * Return: QDF_STATUS_SUCCESS or QDF_STATUS_FAILURE
+ */
+QDF_STATUS
+wlan_mlme_get_force_sap_enabled(struct wlan_objmgr_psoc *psoc, bool *value);
 
 /**
  * wlan_mlme_get_vht_enable2x2() - Enables/disables VHT Tx/Rx MCS values for 2x2

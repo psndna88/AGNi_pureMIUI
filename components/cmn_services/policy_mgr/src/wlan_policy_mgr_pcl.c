@@ -403,15 +403,8 @@ uint32_t policy_mgr_get_channel(struct wlan_objmgr_psoc *psoc,
 	return 0;
 }
 
-/**
- * policy_mgr_skip_dfs_ch() - skip dfs channel or not
- * @psoc: pointer to soc
- * @skip_dfs_channel: pointer to result
- *
- * Return: QDF_STATUS
- */
-static QDF_STATUS policy_mgr_skip_dfs_ch(struct wlan_objmgr_psoc *psoc,
-					 bool *skip_dfs_channel)
+QDF_STATUS policy_mgr_skip_dfs_ch(struct wlan_objmgr_psoc *psoc,
+				  bool *skip_dfs_channel)
 {
 	bool sta_sap_scc_on_dfs_chan;
 	bool dfs_master_capable;
@@ -434,11 +427,23 @@ static QDF_STATUS policy_mgr_skip_dfs_ch(struct wlan_objmgr_psoc *psoc,
 
 	sta_sap_scc_on_dfs_chan =
 		policy_mgr_is_sta_sap_scc_allowed_on_dfs_chan(psoc);
-	if ((policy_mgr_mode_specific_connection_count(psoc, PM_STA_MODE,
-						       NULL) > 0) &&
-	    !sta_sap_scc_on_dfs_chan) {
-		policy_mgr_debug("SAP/Go skips DFS ch if sta connects");
-		*skip_dfs_channel = true;
+
+	if (policy_mgr_is_hw_dbs_capable(psoc)) {
+		if ((policy_mgr_is_special_mode_active_5g(psoc,
+							  PM_P2P_CLIENT_MODE) ||
+		     policy_mgr_is_special_mode_active_5g(psoc, PM_STA_MODE)) &&
+		    !sta_sap_scc_on_dfs_chan) {
+			policy_mgr_debug("skip DFS ch from pcl for DBS SAP/Go");
+			*skip_dfs_channel = true;
+		}
+	} else {
+		if ((policy_mgr_mode_specific_connection_count(psoc,
+							       PM_STA_MODE,
+							       NULL) > 0) &&
+		    !sta_sap_scc_on_dfs_chan) {
+			policy_mgr_debug("skip DFS ch from pcl for non-DBS SAP/Go");
+			*skip_dfs_channel = true;
+		}
 	}
 
 	return QDF_STATUS_SUCCESS;
@@ -703,7 +708,6 @@ static enum policy_mgr_pcl_type policy_mgr_get_pcl_4_port(
 {
 	enum policy_mgr_three_connection_mode fourth_index = 0;
 	enum policy_mgr_pcl_type pcl;
-	enum policy_mgr_con_mode pm_mode;
 
 	/* Will be enhanced for other types of 4 port conc (NaN etc.)
 	 * in future.
@@ -715,11 +719,12 @@ static enum policy_mgr_pcl_type policy_mgr_get_pcl_4_port(
 
 	/* SAP and P2P Go have same result in 4th port pcl table */
 	if (mode == PM_SAP_MODE || mode == PM_P2P_GO_MODE) {
-		pm_mode = PM_SAP_MODE;
-	} else if (mode == PM_STA_MODE) {
-		pm_mode = PM_STA_MODE;
-	} else {
-		policy_mgr_err("Can't start 4th port of type: %d", mode);
+		mode = PM_SAP_MODE;
+	}
+
+	if (mode != PM_STA_MODE && mode != PM_SAP_MODE &&
+	    mode != PM_NDI_MODE) {
+		policy_mgr_err("Can't start 4th port if not STA, SAP, NDI");
 		return PM_MAX_PCL_TYPE;
 	}
 
@@ -731,7 +736,7 @@ static enum policy_mgr_pcl_type policy_mgr_get_pcl_4_port(
 	}
 	policy_mgr_debug("Index for 4th port pcl table: %d", fourth_index);
 
-	pcl = fourth_connection_pcl_dbs_table[fourth_index][pm_mode][pref];
+	pcl = fourth_connection_pcl_dbs_table[fourth_index][mode][pref];
 
 	return pcl;
 }
@@ -1961,6 +1966,52 @@ enum policy_mgr_three_connection_mode
 			index = PM_SAP_NDI_SCC_5_NAN_DISC_24_DBS;
 		} else {
 			index = PM_MAX_THREE_CONNECTION_MODE;
+		}
+	} else if (count_nan_disc == 1 && count_ndi == 1 && count_sta == 1) {
+		/* Policy mgr only considers NAN Disc ch in 2.4GHz */
+		if (WLAN_REG_IS_24GHZ_CH_FREQ(
+			pm_conc_connection_list[list_sta[0]].freq) &&
+		    WLAN_REG_IS_5GHZ_CH_FREQ(
+			pm_conc_connection_list[list_ndi[0]].freq)) {
+			index = PM_NAN_DISC_STA_24_NDI_5_DBS;
+		} else if (WLAN_REG_IS_5GHZ_CH_FREQ(
+			pm_conc_connection_list[list_sta[0]].freq) &&
+			   WLAN_REG_IS_24GHZ_CH_FREQ(
+			pm_conc_connection_list[list_ndi[0]].freq)) {
+			index = PM_NAN_DISC_NDI_24_STA_5_DBS;
+		} else if (WLAN_REG_IS_5GHZ_CH_FREQ(
+			pm_conc_connection_list[list_sta[0]].freq) &&
+			  WLAN_REG_IS_5GHZ_CH_FREQ(
+			pm_conc_connection_list[list_ndi[0]].freq)) {
+			index = PM_STA_NDI_5_NAN_DISC_24_DBS;
+		} else if (WLAN_REG_IS_24GHZ_CH_FREQ(
+			pm_conc_connection_list[list_sta[0]].freq) &&
+			  WLAN_REG_IS_24GHZ_CH_FREQ(
+			pm_conc_connection_list[list_ndi[0]].freq)) {
+			index = PM_STA_NDI_NAN_DISC_24_SMM;
+		}
+	} else if (count_nan_disc == 1 && count_ndi == 2) {
+		/* Policy mgr only considers NAN Disc ch in 2.4GHz */
+		if (WLAN_REG_IS_24GHZ_CH_FREQ(
+			pm_conc_connection_list[list_ndi[0]].freq) &&
+		    WLAN_REG_IS_5GHZ_CH_FREQ(
+			pm_conc_connection_list[list_ndi[1]].freq)) {
+			index = PM_NAN_DISC_NDI_24_NDI_5_DBS;
+		} else if (WLAN_REG_IS_5GHZ_CH_FREQ(
+			pm_conc_connection_list[list_ndi[0]].freq) &&
+			   WLAN_REG_IS_24GHZ_CH_FREQ(
+			pm_conc_connection_list[list_ndi[0]].freq)) {
+			index = PM_NAN_DISC_NDI_24_NDI_5_DBS;
+		} else if (WLAN_REG_IS_5GHZ_CH_FREQ(
+			pm_conc_connection_list[list_ndi[0]].freq) &&
+			  WLAN_REG_IS_5GHZ_CH_FREQ(
+			pm_conc_connection_list[list_ndi[0]].freq)) {
+			index = PM_NDI_NDI_5_NAN_DISC_24_DBS;
+		} else if (WLAN_REG_IS_24GHZ_CH_FREQ(
+			pm_conc_connection_list[list_ndi[0]].freq) &&
+			  WLAN_REG_IS_24GHZ_CH_FREQ(
+			pm_conc_connection_list[list_ndi[0]].freq)) {
+			index = PM_NDI_NDI_NAN_DISC_24_SMM;
 		}
 	}
 

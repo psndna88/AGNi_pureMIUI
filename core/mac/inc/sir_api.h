@@ -322,6 +322,7 @@ struct fils_join_rsp_params {
 
 struct rrm_config_param {
 	uint8_t rrm_enabled;
+	bool sap_rrm_enabled;
 	uint8_t max_randn_interval;
 	uint8_t rm_capability[RMENABLEDCAP_MAX_LEN];
 };
@@ -1045,6 +1046,9 @@ struct join_rsp {
 	tDot11fIEVHTCaps vht_caps;
 	tDot11fIEHTInfo ht_operation;
 	tDot11fIEVHTOperation vht_operation;
+#ifdef WLAN_FEATURE_11AX
+	tDot11fIEhe_op he_operation;
+#endif
 	tDot11fIEhs20vendor_ie hs20vendor_ie;
 	bool is_fils_connection;
 	uint16_t fils_seq_num;
@@ -2229,6 +2233,7 @@ struct roam_offload_scan_req {
 	eSirDFSRoamScanMode allowDFSChannelRoam;
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 	uint8_t roam_offload_enabled;
+	bool enable_self_bss_roam;
 	uint8_t PSK_PMK[SIR_ROAM_SCAN_PSK_SIZE];
 	uint32_t pmk_len;
 	uint8_t Prefer5GHz;
@@ -2590,13 +2595,15 @@ struct sir_peer_info_ext_req {
  * @tx_bytes: bytes transmitted to this station
  * @rx_packets: packets received from this station
  * @rx_bytes: bytes received from this station
- * @rx_retries: cumulative retry counts
- * @tx_failed: number of failed transmissions
- * @rssi: The signal strength
+ * @tx_retries: cumulative retry counts
+ * @tx_failed: the number of failed frames
+ * @tx_succeed: the number of succeed frames
+ * @rssi: the signal strength
  * @tx_rate: last used tx bitrate (kbps)
  * @tx_rate_code: last tx rate code (last_tx_rate_code of wmi_peer_stats_info)
  * @rx_rate: last used rx bitrate (kbps)
  * @rx_rate_code: last rx rate code (last_rx_rate_code of wmi_peer_stats_info)
+ * @peer_rssi_per_chain: the average value of RSSI (dbm) per chain
  *
  * a station's information
  */
@@ -2608,11 +2615,13 @@ struct sir_peer_info_ext {
 	uint64_t rx_bytes;
 	uint32_t tx_retries;
 	uint32_t tx_failed;
+	uint32_t tx_succeed;
 	int32_t rssi;
 	uint32_t tx_rate;
 	uint32_t tx_rate_code;
 	uint32_t rx_rate;
 	uint32_t rx_rate_code;
+	int32_t peer_rssi_per_chain[WMI_MAX_CHAINS];
 };
 
 /**
@@ -3330,7 +3339,7 @@ struct auto_shutdown_cmd {
 };
 #endif
 
-#ifdef WLAN_POWER_DEBUGFS
+#ifdef WLAN_POWER_DEBUG
 /**
  * struct power_stats_response - Power stats response
  * @cumulative_sleep_time_ms: cumulative sleep time in ms

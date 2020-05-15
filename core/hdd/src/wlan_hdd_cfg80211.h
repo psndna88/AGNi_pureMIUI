@@ -437,7 +437,7 @@ void hdd_select_cbmode(struct hdd_adapter *adapter, uint32_t oper_freq,
  * Return: true or false based on findings
  */
 bool wlan_hdd_is_ap_supports_immediate_power_save(uint8_t *ies, int length);
-void wlan_hdd_del_station(struct hdd_adapter *adapter);
+int wlan_hdd_del_station(struct hdd_adapter *adapter);
 
 #if defined(USE_CFG80211_DEL_STA_V2)
 int wlan_hdd_cfg80211_del_station(struct wiphy *wiphy,
@@ -462,11 +462,14 @@ int wlan_hdd_send_avoid_freq_event(struct hdd_context *hdd_ctx,
  * wlan_hdd_send_hang_reason_event() - Send hang reason to the userspace
  * @hdd_ctx: Pointer to hdd context
  * @reason: cds recovery reason
+ * @data: Hang Data
+ * @data_len: Hang Data len
  *
  * Return: 0 on success or failure reason
  */
 int wlan_hdd_send_hang_reason_event(struct hdd_context *hdd_ctx,
-				    uint32_t reason);
+				    uint32_t reason, void *data,
+				    size_t data_len);
 
 int wlan_hdd_send_avoid_freq_for_dnbs(struct hdd_context *hdd_ctx,
 				      uint8_t op_chan);

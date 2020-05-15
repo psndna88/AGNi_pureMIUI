@@ -1112,7 +1112,7 @@ QDF_STATUS wma_set_enable_disable_mcc_adaptive_scheduler(uint32_t
 QDF_STATUS wma_set_mcc_channel_time_latency(tp_wma_handle wma,
 	uint32_t mcc_channel, uint32_t mcc_channel_time_latency)
 {
-	uint8_t mcc_adapt_sch = 0;
+	bool mcc_adapt_sch = false;
 	struct mac_context *mac = NULL;
 	uint32_t channel1 = mcc_channel;
 	uint32_t chan1_freq = cds_chan_to_freq(channel1);
@@ -1135,11 +1135,10 @@ QDF_STATUS wma_set_mcc_channel_time_latency(tp_wma_handle wma,
 		return QDF_STATUS_E_FAILURE;
 	}
 	/* Confirm MCC adaptive scheduler feature is disabled */
-	if (policy_mgr_get_mcc_adaptive_sch(mac->psoc,
-					    &mcc_adapt_sch) ==
+	if (policy_mgr_get_dynamic_mcc_adaptive_sch(mac->psoc,
+						    &mcc_adapt_sch) ==
 	    QDF_STATUS_SUCCESS) {
-		if (mcc_adapt_sch ==
-		    cfg_max(CFG_ENABLE_MCC_ADAPTIVE_SCH_ENABLED_NAME)) {
+		if (mcc_adapt_sch) {
 			WMA_LOGD("%s: Can't set channel latency while MCC ADAPTIVE SCHED is enabled. Exit",
 				__func__);
 			return QDF_STATUS_SUCCESS;
@@ -1176,7 +1175,7 @@ QDF_STATUS wma_set_mcc_channel_time_quota(tp_wma_handle wma,
 		uint32_t adapter_1_chan_number,	uint32_t adapter_1_quota,
 		uint32_t adapter_2_chan_number)
 {
-	uint8_t mcc_adapt_sch = 0;
+	bool mcc_adapt_sch = false;
 	struct mac_context *mac = NULL;
 	uint32_t chan1_freq = cds_chan_to_freq(adapter_1_chan_number);
 	uint32_t chan2_freq = cds_chan_to_freq(adapter_2_chan_number);
@@ -1200,11 +1199,10 @@ QDF_STATUS wma_set_mcc_channel_time_quota(tp_wma_handle wma,
 	}
 
 	/* Confirm MCC adaptive scheduler feature is disabled */
-	if (policy_mgr_get_mcc_adaptive_sch(mac->psoc,
-					    &mcc_adapt_sch) ==
+	if (policy_mgr_get_dynamic_mcc_adaptive_sch(mac->psoc,
+						    &mcc_adapt_sch) ==
 	    QDF_STATUS_SUCCESS) {
-		if (mcc_adapt_sch ==
-		    cfg_max(CFG_ENABLE_MCC_ADAPTIVE_SCH_ENABLED_NAME)) {
+		if (mcc_adapt_sch) {
 			WMA_LOGD("%s: Can't set channel quota while MCC_ADAPTIVE_SCHED is enabled. Exit",
 				 __func__);
 			return QDF_STATUS_SUCCESS;
@@ -1679,7 +1677,7 @@ QDF_STATUS wma_process_init_bad_peer_tx_ctl_info(tp_wma_handle wma,
 static QDF_STATUS wma_update_thermal_mitigation_to_fw(tp_wma_handle wma,
 						      u_int8_t thermal_level)
 {
-	struct thermal_mitigation_params therm_data;
+	struct thermal_mitigation_params therm_data = {0};
 
 	/* Check if vdev is in mcc, if in mcc set dc value as 10, else 100 */
 	therm_data.dc = 100;
@@ -2354,13 +2352,20 @@ static void wma_update_tx_send_params(struct tx_send_params *tx_param,
 }
 
 #ifdef WLAN_FEATURE_11W
-uint8_t *wma_get_igtk(struct wma_txrx_node *iface, uint16_t *key_len)
+uint8_t *wma_get_igtk(struct wma_txrx_node *iface, uint16_t *key_len,
+		      uint16_t igtk_key_idx)
 {
 	struct wlan_crypto_key *crypto_key;
 
-	crypto_key = wlan_crypto_get_key(iface->vdev, WMA_IGTK_KEY_INDEX_4);
+	if (!(igtk_key_idx == WMA_IGTK_KEY_INDEX_4 ||
+	    igtk_key_idx == WMA_IGTK_KEY_INDEX_5)) {
+		wma_err("Invalid igtk_key_idx %d", igtk_key_idx);
+		*key_len = 0;
+		return NULL;
+	}
+	crypto_key = wlan_crypto_get_key(iface->vdev, igtk_key_idx);
 	if (!crypto_key) {
-		wma_err("IGTK not found");
+		wma_err("IGTK not found for igtk_idx %d", igtk_key_idx);
 		*key_len = 0;
 		return NULL;
 	}
@@ -2417,6 +2422,7 @@ QDF_STATUS wma_tx_packet(void *wma_context, void *tx_frame, uint16_t frmLen,
 
 	if (!soc) {
 		WMA_LOGE("%s:SOC context is NULL", __func__);
+		cds_packet_free((void *)tx_frame);
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -2472,8 +2478,11 @@ QDF_STATUS wma_tx_packet(void *wma_context, void *tx_frame, uint16_t frmLen,
 							pdev_id, wh->i_addr1,
 							&mic_len, &hdr_len);
 
-					if (QDF_IS_STATUS_ERROR(qdf_status))
-						return qdf_status;
+					if (QDF_IS_STATUS_ERROR(qdf_status)) {
+						cds_packet_free(
+							(void *)tx_frame);
+						goto error;
+					}
 				}
 
 				newFrmLen = frmLen + hdr_len + mic_len;
@@ -2511,6 +2520,8 @@ QDF_STATUS wma_tx_packet(void *wma_context, void *tx_frame, uint16_t frmLen,
 						(qdf_nbuf_data(tx_frame));
 			}
 		} else {
+			int8_t igtk_key_id;
+
 			/* Allocate extra bytes for MMIE */
 			newFrmLen = frmLen + IEEE80211_MMIE_LEN;
 			qdf_status = cds_packet_alloc((uint16_t) newFrmLen,
@@ -2534,20 +2545,29 @@ QDF_STATUS wma_tx_packet(void *wma_context, void *tx_frame, uint16_t frmLen,
 			qdf_mem_copy(pFrame, wh, sizeof(*wh));
 			qdf_mem_copy(pFrame + sizeof(*wh),
 				     pData + sizeof(*wh), frmLen - sizeof(*wh));
-			igtk = wma_get_igtk(iface, &key_len);
+			igtk_key_id =
+				wlan_crypto_get_default_key_idx(iface->vdev,
+								true);
+			/* Get actual igtk key id adding 4 */
+			igtk_key_id += WMA_IGTK_KEY_INDEX_4;
+			igtk = wma_get_igtk(iface, &key_len, igtk_key_id);
 			if (!igtk) {
-				wma_alert("IGTK not present");
+				wma_err_rl("IGTK not present for igtk_key_id %d",
+					   igtk_key_id);
 				cds_packet_free((void *)tx_frame);
+				cds_packet_free((void *)pPacket);
 				goto error;
 			}
-			if (!cds_attach_mmie(igtk,
-					     iface->key.key_id[0].ipn,
-					     WMA_IGTK_KEY_INDEX_4,
+			if (!cds_attach_mmie(igtk, iface->key.key_id[
+					     igtk_key_id -
+					     WMA_IGTK_KEY_INDEX_4].ipn,
+					     igtk_key_id,
 					     pFrame,
 					     pFrame + newFrmLen, newFrmLen)) {
 				wma_alert("Failed to attach MMIE");
 				/* Free the original packet memory */
 				cds_packet_free((void *)tx_frame);
+				cds_packet_free((void *)pPacket);
 				goto error;
 			}
 			cds_packet_free((void *)tx_frame);
@@ -2717,6 +2737,7 @@ QDF_STATUS wma_tx_packet(void *wma_context, void *tx_frame, uint16_t frmLen,
 		if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 			WMA_LOGP("%s: Event Reset failed tx comp event %x",
 				 __func__, qdf_status);
+			cds_packet_free((void *)tx_frame);
 			goto error;
 		}
 	}
@@ -2779,11 +2800,13 @@ QDF_STATUS wma_tx_packet(void *wma_context, void *tx_frame, uint16_t frmLen,
 	psoc = wma_handle->psoc;
 	if (!psoc) {
 		WMA_LOGE("%s: psoc ctx is NULL", __func__);
+		cds_packet_free((void *)tx_frame);
 		goto error;
 	}
 
 	if (!wma_handle->pdev) {
 		WMA_LOGE("%s: pdev ctx is NULL", __func__);
+		cds_packet_free((void *)tx_frame);
 		goto error;
 	}
 
@@ -2797,7 +2820,7 @@ QDF_STATUS wma_tx_packet(void *wma_context, void *tx_frame, uint16_t frmLen,
 					WLAN_MGMT_NB_ID);
 	}
 
-	if (ucfg_pkt_capture_get_pktcap_mode(psoc) &&
+	if (ucfg_pkt_capture_get_pktcap_mode(psoc) &
 	    PKT_CAPTURE_MODE_MGMT_ONLY) {
 		ucfg_pkt_capture_mgmt_tx(wma_handle->pdev,
 					 tx_frame,

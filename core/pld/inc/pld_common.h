@@ -144,6 +144,7 @@ enum pld_uevent {
 	PLD_FW_DOWN,
 	PLD_FW_CRASHED,
 	PLD_FW_RECOVERY_START,
+	PLD_FW_HANG_EVENT,
 };
 
 /**
@@ -157,6 +158,10 @@ struct pld_uevent_data {
 		struct {
 			bool crashed;
 		} fw_down;
+		struct {
+			void *hang_event_data;
+			u16 hang_event_data_len;
+		} hang_data;
 	};
 };
 

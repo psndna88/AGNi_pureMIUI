@@ -177,6 +177,21 @@ static const int beacon_filter_table[] = {
 #endif
 };
 
+/* HE operation BIT positins */
+#if defined(WLAN_FEATURE_11AX)
+#define HE_OPERATION_DFLT_PE_DURATION_POS 0
+#define HE_OPERATION_TWT_REQUIRED_POS 3
+#define HE_OPERATION_RTS_THRESHOLD_POS 4
+#define HE_OPERATION_VHT_OPER_POS 14
+#define HE_OPERATION_CO_LOCATED_BSS_POS 15
+#define HE_OPERATION_ER_SU_DISABLE_POS 16
+#define HE_OPERATION_OPER_INFO_6G_POS 17
+#define HE_OPERATION_RESERVED_POS 18
+#define HE_OPERATION_BSS_COLOR_POS 24
+#define HE_OPERATION_PARTIAL_BSS_COLOR_POS 30
+#define HE_OPERATION_BSS_COL_DISABLED_POS 31
+#endif
+
 #if defined(WLAN_FEATURE_SAE) && \
 		defined(CFG80211_EXTERNAL_AUTH_SUPPORT)
 /**
@@ -901,6 +916,112 @@ static void hdd_copy_vht_operation(struct hdd_station_ctx *hdd_sta_ctx,
 	hdd_vht_ops->basic_mcs_set = roam_vht_ops->basicMCSSet;
 }
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0)) && \
+     defined(WLAN_FEATURE_11AX)
+static void hdd_copy_he_operation(struct hdd_station_ctx *hdd_sta_ctx,
+				  struct csr_roam_info *roam_info)
+{
+	tDot11fIEhe_op *roam_he_operation = &roam_info->he_operation;
+	struct ieee80211_he_operation *hdd_he_operation;
+	uint32_t he_oper_params = 0;
+	uint32_t len = 0, filled = 0;
+	uint8_t he_oper_6g_params = 0;
+	uint32_t he_oper_len;
+
+	if (!roam_he_operation->present)
+		return;
+	if (roam_he_operation->vht_oper_present)
+		len += 3;
+	if (roam_he_operation->co_located_bss)
+		len += 1;
+	if (roam_he_operation->oper_info_6g_present)
+		len += 5;
+
+	he_oper_len = sizeof(struct ieee80211_he_operation) + len;
+
+	hdd_he_operation = qdf_mem_malloc(he_oper_len);
+	if (!hdd_he_operation)
+		return;
+
+	/* Fill he_oper_params */
+	he_oper_params |= roam_he_operation->default_pe <<
+					HE_OPERATION_DFLT_PE_DURATION_POS;
+	he_oper_params |= roam_he_operation->twt_required <<
+					HE_OPERATION_TWT_REQUIRED_POS;
+	he_oper_params |= roam_he_operation->txop_rts_threshold <<
+					HE_OPERATION_RTS_THRESHOLD_POS;
+	he_oper_params |= roam_he_operation->vht_oper_present <<
+					HE_OPERATION_VHT_OPER_POS;
+	he_oper_params |= roam_he_operation->co_located_bss <<
+					HE_OPERATION_CO_LOCATED_BSS_POS;
+	he_oper_params |= roam_he_operation->er_su_disable <<
+					HE_OPERATION_ER_SU_DISABLE_POS;
+	he_oper_params |= roam_he_operation->oper_info_6g_present <<
+					HE_OPERATION_OPER_INFO_6G_POS;
+	he_oper_params |= roam_he_operation->reserved2 <<
+					HE_OPERATION_RESERVED_POS;
+	he_oper_params |= roam_he_operation->bss_color <<
+					HE_OPERATION_BSS_COLOR_POS;
+	he_oper_params |= roam_he_operation->partial_bss_col <<
+					HE_OPERATION_PARTIAL_BSS_COLOR_POS;
+	he_oper_params |= roam_he_operation->bss_col_disabled <<
+					HE_OPERATION_BSS_COL_DISABLED_POS;
+
+	hdd_he_operation->he_oper_params = he_oper_params;
+
+	/* Fill he_mcs_nss set */
+	qdf_mem_copy(&hdd_he_operation->he_mcs_nss_set,
+		     roam_he_operation->basic_mcs_nss,
+		     sizeof(hdd_he_operation->he_mcs_nss_set));
+
+	/* Fill he_params_optional fields */
+
+	if (roam_he_operation->vht_oper_present) {
+		hdd_he_operation->optional[filled++] =
+			roam_he_operation->vht_oper.info.chan_width;
+		hdd_he_operation->optional[filled++] =
+			roam_he_operation->vht_oper.info.center_freq_seg0;
+		hdd_he_operation->optional[filled++] =
+			roam_he_operation->vht_oper.info.center_freq_seg1;
+	}
+	if (roam_he_operation->co_located_bss)
+		hdd_he_operation->optional[filled++] =
+				roam_he_operation->maxbssid_ind.info.data;
+
+	if (roam_he_operation->oper_info_6g_present) {
+		hdd_he_operation->optional[filled++] =
+			roam_he_operation->oper_info_6g.info.primary_ch;
+		he_oper_6g_params |=
+			roam_he_operation->oper_info_6g.info.ch_width << 0;
+		he_oper_6g_params |=
+			roam_he_operation->oper_info_6g.info.dup_bcon << 2;
+		he_oper_6g_params |=
+			roam_he_operation->oper_info_6g.info.reserved << 3;
+
+		hdd_he_operation->optional[filled++] = he_oper_6g_params;
+		hdd_he_operation->optional[filled++] =
+			roam_he_operation->oper_info_6g.info.center_freq_seg0;
+		hdd_he_operation->optional[filled++] =
+			roam_he_operation->oper_info_6g.info.center_freq_seg1;
+		hdd_he_operation->optional[filled] =
+				roam_he_operation->oper_info_6g.info.min_rate;
+	}
+
+	if (hdd_sta_ctx->cache_conn_info.he_operation) {
+		qdf_mem_free(hdd_sta_ctx->cache_conn_info.he_operation);
+		hdd_sta_ctx->cache_conn_info.he_operation = NULL;
+	}
+
+	hdd_sta_ctx->cache_conn_info.he_oper_len = he_oper_len;
+
+	hdd_sta_ctx->cache_conn_info.he_operation = hdd_he_operation;
+}
+#else
+static inline void hdd_copy_he_operation(struct hdd_station_ctx *hdd_sta_ctx,
+					 struct csr_roam_info *roam_info)
+{
+}
+#endif
 
 /**
  * hdd_save_bss_info() - save connection info in hdd sta ctx
@@ -952,9 +1073,15 @@ static void hdd_save_bss_info(struct hdd_adapter *adapter,
 	} else {
 		hdd_sta_ctx->conn_info.conn_flag.vht_op_present = false;
 	}
+
+	/* Cleanup already existing he info */
+	hdd_cleanup_conn_info(adapter);
+
 	/* Cache last connection info */
 	qdf_mem_copy(&hdd_sta_ctx->cache_conn_info, &hdd_sta_ctx->conn_info,
 		     sizeof(hdd_sta_ctx->cache_conn_info));
+
+	hdd_copy_he_operation(hdd_sta_ctx, roam_info);
 }
 
 /**
@@ -1626,23 +1753,6 @@ static void hdd_clear_roam_profile_ie(struct hdd_adapter *adapter)
 	hdd_exit();
 }
 
-QDF_STATUS hdd_roam_deregister_sta(struct hdd_adapter *adapter,
-				   struct qdf_mac_addr mac_addr)
-{
-	QDF_STATUS qdf_status;
-
-	qdf_status = cdp_clear_peer(cds_get_context(QDF_MODULE_ID_SOC),
-				    OL_TXRX_PDEV_ID, mac_addr);
-	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
-		hdd_err("cdp_clear_peer() failed for sta mac: "
-			QDF_MAC_ADDR_STR ". Status(%d) [0x%08X]",
-			QDF_MAC_ADDR_ARRAY(mac_addr.bytes),
-			qdf_status, qdf_status);
-	}
-
-	return qdf_status;
-}
-
 /**
  * hdd_print_bss_info() - print bss info
  * @hdd_sta_ctx: pointer to hdd station context
@@ -1697,7 +1807,6 @@ static QDF_STATUS hdd_dis_connect_handler(struct hdd_adapter *adapter,
 					  eCsrRoamResult roam_result)
 {
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
-	QDF_STATUS vstatus;
 	struct net_device *dev = adapter->dev;
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	struct hdd_station_ctx *sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
@@ -1718,7 +1827,8 @@ static QDF_STATUS hdd_dis_connect_handler(struct hdd_adapter *adapter,
 				     WLAN_CONTROL_PATH);
 
 	if (ucfg_ipa_is_enabled() &&
-	    (hdd_is_valid_mac_address(sta_ctx->conn_info.bssid.bytes)))
+	    QDF_IS_STATUS_SUCCESS(wlan_hdd_validate_mac_address(
+				  &sta_ctx->conn_info.bssid)))
 		ucfg_ipa_wlan_evt(hdd_ctx->pdev, adapter->dev,
 				  adapter->device_mode,
 				  adapter->vdev_id,
@@ -1838,38 +1948,8 @@ static QDF_STATUS hdd_dis_connect_handler(struct hdd_adapter *adapter,
 						 adapter->vdev_id,
 						 SCAN_EVENT_TYPE_MAX, true);
 	}
-	if (eCSR_ROAM_IBSS_LEAVE == roam_status) {
-		uint8_t i;
-
-		vstatus = hdd_roam_deregister_sta(adapter,
-						  sta_ctx->conn_info.bssid);
-		if (QDF_IS_STATUS_ERROR(vstatus))
-			status = QDF_STATUS_E_FAILURE;
-
-		/* Clear all the peer sta register with TL. */
-		for (i = 0; i < MAX_PEERS; i++) {
-			struct qdf_mac_addr mac_addr =
-				sta_ctx->conn_info.peer_macaddr[i];
-
-			if (!hdd_is_valid_mac_address(mac_addr.bytes))
-				continue;
-
-			hdd_debug("Deregister Sta " QDF_MAC_ADDR_STR,
-				  QDF_MAC_ADDR_ARRAY(mac_addr.bytes));
-
-			vstatus = hdd_roam_deregister_sta(adapter, mac_addr);
-
-			if (QDF_IS_STATUS_ERROR(vstatus))
-				status = QDF_STATUS_E_FAILURE;
-			/* set the peer mac as 0, all other
-			 * reset are done in hdd_conn_remove_connect_info.
-			 */
-			qdf_mem_zero(&sta_ctx->conn_info.peer_macaddr[i],
-				sizeof(struct qdf_mac_addr));
-
-		}
-	} else {
 		/* clear scan cache for Link Lost */
+	if (roam_status != eCSR_ROAM_IBSS_LEAVE) {
 		if (eCSR_ROAM_LOSTLINK == roam_status) {
 			wlan_hdd_cfg80211_unlink_bss(adapter,
 				sta_ctx->conn_info.bssid.bytes,
@@ -1878,8 +1958,8 @@ static QDF_STATUS hdd_dis_connect_handler(struct hdd_adapter *adapter,
 			sme_remove_bssid_from_scan_list(mac_handle,
 			sta_ctx->conn_info.bssid.bytes);
 		}
-
 	}
+
 	/* Clear saved connection information in HDD */
 	hdd_conn_remove_connect_info(sta_ctx);
 	/*
@@ -3710,6 +3790,25 @@ void hdd_delete_peer(struct hdd_station_ctx *sta_ctx,
 	}
 }
 
+bool hdd_any_valid_peer_present(struct hdd_adapter *adapter)
+{
+	struct hdd_station_ctx *sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
+	int i;
+	struct qdf_mac_addr *mac_addr;
+
+	for (i = 0; i < SIR_MAX_NUM_STA_IN_IBSS; i++) {
+		mac_addr = &sta_ctx->conn_info.peer_macaddr[i];
+		if (!qdf_is_macaddr_zero(mac_addr) &&
+		    !qdf_is_macaddr_broadcast(mac_addr)) {
+			hdd_debug("peer: index: %u " QDF_MAC_ADDR_STR, i,
+				  QDF_MAC_ADDR_ARRAY(mac_addr->bytes));
+			return true;
+		}
+	}
+
+	return false;
+}
+
 /**
  * roam_remove_ibss_station() - Remove the IBSS peer MAC address in the adapter
  * @adapter: pointer to adapter
@@ -3986,8 +4085,6 @@ roam_roam_connect_status_update_handler(struct hdd_adapter *adapter,
 			 QDF_MAC_ADDR_ARRAY(sta_ctx->conn_info.bssid.bytes),
 			 roam_info->staId);
 
-		hdd_roam_deregister_sta(adapter, roam_info->peerMac);
-
 		sta_ctx->ibss_sta_generation++;
 
 		cfg80211_del_sta(adapter->dev,
@@ -4064,16 +4161,6 @@ QDF_STATUS hdd_roam_register_tdlssta(struct hdd_adapter *adapter,
 	return qdf_status;
 }
 
-QDF_STATUS hdd_roam_deregister_tdlssta(struct hdd_adapter *adapter,
-				       struct qdf_mac_addr *peer_mac)
-{
-	QDF_STATUS qdf_status;
-
-	qdf_status = cdp_clear_peer(cds_get_context(QDF_MODULE_ID_SOC),
-				    OL_TXRX_PDEV_ID, *peer_mac);
-
-	return qdf_status;
-}
 #endif
 
 #ifdef WLAN_FEATURE_11W
@@ -4642,7 +4729,6 @@ hdd_sme_roam_callback(void *context, struct csr_roam_info *roam_info,
 	QDF_STATUS qdf_ret_status = QDF_STATUS_SUCCESS;
 	struct hdd_adapter *adapter = context;
 	struct hdd_station_ctx *sta_ctx = NULL;
-	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	struct cfg80211_bss *bss_status;
 	struct hdd_context *hdd_ctx;
 
@@ -4696,11 +4782,6 @@ hdd_sme_roam_callback(void *context, struct csr_roam_info *roam_info,
 		wlan_hdd_netif_queue_control(adapter,
 				WLAN_STOP_ALL_NETIF_QUEUE,
 				WLAN_CONTROL_PATH);
-		status = hdd_roam_deregister_sta(
-					adapter,
-					sta_ctx->conn_info.peer_macaddr[0]);
-		if (!QDF_IS_STATUS_SUCCESS(status))
-			qdf_ret_status = QDF_STATUS_E_FAILURE;
 		sta_ctx->ft_carrier_on = true;
 		sta_ctx->hdd_reassoc_scenario = true;
 		hdd_debug("hdd_reassoc_scenario set to: %d, due to eCSR_ROAM_FT_START, session: %d",

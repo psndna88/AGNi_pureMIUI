@@ -51,6 +51,7 @@ typedef enum eSmeCommandType {
 	eSmeCsrCommandMask = 0x10000,
 	eSmeCommandRoam,
 	eSmeCommandWmStatusChange,
+	eSmeCommandGetdisconnectStats,
 	/* QOS */
 	eSmeQosCommandMask = 0x40000,   /* To identify Qos commands */
 	eSmeCommandAddTs,
@@ -253,8 +254,8 @@ typedef void (*hidden_ssid_cb)(hdd_handle_t hdd_handle,
  * @hdd_handle: HDD handle registered with SME
  * @beacon_report: Beacon report structure
  */
-typedef void (*beacon_report_cb)(hdd_handle_t hdd_handle,
-				 struct wlan_beacon_report *beacon_report);
+typedef QDF_STATUS (*beacon_report_cb)
+	(hdd_handle_t hdd_handle, struct wlan_beacon_report *beacon_report);
 
 /**
  * beacon_pause_cb : scan start callback fun
@@ -298,7 +299,7 @@ struct sme_context {
 	link_layer_stats_cb link_layer_stats_cb;
 	void (*link_layer_stats_ext_cb)(hdd_handle_t callback_ctx,
 					tSirLLStatsResults *rsp);
-#ifdef WLAN_POWER_DEBUGFS
+#ifdef WLAN_POWER_DEBUG
 	void *power_debug_stats_context;
 	void (*power_stats_resp_callback)(struct power_stats_response *rsp,
 						void *callback_context);
