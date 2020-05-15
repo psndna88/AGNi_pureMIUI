@@ -1547,23 +1547,7 @@ static enum sigma_cmd_result cmd_sta_set_ip_config(struct sigma_dut *dut,
 						"Failed to disable IPv6 address before association");
 			}
 		} else {
-			snprintf(buf, sizeof(buf),
-				 "ip -6 addr del %s/%s dev %s",
-				 ip, mask, ifname);
-			sigma_dut_print(dut, DUT_MSG_DEBUG, "Run: %s", buf);
-			if (system(buf) != 0) {
-				/*
-				 * This command may fail if the address being
-				 * deleted does not exist. Inaction here is
-				 * intentional.
-				 */
-			}
-
-			snprintf(buf, sizeof(buf),
-				 "ip -6 addr add %s/%s dev %s",
-				 ip, mask, ifname);
-			sigma_dut_print(dut, DUT_MSG_DEBUG, "Run: %s", buf);
-			if (system(buf) != 0) {
+			if (set_ipv6_addr(dut, ip, mask, ifname) != 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "ErrorCode,Failed to set IPv6 address");
 				return 0;

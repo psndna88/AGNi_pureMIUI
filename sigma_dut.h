@@ -1197,5 +1197,7 @@ void dev_register_cmds(void);
 void sniffer_register_cmds(void);
 void server_register_cmds(void);
 void miracast_register_cmds(void);
+int set_ipv6_addr(struct sigma_dut *dut, const char *ip, const char *mask,
+		  const char *ifname);
 
 #endif /* SIGMA_DUT_H */

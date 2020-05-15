@@ -741,3 +741,28 @@ int wcn_driver_cmd(const char *ifname, char *buf)
 	close(s);
 	return res;
 }
+
+
+int set_ipv6_addr(struct sigma_dut *dut, const char *ip, const char *mask,
+		  const char *ifname)
+{
+	char buf[200];
+
+	snprintf(buf, sizeof(buf), "ip -6 addr del %s/%s dev %s", ip, mask,
+		 ifname);
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "Run: %s", buf);
+	if (system(buf) != 0) {
+		/*
+		 * This command may fail if the address being deleted does not
+		 * exist. Inaction here is intentional.
+		 */
+	}
+
+	snprintf(buf, sizeof(buf), "ip -6 addr add %s/%s dev %s", ip, mask,
+		 ifname);
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "Run: %s", buf);
+	if (system(buf) != 0)
+		return -1;
+
+	return 0;
+}
