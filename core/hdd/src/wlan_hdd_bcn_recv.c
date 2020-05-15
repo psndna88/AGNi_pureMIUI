@@ -121,9 +121,8 @@ static int get_pause_ind_data_len(bool is_disconnected)
  * Send beacon info to userspace for connected AP through a vendor event:
  * QCA_NL80211_VENDOR_SUBCMD_BEACON_REPORTING.
  */
-static QDF_STATUS hdd_send_bcn_recv_info(hdd_handle_t hdd_handle,
-					 struct wlan_beacon_report
-					 *beacon_report)
+static void hdd_send_bcn_recv_info(hdd_handle_t hdd_handle,
+				   struct wlan_beacon_report *beacon_report)
 {
 	struct sk_buff *vendor_event;
 	struct hdd_context *hdd_ctx = hdd_handle_to_context(hdd_handle);
@@ -132,13 +131,13 @@ static QDF_STATUS hdd_send_bcn_recv_info(hdd_handle_t hdd_handle,
 	struct hdd_adapter *adapter;
 
 	if (wlan_hdd_validate_context(hdd_ctx))
-		return QDF_STATUS_E_FAILURE;
+		return;
 
 	data_len = get_beacon_report_data_len(beacon_report);
 
 	adapter = hdd_get_adapter_by_vdev(hdd_ctx, beacon_report->vdev_id);
 	if (hdd_validate_adapter(adapter))
-		return QDF_STATUS_E_FAILURE;
+		return;
 
 	vendor_event =
 		cfg80211_vendor_event_alloc(
@@ -148,7 +147,7 @@ static QDF_STATUS hdd_send_bcn_recv_info(hdd_handle_t hdd_handle,
 			flags);
 	if (!vendor_event) {
 		hdd_err("cfg80211_vendor_event_alloc failed");
-		return QDF_STATUS_E_FAILURE;
+		return;
 	}
 
 	if (nla_put_u32(vendor_event,
@@ -171,11 +170,10 @@ static QDF_STATUS hdd_send_bcn_recv_info(hdd_handle_t hdd_handle,
 				      beacon_report->boot_time)) {
 		hdd_err("QCA_WLAN_VENDOR_ATTR put fail");
 		kfree_skb(vendor_event);
-		return QDF_STATUS_E_FAILURE;
+		return;
 	}
 
 	cfg80211_vendor_event(vendor_event, flags);
-	return QDF_STATUS_SUCCESS;
 }
 
 /**
