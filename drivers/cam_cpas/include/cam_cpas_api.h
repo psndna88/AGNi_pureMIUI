@@ -20,6 +20,10 @@
 #define CAM_CPAS_MAX_PATHS_PER_CLIENT 15
 #define CAM_CPAS_API_PATH_DATA_STD_START 512
 
+/* Qos Selection mask */
+#define CAM_CPAS_QOS_DEFAULT_SETTINGS_MASK 0x1
+#define CAM_CPAS_QOS_CUSTOM_SETTINGS_MASK  0x2
+
 /**
  * enum cam_cpas_reg_base - Enum for register base identifier. These
  *                          are the identifiers used in generic register
@@ -637,5 +641,15 @@ const char *cam_cpas_axi_util_trans_type_to_string(
  *
  */
 void cam_cpas_log_votes(void);
+
+/**
+ * cam_cpas_select_qos_settings()
+ *
+ * @brief: API to select specific qos settings based on usecase requirements
+ *
+ * @return 0 on success.
+ *
+ */
+int cam_cpas_select_qos_settings(uint32_t selection_mask);
 
 #endif /* _CAM_CPAS_API_H_ */

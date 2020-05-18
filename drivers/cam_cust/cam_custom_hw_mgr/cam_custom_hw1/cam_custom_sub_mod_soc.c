@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/slab.h>
@@ -55,10 +55,21 @@ int cam_custom_hw_sub_mod_init_soc_resources(struct cam_hw_soc_info *soc_info,
 	soc_private->cpas_handle =
 		cpas_register_param.client_handle;
 
+	rc = cam_cpas_select_qos_settings(CAM_CPAS_QOS_CUSTOM_SETTINGS_MASK);
+	if (rc) {
+		CAM_ERR(CAM_CPAS, "Custom QoS selection failed %d", rc);
+		goto unregister_cpas;
+	}
+
 	return rc;
 
+unregister_cpas:
+	if (cam_cpas_unregister_client(soc_private->cpas_handle))
+		CAM_ERR(CAM_CUSTOM, "CPAS0 unregistration failed");
 release_soc:
-	cam_soc_util_release_platform_resource(soc_info);
+	if (cam_soc_util_release_platform_resource(soc_info))
+		CAM_ERR(CAM_CUSTOM, "CPAS0 release resource failed");
+
 	return rc;
 }
 
