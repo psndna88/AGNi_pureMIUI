@@ -598,15 +598,17 @@ int msm_vidc_calculate_internal_buffer_sizes(struct msm_vidc_inst *inst)
 void msm_vidc_init_buffer_size_calculators(struct msm_vidc_inst *inst)
 {
 	struct msm_vidc_core *core;
+	uint32_t vpu;
 
 	if (!inst)
 		return;
 
 	inst->buffer_size_calculators = NULL;
 	core = inst->core;
+	vpu = core->platform_data->vpu_ver;
 
 	/* Change this to IRIS2 when ready */
-	if (core->platform_data->vpu_ver == VPU_VERSION_IRIS2)
+	if (vpu == VPU_VERSION_IRIS2 || vpu == VPU_VERSION_IRIS2_1)
 		inst->buffer_size_calculators =
 			msm_vidc_calculate_internal_buffer_sizes;
 }
