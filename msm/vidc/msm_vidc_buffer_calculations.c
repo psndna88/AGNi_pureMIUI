@@ -266,13 +266,13 @@ static int msm_vidc_get_extra_input_buff_count(struct msm_vidc_inst *inst);
 static int msm_vidc_get_extra_output_buff_count(struct msm_vidc_inst *inst);
 
 static inline u32 calculate_h264d_scratch_size(struct msm_vidc_inst *inst,
-	u32 width, u32 height, bool is_interlaced);
+	u32 width, u32 height, bool is_interlaced, u32 delay);
 static inline u32 calculate_h265d_scratch_size(struct msm_vidc_inst *inst,
-	u32 width, u32 height, bool is_interlaced);
+	u32 width, u32 height, bool is_interlaced, u32 delay);
 static inline u32 calculate_vpxd_scratch_size(struct msm_vidc_inst *inst,
-	u32 width, u32 height, bool is_interlaced);
+	u32 width, u32 height, bool is_interlaced, u32 delay);
 static inline u32 calculate_mpeg2d_scratch_size(struct msm_vidc_inst *inst,
-	u32 width, u32 height, bool is_interlaced);
+	u32 width, u32 height, bool is_interlaced, u32 delay);
 
 static inline u32 calculate_enc_scratch_size(struct msm_vidc_inst *inst,
 	u32 width, u32 height, u32 work_mode, u32 lcu_size, u32 num_vpp_pipes);
@@ -373,7 +373,7 @@ int msm_vidc_get_decoder_internal_buffer_sizes(struct msm_vidc_inst *inst)
 	struct msm_vidc_dec_buff_size_calculators *dec_calculators;
 	u32 width, height, i, out_min_count, num_vpp_pipes;
 	struct v4l2_format *f;
-	u32 vpp_delay = 2 + 1;
+	u32 vpp_delay = inst->bse_vpp_delay;
 
 	if (!inst || !inst->core || !inst->core->platform_data) {
 		d_vpr_e("%s: Instance is null!", __func__);
@@ -419,7 +419,8 @@ int msm_vidc_get_decoder_internal_buffer_sizes(struct msm_vidc_inst *inst)
 				MSM_VIDC_PIC_STRUCT_MAYBE_INTERLACED);
 			curr_req->buffer_size =
 				dec_calculators->calculate_scratch_size(
-					inst, width, height, is_interlaced);
+					inst, width, height, is_interlaced,
+					vpp_delay);
 			valid_buffer_type = true;
 		} else  if (curr_req->buffer_type ==
 			HAL_BUFFER_INTERNAL_SCRATCH_1) {
@@ -428,7 +429,7 @@ int msm_vidc_get_decoder_internal_buffer_sizes(struct msm_vidc_inst *inst)
 			fmt = &inst->fmts[OUTPUT_PORT];
 			out_min_count = fmt->count_min;
 			out_min_count =
-				max(vpp_delay, out_min_count);
+				max(vpp_delay + 1, out_min_count);
 			curr_req->buffer_size =
 				dec_calculators->calculate_scratch1_size(
 					inst, width, height, out_min_count,
@@ -690,6 +691,17 @@ int msm_vidc_calculate_output_buffer_count(struct msm_vidc_inst *inst)
 	} else {
 		output_min_count = MIN_ENC_OUTPUT_BUFFERS;
 	}
+
+	if (inst->core->resources.has_vpp_delay &&
+		is_decode_session(inst) &&
+		(codec == V4L2_PIX_FMT_H264
+		|| codec == V4L2_PIX_FMT_HEVC))	{
+		output_min_count =
+			max(output_min_count, (u32)MAX_BSE_VPP_DELAY);
+		output_min_count =
+			max(output_min_count, (u32)(msm_vidc_vpp_delay & 0x1F));
+	}
+
 	extra_buff_count = msm_vidc_get_extra_buff_count(inst,
 				HAL_BUFFER_OUTPUT);
 	fmt->count_min = output_min_count;
@@ -1115,12 +1127,11 @@ static inline u32 hfi_iris2_h264d_non_comv_size(u32 width, u32 height,
 	return size;
 }
 
-static inline u32 size_h264d_hw_bin_buffer(u32 width, u32 height)
+static inline u32 size_h264d_hw_bin_buffer(u32 width, u32 height, u32 delay)
 {
 	u32 size_yuv, size_bin_hdr, size_bin_res;
 	u32 size = 0;
 	u32 product;
-	u32 delay = 2;
 
 	product = width * height;
 	size_yuv = (product <= BIN_BUFFER_THRESHOLD) ?
@@ -1138,14 +1149,15 @@ static inline u32 size_h264d_hw_bin_buffer(u32 width, u32 height)
 }
 
 static inline u32 calculate_h264d_scratch_size(struct msm_vidc_inst *inst,
-	u32 width, u32 height, bool is_interlaced)
+	u32 width, u32 height, bool is_interlaced, u32 delay)
 {
 	u32 aligned_width = ALIGN(width, BUFFER_ALIGNMENT_SIZE(16));
 	u32 aligned_height = ALIGN(height, BUFFER_ALIGNMENT_SIZE(16));
 	u32 size = 0;
 
 	if (!is_interlaced)
-		size = size_h264d_hw_bin_buffer(aligned_width, aligned_height);
+		size = size_h264d_hw_bin_buffer(aligned_width, aligned_height,
+						delay);
 	else
 		size = 0;
 
@@ -1234,12 +1246,11 @@ static inline u32 hfi_iris2_h265d_non_comv_size(u32 width, u32 height,
 	return size;
 }
 
-static inline u32 size_h265d_hw_bin_buffer(u32 width, u32 height)
+static inline u32 size_h265d_hw_bin_buffer(u32 width, u32 height, u32 delay)
 {
 	u32 size = 0;
 	u32 size_yuv, size_bin_hdr, size_bin_res;
 	u32 product;
-	u32 delay = 2;
 
 	product = width * height;
 	size_yuv = (product <= BIN_BUFFER_THRESHOLD) ?
@@ -1257,14 +1268,15 @@ static inline u32 size_h265d_hw_bin_buffer(u32 width, u32 height)
 }
 
 static inline u32 calculate_h265d_scratch_size(struct msm_vidc_inst *inst,
-	u32 width, u32 height, bool is_interlaced)
+	u32 width, u32 height, bool is_interlaced, u32 delay)
 {
 	u32 aligned_width = ALIGN(width, BUFFER_ALIGNMENT_SIZE(16));
 	u32 aligned_height = ALIGN(height, BUFFER_ALIGNMENT_SIZE(16));
 	u32 size = 0;
 
 	if (!is_interlaced)
-		size = size_h265d_hw_bin_buffer(aligned_width, aligned_height);
+		size = size_h265d_hw_bin_buffer(aligned_width, aligned_height,
+						delay);
 	else
 		size = 0;
 
@@ -1272,7 +1284,7 @@ static inline u32 calculate_h265d_scratch_size(struct msm_vidc_inst *inst,
 }
 
 static inline u32 calculate_vpxd_scratch_size(struct msm_vidc_inst *inst,
-	u32 width, u32 height, bool is_interlaced)
+	u32 width, u32 height, bool is_interlaced, u32 delay)
 {
 	u32 aligned_width = ALIGN(width, BUFFER_ALIGNMENT_SIZE(16));
 	u32 aligned_height = ALIGN(height, BUFFER_ALIGNMENT_SIZE(16));
@@ -1303,7 +1315,7 @@ static inline u32 calculate_vpxd_scratch_size(struct msm_vidc_inst *inst,
 }
 
 static inline u32 calculate_mpeg2d_scratch_size(struct msm_vidc_inst *inst,
-	u32 width, u32 height, bool is_interlaced)
+	u32 width, u32 height, bool is_interlaced, u32 delay)
 {
 	return 0;
 }

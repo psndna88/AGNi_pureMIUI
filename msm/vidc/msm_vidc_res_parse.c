@@ -769,9 +769,6 @@ int read_platform_resources_from_drv_data(
 	res->debug_timeout = find_key_value(platform_data,
 			"qcom,debug-timeout");
 
-	res->pm_qos_latency_us = find_key_value(platform_data,
-			"qcom,pm-qos-latency-us");
-
 	res->max_secure_inst_count = find_key_value(platform_data,
 			"qcom,max-secure-instances");
 
@@ -810,6 +807,10 @@ int read_platform_resources_from_drv_data(
 			"qcom,fw-vpp-cycles");
 	res->avsync_window_size = find_key_value(platform_data,
 			"qcom,avsync-window-size");
+	res->ubwc_stats_in_fbd = find_key_value(platform_data,
+			"qcom,ubwc_stats_in_fbd");
+	res->has_vpp_delay = find_key_value(platform_data,
+			"qcom,vpp_delay_supported");
 
 	res->csc_coeff_data = &platform_data->csc_data;
 

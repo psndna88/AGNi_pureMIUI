@@ -855,6 +855,9 @@ static inline int start_streaming(struct msm_vidc_inst *inst)
 		goto fail_start;
 	}
 
+	/* Decide bse vpp delay after work mode */
+	msm_vidc_set_bse_vpp_delay(inst);
+
 	/* Assign Core and LP mode for current session */
 	rc = call_core_op(inst->core, decide_core_and_power_mode, inst);
 	if (rc) {
@@ -1489,6 +1492,8 @@ void *msm_vidc_open(int core_id, int session_type)
 	inst->max_filled_len = 0;
 	inst->entropy_mode = HFI_H264_ENTROPY_CABAC;
 	inst->full_range = COLOR_RANGE_UNSPECIFIED;
+	inst->bse_vpp_delay = DEFAULT_BSE_VPP_DELAY;
+	inst->first_reconfig = 0;
 
 	for (i = SESSION_MSG_INDEX(SESSION_MSG_START);
 		i <= SESSION_MSG_INDEX(SESSION_MSG_END); i++) {

@@ -39,6 +39,8 @@
 #define MAX_NUM_OUTPUT_BUFFERS VIDEO_MAX_FRAME // same as VB2_MAX_FRAME
 
 #define MAX_SUPPORTED_INSTANCES 16
+#define MAX_BSE_VPP_DELAY 6
+#define DEFAULT_BSE_VPP_DELAY 2
 
 /* Maintains the number of FTB's between each FBD over a window */
 #define DCVS_FTB_WINDOW 16
@@ -548,6 +550,7 @@ struct msm_vidc_inst {
 	u32 layer_bitrate;
 	u32 client_set_ctrls;
 	bool static_rotation_flip_enabled;
+	bool external_blur;
 	struct internal_buf *dpb_extra_binfo;
 	struct msm_vidc_codec_data *codec_data;
 	struct hal_hdr10_pq_sei hdr10_sei_params;
@@ -561,6 +564,10 @@ struct msm_vidc_inst {
 	bool is_perf_eligible_session;
 	u32 max_filled_len;
 	int full_range;
+	struct mutex ubwc_stats_lock;
+	struct msm_vidc_ubwc_stats ubwc_stats;
+	u32 bse_vpp_delay;
+	u32 first_reconfig;
 };
 
 extern struct msm_vidc_drv *vidc_driver;

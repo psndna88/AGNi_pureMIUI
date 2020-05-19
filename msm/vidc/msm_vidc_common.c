@@ -155,21 +155,6 @@ int msm_comm_hfi_to_v4l2(int id, int value, u32 sid)
 	default:
 		goto unknown_value;
 	}
-	case V4L2_CID_MPEG_VIDC_VIDEO_VP8_PROFILE_LEVEL:
-		switch (value) {
-		case HFI_VP8_LEVEL_VERSION_0:
-			return V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_0;
-		case HFI_VP8_LEVEL_VERSION_1:
-			return V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_1;
-		case HFI_VP8_LEVEL_VERSION_2:
-			return V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_2;
-		case HFI_VP8_LEVEL_VERSION_3:
-			return V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_3;
-		case HFI_LEVEL_UNKNOWN:
-			return V4L2_MPEG_VIDC_VIDEO_VP8_UNUSED;
-		default:
-			goto unknown_value;
-		}
 	case V4L2_CID_MPEG_VIDEO_VP9_PROFILE:
 		switch (value) {
 		case HFI_VP9_PROFILE_P0:
@@ -400,28 +385,6 @@ int msm_comm_v4l2_to_hfi(int id, int value, u32 sid)
 		default:
 			return HFI_H264_ENTROPY_CABAC;
 		}
-	case V4L2_CID_MPEG_VIDEO_VP8_PROFILE:
-		switch (value) {
-		case V4L2_MPEG_VIDEO_VP8_PROFILE_0:
-			return HFI_VP8_PROFILE_MAIN;
-		default:
-			return HFI_VP8_PROFILE_MAIN;
-		}
-	case V4L2_CID_MPEG_VIDC_VIDEO_VP8_PROFILE_LEVEL:
-		switch (value) {
-		case V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_0:
-			return HFI_VP8_LEVEL_VERSION_0;
-		case V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_1:
-			return HFI_VP8_LEVEL_VERSION_1;
-		case V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_2:
-			return HFI_VP8_LEVEL_VERSION_2;
-		case V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_3:
-			return HFI_VP8_LEVEL_VERSION_3;
-		case V4L2_MPEG_VIDC_VIDEO_VP8_UNUSED:
-			return HFI_LEVEL_UNKNOWN;
-		default:
-			return HFI_LEVEL_UNKNOWN;
-		}
 	case V4L2_CID_MPEG_VIDEO_VP9_PROFILE:
 		switch (value) {
 		case V4L2_MPEG_VIDEO_VP9_PROFILE_0:
@@ -503,7 +466,6 @@ int msm_comm_get_v4l2_profile(int fourcc, int profile, u32 sid)
 		return msm_comm_hfi_to_v4l2(
 			V4L2_CID_MPEG_VIDEO_HEVC_PROFILE,
 			profile, sid);
-	case V4L2_PIX_FMT_VP8:
 	case V4L2_PIX_FMT_VP9:
 	case V4L2_PIX_FMT_MPEG2:
 		return 0;
@@ -524,10 +486,6 @@ int msm_comm_get_v4l2_level(int fourcc, int level, u32 sid)
 		level &= ~(0xF << 28);
 		return msm_comm_hfi_to_v4l2(
 			V4L2_CID_MPEG_VIDEO_HEVC_LEVEL,
-			level, sid);
-	case V4L2_PIX_FMT_VP8:
-		return msm_comm_hfi_to_v4l2(
-			V4L2_CID_MPEG_VIDC_VIDEO_VP8_PROFILE_LEVEL,
 			level, sid);
 	case V4L2_PIX_FMT_VP9:
 	case V4L2_PIX_FMT_MPEG2:
@@ -867,9 +825,6 @@ enum hal_video_codec get_hal_codec(int fourcc, u32 sid)
 		break;
 	case V4L2_PIX_FMT_MPEG2:
 		codec = HAL_VIDEO_CODEC_MPEG2;
-		break;
-	case V4L2_PIX_FMT_VP8:
-		codec = HAL_VIDEO_CODEC_VP8;
 		break;
 	case V4L2_PIX_FMT_VP9:
 		codec = HAL_VIDEO_CODEC_VP9;
@@ -1582,6 +1537,43 @@ static void msm_vidc_queue_rbr_event(struct msm_vidc_inst *inst,
 	v4l2_event_queue_fh(&inst->event_handler, &buf_event);
 }
 
+static void handle_event_change_insufficient(struct msm_vidc_inst *inst,
+					struct msm_vidc_format *fmt,
+					struct msm_vidc_cb_event *event_notify,
+					u32 codec)
+{
+	int extra_buff_count = 0;
+
+	s_vpr_h(inst->sid,
+		"seq: V4L2_EVENT_SEQ_CHANGED_INSUFFICIENT\n");
+
+	/* decide batching as configuration changed */
+	inst->batch.enable = is_batching_allowed(inst);
+	s_vpr_hp(inst->sid, "seq : batching %s\n",
+		inst->batch.enable ? "enabled" : "disabled");
+	msm_dcvs_try_enable(inst);
+	extra_buff_count = msm_vidc_get_extra_buff_count(inst,
+		HAL_BUFFER_OUTPUT);
+	fmt->count_min = event_notify->fw_min_cnt;
+
+	if (inst->core->resources.has_vpp_delay &&
+		is_decode_session(inst) &&
+		(codec == V4L2_PIX_FMT_H264
+		|| codec == V4L2_PIX_FMT_HEVC))	{
+		fmt->count_min =
+			max(fmt->count_min, (u32)MAX_BSE_VPP_DELAY);
+		fmt->count_min =
+			max(fmt->count_min,
+			(u32)(msm_vidc_vpp_delay & 0x1F));
+	}
+
+	fmt->count_min_host = fmt->count_min + extra_buff_count;
+	s_vpr_h(inst->sid,
+		"seq: hal buffer[%d] count: min %d min_host %d\n",
+		HAL_BUFFER_OUTPUT, fmt->count_min,
+		fmt->count_min_host);
+}
+
 static void handle_event_change(enum hal_command_response cmd, void *data)
 {
 	struct msm_vidc_inst *inst = NULL;
@@ -1593,7 +1585,6 @@ static void handle_event_change(enum hal_command_response cmd, void *data)
 	u32 *ptr = NULL;
 	struct msm_vidc_format *fmt;
 	struct v4l2_format *f;
-	int extra_buff_count = 0;
 	u32 codec;
 
 	if (!event_notify) {
@@ -1754,24 +1745,9 @@ static void handle_event_change(enum hal_command_response cmd, void *data)
 	fmt->v4l2_fmt.fmt.pix_mp.width = event_notify->width;
 	mutex_unlock(&inst->lock);
 
-	if (event == V4L2_EVENT_SEQ_CHANGED_INSUFFICIENT) {
-		s_vpr_h(inst->sid,
-			"seq: V4L2_EVENT_SEQ_CHANGED_INSUFFICIENT\n");
-
-		/* decide batching as configuration changed */
-		inst->batch.enable = is_batching_allowed(inst);
-		s_vpr_hp(inst->sid, "seq : batching %s\n",
-			inst->batch.enable ? "enabled" : "disabled");
-		msm_dcvs_try_enable(inst);
-		extra_buff_count = msm_vidc_get_extra_buff_count(inst,
-				HAL_BUFFER_OUTPUT);
-		fmt->count_min = event_notify->fw_min_cnt;
-		fmt->count_min_host = fmt->count_min + extra_buff_count;
-		s_vpr_h(inst->sid,
-			"seq: hal buffer[%d] count: min %d min_host %d\n",
-			HAL_BUFFER_OUTPUT, fmt->count_min,
-			fmt->count_min_host);
-	}
+	if (event == V4L2_EVENT_SEQ_CHANGED_INSUFFICIENT)
+		handle_event_change_insufficient(inst, fmt,
+						event_notify, codec);
 
 	rc = msm_vidc_check_session_supported(inst);
 	if (!rc) {
@@ -2636,6 +2612,17 @@ static void handle_fbd(enum hal_command_response cmd, void *data)
 		break;
 	default:
 		break;
+	}
+
+	if (inst->core->resources.ubwc_stats_in_fbd == 1) {
+		mutex_lock(&inst->ubwc_stats_lock);
+		inst->ubwc_stats.is_valid =
+			fill_buf_done->ubwc_cr_stat.is_valid;
+		inst->ubwc_stats.worst_cr =
+			fill_buf_done->ubwc_cr_stat.worst_cr;
+		inst->ubwc_stats.worst_cf =
+			fill_buf_done->ubwc_cr_stat.worst_cf;
+		mutex_unlock(&inst->ubwc_stats_lock);
 	}
 
 	/*
@@ -4335,6 +4322,7 @@ static int msm_comm_qbuf_superframe_to_hfi(struct msm_vidc_inst *inst,
 	frames[0].flags &= ~HAL_BUFFERFLAG_EXTRADATA;
 	frames[0].flags &= ~HAL_BUFFERFLAG_EOS;
 	frames[0].flags &= ~HAL_BUFFERFLAG_CVPMETADATA_SKIP;
+	frames[0].flags &= ~HAL_BUFFERFLAG_ENDOFSUBFRAME;
 	if (frames[0].flags)
 		s_vpr_e(inst->sid, "%s: invalid flags %#x\n",
 			__func__, frames[0].flags);
@@ -4356,10 +4344,20 @@ static int msm_comm_qbuf_superframe_to_hfi(struct msm_vidc_inst *inst,
 			/* first frame */
 			if (frames[0].extradata_addr)
 				frames[0].flags |= HAL_BUFFERFLAG_EXTRADATA;
+
+			/* Add work incomplete flag for all etb's except the
+			 * last one. For last frame, flag is cleared at the
+			 * last frame iteration.
+			 */
+			frames[0].flags |= HAL_BUFFERFLAG_ENDOFSUBFRAME;
 		} else if (i == superframe_count - 1) {
 			/* last frame */
 			if (mbuf->vvb.flags & V4L2_BUF_FLAG_EOS)
 				frames[i].flags |= HAL_BUFFERFLAG_EOS;
+			/* Clear Subframe flag just for the last frame to
+			 * indicate the end of SuperFrame.
+			 */
+			frames[i].flags &= ~HAL_BUFFERFLAG_ENDOFSUBFRAME;
 		}
 		num_etbs++;
 	}

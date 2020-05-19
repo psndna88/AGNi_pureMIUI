@@ -23,6 +23,7 @@ int msm_vidc_clock_voting = !1;
 bool msm_vidc_syscache_disable = !true;
 bool msm_vidc_cvp_usage = true;
 int msm_vidc_err_recovery_disable = !1;
+int msm_vidc_vpp_delay;
 
 #define MAX_DBG_BUF_SIZE 4096
 
@@ -211,6 +212,8 @@ struct dentry *msm_vidc_debugfs_init_drv(void)
 	bool ok = false;
 	struct dentry *dir = NULL;
 
+	msm_vidc_vpp_delay = 0;
+
 	dir = debugfs_create_dir("msm_vidc", NULL);
 	if (IS_ERR_OR_NULL(dir)) {
 		dir = NULL;
@@ -241,7 +244,8 @@ struct dentry *msm_vidc_debugfs_init_drv(void)
 	__debugfs_create(bool, "lossless_encoding",
 			&msm_vidc_lossless_encode) &&
 	__debugfs_create(u32, "disable_err_recovery",
-			&msm_vidc_err_recovery_disable);
+			&msm_vidc_err_recovery_disable) &&
+	__debugfs_create(u32, "vpp_delay", &msm_vidc_vpp_delay);
 
 #undef __debugfs_create
 
@@ -270,7 +274,8 @@ struct dentry *msm_vidc_debugfs_init_core(struct msm_vidc_core *core,
 
 	snprintf(debugfs_name, MAX_DEBUGFS_NAME, "core%d", core->id);
 	dir = debugfs_create_dir(debugfs_name, parent);
-	if (!dir) {
+	if (IS_ERR_OR_NULL(dir)) {
+		dir = NULL;
 		d_vpr_e("Failed to create debugfs for msm_vidc\n");
 		goto failed_create_dir;
 	}
@@ -491,6 +496,7 @@ struct dentry *msm_vidc_debugfs_init_inst(struct msm_vidc_inst *inst,
 
 	dir = debugfs_create_dir(debugfs_name, parent);
 	if (IS_ERR_OR_NULL(dir)) {
+		dir = NULL;
 		s_vpr_e(inst->sid, "Failed to create debugfs for msm_vidc\n");
 		goto failed_create_dir;
 	}
@@ -722,90 +728,6 @@ inline bool is_print_allowed(u32 sid, u32 level)
 }
 
 /* Mock all the missing parts for successful compilation starts here */
-void trace_msm_smem_buffer_iommu_op_start(char *s, int i, int j, unsigned long k,
-  dma_addr_t iova, unsigned long l)
-{
-}
-void trace_msm_smem_buffer_iommu_op_end(char *s, int i, int j, unsigned long k,
-	dma_addr_t iova, unsigned long l)
-{
-}
-void trace_msm_smem_buffer_dma_op_start(char *s, u32 buffer_type, unsigned long heap_mask,
-	size_t size, u32 align, u32 flags,
-	int map_kernel)
-{
-}
-void trace_msm_smem_buffer_dma_op_end(char *s, u32 buffer_type, unsigned long heap_mask,
-	size_t size, u32 align, u32 flags,
-	int map_kernel)
-{
-}
-void trace_msm_v4l2_vidc_buffer_counter(char *s, int etb, int ebd, int ftb, int fbd)
-{
-}
-void trace_msm_v4l2_vidc_open_start(char *s)
-{
-	(void) s;
-}
-void trace_msm_v4l2_vidc_open_end(char *s)
-{
-	(void) s;
-}
-void trace_msm_v4l2_vidc_close_start(char *s)
-{
-	(void) s;
-}
-void trace_msm_v4l2_vidc_close_end(char *s)
-{
-	(void) s;
-}
-void trace_msm_vidc_common_state_change(void* inst, enum instance_state ins_state, int state)
-{
-	(void) inst;
-	(void) ins_state;
-	(void) state;
-}
-
-void trace_msm_vidc_perf_clock_scale(const char *name, u32 freq)
-{
-	(void) name;
-	(void) freq;
-}
-
-void trace_venus_hfi_var_done(u32 cp_start, u32 cp_size,
-	u32 cp_nonpixel_start, u32 cp_nonpixel_size)
-
-{
-	(void) cp_start;
-	(void) cp_size;
-	(void) cp_nonpixel_start;
-	(void) cp_nonpixel_size;
-}
-
-void trace_msm_v4l2_vidc_buffer_event_start(char *event_type, u32 device_addr,
-	int64_t timestamp, u32 alloc_len,
-	u32 filled_len, u32 offset)
-{
-	(void)event_type;
-	(void) device_addr;
-	(void) timestamp;
-	(void) alloc_len;
-	(void) filled_len;
-	(void) offset;
-}
-
-void trace_msm_v4l2_vidc_buffer_event_end(char *event_type, u32 device_addr,
-	int64_t timestamp, u32 alloc_len,
-	u32 filled_len, u32 offset)
-{
-	(void) event_type;
-	(void) device_addr;
-	(void) timestamp;
-	(void) alloc_len;
-	(void) filled_len;
-	(void) offset;
-}
-
 void do_gettimeofday(struct timeval *__ddl_tv)
 {
 }
