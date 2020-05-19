@@ -17,33 +17,48 @@
  */
 
 /**
- * DOC: wlan_hdd_debugfs_crash_inject.h
+ * DOC: wlan_hdd_sysfs_reassoc.h
  *
- * implementation for creating debugfs file crash_inject
+ * implementation for creating sysfs file reassoc
  */
 
-#ifndef _WLAN_HDD_DEBUGFS_CRASH_INJECT_H
-#define _WLAN_HDD_DEBUGFS_CRASH_INJECT_H
+#ifndef _WLAN_HDD_SYSFS_REASSOC_H
+#define _WLAN_HDD_SYSFS_REASSOC_H
 
-#if defined(WLAN_DEBUGFS) && defined(CONFIG_WLAN_DEBUG_CRASH_INJECT)
+#if defined(WLAN_SYSFS) && defined(CONFIG_WLAN_REASSOC)
 /**
- * wlan_hdd_debugfs_crash_inject_create() - API to create crash_inject
- * @adapter: hdd adapter
+ * hdd_sysfs_reassoc_create() - API to create reassoc
+ * @adapter: pointer to adapter
  *
  * this file is created per adapter.
- * file path: /sys/kernel/debug/wlan_xx/crash_inject
- *                (wlan_xx is adapter name)
+ * file path: /sys/class/net/wlanxx/reassoc
+ * where wlanxx is adapter name
+ *
  * usage:
- *      echo [arg_0] [arg_1] > crash_inject
+ *      echo [arg_0] > reassoc
  *
  * Return: 0 on success and errno on failure
  */
-int wlan_hdd_debugfs_crash_inject_create(struct hdd_adapter *adapter);
+int hdd_sysfs_reassoc_create(struct hdd_adapter *adapter);
+
+/**
+ * hdd_sysfs_reassoc_destroy() -
+ *   API to destroy reassoc
+ * @adapter: pointer to adapter
+ *
+ * Return: none
+ */
+void hdd_sysfs_reassoc_destroy(struct hdd_adapter *adapter);
 #else
 static inline int
-wlan_hdd_debugfs_crash_inject_create(struct hdd_adapter *adapter)
+hdd_sysfs_reassoc_create(struct hdd_adapter *adapter)
 {
 	return 0;
 }
+
+static inline void
+hdd_sysfs_reassoc_destroy(struct hdd_adapter *adapter)
+{
+}
 #endif
-#endif /* #ifndef _WLAN_HDD_DEBUGFS_CRASH_INJECT_H */
+#endif /* #ifndef _WLAN_HDD_SYSFS_REASSOC_H */

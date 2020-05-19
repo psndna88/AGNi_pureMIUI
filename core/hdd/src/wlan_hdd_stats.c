@@ -435,10 +435,10 @@ static bool put_wifi_interface_info(struct wifi_interface_info *stats,
 		    QDF_MAC_ADDR_SIZE, stats->bssid.bytes) ||
 	    nla_put(vendor_event,
 		    QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_INFO_AP_COUNTRY_STR,
-		    CFG_COUNTRY_CODE_LEN, stats->apCountryStr) ||
+		    REG_ALPHA2_LEN + 1, stats->apCountryStr) ||
 	    nla_put(vendor_event,
 		    QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_INFO_COUNTRY_STR,
-		    CFG_COUNTRY_CODE_LEN, stats->countryStr)) {
+		    REG_ALPHA2_LEN + 1, stats->countryStr)) {
 		hdd_err("QCA_WLAN_VENDOR_ATTR put fail");
 		return false;
 	}
@@ -625,10 +625,10 @@ bool hdd_get_interface_info(struct hdd_adapter *adapter,
 	}
 
 	qdf_mem_copy(info->countryStr,
-		     mac->scan.countryCodeCurrent, CFG_COUNTRY_CODE_LEN);
+		     mac->scan.countryCodeCurrent, REG_ALPHA2_LEN + 1);
 
 	qdf_mem_copy(info->apCountryStr,
-		     mac->scan.countryCodeCurrent, CFG_COUNTRY_CODE_LEN);
+		     mac->scan.countryCodeCurrent, REG_ALPHA2_LEN + 1);
 
 	return true;
 }
@@ -988,14 +988,16 @@ hdd_link_layer_process_radio_stats(struct hdd_adapter *adapter,
 				   struct wifi_radio_stats *radio_stat,
 				   u32 num_radio)
 {
-	int status, i, nr, ret;
+	int i, nr, ret;
 	struct wifi_radio_stats *radio_stat_save = radio_stat;
-	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 
-
-	status = wlan_hdd_validate_context(hdd_ctx);
-	if (0 != status)
-		return;
+	/*
+	 * There is no need for wlan_hdd_validate_context here. This is a NB
+	 * operation that will come with DSC synchronization. This ensures that
+	 * no driver transition will take place as long as this operation is
+	 * not complete. Thus the need to check validity of hdd_context is not
+	 * required.
+	 */
 
 	for (i = 0; i < num_radio; i++) {
 		hdd_nofl_debug("LL_STATS_RADIO"
@@ -3266,6 +3268,17 @@ wlan_hdd_cfg80211_stats_ext2_callback(hdd_handle_t hdd_handle,
 	cfg80211_vendor_event(vendor_event, GFP_KERNEL);
 }
 
+#else
+void wlan_hdd_cfg80211_stats_ext_callback(hdd_handle_t hdd_handle,
+					  struct stats_ext_event *data)
+{
+}
+
+void
+wlan_hdd_cfg80211_stats_ext2_callback(hdd_handle_t hdd_handle,
+				      struct sir_sme_rx_aggr_hole_ind *pmsg)
+{
+}
 #endif /* End of WLAN_FEATURE_STATS_EXT */
 
 #ifdef LINKSPEED_DEBUG_ENABLED
@@ -6203,7 +6216,6 @@ static void hdd_lost_link_cp_stats_info_cb(void *stats_ev)
 	struct hdd_adapter *adapter;
 	struct stats_event *ev = stats_ev;
 	uint8_t i;
-	struct hdd_station_ctx *sta_ctx;
 
 	if (wlan_hdd_validate_context(hdd_ctx))
 		return;
@@ -6216,16 +6228,11 @@ static void hdd_lost_link_cp_stats_info_cb(void *stats_ev)
 			hdd_debug("invalid adapter");
 			continue;
 		}
-		sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
-		if ((sta_ctx) &&
-		    (eConnectionState_Associated !=
-					sta_ctx->conn_info.conn_state)) {
-			adapter->rssi_on_disconnect =
+		adapter->rssi_on_disconnect =
 					ev->vdev_summary_stats[i].stats.rssi;
-			hdd_debug("rssi on disconnect %d for " QDF_MAC_ADDR_STR,
-				  adapter->rssi_on_disconnect,
-				  QDF_MAC_ADDR_ARRAY(adapter->mac_addr.bytes));
-		}
+		hdd_debug("rssi %d for " QDF_MAC_ADDR_STR,
+			  adapter->rssi_on_disconnect,
+			  QDF_MAC_ADDR_ARRAY(adapter->mac_addr.bytes));
 	}
 }
 

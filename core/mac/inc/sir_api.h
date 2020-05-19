@@ -55,7 +55,6 @@ struct mac_context;
 /* / Max supported channel list */
 #define SIR_MAX_SUPPORTED_CHANNEL_LIST      96
 #define CFG_VALID_CHANNEL_LIST_LEN              100
-#define CFG_COUNTRY_CODE_LEN 3
 
 #define SIR_MDIE_SIZE               3   /* MD ID(2 bytes), Capability(1 byte) */
 
@@ -711,6 +710,7 @@ struct bss_description {
 #endif
 	uint32_t assoc_disallowed;
 	uint32_t adaptive_11r_ap;
+	uint32_t mbo_oce_enabled_ap;
 #if defined(WLAN_SAE_SINGLE_PMK) && defined(WLAN_FEATURE_ROAM_OFFLOAD)
 	uint32_t is_single_pmk;
 #endif
@@ -943,10 +943,6 @@ struct join_req {
 
 	tAniEdType MCEncryptionType;
 	enum ani_akm_type akm;
-
-#ifdef WLAN_FEATURE_11W
-	tAniEdType MgmtEncryptionType;
-#endif
 
 	bool is11Rconnection;
 	bool is_adaptive_11r_connection;
@@ -1419,7 +1415,7 @@ typedef struct sAniGetSnrReq {
 typedef struct sAniGenericChangeCountryCodeReq {
 	uint16_t msgType;       /* message type is same as the request type */
 	uint16_t msgLen;        /* length of the entire request */
-	uint8_t countryCode[CFG_COUNTRY_CODE_LEN];  /* 3 char country code */
+	uint8_t countryCode[REG_ALPHA2_LEN + 1];  /* 3 char country code */
 } tAniGenericChangeCountryCodeReq, *tpAniGenericChangeCountryCodeReq;
 
 /**
@@ -3542,9 +3538,9 @@ struct wifi_interface_info {
 	/* bssid */
 	struct qdf_mac_addr bssid;
 	/* country string advertised by AP */
-	uint8_t apCountryStr[CFG_COUNTRY_CODE_LEN];
+	uint8_t apCountryStr[REG_ALPHA2_LEN + 1];
 	/* country string for this association */
-	uint8_t countryStr[CFG_COUNTRY_CODE_LEN];
+	uint8_t countryStr[REG_ALPHA2_LEN + 1];
 };
 
 /**
@@ -4429,18 +4425,6 @@ struct sir_qos_params {
 	uint8_t aifsn;
 	uint8_t cwmin;
 	uint8_t cwmax;
-};
-
-/**
- * enum powersave_qpower_mode: QPOWER modes
- * @QPOWER_DISABLED: Qpower is disabled
- * @QPOWER_ENABLED: Qpower is enabled
- * @QPOWER_DUTY_CYCLING: Qpower is enabled with duty cycling
- */
-enum powersave_qpower_mode {
-	QPOWER_DISABLED = 0,
-	QPOWER_ENABLED = 1,
-	QPOWER_DUTY_CYCLING = 2
 };
 
 /**

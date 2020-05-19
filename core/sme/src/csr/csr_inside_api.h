@@ -513,18 +513,6 @@ tCsrScanResultInfo *csr_scan_result_get_next(struct mac_context *mac,
 					     tScanResultHandle hScanResult);
 
 /*
- * csr_get_country_code() -
- * This function is to get the country code current being used
- * pBuf - Caller allocated buffer with at least 3 bytes, upon success return,
- * this has the country code
- * pbLen - Caller allocated, as input, it indicates the length of pBuf. Upon
- * success return, this contains the length of the data in pBuf
- * Return QDF_STATUS
- */
-QDF_STATUS csr_get_country_code(struct mac_context *mac, uint8_t *pBuf,
-				uint8_t *pbLen);
-
-/*
  * csr_get_regulatory_domain_for_country() -
  * This function is to get the regulatory domain for a country.
  * This function must be called after CFG is downloaded and all the band/mode
@@ -1019,15 +1007,6 @@ csr_roam_set_bss_config_cfg(struct mac_context *mac_ctx, uint32_t session_id,
 
 void csr_prune_channel_list_for_mode(struct mac_context *mac,
 				     struct csr_channel *pChannelList);
-
-#ifdef WLAN_FEATURE_11W
-bool csr_is_mfpc_capable(struct sDot11fIERSN *rsn);
-#else
-static inline bool csr_is_mfpc_capable(struct sDot11fIERSN *rsn)
-{
-	return false;
-}
-#endif
 
 /**
  * csr_get_rf_band()

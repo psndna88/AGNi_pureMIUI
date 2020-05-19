@@ -1793,7 +1793,6 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 	eSapDfsCACState_t cac_state = eSAP_DFS_DO_NOT_SKIP_CAC;
 	struct hdd_config *cfg = NULL;
 	struct wlan_dfs_info dfs_info;
-	uint8_t cc_len = WLAN_SVC_COUNTRY_CODE_LEN;
 	struct hdd_adapter *con_sap_adapter;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	tSap_StationAssocReassocCompleteEvent *event;
@@ -1845,7 +1844,7 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 	mac_handle = hdd_ctx->mac_handle;
 	dfs_info.channel = wlan_reg_freq_to_chan(
 			hdd_ctx->pdev, ap_ctx->operating_chan_freq);
-	sme_get_country_code(mac_handle, dfs_info.country_code, &cc_len);
+	wlan_reg_get_cc_and_src(hdd_ctx->psoc, dfs_info.country_code);
 	sta_id = sap_event->sapevt.sapStartBssCompleteEvent.staId;
 	sap_config = &adapter->session.ap.sap_config;
 
@@ -6298,7 +6297,7 @@ static int __wlan_hdd_cfg80211_start_ap(struct wiphy *wiphy,
 	struct sme_sta_inactivity_timeout  *sta_inactivity_timer;
 	uint8_t channel, mandt_chnl_list = 0;
 	bool sta_sap_scc_on_dfs_chan;
-	uint16_t sta_cnt, sap_cnt;
+	uint16_t sta_cnt, gc_cnt, sap_cnt;
 	bool val;
 	struct wireless_dev *wdev = dev->ieee80211_ptr;
 	struct cfg80211_chan_def new_chandef;
@@ -6392,17 +6391,20 @@ static int __wlan_hdd_cfg80211_start_ap(struct wiphy *wiphy,
 							hdd_ctx->psoc);
 	sta_cnt = policy_mgr_mode_specific_connection_count(hdd_ctx->psoc,
 							    PM_STA_MODE, NULL);
+	gc_cnt = policy_mgr_mode_specific_connection_count(hdd_ctx->psoc,
+						PM_P2P_CLIENT_MODE, NULL);
 	sap_cnt = policy_mgr_mode_specific_connection_count(hdd_ctx->psoc,
 							    PM_SAP_MODE, NULL);
 
-	hdd_debug("sta_sap_scc_on_dfs_chan %u, sta_cnt %u",
-		  sta_sap_scc_on_dfs_chan, sta_cnt);
+	hdd_debug("sta_sap_scc_on_dfs_chan %u, sta_cnt %u gc_cnt %u",
+		  sta_sap_scc_on_dfs_chan, sta_cnt, gc_cnt);
 
 	/* if sta_sap_scc_on_dfs_chan ini is set, DFS master capability is
 	 * assumed disabled in the driver.
 	 */
 	if ((wlan_reg_get_channel_state(hdd_ctx->pdev, channel) ==
-	     CHANNEL_STATE_DFS) && !sta_cnt && sta_sap_scc_on_dfs_chan &&
+	     CHANNEL_STATE_DFS) && !sta_cnt && !gc_cnt &&
+	     sta_sap_scc_on_dfs_chan &&
 	     !ucfg_policy_mgr_get_dfs_master_dynamic_enabled(
 				hdd_ctx->psoc, adapter->vdev_id)) {
 		hdd_err("SAP not allowed on DFS channel if no dfs master capability!!");

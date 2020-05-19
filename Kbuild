@@ -122,9 +122,6 @@ HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_debugfs_unit_test.o
 ifeq ($(CONFIG_WLAN_MWS_INFO_DEBUGFS), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_debugfs_coex.o
 endif
-ifeq ($(CONFIG_WLAN_DEBUG_CRASH_INJECT), y)
-HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_debugfs_crash_inject.o
-endif
 endif
 
 ifeq ($(CONFIG_WLAN_CONV_SPECTRAL_ENABLE),y)
@@ -263,6 +260,20 @@ endif
 
 ifeq ($(CONFIG_WLAN_SYSFS), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs.o
+ifeq ($(CONFIG_WLAN_SET_FW_MODE_CFG), y)
+HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_set_fw_mode_cfg.o
+endif
+ifeq ($(CONFIG_WLAN_REASSOC), y)
+HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_reassoc.o
+endif
+ifeq ($(CONFIG_WLAN_DEBUG_CRASH_INJECT), y)
+HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_crash_inject.o
+endif
+ifeq ($(CONFIG_FEATURE_UNIT_TEST_SUSPEND), y)
+HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_suspend_resume.o
+endif
+HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_unit_test.o
+HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_modify_acl.o
 endif
 
 ifeq ($(CONFIG_QCACLD_FEATURE_FW_STATE), y)
@@ -2489,6 +2500,8 @@ endif
 endif
 cppflags-$(CONFIG_UNIT_TEST) += -DWLAN_UNIT_TEST
 cppflags-$(CONFIG_WLAN_DEBUG_CRASH_INJECT) += -DCONFIG_WLAN_DEBUG_CRASH_INJECT
+cppflags-$(CONFIG_WLAN_SET_FW_MODE_CFG) += -DCONFIG_WLAN_SET_FW_MODE_CFG
+cppflags-$(CONFIG_WLAN_REASSOC) += -DCONFIG_WLAN_REASSOC
 cppflags-$(CONFIG_FEATURE_UNIT_TEST_SUSPEND) += -DWLAN_SUSPEND_RESUME_TEST
 cppflags-$(CONFIG_FEATURE_WLM_STATS) += -DFEATURE_WLM_STATS
 
@@ -2979,6 +2992,7 @@ cppflags-$(CONFIG_WLAN_FEATURE_11AX) += -DWLAN_FEATURE_11AX_BSS_COLOR
 cppflags-$(CONFIG_WLAN_FEATURE_11AX) += -DSUPPORT_11AX_D3
 cppflags-$(CONFIG_RXDMA_ERR_PKT_DROP) += -DRXDMA_ERR_PKT_DROP
 cppflags-$(CONFIG_MAX_ALLOC_PAGE_SIZE) += -DMAX_ALLOC_PAGE_SIZE
+cppflags-$(CONFIG_DELIVERY_TO_STACK_STATUS_CHECK) += -DDELIVERY_TO_STACK_STATUS_CHECK
 
 cppflags-$(CONFIG_LITHIUM) += -DWAR_TXDMA_LIMITATION
 cppflags-$(CONFIG_LITHIUM) += -DFEATURE_AST

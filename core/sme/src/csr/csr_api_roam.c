@@ -66,6 +66,7 @@
 #include "wlan_policy_mgr_i.h"
 #include "wlan_scan_utils_api.h"
 #include "wlan_p2p_cfg_api.h"
+#include "cfg_nan_api.h"
 
 #include <ol_defines.h>
 #include "wlan_pkt_capture_ucfg_api.h"
@@ -1009,9 +1010,9 @@ QDF_STATUS csr_init_chan_list(struct mac_context *mac, uint8_t *alpha2)
 	mac->scan.domainIdCurrent = 0;
 
 	qdf_mem_copy(mac->scan.countryCodeCurrent,
-		     mac->scan.countryCodeDefault, CFG_COUNTRY_CODE_LEN);
+		     mac->scan.countryCodeDefault, REG_ALPHA2_LEN + 1);
 	qdf_mem_copy(mac->scan.countryCodeElected,
-		     mac->scan.countryCodeDefault, CFG_COUNTRY_CODE_LEN);
+		     mac->scan.countryCodeDefault, REG_ALPHA2_LEN + 1);
 	status = csr_get_channel_and_power_list(mac);
 
 	return status;
@@ -1024,7 +1025,7 @@ QDF_STATUS csr_set_channels(struct mac_context *mac,
 	uint8_t index = 0;
 
 	qdf_mem_copy(pParam->Csr11dinfo.countryCode,
-		     mac->scan.countryCodeCurrent, CFG_COUNTRY_CODE_LEN);
+		     mac->scan.countryCodeCurrent, REG_ALPHA2_LEN + 1);
 	for (index = 0; index < mac->scan.base_channels.numChannels;
 	     index++) {
 		pParam->Csr11dinfo.Channels.channel_freq_list[index] =
@@ -3271,7 +3272,7 @@ static QDF_STATUS csr_init11d_info(struct mac_context *mac, tCsr11dinfo *ps11din
 	/* legacy maintenance */
 
 	qdf_mem_copy(mac->scan.countryCodeDefault, ps11dinfo->countryCode,
-		     CFG_COUNTRY_CODE_LEN);
+		     REG_ALPHA2_LEN + 1);
 
 	/* Tush: at csropen get this initialized with default,
 	 * during csr reset if this already set with some value
@@ -3279,7 +3280,7 @@ static QDF_STATUS csr_init11d_info(struct mac_context *mac, tCsr11dinfo *ps11din
 	 */
 	if (0 == mac->scan.countryCodeCurrent[0]) {
 		qdf_mem_copy(mac->scan.countryCodeCurrent,
-			     ps11dinfo->countryCode, CFG_COUNTRY_CODE_LEN);
+			     ps11dinfo->countryCode, REG_ALPHA2_LEN + 1);
 	}
 	/* need to add the max power channel list */
 	pChanInfo =
@@ -6337,12 +6338,16 @@ static void csr_get_peer_rssi_cb(struct stats_event *ev, void *cookie)
 {
 	struct mac_context *mac = (struct mac_context *)cookie;
 
-	if (!mac)
-		goto disconnect_stats_complete;
+	if (!mac) {
+		sme_err("Invalid mac ctx");
+		return;
+	}
+
 	if (!ev->peer_stats) {
 		sme_debug("%s no peer stats\n", __func__);
 		goto disconnect_stats_complete;
 	}
+
 	mac->peer_rssi = ev->peer_stats->peer_rssi;
 	mac->peer_txrate = ev->peer_stats->tx_rate;
 	mac->peer_rxrate = ev->peer_stats->rx_rate;
@@ -9384,8 +9389,6 @@ csr_roam_save_connected_information(struct mac_context *mac,
 		pConnectProfile->mcEncryptionType =
 			pProfile->negotiatedMCEncryptionType;
 		pConnectProfile->mcEncryptionInfo = pProfile->mcEncryptionType;
-		pConnectProfile->mgmt_encryption_type =
-				pProfile->mgmt_encryption_type;
 		pConnectProfile->BSSType = pProfile->BSSType;
 		pConnectProfile->modifyProfileFields.uapsd_mask =
 			pProfile->uapsd_mask;
@@ -11528,7 +11531,7 @@ csr_roam_get_scan_filter_from_profile(struct mac_context *mac_ctx,
 		 * of the criteria.
 		 */
 		qdf_mem_copy(filter->country, profile->countryCode,
-			     CFG_COUNTRY_CODE_LEN);
+			     REG_ALPHA2_LEN + 1);
 
 	filter->mobility_domain = profile->mdid.mobility_domain;
 	qdf_mem_copy(filter->bssid_hint.bytes, profile->bssid_hint.bytes,
@@ -15264,55 +15267,6 @@ static QDF_STATUS csr_set_ldpc_exception(struct mac_context *mac_ctx,
 	return QDF_STATUS_SUCCESS;
 }
 
-#ifdef WLAN_FEATURE_11W
-/**
- * csr_is_mfpc_capable() - is MFPC capable
- * @ies: AP information element
- *
- * Return: true if MFPC capable, false otherwise
- */
-bool csr_is_mfpc_capable(struct sDot11fIERSN *rsn)
-{
-	bool mfpc_capable = false;
-
-	if (rsn && rsn->present &&
-	    ((rsn->RSN_Cap[0] >> 7) & 0x01))
-		mfpc_capable = true;
-
-	return mfpc_capable;
-}
-
-/**
- * csr_set_mgmt_enc_type() - set mgmt enc type for PMF
- * @profile: roam profile
- * @ies: AP ie
- * @csr_join_req: csr join req
- *
- * Return: void
- */
-static void csr_set_mgmt_enc_type(struct csr_roam_profile *profile,
-				  tDot11fBeaconIEs *ies,
-				  struct join_req *csr_join_req)
-{
-	if (profile->MFPEnabled)
-		csr_join_req->MgmtEncryptionType =
-					profile->mgmt_encryption_type;
-	else
-		csr_join_req->MgmtEncryptionType = eSIR_ED_NONE;
-
-	if (profile->MFPEnabled &&
-	   !(profile->MFPRequired) &&
-	   !csr_is_mfpc_capable(&ies->RSN))
-		csr_join_req->MgmtEncryptionType = eSIR_ED_NONE;
-}
-#else
-static inline void csr_set_mgmt_enc_type(struct csr_roam_profile *profile,
-					 tDot11fBeaconIEs *pIes,
-					 struct join_req *csr_join_req)
-{
-}
-#endif
-
 #ifdef WLAN_FEATURE_FILS_SK
 /*
  * csr_update_fils_connection_info: Copy fils connection info to join request
@@ -16219,7 +16173,6 @@ QDF_STATUS csr_send_join_req_msg(struct mac_context *mac, uint32_t sessionId,
 		csr_join_req->MCEncryptionType =
 				csr_translate_encrypt_type_to_ed_type
 					(pProfile->negotiatedMCEncryptionType);
-	csr_set_mgmt_enc_type(pProfile, pIes, csr_join_req);
 #ifdef FEATURE_WLAN_ESE
 		ese_config =  mac->mlme_cfg->lfr.ese_enabled;
 #endif
@@ -18177,22 +18130,38 @@ void csr_rso_command_fill_11w_params(struct mac_context *mac_ctx,
 #endif
 
 /**
- * csr_get_peer_pmf_status() - Get the PMF capability of peer
+ * csr_update_btm_offload_config() - Update btm config param to fw
  * @mac_ctx: Global mac ctx
+ * @command: Roam offload command
+ * @req_buf: roam offload scan request
  * @session: roam session
  *
- * Return: True if PMF is enabled, false otherwise.
+ * Return: None
  */
-static bool csr_get_peer_pmf_status(struct mac_context *mac_ctx,
-				    struct csr_roam_session *session)
+static void csr_update_btm_offload_config(struct mac_context *mac_ctx,
+					  uint8_t command,
+					  struct roam_offload_scan_req *req_buf,
+					  struct csr_roam_session *session)
 {
 	struct wlan_objmgr_peer *peer;
 	bool is_pmf_enabled;
 
+	req_buf->btm_offload_config =
+			mac_ctx->mlme_cfg->btm.btm_offload_config;
+
+	/* Return if INI is disabled */
+	if (!req_buf->btm_offload_config)
+		return;
+
+	/* For RSO Stop Disable BTM offload to firmware */
+	if (command == ROAM_SCAN_OFFLOAD_STOP) {
+		req_buf->btm_offload_config = 0;
+		return;
+	}
 
 	if (!session->pConnectBssDesc) {
 		sme_err("Connected Bss Desc is NULL");
-		return false;
+		return;
 	}
 
 	peer = wlan_objmgr_get_peer(mac_ctx->psoc,
@@ -18202,7 +18171,7 @@ static bool csr_get_peer_pmf_status(struct mac_context *mac_ctx,
 	if (!peer) {
 		sme_debug("Peer of peer_mac %pM not found",
 			  session->pConnectBssDesc->bssId);
-		return false;
+		return;
 	}
 
 	is_pmf_enabled = mlme_get_peer_pmf_status(peer);
@@ -18210,7 +18179,12 @@ static bool csr_get_peer_pmf_status(struct mac_context *mac_ctx,
 	sme_debug("get is_pmf_enabled %d for %pM", is_pmf_enabled,
 		  session->pConnectBssDesc->bssId);
 
-	return is_pmf_enabled;
+	/* If peer does not support PMF in case of OCE/MBO
+	 * Connection, Disable BTM offload to firmware.
+	 */
+	if (session->pConnectBssDesc->mbo_oce_enabled_ap &&
+	    !is_pmf_enabled)
+		req_buf->btm_offload_config = 0;
 }
 
 /**
@@ -18484,15 +18458,7 @@ csr_create_roam_scan_offload_request(struct mac_context *mac_ctx,
 	req_buf->lca_config_params.num_disallowed_aps =
 		mac_ctx->mlme_cfg->lfr.lfr3_num_disallowed_aps;
 
-	/* For RSO Stop or if peer does not support PMF, Disable BTM offload
-	 * to firmware.
-	 */
-	if (command == ROAM_SCAN_OFFLOAD_STOP ||
-	    !csr_get_peer_pmf_status(mac_ctx, session))
-		req_buf->btm_offload_config = 0;
-	else
-		req_buf->btm_offload_config =
-			mac_ctx->mlme_cfg->btm.btm_offload_config;
+	csr_update_btm_offload_config(mac_ctx, command, req_buf, session);
 
 	req_buf->btm_solicited_timeout =
 		mac_ctx->mlme_cfg->btm.btm_solicited_timeout;
@@ -19624,6 +19590,7 @@ csr_roam_offload_scan(struct mac_context *mac_ctx, uint8_t session_id,
 	bool prev_roaming_state;
 	enum csr_akm_type roam_profile_akm = eCSR_AUTH_TYPE_UNKNOWN;
 	uint32_t fw_akm_bitmap;
+	bool p2p_disable_sta_roaming = 0, nan_disable_sta_roaming = 0;
 
 	sme_debug("RSO Command %d, vdev %d, Reason %d", command,
 		   session_id, reason);
@@ -19708,14 +19675,22 @@ csr_roam_offload_scan(struct mac_context *mac_ctx, uint8_t session_id,
 		}
 	}
 
-	if (cfg_p2p_is_roam_config_disabled(mac_ctx->psoc) &&
-	    (command == ROAM_SCAN_OFFLOAD_START ||
-	     command == ROAM_SCAN_OFFLOAD_UPDATE_CFG) &&
-	    (policy_mgr_mode_specific_connection_count(mac_ctx->psoc,
+	p2p_disable_sta_roaming =
+		(cfg_p2p_is_roam_config_disabled(mac_ctx->psoc) &&
+		(policy_mgr_mode_specific_connection_count(mac_ctx->psoc,
 						PM_P2P_CLIENT_MODE, NULL) ||
+		policy_mgr_mode_specific_connection_count(mac_ctx->psoc,
+						PM_P2P_GO_MODE, NULL)));
+	nan_disable_sta_roaming =
+	    (cfg_nan_is_roam_config_disabled(mac_ctx->psoc) &&
 	    policy_mgr_mode_specific_connection_count(mac_ctx->psoc,
-						PM_P2P_GO_MODE, NULL))) {
-		sme_info("roaming not supported for active p2p connection");
+						PM_NDI_MODE, NULL));
+
+	if ((command == ROAM_SCAN_OFFLOAD_START ||
+	    command == ROAM_SCAN_OFFLOAD_UPDATE_CFG) &&
+	    (p2p_disable_sta_roaming || nan_disable_sta_roaming)) {
+		sme_info("roaming not supported for active %s connection",
+			 p2p_disable_sta_roaming ? "p2p" : "ndi");
 		return QDF_STATUS_E_FAILURE;
 	}
 	/*
@@ -21625,6 +21600,7 @@ static QDF_STATUS csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 	struct mlme_roam_after_data_stall *vdev_roam_params;
 	bool abort_host_scan_cap = false;
 	wlan_scan_id scan_id;
+	struct wlan_crypto_pmksa *pmksa;
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac_ctx->psoc, session_id,
 						    WLAN_LEGACY_SME_ID);
@@ -21907,6 +21883,35 @@ static QDF_STATUS csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 		} else {
 			sme_debug("PMKID Not found in cache for " QDF_MAC_ADDR_STR,
 				  QDF_MAC_ADDR_ARRAY(pmkid_cache->BSSID.bytes));
+			if (roam_synch_data->pmk_len) {
+				pmksa = qdf_mem_malloc(sizeof(*pmksa));
+				if (!pmksa) {
+					status = QDF_STATUS_E_NOMEM;
+					goto end;
+				}
+
+				session->pmk_len = roam_synch_data->pmk_len;
+				qdf_mem_zero(session->psk_pmk,
+					     sizeof(session->psk_pmk));
+				qdf_mem_copy(session->psk_pmk,
+					     roam_synch_data->pmk,
+					     session->pmk_len);
+
+				qdf_copy_macaddr(&pmksa->bssid,
+						 &session->
+						 connectedProfile.bssid);
+				qdf_mem_copy(pmksa->pmkid,
+					     roam_synch_data->pmkid, PMKID_LEN);
+				qdf_mem_copy(pmksa->pmk, roam_synch_data->pmk,
+					     roam_synch_data->pmk_len);
+				pmksa->pmk_len = roam_synch_data->pmk_len;
+
+				if (wlan_crypto_set_del_pmksa(vdev, pmksa, true)
+					!= QDF_STATUS_SUCCESS) {
+					qdf_mem_zero(pmksa, sizeof(*pmksa));
+					qdf_mem_free(pmksa);
+				}
+			}
 		}
 		qdf_mem_zero(pmkid_cache, sizeof(pmkid_cache));
 		qdf_mem_free(pmkid_cache);

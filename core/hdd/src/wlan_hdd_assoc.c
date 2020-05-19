@@ -3762,7 +3762,7 @@ bool hdd_save_peer(struct hdd_station_ctx *sta_ctx,
 	int idx;
 	struct qdf_mac_addr *mac_addr;
 
-	for (idx = 0; idx < SIR_MAX_NUM_STA_IN_IBSS; idx++) {
+	for (idx = 0; idx < MAX_PEERS; idx++) {
 		mac_addr = &sta_ctx->conn_info.peer_macaddr[idx];
 		if (qdf_is_macaddr_zero(mac_addr)) {
 			hdd_debug("adding peer: %pM at idx: %d",
@@ -3781,7 +3781,7 @@ void hdd_delete_peer(struct hdd_station_ctx *sta_ctx,
 	int i;
 	struct qdf_mac_addr *mac_addr;
 
-	for (i = 0; i < SIR_MAX_NUM_STA_IN_IBSS; i++) {
+	for (i = 0; i < MAX_PEERS; i++) {
 		mac_addr = &sta_ctx->conn_info.peer_macaddr[i];
 		if (qdf_is_macaddr_equal(mac_addr, peer_mac_addr)) {
 			qdf_zero_macaddr(mac_addr);
@@ -3796,7 +3796,7 @@ bool hdd_any_valid_peer_present(struct hdd_adapter *adapter)
 	int i;
 	struct qdf_mac_addr *mac_addr;
 
-	for (i = 0; i < SIR_MAX_NUM_STA_IN_IBSS; i++) {
+	for (i = 0; i < MAX_PEERS; i++) {
 		mac_addr = &sta_ctx->conn_info.peer_macaddr[i];
 		if (!qdf_is_macaddr_zero(mac_addr) &&
 		    !qdf_is_macaddr_broadcast(mac_addr)) {
@@ -5375,8 +5375,10 @@ static int32_t hdd_process_genie(struct hdd_adapter *adapter,
 			hdd_translate_rsn_to_csr_encryption_type(
 					dot11_rsn_ie.gp_cipher_suite);
 #ifdef WLAN_FEATURE_11W
-		*mfp_required = (dot11_rsn_ie.RSN_Cap[0] >> 6) & 0x1;
-		*mfp_capable = csr_is_mfpc_capable(&dot11_rsn_ie);
+		*mfp_required = dot11_rsn_ie.RSN_Cap[0] &
+					WLAN_CRYPTO_RSN_CAP_MFP_REQUIRED;
+		*mfp_capable =  dot11_rsn_ie.RSN_Cap[0] &
+					WLAN_CRYPTO_RSN_CAP_MFP_ENABLED;
 #endif
 		qdf_mem_copy(&rsn_cap, dot11_rsn_ie.RSN_Cap, sizeof(rsn_cap));
 		wlan_crypto_set_vdev_param(adapter->vdev,

@@ -1311,7 +1311,7 @@ static void mlme_init_acs_cfg(struct wlan_objmgr_psoc *psoc,
 		cfg_get(psoc, CFG_USER_ACS_DFS_LTE);
 	acs->is_external_acs_policy =
 		cfg_get(psoc, CFG_EXTERNAL_ACS_POLICY);
-
+	acs->np_chan_weightage = cfg_get(psoc, CFG_ACS_NP_CHAN_WEIGHT);
 	mlme_acs_parse_weight_list(psoc, acs);
 }
 
@@ -2357,9 +2357,6 @@ static void mlme_init_reg_cfg(struct wlan_objmgr_psoc *psoc,
 
 	wlan_objmgr_pdev_release_ref(pdev, WLAN_MLME_NB_ID);
 
-	qdf_str_lcopy(reg->country_code, cfg_default(CFG_COUNTRY_CODE),
-		      sizeof(reg->country_code));
-	reg->country_code_len = (uint8_t)sizeof(reg->country_code);
 	mlme_init_acs_avoid_freq_list(psoc, reg);
 }
 

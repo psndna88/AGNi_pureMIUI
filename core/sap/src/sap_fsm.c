@@ -2326,7 +2326,7 @@ static QDF_STATUS sap_fsm_state_init(struct sap_context *sap_ctx,
 		 * request so, set the third to false.
 		 */
 		qdf_status = sap_validate_chan(sap_ctx, false, true);
-		if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
+		if (QDF_IS_STATUS_ERROR(qdf_status)) {
 			QDF_TRACE(QDF_MODULE_ID_SAP,
 				  QDF_TRACE_LEVEL_ERROR,
 				  FL("channel is not valid!"));
@@ -2335,7 +2335,7 @@ static QDF_STATUS sap_fsm_state_init(struct sap_context *sap_ctx,
 
 		qdf_status = sap_goto_starting(sap_ctx, sap_event,
 					       mac_ctx, mac_handle);
-		if (!QDF_IS_STATUS_ERROR(qdf_status))
+		if (QDF_IS_STATUS_ERROR(qdf_status))
 			sap_err("sap_goto_starting failed");
 	} else if (msg == eSAP_DFS_CHANNEL_CAC_START) {
 		if (sap_ctx->is_chan_change_inprogress) {
@@ -2532,7 +2532,7 @@ static QDF_STATUS sap_fsm_state_starting(struct sap_context *sap_ctx,
 		if (sap_ctx->ch_params.ch_width == CH_WIDTH_160MHZ) {
 			is_dfs = wlan_reg_get_5g_bonded_channel_state_for_freq(
 					mac_ctx->pdev, sap_chan_freq,
-					CH_WIDTH_160MHZ);
+					CH_WIDTH_160MHZ) == CHANNEL_STATE_DFS;
 		} else if (sap_ctx->ch_params.ch_width == CH_WIDTH_80P80MHZ) {
 			if (wlan_reg_get_channel_state_for_freq(
 							mac_ctx->pdev,
@@ -2938,7 +2938,7 @@ sapconvert_to_csr_profile(struct sap_config *config, eCsrRoamBssType bssType,
 	/* country code */
 	if (config->countryCode[0])
 		qdf_mem_copy(profile->countryCode, config->countryCode,
-			     CFG_COUNTRY_CODE_LEN);
+			     REG_ALPHA2_LEN + 1);
 	profile->ieee80211d = config->ieee80211d;
 	/* wps config info */
 	profile->wps_state = config->wps_state;
@@ -3407,6 +3407,10 @@ static QDF_STATUS sap_get_freq_list(struct sap_context *sap_ctx,
 					mac_ctx->psoc,
 					WLAN_REG_CH_TO_FREQ(loop_count)))
 				continue;
+			normalize_factor =
+				MLME_GET_DFS_CHAN_WEIGHT(
+				mac_ctx->mlme_cfg->acs.np_chan_weightage);
+			freq_present_in_list = true;
 		}
 
 		/* Dont scan ETSI13 SRD channels if the ETSI13 SRD channels

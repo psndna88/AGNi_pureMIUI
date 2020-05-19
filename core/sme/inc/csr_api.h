@@ -277,7 +277,7 @@ typedef struct sCsrChnPower_ {
 
 typedef struct tagCsr11dinfo {
 	sCsrChannel Channels;
-	uint8_t countryCode[CFG_COUNTRY_CODE_LEN + 1];
+	uint8_t countryCode[REG_ALPHA2_LEN + 1];
 	/* max power channel list */
 	sCsrChnPower ChnPower[CFG_VALID_CHANNEL_LIST_LEN];
 } tCsr11dinfo;
@@ -709,7 +709,6 @@ struct csr_roam_profile {
 	uint8_t MFPRequired;
 	uint8_t MFPCapable;
 #endif
-	tAniEdType mgmt_encryption_type;
 	tCsrKeys Keys;
 	tCsrChannelInfo ChannelInfo;
 	uint32_t op_freq;
@@ -744,7 +743,7 @@ struct csr_roam_profile {
 	 */
 	uint8_t *pAddIEAssoc;
 	/* it is ignored if [0] is 0. */
-	uint8_t countryCode[CFG_COUNTRY_CODE_LEN];
+	uint8_t countryCode[REG_ALPHA2_LEN + 1];
 	/* WPS Association if true => auth and ecryption should be ignored */
 	bool bWPSAssociation;
 	bool bOSENAssociation;
@@ -806,8 +805,6 @@ typedef struct tagCsrRoamConnectedProfile {
 	tCsrEncryptionList EncryptionInfo;
 	eCsrEncryptionType mcEncryptionType;
 	tCsrEncryptionList mcEncryptionInfo;
-	/* group management cipher suite used for 11w */
-	tAniEdType mgmt_encryption_type;
 	uint8_t country_code[WNI_CFG_COUNTRY_CODE_LEN];
 	uint32_t vht_channel_width;
 	tCsrKeys Keys;

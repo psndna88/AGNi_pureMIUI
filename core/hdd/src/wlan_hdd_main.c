@@ -2554,7 +2554,8 @@ static void hdd_mon_mode_ether_setup(struct net_device *dev)
  */
 static void hdd_mon_turn_off_ps_and_wow(struct hdd_context *hdd_ctx)
 {
-	ucfg_pmo_set_power_save_mode(hdd_ctx->psoc, PS_NOT_SUPPORTED);
+	ucfg_pmo_set_power_save_mode(hdd_ctx->psoc,
+				     PMO_PS_ADVANCED_POWER_SAVE_DISABLE);
 	ucfg_pmo_set_wow_enable(hdd_ctx->psoc, PMO_WOW_DISABLE_BOTH);
 }
 
@@ -2860,6 +2861,8 @@ int hdd_start_adapter(struct hdd_adapter *adapter)
 	wlan_hdd_update_dbs_scan_and_fw_mode_config();
 
 exit_with_success:
+	hdd_create_adapter_sysfs_files(adapter);
+
 	hdd_exit();
 
 	return 0;
@@ -3783,9 +3786,7 @@ int hdd_wlan_start_modules(struct hdd_context *hdd_ctx, bool reinit)
 		 */
 		hdd_spectral_register_to_dbr(hdd_ctx);
 
-		hdd_sysfs_create_driver_root_obj();
-		hdd_sysfs_create_version_interface(hdd_ctx->psoc);
-		hdd_sysfs_create_powerstats_interface();
+		hdd_create_sysfs_files(hdd_ctx);
 		hdd_update_hw_sw_info(hdd_ctx);
 
 		if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
@@ -3826,9 +3827,7 @@ int hdd_wlan_start_modules(struct hdd_context *hdd_ctx, bool reinit)
 	return 0;
 
 destroy_driver_sysfs:
-	hdd_sysfs_destroy_powerstats_interface();
-	hdd_sysfs_destroy_version_interface();
-	hdd_sysfs_destroy_driver_root_obj();
+	hdd_destroy_sysfs_files();
 	cds_post_disable();
 
 unregister_notifiers:
@@ -5423,8 +5422,6 @@ static void hdd_cleanup_adapter(struct hdd_context *hdd_ctx,
 	hdd_sta_info_deinit(&adapter->cache_sta_info_list);
 
 	wlan_hdd_debugfs_csr_deinit(adapter);
-	if (adapter->device_mode == QDF_STA_MODE)
-		hdd_sysfs_destroy_adapter_root_obj(adapter);
 
 	hdd_debugfs_exit(adapter);
 
@@ -6094,9 +6091,6 @@ struct hdd_adapter *hdd_open_adapter(struct hdd_context *hdd_ctx, uint8_t sessio
 		hdd_nud_init_tracking(adapter);
 		hdd_mic_init_work(adapter);
 
-		if (adapter->device_mode == QDF_STA_MODE ||
-		    adapter->device_mode == QDF_P2P_DEVICE_MODE)
-			hdd_sysfs_create_adapter_root_obj(adapter);
 		qdf_mutex_create(&adapter->disconnection_status_lock);
 		hdd_periodic_sta_stats_mutex_create(adapter);
 
@@ -6403,6 +6397,8 @@ QDF_STATUS hdd_stop_adapter(struct hdd_context *hdd_ctx,
 	enum eSirMacReasonCodes reason = eSIR_MAC_IFACE_DOWN;
 
 	hdd_enter();
+
+	hdd_destroy_adapter_sysfs_files(adapter);
 
 	if (adapter->vdev_id != WLAN_UMAC_VDEV_ID_MAX)
 		wlan_hdd_cfg80211_deregister_frames(adapter);
@@ -9328,7 +9324,11 @@ void hdd_bus_bandwidth_deinit(struct hdd_context *hdd_ctx)
 {
 	hdd_enter();
 
+	/* it is expecting the timer has been stopped or not started
+	 * when coming deinit.
+	 */
 	QDF_BUG(!qdf_periodic_work_stop_sync(&hdd_ctx->bus_bw_work));
+
 	qdf_periodic_work_destroy(&hdd_ctx->bus_bw_work);
 	qdf_spinlock_destroy(&hdd_ctx->bus_bw_lock);
 	hdd_pm_qos_remove_request(hdd_ctx);
@@ -12862,9 +12862,7 @@ int hdd_wlan_stop_modules(struct hdd_context *hdd_ctx, bool ftm_mode)
 		goto done;
 	}
 
-	hdd_sysfs_destroy_powerstats_interface();
-	hdd_sysfs_destroy_version_interface();
-	hdd_sysfs_destroy_driver_root_obj();
+	hdd_destroy_sysfs_files();
 	hdd_debug("Closing CDS modules!");
 
 	if (hdd_get_conparam() != QDF_GLOBAL_EPPING_MODE) {
@@ -14450,7 +14448,11 @@ end:
 	 * in hdd_stop_adapter
 	 */
 	hdd_err("SAP restart after SSR failed! Reload WLAN and try SAP again");
-
+	/* Free the beacon memory in case of failure in the sap restart */
+	if (ap_adapter->session.ap.beacon) {
+		qdf_mem_free(ap_adapter->session.ap.beacon);
+		ap_adapter->session.ap.beacon = NULL;
+	}
 }
 
 #ifdef QCA_CONFIG_SMP

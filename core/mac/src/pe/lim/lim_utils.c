@@ -538,6 +538,12 @@ void lim_deactivate_timers(struct mac_context *mac_ctx)
 	}
 	tx_timer_deactivate(&lim_timer->gLimDeauthAckTimer);
 
+	if (tx_timer_running(&lim_timer->sae_auth_timer)) {
+		pe_err("SAE Auth failure timer running call the timeout API");
+		/* Cleanup as if SAE auth timer expired */
+		lim_timer_handler(mac_ctx, SIR_LIM_AUTH_SAE_TIMEOUT);
+	}
+
 	tx_timer_deactivate(&lim_timer->sae_auth_timer);
 }
 
@@ -3695,16 +3701,18 @@ static void lim_ht_switch_chnl_params(struct pe_session *pe_session)
 	pe_session->curr_req_chan_freq = pe_session->curr_op_freq;
 	pe_session->ch_center_freq_seg0 = center_freq;
 	pe_session->gLimChannelSwitch.ch_center_freq_seg0 = center_freq;
-	pe_session->gLimChannelSwitch.sw_target_freq = center_freq;
+	pe_session->gLimChannelSwitch.sw_target_freq =
+						pe_session->curr_op_freq;
 	pe_session->ch_width = ch_width;
 	pe_session->gLimChannelSwitch.ch_width = ch_width;
 	pe_session->gLimChannelSwitch.sec_ch_offset =
 		pe_session->htSecondaryChannelOffset;
 	pe_session->gLimChannelSwitch.ch_center_freq_seg1 = 0;
 
-	pe_debug("HT IE changed: Primary Channel: %d center chan: %d Channel Width: %d",
+	pe_debug("HT IE changed: Primary Channel: %d center chan: %d Channel Width: %d cur op freq %d",
 		 primary_channel, center_freq,
-		 pe_session->htRecommendedTxWidthSet);
+		 pe_session->htRecommendedTxWidthSet,
+		 pe_session->gLimChannelSwitch.sw_target_freq);
 	pe_session->channelChangeReasonCode =
 			LIM_SWITCH_CHANNEL_HT_WIDTH;
 	mac->lim.gpchangeChannelCallback = lim_switch_channel_cback;

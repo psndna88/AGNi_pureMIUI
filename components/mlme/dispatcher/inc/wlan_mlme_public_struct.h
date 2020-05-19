@@ -1221,6 +1221,7 @@ struct acs_weight_range {
 };
 
 #define MAX_ACS_WEIGHT_RANGE              10
+#define MLME_GET_DFS_CHAN_WEIGHT(np_chan_weight) (np_chan_weight & 0x000000FF)
 
 /*
  * struct wlan_mlme_acs - All acs related cfg items
@@ -1235,6 +1236,7 @@ struct acs_weight_range {
  * @num_weight_range: num of ranges provided by user
  * @force_sap_start: Force SAP start when no channel is found suitable
  * by ACS
+ * @np_chan_weightage: Weightage to be given to non preferred channels.
  */
 struct wlan_mlme_acs {
 	bool is_acs_with_more_param;
@@ -1247,6 +1249,7 @@ struct wlan_mlme_acs {
 	struct acs_weight_range normalize_weight_range[MAX_ACS_WEIGHT_RANGE];
 	uint16_t num_weight_range;
 	bool force_sap_start;
+	uint32_t np_chan_weightage;
 };
 
 /*
@@ -2200,8 +2203,6 @@ struct wlan_mlme_mwc {
  * @scan_11d_interval: scan 11d interval
  * @valid_channel_freq_list: array for valid channel list
  * @valid_channel_list_num: valid channel list number
- * @country_code: country code
- * @country_code_len: country code length
  * @enable_11d_in_world_mode: Whether to enable 11d scan in world mode or not
  * @avoid_acs_freq_list: List of the frequencies which need to be avoided
  * during acs
@@ -2219,8 +2220,6 @@ struct wlan_mlme_reg {
 	uint32_t scan_11d_interval;
 	uint32_t valid_channel_freq_list[CFG_VALID_CHANNEL_LIST_LEN];
 	uint32_t valid_channel_list_num;
-	uint8_t country_code[CFG_COUNTRY_CODE_LEN + 1];
-	uint8_t country_code_len;
 	bool enable_11d_in_world_mode;
 #ifdef SAP_AVOID_ACS_FREQ_LIST
 	uint16_t avoid_acs_freq_list[CFG_VALID_CHANNEL_LIST_LEN];
