@@ -71,10 +71,11 @@ void cam_csiphy_reset(struct csiphy_device *csiphy_dev)
 			csiphy_dev->ctrl_reg->csiphy_reset_reg[i].reg_data,
 			base +
 			csiphy_dev->ctrl_reg->csiphy_reset_reg[i].reg_addr);
-
-		usleep_range(csiphy_dev->ctrl_reg->csiphy_reset_reg[i].delay
-			* 1000,	csiphy_dev->ctrl_reg->csiphy_reset_reg[i].delay
-			* 1000 + 10);
+		if (csiphy_dev->ctrl_reg->csiphy_reset_reg[i].delay > 0)
+			usleep_range(
+			csiphy_dev->ctrl_reg->csiphy_reset_reg[i].delay,
+			csiphy_dev->ctrl_reg->csiphy_reset_reg[i].delay
+			+ 5);
 	}
 }
 
@@ -465,22 +466,16 @@ int32_t cam_csiphy_config_dev(struct csiphy_device *csiphy_dev)
 		case CSIPHY_LANE_ENABLE:
 			cam_io_w_mb(lane_enable,
 				csiphybase + csiphy_common_reg->reg_addr);
-			usleep_range(csiphy_common_reg->delay * 1000,
-				csiphy_common_reg->delay * 1000 + 10);
 			break;
 		case CSIPHY_DEFAULT_PARAMS:
 			cam_io_w_mb(csiphy_common_reg->reg_data,
 				csiphybase + csiphy_common_reg->reg_addr);
-			usleep_range(csiphy_common_reg->delay * 1000,
-				csiphy_common_reg->delay * 1000 + 10);
 			break;
 		case CSIPHY_2PH_REGS:
 			if (!csiphy_dev->csiphy_info.csiphy_3phase) {
 				cam_io_w_mb(csiphy_common_reg->reg_data,
 					csiphybase +
 					csiphy_common_reg->reg_addr);
-				usleep_range(csiphy_common_reg->delay * 1000,
-					csiphy_common_reg->delay * 1000 + 10);
 			}
 			break;
 		case CSIPHY_3PH_REGS:
@@ -488,13 +483,14 @@ int32_t cam_csiphy_config_dev(struct csiphy_device *csiphy_dev)
 				cam_io_w_mb(csiphy_common_reg->reg_data,
 					csiphybase +
 					csiphy_common_reg->reg_addr);
-				usleep_range(csiphy_common_reg->delay * 1000,
-					csiphy_common_reg->delay * 1000 + 10);
 			}
 			break;
 		default:
 			break;
 		}
+		if (csiphy_common_reg->delay > 0)
+			usleep_range(csiphy_common_reg->delay,
+				csiphy_common_reg->delay + 5);
 	}
 
 	while (lane_mask) {
@@ -541,8 +537,8 @@ int32_t cam_csiphy_config_dev(struct csiphy_device *csiphy_dev)
 			break;
 			}
 			if (reg_array[lane_pos][i].delay > 0) {
-				usleep_range(reg_array[lane_pos][i].delay*1000,
-					reg_array[lane_pos][i].delay*1000 + 10);
+				usleep_range(reg_array[lane_pos][i].delay,
+					reg_array[lane_pos][i].delay + 5);
 			}
 		}
 		lane_mask >>= 1;

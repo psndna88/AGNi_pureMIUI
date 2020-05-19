@@ -128,6 +128,8 @@ struct cam_vfe_bus_ver3_wm_resource_data {
 	uint32_t             ubwc_lossy_threshold_1;
 	uint32_t             ubwc_offset_lossy_variance;
 	uint32_t             ubwc_bandwidth_limit;
+	uint32_t             acquired_width;
+	uint32_t             acquired_height;
 };
 
 struct cam_vfe_bus_ver3_comp_grp_data {
@@ -1079,6 +1081,8 @@ static int cam_vfe_bus_ver3_acquire_wm(
 
 	rsrc_data->width = out_port_info->width;
 	rsrc_data->height = out_port_info->height;
+	rsrc_data->acquired_width = out_port_info->width;
+	rsrc_data->acquired_height = out_port_info->height;
 	rsrc_data->is_dual = is_dual;
 	/* Set WM offset value to default */
 	rsrc_data->offset  = 0;
@@ -2383,34 +2387,37 @@ static int cam_vfe_bus_ver3_deinit_vfe_out_resource(
 	return 0;
 }
 
-static void cam_vfe_bus_ver3_print_dimensions(
+static int cam_vfe_bus_ver3_print_dimensions(
 	enum cam_vfe_bus_ver3_vfe_out_type         vfe_out_res_id,
-	enum cam_vfe_bus_plane_type                plane,
 	struct cam_vfe_bus_ver3_priv              *bus_priv)
 {
-	struct cam_isp_resource_node              *wm_res = NULL;
-	struct cam_vfe_bus_ver3_wm_resource_data  *wm_data = NULL;
-	int                                        wm_idx = 0;
+	struct cam_isp_resource_node              *rsrc_node = NULL;
+	struct cam_vfe_bus_ver3_vfe_out_data      *rsrc_data = NULL;
+	struct cam_vfe_bus_ver3_wm_resource_data  *wm_data   = NULL;
+	int                                        i, wm_idx;
 
-	wm_idx = cam_vfe_bus_ver3_get_wm_idx(vfe_out_res_id, plane,
-		bus_priv->common_data.is_lite);
-
-	if (wm_idx < 0 || wm_idx >= bus_priv->num_client || plane > PLANE_C) {
-		CAM_ERR(CAM_ISP,
-			"Unsupported VFE out_type:0x%X plane:%d wm_idx:%d max_idx:%d",
-			vfe_out_res_id, plane, wm_idx,
-			bus_priv->num_client - 1);
-		return;
+	rsrc_node = &bus_priv->vfe_out[vfe_out_res_id];
+	rsrc_data = rsrc_node->res_priv;
+	for (i = 0; i < rsrc_data->num_wm; i++) {
+		wm_idx = cam_vfe_bus_ver3_get_wm_idx(vfe_out_res_id, i,
+			bus_priv->common_data.is_lite);
+		if (wm_idx < 0 || wm_idx >= bus_priv->num_client) {
+			CAM_ERR(CAM_ISP, "Unsupported VFE out %d",
+				vfe_out_res_id);
+			return -EINVAL;
+		}
+		wm_data = bus_priv->bus_client[wm_idx].res_priv;
+		CAM_INFO(CAM_ISP,
+			"VFE:%d WM:%d width:%u height:%u stride:%u x_init:%u en_cfg:%u acquired width:%u height:%u",
+			wm_data->common_data->core_index, wm_idx,
+			wm_data->width,
+			wm_data->height,
+			wm_data->stride, wm_data->h_init,
+			wm_data->en_cfg,
+			wm_data->acquired_width,
+			wm_data->acquired_height);
 	}
-
-	wm_res = &bus_priv->bus_client[wm_idx];
-	wm_data = wm_res->res_priv;
-
-	CAM_INFO(CAM_ISP,
-		"VFE:%d WM:%d width:%u height:%u stride:%u x_init:%u en_cfg:%u",
-		wm_data->common_data->core_index, wm_idx, wm_data->width,
-		wm_data->height, wm_data->stride, wm_data->h_init,
-		wm_data->en_cfg);
+	return 0;
 }
 
 static int cam_vfe_bus_ver3_handle_bus_irq(uint32_t    evt_id,
@@ -2516,7 +2523,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 					"RDI 0 image size violation");
 				cam_vfe_bus_ver3_print_dimensions(
 					CAM_VFE_BUS_VER3_VFE_OUT_RDI0,
-					PLANE_Y,
 					bus_priv);
 			}
 
@@ -2525,7 +2531,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 					"RDI 1 image size violation");
 				cam_vfe_bus_ver3_print_dimensions(
 					CAM_VFE_BUS_VER3_VFE_OUT_RDI1,
-					PLANE_Y,
 					bus_priv);
 			}
 
@@ -2534,7 +2539,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 					"RDI 2 image size violation");
 				cam_vfe_bus_ver3_print_dimensions(
 					CAM_VFE_BUS_VER3_VFE_OUT_RDI2,
-					PLANE_Y,
 					bus_priv);
 			}
 
@@ -2543,7 +2547,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 					"RDI 3 image size violation");
 				cam_vfe_bus_ver3_print_dimensions(
 					CAM_VFE_BUS_VER3_VFE_OUT_RDI3,
-					PLANE_Y,
 					bus_priv);
 			}
 		}
@@ -2578,7 +2581,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 			CAM_INFO(CAM_ISP, "VID Y 1:1 image size violation");
 			cam_vfe_bus_ver3_print_dimensions(
 				CAM_VFE_BUS_VER3_VFE_OUT_FULL,
-				PLANE_Y,
 				bus_priv);
 		}
 
@@ -2586,7 +2588,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 			CAM_INFO(CAM_ISP, "VID C 1:1 image size violation");
 			cam_vfe_bus_ver3_print_dimensions(
 				CAM_VFE_BUS_VER3_VFE_OUT_FULL,
-				PLANE_C,
 				bus_priv);
 		}
 
@@ -2594,7 +2595,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 			CAM_INFO(CAM_ISP, "VID YC 4:1 image size violation");
 			cam_vfe_bus_ver3_print_dimensions(
 				CAM_VFE_BUS_VER3_VFE_OUT_DS4,
-				PLANE_Y,
 				bus_priv);
 		}
 
@@ -2602,7 +2602,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 			CAM_INFO(CAM_ISP, "VID YC 16:1 image size violation");
 			cam_vfe_bus_ver3_print_dimensions(
 				CAM_VFE_BUS_VER3_VFE_OUT_DS16,
-				PLANE_Y,
 				bus_priv);
 		}
 
@@ -2610,7 +2609,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 			CAM_INFO(CAM_ISP, "DISP Y 1:1 image size violation");
 			cam_vfe_bus_ver3_print_dimensions(
 				CAM_VFE_BUS_VER3_VFE_OUT_FULL_DISP,
-				PLANE_Y,
 				bus_priv);
 		}
 
@@ -2618,7 +2616,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 			CAM_INFO(CAM_ISP, "DISP C 1:1 image size violation");
 			cam_vfe_bus_ver3_print_dimensions(
 				CAM_VFE_BUS_VER3_VFE_OUT_FULL_DISP,
-				PLANE_C,
 				bus_priv);
 		}
 
@@ -2626,7 +2623,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 			CAM_INFO(CAM_ISP, "DISP YC 4:1 image size violation");
 			cam_vfe_bus_ver3_print_dimensions(
 				CAM_VFE_BUS_VER3_VFE_OUT_DS4_DISP,
-				PLANE_Y,
 				bus_priv);
 		}
 
@@ -2634,7 +2630,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 			CAM_INFO(CAM_ISP, "DISP YC 16:1 image size violation");
 			cam_vfe_bus_ver3_print_dimensions(
 				CAM_VFE_BUS_VER3_VFE_OUT_DS16_DISP,
-				PLANE_Y,
 				bus_priv);
 		}
 
@@ -2642,7 +2637,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 			CAM_INFO(CAM_ISP, "FD Y image size violation");
 			cam_vfe_bus_ver3_print_dimensions(
 				CAM_VFE_BUS_VER3_VFE_OUT_FD,
-				PLANE_Y,
 				bus_priv);
 		}
 
@@ -2650,7 +2644,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 			CAM_INFO(CAM_ISP, "FD C image size violation");
 			cam_vfe_bus_ver3_print_dimensions(
 				CAM_VFE_BUS_VER3_VFE_OUT_FD,
-				PLANE_C,
 				bus_priv);
 		}
 
@@ -2659,7 +2652,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 			"PIXEL RAW DUMP image size violation");
 			cam_vfe_bus_ver3_print_dimensions(
 				CAM_VFE_BUS_VER3_VFE_OUT_RAW_DUMP,
-				PLANE_Y,
 				bus_priv);
 		}
 
@@ -2667,7 +2659,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 			CAM_INFO(CAM_ISP, "STATS HDR BE image size violation");
 			cam_vfe_bus_ver3_print_dimensions(
 				CAM_VFE_BUS_VER3_VFE_OUT_STATS_HDR_BE,
-				PLANE_Y,
 				bus_priv);
 		}
 
@@ -2676,7 +2667,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 			"STATS HDR BHIST image size violation");
 			cam_vfe_bus_ver3_print_dimensions(
 				CAM_VFE_BUS_VER3_VFE_OUT_STATS_HDR_BHIST,
-				PLANE_Y,
 				bus_priv);
 		}
 
@@ -2685,7 +2675,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 			"STATS TINTLESS BG image size violation");
 			cam_vfe_bus_ver3_print_dimensions(
 				CAM_VFE_BUS_VER3_VFE_OUT_STATS_TL_BG,
-				PLANE_Y,
 				bus_priv);
 		}
 
@@ -2693,7 +2682,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 			CAM_INFO(CAM_ISP, "STATS AWB BG image size violation");
 			cam_vfe_bus_ver3_print_dimensions(
 				CAM_VFE_BUS_VER3_VFE_OUT_STATS_AWB_BG,
-				PLANE_Y,
 				bus_priv);
 		}
 
@@ -2701,7 +2689,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 			CAM_INFO(CAM_ISP, "STATS BHIST image size violation");
 			cam_vfe_bus_ver3_print_dimensions(
 				CAM_VFE_BUS_VER3_VFE_OUT_STATS_BHIST,
-				PLANE_Y,
 				bus_priv);
 		}
 
@@ -2709,7 +2696,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 			CAM_INFO(CAM_ISP, "STATS RS image size violation");
 			cam_vfe_bus_ver3_print_dimensions(
 				CAM_VFE_BUS_VER3_VFE_OUT_STATS_RS,
-				PLANE_Y,
 				bus_priv);
 		}
 
@@ -2717,7 +2703,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 			CAM_INFO(CAM_ISP, "STATS CS image size violation");
 			cam_vfe_bus_ver3_print_dimensions(
 				CAM_VFE_BUS_VER3_VFE_OUT_STATS_CS,
-				PLANE_Y,
 				bus_priv);
 		}
 
@@ -2725,7 +2710,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 			CAM_INFO(CAM_ISP, "STATS IHIST image size violation");
 			cam_vfe_bus_ver3_print_dimensions(
 				CAM_VFE_BUS_VER3_VFE_OUT_STATS_IHIST,
-				PLANE_Y,
 				bus_priv);
 		}
 
@@ -2733,7 +2717,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 			CAM_INFO(CAM_ISP, "STATS BAF image size violation");
 			cam_vfe_bus_ver3_print_dimensions(
 				CAM_VFE_BUS_VER3_VFE_OUT_STATS_BF,
-				PLANE_Y,
 				bus_priv);
 		}
 
@@ -2741,7 +2724,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 			CAM_INFO(CAM_ISP, "PD image size violation");
 			cam_vfe_bus_ver3_print_dimensions(
 				CAM_VFE_BUS_VER3_VFE_OUT_2PD,
-				PLANE_Y,
 				bus_priv);
 		}
 
@@ -2749,7 +2731,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 			CAM_INFO(CAM_ISP, "LCR image size violation");
 			cam_vfe_bus_ver3_print_dimensions(
 				CAM_VFE_BUS_VER3_VFE_OUT_LCR,
-				PLANE_Y,
 				bus_priv);
 		}
 
@@ -2757,7 +2738,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 			CAM_INFO(CAM_ISP, "RDI 0 image size violation");
 			cam_vfe_bus_ver3_print_dimensions(
 				CAM_VFE_BUS_VER3_VFE_OUT_RDI0,
-				PLANE_Y,
 				bus_priv);
 		}
 
@@ -2765,7 +2745,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 			CAM_INFO(CAM_ISP, "RDI 1 image size violation");
 			cam_vfe_bus_ver3_print_dimensions(
 				CAM_VFE_BUS_VER3_VFE_OUT_RDI1,
-				PLANE_Y,
 				bus_priv);
 		}
 
@@ -2773,7 +2752,6 @@ static int cam_vfe_bus_ver3_err_irq_bottom_half(
 			CAM_INFO(CAM_ISP, "RDI 2 image size violation");
 			cam_vfe_bus_ver3_print_dimensions(
 				CAM_VFE_BUS_VER3_VFE_OUT_RDI2,
-				PLANE_Y,
 				bus_priv);
 		}
 
@@ -3581,7 +3559,7 @@ static int cam_vfe_bus_ver3_init_hw(void *hw_priv,
 	}
 
 	/* no clock gating at bus input */
-	CAM_INFO(CAM_ISP, "Overriding clock gating at bus input");
+	CAM_DBG(CAM_ISP, "Overriding clock gating at bus input");
 	cam_io_w_mb(0x3FFFFFF, bus_priv->common_data.mem_base +
 		bus_priv->common_data.common_reg->cgc_ovd);
 
@@ -3686,6 +3664,19 @@ static int cam_vfe_bus_ver3_process_cmd(
 			bus_priv->error_irq_handle = 0;
 		}
 		break;
+	case CAM_ISP_HW_CMD_DUMP_BUS_INFO: {
+		struct cam_isp_hw_event_info  *event_info;
+		enum cam_vfe_bus_ver3_vfe_out_type vfe_out_res_id;
+
+		event_info =
+			(struct cam_isp_hw_event_info *)cmd_args;
+		bus_priv = (struct cam_vfe_bus_ver3_priv  *) priv;
+		vfe_out_res_id =
+			cam_vfe_bus_ver3_get_out_res_id(event_info->res_id);
+		rc = cam_vfe_bus_ver3_print_dimensions(
+			vfe_out_res_id, bus_priv);
+		break;
+		}
 	case CAM_ISP_HW_CMD_UBWC_UPDATE_V2:
 		rc = cam_vfe_bus_ver3_update_ubwc_config_v2(cmd_args);
 		break;

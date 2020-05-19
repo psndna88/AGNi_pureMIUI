@@ -4,12 +4,115 @@
  */
 
 #include <linux/io.h>
+#include <linux/slab.h>
 #include <linux/module.h>
 
 #include "cam_debug_util.h"
 
 static uint debug_mdl;
 module_param(debug_mdl, uint, 0644);
+struct camera_debug_settings cam_debug;
+
+const struct camera_debug_settings *cam_debug_get_settings()
+{
+	return &cam_debug;
+}
+
+static int cam_debug_parse_cpas_settings(const char *setting, u64 value)
+{
+	if (!strcmp(setting, "camnoc_bw")) {
+		cam_debug.cpas_settings.camnoc_bw = value;
+	} else if (!strcmp(setting, "mnoc_hf_0_ab_bw")) {
+		cam_debug.cpas_settings.mnoc_hf_0_ab_bw = value;
+	} else if (!strcmp(setting, "mnoc_hf_0_ib_bw")) {
+		cam_debug.cpas_settings.mnoc_hf_0_ib_bw = value;
+	} else if (!strcmp(setting, "mnoc_hf_1_ab_bw")) {
+		cam_debug.cpas_settings.mnoc_hf_1_ab_bw = value;
+	} else if (!strcmp(setting, "mnoc_hf_1_ib_bw")) {
+		cam_debug.cpas_settings.mnoc_hf_1_ib_bw = value;
+	} else if (!strcmp(setting, "mnoc_sf_0_ab_bw")) {
+		cam_debug.cpas_settings.mnoc_sf_0_ab_bw = value;
+	} else if (!strcmp(setting, "mnoc_sf_0_ib_bw")) {
+		cam_debug.cpas_settings.mnoc_sf_0_ib_bw = value;
+	} else if (!strcmp(setting, "mnoc_sf_1_ab_bw")) {
+		cam_debug.cpas_settings.mnoc_sf_1_ab_bw = value;
+	} else if (!strcmp(setting, "mnoc_sf_1_ib_bw")) {
+		cam_debug.cpas_settings.mnoc_sf_1_ib_bw = value;
+	} else if (!strcmp(setting, "mnoc_sf_icp_ab_bw")) {
+		cam_debug.cpas_settings.mnoc_sf_icp_ab_bw = value;
+	} else if (!strcmp(setting, "mnoc_sf_icp_ib_bw")) {
+		cam_debug.cpas_settings.mnoc_sf_icp_ib_bw = value;
+	} else {
+		CAM_ERR(CAM_UTIL, "Unsupported cpas sysfs entry");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+ssize_t cam_debug_sysfs_node_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	int rc = 0;
+	char *local_buf = NULL, *local_buf_temp = NULL;
+	char *driver;
+	char *setting = NULL;
+	char *value_str = NULL;
+	u64 value;
+
+	CAM_INFO(CAM_UTIL, "Sysfs debug attr name:[%s] buf:[%s] bytes:[%d]",
+		attr->attr.name, buf, count);
+	local_buf = kmemdup(buf, (count + sizeof(char)), GFP_KERNEL);
+	local_buf_temp = local_buf;
+	driver = strsep(&local_buf, "#");
+	if (!driver) {
+		CAM_ERR(CAM_UTIL,
+			"Invalid input driver name buf:[%s], count:%d",
+			buf, count);
+		goto error;
+	}
+
+	setting = strsep(&local_buf, "=");
+	if (!setting) {
+		CAM_ERR(CAM_UTIL, "Invalid input setting buf:[%s], count:%d",
+			buf, count);
+		goto error;
+	}
+
+	value_str = strsep(&local_buf, "=");
+	if (!value_str) {
+		CAM_ERR(CAM_UTIL, "Invalid input value buf:[%s], count:%d",
+			buf, count);
+		goto error;
+	}
+
+	rc = kstrtou64(value_str, 0, &value);
+	if (rc < 0) {
+		CAM_ERR(CAM_UTIL, "Error converting value:[%s], buf:[%s]",
+			value_str, buf);
+		goto error;
+	}
+
+	CAM_INFO(CAM_UTIL,
+		"Processing sysfs store for driver:[%s], setting:[%s], value:[%llu]",
+		driver, setting, value);
+
+	if (!strcmp(driver, "cpas")) {
+		rc = cam_debug_parse_cpas_settings(setting, value);
+		if (rc)
+			goto error;
+	} else {
+		CAM_ERR(CAM_UTIL, "Unsupported driver in camera debug node");
+		goto error;
+	}
+
+	kfree(local_buf_temp);
+	return count;
+
+error:
+	kfree(local_buf_temp);
+	return -EPERM;
+}
 
 const char *cam_get_module_name(unsigned int module_id)
 {
@@ -98,6 +201,9 @@ const char *cam_get_module_name(unsigned int module_id)
 		break;
 	case CAM_PRESIL:
 		name = "CAM-PRESIL";
+		break;
+	case CAM_RES:
+		name = "CAM-RES";
 		break;
 	default:
 		name = "CAM";

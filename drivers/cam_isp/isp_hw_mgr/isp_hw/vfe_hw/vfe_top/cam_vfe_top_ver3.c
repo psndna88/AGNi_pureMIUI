@@ -309,6 +309,19 @@ static int cam_vfe_top_add_wait_trigger(struct cam_vfe_top_ver3_priv *top_priv,
 	return 0;
 }
 
+static int cam_vfe_top_ver3_get_data(
+	struct cam_vfe_top_ver3_priv *top_priv,
+	void *cmd_args, uint32_t arg_size)
+{
+	struct cam_isp_resource_node  *res = cmd_args;
+
+	if (res->process_cmd)
+		return res->process_cmd(res,
+			CAM_ISP_HW_CMD_CAMIF_DATA, cmd_args, arg_size);
+
+	return -EINVAL;
+}
+
 int cam_vfe_top_ver3_get_hw_caps(void *device_priv,
 	void *get_hw_cap_args, uint32_t arg_size)
 {
@@ -327,7 +340,7 @@ int cam_vfe_top_ver3_init_hw(void *device_priv,
 	 * Auto clock gating is enabled by default, but no harm
 	 * in setting the value we expect.
 	 */
-	CAM_INFO(CAM_ISP, "Enabling clock gating at IFE top");
+	CAM_DBG(CAM_ISP, "Enabling clock gating at IFE top");
 
 	cam_soc_util_w_mb(common_data.soc_info, VFE_CORE_BASE_IDX,
 		common_data.common_reg->core_cgc_ovd_0, 0x0);
@@ -637,6 +650,10 @@ int cam_vfe_top_ver3_process_cmd(void *device_priv, uint32_t cmd_type,
 		break;
 	case CAM_ISP_HW_CMD_GET_REG_UPDATE:
 		rc = cam_vfe_top_ver3_mux_get_reg_update(top_priv, cmd_args,
+			arg_size);
+		break;
+	case CAM_ISP_HW_CMD_CAMIF_DATA:
+		rc = cam_vfe_top_ver3_get_data(top_priv, cmd_args,
 			arg_size);
 		break;
 	case CAM_ISP_HW_CMD_CLOCK_UPDATE:

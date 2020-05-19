@@ -682,10 +682,10 @@ static int cam_res_mgr_component_bind(struct device *dev,
 
 	rc = cam_res_mgr_parse_dt(&pdev->dev);
 	if (rc) {
-		CAM_INFO(CAM_RES, "Disable shared gpio support.");
+		CAM_DBG(CAM_RES, "Disable shared gpio support.");
 		cam_res->shared_gpio_enabled = false;
 	} else {
-		CAM_INFO(CAM_RES, "Enable shared gpio support.");
+		CAM_DBG(CAM_RES, "Enable shared gpio support.");
 		cam_res->shared_gpio_enabled = true;
 	}
 

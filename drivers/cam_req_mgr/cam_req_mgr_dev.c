@@ -25,11 +25,15 @@
 #include "cam_debug_util.h"
 #include "cam_common_util.h"
 #include "cam_compat.h"
+#include "cam_cpas_hw.h"
 
 #define CAM_REQ_MGR_EVENT_MAX 30
 
 static struct cam_req_mgr_device g_dev;
 struct kmem_cache *g_cam_req_mgr_timer_cachep;
+
+static struct device_attribute camera_debug_sysfs_attr =
+	__ATTR(debug_node, 0600, NULL, cam_debug_sysfs_node_store);
 
 static int cam_media_device_setup(struct device *dev)
 {
@@ -809,10 +813,18 @@ static int cam_req_mgr_component_master_bind(struct device *dev)
 		goto req_mgr_device_deinit;
 	}
 
-	CAM_INFO(CAM_CRM, "All camera components bound successfully");
+	CAM_DBG(CAM_CRM, "All camera components bound successfully");
+	rc = sysfs_create_file(&dev->kobj, &camera_debug_sysfs_attr.attr);
+	if (rc < 0) {
+		CAM_ERR(CAM_CPAS,
+			"Failed to create debug attribute, rc=%d\n", rc);
+		goto sysfs_fail;
+	}
 
 	return rc;
 
+sysfs_fail:
+	sysfs_remove_file(&dev->kobj, &camera_debug_sysfs_attr.attr);
 req_mgr_device_deinit:
 	cam_req_mgr_core_device_deinit();
 req_mgr_core_fail:
@@ -835,6 +847,7 @@ static void cam_req_mgr_component_master_unbind(struct device *dev)
 	component_unbind_all(dev, NULL);
 
 	/* Now proceed with unbinding master */
+	sysfs_remove_file(&dev->kobj, &camera_debug_sysfs_attr.attr);
 	cam_req_mgr_core_device_deinit();
 	cam_req_mgr_util_deinit();
 	cam_media_device_cleanup();
