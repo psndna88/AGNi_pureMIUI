@@ -77,6 +77,10 @@
 #include "wlan_pkt_capture_public_structs.h"
 #endif
 
+#ifdef WLAN_CONV_SPECTRAL_ENABLE
+#include "wlan_spectral_public_structs.h"
+#endif /* WLAN_CONV_SPECTRAL_ENABLE */
+
 #define WMI_UNIFIED_MAX_EVENT 0x100
 
 #ifdef WMI_EXT_DBG
@@ -1201,8 +1205,23 @@ QDF_STATUS (*send_smart_ant_set_node_config_cmd)(wmi_unified_t wmi_handle,
 		struct smart_ant_node_config_params *param);
 #endif
 
+QDF_STATUS (*send_simulation_test_cmd)(wmi_unified_t wmi_handle,
+				       struct simulation_test_params *param);
+
 QDF_STATUS (*send_smart_ant_enable_tx_feedback_cmd)(wmi_unified_t wmi_handle,
 		struct smart_ant_enable_tx_feedback_params *param);
+
+#ifdef WLAN_CONV_SPECTRAL_ENABLE
+QDF_STATUS (*extract_pdev_sscan_fw_cmd_fixed_param)(
+				wmi_unified_t wmi_handle,
+				uint8_t *evt_buf,
+				struct spectral_startscan_resp_params *params);
+
+QDF_STATUS (*extract_pdev_sscan_fft_bin_index)(
+			wmi_unified_t wmi_handle,
+			uint8_t *evt_buf,
+			struct spectral_fft_bin_markers_160_165mhz *params);
+#endif /* WLAN_CONV_SPECTRAL_ENABLE */
 
 QDF_STATUS (*send_vdev_spectral_configure_cmd)(wmi_unified_t wmi_handle,
 		struct vdev_spectral_configure_params *param);
@@ -2142,6 +2161,14 @@ QDF_STATUS (*send_obss_spatial_reuse_set)(wmi_unified_t wmi_handle,
 QDF_STATUS (*send_obss_spatial_reuse_set_def_thresh)(wmi_unified_t wmi_handle,
 		struct wmi_host_obss_spatial_reuse_set_def_thresh
 		*obss_spatial_reuse_param);
+
+QDF_STATUS (*send_self_srg_bss_color_bitmap_set)(
+	wmi_unified_t wmi_handle, uint32_t bitmap_0,
+	uint32_t bitmap_1, uint8_t pdev_id);
+
+QDF_STATUS (*send_self_srg_partial_bssid_bitmap_set)(
+	wmi_unified_t wmi_handle, uint32_t bitmap_0,
+	uint32_t bitmap_1, uint8_t pdev_id);
 #endif
 
 QDF_STATUS

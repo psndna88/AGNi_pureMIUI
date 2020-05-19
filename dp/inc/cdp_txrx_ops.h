@@ -353,6 +353,11 @@ struct cdp_cmn_ops {
 			       HTC_HANDLE htc_handle, qdf_device_t qdf_osdev,
 			       struct ol_if_ops *ol_ops, uint16_t device_id);
 
+	QDF_STATUS (*txrx_pdev_init)(ol_txrx_soc_handle soc,
+				     HTC_HANDLE htc_handle,
+				     qdf_device_t qdf_osdev,
+				     uint8_t pdev_id);
+
 	/**
 	 * txrx_tso_soc_attach() - TSO attach handler triggered during
 	 * dynamic tso activation
@@ -1075,6 +1080,7 @@ struct ol_if_ops {
 	int  (*peer_ast_flowid_map)(struct cdp_ctrl_objmgr_psoc *ol_soc_handle,
 			       uint16_t peer_id, uint8_t vdev_id, uint8_t *peer_mac_addr);
 #endif
+	int (*get_soc_nss_cfg)(struct cdp_ctrl_objmgr_psoc *ol_soc_handle);
 	/* TODO: Add any other control path calls required to OL_IF/WMA layer */
 
 };
@@ -1545,11 +1551,14 @@ struct cdp_tx_delay_ops {
  * @bus_suspend: handler for bus suspend
  * @bus_resume: handler for bus resume
  * @process_wow_ack_rsp: handler for wow ack response
+ * @process_target_suspend_req: handler for target suspend request
  */
 struct cdp_bus_ops {
 	QDF_STATUS (*bus_suspend)(struct cdp_soc_t *soc_hdl, uint8_t pdev_id);
 	QDF_STATUS (*bus_resume)(struct cdp_soc_t *soc_hdl, uint8_t pdev_id);
 	void (*process_wow_ack_rsp)(struct cdp_soc_t *soc_hdl, uint8_t pdev_id);
+	void (*process_target_suspend_req)(struct cdp_soc_t *soc_hdl,
+					   uint8_t pdev_id);
 };
 #endif
 

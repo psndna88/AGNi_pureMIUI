@@ -28,6 +28,9 @@
 #ifdef FEATURE_WLAN_TDLS
 #include <wlan_tdls_public_structs.h>
 #endif
+#ifdef WLAN_CONV_SPECTRAL_ENABLE
+#include <wlan_spectral_public_structs.h>
+#endif /* WLAN_CONV_SPECTRAL_ENABLE */
 
 #define MAC_MAX_KEY_LENGTH 32
 #define MAC_PN_LENGTH 8
@@ -52,7 +55,13 @@
 #define WMI_MCC_MIN_CHANNEL_QUOTA             20
 #define WMI_MCC_MAX_CHANNEL_QUOTA             80
 #define WMI_MCC_MIN_NON_ZERO_CHANNEL_LATENCY  30
+
+#ifdef WMI_AP_SUPPORT
+#define WMI_BEACON_TX_BUFFER_SIZE             (1500)
+#else
 #define WMI_BEACON_TX_BUFFER_SIZE             (512)
+#endif
+
 #define WMI_WIFI_SCANNING_MAC_OUI_LENGTH      3
 #define WMI_EXTSCAN_MAX_SIGNIFICANT_CHANGE_APS   64
 #define WMI_RSSI_THOLD_DEFAULT   -300
@@ -2898,6 +2907,37 @@ struct smart_ant_enable_tx_feedback_params {
 };
 
 /**
+ * struct simulation_test_params
+ * pdev_id: pdev id
+ * vdev_id: vdev id
+ * peer_macaddr: peer MAC address
+ * test_cmd_type: test command type
+ * test_subcmd_type: test command sub type
+ * frame_type: frame type
+ * frame_subtype: frame subtype
+ * seq: sequence number
+ * offset: Frame content offset
+ * frame_length: Frame content length
+ * buf_len: Buffer length
+ * bufp: buffer
+ */
+struct simulation_test_params {
+	u32 pdev_id;
+	u32 vdev_id;
+	u8 peer_mac[QDF_MAC_ADDR_SIZE];
+	u32 test_cmd_type;
+	u32 test_subcmd_type;
+	u8 frame_type;
+	u8 frame_subtype;
+	u8 seq;
+	u8 reserved;
+	u16 offset;
+	u16 frame_length;
+	u32 buf_len;
+	u8 *bufp;
+};
+
+/**
  * struct vdev_spectral_configure_params - SPectral config params
  * @vdev_id: VDEV id
  * @count: count
@@ -2919,7 +2959,8 @@ struct smart_ant_enable_tx_feedback_params {
  * @dbm_adj: DBM adjust
  * @chn_mask: chain mask
  * @mode: Mode
- * @center_freq: Center frequency
+ * @center_freq1: Center frequency 1
+ * @center_freq2: Center frequency 2
  * @chan_freq: Primary channel frequency
  * @chan_width: Channel width
  */
@@ -2944,7 +2985,8 @@ struct vdev_spectral_configure_params {
 	uint16_t dbm_adj;
 	uint16_t chn_mask;
 	uint16_t mode;
-	uint16_t center_freq;
+	uint16_t center_freq1;
+	uint16_t center_freq2;
 	uint16_t chan_freq;
 	uint16_t chan_width;
 };
@@ -2966,6 +3008,49 @@ struct vdev_spectral_enable_params {
 	uint8_t enabled;
 	uint8_t mode;
 };
+
+#ifdef WLAN_CONV_SPECTRAL_ENABLE
+/**
+ * struct spectral_fft_bin_markers_160_165mhz - Stores the start index
+ * and length of FFT bins in 165 MHz/Restricted 80p80 or 160 MHz
+ * mode in targets with a single Spectral detector
+ * @is_valid: Indicates whether this structure holds valid data
+ * @start_pri80: Starting index of FFT bins corresponding to primary 80 MHz
+ *               in 165 MHz/Restricted 80p80 or 160 MHz mode
+ * @num_pri80: Number of FFT bins corresponding to primary 80 MHz
+ *             in 165 MHz/Restricted 80p80 or 160 MHz mode
+ * @start_5mhz: Starting index of FFT bins corresponding to extra 5 MHz
+ *               in 165 MHz/Restricted 80p80 mode
+ * @num_5mhz: Number of FFT bins corresponding to extra 5 MHz
+ *             in 165 MHz/Restricted 80p80 mode
+ * @start_sec80: Starting index of FFT bins corresponding to secondary 80 MHz
+ *               in 165 MHz/Restricted 80p80 or 160 MHz mode
+ * @num_sec80: Number of FFT bins corresponding to secondary 80 MHz
+ *             in 165 MHz/Restricted 80p80 or 160 MHz mode
+ */
+struct spectral_fft_bin_markers_160_165mhz {
+	bool is_valid;
+	uint16_t start_pri80;
+	uint16_t num_pri80;
+	uint16_t start_5mhz;
+	uint16_t num_5mhz;
+	uint16_t start_sec80;
+	uint16_t num_sec80;
+};
+
+/**
+ * struct spectral_startscan_resp_params - Params from the event send by
+ * FW as a response to the scan start command
+ * @pdev_id: Pdev id
+ * @smode: Spectral scan mode
+ * @num_fft_bin_index: Number of TLVs with FFT bin start and end indices
+ */
+struct spectral_startscan_resp_params {
+	uint32_t pdev_id;
+	enum spectral_scan_mode smode;
+	uint8_t num_fft_bin_index;
+};
+#endif
 
 /**
  * struct pdev_set_regdomain_params - PDEV set reg domain params
@@ -4611,6 +4696,7 @@ typedef enum {
 #endif
 	wmi_roam_scan_chan_list_id,
 	wmi_muedca_params_config_eventid,
+	wmi_pdev_sscan_fw_param_eventid,
 	wmi_events_max,
 } wmi_conv_event_id;
 
@@ -5129,6 +5215,7 @@ typedef enum {
 	wmi_beacon_protection_support,
 	wmi_service_sta_nan_ndi_four_port,
 	wmi_service_host_scan_stop_vdev_all,
+	wmi_service_ema_ap_support,
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF
@@ -5266,6 +5353,8 @@ struct wmi_host_fw_abi_ver {
  * @nan_separate_iface_support: Separate iface creation for NAN
  * @time_sync_ftm: enable ftm based time sync
  * @max_rnr_neighbours: Max supported RNR neighbors in multisoc APs
+ * @ema_max_vap_cnt: Number of maximum EMA tx-vaps at any instance of time
+ * @ema_max_profile_period: Maximum EMA profile periodicity on any pdev
  */
 typedef struct {
 	uint32_t num_vdevs;
@@ -5365,6 +5454,8 @@ typedef struct {
 	bool nan_separate_iface_support;
 	bool time_sync_ftm;
 	uint32_t max_rnr_neighbours;
+	uint32_t ema_max_vap_cnt;
+	uint32_t ema_max_profile_period;
 } target_resource_config;
 
 /**

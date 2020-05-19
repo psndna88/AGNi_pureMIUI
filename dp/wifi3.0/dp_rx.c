@@ -1369,6 +1369,70 @@ dp_rx_enqueue_rx(struct dp_peer *peer, qdf_nbuf_t rx_buf_list)
 }
 #endif
 
+#ifndef DELIVERY_TO_STACK_STATUS_CHECK
+/**
+ * dp_rx_check_delivery_to_stack() - Deliver pkts to network
+ * using the appropriate call back functions.
+ * @soc: soc
+ * @vdev: vdev
+ * @peer: peer
+ * @nbuf_head: skb list head
+ * @nbuf_tail: skb list tail
+ *
+ * Return: None
+ */
+static void dp_rx_check_delivery_to_stack(struct dp_soc *soc,
+					  struct dp_vdev *vdev,
+					  struct dp_peer *peer,
+					  qdf_nbuf_t nbuf_head)
+{
+	/* Function pointer initialized only when FISA is enabled */
+	if (vdev->osif_fisa_rx)
+		/* on failure send it via regular path */
+		vdev->osif_fisa_rx(soc, vdev, nbuf_head);
+	else
+		vdev->osif_rx(vdev->osif_vdev, nbuf_head);
+}
+
+#else
+/**
+ * dp_rx_check_delivery_to_stack() - Deliver pkts to network
+ * using the appropriate call back functions.
+ * @soc: soc
+ * @vdev: vdev
+ * @peer: peer
+ * @nbuf_head: skb list head
+ * @nbuf_tail: skb list tail
+ *
+ * Check the return status of the call back function and drop
+ * the packets if the return status indicates a failure.
+ *
+ * Return: None
+ */
+static void dp_rx_check_delivery_to_stack(struct dp_soc *soc,
+					  struct dp_vdev *vdev,
+					  struct dp_peer *peer,
+					  qdf_nbuf_t nbuf_head)
+{
+	int num_nbuf = 0;
+	QDF_STATUS ret_val = QDF_STATUS_E_FAILURE;
+
+	/* Function pointer initialized only when FISA is enabled */
+	if (vdev->osif_fisa_rx)
+		/* on failure send it via regular path */
+		ret_val = vdev->osif_fisa_rx(soc, vdev, nbuf_head);
+	else if (vdev->osif_rx)
+		ret_val = vdev->osif_rx(vdev->osif_vdev, nbuf_head);
+
+	if (!QDF_IS_STATUS_SUCCESS(ret_val)) {
+		num_nbuf = dp_rx_drop_nbuf_list(vdev->pdev, nbuf_head);
+		DP_STATS_INC(soc, rx.err.rejected, num_nbuf);
+		if (peer)
+			DP_STATS_DEC(peer, rx.to_stack.num, num_nbuf);
+	}
+}
+#endif /* ifdef DELIVERY_TO_STACK_STATUS_CHECK */
+
 void dp_rx_deliver_to_stack(struct dp_soc *soc,
 			    struct dp_vdev *vdev,
 			    struct dp_peer *peer,
@@ -1409,12 +1473,7 @@ void dp_rx_deliver_to_stack(struct dp_soc *soc,
 				&nbuf_tail, peer->mac_addr.raw);
 	}
 
-	/* Function pointer initialized only when FISA is enabled */
-	if (vdev->osif_fisa_rx)
-		/* on failure send it via regular path */
-		vdev->osif_fisa_rx(soc, vdev, nbuf_head);
-	else
-		vdev->osif_rx(vdev->osif_vdev, nbuf_head);
+	dp_rx_check_delivery_to_stack(soc, vdev, peer, nbuf_head);
 }
 
 /**
@@ -1961,8 +2020,6 @@ more_data:
 			continue;
 		}
 
-		dp_rx_desc_nbuf_sanity_check(ring_desc, rx_desc);
-
 		/*
 		 * this is a unlikely scenario where the host is reaping
 		 * a descriptor which it already reaped just a while ago
@@ -1981,6 +2038,8 @@ more_data:
 			hal_srng_dst_get_next(hal_soc, hal_ring_hdl);
 			continue;
 		}
+
+		dp_rx_desc_nbuf_sanity_check(ring_desc, rx_desc);
 
 		if (qdf_unlikely(!dp_rx_desc_check_magic(rx_desc))) {
 			dp_err("Invalid rx_desc cookie=%d", rx_buf_cookie);
@@ -2488,21 +2547,6 @@ QDF_STATUS dp_rx_vdev_detach(struct dp_vdev *vdev)
 	return QDF_STATUS_SUCCESS;
 }
 
-/**
- * dp_rx_pdev_detach() - detach dp rx
- * @pdev: core txrx pdev context
- *
- * This function will detach DP RX into main device context
- * will free DP Rx resources.
- *
- * Return: void
- */
-void
-dp_rx_pdev_detach(struct dp_pdev *pdev)
-{
-	dp_rx_pdev_desc_pool_free(pdev);
-}
-
 static QDF_STATUS
 dp_pdev_nbuf_alloc_and_map(struct dp_soc *dp_soc, qdf_nbuf_t *nbuf,
 			   struct dp_pdev *dp_pdev,
@@ -2566,6 +2610,8 @@ dp_pdev_rx_buffers_attach(struct dp_soc *dp_soc, uint32_t mac_id,
 	int page_idx, total_pages;
 	union dp_rx_desc_list_elem_t *desc_list = NULL;
 	union dp_rx_desc_list_elem_t *tail = NULL;
+	int sync_hw_ptr = 1;
+	uint32_t num_entries_avail;
 
 	if (qdf_unlikely(!rxdma_srng)) {
 		DP_STATS_INC(dp_pdev, replenish.rxdma_err, num_req_buffers);
@@ -2573,6 +2619,20 @@ dp_pdev_rx_buffers_attach(struct dp_soc *dp_soc, uint32_t mac_id,
 	}
 
 	dp_debug("requested %u RX buffers for driver attach", num_req_buffers);
+
+	hal_srng_access_start(dp_soc->hal_soc, rxdma_srng);
+	num_entries_avail = hal_srng_src_num_avail(dp_soc->hal_soc,
+						   rxdma_srng,
+						   sync_hw_ptr);
+	hal_srng_access_end(dp_soc->hal_soc, rxdma_srng);
+
+	if (!num_entries_avail) {
+		dp_err("Num of available entries is zero, nothing to do");
+		return QDF_STATUS_E_NOMEM;
+	}
+
+	if (num_entries_avail < num_req_buffers)
+		num_req_buffers = num_entries_avail;
 
 	nr_descs = dp_rx_get_free_desc_list(dp_soc, mac_id, rx_desc_pool,
 					    num_req_buffers, &desc_list, &tail);
@@ -2697,7 +2757,7 @@ dp_rx_pdev_desc_pool_alloc(struct dp_pdev *pdev)
 	if (wlan_cfg_get_dp_pdev_nss_enabled(pdev->wlan_cfg_ctx)) {
 		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_INFO,
 			  "nss-wifi<4> skip Rx refil %d", mac_for_pdev);
-		status = QDF_STATUS_SUCCESS;
+		return status;
 	}
 
 	dp_rxdma_srng = &soc->rx_refill_buf_ring[mac_for_pdev];
@@ -2711,10 +2771,6 @@ dp_rx_pdev_desc_pool_alloc(struct dp_pdev *pdev)
 				       rx_desc_pool);
 	if (status != QDF_STATUS_SUCCESS)
 		return status;
-
-	rx_desc_pool->owner = DP_WBM2SW_RBM;
-	rx_desc_pool->buf_size = RX_DATA_BUFFER_SIZE;
-	rx_desc_pool->buf_alignment = RX_DATA_BUFFER_ALIGNMENT;
 
 	return status;
 }
@@ -2770,6 +2826,10 @@ QDF_STATUS dp_rx_pdev_desc_pool_init(struct dp_pdev *pdev)
 	rx_sw_desc_weight =
 	wlan_cfg_get_dp_soc_rx_sw_desc_weight(soc->wlan_cfg_ctx);
 
+	rx_desc_pool->owner = DP_WBM2SW_RBM;
+	rx_desc_pool->buf_size = RX_DATA_BUFFER_SIZE;
+	rx_desc_pool->buf_alignment = RX_DATA_BUFFER_ALIGNMENT;
+
 	dp_rx_desc_pool_init(soc, mac_for_pdev,
 			     rx_sw_desc_weight * rxdma_entries,
 			     rx_desc_pool);
@@ -2792,50 +2852,6 @@ void dp_rx_pdev_desc_pool_deinit(struct dp_pdev *pdev)
 	rx_desc_pool = &soc->rx_desc_buf[mac_for_pdev];
 
 	dp_rx_desc_pool_deinit(soc, rx_desc_pool);
-}
-
-/**
- * dp_rx_attach() - attach DP RX
- * @pdev: core txrx pdev context
- *
- * This function will attach a DP RX instance into the main
- * device (SOC) context. Will allocate dp rx resource and
- * initialize resources.
- *
- * Return: QDF_STATUS_SUCCESS: success
- *         QDF_STATUS_E_RESOURCES: Error return
- */
-QDF_STATUS
-dp_rx_pdev_attach(struct dp_pdev *pdev)
-{
-	struct dp_soc *soc = pdev->soc;
-	QDF_STATUS ret_val;
-
-	if (wlan_cfg_get_dp_pdev_nss_enabled(pdev->wlan_cfg_ctx)) {
-		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_INFO,
-			  "nss-wifi<4> skip Rx refil %d",
-			  pdev->pdev_id);
-		return QDF_STATUS_SUCCESS;
-	}
-
-	if (!dp_is_soc_reinit(soc)) {
-		ret_val = dp_rx_pdev_desc_pool_alloc(pdev);
-		if (ret_val != QDF_STATUS_SUCCESS)
-			return ret_val;
-	}
-
-	dp_rx_pdev_desc_pool_init(pdev);
-
-	ret_val = dp_rx_fst_attach(soc, pdev);
-	if ((ret_val != QDF_STATUS_SUCCESS) &&
-	    (ret_val != QDF_STATUS_E_NOSUPPORT)) {
-		QDF_TRACE(QDF_MODULE_ID_ANY, QDF_TRACE_LEVEL_ERROR,
-			  "RX Flow Search Table attach failed: pdev %d err %d",
-			  pdev->pdev_id, ret_val);
-		return ret_val;
-	}
-
-	return dp_rx_pdev_buffers_alloc(pdev);
 }
 
 /*

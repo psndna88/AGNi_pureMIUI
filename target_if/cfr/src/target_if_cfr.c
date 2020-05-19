@@ -215,6 +215,11 @@ int target_if_cfr_init_pdev(struct wlan_objmgr_psoc *psoc,
 	struct pdev_cfr *pa;
 	struct psoc_cfr *cfr_sc;
 
+	if (wlan_cfr_is_feature_disabled(pdev)) {
+		cfr_err("cfr is disabled");
+		return QDF_STATUS_E_NOSUPPORT;
+	}
+
 	pa = wlan_objmgr_pdev_get_comp_private_obj(pdev, WLAN_UMAC_COMP_CFR);
 	if (pa == NULL)
 		return QDF_STATUS_E_FAILURE;
@@ -252,6 +257,11 @@ int target_if_cfr_deinit_pdev(struct wlan_objmgr_psoc *psoc,
 			      struct wlan_objmgr_pdev *pdev)
 {
 	uint32_t target_type;
+
+	if (wlan_cfr_is_feature_disabled(pdev)) {
+		cfr_err("cfr is disabled");
+		return QDF_STATUS_E_NOSUPPORT;
+	}
 
 	target_type = target_if_cfr_get_target_type(psoc);
 
@@ -356,14 +366,14 @@ void target_if_cfr_default_ta_ra_config(struct cfr_rcc_param *rcc_info,
 {
 	struct ta_ra_cfr_cfg *curr_cfg = NULL;
 	int grp_id;
-
+	unsigned long bitmap = reset_cfg;
 	uint8_t def_mac[QDF_MAC_ADDR_SIZE] = {0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF};
 	uint8_t null_mac[QDF_MAC_ADDR_SIZE] = {0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00};
 
 	for (grp_id = 0; grp_id < MAX_TA_RA_ENTRIES; grp_id++) {
-		if (qdf_test_bit(grp_id, (unsigned long *)&reset_cfg)) {
+		if (qdf_test_bit(grp_id, &bitmap)) {
 			curr_cfg = &rcc_info->curr[grp_id];
 			qdf_mem_copy(curr_cfg->tx_addr,
 				     null_mac, QDF_MAC_ADDR_SIZE);

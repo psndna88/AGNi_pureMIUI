@@ -346,6 +346,9 @@ static void wlan_lmac_if_umac_reg_rx_ops_register(
 	rx_ops->reg_rx_ops.reg_update_pdev_wireless_modes =
 		wlan_reg_update_pdev_wireless_modes;
 
+	rx_ops->reg_rx_ops.reg_is_range_only6g =
+		wlan_reg_is_range_only6g;
+
 	rx_ops->reg_rx_ops.reg_ignore_fw_reg_offload_ind =
 		tgt_reg_ignore_fw_reg_offload_ind;
 
@@ -497,6 +500,7 @@ static void register_rcac_dfs_rx_ops(struct wlan_lmac_if_dfs_rx_ops *rx_ops)
 	rx_ops->dfs_set_rcac_freq = ucfg_dfs_set_rcac_freq;
 	rx_ops->dfs_get_rcac_freq = ucfg_dfs_get_rcac_freq;
 	rx_ops->dfs_rcac_sm_deliver_evt = utils_dfs_rcac_sm_deliver_evt;
+	rx_ops->dfs_is_agile_rcac_enabled = ucfg_dfs_is_agile_rcac_enabled;
 }
 #else
 static inline void

@@ -1547,6 +1547,53 @@ QDF_STATUS reg_read_default_country(struct wlan_objmgr_psoc *psoc,
 	return QDF_STATUS_SUCCESS;
 }
 
+QDF_STATUS reg_get_max_5g_bw_from_country_code(uint16_t cc,
+					       uint16_t *max_bw_5g)
+{
+	uint16_t i;
+	int num_countries;
+
+	*max_bw_5g = 0;
+	reg_get_num_countries(&num_countries);
+
+	for (i = 0; i < num_countries; i++) {
+		if (g_all_countries[i].country_code == cc)
+			break;
+	}
+
+	if (i == num_countries)
+		return QDF_STATUS_E_FAILURE;
+
+	*max_bw_5g = g_all_countries[i].max_bw_5g;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS reg_get_max_5g_bw_from_regdomain(uint16_t regdmn,
+					    uint16_t *max_bw_5g)
+{
+	uint16_t i;
+	int num_reg_dmn;
+
+	*max_bw_5g = 0;
+	reg_get_num_reg_dmn_pairs(&num_reg_dmn);
+
+	for (i = 0; i < num_reg_dmn; i++) {
+		if (g_reg_dmn_pairs[i].reg_dmn_pair_id == regdmn)
+			break;
+	}
+
+	if (i == num_reg_dmn)
+		return QDF_STATUS_E_FAILURE;
+
+	if (!regdomains_5g[g_reg_dmn_pairs[i].dmn_id_5g].num_reg_rules)
+		*max_bw_5g = 0;
+	else
+		*max_bw_5g = BW_160_MHZ;
+
+	return QDF_STATUS_SUCCESS;
+}
+
 void reg_get_current_dfs_region(struct wlan_objmgr_pdev *pdev,
 				enum dfs_reg *dfs_reg)
 {
@@ -2380,6 +2427,75 @@ bool reg_is_6ghz_chan_freq(uint16_t freq)
 	return REG_IS_6GHZ_FREQ(freq);
 }
 
+#ifdef CONFIG_6G_FREQ_OVERLAP
+/**
+ * reg_is_freq_in_between() - Check whether freq falls within low_freq and
+ * high_freq, inclusively.
+ * @low_freq - Low frequency.
+ * @high_freq - High frequency.
+ * @freq - Frequency to be checked.
+ *
+ * Return: True if freq falls within low_freq and high_freq, else false.
+ */
+static bool reg_is_freq_in_between(qdf_freq_t low_freq, qdf_freq_t high_freq,
+				   qdf_freq_t freq)
+{
+	return (low_freq <= freq && freq <= high_freq);
+}
+
+static bool reg_is_ranges_overlap(qdf_freq_t low_freq, qdf_freq_t high_freq,
+				  qdf_freq_t start_edge_freq,
+				  qdf_freq_t end_edge_freq)
+{
+	return (reg_is_freq_in_between(start_edge_freq,
+				       end_edge_freq,
+				       low_freq) ||
+		reg_is_freq_in_between(start_edge_freq,
+				       end_edge_freq,
+				       high_freq) ||
+		reg_is_freq_in_between(low_freq,
+				       high_freq,
+				       start_edge_freq) ||
+		reg_is_freq_in_between(low_freq,
+				       high_freq,
+				       end_edge_freq));
+}
+
+static bool reg_is_range_overlap_6g(qdf_freq_t low_freq,
+				    qdf_freq_t high_freq)
+{
+	return reg_is_ranges_overlap(low_freq, high_freq,
+				     SIXG_STARTING_EDGE_FREQ,
+				     SIXG_ENDING_EDGE_FREQ);
+}
+
+static bool reg_is_range_overlap_5g(qdf_freq_t low_freq,
+				    qdf_freq_t high_freq)
+{
+	return reg_is_ranges_overlap(low_freq, high_freq,
+				     FIVEG_STARTING_EDGE_FREQ,
+				     FIVEG_ENDING_EDGE_FREQ);
+}
+
+bool reg_is_range_only6g(qdf_freq_t low_freq, qdf_freq_t high_freq)
+{
+	if (low_freq >= high_freq) {
+		reg_err_rl("Low freq is greater than or equal to high freq");
+		return false;
+	}
+
+	if (reg_is_range_overlap_6g(low_freq, high_freq) &&
+	    !reg_is_range_overlap_5g(low_freq, high_freq)) {
+		reg_debug_rl("The device is 6G only");
+		return true;
+	}
+
+	reg_debug_rl("The device is not 6G only");
+
+	return false;
+}
+#endif
+
 uint16_t reg_min_6ghz_chan_freq(void)
 {
 	return REG_MIN_6GHZ_CHAN_FREQ;
@@ -2670,6 +2786,23 @@ bool reg_is_regdmn_en302502_applicable(struct wlan_objmgr_pdev *pdev)
 	}
 
 	return reg_en302_502_regdmn(cur_reg_dmn.regdmn_pair_id);
+}
+
+QDF_STATUS reg_get_phybitmap(struct wlan_objmgr_pdev *pdev,
+			     uint16_t *phybitmap)
+{
+	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
+
+	pdev_priv_obj = reg_get_pdev_obj(pdev);
+
+	if (!pdev_priv_obj) {
+		reg_err("reg pdev private obj is NULL");
+		return QDF_STATUS_E_FAULT;
+	}
+
+	*phybitmap = pdev_priv_obj->phybitmap;
+
+	return QDF_STATUS_SUCCESS;
 }
 
 QDF_STATUS reg_modify_pdev_chan_range(struct wlan_objmgr_pdev *pdev)
