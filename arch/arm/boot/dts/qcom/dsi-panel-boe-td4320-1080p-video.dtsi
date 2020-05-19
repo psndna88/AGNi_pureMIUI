@@ -228,11 +228,59 @@
 		qcom,mdss-dsi-panel-peak-brightness = <4300000>;
 		qcom,mdss-dsi-panel-blackness-level = <3230>;
 
+		cm,mdss-livedisplay-cabc-ui-cmd = [
+				29 01 00 00 00 00 02 B0 04
+				15 01 00 00 00 00 02 55 81
+				29 01 00 00 00 00 08 B8 89 51 0D 00 02 00 00
+				29 01 00 00 00 00 1A CE 55 40 4C 5A 69 77 84 93 A2 B1 C1 D1 E0 F0 F1 F2 FF 04 00 04 04 42 00 69 5A
+				29 01 00 00 00 00 0A F9 66 3F E0 BE 00 8D BF 80 00
+				29 01 00 00 00 00 02 B0 03
+		];
+
+		cm,mdss-livedisplay-cabc-image-cmd = [
+				29 01 00 00 00 00 02 B0 04
+				15 01 00 00 00 00 02 55 82
+				29 01 00 00 00 00 08 B9 FF 27 37 00 04 00 00
+				29 01 00 00 00 00 1A CE 55 40 4C 5A 69 77 84 93 A2 B1 C1 D1 E0 F0 F1 F2 FF 04 00 04 04 42 00 69 5A
+				29 01 00 00 00 00 0A F9 66 3F E0 BE 00 8D BF 80 00
+				29 01 00 00 00 00 02 B0 03
+		];
+
+		cm,mdss-livedisplay-cabc-video-cmd = [
+				29 01 00 00 00 00 02 B0 04
+				15 01 00 00 00 00 02 55 83
+				29 01 00 00 00 00 08 BA BB 3D 22 00 03 00 00
+				29 01 00 00 00 00 1A CE 55 40 4C 5A 69 77 84 93 A2 B1 C1 D1 E0 F0 F1 F2 FF 04 00 04 04 42 00 69 5A
+				29 01 00 00 00 00 0A F9 66 3F E0 BE 00 8D BF 80 00
+				29 01 00 00 00 00 02 B0 03
+		];
+
 		cm,mdss-livedisplay-cabc-cmd = [
 				15 01 00 00 00 00 02 55 00
 		];
+
+		cm,mdss-livedisplay-color-enhance-on = [
+				29 01 00 00 00 00 02 B0 00
+				29 01 00 00 00 00 2C CA 1D FC FC FC F8 1E 1C FA FD EF 04 EB 01 0B 00 03 01 FA E8 04 FF 1D FF 00 00 FF 00 00 FF 00 FF 00 00 FF 00 FF 00 00 FF 00 00 FF FF
+				29 01 00 00 00 00 02 B0 03
+		];
+		cm,mdss-livedisplay-color-enhance-off = [
+				29 01 00 00 00 00 02 B0 04
+				39 01 00 00 00 00 02 84 00
+				29 01 00 00 00 00 02 C8 11
+				29 01 00 00 00 00 02 CA 1C
+				29 01 00 00 00 00 02 B0 03
+		];
+
 		cm,mdss-livedisplay-cabc-ui-value = <0x01>;
 		cm,mdss-livedisplay-cabc-image-value = <0x02>;
 		cm,mdss-livedisplay-cabc-video-value = <0x03>;
+
+		cm,mdss-livedisplay-hbm-on-cmd = [
+				15 01 00 00 00 00 02 51 CC
+		];
+		cm,mdss-livedisplay-hbm-off-cmd = [
+				15 01 00 00 00 00 02 51 B8
+		];
 	};
 };
