@@ -37,7 +37,7 @@
 	mem-offline {
 		compatible = "qcom,mem-offline";
 		offline-sizes = <0x1 0x40000000 0x0 0x40000000>,
-				<0x1 0xc0000000 0x0 0x80000000>,
+				<0x1 0xc0000000 0x0 0xc0000000>,
 				<0x2 0xc0000000 0x1 0x40000000>;
 		granule = <512>;
 		mboxes = <&qmp_aop 0>;
@@ -2969,7 +2969,6 @@
 		#reset-cells = <1>;
 
 		lanes-per-direction = <2>;
-		limit-rate = <1>; /* HS Rate-A */
 		dev-ref-clk-freq = <0>; /* 19.2 MHz */
 		clock-names =
 			"core_clk",
@@ -3125,6 +3124,8 @@
 		/* DLL HSR settings. Refer go/hsr - <Target> DLL settings */
 		qcom,dll-hsr-list = <0x0007642C 0xA800 0x10
 					0x2C010800 0x80040868>;
+
+		qcom,scaling-lower-bus-speed-mode = "DDR52";
 
 		iommus = <&apps_smmu 0x4a0 0x0>;
 		dma-coherent;
@@ -5259,7 +5260,7 @@
 			};
 		};
 
-		qcom,altmode {
+		altmode: qcom,altmode {
 			compatible = "qcom,altmode-glink";
 			qcom,altmode-name = "altmode_0";
 		};
