@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -398,6 +398,11 @@
 #define VHT_TX_HIGHEST_SUPPORTED_DATA_RATE_1_1       390
 #define VHT_RX_HIGHEST_SUPPORTED_DATA_RATE_2_2       780
 #define VHT_TX_HIGHEST_SUPPORTED_DATA_RATE_2_2       780
+
+#define VHT_RX_HIGHEST_SUPPORTED_DATA_RATE_1_1_SGI80 433
+#define VHT_TX_HIGHEST_SUPPORTED_DATA_RATE_1_1_SGI80 433
+#define VHT_RX_HIGHEST_SUPPORTED_DATA_RATE_2_2_SGI80 866
+#define VHT_TX_HIGHEST_SUPPORTED_DATA_RATE_2_2_SGI80 866
 
 #define VHT_CAP_80_SUPP 0
 #define VHT_CAP_160_SUPP 1

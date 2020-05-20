@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -916,11 +916,7 @@ lim_send_sme_disassoc_ntf(tpAniSirGlobal pMac,
 					break;
 			}
 		}
-		if (sta_ds
-#ifdef WLAN_FEATURE_11W
-			&& (!sta_ds->rmfEnabled)
-#endif
-		) {
+		if (sta_ds) {
 			if (lim_add_sta(pMac, sta_ds, false, session) !=
 					eSIR_SUCCESS)
 					pe_err("could not Add STA with assocId: %d",

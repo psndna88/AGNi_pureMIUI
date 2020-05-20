@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -377,6 +377,16 @@ sch_bcn_process_sta(tpAniSirGlobal mac_ctx,
 		       bcn->channelNumber);
 		return false;
 	}
+
+	/*
+	 * Ignore bcn as channel switch IE present and csa offload is enabled,
+	 * as in CSA offload enabled case FW will send Event to switch channel
+	 */
+	if (bcn->channelSwitchPresent && wma_is_csa_offload_enabled()) {
+		pe_debug("Ignore bcn as channel switch IE present and csa offload is enabled");
+		return false;
+	}
+
 	lim_detect_change_in_ap_capabilities(mac_ctx, bcn, session);
 	if (lim_get_sta_hash_bssidx(mac_ctx, DPH_STA_HASH_INDEX_PEER, bssIdx,
 				    session) != eSIR_SUCCESS)
@@ -539,6 +549,15 @@ sch_bcn_process_sta_ibss(tpAniSirGlobal mac_ctx,
 	if ((NULL == pStaDs) || ((NULL != pStaDs) &&
 					(STA_INVALID_IDX == pStaDs->staIndex)))
 		return;
+
+	/*
+	 * Ignore opmode change during channel change The opmode will be updated
+	 * with the beacons on new channel once the AP move to new channel.
+	 */
+	if (session->ch_switch_in_progress) {
+		pe_debug("Ignore opmode change as channel switch is in progress");
+		return;
+	}
 
 	if (session->vhtCapability && bcn->OperatingMode.present) {
 		update_nss(mac_ctx, pStaDs, bcn, session, pMh);
