@@ -47,6 +47,7 @@
 #include <linux/input/mt.h>
 #endif
 #include "../lct_tp_gesture.h"
+#include <linux/input/tp_common.h>
 
 #define INPUT_PHYS_NAME "synaptics_dsx/touch_input"
 #define STYLUS_PHYS_NAME "synaptics_dsx/stylus"
@@ -762,6 +763,30 @@ static struct kobj_attribute virtual_key_map_attr = {
 		.mode = S_IRUGO,
 	},
 	.show = synaptics_rmi4_virtual_key_map_show,
+};
+
+static ssize_t double_tap_show(struct kobject *kobj,
+			       struct kobj_attribute *attr, char *buf)
+{
+	if (!rmi4_data)
+		return -EIO;
+	return synaptics_rmi4_wake_gesture_show(&rmi4_data->input_dev->dev,
+						NULL, buf);
+}
+
+static ssize_t double_tap_store(struct kobject *kobj,
+				struct kobj_attribute *attr, const char *buf,
+				size_t count)
+{
+	if (!rmi4_data)
+		return -EIO;
+	return synaptics_rmi4_wake_gesture_store(&rmi4_data->input_dev->dev,
+						 NULL, buf, count);
+}
+
+static struct tp_common_ops double_tap_ops = {
+	.show = double_tap_show,
+	.store = double_tap_store
 };
 
 static ssize_t synaptics_rmi4_f01_reset_store(struct device *dev,
@@ -4347,6 +4372,13 @@ static int synaptics_rmi4_probe(struct platform_device *pdev)
 				"%s: Failed to set up input device\n",
 				__func__);
 		goto err_set_input_dev;
+	}
+
+	retval = tp_common_set_double_tap_ops(&double_tap_ops);
+	if (retval < 0) {
+		dev_err(&pdev->dev,
+				"%s: Failed to create double_tap node err=%d\n",
+				__func__, retval);
 	}
 
 #ifdef CONFIG_FB

@@ -92,9 +92,7 @@ static int fb_notifier_callback(struct notifier_block *self, unsigned long event
 static void nvt_ts_early_suspend(struct early_suspend *h);
 static void nvt_ts_late_resume(struct early_suspend *h);
 #endif
-#ifdef CONFIG_TOUCHSCREEN_COMMON
 #include <linux/input/tp_common.h>
-#endif
 
 #if TOUCH_KEY_NUM > 0
 const uint16_t touch_key_array[TOUCH_KEY_NUM] = {
@@ -154,7 +152,6 @@ int nvt_gesture_switch(struct input_dev *dev, unsigned int type, unsigned int co
 	return 0;
 }
 
-#ifdef CONFIG_TOUCHSCREEN_COMMON
 static ssize_t double_tap_show(struct kobject *kobj,
                    struct kobj_attribute *attr, char *buf)
 {
@@ -179,7 +176,6 @@ static struct tp_common_ops double_tap_ops = {
     .show = double_tap_show,
     .store = double_tap_store
 };
-#endif
 #endif
 
 static uint8_t bTouchIsAwake = 0;
@@ -1368,13 +1364,11 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 		input_set_capability(ts->input_dev, EV_KEY, gesture_key_array[retry]);
 	}
 	wake_lock_init(&gestrue_wakelock, WAKE_LOCK_SUSPEND, "poll-wake-lock");
-#ifdef CONFIG_TOUCHSCREEN_COMMON
     ret = tp_common_set_double_tap_ops(&double_tap_ops);
     if (ret < 0) {
         NVT_ERR("%s: Failed to create double_tap node err=%d\n",
                 __func__, ret);
     }
-#endif
 #endif
 
 	sprintf(ts->phys, "input/ts");
