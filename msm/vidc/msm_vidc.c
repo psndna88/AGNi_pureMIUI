@@ -1511,7 +1511,7 @@ void *msm_vidc_open(int core_id, int session_type)
 	inst->entropy_mode = HFI_H264_ENTROPY_CABAC;
 	inst->full_range = COLOR_RANGE_UNSPECIFIED;
 	inst->bse_vpp_delay = DEFAULT_BSE_VPP_DELAY;
-	inst->first_reconfig = 0;
+	inst->first_reconfig_done = 0;
 	inst->active = true;
 
 	for (i = SESSION_MSG_INDEX(SESSION_MSG_START);

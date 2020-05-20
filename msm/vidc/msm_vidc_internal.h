@@ -568,7 +568,7 @@ struct msm_vidc_inst {
 	struct mutex ubwc_stats_lock;
 	struct msm_vidc_ubwc_stats ubwc_stats;
 	u32 bse_vpp_delay;
-	u32 first_reconfig;
+	u32 first_reconfig_done;
 	u64 last_qbuf_time_ns;
 	bool active;
 };

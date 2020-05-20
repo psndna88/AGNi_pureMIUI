@@ -128,6 +128,19 @@ bool res_is_less_than_or_equal_to(u32 width, u32 height,
 		return false;
 }
 
+bool is_vpp_delay_allowed(struct msm_vidc_inst *inst)
+{
+	u32 codec = get_v4l2_codec(inst);
+	u32 mbpf = msm_vidc_get_mbs_per_frame(inst);
+
+	return (inst->core->resources.has_vpp_delay &&
+		is_decode_session(inst) &&
+		!is_thumbnail_session(inst) &&
+		(mbpf >= NUM_MBS_PER_FRAME(7680, 3840)) &&
+		(codec == V4L2_PIX_FMT_H264
+		|| codec == V4L2_PIX_FMT_HEVC));
+}
+
 int msm_vidc_get_mbs_per_frame(struct msm_vidc_inst *inst)
 {
 	int height, width;
@@ -1234,40 +1247,34 @@ int msm_vidc_set_bse_vpp_delay(struct msm_vidc_inst *inst)
 {
 	int rc = 0;
 	struct hfi_device *hdev;
-	u32 delay = 0;
-	u32 mbpf = 0, codec = 0;
+	u32 delay = DEFAULT_BSE_VPP_DELAY;
 
 	if (!inst || !inst->core) {
 		d_vpr_e("%s: invalid params %pK\n", __func__, inst);
 		return -EINVAL;
 	}
 
+	/* Set VPP delay only upto first reconfig */
+	if (inst->first_reconfig_done) {
+		s_vpr_hp(inst->sid, "%s: Skip bse-vpp\n", __func__);
+		return 0;
+	}
+
+	if (in_port_reconfig(inst))
+		inst->first_reconfig_done = 1;
+
 	if (!inst->core->resources.has_vpp_delay ||
-		inst->session_type != MSM_VIDC_DECODER ||
-		inst->clk_data.work_mode != HFI_WORKMODE_2 ||
-		inst->first_reconfig) {
+		!is_decode_session(inst) ||
+		is_thumbnail_session(inst) ||
+		inst->clk_data.work_mode != HFI_WORKMODE_2) {
 		s_vpr_hp(inst->sid, "%s: Skip bse-vpp\n", __func__);
 		return 0;
 	}
 
 	hdev = inst->core->device;
 
-	/* Decide VPP delay only on first reconfig */
-	if (in_port_reconfig(inst))
-		inst->first_reconfig = 1;
-
-	codec = get_v4l2_codec(inst);
-	if (codec != V4L2_PIX_FMT_HEVC && codec != V4L2_PIX_FMT_H264) {
-		s_vpr_hp(inst->sid, "%s: Skip bse-vpp, codec %u\n",
-			__func__, codec);
-		goto exit;
-	}
-
-	mbpf = msm_vidc_get_mbs_per_frame(inst);
-	if (mbpf >= NUM_MBS_PER_FRAME(7680, 3840))
+	if (is_vpp_delay_allowed(inst))
 		delay = MAX_BSE_VPP_DELAY;
-	else
-		delay = DEFAULT_BSE_VPP_DELAY;
 
 	/* DebugFS override [1-31] */
 	if (msm_vidc_vpp_delay & 0x1F)
@@ -1282,7 +1289,6 @@ int msm_vidc_set_bse_vpp_delay(struct msm_vidc_inst *inst)
 	else
 		inst->bse_vpp_delay = delay;
 
-exit:
 	return rc;
 }
 
