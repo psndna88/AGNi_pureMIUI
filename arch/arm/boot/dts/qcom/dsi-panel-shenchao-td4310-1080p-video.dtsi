@@ -199,7 +199,5 @@
 		qcom,mdss-dsi-pan-fps-update = "dfps_immediate_porch_mode_vfp";
 		qcom,partial-update-enabled = "single_roi";
 		qcom,panel-roi-alignment = <2 2 4 2 1080 2>;
-		qcom,mdss-dsi-pan-enable-dynamic-bitclk;
-		qcom,mdss-dsi-dynamic-bitclk_freq = <798240576 801594528 804948480 808302432 811656384>;
 	};
 };
