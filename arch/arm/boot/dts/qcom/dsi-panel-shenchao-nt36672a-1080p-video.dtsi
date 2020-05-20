@@ -811,9 +811,5 @@ qcom,mdss-dsi-srgb-on-command = [
 		qcom,panel-ack-disabled;
 		qcom,ulps-enabled;
 		qcom,suspend-ulps-enabled;
-		qcom,mdss-dsi-pan-enable-dynamic-fps;
-		qcom,mdss-dsi-pan-fps-update = "dfps_immediate_porch_mode_vfp";
-		qcom,partial-update-enabled = "single_roi";
-		qcom,panel-roi-alignment = <2 2 4 2 1080 2>;
 	};
 };

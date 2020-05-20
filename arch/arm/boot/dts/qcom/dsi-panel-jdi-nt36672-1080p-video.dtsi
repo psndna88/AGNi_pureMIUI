@@ -314,10 +314,6 @@ qcom,mdss-dsi-srgb-on-command = [
 		qcom,mdss-dsi-panel-peak-brightness = <4300000>;
 		qcom,mdss-dsi-panel-blackness-level = <3230>;
 		qcom,panel-ack-disabled;
-		qcom,mdss-dsi-pan-enable-dynamic-fps;
-		qcom,mdss-dsi-pan-fps-update = "dfps_immediate_porch_mode_vfp";
-		qcom,partial-update-enabled = "single_roi";
-		qcom,panel-roi-alignment = <2 2 4 2 1080 2>;
 		
 	};
 };
