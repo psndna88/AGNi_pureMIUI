@@ -144,7 +144,7 @@
 				 <&mdss_dsi_phy1 BYTECLK_MUX_1_CLK>,
 				 <&mdss_dsi_phy1 PCLK_MUX_1_CLK>,
 				 <&mdss_dsi_phy1 CPHY_BYTECLK_SRC_1_CLK>,
-				 <&mdss_dsi_phy1 CPHY_PCLK_SRC_1_CLK>;
+				 <&mdss_dsi_phy1 CPHY_PCLK_SRC_1_CLK>,
 				 <&mdss_dsi_phy1 BYTECLK_SRC_1_CLK>,
 				 <&mdss_dsi_phy1 PCLK_SRC_1_CLK>,
 				 <&mdss_dsi_phy1 SHADOW_BYTECLK_SRC_1_CLK>,
@@ -154,7 +154,7 @@
 				"src_byte_clk0", "src_pixel_clk0",
 				"shadow_byte_clk0", "shadow_pixel_clk0",
 				"mux_byte_clk1", "mux_pixel_clk1",
-				"cphy_byte_clk1", "cphy_pixel_clk1";
+				"cphy_byte_clk1", "cphy_pixel_clk1",
 				"src_byte_clk1", "src_pixel_clk1",
 				"shadow_byte_clk1", "shadow_pixel_clk1";
 
