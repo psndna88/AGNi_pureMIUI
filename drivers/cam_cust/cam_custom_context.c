@@ -219,7 +219,7 @@ static struct cam_ctx_ops
 		.ioctl_ops = {},
 		.crm_ops = {
 			.apply_req = __cam_custom_ctx_apply_req_in_activated,
-			.apply_default =
+			.notify_frame_skip =
 				__cam_custom_ctx_apply_default_settings,
 		},
 		.irq_ops = NULL,
@@ -229,7 +229,7 @@ static struct cam_ctx_ops
 		.ioctl_ops = {},
 		.crm_ops = {
 			.apply_req = __cam_custom_ctx_apply_req_in_activated,
-			.apply_default =
+			.notify_frame_skip =
 				__cam_custom_ctx_apply_default_settings,
 		},
 		.irq_ops = NULL,
@@ -414,7 +414,6 @@ static int __cam_custom_ctx_get_dev_info_in_acquired(struct cam_context *ctx,
 	dev_info->dev_id = CAM_REQ_MGR_DEVICE_CUSTOM_HW;
 	dev_info->p_delay = 1;
 	dev_info->trigger = CAM_TRIGGER_POINT_SOF;
-	dev_info->enable_apply_default = true;
 
 	return 0;
 }
@@ -1452,8 +1451,8 @@ static int __cam_custom_ctx_apply_default_req(
 
 	ctx_ops = &custom_ctx->substate_machine[
 		custom_ctx->substate_activated];
-	if (ctx_ops->crm_ops.apply_default) {
-		rc = ctx_ops->crm_ops.apply_default(ctx, apply);
+	if (ctx_ops->crm_ops.notify_frame_skip) {
+		rc = ctx_ops->crm_ops.notify_frame_skip(ctx, apply);
 	} else {
 		CAM_WARN_RATE_LIMIT(CAM_CUSTOM,
 			"No handle function in activated substate %d",
@@ -1547,7 +1546,7 @@ static struct cam_ctx_ops
 		.crm_ops = {
 			.unlink = __cam_custom_ctx_unlink_in_activated,
 			.apply_req = __cam_custom_ctx_apply_req,
-			.apply_default =
+			.notify_frame_skip =
 				__cam_custom_ctx_apply_default_req,
 			.flush_req = __cam_custom_ctx_flush_req_in_top_state,
 			.process_evt = __cam_custom_ctx_process_evt,
