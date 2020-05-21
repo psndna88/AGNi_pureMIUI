@@ -2282,11 +2282,7 @@ continue_unlock:
 					ret = 0;
 					if (wbc->sync_mode == WB_SYNC_ALL) {
 						cond_resched();
-#if (CONFIG_HZ > 100)
-						congestion_wait(BLK_RW_ASYNC, 2);
-#else
-						congestion_wait(BLK_RW_ASYNC, 1);
-#endif
+						congestion_wait(BLK_RW_ASYNC, msecs_to_jiffies(6));
 						goto retry_write;
 					}
 					continue;
