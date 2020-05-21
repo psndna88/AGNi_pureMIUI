@@ -66,6 +66,10 @@
 #define ETH_ALEN 6
 #endif
 
+#ifndef BIT_ULL
+#define BIT_ULL(nr)		(1ULL << (nr))
+#endif
+
 #ifndef ETH_P_ARP
 #define ETH_P_ARP 0x0806
 #endif

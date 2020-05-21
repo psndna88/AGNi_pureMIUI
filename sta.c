@@ -6994,6 +6994,204 @@ static int sta_get_parameter_he(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+#ifdef NL80211_SUPPORT
+
+struct station_info {
+	uint64_t filled;
+	uint32_t beacon_mic_error_count;
+	uint32_t beacon_replay_count;
+};
+
+
+static int qca_get_sta_info_handler(struct nl_msg *msg, void *arg)
+{
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct station_info *data = arg;
+	struct nlattr *info[QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_MAX + 1];
+	static struct nla_policy info_policy[
+		QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_MAX + 1] = {
+		[QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BEACON_MIC_ERROR_COUNT] = {
+			.type = NLA_U32
+		},
+		[QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BEACON_REPLAY_COUNT] = {
+			.type = NLA_U32
+		},
+	};
+
+	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+
+	if (!tb[NL80211_ATTR_VENDOR_DATA])
+		return NL_SKIP;
+
+	if (nla_parse_nested(info, QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_MAX,
+			     tb[NL80211_ATTR_VENDOR_DATA], info_policy)) {
+		return NL_SKIP;
+	}
+
+	if (info[QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BEACON_MIC_ERROR_COUNT]) {
+		data->filled |=
+			BIT_ULL(QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BEACON_MIC_ERROR_COUNT);
+		data->beacon_mic_error_count =
+			nla_get_u32(info[QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BEACON_MIC_ERROR_COUNT]);
+	}
+
+	if (info[QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BEACON_REPLAY_COUNT]) {
+		data->filled |=
+			BIT_ULL(QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BEACON_REPLAY_COUNT);
+		data->beacon_replay_count =
+			nla_get_u32(info[QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BEACON_REPLAY_COUNT]);
+	}
+
+	return NL_SKIP;
+}
+
+
+static int qca_nl80211_get_sta_info(struct sigma_dut *dut, const char *intf,
+				    struct station_info *sta_data)
+{
+	struct nl_msg *msg;
+	int ifindex, ret;
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s not found",
+				__func__, intf);
+		return -1;
+	}
+
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+				    NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_GET_STA_INFO)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding vendor_cmd", __func__);
+		nlmsg_free(msg);
+		return -1;
+	}
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg,
+				 qca_get_sta_info_handler, sta_data);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in send_and_recv_msgs, ret=%d",
+				__func__, ret);
+	}
+	return ret;
+}
+#endif /* NL80211_SUPPORT */
+
+
+static int get_bip_mic_error_count(struct sigma_dut *dut,
+				   const char *ifname,
+				   unsigned int *count)
+{
+#ifdef NL80211_SUPPORT
+	struct station_info sta_data;
+#endif /* NL80211_SUPPORT */
+
+	if (get_driver_type(dut) != DRIVER_WCN) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"BIP MIC error count not supported");
+		return -1;
+	}
+
+#ifdef NL80211_SUPPORT
+	if (qca_nl80211_get_sta_info(dut, ifname, &sta_data) != 0 ||
+	    !(sta_data.filled &
+	      BIT_ULL(QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BEACON_MIC_ERROR_COUNT))) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"BIP MIC error count fetching failed");
+		return -1;
+	}
+
+	*count = sta_data.beacon_mic_error_count;
+	return 0;
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"BIP MIC error count cannot be fetched without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
+static int get_cmac_replay_count(struct sigma_dut *dut, const char *ifname,
+				 unsigned int *count)
+{
+#ifdef NL80211_SUPPORT
+	struct station_info sta_data;
+#endif /* NL80211_SUPPORT */
+
+	if (get_driver_type(dut) != DRIVER_WCN) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"CMAC reply count not supported");
+		return -1;
+	}
+
+#ifdef NL80211_SUPPORT
+	if (qca_nl80211_get_sta_info(dut, ifname, &sta_data) != 0 ||
+	    !(sta_data.filled &
+	      BIT_ULL(QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BEACON_REPLAY_COUNT))) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"CMAC replay count fetching failed");
+		return -1;
+	}
+
+	*count = sta_data.beacon_replay_count;
+	return 0;
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"CMAC replay count cannot be fetched without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
+static enum sigma_cmd_result sta_get_parameter_wpa3(struct sigma_dut *dut,
+						    struct sigma_conn *conn,
+						    struct sigma_cmd *cmd)
+{
+	char buf[MAX_CMD_LEN];
+	const char *ifname = get_param(cmd, "interface");
+	const char *parameter = get_param(cmd, "Parameter");
+	unsigned int val;
+
+	if (!ifname || !parameter)
+		return INVALID_SEND_STATUS;
+
+	if (strcasecmp(parameter, "BIPMICErrors") == 0) {
+		if (get_bip_mic_error_count(dut, ifname, &val)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to get BIPMICErrors");
+			return STATUS_SENT_ERROR;
+		}
+		snprintf(buf, sizeof(buf), "BIPMICErrors,%d", val);
+		sigma_dut_print(dut, DUT_MSG_INFO, "BIPMICErrors %s", buf);
+		send_resp(dut, conn, SIGMA_COMPLETE, buf);
+		return STATUS_SENT;
+	}
+
+	if (strcasecmp(parameter, "CMACReplays") == 0) {
+		if (get_cmac_replay_count(dut, ifname, &val)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to get CMACReplays");
+			return STATUS_SENT_ERROR;
+		}
+		snprintf(buf, sizeof(buf), "CMACReplays,%d", val);
+		sigma_dut_print(dut, DUT_MSG_INFO, "CMACReplays %s", buf);
+		send_resp(dut, conn, SIGMA_COMPLETE, buf);
+		return STATUS_SENT;
+	}
+
+	send_resp(dut, conn, SIGMA_ERROR, "ErrorCode,Unsupported parameter");
+	return STATUS_SENT_ERROR;
+}
+
+
 static enum sigma_cmd_result sta_get_pmk(struct sigma_dut *dut,
 					 struct sigma_conn *conn,
 					 struct sigma_cmd *cmd)
@@ -7085,6 +7283,8 @@ static enum sigma_cmd_result cmd_sta_get_parameter(struct sigma_dut *dut,
 	    strcasecmp(program, "DisplayR2") == 0)
 		return miracast_cmd_sta_get_parameter(dut, conn, cmd);
 #endif /* MIRACAST */
+	if (strcasecmp(program, "WPA3") == 0)
+		return sta_get_parameter_wpa3(dut, conn, cmd);
 
 	send_resp(dut, conn, SIGMA_ERROR, "ErrorCode,Unsupported parameter");
 	return 0;
