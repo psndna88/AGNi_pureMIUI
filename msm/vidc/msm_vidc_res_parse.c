@@ -826,6 +826,8 @@ int read_platform_resources_from_drv_data(
 			"qcom,ubwc_stats_in_fbd");
 	res->has_vpp_delay = find_key_value(platform_data,
 			"qcom,vpp_delay_supported");
+	res->enc_auto_dynamic_fps = find_key_value(platform_data,
+			"qcom,enc_auto_dynamic_fps");
 
 	res->csc_coeff_data = &platform_data->csc_data;
 

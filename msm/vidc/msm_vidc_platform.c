@@ -453,6 +453,10 @@ static struct msm_vidc_common_data lahaina_common_data[] = {
 		.key = "qcom,vpp_delay_supported",
 		.value = 1,
 	},
+	{
+		.key = "qcom,enc_auto_dynamic_fps",
+		.value = 1,
+	},
 };
 
 static struct msm_vidc_common_data bengal_common_data_v0[] = {

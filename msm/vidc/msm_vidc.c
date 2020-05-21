@@ -420,17 +420,26 @@ int msm_vidc_qbuf(void *instance, struct media_device *mdev,
 	if (is_grid_session(inst) && b->type == INPUT_MPLANE)
 		b->flags |= V4L2_BUF_FLAG_PERF_MODE;
 
+	timestamp_us = (u64)((b->timestamp.tv_sec * 1000000ULL) +
+		b->timestamp.tv_usec);
 	if (is_decode_session(inst) && b->type == INPUT_MPLANE) {
 		if (inst->flush_timestamps)
 			msm_comm_release_timestamps(inst);
 		inst->flush_timestamps = false;
 
-		timestamp_us = (u64)((b->timestamp.tv_sec * 1000000ULL) +
-			b->timestamp.tv_usec);
 		rc = msm_comm_store_timestamp(inst, timestamp_us);
 		if (rc)
 			return rc;
 		inst->clk_data.frame_rate = msm_comm_get_max_framerate(inst);
+	}
+	if (is_encode_session(inst) && b->type == INPUT_MPLANE) {
+		if (inst->flush_timestamps)
+			msm_comm_release_timestamps(inst);
+		inst->flush_timestamps = false;
+
+		rc = msm_venc_store_timestamp(inst, timestamp_us);
+		if (rc)
+			return rc;
 	}
 
 	q = msm_comm_get_vb2q(inst, b->type);

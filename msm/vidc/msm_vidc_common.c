@@ -5596,7 +5596,7 @@ int msm_comm_flush(struct msm_vidc_inst *inst, u32 flags)
 	 * flush is issued, before adding the next buffer's timestamp
 	 * to the list.
 	 */
-	if (is_decode_session(inst) && inst->in_flush) {
+	if (!is_image_session(inst) && inst->in_flush) {
 		inst->flush_timestamps = true;
 		s_vpr_h(inst->sid,
 			"Setting flush variable to clear timestamp list: %d\n",
@@ -7610,7 +7610,7 @@ int msm_comm_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us)
 		goto unlock;
 	}
 	entry->timestamp_us = timestamp_us;
-	entry->framerate = DEFAULT_FPS << 16;
+	entry->framerate = inst->clk_data.frame_rate;
 	entry->is_valid = true;
 
 	/* add new entry into the list in sorted order */
@@ -7661,14 +7661,16 @@ unlock:
 u32 msm_comm_calc_framerate(struct msm_vidc_inst *inst,
 	u64 timestamp_us, u64 prev_ts)
 {
-	u32 framerate = DEFAULT_FPS << 16;
+	u32 framerate = inst->clk_data.frame_rate;
+	u32 interval;
 
 	if (timestamp_us <= prev_ts) {
 		s_vpr_e(inst->sid, "%s: invalid ts %lld, prev ts %lld\n",
 			__func__, timestamp_us, prev_ts);
 		return framerate;
 	}
-	framerate = (1000000 / (timestamp_us - prev_ts)) << 16;
+	interval = (u32)(timestamp_us - prev_ts);
+	framerate = ((1000000 + interval / 2) / interval) << 16;
 	return framerate;
 }
 

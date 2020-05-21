@@ -47,6 +47,7 @@
 
 #define MIN_NUM_ENC_OUTPUT_BUFFERS 4
 #define MIN_NUM_ENC_CAPTURE_BUFFERS 5
+#define VENC_MAX_TIMESTAMP_LIST_SIZE 2
 
 static const char *const mpeg_video_rate_control[] = {
 	"VBR",
@@ -1653,6 +1654,7 @@ int msm_venc_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 			if (rc)
 				s_vpr_e(sid, "%s: set frame rate failed\n",
 					__func__);
+			msm_comm_release_timestamps(inst);
 		}
 		break;
 	case V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MAX_BYTES:
@@ -2109,6 +2111,72 @@ int msm_venc_set_frame_rate(struct msm_vidc_inst *inst)
 	if (rc)
 		s_vpr_e(inst->sid, "%s: set property failed\n", __func__);
 
+	return rc;
+}
+
+int msm_venc_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us)
+{
+	struct msm_vidc_timestamps *entry, *node, *prev = NULL;
+	int count = 0;
+	int rc = 0;
+
+	if (!inst || !inst->core) {
+		d_vpr_e("%s: invalid parameters\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!inst->core->resources.enc_auto_dynamic_fps ||
+		is_image_session(inst))
+		return rc;
+
+	mutex_lock(&inst->timestamps.lock);
+	list_for_each_entry(node, &inst->timestamps.list, list) {
+		count++;
+		if (timestamp_us <= node->timestamp_us) {
+			s_vpr_e(inst->sid, "%s: invalid ts %llu, exist %llu\n",
+				__func__, timestamp_us, node->timestamp_us);
+			goto unlock;
+		}
+	}
+
+	/* Maintain a sliding window */
+	entry = NULL;
+	if (count >= VENC_MAX_TIMESTAMP_LIST_SIZE) {
+		entry = list_first_entry(&inst->timestamps.list,
+			struct msm_vidc_timestamps, list);
+		list_del_init(&entry->list);
+	}
+	if (!entry) {
+		entry = kzalloc(sizeof(*entry), GFP_KERNEL);
+		if (!entry) {
+			s_vpr_e(inst->sid, "%s: ts malloc failure\n",
+				__func__);
+			rc = -ENOMEM;
+			goto unlock;
+		}
+	}
+
+	entry->timestamp_us = timestamp_us;
+	entry->framerate = inst->clk_data.frame_rate;
+	prev = list_last_entry(&inst->timestamps.list,
+		struct msm_vidc_timestamps, list);
+	list_add_tail(&entry->list, &inst->timestamps.list);
+
+	if (!count)
+		goto unlock;
+
+	entry->framerate = msm_comm_calc_framerate(inst,
+		timestamp_us, prev->timestamp_us);
+
+	/* if framerate changed and stable for 2 frames, set to firmware */
+	if (entry->framerate == prev->framerate &&
+		entry->framerate != inst->clk_data.frame_rate) {
+		inst->clk_data.frame_rate = entry->framerate;
+		msm_venc_set_frame_rate(inst);
+	}
+
+unlock:
+	mutex_unlock(&inst->timestamps.lock);
 	return rc;
 }
 

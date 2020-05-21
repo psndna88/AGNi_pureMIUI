@@ -205,6 +205,7 @@ struct msm_vidc_platform_resources {
 	struct cx_ipeak_client *cx_ipeak_context;
 	uint32_t ubwc_stats_in_fbd;
 	uint32_t has_vpp_delay;
+	bool enc_auto_dynamic_fps;
 };
 
 static inline bool is_iommu_present(struct msm_vidc_platform_resources *res)
