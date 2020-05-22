@@ -1346,6 +1346,11 @@ static struct msm_vidc_ubwc_config_data lahaina_ubwc_data[] = {
 	UBWC_CONFIG(1, 1, 1, 0, 0, 0, 8, 32, 16, 0, 0),
 };
 
+/* Default UBWC config for LPDDR5 */
+static struct msm_vidc_ubwc_config_data shima_ubwc_data[] = {
+	UBWC_CONFIG(1, 1, 1, 0, 0, 0, 8, 32, 15, 0, 0),
+};
+
 static struct msm_vidc_platform_data default_data = {
 	.codec_data = default_codec_data,
 	.codec_data_length =  ARRAY_SIZE(default_codec_data),
@@ -1415,7 +1420,7 @@ static struct msm_vidc_platform_data shima_data = {
 	.sku_version = 0,
 	.vpu_ver = VPU_VERSION_IRIS2,
 	.num_vpp_pipes = 0x2,
-	.ubwc_config = 0x0,
+	.ubwc_config = shima_ubwc_data,
 	.codecs = shima_codecs,
 	.codecs_count = ARRAY_SIZE(shima_codecs),
 	.codec_caps = shima_capabilities_v0,
@@ -1592,6 +1597,19 @@ void *vidc_get_drv_data(struct device *dev)
 			driver_data->codec_caps_count =
 					ARRAY_SIZE(shima_capabilities_v2);
 		}
+		ddr_type = of_fdt_get_ddrtype();
+		if (ddr_type == -ENOENT) {
+			d_vpr_e("Failed to get ddr type, use LPDDR5\n");
+		}
+
+		if (driver_data->ubwc_config &&
+			(ddr_type == DDR_TYPE_LPDDR4 ||
+			 ddr_type == DDR_TYPE_LPDDR4X))
+			driver_data->ubwc_config->highest_bank_bit = 0xe;
+
+		d_vpr_h("DDR Type 0x%x hbb 0x%x\n",
+			ddr_type, driver_data->ubwc_config ?
+			driver_data->ubwc_config->highest_bank_bit : -1);
 	}
 exit:
 	return driver_data;
