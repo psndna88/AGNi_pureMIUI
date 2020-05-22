@@ -1234,10 +1234,10 @@ int msm_venc_enum_fmt(struct msm_vidc_inst *inst, struct v4l2_fmtdesc *f)
 	if (f->type == OUTPUT_MPLANE) {
 		fmt_desc = msm_comm_get_pixel_fmt_index(venc_output_formats,
 			ARRAY_SIZE(venc_output_formats), f->index, inst->sid);
+		f->flags = V4L2_FMT_FLAG_COMPRESSED;
 	} else if (f->type == INPUT_MPLANE) {
 		fmt_desc = msm_comm_get_pixel_fmt_index(venc_input_formats,
 			ARRAY_SIZE(venc_input_formats), f->index, inst->sid);
-		f->flags = V4L2_FMT_FLAG_COMPRESSED;
 	}
 
 	memset(f->reserved, 0, sizeof(f->reserved));
