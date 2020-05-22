@@ -4813,6 +4813,111 @@ static void wcn_sta_set_noack(struct sigma_dut *dut, const char *intf,
 	}
 }
 
+
+static int nlvendor_sta_set_phymode(struct sigma_dut *dut, const char *intf,
+				    enum qca_wlan_vendor_phy_mode val)
+{
+	struct nl_msg *msg;
+	struct nlattr *params;
+	int ifindex, ret;
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s not found",
+				__func__, intf);
+		return -1;
+	}
+
+	msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+			      NL80211_CMD_VENDOR);
+	if (!msg) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding vendor_cmd", __func__);
+		return -1;
+	}
+
+	if (nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_SET_WIFI_CONFIGURATION)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding vendor_attr", __func__);
+		nlmsg_free(msg);
+		return -1;
+	}
+
+	params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA);
+	if (!params || nla_put_u32(msg, QCA_WLAN_VENDOR_ATTR_CONFIG_PHY_MODE,
+				   val)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding vendor_data", __func__);
+		nlmsg_free(msg);
+		return -1;
+	}
+
+	nla_nest_end(msg, params);
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in send_and_recv_msgs, ret=%d (%s)",
+				__func__, ret, strerror(-ret));
+		return ret;
+	}
+
+	return 0;
+}
+
+
+static enum qca_wlan_vendor_phy_mode get_qca_vendor_phymode(const char *val)
+{
+	if (strcmp(val, "11a") == 0) {
+		/* IEEE80211_MODE_11A */
+		return QCA_WLAN_VENDOR_PHY_MODE_11A;
+	}
+
+	if (strcmp(val, "11g") == 0) {
+		/* IEEE80211_MODE_11G */
+		return QCA_WLAN_VENDOR_PHY_MODE_11G;
+	}
+
+	if (strcmp(val, "11b") == 0) {
+		/* IEEE80211_MODE_11B */
+		return QCA_WLAN_VENDOR_PHY_MODE_11B;
+	}
+
+	if (strcmp(val, "11n") == 0 ||
+		   strcmp(val, "11nl") == 0 ||
+		   strcmp(val, "11nl(nabg)") == 0) {
+		/* IEEE80211_MODE_11AGN */
+		return QCA_WLAN_VENDOR_PHY_MODE_11AGN;
+	}
+
+	if (strcmp(val, "11ng") == 0) {
+		/* IEEE80211_MODE_11NG_HT40 */
+		return QCA_WLAN_VENDOR_PHY_MODE_11NG_HT40;
+	}
+
+	if (strcmp(val, "AC") == 0 ||
+		   strcasecmp(val, "11AC") == 0) {
+		/* IEEE80211_MODE_11AC_VHT80 */
+		return QCA_WLAN_VENDOR_PHY_MODE_11AC_VHT80;
+	}
+
+	if (strcmp(val, "11na") == 0 ||
+		   strcasecmp(val, "11an") == 0) {
+		/* IEEE80211_MODE_11NA_HT40 */
+		return QCA_WLAN_VENDOR_PHY_MODE_11NA_HT40;
+	}
+
+	if (strcmp(val, "11ax") == 0 ||
+		   strcmp(val, "auto") == 0) {
+		/* IEEE80211_MODE_AUTO */
+		return QCA_WLAN_VENDOR_PHY_MODE_AUTO;
+	}
+
+	return -1;
+}
+
 #endif /* NL80211_SUPPORT */
 
 
@@ -4848,6 +4953,20 @@ static void sta_set_phymode(struct sigma_dut *dut, const char *intf,
 {
 	char buf[100];
 	int len, phymode;
+#ifdef NL80211_SUPPORT
+	enum qca_wlan_vendor_phy_mode qca_phymode;
+
+	qca_phymode = get_qca_vendor_phymode(val);
+	if (qca_phymode == -1) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Ignoring mode change for mode: %s",
+				val);
+		return;
+	}
+
+	if (nlvendor_sta_set_phymode(dut, intf, qca_phymode) == 0)
+		return;
+#endif /* NL80211_SUPPORT */
 
 	phymode = get_phymode(val);
 	if (phymode == -1) {
