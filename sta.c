@@ -4816,6 +4816,61 @@ static void wcn_sta_set_noack(struct sigma_dut *dut, const char *intf,
 #endif /* NL80211_SUPPORT */
 
 
+static int get_phymode(const char *val)
+{
+	if (strcmp(val, "11a") == 0)
+		return 1; /* IEEE80211_MODE_11A */
+	if (strcmp(val, "11g") == 0)
+		return 3; /* IEEE80211_MODE_11G */
+	if (strcmp(val, "11b") == 0)
+		return 2; /* IEEE80211_MODE_11B */
+	if (strcmp(val, "11n") == 0 ||
+	    strcmp(val, "11nl") == 0 ||
+	    strcmp(val, "11nl(nabg)") == 0)
+		return 22; /* IEEE80211_MODE_11AGN */
+	if (strcmp(val, "11ng") == 0)
+		return 13; /* IEEE80211_MODE_11NG_HT40 */
+	if (strcmp(val, "AC") == 0 ||
+	    strcasecmp(val, "11AC") == 0)
+		return 19; /* IEEE80211_MODE_11AC_VHT80 */
+	if (strcmp(val, "11na") == 0 ||
+	    strcasecmp(val, "11an") == 0)
+		return 14; /* IEEE80211_MODE_11NA_HT40 */
+	if (strcmp(val, "11ax") == 0 ||
+	    strcmp(val, "auto") == 0)
+		return 0; /* IEEE80211_MODE_AUTO */
+	return -1;
+}
+
+
+static void sta_set_phymode(struct sigma_dut *dut, const char *intf,
+			    const char *val)
+{
+	char buf[100];
+	int len, phymode;
+
+	phymode = get_phymode(val);
+	if (phymode == -1) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Ignoring mode change for mode: %s",
+				val);
+		return;
+	}
+
+	len = snprintf(buf, sizeof(buf), "iwpriv %s setphymode %d", intf,
+		       phymode);
+	if (len < 0 || len >= sizeof(buf)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to set phymode");
+		return;
+	}
+
+	if (system(buf) != 0)
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"iwpriv setting of phymode failed");
+}
+
+
 static enum sigma_cmd_result
 cmd_sta_preset_testparameters(struct sigma_dut *dut, struct sigma_conn *conn,
 			      struct sigma_cmd *cmd)
@@ -4978,44 +5033,7 @@ cmd_sta_preset_testparameters(struct sigma_dut *dut, struct sigma_conn *conn,
 		 * and for 11a and 11g modes only. */
 		if (dut->program == PROGRAM_HE &&
 		    dut->device_type == STA_testbed) {
-			int phymode;
-			char buf[60];
-
-			if (strcmp(val, "11a") == 0) {
-				phymode = 1; /* IEEE80211_MODE_11A */
-			} else if (strcmp(val, "11g") == 0) {
-				phymode = 3; /* IEEE80211_MODE_11G */
-			} else if (strcmp(val, "11b") == 0) {
-				phymode = 2; /* IEEE80211_MODE_11B */
-			} else if (strcmp(val, "11n") == 0 ||
-				   strcmp(val, "11nl") == 0 ||
-				   strcmp(val, "11nl(nabg)") == 0) {
-				phymode = 22; /* IEEE80211_MODE_11AGN */
-			} else if (strcmp(val, "11ng") == 0) {
-				phymode = 13; /* IEEE80211_MODE_11NG_HT40 */
-			} else if (strcmp(val, "AC") == 0 ||
-				   strcasecmp(val, "11AC") == 0) {
-				phymode = 19; /* IEEE80211_MODE_11AC_VHT80 */
-			} else if (strcmp(val, "11na") == 0 ||
-				   strcasecmp(val, "11an") == 0) {
-				phymode = 14; /* IEEE80211_MODE_11NA_HT40 */
-			} else if (strcmp(val, "11ax") == 0) {
-				phymode = 0; /* IEEE80211_MODE_AUTO */
-			} else {
-				sigma_dut_print(dut, DUT_MSG_DEBUG,
-						"Ignoring mode change for mode: %s",
-						val);
-				phymode = -1;
-			}
-			if (phymode != -1) {
-				snprintf(buf, sizeof(buf),
-					 "iwpriv %s setphymode %d",
-					 intf, phymode);
-				if (system(buf) != 0) {
-					sigma_dut_print(dut, DUT_MSG_ERROR,
-							"iwpriv setting of phymode failed");
-				}
-			}
+			sta_set_phymode(dut, intf, val);
 		}
 	}
 
@@ -7603,11 +7621,7 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 
 	if (dut->program == PROGRAM_HE) {
 		/* resetting phymode to auto in case of HE program */
-		snprintf(buf, sizeof(buf), "iwpriv %s setphymode 0", intf);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv %s setphymode failed", intf);
-		}
+		sta_set_phymode(dut, intf, "auto");
 
 		/* reset the rate to Auto rate */
 		snprintf(buf, sizeof(buf), "iwpriv %s set_11ax_rate 0xff",
