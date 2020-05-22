@@ -927,6 +927,15 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		.step = 1,
 	},
 	{
+		.id = V4L2_CID_MPEG_VIDC_VENC_BITRATE_BOOST,
+		.name = "Bitrate boost margin",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.minimum = 0,
+		.maximum = 100,
+		.default_value = 25,
+		.step = 1,
+	},
+	{
 		.id = V4L2_CID_MPEG_VIDEO_VBV_DELAY,
 		.name = "Set Vbv Delay",
 		.type = V4L2_CTRL_TYPE_INTEGER,
@@ -1968,6 +1977,7 @@ int msm_venc_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 	case V4L2_CID_MPEG_VIDC_VENC_RC_TIMESTAMP_DISABLE:
 	case V4L2_CID_MPEG_VIDEO_VBV_DELAY:
 	case V4L2_CID_MPEG_VIDC_VENC_BITRATE_SAVINGS:
+	case V4L2_CID_MPEG_VIDC_VENC_BITRATE_BOOST:
 	case V4L2_CID_MPEG_VIDC_SUPERFRAME:
 		s_vpr_h(sid, "Control set: ID : 0x%x Val : %d\n",
 			ctrl->id, ctrl->val);
@@ -3230,9 +3240,48 @@ setprop:
 		sizeof(enable));
 	if (rc)
 		s_vpr_e(inst->sid, "%s: set property failed\n", __func__);
+	else
+		rc = msm_venc_set_bitrate_boost_margin(inst, enable.enable);
 
 	return rc;
 }
+
+int msm_venc_set_bitrate_boost_margin(struct msm_vidc_inst *inst, u32 enable)
+{
+	int rc = 0;
+	struct hfi_device *hdev;
+	struct v4l2_ctrl *ctrl = NULL;
+	struct hfi_bitrate_boost_margin boost_margin;
+
+	if (!inst || !inst->core) {
+		d_vpr_e("%s: invalid params %pK\n", __func__, inst);
+		return -EINVAL;
+	}
+	hdev = inst->core->device;
+
+	if (!enable) {
+		boost_margin.margin = 0;
+		goto setprop;
+	}
+
+	ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDC_VENC_BITRATE_BOOST);
+	/* Mapped value to 0, 25 or 50*/
+	if (ctrl->val >= 50)
+		boost_margin.margin = 50;
+	else
+		boost_margin.margin = (u32)(ctrl->val/25) * 25;
+
+setprop:
+	/* s_vpr_h(inst->sid, "%s: %d\n", __func__, boost_margin.margin);
+	 * rc = call_hfi_op(hdev, session_set_property, inst->session,
+	 *	HFI_PROPERTY_PARAM_VENC_BITRATE_BOOST, &boost_margin,
+	 *	sizeof(boost_margin));
+	 *if (rc)
+	 *	s_vpr_e(inst->sid, "%s: set property failed\n", __func__);
+	 */
+	return rc;
+}
+
 
 int msm_venc_set_loop_filter_mode(struct msm_vidc_inst *inst)
 {

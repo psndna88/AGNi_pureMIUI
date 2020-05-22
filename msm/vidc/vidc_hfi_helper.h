@@ -336,6 +336,8 @@ struct hfi_buffer_info {
 	(HFI_PROPERTY_PARAM_VENC_COMMON_START + 0x038)
 #define HFI_PROPERTY_PARAM_VENC_LOSSLESS_ENCODING \
 	(HFI_PROPERTY_PARAM_VENC_COMMON_START + 0x039)
+#define  HFI_PROPERTY_PARAM_VENC_BITRATE_BOOST \
+	(HFI_PROPERTY_PARAM_VENC_COMMON_START + 0x041)
 
 #define HFI_PROPERTY_CONFIG_VENC_COMMON_START				\
 	(HFI_DOMAIN_BASE_VENC + HFI_ARCH_COMMON_OFFSET + 0x6000)
@@ -1061,6 +1063,10 @@ struct hfi_hdr10_pq_sei {
 
 struct hfi_vbv_hrd_buf_size {
 	u32 vbv_hrd_buf_size;
+};
+
+struct hfi_bitrate_boost_margin {
+	u32 margin;
 };
 
 #endif
