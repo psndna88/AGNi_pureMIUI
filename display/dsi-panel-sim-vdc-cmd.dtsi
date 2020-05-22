@@ -222,7 +222,7 @@
 				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
 				qcom,mdss-dsi-h-sync-pulse = <0>;
 				qcom,compression-mode = "vdc";
-				qcom,vdc-version = <0x11>;
+				qcom,vdc-version = <0x12>;
 				qcom,vdc-version-release = <0>;
 				qcom,vdc-slice-height = <256>;
 				qcom,vdc-slice-width = <720>;

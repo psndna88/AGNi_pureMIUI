@@ -540,7 +540,7 @@ Optional properties:
 					instead of standard dcs type 0x0A.
 - qcom,vdc-version:		An 8 bit value indicates the VDC version supported by panel. Bits[0.3]
 					provides information about minor version while Bits[4.7] provides
-					major version information. It supports only VDC rev 1(Major).1(Minor)
+					major version information. It supports only VDC rev 1(Major).2(Minor)
 					right now.
 - qcom,vdc-version-release:		An 8 bit value indicated VDC version release. This has to be set to 0.
 - qcom,vdc-slice-height:	An u32 value which indicates slice height. This should be atleast 16 lines.
@@ -839,7 +839,7 @@ Example:
 		qcom,display-topology = <1 1 1>,
 			                <2 2 1>;
 		qcom,default-topology-index = <0>;
-		qcom,vdc-version = <0x11>;
+		qcom,vdc-version = <0x12>;
 		qcom,vdc-version-release = <0>;
 		qcom,vdc-slice-height = <256>;
 		qcom,vdc-slice-width = <720>;

@@ -115,7 +115,7 @@
 
 		qcom,sde-vdc-off = <0x7C000>;
 		qcom,sde-vdc-size = <0x10>;
-		qcom,sde-vdc-hw-rev = "vdc_1_1";
+		qcom,sde-vdc-hw-rev = "vdc_1_2";
 		qcom,sde-vdc-enc = <0x200>;
 		qcom,sde-vdc-enc-size = <0x1C8>;
 		qcom,sde-vdc-ctl = <0xf00>;
@@ -332,13 +332,17 @@
 		};
 	};
 
+	qcom_msmhdcp: qcom,msm_hdcp {
+		compatible = "qcom,msm-hdcp";
+	};
+
 	sde_dp: qcom,dp_display@ae90000 {
 		cell-index = <0>;
 		compatible = "qcom,dp-display";
 
 		qcom,dp-aux-switch = <&fsa4480>;
 		qcom,ext-disp = <&ext_disp>;
-		qcom,altmode-parent = "altmode_0";
+		qcom,altmode-dev = <&altmode 0>;
 		usb-controller = <&usb0>;
 
 		reg =   <0xae90000 0x0dc>,
@@ -394,9 +398,10 @@
 		qcom,max-pclk-frequency-khz = <675000>;
 
 		qcom,widebus-enable;
+		qcom,mst-enable;
 		qcom,dsc-feature-enable;
 		qcom,fec-feature-enable;
-		qcom,max-dp-dsc-blks = <2>;
+		qcom,max-dp-dsc-blks = <4>;
 		qcom,max-dp-dsc-input-width-pixs = <2048>;
 
 		vdda-1p2-supply = <&L6B>;
