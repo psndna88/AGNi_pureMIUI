@@ -225,7 +225,6 @@ struct sde_crtc_misr_info {
  * @property_defaults : Array of default values for generic property support
  * @output_fence  : output release fence context
  * @stage_cfg     : H/w mixer stage configuration
- * @active_cfg    : H/w pipes active that shouldn't be staged
  * @debugfs_root  : Parent of debugfs node
  * @priv_handle   : Pointer to external private handle, if present
  * @vblank_cb_count : count of vblank callback since last reset
@@ -285,7 +284,7 @@ struct sde_crtc {
 	u32 num_ctls;
 	u32 num_mixers;
 	bool mixers_swapped;
-	struct sde_crtc_mixer mixers[CRTC_DUAL_MIXERS];
+	struct sde_crtc_mixer mixers[MAX_MIXERS_PER_CRTC];
 
 	struct drm_pending_vblank_event *event;
 	u32 vsync_count;
@@ -296,9 +295,7 @@ struct sde_crtc {
 
 	/* output fence support */
 	struct sde_fence_context *output_fence;
-
-	struct sde_hw_stage_cfg stage_cfg;
-	struct sde_hw_stage_cfg active_cfg;
+	struct sde_hw_stage_cfg stage_cfg[MAX_LAYOUTS_PER_CRTC];
 	struct dentry *debugfs_root;
 	void *priv_handle;
 
@@ -413,8 +410,8 @@ struct sde_crtc_state {
 
 	bool is_ppsplit;
 	struct sde_rect crtc_roi;
-	struct sde_rect lm_bounds[CRTC_DUAL_MIXERS];
-	struct sde_rect lm_roi[CRTC_DUAL_MIXERS];
+	struct sde_rect lm_bounds[MAX_MIXERS_PER_CRTC];
+	struct sde_rect lm_roi[MAX_MIXERS_PER_CRTC];
 	struct msm_roi_list user_roi_list, cached_user_roi_list;
 
 	struct msm_property_state property_state;
@@ -485,8 +482,7 @@ static inline int sde_crtc_get_mixer_width(struct sde_crtc *sde_crtc,
 	if (cstate->num_ds_enabled)
 		mixer_width = cstate->ds_cfg[0].lm_width;
 	else
-		mixer_width = (sde_crtc->num_mixers == CRTC_DUAL_MIXERS ?
-			mode->hdisplay / CRTC_DUAL_MIXERS : mode->hdisplay);
+		mixer_width = mode->hdisplay / sde_crtc->num_mixers;
 
 	return mixer_width;
 }

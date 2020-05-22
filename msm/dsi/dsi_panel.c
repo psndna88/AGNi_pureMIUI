@@ -506,6 +506,9 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 
 	dsi = &panel->mipi_device;
 
+	if (panel->bl_config.bl_inverted_dbv)
+		bl_lvl = (((bl_lvl & 0xff) << 8) | (bl_lvl >> 8));
+
 	rc = mipi_dsi_dcs_set_display_brightness(dsi, bl_lvl);
 	if (rc < 0)
 		DSI_ERR("failed to update dcs backlight:%d\n", bl_lvl);
@@ -2183,6 +2186,9 @@ static int dsi_panel_parse_bl_config(struct dsi_panel *panel)
 		panel->bl_config.brightness_max_level = val;
 	}
 
+	panel->bl_config.bl_inverted_dbv = utils->read_bool(utils->data,
+		"qcom,mdss-dsi-bl-inverted-dbv");
+
 	if (panel->bl_config.type == DSI_BACKLIGHT_PWM) {
 		rc = dsi_panel_parse_bl_pwm_config(panel);
 		if (rc) {
@@ -2469,7 +2475,7 @@ static int dsi_panel_parse_vdc_params(struct dsi_display_mode *mode,
 	rc = utils->read_u32(utils->data, "qcom,vdc-version", &data);
 	if (rc) {
 		priv_info->vdc.version_major = 0x1;
-		priv_info->vdc.version_minor = 0x1;
+		priv_info->vdc.version_minor = 0x2;
 		priv_info->vdc.version_release = 0x0;
 		rc = 0;
 	} else {
@@ -2480,7 +2486,7 @@ static int dsi_panel_parse_vdc_params(struct dsi_display_mode *mode,
 		priv_info->vdc.version_minor = data & 0x0F;
 		if ((priv_info->vdc.version_major != 0x1) &&
 				((priv_info->vdc.version_minor
-				  != 0x1))) {
+				  != 0x2))) {
 			DSI_ERR("%s:unsupported major:%d minor:%d version\n",
 					__func__,
 					priv_info->vdc.version_major,
