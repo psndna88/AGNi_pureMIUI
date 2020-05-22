@@ -1,12 +1,12 @@
 /* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
 /*
- * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef __UAPI_CAM_FD_H__
 #define __UAPI_CAM_FD_H__
 
-#include <media/cam_defs.h>
+#include <camera/media/cam_defs.h>
 
 #define CAM_FD_MAX_FACES                       35
 #define CAM_FD_RAW_RESULT_ENTRIES              512
@@ -40,9 +40,9 @@
  * @reserved   : Reserved for future use
  */
 struct cam_fd_soc_clock_bw_request {
-	uint64_t    clock_rate;
-	uint64_t    bandwidth;
-	uint64_t    reserved[4];
+	__u64    clock_rate;
+	__u64    bandwidth;
+	__u64    reserved[4];
 };
 
 /**
@@ -57,10 +57,10 @@ struct cam_fd_soc_clock_bw_request {
  * these values directly when the buffer is programmed to HW
  */
 struct cam_fd_face {
-	uint32_t    prop1;
-	uint32_t    prop2;
-	uint32_t    prop3;
-	uint32_t    prop4;
+	__u32    prop1;
+	__u32    prop2;
+	__u32    prop3;
+	__u32    prop4;
 };
 
 /**
@@ -74,9 +74,9 @@ struct cam_fd_face {
  * these values directly when the buffer is programmed to HW
  */
 struct cam_fd_results {
-	struct cam_fd_face    faces[CAM_FD_MAX_FACES];
-	uint32_t              face_count;
-	uint32_t              reserved[3];
+	struct cam_fd_face faces[CAM_FD_MAX_FACES];
+	__u32              face_count;
+	__u32              reserved[3];
 };
 
 /**
@@ -89,11 +89,11 @@ struct cam_fd_results {
  * @reserved              : Reserved for future use
  */
 struct cam_fd_hw_caps {
-	struct cam_hw_version    core_version;
-	struct cam_hw_version    wrapper_version;
-	uint32_t                 raw_results_available;
-	uint32_t                 supported_modes;
-	uint64_t                 reserved;
+	struct cam_hw_version core_version;
+	struct cam_hw_version wrapper_version;
+	__u32                 raw_results_available;
+	__u32                 supported_modes;
+	__u64                 reserved;
 };
 
 /**
@@ -105,10 +105,10 @@ struct cam_fd_hw_caps {
  * @reserved     : Reserved for alignment
  */
 struct cam_fd_query_cap_cmd {
-	struct cam_iommu_handle    device_iommu;
-	struct cam_iommu_handle    cdm_iommu;
-	struct cam_fd_hw_caps      hw_caps;
-	uint64_t                   reserved;
+	struct cam_iommu_handle device_iommu;
+	struct cam_iommu_handle cdm_iommu;
+	struct cam_fd_hw_caps   hw_caps;
+	__u64                   reserved;
 };
 
 /**
@@ -123,10 +123,10 @@ struct cam_fd_query_cap_cmd {
  */
 struct cam_fd_acquire_dev_info {
 	struct cam_fd_soc_clock_bw_request clk_bw_request;
-	uint32_t                           priority;
-	uint32_t                           mode;
-	uint32_t                           get_raw_results;
-	uint32_t                           reserved[13];
+	__u32                              priority;
+	__u32                              mode;
+	__u32                              get_raw_results;
+	__u32                              reserved[13];
 };
 
 #endif /* __UAPI_CAM_FD_H__ */

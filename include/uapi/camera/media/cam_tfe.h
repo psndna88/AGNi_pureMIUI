@@ -1,14 +1,14 @@
 /* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef __UAPI_CAM_TFE_H__
 #define __UAPI_CAM_TFE_H__
 
-#include "cam_defs.h"
-#include "cam_isp_tfe.h"
-#include "cam_cpas.h"
+#include <camera/media/cam_defs.h>
+#include <camera/media/cam_isp_tfe.h>
+#include <camera/media/cam_cpas.h>
 
 
 /* ISP TFE driver name */
@@ -93,8 +93,8 @@
  *
  */
 struct cam_isp_tfe_dev_cap_info {
-	uint32_t              hw_type;
-	uint32_t              reserved;
+	__u32                 hw_type;
+	__u32                 reserved;
 	struct cam_hw_version hw_version;
 };
 
@@ -110,11 +110,11 @@ struct cam_isp_tfe_dev_cap_info {
  *
  */
 struct cam_isp_tfe_query_cap_cmd {
-	struct cam_iommu_handle           device_iommu;
-	struct cam_iommu_handle           cdm_iommu;
-	int32_t                           num_dev;
-	uint32_t                          reserved;
-	struct cam_isp_tfe_dev_cap_info   dev_caps[CAM_ISP_TFE_HW_MAX];
+	struct cam_iommu_handle         device_iommu;
+	struct cam_iommu_handle         cdm_iommu;
+	__s32                           num_dev;
+	__u32                           reserved;
+	struct cam_isp_tfe_dev_cap_info dev_caps[CAM_ISP_TFE_HW_MAX];
 };
 
 /* Acquire Device */
@@ -135,15 +135,15 @@ struct cam_isp_tfe_query_cap_cmd {
  *
  */
 struct cam_isp_tfe_out_port_info {
-	uint32_t                res_id;
-	uint32_t                format;
-	uint32_t                width;
-	uint32_t                height;
-	uint32_t                stride;
-	uint32_t                comp_grp_id;
-	uint32_t                secure_mode;
-	uint32_t                wm_mode;
-	uint32_t                reserved;
+	__u32                res_id;
+	__u32                format;
+	__u32                width;
+	__u32                height;
+	__u32                stride;
+	__u32                comp_grp_id;
+	__u32                secure_mode;
+	__u32                wm_mode;
+	__u32                reserved;
 };
 
 /**
@@ -185,34 +185,34 @@ struct cam_isp_tfe_out_port_info {
  *
  */
 struct cam_isp_tfe_in_port_info {
-	uint32_t                        res_id;
-	uint32_t                        lane_type;
-	uint32_t                        lane_num;
-	uint32_t                        lane_cfg;
-	uint32_t                        vc;
-	uint32_t                        dt;
-	uint32_t                        format;
-	uint32_t                        pix_pattern;
-	uint32_t                        usage_type;
-	uint32_t                        left_start;
-	uint32_t                        left_end;
-	uint32_t                        left_width;
-	uint32_t                        right_start;
-	uint32_t                        right_end;
-	uint32_t                        right_width;
-	uint32_t                        line_start;
-	uint32_t                        line_end;
-	uint32_t                        height;
-	uint32_t                        batch_size;
-	uint32_t                        dsp_mode;
-	uint32_t                        sensor_width;
-	uint32_t                        sensor_height;
-	uint32_t                        sensor_hbi;
-	uint32_t                        sensor_vbi;
-	uint32_t                        sensor_fps;
-	uint32_t                        init_frame_drop;
-	uint32_t                        num_out_res;
-	struct cam_isp_tfe_out_port_info    data[1];
+	__u32                            res_id;
+	__u32                            lane_type;
+	__u32                            lane_num;
+	__u32                            lane_cfg;
+	__u32                            vc;
+	__u32                            dt;
+	__u32                            format;
+	__u32                            pix_pattern;
+	__u32                            usage_type;
+	__u32                            left_start;
+	__u32                            left_end;
+	__u32                            left_width;
+	__u32                            right_start;
+	__u32                            right_end;
+	__u32                            right_width;
+	__u32                            line_start;
+	__u32                            line_end;
+	__u32                            height;
+	__u32                            batch_size;
+	__u32                            dsp_mode;
+	__u32                            sensor_width;
+	__u32                            sensor_height;
+	__u32                            sensor_hbi;
+	__u32                            sensor_vbi;
+	__u32                            sensor_fps;
+	__u32                            init_frame_drop;
+	__u32                            num_out_res;
+	struct cam_isp_tfe_out_port_info data[1];
 };
 
 /**
@@ -227,11 +227,11 @@ struct cam_isp_tfe_in_port_info {
  *
  */
 struct cam_isp_tfe_resource {
-	uint32_t                       resource_id;
-	uint32_t                       length;
-	uint32_t                       handle_type;
-	uint32_t                       reserved;
-	uint64_t                       res_hdl;
+	__u32                       resource_id;
+	__u32                       length;
+	__u32                       handle_type;
+	__u32                       reserved;
+	__u64                       res_hdl;
 };
 
 /**
@@ -250,12 +250,12 @@ struct cam_isp_tfe_resource {
  * @reserved:                   Reserved for alignment
  */
 struct cam_isp_tfe_port_hfr_config {
-	uint32_t                       resource_type;
-	uint32_t                       subsample_pattern;
-	uint32_t                       subsample_period;
-	uint32_t                       framedrop_pattern;
-	uint32_t                       framedrop_period;
-	uint32_t                       reserved;
+	__u32                       resource_type;
+	__u32                       subsample_pattern;
+	__u32                       subsample_period;
+	__u32                       framedrop_pattern;
+	__u32                       framedrop_period;
+	__u32                       reserved;
 } __attribute__((packed));
 
 /**
@@ -267,8 +267,8 @@ struct cam_isp_tfe_port_hfr_config {
  * @port_hfr_config:            HFR configuration for each IO port
  */
 struct cam_isp_tfe_resource_hfr_config {
-	uint32_t                       num_ports;
-	uint32_t                       reserved;
+	__u32                              num_ports;
+	__u32                              reserved;
 	struct cam_isp_tfe_port_hfr_config port_hfr_config[1];
 } __attribute__((packed));
 
@@ -284,10 +284,10 @@ struct cam_isp_tfe_resource_hfr_config {
  *
  */
 struct cam_isp_tfe_dual_stripe_config {
-	uint32_t                       offset;
-	uint32_t                       width;
-	uint32_t                       port_id;
-	uint32_t                       reserved;
+	__u32                       offset;
+	__u32                       width;
+	__u32                       port_id;
+	__u32                       reserved;
 };
 
 /**
@@ -299,9 +299,9 @@ struct cam_isp_tfe_dual_stripe_config {
  *
  */
 struct cam_isp_tfe_dual_config {
-	uint32_t                               num_ports;
-	uint32_t                               reserved;
-	struct cam_isp_tfe_dual_stripe_config  stripes[1];
+	__u32                                 num_ports;
+	__u32                                 reserved;
+	struct cam_isp_tfe_dual_stripe_config stripes[1];
 } __attribute__((packed));
 
 /**
@@ -320,11 +320,11 @@ struct cam_isp_tfe_dual_config {
  *                              clock and let KMD decide.
  */
 struct cam_isp_tfe_clock_config {
-	uint32_t                       usage_type;
-	uint32_t                       num_rdi;
-	uint64_t                       left_pix_hz;
-	uint64_t                       right_pix_hz;
-	uint64_t                       rdi_hz[1];
+	__u32                       usage_type;
+	__u32                       num_rdi;
+	__u64                       left_pix_hz;
+	__u64                       right_pix_hz;
+	__u64                       rdi_hz[1];
 } __attribute__((packed));
 
 /**
@@ -335,8 +335,8 @@ struct cam_isp_tfe_clock_config {
  * @csi_phy_clock               Phy clock valid if tpg is selected
  */
 struct cam_isp_tfe_csid_clock_config {
-	uint64_t                       csid_clock;
-	uint64_t                       phy_clock;
+	__u64                       csid_clock;
+	__u64                       phy_clock;
 } __attribute__((packed));
 
 /**
@@ -347,9 +347,9 @@ struct cam_isp_tfe_csid_clock_config {
  * @axi_path                    Per path vote info
  */
 struct cam_isp_tfe_bw_config_v2 {
-	uint32_t                             usage_type;
-	uint32_t                             num_paths;
-	struct cam_axi_per_path_bw_vote      axi_path[1];
+	__u32                             usage_type;
+	__u32                             num_paths;
+	struct cam_axi_per_path_bw_vote   axi_path[1];
 } __attribute__((packed));
 
 /**
@@ -366,14 +366,14 @@ struct cam_isp_tfe_bw_config_v2 {
  *                         structure
  */
 struct cam_isp_tfe_acquire_hw_info {
-	uint16_t                common_info_version;
-	uint16_t                common_info_size;
-	uint32_t                common_info_offset;
-	uint32_t                num_inputs;
-	uint32_t                input_info_version;
-	uint32_t                input_info_size;
-	uint32_t                input_info_offset;
-	uint64_t                data;
+	__u16                common_info_version;
+	__u16                common_info_size;
+	__u32                common_info_offset;
+	__u32                num_inputs;
+	__u32                input_info_version;
+	__u32                input_info_size;
+	__u32                input_info_offset;
+	__u64                data;
 };
 
 #define CAM_TFE_ACQUIRE_COMMON_VER0         0x1000
