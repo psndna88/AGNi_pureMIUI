@@ -324,6 +324,7 @@
 		cell-index = <0>;
 		compatible = "qcom,dp-display";
 
+		usb-phy = <&usb_qmp_dp_phy>;
 		qcom,dp-aux-switch = <&fsa4480>;
 		qcom,ext-disp = <&ext_disp>;
 		qcom,altmode-dev = <&altmode 0>;
