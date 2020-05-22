@@ -1981,8 +1981,10 @@ static void msm_pinctrl_resume(void)
 				name = desc->action->name;
 
 			pr_warn("%s: %d triggered %s\n", __func__, irq, name);
+#if defined(CONFIG_SUSPEND) && defined(CONFIG_PM_DEBUG)
 //2019.12.12 add longcheer xiaoxiongfeng "recording wakeup reason"
 			log_wakeup_reason(irq);
+#endif
 		}
 	}
 	raw_spin_unlock_irqrestore(&pctrl->lock, flags);
