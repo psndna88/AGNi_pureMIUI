@@ -200,6 +200,30 @@
 			status = "disabled";
 		};
 
+		pm660l_pwm_5: pwm@b500 {
+			compatible = "qcom,qpnp-pwm";
+			reg = <0xb300 0x100>,
+			      <0xb042 0x7e>;
+			reg-names = "qpnp-lpg-channel-base",
+					 "qpnp-lpg-lut-base";
+			qcom,channel-id = <5>;
+			qcom,lpg-lut-size = <0x7e>;
+			qcom,supported-sizes = <6>, <9>;
+			qcom,ramp-index = <2>;
+			#pwm-cells = <2>;
+			qcom,period = <6000000>;
+
+			qcom,lpg {
+				label = "lpg";
+				cell-index = <0>;
+				qcom,duty-percents =
+					<0x01 0x0a 0x14 0x1e 0x28 0x32 0x3c
+					0x46 0x50 0x5a 0x64
+					0x64 0x5a 0x50 0x46 0x3c 0x32 0x28 0x1e
+					0x14 0x0a 0x01>;
+			};
+		};
+
 		qcom,leds@d000 {
 			compatible = "qcom,leds-qpnp";
 			reg = <0xd000 0x100>;
@@ -211,15 +235,16 @@
 				qcom,mode = "pwm";
 				pwms = <&pm660l_pwm_3 0 0>;
 				qcom,pwm-us = <1000>;
-				qcom,ramp-step-ms = <128>;
+				qcom,ramp-step-ms = <50>;
 				qcom,max-current = <12>;
 				qcom,default-state = "off";
 				linux,name = "red";
-				qcom,start-idx = <0>;
-				qcom,idx-len = <26>;
-				qcom,duty-pcts =
-					[3C 3C 3B 3A 3B 37 35 33 31 2E 2A 27 23
-					 1F 1B 17 13 0E 09 05 00 00 00 00 00 00];
+				qcom,start-idx = <1>;
+				qcom,idx-len = <8>;
+				qcom,duty-pcts = [ 00 0E 1C 2A 38 46 54 64 ];
+				qcom,pause-lo = <500>;
+				qcom,pause-hi = <500>;
+				qcom,lut-flags = <31>; /* loop, ramp up, reverse, pause hi, pause lo */
 				qcom,use-blink;
 			};
 
@@ -243,6 +268,25 @@
 				qcom,max-current = <12>;
 				qcom,default-state = "off";
 				linux,name = "blue";
+			};
+
+			white_led: qcom,rgb_3 {
+				label = "rgb";
+				qcom,id = <6>;
+				qcom,mode = "pwm";
+				pwms = <&pm660l_pwm_5 0 0>;
+				qcom,pwm-us = <1000>;
+				qcom,ramp-step-ms = <50>;
+				qcom,max-current = <12>;
+				qcom,default-state = "off";
+				linux,name = "white";
+				qcom,start-idx = <1>;
+				qcom,duty-pcts = [ 00 0E 1C 2A 38 46 54 64 ];
+				qcom,idx-len = <8>;
+				qcom,pause-lo = <500>;
+				qcom,pause-hi = <500>;
+				qcom,lut-flags = <31>; /* loop, ramp up, reverse, pause hi, pause lo */
+				qcom,use-blink;
 			};
 		};
 
