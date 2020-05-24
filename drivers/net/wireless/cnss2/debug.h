@@ -20,30 +20,15 @@
 
 extern void *cnss_ipc_log_context;
 
-#define cnss_ipc_log_string(_x...) do {					\
-		if (cnss_ipc_log_context)				\
-			ipc_log_string(cnss_ipc_log_context, _x);	\
-	} while (0)
+#define cnss_ipc_log_string(_x...)
 
-#define cnss_pr_err(_fmt, ...) do {					\
-		printk("%scnss: " _fmt, KERN_ERR, ##__VA_ARGS__);	\
-		cnss_ipc_log_string("%scnss: " _fmt, "", ##__VA_ARGS__);\
-	} while (0)
+#define cnss_pr_err(_fmt, ...)
 
-#define cnss_pr_warn(_fmt, ...) do {					\
-		printk("%scnss: " _fmt, KERN_WARNING, ##__VA_ARGS__);	\
-		cnss_ipc_log_string("%scnss: " _fmt, "", ##__VA_ARGS__);\
-	} while (0)
+#define cnss_pr_warn(_fmt, ...)
 
-#define cnss_pr_info(_fmt, ...) do {					\
-		printk("%scnss: " _fmt, KERN_INFO, ##__VA_ARGS__);	\
-		cnss_ipc_log_string("%scnss: " _fmt, "", ##__VA_ARGS__);\
-	} while (0)
+#define cnss_pr_info(_fmt, ...)
 
-#define cnss_pr_dbg(_fmt, ...) do {					\
-		printk("%scnss: " _fmt, KERN_DEBUG, ##__VA_ARGS__);	\
-		cnss_ipc_log_string("%scnss: " _fmt, "", ##__VA_ARGS__);\
-	} while (0)
+#define cnss_pr_dbg(_fmt, ...)
 
 #ifdef CONFIG_CNSS2_DEBUG
 #define CNSS_ASSERT(_condition) do {					\
@@ -63,8 +48,7 @@ extern void *cnss_ipc_log_context;
 	} while (0)
 #endif
 
-#define cnss_fatal_err(_fmt, ...)					\
-	cnss_pr_err("fatal: " _fmt, ##__VA_ARGS__)
+#define cnss_fatal_err(_fmt, ...)
 
 int cnss_debug_init(void);
 void cnss_debug_deinit(void);
