@@ -426,6 +426,14 @@ typedef enum {
     WMI_PDEV_SET_SRG_BSS_COLOR_BITMAP_CMDID,
     /** Partial BSSID bitmap for SRG based spatial reuse feature */
     WMI_PDEV_SET_SRG_PARTIAL_BSSID_BITMAP_CMDID,
+    /** OBSS color enable bitmap for SRG based spatial reuse feature */
+    WMI_PDEV_SET_SRG_OBSS_COLOR_ENABLE_BITMAP_CMDID,
+    /** OBSS BSSID enable bitmap for SRG based spatial reuse feature */
+    WMI_PDEV_SET_SRG_OBSS_BSSID_ENABLE_BITMAP_CMDID,
+    /** OBSS color enable bitmap for NON_SRG based spatial reuse feature */
+    WMI_PDEV_SET_NON_SRG_OBSS_COLOR_ENABLE_BITMAP_CMDID,
+    /** OBSS BSSID enable bitmap for NON_SRG based spatial reuse feature */
+    WMI_PDEV_SET_NON_SRG_OBSS_BSSID_ENABLE_BITMAP_CMDID,
 
     /* VDEV (virtual device) specific commands */
     /** vdev create */
@@ -1333,6 +1341,9 @@ typedef enum {
 
     /** Scan specific events */
     WMI_SCAN_EVENTID = WMI_EVT_GRP_START_ID(WMI_GRP_SCAN),
+
+    /** Spectral scan FW params to host */
+    WMI_PDEV_SSCAN_FW_PARAM_EVENTID,
 
     /* PDEV specific events */
     /** TPC config for the current operating channel */
@@ -3621,8 +3632,9 @@ typedef struct {
      */
     A_UINT32 max_rnr_neighbours;
 
-    /** @brief ema_max_vap_cnt - number of maximum ema vaps at any instance
-     * of time across SOC.
+    /** @brief ema_max_vap_cnt - number of maximum EMA Tx vaps (VAPs having both
+     *  VDEV_FLAGS_EMA_MODE and VDEV_FLAGS_TRANSMIT_AP set) at any instance
+     * of time across SOC. Legacy MBSS Vaps are not accounted in this field.
      */
     A_UINT32 ema_max_vap_cnt;
 
@@ -5140,6 +5152,15 @@ typedef struct {
 #define WMI_TX_SEND_PARAM_CFR_CAPTURE_GET(tx_param_dword1) WMI_GET_BITS(tx_param_dword1, 21, 1)
 #define WMI_TX_SEND_PARAM_CFR_CAPTURE_SET(tx_param_dword1, value) WMI_SET_BITS(tx_param_dword1, 21, 1, value)
 
+/* TX_SEND flags:
+ * Bit 0: set wrong txkey
+ *     There is one special WFA test case in STA or AP, setting wrong txkey
+ *     in disassoc or deauth with PMF enabled to verify if peer disconnected
+ */
+#define WMI_TX_SEND_FLAG_SET_WRONG_KEY    0x00000001
+#define WMI_TX_SEND_FLAG_SET_WRONG_KEY_GET(tx_flags) WMI_GET_BITS(tx_flags, 0, 1)
+#define WMI_TX_SEND_FLAG_SET_WRONG_KEY_SET(tx_flags, value) WMI_SET_BITS(tx_flags, 0, 1, value)
+
 typedef struct {
     A_UINT32 tlv_header; /* TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_tx_send_params */
 
@@ -5303,6 +5324,12 @@ typedef struct {
      * frame, as it will be tx'ed on non-pause tid
      */
     A_UINT32 tx_params_valid;
+    /* tx_flags:
+     * Extra flags when tx_params_valid is 0.
+     * Refer to WMI_TX_SEND_FLAG_xxx defs regarding the meaning of the
+     * bits within this field.
+     */
+    A_UINT32 tx_flags;
 /* This TLV is followed by array of bytes: First 64 bytes of management frame
  *   A_UINT8 bufp[];
  */
@@ -5682,12 +5709,26 @@ typedef struct {
     A_UINT32 spectral_scan_chn_mask;
     /* See enum wmi_spectral_scan_mode */
     A_UINT32 spectral_scan_mode;
-    /* agile span center frequency (MHz), 0 for normal scan*/
-    A_UINT32 spectral_scan_center_freq;
+    union {
+        /**
+         * Two center frequencies are required for agile channel switch
+         * supporting True 160 and Restricted 160 ((80+80) or 165) MHz.
+         * This parameter specifies the center frequency for cases with a
+         * contiguous channel, and the center frequency of the primary
+         * portion of a non-contiguous (80+80 or 165 MHz) channel.
+         */
+        A_UINT32 spectral_scan_center_freq;
+        A_UINT32 spectral_scan_center_freq1;
+    };
     /* agile span primary channel frequency (MHz), 0 for normal scan*/
     A_UINT32 spectral_scan_chan_freq;
     /* agile scan bandwidth (20, 40, 80, 80+80, 160), enum wmi_channel_width */
     A_UINT32 spectral_scan_chan_width;
+    /**
+     * Adding freq2 to support True 160 and restricted 160 ((80+80) or 165) MHz.
+     * agile span center frequency2 (MHz), 0 for normal scan.
+     */
+    A_UINT32 spectral_scan_center_freq2;
 } wmi_vdev_spectral_configure_cmd_fixed_param;
 
 /*
@@ -5711,6 +5752,75 @@ typedef struct {
     A_UINT32 tlv_header; /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_vdev_get_tx_power_cmd_fixed_param */
     A_UINT32 vdev_id;
 } wmi_vdev_get_tx_power_cmd_fixed_param;
+
+/* Primary 80 bin values */
+#define WMI_SSCAN_PRI80_START_BIN_GET(pri80_bins)        WMI_GET_BITS(pri80_bins, 0, 16)
+#define WMI_SSCAN_PRI80_START_BIN_SET(pri80_bins, value) WMI_SET_BITS(pri80_bins, 0, 16, value)
+#define WMI_SSCAN_PRI80_END_BIN_GET(pri80_bins)          WMI_GET_BITS(pri80_bins, 16, 16)
+#define WMI_SSCAN_PRI80_END_BIN_SET(pri80_bins, value)   WMI_SET_BITS(pri80_bins, 16, 16, value)
+
+/* Secondary 80 bin values */
+#define WMI_SSCAN_SEC80_START_BIN_GET(sec80_bins)        WMI_GET_BITS(sec80_bins, 0, 16)
+#define WMI_SSCAN_SEC80_START_BIN_SET(sec80_bins, value) WMI_SET_BITS(sec80_bins, 0, 16, value)
+#define WMI_SSCAN_SEC80_END_BIN_GET(sec80_bins)          WMI_GET_BITS(sec80_bins, 16, 16)
+#define WMI_SSCAN_SEC80_END_BIN_SET(sec80_bins, value)   WMI_SET_BITS(sec80_bins, 16, 16, value)
+
+/* 5MHz bin values */
+#define WMI_SSCAN_MID_5MHZ_START_BIN_GET(mid_5mhz_bins)        WMI_GET_BITS(mid_5mhz_bins, 0, 16)
+#define WMI_SSCAN_MID_5MHZ_START_BIN_SET(mid_5mhz_bins, value) WMI_SET_BITS(mid_5mhz_bins, 0, 16, value)
+#define WMI_SSCAN_MID_5MHZ_END_BIN_GET(mid_5mhz_bins)          WMI_GET_BITS(mid_5mhz_bins, 16, 16)
+#define WMI_SSCAN_MID_5MHZ_END_BIN_SET(mid_5mhz_bins, value)   WMI_SET_BITS(mid_5mhz_bins, 16, 16, value)
+
+typedef struct {
+    A_UINT32 tlv_header; /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_pdev_sscan_fw_cmd_fixed_param */
+    A_UINT32 pdev_id;
+
+    /* See enum wmi_spectral_scan_mode */
+    A_UINT32 spectral_scan_mode;
+
+    /**
+      * This fixed_param TLV is followed by the below TLVs:
+      *
+      * wmi_pdev_sscan_fft_bin_index fft_bin_index[]; // array len = 0 or 1
+      *     If present (array length is 1) this TLV specifies the primary
+      *     and secondary channels FFT bin indices for True 160 and
+      *     Restricted 160 (80+80 or 165) MHz BW cases.
+      */
+} wmi_pdev_sscan_fw_cmd_fixed_param;
+
+/**
+ * The below structure is used only to send the FFT bin numbers for
+ * True 160 and Restricted 160(80+80 or 165) MHz from FW to HOST
+ */
+typedef struct {
+    A_UINT32 tlv_header; /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_pdev_sscan_fft_bin_index */
+
+    /**
+     * Bit 15 -  0 : primary 80 start bin number
+     * Bit 31 - 16 : primary 80 end bin number
+     * Refer to WMI_SSCAN_PRI80_[START,END]_BIN_[GET,SET] macros.
+     * Only for True 160 and Restricted 160(80+80 or 165) MHz this
+     * will be filled.
+     */
+    A_UINT32 pri80_bins;
+
+    /**
+     * Bit 15 -  0 : secondary 80 start bin number
+     * Bit 31 - 16 : secondary 80 end bin number
+     * Refer to WMI_SSCAN_SEC80_[START,END]_BIN_[GET,SET] macros.
+     * Only for True 160 and Restricted 160(80+80 or 165) MHz this
+     * will be filled.
+     */
+    A_UINT32 sec80_bins;
+
+    /**
+     * Bit 15 -  0 : 5Mhz start bin number
+     * Bit 31 - 16 : 5Mhz end bin number
+     * Refer to WMI_SSCAN_MID_5MHZ_[START,END]_BIN_[GET,SET] macros.
+     * Only for Restricted 160(80+80 or 165), otherwise 0.
+     */
+    A_UINT32 mid_5mhz_bins;
+} wmi_pdev_sscan_fft_bin_index;
 
 #define WMI_BEACON_CTRL_TX_DISABLE  0
 #define WMI_BEACON_CTRL_TX_ENABLE   1
@@ -9006,6 +9116,11 @@ typedef struct {
 #define VDEV_FLAGS_NON_MBSSID_AP      0x00000001   /* legacy AP */
 #define VDEV_FLAGS_TRANSMIT_AP        0x00000002   /* indicate if this vdev is transmitting AP */
 #define VDEV_FLAGS_NON_TRANSMIT_AP    0x00000004   /* explicitly indicate this vdev is non-transmitting AP */
+#define VDEV_FLAGS_EMA_MODE           0x00000008   /* vdev is EMA and supports multiple beacon profiles.
+                                                    * Once this flag set, flags VDEV_FLAGS_TRANSMIT_AP and
+                                                    * VDEV_FLAGS_NON_TRANSMIT_AP classify it as either Tx vap
+                                                    * or non Tx vap.
+                                                    */
 
 typedef struct {
     A_UINT32 tlv_header; /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_vdev_create_cmd_fixed_param */
@@ -10770,6 +10885,9 @@ typedef enum {
      */
     WMI_VDEV_PARAM_SET_CMD_OBSS_PD_PER_AC,
 
+    /* Parameter used to enable/disable SRP feature */
+    WMI_VDEV_PARAM_ENABLE_SRP,
+
 
     /*=== ADD NEW VDEV PARAM TYPES ABOVE THIS LINE ===
      * The below vdev param types are used for prototyping, and are
@@ -11275,10 +11393,13 @@ typedef struct {
     A_UINT32 feature_enable_bitmap;
 
     /**
-     * @ema_params: This carries below information encoded each byte:
+     * @ema_params: Applicable only for EMA tx VAPs (VAPs having both flags
+     *         VDEV_FLAGS_EMA_MODE and VDEV_FLAGS_TRANSMIT_AP set) and should
+     *         remain 0 otherwise. For EMA vaps it carries below information
+     *         encoded in each byte:
      * Byte 0: (@ema_beacon_profile_periodicity) - beacon profile periodicity
      *         (number of beacons) after which nontransmitted MBSS info repeats.
-     *         Assumes values [1, N] inclusive. Shall be 1 for legacy Tx VAPs.
+     *         Assumes values [1, N] inclusive.
      *         Refer to WMI_BEACON_TMPLT_[SET,GET]_PROFILE_PERIOD macros.
      * Byte 1: (@ema_beacon_tmpl_idx) -  Specifies the position of beacon
      *         templates within profile periodicity.
@@ -13545,6 +13666,12 @@ typedef struct {
      * oce_ap_tx_pwr_weightage_pcnt != 0.
      */
     A_UINT32 oce_ap_tx_pwr_weightage_pcnt;
+    /*
+     * For OCE Release 2, give weightage to roam candidate based on
+     * advertised subnet id.
+     * Only used if oce_ap_subnet_id_weightage_pcnt != 0.
+     */
+    A_UINT32 oce_ap_subnet_id_weightage_pcnt;
 } wmi_roam_cnd_scoring_param;
 
 typedef struct {
@@ -23493,10 +23620,34 @@ typedef struct wmi_wds_addr_event {
     A_UINT32 vdev_id; /* ID of the vdev this peer belongs to */
 } wmi_wds_addr_event_fixed_param;
 
+/*
+ * Enum values for WMI_PEER_PS_SUPPORTED_BITMAP field,
+ * in wmi_peer_sta_ps_statechange_event structure.
+ */
+typedef enum {
+   /* Used to indicate that peer_ps_valid is valid */
+   WMI_PEER_PS_VALID_SUPPORTED =     0x00000001,
+   /* Used to indicate that peer_ps_timestamp field is valid */
+   WMI_PEER_PS_TIMESTAMP_SUPPORTED = 0x00000002,
+} WMI_PEER_PS_SUPPORTED_BITMAP;
+
 typedef struct {
     A_UINT32 tlv_header; /* TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_peer_sta_ps_statechange_event_fixed_param */
     wmi_mac_addr peer_macaddr;
     A_UINT32 peer_ps_state;
+    /* Start of extended structure */
+    /* Bitmap to indicate which fields in the extended structure are valid.
+     * Bitmap values correspond to enum WMI_PEER_PS_SUPPORTED_BITMAP
+     */
+    A_UINT32 peer_ps_supported_bitmap;
+    /* This field is used to indicate host of a valid PS state change.
+     * 1 - indicates a valid PS state change.
+     * 0 - indicates an invalid PS state change.
+     * Host to ignore the power save duration calculation when peer_ps_valid = 0
+     */
+    A_UINT32 peer_ps_valid;
+    /* This field indicates the time since target boot-up in MilliSeconds. */
+    A_UINT32 peer_ps_timestamp;
 } wmi_peer_sta_ps_statechange_event_fixed_param;
 
 /* WMI_PDEV_FIPS_EVENTID */
@@ -27170,6 +27321,7 @@ typedef enum {
  */
 typedef enum {
     WMI_ROAM_TRIGGER_REASON_STA_KICKOUT = WMI_ROAM_TRIGGER_REASON_MAX,
+    WMI_ROAM_TRIGGER_REASON_ESS_RSSI,
 
     WMI_ROAM_TRIGGER_EXT_REASON_MAX
 } WMI_ROAM_TRIGGER_EXT_REASON_ID;
@@ -30212,6 +30364,70 @@ typedef struct {
      */
     A_UINT32 srg_partial_bssid_bitmap[2];
 } wmi_pdev_srg_partial_bssid_bitmap_cmd_fixed_param;
+
+typedef struct {
+    /** TLV tag and len; tag equals
+     * WMITLV_TAG_STRUC_wmi_pdev_srg_obss_color_enable_bitmap_cmd_fixed_param */
+    A_UINT32 tlv_header;
+    /** pdev_id for identifying the MAC
+     * See macros starting with WMI_PDEV_ID_ for values.
+     * In non-DBDC case host should set it to 0
+     */
+    A_UINT32 pdev_id;
+    /* 64 bit SRG obss color enable bitmap used by SRG based spatial reuse feature
+     * bitmap[0] contains lower 32 bits and bitmap[1] contains
+     * upper 32 bits.
+     */
+    A_UINT32 srg_obss_en_color_bitmap[2];
+} wmi_pdev_srg_obss_color_enable_bitmap_cmd_fixed_param;
+
+typedef struct {
+    /** TLV tag and len; tag equals
+     * WMITLV_TAG_STRUC_wmi_pdev_srg_obss_bssid_enable_bitmap_cmd_fixed_param */
+    A_UINT32 tlv_header;
+    /** pdev_id for identifying the MAC
+     * See macros starting with WMI_PDEV_ID_ for values.
+     * In non-DBDC case host should set it to 0
+     */
+    A_UINT32 pdev_id;
+    /* 64 bit obss bssid enable bitmap used by SRG based spatial reuse feature
+     * bitmap[0] contains lower 32 bits and bitmap[1] contains
+     * upper 32 bits.
+     */
+    A_UINT32 srg_obss_en_bssid_bitmap[2];
+} wmi_pdev_srg_obss_bssid_enable_bitmap_cmd_fixed_param;
+
+typedef struct {
+    /** TLV tag and len; tag equals
+     * WMITLV_TAG_STRUC_wmi_pdev_non_srg_obss_color_enable_bitmap_cmd_fixed_param */
+    A_UINT32 tlv_header;
+    /** pdev_id for identifying the MAC
+     * See macros starting with WMI_PDEV_ID_ for values.
+     * In non-DBDC case host should set it to 0
+     */
+    A_UINT32 pdev_id;
+    /* 64 bit Non_SRG obss color enable bitmap used by Non_SRG based spatial reuse feature
+     * bitmap[0] contains lower 32 bits and bitmap[1] contains
+     * upper 32 bits.
+     */
+    A_UINT32 non_srg_obss_en_color_bitmap[2];
+} wmi_pdev_non_srg_obss_color_enable_bitmap_cmd_fixed_param;
+
+typedef struct {
+    /** TLV tag and len; tag equals
+     * WMITLV_TAG_STRUC_wmi_pdev_non_srg_obss_bssid_enable_bitmap_cmd_fixed_param */
+    A_UINT32 tlv_header;
+    /** pdev_id for identifying the MAC
+     * See macros starting with WMI_PDEV_ID_ for values.
+     * In non-DBDC case host should set it to 0
+     */
+    A_UINT32 pdev_id;
+    /* 64 bit obss bssid enable bitmap used by Non_SRG based spatial reuse feature
+     * bitmap[0] contains lower 32 bits and bitmap[1] contains
+     * upper 32 bits.
+     */
+    A_UINT32 non_srg_obss_en_bssid_bitmap[2];
+} wmi_pdev_non_srg_obss_bssid_enable_bitmap_cmd_fixed_param;
 
 typedef enum {
     /* Simulation test command types */
