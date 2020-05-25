@@ -326,6 +326,7 @@ struct cam_cmd_unconditional_wait {
 /**
  * cam_csiphy_info       : Provides cmdbuffer structre
  * @lane_assign          : Lane sensor will be using
+ * @mipi_flags           : MIPI phy flags
  * @lane_cnt             : Total number of lanes
  * @secure_mode          : Secure mode flag to enable / disable
  * @settle_time          : Settling time in ms
@@ -335,7 +336,7 @@ struct cam_cmd_unconditional_wait {
 struct cam_csiphy_info {
 	__u16    reserved;
 	__u16    lane_assign;
-	__u16    reserved1;
+	__u16    mipi_flags;
 	__u8     lane_cnt;
 	__u8     secure_mode;
 	__u64    settle_time;
