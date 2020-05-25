@@ -260,3 +260,9 @@ config AGNI_MIUI_11_CAMERA_MODE
 	---help---
 	  Support MIUI 11 camera libs
 
+config AGNI_MIUI12_Q_MODE
+	bool "AGNi MIUI 12 Android 10 CAMERA MODE support"
+	depends on MSM_CAMERA_SENSOR
+	default n
+	---help---
+	  Support MIUI 12 Q camera

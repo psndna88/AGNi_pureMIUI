@@ -234,11 +234,10 @@ static int32_t msm_sensor_fill_eeprom_subdevid_by_name(
 			strcmp(eeprom_name, s_ctrl->sensordata->eeprom_name))
 			continue;
 
-		if(userspace_probe == 1)
+		if(userspace_probe)
 		{
 			rc = of_property_read_string(src_node, "qcom,lct_eeprom-name",&lct_eeprom_name);
-			if(rc < 0) {
-			} else {
+			if(rc >= 0) {
 				if(strcmp(s_ctrl->sensordata->eeprom_name,lct_eeprom_name))	{
 					rc = 0;
 					continue;
@@ -1219,7 +1218,7 @@ char sensor_fusion_id[512] = {0};
 static char sensor_fusion_id[512] = {0};
 #endif
 
-void msm_sensor_set_sesnor_id(struct msm_sensor_ctrl_t *s_ctrl)
+void msm_sensor_set_sensor_id(struct msm_sensor_ctrl_t *s_ctrl)
 {
 	char  sensor_fusion_id_tmp[90] = {0};
 	int rc = 0;
@@ -1824,7 +1823,7 @@ CSID_TG:
 	msm_sensor_init_device_name();
 	msm_sensor_set_module_info(s_ctrl);
 	msm_sensorid_init_device_name();
-	msm_sensor_set_sesnor_id(s_ctrl);
+	msm_sensor_set_sensor_id(s_ctrl);
 	/* Power down */
 	s_ctrl->func_tbl->sensor_power_down(s_ctrl);
 	/*

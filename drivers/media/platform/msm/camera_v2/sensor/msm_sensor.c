@@ -241,9 +241,11 @@ int msm_sensor_match_vendor_id(struct msm_sensor_ctrl_t *s_ctrl)
 	const char *sensor_name;
 	uint16_t temp_sid = 0;
 	uint16_t vcmid = 0;
-	uint16_t lensid = 0;
 	int have_vcmid = 0;
+#ifdef CONFIG_AGNI_MIUI_11_CAMERA_MODE
+	uint16_t lensid = 0;
 	int have_lensid = 0;
+#endif
 	enum cci_i2c_master_t temp_master = MASTER_0;
 
 	if (!s_ctrl) {
@@ -317,7 +319,7 @@ int msm_sensor_match_vendor_id(struct msm_sensor_ctrl_t *s_ctrl)
 		return rc;
 	}
 	if (s_ctrl->sensordata->vendor_id_info->vendor_id != vendorid) {
-		pr_err("%s:%s match vendor id failed read vendor id:0x%x expected id 0x%x eeprom_slave_addr 0x%x vendor_id_addr 0x%x\n",
+		pr_err("%s:%s match vendor if failed read vendor id:0x%x expected id 0x%x eeprom_slave_addr 0x%x vendor_id_addr 0x%x\n",
 			__func__,s_ctrl->sensordata->sensor_name,vendorid, s_ctrl->sensordata->vendor_id_info->vendor_id,
 		s_ctrl->sensordata->vendor_id_info->eeprom_slave_addr,
 		s_ctrl->sensordata->vendor_id_info->vendor_id_addr);
@@ -326,7 +328,7 @@ int msm_sensor_match_vendor_id(struct msm_sensor_ctrl_t *s_ctrl)
 	}
 	else
 	{
-		if(have_vcmid == 1)
+		if(have_vcmid)
 		{
 			if (s_ctrl->sensordata->vcm_id_info->vcm_id != vcmid)
 			{
