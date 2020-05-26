@@ -74,8 +74,8 @@
 			qcom,supply-name = "lab";
 			qcom,supply-min-voltage = <4600000>;
 			qcom,supply-max-voltage = <6000000>;
-			qcom,supply-enable-load = <363000>;
-			qcom,supply-disable-load = <100>;
+			qcom,supply-enable-load = <0>;
+			qcom,supply-disable-load = <0>;
 		};
 
 		qcom,panel-supply-entry@3 {
@@ -83,8 +83,8 @@
 			qcom,supply-name = "ibb";
 			qcom,supply-min-voltage = <4600000>;
 			qcom,supply-max-voltage = <6000000>;
-			qcom,supply-enable-load = <363000>;
-			qcom,supply-disable-load = <100>;
+			qcom,supply-enable-load = <0>;
+			qcom,supply-disable-load = <0>;
 			qcom,supply-post-on-sleep = <20>;
 		};
 	};
