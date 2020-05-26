@@ -132,6 +132,10 @@ config WLAN_FEATURE_DISA
 	bool "Enable DISA certification feature"
 	default n
 
+config WLAN_SPECTRAL_SCAN
+	bool "Enable Spectral Scan feature"
+	default n
+
 config WLAN_FEATURE_FIPS
 	bool "Enable FIPS certification feature"
 	default n

@@ -360,8 +360,10 @@ static const u32 hdd_sta_akm_suites[] = {
 	WLAN_AKM_SUITE_TDLS,
 	WLAN_AKM_SUITE_SAE,
 	WLAN_AKM_SUITE_FT_OVER_SAE,
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0))
 	WLAN_AKM_SUITE_8021X_SUITE_B,
 	WLAN_AKM_SUITE_8021X_SUITE_B_192,
+#endif
 	WLAN_AKM_SUITE_FILS_SHA256,
 	WLAN_AKM_SUITE_FILS_SHA384,
 	WLAN_AKM_SUITE_FT_FILS_SHA256,
@@ -969,6 +971,36 @@ hdd_convert_hang_reason(enum qdf_hang_reason reason)
 	case QDF_RESUME_TIMEOUT:
 		ret_val = QCA_WLAN_HANG_RESUME_TIMEOUT;
 		break;
+	case QDF_WMI_EXCEED_MAX_PENDING_CMDS:
+		ret_val = QCA_WLAN_HANG_WMI_EXCEED_MAX_PENDING_CMDS;
+		break;
+	case QDF_AP_STA_CONNECT_REQ_TIMEOUT:
+		ret_val = QCA_WLAN_HANG_AP_STA_CONNECT_REQ_TIMEOUT;
+		break;
+	case QDF_STA_AP_CONNECT_REQ_TIMEOUT:
+		ret_val = QCA_WLAN_HANG_STA_AP_CONNECT_REQ_TIMEOUT;
+		break;
+	case QDF_MAC_HW_MODE_CHANGE_TIMEOUT:
+		ret_val = QCA_WLAN_HANG_MAC_HW_MODE_CHANGE_TIMEOUT;
+		break;
+	case QDF_MAC_HW_MODE_CONFIG_TIMEOUT:
+		ret_val = QCA_WLAN_HANG_MAC_HW_MODE_CONFIG_TIMEOUT;
+		break;
+	case QDF_VDEV_START_RESPONSE_TIMED_OUT:
+		ret_val = QCA_WLAN_HANG_VDEV_START_RESPONSE_TIMED_OUT;
+		break;
+	case QDF_VDEV_RESTART_RESPONSE_TIMED_OUT:
+		ret_val = QCA_WLAN_HANG_VDEV_RESTART_RESPONSE_TIMED_OUT;
+		break;
+	case QDF_VDEV_STOP_RESPONSE_TIMED_OUT:
+		ret_val = QCA_WLAN_HANG_VDEV_STOP_RESPONSE_TIMED_OUT;
+		break;
+	case QDF_VDEV_DELETE_RESPONSE_TIMED_OUT:
+		ret_val = QCA_WLAN_HANG_VDEV_DELETE_RESPONSE_TIMED_OUT;
+		break;
+	case QDF_VDEV_PEER_DELETE_ALL_RESPONSE_TIMED_OUT:
+		ret_val = QCA_WLAN_HANG_VDEV_PEER_DELETE_ALL_RESPONSE_TIMED_OUT;
+		break;
 	case QDF_REASON_UNSPECIFIED:
 	default:
 		ret_val = QCA_WLAN_HANG_REASON_UNSPECIFIED;
@@ -980,11 +1012,13 @@ hdd_convert_hang_reason(enum qdf_hang_reason reason)
  * wlan_hdd_send_hang_reason_event() - Send hang reason to the userspace
  * @hdd_ctx: Pointer to hdd context
  * @reason: cds recovery reason
+ * @data: Hang Data
  *
  * Return: 0 on success or failure reason
  */
 int wlan_hdd_send_hang_reason_event(struct hdd_context *hdd_ctx,
-				    enum qdf_hang_reason reason)
+				    enum qdf_hang_reason reason, void *data,
+				    size_t data_len)
 {
 	struct sk_buff *vendor_event;
 	enum qca_wlan_vendor_hang_reason hang_reason;
@@ -1004,7 +1038,7 @@ int wlan_hdd_send_hang_reason_event(struct hdd_context *hdd_ctx,
 
 	vendor_event = cfg80211_vendor_event_alloc(hdd_ctx->wiphy,
 						   wdev,
-						   sizeof(uint32_t),
+						   sizeof(uint32_t) + data_len,
 						   HANG_REASON_INDEX,
 						   GFP_KERNEL);
 	if (!vendor_event) {
@@ -1015,7 +1049,9 @@ int wlan_hdd_send_hang_reason_event(struct hdd_context *hdd_ctx,
 	hang_reason = hdd_convert_hang_reason(reason);
 
 	if (nla_put_u32(vendor_event, QCA_WLAN_VENDOR_ATTR_HANG_REASON,
-			(uint32_t)hang_reason)) {
+			(uint32_t)hang_reason) ||
+	    nla_put(vendor_event, QCA_WLAN_VENDOR_ATTR_HANG_REASON_DATA,
+		    data_len, data)) {
 		hdd_err("QCA_WLAN_VENDOR_ATTR_HANG_REASON put fail");
 		kfree_skb(vendor_event);
 		return -EINVAL;
@@ -6564,6 +6600,41 @@ hdd_cfg80211_get_station_cmd(struct wiphy *wiphy,
 #endif
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
+
+/**
+ * hdd_get_roam_reason() - convert wmi roam reason to
+ * enum qca_roam_reason
+ * @roam_scan_trigger: wmi roam scan trigger ID
+ *
+ * Return: Meaningful qca_roam_reason from enum WMI_ROAM_TRIGGER_REASON_ID
+ */
+static enum qca_roam_reason hdd_get_roam_reason(uint16_t roam_scan_trigger)
+{
+	switch (roam_scan_trigger) {
+	case WMI_ROAM_TRIGGER_REASON_PER:
+		return QCA_ROAM_REASON_PER;
+	case WMI_ROAM_TRIGGER_REASON_BMISS:
+		return QCA_ROAM_REASON_BEACON_MISS;
+	case WMI_ROAM_TRIGGER_REASON_LOW_RSSI:
+	case WMI_ROAM_TRIGGER_REASON_BACKGROUND:
+		return QCA_ROAM_REASON_POOR_RSSI;
+	case WMI_ROAM_TRIGGER_REASON_HIGH_RSSI:
+		return QCA_ROAM_REASON_BETTER_RSSI;
+	case WMI_ROAM_TRIGGER_REASON_DENSE:
+		return QCA_ROAM_REASON_CONGESTION;
+	case WMI_ROAM_TRIGGER_REASON_FORCED:
+		return QCA_ROAM_REASON_USER_TRIGGER;
+	case WMI_ROAM_TRIGGER_REASON_BTM:
+		return QCA_ROAM_REASON_BTM;
+	case WMI_ROAM_TRIGGER_REASON_BSS_LOAD:
+		return QCA_ROAM_REASON_BSS_LOAD;
+	default:
+		return QCA_ROAM_REASON_UNKNOWN;
+	}
+
+	return QCA_ROAM_REASON_UNKNOWN;
+}
+
 /**
  * __wlan_hdd_cfg80211_keymgmt_set_key() - Store the Keys in the driver session
  * @wiphy: pointer to wireless wiphy structure.
@@ -7073,6 +7144,7 @@ int wlan_hdd_send_roam_auth_event(struct hdd_adapter *adapter, uint8_t *bssid,
 	eCsrAuthType auth_type;
 	uint32_t fils_params_len;
 	int status;
+	enum qca_roam_reason hdd_roam_reason;
 
 	hdd_enter();
 
@@ -7098,8 +7170,8 @@ int wlan_hdd_send_roam_auth_event(struct hdd_adapter *adapter, uint8_t *bssid,
 			ETH_ALEN + req_rsn_len + rsp_rsn_len +
 			sizeof(uint8_t) + SIR_REPLAY_CTR_LEN +
 			SIR_KCK_KEY_LEN + roam_info_ptr->kek_len +
-			sizeof(uint8_t) + (8 * NLMSG_HDRLEN) +
-			fils_params_len,
+			sizeof(uint16_t) + sizeof(uint8_t) +
+			(9 * NLMSG_HDRLEN) + fils_params_len,
 			QCA_NL80211_VENDOR_SUBCMD_KEY_MGMT_ROAM_AUTH_INDEX,
 			GFP_KERNEL);
 
@@ -7150,6 +7222,15 @@ int wlan_hdd_send_roam_auth_event(struct hdd_adapter *adapter, uint8_t *bssid,
 			roam_info_ptr->kek_len, roam_info_ptr->kek)) {
 			hdd_err("nla put fail, kek_len %d",
 				roam_info_ptr->kek_len);
+			goto nla_put_failure;
+		}
+
+		hdd_roam_reason =
+			hdd_get_roam_reason(roam_info_ptr->roam_reason);
+
+		if (nla_put_u16(skb, QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_REASON,
+				hdd_roam_reason)) {
+			hdd_err("roam reason send failure");
 			goto nla_put_failure;
 		}
 
@@ -14362,8 +14443,7 @@ static void
 wlan_hdd_update_akm_suit_info(struct wiphy *wiphy)
 {
 	wiphy->iftype_akm_suites = wlan_hdd_akm_suites;
-	wiphy->num_iftype_akm_suites = QDF_ARRAY_SIZE(wlan_hdd_akm_suites) /
-				       sizeof(struct wiphy_iftype_akm_suites);
+	wiphy->num_iftype_akm_suites = QDF_ARRAY_SIZE(wlan_hdd_akm_suites);
 }
 #else
 static void
