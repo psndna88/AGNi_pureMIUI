@@ -148,14 +148,16 @@ static int32_t cam_cci_write_i2c_queue(struct cci_device *cci_dev,
 {
 	int32_t rc = 0;
 	uint32_t reg_offset = master * 0x200 + queue * 0x100;
-	struct cam_hw_soc_info *soc_info =
-		&cci_dev->soc_info;
-	void __iomem *base = soc_info->reg_map[0].mem_base;
+	struct cam_hw_soc_info *soc_info = NULL;
+	void __iomem *base = NULL;
 
 	if (!cci_dev) {
 		CAM_ERR(CAM_CCI, "Failed");
 		return -EINVAL;
 	}
+
+	soc_info = &cci_dev->soc_info;
+	base = soc_info->reg_map[0].mem_base;
 
 	rc = cam_cci_validate_queue(cci_dev, 1, master, queue);
 	if (rc < 0) {

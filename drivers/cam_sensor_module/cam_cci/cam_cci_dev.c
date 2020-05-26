@@ -33,8 +33,8 @@ static long cam_cci_subdev_ioctl(struct v4l2_subdev *sd,
 	int32_t rc = 0;
 
 	if (arg == NULL) {
-		CAM_ERR(CAM_CCI, "Invalid Args");
-		return rc;
+		CAM_ERR(CAM_CCI, "Args is Null");
+		return -EINVAL;
 	}
 
 	switch (cmd) {
