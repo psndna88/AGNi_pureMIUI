@@ -452,6 +452,7 @@ struct sigma_dut {
 	int ap_rts;
 	int ap_frgmnt;
 	int ap_bcnint;
+	int ap_start_disabled;
 	struct qos_params {
 		int ac;
 		int cwmin;
@@ -945,6 +946,7 @@ struct sigma_dut {
 		SAE_PWE_H2E
 	} sae_pwe;
 	int owe_ptk_workaround;
+	int ocvc;
 };
 
 
@@ -1167,8 +1169,9 @@ int lowi_cmd_sta_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 			       struct sigma_cmd *cmd);
 
 /* dpp.c */
-int dpp_dev_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
-			struct sigma_cmd *cmd);
+enum sigma_cmd_result dpp_dev_exec_action(struct sigma_dut *dut,
+					  struct sigma_conn *conn,
+					  struct sigma_cmd *cmd);
 
 /* dhcp.c */
 void process_fils_hlp(struct sigma_dut *dut);
