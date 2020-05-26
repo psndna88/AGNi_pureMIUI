@@ -8,6 +8,7 @@ COMPILEDIR="/mnt/ANDROID/COMPILED_OUT"
 ANDROID="Q"
 DEVICE="whyred"
 CONFIG="agni_whyred-Q_defconfig"
+SYNC_CONFIG=1
 
 . $KERNELDIR/AGNi_version.sh
 FILENAME="AGNi_$ANDROID-$DEVICE-$AGNI_VERSION_PREFIX-$AGNI_VERSION.zip"
@@ -39,7 +40,13 @@ then
     make defconfig O=$COMPILEDIR $CONFIG
 fi
 
+# COMPILE
 make -j12 O=$COMPILEDIR
+
+# SYNC CONFIG
+if [ $SYNC_CONFIG -eq 1 ]; then
+	cp -f $COMPILEDIR/.config $KERNELDIR/arch/arm64/configs/$CONFIG
+fi
 
 mkdir -p $KERNELDIR/READY_ZIP/$DEVICE
 if [ -f $KERNELDIR/READY_ZIP/$DEVICE/$FILENAME ];

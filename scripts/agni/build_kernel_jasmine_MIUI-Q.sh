@@ -6,12 +6,12 @@ KERNELDIR=`readlink -f .`
 COMPILEDIR="/mnt/ANDROID/COMPILED_OUT"
 
 ANDROID="Q"
-DEVICE="wayne"
-CONFIG="agni_wayne_Q_defconfig"
+DEVICE="jasmine"
+CONFIG="agni_jasmine_MIUI-Q_defconfig"
 SYNC_CONFIG=1
 
 . $KERNELDIR/AGNi_version.sh
-FILENAME="AGNi_$ANDROID-$DEVICE-$AGNI_VERSION_PREFIX-$AGNI_VERSION.zip"
+FILENAME="AGNi_MIUI-$ANDROID-$DEVICE-$AGNI_VERSION_PREFIX-$AGNI_VERSION.zip"
 
 if [ -f ~/WORKING_DIRECTORY/AGNi_stamp.sh ];
 	then
@@ -29,7 +29,7 @@ then
 fi
 
 echo ""
-echo " ~~~~~ Cross-compiling AGNi Android $ANDROID kernel $DEVICE ~~~~~"
+echo " ~~~~~ Cross-compiling AGNi MIUI Android $ANDROID kernel $DEVICE ~~~~~"
 echo "         VERSION: AGNi $AGNI_VERSION_PREFIX $AGNI_VERSION"
 echo ""
 
@@ -61,17 +61,25 @@ then
 	DIR="BUILT-$DEVICE-$ANDROID"
 	rm -rf $KERNELDIR/$DIR
 	mkdir -p $KERNELDIR/$DIR
+#	mkdir -p $KERNELDIR/$DIR/modules/system/vendor/lib/modules/qca_cld3/
 	mv $COMPILEDIR/arch/arm64/boot/Image.gz-dtb $KERNELDIR/$DIR/
 	cp -r $KERNELDIR/anykernel3/* $KERNELDIR/$DIR/
-	sed -i 's/device.name1=/device.name1=wayne/' $KERNELDIR/$DIR/anykernel.sh
+	sed -i 's/do.systemless=0/do.systemless=1/' $KERNELDIR/$DIR/anykernel.sh
+	sed -i 's/device.name1=/device.name1=jasmine_sprout/' $KERNELDIR/$DIR/anykernel.sh
+	sed -i 's/device.name2=/device.name2=jasmine/' $KERNELDIR/$DIR/anykernel.sh
+	sed -i 's/device.name3=/device.name3=sprout/' $KERNELDIR/$DIR/anykernel.sh
+	# MIUI 12 Q wifi module
+#	mv -f $COMPILEDIR/drivers/staging/qcacld-3.0_pie/wlan.ko $KERNELDIR/$DIR/modules/system/vendor/lib/modules/qca_cld3/qca_cld3_wlan.ko
+#	sed -i 's/do.modules=0/do.modules=1/' $KERNELDIR/$DIR/anykernel.sh
+	# MIUI 12 Q wifi module end
 	cd $KERNELDIR/$DIR/
 	zip -rq $KERNELDIR/READY_ZIP/$DEVICE/$FILENAME *
 	rm -rf $KERNELDIR/$DIR
-	echo " <<<<< AGNi Android $ANDROID has been built for $DEVICE !!! >>>>>>"
+	echo " <<<<< AGNi MIUI Android $ANDROID has been built for $DEVICE !!! >>>>>>"
 	echo "         VERSION: AGNi $AGNI_VERSION_PREFIX $AGNI_VERSION"
 	echo "            FILE: $FILENAME"
 else
-	echo " >>>>> AGNi Android $ANDROID $DEVICE BUILD ERROR <<<<<"
+	echo " >>>>> AGNi MIUI Android $ANDROID $DEVICE BUILD ERROR <<<<<"
 fi
 
 

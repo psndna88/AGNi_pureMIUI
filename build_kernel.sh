@@ -20,7 +20,7 @@ echo "\n$HORIZONTALLINE"
 echo "        AGNi kernel by psndna88 !!!"
 echo $HORIZONTALLINE
 echo " 1: Build All Devices"
-echo " 2: Quick Build only whyred (Q-NewCAM)"
+echo " 2: Quick Build only whyred (Q-OldCAM)"
 echo " 3: Build all whyred   - Redmi Note 5 Pro"
 echo " 4: Build all tulip    - Redmi Note 6 Pro"
 echo " 5: Build all lavender - Redmi Note 7"
@@ -107,6 +107,13 @@ if [ $choice -eq 1 ]; then
 	echo $HORIZONTALLINE
 	echo " "
 	echo $HORIZONTALLINE
+	echo "          BATCH MODE: Building AGNi lavender MIUI Q variant..."
+	./scripts/agni/build_kernel_lavender_MIUI-Q.sh || exit 1
+	rm $COUT/.config $COUT/.config.old
+	echo "          BATCH MODE: Built AGNi lavender MIUI Q variant!!!"
+	echo $HORIZONTALLINE
+	echo " "
+	echo $HORIZONTALLINE
 	echo "          BATCH MODE: Building AGNi lavender Pie variant..."
 	./scripts/agni/build_kernel_lavender_pie.sh || exit 1
 	rm $COUT/.config $COUT/.config.old
@@ -136,6 +143,13 @@ if [ $choice -eq 1 ]; then
 	echo $HORIZONTALLINE
 	echo " "
 	echo $HORIZONTALLINE
+	echo "          BATCH MODE: Building AGNi wayne MIUI Q variant..."
+	./scripts/agni/build_kernel_wayne_MIUI-Q.sh || exit 1
+	rm $COUT/.config $COUT/.config.old
+	echo "          BATCH MODE: Built AGNi wayne MIUI Q variant!!!"
+	echo $HORIZONTALLINE
+	echo " "
+	echo $HORIZONTALLINE
 	echo "          BATCH MODE: Building AGNi wayne Pie variant..."
 	./scripts/agni/build_kernel_wayne_pie.sh || exit 1
 	rm $COUT/.config $COUT/.config.old
@@ -157,13 +171,20 @@ if [ $choice -eq 1 ]; then
 	echo "          BATCH MODE: Built AGNi jasmine Q variant!!!"
 	echo $HORIZONTALLINE
 	echo "          BATCH MODE: Built ALL variants !!!"
+	echo " "
+	echo $HORIZONTALLINE
+	echo "          BATCH MODE: Building AGNi jasmine MIUI Q variant..."
+	./scripts/agni/build_kernel_jasmine_MIUI-Q.sh || exit 1
+	rm $COUT/.config $COUT/.config.old
+	echo "          BATCH MODE: Built AGNi jasmine MIUI Q variant!!!"
+	echo $HORIZONTALLINE
 elif [ $choice -eq 2 ]; then
 	#### --QUICK WHYRED Q NEWCAM
 	echo $HORIZONTALLINE
-	echo "          BATCH MODE: Building AGNi whyred Q variant..."
-	./scripts/agni/build_kernel_whyred_Q.sh || exit 1
+	echo "          BATCH MODE: Building AGNi whyred Q OldCam variant..."
+	./scripts/agni/build_kernel_whyred_Q-oldcam.sh || exit 1
 	rm $COUT/.config $COUT/.config.old
-	echo "          BATCH MODE: Built AGNi whyred Q variant!!!"
+	echo "          BATCH MODE: Built AGNi whyred Q OldCam variant!!!"
 	echo $HORIZONTALLINE		
 elif [ $choice -eq 3 ]; then
 	#### ALL WHYRED
@@ -242,6 +263,13 @@ elif [ $choice -eq 5 ];	then
 	echo $HORIZONTALLINE
 	echo " "
 	echo $HORIZONTALLINE
+	echo "          BATCH MODE: Building AGNi lavender MIUI Q variant..."
+	./scripts/agni/build_kernel_lavender_MIUI-Q.sh || exit 1
+	rm $COUT/.config $COUT/.config.old
+	echo "          BATCH MODE: Built AGNi lavender MIUI Q variant!!!"
+	echo $HORIZONTALLINE
+	echo " "
+	echo $HORIZONTALLINE
 	echo "          BATCH MODE: Building AGNi lavender Pie variant..."
 	./scripts/agni/build_kernel_lavender_pie.sh || exit 1
 	rm $COUT/.config $COUT/.config.old
@@ -273,6 +301,13 @@ elif [ $choice -eq 6 ];	then
 	echo $HORIZONTALLINE
 	echo " "
 	echo $HORIZONTALLINE
+	echo "          BATCH MODE: Building AGNi wayne MIUI Q variant..."
+	./scripts/agni/build_kernel_wayne_MIUI-Q.sh || exit 1
+	rm $COUT/.config $COUT/.config.old
+	echo "          BATCH MODE: Built AGNi wayne MIUI Q variant!!!"
+	echo $HORIZONTALLINE
+	echo " "
+	echo $HORIZONTALLINE
 	echo "          BATCH MODE: Building AGNi wayne Pie variant..."
 	./scripts/agni/build_kernel_wayne_pie.sh || exit 1
 	rm $COUT/.config $COUT/.config.old
@@ -293,6 +328,13 @@ elif [ $choice -eq 7 ]; then
 	./scripts/agni/build_kernel_jasmine_Q.sh || exit 1
 	rm $COUT/.config $COUT/.config.old
 	echo "          BATCH MODE: Built AGNi jasmine Q variant!!!"
+	echo $HORIZONTALLINE
+	echo " "
+	echo $HORIZONTALLINE
+	echo "          BATCH MODE: Building AGNi jasmine MIUI Q variant..."
+	./scripts/agni/build_kernel_jasmine_MIUI-Q.sh || exit 1
+	rm $COUT/.config $COUT/.config.old
+	echo "          BATCH MODE: Built AGNi jasmine MIUI Q variant!!!"
 	echo $HORIZONTALLINE
 elif [ $choice -eq 0 ]; then
 	exit
