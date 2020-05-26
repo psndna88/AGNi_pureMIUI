@@ -900,6 +900,13 @@
 			qcom,display-topology = <2 2 2>;
 			qcom,default-topology-index = <0>;
 		};
+
+		timing@17 { /* 1080 144FPS cmd mode*/
+			qcom,mdss-dsi-panel-phy-timings = [00 16 05 05 14 13 06
+				06 06 02 04 00 13 0a];
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+		};
 	};
 };
 
