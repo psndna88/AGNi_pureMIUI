@@ -398,6 +398,8 @@ static inline pte_t pte_mkspecial(pte_t pte)
 	return pte;
 }
 
+#define pte_sw_mkyoung  pte_mkyoung
+
 #ifdef CONFIG_MIPS_HUGE_TLB_SUPPORT
 static inline int pte_huge(pte_t pte)	{ return pte_val(pte) & _PAGE_HUGE; }
 
