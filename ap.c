@@ -1890,6 +1890,10 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 	if (val)
 		dut->he_srctrl_allow = atoi(val);
 
+	val = get_param(cmd, "ocvc");
+	if (val)
+		dut->ap_ocvc = atoi(val);
+
 	return SUCCESS_SEND_STATUS;
 }
 
@@ -4254,6 +4258,11 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 			break;
 		}
 	}
+
+	if (dut->ap_ocvc == 1)
+		owrt_ap_set_vap(dut, vap_count, "ocv", "1");
+	else if (dut->ap_ocvc == 0)
+		owrt_ap_set_vap(dut, vap_count, "ocv", "0");
 
 	return 1;
 }
@@ -7913,6 +7922,9 @@ skip_key_mgmt:
 		fprintf(f, "transition_disable=0x%02x\n",
 			dut->ap_transition_disable);
 
+	if (dut->ap_ocvc == 1 || dut->ap_ocvc == 0)
+		fprintf(f, "ocv=%d\n", dut->ap_ocvc);
+
 	switch (dut->ap_pmf) {
 	case AP_PMF_DISABLED:
 		break;
@@ -8925,6 +8937,8 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 	dut->ap_akm_values = 0;
 	free(dut->ap_sae_passwords);
 	dut->ap_sae_passwords = NULL;
+
+	dut->ap_ocvc = -1;
 
 	if (dut->program == PROGRAM_HS2 || dut->program == PROGRAM_HS2_R2 ||
 	    dut->program == PROGRAM_HS2_R3 ||
