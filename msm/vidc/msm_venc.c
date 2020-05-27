@@ -3354,13 +3354,13 @@ int msm_venc_set_bitrate_boost_margin(struct msm_vidc_inst *inst, u32 enable)
 		boost_margin.margin = (u32)(ctrl->val/25) * 25;
 
 setprop:
-	/* s_vpr_h(inst->sid, "%s: %d\n", __func__, boost_margin.margin);
-	 * rc = call_hfi_op(hdev, session_set_property, inst->session,
-	 *	HFI_PROPERTY_PARAM_VENC_BITRATE_BOOST, &boost_margin,
-	 *	sizeof(boost_margin));
-	 *if (rc)
-	 *	s_vpr_e(inst->sid, "%s: set property failed\n", __func__);
-	 */
+	s_vpr_h(inst->sid, "%s: %d\n", __func__, boost_margin.margin);
+	rc = call_hfi_op(hdev, session_set_property, inst->session,
+		HFI_PROPERTY_PARAM_VENC_BITRATE_BOOST, &boost_margin,
+		sizeof(boost_margin));
+	if (rc)
+		s_vpr_e(inst->sid, "%s: set property failed\n", __func__);
+
 	return rc;
 }
 
