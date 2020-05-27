@@ -1108,7 +1108,9 @@ static int __cam_isp_ctx_apply_req_offline(
 		goto end;
 	}
 
-	if (ctx->state != CAM_CTX_ACTIVATED)
+	if ((ctx->state != CAM_CTX_ACTIVATED) ||
+		(!atomic_read(&ctx_isp->rxd_epoch)) ||
+		(ctx_isp->substate_activated == CAM_ISP_CTX_ACTIVATED_APPLIED))
 		goto end;
 
 	if (ctx_isp->active_req_cnt >= 2)
