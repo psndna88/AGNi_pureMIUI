@@ -4800,6 +4800,40 @@ void afe_set_routing_callback(routing_cb cb)
 }
 EXPORT_SYMBOL(afe_set_routing_callback);
 
+/**
+ * afe_port_send_logging_cfg -
+ *         set AFE port logging status
+ *
+ * @port_id: AFE port id number
+ * @log_disable: logging payload
+ *
+ * Returns 0 on success or error value on set param failure
+ */
+int afe_port_send_logging_cfg(u16 port_id,
+	struct afe_param_id_port_data_log_disable_t *log_disable)
+{
+	struct param_hdr_v3 param_hdr;
+	int ret = -EINVAL;
+
+	pr_debug("%s: enter, port: 0x%x logging flag: %x\n", __func__, port_id,
+		log_disable->disable_logging_flag);
+	memset(&param_hdr, 0, sizeof(param_hdr));
+
+	param_hdr.module_id = AFE_MODULE_AUDIO_DEV_INTERFACE;
+	param_hdr.instance_id = INSTANCE_ID_0;
+	param_hdr.param_id = AFE_PARAM_ID_PORT_DATA_LOGGING_DISABLE;
+	param_hdr.param_size = sizeof(&log_disable);
+
+	ret = q6afe_pack_and_set_param_in_band(port_id,
+		q6audio_get_port_index(port_id), param_hdr, (u8*)log_disable);
+	if (ret)
+		pr_err("%s: AFE port logging setting for port 0x%x failed %d\n",
+			__func__, port_id, ret);
+
+	return ret;
+}
+EXPORT_SYMBOL(afe_port_send_logging_cfg);
+
 int afe_port_send_usb_dev_param(u16 port_id, union afe_port_config *afe_config)
 {
 	struct afe_param_id_usb_audio_dev_params usb_dev;
