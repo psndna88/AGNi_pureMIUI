@@ -466,8 +466,6 @@ int cam_flash_off(struct cam_flash_ctrl *flash_ctrl)
 	if (flash_ctrl->switch_trigger)
 		cam_res_mgr_led_trigger_event(flash_ctrl->switch_trigger,
 			(enum led_brightness)LED_SWITCH_OFF);
-
-	flash_ctrl->flash_state = CAM_FLASH_STATE_START;
 	return 0;
 }
 
@@ -1829,6 +1827,7 @@ void cam_flash_shutdown(struct cam_flash_ctrl *fctrl)
 	if ((fctrl->flash_state == CAM_FLASH_STATE_CONFIG) ||
 		(fctrl->flash_state == CAM_FLASH_STATE_START)) {
 		fctrl->func_tbl.flush_req(fctrl, FLUSH_ALL, 0);
+		cam_flash_off(fctrl);
 		if (fctrl->func_tbl.power_ops) {
 			rc = fctrl->func_tbl.power_ops(fctrl, false);
 			if (rc)
