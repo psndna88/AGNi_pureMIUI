@@ -3404,28 +3404,87 @@ static int find_network(struct sigma_dut *dut, const char *ssid)
 }
 
 
-#ifdef NL80211_SUPPORT
-static int sta_config_rsnie(struct sigma_dut *dut, int val)
+/**
+ * enum qca_sta_helper_config_params - This helper enum defines the config
+ * parameters which can be delivered to sta.
+ */
+enum qca_sta_helper_config_params {
+	/* For the attribute QCA_WLAN_VENDOR_ATTR_CONFIG_RSN_IE */
+	STA_SET_RSNIE,
+
+	/* For the attribute QCA_WLAN_VENDOR_ATTR_CONFIG_LDPC */
+	STA_SET_LDPC,
+
+	/* For the attribute QCA_WLAN_VENDOR_ATTR_CONFIG_TX_STBC */
+	STA_SET_TX_STBC,
+
+	/* For the attribute QCA_WLAN_VENDOR_ATTR_CONFIG_RX_STBC */
+	STA_SET_RX_STBC,
+
+	/* For the attribute QCA_WLAN_VENDOR_ATTR_CONFIG_TX_MSDU_AGGREGATION */
+	STA_SET_TX_MSDU,
+
+	/* For the attribute QCA_WLAN_VENDOR_ATTR_CONFIG_RX_MSDU_AGGREGATION */
+	STA_SET_RX_MSDU,
+};
+
+
+static int sta_config_params(struct sigma_dut *dut, const char *intf,
+			     enum qca_sta_helper_config_params config_cmd,
+			     int value)
 {
+#ifdef NL80211_SUPPORT
 	struct nl_msg *msg;
 	int ret;
 	struct nlattr *params;
 	int ifindex;
 
-	ifindex = if_nametoindex("wlan0");
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Interface %s does not exist",
+				__func__, intf);
+		return -1;
+	}
+
 	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
 				    NL80211_CMD_VENDOR)) ||
 	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
 	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
 	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
 			QCA_NL80211_VENDOR_SUBCMD_SET_WIFI_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_CONFIG_RSN_IE, val)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
+	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)))
+		goto fail;
+
+	switch (config_cmd) {
+	case STA_SET_RSNIE:
+		if (nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_CONFIG_RSN_IE, value))
+			goto fail;
+		break;
+	case STA_SET_LDPC:
+		if (nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_CONFIG_LDPC, value))
+			goto fail;
+		break;
+	case STA_SET_TX_STBC:
+		if (nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_CONFIG_TX_STBC, value))
+			goto fail;
+		break;
+	case STA_SET_RX_STBC:
+		if (nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_CONFIG_RX_STBC, value))
+			goto fail;
+		break;
+	case STA_SET_TX_MSDU:
+		if (nla_put_u8(msg,
+			       QCA_WLAN_VENDOR_ATTR_CONFIG_TX_MSDU_AGGREGATION,
+			       value))
+			goto fail;
+		break;
+	case STA_SET_RX_MSDU:
+		if (nla_put_u8(msg,
+			       QCA_WLAN_VENDOR_ATTR_CONFIG_RX_MSDU_AGGREGATION,
+			       value))
+			goto fail;
+		break;
 	}
 	nla_nest_end(msg, params);
 
@@ -3438,15 +3497,24 @@ static int sta_config_rsnie(struct sigma_dut *dut, int val)
 	}
 
 	return 0;
-}
+
+fail:
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"%s: err in adding vendor_cmd and vendor_data",
+			__func__);
+	nlmsg_free(msg);
 #endif /* NL80211_SUPPORT */
+	return -1;
+}
 
 
 static enum sigma_cmd_result cmd_sta_associate(struct sigma_dut *dut,
 					       struct sigma_conn *conn,
 					       struct sigma_cmd *cmd)
 {
-	/* const char *intf = get_param(cmd, "Interface"); */
+#ifdef NL80211_SUPPORT
+	const char *intf = get_param(cmd, "Interface");
+#endif /* NL80211_SUPPORT */
 	const char *ssid = get_param(cmd, "ssid");
 	const char *wps_param = get_param(cmd, "WPS");
 	const char *bssid = get_param(cmd, "bssid");
@@ -3470,7 +3538,7 @@ static enum sigma_cmd_result cmd_sta_associate(struct sigma_dut *dut,
 	if (dut->rsne_override) {
 #ifdef NL80211_SUPPORT
 		if (get_driver_type(dut) == DRIVER_WCN) {
-			sta_config_rsnie(dut, 1);
+			sta_config_params(dut, intf, STA_SET_RSNIE, 1);
 			dut->config_rsnie = 1;
 		}
 #endif /* NL80211_SUPPORT */
@@ -4271,13 +4339,23 @@ static void iwpriv_sta_set_amsdu(struct sigma_dut *dut, const char *intf,
 				 const char *val)
 {
 	char buf[60];
+	int ret;
 
 	if (strcmp(val, "1") == 0 || strcasecmp(val, "Enable") == 0)
 		snprintf(buf, sizeof(buf), "iwpriv %s amsdu 2", intf);
 	else
 		snprintf(buf, sizeof(buf), "iwpriv %s amsdu 1", intf);
 
-	if (system(buf) != 0)
+	ret = system(buf);
+#ifdef NL80211_SUPPORT
+	if (ret) {
+		int value = (strcasecmp(val, "Enable") == 0) ? 2 : 1;
+
+		ret = sta_config_params(dut, intf, STA_SET_TX_MSDU, value);
+		ret |= sta_config_params(dut, intf, STA_SET_RX_MSDU, value);
+	}
+#endif /* NL80211_SUPPORT */
+	if (ret)
 		sigma_dut_print(dut, DUT_MSG_ERROR, "iwpriv amsdu failed");
 }
 
@@ -4401,13 +4479,26 @@ static void wcn_sta_set_stbc(struct sigma_dut *dut, const char *intf,
 			     const char *val)
 {
 	char buf[60];
+	int ret;
 
 	snprintf(buf, sizeof(buf), "iwpriv %s tx_stbc %s", intf, val);
-	if (system(buf) != 0)
+	ret = system(buf);
+#ifdef NL80211_SUPPORT
+	if (ret)
+		ret = sta_config_params(dut, intf, STA_SET_TX_STBC,
+					strcmp(val, "0") == 0 ? 0 : 1);
+#endif /* NL80211_SUPPORT */
+	if (ret)
 		sigma_dut_print(dut, DUT_MSG_ERROR, "iwpriv tx_stbc failed");
 
 	snprintf(buf, sizeof(buf), "iwpriv %s rx_stbc %s", intf, val);
-	if (system(buf) != 0)
+	ret = system(buf);
+#ifdef NL80211_SUPPORT
+	if (ret)
+		ret = sta_config_params(dut, intf, STA_SET_RX_STBC,
+					strcmp(val, "0") == 0 ? 0 : 1);
+#endif /* NL80211_SUPPORT */
+	if (ret)
 		sigma_dut_print(dut, DUT_MSG_ERROR, "iwpriv rx_stbc failed");
 }
 
@@ -6584,7 +6675,7 @@ static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
 #ifdef NL80211_SUPPORT
 		if (get_driver_type(dut) == DRIVER_WCN &&
 		    dut->config_rsnie == 0) {
-			sta_config_rsnie(dut, 1);
+			sta_config_params(dut, intf, STA_SET_RSNIE, 1);
 			dut->config_rsnie = 1;
 		}
 #endif /* NL80211_SUPPORT */
@@ -8212,7 +8303,7 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 	if (get_driver_type(dut) == DRIVER_WCN &&
 	    dut->config_rsnie == 1) {
 		dut->config_rsnie = 0;
-		sta_config_rsnie(dut, 0);
+		sta_config_params(dut, intf, STA_SET_RSNIE, 0);
 	}
 #endif /* NL80211_SUPPORT */
 
@@ -8722,6 +8813,7 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 	const char *program;
 	int tkip = -1;
 	int wep = -1;
+	int iwpriv_status;
 
 	program = get_param(cmd, "Program");
 	val = get_param(cmd, "SGI80");
@@ -8789,7 +8881,9 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		int ldpc;
 
 		ldpc = strcmp(val, "1") == 0 || strcasecmp(val, "Enable") == 0;
-		run_iwpriv(dut, intf, "ldpc %d", ldpc);
+		iwpriv_status = run_iwpriv(dut, intf, "ldpc %d", ldpc);
+		if (iwpriv_status)
+			sta_config_params(dut, intf, STA_SET_LDPC, ldpc);
 	}
 
 	val = get_param(cmd, "BCC");
@@ -8799,7 +8893,9 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		bcc = strcmp(val, "1") == 0 || strcasecmp(val, "Enable") == 0;
 		/* use LDPC iwpriv itself to set bcc coding, bcc coding
 		 * is mutually exclusive to bcc */
-		run_iwpriv(dut, intf, "ldpc %d", !bcc);
+		iwpriv_status = run_iwpriv(dut, intf, "ldpc %d", !bcc);
+		if (iwpriv_status)
+			sta_config_params(dut, intf, STA_SET_LDPC, !bcc);
 	}
 
 	val = get_param(cmd, "MaxHE-MCS_1SS_RxMapLTE80");
