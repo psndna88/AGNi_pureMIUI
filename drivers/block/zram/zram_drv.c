@@ -1506,7 +1506,9 @@ static ssize_t disksize_store(struct device *dev,
 	disksize = memparse(buf, NULL);
 	if (!disksize) {
 		zramzero = true;
+#ifdef CONFIG_DYNAMIC_FSYNC
 		dyn_fsync_active = false;
+#endif
 		return -EINVAL;
 	}
 
@@ -1529,7 +1531,9 @@ static ssize_t disksize_store(struct device *dev,
 		disksize = 1665393152; /* AGNi Memory management: 3gb ram devices */
 
 	zramzero = false;
+#ifdef CONFIG_DYNAMIC_FSYNC
 	dyn_fsync_active = true;
+#endif
 
 	disksize = PAGE_ALIGN(disksize);
 	if (!zram_meta_alloc(zram, disksize)) {
