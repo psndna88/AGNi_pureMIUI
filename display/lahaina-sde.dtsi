@@ -107,6 +107,7 @@
 		qcom,sde-dsc-ctl = <0xF00 0xF80 0xF00 0xF80>;
 		qcom,sde-dsc-ctl-size = <0x10>;
 		qcom,sde-dsc-native422-supp = <0 0 1 1>;
+		qcom,sde-dsc-linewidth = <2048>;
 
 		qcom,sde-dither-off = <0xe0 0xe0 0xe0
 						0xe0 0xe0 0xe0>;
@@ -387,8 +388,6 @@
 		qcom,mst-enable;
 		qcom,dsc-feature-enable;
 		qcom,fec-feature-enable;
-		qcom,max-dp-dsc-blks = <2>;
-		qcom,max-dp-dsc-input-width-pixs = <2048>;
 
 		vdda-1p2-supply = <&L6B>;
 		vdda-0p9-supply = <&L1B>;
