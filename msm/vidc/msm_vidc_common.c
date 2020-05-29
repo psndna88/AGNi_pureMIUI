@@ -1555,6 +1555,7 @@ static void handle_event_change_insufficient(struct msm_vidc_inst *inst,
 					u32 codec)
 {
 	int extra_buff_count = 0;
+	u32 mbpf = 0;
 
 	s_vpr_h(inst->sid,
 		"seq: V4L2_EVENT_SEQ_CHANGED_INSUFFICIENT\n");
@@ -1568,10 +1569,12 @@ static void handle_event_change_insufficient(struct msm_vidc_inst *inst,
 		HAL_BUFFER_OUTPUT);
 	fmt->count_min = event_notify->fw_min_cnt;
 
+	mbpf = msm_vidc_get_mbs_per_frame(inst);
 	if (inst->core->resources.has_vpp_delay &&
 		is_decode_session(inst) &&
 		(codec == V4L2_PIX_FMT_H264
-		|| codec == V4L2_PIX_FMT_HEVC))	{
+		|| codec == V4L2_PIX_FMT_HEVC) &&
+		mbpf >= NUM_MBS_PER_FRAME(7680, 3840))	{
 		fmt->count_min =
 			max(fmt->count_min, (u32)MAX_BSE_VPP_DELAY);
 		fmt->count_min =

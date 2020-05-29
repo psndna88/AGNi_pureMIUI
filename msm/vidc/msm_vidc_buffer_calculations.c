@@ -664,6 +664,7 @@ int msm_vidc_calculate_output_buffer_count(struct msm_vidc_inst *inst)
 	struct msm_vidc_format *fmt;
 	int extra_buff_count = 0;
 	u32 codec, output_min_count;
+	u32 mbpf = 0;
 
 	if (!inst) {
 		d_vpr_e("%s: invalid params\n", __func__);
@@ -697,16 +698,18 @@ int msm_vidc_calculate_output_buffer_count(struct msm_vidc_inst *inst)
 			output_min_count = 9;
 			break;
 		default:
-			output_min_count = 8; //H264, HEVC
+			output_min_count = 4; //H264, HEVC
 		}
 	} else {
 		output_min_count = MIN_ENC_OUTPUT_BUFFERS;
 	}
 
+	mbpf = msm_vidc_get_mbs_per_frame(inst);
 	if (inst->core->resources.has_vpp_delay &&
 		is_decode_session(inst) &&
 		(codec == V4L2_PIX_FMT_H264
-		|| codec == V4L2_PIX_FMT_HEVC))	{
+		|| codec == V4L2_PIX_FMT_HEVC) &&
+		mbpf >= NUM_MBS_PER_FRAME(7680, 3840)) {
 		output_min_count =
 			max(output_min_count, (u32)MAX_BSE_VPP_DELAY);
 		output_min_count =
