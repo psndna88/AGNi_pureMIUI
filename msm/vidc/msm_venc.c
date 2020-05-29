@@ -930,6 +930,15 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		.step = 1,
 	},
 	{
+		.id = V4L2_CID_MPEG_VIDC_VENC_NATIVE_RECORDER,
+		.name = "Enable/Disable Native Recorder",
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.minimum = V4L2_MPEG_MSM_VIDC_DISABLE,
+		.maximum = V4L2_MPEG_MSM_VIDC_ENABLE,
+		.default_value = V4L2_MPEG_MSM_VIDC_DISABLE,
+		.step = 1,
+	},
+	{
 		.id = V4L2_CID_MPEG_VIDC_VENC_BITRATE_SAVINGS,
 		.name = "Enable/Disable bitrate savings",
 		.type = V4L2_CTRL_TYPE_INTEGER,
@@ -1992,6 +2001,7 @@ int msm_venc_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 	case V4L2_CID_MPEG_VIDC_VIDEO_PRIORITY:
 	case V4L2_CID_MPEG_VIDC_VIDEO_INTRA_REFRESH_RANDOM:
 	case V4L2_CID_MPEG_VIDEO_CYCLIC_INTRA_REFRESH_MB:
+	case V4L2_CID_MPEG_VIDC_VENC_NATIVE_RECORDER:
 	case V4L2_CID_MPEG_VIDC_VENC_RC_TIMESTAMP_DISABLE:
 	case V4L2_CID_MPEG_VIDEO_VBV_DELAY:
 	case V4L2_CID_MPEG_VIDEO_H264_CHROMA_QP_INDEX_OFFSET:
