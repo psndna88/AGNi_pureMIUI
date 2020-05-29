@@ -359,6 +359,10 @@ static struct msm_vidc_common_data lahaina_common_data[] = {
 					 */
 	},
 	{
+		.key = "qcom,max-image-load",
+		.value = 1048576, /* ((16384x16384)/256)@1fps */
+	},
+	{
 		.key = "qcom,max-mbpf",
 		.value = 173056,	/* (8192x4320)/256 + (4096x2176)/256*/
 	},
@@ -473,6 +477,10 @@ static struct msm_vidc_common_data bengal_common_data_v0[] = {
 		.value = 489600,
 	},
 	{
+		.key = "qcom,max-image-load",
+		.value = 262144, /* ((8192x8192)/256)@1fps */
+	},
+	{
 		.key = "qcom,max-hq-mbs-per-frame",
 		.value = 8160,
 	},
@@ -530,6 +538,10 @@ static struct msm_vidc_common_data bengal_common_data_v1[] = {
 	{
 		.key = "qcom,max-hw-load",
 		.value = 244800,
+	},
+	{
+		.key = "qcom,max-image-load",
+		.value = 262144, /* ((8192x8192)/256)@1fps */
 	},
 	{
 		.key = "qcom,max-hq-mbs-per-frame",
