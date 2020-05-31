@@ -3432,6 +3432,13 @@ static int fg_get_time_to_full_locked(struct fg_chip *chip, int *val)
 	ibatt_avg = -ibatt_avg / MILLI_UNIT;
 	vbatt_avg /= MILLI_UNIT;
 
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	if (ibatt_avg > 2000)
+		ibatt_avg = 2000; /* force max charging current limitations */
+#else
+	if (ibatt_avg > 2500)
+		ibatt_avg = 2500; /* force max charging current limitations */
+#endif
 	/* clamp ibatt_avg to iterm */
 	if (msoc <= 90) {
 		if (ibatt_avg < 1000)
