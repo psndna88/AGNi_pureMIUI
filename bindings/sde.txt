@@ -129,6 +129,8 @@ Optional properties:
 				"qseedv3", "qseedv3lite" and "qseedv2" entries for qseed
 				revision. By default "qseedv2" is used if this
 				optional property is not defined.
+- qcom,sde-qseed-scalar-version: A u32 value indicating the HW version of the
+				 QSEED hardware block
 - qcom,sde-csc-type:		A string entry indicates csc support on sspp and wb.
 				It supports "csc" and "csc-10bit" entries for csc
 				type.
@@ -692,6 +694,7 @@ Example:
     qcom,sde-sspp-scale-size = <0x100>;
     qcom,sde-mixer-blendstages = <0x8>;
     qcom,sde-qseed-sw-lib-rev = "qseedv2";
+    qcom,sde-qseed-scalar-version = <0x3000>;
     qcom,sde-csc-type = "csc-10bit";
     qcom,sde-highest-bank-bit = <15>;
     qcom,sde-has-mixer-gc;
