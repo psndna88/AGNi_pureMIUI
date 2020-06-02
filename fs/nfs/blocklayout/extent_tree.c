@@ -591,7 +591,7 @@ ext_tree_prepare_commit(struct nfs4_layoutcommit_args *arg)
 		if (!arg->layoutupdate_pages)
 			return -ENOMEM;
 
-		start_p = __vmalloc(buffer_size, GFP_NOFS, PAGE_KERNEL);
+		start_p = __vmalloc(buffer_size, GFP_NOFS);
 		if (!start_p) {
 			kfree(arg->layoutupdate_pages);
 			return -ENOMEM;
