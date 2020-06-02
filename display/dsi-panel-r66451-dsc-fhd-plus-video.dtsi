@@ -1,7 +1,7 @@
 &mdss_mdp {
 	dsi_r66451_amoled_video: qcom,mdss_dsi_visionox_r66451_fhd_plus_video {
 		qcom,mdss-dsi-panel-name =
-			"r66451 amoled video mode dsi visionx panel with DSC";
+			"r66451 amoled video mode dsi visionox panel with DSC";
 		qcom,mdss-dsi-panel-type = "dsi_video_mode";
 		qcom,mdss-dsi-panel-physical-type = "oled";
 		qcom,dsi-ctrl-num = <0>;
