@@ -198,5 +198,16 @@
 		qcom,panel-ack-disabled;
 		qcom,ulps-enabled;
 		qcom,suspend-ulps-enabled;
+
+
+		cm,mdss-livedisplay-cabc-ui-cmd = [
+				15 00 00 00 00 00 02 55 01
+				29 00 00 00 00 00 08 B8 89 51 0d 00 02 00 00
+				29 00 00 00 00 00 1A CE 55 40 4d 6a 75 97 a7 b6 c9 d0 d4 e7 e8 e9 f2 fb ff 04 00 00 04 46 04 69 5a
+				29 01 00 00 00 00 0A F9 64 FF E0 BE 00 8D BF 80 00
+		];
+		cm,mdss-livedisplay-cabc-cmd = [
+				15 01 00 00 00 00 02 55 00
+		];
 	};
 };

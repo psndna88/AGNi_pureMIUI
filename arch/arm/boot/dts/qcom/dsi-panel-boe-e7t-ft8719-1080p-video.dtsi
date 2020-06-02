@@ -227,5 +227,10 @@
 		qcom,panel-ack-disabled;
 		qcom,ulps-enabled;
 		qcom,suspend-ulps-enabled;
+
+		cm,mdss-livedisplay-cabc-cmd = [
+				39 01 00 00 00 00 02 55 00
+		];
+		cm,mdss-livedisplay-cabc-ui-value = <0x01>;
 	};
 };
