@@ -414,10 +414,11 @@ int msm_vidc_qbuf(void *instance, struct media_device *mdev,
 	}
 
 	/*
-	 * set perf mode for image session buffers so that
-	 * they will be processed quickly
+	 * set perf mode for image and thumbnail session buffers
+	 * so that they will be processed quickly
 	 */
-	if (is_grid_session(inst) && b->type == INPUT_MPLANE)
+	if ((is_grid_session(inst) || is_thumbnail_session(inst))
+		&& b->type == INPUT_MPLANE)
 		b->flags |= V4L2_BUF_FLAG_PERF_MODE;
 
 	timestamp_us = (u64)((b->timestamp.tv_sec * 1000000ULL) +
