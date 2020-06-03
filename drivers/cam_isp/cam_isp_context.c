@@ -491,7 +491,7 @@ static int __cam_isp_ctx_enqueue_init_request(
 				num_cfg_old =
 					req_isp_old->cfg_info[i].num_hw_entries;
 				num_cfg_new =
-					req_isp_old->cfg_info[i].num_hw_entries;
+					req_isp_new->cfg_info[i].num_hw_entries;
 				memcpy(&cfg_old[num_cfg_old],
 					cfg_new,
 					sizeof(cfg_new[0]) * num_cfg_new);
