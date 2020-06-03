@@ -21,7 +21,8 @@ int cam_cci_init(struct v4l2_subdev *sd,
 
 	cci_dev = v4l2_get_subdevdata(sd);
 	if (!cci_dev || !c_ctrl) {
-		CAM_ERR(CAM_CCI, "failed: invalid params %pK %pK",
+		CAM_ERR(CAM_CCI,
+			"failed: invalid params cci_dev:%pK, c_ctrl:%pK",
 			cci_dev, c_ctrl);
 		rc = -EINVAL;
 		return rc;
@@ -31,7 +32,8 @@ int cam_cci_init(struct v4l2_subdev *sd,
 	base = soc_info->reg_map[0].mem_base;
 
 	if (!soc_info || !base) {
-		CAM_ERR(CAM_CCI, "failed: invalid params %pK %pK",
+		CAM_ERR(CAM_CCI,
+			"failed: invalid params soc_info:%pK, base:%pK",
 			soc_info, base);
 		rc = -EINVAL;
 		return rc;
@@ -40,8 +42,9 @@ int cam_cci_init(struct v4l2_subdev *sd,
 	CAM_DBG(CAM_CCI, "Base address %pK", base);
 
 	if (cci_dev->ref_count++) {
-		CAM_DBG(CAM_CCI, "ref_count %d", cci_dev->ref_count);
-		CAM_DBG(CAM_CCI, "master %d", master);
+		CAM_DBG(CAM_CCI,
+			"ref_count:%d, master:%d",
+			cci_dev->ref_count, master);
 		if (master < MASTER_MAX && master >= 0) {
 			mutex_lock(&cci_dev->cci_master_info[master].mutex);
 			flush_workqueue(cci_dev->write_wq[master]);
@@ -64,15 +67,21 @@ int cam_cci_init(struct v4l2_subdev *sd,
 				cam_io_w_mb(CCI_M1_RESET_RMSK,
 					base + CCI_RESET_CMD_ADDR);
 			/* wait for reset done irq */
-			rc = wait_for_completion_timeout(
+			if (!wait_for_completion_timeout(
 			&cci_dev->cci_master_info[master].reset_complete,
-				CCI_TIMEOUT);
-			if (rc <= 0)
-				CAM_ERR(CAM_CCI, "wait failed %d", rc);
+				CCI_TIMEOUT)) {
+				CAM_ERR(CAM_CCI,
+					"wait timeout for reset_complete for master: %d",
+					master);
+				reinit_completion(
+				&cci_dev->cci_master_info[master].reset_complete
+				);
+				rc = -EINVAL;
+			}
 			cci_dev->cci_master_info[master].status = 0;
 			mutex_unlock(&cci_dev->cci_master_info[master].mutex);
 		}
-		return 0;
+		return rc;
 	}
 
 	ahb_vote.type = CAM_VOTE_ABSOLUTE;
@@ -92,7 +101,7 @@ int cam_cci_init(struct v4l2_subdev *sd,
 	rc = cam_cpas_start(cci_dev->cpas_handle,
 		&ahb_vote, &axi_vote);
 	if (rc != 0)
-		CAM_ERR(CAM_CCI, "CPAS start failed");
+		CAM_ERR(CAM_CCI, "CPAS start failed, rc: %d", rc);
 
 	cam_cci_get_clk_rates(cci_dev, c_ctrl);
 
@@ -107,7 +116,8 @@ int cam_cci_init(struct v4l2_subdev *sd,
 	rc = cam_soc_util_enable_platform_resource(soc_info, true,
 		CAM_LOWSVS_VOTE, true);
 	if (rc < 0) {
-		CAM_DBG(CAM_CCI, "request platform resources failed");
+		CAM_DBG(CAM_CCI, "request platform resources failed, rc: %d",
+			rc);
 		goto platform_enable_failed;
 	}
 
@@ -148,13 +158,14 @@ int cam_cci_init(struct v4l2_subdev *sd,
 	cam_io_w_mb(CCI_RESET_CMD_RMSK, base +
 			CCI_RESET_CMD_ADDR);
 	cam_io_w_mb(0x1, base + CCI_RESET_CMD_ADDR);
-	rc = wait_for_completion_timeout(
+	if (!wait_for_completion_timeout(
 		&cci_dev->cci_master_info[master].reset_complete,
-		CCI_TIMEOUT);
-	if (rc <= 0) {
-		CAM_ERR(CAM_CCI, "wait_for_completion_timeout");
-		if (rc == 0)
-			rc = -ETIMEDOUT;
+		CCI_TIMEOUT)) {
+		CAM_ERR(CAM_CCI,
+			"wait timeout for reset_complete for master: %d",
+			master);
+
+		rc = -ETIMEDOUT;
 		goto reset_complete_failed;
 	}
 	for (i = 0; i < MASTER_MAX; i++)

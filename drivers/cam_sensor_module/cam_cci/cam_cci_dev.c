@@ -72,8 +72,9 @@ irqreturn_t cam_cci_irq(int irq_num, void *data)
 
 	irq_status0 = cam_io_r_mb(base + CCI_IRQ_STATUS_0_ADDR);
 	irq_status1 = cam_io_r_mb(base + CCI_IRQ_STATUS_1_ADDR);
-	CAM_DBG(CAM_CCI, "BASE: %pK", base);
-	CAM_DBG(CAM_CCI, "irq0:%x irq1:%x", irq_status0, irq_status1);
+	CAM_DBG(CAM_CCI,
+		"BASE: %pK, irq0:%x irq1:%x",
+		base, irq_status0, irq_status1);
 
 	if (irq_status0 & CCI_IRQ_STATUS_0_RST_DONE_ACK_BMSK) {
 		struct cam_cci_master_info *cci_master_info;
@@ -229,21 +230,23 @@ irqreturn_t cam_cci_irq(int irq_num, void *data)
 	if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M0_ERROR_BMSK) {
 		cci_dev->cci_master_info[MASTER_0].status = -EINVAL;
 		if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M0_Q0_NACK_ERROR_BMSK) {
-			CAM_ERR(CAM_CCI, "Base:%pK, M0_Q0 NACK ERROR: 0x%x",
-				base, irq_status0);
+			CAM_ERR(CAM_CCI,
+				"Base:%pK,cci: %d, M0_Q0 NACK ERROR: 0x%x",
+				base, cci_dev->soc_info.index, irq_status0);
 			complete_all(&cci_dev->cci_master_info[MASTER_0]
 				.report_q[QUEUE_0]);
 		}
 		if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M0_Q1_NACK_ERROR_BMSK) {
-			CAM_ERR(CAM_CCI, "Base:%pK, M0_Q1 NACK ERROR: 0x%x",
-				base, irq_status0);
+			CAM_ERR(CAM_CCI,
+				"Base:%pK,cci: %d, M0_Q1 NACK ERROR: 0x%x",
+				base, cci_dev->soc_info.index, irq_status0);
 			complete_all(&cci_dev->cci_master_info[MASTER_0]
 			.report_q[QUEUE_1]);
 		}
 		if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M0_Q0Q1_ERROR_BMSK)
 			CAM_ERR(CAM_CCI,
-			"Base:%pK, M0 QUEUE_OVER/UNDER_FLOW OR CMD ERR: 0x%x",
-				base, irq_status0);
+			"Base:%pK, cci: %d, M0 QUEUE_OVER/UNDER_FLOW OR CMD ERR: 0x%x",
+				base, cci_dev->soc_info.index, irq_status0);
 		if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M0_RD_ERROR_BMSK)
 			CAM_ERR(CAM_CCI,
 				"Base: %pK, M0 RD_OVER/UNDER_FLOW ERROR: 0x%x",
@@ -255,25 +258,27 @@ irqreturn_t cam_cci_irq(int irq_num, void *data)
 	if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M1_ERROR_BMSK) {
 		cci_dev->cci_master_info[MASTER_1].status = -EINVAL;
 		if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M1_Q0_NACK_ERROR_BMSK) {
-			CAM_ERR(CAM_CCI, "Base:%pK, M1_Q0 NACK ERROR: 0x%x",
-				base, irq_status0);
+			CAM_ERR(CAM_CCI,
+				"Base:%pK, cci: %d, M1_Q0 NACK ERROR: 0x%x",
+				base, cci_dev->soc_info.index, irq_status0);
 			complete_all(&cci_dev->cci_master_info[MASTER_1]
 			.report_q[QUEUE_0]);
 		}
 		if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M1_Q1_NACK_ERROR_BMSK) {
-			CAM_ERR(CAM_CCI, "Base:%pK, M1_Q1 NACK ERROR: 0x%x",
-				base, irq_status0);
+			CAM_ERR(CAM_CCI,
+				"Base:%pK, cci: %d, M1_Q1 NACK ERROR: 0x%x",
+				base, cci_dev->soc_info.index, irq_status0);
 			complete_all(&cci_dev->cci_master_info[MASTER_1]
 			.report_q[QUEUE_1]);
 		}
 		if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M1_Q0Q1_ERROR_BMSK)
 			CAM_ERR(CAM_CCI,
-			"Base:%pK, M1 QUEUE_OVER_UNDER_FLOW OR CMD ERROR:0x%x",
-				base, irq_status0);
+			"Base:%pK, cci: %d, M1 QUEUE_OVER_UNDER_FLOW OR CMD ERROR:0x%x",
+				base, cci_dev->soc_info.index, irq_status0);
 		if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M1_RD_ERROR_BMSK)
 			CAM_ERR(CAM_CCI,
-				"Base:%pK, M1 RD_OVER/UNDER_FLOW ERROR: 0x%x",
-				base, irq_status0);
+				"Base:%pK, cci: %d, M1 RD_OVER/UNDER_FLOW ERROR: 0x%x",
+				base, cci_dev->soc_info.index, irq_status0);
 
 		cci_dev->cci_master_info[MASTER_1].reset_pending = true;
 		cam_io_w_mb(CCI_M1_RESET_RMSK, base + CCI_RESET_CMD_ADDR);
@@ -378,9 +383,10 @@ static int cam_cci_component_bind(struct device *dev,
 
 	new_cci_dev = devm_kzalloc(&pdev->dev, sizeof(struct cci_device),
 		GFP_KERNEL);
-	if (!new_cci_dev)
+	if (!new_cci_dev) {
+		CAM_ERR(CAM_CCI, "Memory allocation failed for cci_dev");
 		return -ENOMEM;
-
+	}
 	soc_info = &new_cci_dev->soc_info;
 
 	new_cci_dev->v4l2_dev_str.pdev = pdev;
@@ -391,7 +397,7 @@ static int cam_cci_component_bind(struct device *dev,
 
 	rc = cam_cci_parse_dt_info(pdev, new_cci_dev);
 	if (rc < 0) {
-		CAM_ERR(CAM_CCI, "Resource get Failed: %d", rc);
+		CAM_ERR(CAM_CCI, "Resource get Failed rc:%d", rc);
 		goto cci_no_resource;
 	}
 
@@ -412,7 +418,7 @@ static int cam_cci_component_bind(struct device *dev,
 
 	rc = cam_register_subdev(&(new_cci_dev->v4l2_dev_str));
 	if (rc < 0) {
-		CAM_ERR(CAM_CCI, "Fail with cam_register_subdev");
+		CAM_ERR(CAM_CCI, "Fail with cam_register_subdev rc: %d", rc);
 		goto cci_no_resource;
 	}
 
@@ -435,7 +441,7 @@ static int cam_cci_component_bind(struct device *dev,
 	strlcpy(cpas_parms.identifier, "cci", CAM_HW_IDENTIFIER_LENGTH);
 	rc = cam_cpas_register_client(&cpas_parms);
 	if (rc) {
-		CAM_ERR(CAM_CCI, "CPAS registration failed");
+		CAM_ERR(CAM_CCI, "CPAS registration failed rc:%d", rc);
 		goto cci_no_resource;
 	}
 
@@ -463,7 +469,7 @@ static void cam_cci_component_unbind(struct device *dev,
 	cam_cci_soc_remove(pdev, cci_dev);
 	rc = cam_unregister_subdev(&(cci_dev->v4l2_dev_str));
 	if (rc < 0)
-		CAM_ERR(CAM_CCI, "Fail with cam_unregister_subdev");
+		CAM_ERR(CAM_CCI, "Fail with cam_unregister_subdev. rc:%d", rc);
 
 	devm_kfree(&pdev->dev, cci_dev);
 }
