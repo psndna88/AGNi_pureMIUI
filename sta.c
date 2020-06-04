@@ -4874,7 +4874,8 @@ cmd_sta_preset_testparameters(struct sigma_dut *dut, struct sigma_conn *conn,
 		return miracast_preset_testparameters(dut, conn, cmd);
 #endif /* MIRACAST */
 
-	if (val && strcasecmp(val, "MBO") == 0) {
+	if (val &&
+	    (strcasecmp(val, "MBO") == 0 || strcasecmp(val, "HE") == 0)) {
 		val = get_param(cmd, "Cellular_Data_Cap");
 		if (val &&
 		    mbo_set_cellular_data_capa(dut, conn, intf, atoi(val)) == 0)
@@ -8002,7 +8003,7 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 		wpa_command(get_station_ifname(dut), "SET interworking 0");
 	}
 
-	if (dut->program == PROGRAM_MBO) {
+	if (dut->program == PROGRAM_MBO || dut->program == PROGRAM_HE) {
 		free(dut->non_pref_ch_list);
 		dut->non_pref_ch_list = NULL;
 		free(dut->btm_query_cand_list);
@@ -12112,6 +12113,14 @@ static int wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 			}
 		}
 	}
+
+	val = get_param(cmd, "Ch_Pref");
+	if (val && mbo_set_non_pref_ch_list(dut, conn, intf, cmd) == 0)
+		return STATUS_SENT;
+
+	val = get_param(cmd, "Cellular_Data_Cap");
+	if (val && mbo_set_cellular_data_capa(dut, conn, intf, atoi(val)) == 0)
+		return STATUS_SENT;
 
 	return 1;
 
