@@ -4205,8 +4205,10 @@ static int cam_ife_mgr_reset_vfe_hw(struct cam_ife_hw_mgr *hw_mgr,
 	vfe_reset_type = CAM_VFE_HW_RESET_HW;
 
 	for (i = 0; i < CAM_VFE_HW_NUM_MAX; i++) {
-		if ((!hw_mgr->ife_devices[i]) ||
-			(hw_idx != hw_mgr->ife_devices[i]->hw_idx))
+		if (!hw_mgr->ife_devices[i])
+			continue;
+
+		if (hw_idx != hw_mgr->ife_devices[i]->hw_idx)
 			continue;
 		CAM_DBG(CAM_ISP, "VFE (id = %d) reset", hw_idx);
 		vfe_hw_intf = hw_mgr->ife_devices[i];

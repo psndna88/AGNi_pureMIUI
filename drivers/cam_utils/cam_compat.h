@@ -37,9 +37,9 @@ int cam_reserve_icp_fw(struct cam_fw_alloc_info *icp_fw, size_t fw_length);
 void cam_unreserve_icp_fw(struct cam_fw_alloc_info *icp_fw, size_t fw_length);
 void cam_cpastop_scm_write(struct cam_cpas_hw_errata_wa *errata_wa);
 int cam_ife_notify_safe_lut_scm(bool safe_trigger);
-int cam_csiphy_notify_secure_mode(struct csiphy_device *csiphy_dev,
-	bool protect, int32_t offset);
 int camera_component_match_add_drivers(struct device *master_dev,
 	struct component_match **match_list);
+int cam_csiphy_notify_secure_mode(struct csiphy_device *csiphy_dev,
+	bool protect, int32_t offset);
 
 #endif /* _CAM_COMPAT_H_ */

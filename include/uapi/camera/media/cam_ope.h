@@ -73,7 +73,7 @@
 #define OPE_MAX_IO_BUFS                     (OPE_OUT_RES_MAX + OPE_IN_RES_MAX)
 #define OPE_MAX_PASS                        1
 #define OPE_MAX_PLANES                      2
-#define OPE_MAX_STRIPES                     32
+#define OPE_MAX_STRIPES                     48
 #define OPE_MAX_BATCH_SIZE                  16
 
 /**
@@ -83,6 +83,7 @@
  * @x_init:          X_init
  * @stripe_location: Stripe location (OPE_STRIPE_XXX)
  * @width:           Width of a stripe
+ * @height:          Height of a stripe
  * @disable_bus:     Flag to disable BUS master
  * @reserved:        Reserved
  *
