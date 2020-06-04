@@ -662,6 +662,7 @@
 		qcom,iommu-dma-addr-pool = <0x00020000 0xfffe0000>;
 		qcom,iommu-faults = "non-fatal";
 		qcom,iommu-earlymap; /* for cont-splash */
+		dma-coherent-hint-cached;
 	};
 
 	smmu_sde_sec: qcom,smmu_sde_sec_cb {
