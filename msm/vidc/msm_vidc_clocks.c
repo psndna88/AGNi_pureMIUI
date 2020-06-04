@@ -1317,7 +1317,7 @@ int msm_vidc_decide_work_mode_iris2(struct msm_vidc_inst *inst)
 	if (inst->session_type == MSM_VIDC_DECODER) {
 		height = out_f->fmt.pix_mp.height;
 		width = out_f->fmt.pix_mp.width;
-		res_ok = res_is_less_than(width, height, 1280, 720);
+		res_ok = res_is_less_than_or_equal_to(width, height, 1280, 720);
 		if (inp_f->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_MPEG2 ||
 			inst->pic_struct != MSM_VIDC_PIC_STRUCT_PROGRESSIVE ||
 			inst->clk_data.low_latency_mode || res_ok) {
