@@ -481,18 +481,18 @@ msm8998_v2_kbss_fuse_ref_volt[2][MSM8998_KBSS_FUSE_CORNERS] = {
 static const int
 sdm660_kbss_fuse_ref_volt[2][SDM660_KBSS_FUSE_CORNERS] = {
 	[CPRH_KBSS_POWER_CLUSTER_ID] = {
-		644000,
-		724000,
-		788000,
-		868000,
-		1068000,
+		604000,
+		684000,
+		748000,
+		828000,
+		1028000,
 	},
 	[CPRH_KBSS_PERFORMANCE_CLUSTER_ID] = {
-		724000,
-		788000,
-		868000,
-		988000,
-		1068000,
+		684000,
+		748000,
+		828000,
+		948000,
+		1028000,
 	},
 };
 
