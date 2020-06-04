@@ -6368,11 +6368,13 @@ static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
 	const char *intf = get_param(cmd, "Interface");
 	const char *bssid = get_param(cmd, "bssid");
 	const char *val = get_param(cmd, "CHANNEL");
+	const char *freq_val = get_param(cmd, "ChnlFreq");
 	struct wpa_ctrl *ctrl;
 	char buf[1000];
 	char result[32];
 	int res;
 	int chan = 0;
+	int freq = 0;
 	enum sigma_cmd_result status = STATUS_SENT;
 	int fastreassoc = 1;
 	int ft_ds = 0;
@@ -6385,6 +6387,9 @@ static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
 
 	if (val)
 		chan = atoi(val);
+
+	if (freq_val)
+		freq = atoi(freq_val);
 
 	if (wifi_chip_type != DRIVER_WCN && wifi_chip_type != DRIVER_AR6003) {
 		/* The current network may be from sta_associate or
@@ -6433,10 +6438,9 @@ static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
 	}
 
 	if (ft_ds) {
-		if (chan) {
-			unsigned int freq;
-
-			freq = channel_to_freq(dut, chan);
+		if (chan || freq) {
+			if (!freq)
+				freq = channel_to_freq(dut, chan);
 			if (!freq) {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
 						"Invalid channel number provided: %d",
@@ -6484,10 +6488,9 @@ static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
 			goto close_mon_conn;
 		}
 	} else if (wifi_chip_type == DRIVER_WCN && fastreassoc) {
-		if (chan) {
-			unsigned int freq;
-
-			freq = channel_to_freq(dut, chan);
+		if (chan || freq) {
+			if (!freq)
+				freq = channel_to_freq(dut, chan);
 			if (!freq) {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
 						"Invalid channel number provided: %d",
