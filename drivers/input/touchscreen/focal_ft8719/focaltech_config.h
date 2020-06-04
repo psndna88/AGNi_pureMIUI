@@ -108,7 +108,7 @@
  * Linux MultiTouch Protocol
  * 1: Protocol B(default), 0: Protocol A
  */
-#define FTS_MT_PROTOCOL_B_EN                    0
+#define FTS_MT_PROTOCOL_B_EN                    1
 
 /*
  * Report Pressure in multitouch
