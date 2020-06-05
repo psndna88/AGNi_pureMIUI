@@ -548,6 +548,9 @@ struct sigma_dut {
 	char ap_passphrase[101];
 	char ap_psk[65];
 	char *ap_sae_passwords;
+	char *ap_sae_pk_modifier;
+	char *ap_sae_pk_keypair;
+	int ap_sae_pk;
 	char ap_wepkey[27];
 	char ap_radius_ipaddr[20];
 	int ap_radius_port;

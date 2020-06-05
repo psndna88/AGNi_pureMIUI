@@ -852,6 +852,10 @@ static void deinit_sigma_dut(struct sigma_dut *dut)
 	dut->dpp_peer_uri = NULL;
 	free(dut->ap_sae_passwords);
 	dut->ap_sae_passwords = NULL;
+	free(dut->ap_sae_pk_modifier);
+	dut->ap_sae_pk_modifier = NULL;
+	free(dut->ap_sae_pk_keypair);
+	dut->ap_sae_pk_keypair = NULL;
 	free(dut->ar_ltf);
 	dut->ar_ltf = NULL;
 	free(dut->ap_dpp_conf_addr);
