@@ -111,20 +111,18 @@ static const char *cam_icp_dev_type_to_name(
 
 static int cam_icp_send_ubwc_cfg(struct cam_icp_hw_mgr *hw_mgr)
 {
-	struct cam_hw_intf *a5_dev_intf = NULL;
+	struct cam_hw_intf *icp_dev_intf = hw_mgr->icp_dev_intf;
 	int rc;
 
-	a5_dev_intf = hw_mgr->a5_dev_intf;
-	if (!a5_dev_intf) {
-		CAM_ERR(CAM_ICP, "a5_dev_intf is NULL");
+	if (!icp_dev_intf) {
+		CAM_ERR(CAM_ICP, "ICP device interface is NULL");
 		return -EINVAL;
 	}
 
-	rc = a5_dev_intf->hw_ops.process_cmd(
-		a5_dev_intf->hw_priv,
-		CAM_ICP_A5_CMD_UBWC_CFG, NULL, 0);
+	rc = icp_dev_intf->hw_ops.process_cmd(icp_dev_intf->hw_priv,
+			CAM_ICP_CMD_UBWC_CFG, NULL, 0);
 	if (rc)
-		CAM_ERR(CAM_ICP, "CAM_ICP_A5_CMD_UBWC_CFG is failed");
+		CAM_ERR(CAM_ICP, "CAM_ICP_CMD_UBWC_CFG is failed");
 
 	return rc;
 }
@@ -348,7 +346,7 @@ static int32_t cam_icp_deinit_idle_clk(void *priv, void *data)
 	struct cam_hw_intf *ipe1_dev_intf = NULL;
 	struct cam_hw_intf *bps_dev_intf = NULL;
 	struct cam_hw_intf *dev_intf = NULL;
-	struct cam_a5_clk_update_cmd clk_upd_cmd;
+	struct cam_icp_clk_update_cmd clk_upd_cmd;
 	int rc = 0;
 	bool busy = false;
 
@@ -407,14 +405,13 @@ static int32_t cam_icp_deinit_idle_clk(void *priv, void *data)
 	clk_upd_cmd.ipe_bps_pc_enable = icp_hw_mgr.ipe_bps_pc_flag;
 
 	dev_intf->hw_ops.process_cmd(dev_intf->hw_priv, id,
-		&clk_upd_cmd, sizeof(struct cam_a5_clk_update_cmd));
+		&clk_upd_cmd, sizeof(clk_upd_cmd));
 
 	if (clk_info->hw_type != ICP_CLK_HW_BPS)
 		if (ipe1_dev_intf)
 			ipe1_dev_intf->hw_ops.process_cmd(
 				ipe1_dev_intf->hw_priv, id,
-				&clk_upd_cmd,
-				sizeof(struct cam_a5_clk_update_cmd));
+				&clk_upd_cmd, sizeof(clk_upd_cmd));
 
 done:
 	mutex_unlock(&hw_mgr->hw_mgr_mutex);
@@ -1436,14 +1433,14 @@ static int cam_icp_update_clk_rate(struct cam_icp_hw_mgr *hw_mgr,
 	struct cam_hw_intf *ipe0_dev_intf = NULL;
 	struct cam_hw_intf *ipe1_dev_intf = NULL;
 	struct cam_hw_intf *bps_dev_intf = NULL;
-	struct cam_hw_intf *a5_dev_intf = NULL;
+	struct cam_hw_intf *icp_dev_intf = NULL;
 	struct cam_hw_intf *dev_intf = NULL;
-	struct cam_a5_clk_update_cmd clk_upd_cmd;
+	struct cam_icp_clk_update_cmd clk_upd_cmd;
 
 	ipe0_dev_intf = hw_mgr->ipe0_dev_intf;
 	ipe1_dev_intf = hw_mgr->ipe1_dev_intf;
 	bps_dev_intf = hw_mgr->bps_dev_intf;
-	a5_dev_intf = hw_mgr->a5_dev_intf;
+	icp_dev_intf = hw_mgr->icp_dev_intf;
 
 
 	if ((!ipe0_dev_intf) || (!bps_dev_intf)) {
@@ -1468,21 +1465,20 @@ static int cam_icp_update_clk_rate(struct cam_icp_hw_mgr *hw_mgr,
 	clk_upd_cmd.clk_level = -1;
 
 	dev_intf->hw_ops.process_cmd(dev_intf->hw_priv, id,
-		&clk_upd_cmd, sizeof(struct cam_a5_clk_update_cmd));
+		&clk_upd_cmd, sizeof(clk_upd_cmd));
 
 	if (ctx_data->icp_dev_acquire_info->dev_type != CAM_ICP_RES_TYPE_BPS) {
 		if (ipe1_dev_intf) {
 			ipe1_dev_intf->hw_ops.process_cmd(
 				ipe1_dev_intf->hw_priv, id,
-				&clk_upd_cmd,
-				sizeof(struct cam_a5_clk_update_cmd));
+				&clk_upd_cmd, sizeof(clk_upd_cmd));
 		}
 
 		/* update a5 clock */
 		CAM_DBG(CAM_PERF, "Update ICP clk to level [%d]",
 			clk_upd_cmd.clk_level);
-		a5_dev_intf->hw_ops.process_cmd(a5_dev_intf->hw_priv,
-			CAM_ICP_A5_CMD_CLK_UPDATE, &clk_upd_cmd.clk_level,
+		icp_dev_intf->hw_ops.process_cmd(icp_dev_intf->hw_priv,
+			CAM_ICP_CMD_CLK_UPDATE, &clk_upd_cmd.clk_level,
 			sizeof(clk_upd_cmd.clk_level));
 	}
 
@@ -2330,16 +2326,11 @@ static int cam_icp_mgr_process_direct_ack_msg(uint32_t *msg_ptr)
 {
 	struct cam_icp_hw_ctx_data *ctx_data = NULL;
 	struct hfi_msg_ipebps_async_ack *ioconfig_ack = NULL;
-	struct cam_hw_intf *a5_dev_intf = NULL;
-	struct cam_hw_info *a5_dev = NULL;
 	int rc = 0;
 
-	a5_dev_intf = icp_hw_mgr.a5_dev_intf;
-	if (!a5_dev_intf) {
-		CAM_ERR(CAM_ICP, "a5_dev_intf is invalid");
+	if (!msg_ptr)
 		return -EINVAL;
-	}
-	a5_dev = (struct cam_hw_info *)a5_dev_intf->hw_priv;
+
 	switch (msg_ptr[ICP_PACKET_OPCODE]) {
 	case HFI_IPEBPS_CMD_OPCODE_IPE_ABORT:
 	case HFI_IPEBPS_CMD_OPCODE_BPS_ABORT:
@@ -2543,14 +2534,14 @@ static int cam_icp_process_msg_pkt_type(
 	switch (msg_ptr[ICP_PACKET_TYPE]) {
 	case HFI_MSG_SYS_INIT_DONE:
 		CAM_DBG(CAM_ICP, "received SYS_INIT_DONE");
-		complete(&hw_mgr->a5_complete);
+		complete(&hw_mgr->icp_complete);
 		size_processed = (
 			(struct hfi_msg_init_done *)msg_ptr)->size;
 		break;
 
 	case HFI_MSG_SYS_PC_PREP_DONE:
 		CAM_DBG(CAM_ICP, "HFI_MSG_SYS_PC_PREP_DONE is received\n");
-		complete(&hw_mgr->a5_complete);
+		complete(&hw_mgr->icp_complete);
 		size_processed = sizeof(struct hfi_msg_pc_prep_done);
 		break;
 
@@ -2968,25 +2959,24 @@ static void cam_icp_mgr_put_ctx(struct cam_icp_hw_ctx_data *ctx_data)
 static int cam_icp_mgr_send_pc_prep(struct cam_icp_hw_mgr *hw_mgr)
 {
 	int rc;
-	struct cam_hw_intf *a5_dev_intf = NULL;
+	struct cam_hw_intf *icp_dev_intf = hw_mgr->icp_dev_intf;
 	unsigned long rem_jiffies;
 	int timeout = 5000;
 
-	a5_dev_intf = hw_mgr->a5_dev_intf;
-	if (!a5_dev_intf) {
-		CAM_ERR(CAM_ICP, "a5_dev_intf is invalid\n");
+	if (!icp_dev_intf) {
+		CAM_ERR(CAM_ICP, "ICP device interface is NULL");
 		return -EINVAL;
 	}
 
-	reinit_completion(&hw_mgr->a5_complete);
+	reinit_completion(&hw_mgr->icp_complete);
 	CAM_DBG(CAM_ICP, "Sending HFI init command");
-	rc = a5_dev_intf->hw_ops.process_cmd(
-		a5_dev_intf->hw_priv, CAM_ICP_A5_CMD_PC_PREP, NULL, 0);
+	rc = icp_dev_intf->hw_ops.process_cmd(icp_dev_intf->hw_priv,
+					CAM_ICP_CMD_PC_PREP, NULL, 0);
 	if (rc)
 		return rc;
 
 	CAM_DBG(CAM_ICP, "Wait for PC_PREP_DONE Message\n");
-	rem_jiffies = wait_for_completion_timeout(&icp_hw_mgr.a5_complete,
+	rem_jiffies = wait_for_completion_timeout(&icp_hw_mgr.icp_complete,
 		msecs_to_jiffies((timeout)));
 	if (!rem_jiffies) {
 		rc = -ETIMEDOUT;
@@ -3062,26 +3052,26 @@ static int cam_icp_mgr_hw_close_k(void *hw_priv, void *hw_close_args)
 
 static int cam_icp_mgr_proc_resume(struct cam_icp_hw_mgr *hw_mgr)
 {
-	struct cam_hw_intf *icp_dev_intf = hw_mgr->a5_dev_intf;
+	struct cam_hw_intf *icp_dev_intf = hw_mgr->icp_dev_intf;
 
 	if (!icp_dev_intf)
 		return -EINVAL;
 
 	return icp_dev_intf->hw_ops.process_cmd(icp_dev_intf->hw_priv,
-						CAM_ICP_A5_CMD_POWER_RESUME,
+						CAM_ICP_CMD_POWER_RESUME,
 						&hw_mgr->a5_jtag_debug,
 						sizeof(hw_mgr->a5_jtag_debug));
 }
 
 static void cam_icp_mgr_proc_suspend(struct cam_icp_hw_mgr *hw_mgr)
 {
-	struct cam_hw_intf *icp_dev_intf = hw_mgr->a5_dev_intf;
+	struct cam_hw_intf *icp_dev_intf = hw_mgr->icp_dev_intf;
 
 	if (!icp_dev_intf)
 		return;
 
 	icp_dev_intf->hw_ops.process_cmd(icp_dev_intf->hw_priv,
-					CAM_ICP_A5_CMD_POWER_COLLAPSE,
+					CAM_ICP_CMD_POWER_COLLAPSE,
 					NULL, 0);
 }
 
@@ -3103,19 +3093,19 @@ static int __power_collapse(struct cam_icp_hw_mgr *hw_mgr)
 
 static int cam_icp_mgr_icp_power_collapse(struct cam_icp_hw_mgr *hw_mgr)
 {
-	struct cam_hw_intf *a5_dev_intf = hw_mgr->a5_dev_intf;
+	struct cam_hw_intf *icp_dev_intf = hw_mgr->icp_dev_intf;
 	int rc;
 
 	CAM_DBG(CAM_PERF, "ENTER");
 
-	if (!a5_dev_intf) {
-		CAM_ERR(CAM_ICP, "A5 device interface is NULL");
+	if (!icp_dev_intf) {
+		CAM_ERR(CAM_ICP, "ICP device interface is NULL");
 		return -EINVAL;
 	}
 
 	rc = __power_collapse(hw_mgr);
 
-	a5_dev_intf->hw_ops.deinit(a5_dev_intf->hw_priv, NULL, 0);
+	icp_dev_intf->hw_ops.deinit(icp_dev_intf->hw_priv, NULL, 0);
 
 	CAM_DBG(CAM_PERF, "EXIT");
 
@@ -3447,17 +3437,17 @@ static int cam_icp_mgr_release_ctx(struct cam_icp_hw_mgr *hw_mgr, int ctx_id)
 
 static void cam_icp_mgr_device_deinit(struct cam_icp_hw_mgr *hw_mgr)
 {
-	struct cam_hw_intf *a5_dev_intf = NULL;
+	struct cam_hw_intf *icp_dev_intf = NULL;
 	struct cam_hw_intf *ipe0_dev_intf = NULL;
 	struct cam_hw_intf *ipe1_dev_intf = NULL;
 	struct cam_hw_intf *bps_dev_intf = NULL;
 
-	a5_dev_intf = hw_mgr->a5_dev_intf;
+	icp_dev_intf = hw_mgr->icp_dev_intf;
 	ipe0_dev_intf = hw_mgr->ipe0_dev_intf;
 	ipe1_dev_intf = hw_mgr->ipe1_dev_intf;
 	bps_dev_intf = hw_mgr->bps_dev_intf;
 
-	if ((!a5_dev_intf) || (!ipe0_dev_intf) || (!bps_dev_intf)) {
+	if ((!icp_dev_intf) || (!ipe0_dev_intf) || (!bps_dev_intf)) {
 		CAM_ERR(CAM_ICP, "dev intfs are wrong, failed to close");
 		return;
 	}
@@ -3466,7 +3456,7 @@ static void cam_icp_mgr_device_deinit(struct cam_icp_hw_mgr *hw_mgr)
 		ipe1_dev_intf->hw_ops.deinit(ipe1_dev_intf->hw_priv, NULL, 0);
 	ipe0_dev_intf->hw_ops.deinit(ipe0_dev_intf->hw_priv, NULL, 0);
 	bps_dev_intf->hw_ops.deinit(bps_dev_intf->hw_priv, NULL, 0);
-	a5_dev_intf->hw_ops.deinit(a5_dev_intf->hw_priv, NULL, 0);
+	icp_dev_intf->hw_ops.deinit(icp_dev_intf->hw_priv, NULL, 0);
 	hw_mgr->bps_clk_state = false;
 	hw_mgr->ipe_clk_state = false;
 }
@@ -3474,8 +3464,8 @@ static void cam_icp_mgr_device_deinit(struct cam_icp_hw_mgr *hw_mgr)
 static int cam_icp_mgr_hw_close(void *hw_priv, void *hw_close_args)
 {
 	struct cam_icp_hw_mgr *hw_mgr = hw_priv;
-	struct cam_hw_intf *a5_dev_intf = NULL;
-	struct cam_icp_a5_set_irq_cb irq_cb;
+	struct cam_hw_intf *icp_dev_intf = NULL;
+	struct cam_icp_set_irq_cb irq_cb;
 	struct cam_icp_a5_set_fw_buf_info fw_buf_info;
 	int rc = 0;
 
@@ -3484,18 +3474,19 @@ static int cam_icp_mgr_hw_close(void *hw_priv, void *hw_close_args)
 		CAM_DBG(CAM_ICP, "hw mgr is already closed");
 		return 0;
 	}
-	a5_dev_intf = hw_mgr->a5_dev_intf;
-	if (!a5_dev_intf) {
-		CAM_DBG(CAM_ICP, "a5_dev_intf is NULL");
+
+	icp_dev_intf = hw_mgr->icp_dev_intf;
+	if (!icp_dev_intf) {
+		CAM_DBG(CAM_ICP, "ICP device interface is NULL");
 		return -EINVAL;
 	}
 
 	fw_buf_info.kva = 0;
 	fw_buf_info.iova = 0;
 	fw_buf_info.len = 0;
-	rc = a5_dev_intf->hw_ops.process_cmd(
-		a5_dev_intf->hw_priv,
-		CAM_ICP_A5_CMD_SET_FW_BUF,
+	rc = icp_dev_intf->hw_ops.process_cmd(
+		icp_dev_intf->hw_priv,
+		CAM_ICP_CMD_SET_FW_BUF,
 		&fw_buf_info,
 		sizeof(fw_buf_info));
 	if (rc)
@@ -3505,9 +3496,9 @@ static int cam_icp_mgr_hw_close(void *hw_priv, void *hw_close_args)
 
 	irq_cb.icp_hw_mgr_cb = NULL;
 	irq_cb.data = NULL;
-	rc = a5_dev_intf->hw_ops.process_cmd(
-		a5_dev_intf->hw_priv,
-		CAM_ICP_A5_SET_IRQ_CB,
+	rc = icp_dev_intf->hw_ops.process_cmd(
+		icp_dev_intf->hw_priv,
+		CAM_ICP_SET_IRQ_CB,
 		&irq_cb, sizeof(irq_cb));
 	if (rc)
 		CAM_ERR(CAM_ICP, "deregister irq call back failed");
@@ -3522,24 +3513,24 @@ static int cam_icp_mgr_hw_close(void *hw_priv, void *hw_close_args)
 static int cam_icp_mgr_device_init(struct cam_icp_hw_mgr *hw_mgr)
 {
 	int rc = 0;
-	struct cam_hw_intf *a5_dev_intf = NULL;
+	struct cam_hw_intf *icp_dev_intf = NULL;
 	struct cam_hw_intf *ipe0_dev_intf = NULL;
 	struct cam_hw_intf *ipe1_dev_intf = NULL;
 	struct cam_hw_intf *bps_dev_intf = NULL;
 
-	a5_dev_intf = hw_mgr->a5_dev_intf;
+	icp_dev_intf = hw_mgr->icp_dev_intf;
 	ipe0_dev_intf = hw_mgr->ipe0_dev_intf;
 	ipe1_dev_intf = hw_mgr->ipe1_dev_intf;
 	bps_dev_intf = hw_mgr->bps_dev_intf;
 
-	if ((!a5_dev_intf) || (!ipe0_dev_intf) || (!bps_dev_intf)) {
+	if ((!icp_dev_intf) || (!ipe0_dev_intf) || (!bps_dev_intf)) {
 		CAM_ERR(CAM_ICP, "dev intfs are wrong");
 		return -EINVAL;
 	}
 
-	rc = a5_dev_intf->hw_ops.init(a5_dev_intf->hw_priv, NULL, 0);
+	rc = icp_dev_intf->hw_ops.init(icp_dev_intf->hw_priv, NULL, 0);
 	if (rc)
-		goto a5_dev_init_failed;
+		goto icp_dev_init_failed;
 
 	rc = bps_dev_intf->hw_ops.init(bps_dev_intf->hw_priv, NULL, 0);
 	if (rc)
@@ -3567,29 +3558,29 @@ ipe0_dev_init_failed:
 	bps_dev_intf->hw_ops.deinit(bps_dev_intf->hw_priv, NULL, 0);
 	hw_mgr->bps_clk_state = false;
 bps_dev_init_failed:
-	a5_dev_intf->hw_ops.deinit(a5_dev_intf->hw_priv, NULL, 0);
-a5_dev_init_failed:
+	icp_dev_intf->hw_ops.deinit(icp_dev_intf->hw_priv, NULL, 0);
+icp_dev_init_failed:
 	return rc;
 }
 
 static int cam_icp_mgr_fw_download(struct cam_icp_hw_mgr *hw_mgr)
 {
 	int rc;
-	struct cam_hw_intf *a5_dev_intf = NULL;
-	struct cam_icp_a5_set_irq_cb irq_cb;
+	struct cam_hw_intf *icp_dev_intf = NULL;
+	struct cam_icp_set_irq_cb irq_cb;
 	struct cam_icp_a5_set_fw_buf_info fw_buf_info;
 
-	a5_dev_intf = hw_mgr->a5_dev_intf;
-	if (!a5_dev_intf) {
-		CAM_ERR(CAM_ICP, "a5_dev_intf is invalid");
+	icp_dev_intf = hw_mgr->icp_dev_intf;
+	if (!icp_dev_intf) {
+		CAM_ERR(CAM_ICP, "ICP device interface is invalid");
 		return -EINVAL;
 	}
 
 	irq_cb.icp_hw_mgr_cb = cam_icp_hw_mgr_cb;
 	irq_cb.data = hw_mgr;
-	rc = a5_dev_intf->hw_ops.process_cmd(
-		a5_dev_intf->hw_priv,
-		CAM_ICP_A5_SET_IRQ_CB,
+	rc = icp_dev_intf->hw_ops.process_cmd(
+		icp_dev_intf->hw_priv,
+		CAM_ICP_SET_IRQ_CB,
 		&irq_cb, sizeof(irq_cb));
 	if (rc)
 		return rc;
@@ -3598,16 +3589,16 @@ static int cam_icp_mgr_fw_download(struct cam_icp_hw_mgr *hw_mgr)
 	fw_buf_info.iova = icp_hw_mgr.hfi_mem.fw_buf.iova;
 	fw_buf_info.len = icp_hw_mgr.hfi_mem.fw_buf.len;
 
-	rc = a5_dev_intf->hw_ops.process_cmd(
-		a5_dev_intf->hw_priv,
-		CAM_ICP_A5_CMD_SET_FW_BUF,
+	rc = icp_dev_intf->hw_ops.process_cmd(
+		icp_dev_intf->hw_priv,
+		CAM_ICP_CMD_SET_FW_BUF,
 		&fw_buf_info, sizeof(fw_buf_info));
 	if (rc)
 		return rc;
 
-	rc = a5_dev_intf->hw_ops.process_cmd(
-		a5_dev_intf->hw_priv,
-		CAM_ICP_A5_CMD_FW_DOWNLOAD,
+	rc = icp_dev_intf->hw_ops.process_cmd(
+		icp_dev_intf->hw_priv,
+		CAM_ICP_CMD_FW_DOWNLOAD,
 		NULL, 0);
 	if (rc)
 		return rc;
@@ -3617,17 +3608,17 @@ static int cam_icp_mgr_fw_download(struct cam_icp_hw_mgr *hw_mgr)
 
 static int cam_icp_mgr_hfi_init(struct cam_icp_hw_mgr *hw_mgr)
 {
-	struct cam_hw_intf *a5_dev_intf = NULL;
-	struct cam_hw_info *a5_dev = NULL;
+	struct cam_hw_intf *icp_dev_intf = NULL;
+	struct cam_hw_info *icp_dev = NULL;
 	struct hfi_mem_info hfi_mem;
 	const struct hfi_ops *hfi_ops;
 
-	a5_dev_intf = hw_mgr->a5_dev_intf;
-	if (!a5_dev_intf) {
-		CAM_ERR(CAM_ICP, "a5_dev_intf is invalid");
+	icp_dev_intf = hw_mgr->icp_dev_intf;
+	if (!icp_dev_intf) {
+		CAM_ERR(CAM_ICP, "ICP device interface is invalid");
 		return -EINVAL;
 	}
-	a5_dev = (struct cam_hw_info *)a5_dev_intf->hw_priv;
+	icp_dev = (struct cam_hw_info *)icp_dev_intf->hw_priv;
 
 	hfi_mem.qtbl.kva = icp_hw_mgr.hfi_mem.qtbl.kva;
 	hfi_mem.qtbl.iova = icp_hw_mgr.hfi_mem.qtbl.iova;
@@ -3687,32 +3678,29 @@ static int cam_icp_mgr_hfi_init(struct cam_icp_hw_mgr *hw_mgr)
 
 	hfi_ops = &hfi_a5_ops;
 
-	return cam_hfi_init(&hfi_mem, hfi_ops, a5_dev, 0);
+	return cam_hfi_init(&hfi_mem, hfi_ops, icp_dev, 0);
 }
 
 static int cam_icp_mgr_send_fw_init(struct cam_icp_hw_mgr *hw_mgr)
 {
 	int rc;
-	struct cam_hw_intf *a5_dev_intf = NULL;
+	struct cam_hw_intf *icp_dev_intf = hw_mgr->icp_dev_intf;
 	unsigned long rem_jiffies;
 	int timeout = 5000;
 
-	a5_dev_intf = hw_mgr->a5_dev_intf;
-	if (!a5_dev_intf) {
-		CAM_ERR(CAM_ICP, "a5_dev_intf is invalid");
+	if (!icp_dev_intf) {
+		CAM_ERR(CAM_ICP, "ICP device interface is NULL");
 		return -EINVAL;
 	}
 
-	reinit_completion(&hw_mgr->a5_complete);
+	reinit_completion(&hw_mgr->icp_complete);
 	CAM_DBG(CAM_ICP, "Sending HFI init command");
-	rc = a5_dev_intf->hw_ops.process_cmd(
-		a5_dev_intf->hw_priv,
-		CAM_ICP_A5_SEND_INIT,
-		NULL, 0);
+	rc = icp_dev_intf->hw_ops.process_cmd(icp_dev_intf->hw_priv,
+					CAM_ICP_SEND_INIT, NULL, 0);
 	if (rc)
 		return rc;
 
-	rem_jiffies = wait_for_completion_timeout(&icp_hw_mgr.a5_complete,
+	rem_jiffies = wait_for_completion_timeout(&icp_hw_mgr.icp_complete,
 		msecs_to_jiffies((timeout)));
 	if (!rem_jiffies) {
 		rc = -ETIMEDOUT;
@@ -3757,14 +3745,13 @@ static int cam_icp_mgr_hw_open_k(void *hw_mgr_priv, void *download_fw_args)
 static int cam_icp_mgr_icp_resume(struct cam_icp_hw_mgr *hw_mgr)
 {
 	int rc = 0;
-	struct cam_hw_intf *a5_dev_intf = NULL;
+	struct cam_hw_intf *icp_dev_intf = hw_mgr->icp_dev_intf;
 	bool downloadFromResume = true;
 
 	CAM_DBG(CAM_ICP, "Enter");
-	a5_dev_intf = hw_mgr->devices[CAM_ICP_DEV_A5][0];
 
-	if (!a5_dev_intf) {
-		CAM_ERR(CAM_ICP, "a5 dev intf is wrong");
+	if (!icp_dev_intf) {
+		CAM_ERR(CAM_ICP, "ICP device interface is NULL");
 		return -EINVAL;
 	}
 
@@ -3775,7 +3762,7 @@ static int cam_icp_mgr_icp_resume(struct cam_icp_hw_mgr *hw_mgr)
 		return rc;
 	}
 
-	rc = a5_dev_intf->hw_ops.init(a5_dev_intf->hw_priv, NULL, 0);
+	rc = icp_dev_intf->hw_ops.init(icp_dev_intf->hw_priv, NULL, 0);
 	if (rc)
 		return -EINVAL;
 
@@ -3793,14 +3780,13 @@ static int cam_icp_mgr_icp_resume(struct cam_icp_hw_mgr *hw_mgr)
 power_collapse:
 	__power_collapse(hw_mgr);
 hw_deinit:
-	a5_dev_intf->hw_ops.deinit(a5_dev_intf->hw_priv, NULL, 0);
+	icp_dev_intf->hw_ops.deinit(icp_dev_intf->hw_priv, NULL, 0);
 
 	return rc;
 }
 
 static int cam_icp_mgr_hw_open(void *hw_mgr_priv, void *download_fw_args)
 {
-	struct cam_hw_intf *a5_dev_intf = NULL;
 	struct cam_icp_hw_mgr *hw_mgr = hw_mgr_priv;
 	bool icp_pc = false;
 	int rc = 0;
@@ -3815,9 +3801,8 @@ static int cam_icp_mgr_hw_open(void *hw_mgr_priv, void *download_fw_args)
 		return rc;
 	}
 
-	a5_dev_intf = hw_mgr->a5_dev_intf;
-	if (!a5_dev_intf) {
-		CAM_ERR(CAM_ICP, "a5_dev_intf is invalid");
+	if (!hw_mgr->icp_dev_intf) {
+		CAM_ERR(CAM_ICP, "ICP device interface is invalid");
 		return -EINVAL;
 	}
 
@@ -5167,7 +5152,7 @@ static int cam_icp_mgr_hw_dump(void *hw_priv, void *hw_dump_args)
 	struct timespec64                cur_ts;
 	struct timespec64                req_ts;
 	ktime_t                          cur_time;
-	struct cam_hw_intf              *a5_dev_intf;
+	struct cam_hw_intf              *icp_dev_intf;
 	struct cam_icp_hw_mgr           *hw_mgr;
 	struct cam_hw_dump_args         *dump_args;
 	struct cam_icp_hw_ctx_data      *ctx_data;
@@ -5253,10 +5238,10 @@ hw_dump:
 	dump_args->offset += (hdr->size + sizeof(struct cam_icp_dump_header));
 	/* Dumping the fw image*/
 	icp_dump_args.offset = dump_args->offset;
-	a5_dev_intf = hw_mgr->a5_dev_intf;
-	rc = a5_dev_intf->hw_ops.process_cmd(
-		a5_dev_intf->hw_priv,
-		CAM_ICP_A5_CMD_HW_DUMP, &icp_dump_args,
+	icp_dev_intf = hw_mgr->icp_dev_intf;
+	rc = icp_dev_intf->hw_ops.process_cmd(
+		icp_dev_intf->hw_priv,
+		CAM_ICP_CMD_HW_DUMP, &icp_dump_args,
 		sizeof(struct cam_icp_hw_dump_args));
 	CAM_DBG(CAM_ICP, "Offset before %zu after %zu",
 		dump_args->offset, icp_dump_args.offset);
@@ -5932,7 +5917,7 @@ static int cam_icp_mgr_init_devs(struct device_node *of_node)
 		of_node_put(child_node);
 	}
 
-	icp_hw_mgr.a5_dev_intf = icp_hw_mgr.devices[CAM_ICP_DEV_A5][0];
+	icp_hw_mgr.icp_dev_intf = icp_hw_mgr.devices[CAM_ICP_DEV_A5][0];
 	icp_hw_mgr.bps_dev_intf = icp_hw_mgr.devices[CAM_ICP_DEV_BPS][0];
 	icp_hw_mgr.ipe0_dev_intf = icp_hw_mgr.devices[CAM_ICP_DEV_IPE][0];
 	if (icp_hw_mgr.ipe1_enable)
@@ -6174,7 +6159,7 @@ int cam_icp_hw_mgr_init(struct device_node *of_node, uint64_t *hw_mgr_hdl,
 	if (iommu_hdl)
 		*iommu_hdl = icp_hw_mgr.iommu_hdl;
 
-	init_completion(&icp_hw_mgr.a5_complete);
+	init_completion(&icp_hw_mgr.icp_complete);
 	return rc;
 
 icp_wq_create_failed:

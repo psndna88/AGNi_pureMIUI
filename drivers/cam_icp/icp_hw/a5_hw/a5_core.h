@@ -67,7 +67,7 @@ struct cam_a5_device_core_info {
 	uint64_t fw_buf_len;
 	struct cam_icp_a5_query_cap query_cap;
 	struct cam_icp_a5_acquire_dev a5_acquire[8];
-	struct cam_icp_a5_set_irq_cb irq_cb;
+	struct cam_icp_set_irq_cb irq_cb;
 	uint32_t cpas_handle;
 	bool cpas_start;
 };

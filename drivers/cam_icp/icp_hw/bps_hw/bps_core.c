@@ -411,8 +411,7 @@ int cam_bps_process_cmd(void *device_priv, uint32_t cmd_type,
 		rc = cam_bps_handle_resume(bps_dev);
 		break;
 	case CAM_ICP_BPS_CMD_UPDATE_CLK: {
-		struct cam_a5_clk_update_cmd *clk_upd_cmd =
-			(struct cam_a5_clk_update_cmd *)cmd_args;
+		struct cam_icp_clk_update_cmd *clk_upd_cmd = cmd_args;
 		struct cam_ahb_vote ahb_vote;
 		uint32_t clk_rate = clk_upd_cmd->curr_clk_rate;
 		int32_t clk_level  = 0, err = 0;

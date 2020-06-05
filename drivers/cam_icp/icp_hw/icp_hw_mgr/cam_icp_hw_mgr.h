@@ -373,7 +373,7 @@ struct cam_icp_hw_mgr {
 	struct cam_req_mgr_core_workq *timer_work;
 	uint32_t msg_buf[ICP_MSG_BUF_SIZE];
 	uint32_t dbg_buf[ICP_DBG_BUF_SIZE];
-	struct completion a5_complete;
+	struct completion icp_complete;
 	struct hfi_cmd_work_data *cmd_work_data;
 	struct hfi_msg_work_data *msg_work_data;
 	struct hfi_msg_work_data *timer_work_data;
@@ -395,7 +395,7 @@ struct cam_icp_hw_mgr {
 	bool ipe0_enable;
 	bool ipe1_enable;
 	bool bps_enable;
-	struct cam_hw_intf *a5_dev_intf;
+	struct cam_hw_intf *icp_dev_intf;
 	struct cam_hw_intf *ipe0_dev_intf;
 	struct cam_hw_intf *ipe1_dev_intf;
 	struct cam_hw_intf *bps_dev_intf;

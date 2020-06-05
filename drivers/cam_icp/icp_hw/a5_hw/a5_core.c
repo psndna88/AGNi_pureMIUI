@@ -549,7 +549,7 @@ int cam_a5_process_cmd(void *device_priv, uint32_t cmd_type,
 		return -EINVAL;
 	}
 
-	if (cmd_type >= CAM_ICP_A5_CMD_MAX) {
+	if (cmd_type >= CAM_ICP_CMD_MAX) {
 		CAM_ERR(CAM_ICP, "Invalid command : %x", cmd_type);
 		return -EINVAL;
 	}
@@ -559,16 +559,16 @@ int cam_a5_process_cmd(void *device_priv, uint32_t cmd_type,
 	hw_info = core_info->a5_hw_info;
 
 	switch (cmd_type) {
-	case CAM_ICP_A5_CMD_FW_DOWNLOAD:
+	case CAM_ICP_CMD_FW_DOWNLOAD:
 		rc = cam_a5_download_fw(device_priv);
 		break;
-	case CAM_ICP_A5_CMD_POWER_COLLAPSE:
+	case CAM_ICP_CMD_POWER_COLLAPSE:
 		rc = cam_a5_power_collapse(a5_dev);
 		break;
-	case CAM_ICP_A5_CMD_POWER_RESUME:
+	case CAM_ICP_CMD_POWER_RESUME:
 		rc = cam_a5_power_resume(a5_dev, *((bool *)cmd_args));
 		break;
-	case CAM_ICP_A5_CMD_SET_FW_BUF: {
+	case CAM_ICP_CMD_SET_FW_BUF: {
 		struct cam_icp_a5_set_fw_buf_info *fw_buf_info = cmd_args;
 
 		if (!cmd_args) {
@@ -585,8 +585,8 @@ int cam_a5_process_cmd(void *device_priv, uint32_t cmd_type,
 			core_info->fw_buf_len);
 		break;
 	}
-	case CAM_ICP_A5_SET_IRQ_CB: {
-		struct cam_icp_a5_set_irq_cb *irq_cb = cmd_args;
+	case CAM_ICP_SET_IRQ_CB: {
+		struct cam_icp_set_irq_cb *irq_cb = cmd_args;
 
 		if (!cmd_args) {
 			CAM_ERR(CAM_ICP, "cmd args NULL");
@@ -600,15 +600,15 @@ int cam_a5_process_cmd(void *device_priv, uint32_t cmd_type,
 		break;
 	}
 
-	case CAM_ICP_A5_SEND_INIT:
+	case CAM_ICP_SEND_INIT:
 		hfi_send_system_cmd(HFI_CMD_SYS_INIT, 0, 0);
 		break;
 
-	case CAM_ICP_A5_CMD_PC_PREP:
+	case CAM_ICP_CMD_PC_PREP:
 		hfi_send_system_cmd(HFI_CMD_SYS_PC_PREP, 0, 0);
 		break;
 
-	case CAM_ICP_A5_CMD_VOTE_CPAS: {
+	case CAM_ICP_CMD_VOTE_CPAS: {
 		struct cam_icp_cpas_vote *cpas_vote = cmd_args;
 
 		if (!cmd_args) {
@@ -620,7 +620,7 @@ int cam_a5_process_cmd(void *device_priv, uint32_t cmd_type,
 		break;
 	}
 
-	case CAM_ICP_A5_CMD_CPAS_START: {
+	case CAM_ICP_CMD_CPAS_START: {
 		struct cam_icp_cpas_vote *cpas_vote = cmd_args;
 
 		if (!cmd_args) {
@@ -637,13 +637,13 @@ int cam_a5_process_cmd(void *device_priv, uint32_t cmd_type,
 		break;
 	}
 
-	case CAM_ICP_A5_CMD_CPAS_STOP:
+	case CAM_ICP_CMD_CPAS_STOP:
 		if (core_info->cpas_start) {
 			cam_cpas_stop(core_info->cpas_handle);
 			core_info->cpas_start = false;
 		}
 		break;
-	case CAM_ICP_A5_CMD_UBWC_CFG: {
+	case CAM_ICP_CMD_UBWC_CFG: {
 		struct a5_ubwc_cfg_ext *ubwc_cfg_ext = NULL;
 
 		a5_soc = soc_info->soc_private;
@@ -676,7 +676,7 @@ int cam_a5_process_cmd(void *device_priv, uint32_t cmd_type,
 
 		break;
 	}
-	case CAM_ICP_A5_CMD_CLK_UPDATE: {
+	case CAM_ICP_CMD_CLK_UPDATE: {
 		int32_t clk_level = 0;
 		struct cam_ahb_vote ahb_vote;
 
@@ -700,7 +700,7 @@ int cam_a5_process_cmd(void *device_priv, uint32_t cmd_type,
 			core_info->cpas_handle, &ahb_vote);
 		break;
 	}
-	case CAM_ICP_A5_CMD_HW_DUMP: {
+	case CAM_ICP_CMD_HW_DUMP: {
 		struct cam_icp_hw_dump_args *dump_args = cmd_args;
 
 		rc = cam_a5_fw_dump(dump_args, core_info);
