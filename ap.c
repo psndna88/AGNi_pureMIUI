@@ -12765,13 +12765,12 @@ static enum sigma_cmd_result cmd_ap_set_rfeature(struct sigma_dut *dut,
 {
 	/* const char *name = get_param(cmd, "NAME"); */
 	/* const char *type = get_param(cmd, "Type"); */
-	const char *val;
+	const char *val, *oci_chan, *oci_frametype;
 	char buf[100];
+	const char *ifname = get_hostapd_ifname(dut);
 
 	val = get_param(cmd, "ReassocResp_RSNXE_Used");
 	if (val) {
-		const char *ifname = get_hostapd_ifname(dut);
-
 		if (atoi(val) == 0)
 			snprintf(buf, sizeof(buf), "SET ft_rsnxe_used 2");
 		else
@@ -12781,6 +12780,44 @@ static enum sigma_cmd_result cmd_ap_set_rfeature(struct sigma_dut *dut,
 				  "ErrorCode,Failed to set ft_rsnxe_used");
 			return STATUS_SENT_ERROR;
 		}
+	}
+
+	oci_chan = get_param(cmd, "OCIChannel");
+	oci_frametype = get_param(cmd, "OCIFrameType");
+	if (oci_chan && oci_frametype) {
+		unsigned int oci_freq = channel_to_freq(dut, atoi(oci_chan));
+
+		if (!oci_freq) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Invalid OCIChannel number");
+			return STATUS_SENT_ERROR;
+		}
+
+		if (strcasecmp(oci_frametype, "eapolM3") == 0) {
+			snprintf(buf, sizeof(buf),
+				 "SET oci_freq_override_eapol_m3 %d", oci_freq);
+		} else if (strcasecmp(oci_frametype, "eapolG1") == 0) {
+			snprintf(buf, sizeof(buf),
+				 "SET oci_freq_override_eapol_g1 %d", oci_freq);
+		} else if (strcasecmp(oci_frametype, "SAQueryReq") == 0) {
+			snprintf(buf, sizeof(buf),
+				 "SET oci_freq_override_saquery_req %d",
+				 oci_freq);
+		} else if (strcasecmp(oci_frametype, "SAQueryResp") == 0) {
+			snprintf(buf, sizeof(buf),
+				 "SET oci_freq_override_saquery_resp %d",
+				 oci_freq);
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported OCIFrameType");
+			return STATUS_SENT_ERROR;
+		}
+		if (hapd_command(ifname, buf) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to set oci_freq_override");
+			return STATUS_SENT_ERROR;
+		}
+		return SUCCESS_SEND_STATUS;
 	}
 
 	switch (get_driver_type(dut)) {
