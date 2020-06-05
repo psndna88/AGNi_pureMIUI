@@ -1059,6 +1059,7 @@ enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 					   struct sigma_cmd *cmd);
 int ap_wps_registration(struct sigma_dut *dut, struct sigma_conn *conn,
 			struct sigma_cmd *cmd);
+const char * get_hostapd_ifname(struct sigma_dut *dut);
 
 /* sta.c */
 void sta_register_cmds(void);

@@ -243,6 +243,40 @@ done:
 }
 
 
+static enum sigma_cmd_result dev_exec_key_rotation(struct sigma_dut *dut,
+						   struct sigma_conn *conn,
+						   struct sigma_cmd *cmd)
+{
+	if (dut->mode == SIGMA_MODE_AP ||
+	    dut->mode == SIGMA_MODE_UNKNOWN) {
+		const char *ifname;
+
+		ifname = get_hostapd_ifname(dut);
+		if (hapd_command(ifname, "REKEY_GTK") < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to request hostapd to rekey GTK");
+			return STATUS_SENT_ERROR;
+		}
+		return SUCCESS_SEND_STATUS;
+	} else if (dut->mode == SIGMA_MODE_STATION) {
+		const char *intf = get_param(cmd, "Interface");
+
+		if (!intf)
+			intf = get_main_ifname(dut);
+		if (wpa_command(intf, "KEY_REQUEST 0 0") != 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to request wpa_supplicant to request AP to rekey GTK");
+			return STATUS_SENT_ERROR;
+		}
+		return SUCCESS_SEND_STATUS;
+	} else {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Unsupported mode for KeyRotation,1");
+		return STATUS_SENT_ERROR;
+	}
+}
+
+
 static enum sigma_cmd_result wpa3_dev_exec_action(struct sigma_dut *dut,
 						  struct sigma_conn *conn,
 						  struct sigma_cmd *cmd)
@@ -277,8 +311,11 @@ static enum sigma_cmd_result wpa3_dev_exec_action(struct sigma_dut *dut,
 			 pos ? pos : "");
 		send_resp(dut, conn, SIGMA_COMPLETE, buf2);
 		return STATUS_SENT;
-
 	}
+
+	val = get_param(cmd, "KeyRotation");
+	if (val && atoi(val) == 1)
+		return dev_exec_key_rotation(dut, conn, cmd);
 
 	return ERROR_SEND_STATUS;
 }

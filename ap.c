@@ -3262,7 +3262,7 @@ static int set_anqp_elem_value(struct sigma_dut *dut, const char *ifname,
 }
 
 
-static const char * get_hostapd_ifname(struct sigma_dut *dut)
+const char * get_hostapd_ifname(struct sigma_dut *dut)
 {
 	enum driver_type drv;
 
