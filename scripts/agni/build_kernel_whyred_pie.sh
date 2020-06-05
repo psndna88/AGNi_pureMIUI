@@ -17,9 +17,9 @@ if [ -f ~/WORKING_DIRECTORY/AGNi_stamp.sh ];
 	then
 	. ~/WORKING_DIRECTORY/AGNi_stamp.sh
 fi
-if [ -f ~/WORKING_DIRECTORY/gcc-8.x-uber_aarch64.sh ];
+if [ -f ~/WORKING_DIRECTORY/gcc-9.x_aarch64.sh ];
 	then
-	. ~/WORKING_DIRECTORY/gcc-8.x-uber_aarch64.sh
+	. ~/WORKING_DIRECTORY/gcc-9.x_aarch64.sh
 fi
 
 mkdir -p $COMPILEDIR

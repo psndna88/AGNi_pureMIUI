@@ -127,6 +127,7 @@ if [ -f version ]; then
   ui_printfile version;
   ui_print " ";
 fi;
+ui_print " " "AGNi Kernel sdm660 by psndna88 @ xda-developers" " ";
 ui_print " " "AnyKernel3 by osm0sis @ xda-developers" " " " ";
 
 $BOOTMODE || $bb mount -o bind /dev/urandom /dev/random;
@@ -289,6 +290,13 @@ fi;
 
 debugging;
 restore_env;
+
+# AGNi Wired Earphone Analog Amplification boost
+ui_print " " "AGNi now boosting Wired Earphone volume with clarity..." " ";
+$bb mount -t auto /dev/block/by-name/vendor /vendor;
+$bb sed -i '/HPHL Volume/c\    <ctl name="HPHL Volume" value="18" />' /vendor/etc/mixer_paths.xml;
+$bb sed -i '/HPHR Volume/c\    <ctl name="HPHR Volume" value="18" />' /vendor/etc/mixer_paths.xml;
+$bb umount /vendor;
 
 if [ "$(file_getprop anykernel.sh do.cleanup)" == 1 ]; then
   cleanup;

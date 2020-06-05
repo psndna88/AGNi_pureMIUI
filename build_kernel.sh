@@ -165,6 +165,12 @@ if [ $choice -eq 1 ]; then
 	echo " "
 	#### --ALL JASMINE
 	echo $HORIZONTALLINE
+	echo "          BATCH MODE: Building AGNi jasmine Q NewCam variant..."
+	./scripts/agni/build_kernel_jasmine_Q-newcam.sh || exit 1
+	rm $COUT/.config $COUT/.config.old
+	echo "          BATCH MODE: Built AGNi jasmine Q NewCamvariant!!!"
+	echo $HORIZONTALLINE
+	echo " "
 	echo "          BATCH MODE: Building AGNi jasmine Q variant..."
 	./scripts/agni/build_kernel_jasmine_Q.sh || exit 1
 	rm $COUT/.config $COUT/.config.old
@@ -324,6 +330,12 @@ elif [ $choice -eq 6 ];	then
 elif [ $choice -eq 7 ]; then
 	#### ALL JASMINE
 	echo $HORIZONTALLINE
+	echo "          BATCH MODE: Building AGNi jasmine Q NewCam variant..."
+	./scripts/agni/build_kernel_jasmine_Q-newcam.sh || exit 1
+	rm $COUT/.config $COUT/.config.old
+	echo "          BATCH MODE: Built AGNi jasmine Q NewCamvariant!!!"
+	echo $HORIZONTALLINE
+	echo " "
 	echo "          BATCH MODE: Building AGNi jasmine Q variant..."
 	./scripts/agni/build_kernel_jasmine_Q.sh || exit 1
 	rm $COUT/.config $COUT/.config.old
