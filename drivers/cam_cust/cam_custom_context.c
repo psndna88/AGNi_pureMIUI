@@ -162,6 +162,7 @@ static int __cam_custom_ctx_get_dev_info_in_acquired(struct cam_context *ctx,
 	dev_info->dev_id = CAM_REQ_MGR_DEVICE_CUSTOM_HW;
 	dev_info->p_delay = 1;
 	dev_info->trigger = CAM_TRIGGER_POINT_SOF;
+	dev_info->enable_apply_default = true;
 
 	return 0;
 }
@@ -452,6 +453,32 @@ static int __cam_custom_release_dev_in_acquired(struct cam_context *ctx,
 
 	CAM_DBG(CAM_CUSTOM, "Release device success[%u] next state %d",
 		ctx->ctx_id, ctx->state);
+
+	return rc;
+}
+
+static int __cam_custom_ctx_apply_default_settings(
+	struct cam_context *ctx, struct cam_req_mgr_apply_request *apply)
+{
+	int rc = 0;
+	struct cam_custom_context *custom_ctx =
+		(struct cam_custom_context *) ctx->ctx_priv;
+	struct cam_hw_cmd_args        hw_cmd_args;
+	struct cam_custom_hw_cmd_args custom_hw_cmd_args;
+
+	hw_cmd_args.ctxt_to_hw_map = custom_ctx->hw_ctx;
+	hw_cmd_args.cmd_type = CAM_HW_MGR_CMD_INTERNAL;
+	custom_hw_cmd_args.cmd_type =
+		CAM_CUSTOM_HW_MGR_PROG_DEFAULT_CONFIG;
+	hw_cmd_args.u.internal_args = (void *)&custom_hw_cmd_args;
+
+	rc = ctx->hw_mgr_intf->hw_cmd(ctx->hw_mgr_intf->hw_mgr_priv,
+			&hw_cmd_args);
+	if (rc)
+		CAM_ERR(CAM_CUSTOM,
+			"Failed to apply default settings rc %d", rc);
+	else
+		CAM_DBG(CAM_CUSTOM, "Applied default settings rc %d", rc);
 
 	return rc;
 }
@@ -1194,6 +1221,8 @@ static struct cam_ctx_ops
 			.unlink = __cam_custom_ctx_unlink_in_activated,
 			.apply_req =
 				__cam_custom_ctx_apply_req_in_activated_state,
+			.apply_default =
+				__cam_custom_ctx_apply_default_settings,
 			.flush_req = __cam_custom_ctx_flush_req_in_top_state,
 			.process_evt = __cam_custom_ctx_process_evt,
 		},

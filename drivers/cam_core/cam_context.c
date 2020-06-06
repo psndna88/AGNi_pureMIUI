@@ -182,6 +182,34 @@ int cam_context_handle_crm_apply_req(struct cam_context *ctx,
 	return rc;
 }
 
+int cam_context_handle_crm_apply_default_req(
+	struct cam_context *ctx,
+	struct cam_req_mgr_apply_request *apply)
+{
+	int rc = 0;
+
+	if (!ctx->state_machine) {
+		CAM_ERR(CAM_CORE, "Context is not ready");
+		return -EINVAL;
+	}
+
+	if (!apply) {
+		CAM_ERR(CAM_CORE, "Invalid apply request payload");
+		return -EINVAL;
+	}
+
+	mutex_lock(&ctx->ctx_mutex);
+	if (ctx->state_machine[ctx->state].crm_ops.apply_default)
+		rc = ctx->state_machine[ctx->state].crm_ops.apply_default(ctx,
+			apply);
+	else
+		CAM_DBG(CAM_CORE, "No crm apply_default in dev %d, state %d",
+			ctx->dev_hdl, ctx->state);
+	mutex_unlock(&ctx->ctx_mutex);
+
+	return rc;
+}
+
 int cam_context_handle_crm_flush_req(struct cam_context *ctx,
 	struct cam_req_mgr_flush_request *flush)
 {

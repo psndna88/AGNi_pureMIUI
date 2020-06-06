@@ -365,6 +365,10 @@ struct cam_req_mgr_connected_device {
  *                         applying the settings
  * @trigger_cnt          : trigger count value per device initiating the trigger
  * @eof_event_cnt        : Atomic variable to track the number of EOF requests
+ * @enable_apply_default : Link will apply a default settings to devices on
+ *                         frames where actual settings are not available.
+ *                         This will  account for all devices irrespective of
+ *                         pipeline delay
  */
 struct cam_req_mgr_core_link {
 	int32_t                              link_hdl;
@@ -398,6 +402,7 @@ struct cam_req_mgr_core_link {
 	bool                                 dual_trigger;
 	uint32_t    trigger_cnt[CAM_REQ_MGR_MAX_TRIGGERS];
 	atomic_t                             eof_event_cnt;
+	bool                                 enable_apply_default;
 };
 
 /**
