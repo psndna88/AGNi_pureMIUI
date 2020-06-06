@@ -125,8 +125,41 @@
 
 static struct synaptics_rmi4_data *rmi4_data;
 
+#if 1
 bool synaptics_gesture_func_on = false;
-static bool gesture_delay = false;
+bool gesture_delay = false;
+#define WAKEUP_OFF 4
+#define WAKEUP_ON 5
+
+int synaptics_gesture_switch(struct input_dev *dev, unsigned int type, unsigned int code, int value)
+{
+
+	unsigned int input ;
+	if (type == EV_SYN && code == SYN_CONFIG)
+	{ 
+		if (rmi4_data->suspend)
+		{
+			if ((value != WAKEUP_OFF) || synaptics_gesture_func_on)
+			{
+				gesture_delay = true;
+			}
+		}
+		if(value == WAKEUP_OFF){
+			synaptics_gesture_func_on = false;
+			printk("close double-click resume\n");
+			input = 0;
+		}else if(value == WAKEUP_ON) {
+			synaptics_gesture_func_on  = true;
+			printk("open double-click resume\n");
+			input = 1;
+		}
+	}
+	if (rmi4_data->f11_wakeup_gesture || rmi4_data->f12_wakeup_gesture)
+		rmi4_data->enable_wakeup_gesture = input;
+
+	return 0;
+}
+#endif
 
 extern int get_tddi_lockdown_data(unsigned char *lockdown_data, unsigned short leng);
 static int synaptics_rmi4_check_status(struct synaptics_rmi4_data *rmi4_data,
@@ -920,13 +953,15 @@ static ssize_t synaptics_rmi4_wake_gesture_store(struct device *dev,
 	if (sscanf(buf, "%u", &input) != 1)
 		return -EINVAL;
 
-	input = input > 0 ? 1 : 0;
+	input_event(rmi4_data->input_dev, EV_SYN, SYN_CONFIG, input ? WAKEUP_ON : WAKEUP_OFF);
 
-	if (rmi4_data->suspend && input != rmi4_data->enable_wakeup_gesture)
-		gesture_delay = true;
+	if(synaptics_gesture_func_on)
+		input = input > 0 ? 1 : 0;
+	else
+		input = 0;
 
 	if (rmi4_data->f11_wakeup_gesture || rmi4_data->f12_wakeup_gesture)
-		synaptics_gesture_func_on = rmi4_data->enable_wakeup_gesture = input;
+		rmi4_data->enable_wakeup_gesture = input;
 
 	return count;
 }
@@ -4441,8 +4476,11 @@ static int synaptics_rmi4_probe(struct platform_device *pdev)
 	INIT_WORK(&rmi4_data->reset_work, synaptics_rmi4_reset_work);
 	queue_work(rmi4_data->reset_workqueue, &rmi4_data->reset_work);
 #endif
+#if  1
 	input_set_capability(rmi4_data->input_dev, EV_KEY, KEY_WAKEUP);
 
+	rmi4_data->input_dev->event =synaptics_gesture_switch;
+#endif
 	INIT_WORK(&rmi4_data->fb_notify_work, tp_fb_notifier_resume_work);
 
 	return retval;
