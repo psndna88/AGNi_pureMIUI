@@ -12922,6 +12922,30 @@ static enum sigma_cmd_result cmd_ap_set_rfeature(struct sigma_dut *dut,
 		return SUCCESS_SEND_STATUS;
 	}
 
+	val = get_param(cmd, "Transition_Disable");
+	if (val) {
+		if (atoi(val)) {
+			val = get_param(cmd, "Transition_Disable_Index");
+			if (!val) {
+				send_resp(dut, conn, SIGMA_INVALID,
+					  "errorCode,Transition_Disable without Transition_Disable_Index");
+				return STATUS_SENT;
+			}
+			dut->ap_transition_disable = 1 << atoi(val);
+		} else {
+			dut->ap_transition_disable = 0;
+		}
+
+		snprintf(buf, sizeof(buf), "SET transition_disable 0x%02x",
+			 dut->ap_transition_disable);
+		if (hapd_command(ifname, buf) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to update transition mode disabled indication");
+			return STATUS_SENT_ERROR;
+		}
+		return SUCCESS_SEND_STATUS;
+	}
+
 	switch (get_driver_type(dut)) {
 	case DRIVER_ATHEROS:
 		return ath_ap_set_rfeature(dut, conn, cmd);
