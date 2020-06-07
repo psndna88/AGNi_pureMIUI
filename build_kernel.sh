@@ -1,6 +1,6 @@
 #!/bin/sh
-COUT="/mnt/ANDROID/COMPILED_OUT"
-KERNELDIR=`readlink -f .`
+COUT="/mnt/Storage-VM/COMPILED_OUT/"
+KERNELDIR=/mnt/Storage-VM/AGNi_pureMIUI/
 
 if [ -f $COUT/.config ];
 then
