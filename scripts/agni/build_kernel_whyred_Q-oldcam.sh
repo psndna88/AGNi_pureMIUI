@@ -3,7 +3,7 @@ export ARCH=arm64
 export SUBARCH=arm64
 
 KERNELDIR=`readlink -f .`
-COMPILEDIR="/mnt/ANDROID/COMPILED_OUT"
+COMPILEDIR="/mnt/Storage-VM/COMPILED_OUT"
 
 ANDROID="Q"
 DEVICE="whyred"
