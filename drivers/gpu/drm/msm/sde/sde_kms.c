@@ -3171,6 +3171,9 @@ static void _sde_kms_set_lutdma_vbif_remap(struct sde_kms *sde_kms)
 
 static void kms_update_pm_qos(struct pm_qos_request *pm_qos_irq_req, bool enable)
 {
+	if (!pm_qos_request_active(pm_qos_irq_req))
+		return;
+
 	if (enable)
 		pm_qos_update_request(pm_qos_irq_req, SDE_KMS_PM_QOS_CPU_DMA_LATENCY);
 	else
