@@ -1011,7 +1011,7 @@ sconfig_store(struct device *dev, struct device_attribute *devattr,
 	if (kstrtoint(buf,10,&sconfig))
 		return -EINVAL;
 
-	thermal_msg->sconfig = sconfig;
+//	thermal_msg->sconfig = sconfig;
 
 	return count;
 }
@@ -1036,7 +1036,7 @@ temp_state_store(struct device *dev, struct device_attribute *devattr,
 	if (kstrtoint(buf,10,&temp_state))
 		return -EINVAL;
 
-	thermal_msg->temp_state = temp_state;
+//	thermal_msg->temp_state = temp_state;
 
 	return count;
 }
