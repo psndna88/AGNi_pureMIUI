@@ -2300,6 +2300,8 @@ static enum sigma_cmd_result cmd_ap_set_security(struct sigma_dut *dut,
 		dut->ap_sae_pk = atoi(val);
 
 	val = get_param(cmd, "SAE_PK_KeyPair");
+	if (!val)
+		val = get_param(cmd, "SAE_PK_KeyPairMism");
 	if (val) {
 		free(dut->ap_sae_pk_keypair);
 		dut->ap_sae_pk_keypair = NULL;
@@ -2333,6 +2335,8 @@ static enum sigma_cmd_result cmd_ap_set_security(struct sigma_dut *dut,
 	}
 
 	val = get_param(cmd, "SAE_PK_Modifier");
+	if (!val)
+		val = get_param(cmd, "SAE_PK_ModifierMism");
 	if (val) {
 		free(dut->ap_sae_pk_modifier);
 		dut->ap_sae_pk_modifier = strdup(val);
