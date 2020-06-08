@@ -1,4 +1,7 @@
 #!/bin/sh
+export CROSS_COMPILE=/home/sleepy/android/toolchains/gcc-arm-x86_64-aarch64-none-linux-gnu/bin/aarch64-none-linux-gnu-
+export CROSS_COMPILE_ARM32=/mnt/Storage-VM/Note9-Zeus-Pie9.0-2.3.97/toolchains/7.1/bin/arm-eabi-
+
 COUT="/mnt/Storage-VM/COMPILED_OUT/"
 KERNELDIR=/mnt/Storage-VM/AGNi_pureMIUI/
 

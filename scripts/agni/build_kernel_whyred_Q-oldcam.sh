@@ -10,7 +10,7 @@ DEVICE="whyred"
 CONFIG="agni_whyred-Q-oldcam_defconfig"
 SYNC_CONFIG=1
 
-. $KERNELDIR/AGNi_version.sh
+
 FILENAME="AGNi_$ANDROID-OldCam-$DEVICE-$AGNI_VERSION_PREFIX-$AGNI_VERSION.zip"
 
 if [ -f ~/WORKING_DIRECTORY/AGNi_stamp.sh ];

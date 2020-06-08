@@ -1,7 +1,7 @@
 #!/bin/sh
 export KERNELDIR=`readlink -f .`
 
-COUT="/mnt/Storage-VM/AGNi_pureMIUI/AGNi_out"
+COUT="/mnt/Storage-VM/COMPILED_OUT"
 
 if [ -f $COUT/.config ];
 	then
