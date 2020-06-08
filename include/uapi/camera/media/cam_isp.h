@@ -20,7 +20,9 @@
 #define CAM_ISP_HW_VFE                          2
 #define CAM_ISP_HW_IFE                          3
 #define CAM_ISP_HW_ISPIF                        4
-#define CAM_ISP_HW_MAX                          5
+#define CAM_ISP_HW_IFE_LITE                     5
+#define CAM_ISP_HW_CSID_LITE                    6
+#define CAM_ISP_HW_MAX                          7
 
 /* Color Pattern */
 #define CAM_ISP_PATTERN_BAYER_RGRGRG            0
@@ -140,13 +142,13 @@
  * struct cam_isp_dev_cap_info - A cap info for particular hw type
  *
  * @hw_type:            Hardware type for the cap info
- * @reserved:           reserved field for alignment
+ * @num_hw:             Number of HW of type @hw_type
  * @hw_version:         Hardware version
  *
  */
 struct cam_isp_dev_cap_info {
-	__u32                 hw_type;
-	__u32                 reserved;
+	__u32              hw_type;
+	__u32              num_hw;
 	struct cam_hw_version hw_version;
 };
 

@@ -282,9 +282,39 @@ static int cam_vfe_top_get_data(
 }
 
 int cam_vfe_top_get_hw_caps(void *device_priv,
-	void *get_hw_cap_args, uint32_t arg_size)
+	void *args, uint32_t arg_size)
 {
-	return -EPERM;
+	struct cam_vfe_hw_get_hw_cap *vfe_cap_info = NULL;
+	struct cam_vfe_top_ver2_priv *vfe_top_prv = NULL;
+	struct cam_vfe_soc_private *vfe_soc_private = NULL;
+
+	if (!device_priv || !args) {
+		CAM_ERR(CAM_ISP,
+			"Invalid arguments device_priv:%p, args:%p",
+			device_priv, args);
+		return -EINVAL;
+	}
+
+	vfe_cap_info = (struct cam_vfe_hw_get_hw_cap *)args;
+	vfe_top_prv = (struct cam_vfe_top_ver2_priv *)device_priv;
+
+	if (!vfe_top_prv->common_data.soc_info) {
+		CAM_ERR(CAM_ISP, "soc_info is null");
+		return -EFAULT;
+	}
+
+	vfe_soc_private = (struct cam_vfe_soc_private *)
+		vfe_top_prv->common_data.soc_info->soc_private;
+
+	vfe_cap_info->is_lite = (vfe_soc_private->is_ife_lite) ? true : false;
+	vfe_cap_info->incr =
+		(vfe_top_prv->top_common.hw_version) & 0x00ffff;
+	vfe_cap_info->minor =
+		((vfe_top_prv->top_common.hw_version) >> 16) & 0x0fff;
+	vfe_cap_info->major =
+		((vfe_top_prv->top_common.hw_version) >> 28) & 0x000f;
+
+	return 0;
 }
 
 static int cam_vfe_hw_dump(
@@ -425,8 +455,13 @@ int cam_vfe_top_init_hw(void *device_priv,
 	void *init_hw_args, uint32_t arg_size)
 {
 	struct cam_vfe_top_ver2_priv   *top_priv = device_priv;
+	struct cam_vfe_top_ver2_common_data common_data = top_priv->common_data;
 
 	top_priv->hw_clk_rate = 0;
+
+	top_priv->top_common.hw_version =
+		cam_io_r_mb(common_data.soc_info->reg_map[0].mem_base +
+		common_data.common_reg->hw_version);
 
 	return 0;
 }

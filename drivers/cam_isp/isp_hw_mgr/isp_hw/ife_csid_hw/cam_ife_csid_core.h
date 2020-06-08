@@ -402,12 +402,14 @@ struct cam_ife_csid_reg_offset {
  *
  * @csid_reg:        csid register offsets
  * @hw_dts_version:  HW DTS version
+ * @hw_reg_version:  HW Version read from register
  * @csid_max_clk:    maximim csid clock
  *
  */
 struct cam_ife_csid_hw_info {
 	const struct cam_ife_csid_reg_offset   *csid_reg;
 	uint32_t                                hw_dts_version;
+	uint32_t                                hw_reg_version;
 	uint32_t                                csid_max_clk;
 
 };

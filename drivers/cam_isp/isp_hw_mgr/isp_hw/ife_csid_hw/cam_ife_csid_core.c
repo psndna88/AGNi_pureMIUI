@@ -1223,7 +1223,7 @@ static int cam_ife_csid_enable_hw(struct cam_ife_csid_hw  *csid_hw)
 	int rc = 0;
 	const struct cam_ife_csid_reg_offset   *csid_reg;
 	struct cam_hw_soc_info                 *soc_info;
-	uint32_t                               i, val;
+	uint32_t                               i;
 	int                                    clk_lvl;
 	unsigned long                          flags;
 
@@ -1305,10 +1305,12 @@ static int cam_ife_csid_enable_hw(struct cam_ife_csid_hw  *csid_hw)
 
 	spin_unlock_irqrestore(&csid_hw->hw_info->hw_lock, flags);
 
-	val = cam_io_r_mb(soc_info->reg_map[0].mem_base +
+	csid_hw->csid_info->hw_reg_version =
+		cam_io_r_mb(soc_info->reg_map[0].mem_base +
 			csid_reg->cmn_reg->csid_hw_version_addr);
 	CAM_DBG(CAM_ISP, "CSID:%d CSID HW version: 0x%x",
-		csid_hw->hw_intf->hw_idx, val);
+		csid_hw->hw_intf->hw_idx,
+		csid_hw->csid_info->hw_reg_version);
 
 	spin_lock_irqsave(&csid_hw->lock_state, flags);
 	csid_hw->device_enabled = 1;
@@ -3102,6 +3104,7 @@ int cam_ife_csid_get_hw_caps(void *hw_priv,
 	struct cam_ife_csid_hw                *csid_hw;
 	struct cam_hw_info                    *csid_hw_info;
 	const struct cam_ife_csid_reg_offset  *csid_reg;
+	struct cam_csid_soc_private           *soc_priv = NULL;
 
 	if (!hw_priv || !get_hw_cap_args) {
 		CAM_ERR(CAM_ISP, "CSID: Invalid args");
@@ -3116,9 +3119,22 @@ int cam_ife_csid_get_hw_caps(void *hw_priv,
 	hw_caps->num_rdis = csid_reg->cmn_reg->num_rdis;
 	hw_caps->num_pix = csid_reg->cmn_reg->num_pix;
 	hw_caps->num_ppp = csid_reg->cmn_reg->num_ppp;
-	hw_caps->major_version = csid_reg->cmn_reg->major_version;
-	hw_caps->minor_version = csid_reg->cmn_reg->minor_version;
-	hw_caps->version_incr = csid_reg->cmn_reg->version_incr;
+
+	/* NOTE: HW version is not correct since we dont enable
+	 * the soc resources in the probe for CSID, instead we
+	 * when the camera actually runs
+	 */
+	hw_caps->version_incr =
+		csid_hw->csid_info->hw_reg_version & 0x00ffff;
+	hw_caps->minor_version =
+		(csid_hw->csid_info->hw_reg_version >> 16) & 0x0fff;
+	hw_caps->major_version =
+		(csid_hw->csid_info->hw_reg_version >> 28) & 0x000f;
+
+	soc_priv = (struct cam_csid_soc_private *)
+		(csid_hw_info->soc_info.soc_private);
+
+	hw_caps->is_lite = soc_priv->is_ife_csid_lite;
 
 	CAM_DBG(CAM_ISP,
 		"CSID:%d No rdis:%d, no pix:%d, major:%d minor:%d ver :%d",
