@@ -1,0 +1,52 @@
+#!/bin/bash
+
+############################################################################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Kernel Source:
+# git clone https://github.com/Re4son/android_kernel_sony_msm8974 -b nethunter-9.0
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############################################################################################
+
+##############################################
+# Toolchains
+##############################################
+
+# Clang
+unset CLANG_ROOT
+unset CLANG_PATH
+unset CLANG_SRC
+unset LD_LIBRARY_PATH
+unset CLANG_TRIPLE
+unset CC
+unset CLANG_SRC
+
+# GCC 64bit
+unset CROSS_COMPILE_SRC
+
+# Enable ccache to speed up compilation
+CCACHE=true
+
+# GCC 32bit
+## armhf cross compiler directory:
+CCD32="${TD}/armhf-standalone-4.8"
+export CROSS_COMPILE=${CCD32}/bin/arm-linux-androideabi-
+export CROSS_COMPILE_ARM32=${CCD32}/bin/arm-linux-androideabi-
+## Source repository:
+CROSS_COMPILE_ARM32_SRC="https://images.kali.org/nethunter/toolchains/google_armhf-standalone-4.8.tar.xz"
+CROSS_COMPILE_ARM32_TYPE="wget"
+
+# Additional compiler arguments
+MAKE_ARGS=""
+
+# Architecture
+export ARCH=arm
+
+# Image
+IMAGE_NAME=zImage-dtb
+
+# Path to compiled kernel image
+KERNEL_IMAGE=$BUILD_DIR/out/arch/arm/boot/$IMAGE_NAME
+
+# Kernel local name
+export LOCALVERSION=-Re4son-2.1
+

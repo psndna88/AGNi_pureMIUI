@@ -1,0 +1,7 @@
+# GCC 32bit
+## armhf cross compiler directory:
+CCD32="${TD}/armhf-4.9"
+export CROSS_COMPILE_ARM32=${CCD32}/bin/arm-linux-androideabi-
+## Source repository:
+CROSS_COMPILE_ARM32_SRC="https://images.kali.org/nethunter/toolchains/google_armhf-4.9.tar.xz"
+CROSS_COMPILE_ARM32_TYPE="wget"

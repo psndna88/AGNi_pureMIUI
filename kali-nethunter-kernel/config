@@ -1,0 +1,150 @@
+CC=clang##!/bin/bash
+##############################################
+# Toolchains
+##############################################
+# Toolchain root directory
+TD=~/android/toolchains
+
+# Preferred editor
+EDIT=vi
+
+# Architecture
+export ARCH=arm64
+export SUBARCH=arm64
+
+# Enable ccache to speed up compilation
+CCACHE=false
+
+# Clang
+export CLANG_ROOT=${TD}/clang-10.0
+export CLANG_PATH=${CLANG_ROOT}/bin
+export PATH=${CLANG_PATH}:${PATH}
+export LD_LIBRARY_PATH=${CLANG_ROOT}/lib64:$LD_LIBRARY_PATH
+export CLANG_TRIPLE=aarch64-linux-gnu-
+## "CC=clang" cannot be exported - we'll pass it to make in the function make_kernel if "CC" is set to "clang" 
+CC=clang
+## Source repository:
+CLANG_SRC="https://images.kali.org/nethunter/toolchains/google_clang-10.0.4.tar.xz"
+CLANG_SRC_TYPE="wget"
+
+# GCC 64bit
+## arm64 cross compiler directory:
+CCD64="${TD}/aarch64-4.9"
+export CROSS_COMPILE=${CCD64}/bin/aarch64-linux-android-
+## Source repository:
+CROSS_COMPILE_SRC="https://images.kali.org/nethunter/toolchains/google_aarch64-4.9.tar.xz"
+CROSS_COMPILE_SRC_TYPE="wget"
+
+# GCC 32bit
+## armhf cross compiler directory:
+CCD32="${TD}/armhf-4.9"
+export CROSS_COMPILE_ARM32=${CCD32}/bin/arm-eabi-
+## Source repository:
+CROSS_COMPILE_ARM32_SRC="https://images.kali.org/nethunter/toolchains/google_armhf-4.9.tar.xz"
+CROSS_COMPILE_ARM32_TYPE="wget"
+
+# Kernel local name
+export LOCALVERSION=-NetHunter
+
+
+##############################################
+# Environment
+##############################################
+
+# Kernel source directory
+KDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+
+# build config
+CONFIG=nethunter_defconfig
+
+# Copy "SRC_VERSION" to  "TARGET_VERSION" if kernel makefile expects it
+SRC_VERSION=
+TARGET_VERSION=
+
+# Directory structure on the target device that will contain the modules directory
+MODULE_DIRTREE="modules/system_root/"
+
+# CPU threads
+# All Available cores (Used for normal compilation)
+THREADS="$(grep -c ^processor /proc/cpuinfo)"
+
+# NetHunter Kernel zip name
+NH_ARCHIVE="nethunter-kernel$LOCALVERSION.zip"
+
+# Anykernel zip name
+ANY_ARCHIVE="anykernel$LOCALVERSION.zip"
+
+# Image Type (Only ONE of the following (lz4/gz) can be enabled!)
+# GZ Image (Uncomment to Enable)
+IMAGE_NAME=Image.gz-dtb
+# lz4 image (Uncomment to Enable)
+### IMAGE_NAME=Image.lz4-dtb
+
+# Set to "true" to enable dtbo
+DO_DTBO=false
+
+# Set to "true" to enable dtb
+DO_DTB=false
+
+# DTB Version 
+DTB_VER=2
+
+# Space separated list of dtb file to generate in brackets
+DTB_FILES=
+
+# Path to compiled kernel image
+KERNEL_IMAGE=$BUILD_DIR/out/arch/arm64/boot/$IMAGE_NAME
+
+# NetHunter kernel zip directory
+NHKERNEL_DIR=$BUILD_DIR/nethunter
+
+# Anykernel zip directory
+ANYKERNEL_DIR=$BUILD_DIR/anykernel3
+
+# DTBTool
+DTBTOOL=$BUILD_DIR/tools/dtbToolCM
+
+# Name of the dtb output image (must be dtb.img when used with nethunter boot-patcher)
+DTB_IMG=dtb.img
+
+# Input DTB path
+DTB_IN=$BUILD_DIR/out/arch/arm64/boot/dts
+
+# Path to compiled dtbo image
+DTBO_IMAGE=$BUILD_DIR/out/arch/arm64/boot/dtbo.img
+
+# Location to build the kernel
+KERNEL_OUT="$BUILD_DIR/out"
+
+# Destination patch for Changelog
+CHANGELOG=$ANYKERNEL_DIR/Changelog.txt
+
+# Destination Path for compiled modules
+MODULES_OUT=$BUILD_DIR/modules_out
+
+# Source Path for module tree to be copied to into nethunter zip
+MODULES_IN=$BUILD_DIR/modules_out/lib
+
+# Destination Path for uploading kernel zip
+UPLOAD_DIR=$BUILD_DIR/output/
+
+# Directory containing the kernel patches 
+PATCH_DIR="$BUILD_DIR/patches"
+
+# Package dependencies
+DEBIAN_DEPEND="axel bc build-essential ccache curl device-tree-compiler pandoc libncurses5-dev lynx lz4 fakeroot xz-utils whiptail"
+SUSE_DEPEND="axel bc ccache curl dtc pandoc libncurses6 lynx lz4 make ncurses-devel newt patch python-base fakeroot xz zip"
+
+# Preferred target for make [menu|n]config - "menuconfig" is default but "nconfig" can be used if keymappings are off
+CONFIG_TOOL=menuconfig
+
+# Additional compiler arguments
+MAKE_ARGS=""
+
+####################################################################
+# Overwrite any of the above settings with this local config file: #
+LOCAL_CONFIG=local.config
+
+if [ -f ${BUILD_DIR}/$LOCAL_CONFIG ]; then
+        source ${BUILD_DIR}/$LOCAL_CONFIG
+fi

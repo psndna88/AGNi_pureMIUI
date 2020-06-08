@@ -1,0 +1,8 @@
+# GCC 32bit
+## armhf cross compiler directory:
+CCD32="${TD}/armhf-standalone-4.8"
+export CROSS_COMPILE=${CCD32}/bin/arm-linux-androideabi-
+export CROSS_COMPILE_ARM32=${CCD32}/bin/arm-linux-androideabi-
+## Source repository:
+CROSS_COMPILE_ARM32_SRC="https://images.kali.org/nethunter/toolchains/google_armhf-standalone-4.8.tar.xz"
+CROSS_COMPILE_ARM32_TYPE="wget"

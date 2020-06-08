@@ -1,0 +1,7 @@
+# GCC 64bit
+## arm64 cross compiler directory:
+CCD64="${TD}/aarch64-9.3"
+export CROSS_COMPILE=${CCD64}/bin/aarch64-elf-
+## Source repository:
+CROSS_COMPILE_SRC="https://images.kali.org/nethunter/toolchains/arter97_aarch64-9.3.tar.xz"
+CROSS_COMPILE_SRC_TYPE="wget"

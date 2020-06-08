@@ -1,0 +1,39 @@
+#!/bin/bash
+
+############################################################################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Kernel Source:
+# git clone https://github.com/Re4son/android_kernel_lge_bullhead -b nethunter-8.1
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############################################################################################
+
+##############################################
+# Toolchains
+##############################################
+
+# Clang
+unset CLANG_ROOT
+unset CLANG_PATH
+unset LD_LIBRARY_PATH
+unset CLANG_TRIPLE
+unset CC
+
+# GCC 64bit
+## arm64 cross compiler directory:
+CCD64="${TD}/aarch64-standalone-4.9"
+export CROSS_COMPILE=${CCD64}/bin/aarch64-linux-android-
+## Source repository:
+CROSS_COMPILE_SRC="https://images.kali.org/nethunter/toolchains/google_aarch64-standalone-oreo-4.9.tar.xz"
+CROSS_COMPILE_SRC_TYPE="wget"
+
+# GCC 32bit
+## armhf cross compiler directory:
+CCD32="${TD}/armhf-standalone-4.9"
+export CROSS_COMPILE_ARM32=${CCD32}/bin/arm-linux-androideabi-
+## Source repository:
+CROSS_COMPILE_ARM32_SRC="https://images.kali.org/nethunter/toolchains/google_armhf-standalone-4.9.tar.xz"
+CROSS_COMPILE_ARM32_TYPE="wget"
+
+# Kernel local name
+export LOCALVERSION=-Re4son-3.5
+

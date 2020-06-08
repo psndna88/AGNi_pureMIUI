@@ -1,0 +1,7 @@
+# GCC 64bit
+## arm64 cross compiler directory:
+CCD64="${TD}/aarch64-linaro-7.5"
+export CROSS_COMPILE=${CCD64}/bin/aarch64-linux-gnu-
+## Source repository:
+CROSS_COMPILE_SRC="https://images.kali.org/nethunter/toolchains/linaro-aarch64-7.5.tar.xz"
+CROSS_COMPILE_SRC_TYPE="wget"

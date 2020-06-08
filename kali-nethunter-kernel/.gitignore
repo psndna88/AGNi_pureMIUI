@@ -1,0 +1,14 @@
+# Untracked working directories
+modules_out
+nethunter
+out
+output
+toolchain_archs
+
+anykernel3/modules
+
+
+# Untracked files:
+anykernel3/Image*
+anykernel3/*dtb*
+anykernel3/Changelog.txt

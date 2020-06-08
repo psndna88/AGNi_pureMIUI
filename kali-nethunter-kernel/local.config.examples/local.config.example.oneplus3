@@ -1,0 +1,54 @@
+#!/bin/bash
+
+###########################################################################################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Kernel Source:
+# git clone origin https://github.com/Re4son/android_kernel_oneplus_msm8996 -b nethunter-9.0
+# git clone origin https://github.com/Re4son/android_kernel_oneplus_msm8996_lineageos -b nethunter-17.1
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+###########################################################################################################
+
+##############################################
+# Toolchains
+##############################################
+
+# Clang
+unset CLANG_ROOT
+unset CLANG_SRC
+unset CLANG_PATH
+unset LD_LIBRARY_PATH
+unset CLANG_TRIPLE
+unset CC
+
+# Enable ccache to speed up compilation
+CCACHE=true
+
+# GCC 64bit
+## arm64 cross compiler directory:
+CCD64="${TD}/aarch64-9.3"
+export CROSS_COMPILE="${CCD64}/bin/aarch64-elf-"
+## Source repository:
+CROSS_COMPILE_SRC="https://images.kali.org/nethunter/toolchains/arter97_aarch64-9.3.tar.xz"
+CROSS_COMPILE_SRC_TYPE="wget"
+
+# GCC 32bit
+## armhf cross compiler directory:
+CCD32="${TD}/armhf-9.3"
+export CROSS_COMPILE_ARM32="${CCD32}/bin/arm-eabi-"
+## Source repository:
+CROSS_COMPILE_ARM32_SRC="https://images.kali.org/nethunter/toolchains/arter97_armhf-9.3.tar.xz"
+CROSS_COMPILE_ARM32_TYPE="wget"
+
+# Directory structure on the target device that will contain the modules directory
+MODULE_DIRTREE=""
+
+# Source Path for module tree to be copied to into nethunter zip
+MODULES_IN=$BUILD_DIR/modules_out/lib/modules
+
+# Kernel local name
+export LOCALVERSION=-Re4son-17.1-2
+
+# Copy "SRC_VERSION" to  "TARGET_VERSION" if kernel makefile expects it
+SRC_VERSION=${KDIR}/version
+TARGET_VERSION=${KERNEL_OUT}/version
+
