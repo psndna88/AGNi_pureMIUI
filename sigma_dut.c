@@ -857,6 +857,8 @@ static void deinit_sigma_dut(struct sigma_dut *dut)
 	dut->ap_sae_pk_modifier = NULL;
 	free(dut->ap_sae_pk_keypair);
 	dut->ap_sae_pk_keypair = NULL;
+	free(dut->ap_sae_pk_keypair_sig);
+	dut->ap_sae_pk_keypair_sig = NULL;
 	free(dut->ar_ltf);
 	dut->ar_ltf = NULL;
 	free(dut->ap_dpp_conf_addr);

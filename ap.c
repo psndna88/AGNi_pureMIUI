@@ -2116,6 +2116,32 @@ static enum sigma_cmd_result cmd_ap_send_addba_req(struct sigma_dut *dut,
 }
 
 
+static const char * get_sae_pk_key(const char *file_name)
+{
+	if (strcasecmp(file_name, "saepk.pem") == 0)
+		return SAE_PK_KEY;
+	else if (strcasecmp(file_name, "saepk1.pem") == 0)
+		return SAE_PK_KEY_1;
+	else if (strcasecmp(file_name, "saepk2.pem") == 0)
+		return SAE_PK_KEY_2;
+	else if (strcasecmp(file_name, "saepk3.pem") == 0)
+		return SAE_PK_KEY_3;
+	else if (strcasecmp(file_name, "saepk4.pem") == 0)
+		return SAE_PK_KEY_4;
+	else if (strcasecmp(file_name, "saepk5.pem") == 0)
+		return SAE_PK_KEY_5;
+	else if (strcasecmp(file_name, "saepk6.pem") == 0)
+		return SAE_PK_KEY_6;
+	else if (strcasecmp(file_name, "saepk7.pem") == 0)
+		return SAE_PK_KEY_7;
+	else if (strcasecmp(file_name, "saepk8_sig.pem") == 0)
+		return SAE_PK_KEY_8_SIG;
+	else if (strcasecmp(file_name, "saepk9.pem") == 0)
+		return SAE_PK_KEY_9;
+	return NULL;
+}
+
+
 static enum sigma_cmd_result cmd_ap_set_security(struct sigma_dut *dut,
 						 struct sigma_conn *conn,
 						 struct sigma_cmd *cmd)
@@ -2306,30 +2332,29 @@ static enum sigma_cmd_result cmd_ap_set_security(struct sigma_dut *dut,
 		free(dut->ap_sae_pk_keypair);
 		dut->ap_sae_pk_keypair = NULL;
 
-		if (strcasecmp(val, "saepk.pem") == 0)
-			dut->ap_sae_pk_keypair = strdup(SAE_PK_KEY);
-		else if (strcasecmp(val, "saepk1.pem") == 0)
-			dut->ap_sae_pk_keypair = strdup(SAE_PK_KEY_1);
-		else if (strcasecmp(val, "saepk2.pem") == 0)
-			dut->ap_sae_pk_keypair = strdup(SAE_PK_KEY_2);
-		else if (strcasecmp(val, "saepk3.pem") == 0)
-			dut->ap_sae_pk_keypair = strdup(SAE_PK_KEY_3);
-		else if (strcasecmp(val, "saepk4.pem") == 0)
-			dut->ap_sae_pk_keypair = strdup(SAE_PK_KEY_4);
-		else if (strcasecmp(val, "saepk5.pem") == 0)
-			dut->ap_sae_pk_keypair = strdup(SAE_PK_KEY_5);
-		else if (strcasecmp(val, "saepk6.pem") == 0)
-			dut->ap_sae_pk_keypair = strdup(SAE_PK_KEY_6);
-		else if (strcasecmp(val, "saepk7.pem") == 0)
-			dut->ap_sae_pk_keypair = strdup(SAE_PK_KEY_7);
-		else if (strcasecmp(val, "saepk8_sig.pem") == 0)
-			dut->ap_sae_pk_keypair = strdup(SAE_PK_KEY_8_SIG);
-		else if (strcasecmp(val, "saepk9.pem") == 0)
-			dut->ap_sae_pk_keypair = strdup(SAE_PK_KEY_9);
+		val = get_sae_pk_key(val);
+		if (val)
+			dut->ap_sae_pk_keypair = strdup(val);
 
 		if (!dut->ap_sae_pk_keypair) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Unknown SAE_PK_KeyPair value");
+			return STATUS_SENT_ERROR;
+		}
+	}
+
+	val = get_param(cmd, "SAE_PK_KeyPairSigOverride");
+	if (val) {
+		free(dut->ap_sae_pk_keypair_sig);
+		dut->ap_sae_pk_keypair_sig = NULL;
+
+		val = get_sae_pk_key(val);
+		if (val)
+			dut->ap_sae_pk_keypair_sig = strdup(val);
+
+		if (!dut->ap_sae_pk_keypair_sig) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unknown SAE_PK_KeyPairSigOverride value");
 			return STATUS_SENT_ERROR;
 		}
 	}
@@ -3830,7 +3855,17 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 			else
 				owrt_ap_set_vap(dut, vap_count, "sae", "0");
 
-			if (dut->ap_key_mgmt == AP_WPA2_SAE && dut->ap_sae_pk) {
+			if (dut->ap_key_mgmt == AP_WPA2_SAE && dut->ap_sae_pk &&
+			    dut->ap_sae_pk_keypair_sig) {
+				snprintf(buf, sizeof(buf), "%s|pk=%s:%s:%s",
+					 dut->ap_passphrase,
+					 dut->ap_sae_pk_modifier,
+					 dut->ap_sae_pk_keypair,
+					 dut->ap_sae_pk_keypair_sig);
+				owrt_ap_set_vap(dut, vap_count, "sae_password",
+						buf);
+			} else if (dut->ap_key_mgmt == AP_WPA2_SAE &&
+				   dut->ap_sae_pk) {
 				snprintf(buf, sizeof(buf), "%s|pk=%s:%s",
 					 dut->ap_passphrase,
 					 dut->ap_sae_pk_modifier,
@@ -7538,8 +7573,17 @@ static int write_hostapd_conf_password(struct sigma_dut *dut, FILE *f, int sae)
 					"SAE-PK keypair not configured");
 			return -1;
 		}
-		fprintf(f, "sae_password=%s|pk=%s:%s\n", dut->ap_passphrase,
-			dut->ap_sae_pk_modifier, dut->ap_sae_pk_keypair);
+		if (dut->ap_sae_pk_keypair_sig)
+			fprintf(f, "sae_password=%s|pk=%s:%s:%s\n",
+				dut->ap_passphrase,
+				dut->ap_sae_pk_modifier,
+				dut->ap_sae_pk_keypair,
+				dut->ap_sae_pk_keypair_sig);
+		else
+			fprintf(f, "sae_password=%s|pk=%s:%s\n",
+				dut->ap_passphrase,
+				dut->ap_sae_pk_modifier,
+				dut->ap_sae_pk_keypair);
 	} else if (sae) {
 		fprintf(f, "sae_password=%s\n", dut->ap_passphrase);
 	} else if (!dut->ap_passphrase[0] && dut->ap_psk[0]) {
@@ -9061,6 +9105,8 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 	dut->ap_sae_pk_modifier = NULL;
 	free(dut->ap_sae_pk_keypair);
 	dut->ap_sae_pk_keypair = NULL;
+	free(dut->ap_sae_pk_keypair_sig);
+	dut->ap_sae_pk_keypair_sig = NULL;
 
 	dut->ap_ocvc = -1;
 
