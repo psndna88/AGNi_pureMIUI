@@ -833,6 +833,7 @@ static void set_defaults(struct sigma_dut *dut)
 	dut->priv_cmd = "iwpriv";
 	dut->sigma_tmpdir = SIGMA_TMPDIR;
 	dut->ap_ocvc = -1;
+	dut->ap_sae_commit_status = -1;
 }
 
 

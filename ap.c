@@ -2269,6 +2269,14 @@ static enum sigma_cmd_result cmd_ap_set_security(struct sigma_dut *dut,
 		dut->ap_sae_passwords = strdup(val);
 	}
 
+	val = get_param(cmd, "SAE_Commit_StatusCode");
+	if (val)
+		dut->ap_sae_commit_status = atoi(val);
+
+	val = get_param(cmd, "SAE_PK_Omit");
+	if (val)
+		dut->ap_sae_pk_omit = get_enable_disable(val);
+
 	val = get_param(cmd, "SAE_Confirm_Immediate");
 	if (val)
 		dut->sae_confirm_immediate = get_enable_disable(val);
@@ -4294,6 +4302,12 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 
 	if (dut->sae_reflection)
 		owrt_ap_set_vap(dut, vap_count, "sae_reflection_attack", "1");
+	if (dut->ap_sae_commit_status >= 0) {
+		snprintf(buf, sizeof(buf), "%d", dut->ap_sae_commit_status);
+		owrt_ap_set_vap(dut, vap_count, "sae_commit_status", buf);
+	}
+	if (dut->ap_sae_pk_omit)
+		owrt_ap_set_vap(dut, vap_count, "sae_pk_omit", "1");
 	if (dut->sae_confirm_immediate)
 		owrt_ap_set_vap(dut, vap_count, "sae_confirm_immediate", "2");
 
@@ -8100,6 +8114,10 @@ skip_key_mgmt:
 			dut->sae_anti_clogging_threshold);
 	if (dut->sae_reflection)
 		fprintf(f, "sae_reflection_attack=1\n");
+	if (dut->ap_sae_commit_status >= 0)
+		fprintf(f, "sae_commit_status=%d\n", dut->ap_sae_commit_status);
+	if (dut->ap_sae_pk_omit)
+		fprintf(f, "sae_pk_omit=1\n");
 	if (dut->sae_confirm_immediate)
 		fprintf(f, "sae_confirm_immediate=2\n");
 
@@ -9321,6 +9339,8 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 
 	dut->sae_anti_clogging_threshold = -1;
 	dut->sae_reflection = 0;
+	dut->ap_sae_commit_status = -1;
+	dut->ap_sae_pk_omit = 0;
 	dut->sae_confirm_immediate = 0;
 	dut->sae_pwe = SAE_PWE_DEFAULT;
 

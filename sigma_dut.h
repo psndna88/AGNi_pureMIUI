@@ -544,6 +544,8 @@ struct sigma_dut {
 	char *ap_sae_groups;
 	int sae_anti_clogging_threshold;
 	int sae_reflection;
+	int ap_sae_commit_status;
+	int ap_sae_pk_omit;
 	int sae_confirm_immediate;
 	char ap_passphrase[101];
 	char ap_psk[65];
