@@ -49,7 +49,7 @@ enum cam_ife_cid_res_id {
  * @major_version : major version
  * @minor_version:  minor version
  * @version_incr:   version increment
- *
+ * @is_lite:        is the ife_csid lite
  */
 struct cam_ife_csid_hw_caps {
 	uint32_t      num_rdis;
@@ -58,6 +58,7 @@ struct cam_ife_csid_hw_caps {
 	uint32_t      major_version;
 	uint32_t      minor_version;
 	uint32_t      version_incr;
+	bool          is_lite;
 };
 
 struct cam_isp_out_port_generic_info {

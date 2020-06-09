@@ -90,16 +90,17 @@ enum cam_vfe_reset_type {
 /*
  * struct cam_vfe_hw_get_hw_cap:
  *
- * @max_width:               Max width supported by HW
- * @max_height:              Max height supported by HW
- * @max_pixel_num:           Max Pixel channels available
- * @max_rdi_num:             Max Raw channels available
+ * @Brief:     Argument type for fetching the hw information for Query caps
+ * @major:     Major revision number
+ * @minor:     Minor revision number
+ * @incr:      Increment revision number
+ * @is_lite:   Flag to indicate Whether a full vfe or a Lite vfe
  */
 struct cam_vfe_hw_get_hw_cap {
-	uint32_t                max_width;
-	uint32_t                max_height;
-	uint32_t                max_pixel_num;
-	uint32_t                max_rdi_num;
+	uint32_t major;
+	uint32_t minor;
+	uint32_t incr;
+	bool     is_lite;
 };
 
 /*

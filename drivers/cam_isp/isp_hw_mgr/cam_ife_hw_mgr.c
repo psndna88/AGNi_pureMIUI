@@ -182,6 +182,11 @@ static int cam_ife_mgr_get_hw_caps(void *hw_mgr_priv,
 	struct cam_ife_hw_mgr             *hw_mgr = hw_mgr_priv;
 	struct cam_query_cap_cmd          *query = hw_caps_args;
 	struct cam_isp_query_cap_cmd       query_isp;
+	struct cam_isp_dev_cap_info       *ife_full_hw_info = NULL;
+	struct cam_isp_dev_cap_info       *ife_lite_hw_info = NULL;
+	struct cam_isp_dev_cap_info       *csid_full_hw_info = NULL;
+	struct cam_isp_dev_cap_info       *csid_lite_hw_info = NULL;
+	struct cam_ife_csid_hw_caps       *ife_csid_caps = {0};
 
 	CAM_DBG(CAM_ISP, "enter");
 
@@ -196,13 +201,98 @@ static int cam_ife_mgr_get_hw_caps(void *hw_mgr_priv,
 	query_isp.device_iommu.secure = hw_mgr->mgr_common.img_iommu_hdl_secure;
 	query_isp.cdm_iommu.non_secure = hw_mgr->mgr_common.cmd_iommu_hdl;
 	query_isp.cdm_iommu.secure = hw_mgr->mgr_common.cmd_iommu_hdl_secure;
-	query_isp.num_dev = 2;
-	for (i = 0; i < query_isp.num_dev; i++) {
-		query_isp.dev_caps[i].hw_type = CAM_ISP_HW_IFE;
-		query_isp.dev_caps[i].hw_version.major = 1;
-		query_isp.dev_caps[i].hw_version.minor = 7;
-		query_isp.dev_caps[i].hw_version.incr = 0;
-		query_isp.dev_caps[i].hw_version.reserved = 0;
+	query_isp.num_dev = 0;
+
+	for (i = 0; i < CAM_IFE_HW_NUM_MAX; i++) {
+		if (!hw_mgr->ife_devices[i])
+			continue;
+
+		if (hw_mgr->ife_dev_caps[i].is_lite) {
+			if (ife_lite_hw_info == NULL) {
+				ife_lite_hw_info =
+					&query_isp.dev_caps[query_isp.num_dev];
+				query_isp.num_dev++;
+
+				ife_lite_hw_info->hw_type = CAM_ISP_HW_IFE_LITE;
+				ife_lite_hw_info->hw_version.major =
+					hw_mgr->ife_dev_caps[i].major;
+				ife_lite_hw_info->hw_version.minor =
+					hw_mgr->ife_dev_caps[i].minor;
+				ife_lite_hw_info->hw_version.incr =
+					hw_mgr->ife_dev_caps[i].incr;
+				ife_lite_hw_info->hw_version.reserved = 0;
+				ife_lite_hw_info->num_hw = 0;
+			}
+
+			ife_lite_hw_info->num_hw++;
+
+		} else {
+			if (ife_full_hw_info == NULL) {
+				ife_full_hw_info =
+					&query_isp.dev_caps[query_isp.num_dev];
+				query_isp.num_dev++;
+
+				ife_full_hw_info->hw_type = CAM_ISP_HW_IFE;
+				ife_full_hw_info->hw_version.major =
+					hw_mgr->ife_dev_caps[i].major;
+				ife_full_hw_info->hw_version.minor =
+					hw_mgr->ife_dev_caps[i].minor;
+				ife_full_hw_info->hw_version.incr =
+					hw_mgr->ife_dev_caps[i].incr;
+				ife_full_hw_info->hw_version.reserved = 0;
+				ife_full_hw_info->num_hw = 0;
+			}
+
+			ife_full_hw_info->num_hw++;
+		}
+	}
+
+	for (i = 0; i < CAM_IFE_CSID_HW_NUM_MAX; i++) {
+		if (!hw_mgr->csid_devices[i])
+			continue;
+
+		ife_csid_caps = (struct cam_ife_csid_hw_caps *)
+			&hw_mgr->ife_csid_dev_caps[i];
+
+		if (ife_csid_caps->is_lite) {
+			if (csid_lite_hw_info == NULL) {
+				csid_lite_hw_info =
+					&query_isp.dev_caps[query_isp.num_dev];
+				query_isp.num_dev++;
+
+				csid_lite_hw_info->hw_type =
+					CAM_ISP_HW_CSID_LITE;
+				csid_lite_hw_info->hw_version.major =
+					ife_csid_caps->major_version;
+				csid_lite_hw_info->hw_version.minor =
+					ife_csid_caps->minor_version;
+				csid_lite_hw_info->hw_version.incr =
+					ife_csid_caps->version_incr;
+				csid_lite_hw_info->hw_version.reserved = 0;
+				csid_lite_hw_info->num_hw = 0;
+			}
+
+			csid_lite_hw_info->num_hw++;
+
+		} else {
+			if (csid_full_hw_info == NULL) {
+				csid_full_hw_info =
+					&query_isp.dev_caps[query_isp.num_dev];
+				query_isp.num_dev++;
+
+				csid_full_hw_info->hw_type = CAM_ISP_HW_CSID;
+				csid_full_hw_info->hw_version.major =
+					ife_csid_caps->major_version;
+				csid_full_hw_info->hw_version.minor =
+					ife_csid_caps->minor_version;
+				csid_full_hw_info->hw_version.incr =
+					ife_csid_caps->version_incr;
+				csid_full_hw_info->hw_version.reserved = 0;
+				csid_full_hw_info->num_hw = 0;
+			}
+
+			csid_full_hw_info->num_hw++;
+		}
 	}
 
 	if (copy_to_user(u64_to_user_ptr(query->caps_handle),
