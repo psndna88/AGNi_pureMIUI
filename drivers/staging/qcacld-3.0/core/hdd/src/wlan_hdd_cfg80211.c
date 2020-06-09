@@ -12282,7 +12282,9 @@ static void hdd_update_acs_sap_config(struct hdd_context *hdd_ctx,
 				hdd_ctx->config->vhtChannelWidth;
 	else
 		sap_config->ch_width_orig =
-			hdd_ctx->config->nChannelBondingMode24GHz = eHT_CHANNEL_WIDTH_40MHZ;
+			hdd_ctx->config->nChannelBondingMode24GHz ?
+			eHT_CHANNEL_WIDTH_40MHZ :
+			eHT_CHANNEL_WIDTH_20MHZ;
 
 	sap_config->acs_cfg.pri_ch = channel_list->pri_ch;
 	sap_config->acs_cfg.ch_width = channel_list->chan_width;
