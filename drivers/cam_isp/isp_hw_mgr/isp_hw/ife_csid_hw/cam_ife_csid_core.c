@@ -1541,6 +1541,71 @@ static int cam_ife_csid_config_tpg(struct cam_ife_csid_hw   *csid_hw,
 	return 0;
 }
 
+static int cam_ife_csid_csi2_irq_ctrl(
+	struct cam_ife_csid_hw *csid_hw,
+	bool irq_enable)
+{
+	uint32_t val = 0;
+	struct cam_hw_soc_info                     *soc_info;
+	const struct cam_ife_csid_reg_offset       *csid_reg;
+
+	csid_reg = csid_hw->csid_info->csid_reg;
+	soc_info = &csid_hw->hw_info->soc_info;
+
+	if (irq_enable) {
+		/*Enable the CSI2 rx interrupts */
+		val = CSID_CSI2_RX_INFO_RST_DONE |
+			CSID_CSI2_RX_ERROR_TG_FIFO_OVERFLOW |
+			CSID_CSI2_RX_ERROR_LANE0_FIFO_OVERFLOW |
+			CSID_CSI2_RX_ERROR_LANE1_FIFO_OVERFLOW |
+			CSID_CSI2_RX_ERROR_LANE2_FIFO_OVERFLOW |
+			CSID_CSI2_RX_ERROR_LANE3_FIFO_OVERFLOW |
+			CSID_CSI2_RX_ERROR_CPHY_SOT_RECEPTION |
+			CSID_CSI2_RX_ERROR_CRC |
+			CSID_CSI2_RX_ERROR_ECC |
+			CSID_CSI2_RX_ERROR_MMAPPED_VC_DT |
+			CSID_CSI2_RX_ERROR_STREAM_UNDERFLOW |
+			CSID_CSI2_RX_ERROR_UNBOUNDED_FRAME |
+			CSID_CSI2_RX_ERROR_CPHY_PH_CRC;
+
+		if (csid_hw->epd_supported == 1)
+			CAM_INFO(CAM_ISP,
+				"Disable CSID_CSI2_RX_ERROR_CPHY_EOT_RECEPTION for EPD");
+		else
+			val = val | CSID_CSI2_RX_ERROR_CPHY_EOT_RECEPTION;
+
+		/* Enable the interrupt based on csid debug info set */
+		if (csid_hw->csid_debug & CSID_DEBUG_ENABLE_SOT_IRQ)
+			val |= CSID_CSI2_RX_INFO_PHY_DL0_SOT_CAPTURED |
+				CSID_CSI2_RX_INFO_PHY_DL1_SOT_CAPTURED |
+				CSID_CSI2_RX_INFO_PHY_DL2_SOT_CAPTURED |
+				CSID_CSI2_RX_INFO_PHY_DL3_SOT_CAPTURED;
+
+		if (csid_hw->csid_debug & CSID_DEBUG_ENABLE_EOT_IRQ)
+			val |= CSID_CSI2_RX_INFO_PHY_DL0_EOT_CAPTURED |
+				CSID_CSI2_RX_INFO_PHY_DL1_EOT_CAPTURED |
+				CSID_CSI2_RX_INFO_PHY_DL2_EOT_CAPTURED |
+				CSID_CSI2_RX_INFO_PHY_DL3_EOT_CAPTURED;
+
+		if (csid_hw->csid_debug & CSID_DEBUG_ENABLE_SHORT_PKT_CAPTURE)
+			val |= CSID_CSI2_RX_INFO_SHORT_PKT_CAPTURED;
+
+		if (csid_hw->csid_debug & CSID_DEBUG_ENABLE_LONG_PKT_CAPTURE)
+			val |= CSID_CSI2_RX_INFO_LONG_PKT_CAPTURED;
+		if (csid_hw->csid_debug & CSID_DEBUG_ENABLE_CPHY_PKT_CAPTURE)
+			val |= CSID_CSI2_RX_INFO_CPHY_PKT_HDR_CAPTURED;
+
+		cam_io_w_mb(val, soc_info->reg_map[0].mem_base +
+			csid_reg->csi2_reg->csid_csi2_rx_irq_mask_addr);
+	} else {
+		/* Disable the CSI2 rx inerrupts */
+		cam_io_w_mb(0, soc_info->reg_map[0].mem_base +
+			csid_reg->csi2_reg->csid_csi2_rx_irq_mask_addr);
+	}
+
+	return 0;
+}
+
 static int cam_ife_csid_enable_csi2(
 	struct cam_ife_csid_hw          *csid_hw,
 	struct cam_isp_resource_node    *res)
@@ -1601,51 +1666,7 @@ static int cam_ife_csid_enable_csi2(
 		}
 	}
 
-	/*Enable the CSI2 rx interrupts */
-	val = CSID_CSI2_RX_INFO_RST_DONE |
-		CSID_CSI2_RX_ERROR_TG_FIFO_OVERFLOW |
-		CSID_CSI2_RX_ERROR_LANE0_FIFO_OVERFLOW |
-		CSID_CSI2_RX_ERROR_LANE1_FIFO_OVERFLOW |
-		CSID_CSI2_RX_ERROR_LANE2_FIFO_OVERFLOW |
-		CSID_CSI2_RX_ERROR_LANE3_FIFO_OVERFLOW |
-		CSID_CSI2_RX_ERROR_CPHY_SOT_RECEPTION |
-		CSID_CSI2_RX_ERROR_CRC |
-		CSID_CSI2_RX_ERROR_ECC |
-		CSID_CSI2_RX_ERROR_MMAPPED_VC_DT |
-		CSID_CSI2_RX_ERROR_STREAM_UNDERFLOW |
-		CSID_CSI2_RX_ERROR_UNBOUNDED_FRAME |
-		CSID_CSI2_RX_ERROR_CPHY_PH_CRC;
-
-	if (csid_hw->epd_supported == 1)
-		CAM_INFO(CAM_ISP,
-			"Disable CSID_CSI2_RX_ERROR_CPHY_EOT_RECEPTION for EPD");
-	else
-		val = val | CSID_CSI2_RX_ERROR_CPHY_EOT_RECEPTION;
-
-	/* Enable the interrupt based on csid debug info set */
-	if (csid_hw->csid_debug & CSID_DEBUG_ENABLE_SOT_IRQ)
-		val |= CSID_CSI2_RX_INFO_PHY_DL0_SOT_CAPTURED |
-			CSID_CSI2_RX_INFO_PHY_DL1_SOT_CAPTURED |
-			CSID_CSI2_RX_INFO_PHY_DL2_SOT_CAPTURED |
-			CSID_CSI2_RX_INFO_PHY_DL3_SOT_CAPTURED;
-
-	if (csid_hw->csid_debug & CSID_DEBUG_ENABLE_EOT_IRQ)
-		val |= CSID_CSI2_RX_INFO_PHY_DL0_EOT_CAPTURED |
-			CSID_CSI2_RX_INFO_PHY_DL1_EOT_CAPTURED |
-			CSID_CSI2_RX_INFO_PHY_DL2_EOT_CAPTURED |
-			CSID_CSI2_RX_INFO_PHY_DL3_EOT_CAPTURED;
-
-	if (csid_hw->csid_debug & CSID_DEBUG_ENABLE_SHORT_PKT_CAPTURE)
-		val |= CSID_CSI2_RX_INFO_SHORT_PKT_CAPTURED;
-
-	if (csid_hw->csid_debug & CSID_DEBUG_ENABLE_LONG_PKT_CAPTURE)
-		val |= CSID_CSI2_RX_INFO_LONG_PKT_CAPTURED;
-	if (csid_hw->csid_debug & CSID_DEBUG_ENABLE_CPHY_PKT_CAPTURE)
-		val |= CSID_CSI2_RX_INFO_CPHY_PKT_HDR_CAPTURED;
-
-	cam_io_w_mb(val, soc_info->reg_map[0].mem_base +
-		csid_reg->csi2_reg->csid_csi2_rx_irq_mask_addr);
-
+	cam_ife_csid_csi2_irq_ctrl(csid_hw, true);
 	return 0;
 }
 
@@ -1673,9 +1694,7 @@ static int cam_ife_csid_disable_csi2(
 	if (csid_hw->csi2_cfg_cnt)
 		return 0;
 
-	/* Disable the CSI2 rx inerrupts */
-	cam_io_w_mb(0, soc_info->reg_map[0].mem_base +
-		csid_reg->csi2_reg->csid_csi2_rx_irq_mask_addr);
+	cam_ife_csid_csi2_irq_ctrl(csid_hw, false);
 
 	/* Reset the Rx CFG registers */
 	cam_io_w_mb(0, soc_info->reg_map[0].mem_base +
@@ -3588,6 +3607,8 @@ int cam_ife_csid_start(void *hw_priv, void *start_args,
 	csid_hw->irq_debug_cnt = 0;
 
 	spin_lock_irqsave(&csid_hw->lock_state, flags);
+	if (!csid_hw->device_enabled)
+		cam_ife_csid_csi2_irq_ctrl(csid_hw, true);
 	csid_hw->device_enabled = 1;
 	spin_unlock_irqrestore(&csid_hw->lock_state, flags);
 
@@ -3659,6 +3680,11 @@ int cam_ife_csid_stop(void *hw_priv,
 		csid_hw->hw_intf->hw_idx,
 		csid_stop->num_res);
 
+	spin_lock_irqsave(&csid_hw->lock_state, flags);
+	csid_hw->device_enabled = 0;
+	cam_ife_csid_csi2_irq_ctrl(csid_hw, false);
+	spin_unlock_irqrestore(&csid_hw->lock_state, flags);
+
 	/* Stop the resource first */
 	for (i = 0; i < csid_stop->num_res; i++) {
 		res = csid_stop->node_res[i];
@@ -3701,10 +3727,6 @@ int cam_ife_csid_stop(void *hw_priv,
 			break;
 		}
 	}
-
-	spin_lock_irqsave(&csid_hw->lock_state, flags);
-	csid_hw->device_enabled = 0;
-	spin_unlock_irqrestore(&csid_hw->lock_state, flags);
 
 	if (res_mask)
 		rc = cam_ife_csid_poll_stop_status(csid_hw, res_mask);
