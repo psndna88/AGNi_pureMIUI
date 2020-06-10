@@ -169,9 +169,20 @@ static int cam_ipe_component_bind(struct device *dev,
 static void cam_ipe_component_unbind(struct device *dev,
 	struct device *master_dev, void *data)
 {
+	struct cam_hw_info            *ipe_dev = NULL;
+	struct cam_hw_intf            *ipe_dev_intf = NULL;
+	struct cam_ipe_device_core_info   *core_info = NULL;
 	struct platform_device *pdev = to_platform_device(dev);
 
 	CAM_DBG(CAM_ICP, "Unbinding component: %s", pdev->name);
+	ipe_dev_intf = platform_get_drvdata(pdev);
+	ipe_dev = ipe_dev_intf->hw_priv;
+	core_info = (struct cam_ipe_device_core_info *)ipe_dev->core_info;
+	cam_cpas_unregister_client(core_info->cpas_handle);
+	cam_ipe_deinit_soc_resources(&ipe_dev->soc_info);
+	kfree(ipe_dev->core_info);
+	kfree(ipe_dev);
+	kfree(ipe_dev_intf);
 }
 
 
@@ -192,6 +203,12 @@ int cam_ipe_probe(struct platform_device *pdev)
 	return rc;
 }
 
+static int cam_ipe_remove(struct platform_device *pdev)
+{
+	component_del(&pdev->dev, &cam_ipe_component_ops);
+	return 0;
+}
+
 static const struct of_device_id cam_ipe_dt_match[] = {
 	{
 		.compatible = "qcom,cam-ipe",
@@ -203,6 +220,7 @@ MODULE_DEVICE_TABLE(of, cam_ipe_dt_match);
 
 struct platform_driver cam_ipe_driver = {
 	.probe = cam_ipe_probe,
+	.remove = cam_ipe_remove,
 	.driver = {
 		.name = "cam-ipe",
 		.owner = THIS_MODULE,

@@ -184,35 +184,35 @@ DEFINE_SIMPLE_ATTRIBUTE(cam_soc_util_clk_lvl_control,
 static int cam_soc_util_create_clk_lvl_debugfs(
 	struct cam_hw_soc_info *soc_info)
 {
-	struct dentry *dentry = NULL;
-
 	if (!soc_info) {
 		CAM_ERR(CAM_UTIL, "soc info is NULL");
 		return -EINVAL;
 	}
 
-	if (soc_info->dentry)
+	if (soc_info->dentry) {
+		CAM_DBG(CAM_UTIL, "Debubfs entry for %s already exist",
+			soc_info->dev_name);
 		return 0;
+	}
 
 	memset(debugfs_dir_name, 0, sizeof(debugfs_dir_name));
 	strlcat(debugfs_dir_name, "clk_dir_", sizeof(debugfs_dir_name));
 	strlcat(debugfs_dir_name, soc_info->dev_name, sizeof(debugfs_dir_name));
 
-	dentry = soc_info->dentry;
-	dentry = debugfs_create_dir(debugfs_dir_name, NULL);
-	if (!dentry) {
+	soc_info->dentry = debugfs_create_dir(debugfs_dir_name, NULL);
+	if (IS_ERR_OR_NULL(soc_info->dentry)) {
 		CAM_ERR(CAM_UTIL, "failed to create debug directory");
 		return -ENOMEM;
 	}
 
 	if (!debugfs_create_file("clk_lvl_options", 0444,
-		dentry, soc_info, &cam_soc_util_clk_lvl_options)) {
+		soc_info->dentry, soc_info, &cam_soc_util_clk_lvl_options)) {
 		CAM_ERR(CAM_UTIL, "failed to create clk_lvl_options");
 		goto err;
 	}
 
 	if (!debugfs_create_file("clk_lvl_control", 0644,
-		dentry, soc_info, &cam_soc_util_clk_lvl_control)) {
+		soc_info->dentry, soc_info, &cam_soc_util_clk_lvl_control)) {
 		CAM_ERR(CAM_UTIL, "failed to create clk_lvl_control");
 		goto err;
 	}
@@ -223,8 +223,10 @@ static int cam_soc_util_create_clk_lvl_debugfs(
 	return 0;
 
 err:
-	debugfs_remove_recursive(dentry);
-	dentry = NULL;
+	CAM_ERR(CAM_UTIL, "Error in creating Debugfs Entry: %s",
+		soc_info->dev_name);
+	debugfs_remove_recursive(soc_info->dentry);
+	soc_info->dentry = NULL;
 	return -ENOMEM;
 }
 

@@ -228,5 +228,6 @@ struct cam_ife_hw_event_recovery_data {
  *
  */
 int cam_ife_hw_mgr_init(struct cam_hw_mgr_intf *hw_mgr_intf, int *iommu_hdl);
+void cam_ife_hw_mgr_deinit(void);
 
 #endif /* _CAM_IFE_HW_MGR_H_ */

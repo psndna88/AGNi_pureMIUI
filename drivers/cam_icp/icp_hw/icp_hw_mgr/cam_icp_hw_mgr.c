@@ -1887,8 +1887,11 @@ static int cam_icp_hw_mgr_create_debugfs_entry(void)
 	int rc = 0;
 
 	icp_hw_mgr.dentry = debugfs_create_dir("camera_icp", NULL);
-	if (!icp_hw_mgr.dentry)
+	if (IS_ERR_OR_NULL(icp_hw_mgr.dentry)) {
+		CAM_ERR(CAM_ICP, "Debugfs entry dir: %s failed",
+			"camrea_icp");
 		return -ENOMEM;
+	}
 
 	if (!debugfs_create_bool("icp_pc",
 		0644,
@@ -5818,6 +5821,7 @@ static int cam_icp_mgr_alloc_devs(struct device_node *of_node)
 		sizeof(struct cam_hw_intf *) * num_dev, GFP_KERNEL);
 	if (!icp_hw_mgr.devices[CAM_ICP_DEV_A5]) {
 		rc = -ENOMEM;
+		CAM_ERR(CAM_ICP, "a5 allocation fail: rc = %d", rc);
 		goto num_a5_failed;
 	}
 
@@ -5834,6 +5838,7 @@ static int cam_icp_mgr_alloc_devs(struct device_node *of_node)
 		sizeof(struct cam_hw_intf *), GFP_KERNEL);
 	if (!icp_hw_mgr.devices[CAM_ICP_DEV_IPE]) {
 		rc = -ENOMEM;
+		CAM_ERR(CAM_ICP, "ipe device allocation fail : rc= %d", rc);
 		goto num_ipe_failed;
 	}
 
@@ -5846,6 +5851,7 @@ static int cam_icp_mgr_alloc_devs(struct device_node *of_node)
 		sizeof(struct cam_hw_intf *), GFP_KERNEL);
 	if (!icp_hw_mgr.devices[CAM_ICP_DEV_BPS]) {
 		rc = -ENOMEM;
+		CAM_ERR(CAM_ICP, "bps device allocation fail : rc= %d", rc);
 		goto num_bps_failed;
 	}
 
@@ -5874,9 +5880,10 @@ static int cam_icp_mgr_init_devs(struct device_node *of_node)
 	struct cam_hw_intf *child_dev_intf = NULL;
 
 	rc = cam_icp_mgr_alloc_devs(of_node);
-	if (rc)
+	if (rc) {
+		CAM_ERR(CAM_ICP, "alloc_devs fail : rc = %d", rc);
 		return rc;
-
+	}
 	count = of_property_count_strings(of_node, "compat-hw-name");
 	if (!count) {
 		CAM_ERR(CAM_ICP, "no compat hw found in dev tree, cnt = %d",
@@ -5972,25 +5979,31 @@ static int cam_icp_mgr_create_wq(void)
 	icp_hw_mgr.cmd_work_data =
 		kzalloc(sizeof(struct hfi_cmd_work_data) * ICP_WORKQ_NUM_TASK,
 		GFP_KERNEL);
-	if (!icp_hw_mgr.cmd_work_data)
+	if (!icp_hw_mgr.cmd_work_data) {
+		CAM_ERR(CAM_ICP, "Mem reservation fail for cmd_work_data");
 		goto cmd_work_data_failed;
-
+	}
 	icp_hw_mgr.msg_work_data =
 		kzalloc(sizeof(struct hfi_msg_work_data) * ICP_WORKQ_NUM_TASK,
 		GFP_KERNEL);
-	if (!icp_hw_mgr.msg_work_data)
+	if (!icp_hw_mgr.msg_work_data) {
+		CAM_ERR(CAM_ICP, "Mem reservation fail for msg_work_data");
 		goto msg_work_data_failed;
+	}
 
 	icp_hw_mgr.timer_work_data =
 		kzalloc(sizeof(struct hfi_msg_work_data) * ICP_WORKQ_NUM_TASK,
 		GFP_KERNEL);
-	if (!icp_hw_mgr.timer_work_data)
+	if (!icp_hw_mgr.timer_work_data) {
+		CAM_ERR(CAM_ICP, "Mem reservation fail for timer_work_data");
 		goto timer_work_data_failed;
+	}
 
 	rc = cam_icp_hw_mgr_create_debugfs_entry();
-	if (rc)
+	if (rc) {
+		CAM_ERR(CAM_ICP, "create_debugfs_entry fail= rc: %d", rc);
 		goto debugfs_create_failed;
-
+	}
 	for (i = 0; i < ICP_WORKQ_NUM_TASK; i++)
 		icp_hw_mgr.msg_work->task.pool[i].payload =
 				&icp_hw_mgr.msg_work_data[i];
@@ -6018,6 +6031,13 @@ msg_work_failed:
 	cam_req_mgr_workq_destroy(&icp_hw_mgr.cmd_work);
 cmd_work_failed:
 	return rc;
+}
+
+void cam_icp_mgr_destroy_wq(void)
+{
+	cam_req_mgr_workq_destroy(&icp_hw_mgr.timer_work);
+	cam_req_mgr_workq_destroy(&icp_hw_mgr.msg_work);
+	cam_req_mgr_workq_destroy(&icp_hw_mgr.cmd_work);
 }
 
 static int cam_icp_mgr_cmd(void *hw_mgr_priv, void *cmd_args)
@@ -6104,9 +6124,10 @@ int cam_icp_hw_mgr_init(struct device_node *of_node, uint64_t *hw_mgr_hdl,
 	}
 
 	rc = cam_icp_mgr_init_devs(of_node);
-	if (rc)
+	if (rc) {
+		CAM_ERR(CAM_ICP, "cam_icp_mgr_init_devs fail: rc: %d", rc);
 		goto dev_init_failed;
-
+	}
 	rc = cam_smmu_get_handle("icp", &icp_hw_mgr.iommu_hdl);
 	if (rc) {
 		CAM_ERR(CAM_ICP, "get mmu handle failed: %d", rc);
@@ -6120,8 +6141,10 @@ int cam_icp_hw_mgr_init(struct device_node *of_node, uint64_t *hw_mgr_hdl,
 	}
 
 	rc = cam_icp_mgr_create_wq();
-	if (rc)
+	if (rc) {
+		CAM_ERR(CAM_ICP, "cam_icp_mgr_create_wq fail: rc=%d", rc);
 		goto icp_wq_create_failed;
+	}
 
 	if (iommu_hdl)
 		*iommu_hdl = icp_hw_mgr.iommu_hdl;
@@ -6145,4 +6168,19 @@ dev_init_failed:
 		mutex_destroy(&icp_hw_mgr.ctx_data[i].ctx_mutex);
 
 	return rc;
+}
+
+void cam_icp_hw_mgr_deinit(void)
+{
+	int i = 0;
+
+	debugfs_remove_recursive(icp_hw_mgr.dentry);
+	icp_hw_mgr.dentry = NULL;
+	cam_icp_mgr_destroy_wq();
+	kfree(icp_hw_mgr.devices[CAM_ICP_DEV_BPS]);
+	kfree(icp_hw_mgr.devices[CAM_ICP_DEV_IPE]);
+	kfree(icp_hw_mgr.devices[CAM_ICP_DEV_A5]);
+	mutex_destroy(&icp_hw_mgr.hw_mgr_mutex);
+	for (i = 0; i < CAM_ICP_CTX_MAX; i++)
+		mutex_destroy(&icp_hw_mgr.ctx_data[i].ctx_mutex);
 }

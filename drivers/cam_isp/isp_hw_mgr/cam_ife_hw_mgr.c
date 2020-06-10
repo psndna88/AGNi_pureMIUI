@@ -7957,3 +7957,27 @@ secure_fail:
 	g_ife_hw_mgr.mgr_common.img_iommu_hdl = -1;
 	return rc;
 }
+
+void cam_ife_hw_mgr_deinit(void)
+{
+	int i = 0;
+
+	cam_req_mgr_workq_destroy(&g_ife_hw_mgr.workq);
+	debugfs_remove_recursive(g_ife_hw_mgr.debug_cfg.dentry);
+	g_ife_hw_mgr.debug_cfg.dentry = NULL;
+
+	for (i = 0; i < CAM_CTX_MAX; i++) {
+		cam_tasklet_deinit(
+			&g_ife_hw_mgr.mgr_common.tasklet_pool[i]);
+		kfree(g_ife_hw_mgr.ctx_pool[i].cdm_cmd);
+		g_ife_hw_mgr.ctx_pool[i].cdm_cmd = NULL;
+		g_ife_hw_mgr.ctx_pool[i].common.tasklet_info = NULL;
+	}
+
+	cam_smmu_destroy_handle(
+		g_ife_hw_mgr.mgr_common.img_iommu_hdl_secure);
+	g_ife_hw_mgr.mgr_common.img_iommu_hdl_secure = -1;
+
+	cam_smmu_destroy_handle(g_ife_hw_mgr.mgr_common.img_iommu_hdl);
+	g_ife_hw_mgr.mgr_common.img_iommu_hdl = -1;
+}

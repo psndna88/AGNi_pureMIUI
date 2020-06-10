@@ -2206,10 +2206,19 @@ static void cam_hw_cdm_component_unbind(struct device *dev,
 		return;
 	}
 
-	rc = cam_hw_cdm_deinit(cdm_hw, NULL, 0);
+	if (cdm_hw->hw_state == CAM_HW_STATE_POWER_UP) {
+		rc = cam_hw_cdm_deinit(cdm_hw, NULL, 0);
+		if (rc) {
+			CAM_ERR(CAM_CDM, "Deinit failed for hw");
+			return;
+		}
+	}
+
+	rc = cam_cdm_intf_deregister_hw_cdm(cdm_hw_intf,
+		cdm_hw->soc_info.soc_private, CAM_HW_CDM, cdm_core->index);
 	if (rc) {
-		CAM_ERR(CAM_CDM, "Deinit failed for hw");
-		return;
+		CAM_ERR(CAM_CDM,
+			"HW_CDM interface deregistration failed: rd: %d", rc);
 	}
 
 	rc = cam_cpas_unregister_client(cdm_core->cpas_handle);

@@ -33,6 +33,8 @@
 int cam_icp_hw_mgr_init(struct device_node *of_node,
 	uint64_t *hw_mgr_hdl, int *iommu_hdl);
 
+void cam_icp_hw_mgr_deinit(void);
+
 /**
  * struct cam_icp_cpas_vote
  * @ahb_vote: AHB vote info

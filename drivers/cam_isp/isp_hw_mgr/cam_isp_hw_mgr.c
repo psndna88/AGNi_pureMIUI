@@ -25,3 +25,13 @@ int cam_isp_hw_mgr_init(const char   *device_name_str,
 
 	return rc;
 }
+
+void cam_isp_hw_mgr_deinit(const char *device_name_str)
+{
+	if (strnstr(device_name_str, "ife", strlen(device_name_str)))
+		cam_ife_hw_mgr_deinit();
+	else if (strnstr(device_name_str, "tfe", strlen(device_name_str)))
+		cam_tfe_hw_mgr_deinit();
+	else
+		CAM_ERR(CAM_ISP, "Invalid ISP hw type :%s", device_name_str);
+}

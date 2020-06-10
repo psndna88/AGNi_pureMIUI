@@ -371,4 +371,6 @@ struct cam_isp_start_args {
 int cam_isp_hw_mgr_init(const char    *device_name_str,
 	struct cam_hw_mgr_intf *hw_mgr, int *iommu_hdl);
 
+void cam_isp_hw_mgr_deinit(const char *device_name_str);
+
 #endif /* __CAM_ISP_HW_MGR_INTF_H__ */

@@ -1072,23 +1072,38 @@ int cam_synx_sync_signal(int32_t sync_obj, uint32_t synx_status)
 	return rc;
 }
 
-static int cam_sync_register_synx_bind_ops(void)
+static int cam_sync_register_synx_bind_ops(
+	struct synx_register_params *object)
 {
 	int rc = 0;
-	struct synx_register_params params;
 
-	params.name = CAM_SYNC_NAME;
-	params.type = SYNX_TYPE_CSL;
-	params.ops.register_callback = cam_sync_register_callback;
-	params.ops.deregister_callback = cam_sync_deregister_callback;
-	params.ops.enable_signaling = cam_sync_get_obj_ref;
-	params.ops.signal = cam_synx_sync_signal;
-
-	rc = synx_register_ops(&params);
+	rc = synx_register_ops(object);
 	if (rc)
 		CAM_ERR(CAM_SYNC, "synx registration fail with rc=%d", rc);
 
 	return rc;
+}
+
+static void cam_sync_unregister_synx_bind_ops(
+	struct synx_register_params *object)
+{
+	int rc = 0;
+
+	rc = synx_deregister_ops(object);
+	if (rc)
+		CAM_ERR(CAM_SYNC, "sync unregistration fail with %d", rc);
+}
+
+static void cam_sync_configure_synx_obj(struct synx_register_params *object)
+{
+	struct synx_register_params *params = object;
+
+	params->name = CAM_SYNC_NAME;
+	params->type = SYNX_TYPE_CSL;
+	params->ops.register_callback = cam_sync_register_callback;
+	params->ops.deregister_callback = cam_sync_deregister_callback;
+	params->ops.enable_signaling = cam_sync_get_obj_ref;
+	params->ops.signal = cam_synx_sync_signal;
 }
 #endif
 
@@ -1167,8 +1182,9 @@ static int cam_sync_component_bind(struct device *dev,
 	trigger_cb_without_switch = false;
 	cam_sync_create_debugfs();
 #if IS_REACHABLE(CONFIG_MSM_GLOBAL_SYNX)
-	CAM_INFO(CAM_SYNC, "Registering with synx driver");
-	rc = cam_sync_register_synx_bind_ops();
+	CAM_DBG(CAM_SYNC, "Registering with synx driver");
+	cam_sync_configure_synx_obj(&sync_dev->params);
+	rc = cam_sync_register_synx_bind_ops(&sync_dev->params);
 	if (rc)
 		goto v4l2_fail;
 #endif
@@ -1195,6 +1211,9 @@ static void cam_sync_component_unbind(struct device *dev,
 
 	v4l2_device_unregister(sync_dev->vdev->v4l2_dev);
 	cam_sync_media_controller_cleanup(sync_dev);
+#if IS_REACHABLE(CONFIG_MSM_GLOBAL_SYNX)
+	cam_sync_unregister_synx_bind_ops(&sync_dev->params);
+#endif
 	video_unregister_device(sync_dev->vdev);
 	video_device_release(sync_dev->vdev);
 	debugfs_remove_recursive(sync_dev->dentry);
