@@ -22,6 +22,10 @@ ifeq ($(CONFIG_ARCH_HOLI), y)
 include $(srctree)/techpack/camera/config/holicamera.conf
 endif
 
+ifeq ($(CONFIG_ARCH_SHIMA), y)
+include $(srctree)/techpack/camera/config/shimacamera.conf
+endif
+
 ifeq ($(CONFIG_ARCH_KONA), y)
 LINUXINCLUDE    += \
 		-include $(srctree)/techpack/camera/config/konacameraconf.h
@@ -45,6 +49,11 @@ endif
 ifeq ($(CONFIG_ARCH_HOLI), y)
 LINUXINCLUDE    += \
 		-include $(srctree)/techpack/camera/config/holicameraconf.h
+endif
+
+ifeq ($(CONFIG_ARCH_SHIMA), y)
+LINUXINCLUDE    += \
+		-include $(srctree)/techpack/camera/config/shimacameraconf.h
 endif
 
 endif
