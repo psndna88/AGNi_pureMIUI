@@ -1810,6 +1810,35 @@ static int cam_cpas_log_vote(struct cam_hw_info *cpas_hw)
 	return rc;
 }
 
+static int cam_cpas_select_qos(struct cam_hw_info *cpas_hw,
+	uint32_t selection_mask)
+{
+	struct cam_cpas *cpas_core = (struct cam_cpas *) cpas_hw->core_info;
+	int rc = 0;
+
+	mutex_lock(&cpas_hw->hw_mutex);
+
+	if (cpas_hw->hw_state == CAM_HW_STATE_POWER_UP) {
+		CAM_ERR(CAM_CPAS,
+			"Hw already in power up state, can't change QoS settings");
+		rc = -EINVAL;
+		goto done;
+	}
+
+	if (cpas_core->internal_ops.setup_qos_settings) {
+		rc = cpas_core->internal_ops.setup_qos_settings(cpas_hw,
+			selection_mask);
+		if (rc)
+			CAM_ERR(CAM_CPAS, "Failed in changing QoS %d", rc);
+	} else {
+		CAM_WARN(CAM_CPAS, "No ops for qos_settings");
+	}
+
+done:
+	mutex_unlock(&cpas_hw->hw_mutex);
+	return rc;
+}
+
 static int cam_cpas_hw_process_cmd(void *hw_priv,
 	uint32_t cmd_type, void *cmd_args, uint32_t arg_size)
 {
@@ -1914,6 +1943,20 @@ static int cam_cpas_hw_process_cmd(void *hw_priv,
 	}
 	case CAM_CPAS_HW_CMD_LOG_VOTE: {
 		rc = cam_cpas_log_vote(hw_priv);
+		break;
+	}
+
+	case CAM_CPAS_HW_CMD_SELECT_QOS: {
+		uint32_t *selection_mask;
+
+		if (sizeof(uint32_t) != arg_size) {
+			CAM_ERR(CAM_CPAS, "cmd_type %d, size mismatch %d",
+				cmd_type, arg_size);
+			break;
+		}
+
+		selection_mask = (uint32_t *)cmd_args;
+		rc = cam_cpas_select_qos(hw_priv, *selection_mask);
 		break;
 	}
 	default:

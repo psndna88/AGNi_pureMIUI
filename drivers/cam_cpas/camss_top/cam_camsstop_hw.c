@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2018, 2020 The Linux Foundation. All rights reserved.
  */
 
 #include "cam_cpas_hw_intf.h"
@@ -77,6 +77,7 @@ int cam_camsstop_get_internal_ops(struct cam_cpas_internal_ops *internal_ops)
 	internal_ops->setup_regbase = cam_camsstop_setup_regbase_indices;
 	internal_ops->power_on = NULL;
 	internal_ops->power_off = NULL;
+	internal_ops->setup_qos_settings = NULL;
 
 	return 0;
 }

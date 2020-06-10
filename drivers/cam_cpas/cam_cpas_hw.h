@@ -55,6 +55,7 @@ enum cam_cpas_access_type {
  * @setup_regbase: Function pointer for setup rebase indices
  * @power_on: Function pointer for hw core specific power on settings
  * @power_off: Function pointer for hw core specific power off settings
+ * @setup_qos_settings: Function pointer for hw to select a specific qos header
  *
  */
 struct cam_cpas_internal_ops {
@@ -67,6 +68,8 @@ struct cam_cpas_internal_ops {
 		int32_t regbase_index[], int32_t num_reg_map);
 	int (*power_on)(struct cam_hw_info *cpas_hw);
 	int (*power_off)(struct cam_hw_info *cpas_hw);
+	int (*setup_qos_settings)(struct cam_hw_info *cpas_hw,
+		uint32_t selection_mask);
 };
 
 /**
