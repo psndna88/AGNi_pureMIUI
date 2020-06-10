@@ -355,6 +355,7 @@ struct qpnp_hap {
 	struct qpnp_hap_lra_ares_cfg	ares_cfg;
 	struct mutex			lock;
 	struct mutex			wf_lock;
+	struct mutex			set_lock;
 	spinlock_t			bus_lock;
 	struct completion		completion;
 	enum qpnp_hap_mode		play_mode;
@@ -2116,6 +2117,8 @@ static int qpnp_hap_set(struct qpnp_hap *hap, bool on)
 	int rc = 0;
 	unsigned long timeout_ns = POLL_TIME_AUTO_RES_ERR_NS;
 
+	mutex_lock(&hap->set_lock);
+
 	if (hap->play_mode == QPNP_HAP_PWM) {
 		if (on) {
 			rc = pwm_enable(hap->pwm_info.pwm_dev);
@@ -2132,16 +2135,22 @@ static int qpnp_hap_set(struct qpnp_hap *hap, bool on)
 				return rc;
 
 			rc = qpnp_hap_mod_enable(hap, on);
-			if (rc < 0)
+			if (rc < 0) {
+				mutex_unlock(&hap->set_lock);
 				return rc;
+			}
 
 			rc = qpnp_hap_play(hap, on);
-			if (rc < 0)
+			if (rc < 0) {
+				mutex_unlock(&hap->set_lock);
 				return rc;
+			}
 
 			rc = qpnp_hap_auto_res_enable(hap, 1);
-			if (rc < 0)
+			if (rc < 0) {
+				mutex_unlock(&hap->set_lock);
 				return rc;
+			}
 
 			if (is_sw_lra_auto_resonance_control(hap)) {
 				/*
@@ -2156,22 +2165,27 @@ static int qpnp_hap_set(struct qpnp_hap *hap, bool on)
 			}
 		} else {
 			rc = qpnp_hap_play(hap, on);
-			if (rc < 0)
+			if (rc < 0) {
+				mutex_unlock(&hap->set_lock);
 				return rc;
+			}
 
 			if (is_sw_lra_auto_resonance_control(hap) &&
 				(hap->status_flags & AUTO_RESONANCE_ENABLED))
 				update_lra_frequency(hap);
 
 			rc = qpnp_hap_mod_enable(hap, on);
-			if (rc < 0)
+			if (rc < 0) {
+				mutex_unlock(&hap->set_lock);
 				return rc;
+			}
 
 			if (is_sw_lra_auto_resonance_control(hap))
 				hrtimer_cancel(&hap->auto_res_err_poll_timer);
 		}
 	}
 
+	mutex_unlock(&hap->set_lock);
 	return rc;
 }
 
@@ -2311,6 +2325,8 @@ static void qpnp_hap_td_enable(struct timed_output_dev *dev, int time_ms)
 	if (time_ms < 0)
 		return;
 
+	flush_work(&hap->work);
+
 	mutex_lock(&hap->lock);
 
 	if (time_ms == 0) {
@@ -2436,7 +2452,10 @@ static void qpnp_hap_td_enable(struct timed_output_dev *dev, int time_ms)
 		ktime_set(time_ms / 1000, (time_ms % 1000) * 1000000),
 		HRTIMER_MODE_REL);
 	mutex_unlock(&hap->lock);
-	schedule_work(&hap->work);
+	if (hap->play_mode == QPNP_HAP_DIRECT)
+		qpnp_hap_set(hap, hap->state);
+	else
+		schedule_work(&hap->work);
 }
 
 /* play pwm bytes */
@@ -2529,7 +2548,8 @@ static void qpnp_hap_worker(struct work_struct *work)
 		qpnp_hap_set(hap, hap->state);
 	}
 
-	if (hap->vcc_pon && !hap->state && hap->vcc_pon_enabled) {
+	if (hap->vcc_pon && !hap->state && hap->vcc_pon_enabled
+		&& !hap->state) {
 		rc = regulator_disable(hap->vcc_pon);
 		if (rc)
 			pr_err("could not disable vcc_pon regulator rc=%d\n",
@@ -3177,6 +3197,7 @@ static int qpnp_haptic_probe(struct platform_device *pdev)
 
 	mutex_init(&hap->lock);
 	mutex_init(&hap->wf_lock);
+    mutex_init(&hap->set_lock);
 	INIT_WORK(&hap->work, qpnp_hap_worker);
 	INIT_DELAYED_WORK(&hap->sc_work, qpnp_handle_sc_irq);
 	init_completion(&hap->completion);
