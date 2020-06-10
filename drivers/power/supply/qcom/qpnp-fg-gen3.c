@@ -3432,19 +3432,28 @@ static int fg_get_time_to_full_locked(struct fg_chip *chip, int *val)
 	ibatt_avg = -ibatt_avg / MILLI_UNIT;
 	vbatt_avg /= MILLI_UNIT;
 
-	if (msoc <= 90) {
-#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
-		if (ibatt_avg > 2000)
-			ibatt_avg = 2000; /* force max charging current limitations */
-#else
+	if (msoc <= 70) {
 		if (ibatt_avg > 2500)
-			ibatt_avg = 2500; /* force max charging current limitations */
-#endif
+			ibatt_avg = 2500; /* force max charging current limitations upto 70% battery */
 		if (ibatt_avg < 1200)
-			ibatt_avg = 1200; /* force consistent minumum charging current 1200mA upto 90% battery */
+			ibatt_avg = 1200; /* force consistent minumum charging current 1200mA upto 70% battery */
+	} else if ((msoc > 70) && (msoc <= 80)) {
+		if (ibatt_avg > 2000)
+			ibatt_avg = 2000;
+		if (ibatt_avg < 1200)
+			ibatt_avg = 1200;
+	} else if ((msoc > 80) && (msoc <= 90)) {
+		if (ibatt_avg > 1200)
+			ibatt_avg = 1200;
+		if (ibatt_avg < 1000)
+			ibatt_avg = 1000;
+	} else if ((msoc > 90) && (msoc < 99)) {
+		if (ibatt_avg > 1000)
+			ibatt_avg = 1000;
+		if (ibatt_avg < 800)
+			ibatt_avg = 800;
 	} else {
-		/* clamp ibatt_avg to iterm */
-		ibatt_avg = abs(chip->dt.sys_term_curr_ma);
+		ibatt_avg = 500;
 	}
 
 	fg_dbg(chip, FG_TTF, "ibatt_avg=%d\n", ibatt_avg);
