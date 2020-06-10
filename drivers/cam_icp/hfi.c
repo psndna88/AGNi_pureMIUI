@@ -31,7 +31,8 @@
 #define HFI_VERSION_INFO_STEP_BMSK   0xFF
 #define HFI_VERSION_INFO_STEP_SHFT  0
 
-#define HFI_MAX_POLL_TRY 5
+#define HFI_POLL_DELAY_US 100
+#define HFI_POLL_TIMEOUT_US 10000
 
 #define HFI_MAX_PC_POLL_TRY 150
 #define HFI_POLL_TRY_SLEEP 1
@@ -588,7 +589,6 @@ int cam_hfi_resume(struct hfi_mem_info *hfi_mem,
 	int rc = 0;
 	uint32_t data;
 	uint32_t fw_version, status = 0;
-	uint32_t retry_cnt = 0;
 
 	cam_hfi_enable_cpu(icp_base);
 	g_hfi->csr_base = icp_base;
@@ -611,33 +611,12 @@ int cam_hfi_resume(struct hfi_mem_info *hfi_mem,
 			icp_base + HFI_REG_A5_CSR_A5_CONTROL);
 	}
 
-	while (retry_cnt < HFI_MAX_POLL_TRY) {
-		readw_poll_timeout((icp_base + HFI_REG_ICP_HOST_INIT_RESPONSE),
-			status, (status == ICP_INIT_RESP_SUCCESS), 100, 10000);
-
-		CAM_DBG(CAM_HFI, "1: status = %u", status);
-		status = cam_io_r_mb(icp_base + HFI_REG_ICP_HOST_INIT_RESPONSE);
-		CAM_DBG(CAM_HFI, "2: status = %u", status);
-		if (status == ICP_INIT_RESP_SUCCESS)
-			break;
-
-		if (status == ICP_INIT_RESP_FAILED) {
-			CAM_ERR(CAM_HFI, "ICP Init Failed. status = %u",
-				status);
-			fw_version = cam_io_r(icp_base + HFI_REG_FW_VERSION);
-			CAM_ERR(CAM_HFI, "fw version : [%x]", fw_version);
-			return -EINVAL;
-		}
-		retry_cnt++;
-	}
-
-	if ((retry_cnt == HFI_MAX_POLL_TRY) &&
-		(status == ICP_INIT_RESP_RESET)) {
-		CAM_ERR(CAM_HFI, "Reached Max retries. status = %u",
-				status);
-		fw_version = cam_io_r(icp_base + HFI_REG_FW_VERSION);
-		CAM_ERR(CAM_HFI, "fw version : [%x]", fw_version);
-		return -EINVAL;
+	if (readl_poll_timeout(icp_base + HFI_REG_ICP_HOST_INIT_RESPONSE,
+			       status, status == ICP_INIT_RESP_SUCCESS,
+			       HFI_POLL_DELAY_US, HFI_POLL_TIMEOUT_US)) {
+		CAM_ERR(CAM_HFI, "response poll timed out: status=0x%08x",
+			status);
+		return -ETIMEDOUT;
 	}
 
 	cam_io_w_mb((uint32_t)(INTR_ENABLE|INTR_ENABLE_WD0),
@@ -689,7 +668,6 @@ int cam_hfi_init(uint8_t event_driven_mode, struct hfi_mem_info *hfi_mem,
 	struct hfi_qtbl_hdr *qtbl_hdr;
 	struct hfi_q_hdr *cmd_q_hdr, *msg_q_hdr, *dbg_q_hdr;
 	uint32_t hw_version, fw_version, status = 0;
-	uint32_t retry_cnt = 0;
 	struct sfr_buf *sfr_buffer;
 
 	mutex_lock(&hfi_cmd_q_mutex);
@@ -877,39 +855,16 @@ int cam_hfi_init(uint8_t event_driven_mode, struct hfi_mem_info *hfi_mem,
 		hfi_mem->io_mem.iova, hfi_mem->io_mem.len,
 		hfi_mem->io_mem2.iova, hfi_mem->io_mem2.len);
 
-	hw_version = cam_io_r(icp_base + HFI_REG_A5_HW_VERSION);
-
-	while (retry_cnt < HFI_MAX_POLL_TRY) {
-		readw_poll_timeout((icp_base + HFI_REG_ICP_HOST_INIT_RESPONSE),
-			status, (status == ICP_INIT_RESP_SUCCESS), 100, 10000);
-
-		CAM_DBG(CAM_HFI, "1: status = %u rc = %d", status, rc);
-		status = cam_io_r_mb(icp_base + HFI_REG_ICP_HOST_INIT_RESPONSE);
-		CAM_DBG(CAM_HFI, "2: status = %u rc = %d", status, rc);
-		if (status == ICP_INIT_RESP_SUCCESS)
-			break;
-
-		if (status == ICP_INIT_RESP_FAILED) {
-			CAM_ERR(CAM_HFI, "ICP Init Failed. status = %u",
-				status);
-			fw_version = cam_io_r(icp_base + HFI_REG_FW_VERSION);
-			CAM_ERR(CAM_HFI, "fw version : [%x]", fw_version);
-			goto regions_fail;
-		}
-		retry_cnt++;
-	}
-
-	if ((retry_cnt == HFI_MAX_POLL_TRY) &&
-		(status == ICP_INIT_RESP_RESET)) {
-		CAM_ERR(CAM_HFI, "Reached Max retries. status = %u",
-				status);
-		fw_version = cam_io_r(icp_base + HFI_REG_FW_VERSION);
-		CAM_ERR(CAM_HFI,
-			"hw version : : [%x], fw version : [%x]",
-			hw_version, fw_version);
+	if (readl_poll_timeout(icp_base + HFI_REG_ICP_HOST_INIT_RESPONSE,
+			       status, status == ICP_INIT_RESP_SUCCESS,
+			       HFI_POLL_DELAY_US, HFI_POLL_TIMEOUT_US)) {
+		CAM_ERR(CAM_HFI, "response poll timed out: status=0x%08x",
+			status);
+		rc = -ETIMEDOUT;
 		goto regions_fail;
 	}
 
+	hw_version = cam_io_r(icp_base + HFI_REG_A5_HW_VERSION);
 	fw_version = cam_io_r(icp_base + HFI_REG_FW_VERSION);
 	CAM_DBG(CAM_HFI, "hw version : : [%x], fw version : [%x]",
 		hw_version, fw_version);
