@@ -49,6 +49,8 @@ enum cam_custom_hw_resource_type {
 struct cam_custom_sub_mod_acq {
 	enum cam_custom_hw_resource_type   rsrc_type;
 	int32_t                            acq;
+	cam_hw_mgr_event_cb_func           event_cb;
+	void                              *priv;
 	struct cam_custom_resource_node   *rsrc_node;
 };
 

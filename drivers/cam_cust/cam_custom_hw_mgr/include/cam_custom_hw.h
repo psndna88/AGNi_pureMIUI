@@ -20,6 +20,28 @@ enum cam_custom_hw_resource_state {
 	CAM_CUSTOM_HW_RESOURCE_STATE_STREAMING     = 4,
 };
 
+enum cam_custom_hw_task_type {
+	CAM_CUSTOM_EVENT_INVALID,
+	CAM_CUSTOM_EVENT_TASK1,
+	CAM_CUSTOM_EVENT_TASK2,
+	CAM_CUSTOM_EVENT_TASK3,
+	CAM_CUSTOM_EVENT_MAX,
+};
+
+/*
+ * struct cam_custom_hw_event_info:
+ *
+ * @Brief:          Structure to pass event details to hw mgr
+ *
+ * @task_type:      Type of CUSTOM HW Task
+ * @err_type:       Error type if any
+ *
+ */
+struct cam_custom_hw_event_info {
+	enum cam_custom_hw_task_type  task_type;
+	uint32_t                      err_type;
+};
+
 /*
  * struct cam_custom_resource_node:
  *
