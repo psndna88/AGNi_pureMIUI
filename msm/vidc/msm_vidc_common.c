@@ -2839,6 +2839,7 @@ bool is_batching_allowed(struct msm_vidc_inst *inst)
 		is_decode_session(inst) &&
 		!is_thumbnail_session(inst) &&
 		is_realtime_session(inst) &&
+		!is_heif_decoder(inst) &&
 		!inst->clk_data.low_latency_mode &&
 		(op_pixelformat == V4L2_PIX_FMT_NV12_UBWC ||
 		 op_pixelformat	== V4L2_PIX_FMT_NV12_TP10_UBWC) &&

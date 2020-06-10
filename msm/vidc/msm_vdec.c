@@ -434,6 +434,15 @@ static struct msm_vidc_ctrl msm_vdec_ctrls[] = {
 		.default_value = 0,
 		.step = 1,
 	},
+	{
+		.id = V4L2_CID_MPEG_VIDC_VDEC_HEIF_MODE,
+		.name = "HEIF Decoder",
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.minimum = V4L2_MPEG_MSM_VIDC_DISABLE,
+		.maximum = V4L2_MPEG_MSM_VIDC_ENABLE,
+		.default_value = V4L2_MPEG_MSM_VIDC_DISABLE,
+		.step = 1,
+	},
 };
 
 #define NUM_CTRLS ARRAY_SIZE(msm_vdec_ctrls)
@@ -947,6 +956,15 @@ int msm_vdec_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 		inst->batch.enable = is_batching_allowed(inst);
 		break;
 	case V4L2_CID_MPEG_VIDC_VIDEO_LOWLATENCY_HINT:
+		break;
+	case V4L2_CID_MPEG_VIDC_VDEC_HEIF_MODE:
+		if(get_v4l2_codec(inst) != V4L2_PIX_FMT_HEVC)
+			break;
+		inst->flags &= ~VIDC_TURBO;
+		if (ctrl->val)
+			inst->flags |= VIDC_TURBO;
+		if (inst->state < MSM_VIDC_LOAD_RESOURCES)
+			msm_vidc_calculate_buffer_counts(inst);
 		break;
 	default:
 		s_vpr_e(inst->sid, "Unknown control %#x\n", ctrl->id);

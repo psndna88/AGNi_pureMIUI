@@ -1293,6 +1293,7 @@ int msm_vidc_set_bse_vpp_delay(struct msm_vidc_inst *inst)
 	if (!inst->core->resources.has_vpp_delay ||
 		!is_decode_session(inst) ||
 		is_thumbnail_session(inst) ||
+		is_heif_decoder(inst) ||
 		inst->clk_data.work_mode != HFI_WORKMODE_2) {
 		s_vpr_hp(inst->sid, "%s: Skip bse-vpp\n", __func__);
 		return 0;
