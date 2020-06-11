@@ -19,6 +19,9 @@ static long cam_eeprom_subdev_ioctl(struct v4l2_subdev *sd,
 	switch (cmd) {
 	case VIDIOC_CAM_CONTROL:
 		rc = cam_eeprom_driver_cmd(e_ctrl, arg);
+		if (rc)
+			CAM_ERR(CAM_EEPROM,
+				"Failed in Driver cmd: %d", rc);
 		break;
 	default:
 		rc = -ENOIOCTLCMD;

@@ -19,8 +19,12 @@ static long cam_ois_subdev_ioctl(struct v4l2_subdev *sd,
 	switch (cmd) {
 	case VIDIOC_CAM_CONTROL:
 		rc = cam_ois_driver_cmd(o_ctrl, arg);
+		if (rc)
+			CAM_ERR(CAM_OIS,
+				"Failed with driver cmd: %d", rc);
 		break;
 	default:
+		CAM_ERR(CAM_OIS, "Wrong IOCTL cmd: %u", cmd);
 		rc = -ENOIOCTLCMD;
 		break;
 	}
@@ -95,7 +99,8 @@ static long cam_ois_init_subdev_do_ioctl(struct v4l2_subdev *sd,
 		break;
 	default:
 		CAM_ERR(CAM_OIS, "Invalid compat ioctl: %d", cmd);
-		rc = -EINVAL;
+		rc = -ENOIOCTLCMD;
+		break;
 	}
 
 	if (!rc) {

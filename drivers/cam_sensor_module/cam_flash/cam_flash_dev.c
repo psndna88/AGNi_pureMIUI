@@ -251,11 +251,14 @@ static long cam_flash_subdev_ioctl(struct v4l2_subdev *sd,
 	case VIDIOC_CAM_CONTROL: {
 		rc = cam_flash_driver_cmd(fctrl, arg,
 			soc_private);
+		if (rc)
+			CAM_ERR(CAM_FLASH,
+				"Failed in driver cmd: %d", rc);
 		break;
 	}
 	default:
 		CAM_ERR(CAM_FLASH, "Invalid ioctl cmd type");
-		rc = -EINVAL;
+		rc = -ENOIOCTLCMD;
 		break;
 	}
 
@@ -288,7 +291,8 @@ static long cam_flash_subdev_do_ioctl(struct v4l2_subdev *sd,
 	default:
 		CAM_ERR(CAM_FLASH, "Invalid compat ioctl cmd_type:%d",
 			cmd);
-		rc = -EINVAL;
+		rc = -ENOIOCTLCMD;
+		break;
 	}
 
 	if (!rc) {
