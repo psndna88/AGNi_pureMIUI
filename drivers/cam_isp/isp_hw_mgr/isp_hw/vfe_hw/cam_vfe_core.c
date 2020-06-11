@@ -91,6 +91,7 @@ int cam_vfe_reset_irq_top_half(uint32_t    evt_id,
 	switch (soc_info->hw_version) {
 	case CAM_CPAS_TITAN_480_V100:
 	case CAM_CPAS_TITAN_580_V100:
+	case CAM_CPAS_TITAN_570_V200:
 		if (!soc_private->is_ife_lite) {
 			if (th_payload->evt_status_arr[0] & 0x1) {
 				cam_io_w(0xFFFFFFFF, mem_base +
@@ -332,6 +333,7 @@ int cam_vfe_reset(void *hw_priv, void *reset_core_args, uint32_t arg_size)
 	switch (soc_info->hw_version) {
 	case CAM_CPAS_TITAN_480_V100:
 	case CAM_CPAS_TITAN_580_V100:
+	case CAM_CPAS_TITAN_570_V200:
 		if (!soc_private->is_ife_lite)
 			top_reset_irq_reg_mask[CAM_IFE_IRQ_CAMIF_REG_STATUS0]
 				= CAM_VFE_48X_TOP_RESET_MASK;

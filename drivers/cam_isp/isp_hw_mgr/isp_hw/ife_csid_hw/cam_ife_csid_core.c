@@ -354,8 +354,9 @@ static int cam_ife_match_vc_dt_pair(int32_t *vc, uint32_t *dt,
 		return -EINVAL;
 	}
 
-	if ((camera_hw_version != CAM_CPAS_TITAN_480_V100) &&
-		(camera_hw_version != CAM_CPAS_TITAN_580_V100))
+	if ((camera_hw_version != CAM_CPAS_TITAN_480_V100) ||
+		(camera_hw_version != CAM_CPAS_TITAN_580_V100) ||
+		(camera_hw_version != CAM_CPAS_TITAN_570_V200))
 		num_valid_vc_dt = 1;
 
 	switch (num_valid_vc_dt) {
@@ -1815,7 +1816,8 @@ static int cam_ife_csid_init_config_pxl_path(
 	CAM_DBG(CAM_ISP, "HW version: %x", camera_hw_version);
 
 	if ((camera_hw_version == CAM_CPAS_TITAN_480_V100) ||
-		(camera_hw_version == CAM_CPAS_TITAN_580_V100))
+		(camera_hw_version == CAM_CPAS_TITAN_580_V100) ||
+		(camera_hw_version == CAM_CPAS_TITAN_570_V200))
 		val |= (path_data->drop_enable <<
 			csid_reg->cmn_reg->drop_h_en_shift_val) |
 			(path_data->drop_enable <<
@@ -1837,7 +1839,8 @@ static int cam_ife_csid_init_config_pxl_path(
 
 	if (path_data->is_valid_vc1_dt1 &&
 		((camera_hw_version == CAM_CPAS_TITAN_480_V100) ||
-		(camera_hw_version == CAM_CPAS_TITAN_580_V100))) {
+		(camera_hw_version == CAM_CPAS_TITAN_580_V100) ||
+		(camera_hw_version == CAM_CPAS_TITAN_570_V200))) {
 		val = cam_io_r_mb(soc_info->reg_map[0].mem_base +
 			pxl_reg->csid_pxl_multi_vcdt_cfg0_addr);
 		val |= ((path_data->vc1 << 2) |
@@ -2304,7 +2307,8 @@ static int cam_ife_csid_init_config_rdi_path(
 
 	if (camera_hw_version == CAM_CPAS_TITAN_480_V100 ||
 		camera_hw_version == CAM_CPAS_TITAN_175_V130 ||
-		camera_hw_version == CAM_CPAS_TITAN_580_V100) {
+		camera_hw_version == CAM_CPAS_TITAN_580_V100 ||
+		camera_hw_version == CAM_CPAS_TITAN_570_V200) {
 		val |= (path_data->drop_enable <<
 			csid_reg->cmn_reg->drop_h_en_shift_val) |
 			(path_data->drop_enable <<
@@ -2318,7 +2322,8 @@ static int cam_ife_csid_init_config_rdi_path(
 
 	if (path_data->is_valid_vc1_dt1 &&
 		((camera_hw_version == CAM_CPAS_TITAN_480_V100) ||
-		(camera_hw_version == CAM_CPAS_TITAN_580_V100))) {
+		(camera_hw_version == CAM_CPAS_TITAN_580_V100) ||
+		(camera_hw_version == CAM_CPAS_TITAN_570_V200))) {
 		val = cam_io_r_mb(soc_info->reg_map[0].mem_base +
 			csid_reg->rdi_reg[id]->csid_rdi_multi_vcdt_cfg0_addr);
 		val |= ((path_data->vc1 << 2) |
@@ -2404,7 +2409,8 @@ static int cam_ife_csid_init_config_rdi_path(
 
 	/* Write max value to pixel drop period due to a bug in ver 480 HW */
 	if (((camera_hw_version == CAM_CPAS_TITAN_480_V100) ||
-		(camera_hw_version == CAM_CPAS_TITAN_580_V100)) &&
+		(camera_hw_version == CAM_CPAS_TITAN_580_V100) ||
+		(camera_hw_version == CAM_CPAS_TITAN_570_V200)) &&
 		path_data->drop_enable)
 		cam_io_w_mb(0x1F, soc_info->reg_map[0].mem_base +
 		csid_reg->rdi_reg[id]->csid_rdi_rpp_pix_drop_period_addr);
