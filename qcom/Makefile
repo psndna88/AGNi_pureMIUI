@@ -242,6 +242,11 @@ dtb-$(CONFIG_ARCH_QTI_VM) += yupik-vm-rumi.dtb \
 endif
 endif
 
+dtb-$(CONFIG_QTI_QUIN_GVM) += sa8155-vm-la.dtb \
+	sa8155-vm-lv.dtb \
+	sa8155-vm-la-mt.dtb \
+	sa8155-vm-lv-mt.dtb
+
 always		:= $(dtb-y)
 subdir-y	:= $(dts-dirs)
 clean-files	:= *.dtb *.dtbo
