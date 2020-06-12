@@ -6,6 +6,11 @@
 		status = "ok";
 	};
 
+	qcom,cam-sync {
+		compatible = "qcom,cam-sync";
+		status = "ok";
+	};
+
 	cam_csiphy0: qcom,csiphy0 {
 		cell-index = <0>;
 		compatible = "qcom,csiphy-v2.0.1", "qcom,csiphy";
@@ -223,7 +228,7 @@
 			qcom,iommu-faults = "non-fatal";
 			multiple-client-devices;
 			qcom,iommu-dma-addr-pool = <0x7400000 0xd8c00000>;
-			label = "ope", "ope-cdm0";
+			label = "ope", "ope-cdm";
 			ope_iova_mem_map: iova-mem-map {
 				/* IO region is approximately 3.4 GB */
 				iova-mem-region-io {
@@ -239,7 +244,7 @@
 		msm_cam_smmu_cpas_cdm {
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0x800 0x000>;
-			label = "cpas-cdm0";
+			label = "cpas-cdm";
 			qcom,iommu-faults = "non-fatal";
 			qcom,iommu-dma-addr-pool = <0x7400000 0xd8c00000>;
 			cpas_cdm_iova_mem_map: iova-mem-map {
@@ -264,7 +269,7 @@
 
 	qcom,cam-cpas@5c11000 {
 		cell-index = <0>;
-		compatible = "qcom,cam-cpas";
+		compatible = "qcom,cam-cpas", "simple-bus";
 		label = "cpas";
 		arch-compat = "cpas_top";
 		status = "ok";
