@@ -441,7 +441,7 @@ static int cam_cci_component_bind(struct device *dev,
 	rc = cam_cpas_register_client(&cpas_parms);
 	if (rc) {
 		CAM_ERR(CAM_CCI, "CPAS registration failed rc:%d", rc);
-		goto cci_no_resource;
+		goto cci_unregister_subdev;
 	}
 
 	CAM_DBG(CAM_CCI, "CPAS registration successful handle=%d",
@@ -449,6 +449,9 @@ static int cam_cci_component_bind(struct device *dev,
 	new_cci_dev->cpas_handle = cpas_parms.client_handle;
 	CAM_DBG(CAM_CCI, "Component bound successfully");
 	return rc;
+
+cci_unregister_subdev:
+	cam_unregister_subdev(&(new_cci_dev->v4l2_dev_str));
 cci_no_resource:
 	devm_kfree(&pdev->dev, new_cci_dev);
 	return rc;
