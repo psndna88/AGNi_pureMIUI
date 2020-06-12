@@ -282,7 +282,7 @@
 		};
 
 		qcom,sde-dspp-blocks {
-			qcom,sde-dspp-igc = <0x1260 0x00030002>;
+			qcom,sde-dspp-igc = <0x1260 0x00040000>;
 			qcom,sde-dspp-hsic = <0x800 0x00010007>;
 			qcom,sde-dspp-memcolor = <0x880 0x00010007>;
 			qcom,sde-dspp-hist = <0x800 0x00010007>;
