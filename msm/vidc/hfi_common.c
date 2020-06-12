@@ -3107,7 +3107,7 @@ int __reset_ahb2axi_bridge_common(struct venus_hfi_device *device, u32 sid)
 		}
 
 		/* wait for deassert */
-		usleep_range(150, 250);
+		usleep_range(400, 500);
 
 		rc = __handle_reset_clk(device->res, i, DEASSERT, sid);
 		if (rc) {
