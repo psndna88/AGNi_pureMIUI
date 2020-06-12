@@ -369,6 +369,8 @@ struct cam_req_mgr_connected_device {
  *                         frames where actual settings are not available.
  *                         This will  account for all devices irrespective of
  *                         pipeline delay
+ * @skip_init_frame      : skip initial frames crm_wd_timer validation in the
+ *                         case of long exposure use case
  */
 struct cam_req_mgr_core_link {
 	int32_t                              link_hdl;
@@ -403,6 +405,7 @@ struct cam_req_mgr_core_link {
 	uint32_t    trigger_cnt[CAM_REQ_MGR_MAX_TRIGGERS];
 	atomic_t                             eof_event_cnt;
 	bool                                 enable_apply_default;
+	bool                                 skip_init_frame;
 };
 
 /**
