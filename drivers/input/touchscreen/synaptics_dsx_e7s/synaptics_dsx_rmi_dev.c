@@ -174,7 +174,7 @@ static int rmidev_sysfs_irq_enable(struct synaptics_rmi4_data *rmi4_data,
 	int retval = 0;
 	unsigned char intr_status[MAX_INTR_REGISTERS];
 	unsigned long irq_flags = IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING |
-			IRQF_ONESHOT;
+			IRQF_ONESHOT | IRQF_PERF_CRITICAL;
 
 	mutex_lock(&(rmi4_data->rmi4_irq_enable_mutex));
 
