@@ -15,6 +15,7 @@
  * v1.8: Turn off the swappiness control routine when zram disksize set to zero
  *       Also enable dynamic fsync when zram enabled
  * v1.9: Account for 3GB ram devices and tune zram disksize accordingly
+ * v2.0: Handle 3GB ram devices more aggressively
  */
 
 #include <asm/page.h>
@@ -42,7 +43,7 @@ void device_totalram(void) {
 			trigthreshold = 20;
 		} else {
 			ramgb = 3; /* 3GB device */
-			trigthreshold = 25;
+			trigthreshold = 40;
 		}
 
 		ramchecked = true;
@@ -92,8 +93,10 @@ bool agni_memprober(void) {
 		} else {
 			agni_swappiness = 30;
 		}
-		if ((ramgb <= 4) && (mem_avail_perc < 10))
+		if ((ramgb >= 4) && (mem_avail_perc < 10))
 			mm_drop_caches(3);
+		if ((ramgb == 3) && (mem_avail_perc < 30))
+			mm_drop_caches(3);		
 	} else {
 		agni_swappiness = 1;
 	}
