@@ -3438,8 +3438,8 @@ static int fg_get_time_to_full_locked(struct fg_chip *chip, int *val)
 	vbatt_avg /= MILLI_UNIT;
 
 	if (msoc <= 70) {
-		if (ibatt_avg > 2500)
-			ibatt_avg = 2500; /* force max charging current limitations upto 70% battery */
+		if (ibatt_avg > 2400)
+			ibatt_avg = 2400; /* force max charging current limitations upto 70% battery */
 		if (ibatt_avg < 1200)
 			ibatt_avg = 1200; /* force consistent minumum charging current 1200mA upto 70% battery */
 	} else if ((msoc > 70) && (msoc <= 80)) {
