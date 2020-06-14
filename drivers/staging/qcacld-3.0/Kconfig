@@ -1,17 +1,16 @@
 comment "Qualcomm Atheros CLD WLAN module"
 
-config QCACLD_PIE
-	bool "Qcacld-3.0 Wifi PIE source"
-	default y
-
-config QCA_CLD_WLAN
-
+config QCA_CLD_WLAN_PIE
 	tristate "Qualcomm Atheros CLD WLAN module"
 	default n
 	help
 	Add support for the Qualcomm Atheros CLD WLAN module
 
-if QCA_CLD_WLAN != n
+config QCA_CLD_WLAN
+	tristate "Qualcomm Atheros CLD WLAN module"
+	default n
+	help
+	Add support for the Qualcomm Atheros CLD WLAN module
 
 config QCACLD_WLAN_LFR3
 	bool "Enable the WLAN Legacy Fast Roaming feature Version 3"
@@ -188,4 +187,3 @@ config WLAN_FEATURE_PKT_CAPTURE
 	bool "Enable packet capture feature"
 	default n
 
-endif # QCA_CLD_WLAN
