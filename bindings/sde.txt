@@ -473,6 +473,7 @@ Optional properties:
 					0xf represents 4 cpu cores. These cores can be
 					silver or gold or gold+.
 - qcom,sde-qos-cpu-dma-latency:	A u32 value indicating desired PM QoS CPU DMA latency in usec.
+- qcom,sde-qos-cpu-irq-latency:	A u32 value indicating desired PM QoS CPU irq latency in usec.
 - qcom,sde-inline-rot-xin:	An integer array of xin-ids related to inline
 				rotation.
 - qcom,sde-inline-rot-xin-type:	A string array indicating the type of xin,
@@ -740,6 +741,7 @@ Example:
     qcom,sde-qos-cpu-mask = <0x3>;
     qcom,sde-qos-cpu-mask-performance = <0xf>;
     qcom,sde-qos-cpu-dma-latency = <300>;
+    qcom,sde-qos-cpu-irq-latency = <300>;
 
     qcom,sde-vbif-off = <0 0>;
     qcom,sde-vbif-id = <0 1>;
