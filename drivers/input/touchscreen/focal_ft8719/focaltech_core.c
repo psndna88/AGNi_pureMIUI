@@ -1343,7 +1343,7 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
     ts_data->pdata = pdata;
     i2c_set_clientdata(client, ts_data);
 
-    ts_data->ts_workqueue = create_singlethread_workqueue("fts_wq");
+    ts_data->ts_workqueue = alloc_workqueue("fts_wq", WQ_FREEZABLE | WQ_HIGHPRI | WQ_UNBOUND, 0);
     if (NULL == ts_data->ts_workqueue) {
         FTS_ERROR("failed to create fts workqueue");
     }
