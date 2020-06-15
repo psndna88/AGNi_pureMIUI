@@ -861,9 +861,10 @@ int cam_ife_csid_cid_reserve(struct cam_ife_csid_hw *csid_hw,
 	case CAM_IFE_PIX_PATH_RES_IPP:
 		if (csid_hw->ipp_res.res_state !=
 			CAM_ISP_RESOURCE_STATE_AVAILABLE) {
-			CAM_ERR(CAM_ISP,
-				"CSID:%d IPP resource not available",
-				csid_hw->hw_intf->hw_idx);
+			CAM_DBG(CAM_ISP,
+				"CSID:%d IPP resource not available state %d",
+				csid_hw->hw_intf->hw_idx,
+				csid_hw->ipp_res.res_state);
 			rc = -EINVAL;
 			goto end;
 		}
@@ -871,7 +872,7 @@ int cam_ife_csid_cid_reserve(struct cam_ife_csid_hw *csid_hw,
 	case CAM_IFE_PIX_PATH_RES_PPP:
 		if (csid_hw->ppp_res.res_state !=
 			CAM_ISP_RESOURCE_STATE_AVAILABLE) {
-			CAM_ERR(CAM_ISP,
+			CAM_DBG(CAM_ISP,
 				"CSID:%d PPP resource not available state %d",
 				csid_hw->hw_intf->hw_idx,
 				csid_hw->ppp_res.res_state);
@@ -885,10 +886,11 @@ int cam_ife_csid_cid_reserve(struct cam_ife_csid_hw *csid_hw,
 	case CAM_IFE_PIX_PATH_RES_RDI_3:
 		if (csid_hw->rdi_res[cid_reserv->res_id].res_state !=
 			CAM_ISP_RESOURCE_STATE_AVAILABLE) {
-			CAM_ERR(CAM_ISP,
-				"CSID:%d RDI:%d resource not available",
+			CAM_DBG(CAM_ISP,
+				"CSID:%d RDI:%d resource not available state:%d",
 				csid_hw->hw_intf->hw_idx,
-				cid_reserv->res_id);
+				cid_reserv->res_id,
+				csid_hw->rdi_res[cid_reserv->res_id].res_state);
 			rc = -EINVAL;
 			goto end;
 		}
@@ -899,10 +901,11 @@ int cam_ife_csid_cid_reserve(struct cam_ife_csid_hw *csid_hw,
 		id = cid_reserv->res_id - CAM_IFE_PIX_PATH_RES_UDI_0;
 		if (csid_hw->udi_res[id].res_state !=
 			CAM_ISP_RESOURCE_STATE_AVAILABLE) {
-			CAM_ERR(CAM_ISP,
-				"CSID:%d UDI:%d resource not available",
+			CAM_DBG(CAM_ISP,
+				"CSID:%d UDI:%d resource not available state:%d",
 				csid_hw->hw_intf->hw_idx,
-				cid_reserv->res_id);
+				cid_reserv->res_id,
+				csid_hw->udi_res[id].res_state);
 			rc = -EINVAL;
 			goto end;
 		}
@@ -4308,7 +4311,8 @@ irqreturn_t cam_ife_csid_irq(int irq_num, void *data)
 		/* IPP reset done bit */
 		if (irq_status_ipp &
 			BIT(csid_reg->cmn_reg->path_rst_done_shift_val)) {
-			CAM_DBG(CAM_ISP, "CSID IPP reset complete");
+			CAM_DBG(CAM_ISP, "CSID:%d IPP reset complete",
+				csid_hw->hw_intf->hw_idx);
 			complete(&csid_hw->csid_ipp_complete);
 		}
 
@@ -4351,7 +4355,8 @@ irqreturn_t cam_ife_csid_irq(int irq_num, void *data)
 		/* PPP reset done bit */
 		if (irq_status_ppp &
 			BIT(csid_reg->cmn_reg->path_rst_done_shift_val)) {
-			CAM_DBG(CAM_ISP, "CSID PPP reset complete");
+			CAM_DBG(CAM_ISP, "CSID:%d PPP reset complete",
+				csid_hw->hw_intf->hw_idx);
 			complete(&csid_hw->csid_ppp_complete);
 		}
 
@@ -4392,14 +4397,16 @@ irqreturn_t cam_ife_csid_irq(int irq_num, void *data)
 	for (i = 0; i < csid_reg->cmn_reg->num_rdis; i++) {
 		if (irq_status_rdi[i] &
 			BIT(csid_reg->cmn_reg->path_rst_done_shift_val)) {
-			CAM_DBG(CAM_ISP, "CSID RDI%d reset complete", i);
+			CAM_DBG(CAM_ISP, "CSID:%d RDI%d reset complete",
+				csid_hw->hw_intf->hw_idx, i);
 			complete(&csid_hw->csid_rdin_complete[i]);
 		}
 
 		if ((irq_status_rdi[i] & CSID_PATH_INFO_INPUT_SOF) &&
 			(csid_hw->csid_debug & CSID_DEBUG_ENABLE_SOF_IRQ)) {
 			CAM_INFO_RATE_LIMIT(CAM_ISP,
-				"CSID RDI:%d SOF received", i);
+				"CSID:%d RDI:%d SOF received",
+				csid_hw->hw_intf->hw_idx, i);
 			if (csid_hw->sof_irq_triggered)
 				csid_hw->irq_debug_cnt++;
 		}
@@ -4407,16 +4414,18 @@ irqreturn_t cam_ife_csid_irq(int irq_num, void *data)
 		if ((irq_status_rdi[i]  & CSID_PATH_INFO_INPUT_EOF) &&
 			(csid_hw->csid_debug & CSID_DEBUG_ENABLE_EOF_IRQ))
 			CAM_INFO_RATE_LIMIT(CAM_ISP,
-				"CSID RDI:%d EOF received", i);
+				"CSID:%d RDI:%d EOF received",
+				csid_hw->hw_intf->hw_idx, i);
 
 		if ((irq_status_rdi[i] & CSID_PATH_ERROR_CCIF_VIOLATION))
 			CAM_INFO_RATE_LIMIT(CAM_ISP,
-				"CSID RDI :%d CCIF violation", i);
+				"CSID:%d RDI :%d CCIF violation",
+				csid_hw->hw_intf->hw_idx, i);
 
 		if ((irq_status_rdi[i] & CSID_PATH_OVERFLOW_RECOVERY))
 			CAM_INFO_RATE_LIMIT(CAM_ISP,
-				"CSID RDI :%d Overflow due to back pressure",
-				i);
+				"CSID:%d RDI :%d Overflow due to back pressure",
+				csid_hw->hw_intf->hw_idx, i);
 
 		if (irq_status_rdi[i] & CSID_PATH_ERROR_FIFO_OVERFLOW) {
 			CAM_ERR_RATE_LIMIT(CAM_ISP,
@@ -4432,14 +4441,16 @@ irqreturn_t cam_ife_csid_irq(int irq_num, void *data)
 	for (i = 0; i < csid_reg->cmn_reg->num_udis; i++) {
 		if (irq_status_udi[i] &
 			BIT(csid_reg->cmn_reg->path_rst_done_shift_val)) {
-			CAM_DBG(CAM_ISP, "CSID UDI%d reset complete", i);
+			CAM_DBG(CAM_ISP, "CSID:%d UDI%d reset complete",
+				csid_hw->hw_intf->hw_idx, i);
 			complete(&csid_hw->csid_udin_complete[i]);
 		}
 
 		if ((irq_status_udi[i] & CSID_PATH_INFO_INPUT_SOF) &&
 			(csid_hw->csid_debug & CSID_DEBUG_ENABLE_SOF_IRQ)) {
 			CAM_INFO_RATE_LIMIT(CAM_ISP,
-				"CSID UDI:%d SOF received", i);
+				"CSID:%d UDI:%d SOF received",
+				csid_hw->hw_intf->hw_idx, i);
 			if (csid_hw->sof_irq_triggered)
 				csid_hw->irq_debug_cnt++;
 		}
@@ -4447,16 +4458,18 @@ irqreturn_t cam_ife_csid_irq(int irq_num, void *data)
 		if ((irq_status_udi[i]  & CSID_PATH_INFO_INPUT_EOF) &&
 			(csid_hw->csid_debug & CSID_DEBUG_ENABLE_EOF_IRQ))
 			CAM_INFO_RATE_LIMIT(CAM_ISP,
-				"CSID UDI:%d EOF received", i);
+				"CSID:%d UDI:%d EOF received",
+				csid_hw->hw_intf->hw_idx, i);
 
 		if ((irq_status_udi[i] & CSID_PATH_ERROR_CCIF_VIOLATION))
 			CAM_WARN_RATE_LIMIT(CAM_ISP,
-				"CSID UDI :%d CCIF violation", i);
+				"CSID:%d UDI :%d CCIF violation",
+				csid_hw->hw_intf->hw_idx, i);
 
 		if ((irq_status_udi[i] & CSID_PATH_OVERFLOW_RECOVERY))
 			CAM_WARN_RATE_LIMIT(CAM_ISP,
-				"CSID UDI :%d Overflow due to back pressure",
-				i);
+				"CSID:%d UDI :%d Overflow due to back pressure",
+				csid_hw->hw_intf->hw_idx, i);
 
 		if (irq_status_udi[i] & CSID_PATH_ERROR_FIFO_OVERFLOW) {
 			CAM_ERR_RATE_LIMIT(CAM_ISP,
