@@ -13,6 +13,8 @@
 #include "cam_sfe_soc.h"
 #include "cam_sfe_core.h"
 
+#define CAM_SFE_DELAY_BW_REDUCTION_NUM_FRAMES 18
+
 struct cam_sfe_core_cfg {
 	uint32_t   mode_sel;
 	uint32_t   ops_mode_cfg;
@@ -41,6 +43,7 @@ struct cam_sfe_top_priv {
 			CAM_SFE_DELAY_BW_REDUCTION_NUM_FRAMES];
 	enum cam_sfe_bw_control_action  axi_vote_control[
 		CAM_SFE_TOP_IN_PORT_MAX];
+	struct cam_axi_vote             applied_axi_vote;
 	struct cam_sfe_core_cfg         core_cfg;
 	uint32_t                        sfe_debug_cfg;
 	spinlock_t                      spin_lock;
@@ -80,6 +83,279 @@ static const char *cam_sfe_top_res_id_to_string(
 	default:
 		return "";
 	}
+}
+
+static struct cam_axi_vote *cam_sfe_top_delay_bw_reduction(
+	struct cam_sfe_top_priv *top_priv,
+	uint64_t *to_be_applied_bw)
+{
+	uint32_t i, j;
+	int vote_idx = -1;
+	uint64_t max_bw = 0;
+	uint64_t total_bw;
+	struct cam_axi_vote *curr_l_vote;
+
+	for (i = 0; i < CAM_SFE_DELAY_BW_REDUCTION_NUM_FRAMES; i++) {
+		total_bw = 0;
+		curr_l_vote = &top_priv->last_vote[i];
+		for (j = 0; j < curr_l_vote->num_paths; j++) {
+			if (total_bw >
+				(U64_MAX -
+				curr_l_vote->axi_path[j].camnoc_bw)) {
+				CAM_ERR(CAM_PERF,
+					"sfe[%d] : Integer overflow at hist idx: %d, path: %d, total_bw = %llu, camnoc_bw = %llu",
+					top_priv->common_data.hw_intf->hw_idx,
+					i, j, total_bw,
+					curr_l_vote->axi_path[j].camnoc_bw);
+				return NULL;
+			}
+
+			total_bw += curr_l_vote->axi_path[j].camnoc_bw;
+		}
+
+		if (total_bw > max_bw) {
+			vote_idx = i;
+			max_bw = total_bw;
+		}
+	}
+
+	if (vote_idx < 0)
+		return NULL;
+
+	*to_be_applied_bw = max_bw;
+
+	return &top_priv->last_vote[vote_idx];
+}
+
+int cam_sfe_top_set_axi_bw_vote(struct cam_sfe_soc_private *soc_private,
+	struct cam_sfe_top_priv *top_priv, bool start_stop)
+{
+	struct cam_axi_vote agg_vote = {0};
+	struct cam_axi_vote *to_be_applied_axi_vote = NULL;
+	int rc = 0;
+	uint32_t i;
+	uint32_t num_paths = 0;
+	uint64_t total_bw_new_vote = 0;
+	bool bw_unchanged = true;
+	bool apply_bw_update = false;
+
+	for (i = 0; i < top_priv->num_in_ports; i++) {
+		if (top_priv->axi_vote_control[i] ==
+			CAM_SFE_BW_CONTROL_INCLUDE) {
+			if (num_paths +
+				top_priv->req_axi_vote[i].num_paths >
+				CAM_CPAS_MAX_PATHS_PER_CLIENT) {
+				CAM_ERR(CAM_PERF,
+					"Required paths(%d) more than max(%d)",
+					num_paths +
+					top_priv->req_axi_vote[i].num_paths,
+					CAM_CPAS_MAX_PATHS_PER_CLIENT);
+				return -EINVAL;
+			}
+
+			memcpy(&agg_vote.axi_path[num_paths],
+				&top_priv->req_axi_vote[i].axi_path[0],
+				top_priv->req_axi_vote[i].num_paths *
+				sizeof(
+				struct cam_axi_per_path_bw_vote));
+			num_paths += top_priv->req_axi_vote[i].num_paths;
+		}
+	}
+
+	agg_vote.num_paths = num_paths;
+
+	for (i = 0; i < agg_vote.num_paths; i++) {
+		CAM_DBG(CAM_PERF,
+			"sfe[%d] : New BW Vote : counter[%d] [%s][%s] [%llu %llu %llu]",
+			top_priv->common_data.hw_intf->hw_idx,
+			top_priv->last_counter,
+			cam_cpas_axi_util_path_type_to_string(
+			agg_vote.axi_path[i].path_data_type),
+			cam_cpas_axi_util_trans_type_to_string(
+			agg_vote.axi_path[i].transac_type),
+			agg_vote.axi_path[i].camnoc_bw,
+			agg_vote.axi_path[i].mnoc_ab_bw,
+			agg_vote.axi_path[i].mnoc_ib_bw);
+
+		total_bw_new_vote += agg_vote.axi_path[i].camnoc_bw;
+	}
+
+	memcpy(&top_priv->last_vote[top_priv->last_counter], &agg_vote,
+		sizeof(struct cam_axi_vote));
+	top_priv->last_counter = (top_priv->last_counter + 1) %
+		CAM_SFE_DELAY_BW_REDUCTION_NUM_FRAMES;
+
+	if ((agg_vote.num_paths != top_priv->applied_axi_vote.num_paths) ||
+		(total_bw_new_vote != top_priv->total_bw_applied))
+		bw_unchanged = false;
+
+	CAM_DBG(CAM_PERF,
+		"applied_total=%lld, new_total=%lld unchanged=%d, start_stop=%d",
+		top_priv->total_bw_applied,
+		total_bw_new_vote, bw_unchanged, start_stop);
+
+	if (bw_unchanged) {
+		CAM_DBG(CAM_PERF, "BW config unchanged");
+		return 0;
+	}
+
+	if (start_stop) {
+		/* need to vote current request immediately */
+		to_be_applied_axi_vote = &agg_vote;
+		/* Reset everything, we can start afresh */
+		memset(top_priv->last_vote, 0x0, sizeof(struct cam_axi_vote) *
+			CAM_SFE_DELAY_BW_REDUCTION_NUM_FRAMES);
+		top_priv->last_counter = 0;
+		top_priv->last_vote[top_priv->last_counter] = agg_vote;
+		top_priv->last_counter = (top_priv->last_counter + 1) %
+			CAM_SFE_DELAY_BW_REDUCTION_NUM_FRAMES;
+	} else {
+		/*
+		 * Find max bw request in last few frames. This will the bw
+		 * that we want to vote to CPAS now.
+		 */
+		to_be_applied_axi_vote =
+			cam_sfe_top_delay_bw_reduction(top_priv,
+			&total_bw_new_vote);
+		if (!to_be_applied_axi_vote) {
+			CAM_ERR(CAM_PERF, "to_be_applied_axi_vote is NULL");
+			return -EINVAL;
+		}
+	}
+
+	for (i = 0; i < to_be_applied_axi_vote->num_paths; i++) {
+		CAM_DBG(CAM_PERF,
+			"sfe[%d] : Apply BW Vote : [%s][%s] [%llu %llu %llu]",
+			top_priv->common_data.hw_intf->hw_idx,
+			cam_cpas_axi_util_path_type_to_string(
+			to_be_applied_axi_vote->axi_path[i].path_data_type),
+			cam_cpas_axi_util_trans_type_to_string(
+			to_be_applied_axi_vote->axi_path[i].transac_type),
+			to_be_applied_axi_vote->axi_path[i].camnoc_bw,
+			to_be_applied_axi_vote->axi_path[i].mnoc_ab_bw,
+			to_be_applied_axi_vote->axi_path[i].mnoc_ib_bw);
+	}
+
+	if ((to_be_applied_axi_vote->num_paths !=
+		top_priv->applied_axi_vote.num_paths) ||
+		(total_bw_new_vote != top_priv->total_bw_applied))
+		apply_bw_update = true;
+
+	CAM_DBG(CAM_PERF,
+		"sfe[%d] : Delayed update: applied_total=%lld, new_total=%lld apply_bw_update=%d, start_stop=%d",
+		top_priv->common_data.hw_intf->hw_idx,
+		top_priv->total_bw_applied, total_bw_new_vote, apply_bw_update,
+		start_stop);
+
+	if (apply_bw_update) {
+		rc = cam_cpas_update_axi_vote(soc_private->cpas_handle,
+			to_be_applied_axi_vote);
+		if (!rc) {
+			memcpy(&top_priv->applied_axi_vote,
+				to_be_applied_axi_vote,
+				sizeof(struct cam_axi_vote));
+			top_priv->total_bw_applied = total_bw_new_vote;
+		} else {
+			CAM_ERR(CAM_PERF, "BW request failed, rc=%d", rc);
+		}
+	}
+
+	return rc;
+}
+
+int cam_sfe_top_bw_update(struct cam_sfe_soc_private *soc_private,
+	struct cam_sfe_top_priv *top_priv, void *cmd_args,
+	uint32_t arg_size)
+{
+	struct cam_sfe_bw_update_args        *bw_update = NULL;
+	struct cam_isp_resource_node         *res = NULL;
+	struct cam_hw_info                   *hw_info = NULL;
+	int                                   rc = 0;
+	int                                   i;
+
+	bw_update = (struct cam_sfe_bw_update_args *)cmd_args;
+	res = bw_update->node_res;
+
+	if (!res || !res->hw_intf || !res->hw_intf->hw_priv)
+		return -EINVAL;
+
+	hw_info = res->hw_intf->hw_priv;
+
+	if (res->res_type != CAM_ISP_RESOURCE_SFE_IN ||
+		res->res_id >= CAM_ISP_HW_SFE_IN_MAX) {
+		CAM_ERR(CAM_SFE, "SFE:%d Invalid res_type:%d res id%d",
+			res->hw_intf->hw_idx, res->res_type,
+			res->res_id);
+		return -EINVAL;
+	}
+
+	for (i = 0; i < top_priv->num_in_ports; i++) {
+		if (top_priv->in_rsrc[i].res_id == res->res_id) {
+			memcpy(&top_priv->req_axi_vote[i],
+				&bw_update->sfe_vote,
+				sizeof(struct cam_axi_vote));
+			top_priv->axi_vote_control[i] =
+				CAM_SFE_BW_CONTROL_INCLUDE;
+			break;
+		}
+	}
+
+	if (hw_info->hw_state != CAM_HW_STATE_POWER_UP) {
+		CAM_ERR_RATE_LIMIT(CAM_SFE,
+			"SFE:%d Not ready to set BW yet :%d",
+			res->hw_intf->hw_idx,
+			hw_info->hw_state);
+	} else {
+		rc = cam_sfe_top_set_axi_bw_vote(soc_private, top_priv,
+			false);
+	}
+
+	return rc;
+}
+
+int cam_sfe_top_bw_control(struct cam_sfe_soc_private *soc_private,
+	struct cam_sfe_top_priv *top_priv, void *cmd_args,
+	uint32_t arg_size)
+{
+	struct cam_sfe_bw_control_args       *bw_ctrl = NULL;
+	struct cam_isp_resource_node         *res = NULL;
+	struct cam_hw_info                   *hw_info = NULL;
+	int                                   rc = 0;
+	int                                   i;
+
+	bw_ctrl = (struct cam_sfe_bw_control_args *)cmd_args;
+	res = bw_ctrl->node_res;
+
+	if (!res || !res->hw_intf->hw_priv)
+		return -EINVAL;
+
+	hw_info = res->hw_intf->hw_priv;
+
+	if (res->res_type != CAM_ISP_RESOURCE_SFE_IN ||
+		res->res_id >= CAM_ISP_HW_SFE_IN_MAX) {
+		CAM_ERR(CAM_SFE, "SFE:%d Invalid res_type:%d res id%d",
+			res->hw_intf->hw_idx, res->res_type,
+			res->res_id);
+		return -EINVAL;
+	}
+
+	for (i = 0; i < top_priv->num_in_ports; i++) {
+		if (top_priv->in_rsrc[i].res_id == res->res_id) {
+			top_priv->axi_vote_control[i] = bw_ctrl->action;
+			break;
+		}
+	}
+
+	if (hw_info->hw_state != CAM_HW_STATE_POWER_UP) {
+		CAM_ERR_RATE_LIMIT(CAM_SFE,
+			"SFE:%d Not ready to set BW yet :%d",
+			res->hw_intf->hw_idx,
+			hw_info->hw_state);
+	} else {
+		rc = cam_sfe_top_set_axi_bw_vote(soc_private, top_priv, true);
+	}
+
+	return rc;
 }
 
 static int cam_sfe_top_core_cfg(
@@ -292,6 +568,8 @@ int cam_sfe_top_process_cmd(void *priv, uint32_t cmd_type,
 {
 	int rc = 0;
 	struct cam_sfe_top_priv           *top_priv;
+	struct cam_hw_soc_info            *soc_info = NULL;
+	struct cam_sfe_soc_private        *soc_private = NULL;
 
 	if (!priv) {
 		CAM_ERR(CAM_SFE, "Invalid top_priv");
@@ -299,6 +577,13 @@ int cam_sfe_top_process_cmd(void *priv, uint32_t cmd_type,
 	}
 
 	top_priv = (struct cam_sfe_top_priv *) priv;
+	soc_info = top_priv->common_data.soc_info;
+	soc_private = soc_info->soc_private;
+
+	if (!soc_private) {
+		CAM_ERR(CAM_SFE, "soc private is NULL");
+		return -EINVAL;
+	}
 
 	switch (cmd_type) {
 	case CAM_ISP_HW_CMD_GET_CHANGE_BASE:
@@ -310,6 +595,8 @@ int cam_sfe_top_process_cmd(void *priv, uint32_t cmd_type,
 			arg_size);
 		break;
 	case CAM_ISP_HW_CMD_BW_UPDATE_V2:
+		rc = cam_sfe_top_bw_update(soc_private, top_priv,
+			cmd_args, arg_size);
 		break;
 	case CAM_ISP_HW_CMD_BW_CONTROL:
 		break;

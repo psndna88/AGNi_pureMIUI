@@ -21,7 +21,7 @@
 #define CAM_TFE_RDI_NUM_MAX  3
 
 /* Appliacble vote paths for dual ife, based on no. of UAPI definitions */
-#define CAM_ISP_MAX_PER_PATH_VOTES 30
+#define CAM_ISP_MAX_PER_PATH_VOTES 40
 
 /**
  *  enum cam_isp_hw_event_type - Collection of the ISP hardware events

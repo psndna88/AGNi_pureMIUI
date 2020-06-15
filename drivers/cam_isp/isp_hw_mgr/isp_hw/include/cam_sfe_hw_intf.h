@@ -8,6 +8,7 @@
 
 #include "cam_isp_hw.h"
 #include "cam_isp_hw_mgr_intf.h"
+#include "cam_cpas_api.h"
 
 #define SFE_CORE_BASE_IDX           0
 #define SFE_RT_CDM_BASE_IDX         1
@@ -52,6 +53,28 @@ enum cam_sfe_bus_irq_regs {
 enum cam_sfe_bus_rd_irq_regs {
 	CAM_SFE_IRQ_BUS_RD_REG_STATUS0,
 	CAM_SFE_BUS_RD_IRQ_REGISTERS_MAX,
+};
+
+/*
+ * struct cam_sfe_bw_control_args:
+ *
+ * @node_res:             Resource node info
+ * @action:               Bandwidth control action
+ */
+struct cam_sfe_bw_control_args {
+	struct cam_isp_resource_node      *node_res;
+	enum cam_sfe_bw_control_action     action;
+};
+
+/*
+ * struct cam_sfe_bw_update_args:
+ *
+ * @node_res:             Resource to get the BW
+ * @sfe_vote:             Vote info according to usage data (left/right/rdi)
+ */
+struct cam_sfe_bw_update_args {
+	struct cam_isp_resource_node      *node_res;
+	struct cam_axi_vote                sfe_vote;
 };
 
 /*
