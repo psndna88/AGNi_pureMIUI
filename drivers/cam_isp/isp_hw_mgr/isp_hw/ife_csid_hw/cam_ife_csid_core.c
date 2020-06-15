@@ -3928,8 +3928,9 @@ static int cam_ife_csid_sof_irq_debug(
 		csid_hw->sof_irq_triggered = false;
 	}
 
-	CAM_INFO(CAM_ISP, "SOF freeze: CSID SOF irq %s",
-		(sof_irq_enable == true) ? "enabled" : "disabled");
+	CAM_INFO(CAM_ISP, "SOF freeze: CSID SOF irq %s, CSID HW:%d",
+		(sof_irq_enable) ? "enabled" : "disabled",
+		csid_hw->hw_intf->hw_idx);
 
 	return 0;
 }

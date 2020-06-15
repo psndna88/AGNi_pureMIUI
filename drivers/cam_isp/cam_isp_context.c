@@ -28,7 +28,7 @@ static struct cam_isp_ctx_debug isp_ctx_debug;
 	div_u64_rem(atomic64_add_return(1, head),\
 	max_entries, (ret))
 
-static int cam_isp_context_dump_active_request(void *data, unsigned long iova,
+static int cam_isp_context_dump_requests(void *data, unsigned long iova,
 	uint32_t buf_info);
 
 static int __cam_isp_ctx_start_dev_in_ready(struct cam_context *ctx,
@@ -3010,8 +3010,8 @@ static int __cam_isp_ctx_flush_req_in_top_state(
 		ctx_isp->substate_activated = CAM_ISP_CTX_ACTIVATED_HALT;
 		spin_unlock_bh(&ctx->lock);
 
-		CAM_INFO(CAM_ISP, "Last request id to flush is %lld",
-			flush_req->req_id);
+		CAM_INFO(CAM_ISP, "Last request id to flush is %lld, ctx_id:%d",
+			flush_req->req_id, ctx->ctx_id);
 		ctx->last_flush_req = flush_req->req_id;
 
 		memset(&hw_cmd_args, 0, sizeof(hw_cmd_args));
@@ -4583,7 +4583,8 @@ static int __cam_isp_ctx_config_dev_in_flushed(struct cam_context *ctx,
 			"Failed to re-start HW after flush rc: %d", rc);
 	else
 		CAM_INFO(CAM_ISP,
-			"Received init after flush. Re-start HW complete.");
+			"Received init after flush. Re-start HW complete in ctx:%d",
+			ctx->ctx_id);
 
 end:
 	CAM_DBG(CAM_ISP, "next state %d sub_state:%d", ctx->state,
@@ -5152,7 +5153,7 @@ static struct cam_ctx_ops
 			.dump_req = __cam_isp_ctx_dump_in_top_state,
 		},
 		.irq_ops = NULL,
-		.pagefault_ops = cam_isp_context_dump_active_request,
+		.pagefault_ops = cam_isp_context_dump_requests,
 		.dumpinfo_ops = cam_isp_context_info_dump,
 	},
 	/* Ready */
@@ -5169,7 +5170,7 @@ static struct cam_ctx_ops
 			.dump_req = __cam_isp_ctx_dump_in_top_state,
 		},
 		.irq_ops = NULL,
-		.pagefault_ops = cam_isp_context_dump_active_request,
+		.pagefault_ops = cam_isp_context_dump_requests,
 		.dumpinfo_ops = cam_isp_context_info_dump,
 	},
 	/* Flushed */
@@ -5185,7 +5186,7 @@ static struct cam_ctx_ops
 			.process_evt = __cam_isp_ctx_process_evt,
 		},
 		.irq_ops = NULL,
-		.pagefault_ops = cam_isp_context_dump_active_request,
+		.pagefault_ops = cam_isp_context_dump_requests,
 		.dumpinfo_ops = cam_isp_context_info_dump,
 	},
 	/* Activated */
@@ -5204,13 +5205,13 @@ static struct cam_ctx_ops
 			.dump_req = __cam_isp_ctx_dump_in_top_state,
 		},
 		.irq_ops = __cam_isp_ctx_handle_irq_in_activated,
-		.pagefault_ops = cam_isp_context_dump_active_request,
+		.pagefault_ops = cam_isp_context_dump_requests,
 		.dumpinfo_ops = cam_isp_context_info_dump,
 	},
 };
 
 
-static int cam_isp_context_dump_active_request(void *data, unsigned long iova,
+static int cam_isp_context_dump_requests(void *data, unsigned long iova,
 	uint32_t buf_info)
 {
 
@@ -5239,7 +5240,8 @@ static int cam_isp_context_dump_active_request(void *data, unsigned long iova,
 		req_isp = (struct cam_isp_ctx_req *) req->req_priv;
 		hw_update_data = &req_isp->hw_update_data;
 		pf_dbg_entry = &(req->pf_data);
-		CAM_INFO(CAM_ISP, "req_id : %lld ", req->request_id);
+		CAM_INFO(CAM_ISP, "Active List: req_id : %lld ",
+			req->request_id);
 
 		rc = cam_context_dump_pf_info_to_hw(ctx, pf_dbg_entry->packet,
 			iova, buf_info, &mem_found);
@@ -5259,7 +5261,7 @@ static int cam_isp_context_dump_active_request(void *data, unsigned long iova,
 		req_isp = (struct cam_isp_ctx_req *) req->req_priv;
 		hw_update_data = &req_isp->hw_update_data;
 		pf_dbg_entry = &(req->pf_data);
-		CAM_INFO(CAM_ISP, "req_id : %lld ", req->request_id);
+		CAM_INFO(CAM_ISP, "Wait List: req_id : %lld ", req->request_id);
 
 		rc = cam_context_dump_pf_info_to_hw(ctx, pf_dbg_entry->packet,
 			iova, buf_info, &mem_found);
@@ -5289,7 +5291,8 @@ static int cam_isp_context_dump_active_request(void *data, unsigned long iova,
 		req_isp = (struct cam_isp_ctx_req *) req->req_priv;
 		hw_update_data = &req_isp->hw_update_data;
 		pf_dbg_entry = &(req->pf_data);
-		CAM_INFO(CAM_ISP, "req_id : %lld ", req->request_id);
+		CAM_INFO(CAM_ISP, "Pending List: req_id : %lld ",
+			req->request_id);
 
 		rc = cam_context_dump_pf_info_to_hw(ctx, pf_dbg_entry->packet,
 			iova, buf_info, &mem_found);
