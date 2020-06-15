@@ -261,17 +261,28 @@ static int read_platform_resources(struct msm_vidc_core *core,
 			__func__, core, pdev);
 		return -EINVAL;
 	}
+	if (!pdev->dev.of_node) {
+		d_vpr_e("%s: pdev node is NULL\n", __func__);
+		return -EINVAL;
+	}
+
 	core->hfi_type = VIDC_HFI_VENUS;
 	core->resources.pdev = pdev;
-	if (pdev->dev.of_node) {
-		/* Target supports DT, parse from it */
-		rc = read_platform_resources_from_drv_data(core);
-		rc = read_platform_resources_from_dt(&core->resources);
-	} else {
-		d_vpr_e("pdev node is NULL\n");
-		rc = -EINVAL;
+	/* Target supports DT, parse from it */
+	rc = read_platform_resources_from_drv_data(core);
+	if (rc) {
+		d_vpr_e("%s: read platform resources from driver failed\n",
+			__func__);
+		return rc;
 	}
-	return rc;
+
+	rc = read_platform_resources_from_dt(&core->resources);
+	if (rc) {
+		d_vpr_e("%s: read platform resources from dt failed\n",
+			__func__);
+		return rc;
+	}
+	return 0;
 }
 
 static int msm_vidc_initialize_core(struct platform_device *pdev,
