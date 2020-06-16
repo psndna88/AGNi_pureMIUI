@@ -197,6 +197,9 @@ camera-$(CONFIG_SPECTRA_OPE) += \
 	cam_ope/ope_hw_mgr/ope_hw/bus_wr/ope_bus_wr.o
 
 camera-$(CONFIG_SPECTRA_TFE) += \
+	cam_isp/isp_hw_mgr/isp_hw/ppi_hw/cam_csid_ppi_core.o \
+	cam_isp/isp_hw_mgr/isp_hw/ppi_hw/cam_csid_ppi_dev.o \
+	cam_isp/isp_hw_mgr/isp_hw/ppi_hw/cam_csid_ppi100.o \
 	cam_isp/isp_hw_mgr/isp_hw/tfe_hw/cam_tfe_soc.o \
 	cam_isp/isp_hw_mgr/isp_hw/tfe_hw/cam_tfe_dev.o \
 	cam_isp/isp_hw_mgr/isp_hw/tfe_hw/cam_tfe_core.o \
