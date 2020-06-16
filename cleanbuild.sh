@@ -1,7 +1,15 @@
 #!/bin/sh
 export KERNELDIR=`readlink -f .`
 
-COUT="/mnt/ANDROID/COMPILED_OUT"
+if [ -f ~/WORKING_DIRECTORY/AGNi_stamp.sh ]; then
+	. ~/WORKING_DIRECTORY/AGNi_stamp.sh
+fi
+if [ ! -d $COMPILEDIR ]; then
+	COUT=$KERNELDIR/OUTPUT
+	mkdir $COUT
+else
+	COUT=$COMPILEDIR
+fi
 
 echo "`rm -rf $COUT/*`" > /dev/null
 if [ -f $COUT/.config ]; then

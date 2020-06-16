@@ -1,0 +1,8 @@
+
+## AGNI_WIFI
+on boot
+    insmod /vendor/agni/wlan.ko
+    chown wifi wifi /sys/module/wlan/parameters/fwpath
+	# add for DT2W by Manish4586 from xiaomi-sdm660 jasmine
+	write /proc/nvt_wake_gesture 1
+

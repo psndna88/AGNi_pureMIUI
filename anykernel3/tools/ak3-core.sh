@@ -16,7 +16,7 @@ split_img=$home/split_img;
 ui_print() {
   until [ ! "$1" ]; do
     echo -e "ui_print $1
-      ui_print" > /proc/self/fd/$OUTFD;
+      ui_print" >> /proc/self/fd/$OUTFD;
     shift;
   done;
 }
@@ -237,14 +237,14 @@ repack_ramdisk() {
 
 # flash_boot (build, sign and write image only)
 flash_boot() {
-  local varlist i kernel ramdisk fdt cmdline comp part0 part1 nocompflag signfail pk8 cert avbtype;
+  local varlist i kernel ramdisk fdt cmdline comp part0 part1 nocompflag signfail pk8 cert avbtype kernel_type;
 
   cd $split_img;
   if [ -f "$bin/mkimage" ]; then
     varlist="name arch os type comp addr ep";
   elif [ -f "$bin/mkbootimg" -a -f "$bin/unpackelf" -a -f boot.img-base ]; then
     mv -f cmdline.txt boot.img-cmdline 2>/dev/null;
-    varlist="cmdline base pagesize kerneloff ramdiskoff tagsoff";
+    varlist="cmdline base pagesize kernel_offset ramdisk_offset tags_offset";
   fi;
   for i in $varlist; do
     if [ -f boot.img-$i ]; then
@@ -253,6 +253,15 @@ flash_boot() {
   done;
 
   cd $home;
+  ##### AGNi Kernel type selection
+  kerneltype="`cat $home/KERNEL_TYPE`";
+  if [ "$kerneltype" == "MIUIQ" ]; then
+  	mv Image.gz-dtb-mqc Image.gz-dtb;
+  elif [ "$kerneltype" == "NEW" ]; then
+   	mv Image.gz-dtb-nc Image.gz-dtb;
+  elif [ "$kerneltype" == "OLD" ]; then
+   	mv Image.gz-dtb-oc Image.gz-dtb;
+  fi;
   for i in zImage zImage-dtb Image Image-dtb Image.gz Image.gz-dtb Image.bz2 Image.bz2-dtb Image.lzo Image.lzo-dtb Image.lzma Image.lzma-dtb Image.xz Image.xz-dtb Image.lz4 Image.lz4-dtb Image.fit; do
     if [ -f $i ]; then
       kernel=$home/$i;
@@ -304,7 +313,7 @@ flash_boot() {
     $bin/rkcrc -k $ramdisk $home/boot-new.img;
   elif [ -f "$bin/mkbootimg" -a -f "$bin/unpackelf" -a -f boot.img-base ]; then
     test "$dt" && dt="--dt $dt";
-    $bin/mkbootimg --kernel $kernel --ramdisk $ramdisk --cmdline "$cmdline" --base $home --pagesize $pagesize --kernel_offset $kerneloff --ramdisk_offset $ramdiskoff --tags_offset "$tagsoff" $dt --output $home/boot-new.img;
+    $bin/mkbootimg --kernel $kernel --ramdisk $ramdisk --cmdline "$cmdline" --base $home --pagesize $pagesize --kernel_offset $kernel_offset --ramdisk_offset $ramdisk_offset --tags_offset "$tags_offset" $dt --output $home/boot-new.img;
   else
     test "$kernel" && cp -f $kernel kernel;
     test "$ramdisk" && cp -f $ramdisk ramdisk.cpio;
@@ -369,16 +378,16 @@ flash_boot() {
     fi;
     test $? != 0 && signfail=1;
   fi;
-  if [ -f "$bin/BootSignature_Android.jar" -a -d "$bin/avb" ]; then
+  if [ -f "$bin/boot_signer-dexed.jar" -a -d "$bin/avb" ]; then
     pk8=$(ls $bin/avb/*.pk8);
     cert=$(ls $bin/avb/*.x509.*);
     case $block in
       *recovery*|*SOS*) avbtype=recovery;;
       *) avbtype=boot;;
     esac;
-    if [ "$(/system/bin/dalvikvm -Xnoimage-dex2oat -cp $bin/BootSignature_Android.jar com.android.verity.BootSignature -verify boot.img 2>&1 | grep VALID)" ]; then
+    if [ "$(/system/bin/dalvikvm -Xnoimage-dex2oat -cp $bin/boot_signer-dexed.jar com.android.verity.BootSignature -verify boot.img 2>&1 | grep VALID)" ]; then
       echo "Signing with AVBv1..." >&2;
-      /system/bin/dalvikvm -Xnoimage-dex2oat -cp $bin/BootSignature_Android.jar com.android.verity.BootSignature /$avbtype boot-new.img $pk8 $cert boot-new-signed.img;
+      /system/bin/dalvikvm -Xnoimage-dex2oat -cp $bin/boot_signer-dexed.jar com.android.verity.BootSignature /$avbtype boot-new.img $pk8 $cert boot-new-signed.img;
     fi;
   fi;
   if [ $? != 0 -o "$signfail" ]; then
@@ -590,7 +599,7 @@ patch_fstab() {
 
 # patch_cmdline <cmdline entry name> <replacement string>
 patch_cmdline() {
-  local cmdfile cmdtmp match;
+  local cmdfile cmdtmp match osver;
   if [ -f "$split_img/cmdline.txt" ]; then
     cmdfile=$split_img/cmdline.txt;
   else
@@ -604,6 +613,18 @@ patch_cmdline() {
   else
     match=$(grep -o "$1.*$" $cmdfile | cut -d\  -f1);
     sed -i -e "s;${match};${2};" -e 's;  *; ;g' -e 's;[ \t]*$;;' $cmdfile;
+  fi;
+ # AGNi OS detection
+  osver="`cat $home/ANDROIDVER`";
+  if [ "$osver" == "R" ]; then
+    # Android R
+    sed -i 's/androidboot.version=9/androidboot.version=11/' $cmdfile;
+  elif [ "$osver" == "Q" ]; then
+    # Android Q
+    sed -i 's/androidboot.version=9/androidboot.version=10/' $cmdfile;
+  elif [ "$osver" == "OREO" ]; then
+    # Android Oreo
+  	sed -i 's/androidboot.version=9/androidboot.version=8/' $cmdfile;
   fi;
   if [ -f "$home/cmdtmp" ]; then
     sed -i "s|^cmdline=.*|cmdline=$(cat $cmdfile)|" $split_img/header;
@@ -753,6 +774,9 @@ setup_ak() {
       fi;
     ;;
   esac;
+#  if [ ! "$no_block_display" ]; then
+#    ui_print "$block";
+#  fi;
 }
 ###
 

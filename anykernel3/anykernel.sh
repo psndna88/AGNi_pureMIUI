@@ -36,6 +36,7 @@ set_perm_recursive 0 0 750 750 $ramdisk/init* $ramdisk/sbin;
 ## AnyKernel install
 dump_boot;
 
+patch_cmdline androidboot.version androidboot.version=9;
 write_boot;
 ## end install
 
