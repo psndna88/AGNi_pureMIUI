@@ -705,12 +705,20 @@ static struct msm_vidc_common_data default_common_data[] = {
 		.key = "qcom,never-unload-fw",
 		.value = 1,
 	},
+	{
+		.key = "qcom,fw-unload-delay",
+		.value = 1000,
+	},
 };
 
 static struct msm_vidc_common_data lahaina_common_data[] = {
 	{
 		.key = "qcom,never-unload-fw",
 		.value = 1,
+	},
+	{
+		.key = "qcom,fw-unload-delay",
+		.value = 1000,
 	},
 	{
 		.key = "qcom,sw-power-collapse",
@@ -839,6 +847,10 @@ static struct msm_vidc_common_data bengal_common_data_v0[] = {
 		.value = 1,
 	},
 	{
+		.key = "qcom,fw-unload-delay",
+		.value = 1000,
+	},
+	{
 		.key = "qcom,sw-power-collapse",
 		.value = 1,
 	},
@@ -902,6 +914,10 @@ static struct msm_vidc_common_data bengal_common_data_v1[] = {
 		.value = 1,
 	},
 	{
+		.key = "qcom,fw-unload-delay",
+		.value = 1000,
+	},
+	{
 		.key = "qcom,sw-power-collapse",
 		.value = 1,
 	},
@@ -963,6 +979,10 @@ static struct msm_vidc_common_data shima_common_data_v0[] = {
 	{
 		.key = "qcom,never-unload-fw",
 		.value = 1,
+	},
+	{
+		.key = "qcom,fw-unload-delay",
+		.value = 1000,
 	},
 	{
 		.key = "qcom,sw-power-collapse",
@@ -1075,6 +1095,10 @@ static struct msm_vidc_common_data shima_common_data_v1[] = {
 		.value = 1,
 	},
 	{
+		.key = "qcom,fw-unload-delay",
+		.value = 1000,
+	},
+	{
 		.key = "qcom,sw-power-collapse",
 		.value = 1,
 	},
@@ -1184,6 +1208,10 @@ static struct msm_vidc_common_data shima_common_data_v2[] = {
 		.value = 1,
 	},
 	{
+		.key = "qcom,fw-unload-delay",
+		.value = 1000,
+	},
+	{
 		.key = "qcom,sw-power-collapse",
 		.value = 1,
 	},
@@ -1291,6 +1319,10 @@ static struct msm_vidc_common_data holi_common_data[] = {
 	{
 		.key = "qcom,never-unload-fw",
 		.value = 1,
+	},
+	{
+		.key = "qcom,fw-unload-delay",
+		.value = 1000,
 	},
 	{
 		.key = "qcom,sw-power-collapse",
