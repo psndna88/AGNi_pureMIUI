@@ -9,9 +9,16 @@ if [ -f ~/WORKING_DIRECTORY/gcc-8.x-uber_aarch64.sh ];
 	. ~/WORKING_DIRECTORY/gcc-8.x-uber_aarch64.sh
 fi
 
-if [ -f /mnt/ANDROID/COMPILED_OUT/.config ];
+if [ ! -d $COMPILEDIR ]; then
+	COUT=$KERNELDIR/OUTPUT
+	mkdir $COUT
+else
+	COUT=$COMPILEDIR
+fi
+
+if [ -f $COUT/.config ];
 	then
-	make menuconfig O=/mnt/ANDROID/COMPILED_OUT ARCH=arm64
+	make menuconfig O=$COUT ARCH=arm64
 else
 	exit 1
 fi

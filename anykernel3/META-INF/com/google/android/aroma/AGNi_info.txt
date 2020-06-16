@@ -1,0 +1,18 @@
+<@center><b><#selectbg_g>AGNi Kernel</#></b>
+
+<b><#selectbg_g>Message from developer</#></b></@>
+
+<@fill><q>Dynamic memory management based on how much total ram the device has.
+
+Safe Fast charging functionality with precise temperature control.
+
+Optimised for gaming with high performance & less temperatures.
+
+Always updated with latest kernel commits.
+
+Strive for the best performing all in one kernel.
+	
+												Thankyou. </q></@>
+
+
+<@center><b><#selectbg_g>HAVE FUN !</#></b></@>
