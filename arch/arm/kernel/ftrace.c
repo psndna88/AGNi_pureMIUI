@@ -91,7 +91,8 @@ static int ftrace_modify_code(unsigned long pc, unsigned long old,
 	}
 
 	if (validate) {
-		if (probe_kernel_read(&replaced, (void *)pc, MCOUNT_INSN_SIZE))
+		if (copy_from_kernel_nofault(&replaced, (void *)pc,
+				MCOUNT_INSN_SIZE))
 			return -EFAULT;
 
 		if (replaced != old)

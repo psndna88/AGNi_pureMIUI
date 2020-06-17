@@ -1108,7 +1108,7 @@ fetch_store_strlen(unsigned long addr)
 	u8 c;
 
 	do {
-		ret = probe_kernel_read(&c, (u8 *)addr + len, 1);
+		ret = copy_from_kernel_nofault(&c, (u8 *)addr + len, 1);
 		len++;
 	} while (c && ret == 0 && len < MAX_STRING_SIZE);
 
@@ -1178,7 +1178,7 @@ fetch_store_string_user(unsigned long addr, void *dest, void *base)
 static nokprobe_inline int
 probe_mem_read(void *dest, void *src, size_t size)
 {
-	return probe_kernel_read(dest, src, size);
+	return copy_from_kernel_nofault(dest, src, size);
 }
 
 static nokprobe_inline int
