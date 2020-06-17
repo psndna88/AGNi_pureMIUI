@@ -178,10 +178,10 @@ Optional properties:
 				match the number of offsets defined in
 				property: qcom,sde-sspp-off
 - qcom,sde-sspp-clk-status:	Array of offsets describing clk status
-				offsets for dynamic clock gating. 1st value
+				offsets for clock active state. 1st value
 				in the array represents offset of the status
 				register. 2nd value represents bit offset within
-				control register. Number of offsets defined should
+				status register. Number of offsets defined should
 				match the number of offsets defined in
 				property: qcom,sde-sspp-off.
 - qcom,sde-sspp-excl-rect:	Array of u32 values indicating exclusion rectangle
@@ -357,6 +357,13 @@ Optional properties:
 				in the array represents offset of the control
 				register. 2nd value represents bit offset within
 				control register. Number of offsets defined should
+				match the number of offsets defined in
+				property: qcom,sde-wb-off
+- qcom,sde-wb-clk-status:	Array of 2 cell property describing clk status
+				offsets for clock active state. 1st value
+				in the array represents offset of the status
+				register. 2nd value represents bit offset within
+				status register. Number of offsets defined should
 				match the number of offsets defined in
 				property: qcom,sde-wb-off
 - qcom,sde-reg-dma-off:         Array of u32 offset addresses of the dma hardware blocks,
@@ -724,6 +731,7 @@ Example:
 
     qcom,sde-wb-id = <2>;
     qcom,sde-wb-clk-ctrl = <0x2bc 16>;
+    qcom,sde-wb-clk-status = <0x3bc 20>;
 
     qcom,sde-danger-lut = <0x0000ffff 0x0000ffff 0x00000000
 		0x00000000 0x0000ffff 0x0000ffff>, <0x0003ffff

@@ -79,6 +79,7 @@
 		qcom,sde-wb-xin-id = <6>;
 		qcom,sde-wb-id = <2>;
 		qcom,sde-wb-clk-ctrl = <0x2bc 16>;
+		qcom,sde-wb-clk-status = <0x3bc 20>;
 
 		qcom,sde-intf-off = <0x35000 0x36000
 					0x37000 0x38000>;
@@ -155,6 +156,9 @@
 		qcom,sde-sspp-clk-ctrl =
 				<0x2ac 0>, <0x2b4 0>, <0x2bc 0>, <0x2c4 0>,
 				 <0x2ac 8>, <0x2b4 8>, <0x2bc 8>, <0x2c4 8>;
+		qcom,sde-sspp-clk-status =
+				<0x2b0 0>, <0x2b8 0>, <0x2c0 0>, <0x2c8 0>,
+				 <0x2b0 12>, <0x2b8 12>, <0x2c8 12>, <0x2c8 14>;
 		qcom,sde-sspp-csc-off = <0x1a00>;
 		qcom,sde-csc-type = "csc-10bit";
 		qcom,sde-qseed-sw-lib-rev = "qseedv3lite";
