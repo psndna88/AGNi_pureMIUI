@@ -51,6 +51,15 @@ SCHED_FEAT(NONTASK_CAPACITY, true)
  */
 SCHED_FEAT(TTWU_QUEUE, false)
 
+/*
+ * Queue remote wakeups on the target CPU even if the current
+ * CPU and the origin CPU share a cache. Targets L1 cache hits
+ * in addition to L2 cache hits. May increase task wakeup latency.
+ *
+ * Requires TTWU_QUEUE to be enabled.
+ */
+SCHED_FEAT(TTWU_QUEUE_SAME_FORCE, true)
+
 #ifdef HAVE_RT_PUSH_IPI
 /*
  * In order to avoid a thundering herd attack of CPUs that are
