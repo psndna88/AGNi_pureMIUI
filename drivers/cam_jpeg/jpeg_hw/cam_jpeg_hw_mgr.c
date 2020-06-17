@@ -175,7 +175,8 @@ static int cam_jpeg_mgr_process_irq(void *priv, void *data)
 	}
 	buf_data.request_id =
 		PTR_TO_U64(p_cfg_req->hw_cfg_args.priv);
-	ctx_data->ctxt_event_cb(ctx_data->context_priv, 0, &buf_data);
+	ctx_data->ctxt_event_cb(ctx_data->context_priv, CAM_CTX_EVT_ID_SUCCESS,
+		&buf_data);
 
 	mutex_lock(&g_jpeg_hw_mgr.hw_mgr_mutex);
 	list_add_tail(&p_cfg_req->list, &hw_mgr->free_req_list);
@@ -505,7 +506,8 @@ end_callcb:
 		}
 		buf_data.request_id =
 			(uintptr_t)p_cfg_req->hw_cfg_args.priv;
-		ctx_data->ctxt_event_cb(ctx_data->context_priv, 0, &buf_data);
+		ctx_data->ctxt_event_cb(ctx_data->context_priv,
+			CAM_CTX_EVT_ID_ERROR, &buf_data);
 	}
 end_unusedev:
 	mutex_lock(&hw_mgr->hw_mgr_mutex);

@@ -32,7 +32,7 @@ static inline int cam_context_validate_thread(void)
 }
 
 int cam_context_buf_done_from_hw(struct cam_context *ctx,
-	void *done_event_data, uint32_t bubble_state)
+	void *done_event_data, uint32_t evt_id)
 {
 	int j;
 	int result;
@@ -84,21 +84,20 @@ int cam_context_buf_done_from_hw(struct cam_context *ctx,
 	 */
 	list_del_init(&req->list);
 	spin_unlock(&ctx->lock);
-	if (!bubble_state) {
+	if (evt_id == CAM_CTX_EVT_ID_SUCCESS)
 		result = CAM_SYNC_STATE_SIGNALED_SUCCESS;
-	} else {
-		CAM_DBG(CAM_REQ,
-			"[%s][ctx_id %d] : req[%llu] is done with error",
-			ctx->dev_name, ctx->ctx_id, req->request_id);
-
-		for (j = 0; j < req->num_out_map_entries; j++)
-			CAM_DBG(CAM_REQ, "fence %d signaled with error",
-				req->out_map_entries[j].sync_id);
-
+	else  if (evt_id == CAM_CTX_EVT_ID_CANCEL)
+		result = CAM_SYNC_STATE_SIGNALED_CANCEL;
+	else
 		result = CAM_SYNC_STATE_SIGNALED_ERROR;
-	}
+
+	CAM_DBG(CAM_REQ,
+		"[%s][ctx_id %d] : req[%llu] : Signaling %d",
+		ctx->dev_name, ctx->ctx_id, req->request_id, result);
 
 	for (j = 0; j < req->num_out_map_entries; j++) {
+		CAM_DBG(CAM_REQ, "fence %d signal with %d",
+			req->out_map_entries[j].sync_id, result);
 		cam_sync_signal(req->out_map_entries[j].sync_id, result);
 		req->out_map_entries[j].sync_id = -1;
 	}

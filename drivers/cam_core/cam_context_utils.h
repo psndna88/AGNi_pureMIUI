@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_CONTEXT_UTILS_H_
@@ -9,7 +9,7 @@
 #include <linux/types.h>
 
 int cam_context_buf_done_from_hw(struct cam_context *ctx,
-	void *done_event_data, uint32_t bubble_state);
+	void *done_event_data, uint32_t evt_id);
 int32_t cam_context_release_dev_to_hw(struct cam_context *ctx,
 	struct cam_release_dev_cmd *cmd);
 int32_t cam_context_prepare_dev_to_hw(struct cam_context *ctx,
