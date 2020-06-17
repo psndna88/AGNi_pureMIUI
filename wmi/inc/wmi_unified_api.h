@@ -30,6 +30,8 @@
 #include "service_ready_param.h"
 #include "wlan_objmgr_psoc_obj.h"
 #include "wlan_mgmt_txrx_utils_api.h"
+#include <wlan_dfs_public_struct.h>
+#include <wlan_crypto_global_def.h>
 #ifdef WLAN_POWER_MANAGEMENT_OFFLOAD
 #include "wmi_unified_pmo_api.h"
 #endif
@@ -3755,6 +3757,64 @@ QDF_STATUS wmi_unified_send_self_srg_bss_color_bitmap_set_cmd(
  * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
  */
 QDF_STATUS wmi_unified_send_self_srg_partial_bssid_bitmap_set_cmd(
+	wmi_unified_t wmi_handle,  uint32_t bitmap_0,
+	uint32_t bitmap_1, uint8_t pdev_id);
+
+/**
+ * wmi_unified_send_self_srg_obss_color_enable_bitmap_cmd() - Send 64-bit BSS
+ * color enable bitmap to be used by SRG based Spatial Reuse feature to the FW
+ * @wmi_handle: wmi handle
+ * @bitmap_0: lower 32 bits in BSS color enable bitmap
+ * @bitmap_1: upper 32 bits in BSS color enable bitmap
+ * @pdev_id: pdev ID
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS wmi_unified_send_self_srg_obss_color_enable_bitmap_cmd(
+	wmi_unified_t wmi_handle,  uint32_t bitmap_0,
+	uint32_t bitmap_1, uint8_t pdev_id);
+
+/**
+ * wmi_unified_send_self_srg_obss_bssid_enable_bitmap_cmd() - Send 64-bit OBSS
+ * BSSID enable bitmap to be used by SRG based Spatial Reuse feature to the FW
+ * @wmi_handle: wmi handle
+ * @bitmap_0: lower 32 bits in BSSID enable bitmap
+ * @bitmap_1: upper 32 bits in BSSID enable bitmap
+ * @pdev_id: pdev ID
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS wmi_unified_send_self_srg_obss_bssid_enable_bitmap_cmd(
+	wmi_unified_t wmi_handle,  uint32_t bitmap_0,
+	uint32_t bitmap_1, uint8_t pdev_id);
+
+/**
+ * wmi_unified_send_self_non_srg_obss_color_enable_bitmap_cmd() - Send 64-bit
+ * BSS color enable bitmap to be used by Non-SRG based Spatial Reuse
+ * feature to the FW
+ * @wmi_handle: wmi handle
+ * @bitmap_0: lower 32 bits in BSS color enable bitmap
+ * @bitmap_1: upper 32 bits in BSS color enable bitmap
+ * @pdev_id: pdev ID
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS wmi_unified_send_self_non_srg_obss_color_enable_bitmap_cmd(
+	wmi_unified_t wmi_handle,  uint32_t bitmap_0,
+	uint32_t bitmap_1, uint8_t pdev_id);
+
+/**
+ * wmi_unified_send_self_non_srg_obss_bssid_enable_bitmap_cmd() - Send 64-bit
+ * OBSS BSSID enable bitmap to be used by Non-SRG based Spatial Reuse
+ * feature to the FW
+ * @wmi_handle: wmi handle
+ * @bitmap_0: lower 32 bits in BSSID enable bitmap
+ * @bitmap_1: upper 32 bits in BSSID enable bitmap
+ * @pdev_id: pdev ID
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS wmi_unified_send_self_non_srg_obss_bssid_enable_bitmap_cmd(
 	wmi_unified_t wmi_handle,  uint32_t bitmap_0,
 	uint32_t bitmap_1, uint8_t pdev_id);
 #endif /* OBSS_PD */

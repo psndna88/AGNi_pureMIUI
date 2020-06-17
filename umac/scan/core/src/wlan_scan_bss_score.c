@@ -41,6 +41,8 @@
 
 #define SCM_BAND_2G_INDEX                   0
 #define SCM_BAND_5G_INDEX                   1
+#define SCM_BAND_6G_INDEX                   2
+
 /* 2 and 3 are reserved */
 #define SCM_MAX_BAND_INDEX                  4
 
@@ -539,17 +541,44 @@ static int32_t scm_calculate_oce_wan_score(
 }
 
 /**
+ * scm_calculate_oce_subnet_id_weightage () - Calculate oce subnet id weightage
+ * @entry: bss entry
+ * @score_params: bss score params
+ *
+ * Return : oce subnet id score
+ */
+static uint32_t
+scm_calculate_oce_subnet_id_weightage(struct scan_cache_entry *entry,
+				      struct scoring_config *score_params,
+				      bool *oce_subnet_id_present)
+{
+	uint32_t score = 0;
+	uint8_t *mbo_oce_ie;
+
+	mbo_oce_ie = util_scan_entry_mbo_oce(entry);
+	*oce_subnet_id_present = wlan_parse_oce_subnet_id_ie(mbo_oce_ie);
+
+	if (*oce_subnet_id_present)
+		/* Consider 50% weightage of subnet id */
+		score  = (score_params->weight_cfg.oce_subnet_id_weightage *
+			 (MAX_PCT_SCORE / 2));
+
+	return score;
+}
+
+/**
  * scm_calculate_oce_ap_tx_pwr_weightage () - Calculate oce ap tx pwr weightage
  * @entry: bss entry
  * @score_params: bss score params
+ * @ap_tx_pwr_dbm: pointer to hold ap tx power
  *
  * Return : oce ap tx power score
  */
 static uint32_t
 scm_calculate_oce_ap_tx_pwr_weightage(struct scan_cache_entry *entry,
-				      struct scoring_config *score_params)
+				      struct scoring_config *score_params,
+				      int8_t *ap_tx_pwr_dbm)
 {
-	int8_t ap_tx_pwr_dbm = 0;
 	uint8_t *mbo_oce_ie, ap_tx_pwr_factor;
 	struct rssi_cfg_score *rssi_score_param;
 	int32_t best_rssi_threshold, good_rssi_threshold, bad_rssi_threshold;
@@ -558,7 +587,7 @@ scm_calculate_oce_ap_tx_pwr_weightage(struct scan_cache_entry *entry,
 	bool ap_tx_pwr_cap_present = true;
 
 	mbo_oce_ie = util_scan_entry_mbo_oce(entry);
-	if (!wlan_parse_oce_ap_tx_pwr_ie(mbo_oce_ie, &ap_tx_pwr_dbm)) {
+	if (!wlan_parse_oce_ap_tx_pwr_ie(mbo_oce_ie, ap_tx_pwr_dbm)) {
 		ap_tx_pwr_cap_present = false;
 		/* If no OCE AP TX pwr, consider Uplink RSSI = Downlink RSSI */
 		normalized_ap_tx_pwr = entry->rssi_raw;
@@ -569,7 +598,7 @@ scm_calculate_oce_ap_tx_pwr_weightage(struct scan_cache_entry *entry,
 		 * Currently assuming STA Tx Power to be 20dBm, though later it
 		 * need to fetched from hal-phy API.
 		 */
-		normalized_ap_tx_pwr = (20 - (ap_tx_pwr_dbm - entry->rssi_raw));
+		normalized_ap_tx_pwr = (20 - (*ap_tx_pwr_dbm - entry->rssi_raw));
 	}
 
 	rssi_score_param = &score_params->rssi_score;
@@ -605,10 +634,6 @@ scm_calculate_oce_ap_tx_pwr_weightage(struct scan_cache_entry *entry,
 
 	score  = score_params->weight_cfg.oce_ap_tx_pwr_weightage *
 			ap_tx_pwr_factor;
-	scm_debug("ap_tx_pwr_cap_present %d ap_tx_pwr_dbm %d rssi %d normalize_ap_tx_pwr %d score %d weight %d",
-		  ap_tx_pwr_cap_present, ap_tx_pwr_dbm, entry->rssi_raw,
-		  normalized_ap_tx_pwr, score,
-		  score_params->weight_cfg.oce_ap_tx_pwr_weightage);
 
 	return score;
 }
@@ -648,6 +673,35 @@ static uint32_t scm_get_sta_nss(struct wlan_objmgr_psoc *psoc,
 }
 #endif
 
+/**
+ * scm_get_band_score() - Get band prefernce weightage
+ * freq: Operating frequency of the AP
+ * @score_config: Score configuration
+ *
+ * Return : Band score for AP.
+ */
+static int
+scm_get_band_score(uint32_t freq, struct scoring_config *score_config)
+{
+	uint8_t band_index;
+	struct weight_config *weight_config;
+
+	weight_config = &score_config->weight_cfg;
+
+	if (WLAN_REG_IS_5GHZ_CH_FREQ(freq))
+		band_index = SCM_BAND_5G_INDEX;
+	else if (WLAN_REG_IS_24GHZ_CH_FREQ(freq))
+		band_index = SCM_BAND_2G_INDEX;
+	else if (WLAN_REG_IS_6GHZ_CHAN_FREQ(freq))
+		band_index = SCM_BAND_6G_INDEX;
+	else
+		return 0;
+
+	return weight_config->chan_band_weightage *
+	       WLAN_GET_SCORE_PERCENTAGE(score_config->band_weight_per_index,
+					 band_index);
+}
+
 int scm_calculate_bss_score(struct wlan_objmgr_psoc *psoc,
 		struct scan_default_params *params,
 		struct scan_cache_entry *entry,
@@ -666,7 +720,9 @@ int scm_calculate_bss_score(struct wlan_objmgr_psoc *psoc,
 	int32_t congestion_score = 0;
 	int32_t congestion_pct = 0;
 	int32_t oce_wan_score = 0;
-	uint8_t oce_ap_tx_pwr_score;
+	uint8_t oce_ap_tx_pwr_score = 0;
+	uint8_t oce_subnet_id_score = 0;
+	bool oce_subnet_id_present = 0;
 	uint8_t prorated_pcnt;
 	bool is_vht = false;
 	int8_t good_rssi_threshold;
@@ -679,6 +735,7 @@ int scm_calculate_bss_score(struct wlan_objmgr_psoc *psoc,
 	struct wlan_scan_obj *scan_obj;
 	uint32_t sta_nss;
 	struct wlan_objmgr_pdev *pdev = NULL;
+	int8_t ap_tx_pwr_dbm = 0;
 
 	scan_obj = wlan_psoc_get_scan_obj(psoc);
 	if (!scan_obj) {
@@ -700,8 +757,15 @@ int scm_calculate_bss_score(struct wlan_objmgr_psoc *psoc,
 	prorated_pcnt = scm_roam_calculate_prorated_pcnt_by_rssi(
 				&score_config->rssi_score, entry->rssi_raw,
 				weight_config->rssi_weightage);
-	/* If device and AP supports HT caps, extra 10% score will be added */
-	if (score_config->ht_cap && entry->ie_list.htcap)
+
+	/*
+	 * Add HT weight if HT is supported by the AP. In case
+	 * of 6 GHZ AP, HT and VHT won't be supported so that
+	 * these weightage to the same by default to match
+	 * with 2.4/5 GHZ APs where HT, VHT is supported
+	 */
+	if (score_config->ht_cap && (entry->ie_list.htcap ||
+	    WLAN_REG_IS_6GHZ_CHAN_FREQ(entry->channel.chan_freq)))
 		ht_score = prorated_pcnt *
 				weight_config->ht_caps_weightage;
 	score += ht_score;
@@ -712,11 +776,10 @@ int scm_calculate_bss_score(struct wlan_objmgr_psoc *psoc,
 	} else if (score_config->vht_cap) {
 		is_vht = true;
 	}
-	/*
-	 * If device and AP supports VHT caps, Extra 6% score will
-	 * be added to score
-	 */
-	if (is_vht && entry->ie_list.vhtcap)
+
+	/* Add VHT score to 6 GHZ AP to match with 2.4/5 GHZ APs */
+	if (is_vht && (entry->ie_list.vhtcap ||
+	    WLAN_REG_IS_6GHZ_CHAN_FREQ(entry->channel.chan_freq)))
 		vht_score = prorated_pcnt *
 				 weight_config->vht_caps_weightage;
 	score += vht_score;
@@ -757,25 +820,23 @@ int scm_calculate_bss_score(struct wlan_objmgr_psoc *psoc,
 	 */
 	if (congestion_pct < CONGESTION_THRSHOLD_FOR_BAND_OCE_SCORE) {
 		/*
-		 * If AP is on 5Ghz channel , extra weigtage is added to BSS
+		 * If AP is on 5/6 GHZ channel , extra weigtage is added to BSS
 		 * score. if RSSI is greater tha 5g rssi threshold or fall in
-		 * same bucket else give weigtage to 2.4 GH.
+		 * same bucket else give weigtage to 2.4 GHZ AP.
 		 */
 		if ((entry->rssi_raw > rssi_pref_5g_rssi_thresh) &&
 		    !same_bucket) {
-			if (WLAN_REG_IS_5GHZ_CH_FREQ(entry->channel.chan_freq))
-				band_score =
-					weight_config->chan_band_weightage *
-					    WLAN_GET_SCORE_PERCENTAGE(
-					    score_config->band_weight_per_index,
-					    SCM_BAND_5G_INDEX);
+			if (!WLAN_REG_IS_24GHZ_CH_FREQ(entry->channel.chan_freq))
+				band_score = scm_get_band_score(
+						entry->channel.chan_freq,
+						score_config);
 		} else if (WLAN_REG_IS_24GHZ_CH_FREQ(
-						entry->channel.chan_freq)) {
-			band_score = weight_config->chan_band_weightage *
-					WLAN_GET_SCORE_PERCENTAGE(
-					score_config->band_weight_per_index,
-					SCM_BAND_2G_INDEX);
+			   entry->channel.chan_freq)) {
+			band_score =
+				scm_get_band_score(entry->channel.chan_freq,
+						   score_config);
 		}
+
 		score += band_score;
 
 		oce_wan_score = scm_calculate_oce_wan_score(entry,
@@ -784,8 +845,13 @@ int scm_calculate_bss_score(struct wlan_objmgr_psoc *psoc,
 	}
 
 	oce_ap_tx_pwr_score =
-		scm_calculate_oce_ap_tx_pwr_weightage(entry, score_config);
+		scm_calculate_oce_ap_tx_pwr_weightage(entry, score_config,
+						      &ap_tx_pwr_dbm);
 	score += oce_ap_tx_pwr_score;
+	oce_subnet_id_score = scm_calculate_oce_subnet_id_weightage(entry,
+					score_config, &oce_subnet_id_present);
+	score += oce_subnet_id_score;
+
 	pdev = wlan_objmgr_get_pdev_by_id(psoc, entry->pdev_id, WLAN_SCAN_ID);
 	if (!pdev) {
 		scm_err("pdev is NULL");
@@ -813,19 +879,20 @@ int scm_calculate_bss_score(struct wlan_objmgr_psoc *psoc,
 		       score_config->beamformee_cap, score_config->cb_mode_24G,
 		       score_config->cb_mode_5G, sta_nss);
 
-	scm_nofl_debug("Candidate(%pM freq %d): rssi %d HT %d VHT %d HE %d su bfer %d phy %d  air time frac %d qbss %d cong_pct %d NSS %d",
+	scm_nofl_debug("Candidate(%pM freq %d): rssi %d HT %d VHT %d HE %d su bfer %d phy %d  air time frac %d qbss %d cong_pct %d NSS %d ap_tx_pwr_dbm %d oce_subnet_id_present %d",
 		       entry->bssid.bytes, entry->channel.chan_freq,
 		       entry->rssi_raw, util_scan_entry_htcap(entry) ? 1 : 0,
 		       util_scan_entry_vhtcap(entry) ? 1 : 0,
 		       util_scan_entry_hecap(entry) ? 1 : 0, ap_su_beam_former,
 		       entry->phy_mode, entry->air_time_fraction,
-		       entry->qbss_chan_load, congestion_pct, entry->nss);
+		       entry->qbss_chan_load, congestion_pct, entry->nss,
+		       ap_tx_pwr_dbm, oce_subnet_id_present);
 
-	scm_nofl_debug("Scores: prorated_pcnt %d rssi %d pcl %d ht %d vht %d he %d bfee %d bw %d band %d congestion %d nss %d oce wan %d oce ap tx pwr %d TOTAL %d",
+	scm_nofl_debug("Scores: prorated_pcnt %d rssi %d pcl %d ht %d vht %d he %d bfee %d bw %d band %d congestion %d nss %d oce wan %d oce ap tx pwr %d subnet id score %d TOTAL %d",
 		       prorated_pcnt, rssi_score, pcl_score, ht_score,
 		       vht_score, he_score, beamformee_score, bandwidth_score,
 		       band_score, congestion_score, nss_score, oce_wan_score,
-		       oce_ap_tx_pwr_score, score);
+		       oce_ap_tx_pwr_score, oce_subnet_id_score, score);
 
 	entry->bss_score = score;
 	return score;

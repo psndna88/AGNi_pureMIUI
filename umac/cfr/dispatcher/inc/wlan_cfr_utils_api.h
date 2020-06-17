@@ -51,6 +51,7 @@
 #define MAX_TA_RA_ENTRIES 16
 #define MAX_RESET_CFG_ENTRY 0xFFFF
 #define CFR_INVALID_VDEV_ID 0xff
+#define DEFAULT_SRNGID_CFR 0
 #endif
 
 enum cfrmetaversion {
@@ -91,6 +92,7 @@ enum cfrradiotype {
 	CFR_CAPTURE_RADIO_HKV2,
 	CFR_CAPTURE_RADIO_CYP,
 	CFR_CAPTURE_RADIO_HSP,
+	CFR_CAPTURE_RADIO_PINE,
 	CFR_CAPTURE_RADIO_MAX = 0xFF,
 };
 
@@ -442,12 +444,19 @@ struct cfr_rcc_param {
  * dir_ptr: Parent directory of relayfs file
  * lut: lookup table used to store asynchronous DBR and TX/RX events for
  * correlation
+ * lut_num: Number of lut
  * dbr_buf_size: Size of DBR completion buffer
  * dbr_num_bufs: No. of DBR completions
  * tx_evt_cnt: No. of TX completion events till CFR stop was issued
  * total_tx_evt_cnt: No. of Tx completion events since wifi was up
  * dbr_evt_cnt: No. of WMI DBR completion events
  * release_cnt: No. of CFR data buffers relayed to userspace
+ * tx_peer_status_cfr_fail: No. of tx events without tx status set to
+ * PEER_CFR_CAPTURE_EVT_STATUS_MASK indicating CFR capture failure on a peer.
+ * tx_evt_status_cfr_fail: No. of tx events without tx status set to
+ * CFR_TX_EVT_STATUS_MASK indicating CFR capture status failure.
+ * tx_dbr_cookie_lookup_fail: No. of dbr cookie lookup failures during tx event
+ * process.
  * rcc_param: Structure to store CFR config for the current commit session
  * global: Structure to store accumulated CFR config
  * rx_tlv_evt_cnt: Number of CFR WDI events from datapath
@@ -483,13 +492,17 @@ struct pdev_cfr {
 	uint32_t subbuf_size;
 	qdf_streamfs_chan_t chan_ptr;
 	qdf_dentry_t dir_ptr;
-	struct look_up_table lut[MAX_LUT_ENTRIES];
+	struct look_up_table **lut;
+	uint32_t lut_num;
 	uint32_t dbr_buf_size;
 	uint32_t dbr_num_bufs;
 	uint64_t tx_evt_cnt;
 	uint64_t total_tx_evt_cnt;
 	uint64_t dbr_evt_cnt;
 	uint64_t release_cnt;
+	uint64_t tx_peer_status_cfr_fail;
+	uint64_t tx_evt_status_cfr_fail;
+	uint64_t tx_dbr_cookie_lookup_fail;
 #ifdef WLAN_ENH_CFR_ENABLE
 	struct cfr_rcc_param rcc_param;
 	struct ta_ra_cfr_cfg global[MAX_TA_RA_ENTRIES];

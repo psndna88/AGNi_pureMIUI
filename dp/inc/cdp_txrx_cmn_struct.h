@@ -43,6 +43,10 @@
 #include "cdp_txrx_extd_struct.h"
 #endif
 
+#ifdef WLAN_MAX_CLIENTS_ALLOWED
+#define OL_TXRX_NUM_LOCAL_PEER_IDS (WLAN_MAX_CLIENTS_ALLOWED + 1 + 1 + 1)
+#endif
+
 #ifndef OL_TXRX_NUM_LOCAL_PEER_IDS
 /*
  * Each AP will occupy one ID, so it will occupy two IDs for AP-AP mode.
@@ -974,10 +978,12 @@ struct cdp_soc_t {
  *			to set values in peer
  * @CDP_CONFIG_NAWDS: Enable nawds mode
  * @CDP_CONFIG_NAC: Enable nac
+ * @CDP_CONFIG_ISOLATION : Enable isolation
  */
 enum cdp_peer_param_type {
 	CDP_CONFIG_NAWDS,
 	CDP_CONFIG_NAC,
+	CDP_CONFIG_ISOLATION,
 };
 
 /*
@@ -1046,6 +1052,7 @@ enum cdp_pdev_param_type {
  *			to set values into dp handles.
  *
  * @cdp_peer_param_nawds: Enable nawds mode
+ * @cdp_peer_param_isolation: Enable isolation
  * @cdp_peer_param_nac: Enable nac
  *
  * @cdp_vdev_param_nawds: set nawds enable/disable
@@ -1100,6 +1107,7 @@ enum cdp_pdev_param_type {
 typedef union cdp_config_param_t {
 	/* peer params */
 	bool cdp_peer_param_nawds;
+	bool cdp_peer_param_isolation;
 	uint8_t cdp_peer_param_nac;
 
 	/* vdev params */

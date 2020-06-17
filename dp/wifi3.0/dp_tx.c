@@ -103,6 +103,30 @@ dp_tx_limit_check(struct dp_vdev *vdev)
 }
 
 /**
+ * dp_tx_exception_limit_check - Check if allocated tx exception descriptors
+ * reached soc max limit
+ * @vdev: DP vdev handle
+ *
+ * Return: true if allocated tx descriptors reached max configured value, else
+ * false
+ */
+static inline bool
+dp_tx_exception_limit_check(struct dp_vdev *vdev)
+{
+	struct dp_pdev *pdev = vdev->pdev;
+	struct dp_soc *soc = pdev->soc;
+
+	if (qdf_atomic_read(&soc->num_tx_exception) >=
+			soc->num_msdu_exception_desc) {
+		dp_info("exc packets are more than max drop the exc pkt");
+		DP_STATS_INC(vdev, tx_i.dropped.exc_desc_na.num, 1);
+		return true;
+	}
+
+	return false;
+}
+
+/**
  * dp_tx_outstanding_inc - Increment outstanding tx desc values on pdev and soc
  * @vdev: DP pdev handle
  *
@@ -135,6 +159,12 @@ dp_tx_outstanding_dec(struct dp_pdev *pdev)
 #else //QCA_TX_LIMIT_CHECK
 static inline bool
 dp_tx_limit_check(struct dp_vdev *vdev)
+{
+	return false;
+}
+
+static inline bool
+dp_tx_exception_limit_check(struct dp_vdev *vdev)
 {
 	return false;
 }
@@ -274,7 +304,7 @@ dp_tx_desc_release(struct dp_tx_desc_s *tx_desc, uint8_t desc_pool_id)
 		dp_tx_me_free_buf(tx_desc->pdev, tx_desc->me_buffer);
 
 	if (tx_desc->flags & DP_TX_DESC_FLAG_TO_FW)
-		qdf_atomic_dec(&pdev->num_tx_exception);
+		qdf_atomic_dec(&soc->num_tx_exception);
 
 	if (HAL_TX_COMP_RELEASE_SOURCE_TQM ==
 				hal_tx_comp_get_buffer_source(&tx_desc->comp))
@@ -681,7 +711,7 @@ struct dp_tx_ext_desc_elem_s *dp_tx_prepare_ext_desc(struct dp_vdev *vdev,
 		qdf_mem_copy(&cached_ext_desc[HAL_TX_EXTENSION_DESC_LEN_BYTES],
 				&msdu_info->meta_data[0],
 				sizeof(struct htt_tx_msdu_desc_ext2_t));
-		qdf_atomic_inc(&vdev->pdev->num_tx_exception);
+		qdf_atomic_inc(&soc->num_tx_exception);
 	}
 
 	switch (msdu_info->frm_type) {
@@ -872,7 +902,7 @@ struct dp_tx_desc_s *dp_tx_prepare_desc_single(struct dp_vdev *vdev,
 	{
 		/* Temporary WAR due to TQM VP issues */
 		tx_desc->flags |= DP_TX_DESC_FLAG_TO_FW;
-		qdf_atomic_inc(&pdev->num_tx_exception);
+		qdf_atomic_inc(&soc->num_tx_exception);
 	}
 
 	return tx_desc;
@@ -942,7 +972,7 @@ static struct dp_tx_desc_s *dp_tx_prepare_desc(struct dp_vdev *vdev,
 #if TQM_BYPASS_WAR
 	/* Temporary WAR due to TQM VP issues */
 	tx_desc->flags |= DP_TX_DESC_FLAG_TO_FW;
-	qdf_atomic_inc(&pdev->num_tx_exception);
+	qdf_atomic_inc(&soc->num_tx_exception);
 #endif
 	if (qdf_unlikely(msdu_info->exception_fw))
 		tx_desc->flags |= DP_TX_DESC_FLAG_TO_FW;
@@ -1632,8 +1662,8 @@ int dp_tx_frame_is_drop(struct dp_vdev *vdev, uint8_t *srcmac, uint8_t *dstmac)
 	src_ast_entry = dp_peer_ast_hash_find_by_pdevid
 				(soc, srcmac, vdev->pdev->pdev_id);
 	if (dst_ast_entry && src_ast_entry) {
-		if (dst_ast_entry->peer->peer_ids[0] ==
-				src_ast_entry->peer->peer_ids[0])
+		if (dst_ast_entry->peer->peer_id ==
+				src_ast_entry->peer->peer_id)
 			return 1;
 	}
 
@@ -2212,6 +2242,12 @@ dp_tx_send_exception(struct cdp_soc_t *soc, uint8_t vdev_id, qdf_nbuf_t nbuf,
 	 */
 	dp_tx_get_queue(vdev, nbuf, &msdu_info.tx_queue);
 
+	/*
+	 * Check exception descriptors
+	 */
+	if (dp_tx_exception_limit_check(vdev))
+		goto fail;
+
 	/*  Single linear frame */
 	/*
 	 * If nbuf is a simple linear frame, use send_single function to
@@ -2360,7 +2396,7 @@ void dp_tx_nawds_handler(struct cdp_soc_t *soc, struct dp_vdev *vdev,
 	qdf_spin_lock_bh(&dp_soc->peer_ref_mutex);
 	TAILQ_FOREACH(peer, &vdev->peer_list, peer_list_elem) {
 		if (!peer->bss_peer && peer->nawds_enabled) {
-			peer_id = peer->peer_ids[0];
+			peer_id = peer->peer_id;
 			/* Multicast packets needs to be
 			 * dropped in case of intra bss forwarding
 			 */
@@ -2640,7 +2676,7 @@ void dp_tx_reinject_handler(struct dp_tx_desc_s *tx_desc, uint8_t *status)
 		DP_TX_FREE_SINGLE_BUF(vdev->pdev->soc, tx_desc->nbuf);
 	} else {
 		TAILQ_FOREACH(peer, &vdev->peer_list, peer_list_elem) {
-			if ((peer->peer_ids[0] != HTT_INVALID_PEER) &&
+			if ((peer->peer_id != HTT_INVALID_PEER) &&
 #ifdef WDS_VENDOR_EXTENSION
 			/*
 			 * . if 3-addr STA, then send on BSS Peer
@@ -3350,6 +3386,7 @@ void dp_tx_comp_process_tx_status(struct dp_tx_desc_s *tx_desc,
 	struct dp_soc *soc = NULL;
 	struct dp_vdev *vdev = tx_desc->vdev;
 	qdf_nbuf_t nbuf = tx_desc->nbuf;
+	uint8_t dp_status;
 
 	if (!vdev || !nbuf) {
 		dp_info_rl("invalid tx descriptor. vdev or nbuf NULL");
@@ -3358,13 +3395,14 @@ void dp_tx_comp_process_tx_status(struct dp_tx_desc_s *tx_desc,
 
 	eh = (qdf_ether_header_t *)qdf_nbuf_data(nbuf);
 
+	dp_status = qdf_dp_get_status_from_htt(ts->status);
 	DPTRACE(qdf_dp_trace_ptr(tx_desc->nbuf,
 				 QDF_DP_TRACE_LI_DP_FREE_PACKET_PTR_RECORD,
 				 QDF_TRACE_DEFAULT_PDEV_ID,
 				 qdf_nbuf_data_addr(nbuf),
 				 sizeof(qdf_nbuf_data(nbuf)),
 				 tx_desc->id,
-				 ts->status));
+				 dp_status));
 
 	QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_DEBUG,
 				"-------------------- \n"
@@ -3702,7 +3740,7 @@ uint32_t dp_tx_comp_handler(struct dp_intr *int_ctx, struct dp_soc *soc,
 	struct dp_tx_desc_s *head_desc = NULL;
 	struct dp_tx_desc_s *tail_desc = NULL;
 	uint32_t num_processed = 0;
-	uint32_t count = 0;
+	uint32_t count;
 	uint32_t num_avail_for_reap = 0;
 	bool force_break = false;
 
@@ -3712,6 +3750,7 @@ more_data:
 	/* Re-initialize local variables to be re-used */
 	head_desc = NULL;
 	tail_desc = NULL;
+	count = 0;
 
 	if (qdf_unlikely(dp_srng_access_start(int_ctx, soc, hal_ring_hdl))) {
 		dp_err("HAL RING Access Failed -- %pK", hal_ring_hdl);
@@ -4050,9 +4089,8 @@ dp_is_tx_desc_flush_match(struct dp_pdev *pdev,
  * the outstanding TX data or reset Vdev to NULL in associated TX
  * Desc.
  */
-static void dp_tx_desc_flush(struct dp_pdev *pdev,
-			     struct dp_vdev *vdev,
-			     bool force_free)
+void dp_tx_desc_flush(struct dp_pdev *pdev, struct dp_vdev *vdev,
+		      bool force_free)
 {
 	uint8_t i;
 	uint32_t j;
@@ -4135,9 +4173,8 @@ dp_tx_desc_reset_vdev(struct dp_soc *soc, struct dp_tx_desc_s *tx_desc,
 	TX_DESC_LOCK_UNLOCK(&soc->tx_desc[desc_pool_id].lock);
 }
 
-static void dp_tx_desc_flush(struct dp_pdev *pdev,
-			     struct dp_vdev *vdev,
-			     bool force_free)
+void dp_tx_desc_flush(struct dp_pdev *pdev, struct dp_vdev *vdev,
+		      bool force_free)
 {
 	uint8_t i, num_pool;
 	uint32_t j;
@@ -4211,7 +4248,6 @@ QDF_STATUS dp_tx_pdev_init(struct dp_pdev *pdev)
 	struct dp_soc *soc = pdev->soc;
 
 	/* Initialize Flow control counters */
-	qdf_atomic_init(&pdev->num_tx_exception);
 	qdf_atomic_init(&pdev->num_tx_outstanding);
 
 	if (wlan_cfg_per_pdev_tx_ring(soc->wlan_cfg_ctx)) {

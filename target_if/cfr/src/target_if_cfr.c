@@ -49,6 +49,10 @@ int target_if_cfr_stop_capture(struct wlan_objmgr_pdev *pdev,
 		return -EINVAL;
 
 	pdev_wmi_handle = lmac_get_pdev_wmi_handle(pdev);
+	if (!pdev_wmi_handle) {
+		cfr_err("pdev wmi handle NULL");
+		return -EINVAL;
+	}
 	vdev = wlan_peer_get_vdev(peer);
 
 	qdf_mem_set(&param, sizeof(param), 0);
@@ -78,6 +82,9 @@ int target_if_cfr_stop_capture(struct wlan_objmgr_pdev *pdev,
 	pdev_cfrobj->dbr_evt_cnt = 0;
 	pdev_cfrobj->tx_evt_cnt  = 0;
 	pdev_cfrobj->release_cnt = 0;
+	pdev_cfrobj->tx_peer_status_cfr_fail = 0;
+	pdev_cfrobj->tx_evt_status_cfr_fail = 0;
+	pdev_cfrobj->tx_dbr_cookie_lookup_fail = 0;
 
 	return retv;
 }
@@ -92,6 +99,10 @@ int target_if_cfr_start_capture(struct wlan_objmgr_pdev *pdev,
 	int retv = 0;
 
 	pdev_wmi_handle = lmac_get_pdev_wmi_handle(pdev);
+	if (!pdev_wmi_handle) {
+		cfr_err("pdev wmi handle NULL");
+		return -EINVAL;
+	}
 	vdev = wlan_peer_get_vdev(peer);
 	qdf_mem_set(&param, sizeof(param), 0);
 
@@ -112,16 +123,22 @@ int target_if_cfr_pdev_set_param(struct wlan_objmgr_pdev *pdev,
 {
 	struct pdev_params pparam;
 	uint32_t pdev_id;
+	struct wmi_unified *pdev_wmi_handle = NULL;
 
 	pdev_id = wlan_objmgr_pdev_get_pdev_id(pdev);
 	if (pdev_id < 0)
 		return -EINVAL;
 
+	pdev_wmi_handle = lmac_get_pdev_wmi_handle(pdev);
+	if (!pdev_wmi_handle) {
+		cfr_err("pdev wmi handle NULL");
+		return -EINVAL;
+	}
 	qdf_mem_set(&pparam, sizeof(pparam), 0);
 	pparam.param_id = param_id;
 	pparam.param_value = param_value;
 
-	return wmi_unified_pdev_param_send(lmac_get_pdev_wmi_handle(pdev),
+	return wmi_unified_pdev_param_send(pdev_wmi_handle,
 					   &pparam, pdev_id);
 }
 
@@ -162,8 +179,14 @@ int target_if_cfr_get_target_type(struct wlan_objmgr_psoc *psoc)
 {
 	uint32_t target_type = 0;
 	struct wlan_lmac_if_target_tx_ops *target_type_tx_ops;
+	struct wlan_lmac_if_tx_ops *tx_ops;
 
-	target_type_tx_ops = &psoc->soc_cb.tx_ops.target_tx_ops;
+	tx_ops = wlan_psoc_get_lmac_if_txops(psoc);
+	if (!tx_ops) {
+		cfr_err("tx_ops is NULL");
+		return target_type;
+	}
+	target_type_tx_ops = &tx_ops->target_tx_ops;
 
 	if (target_type_tx_ops->tgt_get_tgt_type)
 		target_type = target_type_tx_ops->tgt_get_tgt_type(psoc);
@@ -246,7 +269,8 @@ int target_if_cfr_init_pdev(struct wlan_objmgr_psoc *psoc,
 		pa->is_cfr_capable = cfr_sc->is_cfr_capable;
 
 		return cfr_wifi2_0_init_pdev(psoc, pdev);
-	} else if (target_type == TARGET_TYPE_QCA6018) {
+	} else if ((target_type == TARGET_TYPE_QCA6018) ||
+		   (target_type == TARGET_TYPE_QCN9000)) {
 		pa->is_cfr_capable = cfr_sc->is_cfr_capable;
 		return cfr_6018_init_pdev(psoc, pdev);
 	} else
@@ -272,7 +296,8 @@ int target_if_cfr_deinit_pdev(struct wlan_objmgr_psoc *psoc,
 		   (target_type == TARGET_TYPE_QCA9888)) {
 
 		return cfr_wifi2_0_deinit_pdev(psoc, pdev);
-	} else if (target_type == TARGET_TYPE_QCA6018) {
+	} else if ((target_type == TARGET_TYPE_QCA6018) ||
+		   (target_type == TARGET_TYPE_QCN9000)) {
 		return cfr_6018_deinit_pdev(psoc, pdev);
 	} else
 		return QDF_STATUS_E_NOSUPPORT;
@@ -468,8 +493,15 @@ void target_if_cfr_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 void target_if_cfr_set_cfr_support(struct wlan_objmgr_psoc *psoc,
 				   uint8_t value)
 {
-	if (psoc->soc_cb.rx_ops.cfr_rx_ops.cfr_support_set)
-		psoc->soc_cb.rx_ops.cfr_rx_ops.cfr_support_set(psoc, value);
+	struct wlan_lmac_if_rx_ops *rx_ops;
+
+	rx_ops = wlan_psoc_get_lmac_if_rxops(psoc);
+	if (!rx_ops) {
+		cfr_err("rx_ops is NULL");
+		return;
+	}
+	if (rx_ops->cfr_rx_ops.cfr_support_set)
+		rx_ops->cfr_rx_ops.cfr_support_set(psoc, value);
 }
 
 void target_if_cfr_info_send(struct wlan_objmgr_pdev *pdev, void *head,
@@ -477,11 +509,16 @@ void target_if_cfr_info_send(struct wlan_objmgr_pdev *pdev, void *head,
 			     size_t tlen)
 {
 	struct wlan_objmgr_psoc *psoc;
+	struct wlan_lmac_if_rx_ops *rx_ops;
 
 	psoc = wlan_pdev_get_psoc(pdev);
 
-	if (psoc->soc_cb.rx_ops.cfr_rx_ops.cfr_info_send)
-		psoc->soc_cb.rx_ops.cfr_rx_ops.cfr_info_send(pdev, head, hlen,
-							     data, dlen, tail,
-							     tlen);
+	rx_ops = wlan_psoc_get_lmac_if_rxops(psoc);
+	if (!rx_ops) {
+		cfr_err("rx_ops is NULL");
+		return;
+	}
+	if (rx_ops->cfr_rx_ops.cfr_info_send)
+		rx_ops->cfr_rx_ops.cfr_info_send(pdev, head, hlen, data, dlen,
+						 tail, tlen);
 }

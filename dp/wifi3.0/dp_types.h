@@ -1300,6 +1300,8 @@ struct dp_soc {
 	struct wlan_srng_cfg *wlan_srng_cfg;
 	/* Num Tx outstanding on device */
 	qdf_atomic_t num_tx_outstanding;
+	/* Num Tx exception on device */
+	qdf_atomic_t num_tx_exception;
 	/* Num Tx allowed */
 	uint32_t num_tx_allowed;
 	/* Preferred HW mode */
@@ -1336,6 +1338,8 @@ struct dp_soc {
 		qdf_nbuf_t wbm_sg_nbuf_tail;
 		uint32_t wbm_sg_desc_msdu_len;
 	} wbm_sg_param;
+	/* Number of msdu exception descriptors */
+	uint32_t num_msdu_exception_desc;
 };
 
 #ifdef IPA_OFFLOAD
@@ -2204,9 +2208,8 @@ struct dp_peer {
 
 	qdf_atomic_t ref_cnt;
 
-	/* TODO: See if multiple peer IDs are required in wifi3.0 */
-	/* peer ID(s) for this peer */
-	uint16_t peer_ids[MAX_NUM_PEER_ID_PER_PEER];
+	/* peer ID for this peer */
+	uint16_t peer_id;
 
 	union dp_align_mac_addr mac_addr;
 
@@ -2236,6 +2239,10 @@ struct dp_peer {
 		tx_cap_enabled:1, /* Peer's tx-capture is enabled */
 		rx_cap_enabled:1, /* Peer's rx-capture is enabled */
 		valid:1; /* valid bit */
+
+#ifdef QCA_SUPPORT_PEER_ISOLATION
+	bool isolation; /* enable peer isolation for this peer */
+#endif
 
 	/* MCL specific peer local id */
 	uint16_t local_id;

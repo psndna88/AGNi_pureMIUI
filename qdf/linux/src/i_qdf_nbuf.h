@@ -108,6 +108,7 @@ typedef union {
  * @rx.dev.priv_cb_m.flush_ind: flush indication
  * @rx.dev.priv_cb_m.packet_buf_pool:  packet buff bool
  * @rx.dev.priv_cb_m.l3_hdr_pad: L3 header padding offset
+ * @rx.dev.priv_cb_m.exc_frm: exception frame
  * @rx.dev.priv_cb_m.tcp_seq_num: TCP sequence number
  * @rx.dev.priv_cb_m.tcp_ack_num: TCP ACK number
  * @rx.dev.priv_cb_m.lro_ctx: LRO context
@@ -224,7 +225,9 @@ struct qdf_nbuf_cb {
 						 flush_ind:1,
 						 packet_buf_pool:1,
 						 l3_hdr_pad:3,
-						 reserved:9,
+						 /* exception frame flag */
+						 exc_frm:1,
+						 reserved:8,
 						 reserved1:16;
 					uint32_t tcp_seq_num;
 					uint32_t tcp_ack_num;
@@ -333,8 +336,15 @@ struct qdf_nbuf_cb {
 	} u;
 }; /* struct qdf_nbuf_cb: MAX 48 bytes */
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 16, 0))
 QDF_COMPILE_TIME_ASSERT(qdf_nbuf_cb_size,
-	(sizeof(struct qdf_nbuf_cb)) <= FIELD_SIZEOF(struct sk_buff, cb));
+			(sizeof(struct qdf_nbuf_cb)) <=
+			sizeof_field(struct sk_buff, cb));
+#else
+QDF_COMPILE_TIME_ASSERT(qdf_nbuf_cb_size,
+			(sizeof(struct qdf_nbuf_cb)) <=
+			FIELD_SIZEOF(struct sk_buff, cb));
+#endif
 
 /**
  *  access macros to qdf_nbuf_cb

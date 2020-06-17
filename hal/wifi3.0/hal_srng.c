@@ -273,6 +273,12 @@ error:
 
 static void hal_target_based_configure(struct hal_soc *hal)
 {
+	/**
+	 * Indicate Initialization of srngs to avoid force wake
+	 * as umac power collapse is not enabled yet
+	 */
+	hal->init_phase = true;
+
 	switch (hal->target_type) {
 #ifdef QCA_WIFI_QCA6290
 	case TARGET_TYPE_QCA6290:
@@ -290,6 +296,7 @@ static void hal_target_based_configure(struct hal_soc *hal)
 	case TARGET_TYPE_QCA6490:
 		hal->use_register_windowing = true;
 		hal_qca6490_attach(hal);
+		hal->init_phase = false;
 	break;
 #endif
 #ifdef QCA_WIFI_QCA6750
@@ -330,6 +337,8 @@ static void hal_target_based_configure(struct hal_soc *hal)
 #endif
 #ifdef QCA_WIFI_QCA5018
 	case TARGET_TYPE_QCA5018:
+		hal->use_register_windowing = true;
+		hal->static_window_map = true;
 		hal_qca5018_attach(hal);
 	break;
 #endif
@@ -732,7 +741,8 @@ void *hal_attach(struct hif_opaque_softc *hif_handle, qdf_device_t qdf_dev)
 		goto fail0;
 	}
 	hal->hif_handle = hif_handle;
-	hal->dev_base_addr = hif_get_dev_ba(hif_handle);
+	hal->dev_base_addr = hif_get_dev_ba(hif_handle); /* UMAC */
+	hal->dev_base_addr_ce = hif_get_dev_ba_ce(hif_handle); /* CE */
 	hal->qdf_dev = qdf_dev;
 	hal->shadow_rdptr_mem_vaddr = (uint32_t *)qdf_mem_alloc_consistent(
 		qdf_dev, qdf_dev->dev, sizeof(*(hal->shadow_rdptr_mem_vaddr)) *
@@ -771,12 +781,6 @@ void *hal_attach(struct hif_opaque_softc *hif_handle, qdf_device_t qdf_dev)
 	hal_target_based_configure(hal);
 
 	hal_reg_write_fail_history_init(hal);
-
-	/**
-	 * Indicate Initialization of srngs to avoid force wake
-	 * as umac power collapse is not enabled yet
-	 */
-	hal->init_phase = true;
 
 	qdf_minidump_log(hal, sizeof(*hal), "hal_soc");
 
@@ -1295,6 +1299,15 @@ extern void hal_get_srng_params(hal_soc_handle_t hal_soc_hdl,
 		ring_params->hwreg_base[i] = srng->hwreg_base[i];
 }
 qdf_export_symbol(hal_get_srng_params);
+
+void hal_set_low_threshold(hal_ring_handle_t hal_ring_hdl,
+				 uint32_t low_threshold)
+{
+	struct hal_srng *srng = (struct hal_srng *)hal_ring_hdl;
+	srng->u.src_ring.low_threshold = low_threshold * srng->entry_size;
+}
+qdf_export_symbol(hal_set_low_threshold);
+
 
 #ifdef FORCE_WAKE
 void hal_set_init_phase(hal_soc_handle_t soc, bool init_phase)
