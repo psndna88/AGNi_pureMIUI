@@ -16,10 +16,10 @@
 		ranges;
 		dma-ranges;
 
-		interrupts-extended = <&pdc 14 IRQ_TYPE_EDGE_BOTH>,
+		interrupts-extended = <&pdc 14 IRQ_TYPE_EDGE_RISING>,
 			     <&intc GIC_SPI 130 IRQ_TYPE_LEVEL_HIGH>,
 			     <&pdc 17 IRQ_TYPE_LEVEL_HIGH>,
-			     <&pdc 15 IRQ_TYPE_EDGE_BOTH>;
+			     <&pdc 15 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "dp_hs_phy_irq", "pwr_event_irq",
 				"ss_phy_irq", "dm_hs_phy_irq";
 		qcom,use-pdc-interrupts;
@@ -29,9 +29,10 @@
 			<&clock_gcc GCC_CFG_NOC_USB3_PRIM_AXI_CLK>,
 			<&clock_gcc GCC_AGGRE_USB3_PRIM_AXI_CLK>,
 			<&clock_gcc GCC_USB30_PRIM_MOCK_UTMI_CLK>,
-			<&clock_gcc GCC_USB30_PRIM_SLEEP_CLK>;
+			<&clock_gcc GCC_USB30_PRIM_SLEEP_CLK>,
+			<&clock_gcc GCC_USB30_PRIM_MASTER_CLK__FORCE_MEM_CORE_ON>;
 		clock-names = "core_clk", "iface_clk", "bus_aggr_clk",
-					"utmi_clk", "sleep_clk";
+				"utmi_clk", "sleep_clk", "core_csr_clk";
 
 		resets = <&clock_gcc GCC_USB30_PRIM_BCR>;
 		reset-names = "core_reset";
@@ -70,6 +71,7 @@
 			snps,dis-u2-entry-quirk;
 			snps,dis_u2_susphy_quirk;
 			snps,dis_enblslpm_quirk;
+			snps,ssp-u3-u0-quirk;
 			usb-core-id = <0>;
 			tx-fifo-resize;
 			maximum-speed = "super-speed-plus";
@@ -222,6 +224,7 @@
 			USB3_DP_QSERDES_TXA_RES_CODE_LANE_OFFSET_TX 0x16 0
 			USB3_DP_QSERDES_TXA_RES_CODE_LANE_OFFSET_RX 0x0E 0
 			USB3_DP_QSERDES_TXA_LANE_MODE_1 0x35 0
+			USB3_DP_QSERDES_TXA_LANE_MODE_3 0x3F 0
 			USB3_DP_QSERDES_TXA_LANE_MODE_4 0x7F 0
 			USB3_DP_QSERDES_TXA_LANE_MODE_5 0x3F 0
 			USB3_DP_QSERDES_TXA_RCV_DETECT_LVL_2 0x12 0
@@ -252,8 +255,8 @@
 			USB3_DP_QSERDES_RXA_RX_MODE_00_HIGH2 0xBB 0
 			USB3_DP_QSERDES_RXA_RX_MODE_00_HIGH3 0x3D 0
 			USB3_DP_QSERDES_RXA_RX_MODE_00_HIGH4 0xDB 0
-			USB3_DP_QSERDES_RXA_RX_MODE_01_LOW 0x5B 0
-			USB3_DP_QSERDES_RXA_RX_MODE_01_HIGH 0x1B 0
+			USB3_DP_QSERDES_RXA_RX_MODE_01_LOW 0x64 0
+			USB3_DP_QSERDES_RXA_RX_MODE_01_HIGH 0x24 0
 			USB3_DP_QSERDES_RXA_RX_MODE_01_HIGH2 0xD2 0
 			USB3_DP_QSERDES_RXA_RX_MODE_01_HIGH3 0x13 0
 			USB3_DP_QSERDES_RXA_RX_MODE_01_HIGH4 0xA9 0
@@ -268,6 +271,7 @@
 			USB3_DP_QSERDES_TXB_RES_CODE_LANE_OFFSET_TX 0x16 0
 			USB3_DP_QSERDES_TXB_RES_CODE_LANE_OFFSET_RX 0x0E 0
 			USB3_DP_QSERDES_TXB_LANE_MODE_1 0x35 0
+			USB3_DP_QSERDES_TXB_LANE_MODE_3 0x3F 0
 			USB3_DP_QSERDES_TXB_LANE_MODE_4 0x7F 0
 			USB3_DP_QSERDES_TXB_LANE_MODE_5 0x3F 0
 			USB3_DP_QSERDES_TXB_RCV_DETECT_LVL_2 0x12 0
@@ -298,8 +302,8 @@
 			USB3_DP_QSERDES_RXB_RX_MODE_00_HIGH2 0xBB 0
 			USB3_DP_QSERDES_RXB_RX_MODE_00_HIGH3 0x3C 0
 			USB3_DP_QSERDES_RXB_RX_MODE_00_HIGH4 0xDB 0
-			USB3_DP_QSERDES_RXB_RX_MODE_01_LOW 0x5B 0
-			USB3_DP_QSERDES_RXB_RX_MODE_01_HIGH 0x1B 0
+			USB3_DP_QSERDES_RXB_RX_MODE_01_LOW 0x64 0
+			USB3_DP_QSERDES_RXB_RX_MODE_01_HIGH 0x24 0
 			USB3_DP_QSERDES_RXB_RX_MODE_01_HIGH2 0xD2 0
 			USB3_DP_QSERDES_RXB_RX_MODE_01_HIGH3 0x13 0
 			USB3_DP_QSERDES_RXB_RX_MODE_01_HIGH4 0xA9 0
@@ -308,6 +312,10 @@
 			USB3_DP_QSERDES_RXB_AUX_DATA_TCOARSE_TFINE 0xA0 0
 			USB3_DP_QSERDES_RXB_DCC_CTRL1 0x0C 0
 			USB3_DP_QSERDES_RXB_GM_CAL 0x00 0
+			USB3_DP_PCS_USB3_RCVR_DTCT_DLY_U3_L 0x40 0
+			USB3_DP_PCS_USB3_RCVR_DTCT_DLY_U3_H 0x00 0
+			USB3_DP_PCS_RCVR_DTCT_DLY_P1U2_L 0xE7 0
+			USB3_DP_PCS_RCVR_DTCT_DLY_P1U2_H 0x03 0
 			USB3_DP_QSERDES_RXB_VTH_CODE 0x10 0
 			USB3_DP_PCS_LOCK_DETECT_CONFIG1 0xD0 0
 			USB3_DP_PCS_LOCK_DETECT_CONFIG2 0x07 0
@@ -354,9 +362,10 @@
 			<&clock_gcc GCC_AGGRE_USB3_SEC_AXI_CLK>,
 			<&clock_gcc GCC_USB30_SEC_MOCK_UTMI_CLK>,
 			<&clock_gcc GCC_USB30_SEC_SLEEP_CLK>,
-			<&clock_gcc GCC_USB3_SEC_CLKREF_EN>;
+			<&clock_gcc GCC_USB3_SEC_CLKREF_EN>,
+			<&clock_gcc GCC_USB30_SEC_MASTER_CLK__FORCE_MEM_CORE_ON>;
 		clock-names = "core_clk", "iface_clk", "bus_aggr_clk",
-					"utmi_clk", "sleep_clk", "xo";
+			"utmi_clk", "sleep_clk", "xo", "core_csr_clk";
 
 		resets = <&clock_gcc GCC_USB30_SEC_BCR>;
 		reset-names = "core_reset";

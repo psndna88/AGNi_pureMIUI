@@ -67,6 +67,30 @@
 	status = "disabled";
 };
 
+&tx_swr_clk_active {
+	config {
+		drive-strength = <2>;
+	};
+};
+
+&tx_swr_data0_active {
+	config {
+		drive-strength = <2>;
+	};
+};
+
+&tx_swr_data1_active {
+	config {
+		drive-strength = <2>;
+	};
+};
+
+&tx_swr_data2_active {
+	config {
+		drive-strength = <2>;
+	};
+};
+
 &lahaina_snd {
 	qcom,model = "lahaina-qrd-snd-card";
 
@@ -146,6 +170,13 @@
 
 &usb_qmp_phy {
 	status = "disabled";
+};
+
+&usb2_phy0 {
+	qcom,param-override-seq =
+		<0xe4 0x6c
+		0x0f 0x70
+		0x17 0x74>;
 };
 
 &qupv3_se4_i2c {
