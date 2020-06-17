@@ -110,8 +110,9 @@ int cam_sync_register_callback(sync_callback cb_func,
 	}
 
 	/* Trigger callback if sync object is already in SIGNALED state */
-	if ((row->state == CAM_SYNC_STATE_SIGNALED_SUCCESS ||
-		row->state == CAM_SYNC_STATE_SIGNALED_ERROR) &&
+	if (((row->state == CAM_SYNC_STATE_SIGNALED_SUCCESS) ||
+		(row->state == CAM_SYNC_STATE_SIGNALED_ERROR) ||
+		(row->state == CAM_SYNC_STATE_SIGNALED_CANCEL)) &&
 		(!row->remaining)) {
 		if (trigger_cb_without_switch) {
 			CAM_DBG(CAM_SYNC, "Invoke callback for sync object:%d",
@@ -222,8 +223,9 @@ int cam_sync_signal(int32_t sync_obj, uint32_t status)
 		return -EALREADY;
 	}
 
-	if (status != CAM_SYNC_STATE_SIGNALED_SUCCESS &&
-		status != CAM_SYNC_STATE_SIGNALED_ERROR) {
+	if ((status != CAM_SYNC_STATE_SIGNALED_SUCCESS) &&
+		(status != CAM_SYNC_STATE_SIGNALED_ERROR) &&
+		(status != CAM_SYNC_STATE_SIGNALED_CANCEL)) {
 		spin_unlock_bh(&sync_dev->row_spinlocks[sync_obj]);
 		CAM_ERR(CAM_SYNC,
 			"Error: signaling with undefined status = %d",
@@ -439,6 +441,7 @@ int cam_sync_wait(int32_t sync_obj, uint64_t timeout_ms)
 		case CAM_SYNC_STATE_INVALID:
 		case CAM_SYNC_STATE_ACTIVE:
 		case CAM_SYNC_STATE_SIGNALED_ERROR:
+		case CAM_SYNC_STATE_SIGNALED_CANCEL:
 			CAM_ERR(CAM_SYNC,
 				"Error: Wait on invalid state = %d, obj = %d",
 				row->state, sync_obj);
@@ -653,8 +656,9 @@ static int cam_sync_handle_register_user_payload(
 		return -EINVAL;
 	}
 
-	if (row->state == CAM_SYNC_STATE_SIGNALED_SUCCESS ||
-		row->state == CAM_SYNC_STATE_SIGNALED_ERROR) {
+	if ((row->state == CAM_SYNC_STATE_SIGNALED_SUCCESS) ||
+		(row->state == CAM_SYNC_STATE_SIGNALED_ERROR) ||
+		(row->state == CAM_SYNC_STATE_SIGNALED_CANCEL)) {
 
 		cam_sync_util_send_v4l2_event(CAM_SYNC_V4L_EVENT_ID_CB_TRIG,
 			sync_obj,
@@ -1033,23 +1037,73 @@ static int cam_sync_create_debugfs(void)
 }
 
 #if IS_REACHABLE(CONFIG_MSM_GLOBAL_SYNX)
-static int cam_sync_register_synx_bind_ops(void)
+int cam_synx_sync_signal(int32_t sync_obj, uint32_t synx_status)
 {
 	int rc = 0;
-	struct synx_register_params params;
+	uint32_t sync_status = synx_status;
 
-	params.name = CAM_SYNC_NAME;
-	params.type = SYNX_TYPE_CSL;
-	params.ops.register_callback = cam_sync_register_callback;
-	params.ops.deregister_callback = cam_sync_deregister_callback;
-	params.ops.enable_signaling = cam_sync_get_obj_ref;
-	params.ops.signal = cam_sync_signal;
+	switch (synx_status) {
+	case SYNX_STATE_ACTIVE:
+		sync_status = CAM_SYNC_STATE_ACTIVE;
+		break;
+	case SYNX_STATE_SIGNALED_SUCCESS:
+		sync_status = CAM_SYNC_STATE_SIGNALED_SUCCESS;
+		break;
+	case SYNX_STATE_SIGNALED_ERROR:
+		sync_status = CAM_SYNC_STATE_SIGNALED_ERROR;
+		break;
+	case 4: /* SYNX_STATE_SIGNALED_CANCEL: */
+		sync_status = CAM_SYNC_STATE_SIGNALED_CANCEL;
+		break;
+	default:
+		CAM_ERR(CAM_SYNC, "Invalid synx status %d for obj %d",
+			synx_status, sync_obj);
+		sync_status = CAM_SYNC_STATE_SIGNALED_ERROR;
+		break;
+	}
 
-	rc = synx_register_ops(&params);
+	rc = cam_sync_signal(sync_obj, sync_status);
+	if (rc) {
+		CAM_ERR(CAM_SYNC,
+			"synx signal failed with %d, sync_obj=%d, synx_status=%d, sync_status=%d",
+			sync_obj, synx_status, sync_status, rc);
+	}
+
+	return rc;
+}
+
+static int cam_sync_register_synx_bind_ops(
+	struct synx_register_params *object)
+{
+	int rc = 0;
+
+	rc = synx_register_ops(object);
 	if (rc)
 		CAM_ERR(CAM_SYNC, "synx registration fail with rc=%d", rc);
 
 	return rc;
+}
+
+static void cam_sync_unregister_synx_bind_ops(
+	struct synx_register_params *object)
+{
+	int rc = 0;
+
+	rc = synx_deregister_ops(object);
+	if (rc)
+		CAM_ERR(CAM_SYNC, "sync unregistration fail with %d", rc);
+}
+
+static void cam_sync_configure_synx_obj(struct synx_register_params *object)
+{
+	struct synx_register_params *params = object;
+
+	params->name = CAM_SYNC_NAME;
+	params->type = SYNX_TYPE_CSL;
+	params->ops.register_callback = cam_sync_register_callback;
+	params->ops.deregister_callback = cam_sync_deregister_callback;
+	params->ops.enable_signaling = cam_sync_get_obj_ref;
+	params->ops.signal = cam_synx_sync_signal;
 }
 #endif
 
@@ -1128,8 +1182,9 @@ static int cam_sync_component_bind(struct device *dev,
 	trigger_cb_without_switch = false;
 	cam_sync_create_debugfs();
 #if IS_REACHABLE(CONFIG_MSM_GLOBAL_SYNX)
-	CAM_INFO(CAM_SYNC, "Registering with synx driver");
-	rc = cam_sync_register_synx_bind_ops();
+	CAM_DBG(CAM_SYNC, "Registering with synx driver");
+	cam_sync_configure_synx_obj(&sync_dev->params);
+	rc = cam_sync_register_synx_bind_ops(&sync_dev->params);
 	if (rc)
 		goto v4l2_fail;
 #endif
@@ -1156,6 +1211,9 @@ static void cam_sync_component_unbind(struct device *dev,
 
 	v4l2_device_unregister(sync_dev->vdev->v4l2_dev);
 	cam_sync_media_controller_cleanup(sync_dev);
+#if IS_REACHABLE(CONFIG_MSM_GLOBAL_SYNX)
+	cam_sync_unregister_synx_bind_ops(&sync_dev->params);
+#endif
 	video_unregister_device(sync_dev->vdev);
 	video_device_release(sync_dev->vdev);
 	debugfs_remove_recursive(sync_dev->dentry);

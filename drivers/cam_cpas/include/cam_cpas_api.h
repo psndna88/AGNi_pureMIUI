@@ -20,6 +20,10 @@
 #define CAM_CPAS_MAX_PATHS_PER_CLIENT 15
 #define CAM_CPAS_API_PATH_DATA_STD_START 512
 
+/* Qos Selection mask */
+#define CAM_CPAS_QOS_DEFAULT_SETTINGS_MASK 0x1
+#define CAM_CPAS_QOS_CUSTOM_SETTINGS_MASK  0x2
+
 /**
  * enum cam_cpas_reg_base - Enum for register base identifier. These
  *                          are the identifiers used in generic register
@@ -41,6 +45,8 @@ enum cam_cpas_camera_version {
 	CAM_CPAS_CAMERA_VERSION_170  = 0x00010700,
 	CAM_CPAS_CAMERA_VERSION_175  = 0x00010705,
 	CAM_CPAS_CAMERA_VERSION_480  = 0x00040800,
+	CAM_CPAS_CAMERA_VERSION_520  = 0x00050200,
+	CAM_CPAS_CAMERA_VERSION_540  = 0x00050400,
 	CAM_CPAS_CAMERA_VERSION_580  = 0x00050800,
 	CAM_CPAS_CAMERA_VERSION_MAX
 };
@@ -69,6 +75,8 @@ enum cam_cpas_camera_version_map_id {
 	CAM_CPAS_CAMERA_VERSION_ID_175  = 0x2,
 	CAM_CPAS_CAMERA_VERSION_ID_480  = 0x3,
 	CAM_CPAS_CAMERA_VERSION_ID_580  = 0x4,
+	CAM_CPAS_CAMERA_VERSION_ID_520  = 0x5,
+	CAM_CPAS_CAMERA_VERSION_ID_540  = 0x6,
 	CAM_CPAS_CAMERA_VERSION_ID_MAX
 };
 
@@ -103,6 +111,7 @@ enum cam_cpas_hw_version {
 	CAM_CPAS_TITAN_480_V100 = 0x480100,
 	CAM_CPAS_TITAN_580_V100 = 0x580100,
 	CAM_CPAS_TITAN_540_V100 = 0x540100,
+	CAM_CPAS_TITAN_520_V100 = 0x520100,
 	CAM_CPAS_TITAN_MAX
 };
 
@@ -632,5 +641,15 @@ const char *cam_cpas_axi_util_trans_type_to_string(
  *
  */
 void cam_cpas_log_votes(void);
+
+/**
+ * cam_cpas_select_qos_settings()
+ *
+ * @brief: API to select specific qos settings based on usecase requirements
+ *
+ * @return 0 on success.
+ *
+ */
+int cam_cpas_select_qos_settings(uint32_t selection_mask);
 
 #endif /* _CAM_CPAS_API_H_ */

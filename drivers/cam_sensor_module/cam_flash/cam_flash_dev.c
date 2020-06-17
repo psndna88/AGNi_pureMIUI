@@ -176,9 +176,9 @@ static int32_t cam_flash_driver_cmd(struct cam_flash_ctrl *fctrl,
 			goto release_mutex;
 		}
 
-		cam_flash_off(fctrl);
 		fctrl->func_tbl.flush_req(fctrl, FLUSH_ALL, 0);
 		fctrl->last_flush_req = 0;
+		cam_flash_off(fctrl);
 		fctrl->flash_state = CAM_FLASH_STATE_ACQUIRE;
 		break;
 	}
@@ -519,6 +519,7 @@ static void cam_flash_component_unbind(struct device *dev,
 	cam_flash_shutdown(fctrl);
 	mutex_unlock(&fctrl->flash_mutex);
 	cam_unregister_subdev(&(fctrl->v4l2_dev_str));
+	cam_flash_put_source_node_data(fctrl);
 	platform_set_drvdata(pdev, NULL);
 	v4l2_set_subdevdata(&fctrl->v4l2_dev_str.sd, NULL);
 	kfree(fctrl);
@@ -659,9 +660,9 @@ int32_t cam_flash_init_module(void)
 	int32_t rc = 0;
 
 	rc = platform_driver_register(&cam_flash_platform_driver);
-	if (rc == 0) {
-		CAM_DBG(CAM_FLASH, "platform probe success");
-		return 0;
+	if (rc < 0) {
+		CAM_ERR(CAM_FLASH, "platform probe failed rc: %d", rc);
+		return rc;
 	}
 
 	rc = i2c_add_driver(&cam_flash_i2c_driver);

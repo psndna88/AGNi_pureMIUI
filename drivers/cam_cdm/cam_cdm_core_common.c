@@ -49,6 +49,7 @@ bool cam_cdm_set_cam_hw_version(
 	case CAM_CDM110_VERSION:
 	case CAM_CDM120_VERSION:
 	case CAM_CDM200_VERSION:
+	case CAM_CDM210_VERSION:
 		cam_version->major    = (ver & 0xF0000000);
 		cam_version->minor    = (ver & 0xFFF0000);
 		cam_version->incr     = (ver & 0xFFFF);
@@ -81,6 +82,7 @@ struct cam_cdm_utils_ops *cam_cdm_get_ops(
 		case CAM_CDM110_VERSION:
 		case CAM_CDM120_VERSION:
 		case CAM_CDM200_VERSION:
+		case CAM_CDM210_VERSION:
 			return &CDM170_ops;
 		default:
 			CAM_ERR(CAM_CDM, "CDM Version=%x not supported in util",
@@ -262,6 +264,47 @@ void cam_cdm_notify_clients(struct cam_hw_info *cdm_hw,
 	}
 }
 
+static int cam_cdm_stream_handle_init(void *hw_priv, bool init)
+{
+	struct cam_hw_info *cdm_hw = hw_priv;
+	struct cam_cdm *core = NULL;
+	int rc = -EPERM;
+
+	core = (struct cam_cdm *)cdm_hw->core_info;
+
+	if (init) {
+		rc = cam_hw_cdm_init(hw_priv, NULL, 0);
+		if (rc) {
+			CAM_ERR(CAM_CDM, "CDM HW init failed");
+			return rc;
+		}
+
+		if (core->arbitration !=
+			CAM_CDM_ARBITRATION_PRIORITY_BASED) {
+			rc = cam_hw_cdm_alloc_genirq_mem(
+				hw_priv);
+			if (rc) {
+				CAM_ERR(CAM_CDM,
+					"Genirqalloc failed");
+				cam_hw_cdm_deinit(hw_priv,
+					NULL, 0);
+			}
+		}
+	} else {
+		rc = cam_hw_cdm_deinit(hw_priv, NULL, 0);
+		if (rc)
+			CAM_ERR(CAM_CDM, "Deinit failed in streamoff");
+
+		if (core->arbitration !=
+			CAM_CDM_ARBITRATION_PRIORITY_BASED) {
+			if (cam_hw_cdm_release_genirq_mem(hw_priv))
+				CAM_ERR(CAM_CDM, "Genirq release fail");
+		}
+	}
+
+	return rc;
+}
+
 int cam_cdm_stream_ops_internal(void *hw_priv,
 	void *start_args, bool operation)
 {
@@ -337,19 +380,7 @@ int cam_cdm_stream_ops_internal(void *hw_priv,
 				rc = 0;
 			} else {
 				CAM_DBG(CAM_CDM, "CDM HW init first time");
-				rc = cam_hw_cdm_init(hw_priv, NULL, 0);
-				if (rc == 0) {
-					rc = cam_hw_cdm_alloc_genirq_mem(
-						hw_priv);
-					if (rc != 0) {
-						CAM_ERR(CAM_CDM,
-							"Genirqalloc failed");
-						cam_hw_cdm_deinit(hw_priv,
-							NULL, 0);
-					}
-				} else {
-					CAM_ERR(CAM_CDM, "CDM HW init failed");
-				}
+				rc = cam_cdm_stream_handle_init(hw_priv, true);
 			}
 			if (rc == 0) {
 				cdm_hw->open_count++;
@@ -378,17 +409,10 @@ int cam_cdm_stream_ops_internal(void *hw_priv,
 					rc = 0;
 				} else {
 					CAM_DBG(CAM_CDM, "CDM HW Deinit now");
-					rc = cam_hw_cdm_deinit(
-						hw_priv, NULL, 0);
-					if (cam_hw_cdm_release_genirq_mem(
-						hw_priv))
-						CAM_ERR(CAM_CDM,
-							"Genirq release fail");
+					rc = cam_cdm_stream_handle_init(hw_priv,
+						false);
 				}
-				if (rc) {
-					CAM_ERR(CAM_CDM,
-						"Deinit failed in streamoff");
-				} else {
+				if (rc == 0) {
 					client->stream_on = false;
 					rc = cam_cpas_stop(core->cpas_handle);
 					if (rc)
@@ -760,6 +784,41 @@ int cam_cdm_process_cmd(void *hw_priv,
 				*handle);
 		}
 
+		mutex_unlock(&cdm_hw->hw_mutex);
+		break;
+	}
+	case CAM_CDM_HW_INTF_CMD_HANG_DETECT: {
+		uint32_t *handle = cmd_args;
+		int idx;
+		struct cam_cdm_client *client;
+
+		if (sizeof(uint32_t) != arg_size) {
+			CAM_ERR(CAM_CDM,
+				"Invalid CDM cmd %d size=%x for handle=%x",
+				cmd, arg_size, *handle);
+				return -EINVAL;
+		}
+
+		idx = CAM_CDM_GET_CLIENT_IDX(*handle);
+		mutex_lock(&cdm_hw->hw_mutex);
+		client = core->clients[idx];
+		if (!client) {
+			CAM_ERR(CAM_CDM,
+				"Client not present for handle %d",
+				*handle);
+			mutex_unlock(&cdm_hw->hw_mutex);
+			break;
+		}
+
+		if (*handle != client->handle) {
+			CAM_ERR(CAM_CDM,
+				"handle mismatch, client handle %d index %d received handle %d",
+				client->handle, idx, *handle);
+			mutex_unlock(&cdm_hw->hw_mutex);
+			break;
+		}
+
+		rc = cam_hw_cdm_hang_detect(cdm_hw, *handle);
 		mutex_unlock(&cdm_hw->hw_mutex);
 		break;
 	}

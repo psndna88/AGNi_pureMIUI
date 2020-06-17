@@ -165,6 +165,10 @@ static const struct of_device_id cam_custom_csid_dt_match[] = {
 		.compatible = "qcom,csid-custom480",
 		.data = &cam_custom_csid480_hw_info
 	},
+	{
+		.compatible = "qcom,csid-custom580",
+		.data = &cam_custom_csid480_hw_info
+	},
 	{}
 };
 

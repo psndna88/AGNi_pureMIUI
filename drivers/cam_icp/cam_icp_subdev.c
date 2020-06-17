@@ -171,7 +171,8 @@ static int cam_icp_component_bind(struct device *dev,
 
 	hw_mgr_intf = kzalloc(sizeof(*hw_mgr_intf), GFP_KERNEL);
 	if (!hw_mgr_intf) {
-		rc = -EINVAL;
+		rc = -ENOMEM;
+		CAM_ERR(CAM_ICP, "Memory allocation fail");
 		goto hw_alloc_fail;
 	}
 
@@ -225,7 +226,6 @@ static void cam_icp_component_unbind(struct device *dev,
 {
 	int i;
 	struct v4l2_subdev *sd;
-	struct cam_subdev *subdev;
 	struct platform_device *pdev = to_platform_device(dev);
 
 	if (!pdev) {
@@ -239,15 +239,10 @@ static void cam_icp_component_unbind(struct device *dev,
 		return;
 	}
 
-	subdev = v4l2_get_subdevdata(sd);
-	if (!subdev) {
-		CAM_ERR(CAM_ICP, "cam subdev is NULL");
-		return;
-	}
-
 	for (i = 0; i < CAM_ICP_CTX_MAX; i++)
 		cam_icp_context_deinit(&g_icp_dev.ctx_icp[i]);
 
+	cam_icp_hw_mgr_deinit();
 	cam_node_deinit(g_icp_dev.node);
 	cam_subdev_remove(&g_icp_dev.sd);
 	mutex_destroy(&g_icp_dev.icp_lock);

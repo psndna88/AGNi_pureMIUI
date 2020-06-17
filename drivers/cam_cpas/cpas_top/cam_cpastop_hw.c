@@ -22,8 +22,11 @@
 #include "cpastop_v175_120.h"
 #include "cpastop_v175_130.h"
 #include "cpastop_v480_100.h"
+#include "cpastop_v480_custom.h"
 #include "cpastop_v580_100.h"
+#include "cpastop_v580_custom.h"
 #include "cpastop_v540_100.h"
+#include "cpastop_v520_100.h"
 
 struct cam_camnoc_info *camnoc_info;
 
@@ -86,6 +89,25 @@ static const uint32_t cam_cpas_hw_version_map
 		0,
 		0,
 	},
+	/* for camera_520 */
+	{
+		CAM_CPAS_TITAN_520_V100,
+		0,
+		0,
+		0,
+		0,
+		0,
+
+	},
+	/* for camera_540 */
+	{
+		CAM_CPAS_TITAN_540_V100,
+		0,
+		0,
+		0,
+		0,
+		0,
+	},
 };
 
 static int cam_cpas_translate_camera_cpas_version_id(
@@ -111,6 +133,14 @@ static int cam_cpas_translate_camera_cpas_version_id(
 
 	case CAM_CPAS_CAMERA_VERSION_480:
 		*cam_version_id = CAM_CPAS_CAMERA_VERSION_ID_480;
+		break;
+
+	case CAM_CPAS_CAMERA_VERSION_520:
+		*cam_version_id = CAM_CPAS_CAMERA_VERSION_ID_520;
+		break;
+
+	case CAM_CPAS_CAMERA_VERSION_540:
+		*cam_version_id = CAM_CPAS_CAMERA_VERSION_ID_540;
 		break;
 
 	case CAM_CPAS_CAMERA_VERSION_580:
@@ -716,6 +746,9 @@ static int cam_cpastop_init_hw_version(struct cam_hw_info *cpas_hw,
 	case CAM_CPAS_TITAN_540_V100:
 		camnoc_info = &cam540_cpas100_camnoc_info;
 		break;
+	case CAM_CPAS_TITAN_520_V100:
+		camnoc_info = &cam520_cpas100_camnoc_info;
+		break;
 	default:
 		CAM_ERR(CAM_CPAS, "Camera Version not supported %d.%d.%d",
 			hw_caps->camera_version.major,
@@ -726,6 +759,47 @@ static int cam_cpastop_init_hw_version(struct cam_hw_info *cpas_hw,
 	}
 
 	return 0;
+}
+
+static int cam_cpastop_setup_qos_settings(struct cam_hw_info *cpas_hw,
+	uint32_t selection_mask)
+{
+	int rc = 0;
+	struct cam_hw_soc_info *soc_info = &cpas_hw->soc_info;
+
+	CAM_DBG(CAM_CPAS,
+		"QoS selection : hw_version=0x%x selection_mask 0x%x",
+		soc_info->hw_version,
+		selection_mask);
+
+	switch (soc_info->hw_version) {
+	case CAM_CPAS_TITAN_480_V100:
+		if (selection_mask & CAM_CPAS_QOS_CUSTOM_SETTINGS_MASK)
+			camnoc_info = &cam480_custom_camnoc_info;
+		else if (selection_mask & CAM_CPAS_QOS_DEFAULT_SETTINGS_MASK)
+			camnoc_info = &cam480_cpas100_camnoc_info;
+		else
+			CAM_ERR(CAM_CPAS, "Invalid selection mask 0x%x",
+				selection_mask);
+		break;
+	case CAM_CPAS_TITAN_580_V100:
+		if (selection_mask & CAM_CPAS_QOS_CUSTOM_SETTINGS_MASK)
+			camnoc_info = &cam580_custom_camnoc_info;
+		else if (selection_mask & CAM_CPAS_QOS_DEFAULT_SETTINGS_MASK)
+			camnoc_info = &cam580_cpas100_camnoc_info;
+		else
+			CAM_ERR(CAM_CPAS,
+				"Invalid selection mask 0x%x for hw 0x%x",
+				selection_mask, soc_info->hw_version);
+		break;
+	default:
+		CAM_WARN(CAM_CPAS, "QoS selection not supported for 0x%x",
+			soc_info->hw_version);
+		rc = -EINVAL;
+		break;
+	}
+
+	return rc;
 }
 
 int cam_cpastop_get_internal_ops(struct cam_cpas_internal_ops *internal_ops)
@@ -741,6 +815,7 @@ int cam_cpastop_get_internal_ops(struct cam_cpas_internal_ops *internal_ops)
 	internal_ops->setup_regbase = cam_cpastop_setup_regbase_indices;
 	internal_ops->power_on = cam_cpastop_poweron;
 	internal_ops->power_off = cam_cpastop_poweroff;
+	internal_ops->setup_qos_settings = cam_cpastop_setup_qos_settings;
 
 	return 0;
 }

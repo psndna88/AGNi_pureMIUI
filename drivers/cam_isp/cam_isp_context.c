@@ -491,7 +491,7 @@ static int __cam_isp_ctx_enqueue_init_request(
 				num_cfg_old =
 					req_isp_old->cfg_info[i].num_hw_entries;
 				num_cfg_new =
-					req_isp_old->cfg_info[i].num_hw_entries;
+					req_isp_new->cfg_info[i].num_hw_entries;
 				memcpy(&cfg_old[num_cfg_old],
 					cfg_new,
 					sizeof(cfg_new[0]) * num_cfg_new);
@@ -1108,7 +1108,9 @@ static int __cam_isp_ctx_apply_req_offline(
 		goto end;
 	}
 
-	if (ctx->state != CAM_CTX_ACTIVATED)
+	if ((ctx->state != CAM_CTX_ACTIVATED) ||
+		(!atomic_read(&ctx_isp->rxd_epoch)) ||
+		(ctx_isp->substate_activated == CAM_ISP_CTX_ACTIVATED_APPLIED))
 		goto end;
 
 	if (ctx_isp->active_req_cnt >= 2)
@@ -1364,7 +1366,9 @@ static int __cam_isp_ctx_notify_sof_in_activated_state(
 		}
 
 		list_for_each_entry(req, &ctx->active_req_list, list) {
-			if (req->request_id > ctx_isp->reported_req_id) {
+			req_isp = (struct cam_isp_ctx_req *) req->req_priv;
+			if ((!req_isp->bubble_detected) &&
+				(req->request_id > ctx_isp->reported_req_id)) {
 				request_id = req->request_id;
 				ctx_isp->reported_req_id = request_id;
 				__cam_isp_ctx_update_event_record(ctx_isp,
@@ -2953,7 +2957,7 @@ static int __cam_isp_ctx_flush_req(struct cam_context *ctx,
 					req_isp->fence_map_out[i].sync_id);
 				rc = cam_sync_signal(
 					req_isp->fence_map_out[i].sync_id,
-					CAM_SYNC_STATE_SIGNALED_ERROR);
+					CAM_SYNC_STATE_SIGNALED_CANCEL);
 				if (rc) {
 					tmp = req_isp->fence_map_out[i].sync_id;
 					CAM_ERR_RATE_LIMIT(CAM_ISP,
@@ -4832,7 +4836,7 @@ static int __cam_isp_ctx_stop_dev_in_activated_unlock(
 			if (req_isp->fence_map_out[i].sync_id != -1) {
 				cam_sync_signal(
 					req_isp->fence_map_out[i].sync_id,
-					CAM_SYNC_STATE_SIGNALED_ERROR);
+					CAM_SYNC_STATE_SIGNALED_CANCEL);
 			}
 		list_add_tail(&req->list, &ctx->free_req_list);
 	}
@@ -4848,7 +4852,7 @@ static int __cam_isp_ctx_stop_dev_in_activated_unlock(
 			if (req_isp->fence_map_out[i].sync_id != -1) {
 				cam_sync_signal(
 					req_isp->fence_map_out[i].sync_id,
-					CAM_SYNC_STATE_SIGNALED_ERROR);
+					CAM_SYNC_STATE_SIGNALED_CANCEL);
 			}
 		list_add_tail(&req->list, &ctx->free_req_list);
 	}
@@ -4864,7 +4868,7 @@ static int __cam_isp_ctx_stop_dev_in_activated_unlock(
 			if (req_isp->fence_map_out[i].sync_id != -1) {
 				cam_sync_signal(
 					req_isp->fence_map_out[i].sync_id,
-					CAM_SYNC_STATE_SIGNALED_ERROR);
+					CAM_SYNC_STATE_SIGNALED_CANCEL);
 			}
 		list_add_tail(&req->list, &ctx->free_req_list);
 	}
@@ -5298,7 +5302,7 @@ static int cam_isp_context_debug_register(void)
 	isp_ctx_debug.dentry = debugfs_create_dir("camera_isp_ctx",
 		NULL);
 
-	if (!isp_ctx_debug.dentry) {
+	if (IS_ERR_OR_NULL(isp_ctx_debug.dentry)) {
 		CAM_ERR(CAM_ISP, "failed to create dentry");
 		return -ENOMEM;
 	}
@@ -5379,7 +5383,8 @@ int cam_isp_context_init(struct cam_isp_context *ctx,
 	for (i = 0; i < CAM_ISP_CTX_EVENT_MAX; i++)
 		atomic64_set(&ctx->event_record_head[i], -1);
 
-	cam_isp_context_debug_register();
+	if (!isp_ctx_debug.dentry)
+		cam_isp_context_debug_register();
 
 err:
 	return rc;
@@ -5387,8 +5392,6 @@ err:
 
 int cam_isp_context_deinit(struct cam_isp_context *ctx)
 {
-	int rc = 0;
-
 	if (ctx->base)
 		cam_context_deinit(ctx->base);
 
@@ -5397,6 +5400,9 @@ int cam_isp_context_deinit(struct cam_isp_context *ctx)
 			__cam_isp_ctx_substate_val_to_type(
 			ctx->substate_activated));
 
+	debugfs_remove_recursive(isp_ctx_debug.dentry);
+	isp_ctx_debug.dentry = NULL;
 	memset(ctx, 0, sizeof(*ctx));
-	return rc;
+
+	return 0;
 }

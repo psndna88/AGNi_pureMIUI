@@ -177,9 +177,21 @@ static int cam_bps_component_bind(struct device *dev,
 static void cam_bps_component_unbind(struct device *dev,
 	struct device *master_dev, void *data)
 {
+	struct cam_hw_info            *bps_dev = NULL;
+	struct cam_hw_intf            *bps_dev_intf = NULL;
+	struct cam_bps_device_core_info   *core_info = NULL;
 	struct platform_device *pdev = to_platform_device(dev);
 
 	CAM_DBG(CAM_ICP, "Unbinding component: %s", pdev->name);
+	bps_dev_intf = platform_get_drvdata(pdev);
+	bps_dev = bps_dev_intf->hw_priv;
+	core_info = (struct cam_bps_device_core_info *)bps_dev->core_info;
+	cam_cpas_unregister_client(core_info->cpas_handle);
+	cam_bps_deinit_soc_resources(&bps_dev->soc_info);
+
+	kfree(bps_dev->core_info);
+	kfree(bps_dev);
+	kfree(bps_dev_intf);
 }
 
 const static struct component_ops cam_bps_component_ops = {
@@ -199,6 +211,12 @@ int cam_bps_probe(struct platform_device *pdev)
 	return rc;
 }
 
+static int cam_bps_remove(struct platform_device *pdev)
+{
+	component_del(&pdev->dev, &cam_bps_component_ops);
+	return 0;
+}
+
 static const struct of_device_id cam_bps_dt_match[] = {
 	{
 		.compatible = "qcom,cam-bps",
@@ -210,6 +228,7 @@ MODULE_DEVICE_TABLE(of, cam_bps_dt_match);
 
 struct platform_driver cam_bps_driver = {
 	.probe = cam_bps_probe,
+	.remove = cam_bps_remove,
 	.driver = {
 		.name = "cam-bps",
 		.owner = THIS_MODULE,

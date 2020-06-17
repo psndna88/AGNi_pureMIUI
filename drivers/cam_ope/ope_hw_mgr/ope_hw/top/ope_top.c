@@ -29,12 +29,27 @@
 
 static struct ope_top ope_top_info;
 
+static int cam_ope_top_dump_debug_reg(struct ope_hw *ope_hw_info)
+{
+	uint32_t i, val;
+	struct cam_ope_top_reg *top_reg;
+
+	top_reg = ope_hw_info->top_reg;
+	for (i = 0; i < top_reg->num_debug_registers; i++) {
+		val = cam_io_r_mb(top_reg->base +
+			top_reg->debug_regs[i].offset);
+		CAM_INFO(CAM_OPE, "Debug_status_%d val: 0x%x", i, val);
+	}
+	return 0;
+}
+
 static int cam_ope_top_reset(struct ope_hw *ope_hw_info,
 	int32_t ctx_id, void *data)
 {
 	int rc = 0;
 	struct cam_ope_top_reg *top_reg;
 	struct cam_ope_top_reg_val *top_reg_val;
+	uint32_t irq_mask, irq_status;
 
 	if (!ope_hw_info) {
 		CAM_ERR(CAM_OPE, "Invalid ope_hw_info");
@@ -44,7 +59,8 @@ static int cam_ope_top_reset(struct ope_hw *ope_hw_info,
 	top_reg = ope_hw_info->top_reg;
 	top_reg_val = ope_hw_info->top_reg_val;
 
-	init_completion(&ope_top_info.reset_complete);
+	mutex_lock(&ope_top_info.ope_hw_mutex);
+	reinit_completion(&ope_top_info.reset_complete);
 
 	/* enable interrupt mask */
 	cam_io_w_mb(top_reg_val->irq_mask,
@@ -58,10 +74,19 @@ static int cam_ope_top_reset(struct ope_hw *ope_hw_info,
 			&ope_top_info.reset_complete,
 			msecs_to_jiffies(30));
 
+	cam_io_w_mb(top_reg_val->debug_cfg_val,
+		top_reg->base + top_reg->debug_cfg);
+
 	if (!rc || rc < 0) {
 		CAM_ERR(CAM_OPE, "reset error result = %d", rc);
-		if (!rc)
-			rc = -ETIMEDOUT;
+		irq_mask = cam_io_r_mb(ope_hw_info->top_reg->base +
+			top_reg->irq_mask);
+		irq_status = cam_io_r_mb(ope_hw_info->top_reg->base +
+			top_reg->irq_status);
+		CAM_ERR(CAM_OPE, "irq mask 0x%x irq status 0x%x",
+			irq_mask, irq_status);
+		cam_ope_top_dump_debug_reg(ope_hw_info);
+		rc = -ETIMEDOUT;
 	} else {
 		rc = 0;
 	}
@@ -70,6 +95,7 @@ static int cam_ope_top_reset(struct ope_hw *ope_hw_info,
 	cam_io_w_mb(top_reg_val->irq_mask,
 		ope_hw_info->top_reg->base + top_reg->irq_mask);
 
+	mutex_unlock(&ope_top_info.ope_hw_mutex);
 	return rc;
 }
 
@@ -110,6 +136,7 @@ static int cam_ope_top_init(struct ope_hw *ope_hw_info,
 	struct cam_ope_top_reg *top_reg;
 	struct cam_ope_top_reg_val *top_reg_val;
 	struct cam_ope_dev_init *dev_init = data;
+	uint32_t irq_mask, irq_status;
 
 	if (!ope_hw_info) {
 		CAM_ERR(CAM_OPE, "Invalid ope_hw_info");
@@ -121,13 +148,13 @@ static int cam_ope_top_init(struct ope_hw *ope_hw_info,
 
 	top_reg->base = dev_init->core_info->ope_hw_info->ope_top_base;
 
+	mutex_init(&ope_top_info.ope_hw_mutex);
 	/* OPE SW RESET */
 	init_completion(&ope_top_info.reset_complete);
 
 	/* enable interrupt mask */
 	cam_io_w_mb(top_reg_val->irq_mask,
 		ope_hw_info->top_reg->base + top_reg->irq_mask);
-
 	cam_io_w_mb(top_reg_val->sw_reset_cmd,
 		ope_hw_info->top_reg->base + top_reg->reset_cmd);
 
@@ -135,17 +162,26 @@ static int cam_ope_top_init(struct ope_hw *ope_hw_info,
 			&ope_top_info.reset_complete,
 			msecs_to_jiffies(30));
 
-	/* enable interrupt mask */
-	cam_io_w_mb(top_reg_val->irq_mask,
-		ope_hw_info->top_reg->base + top_reg->irq_mask);
+	cam_io_w_mb(top_reg_val->debug_cfg_val,
+		top_reg->base + top_reg->debug_cfg);
 
 	if (!rc || rc < 0) {
 		CAM_ERR(CAM_OPE, "reset error result = %d", rc);
-		if (!rc)
-			rc = -ETIMEDOUT;
+		irq_mask = cam_io_r_mb(ope_hw_info->top_reg->base +
+			top_reg->irq_mask);
+		irq_status = cam_io_r_mb(ope_hw_info->top_reg->base +
+			top_reg->irq_status);
+		CAM_ERR(CAM_OPE, "irq mask 0x%x irq status 0x%x",
+			irq_mask, irq_status);
+		cam_ope_top_dump_debug_reg(ope_hw_info);
+		rc = -ETIMEDOUT;
 	} else {
 		rc = 0;
 	}
+
+	/* enable interrupt mask */
+	cam_io_w_mb(top_reg_val->irq_mask,
+		ope_hw_info->top_reg->base + top_reg->irq_mask);
 
 	return rc;
 }
@@ -246,6 +282,8 @@ int cam_ope_top_process(struct ope_hw *ope_hw_info,
 	case OPE_HW_RESET:
 		rc = cam_ope_top_reset(ope_hw_info, 0, 0);
 		break;
+	case OPE_HW_DUMP_DEBUG:
+		rc - cam_ope_top_dump_debug_reg(ope_hw_info);
 	default:
 		break;
 	}

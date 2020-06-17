@@ -168,7 +168,7 @@ static int cam_a5_component_bind(struct device *dev,
 	}
 
 	CAM_DBG(CAM_ICP, "soc info : %pK",
-				(void *)&a5_dev->soc_info);
+			(void *)&a5_dev->soc_info);
 	rc = cam_a5_register_cpas(&a5_dev->soc_info,
 			core_info, a5_dev_intf->hw_idx);
 	if (rc < 0) {
@@ -185,6 +185,7 @@ static int cam_a5_component_bind(struct device *dev,
 	return 0;
 
 cpas_reg_failed:
+	cam_a5_deinit_soc_resources(&a5_dev->soc_info);
 init_soc_failure:
 match_err:
 	kfree(a5_dev->core_info);
@@ -200,9 +201,21 @@ a5_dev_alloc_failure:
 static void cam_a5_component_unbind(struct device *dev,
 	struct device *master_dev, void *data)
 {
+	struct cam_hw_info *a5_dev = NULL;
+	struct cam_hw_intf *a5_dev_intf = NULL;
+	struct cam_a5_device_core_info *core_info = NULL;
 	struct platform_device *pdev = to_platform_device(dev);
 
-	CAM_DBG(CAM_ICP, "Unbinding component: %s", pdev->name);
+	a5_dev_intf = platform_get_drvdata(pdev);
+	a5_dev = a5_dev_intf->hw_priv;
+	core_info = (struct cam_a5_device_core_info *)a5_dev->core_info;
+	cam_cpas_unregister_client(core_info->cpas_handle);
+	cam_a5_deinit_soc_resources(&a5_dev->soc_info);
+	memset(&cam_a5_soc_info, 0, sizeof(struct a5_soc_info));
+	kfree(a5_dev->core_info);
+	a5_dev->core_info = NULL;
+	kfree(a5_dev);
+	kfree(a5_dev_intf);
 }
 
 const static struct component_ops cam_a5_component_ops = {
@@ -222,6 +235,12 @@ int cam_a5_probe(struct platform_device *pdev)
 	return rc;
 }
 
+static int cam_a5_remove(struct platform_device *pdev)
+{
+	component_del(&pdev->dev, &cam_a5_component_ops);
+	return 0;
+}
+
 static const struct of_device_id cam_a5_dt_match[] = {
 	{
 		.compatible = "qcom,cam-a5",
@@ -233,6 +252,7 @@ MODULE_DEVICE_TABLE(of, cam_a5_dt_match);
 
 struct platform_driver cam_a5_driver = {
 	.probe = cam_a5_probe,
+	.remove = cam_a5_remove,
 	.driver = {
 		.name = "cam-a5",
 		.owner = THIS_MODULE,

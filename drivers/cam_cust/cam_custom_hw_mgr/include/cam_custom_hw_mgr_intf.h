@@ -13,6 +13,7 @@
 #include "cam_hw.h"
 #include "cam_hw_mgr_intf.h"
 #include "cam_hw_intf.h"
+#include "cam_custom_hw.h"
 
 #define CAM_CUSTOM_HW_TYPE_1   1
 
@@ -22,14 +23,78 @@
 #define CAM_CUSTOM_CSID_HW_MAX    1
 
 enum cam_custom_hw_event_type {
-	CAM_CUSTOM_EVENT_TYPE_ERROR,
-	CAM_CUSTOM_EVENT_BUF_DONE,
+	CAM_CUSTOM_HW_EVENT_ERROR,
+	CAM_CUSTOM_HW_EVENT_RUP_DONE,
+	CAM_CUSTOM_HW_EVENT_FRAME_DONE,
+	CAM_CUSTOM_HW_EVENT_MAX
 };
 
 enum cam_custom_cmd_types {
 	CAM_CUSTOM_CMD_NONE,
 	CAM_CUSTOM_SET_IRQ_CB,
 	CAM_CUSTOM_SUBMIT_REQ,
+};
+
+enum cam_custom_hw_mgr_cmd {
+	CAM_CUSTOM_HW_MGR_CMD_NONE,
+	CAM_CUSTOM_HW_MGR_PROG_DEFAULT_CONFIG,
+};
+
+/**
+ * struct cam_custom_hw_cmd_args - Payload for hw manager command
+ *
+ * @cmd_type               HW command type
+ * @reserved               any other required data
+ */
+struct cam_custom_hw_cmd_args {
+	uint32_t                   cmd_type;
+	uint32_t                   reserved;
+};
+
+/**
+ * struct cam_custom_hw_sof_event_data - Event payload for CAM_HW_EVENT_SOF
+ *
+ * @timestamp:   Time stamp for the sof event
+ * @boot_time:   Boot time stamp for the sof event
+ *
+ */
+struct cam_custom_hw_sof_event_data {
+	uint64_t       timestamp;
+	uint64_t       boot_time;
+};
+
+/**
+ * struct cam_custom_hw_reg_update_event_data - Event payload for
+ *                         CAM_HW_EVENT_REG_UPDATE
+ *
+ * @timestamp:     Time stamp for the reg update event
+ *
+ */
+struct cam_custom_hw_reg_update_event_data {
+	uint64_t       timestamp;
+};
+
+/**
+ * struct cam_custom_hw_done_event_data - Event payload for CAM_HW_EVENT_DONE
+ *
+ * @num_handles:           Number of resource handeles
+ * @resource_handle:       Resource handle array
+ *
+ */
+struct cam_custom_hw_done_event_data {
+	uint32_t             num_handles;
+	uint32_t             resource_handle[CAM_NUM_OUT_PER_COMP_IRQ_MAX];
+};
+
+/**
+ * struct cam_custom_hw_error_event_data - Event payload for CAM_HW_EVENT_ERROR
+ *
+ * @error_type:            Error type for the error event
+ * @timestamp:             Timestamp for the error event
+ */
+struct cam_custom_hw_error_event_data {
+	uint32_t             error_type;
+	uint64_t             timestamp;
 };
 
 /**
@@ -61,21 +126,24 @@ struct cam_custom_start_args {
  * @packet_opcode_type:     Packet header opcode in the packet header
  *                          this opcode defines, packet is init packet or
  *                          update packet
+ * @buffer_addr:            IO Buffer address
  *
  */
 struct cam_custom_prepare_hw_update_data {
-	uint32_t                          packet_opcode_type;
+	uint32_t                    packet_opcode_type;
+	uint32_t                    num_cfg;
+	uint64_t                    io_addr[CAM_PACKET_MAX_PLANES];
 };
 
 /**
  * struct cam_custom_hw_cb_args : HW manager callback args
  *
- * @irq_status : irq status
- * @req_info   : Pointer to the request info associated with the cb
+ * @res_type : resource type
+ * @err_type : error type
  */
 struct cam_custom_hw_cb_args {
-	uint32_t                              irq_status;
-	struct cam_custom_sub_mod_req_to_dev *req_info;
+	uint32_t                              res_type;
+	uint32_t                              err_type;
 };
 
 /**

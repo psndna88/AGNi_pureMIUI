@@ -130,7 +130,7 @@ struct ope_bus_wr_ctx {
 struct ope_bus_wr {
 	struct ope_hw *ope_hw_info;
 	struct ope_bus_out_port_to_wm out_port_to_wm[OPE_OUT_RES_MAX];
-	struct ope_bus_wr_ctx bus_wr_ctx[OPE_CTX_MAX];
+	struct ope_bus_wr_ctx *bus_wr_ctx[OPE_CTX_MAX];
 };
 
 #endif /* OPE_BUS_WR_H */

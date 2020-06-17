@@ -182,6 +182,11 @@ static int cam_ife_mgr_get_hw_caps(void *hw_mgr_priv,
 	struct cam_ife_hw_mgr             *hw_mgr = hw_mgr_priv;
 	struct cam_query_cap_cmd          *query = hw_caps_args;
 	struct cam_isp_query_cap_cmd       query_isp;
+	struct cam_isp_dev_cap_info       *ife_full_hw_info = NULL;
+	struct cam_isp_dev_cap_info       *ife_lite_hw_info = NULL;
+	struct cam_isp_dev_cap_info       *csid_full_hw_info = NULL;
+	struct cam_isp_dev_cap_info       *csid_lite_hw_info = NULL;
+	struct cam_ife_csid_hw_caps       *ife_csid_caps = {0};
 
 	CAM_DBG(CAM_ISP, "enter");
 
@@ -196,13 +201,98 @@ static int cam_ife_mgr_get_hw_caps(void *hw_mgr_priv,
 	query_isp.device_iommu.secure = hw_mgr->mgr_common.img_iommu_hdl_secure;
 	query_isp.cdm_iommu.non_secure = hw_mgr->mgr_common.cmd_iommu_hdl;
 	query_isp.cdm_iommu.secure = hw_mgr->mgr_common.cmd_iommu_hdl_secure;
-	query_isp.num_dev = 2;
-	for (i = 0; i < query_isp.num_dev; i++) {
-		query_isp.dev_caps[i].hw_type = CAM_ISP_HW_IFE;
-		query_isp.dev_caps[i].hw_version.major = 1;
-		query_isp.dev_caps[i].hw_version.minor = 7;
-		query_isp.dev_caps[i].hw_version.incr = 0;
-		query_isp.dev_caps[i].hw_version.reserved = 0;
+	query_isp.num_dev = 0;
+
+	for (i = 0; i < CAM_IFE_HW_NUM_MAX; i++) {
+		if (!hw_mgr->ife_devices[i])
+			continue;
+
+		if (hw_mgr->ife_dev_caps[i].is_lite) {
+			if (ife_lite_hw_info == NULL) {
+				ife_lite_hw_info =
+					&query_isp.dev_caps[query_isp.num_dev];
+				query_isp.num_dev++;
+
+				ife_lite_hw_info->hw_type = CAM_ISP_HW_IFE_LITE;
+				ife_lite_hw_info->hw_version.major =
+					hw_mgr->ife_dev_caps[i].major;
+				ife_lite_hw_info->hw_version.minor =
+					hw_mgr->ife_dev_caps[i].minor;
+				ife_lite_hw_info->hw_version.incr =
+					hw_mgr->ife_dev_caps[i].incr;
+				ife_lite_hw_info->hw_version.reserved = 0;
+				ife_lite_hw_info->num_hw = 0;
+			}
+
+			ife_lite_hw_info->num_hw++;
+
+		} else {
+			if (ife_full_hw_info == NULL) {
+				ife_full_hw_info =
+					&query_isp.dev_caps[query_isp.num_dev];
+				query_isp.num_dev++;
+
+				ife_full_hw_info->hw_type = CAM_ISP_HW_IFE;
+				ife_full_hw_info->hw_version.major =
+					hw_mgr->ife_dev_caps[i].major;
+				ife_full_hw_info->hw_version.minor =
+					hw_mgr->ife_dev_caps[i].minor;
+				ife_full_hw_info->hw_version.incr =
+					hw_mgr->ife_dev_caps[i].incr;
+				ife_full_hw_info->hw_version.reserved = 0;
+				ife_full_hw_info->num_hw = 0;
+			}
+
+			ife_full_hw_info->num_hw++;
+		}
+	}
+
+	for (i = 0; i < CAM_IFE_CSID_HW_NUM_MAX; i++) {
+		if (!hw_mgr->csid_devices[i])
+			continue;
+
+		ife_csid_caps = (struct cam_ife_csid_hw_caps *)
+			&hw_mgr->ife_csid_dev_caps[i];
+
+		if (ife_csid_caps->is_lite) {
+			if (csid_lite_hw_info == NULL) {
+				csid_lite_hw_info =
+					&query_isp.dev_caps[query_isp.num_dev];
+				query_isp.num_dev++;
+
+				csid_lite_hw_info->hw_type =
+					CAM_ISP_HW_CSID_LITE;
+				csid_lite_hw_info->hw_version.major =
+					ife_csid_caps->major_version;
+				csid_lite_hw_info->hw_version.minor =
+					ife_csid_caps->minor_version;
+				csid_lite_hw_info->hw_version.incr =
+					ife_csid_caps->version_incr;
+				csid_lite_hw_info->hw_version.reserved = 0;
+				csid_lite_hw_info->num_hw = 0;
+			}
+
+			csid_lite_hw_info->num_hw++;
+
+		} else {
+			if (csid_full_hw_info == NULL) {
+				csid_full_hw_info =
+					&query_isp.dev_caps[query_isp.num_dev];
+				query_isp.num_dev++;
+
+				csid_full_hw_info->hw_type = CAM_ISP_HW_CSID;
+				csid_full_hw_info->hw_version.major =
+					ife_csid_caps->major_version;
+				csid_full_hw_info->hw_version.minor =
+					ife_csid_caps->minor_version;
+				csid_full_hw_info->hw_version.incr =
+					ife_csid_caps->version_incr;
+				csid_full_hw_info->hw_version.reserved = 0;
+				csid_full_hw_info->num_hw = 0;
+			}
+
+			csid_full_hw_info->num_hw++;
+		}
 	}
 
 	if (copy_to_user(u64_to_user_ptr(query->caps_handle),
@@ -1639,9 +1729,7 @@ static int cam_ife_mgr_acquire_cid_res(
 			&csid_acquire, false);
 
 	if (rc || !csid_acquire.node_res) {
-		CAM_ERR(CAM_ISP,
-			"Can not acquire ife cid resource for path %d",
-			path_res_id);
+		CAM_ERR(CAM_ISP, "No %d paths available", path_res_id);
 		goto put_res;
 	}
 	cid_res_temp->hw_res[acquired_cnt++] = csid_acquire.node_res;
@@ -2912,6 +3000,7 @@ static int cam_ife_mgr_acquire_hw(void *hw_mgr_priv, void *acquire_hw_args)
 	}
 
 	ife_ctx->custom_enabled = false;
+	ife_ctx->custom_config = 0;
 	memset(ife_ctx->cdm_handle, 0, sizeof(ife_ctx->cdm_handle));
 
 	ife_ctx->common.cb_priv = acquire_args->context_data;
@@ -2943,8 +3032,11 @@ static int cam_ife_mgr_acquire_hw(void *hw_mgr_priv, void *acquire_hw_args)
 
 		if ((in_port->cust_node) && (!ife_ctx->custom_enabled)) {
 			ife_ctx->custom_enabled = true;
-			/* This can be obtained from uapi */
-			ife_ctx->use_frame_header_ts = true;
+			/* These can be obtained from uapi */
+			ife_ctx->custom_config |=
+				CAM_IFE_CUSTOM_CFG_FRAME_HEADER_TS;
+			ife_ctx->custom_config |=
+				CAM_IFE_CUSTOM_CFG_SW_SYNC_ON;
 		}
 
 		if ((in_port->res_type == CAM_ISP_IFE_IN_RES_CPHY_TPG_0) ||
@@ -3036,7 +3128,8 @@ static int cam_ife_mgr_acquire_hw(void *hw_mgr_priv, void *acquire_hw_args)
 
 	acquire_args->ctxt_to_hw_map = ife_ctx;
 	acquire_args->custom_enabled = ife_ctx->custom_enabled;
-	acquire_args->use_frame_header_ts = ife_ctx->use_frame_header_ts;
+	acquire_args->use_frame_header_ts =
+		(ife_ctx->custom_config & CAM_IFE_CUSTOM_CFG_FRAME_HEADER_TS);
 	ife_ctx->ctx_in_use = 1;
 	ife_ctx->num_reg_dump_buf = 0;
 
@@ -3691,7 +3784,8 @@ static int cam_ife_config_hw_internal_cdm(struct cam_ife_hw_mgr_ctx *ctx,
 
 	for (i = 0; i < ctx->num_base; i++) {
 		idx = ctx->base[i].idx;
-		if (cfg->init_packet) {
+		if ((cfg->init_packet) ||
+			(ctx->custom_config & CAM_IFE_CUSTOM_CFG_SW_SYNC_ON)) {
 			rem_jiffies = wait_for_completion_timeout(
 				&ctx->config_done_complete[idx],
 				msecs_to_jiffies(30));
@@ -3781,7 +3875,8 @@ static int cam_ife_config_hw_external_cdm(struct cam_ife_hw_mgr_ctx *ctx,
 		return rc;
 	}
 
-	if (cfg->init_packet) {
+	if ((cfg->init_packet) ||
+		(ctx->custom_config & CAM_IFE_CUSTOM_CFG_SW_SYNC_ON)) {
 		rem_jiffies = wait_for_completion_timeout(
 				&ctx->config_done_complete[0],
 				msecs_to_jiffies(30));
@@ -4207,8 +4302,10 @@ static int cam_ife_mgr_reset_vfe_hw(struct cam_ife_hw_mgr *hw_mgr,
 	vfe_reset_type = CAM_VFE_HW_RESET_HW;
 
 	for (i = 0; i < CAM_VFE_HW_NUM_MAX; i++) {
-		if ((!hw_mgr->ife_devices[i]) ||
-			(hw_idx != hw_mgr->ife_devices[i]->hw_idx))
+		if (!hw_mgr->ife_devices[i])
+			continue;
+
+		if (hw_idx != hw_mgr->ife_devices[i]->hw_idx)
 			continue;
 		CAM_DBG(CAM_ISP, "VFE (id = %d) reset", hw_idx);
 		vfe_hw_intf = hw_mgr->ife_devices[i];
@@ -4683,7 +4780,7 @@ static int cam_ife_mgr_release_hw(void *hw_mgr_priv,
 	ctx->cdm_ops = NULL;
 	ctx->num_reg_dump_buf = 0;
 	ctx->custom_enabled = false;
-	ctx->use_frame_header_ts = false;
+	ctx->custom_config = 0;
 	ctx->num_reg_dump_buf = 0;
 	ctx->is_dual = false;
 	ctx->dsp_enabled = false;
@@ -6165,7 +6262,7 @@ static int cam_ife_mgr_prepare_hw_update(void *hw_mgr_priv,
 	if (rc)
 		return rc;
 
-	if (ctx->use_frame_header_ts) {
+	if (ctx->custom_config & CAM_IFE_CUSTOM_CFG_FRAME_HEADER_TS) {
 		rc = cam_ife_mgr_util_insert_frame_header(&kmd_buf,
 			prepare_hw_data);
 		if (rc)
@@ -7352,7 +7449,8 @@ static int cam_ife_hw_mgr_handle_hw_sof(
 				&sof_done_event_data.boot_time);
 
 		/* if frame header is enabled reset qtimer ts */
-		if (ife_hw_mgr_ctx->use_frame_header_ts)
+		if (ife_hw_mgr_ctx->custom_config &
+			CAM_IFE_CUSTOM_CFG_FRAME_HEADER_TS)
 			sof_done_event_data.timestamp = 0x0;
 
 		if (atomic_read(&ife_hw_mgr_ctx->overflow_pending))
@@ -7858,4 +7956,28 @@ secure_fail:
 	cam_smmu_destroy_handle(g_ife_hw_mgr.mgr_common.img_iommu_hdl);
 	g_ife_hw_mgr.mgr_common.img_iommu_hdl = -1;
 	return rc;
+}
+
+void cam_ife_hw_mgr_deinit(void)
+{
+	int i = 0;
+
+	cam_req_mgr_workq_destroy(&g_ife_hw_mgr.workq);
+	debugfs_remove_recursive(g_ife_hw_mgr.debug_cfg.dentry);
+	g_ife_hw_mgr.debug_cfg.dentry = NULL;
+
+	for (i = 0; i < CAM_CTX_MAX; i++) {
+		cam_tasklet_deinit(
+			&g_ife_hw_mgr.mgr_common.tasklet_pool[i]);
+		kfree(g_ife_hw_mgr.ctx_pool[i].cdm_cmd);
+		g_ife_hw_mgr.ctx_pool[i].cdm_cmd = NULL;
+		g_ife_hw_mgr.ctx_pool[i].common.tasklet_info = NULL;
+	}
+
+	cam_smmu_destroy_handle(
+		g_ife_hw_mgr.mgr_common.img_iommu_hdl_secure);
+	g_ife_hw_mgr.mgr_common.img_iommu_hdl_secure = -1;
+
+	cam_smmu_destroy_handle(g_ife_hw_mgr.mgr_common.img_iommu_hdl);
+	g_ife_hw_mgr.mgr_common.img_iommu_hdl = -1;
 }

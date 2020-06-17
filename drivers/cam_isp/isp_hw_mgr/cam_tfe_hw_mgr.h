@@ -37,8 +37,8 @@ struct cam_tfe_hw_mgr_debug {
 	uint64_t       csid_debug;
 	uint32_t       enable_recovery;
 	uint32_t       camif_debug;
-	bool           enable_reg_dump;
-	bool           per_req_reg_dump;
+	uint32_t       enable_reg_dump;
+	uint32_t       per_req_reg_dump;
 };
 
 /**
@@ -79,6 +79,7 @@ struct cam_tfe_hw_mgr_debug {
  * @is_dual                   indicate whether context is in dual TFE mode
  * @is_tpg                    indicate whether context use tpg
  * @master_hw_idx             master hardware index in dual tfe case
+ * @slave_hw_idx              slave hardware index in dual tfe case
  * @dual_tfe_irq_mismatch_cnt irq mismatch count value per core, used for
  *                              dual TFE
  */
@@ -122,6 +123,7 @@ struct cam_tfe_hw_mgr_ctx {
 	bool                            is_dual;
 	bool                            is_tpg;
 	uint32_t                        master_hw_idx;
+	uint32_t                        slave_hw_idx;
 	uint32_t                        dual_tfe_irq_mismatch_cnt;
 };
 
@@ -191,6 +193,19 @@ struct cam_tfe_hw_event_recovery_data {
  * @iommu_hdl:          Iommu handle to be returned
  *
  */
+#ifdef CONFIG_SPECTRA_TFE
 int cam_tfe_hw_mgr_init(struct cam_hw_mgr_intf *hw_mgr_intf, int *iommu_hdl);
+void cam_tfe_hw_mgr_deinit(void);
+#else
+static inline int cam_tfe_hw_mgr_init(struct cam_hw_mgr_intf *hw_mgr_intf,
+	int *iommu_hdl)
+{
+	return -EINVAL;
+}
+
+static inline void cam_tfe_hw_mgr_deinit(void)
+{
+}
+#endif
 
 #endif /* _CAM_TFE_HW_MGR_H_ */

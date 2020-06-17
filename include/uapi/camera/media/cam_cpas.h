@@ -1,12 +1,12 @@
 /* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
 /*
- * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef __UAPI_CAM_CPAS_H__
 #define __UAPI_CAM_CPAS_H__
 
-#include <media/cam_defs.h>
+#include <camera/media/cam_defs.h>
 
 #define CAM_FAMILY_CAMERA_SS     1
 #define CAM_FAMILY_CPAS_SS       2
@@ -73,10 +73,10 @@
  *
  */
 struct cam_cpas_query_cap {
-	uint32_t                 camera_family;
-	uint32_t                 reserved;
-	struct cam_hw_version    camera_version;
-	struct cam_hw_version    cpas_version;
+	__u32                 camera_family;
+	__u32                 reserved;
+	struct cam_hw_version camera_version;
+	struct cam_hw_version cpas_version;
 };
 
 /**
@@ -93,15 +93,15 @@ struct cam_cpas_query_cap {
  * @ddr_ib_bw                DDR IB bw for this path
  */
 struct cam_axi_per_path_bw_vote {
-	uint32_t                      usage_data;
-	uint32_t                      transac_type;
-	uint32_t                      path_data_type;
-	uint32_t                      reserved;
-	uint64_t                      camnoc_bw;
-	uint64_t                      mnoc_ab_bw;
-	uint64_t                      mnoc_ib_bw;
-	uint64_t                      ddr_ab_bw;
-	uint64_t                      ddr_ib_bw;
+	__u32                      usage_data;
+	__u32                      transac_type;
+	__u32                      path_data_type;
+	__u32                      reserved;
+	__u64                      camnoc_bw;
+	__u64                      mnoc_ab_bw;
+	__u64                      mnoc_ib_bw;
+	__u64                      ddr_ab_bw;
+	__u64                      ddr_ib_bw;
 };
 
 #endif /* __UAPI_CAM_CPAS_H__ */

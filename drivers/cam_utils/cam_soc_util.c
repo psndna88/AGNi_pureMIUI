@@ -17,7 +17,7 @@ static char supported_clk_info[256];
 static char debugfs_dir_name[64];
 
 int cam_soc_util_get_clk_level(struct cam_hw_soc_info *soc_info,
-	int32_t clk_rate, int clk_idx, int32_t *clk_lvl)
+	int64_t clk_rate, int clk_idx, int32_t *clk_lvl)
 {
 	int i;
 	long clk_rate_round;
@@ -41,9 +41,9 @@ int cam_soc_util_get_clk_level(struct cam_hw_soc_info *soc_info,
 			(soc_info->clk_rate[i][clk_idx] >=
 			clk_rate_round)) {
 			CAM_DBG(CAM_UTIL,
-				"soc = %d round rate = %ld actual = %d",
+				"soc = %d round rate = %ld actual = %lld",
 				soc_info->clk_rate[i][clk_idx],
-				clk_rate_round,	clk_rate);
+				clk_rate_round, clk_rate);
 			*clk_lvl = i;
 			return 0;
 		}
@@ -184,35 +184,35 @@ DEFINE_SIMPLE_ATTRIBUTE(cam_soc_util_clk_lvl_control,
 static int cam_soc_util_create_clk_lvl_debugfs(
 	struct cam_hw_soc_info *soc_info)
 {
-	struct dentry *dentry = NULL;
-
 	if (!soc_info) {
 		CAM_ERR(CAM_UTIL, "soc info is NULL");
 		return -EINVAL;
 	}
 
-	if (soc_info->dentry)
+	if (soc_info->dentry) {
+		CAM_DBG(CAM_UTIL, "Debubfs entry for %s already exist",
+			soc_info->dev_name);
 		return 0;
+	}
 
 	memset(debugfs_dir_name, 0, sizeof(debugfs_dir_name));
 	strlcat(debugfs_dir_name, "clk_dir_", sizeof(debugfs_dir_name));
 	strlcat(debugfs_dir_name, soc_info->dev_name, sizeof(debugfs_dir_name));
 
-	dentry = soc_info->dentry;
-	dentry = debugfs_create_dir(debugfs_dir_name, NULL);
-	if (!dentry) {
+	soc_info->dentry = debugfs_create_dir(debugfs_dir_name, NULL);
+	if (IS_ERR_OR_NULL(soc_info->dentry)) {
 		CAM_ERR(CAM_UTIL, "failed to create debug directory");
 		return -ENOMEM;
 	}
 
 	if (!debugfs_create_file("clk_lvl_options", 0444,
-		dentry, soc_info, &cam_soc_util_clk_lvl_options)) {
+		soc_info->dentry, soc_info, &cam_soc_util_clk_lvl_options)) {
 		CAM_ERR(CAM_UTIL, "failed to create clk_lvl_options");
 		goto err;
 	}
 
 	if (!debugfs_create_file("clk_lvl_control", 0644,
-		dentry, soc_info, &cam_soc_util_clk_lvl_control)) {
+		soc_info->dentry, soc_info, &cam_soc_util_clk_lvl_control)) {
 		CAM_ERR(CAM_UTIL, "failed to create clk_lvl_control");
 		goto err;
 	}
@@ -223,8 +223,10 @@ static int cam_soc_util_create_clk_lvl_debugfs(
 	return 0;
 
 err:
-	debugfs_remove_recursive(dentry);
-	dentry = NULL;
+	CAM_ERR(CAM_UTIL, "Error in creating Debugfs Entry: %s",
+		soc_info->dev_name);
+	debugfs_remove_recursive(soc_info->dentry);
+	soc_info->dentry = NULL;
 	return -ENOMEM;
 }
 
@@ -380,7 +382,7 @@ long cam_soc_util_get_clk_round_rate(struct cam_hw_soc_info *soc_info,
  * @return:         Success or failure
  */
 static int cam_soc_util_set_clk_rate(struct clk *clk, const char *clk_name,
-	int32_t clk_rate)
+	int64_t clk_rate)
 {
 	int rc = 0;
 	long clk_rate_round;
@@ -388,7 +390,7 @@ static int cam_soc_util_set_clk_rate(struct clk *clk, const char *clk_name,
 	if (!clk || !clk_name)
 		return -EINVAL;
 
-	CAM_DBG(CAM_UTIL, "set %s, rate %d", clk_name, clk_rate);
+	CAM_DBG(CAM_UTIL, "set %s, rate %lld", clk_name, clk_rate);
 	if (clk_rate > 0) {
 		clk_rate_round = clk_round_rate(clk, clk_rate);
 		CAM_DBG(CAM_UTIL, "new_rate %ld", clk_rate_round);
@@ -424,7 +426,7 @@ static int cam_soc_util_set_clk_rate(struct clk *clk, const char *clk_name,
 }
 
 int cam_soc_util_set_src_clk_rate(struct cam_hw_soc_info *soc_info,
-	int32_t clk_rate)
+	int64_t clk_rate)
 {
 	int rc = 0;
 	int i = 0;
@@ -452,13 +454,13 @@ int cam_soc_util_set_src_clk_rate(struct cam_hw_soc_info *soc_info,
 		&apply_level);
 	if (rc || (apply_level < 0) || (apply_level >= CAM_MAX_VOTE)) {
 		CAM_ERR(CAM_UTIL,
-			"set %s, rate %d dev_name = %s apply level = %d",
+			"set %s, rate %lld dev_name = %s apply level = %d",
 			soc_info->clk_name[src_clk_idx], clk_rate,
 			soc_info->dev_name, apply_level);
 			return -EINVAL;
 	}
 
-	CAM_DBG(CAM_UTIL, "set %s, rate %d dev_name = %s apply level = %d",
+	CAM_DBG(CAM_UTIL, "set %s, rate %lld dev_name = %s apply level = %d",
 		soc_info->clk_name[src_clk_idx], clk_rate,
 		soc_info->dev_name, apply_level);
 
@@ -471,7 +473,7 @@ int cam_soc_util_set_src_clk_rate(struct cam_hw_soc_info *soc_info,
 		soc_info->clk_name[src_clk_idx], clk_rate);
 	if (rc) {
 		CAM_ERR(CAM_UTIL,
-			"SET_RATE Failed: src clk: %s, rate %d, dev_name = %s rc: %d",
+			"SET_RATE Failed: src clk: %s, rate %lld, dev_name = %s rc: %d",
 			soc_info->clk_name[src_clk_idx], clk_rate,
 			soc_info->dev_name, rc);
 		return rc;

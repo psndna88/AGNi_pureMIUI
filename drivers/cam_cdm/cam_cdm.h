@@ -67,6 +67,7 @@
 /* BL_FIFO configurations*/
 #define CAM_CDM_BL_FIFO_LENGTH_MAX_DEFAULT 0x40
 #define CAM_CDM_BL_FIFO_LENGTH_CFG_SHIFT 0x10
+#define CAM_CDM_BL_FIFO_FLUSH_SHIFT 0x3
 
 #define CAM_CDM_BL_FIFO_REQ_SIZE_MAX 0x00
 #define CAM_CDM_BL_FIFO_REQ_SIZE_MAX_DIV2 0x01
@@ -100,6 +101,7 @@
 #define CAM_CDM_IRQ_STATUS_ERROR_INV_CMD_MASK 0x10000
 #define CAM_CDM_IRQ_STATUS_ERROR_OVER_FLOW_MASK 0x20000
 #define CAM_CDM_IRQ_STATUS_ERROR_AHB_BUS_MASK 0x40000
+#define CAM_CDM_IRQ_STATUS_USR_DATA_MASK 0xFF
 
 #define CAM_CDM_IRQ_STATUS_ERRORS \
 	(CAM_CDM_IRQ_STATUS_ERROR_INV_CMD_MASK | \
@@ -274,6 +276,7 @@ struct cam_cdm_common_reg_data {
  *                       wait, etc.
  * @core_en:             offset to pause/enable CDM
  * @fe_cfg:              offset to configure CDM fetch engine
+ * @irq_context_status   offset to read back irq context status
  * @bl_fifo_rb:          offset to set BL_FIFO read back
  * @bl_fifo_base_rb:     offset to read back base address on offset set by
  *                       bl_fifo_rb
@@ -317,6 +320,7 @@ struct cam_cdm_common_regs {
 	uint32_t core_cfg;
 	uint32_t core_en;
 	uint32_t fe_cfg;
+	uint32_t irq_context_status;
 	uint32_t bl_fifo_rb;
 	uint32_t bl_fifo_base_rb;
 	uint32_t bl_fifo_len_rb;
@@ -371,6 +375,7 @@ enum cam_cdm_hw_process_intf_cmd {
 	CAM_CDM_HW_INTF_CMD_RESET_HW,
 	CAM_CDM_HW_INTF_CMD_FLUSH_HW,
 	CAM_CDM_HW_INTF_CMD_HANDLE_ERROR,
+	CAM_CDM_HW_INTF_CMD_HANG_DETECT,
 	CAM_CDM_HW_INTF_CMD_INVALID,
 };
 
@@ -412,6 +417,7 @@ enum cam_cdm_hw_version {
 	CAM_CDM_VERSION_1_1 = 0x10010000,
 	CAM_CDM_VERSION_1_2 = 0x10020000,
 	CAM_CDM_VERSION_2_0 = 0x20000000,
+	CAM_CDM_VERSION_2_1 = 0x20010000,
 	CAM_CDM_VERSION_MAX,
 };
 
@@ -466,6 +472,8 @@ struct cam_cdm_bl_fifo {
 	struct mutex fifo_lock;
 	uint8_t bl_tag;
 	uint32_t bl_depth;
+	uint8_t last_bl_tag_done;
+	uint32_t work_record;
 };
 
 /**
@@ -493,6 +501,7 @@ struct cam_cdm_bl_fifo {
  * @gen_irq:             memory region in which gen_irq command will be written
  * @cpas_handle:         handle for cpas driver
  * @arbitration:         type of arbitration to be used for the CDM
+ * @rst_done_cnt:        CMD reset done count
  */
 struct cam_cdm {
 	uint32_t index;
@@ -515,6 +524,7 @@ struct cam_cdm {
 	struct cam_cdm_hw_mem gen_irq[CAM_CDM_BL_FIFO_MAX];
 	uint32_t cpas_handle;
 	enum cam_cdm_arbitration arbitration;
+	uint32_t rst_done_cnt;
 };
 
 /* struct cam_cdm_private_dt_data - CDM hw custom dt data */

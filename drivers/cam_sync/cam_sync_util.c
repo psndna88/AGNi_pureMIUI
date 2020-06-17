@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2018, 2020 The Linux Foundation. All rights reserved.
  */
 
 #include "cam_sync_util.h"
@@ -88,8 +88,9 @@ int cam_sync_init_group_object(struct sync_table_row *table,
 		}
 
 		/* check for child's state */
-		if (child_row->state == CAM_SYNC_STATE_SIGNALED_ERROR) {
-			row->state = CAM_SYNC_STATE_SIGNALED_ERROR;
+		if ((child_row->state == CAM_SYNC_STATE_SIGNALED_ERROR) ||
+			(child_row->state == CAM_SYNC_STATE_SIGNALED_CANCEL)) {
+			row->state = child_row->state;
 			spin_unlock_bh(&sync_dev->row_spinlocks[sync_objs[i]]);
 			continue;
 		}
@@ -123,7 +124,8 @@ int cam_sync_init_group_object(struct sync_table_row *table,
 	}
 
 	if (!row->remaining) {
-		if (row->state != CAM_SYNC_STATE_SIGNALED_ERROR)
+		if ((row->state != CAM_SYNC_STATE_SIGNALED_ERROR) &&
+			(row->state != CAM_SYNC_STATE_SIGNALED_CANCEL))
 			row->state = CAM_SYNC_STATE_SIGNALED_SUCCESS;
 		complete_all(&row->signaled);
 	}
@@ -392,6 +394,7 @@ int cam_sync_util_update_parent_state(struct sync_table_row *parent_row,
 		break;
 
 	case CAM_SYNC_STATE_SIGNALED_ERROR:
+	case CAM_SYNC_STATE_SIGNALED_CANCEL:
 		break;
 
 	case CAM_SYNC_STATE_INVALID:

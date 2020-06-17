@@ -462,7 +462,7 @@ static int cam_cpas_util_set_camnoc_axi_clk_rate(
 	if (soc_private->control_camnoc_axi_clk) {
 		struct cam_hw_soc_info *soc_info = &cpas_hw->soc_info;
 		uint64_t required_camnoc_bw = 0, intermediate_result = 0;
-		int32_t clk_rate = 0;
+		int64_t clk_rate = 0;
 
 		for (i = 0; i < CAM_CPAS_MAX_TREE_NODES; i++) {
 			tree_node = soc_private->tree_node[i];
@@ -511,7 +511,7 @@ static int cam_cpas_util_set_camnoc_axi_clk_rate(
 		do_div(intermediate_result, soc_private->camnoc_bus_width);
 		clk_rate = intermediate_result;
 
-		CAM_DBG(CAM_CPAS, "Setting camnoc axi clk rate : %llu %d",
+		CAM_DBG(CAM_CPAS, "Setting camnoc axi clk rate : %llu %lld",
 			required_camnoc_bw, clk_rate);
 
 		/*
@@ -524,7 +524,7 @@ static int cam_cpas_util_set_camnoc_axi_clk_rate(
 			rc = cam_soc_util_set_src_clk_rate(soc_info, clk_rate);
 			if (rc)
 				CAM_ERR(CAM_CPAS,
-				"Failed in setting camnoc axi clk %llu %d %d",
+				"Failed in setting camnoc axi clk %llu %lld %d",
 				required_camnoc_bw, clk_rate, rc);
 
 			cpas_core->applied_camnoc_axi_rate = clk_rate;
@@ -982,6 +982,46 @@ unlock_tree:
 	return rc;
 }
 
+static int cam_cpas_util_apply_default_axi_vote(
+	struct cam_hw_info *cpas_hw, bool enable)
+{
+	struct cam_cpas *cpas_core = (struct cam_cpas *) cpas_hw->core_info;
+	struct cam_cpas_axi_port *axi_port = NULL;
+	uint64_t mnoc_ab_bw = 0, mnoc_ib_bw = 0;
+	int rc = 0, i = 0;
+
+	mutex_lock(&cpas_core->tree_lock);
+	for (i = 0; i < cpas_core->num_axi_ports; i++) {
+		if (!cpas_core->axi_port[i].ab_bw ||
+			!cpas_core->axi_port[i].ib_bw)
+			axi_port = &cpas_core->axi_port[i];
+		else
+			continue;
+
+		if (enable)
+			mnoc_ib_bw = CAM_CPAS_DEFAULT_AXI_BW;
+		else
+			mnoc_ib_bw = 0;
+
+		CAM_DBG(CAM_CPAS, "Port=[%s] :ab[%llu] ib[%llu]",
+			axi_port->axi_port_name, mnoc_ab_bw, mnoc_ib_bw);
+
+		rc = cam_cpas_util_vote_bus_client_bw(&axi_port->bus_client,
+			mnoc_ab_bw, mnoc_ib_bw, false, &axi_port->applied_ab_bw,
+			&axi_port->applied_ib_bw);
+		if (rc) {
+			CAM_ERR(CAM_CPAS,
+				"Failed in mnoc vote ab[%llu] ib[%llu] rc=%d",
+				mnoc_ab_bw, mnoc_ib_bw, rc);
+			goto unlock_tree;
+		}
+	}
+
+unlock_tree:
+	mutex_unlock(&cpas_core->tree_lock);
+	return rc;
+}
+
 static int cam_cpas_hw_update_axi_vote(struct cam_hw_info *cpas_hw,
 	uint32_t client_handle, struct cam_axi_vote *client_axi_vote)
 {
@@ -1364,6 +1404,10 @@ static int cam_cpas_hw_start(void *hw_priv, void *start_args,
 		goto remove_ahb_vote;
 
 	if (cpas_core->streamon_clients == 0) {
+		rc = cam_cpas_util_apply_default_axi_vote(cpas_hw, true);
+		if (rc)
+			goto remove_ahb_vote;
+
 		atomic_set(&cpas_core->irq_count, 1);
 		rc = cam_cpas_soc_enable_resources(&cpas_hw->soc_info,
 			applied_level);
@@ -1543,6 +1587,11 @@ static int cam_cpas_hw_stop(void *hw_priv, void *stop_args,
 
 	rc = cam_cpas_util_apply_client_axi_vote(cpas_hw,
 		cpas_client, &axi_vote);
+	if (rc)
+		goto done;
+
+	if (cpas_core->streamon_clients == 0)
+		rc = cam_cpas_util_apply_default_axi_vote(cpas_hw, false);
 done:
 	mutex_unlock(&cpas_core->client_mutex[client_indx]);
 	mutex_unlock(&cpas_hw->hw_mutex);
@@ -1761,6 +1810,35 @@ static int cam_cpas_log_vote(struct cam_hw_info *cpas_hw)
 	return rc;
 }
 
+static int cam_cpas_select_qos(struct cam_hw_info *cpas_hw,
+	uint32_t selection_mask)
+{
+	struct cam_cpas *cpas_core = (struct cam_cpas *) cpas_hw->core_info;
+	int rc = 0;
+
+	mutex_lock(&cpas_hw->hw_mutex);
+
+	if (cpas_hw->hw_state == CAM_HW_STATE_POWER_UP) {
+		CAM_ERR(CAM_CPAS,
+			"Hw already in power up state, can't change QoS settings");
+		rc = -EINVAL;
+		goto done;
+	}
+
+	if (cpas_core->internal_ops.setup_qos_settings) {
+		rc = cpas_core->internal_ops.setup_qos_settings(cpas_hw,
+			selection_mask);
+		if (rc)
+			CAM_ERR(CAM_CPAS, "Failed in changing QoS %d", rc);
+	} else {
+		CAM_WARN(CAM_CPAS, "No ops for qos_settings");
+	}
+
+done:
+	mutex_unlock(&cpas_hw->hw_mutex);
+	return rc;
+}
+
 static int cam_cpas_hw_process_cmd(void *hw_priv,
 	uint32_t cmd_type, void *cmd_args, uint32_t arg_size)
 {
@@ -1865,6 +1943,20 @@ static int cam_cpas_hw_process_cmd(void *hw_priv,
 	}
 	case CAM_CPAS_HW_CMD_LOG_VOTE: {
 		rc = cam_cpas_log_vote(hw_priv);
+		break;
+	}
+
+	case CAM_CPAS_HW_CMD_SELECT_QOS: {
+		uint32_t *selection_mask;
+
+		if (sizeof(uint32_t) != arg_size) {
+			CAM_ERR(CAM_CPAS, "cmd_type %d, size mismatch %d",
+				cmd_type, arg_size);
+			break;
+		}
+
+		selection_mask = (uint32_t *)cmd_args;
+		rc = cam_cpas_select_qos(hw_priv, *selection_mask);
 		break;
 	}
 	default:

@@ -12,6 +12,7 @@
 #define CAM_CDM110_VERSION 0x10010000
 #define CAM_CDM120_VERSION 0x10020000
 #define CAM_CDM200_VERSION 0x20000000
+#define CAM_CDM210_VERSION 0x20010000
 
 #define CAM_CDM_AHB_BURST_LEN_1  (BIT(1) - 1)
 #define CAM_CDM_AHB_BURST_LEN_4  (BIT(2) - 1)
@@ -50,6 +51,7 @@ int cam_hw_cdm_submit_bl(struct cam_hw_info *cdm_hw,
 int cam_hw_cdm_reset_hw(struct cam_hw_info *cdm_hw, uint32_t handle);
 int cam_hw_cdm_flush_hw(struct cam_hw_info *cdm_hw, uint32_t handle);
 int cam_hw_cdm_handle_error(struct cam_hw_info *cdm_hw, uint32_t handle);
+int cam_hw_cdm_hang_detect(struct cam_hw_info *cdm_hw, uint32_t handle);
 struct cam_cdm_bl_cb_request_entry *cam_cdm_find_request_by_bl_tag(
 	uint32_t tag, struct list_head *bl_list);
 void cam_cdm_notify_clients(struct cam_hw_info *cdm_hw,

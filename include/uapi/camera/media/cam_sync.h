@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
 /*
- * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018, 2020 The Linux Foundation. All rights reserved.
  */
 
 #ifndef __UAPI_CAM_SYNC_H__
@@ -35,6 +35,7 @@
 #define CAM_SYNC_STATE_ACTIVE                    1
 #define CAM_SYNC_STATE_SIGNALED_SUCCESS          2
 #define CAM_SYNC_STATE_SIGNALED_ERROR            3
+#define CAM_SYNC_STATE_SIGNALED_CANCEL           4
 
 /**
  * struct cam_sync_ev_header - Event header for sync event notification
@@ -43,8 +44,8 @@
  * @status:   Status of the object
  */
 struct cam_sync_ev_header {
-	int32_t sync_obj;
-	int32_t status;
+	__s32 sync_obj;
+	__s32 status;
 };
 
 /**
@@ -54,8 +55,8 @@ struct cam_sync_ev_header {
  * @sync_obj:   Sync object returned after creation in kernel
  */
 struct cam_sync_info {
-	char name[64];
-	int32_t sync_obj;
+	char  name[64];
+	__s32 sync_obj;
 };
 
 /**
@@ -65,8 +66,8 @@ struct cam_sync_info {
  * @sync_state: State of the sync object to which it should be signaled
  */
 struct cam_sync_signal {
-	int32_t sync_obj;
-	uint32_t sync_state;
+	__s32 sync_obj;
+	__u32 sync_state;
 };
 
 /**
@@ -78,8 +79,8 @@ struct cam_sync_signal {
  */
 struct cam_sync_merge {
 	__u64 sync_objs;
-	uint32_t num_objs;
-	int32_t merged;
+	__u32 num_objs;
+	__s32 merged;
 };
 
 /**
@@ -90,8 +91,8 @@ struct cam_sync_merge {
  * @payload:    Pointer to user payload
  */
 struct cam_sync_userpayload_info {
-	int32_t sync_obj;
-	uint32_t reserved;
+	__s32 sync_obj;
+	__u32 reserved;
 	__u64 payload[CAM_SYNC_USER_PAYLOAD_SIZE];
 };
 
@@ -103,8 +104,8 @@ struct cam_sync_userpayload_info {
  * @timeout_ms: Timeout in milliseconds
  */
 struct cam_sync_wait {
-	int32_t sync_obj;
-	uint32_t reserved;
+	__s32    sync_obj;
+	__u32    reserved;
 	uint64_t timeout_ms;
 };
 

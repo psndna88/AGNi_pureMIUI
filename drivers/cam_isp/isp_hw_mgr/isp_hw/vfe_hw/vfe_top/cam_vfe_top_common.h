@@ -27,6 +27,7 @@ struct cam_vfe_top_priv_common {
 					CAM_VFE_DELAY_BW_REDUCTION_NUM_FRAMES];
 	uint32_t                        last_counter;
 	uint64_t                        total_bw_applied;
+	uint32_t                        hw_version;
 	enum cam_vfe_bw_control_action  axi_vote_control[CAM_VFE_TOP_MUX_MAX];
 };
 

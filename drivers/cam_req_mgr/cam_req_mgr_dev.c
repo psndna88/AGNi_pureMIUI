@@ -656,14 +656,6 @@ int cam_register_subdev(struct cam_subdev *csd)
 	}
 
 	mutex_lock(&g_dev.dev_lock);
-	if ((g_dev.subdev_nodes_created) &&
-		(csd->sd_flags & V4L2_SUBDEV_FL_HAS_DEVNODE)) {
-		CAM_ERR(CAM_CRM,
-			"dynamic node is not allowed, name: %s, type :%d",
-			csd->name, csd->ent_function);
-		rc = -EINVAL;
-		goto reg_fail;
-	}
 
 	sd = &csd->sd;
 	v4l2_subdev_init(sd, csd->ops);
@@ -680,6 +672,18 @@ int cam_register_subdev(struct cam_subdev *csd)
 	if (rc) {
 		CAM_ERR(CAM_CRM, "register subdev failed");
 		goto reg_fail;
+	}
+
+	rc = v4l2_device_register_subdev_nodes(g_dev.v4l2_dev);
+	if (rc) {
+		CAM_ERR(CAM_CRM, "Failed to register subdev node: %s, rc: %d",
+			sd->name, rc);
+		goto reg_fail;
+	}
+
+	if (sd->flags & V4L2_SUBDEV_FL_HAS_DEVNODE) {
+		sd->entity.name = video_device_node_name(sd->devnode);
+		CAM_DBG(CAM_CRM, "created node :%s", sd->entity.name);
 	}
 
 	g_dev.count++;
@@ -706,47 +710,6 @@ int cam_unregister_subdev(struct cam_subdev *csd)
 }
 EXPORT_SYMBOL(cam_unregister_subdev);
 
-static int cam_dev_mgr_create_subdev_nodes(void)
-{
-	int rc;
-	struct v4l2_subdev *sd;
-
-	if (!g_dev.v4l2_dev) {
-		CAM_ERR(CAM_CRM, "V4L2 device not initialized");
-		return -EINVAL;
-	}
-
-	if (!g_dev.state) {
-		CAM_ERR(CAM_CRM, "camera root device not ready");
-		return -ENODEV;
-	}
-
-	mutex_lock(&g_dev.dev_lock);
-	if (g_dev.subdev_nodes_created) {
-		rc = -EEXIST;
-		goto create_fail;
-	}
-
-	rc = v4l2_device_register_subdev_nodes(g_dev.v4l2_dev);
-	if (rc) {
-		CAM_ERR(CAM_CRM, "failed to register the sub devices");
-		goto create_fail;
-	}
-
-	list_for_each_entry(sd, &g_dev.v4l2_dev->subdevs, list) {
-		if (!(sd->flags & V4L2_SUBDEV_FL_HAS_DEVNODE))
-			continue;
-		sd->entity.name = video_device_node_name(sd->devnode);
-		CAM_DBG(CAM_CRM, "created node :%s", sd->entity.name);
-	}
-
-	g_dev.subdev_nodes_created = true;
-
-create_fail:
-	mutex_unlock(&g_dev.dev_lock);
-	return rc;
-}
-
 static int cam_req_mgr_component_master_bind(struct device *dev)
 {
 	int rc = 0;
@@ -767,7 +730,6 @@ static int cam_req_mgr_component_master_bind(struct device *dev)
 	g_dev.open_cnt = 0;
 	mutex_init(&g_dev.cam_lock);
 	spin_lock_init(&g_dev.cam_eventq_lock);
-	g_dev.subdev_nodes_created = false;
 	mutex_init(&g_dev.dev_lock);
 
 	rc = cam_req_mgr_util_init();
@@ -802,13 +764,6 @@ static int cam_req_mgr_component_master_bind(struct device *dev)
 	if (rc) {
 		CAM_ERR(CAM_CRM,
 			"Error in binding all components rc: %d, Camera initialization failed!",
-			rc);
-		goto req_mgr_device_deinit;
-	}
-
-	rc = cam_dev_mgr_create_subdev_nodes();
-	if (rc) {
-		CAM_ERR(CAM_CRM, "failed in creating devices for subdevs %d",
 			rc);
 		goto req_mgr_device_deinit;
 	}
@@ -855,7 +810,6 @@ static void cam_req_mgr_component_master_unbind(struct device *dev)
 	cam_v4l2_device_cleanup();
 	mutex_destroy(&g_dev.dev_lock);
 	g_dev.state = false;
-	g_dev.subdev_nodes_created = false;
 }
 
 static const struct component_master_ops cam_req_mgr_component_master_ops = {

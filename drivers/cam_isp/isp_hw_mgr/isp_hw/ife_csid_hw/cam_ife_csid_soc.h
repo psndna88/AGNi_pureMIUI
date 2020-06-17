@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_IFE_CSID_SOC_H_
@@ -16,9 +16,11 @@
  * @cpas_handle:             Handle returned on registering with CPAS driver.
  *                           This handle is used for all further interface
  *                           with CPAS.
+ * @is_ife_csid_lite:        Flag to indicate Whether a full csid or a Lite csid
  */
 struct cam_csid_soc_private {
 	uint32_t cpas_handle;
+	bool     is_ife_csid_lite;
 };
 
 /**

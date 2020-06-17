@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 #include <linux/slab.h>
 #include "cam_ife_csid_soc.h"
@@ -10,15 +10,22 @@
 static int cam_ife_csid_get_dt_properties(struct cam_hw_soc_info *soc_info)
 {
 	struct device_node *of_node = NULL;
-	struct csid_device_soc_info *csid_soc_info = NULL;
+	struct cam_csid_soc_private *soc_private = NULL;
 	int rc = 0;
 
 	of_node = soc_info->pdev->dev.of_node;
-	csid_soc_info = (struct csid_device_soc_info *)soc_info->soc_private;
 
 	rc = cam_soc_util_get_dt_properties(soc_info);
 	if (rc)
 		return rc;
+
+	soc_private = (struct cam_csid_soc_private *)soc_info->soc_private;
+
+	soc_private->is_ife_csid_lite = false;
+	if (strnstr(soc_info->compatible, "lite",
+		strlen(soc_info->compatible)) != NULL) {
+		soc_private->is_ife_csid_lite = true;
+	}
 
 	return rc;
 }
@@ -110,6 +117,9 @@ int cam_ife_csid_deinit_soc_resources(
 		CAM_ERR(CAM_ISP, "CPAS unregistration failed rc=%d", rc);
 
 	rc = cam_soc_util_release_platform_resource(soc_info);
+	if (rc)
+		CAM_WARN(CAM_ISP,
+			"soc release platform resource fail rc: %d", rc);
 
 	return rc;
 }

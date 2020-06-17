@@ -19,12 +19,38 @@
  * output port resource. The current maximum resource number
  * is 2.
  */
-#define CAM_CUSTOM_DEV_CTX_RES_MAX                     2
+#define CAM_CUSTOM_DEV_CTX_RES_MAX                     1
 
 #define CAM_CUSTOM_CTX_CFG_MAX                         8
 
 /* forward declaration */
 struct cam_custom_context;
+
+/* cam custom context irq handling function type */
+typedef int (*cam_custom_hw_event_cb_func)(
+	struct cam_custom_context *custom_ctx, void *evt_data);
+
+/**
+ * enum cam_custom_ctx_activated_substate - sub states for activated
+ *
+ */
+enum cam_custom_ctx_activated_substate {
+	CAM_CUSTOM_CTX_ACTIVATED_SOF,
+	CAM_CUSTOM_CTX_ACTIVATED_APPLIED,
+	CAM_CUSTOM_CTX_ACTIVATED_HW_ERROR,
+	CAM_CUSTOM_CTX_ACTIVATED_HALT,
+	CAM_CUSTOM_CTX_ACTIVATED_MAX,
+};
+
+/**
+ * struct cam_custom_ctx_irq_ops - Function table for handling IRQ callbacks
+ *
+ * @irq_ops:               Array of handle function pointers.
+ *
+ */
+struct cam_custom_ctx_irq_ops {
+	cam_custom_hw_event_cb_func         irq_ops[CAM_CUSTOM_HW_EVENT_MAX];
+};
 
 /**
  * struct cam_custom_dev_ctx_req - Custom context request object
@@ -69,22 +95,28 @@ struct cam_custom_dev_ctx_req {
  * @active_req_cnt: Counter for the active request
  * @frame_id: Frame id tracking for the custom context
  * @hw_acquired: Flag to indicate if HW is acquired for this context
+ * @substate_actiavted: Current substate for the activated state.
+ * @substate_machine: Custom substate machine for external interface
+ * @substate_machine_irq: Custom substate machine for irq handling
  * @req_base: common request structure
  * @req_custom: custom request structure
  *
  */
 struct cam_custom_context {
-	struct cam_context           *base;
-	struct cam_ctx_ops           *state_machine;
-	uint32_t                      state;
-	void                         *hw_ctx;
-	bool                          init_received;
-	uint32_t                      subscribe_event;
-	uint32_t                      active_req_cnt;
-	int64_t                       frame_id;
-	bool                          hw_acquired;
-	struct cam_ctx_request        req_base[CAM_CTX_REQ_MAX];
-	struct cam_custom_dev_ctx_req req_custom[CAM_CTX_REQ_MAX];
+	struct cam_context            *base;
+	struct cam_ctx_ops            *state_machine;
+	uint32_t                       state;
+	void                          *hw_ctx;
+	bool                           init_received;
+	uint32_t                       subscribe_event;
+	uint32_t                       active_req_cnt;
+	int64_t                        frame_id;
+	bool                           hw_acquired;
+	uint32_t                       substate_activated;
+	struct cam_ctx_ops            *substate_machine;
+	struct cam_custom_ctx_irq_ops *substate_machine_irq;
+	struct cam_ctx_request         req_base[CAM_CTX_REQ_MAX];
+	struct cam_custom_dev_ctx_req  req_custom[CAM_CTX_REQ_MAX];
 };
 
 

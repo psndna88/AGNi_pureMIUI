@@ -75,6 +75,8 @@ struct ctx_base_info {
  * @num_base:               number of valid base data in the base array
  * @init_done:              indicate whether init hw is done
  * @event_cb:               event_cb to ctx
+ * @scratch_buffer_addr:    scratch buffer address
+ * @task_type:              Custom HW task type
  * @cb_priv:                data sent back with event_cb
  *
  */
@@ -96,6 +98,8 @@ struct cam_custom_hw_mgr_ctx {
 	uint32_t                        num_base;
 	bool                            init_done;
 	cam_hw_event_cb_func            event_cb;
+	uint64_t                        scratch_buffer_addr;
+	enum cam_custom_hw_task_type    task_type;
 	void                           *cb_priv;
 };
 

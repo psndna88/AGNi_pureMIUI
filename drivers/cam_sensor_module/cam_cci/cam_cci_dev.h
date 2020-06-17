@@ -57,6 +57,7 @@
 
 /* Max bytes that can be read per CCI read transaction */
 #define CCI_READ_MAX 256
+#define CCI_READ_MAX_V_1_2 0xE
 #define CCI_I2C_READ_MAX_RETRIES 3
 #define CCI_I2C_MAX_READ 10240
 #define CCI_I2C_MAX_WRITE 10240
@@ -69,6 +70,7 @@
 #define PRIORITY_QUEUE (QUEUE_0)
 #define SYNC_QUEUE (QUEUE_1)
 
+#define CCI_VERSION_1_2_9 0x10020009
 enum cci_i2c_sync {
 	MSM_SYNC_DISABLE,
 	MSM_SYNC_ENABLE,
@@ -124,7 +126,7 @@ struct cam_cci_i2c_queue_info {
 };
 
 struct cam_cci_master_info {
-	uint32_t status;
+	int32_t status;
 	atomic_t q_free[NUM_QUEUES];
 	uint8_t q_lock[NUM_QUEUES];
 	uint8_t reset_pending;

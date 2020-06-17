@@ -570,6 +570,26 @@ static int __cam_node_crm_apply_req(struct cam_req_mgr_apply_request *apply)
 	return cam_context_handle_crm_apply_req(ctx, apply);
 }
 
+static int __cam_node_crm_apply_default_req(
+	struct cam_req_mgr_apply_request *apply)
+{
+	struct cam_context *ctx = NULL;
+
+	if (!apply)
+		return -EINVAL;
+
+	ctx = (struct cam_context *) cam_get_device_priv(apply->dev_hdl);
+	if (!ctx) {
+		CAM_ERR(CAM_CORE, "Can not get context for handle %d",
+			apply->dev_hdl);
+		return -EINVAL;
+	}
+
+	trace_cam_apply_req("Node", apply->request_id);
+
+	return cam_context_handle_crm_apply_default_req(ctx, apply);
+}
+
 static int __cam_node_crm_flush_req(struct cam_req_mgr_flush_request *flush)
 {
 	struct cam_context *ctx = NULL;
@@ -683,6 +703,7 @@ int cam_node_init(struct cam_node *node, struct cam_hw_mgr_intf *hw_mgr_intf,
 	node->crm_node_intf.flush_req = __cam_node_crm_flush_req;
 	node->crm_node_intf.process_evt = __cam_node_crm_process_evt;
 	node->crm_node_intf.dump_req = __cam_node_crm_dump_req;
+	node->crm_node_intf.apply_default = __cam_node_crm_apply_default_req;
 
 	mutex_init(&node->list_mutex);
 	INIT_LIST_HEAD(&node->free_ctx_list);

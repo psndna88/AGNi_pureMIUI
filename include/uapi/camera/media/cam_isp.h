@@ -6,10 +6,10 @@
 #ifndef __UAPI_CAM_ISP_H__
 #define __UAPI_CAM_ISP_H__
 
-#include <media/cam_defs.h>
-#include <media/cam_isp_vfe.h>
-#include <media/cam_isp_ife.h>
-#include <media/cam_cpas.h>
+#include <camera/media/cam_defs.h>
+#include <camera/media/cam_isp_vfe.h>
+#include <camera/media/cam_isp_ife.h>
+#include <camera/media/cam_cpas.h>
 
 /* ISP driver name */
 #define CAM_ISP_DEV_NAME                        "cam-isp"
@@ -20,7 +20,9 @@
 #define CAM_ISP_HW_VFE                          2
 #define CAM_ISP_HW_IFE                          3
 #define CAM_ISP_HW_ISPIF                        4
-#define CAM_ISP_HW_MAX                          5
+#define CAM_ISP_HW_IFE_LITE                     5
+#define CAM_ISP_HW_CSID_LITE                    6
+#define CAM_ISP_HW_MAX                          7
 
 /* Color Pattern */
 #define CAM_ISP_PATTERN_BAYER_RGRGRG            0
@@ -140,13 +142,13 @@
  * struct cam_isp_dev_cap_info - A cap info for particular hw type
  *
  * @hw_type:            Hardware type for the cap info
- * @reserved:           reserved field for alignment
+ * @num_hw:             Number of HW of type @hw_type
  * @hw_version:         Hardware version
  *
  */
 struct cam_isp_dev_cap_info {
-	uint32_t              hw_type;
-	uint32_t              reserved;
+	__u32              hw_type;
+	__u32              num_hw;
 	struct cam_hw_version hw_version;
 };
 
@@ -161,11 +163,11 @@ struct cam_isp_dev_cap_info {
  *
  */
 struct cam_isp_query_cap_cmd {
-	struct cam_iommu_handle       device_iommu;
-	struct cam_iommu_handle       cdm_iommu;
-	int32_t                       num_dev;
-	uint32_t                      reserved;
-	struct cam_isp_dev_cap_info   dev_caps[CAM_ISP_HW_MAX];
+	struct cam_iommu_handle     device_iommu;
+	struct cam_iommu_handle     cdm_iommu;
+	__s32                       num_dev;
+	__u32                       reserved;
+	struct cam_isp_dev_cap_info dev_caps[CAM_ISP_HW_MAX];
 };
 
 /* Acquire Device */
@@ -185,14 +187,14 @@ struct cam_isp_query_cap_cmd {
  *
  */
 struct cam_isp_out_port_info {
-	uint32_t                res_type;
-	uint32_t                format;
-	uint32_t                width;
-	uint32_t                height;
-	uint32_t                comp_grp_id;
-	uint32_t                split_point;
-	uint32_t                secure_mode;
-	uint32_t                reserved;
+	__u32                res_type;
+	__u32                format;
+	__u32                width;
+	__u32                height;
+	__u32                comp_grp_id;
+	__u32                split_point;
+	__u32                secure_mode;
+	__u32                reserved;
 };
 
 /**
@@ -213,16 +215,16 @@ struct cam_isp_out_port_info {
  *
  */
 struct cam_isp_out_port_info_v2 {
-	uint32_t                res_type;
-	uint32_t                format;
-	uint32_t                width;
-	uint32_t                height;
-	uint32_t                comp_grp_id;
-	uint32_t                split_point;
-	uint32_t                secure_mode;
-	uint32_t                wm_mode;
-	uint32_t                out_port_res1;
-	uint32_t                out_port_res2;
+	__u32                res_type;
+	__u32                format;
+	__u32                width;
+	__u32                height;
+	__u32                comp_grp_id;
+	__u32                split_point;
+	__u32                secure_mode;
+	__u32                wm_mode;
+	__u32                out_port_res1;
+	__u32                out_port_res2;
 };
 
 /**
@@ -260,31 +262,31 @@ struct cam_isp_out_port_info_v2 {
  *
  */
 struct cam_isp_in_port_info {
-	uint32_t                        res_type;
-	uint32_t                        lane_type;
-	uint32_t                        lane_num;
-	uint32_t                        lane_cfg;
-	uint32_t                        vc;
-	uint32_t                        dt;
-	uint32_t                        format;
-	uint32_t                        test_pattern;
-	uint32_t                        usage_type;
-	uint32_t                        left_start;
-	uint32_t                        left_stop;
-	uint32_t                        left_width;
-	uint32_t                        right_start;
-	uint32_t                        right_stop;
-	uint32_t                        right_width;
-	uint32_t                        line_start;
-	uint32_t                        line_stop;
-	uint32_t                        height;
-	uint32_t                        pixel_clk;
-	uint32_t                        batch_size;
-	uint32_t                        dsp_mode;
-	uint32_t                        hbi_cnt;
-	uint32_t                        reserved;
-	uint32_t                        num_out_res;
-	struct cam_isp_out_port_info    data[1];
+	__u32                        res_type;
+	__u32                        lane_type;
+	__u32                        lane_num;
+	__u32                        lane_cfg;
+	__u32                        vc;
+	__u32                        dt;
+	__u32                        format;
+	__u32                        test_pattern;
+	__u32                        usage_type;
+	__u32                        left_start;
+	__u32                        left_stop;
+	__u32                        left_width;
+	__u32                        right_start;
+	__u32                        right_stop;
+	__u32                        right_width;
+	__u32                        line_start;
+	__u32                        line_stop;
+	__u32                        height;
+	__u32                        pixel_clk;
+	__u32                        batch_size;
+	__u32                        dsp_mode;
+	__u32                        hbi_cnt;
+	__u32                        reserved;
+	__u32                        num_out_res;
+	struct cam_isp_out_port_info data[1];
 };
 
 /**
@@ -329,38 +331,38 @@ struct cam_isp_in_port_info {
  *
  */
 struct cam_isp_in_port_info_v2 {
-	uint32_t                        res_type;
-	uint32_t                        lane_type;
-	uint32_t                        lane_num;
-	uint32_t                        lane_cfg;
-	uint32_t                        vc[CAM_ISP_VC_DT_CFG];
-	uint32_t                        dt[CAM_ISP_VC_DT_CFG];
-	uint32_t                        num_valid_vc_dt;
-	uint32_t                        format;
-	uint32_t                        test_pattern;
-	uint32_t                        usage_type;
-	uint32_t                        left_start;
-	uint32_t                        left_stop;
-	uint32_t                        left_width;
-	uint32_t                        right_start;
-	uint32_t                        right_stop;
-	uint32_t                        right_width;
-	uint32_t                        line_start;
-	uint32_t                        line_stop;
-	uint32_t                        height;
-	uint32_t                        pixel_clk;
-	uint32_t                        batch_size;
-	uint32_t                        dsp_mode;
-	uint32_t                        hbi_cnt;
-	uint32_t                        cust_node;
-	uint32_t                        num_out_res;
-	uint32_t                        offline_mode;
-	uint32_t                        horizontal_bin;
-	uint32_t                        qcfa_bin;
-	uint32_t                        csid_res_1;
-	uint32_t                        csid_res_2;
-	uint32_t                        ife_res_1;
-	uint32_t                        ife_res_2;
+	__u32                           res_type;
+	__u32                           lane_type;
+	__u32                           lane_num;
+	__u32                           lane_cfg;
+	__u32                           vc[CAM_ISP_VC_DT_CFG];
+	__u32                           dt[CAM_ISP_VC_DT_CFG];
+	__u32                           num_valid_vc_dt;
+	__u32                           format;
+	__u32                           test_pattern;
+	__u32                           usage_type;
+	__u32                           left_start;
+	__u32                           left_stop;
+	__u32                           left_width;
+	__u32                           right_start;
+	__u32                           right_stop;
+	__u32                           right_width;
+	__u32                           line_start;
+	__u32                           line_stop;
+	__u32                           height;
+	__u32                           pixel_clk;
+	__u32                           batch_size;
+	__u32                           dsp_mode;
+	__u32                           hbi_cnt;
+	__u32                           cust_node;
+	__u32                           num_out_res;
+	__u32                           offline_mode;
+	__u32                           horizontal_bin;
+	__u32                           qcfa_bin;
+	__u32                           csid_res_1;
+	__u32                           csid_res_2;
+	__u32                           ife_res_1;
+	__u32                           ife_res_2;
 	struct cam_isp_out_port_info_v2 data[1];
 };
 
@@ -376,11 +378,11 @@ struct cam_isp_in_port_info_v2 {
  *
  */
 struct cam_isp_resource {
-	uint32_t                       resource_id;
-	uint32_t                       length;
-	uint32_t                       handle_type;
-	uint32_t                       reserved;
-	uint64_t                       res_hdl;
+	__u32                       resource_id;
+	__u32                       length;
+	__u32                       handle_type;
+	__u32                       reserved;
+	__u64                       res_hdl;
 };
 
 /**
@@ -398,12 +400,12 @@ struct cam_isp_resource {
  * @reserved:                   Reserved for alignment
  */
 struct cam_isp_port_hfr_config {
-	uint32_t                       resource_type;
-	uint32_t                       subsample_pattern;
-	uint32_t                       subsample_period;
-	uint32_t                       framedrop_pattern;
-	uint32_t                       framedrop_period;
-	uint32_t                       reserved;
+	__u32                       resource_type;
+	__u32                       subsample_pattern;
+	__u32                       subsample_period;
+	__u32                       framedrop_pattern;
+	__u32                       framedrop_period;
+	__u32                       reserved;
 } __attribute__((packed));
 
 /**
@@ -414,8 +416,8 @@ struct cam_isp_port_hfr_config {
  * @port_hfr_config:            HFR configuration for each IO port
  */
 struct cam_isp_resource_hfr_config {
-	uint32_t                       num_ports;
-	uint32_t                       reserved;
+	__u32                          num_ports;
+	__u32                          reserved;
 	struct cam_isp_port_hfr_config port_hfr_config[1];
 } __attribute__((packed));
 
@@ -433,10 +435,10 @@ struct cam_isp_resource_hfr_config {
  *
  */
 struct cam_isp_dual_split_params {
-	uint32_t                       split_point;
-	uint32_t                       right_padding;
-	uint32_t                       left_padding;
-	uint32_t                       reserved;
+	__u32                       split_point;
+	__u32                       right_padding;
+	__u32                       left_padding;
+	__u32                       reserved;
 };
 
 /**
@@ -453,10 +455,10 @@ struct cam_isp_dual_split_params {
  *
  */
 struct cam_isp_dual_stripe_config {
-	uint32_t                       offset;
-	uint32_t                       width;
-	uint32_t                       tileconfig;
-	uint32_t                       port_id;
+	__u32                       offset;
+	__u32                       width;
+	__u32                       tileconfig;
+	__u32                       port_id;
 };
 
 /**
@@ -469,10 +471,10 @@ struct cam_isp_dual_stripe_config {
  *
  */
 struct cam_isp_dual_config {
-	uint32_t                           num_ports;
-	uint32_t                           reserved;
-	struct cam_isp_dual_split_params   split_params;
-	struct cam_isp_dual_stripe_config  stripes[1];
+	__u32                             num_ports;
+	__u32                             reserved;
+	struct cam_isp_dual_split_params  split_params;
+	struct cam_isp_dual_stripe_config stripes[1];
 } __attribute__((packed));
 
 /**
@@ -488,11 +490,11 @@ struct cam_isp_dual_config {
  *                              Hence pass the clock and let KMD decide.
  */
 struct cam_isp_clock_config {
-	uint32_t                       usage_type;
-	uint32_t                       num_rdi;
-	uint64_t                       left_pix_hz;
-	uint64_t                       right_pix_hz;
-	uint64_t                       rdi_hz[1];
+	__u32                       usage_type;
+	__u32                       num_rdi;
+	__u64                       left_pix_hz;
+	__u64                       right_pix_hz;
+	__u64                       rdi_hz[1];
 } __attribute__((packed));
 
 /**
@@ -501,7 +503,7 @@ struct cam_isp_clock_config {
  * @csid_clock                  CSID clock
  */
 struct cam_isp_csid_clock_config {
-	uint64_t                       csid_clock;
+	__u64                       csid_clock;
 } __attribute__((packed));
 
 /**
@@ -510,7 +512,7 @@ struct cam_isp_csid_clock_config {
  * @csid_binning                CSID binning
  */
 struct cam_isp_csid_qcfa_config {
-	uint32_t                       csid_binning;
+	__u32                       csid_binning;
 } __attribute__((packed));
 
 /**
@@ -522,10 +524,10 @@ struct cam_isp_csid_qcfa_config {
  * @ext_bw_bps:                 Bandwidth vote for path-to-DDR after CAMNOC
  */
 struct cam_isp_bw_vote {
-	uint32_t                       resource_id;
-	uint32_t                       reserved;
-	uint64_t                       cam_bw_bps;
-	uint64_t                       ext_bw_bps;
+	__u32                       resource_id;
+	__u32                       reserved;
+	__u64                       cam_bw_bps;
+	__u64                       ext_bw_bps;
 } __attribute__((packed));
 
 /**
@@ -538,11 +540,11 @@ struct cam_isp_bw_vote {
  * @rdi_vote:                   RDI bandwidth requirements
  */
 struct cam_isp_bw_config {
-	uint32_t                       usage_type;
-	uint32_t                       num_rdi;
-	struct cam_isp_bw_vote         left_pix_vote;
-	struct cam_isp_bw_vote         right_pix_vote;
-	struct cam_isp_bw_vote         rdi_vote[1];
+	__u32                       usage_type;
+	__u32                       num_rdi;
+	struct cam_isp_bw_vote      left_pix_vote;
+	struct cam_isp_bw_vote      right_pix_vote;
+	struct cam_isp_bw_vote      rdi_vote[1];
 } __attribute__((packed));
 
 /**
@@ -553,9 +555,9 @@ struct cam_isp_bw_config {
  * @axi_path                    Per path vote info
  */
 struct cam_isp_bw_config_v2 {
-	uint32_t                             usage_type;
-	uint32_t                             num_paths;
-	struct cam_axi_per_path_bw_vote      axi_path[1];
+	__u32                             usage_type;
+	__u32                             num_paths;
+	struct cam_axi_per_path_bw_vote   axi_path[1];
 } __attribute__((packed));
 
 /**
@@ -580,21 +582,21 @@ struct cam_isp_bw_config_v2 {
  * @latency_buf_size:           latency buffer for read engine
  */
 struct cam_fe_config {
-	uint64_t    version;
-	uint32_t    min_vbi;
-	uint32_t    fs_mode;
-	uint32_t    fs_line_sync_en;
-	uint32_t    hbi_count;
-	uint32_t    fs_sync_enable;
-	uint32_t    go_cmd_sel;
-	uint32_t    client_enable;
-	uint32_t    source_addr;
-	uint32_t    width;
-	uint32_t    height;
-	uint32_t    stride;
-	uint32_t    format;
-	uint32_t    unpacker_cfg;
-	uint32_t    latency_buf_size;
+	__u64    version;
+	__u32    min_vbi;
+	__u32    fs_mode;
+	__u32    fs_line_sync_en;
+	__u32    hbi_count;
+	__u32    fs_sync_enable;
+	__u32    go_cmd_sel;
+	__u32    client_enable;
+	__u32    source_addr;
+	__u32    width;
+	__u32    height;
+	__u32    stride;
+	__u32    format;
+	__u32    unpacker_cfg;
+	__u32    latency_buf_size;
 } __attribute__((packed));
 
 /**
@@ -614,18 +616,18 @@ struct cam_fe_config {
  * @reserved:                   Reserved
  */
 struct cam_isp_core_config {
-	uint32_t     version;
-	uint32_t     vid_ds16_r2pd;
-	uint32_t     vid_ds4_r2pd;
-	uint32_t     disp_ds16_r2pd;
-	uint32_t     disp_ds4_r2pd;
-	uint32_t     dsp_streaming_tap_point;
-	uint32_t     ihist_src_sel;
-	uint32_t     hdr_be_src_sel;
-	uint32_t     hdr_bhist_src_sel;
-	uint32_t     input_mux_sel_pdaf;
-	uint32_t     input_mux_sel_pp;
-	uint32_t     reserved;
+	__u32     version;
+	__u32     vid_ds16_r2pd;
+	__u32     vid_ds4_r2pd;
+	__u32     disp_ds16_r2pd;
+	__u32     disp_ds4_r2pd;
+	__u32     dsp_streaming_tap_point;
+	__u32     ihist_src_sel;
+	__u32     hdr_be_src_sel;
+	__u32     hdr_bhist_src_sel;
+	__u32     input_mux_sel_pdaf;
+	__u32     input_mux_sel_pp;
+	__u32     reserved;
 } __attribute__((packed));
 
 /**
@@ -641,14 +643,14 @@ struct cam_isp_core_config {
  * @data                 : Start of data region
  */
 struct cam_isp_acquire_hw_info {
-	uint16_t                common_info_version;
-	uint16_t                common_info_size;
-	uint32_t                common_info_offset;
-	uint32_t                num_inputs;
-	uint32_t                input_info_version;
-	uint32_t                input_info_size;
-	uint32_t                input_info_offset;
-	uint64_t                data;
+	__u16             common_info_version;
+	__u16             common_info_size;
+	__u32             common_info_offset;
+	__u32             num_inputs;
+	__u32             input_info_version;
+	__u32             input_info_size;
+	__u32             input_info_offset;
+	__u64             data;
 };
 
 /**
@@ -673,18 +675,18 @@ struct cam_isp_acquire_hw_info {
  * @reserved_4       : Reserved field for Write master config
  */
 struct cam_isp_vfe_wm_config {
-	uint32_t                      port_type;
-	uint32_t                      wm_mode;
-	uint32_t                      h_init;
-	uint32_t                      height;
-	uint32_t                      width;
-	uint32_t                      virtual_frame_en;
-	uint32_t                      stride;
-	uint32_t                      offset;
-	uint32_t                      reserved_1;
-	uint32_t                      reserved_2;
-	uint32_t                      reserved_3;
-	uint32_t                      reserved_4;
+	__u32                      port_type;
+	__u32                      wm_mode;
+	__u32                      h_init;
+	__u32                      height;
+	__u32                      width;
+	__u32                      virtual_frame_en;
+	__u32                      stride;
+	__u32                      offset;
+	__u32                      reserved_1;
+	__u32                      reserved_2;
+	__u32                      reserved_3;
+	__u32                      reserved_4;
 };
 
 /**
@@ -695,9 +697,9 @@ struct cam_isp_vfe_wm_config {
  * @wm_config      : VFE out config
  */
 struct cam_isp_vfe_out_config {
-	uint32_t                      num_ports;
-	uint32_t                      reserved;
-	struct cam_isp_vfe_wm_config  wm_config[1];
+	__u32                        num_ports;
+	__u32                        reserved;
+	struct cam_isp_vfe_wm_config wm_config[1];
 };
 
 /**
@@ -706,7 +708,7 @@ struct cam_isp_vfe_out_config {
  * @is_epd_sensor      : flag to check if epd supported
  */
 struct cam_isp_csid_epd_config {
-	uint32_t                      is_epd_supported;
+	__u32                      is_epd_supported;
 };
 
 #define CAM_ISP_ACQUIRE_COMMON_VER0         0x1000
