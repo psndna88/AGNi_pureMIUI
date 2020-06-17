@@ -496,45 +496,54 @@ else
 	LIBS="OLD";
 fi;
 $BB echo "$LIBS" > $AKHOME/CAM_LIB;
-
-if [ "$DEVICE_NATIVE_MIUIQ" == "YES" ]; then
-	if ([ "$ANDROID_VER" == "Q" ] && [ "$MIUI_VER" == "12" ]); then
-		if [ "$LIBS" == "NEW" ]; then
-			KERNEL="MIUIQ";
-			ui_print " " "AGNi detected New Camera libs (MIUI Q).." " ";
+if [ "`$BB grep selected.0=1 /tmp/aroma-data/cam.prop`" ]; then
+	#AUTO CAM MODE
+	ui_print " " "AGNi detecting rom's camera libs type.." " ";
+	if [ "$DEVICE_NATIVE_MIUIQ" == "YES" ]; then
+		if ([ "$ANDROID_VER" == "Q" ] && [ "$MIUI_VER" == "12" ]); then
+			if [ "$LIBS" == "NEW" ]; then
+				KERNEL="MIUIQ";
+				ui_print " " "AGNi detected New Camera libs (MIUI Q).." " ";
+			else
+				KERNEL="ERROR";
+				ui_print " " "ERROR: unsupported Camera libs. Reflash MIUI 12 Q rom without wipe then try again." " ";
+				ui_print " " " Expected New camera libs in your rom." " ";
+				ui_print " " " Terminating Installation !" " ";
+				cleanup;
+				exit;
+			fi;
 		else
-			KERNEL="ERROR";
-			ui_print " " "ERROR: unsupported Camera libs. Reflash MIUI 12 Q rom without wipe then try again." " ";
-			ui_print " " " Terminating Installation !" " ";
-			cleanup;
-			exit;
+			if [ "$LIBS" == "NEW" ]; then
+				KERNEL="NEW";
+				ui_print " " "AGNi detected New Camera libs.." " ";
+			else
+				KERNEL="OLD";
+				ui_print " " "AGNi detected Old Camera libs.." " ";
+			fi;
 		fi;
 	else
 		if [ "$LIBS" == "NEW" ]; then
 			KERNEL="NEW";
-			ui_print " " "AGNi detected New Camera libs.." " ";
+			ui_print " " "AGNi installing with New Camera libs support.." " ";
 		else
 			KERNEL="OLD";
-			ui_print " " "AGNi detected Old Camera libs.." " ";
+			ui_print " " "AGNi installing with Old Camera libs support.." " ";
 		fi;
 	fi;
-else
-	if [ "$LIBS" == "NEW" ]; then
-		KERNEL="NEW";
-		ui_print " " "AGNi detected New Camera libs.." " ";
-	else
+elif [ "`$BB grep selected.0=2 /tmp/aroma-data/cam.prop`" ]; then
+		if ([ "$DEVICE_NATIVE_MIUIQ" == "YES" ] && [ "$ANDROID_VER" == "Q" ] && [ "$MIUI_VER" == "12" ]); then
+			#FORCE MIUIQ CAM MODE
+			KERNEL="MIUIQ";
+			ui_print " " "AGNi installing with New Camera libs support (MIUI Q).." " ";
+		else
+			#FORCE NEW CAM MODE
+			KERNEL="NEW";
+			ui_print " " "AGNi installing with New Camera libs support.." " ";
+		fi;
+elif [ "`$BB grep selected.0=3 /tmp/aroma-data/cam.prop`" ]; then
+		#FORCE OLD CAM MODE
 		KERNEL="OLD";
-		ui_print " " "AGNi detected Old Camera libs.." " ";
-	fi;
-fi;
-if [ -f /cache/OLDCAM ]; then
-	LIBS="OLD";
-	KERNEL="$LIBS";
-	ui_print " " "AGNi: Override: Set OLD Camera libs.." " ";
-elif [ -f /cache/NEWCAM ]; then
-	LIBS="NEW";
-	KERNEL="$LIBS";
-	ui_print " " "AGNi: Override: Set NEW Camera libs.." " ";
+		ui_print " " "AGNi installing with Old Camera libs support.." " ";
 fi;
 $BB echo "$KERNEL" > $AKHOME/KERNEL_TYPE;
 ### AGNi: WiFi module
