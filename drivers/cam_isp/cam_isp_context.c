@@ -1364,9 +1364,7 @@ static int __cam_isp_ctx_notify_sof_in_activated_state(
 		}
 
 		list_for_each_entry(req, &ctx->active_req_list, list) {
-			req_isp = (struct cam_isp_ctx_req *) req->req_priv;
-			if ((!req_isp->bubble_detected) &&
-				(req->request_id > ctx_isp->reported_req_id)) {
+			if (req->request_id > ctx_isp->reported_req_id) {
 				request_id = req->request_id;
 				ctx_isp->reported_req_id = request_id;
 				__cam_isp_ctx_update_event_record(ctx_isp,
