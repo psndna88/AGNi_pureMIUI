@@ -856,7 +856,7 @@ static void md_dump_data(unsigned long addr, int nbytes, const char *name)
 			if (__is_lm_address(p) &&
 			    kern_addr_valid((unsigned long)p) &&
 			    page_accessible(page_to_pfn(virt_to_page(p))) &&
-			    !probe_kernel_address(p, data))
+			    !get_kernel_nofault(data, p))
 				seq_buf_printf(md_cntxt_seq_buf, " %08x",
 						data);
 			else

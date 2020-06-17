@@ -1239,7 +1239,7 @@ static void show_instructions(struct pt_regs *regs)
 			pr_cont("\n");
 
 		if (!__kernel_text_address(pc) ||
-		    probe_kernel_address((const void *)pc, instr)) {
+		    get_kernel_nofault(instr, (const void *)pc)) {
 			pr_cont("XXXXXXXX ");
 		} else {
 			if (nip == pc)
@@ -1283,7 +1283,7 @@ void show_user_instructions(struct pt_regs *regs)
 		for (i = 0; i < 8 && n; i++, n--, pc += sizeof(int)) {
 			int instr;
 
-			if (probe_kernel_address((const void *)pc, instr)) {
+			if (get_kernel_nofault(instr, const void *)pc)) {
 				seq_buf_printf(&s, "XXXXXXXX ");
 				continue;
 			}
