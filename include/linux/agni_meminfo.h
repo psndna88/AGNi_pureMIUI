@@ -22,5 +22,6 @@ extern unsigned long adreno_load_perc;
 extern int ramgb;
 extern bool zramzero;
 extern bool dyn_fsync_active;
+extern bool miuirom;
 
 #endif /* _LINUX_AGNI_MEMINFO_H */
