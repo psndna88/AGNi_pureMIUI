@@ -1459,7 +1459,6 @@ void *msm_vidc_open(int core_id, int session_type)
 	mutex_init(&inst->bufq[INPUT_PORT].lock);
 	mutex_init(&inst->lock);
 	mutex_init(&inst->flush_lock);
-	mutex_init(&inst->ubwc_stats_lock);
 
 	INIT_MSM_VIDC_LIST(&inst->scratchbufs);
 	INIT_MSM_VIDC_LIST(&inst->input_crs);
@@ -1563,7 +1562,6 @@ fail_bufq_output:
 	vb2_queue_release(&inst->bufq[OUTPUT_PORT].vb2_bufq);
 fail_bufq_capture:
 	msm_comm_ctrl_deinit(inst);
-	mutex_destroy(&inst->ubwc_stats_lock);
 	mutex_destroy(&inst->sync_lock);
 	mutex_destroy(&inst->bufq[OUTPUT_PORT].lock);
 	mutex_destroy(&inst->bufq[INPUT_PORT].lock);
@@ -1709,7 +1707,6 @@ int msm_vidc_destroy(struct msm_vidc_inst *inst)
 	DEINIT_MSM_VIDC_LIST(&inst->window_data);
 	DEINIT_MSM_VIDC_LIST(&inst->timestamps);
 
-	mutex_destroy(&inst->ubwc_stats_lock);
 	mutex_destroy(&inst->sync_lock);
 	mutex_destroy(&inst->bufq[OUTPUT_PORT].lock);
 	mutex_destroy(&inst->bufq[INPUT_PORT].lock);
