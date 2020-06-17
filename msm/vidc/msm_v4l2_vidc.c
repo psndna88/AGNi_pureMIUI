@@ -208,6 +208,7 @@ static int msm_v4l2_querymenu(struct file *file, void *fh,
 const struct v4l2_ioctl_ops msm_v4l2_ioctl_ops = {
 	.vidioc_querycap = msm_v4l2_querycap,
 	.vidioc_enum_fmt_vid_cap = msm_v4l2_enum_fmt,
+	.vidioc_enum_fmt_vid_out = msm_v4l2_enum_fmt,
 	.vidioc_s_fmt_vid_cap_mplane = msm_v4l2_s_fmt,
 	.vidioc_s_fmt_vid_out_mplane = msm_v4l2_s_fmt,
 	.vidioc_g_fmt_vid_cap_mplane = msm_v4l2_g_fmt,
@@ -289,6 +290,7 @@ static int msm_vidc_initialize_core(struct platform_device *pdev,
 
 	INIT_LIST_HEAD(&core->instances);
 	mutex_init(&core->lock);
+	mutex_init(&core->resources.cb_lock);
 
 	core->state = VIDC_CORE_UNINIT;
 	for (i = SYS_MSG_INDEX(SYS_MSG_START);
@@ -644,6 +646,7 @@ static int msm_vidc_remove(struct platform_device *pdev)
 	msm_vidc_free_platform_resources(&core->resources);
 	sysfs_remove_group(&pdev->dev.kobj, &msm_vidc_core_attr_group);
 	dev_set_drvdata(&pdev->dev, NULL);
+	mutex_destroy(&core->resources.cb_lock);
 	mutex_destroy(&core->lock);
 	kfree(core);
 	return rc;

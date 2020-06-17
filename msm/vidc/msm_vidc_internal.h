@@ -26,8 +26,8 @@
 
 #define MAX_DEBUGFS_NAME 50
 #define DEFAULT_TIMEOUT 3
-#define DEFAULT_HEIGHT 1088
-#define DEFAULT_WIDTH 1920
+#define DEFAULT_HEIGHT 240
+#define DEFAULT_WIDTH 320
 #define MIN_SUPPORTED_WIDTH 32
 #define MIN_SUPPORTED_HEIGHT 32
 #define DEFAULT_FPS 30
@@ -263,6 +263,7 @@ enum vpu_version {
 	VPU_VERSION_AR50 = 1,
 	VPU_VERSION_IRIS1,
 	VPU_VERSION_IRIS2,
+	VPU_VERSION_IRIS2_1,
 	VPU_VERSION_AR50_LITE,
 };
 
@@ -567,7 +568,9 @@ struct msm_vidc_inst {
 	struct mutex ubwc_stats_lock;
 	struct msm_vidc_ubwc_stats ubwc_stats;
 	u32 bse_vpp_delay;
-	u32 first_reconfig;
+	u32 first_reconfig_done;
+	u64 last_qbuf_time_ns;
+	bool active;
 };
 
 extern struct msm_vidc_drv *vidc_driver;

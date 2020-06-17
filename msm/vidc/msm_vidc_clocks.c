@@ -17,6 +17,8 @@
 #define MSM_VIDC_MIN_UBWC_COMPRESSION_RATIO (1 << 16)
 #define MSM_VIDC_MAX_UBWC_COMPRESSION_RATIO (5 << 16)
 
+#define MSM_VIDC_SESSION_INACTIVE_THRESHOLD_MS 1000
+
 static int msm_vidc_decide_work_mode_ar50_lt(struct msm_vidc_inst *inst);
 static unsigned long msm_vidc_calc_freq_ar50_lt(struct msm_vidc_inst *inst,
 	u32 filled_len);
@@ -126,6 +128,19 @@ bool res_is_less_than_or_equal_to(u32 width, u32 height,
 		return false;
 }
 
+bool is_vpp_delay_allowed(struct msm_vidc_inst *inst)
+{
+	u32 codec = get_v4l2_codec(inst);
+	u32 mbpf = msm_vidc_get_mbs_per_frame(inst);
+
+	return (inst->core->resources.has_vpp_delay &&
+		is_decode_session(inst) &&
+		!is_thumbnail_session(inst) &&
+		(mbpf >= NUM_MBS_PER_FRAME(7680, 3840)) &&
+		(codec == V4L2_PIX_FMT_H264
+		|| codec == V4L2_PIX_FMT_HEVC));
+}
+
 int msm_vidc_get_mbs_per_frame(struct msm_vidc_inst *inst)
 {
 	int height, width;
@@ -153,6 +168,19 @@ int msm_vidc_get_fps(struct msm_vidc_inst *inst)
 		fps = inst->clk_data.frame_rate >> 16;
 
 	return fps;
+}
+
+static inline bool is_active_session(u64 prev, u64 curr)
+{
+	u64 ts_delta;
+
+	if (!prev || !curr)
+		return true;
+
+	ts_delta = (prev < curr) ? curr - prev : prev - curr;
+
+	return ((ts_delta / NSEC_PER_MSEC) <=
+			MSM_VIDC_SESSION_INACTIVE_THRESHOLD_MS);
 }
 
 void update_recon_stats(struct msm_vidc_inst *inst,
@@ -263,12 +291,14 @@ int msm_comm_set_buses(struct msm_vidc_core *core, u32 sid)
 	struct msm_vidc_inst *inst = NULL;
 	struct hfi_device *hdev;
 	unsigned long total_bw_ddr = 0, total_bw_llcc = 0;
+	u64 curr_time_ns;
 
 	if (!core || !core->device) {
 		s_vpr_e(sid, "%s: Invalid args: %pK\n", __func__, core);
 		return -EINVAL;
 	}
 	hdev = core->device;
+	curr_time_ns = ktime_get_ns();
 
 	mutex_lock(&core->lock);
 	list_for_each_entry(inst, &core->instances, list) {
@@ -289,6 +319,12 @@ int msm_comm_set_buses(struct msm_vidc_core *core, u32 sid)
 
 		if (!filled_len || !device_addr) {
 			s_vpr_l(sid, "%s: no input\n", __func__);
+			continue;
+		}
+
+		/* skip inactive session bus bandwidth */
+		if (!is_active_session(inst->last_qbuf_time_ns, curr_time_ns)) {
+			inst->active = false;
 			continue;
 		}
 
@@ -766,8 +802,10 @@ int msm_vidc_set_clocks(struct msm_vidc_core *core, u32 sid)
 	int rc = 0, i = 0;
 	struct allowed_clock_rates_table *allowed_clks_tbl = NULL;
 	bool increment, decrement;
+	u64 curr_time_ns;
 
 	hdev = core->device;
+	curr_time_ns = ktime_get_ns();
 	allowed_clks_tbl = core->resources.allowed_clks_tbl;
 	if (!allowed_clks_tbl) {
 		s_vpr_e(sid, "%s: Invalid parameters\n", __func__);
@@ -793,6 +831,12 @@ int msm_vidc_set_clocks(struct msm_vidc_core *core, u32 sid)
 
 		if (!filled_len || !device_addr) {
 			s_vpr_l(sid, "%s: no input\n", __func__);
+			continue;
+		}
+
+		/* skip inactive session clock rate */
+		if (!is_active_session(inst->last_qbuf_time_ns, curr_time_ns)) {
+			inst->active = false;
 			continue;
 		}
 
@@ -919,6 +963,12 @@ int msm_comm_scale_clocks_and_bus(struct msm_vidc_inst *inst, bool do_bw_calc)
 	core = inst->core;
 	hdev = core->device;
 
+	if (!inst->active) {
+		/* do not skip bw voting for inactive -> active session */
+		do_bw_calc = true;
+		inst->active = true;
+	}
+
 	if (msm_comm_scale_clocks(inst)) {
 		s_vpr_e(inst->sid,
 			"Failed to scale clocks. May impact performance\n");
@@ -930,6 +980,7 @@ int msm_comm_scale_clocks_and_bus(struct msm_vidc_inst *inst, bool do_bw_calc)
 				"Failed to scale DDR bus. May impact perf\n");
 		}
 	}
+
 	return 0;
 }
 
@@ -944,6 +995,7 @@ int msm_dcvs_try_enable(struct msm_vidc_inst *inst)
 		!(msm_vidc_clock_voting ||
 			!inst->core->resources.dcvs ||
 			inst->flags & VIDC_THUMBNAIL ||
+			is_low_latency_hint(inst) ||
 			inst->clk_data.low_latency_mode ||
 			inst->batch.enable ||
 			is_turbo_session(inst) ||
@@ -1064,6 +1116,7 @@ int msm_vidc_decide_work_route_iris2(struct msm_vidc_inst *inst)
 	struct hfi_video_work_route pdata;
 	bool is_legacy_cbr;
 	u32 codec;
+	uint32_t vpu;
 
 	if (!inst || !inst->core || !inst->core->device) {
 		d_vpr_e("%s: Invalid args: Inst = %pK\n",
@@ -1071,10 +1124,15 @@ int msm_vidc_decide_work_route_iris2(struct msm_vidc_inst *inst)
 		return -EINVAL;
 	}
 
+	vpu = inst->core->platform_data->vpu_ver;
 	hdev = inst->core->device;
 	is_legacy_cbr = inst->clk_data.is_legacy_cbr;
 	pdata.video_work_route = 4;
 
+	if (vpu == VPU_VERSION_IRIS2_1) {
+		pdata.video_work_route = 1;
+		goto decision_done;
+	}
 	codec  = get_v4l2_codec(inst);
 	if (inst->session_type == MSM_VIDC_DECODER) {
 		if (codec == V4L2_PIX_FMT_MPEG2 ||
@@ -1098,6 +1156,7 @@ int msm_vidc_decide_work_route_iris2(struct msm_vidc_inst *inst)
 		return -EINVAL;
 	}
 
+decision_done:
 	s_vpr_h(inst->sid, "Configurng work route = %u",
 			pdata.video_work_route);
 
@@ -1146,9 +1205,17 @@ static int msm_vidc_decide_work_mode_ar50_lt(struct msm_vidc_inst *inst)
 				pdata.video_work_mode = HFI_WORKMODE_1;
 			break;
 		}
-	} else if (inst->session_type == MSM_VIDC_ENCODER)
+	} else if (inst->session_type == MSM_VIDC_ENCODER) {
 		pdata.video_work_mode = HFI_WORKMODE_1;
-	else {
+		if (inst->rc_type == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR ||
+				inst->rc_type ==
+					V4L2_MPEG_VIDEO_BITRATE_MODE_MBR ||
+				inst->rc_type ==
+					V4L2_MPEG_VIDEO_BITRATE_MODE_MBR_VFR ||
+				inst->rc_type ==
+					V4L2_MPEG_VIDEO_BITRATE_MODE_CQ)
+			pdata.video_work_mode = HFI_WORKMODE_2;
+	} else {
 		return -EINVAL;
 	}
 
@@ -1181,40 +1248,34 @@ int msm_vidc_set_bse_vpp_delay(struct msm_vidc_inst *inst)
 {
 	int rc = 0;
 	struct hfi_device *hdev;
-	u32 delay = 0;
-	u32 mbpf = 0, codec = 0;
+	u32 delay = DEFAULT_BSE_VPP_DELAY;
 
 	if (!inst || !inst->core) {
 		d_vpr_e("%s: invalid params %pK\n", __func__, inst);
 		return -EINVAL;
 	}
 
+	/* Set VPP delay only upto first reconfig */
+	if (inst->first_reconfig_done) {
+		s_vpr_hp(inst->sid, "%s: Skip bse-vpp\n", __func__);
+		return 0;
+	}
+
+	if (in_port_reconfig(inst))
+		inst->first_reconfig_done = 1;
+
 	if (!inst->core->resources.has_vpp_delay ||
-		inst->session_type != MSM_VIDC_DECODER ||
-		inst->clk_data.work_mode != HFI_WORKMODE_2 ||
-		inst->first_reconfig) {
+		!is_decode_session(inst) ||
+		is_thumbnail_session(inst) ||
+		inst->clk_data.work_mode != HFI_WORKMODE_2) {
 		s_vpr_hp(inst->sid, "%s: Skip bse-vpp\n", __func__);
 		return 0;
 	}
 
 	hdev = inst->core->device;
 
-	/* Decide VPP delay only on first reconfig */
-	if (in_port_reconfig(inst))
-		inst->first_reconfig = 1;
-
-	codec = get_v4l2_codec(inst);
-	if (codec != V4L2_PIX_FMT_HEVC && codec != V4L2_PIX_FMT_H264) {
-		s_vpr_hp(inst->sid, "%s: Skip bse-vpp, codec %u\n",
-			__func__, codec);
-		goto exit;
-	}
-
-	mbpf = msm_vidc_get_mbs_per_frame(inst);
-	if (mbpf >= NUM_MBS_PER_FRAME(7680, 3840))
+	if (is_vpp_delay_allowed(inst))
 		delay = MAX_BSE_VPP_DELAY;
-	else
-		delay = DEFAULT_BSE_VPP_DELAY;
 
 	/* DebugFS override [1-31] */
 	if (msm_vidc_vpp_delay & 0x1F)
@@ -1229,7 +1290,6 @@ int msm_vidc_set_bse_vpp_delay(struct msm_vidc_inst *inst)
 	else
 		inst->bse_vpp_delay = delay;
 
-exit:
 	return rc;
 }
 

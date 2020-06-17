@@ -31,6 +31,9 @@
 #define MAX_QP_PACKED 0x7F7F7F
 #define DEFAULT_QP 0xA
 #define DEFAULT_QP_PACKED 0xA0A0A
+#define MIN_CHROMA_QP_OFFSET -12
+#define MAX_CHROMA_QP_OFFSET 0
+#define DEFAULT_CHROMA_QP_OFFSET 0
 #define MAX_INTRA_REFRESH_MBS ((7680 * 4320) >> 8)
 #define MAX_LTR_FRAME_COUNT 10
 #define MAX_NUM_B_FRAMES 1
@@ -44,6 +47,7 @@
 
 #define MIN_NUM_ENC_OUTPUT_BUFFERS 4
 #define MIN_NUM_ENC_CAPTURE_BUFFERS 5
+#define VENC_MAX_TIMESTAMP_LIST_SIZE 2
 
 static const char *const mpeg_video_rate_control[] = {
 	"VBR",
@@ -918,6 +922,24 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		.qmenu = mpeg_video_stream_format,
 	},
 	{
+		.id = V4L2_CID_MPEG_VIDEO_H264_CHROMA_QP_INDEX_OFFSET,
+		.name = "Chroma QP Index Offset",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.minimum = MIN_CHROMA_QP_OFFSET,
+		.maximum = MAX_CHROMA_QP_OFFSET,
+		.default_value = DEFAULT_CHROMA_QP_OFFSET,
+		.step = 1,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDC_VENC_NATIVE_RECORDER,
+		.name = "Enable/Disable Native Recorder",
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.minimum = V4L2_MPEG_MSM_VIDC_DISABLE,
+		.maximum = V4L2_MPEG_MSM_VIDC_ENABLE,
+		.default_value = V4L2_MPEG_MSM_VIDC_DISABLE,
+		.step = 1,
+	},
+	{
 		.id = V4L2_CID_MPEG_VIDC_VENC_BITRATE_SAVINGS,
 		.name = "Enable/Disable bitrate savings",
 		.type = V4L2_CTRL_TYPE_INTEGER,
@@ -1020,6 +1042,11 @@ static struct msm_vidc_format_desc venc_input_formats[] = {
 		.description = "Y/CbCr 4:2:0 512 aligned",
 		.fourcc = V4L2_PIX_FMT_NV12_512,
 	},
+	{
+		.name = "32bit RGBA UBWC 8:8:8:8",
+		.description = "32-bit RGBA UBWC 8:8:8:8",
+		.fourcc = V4L2_PIX_FMT_RGBA8888_UBWC,
+	},
 };
 
 static struct msm_vidc_format_desc venc_output_formats[] = {
@@ -1118,11 +1145,13 @@ int msm_venc_inst_init(struct msm_vidc_inst *inst)
 	int rc = 0;
 	struct msm_vidc_format_desc *fmt_desc = NULL;
 	struct v4l2_format *f = NULL;
+	uint32_t vpu;
 
 	if (!inst) {
 		d_vpr_e("Invalid input = %pK\n", inst);
 		return -EINVAL;
 	}
+	vpu = inst->core->platform_data->vpu_ver;
 	f = &inst->fmts[OUTPUT_PORT].v4l2_fmt;
 	f->type = OUTPUT_MPLANE;
 	f->fmt.pix_mp.height = DEFAULT_HEIGHT;
@@ -1148,9 +1177,8 @@ int msm_venc_inst_init(struct msm_vidc_inst *inst)
 	f->fmt.pix_mp.height = DEFAULT_HEIGHT;
 	f->fmt.pix_mp.width = DEFAULT_WIDTH;
 	f->fmt.pix_mp.pixelformat = V4L2_PIX_FMT_NV12_UBWC;
-	if(inst->core->platform_data->vpu_ver == VPU_VERSION_IRIS1)
-		f->fmt.pix_mp.num_planes = 1;
-	else
+	f->fmt.pix_mp.num_planes = 1;
+	if (vpu == VPU_VERSION_IRIS2)
 		f->fmt.pix_mp.num_planes = 2;
 	f->fmt.pix_mp.plane_fmt[0].sizeimage =
 		msm_vidc_calculate_enc_input_frame_size(inst);
@@ -1216,10 +1244,10 @@ int msm_venc_enum_fmt(struct msm_vidc_inst *inst, struct v4l2_fmtdesc *f)
 	if (f->type == OUTPUT_MPLANE) {
 		fmt_desc = msm_comm_get_pixel_fmt_index(venc_output_formats,
 			ARRAY_SIZE(venc_output_formats), f->index, inst->sid);
+		f->flags = V4L2_FMT_FLAG_COMPRESSED;
 	} else if (f->type == INPUT_MPLANE) {
 		fmt_desc = msm_comm_get_pixel_fmt_index(venc_input_formats,
 			ARRAY_SIZE(venc_input_formats), f->index, inst->sid);
-		f->flags = V4L2_FMT_FLAG_COMPRESSED;
 	}
 
 	memset(f->reserved, 0, sizeof(f->reserved));
@@ -1626,6 +1654,7 @@ int msm_venc_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 			if (rc)
 				s_vpr_e(sid, "%s: set frame rate failed\n",
 					__func__);
+			msm_comm_release_timestamps(inst);
 		}
 		break;
 	case V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MAX_BYTES:
@@ -1974,8 +2003,10 @@ int msm_venc_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 	case V4L2_CID_MPEG_VIDC_VIDEO_PRIORITY:
 	case V4L2_CID_MPEG_VIDC_VIDEO_INTRA_REFRESH_RANDOM:
 	case V4L2_CID_MPEG_VIDEO_CYCLIC_INTRA_REFRESH_MB:
+	case V4L2_CID_MPEG_VIDC_VENC_NATIVE_RECORDER:
 	case V4L2_CID_MPEG_VIDC_VENC_RC_TIMESTAMP_DISABLE:
 	case V4L2_CID_MPEG_VIDEO_VBV_DELAY:
+	case V4L2_CID_MPEG_VIDEO_H264_CHROMA_QP_INDEX_OFFSET:
 	case V4L2_CID_MPEG_VIDC_VENC_BITRATE_SAVINGS:
 	case V4L2_CID_MPEG_VIDC_VENC_BITRATE_BOOST:
 	case V4L2_CID_MPEG_VIDC_SUPERFRAME:
@@ -2080,6 +2111,72 @@ int msm_venc_set_frame_rate(struct msm_vidc_inst *inst)
 	if (rc)
 		s_vpr_e(inst->sid, "%s: set property failed\n", __func__);
 
+	return rc;
+}
+
+int msm_venc_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us)
+{
+	struct msm_vidc_timestamps *entry, *node, *prev = NULL;
+	int count = 0;
+	int rc = 0;
+
+	if (!inst || !inst->core) {
+		d_vpr_e("%s: invalid parameters\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!inst->core->resources.enc_auto_dynamic_fps ||
+		is_image_session(inst))
+		return rc;
+
+	mutex_lock(&inst->timestamps.lock);
+	list_for_each_entry(node, &inst->timestamps.list, list) {
+		count++;
+		if (timestamp_us <= node->timestamp_us) {
+			s_vpr_e(inst->sid, "%s: invalid ts %llu, exist %llu\n",
+				__func__, timestamp_us, node->timestamp_us);
+			goto unlock;
+		}
+	}
+
+	/* Maintain a sliding window */
+	entry = NULL;
+	if (count >= VENC_MAX_TIMESTAMP_LIST_SIZE) {
+		entry = list_first_entry(&inst->timestamps.list,
+			struct msm_vidc_timestamps, list);
+		list_del_init(&entry->list);
+	}
+	if (!entry) {
+		entry = kzalloc(sizeof(*entry), GFP_KERNEL);
+		if (!entry) {
+			s_vpr_e(inst->sid, "%s: ts malloc failure\n",
+				__func__);
+			rc = -ENOMEM;
+			goto unlock;
+		}
+	}
+
+	entry->timestamp_us = timestamp_us;
+	entry->framerate = inst->clk_data.frame_rate;
+	prev = list_last_entry(&inst->timestamps.list,
+		struct msm_vidc_timestamps, list);
+	list_add_tail(&entry->list, &inst->timestamps.list);
+
+	if (!count)
+		goto unlock;
+
+	entry->framerate = msm_comm_calc_framerate(inst,
+		timestamp_us, prev->timestamp_us);
+
+	/* if framerate changed and stable for 2 frames, set to firmware */
+	if (entry->framerate == prev->framerate &&
+		entry->framerate != inst->clk_data.frame_rate) {
+		inst->clk_data.frame_rate = entry->framerate;
+		msm_venc_set_frame_rate(inst);
+	}
+
+unlock:
+	mutex_unlock(&inst->timestamps.lock);
 	return rc;
 }
 
@@ -2987,8 +3084,13 @@ int msm_venc_set_image_properties(struct msm_vidc_inst *inst)
 		return -EINVAL;
 	}
 
-	if (inst->rc_type != V4L2_MPEG_VIDEO_BITRATE_MODE_CQ)
+	if (!is_image_session(inst) && !is_grid_session(inst))
 		return 0;
+
+	if (inst->rc_type != V4L2_MPEG_VIDEO_BITRATE_MODE_CQ) {
+		d_vpr_e("%s: invalid rate control mode\n", __func__);
+		return -EINVAL;
+	}
 
 	rc = msm_venc_set_frame_quality(inst);
 	if (rc) {
@@ -3201,6 +3303,69 @@ int msm_venc_set_intra_refresh_mode(struct msm_vidc_inst *inst)
 	return rc;
 }
 
+int msm_venc_set_chroma_qp_offset(struct msm_vidc_inst *inst)
+{
+	int rc = 0;
+	struct hfi_device *hdev;
+	struct v4l2_ctrl *chr;
+	struct v4l2_ctrl *ctrl_cs;
+	struct hfi_chroma_qp_offset chroma_qp;
+	struct v4l2_format *f;
+	u32 codec, width, height, mbpf;
+
+	if (!inst || !inst->core) {
+		d_vpr_e("%s: invalid params %pK\n", __func__, inst);
+		return -EINVAL;
+	}
+	hdev = inst->core->device;
+
+	chr = get_ctrl(inst, V4L2_CID_MPEG_VIDEO_H264_CHROMA_QP_INDEX_OFFSET);
+	if (chr->val != MIN_CHROMA_QP_OFFSET)
+		return 0;
+
+	f = &inst->fmts[INPUT_PORT].v4l2_fmt;
+	width = f->fmt.pix_mp.width;
+	height = f->fmt.pix_mp.height;
+	mbpf = NUM_MBS_PER_FRAME(width, height);
+	ctrl_cs = get_ctrl(inst, V4L2_CID_MPEG_VIDC_VIDEO_COLOR_SPACE);
+	codec = get_v4l2_codec(inst);
+
+	/**
+	 * Set chroma qp offset to HEVC & VBR_CFR rc
+	 * 10 bit: only BT2020
+	 *  8 bit: only mbpf >= num_mbs(7680, 3840)
+	 */
+	if (codec != V4L2_PIX_FMT_HEVC ||
+		inst->rc_type != V4L2_MPEG_VIDEO_BITRATE_MODE_VBR)
+		return 0;
+
+	if ((inst->bit_depth == MSM_VIDC_BIT_DEPTH_10 &&
+		ctrl_cs->val != MSM_VIDC_BT2020) ||
+		(inst->bit_depth == MSM_VIDC_BIT_DEPTH_8 &&
+		mbpf < NUM_MBS_PER_FRAME(7680, 3840)))
+		return 0;
+
+	/**
+	 * client sets one chroma offset only in range [-12, 0]
+	 * firmware expects chroma cb offset and cr offset in
+	 * range [0, 12], firmware subtracts 12 from driver set values.
+	 */
+	chroma_qp.chroma_offset = (chr->val + 12) << 16 | (chr->val + 12);
+	s_vpr_h(inst->sid, "%s: %x\n", __func__, chroma_qp.chroma_offset);
+
+	/* TODO: Remove this check after firmware support added for 8-bit */
+	if (inst->bit_depth == MSM_VIDC_BIT_DEPTH_8)
+		return 0;
+
+	rc = call_hfi_op(hdev, session_set_property, inst->session,
+		HFI_PROPERTY_PARAM_HEVC_PPS_CB_CR_OFFSET, &chroma_qp,
+		sizeof(chroma_qp));
+	if (rc)
+		s_vpr_e(inst->sid, "%s: set property failed\n", __func__);
+
+	return rc;
+}
+
 int msm_venc_set_bitrate_savings_mode(struct msm_vidc_inst *inst)
 {
 	int rc = 0;
@@ -3272,13 +3437,13 @@ int msm_venc_set_bitrate_boost_margin(struct msm_vidc_inst *inst, u32 enable)
 		boost_margin.margin = (u32)(ctrl->val/25) * 25;
 
 setprop:
-	/* s_vpr_h(inst->sid, "%s: %d\n", __func__, boost_margin.margin);
-	 * rc = call_hfi_op(hdev, session_set_property, inst->session,
-	 *	HFI_PROPERTY_PARAM_VENC_BITRATE_BOOST, &boost_margin,
-	 *	sizeof(boost_margin));
-	 *if (rc)
-	 *	s_vpr_e(inst->sid, "%s: set property failed\n", __func__);
-	 */
+	s_vpr_h(inst->sid, "%s: %d\n", __func__, boost_margin.margin);
+	rc = call_hfi_op(hdev, session_set_property, inst->session,
+		HFI_PROPERTY_PARAM_VENC_BITRATE_BOOST, &boost_margin,
+		sizeof(boost_margin));
+	if (rc)
+		s_vpr_e(inst->sid, "%s: set property failed\n", __func__);
+
 	return rc;
 }
 
@@ -4611,6 +4776,9 @@ int msm_venc_set_properties(struct msm_vidc_inst *inst)
 	 * than blur.
 	 */
 	rc = msm_venc_set_rotation(inst);
+	if (rc)
+		goto exit;
+	rc = msm_venc_set_chroma_qp_offset(inst);
 	if (rc)
 		goto exit;
 	rc = msm_venc_set_blur_resolution(inst);

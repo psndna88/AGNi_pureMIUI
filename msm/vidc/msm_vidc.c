@@ -387,6 +387,8 @@ int msm_vidc_qbuf(void *instance, struct media_device *mdev,
 		return -EINVAL;
 	}
 
+	inst->last_qbuf_time_ns = ktime_get_ns();
+
 	for (i = 0; i < b->length; i++) {
 		b->m.planes[i].m.fd =
 				b->m.planes[i].reserved[MSM_VIDC_BUFFER_FD];
@@ -418,17 +420,26 @@ int msm_vidc_qbuf(void *instance, struct media_device *mdev,
 	if (is_grid_session(inst) && b->type == INPUT_MPLANE)
 		b->flags |= V4L2_BUF_FLAG_PERF_MODE;
 
+	timestamp_us = (u64)((b->timestamp.tv_sec * 1000000ULL) +
+		b->timestamp.tv_usec);
 	if (is_decode_session(inst) && b->type == INPUT_MPLANE) {
 		if (inst->flush_timestamps)
 			msm_comm_release_timestamps(inst);
 		inst->flush_timestamps = false;
 
-		timestamp_us = (u64)((b->timestamp.tv_sec * 1000000ULL) +
-			b->timestamp.tv_usec);
 		rc = msm_comm_store_timestamp(inst, timestamp_us);
 		if (rc)
 			return rc;
 		inst->clk_data.frame_rate = msm_comm_get_max_framerate(inst);
+	}
+	if (is_encode_session(inst) && b->type == INPUT_MPLANE) {
+		if (inst->flush_timestamps)
+			msm_comm_release_timestamps(inst);
+		inst->flush_timestamps = false;
+
+		rc = msm_venc_store_timestamp(inst, timestamp_us);
+		if (rc)
+			return rc;
 	}
 
 	q = msm_comm_get_vb2q(inst, b->type);
@@ -825,8 +836,15 @@ static inline int start_streaming(struct msm_vidc_inst *inst)
 
 	b.buffer_type = HFI_BUFFER_OUTPUT;
 	if (inst->session_type == MSM_VIDC_DECODER &&
-		is_secondary_output_mode(inst))
+		is_secondary_output_mode(inst)) {
 		b.buffer_type = HFI_BUFFER_OUTPUT2;
+		rc = msm_comm_update_dpb_bufreqs(inst);
+		if (rc) {
+			s_vpr_e(inst->sid,
+				"%s: set dpb bufreq failed\n", __func__);
+			goto fail_start;
+		}
+	}
 
 	/* Check if current session is under HW capability */
 	rc = msm_vidc_check_session_supported(inst);
@@ -867,6 +885,13 @@ static inline int start_streaming(struct msm_vidc_inst *inst)
 	}
 
 	rc = msm_comm_try_get_bufreqs(inst);
+
+	rc = msm_comm_check_memory_supported(inst);
+	if (rc) {
+		s_vpr_e(inst->sid,
+			"Memory not sufficient to proceed current session\n");
+		goto fail_start;
+	}
 
 	f = &inst->fmts[OUTPUT_PORT].v4l2_fmt;
 	b.buffer_size = f->fmt.pix_mp.plane_fmt[0].sizeimage;
@@ -1394,7 +1419,8 @@ static int try_get_ctrl_for_instance(struct msm_vidc_inst *inst,
 			return -EINVAL;
 		vpu_ver = inst->core->platform_data->vpu_ver;
 		ctrl->val = (vpu_ver == VPU_VERSION_IRIS1 ||
-				vpu_ver == VPU_VERSION_IRIS2) ?
+				vpu_ver == VPU_VERSION_IRIS2 ||
+				vpu_ver == VPU_VERSION_IRIS2_1) ?
 				V4L2_CID_MPEG_VIDC_VIDEO_ROI_TYPE_2BYTE :
 				V4L2_CID_MPEG_VIDC_VIDEO_ROI_TYPE_2BIT;
 		break;
@@ -1459,6 +1485,7 @@ void *msm_vidc_open(int core_id, int session_type)
 	mutex_init(&inst->bufq[INPUT_PORT].lock);
 	mutex_init(&inst->lock);
 	mutex_init(&inst->flush_lock);
+	mutex_init(&inst->ubwc_stats_lock);
 
 	INIT_MSM_VIDC_LIST(&inst->scratchbufs);
 	INIT_MSM_VIDC_LIST(&inst->input_crs);
@@ -1493,7 +1520,8 @@ void *msm_vidc_open(int core_id, int session_type)
 	inst->entropy_mode = HFI_H264_ENTROPY_CABAC;
 	inst->full_range = COLOR_RANGE_UNSPECIFIED;
 	inst->bse_vpp_delay = DEFAULT_BSE_VPP_DELAY;
-	inst->first_reconfig = 0;
+	inst->first_reconfig_done = 0;
+	inst->active = true;
 
 	for (i = SESSION_MSG_INDEX(SESSION_MSG_START);
 		i <= SESSION_MSG_INDEX(SESSION_MSG_END); i++) {
@@ -1562,6 +1590,7 @@ fail_bufq_output:
 	vb2_queue_release(&inst->bufq[OUTPUT_PORT].vb2_bufq);
 fail_bufq_capture:
 	msm_comm_ctrl_deinit(inst);
+	mutex_destroy(&inst->ubwc_stats_lock);
 	mutex_destroy(&inst->sync_lock);
 	mutex_destroy(&inst->bufq[OUTPUT_PORT].lock);
 	mutex_destroy(&inst->bufq[INPUT_PORT].lock);
@@ -1707,6 +1736,7 @@ int msm_vidc_destroy(struct msm_vidc_inst *inst)
 	DEINIT_MSM_VIDC_LIST(&inst->window_data);
 	DEINIT_MSM_VIDC_LIST(&inst->timestamps);
 
+	mutex_destroy(&inst->ubwc_stats_lock);
 	mutex_destroy(&inst->sync_lock);
 	mutex_destroy(&inst->bufq[OUTPUT_PORT].lock);
 	mutex_destroy(&inst->bufq[INPUT_PORT].lock);

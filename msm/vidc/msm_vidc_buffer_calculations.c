@@ -24,6 +24,9 @@
 /* minimum number of output buffers */
 #define MIN_ENC_OUTPUT_BUFFERS 4
 
+/* extra output buffers for encoder HEIF usecase */
+#define HEIF_ENC_TOTAL_OUTPUT_BUFFERS 12
+
 #define HFI_COLOR_FORMAT_YUV420_NV12_UBWC_Y_TILE_WIDTH 32
 #define HFI_COLOR_FORMAT_YUV420_NV12_UBWC_Y_TILE_HEIGHT 8
 #define HFI_COLOR_FORMAT_YUV420_NV12_UBWC_UV_TILE_WIDTH 16
@@ -598,15 +601,17 @@ int msm_vidc_calculate_internal_buffer_sizes(struct msm_vidc_inst *inst)
 void msm_vidc_init_buffer_size_calculators(struct msm_vidc_inst *inst)
 {
 	struct msm_vidc_core *core;
+	uint32_t vpu;
 
 	if (!inst)
 		return;
 
 	inst->buffer_size_calculators = NULL;
 	core = inst->core;
+	vpu = core->platform_data->vpu_ver;
 
 	/* Change this to IRIS2 when ready */
-	if (core->platform_data->vpu_ver == VPU_VERSION_IRIS2)
+	if (vpu == VPU_VERSION_IRIS2 || vpu == VPU_VERSION_IRIS2_1)
 		inst->buffer_size_calculators =
 			msm_vidc_calculate_internal_buffer_sizes;
 }
@@ -632,6 +637,12 @@ int msm_vidc_calculate_input_buffer_count(struct msm_vidc_inst *inst)
 	if (is_thumbnail_session(inst)) {
 		fmt->count_min = fmt->count_min_host = fmt->count_actual =
 			SINGLE_INPUT_BUFFER;
+		return 0;
+	}
+
+	if (is_grid_session(inst)) {
+		fmt->count_min = fmt->count_min_host = fmt->count_actual =
+			SINGLE_INPUT_BUFFER + 1;
 		return 0;
 	}
 
@@ -686,16 +697,13 @@ int msm_vidc_calculate_output_buffer_count(struct msm_vidc_inst *inst)
 			output_min_count = 9;
 			break;
 		default:
-			output_min_count = 8; //H264, HEVC
+			output_min_count = 4; //H264, HEVC
 		}
 	} else {
 		output_min_count = MIN_ENC_OUTPUT_BUFFERS;
 	}
 
-	if (inst->core->resources.has_vpp_delay &&
-		is_decode_session(inst) &&
-		(codec == V4L2_PIX_FMT_H264
-		|| codec == V4L2_PIX_FMT_HEVC))	{
+	if (is_vpp_delay_allowed(inst)) {
 		output_min_count =
 			max(output_min_count, (u32)MAX_BSE_VPP_DELAY);
 		output_min_count =
@@ -801,6 +809,13 @@ static int msm_vidc_get_extra_output_buff_count(struct msm_vidc_inst *inst)
 	if (!is_realtime_session(inst) || is_thumbnail_session(inst))
 		return extra_output_count;
 
+	/* For HEIF, we are increasing buffer count */
+	if (is_image_session(inst)) {
+		extra_output_count = (HEIF_ENC_TOTAL_OUTPUT_BUFFERS -
+			MIN_ENC_OUTPUT_BUFFERS);
+		return extra_output_count;
+	}
+
 	if (is_decode_session(inst)) {
 		/* add 4 extra buffers for dcvs */
 		if (core->resources.dcvs)
@@ -843,15 +858,24 @@ u32 msm_vidc_calculate_dec_input_frame_size(struct msm_vidc_inst *inst)
 			div_factor = 2;
 	}
 
+	if (is_secure_session(inst))
+		div_factor = div_factor << 1;
+
+	/*
+	 * For targets that doesn't support 4k, consider max mb's for that
+	 * target and allocate max input buffer size for the same
+	 */
+	if (base_res_mbs > inst->capability.cap[CAP_MBS_PER_FRAME].max) {
+		base_res_mbs = inst->capability.cap[CAP_MBS_PER_FRAME].max;
+		div_factor = 1;
+	}
+
 	frame_size = base_res_mbs * MB_SIZE_IN_PIXEL * 3 / 2 / div_factor;
 
 	 /* multiply by 10/8 (1.25) to get size for 10 bit case */
 	if ((f->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_VP9) ||
 		(f->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_HEVC))
 		frame_size = frame_size + (frame_size >> 2);
-
-	if (is_secure_session(inst))
-		frame_size /= 2;
 
 	if (inst->buffer_size_limit &&
 		(inst->buffer_size_limit < frame_size)) {
@@ -1523,7 +1547,7 @@ static inline u32 calculate_enc_scratch1_size(struct msm_vidc_inst *inst,
 	u32 leftline_buf_ctrl_size_FE, line_buf_recon_pix_size;
 	u32 leftline_buf_recon_pix_size, lambda_lut_size, override_buffer_size;
 	u32 col_mv_buf_size, vpp_reg_buffer_size, ir_buffer_size;
-	u32 vpss_line_buf, leftline_buf_meta_recony, h265e_colrcbuf_size;
+	u32 vpss_line_buf, leftline_buf_meta_recony, col_rc_buf_size;
 	u32 h265e_framerc_bufsize, h265e_lcubitcnt_bufsize;
 	u32 h265e_lcubitmap_bufsize, se_stats_bufsize;
 	u32 bse_reg_buffer_size, bse_slice_cmd_buffer_size, slice_info_bufsize;
@@ -1533,6 +1557,8 @@ static inline u32 calculate_enc_scratch1_size(struct msm_vidc_inst *inst,
 	u32 output_mv_bufsize = 0, temp_scratch_mv_bufsize = 0;
 	u32 size, bit_depth, num_LCUMB;
 	u32 vpss_lineBufferSize_1 = 0;
+	u32 width_mb_num = ((width + 15) >> 4);
+	u32 height_mb_num = ((height + 15) >> 4);
 
 	width_lcu_num = ((width)+(lcu_size)-1) / (lcu_size);
 	height_lcu_num = ((height)+(lcu_size)-1) / (lcu_size);
@@ -1598,12 +1624,9 @@ static inline u32 calculate_enc_scratch1_size(struct msm_vidc_inst *inst,
 		BUFFER_ALIGNMENT_SIZE(32)));
 	col_mv_buf_size = ALIGN(col_mv_buf_size, VENUS_DMA_ALIGNMENT)
 		* (num_ref + 1);
-	h265e_colrcbuf_size = (((width_lcu_num + 7) >> 3) *
-		16 * 2 * height_lcu_num);
-	if (num_vpp_pipes > 1)
-		h265e_colrcbuf_size = ALIGN(h265e_colrcbuf_size,
-			VENUS_DMA_ALIGNMENT) * num_vpp_pipes;
-	h265e_colrcbuf_size = ALIGN(h265e_colrcbuf_size,
+	col_rc_buf_size = (((width_mb_num + 7) >> 3) *
+		16 * 2 * height_mb_num);
+	col_rc_buf_size = ALIGN(col_rc_buf_size,
 		VENUS_DMA_ALIGNMENT) * HFI_MAX_COL_FRAME;
 	h265e_framerc_bufsize = (is_h265) ? (256 + 16 *
 		(14 + (((height_coded >> 5) + 7) >> 3))) :
@@ -1651,7 +1674,7 @@ static inline u32 calculate_enc_scratch1_size(struct msm_vidc_inst *inst,
 		vpss_line_buf + col_mv_buf_size + topline_buf_ctrl_size_FE +
 		leftline_buf_ctrl_size_FE + line_buf_recon_pix_size +
 		leftline_buf_recon_pix_size + leftline_buf_meta_recony +
-		linebuf_meta_recon_uv + h265e_colrcbuf_size +
+		linebuf_meta_recon_uv + col_rc_buf_size +
 		h265e_framerc_bufsize + h265e_lcubitcnt_bufsize +
 		h265e_lcubitmap_bufsize + line_buf_sde_size +
 		topline_bufsize_fe_1stg_sao + override_buffer_size +

@@ -4,6 +4,7 @@
  */
 
 #include <linux/iommu.h>
+#include <linux/dma-iommu.h>
 #include <linux/of.h>
 #include <linux/sort.h>
 #include "msm_vidc_debug.h"
@@ -13,6 +14,15 @@
 enum clock_properties {
 	CLOCK_PROP_HAS_SCALING = 1 << 0,
 	CLOCK_PROP_HAS_MEM_RETENTION    = 1 << 1,
+};
+
+static struct memory_limit_table memory_limit_tbl_mbytes[] = {
+	/* target_memory_size - max_video_cap */
+	{12288, 4096},  /* 12 GB - 4 Gb*/
+	{8192, 3584},   /*  8 GB - 3.5 Gb*/
+	{6144, 2560},   /*  6 GB - 2.5 Gb*/
+	{4096, 1536},   /*  4 GB - 1.5 Gb*/
+	{2048, 768},    /*  2 GB - 0.75 Gb*/
 };
 
 static inline struct device *msm_iommu_get_ctx(const char *ctx_name)
@@ -741,9 +751,15 @@ int read_platform_resources_from_drv_data(
 	res->codec_data = platform_data->codec_data;
 
 	res->sku_version = platform_data->sku_version;
+	res->mem_limit_tbl = memory_limit_tbl_mbytes;
+	res->memory_limit_table_size =
+		ARRAY_SIZE(memory_limit_tbl_mbytes);
 
 	res->max_load = find_key_value(platform_data,
 			"qcom,max-hw-load");
+
+	res->max_image_load = find_key_value(platform_data,
+			"qcom,max-image-load");
 
 	res->max_mbpf = find_key_value(platform_data,
 			"qcom,max-mbpf");
@@ -811,6 +827,8 @@ int read_platform_resources_from_drv_data(
 			"qcom,ubwc_stats_in_fbd");
 	res->has_vpp_delay = find_key_value(platform_data,
 			"qcom,vpp_delay_supported");
+	res->enc_auto_dynamic_fps = find_key_value(platform_data,
+			"qcom,enc_auto_dynamic_fps");
 
 	res->csc_coeff_data = &platform_data->csc_data;
 
@@ -837,7 +855,6 @@ int read_platform_resources_from_dt(
 	rc = msm_decide_dt_node(res);
 	if (rc)
 		return rc;
-
 
 	INIT_LIST_HEAD(&res->context_banks);
 
@@ -953,6 +970,12 @@ static int msm_vidc_setup_context_bank(struct msm_vidc_platform_resources *res,
 	 cb->domain = iommu_get_domain_for_dev(cb->dev);
 
 	 /*
+	  * When memory is fragmented, below configuration increases the
+	  * possibility to get a mapping for buffer in the configured CB.
+	  */
+	iommu_dma_enable_best_fit_algo(cb->dev);
+
+	 /*
 	 * configure device segment size and segment boundary to ensure
 	 * iommu mapping returns one mapping (which is required for partial
 	 * cache operations)
@@ -977,7 +1000,6 @@ int msm_vidc_smmu_fault_handler(struct iommu_domain *domain,
 		struct device *dev, unsigned long iova, int flags, void *token)
 {
 	struct msm_vidc_core *core = token;
-	struct msm_vidc_inst *inst;
 
 	if (!domain || !core) {
 		d_vpr_e("%s: invalid params %pK %pK\n",
@@ -996,12 +1018,8 @@ int msm_vidc_smmu_fault_handler(struct iommu_domain *domain,
 
 	d_vpr_e("%s: faulting address: %lx\n", __func__, iova);
 
-	mutex_lock(&core->lock);
-	list_for_each_entry(inst, &core->instances, list) {
-		msm_comm_print_inst_info(inst);
-	}
 	core->smmu_fault_handled = true;
-	mutex_unlock(&core->lock);
+	msm_comm_print_insts_info(core);
 	/*
 	 * Return -EINVAL to elicit the default behaviour of smmu driver.
 	 * If we return -EINVAL, then smmu driver assumes page fault handler
@@ -1031,7 +1049,10 @@ static int msm_vidc_populate_context_bank(struct device *dev,
 	}
 
 	INIT_LIST_HEAD(&cb->list);
+
+	mutex_lock(&core->resources.cb_lock);
 	list_add_tail(&cb->list, &core->resources.context_banks);
+	mutex_unlock(&core->resources.cb_lock);
 
 	rc = of_property_read_string(np, "label", &cb->name);
 	if (rc) {
@@ -1111,7 +1132,10 @@ static int msm_vidc_populate_legacy_context_bank(
 			return -ENOMEM;
 		}
 		INIT_LIST_HEAD(&cb->list);
+
+		mutex_lock(&res->cb_lock);
 		list_add_tail(&cb->list, &res->context_banks);
+		mutex_unlock(&res->cb_lock);
 
 		ctx_node = of_parse_phandle(domains_child_node,
 				"qcom,vidc-domain-phandle", 0);
