@@ -411,7 +411,6 @@ module_param_named(
 );
 
 bool is_charging = false;
-static bool charging_prev_state = false;
 
 bool charging_detected(void)
 {
@@ -883,10 +882,6 @@ static int fg_get_msoc(struct fg_chip *chip, int *msoc)
 	else
 		low_batt_swap_stall = false;
 
-	if (charging_prev_state != is_charging) {
-		charging_prev_state = is_charging;
-		mm_drop_caches(3); /* drop caches on charger connect/disconnect */
-	}
 	agni_memprobe();
 
 	return 0;
