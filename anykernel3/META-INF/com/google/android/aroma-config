@@ -26,14 +26,14 @@
 
 # Initializing Rom Information
 ini_set("rom_name",		"AGNi Kernel");
-ini_set("rom_version",	"v8.7_stable");
+ini_set("rom_version",	"v8.8_stable");
 ini_set("rom_author",	"psndna88@xda");
-ini_set("rom_device",	"SDM660 whyred/wayne/tulip/lavender/jasmine");
-ini_set("rom_date",		"June, 16, 2020");
+ini_set("rom_device",	"SDM636/660 whyred/wayne/tulip/lavender/jasmine");
+ini_set("rom_date",		"June, 20, 2020");
 
 # Show Simple Splash
 splash(
-    750,
+    1000,
     "agni"
 );
 
@@ -79,13 +79,20 @@ agreebox(
 );
 
 selectbox(
+    "Camera Libs Support Mode","<@center><b>\nSelect method of camera libs support</b>\n\n</@>","@install","cam.prop",  
+    "Automatic",					"DEFAULT. Auto detect camera libs in rom and flash kernel accordingly", 1,   								#-- selected.0 = 1
+    "Forced NEW Camera Libs Mode", 	"Force Support for new camera libs. - USE IF PROBLEMS WITH AUTOMATIC CAMERA MODE & you sure about it.", 0, 	#-- selected.0 = 2
+    "Forced OLD Camera Libs Mode", 	"Force Support for old camera libs. - USE IF PROBLEMS WITH AUTOMATIC CAMERA MODE & you sure about it.", 0 	#-- selected.0 = 3
+);
+
+selectbox(
     "WiFi Driver","<@center><b>\nSelect the WiFi version you want</b>\n\n</@>","@install","wifi.prop",  
     "Pie Source based WiFi",	"DEFAULT. Most stable & preferred. Gives good speed. SELECT THIS IF YOU DON'T UNDERSTAND THIS!", 1,   #-- selected.0 = 1
     "Q Source based WiFi",		"NOT STABLE. Slower Speeds. USE IF YOU HAVE CONSISTENT WiFi ISSUES LIKE HOTSPOT FAILURE ON 5GHz", 0  #-- selected.0 = 2
 );
 
 selectbox(
-    "Wired Earphone Sound Enhancement","<@center><b>\nWanr AGNi Wired Sound Enhancement ?</b>\n\n</@>","@install","sound.prop",  
+    "Wired Earphone Sound Enhancement","<@center><b>\nWant AGNi Wired Sound Enhancement ?</b>\n\n</@>","@install","sound.prop",  
     "YESSSS!",	"DEFAULT. AGNi's Wired Earphone Sound Enhancement doesnt consume extra battery unlike other sound mods like Dolby or V4A", 1,   #-- selected.0 = 1
     "No...",	"Select if you really don't want or want to use only other Sound mods", 0  #-- selected.0 = 2
 );
