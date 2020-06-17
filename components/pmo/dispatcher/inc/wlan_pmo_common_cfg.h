@@ -193,31 +193,31 @@
 
 /*
  * <ini>
- * gAdvancedPowerSaveMode - Advanced Power Save Mode
+ * gOptimizedPowerManagement - Optimized Power Management
  * @Min: 0
  * @Max: 1
  * @Default: 1
  *
- * This ini is used to set Advanced Power Save Mode configuration:
- * Current values of gAdvancedPowerSaveMode:
- * 0 -> Disable advanced power save
- * 1 -> Enable advanced power save
+ * This ini is used to set Optimized Power Management configuration:
+ * Current values of gOptimizedPowerManagement:
+ * 0 -> Disable optimized power management
+ * 1 -> Enable optimized power management
  *
  * Related: None
  *
- * Supported Feature: Advanced Power Save
+ * Supported Feature: Optimized Power Management
  *
  * Usage: External
  *
  * </ini>
  */
 #define CFG_PMO_POWERSAVE_MODE CFG_INI_UINT( \
-	"gAdvancedPowerSaveMode", \
+	"gOptimizedPowerManagement", \
 	0, \
 	1, \
 	1, \
 	CFG_VALUE_OR_DEFAULT, \
-	"Advanced Power Save Mode")
+	"Optimized Power Management")
 
 /*
  * <ini>
@@ -265,46 +265,6 @@
 					0, 3, 3, \
 					CFG_VALUE_OR_DEFAULT, \
 					"Enable WoW Support")
-/*
- * <ini>
- * wowlan_deauth_enable - Enable/Disable wowlan deauth enable
- * @Min: 0
- * @Max: 1
- * @Default: 1
- *
- * This ini is used to enable/disable wowlan deauth enable.
- *
- * Related: None
- *
- * Supported Feature: Power Save
- *
- * Usage: External
- *
- * </ini>
- */
-#define CFG_PMO_WOWLAN_DEAUTH_ENABLE CFG_INI_BOOL("wowlan_deauth_enable", \
-						  1, \
-						  "Enable WoWLan deauth")
-/*
- * <ini>
- * wowlan_disassoc_enable - Enable/Disable wowlan disassoc enable
- * @Min: 0
- * @Max: 1
- * @Default: 1
- *
- * This ini is used to enable/disable wowlan disassoc enable.
- *
- * Related: None
- *
- * Supported Feature: Power Save
- *
- * Usage: External
- *
- * </ini>
- */
-#define CFG_PMO_WOWLAN_DISASSOC_ENABLE CFG_INI_BOOL("wowlan_disassoc_enable", \
-						    1, \
-						    "Enable WoW Support")
 
 /*
  * <ini>
@@ -427,8 +387,6 @@
 	CFG(CFG_PMO_MC_ADDR_LIST_ENABLE) \
 	CFG(CFG_PMO_POWERSAVE_MODE) \
 	CFG(CFG_PMO_MAX_PS_POLL) \
-	CFG(CFG_PMO_WOWLAN_DEAUTH_ENABLE) \
-	CFG(CFG_PMO_WOWLAN_DISASSOC_ENABLE) \
 	CFG(CFG_PMO_WOW_ENABLE) \
 	CFG(CFG_PMO_ACTIVE_MODE) \
 	CFG(CFG_PMO_PWR_FAILURE) \

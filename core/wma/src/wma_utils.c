@@ -65,6 +65,7 @@
 #include <wlan_mlme_api.h>
 #include <../../core/src/vdev_mgr_ops.h>
 #include "cdp_txrx_misc.h"
+#include <cdp_txrx_host_stats.h>
 
 /* MCS Based rate table */
 /* HT MCS parameters with Nss = 1 */
@@ -1612,6 +1613,10 @@ static int wma_unified_link_peer_stats_event_handler(void *handle,
 	size_t link_stats_results_size;
 	bool excess_data = false;
 	uint32_t buf_len = 0;
+	struct cdp_peer_stats *dp_stats;
+	void *dp_soc = cds_get_context(QDF_MODULE_ID_SOC);
+	QDF_STATUS status;
+	uint8_t mcs_index;
 
 	struct mac_context *mac = cds_get_context(QDF_MODULE_ID_PE);
 
@@ -1709,6 +1714,12 @@ static int wma_unified_link_peer_stats_event_handler(void *handle,
 
 	qdf_mem_copy(link_stats_results->results,
 		     &fixed_param->num_peers, peer_stats_size);
+	dp_stats = qdf_mem_malloc(sizeof(*dp_stats));
+	if (!dp_stats) {
+		WMA_LOGE("dp stats allocation failed");
+		qdf_mem_free(link_stats_results);
+		return -ENOMEM;
+	}
 
 	results = (uint8_t *) link_stats_results->results;
 	t_peer_stats = (uint8_t *) peer_stats;
@@ -1721,8 +1732,21 @@ static int wma_unified_link_peer_stats_event_handler(void *handle,
 			     t_peer_stats + next_peer_offset, peer_info_size);
 		next_res_offset += peer_info_size;
 
+		status = cdp_host_get_peer_stats(dp_soc,
+				       link_stats_results->ifaceId,
+				       (uint8_t *)&peer_stats->peer_mac_address,
+				       dp_stats);
+
 		/* Copy rate stats associated with this peer */
 		for (count = 0; count < peer_stats->num_rates; count++) {
+			mcs_index = RATE_STAT_GET_MCS_INDEX(rate_stats->rate);
+			if (QDF_IS_STATUS_SUCCESS(status)) {
+				if (rate_stats->rate && mcs_index < MAX_MCS)
+					rate_stats->rx_mpdu =
+					    dp_stats->rx.rx_mpdu_cnt[mcs_index];
+				else
+					rate_stats->rx_mpdu = 0;
+			}
 			rate_stats++;
 
 			qdf_mem_copy(results + next_res_offset,
@@ -1735,6 +1759,7 @@ static int wma_unified_link_peer_stats_event_handler(void *handle,
 		peer_stats++;
 	}
 
+	qdf_mem_free(dp_stats);
 	/* call hdd callback with Link Layer Statistics
 	 * vdev_id/ifacId in link_stats_results will be
 	 * used to retrieve the correct HDD context
@@ -3547,7 +3572,7 @@ QDF_STATUS wma_get_connection_info(uint8_t vdev_id,
 	}
 	conn_table_entry->chan_width = wma_conn_table_entry->chan_width;
 	conn_table_entry->mac_id = wma_conn_table_entry->mac_id;
-	conn_table_entry->mhz = wma_conn_table_entry->mhz;
+	conn_table_entry->mhz = wma_conn_table_entry->ch_freq;
 	conn_table_entry->sub_type = wma_conn_table_entry->sub_type;
 	conn_table_entry->type = wma_conn_table_entry->type;
 	conn_table_entry->ch_flagext = wma_conn_table_entry->ch_flagext;
@@ -3578,7 +3603,7 @@ QDF_STATUS wma_ndi_update_connection_info(uint8_t vdev_id,
 	}
 
 	wma_iface_entry->chan_width = ndp_chan_info->ch_width;
-	wma_iface_entry->mhz = ndp_chan_info->freq;
+	wma_iface_entry->ch_freq = ndp_chan_info->freq;
 	wma_iface_entry->nss = ndp_chan_info->nss;
 	wma_iface_entry->mac_id = ndp_chan_info->mac_id;
 
@@ -4925,8 +4950,9 @@ int wma_oem_event_handler(void *wma_ctx, uint8_t *event_buff, uint32_t len)
 
 	oem_event_data.data_len = event->data_len;
 	oem_event_data.data = param_buf->data;
-
-	pmac->sme.oem_data_event_handler_cb(&oem_event_data);
+	pmac->sme.oem_data_event_handler_cb(&oem_event_data,
+					    pmac->sme.oem_data_vdev_id);
+	pmac->sme.oem_data_event_handler_cb = NULL;
 
 	return QDF_STATUS_SUCCESS;
 }

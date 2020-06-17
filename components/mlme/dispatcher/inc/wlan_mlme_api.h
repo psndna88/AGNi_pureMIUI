@@ -495,6 +495,15 @@ QDF_STATUS wlan_mlme_configure_chain_mask(struct wlan_objmgr_psoc *psoc,
 					  uint8_t session_id);
 
 /**
+ * wlan_mlme_is_chain_mask_supported() - check if configure chainmask can
+ * be supported
+ * @psoc: pointer to psoc object
+ *
+ * Return: true if supported else false
+ */
+bool wlan_mlme_is_chain_mask_supported(struct wlan_objmgr_psoc *psoc);
+
+/**
  * wlan_mlme_get_listen_interval() - Get listen interval
  * @psoc: pointer to psoc object
  * @value: Pointer to value that needs to be filled by MLME
@@ -523,16 +532,6 @@ QDF_STATUS wlan_mlme_set_sap_listen_interval(struct wlan_objmgr_psoc *psoc,
  */
 QDF_STATUS wlan_mlme_set_assoc_sta_limit(struct wlan_objmgr_psoc *psoc,
 					 int value);
-
-/**
- * wlan_mlme_set_rmc_action_period_freq() - Set the rmc action period frequency
- * @psoc: pointer to psoc object
- * @value: Value that needs to be set from the caller
- *
- * Return: QDF Status
- */
-QDF_STATUS wlan_mlme_set_rmc_action_period_freq(struct wlan_objmgr_psoc *psoc,
-						int value);
 
 /**
  * wlan_mlme_set_sap_get_peer_info() - get the sap get peer info
@@ -2059,16 +2058,6 @@ wlan_mlme_set_11h_enabled(struct wlan_objmgr_psoc *psoc, bool value);
  */
 QDF_STATUS
 wlan_mlme_is_11d_enabled(struct wlan_objmgr_psoc *psoc, bool *value);
-
-/**
- * wlan_mlme_ibss_power_save_setup() - Set IBSS power save params
- * @psoc: pointer to psoc object
- * @vdev_id: IBSS Vdev ID
- *
- * Return: QDF Status
- */
-QDF_STATUS wlan_mlme_ibss_power_save_setup(struct wlan_objmgr_psoc *psoc,
-					   uint32_t vdev_id);
 
 /**
  * wlan_mlme_set_11d_enabled() - Set the 11h flag

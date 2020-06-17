@@ -514,15 +514,10 @@ static int __wlan_hdd_cfg80211_scan(struct wiphy *wiphy,
 	}
 
 	/*
-	 * IBSS vdev does not need to scan to establish
-	 * IBSS connection. If IBSS vdev need to support scan,
-	 * Firmware need to make the change to add self peer
-	 * per mac for IBSS vdev.
 	 * NDI does not need scan from userspace to establish connection
 	 * and it does not support scan request either.
 	 */
-	if (QDF_IBSS_MODE == adapter->device_mode ||
-	    QDF_NDI_MODE == adapter->device_mode) {
+	if (QDF_NDI_MODE == adapter->device_mode) {
 		hdd_err("Scan not supported for %s",
 			qdf_opmode_str(adapter->device_mode));
 		return -EINVAL;
@@ -932,10 +927,8 @@ struct nla_policy scan_policy[QCA_WLAN_VENDOR_ATTR_SCAN_MAX + 1] = {
 	[QCA_WLAN_VENDOR_ATTR_SCAN_COOKIE] = {.type = NLA_U64},
 	[QCA_WLAN_VENDOR_ATTR_SCAN_IE] = {.type = NLA_BINARY,
 					  .len = MAX_DEFAULT_SCAN_IE_LEN},
-	[QCA_WLAN_VENDOR_ATTR_SCAN_MAC] = {.type = NLA_UNSPEC,
-					   .len = QDF_MAC_ADDR_SIZE},
-	[QCA_WLAN_VENDOR_ATTR_SCAN_MAC_MASK] = {.type = NLA_UNSPEC,
-						.len = QDF_MAC_ADDR_SIZE},
+	[QCA_WLAN_VENDOR_ATTR_SCAN_MAC] = VENDOR_NLA_POLICY_MAC_ADDR,
+	[QCA_WLAN_VENDOR_ATTR_SCAN_MAC_MASK] = VENDOR_NLA_POLICY_MAC_ADDR,
 	[QCA_WLAN_VENDOR_ATTR_SCAN_FREQUENCIES] = {.type = NLA_NESTED},
 	[QCA_WLAN_VENDOR_ATTR_SCAN_SSIDS] = {.type = NLA_NESTED},
 	[QCA_WLAN_VENDOR_ATTR_SCAN_SUPP_RATES] = {.type = NLA_NESTED},

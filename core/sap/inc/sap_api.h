@@ -298,6 +298,7 @@ typedef struct sap_StationDisassocCompleteEvent_s {
 	int tx_rate;
 	int rx_rate;
 	uint32_t rx_mc_bc_cnt;
+	uint32_t rx_retry_cnt;
 } tSap_StationDisassocCompleteEvent;
 
 typedef struct sap_StationSetKeyCompleteEvent_s {
@@ -1225,18 +1226,6 @@ eCsrPhyMode wlan_sap_get_phymode(struct sap_context *sap_ctx);
  * Return: VHT channel width
  */
 uint32_t wlan_sap_get_vht_ch_width(struct sap_context *sap_ctx);
-
-/**
- * wlan_sap_set_vht_ch_width() - Sets SAP VHT channel width.
- * @sap_ctx:		Pointer to Sap Context
- * @vht_channel_width:	SAP VHT channel width value.
- *
- * This function sets the SAP current VHT channel width.
- *
- * Return: None
- */
-void wlan_sap_set_vht_ch_width(struct sap_context *sap_ctx,
-			       uint32_t vht_channel_width);
 
 /**
  * wlan_sap_get_ch_params() - get ch params

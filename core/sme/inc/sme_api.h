@@ -753,9 +753,6 @@ QDF_STATUS sme_generic_change_country_code(mac_handle_t mac_handle,
  */
 QDF_STATUS sme_update_channel_list(mac_handle_t mac_handle);
 
-QDF_STATUS sme_tx_fail_monitor_start_stop_ind(mac_handle_t mac_handle,
-		uint8_t tx_fail_count,
-		void *txFailIndCallback);
 QDF_STATUS sme_dhcp_start_ind(mac_handle_t mac_handle,
 		uint8_t device_mode,
 		uint8_t *macAddr, uint8_t sessionId);
@@ -771,12 +768,18 @@ QDF_STATUS sme_neighbor_report_request(mac_handle_t mac_handle,
 /**
  * sme_oem_data_cmd() - the wrapper to send oem data cmd to wma
  * @mac_handle: Opaque handle to the global MAC context.
+ * @@oem_data_event_handler_cb: callback to be registered
  * @oem_data: the pointer of oem data
+ * @vdev id: vdev id to fetch adapter
  *
  * Return: QDF_STATUS
  */
 QDF_STATUS sme_oem_data_cmd(mac_handle_t mac_handle,
-			    struct oem_data *oem_data);
+			    void (*oem_data_event_handler_cb)
+			    (const struct oem_data *oem_event_data,
+			     uint8_t vdev_id),
+			     struct oem_data *oem_data,
+			     uint8_t vdev_id);
 #endif
 
 #ifdef FEATURE_OEM_DATA_SUPPORT
@@ -1204,44 +1207,6 @@ QDF_STATUS sme_roam_del_pmkid_from_cache(mac_handle_t mac_handle,
 					 bool set_pmk);
 
 void sme_get_command_q_status(mac_handle_t mac_handle);
-
-#ifdef FEATURE_WLAN_RMC
-QDF_STATUS sme_enable_rmc(mac_handle_t mac_handle, uint32_t sessionId);
-QDF_STATUS sme_disable_rmc(mac_handle_t mac_handle, uint32_t sessionId);
-QDF_STATUS sme_send_rmc_action_period(mac_handle_t mac_handle,
-				      uint32_t sessionId);
-#endif
-
-#ifdef QCA_IBSS_SUPPORT
-/*
- * sme_request_ibss_peer_info() -  request ibss peer info
- * @mac_handle: Opaque handle to the global MAC context
- * @cb_context: Pointer to user data
- * @peer_info_cb: Peer info callback
- * @allPeerInfoReqd: All peer info required or not
- * @staIdx: sta index
- *
- * Return:  QDF_STATUS
- */
-QDF_STATUS sme_request_ibss_peer_info(mac_handle_t mac_handle,
-				      void *cb_context,
-				      ibss_peer_info_cb peer_info_cb,
-				      bool allPeerInfoReqd,
-				      uint8_t *mac_addr);
-#else
-static inline
-QDF_STATUS sme_request_ibss_peer_info(mac_handle_t mac_handle,
-				      void *cb_context,
-				      ibss_peer_info_cb peer_info_cb,
-				      bool allPeerInfoReqd,
-				      uint8_t *mac_addr)
-{
-	return QDF_STATUS_SUCCESS;
-}
-#endif
-
-QDF_STATUS sme_send_cesium_enable_ind(mac_handle_t mac_handle,
-				      uint32_t sessionId);
 
 /**
  * sme_set_wlm_latency_level_ind() - Used to set the latency level to fw
@@ -2159,9 +2124,6 @@ QDF_STATUS sme_process_mac_pwr_dbg_cmd(mac_handle_t mac_handle,
 
 void sme_get_vdev_type_nss(enum QDF_OPMODE dev_mode,
 			   uint8_t *nss_2g, uint8_t *nss_5g);
-QDF_STATUS sme_roam_set_default_key_index(mac_handle_t mac_handle,
-					  uint8_t session_id,
-					  uint8_t default_idx);
 void sme_send_disassoc_req_frame(mac_handle_t mac_handle,
 				 uint8_t session_id, uint8_t *peer_mac,
 				 uint16_t reason, uint8_t wait_for_ack);
@@ -3511,6 +3473,20 @@ static inline int sme_update_he_twt_req_support(mac_handle_t mac_handle,
 #endif
 
 /**
+ * sme_update_session_txq_edca_params() - sets the configured
+ * internal EDCA params values
+ *
+ * @mac_handle: Opaque handle to the global MAC context
+ * @session_id: session id
+ * @txq_edca_params: edca parameters
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+sme_update_session_txq_edca_params(mac_handle_t mac_handle, uint8_t session_id,
+				   tSirMacEdcaParamRecord *txq_edca_params);
+
+/**
  * sme_is_sta_key_exchange_in_progress() - checks whether the STA/P2P client
  * session has key exchange in progress
  *
@@ -4112,43 +4088,6 @@ QDF_STATUS sme_get_ani_level(mac_handle_t mac_handle, uint32_t *freqs,
 			     struct wmi_host_ani_level_event *ani, uint8_t num,
 			     void *context), void *context);
 #endif /* FEATURE_ANI_LEVEL_REQUEST */
-
-#ifdef FEATURE_OEM_DATA
-/**
- * sme_set_oem_data_event_handler_cb() - Register oem data event handler
- * callback
- * @mac_handle: Opaque handle to the MAC context
- * @oem_data_event_handler_cb: callback to be registered
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS sme_set_oem_data_event_handler_cb(
-			mac_handle_t mac_handle,
-			void (*oem_data_event_handler_cb)
-				(const struct oem_data *oem_event_data));
-
-/**
- * sme_reset_oem_data_event_handler_cb() - De-register oem data event handler
- * @mac_handle: Handler return by mac_open
- *
- * This function De-registers the OEM data event handler callback to SME
- *
- * Return: None
- */
-void sme_reset_oem_data_event_handler_cb(mac_handle_t  mac_handle);
-#else
-static inline QDF_STATUS sme_set_oem_data_event_handler_cb(
-			mac_handle_t mac_handle,
-			void (*oem_data_event_handler_cb)
-				(void *oem_event_data))
-{
-	return QDF_STATUS_SUCCESS;
-}
-
-static inline void sme_reset_oem_data_event_handler_cb(mac_handle_t  mac_handle)
-{
-}
-#endif
 
 /**
  * sme_get_prev_connected_bss_ies() - Get the previous connected AP IEs

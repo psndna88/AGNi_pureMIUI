@@ -53,8 +53,6 @@
 #define WLAN_MODULE_NAME  "wlan"
 #endif
 
-#define DISABLE_KRAIT_IDLE_PS_VAL      1
-
 #define SSR_MAX_FAIL_CNT 3
 static uint8_t re_init_fail_cnt, probe_fail_cnt;
 
@@ -1072,6 +1070,12 @@ static int __wlan_hdd_bus_suspend(struct wow_enable_params wow_params)
 		goto resume_pmo;
 	}
 
+	/*
+	 * Remove bus votes at the very end, after making sure there are no
+	 * pending bus transactions from WLAN SOC for TX/RX.
+	 */
+	pld_request_bus_bandwidth(hdd_ctx->parent_dev, PLD_BUS_WIDTH_NONE);
+
 	hdd_info("bus suspend succeeded");
 	return 0;
 
@@ -1216,6 +1220,18 @@ int wlan_hdd_bus_resume(void)
 	if (!hif_ctx) {
 		hdd_err("Failed to get hif context");
 		return -EINVAL;
+	}
+
+	/*
+	 * Add bus votes at the beginning, before making sure there are any
+	 * bus transactions from WLAN SOC for TX/RX.
+	 */
+	if (hdd_is_any_adapter_connected(hdd_ctx)) {
+		pld_request_bus_bandwidth(hdd_ctx->parent_dev,
+					  PLD_BUS_WIDTH_MEDIUM);
+	} else {
+		pld_request_bus_bandwidth(hdd_ctx->parent_dev,
+					  PLD_BUS_WIDTH_NONE);
 	}
 
 	status = hif_bus_resume(hif_ctx);

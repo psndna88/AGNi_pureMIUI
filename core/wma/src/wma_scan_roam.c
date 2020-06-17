@@ -367,6 +367,7 @@ static void wma_roam_scan_offload_set_params(
 	params->rct_validity_timer = roam_req->rct_validity_timer;
 	params->is_adaptive_11r = roam_req->is_adaptive_11r_connection;
 	params->is_sae_same_pmk = roam_req->is_sae_single_pmk;
+	params->enable_ft_im_roaming = roam_req->enable_ft_im_roaming;
 	wma_debug("qos_caps %d, qos_enabled %d, ho_delay_for_rx %d, roam_scan_mode %d roam_preauth: retrycount %d, no_ack_timeout %d SAE Single PMK:%d",
 		 params->roam_offload_params.qos_caps,
 		 params->roam_offload_params.qos_enabled,
@@ -1890,14 +1891,10 @@ QDF_STATUS wma_process_roaming_config(tp_wma_handle wma_handle,
 				break;
 
 			mode = WMI_ROAM_SCAN_MODE_PERIODIC;
-			/* Don't use rssi triggered roam scans if external app
-			 * is in control of channel list.
-			 */
-			if (roam_req->ChannelCacheType != CHANNEL_LIST_STATIC ||
-			    roam_req->roam_force_rssi_trigger)
+			if (roam_req->roam_force_rssi_trigger)
 				mode |= WMI_ROAM_SCAN_MODE_RSSI_CHANGE;
 
-		} else {
+		} else if (roam_req->roam_force_rssi_trigger) {
 			mode = WMI_ROAM_SCAN_MODE_RSSI_CHANGE;
 		}
 
@@ -2191,14 +2188,10 @@ QDF_STATUS wma_process_roaming_config(tp_wma_handle wma_handle,
 				break;
 
 			mode = WMI_ROAM_SCAN_MODE_PERIODIC;
-			/* Don't use rssi triggered roam scans if external app
-			 * is in control of channel list.
-			 */
-			if (roam_req->ChannelCacheType != CHANNEL_LIST_STATIC ||
-			    roam_req->roam_force_rssi_trigger)
+			if (roam_req->roam_force_rssi_trigger)
 				mode |= WMI_ROAM_SCAN_MODE_RSSI_CHANGE;
 
-		} else {
+		} else if (roam_req->roam_force_rssi_trigger) {
 			mode = WMI_ROAM_SCAN_MODE_RSSI_CHANGE;
 		}
 
@@ -2799,7 +2792,7 @@ static void wma_update_phymode_on_roam(tp_wma_handle wma, uint8_t *bssid,
 	struct vdev_mlme_obj *vdev_mlme;
 	uint8_t channel;
 
-	channel = wlan_freq_to_chan(iface->mhz);
+	channel = wlan_freq_to_chan(iface->ch_freq);
 	if (chan)
 		bss_phymode =
 			wma_fw_to_host_phymode(WMI_GET_CHANNEL_MODE(chan));
@@ -3031,7 +3024,7 @@ int wma_mlme_roam_synch_event_handler_cb(void *handle, uint8_t *event,
 	wma_process_roam_synch_complete(wma, synch_event->vdev_id);
 
 	/* update freq and channel width */
-	wma->interfaces[synch_event->vdev_id].mhz =
+	wma->interfaces[synch_event->vdev_id].ch_freq =
 		roam_synch_ind_ptr->chan_freq;
 	if (roam_synch_ind_ptr->join_rsp)
 		wma->interfaces[synch_event->vdev_id].chan_width =

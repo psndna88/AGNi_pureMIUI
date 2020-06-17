@@ -889,7 +889,7 @@
  * @OUTPUT: None
  *
  * This IOCTL sets the data rate for multicast data. Note that this command
- * is allowed only in STA, IBSS, or QCMobileAP mode
+ * is allowed only in STA or QCMobileAP mode
  *
  * @E.g: iwpriv wlan0 setMcRate <value>
  *
@@ -2017,27 +2017,6 @@
 #define WE_GET_STATES        10
 /*
  * <ioctl>
- * getIbssSTAs - get ibss sta info
- *
- * @INPUT: None
- *
- * @OUTPUT: Give the MAC of the IBSS STA
- *  wlan0     getIbssSTAs:
- *  1 .8c:fd:f0:01:9c:bf
- *
- * This IOCTL is used to get ibss sta info
- *
- * @E.g: iwpriv wlan0 getIbssSTAs
- *
- * Supported Feature: IBSS
- *
- * Usage: Internal/External
- *
- * </ioctl>
- */
-#define WE_GET_IBSS_STA_INFO 11
-/*
- * <ioctl>
  * getphymode - Get the current phymode.
  *
  * @INPUT: None
@@ -2156,28 +2135,7 @@
  * </ioctl>
  */
 #define WE_SET_REASSOC_TRIGGER     8
-/*
- * <ioctl>
- * ibssPeerInfoAll - Print the ibss peers's MAC, rate and RSSI
- *
- * @INPUT: None
- *
- * @OUTPUT: print ibss peer in info logs
- *  peer_info->numIBSSPeers = 1
- *  PEER ADDR : 8c:fd:f0:01:9c:bf TxRate: 1 Mbps RSSI: -35
- *
- * This IOCTL is used to rint the ibss peers's MAC, rate and RSSI
- * in info logs
- *
- * @E.g: iwpriv wlan0 ibssPeerInfoAll
- *
- * Supported Feature: IBSS
- *
- * Usage: Internal/External
- *
- * </ioctl>
- */
-#define WE_IBSS_GET_PEER_INFO_ALL 10
+
 /* Sub ioctls 11 to 16 are not used */
 #define WE_GET_FW_PROFILE_DATA     18
 /*
@@ -3219,171 +3177,10 @@ void hdd_wlan_list_fw_profile(uint16_t *length,
 	*length = len + 1;
 }
 
-#define HDD_DUMP_STAT_HELP(STAT_ID) \
-	hdd_nofl_info("%u -- %s", STAT_ID, (# STAT_ID))
-/**
- * hdd_display_stats_help() - print statistics help
- *
- * Return: none
- */
-static void hdd_display_stats_help(void)
+static int hdd_we_dump_stats(struct hdd_adapter *adapter, int value)
 {
-	hdd_nofl_info("iwpriv wlan0 dumpStats [option] - dump statistics");
-	hdd_nofl_info("iwpriv wlan0 clearStats [option] - clear statistics");
-	hdd_nofl_info("options:");
-	HDD_DUMP_STAT_HELP(CDP_TXRX_PATH_STATS);
-	HDD_DUMP_STAT_HELP(CDP_TXRX_HIST_STATS);
-	HDD_DUMP_STAT_HELP(CDP_TXRX_TSO_STATS);
-	HDD_DUMP_STAT_HELP(CDP_HDD_NETIF_OPER_HISTORY);
-	HDD_DUMP_STAT_HELP(CDP_DUMP_TX_FLOW_POOL_INFO);
-	HDD_DUMP_STAT_HELP(CDP_TXRX_DESC_STATS);
-	HDD_DUMP_STAT_HELP(CDP_HIF_STATS);
-	HDD_DUMP_STAT_HELP(CDP_NAPI_STATS);
-	HDD_DUMP_STAT_HELP(CDP_DP_NAPI_STATS);
-	HDD_DUMP_STAT_HELP(CDP_DP_RX_THREAD_STATS);
+	return hdd_wlan_dump_stats(adapter, value);
 }
-
-/**
- * hdd_wlan_dump_stats() - display dump Stats
- * @adapter: adapter handle
- * @value: value from user
- *
- * Return: 0 => success, error code on failure
- */
-int hdd_wlan_dump_stats(struct hdd_adapter *adapter, int value)
-{
-	int ret = 0;
-	QDF_STATUS status;
-	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
-
-	hdd_debug("%d", value);
-
-	switch (value) {
-	case CDP_TXRX_HIST_STATS:
-		wlan_hdd_display_tx_rx_histogram(hdd_ctx);
-		break;
-	case CDP_HDD_NETIF_OPER_HISTORY:
-		wlan_hdd_display_adapter_netif_queue_history(adapter);
-		break;
-	case CDP_HIF_STATS:
-		hdd_display_hif_stats();
-		break;
-	case CDP_LRO_STATS:
-		hdd_lro_display_stats(hdd_ctx);
-		break;
-	case CDP_NAPI_STATS:
-		if (hdd_display_napi_stats()) {
-			hdd_err("error displaying napi stats");
-			ret = -EFAULT;
-		}
-		break;
-	case CDP_DP_RX_THREAD_STATS:
-		dp_txrx_ext_dump_stats(cds_get_context(QDF_MODULE_ID_SOC),
-				       CDP_DP_RX_THREAD_STATS);
-		break;
-	case CDP_DISCONNECT_STATS:
-		sme_display_disconnect_stats(hdd_ctx->mac_handle,
-					     adapter->vdev_id);
-		break;
-	default:
-		status = cdp_display_stats(cds_get_context(QDF_MODULE_ID_SOC),
-					   value,
-					   QDF_STATS_VERBOSITY_LEVEL_HIGH);
-		if (status == QDF_STATUS_E_INVAL) {
-			hdd_display_stats_help();
-			ret = -EINVAL;
-		}
-		break;
-	}
-	return ret;
-}
-
-#ifdef QCA_IBSS_SUPPORT
-/**
- * hdd_wlan_get_ibss_peer_info_all() - Print all IBSS peers
- * @adapter: Adapter upon which the IBSS clients are active
- *
- * Return: QDF_STATUS_STATUS if the peer information was retrieved and
- * displayed, otherwise an appropriate QDF_STATUS_E_* failure code.
- */
-static QDF_STATUS hdd_wlan_get_ibss_peer_info_all(struct hdd_adapter *adapter)
-{
-	QDF_STATUS status = QDF_STATUS_E_FAILURE;
-	mac_handle_t mac_handle = adapter->hdd_ctx->mac_handle;
-	struct hdd_station_ctx *sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
-	tSirPeerInfoRspParams *peer_info = &sta_ctx->ibss_peer_info;
-	struct qdf_mac_addr bcast = QDF_MAC_ADDR_BCAST_INIT;
-	int i;
-
-	INIT_COMPLETION(adapter->ibss_peer_info_comp);
-	status = sme_request_ibss_peer_info(mac_handle, adapter,
-					    hdd_get_ibss_peer_info_cb,
-					    true, bcast.bytes);
-
-	if (QDF_STATUS_SUCCESS == status) {
-		unsigned long rc;
-
-		rc = wait_for_completion_timeout
-			     (&adapter->ibss_peer_info_comp,
-			     msecs_to_jiffies(IBSS_PEER_INFO_REQ_TIMOEUT));
-		if (!rc) {
-			hdd_err("failed wait on ibss_peer_info_comp");
-			return QDF_STATUS_E_FAILURE;
-		}
-
-		/** Print the peer info */
-		hdd_debug("peer_info->numIBSSPeers = %d ",
-			(int)peer_info->numPeers);
-		for (i = 0; i < peer_info->numPeers; i++) {
-			uint8_t mac_addr[QDF_MAC_ADDR_SIZE];
-			uint32_t tx_rate;
-
-			tx_rate = peer_info->peerInfoParams[i].txRate;
-			qdf_mem_copy(mac_addr,
-				peer_info->peerInfoParams[i].mac_addr,
-				sizeof(mac_addr));
-
-			hdd_debug(" PEER ADDR : %pM TxRate: %d Mbps RSSI: %d",
-				mac_addr, (int)tx_rate,
-				(int)peer_info->peerInfoParams[i].rssi);
-		}
-	} else {
-		hdd_warn("Warning: sme_request_ibss_peer_info Request failed");
-	}
-
-	return status;
-}
-#else
-/**
- * hdd_wlan_get_ibss_peer_info() - Print IBSS peer information
- * @adapter: Adapter upon which the IBSS client is active
- * @sta_id: Station index of the IBSS peer
- *
- * This function is dummy
- *
- * Return: QDF_STATUS_STATUS
- */
-static inline QDF_STATUS
-hdd_wlan_get_ibss_peer_info(struct hdd_adapter *adapter,
-			    uint8_t sta_id)
-{
-	return QDF_STATUS_SUCCESS;
-}
-
-/**
- * hdd_wlan_get_ibss_peer_info_all() - Print all IBSS peers
- * @adapter: Adapter upon which the IBSS clients are active
- *
- * This function is dummy
- *
- * Return: QDF_STATUS_STATUS
- */
-static inline QDF_STATUS
-hdd_wlan_get_ibss_peer_info_all(struct hdd_adapter *adapter)
-{
-	return QDF_STATUS_SUCCESS;
-}
-#endif
 
 /**
  * hdd_get_ldpc() - Get adapter LDPC
@@ -4781,38 +4578,7 @@ static int hdd_we_set_amsdu(struct hdd_adapter *adapter, int amsdu)
 
 static int hdd_we_clear_stats(struct hdd_adapter *adapter, int option)
 {
-	QDF_STATUS status;
-
-	hdd_debug("option %d", option);
-
-	switch (option) {
-	case CDP_HDD_STATS:
-		memset(&adapter->stats, 0, sizeof(adapter->stats));
-		memset(&adapter->hdd_stats, 0, sizeof(adapter->hdd_stats));
-		break;
-	case CDP_TXRX_HIST_STATS:
-		wlan_hdd_clear_tx_rx_histogram(adapter->hdd_ctx);
-		break;
-	case CDP_HDD_NETIF_OPER_HISTORY:
-		wlan_hdd_clear_netif_queue_history(adapter->hdd_ctx);
-		break;
-	case CDP_HIF_STATS:
-		hdd_clear_hif_stats();
-		break;
-	case CDP_NAPI_STATS:
-		hdd_clear_napi_stats();
-		break;
-	default:
-		status = cdp_clear_stats(cds_get_context(QDF_MODULE_ID_SOC),
-					 OL_TXRX_PDEV_ID,
-					 option);
-		if (status != QDF_STATUS_SUCCESS)
-			hdd_debug("Failed to dump stats for option: %d",
-				  option);
-		break;
-	}
-
-	return 0;
+	return hdd_wlan_clear_stats(adapter, option);
 }
 
 static int hdd_we_set_green_tx_param(struct hdd_adapter *adapter,
@@ -5631,7 +5397,7 @@ static const setint_getnone_fn setint_getnone_cb[] = {
 	[WE_DBGLOG_REPORT_ENABLE] = hdd_we_dbglog_report_enable,
 	[WE_SET_TXRX_FWSTATS] = hdd_we_set_txrx_fwstats,
 	[WE_TXRX_FWSTATS_RESET] = hdd_we_txrx_fwstats_reset,
-	[WE_DUMP_STATS] = hdd_wlan_dump_stats,
+	[WE_DUMP_STATS] = hdd_we_dump_stats,
 	[WE_CLEAR_STATS] = hdd_we_clear_stats,
 	[WE_PPS_PAID_MATCH] = hdd_we_pps_paid_match,
 	[WE_PPS_GID_MATCH] = hdd_we_pps_gid_match,
@@ -6643,8 +6409,6 @@ hdd_connection_state_string(eConnectionState connection_state)
 		CASE_RETURN_STRING(eConnectionState_NotConnected);
 		CASE_RETURN_STRING(eConnectionState_Connecting);
 		CASE_RETURN_STRING(eConnectionState_Associated);
-		CASE_RETURN_STRING(eConnectionState_IbssDisconnected);
-		CASE_RETURN_STRING(eConnectionState_IbssConnected);
 		CASE_RETURN_STRING(eConnectionState_Disconnecting);
 	default:
 		return "UNKNOWN";
@@ -7062,40 +6826,6 @@ static int __iw_get_char_setnone(struct net_device *dev,
 		break;
 	}
 #endif
-	case WE_GET_IBSS_STA_INFO:
-	{
-		struct hdd_station_ctx *sta_ctx =
-			WLAN_HDD_GET_STATION_CTX_PTR(adapter);
-		int idx = 0;
-		int length = 0, buf = 0;
-
-		for (idx = 0; idx < MAX_PEERS; idx++) {
-			if (!hdd_is_valid_mac_address(
-			    sta_ctx->conn_info.peer_macaddr[idx].bytes))
-				continue;
-
-			buf = snprintf
-				      ((extra + length),
-				      WE_MAX_STR_LEN - length,
-				      "\n" QDF_MAC_ADDR_STR "\n",
-				      sta_ctx->conn_info.
-				      peer_macaddr[idx].bytes[0],
-				      sta_ctx->conn_info.
-				      peer_macaddr[idx].bytes[1],
-				      sta_ctx->conn_info.
-				      peer_macaddr[idx].bytes[2],
-				      sta_ctx->conn_info.
-				      peer_macaddr[idx].bytes[3],
-				      sta_ctx->conn_info.
-				      peer_macaddr[idx].bytes[4],
-				      sta_ctx->conn_info.
-				      peer_macaddr[idx].bytes[5]
-				      );
-			length += buf;
-		}
-		wrqu->data.length = strlen(extra) + 1;
-		break;
-	}
 	case WE_GET_PHYMODE:
 	{
 		bool ch_bond24 = false, ch_bond5g = false;
@@ -7335,10 +7065,6 @@ static int __iw_setnone_getnone(struct net_device *dev,
 		ret = wma_cli_set_command(adapter->vdev_id,
 				WMI_WLAN_PROFILE_GET_PROFILE_DATA_CMDID,
 				0, DBG_CMD);
-		break;
-
-	case WE_IBSS_GET_PEER_INFO_ALL:
-		hdd_wlan_get_ibss_peer_info_all(adapter);
 		break;
 
 	case WE_SET_REASSOC_TRIGGER:
@@ -10576,11 +10302,6 @@ static const struct iw_priv_args we_private_args[] = {
 	 IW_PRIV_TYPE_CHAR | WE_MAX_STR_LEN,
 	 "get_cxn_info"	},
 
-	{WE_GET_IBSS_STA_INFO,
-	 0,
-	 IW_PRIV_TYPE_CHAR | WE_MAX_STR_LEN,
-	 "getIbssSTAs"},
-
 	{WE_GET_PHYMODE,
 	 0,
 	 IW_PRIV_TYPE_CHAR | WE_MAX_STR_LEN,
@@ -10606,12 +10327,6 @@ static const struct iw_priv_args we_private_args[] = {
 	 0,
 	 0,
 	 ""},
-
-	/* handlers for sub-ioctl */
-	{WE_IBSS_GET_PEER_INFO_ALL,
-	 0,
-	 0,
-	 "ibssPeerInfoAll"},
 
 	{WE_GET_FW_PROFILE_DATA,
 	 0,

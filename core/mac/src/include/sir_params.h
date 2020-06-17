@@ -96,7 +96,6 @@ typedef enum {
  * DOT11AX - indicate 11ax
  * WOW - indicate WOW
  * WLAN_ROAM_SCAN_OFFLOAD - indicate Roam scan offload
- * IBSS_HEARTBEAT_OFFLOAD - indicate IBSS HB offload
  * WLAN_PERIODIC_TX_PTRN - indicate WLAN_PERIODIC_TX_PTRN
  * ADVANCE_TDLS - indicate advanced TDLS
  * TDLS_OFF_CHANNEL - indicate TDLS off channel
@@ -126,7 +125,6 @@ enum cap_bitmap {
 	DOT11AX = 13,
 	WOW = 22,
 	WLAN_ROAM_SCAN_OFFLOAD = 23,
-	IBSS_HEARTBEAT_OFFLOAD = 26,
 	WLAN_PERIODIC_TX_PTRN = 28,
 #ifdef FEATURE_WLAN_TDLS
 	ADVANCE_TDLS = 29,
@@ -369,7 +367,6 @@ struct sir_cfg_action_frm_tb_ppdu {
 #define SIR_HAL_RX_SCAN_EVENT              (SIR_HAL_ITC_MSG_TYPES_BEGIN + 147)
 #define SIR_HAL_DHCP_START_IND             (SIR_HAL_ITC_MSG_TYPES_BEGIN + 148)
 #define SIR_HAL_DHCP_STOP_IND              (SIR_HAL_ITC_MSG_TYPES_BEGIN + 149)
-#define SIR_HAL_IBSS_PEER_INACTIVITY_IND   (SIR_HAL_ITC_MSG_TYPES_BEGIN + 150)
 
 #define SIR_HAL_LPHB_CONF_IND              (SIR_HAL_ITC_MSG_TYPES_BEGIN + 151)
 
@@ -379,9 +376,6 @@ struct sir_cfg_action_frm_tb_ppdu {
 /* Messages between 156 to 157 are not used */
 #define SIR_HAL_PDEV_DUAL_MAC_CFG_REQ      (SIR_HAL_ITC_MSG_TYPES_BEGIN + 154)
 #define SIR_HAL_PDEV_MAC_CFG_RESP          (SIR_HAL_ITC_MSG_TYPES_BEGIN + 155)
-
-/* For IBSS peer info related messages */
-#define SIR_HAL_IBSS_PEER_INFO_REQ         (SIR_HAL_ITC_MSG_TYPES_BEGIN + 158)
 
 #define SIR_HAL_RATE_UPDATE_IND            (SIR_HAL_ITC_MSG_TYPES_BEGIN + 159)
 
@@ -404,8 +398,6 @@ struct sir_cfg_action_frm_tb_ppdu {
 #define SIR_HAL_SET_MAX_TX_POWER_PER_BAND_REQ \
 					    (SIR_HAL_ITC_MSG_TYPES_BEGIN + 170)
 
-#define SIR_HAL_TX_FAIL_MONITOR_IND         (SIR_HAL_ITC_MSG_TYPES_BEGIN + 171)
-
 #define SIR_HAL_UPDATE_MEMBERSHIP           (SIR_HAL_ITC_MSG_TYPES_BEGIN + 172)
 #define SIR_HAL_UPDATE_USERPOS              (SIR_HAL_ITC_MSG_TYPES_BEGIN + 173)
 
@@ -421,11 +413,6 @@ struct sir_cfg_action_frm_tb_ppdu {
 #define SIR_HAL_BEACON_TX_SUCCESS_IND       (SIR_HAL_ITC_MSG_TYPES_BEGIN + 179)
 /* (SIR_HAL_ITC_MSG_TYPES_BEGIN + 180) is unused */
 
-#define SIR_HAL_IBSS_CESIUM_ENABLE_IND      (SIR_HAL_ITC_MSG_TYPES_BEGIN + 181)
-
-#define SIR_HAL_RMC_ENABLE_IND              (SIR_HAL_ITC_MSG_TYPES_BEGIN + 182)
-#define SIR_HAL_RMC_DISABLE_IND             (SIR_HAL_ITC_MSG_TYPES_BEGIN + 183)
-#define SIR_HAL_RMC_ACTION_PERIOD_IND       (SIR_HAL_ITC_MSG_TYPES_BEGIN + 184)
 #define SIR_HAL_INIT_THERMAL_INFO_CMD       (SIR_HAL_ITC_MSG_TYPES_BEGIN + 185)
 #define SIR_HAL_SET_THERMAL_LEVEL           (SIR_HAL_ITC_MSG_TYPES_BEGIN + 186)
 
@@ -572,10 +559,9 @@ struct sir_cfg_action_frm_tb_ppdu {
 #define SIR_HAL_SET_PDEV_IE_REQ             (SIR_HAL_ITC_MSG_TYPES_BEGIN + 345)
 
 /*
- * (SIR_HAL_ITC_MSG_TYPES_BEGIN + 346) thru
- * (SIR_HAL_ITC_MSG_TYPES_BEGIN + 357) are unused
+ * (SIR_HAL_ITC_MSG_TYPES_BEGIN + 346) to
+ * (SIR_HAL_ITC_MSG_TYPES_BEGIN + 359) are unused
  */
-#define SIR_HAL_UPDATE_WEP_DEFAULT_KEY      (SIR_HAL_ITC_MSG_TYPES_BEGIN + 358)
 
 #define SIR_HAL_SEND_FREQ_RANGE_CONTROL_IND (SIR_HAL_ITC_MSG_TYPES_BEGIN + 360)
 #define SIR_HAL_POWER_DBG_CMD               (SIR_HAL_ITC_MSG_TYPES_BEGIN + 362)

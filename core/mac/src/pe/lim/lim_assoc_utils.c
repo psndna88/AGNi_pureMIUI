@@ -44,7 +44,6 @@
 #include "lim_ser_des_utils.h"
 #include "lim_admit_control.h"
 #include "lim_send_messages.h"
-#include "lim_ibss_peer_mgmt.h"
 #include "lim_ft_defs.h"
 #include "lim_session.h"
 #include "lim_process_fils.h"
@@ -1581,7 +1580,7 @@ static bool lim_check_valid_mcs_for_nss(struct pe_session *session,
 	uint16_t mcs_map;
 	uint8_t mcs_count = 2, i;
 
-	if (!session->he_capable || !he_caps)
+	if (!session->he_capable || !he_caps || !he_caps->present)
 		return true;
 
 	mcs_map = he_caps->rx_he_mcs_map_lt_80;
@@ -1774,7 +1773,7 @@ QDF_STATUS lim_populate_peer_rate_set(struct mac_context *mac,
 
 	if (IS_DOT11_MODE_HE(pe_session->dot11mode) && he_caps) {
 		lim_calculate_he_nss(pRates, pe_session);
-	} else if (IS_DOT11_MODE_VHT(pe_session->dot11mode)) {
+	} else if (pe_session->vhtCapability) {
 		if ((pRates->vhtRxMCSMap & MCSMAPMASK2x2) == MCSMAPMASK2x2)
 			pe_session->nss = NSS_1x1_MODE;
 	} else if (pRates->supportedMCSSet[1] == 0) {
@@ -1804,7 +1803,6 @@ QDF_STATUS lim_populate_peer_rate_set(struct mac_context *mac,
  * processing on AP and while adding peer's context
  * in IBSS role to process the CFG rate sets and
  * the rate sets received in the Assoc request on AP
- * or Beacon/Probe Response from peer in IBSS.
  *
  * 1. It makes the intersection between our own rate Sat
  *    and extemcded rate set and the ones received in the
@@ -2133,7 +2131,6 @@ lim_add_sta(struct mac_context *mac_ctx,
 	tSirMacAddr sta_mac, *sta_Addr;
 	tpSirAssocReq assoc_req;
 	uint8_t i, nw_type_11b = 0;
-	tLimIbssPeerNode *peer_node; /* for IBSS mode */
 	const uint8_t *p2p_ie = NULL;
 	tDot11fIEVHTCaps vht_caps;
 	struct mlme_vht_capabilities_info *vht_cap_info;
@@ -2150,8 +2147,7 @@ lim_add_sta(struct mac_context *mac_ctx,
 	if (!add_sta_params)
 		return QDF_STATUS_E_NOMEM;
 
-	if (LIM_IS_AP_ROLE(session_entry) || LIM_IS_IBSS_ROLE(session_entry) ||
-		LIM_IS_NDI_ROLE(session_entry))
+	if (LIM_IS_AP_ROLE(session_entry) || LIM_IS_NDI_ROLE(session_entry))
 		sta_Addr = &sta_ds->staAddr;
 #ifdef FEATURE_WLAN_TDLS
 	/* SystemRole shouldn't be matter if staType is TDLS peer */
@@ -2202,8 +2198,7 @@ lim_add_sta(struct mac_context *mac_ctx,
 	add_sta_params->status = QDF_STATUS_SUCCESS;
 
 	/* Update VHT/HT Capability */
-	if (LIM_IS_AP_ROLE(session_entry) ||
-	    LIM_IS_IBSS_ROLE(session_entry)) {
+	if (LIM_IS_AP_ROLE(session_entry)) {
 		add_sta_params->htCapable = sta_ds->mlmStaContext.htCapability;
 		add_sta_params->vhtCapable =
 			 sta_ds->mlmStaContext.vhtCapability;
@@ -2372,46 +2367,8 @@ lim_add_sta(struct mac_context *mac_ctx,
 		lim_add_he_cap(mac_ctx, session_entry,
 			       add_sta_params, assoc_req);
 
-	} else if (LIM_IS_IBSS_ROLE(session_entry)) {
-
-		/*
-		 * in IBSS mode, use peer node as the source of ht_caps
-		 * and vht_caps
-		 */
-		peer_node = lim_ibss_peer_find(mac_ctx, *sta_Addr);
-		if (!peer_node) {
-			pe_err("Can't find IBSS peer node for ADD_STA");
-			return QDF_STATUS_E_NOENT;
-		}
-
-		if (peer_node->atimIePresent) {
-			add_sta_params->atimIePresent =
-				 peer_node->atimIePresent;
-			add_sta_params->peerAtimWindowLength =
-				peer_node->peerAtimWindowLength;
-		}
-
-		add_sta_params->ht_caps =
-			(peer_node->htSupportedChannelWidthSet <<
-			 SIR_MAC_HT_CAP_CHWIDTH40_S) |
-			(peer_node->htGreenfield <<
-			 SIR_MAC_HT_CAP_GREENFIELD_S) |
-			(peer_node->htShortGI20Mhz <<
-			 SIR_MAC_HT_CAP_SHORTGI20MHZ_S) |
-			(peer_node->htShortGI40Mhz <<
-			 SIR_MAC_HT_CAP_SHORTGI40MHZ_S) |
-			(SIR_MAC_TXSTBC <<
-			 SIR_MAC_HT_CAP_TXSTBC_S) |
-			(SIR_MAC_RXSTBC <<
-			 SIR_MAC_HT_CAP_RXSTBC_S) |
-			(peer_node->htMaxAmsduLength <<
-			 SIR_MAC_HT_CAP_MAXAMSDUSIZE_S) |
-			(peer_node->htDsssCckRate40MHzSupport <<
-			 SIR_MAC_HT_CAP_DSSSCCK40_S);
-
-		add_sta_params->vht_caps =
-			 lim_populate_vht_caps(peer_node->VHTCaps);
 	}
+
 #ifdef FEATURE_WLAN_TDLS
 	if (STA_ENTRY_TDLS_PEER == sta_ds->staType) {
 		add_sta_params->ht_caps = sta_ds->ht_caps;
@@ -2784,7 +2741,7 @@ lim_add_sta_self(struct mac_context *mac, uint8_t updateSta,
 		pAddStaParams->fShortGI20Mhz = pe_session->ht_config.ht_sgi20;
 		pAddStaParams->fShortGI40Mhz = pe_session->ht_config.ht_sgi40;
 	}
-	pAddStaParams->vhtCapable = IS_DOT11_MODE_VHT(selfStaDot11Mode);
+	pAddStaParams->vhtCapable = pe_session->vhtCapability;
 	if (pAddStaParams->vhtCapable)
 		pAddStaParams->ch_width =
 			pe_session->ch_width;
@@ -2795,7 +2752,7 @@ lim_add_sta_self(struct mac_context *mac, uint8_t updateSta,
 		pe_session->vht_config.su_beam_former;
 
 	/* In 11ac mode, the hardware is capable of supporting 128K AMPDU size */
-	if (IS_DOT11_MODE_VHT(selfStaDot11Mode))
+	if (pe_session->vhtCapability)
 		pAddStaParams->maxAmpduSize =
 		mac->mlme_cfg->vht_caps.vht_cap_info.ampdu_len_exponent;
 
@@ -2957,7 +2914,7 @@ lim_delete_dph_hash_entry(struct mac_context *mac_ctx, tSirMacAddr sta_addr,
 	 */
 	lim_util_count_sta_del(mac_ctx, sta_ds, session_entry);
 
-	if (LIM_IS_AP_ROLE(session_entry) || LIM_IS_IBSS_ROLE(session_entry)) {
+	if (LIM_IS_AP_ROLE(session_entry)) {
 		if (LIM_IS_AP_ROLE(session_entry)) {
 			if (session_entry->gLimProtectionControl !=
 				MLME_FORCE_POLICY_PROTECTION_DISABLE)
@@ -2975,10 +2932,6 @@ lim_delete_dph_hash_entry(struct mac_context *mac_ctx, tSirMacAddr sta_addr,
 					 session_entry->lim_non_ecsa_cap_num);
 			}
 		}
-
-		if (LIM_IS_IBSS_ROLE(session_entry))
-			lim_ibss_decide_protection_on_delete(mac_ctx, sta_ds,
-				     &beacon_params, session_entry);
 
 		lim_decide_short_preamble(mac_ctx, sta_ds, &beacon_params,
 					  session_entry);
@@ -3177,8 +3130,8 @@ lim_check_and_announce_join_success(struct mac_context *mac_ctx,
 	lim_post_sme_message(mac_ctx, LIM_MLM_JOIN_CNF,
 			     (uint32_t *) &mlm_join_cnf);
 
-	if ((IS_DOT11_MODE_VHT(session_entry->dot11mode)) &&
-		beacon_probe_rsp->vendor_vht_ie.VHTCaps.present) {
+	if (session_entry->vhtCapability &&
+	    beacon_probe_rsp->vendor_vht_ie.VHTCaps.present) {
 		session_entry->is_vendor_specific_vhtcaps = true;
 		session_entry->vendor_specific_vht_ie_sub_type =
 			beacon_probe_rsp->vendor_vht_ie.sub_type;

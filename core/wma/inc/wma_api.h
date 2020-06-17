@@ -46,6 +46,10 @@ typedef void *WMA_HANDLE;
  * @GEN_PARAM_CAPTURE_TSF: read tsf
  * @GEN_PARAM_RESET_TSF_GPIO: reset tsf gpio
  * @GEN_VDEV_ROAM_SYNCH_DELAY: roam sync delay
+ * @GEN_VDEV_PARAM_TX_AMPDU: Set tx ampdu size
+ * @GEN_VDEV_PARAM_RX_AMPDU: Set rx ampdu size
+ * @GEN_VDEV_PARAM_TX_AMSDU: Set tx amsdu size
+ * @GEN_VDEV_PARAM_RX_AMSDU: Set rx amsdu size
  */
 enum GEN_PARAM {
 	GEN_VDEV_PARAM_AMPDU = 0x1,
@@ -54,6 +58,10 @@ enum GEN_PARAM {
 	GEN_PARAM_CAPTURE_TSF,
 	GEN_PARAM_RESET_TSF_GPIO,
 	GEN_VDEV_ROAM_SYNCH_DELAY,
+	GEN_VDEV_PARAM_TX_AMPDU,
+	GEN_VDEV_PARAM_RX_AMPDU,
+	GEN_VDEV_PARAM_TX_AMSDU,
+	GEN_VDEV_PARAM_RX_AMSDU,
 };
 
 /**
@@ -193,7 +201,11 @@ QDF_STATUS wma_post_ctrl_msg(struct mac_context *mac, struct scheduler_msg *pMsg
 
 void wma_update_intf_hw_mode_params(uint32_t vdev_id, uint32_t mac_id,
 				uint32_t cfgd_hw_mode_index);
+#ifdef MPC_UT_FRAMEWORK
 void wma_set_dbs_capability_ut(uint32_t dbs);
+#else
+static inline void wma_set_dbs_capability_ut(uint32_t dbs) {}
+#endif
 QDF_STATUS wma_get_caps_for_phyidx_hwmode(struct wma_caps_per_phy *caps_per_phy,
 		enum hw_mode_dbs_capab hw_mode, enum cds_band_type band);
 bool wma_is_rx_ldpc_supported_for_channel(uint32_t ch_freq);

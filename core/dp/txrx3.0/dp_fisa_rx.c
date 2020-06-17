@@ -804,14 +804,14 @@ dp_rx_fisa_flush_udp_flow(struct dp_vdev *vdev,
 	dp_fisa_debug("fisa_flow->curr_aggr %d", fisa_flow->cur_aggr);
 	linear_skb = dp_fisa_rx_linear_skb(vdev, fisa_flow->head_skb, 24000);
 	if (linear_skb) {
-		if (qdf_likely(vdev->osif_rx))
-			vdev->osif_rx(vdev->osif_vdev, linear_skb);
+		if (!vdev->osif_rx || QDF_STATUS_SUCCESS !=
+		    vdev->osif_rx(vdev->osif_vdev, linear_skb))
+			qdf_nbuf_free(linear_skb);
 		/* Free non linear skb */
 		qdf_nbuf_free(fisa_flow->head_skb);
 	} else {
-		if (qdf_likely(vdev->osif_rx))
-			vdev->osif_rx(vdev->osif_vdev, fisa_flow->head_skb);
-		else
+		if (!vdev->osif_rx || QDF_STATUS_SUCCESS !=
+		    vdev->osif_rx(vdev->osif_vdev, fisa_flow->head_skb))
 			qdf_nbuf_free(fisa_flow->head_skb);
 	}
 
@@ -1023,6 +1023,9 @@ QDF_STATUS dp_fisa_rx(struct dp_soc *soc, struct dp_vdev *vdev,
 	while (head_nbuf) {
 		next_nbuf = head_nbuf->next;
 		qdf_nbuf_set_next(head_nbuf, NULL);
+		/* bypass FISA for non-regular RX frame */
+		if (qdf_nbuf_is_exc_frame(head_nbuf))
+			goto deliver_nbuf;
 
 		qdf_nbuf_push_head(head_nbuf, RX_PKT_TLVS_LEN +
 				   QDF_NBUF_CB_RX_PACKET_L3_HDR_PAD(head_nbuf));
@@ -1038,7 +1041,7 @@ QDF_STATUS dp_fisa_rx(struct dp_soc *soc, struct dp_vdev *vdev,
 			dp_fisa_debug("Fragmented skb, will not be FISAed");
 			if (fisa_flow)
 				dp_rx_fisa_flush_flow(vdev, fisa_flow);
-			goto deliver_nbuf;
+			goto pull_nbuf;
 		}
 
 		if (!fisa_flow)
@@ -1058,9 +1061,8 @@ pull_nbuf:
 deliver_nbuf: /* Deliver without FISA */
 		qdf_nbuf_set_next(head_nbuf, NULL);
 		hex_dump_skb_data(head_nbuf, false);
-		if (qdf_likely(vdev->osif_rx))
-			vdev->osif_rx(vdev->osif_vdev, head_nbuf);
-		else
+		if (!vdev->osif_rx || QDF_STATUS_SUCCESS !=
+		    vdev->osif_rx(vdev->osif_vdev, head_nbuf))
 			qdf_nbuf_free(head_nbuf);
 next_msdu:
 		head_nbuf = next_nbuf;
@@ -1101,13 +1103,30 @@ QDF_STATUS dp_rx_dump_fisa_stats(struct dp_soc *soc)
 }
 
 /**
- * dp_rx_fisa_flush() - Flush function to end of context flushing of aggregates
- * @soc: core txrx main context
- * @napi_id: REO number to flush the flow Rxed on the REO
+ * dp_rx_fisa_flush_flow_wrap() - flush fisa flow by invoking
+ *				  dp_rx_fisa_flush_flow()
+ * @sw_ft: fisa flow for which aggregates to be flushed
  *
- * Return: Success on flushing the flows for the REO
+ * Return: None.
  */
-QDF_STATUS dp_rx_fisa_flush(struct dp_soc *soc, int napi_id)
+static void dp_rx_fisa_flush_flow_wrap(struct dp_fisa_rx_sw_ft *sw_ft)
+{
+	/* Save the ip_len and checksum as hardware assist is
+	 * always based on his start of aggregation
+	 */
+	sw_ft->napi_flush_cumulative_l4_checksum =
+				sw_ft->cumulative_l4_checksum;
+	sw_ft->napi_flush_cumulative_ip_length =
+				sw_ft->hal_cumultive_ip_len;
+	dp_fisa_debug("napi_flush_cumulative_ip_length 0x%x",
+		      sw_ft->napi_flush_cumulative_ip_length);
+
+	dp_rx_fisa_flush_flow(sw_ft->vdev,
+			      sw_ft);
+	sw_ft->cur_aggr = 0;
+}
+
+QDF_STATUS dp_rx_fisa_flush_by_ctx_id(struct dp_soc *soc, int napi_id)
 {
 	struct dp_rx_fst *fisa_hdl = soc->rx_fst;
 	struct dp_fisa_rx_sw_ft *sw_ft_entry =
@@ -1120,19 +1139,33 @@ QDF_STATUS dp_rx_fisa_flush(struct dp_soc *soc, int napi_id)
 		    sw_ft_entry[i].is_populated) {
 			dp_fisa_debug("flushing %d %pK napi_id %d", i,
 				      &sw_ft_entry[i], napi_id);
-			/* Save the ip_len and checksum as hardware assist is
-			 * always based on his start of aggregation
-			 */
-			sw_ft_entry[i].napi_flush_cumulative_l4_checksum =
-					sw_ft_entry[i].cumulative_l4_checksum;
-			sw_ft_entry[i].napi_flush_cumulative_ip_length =
-					sw_ft_entry[i].hal_cumultive_ip_len;
-			dp_fisa_debug("napi_flush_cumulative_ip_length 0x%x",
-				sw_ft_entry[i].napi_flush_cumulative_ip_length);
+			dp_rx_fisa_flush_flow_wrap(&sw_ft_entry[i]);
+		}
+	}
 
-			dp_rx_fisa_flush_flow(sw_ft_entry[i].vdev,
-					      &sw_ft_entry[i]);
-			sw_ft_entry[i].cur_aggr = 0;
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS dp_rx_fisa_flush_by_vdev_id(struct dp_soc *soc, uint8_t vdev_id)
+{
+	struct dp_rx_fst *fisa_hdl = soc->rx_fst;
+	struct dp_fisa_rx_sw_ft *sw_ft_entry =
+		(struct dp_fisa_rx_sw_ft *)fisa_hdl->base;
+	int ft_size = fisa_hdl->max_entries;
+	int i;
+	struct dp_vdev *vdev;
+
+	vdev = dp_get_vdev_from_soc_vdev_id_wifi3(soc, vdev_id);
+	if (qdf_unlikely(!vdev)) {
+		dp_err("null vdev by vdev_id %d", vdev_id);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	for (i = 0; i < ft_size; i++) {
+		if (vdev == sw_ft_entry[i].vdev) {
+			dp_fisa_debug("flushing %d %pk vdev %pK", i,
+				      &sw_ft_entry[i], vdev);
+			dp_rx_fisa_flush_flow_wrap(&sw_ft_entry[i]);
 		}
 	}
 

@@ -641,7 +641,6 @@ struct wlan_mlme_wps_params {
  * @sap_11g_policy:  Check if 11g support is enabled
  * @assoc_sta_limit: Limit on number of STA associated to SAP
  * @enable_lte_coex: Flag for LTE coexistence
- * @rmc_action_period_freq: rmc action period frequency
  * @rate_tx_mgmt: mgmt frame tx rate
  * @rate_tx_mgmt_2g: mgmt frame tx rate for 2G band
  * @rate_tx_mgmt_5g: mgmt frame tx rate for 5G band
@@ -676,7 +675,6 @@ struct wlan_mlme_cfg_sap {
 	bool sap_11g_policy;
 	uint8_t assoc_sta_limit;
 	bool enable_lte_coex;
-	uint16_t rmc_action_period_freq;
 	uint8_t rate_tx_mgmt;
 	uint8_t rate_tx_mgmt_2g;
 	uint8_t rate_tx_mgmt_5g;
@@ -1443,6 +1441,7 @@ struct bss_load_trigger {
 #define AKM_FT_FILS          2
 #define AKM_SAE              3
 #define AKM_OWE              4
+#define AKM_SUITEB           5
 
 #define LFR3_STA_ROAM_DISABLE_BY_P2P BIT(0)
 #define LFR3_STA_ROAM_DISABLE_BY_NAN BIT(1)
@@ -1532,6 +1531,7 @@ struct bss_load_trigger {
  * @enable_adaptive_11r             Flag to check if adaptive 11r ini is enabled
  * @tgt_adaptive_11r_cap:           Flag to check if target supports adaptive
  * 11r
+ * @enable_ft_im_roaming:           Flag to enable/disable FT-IM roaming
  * @roam_scan_home_away_time:       The home away time to firmware
  * @roam_scan_n_probes:    The number of probes to be sent for firmware roaming
  * @delay_before_vdev_stop:Wait time for tx complete before vdev stop
@@ -1642,6 +1642,7 @@ struct wlan_mlme_lfr_cfg {
 	bool enable_adaptive_11r;
 	bool tgt_adaptive_11r_cap;
 #endif
+	bool enable_ft_im_roaming;
 	uint16_t roam_scan_home_away_time;
 	uint32_t roam_scan_n_probes;
 	uint8_t delay_before_vdev_stop;
@@ -1817,7 +1818,6 @@ struct wlan_mlme_wmm_params {
 /**
  * struct wlan_mlme_weight_config - weight params to
  * calculate best candidate
- *
  * @rssi_weightage: RSSI weightage
  * @ht_caps_weightage: HT caps weightage
  * @vht_caps_weightage: VHT caps weightage
@@ -1830,6 +1830,7 @@ struct wlan_mlme_wmm_params {
  * @channel_congestion_weightage: channel congestion weightage
  * @oce_wan_weightage: OCE WAN metrics weightage
  * @oce_ap_tx_pwr_weightage: weightage based on ap tx power
+ * @oce_subnet_id_weightage: weightage based on subnet id
  */
 struct  wlan_mlme_weight_config {
 	uint8_t rssi_weightage;
@@ -1844,12 +1845,12 @@ struct  wlan_mlme_weight_config {
 	uint8_t channel_congestion_weightage;
 	uint8_t oce_wan_weightage;
 	uint8_t oce_ap_tx_pwr_weightage;
+	uint8_t oce_subnet_id_weightage;
 };
 
 /**
  * struct wlan_mlme_rssi_cfg_score - RSSI params to
  * calculate best candidate
- *
  * @best_rssi_threshold: Best RSSI threshold
  * @good_rssi_threshold: Good RSSI threshold
  * @bad_rssi_threshold: Bad RSSI threshold
@@ -2230,38 +2231,6 @@ struct wlan_mlme_reg {
 };
 
 /**
- * struct wlan_mlme_ibss_cfg - IBSS config params
- * @auto_bssid: Enable Auto BSSID for IBSS
- * @atim_win_size: Set IBSS ATIM window size
- * @adhoc_ch_5g: Default 5Ghz IBSS channel if not provided by supplicant
- * @adhoc_ch_2g: Default 2.4Ghz IBSS channel if not provided by supplicant
- * @coalesing_enable: IBSS coalesing control param
- * @power_save_allow: IBSS Power Save control
- * @power_collapse_allow: IBSS Power collapse control
- * @awake_on_tx_rx: IBSS sta power save mode on TX/RX activity
- * @inactivity_bcon_count: No of Beacons of data inactivity for power save
- * @txsp_end_timeout: TX service period inactivity timeout
- * @ps_warm_up_time: IBSS Power save skip time
- * @ps_1rx_chain_atim_win: Control IBSS Power save in 1RX chain during ATIM
- * @bssid: BSSID Mac address: IBSS BSSID if not provided by supplicant
- */
-struct wlan_mlme_ibss_cfg {
-	bool auto_bssid;
-	uint32_t atim_win_size;
-	uint32_t adhoc_ch_5g;
-	uint32_t adhoc_ch_2g;
-	bool coalesing_enable;
-	bool power_save_allow;
-	bool power_collapse_allow;
-	bool awake_on_tx_rx;
-	uint32_t inactivity_bcon_count;
-	uint32_t txsp_end_timeout;
-	uint32_t ps_warm_up_time;
-	uint32_t ps_1rx_chain_atim_win;
-	struct qdf_mac_addr bssid;
-};
-
-/**
  * struct wlan_mlme_cfg - MLME config items
  * @chainmask_cfg: VHT chainmask related cfg items
  * @edca_params: edca related CFG items
@@ -2314,7 +2283,6 @@ struct wlan_mlme_cfg {
 	struct wlan_mlme_he_caps he_caps;
 #endif
 	struct wlan_mlme_lfr_cfg lfr;
-	struct wlan_mlme_ibss_cfg ibss;
 	struct wlan_mlme_obss_ht40 obss_ht40;
 	struct wlan_mlme_mbo mbo_cfg;
 	struct wlan_mlme_vht_caps vht_caps;

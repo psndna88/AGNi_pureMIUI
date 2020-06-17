@@ -83,7 +83,23 @@ struct hdd_context;
 #define SME_QOS_UAPSD_CFG_VO_CHANGED_MASK     0xF8
 
 netdev_tx_t hdd_hard_start_xmit(struct sk_buff *skb, struct net_device *dev);
+
+/**
+ * hdd_tx_timeout() - Wrapper function to protect __hdd_tx_timeout from SSR
+ * @net_dev: pointer to net_device structure
+ * @txqueue: tx queue
+ *
+ * Function called by OS if there is any timeout during transmission.
+ * Since HDD simply enqueues packet and returns control to OS right away,
+ * this would never be invoked
+ *
+ * Return: none
+ */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
+void hdd_tx_timeout(struct net_device *dev, unsigned int txqueue);
+#else
 void hdd_tx_timeout(struct net_device *dev);
+#endif
 
 QDF_STATUS hdd_init_tx_rx(struct hdd_adapter *adapter);
 QDF_STATUS hdd_deinit_tx_rx(struct hdd_adapter *adapter);
@@ -127,13 +143,29 @@ QDF_STATUS hdd_rx_packet_cbk(void *adapter_context, qdf_nbuf_t rxBuf);
 QDF_STATUS hdd_rx_fisa_cbk(void *dp_soc, void *dp_vdev, qdf_nbuf_t rxbuf_list);
 
 /**
- * hdd_rx_fisa_flush() - Flush function to end of context flushing of aggregates
+ * hdd_rx_fisa_flush_by_ctx_id() - Flush function to end of context
+ *				   flushing of aggregates
  * @soc: core txrx main context
- * @napi_id: REO number to flush the flow Rxed on the REO
+ * @ring_num: REO number to flush the flow Rxed on the REO
  *
  * Return: Success on flushing the flows for the REO
  */
-QDF_STATUS hdd_rx_fisa_flush(void *dp_soc, int ring_num);
+QDF_STATUS hdd_rx_fisa_flush_by_ctx_id(void *dp_soc, int ring_num);
+
+/**
+ * hdd_rx_fisa_flush_by_vdev_id() - Flush fisa aggregates per vdev id
+ * @soc: core txrx main context
+ * @vdev_id: vdev ID
+ *
+ * Return: Success on flushing the flows for the vdev
+ */
+QDF_STATUS hdd_rx_fisa_flush_by_vdev_id(void *dp_soc, uint8_t vdev_id);
+#else
+static inline QDF_STATUS hdd_rx_fisa_flush_by_vdev_id(void *dp_soc,
+						      uint8_t vdev_id)
+{
+	return QDF_STATUS_SUCCESS;
+}
 #endif
 
 /**

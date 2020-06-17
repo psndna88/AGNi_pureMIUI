@@ -881,14 +881,7 @@ void hdd_get_transmit_mac_addr(struct hdd_adapter *adapter, struct sk_buff *skb,
 	if (QDF_NBUF_CB_GET_IS_BCAST(skb) || QDF_NBUF_CB_GET_IS_MCAST(skb))
 		is_mc_bc_addr = true;
 
-	if (adapter->device_mode == QDF_IBSS_MODE) {
-		if (is_mc_bc_addr)
-			qdf_copy_macaddr(mac_addr_tx_allowed,
-					 &adapter->mac_addr);
-		else
-			qdf_copy_macaddr(mac_addr_tx_allowed,
-					 (struct qdf_mac_addr *)skb->data);
-	} else if (adapter->device_mode == QDF_NDI_MODE &&
+	if (adapter->device_mode == QDF_NDI_MODE &&
 		   hdd_is_xmit_allowed_on_ndi(adapter)) {
 		if (is_mc_bc_addr)
 			qdf_copy_macaddr(mac_addr_tx_allowed,
@@ -1322,17 +1315,11 @@ static void __hdd_tx_timeout(struct net_device *dev)
 	}
 }
 
-/**
- * hdd_tx_timeout() - Wrapper function to protect __hdd_tx_timeout from SSR
- * @net_dev: pointer to net_device structure
- *
- * Function called by OS if there is any timeout during transmission.
- * Since HDD simply enqueues packet and returns control to OS right away,
- * this would never be invoked
- *
- * Return: none
- */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
+void hdd_tx_timeout(struct net_device *net_dev, unsigned int txqueue)
+#else
 void hdd_tx_timeout(struct net_device *net_dev)
+#endif
 {
 	struct osif_vdev_sync *vdev_sync;
 
@@ -1950,8 +1937,10 @@ QDF_STATUS hdd_rx_pkt_thread_enqueue_cbk(void *adapter,
 	}
 
 	hdd_adapter = (struct hdd_adapter *)adapter;
-	if (hdd_validate_adapter(hdd_adapter))
+	if (hdd_validate_adapter(hdd_adapter)) {
+		hdd_err_rl("adapter validate failed");
 		return QDF_STATUS_E_FAILURE;
+	}
 
 	vdev_id = hdd_adapter->vdev_id;
 	head_ptr = nbuf_list;
@@ -2069,6 +2058,10 @@ QDF_STATUS hdd_rx_flush_packet_cbk(void *adapter_context, uint8_t vdev_id)
 		return QDF_STATUS_E_FAILURE;
 	}
 
+	/* do fisa flush for this vdev */
+	if (hdd_ctx->config->fisa_enable)
+		hdd_rx_fisa_flush_by_vdev_id(soc, vdev_id);
+
 	if (hdd_ctx->enable_dp_rx_threads)
 		dp_txrx_flush_pkts_by_vdev_id(soc, vdev_id);
 
@@ -2084,9 +2077,14 @@ QDF_STATUS hdd_rx_fisa_cbk(void *dp_soc, void *dp_vdev, qdf_nbuf_t nbuf_list)
 			  nbuf_list);
 }
 
-QDF_STATUS hdd_rx_fisa_flush(void *dp_soc, int ring_num)
+QDF_STATUS hdd_rx_fisa_flush_by_ctx_id(void *dp_soc, int ring_num)
 {
-	return dp_rx_fisa_flush((struct dp_soc *)dp_soc, ring_num);
+	return dp_rx_fisa_flush_by_ctx_id((struct dp_soc *)dp_soc, ring_num);
+}
+
+QDF_STATUS hdd_rx_fisa_flush_by_vdev_id(void *dp_soc, uint8_t vdev_id)
+{
+	return dp_rx_fisa_flush_by_vdev_id((struct dp_soc *)dp_soc, vdev_id);
 }
 #endif
 
@@ -3071,6 +3069,8 @@ static void hdd_ini_bus_bandwidth(struct hdd_config *config,
 		cfg_get(psoc, CFG_DP_BUS_BANDWIDTH_COMPUTE_INTERVAL);
 	config->bus_low_cnt_threshold =
 		cfg_get(psoc, CFG_DP_BUS_LOW_BW_CNT_THRESHOLD);
+	config->enable_latency_crit_clients =
+		cfg_get(psoc, CFG_DP_BUS_HANDLE_LATENCY_CRITICAL_CLIENTS);
 }
 
 /**

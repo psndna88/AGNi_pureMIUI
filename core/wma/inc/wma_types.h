@@ -28,8 +28,6 @@
 #define IS_FEATURE_SUPPORTED_BY_FW(feat_enum_value) \
 				wma_get_fw_wlan_feat_caps(feat_enum_value)
 
-#define IS_IBSS_HEARTBEAT_OFFLOAD_FEATURE_ENABLE 1
-
 #define DPU_FEEDBACK_UNPROTECTED_ERROR 0x0F
 
 #define WMA_GET_RX_MAC_HEADER(pRxMeta) \
@@ -241,8 +239,6 @@
 #define WMA_DHCP_START_IND              SIR_HAL_DHCP_START_IND
 #define WMA_DHCP_STOP_IND               SIR_HAL_DHCP_STOP_IND
 
-#define WMA_TX_FAIL_MONITOR_IND         SIR_HAL_TX_FAIL_MONITOR_IND
-
 #ifdef WLAN_FEATURE_GTK_OFFLOAD
 #define WMA_GTK_OFFLOAD_REQ             SIR_HAL_GTK_OFFLOAD_REQ
 #define WMA_GTK_OFFLOAD_GETINFO_REQ     SIR_HAL_GTK_OFFLOAD_GETINFO_REQ
@@ -265,7 +261,6 @@
 #define WMA_UPDATE_CHAN_LIST_REQ    SIR_HAL_UPDATE_CHAN_LIST_REQ
 #define WMA_RX_SCAN_EVENT           SIR_HAL_RX_SCAN_EVENT
 #define WMA_RX_CHN_STATUS_EVENT     SIR_HAL_RX_CHN_STATUS_EVENT
-#define WMA_IBSS_PEER_INACTIVITY_IND SIR_HAL_IBSS_PEER_INACTIVITY_IND
 
 #define WMA_CLI_SET_CMD             SIR_HAL_CLI_SET_CMD
 
@@ -295,14 +290,6 @@
 #define WMA_SEND_ADDBA_REQ          SIR_HAL_SEND_ADDBA_REQ
 #define WMA_INIT_THERMAL_INFO_CMD   SIR_HAL_INIT_THERMAL_INFO_CMD
 #define WMA_SET_THERMAL_LEVEL       SIR_HAL_SET_THERMAL_LEVEL
-#define WMA_RMC_ENABLE_IND          SIR_HAL_RMC_ENABLE_IND
-#define WMA_RMC_DISABLE_IND         SIR_HAL_RMC_DISABLE_IND
-#define WMA_RMC_ACTION_PERIOD_IND   SIR_HAL_RMC_ACTION_PERIOD_IND
-
-/* IBSS peer info related message */
-#define WMA_GET_IBSS_PEER_INFO_REQ  SIR_HAL_IBSS_PEER_INFO_REQ
-
-#define WMA_IBSS_CESIUM_ENABLE_IND  SIR_HAL_IBSS_CESIUM_ENABLE_IND
 
 #define WMA_INIT_BAD_PEER_TX_CTL_INFO_CMD   SIR_HAL_BAD_PEER_TX_CTL_INI_CMD
 
@@ -401,7 +388,6 @@
 #define WMA_ROAM_SYNC_TIMEOUT                SIR_HAL_WMA_ROAM_SYNC_TIMEOUT
 
 #define WMA_SET_PDEV_IE_REQ                  SIR_HAL_SET_PDEV_IE_REQ
-#define WMA_UPDATE_WEP_DEFAULT_KEY           SIR_HAL_UPDATE_WEP_DEFAULT_KEY
 #define WMA_SEND_FREQ_RANGE_CONTROL_IND      SIR_HAL_SEND_FREQ_RANGE_CONTROL_IND
 #define WMA_POWER_DEBUG_STATS_REQ            SIR_HAL_POWER_DEBUG_STATS_REQ
 #define WMA_BEACON_DEBUG_STATS_REQ           SIR_HAL_BEACON_DEBUG_STATS_REQ
@@ -628,6 +614,17 @@ QDF_STATUS u_mac_post_ctrl_msg(void *pSirGlobal, tSirMbMsg *pMb);
 
 QDF_STATUS wma_set_idle_ps_config(void *wma_ptr, uint32_t idle_ps);
 QDF_STATUS wma_get_snr(tAniGetSnrReq *psnr_req);
+
+/**
+ * wma_get_rx_retry_cnt() - API to get rx retry count from data path
+ * @mac: pointer to mac context
+ * @vdev_id: vdev id
+ * @mac_addr: mac address of the remote station
+ *
+ * Return: none
+ */
+void wma_get_rx_retry_cnt(struct mac_context *mac, uint8_t vdev_id,
+			  uint8_t *mac_addr);
 
 /**
  * wma_set_wlm_latency_level() - set latency level to FW

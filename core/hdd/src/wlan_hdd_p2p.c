@@ -644,6 +644,11 @@ struct wireless_dev *__wlan_hdd_add_virtual_intf(struct wiphy *wiphy,
 		return ERR_PTR(-EINVAL);
 	}
 
+	if (cds_get_conparam() == QDF_GLOBAL_MONITOR_MODE) {
+		hdd_err("Concurrency not allowed with standalone monitor mode");
+		return ERR_PTR(-EINVAL);
+	}
+
 	ret = wlan_hdd_validate_context(hdd_ctx);
 	if (ret)
 		return ERR_PTR(ret);
@@ -864,6 +869,8 @@ int __wlan_hdd_del_virtual_intf(struct wiphy *wiphy, struct wireless_dev *wdev)
 		hdd_close_adapter(hdd_ctx, adapter, true);
 	}
 
+	if (!hdd_is_any_interface_open(hdd_ctx))
+		hdd_psoc_idle_timer_start(hdd_ctx);
 	hdd_exit();
 
 	return 0;

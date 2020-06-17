@@ -298,11 +298,10 @@ static int hdd_hostapd_deinit_sap_session(struct hdd_adapter *adapter)
 		status = -EINVAL;
 	}
 
-	if (!QDF_IS_STATUS_SUCCESS(sap_destroy_ctx(sap_ctx))) {
+	if (!hdd_sap_destroy_ctx(adapter)) {
 		hdd_err("Error closing the sap session");
 		status = -EINVAL;
 	}
-	adapter->session.ap.sap_context = NULL;
 
 	if (!QDF_IS_STATUS_SUCCESS(status))
 		hdd_debug("sap has issue closing the session");
@@ -768,7 +767,7 @@ static void hdd_clear_sta(struct hdd_adapter *adapter,
 
 	wlansap_populate_del_sta_params(sta_info->sta_mac.bytes,
 					eSIR_MAC_DEAUTH_LEAVING_BSS_REASON,
-					(SIR_MAC_MGMT_DISASSOC >> 4),
+					SIR_MAC_MGMT_DISASSOC,
 					&del_sta_params);
 
 	hdd_softap_sta_disassoc(adapter, &del_sta_params);
@@ -1968,13 +1967,6 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 		hostapd_state->bss_state = BSS_START;
 		hdd_start_tsf_sync(adapter);
 
-		/* Set default key index */
-		hdd_debug("default key index %hu", ap_ctx->wep_def_key_idx);
-
-		sme_roam_set_default_key_index(mac_handle,
-					       adapter->vdev_id,
-					       ap_ctx->wep_def_key_idx);
-
 		hdd_hostapd_set_sap_key(adapter);
 
 		/* Fill the params for sending IWEVCUSTOM Event
@@ -2382,6 +2374,8 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 			cache_stainfo->rx_rate = disassoc_comp->rx_rate;
 			cache_stainfo->rx_mc_bc_cnt =
 						disassoc_comp->rx_mc_bc_cnt;
+			cache_stainfo->rx_retry_cnt =
+						disassoc_comp->rx_retry_cnt;
 			cache_stainfo->reason_code = disassoc_comp->reason_code;
 			cache_stainfo->disassoc_ts = qdf_system_ticks();
 			hdd_debug("Cache_stainfo rssi %d txrate %d rxrate %d reason_code %d",
@@ -2427,8 +2421,8 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 					  WMA_DHCP_STOP_IND);
 		stainfo->dhcp_nego_status = DHCP_NEGO_STOP;
 
-		hdd_put_sta_info_ref(&adapter->sta_info_list, &stainfo, true);
 		hdd_softap_deregister_sta(adapter, &stainfo);
+		hdd_put_sta_info_ref(&adapter->sta_info_list, &stainfo, true);
 
 		ap_ctx->ap_active = false;
 
@@ -3391,8 +3385,18 @@ bool hdd_sap_create_ctx(struct hdd_adapter *adapter)
 
 bool hdd_sap_destroy_ctx(struct hdd_adapter *adapter)
 {
+	struct sap_context *sap_ctx = adapter->session.ap.sap_context;
+
+	if (adapter->session.ap.beacon) {
+		qdf_mem_free(adapter->session.ap.beacon);
+		adapter->session.ap.beacon = NULL;
+	}
+
 	hdd_debug("destroying sap context");
-	sap_destroy_ctx(adapter->session.ap.sap_context);
+
+	if (QDF_IS_STATUS_ERROR(sap_destroy_ctx(sap_ctx)))
+		return false;
+
 	adapter->session.ap.sap_context = NULL;
 
 	return true;
@@ -3800,13 +3804,6 @@ int wlan_hdd_set_channel(struct wiphy *wiphy,
 		struct csr_roam_profile *roam_profile;
 		struct hdd_station_ctx *sta_ctx =
 			WLAN_HDD_GET_STATION_CTX_PTR(adapter);
-
-		if (eConnectionState_IbssConnected ==
-		    sta_ctx->conn_info.conn_state) {
-			/* Link is up then return cant set channel */
-			hdd_err("IBSS Associated, can't set the channel");
-			return -EINVAL;
-		}
 
 		roam_profile = hdd_roam_profile(adapter);
 		num_ch = roam_profile->ChannelInfo.numOfChannels = 1;
@@ -5600,7 +5597,11 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 		    config->ch_params.center_freq_seg1 == 155) ||
 		    (config->ch_params.center_freq_seg1 == 138 &&
 		     config->ch_params.center_freq_seg0 == 155))) {
+			hdd_debug("Falling back to 80 from 80p80 as non supported freq_seq0 %d and freq_seq1 %d",
+				  config->ch_params.mhz_freq_seg0,
+				  config->ch_params.mhz_freq_seg1);
 			config->ch_params.center_freq_seg1 = 0;
+			config->ch_params.mhz_freq_seg1 = 0;
 			config->ch_width_orig = CH_WIDTH_80MHZ;
 			config->ch_params.ch_width = config->ch_width_orig;
 		}
@@ -5622,11 +5623,14 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 		  config->mfpCapable, config->mfpRequired);
 #endif
 
-	hdd_nofl_debug("SAP mac:" QDF_MAC_ADDR_STR " SSID: %.*s BCNINTV:%d Freq:%d HW mode:%d privacy:%d akm:%d acs_mode:%d acs_dfs_mode %d dtim period:%d",
+	hdd_nofl_debug("SAP mac:" QDF_MAC_ADDR_STR " SSID: %.*s BCNINTV:%d Freq:%d freq_seg0:%d freq_seg1:%d ch_width:%d HW mode:%d privacy:%d akm:%d acs_mode:%d acs_dfs_mode %d dtim period:%d",
 		       QDF_MAC_ADDR_ARRAY(adapter->mac_addr.bytes),
 		       config->SSIDinfo.ssid.length,
 		       config->SSIDinfo.ssid.ssId, (int)config->beacon_int,
-		       config->chan_freq, config->SapHw_mode, config->privacy,
+		       config->chan_freq, config->ch_params.mhz_freq_seg0,
+		       config->ch_params.mhz_freq_seg1,
+		       config->ch_params.ch_width,
+		       config->SapHw_mode, config->privacy,
 		       config->authType, config->acs_cfg.acs_mode,
 		       config->acs_dfs_mode, config->dtim_period);
 
@@ -5829,21 +5833,21 @@ static int __wlan_hdd_cfg80211_stop_ap(struct wiphy *wiphy,
 	 * interval in not reset.
 	 */
 	if (ret)
-		return 0;
+		goto exit;
 
 	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
 		hdd_err("Command not allowed in FTM mode");
-		return 0;
+		goto exit;
 	}
 
 	if (hdd_ctx->driver_status == DRIVER_MODULES_CLOSED) {
 		hdd_err("Driver module is closed; dropping request");
-		return 0;
+		goto exit;
 	}
 
 	if (wlan_hdd_validate_vdev_id(adapter->vdev_id)) {
 		hdd_err("vdev is invalid. Hence return");
-		return 0;
+		goto exit;
 	}
 
 	qdf_mtrace(QDF_MODULE_ID_HDD, QDF_MODULE_ID_HDD,
@@ -5853,7 +5857,7 @@ static int __wlan_hdd_cfg80211_stop_ap(struct wiphy *wiphy,
 	if (!(adapter->device_mode == QDF_SAP_MODE ||
 	      adapter->device_mode == QDF_P2P_GO_MODE)) {
 		hdd_err("stop ap is given on device modes other than SAP/GO. Hence return");
-		return 0;
+		goto exit;
 	}
 
 	/* Clear SOFTAP_INIT_DONE flag to mark stop_ap deinit. So that we do
@@ -5942,7 +5946,7 @@ static int __wlan_hdd_cfg80211_stop_ap(struct wiphy *wiphy,
 	} else {
 		hdd_debug("SAP already down");
 		mutex_unlock(&hdd_ctx->sap_lock);
-		return 0;
+		goto exit;
 	}
 
 	mutex_unlock(&hdd_ctx->sap_lock);
@@ -5953,7 +5957,7 @@ static int __wlan_hdd_cfg80211_stop_ap(struct wiphy *wiphy,
 
 	if (status != QDF_STATUS_SUCCESS) {
 		hdd_err("Stopping the BSS");
-		return -EINVAL;
+		goto exit;
 	}
 
 	qdf_copy_macaddr(&update_ie.bssid, &adapter->mac_addr);
@@ -5981,9 +5985,15 @@ static int __wlan_hdd_cfg80211_stop_ap(struct wiphy *wiphy,
 	ucfg_ftm_time_sync_update_bss_state(adapter->vdev,
 					    FTM_TIME_SYNC_BSS_STOPPED);
 
+exit:
+	if (adapter->session.ap.beacon) {
+		qdf_mem_free(adapter->session.ap.beacon);
+		adapter->session.ap.beacon = NULL;
+	}
+
 	hdd_exit();
 
-	return ret;
+	return 0;
 }
 
 /**
@@ -6385,6 +6395,10 @@ static int __wlan_hdd_cfg80211_start_ap(struct wiphy *wiphy,
 				cds_freq_to_chan(chandef->center_freq1);
 	adapter->session.ap.sap_config.ch_params.center_freq_seg1 =
 				cds_freq_to_chan(chandef->center_freq2);
+	adapter->session.ap.sap_config.ch_params.mhz_freq_seg0 =
+							chandef->center_freq1;
+	adapter->session.ap.sap_config.ch_params.mhz_freq_seg1 =
+							chandef->center_freq2;
 
 	sta_sap_scc_on_dfs_chan =
 		policy_mgr_is_sta_sap_scc_allowed_on_dfs_chan(
@@ -6611,7 +6625,8 @@ static int __wlan_hdd_cfg80211_start_ap(struct wiphy *wiphy,
 					sizeof(*sta_inactivity_timer));
 			if (!sta_inactivity_timer) {
 				hdd_err("Failed to allocate Memory");
-				return QDF_STATUS_E_FAILURE;
+				status = QDF_STATUS_E_FAILURE;
+				goto err_start_bss;
 			}
 			sta_inactivity_timer->session_id = adapter->vdev_id;
 			sta_inactivity_timer->sta_inactivity_timeout =
@@ -6792,13 +6807,13 @@ void hdd_sap_indicate_disconnect_for_sta(struct hdd_adapter *adapter)
 		qdf_mem_copy(
 		     &sap_event.sapevt.sapStationDisassocCompleteEvent.staMac,
 		     &sta_info->sta_mac, sizeof(struct qdf_mac_addr));
+		hdd_put_sta_info_ref(&adapter->sta_info_list, &sta_info, true);
 
 		sap_event.sapevt.sapStationDisassocCompleteEvent.reason =
 				eSAP_MAC_INITATED_DISASSOC;
 		sap_event.sapevt.sapStationDisassocCompleteEvent.status_code =
 				QDF_STATUS_E_RESOURCES;
 		hdd_hostapd_sap_event_cb(&sap_event, sap_ctx->user_context);
-		hdd_put_sta_info_ref(&adapter->sta_info_list, &sta_info, true);
 	}
 
 	hdd_exit();

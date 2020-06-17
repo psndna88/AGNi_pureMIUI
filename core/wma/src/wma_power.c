@@ -125,88 +125,6 @@ QDF_STATUS wma_unified_set_sta_ps_param(wmi_unified_t wmi_handle,
 	return status;
 }
 
-#ifdef QCA_IBSS_SUPPORT
-QDF_STATUS
-wma_set_ibss_pwrsave_params(tp_wma_handle wma, uint8_t vdev_id)
-{
-	QDF_STATUS ret;
-
-	ret = wma_vdev_set_param(wma->wmi_handle, vdev_id,
-			WMI_VDEV_PARAM_ATIM_WINDOW_LENGTH,
-			wma->wma_ibss_power_save_params.atimWindowLength);
-	if (QDF_IS_STATUS_ERROR(ret)) {
-		WMA_LOGE("Failed to set WMI_VDEV_PARAM_ATIM_WINDOW_LENGTH ret = %d",
-			ret);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	ret = wma_vdev_set_param(wma->wmi_handle, vdev_id,
-			WMI_VDEV_PARAM_IS_IBSS_POWER_SAVE_ALLOWED,
-			wma->wma_ibss_power_save_params.isPowerSaveAllowed);
-	if (QDF_IS_STATUS_ERROR(ret)) {
-		WMA_LOGE("Failed, set WMI_VDEV_PARAM_IS_IBSS_POWER_SAVE_ALLOWED ret=%d",
-			ret);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	ret = wma_vdev_set_param(wma->wmi_handle, vdev_id,
-			WMI_VDEV_PARAM_IS_POWER_COLLAPSE_ALLOWED,
-			wma->wma_ibss_power_save_params.isPowerCollapseAllowed);
-	if (QDF_IS_STATUS_ERROR(ret)) {
-		WMA_LOGE("Failed, set WMI_VDEV_PARAM_IS_POWER_COLLAPSE_ALLOWED ret=%d",
-			ret);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	ret = wma_vdev_set_param(wma->wmi_handle, vdev_id,
-			 WMI_VDEV_PARAM_IS_AWAKE_ON_TXRX_ENABLED,
-			 wma->wma_ibss_power_save_params.isAwakeonTxRxEnabled);
-	if (QDF_IS_STATUS_ERROR(ret)) {
-		WMA_LOGE("Failed, set WMI_VDEV_PARAM_IS_AWAKE_ON_TXRX_ENABLED ret=%d",
-			ret);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	ret = wma_vdev_set_param(wma->wmi_handle, vdev_id,
-			WMI_VDEV_PARAM_INACTIVITY_CNT,
-			wma->wma_ibss_power_save_params.inactivityCount);
-	if (QDF_IS_STATUS_ERROR(ret)) {
-		WMA_LOGE("Failed, set WMI_VDEV_PARAM_INACTIVITY_CNT ret=%d",
-			 ret);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	ret = wma_vdev_set_param(wma->wmi_handle, vdev_id,
-			WMI_VDEV_PARAM_TXSP_END_INACTIVITY_TIME_MS,
-			wma->wma_ibss_power_save_params.txSPEndInactivityTime);
-	if (QDF_IS_STATUS_ERROR(ret)) {
-		WMA_LOGE("Failed, set WMI_VDEV_PARAM_TXSP_END_INACTIVITY_TIME_MS ret=%d",
-			ret);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	ret = wma_vdev_set_param(wma->wmi_handle, vdev_id,
-			WMI_VDEV_PARAM_IBSS_PS_WARMUP_TIME_SECS,
-			wma->wma_ibss_power_save_params.ibssPsWarmupTime);
-	if (QDF_IS_STATUS_ERROR(ret)) {
-		WMA_LOGE("Failed, set WMI_VDEV_PARAM_IBSS_PS_WARMUP_TIME_SECS ret=%d",
-			ret);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	ret = wma_vdev_set_param(wma->wmi_handle, vdev_id,
-			WMI_VDEV_PARAM_IBSS_PS_1RX_CHAIN_IN_ATIM_WINDOW_ENABLE,
-			wma->wma_ibss_power_save_params.ibssPs1RxChainInAtimEnable);
-	if (QDF_IS_STATUS_ERROR(ret)) {
-		WMA_LOGE("Failed to set IBSS_PS_1RX_CHAIN_IN_ATIM_WINDOW_ENABLE ret=%d",
-			ret);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	return QDF_STATUS_SUCCESS;
-}
-#endif /* QCA_IBSS_SUPPORT */
-
 /**
  * wma_set_ap_peer_uapsd() - set powersave parameters in ap mode to fw
  * @wma: wma handle
@@ -384,11 +302,10 @@ void wma_set_tx_power(WMA_HANDLE handle,
 	if (mlme_get_tx_power(iface->vdev) != tx_pwr_params->power) {
 
 		/* tx_power changed, Push the tx_power to FW */
-		WMA_LOGI("%s: Set TX pwr limit [WMI_VDEV_PARAM_TX_PWRLIMIT] to %d",
-			__func__, tx_pwr_params->power);
+		wma_nofl_debug("TXP[W][set_tx_pwr]: %d", tx_pwr_params->power);
 		ret = wma_vdev_set_param(wma_handle->wmi_handle, vdev_id,
-					      WMI_VDEV_PARAM_TX_PWRLIMIT,
-					      tx_pwr_params->power);
+					 WMI_VDEV_PARAM_TX_PWRLIMIT,
+					 tx_pwr_params->power);
 		if (ret == QDF_STATUS_SUCCESS)
 			mlme_set_tx_power(iface->vdev, tx_pwr_params->power);
 	} else {
@@ -422,6 +339,7 @@ void wma_send_max_tx_pwrlmt(WMA_HANDLE handle, uint8_t vdev_id)
 	if (!max_tx_pwr)
 		return;
 
+	wma_nofl_debug("TXP[W][send_max_tx_pwr]: %d", max_tx_pwr);
 	wma_vdev_set_param(wma_handle->wmi_handle, vdev_id,
 			   WMI_VDEV_PARAM_TX_PWRLIMIT,
 			   max_tx_pwr);
@@ -479,8 +397,7 @@ void wma_set_max_tx_power(WMA_HANDLE handle,
 		ret = QDF_STATUS_SUCCESS;
 		goto end;
 	}
-	WMA_LOGI("Set MAX TX pwr limit [WMI_VDEV_PARAM_TX_PWRLIMIT] to %d",
-		 max_reg_power);
+	wma_nofl_debug("TXP[W][set_max_pwr_req]: %d", max_reg_power);
 	ret = wma_vdev_set_param(wma_handle->wmi_handle, vdev_id,
 				WMI_VDEV_PARAM_TX_PWRLIMIT,
 				max_reg_power);

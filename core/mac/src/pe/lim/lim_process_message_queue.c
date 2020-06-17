@@ -39,7 +39,6 @@
 #include "lim_prop_exts_utils.h"
 
 #include "lim_admit_control.h"
-#include "lim_ibss_peer_mgmt.h"
 #include "sch_api.h"
 #include "lim_ft_defs.h"
 #include "lim_session.h"
@@ -1764,6 +1763,7 @@ static void lim_process_messages(struct mac_context *mac_ctx,
 	case eWNI_SME_SET_ADDBA_ACCEPT:
 	case eWNI_SME_UPDATE_EDCA_PROFILE:
 	case WNI_SME_UPDATE_MU_EDCA_PARAMS:
+	case eWNI_SME_UPDATE_SESSION_EDCA_TXQ_PARAMS:
 	case WNI_SME_CFG_ACTION_FRM_HE_TB_PPDU:
 	case WNI_SME_REGISTER_BCN_REPORT_SEND_CB:
 		/* These messages are from HDD.No need to respond to HDD */
@@ -1930,11 +1930,6 @@ static void lim_process_messages(struct mac_context *mac_ctx,
 		break;
 	case WMA_RX_CHN_STATUS_EVENT:
 		lim_process_rx_channel_status_event(mac_ctx, msg->bodyptr);
-		break;
-	case WMA_IBSS_PEER_INACTIVITY_IND:
-		lim_process_ibss_peer_inactivity(mac_ctx, msg->bodyptr);
-		qdf_mem_free((void *)(msg->bodyptr));
-		msg->bodyptr = NULL;
 		break;
 	case WMA_DFS_BEACON_TX_SUCCESS_IND:
 		lim_process_beacon_tx_success_ind(mac_ctx, msg->type,

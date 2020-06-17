@@ -1144,8 +1144,7 @@ static void hdd_update_conn_state_mask(struct hdd_adapter *adapter,
 
 	conn_state = sta_ctx->conn_info.conn_state;
 
-	if (conn_state == eConnectionState_Associated ||
-			conn_state == eConnectionState_IbssConnected)
+	if (conn_state == eConnectionState_Associated)
 		*conn_state_mask |= (1 << adapter->vdev_id);
 }
 
@@ -1718,8 +1717,6 @@ static int __wlan_hdd_cfg80211_resume_wlan(struct wiphy *wiphy)
 		goto exit_with_code;
 	}
 
-	pld_request_bus_bandwidth(hdd_ctx->parent_dev, PLD_BUS_WIDTH_MEDIUM);
-
 	status = hdd_resume_wlan();
 	if (status != QDF_STATUS_SUCCESS) {
 		exit_code = 0;
@@ -1974,8 +1971,6 @@ static int __wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
 
 	hdd_ctx->is_wiphy_suspended = true;
 
-	pld_request_bus_bandwidth(hdd_ctx->parent_dev, PLD_BUS_WIDTH_NONE);
-
 	hdd_exit();
 	return 0;
 
@@ -2142,8 +2137,15 @@ static int __wlan_hdd_cfg80211_set_power_mgmt(struct wiphy *wiphy,
 
 	status = wlan_hdd_set_powersave(adapter, allow_power_save, timeout);
 
-	allow_power_save ? hdd_stop_dhcp_ind(adapter) :
-		hdd_start_dhcp_ind(adapter);
+	if (hdd_adapter_is_connected_sta(adapter)) {
+		hdd_debug("vdev mode %d enable dhcp protection",
+			  adapter->device_mode);
+		allow_power_save ? hdd_stop_dhcp_ind(adapter) :
+			hdd_start_dhcp_ind(adapter);
+	} else {
+		hdd_debug("vdev mod %d disconnected ignore dhcp protection",
+			  adapter->device_mode);
+	}
 
 	hdd_exit();
 	return status;
@@ -2266,9 +2268,13 @@ static int __wlan_hdd_cfg80211_set_txpower(struct wiphy *wiphy,
 		break;
 
 	case NL80211_TX_POWER_FIXED:    /* Fix TX power to the mBm parameter */
-		hdd_err("NL80211_TX_POWER_FIXED not supported");
-		return -EOPNOTSUPP;
-
+		status = sme_set_tx_power(mac_handle, adapter->vdev_id,
+					  bssid, adapter->device_mode, dbm);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			hdd_err("Setting tx power failed, %d", status);
+			return -EIO;
+		}
+		break;
 	default:
 		hdd_err("Invalid power setting type %d", type);
 		return -EIO;
