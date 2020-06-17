@@ -16,6 +16,7 @@
  *       Also enable dynamic fsync when zram enabled
  * v1.9: Account for 3GB ram devices and tune zram disksize accordingly
  * v2.0: Handle 3GB ram devices more aggressively
+ * v2.1: Do not drop caches, change behaviour for miui roms, control swappiness for > 4GB ram devices
  */
 
 #include <asm/page.h>
@@ -86,21 +87,23 @@ bool agni_memprober(void) {
 
 	if (low_batt_swap_stall) /* Battery below 25% */
 		vote = false;
-		
-	if (vote) {
+
+	if (miuirom) {
 		if (ramgb <= 4) {
 			agni_swappiness = 60;
 		} else {
 			agni_swappiness = 30;
 		}
-		if ((ramgb >= 4) && (mem_avail_perc < 10))
-			mm_drop_caches(3);
-		if ((ramgb == 3) && (mem_avail_perc < 30))
-			mm_drop_caches(3);		
 	} else {
-		agni_swappiness = 1;
+		if (ramgb > 4) {
+			if (vote)
+				agni_swappiness = 60;
+			else
+				agni_swappiness = 1;
+		} else {
+			agni_swappiness = 60;
+		}
 	}
-
 	return vote;
 }
 
