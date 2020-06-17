@@ -1967,7 +1967,7 @@ static const struct snd_kcontrol_new msm_dig_snd_controls[] = {
 		-13, -84, 40, digital_gain),
 	SOC_SINGLE_SX_TLV("RX3 Digital Volume",
 		MSM89XX_CDC_CORE_RX3_VOL_CTL_B2_CTL,
-		0, -84, 40, digital_gain),
+		-5, -84, 40, digital_gain),
 
 	SOC_SINGLE_EXT("IIR1 Enable Band1", IIR1, BAND1, 1, 0,
 		msm_dig_cdc_get_iir_enable_audio_mixer,
