@@ -7628,6 +7628,8 @@ enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 		fprintf(f, "ssid=QCA AP OOB\n");
 	if (dut->ap_bcnint)
 		fprintf(f, "beacon_int=%d\n", dut->ap_bcnint);
+	if (dut->ap_start_disabled)
+		fprintf(f, "start_disabled=1\n");
 
 	if (dut->ap_akm_values) {
 		struct {
@@ -9219,6 +9221,7 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 	dut->ap_dpp_conf_addr = NULL;
 	free(dut->ap_dpp_conf_pkhash);
 	dut->ap_dpp_conf_pkhash = NULL;
+	dut->ap_start_disabled = 0;
 
 	if (is_60g_sigma_dut(dut)) {
 		dut->ap_mode = AP_11ad;
@@ -12748,6 +12751,23 @@ static enum sigma_cmd_result cmd_ap_set_rfeature(struct sigma_dut *dut,
 {
 	/* const char *name = get_param(cmd, "NAME"); */
 	/* const char *type = get_param(cmd, "Type"); */
+	const char *val;
+	char buf[100];
+
+	val = get_param(cmd, "ReassocResp_RSNXE_Used");
+	if (val) {
+		const char *ifname = get_hostapd_ifname(dut);
+
+		if (atoi(val) == 0)
+			snprintf(buf, sizeof(buf), "SET ft_rsnxe_used 2");
+		else
+			snprintf(buf, sizeof(buf), "SET ft_rsnxe_used 1");
+		if (hapd_command(ifname, buf) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to set ft_rsnxe_used");
+			return STATUS_SENT_ERROR;
+		}
+	}
 
 	switch (get_driver_type(dut)) {
 	case DRIVER_ATHEROS:

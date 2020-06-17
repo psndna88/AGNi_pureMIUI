@@ -231,6 +231,71 @@ static int android_keystore_get(char cmd, const char *key, unsigned char *val)
 #endif /* ANDROID */
 
 
+#ifdef NL80211_SUPPORT
+static int nl80211_sta_set_power_save(struct sigma_dut *dut,
+				      const char *intf,
+				      enum nl80211_ps_state ps_state)
+{
+	struct nl_msg *msg;
+	int ifindex, ret;
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s not found",
+				__func__, intf);
+		return -1;
+	}
+
+	msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+			      NL80211_CMD_SET_POWER_SAVE);
+	if (!msg) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in creating nl80211 msg", __func__);
+		return -1;
+	}
+
+	if (nla_put_u32(msg, NL80211_ATTR_PS_STATE, ps_state)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in populating nl80211 msg", __func__);
+		nlmsg_free(msg);
+		return -1;
+	}
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in send_and_recv_msgs, ret=%d (%s)",
+				__func__, ret, strerror(-ret));
+		return -1;
+	}
+
+	return 0;
+}
+#endif /* NL80211_SUPPORT */
+
+
+static int set_power_save_wcn(struct sigma_dut *dut, const char *intf, int ps)
+{
+	char buf[100];
+#ifdef NL80211_SUPPORT
+	enum nl80211_ps_state ps_state;
+
+	ps_state = ps == 1 ? NL80211_PS_ENABLED : NL80211_PS_DISABLED;
+	if (nl80211_sta_set_power_save(dut, intf, ps_state) == 0)
+		return 0;
+#endif /* NL80211_SUPPORT */
+
+	snprintf(buf, sizeof(buf), "iwpriv %s setPower %d", intf, ps);
+	if (system(buf) != 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"iwpriv setPower %d failed", ps);
+		return -1;
+	}
+	return 0;
+}
+
+
 int set_ps(const char *intf, struct sigma_dut *dut, int enabled)
 {
 #ifdef __linux__
@@ -238,18 +303,14 @@ int set_ps(const char *intf, struct sigma_dut *dut, int enabled)
 
 	if (wifi_chip_type == DRIVER_WCN) {
 		if (enabled) {
-			snprintf(buf, sizeof(buf), "iwpriv %s setPower 1",
-				 intf);
-			if (system(buf) != 0) {
+			if (set_power_save_wcn(dut, intf, 1) < 0) {
 				snprintf(buf, sizeof(buf),
 					 "iwpriv wlan0 dump 906");
 				if (system(buf) != 0)
 					goto set_power_save;
 			}
 		} else {
-			snprintf(buf, sizeof(buf), "iwpriv %s setPower 2",
-				 intf);
-			if (system(buf) != 0) {
+			if (set_power_save_wcn(dut, intf, 2) < 0) {
 				snprintf(buf, sizeof(buf),
 					 "iwpriv wlan0 dump 905");
 				if (system(buf) != 0)
@@ -2234,6 +2295,16 @@ static enum sigma_cmd_result cmd_sta_set_psk(struct sigma_dut *dut,
 			return STATUS_SENT_ERROR;
 		}
 	}
+
+	val = get_param(cmd, "Clear_RSNXE");
+	if (val && strcmp(val, "1") == 0 &&
+	    (wpa_command(intf, "SET rsnxe_override_assoc ") ||
+	     wpa_command(intf, "SET rsnxe_override_eapol "))) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Failed to clear RSNXE");
+		return ERROR_SEND_STATUS;
+	}
+
 	if (dut->sae_pwe == SAE_PWE_LOOP && get_param(cmd, "PasswordId"))
 		sae_pwe = 3;
 	else if (dut->sae_pwe == SAE_PWE_LOOP)
@@ -3439,6 +3510,11 @@ static enum sigma_cmd_result cmd_sta_associate(struct sigma_dut *dut,
 	if (wps_param &&
 	    (strcmp(wps_param, "1") == 0 || strcasecmp(wps_param, "On") == 0))
 		wps = 1;
+
+	if (dut->ocvc &&
+	    set_network(get_station_ifname(dut), dut->infra_network_id,
+			"ocv", "1") < 0)
+		return ERROR_SEND_STATUS;
 
 	if (wps) {
 		if (dut->program == PROGRAM_60GHZ && network_mode &&
@@ -4947,17 +5023,10 @@ cmd_sta_preset_testparameters(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	val = get_param(cmd, "Powersave");
 	if (val) {
-		char buf[60];
-
 		if (strcmp(val, "0") == 0 || strcasecmp(val, "off") == 0) {
 			if (get_driver_type(dut) == DRIVER_WCN) {
-				snprintf(buf, sizeof(buf),
-					 "iwpriv %s setPower 2", intf);
-				if (system(buf) != 0) {
-					sigma_dut_print(dut, DUT_MSG_ERROR,
-							"iwpriv setPower 2 failed");
+				if (set_power_save_wcn(dut, intf, 2) < 0)
 					return 0;
-				}
 			}
 
 			if (wpa_command(get_station_ifname(dut),
@@ -4970,13 +5039,8 @@ cmd_sta_preset_testparameters(struct sigma_dut *dut, struct sigma_conn *conn,
 			   strcasecmp(val, "PSPoll") == 0 ||
 			   strcasecmp(val, "on") == 0) {
 			if (get_driver_type(dut) == DRIVER_WCN) {
-				snprintf(buf, sizeof(buf),
-					 "iwpriv %s setPower 1", intf);
-				if (system(buf) != 0) {
-					sigma_dut_print(dut, DUT_MSG_ERROR,
-							"iwpriv setPower 1 failed");
+				if (set_power_save_wcn(dut, intf, 1) < 0)
 					return 0;
-				}
 			}
 			/* Disable default power save mode */
 			wpa_command(get_station_ifname(dut), "P2P_SET ps 0");
@@ -6680,20 +6744,18 @@ static enum sigma_cmd_result sta_get_pmk(struct sigma_dut *dut,
 		if (strncmp(pos, bssid, 17) == 0) {
 			pos = strchr(pos, ' ');
 			if (!pos)
-				goto fail;
+				break;
 			pos++;
 			pos = strchr(pos, ' ');
 			if (!pos)
-				goto fail;
+				break;
 			pos++;
 			tmp = strchr(pos, ' ');
 			if (!tmp)
-				goto fail;
+				break;
 			*tmp = '\0';
 			break;
 		}
-
-	fail:
 		pos = strchr(pos, '\n');
 		if (pos)
 			pos++;
@@ -7525,11 +7587,7 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 		}
 
 		/* reset the power save setting */
-		snprintf(buf, sizeof(buf), "iwpriv %s setPower 2", intf);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv %s  setPower 2 failed", intf);
-		}
+		set_power_save_wcn(dut, intf, 2);
 
 		/* remove all network profiles */
 		remove_wpa_networks(intf);
@@ -7954,6 +8012,7 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 	dut->dpp_peer_uri = NULL;
 	dut->dpp_local_bootstrap = -1;
 	wpa_command(intf, "SET dpp_config_processing 2");
+	wpa_command(intf, "SET dpp_mud_url ");
 
 	wpa_command(intf, "VENDOR_ELEM_REMOVE 13 *");
 
@@ -7987,6 +8046,8 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 	}
 
 	wpa_command(intf, "SET setband AUTO");
+
+	dut->ocvc = 0;
 
 	if (dut->program != PROGRAM_VHT)
 		return cmd_sta_p2p_reset(dut, conn, cmd);
@@ -9009,6 +9070,20 @@ static int sta_set_wireless_oce(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int sta_set_wireless_wpa3(struct sigma_dut *dut, struct sigma_conn *conn,
+				 struct sigma_cmd *cmd)
+{
+	const char *intf = get_param(cmd, "Interface");
+	const char *val;
+
+	val = get_param(cmd, "ocvc");
+	if (val)
+		dut->ocvc = atoi(val);
+
+	return cmd_sta_set_wireless_common(intf, dut, conn, cmd);
+}
+
+
 static enum sigma_cmd_result cmd_sta_set_wireless(struct sigma_dut *dut,
 						  struct sigma_conn *conn,
 						  struct sigma_cmd *cmd)
@@ -9028,6 +9103,8 @@ static enum sigma_cmd_result cmd_sta_set_wireless(struct sigma_dut *dut,
 		/* sta_set_wireless in WPS program is only used for 60G */
 		if (is_60g_sigma_dut(dut))
 			return sta_set_wireless_60g(dut, conn, cmd);
+		if (strcasecmp(val, "WPA3") == 0)
+			return sta_set_wireless_wpa3(dut, conn, cmd);
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "ErrorCode,Program value not supported");
 	} else {
@@ -11702,30 +11779,20 @@ static int wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 
 	val = get_param(cmd, "Powersave");
 	if (val) {
-		char buf[60];
+		int ps;
 
 		if (strcasecmp(val, "off") == 0) {
-			snprintf(buf, sizeof(buf),
-					"iwpriv %s setPower 2", intf);
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"iwpriv setPower 2 failed");
-				return 0;
-			}
+			ps = 2;
 		} else if (strcasecmp(val, "on") == 0) {
-			snprintf(buf, sizeof(buf),
-					"iwpriv %s setPower 1", intf);
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"iwpriv setPower 1 failed");
-				return 0;
-			}
+			ps = 1;
 		} else {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Unsupported Powersave value '%s'",
 					val);
 			return -1;
 		}
+		if (set_power_save_wcn(dut, intf, ps) < 0)
+			return 0;
 	}
 
 	val = get_param(cmd, "MU_EDCA");
@@ -11776,29 +11843,19 @@ static int cmd_sta_set_power_save_he(const char *intf, struct sigma_dut *dut,
 
 	val = get_param(cmd, "powersave");
 	if (val) {
-		char buf[60];
+		int ps;
 
 		if (strcasecmp(val, "off") == 0) {
-			snprintf(buf, sizeof(buf), "iwpriv %s setPower 2",
-				 intf);
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"iwpriv setPower 2 failed");
-				return 0;
-			}
+			ps = 2;
 		} else if (strcasecmp(val, "on") == 0) {
-			snprintf(buf, sizeof(buf), "iwpriv %s setPower 1",
-				 intf);
-			if (system(buf) != 0) {
-				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"iwpriv setPower 1 failed");
-				return 0;
-			}
+			ps = 1;
 		} else {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Unsupported power save config");
 			return -1;
 		}
+		if (set_power_save_wcn(dut, intf, ps) < 0)
+			return 0;
 		return 1;
 	}
 
@@ -12008,6 +12065,65 @@ static int cmd_sta_set_rfeature_60g(const char *intf, struct sigma_dut *dut,
 }
 
 
+static enum sigma_cmd_result
+cmd_sta_set_rfeature_wpa3(const char *intf, struct sigma_dut *dut,
+			  struct sigma_conn *conn,
+			  struct sigma_cmd *cmd)
+{
+	const char *val, *oci_chan, *oci_frametype;
+
+	val = get_param(cmd, "ReassocReq_RSNXE_Used");
+	if (val && atoi(val) == 1) {
+		if (wpa_command(intf, "SET ft_rsnxe_used 1") < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to set ft_rsnxe_used");
+			return STATUS_SENT_ERROR;
+		}
+		return SUCCESS_SEND_STATUS;
+	}
+
+	oci_chan = get_param(cmd, "OCIChannel");
+	oci_frametype = get_param(cmd, "OCIFrameType");
+	if (oci_chan && oci_frametype) {
+		unsigned int oci_freq = channel_to_freq(dut, atoi(oci_chan));
+		char buf[100];
+
+		if (!oci_freq) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Invalid OCIChannel number");
+			return STATUS_SENT_ERROR;
+		}
+
+		if (strcasecmp(oci_frametype, "eapolM2") == 0) {
+			snprintf(buf, sizeof(buf),
+				 "SET oci_freq_override_eapol %d", oci_freq);
+		} else if (strcasecmp(oci_frametype, "SAQueryReq") == 0) {
+			snprintf(buf, sizeof(buf),
+				 "SET oci_freq_override_saquery_req %d",
+				 oci_freq);
+		} else if (strcasecmp(oci_frametype, "SAQueryResp") == 0) {
+			snprintf(buf, sizeof(buf),
+				 "SET oci_freq_override_saquery_resp %d",
+				 oci_freq);
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported OCIFrameType");
+			return STATUS_SENT_ERROR;
+		}
+		if (wpa_command(intf, buf) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to set oci_freq_override");
+			return STATUS_SENT_ERROR;
+		}
+		return SUCCESS_SEND_STATUS;
+	}
+
+	send_resp(dut, conn, SIGMA_ERROR,
+		  "errorCode,Unsupported WPA3 rfeature");
+	return STATUS_SENT_ERROR;
+}
+
+
 static enum sigma_cmd_result cmd_sta_set_rfeature(struct sigma_dut *dut,
 						  struct sigma_conn *conn,
 						  struct sigma_cmd *cmd)
@@ -12048,6 +12164,9 @@ static enum sigma_cmd_result cmd_sta_set_rfeature(struct sigma_dut *dut,
 
 	if (strcasecmp(prog, "60GHz") == 0)
 		return cmd_sta_set_rfeature_60g(intf, dut, conn, cmd);
+
+	if (strcasecmp(prog, "WPA3") == 0)
+		return cmd_sta_set_rfeature_wpa3(intf, dut, conn, cmd);
 
 	send_resp(dut, conn, SIGMA_ERROR, "errorCode,Unsupported Prog");
 	return 0;

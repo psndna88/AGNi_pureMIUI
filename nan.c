@@ -1768,8 +1768,6 @@ int sigma_nan_publish_request(struct sigma_dut *dut, struct sigma_conn *conn,
 		tlv_len += len;
 
 		cfg_debug.cmd = NAN_TEST_MODE_CMD_TRANSPORT_IP_PARAM;
-		memcpy(cfg_debug.debug_cmd_data, &ndp_ip_trans_param,
-		       sizeof(NdpIpTransParams));
 		nan_debug_command_config(0, dut->wifi_hal_iface_handle,
 					 cfg_debug, tlv_len + sizeof(u32));
 	}
@@ -2448,6 +2446,10 @@ int nan_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 
 		memcpy(cfg_debug.debug_cmd_data, &device_type_val, sizeof(u32));
 		size = sizeof(u32) + sizeof(u32);
+
+		if (if_nametoindex(NAN_AWARE_IFACE))
+		    run_system_wrapper(dut, "ifconfig %s up", NAN_AWARE_IFACE);
+
 		sigma_dut_print(dut, DUT_MSG_INFO,
 				"%s: Device Type: cmd type = %d and command data = %u",
 				__func__, cfg_debug.cmd, device_type_val);
