@@ -34,8 +34,8 @@ int cam_soc_bus_client_update_request(void *client, unsigned int idx)
 	ab = bus_client->common_data->bw_pair[idx].ab;
 	ib = bus_client->common_data->bw_pair[idx].ib;
 
-	CAM_DBG(CAM_UTIL, "Bus client=[%s] index[%d]",
-		bus_client->common_data->name, idx);
+	CAM_DBG(CAM_PERF, "Bus client=[%s] index[%d] ab[%llu] ib[%llu]",
+		bus_client->common_data->name, idx, ab, ib);
 
 	rc = icc_set_bw(bus_client_data->icc_data, Bps_to_icc(ab),
 		Bps_to_icc(ib));
@@ -58,7 +58,7 @@ int cam_soc_bus_client_update_bw(void *client, uint64_t ab, uint64_t ib)
 		(struct cam_soc_bus_client_data *) bus_client->client_data;
 	int rc = 0;
 
-	CAM_DBG(CAM_UTIL, "Bus client=[%s] :ab[%llu] ib[%llu]",
+	CAM_DBG(CAM_PERF, "Bus client=[%s] :ab[%llu] ib[%llu]",
 		bus_client->common_data->name, ab, ib);
 	rc = icc_set_bw(bus_client_data->icc_data, Bps_to_icc(ab),
 		Bps_to_icc(ib));
@@ -116,7 +116,7 @@ int cam_soc_bus_client_register(struct platform_device *pdev,
 		goto fail_unregister_client;
 	}
 
-	CAM_DBG(CAM_UTIL, "Bus Client=[%s] : src=%d, dst=%d",
+	CAM_DBG(CAM_PERF, "Register Bus Client=[%s] : src=%d, dst=%d",
 		bus_client->common_data->name, bus_client->common_data->src_id,
 		bus_client->common_data->dst_id);
 
