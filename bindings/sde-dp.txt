@@ -77,6 +77,7 @@ DP Controller: Required properties:
 - qcom,altmode-dev:         Phandle for the AltMode GLink driver.
 - usb-controller:         Phandle for the USB controller.
 - qcom,pll-revision:    PLL hardware revision.
+- usb-phy:              Phandle for USB PHY driver. This is used to register for USB cable events.
 - qcom,dp-aux-switch:		Phandle for the driver used to program the AUX switch for Display Port orientation.
 - qcom,dp-hpd-gpio:		HPD gpio for direct DP connector without USB PHY or AUX switch.
 - qcom,dp-gpio-aux-switch:      Gpio DP AUX switch chipset support.

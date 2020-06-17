@@ -161,6 +161,7 @@
 		qcom,sde-mixer-linewidth = <2560>;
 		qcom,sde-sspp-linewidth = <4096>;
 		qcom,sde-wb-linewidth = <4096>;
+		qcom,sde-wb-linewidth-linear = <5120>;
 		qcom,sde-mixer-blendstages = <0xb>;
 		qcom,sde-highest-bank-bit = <0x3>;
 		qcom,sde-ubwc-version = <0x400>;
@@ -250,9 +251,9 @@
 		interconnect-names = "qcom,sde-data-bus0", "qcom,sde-data-bus1",
 				"qcom,sde-reg-bus";
 		qcom,sde-reg-bus,vectors-KBps = <0 0>,
-				<0 76800>,
-				<0 150000>,
-				<0 300000>;
+				<0 74000>,
+				<0 148000>,
+				<0 265000>;
 
 		qcom,sde-sspp-vig-blocks {
 			qcom,sde-vig-csc-off = <0x1a00>;
@@ -306,22 +307,6 @@
 			};
 		};
 
-		smmu_sde_unsec: qcom,smmu_sde_unsec_cb {
-			compatible = "qcom,smmu_sde_unsec";
-			iommus = <&apps_smmu 0x820 0x402>;
-			qcom,iommu-dma-addr-pool = <0x00020000 0xfffe0000>;
-			qcom,iommu-faults = "non-fatal";
-			qcom,iommu-earlymap; /* for cont-splash */
-		};
-
-		smmu_sde_sec: qcom,smmu_sde_sec_cb {
-			compatible = "qcom,smmu_sde_sec";
-			iommus = <&apps_smmu 0x821 0x400>;
-			qcom,iommu-dma-addr-pool = <0x00020000 0xfffe0000>;
-			qcom,iommu-faults = "non-fatal";
-			qcom,iommu-vmid = <0xa>;
-		};
-
 	};
 
 	ext_disp: qcom,msm-ext-disp {
@@ -340,6 +325,7 @@
 		cell-index = <0>;
 		compatible = "qcom,dp-display";
 
+		usb-phy = <&usb_qmp_dp_phy>;
 		qcom,dp-aux-switch = <&fsa4480>;
 		qcom,ext-disp = <&ext_disp>;
 		qcom,altmode-dev = <&altmode 0>;
@@ -401,7 +387,7 @@
 		qcom,mst-enable;
 		qcom,dsc-feature-enable;
 		qcom,fec-feature-enable;
-		qcom,max-dp-dsc-blks = <4>;
+		qcom,max-dp-dsc-blks = <2>;
 		qcom,max-dp-dsc-input-width-pixs = <2048>;
 
 		vdda-1p2-supply = <&L6B>;
@@ -605,6 +591,7 @@
 		vdda-0p9-supply = <&L5B>;
 		qcom,dsi-pll-ssc-en;
 		qcom,dsi-pll-ssc-mode = "down-spread";
+		memory-region = <&dfps_data_memory>;
 		qcom,platform-strength-ctrl = [55 03
 						55 03
 						55 03
@@ -667,6 +654,22 @@
 				qcom,supply-disable-load = <0>;
 			};
 		};
+	};
+
+	smmu_sde_unsec: qcom,smmu_sde_unsec_cb {
+		compatible = "qcom,smmu_sde_unsec";
+		iommus = <&apps_smmu 0x820 0x402>;
+		qcom,iommu-dma-addr-pool = <0x00020000 0xfffe0000>;
+		qcom,iommu-faults = "non-fatal";
+		qcom,iommu-earlymap; /* for cont-splash */
+	};
+
+	smmu_sde_sec: qcom,smmu_sde_sec_cb {
+		compatible = "qcom,smmu_sde_sec";
+		iommus = <&apps_smmu 0x821 0x400>;
+		qcom,iommu-dma-addr-pool = <0x00020000 0xfffe0000>;
+		qcom,iommu-faults = "non-fatal";
+		qcom,iommu-vmid = <0xa>;
 	};
 
 };

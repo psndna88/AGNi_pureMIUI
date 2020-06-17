@@ -98,6 +98,7 @@ Optional properties:
 				-- qcom,supply-post-on-sleep: time to sleep (ms) after turning on
 				-- qcom,supply-pre-off-sleep: time to sleep (ms) before turning off
 				-- qcom,supply-post-off-sleep: time to sleep (ms) after turning off
+- qcom,sde-hw-version:      A u32 value indicates the MDSS hw version
 - qcom,sde-sspp-src-size:	A u32 value indicates the address range for each sspp.
 - qcom,sde-mixer-size:		A u32 value indicates the address range for each mixer.
 - qcom,sde-ctl-size:		A u32 value indicates the address range for each ctl.
@@ -118,6 +119,8 @@ Optional properties:
 				for scaling purposes.
 - qcom,sde-mixer-linewidth:	A u32 value indicates the max mixer line width.
 - qcom,sde-wb-linewidth:	A u32 value indicates the max writeback line width.
+- qcom,sde-wb-linewidth-linear:	A u32 value indicates the max line width
+				supported by WB for linear color formats.
 - qcom,sde-sspp-scale-size:	A u32 value indicates the scaling block size on sspp.
 - qcom,sde-mixer-blendstages:	A u32 value indicates the max mixer blend stages for
 				alpha blending.
@@ -578,6 +581,7 @@ Example:
     iommus = <&mdp_smmu 0>;
     #power-domain-cells = <0>;
 
+    qcom,sde-hw-version = <0x70000000>;
     qcom,sde-off = <0x1000>;
     qcom,sde-ctl-off = <0x00002000 0x00002200 0x00002400
 		     0x00002600 0x00002800>;
@@ -681,6 +685,7 @@ Example:
     qcom,sde-dest-scaler-size = <0x800>;
     qcom,sde-len = <0x100>;
     qcom,sde-wb-linewidth = <2560>;
+    qcom,sde-wb-linewidth-linear = <5120>;
     qcom,sde-sspp-scale-size = <0x100>;
     qcom,sde-mixer-blendstages = <0x8>;
     qcom,sde-qseed-type = "qseedv2";
