@@ -9,8 +9,8 @@
 #include <linux/debugfs.h>
 #include <linux/component.h>
 #include <linux/of_irq.h>
-#include <linux/extcon.h>
 #include <linux/soc/qcom/fsa4480-i2c.h>
+#include <linux/usb/phy.h>
 
 #include "sde_connector.h"
 
@@ -415,6 +415,7 @@ static void dp_display_hdcp_process_delayed_off(struct dp_display_private *dp)
 static int dp_display_hdcp_process_sink_sync(struct dp_display_private *dp)
 {
 	u8 sink_status = 0;
+	SDE_EVT32_EXTERNAL(SDE_EVTLOG_FUNC_ENTRY);
 
 	if (dp->debug->hdcp_wait_sink_sync) {
 		drm_dp_dpcd_readb(dp->aux->drm_aux, DP_SINK_STATUS,
@@ -426,7 +427,14 @@ static int dp_display_hdcp_process_sink_sync(struct dp_display_private *dp)
 			queue_delayed_work(dp->wq, &dp->hdcp_cb_work, HZ);
 			return -EAGAIN;
 		}
+		/*
+		 * Some sinks need more time to stabilize after synchronization
+		 * and before it can handle an HDCP authentication request.
+		 * Adding the delay for better interoperability.
+		 */
+		msleep(6000);
 	}
+	SDE_EVT32_EXTERNAL(SDE_EVTLOG_FUNC_EXIT);
 
 	return 0;
 }
@@ -573,6 +581,8 @@ static void dp_display_notify_hdcp_status_cb(void *ptr,
 		enum sde_hdcp_state state)
 {
 	struct dp_display_private *dp = ptr;
+	SDE_EVT32_EXTERNAL(SDE_EVTLOG_FUNC_ENTRY,
+					dp->link->hdcp_status.hdcp_state);
 
 	if (!dp) {
 		DP_ERR("invalid input\n");
@@ -582,6 +592,8 @@ static void dp_display_notify_hdcp_status_cb(void *ptr,
 	dp->link->hdcp_status.hdcp_state = state;
 
 	queue_delayed_work(dp->wq, &dp->hdcp_cb_work, HZ/4);
+	SDE_EVT32_EXTERNAL(SDE_EVTLOG_FUNC_EXIT,
+					dp->link->hdcp_status.hdcp_state);
 }
 
 static void dp_display_deinitialize_hdcp(struct dp_display_private *dp)
@@ -723,6 +735,7 @@ static void dp_display_send_hpd_event(struct dp_display_private *dp)
 
 	if (dp->mst.mst_active) {
 		DP_DEBUG("skip notification for mst mode\n");
+		dp_display_state_remove(DP_STATE_DISCONNECT_NOTIFIED);
 		return;
 	}
 
@@ -1537,38 +1550,39 @@ static void dp_display_connect_work(struct work_struct *work)
 }
 
 static int dp_display_usb_notifier(struct notifier_block *nb,
-	unsigned long event, void *ptr)
+	unsigned long action, void *data)
 {
-	struct extcon_dev *edev = ptr;
 	struct dp_display_private *dp = container_of(nb,
 			struct dp_display_private, usb_nb);
-	if (!edev)
-		goto end;
 
-	if (!event && dp->debug->sim_mode) {
+	SDE_EVT32_EXTERNAL(dp->state, dp->debug->sim_mode, action);
+	if (!action && dp->debug->sim_mode) {
+		DP_WARN("usb disconnected during simulation\n");
 		dp_display_disconnect_sync(dp);
 		dp->debug->abort(dp->debug);
 	}
-end:
+
+	SDE_EVT32_EXTERNAL(SDE_EVTLOG_FUNC_EXIT, dp->state, NOTIFY_DONE);
 	return NOTIFY_DONE;
 }
 
-static int dp_display_get_usb_extcon(struct dp_display_private *dp)
+static void dp_display_register_usb_notifier(struct dp_display_private *dp)
 {
-	struct extcon_dev *edev;
-	int rc;
+	int rc = 0;
+	const char *phandle = "usb-phy";
+	struct usb_phy *usbphy;
 
-	edev = extcon_get_edev_by_phandle(&dp->pdev->dev, 0);
-	if (IS_ERR(edev))
-		return PTR_ERR(edev);
+	usbphy = devm_usb_get_phy_by_phandle(&dp->pdev->dev, phandle, 0);
+	if (IS_ERR_OR_NULL(usbphy)) {
+		DP_DEBUG("unable to get usbphy\n");
+		return;
+	}
 
 	dp->usb_nb.notifier_call = dp_display_usb_notifier;
 	dp->usb_nb.priority = 2;
-	rc = extcon_register_notifier(edev, EXTCON_USB, &dp->usb_nb);
+	rc = usb_register_notifier(usbphy, &dp->usb_nb);
 	if (rc)
-		DP_ERR("failed to register for usb event: %d\n", rc);
-
-	return rc;
+		DP_DEBUG("failed to register for usb event: %d\n", rc);
 }
 
 static void dp_display_deinit_sub_modules(struct dp_display_private *dp)
@@ -1761,7 +1775,7 @@ static int dp_init_sub_modules(struct dp_display_private *dp)
 	dp->debug->hdcp_disabled = hdcp_disabled;
 	dp_display_update_hdcp_status(dp, true);
 
-	dp_display_get_usb_extcon(dp);
+	dp_display_register_usb_notifier(dp);
 
 	if (dp->hpd->register_hpd) {
 		rc = dp->hpd->register_hpd(dp->hpd);
@@ -1948,8 +1962,8 @@ static int dp_display_prepare(struct dp_display *dp_display, void *panel)
 end:
 	mutex_unlock(&dp->session_lock);
 
-	SDE_EVT32_EXTERNAL(SDE_EVTLOG_FUNC_EXIT, dp->state);
-	return 0;
+	SDE_EVT32_EXTERNAL(SDE_EVTLOG_FUNC_EXIT, dp->state, rc);
+	return rc;
 }
 
 static int dp_display_set_stream_info(struct dp_display *dp_display,
@@ -2061,7 +2075,7 @@ static int dp_display_enable(struct dp_display *dp_display, void *panel)
 	dp_display_state_add(DP_STATE_ENABLED);
 end:
 	mutex_unlock(&dp->session_lock);
-	SDE_EVT32_EXTERNAL(SDE_EVTLOG_FUNC_EXIT, dp->state);
+	SDE_EVT32_EXTERNAL(SDE_EVTLOG_FUNC_EXIT, dp->state, rc);
 	return rc;
 }
 
@@ -2646,6 +2660,11 @@ static int dp_display_config_hdr(struct dp_display *dp_display, void *panel,
 		return -EINVAL;
 	}
 
+	if (!dp_display_state_is(DP_STATE_ENABLED)) {
+		dp_display_state_show("[not enabled]");
+		return 0;
+	}
+
 	/*
 	 * In rare cases where HDR metadata is updated independently
 	 * flush the HDR metadata immediately instead of relying on
@@ -2667,10 +2686,18 @@ static int dp_display_setup_colospace(struct dp_display *dp_display,
 		u32 colorspace)
 {
 	struct dp_panel *dp_panel;
+	struct dp_display_private *dp;
 
 	if (!dp_display || !panel) {
 		pr_err("invalid input\n");
 		return -EINVAL;
+	}
+
+	dp = container_of(dp_display, struct dp_display_private, dp_display);
+
+	if (!dp_display_state_is(DP_STATE_ENABLED)) {
+		dp_display_state_show("[not enabled]");
+		return 0;
 	}
 
 	dp_panel = panel;
@@ -3003,6 +3030,11 @@ static int dp_display_update_pps(struct dp_display *dp_display,
 	if (!sde_conn->drv_panel) {
 		DP_ERR("invalid panel for connector:%d\n", connector->base.id);
 		return -EINVAL;
+	}
+
+	if (!dp_display_state_is(DP_STATE_ENABLED)) {
+		dp_display_state_show("[not enabled]");
+		return 0;
 	}
 
 	dp_panel = sde_conn->drv_panel;

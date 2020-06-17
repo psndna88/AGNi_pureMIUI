@@ -50,8 +50,8 @@
  */
 #define DEFAULT_SDE_HIGHEST_BANK_BIT 0x02
 
-/* default ubwc version */
-#define DEFAULT_SDE_UBWC_VERSION SDE_HW_UBWC_VER_10
+/* No UBWC */
+#define DEFAULT_SDE_UBWC_NONE 0x0
 
 /* default ubwc static config register value */
 #define DEFAULT_SDE_UBWC_STATIC 0x0
@@ -162,6 +162,11 @@
  *  DTSI PROPERTY INDEX
  *************************************************************/
 enum {
+	SDE_HW_VERSION,
+	SDE_HW_PROP_MAX,
+};
+
+enum {
 	HW_OFF,
 	HW_LEN,
 	HW_DISP,
@@ -177,6 +182,7 @@ enum sde_prop {
 	MIXER_LINEWIDTH,
 	MIXER_BLEND,
 	WB_LINEWIDTH,
+	WB_LINEWIDTH_LINEAR,
 	BANK_BIT,
 	UBWC_VERSION,
 	UBWC_STATIC,
@@ -524,6 +530,10 @@ struct sde_dt_props {
 /*************************************************************
  * dts property list
  *************************************************************/
+static struct sde_prop_type sde_hw_prop[] = {
+	{SDE_HW_VERSION, "qcom,sde-hw-version", false, PROP_TYPE_U32},
+};
+
 static struct sde_prop_type sde_prop[] = {
 	{SDE_OFF, "qcom,sde-off", true, PROP_TYPE_U32},
 	{SDE_LEN, "qcom,sde-len", false, PROP_TYPE_U32},
@@ -533,6 +543,8 @@ static struct sde_prop_type sde_prop[] = {
 	{MIXER_LINEWIDTH, "qcom,sde-mixer-linewidth", false, PROP_TYPE_U32},
 	{MIXER_BLEND, "qcom,sde-mixer-blendstages", false, PROP_TYPE_U32},
 	{WB_LINEWIDTH, "qcom,sde-wb-linewidth", false, PROP_TYPE_U32},
+	{WB_LINEWIDTH_LINEAR, "qcom,sde-wb-linewidth-linear",
+			false, PROP_TYPE_U32},
 	{BANK_BIT, "qcom,sde-highest-bank-bit", false, PROP_TYPE_U32},
 	{UBWC_VERSION, "qcom,sde-ubwc-version", false, PROP_TYPE_U32},
 	{UBWC_STATIC, "qcom,sde-ubwc-static", false, PROP_TYPE_U32},
@@ -1477,8 +1489,6 @@ static int _sde_sspp_setup_vigs(struct device_node *np,
 		if (sde_cfg->inline_disable_const_clr)
 			set_bit(SDE_SSPP_INLINE_CONST_CLR, &sspp->features);
 
-		if (sc_cfg[SDE_SYS_CACHE_DISP].has_sys_cache)
-			set_bit(SDE_PERF_SSPP_SYS_CACHE, &sspp->perf_features);
 	}
 
 	sde_put_dt_props(props);
@@ -1720,6 +1730,9 @@ static void sde_sspp_set_features(struct sde_mdss_cfg *sde_cfg,
 
 		if (sde_cfg->uidle_cfg.uidle_rev)
 			set_bit(SDE_PERF_SSPP_UIDLE, &sspp->perf_features);
+
+		if (sde_cfg->sc_cfg[SDE_SYS_CACHE_DISP].has_sys_cache)
+			set_bit(SDE_PERF_SSPP_SYS_CACHE, &sspp->perf_features);
 
 		if (sde_cfg->has_decimation) {
 			sblk->maxhdeciexp = MAX_HORZ_DECIMATION;
@@ -2289,6 +2302,7 @@ static int sde_wb_parse_dt(struct device_node *np, struct sde_mdss_cfg *sde_cfg)
 		if (!prop_exists[WB_LEN])
 			wb->len = DEFAULT_SDE_HW_BLOCK_LEN;
 		sblk->maxlinewidth = sde_cfg->max_wb_linewidth;
+		sblk->maxlinewidth_linear = sde_cfg->max_wb_linewidth_linear;
 
 		if (wb->id >= LINE_MODE_WB_OFFSET)
 			set_bit(SDE_WB_LINE_MODE, &wb->features);
@@ -3010,6 +3024,7 @@ static int sde_vdc_parse_dt(struct device_node *np,
 		rc = 0;
 	} else {
 		SDE_ERROR("invalid vdc configuration\n");
+		goto end;
 	}
 
 	rc = _read_dt_entry(np, vdc_prop, ARRAY_SIZE(vdc_prop), prop_count,
@@ -3644,6 +3659,11 @@ static void _sde_top_parse_dt_helper(struct sde_mdss_cfg *cfg,
 			PROP_VALUE_ACCESS(props->values, WB_LINEWIDTH, 0) :
 			DEFAULT_SDE_LINE_WIDTH;
 
+	/* if wb linear width is not defined use the line width as default */
+	cfg->max_wb_linewidth_linear = props->exists[WB_LINEWIDTH_LINEAR] ?
+			PROP_VALUE_ACCESS(props->values, WB_LINEWIDTH_LINEAR, 0)
+			:  cfg->max_wb_linewidth;
+
 	cfg->max_mixer_width = props->exists[MIXER_LINEWIDTH] ?
 			PROP_VALUE_ACCESS(props->values, MIXER_LINEWIDTH, 0) :
 			DEFAULT_SDE_LINE_WIDTH;
@@ -3654,7 +3674,7 @@ static void _sde_top_parse_dt_helper(struct sde_mdss_cfg *cfg,
 
 	cfg->ubwc_version = props->exists[UBWC_VERSION] ?
 			SDE_HW_UBWC_VER(PROP_VALUE_ACCESS(props->values,
-			UBWC_VERSION, 0)) : DEFAULT_SDE_UBWC_VERSION;
+			UBWC_VERSION, 0)) : DEFAULT_SDE_UBWC_NONE;
 
 	cfg->mdp[0].highest_bank_bit = props->exists[BANK_BIT] ?
 			PROP_VALUE_ACCESS(props->values, BANK_BIT, 0) :
@@ -4790,10 +4810,48 @@ void sde_hw_catalog_deinit(struct sde_mdss_cfg *sde_cfg)
 	kfree(sde_cfg);
 }
 
+static int sde_hw_ver_parse_dt(struct drm_device *dev, struct device_node *np,
+			struct sde_mdss_cfg *cfg)
+{
+	int rc, len, prop_count[SDE_HW_PROP_MAX];
+	struct sde_prop_value *prop_value = NULL;
+	bool prop_exists[SDE_HW_PROP_MAX];
+
+	if (!cfg) {
+		SDE_ERROR("invalid argument\n");
+		return -EINVAL;
+	}
+
+	prop_value = kzalloc(SDE_HW_PROP_MAX *
+			sizeof(struct sde_prop_value), GFP_KERNEL);
+	if (!prop_value)
+		return -ENOMEM;
+
+	rc = _validate_dt_entry(np, sde_hw_prop, ARRAY_SIZE(sde_hw_prop),
+			prop_count, &len);
+	if (rc)
+		goto end;
+
+	rc = _read_dt_entry(np, sde_hw_prop, ARRAY_SIZE(sde_hw_prop),
+			prop_count, prop_exists, prop_value);
+	if (rc)
+		goto end;
+
+	if (prop_exists[SDE_HW_VERSION])
+		cfg->hwversion = PROP_VALUE_ACCESS(prop_value,
+					SDE_HW_VERSION, 0);
+	else
+		cfg->hwversion = sde_kms_get_hw_version(dev);
+
+end:
+	kfree(prop_value);
+	return rc;
+}
+
 /*************************************************************
  * hardware catalog init
  *************************************************************/
-struct sde_mdss_cfg *sde_hw_catalog_init(struct drm_device *dev, u32 hw_rev)
+struct sde_mdss_cfg *sde_hw_catalog_init(struct drm_device *dev)
 {
 	int rc;
 	struct sde_mdss_cfg *sde_cfg;
@@ -4806,10 +4864,13 @@ struct sde_mdss_cfg *sde_hw_catalog_init(struct drm_device *dev, u32 hw_rev)
 	if (!sde_cfg)
 		return ERR_PTR(-ENOMEM);
 
-	sde_cfg->hwversion = hw_rev;
 	INIT_LIST_HEAD(&sde_cfg->irq_offset_list);
 
-	rc = _sde_hardware_pre_caps(sde_cfg, hw_rev);
+	rc = sde_hw_ver_parse_dt(dev, np, sde_cfg);
+	if (rc)
+		goto end;
+
+	rc = _sde_hardware_pre_caps(sde_cfg, sde_cfg->hwversion);
 	if (rc)
 		goto end;
 
@@ -4905,7 +4966,7 @@ struct sde_mdss_cfg *sde_hw_catalog_init(struct drm_device *dev, u32 hw_rev)
 	if (rc)
 		goto end;
 
-	rc = _sde_hardware_post_caps(sde_cfg, hw_rev);
+	rc = _sde_hardware_post_caps(sde_cfg, sde_cfg->hwversion);
 	if (rc)
 		goto end;
 

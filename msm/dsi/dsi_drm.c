@@ -440,7 +440,7 @@ static bool dsi_bridge_mode_fixup(struct drm_bridge *bridge,
 		((dsi_mode.dsi_mode_flags & DSI_MODE_FLAG_VRR) ||
 		(dsi_mode.dsi_mode_flags & DSI_MODE_FLAG_POMS) ||
 		(dsi_mode.dsi_mode_flags & DSI_MODE_FLAG_DYN_CLK))) {
-		DSI_ERR("seamless on active/conn(%d/%d) changed 0x%x\n",
+		DSI_INFO("seamless on active/conn(%d/%d) changed 0x%x\n",
 			crtc_state->active_changed,
 			crtc_state->connectors_changed,
 			dsi_mode.dsi_mode_flags);
@@ -882,9 +882,15 @@ int dsi_connector_get_modes(struct drm_connector *connector, void *data,
 		}
 		m->width_mm = connector->display_info.width_mm;
 		m->height_mm = connector->display_info.height_mm;
-		/* set the first mode in list as preferred */
-		if (i == 0)
+
+		if (display->cmdline_timing != NO_OVERRIDE) {
+			/* get the preferred mode from dsi display mode */
+			if (modes[i].is_preferred)
+				m->type |= DRM_MODE_TYPE_PREFERRED;
+		} else if (i == 0) {
+			/* set the first mode in list as preferred */
 			m->type |= DRM_MODE_TYPE_PREFERRED;
+		}
 		drm_mode_probed_add(connector, m);
 	}
 

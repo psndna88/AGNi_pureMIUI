@@ -222,6 +222,8 @@ struct sde_irq_callback {
  * @enable_counts array of IRQ enable counts
  * @cb_lock:      callback lock
  * @debugfs_file: debugfs file for irq statistics
+ * @curr_irq_enable_count: Atomic counter keep track of total current irq enable
+ *                         It is used to keep pm_qos vote on CPU.
  */
 struct sde_irq {
 	u32 total_irqs;
@@ -230,6 +232,7 @@ struct sde_irq {
 	atomic_t *irq_counts;
 	spinlock_t cb_lock;
 	struct dentry *debugfs_file;
+	atomic_t curr_irq_enable_count;
 };
 
 /**
@@ -322,6 +325,23 @@ struct vsync_info {
  * Return: Whether or not the 'sdeclient' module parameter was set on boot up
  */
 bool sde_is_custom_client(void);
+
+/**
+ * sde_kms_get_hw_version - get the hw revision - client is expected to
+ *    enable the power resources before making this call
+ * @dev: Pointer to drm device
+ */
+static inline u32 sde_kms_get_hw_version(struct drm_device *dev)
+{
+	struct sde_kms *sde_kms;
+
+	if (!ddev_to_msm_kms(dev))
+		return 0;
+
+	sde_kms = to_sde_kms(ddev_to_msm_kms(dev));
+
+	return readl_relaxed(sde_kms->mmio + 0x0);
+}
 
 /**
  * sde_kms_power_resource_is_enabled - whether or not power resource is enabled
@@ -649,5 +669,13 @@ void sde_kms_timeline_status(struct drm_device *dev);
  * return: 0 on success; error code otherwise
  */
 int sde_kms_handle_recovery(struct drm_encoder *encoder);
+
+/**
+ * Notifies the irq enable on first interrupt enable and irq disable
+ * on last interrupt disable.
+ * @sde_kms: poiner to sde_kms structure
+ * @enable: true if irq enabled, false for disabled state.
+ */
+void sde_kms_irq_enable_notify(struct sde_kms *sde_kms, bool enable);
 
 #endif /* __sde_kms_H__ */

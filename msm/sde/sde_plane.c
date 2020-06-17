@@ -233,6 +233,29 @@ void sde_plane_setup_src_split_order(struct drm_plane *plane,
 					rect_mode, enable);
 }
 
+void sde_plane_set_sid(struct drm_plane *plane, u32 vm)
+{
+	struct sde_plane *psde;
+	struct sde_kms *sde_kms;
+	struct msm_drm_private *priv;
+
+	if (!plane || !plane->dev) {
+		SDE_ERROR("invalid plane %d\n");
+		return;
+	}
+
+	priv = plane->dev->dev_private;
+	if (!priv || !priv->kms) {
+		SDE_ERROR("invalid KMS reference\n");
+		return;
+	}
+
+	sde_kms = to_sde_kms(priv->kms);
+
+	psde = to_sde_plane(plane);
+	sde_hw_set_sspp_sid(sde_kms->hw_sid, psde->pipe, vm);
+}
+
 /**
  * _sde_plane_set_qos_lut - set danger, safe and creq LUT of the given plane
  * @plane:		Pointer to drm plane
@@ -678,6 +701,7 @@ static int _sde_plane_get_aspace(
 		if (!aspace)
 			return -EINVAL;
 		break;
+	case SDE_DRM_FB_NON_SEC_DIR_TRANS:
 	case SDE_DRM_FB_SEC_DIR_TRANS:
 		*aspace = NULL;
 		break;
@@ -2809,6 +2833,9 @@ static void _sde_plane_sspp_setup_sys_cache(struct sde_plane *psde,
 		pstate->sc_cfg.type = SDE_SYS_CACHE_DISP;
 	}
 
+	SDE_EVT32(DRMID(&psde->base), pstate->sc_cfg.rd_scid,
+			pstate->sc_cfg.rd_en, pstate->sc_cfg.rd_noallocate);
+
 	psde->pipe_hw->ops.setup_sys_cache(
 		psde->pipe_hw, &pstate->sc_cfg);
 }
@@ -2829,7 +2856,7 @@ void sde_plane_static_img_control(struct drm_plane *plane,
 
 	pstate->static_cache_state = state;
 
-	if (state == CACHE_STATE_FRAME_READ)
+	if (state == CACHE_STATE_FRAME_WRITE || state == CACHE_STATE_FRAME_READ)
 		_sde_plane_sspp_setup_sys_cache(psde, pstate, false);
 }
 

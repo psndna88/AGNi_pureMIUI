@@ -32,6 +32,7 @@
 #define DEFAULT_PANEL_JITTER_ARRAY_SIZE		2
 #define MAX_PANEL_JITTER		10
 #define DEFAULT_PANEL_PREFILL_LINES	25
+#define HIGH_REFRESH_RATE_THRESHOLD_TIME_US	500
 #define MIN_PREFILL_LINES      35
 
 static void dsi_dce_prepare_pps_header(char *buf, u32 pps_delay_ms)
@@ -794,7 +795,7 @@ static int dsi_panel_parse_timing(struct dsi_mode_info *mode,
 	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-h-sync-skew",
 				  &mode->h_skew);
 	if (rc)
-		DSI_ERR("qcom,mdss-dsi-h-sync-skew is not defined, rc=%d\n",
+		DSI_DEBUG("qcom,mdss-dsi-h-sync-skew is not defined, rc=%d\n",
 				rc);
 
 	DSI_DEBUG("panel horz active:%d front_portch:%d back_porch:%d sync_skew:%d\n",
@@ -1043,6 +1044,7 @@ static int dsi_panel_parse_misc_host_config(struct dsi_host_common_cfg *host,
 {
 	u32 val = 0;
 	int rc = 0;
+	bool panel_cphy_mode = false;
 
 	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-t-clk-post", &val);
 	if (!rc) {
@@ -1068,6 +1070,11 @@ static int dsi_panel_parse_misc_host_config(struct dsi_host_common_cfg *host,
 
 	host->force_hs_clk_lane = utils->read_bool(utils->data,
 					"qcom,mdss-dsi-force-clock-lane-hs");
+	panel_cphy_mode = utils->read_bool(utils->data,
+					"qcom,panel-cphy-mode");
+	host->phy_type = panel_cphy_mode ? DSI_PHY_TYPE_CPHY
+						: DSI_PHY_TYPE_DPHY;
+
 	return 0;
 }
 
@@ -1362,9 +1369,6 @@ static int dsi_panel_parse_video_host_config(struct dsi_video_engine_cfg *cfg,
 
 	cfg->bllp_lp11_en = utils->read_bool(utils->data,
 					"qcom,mdss-dsi-bllp-power-mode");
-
-	cfg->force_clk_lane_hs = of_property_read_bool(utils->data,
-					"qcom,mdss-dsi-force-clock-lane-hs");
 
 	traffic_mode = utils->get_property(utils->data,
 				       "qcom,mdss-dsi-traffic-mode",
@@ -2182,6 +2186,7 @@ static int dsi_panel_parse_bl_config(struct dsi_panel *panel)
 		DSI_DEBUG("[%s] brigheness-max-level unspecified, defaulting to 255\n",
 			 panel->name);
 		panel->bl_config.brightness_max_level = 255;
+		rc = 0;
 	} else {
 		panel->bl_config.brightness_max_level = val;
 	}
@@ -3573,6 +3578,9 @@ void dsi_panel_calc_dsi_transfer_time(struct dsi_host_common_cfg *config,
 	jitter_denom = display_mode->priv_info->panel_jitter_denom;
 
 	frame_time_us = mult_frac(1000, 1000, (timing->refresh_rate));
+
+	if (timing->refresh_rate >= 120)
+		frame_threshold_us = HIGH_REFRESH_RATE_THRESHOLD_TIME_US;
 
 	if (timing->dsc_enabled) {
 		nslices = (timing->h_active)/(dsc->config.slice_width);

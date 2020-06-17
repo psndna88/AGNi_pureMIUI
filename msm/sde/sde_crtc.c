@@ -1299,7 +1299,8 @@ static void _sde_crtc_set_src_split_order(struct drm_crtc *crtc,
 		prv_pstate = (i > 0) ? &pstates[i - 1] : NULL;
 		cur_pstate = &pstates[i];
 		nxt_pstate = ((i + 1) < cnt) ? &pstates[i + 1] : NULL;
-		prev_layout = prv_pstate->sde_pstate->layout;
+		prev_layout = prv_pstate ? prv_pstate->sde_pstate->layout :
+							SDE_LAYOUT_NONE;
 		cur_layout = cur_pstate->sde_pstate->layout;
 
 		if ((!prv_pstate) || (prv_pstate->stage != cur_pstate->stage)
@@ -1738,6 +1739,8 @@ int sde_crtc_find_plane_fb_modes(struct drm_crtc *crtc,
 		case SDE_DRM_FB_SEC_DIR_TRANS:
 			(*fb_sec_dir)++;
 			break;
+		case SDE_DRM_FB_NON_SEC_DIR_TRANS:
+			break;
 		default:
 			SDE_ERROR("Error: Plane[%d], fb_trans_mode:%d",
 					DRMID(plane), mode);
@@ -1784,6 +1787,8 @@ int sde_crtc_state_find_plane_fb_modes(struct drm_crtc_state *state,
 			break;
 		case SDE_DRM_FB_SEC_DIR_TRANS:
 			(*fb_sec_dir)++;
+			break;
+		case SDE_DRM_FB_NON_SEC_DIR_TRANS:
 			break;
 		default:
 			SDE_ERROR("Error: Plane[%d], fb_trans_mode:%d",
@@ -1937,6 +1942,10 @@ int sde_crtc_get_secure_transition_ops(struct drm_crtc *crtc,
 	case SDE_DRM_FB_NON_SEC:
 		_sde_drm_fb_transactions(smmu_state, catalog,
 				old_valid_fb, post_commit, &ops);
+		break;
+
+	case SDE_DRM_FB_NON_SEC_DIR_TRANS:
+		ops = 0;
 		break;
 
 	default:
@@ -3262,12 +3271,6 @@ static void sde_crtc_atomic_begin(struct drm_crtc *crtc,
 	_sde_crtc_blend_setup(crtc, old_state, true);
 	_sde_crtc_dest_scaler_setup(crtc);
 
-	/* cancel the idle notify delayed work */
-	if (sde_encoder_check_curr_mode(sde_crtc->mixers[0].encoder,
-					MSM_DISPLAY_VIDEO_MODE) &&
-		kthread_cancel_delayed_work_sync(&sde_crtc->idle_notify_work))
-		SDE_DEBUG("idle notify work cancelled\n");
-
 	/*
 	 * Since CP properties use AXI buffer to program the
 	 * HW, check if context bank is in attached state,
@@ -3348,7 +3351,8 @@ static void sde_crtc_atomic_flush(struct drm_crtc *crtc,
 	event_thread = &priv->event_thread[crtc->index];
 	idle_time = sde_crtc_get_property(cstate, CRTC_PROP_IDLE_TIMEOUT);
 
-	if (sde_crtc_get_property(cstate, CRTC_PROP_CACHE_STATE))
+	if ((sde_crtc->cache_state == CACHE_STATE_PRE_CACHE) &&
+			sde_crtc_get_property(cstate, CRTC_PROP_CACHE_STATE))
 		sde_crtc_static_img_control(crtc, CACHE_STATE_FRAME_WRITE,
 				false);
 	else
@@ -3394,7 +3398,7 @@ static void sde_crtc_atomic_flush(struct drm_crtc *crtc,
 	if (idle_time && sde_encoder_check_curr_mode(
 						sde_crtc->mixers[0].encoder,
 						MSM_DISPLAY_VIDEO_MODE)) {
-		kthread_queue_delayed_work(&event_thread->worker,
+		kthread_mod_delayed_work(&event_thread->worker,
 					&sde_crtc->idle_notify_work,
 					msecs_to_jiffies(idle_time));
 		SDE_DEBUG("schedule idle notify work in %dms\n", idle_time);
@@ -3834,9 +3838,6 @@ static struct drm_crtc_state *sde_crtc_duplicate_state(struct drm_crtc *crtc)
 			old_cstate, cstate,
 			&cstate->property_state, cstate->property_values);
 
-	/* clear destination scaler dirty bit */
-	clear_bit(SDE_CRTC_DIRTY_DEST_SCALER, cstate->dirty);
-
 	/* duplicate base helper */
 	__drm_atomic_helper_crtc_duplicate_state(crtc, &cstate->base);
 
@@ -3978,7 +3979,10 @@ static void sde_crtc_handle_power_event(u32 event_type, void *arg)
 		sde_cp_crtc_suspend(crtc);
 
 		/* reconfigure everything on next frame update */
-		bitmap_fill(cstate->dirty, SDE_CRTC_DIRTY_MAX);
+		set_bit(SDE_CRTC_DIRTY_DIM_LAYERS, cstate->dirty);
+
+		if (cstate->num_ds_enabled)
+			set_bit(SDE_CRTC_DIRTY_DEST_SCALER, cstate->dirty);
 
 		event.type = DRM_EVENT_SDE_POWER;
 		event.length = sizeof(power_on);
@@ -4058,8 +4062,6 @@ static void sde_crtc_disable(struct drm_crtc *crtc)
 	power_on = 0;
 	msm_mode_object_event_notify(&crtc->base, crtc->dev, &event,
 			(u8 *)&power_on);
-
-	bitmap_fill(cstate->dirty, SDE_CRTC_DIRTY_MAX);
 
 	_sde_crtc_flush_event_thread(crtc);
 
@@ -4649,13 +4651,18 @@ static int _sde_crtc_check_get_pstates(struct drm_crtc *crtc,
 
 	for (i = 1; i < SSPP_MAX; i++) {
 		if (pipe_staged[i]) {
-			if (is_sde_plane_virtual(pipe_staged[i]->plane)) {
-				SDE_ERROR(
-					"r1 only virt plane:%d not supported\n",
-					pipe_staged[i]->plane->base.id);
-				return -EINVAL;
-			}
 			sde_plane_clear_multirect(pipe_staged[i]);
+			if (is_sde_plane_virtual(pipe_staged[i]->plane)) {
+				struct sde_plane_state *psde_state;
+
+				SDE_DEBUG("r1 only virt plane:%d staged\n",
+					 pipe_staged[i]->plane->base.id);
+
+				psde_state = to_sde_plane_state(
+						pipe_staged[i]);
+
+				psde_state->multirect_index = SDE_SSPP_RECT_1;
+			}
 		}
 	}
 
@@ -4957,6 +4964,43 @@ end:
 	return rc;
 }
 
+/**
+ * sde_crtc_get_num_datapath - get the number of datapath active
+ *				of primary connector
+ * @crtc: Pointer to DRM crtc object
+ * @connector: Pointer to DRM connector object of WB in CWB case
+ */
+int sde_crtc_get_num_datapath(struct drm_crtc *crtc,
+		struct drm_connector *connector)
+{
+	struct sde_crtc *sde_crtc = to_sde_crtc(crtc);
+	struct sde_connector_state *sde_conn_state = NULL;
+	struct drm_connector *conn;
+	struct drm_connector_list_iter conn_iter;
+
+	if (!sde_crtc || !connector) {
+		SDE_DEBUG("Invalid argument\n");
+		return 0;
+	}
+
+	if (sde_crtc->num_mixers)
+		return sde_crtc->num_mixers;
+
+	drm_connector_list_iter_begin(crtc->dev, &conn_iter);
+	drm_for_each_connector_iter(conn, &conn_iter) {
+		if (conn->state && conn->state->crtc == crtc &&
+				 conn != connector)
+			sde_conn_state = to_sde_connector_state(conn->state);
+	}
+
+	drm_connector_list_iter_end(&conn_iter);
+
+	if (sde_conn_state)
+		return sde_conn_state->mode_info.topology.num_lm;
+
+	return 0;
+}
+
 int sde_crtc_vblank(struct drm_crtc *crtc, bool en)
 {
 	struct sde_crtc *sde_crtc;
@@ -5099,13 +5143,16 @@ static void sde_crtc_setup_capabilities_blob(struct sde_kms_info *info,
 	if (catalog->qseed_type == SDE_SSPP_SCALER_QSEED3LITE)
 		sde_kms_info_add_keystr(info, "qseed_type", "qseed3lite");
 
-	sde_kms_info_add_keyint(info, "UBWC version", catalog->ubwc_version);
-	sde_kms_info_add_keyint(info, "UBWC macrotile_mode",
+	if (catalog->ubwc_version) {
+		sde_kms_info_add_keyint(info, "UBWC version",
+				catalog->ubwc_version);
+		sde_kms_info_add_keyint(info, "UBWC macrotile_mode",
 				catalog->macrotile_mode);
-	sde_kms_info_add_keyint(info, "UBWC highest banking bit",
+		sde_kms_info_add_keyint(info, "UBWC highest banking bit",
 				catalog->mdp[0].highest_bank_bit);
-	sde_kms_info_add_keyint(info, "UBWC swizzle",
+		sde_kms_info_add_keyint(info, "UBWC swizzle",
 				catalog->mdp[0].ubwc_swizzle);
+	}
 
 	if (of_fdt_get_ddrtype() == LP_DDR4_TYPE)
 		sde_kms_info_add_keystr(info, "DDR version", "DDR4");
@@ -5573,6 +5620,9 @@ int sde_crtc_helper_reset_custom_properties(struct drm_crtc *crtc,
 		}
 	}
 
+	/* disable clk and bw control until clk & bw properties are set */
+	cstate->bw_control = false;
+	cstate->bw_split_vote = false;
 	return 0;
 }
 
@@ -6236,6 +6286,8 @@ void sde_crtc_static_img_control(struct drm_crtc *crtc,
 		return;
 
 	sde_crtc = to_sde_crtc(crtc);
+	if (sde_crtc->cache_state == state)
+		return;
 
 	switch (state) {
 	case CACHE_STATE_NORMAL:
@@ -6277,7 +6329,6 @@ void __sde_crtc_static_cache_read_work(struct kthread_work *work)
 	struct sde_crtc *sde_crtc = container_of(work, struct sde_crtc,
 			static_cache_read_work.work);
 	struct drm_crtc *crtc;
-	struct drm_plane *plane;
 	struct sde_crtc_mixer *mixer;
 	struct sde_hw_ctl *ctl;
 
@@ -6292,18 +6343,10 @@ void __sde_crtc_static_cache_read_work(struct kthread_work *work)
 	ctl = mixer->hw_ctl;
 
 	if (sde_crtc->cache_state != CACHE_STATE_FRAME_WRITE ||
-			!ctl->ops.update_bitmask_ctl ||
 			!ctl->ops.trigger_flush)
 		return;
 
 	sde_crtc_static_img_control(crtc, CACHE_STATE_FRAME_READ, false);
-	drm_atomic_crtc_for_each_plane(plane, crtc) {
-		if (!plane->state)
-			continue;
-
-		sde_plane_ctl_flush(plane, ctl, true);
-	}
-	ctl->ops.update_bitmask_ctl(ctl, true);
 	ctl->ops.trigger_flush(ctl);
 }
 
@@ -6360,6 +6403,7 @@ static void __sde_crtc_idle_notify_work(struct kthread_work *work)
 		msm_mode_object_event_notify(&crtc->base, crtc->dev,
 				&event, (u8 *)&ret);
 
+		SDE_EVT32(DRMID(crtc));
 		SDE_DEBUG("crtc[%d]: idle timeout notified\n", crtc->base.id);
 
 		sde_crtc_static_img_control(crtc, CACHE_STATE_PRE_CACHE, false);

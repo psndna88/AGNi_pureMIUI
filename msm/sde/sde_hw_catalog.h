@@ -817,6 +817,7 @@ struct sde_vdc_sub_blks {
 
 struct sde_wb_sub_blocks {
 	u32 maxlinewidth;
+	u32 maxlinewidth_linear;
 };
 
 struct sde_mdss_base_cfg {
@@ -1364,6 +1365,7 @@ struct sde_perf_cfg {
  * @max_mixer_blendstages max layer mixer blend stages or
  *                       supported z order
  * @max_wb_linewidth   max writeback line width support.
+ * @max_wb_linewidth_linear   max writeback line width for linear formats.
  * @max_display_width   maximum display width support.
  * @max_display_height  maximum display height support.
  * @max_lm_per_display  maximum layer mixer per display
@@ -1433,6 +1435,7 @@ struct sde_mdss_cfg {
 	u32 max_mixer_width;
 	u32 max_mixer_blendstages;
 	u32 max_wb_linewidth;
+	u32 max_wb_linewidth_linear;
 
 	u32 max_display_width;
 	u32 max_display_height;
@@ -1602,11 +1605,10 @@ void sde_hw_mixer_set_preference(struct sde_mdss_cfg *sde_cfg, u32 num_lm,
  * sde_hw_catalog_init - sde hardware catalog init API parses dtsi property
  * and stores all parsed offset, hardware capabilities in config structure.
  * @dev:          drm device node.
- * @hw_rev:       caller needs provide the hardware revision before parsing.
  *
  * Return: parsed sde config structure
  */
-struct sde_mdss_cfg *sde_hw_catalog_init(struct drm_device *dev, u32 hw_rev);
+struct sde_mdss_cfg *sde_hw_catalog_init(struct drm_device *dev);
 
 /**
  * sde_hw_catalog_deinit - sde hardware catalog cleanup
