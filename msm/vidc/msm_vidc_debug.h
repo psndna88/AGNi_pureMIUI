@@ -228,7 +228,7 @@ static inline char *get_debug_level_str(int level)
 static inline void tic(struct msm_vidc_inst *i, enum profiling_points p,
 				 char *b)
 {
-	struct timeval __ddl_tv;
+	struct timeval __ddl_tv = { 0 };
 
 	if (!i->debug.pdata[p].name[0])
 		memcpy(i->debug.pdata[p].name, b, 64);
@@ -243,7 +243,7 @@ static inline void tic(struct msm_vidc_inst *i, enum profiling_points p,
 
 static inline void toc(struct msm_vidc_inst *i, enum profiling_points p)
 {
-	struct timeval __ddl_tv;
+	struct timeval __ddl_tv = { 0 };
 
 	if ((msm_vidc_debug & VIDC_PERF) &&
 		!i->debug.pdata[p].sampling) {

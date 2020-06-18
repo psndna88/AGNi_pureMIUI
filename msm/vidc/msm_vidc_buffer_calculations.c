@@ -376,12 +376,14 @@ int msm_vidc_get_decoder_internal_buffer_sizes(struct msm_vidc_inst *inst)
 	struct msm_vidc_dec_buff_size_calculators *dec_calculators;
 	u32 width, height, i, out_min_count, num_vpp_pipes;
 	struct v4l2_format *f;
-	u32 vpp_delay = inst->bse_vpp_delay;
+	u32 vpp_delay;
 
 	if (!inst || !inst->core || !inst->core->platform_data) {
 		d_vpr_e("%s: Instance is null!", __func__);
 		return -EINVAL;
 	}
+
+	vpp_delay = inst->bse_vpp_delay;
 
 	num_vpp_pipes = inst->core->platform_data->num_vpp_pipes;
 	f = &inst->fmts[INPUT_PORT].v4l2_fmt;
