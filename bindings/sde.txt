@@ -527,6 +527,7 @@ Optional properties:
 - qcom,sde-vm-exclude-reg-names A string array indicating the reg-names which
 				should be excluded from IO memory validation list
 				in trusted vm environment
+- qcom,vram-size: 		A u32 value indicating the size of the VRAM in bytes
 
 Bus Scaling:
 - interconnects                 An array of 4 cell properties with the format of
@@ -805,6 +806,8 @@ Example:
         2400000 2400000 2400000 2400000>;
     qcom,sde-amortizable-threshold = <11>;
     qcom,sde-secure-sid-mask = <0x200801 0x200c01>;
+
+    qcom,vram-size = <0x200000>;
 
     qcom,sde-vbif-qos-rt-remap = <3 3 4 4 5 5 6 6>;
     qcom,sde-vbif-qos-nrt-remap = <3 3 3 3 3 3 3 3>;

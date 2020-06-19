@@ -38,6 +38,7 @@
 			"iface_clk", "core_clk", "vsync_clk",
 			"lut_clk", "rot_clk";
 	qcom,sde-trusted-vm-env;
+	qcom,vram-size = <0x200000>;
 };
 
 &mdss_dsi0 {
