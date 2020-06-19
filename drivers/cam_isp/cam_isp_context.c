@@ -3463,6 +3463,21 @@ static int __cam_isp_ctx_rdi_only_sof_in_bubble_state(
 	return 0;
 }
 
+
+static int __cam_isp_ctx_rdi_only_reg_upd_in_bubble_state(
+	struct cam_isp_context *ctx_isp, void *evt_data)
+{
+	struct cam_ctx_request  *req = NULL;
+	struct cam_context      *ctx = ctx_isp->base;
+
+	req = list_first_entry(&ctx->active_req_list,
+		struct cam_ctx_request, list);
+
+	CAM_INFO(CAM_ISP, "Received RUP for Bubble Request", req->request_id);
+
+	return 0;
+}
+
 static int __cam_isp_ctx_rdi_only_reg_upd_in_bubble_applied_state(
 	struct cam_isp_context *ctx_isp, void *evt_data)
 {
@@ -3586,7 +3601,7 @@ static struct cam_isp_ctx_irq_ops
 		.irq_ops = {
 			__cam_isp_ctx_handle_error,
 			__cam_isp_ctx_rdi_only_sof_in_bubble_state,
-			NULL,
+			__cam_isp_ctx_rdi_only_reg_upd_in_bubble_state,
 			NULL,
 			NULL,
 			__cam_isp_ctx_buf_done_in_bubble,
