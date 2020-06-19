@@ -7818,61 +7818,40 @@ DEFINE_SIMPLE_ATTRIBUTE(cam_ife_camif_debug,
 
 static int cam_ife_hw_mgr_debug_register(void)
 {
-	g_ife_hw_mgr.debug_cfg.dentry = debugfs_create_dir("camera_ife",
-		NULL);
+	int rc = 0;
+	struct dentry *dbgfileptr = NULL;
 
-	if (!g_ife_hw_mgr.debug_cfg.dentry) {
-		CAM_ERR(CAM_ISP, "failed to create dentry");
-		return -ENOMEM;
+	dbgfileptr = debugfs_create_dir("camera_ife", NULL);
+	if (!dbgfileptr) {
+		CAM_ERR(CAM_ISP,"DebugFS could not create directory!");
+		rc = -ENOENT;
+		goto end;
 	}
+	/* Store parent inode for cleanup in caller */
+	g_ife_hw_mgr.debug_cfg.dentry = dbgfileptr;
 
-	if (!debugfs_create_file("ife_csid_debug",
-		0644,
-		g_ife_hw_mgr.debug_cfg.dentry, NULL,
-		&cam_ife_csid_debug)) {
-		CAM_ERR(CAM_ISP, "failed to create cam_ife_csid_debug");
-		goto err;
-	}
-
-	if (!debugfs_create_u32("enable_recovery",
-		0644,
+	dbgfileptr = debugfs_create_file("ife_csid_debug", 0644,
+		g_ife_hw_mgr.debug_cfg.dentry, NULL, &cam_ife_csid_debug);
+	dbgfileptr = debugfs_create_u32("enable_recovery", 0644,
 		g_ife_hw_mgr.debug_cfg.dentry,
-		&g_ife_hw_mgr.debug_cfg.enable_recovery)) {
-		CAM_ERR(CAM_ISP, "failed to create enable_recovery");
-		goto err;
-	}
-
-	if (!debugfs_create_bool("enable_req_dump",
-		0644,
+		&g_ife_hw_mgr.debug_cfg.enable_recovery);
+	dbgfileptr = debugfs_create_bool("enable_req_dump", 0644,
 		g_ife_hw_mgr.debug_cfg.dentry,
-		&g_ife_hw_mgr.debug_cfg.enable_req_dump)) {
-		CAM_ERR(CAM_ISP, "failed to create enable_req_dump");
-		goto err;
-	}
-
-	if (!debugfs_create_file("ife_camif_debug",
-		0644,
-		g_ife_hw_mgr.debug_cfg.dentry, NULL,
-		&cam_ife_camif_debug)) {
-		CAM_ERR(CAM_ISP, "failed to create cam_ife_camif_debug");
-		goto err;
-	}
-
-	if (!debugfs_create_bool("per_req_reg_dump",
-		0644,
+		&g_ife_hw_mgr.debug_cfg.enable_req_dump);
+	dbgfileptr = debugfs_create_file("ife_camif_debug", 0644,
+		g_ife_hw_mgr.debug_cfg.dentry, NULL, &cam_ife_camif_debug);
+	dbgfileptr = debugfs_create_bool("per_req_reg_dump", 0644,
 		g_ife_hw_mgr.debug_cfg.dentry,
-		&g_ife_hw_mgr.debug_cfg.per_req_reg_dump)) {
-		CAM_ERR(CAM_ISP, "failed to create per_req_reg_dump entry");
-		goto err;
+		&g_ife_hw_mgr.debug_cfg.per_req_reg_dump);
+	if (IS_ERR(dbgfileptr)) {
+		if (PTR_ERR(dbgfileptr) == -ENODEV)
+			CAM_WARN(CAM_ISP, "DebugFS not enabled in kernel!");
+		else
+			rc = PTR_ERR(dbgfileptr);
 	}
-
+end:
 	g_ife_hw_mgr.debug_cfg.enable_recovery = 0;
-
-	return 0;
-
-err:
-	debugfs_remove_recursive(g_ife_hw_mgr.debug_cfg.dentry);
-	return -ENOMEM;
+	return rc;
 }
 
 static void cam_req_mgr_process_workq_cam_ife_worker(struct work_struct *w)
@@ -7887,8 +7866,6 @@ int cam_ife_hw_mgr_init(struct cam_hw_mgr_intf *hw_mgr_intf, int *iommu_hdl)
 	struct cam_iommu_handle cdm_handles;
 	struct cam_ife_hw_mgr_ctx *ctx_pool;
 	struct cam_isp_hw_mgr_res *res_list_ife_out;
-
-	CAM_DBG(CAM_ISP, "Enter");
 
 	memset(&g_ife_hw_mgr, 0, sizeof(g_ife_hw_mgr));
 

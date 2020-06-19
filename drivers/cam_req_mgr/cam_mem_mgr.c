@@ -154,25 +154,28 @@ static int cam_mem_util_unmap_cpu_va(struct dma_buf *dmabuf,
 
 static int cam_mem_mgr_create_debug_fs(void)
 {
-	tbl.dentry = debugfs_create_dir("camera_memmgr", NULL);
-	if (!tbl.dentry) {
-		CAM_ERR(CAM_MEM, "failed to create dentry");
-		return -ENOMEM;
-	}
+	int rc = 0;
+	struct dentry *dbgfileptr = NULL;
 
-	if (!debugfs_create_bool("alloc_profile_enable",
-		0644,
-		tbl.dentry,
-		&tbl.alloc_profile_enable)) {
-		CAM_ERR(CAM_MEM,
-			"failed to create alloc_profile_enable");
-		goto err;
+	dbgfileptr = debugfs_create_dir("camera_memmgr", NULL);
+	if (!dbgfileptr) {
+		CAM_ERR(CAM_MEM,"DebugFS could not create directory!");
+		rc = -ENOENT;
+		goto end;
 	}
+	/* Store parent inode for cleanup in caller */
+	tbl.dentry = dbgfileptr;
 
-	return 0;
-err:
-	debugfs_remove_recursive(tbl.dentry);
-	return -ENOMEM;
+	dbgfileptr = debugfs_create_bool("alloc_profile_enable", 0644,
+		tbl.dentry, &tbl.alloc_profile_enable);
+	if (IS_ERR(dbgfileptr)) {
+		if (PTR_ERR(dbgfileptr) == -ENODEV)
+			CAM_WARN(CAM_MEM, "DebugFS not enabled in kernel!");
+		else
+			rc = PTR_ERR(dbgfileptr);
+	}
+end:
+	return rc;
 }
 
 int cam_mem_mgr_init(void)
