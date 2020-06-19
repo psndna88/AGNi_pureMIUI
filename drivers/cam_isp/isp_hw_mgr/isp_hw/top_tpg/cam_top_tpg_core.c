@@ -15,6 +15,40 @@
 #include "cam_cpas_api.h"
 #include "cam_top_tpg_ver1.h"
 #include "cam_top_tpg_ver2.h"
+#include "cam_top_tpg_ver3.h"
+
+int cam_top_tpg_get_format(
+	uint32_t                                     in_format,
+	uint32_t                                    *tpg_encode_format)
+{
+	int                                          rc = 0;
+
+	switch (in_format) {
+	case CAM_FORMAT_MIPI_RAW_6:
+		*tpg_encode_format = 0;
+		break;
+	case CAM_FORMAT_MIPI_RAW_8:
+		*tpg_encode_format = 1;
+		break;
+	case CAM_FORMAT_MIPI_RAW_10:
+		*tpg_encode_format = 2;
+		break;
+	case CAM_FORMAT_MIPI_RAW_12:
+		*tpg_encode_format = 3;
+		break;
+	case CAM_FORMAT_MIPI_RAW_14:
+		*tpg_encode_format = 4;
+		break;
+	case CAM_FORMAT_MIPI_RAW_16:
+		*tpg_encode_format = 5;
+		break;
+	default:
+		CAM_ERR(CAM_ISP, "Unsupported input encode format %d",
+			in_format);
+		rc = -EINVAL;
+	}
+	return rc;
+}
 
 static int cam_top_tpg_release(void *hw_priv,
 	void *release_args, uint32_t arg_size)
@@ -212,6 +246,42 @@ static int cam_top_tpg_set_phy_clock(
 	return 0;
 }
 
+irqreturn_t cam_top_tpg_irq(int irq_num, void *data)
+{
+	struct cam_top_tpg_hw                        *tpg_hw;
+	struct cam_hw_soc_info                       *soc_info;
+	struct cam_top_tpg_ver3_reg_offset           *tpg_reg;
+	uint32_t                                      irq_status_top;
+	unsigned long                                 flags;
+
+	if (!data) {
+		CAM_ERR(CAM_ISP, "TPG: Invalid arguments");
+		return IRQ_HANDLED;
+	}
+
+
+	tpg_hw = (struct cam_top_tpg_hw *) data;
+	CAM_DBG(CAM_ISP, "CPHY TPG %d IRQ Handling", tpg_hw->hw_intf->hw_idx);
+
+	soc_info = &tpg_hw->hw_info->soc_info;
+	tpg_reg = tpg_hw->tpg_info->tpg_reg;
+
+	irq_status_top = cam_io_r_mb(soc_info->reg_map[0].mem_base +
+		tpg_reg->tpg_top_irq_status);
+
+	spin_lock_irqsave(&tpg_hw->hw_info->hw_lock, flags);
+	/* clear */
+	cam_io_w_mb(irq_status_top, soc_info->reg_map[0].mem_base +
+		tpg_reg->tpg_top_irq_clear);
+	cam_io_w_mb(1, soc_info->reg_map[0].mem_base +
+		tpg_reg->tpg_top_irq_cmd);
+
+	spin_unlock_irqrestore(&tpg_hw->hw_info->hw_lock, flags);
+
+	CAM_DBG(CAM_ISP, "TPG: irq_status_top = 0x%x", irq_status_top);
+	return IRQ_HANDLED;
+}
+
 static int cam_top_tpg_process_cmd(void *hw_priv,
 	uint32_t cmd_type, void *cmd_args, uint32_t arg_size)
 {
@@ -272,7 +342,7 @@ int cam_top_tpg_probe_init(struct cam_hw_intf  *tpg_hw_intf,
 	init_completion(&tpg_hw->tpg_complete);
 
 	rc = cam_top_tpg_init_soc_resources(&tpg_hw->hw_info->soc_info,
-			tpg_hw);
+		cam_top_tpg_irq, tpg_hw);
 	if (rc < 0) {
 		CAM_ERR(CAM_ISP, "TPG:%d Failed to init_soc", tpg_idx);
 		goto err;
@@ -291,6 +361,8 @@ int cam_top_tpg_probe_init(struct cam_hw_intf  *tpg_hw_intf,
 		cam_top_tpg_ver1_init(tpg_hw);
 	else if (hw_version == CAM_TOP_TPG_VERSION_2)
 		cam_top_tpg_ver2_init(tpg_hw);
+	else if (hw_version == CAM_TOP_TPG_VERSION_3)
+		cam_top_tpg_ver3_init(tpg_hw);
 
 	tpg_hw->tpg_res.res_type = CAM_ISP_RESOURCE_TPG;
 	tpg_hw->tpg_res.res_state = CAM_ISP_RESOURCE_STATE_AVAILABLE;
