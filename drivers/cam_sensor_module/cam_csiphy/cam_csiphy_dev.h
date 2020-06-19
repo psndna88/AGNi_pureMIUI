@@ -106,6 +106,7 @@ struct csiphy_reg_parms_t {
 	uint32_t mipi_csiphy_interrupt_mask_addr;
 	uint32_t mipi_csiphy_interrupt_clear0_addr;
 	uint32_t csiphy_version;
+	uint32_t csiphy_interrupt_status_size;
 	uint32_t csiphy_common_array_size;
 	uint32_t csiphy_reset_array_size;
 	uint32_t csiphy_2ph_config_array_size;
