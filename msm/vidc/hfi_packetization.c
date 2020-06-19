@@ -626,7 +626,7 @@ int create_pkt_cmd_session_set_property(
 
 static int get_hfi_ssr_type(enum hal_ssr_trigger_type type)
 {
-	int rc = HFI_TEST_SSR_HW_WDOG_IRQ;
+	int rc = HFI_TEST_SSR_SW_ERR_FATAL;
 
 	switch (type) {
 	case SSR_ERR_FATAL:
@@ -638,22 +638,37 @@ static int get_hfi_ssr_type(enum hal_ssr_trigger_type type)
 	case SSR_HW_WDOG_IRQ:
 		rc = HFI_TEST_SSR_HW_WDOG_IRQ;
 		break;
+	case SSR_NOC_ERROR:
+		rc = HFI_TEST_SSR_NOC_ERROR;
+		break;
+	case SSR_VCODEC_HUNG:
+		rc = HFI_TEST_SSR_VCODEC_HUNG;
+		break;
 	default:
 		d_vpr_e("SSR trigger type not recognized, using WDOG.\n");
 	}
 	return rc;
 }
 
-int create_pkt_ssr_cmd(enum hal_ssr_trigger_type type,
-		struct hfi_cmd_sys_test_ssr_packet *pkt)
+int create_pkt_ssr_cmd(struct hfi_cmd_sys_test_ssr_packet *pkt,
+		enum hal_ssr_trigger_type ssr_type, u32 sub_client_id,
+		u32 test_addr)
 {
+	struct hfi_ssr_payload payload;
 	if (!pkt) {
 		d_vpr_e("%s: invalid params\n", __func__);
 		return -EINVAL;
 	}
-	pkt->size = sizeof(struct hfi_cmd_sys_test_ssr_packet);
+	pkt->size = sizeof(struct hfi_cmd_sys_test_ssr_packet) - sizeof(u32);
 	pkt->packet_type = HFI_CMD_SYS_TEST_SSR;
-	pkt->trigger_type = get_hfi_ssr_type(type);
+	pkt->trigger_type = get_hfi_ssr_type(ssr_type);
+	if (pkt->trigger_type == HFI_TEST_SSR_NOC_ERROR ||
+		pkt->trigger_type == HFI_TEST_SSR_VCODEC_HUNG) {
+		pkt->size += sizeof(struct hfi_ssr_payload);
+		payload.sub_client_id = sub_client_id;
+		payload.test_addr = test_addr;
+		memcpy(&pkt->rg_data[0], &payload, sizeof(struct hfi_ssr_payload));
+	}
 	return 0;
 }
 
