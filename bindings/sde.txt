@@ -124,10 +124,13 @@ Optional properties:
 - qcom,sde-sspp-scale-size:	A u32 value indicates the scaling block size on sspp.
 - qcom,sde-mixer-blendstages:	A u32 value indicates the max mixer blend stages for
 				alpha blending.
-- qcom,sde-qseed-type:		A string entry indiates qseed support on sspp and wb.
-				It supports "qssedv3" and "qseedv2" entries for qseed
-				type. By default "qseedv2" is used if this optional property
-				is not defined.
+- qcom,sde-qseed-sw-lib-rev:	A string entry indicates qseed sw library revision
+				supporting the qseed HW block. It supports
+				"qseedv3", "qseedv3lite" and "qseedv2" entries for qseed
+				revision. By default "qseedv2" is used if this
+				optional property is not defined.
+- qcom,sde-qseed-scalar-version: A u32 value indicating the HW version of the
+				 QSEED hardware block
 - qcom,sde-csc-type:		A string entry indicates csc support on sspp and wb.
 				It supports "csc" and "csc-10bit" entries for csc
 				type.
@@ -691,7 +694,8 @@ Example:
     qcom,sde-wb-linewidth-linear = <5120>;
     qcom,sde-sspp-scale-size = <0x100>;
     qcom,sde-mixer-blendstages = <0x8>;
-    qcom,sde-qseed-type = "qseedv2";
+    qcom,sde-qseed-sw-lib-rev = "qseedv2";
+    qcom,sde-qseed-scalar-version = <0x3000>;
     qcom,sde-csc-type = "csc-10bit";
     qcom,sde-highest-bank-bit = <15>;
     qcom,sde-has-mixer-gc;
