@@ -228,7 +228,7 @@ static int cam_ope_component_bind(struct device *dev,
 	spin_lock_init(&ope_dev->hw_lock);
 	init_completion(&ope_dev->hw_complete);
 
-	CAM_DBG(CAM_OPE, "OPE:%d component bound successfully"
+	CAM_DBG(CAM_OPE, "OPE:%d component bound successfully",
 		ope_dev_intf->hw_idx);
 	return rc;
 
@@ -264,7 +264,7 @@ int cam_ope_probe(struct platform_device *pdev)
 	int rc = 0;
 
 	CAM_DBG(CAM_OPE, "Adding OPE component");
-	rc = component_add(&pdev->dev, &cam_vfe_component_ops);
+	rc = component_add(&pdev->dev, &cam_ope_component_ops);
 	if (rc)
 		CAM_ERR(CAM_OPE, "failed to add component rc: %d", rc);
 
