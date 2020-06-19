@@ -7725,64 +7725,43 @@ DEFINE_SIMPLE_ATTRIBUTE(cam_ife_camif_debug,
 	cam_ife_get_camif_debug,
 	cam_ife_set_camif_debug, "%16llu");
 
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 static int cam_ife_hw_mgr_debug_register(void)
 {
-	g_ife_hw_mgr.debug_cfg.dentry = debugfs_create_dir("camera_ife",
-		NULL);
+	int rc = 0;
 
-	if (!g_ife_hw_mgr.debug_cfg.dentry) {
-		CAM_ERR(CAM_ISP, "failed to create dentry");
-		return -ENOMEM;
+	g_ife_hw_mgr.debug_cfg.dentry = debugfs_create_dir("camera_ife", NULL);
+	if (IS_ERR(g_ife_hw_mgr.debug_cfg.dentry))
+	{
+		rc = PTR_ERR(g_ife_hw_mgr.debug_cfg.dentry);
+		goto end;
 	}
 
-	if (!debugfs_create_file("ife_csid_debug",
-		0644,
-		g_ife_hw_mgr.debug_cfg.dentry, NULL,
-		&cam_ife_csid_debug)) {
-		CAM_ERR(CAM_ISP, "failed to create cam_ife_csid_debug");
-		goto err;
-	}
-
-	if (!debugfs_create_u32("enable_recovery",
-		0644,
+	debugfs_create_file("ife_csid_debug", 0644,
+		g_ife_hw_mgr.debug_cfg.dentry, NULL, &cam_ife_csid_debug);
+	debugfs_create_u32("enable_recovery", 0644,
 		g_ife_hw_mgr.debug_cfg.dentry,
-		&g_ife_hw_mgr.debug_cfg.enable_recovery)) {
-		CAM_ERR(CAM_ISP, "failed to create enable_recovery");
-		goto err;
-	}
-
-	if (!debugfs_create_bool("enable_req_dump",
-		0644,
+		&g_ife_hw_mgr.debug_cfg.enable_recovery);
+	debugfs_create_bool("enable_req_dump", 0644,
 		g_ife_hw_mgr.debug_cfg.dentry,
-		&g_ife_hw_mgr.debug_cfg.enable_req_dump)) {
-		CAM_ERR(CAM_ISP, "failed to create enable_req_dump");
-		goto err;
-	}
-
-	if (!debugfs_create_file("ife_camif_debug",
-		0644,
-		g_ife_hw_mgr.debug_cfg.dentry, NULL,
-		&cam_ife_camif_debug)) {
-		CAM_ERR(CAM_ISP, "failed to create cam_ife_camif_debug");
-		goto err;
-	}
-
-	if (!debugfs_create_bool("per_req_reg_dump",
-		0644,
+		&g_ife_hw_mgr.debug_cfg.enable_req_dump);
+	debugfs_create_file("ife_camif_debug", 0644,
+		g_ife_hw_mgr.debug_cfg.dentry, NULL, &cam_ife_camif_debug);
+	debugfs_create_bool("per_req_reg_dump", 0644,
 		g_ife_hw_mgr.debug_cfg.dentry,
-		&g_ife_hw_mgr.debug_cfg.per_req_reg_dump)) {
-		CAM_ERR(CAM_ISP, "failed to create per_req_reg_dump entry");
-		goto err;
-	}
-
+		&g_ife_hw_mgr.debug_cfg.per_req_reg_dump);
+end:
 	g_ife_hw_mgr.debug_cfg.enable_recovery = 0;
-
-	return 0;
-
-err:
-	debugfs_remove_recursive(g_ife_hw_mgr.debug_cfg.dentry);
-	return -ENOMEM;
+	return rc;
 }
+#else
+static inline int cam_ife_hw_mgr_debug_register(void)
+{
+	g_ife_hw_mgr.debug_cfg.enable_recovery = 0;
+	CAM_WARN(CAM_ISP, "DebugFS not enabled in kernel");
+	return 0;
+}
+#endif
 
 int cam_ife_hw_mgr_init(struct cam_hw_mgr_intf *hw_mgr_intf, int *iommu_hdl)
 {
@@ -7791,8 +7770,6 @@ int cam_ife_hw_mgr_init(struct cam_hw_mgr_intf *hw_mgr_intf, int *iommu_hdl)
 	struct cam_iommu_handle cdm_handles;
 	struct cam_ife_hw_mgr_ctx *ctx_pool;
 	struct cam_isp_hw_mgr_res *res_list_ife_out;
-
-	CAM_DBG(CAM_ISP, "Enter");
 
 	memset(&g_ife_hw_mgr, 0, sizeof(g_ife_hw_mgr));
 
@@ -8001,7 +7978,9 @@ void cam_ife_hw_mgr_deinit(void)
 	int i = 0;
 
 	cam_req_mgr_workq_destroy(&g_ife_hw_mgr.workq);
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 	debugfs_remove_recursive(g_ife_hw_mgr.debug_cfg.dentry);
+#endif
 	g_ife_hw_mgr.debug_cfg.dentry = NULL;
 
 	for (i = 0; i < CAM_CTX_MAX; i++) {

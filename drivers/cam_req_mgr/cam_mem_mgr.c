@@ -119,28 +119,29 @@ static int cam_mem_util_unmap_cpu_va(struct dma_buf *dmabuf,
 	return rc;
 }
 
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 static int cam_mem_mgr_create_debug_fs(void)
 {
+	int rc = 0;
+
 	tbl.dentry = debugfs_create_dir("camera_memmgr", NULL);
-	if (!tbl.dentry) {
-		CAM_ERR(CAM_MEM, "failed to create dentry");
-		return -ENOMEM;
+	if (IS_ERR(tbl.dentry)) {
+		rc = PTR_ERR(tbl.dentry);
+		goto end;
 	}
 
-	if (!debugfs_create_bool("alloc_profile_enable",
-		0644,
-		tbl.dentry,
-		&tbl.alloc_profile_enable)) {
-		CAM_ERR(CAM_MEM,
-			"failed to create alloc_profile_enable");
-		goto err;
-	}
-
-	return 0;
-err:
-	debugfs_remove_recursive(tbl.dentry);
-	return -ENOMEM;
+	debugfs_create_bool("alloc_profile_enable", 0644, tbl.dentry,
+		&tbl.alloc_profile_enable);
+end:
+	return rc;
 }
+#else
+static inline int cam_mem_mgr_create_debug_fs(void)
+{
+	CAM_WARN(CAM_MEM, "DebugFS not enabled in kernel");
+	return 0;
+}
+#endif
 
 int cam_mem_mgr_init(void)
 {
@@ -953,6 +954,9 @@ static int cam_mem_mgr_cleanup_table(void)
 
 void cam_mem_mgr_deinit(void)
 {
+#if IS_ENABLED(CONFIG_DEBUG_FS)
+	debugfs_remove_recursive(tbl.dentry);
+#endif
 	atomic_set(&cam_mem_mgr_state, CAM_MEM_MGR_UNINITIALIZED);
 	cam_mem_mgr_cleanup_table();
 	mutex_lock(&tbl.m_lock);

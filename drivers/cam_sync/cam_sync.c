@@ -1016,25 +1016,30 @@ static void cam_sync_init_entity(struct sync_device *sync_dev)
 }
 #endif
 
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 static int cam_sync_create_debugfs(void)
 {
+	int rc = 0;
+
 	sync_dev->dentry = debugfs_create_dir("camera_sync", NULL);
-
-	if (!sync_dev->dentry) {
-		CAM_ERR(CAM_SYNC, "Failed to create sync dir");
-		return -ENOMEM;
+	if (IS_ERR(sync_dev->dentry)) {
+		rc = PTR_ERR(sync_dev->dentry);
+		goto end;
 	}
 
-	if (!debugfs_create_bool("trigger_cb_without_switch",
-		0644, sync_dev->dentry,
-		&trigger_cb_without_switch)) {
-		CAM_ERR(CAM_SYNC,
-			"failed to create trigger_cb_without_switch entry");
-		return -ENOMEM;
-	}
+	debugfs_create_bool("trigger_cb_without_switch", 0644,
+		sync_dev->dentry, &trigger_cb_without_switch);
 
+end:
+	return rc;
+}
+#else
+static inline int cam_sync_create_debugfs(void)
+{
+	CAM_WARN(CAM_SYNC, "DebugFS not enabled in kernel");
 	return 0;
 }
+#endif
 
 #if IS_REACHABLE(CONFIG_MSM_GLOBAL_SYNX)
 int cam_synx_sync_signal(int32_t sync_obj, uint32_t synx_status)
@@ -1216,7 +1221,9 @@ static void cam_sync_component_unbind(struct device *dev,
 #endif
 	video_unregister_device(sync_dev->vdev);
 	video_device_release(sync_dev->vdev);
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 	debugfs_remove_recursive(sync_dev->dentry);
+#endif
 	sync_dev->dentry = NULL;
 
 	for (i = 0; i < CAM_SYNC_MAX_OBJS; i++)

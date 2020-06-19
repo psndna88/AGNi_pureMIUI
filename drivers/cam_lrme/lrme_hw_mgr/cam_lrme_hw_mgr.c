@@ -1013,33 +1013,32 @@ static int cam_lrme_mgr_hw_config(void *hw_mgr_priv,
 	return rc;
 }
 
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 static int cam_lrme_mgr_create_debugfs_entry(void)
 {
 	int rc = 0;
 
 	g_lrme_hw_mgr.debugfs_entry.dentry =
 		debugfs_create_dir("camera_lrme", NULL);
-	if (!g_lrme_hw_mgr.debugfs_entry.dentry) {
-		CAM_ERR(CAM_LRME, "failed to create dentry");
-		return -ENOMEM;
+	if (IS_ERR(g_lrme_hw_mgr.debugfs_entry.dentry)) {
+		rc = PTR_ERR(g_lrme_hw_mgr.debugfs_entry.dentry);
+		goto end;
 	}
 
-	if (!debugfs_create_bool("dump_register",
-		0644,
+	debugfs_create_bool("dump_register", 0644,
 		g_lrme_hw_mgr.debugfs_entry.dentry,
-		&g_lrme_hw_mgr.debugfs_entry.dump_register)) {
-		CAM_ERR(CAM_LRME, "failed to create dump register entry");
-		rc = -ENOMEM;
-		goto err;
-	}
-
-	return rc;
+		&g_lrme_hw_mgr.debugfs_entry.dump_register);
 
 err:
-	debugfs_remove_recursive(g_lrme_hw_mgr.debugfs_entry.dentry);
-	g_lrme_hw_mgr.debugfs_entry.dentry = NULL;
 	return rc;
 }
+#else
+static inline int cam_lrme_mgr_create_debugfs_entry(void)
+{
+	CAM_WARN(CAM_LRME, "DebugFS not enabled in kernel");
+	return 0;
+}
+#endif
 
 
 int cam_lrme_mgr_register_device(
@@ -1140,6 +1139,9 @@ int cam_lrme_mgr_deregister_device(int device_index)
 int cam_lrme_hw_mgr_deinit(void)
 {
 	mutex_destroy(&g_lrme_hw_mgr.hw_mgr_mutex);
+#if IS_ENABLED(CONFIG_DEBUG_FS)
+	debugfs_remove_recursive(g_lrme_hw_mgr.debugfs_entry.dentry);
+#endif
 	memset(&g_lrme_hw_mgr, 0x0, sizeof(g_lrme_hw_mgr));
 
 	return 0;
@@ -1194,7 +1196,6 @@ int cam_lrme_hw_mgr_init(struct cam_hw_mgr_intf *hw_mgr_intf,
 	hw_mgr_intf->hw_dump = cam_lrme_mgr_hw_dump;
 
 	cam_lrme_mgr_create_debugfs_entry();
-
 	CAM_DBG(CAM_LRME, "Hw mgr init done");
 	return rc;
 }

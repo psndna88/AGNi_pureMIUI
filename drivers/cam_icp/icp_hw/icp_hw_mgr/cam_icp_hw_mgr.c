@@ -1882,87 +1882,51 @@ static int cam_icp_get_a5_fw_dump_lvl(void *data, u64 *val)
 DEFINE_SIMPLE_ATTRIBUTE(cam_icp_debug_fw_dump, cam_icp_get_a5_fw_dump_lvl,
 	cam_icp_set_a5_fw_dump_lvl, "%08llu");
 
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 static int cam_icp_hw_mgr_create_debugfs_entry(void)
 {
 	int rc = 0;
 
 	icp_hw_mgr.dentry = debugfs_create_dir("camera_icp", NULL);
-	if (IS_ERR_OR_NULL(icp_hw_mgr.dentry)) {
-		CAM_ERR(CAM_ICP, "Debugfs entry dir: %s failed",
-			"camrea_icp");
-		return -ENOMEM;
+	if (IS_ERR(icp_hw_mgr.dentry)) {
+		rc = PTR_ERR(icp_hw_mgr.dentry);
+		goto end;
 	}
 
-	if (!debugfs_create_bool("icp_pc",
-		0644,
-		icp_hw_mgr.dentry,
-		&icp_hw_mgr.icp_pc_flag)) {
-		CAM_ERR(CAM_ICP, "failed to create icp_pc entry");
-		rc = -ENOMEM;
-		goto err;
-	}
+	debugfs_create_bool("icp_pc", 0644, icp_hw_mgr.dentry,
+		&icp_hw_mgr.icp_pc_flag);
 
-	if (!debugfs_create_bool("ipe_bps_pc",
-		0644,
-		icp_hw_mgr.dentry,
-		&icp_hw_mgr.ipe_bps_pc_flag)) {
-		CAM_ERR(CAM_ICP, "failed to create ipe_bps_pc entry");
-		rc = -ENOMEM;
-		goto err;
-	}
+	debugfs_create_bool("ipe_bps_pc", 0644, icp_hw_mgr.dentry,
+		&icp_hw_mgr.ipe_bps_pc_flag);
 
-	if (!debugfs_create_file("icp_debug_clk",
-		0644,
-		icp_hw_mgr.dentry, NULL,
-		&cam_icp_debug_default_clk)) {
-		CAM_ERR(CAM_ICP, "failed to create icp_debug_clk entry");
-		rc = -ENOMEM;
-		goto err;
-	}
+	debugfs_create_file("icp_debug_clk", 0644, icp_hw_mgr.dentry, NULL,
+		&cam_icp_debug_default_clk);
 
-	if (!debugfs_create_bool("a5_jtag_debug",
-		0644,
-		icp_hw_mgr.dentry,
-		&icp_hw_mgr.a5_jtag_debug)) {
-		rc = -ENOMEM;
-		goto err;
-	}
+	debugfs_create_bool("a5_jtag_debug", 0644, icp_hw_mgr.dentry,
+		&icp_hw_mgr.a5_jtag_debug);
 
-	if (!debugfs_create_file("a5_debug_type",
-		0644,
-		icp_hw_mgr.dentry,
-		NULL, &cam_icp_debug_type_fs)) {
-		CAM_ERR(CAM_ICP, "failed to create a5_debug_type");
-		rc = -ENOMEM;
-		goto err;
-	}
+	debugfs_create_file("a5_debug_type", 0644, icp_hw_mgr.dentry, NULL,
+		&cam_icp_debug_type_fs);
 
-	if (!debugfs_create_file("a5_debug_lvl",
-		0644,
-		icp_hw_mgr.dentry,
-		NULL, &cam_icp_debug_fs)) {
-		CAM_ERR(CAM_ICP, "failed to create a5_dbg_lvl");
-		rc = -ENOMEM;
-		goto err;
-	}
+	debugfs_create_file("a5_debug_lvl", 0644, icp_hw_mgr.dentry, NULL,
+		&cam_icp_debug_fs);
 
-	if (!debugfs_create_file("a5_fw_dump_lvl",
-		0644,
-		icp_hw_mgr.dentry,
-		NULL, &cam_icp_debug_fw_dump)) {
-		CAM_ERR(CAM_ICP, "failed to create a5_fw_dump_lvl");
-		rc = -ENOMEM;
-		goto err;
-	}
-
+	debugfs_create_file("a5_fw_dump_lvl", 0644, icp_hw_mgr.dentry, NULL,
+		&cam_icp_debug_fw_dump);
+end:
 	/* Set default hang dump lvl */
 	icp_hw_mgr.a5_fw_dump_lvl = HFI_FW_DUMP_ON_FAILURE;
 	return rc;
-err:
-	debugfs_remove_recursive(icp_hw_mgr.dentry);
-	icp_hw_mgr.dentry = NULL;
-	return rc;
 }
+#else
+static inline int cam_icp_hw_mgr_create_debugfs_entry(void)
+{
+	/* Set default hang dump lvl */
+	icp_hw_mgr.a5_fw_dump_lvl = HFI_FW_DUMP_ON_FAILURE;
+	CAM_WARN(CAM_ICP, "DebugFS not enabled in kernel");
+	return 0;
+}
+#endif
 
 static int cam_icp_mgr_process_cmd(void *priv, void *data)
 {
@@ -6000,10 +5964,9 @@ static int cam_icp_mgr_create_wq(void)
 	}
 
 	rc = cam_icp_hw_mgr_create_debugfs_entry();
-	if (rc) {
-		CAM_ERR(CAM_ICP, "create_debugfs_entry fail= rc: %d", rc);
+	if (rc)
 		goto debugfs_create_failed;
-	}
+
 	for (i = 0; i < ICP_WORKQ_NUM_TASK; i++)
 		icp_hw_mgr.msg_work->task.pool[i].payload =
 				&icp_hw_mgr.msg_work_data[i];
@@ -6174,7 +6137,9 @@ void cam_icp_hw_mgr_deinit(void)
 {
 	int i = 0;
 
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 	debugfs_remove_recursive(icp_hw_mgr.dentry);
+#endif
 	icp_hw_mgr.dentry = NULL;
 	cam_icp_mgr_destroy_wq();
 	kfree(icp_hw_mgr.devices[CAM_ICP_DEV_BPS]);

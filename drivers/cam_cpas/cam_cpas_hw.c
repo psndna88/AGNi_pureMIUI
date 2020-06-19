@@ -2025,32 +2025,31 @@ static int cam_cpas_util_get_internal_ops(struct platform_device *pdev,
 	return rc;
 }
 
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 static int cam_cpas_util_create_debugfs(
 	struct cam_cpas *cpas_core)
 {
 	int rc = 0;
 
 	cpas_core->dentry = debugfs_create_dir("camera_cpas", NULL);
-	if (!cpas_core->dentry)
-		return -ENOMEM;
-
-	if (!debugfs_create_bool("ahb_bus_scaling_disable",
-		0644,
-		cpas_core->dentry,
-		&cpas_core->ahb_bus_scaling_disable)) {
-		CAM_ERR(CAM_CPAS,
-			"failed to create ahb_bus_scaling_disable entry");
-		rc = -ENOMEM;
-		goto err;
+	if (IS_ERR(cpas_core->dentry)) {
+		rc = PTR_ERR(cpas_core->dentry);
+		goto end;
 	}
+	
+	debugfs_create_bool("ahb_bus_scaling_disable", 0644, cpas_core->dentry,
+		&cpas_core->ahb_bus_scaling_disable);
 
-	return 0;
-
-err:
-	debugfs_remove_recursive(cpas_core->dentry);
-	cpas_core->dentry = NULL;
+end:
 	return rc;
 }
+#else
+static inline int cam_cpas_util_create_debugfs(struct cam_cpas *cpas_core)
+{
+	CAM_WARN(CAM_CPAS, "DebugFS not enabled in kernel");
+	return 0;
+}
+#endif
 
 int cam_cpas_hw_probe(struct platform_device *pdev,
 	struct cam_hw_intf **hw_intf)
@@ -2195,9 +2194,7 @@ int cam_cpas_hw_probe(struct platform_device *pdev,
 	if (rc)
 		goto axi_cleanup;
 
-	rc  = cam_cpas_util_create_debugfs(cpas_core);
-	if (rc)
-		CAM_WARN(CAM_CPAS, "Failed to create dentry");
+	rc = cam_cpas_util_create_debugfs(cpas_core);
 
 	*hw_intf = cpas_hw_intf;
 	return 0;
@@ -2250,7 +2247,9 @@ int cam_cpas_hw_remove(struct cam_hw_intf *cpas_hw_intf)
 	cam_cpas_util_unregister_bus_client(&cpas_core->ahb_bus_client);
 	cam_cpas_util_client_cleanup(cpas_hw);
 	cam_cpas_soc_deinit_resources(&cpas_hw->soc_info);
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 	debugfs_remove_recursive(cpas_core->dentry);
+#endif
 	cpas_core->dentry = NULL;
 	flush_workqueue(cpas_core->work_queue);
 	destroy_workqueue(cpas_core->work_queue);

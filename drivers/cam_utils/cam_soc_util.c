@@ -14,7 +14,6 @@
 #include "cam_mem_mgr.h"
 
 static char supported_clk_info[256];
-static char debugfs_dir_name[64];
 
 int cam_soc_util_get_clk_level(struct cam_hw_soc_info *soc_info,
 	int64_t clk_rate, int clk_idx, int32_t *clk_lvl)
@@ -181,18 +180,16 @@ DEFINE_SIMPLE_ATTRIBUTE(cam_soc_util_clk_lvl_control,
  *
  * @return:     Success or failure
  */
-static int cam_soc_util_create_clk_lvl_debugfs(
-	struct cam_hw_soc_info *soc_info)
+#if IS_ENABLED(CONFIG_DEBUG_FS)
+static int cam_soc_util_create_clk_lvl_debugfs(struct cam_hw_soc_info *soc_info)
 {
-	if (!soc_info) {
-		CAM_ERR(CAM_UTIL, "soc info is NULL");
-		return -EINVAL;
-	}
+	char debugfs_dir_name[64];
+	int rc = 0;
 
 	if (soc_info->dentry) {
-		CAM_DBG(CAM_UTIL, "Debubfs entry for %s already exist",
+		CAM_DBG(CAM_UTIL, "Debugfs entry for %s already exist",
 			soc_info->dev_name);
-		return 0;
+		goto end;
 	}
 
 	memset(debugfs_dir_name, 0, sizeof(debugfs_dir_name));
@@ -200,36 +197,26 @@ static int cam_soc_util_create_clk_lvl_debugfs(
 	strlcat(debugfs_dir_name, soc_info->dev_name, sizeof(debugfs_dir_name));
 
 	soc_info->dentry = debugfs_create_dir(debugfs_dir_name, NULL);
-	if (IS_ERR_OR_NULL(soc_info->dentry)) {
-		CAM_ERR(CAM_UTIL, "failed to create debug directory");
-		return -ENOMEM;
+	if (IS_ERR(soc_info->dentry)) {
+		rc = PTR_ERR(soc_info->dentry);
+		goto end;
 	}
 
-	if (!debugfs_create_file("clk_lvl_options", 0444,
-		soc_info->dentry, soc_info, &cam_soc_util_clk_lvl_options)) {
-		CAM_ERR(CAM_UTIL, "failed to create clk_lvl_options");
-		goto err;
-	}
+	debugfs_create_file("clk_lvl_options", 0444, soc_info->dentry, soc_info,
+		&cam_soc_util_clk_lvl_options);
+	debugfs_create_file("clk_lvl_control", 0644, soc_info->dentry, soc_info,
+		&cam_soc_util_clk_lvl_control);
 
-	if (!debugfs_create_file("clk_lvl_control", 0644,
-		soc_info->dentry, soc_info, &cam_soc_util_clk_lvl_control)) {
-		CAM_ERR(CAM_UTIL, "failed to create clk_lvl_control");
-		goto err;
-	}
-
-	CAM_DBG(CAM_UTIL, "clk lvl debugfs for %s successfully created",
-		soc_info->dev_name);
-
-	return 0;
-
-err:
-	CAM_ERR(CAM_UTIL, "Error in creating Debugfs Entry: %s",
-		soc_info->dev_name);
-	debugfs_remove_recursive(soc_info->dentry);
-	soc_info->dentry = NULL;
-	return -ENOMEM;
+end:
+	return rc;
 }
-
+#else
+static int cam_soc_util_create_clk_lvl_debugfs(struct cam_hw_soc_info *soc_info)
+{
+	CAM_WARN(CAM_UTIL, "DebugFS not enabled in kernel");
+	return 0;
+}
+#endif
 /**
  * cam_soc_util_remove_clk_lvl_debugfs()
  *
@@ -242,8 +229,9 @@ err:
 static void cam_soc_util_remove_clk_lvl_debugfs(
 	struct cam_hw_soc_info *soc_info)
 {
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 	debugfs_remove_recursive(soc_info->dentry);
-	soc_info->dentry = NULL;
+#endif
 }
 
 int cam_soc_util_get_level_from_string(const char *string,

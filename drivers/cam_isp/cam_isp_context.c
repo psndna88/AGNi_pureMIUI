@@ -5297,30 +5297,30 @@ static int cam_isp_context_dump_active_request(void *data, unsigned long iova,
 	return rc;
 }
 
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 static int cam_isp_context_debug_register(void)
 {
-	isp_ctx_debug.dentry = debugfs_create_dir("camera_isp_ctx",
-		NULL);
+	int rc = 0;
 
-	if (IS_ERR_OR_NULL(isp_ctx_debug.dentry)) {
-		CAM_ERR(CAM_ISP, "failed to create dentry");
-		return -ENOMEM;
+	isp_ctx_debug.dentry = debugfs_create_dir("camera_isp_ctx", NULL);
+	if (IS_ERR(isp_ctx_debug.dentry)) {
+		rc = PTR_ERR(isp_ctx_debug.dentry);
+		goto end;
 	}
 
-	if (!debugfs_create_u32("enable_state_monitor_dump",
-		0644,
-		isp_ctx_debug.dentry,
-		&isp_ctx_debug.enable_state_monitor_dump)) {
-		CAM_ERR(CAM_ISP, "failed to create enable_state_monitor_dump");
-		goto err;
-	}
+	debugfs_create_u32("enable_state_monitor_dump", 0644,
+		isp_ctx_debug.dentry, &isp_ctx_debug.enable_state_monitor_dump);
 
-	return 0;
-
-err:
-	debugfs_remove_recursive(isp_ctx_debug.dentry);
-	return -ENOMEM;
+end:
+	return rc;
 }
+#else
+static inline int cam_isp_context_debug_register(void)
+{
+	CAM_WARN(CAM_ISP, "DebugFS not enabled in kernel");
+	return 0;
+}
+#endif
 
 int cam_isp_context_init(struct cam_isp_context *ctx,
 	struct cam_context *ctx_base,
@@ -5400,7 +5400,9 @@ int cam_isp_context_deinit(struct cam_isp_context *ctx)
 			__cam_isp_ctx_substate_val_to_type(
 			ctx->substate_activated));
 
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 	debugfs_remove_recursive(isp_ctx_debug.dentry);
+#endif
 	isp_ctx_debug.dentry = NULL;
 	memset(ctx, 0, sizeof(*ctx));
 

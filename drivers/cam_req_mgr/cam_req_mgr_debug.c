@@ -8,7 +8,6 @@
 #define MAX_SESS_INFO_LINE_BUFF_LEN 256
 
 static char sess_info_buffer[MAX_SESS_INFO_LINE_BUFF_LEN];
-static struct dentry  *debugfs_root;
 
 static int cam_req_mgr_debug_set_bubble_recovery(void *data, u64 val)
 {
@@ -111,32 +110,27 @@ static const struct file_operations session_info = {
 	.write = session_info_write,
 };
 
+#if IS_ENABLED(CONFIG_DEBUG_FS)
+static struct dentry *debugfs_root;
 int cam_req_mgr_debug_register(struct cam_req_mgr_core_device *core_dev)
 {
-	char dirname[32] = {0};
-	snprintf(dirname, sizeof(dirname), "cam_req_mgr");
-	debugfs_root = debugfs_create_dir(dirname, NULL);
-	if (IS_ERR_OR_NULL(debugfs_root)) {
-		CAM_ERR(CAM_CRM, "Failed to create cam_req_mgr debugfs dir");
-		return -ENOMEM;
+	int rc = 0;
+
+	debugfs_root = debugfs_create_dir("cam_req_mgr", NULL);
+	if (IS_ERR(debugfs_root)) {
+		rc = PTR_ERR(debugfs_root);
+		goto end;
 	}
+	
+	debugfs_create_file("sessions_info", 0644, debugfs_root, core_dev,
+		&session_info);
+	debugfs_create_file("bubble_recovery", 0644, debugfs_root, core_dev,
+		&bubble_recovery);
+	debugfs_create_bool("recovery_on_apply_fail", 0644, debugfs_root,
+		&core_dev->recovery_on_apply_fail);
 
-	if (!debugfs_create_file("sessions_info", 0644,
-		debugfs_root, core_dev, &session_info))
-		CAM_WARN(CAM_CRM,
-			"Failed to create sessions_info debugfs file");
-
-	if (!debugfs_create_file("bubble_recovery", 0644,
-		debugfs_root, core_dev, &bubble_recovery))
-		CAM_WARN(CAM_CRM,
-			"Failed to create bubble_recovery debugfs file");
-
-	if (!debugfs_create_bool("recovery_on_apply_fail",
-		0644, debugfs_root,
-		&core_dev->recovery_on_apply_fail))
-		CAM_WARN(CAM_CRM,
-			"Failed to create recovery_on_apply_fail debugfs bool");
-	return 0;
+end:
+	return rc;
 }
 
 void cam_req_mgr_debug_unregister(void)
@@ -144,3 +138,12 @@ void cam_req_mgr_debug_unregister(void)
 	if (!debugfs_root)
 		debugfs_remove_recursive(debugfs_root);
 }
+#else
+int cam_req_mgr_debug_register(struct cam_req_mgr_core_device *core_dev)
+{
+	CAM_WARN(CAM_CRM, "DebugFS not enabled in kernel");
+	return 0;
+}
+
+void cam_req_mgr_debug_unregister(void) { };
+#endif
