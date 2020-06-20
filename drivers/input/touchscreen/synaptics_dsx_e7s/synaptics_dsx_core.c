@@ -1190,8 +1190,10 @@ static int synaptics_rmi4_f11_abs_report(struct synaptics_rmi4_data *rmi4_data,
 
 		if (detected_gestures) {
 			input_report_key(rmi4_data->input_dev, KEY_WAKEUP, 1);
+			input_report_key(rmi4_data->input_dev, KEY_DOUBLE_TAP, 1);
 			input_sync(rmi4_data->input_dev);
 			input_report_key(rmi4_data->input_dev, KEY_WAKEUP, 0);
+			input_report_key(rmi4_data->input_dev, KEY_DOUBLE_TAP, 0);
 			input_sync(rmi4_data->input_dev);
 			rmi4_data->suspend = false;
 		}
@@ -1360,8 +1362,10 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 
 		if (gesture_type && gesture_type != F12_UDG_DETECT) {
 			input_report_key(rmi4_data->input_dev, KEY_WAKEUP, 1);
+			input_report_key(rmi4_data->input_dev, KEY_DOUBLE_TAP, 1);
 			input_sync(rmi4_data->input_dev);
 			input_report_key(rmi4_data->input_dev, KEY_WAKEUP, 0);
+			input_report_key(rmi4_data->input_dev, KEY_DOUBLE_TAP, 0);
 			input_sync(rmi4_data->input_dev);
 
 			rmi4_data->suspend = false;
@@ -3545,7 +3549,9 @@ static void synaptics_rmi4_set_params(struct synaptics_rmi4_data *rmi4_data)
 
 	if (rmi4_data->f11_wakeup_gesture || rmi4_data->f12_wakeup_gesture) {
 		set_bit(KEY_WAKEUP, rmi4_data->input_dev->keybit);
+		set_bit(KEY_DOUBLE_TAP, rmi4_data->input_dev->keybit);
 		input_set_capability(rmi4_data->input_dev, EV_KEY, KEY_WAKEUP);
+		input_set_capability(rmi4_data->input_dev, EV_KEY, KEY_DOUBLE_TAP);
 	}
 
 	return;
@@ -4478,7 +4484,7 @@ static int synaptics_rmi4_probe(struct platform_device *pdev)
 #endif
 #if  1
 	input_set_capability(rmi4_data->input_dev, EV_KEY, KEY_WAKEUP);
-
+	input_set_capability(rmi4_data->input_dev, EV_KEY, KEY_DOUBLE_TAP);
 	rmi4_data->input_dev->event =synaptics_gesture_switch;
 #endif
 	INIT_WORK(&rmi4_data->fb_notify_work, tp_fb_notifier_resume_work);

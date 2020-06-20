@@ -1498,8 +1498,10 @@ static void udg_report(void)
 
 		if (udg->detection_status == DETECTION) {
 			input_report_key(udg->udg_dev, KEY_WAKEUP, 1);
+			input_report_key(udg->udg_dev, KEY_DOUBLE_TAP, 1);
 			input_sync(udg->udg_dev);
 			input_report_key(udg->udg_dev, KEY_WAKEUP, 0);
+			input_report_key(udg->udg_dev, KEY_DOUBLE_TAP, 0);
 			input_sync(udg->udg_dev);
 			rmi4_data->suspend = false;
 		}
@@ -2041,7 +2043,9 @@ static int synaptics_rmi4_udg_init(struct synaptics_rmi4_data *rmi4_data)
 
 	set_bit(EV_KEY, udg->udg_dev->evbit);
 	set_bit(KEY_WAKEUP, udg->udg_dev->keybit);
+	set_bit(KEY_DOUBLE_TAP, udg->udg_dev->keybit);
 	input_set_capability(udg->udg_dev, EV_KEY, KEY_WAKEUP);
+	input_set_capability(udg->udg_dev, EV_KEY, KEY_DOUBLE_TAP);
 
 	retval = input_register_device(udg->udg_dev);
 	if (retval) {
