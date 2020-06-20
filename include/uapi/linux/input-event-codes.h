@@ -218,6 +218,7 @@
 #define KEY_SETUP		141
 #define KEY_SLEEP		142	/* SC System Sleep */
 #define KEY_WAKEUP		143	/* System Wake Up */
+#define KEY_DOUBLE_TAP		750 /* DT2W */
 #define KEY_FILE		144	/* AL Local Machine Browser */
 #define KEY_SENDFILE		145
 #define KEY_DELETEFILE		146
