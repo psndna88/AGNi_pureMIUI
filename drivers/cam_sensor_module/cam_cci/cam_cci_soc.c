@@ -403,11 +403,15 @@ int cam_cci_soc_release(struct cci_device *cci_dev,
 		return -EINVAL;
 	}
 
-	if (--cci_dev->master_active_slave[master])
+	if (!(--cci_dev->master_active_slave[master])) {
 		cci_dev->cci_master_info[master].is_initilized = false;
+		CAM_DBG(CAM_CCI,
+			"All submodules are released for master: %d", master);
+	}
 
 	if (--cci_dev->ref_count) {
-		CAM_DBG(CAM_CCI, "ref_count Exit %d", cci_dev->ref_count);
+		CAM_DBG(CAM_CCI, "Submodule release: Ref_count: %d",
+			cci_dev->ref_count);
 		return 0;
 	}
 
