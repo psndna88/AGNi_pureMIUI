@@ -913,7 +913,7 @@ QDF_STATUS sme_get_soft_ap_domain(tHalHandle hHal, v_REGDOMAIN_t
  * Return: None
  */
 void sme_update_fine_time_measurement_capab(tHalHandle hal, uint8_t session_id,
-						uint32_t val)
+					    uint32_t val)
 {
 	tpAniSirGlobal mac_ctx = PMAC_STRUCT(hal);
 	QDF_STATUS status;
@@ -922,11 +922,11 @@ void sme_update_fine_time_measurement_capab(tHalHandle hal, uint8_t session_id,
 
 	if (!val) {
 		mac_ctx->rrm.rrmPEContext.rrmEnabledCaps.fine_time_meas_rpt = 0;
-		((tpRRMCaps)mac_ctx->rrm.rrmSmeContext.
+		((tpRRMCaps)mac_ctx->rrm.
 			rrmConfig.rm_capability)->fine_time_meas_rpt = 0;
 	} else {
 		mac_ctx->rrm.rrmPEContext.rrmEnabledCaps.fine_time_meas_rpt = 1;
-		((tpRRMCaps)mac_ctx->rrm.rrmSmeContext.
+		((tpRRMCaps)mac_ctx->rrm.
 			rrmConfig.rm_capability)->fine_time_meas_rpt = 1;
 	}
 
@@ -1746,7 +1746,7 @@ QDF_STATUS sme_set_ese_beacon_request(tHalHandle hHal, const uint8_t sessionId,
 	tCsrEseBeaconReqParams *pBeaconReq = NULL;
 	uint8_t counter = 0;
 	struct csr_roam_session *pSession = CSR_GET_SESSION(pMac, sessionId);
-	tpRrmSMEContext pSmeRrmContext = &pMac->rrm.rrmSmeContext;
+	tpRrmSMEContext pSmeRrmContext = &pMac->rrm.rrmSmeContext[0];
 
 	if (pSmeRrmContext->eseBcnReqInProgress == true) {
 		sme_err("A Beacon Report Req is already in progress");
@@ -1776,6 +1776,7 @@ QDF_STATUS sme_set_ese_beacon_request(tHalHandle hHal, const uint8_t sessionId,
 	pSmeBcnReportReq->channelInfo.channelNum = 255;
 	pSmeBcnReportReq->channelList.numChannels = pEseBcnReq->numBcnReqIe;
 	pSmeBcnReportReq->msgSource = eRRM_MSG_SOURCE_ESE_UPLOAD;
+	pSmeBcnReportReq->measurement_idx = 0;
 
 	for (counter = 0; counter < pEseBcnReq->numBcnReqIe; counter++) {
 		pBeaconReq =
@@ -3947,8 +3948,8 @@ QDF_STATUS sme_get_config_param(tHalHandle hHal, tSmeConfigParams *pParam)
 			return status;
 		}
 		qdf_mem_copy(&pParam->rrmConfig,
-				&pMac->rrm.rrmSmeContext.rrmConfig,
-				sizeof(pMac->rrm.rrmSmeContext.rrmConfig));
+			     &pMac->rrm.rrmConfig,
+			     sizeof(pMac->rrm.rrmConfig));
 		pParam->snr_monitor_enabled = pMac->snr_monitor_enabled;
 		sme_release_global_lock(&pMac->sme);
 	}
@@ -4164,7 +4165,7 @@ QDF_STATUS sme_oem_update_capability(tHalHandle hal,
 	tpAniSirGlobal pmac = PMAC_STRUCT(hal);
 	uint8_t *bytes;
 
-	bytes = pmac->rrm.rrmSmeContext.rrmConfig.rm_capability;
+	bytes = pmac->rrm.rrmConfig.rm_capability;
 
 	if (cap->ftm_rr)
 		bytes[4] |= RM_CAP_FTM_RANGE_REPORT;
@@ -4192,7 +4193,7 @@ QDF_STATUS sme_oem_get_capability(tHalHandle hal,
 	tpAniSirGlobal pmac = PMAC_STRUCT(hal);
 	uint8_t *bytes;
 
-	bytes = pmac->rrm.rrmSmeContext.rrmConfig.rm_capability;
+	bytes = pmac->rrm.rrmConfig.rm_capability;
 
 	cap->ftm_rr = bytes[4] & RM_CAP_FTM_RANGE_REPORT;
 	cap->lci_capability = bytes[4] & RM_CAP_CIVIC_LOC_MEASUREMENT;
@@ -13572,21 +13573,14 @@ QDF_STATUS sme_set_rssi_monitoring(tHalHandle hal,
 static enum band_info sme_get_connected_roaming_vdev_band(void)
 {
 	enum band_info band = BAND_ALL;
-	tpAniSirGlobal mac = sme_get_mac_context();
-	struct csr_roam_session *session;
-	uint8_t session_id, channel;
+	tp_wma_handle wma_handle;
+	uint8_t channel;
 
-	if (!mac) {
-		sme_debug("MAC Context is NULL");
-		return band;
-	}
-	session_id = csr_get_roam_enabled_sta_sessionid(mac);
-	if (session_id != CSR_SESSION_ID_INVALID) {
-		session = CSR_GET_SESSION(mac, session_id);
-		channel = session->connectedProfile.operationChannel;
-		band = csr_get_rf_band(channel);
-		return band;
-	}
+	wma_handle = cds_get_context(QDF_MODULE_ID_WMA);
+	if (!wma_handle)
+		sme_err("Invalid wma handle");
+	channel = wma_get_vdev_chan_roam_enabled(wma_handle);
+	band = csr_get_rf_band(channel);
 
 	return band;
 }
@@ -14100,6 +14094,8 @@ void sme_update_tgt_services(tHalHandle hal, struct wma_tgt_services *cfg)
 		FL("mac_ctx->pmf_offload: %d"), mac_ctx->pmf_offload);
 	mac_ctx->is_fils_roaming_supported =
 				cfg->is_fils_roaming_supported;
+	mac_ctx->stop_all_host_scan_support =
+				cfg->stop_all_host_scan_support;
 	mac_ctx->is_11k_offload_supported =
 				cfg->is_11k_offload_supported;
 	mac_ctx->akm_service_bitmap = cfg->akm_service_bitmap;
