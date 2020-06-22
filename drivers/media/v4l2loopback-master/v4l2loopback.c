@@ -2145,7 +2145,7 @@ static int free_buffers(struct v4l2_loopback_device *dev)
 static void try_free_buffers(struct v4l2_loopback_device *dev)
 {
 	MARK();
-	if (dev->open_count.counter && !dev->keep_format == 0) {
+	if ((dev->open_count.counter && !dev->keep_format) == 0) {
 		free_buffers(dev);
 		dev->ready_for_capture = 0;
 		dev->buffer_size = 0;

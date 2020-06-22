@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2017, 2020,  The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1664,7 +1664,7 @@ void msm_jpegdma_hw_put(struct msm_jpegdma_device *dma)
  */
 static int msm_jpegdma_hw_attach_iommu(struct msm_jpegdma_device *dma)
 {
-	int ret;
+	int ret = -EINVAL;
 
 	mutex_lock(&dma->lock);
 

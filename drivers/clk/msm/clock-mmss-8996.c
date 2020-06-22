@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2016, 2018 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2016, 2018, 2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -53,7 +53,7 @@ static void __iomem *virt_base_gpu;
 #define dsi1phypll_mm_source_val		2
 #define ext_extpclk_clk_src_mm_source_val	1
 
-#define FIXDIV(div) (div != 0 ? (2 * (div) - 1) : (0))
+#define FIXDIV(div) ((int)div ? (2 * (div) - 1) : (0))
 
 #define F_MM(f, s, div, m, n) \
 	{ \

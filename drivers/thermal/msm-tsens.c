@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2017, 2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -995,7 +995,8 @@ static int tsens_tm_activate_trip_type(struct thermal_zone_device *thermal,
 	switch (trip) {
 	case TSENS_TM_TRIP_CRITICAL:
 		tmdev->sensor[tm_sensor->sensor_hw_num].
-			debug_thr_state_copy.crit_th_state = mode;
+			debug_thr_state_copy.crit_th_state =
+					(enum thermal_device_mode) mode;
 		reg_cntl = readl_relaxed(TSENS_TM_CRITICAL_INT_MASK
 							(tmdev->tsens_addr));
 		if (mode == THERMAL_TRIP_ACTIVATION_DISABLED)
@@ -1009,7 +1010,8 @@ static int tsens_tm_activate_trip_type(struct thermal_zone_device *thermal,
 		break;
 	case TSENS_TM_TRIP_WARM:
 		tmdev->sensor[tm_sensor->sensor_hw_num].
-			debug_thr_state_copy.high_th_state = mode;
+			debug_thr_state_copy.high_th_state =
+					(enum thermal_device_mode) mode;
 		reg_cntl = readl_relaxed(TSENS_TM_UPPER_LOWER_INT_MASK
 						(tmdev->tsens_addr));
 		if (mode == THERMAL_TRIP_ACTIVATION_DISABLED)
@@ -1025,7 +1027,8 @@ static int tsens_tm_activate_trip_type(struct thermal_zone_device *thermal,
 		break;
 	case TSENS_TM_TRIP_COOL:
 		tmdev->sensor[tm_sensor->sensor_hw_num].
-			debug_thr_state_copy.low_th_state = mode;
+			debug_thr_state_copy.low_th_state =
+					(enum thermal_device_mode) mode;
 		reg_cntl = readl_relaxed(TSENS_TM_UPPER_LOWER_INT_MASK
 						(tmdev->tsens_addr));
 		if (mode == THERMAL_TRIP_ACTIVATION_DISABLED)
@@ -1071,7 +1074,8 @@ static int tsens_tz_activate_trip_type(struct thermal_zone_device *thermal,
 	switch (trip) {
 	case TSENS_TRIP_WARM:
 		tmdev->sensor[tm_sensor->sensor_hw_num].
-				debug_thr_state_copy.high_th_state = mode;
+				debug_thr_state_copy.high_th_state =
+					(enum thermal_device_mode)mode;
 
 		code = (reg_cntl & TSENS_UPPER_THRESHOLD_MASK)
 					>> TSENS_UPPER_THRESHOLD_SHIFT;
@@ -1082,7 +1086,8 @@ static int tsens_tz_activate_trip_type(struct thermal_zone_device *thermal,
 		break;
 	case TSENS_TRIP_COOL:
 		tmdev->sensor[tm_sensor->sensor_hw_num].
-				debug_thr_state_copy.low_th_state = mode;
+				debug_thr_state_copy.low_th_state =
+					(enum thermal_device_mode)mode;
 
 		code = (reg_cntl & TSENS_LOWER_THRESHOLD_MASK);
 		mask = TSENS_LOWER_STATUS_CLR;

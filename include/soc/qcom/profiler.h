@@ -82,11 +82,11 @@ struct tz_bw_svc_resp {
 	enum tz_bw_svc_err status;
 } __packed;
 
-__packed union tz_bw_svc_req {
+union tz_bw_svc_req {
 	struct tz_bw_svc_start_req *start_req;
 	struct tz_bw_svc_get_req *get_req;
 	struct tz_bw_svc_stop_req *stop_req;
-};
+} __packed;
 
 struct tz_bw_svc_buf {
 	union tz_bw_svc_req bwreq;
