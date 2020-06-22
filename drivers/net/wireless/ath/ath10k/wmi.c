@@ -6048,7 +6048,7 @@ static struct sk_buff *ath10k_wmi_10_4_op_gen_init(struct ath10k *ar)
 
 int ath10k_wmi_start_scan_verify(const struct wmi_start_scan_arg *arg)
 {
-	if (arg->ie_len && !arg->ie)
+	if (arg->ie_len)
 		return -EINVAL;
 	if (arg->n_channels && !arg->channels)
 		return -EINVAL;

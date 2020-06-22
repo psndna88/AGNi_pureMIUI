@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2016, 2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -42,7 +42,7 @@ static void __iomem *virt_dbgbase;
 #define gpll0_out_main_source_val 1
 #define gpll4_out_main_source_val 5
 
-#define FIXDIV(div) (div != 0 ? (2 * (div) - 1) : (0))
+#define FIXDIV(div) ((int)div ? (2 * (div) - 1) : (0))
 
 #define F(f, s, div, m, n) \
 	{ \
