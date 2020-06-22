@@ -179,7 +179,7 @@
 					qcom,axi-port-mnoc {
 						interconnect-names = "cam_sf_0";
 						interconnects =
-						<&mmrt_virt MASTER_CAMNOC_SF
+						<&mmnrt_virt MASTER_CAMNOC_SF
 						&bimc SLAVE_EBI>;
 					};
 				};
