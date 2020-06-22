@@ -12,6 +12,7 @@
 #include "wpa_helpers.h"
 
 extern char *sigma_wpas_ctrl;
+extern char *sigma_cert_path;
 
 #ifdef ANDROID
 char *dpp_qrcode_file = "/sdcard/wpadebug_qrdata.txt";
@@ -965,6 +966,72 @@ static int dpp_process_auth_response(struct sigma_dut *dut,
 }
 
 
+static int dpp_process_csr(struct sigma_dut *dut, const char *ifname,
+			   char *csr_event)
+{
+	FILE *f;
+	char buf[2000], cmd[2500], tmp[300];
+	char *pos;
+	int peer;
+	size_t len;
+
+	pos = strstr(csr_event, " peer=");
+	if (!pos) {
+		sigma_dut_print(dut, DUT_MSG_INFO, "No peer id known for CSR");
+		return -1;
+	}
+	pos += 6;
+	peer = atoi(pos);
+
+	pos = strstr(csr_event, " csr=");
+	if (!pos) {
+		sigma_dut_print(dut, DUT_MSG_INFO, "No CSR found");
+		return -1;
+	}
+	pos += 5;
+
+	snprintf(tmp, sizeof(tmp), "%s/dpp-ca-certbag", sigma_cert_path);
+	unlink(tmp);
+
+	snprintf(tmp, sizeof(tmp), "%s/dpp-ca-csr", sigma_cert_path);
+	f = fopen(tmp, "w");
+	if (!f) {
+		sigma_dut_print(dut, DUT_MSG_INFO, "Failed to write CSR file");
+		return -1;
+	}
+	fprintf(f, "%s", pos);
+	fclose(f);
+
+	if (run_system_wrapper(dut, "./dpp-ca.py %s", sigma_cert_path) < 0) {
+		sigma_dut_print(dut, DUT_MSG_INFO, "Failed to run dpp-ca.py");
+		return -1;
+	}
+
+	snprintf(tmp, sizeof(tmp), "%s/dpp-ca-certbag", sigma_cert_path);
+	f = fopen(tmp, "r");
+	if (!f) {
+		sigma_dut_print(dut, DUT_MSG_INFO, "No certBag available");
+		return -1;
+	}
+	len = fread(buf, 1, sizeof(buf), f);
+	fclose(f);
+	if (len >= sizeof(buf)) {
+		sigma_dut_print(dut, DUT_MSG_INFO, "No bufferroom for certBag");
+		return -1;
+	}
+	buf[len] = '\0';
+
+	snprintf(cmd, sizeof(cmd), "DPP_CA_SET peer=%d name=certBag value=%s",
+		 peer, buf);
+	if (wpa_command(ifname, cmd) < 0) {
+		sigma_dut_print(dut, DUT_MSG_INFO, "DPP_CA_SET failed");
+		return -1;
+	}
+
+	return 0;
+}
+
+
 static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 					       struct sigma_conn *conn,
 					       struct sigma_cmd *cmd)
@@ -992,6 +1059,7 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 	char buf2[200];
 	char conf_ssid[100];
 	char conf_pass[100];
+	char csrattrs[200];
 	char pkex_identifier[200];
 	struct wpa_ctrl *ctrl;
 	int res;
@@ -1032,6 +1100,7 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 	int chirp = 0;
 	int manual = strcasecmp(type, "ManualDPP") == 0;
 	time_t start, now;
+	FILE *f;
 
 	time(&start);
 
@@ -1199,6 +1268,7 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 
 	conf_ssid[0] = '\0';
 	conf_pass[0] = '\0';
+	csrattrs[0] = '\0';
 	group_id[0] = '\0';
 	conf2[0] = '\0';
 	if (!enrollee_configurator) {
@@ -1341,6 +1411,48 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 		if (res < 0 || res >= sizeof(conf2))
 			goto err;
 		break;
+	case 11:
+		ascii2hexstr("DPPNET01", buf);
+		res = snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		if (res < 0 || res >= sizeof(conf_ssid))
+			goto err;
+		if (enrollee_ap) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,dot1x AKM provisioning not supported for AP");
+			goto out;
+		}
+		conf_role = "sta-dot1x";
+		snprintf(buf, sizeof(buf), "%s/dpp-ca-csrattrs",
+			 sigma_cert_path);
+		f = fopen(buf, "r");
+		if (f) {
+			size_t len;
+			int r;
+
+			len = fread(buf, 1, sizeof(buf), f);
+			fclose(f);
+			if (len >= sizeof(buf)) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,No room for csrAttrs");
+				goto out;
+			}
+			buf[len] = '\0';
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Use csrAttrs from file");
+			r = snprintf(csrattrs, sizeof(csrattrs),
+				     " csrattrs=%s", buf);
+			if (r <= 0 || r >= sizeof(csrattrs)) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,No room for csrAttrs");
+				goto out;
+			}
+		} else {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Use default csrAttrs");
+			snprintf(csrattrs, sizeof(csrattrs), "%s",
+				 " csrattrs=MAsGCSqGSIb3DQEJBw==");
+		}
+		break;
 	default:
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Unsupported DPPConfIndex");
@@ -1426,22 +1538,24 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 				goto out;
 			}
 			snprintf(buf, sizeof(buf),
-				 "SET dpp_configurator_params  conf=%s %s %s configurator=%d%s%s%s%s",
+				 "SET dpp_configurator_params  conf=%s %s %s configurator=%d%s%s%s%s%s",
 				 conf_role, conf_ssid, conf_pass,
 				 dut->dpp_conf_id, group_id,
 				 akm_use_selector ? " akm_use_selector=1" : "",
-				 conn_status ? " conn_status=1" : "", conf2);
+				 conn_status ? " conn_status=1" : "",
+				 csrattrs, conf2);
 			if (wpa_command(ifname, buf) < 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "errorCode,Failed to set configurator parameters");
 				goto out;
 			}
 			snprintf(buf, sizeof(buf),
-				 "conf=%s %s %s configurator=%d%s%s%s%s",
+				 "conf=%s %s %s configurator=%d%s%s%s%s%s",
 				 conf_role, conf_ssid, conf_pass,
 				 dut->dpp_conf_id, group_id,
 				 akm_use_selector ? " akm_use_selector=1" : "",
-				 conn_status ? " conn_status=1" : "", conf2);
+				 conn_status ? " conn_status=1" : "", csrattrs,
+				 conf2);
 		} else {
 			buf[0] = '\0';
 			enrollee = 1;
@@ -1640,13 +1754,13 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 					goto out;
 				}
 				snprintf(buf, sizeof(buf),
-					 "SET dpp_configurator_params  conf=%s %s %s configurator=%d%s%s%s%s",
+					 "SET dpp_configurator_params  conf=%s %s %s configurator=%d%s%s%s%s%s",
 					 conf_role, conf_ssid, conf_pass,
 					 dut->dpp_conf_id, group_id,
 					 akm_use_selector ?
 					 " akm_use_selector=1" : "",
 					 conn_status ? " conn_status=1" : "",
-					 conf2);
+					 csrattrs, conf2);
 				if (wpa_command(ifname, buf) < 0) {
 					send_resp(dut, conn, SIGMA_ERROR,
 						  "errorCode,Failed to set configurator parameters");
@@ -1674,7 +1788,7 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 				goto out;
 			}
 			snprintf(buf, sizeof(buf),
-				 "DPP_AUTH_INIT peer=%d%s role=%s%s%s conf=%s %s %s configurator=%d%s%s%s%s%s%s%s",
+				 "DPP_AUTH_INIT peer=%d%s role=%s%s%s conf=%s %s %s configurator=%d%s%s%s%s%s%s%s%s",
 				 dpp_peer_bootstrap, own_txt, role,
 				 netrole ? " netrole=" : "",
 				 netrole ? netrole : "",
@@ -1684,7 +1798,7 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 				 conn_status ? " conn_status=1" : "",
 				 tcp ? " tcp_addr=" : "",
 				 tcp ? tcp : "",
-				 conf2);
+				 csrattrs, conf2);
 		} else if (tcp && (strcasecmp(bs, "QR") == 0 ||
 				   strcasecmp(bs, "NFC") == 0)) {
 			snprintf(buf, sizeof(buf),
@@ -1710,10 +1824,10 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 				goto out;
 			}
 			snprintf(buf, sizeof(buf),
-				 "DPP_PKEX_ADD own=%d init=1 role=%s conf=%s %s %s configurator=%d %scode=%s",
+				 "DPP_PKEX_ADD own=%d init=1 role=%s conf=%s %s %s configurator=%d%s %scode=%s",
 				 own_pkex_id, role, conf_role,
 				 conf_ssid, conf_pass, dut->dpp_conf_id,
-				 pkex_identifier, pkex_code);
+				 csrattrs, pkex_identifier, pkex_code);
 		} else if (strcasecmp(bs, "PKEX") == 0) {
 			snprintf(buf, sizeof(buf),
 				 "DPP_PKEX_ADD own=%d init=1 role=%s %scode=%s",
@@ -1836,11 +1950,11 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 				goto out;
 			}
 			snprintf(buf, sizeof(buf),
-				 "SET dpp_configurator_params  conf=%s %s %s configurator=%d%s%s%s%s",
+				 "SET dpp_configurator_params  conf=%s %s %s configurator=%d%s%s%s%s%s",
 				 conf_role, conf_ssid, conf_pass,
 				 dut->dpp_conf_id, group_id,
 				 akm_use_selector ? " akm_use_selector=1" : "",
-				 conn_status ? " conn_status=1" : "",
+				 conn_status ? " conn_status=1" : "", csrattrs,
 				 conf2);
 			if (wpa_command(ifname, buf) < 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
@@ -2193,6 +2307,23 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 			result = "BootstrapResult,OK,AuthResult,OK,ConfResult,Errorsent,LastFrameReceived,ConfigurationRequest";
 		send_resp(dut, conn, SIGMA_COMPLETE, result);
 		goto out;
+	}
+
+	if (strcasecmp(prov_role, "Configurator") == 0 && csrattrs[0]) {
+		res = get_wpa_cli_event(dut, ctrl, "DPP-CSR", buf, sizeof(buf));
+		if (res < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,No CSR received from Enrollee");
+			res = STATUS_SENT_ERROR;
+			goto out;
+		}
+
+		if (dpp_process_csr(dut, ifname, buf) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to process CSR");
+			res = STATUS_SENT_ERROR;
+			goto out;
+		}
 	}
 
 	res = get_wpa_cli_events(dut, ctrl, conf_events, buf, sizeof(buf));
