@@ -1528,6 +1528,9 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 		pid_t pid;
 		int pid_status;
 		int enrollee = 0;
+		int tag_read = 0;
+		int tag_write_uri = 0;
+		int tag_write_hs = 0;
 		const char *tx_rx_events[] = { "DPP-TX", "DPP-RX", NULL };
 
 		if (strcasecmp(prov_role, "Configurator") == 0 ||
@@ -1561,6 +1564,21 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 			enrollee = 1;
 		}
 
+		val = get_param(cmd, "DPPNFCTag");
+		if (val) {
+			if (strcasecmp(val, "Read") == 0) {
+				tag_read = 1;
+			} else if (strcasecmp(val, "Write-HS") == 0) {
+				tag_write_hs = 1;
+			} else if (strcasecmp(val, "Write-URI") == 0) {
+				tag_write_uri = 1;
+			} else {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Unsupported DPPNFCTag value");
+				goto out;
+			}
+		}
+
 		run_system(dut, "killall dpp-nfc.py");
 		sigma_dut_print(dut, DUT_MSG_INFO, "Manual NFC operation");
 		if (!file_exists("dpp-nfc.py")) {
@@ -1578,15 +1596,31 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 		}
 
 		if (pid == 0) {
-			char * argv[] = { "dpp-nfc.py",
-					  "--only-one", "--no-input",
-					  "-i", (char *) ifname,
-					  "--ctrl", sigma_wpas_ctrl,
-					  enrollee ? "--enrollee" :
-					  "--configurator",
-					  "--config-params", buf,
-					  init ? "-I" : NULL,
-					  NULL };
+			char *argv[100];
+			int pos = 0;
+
+			argv[pos++] = "dpp-nfc.py";
+			argv[pos++] = "--only-one";
+			argv[pos++] = "--no-input";
+			argv[pos++] = "-i";
+			argv[pos++] = (char *) ifname;
+			argv[pos++] = "--ctrl";
+			argv[pos++] = sigma_wpas_ctrl;
+			argv[pos++] = enrollee ? "--enrollee" :
+				"--configurator";
+			argv[pos++] = "--config-params";
+			argv[pos++] = buf;
+			if (init)
+				argv[pos++] = "-I";
+			if (tag_read || tag_write_hs || tag_write_uri)
+				argv[pos++] = "--no-wait";
+			if (tag_read)
+				argv[pos++] = "--tag-read-only";
+			else if (tag_write_hs)
+				argv[pos++] = "write-nfc-hs";
+			else if (tag_write_uri)
+				argv[pos++] = "write-nfc-uri";
+			argv[pos] = NULL;
 
 			execv("./dpp-nfc.py", argv);
 			perror("execv");
