@@ -13,5 +13,6 @@
 #define _LINUX_CHARGING_STATE_H
 
 extern bool charging_detected(void);
+extern bool charging_9v(void);
 
 #endif
