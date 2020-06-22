@@ -5205,6 +5205,28 @@ cmd_sta_preset_testparameters(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 #endif /* NL80211_SUPPORT */
 
+	val = get_param(cmd, "IncludeMSCSDescriptor");
+	if (val && strcasecmp(val, "1") == 0) {
+		char buf[128];
+		int len;
+
+		len = snprintf(buf, sizeof(buf),
+			       "MSCS add up_bitmap=0xF0 up_limit=7 stream_timeout=60000 frame_classifier=045F%032x",
+			       0);
+
+		if (len < 0 || len >= sizeof(buf)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to build MSCS Descriptor IE");
+			return ERROR_SEND_STATUS;
+		}
+
+		if (wpa_command(intf, buf) != 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				"ErrorCode,Failed to include MSCS descriptor");
+			return STATUS_SENT_ERROR;
+		}
+	}
+
 	return 1;
 }
 
