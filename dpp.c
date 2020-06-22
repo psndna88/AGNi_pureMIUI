@@ -1524,7 +1524,7 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 		goto wait_connect;
 	} else if (manual && strcasecmp(bs, "NFC") == 0) {
 		const char *val = get_param(cmd, "DPPNFCInit");
-		int init = val && atoi(val) > 0;
+		int init = !val || atoi(val) > 0;
 		pid_t pid;
 		int pid_status;
 		int enrollee = 0;
