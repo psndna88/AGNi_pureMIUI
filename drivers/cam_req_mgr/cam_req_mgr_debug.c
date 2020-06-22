@@ -141,6 +141,5 @@ int cam_req_mgr_debug_register(struct cam_req_mgr_core_device *core_dev)
 
 void cam_req_mgr_debug_unregister(void)
 {
-	if (!debugfs_root)
-		debugfs_remove_recursive(debugfs_root);
+	debugfs_remove_recursive(debugfs_root);
 }

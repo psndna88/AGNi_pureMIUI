@@ -1030,6 +1030,7 @@ void cam_mem_mgr_deinit(void)
 {
 	atomic_set(&cam_mem_mgr_state, CAM_MEM_MGR_UNINITIALIZED);
 	cam_mem_mgr_cleanup_table();
+	debugfs_remove_recursive(tbl.dentry);
 	mutex_lock(&tbl.m_lock);
 	bitmap_zero(tbl.bitmap, tbl.bits);
 	kfree(tbl.bitmap);
