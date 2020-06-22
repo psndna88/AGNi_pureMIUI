@@ -2513,12 +2513,6 @@ static enum sigma_cmd_result dpp_manual_dpp(struct sigma_dut *dut,
 	unsigned int old_timeout;
 	const char *bs = get_param(cmd, "DPPBS");
 
-	if (!auth_role) {
-		send_resp(dut, conn, SIGMA_ERROR,
-			  "errorCode,Missing DPPAuthRole");
-		return STATUS_SENT_ERROR;
-	}
-
 	if (!self_conf)
 		self_conf = "no";
 
@@ -2538,6 +2532,12 @@ static enum sigma_cmd_result dpp_manual_dpp(struct sigma_dut *dut,
 	res = dpp_get_local_bootstrap(dut, conn, cmd, 0, &success);
 	if (res != STATUS_SENT || !success)
 		goto out;
+
+	if (!auth_role) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Missing DPPAuthRole");
+		return STATUS_SENT_ERROR;
+	}
 
 	if (strcasecmp(auth_role, "Responder") == 0) {
 		if (dpp_display_own_qrcode(dut) < 0) {
