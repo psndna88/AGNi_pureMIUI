@@ -9,6 +9,7 @@
 #include "cam_hw.h"
 #include "cam_tfe_csid_hw_intf.h"
 #include "cam_tfe_csid_soc.h"
+#include "cam_csid_ppi_core.h"
 
 #define CAM_TFE_CSID_CID_MAX                          4
 
@@ -383,6 +384,9 @@ struct cam_tfe_csid_path_cfg {
  * @lock_state                csid spin lock
  * @event_cb:                 Callback function to hw mgr in case of hw events
  * @event_cb_priv:            Context data
+ * @ppi_hw_intf               interface to ppi hardware
+ * @ppi_enabled               flag to specify if the hardware has ppi bridge
+ *                            or not
  *
  */
 struct cam_tfe_csid_hw {
@@ -409,6 +413,8 @@ struct cam_tfe_csid_hw {
 	spinlock_t                          spin_lock;
 	cam_hw_mgr_event_cb_func            event_cb;
 	void                               *event_cb_priv;
+	struct cam_hw_intf                 *ppi_hw_intf[CAM_CSID_PPI_HW_MAX];
+	bool                                ppi_enable;
 };
 
 int cam_tfe_csid_hw_probe_init(struct cam_hw_intf  *csid_hw_intf,
