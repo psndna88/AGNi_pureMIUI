@@ -12910,6 +12910,7 @@ static enum sigma_cmd_result cmd_sta_scan(struct sigma_dut *dut,
 	int wildcard_ssid = 0;
 	int res;
 	enum sigma_cmd_result status;
+	struct wpa_ctrl *ctrl = NULL;
 
 	start_sta_mode(dut);
 
@@ -12985,6 +12986,16 @@ static enum sigma_cmd_result cmd_sta_scan(struct sigma_dut *dut,
 
 	scan_freq = get_param(cmd, "ChnlFreq");
 
+	val = get_param(cmd, "WaitCompletion");
+	if (val && atoi(val) == 1) {
+		ctrl = open_wpa_mon(intf);
+		if (!ctrl) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to open monitor socket");
+			return STATUS_SENT_ERROR;
+		}
+	}
+
 	res = snprintf(buf, sizeof(buf), "SCAN%s%s%s%s%s%s%s",
 			bssid ? " bssid=": "",
 			bssid ? bssid : "",
@@ -13012,6 +13023,22 @@ remove_s_ssid:
 	if (short_ssid && wpa_command(intf, "VENDOR_ELEM_REMOVE 14 *"))
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Failed to delete vendor element");
+
+	if (ctrl) {
+		if (status == SUCCESS_SEND_STATUS) {
+			res = get_wpa_cli_event(dut, ctrl,
+						"CTRL-EVENT-SCAN-RESULTS",
+						buf, sizeof(buf));
+			if (res < 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "ErrorCode,scan did not complete");
+				status = STATUS_SENT_ERROR;
+			}
+		}
+
+		wpa_ctrl_detach(ctrl);
+		wpa_ctrl_close(ctrl);
+	}
 
 	return status;
 }
