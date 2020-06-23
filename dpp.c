@@ -1532,6 +1532,8 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 		int tag_write_uri = 0;
 		int tag_write_hs = 0;
 		const char *tx_rx_events[] = { "DPP-TX", "DPP-RX", NULL };
+		const char *chan_list, *alt_chan_list;
+		char chan_list2[200], alt_chan_list2[200];
 
 		if (strcasecmp(prov_role, "Configurator") == 0 ||
 		    strcasecmp(prov_role, "Both") == 0) {
@@ -1579,6 +1581,24 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 			}
 		}
 
+		chan_list = get_param(cmd, "DPPChannelList");
+		if (chan_list) {
+			strlcpy(chan_list2, chan_list, sizeof(chan_list2));
+			for (pos = chan_list2; *pos; pos++) {
+				if (*pos == ' ')
+					*pos = ',';
+			}
+		}
+		alt_chan_list = get_param(cmd, "DPPNFCAltChannelList");
+		if (alt_chan_list) {
+			strlcpy(alt_chan_list2, alt_chan_list,
+				sizeof(alt_chan_list2));
+			for (pos = alt_chan_list2; *pos; pos++) {
+				if (*pos == ' ')
+					*pos = ',';
+			}
+		}
+
 		run_system(dut, "killall dpp-nfc.py");
 		sigma_dut_print(dut, DUT_MSG_INFO, "Manual NFC operation");
 		if (!file_exists("dpp-nfc.py")) {
@@ -1610,6 +1630,15 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 				"--configurator";
 			argv[pos++] = "--config-params";
 			argv[pos++] = buf;
+			if (chan_list && strcmp(chan_list, "0/0") != 0) {
+				argv[pos++] = "--chan";
+				argv[pos++] = chan_list2;
+			}
+			if (alt_chan_list &&
+			    strcmp(alt_chan_list, "0/0") != 0) {
+				argv[pos++] = "--altchan";
+				argv[pos++] = alt_chan_list2;
+			}
 			if (init)
 				argv[pos++] = "-I";
 			if (tag_read || tag_write_hs || tag_write_uri)
