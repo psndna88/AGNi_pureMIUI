@@ -735,15 +735,20 @@ int msm_comm_get_inst_load(struct msm_vidc_inst *inst,
 	 *                 | Power Request Load =       |
 	 *                 |          res * max(op, fps)|
 	 * ----------------|----------------------------|
-	 * NON-REALTIME/   | Admission Control Load = 0	|
-	 *  THUMBNAIL      | Power Request Load =       |
+	 * NON-REALTIME    | Admission Control Load = 0 |
+	 *                 | Power Request Load =       |
 	 *                 |          res * max(op, fps)|
+	 * ----------------|----------------------------|
+	 * THUMBNAIL       | Always Load = 0            |
+	 *                 | Perf mode added for        |
+	 *                 | thumbnail session buffers  |
+	 *                 | for faster decoding.       |
 	 * ----------------|----------------------------|
 	 */
 
-	if ((is_thumbnail_session(inst) ||
-		 !is_realtime_session(inst)) &&
-		quirks == LOAD_ADMISSION_CONTROL) {
+	if (is_thumbnail_session(inst) ||
+		(!is_realtime_session(inst) &&
+		 quirks == LOAD_ADMISSION_CONTROL)) {
 		load = 0;
 	} else {
 		load = msm_comm_get_mbs_per_sec(inst, quirks);
