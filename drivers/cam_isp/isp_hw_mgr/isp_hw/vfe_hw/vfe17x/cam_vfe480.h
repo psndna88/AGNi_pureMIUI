@@ -1314,6 +1314,7 @@ static struct cam_vfe_bus_ver3_hw_info vfe480_bus_hw_info = {
 	},
 	.comp_done_shift = 6,
 	.top_irq_shift   = 7,
+	.support_consumed_addr = true,
 };
 
 static struct cam_irq_register_set vfe480_bus_rd_irq_reg[1] = {

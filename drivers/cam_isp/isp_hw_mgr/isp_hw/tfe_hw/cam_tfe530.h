@@ -820,6 +820,7 @@ static struct cam_tfe_bus_hw_info  tfe530_bus_hw_info = {
 		0xD0000000,
 		0x00000000,
 	},
+	.support_consumed_addr = true,
 };
 
 struct cam_tfe_hw_info cam_tfe530 = {

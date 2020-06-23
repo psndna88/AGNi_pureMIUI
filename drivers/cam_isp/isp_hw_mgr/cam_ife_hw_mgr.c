@@ -2982,6 +2982,32 @@ static int cam_ife_mgr_acquire_get_unified_structure(
 	return 0;
 }
 
+static bool cam_ife_mgr_is_consumed_addr_supported(
+	struct cam_ife_hw_mgr_ctx *ctx)
+{
+	bool support_consumed_addr            = false;
+	struct cam_isp_hw_mgr_res *isp_hw_res = NULL;
+	struct cam_hw_intf *hw_intf           = NULL;
+
+	isp_hw_res = &ctx->res_list_ife_out[0];
+
+	if (!isp_hw_res || !isp_hw_res->hw_res[0]) {
+		CAM_ERR(CAM_ISP, "Invalid ife out res.");
+		goto end;
+	}
+
+	hw_intf = isp_hw_res->hw_res[0]->hw_intf;
+	if (hw_intf && hw_intf->hw_ops.process_cmd) {
+		hw_intf->hw_ops.process_cmd(hw_intf->hw_priv,
+			CAM_ISP_HW_CMD_IS_CONSUMED_ADDR_SUPPORT,
+			&support_consumed_addr,
+			sizeof(support_consumed_addr));
+	}
+
+end:
+	return support_consumed_addr;
+}
+
 /* entry function: acquire_hw */
 static int cam_ife_mgr_acquire_hw(void *hw_mgr_priv, void *acquire_hw_args)
 {
@@ -3143,6 +3169,9 @@ static int cam_ife_mgr_acquire_hw(void *hw_mgr_priv, void *acquire_hw_args)
 	if (cdm_acquire.id == CAM_CDM_IFE)
 		ife_ctx->internal_cdm = true;
 	atomic_set(&ife_ctx->cdm_done, 1);
+
+	acquire_args->support_consumed_addr =
+		cam_ife_mgr_is_consumed_addr_supported(ife_ctx);
 
 	acquire_args->ctxt_to_hw_map = ife_ctx;
 	acquire_args->custom_enabled = ife_ctx->custom_enabled;
@@ -7303,7 +7332,7 @@ static int cam_ife_hw_mgr_handle_hw_epoch(
 		if (atomic_read(&ife_hw_mgr_ctx->overflow_pending))
 			break;
 
-		epoch_done_event_data.frame_id_meta = event_info->th_reg_val;
+		epoch_done_event_data.frame_id_meta = event_info->reg_val;
 		ife_hw_irq_epoch_cb(ife_hw_mgr_ctx->common.cb_priv,
 			CAM_ISP_HW_EVENT_EPOCH, &epoch_done_event_data);
 
@@ -7456,6 +7485,8 @@ static int cam_ife_hw_mgr_handle_hw_buf_done(
 
 	buf_done_event_data.num_handles = 1;
 	buf_done_event_data.resource_handle[0] = event_info->res_id;
+	buf_done_event_data.last_consumed_addr[0] =
+		event_info->reg_val;
 
 	if (atomic_read(&ife_hw_mgr_ctx->overflow_pending))
 		return 0;
@@ -7466,8 +7497,9 @@ static int cam_ife_hw_mgr_handle_hw_buf_done(
 			CAM_ISP_HW_EVENT_DONE, &buf_done_event_data);
 	}
 
-	CAM_DBG(CAM_ISP, "Buf done for VFE:%d out_res->res_id: 0x%x",
-		event_info->hw_idx, event_info->res_id);
+	CAM_DBG(CAM_ISP,
+		"Buf done for VFE:%d res_id: 0x%x last consumed addr: 0x%x",
+		event_info->hw_idx, event_info->res_id, event_info->reg_val);
 
 	return 0;
 }

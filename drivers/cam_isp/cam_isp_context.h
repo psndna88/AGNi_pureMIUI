@@ -251,6 +251,7 @@ struct cam_isp_context_event_record {
  * @split_acquire:             Indicate whether a separate acquire is expected
  * @custom_enabled:            Custom HW enabled for this ctx
  * @use_frame_header_ts:       Use frame header for qtimer ts
+ * @support_consumed_addr:     Indicate whether HW has last consumed addr reg
  * @init_timestamp:            Timestamp at which this context is initialized
  * @isp_device_type:           ISP device type
  * @rxd_epoch:                 Indicate whether epoch has been received. Used to
@@ -294,6 +295,7 @@ struct cam_isp_context {
 	bool                                  split_acquire;
 	bool                                  custom_enabled;
 	bool                                  use_frame_header_ts;
+	bool                                  support_consumed_addr;
 	unsigned int                          init_timestamp;
 	uint32_t                              isp_device_type;
 	atomic_t                              rxd_epoch;

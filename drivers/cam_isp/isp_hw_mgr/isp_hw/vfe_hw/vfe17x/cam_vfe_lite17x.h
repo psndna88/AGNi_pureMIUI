@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_VFE_LITE17X_H_
@@ -324,6 +324,7 @@ static struct cam_vfe_bus_ver2_hw_info vfe17x_bus_hw_info = {
 		},
 	},
 	.top_irq_shift = 9,
+	.support_consumed_addr = false,
 };
 
 static struct cam_vfe_hw_info cam_vfe_lite17x_hw_info = {

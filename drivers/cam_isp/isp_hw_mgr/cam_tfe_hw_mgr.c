@@ -1733,6 +1733,32 @@ void cam_tfe_cam_cdm_callback(uint32_t handle, void *userdata,
 	}
 }
 
+static bool cam_tfe_mgr_is_consumed_addr_supported(
+	struct cam_tfe_hw_mgr_ctx *ctx)
+{
+	bool support_consumed_addr            = false;
+	struct cam_isp_hw_mgr_res *isp_hw_res = NULL;
+	struct cam_hw_intf *hw_intf           = NULL;
+
+	isp_hw_res = &ctx->res_list_tfe_out[0];
+
+	if (!isp_hw_res || !isp_hw_res->hw_res[0]) {
+		CAM_ERR(CAM_ISP, "Invalid ife out res.");
+		goto end;
+	}
+
+	hw_intf = isp_hw_res->hw_res[0]->hw_intf;
+	if (hw_intf && hw_intf->hw_ops.process_cmd) {
+		hw_intf->hw_ops.process_cmd(hw_intf->hw_priv,
+			CAM_ISP_HW_CMD_IS_CONSUMED_ADDR_SUPPORT,
+			&support_consumed_addr,
+			sizeof(support_consumed_addr));
+	}
+
+end:
+	return support_consumed_addr;
+}
+
 /* entry function: acquire_hw */
 static int cam_tfe_mgr_acquire_hw(void *hw_mgr_priv, void *acquire_hw_args)
 {
@@ -1941,6 +1967,9 @@ static int cam_tfe_mgr_acquire_hw(void *hw_mgr_priv, void *acquire_hw_args)
 	acquire_args->ctxt_to_hw_map = tfe_ctx;
 	tfe_ctx->ctx_in_use = 1;
 	tfe_ctx->num_reg_dump_buf = 0;
+
+	acquire_args->support_consumed_addr =
+		cam_tfe_mgr_is_consumed_addr_supported(tfe_ctx);
 
 	cam_tfe_hw_mgr_put_ctx(&tfe_hw_mgr->used_ctx_list, &tfe_ctx);
 
