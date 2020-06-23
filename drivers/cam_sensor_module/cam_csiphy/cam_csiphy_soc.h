@@ -31,6 +31,7 @@
 #define CSIPHY_VERSION_V124                       0x124
 #define CSIPHY_VERSION_V20                        0x20
 #define CSIPHY_VERSION_V201                       0x201
+#define CSIPHY_VERSION_V210                       0x210
 
 /**
  * @csiphy_dev: CSIPhy device structure
