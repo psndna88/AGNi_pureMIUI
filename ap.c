@@ -108,6 +108,10 @@
 	"MHcCAQEEIFOu3xlEIWA1r/B/1eXv10Av/s6Ckbr0ZhewG5VTv8vGoAoGCCqGSM49AwEHoUQDQgAEIiW3UPh/XUgUKNL4uHFbGoueQd0f3B7rkfNy+R0keJe35HKgsmYAd7gztAmIXSvbswUydsbE52QaUslEZdnw3w=="
 #define SAE_PK_KEY_9 \
 	"MHcCAQEEIMKGpkSSz4CLzyuLbxfr0vAvR34rDEi43L79ShM55wPfoAoGCCqGSM49AwEHoUQDQgAEHgK4UPbjHRmz5hjc0oXrEk/Xkt2OqGL2YzuQiO9d9C09/qr09cxgE7XZ24fgMBgDv1N1nqljYghev41bOwrjKA=="
+#define SAE_PK_KEY_13 \
+	"MHcCAQEEIGTxtJh0ksgaLk3IKKrS8J5jLnaYXBLymfKS5UZ1ZqOUoAoGCCqGSM49AwEHoUQDQgAEr5pJ0f2TwXqukzgx0E2sj0/Mt6O9G6EiILsZaHu8VFHk+JxIJ0hXJRcEcz8jwSQ843vOZknFIMcULRz3UsrcWw=="
+#define SAE_PK_KEY_571 \
+	"MHcCAQEEIAJIGlfnteonDb7rQyP/SGQjwzrZAnfrXIm4280VWajYoAoGCCqGSM49AwEHoUQDQgAEeRkstKQV+FSAMqBayqFknn2nAQsdsh/MhdX6tiHOTAFin/sUMFRMyspPtIu7YvlKdsexhI0jPVhaYZn1jKWhZg=="
 
 /*
  * MTU for Ethernet need to take into account 8-byte SNAP header
@@ -2138,6 +2142,10 @@ static const char * get_sae_pk_key(const char *file_name)
 		return SAE_PK_KEY_8_SIG;
 	else if (strcasecmp(file_name, "saepk9.pem") == 0)
 		return SAE_PK_KEY_9;
+	else if (strcasecmp(file_name, "saepk13.pem") == 0)
+		return SAE_PK_KEY_13;
+	else if (strcasecmp(file_name, "saepk5.7.1Run4thru12.pem") == 0)
+		return SAE_PK_KEY_571;
 	return NULL;
 }
 
