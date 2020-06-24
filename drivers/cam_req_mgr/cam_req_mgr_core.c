@@ -560,6 +560,7 @@ static void __cam_req_mgr_validate_crm_wd_timer(
 {
 	int idx = 0;
 	int next_frame_timeout = 0, current_frame_timeout = 0;
+	int64_t current_req_id, next_req_id;
 	struct cam_req_mgr_req_queue *in_q = link->req.in_q;
 
 	if (link->skip_init_frame) {
@@ -574,18 +575,26 @@ static void __cam_req_mgr_validate_crm_wd_timer(
 		&idx, (link->max_delay - 1),
 		in_q->num_slots);
 	next_frame_timeout = in_q->slot[idx].additional_timeout;
+	next_req_id = in_q->slot[idx].req_id;
 	CAM_DBG(CAM_CRM,
-		"rd_idx: %d idx: %d next_frame_timeout: %d ms",
-		in_q->rd_idx, idx, next_frame_timeout);
+		"rd_idx: %d idx: %d next_req_id: %lld next_frame_timeout: %d ms",
+		in_q->rd_idx, idx, next_req_id, next_frame_timeout);
 
 	idx = in_q->rd_idx;
 	__cam_req_mgr_dec_idx(
 		&idx, link->max_delay,
 		in_q->num_slots);
 	current_frame_timeout = in_q->slot[idx].additional_timeout;
+	current_req_id = in_q->slot[idx].req_id;
 	CAM_DBG(CAM_CRM,
-		"rd_idx: %d idx: %d current_frame_timeout: %d ms",
-		in_q->rd_idx, idx, current_frame_timeout);
+		"rd_idx: %d idx: %d curr_req_id: %lld current_frame_timeout: %d ms",
+		in_q->rd_idx, idx, current_req_id, current_frame_timeout);
+
+	if ((current_req_id == -1) && (next_req_id == -1)) {
+		CAM_DBG(CAM_CRM,
+			"Skip modifying wd timer, continue with same timeout");
+		return;
+	}
 	spin_lock_bh(&link->link_state_spin_lock);
 	if (link->watchdog) {
 		if ((next_frame_timeout + CAM_REQ_MGR_WATCHDOG_TIMEOUT) >
@@ -4095,6 +4104,9 @@ int cam_req_mgr_link_control(struct cam_req_mgr_link_control *control)
 			if (control->init_timeout[i])
 				link->skip_init_frame = true;
 			init_timeout = (2 * control->init_timeout[i]);
+			CAM_DBG(CAM_CRM,
+				"Activate link: 0x%x init_timeout: %d ms",
+				link->link_hdl, control->init_timeout[i]);
 			/* Start SOF watchdog timer */
 			rc = crm_timer_init(&link->watchdog,
 				(init_timeout + CAM_REQ_MGR_WATCHDOG_TIMEOUT),
@@ -4132,6 +4144,8 @@ int cam_req_mgr_link_control(struct cam_req_mgr_link_control *control)
 			link->skip_init_frame = false;
 			crm_timer_exit(&link->watchdog);
 			spin_unlock_bh(&link->link_state_spin_lock);
+			CAM_DBG(CAM_CRM,
+				"De-activate link: 0x%x", link->link_hdl);
 		} else {
 			CAM_ERR(CAM_CRM, "Invalid link control command");
 			rc = -EINVAL;
