@@ -54,6 +54,7 @@ static int dpp_hostapd_beacon(struct sigma_dut *dut)
 	if (!dut->ap_start_disabled)
 		return 0;
 
+	sigma_dut_print(dut, DUT_MSG_INFO, "Start beaconing");
 	if (!ifname ||
 	    wpa_command(ifname, "SET start_disabled 0") < 0 ||
 	    wpa_command(ifname, "DISABLE") < 0 ||
@@ -448,6 +449,8 @@ static int dpp_hostapd_conf_update(struct sigma_dut *dut,
 		}
 	}
 
+	if (dut->ap_start_disabled)
+		sigma_dut_print(dut, DUT_MSG_INFO, "Clear ap_start_disabled");
 	if (wpa_command(ifname, "SET start_disabled 0") < 0 &&
 	    dut->ap_start_disabled) {
 		send_resp(dut, conn, SIGMA_ERROR,
@@ -461,6 +464,14 @@ static int dpp_hostapd_conf_update(struct sigma_dut *dut,
 	dut->default_timeout = 1;
 	get_wpa_cli_event(dut, ctrl, "DPP-TX-STATUS", buf, sizeof(buf));
 	dut->default_timeout = old_timeout;
+
+	if (dut->ap_oper_chn) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Set AP operating channel %d",
+				dut->ap_channel);
+		snprintf(buf, sizeof(buf), "SET channel %d", dut->ap_channel);
+		wpa_command(ifname, buf);
+	}
 	if (wpa_command(ifname, "DISABLE") < 0 ||
 	    wpa_command(ifname, "ENABLE") < 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
@@ -1918,12 +1929,6 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 		    dut->ap_oper_chn)
 			freq = channel_to_freq(dut, dut->ap_channel);
 
-		if (sigma_dut_is_ap(dut) && dpp_hostapd_beacon(dut) < 0) {
-			send_resp(dut, conn, SIGMA_ERROR,
-				  "errorCode,Failed to start AP mode listen");
-			goto out;
-		}
-
 		if (strcasecmp(bs, "PKEX") == 0) {
 			/* default: channel 6 for PKEX */
 			freq = 2437;
@@ -1942,6 +1947,22 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 					  "errorCode,Unsupported DPPListenChannel value");
 				goto out;
 			}
+
+			if (sigma_dut_is_ap(dut) && !chirp &&
+			    dut->ap_start_disabled &&
+			    atoi(val) != dut->ap_channel) {
+				sigma_dut_print(dut, DUT_MSG_INFO,
+						"Use requested listen channel as the initial operating channel");
+				snprintf(buf, sizeof(buf), "SET channel %d",
+					 atoi(val));
+				wpa_command(ifname, buf);
+			}
+		}
+
+		if (sigma_dut_is_ap(dut) && dpp_hostapd_beacon(dut) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to start AP mode listen");
+			goto out;
 		}
 
 		if (strcasecmp(bs, "NFC") == 0 && nfc_handover &&
