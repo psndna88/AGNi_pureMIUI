@@ -15,14 +15,6 @@
 #include "cam_tasklet_util.h"
 #include "cam_cdm_intf_api.h"
 
-/* enum cam_ife_res_master_slave - HW resource master/slave */
-enum cam_ife_res_master_slave {
-	CAM_IFE_RES_NONE,
-	CAM_IFE_RES_MASTER,
-	CAM_IFE_RES_SLAVE,
-	CAM_IFE_RES_MAX,
-};
-
 /* IFE resource constants */
 #define CAM_IFE_HW_IN_RES_MAX            (CAM_ISP_IFE_IN_RES_MAX & 0xFF)
 #define CAM_IFE_HW_OUT_RES_MAX           (CAM_ISP_IFE_OUT_RES_MAX & 0xFF)
@@ -132,7 +124,7 @@ struct cam_ife_hw_mgr_ctx {
 	uint32_t                        irq_status1_mask[CAM_IFE_HW_NUM_MAX];
 	struct cam_isp_ctx_base_info    base[CAM_IFE_HW_NUM_MAX];
 	uint32_t                        num_base;
-	uint32_t                        cdm_handle[CAM_IFE_HW_NUM_MAX];
+	uint32_t                        cdm_handle;
 	struct cam_cdm_utils_ops       *cdm_ops;
 	struct cam_cdm_bl_request      *cdm_cmd;
 
@@ -142,9 +134,7 @@ struct cam_ife_hw_mgr_ctx {
 	atomic_t                        overflow_pending;
 	atomic_t                        cdm_done;
 	uint32_t                        is_rdi_only_context;
-	struct completion               config_done_complete[
-						CAM_IFE_HW_NUM_MAX];
-	enum cam_ife_res_master_slave   master_slave[CAM_IFE_HW_NUM_MAX];
+	struct completion               config_done_complete;
 	uint32_t                        hw_version;
 	struct cam_cmd_buf_desc         reg_dump_buf_desc[
 						CAM_REG_DUMP_MAX_BUF_ENTRIES];
