@@ -922,6 +922,7 @@ struct sigma_dut {
 	char *dpp_peer_uri;
 	int dpp_local_bootstrap;
 	int dpp_conf_id;
+	int dpp_network_id;
 
 	u8 fils_hlp;
 	pthread_t hlp_thread;
