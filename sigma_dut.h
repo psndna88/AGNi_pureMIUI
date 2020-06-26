@@ -956,6 +956,7 @@ struct sigma_dut {
 	} sae_pwe;
 	int owe_ptk_workaround;
 	int ocvc;
+	int client_privacy;
 };
 
 

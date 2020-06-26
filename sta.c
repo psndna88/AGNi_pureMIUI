@@ -8056,6 +8056,7 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 	wpa_command(intf, "SET setband AUTO");
 
 	dut->ocvc = 0;
+	dut->client_privacy = 0;
 
 	if (dut->program != PROGRAM_VHT)
 		return cmd_sta_p2p_reset(dut, conn, cmd);
@@ -9078,8 +9079,9 @@ static int sta_set_wireless_oce(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int sta_set_wireless_wpa3(struct sigma_dut *dut, struct sigma_conn *conn,
-				 struct sigma_cmd *cmd)
+static enum sigma_cmd_result
+sta_set_wireless_wpa3(struct sigma_dut *dut, struct sigma_conn *conn,
+		      struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *val;
@@ -9087,6 +9089,21 @@ static int sta_set_wireless_wpa3(struct sigma_dut *dut, struct sigma_conn *conn,
 	val = get_param(cmd, "ocvc");
 	if (val)
 		dut->ocvc = atoi(val);
+
+	val = get_param(cmd, "ClientPrivacy");
+	if (val) {
+		dut->client_privacy = atoi(val);
+		if (dut->client_privacy &&
+		    (wpa_command(intf, "SET mac_addr 1") < 0 ||
+		     wpa_command(intf, "SET rand_addr_lifetime 1") < 0 ||
+		     wpa_command(intf, "SET preassoc_mac_addr 1") < 0 ||
+		     wpa_command(intf, "SET gas_rand_mac_addr 1") < 0 ||
+		     wpa_command(intf, "SET gas_rand_addr_lifetime 1") < 0)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to enable random MAC address use");
+			return STATUS_SENT_ERROR;
+		}
+	}
 
 	return cmd_sta_set_wireless_common(intf, dut, conn, cmd);
 }
