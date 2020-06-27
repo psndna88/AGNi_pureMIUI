@@ -91,7 +91,6 @@ config CPU_FREQ_DEFAULT_GOV_USERSPACE
 config CPU_FREQ_DEFAULT_GOV_ONDEMAND
 	bool "ondemand"
 	select CPU_FREQ_GOV_ONDEMAND
-	select CPU_FREQ_GOV_PERFORMANCE
 	help
 	  Use the CPUFreq governor 'ondemand' as default. This allows
 	  you to get a full dynamic frequency capable system by simply
@@ -103,7 +102,6 @@ config CPU_FREQ_DEFAULT_GOV_ONDEMAND
 config CPU_FREQ_DEFAULT_GOV_CONSERVATIVE
 	bool "conservative"
 	select CPU_FREQ_GOV_CONSERVATIVE
-	select CPU_FREQ_GOV_PERFORMANCE
 	help
 	  Use the CPUFreq governor 'conservative' as default. This allows
 	  you to get a full dynamic frequency capable system by simply
@@ -125,7 +123,6 @@ config CPU_FREQ_DEFAULT_GOV_SCHEDUTIL
 	bool "schedutil"
 	depends on SMP
 	select CPU_FREQ_GOV_SCHEDUTIL
-	select CPU_FREQ_GOV_PERFORMANCE
 	help
 	  Use the 'schedutil' CPUFreq governor by default. If unsure,
 	  have a look at the help section of that governor. The fallback
@@ -142,7 +139,6 @@ config CPU_FREQ_DEFAULT_GOV_DARKUTIL
 config CPU_FREQ_DEFAULT_GOV_BLU_SCHEDUTIL
 	bool "blu_schedutil"
 	select CPU_FREQ_GOV_BLU_SCHEDUTIL
-	select CPU_FREQ_GOV_PERFORMANCE
 	help
 	  Use the 'blu_schedutil' CPUFreq governor by default. If unsure,
 	  have a look at the help section of that governor. The fallback
@@ -154,7 +150,6 @@ config CPU_FREQ_DEFAULT_GOV_ALUCARDSCHED
 	bool "alucardsched"
 	depends on SMP
 	select CPU_FREQ_GOV_ALUCARDSCHED
-	select CPU_FREQ_GOV_PERFORMANCE
 	help
 	  Use the 'alucardsched' CPUFreq governor by default. If unsure,
 	  have a look at the help section of that governor. The fallback
@@ -164,7 +159,6 @@ config CPU_FREQ_DEFAULT_GOV_DARKNESSSCHED
 	bool "darknesssched"
 	depends on SMP
 	select CPU_FREQ_GOV_DARKNESSSCHED
-	select CPU_FREQ_GOV_PERFORMANCE
 	help
 	  Use the 'darknesssched' CPUFreq governor by default. If unsure,
 	  have a look at the help section of that governor. The fallback
@@ -174,7 +168,6 @@ config CPU_FREQ_DEFAULT_GOV_HELIX
 	bool "helix_schedutil"
 	depends on SMP
 	select CPU_FREQ_GOV_HELIX
-	select CPU_FREQ_GOV_PERFORMANCE
 	help
 	  Use the 'helix-schedutil' CPUFreq governor by default. If unsure,
 	  have a look at the help section of that governor. The fallback
@@ -184,7 +177,6 @@ config CPU_FREQ_DEFAULT_GOV_ENERGY
 	bool "energy-dcfc"
 	depends on SMP
 	select CPU_FREQ_GOV_ENERGY
-	select CPU_FREQ_GOV_PERFORMANCE
 	help
 	  Use the 'energy-dcfc' CPUFreq governor by default. If unsure,
 	  have a look at the help section of that governor. The fallback
@@ -204,7 +196,6 @@ config CPU_FREQ_DEFAULT_GOV_PWRUTILX
 	bool "pwrutilx"
 	depends on SMP
 	select CPU_FREQ_GOV_PWRUTILX
-	select CPU_FREQ_GOV_PERFORMANCE
 	help
 	  Use the 'pwrutilx' CPUFreq governor by default. If unsure,
 	  have a look at the help section of that governor. The fallback
