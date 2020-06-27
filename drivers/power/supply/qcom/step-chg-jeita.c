@@ -116,7 +116,7 @@ static struct step_chg_cfg step_chg_config = {
  * range data must be in increasing ranges and shouldn't overlap.
  * Gaps are okay
  */
-#if defined(CONFIG_KERNEL_CUSTOM_D2S)
+#if defined(CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A)
 static struct jeita_fcc_cfg jeita_fcc_config = {
 	.psy_prop	= POWER_SUPPLY_PROP_TEMP,
 	.prop_name	= "BATT_TEMP",
@@ -125,13 +125,13 @@ static struct jeita_fcc_cfg jeita_fcc_config = {
 		/* TEMP_LOW	TEMP_HIGH	FCC */
 		{0,			50,			 400000},
 		{51,		150,		1200000},
-		{151,		430,		2400000},
-		{431,		450,		2000000},
+		{151,		430,		2000000},
+		{431,		450,		1700000},
 		{451,		470,		1500000},
 		{471,		600,		 800000},
 	},
 };
-#elif defined(CONFIG_KERNEL_CUSTOM_F7A)
+#elif defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
 static struct jeita_fcc_cfg jeita_fcc_config = {
 	.psy_prop	= POWER_SUPPLY_PROP_TEMP,
 	.prop_name	= "BATT_TEMP",
@@ -140,39 +140,8 @@ static struct jeita_fcc_cfg jeita_fcc_config = {
 		/* TEMP_LOW	TEMP_HIGH	FCC */
 		{0,			50,			 400000},
 		{51,		150,		1200000},
-		{151,		430,		2400000},
-		{431,		450,		2000000},
-		{451,		470,		1500000},
-		{471,		600,		 800000},
-	},
-};
-#elif defined(CONFIG_KERNEL_CUSTOM_E7S)
-static struct jeita_fcc_cfg jeita_fcc_config = {
-	.psy_prop	= POWER_SUPPLY_PROP_TEMP,
-	.prop_name	= "BATT_TEMP",
-	.hysteresis	= 0, /* 1degC hysteresis */
-	.fcc_cfg	= {
-		/* TEMP_LOW	TEMP_HIGH	FCC */
-		{0,			50,			 400000},
-		{51,		150,		1200000},
-		{151,		400,		2400000},
-		{401,		430,		2000000},
-		{431,		450,		1500000},
-		{451,		470,		1000000},
-		{471,		600,		 600000},
-	},
-};
-#elif defined(CONFIG_KERNEL_CUSTOM_E7T)
-static struct jeita_fcc_cfg jeita_fcc_config = {
-	.psy_prop	= POWER_SUPPLY_PROP_TEMP,
-	.prop_name	= "BATT_TEMP",
-	.hysteresis	= 0, /* 1degC hysteresis */
-	.fcc_cfg	= {
-		/* TEMP_LOW	TEMP_HIGH	FCC */
-		{0,			50,			 400000},
-		{51,		150,		1200000},
-		{151,		400,		2400000},
-		{401,		430,		2000000},
+		{151,		400,		2000000},
+		{401,		430,		1700000},
 		{431,		450,		1500000},
 		{451,		470,		1000000},
 		{471,		600,		 600000},
