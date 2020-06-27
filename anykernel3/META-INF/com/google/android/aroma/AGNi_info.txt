@@ -1,4 +1,4 @@
-<@center><b><#selectbg_g>AGNi Kernel</#></b>
+<@center><b><#selectbg_g>AGNi Kernel 🔥</#></b>
 
 <b><#selectbg_g>Message from developer</#></b></@>
 
@@ -11,7 +11,10 @@ Optimised for gaming with high performance & less temperatures.
 Always updated with latest kernel commits.
 
 Strive for the best performing all in one kernel.
-	
+
+<b>DO NOT INSTALL MAGICAL MAGISK MODULES LIKE FDE.AI, MAGNETAR etc. & those claiming to "BOOST RAM MANAGEMENT".
+Take this as a warning before I start blocking their running in harsh way.</b>
+
 												Thankyou. </q></@>
 
 
