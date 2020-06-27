@@ -26,10 +26,10 @@
 
 # Initializing Rom Information
 ini_set("rom_name",		"AGNi Kernel");
-ini_set("rom_version",	"v8.8_stable");
+ini_set("rom_version",	"v8.9_stable");
 ini_set("rom_author",	"psndna88@xda");
 ini_set("rom_device",	"SDM636/660 whyred/wayne/tulip/lavender/jasmine");
-ini_set("rom_date",		"June, 20, 2020");
+ini_set("rom_date",		"June, 27, 2020");
 
 # Show Simple Splash
 splash(
@@ -103,9 +103,9 @@ setvar("retstatus",
       "Installing",
 	
 	#-- Installation Process message
-	  "<b>"+ini_get("rom_name")+"</b> are being installed.\n\n"+
+	  "<b>"+ini_get("rom_name")+"</b> is being installed.\n\n"+
       "Please wait while installation wizard installs <b>"+ini_get("rom_name")+
-	  "</b>. This may take just a minute.",
+	  "</b>. This may take just a minute...",
 	
 	#-- Installation Icon
       "@install",
