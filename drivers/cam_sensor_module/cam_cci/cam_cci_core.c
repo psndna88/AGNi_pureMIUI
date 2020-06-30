@@ -1642,6 +1642,7 @@ static int32_t cam_cci_read_bytes_v_1_2(struct v4l2_subdev *sd,
 		goto ERROR;
 	}
 
+	reinit_completion(&cci_dev->cci_master_info[master].rd_done);
 	read_bytes = read_cfg->num_byte;
 	CAM_DBG(CAM_CCI, "Bytes to read %u", read_bytes);
 	do {
