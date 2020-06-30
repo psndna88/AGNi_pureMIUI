@@ -202,7 +202,7 @@ static void f2fs_write_end_io(struct bio *bio)
 		end_page_writeback(page);
 	}
 	if (!get_pages(sbi, F2FS_WB_CP_DATA) &&
-				wq_has_sleeper(&sbi->cp_wait))
+				skwq_has_sleeper(&sbi->cp_wait))
 		wake_up(&sbi->cp_wait);
 
 	bio_put(bio);
