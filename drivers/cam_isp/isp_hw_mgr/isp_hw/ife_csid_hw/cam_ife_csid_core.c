@@ -4118,6 +4118,55 @@ static int cam_ife_csid_dump_hw(
 	return 0;
 }
 
+static int cam_ife_csid_log_acquire_data(
+	struct cam_ife_csid_hw   *csid_hw,  void *cmd_args)
+{
+	struct cam_isp_resource_node  *res =
+		(struct cam_isp_resource_node *)cmd_args;
+	struct cam_ife_csid_path_cfg       *path_data;
+	struct cam_hw_soc_info                         *soc_info;
+	const struct cam_ife_csid_reg_offset           *csid_reg;
+	const struct cam_ife_csid_rdi_reg_offset       *rdi_reg;
+	uint32_t byte_cnt_ping, byte_cnt_pong;
+
+	path_data = (struct cam_ife_csid_path_cfg *)res->res_priv;
+	csid_reg = csid_hw->csid_info->csid_reg;
+	soc_info = &csid_hw->hw_info->soc_info;
+
+	if (res->res_state <= CAM_ISP_RESOURCE_STATE_AVAILABLE) {
+		CAM_ERR(CAM_ISP,
+			"CSID:%d invalid res id:%d res type: %d state:%d",
+			csid_hw->hw_intf->hw_idx, res->res_id, res->res_type,
+			res->res_state);
+		return -EINVAL;
+	}
+
+	/* Dump all the acquire data for this hardware */
+	CAM_INFO(CAM_ISP,
+		"CSID:%d res id:%d type:%d state:%d in f:%d out f:%d st pix:%d end pix:%d st line:%d end line:%d h bin:%d qcfa bin:%d",
+		csid_hw->hw_intf->hw_idx, res->res_id, res->res_type,
+		res->res_type, path_data->in_format, path_data->out_format,
+		path_data->start_pixel, path_data->end_pixel,
+		path_data->start_line, path_data->end_line,
+		path_data->horizontal_bin, path_data->qcfa_bin);
+
+	if (res->res_id >= CAM_IFE_PIX_PATH_RES_RDI_0  &&
+		res->res_id <= CAM_IFE_PIX_PATH_RES_RDI_3) {
+		rdi_reg = csid_reg->rdi_reg[res->res_id];
+		/* read total number of bytes transmitted through RDI */
+		byte_cnt_ping = cam_io_r_mb(soc_info->reg_map[0].mem_base +
+			rdi_reg->csid_rdi_byte_cntr_ping_addr);
+		byte_cnt_pong = cam_io_r_mb(soc_info->reg_map[0].mem_base +
+			rdi_reg->csid_rdi_byte_cntr_pong_addr);
+		CAM_INFO(CAM_ISP,
+			"CSID:%d res id:%d byte cnt val ping:%d pong:%d",
+			csid_hw->hw_intf->hw_idx, res->res_id,
+			byte_cnt_ping, byte_cnt_pong);
+	}
+
+	return 0;
+}
+
 static int cam_ife_csid_process_cmd(void *hw_priv,
 	uint32_t cmd_type, void *cmd_args, uint32_t arg_size)
 {
@@ -4163,6 +4212,9 @@ static int cam_ife_csid_process_cmd(void *hw_priv,
 		break;
 	case CAM_IFE_CSID_SET_SENSOR_DIMENSION_CFG:
 		rc = cam_ife_csid_set_sensor_dimension(csid_hw, cmd_args);
+		break;
+	case CAM_IFE_CSID_LOG_ACQUIRE_DATA:
+		rc = cam_ife_csid_log_acquire_data(csid_hw, cmd_args);
 		break;
 	default:
 		CAM_ERR(CAM_ISP, "CSID:%d unsupported cmd:%d",

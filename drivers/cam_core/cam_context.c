@@ -287,8 +287,8 @@ int cam_context_handle_crm_dump_req(struct cam_context *ctx,
 	return rc;
 }
 
-int cam_context_dump_pf_info(struct cam_context *ctx, unsigned long iova,
-	uint32_t buf_info)
+int cam_context_dump_pf_info(struct cam_context *ctx,
+	struct cam_smmu_pf_info *pf_info)
 {
 	int rc = 0;
 
@@ -301,7 +301,7 @@ int cam_context_dump_pf_info(struct cam_context *ctx, unsigned long iova,
 		(ctx->state < CAM_CTX_STATE_MAX)) {
 		if (ctx->state_machine[ctx->state].pagefault_ops) {
 			rc = ctx->state_machine[ctx->state].pagefault_ops(
-				ctx, iova, buf_info);
+				ctx, pf_info);
 		} else {
 			CAM_WARN(CAM_CORE, "No dump ctx in dev %d, state %d",
 				ctx->dev_hdl, ctx->state);

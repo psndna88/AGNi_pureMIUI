@@ -15,6 +15,8 @@
 
 /* Maximum length of tag while dumping */
 #define CAM_ISP_HW_DUMP_TAG_MAX_LEN 32
+/* Max isp hw pid values number */
+#define CAM_ISP_HW_MAX_PID_VAL      4
 /*
  * struct cam_isp_timestamp:
  *
@@ -121,6 +123,7 @@ enum cam_isp_hw_cmd_type {
 	CAM_ISP_HW_CMD_FE_TRIGGER_CMD,
 	CAM_ISP_HW_CMD_UNMASK_BUS_WR_IRQ,
 	CAM_ISP_HW_CMD_IS_CONSUMED_ADDR_SUPPORT,
+	CAM_ISP_HW_CMD_GET_RES_FOR_MID,
 	CAM_ISP_HW_CMD_MAX,
 };
 
@@ -234,6 +237,20 @@ struct cam_isp_hw_get_wm_update {
 };
 
 /*
+ * struct cam_isp_hw_get_res_for_mid:
+ *
+ * @Brief:           Get the out resource id for given mid
+ *
+ * @mid:             Mid number of hw outport numb
+ * @out_res_id:      Out resource id
+ *
+ */
+struct cam_isp_hw_get_res_for_mid {
+	uint32_t                       mid;
+	uint32_t                       out_res_id;
+};
+
+/*
  * struct cam_isp_hw_get_cmd_update:
  *
  * @Brief:         Get cmd buffer update for different CMD types
@@ -308,4 +325,19 @@ struct cam_isp_hw_dump_header {
 	uint32_t  word_size;
 };
 
+/**
+ * struct cam_isp_hw_intf_data - ISP hw intf data
+ *
+ * @Brief:        isp hw intf pointer and pid list data
+ *
+ * @isp_hw_intf:      Isp hw intf pointer
+ * @num_hw_pid:       Number of pids for this hw
+ * @isp_hw_pid:       Isp hw pid values
+ *
+ */
+struct cam_isp_hw_intf_data {
+	struct cam_hw_intf     *hw_intf;
+	uint32_t                num_hw_pid;
+	uint32_t                hw_pid[CAM_ISP_HW_MAX_PID_VAL];
+};
 #endif /* _CAM_ISP_HW_H_ */

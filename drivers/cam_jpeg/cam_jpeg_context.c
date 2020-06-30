@@ -16,17 +16,18 @@
 
 static const char jpeg_dev_name[] = "cam-jpeg";
 
-static int cam_jpeg_context_dump_active_request(void *data, unsigned long iova,
-	uint32_t buf_info)
+static int cam_jpeg_context_dump_active_request(void *data,
+	struct cam_smmu_pf_info *pf_info)
 {
 
 	struct cam_context *ctx = (struct cam_context *)data;
 	struct cam_ctx_request          *req = NULL;
 	struct cam_ctx_request          *req_temp = NULL;
 	struct cam_hw_mgr_dump_pf_data  *pf_dbg_entry = NULL;
+	uint32_t  resource_type = 0;
 	int rc = 0;
 	int closest_port;
-	bool b_mem_found = false;
+	bool b_mem_found = false, b_ctx_found = false;
 
 
 	if (!ctx) {
@@ -44,7 +45,7 @@ static int cam_jpeg_context_dump_active_request(void *data, unsigned long iova,
 		CAM_INFO(CAM_JPEG, "req_id : %lld ", req->request_id);
 
 		rc = cam_context_dump_pf_info_to_hw(ctx, pf_dbg_entry->packet,
-			iova, buf_info, &b_mem_found);
+			&b_mem_found, &b_ctx_found, &resource_type, pf_info);
 		if (rc)
 			CAM_ERR(CAM_JPEG, "Failed to dump pf info");
 

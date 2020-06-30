@@ -11,6 +11,7 @@
 #include <linux/kref.h>
 #include "cam_req_mgr_interface.h"
 #include "cam_hw_mgr_intf.h"
+#include "cam_smmu_api.h"
 
 /* Forward declarations */
 struct cam_context;
@@ -360,12 +361,11 @@ int cam_context_handle_crm_dump_req(struct cam_context *ctx,
  * @brief:        Handle dump active request request command
  *
  * @ctx:          Object pointer for cam_context
- * @iova:         Page fault address
- * @buf_info:     Information about closest memory handle
+ * @pf_info:      Smmu page fault info
  *
  */
-int cam_context_dump_pf_info(struct cam_context *ctx, unsigned long iova,
-	uint32_t buf_info);
+int cam_context_dump_pf_info(struct cam_context *ctx,
+	struct cam_smmu_pf_info *pf_info);
 
 /**
  * cam_context_handle_acquire_dev()

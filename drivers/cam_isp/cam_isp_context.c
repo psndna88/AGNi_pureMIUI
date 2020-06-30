@@ -28,8 +28,8 @@ static struct cam_isp_ctx_debug isp_ctx_debug;
 	div_u64_rem(atomic64_add_return(1, head),\
 	max_entries, (ret))
 
-static int cam_isp_context_dump_requests(void *data, unsigned long iova,
-	uint32_t buf_info);
+static int cam_isp_context_dump_requests(void *data,
+	struct cam_smmu_pf_info *pf_info);
 
 static int __cam_isp_ctx_start_dev_in_ready(struct cam_context *ctx,
 	struct cam_start_stop_dev_cmd *cmd);
@@ -5390,9 +5390,8 @@ static struct cam_ctx_ops
 	},
 };
 
-
-static int cam_isp_context_dump_requests(void *data, unsigned long iova,
-	uint32_t buf_info)
+static int cam_isp_context_dump_requests(void *data,
+	struct cam_smmu_pf_info *pf_info)
 {
 
 	struct cam_context *ctx = (struct cam_context *)data;
@@ -5401,7 +5400,10 @@ static int cam_isp_context_dump_requests(void *data, unsigned long iova,
 	struct cam_isp_ctx_req *req_isp  = NULL;
 	struct cam_isp_prepare_hw_update_data *hw_update_data = NULL;
 	struct cam_hw_mgr_dump_pf_data *pf_dbg_entry = NULL;
-	bool mem_found = false;
+	struct cam_req_mgr_message       req_msg;
+	struct cam_isp_context          *ctx_isp;
+	uint32_t  resource_type = 0;
+	bool mem_found = false, ctx_found = false, send_error = false;
 	int rc = 0;
 
 	struct cam_isp_context *isp_ctx =
@@ -5424,13 +5426,12 @@ static int cam_isp_context_dump_requests(void *data, unsigned long iova,
 			req->request_id);
 
 		rc = cam_context_dump_pf_info_to_hw(ctx, pf_dbg_entry->packet,
-			iova, buf_info, &mem_found);
+			&mem_found, &ctx_found, &resource_type, pf_info);
 		if (rc)
 			CAM_ERR(CAM_ISP, "Failed to dump pf info");
 
-		if (mem_found)
-			CAM_ERR(CAM_ISP, "Found page fault in req %lld %d",
-				req->request_id, rc);
+		if (ctx_found)
+			send_error = true;
 	}
 
 	CAM_INFO(CAM_ISP, "Iterating over wait_list of isp ctx %d state %d",
@@ -5444,13 +5445,12 @@ static int cam_isp_context_dump_requests(void *data, unsigned long iova,
 		CAM_INFO(CAM_ISP, "Wait List: req_id : %lld ", req->request_id);
 
 		rc = cam_context_dump_pf_info_to_hw(ctx, pf_dbg_entry->packet,
-			iova, buf_info, &mem_found);
+			&mem_found, &ctx_found, &resource_type, pf_info);
 		if (rc)
 			CAM_ERR(CAM_ISP, "Failed to dump pf info");
 
-		if (mem_found)
-			CAM_ERR(CAM_ISP, "Found page fault in req %lld %d",
-				req->request_id, rc);
+		if (ctx_found)
+			send_error = true;
 	}
 
 	/*
@@ -5475,15 +5475,57 @@ static int cam_isp_context_dump_requests(void *data, unsigned long iova,
 			req->request_id);
 
 		rc = cam_context_dump_pf_info_to_hw(ctx, pf_dbg_entry->packet,
-			iova, buf_info, &mem_found);
+			&mem_found, &ctx_found, &resource_type, pf_info);
 		if (rc)
 			CAM_ERR(CAM_ISP, "Failed to dump pf info");
 
-		if (mem_found)
-			CAM_ERR(CAM_ISP, "Found page fault in req %lld %d",
-				req->request_id, rc);
+		if (ctx_found)
+			send_error = true;
 	}
 
+	if (resource_type) {
+		ctx_isp = (struct cam_isp_context *) ctx->ctx_priv;
+		if (ctx_isp->isp_device_type == CAM_IFE_DEVICE_TYPE)
+			CAM_ERR(CAM_ISP,
+				"Page fault on resource id:%s (0x%x) ctx id:%d frame id:%d reported id:%lld applied id:%lld",
+				__cam_isp_resource_handle_id_to_type(
+				resource_type),
+				resource_type, ctx->ctx_id, ctx_isp->frame_id,
+				ctx_isp->reported_req_id,
+				ctx_isp->last_applied_req_id);
+		else
+			CAM_ERR(CAM_ISP,
+				"Page fault on resource id:%s (0x%x) ctx id:%d frame id:%d reported id:%lld applied id:%lld",
+				__cam_isp_tfe_resource_handle_id_to_type(
+				resource_type),
+				resource_type, ctx->ctx_id, ctx_isp->frame_id,
+				ctx_isp->reported_req_id,
+				ctx_isp->last_applied_req_id);
+
+	}
+
+	if (send_error) {
+		CAM_INFO(CAM_ISP,
+			"page fault notifying to umd ctx %u session_hdl:%d device_hdl:%d link_hdl:%d",
+			ctx->ctx_id, ctx->session_hdl,
+			ctx->dev_hdl, ctx->link_hdl);
+
+		req_msg.session_hdl = ctx->session_hdl;
+		req_msg.u.err_msg.device_hdl = ctx->dev_hdl;
+		req_msg.u.err_msg.error_type =
+			CAM_REQ_MGR_ERROR_TYPE_PAGE_FAULT;
+		req_msg.u.err_msg.link_hdl = ctx->link_hdl;
+		req_msg.u.err_msg.request_id = 0;
+		req_msg.u.err_msg.resource_size = 0x0;
+
+		if (cam_req_mgr_notify_message(&req_msg,
+				V4L_EVENT_CAM_REQ_MGR_ERROR,
+				V4L_EVENT_CAM_REQ_MGR_EVENT))
+			CAM_ERR(CAM_ISP,
+				"could not send page fault notification ctx %u session_hdl:%d device_hdl:%d link_hdl:%d",
+				ctx->ctx_id, ctx->session_hdl,
+				ctx->dev_hdl, ctx->link_hdl);
+	}
 	return rc;
 }
 
