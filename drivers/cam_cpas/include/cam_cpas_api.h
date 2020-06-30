@@ -575,15 +575,17 @@ int cam_cpas_reg_read(
  * @camera_version : Camera platform version
  * @cpas_version   : Camera cpas version
  * @cam_caps       : Camera capability
+ * @cam_fuse_info  : Camera fuse info
  *
  * @return 0 on success.
  *
  */
 int cam_cpas_get_hw_info(
-	uint32_t                 *camera_family,
-	struct cam_hw_version    *camera_version,
-	struct cam_hw_version    *cpas_version,
-	uint32_t                 *cam_caps);
+	uint32_t                  *camera_family,
+	struct cam_hw_version     *camera_version,
+	struct cam_hw_version     *cpas_version,
+	uint32_t                  *cam_caps,
+	struct cam_cpas_fuse_info *cam_fuse_info);
 
 /**
  * cam_cpas_get_cpas_hw_version()

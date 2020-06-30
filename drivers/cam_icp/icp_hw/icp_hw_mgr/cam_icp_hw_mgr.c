@@ -6093,7 +6093,8 @@ int cam_icp_hw_mgr_init(struct device_node *of_node, uint64_t *hw_mgr_hdl,
 		mutex_init(&icp_hw_mgr.ctx_data[i].ctx_mutex);
 
 	rc = cam_cpas_get_hw_info(&query.camera_family,
-			&query.camera_version, &query.cpas_version, &cam_caps);
+			&query.camera_version, &query.cpas_version,
+			&cam_caps, NULL);
 	if (rc) {
 		CAM_ERR(CAM_ICP, "failed to get hw info rc=%d", rc);
 		goto destroy_mutex;

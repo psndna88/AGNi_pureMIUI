@@ -61,7 +61,30 @@
 #define CAM_AXI_PATH_DATA_OPE_MAX_OFFSET \
 	(CAM_AXI_PATH_DATA_OPE_START_OFFSET + 31)
 
-#define CAM_AXI_PATH_DATA_ALL              256
+#define CAM_AXI_PATH_DATA_ALL  256
+#define CAM_CPAS_FUSES_MAX     32
+
+/**
+ * struct cam_cpas_fuse_value - CPAS fuse value
+ *
+ * @fuse_id     : Camera fuse identification
+ * @fuse_val    : Camera Fuse Value
+ */
+struct cam_cpas_fuse_value {
+	__u32 fuse_id;
+	__u32 fuse_val;
+};
+
+/**
+ * struct cam_cpas_fuse_info - CPAS fuse info
+ *
+ * @num_fuses     : Number of fuses
+ * @fuse_val      : Array of different fuse info.
+ */
+struct cam_cpas_fuse_info {
+	__u32  num_fuses;
+	struct cam_cpas_fuse_value fuse_val[CAM_CPAS_FUSES_MAX];
+};
 
 /**
  * struct cam_cpas_query_cap - CPAS query device capability payload
@@ -77,6 +100,24 @@ struct cam_cpas_query_cap {
 	__u32                 reserved;
 	struct cam_hw_version camera_version;
 	struct cam_hw_version cpas_version;
+};
+
+/**
+ * struct cam_cpas_query_cap - CPAS query device capability payload
+ *
+ * @camera_family     : Camera family type
+ * @reserved          : Reserved field for alignment
+ * @camera_version    : Camera platform version
+ * @cpas_version      : Camera CPAS version within camera platform
+ * @fuse_info         : Camera fuse info
+ *
+ */
+struct cam_cpas_query_cap_v2 {
+	__u32                     camera_family;
+	__u32                     reserved;
+	struct cam_hw_version     camera_version;
+	struct cam_hw_version     cpas_version;
+	struct cam_cpas_fuse_info fuse_info;
 };
 
 /**
