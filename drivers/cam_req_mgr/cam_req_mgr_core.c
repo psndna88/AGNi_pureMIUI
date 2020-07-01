@@ -2829,8 +2829,17 @@ static int cam_req_mgr_cb_add_req(struct cam_req_mgr_add_request *add_req)
 	/* Validate if req id is present in input queue */
 	idx = __cam_req_mgr_find_slot_for_req(link->req.in_q, add_req->req_id);
 	if (idx < 0) {
-		CAM_ERR(CAM_CRM, "req %lld not found in in_q", add_req->req_id);
-		rc = -ENOENT;
+		if (((uint32_t)add_req->req_id) <= (link->last_flush_id)) {
+			CAM_ERR(CAM_CRM,
+				"req %lld not found in in_q; it has been flushed [last_flush_req %u]",
+				add_req->req_id, link->last_flush_id);
+			rc = -EBADR;
+		} else {
+			CAM_ERR(CAM_CRM,
+				"req %lld not found in in_q",
+				add_req->req_id);
+			rc = -ENOENT;
+		}
 		goto end;
 	}
 

@@ -396,7 +396,7 @@ int32_t cam_context_prepare_dev_to_hw(struct cam_context *ctx,
 		CAM_ERR(CAM_CORE,
 			"request %lld has been flushed, reject packet",
 			packet->header.request_id);
-		rc = -EINVAL;
+		rc = -EBADR;
 		goto free_req;
 	}
 
