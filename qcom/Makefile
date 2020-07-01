@@ -150,6 +150,18 @@ dtb-$(CONFIG_ARCH_SA8155)       += sa8155-adp-star.dtb \
 	sa8155-v2-adp-air.dtb \
 	sa8155p-v2-adp-air.dtb
 endif
+
+ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
+	dtbo-$(CONFIG_ARCH_SA8195) += \
+		sa8195p-adp-star-overlay.dtbo \
+		sa8195p-v2-adp-air-overlay.dtbo
+
+sa8195p-adp-star-overlay.dtbo-base := sa8195p.dtb
+sa8195p-v2-adp-air-overlay.dtbo-base := sa8195p.dtb
+else
+dtb-$(CONFIG_ARCH_SA8195)	+= sa8195p-adp-star.dtb \
+	sa8195p-v2-adp-air.dtb
+endif
 endif
 
 ifeq ($(CONFIG_ARCH_LAHAINA), y)
