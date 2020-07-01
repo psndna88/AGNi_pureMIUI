@@ -675,6 +675,8 @@ static inline int thread_group_empty(struct task_struct *p)
 extern struct sighand_struct *__lock_task_sighand(struct task_struct *task,
 							unsigned long *flags);
 
+extern bool thread_group_exited(struct pid *pid);
+
 static inline struct sighand_struct *lock_task_sighand(struct task_struct *task,
 						       unsigned long *flags)
 {
