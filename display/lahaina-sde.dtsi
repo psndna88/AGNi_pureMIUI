@@ -192,7 +192,7 @@
 		qcom,sde-min-dram-ib-kbps = <800000>;
 		qcom,sde-dram-channels = <2>;
 		qcom,sde-num-nrt-paths = <0>;
-		qcom,sde-dspp-ltm-version = <0x00010000>;
+		qcom,sde-dspp-ltm-version = <0x00010001>;
 		/* offsets are based off dspp 0 and dspp 1 */
 		qcom,sde-dspp-ltm-off = <0x15300 0x14300>;
 
