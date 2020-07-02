@@ -3751,7 +3751,8 @@ static int bpf_btf_get_info_by_fd(struct file *file,
 	return btf_get_info_by_fd(btf, attr, uattr);
 }
 
-static int bpf_link_get_info_by_fd(struct bpf_link *link,
+static int bpf_link_get_info_by_fd(struct file *file,
+				  struct bpf_link *link,
 				  const union bpf_attr *attr,
 				  union bpf_attr __user *uattr)
 {
