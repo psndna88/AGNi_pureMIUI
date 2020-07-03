@@ -127,3 +127,4 @@
 
 #include "camera/sa8155-camera.dtsi"
 #include "camera/sa8155-camera-sensor.dtsi"
+#include "sa8155-audio.dtsi"
