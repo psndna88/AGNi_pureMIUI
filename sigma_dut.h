@@ -1209,6 +1209,12 @@ int send_and_recv_msgs(struct sigma_dut *dut, struct nl80211_ctx *ctx,
 		       struct nl_msg *nlmsg,
 		       int (*valid_handler)(struct nl_msg *, void *),
 		       void *valid_data);
+int wcn_wifi_test_config_set_flag(struct sigma_dut *dut, const char *intf,
+				  int attr_id);
+int wcn_wifi_test_config_set_u8(struct sigma_dut *dut, const char *intf,
+				int attr_id, uint8_t val);
+int wcn_wifi_test_config_set_u16(struct sigma_dut *dut, const char *intf,
+				 int attr_id, uint16_t val);
 #endif /* NL80211_SUPPORT */
 
 void traffic_register_cmds(void);

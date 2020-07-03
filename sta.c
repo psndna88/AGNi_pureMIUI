@@ -4264,48 +4264,15 @@ static int wcn_sta_set_wmm(struct sigma_dut *dut, const char *intf,
 			   const char *val)
 {
 #ifdef NL80211_SUPPORT
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
 	int wmmenable = 1;
 
 	if (val &&
 	    (strcasecmp(val, "off") == 0 || strcmp(val, "0") == 0))
 		wmmenable = 0;
 
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_WMM_ENABLE,
-		       wmmenable)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_WMM_ENABLE,
+		wmmenable);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"WMM cannot be changed without NL80211_SUPPORT defined");
@@ -4719,131 +4686,26 @@ static int mbo_set_non_pref_ch_list(struct sigma_dut *dut,
 static int sta_set_he_htc_supp(struct sigma_dut *dut, const char *intf,
 			       uint8_t cfg)
 {
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_HTC_HE_SUPP,
-		       cfg)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_HTC_HE_SUPP,
+		cfg);
 }
 
 
 static int sta_set_he_fragmentation(struct sigma_dut *dut, const char *intf,
 				    enum he_fragmentation_val frag)
 {
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_FRAGMENTATION,
-		       frag)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_FRAGMENTATION, frag);
 }
 
 
 int wcn_set_he_ltf(struct sigma_dut *dut, const char *intf,
 		   enum qca_wlan_he_ltf_cfg ltf)
 {
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_LTF,
-		       ltf)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_LTF, ltf);
 }
 
 
@@ -5659,44 +5521,10 @@ static int nlvendor_sta_set_addba_reject(struct sigma_dut *dut,
 					 const char *intf, int addbareject)
 {
 #ifdef NL80211_SUPPORT
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_ACCEPT_ADDBA_REQ,
-		       !addbareject)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_ACCEPT_ADDBA_REQ,
+		!addbareject);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"ADDBA_REJECT cannot be set without NL80211_SUPPORT defined");
@@ -5735,44 +5563,9 @@ static int nlvendor_config_send_addba(struct sigma_dut *dut, const char *intf,
 				      int enable)
 {
 #ifdef NL80211_SUPPORT
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_SEND_ADDBA_REQ,
-		       enable)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_SEND_ADDBA_REQ,
+		enable);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"Disable addba not possible without NL80211_SUPPORT defined");
@@ -7365,43 +7158,8 @@ static void sta_reset_default_ath(struct sigma_dut *dut, const char *intf,
 static int sta_set_he_mcs(struct sigma_dut *dut, const char *intf,
 			  enum he_mcs_config mcs)
 {
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_MCS,
-		       mcs)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_MCS, mcs);
 }
 #endif /* NL80211_SUPPORT */
 
@@ -7410,44 +7168,10 @@ static int sta_set_action_tx_in_he_tb_ppdu(struct sigma_dut *dut,
 					   const char *intf, int enable)
 {
 #ifdef NL80211_SUPPORT
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_ACTION_TX_TB_PPDU,
-		       enable)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_ACTION_TX_TB_PPDU,
+		enable);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"HE action Tx TB PPDU cannot be set without NL80211_SUPPORT defined");
@@ -7460,44 +7184,9 @@ static int sta_set_heconfig_and_wep_tkip(struct sigma_dut *dut,
 					 const char *intf, int enable)
 {
 #ifdef NL80211_SUPPORT
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_WEP_TKIP_IN_HE,
-		       enable)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_WEP_TKIP_IN_HE,
+		enable);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"HE config enablement cannot be changed without NL80211_SUPPORT defined");
@@ -7511,87 +7200,18 @@ static int sta_set_heconfig_and_wep_tkip(struct sigma_dut *dut,
 static int sta_set_he_testbed_def(struct sigma_dut *dut,
 				  const char *intf, int cfg)
 {
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_SET_HE_TESTBED_DEFAULTS,
-		       cfg)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_SET_HE_TESTBED_DEFAULTS,
+		cfg);
 }
 
 
 static int sta_set_2g_vht_supp(struct sigma_dut *dut, const char *intf, int cfg)
 {
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_ENABLE_2G_VHT,
-		       cfg)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_ENABLE_2G_VHT,
+		cfg);
 }
 
 #endif /* NL80211_SUPPORT */
@@ -7601,44 +7221,9 @@ int sta_set_addba_buf_size(struct sigma_dut *dut,
 			   const char *intf, int bufsize)
 {
 #ifdef NL80211_SUPPORT
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u16(msg,
-			QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_ADDBA_BUFF_SIZE,
-			bufsize)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u16(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_ADDBA_BUFF_SIZE, bufsize);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"AddBA bufsize cannot be changed without NL80211_SUPPORT defined");
@@ -7651,44 +7236,10 @@ static int sta_set_tx_beamformee(struct sigma_dut *dut, const char *intf,
 				 int enable)
 {
 #ifdef NL80211_SUPPORT
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_ENABLE_TX_BEAMFORMEE,
-		       enable)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_ENABLE_TX_BEAMFORMEE,
+		enable);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"tx beamformee cannot be changed without NL80211_SUPPORT defined");
@@ -7701,44 +7252,10 @@ static int sta_set_beamformee_sts(struct sigma_dut *dut, const char *intf,
 				  int val)
 {
 #ifdef NL80211_SUPPORT
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed, val:%d",
-				__func__, intf, val);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_TX_BEAMFORMEE_NSTS,
-		       val)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data, val: %d",
-				__func__, val);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d, val=%d",
-				__func__, ret, val);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_TX_BEAMFORMEE_NSTS,
+		val);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"beamformee sts cannot be changed without NL80211_SUPPORT defined");
@@ -7751,44 +7268,9 @@ static int sta_set_beamformee_sts(struct sigma_dut *dut, const char *intf,
 static int sta_set_mac_padding_duration(struct sigma_dut *dut, const char *intf,
 					enum qca_wlan_he_mac_padding_dur val)
 {
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed, val:%d",
-				__func__, intf, val);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_MAC_PADDING_DUR,
-		       val)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data, val: %d",
-				__func__, val);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d, val=%d",
-				__func__, ret, val);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_MAC_PADDING_DUR, val);
 }
 #endif /* NL80211_SUPPORT */
 
@@ -7797,44 +7279,9 @@ static int sta_set_tx_su_ppdu_cfg(struct sigma_dut *dut, const char *intf,
 				  int val)
 {
 #ifdef NL80211_SUPPORT
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed, val:%d",
-				__func__, intf, val);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_TX_SUPPDU,
-		       val)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data, val: %d",
-				__func__, val);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d, val=%d",
-				__func__, ret, val);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_TX_SUPPDU,
+		val);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"Tx SU PPDU cannot be set without NL80211_SUPPORT defined");
@@ -7846,43 +7293,9 @@ static int sta_set_tx_su_ppdu_cfg(struct sigma_dut *dut, const char *intf,
 #ifdef NL80211_SUPPORT
 static int sta_set_he_om_ctrl_reset(struct sigma_dut *dut, const char *intf)
 {
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_flag(msg,
-			 QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_CLEAR_HE_OM_CTRL_CONFIG)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_flag(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_CLEAR_HE_OM_CTRL_CONFIG);
 }
 #endif /* NL80211_SUPPORT */
 
@@ -7891,44 +7304,9 @@ static int sta_set_mu_edca_override(struct sigma_dut *dut, const char *intf,
 				    int val)
 {
 #ifdef NL80211_SUPPORT
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed, val:%d",
-				__func__, intf, val);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_OVERRIDE_MU_EDCA,
-		       val)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data, val: %d",
-				__func__, val);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d, val=%d",
-				__func__, ret, val);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_OVERRIDE_MU_EDCA, val);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"MU EDCA override cannot be changed without NL80211_SUPPORT defined");
@@ -7941,44 +7319,9 @@ static int sta_set_om_ctrl_supp(struct sigma_dut *dut, const char *intf,
 				int val)
 {
 #ifdef NL80211_SUPPORT
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed, val:%d",
-				__func__, intf, val);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_OM_CTRL_SUPP,
-		       val)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data, val: %d",
-				__func__, val);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d, val=%d",
-				__func__, ret, val);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_OM_CTRL_SUPP, val);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"HE OM ctrl cannot be changed without NL80211_SUPPORT defined");
@@ -7991,44 +7334,9 @@ static int sta_set_twt_req_support(struct sigma_dut *dut, const char *intf,
 				   int val)
 {
 #ifdef NL80211_SUPPORT
-	struct nl_msg *msg;
-	int ret;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed, val:%d",
-				__func__, intf, val);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_TWT_REQ_SUPPORT,
-		       val)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data, val: %d",
-				__func__, val);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d, val=%d",
-				__func__, ret, val);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_TWT_REQ_SUPPORT, val);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"TWT Request cannot be changed without NL80211_SUPPORT defined");
@@ -11182,44 +10490,9 @@ static int wcn_sta_set_pmf_config(struct sigma_dut *dut, const char *intf,
 				  enum send_frame_protection protected)
 {
 #ifdef NL80211_SUPPORT
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_PMF_PROTECTION,
-		       protected)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_PMF_PROTECTION,
+		protected);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"PMF config cannot be set without NL80211_SUPPORT defined");
@@ -11246,43 +10519,8 @@ static int cmd_sta_send_frame_vht(struct sigma_dut *dut,
 static int wcn_sta_send_disassoc(struct sigma_dut *dut, const char *intf)
 {
 #ifdef NL80211_SUPPORT
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_flag(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_DISASSOC_TX)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_flag(
+		dut, intf, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_DISASSOC_TX);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"Disassoc Tx cannot be done without NL80211_SUPPORT defined");
