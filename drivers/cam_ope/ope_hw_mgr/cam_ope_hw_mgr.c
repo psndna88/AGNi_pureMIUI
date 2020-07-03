@@ -1519,7 +1519,7 @@ static void cam_ope_ctx_cdm_callback(uint32_t handle, void *userdata,
 	struct cam_ope_request *ope_req;
 	struct cam_hw_done_event_data buf_data;
 	struct timespec64 ts;
-	bool flag = false;
+	uint32_t evt_id = CAM_CTX_EVT_ID_SUCCESS;
 
 	if (!userdata) {
 		CAM_ERR(CAM_OPE, "Invalid ctx from CDM callback");
@@ -1582,7 +1582,7 @@ static void cam_ope_ctx_cdm_callback(uint32_t handle, void *userdata,
 		if (status != CAM_CDM_CB_STATUS_HW_FLUSH)
 			cam_ope_dump_req_data(ope_req);
 		rc = cam_ope_mgr_reset_hw();
-		flag = true;
+		evt_id = CAM_CTX_EVT_ID_ERROR;
 	}
 
 	ctx->req_cnt--;
@@ -1595,7 +1595,7 @@ static void cam_ope_ctx_cdm_callback(uint32_t handle, void *userdata,
 	kzfree(ctx->req_list[cookie]);
 	ctx->req_list[cookie] = NULL;
 	clear_bit(cookie, ctx->bitmap);
-	ctx->ctxt_event_cb(ctx->context_priv, flag, &buf_data);
+	ctx->ctxt_event_cb(ctx->context_priv, evt_id, &buf_data);
 
 end:
 	mutex_unlock(&ctx->ctx_mutex);
@@ -3203,7 +3203,8 @@ static int cam_ope_mgr_handle_config_err(
 	ope_req = config_args->priv;
 
 	buf_data.request_id = ope_req->request_id;
-	ctx_data->ctxt_event_cb(ctx_data->context_priv, false, &buf_data);
+	ctx_data->ctxt_event_cb(ctx_data->context_priv, CAM_CTX_EVT_ID_ERROR,
+		&buf_data);
 
 	req_idx = ope_req->req_idx;
 	ope_req->request_id = 0;

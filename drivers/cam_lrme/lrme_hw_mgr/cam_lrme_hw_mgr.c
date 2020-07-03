@@ -498,7 +498,7 @@ static int cam_lrme_mgr_cb(void *data,
 {
 	struct cam_lrme_hw_mgr *hw_mgr = &g_lrme_hw_mgr;
 	int rc = 0;
-	bool frame_abort = true;
+	uint32_t evt_id = CAM_CTX_EVT_ID_ERROR;
 	struct cam_lrme_frame_request *frame_req;
 	struct cam_lrme_device *hw_device;
 
@@ -530,10 +530,10 @@ static int cam_lrme_mgr_cb(void *data,
 
 	if (cb_args->cb_type & CAM_LRME_CB_BUF_DONE) {
 		cb_args->cb_type &= ~CAM_LRME_CB_BUF_DONE;
-		frame_abort = false;
+		evt_id = CAM_CTX_EVT_ID_SUCCESS;
 	} else if (cb_args->cb_type & CAM_LRME_CB_ERROR) {
 		cb_args->cb_type &= ~CAM_LRME_CB_ERROR;
-		frame_abort = true;
+		evt_id = CAM_CTX_EVT_ID_ERROR;
 	} else {
 		CAM_ERR(CAM_LRME, "Wrong cb type %d, req %lld",
 			cb_args->cb_type, frame_req->req_id);
@@ -544,10 +544,10 @@ static int cam_lrme_mgr_cb(void *data,
 		struct cam_hw_done_event_data buf_data;
 
 		buf_data.request_id = frame_req->req_id;
-		CAM_DBG(CAM_LRME, "frame req %llu, frame_abort %d",
-			frame_req->req_id, frame_abort);
+		CAM_DBG(CAM_LRME, "frame req %llu, evt_id %d",
+			frame_req->req_id, evt_id);
 		rc = hw_mgr->event_cb(frame_req->ctxt_to_hw_map,
-			frame_abort, &buf_data);
+			evt_id, &buf_data);
 	} else {
 		CAM_ERR(CAM_LRME, "No cb function");
 	}

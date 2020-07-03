@@ -1995,7 +1995,7 @@ static int cam_icp_mgr_cleanup_ctx(struct cam_icp_hw_ctx_data *ctx_data)
 			continue;
 		buf_data.request_id = hfi_frame_process->request_id[i];
 		ctx_data->ctxt_event_cb(ctx_data->context_priv,
-			false, &buf_data);
+			CAM_CTX_EVT_ID_SUCCESS, &buf_data);
 		hfi_frame_process->request_id[i] = 0;
 		if (ctx_data->hfi_frame_process.in_resource[i] > 0) {
 			CAM_DBG(CAM_ICP, "Delete merged sync in object: %d",
@@ -2096,6 +2096,7 @@ static int cam_icp_mgr_handle_frame_process(uint32_t *msg_ptr, int flag)
 	struct hfi_frame_process_info *hfi_frame_process;
 	struct cam_hw_done_event_data buf_data;
 	uint32_t clk_type;
+	uint32_t event_id;
 
 	ioconfig_ack = (struct hfi_msg_ipebps_async_ack *)msg_ptr;
 	request_id = ioconfig_ack->user_data2;
@@ -2138,12 +2139,13 @@ static int cam_icp_mgr_handle_frame_process(uint32_t *msg_ptr, int flag)
 	idx = i;
 
 	if (flag == ICP_FRAME_PROCESS_FAILURE) {
-		if (ioconfig_ack->err_type == CAMERAICP_EABORTED)
+		if (ioconfig_ack->err_type == CAMERAICP_EABORTED) {
 			CAM_WARN(CAM_ICP,
 				"ctx_id %d req %llu dev %d has been aborted[flushed]",
 				ctx_data->ctx_id, request_id,
 				ctx_data->icp_dev_acquire_info->dev_type);
-		else
+			event_id = CAM_CTX_EVT_ID_CANCEL;
+		} else {
 			CAM_ERR(CAM_ICP,
 				"Done with error: %u err_type= [%s] on ctx_id %d dev %d for req %llu",
 				ioconfig_ack->err_type,
@@ -2152,10 +2154,14 @@ static int cam_icp_mgr_handle_frame_process(uint32_t *msg_ptr, int flag)
 				ctx_data->ctx_id,
 				ctx_data->icp_dev_acquire_info->dev_type,
 				request_id);
+			event_id = CAM_CTX_EVT_ID_ERROR;
+		}
+	} else {
+		event_id = CAM_CTX_EVT_ID_SUCCESS;
 	}
 
 	buf_data.request_id = hfi_frame_process->request_id[idx];
-	ctx_data->ctxt_event_cb(ctx_data->context_priv, flag, &buf_data);
+	ctx_data->ctxt_event_cb(ctx_data->context_priv, event_id, &buf_data);
 	hfi_frame_process->request_id[idx] = 0;
 	if (ctx_data->hfi_frame_process.in_resource[idx] > 0) {
 		CAM_DBG(CAM_ICP, "Delete merged sync in object: %d",
@@ -3890,7 +3896,8 @@ static int cam_icp_mgr_handle_config_err(
 	struct cam_hw_done_event_data buf_data;
 
 	buf_data.request_id = *(uint64_t *)config_args->priv;
-	ctx_data->ctxt_event_cb(ctx_data->context_priv, false, &buf_data);
+	ctx_data->ctxt_event_cb(ctx_data->context_priv, CAM_CTX_EVT_ID_SUCCESS,
+		&buf_data);
 
 	ctx_data->hfi_frame_process.request_id[idx] = 0;
 	ctx_data->hfi_frame_process.fw_process_flag[idx] = false;
@@ -4962,7 +4969,8 @@ static int cam_icp_mgr_send_abort_status(struct cam_icp_hw_ctx_data *ctx_data)
 		if (!hfi_frame_process->request_id[idx])
 			continue;
 
-		ctx_data->ctxt_event_cb(ctx_data->context_priv, true,
+		ctx_data->ctxt_event_cb(ctx_data->context_priv,
+			CAM_CTX_EVT_ID_CANCEL,
 			&hfi_frame_process->request_id[idx]);
 
 		/* now release memory for hfi frame process command */

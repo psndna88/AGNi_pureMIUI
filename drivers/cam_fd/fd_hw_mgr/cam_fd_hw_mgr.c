@@ -947,7 +947,7 @@ static int32_t cam_fd_mgr_workq_irq_cb(void *priv, void *data)
 	struct cam_fd_mgr_work_data *work_data;
 	struct cam_fd_mgr_frame_request *frame_req = NULL;
 	enum cam_fd_hw_irq_type irq_type;
-	bool frame_abort = true;
+	uint32_t evt_id = CAM_CTX_EVT_ID_ERROR;
 	int rc;
 
 	if (!data || !priv) {
@@ -1013,12 +1013,11 @@ static int32_t cam_fd_mgr_workq_irq_cb(void *priv, void *data)
 			if (rc) {
 				CAM_ERR(CAM_FD, "Failed in CMD_PRESTART %d",
 					rc);
-				frame_abort = true;
 				goto notify_context;
 			}
 		}
 
-		frame_abort = false;
+		evt_id = CAM_CTX_EVT_ID_SUCCESS;
 	}
 
 	trace_cam_irq_handled("FD", irq_type);
@@ -1035,7 +1034,7 @@ notify_context:
 		buf_data.request_id = frame_req->request_id;
 
 		rc = frame_req->hw_ctx->event_cb(frame_req->hw_ctx->cb_priv,
-			frame_abort, &buf_data);
+			evt_id, &buf_data);
 		if (rc)
 			CAM_ERR(CAM_FD, "Error in event cb handling %d", rc);
 	}
