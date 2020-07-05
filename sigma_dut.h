@@ -957,6 +957,7 @@ struct sigma_dut {
 	int owe_ptk_workaround;
 	int ocvc;
 	int client_privacy;
+	int saquery_oci_freq;
 };
 
 

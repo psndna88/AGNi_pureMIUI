@@ -8062,6 +8062,7 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 
 	dut->ocvc = 0;
 	dut->client_privacy = 0;
+	dut->saquery_oci_freq = 0;
 
 	if (dut->program != PROGRAM_VHT)
 		return cmd_sta_p2p_reset(dut, conn, cmd);
@@ -9819,6 +9820,18 @@ static int sta_inject_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 			/* Transaction ID */
 			*pos++ = 0x12;
 			*pos++ = 0x34;
+			if (dut->saquery_oci_freq) {
+				/* OCI IE - Extended ID */
+				*pos++ = 0xFF;
+				*pos++ = 0x04;
+				*pos++ = 0x36;
+				/* Operating Class */
+				*pos++ = 0x74;
+				/* Primary Channel */
+				*pos++ = freq_to_channel(dut->saquery_oci_freq);
+				/* Frequency Segment 1 Channel Number */
+				*pos++ = 0x00;
+			}
 			break;
 		case AUTH:
 			/* Auth Alg (Open) */
@@ -9878,11 +9891,29 @@ static int sta_inject_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 			/* Extended Supported Rates */
 			memcpy(pos, "\x32\x04\x30\x48\x60\x6c", 6);
 			pos += 6;
-			/* RSN */
-			memcpy(pos, "\x30\x1a\x01\x00\x00\x0f\xac\x04\x01\x00"
-			       "\x00\x0f\xac\x04\x01\x00\x00\x0f\xac\x02\xc0"
-			       "\x00\x00\x00\x00\x0f\xac\x06", 28);
-			pos += 28;
+			/* RSNE - Group and Pairwise ciphers */
+			memcpy(pos,
+			       "\x30\x1a\x01\x00\x00\x0f\xac\x04\x01\x00\x00\x0f\xac\x04",
+			       14);
+			pos += 14;
+			/* RSNE - AKM Suite count */
+			*pos++ = 0x01;
+			*pos++ = 0x00;
+			/* RSNE - AKM Suites */
+			if (dut->program == PROGRAM_WPA3)
+				memcpy(pos, "\x00\x0f\xac\x08", 4);
+			else
+				memcpy(pos, "\x00\x0f\xac\x02", 4);
+			pos += 4;
+			/* RSNE - Capabilities */
+			*pos++ = 0xc0;
+			if (dut->ocvc)
+				*pos++ = 0x40;
+			else
+				*pos++ = 0x00;
+			/* RSNE - PMKID list and Group Management Ciphers */
+			memcpy(pos, "\x00\x00\x00\x0f\xac\x06", 6);
+			pos += 6;
 			break;
 		case DLS_REQ:
 			/* Category - DLS */
@@ -11036,6 +11067,45 @@ static int mbo_cmd_sta_send_frame(struct sigma_dut *dut,
 }
 
 
+static enum sigma_cmd_result cmd_sta_send_frame_wpa3(struct sigma_dut *dut,
+						     struct sigma_conn *conn,
+						     const char *intf,
+						     struct sigma_cmd *cmd)
+{
+	const char *val = get_param(cmd, "framename");
+
+	if (!val)
+		return INVALID_SEND_STATUS;
+
+	if (strcasecmp(val, "SAQueryReq") == 0) {
+		val = get_param(cmd, "OCIChannel");
+
+		if (!val) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,OCIChannel not present");
+			return STATUS_SENT_ERROR;
+		}
+
+		dut->saquery_oci_freq = channel_to_freq(dut, atoi(val));
+		if (!dut->saquery_oci_freq) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Invalid OCIChannel number");
+			return STATUS_SENT_ERROR;
+		}
+
+		return sta_inject_frame(dut, conn, intf, SAQUERY, CORRECT_KEY,
+					NULL, 0);
+	}
+
+	if (strcasecmp(val, "reassocreq") == 0)
+		return sta_inject_frame(dut, conn, intf, REASSOCREQ,
+					CORRECT_KEY, NULL, 0);
+
+	send_resp(dut, conn, SIGMA_ERROR, "errorCode,Unsupported framename");
+	return STATUS_SENT_ERROR;
+}
+
+
 enum sigma_cmd_result cmd_sta_send_frame(struct sigma_dut *dut,
 					 struct sigma_conn *conn,
 					 struct sigma_cmd *cmd)
@@ -11073,6 +11143,8 @@ enum sigma_cmd_result cmd_sta_send_frame(struct sigma_dut *dut,
 		if (res != 2)
 			return res;
 	}
+	if (val && strcasecmp(val, "WPA3") == 0)
+		return cmd_sta_send_frame_wpa3(dut, conn, intf, cmd);
 
 	val = get_param(cmd, "TD_DISC");
 	if (val) {
