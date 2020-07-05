@@ -9629,6 +9629,47 @@ int hwaddr_aton(const char *txt, unsigned char *addr)
 
 #endif /* defined(__linux__) || defined(__QNXNTO__) */
 
+
+#ifdef NL80211_SUPPORT
+static int nl80211_send_frame_cmd(struct sigma_dut *dut, const char *intf,
+				  const u8 *data, size_t data_len, int freq)
+{
+	struct nl_msg *msg;
+	int ret = 0;
+	int ifindex;
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s failed",
+				__func__, intf);
+		return -1;
+	}
+
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+				    NL80211_CMD_FRAME)) ||
+	    (freq && nla_put_u32(msg, NL80211_ATTR_WIPHY_FREQ, freq)) ||
+	    nla_put(msg, NL80211_ATTR_FRAME, data_len, data)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Error in adding NL80211_CMD_FRAME",
+				__func__);
+		nlmsg_free(msg);
+		return -1;
+	}
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"nl80211: Frame command failed: ret=%d (%s) req=%u",
+				ret, strerror(-ret), freq);
+		return -1;
+	}
+
+	return 0;
+}
+#endif /* NL80211_SUPPORT */
+
+
 enum send_frame_type {
 	DISASSOC, DEAUTH, SAQUERY, AUTH, ASSOCREQ, REASSOCREQ, DLS_REQ
 };
@@ -9638,9 +9679,9 @@ enum send_frame_protection {
 
 
 static int sta_inject_frame(struct sigma_dut *dut, struct sigma_conn *conn,
-			    enum send_frame_type frame,
+			    const char *intf, enum send_frame_type frame,
 			    enum send_frame_protection protected,
-			    const char *dest)
+			    const char *dest, int use_monitor)
 {
 #ifdef __linux__
 	unsigned char buf[1000], *pos;
@@ -9880,28 +9921,53 @@ static int sta_inject_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
-	s = open_monitor("sigmadut");
-	if (s < 0) {
-		send_resp(dut, conn, SIGMA_ERROR, "errorCode,Failed to open "
-			  "monitor socket");
-		return 0;
-	}
+	if (use_monitor) {
+		s = open_monitor("sigmadut");
+		if (s < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to open monitor socket");
+			return 0;
+		}
 
-	res = inject_frame(s, buf, pos - buf, protected == CORRECT_KEY);
-	if (res < 0) {
-		send_resp(dut, conn, SIGMA_ERROR, "errorCode,Failed to "
-			  "inject frame");
-		close(s);
-		return 0;
-	}
-	if (res < pos - buf) {
-		send_resp(dut, conn, SIGMA_ERROR, "errorCode,Only partial "
-			  "frame sent");
-		close(s);
-		return 0;
-	}
+		res = inject_frame(s, buf, pos - buf, protected == CORRECT_KEY);
+		if (res < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to inject frame");
+			close(s);
+			return 0;
+		}
+		if (res < pos - buf) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Only partial frame sent");
+			close(s);
+			return 0;
+		}
 
-	close(s);
+		close(s);
+	} else {
+#ifdef NL80211_SUPPORT
+		int freq;
+		char freq_str[10];
+
+		if (get_wpa_status(get_station_ifname(dut), "freq",
+				   freq_str, sizeof(freq_str)) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Could not get current operating frequency");
+			return 0;
+		}
+		freq = atoi(freq_str);
+
+		if (nl80211_send_frame_cmd(dut, intf, buf, pos - buf, freq)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to inject frame");
+			return 0;
+		}
+#else /* NL80211_SUPPORT */
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Failed to inject frame (no NL80211_SUPPORT)");
+		return 0;
+#endif /* NL80211_SUPPORT */
+	}
 
 	return 1;
 #else /* __linux__ */
@@ -10286,7 +10352,7 @@ static int cmd_sta_send_frame_hs2_dls_req(struct sigma_dut *dut,
 		return -2;
 	}
 
-	return sta_inject_frame(dut, conn, DLS_REQ, UNPROTECTED, dest);
+	return sta_inject_frame(dut, conn, intf, DLS_REQ, UNPROTECTED, dest, 1);
 }
 
 
@@ -11159,7 +11225,7 @@ enum sigma_cmd_result cmd_sta_send_frame(struct sigma_dut *dut,
 		return -2;
 	}
 
-	return sta_inject_frame(dut, conn, frame, protected, NULL);
+	return sta_inject_frame(dut, conn, intf, frame, protected, NULL, 1);
 }
 
 
