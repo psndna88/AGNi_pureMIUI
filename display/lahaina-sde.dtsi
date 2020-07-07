@@ -247,33 +247,6 @@
 		<&clock_dispcc DISP_CC_MDSS_ESC0_CLK>;
 	clock-names = "byte_clk", "byte_clk_rcg", "byte_intf_clk",
 			"pixel_clk", "pixel_clk_rcg", "esc_clk";
-
-	qcom,ctrl-supply-entries {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		qcom,ctrl-supply-entry@0 {
-			reg = <0>;
-			qcom,supply-name = "vdda-1p2";
-			qcom,supply-min-voltage = <1200000>;
-			qcom,supply-max-voltage = <1200000>;
-			qcom,supply-enable-load = <8350>;
-			qcom,supply-disable-load = <0>;
-		};
-	};
-
-	qcom,core-supply-entries {
-		#address-cells = <1>;
-		#size-cells = <0>;
-			qcom,core-supply-entry@0 {
-			reg = <0>;
-			qcom,supply-name = "refgen";
-			qcom,supply-min-voltage = <0>;
-			qcom,supply-max-voltage = <0>;
-			qcom,supply-enable-load = <0>;
-			qcom,supply-disable-load = <0>;
-		};
-	};
 };
 
 &mdss_dsi1 {
@@ -287,34 +260,6 @@
 		<&clock_dispcc DISP_CC_MDSS_ESC1_CLK>;
 	clock-names = "byte_clk", "byte_clk_rcg", "byte_intf_clk",
 			"pixel_clk", "pixel_clk_rcg", "esc_clk";
-
-	qcom,ctrl-supply-entries {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		qcom,ctrl-supply-entry@0 {
-			reg = <0>;
-			qcom,supply-name = "vdda-1p2";
-			qcom,supply-min-voltage = <1200000>;
-			qcom,supply-max-voltage = <1200000>;
-			qcom,supply-enable-load = <8350>;
-			qcom,supply-disable-load = <0>;
-		};
-	};
-
-	qcom,core-supply-entries {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		qcom,core-supply-entry@0 {
-			reg = <0>;
-			qcom,supply-name = "refgen";
-			qcom,supply-min-voltage = <0>;
-			qcom,supply-max-voltage = <0>;
-			qcom,supply-enable-load = <0>;
-			qcom,supply-disable-load = <0>;
-		};
-	};
 };
 
 &mdss_dsi_phy0 {
