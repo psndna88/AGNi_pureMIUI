@@ -517,6 +517,8 @@ Optional properties:
 				ordering block
 				0: lower priority pipe has to be on the left for a given pair of pipes.
 				1: priority have to be explicitly configured for a given pair of pipes.
+- qcom,sde-trusted-vm-env:	Boolean property to indicate if the device
+				driver is executing in a trusted VM
 
 Bus Scaling:
 - interconnects                 An array of 4 cell properties with the format of
@@ -728,6 +730,7 @@ Example:
     qcom,sde-te2-off = <0x100>;
     qcom,sde-te-size = <0xffff>;
     qcom,sde-te2-size = <0xffff>;
+    qcom,sde-trusted-vm-env;
 
     qcom,sde-wb-id = <2>;
     qcom,sde-wb-clk-ctrl = <0x2bc 16>;
