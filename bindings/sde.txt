@@ -519,6 +519,9 @@ Optional properties:
 				1: priority have to be explicitly configured for a given pair of pipes.
 - qcom,sde-trusted-vm-env:	Boolean property to indicate if the device
 				driver is executing in a trusted VM
+- qcom,sde-max-trusted-vm-displays:    A u32 property to indicate the maximum
+				number of concurrent displays supported in the
+	                        trusted vm environment
 
 Bus Scaling:
 - interconnects                 An array of 4 cell properties with the format of
@@ -711,6 +714,7 @@ Example:
     qcom,sde-has-idle-pc;
     qcom,fullsize-va-map;
     qcom,sde-has-dest-scaler;
+    qcom,sde-max-trusted-vm-displays = <1>;
     qcom,sde-max-dest-scaler-input-linewidth = <2048>;
     qcom,sde-max-dest-scaler-output-linewidth = <2560>;
     qcom,sde-sspp-max-rects = <1 1 1 1
