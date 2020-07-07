@@ -522,6 +522,9 @@ Optional properties:
 - qcom,sde-max-trusted-vm-displays:    A u32 property to indicate the maximum
 				number of concurrent displays supported in the
 	                        trusted vm environment
+- qcom,sde-vm-exclude-reg-names A string array indicating the reg-names which
+				should be excluded from IO memory validation list
+				in trusted vm environment
 
 Bus Scaling:
 - interconnects                 An array of 4 cell properties with the format of
