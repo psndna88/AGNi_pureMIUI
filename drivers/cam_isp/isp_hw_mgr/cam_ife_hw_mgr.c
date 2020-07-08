@@ -402,11 +402,13 @@ static int cam_ife_hw_mgr_start_hw_res(
 				isp_hw_res->hw_res[i],
 				sizeof(struct cam_isp_resource_node));
 			if (rc) {
-				CAM_ERR(CAM_ISP, "Can not start HW resources");
+				CAM_ERR(CAM_ISP,
+					"Can not start HW:%d resources",
+					hw_intf->hw_idx);
 				goto err;
-			}
-			CAM_DBG(CAM_ISP, "Start HW %d Res %d", hw_intf->hw_idx,
-				isp_hw_res->hw_res[i]->res_id);
+			} else
+				CAM_INFO(CAM_ISP, "Started HW:%d",
+					hw_intf->hw_idx);
 		} else {
 			CAM_ERR(CAM_ISP, "function null");
 			goto err;
@@ -436,10 +438,13 @@ static void cam_ife_hw_mgr_stop_hw_res(
 			CAM_ISP_RESOURCE_STATE_STREAMING)
 			continue;
 
-		if (hw_intf->hw_ops.stop)
+		if (hw_intf->hw_ops.stop) {
 			hw_intf->hw_ops.stop(hw_intf->hw_priv,
 				isp_hw_res->hw_res[i],
 				sizeof(struct cam_isp_resource_node));
+
+			CAM_INFO(CAM_ISP, "Stopped Hw:%d", hw_intf->hw_idx);
+		}
 		else
 			CAM_ERR(CAM_ISP, "stop null");
 		if (hw_intf->hw_ops.process_cmd &&
@@ -645,8 +650,13 @@ static int cam_ife_hw_mgr_free_hw_res(
 				sizeof(struct cam_isp_resource_node));
 			if (rc)
 				CAM_ERR(CAM_ISP,
-					"Release hw resource id %d failed",
-					isp_hw_res->res_id);
+					"Release HW:%d resource id %d failed",
+					hw_intf->hw_idx, isp_hw_res->res_id);
+			else
+				CAM_INFO(CAM_ISP,
+					"Released HW:%d resource id %d",
+					hw_intf->hw_idx, isp_hw_res->res_id);
+
 			isp_hw_res->hw_res[i] = NULL;
 		} else
 			CAM_ERR(CAM_ISP, "Release null");
