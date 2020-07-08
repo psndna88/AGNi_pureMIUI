@@ -144,6 +144,14 @@ unsigned int get_android_version(void)
 	return android_version;
 }
 
+bool miuirom = true;
+static int __init set_miui_rom(bool *val)
+{
+	get_option(&val, &miuirom);
+	return 0;
+}
+__setup("androidboot.miui=", set_miui_rom);
+
 /*
  * Used to generate warnings if static_key manipulation functions are used
  * before jump_label_init is called.
