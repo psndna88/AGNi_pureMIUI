@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/msm-bus.h>
@@ -48,7 +48,7 @@ int cam_soc_bus_client_update_request(void *client, unsigned int idx)
 		goto end;
 	}
 
-	CAM_DBG(CAM_UTIL, "Bus client=[%d][%s] index[%d]",
+	CAM_DBG(CAM_PERF, "Bus client=[%d][%s] index[%d]",
 		bus_client_data->client_id, bus_client->common_data->name, idx);
 
 	rc = msm_bus_scale_client_update_request(bus_client_data->client_id,
@@ -99,7 +99,7 @@ int cam_soc_bus_client_update_bw(void *client, uint64_t ab, uint64_t ib)
 	path->vectors[0].ab = ab;
 	path->vectors[0].ib = ib;
 
-	CAM_DBG(CAM_UTIL, "Bus client=[%d][%s] :ab[%llu] ib[%llu], index[%d]",
+	CAM_DBG(CAM_PERF, "Bus client=[%d][%s] :ab[%llu] ib[%llu], index[%d]",
 		bus_client_data->client_id, bus_client->common_data->name, ab,
 		ib, idx);
 	rc = msm_bus_scale_client_update_request(bus_client_data->client_id,
@@ -194,7 +194,7 @@ int cam_soc_bus_client_register(struct platform_device *pdev,
 	bus_client_data->num_paths = pdata->usecase[0].num_paths;
 	bus_client->common_data->name = pdata->name;
 
-	CAM_DBG(CAM_UTIL, "Bus Client=[%d][%s] : src=%d, dst=%d",
+	CAM_DBG(CAM_PERF, "Register Bus Client=[%d][%s] : src=%d, dst=%d",
 		bus_client_data->client_id, bus_client->common_data->name,
 		bus_client->common_data->src_id,
 		bus_client->common_data->dst_id);
