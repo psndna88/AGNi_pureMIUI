@@ -2025,30 +2025,29 @@ static int cam_cpas_util_get_internal_ops(struct platform_device *pdev,
 	return rc;
 }
 
-static int cam_cpas_util_create_debugfs(
-	struct cam_cpas *cpas_core)
+static int cam_cpas_util_create_debugfs(struct cam_cpas *cpas_core)
 {
 	int rc = 0;
+	struct dentry *dbgfileptr = NULL;
 
-	cpas_core->dentry = debugfs_create_dir("camera_cpas", NULL);
-	if (!cpas_core->dentry)
-		return -ENOMEM;
-
-	if (!debugfs_create_bool("ahb_bus_scaling_disable",
-		0644,
-		cpas_core->dentry,
-		&cpas_core->ahb_bus_scaling_disable)) {
-		CAM_ERR(CAM_CPAS,
-			"failed to create ahb_bus_scaling_disable entry");
-		rc = -ENOMEM;
-		goto err;
+	dbgfileptr = debugfs_create_dir("camera_cpas", NULL);
+	if (!dbgfileptr) {
+		CAM_ERR(CAM_CPAS,"DebugFS could not create directory!");
+		rc = -ENOENT;
+		goto end;
 	}
+	/* Store parent inode for cleanup in caller */
+	cpas_core->dentry = dbgfileptr;
 
-	return 0;
-
-err:
-	debugfs_remove_recursive(cpas_core->dentry);
-	cpas_core->dentry = NULL;
+	dbgfileptr = debugfs_create_bool("ahb_bus_scaling_disable", 0644,
+		cpas_core->dentry, &cpas_core->ahb_bus_scaling_disable);
+	if (IS_ERR(dbgfileptr)) {
+		if (PTR_ERR(dbgfileptr) == -ENODEV)
+			CAM_WARN(CAM_CPAS, "DebugFS not enabled in kernel!");
+		else
+			rc = PTR_ERR(dbgfileptr);
+	}
+end:
 	return rc;
 }
 
@@ -2195,9 +2194,7 @@ int cam_cpas_hw_probe(struct platform_device *pdev,
 	if (rc)
 		goto axi_cleanup;
 
-	rc  = cam_cpas_util_create_debugfs(cpas_core);
-	if (rc)
-		CAM_WARN(CAM_CPAS, "Failed to create dentry");
+	rc = cam_cpas_util_create_debugfs(cpas_core);
 
 	*hw_intf = cpas_hw_intf;
 	return 0;

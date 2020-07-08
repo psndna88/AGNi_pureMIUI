@@ -3921,36 +3921,30 @@ cb_init_fail:
 
 static int cam_smmu_create_debug_fs(void)
 {
-	iommu_cb_set.dentry = debugfs_create_dir("camera_smmu",
-		NULL);
+	int rc = 0;
+	struct dentry *dbgfileptr = NULL;
 
-	if (!iommu_cb_set.dentry) {
-		CAM_ERR(CAM_SMMU, "failed to create dentry");
-		return -ENOMEM;
+	dbgfileptr = debugfs_create_dir("camera_smmu", NULL);
+	if (!dbgfileptr) {
+		CAM_ERR(CAM_SMMU,"DebugFS could not create directory!");
+		rc = -ENOENT;
+		goto end;
 	}
+	/* Store parent inode for cleanup in caller */
+	iommu_cb_set.dentry = dbgfileptr;
 
-	if (!debugfs_create_bool("cb_dump_enable",
-		0644,
-		iommu_cb_set.dentry,
-		&iommu_cb_set.cb_dump_enable)) {
-		CAM_ERR(CAM_SMMU,
-			"failed to create dump_enable_debug");
-		goto err;
+	dbgfileptr = debugfs_create_bool("cb_dump_enable", 0644,
+		iommu_cb_set.dentry, &iommu_cb_set.cb_dump_enable);
+	dbgfileptr = debugfs_create_bool("map_profile_enable", 0644,
+		iommu_cb_set.dentry, &iommu_cb_set.map_profile_enable);
+	if (IS_ERR(dbgfileptr)) {
+		if (PTR_ERR(dbgfileptr) == -ENODEV)
+			CAM_WARN(CAM_MEM, "DebugFS not enabled in kernel!");
+		else
+			rc = PTR_ERR(dbgfileptr);
 	}
-
-	if (!debugfs_create_bool("map_profile_enable",
-		0644,
-		iommu_cb_set.dentry,
-		&iommu_cb_set.map_profile_enable)) {
-		CAM_ERR(CAM_SMMU,
-			"failed to create map_profile_enable");
-		goto err;
-	}
-
-	return 0;
-err:
-	debugfs_remove_recursive(iommu_cb_set.dentry);
-	return -ENOMEM;
+end:
+	return rc;
 }
 
 static int cam_smmu_fw_dev_component_bind(struct device *dev,
