@@ -51,7 +51,6 @@ static unsigned int num_devices = 1;
  */
 static size_t huge_class_size;
 
-bool miuirom = false;
 bool zramzero = true;
 static void zram_free_page(struct zram *zram, size_t index);
 
@@ -1510,11 +1509,6 @@ static ssize_t disksize_store(struct device *dev,
 		dyn_fsync_active = false;
 #endif
 		return -EINVAL;
-	}
-
-	if (disksize == 2361393152) {
-		if (!miuirom)
-			miuirom = true; /* Miui Sets 2361393152 = 2252MB ON 4GB devices*/
 	}
 
 	down_write(&zram->init_lock);
