@@ -1132,26 +1132,13 @@ static int fg_get_batt_profile(struct fg_chip *chip)
 		chip->bp.float_volt_uv = -EINVAL;
 	}
 
-	if (hwc_check_global){
-		pr_err("sunxing get global set fastchg  2.3A");
-		chip->bp.fastchg_curr_ma = 2300;
-	}else{
-	rc = of_property_read_u32(profile_node, "qcom,fastchg-current-ma",
-			&chip->bp.fastchg_curr_ma);
-#if defined(CONFIG_KERNEL_CUSTOM_E7T)
-	if (is_poweroff_charge == true)
-	{
-		if(hwc_check_india == 1)
-			chip->bp.fastchg_curr_ma = 2200;
-		else
-			chip->bp.fastchg_curr_ma = 2300;
-	}
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	pr_info("set fastchg  2.3A");
+	chip->bp.fastchg_curr_ma = 2300;
+#else
+	pr_info("set fastchg  2.7A");
+	chip->bp.fastchg_curr_ma = 2700;
 #endif
-	if (rc < 0) {
-		pr_err("battery fastchg current unavailable, rc:%d\n", rc);
-		chip->bp.fastchg_curr_ma = -EINVAL;
-	}
-	}
 	rc = of_property_read_u32(profile_node, "qcom,fg-cc-cv-threshold-mv",
 			&chip->bp.vbatt_full_mv);
 	if (rc < 0) {
@@ -3432,14 +3419,14 @@ static int fg_get_time_to_full_locked(struct fg_chip *chip, int *val)
 	ibatt_avg = -ibatt_avg / MILLI_UNIT;
 	vbatt_avg /= MILLI_UNIT;
 
-	if (msoc < 15) {
-		if (ibatt_avg > 1500)
-			ibatt_avg = 1500;
-		if (ibatt_avg < 1000)
-			ibatt_avg = 1000;
-	} else if ((msoc >= 15) && (msoc <= 70)) {
-		if (ibatt_avg > 2000)
-			ibatt_avg = 2000;
+	if (msoc <= 70) {
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+		if (ibatt_avg > 2300)
+			ibatt_avg = 2300;
+#else
+		if (ibatt_avg > 2700)
+			ibatt_avg = 2700;
+#endif
 		if (ibatt_avg < 1200)
 			ibatt_avg = 1200;
 	} else if ((msoc > 70) && (msoc <= 80)) {
@@ -3567,8 +3554,8 @@ cv_estimate:
 		return rc;
 	}
 
-	/* tau is scaled linearly from 95% to 100% SOC */
-	if (msoc >= 95)
+	/* tau is scaled linearly from 80% to 100% SOC */
+	if (msoc >= 80)
 		tau = tau * 2 * (100 - msoc) / 10;
 
 	fg_dbg(chip, FG_TTF, "tau=%d\n", tau);

@@ -2774,17 +2774,11 @@ int smblib_get_prop_die_health(struct smb_charger *chg,
 #define CDP_CURRENT_UA			1500000
 #endif
 #define DCP_CURRENT_UA			2000000
-#if defined(CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A)
 #define HVDCP2_CURRENT_UA		1500000
-#else
-#define HVDCP2_CURRENT_UA		1500000
-#endif
 #if defined(CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A)
-#define HVDCP_CURRENT_UA		2500000
-#elif defined(CONFIG_KERNEL_CUSTOM_E7S)
-#define HVDCP_CURRENT_UA		2000000
-#elif defined(CONFIG_KERNEL_CUSTOM_E7T)
-#define HVDCP_CURRENT_UA		2000000
+#define HVDCP_CURRENT_UA		2700000
+#elif defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+#define HVDCP_CURRENT_UA		2300000
 #else
 #define HVDCP_CURRENT_UA		2500000
 #endif
@@ -2826,11 +2820,7 @@ int smblib_set_prop_pd_current_max(struct smb_charger *chg,
 	return rc;
 }
 
-#if defined(CONFIG_KERNEL_CUSTOM_E7S)
 #define FLOAT_CURRENT_UA		1000000
-#else
-#define FLOAT_CURRENT_UA		1000000
-#endif
 static int smblib_handle_usb_current(struct smb_charger *chg,
 					int usb_current)
 {
@@ -3389,7 +3379,11 @@ int smblib_get_charge_current(struct smb_charger *chg,
 	/* QC 3.0 adapter */
 	if (apsd_result->bit & QC_3P0_BIT) {
 		*total_current_ua = HVDCP_CURRENT_UA;
-		pr_info("QC3.0 set icl to 2.9A\n");
+#if defined(CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A)
+		pr_info("QC3.0 set icl to 2.7A\n");
+#else
+		pr_info("QC3.0 set icl to 2.3A\n");
+#endif
 		return 0;
 	}
 
@@ -4069,19 +4063,13 @@ static void smblib_force_legacy_icl(struct smb_charger *chg, int pst)
 		smblib_err(chg, "lct battery smblib_force_legacy_icl qc2.0\n");
 		break;
 	case POWER_SUPPLY_TYPE_USB_HVDCP_3:
-#if defined (CONFIG_KERNEL_CUSTOM_E7S)
-		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 2000000);
-#elif defined(CONFIG_KERNEL_CUSTOM_E7T)
-		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 2000000);
+#if defined (CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 2300000);
 #elif defined(CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A)
 		vote(chg->usb_icl_votable, USER_VOTER, false, 0);
-		if (hwc_check_global){
-		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 2300000);
-		}else{
-		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 2900000);
-		}
+		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 2700000);
 #else
-		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 3000000);
+		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 2500000);
 #endif
 		smblib_err(chg, "lct battery smblib_force_legacy_icl qc3.0\n");
 		break;

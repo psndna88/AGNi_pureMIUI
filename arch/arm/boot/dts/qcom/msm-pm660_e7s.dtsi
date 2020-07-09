@@ -359,17 +359,17 @@
 
 			qcom,wipower-max-uw = <5000000>;
 			dpdm-supply = <&qusb_phy0>;
-			qcom,usb-icl-ua = <2000000>;
-			qcom,dc-icl-ua = <2000000>;
-			qcom,fcc-max-ua = <2400000>;
+			qcom,usb-icl-ua = <2300000>;
+			qcom,dc-icl-ua = <2300000>;
+			qcom,fcc-max-ua = <2300000>;
 			qcom,fv-max-uv  = <4400000>;
 			qcom,sw-jeita-enable;
 
 
 			qcom,thermal-mitigation
-					= <2400000 2200000 1800000 1500000 1200000 900000 700000>;
+					= <2300000 2100000 1800000 1500000 1200000 900000 800000>;
 			qcom,thermal-mitigation-china
-					= <2400000 2200000 1800000 1500000 1200000 900000 700000>;
+					= <2300000 2100000 1800000 1500000 1200000 900000 800000>;
 
 			qcom,chgr@1000 {
 				reg = <0x1000 0x100>;

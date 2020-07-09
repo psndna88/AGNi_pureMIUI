@@ -264,23 +264,13 @@ static int smb2_parse_dt(struct smb2 *chip)
 	chip->dt.no_battery = of_property_read_bool(node,
 						"qcom,batteryless-platform");
 
-	if (hwc_check_global) {
-		pr_err("sunxing get global set fcc max 2.3A");
-		chg->batt_profile_fcc_ua = 2300000;
-	} else {
-	rc = of_property_read_u32(node,
-				"qcom,fcc-max-ua", &chg->batt_profile_fcc_ua);
-#if defined(CONFIG_KERNEL_CUSTOM_E7T)
-	if(is_poweroff_charge == true) {
-		if(hwc_check_india == 1)
-			chg->batt_profile_fcc_ua = 2200000;
-		else
-			chg->batt_profile_fcc_ua = 2300000;
-	}
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	pr_info("set fcc max 2.3A");
+	chg->batt_profile_fcc_ua = 2300000;
+#else
+	pr_info("set fcc max 2.7A");
+	chg->batt_profile_fcc_ua = 2700000;
 #endif
-	if (rc < 0)
-		chg->batt_profile_fcc_ua = -EINVAL;
-	}
 	rc = of_property_read_u32(node,
 				"qcom,fv-max-uv", &chg->batt_profile_fv_uv);
 	if (rc < 0)
