@@ -626,6 +626,11 @@ patch_cmdline() {
     # Android Oreo
   	sed -i 's/androidboot.version=9/androidboot.version=8/' $cmdfile;
   fi;
+ # AGNi MIUI detection
+  miui="`cat $home/MIUI_ROM`";
+  if [ "$miui" == "false" ]; then
+	sed -i 's/androidboot.miui=1/androidboot.miui=0/' $cmdfile;
+  fi;
   if [ -f "$home/cmdtmp" ]; then
     sed -i "s|^cmdline=.*|cmdline=$(cat $cmdfile)|" $split_img/header;
     rm -f $cmdfile;

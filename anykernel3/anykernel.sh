@@ -4,7 +4,7 @@
 ## AnyKernel setup
 # begin properties
 properties() { '
-kernel.string=AGNi EAS OC-2.2GHz (AGNi has dynamic memory management. AVOID 3rd Party Memory tweaks)
+kernel.string=AGNi Kernel EAS (AVOID 3rd Party Memory tweaks)
 do.devicecheck=1
 do.modules=0
 do.systemless=0
@@ -37,6 +37,7 @@ set_perm_recursive 0 0 750 750 $ramdisk/init* $ramdisk/sbin;
 dump_boot;
 
 patch_cmdline androidboot.version androidboot.version=9;
+patch_cmdline androidboot.miui androidboot.miui=1;
 write_boot;
 ## end install
 

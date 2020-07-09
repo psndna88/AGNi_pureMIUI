@@ -26,10 +26,10 @@
 
 # Initializing Rom Information
 ini_set("rom_name",		"AGNi Kernel");
-ini_set("rom_version",	"v8.9_stable");
+ini_set("rom_version",	"v9.0_stable");
 ini_set("rom_author",	"psndna88@xda");
 ini_set("rom_device",	"SDM636/660 whyred/wayne/tulip/lavender/jasmine");
-ini_set("rom_date",		"June, 27, 2020");
+ini_set("rom_date",		"July, 10, 2020");
 
 # Show Simple Splash
 splash(
@@ -80,9 +80,11 @@ agreebox(
 
 selectbox(
     "Camera Libs Support Mode","<@center><b>\nSelect method of camera libs support</b>\n\n</@>","@install","cam.prop",  
-    "Automatic",					"DEFAULT. Auto detect camera libs in rom and flash kernel accordingly", 1,   								#-- selected.0 = 1
-    "Forced NEW Camera Libs Mode", 	"Force Support for new camera libs. - USE IF PROBLEMS WITH AUTOMATIC CAMERA MODE & you sure about it.", 0, 	#-- selected.0 = 2
-    "Forced OLD Camera Libs Mode", 	"Force Support for old camera libs. - USE IF PROBLEMS WITH AUTOMATIC CAMERA MODE & you sure about it.", 0 	#-- selected.0 = 3
+    "Automatic",						"DEFAULT. Auto detect camera libs in rom and flash kernel accordingly", 1,   								#-- selected.0 = 1
+    "Forced NEW Camera Libs Mode", 		"Force Support for new camera libs. - USE IF PROBLEMS WITH AUTOMATIC CAMERA MODE & you sure about it.", 0, 	#-- selected.0 = 2
+    "Forced OLD Camera Libs Mode", 		"Force Support for old camera libs. - USE IF PROBLEMS WITH AUTOMATIC CAMERA MODE & you sure about it.", 0	#-- selected.0 = 3
+    ,																																									#NATIVEMIUIQ
+    "Forced MIUI-Q Camera Libs Mode", 	"Force Support for MIUI Q camera. - USE IF PROBLEMS WITH AUTOMATIC CAMERA MODE or Lineage OS", 0			#-- selected.0 = 4	#NATIVEMIUIQ
 );
 
 selectbox(
@@ -95,6 +97,18 @@ selectbox(
     "Wired Earphone Sound Enhancement","<@center><b>\nWant AGNi Wired Sound Enhancement ?</b>\n\n</@>","@install","sound.prop",  
     "YESSSS!",	"DEFAULT. AGNi's Wired Earphone Sound Enhancement doesnt consume extra battery unlike other sound mods like Dolby or V4A", 1,   #-- selected.0 = 1
     "No...",	"Select if you really don't want or want to use only other Sound mods", 0  #-- selected.0 = 2
+);
+
+selectbox( 																																							#AGNICPUOC
+    "CPU Frequency Selection","<@center><b>\nWant to Overclock CPU ?</b>\n\n</@>","@install","cpuoc.prop",  														#AGNICPUOC
+    "Ofcourse Yes",	"DEFAULT. CPU OC to 2.2GHz Good for Gaming.", 1,   																			#-- selected.0 = 1	#AGNICPUOC
+    "No, Not my cup of tea !",	"You dont want to use CPU OC Performance boost. CPU will still show as 2.2GHz supported but not use it", 0  	#-- selected.0 = 2	#AGNICPUOC
+); 																																									#AGNICPUOC
+
+selectbox(
+    "EAS Perf HAL","<@center><b>\nEAS compatible PERF HAL configuration</b>\n\n</@>","@install","easperfhal.prop",  
+    "YES",	"DEFAULT. Strongly recomended. For roms not built with EAS & schedutil support. Kills the beckground logspams for interactive. ", 1, #-- selected.0 = 1
+    "NO",	"You will get increased battery drains on roms not built for use with EAS & schedutil. This will revert changes made above also.", 0  #-- selected.0 = 2
 );
 
 setvar("retstatus",
