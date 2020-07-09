@@ -5,8 +5,9 @@ on boot
     chown wifi wifi /sys/module/wlan/parameters/fwpath
 	write /sys/touchpanel/double_tap 1
 	write /sys/module/msm_performance/parameters/cpu_oc Y
-	write /sys/devices/system/cpu/cpufreq/policy0/scaling_max_freq 1843200
-	write /sys/devices/system/cpu/cpufreq/policy4/scaling_max_freq 2208800
+	write /sys/devices/system/cpu/cpufreq/policy0/scaling_max_freq 1612800
+	write /sys/devices/system/cpu/cpufreq/policy4/scaling_max_freq 1804800
+	write /sys/module/msm_performance/parameters/cpu_oc N
     # add a cpuset for the camera daemon
     mkdir /dev/cpuset/camera-daemon
     write /dev/cpuset/camera-daemon/cpus 0-3
@@ -14,5 +15,4 @@ on boot
     chown system system /dev/cpuset/camera-daemon
     chown system system /dev/cpuset/camera-daemon/tasks
     chmod 0664 /dev/cpuset/camera-daemon/tasks
-
 

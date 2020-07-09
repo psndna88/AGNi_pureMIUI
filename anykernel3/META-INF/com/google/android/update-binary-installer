@@ -483,6 +483,7 @@ else
 	ui_print " " "AGNi detected non-MIUI rom." " ";
 fi;
 $BB echo "$MIUI_VER" > $AKHOME/MIUIVER;
+$BB echo "$MIUI_ROM" > $AKHOME/MIUI_ROM;
 
 ### AGNi: Camera Libs type detection
 DEVICE_NATIVE_MIUIQ="NO";
@@ -503,11 +504,12 @@ if [ "`$BB grep selected.0=1 /tmp/aroma-data/cam.prop`" ]; then
 		if ([ "$ANDROID_VER" == "Q" ] && [ "$MIUI_VER" == "12" ]); then
 			if [ "$LIBS" == "NEW" ]; then
 				KERNEL="MIUIQ";
-				ui_print " " "AGNi detected New Camera libs (MIUI Q).." " ";
+				ui_print " " "AGNi detected New Camera libs (MIUI Q mode).." " ";
 			else
 				KERNEL="ERROR";
-				ui_print " " "ERROR: unsupported Camera libs. Reflash MIUI 12 Q rom without wipe then try again." " ";
+				ui_print " " "ERROR: unsupported Camera libs. Reflash MIUI 12 Q rom without wipe for stock miui Q official rom & then try again." " ";
 				ui_print " " " Expected New camera libs in your rom." " ";
+				ui_print " " "  Maybe flash any new camera libs patch zip availabe for your device & try again." " ";
 				ui_print " " " Terminating Installation !" " ";
 				cleanup;
 				exit;
@@ -534,16 +536,24 @@ elif [ "`$BB grep selected.0=2 /tmp/aroma-data/cam.prop`" ]; then
 		if ([ "$DEVICE_NATIVE_MIUIQ" == "YES" ] && [ "$ANDROID_VER" == "Q" ] && [ "$MIUI_VER" == "12" ]); then
 			#FORCE MIUIQ CAM MODE
 			KERNEL="MIUIQ";
-			ui_print " " "AGNi installing with New Camera libs support (MIUI Q).." " ";
+			ui_print " " "AGNi installing with New Camera libs support (MIUI Q mode).." " ";
 		else
 			#FORCE NEW CAM MODE
 			KERNEL="NEW";
 			ui_print " " "AGNi installing with New Camera libs support.." " ";
 		fi;
+		ui_print " " "  Make sure you have new camera libs in your rom else camera wont work!" " ";
+		ui_print " " "  (If unsure & camera doesn't work & want to use this option, flash any NEW camera libs patch zip availabe for your device & try again)" " ";
 elif [ "`$BB grep selected.0=3 /tmp/aroma-data/cam.prop`" ]; then
 		#FORCE OLD CAM MODE
 		KERNEL="OLD";
 		ui_print " " "AGNi installing with Old Camera libs support.." " ";
+		ui_print " " "  Make sure you have old camera libs in your rom else camera wont work!" " ";
+		ui_print " " "  (If unsure & camera doesn't work & want to use this option, flash any OLD camera libs patch zip availabe for your device & try again)" " ";
+elif [ "`$BB grep selected.0=4 /tmp/aroma-data/cam.prop`" ]; then
+		#FORCE MIUI-Q CAM MODE
+		KERNEL="MIUIQ";
+		ui_print " " "AGNi installing with New Camera libs support (MIUI Q mode).." " ";
 fi;
 $BB echo "$KERNEL" > $AKHOME/KERNEL_TYPE;
 ### AGNi: WiFi module
@@ -554,7 +564,17 @@ if [ ! "`$BB grep AGNI_HERE /vendor/etc/init/hw/init.qcom.rc`" ]; then
 else
     $BB echo "Vendor is already patched for wifi.";
 fi;
-$BB cp -f $AKHOME/tools/init.agni.rc /vendor/etc/init/hw/init.agni.rc;
+if [ "$DEVICE_NATIVE_MIUIQ" == "YES" ]; then #essentially its sdm660
+	$BB cp -f $AKHOME/tools/init.agni.rc /vendor/etc/init/hw/init.agni.rc;
+else
+	if [ "`$BB grep selected.0=1 /tmp/aroma-data/cpuoc.prop`" ]; then # CPU OC selection
+		$BB cp -f $AKHOME/tools/init.agni.rc /vendor/etc/init/hw/init.agni.rc;
+		ui_print " " "AGNi installing with DEFAULT CPU OC @ 2.2GHz !" " ";
+	else
+		$BB cp -f $AKHOME/tools/init.agni.rc.noc /vendor/etc/init/hw/init.agni.rc;
+		ui_print " " "AGNi installing without CPU OC :( ..." " ";
+	fi;
+fi;
 $BB chmod 644 /vendor/etc/init/hw/init.agni.rc;
 $BB mkdir /vendor/agni 2>/dev/null;
 $BB cp -f $AKHOME/tools/wlan*.ko /vendor/agni/;
@@ -596,6 +616,7 @@ restore_env;
 ## Mount /system & /vendor
 umount_all;
 $BB mount /vendor;
+$BB mount /data 2>/dev/null;
 if [ "`$BB grep system_root /etc/fstab`" ]; then
 	$BB mount /system_root;
 else
@@ -634,6 +655,61 @@ else
 	fi;
 fi;
 
+# Facebook app watcher killer
+if [ -d /data/data/com.facebook.katana ]; then
+	$BB chmod -R 660 /data/data/com.facebook.katana/app_watcher;
+fi;
+
+# EAS Perf HAL
+if [ "`$BB grep selected.0=1 /tmp/aroma-data/easperfhal.prop`" ]; then
+	if [ -f /vendor/etc/perf/commonresourceconfigs.xml ]; then
+		if [ ! -f /vendor/etc/perf/commonresourceconfigs.xml.bak ]; then
+			mv /vendor/etc/perf/commonresourceconfigs.xml /vendor/etc/perf/commonresourceconfigs.xml.bak;
+		fi;
+		$BB cp -f $AKHOME/tools/perf/commonresourceconfigs.xml /vendor/etc/perf/commonresourceconfigs.xml;
+		$BB chmod 0644 /vendor/etc/perf/commonresourceconfigs.xml;
+	fi;
+	if [ -f /vendor/etc/perf/perfboostsconfig.xml ]; then
+		if [ ! -f /vendor/etc/perf/perfboostsconfig.xml.bak ]; then
+			mv /vendor/etc/perf/perfboostsconfig.xml /vendor/etc/perf/perfboostsconfig.xml.bak;
+		fi;
+		$BB cp -f $AKHOME/tools/perf/perfboostsconfig.xml /vendor/etc/perf/perfboostsconfig.xml;
+		$BB chmod 0644 /vendor/etc/perf/perfboostsconfig.xml;
+	fi;
+	if [ -f /vendor/etc/perf/targetconfig.xml ]; then
+		if [ ! -f /vendor/etc/perf/targetconfig.xml.bak ]; then
+			mv /vendor/etc/perf/targetconfig.xml /vendor/etc/perf/targetconfig.xml.bak;
+		fi;
+		$BB cp -f $AKHOME/tools/perf/targetconfig.xml /vendor/etc/perf/targetconfig.xml;
+		$BB chmod 0644 /vendor/etc/perf/targetconfig.xml;
+	fi;
+	if [ -f /vendor/etc/perf/targetresourceconfigs.xml ]; then
+		if [ ! -f /vendor/etc/perf/targetresourceconfigs.xml.bak ]; then
+			mv /vendor/etc/perf/targetresourceconfigs.xml /vendor/etc/perf/targetresourceconfigs.xml.bak;
+		fi;
+		$BB cp -f $AKHOME/tools/perf/targetresourceconfigs.xml /vendor/etc/perf/targetresourceconfigs.xml;
+		$BB chmod 0644 /vendor/etc/perf/targetresourceconfigs.xml;
+	fi;
+	ui_print " " "AGNi has modified Perf HAL (by uvera) for EAS & schedutil compatibility..." " ";
+else
+		if [ -f /vendor/etc/perf/commonresourceconfigs.xml.bak ]; then
+			mv /vendor/etc/perf/commonresourceconfigs.xml.bak /vendor/etc/perf/commonresourceconfigs.xml;
+			$BB chmod 0644 /vendor/etc/perf/commonresourceconfigs.xml;
+		fi;
+		if [ -f /vendor/etc/perf/perfboostsconfig.xml.bak ]; then
+			mv /vendor/etc/perf/perfboostsconfig.xml.bak /vendor/etc/perf/perfboostsconfig.xml;
+			$BB chmod 0644 /vendor/etc/perf/perfboostsconfig.xml;
+		fi;
+		if [ -f /vendor/etc/perf/targetconfig.xml.bak ]; then
+			mv /vendor/etc/perf/targetconfig.xml.bak /vendor/etc/perf/targetconfig.xml;
+			$BB chmod 0644 /vendor/etc/perf/targetconfig.xml;
+		fi;
+		if [ -f /vendor/etc/perf/targetresourceconfigs.xml.bak ]; then
+			mv /vendor/etc/perf/targetresourceconfigs.xml.bak /vendor/etc/perf/targetresourceconfigs.xml;
+			$BB chmod 0644 /vendor/etc/perf/targetresourceconfigs.xml;
+		fi;
+		ui_print " " "AGNi has NOT modified Perf HAL for EAS & schedutil compatibility." " ";
+fi;
 ## Unmount /system /vendor
 umount_all;
 
