@@ -1,7 +1,7 @@
 &msm_gpu {
 	qcom,chipid = <0x06060001>;
 
-	qcom,initial-pwrlevel = <5>;
+	qcom,initial-pwrlevel = <7>;
 
 	/* Power levels */
 	qcom,gpu-pwrlevels {
@@ -12,8 +12,8 @@
 
 		qcom,gpu-pwrlevel@0 {
 			reg = <0>;
-			qcom,gpu-freq = <738000000>;
-			qcom,level = <RPMH_REGULATOR_LEVEL_NOM_L1>;
+			qcom,gpu-freq = <840000000>;
+			qcom,level = <RPMH_REGULATOR_LEVEL_TURBO_L1>;
 
 			qcom,bus-freq-ddr7 = <11>;
 			qcom,bus-min-ddr7 = <11>;
@@ -26,6 +26,34 @@
 
 		qcom,gpu-pwrlevel@1 {
 			reg = <1>;
+			qcom,gpu-freq = <778000000>;
+			qcom,level = <RPMH_REGULATOR_LEVEL_TURBO>;
+
+			qcom,bus-freq-ddr7 = <11>;
+			qcom,bus-min-ddr7 = <11>;
+			qcom,bus-max-ddr7 = <11>;
+
+			qcom,bus-freq-ddr8 = <11>;
+			qcom,bus-min-ddr8 = <11>;
+			qcom,bus-max-ddr8 = <11>;
+		};
+
+		qcom,gpu-pwrlevel@2 {
+			reg = <2>;
+			qcom,gpu-freq = <738000000>;
+			qcom,level = <RPMH_REGULATOR_LEVEL_NOM_L1>;
+
+			qcom,bus-freq-ddr7 = <11>;
+			qcom,bus-min-ddr7 = <11>;
+			qcom,bus-max-ddr7 = <11>;
+
+			qcom,bus-freq-ddr8 = <11>;
+			qcom,bus-min-ddr8 = <11>;
+			qcom,bus-max-ddr8 = <11>;
+		};
+
+		qcom,gpu-pwrlevel@3 {
+			reg = <3>;
 			qcom,gpu-freq = <676000000>;
 			qcom,level = <RPMH_REGULATOR_LEVEL_NOM>;
 
@@ -38,8 +66,8 @@
 			qcom,bus-max-ddr8 = <11>;
 		};
 
-		qcom,gpu-pwrlevel@2 {
-			reg = <2>;
+		qcom,gpu-pwrlevel@4 {
+			reg = <4>;
 			qcom,gpu-freq = <608000000>;
 			qcom,level = <RPMH_REGULATOR_LEVEL_SVS_L2>;
 
@@ -52,8 +80,8 @@
 			qcom,bus-max-ddr8 = <11>;
 		};
 
-		qcom,gpu-pwrlevel@3 {
-			reg = <3>;
+		qcom,gpu-pwrlevel@5 {
+			reg = <5>;
 			qcom,gpu-freq = <540000000>;
 			qcom,level = <RPMH_REGULATOR_LEVEL_SVS_L1>;
 
@@ -66,8 +94,8 @@
 			qcom,bus-max-ddr8 = <9>;
 		};
 
-		qcom,gpu-pwrlevel@4 {
-			reg = <4>;
+		qcom,gpu-pwrlevel@6 {
+			reg = <6>;
 			qcom,gpu-freq = <443000000>;
 			qcom,level = <RPMH_REGULATOR_LEVEL_SVS>;
 
@@ -80,8 +108,8 @@
 			qcom,bus-max-ddr8 = <7>;
 		};
 
-		qcom,gpu-pwrlevel@5 {
-			reg = <5>;
+		qcom,gpu-pwrlevel@7 {
+			reg = <7>;
 			qcom,gpu-freq = <315000000>;
 			qcom,level = <RPMH_REGULATOR_LEVEL_LOW_SVS>;
 
