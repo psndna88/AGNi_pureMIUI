@@ -586,13 +586,11 @@ else
 	$BB cp -f /vendor/agni/wlan_pie.ko /vendor/agni/wlan.ko;
 	ui_print " " "AGNi now using its Default Pie-sourced Wifi driver..." " ";
 fi;
-if [ -f /vendor/lib/modules/qca_cld3_wlan.ko ]; then
-	$BB cp -f /vendor/agni/wlan.ko /vendor/lib/modules/qca_cld3_wlan.ko;
-fi;
+#if [ -f /vendor/lib/modules/qca_cld3_wlan.ko ]; then
+#	$BB cp -f /vendor/agni/wlan.ko /vendor/lib/modules/qca_cld3_wlan.ko;
+#fi;
 $BB chmod 644 /vendor/agni/wlan.ko;
 $BB chmod 755 /vendor/bin/switchwifi;
-$BB echo "`$BB md5sum /vendor/agni/wlan_pie.ko`" > /vendor/agni/wlan_pie.md5
-$BB echo "`$BB md5sum /vendor/agni/wlan_q.ko`" > /vendor/agni/wlan_q.md5
 umount_all;
 
 setup_env;

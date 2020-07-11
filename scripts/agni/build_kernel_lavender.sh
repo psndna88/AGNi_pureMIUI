@@ -127,6 +127,7 @@ if ([ -f $KERNELDIR/$DIR/Image.gz-dtb-nc ] && [ -f $KERNELDIR/$DIR/Image.gz-dtb-
 	sed -i 's/device.name1=/device.name1=lavender/' $KERNELDIR/$DIR/anykernel.sh
 	sed -i 's/DEVICE_NATIVE_MIUIQ="NO";/DEVICE_NATIVE_MIUIQ="YES";/' $KERNELDIR/$DIR/META-INF/com/google/android/update-binary-installer
 	sed -i '/#AGNICPUOC/d' $KERNELDIR/$DIR/META-INF/com/google/android/aroma-config
+	sed -i '/#AGNIFW/d' $KERNELDIR/$DIR/META-INF/com/google/android/aroma-config
 	sed -i '/NON-OC/d' $KERNELDIR/$DIR/META-INF/com/google/android/aroma/AGNi_info.txt
 	mv $KERNELDIR/$DIR/wlan_pie.ko $KERNELDIR/$DIR/tools/wlan_pie.ko
 	mv $KERNELDIR/$DIR/wlan_q.ko $KERNELDIR/$DIR/tools/wlan_q.ko

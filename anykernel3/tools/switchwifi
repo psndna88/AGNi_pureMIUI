@@ -19,10 +19,14 @@ read -r choice;
 
 if [ $choice -eq 1 ]; then
 	rmmod wlan.ko;
+	echo "N" > /sys/module/module/parameters/lock_wlanmodule
 	insmod /vendor/agni/wlan_pie.ko && echo "Now, Pie-Based wifi driver is loaded. You can enable wifi from rom settings.";
+	echo "Y" > /sys/module/module/parameters/lock_wlanmodule
 elif [ $choice -eq 2 ]; then
 	rmmod wlan.ko;
+	echo "N" > /sys/module/module/parameters/lock_wlanmodule
 	insmod /vendor/agni/wlan_q.ko && echo "Now, Q-Based wifi driver is loaded. You can enable wifi from rom settings.";
+	echo "Y" > /sys/module/module/parameters/lock_wlanmodule
 elif [ $choice -eq 0 ]; then
 	exit;
 else
