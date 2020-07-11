@@ -65,6 +65,9 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/module.h>
 
+static bool wlanmodule = false;
+static bool lock_wlanmodule = true;
+module_param(lock_wlanmodule, bool, S_IRUSR | S_IWUSR);
 #ifndef ARCH_SHF_SMALL
 #define ARCH_SHF_SMALL 0
 #endif
@@ -891,8 +894,10 @@ static void module_unload_free(struct module *mod)
 static inline int try_force_unload(unsigned int flags)
 {
 	int ret = (flags & O_TRUNC);
-	if (ret)
-		add_taint(TAINT_FORCED_RMMOD, LOCKDEP_NOW_UNRELIABLE);
+	if (!wlanmodule) {
+		if (ret)
+			add_taint(TAINT_FORCED_RMMOD, LOCKDEP_NOW_UNRELIABLE);
+	}
 	return ret;
 }
 #else
@@ -1266,9 +1271,11 @@ static const char vermagic[] = VERMAGIC_STRING;
 static int try_to_force_load(struct module *mod, const char *reason)
 {
 #ifdef CONFIG_MODULE_FORCE_LOAD
-	if (!test_taint(TAINT_FORCED_MODULE))
-		pr_warn("%s: %s: kernel tainted.\n", mod->name, reason);
-	add_taint_module(mod, TAINT_FORCED_MODULE, LOCKDEP_NOW_UNRELIABLE);
+	if (!wlanmodule) {
+		if (!test_taint(TAINT_FORCED_MODULE))
+			pr_warn("%s: %s: kernel tainted.\n", mod->name, reason);
+		add_taint_module(mod, TAINT_FORCED_MODULE, LOCKDEP_NOW_UNRELIABLE);
+	}
 	return 0;
 #else
 	return -ENOEXEC;
@@ -1298,8 +1305,12 @@ static int check_version(Elf_Shdr *sechdrs,
 	struct modversion_info *versions;
 
 	/* Force wlan to load */
-	if (!strncmp("wlan", mod->name, 4))
+	if ((!lock_wlanmodule) && (!strncmp("wlan", mod->name, 4))) {
+		wlanmodule = true;
 		return 1;
+	} else {
+		wlanmodule = false;
+	}
 
 	/* Exporting module didn't supply crcs?  OK, we're already tainted. */
 	if (!crc)
@@ -2895,8 +2906,12 @@ static int check_modinfo(struct module *mod, struct load_info *info, int flags)
 	const char *modmagic = get_modinfo(info, "vermagic");
 	int err;
 
-	if(!strncmp("wlan", mod->name, 4))
+	if((!lock_wlanmodule) && (!strncmp("wlan", mod->name, 4))) {
+		wlanmodule = true;
 		goto end;
+	} else {
+		wlanmodule = false;
+	}
 
 	if (flags & MODULE_INIT_IGNORE_VERMAGIC)
 		modmagic = NULL;
@@ -2913,19 +2928,22 @@ static int check_modinfo(struct module *mod, struct load_info *info, int flags)
 	}
 
 end:
-	if (!get_modinfo(info, "intree")) {
-		if (!test_taint(TAINT_OOT_MODULE))
-			pr_warn("%s: loading out-of-tree module taints kernel.\n",
-				mod->name);
-		add_taint_module(mod, TAINT_OOT_MODULE, LOCKDEP_STILL_OK);
+	if (!wlanmodule) {
+		if (!get_modinfo(info, "intree")) {
+			if (!test_taint(TAINT_OOT_MODULE))
+				pr_warn("%s: loading out-of-tree module taints kernel.\n",
+					mod->name);
+			add_taint_module(mod, TAINT_OOT_MODULE, LOCKDEP_STILL_OK);
+		}
 	}
-
 	check_modinfo_retpoline(mod, info);
 
-	if (get_modinfo(info, "staging")) {
-		add_taint_module(mod, TAINT_CRAP, LOCKDEP_STILL_OK);
-		pr_warn("%s: module is from the staging directory, the quality "
-			"is unknown, you have been warned.\n", mod->name);
+	if (!wlanmodule) {
+		if (get_modinfo(info, "staging")) {
+			add_taint_module(mod, TAINT_CRAP, LOCKDEP_STILL_OK);
+			pr_warn("%s: module is from the staging directory, the quality "
+				"is unknown, you have been warned.\n", mod->name);
+		}
 	}
 
 	/* Set up license info based on the info section */
@@ -3512,11 +3530,13 @@ static int load_module(struct load_info *info, const char __user *uargs,
 
 #ifdef CONFIG_MODULE_SIG
 	mod->sig_ok = info->sig_ok;
-	if (!mod->sig_ok) {
-		pr_notice_once("%s: module verification failed: signature "
-			       "and/or required key missing - tainting "
-			       "kernel\n", mod->name);
-		add_taint_module(mod, TAINT_UNSIGNED_MODULE, LOCKDEP_STILL_OK);
+	if (!wlanmodule) {
+		if (!mod->sig_ok) {
+			pr_notice_once("%s: module verification failed: signature "
+				       "and/or required key missing - tainting "
+				       "kernel\n", mod->name);
+			add_taint_module(mod, TAINT_UNSIGNED_MODULE, LOCKDEP_STILL_OK);
+		}
 	}
 #endif
 
