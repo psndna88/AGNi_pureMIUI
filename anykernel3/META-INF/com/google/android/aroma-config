@@ -26,10 +26,10 @@
 
 # Initializing Rom Information
 ini_set("rom_name",		"AGNi Kernel");
-ini_set("rom_version",	"v9.0_stable");
+ini_set("rom_version",	"v9.1_stable");
 ini_set("rom_author",	"psndna88@xda");
 ini_set("rom_device",	"SDM636/660 whyred/wayne/tulip/lavender/jasmine");
-ini_set("rom_date",		"July, 10, 2020");
+ini_set("rom_date",		"July, 14, 2020");
 
 # Show Simple Splash
 splash(
@@ -78,6 +78,16 @@ agreebox(
     "Tick to proceed !"
 );
 
+agreebox(					#AGNIFW
+    "AGNi™ Firmware",		#AGNIFW
+    "Read Carefully",		#AGNIFW
+    "@license",				#AGNIFW
+    resread("AGNi_fw.txt"),	#AGNIFW
+    "I Agree...",			#AGNIFW
+    "Tick to proceed !"		#AGNIFW
+);							#AGNIFW
+
+
 selectbox(
     "Camera Libs Support Mode","<@center><b>\nSelect method of camera libs support</b>\n\n</@>","@install","cam.prop",  
     "Automatic",						"DEFAULT. Auto detect camera libs in rom and flash kernel accordingly", 1,   								#-- selected.0 = 1
@@ -89,7 +99,7 @@ selectbox(
 
 selectbox(
     "WiFi Driver","<@center><b>\nSelect the WiFi version you want</b>\n\n</@>","@install","wifi.prop",  
-    "Pie Source based WiFi",	"DEFAULT. Most stable & preferred. Gives good speed. SELECT THIS IF YOU DON'T UNDERSTAND THIS!", 1,   #-- selected.0 = 1
+    "Pie Source based WiFi",	"DEFAULT. Most stable & preferred. Gives good speed. SELECT THIS IF YOU DON'T UNDERSTAND THIS!", 1,  #-- selected.0 = 1
     "Q Source based WiFi",		"NOT STABLE. Slower Speeds. USE IF YOU HAVE CONSISTENT WiFi ISSUES LIKE HOTSPOT FAILURE ON 5GHz", 0  #-- selected.0 = 2
 );
 
@@ -108,7 +118,7 @@ selectbox( 																																							#AGNICPUOC
 selectbox(
     "EAS Perf HAL","<@center><b>\nEAS compatible PERF HAL configuration</b>\n\n</@>","@install","easperfhal.prop",  
     "YES",	"DEFAULT. Strongly recomended. For roms not built with EAS & schedutil support. Kills the beckground logspams for interactive. ", 1, #-- selected.0 = 1
-    "NO",	"You will get increased battery drains on roms not built for use with EAS & schedutil. This will revert changes made above also.", 0  #-- selected.0 = 2
+    "NO",	"You will get increased battery drains on roms not built for use with EAS & schedutil. This will revert changes made above also.", 0 #-- selected.0 = 2
 );
 
 setvar("retstatus",
