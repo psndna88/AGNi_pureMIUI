@@ -485,8 +485,12 @@ unsigned long arch_align_stack(unsigned long sp)
 
 unsigned long arch_randomize_brk(struct mm_struct *mm)
 {
+	unsigned long range_end = mm->brk;
+
 	if (is_compat_task())
-		return randomize_page(mm->brk, 0x02000000);
+		range_end += 0x02000000;
 	else
-		return randomize_page(mm->brk, 0x40000000);
+		range_end += 0x40000000;
+
+	return randomize_range(mm->brk, range_end, 0) ? : mm->brk;
 }
