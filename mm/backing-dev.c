@@ -10,6 +10,7 @@
 #include <linux/module.h>
 #include <linux/writeback.h>
 #include <linux/device.h>
+#include <linux/agni_meminfo.h>
 #include <trace/events/writeback.h>
 
 static atomic_long_t bdi_seq = ATOMIC_LONG_INIT(0);
@@ -152,6 +153,10 @@ static ssize_t read_ahead_kb_store(struct device *dev,
 	if (ret < 0)
 		return ret;
 
+	if (ramgb <= 3)
+		read_ahead_kb = 128;
+	else
+		read_ahead_kb = 512;
 	bdi->ra_pages = read_ahead_kb >> (PAGE_SHIFT - 10);
 
 	return count;
