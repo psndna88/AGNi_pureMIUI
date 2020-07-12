@@ -145,9 +145,17 @@ unsigned int get_android_version(void)
 }
 
 bool miuirom = true;
-static int __init set_miui_rom(bool *val)
+static int __init set_miui_rom(int *val)
 {
-	get_option(&val, &miuirom);
+	int temp;
+
+	get_option(&val, &temp);
+
+	if (temp)
+		miuirom = true;
+	else
+		miuirom = false;
+
 	return 0;
 }
 __setup("androidboot.miui=", set_miui_rom);
