@@ -36,7 +36,10 @@ void device_totalram(void) {
 	if (!ramchecked) {
 		totalmemk = totalram_pages << (PAGE_SHIFT - 10);
 	
-		if (totalmemk > 5000000) {
+		if (totalmemk > 5505024) {
+			ramgb = 8; /* 8GB device */
+			trigthreshold = 15;
+		} else if ((totalmemk > 5000000) && (totalmemk < 5505024)) {
 			ramgb = 6; /* 6GB device */
 			trigthreshold = 15;
 		} else if ((totalmemk > 3000000) && (totalmemk < 5000000)) {
@@ -109,11 +112,13 @@ bool agni_memprober(void) {
 
 void agni_memprobe(void) {
 
+	device_totalram();
 	if (zramzero) {
 		agni_swappiness = 0;
-		return;
+	} else {
+		agni_swappiness = 100;
 	}
 
-	triggerswapping = agni_memprober();
+	//triggerswapping = agni_memprober();
 }
 
