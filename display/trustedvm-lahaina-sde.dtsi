@@ -21,6 +21,8 @@
 		"regdma_phys",
 		"sid_phys";
 
+	qcom,sde-vm-exclude-reg-names = "sid_phys";
+
 	qcom,sde-hw-version =<0x70000000>;
 
 	clocks =
