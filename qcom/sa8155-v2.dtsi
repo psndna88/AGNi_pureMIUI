@@ -342,3 +342,7 @@
 &camcc {
 	compatible = "qcom,sa8155-camcc-v2", "syscon";
 };
+
+&ethqos_hw {
+	emac-core-version = <0x20010002>;
+};
