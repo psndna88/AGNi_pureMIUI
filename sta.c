@@ -12095,6 +12095,76 @@ static int cmd_sta_set_rfeature_60g(const char *intf, struct sigma_dut *dut,
 }
 
 
+static int wcn_sta_override_oci(struct sigma_dut *dut, const char *intf,
+				const char *oci_frametype, uint32_t oci_freq)
+{
+#ifdef NL80211_SUPPORT
+	struct nl_msg *msg;
+	int ret = 0;
+	struct nlattr *params;
+	struct nlattr *attr;
+	int ifindex;
+	u8 frame_type;
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s failed",
+				__func__, intf);
+		return -1;
+	}
+
+	if (strcasecmp(oci_frametype, "SAQueryReq") == 0) {
+		frame_type = QCA_WLAN_VENDOR_OCI_OVERRIDE_FRAME_SA_QUERY_REQ;
+	} else if (strcasecmp(oci_frametype, "SAQueryResp") == 0) {
+		frame_type = QCA_WLAN_VENDOR_OCI_OVERRIDE_FRAME_SA_QUERY_RESP;
+	} else if (strcasecmp(oci_frametype, "Reassocreq") == 0) {
+		frame_type = QCA_WLAN_VENDOR_OCI_OVERRIDE_FRAME_FT_REASSOC_REQ;
+	} else {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "%s: Unknown frametype %s",
+				__func__, oci_frametype);
+		return -1;
+	}
+
+
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+				    NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
+	    !(attr = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    !(params = nla_nest_start(
+		      msg,
+		      QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_OCI_OVERRIDE)) ||
+	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_OCI_OVERRIDE_FRAME_TYPE,
+		       frame_type) ||
+	    nla_put_u32(msg, QCA_WLAN_VENDOR_ATTR_OCI_OVERRIDE_FREQUENCY,
+			oci_freq)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding vendor_cmd and vendor_data",
+				__func__);
+		nlmsg_free(msg);
+		return -1;
+	}
+	nla_nest_end(msg, params);
+	nla_nest_end(msg, attr);
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in send_and_recv_msgs, ret=%d",
+				__func__, ret);
+	}
+	return ret;
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"OCI override not possible without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
 static enum sigma_cmd_result
 cmd_sta_set_rfeature_wpa3(const char *intf, struct sigma_dut *dut,
 			  struct sigma_conn *conn,
@@ -12124,6 +12194,19 @@ cmd_sta_set_rfeature_wpa3(const char *intf, struct sigma_dut *dut,
 			return STATUS_SENT_ERROR;
 		}
 
+		if (wifi_chip_type == DRIVER_WCN &&
+		    (strcasecmp(oci_frametype, "SAQueryReq") == 0 ||
+		     strcasecmp(oci_frametype, "SAQueryResp") == 0 ||
+		     strcasecmp(oci_frametype, "Reassocreq") == 0)) {
+			if (wcn_sta_override_oci(dut, intf, oci_frametype,
+						 oci_freq)) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to override OCI");
+				return STATUS_SENT_ERROR;
+			}
+			return SUCCESS_SEND_STATUS;
+		}
+
 		if (strcasecmp(oci_frametype, "eapolM2") == 0) {
 			snprintf(buf, sizeof(buf),
 				 "SET oci_freq_override_eapol %d", oci_freq);
@@ -12134,6 +12217,14 @@ cmd_sta_set_rfeature_wpa3(const char *intf, struct sigma_dut *dut,
 		} else if (strcasecmp(oci_frametype, "SAQueryResp") == 0) {
 			snprintf(buf, sizeof(buf),
 				 "SET oci_freq_override_saquery_resp %d",
+				 oci_freq);
+		} else if (strcasecmp(oci_frametype, "GrpKeyM2") == 0) {
+			snprintf(buf, sizeof(buf),
+				 "SET oci_freq_override_eapol_g2 %d",
+				 oci_freq);
+		} else if (strcasecmp(oci_frametype, "Reassocreq") == 0) {
+			snprintf(buf, sizeof(buf),
+				 "SET oci_freq_override_ft_assoc %d",
 				 oci_freq);
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
