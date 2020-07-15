@@ -7702,11 +7702,15 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 					"Set tx beamformee enable by default in sta_reset_default_wcn failed");
 		}
 
+		wpa_command(intf, "SET oce 1");
+
 		/* Set nss to 1 and MCS 0-7 in case of testbed */
 		if (type && strcasecmp(type, "Testbed") == 0) {
 #ifdef NL80211_SUPPORT
 			int ret;
 #endif /* NL80211_SUPPORT */
+
+			wpa_command(intf, "SET oce 0");
 
 			snprintf(buf, sizeof(buf), "iwpriv %s nss 1", intf);
 			if (system(buf) != 0) {
