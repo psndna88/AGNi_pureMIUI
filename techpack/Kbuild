@@ -9,5 +9,5 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 
-obj-y += stub/ audio/
-header-y += stub/include/uapi/ audio/include/uapi/
+obj-y += stub/ audio/ audio/4.0/
+header-y += stub/include/uapi/ audio/include/uapi/ audio/4.0/include/uapi
