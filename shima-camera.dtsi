@@ -29,10 +29,10 @@
 		rgltr-min-voltage = <0 0 1200000 880000>;
 		rgltr-max-voltage = <0 0 1260000 1050000>;
 		rgltr-load-current = <0 0 54000 96400>;
-		clocks = <&clock_camcc CAM_CC_CPHY_RX_CLK_SRC>,
-			<&clock_camcc CAM_CC_CSIPHY0_CLK>,
-			<&clock_camcc CAM_CC_CSI0PHYTIMER_CLK_SRC>,
-			<&clock_camcc CAM_CC_CSI0PHYTIMER_CLK>;
+		clocks = <&camcc CAM_CC_CPHY_RX_CLK_SRC>,
+			<&camcc CAM_CC_CSIPHY0_CLK>,
+			<&camcc CAM_CC_CSI0PHYTIMER_CLK_SRC>,
+			<&camcc CAM_CC_CSI0PHYTIMER_CLK>;
 		clock-names = "cphy_rx_clk_src",
 			"csiphy0_clk",
 			"csi0phytimer_clk_src",
@@ -63,10 +63,10 @@
 		rgltr-min-voltage = <0 0 1200000 880000>;
 		rgltr-max-voltage = <0 0 1260000 1050000>;
 		rgltr-load-current = <0 0 54000 96400>;
-		clocks = <&clock_camcc CAM_CC_CPHY_RX_CLK_SRC>,
-			<&clock_camcc CAM_CC_CSIPHY1_CLK>,
-			<&clock_camcc CAM_CC_CSI1PHYTIMER_CLK_SRC>,
-			<&clock_camcc CAM_CC_CSI1PHYTIMER_CLK>;
+		clocks = <&camcc CAM_CC_CPHY_RX_CLK_SRC>,
+			<&camcc CAM_CC_CSIPHY1_CLK>,
+			<&camcc CAM_CC_CSI1PHYTIMER_CLK_SRC>,
+			<&camcc CAM_CC_CSI1PHYTIMER_CLK>;
 		clock-names = "cphy_rx_clk_src",
 			"csiphy1_clk",
 			"csi1phytimer_clk_src",
@@ -97,10 +97,10 @@
 		rgltr-min-voltage = <0 0 1200000 880000>;
 		rgltr-max-voltage = <0 0 1260000 1050000>;
 		rgltr-load-current = <0 0 54000 96400>;
-		clocks = <&clock_camcc CAM_CC_CPHY_RX_CLK_SRC>,
-			<&clock_camcc CAM_CC_CSIPHY2_CLK>,
-			<&clock_camcc CAM_CC_CSI2PHYTIMER_CLK_SRC>,
-			<&clock_camcc CAM_CC_CSI2PHYTIMER_CLK>;
+		clocks = <&camcc CAM_CC_CPHY_RX_CLK_SRC>,
+			<&camcc CAM_CC_CSIPHY2_CLK>,
+			<&camcc CAM_CC_CSI2PHYTIMER_CLK_SRC>,
+			<&camcc CAM_CC_CSI2PHYTIMER_CLK>;
 		clock-names = "cphy_rx_clk_src",
 			"csiphy2_clk",
 			"csi2phytimer_clk_src",
@@ -131,10 +131,10 @@
 		rgltr-min-voltage = <0 0 1200000 880000>;
 		rgltr-max-voltage = <0 0 1260000 1050000>;
 		rgltr-load-current = <0 0 54000 96400>;
-		clocks = <&clock_camcc CAM_CC_CPHY_RX_CLK_SRC>,
-			<&clock_camcc CAM_CC_CSIPHY3_CLK>,
-			<&clock_camcc CAM_CC_CSI3PHYTIMER_CLK_SRC>,
-			<&clock_camcc CAM_CC_CSI3PHYTIMER_CLK>;
+		clocks = <&camcc CAM_CC_CPHY_RX_CLK_SRC>,
+			<&camcc CAM_CC_CSIPHY3_CLK>,
+			<&camcc CAM_CC_CSI3PHYTIMER_CLK_SRC>,
+			<&camcc CAM_CC_CSI3PHYTIMER_CLK>;
 		clock-names = "cphy_rx_clk_src",
 			"csiphy3_clk",
 			"csi3phytimer_clk_src",
@@ -165,10 +165,10 @@
 		rgltr-min-voltage = <0 0 1200000 880000>;
 		rgltr-max-voltage = <0 0 1260000 1050000>;
 		rgltr-load-current = <0 0 54000 96400>;
-		clocks = <&clock_camcc CAM_CC_CPHY_RX_CLK_SRC>,
-			<&clock_camcc CAM_CC_CSIPHY4_CLK>,
-			<&clock_camcc CAM_CC_CSI4PHYTIMER_CLK_SRC>,
-			<&clock_camcc CAM_CC_CSI4PHYTIMER_CLK>;
+		clocks = <&camcc CAM_CC_CPHY_RX_CLK_SRC>,
+			<&camcc CAM_CC_CSIPHY4_CLK>,
+			<&camcc CAM_CC_CSI4PHYTIMER_CLK_SRC>,
+			<&camcc CAM_CC_CSI4PHYTIMER_CLK>;
 		clock-names = "cphy_rx_clk_src",
 			"csiphy4_clk",
 			"csi4phytimer_clk_src",
@@ -199,10 +199,10 @@
 		rgltr-min-voltage = <0 0 1200000 880000>;
 		rgltr-max-voltage = <0 0 1260000 1050000>;
 		rgltr-load-current = <0 0 54000 96400>;
-		clocks = <&clock_camcc CAM_CC_CPHY_RX_CLK_SRC>,
-			<&clock_camcc CAM_CC_CSIPHY5_CLK>,
-			<&clock_camcc CAM_CC_CSI5PHYTIMER_CLK_SRC>,
-			<&clock_camcc CAM_CC_CSI5PHYTIMER_CLK>;
+		clocks = <&camcc CAM_CC_CPHY_RX_CLK_SRC>,
+			<&camcc CAM_CC_CSIPHY5_CLK>,
+			<&camcc CAM_CC_CSI5PHYTIMER_CLK_SRC>,
+			<&camcc CAM_CC_CSI5PHYTIMER_CLK>;
 		clock-names = "cphy_rx_clk_src",
 			"csiphy5_clk",
 			"csi5phytimer_clk_src",
@@ -226,8 +226,8 @@
 		status = "ok";
 		gdscr-supply = <&cam_cc_titan_top_gdsc>;
 		regulator-names = "gdscr";
-		clocks = <&clock_camcc CAM_CC_CCI_0_CLK_SRC>,
-			<&clock_camcc CAM_CC_CCI_0_CLK>;
+		clocks = <&camcc CAM_CC_CCI_0_CLK_SRC>,
+			<&camcc CAM_CC_CCI_0_CLK>;
 		clock-names = "cci_0_clk_src",
 			"cci_0_clk";
 		src-clock-name = "cci_0_clk_src";
@@ -319,8 +319,8 @@
 		status = "ok";
 		gdscr-supply = <&cam_cc_titan_top_gdsc>;
 		regulator-names = "gdscr";
-		clocks = <&clock_camcc CAM_CC_CCI_1_CLK_SRC>,
-			<&clock_camcc CAM_CC_CCI_1_CLK>;
+		clocks = <&camcc CAM_CC_CCI_1_CLK_SRC>,
+			<&camcc CAM_CC_CCI_1_CLK>;
 		clock-names = "cci_1_clk_src",
 			"cci_1_clk";
 		src-clock-name = "cci_1_clk_src";
