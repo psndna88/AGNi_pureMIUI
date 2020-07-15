@@ -4607,6 +4607,12 @@ int msm_venc_set_cvp_skipratio(struct msm_vidc_inst *inst)
 		d_vpr_e("%s: invalid params %pK\n", __func__, inst);
 		return -EINVAL;
 	}
+
+	if (!is_cvp_supported(inst)) {
+		s_vpr_h(inst->sid, "%s cvp is not supported", __func__);
+		return rc;
+	}
+
 	if (!msm_vidc_cvp_usage)
 		return 0;
 

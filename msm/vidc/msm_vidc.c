@@ -794,6 +794,11 @@ static bool msm_vidc_set_cvp_metadata(struct msm_vidc_inst *inst) {
 		return false;
 	}
 
+	if (!is_cvp_supported(inst)) {
+		s_vpr_h(inst->sid, "%s cvp is not supported", __func__);
+		return true;
+	}
+
 	if (inst->prop.extradata_ctrls & EXTRADATA_ENC_INPUT_CVP)
 	    value = 0x1;
 

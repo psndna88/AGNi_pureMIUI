@@ -1398,6 +1398,10 @@ static struct msm_vidc_common_data holi_common_data[] = {
 		.key = "qcom,fw-vpp-cycles",
 		.value = 225975,
 	},
+	{
+		.key = "qcom,no-cvp",
+		.value = 1,
+	},
 };
 
 static struct msm_vidc_efuse_data shima_efuse_data[] = {

@@ -59,6 +59,11 @@ static inline bool is_low_power_session(struct msm_vidc_inst *inst)
 	return !!(inst->flags & VIDC_LOW_POWER);
 }
 
+static inline bool is_cvp_supported(struct msm_vidc_inst *inst)
+{
+	return inst->core && !inst->core->resources.no_cvp;
+}
+
 static inline struct v4l2_ctrl *get_ctrl(struct msm_vidc_inst *inst,
 	u32 id)
 {
