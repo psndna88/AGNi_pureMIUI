@@ -281,17 +281,20 @@ struct cam_req_mgr_req_queue {
 
 /**
  * struct cam_req_mgr_req_data
- * @in_q        : Poiner to Input request queue
- * @l_tbl       : unique pd request tables.
- * @num_tbl     : how many unique pd value devices are present
- * @apply_data  : Holds information about request id for a request
- * @lock        : mutex lock protecting request data ops.
+ * @in_q             : Poiner to Input request queue
+ * @l_tbl            : unique pd request tables.
+ * @num_tbl          : how many unique pd value devices are present
+ * @apply_data       : Holds information about request id for a request
+ * @prev_apply_data  : Holds information about request id for a previous
+ *                     applied request
+ * @lock             : mutex lock protecting request data ops.
  */
 struct cam_req_mgr_req_data {
 	struct cam_req_mgr_req_queue *in_q;
 	struct cam_req_mgr_req_tbl   *l_tbl;
 	int32_t                       num_tbl;
 	struct cam_req_mgr_apply      apply_data[CAM_PIPELINE_DELAY_MAX];
+	struct cam_req_mgr_apply      prev_apply_data[CAM_PIPELINE_DELAY_MAX];
 	struct mutex                  lock;
 };
 
@@ -365,10 +368,6 @@ struct cam_req_mgr_connected_device {
  *                         applying the settings
  * @trigger_cnt          : trigger count value per device initiating the trigger
  * @eof_event_cnt        : Atomic variable to track the number of EOF requests
- * @enable_apply_default : Link will apply a default settings to devices on
- *                         frames where actual settings are not available.
- *                         This will  account for all devices irrespective of
- *                         pipeline delay
  * @skip_init_frame      : skip initial frames crm_wd_timer validation in the
  *                         case of long exposure use case
  */
@@ -404,7 +403,6 @@ struct cam_req_mgr_core_link {
 	bool                                 dual_trigger;
 	uint32_t    trigger_cnt[CAM_REQ_MGR_MAX_TRIGGERS];
 	atomic_t                             eof_event_cnt;
-	bool                                 enable_apply_default;
 	bool                                 skip_init_frame;
 };
 

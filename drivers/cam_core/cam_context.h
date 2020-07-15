@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_CONTEXT_H_
@@ -121,7 +121,7 @@ struct cam_ctx_ioctl_ops {
  * @link:                  Link the context
  * @unlink:                Unlink the context
  * @apply_req:             Apply setting for the context
- * @apply_default:         Apply default settings for the context
+ * @notify_frame_skip:     Notify device that a frame is skipped
  * @flush_req:             Flush request to remove request ids
  * @process_evt:           Handle event notification from CRM.(optional)
  * @dump_req:              Dump information for the issue request
@@ -136,7 +136,7 @@ struct cam_ctx_crm_ops {
 			struct cam_req_mgr_core_dev_link_setup *unlink);
 	int (*apply_req)(struct cam_context *ctx,
 			struct cam_req_mgr_apply_request *apply);
-	int (*apply_default)(struct cam_context *ctx,
+	int (*notify_frame_skip)(struct cam_context *ctx,
 			struct cam_req_mgr_apply_request *apply);
 	int (*flush_req)(struct cam_context *ctx,
 			struct cam_req_mgr_flush_request *flush);
@@ -306,15 +306,15 @@ int cam_context_handle_crm_apply_req(struct cam_context *ctx,
 		struct cam_req_mgr_apply_request *apply);
 
 /**
- * cam_context_handle_crm_apply_default_req()
+ * cam_context_handle_crm_notify_frame_skip()
  *
- * @brief:        Handle apply default request command
+ * @brief:        Handle notify frame skip command
  *
  * @ctx:          Object pointer for cam_context
- * @apply:        Apply default request command payload
+ * @apply:        Notify frame skip command payload
  *
  */
-int cam_context_handle_crm_apply_default_req(
+int cam_context_handle_crm_notify_frame_skip(
 	struct cam_context *ctx, struct cam_req_mgr_apply_request *apply);
 
 /**

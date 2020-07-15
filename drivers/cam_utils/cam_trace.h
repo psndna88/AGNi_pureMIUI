@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #if !defined(_CAM_TRACE_H) || defined(TRACE_HEADER_MULTI_READ)
@@ -136,6 +136,23 @@ TRACE_EVENT(cam_apply_req,
 	),
 	TP_printk(
 		"%8s: ApplyRequest request=%llu",
+			__get_str(entity), __entry->req_id
+	)
+);
+
+TRACE_EVENT(cam_notify_frame_skip,
+	TP_PROTO(const char *entity, uint64_t req_id),
+	TP_ARGS(entity, req_id),
+	TP_STRUCT__entry(
+		__string(entity, entity)
+		__field(uint64_t, req_id)
+	),
+	TP_fast_assign(
+		__assign_str(entity, entity);
+		__entry->req_id = req_id;
+	),
+	TP_printk(
+		"%8s: NotifyFrameSkip request=%llu",
 			__get_str(entity), __entry->req_id
 	)
 );

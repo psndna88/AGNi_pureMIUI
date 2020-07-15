@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2018,2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_SENSOR_CORE_H_
@@ -46,6 +46,13 @@ int cam_sensor_apply_settings(struct cam_sensor_ctrl_t *s_ctrl, int64_t req_id,
  * This API applies the request that is mentioned
  */
 int cam_sensor_apply_request(struct cam_req_mgr_apply_request *apply);
+
+/**
+ * @apply: Req mgr structure for notifying frame skip
+ *
+ * This API notifies a frame is skipped
+ */
+int cam_sensor_notify_frame_skip(struct cam_req_mgr_apply_request *apply);
 
 /**
  * @flush: Req mgr structure for flushing request
