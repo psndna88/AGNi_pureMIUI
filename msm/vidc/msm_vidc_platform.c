@@ -1048,7 +1048,7 @@ static struct msm_vidc_common_data shima_common_data_v0[] = {
 	},
 	{
 		.key = "qcom,max-hq-mbs-per-sec",
-		.value = 489600, /* ((1920x1088)/256)@60fps */
+		.value = 244800, /* ((1920x1088)/256)@30fps */
 	},
 	{
 		.key = "qcom,power-collapse-delay",
@@ -1161,7 +1161,7 @@ static struct msm_vidc_common_data shima_common_data_v1[] = {
 	},
 	{
 		.key = "qcom,max-hq-mbs-per-sec",
-		.value = 489600, /* ((1920x1088)/256)@60fps */
+		.value = 244800, /* ((1920x1088)/256)@30fps */
 	},
 	{
 		.key = "qcom,power-collapse-delay",
@@ -1274,7 +1274,7 @@ static struct msm_vidc_common_data shima_common_data_v2[] = {
 	},
 	{
 		.key = "qcom,max-hq-mbs-per-sec",
-		.value = 489600, /* ((1920x1088)/256)@60fps */
+		.value = 244800, /* ((1920x1088)/256)@30fps */
 	},
 	{
 		.key = "qcom,power-collapse-delay",
