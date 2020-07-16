@@ -2456,8 +2456,13 @@ int msm_venc_set_intra_period(struct msm_vidc_inst *inst)
 	struct v4l2_ctrl *bframes = NULL;
 	struct v4l2_ctrl *max_layer = NULL;
 	struct v4l2_ctrl *frame_t = NULL;
-	struct hfi_intra_period intra_period;
-	struct hfi_adaptive_p_b_intra_period adaptive_p_b_intra_period;
+	struct hfi_intra_period intra_period = {
+		.pframes = 0,
+		.bframes = 0
+	};
+	struct hfi_adaptive_p_b_intra_period adaptive_p_b_intra_period = {
+		.nframes = 0
+	};
 	u32 codec;
 	bool adaptive_bframes = false;
 
