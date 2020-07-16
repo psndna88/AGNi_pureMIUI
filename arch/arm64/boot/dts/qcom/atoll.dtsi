@@ -4291,7 +4291,12 @@
 	vdd_l7-supply = <&BOB>;
 };
 
+&pm8008_8 {
+	status = "disabled";
+};
+
 &pm8008_9 {
+	status = "disabled";
 	/* GPIO1 pinctrl config */
 	pinctrl-names = "default";
 	pinctrl-0 = <&pm8008_gpio1_active>;
