@@ -1,5 +1,17 @@
 &pm6150_charger {
-	qcom,fv-max-uv = <4450000>;
+	qcom,fv-max-uv = <4480000>;
 	qcom,fcc-max-ua = <3600000>;
-	qcom,thermal-mitigation = <3600000 3300000 3000000 2500000 2000000 1500000 1000000 500000>;
+	qcom,thermal-mitigation = <3600000 3300000 3000000 2500000 2000000 1500000 1000000 800000 500000 100000>;
+	mi,support-ffc;
+};
+
+&smb1396_div2_cp_master {
+	mi,qc3p5-ffc-batt;
+};
+
+&pm6150_pdphy {
+	mi,pd_curr_limit = <1>;
+	mi,pd_max_curr_limit = <4000000>;
+	mi,limit_pd_vbus = <1>;
+	mi,pd_vbus_max_limit = <9500000>;
 };
