@@ -101,6 +101,11 @@
 	parent-supply = <&VDD_GFX_LEVEL>;
 };
 
+
+&pil_modem {
+	vdd_mss-supply = <&pm8150_1_s8_level>;
+};
+
 &ufsphy_mem {
 	vdda-phy-supply = <&pm8150_2_l18>;
 };
