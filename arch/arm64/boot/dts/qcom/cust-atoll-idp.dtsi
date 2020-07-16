@@ -301,11 +301,11 @@
 
 		ti,reset-gpio = <&tlmm 52 0>;
 		ti,irq-gpio = <&tlmm 26 0>;
-		ti,smart-loop = <0>; /* 0-closeloop, 1-openloop*/
+		ti,smart-loop = <1>; /* 0-closeloop, 1-openloop*/
 		ti,actuator = <1>; /* 0-ERM, 1-LRA */
 		ti,rated-voltage = <2500>; /*1800mv*/
 		ti,odclamp-voltage = <4000>; /*3000mv*/
-		ti,lra-frequency = <175>; /* DON'T Care if ERM */
+		ti,lra-frequency = <205>; /* DON'T Care if ERM */
 		wf_0 {
 			/*CLICK*/
 			qcom,effect-id = <0>;
