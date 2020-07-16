@@ -3864,7 +3864,7 @@ static int cam_populate_smmu_context_banks(struct device *dev,
 		of_property_read_bool(dev->of_node, "multiple-client-devices");
 
 	cb->num_shared_hdl = of_property_count_strings(dev->of_node,
-		"label");
+		"cam-smmu-label");
 
 	if (cb->num_shared_hdl >
 		CAM_SMMU_SHARED_HDL_MAX) {
@@ -3877,7 +3877,7 @@ static int cam_populate_smmu_context_banks(struct device *dev,
 	/* set the name of the context bank */
 	for (i = 0; i < cb->num_shared_hdl; i++)
 		rc = of_property_read_string_index(dev->of_node,
-		"label", i, &cb->name[i]);
+		"cam-smmu-label", i, &cb->name[i]);
 	if (rc < 0) {
 		CAM_ERR(CAM_SMMU,
 			"Error: failed to read label from sub device");
