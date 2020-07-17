@@ -61,3 +61,26 @@
 &pil_modem {
 	status = "disabled";
 };
+
+&soc {
+	qcom,lpass@17300000 {
+		status = "ok";
+		qcom,pil-force-shutdown;
+	};
+
+	qcom,turing@8300000 {
+		status = "ok";
+	};
+
+	qcom,venus@aae0000 {
+		status = "ok";
+	};
+
+	qcom,spss@1880000 {
+		status = "ok";
+	};
+
+	qcom,npu@9800000 {
+		status = "ok";
+	};
+};
