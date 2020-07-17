@@ -1921,6 +1921,32 @@
 		mboxes = <&qmp_aop 0>;
 		mbox-names = "cdsp-pil";
 	};
+
+	qcom,venus@aae0000 {
+		compatible = "qcom,pil-tz-generic";
+		reg = <0xaae0000 0x4000>;
+
+		vdd-supply = <&mvsc_gdsc>;
+		qcom,proxy-reg-names = "vdd";
+		qcom,complete-ramdump;
+
+		clocks = <&videocc VIDEO_CC_XO_CLK>,
+			<&videocc VIDEO_CC_MVSC_CORE_CLK>,
+			<&videocc VIDEO_CC_IRIS_AHB_CLK>;
+		clock-names = "xo", "core", "ahb";
+		qcom,proxy-clock-names = "xo",  "core", "ahb";
+
+		qcom,core-freq = <200000000>;
+		qcom,ahb-freq = <200000000>;
+
+		qcom,pas-id = <9>;
+		interconnect-names = "pil-venus";
+		interconnects = <&mmss_noc MASTER_VIDEO_P0
+				&mc_virt SLAVE_EBI1>;
+		qcom,proxy-timeout-ms = <100>;
+		qcom,firmware-name = "venus";
+		memory-region = <&pil_video_mem>;
+	};
 };
 
 &firmware {
