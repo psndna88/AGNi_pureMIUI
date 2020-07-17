@@ -756,6 +756,7 @@
 		clocks-option = <&camcc CAM_CC_IFE_0_DSP_CLK>;
 		clock-rates-option = <720000000>;
 		ubwc-static-cfg = <0x1026 0x1036>;
+		cam_hw_pid = < 28 4 16 8 >;
 		status = "ok";
 	};
 
@@ -842,6 +843,7 @@
 		clocks-option = <&camcc CAM_CC_IFE_1_DSP_CLK>;
 		clock-rates-option = <720000000>;
 		ubwc-static-cfg = <0x1026 0x1036>;
+		cam_hw_pid = < 29 5 17 9 >;
 		status = "ok";
 	};
 
@@ -925,6 +927,7 @@
 		scl-clk-names = "ife_2_areg";
 		clock-control-debugfs = "true";
 		ubwc-static-cfg = <0x1026 0x1036>;
+		cam_hw_pid = < 23 6 18 10>;
 		status = "ok";
 	};
 
@@ -997,6 +1000,7 @@
 			"turbo";
 		src-clock-name = "ife_clk_src";
 		clock-control-debugfs = "true";
+		cam_hw_pid = < 20 >;
 		status = "ok";
 	};
 
@@ -1069,6 +1073,7 @@
 			"turbo";
 		src-clock-name = "ife_clk_src";
 		clock-control-debugfs = "true";
+		cam_hw_pid = < 19 >;
 		status = "ok";
 	};
 
