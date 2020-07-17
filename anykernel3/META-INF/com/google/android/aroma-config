@@ -26,10 +26,10 @@
 
 # Initializing Rom Information
 ini_set("rom_name",		"AGNi Kernel");
-ini_set("rom_version",	"v9.1_stable");
+ini_set("rom_version",	"v9.2_stable");
 ini_set("rom_author",	"psndna88@xda");
 ini_set("rom_device",	"SDM636/660 whyred/wayne/tulip/lavender/jasmine");
-ini_set("rom_date",		"July, 14, 2020");
+ini_set("rom_date",		"July, 19, 2020");
 
 # Show Simple Splash
 splash(
