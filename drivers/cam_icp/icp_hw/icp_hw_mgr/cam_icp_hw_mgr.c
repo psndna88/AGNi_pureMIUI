@@ -3624,6 +3624,7 @@ static int cam_icp_mgr_hfi_init(struct cam_icp_hw_mgr *hw_mgr)
 	struct cam_hw_intf *a5_dev_intf = NULL;
 	struct cam_hw_info *a5_dev = NULL;
 	struct hfi_mem_info hfi_mem;
+	struct hfi_ops hfi_ops;
 
 	a5_dev_intf = hw_mgr->a5_dev_intf;
 	if (!a5_dev_intf) {
@@ -3688,8 +3689,11 @@ static int cam_icp_mgr_hfi_init(struct cam_icp_hw_mgr *hw_mgr)
 		hfi_mem.io_mem2.len = 0x0;
 	}
 
-	return cam_hfi_init(0, &hfi_mem,
-		a5_dev->soc_info.reg_map[A5_SIERRA_BASE].mem_base);
+	hfi_ops.irq_raise = cam_a5_irq_raise;
+	hfi_ops.irq_enable = cam_a5_irq_enable;
+
+	return cam_hfi_init(&hfi_mem, &hfi_ops, a5_dev, 0,
+			a5_dev->soc_info.reg_map[A5_SIERRA_BASE].mem_base);
 }
 
 static int cam_icp_mgr_send_fw_init(struct cam_icp_hw_mgr *hw_mgr)

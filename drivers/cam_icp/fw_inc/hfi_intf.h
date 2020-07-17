@@ -50,6 +50,16 @@ struct hfi_mem_info {
 };
 
 /**
+ * struct hfi_ops
+ * @irq_raise: called to raise H2ICP interrupt
+ * @irq_enable: called to enable interrupts from ICP
+ */
+struct hfi_ops {
+	void (*irq_raise)(void *data);
+	void (*irq_enable)(void *data);
+};
+
+/**
  * hfi_write_cmd() - function for hfi write
  * @cmd_ptr: pointer to command data for hfi write
  *
@@ -70,14 +80,16 @@ int hfi_read_message(uint32_t *pmsg, uint8_t q_id, uint32_t *words_read);
 
 /**
  * hfi_init() - function initialize hfi after firmware download
- * @event_driven_mode: event mode
  * @hfi_mem: hfi memory info
+ * @hfi_ops: processor-specific hfi ops
+ * @priv: device private data
+ * @event_driven_mode: event mode
  * @icp_base: icp base address
  *
  * Returns success(zero)/failure(non zero)
  */
-int cam_hfi_init(uint8_t event_driven_mode, struct hfi_mem_info *hfi_mem,
-	void *__iomem icp_base);
+int cam_hfi_init(struct hfi_mem_info *hfi_mem, struct hfi_ops *hfi_ops,
+		void *priv, uint8_t event_driven_mode, void *__iomem icp_base);
 
 /**
  * hfi_get_hw_caps() - hardware capabilities from firmware

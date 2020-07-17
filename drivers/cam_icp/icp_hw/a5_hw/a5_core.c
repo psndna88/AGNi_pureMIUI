@@ -485,6 +485,34 @@ irqreturn_t cam_a5_irq(int irq_num, void *data)
 	return IRQ_HANDLED;
 }
 
+void cam_a5_irq_raise(void *priv)
+{
+	struct cam_hw_info *a5_info = priv;
+
+	if (!a5_info) {
+		CAM_ERR(CAM_ICP, "invalid A5 device info");
+		return;
+	}
+
+	cam_io_w_mb(A5_HOSTINT,
+		a5_info->soc_info.reg_map[A5_SIERRA_BASE].mem_base +
+		ICP_SIERRA_A5_CSR_HOST2ICPINT);
+}
+
+void cam_a5_irq_enable(void *priv)
+{
+	struct cam_hw_info *a5_info = priv;
+
+	if (!a5_info) {
+		CAM_ERR(CAM_ICP, "invalid A5 device info");
+		return;
+	}
+
+	cam_io_w_mb(A5_WDT_WS0EN | A5_A2HOSTINTEN,
+		a5_info->soc_info.reg_map[A5_SIERRA_BASE].mem_base +
+		ICP_SIERRA_A5_CSR_A2HOSTINTEN);
+}
+
 int cam_a5_process_cmd(void *device_priv, uint32_t cmd_type,
 	void *cmd_args, uint32_t arg_size)
 {

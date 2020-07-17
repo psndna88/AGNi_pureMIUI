@@ -23,6 +23,14 @@
 				A5_CSR_WAKE_UP_EN | \
 				A5_CSR_EN_CLKGATE_WFI)
 
+#define ICP_SIERRA_A5_CSR_A2HOSTINTEN   0x10
+#define A5_WDT_WS1EN                    (1 << 2)
+#define A5_WDT_WS0EN                    (1 << 1)
+#define A5_A2HOSTINTEN                  (1 << 0)
+
+#define ICP_SIERRA_A5_CSR_HOST2ICPINT   0x30
+#define A5_HOSTINT                      (1 << 0)
+
 #define ICP_SIERRA_A5_CSR_A5_STATUS     0x200
 #define A5_CSR_A5_STANDBYWFI            (1 << 7)
 
