@@ -7602,7 +7602,7 @@ int msm_comm_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us)
 	duplicate = NULL;
 	list_for_each_entry(node, &inst->timestamps.list, list) {
 		count++;
-		if (node->timestamp_us == timestamp_us)
+		if (node->is_valid && node->timestamp_us == timestamp_us)
 			duplicate = node;
 	}
 
