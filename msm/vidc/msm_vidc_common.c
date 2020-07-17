@@ -7764,7 +7764,7 @@ int msm_comm_fetch_ts_framerate(struct msm_vidc_inst *inst,
 		}
 
 		/* do not update is_valid flag for subframe buffer */
-		if (!(b->flags & HAL_BUFFERFLAG_ENDOFSUBFRAME))
+		if (!(b->flags & V4L2_BUF_FLAG_END_OF_SUBFRAME))
 			node->is_valid = false;
 
 		b->timestamp.tv_sec = node->timestamp_us / 1000000ull;
