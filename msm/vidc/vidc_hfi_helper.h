@@ -541,6 +541,10 @@ struct hfi_intra_period {
 	u32 bframes;
 };
 
+struct hfi_adaptive_p_b_intra_period {
+	u32 nframes;
+};
+
 struct hfi_multi_stream {
 	u32 buffer_type;
 	u32 enable;

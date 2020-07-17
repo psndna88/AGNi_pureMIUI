@@ -601,10 +601,11 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		.id = V4L2_CID_MPEG_VIDEO_HEVC_HIER_CODING_TYPE,
 		.name = "Set Hier coding type",
 		.type = V4L2_CTRL_TYPE_MENU,
-		.minimum = V4L2_MPEG_VIDEO_HEVC_HIERARCHICAL_CODING_P,
+		.minimum = V4L2_MPEG_VIDEO_HEVC_HIERARCHICAL_CODING_B,
 		.maximum = V4L2_MPEG_VIDEO_HEVC_HIERARCHICAL_CODING_P,
 		.default_value = V4L2_MPEG_VIDEO_HEVC_HIERARCHICAL_CODING_P,
 		.menu_skip_mask = ~(
+		(1 << V4L2_MPEG_VIDEO_HEVC_HIERARCHICAL_CODING_B) |
 		(1 << V4L2_MPEG_VIDEO_HEVC_HIERARCHICAL_CODING_P)
 		),
 		.qmenu = NULL,
@@ -2451,8 +2452,19 @@ int msm_venc_set_intra_period(struct msm_vidc_inst *inst)
 {
 	int rc = 0;
 	struct hfi_device *hdev;
-	struct v4l2_ctrl *ctrl;
-	struct hfi_intra_period intra_period;
+	struct v4l2_ctrl *gop_size = NULL;
+	struct v4l2_ctrl *bframes = NULL;
+	struct v4l2_ctrl *max_layer = NULL;
+	struct v4l2_ctrl *frame_t = NULL;
+	struct hfi_intra_period intra_period = {
+		.pframes = 0,
+		.bframes = 0
+	};
+	struct hfi_adaptive_p_b_intra_period adaptive_p_b_intra_period = {
+		.nframes = 0
+	};
+	u32 codec;
+	bool adaptive_bframes = false;
 
 	if (!inst || !inst->core) {
 		d_vpr_e("%s: invalid params %pK\n", __func__, inst);
@@ -2460,38 +2472,78 @@ int msm_venc_set_intra_period(struct msm_vidc_inst *inst)
 	}
 	hdev = inst->core->device;
 
-	msm_venc_adjust_gop_size(inst);
+	frame_t = get_ctrl(inst, V4L2_CID_MPEG_VIDEO_HEVC_HIER_CODING_TYPE);
+	gop_size = get_ctrl(inst, V4L2_CID_MPEG_VIDEO_GOP_SIZE);
+	max_layer = get_ctrl(inst,
+			V4L2_CID_MPEG_VIDC_VIDEO_HEVC_MAX_HIER_CODING_LAYER);
+	codec = get_v4l2_codec(inst);
 
-	ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDEO_GOP_SIZE);
-	intra_period.pframes = ctrl->val;
+	if (!max_layer->val && codec == V4L2_PIX_FMT_H264) {
+		intra_period.pframes = gop_size->val;
+		/*
+		 * At this point we've already made decision on bframe.
+		 * Control value gives updated bframe value.
+		 */
+		bframes = get_ctrl(inst, V4L2_CID_MPEG_VIDEO_B_FRAMES);
+		intra_period.bframes = bframes->val;
+		if (intra_period.bframes)
+			adaptive_bframes = true;
+	}
 
-	/*
-	 * At this point we have already made decision on bframe
-	 * Control value gives updated bframe value.
-	 */
-	ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDEO_B_FRAMES);
-	intra_period.bframes = ctrl->val;
+	if (max_layer->val > 1) {
+		if (frame_t->val ==
+			V4L2_MPEG_VIDEO_HEVC_HIERARCHICAL_CODING_B) {
+			if (codec == V4L2_PIX_FMT_HEVC) {
+				adaptive_p_b_intra_period.nframes =
+					gop_size->val;
+				adaptive_bframes = true;
+			} else {
+				d_vpr_e("%s: Hier-B supported for HEVC only\n",
+						__func__);
+				return -EINVAL;
+			}
+		} else if (frame_t->val ==
+			V4L2_MPEG_VIDEO_HEVC_HIERARCHICAL_CODING_P) {
+			msm_venc_adjust_gop_size(inst);
+			intra_period.pframes = gop_size->val;
+			intra_period.bframes = 0;
+			adaptive_bframes = false;
+		}
+	}
 
 	if (inst->state == MSM_VIDC_START_DONE &&
-		!intra_period.pframes && !intra_period.bframes) {
+			!intra_period.pframes && !intra_period.bframes) {
 		s_vpr_h(inst->sid,
 			"%s: Switch from IPPP to All Intra is not allowed\n",
 			__func__);
 		return rc;
 	}
 
-	s_vpr_h(inst->sid, "%s: %d %d\n", __func__, intra_period.pframes,
-		intra_period.bframes);
-	rc = call_hfi_op(hdev, session_set_property, inst->session,
-		HFI_PROPERTY_CONFIG_VENC_INTRA_PERIOD, &intra_period,
-		sizeof(intra_period));
+	if (frame_t->val ==
+			V4L2_MPEG_VIDEO_HEVC_HIERARCHICAL_CODING_B &&
+			codec == V4L2_PIX_FMT_HEVC) {
+		s_vpr_h(inst->sid, "%s: nframes: %d\n",
+				__func__, adaptive_p_b_intra_period.nframes);
+		rc = call_hfi_op(hdev, session_set_property, inst->session,
+				HFI_PROPERTY_CONFIG_VENC_INTRA_PERIOD,
+				&adaptive_p_b_intra_period,
+				sizeof(adaptive_p_b_intra_period));
+
+	} else {
+		s_vpr_h(inst->sid, "%s: pframes: %d bframes: %d\n",
+				__func__, intra_period.pframes,
+				intra_period.bframes);
+		rc = call_hfi_op(hdev, session_set_property, inst->session,
+				HFI_PROPERTY_CONFIG_VENC_INTRA_PERIOD,
+				&intra_period, sizeof(intra_period));
+	}
+
 	if (rc) {
 		s_vpr_e(inst->sid, "%s: set property failed\n", __func__);
 		return rc;
 	}
 
-	if (intra_period.bframes) {
-		/* Enable adaptive bframes as nbframes!= 0 */
+	if (adaptive_bframes) {
 		rc = msm_venc_set_adaptive_bframes(inst);
 		if (rc) {
 			s_vpr_e(inst->sid, "%s: set property failed\n",
@@ -2499,6 +2551,7 @@ int msm_venc_set_intra_period(struct msm_vidc_inst *inst)
 			return rc;
 		}
 	}
+
 	return rc;
 }
 
@@ -2764,14 +2817,14 @@ int msm_venc_set_layer_bitrate(struct msm_vidc_inst *inst)
 
 	if (!max_layer->val || !layer->val) {
 		s_vpr_h(inst->sid,
-			"%s: Hierp layer not set. Ignore layer bitrate\n",
+			"%s: Hier-P layer not set. Ignore layer bitrate\n",
 			__func__);
 		goto error;
 	}
 
 	if (max_layer->val < layer->val) {
 		s_vpr_h(inst->sid,
-			"%s: Hierp layer greater than max isn't allowed\n",
+			"%s: Hier-P layer greater than max isn't allowed\n",
 			__func__);
 		goto error;
 	}
@@ -3611,7 +3664,7 @@ int msm_venc_set_base_layer_priority_id(struct msm_vidc_inst *inst)
 	max_layer = get_ctrl(inst,
 		V4L2_CID_MPEG_VIDC_VIDEO_HEVC_MAX_HIER_CODING_LAYER);
 	if (max_layer->val <= 0) {
-		s_vpr_h(inst->sid, "%s: Layer id can only be set with Hierp\n",
+		s_vpr_h(inst->sid, "%s: Layer id can only be set with Hier-P\n",
 			__func__);
 		return 0;
 	}
@@ -3629,11 +3682,54 @@ int msm_venc_set_base_layer_priority_id(struct msm_vidc_inst *inst)
 	return rc;
 }
 
+int msm_venc_set_hb_max_layer(struct msm_vidc_inst *inst)
+{
+	int rc = 0;
+	struct hfi_device *hdev;
+	struct v4l2_ctrl *frame_t = NULL;
+	struct v4l2_ctrl *max_layer = NULL;
+	u32 hb_layer = 0;
+	u32 codec;
+
+	if (!inst || !inst->core) {
+		d_vpr_e("%s: invalid params %pK\n", __func__, inst);
+		return -EINVAL;
+	}
+	hdev = inst->core->device;
+
+	codec = get_v4l2_codec(inst);
+	if (codec != V4L2_PIX_FMT_HEVC)
+		return 0;
+
+	max_layer = get_ctrl(inst,
+		V4L2_CID_MPEG_VIDC_VIDEO_HEVC_MAX_HIER_CODING_LAYER);
+	frame_t = get_ctrl(inst, V4L2_CID_MPEG_VIDEO_HEVC_HIER_CODING_TYPE);
+	if (max_layer->val < 2 ||
+		frame_t->val != V4L2_MPEG_VIDEO_HEVC_HIERARCHICAL_CODING_B) {
+		s_vpr_h(inst->sid,
+			"%s: Hier-B not requested for this session\n",
+			__func__);
+		return 0;
+	}
+	hb_layer = max_layer->val - 1;
+
+	s_vpr_h(inst->sid, "%s: Hier-B max layer: %d\n",
+		__func__, hb_layer);
+	rc = call_hfi_op(hdev, session_set_property, inst->session,
+		HFI_PROPERTY_PARAM_VENC_HIER_B_MAX_NUM_ENH_LAYER,
+		&hb_layer, sizeof(hb_layer));
+	if (rc)
+		s_vpr_e(inst->sid, "%s: set property failed\n", __func__);
+
+	return rc;
+}
+
 int msm_venc_set_hp_max_layer(struct msm_vidc_inst *inst)
 {
 	int rc = 0;
 	struct hfi_device *hdev;
-	struct v4l2_ctrl *ctrl;
+	struct v4l2_ctrl *frame_t = NULL;
+	struct v4l2_ctrl *max_layer = NULL;
 	u32 hp_layer = 0;
 	u32 codec;
 
@@ -3647,12 +3743,20 @@ int msm_venc_set_hp_max_layer(struct msm_vidc_inst *inst)
 	if (codec != V4L2_PIX_FMT_H264 && codec != V4L2_PIX_FMT_HEVC)
 		return 0;
 
-	ctrl = get_ctrl(inst,
+	max_layer = get_ctrl(inst,
 		V4L2_CID_MPEG_VIDC_VIDEO_HEVC_MAX_HIER_CODING_LAYER);
+	frame_t = get_ctrl(inst, V4L2_CID_MPEG_VIDEO_HEVC_HIER_CODING_TYPE);
+	if (max_layer->val < 2 ||
+		frame_t->val != V4L2_MPEG_VIDEO_HEVC_HIERARCHICAL_CODING_P) {
+		s_vpr_h(inst->sid,
+			"%s: Hier-P not requested for this session\n",
+			__func__);
+		return 0;
+	}
 
 	rc = msm_venc_enable_hybrid_hp(inst);
 	if (rc) {
-		s_vpr_e(inst->sid, "%s: get hybrid hp decision failed\n",
+		s_vpr_e(inst->sid, "%s: get hybrid hier-P decision failed\n",
 			__func__);
 		return rc;
 	}
@@ -3661,17 +3765,17 @@ int msm_venc_set_hp_max_layer(struct msm_vidc_inst *inst)
 	 * We send enhancement layer count to FW,
 	 * hence, input 0/1 indicates absence of layer encoding.
 	 */
-	if (ctrl->val)
-		hp_layer = ctrl->val - 1;
+	if (max_layer->val)
+		hp_layer = max_layer->val - 1;
 
 	if (inst->hybrid_hp) {
-		s_vpr_h(inst->sid, "%s: Hybrid hierp layer: %d\n",
+		s_vpr_h(inst->sid, "%s: Hybrid hier-P layer: %d\n",
 			__func__, hp_layer);
 		rc = call_hfi_op(hdev, session_set_property, inst->session,
 			HFI_PROPERTY_PARAM_VENC_HIER_P_HYBRID_MODE,
 			&hp_layer, sizeof(hp_layer));
 	} else {
-		s_vpr_h(inst->sid, "%s: Hierp max layer: %d\n",
+		s_vpr_h(inst->sid, "%s: Hier-P max layer: %d\n",
 			__func__, hp_layer);
 		rc = call_hfi_op(hdev, session_set_property, inst->session,
 			HFI_PROPERTY_PARAM_VENC_HIER_P_MAX_NUM_ENH_LAYER,
@@ -3686,6 +3790,7 @@ int msm_venc_set_hp_layer(struct msm_vidc_inst *inst)
 {
 	int rc = 0;
 	struct hfi_device *hdev;
+	struct v4l2_ctrl *frame_t = NULL;
 	struct v4l2_ctrl *ctrl = NULL;
 	struct v4l2_ctrl *max_layer = NULL;
 	u32 hp_layer = 0;
@@ -3696,6 +3801,14 @@ int msm_venc_set_hp_layer(struct msm_vidc_inst *inst)
 		return -EINVAL;
 	}
 	hdev = inst->core->device;
+
+	frame_t = get_ctrl(inst, V4L2_CID_MPEG_VIDEO_HEVC_HIER_CODING_TYPE);
+	if (frame_t->val != V4L2_MPEG_VIDEO_HEVC_HIERARCHICAL_CODING_P) {
+		s_vpr_h(inst->sid,
+			"%s: Hier-P layer can be set for P type frame only\n",
+			__func__);
+		return 0;
+	}
 
 	codec = get_v4l2_codec(inst);
 	if (codec != V4L2_PIX_FMT_H264 && codec != V4L2_PIX_FMT_HEVC)
@@ -3728,7 +3841,7 @@ int msm_venc_set_hp_layer(struct msm_vidc_inst *inst)
 	if (ctrl->val)
 		hp_layer = ctrl->val - 1;
 
-	s_vpr_h(inst->sid, "%s: Hierp enhancement layer: %d\n",
+	s_vpr_h(inst->sid, "%s: Hier-P enhancement layer: %d\n",
 		__func__, hp_layer);
 	rc = call_hfi_op(hdev, session_set_property, inst->session,
 		HFI_PROPERTY_CONFIG_VENC_HIER_P_ENH_LAYER,
@@ -4735,6 +4848,9 @@ int msm_venc_set_properties(struct msm_vidc_inst *inst)
 	if (rc)
 		goto exit;
 	rc = msm_venc_set_ltr_mode(inst);
+	if (rc)
+		goto exit;
+	rc = msm_venc_set_hb_max_layer(inst);
 	if (rc)
 		goto exit;
 	rc = msm_venc_set_hp_max_layer(inst);

@@ -190,6 +190,25 @@ static inline bool is_internal_buffer(enum hal_buffer type)
 	return !!(buf_type & type);
 }
 
+static inline bool is_hier_b_session(struct msm_vidc_inst *inst)
+{
+	struct v4l2_ctrl *max_layer = NULL;
+	struct v4l2_ctrl *frame_t = NULL;
+
+	if (inst->session_type == MSM_VIDC_ENCODER) {
+		max_layer = get_ctrl(inst,
+			V4L2_CID_MPEG_VIDC_VIDEO_HEVC_MAX_HIER_CODING_LAYER);
+		frame_t = get_ctrl(inst,
+			V4L2_CID_MPEG_VIDEO_HEVC_HIER_CODING_TYPE);
+		if (get_v4l2_codec(inst) == V4L2_PIX_FMT_HEVC &&
+			max_layer->val > 1 &&
+			frame_t->val ==
+				V4L2_MPEG_VIDEO_HEVC_HIERARCHICAL_CODING_B)
+			return true;
+	}
+	return false;
+}
+
 static inline int msm_comm_g_ctrl(struct msm_vidc_inst *inst,
 		struct v4l2_control *ctrl)
 {
