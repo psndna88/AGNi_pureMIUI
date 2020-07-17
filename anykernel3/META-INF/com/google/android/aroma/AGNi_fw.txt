@@ -7,9 +7,11 @@
 It also includes fixes for Indian carriers - Jio volte/vilte & Airtel vowifi.
 It has goodies of 3 different firmwares merged in one modified firmware.
 
-<b>HIGHLY RECOMMENDED to be definitely used with AGNi kernel</b>
+<b>HIGHLY RECOMMENDED to be definitely used with AGNi kernel
 
-You can get it on AGNi telegram group.</q></@>
+For best experience, you should charge till 100% and 10 minutes more after 100% to ensure good battery backup.</b>
+
+You can get it on AGNi whyed telegram group/channel.</q></@>
 
 
 <@center><b><#selectbg_g>May you have Good Battery life !</#></b></@>
