@@ -1860,6 +1860,17 @@
 		mboxes = <&qmp_aop 0>;
 		mbox-names = "spss-pil";
 	};
+
+	qcom,npu@9800000 {
+		compatible = "qcom,pil-tz-generic";
+		reg = <0x9800000 0x800000>;
+
+		status = "ok";
+		qcom,pas-id = <23>;
+		qcom,firmware-name = "npu";
+
+		memory-region = <&pil_npu_mem>;
+	};
 };
 
 &firmware {
