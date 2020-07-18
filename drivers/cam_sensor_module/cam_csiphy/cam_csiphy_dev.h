@@ -152,6 +152,11 @@ struct csiphy_reg_t {
 
 struct csiphy_device;
 
+struct csiphy_cphy_per_lane_info {
+	uint8_t lane_identifier;
+	struct csiphy_reg_t csiphy_data_rate_regs[MAX_DATA_RATE_REGS];
+};
+
 /*
  * struct data_rate_reg_info_t
  * @bandwidth: max bandwidth supported by this reg settings
@@ -161,7 +166,8 @@ struct csiphy_device;
 struct data_rate_reg_info_t {
 	uint64_t bandwidth;
 	ssize_t  data_rate_reg_array_size;
-	struct csiphy_reg_t csiphy_data_rate_regs[MAX_DATA_RATE_REGS];
+	struct   csiphy_cphy_per_lane_info per_lane_info[
+			CAM_CSIPHY_MAX_CPHY_LANES];
 };
 
 /**
