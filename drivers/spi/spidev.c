@@ -123,7 +123,9 @@ spidev_sync_write(struct spidev_data *spidev, size_t len)
 	struct spi_transfer	t = {
 			.tx_buf		= spidev->tx_buffer,
 			.len		= len,
-			.speed_hz	= spidev->speed_hz,
+			.speed_hz	= 960000,
+			.delay_usecs = 0,
+			.cs_change   = 0,
 		};
 	struct spi_message	m;
 
