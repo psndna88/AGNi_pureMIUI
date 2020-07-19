@@ -5,4 +5,6 @@ config FINGERPRINT_FPC1020
 	help
 	  say y here to enable fpc fingerprint driver support!
 
+source "drivers/input/fingerprint/gf3208/Kconfig"
+
 endmenu
