@@ -560,7 +560,7 @@ int nfc_ioctl_power_states(struct file *filp, unsigned long arg)
 	int r = 0;
 	struct nqx_dev *nqx_dev = filp->private_data;
 
-	if (arg == 0) {
+	if (arg == 0 || arg == 8) {
 		/*
 		 * We are attempting a hardware reset so let us disable
 		 * interrupts to avoid spurious notifications to upper
@@ -595,7 +595,7 @@ int nfc_ioctl_power_states(struct file *filp, unsigned long arg)
 				dev_err(&nqx_dev->client->dev, "unable to disable clock\n");
 		}
 		nqx_dev->nfc_ven_enabled = false;
-	} else if (arg == 1) {
+	} else if (arg == 1 || arg == 7) {
 		nqx_enable_irq(nqx_dev);
 		dev_dbg(&nqx_dev->client->dev,
 			"gpio_set_value enable: %s: info: %p\n",
