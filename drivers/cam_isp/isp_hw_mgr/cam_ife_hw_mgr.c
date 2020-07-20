@@ -484,6 +484,9 @@ static void cam_ife_hw_mgr_deinit_hw(
 		return;
 	}
 
+	if (ctx->is_tpg)
+		cam_ife_hw_mgr_deinit_hw_res(&ctx->res_list_tpg);
+
 	/* Deinit IFE CID */
 	list_for_each_entry(hw_mgr_res, &ctx->res_list_ife_cid, list) {
 		CAM_DBG(CAM_ISP, "%s: Going to DeInit IFE CID\n", __func__);
