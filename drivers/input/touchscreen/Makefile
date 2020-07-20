@@ -6,6 +6,7 @@
 # Each configuration option enables a list of files.
 
 obj-$(CONFIG_TOUCHSCREEN_FTS)                   += ft8756_spi/
+obj-$(CONFIG_TOUCHSCREEN_NT36xxx_HOSTDL_SPI)    += nt36xxx_spi/
 
 wm97xx-ts-y := wm97xx-core.o
 
