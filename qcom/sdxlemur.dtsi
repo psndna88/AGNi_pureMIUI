@@ -352,22 +352,6 @@
 		};
 	};
 
-	bi_tcxo: bi_tcxo {
-		compatible = "fixed-factor-clock";
-		clock-mult = <1>;
-		clock-div = <4>;
-		clocks = <&xo_board>;
-		#clock-cells = <0>;
-	};
-
-	bi_tcxo_ao: bi_tcxo_ao {
-		compatible = "fixed-factor-clock";
-		clock-mult = <1>;
-		clock-div = <4>;
-		clocks = <&xo_board>;
-		#clock-cells = <0>;
-	};
-
 	aopcc: clock-controller@0 {
 		compatible = "qcom,aop-qmp-clk";
 		mboxes = <&qmp_aop 0>;
@@ -375,16 +359,16 @@
 		#clock-cells = <1>;
 	};
 
-	rpmhcc: clock-controller@1 {
-		compatible = "qcom,dummycc";
-		clock-output-names = "rpmhcc_clocks";
-		#clock-cells = <1>;
-		#reset-cells = <1>;
-	};
-
-	gcc: clock-controller@100000 {
-		compatible = "qcom,dummycc";
-		clock-output-names = "gcc_clocks";
+	gcc: clock-controller@0x100000 {
+		compatible = "qcom,sdxlemur-gcc", "syscon";
+		reg = <0x100000 0x1f7400>;
+		reg-name = "cc_base";
+		clocks = <&rpmhcc RPMH_CXO_CLK>, <&rpmhcc RPMH_CXO_CLK_A>, <&sleep_clk>,
+			 <&pcie_pipe_clk>, <&usb3_phy_wrapper_gcc_usb30_pipe_clk>;
+		clock-names = "bi_tcxo", "bi_tcxo_ao", "sleep_clk",
+			      "pcie_pipe_clk", "usb3_phy_wrapper_gcc_usb30_pipe_clk";
+		vdd_cx-supply = <&VDD_CX_LEVEL>;
+		vdd_mx-supply = <&VDD_MX_LEVEL>;
 		#clock-cells = <1>;
 		#reset-cells = <1>;
 	};
@@ -431,6 +415,11 @@
 		system_pm {
 			compatible = "qcom,system-pm";
 		};
+
+		rpmhcc: clock-controller@1 {
+			compatible = "qcom,sdxlemur-rpmh-clk";
+			#clock-cells = <1>;
+		};
 	};
 
 	pdc: interrupt-controller@b210000 {
@@ -444,13 +433,13 @@
 
 	 /* GCC GDSCs */
 	gcc_pcie_gdsc: qcom,gdsc@143004 {
-		compatible = "regulator-fixed";
+		compatible = "qcom,gdsc";
 		reg = <0x143004 0x4>;
 		regulator-name = "gcc_pcie_gdsc";
 	};
 
 	gcc_usb30_gdsc: qcom,gdsc@117004 {
-		compatible = "regulator-fixed";
+		compatible = "qcom,gdsc";
 		reg = <0x117004 0x4>;
 		regulator-name = "gcc_usb30_gdsc";
 	};
