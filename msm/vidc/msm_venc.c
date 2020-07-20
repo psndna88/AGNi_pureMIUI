@@ -2120,6 +2120,7 @@ int msm_venc_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us)
 	struct msm_vidc_timestamps *entry, *node, *prev = NULL;
 	int count = 0;
 	int rc = 0;
+	struct v4l2_ctrl *superframe_ctrl = NULL;
 
 	if (!inst || !inst->core) {
 		d_vpr_e("%s: invalid parameters\n", __func__);
@@ -2172,7 +2173,13 @@ int msm_venc_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us)
 	/* if framerate changed and stable for 2 frames, set to firmware */
 	if (entry->framerate == prev->framerate &&
 		entry->framerate != inst->clk_data.frame_rate) {
-		inst->clk_data.frame_rate = entry->framerate;
+		superframe_ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDC_SUPERFRAME);
+		if (superframe_ctrl->val > 1)
+			inst->clk_data.frame_rate = entry->framerate * superframe_ctrl->val;
+		else
+			inst->clk_data.frame_rate = entry->framerate;
+		s_vpr_l(inst->sid, "%s: updated fps to %u\n",
+			__func__, (inst->clk_data.frame_rate >> 16));
 		msm_venc_set_frame_rate(inst);
 	}
 
