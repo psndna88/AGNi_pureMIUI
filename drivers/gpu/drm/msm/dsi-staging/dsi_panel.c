@@ -44,6 +44,9 @@
 #define DEFAULT_PANEL_PREFILL_LINES	25
 #define TICKS_IN_MICRO_SECOND		1000000
 
+static bool lcd_esd_irq_handler = false;
+extern void lcd_esd_enable(bool en);
+
 enum dsi_dsc_ratio_type {
 	DSC_8BPC_8BPP,
 	DSC_10BPC_8BPP,
@@ -3205,6 +3208,19 @@ static int dsi_panel_parse_esd_config(struct dsi_panel *panel)
 
 	esd_config = &panel->esd_config;
 	esd_config->status_mode = ESD_MODE_MAX;
+
+	esd_config->esd_err_irq_gpio = of_get_named_gpio(panel->panel_of_node,
+			"qcom,esd-err-int-gpio", 0);
+	esd_config->esd_err_irq_flags =  IRQF_TRIGGER_FALLING | IRQF_ONESHOT;
+	if (gpio_is_valid(esd_config->esd_err_irq_gpio)) {
+		esd_config->esd_err_irq = gpio_to_irq(esd_config->esd_err_irq_gpio);
+		rc = gpio_request(esd_config->esd_err_irq_gpio, "esd_err_int_gpio");
+		if (!rc)
+			gpio_direction_input(esd_config->esd_err_irq_gpio);
+
+		return 0;
+	}
+
 	esd_config->esd_enabled = utils->read_bool(utils->data,
 		"qcom,esd-check-enabled");
 
@@ -3436,6 +3452,7 @@ int dsi_panel_drv_init(struct dsi_panel *panel,
 	 */
 	dev->channel = 0;
 	dev->lanes = 4;
+	lcd_esd_irq_handler = false;
 
 	panel->host = host;
 	rc = dsi_panel_vreg_get(panel);
@@ -4267,6 +4284,12 @@ int dsi_panel_post_switch(struct dsi_panel *panel)
 	return rc;
 }
 
+void lcd_esd_handler(bool en)
+{
+	lcd_esd_irq_handler = en;
+}
+EXPORT_SYMBOL(lcd_esd_handler);
+
 int dsi_panel_enable(struct dsi_panel *panel)
 {
 	int rc = 0;
@@ -4285,6 +4308,15 @@ int dsi_panel_enable(struct dsi_panel *panel)
 	else
 		panel->panel_initialized = true;
 	mutex_unlock(&panel->panel_lock);
+
+	if (lcd_esd_irq_handler) {
+		enable_irq(panel->esd_config.esd_err_irq);
+		lcd_esd_irq_handler = false;
+	}
+
+	if (panel->special_panel == DSI_SPECIAL_PANEL_TIANMA)
+		lcd_esd_enable(true);
+
 	return rc;
 }
 
@@ -4355,6 +4387,9 @@ int dsi_panel_disable(struct dsi_panel *panel)
 		       panel->power_mode == SDE_MODE_DPMS_LP2))
 			dsi_pwr_panel_regulator_mode_set(&panel->power_info,
 				"ibb", REGULATOR_MODE_STANDBY);
+
+		if (panel->special_panel == DSI_SPECIAL_PANEL_TIANMA)
+			lcd_esd_enable(false);
 
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_OFF);
 		if (rc) {

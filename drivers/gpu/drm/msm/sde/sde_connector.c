@@ -1842,6 +1842,73 @@ static int sde_connector_atomic_check(struct drm_connector *connector,
 	return 0;
 }
 
+static int esd_irq_count = 0;
+static bool tp_update_firmware = false;
+extern void lcd_esd_handler(bool en);
+
+void lcd_esd_enable(bool en)
+{
+	tp_update_firmware = en;
+}
+EXPORT_SYMBOL(lcd_esd_enable);
+
+static void esd_recovery(int irq, void *data)
+{
+	struct sde_connector *conn = data;
+	struct dsi_display *display;
+	struct dsi_panel *panel;
+	struct drm_event event;
+
+	if (!conn && !conn->display) {
+		SDE_ERROR("not able to get connector object\n");
+		return ;
+	}
+
+	display = (struct dsi_display *)(conn->display);
+	if (!display || !display->panel)
+		return;
+
+	panel = display->panel;
+
+	if (!panel->panel_initialized)
+		return;
+
+	esd_irq_count++;
+
+	if (panel->special_panel == DSI_SPECIAL_PANEL_HUAXING && esd_irq_count != 3)
+		return;
+
+	esd_irq_count = 0;
+
+	if (panel->special_panel == DSI_SPECIAL_PANEL_HUAXING) {
+		disable_irq_nosync(irq);
+		lcd_esd_handler(1);
+	} else if (panel->special_panel == DSI_SPECIAL_PANEL_TIANMA) {
+		lcd_esd_enable(false);
+	}
+
+	conn->panel_dead = true;
+	event.type = DRM_EVENT_PANEL_DEAD;
+	event.length = sizeof(bool);
+	msm_mode_object_event_notify(&conn->base.base,
+		conn->base.dev, &event, (u8 *)&conn->panel_dead);
+	sde_encoder_display_failure_notification(conn->encoder,
+		false);
+	SDE_EVT32(SDE_EVTLOG_ERROR);
+	SDE_ERROR("esd check failed report PANEL_DEAD conn_id: %d enc_id: %d\n",
+			conn->base.base.id, conn->encoder->base.id);
+}
+
+static irqreturn_t esd_err_irq_handle(int irq, void *data)
+{
+	if (tp_update_firmware)
+		return IRQ_HANDLED;
+
+	esd_recovery(irq, data);
+
+	return IRQ_HANDLED;
+}
+
 static void _sde_connector_report_panel_dead(struct sde_connector *conn,
 	bool skip_pre_kickoff)
 {
@@ -2277,6 +2344,20 @@ struct drm_connector *sde_connector_init(struct drm_device *dev,
 				&dsi_display->panel->hdr_props,
 				sizeof(dsi_display->panel->hdr_props),
 				CONNECTOR_PROP_HDR_INFO);
+		}
+
+		esd_irq_count = 0;
+		if (dsi_display && dsi_display->panel &&
+			dsi_display->panel->esd_config.esd_err_irq_gpio > 0) {
+			rc = request_threaded_irq(dsi_display->panel->esd_config.esd_err_irq,
+				NULL, esd_err_irq_handle,
+				dsi_display->panel->esd_config.esd_err_irq_flags,
+				"esd_err_irq", c_conn);
+			if (rc < 0) {
+				pr_err("%s: request irq %d failed\n", __func__,
+					dsi_display->panel->esd_config.esd_err_irq);
+				dsi_display->panel->esd_config.esd_err_irq = 0;
+			}
 		}
 	}
 
