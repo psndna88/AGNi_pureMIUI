@@ -53,6 +53,12 @@
 
 #define ICP_DEVICE_IDLE_TIMEOUT 400
 
+static const struct hfi_ops hfi_a5_ops = {
+	.irq_raise = cam_a5_irq_raise,
+	.irq_enable = cam_a5_irq_enable,
+	.iface_addr = cam_a5_iface_addr,
+};
+
 static struct cam_icp_hw_mgr icp_hw_mgr;
 
 static void cam_icp_mgr_process_dbg_buf(unsigned int debug_lvl);
@@ -3118,16 +3124,7 @@ static int cam_icp_mgr_icp_power_collapse(struct cam_icp_hw_mgr *hw_mgr)
 
 static int cam_icp_mgr_hfi_resume(struct cam_icp_hw_mgr *hw_mgr)
 {
-	struct cam_hw_intf *a5_dev_intf = NULL;
-	struct cam_hw_info *a5_dev = NULL;
 	struct hfi_mem_info hfi_mem;
-
-	a5_dev_intf = hw_mgr->a5_dev_intf;
-	if (!a5_dev_intf) {
-		CAM_ERR(CAM_ICP, "a5_dev_intf is invalid\n");
-		return -EINVAL;
-	}
-	a5_dev = (struct cam_hw_info *)a5_dev_intf->hw_priv;
 
 	hfi_mem.qtbl.kva = icp_hw_mgr.hfi_mem.qtbl.kva;
 	hfi_mem.qtbl.iova = icp_hw_mgr.hfi_mem.qtbl.iova;
@@ -3203,8 +3200,7 @@ static int cam_icp_mgr_hfi_resume(struct cam_icp_hw_mgr *hw_mgr)
 		hfi_mem.io_mem2.iova,
 		hfi_mem.io_mem2.len);
 
-	return cam_hfi_resume(&hfi_mem,
-		a5_dev->soc_info.reg_map[A5_SIERRA_BASE].mem_base);
+	return cam_hfi_resume(&hfi_mem);
 }
 
 static int cam_icp_retry_wait_for_abort(
@@ -3479,7 +3475,6 @@ static int cam_icp_mgr_hw_close(void *hw_priv, void *hw_close_args)
 {
 	struct cam_icp_hw_mgr *hw_mgr = hw_priv;
 	struct cam_hw_intf *a5_dev_intf = NULL;
-	struct cam_hw_info *a5_dev = NULL;
 	struct cam_icp_a5_set_irq_cb irq_cb;
 	struct cam_icp_a5_set_fw_buf_info fw_buf_info;
 	int rc = 0;
@@ -3494,7 +3489,7 @@ static int cam_icp_mgr_hw_close(void *hw_priv, void *hw_close_args)
 		CAM_DBG(CAM_ICP, "a5_dev_intf is NULL");
 		return -EINVAL;
 	}
-	a5_dev = (struct cam_hw_info *)a5_dev_intf->hw_priv;
+
 	fw_buf_info.kva = 0;
 	fw_buf_info.iova = 0;
 	fw_buf_info.len = 0;
@@ -3505,8 +3500,9 @@ static int cam_icp_mgr_hw_close(void *hw_priv, void *hw_close_args)
 		sizeof(fw_buf_info));
 	if (rc)
 		CAM_ERR(CAM_ICP, "nullify the fw buf failed");
-	cam_hfi_deinit(
-		a5_dev->soc_info.reg_map[A5_SIERRA_BASE].mem_base);
+
+	cam_hfi_deinit();
+
 	irq_cb.icp_hw_mgr_cb = NULL;
 	irq_cb.data = NULL;
 	rc = a5_dev_intf->hw_ops.process_cmd(
@@ -3624,7 +3620,7 @@ static int cam_icp_mgr_hfi_init(struct cam_icp_hw_mgr *hw_mgr)
 	struct cam_hw_intf *a5_dev_intf = NULL;
 	struct cam_hw_info *a5_dev = NULL;
 	struct hfi_mem_info hfi_mem;
-	struct hfi_ops hfi_ops;
+	const struct hfi_ops *hfi_ops;
 
 	a5_dev_intf = hw_mgr->a5_dev_intf;
 	if (!a5_dev_intf) {
@@ -3689,11 +3685,9 @@ static int cam_icp_mgr_hfi_init(struct cam_icp_hw_mgr *hw_mgr)
 		hfi_mem.io_mem2.len = 0x0;
 	}
 
-	hfi_ops.irq_raise = cam_a5_irq_raise;
-	hfi_ops.irq_enable = cam_a5_irq_enable;
+	hfi_ops = &hfi_a5_ops;
 
-	return cam_hfi_init(&hfi_mem, &hfi_ops, a5_dev, 0,
-			a5_dev->soc_info.reg_map[A5_SIERRA_BASE].mem_base);
+	return cam_hfi_init(&hfi_mem, hfi_ops, a5_dev, 0);
 }
 
 static int cam_icp_mgr_send_fw_init(struct cam_icp_hw_mgr *hw_mgr)
@@ -3807,7 +3801,6 @@ hw_deinit:
 static int cam_icp_mgr_hw_open(void *hw_mgr_priv, void *download_fw_args)
 {
 	struct cam_hw_intf *a5_dev_intf = NULL;
-	struct cam_hw_info *a5_dev = NULL;
 	struct cam_icp_hw_mgr *hw_mgr = hw_mgr_priv;
 	bool icp_pc = false;
 	int rc = 0;
@@ -3827,7 +3820,7 @@ static int cam_icp_mgr_hw_open(void *hw_mgr_priv, void *download_fw_args)
 		CAM_ERR(CAM_ICP, "a5_dev_intf is invalid");
 		return -EINVAL;
 	}
-	a5_dev = (struct cam_hw_info *)a5_dev_intf->hw_priv;
+
 	rc = cam_icp_allocate_hfi_mem();
 	if (rc)
 		goto alloc_hfi_mem_failed;
@@ -3873,8 +3866,7 @@ static int cam_icp_mgr_hw_open(void *hw_mgr_priv, void *download_fw_args)
 	return rc;
 
 fw_init_failed:
-	cam_hfi_deinit(
-		a5_dev->soc_info.reg_map[A5_SIERRA_BASE].mem_base);
+	cam_hfi_deinit();
 hfi_init_failed:
 	cam_icp_mgr_proc_suspend(hw_mgr);
 fw_download_failed:

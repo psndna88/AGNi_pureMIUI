@@ -9,27 +9,24 @@
 #include <linux/types.h>
 #include "hfi_intf.h"
 
-/* start of ICP CSR registers */
-#define HFI_REG_A5_HW_VERSION                   0x0
+/* general purpose registers */
+#define GEN_PURPOSE_REG(n)              (n * 4)
 
-/* general purpose registers from */
-#define HFI_REG_FW_VERSION                      0x44
-#define HFI_REG_HOST_ICP_INIT_REQUEST           0x48
-#define HFI_REG_ICP_HOST_INIT_RESPONSE          0x4C
-#define HFI_REG_SHARED_MEM_PTR                  0x50
-#define HFI_REG_SHARED_MEM_SIZE                 0x54
-#define HFI_REG_QTBL_PTR                        0x58
-#define HFI_REG_UNCACHED_HEAP_PTR               0x5C
-#define HFI_REG_UNCACHED_HEAP_SIZE              0x60
-#define HFI_REG_QDSS_IOVA                       0x6C
-#define HFI_REG_SFR_PTR                         0x68
-#define HFI_REG_QDSS_IOVA_SIZE                  0x70
-#define HFI_REG_IO_REGION_IOVA                  0x74
-#define HFI_REG_IO_REGION_SIZE                  0x78
-#define HFI_REG_IO2_REGION_IOVA                 0x7C
-#define HFI_REG_IO2_REGION_SIZE                 0x80
-
-/* end of ICP CSR registers */
+#define HFI_REG_FW_VERSION              GEN_PURPOSE_REG(1)
+#define HFI_REG_HOST_ICP_INIT_REQUEST   GEN_PURPOSE_REG(2)
+#define HFI_REG_ICP_HOST_INIT_RESPONSE  GEN_PURPOSE_REG(3)
+#define HFI_REG_SHARED_MEM_PTR          GEN_PURPOSE_REG(4)
+#define HFI_REG_SHARED_MEM_SIZE         GEN_PURPOSE_REG(5)
+#define HFI_REG_QTBL_PTR                GEN_PURPOSE_REG(6)
+#define HFI_REG_UNCACHED_HEAP_PTR       GEN_PURPOSE_REG(7)
+#define HFI_REG_UNCACHED_HEAP_SIZE      GEN_PURPOSE_REG(8)
+#define HFI_REG_SFR_PTR                 GEN_PURPOSE_REG(10)
+#define HFI_REG_QDSS_IOVA               GEN_PURPOSE_REG(11)
+#define HFI_REG_QDSS_IOVA_SIZE          GEN_PURPOSE_REG(12)
+#define HFI_REG_IO_REGION_IOVA          GEN_PURPOSE_REG(13)
+#define HFI_REG_IO_REGION_SIZE          GEN_PURPOSE_REG(14)
+#define HFI_REG_IO2_REGION_IOVA         GEN_PURPOSE_REG(15)
+#define HFI_REG_IO2_REGION_SIZE         GEN_PURPOSE_REG(16)
 
 /* start of Queue table and queues */
 #define MAX_ICP_HFI_QUEUES                      4
@@ -278,7 +275,6 @@ struct hfi_qtbl {
  * @cmd_q_state: State of command queue
  * @mutex msg_q_lock: Lock for message queue
  * @msg_q_state: State of message queue
- * @csr_base: CSR base address
  * @priv: device private data
  */
 struct hfi_info {
@@ -292,7 +288,6 @@ struct hfi_info {
 	bool cmd_q_state;
 	struct mutex msg_q_lock;
 	bool msg_q_state;
-	void __iomem *csr_base;
 	void *priv;
 };
 
