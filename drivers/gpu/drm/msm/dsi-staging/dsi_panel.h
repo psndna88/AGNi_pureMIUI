@@ -167,8 +167,15 @@ struct drm_panel_esd_config {
 	u32 groups;
 };
 
+enum dsi_special_panel {
+	DSI_SPECIAL_PANEL_NONE,
+	DSI_SPECIAL_PANEL_TIANMA,
+	DSI_SPECIAL_PANEL_HUAXING,
+};
+
 struct dsi_panel {
 	const char *name;
+	enum dsi_special_panel special_panel;
 	const char *type;
 	struct device_node *panel_of_node;
 	struct mipi_dsi_device mipi_device;
