@@ -180,29 +180,6 @@ int nvt_gesture_switch(struct input_dev *dev, unsigned int type, unsigned int co
 	return 0;
 }
 
-static int32_t nvt_ts_resume(struct device *dev);
-static int32_t nvt_ts_suspend(struct device *dev);
-
-typedef int(*touchpanel_recovery_cb_p_t)(void);
-extern int set_touchpanel_recovery_callback(touchpanel_recovery_cb_p_t cb);
-
-/* Fix Touch/Fingerprint wakeup crash issue */
-int nvt_ts_recovery_callback(void)
-{
-	if (unlikely(bTouchIsAwake)) {
-		NVT_ERR("touch is awake, can not to set\n");
-		return -EPERM;
-	}
-	if (ts->is_gesture_mode) {
-		NVT_LOG("recovery touch 'Double Click' mode start\n");
-		nvt_ts_resume(&ts->client->dev);
-		nvt_ts_suspend(&ts->client->dev);
-		NVT_LOG("recovery touch 'Double Click' mode end\n");
-	}
-	return 0;
-}
-EXPORT_SYMBOL(nvt_ts_recovery_callback);
-
 #endif
 /*function description*/
 #if NVT_USB_PLUGIN
@@ -2560,8 +2537,6 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 #if NVT_USB_PLUGIN
 	g_touchscreen_usb_pulgin.event_callback = nvt_ts_usb_event_callback;
 #endif
-
-	set_touchpanel_recovery_callback(nvt_ts_recovery_callback);
 
 	//spi bus pm_runtime_get
 	spi_geni_master_dev = lct_get_spi_geni_master_dev(ts->client->master);
