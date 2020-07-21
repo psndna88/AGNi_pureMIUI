@@ -2857,20 +2857,12 @@ static int cam_req_mgr_cb_add_req(struct cam_req_mgr_add_request *add_req)
 	}
 
 	CAM_DBG(CAM_REQ,
-		"dev name %s dev_hdl %d dev req %lld, trigger_eof: %d",
+		"dev name %s dev_hdl %d dev req %lld, trigger_eof %d link_state %d",
 		__cam_req_mgr_dev_handle_to_name(add_req->dev_hdl, link),
-		add_req->dev_hdl, add_req->req_id, add_req->trigger_eof);
+		add_req->dev_hdl, add_req->req_id, add_req->trigger_eof,
+		link->state);
 
 	mutex_lock(&link->lock);
-	spin_lock_bh(&link->link_state_spin_lock);
-	if (link->state < CAM_CRM_LINK_STATE_READY) {
-		CAM_WARN(CAM_CRM, "invalid link state:%d", link->state);
-		rc = -EPERM;
-		spin_unlock_bh(&link->link_state_spin_lock);
-		goto end;
-	}
-	spin_unlock_bh(&link->link_state_spin_lock);
-
 	/* Validate if req id is present in input queue */
 	idx = __cam_req_mgr_find_slot_for_req(link->req.in_q, add_req->req_id);
 	if (idx < 0) {
