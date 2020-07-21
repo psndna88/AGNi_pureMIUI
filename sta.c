@@ -12330,6 +12330,22 @@ static int wcn_sta_override_oci(struct sigma_dut *dut, const char *intf,
 }
 
 
+static int wcn_sta_set_rsnxe_used(struct sigma_dut *dut, const char *intf,
+				  uint8_t rsnxe_used)
+{
+#ifdef NL80211_SUPPORT
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_FT_REASSOCREQ_RSNXE_USED,
+		rsnxe_used);
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"RSNXE_Used can't be set without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
 static enum sigma_cmd_result
 cmd_sta_set_rfeature_wpa3(const char *intf, struct sigma_dut *dut,
 			  struct sigma_conn *conn,
@@ -12339,7 +12355,14 @@ cmd_sta_set_rfeature_wpa3(const char *intf, struct sigma_dut *dut,
 
 	val = get_param(cmd, "ReassocReq_RSNXE_Used");
 	if (val && atoi(val) == 1) {
-		if (wpa_command(intf, "SET ft_rsnxe_used 1") < 0) {
+		if (wifi_chip_type == DRIVER_WCN) {
+			if (wcn_sta_set_rsnxe_used(dut, intf, 1)) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to set ft_rsnxe_used");
+				return STATUS_SENT_ERROR;
+			}
+			return SUCCESS_SEND_STATUS;
+		} else if (wpa_command(intf, "SET ft_rsnxe_used 1") < 0) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Failed to set ft_rsnxe_used");
 			return STATUS_SENT_ERROR;
