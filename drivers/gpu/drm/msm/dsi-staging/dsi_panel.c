@@ -3299,10 +3299,15 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	dsi_panel_update_util(panel, parser_node);
 	utils = &panel->utils;
 
+	panel->special_panel = DSI_SPECIAL_PANEL_NONE;
 	panel->name = utils->get_property(utils->data,
 				"qcom,mdss-dsi-panel-name", NULL);
 	if (!panel->name)
 		panel->name = DSI_PANEL_DEFAULT_LABEL;
+	else if ((strnstr(panel->name, "tianma", strlen(panel->name))))
+		panel->special_panel = DSI_SPECIAL_PANEL_TIANMA;
+	else if ((strnstr(panel->name, "huaxing", strlen(panel->name))))
+		panel->special_panel = DSI_SPECIAL_PANEL_HUAXING;
 
 	/*
 	 * Set panel type to LCD as default.
