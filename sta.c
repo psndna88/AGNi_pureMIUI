@@ -12330,6 +12330,21 @@ static int wcn_sta_override_oci(struct sigma_dut *dut, const char *intf,
 }
 
 
+static int wcn_sta_ignore_csa(struct sigma_dut *dut, const char *intf,
+			      uint8_t ignore_csa)
+{
+#ifdef NL80211_SUPPORT
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_IGNORE_CSA, ignore_csa);
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"IgnoreCSA can't be set without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
 static int wcn_sta_set_rsnxe_used(struct sigma_dut *dut, const char *intf,
 				  uint8_t rsnxe_used)
 {
@@ -12425,6 +12440,18 @@ cmd_sta_set_rfeature_wpa3(const char *intf, struct sigma_dut *dut,
 			return STATUS_SENT_ERROR;
 		}
 		return SUCCESS_SEND_STATUS;
+	}
+
+	val = get_param(cmd, "IgnoreCSA");
+	if (val && atoi(val) == 1) {
+		if (wifi_chip_type == DRIVER_WCN) {
+			if (wcn_sta_ignore_csa(dut, intf, 1)) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to set ignore CSA");
+				return STATUS_SENT_ERROR;
+			}
+			return SUCCESS_SEND_STATUS;
+		}
 	}
 
 	send_resp(dut, conn, SIGMA_ERROR,
