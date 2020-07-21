@@ -135,26 +135,6 @@ static int32_t fts_ts_get_regulator(bool get);
 
 extern bool fts_ts_is_gesture_mode(void);
 
-typedef int(*touchpanel_recovery_cb_p_t)(void);
-extern int set_touchpanel_recovery_callback(touchpanel_recovery_cb_p_t cb);
-
-/*Fix Touch/Fingerprint wakeup crash issue */
-int fts_ts_recovery_callback(void)
-{
-	if (unlikely(!fts_data->suspended)) {
-		FTS_ERROR("touch is awake, can not set");
-		return -EPERM;
-	}
-	if (fts_ts_is_gesture_mode()) {
-		FTS_INFO("recovery touch 'Double Click' mode start");
-		fts_ts_resume(fts_data->dev);
-		fts_ts_suspend(fts_data->dev);
-		FTS_INFO("recovery touch 'Double Click' mode end");
-	}
-	return 0;
-}
-EXPORT_SYMBOL(fts_ts_recovery_callback);
-
 /*****************************************************************************
 *  Name: fts_wait_tp_to_valid
 *  Brief: Read chip id until TP FW become valid(Timeout: TIMEOUT_READ_REG),
@@ -2171,8 +2151,6 @@ static int fts_ts_probe(struct spi_device *spi)
 #endif
 
 	pm_runtime_enable(ts_data->dev);
-
-	set_touchpanel_recovery_callback(fts_ts_recovery_callback);
 
 	FTS_INFO("Touch Screen(SPI BUS) driver prboe successfully");
 	return 0;
