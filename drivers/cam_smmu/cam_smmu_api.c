@@ -3876,32 +3876,39 @@ cb_init_fail:
 	return rc;
 }
 
-#if IS_ENABLED(CONFIG_DEBUG_FS)
 static int cam_smmu_create_debug_fs(void)
 {
-	int rc = 0;
+	iommu_cb_set.dentry = debugfs_create_dir("camera_smmu",
+		NULL);
 
-	iommu_cb_set.dentry = debugfs_create_dir("camera_smmu", NULL);
-	if (IS_ERR(iommu_cb_set.dentry)) {
-		rc = PTR_ERR(iommu_cb_set.dentry);
-		goto end;
+	if (!iommu_cb_set.dentry) {
+		CAM_ERR(CAM_SMMU, "failed to create dentry");
+		return -ENOMEM;
 	}
 
-	debugfs_create_bool("cb_dump_enable", 0644, iommu_cb_set.dentry,
-		&iommu_cb_set.cb_dump_enable);
-	debugfs_create_bool("map_profile_enable", 0644, iommu_cb_set.dentry,
-		&iommu_cb_set.map_profile_enable);
+	if (!debugfs_create_bool("cb_dump_enable",
+		0644,
+		iommu_cb_set.dentry,
+		&iommu_cb_set.cb_dump_enable)) {
+		CAM_ERR(CAM_SMMU,
+			"failed to create dump_enable_debug");
+		goto err;
+	}
 
-end:
-	return rc;
-}
-#else
-static inline int cam_smmu_create_debug_fs(void)
-{
-	CAM_WARN(CAM_SMMU, "DebugFS not enabled in kernel");
+	if (!debugfs_create_bool("map_profile_enable",
+		0644,
+		iommu_cb_set.dentry,
+		&iommu_cb_set.map_profile_enable)) {
+		CAM_ERR(CAM_SMMU,
+			"failed to create map_profile_enable");
+		goto err;
+	}
+
 	return 0;
+err:
+	debugfs_remove_recursive(iommu_cb_set.dentry);
+	return -ENOMEM;
 }
-#endif
 
 static int cam_smmu_fw_dev_component_bind(struct device *dev,
 	struct device *master_dev, void *data)
@@ -4012,9 +4019,7 @@ static void cam_smmu_component_unbind(struct device *dev,
 	}
 
 	cam_smmu_release_cb(pdev);
-#if IS_ENABLED(CONFIG_DEBUG_FS)
 	debugfs_remove_recursive(iommu_cb_set.dentry);
-#endif
 	iommu_cb_set.dentry = NULL;
 }
 
