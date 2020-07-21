@@ -507,6 +507,9 @@ static int dsi_panel_power_off(struct dsi_panel *panel)
 	if (rc)
 		pr_err("[%s] failed to enable vregs, rc=%d\n", panel->name, rc);
 
+	if (panel->special_panel == DSI_SPECIAL_PANEL_TIANMA)
+		mdelay(5);
+
 	return rc;
 }
 static int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
