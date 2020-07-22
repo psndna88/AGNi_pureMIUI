@@ -141,6 +141,16 @@ struct sde_hw_mdp_ops {
 			enum sde_clk_ctrl_type clk_ctrl, bool enable);
 
 	/**
+	 * get_clk_ctrl_status - get clock control status
+	 * @mdp: mdp top context driver
+	 * @clk_ctrl: clock to be controlled
+	 * @status: returns true if clock is on
+	 * @return: 0 if success, otherwise return code
+	 */
+	int (*get_clk_ctrl_status)(struct sde_hw_mdp *mdp,
+			enum sde_clk_ctrl_type clk_ctrl, bool *status);
+
+	/**
 	 * setup_dce - set DCE mux for DSC ctrl path
 	 * @mdp: mdp top context driver
 	 * @dce_sel: dce_mux value
@@ -196,6 +206,28 @@ struct sde_hw_mdp_ops {
 	 * @enable: enable/disable hw events
 	 */
 	void (*set_mdp_hw_events)(struct sde_hw_mdp *mdp, bool enable);
+
+	/**
+	 * clear_mode_index - clears the mode index in spare reg
+	 * @mdp: mdp top context driver
+	 */
+	void (*clear_mode_index)(struct sde_hw_mdp *mdp);
+
+	/**
+	 * set_mode_index - sets the current drm mode index to spare reg
+	 * @mdp: mdp top context driver
+	 * @display_id: display index
+	 * @mode: drm mode index
+	 */
+	void (*set_mode_index)(struct sde_hw_mdp *mdp, u32 display_id,
+			u32 mode);
+
+	/**
+	 * get_mode_index - gets the current drm mode index from spare reg
+	 * @mdp: mdp top context driver
+	 * @display_id: display index
+	 */
+	u32 (*get_mode_index)(struct sde_hw_mdp *mdp, u32 display_id);
 
 	/**
 	 * set_cwb_ppb_cntl - select the data point for CWB

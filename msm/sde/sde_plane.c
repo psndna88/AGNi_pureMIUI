@@ -290,12 +290,11 @@ static void _sde_plane_set_qos_lut(struct drm_plane *plane,
 	frame_rate = crtc->mode.vrefresh;
 	perf = &psde->catalog->perf;
 	qos_count = perf->qos_refresh_count;
-	while (qos_count && perf->qos_refresh_rate) {
-		if (frame_rate >= perf->qos_refresh_rate[qos_count - 1]) {
-			fps_index = qos_count - 1;
+	while ((fps_index < qos_count) && perf->qos_refresh_rate) {
+		if ((frame_rate <= perf->qos_refresh_rate[fps_index]) ||
+				(fps_index == qos_count - 1))
 			break;
-		}
-		qos_count--;
+		fps_index++;
 	}
 
 	if (!psde->is_rt_pipe) {
@@ -846,11 +845,9 @@ static void _sde_plane_setup_scaler3(struct sde_plane *psde,
 	bool pre_down_supported = (psde->features & BIT(SDE_SSPP_PREDOWNSCALE));
 	bool inline_rotation = (pstate->rotation & DRM_MODE_ROTATE_90);
 
-	if (!psde || !pstate || !fmt ||
-			!chroma_subsmpl_h || !chroma_subsmpl_v) {
-		SDE_ERROR("psde %d pstate %d fmt %d smp_h %d smp_v %d\n",
-				!!psde, !!pstate, !!fmt, chroma_subsmpl_h,
-				chroma_subsmpl_v);
+	if (!fmt || !chroma_subsmpl_h || !chroma_subsmpl_v) {
+		SDE_ERROR("fmt %d smp_h %d smp_v %d\n", !fmt,
+				chroma_subsmpl_h, chroma_subsmpl_v);
 		return;
 	}
 
@@ -1648,8 +1645,8 @@ static void sde_plane_rot_install_properties(struct drm_plane *plane,
 	struct sde_mdss_cfg *catalog)
 {
 	struct sde_plane *psde = to_sde_plane(plane);
-	unsigned long supported_rotations = DRM_MODE_ROTATE_0 |
-			DRM_MODE_REFLECT_X | DRM_MODE_REFLECT_Y;
+	unsigned int supported_rotations = DRM_MODE_ROTATE_0 |
+		DRM_MODE_ROTATE_180 | DRM_MODE_REFLECT_X | DRM_MODE_REFLECT_Y;
 	int ret = 0;
 
 	if (!plane || !psde) {
@@ -1660,9 +1657,8 @@ static void sde_plane_rot_install_properties(struct drm_plane *plane,
 		return;
 	}
 
-	if (psde->features & BIT(SDE_SSPP_TRUE_INLINE_ROT))
-		supported_rotations |= DRM_MODE_ROTATE_0 | DRM_MODE_ROTATE_90 |
-			DRM_MODE_ROTATE_180 | DRM_MODE_ROTATE_270;
+	if (!psde->is_virtual && psde->features & BIT(SDE_SSPP_TRUE_INLINE_ROT))
+		supported_rotations |= DRM_MODE_ROTATE_90 | DRM_MODE_ROTATE_270;
 
 	ret = drm_plane_create_rotation_property(plane,
 			DRM_MODE_ROTATE_0, supported_rotations);
@@ -1948,83 +1944,18 @@ static int sde_plane_prepare_fb(struct drm_plane *plane,
 	return 0;
 }
 
-/**
- * _sde_plane_fetch_halt - halts vbif transactions for a plane
- * @plane: Pointer to plane
- * Returns: 0 on success
- */
-static int _sde_plane_fetch_halt(struct drm_plane *plane)
-{
-	struct sde_plane *psde;
-	int xin_id;
-	enum sde_clk_ctrl_type clk_ctrl;
-	struct msm_drm_private *priv;
-	struct sde_kms *sde_kms;
-
-	psde = to_sde_plane(plane);
-	if (!plane || !plane->dev || !psde->pipe_hw) {
-		SDE_ERROR("invalid arguments\n");
-		return -EINVAL;
-	}
-
-	priv = plane->dev->dev_private;
-	if (!priv || !priv->kms) {
-		SDE_ERROR("invalid KMS reference\n");
-		return -EINVAL;
-	}
-
-	sde_kms = to_sde_kms(priv->kms);
-	clk_ctrl = psde->pipe_hw->cap->clk_ctrl;
-	xin_id = psde->pipe_hw->cap->xin_id;
-	SDE_DEBUG_PLANE(psde, "pipe:%d xin_id:%d clk_ctrl:%d\n",
-			psde->pipe - SSPP_VIG0, xin_id, clk_ctrl);
-	SDE_EVT32_VERBOSE(psde, psde->pipe - SSPP_VIG0, xin_id, clk_ctrl);
-
-	return sde_vbif_halt_plane_xin(sde_kms, xin_id, clk_ctrl);
-}
-
-
 static void sde_plane_cleanup_fb(struct drm_plane *plane,
 		struct drm_plane_state *old_state)
 {
 	struct sde_plane *psde = to_sde_plane(plane);
 	struct sde_plane_state *old_pstate;
-	int ret;
 
-	if (!old_state || !old_state->fb || !plane || !plane->state)
+	if (!old_state || !old_state->fb || !plane)
 		return;
 
 	old_pstate = to_sde_plane_state(old_state);
 
 	SDE_DEBUG_PLANE(psde, "FB[%u]\n", old_state->fb->base.id);
-
-	/*
-	 * plane->state gets populated for next frame after swap_state. If
-	 * plane->state->crtc pointer is not populated then it is not used in
-	 * the next frame, hence making it an unused plane.
-	 */
-	if ((plane->state->crtc == NULL) && !psde->is_virtual) {
-		SDE_DEBUG_PLANE(psde, "unused pipe:%u\n",
-			       psde->pipe - SSPP_VIG0);
-
-		/* halt this plane now */
-		ret = pm_runtime_get_sync(plane->dev->dev);
-		if (ret < 0) {
-			SDE_ERROR("power resource enable failed with %d", ret);
-			SDE_EVT32(ret, SDE_EVTLOG_ERROR);
-			return;
-		}
-
-		ret = _sde_plane_fetch_halt(plane);
-		if (ret) {
-			SDE_ERROR_PLANE(psde,
-				       "unused pipe %u halt failed\n",
-				       psde->pipe - SSPP_VIG0);
-			SDE_EVT32(DRMID(plane), psde->pipe - SSPP_VIG0,
-				       ret, SDE_EVTLOG_ERROR);
-		}
-		pm_runtime_put_sync(plane->dev->dev);
-	}
 
 	msm_framebuffer_cleanup(old_state->fb, old_pstate->aspace);
 
@@ -2621,6 +2552,10 @@ static int _sde_plane_sspp_atomic_check_helper(struct sde_plane *psde,
 		SDE_ERROR_PLANE(psde, "invalid dest rect %u, %u, %ux%u\n",
 				dst.x, dst.y, dst.w, dst.h);
 		ret = -EINVAL;
+	} else if (SDE_FORMAT_IS_UBWC(fmt) &&
+		!psde->catalog->ubwc_version) {
+		SDE_ERROR_PLANE(psde, "ubwc not supported\n");
+		ret = -EINVAL;
 	}
 
 	return ret;
@@ -2925,6 +2860,7 @@ static void _sde_plane_setup_uidle(struct drm_crtc *crtc,
 {
 	struct sde_hw_pipe_uidle_cfg cfg;
 	struct sde_crtc *sde_crtc = to_sde_crtc(crtc);
+	u32 fal1_threshold_max = 15;
 
 	u32 line_time = sde_get_linetime(&crtc->mode,
 			sde_crtc->src_bpp, sde_crtc->target_bpp); /* nS */
@@ -2940,8 +2876,9 @@ static void _sde_plane_setup_uidle(struct drm_crtc *crtc,
 		cfg.enable = _sde_plane_allow_uidle(psde, src, dst);
 		cfg.fal10_threshold = fal10_threshold;
 		cfg.fal10_exit_threshold = fal10_threshold + 2;
-		cfg.fal1_threshold = 1 +
-			(fal1_target_idle_time_ns*1000/line_time*2)/1000;
+		cfg.fal1_threshold = min(1 +
+			(fal1_target_idle_time_ns*1000/line_time*2)/1000,
+			fal1_threshold_max);
 		cfg.fal_allowed_threshold = fal10_threshold +
 			(fal10_target_idle_time_ns*1000/line_time*2)/1000;
 	} else {
@@ -3089,9 +3026,11 @@ static void _sde_plane_update_roi_config(struct drm_plane *plane,
 				&pstate->excl_rect,
 				pstate->multirect_index);
 
-	if (psde->pipe_hw->ops.setup_multirect)
-		psde->pipe_hw->ops.setup_multirect(
+	/* enable multirect config of corresponding rect */
+	if (psde->pipe_hw->ops.update_multirect)
+		psde->pipe_hw->ops.update_multirect(
 				psde->pipe_hw,
+				true,
 				pstate->multirect_index,
 				pstate->multirect_mode);
 }
@@ -3346,6 +3285,7 @@ static void _sde_plane_atomic_disable(struct drm_plane *plane,
 	struct sde_plane *psde;
 	struct drm_plane_state *state;
 	struct sde_plane_state *pstate;
+	u32 multirect_index = SDE_SSPP_RECT_0;
 
 	if (!plane) {
 		SDE_ERROR("invalid plane\n");
@@ -3367,10 +3307,13 @@ static void _sde_plane_atomic_disable(struct drm_plane *plane,
 
 	pstate->pending = true;
 
-	if (is_sde_plane_virtual(plane) &&
-			psde->pipe_hw && psde->pipe_hw->ops.setup_multirect)
-		psde->pipe_hw->ops.setup_multirect(psde->pipe_hw,
-				SDE_SSPP_RECT_SOLO, SDE_SSPP_MULTIRECT_NONE);
+	if (is_sde_plane_virtual(plane))
+		multirect_index = SDE_SSPP_RECT_1;
+
+	/* disable multirect config of corresponding rect */
+	if (psde->pipe_hw && psde->pipe_hw->ops.update_multirect)
+		psde->pipe_hw->ops.update_multirect(psde->pipe_hw, false,
+				multirect_index, SDE_SSPP_MULTIRECT_TIME_MX);
 }
 
 static void sde_plane_atomic_update(struct drm_plane *plane,
@@ -3624,9 +3567,9 @@ static void _sde_plane_setup_capabilities_blob(struct sde_plane *psde,
 		sde_kms_info_stop(info);
 	}
 
-	if (psde->pipe_hw && psde->pipe_hw->ops.get_scaler_ver)
+	if (psde->pipe_hw && catalog->qseed_hw_version)
 		sde_kms_info_add_keyint(info, "scaler_step_ver",
-			psde->pipe_hw->ops.get_scaler_ver(psde->pipe_hw));
+			catalog->qseed_hw_version);
 
 	sde_kms_info_add_keyint(info, "max_linewidth",
 			psde->pipe_sblk->maxlinewidth);
@@ -3772,7 +3715,7 @@ static void _sde_plane_install_properties(struct drm_plane *plane,
 	else
 		msm_property_install_enum(&psde->property_info,
 				"multirect_mode", 0x0, 0, e_multirect_mode,
-				ARRAY_SIZE(e_multirect_mode),
+				ARRAY_SIZE(e_multirect_mode), 0,
 				PLANE_PROP_MULTIRECT_MODE);
 
 	if (psde->features & BIT(SDE_SSPP_EXCL_RECT))
@@ -3782,10 +3725,11 @@ static void _sde_plane_install_properties(struct drm_plane *plane,
 	sde_plane_rot_install_properties(plane, catalog);
 
 	msm_property_install_enum(&psde->property_info, "blend_op", 0x0, 0,
-		e_blend_op, ARRAY_SIZE(e_blend_op), PLANE_PROP_BLEND_OP);
+		e_blend_op, ARRAY_SIZE(e_blend_op), 0, PLANE_PROP_BLEND_OP);
 
 	msm_property_install_enum(&psde->property_info, "src_config", 0x0, 1,
-		e_src_config, ARRAY_SIZE(e_src_config), PLANE_PROP_SRC_CONFIG);
+		e_src_config, ARRAY_SIZE(e_src_config), 0,
+		PLANE_PROP_SRC_CONFIG);
 
 	if (psde->pipe_hw->ops.setup_solidfill)
 		msm_property_install_range(&psde->property_info, "color_fill",
@@ -3811,7 +3755,7 @@ static void _sde_plane_install_properties(struct drm_plane *plane,
 
 	msm_property_install_enum(&psde->property_info, "fb_translation_mode",
 			0x0, 0, e_fb_translation_mode,
-			ARRAY_SIZE(e_fb_translation_mode),
+			ARRAY_SIZE(e_fb_translation_mode), 0,
 			PLANE_PROP_FB_TRANSLATION_MODE);
 
 	kfree(info);

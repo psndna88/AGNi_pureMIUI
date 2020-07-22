@@ -65,6 +65,23 @@
 #define MSM_VERSION_MINOR	4
 #define MSM_VERSION_PATCHLEVEL	0
 
+#define LASTCLOSE_TIMEOUT_MS	500
+
+#define msm_wait_event_timeout(waitq, cond, timeout_ms, ret)		\
+	do {								\
+		ktime_t cur_ktime;					\
+		ktime_t exp_ktime;					\
+		s64 wait_time_jiffies = msecs_to_jiffies(timeout_ms);	\
+\
+		exp_ktime = ktime_add_ms(ktime_get(), timeout_ms);	\
+		do {							\
+			ret = wait_event_timeout(waitq, cond,		\
+					wait_time_jiffies);		\
+			cur_ktime = ktime_get();			\
+		} while ((!cond) && (ret == 0) &&			\
+			(ktime_compare_safe(exp_ktime, cur_ktime) > 0));\
+	} while (0)
+
 static void msm_fb_output_poll_changed(struct drm_device *dev)
 {
 	struct msm_drm_private *priv = NULL;
@@ -365,15 +382,7 @@ static int vblank_ctrl_queue_work(struct msm_drm_private *priv,
 	cur_work->crtc_id = crtc_id;
 	cur_work->enable = enable;
 	cur_work->priv = priv;
-
-	/* During modeset scenario, vblank request is queued to
-	 * display thread to avoid enabling irq resulting in
-	 * vblank refcount mismatch
-	 */
-	if (crtc->state && drm_atomic_crtc_needs_modeset(crtc->state))
-		worker = &priv->disp_thread[crtc_id].worker;
-	else
-		worker = &priv->event_thread[crtc_id].worker;
+	worker = &priv->event_thread[crtc_id].worker;
 
 	kthread_queue_work(worker, &cur_work->work);
 	return 0;
@@ -385,6 +394,7 @@ static int msm_drm_uninit(struct device *dev)
 	struct drm_device *ddev = platform_get_drvdata(pdev);
 	struct msm_drm_private *priv = ddev->dev_private;
 	struct msm_kms *kms = priv->kms;
+	struct msm_vm_client_entry *client_entry, *tmp;
 	int i;
 
 	/* We must cancel and cleanup any pending vblank enable/disable
@@ -445,6 +455,17 @@ static int msm_drm_uninit(struct device *dev)
 	debugfs_remove_recursive(priv->debug_root);
 
 	sde_power_resource_deinit(pdev, &priv->phandle);
+
+	mutex_lock(&priv->vm_client_lock);
+
+	/* clean up any unregistered clients */
+	list_for_each_entry_safe(client_entry, tmp, &priv->vm_client_list,
+				 list) {
+		list_del(&client_entry->list);
+		kfree(client_entry);
+	}
+
+	mutex_unlock(&priv->vm_client_lock);
 
 	msm_mdss_destroy(ddev);
 
@@ -522,8 +543,13 @@ static int msm_init_vram(struct drm_device *dev)
 		 * mach-msm:
 		 */
 	} else if (!iommu_present(&platform_bus_type)) {
-		DRM_INFO("using %s VRAM carveout\n", vram);
-		size = memparse(vram, NULL);
+		u32 vram_size;
+
+		ret = of_property_read_u32(dev->dev->of_node,
+					"qcom,vram-size", &vram_size);
+		size = (ret < 0) ? memparse(vram, NULL) : vram_size;
+		DRM_INFO("using 0x%x VRAM carveout\n", size);
+		ret = 0;
 	}
 
 	if (size) {
@@ -817,6 +843,9 @@ static int msm_drm_component_init(struct device *dev)
 
 	INIT_LIST_HEAD(&priv->client_event_list);
 	INIT_LIST_HEAD(&priv->inactive_list);
+	INIT_LIST_HEAD(&priv->vm_client_list);
+
+	mutex_init(&priv->vm_client_lock);
 
 	/* Bind all our sub-components: */
 	ret = msm_component_bind_all(dev, ddev);
@@ -1022,6 +1051,13 @@ static void msm_lastclose(struct drm_device *dev)
 	/* wait for pending vblank requests to be executed by worker thread */
 	flush_workqueue(priv->wq);
 
+	/* wait for any pending crtcs to finish before lastclose commit */
+	msm_wait_event_timeout(priv->pending_crtcs_event, !priv->pending_crtcs,
+			LASTCLOSE_TIMEOUT_MS, rc);
+	if (!rc)
+		DRM_INFO("wait for crtc mask 0x%x failed, commit anyway...\n",
+				priv->pending_crtcs);
+
 	if (priv->fbdev) {
 		rc = drm_fb_helper_restore_fbdev_mode_unlocked(priv->fbdev);
 		if (rc)
@@ -1031,6 +1067,13 @@ static void msm_lastclose(struct drm_device *dev)
 		if (rc)
 			DRM_ERROR("client modeset commit failed: %d\n", rc);
 	}
+
+	/* wait again, before kms driver does it's lastclose commit */
+	msm_wait_event_timeout(priv->pending_crtcs_event, !priv->pending_crtcs,
+			LASTCLOSE_TIMEOUT_MS, rc);
+	if (!rc)
+		DRM_INFO("wait for crtc mask 0x%x failed, commit anyway...\n",
+				priv->pending_crtcs);
 
 	if (kms->funcs && kms->funcs->lastclose)
 		kms->funcs->lastclose(kms);
@@ -1894,21 +1937,26 @@ msm_gem_smmu_address_space_get(struct drm_device *dev,
 	struct msm_drm_private *priv = NULL;
 	struct msm_kms *kms;
 	const struct msm_kms_funcs *funcs;
+	struct msm_gem_address_space *aspace;
+
+	if (!iommu_present(&platform_bus_type))
+		return ERR_PTR(-ENODEV);
 
 	if ((!dev) || (!dev->dev_private))
-		return NULL;
+		return ERR_PTR(-EINVAL);
 
 	priv = dev->dev_private;
 	kms = priv->kms;
 	if (!kms)
-		return NULL;
+		return ERR_PTR(-EINVAL);
 
 	funcs = kms->funcs;
 
 	if ((!funcs) || (!funcs->get_address_space))
-		return NULL;
+		return ERR_PTR(-EINVAL);
 
-	return funcs->get_address_space(priv->kms, domain);
+	aspace = funcs->get_address_space(priv->kms, domain);
+	return aspace ? aspace : ERR_PTR(-EINVAL);
 }
 
 int msm_get_mixer_count(struct msm_drm_private *priv,
@@ -1936,6 +1984,32 @@ int msm_get_mixer_count(struct msm_drm_private *priv,
 	}
 
 	return funcs->get_mixer_count(priv->kms, mode, res, num_lm);
+}
+
+int msm_get_dsc_count(struct msm_drm_private *priv,
+		u32 hdisplay, u32 *num_dsc)
+{
+	struct msm_kms *kms;
+	const struct msm_kms_funcs *funcs;
+
+	if (!priv) {
+		DRM_ERROR("invalid drm private struct\n");
+		return -EINVAL;
+	}
+
+	kms = priv->kms;
+	if (!kms) {
+		DRM_ERROR("invalid msm kms struct\n");
+		return -EINVAL;
+	}
+
+	funcs = kms->funcs;
+	if (!funcs || !funcs->get_dsc_count) {
+		DRM_ERROR("invalid function pointers\n");
+		return -EINVAL;
+	}
+
+	return funcs->get_dsc_count(priv->kms, hdisplay, num_dsc);
 }
 
 static int msm_drm_bind(struct device *dev)

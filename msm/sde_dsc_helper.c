@@ -93,7 +93,7 @@ static struct sde_dsc_v1_1_table_index_lut {
 	int scr_ver;
 	u32 bpc;
 	u32 bpp;
-	enum sde_dsc_ratio_type type;
+	u32 type;
 } sde_dsc_v1_1_index_map[] = {
 	{0, 8, 8, DSC_V11_8BPC_8BPP},
 	{0, 10, 8, DSC_V11_10BPC_8BPP},
@@ -108,7 +108,7 @@ static struct sde_dsc_v1_2_table_index_lut {
 	u32 fmt;
 	u32 bpc;
 	u32 bpp;
-	enum sde_dsc_ratio_type type;
+	u32 type;
 } sde_dsc_v1_2_index_map[] = {
 	{MSM_CHROMA_444, 8, 8, DSC_V12_444_8BPC_8BPP},
 	{MSM_CHROMA_444, 10, 8, DSC_V12_444_10BPC_8BPP},
@@ -309,6 +309,8 @@ int sde_dsc_populate_dsc_private_params(struct msm_display_dsc_info *dsc_info,
 	int slice_per_pkt, slice_per_intf;
 	int bytes_in_slice, total_bytes_per_intf;
 	u16 bpp;
+	u32 bytes_in_dsc_pair;
+	u32 total_bytes_in_dsc_pair;
 
 	if (!dsc_info || !dsc_info->config.slice_width ||
 			!dsc_info->config.slice_height ||
@@ -359,6 +361,16 @@ int sde_dsc_populate_dsc_private_params(struct msm_display_dsc_info *dsc_info,
 	dsc_info->bytes_in_slice = bytes_in_slice;
 	dsc_info->bytes_per_pkt = bytes_in_slice * slice_per_pkt;
 	dsc_info->pkt_per_line = slice_per_intf / slice_per_pkt;
+
+	bytes_in_dsc_pair = DIV_ROUND_UP(bytes_in_slice * 2, 3);
+	if (bytes_in_dsc_pair % 8) {
+		dsc_info->dsc_4hsmerge_padding = 8 - (bytes_in_dsc_pair % 8);
+		total_bytes_in_dsc_pair = bytes_in_dsc_pair +
+				dsc_info->dsc_4hsmerge_padding;
+		if (total_bytes_in_dsc_pair % 16)
+			dsc_info->dsc_4hsmerge_alignment = 16 -
+					(total_bytes_in_dsc_pair % 16);
+	}
 
 	return 0;
 }

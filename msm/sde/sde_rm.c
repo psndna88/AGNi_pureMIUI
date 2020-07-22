@@ -34,6 +34,9 @@
 				(t).num_intf == (r).num_intf && \
 				(t).comp_type == (r).comp_type)
 
+/* ~one vsync poll time for rsvp_nxt to cleared by modeset from commit thread */
+#define RM_NXT_CLEAR_POLL_TIMEOUT_US 16600
+
 /**
  * toplogy information to be used when ctl path version does not
  * support driving more than one interface per ctl_path
@@ -2074,11 +2077,13 @@ static struct drm_connector *_sde_rm_get_connector(
 		struct drm_encoder *enc)
 {
 	struct drm_connector *conn = NULL, *conn_search;
+	struct sde_connector *c_conn = NULL;
 	struct drm_connector_list_iter conn_iter;
 
 	drm_connector_list_iter_begin(enc->dev, &conn_iter);
 	drm_for_each_connector_iter(conn_search, &conn_iter) {
-		if (conn_search->encoder == enc) {
+		c_conn = to_sde_connector(conn_search);
+		if (c_conn->encoder == enc) {
 			conn = conn_search;
 			break;
 		}
@@ -2116,27 +2121,77 @@ int sde_rm_update_topology(struct sde_rm *rm,
 	return ret;
 }
 
-bool sde_rm_topology_is_quad_pipe(struct sde_rm *rm,
-		struct drm_crtc_state *state)
+bool sde_rm_topology_is_group(struct sde_rm *rm,
+		struct drm_crtc_state *state,
+		enum sde_rm_topology_group group)
 {
-	int i;
+	int i, ret = 0;
 	struct sde_crtc_state *cstate;
-	uint64_t topology = SDE_RM_TOPOLOGY_NONE;
+	struct drm_connector *conn;
+	struct drm_connector_state *conn_state;
+	struct msm_display_topology topology;
+	enum sde_rm_topology_name name;
 
-	if ((!rm) || (!state)) {
-		pr_err("invalid arguments: rm:%d state:%d\n",
-				rm == NULL, state == NULL);
+	if ((!rm) || (!state) || (!state->state)) {
+		pr_err("invalid arguments: rm:%d state:%d atomic state:%d\n",
+				!rm, !state, state ? (!state->state) : 0);
 		return false;
 	}
 
 	cstate = to_sde_crtc_state(state);
 
 	for (i = 0; i < cstate->num_connectors; i++) {
-		struct drm_connector *conn = cstate->connectors[i];
+		conn = cstate->connectors[i];
+		if (!conn) {
+			SDE_DEBUG("invalid connector\n");
+			continue;
+		}
 
-		topology = sde_connector_get_topology_name(conn);
-		if (TOPOLOGY_QUADPIPE_MERGE_MODE(topology))
-			return true;
+		conn_state = drm_atomic_get_connector_state(state->state, conn);
+		if (!conn_state) {
+			SDE_DEBUG("%s invalid connector state\n", conn->name);
+			continue;
+		}
+
+		ret = sde_connector_state_get_topology(conn_state, &topology);
+		if (ret) {
+			SDE_DEBUG("%s invalid topology\n", conn->name);
+			continue;
+		}
+
+		name = sde_rm_get_topology_name(rm, topology);
+		switch (group) {
+		case SDE_RM_TOPOLOGY_GROUP_SINGLEPIPE:
+			if (TOPOLOGY_SINGLEPIPE_MODE(name))
+				return true;
+			break;
+		case SDE_RM_TOPOLOGY_GROUP_DUALPIPE:
+			if (TOPOLOGY_DUALPIPE_MODE(name))
+				return true;
+			break;
+		case SDE_RM_TOPOLOGY_GROUP_QUADPIPE:
+			if (TOPOLOGY_QUADPIPE_MODE(name))
+				return true;
+			break;
+		case SDE_RM_TOPOLOGY_GROUP_3DMERGE:
+			if (topology.num_lm > topology.num_intf &&
+					!topology.num_enc)
+				return true;
+			break;
+		case SDE_RM_TOPOLOGY_GROUP_3DMERGE_DSC:
+			if (topology.num_lm > topology.num_enc &&
+					topology.num_enc)
+				return true;
+			break;
+		case SDE_RM_TOPOLOGY_GROUP_DSCMERGE:
+			if (topology.num_lm == topology.num_enc &&
+					topology.num_enc)
+				return true;
+			break;
+		default:
+			SDE_ERROR("invalid topology group\n");
+			return false;
+		}
 	}
 
 	return false;
@@ -2229,10 +2284,10 @@ void sde_rm_release(struct sde_rm *rm, struct drm_encoder *enc, bool nxt)
 
 	conn = _sde_rm_get_connector(enc);
 	if (!conn) {
-		SDE_DEBUG("failed to get connector for enc %d, nxt %d",
-				enc->base.id, nxt);
 		SDE_EVT32(enc->base.id, 0x0, 0xffffffff);
 		_sde_rm_release_rsvp(rm, rsvp, conn);
+		SDE_DEBUG("failed to get conn for enc %d nxt %d\n",
+				enc->base.id, nxt);
 		goto end;
 	}
 
@@ -2282,6 +2337,30 @@ static int _sde_rm_commit_rsvp(
 	}
 
 	return ret;
+}
+
+/* call this only after rm_mutex held */
+struct sde_rm_rsvp *_sde_rm_poll_get_rsvp_nxt_locked(struct sde_rm *rm,
+		struct drm_encoder *enc)
+{
+	int i;
+	u32 loop_count = 20;
+	struct sde_rm_rsvp *rsvp_nxt = NULL;
+	u32 sleep = RM_NXT_CLEAR_POLL_TIMEOUT_US / loop_count;
+
+	for (i = 0; i < loop_count; i++) {
+		rsvp_nxt = _sde_rm_get_rsvp_nxt(rm, enc);
+		if (!rsvp_nxt)
+			return rsvp_nxt;
+
+		mutex_unlock(&rm->rm_lock);
+		SDE_DEBUG("iteration i:%d sleep range:%uus to %uus\n",
+				i, sleep, sleep * 2);
+		usleep_range(sleep, sleep * 2);
+		mutex_lock(&rm->rm_lock);
+	}
+
+	return rsvp_nxt;
 }
 
 int sde_rm_reserve(
@@ -2340,16 +2419,17 @@ int sde_rm_reserve(
 	 * commit rsvps. This rsvp_nxt can be cleared by a back to back
 	 * check_only commit with modeset when its predecessor atomic
 	 * commit is delayed / not committed the reservation yet.
-	 * Bail out in such cases so that check only commit
-	 * comes again after earlier commit gets processed.
+	 * Poll for rsvp_nxt clear, allow the check_only commit if rsvp_nxt
+	 * gets cleared and bailout if it does not get cleared before timeout.
 	 */
-
-	if (test_only && rsvp_nxt) {
-		SDE_ERROR("cur %d nxt %d enc %d conn %d\n", rsvp_cur->seq,
-			 rsvp_nxt->seq, enc->base.id,
-			 conn_state->connector->base.id);
-		ret = -EINVAL;
-		goto end;
+	if (test_only && rsvp_cur && rsvp_nxt) {
+		rsvp_nxt = _sde_rm_poll_get_rsvp_nxt_locked(rm, enc);
+		if (rsvp_nxt) {
+			SDE_ERROR("poll timeout cur %d nxt %d enc %d\n",
+				rsvp_cur->seq, rsvp_nxt->seq, enc->base.id);
+			ret = -EINVAL;
+			goto end;
+		}
 	}
 
 	if (!test_only && rsvp_nxt)

@@ -581,13 +581,14 @@ static void dp_display_notify_hdcp_status_cb(void *ptr,
 		enum sde_hdcp_state state)
 {
 	struct dp_display_private *dp = ptr;
-	SDE_EVT32_EXTERNAL(SDE_EVTLOG_FUNC_ENTRY,
-					dp->link->hdcp_status.hdcp_state);
 
 	if (!dp) {
 		DP_ERR("invalid input\n");
 		return;
 	}
+
+	SDE_EVT32_EXTERNAL(SDE_EVTLOG_FUNC_ENTRY,
+					dp->link->hdcp_status.hdcp_state);
 
 	dp->link->hdcp_status.hdcp_state = state;
 
@@ -732,6 +733,7 @@ static void dp_display_send_hpd_event(struct dp_display_private *dp)
 	char name[HPD_STRING_SIZE], status[HPD_STRING_SIZE],
 		bpp[HPD_STRING_SIZE], pattern[HPD_STRING_SIZE];
 	char *envp[5];
+	int rc = 0;
 
 	if (dp->mst.mst_active) {
 		DP_DEBUG("skip notification for mst mode\n");
@@ -757,6 +759,11 @@ static void dp_display_send_hpd_event(struct dp_display_private *dp)
 
 	dev = connector->dev;
 
+	if (dp->debug->skip_uevent) {
+		DP_INFO("skipping uevent\n");
+		goto update_state;
+	}
+
 	snprintf(name, HPD_STRING_SIZE, "name=%s", connector->name);
 	snprintf(status, HPD_STRING_SIZE, "status=%s",
 		drm_get_connector_status_name(connector->status));
@@ -766,16 +773,17 @@ static void dp_display_send_hpd_event(struct dp_display_private *dp)
 	snprintf(pattern, HPD_STRING_SIZE, "pattern=%d",
 		dp->link->test_video.test_video_pattern);
 
-	DP_DEBUG("[%s]:[%s] [%s] [%s]\n", name, status, bpp, pattern);
+	DP_INFO("[%s]:[%s] [%s] [%s]\n", name, status, bpp, pattern);
 	envp[0] = name;
 	envp[1] = status;
 	envp[2] = bpp;
 	envp[3] = pattern;
 	envp[4] = NULL;
-	if (!dp->debug->skip_uevent)
-		kobject_uevent_env(&dev->primary->kdev->kobj, KOBJ_CHANGE,
-				envp);
 
+	rc = kobject_uevent_env(&dev->primary->kdev->kobj, KOBJ_CHANGE, envp);
+	DP_INFO("uevent %s: %d\n", rc ? "failure" : "success", rc);
+
+update_state:
 	if (connector->status == connector_status_connected) {
 		dp_display_state_add(DP_STATE_CONNECT_NOTIFIED);
 		dp_display_state_remove(DP_STATE_DISCONNECT_NOTIFIED);
@@ -916,8 +924,7 @@ static void dp_display_host_init(struct dp_display_private *dp)
 	if (dp->hpd->orientation == ORIENTATION_CC2)
 		flip = true;
 
-	reset = dp->debug->sim_mode ? false :
-		(!dp->hpd->multi_func || !dp->hpd->peer_usb_comm);
+	reset = dp->debug->sim_mode ? false : !dp->hpd->multi_func;
 
 	dp->power->init(dp->power, flip);
 	dp->hpd->host_init(dp->hpd, &dp->catalog->hpd);
@@ -1589,7 +1596,8 @@ static void dp_display_deinit_sub_modules(struct dp_display_private *dp)
 {
 	dp_debug_put(dp->debug);
 	dp_hpd_put(dp->hpd);
-	dp_audio_put(dp->panel->audio);
+	if (dp->panel)
+		dp_audio_put(dp->panel->audio);
 	dp_ctrl_put(dp->ctrl);
 	dp_panel_put(dp->panel);
 	dp_link_put(dp->link);
@@ -2012,15 +2020,18 @@ static int dp_display_set_stream_info(struct dp_display *dp_display,
 static void dp_display_update_dsc_resources(struct dp_display_private *dp,
 		struct dp_panel *panel, bool enable)
 {
+	int rc;
 	u32 dsc_blk_cnt = 0;
+	struct msm_drm_private *priv = dp->priv;
 
 	if (panel->pinfo.comp_info.comp_type == MSM_DISPLAY_COMPRESSION_DSC &&
-		(panel->pinfo.comp_info.comp_ratio > 1)) {
-		dsc_blk_cnt = panel->pinfo.h_active /
-				dp->parser->max_dp_dsc_input_width_pixs;
-		if (panel->pinfo.h_active %
-				dp->parser->max_dp_dsc_input_width_pixs)
-			dsc_blk_cnt++;
+			(panel->pinfo.comp_info.comp_ratio > 1)) {
+		rc = msm_get_dsc_count(priv, panel->pinfo.h_active,
+				&dsc_blk_cnt);
+		if (rc) {
+			DP_ERR("error getting dsc count. rc:%d\n", rc);
+			return;
+		}
 	}
 
 	if (enable) {
@@ -2431,10 +2442,74 @@ static int dp_display_validate_mixers(struct msm_drm_private *priv,
 		return rc;
 	}
 
-	if (num_lm > avail_res->num_lm ||
-			(num_lm == 2 && !avail_res->num_3dmux)) {
-		DP_DEBUG("num_lm:%d, req lm:%d 3dmux:%d\n", num_lm,
-				avail_res->num_lm, avail_res->num_3dmux);
+	if (num_lm > avail_res->num_lm) {
+		DP_DEBUG("num lm:%d > available lm:%d\n", num_lm,
+				avail_res->num_lm);
+		return -EPERM;
+	}
+
+	return 0;
+}
+
+static int dp_display_validate_dscs(struct msm_drm_private *priv,
+		struct dp_panel *dp_panel, struct drm_display_mode *mode,
+		struct dp_display_mode *dp_mode,
+		const struct msm_resource_caps_info *avail_res)
+{
+	int rc;
+	u32 num_dsc = 0;
+	bool dsc_capable = dp_mode->capabilities & DP_PANEL_CAPS_DSC;
+
+	if (!dp_panel->dsc_en || !dsc_capable)
+		return 0;
+
+	rc = msm_get_dsc_count(priv, mode->hdisplay, &num_dsc);
+	if (rc) {
+		DP_ERR("error getting dsc count. rc:%d\n", rc);
+		return rc;
+	}
+
+	if (num_dsc > avail_res->num_dsc) {
+		DP_DEBUG("num dsc:%d > available dsc:%d\n", num_dsc,
+				avail_res->num_dsc);
+		return -EPERM;
+	}
+
+	return 0;
+}
+
+static int dp_display_validate_topology(struct dp_display_private *dp,
+		struct dp_panel *dp_panel, struct drm_display_mode *mode,
+		struct dp_display_mode *dp_mode,
+		const struct msm_resource_caps_info *avail_res)
+{
+	int rc;
+	struct msm_drm_private *priv = dp->priv;
+	const u32 dual_lm = 2, quad_lm = 4;
+	u32 num_lm = 0, num_dsc = 0, num_3dmux = 0;
+	bool dsc_capable = dp_mode->capabilities & DP_PANEL_CAPS_DSC;
+
+	rc = msm_get_mixer_count(priv, mode, avail_res, &num_lm);
+	if (rc) {
+		DP_ERR("error getting mixer count. rc:%d\n", rc);
+		return rc;
+	}
+
+	num_3dmux = avail_res->num_3dmux;
+
+	if (dp_panel->dsc_en && dsc_capable) {
+		rc = msm_get_dsc_count(priv, mode->hdisplay, &num_dsc);
+		if (rc) {
+			DP_ERR("error getting dsc count. rc:%d\n", rc);
+			return rc;
+		}
+	}
+
+	/* filter out unsupported DP topologies */
+	if ((num_lm == dual_lm && (!num_3dmux && !num_dsc)) ||
+			(num_lm == quad_lm && (num_dsc != 4))) {
+		DP_DEBUG("invalid topology lm:%d dsc:%d 3dmux:%d intf:1\n",
+				num_lm, num_dsc, num_3dmux);
 		return -EPERM;
 	}
 
@@ -2554,6 +2629,16 @@ static enum drm_mode_status dp_display_validate_mode(
 	if (rc)
 		goto end;
 
+	rc = dp_display_validate_dscs(dp->priv, panel, mode, &dp_mode,
+			avail_res);
+	if (rc)
+		goto end;
+
+	rc = dp_display_validate_topology(dp, dp_panel, mode,
+			&dp_mode, avail_res);
+	if (rc)
+		goto end;
+
 	dp_display_validate_mst_connectors(debug, dp_panel, mode, &mode_status,
 			&use_default);
 	if (!use_default)
@@ -2568,7 +2653,38 @@ static enum drm_mode_status dp_display_validate_mode(
 	mode_status = MODE_OK;
 end:
 	mutex_unlock(&dp->session_lock);
+	DP_DEBUG("[%s] mode is %s\n", mode->name,
+			(mode_status == MODE_OK) ? "valid" : "invalid");
+
 	return mode_status;
+}
+
+static int dp_display_get_available_dp_resources(struct dp_display *dp_display,
+		const struct msm_resource_caps_info *avail_res,
+		struct msm_resource_caps_info *max_dp_avail_res)
+{
+	if (!dp_display || !avail_res || !max_dp_avail_res) {
+		DP_ERR("invalid arguments\n");
+		return -EINVAL;
+	}
+
+	memcpy(max_dp_avail_res, avail_res,
+			sizeof(struct msm_resource_caps_info));
+
+	max_dp_avail_res->num_lm = min(avail_res->num_lm,
+			dp_display->max_mixer_count);
+	max_dp_avail_res->num_dsc = min(avail_res->num_dsc,
+			dp_display->max_dsc_count);
+
+	DP_DEBUG("max_lm:%d, avail_lm:%d, dp_avail_lm:%d\n",
+			dp_display->max_mixer_count, avail_res->num_lm,
+			max_dp_avail_res->num_lm);
+
+	DP_DEBUG("max_dsc:%d, avail_dsc:%d, dp_avail_dsc:%d\n",
+			dp_display->max_dsc_count, avail_res->num_dsc,
+			max_dp_avail_res->num_dsc);
+
+	return 0;
 }
 
 static int dp_display_get_modes(struct dp_display *dp, void *panel,
@@ -2602,6 +2718,7 @@ static void dp_display_convert_to_dp_mode(struct dp_display *dp_display,
 		const struct drm_display_mode *drm_mode,
 		struct dp_display_mode *dp_mode)
 {
+	int rc;
 	struct dp_display_private *dp;
 	struct dp_panel *dp_panel;
 	u32 free_dsc_blks = 0, required_dsc_blks = 0;
@@ -2616,22 +2733,26 @@ static void dp_display_convert_to_dp_mode(struct dp_display *dp_display,
 
 	memset(dp_mode, 0, sizeof(*dp_mode));
 
-	free_dsc_blks = dp->parser->max_dp_dsc_blks -
+	free_dsc_blks = dp_display->max_dsc_count -
 				dp->tot_dsc_blks_in_use +
 				dp_panel->tot_dsc_blks_in_use;
-	required_dsc_blks = drm_mode->hdisplay /
-				dp->parser->max_dp_dsc_input_width_pixs;
-	if (drm_mode->hdisplay % dp->parser->max_dp_dsc_input_width_pixs)
-		required_dsc_blks++;
+
+	rc = msm_get_dsc_count(dp->priv, drm_mode->hdisplay,
+			&required_dsc_blks);
+	if (rc) {
+		DP_ERR("error getting dsc count. rc:%d\n", rc);
+		return;
+	}
 
 	if (free_dsc_blks >= required_dsc_blks)
 		dp_mode->capabilities |= DP_PANEL_CAPS_DSC;
 
 	if (dp_mode->capabilities & DP_PANEL_CAPS_DSC)
-		DP_DEBUG("in_use:%d, max:%d, free:%d, req:%d, caps:0x%x, width:%d\n",
-			dp->tot_dsc_blks_in_use, dp->parser->max_dp_dsc_blks,
-			free_dsc_blks, required_dsc_blks, dp_mode->capabilities,
-			dp->parser->max_dp_dsc_input_width_pixs);
+		DP_DEBUG("in_use:%d, max:%d, free:%d, req:%d, caps:0x%x\n",
+				dp->tot_dsc_blks_in_use,
+				dp_display->max_dsc_count,
+				free_dsc_blks, required_dsc_blks,
+				dp_mode->capabilities);
 
 	dp_panel->convert_to_dp_mode(dp_panel, drm_mode, dp_mode);
 }
@@ -3231,6 +3352,8 @@ static int dp_display_probe(struct platform_device *pdev)
 	g_dp_display->wakeup_phy_layer =
 					dp_display_wakeup_phy_layer;
 	g_dp_display->set_colorspace = dp_display_setup_colospace;
+	g_dp_display->get_available_dp_resources =
+					dp_display_get_available_dp_resources;
 
 	rc = component_add(&pdev->dev, &dp_display_comp_ops);
 	if (rc) {

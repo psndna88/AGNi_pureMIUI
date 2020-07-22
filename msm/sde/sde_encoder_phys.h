@@ -52,13 +52,16 @@ enum sde_enc_split_role {
  * @SDE_ENC_ENABLED:	Encoder is enabled
  * @SDE_ENC_ERR_NEEDS_HW_RESET:	Encoder is enabled, but requires a hw_reset
  *				to recover from a previous error
+ * @SDE_ENC_TIMING_ENGINE_RECONFIG: Encoder is enabled and timing engine
+ *				parameters are updated
  */
 enum sde_enc_enable_state {
 	SDE_ENC_DISABLING,
 	SDE_ENC_DISABLED,
 	SDE_ENC_ENABLING,
 	SDE_ENC_ENABLED,
-	SDE_ENC_ERR_NEEDS_HW_RESET
+	SDE_ENC_ERR_NEEDS_HW_RESET,
+	SDE_ENC_TIMING_ENGINE_RECONFIG,
 };
 
 struct sde_encoder_phys;
@@ -275,6 +278,7 @@ struct sde_encoder_irq {
  * @enc_spinlock:	Virtual-Encoder-Wide Spin Lock for IRQ purposes
  * @enable_state:	Enable state tracking
  * @vblank_refcount:	Reference count of vblank request
+ * @vblank_cached_refcount:	Reference count of vblank cached request
  * @wbirq_refcount:	Reference count of wb irq request
  * @vsync_cnt:		Vsync count for the physical encoder
  * @underrun_cnt:	Underrun count for the physical encoder
@@ -324,6 +328,7 @@ struct sde_encoder_phys {
 	enum sde_enc_enable_state enable_state;
 	struct mutex *vblank_ctl_lock;
 	atomic_t vblank_refcount;
+	atomic_t vblank_cached_refcount;
 	atomic_t wbirq_refcount;
 	atomic_t vsync_cnt;
 	atomic_t underrun_cnt;
@@ -538,6 +543,14 @@ void sde_encoder_helper_get_pp_line_count(struct drm_encoder *drm_enc,
 		struct sde_hw_pp_vsync_info *info);
 
 /**
+ * sde_encoder_helper_get_transfer_time - get the mdp transfer time in usecs
+ * @drm_enc: Pointer to drm encoder structure
+ * @transfer_time_us: Pointer to store the output value
+ */
+void sde_encoder_helper_get_transfer_time(struct drm_encoder *drm_enc,
+		u32 *transfer_time_us);
+
+/**
  * sde_encoder_helper_trigger_flush - control flush helper function
  *	This helper function may be optionally specified by physical
  *	encoders if they require ctl_flush triggering.
@@ -603,16 +616,29 @@ void sde_encoder_helper_hw_reset(struct sde_encoder_phys *phys_enc);
 static inline enum sde_3d_blend_mode sde_encoder_helper_get_3d_blend_mode(
 		struct sde_encoder_phys *phys_enc)
 {
-	enum sde_rm_topology_name topology;
+	struct msm_display_topology def;
+	enum sde_enc_split_role split_role;
+	int ret, num_lm;
+	bool mode_3d;
 
-	if (!phys_enc || phys_enc->enable_state == SDE_ENC_DISABLING)
+	if (!phys_enc || phys_enc->enable_state == SDE_ENC_DISABLING ||
+			!phys_enc->connector || !phys_enc->connector->state)
 		return BLEND_3D_NONE;
 
-	topology = sde_connector_get_topology_name(phys_enc->connector);
-	if (phys_enc->split_role == ENC_ROLE_SOLO &&
-			(topology == SDE_RM_TOPOLOGY_DUALPIPE_3DMERGE ||
-			 topology == SDE_RM_TOPOLOGY_DUALPIPE_3DMERGE_DSC ||
-			topology == SDE_RM_TOPOLOGY_DUALPIPE_3DMERGE_VDC))
+	ret = sde_connector_state_get_topology
+			(phys_enc->connector->state, &def);
+	if (ret)
+		return BLEND_3D_NONE;
+
+	num_lm = def.num_lm;
+	mode_3d = (num_lm > def.num_enc) ? true : false;
+	split_role = phys_enc->split_role;
+
+	if (split_role == ENC_ROLE_SOLO && num_lm == 2 && mode_3d)
+		return BLEND_3D_H_ROW_INT;
+
+	if ((split_role == ENC_ROLE_MASTER || split_role == ENC_ROLE_SLAVE)
+			&& num_lm == 4 && mode_3d)
 		return BLEND_3D_H_ROW_INT;
 
 	return BLEND_3D_NONE;

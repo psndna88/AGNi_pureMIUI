@@ -1653,7 +1653,7 @@ void sde_cp_dspp_flush_helper(struct sde_crtc *sde_crtc, u32 feature)
 				dspp->sb_dma_in_use = false;
 
 				_flush_sb_dma_hw(active_ctls, ctl,
-						sizeof(active_ctls));
+						ARRAY_SIZE(active_ctls));
 				ctl->ops.update_bitmask_dspp_subblk(ctl,
 						dspp->idx, sub_blk, true);
 			} else {
@@ -2757,6 +2757,7 @@ static void dspp_igc_install_property(struct drm_crtc *crtc)
 		"SDE_DSPP_IGC_V", version);
 	switch (version) {
 	case 3:
+	case 4:
 		sde_cp_crtc_install_blob_property(crtc, feature_name,
 			SDE_CP_CRTC_DSPP_IGC, sizeof(struct drm_msm_igc_lut));
 		break;
@@ -3473,7 +3474,13 @@ static void _sde_cp_crtc_set_ltm_buffer(struct sde_crtc *sde_crtc, void *cfg)
 		sde_crtc->ltm_buffers[i]->aspace =
 			msm_gem_smmu_address_space_get(crtc->dev,
 			MSM_SMMU_DOMAIN_UNSECURE);
-		if (!sde_crtc->ltm_buffers[i]->aspace) {
+
+		if (PTR_ERR(sde_crtc->ltm_buffers[i]->aspace) == -ENODEV) {
+			sde_crtc->ltm_buffers[i]->aspace = NULL;
+			DRM_DEBUG("IOMMU not present, relying on VRAM\n");
+		} else if (IS_ERR_OR_NULL(sde_crtc->ltm_buffers[i]->aspace)) {
+			ret = PTR_ERR(sde_crtc->ltm_buffers[i]->aspace);
+			sde_crtc->ltm_buffers[i]->aspace = NULL;
 			DRM_ERROR("failed to get aspace\n");
 			goto exit;
 		}
@@ -3801,6 +3808,19 @@ static void sde_cp_ltm_hist_interrupt_cb(void *arg, int irq_idx)
 	ltm_data = (struct drm_msm_ltm_stats_data *)
 		((u8 *)sde_crtc->ltm_buffers[idx]->kva +
 		sde_crtc->ltm_buffers[idx]->offset);
+
+	hw_dspp = sde_crtc->mixers[0].hw_dspp;
+	if (!hw_dspp) {
+		spin_unlock_irqrestore(&sde_crtc->ltm_lock, irq_flags);
+		DRM_ERROR("invalid dspp for mixer %d\n", i);
+		return;
+	}
+	if (hw_dspp->ltm_checksum_support) {
+		ltm_data->feature_flag |= LTM_HIST_CHECKSUM_SUPPORT;
+		ltm_data->checksum = ltm_data->status_flag;
+	} else
+		ltm_data->feature_flag &= ~LTM_HIST_CHECKSUM_SUPPORT;
+
 	ltm_data->status_flag = ltm_hist_status;
 
 	hw_lm = sde_crtc->mixers[0].hw_lm;

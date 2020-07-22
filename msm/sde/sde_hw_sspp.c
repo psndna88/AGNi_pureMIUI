@@ -193,7 +193,8 @@ static inline int _sspp_subblk_offset(struct sde_hw_pipe *ctx,
 	return rc;
 }
 
-static void sde_hw_sspp_setup_multirect(struct sde_hw_pipe *ctx,
+static void sde_hw_sspp_update_multirect(struct sde_hw_pipe *ctx,
+		bool enable,
 		enum sde_sspp_multirect_index index,
 		enum sde_sspp_multirect_mode mode)
 {
@@ -212,8 +213,13 @@ static void sde_hw_sspp_setup_multirect(struct sde_hw_pipe *ctx,
 		mode_mask = 0;
 	} else {
 		mode_mask = SDE_REG_READ(&ctx->hw, SSPP_MULTIRECT_OPMODE + idx);
-		mode_mask |= index;
-		if (mode == SDE_SSPP_MULTIRECT_TIME_MX)
+
+		if (enable)
+			mode_mask |= index;
+		else
+			mode_mask &= ~index;
+
+		if (enable && (mode == SDE_SSPP_MULTIRECT_TIME_MX))
 			mode_mask |= BIT(2);
 		else
 			mode_mask &= ~BIT(2);
@@ -611,16 +617,6 @@ static void sde_hw_sspp_setup_pre_downscale(struct sde_hw_pipe *ctx,
 			(pre_down->pre_downscale_y_1 << 12);
 
 	SDE_REG_WRITE(&ctx->hw, SSPP_PRE_DOWN_SCALE + idx, val);
-}
-
-static u32 _sde_hw_sspp_get_scaler3_ver(struct sde_hw_pipe *ctx)
-{
-	u32 idx;
-
-	if (!ctx || _sspp_subblk_offset(ctx, SDE_SSPP_SCALER_QSEED3, &idx))
-		return 0;
-
-	return sde_hw_get_scaler3_ver(&ctx->hw, idx);
 }
 
 /**
@@ -1242,12 +1238,11 @@ static void _setup_layer_ops(struct sde_hw_pipe *c,
 	}
 
 	if (sde_hw_sspp_multirect_enabled(c->cap))
-		c->ops.setup_multirect = sde_hw_sspp_setup_multirect;
+		c->ops.update_multirect = sde_hw_sspp_update_multirect;
 
 	if (test_bit(SDE_SSPP_SCALER_QSEED3, &features) ||
 			test_bit(SDE_SSPP_SCALER_QSEED3LITE, &features)) {
 		c->ops.setup_scaler = _sde_hw_sspp_setup_scaler3;
-		c->ops.get_scaler_ver = _sde_hw_sspp_get_scaler3_ver;
 		c->ops.setup_scaler_lut = is_qseed3_rev_qseed3lite(
 				c->catalog) ? reg_dmav1_setup_scaler3lite_lut
 				: reg_dmav1_setup_scaler3_lut;
@@ -1346,10 +1341,9 @@ struct sde_hw_pipe *sde_hw_sspp_init(enum sde_sspp idx,
 	_setup_layer_ops(hw_pipe, hw_pipe->cap->features,
 		hw_pipe->cap->perf_features, is_virtual_pipe);
 
-	if (hw_pipe->ops.get_scaler_ver) {
+	if (catalog->qseed_hw_version)
 		sde_init_scaler_blk(&hw_pipe->cap->sblk->scaler_blk,
-			hw_pipe->ops.get_scaler_ver(hw_pipe));
-	}
+			catalog->qseed_hw_version);
 
 	rc = sde_hw_blk_init(&hw_pipe->base, SDE_HW_BLK_SSPP, idx, &sde_hw_ops);
 	if (rc) {

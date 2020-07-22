@@ -165,8 +165,6 @@ struct sde_hw_pixel_ext {
  *              4: Read 1 line/pixel drop 3  lines/pixels
  *              8: Read 1 line/pixel drop 7 lines/pixels
  *              16: Read 1 line/pixel drop 15 line/pixels
- * @index:     index of the rectangle of SSPP
- * @mode:      parallel or time multiplex multirect mode
  */
 struct sde_hw_pipe_cfg {
 	struct sde_hw_fmt_layout layout;
@@ -174,8 +172,6 @@ struct sde_hw_pipe_cfg {
 	struct sde_rect dst_rect;
 	u8 horz_decimation;
 	u8 vert_decimation;
-	enum sde_sspp_multirect_index index;
-	enum sde_sspp_multirect_mode mode;
 };
 
 /**
@@ -374,13 +370,15 @@ struct sde_hw_sspp_ops {
 			enum sde_sspp_multirect_index index);
 
 	/**
-	 * setup_multirect - setup multirect configuration
+	 * update_multirect - update multirect configuration
 	 * @ctx: Pointer to pipe context
+	 * @enable: Boolean to indicate enable or disable of given config
 	 * @index: rectangle index in multirect
 	 * @mode: parallel fetch / time multiplex multirect mode
 	 */
 
-	void (*setup_multirect)(struct sde_hw_pipe *ctx,
+	void (*update_multirect)(struct sde_hw_pipe *ctx,
+			bool enable,
 			enum sde_sspp_multirect_index index,
 			enum sde_sspp_multirect_mode mode);
 
@@ -517,12 +515,6 @@ struct sde_hw_sspp_ops {
 	 */
 	void (*setup_pre_downscale)(struct sde_hw_pipe *ctx,
 		struct sde_hw_inline_pre_downscale_cfg *pre_down);
-
-	/**
-	 * get_scaler_ver - get scaler h/w version
-	 * @ctx: Pointer to pipe context
-	 */
-	u32 (*get_scaler_ver)(struct sde_hw_pipe *ctx);
 
 	/**
 	 * setup_sys_cache - setup system cache configuration

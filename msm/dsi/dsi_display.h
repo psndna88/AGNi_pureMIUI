@@ -188,6 +188,8 @@ struct dsi_display_ext_bridge {
  * @dma_cmd_workq:	Pointer to the workqueue of DMA command transfer done
  *				wait sequence.
  * @is_active:        status of the display
+ * @trusted_vm_env:   Set to true, it the executing VM is Trusted VM.
+ *                    Set to false, otherwise.
  */
 struct dsi_display {
 	struct platform_device *pdev;
@@ -281,6 +283,8 @@ struct dsi_display {
 	/* panel id of the display */
 	u64 panel_id;
 	bool is_active;
+
+	bool trusted_vm_env;
 };
 
 int dsi_display_dev_probe(struct platform_device *pdev);
@@ -654,6 +658,17 @@ int dsi_display_cmd_transfer(struct drm_connector *connector,
 		u32 cmd_buf_len);
 
 /**
+ * dsi_display_cmd_receive() - receive response from the panel
+ * @display:            Handle to display.
+ * @cmd_buf:            Command buffer
+ * @cmd_buf_len:        Command buffer length in bytes
+ * @recv_buf:           Receive buffer
+ * @recv_buf_len:       Receive buffer length in bytes
+ */
+int dsi_display_cmd_receive(void *display, const char *cmd_buf,
+			    u32 cmd_buf_len, u8 *recv_buf, u32 recv_buf_len);
+
+/**
  * dsi_display_soft_reset() - perform a soft reset on DSI controller
  * @display:         Handle to display
  *
@@ -731,5 +746,13 @@ int dsi_display_cont_splash_config(void *display);
  */
 int dsi_display_get_panel_vfp(void *display,
 	int h_active, int v_active);
+
+/**
+ * dsi_display_dump_clks_state() - dump clocks state to console
+ * @display:         Handle to display
+ *
+ * Return: Zero on Success
+ */
+int dsi_display_dump_clks_state(struct dsi_display *display);
 
 #endif /* _DSI_DISPLAY_H_ */

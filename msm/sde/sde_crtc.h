@@ -89,6 +89,18 @@ enum sde_crtc_cache_state {
 };
 
 /**
+ * enum sde_crtc_vm_req: request for VM operations
+ * @VM_REQ_NONE: no request. Normal VM operations.
+ * @VM_REQ_RELEASE: request to release the HW resources from the current VM
+ * @VM_REQ_ACQUIRE: request to acquire the HW resources in the current VM
+ */
+enum sde_crtc_vm_req {
+	VM_REQ_NONE,
+	VM_REQ_RELEASE,
+	VM_REQ_ACQUIRE,
+};
+
+/**
  * @connectors    : Currently associated drm connectors for retire event
  * @num_connectors: Number of associated drm connectors for retire event
  * @list:	event list
@@ -255,6 +267,7 @@ struct sde_crtc_misr_info {
  *                    for secure cases.
  * @misr_enable_debugfs : boolean entry indicates misr enable/disable status
  *                        from debugfs.
+ * @misr_reconfigure : boolean entry indicates misr reconfigure status
  * @misr_frame_count  : misr frame count provided by client
  * @misr_data     : store misr data before turning off the clocks.
  * @idle_notify_work: delayed worker to notify idle timeout to user space
@@ -329,6 +342,7 @@ struct sde_crtc {
 	spinlock_t event_lock;
 	bool misr_enable_sui;
 	bool misr_enable_debugfs;
+	bool misr_reconfigure;
 	u32 misr_frame_count;
 	struct kthread_delayed_work idle_notify_work;
 

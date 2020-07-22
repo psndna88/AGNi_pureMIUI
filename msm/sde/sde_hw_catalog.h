@@ -21,7 +21,7 @@
  */
 #define MAX_BLOCKS    12
 
-#define SDE_HW_VER(MAJOR, MINOR, STEP) (((MAJOR & 0xF) << 28)    |\
+#define SDE_HW_VER(MAJOR, MINOR, STEP) ((u32)((MAJOR & 0xF) << 28)    |\
 		((MINOR & 0xFFF) << 16)  |\
 		(STEP & 0xFFFF))
 
@@ -43,6 +43,8 @@
 #define SDE_HW_VER_610	SDE_HW_VER(6, 1, 0) /* sm7250 */
 #define SDE_HW_VER_630	SDE_HW_VER(6, 3, 0) /* bengal */
 #define SDE_HW_VER_700	SDE_HW_VER(7, 0, 0) /* lahaina */
+#define SDE_HW_VER_660	SDE_HW_VER(6, 6, 0) /* holi */
+#define SDE_HW_VER_670	SDE_HW_VER(6, 7, 0) /* shima */
 
 /* Avoid using below IS_XXX macros outside catalog, use feature bit instead */
 #define IS_SDE_MAJOR_SAME(rev1, rev2)   \
@@ -63,6 +65,8 @@
 #define IS_SAIPAN_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_610)
 #define IS_BENGAL_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_630)
 #define IS_LAHAINA_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_700)
+#define IS_HOLI_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_660)
+#define IS_SHIMA_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_670)
 
 #define SDE_HW_BLK_NAME_LEN	16
 
@@ -87,7 +91,7 @@
 
 #define SDE_CTL_CFG_VERSION_1_0_0       0x100
 #define MAX_INTF_PER_CTL_V1                 2
-#define MAX_DSC_PER_CTL_V1                  2
+#define MAX_DSC_PER_CTL_V1                  4
 #define MAX_CWB_PER_CTL_V1                  2
 #define MAX_MERGE_3D_PER_CTL_V1             2
 #define MAX_WB_PER_CTL_V1                   1
@@ -674,7 +678,7 @@ enum sde_qos_lut_usage {
  * @smart_dma_priority: hw priority of rect1 of multirect pipe
  * @max_per_pipe_bw: maximum allowable bandwidth of this pipe in kBps
  * @max_per_pipe_bw_high: maximum allowable bandwidth of this pipe in kBps
- * 				in case of no VFE
+ *				in case of no VFE
  * @src_blk:
  * @scaler_blk:
  * @csc_blk:
@@ -868,6 +872,7 @@ struct sde_clk_ctrl_reg {
  * @has_dest_scaler:   indicates support of destination scaler
  * @smart_panel_align_mode: split display smart panel align modes
  * @clk_ctrls          clock control register definition
+ * @clk_status         clock status register definition
  */
 struct sde_mdp_cfg {
 	SDE_HW_BLK_INFO;
@@ -877,6 +882,7 @@ struct sde_mdp_cfg {
 	bool has_dest_scaler;
 	u32 smart_panel_align_mode;
 	struct sde_clk_ctrl_reg clk_ctrls[SDE_CLK_CTRL_MAX];
+	struct sde_clk_ctrl_reg clk_status[SDE_CLK_CTRL_MAX];
 };
 
 /* struct sde_uidle_cfg : MDP TOP-BLK instance info
@@ -1317,6 +1323,7 @@ struct sde_sc_cfg {
  * @cpu_mask:          pm_qos cpu mask value
  * @cpu_mask_perf:     pm_qos cpu silver core mask value
  * @cpu_dma_latency:   pm_qos cpu dma latency value
+ * @cpu_irq_latency:   pm_qos cpu irq latency value
  * @axi_bus_width:     axi bus width value in bytes
  * @num_mnoc_ports:    number of mnoc ports
  */
@@ -1348,6 +1355,7 @@ struct sde_perf_cfg {
 	unsigned long cpu_mask;
 	unsigned long cpu_mask_perf;
 	u32 cpu_dma_latency;
+	u32 cpu_irq_latency;
 	u32 axi_bus_width;
 	u32 num_mnoc_ports;
 };
@@ -1358,20 +1366,24 @@ struct sde_perf_cfg {
  * this HW version. Contains number of instances,
  * register offsets, capabilities of the all MDSS HW sub-blocks.
  *
+ * @trusted_vm_env	set to true, if the driver is executing in
+ *			the trusted VM. false, otherwise.
+ * @max_trusted_vm_displays	maximum number of concurrent trusted
+ *				vm displays supported.
  * @max_sspp_linewidth max source pipe line width support.
  * @vig_sspp_linewidth max vig source pipe line width support.
  * @scaling_linewidth max vig source pipe linewidth for scaling usecases
  * @max_mixer_width    max layer mixer line width support.
+ * @max_dsc_width      max dsc line width support.
  * @max_mixer_blendstages max layer mixer blend stages or
  *                       supported z order
  * @max_wb_linewidth   max writeback line width support.
  * @max_wb_linewidth_linear   max writeback line width for linear formats.
  * @max_display_width   maximum display width support.
  * @max_display_height  maximum display height support.
- * @max_lm_per_display  maximum layer mixer per display
+
  * @min_display_width   minimum display width support.
  * @min_display_height  minimum display height support.
- * @qseed_type         qseed2 or qseed3 support.
  * @csc_type           csc or csc_10bit support.
  * @smart_dma_rev      Supported version of SmartDMA feature.
  * @ctl_rev            supported version of control path.
@@ -1400,12 +1412,15 @@ struct sde_perf_cfg {
  * @has_qsync	       Supports qsync feature
  * @has_3d_merge_reset Supports 3D merge reset
  * @has_decimation     Supports decimation
+ * @has_trusted_vm_support	     Supported HW sharing with trusted VM
  * @has_mixer_combined_alpha     Mixer has single register for FG & BG alpha
  * @vbif_disable_inner_outer_shareable     VBIF requires disabling shareables
  * @inline_disable_const_clr     Disable constant color during inline rotate
  * @dither_luma_mode_support   Enables dither luma mode
  * @has_base_layer     Supports staging layer as base layer
  * @demura_supported   Demura pipe support flag(~0x00 - Not supported)
+ * @qseed_sw_lib_rev	qseed sw library type supporting the qseed hw
+ * @qseed_hw_version   qseed hw version of the target
  * @sc_cfg: system cache configuration
  * @uidle_cfg		Settings for uidle feature
  * @sui_misr_supported  indicate if secure-ui-misr is supported
@@ -1428,11 +1443,14 @@ struct sde_perf_cfg {
  */
 struct sde_mdss_cfg {
 	u32 hwversion;
+	bool trusted_vm_env;
+	u32 max_trusted_vm_displays;
 
 	u32 max_sspp_linewidth;
 	u32 vig_sspp_linewidth;
 	u32 scaling_linewidth;
 	u32 max_mixer_width;
+	u32 max_dsc_width;
 	u32 max_mixer_blendstages;
 	u32 max_wb_linewidth;
 	u32 max_wb_linewidth_linear;
@@ -1441,9 +1459,7 @@ struct sde_mdss_cfg {
 	u32 max_display_height;
 	u32 min_display_width;
 	u32 min_display_height;
-	u32 max_lm_per_display;
 
-	u32 qseed_type;
 	u32 csc_type;
 	u32 smart_dma_rev;
 	u32 ctl_rev;
@@ -1472,7 +1488,10 @@ struct sde_mdss_cfg {
 	bool dither_luma_mode_support;
 	bool has_base_layer;
 	bool has_demura;
+	bool has_trusted_vm_support;
 	u32 demura_supported[SSPP_MAX][2];
+	u32 qseed_sw_lib_rev;
+	u32 qseed_hw_version;
 
 	struct sde_sc_cfg sc_cfg[SDE_SYS_CACHE_MAX];
 

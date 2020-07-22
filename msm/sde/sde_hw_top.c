@@ -9,6 +9,7 @@
 #include "sde_dbg.h"
 #include "sde_kms.h"
 
+#define SCRATCH_REGISTER_0                0x14
 #define SSPP_SPARE                        0x28
 #define UBWC_DEC_HW_VERSION               0x058
 #define UBWC_STATIC                       0x144
@@ -219,6 +220,27 @@ static bool sde_hw_setup_clk_force_ctrl(struct sde_hw_mdp *mdp,
 	return clk_forced_on;
 }
 
+static int sde_hw_get_clk_ctrl_status(struct sde_hw_mdp *mdp,
+		enum sde_clk_ctrl_type clk_ctrl, bool *status)
+{
+	struct sde_hw_blk_reg_map *c;
+	u32 reg_off, bit_off;
+
+	if (!mdp)
+		return -EINVAL;
+
+	c = &mdp->hw;
+
+	if (clk_ctrl <= SDE_CLK_CTRL_NONE || clk_ctrl >= SDE_CLK_CTRL_MAX ||
+			!mdp->caps->clk_status[clk_ctrl].reg_off)
+		return -EINVAL;
+
+	reg_off = mdp->caps->clk_status[clk_ctrl].reg_off;
+	bit_off = mdp->caps->clk_status[clk_ctrl].bit_off;
+
+	*status = SDE_REG_READ(c, reg_off) & BIT(bit_off);
+	return 0;
+}
 
 static void sde_hw_get_danger_status(struct sde_hw_mdp *mdp,
 		struct sde_danger_safe_status *status)
@@ -593,6 +615,51 @@ static u32 sde_hw_get_autorefresh_status(struct sde_hw_mdp *mdp, u32 intf_idx)
 	return autorefresh_status;
 }
 
+static void sde_hw_clear_mode_index(struct sde_hw_mdp *mdp)
+{
+	struct sde_hw_blk_reg_map c;
+
+	if (!mdp)
+		return;
+
+	c = mdp->hw;
+	c.blk_off = 0x0;
+
+	SDE_REG_WRITE(&c, SCRATCH_REGISTER_0, 0x0);
+}
+
+static void sde_hw_set_mode_index(struct sde_hw_mdp *mdp, u32 display_id,
+		u32 mode)
+{
+	struct sde_hw_blk_reg_map c;
+	u32 value = 0;
+
+	if (!mdp)
+		return;
+
+	c = mdp->hw;
+	c.blk_off = 0x0;
+
+	/* 4-bits for mode index of each display */
+	value = SDE_REG_READ(&c, SCRATCH_REGISTER_0);
+	value |= (mode << (display_id * 4));
+	SDE_REG_WRITE(&c, SCRATCH_REGISTER_0, value);
+}
+
+static u32 sde_hw_get_mode_index(struct sde_hw_mdp *mdp, u32 display_id)
+{
+	struct sde_hw_blk_reg_map c;
+	u32 value = 0;
+
+	c = mdp->hw;
+	c.blk_off = 0x0;
+
+	value = SDE_REG_READ(&c, SCRATCH_REGISTER_0);
+	value = (value >> (display_id * 4)) & 0xF;
+
+	return value;
+}
+
 static void _setup_mdp_ops(struct sde_hw_mdp_ops *ops,
 		unsigned long cap)
 {
@@ -600,6 +667,7 @@ static void _setup_mdp_ops(struct sde_hw_mdp_ops *ops,
 	ops->setup_pp_split = sde_hw_setup_pp_split;
 	ops->setup_cdm_output = sde_hw_setup_cdm_output;
 	ops->setup_clk_force_ctrl = sde_hw_setup_clk_force_ctrl;
+	ops->get_clk_ctrl_status = sde_hw_get_clk_ctrl_status;
 	ops->get_danger_status = sde_hw_get_danger_status;
 	ops->setup_vsync_source = sde_hw_setup_vsync_source;
 	ops->set_cwb_ppb_cntl = sde_hw_program_cwb_ppb_ctrl;
@@ -609,6 +677,9 @@ static void _setup_mdp_ops(struct sde_hw_mdp_ops *ops,
 	ops->reset_ubwc = sde_hw_reset_ubwc;
 	ops->intf_audio_select = sde_hw_intf_audio_select;
 	ops->set_mdp_hw_events = sde_hw_mdp_events;
+	ops->set_mode_index = sde_hw_set_mode_index;
+	ops->get_mode_index = sde_hw_get_mode_index;
+	ops->clear_mode_index = sde_hw_clear_mode_index;
 	if (cap & BIT(SDE_MDP_VSYNC_SEL))
 		ops->setup_vsync_source = sde_hw_setup_vsync_source;
 	else

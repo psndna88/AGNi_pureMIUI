@@ -222,8 +222,6 @@ struct sde_irq_callback {
  * @enable_counts array of IRQ enable counts
  * @cb_lock:      callback lock
  * @debugfs_file: debugfs file for irq statistics
- * @curr_irq_enable_count: Atomic counter keep track of total current irq enable
- *                         It is used to keep pm_qos vote on CPU.
  */
 struct sde_irq {
 	u32 total_irqs;
@@ -232,7 +230,6 @@ struct sde_irq {
 	atomic_t *irq_counts;
 	spinlock_t cb_lock;
 	struct dentry *debugfs_file;
-	atomic_t curr_irq_enable_count;
 };
 
 /**
@@ -248,7 +245,7 @@ struct sde_kms_frame_event_cb_data {
 struct sde_kms {
 	struct msm_kms base;
 	struct drm_device *dev;
-	int core_rev;
+	uint32_t core_rev;
 	struct sde_mdss_cfg *catalog;
 
 	struct generic_pm_domain genpd;
@@ -302,14 +299,17 @@ struct sde_kms {
 	atomic_t detach_sec_cb;
 	atomic_t detach_all_cb;
 	struct mutex secure_transition_lock;
-	struct mutex vblank_ctl_global_lock;
 
 	bool first_kickoff;
 	bool qdss_enabled;
+	bool pm_suspend_clk_dump;
 
 	cpumask_t irq_cpu_mask;
+	atomic_t irq_vote_count;
 	struct dev_pm_qos_request pm_qos_irq_req[NR_CPUS];
 	struct irq_affinity_notify affinity_notify;
+
+	struct sde_vm *vm;
 };
 
 struct vsync_info {
@@ -642,6 +642,19 @@ static inline bool sde_kms_rect_is_null(const struct sde_rect *r)
 	return (!r->w || !r->h);
 }
 
+/*
+ * sde_in_trusted_vm - checks the executing VM
+ * return: true, if the device driver is executing in the trusted VM
+ *         false, if the device driver is executing in the primary VM
+ */
+static inline bool sde_in_trusted_vm(const struct sde_kms *sde_kms)
+{
+	if (sde_kms && sde_kms->catalog)
+		return sde_kms->catalog->trusted_vm_env;
+
+	return false;
+}
+
 /**
  * Vblank enable/disable functions
  */
@@ -671,11 +684,70 @@ void sde_kms_timeline_status(struct drm_device *dev);
 int sde_kms_handle_recovery(struct drm_encoder *encoder);
 
 /**
- * Notifies the irq enable on first interrupt enable and irq disable
- * on last interrupt disable.
- * @sde_kms: poiner to sde_kms structure
- * @enable: true if irq enabled, false for disabled state.
+ * sde_kms_cpu_vote_for_irq() - API to keep pm_qos latency vote on cpu
+ * where mdss_irq is scheduled
+ * @sde_kms: pointer to sde_kms structure
+ * @enable: true if enable request, false otherwise.
  */
-void sde_kms_irq_enable_notify(struct sde_kms *sde_kms, bool enable);
+void sde_kms_cpu_vote_for_irq(struct sde_kms *sde_kms, bool enable);
 
+/**
+ * sde_kms_get_io_resources() - reads associated register range
+ * @kms: pointer to sde_kms structure
+ * @io_res: pointer to msm_io_res struct to populate the ranges
+ * Return: error code.
+ */
+int sde_kms_get_io_resources(struct sde_kms *kms, struct msm_io_res *io_res);
+
+/**
+ * sde_kms_vm_trusted_resource_init - reserve/initialize the HW/SW resources
+ * @sde_kms: poiner to sde_kms structure
+ * return: 0 on success; error code otherwise
+ */
+int sde_kms_vm_trusted_resource_init(struct sde_kms *sde_kms);
+
+/**
+ * sde_kms_vm_trusted_resource_deinit - release the HW/SW resources
+ * @sde_kms: poiner to sde_kms structure
+ */
+void sde_kms_vm_trusted_resource_deinit(struct sde_kms *sde_kms);
+
+/**
+ * sde_kms_vm_trusted_post_commit - function to prepare the VM after the
+ *				    last commit before releasing the HW
+ *				    resources from trusted VM
+ * @sde_kms: pointer to sde_kms
+ * @state: current frames atomic commit state
+ */
+int sde_kms_vm_trusted_post_commit(struct sde_kms *sde_kms,
+	struct drm_atomic_state *state);
+
+/**
+ * sde_kms_vm_primary_post_commit - function to prepare the VM after the
+ *				    last commit before assign the HW
+ *				    resources from primary VM
+ * @sde_kms: pointer to sde_kms
+ * @state: current frames atomic commit state
+ */
+int sde_kms_vm_primary_post_commit(struct sde_kms *sde_kms,
+	struct drm_atomic_state *state);
+
+/**
+ * sde_kms_vm_trusted_prepare_commit - function to prepare the VM before the
+ *				       the first commit after the accepting
+ *				       the HW resources in trusted VM.
+ * @sde_kms: pointer to sde_kms
+ * @state: current frame's atomic commit state
+ */
+int sde_kms_vm_trusted_prepare_commit(struct sde_kms *sde_kms,
+					   struct drm_atomic_state *state);
+/**
+ * sde_kms_vm_primary_prepare_commit - function to prepare the VM before the
+ *				       the first commit after the reclaming
+ *				       the HW resources in trusted VM.
+ * @sde_kms: pointer to sde_kms
+ * @state: current frame's atomic commit state
+ */
+int sde_kms_vm_primary_prepare_commit(struct sde_kms *sde_kms,
+					   struct drm_atomic_state *state);
 #endif /* __sde_kms_H__ */

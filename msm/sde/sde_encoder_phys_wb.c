@@ -168,12 +168,11 @@ static void sde_encoder_phys_wb_set_qos(struct sde_encoder_phys *phys_enc)
 
 	hw_wb = wb_enc->hw_wb;
 	qos_count = perf->qos_refresh_count;
-	while (qos_count && perf->qos_refresh_rate) {
-		if (frame_rate >= perf->qos_refresh_rate[qos_count - 1]) {
-			fps_index = qos_count - 1;
+	while ((fps_index < qos_count) && perf->qos_refresh_rate) {
+		if ((frame_rate <= perf->qos_refresh_rate[fps_index]) ||
+				(fps_index == qos_count - 1))
 			break;
-		}
-		qos_count--;
+		fps_index++;
 	}
 
 	qos_cfg.danger_safe_en = true;
@@ -589,85 +588,118 @@ static void sde_encoder_phys_wb_setup_cdp(struct sde_encoder_phys *phys_enc,
 static void _sde_enc_phys_wb_detect_cwb(struct sde_encoder_phys *phys_enc,
 		struct drm_crtc_state *crtc_state)
 {
-	struct drm_encoder *encoder;
 	struct sde_encoder_phys_wb *wb_enc = to_sde_encoder_phys_wb(phys_enc);
 	const struct sde_wb_cfg *wb_cfg = wb_enc->hw_wb->caps;
-
-	phys_enc->in_clone_mode = false;
+	u32 encoder_mask = 0;
 
 	/* Check if WB has CWB support */
-	if (!(wb_cfg->features & BIT(SDE_WB_HAS_CWB)))
-		return;
-
-	/* if any other encoder is connected to same crtc enable clone mode*/
-	drm_for_each_encoder(encoder, crtc_state->crtc->dev) {
-		if (encoder->crtc != crtc_state->crtc)
-			continue;
-
-		if (phys_enc->parent != encoder) {
-			phys_enc->in_clone_mode = true;
-			break;
-		}
+	if (wb_cfg->features & BIT(SDE_WB_HAS_CWB)) {
+		encoder_mask = crtc_state->encoder_mask;
+		encoder_mask &= ~drm_encoder_mask(phys_enc->parent);
 	}
+	phys_enc->in_clone_mode = encoder_mask ? true : false;
 
 	SDE_DEBUG("detect CWB - status:%d\n", phys_enc->in_clone_mode);
 }
 
 static int _sde_enc_phys_wb_validate_cwb(struct sde_encoder_phys *phys_enc,
 			struct drm_crtc_state *crtc_state,
-			 struct drm_connector_state *conn_state)
+			struct drm_connector_state *conn_state)
 {
+	struct drm_framebuffer *fb;
 	struct sde_crtc_state *cstate = to_sde_crtc_state(crtc_state);
+	const struct drm_display_mode *mode = &crtc_state->mode;
 	struct sde_rect wb_roi = {0,};
 	struct sde_rect pu_roi = {0,};
+	int out_width = 0, out_height = 0;
+	int ds_srcw = 0, ds_srch = 0, ds_outw = 0, ds_outh = 0;
 	int data_pt;
-	int ds_outw = 0;
-	int ds_outh = 0;
 	int ds_in_use = false;
 	int i = 0;
 	int ret = 0;
 
-	if (!phys_enc->in_clone_mode) {
-		SDE_DEBUG("not in CWB mode. early return\n");
-		goto exit;
+	fb = sde_wb_connector_state_get_output_fb(conn_state);
+	if (!fb) {
+		SDE_DEBUG("no output framebuffer\n");
+		return 0;
 	}
 
 	ret = sde_wb_connector_state_get_output_roi(conn_state, &wb_roi);
 	if (ret) {
 		SDE_ERROR("failed to get roi %d\n", ret);
-		goto exit;
+		return ret;
+	}
+
+	if (!wb_roi.w || !wb_roi.h) {
+		SDE_ERROR("cwb roi is not set wxh:%dx%d\n", wb_roi.w, wb_roi.h);
+		return -EINVAL;
 	}
 
 	data_pt = sde_crtc_get_property(cstate, CRTC_PROP_CAPTURE_OUTPUT);
 
 	/* compute cumulative ds output dimensions if in use */
-	for (i = 0; i < cstate->num_ds; i++)
+	for (i = 0; i < cstate->num_ds; i++) {
 		if (cstate->ds_cfg[i].scl3_cfg.enable) {
 			ds_in_use = true;
 			ds_outw += cstate->ds_cfg[i].scl3_cfg.dst_width;
 			ds_outh = cstate->ds_cfg[i].scl3_cfg.dst_height;
+			ds_srcw +=  cstate->ds_cfg[i].lm_width;
+			ds_srch =  cstate->ds_cfg[i].lm_height;
 		}
-
-	/* if ds in use check wb roi against ds output dimensions */
-	if ((data_pt == CAPTURE_DSPP_OUT) &&  ds_in_use &&
-			((wb_roi.w != ds_outw) || (wb_roi.h != ds_outh))) {
-		SDE_ERROR("invalid wb roi with dest scalar [%dx%d vs %dx%d]\n",
-				wb_roi.w, wb_roi.h, ds_outw, ds_outh);
-		ret = -EINVAL;
-		goto exit;
 	}
 
-	/* validate conn roi against pu rect */
+	if ((ds_in_use && (!ds_outw || !ds_outh || !ds_srcw || !ds_srch))) {
+		SDE_ERROR("invalid ds cfg src:%dx%d dst:%dx%d\n",
+				ds_srcw, ds_srch, ds_outw, ds_outh);
+		return -EINVAL;
+	}
+
+	/* 1) No DS case: same restrictions for LM & DSSPP tap point
+	 *	a) wb-roi should be inside FB
+	 *	b) mode resolution & wb-roi should be same
+	 * 2) With DS case: restrictions would change based on tap point
+	 *	2.1) LM Tap Point:
+	 *		a) wb-roi should be inside FB
+	 *		b) wb-roi should be same as crtc-LM bounds
+	 *	2.2) DSPP Tap point: same as No DS case
+	 *		a) wb-roi should be inside FB
+	 *		b) mode resolution & wb-roi should be same
+	 */
+	if (ds_in_use && data_pt == CAPTURE_DSPP_OUT) {
+		out_width = ds_outw;
+		out_height = ds_outh;
+	} else if (ds_in_use) { /* LM tap point */
+		out_width = ds_srcw;
+		out_height = ds_srch;
+	} else {
+		out_width = mode->hdisplay;
+		out_height = mode->vdisplay;
+	}
+
+	if ((wb_roi.w != out_width) || (wb_roi.h != out_height)) {
+		SDE_ERROR("invalid wb roi[%dx%d] with ds_use:%d out[%dx%d]\n",
+				wb_roi.w, wb_roi.h, out_width, out_height);
+		return -EINVAL;
+	}
+
+	if (((wb_roi.x + wb_roi.w) > fb->width) ||
+			((wb_roi.y + wb_roi.h) > fb->height)) {
+		SDE_ERROR("invalid wb roi[%d,%d,%d,%d] fb[%dx%d]\n",
+				wb_roi.x, wb_roi.y, wb_roi.w, wb_roi.h,
+				fb->width, fb->height);
+		return -EINVAL;
+	}
+
+	/* validate wb roi against pu rect */
 	if (cstate->user_roi_list.num_rects) {
 		sde_kms_rect_merge_rectangles(&cstate->user_roi_list, &pu_roi);
 		if (wb_roi.w != pu_roi.w || wb_roi.h != pu_roi.h) {
 			SDE_ERROR("invalid wb roi with pu [%dx%d vs %dx%d]\n",
 					wb_roi.w, wb_roi.h, pu_roi.w, pu_roi.h);
-			ret = -EINVAL;
-			goto exit;
+			return -EINVAL;
 		}
 	}
-exit:
+
 	return ret;
 }
 
@@ -753,6 +785,16 @@ static int sde_encoder_phys_wb_atomic_check(
 	if (SDE_FORMAT_IS_YUV(fmt) != !!phys_enc->hw_cdm)
 		crtc_state->mode_changed = true;
 
+	/* if in clone mode, return after cwb validation */
+	if (phys_enc->in_clone_mode) {
+		rc = _sde_enc_phys_wb_validate_cwb(phys_enc, crtc_state,
+				conn_state);
+		if (rc)
+			SDE_ERROR("failed in cwb validation %d\n", rc);
+
+		return rc;
+	}
+
 	if (wb_roi.w && wb_roi.h) {
 		if (wb_roi.w != mode->hdisplay) {
 			SDE_ERROR("invalid roi w=%d, mode w=%d\n", wb_roi.w,
@@ -795,12 +837,6 @@ static int sde_encoder_phys_wb_atomic_check(
 					SDE_WB_MAX_LINEWIDTH(fmt, wb_cfg));
 			return -EINVAL;
 		}
-	}
-
-	rc = _sde_enc_phys_wb_validate_cwb(phys_enc, crtc_state, conn_state);
-	if (rc) {
-		SDE_ERROR("failed in cwb validation %d\n", rc);
-		return rc;
 	}
 
 	return rc;
@@ -1210,6 +1246,25 @@ static int sde_encoder_phys_wb_frame_timeout(struct sde_encoder_phys *phys_enc)
 	return event;
 }
 
+static bool _sde_encoder_phys_wb_is_idle(
+		struct sde_encoder_phys *phys_enc)
+{
+	bool ret = false;
+	struct sde_encoder_phys_wb *wb_enc = to_sde_encoder_phys_wb(phys_enc);
+	struct sde_hw_wb *hw_wb = wb_enc->hw_wb;
+	struct sde_vbif_get_xin_status_params xin_status = {0};
+
+	xin_status.vbif_idx = hw_wb->caps->vbif_idx;
+	xin_status.xin_id = hw_wb->caps->xin_id;
+	xin_status.clk_ctrl = hw_wb->caps->clk_ctrl;
+	if (sde_vbif_get_xin_status(phys_enc->sde_kms, &xin_status)) {
+		_sde_encoder_phys_wb_frame_done_helper(wb_enc, false);
+		ret = true;
+	}
+
+	return ret;
+}
+
 static int _sde_encoder_phys_wb_wait_for_commit_done(
 		struct sde_encoder_phys *phys_enc, bool is_disable)
 {
@@ -1245,7 +1300,9 @@ static int _sde_encoder_phys_wb_wait_for_commit_done(
 		KICKOFF_TIMEOUT_MS);
 	rc = sde_encoder_helper_wait_for_irq(phys_enc, INTR_IDX_WB_DONE,
 		&wait_info);
-	if (rc == -ETIMEDOUT) {
+	if (rc == -ETIMEDOUT && _sde_encoder_phys_wb_is_idle(phys_enc)) {
+		rc = 0;
+	} else if (rc == -ETIMEDOUT) {
 		SDE_EVT32(DRMID(phys_enc->parent), WBID(wb_enc),
 			wb_enc->frame_count, SDE_EVTLOG_ERROR);
 		SDE_ERROR("wb:%d kickoff timed out\n", WBID(wb_enc));
@@ -1294,6 +1351,15 @@ static int sde_encoder_phys_wb_wait_for_commit_done(
 		struct sde_encoder_phys *phys_enc)
 {
 	return _sde_encoder_phys_wb_wait_for_commit_done(phys_enc, false);
+}
+
+static int sde_encoder_phys_wb_wait_for_tx_complete(
+		struct sde_encoder_phys *phys_enc)
+{
+	if (!atomic_read(&phys_enc->pending_retire_fence_cnt))
+		return 0;
+
+	return _sde_encoder_phys_wb_wait_for_commit_done(phys_enc, true);
 }
 
 /**
@@ -1724,6 +1790,7 @@ static void sde_encoder_phys_wb_init_ops(struct sde_encoder_phys_ops *ops)
 	ops->atomic_check = sde_encoder_phys_wb_atomic_check;
 	ops->get_hw_resources = sde_encoder_phys_wb_get_hw_resources;
 	ops->wait_for_commit_done = sde_encoder_phys_wb_wait_for_commit_done;
+	ops->wait_for_tx_complete = sde_encoder_phys_wb_wait_for_tx_complete;
 	ops->prepare_for_kickoff = sde_encoder_phys_wb_prepare_for_kickoff;
 	ops->handle_post_kickoff = sde_encoder_phys_wb_handle_post_kickoff;
 	ops->trigger_flush = sde_encoder_phys_wb_trigger_flush;

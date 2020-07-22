@@ -291,6 +291,9 @@ static int dsi_panel_set_pinctrl_state(struct dsi_panel *panel, bool enable)
 	if (panel->host_config.ext_bridge_mode)
 		return 0;
 
+	if (!panel->pinctrl.pinctrl)
+		return 0;
+
 	if (enable)
 		state = panel->pinctrl.active;
 	else
@@ -2423,14 +2426,14 @@ static int dsi_panel_parse_dsc_params(struct dsi_display_mode *mode,
 	rc = sde_dsc_populate_dsc_config(&priv_info->dsc.config,
 			priv_info->dsc.scr_rev);
 	if (rc) {
-		DSI_DEBUG("failed populating dsc params \n");
+		DSI_DEBUG("failed populating dsc params\n");
 		rc = -EINVAL;
 		goto error;
 	}
 
 	rc = sde_dsc_populate_dsc_private_params(&priv_info->dsc, intf_width);
 	if (rc) {
-		DSI_DEBUG("failed populating other dsc params \n");
+		DSI_DEBUG("failed populating other dsc params\n");
 		rc = -EINVAL;
 		goto error;
 	}
@@ -3182,11 +3185,38 @@ end:
 	utils->node = panel->panel_of_node;
 }
 
+static int dsi_panel_vm_stub(struct dsi_panel *panel)
+{
+	return 0;
+}
+
+static void dsi_panel_setup_vm_ops(struct dsi_panel *panel, bool trusted_vm_env)
+{
+	if (trusted_vm_env) {
+		panel->panel_ops.pinctrl_init = dsi_panel_vm_stub;
+		panel->panel_ops.gpio_request = dsi_panel_vm_stub;
+		panel->panel_ops.pinctrl_deinit = dsi_panel_vm_stub;
+		panel->panel_ops.gpio_release = dsi_panel_vm_stub;
+		panel->panel_ops.bl_register = dsi_panel_vm_stub;
+		panel->panel_ops.bl_unregister = dsi_panel_vm_stub;
+		panel->panel_ops.parse_gpios = dsi_panel_vm_stub;
+	} else {
+		panel->panel_ops.pinctrl_init = dsi_panel_pinctrl_init;
+		panel->panel_ops.gpio_request = dsi_panel_gpio_request;
+		panel->panel_ops.pinctrl_deinit = dsi_panel_pinctrl_deinit;
+		panel->panel_ops.gpio_release = dsi_panel_gpio_release;
+		panel->panel_ops.bl_register = dsi_panel_bl_register;
+		panel->panel_ops.bl_unregister = dsi_panel_bl_unregister;
+		panel->panel_ops.parse_gpios = dsi_panel_parse_gpios;
+	}
+}
+
 struct dsi_panel *dsi_panel_get(struct device *parent,
 				struct device_node *of_node,
 				struct device_node *parser_node,
 				const char *type,
-				int topology_override)
+				int topology_override,
+				bool trusted_vm_env)
 {
 	struct dsi_panel *panel;
 	struct dsi_parser_utils *utils;
@@ -3196,6 +3226,8 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	panel = kzalloc(sizeof(*panel), GFP_KERNEL);
 	if (!panel)
 		return ERR_PTR(-ENOMEM);
+
+	dsi_panel_setup_vm_ops(panel, trusted_vm_env);
 
 	panel->panel_of_node = of_node;
 	panel->parent = parent;
@@ -3255,7 +3287,7 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 		goto error;
 	}
 
-	rc = dsi_panel_parse_gpios(panel);
+	rc = panel->panel_ops.parse_gpios(panel);
 	if (rc) {
 		DSI_ERR("failed to parse panel gpios, rc=%d\n", rc);
 		goto error;
@@ -3355,21 +3387,22 @@ int dsi_panel_drv_init(struct dsi_panel *panel,
 	dev->lanes = 4;
 
 	panel->host = host;
-	rc = dsi_panel_pinctrl_init(panel);
+
+	rc = panel->panel_ops.pinctrl_init(panel);
 	if (rc) {
 		DSI_ERR("[%s] failed to init pinctrl, rc=%d\n",
 				panel->name, rc);
 		goto exit;
 	}
 
-	rc = dsi_panel_gpio_request(panel);
+	rc = panel->panel_ops.gpio_request(panel);
 	if (rc) {
 		DSI_ERR("[%s] failed to request gpios, rc=%d\n", panel->name,
 		       rc);
 		goto error_pinctrl_deinit;
 	}
 
-	rc = dsi_panel_bl_register(panel);
+	rc = panel->panel_ops.bl_register(panel);
 	if (rc) {
 		if (rc != -EPROBE_DEFER)
 			DSI_ERR("[%s] failed to register backlight, rc=%d\n",
@@ -3399,17 +3432,17 @@ int dsi_panel_drv_deinit(struct dsi_panel *panel)
 
 	mutex_lock(&panel->panel_lock);
 
-	rc = dsi_panel_bl_unregister(panel);
+	rc = panel->panel_ops.bl_unregister(panel);
 	if (rc)
 		DSI_ERR("[%s] failed to unregister backlight, rc=%d\n",
 		       panel->name, rc);
 
-	rc = dsi_panel_gpio_release(panel);
+	rc = panel->panel_ops.gpio_release(panel);
 	if (rc)
 		DSI_ERR("[%s] failed to release gpios, rc=%d\n", panel->name,
 		       rc);
 
-	rc = dsi_panel_pinctrl_deinit(panel);
+	rc = panel->panel_ops.pinctrl_deinit(panel);
 	if (rc)
 		DSI_ERR("[%s] failed to deinit gpios, rc=%d\n", panel->name,
 		       rc);
@@ -3431,6 +3464,49 @@ int dsi_panel_validate_mode(struct dsi_panel *panel,
 	return 0;
 }
 
+static int dsi_panel_get_max_res_count(struct dsi_parser_utils *utils,
+	struct device_node *node, u32 *dsc_count, u32 *lm_count)
+{
+	const char *compression;
+	u32 *array = NULL, top_count, len, i;
+	int rc = -EINVAL;
+	bool dsc_enable = false;
+
+	*dsc_count = 0;
+	*lm_count = 0;
+	compression = utils->get_property(node, "qcom,compression-mode", NULL);
+	if (compression && !strcmp(compression, "dsc"))
+		dsc_enable = true;
+
+	len = utils->count_u32_elems(node, "qcom,display-topology");
+	if (len <= 0 || len % TOPOLOGY_SET_LEN ||
+			len > (TOPOLOGY_SET_LEN * MAX_TOPOLOGY))
+		return rc;
+
+	top_count = len / TOPOLOGY_SET_LEN;
+
+	array = kcalloc(len, sizeof(u32), GFP_KERNEL);
+	if (!array)
+		return -ENOMEM;
+
+	rc = utils->read_u32_array(node, "qcom,display-topology", array, len);
+	if (rc) {
+		DSI_ERR("unable to read the display topologies, rc = %d\n", rc);
+		goto read_fail;
+	}
+
+	for (i = 0; i < top_count; i++) {
+		*lm_count = max(*lm_count, array[i * TOPOLOGY_SET_LEN]);
+		if (dsc_enable)
+			*dsc_count = max(*dsc_count,
+					array[i * TOPOLOGY_SET_LEN + 1]);
+	}
+
+read_fail:
+	kfree(array);
+	return 0;
+}
+
 int dsi_panel_get_mode_count(struct dsi_panel *panel)
 {
 	const u32 SINGLE_MODE_SUPPORT = 1;
@@ -3439,6 +3515,7 @@ int dsi_panel_get_mode_count(struct dsi_panel *panel)
 	int num_dfps_rates, num_bit_clks;
 	int num_video_modes = 0, num_cmd_modes = 0;
 	int count, rc = 0;
+	u32 dsc_count = 0, lm_count = 0;
 
 	if (!panel) {
 		DSI_ERR("invalid params\n");
@@ -3484,6 +3561,11 @@ int dsi_panel_get_mode_count(struct dsi_panel *panel)
 			num_video_modes++;
 		else if (panel->panel_mode == DSI_OP_CMD_MODE)
 			num_cmd_modes++;
+
+		dsi_panel_get_max_res_count(utils, child_np,
+				&dsc_count, &lm_count);
+		panel->dsc_count = max(dsc_count, panel->dsc_count);
+		panel->lm_count = max(lm_count, panel->lm_count);
 	}
 
 	num_dfps_rates = !panel->dfps_caps.dfps_support ? 1 :
@@ -3557,7 +3639,7 @@ void dsi_panel_put_mode(struct dsi_display_mode *mode)
 void dsi_panel_calc_dsi_transfer_time(struct dsi_host_common_cfg *config,
 		struct dsi_display_mode *mode, u32 frame_threshold_us)
 {
-	u32 frame_time_us,nslices;
+	u32 frame_time_us, nslices;
 	u64 min_bitclk_hz, total_active_pixels, bits_per_line, pclk_rate_hz,
 		dsi_transfer_time_us, pixel_clk_khz;
 	struct msm_display_dsc_info *dsc = mode->timing.dsc;
@@ -3569,7 +3651,7 @@ void dsi_panel_calc_dsi_transfer_time(struct dsi_host_common_cfg *config,
 
 	/* Packet overlead in bits,2 bytes header + 2 bytes checksum
 	 * + 1 byte dcs data command.
-        */
+	*/
 	const u32 packet_overhead = 56;
 
 	display_mode = container_of(timing, struct dsi_display_mode, timing);

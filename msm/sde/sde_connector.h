@@ -18,6 +18,7 @@
 
 #define SDE_CONNECTOR_NAME_SIZE	16
 #define SDE_CONNECTOR_DHDR_MEMPOOL_MAX_SIZE	SZ_32
+#define MAX_CMD_RECEIVE_SIZE       256
 
 struct sde_connector;
 struct sde_connector_state;
@@ -263,6 +264,18 @@ struct sde_connector_ops {
 	int (*cmd_transfer)(struct drm_connector *connector,
 			void *display, const char *cmd_buf,
 			u32 cmd_buf_len);
+	/**
+	 * cmd_receive - Receive the response from the connected display panel
+	 * @display: Pointer to private display handle
+	 * @cmd_buf: Command buffer
+	 * @cmd_buf_len: Command buffer length in bytes
+	 * @recv_buf: rx buffer
+	 * @recv_buf_len: rx buffer length
+	 * Returns: number of bytes read, if successful, negative for failure
+	 */
+
+	int (*cmd_receive)(void *display, const char *cmd_buf,
+			   u32 cmd_buf_len, u8 *recv_buf, u32 recv_buf_len);
 
 	/**
 	 * config_hdr - configure HDR
@@ -412,6 +425,9 @@ struct sde_connector_dyn_hdr_metadata {
  * @event_table: Array of registered events
  * @event_lock: Lock object for event_table
  * @bl_device: backlight device node
+ * @cdev: backlight cooling device interface
+ * @n: backlight cooling device notifier
+ * @thermal_max_brightness: thermal max brightness cap
  * @status_work: work object to perform status checks
  * @esd_status_interval: variable to change ESD check interval in millisec
  * @panel_dead: Flag to indicate if panel has gone bad
@@ -433,7 +449,8 @@ struct sde_connector_dyn_hdr_metadata {
  * @colorspace_updated: Colorspace property was updated
  * @last_cmd_tx_sts: status of the last command transfer
  * @hdr_capable: external hdr support present
- * @core_clk_rate: MDP core clk rate used for dynamic HDR packet calculation
+ * @cmd_rx_buf: the return buffer of response of command transfer
+ * @rx_len: the length of dcs command received buffer
  */
 struct sde_connector {
 	struct drm_connector base;
@@ -470,6 +487,9 @@ struct sde_connector {
 	spinlock_t event_lock;
 
 	struct backlight_device *bl_device;
+	struct sde_cdev *cdev;
+	struct notifier_block n;
+	unsigned long thermal_max_brightness;
 	struct delayed_work status_work;
 	u32 esd_status_interval;
 	bool panel_dead;
@@ -498,6 +518,9 @@ struct sde_connector {
 
 	bool last_cmd_tx_sts;
 	bool hdr_capable;
+
+	u8 cmd_rx_buf[MAX_CMD_RECEIVE_SIZE];
+	int rx_len;
 };
 
 /**
