@@ -1433,6 +1433,7 @@
 #include "sa8195-smp2p.dtsi"
 #include "sa8195-gdsc.dtsi"
 #include "msm-arm-smmu-sdmshrike.dtsi"
+#include "sm8150-slpi-pinctrl.dtsi"
 
 &emac_gdsc {
 	status = "ok";
@@ -1620,5 +1621,9 @@
 	clocks = <&gcc GCC_VIDEO_AHB_CLK>;
 	clock-names = "ahb_clk";
 	parent-supply = <&VDD_MMCX_LEVEL>;
+	status = "ok";
+};
+
+&slpi_tlmm {
 	status = "ok";
 };
