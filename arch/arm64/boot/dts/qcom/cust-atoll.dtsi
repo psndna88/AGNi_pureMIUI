@@ -31,3 +31,7 @@
 		qcom,scale-fn-type = <15>;
 	};
 };
+
+&ufshc_mem {
+	spm-level = <3>;
+};
