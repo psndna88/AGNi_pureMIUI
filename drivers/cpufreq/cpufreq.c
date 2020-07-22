@@ -755,7 +755,6 @@ static ssize_t store_##file_name					\
 }
 
 store_one(scaling_min_freq, min);
-#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
 extern bool cpu_oc;
 static ssize_t store_scaling_max_freq(struct cpufreq_policy *policy, const char *buf, size_t count) {									\
 
@@ -780,9 +779,6 @@ static ssize_t store_scaling_max_freq(struct cpufreq_policy *policy, const char 
 		return count;
 	}
 }
-#else
-store_one(scaling_max_freq, max);
-#endif
 
 /**
  * show_cpuinfo_cur_freq - current CPU frequency as detected by hardware
