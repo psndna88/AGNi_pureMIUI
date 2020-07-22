@@ -38,6 +38,20 @@
 	qcom,string-cfg = <7>;
 };
 
+&pm6150l_rgb_led {
+	red {
+		label = "white";
+	};
+
+	green {
+		status = "disabled";
+	};
+
+	blue {
+		status = "disabled";
+	};
+};
+
 &pm6150_qg {
 	qcom,tcss-enable;
 	qcom,qg-iterm-ma = <350>;
