@@ -583,6 +583,7 @@ static int __hdd_soc_recovery_reinit(struct device *dev,
 	cds_set_recovery_in_progress(false);
 
 	hdd_soc_load_unlock(dev);
+	hdd_start_complete(0);
 
 	return 0;
 
@@ -593,6 +594,7 @@ assert_fail_count:
 unlock:
 	cds_set_driver_in_bad_state(true);
 	hdd_soc_load_unlock(dev);
+	hdd_start_complete(errno);
 
 	return check_for_probe_defer(errno);
 }
@@ -732,12 +734,6 @@ static void hdd_send_hang_data(void *data, size_t data_len)
  */
 static void hdd_psoc_shutdown_notify(struct hdd_context *hdd_ctx)
 {
-	/* Notify external threads currently waiting on firmware by forcefully
-	 * completing waiting events with a "reset" status. This will cause the
-	 * event to fail early instead of timing out.
-	 */
-	qdf_complete_wait_events();
-
 	wlan_cfg80211_cleanup_scan_queue(hdd_ctx->pdev, NULL);
 
 	if (ucfg_ipa_is_enabled()) {
@@ -798,6 +794,7 @@ static void __hdd_soc_recovery_shutdown(void)
 
 	/* recovery starts via firmware down indication; ensure we got one */
 	QDF_BUG(cds_is_driver_recovering());
+	hdd_init_start_completion();
 
 	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
 	if (!hdd_ctx) {
@@ -1520,6 +1517,18 @@ static void wlan_hdd_pld_remove(struct device *dev, enum pld_bus_type bus_type)
 	hdd_exit();
 }
 
+static void hdd_soc_idle_shutdown_lock(struct device *dev)
+{
+	hdd_prevent_suspend(WIFI_POWER_EVENT_WAKELOCK_DRIVER_IDLE_SHUTDOWN);
+
+	hdd_abort_system_suspend(dev);
+}
+
+static void hdd_soc_idle_shutdown_unlock(void)
+{
+	hdd_allow_suspend(WIFI_POWER_EVENT_WAKELOCK_DRIVER_IDLE_SHUTDOWN);
+}
+
 /**
  * wlan_hdd_pld_idle_shutdown() - wifi module idle shutdown after interface
  *                                inactivity timeout has trigerred idle shutdown
@@ -1531,7 +1540,15 @@ static void wlan_hdd_pld_remove(struct device *dev, enum pld_bus_type bus_type)
 static int wlan_hdd_pld_idle_shutdown(struct device *dev,
 				       enum pld_bus_type bus_type)
 {
-	return hdd_psoc_idle_shutdown(dev);
+	int ret;
+
+	hdd_soc_idle_shutdown_lock(dev);
+
+	ret = hdd_psoc_idle_shutdown(dev);
+
+	hdd_soc_idle_shutdown_unlock();
+
+	return ret;
 }
 
 /**
@@ -1763,6 +1780,9 @@ wlan_hdd_pld_uevent(struct device *dev, struct pld_uevent_data *event_data)
 {
 	struct qdf_notifer_data hang_evt_data;
 	enum qdf_hang_reason reason = QDF_REASON_UNSPECIFIED;
+	uint8_t bus_type;
+
+	bus_type = pld_get_bus_type(dev);
 
 	switch (event_data->uevent) {
 	case PLD_FW_DOWN:
@@ -1770,6 +1790,13 @@ wlan_hdd_pld_uevent(struct device *dev, struct pld_uevent_data *event_data)
 
 		cds_set_target_ready(false);
 		cds_set_recovery_in_progress(true);
+
+		/* Notify external threads currently waiting on firmware
+		 * by forcefully completing waiting events with a "reset"
+		 * status. This will cause the event to fail early instead
+		 * of timing out.
+		 */
+		qdf_complete_wait_events();
 
 		/*
 		 * In case of some platforms, uevent will come to the driver in
@@ -1780,7 +1807,7 @@ wlan_hdd_pld_uevent(struct device *dev, struct pld_uevent_data *event_data)
 		 * thus defer the cleanup to be done during
 		 * hdd_soc_recovery_shutdown
 		 */
-		if (qdf_in_interrupt())
+		if (qdf_in_interrupt() || bus_type == PLD_BUS_TYPE_PCIE)
 			break;
 
 		hdd_soc_recovery_cleanup();

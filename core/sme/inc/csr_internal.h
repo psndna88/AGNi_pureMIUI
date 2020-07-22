@@ -516,7 +516,6 @@ struct csr_roam_session {
 	struct qdf_mac_addr self_mac_addr;
 
 	eCsrConnectState connectState;
-	struct rsn_caps rsn_caps;
 	tCsrRoamConnectedProfile connectedProfile;
 	struct csr_roam_connectedinfo connectedInfo;
 	struct csr_roam_connectedinfo prev_assoc_ap_info;
@@ -610,7 +609,6 @@ struct csr_roam_session {
 	uint8_t join_bssid_count;
 	struct csr_roam_stored_profile stored_roam_profile;
 	bool ch_switch_in_progress;
-	bool roam_synch_in_progress;
 	bool supported_nss_1x1;
 	uint8_t vdev_nss;
 	uint8_t nss;
@@ -651,8 +649,6 @@ struct csr_roamstruct {
 	uint8_t RoamRssiDiff;
 	bool isWESModeEnabled;
 	uint32_t deauthRspStatus;
-	uint8_t *pReassocResp;          /* reassociation response from new AP */
-	uint16_t reassocRespLen;        /* length of reassociation response */
 	qdf_mc_timer_t packetdump_timer;
 	spinlock_t roam_state_lock;
 };
@@ -1006,6 +1002,15 @@ csr_rso_save_ap_to_scan_cache(struct mac_context *mac,
 			      struct roam_offload_synch_ind *roam_synch_ind,
 			      struct bss_description *bss_desc_ptr);
 
+/**
+ * csr_process_ho_fail_ind  - This function will process the Hand Off Failure
+ * indication received from the firmware. It will trigger a disconnect on
+ * the session which the firmware reported a hand off failure.
+ * @mac:     Pointer to global Mac
+ * @msg_buf: Pointer to wma Ho fail indication message
+ *
+ * Return: None
+ */
 void csr_process_ho_fail_ind(struct mac_context *mac, void *msg_buf);
 #endif
 #ifdef FEATURE_WLAN_DIAG_SUPPORT_CSR

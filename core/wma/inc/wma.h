@@ -46,6 +46,7 @@
 #include "wma_api.h"
 #include "wmi_unified_param.h"
 #include "wmi.h"
+#include "wlan_cm_roam_public_srtuct.h"
 
 /* Platform specific configuration for max. no. of fragments */
 #define QCA_OL_11AC_TX_MAX_FRAGS            2
@@ -74,16 +75,8 @@
 #define WMA_INVALID_VDEV_ID                             0xFF
 
 /* Deprecated logging macros, to be removed. Please do not use in new code */
-#define WMA_LOGD(params ...) \
-	QDF_TRACE_DEBUG_NO_FL(QDF_MODULE_ID_WMA, params)
-#define WMA_LOGI(params ...) \
-	QDF_TRACE_INFO_NO_FL(QDF_MODULE_ID_WMA, params)
-#define WMA_LOGW(params ...) \
-	QDF_TRACE_WARN_NO_FL(QDF_MODULE_ID_WMA, params)
 #define WMA_LOGE(params ...) \
 	QDF_TRACE_ERROR_NO_FL(QDF_MODULE_ID_WMA, params)
-#define WMA_LOGP(params ...) \
-	QDF_TRACE_FATAL_NO_FL(QDF_MODULE_ID_WMA, params)
 
 #define wma_alert(params...) QDF_TRACE_FATAL(QDF_MODULE_ID_WMA, params)
 #define wma_err(params...) QDF_TRACE_ERROR(QDF_MODULE_ID_WMA, params)
@@ -103,15 +96,6 @@
 	QDF_TRACE_INFO_NO_FL(QDF_MODULE_ID_WMA, params)
 #define wma_nofl_debug(params...) \
 	QDF_TRACE_DEBUG_NO_FL(QDF_MODULE_ID_WMA, params)
-
-#define WMA_DEBUG_ALWAYS
-
-#ifdef WMA_DEBUG_ALWAYS
-#define WMA_LOGA(params ...) \
-	QDF_TRACE_FATAL_NO_FL(QDF_MODULE_ID_WMA, params)
-#else
-#define WMA_LOGA(params ...)
-#endif
 
 #define WMA_WILDCARD_PDEV_ID 0x0
 
@@ -725,7 +709,7 @@ struct wma_txrx_node {
 	bool vdev_active;
 	uint64_t tsfadjust;
 	tAddStaParams *addBssStaContext;
-	uint8_t aid;
+	uint16_t aid;
 	uint8_t rmfEnabled;
 	uint32_t uapsd_cached_val;
 	void *del_staself_req;
@@ -737,7 +721,6 @@ struct wma_txrx_node {
 	uint32_t nwType;
 	tSetStaKeyParams *staKeyParams;
 	uint32_t peer_count;
-	bool roam_synch_in_progress;
 	void *plink_status_req;
 	void *psnr_req;
 	uint8_t delay_before_vdev_stop;
@@ -1492,8 +1475,16 @@ QDF_STATUS wma_set_rssi_monitoring(tp_wma_handle wma,
 }
 #endif /* FEATURE_RSSI_MONITOR */
 
-QDF_STATUS wma_send_pdev_set_pcl_cmd(tp_wma_handle wma_handle,
-				     struct set_pcl_req *msg);
+/**
+ * wma_map_pcl_weights  - Map WMA pcl weights to wmi pcl weights
+ * @pcl_weight: Input PCL weight to be converted to wmi format
+ *
+ * Return: wmi_pcl_chan_weight
+ */
+wmi_pcl_chan_weight wma_map_pcl_weights(uint32_t pcl_weight);
+
+QDF_STATUS wma_send_set_pcl_cmd(tp_wma_handle wma_handle,
+				struct set_pcl_req *msg);
 
 QDF_STATUS wma_send_pdev_set_hw_mode_cmd(tp_wma_handle wma_handle,
 		struct policy_mgr_hw_mode *msg);
@@ -1657,11 +1648,10 @@ void wma_process_set_pdev_vht_ie_req(tp_wma_handle wma,
 		struct set_ie_param *ie_params);
 
 QDF_STATUS wma_remove_peer(tp_wma_handle wma, uint8_t *mac_addr,
-			   uint8_t vdev_id, bool roam_synch_in_progress);
+			   uint8_t vdev_id);
 
 QDF_STATUS wma_create_peer(tp_wma_handle wma, uint8_t peer_addr[6],
-			   u_int32_t peer_type, u_int8_t vdev_id,
-			   bool roam_synch_in_progress);
+			   u_int32_t peer_type, u_int8_t vdev_id);
 
 QDF_STATUS wma_peer_unmap_conf_cb(uint8_t vdev_id,
 				  uint32_t peer_id_cnt,
@@ -2417,8 +2407,7 @@ int wma_motion_det_base_line_host_event_handler(void *handle, u_int8_t *event,
  *
  * Return: 0 on success, else error on failure
  */
-QDF_STATUS wma_add_bss_peer_sta(uint8_t vdev_id, uint8_t *bssid,
-				bool roam_sync);
+QDF_STATUS wma_add_bss_peer_sta(uint8_t vdev_id, uint8_t *bssid);
 
 /**
  * wma_send_vdev_stop() - WMA api to send vdev stop to fw

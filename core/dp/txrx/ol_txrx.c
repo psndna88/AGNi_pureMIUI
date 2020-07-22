@@ -118,6 +118,78 @@ ol_txrx_set_wmm_param(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 /* thresh for peer's cached buf queue beyond which the elements are dropped */
 #define OL_TXRX_CACHED_BUFQ_THRESH 128
 
+#ifdef DP_SUPPORT_RECOVERY_NOTIFY
+static
+int ol_peer_recovery_notifier_cb(struct notifier_block *block,
+				 unsigned long state, void *data)
+{
+	struct qdf_notifer_data *notif_data = data;
+	qdf_notif_block *notif_block;
+	struct ol_txrx_peer_t *peer;
+	struct peer_hang_data hang_data = {0};
+	enum peer_debug_id_type dbg_id;
+
+	if (!data || !block)
+		return -EINVAL;
+
+	notif_block = qdf_container_of(block, qdf_notif_block, notif_block);
+
+	peer = notif_block->priv_data;
+	if (!peer)
+		return -EINVAL;
+
+	if (notif_data->offset >= QDF_WLAN_MAX_HOST_OFFSET)
+		return NOTIFY_STOP_MASK;
+
+	QDF_HANG_EVT_SET_HDR(&hang_data.tlv_header,
+			     HANG_EVT_TAG_DP_PEER_INFO,
+			     QDF_HANG_GET_STRUCT_TLVLEN(struct peer_hang_data));
+
+	qdf_mem_copy(&hang_data.peer_mac_addr, &peer->mac_addr.raw,
+		     QDF_MAC_ADDR_SIZE);
+
+	for (dbg_id = 0; dbg_id < PEER_DEBUG_ID_MAX; dbg_id++)
+		if (qdf_atomic_read(&peer->access_list[dbg_id]))
+			hang_data.peer_timeout_bitmask |= (1 << dbg_id);
+
+	qdf_mem_copy(notif_data->hang_data + notif_data->offset,
+		     &hang_data, sizeof(struct peer_hang_data));
+	notif_data->offset += sizeof(struct peer_hang_data);
+
+	return 0;
+}
+
+static qdf_notif_block ol_peer_recovery_notifier = {
+	.notif_block.notifier_call = ol_peer_recovery_notifier_cb,
+};
+
+static
+QDF_STATUS ol_register_peer_recovery_notifier(struct ol_txrx_peer_t *peer)
+{
+	ol_peer_recovery_notifier.priv_data = peer;
+
+	return qdf_hang_event_register_notifier(&ol_peer_recovery_notifier);
+}
+
+static
+QDF_STATUS ol_unregister_peer_recovery_notifier(void)
+{
+	return qdf_hang_event_unregister_notifier(&ol_peer_recovery_notifier);
+}
+#else
+static inline
+QDF_STATUS ol_register_peer_recovery_notifier(struct ol_txrx_peer_t *peer)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static
+QDF_STATUS ol_unregister_peer_recovery_notifier(void)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 /**
  * ol_tx_mark_first_wakeup_packet() - set flag to indicate that
  *    fw is compatible for marking first packet after wow wakeup
@@ -1547,11 +1619,39 @@ static void ol_tx_free_descs_inuse(ol_txrx_pdev_handle pdev)
 		 * In particular, check that there are no frames that have
 		 * been given to the target to transmit, for which the
 		 * target has never provided a response.
+		 *
+		 * Rome supports mgmt Tx via HTT interface, not via WMI.
+		 * When mgmt frame is sent, 2 tx desc is allocated:
+		 * mgmt_txrx_desc is allocated in wlan_mgmt_txrx_mgmt_frame_tx,
+		 * ol_tx_desc is allocated in ol_txrx_mgmt_send_ext.
+		 * They point to same net buffer.
+		 * net buffer is mapped in htt_tx_desc_init.
+		 *
+		 * When SSR during Rome STA connected, deauth frame is sent,
+		 * but no tx complete since firmware hung already.
+		 * Pending mgmt frames are unmapped and freed when destroy
+		 * vdev.
+		 * hdd_reset_all_adapters->hdd_stop_adapter->hdd_vdev_destroy
+		 * ->wma_handle_vdev_detach->wlan_mgmt_txrx_vdev_drain
+		 * ->wma_mgmt_frame_fill_peer_cb
+		 * ->mgmt_txrx_tx_completion_handler.
+		 *
+		 * Don't need unmap and free net buffer of mgmt frames again
+		 * during data path clean up, just free ol_tx_desc.
+		 * hdd_wlan_stop_modules->cds_post_disable->cdp_pdev_pre_detach
+		 * ->ol_txrx_pdev_pre_detach->ol_tx_free_descs_inuse.
 		 */
 		if (qdf_atomic_read(&tx_desc->ref_cnt)) {
-			ol_txrx_dbg("Warning: freeing tx frame (no compltn)");
-			ol_tx_desc_frame_free_nonstd(pdev,
-						     tx_desc, 1);
+			if (!ol_tx_get_is_mgmt_over_wmi_enabled() &&
+			    tx_desc->pkt_type >= OL_TXRX_MGMT_TYPE_BASE) {
+				qdf_atomic_init(&tx_desc->ref_cnt);
+				ol_txrx_dbg("Pending mgmt frames nbuf unmapped and freed already when vdev destroyed");
+				/* free the tx desc */
+				ol_tx_desc_free(pdev, tx_desc);
+			} else {
+				ol_txrx_dbg("Warning: freeing tx frame (no compltn)");
+				ol_tx_desc_frame_free_nonstd(pdev, tx_desc, 1);
+			}
 			num_freed_tx_desc++;
 		}
 		htt_tx_desc = tx_desc->htt_tx_desc;
@@ -1755,6 +1855,7 @@ static QDF_STATUS ol_txrx_pdev_detach(struct cdp_soc_t *soc_hdl, uint8_t pdev_id
 	ol_txrx_pdev_grp_stat_destroy(pdev);
 
 	ol_txrx_debugfs_exit(pdev);
+	ol_unregister_peer_recovery_notifier();
 
 	soc->pdev_list[pdev->id] = NULL;
 	qdf_mem_free(pdev);
@@ -3344,64 +3445,6 @@ ol_txrx_clear_peer(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 
 	return status;
 }
-
-#ifdef DP_SUPPORT_RECOVERY_NOTIFY
-static
-int ol_peer_recovery_notifier_cb(struct notifier_block *block,
-				 unsigned long state, void *data)
-{
-	struct qdf_notifer_data *notif_data = data;
-	qdf_notif_block *notif_block;
-	struct ol_txrx_peer_t *peer;
-	struct peer_hang_data hang_data;
-	enum peer_debug_id_type dbg_id;
-
-	if (!data || !block)
-		return -EINVAL;
-
-	notif_block = qdf_container_of(block, qdf_notif_block, notif_block);
-
-	peer = notif_block->priv_data;
-	if (!peer)
-		return -EINVAL;
-
-	hang_data.peer_timeout_bitmask = 0;
-	QDF_HANG_EVT_SET_HDR(&hang_data.tlv_header,
-			     HANG_EVT_TAG_DP_PEER_INFO,
-			     QDF_HANG_GET_STRUCT_TLVLEN(struct peer_hang_data));
-
-	qdf_mem_copy(&hang_data.peer_mac_addr, &peer->mac_addr.raw,
-		     QDF_MAC_ADDR_SIZE);
-
-	for (dbg_id = 0; dbg_id < PEER_DEBUG_ID_MAX; dbg_id++)
-		if (qdf_atomic_read(&peer->access_list[dbg_id]))
-			hang_data.peer_timeout_bitmask |= (1 << dbg_id);
-
-	qdf_mem_copy(notif_data->hang_data + notif_data->offset,
-		     &hang_data, sizeof(struct peer_hang_data));
-	notif_data->offset += sizeof(struct peer_hang_data);
-
-	return 0;
-}
-
-static qdf_notif_block ol_peer_recovery_notifier = {
-	.notif_block.notifier_call = ol_peer_recovery_notifier_cb,
-};
-
-static
-QDF_STATUS ol_register_peer_recovery_notifier(struct ol_txrx_peer_t *peer)
-{
-	ol_peer_recovery_notifier.priv_data = peer;
-
-	return qdf_hang_event_register_notifier(&ol_peer_recovery_notifier);
-}
-#else
-static inline
-QDF_STATUS ol_register_peer_recovery_notifier(struct ol_txrx_peer_t *peer)
-{
-	return QDF_STATUS_SUCCESS;
-}
-#endif
 
 /**
  * peer_unmap_timer_handler() - peer unmap timer function

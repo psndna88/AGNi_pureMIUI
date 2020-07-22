@@ -199,8 +199,15 @@ extern const enum policy_mgr_pcl_type
 extern enum policy_mgr_pcl_type
 	(*second_connection_pcl_dbs_table)[PM_MAX_ONE_CONNECTION_MODE]
 			[PM_MAX_NUM_OF_MODE][PM_MAX_CONC_PRIORITY_MODE];
+extern enum policy_mgr_pcl_type const
+	(*second_connection_pcl_non_dbs_table)[PM_MAX_ONE_CONNECTION_MODE]
+			[PM_MAX_NUM_OF_MODE][PM_MAX_CONC_PRIORITY_MODE];
 extern pm_dbs_pcl_third_connection_table_type
 		*third_connection_pcl_dbs_table;
+extern enum policy_mgr_pcl_type const
+	(*third_connection_pcl_non_dbs_table)[PM_MAX_TWO_CONNECTION_MODE]
+			[PM_MAX_NUM_OF_MODE][PM_MAX_CONC_PRIORITY_MODE];
+
 extern policy_mgr_next_action_two_connection_table_type
 		*next_action_two_connection_table;
 extern policy_mgr_next_action_three_connection_table_type
@@ -221,15 +228,6 @@ extern policy_mgr_next_action_three_connection_table_type
 extern enum policy_mgr_conc_next_action
 	(*policy_mgr_get_current_pref_hw_mode_ptr)
 	(struct wlan_objmgr_psoc *psoc);
-
-/**
- * struct sta_ap_intf_check_work_ctx - sta_ap_intf_check_work
- * related info
- * @psoc: pointer to PSOC object information
- */
-struct sta_ap_intf_check_work_ctx {
-	struct wlan_objmgr_psoc *psoc;
-};
 
 /**
  * struct policy_mgr_cfg - all the policy manager owned configs
@@ -556,7 +554,8 @@ void policy_mgr_pdev_set_hw_mode_cb(uint32_t status,
 				struct policy_mgr_vdev_mac_map *vdev_mac_map,
 				uint8_t next_action,
 				enum policy_mgr_conn_update_reason reason,
-				uint32_t session_id, void *context);
+				uint32_t session_id, void *context,
+				uint32_t request_id);
 void policy_mgr_dump_current_concurrency(struct wlan_objmgr_psoc *psoc);
 
 /**

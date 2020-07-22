@@ -401,6 +401,16 @@ void wlan_hdd_classify_pkt(struct sk_buff *skb);
 
 #ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
 void hdd_reset_tcp_delack(struct hdd_context *hdd_ctx);
+
+/**
+ * hdd_reset_tcp_adv_win_scale() - Reset tcp adv window scale value to default
+ * @hdd_ctx: Handle to hdd context
+ *
+ * Function used to reset TCP advance window scale value to its default value
+ *
+ * Return: None
+ */
+void hdd_reset_tcp_adv_win_scale(struct hdd_context *hdd_ctx);
 #ifdef RX_PERFORMANCE
 bool hdd_is_current_high_throughput(struct hdd_context *hdd_ctx);
 #else
@@ -412,6 +422,7 @@ static inline bool hdd_is_current_high_throughput(struct hdd_context *hdd_ctx)
 #define HDD_MSM_CFG(msm_cfg)	msm_cfg
 #else
 static inline void hdd_reset_tcp_delack(struct hdd_context *hdd_ctx) {}
+static inline void hdd_reset_tcp_adv_win_scale(struct hdd_context *hdd_ctx) {}
 static inline bool hdd_is_current_high_throughput(struct hdd_context *hdd_ctx)
 {
 	return false;
@@ -426,6 +437,17 @@ static inline
 void hdd_event_eapol_log(struct sk_buff *skb, enum qdf_proto_dir dir)
 {}
 #endif
+
+/**
+ * hdd_set_udp_qos_upgrade_config() - Set the threshold for UDP packet
+ *				      QoS upgrade.
+ * @adapter: adapter for which this configuration is to be applied
+ * @priority: the threshold priority
+ *
+ * Returns: 0 on success, -EINVAL on failure
+ */
+int hdd_set_udp_qos_upgrade_config(struct hdd_adapter *adapter,
+				   uint8_t priority);
 
 /*
  * As of the 4.7 kernel, net_device->trans_start is removed. Create shims to

@@ -223,17 +223,6 @@ int hdd_priv_get_data(struct iw_point *p_priv_data,
 
 void *mem_alloc_copy_from_user_helper(const void *wrqu_data, size_t len);
 
-int hdd_get_ldpc(struct hdd_adapter *adapter, int *value);
-
-/**
- * hdd_set_ldpc() - Set adapter LDPC
- * @adapter: adapter being modified
- * @value: new LDPC value
- *
- * Return: 0 on success, negative errno on failure
- */
-int hdd_set_ldpc(struct hdd_adapter *adapter, int value);
-
 /**
  * hdd_we_set_short_gi() - Set adapter Short GI
  * @adapter: adapter being modified
@@ -242,28 +231,6 @@ int hdd_set_ldpc(struct hdd_adapter *adapter, int value);
  * Return: 0 on success, negative errno on failure
  */
 int hdd_we_set_short_gi(struct hdd_adapter *adapter, int sgi);
-
-int hdd_get_tx_stbc(struct hdd_adapter *adapter, int *value);
-
-/**
- * hdd_set_tx_stbc() - Set adapter TX STBC
- * @adapter: adapter being modified
- * @value: new TX STBC value
- *
- * Return: 0 on success, negative errno on failure
- */
-int hdd_set_tx_stbc(struct hdd_adapter *adapter, int value);
-
-int hdd_get_rx_stbc(struct hdd_adapter *adapter, int *value);
-
-/**
- * hdd_set_rx_stbc() - Set adapter RX STBC
- * @adapter: adapter being modified
- * @value: new RX STBC value
- *
- * Return: 0 on success, negative errno on failure
- */
-int hdd_set_rx_stbc(struct hdd_adapter *adapter, int value);
 
 /**
  * hdd_assemble_rate_code() - assemble rate code to be sent to FW
@@ -291,7 +258,7 @@ int hdd_set_11ax_rate(struct hdd_adapter *adapter, int value,
 		      struct sap_config *sap_config);
 
 /**
- * wlan_hdd_update_phymode() - handle change in PHY mode
+ * hdd_we_update_phymode() - handle change in PHY mode
  * @adapter: adapter being modified
  * @new_phymode: new PHY mode for the device
  *
@@ -303,7 +270,8 @@ int hdd_set_11ax_rate(struct hdd_adapter *adapter, int value,
  *
  * Return: 0 on success, negative errno value on error
  */
-int wlan_hdd_update_phymode(struct hdd_adapter *adapter, int new_phymode);
+int hdd_we_update_phymode(struct hdd_adapter *adapter, int new_phymode);
+
 /**
  * wlan_hdd_update_btcoex_mode() - set BTCoex Mode
  * @adapter: adapter being modified

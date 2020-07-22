@@ -1988,6 +1988,63 @@ enum csr_cfgdot11mode csr_find_best_phy_mode(struct mac_context *mac,
 	return cfgDot11ModeToUse;
 }
 
+enum reg_phymode csr_convert_to_reg_phy_mode(eCsrPhyMode csr_phy_mode,
+				       qdf_freq_t freq)
+{
+	if (csr_phy_mode == eCSR_DOT11_MODE_AUTO)
+		return REG_PHYMODE_MAX - 1;
+	else if (csr_phy_mode == eCSR_DOT11_MODE_11ax ||
+		 csr_phy_mode == eCSR_DOT11_MODE_11ax_ONLY)
+		return REG_PHYMODE_11AX;
+	else if (csr_phy_mode == eCSR_DOT11_MODE_11ac ||
+		 csr_phy_mode == eCSR_DOT11_MODE_11ac_ONLY)
+		return REG_PHYMODE_11AC;
+	else if (csr_phy_mode == eCSR_DOT11_MODE_11n ||
+		 csr_phy_mode == eCSR_DOT11_MODE_11n_ONLY)
+		return REG_PHYMODE_11N;
+	else if (csr_phy_mode == eCSR_DOT11_MODE_11a)
+		return REG_PHYMODE_11A;
+	else if (csr_phy_mode == eCSR_DOT11_MODE_11g ||
+		 csr_phy_mode == eCSR_DOT11_MODE_11g_ONLY)
+		return REG_PHYMODE_11G;
+	else if (csr_phy_mode == eCSR_DOT11_MODE_11b ||
+		 csr_phy_mode == eCSR_DOT11_MODE_11b_ONLY)
+		return REG_PHYMODE_11B;
+	else if (csr_phy_mode == eCSR_DOT11_MODE_abg) {
+		if (WLAN_REG_IS_24GHZ_CH_FREQ(freq))
+			return REG_PHYMODE_11G;
+		else
+			return REG_PHYMODE_11A;
+	} else {
+		sme_err("Invalid eCsrPhyMode");
+		return REG_PHYMODE_INVALID;
+	}
+}
+
+eCsrPhyMode csr_convert_from_reg_phy_mode(enum reg_phymode phymode)
+{
+	switch (phymode) {
+	case REG_PHYMODE_INVALID:
+		return eCSR_DOT11_MODE_AUTO;
+	case REG_PHYMODE_11B:
+		return eCSR_DOT11_MODE_11b;
+	case REG_PHYMODE_11G:
+		return eCSR_DOT11_MODE_11g;
+	case REG_PHYMODE_11A:
+		return eCSR_DOT11_MODE_11a;
+	case REG_PHYMODE_11N:
+		return eCSR_DOT11_MODE_11n;
+	case REG_PHYMODE_11AC:
+		return eCSR_DOT11_MODE_11ac;
+	case REG_PHYMODE_11AX:
+		return eCSR_DOT11_MODE_11ax;
+	case REG_PHYMODE_MAX:
+		return eCSR_DOT11_MODE_AUTO;
+	default:
+		return eCSR_DOT11_MODE_AUTO;
+	}
+}
+
 uint32_t csr_get11h_power_constraint(struct mac_context *mac_ctx,
 				     tDot11fIEPowerConstraints *constraints)
 {
@@ -2631,6 +2688,31 @@ bool csr_lookup_pmkid_using_bssid(struct mac_context *mac,
 	qdf_mem_copy(pmk_cache->PMKID, pmksa->pmkid, sizeof(pmk_cache->PMKID));
 	qdf_mem_copy(pmk_cache->pmk, pmksa->pmk, pmksa->pmk_len);
 	pmk_cache->pmk_len = pmksa->pmk_len;
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
+
+	return true;
+}
+
+bool csr_lookup_fils_pmkid(struct mac_context *mac,
+			   uint8_t vdev_id, uint8_t *cache_id,
+			   uint8_t *ssid, uint8_t ssid_len)
+{
+	struct wlan_crypto_pmksa *pmksa;
+	struct wlan_objmgr_vdev *vdev;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac->psoc, vdev_id,
+						    WLAN_LEGACY_SME_ID);
+	if (!vdev) {
+		sme_err("Invalid vdev");
+		return false;
+	}
+
+	pmksa = wlan_crypto_get_fils_pmksa(vdev, cache_id, ssid, ssid_len);
+	if (!pmksa) {
+		sme_err("FILS_PMKSA: Lookup failed");
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
+		return false;
+	}
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
 
 	return true;

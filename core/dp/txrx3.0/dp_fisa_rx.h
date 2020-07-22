@@ -26,6 +26,18 @@
 #endif
 
 #if defined(WLAN_SUPPORT_RX_FISA)
+
+#define FSE_CACHE_FLUSH_TIME_OUT	5 /* milliSeconds */
+#define FISA_UDP_MAX_DATA_LEN		1470 /* udp max data length */
+#define FISA_UDP_HDR_LEN		8 /* udp header length */
+#define FISA_FLOW_MAX_AGGR_COUNT        16 /* max flow aggregate count */
+/* single packet max cumulative ip length */
+#define FISA_MAX_SINGLE_CUMULATIVE_IP_LEN \
+	(FISA_UDP_MAX_DATA_LEN + FISA_UDP_HDR_LEN)
+/* max flow cumulative ip length */
+#define FISA_FLOW_MAX_CUMULATIVE_IP_LEN \
+	(FISA_MAX_SINGLE_CUMULATIVE_IP_LEN * FISA_FLOW_MAX_AGGR_COUNT)
+
 /**
  * dp_rx_dump_fisa_stats() - Dump fisa stats
  * @soc: core txrx main context
@@ -63,6 +75,21 @@ QDF_STATUS dp_rx_fisa_flush_by_ctx_id(struct dp_soc *soc, int napi_id);
  * Return: Success on flushing the flows for the vdev
  */
 QDF_STATUS dp_rx_fisa_flush_by_vdev_id(struct dp_soc *soc, uint8_t vdev_id);
+
+/**
+ * dp_rx_skip_fisa() - Set flags to skip fisa aggregation
+ * @cdp_soc: core txrx main context
+ * @value: allow or skip fisa
+ *
+ * Return: None
+ */
+static inline
+void dp_rx_skip_fisa(struct cdp_soc_t *cdp_soc, uint32_t value)
+{
+	struct dp_soc *soc = (struct dp_soc *)cdp_soc;
+
+	qdf_atomic_set(&soc->skip_fisa_param.skip_fisa, !value);
+}
 #else
 static QDF_STATUS dp_rx_dump_fisa_stats(struct dp_soc *soc)
 {

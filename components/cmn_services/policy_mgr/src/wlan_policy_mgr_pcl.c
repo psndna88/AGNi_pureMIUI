@@ -26,7 +26,6 @@
 /* Include files */
 
 #include "wlan_policy_mgr_api.h"
-#include "wlan_policy_mgr_tables_no_dbs_i.h"
 #include "wlan_policy_mgr_i.h"
 #include "qdf_types.h"
 #include "qdf_trace.h"
@@ -34,6 +33,7 @@
 #include "wlan_objmgr_global_obj.h"
 #include "wlan_utility.h"
 #include "wlan_mlme_ucfg_api.h"
+#include "csr_neighbor_roam.h"
 
 /**
  * first_connection_pcl_table - table which provides PCL for the
@@ -52,8 +52,14 @@ first_connection_pcl_table[PM_MAX_NUM_OF_MODE]
 enum policy_mgr_pcl_type
 	(*second_connection_pcl_dbs_table)[PM_MAX_ONE_CONNECTION_MODE]
 			[PM_MAX_NUM_OF_MODE][PM_MAX_CONC_PRIORITY_MODE];
+enum policy_mgr_pcl_type const
+	(*second_connection_pcl_non_dbs_table)[PM_MAX_ONE_CONNECTION_MODE]
+			[PM_MAX_NUM_OF_MODE][PM_MAX_CONC_PRIORITY_MODE];
 pm_dbs_pcl_third_connection_table_type
 		*third_connection_pcl_dbs_table;
+enum policy_mgr_pcl_type const
+	(*third_connection_pcl_non_dbs_table)[PM_MAX_TWO_CONNECTION_MODE]
+			[PM_MAX_NUM_OF_MODE][PM_MAX_CONC_PRIORITY_MODE];
 policy_mgr_next_action_two_connection_table_type
 		*next_action_two_connection_table;
 policy_mgr_next_action_three_connection_table_type
@@ -107,6 +113,9 @@ void policy_mgr_decr_session_set_pcl(struct wlan_objmgr_psoc *psoc,
 {
 	QDF_STATUS qdf_status;
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	mac_handle_t mac_handle = cds_get_context(QDF_MODULE_ID_SME);
+	uint32_t conn_idx = 0;
+	uint8_t vdev_id = WLAN_INVALID_VDEV_ID;
 
 	pm_ctx = policy_mgr_get_context(psoc);
 	if (!pm_ctx) {
@@ -134,9 +143,41 @@ void policy_mgr_decr_session_set_pcl(struct wlan_objmgr_psoc *psoc,
 	 * given to the FW. After setting the PCL, we need to restore
 	 * the entry that we have saved before.
 	 */
-	policy_mgr_set_pcl_for_existing_combo(psoc, PM_STA_MODE);
+
+	if ((policy_mgr_mode_specific_connection_count(
+		psoc, PM_STA_MODE, NULL) > 0) && mode != QDF_STA_MODE) {
+		for (conn_idx = 0; conn_idx < MAX_NUMBER_OF_CONC_CONNECTIONS;
+		     conn_idx++) {
+			qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
+			if (!(pm_conc_connection_list[conn_idx].mode ==
+			      PM_STA_MODE &&
+			      pm_conc_connection_list[conn_idx].in_use)) {
+				qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
+				continue;
+			}
+
+			vdev_id = pm_conc_connection_list[conn_idx].vdev_id;
+			qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
+
+			/* Send RSO stop before sending set pcl command */
+			pm_ctx->sme_cbacks.sme_rso_stop_cb(
+						mac_handle, session_id,
+						REASON_DRIVER_DISABLED,
+						RSO_SET_PCL);
+
+			policy_mgr_set_pcl_for_existing_combo(psoc, PM_STA_MODE,
+							      session_id);
+
+			pm_ctx->sme_cbacks.sme_rso_start_cb(
+					mac_handle, session_id,
+					REASON_DRIVER_ENABLED,
+					RSO_SET_PCL);
+		}
+	}
+
 	/* do we need to change the HW mode */
-	policy_mgr_check_n_start_opportunistic_timer(psoc);
+	if (policy_mgr_is_hw_dbs_capable(psoc))
+		policy_mgr_check_n_start_opportunistic_timer(psoc);
 	return;
 }
 
@@ -815,7 +856,7 @@ QDF_STATUS policy_mgr_get_pcl(struct wlan_objmgr_psoc *psoc,
 			pcl = (*second_connection_pcl_dbs_table)
 				[second_index][mode][conc_system_pref];
 		} else {
-			pcl = second_connection_pcl_nodbs_table
+			pcl = (*second_connection_pcl_non_dbs_table)
 				[second_index][mode][conc_system_pref];
 		}
 
@@ -832,7 +873,7 @@ QDF_STATUS policy_mgr_get_pcl(struct wlan_objmgr_psoc *psoc,
 			pcl = (*third_connection_pcl_dbs_table)
 				[third_index][mode][conc_system_pref];
 		} else {
-			pcl = third_connection_pcl_nodbs_table
+			pcl = (*third_connection_pcl_non_dbs_table)
 				[third_index][mode][conc_system_pref];
 		}
 		break;
@@ -2486,7 +2527,7 @@ bool policy_mgr_dump_channel_list(uint32_t len, uint32_t *pcl_channels,
 		return false;
 
 	policymgr_nofl_debug("Total PCL Chan Freq %d", len);
-	for (idx = 0; idx < len; idx++) {
+	for (idx = 0; (idx < len) && (idx < NUM_CHANNELS); idx++) {
 		if (!WLAN_REG_IS_6GHZ_CHAN_FREQ(pcl_channels[idx])) {
 			num += qdf_scnprintf(chan_buff + num, buff_len - num,
 					     " %d[%d]", pcl_channels[idx],
@@ -2512,7 +2553,7 @@ bool policy_mgr_dump_channel_list(uint32_t len, uint32_t *pcl_channels,
 
 	count = 0;
 	num = 0;
-	for (idx = 0; idx < len; idx++) {
+	for (idx = 0; (idx < len) && (idx < NUM_CHANNELS); idx++) {
 		if (WLAN_REG_IS_6GHZ_CHAN_FREQ(pcl_channels[idx])) {
 			num += qdf_scnprintf(chan_buff + num, buff_len - num,
 					     " %d[%d]", pcl_channels[idx],

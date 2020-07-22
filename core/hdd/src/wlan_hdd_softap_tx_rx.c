@@ -780,6 +780,11 @@ static void __hdd_softap_tx_timeout(struct net_device *dev)
 		return;
 	}
 
+	if (hdd_ctx->hdd_wlan_suspended) {
+		hdd_debug("wlan is suspended, ignore timeout");
+		return;
+	}
+
 	TX_TIMEOUT_TRACE(dev, QDF_MODULE_ID_HDD_SAP_DATA);
 
 	for (i = 0; i < NUM_TX_QUEUES; i++) {
@@ -1211,8 +1216,7 @@ QDF_STATUS hdd_softap_register_sta(struct hdd_adapter *adapter,
 		 */
 		qdf_status = hdd_change_peer_state(adapter,
 						   txrx_desc.peer_addr.bytes,
-						   OL_TXRX_PEER_STATE_AUTH,
-						   false);
+						   OL_TXRX_PEER_STATE_AUTH);
 
 		sta_info->peer_state = OL_TXRX_PEER_STATE_AUTH;
 		if (!qdf_is_macaddr_broadcast(sta_mac))
@@ -1227,8 +1231,7 @@ QDF_STATUS hdd_softap_register_sta(struct hdd_adapter *adapter,
 
 		qdf_status = hdd_change_peer_state(adapter,
 						   txrx_desc.peer_addr.bytes,
-						   OL_TXRX_PEER_STATE_CONN,
-						   false);
+						   OL_TXRX_PEER_STATE_CONN);
 
 		sta_info->peer_state = OL_TXRX_PEER_STATE_CONN;
 	}
@@ -1345,8 +1348,7 @@ QDF_STATUS hdd_softap_change_sta_state(struct hdd_adapter *adapter,
 		qdf_mem_copy(&mac_addr, sta_mac, QDF_MAC_ADDR_SIZE);
 
 	qdf_status =
-		hdd_change_peer_state(adapter, mac_addr.bytes,
-				      state, false);
+		hdd_change_peer_state(adapter, mac_addr.bytes, state);
 	hdd_debug("Station " QDF_MAC_ADDR_STR " changed to state %d",
 		  QDF_MAC_ADDR_ARRAY(mac_addr.bytes), state);
 

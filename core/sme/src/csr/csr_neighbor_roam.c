@@ -141,11 +141,11 @@ QDF_STATUS csr_neighbor_roam_update_fast_roaming_enabled(struct mac_context *mac
 						     !fast_roam_enabled);
 		if (fast_roam_enabled) {
 			csr_post_roam_state_change(mac_ctx, session_id,
-						   ROAM_RSO_STARTED,
+						   WLAN_ROAM_RSO_ENABLED,
 						   REASON_CONNECT);
 		} else {
 			csr_post_roam_state_change(mac_ctx, session_id,
-					    ROAM_RSO_STOPPED,
+					    WLAN_ROAM_RSO_STOPPED,
 					    REASON_SUPPLICANT_DISABLED_ROAMING);
 		}
 		sme_release_global_lock(&mac_ctx->sme);
@@ -340,6 +340,35 @@ csr_update_pmf_cap_from_connected_profile(tCsrRoamConnectedProfile *profile,
 {}
 #endif
 
+#ifdef WLAN_SCAN_SECURITY_FILTER_V1
+QDF_STATUS
+csr_fill_crypto_params_connected_profile(struct mac_context *mac_ctx,
+					 tCsrRoamConnectedProfile *profile,
+					 struct scan_filter *filter,
+					 uint8_t vdev_id)
+{
+	return csr_fill_filter_from_vdev_crypto(mac_ctx, filter, vdev_id);
+}
+#else
+QDF_STATUS
+csr_fill_crypto_params_connected_profile(struct mac_context *mac_ctx,
+					 tCsrRoamConnectedProfile *profile,
+					 struct scan_filter *filter,
+					 uint8_t vdev_id)
+{
+	filter->num_of_auth = 1;
+	filter->auth_type[0] = csr_covert_auth_type_new(profile->AuthType);
+	filter->num_of_enc_type = 1;
+	filter->enc_type[0] =
+		csr_covert_enc_type_new(profile->EncryptionType);
+	filter->num_of_mc_enc_type = 1;
+	filter->mc_enc_type[0] =
+		csr_covert_enc_type_new(profile->mcEncryptionType);
+
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 QDF_STATUS
 csr_neighbor_roam_get_scan_filter_from_profile(struct mac_context *mac,
 					       struct scan_filter *filter,
@@ -350,7 +379,7 @@ csr_neighbor_roam_get_scan_filter_from_profile(struct mac_context *mac,
 	struct roam_ext_params *roam_params;
 	tCsrChannelInfo *chan_info;
 	uint8_t num_ch = 0;
-	enum QDF_OPMODE opmode = QDF_STA_MODE;
+	QDF_STATUS status;
 
 	if (!filter)
 		return QDF_STATUS_E_FAILURE;
@@ -391,19 +420,10 @@ csr_neighbor_roam_get_scan_filter_from_profile(struct mac_context *mac,
 			  filter->ssid_list[0].length);
 	}
 
-	filter->num_of_auth = 1;
-	filter->auth_type[0] = csr_covert_auth_type_new(profile->AuthType);
-	filter->num_of_enc_type = 1;
-	filter->enc_type[0] =
-		csr_covert_enc_type_new(profile->EncryptionType);
-	filter->num_of_mc_enc_type = 1;
-	filter->mc_enc_type[0] =
-		csr_covert_enc_type_new(profile->mcEncryptionType);
-
-	if (profile->BSSType == eCSR_BSS_TYPE_INFRASTRUCTURE)
-		filter->bss_type = WLAN_TYPE_BSS;
-	else
-		filter->bss_type = WLAN_TYPE_ANY;
+	status = csr_fill_crypto_params_connected_profile(mac, profile, filter,
+							  vdev_id);
+	if (QDF_IS_STATUS_ERROR(status))
+		return status;
 
 	chan_info = &nbr_roam_info->roamChannelInfo.currentChannelListInfo;
 	num_ch = chan_info->numOfChannels;
@@ -425,7 +445,7 @@ csr_neighbor_roam_get_scan_filter_from_profile(struct mac_context *mac,
 
 	csr_update_pmf_cap_from_connected_profile(profile, filter);
 
-	csr_update_connect_n_roam_cmn_filter(mac, filter, opmode);
+	csr_update_adaptive_11r_scan_filter(mac, filter);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -771,7 +791,7 @@ QDF_STATUS csr_neighbor_roam_indicate_disconnect(struct mac_context *mac,
 
 	/*Inform the Firmware to STOP Scanning as the host has a disconnect. */
 	if (csr_roam_is_sta_mode(mac, sessionId))
-		csr_post_roam_state_change(mac, sessionId, ROAM_DEINIT,
+		csr_post_roam_state_change(mac, sessionId, WLAN_ROAM_DEINIT,
 					   REASON_DISCONNECTED);
 
 	return QDF_STATUS_SUCCESS;
@@ -852,47 +872,36 @@ static void csr_neighbor_roam_info_ctx_init(struct mac_context *mac,
 		csr_neighbor_roam_purge_preauth_failed_list(mac);
 	}
 
-	if (csr_roam_is_roam_offload_scan_enabled(mac)) {
-		/*
-		 * Store the current PMK info of the AP
-		 * to the single pmk global cache if the BSS allows
-		 * single pmk roaming capable.
-		 */
-		csr_store_sae_single_pmk_to_global_cache(mac, session,
-							 session_id);
+	if (!csr_roam_is_roam_offload_scan_enabled(mac))
+		return;
+	/*
+	 * Store the current PMK info of the AP
+	 * to the single pmk global cache if the BSS allows
+	 * single pmk roaming capable.
+	 */
+	csr_store_sae_single_pmk_to_global_cache(mac, session,
+						 session_id);
 
-		/*
-		 * If this is not a INFRA type BSS, then do not send the command
-		 * down to firmware.Do not send the START command for
-		 * other session connections.
-		 */
-		if (!csr_roam_is_sta_mode(mac, session_id)) {
-			QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
-				"Wrong Mode %d",
-				session->connectedProfile.BSSType);
-			return;
-		}
-		ngbr_roam_info->uOsRequestedHandoff = 0;
-#ifdef WLAN_FEATURE_ROAM_OFFLOAD
-		if (session->roam_synch_in_progress) {
-			if (mac->roam.pReassocResp) {
-				qdf_mem_free(mac->roam.pReassocResp);
-				mac->roam.pReassocResp = NULL;
-			}
-		} else
-#endif
-		{
-			csr_post_roam_state_change(mac, session_id,
-						   ROAM_RSO_STARTED,
-						   REASON_CTX_INIT);
-
-		}
+	/*
+	 * If this is not a INFRA type BSS, then do not send the command
+	 * down to firmware.Do not send the START command for
+	 * other session connections.
+	 */
+	if (!csr_roam_is_sta_mode(mac, session_id)) {
+		sme_debug("Wrong Mode %d", session->connectedProfile.BSSType);
+		return;
 	}
+
+	ngbr_roam_info->uOsRequestedHandoff = 0;
+	if (!MLME_IS_ROAM_SYNCH_IN_PROGRESS(mac->psoc, session_id))
+		csr_post_roam_state_change(mac, session_id,
+					   WLAN_ROAM_RSO_ENABLED,
+					   REASON_CTX_INIT);
 }
 
 /**
- * csr_neighbor_roam_indicate_connect()
- * @mac: mac context
+* csr_neighbor_roam_indicate_connect()
+* @mac: mac context
  * @session_id: Session Id
  * @qdf_status: QDF status
  *
@@ -941,22 +950,20 @@ QDF_STATUS csr_neighbor_roam_indicate_connect(
 		return QDF_STATUS_SUCCESS;
 	}
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
-	if (session->roam_synch_in_progress &&
-		(eSIR_ROAM_AUTH_STATUS_AUTHENTICATED ==
-		session->roam_synch_data->authStatus)) {
+	if (MLME_IS_ROAM_SYNCH_IN_PROGRESS(mac->psoc, session_id) &&
+	    eSIR_ROAM_AUTH_STATUS_AUTHENTICATED ==
+	     session->roam_synch_data->authStatus) {
 		sme_debug("LFR3: Authenticated");
 		roam_info = qdf_mem_malloc(sizeof(*roam_info));
 		if (!roam_info)
 			return QDF_STATUS_E_NOMEM;
 		qdf_copy_macaddr(&roam_info->peerMac,
 				 &session->connectedProfile.bssid);
-		roam_info->roamSynchInProgress =
-			session->roam_synch_in_progress;
 		csr_roam_call_callback(mac, session_id, roam_info, 0,
 				       eCSR_ROAM_SET_KEY_COMPLETE,
 				       eCSR_ROAM_RESULT_AUTHENTICATED);
 		csr_neighbor_roam_reset_init_state_control_info(mac,
-			session_id);
+								session_id);
 		csr_neighbor_roam_info_ctx_init(mac, session_id);
 		qdf_mem_free(roam_info);
 		return status;
@@ -1080,7 +1087,7 @@ QDF_STATUS csr_neighbor_roam_init(struct mac_context *mac, uint8_t sessionId)
 	pNeighborRoamInfo->cfgParams.full_roam_scan_period =
 		mac->mlme_cfg->lfr.roam_full_scan_period;
 	pNeighborRoamInfo->cfgParams.enable_scoring_for_roam =
-		mac->mlme_cfg->scoring.enable_scoring_for_roam;
+		mac->mlme_cfg->roam_scoring.enable_scoring_for_roam;
 	pNeighborRoamInfo->cfgParams.roam_scan_n_probes =
 		mac->mlme_cfg->lfr.roam_scan_n_probes;
 	pNeighborRoamInfo->cfgParams.roam_scan_home_away_time =
@@ -1365,7 +1372,7 @@ static QDF_STATUS csr_neighbor_roam_process_handoff_req(
 								session_id);
 		sme_debug("Filter creation status: %d", status);
 		status = csr_scan_get_result(mac_ctx, scan_filter,
-					     &scan_result);
+					     &scan_result, true);
 		qdf_mem_free(scan_filter);
 		csr_neighbor_roam_process_scan_results(mac_ctx, session_id,
 							&scan_result);
@@ -1494,7 +1501,7 @@ QDF_STATUS csr_neighbor_roam_handoff_req_hdlr(
 	roam_ctrl_info->uOsRequestedHandoff = 1;
 
 	status = csr_post_roam_state_change(mac_ctx, session_id,
-					    ROAM_RSO_STOPPED,
+					    WLAN_ROAM_RSO_STOPPED,
 					    REASON_OS_REQUESTED_ROAMING_NOW);
 	if (QDF_STATUS_SUCCESS != status) {
 		sme_err("ROAM: RSO stop failed");
@@ -1559,7 +1566,7 @@ QDF_STATUS csr_neighbor_roam_start_lfr_scan(struct mac_context *mac,
 	/* There is no candidate or We are not roaming Now.
 	 * Inform the FW to restart Roam Offload Scan
 	 */
-	csr_post_roam_state_change(mac, sessionId, ROAM_RSO_STARTED,
+	csr_post_roam_state_change(mac, sessionId, WLAN_ROAM_RSO_ENABLED,
 				   REASON_NO_CAND_FOUND_OR_NOT_ROAMING_NOW);
 
 	return QDF_STATUS_SUCCESS;

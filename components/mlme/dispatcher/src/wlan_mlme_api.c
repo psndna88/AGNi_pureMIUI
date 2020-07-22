@@ -459,6 +459,11 @@ wlan_mlme_update_cfg_with_tgt_caps(struct wlan_objmgr_psoc *psoc,
 	mlme_obj->cfg.gen.bigtk_support = tgt_caps->bigtk_support;
 	mlme_obj->cfg.gen.stop_all_host_scan_support =
 			tgt_caps->stop_all_host_scan_support;
+	mlme_obj->cfg.gen.peer_create_conf_support =
+			tgt_caps->peer_create_conf_support;
+	mlme_obj->cfg.gen.dual_sta_roam_fw_support =
+			tgt_caps->dual_sta_roam_fw_support;
+
 }
 
 #ifdef WLAN_FEATURE_11AX
@@ -919,7 +924,7 @@ bool wlan_mlme_configure_chain_mask_supported(struct wlan_objmgr_psoc *psoc)
 	hw_dbs_2x2_cap = policy_mgr_is_hw_dbs_2x2_capable(psoc);
 	enable2x2 = mlme_obj->cfg.vht_caps.vht_cap_info.enable2x2;
 
-	if (!enable_bt_chain_sep || as_enabled || enable2x2 ||
+	if ((enable2x2 && !enable_bt_chain_sep) || as_enabled ||
 	   (!hw_dbs_2x2_cap && dual_mac_feature != DISABLE_DBS_CXN_AND_SCAN)) {
 		mlme_legacy_debug("Cannot configure chainmask enable_bt_chain_sep %d as_enabled %d enable2x2 %d hw_dbs_2x2_cap %d dual_mac_feature %d",
 				  enable_bt_chain_sep, as_enabled, enable2x2,
@@ -2071,6 +2076,26 @@ bool wlan_mlme_get_host_scan_abort_support(struct wlan_objmgr_psoc *psoc)
 	return mlme_obj->cfg.gen.stop_all_host_scan_support;
 }
 
+bool wlan_mlme_get_peer_create_conf_support(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj = mlme_get_psoc_ext_obj(psoc);
+
+	if (!mlme_obj)
+		return false;
+
+	return mlme_obj->cfg.gen.peer_create_conf_support;
+}
+
+bool wlan_mlme_get_dual_sta_roam_support(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj = mlme_get_psoc_ext_obj(psoc);
+
+	if (!mlme_obj)
+		return false;
+
+	return mlme_obj->cfg.gen.dual_sta_roam_fw_support;
+}
+
 QDF_STATUS wlan_mlme_get_oce_sta_enabled_info(struct wlan_objmgr_psoc *psoc,
 					      bool *value)
 {
@@ -3015,6 +3040,21 @@ wlan_mlme_get_vht20_mcs9(struct wlan_objmgr_psoc *psoc, bool *value)
 }
 
 QDF_STATUS
+wlan_mlme_get_enable_dynamic_nss_chains_cfg(struct wlan_objmgr_psoc *psoc,
+					    bool *value)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_FAILURE;
+
+	*value = mlme_obj->cfg.nss_chains_ini_cfg.enable_dynamic_nss_chains_cfg;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
 wlan_mlme_get_vht_enable2x2(struct wlan_objmgr_psoc *psoc, bool *value)
 {
 	struct wlan_mlme_psoc_ext_obj *mlme_obj;
@@ -3557,6 +3597,8 @@ char *mlme_get_roam_trigger_str(uint32_t roam_scan_trigger)
 		return "IDLE STATE SCAN";
 	case WMI_ROAM_TRIGGER_REASON_STA_KICKOUT:
 		return "STA KICKOUT";
+	case WMI_ROAM_TRIGGER_REASON_ESS_RSSI:
+		return "ESS RSSI";
 	case WMI_ROAM_TRIGGER_REASON_NONE:
 		return "NONE";
 	default:
@@ -3885,3 +3927,102 @@ wlan_mlme_get_dfs_chan_ageout_time(struct wlan_objmgr_psoc *psoc,
 
 	return QDF_STATUS_SUCCESS;
 }
+
+#ifdef WLAN_FEATURE_SAE
+
+#define NUM_RETRY_BITS 3
+#define ROAM_AUTH_INDEX 2
+#define ASSOC_INDEX 1
+#define AUTH_INDEX 0
+#define MAX_RETRIES 2
+#define MAX_ROAM_AUTH_RETRIES 1
+
+QDF_STATUS
+wlan_mlme_get_sae_assoc_retry_count(struct wlan_objmgr_psoc *psoc,
+				    uint8_t *retry_count)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+
+	if (!mlme_obj) {
+		*retry_count = 0;
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	*retry_count =
+		QDF_GET_BITS(mlme_obj->cfg.gen.sae_connect_retries,
+			     ASSOC_INDEX * NUM_RETRY_BITS, NUM_RETRY_BITS);
+
+	*retry_count = QDF_MIN(MAX_RETRIES, *retry_count);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+wlan_mlme_get_sae_auth_retry_count(struct wlan_objmgr_psoc *psoc,
+				   uint8_t *retry_count)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+
+	if (!mlme_obj) {
+		*retry_count = 0;
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	*retry_count =
+		QDF_GET_BITS(mlme_obj->cfg.gen.sae_connect_retries,
+			     AUTH_INDEX * NUM_RETRY_BITS, NUM_RETRY_BITS);
+
+	*retry_count = QDF_MIN(MAX_RETRIES, *retry_count);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+wlan_mlme_get_sae_roam_auth_retry_count(struct wlan_objmgr_psoc *psoc,
+					uint8_t *retry_count)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+
+	if (!mlme_obj) {
+		*retry_count = 0;
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	*retry_count =
+		QDF_GET_BITS(mlme_obj->cfg.gen.sae_connect_retries,
+			     ROAM_AUTH_INDEX * NUM_RETRY_BITS, NUM_RETRY_BITS);
+
+	*retry_count = QDF_MIN(MAX_ROAM_AUTH_RETRIES, *retry_count);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+#endif
+
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
+bool
+wlan_mlme_get_dual_sta_roaming_enabled(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+	bool dual_sta_roaming_enabled;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+
+	if (!mlme_obj)
+		return cfg_default(CFG_ENABLE_DUAL_STA_ROAM_OFFLOAD);
+
+	dual_sta_roaming_enabled =
+			mlme_obj->cfg.lfr.lfr3_roaming_offload &&
+			mlme_obj->cfg.lfr.lfr3_dual_sta_roaming_enabled &&
+			wlan_mlme_get_dual_sta_roam_support(psoc) &&
+			policy_mgr_is_hw_dbs_capable(psoc);
+
+	return dual_sta_roaming_enabled;
+}
+#endif

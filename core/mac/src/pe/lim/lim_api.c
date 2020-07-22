@@ -592,6 +592,21 @@ static inline void lim_nan_register_callbacks(struct mac_context *mac_ctx)
 }
 #endif
 
+#ifdef WLAN_FEATURE_11W
+static void lim_stop_pmfcomeback_timer(struct pe_session *session)
+{
+	if (session->opmode != QDF_STA_MODE)
+		return;
+
+	qdf_mc_timer_stop(&session->pmf_retry_timer);
+	session->pmf_retry_timer_info.retried = false;
+}
+#else
+static void lim_stop_pmfcomeback_timer(struct pe_session *session)
+{
+}
+#endif
+
 /*
  * pe_shutdown_notifier_cb - Shutdown notifier callback
  * @ctx: Pointer to Global MAC structure
@@ -611,6 +626,7 @@ static void pe_shutdown_notifier_cb(void *ctx)
 			if (LIM_IS_AP_ROLE(session))
 				qdf_mc_timer_stop(&session->
 						 protection_fields_reset_timer);
+			lim_stop_pmfcomeback_timer(session);
 		}
 	}
 }
@@ -798,6 +814,9 @@ QDF_STATUS pe_open(struct mac_context *mac, struct cds_config_info *cds_cfg)
 
 	mac->lim.maxBssId = cds_cfg->max_bssid;
 	mac->lim.maxStation = cds_cfg->max_station;
+	mac->lim.max_sta_of_pe_session =
+			(cds_cfg->max_station > SIR_SAP_MAX_NUM_PEERS) ?
+				SIR_SAP_MAX_NUM_PEERS : cds_cfg->max_station;
 	qdf_spinlock_create(&mac->sys.bbt_mgmt_lock);
 
 	if ((mac->lim.maxBssId == 0) || (mac->lim.maxStation == 0)) {
@@ -2364,6 +2383,7 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 	struct pe_session *session_ptr;
 	struct pe_session *ft_session_ptr;
 	uint8_t session_id;
+	uint8_t *reassoc_resp;
 	tpDphHashNode curr_sta_ds;
 	uint16_t aid;
 	struct bss_params *add_bss_params;
@@ -2388,11 +2408,7 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 
 	pe_debug("LFR3: PE callback reason: %d", reason);
 	switch (reason) {
-	case SIR_ROAMING_START:
-		session_ptr->fw_roaming_started = true;
-		return QDF_STATUS_SUCCESS;
 	case SIR_ROAMING_ABORT:
-		session_ptr->fw_roaming_started = false;
 		/*
 		 * If there was a disassoc or deauth that was received
 		 * during roaming and it was not honored, then we have
@@ -2412,13 +2428,12 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 		}
 		return QDF_STATUS_SUCCESS;
 	case SIR_ROAM_SYNCH_PROPAGATION:
-		session_ptr->fw_roaming_started = false;
 		break;
 	default:
 		return status;
 	}
 
-	pe_debug("LFR3:Received ROAM_OFFLOAD_SYNCH_IND bssid %pM auth: %d vdevId: %d",
+	pe_debug("LFR3:Received ROAM SYNCH IND bssid %pM auth: %d vdevId: %d",
 		 roam_sync_ind_ptr->bssid.bytes, roam_sync_ind_ptr->authStatus,
 		 roam_sync_ind_ptr->roamed_vdev_id);
 
@@ -2437,7 +2452,8 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 	}
 	status = QDF_STATUS_E_FAILURE;
 	ft_session_ptr = pe_create_session(mac_ctx, bss_desc->bssId,
-					   &session_id, mac_ctx->lim.maxStation,
+					   &session_id,
+					   mac_ctx->lim.max_sta_of_pe_session,
 					   session_ptr->bssType,
 					   session_ptr->vdev_id,
 					   session_ptr->opmode);
@@ -2461,7 +2477,8 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 	ft_session_ptr->csaOffloadEnable = session_ptr->csaOffloadEnable;
 
 	/* Next routine will update nss and vdev_nss with AP's capabilities */
-	lim_fill_ft_session(mac_ctx, bss_desc, ft_session_ptr, session_ptr);
+	lim_fill_ft_session(mac_ctx, bss_desc, ft_session_ptr,
+			    session_ptr, roam_sync_ind_ptr->phy_mode);
 
 	/* Next routine may update nss based on dot11Mode */
 	lim_ft_prepare_add_bss_req(mac_ctx, ft_session_ptr, bss_desc);
@@ -2496,19 +2513,6 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 		return status;
 	}
 
-	mac_ctx->roam.reassocRespLen = roam_sync_ind_ptr->reassocRespLength;
-	mac_ctx->roam.pReassocResp =
-		qdf_mem_malloc(mac_ctx->roam.reassocRespLen);
-	if (!mac_ctx->roam.pReassocResp) {
-		ft_session_ptr->bRoamSynchInProgress = false;
-		return QDF_STATUS_E_NOMEM;
-	}
-	qdf_mem_copy(mac_ctx->roam.pReassocResp,
-			(uint8_t *)roam_sync_ind_ptr +
-			roam_sync_ind_ptr->reassocRespOffset,
-			mac_ctx->roam.reassocRespLen);
-
-	ft_session_ptr->bRoamSynchInProgress = true;
 
 	if (roam_sync_ind_ptr->authStatus ==
 	    CSR_ROAM_AUTH_STATUS_AUTHENTICATED) {
@@ -2516,7 +2520,10 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 		curr_sta_ds->is_key_installed = true;
 	}
 
-	lim_process_assoc_rsp_frame(mac_ctx, mac_ctx->roam.pReassocResp,
+	reassoc_resp = (uint8_t *)roam_sync_ind_ptr +
+			roam_sync_ind_ptr->reassocRespOffset;
+	lim_process_assoc_rsp_frame(mac_ctx, reassoc_resp,
+				    roam_sync_ind_ptr->reassocRespLength,
 				    LIM_REASSOC, ft_session_ptr);
 
 	lim_check_ft_initial_im_association(roam_sync_ind_ptr, ft_session_ptr);
@@ -2542,9 +2549,6 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 	roam_sync_ind_ptr->join_rsp = qdf_mem_malloc(join_rsp_len);
 	if (!roam_sync_ind_ptr->join_rsp) {
 		ft_session_ptr->bRoamSynchInProgress = false;
-		if (mac_ctx->roam.pReassocResp)
-			qdf_mem_free(mac_ctx->roam.pReassocResp);
-		mac_ctx->roam.pReassocResp = NULL;
 		return QDF_STATUS_E_NOMEM;
 	}
 
@@ -2586,10 +2590,6 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 	ft_session_ptr->limSmeState = eLIM_SME_LINK_EST_STATE;
 	ft_session_ptr->limPrevSmeState = ft_session_ptr->limSmeState;
 	ft_session_ptr->bRoamSynchInProgress = false;
-	if (mac_ctx->roam.pReassocResp)
-		qdf_mem_free(mac_ctx->roam.pReassocResp);
-	mac_ctx->roam.pReassocResp = NULL;
-
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -2792,7 +2792,7 @@ void lim_mon_init_session(struct mac_context *mac_ptr,
 
 	psession_entry = pe_create_session(mac_ptr, msg->bss_id.bytes,
 					   &session_id,
-					   mac_ptr->lim.maxStation,
+					   mac_ptr->lim.max_sta_of_pe_session,
 					   eSIR_MONITOR_MODE,
 					   msg->vdev_id,
 					   QDF_MONITOR_MODE);

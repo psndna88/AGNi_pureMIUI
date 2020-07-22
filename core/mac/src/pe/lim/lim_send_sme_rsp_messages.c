@@ -1465,7 +1465,7 @@ static QDF_STATUS lim_process_csa_wbw_ie(struct mac_context *mac_ctx,
 		eLIM_CHANNEL_SWITCH_PRIMARY_AND_SECONDARY;
 	if ((ap_new_ch_width == CH_WIDTH_160MHZ) &&
 			!new_ch_width_dfn) {
-		if (csa_params->new_ch_freq_seg1 != csa_params->channel +
+		if (abs(csa_params->new_ch_freq_seg1 - csa_params->channel) !=
 				CH_TO_CNTR_FREQ_DIFF_160MHz) {
 			pe_err("CSA wide BW IE has invalid center freq");
 			return QDF_STATUS_E_INVAL;
@@ -1488,7 +1488,7 @@ static QDF_STATUS lim_process_csa_wbw_ie(struct mac_context *mac_ctx,
 				 fw_vht_ch_wd);
 			ap_new_ch_width = fw_vht_ch_wd;
 		}
-		if (csa_params->new_ch_freq_seg1 != csa_params->channel +
+		if (abs(csa_params->new_ch_freq_seg1 - csa_params->channel) !=
 				CH_TO_CNTR_FREQ_DIFF_80MHz) {
 			pe_err("CSA wide BW IE has invalid center freq");
 			return QDF_STATUS_E_INVAL;
@@ -1496,7 +1496,7 @@ static QDF_STATUS lim_process_csa_wbw_ie(struct mac_context *mac_ctx,
 		csa_params->new_ch_freq_seg2 = 0;
 	}
 	if (new_ch_width_dfn) {
-		if (csa_params->new_ch_freq_seg1 != csa_params->channel +
+		if (abs(csa_params->new_ch_freq_seg1 - csa_params->channel) !=
 				CH_TO_CNTR_FREQ_DIFF_80MHz) {
 			pe_err("CSA wide BW IE has invalid center freq");
 			return QDF_STATUS_E_INVAL;
@@ -1507,8 +1507,7 @@ static QDF_STATUS lim_process_csa_wbw_ie(struct mac_context *mac_ctx,
 			ap_new_ch_width = fw_vht_ch_wd;
 		}
 		if ((ap_new_ch_width == CH_WIDTH_160MHZ) &&
-				(csa_params->new_ch_freq_seg1 !=
-				 csa_params->channel +
+		    (abs(csa_params->new_ch_freq_seg1 - csa_params->channel) !=
 				 CH_TO_CNTR_FREQ_DIFF_160MHz)) {
 			pe_err("wide BW IE has invalid 160M center freq");
 			csa_params->new_ch_freq_seg2 = 0;
@@ -1533,6 +1532,31 @@ prnt_log:
 
 	return QDF_STATUS_SUCCESS;
 }
+
+#ifdef FEATURE_NO_DBS_INTRABAND_MCC_SUPPORT
+static bool lim_is_csa_channel_allowed(struct mac_context *mac_ctx,
+				       qdf_freq_t ch_freq1,
+				       uint32_t ch_freq2)
+{
+	bool is_allowed = true;
+	u32 cnx_count = 0;
+
+	cnx_count = policy_mgr_get_connection_count(mac_ctx->psoc);
+	if ((cnx_count > 1) && !policy_mgr_is_hw_dbs_capable(mac_ctx->psoc) &&
+	    !policy_mgr_is_interband_mcc_supported(mac_ctx->psoc)) {
+		is_allowed = wlan_reg_is_same_band_freqs(ch_freq1, ch_freq2);
+	}
+
+	return is_allowed;
+}
+#else
+static bool lim_is_csa_channel_allowed(struct mac_context *mac_ctx,
+				       qdf_freq_t ch_freq1,
+				       uint32_t ch_freq2)
+{
+	return true;
+}
+#endif
 
 /**
  * lim_handle_csa_offload_msg() - Handle CSA offload message
@@ -1581,6 +1605,12 @@ void lim_handle_csa_offload_msg(struct mac_context *mac_ctx,
 
 	if (!LIM_IS_STA_ROLE(session_entry)) {
 		pe_debug("Invalid role to handle CSA");
+		goto err;
+	}
+
+	if (!lim_is_csa_channel_allowed(mac_ctx, session_entry->curr_op_freq,
+					csa_params->csa_chan_freq)) {
+		pe_debug("Channel switch is not allowed");
 		goto err;
 	}
 	/*

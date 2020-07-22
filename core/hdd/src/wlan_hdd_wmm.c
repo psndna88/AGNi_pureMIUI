@@ -57,6 +57,7 @@
 #include "sme_api.h"
 #include "wlan_mlme_ucfg_api.h"
 #include "cfg_ucfg_api.h"
+#include "wlan_hdd_object_manager.h"
 
 #define HDD_WMM_UP_TO_AC_MAP_SIZE 8
 #define DSCP(x)	x
@@ -1521,12 +1522,15 @@ static void hdd_wmm_do_implicit_qos(struct work_struct *work)
 QDF_STATUS hdd_send_dscp_up_map_to_fw(struct hdd_adapter *adapter)
 {
 	uint32_t *dscp_to_up_map = adapter->dscp_to_up_map;
-	struct wlan_objmgr_vdev *vdev = adapter->vdev;
+	struct wlan_objmgr_vdev *vdev;
 	int ret;
+
+	vdev = hdd_objmgr_get_vdev(adapter);
 
 	if (vdev) {
 		/* Send DSCP to TID map table to FW */
 		ret = os_if_fwol_send_dscp_up_map_to_fw(vdev, dscp_to_up_map);
+		hdd_objmgr_put_vdev(vdev);
 		if (ret && ret != -EOPNOTSUPP)
 			return QDF_STATUS_E_FAILURE;
 	}
@@ -1607,7 +1611,7 @@ static inline QDF_STATUS hdd_custom_dscp_up_map(
 #endif /* WLAN_CUSTOM_DSCP_UP_MAP */
 
 /**
- * hdd_wmm_init() - initialize the WMM DSCP configuation
+ * hdd_wmm_dscp_initial_state() - initialize the WMM DSCP configuration
  * @adapter : [in]  pointer to Adapter context
  *
  * This function will initialize the WMM DSCP configuation of an
@@ -1616,7 +1620,7 @@ static inline QDF_STATUS hdd_custom_dscp_up_map(
  *
  * Return: QDF_STATUS enumeration
  */
-QDF_STATUS hdd_wmm_init(struct hdd_adapter *adapter)
+QDF_STATUS hdd_wmm_dscp_initial_state(struct hdd_adapter *adapter)
 {
 	enum sme_qos_wmmuptype *dscp_to_up_map = adapter->dscp_to_up_map;
 	struct wlan_objmgr_psoc *psoc = adapter->hdd_ctx->psoc;
@@ -1653,6 +1657,8 @@ QDF_STATUS hdd_wmm_adapter_init(struct hdd_adapter *adapter)
 	sme_ac_enum_type ac_type;
 
 	hdd_enter();
+
+	hdd_wmm_dscp_initial_state(adapter);
 
 	adapter->hdd_wmm_status.qap = false;
 	INIT_LIST_HEAD(&adapter->hdd_wmm_status.context_list);
@@ -1858,6 +1864,17 @@ void hdd_wmm_classify_pkt(struct hdd_adapter *adapter,
 
 	dscp = (tos >> 2) & 0x3f;
 	*user_pri = adapter->dscp_to_up_map[dscp];
+
+	/*
+	 * Upgrade the priority, if the user priority of this packet is
+	 * less than the configured threshold.
+	 */
+	if (*user_pri < adapter->upgrade_udp_qos_threshold &&
+	    (qdf_nbuf_is_ipv4_udp_pkt(skb) || qdf_nbuf_is_ipv6_udp_pkt(skb))) {
+		/* Upgrade UDP pkt priority alone */
+		*user_pri = qca_wlan_ac_to_sme_qos(
+				adapter->upgrade_udp_qos_threshold);
+	}
 
 #ifdef HDD_WMM_DEBUG
 	hdd_debug("tos is %d, dscp is %d, up is %d", tos, dscp, *user_pri);
@@ -2296,7 +2313,7 @@ QDF_STATUS hdd_wmm_assoc(struct hdd_adapter *adapter,
 					       adapter->vdev_id);
 
 	if (!QDF_IS_STATUS_SUCCESS(status))
-		hdd_wmm_init(adapter);
+		hdd_wmm_dscp_initial_state(adapter);
 
 	hdd_exit();
 

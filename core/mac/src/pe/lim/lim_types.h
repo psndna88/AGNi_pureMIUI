@@ -421,6 +421,17 @@ bool lim_fill_lim_assoc_ind_params(
 		struct pe_session *session_entry);
 
 /**
+ * lim_sae_auth_cleanup_retry() - API to cleanup sae auth frmae stored
+ * and deactivate the timer
+ * @mac_ctx: Pointer to mac context
+ * @vdev_id: vdev id
+ *
+ * Return: none
+ */
+void lim_sae_auth_cleanup_retry(struct mac_context *mac_ctx,
+				uint8_t vdev_id);
+
+/**
  * lim_fill_sme_assoc_ind_params() - Initialize association indication
  * @mac_ctx: Pointer to Global MAC structure
  * @assoc_ind: PE association indication structure
@@ -438,8 +449,38 @@ lim_fill_sme_assoc_ind_params(
 void lim_send_mlm_assoc_ind(struct mac_context *mac, tpDphHashNode sta,
 			    struct pe_session *pe_session);
 
-void lim_process_assoc_rsp_frame(struct mac_context *, uint8_t *, uint8_t, struct pe_session *);
+#define ASSOC_FRAME_LEN 0
+/**
+ * lim_process_assoc_rsp_frame() - Processes assoc response
+ * @mac_ctx:              Pointer to Global MAC structure
+ * @rx_packet_info:       A pointer to Rx packet info structure
+ * @reassoc_frame_length: Valid frame length if its a reassoc response frame
+ * else 0
+ * @sub_type: Indicates whether it is Association Response (=0) or
+ *             Reassociation Response (=1) frame
+ *
+ * This function is called by lim_handle80211_frames() or
+ * pe_roam_synch_callback() upon Re/Association Response frame reception or
+ * roam synch indication with reassociation response frame is received.
+ *
+ * Return: None
+ */
+void lim_process_assoc_rsp_frame(struct mac_context *mac, uint8_t *rx_pkt_info,
+				 uint32_t reassoc_frame_len, uint8_t subtype,
+				 struct pe_session *pe_session);
+
 void lim_process_disassoc_frame(struct mac_context *, uint8_t *, struct pe_session *);
+
+/**
+ * lim_get_nss_supported_by_ap() - finds out nss from AP's beacons
+ * @vht_caps: VHT capabilities
+ * @ht_caps: HT capabilities
+ *
+ * Return: nss advertised by AP in beacon
+ */
+uint8_t lim_get_nss_supported_by_ap(tDot11fIEVHTCaps *vht_caps,
+				    tDot11fIEHTCaps *ht_caps,
+				    tDot11fIEhe_cap *he_caps);
 /*
  * lim_perform_disassoc() - Actual action taken after receiving disassoc
  * @mac_ctx: Global MAC context
@@ -1219,6 +1260,18 @@ void lim_process_auth_failure_timeout(struct mac_context *mac_ctx);
  */
 void lim_process_assoc_failure_timeout(struct mac_context *mac_ctx,
 				       uint32_t msg_type);
+
+/**
+ * lim_send_frame() - API to send frame
+ * @mac_ctx Pointer to Global MAC structure
+ * @vdev_id: vdev id
+ * @buf: Pointer to SAE auth retry frame
+ * @buf_len: length of frame
+ *
+ * Return: None
+ */
+void lim_send_frame(struct mac_context *mac_ctx, uint8_t vdev_id, uint8_t *buf,
+		    uint16_t buf_len);
 
 /**
  * lim_send_mgmt_frame_tx() - Sends mgmt frame

@@ -148,13 +148,13 @@ QDF_STATUS wma_update_channel_list(WMA_HANDLE handle,
 		return QDF_STATUS_E_NOMEM;
 
 	qdf_mem_zero(scan_ch_param, len);
-	WMA_LOGD("no of channels = %d", chan_list->numChan);
+	wma_debug("no of channels = %d", chan_list->numChan);
 	chan_p = &scan_ch_param->ch_param[0];
 	scan_ch_param->nallchans = chan_list->numChan;
 	scan_ch_param->max_bw_support_present = true;
 	wma_handle->saved_chan.num_channels = chan_list->numChan;
-	WMA_LOGD("ht %d, vht %d, vht_24 %d", chan_list->ht_en,
-			chan_list->vht_en, chan_list->vht_24_en);
+	wma_debug("ht %d, vht %d, vht_24 %d", chan_list->ht_en,
+		  chan_list->vht_en, chan_list->vht_24_en);
 
 	for (i = 0; i < chan_list->numChan; ++i) {
 		chan_p->mhz = chan_list->chanParam[i].freq;
@@ -960,7 +960,7 @@ wma_roam_scan_fill_ap_profile(struct roam_offload_scan_req *roam_req,
 	qdf_mem_zero(profile, sizeof(*profile));
 	if (!roam_req) {
 		profile->ssid.length = 0;
-		profile->ssid.mac_ssid[0] = 0;
+		profile->ssid.ssid[0] = 0;
 		profile->rsn_authmode = WMI_AUTH_NONE;
 		profile->rsn_ucastcipherset = WMI_CIPHER_NONE;
 		profile->rsn_mcastcipherset = WMI_CIPHER_NONE;
@@ -971,7 +971,7 @@ wma_roam_scan_fill_ap_profile(struct roam_offload_scan_req *roam_req,
 	}
 
 	profile->ssid.length = roam_req->ConnectedNetwork.ssId.length;
-	qdf_mem_copy(profile->ssid.mac_ssid,
+	qdf_mem_copy(profile->ssid.ssid,
 		     roam_req->ConnectedNetwork.ssId.ssId,
 		     profile->ssid.length);
 	profile->rsn_authmode =
@@ -1066,8 +1066,7 @@ void wma_process_set_pdev_ht_ie_req(tp_wma_handle wma,
 	cmd->ie_len = ie_params->ie_len;
 	cmd->tx_streams = ie_params->nss;
 	cmd->rx_streams = ie_params->nss;
-	WMA_LOGD("Setting pdev HT ie with Nss = %u",
-			ie_params->nss);
+	wma_debug("Setting pdev HT ie with Nss = %u", ie_params->nss);
 	buf_ptr = (uint8_t *)cmd + sizeof(*cmd);
 	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_BYTE, ie_len_pad);
 	if (ie_params->ie_len) {
@@ -1119,8 +1118,7 @@ void wma_process_set_pdev_vht_ie_req(tp_wma_handle wma,
 	cmd->ie_len = ie_params->ie_len;
 	cmd->tx_streams = ie_params->nss;
 	cmd->rx_streams = ie_params->nss;
-	WMA_LOGD("Setting pdev VHT ie with Nss = %u",
-			ie_params->nss);
+	wma_debug("Setting pdev VHT ie with Nss = %u", ie_params->nss);
 	buf_ptr = (uint8_t *)cmd + sizeof(*cmd);
 	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_BYTE, ie_len_pad);
 	if (ie_params->ie_len) {
@@ -1403,13 +1401,13 @@ static QDF_STATUS wma_roam_scan_filter(tp_wma_handle wma_handle,
 				num_rssi_rejection_ap =
 					roam_params->num_rssi_rejection_ap;
 			} else {
-				WMA_LOGD("%s : Roam Filter need not be sent", __func__);
+				wma_debug("Roam Filter need not be sent");
 				qdf_mem_free(params);
 				return QDF_STATUS_SUCCESS;
 			}
 			break;
 		default:
-			WMA_LOGD("%s : Roam Filter need not be sent", __func__);
+			wma_debug("Roam Filter need not be sent");
 			qdf_mem_free(params);
 			return QDF_STATUS_SUCCESS;
 		}
@@ -1435,14 +1433,14 @@ static QDF_STATUS wma_roam_scan_filter(tp_wma_handle wma_handle,
 			MAX_BSSID_AVOID_LIST * sizeof(struct qdf_mac_addr));
 
 	for (i = 0; i < num_ssid_white_list; i++) {
-		qdf_mem_copy(params->ssid_allowed_list[i].mac_ssid,
+		qdf_mem_copy(params->ssid_allowed_list[i].ssid,
 				roam_params->ssid_allowed_list[i].ssId,
 			roam_params->ssid_allowed_list[i].length);
 		params->ssid_allowed_list[i].length =
 				roam_params->ssid_allowed_list[i].length;
 		wma_debug("SSID %d: %.*s", i,
 			  params->ssid_allowed_list[i].length,
-			  params->ssid_allowed_list[i].mac_ssid);
+			  params->ssid_allowed_list[i].ssid);
 	}
 
 	for (i = 0; i < params->num_bssid_black_list; i++)
@@ -1498,8 +1496,7 @@ QDF_STATUS wma_roam_scan_bmiss_cnt(tp_wma_handle wma_handle,
 {
 	QDF_STATUS status;
 
-	WMA_LOGD("%s: first_bcnt: %d, final_bcnt: %d", __func__, first_bcnt,
-		 final_bcnt);
+	wma_debug("first_bcnt: %d, final_bcnt: %d", first_bcnt, final_bcnt);
 
 	status = wma_vdev_set_param(wma_handle->wmi_handle,
 				vdev_id, WMI_VDEV_PARAM_BMISS_FIRST_BCNT,
@@ -1574,8 +1571,8 @@ wma_roam_scan_btm_offload(tp_wma_handle wma_handle,
 	params->btm_candidate_min_score =
 			roam_req->btm_trig_min_candidate_score;
 
-	WMA_LOGD("%s: vdev %u btm_offload:%u btm_query_bitmask:%u btm_candidate_min_score:%d",
-		 __func__, params->vdev_id, params->btm_offload_config,
+	wma_debug("vdev %u btm_offload:%u btm_query_bitmask:%u btm_candidate_min_score:%d",
+		 params->vdev_id, params->btm_offload_config,
 		 params->btm_query_bitmask, params->btm_candidate_min_score);
 
 	status = wmi_unified_send_btm_config(wma_handle->wmi_handle, params);
@@ -1615,8 +1612,8 @@ void wma_send_roam_bss_load_config(WMA_HANDLE handle,
 		params->rssi_threshold_24ghz &= 0x000000ff;
 	}
 
-	WMA_LOGD("%s: Bss load trig params vdev %u threshold %u sample_time: %u 5Ghz RSSI threshold:%d 2.4G rssi threshold:%d",
-		 __func__, params->vdev_id, params->bss_load_threshold,
+	wma_debug("Bss load trig params vdev %u threshold %u sample_time: %u 5Ghz RSSI threshold:%d 2.4G rssi threshold:%d",
+		 params->vdev_id, params->bss_load_threshold,
 		 params->bss_load_sample_time, params->rssi_threshold_5ghz,
 		 params->rssi_threshold_24ghz);
 
@@ -1657,7 +1654,7 @@ QDF_STATUS wma_send_offload_11k_params(WMA_HANDLE handle,
 	 */
 	if (params->offload_11k_bitmask &&
 	    !params->neighbor_report_params.ssid.length) {
-		WMA_LOGD("%s: SSID Len 0", __func__);
+		wma_debug("SSID Len 0");
 		return QDF_STATUS_E_INVAL;
 	}
 
@@ -1944,7 +1941,7 @@ QDF_STATUS wma_process_roaming_config(tp_wma_handle wma_handle,
 				break;
 			}
 		} else {
-			WMA_LOGD("MAWC roaming not supported by firmware");
+			wma_debug("MAWC roaming not supported by firmware");
 		}
 		qdf_status = wma_roam_scan_filter(wma_handle, roam_req);
 		if (qdf_status != QDF_STATUS_SUCCESS) {
@@ -2002,12 +1999,12 @@ QDF_STATUS wma_process_roaming_config(tp_wma_handle wma_handle,
 		 * should go through to the firmware and receive HO_FAIL
 		 * and clean up.
 		 */
-		if (wma_is_roam_synch_in_progress(wma_handle,
-				roam_req->sessionId) &&
-				roam_req->reason ==
-				REASON_ROAM_STOP_ALL) {
-				WMA_LOGD("Dont send RSO stop during roam sync");
-				break;
+		if (MLME_IS_ROAM_SYNCH_IN_PROGRESS(wma_handle->psoc,
+						   roam_req->sessionId) &&
+		    roam_req->reason == REASON_ROAM_STOP_ALL) {
+			wma_info("vdev_id:%d : Drop RSO stop during roam sync",
+				 roam_req->sessionId);
+			break;
 		}
 
 		/*
@@ -2308,14 +2305,6 @@ void wma_process_roam_synch_fail(WMA_HANDLE handle,
 	wlan_roam_debug_log(synch_fail->session_id,
 			    DEBUG_ROAM_SYNCH_FAIL,
 			    DEBUG_INVALID_PEER_ID, NULL, NULL, 0, 0);
-
-	/* Hand Off Failure could happen as an exception, when a roam synch
-	 * indication is posted to Host, but a roam synch complete is not
-	 * posted to the firmware.So, clear the roam synch in progress
-	 * flag before disconnecting the session through this event.
-	 */
-	wma_handle->interfaces[synch_fail->session_id].roam_synch_in_progress =
-		false;
 }
 
 /**
@@ -2505,10 +2494,10 @@ static int wma_fill_roam_synch_buffer(tp_wma_handle wma,
 	iface = &wma->interfaces[synch_event->vdev_id];
 	WMI_MAC_ADDR_TO_CHAR_ARRAY(&synch_event->bssid,
 				   roam_synch_ind_ptr->bssid.bytes);
-	WMA_LOGD("%s: roamedVdevId %d authStatus %d roamReason %d rssi %d isBeacon %d",
-		__func__, roam_synch_ind_ptr->roamed_vdev_id,
-		roam_synch_ind_ptr->authStatus, roam_synch_ind_ptr->roamReason,
-		roam_synch_ind_ptr->rssi, roam_synch_ind_ptr->isBeacon);
+	wma_debug("roamedVdevId %d authStatus %d roamReason %d rssi %d isBeacon %d",
+		 roam_synch_ind_ptr->roamed_vdev_id,
+		 roam_synch_ind_ptr->authStatus, roam_synch_ind_ptr->roamReason,
+		 roam_synch_ind_ptr->rssi, roam_synch_ind_ptr->isBeacon);
 
 	if (!QDF_IS_STATUS_SUCCESS(
 		wma->csr_roam_synch_cb(wma->mac_context, roam_synch_ind_ptr,
@@ -2551,10 +2540,14 @@ static int wma_fill_roam_synch_buffer(tp_wma_handle wma,
 	} else {
 		wma_fill_data_synch_event(wma, roam_synch_ind_ptr, param_buf);
 	}
-
 	chan = param_buf->chan;
-	if (chan)
+	if (chan) {
 		roam_synch_ind_ptr->chan_freq = chan->mhz;
+		roam_synch_ind_ptr->phy_mode =
+			wma_fw_to_host_phymode(WMI_GET_CHANNEL_MODE(chan));
+	} else {
+		roam_synch_ind_ptr->phy_mode = WLAN_PHYMODE_AUTO;
+	}
 
 	key = param_buf->key;
 	key_ft = param_buf->key_ext;
@@ -2579,14 +2572,14 @@ static int wma_fill_roam_synch_buffer(tp_wma_handle wma,
 		kck_len = KCK_192BIT_KEY_LEN;
 		kek_len = KEK_256BIT_KEY_LEN;
 
-		roam_synch_ind_ptr->kek_len = kek_len;
-		qdf_mem_copy(roam_synch_ind_ptr->kek,
-			     key_ft->key_buffer, kek_len);
-
 		roam_synch_ind_ptr->kck_len = kck_len;
 		qdf_mem_copy(roam_synch_ind_ptr->kck,
-			     (key_ft->key_buffer + kek_len),
-			     kck_len);
+			     key_ft->key_buffer, kck_len);
+
+		roam_synch_ind_ptr->kek_len = kek_len;
+		qdf_mem_copy(roam_synch_ind_ptr->kek,
+			     (key_ft->key_buffer + kck_len),
+			     kek_len);
 
 		qdf_mem_copy(roam_synch_ind_ptr->replay_ctr,
 			     (key_ft->key_buffer + kek_len + kck_len),
@@ -2599,7 +2592,7 @@ static int wma_fill_roam_synch_buffer(tp_wma_handle wma,
 		    param_buf->wmi_pdev_set_hw_mode_response_vdev_mac_mapping,
 		    &roam_synch_ind_ptr->hw_mode_trans_ind);
 	else
-		WMA_LOGD(FL("hw_mode transition fixed param is NULL"));
+		wma_debug("hw_mode transition fixed param is NULL");
 
 	fils_info = param_buf->roam_fils_synch_info;
 	if (fils_info) {
@@ -2629,7 +2622,7 @@ static int wma_fill_roam_synch_buffer(tp_wma_handle wma,
 		roam_synch_ind_ptr->next_erp_seq_num =
 				fils_info->next_erp_seq_num;
 
-		WMA_LOGD("Update ERP Seq Num %d, Next ERP Seq Num %d",
+		wma_debug("Update ERP Seq Num %d, Next ERP Seq Num %d",
 			 roam_synch_ind_ptr->update_erp_next_seq_num,
 			 roam_synch_ind_ptr->next_erp_seq_num);
 	}
@@ -2772,7 +2765,7 @@ wma_roam_update_vdev(tp_wma_handle wma,
 
 	wma_delete_sta(wma, del_sta_params);
 	wma_delete_bss(wma, vdev_id);
-	wma_add_bss_peer_sta(vdev_id, roam_synch_ind_ptr->bssid.bytes, true);
+	wma_add_bss_peer_sta(vdev_id, roam_synch_ind_ptr->bssid.bytes);
 	/* Update new peer's uc cipher */
 	wma_update_roamed_peer_unicast_cipher(wma, uc_cipher, cipher_cap,
 					      roam_synch_ind_ptr->bssid.bytes);
@@ -2811,7 +2804,7 @@ static void wma_update_phymode_on_roam(tp_wma_handle wma, uint8_t *bssid,
 	/* update new phymode to peer */
 	wma_objmgr_set_peer_mlme_phymode(wma, bssid, bss_phymode);
 
-	WMA_LOGD("LFR3: new phymode %d", bss_phymode);
+	wma_debug("LFR3: new phymode %d", bss_phymode);
 }
 
 /**
@@ -2853,7 +2846,7 @@ int wma_mlme_roam_synch_event_handler_cb(void *handle, uint8_t *event,
 	A_UINT32 reassoc_rsp_len;
 	A_UINT32 reassoc_req_len;
 
-	WMA_LOGD("LFR3: Received WMA_ROAM_OFFLOAD_SYNCH_IND");
+	wma_debug("LFR3: Received WMA_ROAM_OFFLOAD_SYNCH_IND");
 	if (!event) {
 		WMA_LOGE("%s: event param null", __func__);
 		goto cleanup_label;
@@ -2891,7 +2884,7 @@ int wma_mlme_roam_synch_event_handler_cb(void *handle, uint8_t *event,
 	    param_buf->num_reassoc_req_frame ||
 	    synch_event->reassoc_rsp_len >
 	    param_buf->num_reassoc_rsp_frame) {
-		WMA_LOGD("Invalid synch payload: LEN bcn:%d, req:%d, rsp:%d",
+		wma_debug("Invalid synch payload: LEN bcn:%d, req:%d, rsp:%d",
 			synch_event->bcn_probe_rsp_len,
 			synch_event->reassoc_req_len,
 			synch_event->reassoc_rsp_len);
@@ -2906,9 +2899,9 @@ int wma_mlme_roam_synch_event_handler_cb(void *handle, uint8_t *event,
 		synch_event->vdev_id, QDF_TRACE_DEFAULT_PDEV_ID,
 		QDF_PROTO_TYPE_EVENT, QDF_ROAM_SYNCH));
 
-	if (wma_is_roam_synch_in_progress(wma, synch_event->vdev_id)) {
+	if (MLME_IS_ROAM_SYNCH_IN_PROGRESS(wma->psoc, synch_event->vdev_id)) {
 		WMA_LOGE("%s: Ignoring RSI since one is already in progress",
-				__func__);
+			 __func__);
 		goto cleanup_label;
 	}
 
@@ -2917,7 +2910,7 @@ int wma_mlme_roam_synch_event_handler_cb(void *handle, uint8_t *event,
 	 * Maximum number during the addition would be (3 * MAX_LIMIT(UINT32) +
 	 * few fixed fields).
 	 */
-	WMA_LOGD("synch payload: LEN bcn:%d, req:%d, rsp:%d",
+	wma_debug("synch payload: LEN bcn:%d, req:%d, rsp:%d",
 			synch_event->bcn_probe_rsp_len,
 			synch_event->reassoc_req_len,
 			synch_event->reassoc_rsp_len);
@@ -2941,10 +2934,10 @@ int wma_mlme_roam_synch_event_handler_cb(void *handle, uint8_t *event,
 		roam_synch_data_len = bcn_probe_rsp_len + reassoc_rsp_len +
 			reassoc_req_len + sizeof(struct roam_offload_synch_ind);
 
-		WMA_LOGD("Updated synch payload: LEN bcn:%d, req:%d, rsp:%d",
-			bcn_probe_rsp_len,
-			reassoc_req_len,
-			reassoc_rsp_len);
+		wma_debug("Updated synch payload: LEN bcn:%d, req:%d, rsp:%d",
+			 bcn_probe_rsp_len,
+			 reassoc_req_len,
+			 reassoc_rsp_len);
 	} else {
 		bcn_probe_rsp_len = synch_event->bcn_probe_rsp_len;
 		reassoc_req_len = synch_event->reassoc_req_len;
@@ -2980,8 +2973,6 @@ int wma_mlme_roam_synch_event_handler_cb(void *handle, uint8_t *event,
 			       WIFI_POWER_EVENT_WAKELOCK_WOW);
 	qdf_wake_lock_timeout_acquire(&wma->roam_ho_wl,
 				      WMA_ROAM_HO_WAKE_LOCK_DURATION);
-
-	wma->interfaces[synch_event->vdev_id].roam_synch_in_progress = true;
 
 	roam_synch_ind_ptr = qdf_mem_malloc(roam_synch_data_len);
 	if (!roam_synch_ind_ptr) {
@@ -3045,8 +3036,8 @@ int wma_mlme_roam_synch_event_handler_cb(void *handle, uint8_t *event,
 			       bss_desc_ptr, SIR_ROAM_SYNCH_COMPLETE);
 	wma->interfaces[synch_event->vdev_id].roam_synch_delay =
 		qdf_get_system_timestamp() - roam_synch_received;
-	WMA_LOGD("LFR3: roam_synch_delay:%d",
-		wma->interfaces[synch_event->vdev_id].roam_synch_delay);
+	wma_debug("LFR3: roam_synch_delay:%d",
+		 wma->interfaces[synch_event->vdev_id].roam_synch_delay);
 	wma->csr_roam_synch_cb(wma->mac_context, roam_synch_ind_ptr,
 			       bss_desc_ptr, SIR_ROAM_SYNCH_NAPI_OFF);
 
@@ -3067,9 +3058,6 @@ cleanup_label:
 		qdf_mem_free(roam_synch_ind_ptr);
 	if (bss_desc_ptr)
 		qdf_mem_free(bss_desc_ptr);
-	if (wma && synch_event)
-		wma->interfaces[synch_event->vdev_id].roam_synch_in_progress =
-			false;
 
 	return status;
 }
@@ -3084,7 +3072,6 @@ int wma_roam_synch_frame_event_handler(void *handle, uint8_t *event,
 	struct wma_txrx_node *iface = NULL;
 	int status = -EINVAL;
 
-	WMA_LOGD("LFR3:Synch Frame event");
 	if (!event) {
 		WMA_LOGE("event param null");
 		return status;
@@ -3127,18 +3114,17 @@ int wma_roam_synch_frame_event_handler(void *handle, uint8_t *event,
 	vdev_id = synch_frame_event->vdev_id;
 	iface = &wma->interfaces[vdev_id];
 
-	if (wma_is_roam_synch_in_progress(wma, vdev_id)) {
+	if (MLME_IS_ROAM_SYNCH_IN_PROGRESS(wma->psoc, vdev_id)) {
 		WMA_LOGE("Ignoring this event as it is unexpected");
 		wma_free_roam_synch_frame_ind(iface);
 		return status;
 	}
-	WMA_LOGD("LFR3: Received ROAM_SYNCH_FRAME_EVENT");
 
-	WMA_LOGD("synch frame payload: LEN bcn:%d, req:%d, rsp:%d morefrag: %d",
-				synch_frame_event->bcn_probe_rsp_len,
-				synch_frame_event->reassoc_req_len,
-				synch_frame_event->reassoc_rsp_len,
-				synch_frame_event->more_frag);
+	wma_debug("LFR3: Roam synch frame payload: LEN bcn:%d, req:%d, rsp:%d morefrag: %d",
+		  synch_frame_event->bcn_probe_rsp_len,
+		  synch_frame_event->reassoc_req_len,
+		  synch_frame_event->reassoc_rsp_len,
+		  synch_frame_event->more_frag);
 
 	if (synch_frame_event->bcn_probe_rsp_len) {
 		iface->roam_synch_frame_ind.bcn_probe_rsp_len =
@@ -3437,7 +3423,6 @@ wma_get_trigger_detail_str(struct wmi_roam_trigger_info *roam_info, char *buf)
 	case WMI_ROAM_TRIGGER_REASON_PER:
 	case WMI_ROAM_TRIGGER_REASON_BMISS:
 	case WMI_ROAM_TRIGGER_REASON_HIGH_RSSI:
-	case WMI_ROAM_TRIGGER_REASON_PERIODIC:
 	case WMI_ROAM_TRIGGER_REASON_MAWC:
 	case WMI_ROAM_TRIGGER_REASON_DENSE:
 	case WMI_ROAM_TRIGGER_REASON_BACKGROUND:
@@ -3475,7 +3460,8 @@ wma_get_trigger_detail_str(struct wmi_roam_trigger_info *roam_info, char *buf)
 		buf_left -= buf_cons;
 		return;
 	case WMI_ROAM_TRIGGER_REASON_LOW_RSSI:
-		buf_cons = qdf_snprint(temp, buf_left, "Low_rssi_threshold: %d",
+	case WMI_ROAM_TRIGGER_REASON_PERIODIC:
+		buf_cons = qdf_snprint(temp, buf_left, "Cur_rssi_threshold: %d",
 				       roam_info->rssi_trig_data.threshold);
 		temp += buf_cons;
 		buf_left -= buf_cons;
@@ -3507,7 +3493,7 @@ wma_rso_print_trigger_info(struct wmi_roam_trigger_info *data, uint8_t vdev_id)
 
 	wma_get_trigger_detail_str(data, buf);
 	mlme_get_converted_timestamp(data->timestamp, time);
-	WMA_LOGI("%s [ROAM_TRIGGER]: VDEV[%d] %s", time, vdev_id, buf);
+	wma_info("%s [ROAM_TRIGGER]: VDEV[%d] %s", time, vdev_id, buf);
 
 	qdf_mem_free(buf);
 }
@@ -3529,18 +3515,18 @@ wma_log_roam_scan_candidates(struct wmi_roam_candidate_info *ap,
 	uint16_t i;
 	char time[TIME_STRING_LEN];
 
-	WMA_LOGD("%40s%40s", LINE_STR, LINE_STR);
-	WMA_LOGI("%13s %16s %8s %4s %4s %5s/%3s %3s/%3s %7s",
-		 "AP BSSID", "TSTAMP", "CH", "TY", "ETP", "RSSI",
-		 "SCR", "CU%", "SCR", "TOT_SCR");
-	WMA_LOGD("%40s%40s", LINE_STR, LINE_STR);
+	wma_nofl_info("%40s%40s", LINE_STR, LINE_STR);
+	wma_nofl_info("%13s %16s %8s %4s %4s %5s/%3s %3s/%3s %7s",
+		     "AP BSSID", "TSTAMP", "CH", "TY", "ETP", "RSSI",
+		     "SCR", "CU%", "SCR", "TOT_SCR");
+	wma_nofl_info("%40s%40s", LINE_STR, LINE_STR);
 
 	if (num_entries > MAX_ROAM_CANDIDATE_AP)
 		num_entries = MAX_ROAM_CANDIDATE_AP;
 
 	for (i = 0; i < num_entries; i++) {
 		mlme_get_converted_timestamp(ap->timestamp, time);
-		WMA_LOGI(QDF_MAC_ADDR_STR " %17s %4d %-4s %4d %3d/%-4d %2d/%-4d %5d",
+		wma_nofl_info(QDF_MAC_ADDR_STR " %17s %4d %-4s %4d %3d/%-4d %2d/%-4d %5d",
 			 QDF_MAC_ADDR_ARRAY(ap->bssid.bytes), time, ap->freq,
 			 ((ap->type == 0) ? "C_AP" :
 			  ((ap->type == 2) ? "R_AP" : "P_AP")),
@@ -3601,13 +3587,14 @@ wma_rso_print_scan_info(struct wmi_roam_scan_data *scan, uint8_t vdev_id,
 		return;
 	}
 
-	if (WMI_ROAM_TRIGGER_REASON_LOW_RSSI == trigger)
+	if (WMI_ROAM_TRIGGER_REASON_LOW_RSSI == trigger ||
+	    WMI_ROAM_TRIGGER_REASON_PERIODIC == trigger)
 		qdf_snprint(buf1, ROAM_FAILURE_BUF_SIZE,
 			    "next_rssi_threshold: %d dBm",
 			    scan->next_rssi_threshold);
 
 	mlme_get_converted_timestamp(timestamp, time);
-	WMA_LOGI("%s [ROAM_SCAN]: VDEV[%d] Scan_type: %s %s %s",
+	wma_info("%s [ROAM_SCAN]: VDEV[%d] Scan_type: %s %s %s",
 		 time, vdev_id, (scan->type ? "FULL" : "PARTIAL"),
 		 buf1, buf);
 	wma_log_roam_scan_candidates(scan->ap, scan->num_ap);
@@ -3641,7 +3628,7 @@ wma_rso_print_roam_result(struct wmi_roam_result *res,
 			    mlme_get_roam_fail_reason_str(res->fail_reason));
 
 	mlme_get_converted_timestamp(res->timestamp, time);
-	WMA_LOGI("%s [ROAM_RESULT]: VDEV[%d] %s %s",
+	wma_info("%s [ROAM_RESULT]: VDEV[%d] %s %s",
 		 time, vdev_id, (res->status) ? "SUCCESS" : "FAILED", buf);
 
 	qdf_mem_free(buf);
@@ -3693,16 +3680,16 @@ wma_rso_print_11kv_info(struct wmi_neighbor_report_data *neigh_rpt,
 	}
 
 	mlme_get_converted_timestamp(neigh_rpt->req_time, time);
-	WMA_LOGI("%s [%s] VDEV[%d]", time,
+	wma_info("%s [%s] VDEV[%d]", time,
 		 (type == 1) ? "BTM_QUERY" : "NEIGH_RPT_REQ", vdev_id);
 
 	if (neigh_rpt->resp_time) {
 		mlme_get_converted_timestamp(neigh_rpt->resp_time, time1);
-		WMA_LOGI("%s [%s] VDEV[%d] %s", time1,
+		wma_info("%s [%s] VDEV[%d] %s", time1,
 			 (type == 1) ? "BTM_REQ" : "NEIGH_RPT_RSP", vdev_id,
 			 (num_ch > 0) ? buf : "NO Ch update");
 	} else {
-		WMA_LOGI("%s No response received from AP",
+		wma_info("%s No response received from AP",
 			 (type == 1) ? "BTM" : "NEIGH_RPT");
 	}
 	qdf_mem_free(buf);
@@ -3955,7 +3942,7 @@ QDF_STATUS wma_roam_scan_fill_self_caps(tp_wma_handle wma_handle,
 	if (mac->mlme_cfg->wmm_params.qos_enabled)
 		selfCaps.qos = 1;
 
-	if (mac->mlme_cfg->scoring.apsd_enabled)
+	if (mac->mlme_cfg->roam_scoring.apsd_enabled)
 		selfCaps.apsd = 1;
 
 	selfCaps.rrm = mac->rrm.rrmConfig.rrm_enabled;
@@ -4099,12 +4086,12 @@ int wma_rssi_breached_event_handler(void *handle,
 		rssi.curr_rssi = event->rssi + WMA_TGT_NOISE_FLOOR_DBM;
 	WMI_MAC_ADDR_TO_CHAR_ARRAY(&event->bssid, rssi.curr_bssid.bytes);
 
-	WMA_LOGD("%s: req_id: %u vdev_id: %d curr_rssi: %d", __func__,
+	wma_debug("req_id: %u vdev_id: %d curr_rssi: %d",
 		 rssi.request_id, rssi.session_id, rssi.curr_rssi);
-	WMA_LOGI("%s: curr_bssid: %pM", __func__, rssi.curr_bssid.bytes);
+	wma_debug("curr_bssid: %pM", rssi.curr_bssid.bytes);
 
 	mac->sme.rssi_threshold_breached_cb(mac->hdd_handle, &rssi);
-	WMA_LOGD("%s: Invoke HDD rssi breached callback", __func__);
+	wma_debug("Invoke HDD rssi breached callback");
 	return 0;
 }
 #endif /* FEATURE_RSSI_MONITOR */
@@ -4168,21 +4155,18 @@ void wma_process_roam_synch_complete(WMA_HANDLE handle, uint8_t vdev_id)
 		return;
 	}
 
-	if (!wma_is_vdev_valid(vdev_id)) {
-		WMA_LOGE("%s: Invalid vdev id:%d", __func__, vdev_id);
+	if (!wma_is_vdev_valid(vdev_id))
 		return;
-	}
 
 	if (wmi_unified_roam_synch_complete_cmd(wma_handle->wmi_handle,
-				 vdev_id)) {
+						vdev_id))
 		return;
-	}
 
 	DPTRACE(qdf_dp_trace_record_event(QDF_DP_TRACE_EVENT_RECORD,
 		vdev_id, QDF_TRACE_DEFAULT_PDEV_ID,
 		QDF_PROTO_TYPE_EVENT, QDF_ROAM_COMPLETE));
 
-	WMA_LOGI("LFR3: Posting WMA_ROAM_OFFLOAD_SYNCH_CNF");
+	wma_info("LFR3: vdev[%d] Sent ROAM_SYNCH_COMPLETE", vdev_id);
 	wlan_roam_debug_log(vdev_id, DEBUG_ROAM_SYNCH_CNF,
 			    DEBUG_INVALID_PEER_ID, NULL, NULL, 0, 0);
 
@@ -4193,13 +4177,23 @@ QDF_STATUS wma_pre_chan_switch_setup(uint8_t vdev_id)
 {
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	tp_wma_handle wma = cds_get_context(QDF_MODULE_ID_WMA);
-	struct wma_txrx_node *intr = &wma->interfaces[vdev_id];
+	struct wma_txrx_node *intr;
 	uint16_t beacon_interval_ori;
 	bool restart;
 	uint16_t reduced_beacon_interval;
 	struct vdev_mlme_obj *mlme_obj;
-	struct wlan_objmgr_vdev *vdev = intr->vdev;
+	struct wlan_objmgr_vdev *vdev;
 
+	if (!wma) {
+		pe_err("wma is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+	intr = &wma->interfaces[vdev_id];
+	if (!intr) {
+		pe_err("wma txrx node is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+	vdev = intr->vdev;
 	mlme_obj = wlan_vdev_mlme_get_cmpt_obj(vdev);
 	if (!mlme_obj) {
 		pe_err("vdev component object is NULL");
@@ -4225,8 +4219,8 @@ QDF_STATUS wma_pre_chan_switch_setup(uint8_t vdev_id)
 		 * sent with increased frequency.
 		 */
 
-		WMA_LOGD("%s: Changing beacon interval to %d",
-			 __func__, reduced_beacon_interval);
+		wma_debug("Changing beacon interval to %d",
+			 reduced_beacon_interval);
 
 		/* Add a timer to reset the beacon interval back*/
 		beacon_interval_ori = mlme_obj->proto.generic.beacon_interval;
@@ -4237,8 +4231,7 @@ QDF_STATUS wma_pre_chan_switch_setup(uint8_t vdev_id)
 			beacon_interval_ori,
 			RESET_BEACON_INTERVAL_TIMEOUT)) {
 
-			WMA_LOGD("%s: Failed to fill beacon interval reset req",
-				 __func__);
+			wma_debug("Failed to fill beacon interval reset req");
 		}
 	}
 
@@ -4250,11 +4243,20 @@ QDF_STATUS wma_pre_chan_switch_setup(uint8_t vdev_id)
 QDF_STATUS wma_post_chan_switch_setup(uint8_t vdev_id)
 {
 	tp_wma_handle wma = cds_get_context(QDF_MODULE_ID_WMA);
-	struct wma_txrx_node *intr = &wma->interfaces[vdev_id];
+	struct wma_txrx_node *intr;
 	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
 	struct wlan_channel *des_chan;
 	cdp_config_param_type val;
 
+	if (!wma) {
+		pe_err("wma is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+	intr = &wma->interfaces[vdev_id];
+	if (!intr) {
+		pe_err("wma txrx node is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
 	/*
 	 * Record monitor mode channel here in case HW
 	 * indicate RX PPDU TLV with invalid channel number.
@@ -4288,7 +4290,7 @@ static QDF_STATUS wma_plm_start(tp_wma_handle wma,
 {
 	QDF_STATUS status;
 
-	WMA_LOGD("PLM Start");
+	wma_debug("PLM Start");
 
 	status = wmi_unified_plm_start_cmd(wma->wmi_handle, params);
 	if (QDF_IS_STATUS_ERROR(status))
@@ -4296,7 +4298,7 @@ static QDF_STATUS wma_plm_start(tp_wma_handle wma,
 
 	wma->interfaces[params->vdev_id].plm_in_progress = true;
 
-	WMA_LOGD("Plm start request sent successfully for vdev %d",
+	wma_debug("Plm start request sent successfully for vdev %d",
 		 params->vdev_id);
 
 	return status;
@@ -4321,7 +4323,7 @@ static QDF_STATUS wma_plm_stop(tp_wma_handle wma,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	WMA_LOGD("PLM Stop");
+	wma_debug("PLM Stop");
 
 	status = wmi_unified_plm_stop_cmd(wma->wmi_handle, params);
 	if (QDF_IS_STATUS_ERROR(status))
@@ -4329,7 +4331,7 @@ static QDF_STATUS wma_plm_stop(tp_wma_handle wma,
 
 	wma->interfaces[params->vdev_id].plm_in_progress = false;
 
-	WMA_LOGD("Plm stop request sent successfully for vdev %d",
+	wma_debug("Plm stop request sent successfully for vdev %d",
 		 params->vdev_id);
 
 	return status;
@@ -4560,8 +4562,8 @@ int wma_extscan_start_stop_event_handler(void *handle,
 		return -EINVAL;
 	}
 	mac->sme.ext_scan_ind_cb(mac->hdd_handle, event_type, extscan_ind);
-	WMA_LOGD("%s: sending event to umac for requestid %u with status %d",
-		__func__, extscan_ind->request_id, extscan_ind->status);
+	wma_debug("sending event to umac for requestid %u with status %d",
+		 extscan_ind->request_id, extscan_ind->status);
 	qdf_mem_free(extscan_ind);
 	return 0;
 }
@@ -4614,8 +4616,7 @@ int wma_extscan_operations_event_handler(void *handle,
 		oprn_ind->status = 0;
 		goto exit_handler;
 	case WMI_EXTSCAN_CYCLE_STARTED_EVENT:
-		WMA_LOGD("%s: received WMI_EXTSCAN_CYCLE_STARTED_EVENT",
-			 __func__);
+		wma_debug("received WMI_EXTSCAN_CYCLE_STARTED_EVENT");
 
 		if (oprn_event->num_buckets > param_buf->num_bucket_id) {
 			WMA_LOGE("FW mesg num_buk %d more than TLV hdr %d",
@@ -4636,13 +4637,12 @@ int wma_extscan_operations_event_handler(void *handle,
 		for (cnt = 0; cnt < oprn_event->num_buckets; cnt++)
 			oprn_ind->buckets_scanned |=
 				(1 << param_buf->bucket_id[cnt]);
-		WMA_LOGD(FL("num_buckets %u request_id %u buckets_scanned %u"),
+		wma_debug("num_buckets %u request_id %u buckets_scanned %u",
 			oprn_event->num_buckets, oprn_ind->requestId,
 			oprn_ind->buckets_scanned);
 		break;
 	case WMI_EXTSCAN_CYCLE_COMPLETED_EVENT:
-		WMA_LOGD("%s: received WMI_EXTSCAN_CYCLE_COMPLETED_EVENT",
-			 __func__);
+		wma_debug("received WMI_EXTSCAN_CYCLE_COMPLETED_EVENT");
 		qdf_wake_lock_release(&wma->extscan_wake_lock,
 				      WIFI_POWER_EVENT_WAKELOCK_EXT_SCAN);
 		oprn_ind->scanEventType = WIFI_EXTSCAN_CYCLE_COMPLETED_EVENT;
@@ -4651,20 +4651,17 @@ int wma_extscan_operations_event_handler(void *handle,
 		oprn_ind->buckets_scanned = 0;
 		break;
 	case WMI_EXTSCAN_BUCKET_STARTED_EVENT:
-		WMA_LOGD("%s: received WMI_EXTSCAN_BUCKET_STARTED_EVENT",
-			__func__);
+		wma_debug("received WMI_EXTSCAN_BUCKET_STARTED_EVENT");
 		oprn_ind->scanEventType = WIFI_EXTSCAN_BUCKET_STARTED_EVENT;
 		oprn_ind->status = 0;
 		goto exit_handler;
 	case WMI_EXTSCAN_THRESHOLD_NUM_SCANS:
-		WMA_LOGD("%s: received WMI_EXTSCAN_THRESHOLD_NUM_SCANS",
-			__func__);
+		wma_debug("received WMI_EXTSCAN_THRESHOLD_NUM_SCANS");
 		oprn_ind->scanEventType = WIFI_EXTSCAN_THRESHOLD_NUM_SCANS;
 		oprn_ind->status = 0;
 		break;
 	case WMI_EXTSCAN_THRESHOLD_PERCENT:
-		WMA_LOGD("%s: received WMI_EXTSCAN_THRESHOLD_PERCENT",
-			__func__);
+		wma_debug("received WMI_EXTSCAN_THRESHOLD_PERCENT");
 		oprn_ind->scanEventType = WIFI_EXTSCAN_THRESHOLD_PERCENT;
 		oprn_ind->status = 0;
 		break;
@@ -4676,7 +4673,7 @@ int wma_extscan_operations_event_handler(void *handle,
 	}
 	mac->sme.ext_scan_ind_cb(mac->hdd_handle,
 				eSIR_EXTSCAN_SCAN_PROGRESS_EVENT_IND, oprn_ind);
-	WMA_LOGI("%s: sending scan progress event to hdd", __func__);
+	wma_debug("sending scan progress event to hdd");
 exit_handler:
 	qdf_mem_free(oprn_ind);
 	return 0;
@@ -4726,7 +4723,7 @@ int wma_extscan_table_usage_event_handler(void *handle,
 	mac->sme.ext_scan_ind_cb(mac->hdd_handle,
 				eSIR_EXTSCAN_SCAN_RES_AVAILABLE_IND,
 				tbl_usg_ind);
-	WMA_LOGI("%s: sending scan_res available event to hdd", __func__);
+	wma_debug("sending scan_res available event to hdd");
 	qdf_mem_free(tbl_usg_ind);
 	return 0;
 }
@@ -4807,26 +4804,26 @@ int wma_extscan_capabilities_event_handler(void *handle,
 				event->num_roam_bssid_blacklist;
 	dest_capab->status = 0;
 
-	WMA_LOGD("%s: request_id: %u status: %d",
-		__func__, dest_capab->requestId, dest_capab->status);
+	wma_debug("request_id: %u status: %d",
+		 dest_capab->requestId, dest_capab->status);
 
-	WMA_LOGD("%s: Capabilities: max_scan_buckets: %d, max_hotlist_bssids: %d, max_scan_cache_size: %d, max_ap_cache_per_scan: %d",
-		 __func__, dest_capab->max_scan_buckets,
-		dest_capab->max_hotlist_bssids, dest_capab->max_scan_cache_size,
-		dest_capab->max_ap_cache_per_scan);
-	WMA_LOGD("%s: max_scan_reporting_threshold: %d, max_rssi_sample_size: %d, max_bssid_history_entries: %d, max_significant_wifi_change_aps: %d",
-		__func__, dest_capab->max_scan_reporting_threshold,
-		dest_capab->max_rssi_sample_size,
-		dest_capab->max_bssid_history_entries,
-		dest_capab->max_significant_wifi_change_aps);
+	wma_debug("Capabilities: max_scan_buckets: %d, max_hotlist_bssids: %d, max_scan_cache_size: %d, max_ap_cache_per_scan: %d",
+		 dest_capab->max_scan_buckets,
+		 dest_capab->max_hotlist_bssids, dest_capab->max_scan_cache_size,
+		 dest_capab->max_ap_cache_per_scan);
+	wma_debug("max_scan_reporting_threshold: %d, max_rssi_sample_size: %d, max_bssid_history_entries: %d, max_significant_wifi_change_aps: %d",
+		 dest_capab->max_scan_reporting_threshold,
+		 dest_capab->max_rssi_sample_size,
+		 dest_capab->max_bssid_history_entries,
+		 dest_capab->max_significant_wifi_change_aps);
 
-	WMA_LOGD("%s: Capabilities: max_hotlist_ssids: %d, max_number_epno_networks: %d, max_number_epno_networks_by_ssid: %d",
-		 __func__, dest_capab->max_hotlist_ssids,
-		dest_capab->max_number_epno_networks,
-		dest_capab->max_number_epno_networks_by_ssid);
-	WMA_LOGD("%s: max_number_of_white_listed_ssid: %d, max_number_of_black_listed_bssid: %d",
-		__func__, dest_capab->max_number_of_white_listed_ssid,
-		dest_capab->max_number_of_black_listed_bssid);
+	wma_debug("Capabilities: max_hotlist_ssids: %d, max_number_epno_networks: %d, max_number_epno_networks_by_ssid: %d",
+		 dest_capab->max_hotlist_ssids,
+		 dest_capab->max_number_epno_networks,
+		 dest_capab->max_number_epno_networks_by_ssid);
+	wma_debug("max_number_of_white_listed_ssid: %d, max_number_of_black_listed_bssid: %d",
+		 dest_capab->max_number_of_white_listed_ssid,
+		 dest_capab->max_number_of_black_listed_bssid);
 
 	mac->sme.ext_scan_ind_cb(mac->hdd_handle,
 				eSIR_EXTSCAN_GET_CAPABILITIES_IND, dest_capab);
@@ -4915,8 +4912,7 @@ int wma_extscan_hotlist_match_event_handler(void *handle,
 	else
 		dest_hotlist->moreData = 0;
 
-	WMA_LOGD("%s: Hotlist match: requestId: %u,"
-		 "numOfAps: %d", __func__,
+	wma_debug("Hotlist match: requestId: %u numOfAps: %d",
 		 dest_hotlist->requestId, dest_hotlist->numOfAps);
 
 	/*
@@ -4949,7 +4945,7 @@ int wma_extscan_hotlist_match_event_handler(void *handle,
 	dest_hotlist->ap_found = ap_found;
 	mac->sme.ext_scan_ind_cb(mac->hdd_handle,
 				eSIR_EXTSCAN_HOTLIST_MATCH_IND, dest_hotlist);
-	WMA_LOGI("%s: sending hotlist match event to hdd", __func__);
+	wma_debug("sending hotlist match event to hdd");
 	qdf_mem_free(dest_hotlist);
 	return 0;
 }
@@ -5094,11 +5090,10 @@ static int wma_group_num_bss_to_scan_id(const u_int8_t *cmd_param_info,
 		return -EINVAL;
 	}
 
-	WMA_LOGD("%s: num_scan_ids:%d", __func__,
+	wma_debug("num_scan_ids:%d",
 			t_cached_result->num_scan_ids);
 	for (i = 0; i < t_cached_result->num_scan_ids; i++) {
-		WMA_LOGD("%s: num_results:%d", __func__,
-			t_scan_id_grp->num_results);
+		wma_debug("num_results:%d", t_scan_id_grp->num_results);
 		t_scan_id_grp->ap = qdf_mem_malloc(t_scan_id_grp->num_results *
 						sizeof(*ap));
 		if (!t_scan_id_grp->ap)
@@ -5126,8 +5121,8 @@ static int wma_group_num_bss_to_scan_id(const u_int8_t *cmd_param_info,
 
 			if (src_hotlist->ssid.ssid_len >
 			    WLAN_SSID_MAX_LEN) {
-				WMA_LOGD("%s Invalid SSID len %d, truncating",
-					 __func__, src_hotlist->ssid.ssid_len);
+				wma_debug("Invalid SSID len %d, truncating",
+					 src_hotlist->ssid.ssid_len);
 				src_hotlist->ssid.ssid_len =
 						WLAN_SSID_MAX_LEN;
 			}
@@ -5187,13 +5182,13 @@ int wma_extscan_cached_results_event_handler(void *handle,
 	event = param_buf->fixed_param;
 	src_hotlist = param_buf->bssid_list;
 	src_rssi = param_buf->rssi_list;
-	WMA_LOGI("Total_entries: %u first_entry_index: %u num_entries_in_page: %d",
-			event->total_entries,
-			event->first_entry_index,
-			event->num_entries_in_page);
+	wma_debug("Total_entries: %u first_entry_index: %u num_entries_in_page: %d",
+		 event->total_entries,
+		 event->first_entry_index,
+		 event->num_entries_in_page);
 
 	if (!src_hotlist || !src_rssi || !event->num_entries_in_page) {
-		WMA_LOGW("%s: Cached results empty, send 0 results", __func__);
+		wma_warn("Cached results empty, send 0 results");
 		goto noresults;
 	}
 
@@ -5215,7 +5210,7 @@ int wma_extscan_cached_results_event_handler(void *handle,
 			break;
 		} else {
 			total_len += src_hotlist[i].ie_length;
-			WMA_LOGD("total len IE: %d", total_len);
+			wma_debug("total len IE: %d", total_len);
 		}
 
 		if (src_hotlist[i].number_rssi_samples >
@@ -5225,7 +5220,7 @@ int wma_extscan_cached_results_event_handler(void *handle,
 		} else {
 			total_len += (src_hotlist[i].number_rssi_samples *
 					sizeof(*src_rssi));
-			WMA_LOGD("total len RSSI samples: %d", total_len);
+			wma_debug("total len RSSI samples: %d", total_len);
 		}
 	}
 	if (excess_data) {
@@ -5249,7 +5244,7 @@ int wma_extscan_cached_results_event_handler(void *handle,
 	dest_cachelist->more_data = moredata;
 
 	scan_ids_cnt = wma_extscan_find_unique_scan_ids(cmd_param_info);
-	WMA_LOGD("%s: scan_ids_cnt %d", __func__, scan_ids_cnt);
+	wma_debug("scan_ids_cnt %d", scan_ids_cnt);
 	dest_cachelist->num_scan_ids = scan_ids_cnt;
 
 	buf_len = sizeof(*dest_result) * scan_ids_cnt;
@@ -5268,7 +5263,7 @@ int wma_extscan_cached_results_event_handler(void *handle,
 				eSIR_EXTSCAN_CACHED_RESULTS_IND,
 				dest_cachelist);
 	else
-		WMA_LOGD("wma_group_num_bss_to_scan_id failed, not calling callback");
+		wma_debug("wma_group_num_bss_to_scan_id failed, not calling callback");
 
 	dest_result = dest_cachelist->result;
 	for (i = 0; i < dest_cachelist->num_scan_ids; i++) {
@@ -5429,7 +5424,7 @@ int wma_extscan_change_results_event_handler(void *handle,
 	mac->sme.ext_scan_ind_cb(mac->hdd_handle,
 			eSIR_EXTSCAN_SIGNIFICANT_WIFI_CHANGE_RESULTS_IND,
 			dest_chglist);
-	WMA_LOGI("%s: sending change monitor results", __func__);
+	wma_debug("sending change monitor results");
 	qdf_mem_free(dest_chglist);
 	return 0;
 }
@@ -5503,8 +5498,8 @@ int wma_passpoint_match_event_handler(void *handle,
 	}
 
 	if (event->ssid.ssid_len > WLAN_SSID_MAX_LEN) {
-		WMA_LOGD("%s: Invalid ssid len %d, truncating",
-			 __func__, event->ssid.ssid_len);
+		wma_debug("Invalid ssid len %d, truncating",
+			 event->ssid.ssid_len);
 		event->ssid.ssid_len = WLAN_SSID_MAX_LEN;
 	}
 
@@ -5517,7 +5512,7 @@ int wma_passpoint_match_event_handler(void *handle,
 	dest_match->request_id = 0;
 	dest_match->id = event->id;
 	dest_match->anqp_len = event->anqp_length;
-	WMA_LOGI("%s: passpoint match: id: %u anqp length %u", __func__,
+	wma_info("passpoint match: id: %u anqp length %u",
 		 dest_match->id, dest_match->anqp_len);
 
 	dest_ap->channel = event->channel_mhz;
@@ -5541,7 +5536,7 @@ int wma_passpoint_match_event_handler(void *handle,
 	mac->sme.ext_scan_ind_cb(mac->hdd_handle,
 				eSIR_PASSPOINT_NETWORK_FOUND_IND,
 				dest_match);
-	WMA_LOGI("%s: sending passpoint match event to hdd", __func__);
+	wma_debug("sending passpoint match event to hdd");
 	qdf_mem_free(dest_match);
 	return 0;
 }
@@ -5593,7 +5588,7 @@ QDF_STATUS wma_stop_extscan(tp_wma_handle wma,
 		return status;
 
 	wma->interfaces[params->vdev_id].extscan_in_progress = false;
-	WMA_LOGD("Extscan stop request sent successfully for vdev %d",
+	wma_debug("Extscan stop request sent successfully for vdev %d",
 		 params->vdev_id);
 
 	return status;
@@ -5886,7 +5881,7 @@ static int wma_handle_hw_mode_transition(tp_wma_handle wma,
 		    param->wmi_pdev_set_hw_mode_response_vdev_mac_mapping,
 		    hw_mode_trans_ind);
 
-		WMA_LOGI(FL("Update HW mode"));
+		wma_debug("Update HW mode");
 		sme_msg.type = eWNI_SME_HW_MODE_TRANS_IND;
 		sme_msg.bodyptr = hw_mode_trans_ind;
 
@@ -5896,7 +5891,7 @@ static int wma_handle_hw_mode_transition(tp_wma_handle wma,
 		if (QDF_IS_STATUS_ERROR(status))
 			qdf_mem_free(hw_mode_trans_ind);
 	} else {
-		WMA_LOGD(FL("hw_mode transition fixed param is NULL"));
+		wma_debug("hw_mode transition fixed param is NULL");
 	}
 
 	return 0;
@@ -5926,7 +5921,7 @@ static void wma_invalid_roam_reason_handler(tp_wma_handle wma_handle,
 		wma_handle->interfaces[vdev_id].roaming_in_progress = false;
 		op_code = SIR_ROAMING_ABORT;
 	} else {
-		WMA_LOGD(FL("Invalid notif %d"), notif);
+		wma_debug("Invalid notif %d", notif);
 		return;
 	}
 
@@ -5935,11 +5930,12 @@ static void wma_invalid_roam_reason_handler(tp_wma_handle wma_handle,
 		return;
 
 	roam_synch_data->roamed_vdev_id = vdev_id;
-	wma_handle->pe_roam_synch_cb(wma_handle->mac_context, roam_synch_data,
-				     NULL, op_code);
+	if (notif != WMI_ROAM_NOTIF_ROAM_START)
+		wma_handle->pe_roam_synch_cb(wma_handle->mac_context,
+					     roam_synch_data, NULL, op_code);
+
 	wma_handle->csr_roam_synch_cb(wma_handle->mac_context, roam_synch_data,
 				      NULL, op_code);
-
 	qdf_mem_free(roam_synch_data);
 }
 
@@ -5948,6 +5944,36 @@ void wma_handle_roam_sync_timeout(tp_wma_handle wma_handle,
 {
 	wma_invalid_roam_reason_handler(wma_handle, info->vdev_id,
 					WMI_ROAM_NOTIF_ROAM_ABORT);
+}
+
+static char *wma_get_roam_event_reason_string(uint32_t reason)
+{
+	switch (reason) {
+	case WMI_ROAM_REASON_INVALID:
+		return "Default";
+	case WMI_ROAM_REASON_BETTER_AP:
+		return "Better AP";
+	case WMI_ROAM_REASON_BMISS:
+		return "BMISS";
+	case WMI_ROAM_REASON_LOW_RSSI:
+		return "Low Rssi";
+	case WMI_ROAM_REASON_SUITABLE_AP:
+		return "Suitable AP";
+	case WMI_ROAM_REASON_HO_FAILED:
+		return "Hand-off Failed";
+	case WMI_ROAM_REASON_INVOKE_ROAM_FAIL:
+		return "Roam Invoke failed";
+	case WMI_ROAM_REASON_RSO_STATUS:
+		return "RSO status";
+	case WMI_ROAM_REASON_BTM:
+		return "BTM";
+	case WMI_ROAM_REASON_DEAUTH:
+		return "Deauth";
+	default:
+		return "Invalid";
+	}
+
+	return "Invalid";
 }
 
 /**
@@ -5979,10 +6005,6 @@ int wma_roam_event_callback(WMA_HANDLE handle, uint8_t *event_buf,
 	}
 
 	wmi_event = param_buf->fixed_param;
-	WMA_LOGD("%s: Reason %x, Notif %x for vdevid %x, rssi %d",
-		 __func__, wmi_event->reason, wmi_event->notif,
-		 wmi_event->vdev_id, wmi_event->rssi);
-
 	if (wmi_event->vdev_id >= wma_handle->max_bssid) {
 		WMA_LOGE("Invalid vdev id from firmware");
 		return -EINVAL;
@@ -5997,6 +6019,11 @@ int wma_roam_event_callback(WMA_HANDLE handle, uint8_t *event_buf,
 		wmi_event->vdev_id, QDF_TRACE_DEFAULT_PDEV_ID,
 		QDF_PROTO_TYPE_EVENT, QDF_ROAM_EVENTID));
 
+	wma_debug("FW_ROAM_EVT: Reason:%s[%d], Notif %x for vdevid %x, rssi %d",
+		  wma_get_roam_event_reason_string(wmi_event->reason),
+		  wmi_event->reason,
+		  wmi_event->notif, wmi_event->vdev_id, wmi_event->rssi);
+
 	switch (wmi_event->reason) {
 	case WMI_ROAM_REASON_BTM:
 		/*
@@ -6004,7 +6031,7 @@ int wma_roam_event_callback(WMA_HANDLE handle, uint8_t *event_buf,
 		 * find candidate AP after roam scan and BTM request from AP
 		 * has disassoc imminent bit set.
 		 */
-		WMA_LOGD("Kickout due to btm request");
+		wma_debug("Kickout due to btm request");
 		wma_sta_kickout_event(HOST_STA_KICKOUT_REASON_BTM,
 				      wmi_event->vdev_id, NULL);
 		wma_handle_btm_disassoc_imminent_msg(wma_handle,
@@ -6015,7 +6042,7 @@ int wma_roam_event_callback(WMA_HANDLE handle, uint8_t *event_buf,
 		 * WMI_ROAM_REASON_BMISS can get called in soft IRQ context, so
 		 * avoid using CSR/PE structure directly
 		 */
-		WMA_LOGD("Beacon Miss for vdevid %x", wmi_event->vdev_id);
+		wma_debug("Beacon Miss for vdevid %x", wmi_event->vdev_id);
 		wma_beacon_miss_handler(wma_handle, wmi_event->vdev_id,
 					wmi_event->rssi);
 		wma_sta_kickout_event(HOST_STA_KICKOUT_REASON_BMISS,
@@ -6026,7 +6053,7 @@ int wma_roam_event_callback(WMA_HANDLE handle, uint8_t *event_buf,
 		 * WMI_ROAM_REASON_BETTER_AP can get called in soft IRQ context,
 		 * so avoid using CSR/PE structure directly.
 		 */
-		WMA_LOGD("%s:Better AP found for vdevid %x, rssi %d", __func__,
+		wma_debug("Better AP found for vdevid %x, rssi %d",
 			 wmi_event->vdev_id, wmi_event->rssi);
 		wma_handle->suitable_ap_hb_failure = false;
 		wma_roam_better_ap_handler(wma_handle, wmi_event->vdev_id);
@@ -6038,8 +6065,8 @@ int wma_roam_event_callback(WMA_HANDLE handle, uint8_t *event_buf,
 		 */
 		wma_handle->suitable_ap_hb_failure = true;
 		wma_handle->suitable_ap_hb_failure_rssi = wmi_event->rssi;
-		WMA_LOGD("%s:Bmiss scan AP found for vdevid %x, rssi %d",
-			 __func__, wmi_event->vdev_id, wmi_event->rssi);
+		wma_debug("Bmiss scan AP found for vdevid %x, rssi %d",
+			 wmi_event->vdev_id, wmi_event->rssi);
 		wma_roam_better_ap_handler(wma_handle, wmi_event->vdev_id);
 		break;
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
@@ -6059,8 +6086,6 @@ int wma_roam_event_callback(WMA_HANDLE handle, uint8_t *event_buf,
 		WMA_LOGE("mac addr to avoid %pM", bssid.bytes);
 		wma_handle_hw_mode_transition(wma_handle, param_buf);
 		wma_roam_ho_fail_handler(wma_handle, wmi_event->vdev_id, bssid);
-		wma_handle->interfaces[wmi_event->vdev_id].roaming_in_progress =
-								false;
 		break;
 #endif
 	case WMI_ROAM_REASON_INVALID:
@@ -6083,8 +6108,8 @@ int wma_roam_event_callback(WMA_HANDLE handle, uint8_t *event_buf,
 		qdf_mem_free(roam_synch_data);
 		break;
 	case WMI_ROAM_REASON_DEAUTH:
-		WMA_LOGD("%s: Received disconnect roam event reason:%d",
-			 __func__, wmi_event->notif_params);
+		wma_debug("Received disconnect roam event reason:%d",
+			 wmi_event->notif_params);
 		if (wmi_event->notif_params1)
 			frame = param_buf->deauth_disassoc_frame;
 		wma_handle->pe_disconnect_cb(wma_handle->mac_context,
@@ -6102,7 +6127,7 @@ int wma_roam_event_callback(WMA_HANDLE handle, uint8_t *event_buf,
 		qdf_mem_free(roam_synch_data);
 		break;
 	default:
-		WMA_LOGD("%s:Unhandled Roam Event %x for vdevid %x", __func__,
+		wma_debug("Unhandled Roam Event %x for vdevid %x",
 			 wmi_event->reason, wmi_event->vdev_id);
 		break;
 	}
@@ -6140,7 +6165,7 @@ QDF_STATUS wma_ht40_stop_obss_scan(tp_wma_handle wma, int32_t vdev_id)
 	if (!buf)
 		return QDF_STATUS_E_NOMEM;
 
-	WMA_LOGD("cmd %x vdev_id %d", WMI_OBSS_SCAN_DISABLE_CMDID, vdev_id);
+	wma_debug("cmd %x vdev_id %d", WMI_OBSS_SCAN_DISABLE_CMDID, vdev_id);
 
 	cmd = (wmi_obss_scan_disable_cmd_fixed_param *) wmi_buf_data(buf);
 	WMITLV_SET_HDR(&cmd->tlv_header,
@@ -6239,7 +6264,7 @@ QDF_STATUS wma_send_ht40_obss_scanind(tp_wma_handle wma,
 	for (i = 0; i < req->channel_count; i++) {
 		channel_list[i] =
 		  wlan_reg_freq_to_chan(wma->pdev, req->chan_freq_list[i]);
-		WMA_LOGD("Ch[%d]: %d ", i, channel_list[i]);
+		wma_nofl_debug("Ch[%d]: %d ", i, channel_list[i]);
 	}
 
 	buf_ptr += qdf_roundup(sizeof(uint8_t) * req->channel_count,
@@ -6257,7 +6282,7 @@ QDF_STATUS wma_send_ht40_obss_scanind(tp_wma_handle wma,
 	chan_freq_list = (uint32_t *)buf_ptr;
 	for (i = 0; i < req->channel_count; i++) {
 		chan_freq_list[i] = req->chan_freq_list[i];
-		WMA_LOGD("freq[%u]: %u ", i, chan_freq_list[i]);
+		wma_nofl_debug("freq[%u]: %u ", i, chan_freq_list[i]);
 	}
 
 	buf_ptr += sizeof(uint32_t) * req->channel_count;
@@ -6430,8 +6455,8 @@ int wma_roam_pmkid_request_event_handler(void *handle, uint8_t *event,
 			qdf_mem_free(dst_list);
 			return -EINVAL;
 		}
-		WMA_LOGD("%s:Received pmkid fallback for bssid: %pM vdev_id:%d",
-			 __func__, roam_bsslist->bytes,
+		wma_debug("Received pmkid fallback for bssid: %pM vdev_id:%d",
+			 roam_bsslist->bytes,
 			 roam_pmkid_req_ev->vdev_id);
 		src_list++;
 	}

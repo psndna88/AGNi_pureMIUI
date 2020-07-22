@@ -12,6 +12,7 @@ ifeq ($(CONFIG_CNSS_QCA6390), y)
 	CONFIG_WLAN_FEATURE_DFS_OFFLOAD := y
 	CONFIG_IPA3 := n
 	CONFIG_SCALE_INCLUDES := y
+	CONFIG_MORE_TX_DESC := y
 endif
 
 ifeq ($(CONFIG_ENABLE_IPA), y)
@@ -514,11 +515,6 @@ CONFIG_CHECKSUM_OFFLOAD := y
 
 #Enable GTK offload
 CONFIG_GTK_OFFLOAD := y
-
-#Enable EXT WOW
-ifeq ($(CONFIG_HIF_PCI), y)
-	CONFIG_EXT_WOW := y
-endif
 
 #Set this to 1 to catch erroneous Target accesses during debug.
 CONFIG_ATH_PCIE_ACCESS_DEBUG := n

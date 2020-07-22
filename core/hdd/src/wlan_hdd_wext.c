@@ -3183,207 +3183,6 @@ static int hdd_we_dump_stats(struct hdd_adapter *adapter, int value)
 }
 
 /**
- * hdd_get_ldpc() - Get adapter LDPC
- * @adapter: adapter being queried
- * @value: where to store the value
- *
- * Return: 0 on success, negative errno on failure
- */
-int hdd_get_ldpc(struct hdd_adapter *adapter, int *value)
-{
-	mac_handle_t mac_handle = adapter->hdd_ctx->mac_handle;
-	int ret;
-
-	hdd_enter();
-	ret = sme_get_ht_config(mac_handle, adapter->vdev_id,
-				WNI_CFG_HT_CAP_INFO_ADVANCE_CODING);
-	if (ret < 0) {
-		hdd_err("Failed to get LDPC value");
-	} else {
-		*value = ret;
-		ret = 0;
-	}
-	return ret;
-}
-
-int hdd_set_ldpc(struct hdd_adapter *adapter, int value)
-{
-	mac_handle_t mac_handle = adapter->hdd_ctx->mac_handle;
-	int ret;
-	QDF_STATUS status;
-	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
-	struct mlme_ht_capabilities_info ht_cap_info;
-
-	hdd_debug("%d", value);
-
-	if (!mac_handle) {
-		hdd_err("NULL Mac handle");
-		return -EINVAL;
-	}
-
-	status = ucfg_mlme_get_ht_cap_info(hdd_ctx->psoc, &ht_cap_info);
-	if (QDF_STATUS_SUCCESS != status) {
-		hdd_err("Failed to get HT capability info");
-		return -EIO;
-	}
-
-	ht_cap_info.adv_coding_cap = value;
-	status = ucfg_mlme_set_ht_cap_info(hdd_ctx->psoc, ht_cap_info);
-	if (QDF_STATUS_SUCCESS != status) {
-		hdd_err("Failed to set HT capability info");
-		return -EIO;
-	}
-	status = ucfg_mlme_cfg_set_vht_ldpc_coding_cap(hdd_ctx->psoc, value);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		hdd_err("Failed to set VHT LDPC capability info");
-		return -EIO;
-	}
-	ret = sme_update_ht_config(mac_handle, adapter->vdev_id,
-				   WNI_CFG_HT_CAP_INFO_ADVANCE_CODING,
-				   value);
-	if (ret)
-		hdd_err("Failed to set LDPC value");
-	ret = sme_update_he_ldpc_supp(mac_handle, adapter->vdev_id, value);
-	if (ret)
-		hdd_err("Failed to set HE LDPC value");
-	ret = sme_set_auto_rate_ldpc(mac_handle, adapter->vdev_id,
-				     (value ? 0 : 1));
-
-	return ret;
-}
-
-/**
- * hdd_get_tx_stbc() - Get adapter TX STBC
- * @adapter: adapter being queried
- * @value: where to store the value
- *
- * Return: 0 on success, negative errno on failure
- */
-int hdd_get_tx_stbc(struct hdd_adapter *adapter, int *value)
-{
-	mac_handle_t mac_handle = adapter->hdd_ctx->mac_handle;
-	int ret;
-
-	hdd_enter();
-	ret = sme_get_ht_config(mac_handle, adapter->vdev_id,
-				WNI_CFG_HT_CAP_INFO_TX_STBC);
-	if (ret < 0) {
-		hdd_err("Failed to get TX STBC value");
-	} else {
-		*value = ret;
-		ret = 0;
-	}
-
-	return ret;
-}
-
-int hdd_set_tx_stbc(struct hdd_adapter *adapter, int value)
-{
-	mac_handle_t mac_handle = adapter->hdd_ctx->mac_handle;
-	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
-	int ret;
-	QDF_STATUS status;
-	struct mlme_ht_capabilities_info ht_cap_info;
-
-	hdd_debug("%d", value);
-
-	if (!mac_handle) {
-		hdd_err("NULL Mac handle");
-		return -EINVAL;
-	}
-
-	if (value) {
-		/* make sure HT capabilities allow this */
-		status = ucfg_mlme_get_ht_cap_info(hdd_ctx->psoc,
-						   &ht_cap_info);
-		if (QDF_STATUS_SUCCESS != status) {
-			hdd_err("Failed to get HT capability info");
-			return -EIO;
-		}
-		if (!ht_cap_info.tx_stbc) {
-			hdd_err("TX STBC not supported");
-			return -EINVAL;
-		}
-	}
-	ret = sme_update_ht_config(mac_handle, adapter->vdev_id,
-				   WNI_CFG_HT_CAP_INFO_TX_STBC,
-				   value);
-	if (ret)
-		hdd_err("Failed to set TX STBC value");
-	ret = sme_update_he_tx_stbc_cap(mac_handle, adapter->vdev_id, value);
-	if (ret)
-		hdd_err("Failed to set HE TX STBC value");
-
-	return ret;
-}
-
-/**
- * hdd_get_rx_stbc() - Get adapter RX STBC
- * @adapter: adapter being queried
- * @value: where to store the value
- *
- * Return: 0 on success, negative errno on failure
- */
-int hdd_get_rx_stbc(struct hdd_adapter *adapter, int *value)
-{
-	mac_handle_t mac_handle = adapter->hdd_ctx->mac_handle;
-	int ret;
-
-	hdd_enter();
-	ret = sme_get_ht_config(mac_handle, adapter->vdev_id,
-				WNI_CFG_HT_CAP_INFO_RX_STBC);
-	if (ret < 0) {
-		hdd_err("Failed to get RX STBC value");
-	} else {
-		*value = ret;
-		ret = 0;
-	}
-
-	return ret;
-}
-
-int hdd_set_rx_stbc(struct hdd_adapter *adapter, int value)
-{
-	mac_handle_t mac_handle = adapter->hdd_ctx->mac_handle;
-	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
-	int ret;
-	QDF_STATUS status;
-	struct mlme_ht_capabilities_info ht_cap_info;
-
-	hdd_debug("%d", value);
-
-	if (!mac_handle) {
-		hdd_err("NULL Mac handle");
-		return -EINVAL;
-	}
-
-	if (value) {
-		/* make sure HT capabilities allow this */
-		status = ucfg_mlme_get_ht_cap_info(hdd_ctx->psoc,
-						   &ht_cap_info);
-		if (QDF_STATUS_SUCCESS != status) {
-			hdd_err("Failed to get HT capability info");
-			return -EIO;
-		}
-		if (!ht_cap_info.rx_stbc) {
-			hdd_warn("RX STBC not supported");
-			return -EINVAL;
-		}
-	}
-	ret = sme_update_ht_config(mac_handle, adapter->vdev_id,
-				   WNI_CFG_HT_CAP_INFO_RX_STBC,
-				   value);
-	if (ret)
-		hdd_err("Failed to set RX STBC value");
-
-	ret = sme_update_he_rx_stbc_cap(mac_handle, adapter->vdev_id, value);
-	if (ret)
-		hdd_err("Failed to set HE RX STBC value");
-
-	return ret;
-}
-
-/**
  * iw_get_linkspeed() - Get current link speed ioctl
  * @dev: device upon which the ioctl was received
  * @info: ioctl request information
@@ -3616,342 +3415,128 @@ static int iw_get_wlm_stats(struct net_device *net_dev,
 }
 #endif /* FEATURE_WLM_STATS */
 
-int wlan_hdd_update_phymode(struct hdd_adapter *adapter, int new_phymode)
+static eCsrPhyMode hdd_we_ieee_to_phymode(int ieee_mode)
 {
-	struct net_device *net = adapter->dev;
-	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
-	mac_handle_t mac_handle = hdd_ctx->mac_handle;
-	bool band_24 = false, band_5g = false;
-	bool ch_bond24 = false, ch_bond5g = false;
-	struct sme_config_params *sme_config = NULL;
-	struct csr_config_params *csr_config;
-	uint32_t chwidth = WNI_CFG_CHANNEL_BONDING_MODE_DISABLE;
-	uint8_t vhtchanwidth;
-	eCsrPhyMode phymode = -EIO, old_phymode;
-	enum hdd_dot11_mode hdd_dot11mode = hdd_ctx->config->dot11Mode;
-	enum band_info curr_band = BAND_ALL;
-	int retval = 0;
-	uint8_t band_capability;
-	QDF_STATUS status;
-	uint32_t channel_bonding_mode;
+	eCsrPhyMode phymode;
 
-	if (!mac_handle)
-		return -EINVAL;
-
-	old_phymode = sme_get_phy_mode(mac_handle);
-
-	ucfg_mlme_get_channel_bonding_24ghz(hdd_ctx->psoc,
-					    &channel_bonding_mode);
-	if (WNI_CFG_CHANNEL_BONDING_MODE_DISABLE !=
-	    sme_get_cb_phy_state_from_cb_ini_value(channel_bonding_mode))
-		ch_bond24 = true;
-
-	ucfg_mlme_get_channel_bonding_5ghz(hdd_ctx->psoc,
-					   &channel_bonding_mode);
-	if (WNI_CFG_CHANNEL_BONDING_MODE_DISABLE !=
-	    sme_get_cb_phy_state_from_cb_ini_value(channel_bonding_mode))
-		ch_bond5g = true;
-
-	status = wlan_mlme_get_band_capability(hdd_ctx->psoc, &band_capability);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		hdd_err("Failed to get MLME Band capability");
-		return -EIO;
-	}
-
-	if (band_capability == BAND_ALL)
-		band_24 = band_5g = true;
-	else if (band_capability == BAND_2G)
-		band_24 = true;
-	else if (band_capability == BAND_5G)
-		band_5g = true;
-
-	status = ucfg_mlme_get_vht_channel_width(hdd_ctx->psoc, &vhtchanwidth);
-	if (!QDF_IS_STATUS_SUCCESS(status))
-		hdd_err("Failed to get channel_width");
-
-	hdd_debug("ch_bond24=%d ch_bond5g=%d band_24=%d band_5g=%d VHT_ch_width=%u",
-		ch_bond24, ch_bond5g, band_24, band_5g, vhtchanwidth);
-
-	switch (new_phymode) {
+	switch (ieee_mode) {
 	case IEEE80211_MODE_AUTO:
-		sme_set_phy_mode(mac_handle, eCSR_DOT11_MODE_AUTO);
-		if (hdd_reg_set_band(net, WLAN_HDD_UI_BAND_AUTO) == 0) {
-			phymode = eCSR_DOT11_MODE_AUTO;
-			hdd_dot11mode = eHDD_DOT11_MODE_AUTO;
-			chwidth = WNI_CFG_CHANNEL_BONDING_MODE_ENABLE;
-			curr_band = BAND_ALL;
-			vhtchanwidth = eHT_CHANNEL_WIDTH_80MHZ;
-		} else {
-			sme_set_phy_mode(mac_handle, old_phymode);
-			return -EIO;
-		}
+	case IEEE80211_MODE_2G_AUTO:
+	case IEEE80211_MODE_5G_AUTO:
+		phymode = eCSR_DOT11_MODE_AUTO;
 		break;
 	case IEEE80211_MODE_11A:
-		sme_set_phy_mode(mac_handle, eCSR_DOT11_MODE_11a);
-		if (hdd_reg_set_band(net, WLAN_HDD_UI_BAND_5_GHZ) == 0) {
-			phymode = eCSR_DOT11_MODE_11a;
-			hdd_dot11mode = eHDD_DOT11_MODE_11a;
-			chwidth = WNI_CFG_CHANNEL_BONDING_MODE_DISABLE;
-			curr_band = BAND_5G;
-		} else {
-			sme_set_phy_mode(mac_handle, old_phymode);
-			return -EIO;
-		}
+		phymode = eCSR_DOT11_MODE_11a;
 		break;
 	case IEEE80211_MODE_11B:
-		sme_set_phy_mode(mac_handle, eCSR_DOT11_MODE_11b);
-		if (hdd_reg_set_band(net, WLAN_HDD_UI_BAND_2_4_GHZ) == 0) {
-			phymode = eCSR_DOT11_MODE_11b;
-			hdd_dot11mode = eHDD_DOT11_MODE_11b;
-			chwidth = WNI_CFG_CHANNEL_BONDING_MODE_DISABLE;
-			curr_band = BAND_2G;
-		} else {
-			sme_set_phy_mode(mac_handle, old_phymode);
-			return -EIO;
-		}
+		phymode = eCSR_DOT11_MODE_11b;
 		break;
 	case IEEE80211_MODE_11G:
-		sme_set_phy_mode(mac_handle, eCSR_DOT11_MODE_11g);
-		if (hdd_reg_set_band(net, WLAN_HDD_UI_BAND_2_4_GHZ) == 0) {
-			phymode = eCSR_DOT11_MODE_11g;
-			hdd_dot11mode = eHDD_DOT11_MODE_11g;
-			chwidth = WNI_CFG_CHANNEL_BONDING_MODE_DISABLE;
-			curr_band = BAND_2G;
-		} else {
-			sme_set_phy_mode(mac_handle, old_phymode);
-			return -EIO;
-		}
+		phymode = eCSR_DOT11_MODE_11g;
 		break;
-	/* UMAC doesn't have option to set MODE_11NA/MODE_11NG as phymode
-	 * so setting phymode as eCSR_DOT11_MODE_11n and updating the band
-	 * and channel bonding in configuration to reflect MODE_11NA/MODE_11NG
-	 */
 	case IEEE80211_MODE_11NA_HT20:
-		sme_set_phy_mode(mac_handle, eCSR_DOT11_MODE_11n);
-		if (hdd_reg_set_band(net, WLAN_HDD_UI_BAND_5_GHZ) == 0) {
-			phymode = eCSR_DOT11_MODE_11n;
-			hdd_dot11mode = eHDD_DOT11_MODE_11n;
-			chwidth = WNI_CFG_CHANNEL_BONDING_MODE_DISABLE;
-			curr_band = BAND_5G;
-		} else {
-			sme_set_phy_mode(mac_handle, old_phymode);
-			return -EIO;
-		}
-		break;
 	case IEEE80211_MODE_11NA_HT40:
-		sme_set_phy_mode(mac_handle, eCSR_DOT11_MODE_11n);
-		if (hdd_reg_set_band(net, WLAN_HDD_UI_BAND_5_GHZ) == 0) {
-			phymode = eCSR_DOT11_MODE_11n;
-			hdd_dot11mode = eHDD_DOT11_MODE_11n;
-			chwidth = WNI_CFG_CHANNEL_BONDING_MODE_ENABLE;
-			curr_band = BAND_5G;
-		} else {
-			sme_set_phy_mode(mac_handle, old_phymode);
-			return -EIO;
-		}
-		break;
 	case IEEE80211_MODE_11NG_HT20:
-		sme_set_phy_mode(mac_handle, eCSR_DOT11_MODE_11n);
-		if (hdd_reg_set_band(net, WLAN_HDD_UI_BAND_2_4_GHZ) == 0) {
-			phymode = eCSR_DOT11_MODE_11n;
-			hdd_dot11mode = eHDD_DOT11_MODE_11n;
-			chwidth = WNI_CFG_CHANNEL_BONDING_MODE_DISABLE;
-			curr_band = BAND_2G;
-		} else {
-			sme_set_phy_mode(mac_handle, old_phymode);
-			return -EIO;
-		}
-		break;
 	case IEEE80211_MODE_11NG_HT40:
-		sme_set_phy_mode(mac_handle, eCSR_DOT11_MODE_11n);
-		if (hdd_reg_set_band(net, WLAN_HDD_UI_BAND_2_4_GHZ) == 0) {
-			phymode = eCSR_DOT11_MODE_11n;
-			hdd_dot11mode = eHDD_DOT11_MODE_11n;
-			chwidth = WNI_CFG_CHANNEL_BONDING_MODE_ENABLE;
-			curr_band = BAND_2G;
-		} else {
-			sme_set_phy_mode(mac_handle, old_phymode);
-			return -EIO;
-		}
+	case IEEE80211_MODE_11AGN:
+		phymode = eCSR_DOT11_MODE_11n;
 		break;
 	case IEEE80211_MODE_11AC_VHT20:
 	case IEEE80211_MODE_11AC_VHT40:
 	case IEEE80211_MODE_11AC_VHT80:
-		sme_set_phy_mode(mac_handle, eCSR_DOT11_MODE_11ac);
 		phymode = eCSR_DOT11_MODE_11ac;
-		hdd_dot11mode = eHDD_DOT11_MODE_11ac;
-		chwidth = WNI_CFG_CHANNEL_BONDING_MODE_ENABLE;
-		if (band_5g && band_24) {
-			curr_band = BAND_ALL;
-			break;
-		} else if (band_5g) {
-			curr_band = BAND_5G;
-			break;
-		} else if (new_phymode != IEEE80211_MODE_11AC_VHT80) {
-			curr_band = BAND_2G;
-			break;
-		}
-		if (hdd_reg_set_band(net, WLAN_HDD_UI_BAND_AUTO) == 0) {
-			curr_band = BAND_ALL;
-		} else {
-			sme_set_phy_mode(mac_handle, old_phymode);
-			return -EIO;
-		}
-		break;
-	case IEEE80211_MODE_2G_AUTO:
-		sme_set_phy_mode(mac_handle, eCSR_DOT11_MODE_AUTO);
-		if (hdd_reg_set_band(net, WLAN_HDD_UI_BAND_2_4_GHZ) == 0) {
-			phymode = eCSR_DOT11_MODE_AUTO;
-			hdd_dot11mode = eHDD_DOT11_MODE_AUTO;
-			chwidth = WNI_CFG_CHANNEL_BONDING_MODE_ENABLE;
-			curr_band = BAND_2G;
-		} else {
-			sme_set_phy_mode(mac_handle, old_phymode);
-			return -EIO;
-		}
-		break;
-	case IEEE80211_MODE_5G_AUTO:
-		sme_set_phy_mode(mac_handle, eCSR_DOT11_MODE_AUTO);
-		if (hdd_reg_set_band(net, WLAN_HDD_UI_BAND_5_GHZ) == 0) {
-			phymode = eCSR_DOT11_MODE_AUTO;
-			hdd_dot11mode = eHDD_DOT11_MODE_AUTO;
-			chwidth = WNI_CFG_CHANNEL_BONDING_MODE_ENABLE;
-			vhtchanwidth = eHT_CHANNEL_WIDTH_80MHZ;
-			curr_band = BAND_5G;
-		} else {
-			sme_set_phy_mode(mac_handle, old_phymode);
-			return -EIO;
-		}
-		break;
-	case IEEE80211_MODE_11AGN:
-		sme_set_phy_mode(mac_handle, eCSR_DOT11_MODE_11n);
-		if (hdd_reg_set_band(net, WLAN_HDD_UI_BAND_AUTO) == 0) {
-			phymode = eCSR_DOT11_MODE_11n;
-			hdd_dot11mode = eHDD_DOT11_MODE_11n;
-			chwidth = WNI_CFG_CHANNEL_BONDING_MODE_ENABLE;
-			curr_band = BAND_ALL;
-		} else {
-			sme_set_phy_mode(mac_handle, old_phymode);
-			return -EIO;
-		}
 		break;
 	default:
-		return -EIO;
+		hdd_err("Not supported mode %d", ieee_mode);
+		phymode = -EINVAL;
 	}
 
-	switch (new_phymode) {
+	return phymode;
+}
+
+static enum band_info hdd_we_ieee_to_band(int ieee_mode)
+{
+	enum band_info band;
+
+	switch (ieee_mode) {
+	case IEEE80211_MODE_AUTO:
+	case IEEE80211_MODE_11AC_VHT20:
+	case IEEE80211_MODE_11AC_VHT40:
+	case IEEE80211_MODE_11AC_VHT80:
+	case IEEE80211_MODE_11AGN:
+		band = BAND_ALL;
+		break;
+	case IEEE80211_MODE_11A:
+	case IEEE80211_MODE_11NA_HT20:
+	case IEEE80211_MODE_11NA_HT40:
+	case IEEE80211_MODE_5G_AUTO:
+		band = BAND_5G;
+		break;
+	case IEEE80211_MODE_11B:
+	case IEEE80211_MODE_11G:
+	case IEEE80211_MODE_11NG_HT20:
+	case IEEE80211_MODE_11NG_HT40:
+	case IEEE80211_MODE_2G_AUTO:
+		band = BAND_2G;
+		break;
+	default:
+		hdd_err("Not supported mode %d", ieee_mode);
+		band = -EINVAL;
+	}
+
+	return band;
+}
+
+static uint32_t hdd_we_ieee_to_chwidth(int ieee_mode)
+{
+	uint32_t chwidth;
+
+	switch (ieee_mode) {
+	case IEEE80211_MODE_AUTO:
+	case IEEE80211_MODE_11NA_HT40:
+	case IEEE80211_MODE_11NG_HT40:
+	case IEEE80211_MODE_11AC_VHT40:
+	case IEEE80211_MODE_11AC_VHT80:
+	case IEEE80211_MODE_2G_AUTO:
+	case IEEE80211_MODE_5G_AUTO:
+	case IEEE80211_MODE_11AGN:
+		chwidth = WNI_CFG_CHANNEL_BONDING_MODE_ENABLE;
+		break;
+	case IEEE80211_MODE_11A:
+	case IEEE80211_MODE_11B:
+	case IEEE80211_MODE_11G:
+	case IEEE80211_MODE_11NA_HT20:
+	case IEEE80211_MODE_11NG_HT20:
 	case IEEE80211_MODE_11AC_VHT20:
 		chwidth = WNI_CFG_CHANNEL_BONDING_MODE_DISABLE;
-		vhtchanwidth = eHT_CHANNEL_WIDTH_20MHZ;
-		break;
-	case IEEE80211_MODE_11AC_VHT40:
-		vhtchanwidth = eHT_CHANNEL_WIDTH_40MHZ;
-		break;
-	case IEEE80211_MODE_11AC_VHT80:
-		vhtchanwidth = eHT_CHANNEL_WIDTH_80MHZ;
 		break;
 	default:
-		status = ucfg_mlme_get_vht_channel_width(hdd_ctx->psoc,
-							 &vhtchanwidth);
-		if (!QDF_IS_STATUS_SUCCESS(status))
-			hdd_err("Failed to get channel_width");
-		break;
+		hdd_err("Not supported mode %d", ieee_mode);
+		chwidth = -EINVAL;
 	}
 
-	if (phymode != -EIO) {
-		sme_config = qdf_mem_malloc(sizeof(*sme_config));
-		if (!sme_config) {
-			hdd_err("Failed to allocate memory for sme_config");
-			return -ENOMEM;
-		}
-		qdf_mem_zero(sme_config, sizeof(*sme_config));
-		sme_get_config_param(mac_handle, sme_config);
-		csr_config = &sme_config->csr_config;
-		csr_config->phyMode = phymode;
-#ifdef QCA_HT_2040_COEX
-		if (phymode == eCSR_DOT11_MODE_11n &&
-		    chwidth == WNI_CFG_CHANNEL_BONDING_MODE_DISABLE) {
-			csr_config->obssEnabled = false;
-			status = sme_set_ht2040_mode(mac_handle,
-						     adapter->vdev_id,
-						     eHT_CHAN_HT20, false);
-			if (status == QDF_STATUS_E_FAILURE) {
-				hdd_err("Failed to disable OBSS");
-				retval = -EIO;
-				goto free;
-			}
-		} else if (phymode == eCSR_DOT11_MODE_11n &&
-			   chwidth == WNI_CFG_CHANNEL_BONDING_MODE_ENABLE) {
-			csr_config->obssEnabled = true;
-			status = sme_set_ht2040_mode(mac_handle,
-						     adapter->vdev_id,
-						     eHT_CHAN_HT20, true);
-			if (status == QDF_STATUS_E_FAILURE) {
-				hdd_err("Failed to enable OBSS");
-				retval = -EIO;
-				goto free;
-			}
-		}
-#endif
-		status = ucfg_mlme_set_band_capability(hdd_ctx->psoc,
-						       curr_band);
-		if (QDF_IS_STATUS_ERROR(status)) {
-			hdd_err("failed to set MLME band capability");
-			goto free;
-		}
+	return chwidth;
+}
 
-		if (curr_band == BAND_2G) {
-			status = ucfg_mlme_set_11h_enabled(hdd_ctx->psoc, 0);
-			if (!QDF_IS_STATUS_SUCCESS(status)) {
-				hdd_err("Failed to set 11h_enable flag");
-				goto free;
-			}
-		}
-		if (curr_band == BAND_2G)
-			csr_config->channelBondingMode24GHz = chwidth;
-		else if (curr_band == BAND_5G)
-			csr_config->channelBondingMode5GHz = chwidth;
-		else {
-			csr_config->channelBondingMode24GHz = chwidth;
-			csr_config->channelBondingMode5GHz = chwidth;
-		}
-		sme_update_config(mac_handle, sme_config);
+int hdd_we_update_phymode(struct hdd_adapter *adapter, int new_phymode)
+{
+	eCsrPhyMode phymode;
+	enum band_info band;
+	uint32_t chwidth;
 
-		hdd_ctx->config->dot11Mode = hdd_dot11mode;
-		ucfg_mlme_set_channel_bonding_24ghz(
-			hdd_ctx->psoc,
-			csr_config->channelBondingMode24GHz);
-		ucfg_mlme_set_channel_bonding_5ghz(
-			hdd_ctx->psoc,
-			csr_config->channelBondingMode5GHz);
-		if (hdd_update_config_cfg(hdd_ctx) == false) {
-			hdd_err("could not update config_dat");
-			retval = -EIO;
-			goto free;
-		}
+	phymode = hdd_we_ieee_to_phymode(new_phymode);
+	if (phymode < 0)
+		return -EINVAL;
 
-		if (band_5g) {
-			struct ieee80211_supported_band *band;
+	band = hdd_we_ieee_to_band(new_phymode);
+	if (band < 0)
+		return -EINVAL;
 
-			ucfg_mlme_get_channel_bonding_5ghz(
-					hdd_ctx->psoc, &channel_bonding_mode);
-			band = hdd_ctx->wiphy->bands[HDD_NL80211_BAND_5GHZ];
-			if (channel_bonding_mode)
-				band->ht_cap.cap |=
-					IEEE80211_HT_CAP_SUP_WIDTH_20_40;
-			else
-				band->ht_cap.cap &=
-					~IEEE80211_HT_CAP_SUP_WIDTH_20_40;
-		}
+	chwidth = hdd_we_ieee_to_chwidth(new_phymode);
+	if (chwidth < 0)
+		return -EINVAL;
 
-		hdd_debug("New_Phymode= %d ch_bonding=%d band=%d VHT_ch_width=%u",
-			phymode, chwidth, curr_band, vhtchanwidth);
-	}
-
-free:
-	if (sme_config)
-		qdf_mem_free(sme_config);
-	return retval;
+	return hdd_update_phymode(adapter, phymode, band, chwidth);
 }
 
 static int hdd_validate_pdev_reset(int value)
@@ -3989,15 +3574,7 @@ static int hdd_handle_pdev_reset(struct hdd_adapter *adapter, int value)
 
 static int hdd_we_set_ch_width(struct hdd_adapter *adapter, int ch_width)
 {
-	int errno;
-	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	uint32_t bonding_mode;
-	struct sme_config_params *sme_config;
-	mac_handle_t mac_handle;
-
-	mac_handle = hdd_ctx->mac_handle;
-	if (!mac_handle)
-		return -EINVAL;
 
 	/* updating channel bonding only on 5Ghz */
 	hdd_debug("WMI_VDEV_PARAM_CHWIDTH val %d", ch_width);
@@ -4009,7 +3586,9 @@ static int hdd_we_set_ch_width(struct hdd_adapter *adapter, int ch_width)
 
 	case eHT_CHANNEL_WIDTH_40MHZ:
 	case eHT_CHANNEL_WIDTH_80MHZ:
-		bonding_mode = 1;
+	case eHT_CHANNEL_WIDTH_80P80MHZ:
+	case eHT_CHANNEL_WIDTH_160MHZ:
+		bonding_mode = WNI_CFG_CHANNEL_BONDING_MODE_ENABLE;
 		break;
 
 	default:
@@ -4017,26 +3596,7 @@ static int hdd_we_set_ch_width(struct hdd_adapter *adapter, int ch_width)
 		return -EINVAL;
 	}
 
-	sme_config = qdf_mem_malloc(sizeof(*sme_config));
-	if (!sme_config) {
-		hdd_err("failed to allocate memory for sme_config");
-		return -ENOMEM;
-	}
-
-	errno = wma_cli_set_command(adapter->vdev_id, WMI_VDEV_PARAM_CHWIDTH,
-				    ch_width, VDEV_CMD);
-	if (errno)
-		goto free_config;
-
-	sme_get_config_param(mac_handle, sme_config);
-	sme_config->csr_config.channelBondingMode5GHz = bonding_mode;
-	sme_config->csr_config.channelBondingMode24GHz = bonding_mode;
-	sme_update_config(mac_handle, sme_config);
-
-free_config:
-	qdf_mem_free(sme_config);
-
-	return errno;
+	return hdd_update_channel_width(adapter, ch_width, bonding_mode);
 }
 
 static int hdd_we_set_11d_state(struct hdd_adapter *adapter, int state_11d)
@@ -5356,7 +4916,7 @@ static const setint_getnone_fn setint_getnone_cb[] = {
 	[WE_SET_HASTINGS_BT_WAR] = hdd_we_set_hastings_bt_war,
 #endif
 	[WE_SET_TM_LEVEL] = hdd_we_set_tm_level,
-	[WE_SET_PHYMODE] = wlan_hdd_update_phymode,
+	[WE_SET_PHYMODE] = hdd_we_update_phymode,
 	[WE_SET_NSS] = hdd_we_set_nss,
 	[WE_SET_GTX_HT_MCS] = hdd_we_set_gtx_ht_mcs,
 	[WE_SET_GTX_VHT_MCS] = hdd_we_set_gtx_vht_mcs,
@@ -5826,14 +5386,15 @@ static int __iw_setnone_getint(struct net_device *dev,
 
 	case WE_GET_NSS:
 	{
-		sme_get_config_param(mac_handle, sme_config);
-		status = ucfg_mlme_get_vht_enable2x2(hdd_ctx->psoc, &bval);
-		if (!QDF_IS_STATUS_SUCCESS(status))
+		uint8_t nss;
+
+		status = hdd_get_nss(adapter, &nss);
+		if (!QDF_IS_STATUS_SUCCESS(status)) {
 			hdd_err("unable to get vht_enable2x2");
-		*value = (bval == 0) ? 1 : 2;
-		if (!policy_mgr_is_hw_dbs_2x2_capable(hdd_ctx->psoc) &&
-		    policy_mgr_is_current_hwmode_dbs(hdd_ctx->psoc))
-			*value = *value - 1;
+			ret = -EIO;
+			break;
+		}
+		*value = nss;
 
 		hdd_debug("GET_NSS: Current NSS:%d", *value);
 		break;
@@ -7195,7 +6756,7 @@ hdd_policy_mgr_set_hw_mode_ut(struct hdd_context *hdd_ctx,
 				    mac0_band_cap, dbs, HW_MODE_AGILE_DFS_NONE,
 				    HW_MODE_SBS_NONE,
 				    POLICY_MGR_UPDATE_REASON_UT, PM_NOP,
-				    action);
+				    action, POLICY_MGR_DEF_REQ_ID);
 }
 
 static int iw_get_policy_manager_ut_ops(struct hdd_context *hdd_ctx,
@@ -7305,7 +6866,7 @@ static int iw_get_policy_manager_ut_ops(struct hdd_context *hdd_ctx,
 		policy_mgr_current_connections_update(
 			hdd_ctx->psoc, adapter->vdev_id,
 			wlan_chan_to_freq(apps_args[0]),
-			POLICY_MGR_UPDATE_REASON_UT);
+			POLICY_MGR_UPDATE_REASON_UT, POLICY_MGR_DEF_REQ_ID);
 	}
 	break;
 

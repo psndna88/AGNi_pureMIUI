@@ -28,6 +28,7 @@
 #include <wlan_cmn.h>
 #include <wlan_objmgr_vdev_obj.h>
 #include <wlan_objmgr_peer_obj.h>
+#include "wlan_cm_roam_public_srtuct.h"
 
 #define mlme_legacy_fatal(params...) QDF_TRACE_FATAL(QDF_MODULE_ID_MLME, params)
 #define mlme_legacy_err(params...) QDF_TRACE_ERROR(QDF_MODULE_ID_MLME, params)
@@ -57,6 +58,16 @@ struct wlan_disconnect_info {
 	struct wlan_ies peer_discon_ies;
 	uint32_t discon_reason;
 	bool from_ap;
+};
+
+/**
+ * struct sae_auth_retry - SAE auth retry Information
+ * @sae_auth_max_retry: Max number of sae auth retries
+ * @sae_auth: SAE auth frame information
+ */
+struct sae_auth_retry {
+	uint8_t sae_auth_max_retry;
+	struct wlan_ies sae_auth;
 };
 
 /**
@@ -146,7 +157,9 @@ struct wlan_mlme_roam {
  * @disconnect_info: Disconnection information
  * @vdev_stop_type: vdev stop type request
  * @roam_off_state: Roam offload state
+ * @cm_roam: Roaming configuration
  * @bigtk_vdev_support: BIGTK feature support for this vdev (SAP)
+ * @sae_auth_retry: SAE auth retry information
  */
 struct mlme_legacy_priv {
 	bool chan_switch_in_progress;
@@ -164,7 +177,9 @@ struct mlme_legacy_priv {
 	struct wlan_disconnect_info disconnect_info;
 	uint32_t vdev_stop_type;
 	struct wlan_mlme_roam mlme_roam;
+	struct wlan_cm_roam cm_roam;
 	bool bigtk_vdev_support;
+	struct sae_auth_retry sae_retry;
 };
 
 /**
@@ -246,6 +261,16 @@ struct mlme_roam_after_data_stall *
 mlme_get_roam_invoke_params(struct wlan_objmgr_vdev *vdev);
 
 /**
+ * mlme_is_roam_invoke_in_progress  - Get if roam invoked by host
+ * is active.
+ * @psoc: Pointer to global psoc.
+ * @vdev_id: vdev id
+ *
+ * Return: True if roaming invoke is in progress
+ */
+bool mlme_is_roam_invoke_in_progress(struct wlan_objmgr_psoc *psoc,
+				     uint8_t vdev_id);
+/**
  * mlme_cfg_on_psoc_enable() - Populate MLME structure from CFG and INI
  * @psoc: pointer to the psoc object
  *
@@ -269,6 +294,22 @@ struct wlan_mlme_psoc_ext_obj *mlme_get_psoc_ext_obj_fl(struct wlan_objmgr_psoc
 							*psoc,
 							const char *func,
 							uint32_t line);
+
+/**
+ * mlme_get_sae_auth_retry() - Get sae_auth_retry pointer
+ * @vdev: vdev pointer
+ *
+ * Return: Pointer to struct sae_auth_retry or NULL
+ */
+struct sae_auth_retry *mlme_get_sae_auth_retry(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * mlme_free_sae_auth_retry() - Free the SAE auth info
+ * @vdev: vdev pointer
+ *
+ * Return: None
+ */
+void mlme_free_sae_auth_retry(struct wlan_objmgr_vdev *vdev);
 
 /**
  * mlme_set_self_disconnect_ies() - Set diconnect IEs configured from userspace
@@ -511,22 +552,34 @@ mlme_get_operations_bitmap(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id);
  */
 void
 mlme_set_operations_bitmap(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
-			   enum roam_control_requestor reqs, bool clear);
+			   enum wlan_cm_rso_control_requestor reqs, bool clear);
 
-#define MLME_IS_ROAM_STATE_RSO_STARTED(psoc, vdev_id) \
-	(mlme_get_roam_state(psoc, vdev_id) == ROAM_RSO_STARTED)
+#define MLME_IS_ROAM_STATE_RSO_ENABLED(psoc, vdev_id) \
+	(mlme_get_roam_state(psoc, vdev_id) == WLAN_ROAM_RSO_ENABLED)
 
 #define MLME_IS_ROAM_STATE_DEINIT(psoc, vdev_id) \
-	(mlme_get_roam_state(psoc, vdev_id) == ROAM_DEINIT)
+	(mlme_get_roam_state(psoc, vdev_id) == WLAN_ROAM_DEINIT)
 
 #define MLME_IS_ROAM_STATE_INIT(psoc, vdev_id) \
-	(mlme_get_roam_state(psoc, vdev_id) == ROAM_INIT)
+	(mlme_get_roam_state(psoc, vdev_id) == WLAN_ROAM_INIT)
 
 #define MLME_IS_ROAM_STATE_STOPPED(psoc, vdev_id) \
-	(mlme_get_roam_state(psoc, vdev_id) == ROAM_RSO_STOPPED)
+	(mlme_get_roam_state(psoc, vdev_id) == WLAN_ROAM_RSO_STOPPED)
 
 #define MLME_IS_ROAM_INITIALIZED(psoc, vdev_id) \
-	(mlme_get_roam_state(psoc, vdev_id) >= ROAM_INIT)
+	(mlme_get_roam_state(psoc, vdev_id) >= WLAN_ROAM_INIT)
+#endif
+
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
+#define MLME_IS_ROAMING_IN_PROG(psoc, vdev_id) \
+	(mlme_get_roam_state(psoc, vdev_id) == WLAN_ROAMING_IN_PROG)
+
+#define MLME_IS_ROAM_SYNCH_IN_PROGRESS(psoc, vdev_id) \
+	(mlme_get_roam_state(psoc, vdev_id) == WLAN_ROAM_SYNCH_IN_PROG)
+
+#else
+#define MLME_IS_ROAMING_IN_PROG(psoc, vdev_id) (false)
+#define MLME_IS_ROAM_SYNCH_IN_PROGRESS(psoc, vdev_id) (false)
 #endif
 
 /**

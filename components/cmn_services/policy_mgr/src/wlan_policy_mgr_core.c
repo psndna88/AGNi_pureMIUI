@@ -907,7 +907,8 @@ void policy_mgr_pdev_set_hw_mode_cb(uint32_t status,
 				struct policy_mgr_vdev_mac_map *vdev_mac_map,
 				uint8_t next_action,
 				enum policy_mgr_conn_update_reason reason,
-				uint32_t session_id, void *context)
+				uint32_t session_id, void *context,
+				uint32_t request_id)
 {
 	QDF_STATUS ret;
 	struct policy_mgr_hw_mode_params hw_mode;
@@ -980,7 +981,7 @@ next_action:
 	if (PM_NOP != next_action && (status == SET_HW_MODE_STATUS_ALREADY ||
 	    status == SET_HW_MODE_STATUS_OK))
 		policy_mgr_next_actions(context, session_id,
-			next_action, reason);
+			next_action, reason, request_id);
 	else
 		policy_mgr_debug("No action needed right now");
 
@@ -1087,6 +1088,11 @@ static uint32_t policy_mgr_dump_current_concurrency_two_connection(
 				cc_mode, length);
 		count += strlcat(cc_mode, "+NDI",
 					length);
+		break;
+	case PM_NAN_DISC_MODE:
+		count = policy_mgr_dump_current_concurrency_one_connection(
+				cc_mode, length);
+		count += strlcat(cc_mode, "+NAN Disc", length);
 		break;
 	default:
 		policy_mgr_err("unexpected mode %d", mode);
@@ -1345,13 +1351,15 @@ QDF_STATUS policy_mgr_pdev_get_pcl(struct wlan_objmgr_psoc *psoc,
 /**
  * policy_mgr_set_pcl_for_existing_combo() - Set PCL for existing connection
  * @mode: Connection mode of type 'policy_mgr_con_mode'
+ * @vdev_id: Vdev Id
  *
  * Set the PCL for an existing connection
  *
  * Return: None
  */
-void policy_mgr_set_pcl_for_existing_combo(
-		struct wlan_objmgr_psoc *psoc, enum policy_mgr_con_mode mode)
+void policy_mgr_set_pcl_for_existing_combo(struct wlan_objmgr_psoc *psoc,
+					   enum policy_mgr_con_mode mode,
+					   uint8_t vdev_id)
 {
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
 	struct policy_mgr_conc_connection_info
@@ -1385,7 +1393,7 @@ void policy_mgr_set_pcl_for_existing_combo(
 
 	/* Send PCL only if policy_mgr_pdev_get_pcl returned success */
 	if (QDF_IS_STATUS_SUCCESS(status)) {
-		status = pm_ctx->sme_cbacks.sme_pdev_set_pcl(&pcl);
+		status = pm_ctx->sme_cbacks.sme_set_pcl(&pcl, vdev_id, false);
 		if (QDF_IS_STATUS_ERROR(status))
 			policy_mgr_err("Send set PCL to SME failed");
 	}
@@ -1455,7 +1463,7 @@ void pm_dbs_opportunistic_timer_handler(void *data)
 	}
 	session_id = pm_get_vdev_id_of_first_conn_idx(psoc);
 	policy_mgr_next_actions(psoc, session_id, action,
-				reason);
+				reason, POLICY_MGR_DEF_REQ_ID);
 }
 
 /**
@@ -2676,7 +2684,8 @@ bool policy_mgr_allow_new_home_channel(
 		QDF_MCC_TO_SCC_SWITCH_FORCE_PREFERRED_WITHOUT_DISCONNECTION)
 		) && (pm_conc_connection_list[0].mac ==
 			pm_conc_connection_list[1].mac)) {
-			if (policy_mgr_is_hw_dbs_capable(psoc) == false) {
+			if (!policy_mgr_is_hw_dbs_capable(psoc) &&
+			    policy_mgr_is_interband_mcc_supported(psoc)) {
 				if (ch_freq !=
 				    pm_conc_connection_list[0].freq &&
 				    ch_freq !=
@@ -2715,7 +2724,8 @@ bool policy_mgr_allow_new_home_channel(
 		} else if (pm_conc_connection_list[0].mac ==
 			   pm_conc_connection_list[1].mac) {
 			/* Existing two connections are SCC */
-			if (policy_mgr_is_hw_dbs_capable(psoc) == false) {
+			if (!policy_mgr_is_hw_dbs_capable(psoc) &&
+			    policy_mgr_is_interband_mcc_supported(psoc)) {
 				/* keep legacy chip "allow" as it is */
 				policy_mgr_rl_debug("allow 2 intf SCC + new intf ch %d for legacy hw",
 						    ch_freq);
@@ -2752,6 +2762,16 @@ bool policy_mgr_allow_new_home_channel(
 
 		policy_mgr_rl_debug("Existing DFS connection, new 2-port DFS connection is not allowed");
 		status = false;
+	} else if ((num_connections == 1) &&
+		   !policy_mgr_is_hw_dbs_capable(psoc) &&
+		   !policy_mgr_is_interband_mcc_supported(psoc)) {
+		/* For target which is single mac and doesn't support
+		 * interband MCC
+		 */
+		if ((pm_conc_connection_list[0].mode != PM_NAN_DISC_MODE) &&
+		    (mode != PM_NAN_DISC_MODE))
+			status = wlan_reg_is_same_band_freqs(ch_freq,
+				      pm_conc_connection_list[0].freq);
 	}
 	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
 
@@ -2834,10 +2854,11 @@ static void policy_mgr_nss_update_cb(struct wlan_objmgr_psoc *psoc,
 	if (PM_NOP != next_action) {
 		if (reason == POLICY_MGR_UPDATE_REASON_AFTER_CHANNEL_SWITCH)
 			policy_mgr_next_actions(psoc, vdev_id, next_action,
-						reason);
+						reason, POLICY_MGR_DEF_REQ_ID);
 		else
 			policy_mgr_next_actions(psoc, original_vdev_id,
-						next_action, reason);
+						next_action, reason,
+						POLICY_MGR_DEF_REQ_ID);
 	} else {
 		policy_mgr_debug("No action needed right now");
 		ret = policy_mgr_set_opportunistic_update(psoc);
@@ -2989,7 +3010,8 @@ QDF_STATUS policy_mgr_complete_action(struct wlan_objmgr_psoc *psoc,
 				       session_id);
 	if (!QDF_IS_STATUS_SUCCESS(status))
 		status = policy_mgr_next_actions(psoc, session_id,
-						next_action, reason);
+						 next_action, reason,
+						 POLICY_MGR_DEF_REQ_ID);
 
 	return status;
 }

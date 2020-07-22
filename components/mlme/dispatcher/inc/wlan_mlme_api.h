@@ -813,6 +813,24 @@ QDF_STATUS wlan_mlme_get_bigtk_support(struct wlan_objmgr_psoc *psoc,
 bool wlan_mlme_get_host_scan_abort_support(struct wlan_objmgr_psoc *psoc);
 
 /**
+ * wlan_mlme_get_peer_create_conf_support  - Get if the firmware supports
+ * peer create confirm event
+ * @psoc: PSOC object pointer
+ *
+ * Return: True if capability is supported, else False
+ */
+bool wlan_mlme_get_peer_create_conf_support(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * wlan_mlme_get_dual_sta_roam_support  - Get support for dual sta roaming
+ * feature
+ * @psoc: PSOC object pointer
+ *
+ * Return: True if capability is supported, else False
+ */
+bool wlan_mlme_get_dual_sta_roam_support(struct wlan_objmgr_psoc *psoc);
+
+/**
  * wlan_mlme_get_oce_sap_enabled_info() - Get the OCE feature enable
  * info for SAP
  * @psoc: pointer to psoc object
@@ -1925,6 +1943,20 @@ QDF_STATUS
 wlan_mlme_get_force_sap_enabled(struct wlan_objmgr_psoc *psoc, bool *value);
 
 /**
+ * wlan_mlme_get_enable_dynamic_nss_chains_cfg() - API to get whether dynamic
+ * nss and chain config is enabled or not
+ * @psoc: psoc context
+ * @value: data to be set
+ *
+ * API to get whether dynamic nss and chain config is enabled or not
+ *
+ * Return: QDF_STATUS_SUCCESS or QDF_STATUS_FAILURE
+ */
+QDF_STATUS
+wlan_mlme_get_enable_dynamic_nss_chains_cfg(struct wlan_objmgr_psoc *psoc,
+					    bool *value);
+
+/**
  * wlan_mlme_get_vht_enable2x2() - Enables/disables VHT Tx/Rx MCS values for 2x2
  * @psoc: psoc context
  * @value: data to be set
@@ -2208,7 +2240,6 @@ QDF_STATUS wlan_mlme_is_bmps_enabled(struct wlan_objmgr_psoc *psoc,
 /**
  * wlan_mlme_override_bmps_imps() - disable imps/bmps
  * @psoc: pointer to psoc object
- * @value: value that is requested by the caller
  *
  * Return: QDF_STATUS_SUCCESS - in case of success
  */
@@ -2507,4 +2538,109 @@ uint32_t wlan_mlme_get_roaming_triggers(struct wlan_objmgr_psoc *psoc)
 QDF_STATUS
 wlan_mlme_get_dfs_chan_ageout_time(struct wlan_objmgr_psoc *psoc,
 				   uint8_t *dfs_chan_ageout_time);
+
+#ifdef WLAN_FEATURE_SAE
+/**
+ * wlan_mlme_get_sae_assoc_retry_count() - Get the sae assoc retry count
+ * @psoc: pointer to psoc object
+ * @retry_count: assoc retry count
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+wlan_mlme_get_sae_assoc_retry_count(struct wlan_objmgr_psoc *psoc,
+				    uint8_t *retry_count);
+/**
+ * wlan_mlme_get_sae_assoc_retry_count() - Get the sae auth retry count
+ * @psoc: pointer to psoc object
+ * @retry_count: auth retry count
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+wlan_mlme_get_sae_auth_retry_count(struct wlan_objmgr_psoc *psoc,
+				   uint8_t *retry_count);
+
+/**
+ * wlan_mlme_get_sae_roam_auth_retry_count() - Get the sae roam auth retry count
+ * @psoc: pointer to psoc object
+ * @retry_count: auth retry count
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+wlan_mlme_get_sae_roam_auth_retry_count(struct wlan_objmgr_psoc *psoc,
+					uint8_t *retry_count);
+
+#else
+static inline QDF_STATUS
+wlan_mlme_get_sae_assoc_retry_count(struct wlan_objmgr_psoc *psoc,
+				    uint8_t *retry_count)
+{
+	*retry_count = 0;
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+wlan_mlme_get_sae_auth_retry_count(struct wlan_objmgr_psoc *psoc,
+				    uint8_t *retry_count)
+{
+	*retry_count = 0;
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+wlan_mlme_get_sae_roam_auth_retry_count(struct wlan_objmgr_psoc *psoc,
+					uint8_t *retry_count)
+{
+	*retry_count = 0;
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
+/**
+ * wlan_mlme_get_dual_sta_roaming_enabled  - API to get if the dual sta
+ * roaming support is enabled.
+ * @psoc: Pointer to global psoc object
+ *
+ * Return: True if dual sta roaming feature is enabled else return false
+ */
+bool
+wlan_mlme_get_dual_sta_roaming_enabled(struct wlan_objmgr_psoc *psoc);
+#else
+static inline bool
+wlan_mlme_get_dual_sta_roaming_enabled(struct wlan_objmgr_psoc *psoc)
+{
+	return false;
+}
+#endif
+
+/**
+ * mlme_store_fw_scan_channels - Update the valid channel list to mlme.
+ * @psoc: Pointer to global psoc object
+ * @chan_list: Source channel list pointer
+ *
+ * Currently the channel list is saved to wma_handle to be updated in the
+ * PCL command. This cannot be accesed at target_if while sending vdev
+ * set pcl command. So save the channel list to mlme.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+mlme_store_fw_scan_channels(struct wlan_objmgr_psoc *psoc,
+			    tSirUpdateChanList *chan_list);
+
+/**
+ * mlme_get_fw_scan_channels  - Copy the saved valid channel
+ * list to the provided buffer
+ * @psoc: Pointer to global psoc object
+ * @freq_list: Pointer to the frequency list buffer to be filled
+ * @saved_num_chan: Number of channels filled
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS mlme_get_fw_scan_channels(struct wlan_objmgr_psoc *psoc,
+				     uint32_t *freq_list,
+				     uint8_t *saved_num_chan);
 #endif /* _WLAN_MLME_API_H_ */

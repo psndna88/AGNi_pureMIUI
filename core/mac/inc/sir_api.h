@@ -937,8 +937,6 @@ struct join_req {
 	/* (Re) Association Request */
 
 	tAniEdType UCEncryptionType;
-
-	tAniEdType MCEncryptionType;
 	enum ani_akm_type akm;
 
 	bool is11Rconnection;
@@ -2923,6 +2921,7 @@ struct roam_offload_synch_ind {
 	uint16_t hlp_data_len;
 	uint8_t hlp_data[FILS_MAX_HLP_DATA_LEN];
 	bool is_ft_im_roam;
+	enum wlan_phymode phy_mode; /*phy mode sent by fw */
 };
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
@@ -5167,6 +5166,8 @@ struct sme_sta_inactivity_timeout {
  * @wow_pulse_pin: GPIO PIN for Pulse
  * @wow_pulse_interval_low: Pulse interval low
  * @wow_pulse_interval_high: Pulse interval high
+ * @wow_pulse_repeat_count: Pulse repeat count
+ * @wow_pulse_init_state: Pulse init level
  *
  * SME uses this structure to configure wow pulse info
  * and send it to WMA
@@ -5176,6 +5177,8 @@ struct wow_pulse_mode {
 	uint8_t                    wow_pulse_pin;
 	uint16_t                   wow_pulse_interval_high;
 	uint16_t                   wow_pulse_interval_low;
+	uint32_t                   wow_pulse_repeat_count;
+	uint32_t                   wow_pulse_init_state;
 };
 
 
@@ -5330,6 +5333,14 @@ struct ppet_hdr {
 #define HE_MCS_0_9     0x1
 #define HE_MCS_0_11    0x2
 #define HE_MCS_DISABLE 0x3
+
+#define HE_6G_MIN_MPDU_START_SAPCE_BIT_POS 0
+#define HE_6G_MAX_AMPDU_LEN_EXP_BIT_POS 3
+#define HE_6G_MAX_MPDU_LEN_BIT_POS 6
+#define HE_6G_SMPS_BIT_POS 9
+#define HE_6G_RD_RESP_BIT_POS 11
+#define HE_6G_RX_ANT_PATTERN_BIT_POS 12
+#define HE_6G_TX_ANT_PATTERN_BIT_POS 13
 
 /*
  * Following formuala has been arrived at using karnaugh map and unit tested
@@ -5637,16 +5648,6 @@ struct sir_sae_msg {
 	uint16_t vdev_id;
 	uint8_t sae_status;
 	tSirMacAddr peer_mac_addr;
-};
-
-/**
- * struct set_pcl_req - Request message to set the PCL
- * @chan_weights: PCL channel weights
- * @band_mask: Supported band mask
- */
-struct set_pcl_req {
-	struct wmi_pcl_chan_weights chan_weights;
-	uint32_t band_mask;
 };
 
 #ifdef WLAN_FEATURE_MOTION_DETECTION

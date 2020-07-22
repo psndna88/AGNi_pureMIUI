@@ -190,8 +190,8 @@ static void wma_send_bcn_buf_ll(tp_wma_handle wma,
 			(uint8_t) WMI_UNIFIED_NOA_ATTR_CTWIN_GET(p2p_noa_info);
 		noa_ie.num_descriptors = (uint8_t)
 				WMI_UNIFIED_NOA_ATTR_NUM_DESC_GET(p2p_noa_info);
-		WMA_LOGI("%s: index %u, oppPs %u, ctwindow %u, num_descriptors = %u",
-			 __func__, noa_ie.index,
+		wma_debug("index %u, oppPs %u, ctwindow %u, num_descriptors = %u",
+			 noa_ie.index,
 			 noa_ie.oppPS, noa_ie.ctwindow, noa_ie.num_descriptors);
 		for (i = 0; i < noa_ie.num_descriptors; i++) {
 			noa_ie.noa_descriptors[i].type_count =
@@ -203,8 +203,8 @@ static void wma_send_bcn_buf_ll(tp_wma_handle wma,
 				p2p_noa_info->noa_descriptors[i].interval;
 			noa_ie.noa_descriptors[i].start_time =
 				p2p_noa_info->noa_descriptors[i].start_time;
-			WMA_LOGI("%s: NoA descriptor[%d] type_count %u, duration %u, interval %u, start_time = %u",
-				 __func__, i,
+			wma_debug("NoA descriptor[%d] type_count %u, duration %u, interval %u, start_time = %u",
+				 i,
 				 noa_ie.noa_descriptors[i].type_count,
 				 noa_ie.noa_descriptors[i].duration,
 				 noa_ie.noa_descriptors[i].interval,
@@ -331,7 +331,6 @@ int wma_peer_sta_kickout_event_handler(void *handle, uint8_t *event,
 	uint8_t *addr, *bssid;
 	struct wlan_objmgr_vdev *vdev;
 	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
-	struct reject_ap_info ap_info;
 
 	param_buf = (WMI_PEER_STA_KICKOUT_EVENTID_param_tlvs *) event;
 	kickout_event = param_buf->fixed_param;
@@ -407,8 +406,7 @@ int wma_peer_sta_kickout_event_handler(void *handle, uint8_t *event,
 			 * In future implementation, roaming module will also
 			 * handle this event and perform a scan.
 			 */
-			WMA_LOGW("%s: WMI_PEER_STA_KICKOUT_REASON_UNSPECIFIED event for STA",
-				__func__);
+			wma_warn("WMI_PEER_STA_KICKOUT_REASON_UNSPECIFIED event for STA");
 			wma_beacon_miss_handler(wma, vdev_id,
 						kickout_event->rssi);
 			goto exit_handler;
@@ -460,10 +458,6 @@ int wma_peer_sta_kickout_event_handler(void *handle, uint8_t *event,
 		     0);
 	wma_lost_link_info_handler(wma, vdev_id, del_sta_ctx->rssi);
 
-	qdf_mem_copy(&ap_info.bssid, macaddr, QDF_MAC_ADDR_SIZE);
-	ap_info.reject_ap_type = DRIVER_AVOID_TYPE;
-	wlan_blm_add_bssid_to_reject_list(wma->pdev, &ap_info);
-
 exit_handler:
 	return 0;
 }
@@ -503,9 +497,9 @@ int wma_unified_bcntx_status_event_handler(void *handle,
 
 	/* Beacon Tx Indication supports only AP mode. Ignore in other modes */
 	if (wma_is_vdev_in_ap_mode(wma, resp_event->vdev_id) == false) {
-		WMA_LOGI("%s: Beacon Tx Indication does not support type %d and sub_type %d",
-			__func__, wma->interfaces[resp_event->vdev_id].type,
-			wma->interfaces[resp_event->vdev_id].sub_type);
+		wma_debug("Beacon Tx Indication does not support type %d and sub_type %d",
+			 wma->interfaces[resp_event->vdev_id].type,
+			 wma->interfaces[resp_event->vdev_id].sub_type);
 		return 0;
 	}
 
@@ -1343,8 +1337,8 @@ QDF_STATUS wma_send_peer_assoc(tp_wma_handle wma,
 
 	if ((phymode == WLAN_PHYMODE_11A && num_peer_11a_rates == 0) ||
 	    (phymode == WLAN_PHYMODE_11B && num_peer_11b_rates == 0)) {
-		WMA_LOGW("%s: Invalid phy rates. phymode 0x%x, 11b_rates %d, 11a_rates %d",
-			__func__, phymode, num_peer_11b_rates,
+		wma_warn("Invalid phy rates. phymode 0x%x, 11b_rates %d, 11a_rates %d",
+			phymode, num_peer_11b_rates,
 			num_peer_11a_rates);
 		qdf_mem_free(cmd);
 		return QDF_STATUS_E_INVAL;
@@ -1379,7 +1373,7 @@ QDF_STATUS wma_send_peer_assoc(tp_wma_handle wma,
 		 */
 
 		/* TODO: Do we really need this? */
-		WMA_LOGW("Peer is marked as HT capable but supported mcs rate is 0");
+		wma_warn("Peer is marked as HT capable but supported mcs rate is 0");
 		peer_ht_rates.num_rates = sizeof(temp_ni_rates);
 		qdf_mem_copy((uint8_t *) peer_ht_rates.rates, temp_ni_rates,
 			     peer_ht_rates.num_rates);
@@ -1617,8 +1611,8 @@ QDF_STATUS wma_send_peer_assoc(tp_wma_handle wma,
 	status = wmi_unified_peer_assoc_send(wma->wmi_handle,
 					 cmd);
 	if (QDF_IS_STATUS_ERROR(status))
-		WMA_LOGP(FL("Failed to send peer assoc command status = %d"),
-			status);
+		wma_alert("Failed to send peer assoc command status = %d",
+			 status);
 	qdf_mem_free(cmd);
 
 	return status;
@@ -1696,7 +1690,7 @@ wma_update_beacon_interval(tp_wma_handle wma, uint8_t vdev_id,
 	if (QDF_IS_STATUS_ERROR(ret))
 		WMA_LOGE("Failed to update beacon interval");
 	else
-		WMA_LOGI("Updated beacon interval %d for vdev %d",
+		wma_info("Updated beacon interval %d for vdev %d",
 			 beaconInterval, vdev_id);
 }
 

@@ -77,8 +77,7 @@ void wma_add_sta_ndi_mode(tp_wma_handle wma, tpAddStaParams add_sta)
 	}
 
 	status = wma_create_peer(wma, add_sta->staMac,
-				 WMI_PEER_TYPE_NAN_DATA, add_sta->smesessionId,
-				 false);
+				 WMI_PEER_TYPE_NAN_DATA, add_sta->smesessionId);
 	if (status != QDF_STATUS_SUCCESS) {
 		WMA_LOGE(FL("Failed to create peer for %pM"), add_sta->staMac);
 		add_sta->status = status;
@@ -90,18 +89,17 @@ void wma_add_sta_ndi_mode(tp_wma_handle wma, tpAddStaParams add_sta)
 		WMA_LOGE(FL("Failed to find peer handle using peer mac %pM"),
 			 add_sta->staMac);
 		add_sta->status = QDF_STATUS_E_FAILURE;
-		wma_remove_peer(wma, add_sta->staMac, add_sta->smesessionId,
-				false);
+		wma_remove_peer(wma, add_sta->staMac, add_sta->smesessionId);
 		goto send_rsp;
 	}
 
-	WMA_LOGD(FL("Moving peer %pM to state %d"), add_sta->staMac, state);
+	wma_debug("Moving peer %pM to state %d", add_sta->staMac, state);
 	cdp_peer_state_update(soc, add_sta->staMac, state);
 
 	add_sta->nss    = iface->nss;
 	add_sta->status = QDF_STATUS_SUCCESS;
 send_rsp:
-	WMA_LOGD(FL("Sending add sta rsp to umac (mac:%pM, status:%d)"),
+	wma_debug("Sending add sta rsp to umac (mac:%pM, status:%d)",
 		 add_sta->staMac, add_sta->status);
 	wma_send_msg_high_priority(wma, WMA_ADD_STA_RSP, (void *)add_sta, 0);
 }
@@ -119,15 +117,15 @@ void wma_delete_sta_req_ndi_mode(tp_wma_handle wma,
 					tpDeleteStaParams del_sta)
 {
 	wma_remove_peer(wma, del_sta->staMac,
-			del_sta->smesessionId, false);
+			del_sta->smesessionId);
 	del_sta->status = QDF_STATUS_SUCCESS;
 
 	if (del_sta->respReqd) {
-		WMA_LOGD(FL("Sending del rsp to umac (status: %d)"),
+		wma_debug("Sending del rsp to umac (status: %d)",
 				del_sta->status);
 		wma_send_msg_high_priority(wma, WMA_DELETE_STA_RSP, del_sta, 0);
 	} else {
-		WMA_LOGD(FL("NDI Del Sta resp not needed"));
+		wma_debug("NDI Del Sta resp not needed");
 		qdf_mem_free(del_sta);
 	}
 

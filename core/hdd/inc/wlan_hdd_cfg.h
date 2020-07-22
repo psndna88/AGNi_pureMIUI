@@ -34,6 +34,7 @@
 #include <qdf_types.h>
 #include <csr_api.h>
 #include <sap_api.h>
+#include <sir_mac_prot_def.h>
 #include "osapi_linux.h"
 #include <wmi_unified.h>
 #include "wlan_pmo_hw_filter_public_struct.h"
@@ -252,6 +253,7 @@ struct hdd_config {
 	/* Duration for which periodic logging should be done */
 	uint32_t periodic_stats_timer_duration;
 #endif /* WLAN_FEATURE_PERIODIC_STA_STATS */
+	uint8_t nb_commands_interval;
 };
 
 /**
@@ -299,7 +301,32 @@ QDF_STATUS hdd_hex_string_to_u16_array(char *str, uint16_t *int_array,
 
 void hdd_cfg_print_global_config(struct hdd_context *hdd_ctx);
 
+/**
+ * hdd_update_nss() - Update the number of spatial streams supported.
+ *
+ * @adapter: the pointer to adapter
+ * @nss: the number of spatial streams to be updated
+ *
+ * This function is used to modify the number of spatial streams
+ * supported when not in connected state.
+ *
+ * Return: QDF_STATUS_SUCCESS if nss is correctly updated,
+ *              otherwise QDF_STATUS_E_FAILURE would be returned
+ */
 QDF_STATUS hdd_update_nss(struct hdd_adapter *adapter, uint8_t nss);
+
+/**
+ * hdd_get_nss() - Get the number of spatial streams supported by the adapter
+ *
+ * @adapter: the pointer to adapter
+ * @nss: the number of spatial streams supported by the adapter
+ *
+ * This function is used to get the number of spatial streams supported by
+ * the adapter.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS hdd_get_nss(struct hdd_adapter *adapter, uint8_t *nss);
 
 /**
  * hdd_dfs_indicate_radar() - Block tx as radar found on the channel
@@ -316,6 +343,15 @@ QDF_STATUS hdd_update_nss(struct hdd_adapter *adapter, uint8_t nss);
 bool hdd_dfs_indicate_radar(struct hdd_context *hdd_ctx);
 
 /**
+ * hdd_restore_all_ps() - Restore all the powersave configuration overwritten
+ * by hdd_override_all_ps.
+ * @hdd_ctx: Pointer to HDD context.
+ *
+ * Return: None
+ */
+void hdd_restore_all_ps(struct hdd_context *hdd_ctx);
+
+/**
  * hdd_override_all_ps() - overrides to disables all the powersave features.
  * @hdd_ctx: Pointer to HDD context.
  * Overrides below powersave ini configurations.
@@ -329,4 +365,119 @@ bool hdd_dfs_indicate_radar(struct hdd_context *hdd_ctx);
  * Return: None
  */
 void hdd_override_all_ps(struct hdd_context *hdd_ctx);
-#endif
+
+/**
+ * hdd_vendor_mode_to_phymode() - Get eCsrPhyMode according to vendor phy mode
+ * @vendor_phy_mode: vendor phy mode
+ * @crs_phy_mode: phy mode of eCsrPhyMode
+ *
+ * Return: 0 on success, negative errno value on error
+ */
+int hdd_vendor_mode_to_phymode(enum qca_wlan_vendor_phy_mode vendor_phy_mode,
+			       eCsrPhyMode *csr_phy_mode);
+
+/**
+ * hdd_vendor_mode_to_band() - Get band_info according to vendor phy mode
+ * @vendor_phy_mode: vendor phy mode
+ *
+ * Return: band_info on success, BAND_UNKNOWN on error
+ */
+enum band_info
+hdd_vendor_mode_to_band(enum qca_wlan_vendor_phy_mode vendor_phy_mode);
+
+/**
+ * hdd_vendor_mode_to_bonding_mode() - Get channel bonding mode according to
+ * vendor phy mode
+ * @vendor_phy_mode: vendor phy mode
+ * @bonding_mode: channel bonding mode
+ *
+ * Return: 0 on success, negative errno value on error
+ */
+int
+hdd_vendor_mode_to_bonding_mode(enum qca_wlan_vendor_phy_mode vendor_phy_mode,
+				uint32_t *bonding_mode);
+
+/**
+ * hdd_update_phymode() - update the PHY mode of the adapter
+ * @adapter: adapter being modified
+ * @phymode: new PHY mode for the adapter
+ * @band: new band for the adapter
+ * @bonding_mode: new channel bonding mode for the adapter
+ *
+ * This function is called when the adapter is set to a new PHY mode.
+ * It takes a holistic look at the desired PHY mode along with the
+ * configured capabilities of the driver and the reported capabilities
+ * of the hardware in order to correctly configure all PHY-related
+ * parameters.
+ *
+ * Return: 0 on success, negative errno value on error
+ */
+int hdd_update_phymode(struct hdd_adapter *adapter, eCsrPhyMode phymode,
+		       enum band_info band, uint32_t bonding_mode);
+
+/**
+ * hdd_get_ldpc() - Get adapter LDPC
+ * @adapter: adapter being queried
+ * @value: where to store the value
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+int hdd_get_ldpc(struct hdd_adapter *adapter, int *value);
+
+/**
+ * hdd_set_ldpc() - Set adapter LDPC
+ * @adapter: adapter being modified
+ * @value: new LDPC value
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+int hdd_set_ldpc(struct hdd_adapter *adapter, int value);
+
+/**
+ * hdd_get_tx_stbc() - Get adapter TX STBC
+ * @adapter: adapter being queried
+ * @value: where to store the value
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+int hdd_get_tx_stbc(struct hdd_adapter *adapter, int *value);
+
+/**
+ * hdd_set_tx_stbc() - Set adapter TX STBC
+ * @adapter: adapter being modified
+ * @value: new TX STBC value
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+int hdd_set_tx_stbc(struct hdd_adapter *adapter, int value);
+
+/**
+ * hdd_get_rx_stbc() - Get adapter RX STBC
+ * @adapter: adapter being queried
+ * @value: where to store the value
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+int hdd_get_rx_stbc(struct hdd_adapter *adapter, int *value);
+
+/**
+ * hdd_set_rx_stbc() - Set adapter RX STBC
+ * @adapter: adapter being modified
+ * @value: new RX STBC value
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+int hdd_set_rx_stbc(struct hdd_adapter *adapter, int value);
+
+/**
+ * hdd_update_channel_width() - Update adapter channel width settings
+ * @adapter: adapter being modified
+ * @chwidth: new channel width of enum eSirMacHTChannelWidth
+ * @bonding_mode: channel bonding mode of the new channel width
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+int hdd_update_channel_width(struct hdd_adapter *adapter,
+			     enum eSirMacHTChannelWidth chwidth,
+			     uint32_t bonding_mode);
+#endif /* end #if !defined(HDD_CONFIG_H__) */

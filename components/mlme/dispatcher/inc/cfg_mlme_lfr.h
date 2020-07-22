@@ -2366,9 +2366,13 @@
  * <ini>
  * roam_triggers - Bitmap of roaming triggers. Setting this to
  * zero will disable roaming altogether for the STA interface.
+ * ESS report element of beacon explores BSS information, for roaming station
+ * uses it to consider next AP to roam. ROAM_TRIGGER_REASON_ESS_RSSI bit is
+ * to enable/disable roam trigger for ESS RSSI reason. This bit of ini is also
+ * used for WFA certification.
  * @Min: 0
  * @Max: 0xFFFFFFFF
- * @Default: 0xFFFF
+ * @Default: 0x1FFFF
  *
  * ROAM_TRIGGER_REASON_PER         BIT 1
  * ROAM_TRIGGER_REASON_BMISS       BIT 2
@@ -2385,13 +2389,14 @@
  * ROAM_TRIGGER_REASON_DEAUTH      BIT 13
  * ROAM_TRIGGER_REASON_IDLE        BIT 14
  * ROAM_TRIGGER_REASON_STA_KICKOUT BIT 15
- * ROAM_TRIGGER_REASON_MAX     BIT 16
+ * ROAM_TRIGGER_REASON_ESS_RSSI    BIT 16
+ * ROAM_TRIGGER_REASON_MAX         BIT 17
  *
  * Related: none
  *
  * Supported Feature: Roaming
  *
- * Usage: Internal
+ * Usage: External
  *
  * </ini>
  */
@@ -2399,7 +2404,7 @@
 			"roam_triggers", \
 			0, \
 			0xFFFFFFFF, \
-			0xFFFF, \
+			0x1FFFF, \
 			CFG_VALUE_OR_DEFAULT, \
 			"Bitmap of roaming triggers")
 
@@ -2434,6 +2439,36 @@
 		CFG_VALUE_OR_DEFAULT, \
 		"disable roam on STA iface if one of the iface mentioned in default is in connected state")
 
+/*
+ * <ini>
+ * enable_dual_sta_roam_offload - Enable roaming offload on both interfaces
+ * for STA + STA
+ * @Min: 0 - Dual STA Roam offload Disabled
+ * @Max: 1 - Dual STA Roam offload Enabled
+ * @Default: 1
+ *
+ * Enabling this ini will:
+ *  a) Enforce the STA + STA connection be DBS if the hw is capable.
+ *  b) Enable Roam Scan Offload on both the STA vdev.
+ *  c) Enable firmware to support sequential roaming on both STA vdev
+ *     if the firmware is capable of dual sta roaming.
+ *
+ * Related: None.
+ *
+ * Supported Feature: ROAM
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_ENABLE_DUAL_STA_ROAM_OFFLOAD CFG_INI_UINT( \
+		"enable_dual_sta_roam_offload", \
+		false, \
+		true, \
+		true, \
+		CFG_VALUE_OR_DEFAULT, \
+		"Enable roam on both STA vdev")
+
 #define ROAM_OFFLOAD_ALL \
 	CFG(CFG_LFR3_ROAMING_OFFLOAD) \
 	CFG(CFG_LFR3_ENABLE_SELF_BSS_ROAM) \
@@ -2446,6 +2481,7 @@
 	CFG(CFG_LFR_IDLE_ROAM_BAND) \
 	CFG(CFG_ROAM_TRIGGER_BITMAP) \
 	CFG(CFG_STA_DISABLE_ROAM) \
+	CFG(CFG_ENABLE_DUAL_STA_ROAM_OFFLOAD) \
 
 #else
 #define ROAM_OFFLOAD_ALL

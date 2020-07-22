@@ -104,6 +104,8 @@
 #include "wma_sar_public_structs.h"
 #include "wlan_mlme_ucfg_api.h"
 #include "pld_common.h"
+#include <dp_txrx.h>
+#include "wlan_cm_roam_public_srtuct.h"
 
 #ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
 #include "qdf_periodic_work.h"
@@ -153,6 +155,29 @@ struct hdd_apf_context {
 #else
 #define NUM_TX_QUEUES 4
 #endif
+
+/* HDD_IS_RATE_LIMIT_REQ: Macro helper to implement rate limiting
+ * @flag: The flag to determine if limiting is required or not
+ * @rate: The number of seconds within which if multiple commands come, the
+ *	  flag will be set to true
+ *
+ * If the function in which this macro is used is called multiple times within
+ * "rate" number of seconds, the "flag" will be set to true which can be used
+ * to reject/take appropriate action.
+ */
+#define HDD_IS_RATE_LIMIT_REQ(flag, rate)\
+	do {\
+		static ulong __last_ticks;\
+		ulong __ticks = jiffies;\
+		flag = false; \
+		if (!time_after(__ticks,\
+		    __last_ticks + rate * HZ)) {\
+			flag = true; \
+		} \
+		else { \
+			__last_ticks = __ticks;\
+		} \
+	} while (0)
 
 /*
  * API in_compat_syscall() is introduced in 4.6 kernel to check whether we're
@@ -777,7 +802,7 @@ struct hdd_station_ctx {
 	struct qdf_mac_addr requested_bssid;
 	struct hdd_connection_info conn_info;
 	struct hdd_connection_info cache_conn_info;
-	int ft_carrier_on;
+	bool ft_carrier_on;
 	bool hdd_reassoc_scenario;
 	int sta_debug_state;
 	struct hdd_mon_set_ch_info ch_info;
@@ -1086,6 +1111,8 @@ struct hdd_context;
  * @latency_level: 0 - normal, 1 - moderate, 2 - low, 3 - ultralow
  * @last_disconnect_reason: Last disconnected internal reason code
  *                          as per enum qca_disconnect_reason_codes
+ * @upgrade_udp_qos_threshold: The threshold for user priority upgrade for
+			       any UDP packet.
  */
 struct hdd_adapter {
 	/* Magic cookie for adapter sanity verification.  Note that this
@@ -1294,6 +1321,7 @@ struct hdd_adapter {
 	bool is_link_layer_stats_set;
 #endif
 	uint8_t link_status;
+	uint8_t upgrade_udp_qos_threshold;
 
 	/* variable for temperature in Celsius */
 	int temperature;
@@ -1648,6 +1676,9 @@ struct hdd_fw_ver_info {
  * @psoc_idle_timeout_work: delayed work for psoc idle shutdown
  * @dynamic_nss_chains_support: Per vdev dynamic nss chains update capability
  * @sar_cmd_params: SAR command params to be configured to the FW
+ * @country_change_work: work for updating vdev when country changes
+ * @rx_aggregation: rx aggregation enable or disable state
+ * @gro_force_flush: gro force flushed indication flag
  */
 struct hdd_context {
 	struct wlan_objmgr_psoc *psoc;
@@ -1972,6 +2003,11 @@ struct hdd_context {
 #ifdef FW_THERMAL_THROTTLE_SUPPORT
 	uint8_t dutycycle_off_percent;
 #endif
+	qdf_work_t country_change_work;
+	struct {
+		qdf_atomic_t rx_aggregation;
+		uint8_t gro_force_flush[DP_MAX_RX_THREADS];
+	} dp_agg_param;
 };
 
 /**
@@ -3039,28 +3075,30 @@ hdd_store_nss_chains_cfg_in_vdev(struct hdd_adapter *adapter);
 /**
  * wlan_hdd_disable_roaming() - disable roaming on all STAs except the input one
  * @cur_adapter: Current HDD adapter passed from caller
- * @mlme_operation_requestor: roam disable requestor
+ * @rso_op_requestor: roam disable requestor
  *
  * This function loops through all adapters and disables roaming on each STA
  * mode adapter except the current adapter passed from the caller
  *
  * Return: None
  */
-void wlan_hdd_disable_roaming(struct hdd_adapter *cur_adapter,
-			      uint32_t mlme_operation_requestor);
+void
+wlan_hdd_disable_roaming(struct hdd_adapter *cur_adapter,
+			 enum wlan_cm_rso_control_requestor rso_op_requestor);
 
 /**
  * wlan_hdd_enable_roaming() - enable roaming on all STAs except the input one
  * @cur_adapter: Current HDD adapter passed from caller
- * @mlme_operation_requestor: roam disable requestor
+ * @rso_op_requestor: roam disable requestor
  *
  * This function loops through all adapters and enables roaming on each STA
  * mode adapter except the current adapter passed from the caller
  *
  * Return: None
  */
-void wlan_hdd_enable_roaming(struct hdd_adapter *cur_adapter,
-			     uint32_t mlme_operation_requestor);
+void
+wlan_hdd_enable_roaming(struct hdd_adapter *cur_adapter,
+			enum wlan_cm_rso_control_requestor rso_op_requestor);
 
 QDF_STATUS hdd_post_cds_enable_config(struct hdd_context *hdd_ctx);
 
@@ -3244,6 +3282,16 @@ static inline void hdd_set_sg_flags(struct hdd_context *hdd_ctx,
 static inline void hdd_set_sg_flags(struct hdd_context *hdd_ctx,
 				struct net_device *wlan_dev){}
 #endif
+
+/**
+ * hdd_set_netdev_flags() - set netdev flags for adapter as per ini config
+ * @adapter: hdd adapter context
+ *
+ * This function sets netdev feature flags for the adapter.
+ *
+ * Return: none
+ */
+void hdd_set_netdev_flags(struct hdd_adapter *adapter);
 
 #ifdef FEATURE_TSO
 /**
@@ -3582,7 +3630,6 @@ tSirAddie *hdd_assoc_additional_ie(struct hdd_adapter *adapter)
  * Return: true if roaming is in progress else false
  */
 bool hdd_is_roaming_in_progress(struct hdd_context *hdd_ctx);
-void hdd_set_roaming_in_progress(bool value);
 
 /**
  * hdd_is_connection_in_progress() - check if connection is in progress
@@ -3873,13 +3920,11 @@ void hdd_set_rx_mode_rps(bool enable);
 /**
  * hdd_update_score_config - API to update candidate scoring related params
  * configuration parameters
- * @score_config: score config to update
- * @cfg: config params
+ * @hdd_ctx: hdd context
  *
  * Return: QDF_STATUS
  */
-QDF_STATUS hdd_update_score_config(
-	struct scoring_config *score_config, struct hdd_context *hdd_ctx);
+QDF_STATUS hdd_update_score_config(struct hdd_context *hdd_ctx);
 
 /**
  * hdd_get_stainfo() - get stainfo for the specified peer
@@ -4218,31 +4263,6 @@ QDF_STATUS hdd_md_bl_evt_cb(void *ctx, struct sir_md_bl_evt *event);
 void hdd_hidden_ssid_enable_roaming(hdd_handle_t hdd_handle, uint8_t vdev_id);
 
 /**
- * hdd_send_update_owe_info_event - Send update OWE info event
- * @adapter: Pointer to adapter
- * @sta_addr: MAC address of peer STA
- * @owe_ie: OWE IE
- * @owe_ie_len: Length of OWE IE
- *
- * Send update OWE info event to hostapd
- *
- * Return: none
- */
-#ifdef CFG80211_EXTERNAL_DH_UPDATE_SUPPORT
-void hdd_send_update_owe_info_event(struct hdd_adapter *adapter,
-				    uint8_t sta_addr[],
-				    uint8_t *owe_ie,
-				    uint32_t owe_ie_len);
-#else
-static inline void hdd_send_update_owe_info_event(struct hdd_adapter *adapter,
-						  uint8_t sta_addr[],
-						  uint8_t *owe_ie,
-						  uint32_t owe_ie_len)
-{
-}
-#endif
-
-/**
  * hdd_psoc_idle_shutdown - perform idle shutdown after interface inactivity
  *                          timeout
  * @device: pointer to struct device
@@ -4426,6 +4446,35 @@ static inline void hdd_cleanup_conn_info(struct hdd_adapter *adapter)
 {
 }
 static inline void hdd_sta_destroy_ctx_all(struct hdd_context *hdd_ctx)
+{
+}
+#endif
+
+/**
+ * hdd_init_start_completion() - Init the completion variable to wait on ON/OFF
+ *
+ * Return: None
+ */
+void hdd_init_start_completion(void);
+
+/**
+ * hdd_max_sta_vdev_count_reached() - check sta vdev count
+ * @hdd_ctx: global hdd context
+ *
+ * Return: true if vdev limit reached
+ */
+bool hdd_max_sta_vdev_count_reached(struct hdd_context *hdd_ctx);
+
+#if defined(CLD_PM_QOS) && defined(WLAN_FEATURE_LL_MODE)
+/**
+ * hdd_beacon_latency_event_cb() - Callback function to get latency level
+ * @latency_level: latency level received from firmware
+ *
+ * Return: None
+ */
+void hdd_beacon_latency_event_cb(uint32_t latency_level);
+#else
+static inline void hdd_beacon_latency_event_cb(uint32_t latency_level)
 {
 }
 #endif
