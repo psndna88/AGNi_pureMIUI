@@ -41,10 +41,8 @@ struct events {
 static struct events events_group;
 static struct task_struct *events_notify_thread;
 
-#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
 bool cpu_oc = true;
 module_param(cpu_oc, bool, S_IRUSR | S_IWUSR);
-#endif
 /*******************************sysfs start************************************/
 static int set_cpu_min_freq(const char *buf, const struct kernel_param *kp)
 {
@@ -151,6 +149,13 @@ static int set_cpu_max_freq(const char *buf, const struct kernel_param *kp)
 				val = 1612800;
 			if ((cpu >= 4) && (cpu <=7 ) && (val > 1804800))
 				val = 1804800;
+		}
+#else
+		if (!cpu_oc) {
+			if ((cpu >= 0) && (cpu <=3 ) && (val > 1843200))
+				val = 1843200;
+			if ((cpu >= 4) && (cpu <=7 ) && (val > 2208000))
+				val = 2208000;
 		}
 #endif
 
