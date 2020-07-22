@@ -1652,6 +1652,10 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 			}
 			if (init)
 				argv[pos++] = "-I";
+			if (netrole) {
+				argv[pos++] = "--netrole";
+				argv[pos++] = (char *) netrole;
+			}
 			if (tag_read || tag_write_hs || tag_write_uri)
 				argv[pos++] = "--no-wait";
 			if (tag_read)
