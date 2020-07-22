@@ -2155,8 +2155,6 @@ static int cam_ope_mgr_process_cmd_desc(struct cam_ope_hw_mgr *hw_mgr,
 		if (rc || !cpu_addr) {
 			CAM_ERR(CAM_OPE, "get cmd buf failed %x",
 				hw_mgr->iommu_hdl);
-			num_cmd_buf = (num_cmd_buf > 0) ?
-				num_cmd_buf-- : 0;
 			goto end;
 		}
 		if ((len <= cmd_desc[i].offset) ||
