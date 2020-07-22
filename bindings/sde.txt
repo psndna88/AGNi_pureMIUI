@@ -124,15 +124,20 @@ Optional properties:
 - qcom,sde-sspp-scale-size:	A u32 value indicates the scaling block size on sspp.
 - qcom,sde-mixer-blendstages:	A u32 value indicates the max mixer blend stages for
 				alpha blending.
-- qcom,sde-qseed-type:		A string entry indiates qseed support on sspp and wb.
-				It supports "qssedv3" and "qseedv2" entries for qseed
-				type. By default "qseedv2" is used if this optional property
-				is not defined.
+- qcom,sde-qseed-sw-lib-rev:	A string entry indicates qseed sw library revision
+				supporting the qseed HW block. It supports
+				"qseedv3", "qseedv3lite" and "qseedv2" entries for qseed
+				revision. By default "qseedv2" is used if this
+				optional property is not defined.
+- qcom,sde-qseed-scalar-version: A u32 value indicating the HW version of the
+				 QSEED hardware block
 - qcom,sde-csc-type:		A string entry indicates csc support on sspp and wb.
 				It supports "csc" and "csc-10bit" entries for csc
 				type.
-- qcom,sde-highest-bank-bit:	A u32 property to indicate GPU/Camera/Video highest memory
-				bank bit used for tile format buffers.
+- qcom,sde-highest-bank-bit:	Property to specify GPU/Camera/Video highest memory
+				bank bit used for tile format buffers. First value
+				in the array represents the ddr type and the second
+				value is the hbb value corresponding to the ddr type.
 - qcom,sde-ubwc-version:	Property to specify the UBWC feature version.
 - qcom,sde-ubwc-static:	Property to specify the default UBWC static
 				configuration value.
@@ -175,10 +180,10 @@ Optional properties:
 				match the number of offsets defined in
 				property: qcom,sde-sspp-off
 - qcom,sde-sspp-clk-status:	Array of offsets describing clk status
-				offsets for dynamic clock gating. 1st value
+				offsets for clock active state. 1st value
 				in the array represents offset of the status
 				register. 2nd value represents bit offset within
-				control register. Number of offsets defined should
+				status register. Number of offsets defined should
 				match the number of offsets defined in
 				property: qcom,sde-sspp-off.
 - qcom,sde-sspp-excl-rect:	Array of u32 values indicating exclusion rectangle
@@ -236,6 +241,7 @@ Optional properties:
 - qcom,sde-dsc-native422-supp:	Array of flags indicating whether corresponding dsc
 				block can support native 422 and native 420
 				encoding.
+- qcom,sde-dsc-linewidth:	A u32 value indicates the max dsc line width.
 - qcom,sde-vdc-off:		A u32 offset address for the available vdc blocks.
 						This offset is calculated from register "mdp_phys"
 						defined in reg property.
@@ -355,6 +361,13 @@ Optional properties:
 				control register. Number of offsets defined should
 				match the number of offsets defined in
 				property: qcom,sde-wb-off
+- qcom,sde-wb-clk-status:	Array of 2 cell property describing clk status
+				offsets for clock active state. 1st value
+				in the array represents offset of the status
+				register. 2nd value represents bit offset within
+				status register. Number of offsets defined should
+				match the number of offsets defined in
+				property: qcom,sde-wb-off
 - qcom,sde-reg-dma-off:         Array of u32 offset addresses of the dma hardware blocks,
 				relative to "regdma_phys" defined in reg property.
 - qcom,sde-reg-dma-id:		Array of u32 DMA block type ids corresponding to the
@@ -472,6 +485,7 @@ Optional properties:
 					0xf represents 4 cpu cores. These cores can be
 					silver or gold or gold+.
 - qcom,sde-qos-cpu-dma-latency:	A u32 value indicating desired PM QoS CPU DMA latency in usec.
+- qcom,sde-qos-cpu-irq-latency:	A u32 value indicating desired PM QoS CPU irq latency in usec.
 - qcom,sde-inline-rot-xin:	An integer array of xin-ids related to inline
 				rotation.
 - qcom,sde-inline-rot-xin-type:	A string array indicating the type of xin,
@@ -505,6 +519,15 @@ Optional properties:
 				ordering block
 				0: lower priority pipe has to be on the left for a given pair of pipes.
 				1: priority have to be explicitly configured for a given pair of pipes.
+- qcom,sde-trusted-vm-env:	Boolean property to indicate if the device
+				driver is executing in a trusted VM
+- qcom,sde-max-trusted-vm-displays:    A u32 property to indicate the maximum
+				number of concurrent displays supported in the
+	                        trusted vm environment
+- qcom,sde-vm-exclude-reg-names A string array indicating the reg-names which
+				should be excluded from IO memory validation list
+				in trusted vm environment
+- qcom,vram-size: 		A u32 value indicating the size of the VRAM in bytes
 
 Bus Scaling:
 - interconnects                 An array of 4 cell properties with the format of
@@ -661,7 +684,8 @@ Example:
     qcom,sde-mixer-linewidth = <2560>;
     qcom,sde-sspp-linewidth = <2560>;
     qcom,sde-mixer-blendstages = <0x7>;
-    qcom,sde-highest-bank-bit = <0x2>;
+    qcom,sde-dsc-linewidth = <2048>;
+    qcom,sde-highest-bank-bit = <0x7 0x2>;
     qcom,sde-ubwc-version = <0x100>;
     qcom,sde-ubwc-static = <0x100>;
     qcom,sde-ubwc-swizzle = <0>;
@@ -688,13 +712,15 @@ Example:
     qcom,sde-wb-linewidth-linear = <5120>;
     qcom,sde-sspp-scale-size = <0x100>;
     qcom,sde-mixer-blendstages = <0x8>;
-    qcom,sde-qseed-type = "qseedv2";
+    qcom,sde-qseed-sw-lib-rev = "qseedv2";
+    qcom,sde-qseed-scalar-version = <0x3000>;
     qcom,sde-csc-type = "csc-10bit";
     qcom,sde-highest-bank-bit = <15>;
     qcom,sde-has-mixer-gc;
     qcom,sde-has-idle-pc;
     qcom,fullsize-va-map;
     qcom,sde-has-dest-scaler;
+    qcom,sde-max-trusted-vm-displays = <1>;
     qcom,sde-max-dest-scaler-input-linewidth = <2048>;
     qcom,sde-max-dest-scaler-output-linewidth = <2560>;
     qcom,sde-sspp-max-rects = <1 1 1 1
@@ -714,9 +740,11 @@ Example:
     qcom,sde-te2-off = <0x100>;
     qcom,sde-te-size = <0xffff>;
     qcom,sde-te2-size = <0xffff>;
+    qcom,sde-trusted-vm-env;
 
     qcom,sde-wb-id = <2>;
     qcom,sde-wb-clk-ctrl = <0x2bc 16>;
+    qcom,sde-wb-clk-status = <0x3bc 20>;
 
     qcom,sde-danger-lut = <0x0000ffff 0x0000ffff 0x00000000
 		0x00000000 0x0000ffff 0x0000ffff>, <0x0003ffff
@@ -738,6 +766,7 @@ Example:
     qcom,sde-qos-cpu-mask = <0x3>;
     qcom,sde-qos-cpu-mask-performance = <0xf>;
     qcom,sde-qos-cpu-dma-latency = <300>;
+    qcom,sde-qos-cpu-irq-latency = <300>;
 
     qcom,sde-vbif-off = <0 0>;
     qcom,sde-vbif-id = <0 1>;
@@ -777,6 +806,8 @@ Example:
         2400000 2400000 2400000 2400000>;
     qcom,sde-amortizable-threshold = <11>;
     qcom,sde-secure-sid-mask = <0x200801 0x200c01>;
+
+    qcom,vram-size = <0x200000>;
 
     qcom,sde-vbif-qos-rt-remap = <3 3 4 4 5 5 6 6>;
     qcom,sde-vbif-qos-nrt-remap = <3 3 3 3 3 3 3 3>;
