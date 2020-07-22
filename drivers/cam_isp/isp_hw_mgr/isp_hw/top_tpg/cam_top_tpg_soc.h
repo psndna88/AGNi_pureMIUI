@@ -37,11 +37,12 @@ struct cam_top_tpg_device_soc_info {
  * @brief:                 csid initialization function for the soc info
  *
  * @soc_info:              soc info structure pointer
+ * @tpg_irq_handler:       irq handler function to be registered
  * @irq_data:              irq data for the callback function
  *
  */
 int cam_top_tpg_init_soc_resources(struct cam_hw_soc_info *soc_info,
-	void *irq_data);
+	irq_handler_t tpg_irq_handler, void *irq_data);
 
 /**
  * cam_top_tpg_deinit_soc_resources()

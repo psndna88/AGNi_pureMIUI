@@ -6,6 +6,7 @@
 #include <linux/module.h>
 #include "cam_top_tpg101.h"
 #include "cam_top_tpg102.h"
+#include "cam_top_tpg103.h"
 #include "cam_top_tpg_core.h"
 #include "cam_top_tpg_dev.h"
 #include "camera_main.h"
@@ -18,6 +19,10 @@ static const struct of_device_id cam_top_tpg_dt_match[] = {
 	{
 		.compatible = "qcom,tpg102",
 		.data = &cam_top_tpg102_hw_info,
+	},
+	{
+		.compatible = "qcom,tpg103",
+		.data = &cam_top_tpg103_hw_info,
 	},
 	{}
 };

@@ -22,6 +22,39 @@
 static struct cam_mem_table tbl;
 static atomic_t cam_mem_mgr_state = ATOMIC_INIT(CAM_MEM_MGR_UNINITIALIZED);
 
+static void cam_mem_mgr_print_tbl(void)
+{
+	int i;
+	uint64_t ms, tmp, hrs, min, sec;
+	struct timespec64 *ts =  NULL;
+	struct timespec64 current_ts;
+
+	ktime_get_real_ts64(&(current_ts));
+	tmp = current_ts.tv_sec;
+	ms = (current_ts.tv_nsec) / 1000000;
+	sec = do_div(tmp, 60);
+	min = do_div(tmp, 60);
+	hrs = do_div(tmp, 24);
+
+	CAM_INFO(CAM_MEM, "***%llu:%llu:%llu:%llu Mem mgr table dump***",
+		hrs, min, sec, ms);
+	for (i = 1; i < CAM_MEM_BUFQ_MAX; i++) {
+		if (tbl.bufq[i].active) {
+			ts = &tbl.bufq[i].timestamp;
+			tmp = ts->tv_sec;
+			ms = (ts->tv_nsec) / 1000000;
+			sec = do_div(tmp, 60);
+			min = do_div(tmp, 60);
+			hrs = do_div(tmp, 24);
+			CAM_INFO(CAM_MEM,
+				"%llu:%llu:%llu:%llu idx %d fd %d size %llu",
+				hrs, min, sec, ms, i, tbl.bufq[i].fd,
+				tbl.bufq[i].len);
+		}
+	}
+
+}
+
 static int cam_mem_util_get_dma_dir(uint32_t flags)
 {
 	int rc = -EINVAL;
@@ -121,25 +154,28 @@ static int cam_mem_util_unmap_cpu_va(struct dma_buf *dmabuf,
 
 static int cam_mem_mgr_create_debug_fs(void)
 {
-	tbl.dentry = debugfs_create_dir("camera_memmgr", NULL);
-	if (!tbl.dentry) {
-		CAM_ERR(CAM_MEM, "failed to create dentry");
-		return -ENOMEM;
-	}
+	int rc = 0;
+	struct dentry *dbgfileptr = NULL;
 
-	if (!debugfs_create_bool("alloc_profile_enable",
-		0644,
-		tbl.dentry,
-		&tbl.alloc_profile_enable)) {
-		CAM_ERR(CAM_MEM,
-			"failed to create alloc_profile_enable");
-		goto err;
+	dbgfileptr = debugfs_create_dir("camera_memmgr", NULL);
+	if (!dbgfileptr) {
+		CAM_ERR(CAM_MEM,"DebugFS could not create directory!");
+		rc = -ENOENT;
+		goto end;
 	}
+	/* Store parent inode for cleanup in caller */
+	tbl.dentry = dbgfileptr;
 
-	return 0;
-err:
-	debugfs_remove_recursive(tbl.dentry);
-	return -ENOMEM;
+	dbgfileptr = debugfs_create_bool("alloc_profile_enable", 0644,
+		tbl.dentry, &tbl.alloc_profile_enable);
+	if (IS_ERR(dbgfileptr)) {
+		if (PTR_ERR(dbgfileptr) == -ENODEV)
+			CAM_WARN(CAM_MEM, "DebugFS not enabled in kernel!");
+		else
+			rc = PTR_ERR(dbgfileptr);
+	}
+end:
+	return rc;
 }
 
 int cam_mem_mgr_init(void)
@@ -185,6 +221,7 @@ static int32_t cam_mem_get_slot(void)
 
 	set_bit(idx, tbl.bitmap);
 	tbl.bufq[idx].active = true;
+	ktime_get_real_ts64(&(tbl.bufq[idx].timestamp));
 	mutex_init(&tbl.bufq[idx].q_lock);
 	mutex_unlock(&tbl.m_lock);
 
@@ -196,6 +233,8 @@ static void cam_mem_put_slot(int32_t idx)
 	mutex_lock(&tbl.m_lock);
 	mutex_lock(&tbl.bufq[idx].q_lock);
 	tbl.bufq[idx].active = false;
+	tbl.bufq[idx].is_internal = false;
+	memset(&tbl.bufq[idx].timestamp, 0, sizeof(struct timespec64));
 	mutex_unlock(&tbl.bufq[idx].q_lock);
 	mutex_destroy(&tbl.bufq[idx].q_lock);
 	clear_bit(idx, tbl.bitmap);
@@ -540,7 +579,8 @@ static int cam_mem_util_map_hw_va(uint32_t flags,
 	int fd,
 	dma_addr_t *hw_vaddr,
 	size_t *len,
-	enum cam_smmu_region_id region)
+	enum cam_smmu_region_id region,
+	bool is_internal)
 {
 	int i;
 	int rc = -1;
@@ -582,7 +622,8 @@ static int cam_mem_util_map_hw_va(uint32_t flags,
 				dir,
 				(dma_addr_t *)hw_vaddr,
 				len,
-				region);
+				region,
+				is_internal);
 
 			if (rc < 0) {
 				CAM_ERR(CAM_MEM,
@@ -643,6 +684,7 @@ int cam_mem_mgr_alloc_and_map(struct cam_mem_mgr_alloc_cmd *cmd)
 		CAM_ERR(CAM_MEM,
 			"Ion Alloc failed, len=%llu, align=%llu, flags=0x%x, num_hdl=%d",
 			cmd->len, cmd->align, cmd->flags, cmd->num_hdl);
+		cam_mem_mgr_print_tbl();
 		return rc;
 	}
 
@@ -675,13 +717,19 @@ int cam_mem_mgr_alloc_and_map(struct cam_mem_mgr_alloc_cmd *cmd)
 			fd,
 			&hw_vaddr,
 			&len,
-			region);
+			region,
+			true);
 
 		if (rc) {
 			CAM_ERR(CAM_MEM,
-				"Failed in map_hw_va, len=%llu, flags=0x%x, fd=%d, region=%d, num_hdl=%d, rc=%d",
-				cmd->len, cmd->flags, fd, region,
-				cmd->num_hdl, rc);
+				"Failed in map_hw_va len=%llu, flags=0x%x, fd=%d, region=%d, num_hdl=%d, rc=%d",
+				len, cmd->flags,
+				fd, region, cmd->num_hdl, rc);
+			if (rc == -EALREADY) {
+				if ((size_t)dmabuf->size != len)
+					rc = -EBADR;
+				cam_mem_mgr_print_tbl();
+			}
 			goto map_hw_fail;
 		}
 	}
@@ -691,6 +739,7 @@ int cam_mem_mgr_alloc_and_map(struct cam_mem_mgr_alloc_cmd *cmd)
 	tbl.bufq[idx].dma_buf = NULL;
 	tbl.bufq[idx].flags = cmd->flags;
 	tbl.bufq[idx].buf_handle = GET_MEM_HANDLE(idx, fd);
+	tbl.bufq[idx].is_internal = true;
 	if (cmd->flags & CAM_MEM_FLAG_PROTECTED_MODE)
 		CAM_MEM_MGR_SET_SECURE_HDL(tbl.bufq[idx].buf_handle, true);
 
@@ -733,6 +782,23 @@ slot_fail:
 	return rc;
 }
 
+static bool cam_mem_util_is_map_internal(int32_t fd)
+{
+	uint32_t i;
+	bool is_internal = false;
+
+	mutex_lock(&tbl.m_lock);
+	for_each_set_bit(i, tbl.bitmap, tbl.bits) {
+		if (tbl.bufq[i].fd == fd) {
+			is_internal = tbl.bufq[i].is_internal;
+			break;
+		}
+	}
+	mutex_unlock(&tbl.m_lock);
+
+	return is_internal;
+}
+
 int cam_mem_mgr_map(struct cam_mem_mgr_map_cmd *cmd)
 {
 	int32_t idx;
@@ -740,6 +806,7 @@ int cam_mem_mgr_map(struct cam_mem_mgr_map_cmd *cmd)
 	struct dma_buf *dmabuf;
 	dma_addr_t hw_vaddr = 0;
 	size_t len = 0;
+	bool is_internal = false;
 
 	if (!atomic_read(&cam_mem_mgr_state)) {
 		CAM_ERR(CAM_MEM, "failed. mem_mgr not initialized");
@@ -769,6 +836,8 @@ int cam_mem_mgr_map(struct cam_mem_mgr_map_cmd *cmd)
 		return -EINVAL;
 	}
 
+	is_internal = cam_mem_util_is_map_internal(cmd->fd);
+
 	if ((cmd->flags & CAM_MEM_FLAG_HW_READ_WRITE) ||
 		(cmd->flags & CAM_MEM_FLAG_PROTECTED_MODE)) {
 		rc = cam_mem_util_map_hw_va(cmd->flags,
@@ -777,12 +846,19 @@ int cam_mem_mgr_map(struct cam_mem_mgr_map_cmd *cmd)
 			cmd->fd,
 			&hw_vaddr,
 			&len,
-			CAM_SMMU_REGION_IO);
+			CAM_SMMU_REGION_IO,
+			is_internal);
 		if (rc) {
 			CAM_ERR(CAM_MEM,
-				"Failed in map_hw_va, flags=0x%x, fd=%d, region=%d, num_hdl=%d, rc=%d",
-				cmd->flags, cmd->fd, CAM_SMMU_REGION_IO,
-				cmd->num_hdl, rc);
+				"Failed in map_hw_va, flags=0x%x, fd=%d, len=%llu, region=%d, num_hdl=%d, rc=%d",
+				cmd->flags, cmd->fd, len,
+				CAM_SMMU_REGION_IO, cmd->num_hdl, rc);
+			if (rc == -EALREADY) {
+				if ((size_t)dmabuf->size != len) {
+					rc = -EBADR;
+					cam_mem_mgr_print_tbl();
+				}
+			}
 			goto map_fail;
 		}
 	}
@@ -813,11 +889,12 @@ int cam_mem_mgr_map(struct cam_mem_mgr_map_cmd *cmd)
 	memcpy(tbl.bufq[idx].hdls, cmd->mmu_hdls,
 		sizeof(int32_t) * cmd->num_hdl);
 	tbl.bufq[idx].is_imported = true;
+	tbl.bufq[idx].is_internal = is_internal;
 	mutex_unlock(&tbl.bufq[idx].q_lock);
 
 	cmd->out.buf_handle = tbl.bufq[idx].buf_handle;
 	cmd->out.vaddr = 0;
-
+	cmd->out.size = (uint32_t)len;
 	CAM_DBG(CAM_MEM,
 		"fd=%d, flags=0x%x, num_hdl=%d, idx=%d, buf handle=%x, len=%zu",
 		cmd->fd, cmd->flags, cmd->num_hdl, idx, cmd->out.buf_handle,
@@ -939,6 +1016,7 @@ static int cam_mem_mgr_cleanup_table(void)
 		tbl.bufq[i].num_hdl = 0;
 		tbl.bufq[i].dma_buf = NULL;
 		tbl.bufq[i].active = false;
+		tbl.bufq[i].is_internal = false;
 		mutex_unlock(&tbl.bufq[i].q_lock);
 		mutex_destroy(&tbl.bufq[i].q_lock);
 	}
@@ -955,6 +1033,7 @@ void cam_mem_mgr_deinit(void)
 {
 	atomic_set(&cam_mem_mgr_state, CAM_MEM_MGR_UNINITIALIZED);
 	cam_mem_mgr_cleanup_table();
+	debugfs_remove_recursive(tbl.dentry);
 	mutex_lock(&tbl.m_lock);
 	bitmap_zero(tbl.bitmap, tbl.bits);
 	kfree(tbl.bitmap);
@@ -1034,9 +1113,11 @@ static int cam_mem_util_unmap(int32_t idx,
 	tbl.bufq[idx].fd = -1;
 	tbl.bufq[idx].dma_buf = NULL;
 	tbl.bufq[idx].is_imported = false;
+	tbl.bufq[idx].is_internal = false;
 	tbl.bufq[idx].len = 0;
 	tbl.bufq[idx].num_hdl = 0;
 	tbl.bufq[idx].active = false;
+	memset(&tbl.bufq[idx].timestamp, 0, sizeof(struct timespec64));
 	mutex_unlock(&tbl.bufq[idx].q_lock);
 	mutex_destroy(&tbl.bufq[idx].q_lock);
 	clear_bit(idx, tbl.bitmap);

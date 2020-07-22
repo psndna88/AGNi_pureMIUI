@@ -61,6 +61,7 @@ static int cam_vfe_get_dt_properties(struct cam_hw_soc_info *soc_info)
 	switch (soc_info->hw_version) {
 	case CAM_CPAS_TITAN_480_V100:
 	case CAM_CPAS_TITAN_580_V100:
+	case CAM_CPAS_TITAN_570_V200:
 		num_ubwc_cfg = of_property_count_u32_elems(of_node,
 			"ubwc-static-cfg");
 

@@ -1885,82 +1885,46 @@ DEFINE_SIMPLE_ATTRIBUTE(cam_icp_debug_fw_dump, cam_icp_get_a5_fw_dump_lvl,
 static int cam_icp_hw_mgr_create_debugfs_entry(void)
 {
 	int rc = 0;
+	struct dentry *dbgfileptr = NULL;
 
-	icp_hw_mgr.dentry = debugfs_create_dir("camera_icp", NULL);
-	if (IS_ERR_OR_NULL(icp_hw_mgr.dentry)) {
-		CAM_ERR(CAM_ICP, "Debugfs entry dir: %s failed",
-			"camrea_icp");
-		return -ENOMEM;
+	dbgfileptr = debugfs_create_dir("camera_icp", NULL);
+	if (!dbgfileptr) {
+		CAM_ERR(CAM_ICP,"DebugFS could not create directory!");
+		rc = -ENOENT;
+		goto end;
 	}
+	/* Store parent inode for cleanup in caller */
+	icp_hw_mgr.dentry = dbgfileptr;
 
-	if (!debugfs_create_bool("icp_pc",
-		0644,
-		icp_hw_mgr.dentry,
-		&icp_hw_mgr.icp_pc_flag)) {
-		CAM_ERR(CAM_ICP, "failed to create icp_pc entry");
-		rc = -ENOMEM;
-		goto err;
+	dbgfileptr = debugfs_create_bool("icp_pc", 0644, icp_hw_mgr.dentry,
+		&icp_hw_mgr.icp_pc_flag);
+
+	dbgfileptr = debugfs_create_bool("ipe_bps_pc", 0644, icp_hw_mgr.dentry,
+		&icp_hw_mgr.ipe_bps_pc_flag);
+
+	dbgfileptr = debugfs_create_file("icp_debug_clk", 0644,
+		icp_hw_mgr.dentry, NULL, &cam_icp_debug_default_clk);
+
+	dbgfileptr = debugfs_create_bool("a5_jtag_debug", 0644,
+		icp_hw_mgr.dentry, &icp_hw_mgr.a5_jtag_debug);
+
+	dbgfileptr = debugfs_create_file("a5_debug_type", 0644,
+		icp_hw_mgr.dentry, NULL, &cam_icp_debug_type_fs);
+
+	dbgfileptr = debugfs_create_file("a5_debug_lvl", 0644,
+		icp_hw_mgr.dentry, NULL, &cam_icp_debug_fs);
+
+	dbgfileptr = debugfs_create_file("a5_fw_dump_lvl", 0644,
+		icp_hw_mgr.dentry, NULL, &cam_icp_debug_fw_dump);
+	if (IS_ERR(dbgfileptr)) {
+		if (PTR_ERR(dbgfileptr) == -ENODEV)
+			CAM_WARN(CAM_ICP, "DebugFS not enabled in kernel!");
+		else
+			rc = PTR_ERR(dbgfileptr);
 	}
-
-	if (!debugfs_create_bool("ipe_bps_pc",
-		0644,
-		icp_hw_mgr.dentry,
-		&icp_hw_mgr.ipe_bps_pc_flag)) {
-		CAM_ERR(CAM_ICP, "failed to create ipe_bps_pc entry");
-		rc = -ENOMEM;
-		goto err;
-	}
-
-	if (!debugfs_create_file("icp_debug_clk",
-		0644,
-		icp_hw_mgr.dentry, NULL,
-		&cam_icp_debug_default_clk)) {
-		CAM_ERR(CAM_ICP, "failed to create icp_debug_clk entry");
-		rc = -ENOMEM;
-		goto err;
-	}
-
-	if (!debugfs_create_bool("a5_jtag_debug",
-		0644,
-		icp_hw_mgr.dentry,
-		&icp_hw_mgr.a5_jtag_debug)) {
-		rc = -ENOMEM;
-		goto err;
-	}
-
-	if (!debugfs_create_file("a5_debug_type",
-		0644,
-		icp_hw_mgr.dentry,
-		NULL, &cam_icp_debug_type_fs)) {
-		CAM_ERR(CAM_ICP, "failed to create a5_debug_type");
-		rc = -ENOMEM;
-		goto err;
-	}
-
-	if (!debugfs_create_file("a5_debug_lvl",
-		0644,
-		icp_hw_mgr.dentry,
-		NULL, &cam_icp_debug_fs)) {
-		CAM_ERR(CAM_ICP, "failed to create a5_dbg_lvl");
-		rc = -ENOMEM;
-		goto err;
-	}
-
-	if (!debugfs_create_file("a5_fw_dump_lvl",
-		0644,
-		icp_hw_mgr.dentry,
-		NULL, &cam_icp_debug_fw_dump)) {
-		CAM_ERR(CAM_ICP, "failed to create a5_fw_dump_lvl");
-		rc = -ENOMEM;
-		goto err;
-	}
-
+end:
 	/* Set default hang dump lvl */
 	icp_hw_mgr.a5_fw_dump_lvl = HFI_FW_DUMP_ON_FAILURE;
-	return rc;
-err:
-	debugfs_remove_recursive(icp_hw_mgr.dentry);
-	icp_hw_mgr.dentry = NULL;
 	return rc;
 }
 
@@ -1995,7 +1959,7 @@ static int cam_icp_mgr_cleanup_ctx(struct cam_icp_hw_ctx_data *ctx_data)
 			continue;
 		buf_data.request_id = hfi_frame_process->request_id[i];
 		ctx_data->ctxt_event_cb(ctx_data->context_priv,
-			false, &buf_data);
+			CAM_CTX_EVT_ID_SUCCESS, &buf_data);
 		hfi_frame_process->request_id[i] = 0;
 		if (ctx_data->hfi_frame_process.in_resource[i] > 0) {
 			CAM_DBG(CAM_ICP, "Delete merged sync in object: %d",
@@ -2096,6 +2060,7 @@ static int cam_icp_mgr_handle_frame_process(uint32_t *msg_ptr, int flag)
 	struct hfi_frame_process_info *hfi_frame_process;
 	struct cam_hw_done_event_data buf_data;
 	uint32_t clk_type;
+	uint32_t event_id;
 
 	ioconfig_ack = (struct hfi_msg_ipebps_async_ack *)msg_ptr;
 	request_id = ioconfig_ack->user_data2;
@@ -2138,12 +2103,13 @@ static int cam_icp_mgr_handle_frame_process(uint32_t *msg_ptr, int flag)
 	idx = i;
 
 	if (flag == ICP_FRAME_PROCESS_FAILURE) {
-		if (ioconfig_ack->err_type == CAMERAICP_EABORTED)
+		if (ioconfig_ack->err_type == CAMERAICP_EABORTED) {
 			CAM_WARN(CAM_ICP,
 				"ctx_id %d req %llu dev %d has been aborted[flushed]",
 				ctx_data->ctx_id, request_id,
 				ctx_data->icp_dev_acquire_info->dev_type);
-		else
+			event_id = CAM_CTX_EVT_ID_CANCEL;
+		} else {
 			CAM_ERR(CAM_ICP,
 				"Done with error: %u err_type= [%s] on ctx_id %d dev %d for req %llu",
 				ioconfig_ack->err_type,
@@ -2152,10 +2118,14 @@ static int cam_icp_mgr_handle_frame_process(uint32_t *msg_ptr, int flag)
 				ctx_data->ctx_id,
 				ctx_data->icp_dev_acquire_info->dev_type,
 				request_id);
+			event_id = CAM_CTX_EVT_ID_ERROR;
+		}
+	} else {
+		event_id = CAM_CTX_EVT_ID_SUCCESS;
 	}
 
 	buf_data.request_id = hfi_frame_process->request_id[idx];
-	ctx_data->ctxt_event_cb(ctx_data->context_priv, flag, &buf_data);
+	ctx_data->ctxt_event_cb(ctx_data->context_priv, event_id, &buf_data);
 	hfi_frame_process->request_id[idx] = 0;
 	if (ctx_data->hfi_frame_process.in_resource[idx] > 0) {
 		CAM_DBG(CAM_ICP, "Delete merged sync in object: %d",
@@ -3890,7 +3860,8 @@ static int cam_icp_mgr_handle_config_err(
 	struct cam_hw_done_event_data buf_data;
 
 	buf_data.request_id = *(uint64_t *)config_args->priv;
-	ctx_data->ctxt_event_cb(ctx_data->context_priv, false, &buf_data);
+	ctx_data->ctxt_event_cb(ctx_data->context_priv, CAM_CTX_EVT_ID_SUCCESS,
+		&buf_data);
 
 	ctx_data->hfi_frame_process.request_id[idx] = 0;
 	ctx_data->hfi_frame_process.fw_process_flag[idx] = false;
@@ -4962,7 +4933,8 @@ static int cam_icp_mgr_send_abort_status(struct cam_icp_hw_ctx_data *ctx_data)
 		if (!hfi_frame_process->request_id[idx])
 			continue;
 
-		ctx_data->ctxt_event_cb(ctx_data->context_priv, true,
+		ctx_data->ctxt_event_cb(ctx_data->context_priv,
+			CAM_CTX_EVT_ID_CANCEL,
 			&hfi_frame_process->request_id[idx]);
 
 		/* now release memory for hfi frame process command */
@@ -5949,28 +5921,45 @@ compat_hw_name_failed:
 	return rc;
 }
 
+static void cam_req_mgr_process_workq_icp_command_queue(struct work_struct *w)
+{
+	cam_req_mgr_process_workq(w);
+}
+
+static void cam_req_mgr_process_workq_icp_message_queue(struct work_struct *w)
+{
+	cam_req_mgr_process_workq(w);
+}
+
+static void cam_req_mgr_process_workq_icp_timer_queue(struct work_struct *w)
+{
+	cam_req_mgr_process_workq(w);
+}
+
 static int cam_icp_mgr_create_wq(void)
 {
 	int rc;
 	int i;
 
 	rc = cam_req_mgr_workq_create("icp_command_queue", ICP_WORKQ_NUM_TASK,
-		&icp_hw_mgr.cmd_work, CRM_WORKQ_USAGE_NON_IRQ,
-		0);
+		&icp_hw_mgr.cmd_work, CRM_WORKQ_USAGE_NON_IRQ, 0,
+		cam_req_mgr_process_workq_icp_command_queue);
 	if (rc) {
 		CAM_ERR(CAM_ICP, "unable to create a command worker");
 		goto cmd_work_failed;
 	}
 
 	rc = cam_req_mgr_workq_create("icp_message_queue", ICP_WORKQ_NUM_TASK,
-		&icp_hw_mgr.msg_work, CRM_WORKQ_USAGE_IRQ, 0);
+		&icp_hw_mgr.msg_work, CRM_WORKQ_USAGE_IRQ, 0,
+		cam_req_mgr_process_workq_icp_message_queue);
 	if (rc) {
 		CAM_ERR(CAM_ICP, "unable to create a message worker");
 		goto msg_work_failed;
 	}
 
 	rc = cam_req_mgr_workq_create("icp_timer_queue", ICP_WORKQ_NUM_TASK,
-		&icp_hw_mgr.timer_work, CRM_WORKQ_USAGE_IRQ, 0);
+		&icp_hw_mgr.timer_work, CRM_WORKQ_USAGE_IRQ, 0,
+		cam_req_mgr_process_workq_icp_timer_queue);
 	if (rc) {
 		CAM_ERR(CAM_ICP, "unable to create a timer worker");
 		goto timer_work_failed;
@@ -6000,10 +5989,9 @@ static int cam_icp_mgr_create_wq(void)
 	}
 
 	rc = cam_icp_hw_mgr_create_debugfs_entry();
-	if (rc) {
-		CAM_ERR(CAM_ICP, "create_debugfs_entry fail= rc: %d", rc);
+	if (rc)
 		goto debugfs_create_failed;
-	}
+
 	for (i = 0; i < ICP_WORKQ_NUM_TASK; i++)
 		icp_hw_mgr.msg_work->task.pool[i].payload =
 				&icp_hw_mgr.msg_work_data[i];
@@ -6109,7 +6097,8 @@ int cam_icp_hw_mgr_init(struct device_node *of_node, uint64_t *hw_mgr_hdl,
 	cam_cpas_get_cpas_hw_version(&camera_hw_version);
 
 	if ((camera_hw_version == CAM_CPAS_TITAN_480_V100) ||
-		(camera_hw_version == CAM_CPAS_TITAN_580_V100)) {
+		(camera_hw_version == CAM_CPAS_TITAN_580_V100) ||
+		(camera_hw_version == CAM_CPAS_TITAN_570_V200)) {
 		if (cam_caps & CPAS_TITAN_480_IPE0_BIT)
 			icp_hw_mgr.ipe0_enable = true;
 		if (cam_caps & CPAS_BPS_BIT)

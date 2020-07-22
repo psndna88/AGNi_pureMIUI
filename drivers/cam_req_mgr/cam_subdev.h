@@ -16,6 +16,10 @@
 
 #define CAM_SUBDEVICE_EVENT_MAX 30
 
+enum cam_subdev_message_type_t {
+	CAM_SUBDEV_MESSAGE_IRQ_ERR = 0x1
+};
+
 /**
  * struct cam_subdev - describes a camera sub-device
  *
@@ -49,7 +53,25 @@ struct cam_subdev {
 	u32                                    sd_flags;
 	void                                  *token;
 	u32                                    ent_function;
+	void                                  (*msg_cb)(
+					struct v4l2_subdev *sd,
+					enum cam_subdev_message_type_t msg_type,
+					uint32_t data);
 };
+
+/**
+ * cam_subdev_notify_message()
+ *
+ * @brief:  Notify message to a subdevs of specific type
+ *
+ * @subdev_type:           Subdev type
+ * @message_type:          message type
+ * @data:                  data to be delivered.
+ *
+ */
+void cam_subdev_notify_message(u32 subdev_type,
+		enum cam_subdev_message_type_t message_type,
+		uint32_t data);
 
 /**
  * cam_subdev_probe()

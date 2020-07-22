@@ -41,6 +41,8 @@ enum cam_smmu_mapping_client {
  * @kmdvaddr:    Kernel virtual address
  * @active:      state of the buffer
  * @is_imported: Flag indicating if buffer is imported from an FD in user space
+ * @is_internal: Flag indicating kernel allocated buffer
+ * @timestamp:   Timestamp at which this entry in tbl was made
  */
 struct cam_mem_buf_queue {
 	struct dma_buf *dma_buf;
@@ -56,6 +58,8 @@ struct cam_mem_buf_queue {
 	uintptr_t kmdvaddr;
 	bool active;
 	bool is_imported;
+	bool is_internal;
+	struct timespec64 timestamp;
 };
 
 /**

@@ -175,7 +175,8 @@ static int cam_jpeg_mgr_process_irq(void *priv, void *data)
 	}
 	buf_data.request_id =
 		PTR_TO_U64(p_cfg_req->hw_cfg_args.priv);
-	ctx_data->ctxt_event_cb(ctx_data->context_priv, 0, &buf_data);
+	ctx_data->ctxt_event_cb(ctx_data->context_priv, CAM_CTX_EVT_ID_SUCCESS,
+		&buf_data);
 
 	mutex_lock(&g_jpeg_hw_mgr.hw_mgr_mutex);
 	list_add_tail(&p_cfg_req->list, &hw_mgr->free_req_list);
@@ -505,7 +506,8 @@ end_callcb:
 		}
 		buf_data.request_id =
 			(uintptr_t)p_cfg_req->hw_cfg_args.priv;
-		ctx_data->ctxt_event_cb(ctx_data->context_priv, 0, &buf_data);
+		ctx_data->ctxt_event_cb(ctx_data->context_priv,
+			CAM_CTX_EVT_ID_ERROR, &buf_data);
 	}
 end_unusedev:
 	mutex_lock(&hw_mgr->hw_mgr_mutex);
@@ -1290,6 +1292,16 @@ copy_error:
 	return rc;
 }
 
+static void cam_req_mgr_process_workq_jpeg_command_queue(struct work_struct *w)
+{
+	cam_req_mgr_process_workq(w);
+}
+
+static void cam_req_mgr_process_workq_jpeg_message_queue(struct work_struct *w)
+{
+	cam_req_mgr_process_workq(w);
+}
+
 static int cam_jpeg_setup_workqs(void)
 {
 	int rc, i;
@@ -1298,7 +1310,8 @@ static int cam_jpeg_setup_workqs(void)
 		"jpeg_command_queue",
 		CAM_JPEG_WORKQ_NUM_TASK,
 		&g_jpeg_hw_mgr.work_process_frame,
-		CRM_WORKQ_USAGE_NON_IRQ, 0);
+		CRM_WORKQ_USAGE_NON_IRQ, 0,
+		cam_req_mgr_process_workq_jpeg_command_queue);
 	if (rc) {
 		CAM_ERR(CAM_JPEG, "unable to create a worker %d", rc);
 		goto work_process_frame_failed;
@@ -1308,7 +1321,8 @@ static int cam_jpeg_setup_workqs(void)
 		"jpeg_message_queue",
 		CAM_JPEG_WORKQ_NUM_TASK,
 		&g_jpeg_hw_mgr.work_process_irq_cb,
-		CRM_WORKQ_USAGE_IRQ, 0);
+		CRM_WORKQ_USAGE_IRQ, 0,
+		cam_req_mgr_process_workq_jpeg_message_queue);
 	if (rc) {
 		CAM_ERR(CAM_JPEG, "unable to create a worker %d", rc);
 		goto work_process_irq_cb_failed;

@@ -324,23 +324,18 @@ struct cam_cmd_unconditional_wait {
 } __attribute__((packed));
 
 /**
- * cam_csiphy_info: Provides cmdbuffer structre
- * @lane_mask     : Lane mask details
- * @lane_assign   : Lane sensor will be using
- * @csiphy_3phase : Total number of lanes
- * @combo_mode    : Info regarding combo_mode is enable / disable
- * @lane_cnt      : Total number of lanes
- * @secure_mode   : Secure mode flag to enable / disable
- * @3phase        : Details whether 3Phase / 2Phase operation
- * @settle_time   : Settling time in ms
- * @data_rate     : Data rate
+ * cam_csiphy_info       : Provides cmdbuffer structre
+ * @lane_assign          : Lane sensor will be using
+ * @lane_cnt             : Total number of lanes
+ * @secure_mode          : Secure mode flag to enable / disable
+ * @settle_time          : Settling time in ms
+ * @data_rate            : Data rate
  *
  */
 struct cam_csiphy_info {
-	__u16    lane_mask;
+	__u16    reserved;
 	__u16    lane_assign;
-	__u8     csiphy_3phase;
-	__u8     combo_mode;
+	__u16    reserved1;
 	__u8     lane_cnt;
 	__u8     secure_mode;
 	__u64    settle_time;
@@ -349,14 +344,18 @@ struct cam_csiphy_info {
 
 /**
  * cam_csiphy_acquire_dev_info : Information needed for
- *                        csiphy at the time of acquire
- * @combo_mode     :    Indicates the device mode of operation
- * @reserved
+ *                               csiphy at the time of acquire
+ * @combo_mode                 : Indicates the device mode of operation
+ * @cphy_dphy_combo_mode       : Info regarding cphy_dphy_combo mode
+ * @csiphy_3phase              : Details whether 3Phase / 2Phase operation
+ * @reserve
  *
  */
 struct cam_csiphy_acquire_dev_info {
 	__u32    combo_mode;
-	__u32    reserved;
+	__u16    cphy_dphy_combo_mode;
+	__u8     csiphy_3phase;
+	__u8     reserve;
 } __attribute__((packed));
 
 /**

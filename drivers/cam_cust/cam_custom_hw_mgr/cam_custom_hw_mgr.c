@@ -489,16 +489,15 @@ static int cam_custom_hw_mgr_notify(
 		custom_ctx->event_cb(custom_ctx->cb_priv,
 			CAM_CUSTOM_HW_EVENT_RUP_DONE, &reg_upd_data);
 		break;
-	case CAM_CUSTOM_HW_EVENT_RUP_DONE:
+	case CAM_CUSTOM_HW_EVENT_FRAME_DONE:
 		CAM_DBG(CAM_CUSTOM, "Notify FRAME DONE for ctx %u",
 			custom_ctx->ctx_index);
 		/* fill the evt data struct */
 		done_evt_data.num_handles = 1;
-		done_evt_data.resource_handle = 0;
 		custom_ctx->event_cb(custom_ctx->cb_priv,
 			CAM_CUSTOM_HW_EVENT_RUP_DONE, &done_evt_data);
 		break;
-	case CAM_CUSTOM_HW_EVENT_RUP_DONE:
+	case CAM_CUSTOM_HW_EVENT_ERROR:
 		CAM_DBG(CAM_CUSTOM, "Notify ERROR for ctx %u",
 			custom_ctx->ctx_index);
 		/* fill the evt data struct */

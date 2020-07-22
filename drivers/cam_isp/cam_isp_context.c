@@ -28,7 +28,7 @@ static struct cam_isp_ctx_debug isp_ctx_debug;
 	div_u64_rem(atomic64_add_return(1, head),\
 	max_entries, (ret))
 
-static int cam_isp_context_dump_active_request(void *data, unsigned long iova,
+static int cam_isp_context_dump_requests(void *data, unsigned long iova,
 	uint32_t buf_info);
 
 static int __cam_isp_ctx_start_dev_in_ready(struct cam_context *ctx,
@@ -3010,8 +3010,8 @@ static int __cam_isp_ctx_flush_req_in_top_state(
 		ctx_isp->substate_activated = CAM_ISP_CTX_ACTIVATED_HALT;
 		spin_unlock_bh(&ctx->lock);
 
-		CAM_INFO(CAM_ISP, "Last request id to flush is %lld",
-			flush_req->req_id);
+		CAM_INFO(CAM_ISP, "Last request id to flush is %lld, ctx_id:%d",
+			flush_req->req_id, ctx->ctx_id);
 		ctx->last_flush_req = flush_req->req_id;
 
 		memset(&hw_cmd_args, 0, sizeof(hw_cmd_args));
@@ -3463,6 +3463,21 @@ static int __cam_isp_ctx_rdi_only_sof_in_bubble_state(
 	return 0;
 }
 
+
+static int __cam_isp_ctx_rdi_only_reg_upd_in_bubble_state(
+	struct cam_isp_context *ctx_isp, void *evt_data)
+{
+	struct cam_ctx_request  *req = NULL;
+	struct cam_context      *ctx = ctx_isp->base;
+
+	req = list_first_entry(&ctx->active_req_list,
+		struct cam_ctx_request, list);
+
+	CAM_INFO(CAM_ISP, "Received RUP for Bubble Request", req->request_id);
+
+	return 0;
+}
+
 static int __cam_isp_ctx_rdi_only_reg_upd_in_bubble_applied_state(
 	struct cam_isp_context *ctx_isp, void *evt_data)
 {
@@ -3586,7 +3601,7 @@ static struct cam_isp_ctx_irq_ops
 		.irq_ops = {
 			__cam_isp_ctx_handle_error,
 			__cam_isp_ctx_rdi_only_sof_in_bubble_state,
-			NULL,
+			__cam_isp_ctx_rdi_only_reg_upd_in_bubble_state,
 			NULL,
 			NULL,
 			__cam_isp_ctx_buf_done_in_bubble,
@@ -3776,6 +3791,7 @@ static int __cam_isp_ctx_release_dev_in_top_state(struct cam_context *ctx,
 	ctx_isp->reported_req_id = 0;
 	ctx_isp->hw_acquired = false;
 	ctx_isp->init_received = false;
+	ctx_isp->offline_context = false;
 	ctx_isp->rdi_only_context = false;
 	ctx_isp->req_info.last_bufdone_req_id = 0;
 
@@ -4327,6 +4343,11 @@ end:
 	return rc;
 }
 
+static void cam_req_mgr_process_workq_offline_ife_worker(struct work_struct *w)
+{
+	cam_req_mgr_process_workq(w);
+}
+
 static int __cam_isp_ctx_acquire_hw_v2(struct cam_context *ctx,
 	void *args)
 {
@@ -4451,7 +4472,8 @@ static int __cam_isp_ctx_acquire_hw_v2(struct cam_context *ctx,
 		ctx_isp->offline_context = true;
 
 		rc = cam_req_mgr_workq_create("offline_ife", 20,
-			&ctx_isp->workq, CRM_WORKQ_USAGE_IRQ, 0);
+			&ctx_isp->workq, CRM_WORKQ_USAGE_IRQ, 0,
+			cam_req_mgr_process_workq_offline_ife_worker);
 		if (rc)
 			CAM_ERR(CAM_ISP,
 				"Failed to create workq for offline IFE rc:%d",
@@ -4576,7 +4598,8 @@ static int __cam_isp_ctx_config_dev_in_flushed(struct cam_context *ctx,
 			"Failed to re-start HW after flush rc: %d", rc);
 	else
 		CAM_INFO(CAM_ISP,
-			"Received init after flush. Re-start HW complete.");
+			"Received init after flush. Re-start HW complete in ctx:%d",
+			ctx->ctx_id);
 
 end:
 	CAM_DBG(CAM_ISP, "next state %d sub_state:%d", ctx->state,
@@ -5145,7 +5168,7 @@ static struct cam_ctx_ops
 			.dump_req = __cam_isp_ctx_dump_in_top_state,
 		},
 		.irq_ops = NULL,
-		.pagefault_ops = cam_isp_context_dump_active_request,
+		.pagefault_ops = cam_isp_context_dump_requests,
 		.dumpinfo_ops = cam_isp_context_info_dump,
 	},
 	/* Ready */
@@ -5162,7 +5185,7 @@ static struct cam_ctx_ops
 			.dump_req = __cam_isp_ctx_dump_in_top_state,
 		},
 		.irq_ops = NULL,
-		.pagefault_ops = cam_isp_context_dump_active_request,
+		.pagefault_ops = cam_isp_context_dump_requests,
 		.dumpinfo_ops = cam_isp_context_info_dump,
 	},
 	/* Flushed */
@@ -5178,7 +5201,7 @@ static struct cam_ctx_ops
 			.process_evt = __cam_isp_ctx_process_evt,
 		},
 		.irq_ops = NULL,
-		.pagefault_ops = cam_isp_context_dump_active_request,
+		.pagefault_ops = cam_isp_context_dump_requests,
 		.dumpinfo_ops = cam_isp_context_info_dump,
 	},
 	/* Activated */
@@ -5197,13 +5220,13 @@ static struct cam_ctx_ops
 			.dump_req = __cam_isp_ctx_dump_in_top_state,
 		},
 		.irq_ops = __cam_isp_ctx_handle_irq_in_activated,
-		.pagefault_ops = cam_isp_context_dump_active_request,
+		.pagefault_ops = cam_isp_context_dump_requests,
 		.dumpinfo_ops = cam_isp_context_info_dump,
 	},
 };
 
 
-static int cam_isp_context_dump_active_request(void *data, unsigned long iova,
+static int cam_isp_context_dump_requests(void *data, unsigned long iova,
 	uint32_t buf_info)
 {
 
@@ -5232,7 +5255,8 @@ static int cam_isp_context_dump_active_request(void *data, unsigned long iova,
 		req_isp = (struct cam_isp_ctx_req *) req->req_priv;
 		hw_update_data = &req_isp->hw_update_data;
 		pf_dbg_entry = &(req->pf_data);
-		CAM_INFO(CAM_ISP, "req_id : %lld ", req->request_id);
+		CAM_INFO(CAM_ISP, "Active List: req_id : %lld ",
+			req->request_id);
 
 		rc = cam_context_dump_pf_info_to_hw(ctx, pf_dbg_entry->packet,
 			iova, buf_info, &mem_found);
@@ -5252,7 +5276,7 @@ static int cam_isp_context_dump_active_request(void *data, unsigned long iova,
 		req_isp = (struct cam_isp_ctx_req *) req->req_priv;
 		hw_update_data = &req_isp->hw_update_data;
 		pf_dbg_entry = &(req->pf_data);
-		CAM_INFO(CAM_ISP, "req_id : %lld ", req->request_id);
+		CAM_INFO(CAM_ISP, "Wait List: req_id : %lld ", req->request_id);
 
 		rc = cam_context_dump_pf_info_to_hw(ctx, pf_dbg_entry->packet,
 			iova, buf_info, &mem_found);
@@ -5282,7 +5306,8 @@ static int cam_isp_context_dump_active_request(void *data, unsigned long iova,
 		req_isp = (struct cam_isp_ctx_req *) req->req_priv;
 		hw_update_data = &req_isp->hw_update_data;
 		pf_dbg_entry = &(req->pf_data);
-		CAM_INFO(CAM_ISP, "req_id : %lld ", req->request_id);
+		CAM_INFO(CAM_ISP, "Pending List: req_id : %lld ",
+			req->request_id);
 
 		rc = cam_context_dump_pf_info_to_hw(ctx, pf_dbg_entry->packet,
 			iova, buf_info, &mem_found);
@@ -5299,27 +5324,28 @@ static int cam_isp_context_dump_active_request(void *data, unsigned long iova,
 
 static int cam_isp_context_debug_register(void)
 {
-	isp_ctx_debug.dentry = debugfs_create_dir("camera_isp_ctx",
-		NULL);
+	int rc = 0;
+	struct dentry *dbgfileptr = NULL;
 
-	if (IS_ERR_OR_NULL(isp_ctx_debug.dentry)) {
-		CAM_ERR(CAM_ISP, "failed to create dentry");
-		return -ENOMEM;
+	dbgfileptr = debugfs_create_dir("camera_isp_ctx", NULL);
+	if (!dbgfileptr) {
+		CAM_ERR(CAM_ICP,"DebugFS could not create directory!");
+		rc = -ENOENT;
+		goto end;
 	}
+	/* Store parent inode for cleanup in caller */
+	isp_ctx_debug.dentry = dbgfileptr;
 
-	if (!debugfs_create_u32("enable_state_monitor_dump",
-		0644,
-		isp_ctx_debug.dentry,
-		&isp_ctx_debug.enable_state_monitor_dump)) {
-		CAM_ERR(CAM_ISP, "failed to create enable_state_monitor_dump");
-		goto err;
+	dbgfileptr = debugfs_create_u32("enable_state_monitor_dump", 0644,
+		isp_ctx_debug.dentry, &isp_ctx_debug.enable_state_monitor_dump);
+	if (IS_ERR(dbgfileptr)) {
+		if (PTR_ERR(dbgfileptr) == -ENODEV)
+			CAM_WARN(CAM_ICP, "DebugFS not enabled in kernel!");
+		else
+			rc = PTR_ERR(dbgfileptr);
 	}
-
-	return 0;
-
-err:
-	debugfs_remove_recursive(isp_ctx_debug.dentry);
-	return -ENOMEM;
+end:
+	return rc;
 }
 
 int cam_isp_context_init(struct cam_isp_context *ctx,

@@ -1018,22 +1018,28 @@ static void cam_sync_init_entity(struct sync_device *sync_dev)
 
 static int cam_sync_create_debugfs(void)
 {
-	sync_dev->dentry = debugfs_create_dir("camera_sync", NULL);
+	int rc = 0;
+	struct dentry *dbgfileptr = NULL;
 
-	if (!sync_dev->dentry) {
-		CAM_ERR(CAM_SYNC, "Failed to create sync dir");
-		return -ENOMEM;
+	dbgfileptr = debugfs_create_dir("camera_sync", NULL);
+	if (!dbgfileptr) {
+		CAM_ERR(CAM_SYNC,"DebugFS could not create directory!");
+		rc = -ENOENT;
+		goto end;
 	}
+	/* Store parent inode for cleanup in caller */
+	sync_dev->dentry = dbgfileptr;
 
-	if (!debugfs_create_bool("trigger_cb_without_switch",
-		0644, sync_dev->dentry,
-		&trigger_cb_without_switch)) {
-		CAM_ERR(CAM_SYNC,
-			"failed to create trigger_cb_without_switch entry");
-		return -ENOMEM;
+	dbgfileptr = debugfs_create_bool("trigger_cb_without_switch", 0644,
+		sync_dev->dentry, &trigger_cb_without_switch);
+	if (IS_ERR(dbgfileptr)) {
+		if (PTR_ERR(dbgfileptr) == -ENODEV)
+			CAM_WARN(CAM_SYNC, "DebugFS not enabled in kernel!");
+		else
+			rc = PTR_ERR(dbgfileptr);
 	}
-
-	return 0;
+end:
+	return rc;
 }
 
 #if IS_REACHABLE(CONFIG_MSM_GLOBAL_SYNX)

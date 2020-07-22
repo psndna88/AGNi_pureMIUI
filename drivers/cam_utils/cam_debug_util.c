@@ -196,6 +196,7 @@ const char *cam_get_module_name(unsigned int module_id)
 		break;
 	case CAM_CUSTOM:
 		name = "CAM-CUSTOM";
+		break;
 	case CAM_OPE:
 		name = "CAM-OPE";
 		break;

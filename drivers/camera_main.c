@@ -54,6 +54,7 @@
 #include "cam_top_tpg.h"
 #include "cam_tfe_dev.h"
 #include "cam_tfe_csid530.h"
+#include "cam_csid_ppi100.h"
 #include "camera_main.h"
 
 struct camera_submodule_component {
@@ -76,6 +77,15 @@ static const struct camera_submodule_component camera_base[] = {
 	{&cam_hw_cdm_init_module, &cam_hw_cdm_exit_module},
 };
 
+static const struct camera_submodule_component camera_tfe[] = {
+#ifdef CONFIG_SPECTRA_TFE
+	{&cam_top_tpg_init_module, &cam_top_tpg_exit_module},
+	{&cam_csid_ppi100_init_module, &cam_csid_ppi100_exit_module},
+	{&cam_tfe_init_module, &cam_tfe_exit_module},
+	{&cam_tfe_csid530_init_module, &cam_tfe_csid530_exit_module},
+#endif
+};
+
 static const struct camera_submodule_component camera_isp[] = {
 #ifdef CONFIG_SPECTRA_ISP
 	{&cam_top_tpg_init_module, &cam_top_tpg_exit_module},
@@ -83,14 +93,6 @@ static const struct camera_submodule_component camera_isp[] = {
 	{&cam_ife_csid_lite_init_module, &cam_ife_csid_lite_exit_module},
 	{&cam_vfe_init_module, &cam_vfe_exit_module},
 	{&cam_isp_dev_init_module, &cam_isp_dev_exit_module},
-#endif
-};
-
-static const struct camera_submodule_component camera_tfe[] = {
-#ifdef CONFIG_SPECTRA_TFE
-	{&cam_top_tpg_init_module, &cam_top_tpg_exit_module},
-	{&cam_tfe_init_module, &cam_tfe_exit_module},
-	{&cam_tfe_csid530_init_module, &cam_tfe_csid530_exit_module},
 #endif
 };
 
@@ -163,14 +165,14 @@ static const struct camera_submodule submodule_table[] = {
 		.component = camera_base,
 	},
 	{
-		.name = "Camera ISP",
-		.num_component = ARRAY_SIZE(camera_isp),
-		.component = camera_isp,
-	},
-	{
 		.name = "Camera TFE",
 		.num_component = ARRAY_SIZE(camera_tfe),
 		.component = camera_tfe,
+	},
+	{
+		.name = "Camera ISP",
+		.num_component = ARRAY_SIZE(camera_isp),
+		.component = camera_isp,
 	},
 	{
 		.name = "Camera SENSOR",

@@ -35,6 +35,10 @@ enum cam_context_dump_id {
 	CAM_CTX_DUMP_TYPE_MAX,
 };
 
+#define CAM_CTX_EVT_ID_SUCCESS 0
+#define CAM_CTX_EVT_ID_ERROR   1
+#define CAM_CTX_EVT_ID_CANCEL  2
+
 /* hardware event callback function type */
 typedef int (*cam_hw_event_cb_func)(void *context, uint32_t evt_id,
 	void *evt_data);

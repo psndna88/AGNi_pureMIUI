@@ -44,17 +44,20 @@ typedef int (*cam_req_mgr_notify_stop)(struct cam_req_mgr_notify_stop *);
 /**
  * @brief: cam req mgr to camera device drivers
  *
- * @cam_req_mgr_get_dev_info: to fetch details about device linked
- * @cam_req_mgr_link_setup  : to establish link with device for a session
- * @cam_req_mgr_apply_req   : CRM asks device to apply certain request id
- * @cam_req_mgr_flush_req   : Flush or cancel request
- * cam_req_mgr_process_evt  : generic events
- * @cam_req_mgr_dump_req    : dump request
+ * @cam_req_mgr_get_dev_info     : to fetch details about device linked
+ * @cam_req_mgr_link_setup       : to establish link with device for a session
+ * @cam_req_mgr_apply_req        : CRM asks device to apply certain request id
+ * @cam_req_mgr_notify_frame_skip: CRM asks device to apply setting for
+ *                                 frame skip
+ * @cam_req_mgr_flush_req        : Flush or cancel request
+ * cam_req_mgr_process_evt       : generic events
+ * @cam_req_mgr_dump_req         : dump request
  */
 typedef int (*cam_req_mgr_get_dev_info) (struct cam_req_mgr_device_info *);
 typedef int (*cam_req_mgr_link_setup)(struct cam_req_mgr_core_dev_link_setup *);
 typedef int (*cam_req_mgr_apply_req)(struct cam_req_mgr_apply_request *);
-typedef int (*cam_req_mgr_apply_default)(struct cam_req_mgr_apply_request *);
+typedef int (*cam_req_mgr_notify_frame_skip)(
+	struct cam_req_mgr_apply_request *);
 typedef int (*cam_req_mgr_flush_req)(struct cam_req_mgr_flush_request *);
 typedef int (*cam_req_mgr_process_evt)(struct cam_req_mgr_link_evt_data *);
 typedef int (*cam_req_mgr_dump_req)(struct cam_req_mgr_dump_info *);
@@ -79,22 +82,22 @@ struct cam_req_mgr_crm_cb {
 /**
  * @brief        : cam_req_mgr_kmd_ops - func table
  *
- * @get_dev_info : payload to fetch device details
- * @link_setup   : payload to establish link with device
- * @apply_req    : payload to apply request id on a device linked
- * @apply_default: payload to trigger default apply settings
- * @flush_req    : payload to flush request
- * @process_evt  : payload to generic event
- * @dump_req     : payload to dump request
+ * @get_dev_info     : payload to fetch device details
+ * @link_setup       : payload to establish link with device
+ * @apply_req        : payload to apply request id on a device linked
+ * @notify_frame_skip: payload to notify frame skip
+ * @flush_req        : payload to flush request
+ * @process_evt      : payload to generic event
+ * @dump_req         : payload to dump request
  */
 struct cam_req_mgr_kmd_ops {
-	cam_req_mgr_get_dev_info     get_dev_info;
-	cam_req_mgr_link_setup       link_setup;
-	cam_req_mgr_apply_req        apply_req;
-	cam_req_mgr_apply_default    apply_default;
-	cam_req_mgr_flush_req        flush_req;
-	cam_req_mgr_process_evt      process_evt;
-	cam_req_mgr_dump_req         dump_req;
+	cam_req_mgr_get_dev_info      get_dev_info;
+	cam_req_mgr_link_setup        link_setup;
+	cam_req_mgr_apply_req         apply_req;
+	cam_req_mgr_notify_frame_skip notify_frame_skip;
+	cam_req_mgr_flush_req         flush_req;
+	cam_req_mgr_process_evt       process_evt;
+	cam_req_mgr_dump_req          dump_req;
 };
 
 /**
@@ -296,9 +299,6 @@ struct cam_req_mgr_notify_stop {
  * @p_delay : delay between time settings applied and take effect
  * @trigger : Trigger point for the client
  * @trigger_on : This device provides trigger
- * @enable_apply_default : Device requests CRM to apply default
- *                         settings for devices on a link if actual
- *                         settings for a given frame is not available
  */
 struct cam_req_mgr_device_info {
 	int32_t                     dev_hdl;
@@ -307,7 +307,6 @@ struct cam_req_mgr_device_info {
 	enum cam_pipeline_delay     p_delay;
 	uint32_t                    trigger;
 	bool                        trigger_on;
-	bool                        enable_apply_default;
 };
 
 /**

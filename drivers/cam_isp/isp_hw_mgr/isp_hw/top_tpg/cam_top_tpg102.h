@@ -43,8 +43,8 @@ static struct cam_top_tpg_ver2_reg_offset cam_top_tpg102_reg = {
 struct cam_top_tpg_hw_info cam_top_tpg102_hw_info = {
 	.tpg_reg = &cam_top_tpg102_reg,
 	.hw_dts_version = CAM_TOP_TPG_VERSION_2,
-	.csid_max_clk = 426400000,
-	.phy_max_clk = 384000000,
+	.csid_max_clk = 400000000,
+	.phy_max_clk = 400000000,
 };
 
 #endif /* _CAM_TOP_TPG102_H_ */

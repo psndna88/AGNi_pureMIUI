@@ -110,6 +110,14 @@ int cam_cdm_soc_load_dt_private(struct platform_device *pdev,
 			CAM_ERR(CAM_CDM, "Reading cdm-client-names failed");
 			goto end;
 		}
+
+	}
+
+	rc = of_property_read_u8(pdev->dev.of_node, "cdm-priority-group",
+			&ptr->priority_group);
+	if (rc < 0) {
+		ptr->priority_group = 0;
+		rc = 0;
 	}
 
 	ptr->config_fifo = of_property_read_bool(pdev->dev.of_node,
@@ -154,12 +162,13 @@ int cam_hw_cdm_soc_get_dt_properties(struct cam_hw_info *cdm_hw,
 	int rc;
 	struct cam_hw_soc_info *soc_ptr;
 	const struct of_device_id *id;
-	struct cam_cdm *cdm_core = cdm_hw->core_info;
+	struct cam_cdm *cdm_core = NULL;
 
 	if (!cdm_hw  || (cdm_hw->soc_info.soc_private)
 		|| !(cdm_hw->soc_info.pdev))
 		return -EINVAL;
 
+	cdm_core = cdm_hw->core_info;
 	soc_ptr = &cdm_hw->soc_info;
 
 	rc = cam_soc_util_get_dt_properties(soc_ptr);
@@ -191,7 +200,7 @@ int cam_hw_cdm_soc_get_dt_properties(struct cam_hw_info *cdm_hw,
 
 	CAM_DBG(CAM_CDM, "name %s", cdm_core->name);
 
-	snprintf(cdm_core->name, sizeof(cdm_core->name) + 1, "%s%d",
+	snprintf(cdm_core->name, sizeof(cdm_core->name), "%s%d",
 		id->compatible, soc_ptr->index);
 
 	CAM_DBG(CAM_CDM, "name %s", cdm_core->name);

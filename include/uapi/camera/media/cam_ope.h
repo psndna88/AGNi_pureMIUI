@@ -93,6 +93,7 @@ struct ope_stripe_info {
 	__u32 x_init;
 	__u32 stripe_location;
 	__u32 width;
+	__u32 height;
 	__u32 disable_bus;
 	__u32 reserved;
 };

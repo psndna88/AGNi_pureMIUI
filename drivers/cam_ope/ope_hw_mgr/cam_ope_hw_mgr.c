@@ -582,7 +582,7 @@ static bool cam_ope_check_req_delay(struct cam_ope_ctx *ctx_data,
 	struct timespec64 ts;
 	uint64_t ts_ns;
 
-	get_monotonic_boottime64(&ts);
+	ktime_get_boottime_ts64(&ts);
 	ts_ns = (uint64_t)((ts.tv_sec * 1000000000) +
 		ts.tv_nsec);
 
@@ -1519,7 +1519,7 @@ static void cam_ope_ctx_cdm_callback(uint32_t handle, void *userdata,
 	struct cam_ope_request *ope_req;
 	struct cam_hw_done_event_data buf_data;
 	struct timespec64 ts;
-	bool flag = false;
+	uint32_t evt_id = CAM_CTX_EVT_ID_SUCCESS;
 
 	if (!userdata) {
 		CAM_ERR(CAM_OPE, "Invalid ctx from CDM callback");
@@ -1542,7 +1542,7 @@ static void cam_ope_ctx_cdm_callback(uint32_t handle, void *userdata,
 
 	ope_req = ctx->req_list[cookie];
 
-	get_monotonic_boottime64(&ts);
+	ktime_get_boottime_ts64(&ts);
 	ope_hw_mgr->last_callback_time = (uint64_t)((ts.tv_sec * 1000000000) +
 		ts.tv_nsec);
 
@@ -1582,7 +1582,7 @@ static void cam_ope_ctx_cdm_callback(uint32_t handle, void *userdata,
 		if (status != CAM_CDM_CB_STATUS_HW_FLUSH)
 			cam_ope_dump_req_data(ope_req);
 		rc = cam_ope_mgr_reset_hw();
-		flag = true;
+		evt_id = CAM_CTX_EVT_ID_ERROR;
 	}
 
 	ctx->req_cnt--;
@@ -1595,7 +1595,7 @@ static void cam_ope_ctx_cdm_callback(uint32_t handle, void *userdata,
 	kzfree(ctx->req_list[cookie]);
 	ctx->req_list[cookie] = NULL;
 	clear_bit(cookie, ctx->bitmap);
-	ctx->ctxt_event_cb(ctx->context_priv, flag, &buf_data);
+	ctx->ctxt_event_cb(ctx->context_priv, evt_id, &buf_data);
 
 end:
 	mutex_unlock(&ctx->ctx_mutex);
@@ -3098,7 +3098,7 @@ static int cam_ope_mgr_prepare_hw_update(void *hw_priv,
 		CAM_ERR(CAM_OPE, "Invalid ctx req slot = %d", request_idx);
 		return -EINVAL;
 	}
-	get_monotonic_boottime64(&ts);
+	ktime_get_boottime_ts64(&ts);
 	ctx_data->last_req_time = (uint64_t)((ts.tv_sec * 1000000000) +
 		ts.tv_nsec);
 	CAM_DBG(CAM_REQ, "req_id= %llu ctx_id= %d lrt=%llu",
@@ -3203,7 +3203,8 @@ static int cam_ope_mgr_handle_config_err(
 	ope_req = config_args->priv;
 
 	buf_data.request_id = ope_req->request_id;
-	ctx_data->ctxt_event_cb(ctx_data->context_priv, false, &buf_data);
+	ctx_data->ctxt_event_cb(ctx_data->context_priv, CAM_CTX_EVT_ID_ERROR,
+		&buf_data);
 
 	req_idx = ope_req->req_idx;
 	ope_req->request_id = 0;
@@ -3573,6 +3574,21 @@ compat_hw_name_failed:
 	return rc;
 }
 
+static void cam_req_mgr_process_ope_command_queue(struct work_struct *w)
+{
+	cam_req_mgr_process_workq(w);
+}
+
+static void cam_req_mgr_process_ope_msg_queue(struct work_struct *w)
+{
+	cam_req_mgr_process_workq(w);
+}
+
+static void cam_req_mgr_process_ope_timer_queue(struct work_struct *w)
+{
+	cam_req_mgr_process_workq(w);
+}
+
 static int cam_ope_mgr_create_wq(void)
 {
 
@@ -3581,21 +3597,23 @@ static int cam_ope_mgr_create_wq(void)
 
 	rc = cam_req_mgr_workq_create("ope_command_queue", OPE_WORKQ_NUM_TASK,
 		&ope_hw_mgr->cmd_work, CRM_WORKQ_USAGE_NON_IRQ,
-		0);
+		0, cam_req_mgr_process_ope_command_queue);
 	if (rc) {
 		CAM_ERR(CAM_OPE, "unable to create a command worker");
 		goto cmd_work_failed;
 	}
 
 	rc = cam_req_mgr_workq_create("ope_message_queue", OPE_WORKQ_NUM_TASK,
-		&ope_hw_mgr->msg_work, CRM_WORKQ_USAGE_IRQ, 0);
+		&ope_hw_mgr->msg_work, CRM_WORKQ_USAGE_IRQ, 0,
+		cam_req_mgr_process_ope_msg_queue);
 	if (rc) {
 		CAM_ERR(CAM_OPE, "unable to create a message worker");
 		goto msg_work_failed;
 	}
 
 	rc = cam_req_mgr_workq_create("ope_timer_queue", OPE_WORKQ_NUM_TASK,
-		&ope_hw_mgr->timer_work, CRM_WORKQ_USAGE_IRQ, 0);
+		&ope_hw_mgr->timer_work, CRM_WORKQ_USAGE_IRQ, 0,
+		cam_req_mgr_process_ope_timer_queue);
 	if (rc) {
 		CAM_ERR(CAM_OPE, "unable to create a timer worker");
 		goto timer_work_failed;

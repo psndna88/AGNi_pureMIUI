@@ -21,39 +21,6 @@ static uint32_t tpg_num_dt_map[CAM_TOP_TPG_MAX_SUPPORTED_DT] = {
 	2
 };
 
-static int cam_top_tpg_ver1_get_format(
-	uint32_t                                     in_format,
-	uint32_t                                    *tpg_encode_format)
-{
-	int                                          rc = 0;
-
-	switch (in_format) {
-	case CAM_FORMAT_MIPI_RAW_6:
-		*tpg_encode_format = 0;
-		break;
-	case CAM_FORMAT_MIPI_RAW_8:
-		*tpg_encode_format = 1;
-		break;
-	case CAM_FORMAT_MIPI_RAW_10:
-		*tpg_encode_format = 2;
-		break;
-	case CAM_FORMAT_MIPI_RAW_12:
-		*tpg_encode_format = 3;
-		break;
-	case CAM_FORMAT_MIPI_RAW_14:
-		*tpg_encode_format = 4;
-		break;
-	case CAM_FORMAT_MIPI_RAW_16:
-		*tpg_encode_format = 4;
-		break;
-	default:
-		CAM_ERR(CAM_ISP, "Unsupported input encode format %d",
-			in_format);
-		rc = -EINVAL;
-	}
-	return rc;
-}
-
 static int cam_top_tpg_ver1_get_hw_caps(
 	void                                         *hw_priv,
 	void                                         *get_hw_cap_args,
@@ -136,7 +103,7 @@ static int cam_top_tpg_ver1_reserve(
 		mutex_unlock(&tpg_hw->hw_info->hw_mutex);
 		return -EINVAL;
 	}
-	rc = cam_top_tpg_ver1_get_format(reserv->in_port[0]->format,
+	rc = cam_top_tpg_get_format(reserv->in_port[0]->format,
 		&encode_format);
 	if (rc)
 		goto error;
@@ -144,7 +111,7 @@ static int cam_top_tpg_ver1_reserve(
 	CAM_DBG(CAM_ISP, "TPG: %u enter", tpg_hw->hw_intf->hw_idx);
 
 	tpg_data = (struct cam_top_tpg_cfg *)tpg_hw->tpg_res.res_priv;
-	tpg_data->vc_num = reserv->in_port[0]->vc;
+	tpg_data->vc_num[0] = reserv->in_port[0]->vc;
 	tpg_data->phy_sel = reserv->in_port[0]->lane_type;
 	tpg_data->num_active_lanes = reserv->in_port[0]->lane_num;
 	tpg_data->h_blank_count = reserv->in_port[0]->sensor_hbi;
@@ -165,7 +132,7 @@ static int cam_top_tpg_ver1_reserve(
 	CAM_DBG(CAM_ISP,
 		"TPG:%u vc_num:%d dt:%d phy:%d lines:%d pattern:%d format:%d",
 		tpg_hw->hw_intf->hw_idx,
-		tpg_data->vc_num, tpg_data->dt_cfg[0].data_type,
+		tpg_data->vc_num[0], tpg_data->dt_cfg[0].data_type,
 		tpg_data->phy_sel, tpg_data->num_active_lanes,
 		tpg_data->pix_pattern,
 		tpg_data->dt_cfg[0].encode_format);
@@ -181,7 +148,7 @@ static int cam_top_tpg_ver1_reserve(
 		goto end;
 
 	for (i = 1; i < reserv->num_inport; i++) {
-		if ((tpg_data->vc_num != reserv->in_port[i]->vc) ||
+		if ((tpg_data->vc_num[0] != reserv->in_port[i]->vc) ||
 			(tpg_data->phy_sel != reserv->in_port[i]->lane_type) ||
 			(tpg_data->num_active_lanes !=
 				reserv->in_port[i]->lane_num) ||
@@ -193,7 +160,7 @@ static int cam_top_tpg_ver1_reserve(
 			rc = -EINVAL;
 			goto error;
 		}
-		rc = cam_top_tpg_ver1_get_format(reserv->in_port[0]->format,
+		rc = cam_top_tpg_get_format(reserv->in_port[0]->format,
 			&encode_format);
 		if (rc)
 			return rc;
@@ -278,7 +245,7 @@ static int cam_top_tpg_ver1_start(
 	}
 
 	val = (tpg_num_dt_map[tpg_data->num_active_dts-1] <<
-		 tpg_reg->tpg_num_dts_shift_val) | tpg_data->vc_num;
+		 tpg_reg->tpg_num_dts_shift_val) | tpg_data->vc_num[0];
 	cam_io_w_mb(val, soc_info->reg_map[0].mem_base + tpg_reg->tpg_vc_cfg0);
 
 	/*

@@ -229,7 +229,7 @@ uint32_t cdm_required_size_changebase(void)
 
 uint32_t cdm_required_size_comp_wait(void)
 {
-	return cdm_get_cmd_header_size(CAM_CDM_COMP_WAIT);
+	return cdm_get_cmd_header_size(CAM_CDM_CMD_COMP_WAIT);
 }
 
 uint32_t cdm_required_size_clear_comp_event(void)
@@ -387,11 +387,11 @@ uint32_t *cdm_write_wait_comp_event(
 	struct cdm_wait_comp_event_cmd *pHeader =
 		(struct cdm_wait_comp_event_cmd *)pCmdBuffer;
 
-	pHeader->cmd = CAM_CDM_COMP_WAIT;
+	pHeader->cmd = CAM_CDM_CMD_COMP_WAIT;
 	pHeader->mask1 = mask1;
 	pHeader->mask2 = mask2;
 
-	pCmdBuffer += cdm_get_cmd_header_size(CAM_CDM_COMP_WAIT);
+	pCmdBuffer += cdm_get_cmd_header_size(CAM_CDM_CMD_COMP_WAIT);
 
 	return pCmdBuffer;
 }
@@ -793,6 +793,17 @@ static long cam_cdm_util_dump_change_base_cmd(uint32_t *cmd_buf_addr)
 	return ret;
 }
 
+static long cam_cdm_util_dump_comp_wait_event_cmd(uint32_t *cmd_buf_addr)
+{
+	long ret = 0;
+
+	ret += CDMCmdHeaderSizes[CAM_CDM_CMD_COMP_WAIT];
+
+	CAM_INFO(CAM_CDM, "WAIT_EVENT");
+
+	return ret;
+}
+
 static long cam_cdm_util_dump_perf_ctrl_cmd(uint32_t *cmd_buf_addr)
 {
 	long ret = 0;
@@ -845,6 +856,10 @@ void cam_cdm_util_dump_cmd_buf(
 			break;
 		case CAM_CDM_CMD_PERF_CTRL:
 			buf_now += cam_cdm_util_dump_perf_ctrl_cmd(buf_now);
+			break;
+		case CAM_CDM_CMD_COMP_WAIT:
+			buf_now +=
+				cam_cdm_util_dump_comp_wait_event_cmd(buf_now);
 			break;
 		default:
 			CAM_ERR(CAM_CDM, "Invalid CMD: 0x%x buf 0x%x",
@@ -1013,6 +1028,10 @@ int cam_cdm_util_dump_cmd_bufs_v2(
 		case CAM_CDM_CMD_PERF_CTRL:
 			buf_now += cdm_get_cmd_header_size(
 				CAM_CDM_CMD_PERF_CTRL);
+			break;
+		case CAM_CDM_CMD_COMP_WAIT:
+			buf_now += cdm_get_cmd_header_size(
+				CAM_CDM_CMD_COMP_WAIT);
 			break;
 		default:
 			CAM_ERR(CAM_CDM, "Invalid CMD: 0x%x", cmd);

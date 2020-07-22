@@ -498,7 +498,7 @@ static int cam_lrme_mgr_cb(void *data,
 {
 	struct cam_lrme_hw_mgr *hw_mgr = &g_lrme_hw_mgr;
 	int rc = 0;
-	bool frame_abort = true;
+	uint32_t evt_id = CAM_CTX_EVT_ID_ERROR;
 	struct cam_lrme_frame_request *frame_req;
 	struct cam_lrme_device *hw_device;
 
@@ -530,10 +530,10 @@ static int cam_lrme_mgr_cb(void *data,
 
 	if (cb_args->cb_type & CAM_LRME_CB_BUF_DONE) {
 		cb_args->cb_type &= ~CAM_LRME_CB_BUF_DONE;
-		frame_abort = false;
+		evt_id = CAM_CTX_EVT_ID_SUCCESS;
 	} else if (cb_args->cb_type & CAM_LRME_CB_ERROR) {
 		cb_args->cb_type &= ~CAM_LRME_CB_ERROR;
-		frame_abort = true;
+		evt_id = CAM_CTX_EVT_ID_ERROR;
 	} else {
 		CAM_ERR(CAM_LRME, "Wrong cb type %d, req %lld",
 			cb_args->cb_type, frame_req->req_id);
@@ -544,10 +544,10 @@ static int cam_lrme_mgr_cb(void *data,
 		struct cam_hw_done_event_data buf_data;
 
 		buf_data.request_id = frame_req->req_id;
-		CAM_DBG(CAM_LRME, "frame req %llu, frame_abort %d",
-			frame_req->req_id, frame_abort);
+		CAM_DBG(CAM_LRME, "frame req %llu, evt_id %d",
+			frame_req->req_id, evt_id);
 		rc = hw_mgr->event_cb(frame_req->ctxt_to_hw_map,
-			frame_abort, &buf_data);
+			evt_id, &buf_data);
 	} else {
 		CAM_ERR(CAM_LRME, "No cb function");
 	}
@@ -1016,31 +1016,36 @@ static int cam_lrme_mgr_hw_config(void *hw_mgr_priv,
 static int cam_lrme_mgr_create_debugfs_entry(void)
 {
 	int rc = 0;
+	struct dentry *dbgfileptr = NULL;
 
-	g_lrme_hw_mgr.debugfs_entry.dentry =
-		debugfs_create_dir("camera_lrme", NULL);
-	if (!g_lrme_hw_mgr.debugfs_entry.dentry) {
-		CAM_ERR(CAM_LRME, "failed to create dentry");
-		return -ENOMEM;
+	dbgfileptr = debugfs_create_dir("camera_lrme", NULL);
+	if (!dbgfileptr) {
+		CAM_ERR(CAM_ISP,"DebugFS could not create directory!");
+		rc = -ENOENT;
+		goto end;
 	}
+	/* Store parent inode for cleanup in caller */
+	g_lrme_hw_mgr.debugfs_entry.dentry = dbgfileptr;
 
-	if (!debugfs_create_bool("dump_register",
-		0644,
+	dbgfileptr = debugfs_create_bool("dump_register", 0644,
 		g_lrme_hw_mgr.debugfs_entry.dentry,
-		&g_lrme_hw_mgr.debugfs_entry.dump_register)) {
-		CAM_ERR(CAM_LRME, "failed to create dump register entry");
-		rc = -ENOMEM;
-		goto err;
+		&g_lrme_hw_mgr.debugfs_entry.dump_register);
+	if (IS_ERR(dbgfileptr)) {
+		if (PTR_ERR(dbgfileptr) == -ENODEV)
+			CAM_WARN(CAM_LRME, "DebugFS not enabled in kernel!");
+		else
+			rc = PTR_ERR(dbgfileptr);
 	}
-
-	return rc;
 
 err:
-	debugfs_remove_recursive(g_lrme_hw_mgr.debugfs_entry.dentry);
-	g_lrme_hw_mgr.debugfs_entry.dentry = NULL;
 	return rc;
 }
 
+static void cam_req_mgr_process_workq_cam_lrme_device_submit_worker(
+	struct work_struct *w)
+{
+	cam_req_mgr_process_workq(w);
+}
 
 int cam_lrme_mgr_register_device(
 	struct cam_hw_intf *lrme_hw_intf,
@@ -1068,8 +1073,8 @@ int cam_lrme_mgr_register_device(
 	CAM_DBG(CAM_LRME, "Create submit workq for %s", buf);
 	rc = cam_req_mgr_workq_create(buf,
 		CAM_LRME_WORKQ_NUM_TASK,
-		&hw_device->work, CRM_WORKQ_USAGE_NON_IRQ,
-		0);
+		&hw_device->work, CRM_WORKQ_USAGE_NON_IRQ, 0,
+		cam_req_mgr_process_workq_cam_lrme_device_submit_worker);
 	if (rc) {
 		CAM_ERR(CAM_LRME,
 			"Unable to create a worker, rc=%d", rc);
@@ -1140,6 +1145,7 @@ int cam_lrme_mgr_deregister_device(int device_index)
 int cam_lrme_hw_mgr_deinit(void)
 {
 	mutex_destroy(&g_lrme_hw_mgr.hw_mgr_mutex);
+	debugfs_remove_recursive(g_lrme_hw_mgr.debugfs_entry.dentry);
 	memset(&g_lrme_hw_mgr, 0x0, sizeof(g_lrme_hw_mgr));
 
 	return 0;
@@ -1194,7 +1200,6 @@ int cam_lrme_hw_mgr_init(struct cam_hw_mgr_intf *hw_mgr_intf,
 	hw_mgr_intf->hw_dump = cam_lrme_mgr_hw_dump;
 
 	cam_lrme_mgr_create_debugfs_entry();
-
 	CAM_DBG(CAM_LRME, "Hw mgr init done");
 	return rc;
 }
