@@ -289,6 +289,8 @@ struct msm_vidc_platform_data {
 	unsigned int common_data_length;
 	struct msm_vidc_codec_data *codec_data;
 	unsigned int codec_data_length;
+	struct allowed_clock_rates_table *clock_data;
+	unsigned int clock_data_length;
 	struct msm_vidc_codec *codecs;
 	uint32_t codecs_count;
 	struct msm_vidc_codec_capability *codec_caps;
@@ -494,7 +496,7 @@ struct msm_vidc_inst_smem_ops {
 
 struct msm_vidc_inst {
 	struct list_head list;
-	struct mutex sync_lock, lock, flush_lock;
+	struct mutex sync_lock, lock;
 	struct msm_vidc_core *core;
 	enum session_type session_type;
 	void *session;

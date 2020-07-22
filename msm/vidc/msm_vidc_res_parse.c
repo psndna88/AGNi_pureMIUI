@@ -347,6 +347,11 @@ static int msm_vidc_load_allowed_clocks_table(
 	int rc = 0;
 	struct platform_device *pdev = res->pdev;
 
+	if (res->allowed_clks_tbl) {
+		d_vpr_h("allowed-clock-rates populated from platform_data\n");
+		return 0;
+	}
+
 	if (!of_find_property(pdev->dev.of_node,
 			"qcom,allowed-clock-rates", NULL)) {
 		d_vpr_h("allowed-clock-rates not found\n");
@@ -692,29 +697,6 @@ static int msm_vidc_load_reset_table(
 	return 0;
 }
 
-static int msm_decide_dt_node(
-		struct msm_vidc_platform_resources *res)
-{
-	struct platform_device *pdev = res->pdev;
-	int rc = 0;
-	u32 sku_index = 0;
-
-	rc = of_property_read_u32(pdev->dev.of_node, "sku-index",
-			&sku_index);
-	if (rc) {
-		d_vpr_h("'sku_index' not found in node\n");
-		return 0;
-	}
-
-	if (sku_index != res->sku_version) {
-		d_vpr_h("Failed to parse dt: sku_index %d sku_version %d\n",
-			sku_index, res->sku_version);
-		return -EINVAL;
-	}
-
-	return 0;
-}
-
 static int find_key_value(struct msm_vidc_platform_data *platform_data,
 	const char *key)
 {
@@ -749,6 +731,8 @@ int read_platform_resources_from_drv_data(
 	res->codec_caps_count = platform_data->codec_caps_count;
 	res->codec_data_count = platform_data->codec_data_length;
 	res->codec_data = platform_data->codec_data;
+	res->allowed_clks_tbl = platform_data->clock_data;
+	res->allowed_clks_tbl_size = platform_data->clock_data_length;
 
 	res->sku_version = platform_data->sku_version;
 	res->mem_limit_tbl = memory_limit_tbl_mbytes;
@@ -851,10 +835,6 @@ int read_platform_resources_from_dt(
 		d_vpr_e("DT node not found\n");
 		return -ENOENT;
 	}
-
-	rc = msm_decide_dt_node(res);
-	if (rc)
-		return rc;
 
 	INIT_LIST_HEAD(&res->context_banks);
 

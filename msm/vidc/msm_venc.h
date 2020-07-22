@@ -35,6 +35,7 @@ int msm_venc_set_ltr_markframe(struct msm_vidc_inst *inst);
 int msm_venc_set_dyn_qp(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl);
 int msm_venc_set_request_keyframe(struct msm_vidc_inst *inst);
 int msm_venc_set_intra_refresh_mode(struct msm_vidc_inst *inst);
+int msm_venc_set_hb_max_layer(struct msm_vidc_inst *inst);
 int msm_venc_set_hp_max_layer(struct msm_vidc_inst *inst);
 int msm_venc_set_hp_layer(struct msm_vidc_inst *inst);
 int msm_venc_set_base_layer_priority_id(struct msm_vidc_inst *inst);
