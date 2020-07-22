@@ -13,8 +13,8 @@
 #include <net/sock.h>
 #include "ipa_i.h"
 #include "ipa_trace.h"
-#include "ipahal/ipahal.h"
-#include "ipahal/ipahal_fltrt.h"
+#include "ipahal.h"
+#include "ipahal_fltrt.h"
 
 #define IPA_GSI_EVENT_RP_SIZE 8
 #define IPA_WAN_AGGR_PKT_CNT 5
@@ -313,6 +313,7 @@ static void ipa3_send_nop_desc(struct work_struct *work)
 	IPADBG_LOW("gsi send NOP for ch: %lu\n", sys->ep->gsi_chan_hdl);
 	if (atomic_read(&sys->workqueue_flushed))
 		return;
+
 	spin_lock_bh(&sys->spinlock);
 	if (!list_empty(&sys->avail_tx_wrapper_list)) {
 		tx_pkt = list_first_entry(&sys->avail_tx_wrapper_list,
@@ -321,8 +322,10 @@ static void ipa3_send_nop_desc(struct work_struct *work)
 		sys->avail_tx_wrapper--;
 		memset(tx_pkt, 0, sizeof(struct ipa3_tx_pkt_wrapper));
 	} else {
+		spin_unlock_bh(&sys->spinlock);
 		tx_pkt = kmem_cache_zalloc(ipa3_ctx->tx_pkt_wrapper_cache,
 			GFP_KERNEL);
+		spin_lock_bh(&sys->spinlock);
 	}
 	if (!tx_pkt) {
 		spin_unlock_bh(&sys->spinlock);
@@ -358,7 +361,6 @@ static void ipa3_send_nop_desc(struct work_struct *work)
 
 	/* make sure TAG process is sent before clocks are gated */
 	ipa3_ctx->tag_process_before_gating = true;
-
 }
 
 
@@ -566,7 +568,6 @@ int ipa3_send(struct ipa3_sys_context *sys,
 
 	/* set the timer for sending the NOP descriptor */
 	if (send_nop) {
-
 		ktime_t time = ktime_set(0, IPA_TX_SEND_COMPL_NOP_DELAY_NS);
 
 		IPADBG_LOW("scheduling timer for ch %lu\n",
@@ -1999,6 +2000,8 @@ fail_kmem_cache_alloc:
 			IPA_STATS_INC_CNT(ipa3_ctx->stats.wan_repl_rx_empty);
 		else if (sys->ep->client == IPA_CLIENT_APPS_LAN_CONS)
 			IPA_STATS_INC_CNT(ipa3_ctx->stats.lan_repl_rx_empty);
+		else if (sys->ep->client == IPA_CLIENT_APPS_WAN_LOW_LAT_CONS)
+			IPA_STATS_INC_CNT(ipa3_ctx->stats.low_lat_repl_rx_empty);
 		pr_err_ratelimited("%s sys=%pK repl ring empty\n",
 				__func__, sys);
 		goto begin;
@@ -2662,8 +2665,10 @@ static void ipa3_fast_replenish_rx_cache(struct ipa3_sys_context *sys)
 			IPA_STATS_INC_CNT(ipa3_ctx->stats.wan_rx_empty);
 		else if (sys->ep->client == IPA_CLIENT_APPS_LAN_CONS)
 			IPA_STATS_INC_CNT(ipa3_ctx->stats.lan_rx_empty);
+		else if (sys->ep->client == IPA_CLIENT_APPS_WAN_LOW_LAT_CONS)
+			IPA_STATS_INC_CNT(ipa3_ctx->stats.low_lat_rx_empty);
 		else
-			WARN_ON(1);
+			WARN_ON_RATELIMIT_IPA(1);
 		queue_delayed_work(sys->wq, &sys->replenish_rx_work,
 				msecs_to_jiffies(1));
 	}
@@ -3558,6 +3563,7 @@ static struct sk_buff *handle_page_completion(struct gsi_chan_xfer_notify
 	struct list_head *head;
 	struct ipa3_sys_context *sys;
 	struct ipa_rx_page_data rx_page;
+	int size;
 
 	sys = (struct ipa3_sys_context *) notify->chan_user_data;
 	rx_pkt = (struct ipa3_rx_pkt_wrapper *) notify->xfer_user_data;
@@ -3567,9 +3573,12 @@ static struct sk_buff *handle_page_completion(struct gsi_chan_xfer_notify
 	rx_pkt->sys->len--;
 	spin_unlock_bh(&rx_pkt->sys->spinlock);
 
-	/* TODO: truesize handle for EOB */
-	if (update_truesize)
-		IPAERR("update_truesize not supported\n");
+	if (likely(notify->bytes_xfered))
+		rx_pkt->data_len = notify->bytes_xfered;
+	else {
+		IPAERR_RL("unexpected 0 byte_xfered\n");
+		rx_pkt->data_len = rx_pkt->len;
+	}
 
 	if (notify->veid >= GSI_VEID_MAX) {
 		IPAERR("notify->veid > GSI_VEID_MAX\n");
@@ -3610,9 +3619,9 @@ static struct sk_buff *handle_page_completion(struct gsi_chan_xfer_notify
 			IPA_STATS_INC_CNT(ipa3_ctx->stats.rx_page_drop_cnt);
 			return NULL;
 		}
-	/* go over the list backward to save computations on updating length */
-		list_for_each_entry_safe_reverse(rx_pkt, tmp, head, link) {
+		list_for_each_entry_safe(rx_pkt, tmp, head, link) {
 			rx_page = rx_pkt->page_data;
+			size = rx_pkt->data_len;
 
 			list_del(&rx_pkt->link);
 			if (rx_page.is_tmp_alloc)
@@ -3627,7 +3636,7 @@ static struct sk_buff *handle_page_completion(struct gsi_chan_xfer_notify
 			skb_add_rx_frag(rx_skb,
 				skb_shinfo(rx_skb)->nr_frags,
 				rx_page.page, 0,
-				notify->bytes_xfered,
+				size,
 				PAGE_SIZE << IPA_WAN_PAGE_ORDER);
 		}
 	} else {
@@ -3902,6 +3911,10 @@ static int ipa3_assign_policy(struct ipa_sys_connect_params *in,
 		sys->ep->status.status_en = true;
 		sys->ep->status.status_ep =
 			ipa3_get_ep_mapping(IPA_CLIENT_Q6_WAN_CONS);
+		/* Enable status supression to disable sending status for
+		 * every packet.
+		 */
+		sys->ep->status.status_pkt_suppress = true;
 		return 0;
 	}
 
@@ -4590,8 +4603,14 @@ static void ipa_gsi_irq_rx_notify_cb(struct gsi_chan_xfer_notify *notify)
 
 	sys = (struct ipa3_sys_context *)notify->chan_user_data;
 
-
-	sys->ep->xfer_notify_valid = true;
+	/*
+	 * In suspend just before stopping the channel possible to receive
+	 * the IEOB interrupt and xfer pointer will not be processed in this
+	 * mode and moving channel poll mode. In resume after starting the
+	 * channel will receive the IEOB interrupt and xfer pointer will be
+	 * overwritten. To avoid this process all data in polling context.
+	 */
+	sys->ep->xfer_notify_valid = false;
 	sys->ep->xfer_notify = *notify;
 
 	switch (notify->evt_id) {
@@ -4626,7 +4645,7 @@ static void ipa_dma_gsi_irq_rx_notify_cb(struct gsi_chan_xfer_notify *notify)
 		return;
 	}
 
-	sys->ep->xfer_notify_valid = true;
+	sys->ep->xfer_notify_valid = false;
 	sys->ep->xfer_notify = *notify;
 
 	switch (notify->evt_id) {
@@ -4648,8 +4667,8 @@ static void ipa_dma_gsi_irq_rx_notify_cb(struct gsi_chan_xfer_notify *notify)
 int ipa3_alloc_common_event_ring(void)
 {
 	struct gsi_evt_ring_props gsi_evt_ring_props;
-	dma_addr_t evt_dma_addr;
-	dma_addr_t evt_rp_dma_addr;
+	dma_addr_t evt_dma_addr = 0;
+	dma_addr_t evt_rp_dma_addr = 0;
 	int result;
 
 	memset(&gsi_evt_ring_props, 0, sizeof(gsi_evt_ring_props));

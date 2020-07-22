@@ -23,12 +23,12 @@
 #include <linux/platform_device.h>
 #include <linux/firmware.h>
 #include "ipa_qmi_service.h"
-#include "../ipa_api.h"
-#include "ipahal/ipahal_reg.h"
-#include "ipahal/ipahal.h"
-#include "ipahal/ipahal_fltrt.h"
-#include "ipahal/ipahal_hw_stats.h"
-#include "../ipa_common_i.h"
+#include "ipa_api.h"
+#include "ipahal_reg.h"
+#include "ipahal.h"
+#include "ipahal_fltrt.h"
+#include "ipahal_hw_stats.h"
+#include "ipa_common_i.h"
 #include "ipa_uc_offload_i.h"
 #include "ipa_pm.h"
 #include "ipa_defs.h"
@@ -1192,7 +1192,8 @@ struct ipa3_desc {
  * @skb: skb
  * @dma_address: DMA address of this Rx packet
  * @link: linked to the Rx packets on that pipe
- * @len: how many bytes are copied into skb's flat buffer
+ * @len: fixed allocated skb length (i.e. times of page size)
+ * @data_len: how many bytes are copied into skb's flat buffer
  */
 struct ipa3_rx_pkt_wrapper {
 	struct list_head link;
@@ -1201,6 +1202,7 @@ struct ipa3_rx_pkt_wrapper {
 		struct ipa_rx_page_data page_data;
 	};
 	u32 len;
+	u32 data_len;
 	struct work_struct work;
 	struct ipa3_sys_context *sys;
 };
@@ -1408,6 +1410,8 @@ struct ipa3_stats {
 	u32 wan_repl_rx_empty;
 	u32 lan_rx_empty;
 	u32 lan_repl_rx_empty;
+	u32 low_lat_rx_empty;
+	u32 low_lat_repl_rx_empty;
 	u32 flow_enable;
 	u32 flow_disable;
 	u32 tx_non_linear;
@@ -1868,6 +1872,7 @@ struct ipa3_app_clock_vote {
  * @ipa_hw_type: type of IPA HW type (e.g. IPA 1.0, IPA 1.1 etc')
  * @ipa_hw_type_index: index of IPA HW type (e.g. IPA_4_0, IPA_4_0_MHI etc')
  * @ipa3_hw_mode: mode of IPA HW mode (e.g. Normal, Virtual or over PCIe)
+ * @gsi_ver: version of GSI
  * @use_ipa_teth_bridge: use tethering bridge driver
  * @modem_cfg_emb_pipe_flt: modem configure embedded pipe filtering rules
  * @logbuf: ipc log buffer for high priority messages
@@ -1988,6 +1993,7 @@ struct ipa3_context {
 	enum ipa_hw_type ipa_hw_type;
 	u8 hw_type_index;
 	enum ipa3_hw_mode ipa3_hw_mode;
+	enum gsi_ver gsi_ver;
 	enum ipa3_platform_type platform_type;
 	bool ipa_config_is_mhi;
 	bool use_ipa_teth_bridge;
@@ -2464,6 +2470,8 @@ int ipa3_clear_endpoint_delay(u32 clnt_hdl);
  */
 int ipa3_cfg_ep(u32 clnt_hdl, const struct ipa_ep_cfg *ipa_ep_cfg);
 
+int ipa3_cfg_ep_seq(u32 clnt_hdl, const struct ipa_ep_cfg_seq *seq_cfg);
+
 int ipa3_cfg_ep_nat(u32 clnt_hdl, const struct ipa_ep_cfg_nat *ipa_ep_cfg);
 
 int ipa3_cfg_ep_conn_track(u32 clnt_hdl,
@@ -2501,11 +2509,9 @@ int ipa3_cfg_ep_ctrl(u32 clnt_hdl, const struct ipa_ep_cfg_ctrl *ep_ctrl);
 /*
  * Header removal / addition
  */
-int ipa3_add_hdr(struct ipa_ioc_add_hdr *hdrs);
+
 
 int ipa3_add_hdr_usr(struct ipa_ioc_add_hdr *hdrs, bool by_user);
-
-int ipa3_del_hdr(struct ipa_ioc_del_hdr *hdls);
 
 int ipa3_del_hdr_by_user(struct ipa_ioc_del_hdr *hdls, bool by_user);
 
@@ -3261,6 +3267,8 @@ static inline void ipa_eth_exit(void) { }
 int ipa3_get_gsi_chan_info(struct gsi_chan_info *gsi_chan_info,
 	unsigned long chan_hdl);
 
+int ipa3_disable_apps_wan_cons_deaggr(uint32_t agg_size, uint32_t agg_count);
+
 #if IS_ENABLED(CONFIG_IPA3_MHI_PRIME_MANAGER)
 int ipa_mpm_mhip_xdci_pipe_enable(enum ipa_usb_teth_prot prot);
 int ipa_mpm_mhip_xdci_pipe_disable(enum ipa_usb_teth_prot xdci_teth_prot);
@@ -3332,4 +3340,6 @@ int ipa3_uc_send_enable_flow_control(uint16_t gsi_chid,
 int ipa3_uc_send_disable_flow_control(void);
 int ipa3_uc_send_update_flow_control(uint32_t bitmask,
 	uint8_t  add_delete);
+
+enum ipa_hw_type ipa_get_hw_type_internal(void);
 #endif /* _IPA3_I_H_ */

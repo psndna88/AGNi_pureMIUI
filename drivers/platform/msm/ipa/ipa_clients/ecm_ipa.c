@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/debugfs.h>
@@ -14,8 +14,8 @@
 #include <linux/sched.h>
 #include <linux/atomic.h>
 #include <linux/ecm_ipa.h>
-#include "../ipa_common_i.h"
-#include "../ipa_v3/ipa_pm.h"
+#include "ipa_common_i.h"
+#include "ipa_pm.h"
 
 #define DRIVER_NAME "ecm_ipa"
 #define ECM_IPA_IPV4_HDR_NAME "ecm_eth_ipv4"
@@ -408,13 +408,13 @@ int ecm_ipa_connect(u32 usb_to_ipa_hdl, u32 ipa_to_usb_hdl, void *priv)
 	ecm_ipa_ctx->state = next_state;
 	ECM_IPA_STATE_DEBUG(ecm_ipa_ctx);
 
-	if (!ipa_is_client_handle_valid(usb_to_ipa_hdl)) {
+	if (!ipa3_is_client_handle_valid(usb_to_ipa_hdl)) {
 		ECM_IPA_ERROR
 			("usb_to_ipa_hdl(%d) is not a valid ipa handle\n",
 			usb_to_ipa_hdl);
 		return -EINVAL;
 	}
-	if (!ipa_is_client_handle_valid(ipa_to_usb_hdl)) {
+	if (!ipa3_is_client_handle_valid(ipa_to_usb_hdl)) {
 		ECM_IPA_ERROR
 			("ipa_to_usb_hdl(%d) is not a valid ipa handle\n",
 			ipa_to_usb_hdl);
@@ -424,7 +424,7 @@ int ecm_ipa_connect(u32 usb_to_ipa_hdl, u32 ipa_to_usb_hdl, void *priv)
 	ecm_ipa_ctx->ipa_to_usb_hdl = ipa_to_usb_hdl;
 	ecm_ipa_ctx->usb_to_ipa_hdl = usb_to_ipa_hdl;
 
-	ecm_ipa_ctx->ipa_to_usb_client = ipa_get_client_mapping(ipa_to_usb_hdl);
+	ecm_ipa_ctx->ipa_to_usb_client = ipa3_get_client_mapping(ipa_to_usb_hdl);
 	if (ecm_ipa_ctx->ipa_to_usb_client < 0) {
 		ECM_IPA_ERROR(
 			"Error getting IPA->USB client from handle %d\n",
@@ -434,7 +434,7 @@ int ecm_ipa_connect(u32 usb_to_ipa_hdl, u32 ipa_to_usb_hdl, void *priv)
 	ECM_IPA_DEBUG("ipa_to_usb_client = %d\n",
 		      ecm_ipa_ctx->ipa_to_usb_client);
 
-	ecm_ipa_ctx->usb_to_ipa_client = ipa_get_client_mapping(usb_to_ipa_hdl);
+	ecm_ipa_ctx->usb_to_ipa_client = ipa3_get_client_mapping(usb_to_ipa_hdl);
 	if (ecm_ipa_ctx->usb_to_ipa_client < 0) {
 		ECM_IPA_ERROR(
 			"Error getting USB->IPA client from handle %d\n",
@@ -648,7 +648,6 @@ static void ecm_ipa_packet_receive_notify
 {
 	struct sk_buff *skb = (struct sk_buff *)data;
 	struct ecm_ipa_dev *ecm_ipa_ctx = priv;
-	int result;
 	unsigned int packet_len;
 
 	if (!skb) {
@@ -672,9 +671,8 @@ static void ecm_ipa_packet_receive_notify
 	skb->dev = ecm_ipa_ctx->net;
 	skb->protocol = eth_type_trans(skb, ecm_ipa_ctx->net);
 
-	result = ecm_ipa_ctx->netif_rx_function(skb);
-	if (unlikely(result))
-		ECM_IPA_ERROR("fail on netif_rx_function\n");
+	ecm_ipa_ctx->netif_rx_function(skb);
+
 	ecm_ipa_ctx->net->stats.rx_packets++;
 	ecm_ipa_ctx->net->stats.rx_bytes += packet_len;
 }
@@ -919,7 +917,7 @@ static int ecm_ipa_rules_cfg
 
 	hdrs->commit = 1;
 	hdrs->num_hdrs = 2;
-	result = ipa_add_hdr(hdrs);
+	result = ipa3_add_hdr(hdrs);
 	if (result) {
 		ECM_IPA_ERROR("Fail on Header-Insertion(%d)\n", result);
 		goto out_free_mem;
@@ -971,9 +969,9 @@ static void ecm_ipa_rules_destroy(struct ecm_ipa_dev *ecm_ipa_ctx)
 	ipv4->hdl = ecm_ipa_ctx->eth_ipv4_hdr_hdl;
 	ipv6 = &del_hdr->hdl[1];
 	ipv6->hdl = ecm_ipa_ctx->eth_ipv6_hdr_hdl;
-	result = ipa_del_hdr(del_hdr);
+	result = ipa3_del_hdr(del_hdr);
 	if (result || ipv4->status || ipv6->status)
-		ECM_IPA_ERROR("ipa_del_hdr failed\n");
+		ECM_IPA_ERROR("ipa3_del_hdr failed\n");
 	kfree(del_hdr);
 }
 
@@ -1034,7 +1032,7 @@ static int ecm_ipa_register_properties(struct ecm_ipa_dev *ecm_ipa_ctx)
 	rx_ipv6_property->hdr_l2_type = hdr_l2_type;
 	rx_properties.num_props = 2;
 
-	result = ipa_register_intf("ecm0", &tx_properties, &rx_properties);
+	result = ipa3_register_intf("ecm0", &tx_properties, &rx_properties);
 	if (result)
 		ECM_IPA_ERROR("fail on Tx/Rx properties registration\n");
 
@@ -1048,7 +1046,7 @@ static void ecm_ipa_deregister_properties(void)
 	int result;
 
 	ECM_IPA_LOG_ENTRY();
-	result = ipa_deregister_intf("ecm0");
+	result = ipa3_deregister_intf("ecm0");
 	if (result)
 		ECM_IPA_DEBUG("Fail on Tx prop deregister\n");
 	ECM_IPA_LOG_EXIT();

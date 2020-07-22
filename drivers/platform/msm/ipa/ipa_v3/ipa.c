@@ -47,9 +47,9 @@
 #define IPA_UC_SUBSYSTEM_NAME "ipa_uc"
 
 #include "ipa_i.h"
-#include "../ipa_rm_i.h"
-#include "ipahal/ipahal.h"
-#include "ipahal/ipahal_fltrt.h"
+#include "ipa_rm_i.h"
+#include "ipahal.h"
+#include "ipahal_fltrt.h"
 
 #define CREATE_TRACE_POINTS
 #include "ipa_trace.h"
@@ -423,6 +423,7 @@ struct device *ipa3_get_dma_dev(void)
 {
 	return ipa3_ctx->pdev;
 }
+EXPORT_SYMBOL(ipa3_get_dma_dev);
 
 /**
  * ipa3_get_smmu_ctx()- Return smmu context for the given cb_type
@@ -3868,12 +3869,12 @@ int _ipa_init_sram_v3(void)
 		IPA_MEM_PART(modem_hdr_proc_ctx_ofst) - 4);
 	ipa3_sram_set_canary(ipa_sram_mmio,
 		IPA_MEM_PART(modem_hdr_proc_ctx_ofst));
-	if (ipa_get_hw_type() >= IPA_HW_v4_5) {
+	if (ipa_get_hw_type_internal() >= IPA_HW_v4_5) {
 		ipa3_sram_set_canary(ipa_sram_mmio,
 			IPA_MEM_PART(nat_tbl_ofst) - 12);
 	}
-	if (ipa_get_hw_type() >= IPA_HW_v4_0) {
-		if (ipa_get_hw_type() < IPA_HW_v4_5) {
+	if (ipa_get_hw_type_internal() >= IPA_HW_v4_0) {
+		if (ipa_get_hw_type_internal() < IPA_HW_v4_5) {
 			ipa3_sram_set_canary(ipa_sram_mmio,
 				IPA_MEM_PART(pdn_config_ofst) - 4);
 			ipa3_sram_set_canary(ipa_sram_mmio,
@@ -3888,14 +3889,14 @@ int _ipa_init_sram_v3(void)
 		}
 	}
 
-	if (ipa_get_hw_type() <= IPA_HW_v3_5 ||
-		ipa_get_hw_type() >= IPA_HW_v4_5) {
+	if (ipa_get_hw_type_internal() <= IPA_HW_v3_5 ||
+		ipa_get_hw_type_internal() >= IPA_HW_v4_5) {
 		ipa3_sram_set_canary(ipa_sram_mmio,
 			IPA_MEM_PART(modem_ofst) - 4);
 		ipa3_sram_set_canary(ipa_sram_mmio, IPA_MEM_PART(modem_ofst));
 	}
 	ipa3_sram_set_canary(ipa_sram_mmio,
-		(ipa_get_hw_type() >= IPA_HW_v3_5) ?
+		(ipa_get_hw_type_internal() >= IPA_HW_v3_5) ?
 			IPA_MEM_PART(uc_descriptor_ram_ofst) :
 			IPA_MEM_PART(end_ofst));
 
@@ -5474,16 +5475,6 @@ int ipa3_restore_suspend_handler(void)
 	return result;
 }
 
-static int ipa3_apps_cons_release_resource(void)
-{
-	return 0;
-}
-
-static int ipa3_apps_cons_request_resource(void)
-{
-	return 0;
-}
-
 static void ipa3_transport_release_resource(struct work_struct *work)
 {
 	mutex_lock(&ipa3_ctx->transport_pm.transport_pm_mutex);
@@ -5500,31 +5491,6 @@ static void ipa3_transport_release_resource(struct work_struct *work)
 	}
 	atomic_set(&ipa3_ctx->transport_pm.eot_activity, 0);
 	mutex_unlock(&ipa3_ctx->transport_pm.transport_pm_mutex);
-}
-
-int ipa3_create_apps_resource(void)
-{
-	struct ipa_rm_create_params apps_cons_create_params;
-	struct ipa_rm_perf_profile profile;
-	int result = 0;
-
-	memset(&apps_cons_create_params, 0,
-				sizeof(apps_cons_create_params));
-	apps_cons_create_params.name = IPA_RM_RESOURCE_APPS_CONS;
-	apps_cons_create_params.request_resource =
-		ipa3_apps_cons_request_resource;
-	apps_cons_create_params.release_resource =
-		ipa3_apps_cons_release_resource;
-	result = ipa_rm_create_resource(&apps_cons_create_params);
-	if (result) {
-		IPAERR("ipa_rm_create_resource failed\n");
-		return result;
-	}
-
-	profile.max_supported_bandwidth_mbps = IPA_APPS_MAX_BW_IN_MBPS;
-	ipa_rm_set_perf_profile(IPA_RM_RESOURCE_APPS_CONS, &profile);
-
-	return result;
 }
 
 /**
@@ -5727,7 +5693,7 @@ static int ipa3_gsi_pre_fw_load_init(void)
 
 	result = gsi_configure_regs(
 		ipa3_res.ipa_mem_base,
-		ipa3_get_gsi_ver(ipa3_res.ipa_hw_type));
+		ipa3_ctx->gsi_ver);
 
 	if (result) {
 		IPAERR("Failed to configure GSI registers\n");
@@ -5781,6 +5747,40 @@ static inline void ipa3_register_to_fmwk(void)
 	struct ipa_core_data data;
 
 	data.ipa_tx_dp = ipa3_tx_dp;
+	data.ipa_get_hw_type = ipa_get_hw_type_internal;
+	data.ipa_is_vlan_mode = ipa3_is_vlan_mode;
+	data.ipa_get_smmu_params = ipa3_get_smmu_params;
+	data.ipa_get_lan_rx_napi = ipa3_get_lan_rx_napi;
+	data.ipa_dma_init = ipa3_dma_init;
+	data.ipa_dma_enable = ipa3_dma_enable;
+	data.ipa_dma_disable = ipa3_dma_disable;
+	data.ipa_dma_sync_memcpy = ipa3_dma_sync_memcpy;
+	data.ipa_dma_async_memcpy = ipa3_dma_async_memcpy;
+	data.ipa_dma_destroy = ipa3_dma_destroy;
+	data.ipa_get_ep_mapping = ipa3_get_ep_mapping;
+	data.ipa_send_msg = ipa3_send_msg;
+	data.ipa_free_skb = ipa3_free_skb;
+	data.ipa_setup_sys_pipe = ipa3_setup_sys_pipe;
+	data.ipa_teardown_sys_pipe = ipa3_teardown_sys_pipe;
+	data.ipa_get_wdi_stats = ipa3_get_wdi_stats;
+	data.ipa_uc_bw_monitor = ipa3_uc_bw_monitor;
+	data.ipa_broadcast_wdi_quota_reach_ind =
+		ipa3_broadcast_wdi_quota_reach_ind;
+	data.ipa_uc_wdi_get_dbpa = ipa3_uc_wdi_get_dbpa;
+	data.ipa_cfg_ep_ctrl = ipa3_cfg_ep_ctrl;
+	data.ipa_add_rt_rule = ipa3_add_rt_rule;
+	data.ipa_put_rt_tbl = ipa3_put_rt_tbl;
+	data.ipa_register_intf = ipa3_register_intf;
+	data.ipa_set_aggr_mode = ipa3_set_aggr_mode;
+	data.ipa_set_qcncm_ndp_sig = ipa3_set_qcncm_ndp_sig;
+	data.ipa_set_single_ndp_per_mbim = ipa3_set_single_ndp_per_mbim;
+	data.ipa_add_interrupt_handler = ipa3_add_interrupt_handler;
+	data.ipa_restore_suspend_handler = ipa3_restore_suspend_handler;
+	data.ipa_get_gsi_ep_info = ipa3_get_gsi_ep_info;
+	data.ipa_stop_gsi_channel = ipa3_stop_gsi_channel;
+	data.ipa_rmnet_ctl_xmit = ipa3_rmnet_ctl_xmit;
+	data.ipa_register_rmnet_ctl_cb = ipa3_register_rmnet_ctl_cb;
+	data.ipa_unregister_rmnet_ctl_cb = ipa3_unregister_rmnet_ctl_cb;
 
 	if (ipa_fmwk_register_ipa(&data)) {
 		IPAERR("couldn't register to IPA framework\n");
@@ -5996,7 +5996,7 @@ static int ipa3_post_init(const struct ipa3_plat_drv_res *resource_p,
 		ipa3_disable_prefetch(IPA_CLIENT_MHI_CONS);
 
 	memset(&gsi_props, 0, sizeof(gsi_props));
-	gsi_props.ver = ipa3_get_gsi_ver(resource_p->ipa_hw_type);
+	gsi_props.ver = ipa3_ctx->gsi_ver;
 	gsi_props.ee = resource_p->ee;
 	gsi_props.intr = GSI_INTR_IRQ;
 	gsi_props.phys_addr = resource_p->transport_mem_base;
@@ -6035,7 +6035,7 @@ static int ipa3_post_init(const struct ipa3_plat_drv_res *resource_p,
 	/* GSI 2.2 requires to allocate all EE GSI channel
 	 * during device bootup.
 	 */
-	if (ipa3_get_gsi_ver(resource_p->ipa_hw_type) == GSI_VER_2_2) {
+	if (gsi_props.ver == GSI_VER_2_2) {
 		result = ipa3_alloc_gsi_channel();
 		if (result) {
 			IPAERR("Failed to alloc the GSI channels\n");
@@ -6148,6 +6148,7 @@ static int ipa3_manual_load_ipa_fws(void)
 	int result;
 	const struct firmware *fw;
 	const char *path = IPA_FWS_PATH;
+	enum gsi_ver gsi_ver = ipa3_ctx->gsi_ver;
 
 	if (ipa3_ctx->ipa3_hw_mode == IPA_HW_MODE_EMULATION) {
 		switch (ipa3_get_emulation_type()) {
@@ -6179,10 +6180,10 @@ static int ipa3_manual_load_ipa_fws(void)
 		result = emulator_load_fws(fw,
 			ipa3_res.transport_mem_base,
 			ipa3_res.transport_mem_size,
-			ipa3_get_gsi_ver(ipa3_res.ipa_hw_type));
+			gsi_ver);
 	} else {
 		result = ipa3_load_fws(fw, ipa3_res.transport_mem_base,
-			ipa3_get_gsi_ver(ipa3_res.ipa_hw_type));
+			gsi_ver);
 	}
 
 	if (result) {
@@ -6193,7 +6194,7 @@ static int ipa3_manual_load_ipa_fws(void)
 
 	result = gsi_enable_fw(ipa3_res.transport_mem_base,
 				ipa3_res.transport_mem_size,
-				ipa3_get_gsi_ver(ipa3_res.ipa_hw_type));
+				gsi_ver);
 	if (result) {
 		IPAERR("Failed to enable GSI FW\n");
 		release_firmware(fw);
@@ -7730,7 +7731,9 @@ static int get_ipa_dts_configuration(struct platform_device *pdev,
 	IPADBG(": Read GPI or GCI Event RP from DDR = %s\n",
 	       ipa_drv_res->ipa_gpi_event_rp_ddr ? "True" : "False");
 
-	ipa_drv_res->tx_napi_enable = true;
+	ipa_drv_res->tx_napi_enable = 
+		of_property_read_bool(pdev->dev.of_node,
+		"qcom,tx-napi");
 	IPADBG(": Enable tx NAPI = %s\n",
 		ipa_drv_res->tx_napi_enable
 		? "True" : "False");
@@ -8594,6 +8597,9 @@ int ipa3_plat_drv_probe(struct platform_device *pdev_p,
 		return result;
 	}
 
+	/* Get GSI version */
+	ipa3_ctx->gsi_ver = ipa3_get_gsi_ver(ipa3_res.ipa_hw_type);
+
 	result = ipa3_bind_api_controller(ipa3_res.ipa_hw_type, api_ctrl);
 	if (result) {
 		IPAERR("IPA API binding failed\n");
@@ -8693,6 +8699,7 @@ struct ipa3_context *ipa3_get_ctx(void)
 {
 	return ipa3_ctx;
 }
+EXPORT_SYMBOL(ipa3_get_ctx);
 
 bool ipa3_get_lan_rx_napi(void)
 {
