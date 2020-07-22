@@ -644,8 +644,10 @@ static void touch_report(void)
 
 	if (touch_data->gesture_double_tap && tcm_hcd->in_suspend) {
 		input_report_key(touch_hcd->input_dev, KEY_WAKEUP, 1);
+		input_report_key(touch_hcd->input_dev, KEY_DOUBLE_TAP, 1);
 		input_sync(touch_hcd->input_dev);
 		input_report_key(touch_hcd->input_dev, KEY_WAKEUP, 0);
+		input_report_key(touch_hcd->input_dev, KEY_DOUBLE_TAP, 0);
 		input_sync(touch_hcd->input_dev);
 		LOGV("Double Tap\n");
 	}
@@ -859,7 +861,9 @@ static int touch_set_input_dev(void)
 #endif
 
 	set_bit(KEY_WAKEUP, touch_hcd->input_dev->keybit);
+	set_bit(KEY_DOUBLE_TAP, touch_hcd->input_dev->keybit);
 	input_set_capability(touch_hcd->input_dev, EV_KEY, KEY_WAKEUP);
+	input_set_capability(touch_hcd->input_dev, EV_KEY, KEY_DOUBLE_TAP);
 	touch_hcd->input_dev->event = synaptics_gesture_switch;
 
 	retval = touch_set_input_params();

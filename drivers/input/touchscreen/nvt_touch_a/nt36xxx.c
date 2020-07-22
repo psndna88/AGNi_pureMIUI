@@ -101,6 +101,7 @@ const uint16_t gesture_key_array[] = {
 	KEY_WAKEUP,
 	KEY_WAKEUP,
 	KEY_WAKEUP,
+	KEY_DOUBLE_TAP,
 };
 
 bool enable_gesture_mode = false;
@@ -796,8 +797,10 @@ void nvt_ts_wakeup_gesture_report(uint8_t gesture_id, uint8_t *data)
 
 	if (keycode > 0) {
 		input_report_key(ts->input_dev, keycode, 1);
+		input_report_key(ts->input_dev, KEY_DOUBLE_TAP, 1);
 		input_sync(ts->input_dev);
 		input_report_key(ts->input_dev, keycode, 0);
+		input_report_key(ts->input_dev, KEY_DOUBLE_TAP, 0);
 		input_sync(ts->input_dev);
 	}
 }
