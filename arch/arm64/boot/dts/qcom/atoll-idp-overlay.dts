@@ -17,6 +17,7 @@
 
 #include "atoll-idp.dtsi"
 #include "atoll-audio-overlay.dtsi"
+#include "atoll-camera-sensor-idp.dtsi"
 
 / {
 	model = "IDP";
