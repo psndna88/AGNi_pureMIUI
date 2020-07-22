@@ -64,15 +64,19 @@
 		compatible = "qcom,eeprom";
 		cam_vio-supply = <&pm8008j_l3>;
 		cam_vana-supply = <&pm8008i_l4>;
+		cam_v_custom1-supply = <&pm8008i_l5>;
 		cam_vdig-supply = <&pm8008i_l2>;
+		cam_v_custom2-supply = <&pm8008i_l1>;
 		cam_clk-supply = <&cam_cc_titan_top_gdsc>;
 		cam_vaf-supply = <&pm8008i_l7>;
-		regulator-names = "cam_vio", "cam_vana", "cam_vdig",
-			"cam_clk", "cam_vaf";
+		regulator-names = "cam_vio", "cam_vana", "cam_v_custom1",
+			"cam_vdig", "cam_v_custom2", "cam_clk", "cam_vaf";
 		rgltr-cntrl-support;
-		rgltr-min-voltage = <1800000 2700000 950000 0 2700000>;
-		rgltr-max-voltage = <1800000 2900000 1150000 0 3000000>;
-		rgltr-load-current = <10000 52000 140000 0 103000>;
+		rgltr-min-voltage = <1800000 2700000 1700000 950000 1000000 0
+					 2700000>;
+		rgltr-max-voltage = <1800000 2900000 1900000 1150000 1200000 0
+					 3000000>;
+		rgltr-load-current = <15000 52000 72000 140000 250000 0 103000>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk0_active
@@ -338,15 +342,20 @@
 		led-flash-src = <&led_flash_triple_rear_aux>;
 		cam_vio-supply = <&pm8008j_l3>;
 		cam_vana-supply = <&pm8008i_l4>;
+		cam_v_custom1-supply = <&pm8008i_l5>;
 		cam_vdig-supply = <&pm8008i_l2>;
+		cam_v_custom2-supply = <&pm8008i_l1>;
 		cam_clk-supply = <&cam_cc_titan_top_gdsc>;
 		cam_bob-supply = <&pm8350c_bob>;
-		regulator-names = "cam_vio", "cam_vana", "cam_vdig",
-			"cam_clk", "cam_bob";
+		regulator-names = "cam_vio", "cam_vana", "cam_v_custom1",
+			"cam_vdig", "cam_v_custom2","cam_clk", "cam_bob";
 		rgltr-cntrl-support;
-		rgltr-min-voltage = <1800000 2700000 950000 0 3200000>;
-		rgltr-max-voltage = <1800000 2900000 1150000 0 3960000>;
-		rgltr-load-current = <10000 52000 140000 0 2000000>;
+		rgltr-min-voltage = <1800000 2700000 1700000 950000 1000000 0
+					 3200000>;
+		rgltr-max-voltage = <1800000 2900000 1900000 1150000 1200000 0
+					 3960000>;
+		rgltr-load-current = <15000 52000 72000 140000 250000 0
+					 2000000>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk0_active
