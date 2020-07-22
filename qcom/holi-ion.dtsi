@@ -8,7 +8,7 @@
 
 		system_heap: qcom,ion-heap@25 {
 			reg = <ION_SYSTEM_HEAP_ID>;
-			qcom,ion-heap-type = "SYSTEM";
+			qcom,ion-heap-type = "MSM_SYSTEM";
 		};
 
 		system_secure_heap: qcom,ion-heap@9 {
@@ -17,7 +17,7 @@
 		};
 
 		qcom,ion-heap@10 { /* SECURE DISPLAY HEAP */
-			reg = <10>;
+			reg = <ION_SECURE_DISPLAY_HEAP_ID>;
 			memory-region = <&secure_display_memory>;
 			qcom,ion-heap-type = "HYP_CMA";
 		};

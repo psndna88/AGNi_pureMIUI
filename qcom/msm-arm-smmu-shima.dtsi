@@ -13,6 +13,19 @@
 		#size-cells = <1>;
 		#address-cells = <1>;
 		ranges;
+		qcom,regulator-names = "vdd";
+		vdd-supply = <&gpu_cx_gdsc>;
+
+		clocks = <&gcc GCC_GPU_MEMNOC_GFX_CLK>,
+			<&gcc GCC_GPU_SNOC_DVM_GFX_CLK>,
+			<&gpucc GPU_CC_AHB_CLK>,
+			<&gpucc GPU_CC_HLOS1_VOTE_GPU_SMMU_CLK>;
+		clock-names = "gcc_gpu_memnoc_gfx",
+			"gcc_gpu_snoc_dvm_gfx",
+			"gpu_cc_ahb",
+			"gpu_cc_hlos1_vote_gpu_smmu_clk";
+
+		interconnects = <&gem_noc MASTER_GPU_TCU &mc_virt SLAVE_EBI1>;
 
 		interrupts =	<GIC_SPI 673 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 675 IRQ_TYPE_LEVEL_HIGH>,
@@ -26,6 +39,11 @@
 				<GIC_SPI 685 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 686 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 687 IRQ_TYPE_LEVEL_HIGH>;
+
+		qcom,actlr =
+			/* All CBs of GFX: +15 deep PF */
+			<0x0 0x3ff 0x32B>,
+			<0x400 0x3ff 0x32B>;
 
 		gfx_0_tbu: gfx_0_tbu@3dc5000 {
 			compatible = "qcom,qsmmuv500-tbu";
@@ -140,6 +158,16 @@
 				<GIC_SPI 418 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 419 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 426 IRQ_TYPE_LEVEL_HIGH>;
+
+		qcom,actlr =
+			/* For Camera: +3 deep PF */
+			<0x1000 0x3ff 0x103>,
+			<0x1400 0x3ff 0x103>,
+			<0x2800 0x4ff 0x103>,
+			/* For Video: +3 deep PF*/
+			<0x2900 0x43f 0x103>,
+			/* For Compute: +15 deep PF */
+			<0x2960 0x40f 0x303>;
 
 		anoc_1_tbu: anoc_1_tbu@15185000 {
 			compatible = "qcom,qsmmuv500-tbu";

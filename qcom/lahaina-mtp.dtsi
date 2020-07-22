@@ -75,6 +75,11 @@
 		st,y-flip = <1>;
 		st,regulator_dvdd = "vdd";
 		st,regulator_avdd = "avdd";
+		st,trusted-touch-mode = "vm_mode";
+		st,touch-environment = "pvm";
+		st,trusted-touch-spi-irq = <566>;
+		st,trusted-touch-io-bases = <0xF114000 0xF115000 0xF116000 0xF117000 0x990000 0x00910000>;
+		st,trusted-touch-io-sizes = <0x1000 0x1000 0x1000 0x1000 0x4000 0x4000>;
 		panel = <&dsi_sw43404_amoled_cmd &dsi_sw43404_amoled_video
 			 &dsi_sw43404_amoled_fhd_plus_cmd>;
 	};
@@ -135,14 +140,17 @@
 
 &pm8350c_switch0 {
 	qcom,led-mask = <9>; /* Channels 1 & 4 */
+	qcom,symmetry-en;
 };
 
 &pm8350c_switch1 {
 	qcom,led-mask = <6>; /* Channels 2 & 3 */
+	qcom,symmetry-en;
 };
 
 &pm8350c_switch2 {
 	qcom,led-mask = <15>; /* All Channels */
+	qcom,symmetry-en;
 };
 
 &pm8350c_flash {
@@ -164,6 +172,7 @@
 
 &battery_charger {
 	qcom,thermal-mitigation = <3000000 1500000 1000000 500000>;
+	qcom,wireless-fw-name = "idt9412.bin";
 };
 
 &wil6210 {

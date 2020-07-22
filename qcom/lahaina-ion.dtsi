@@ -8,7 +8,7 @@
 
 		system_heap: qcom,ion-heap@25 {
 			reg = <ION_SYSTEM_HEAP_ID>;
-			qcom,ion-heap-type = "SYSTEM";
+			qcom,ion-heap-type = "MSM_SYSTEM";
 		};
 
 		adsp_heap: qcom,ion-heap@22 {
@@ -59,6 +59,12 @@
 			reg = <ION_SECURE_DISPLAY_HEAP_ID>;
 			memory-region = <&secure_display_memory>;
 			qcom,ion-heap-type = "HYP_CMA";
+		};
+
+		qcom,ion-heap@5 { /* AUDIO ML HEAP */
+			reg = <ION_AUDIO_ML_HEAP_ID>;
+			memory-region = <&audio_cma_mem>;
+			qcom,ion-heap-type = "DMA";
 		};
 
 	};

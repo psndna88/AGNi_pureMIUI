@@ -66,13 +66,12 @@
 			linux,sysdev_is_parent;
 			snps,disable-clk-gating;
 			snps,has-lpm-erratum;
-			snps,hird-threshold = /bits/ 8 <0x10>;
+			snps,hird-threshold = /bits/ 8 <0x0>;
+			snps,is-utmi-l1-suspend;
 			snps,dis-u1-entry-quirk;
 			snps,dis-u2-entry-quirk;
 			snps,dis_u2_susphy_quirk;
-			snps,dis_enblslpm_quirk;
 			snps,ssp-u3-u0-quirk;
-			usb-core-id = <0>;
 			tx-fifo-resize;
 			maximum-speed = "super-speed-plus";
 			dr_mode = "otg";
@@ -132,6 +131,10 @@
 
 		resets = <&clock_gcc GCC_QUSB2PHY_PRIM_BCR>;
 		reset-names = "phy_reset";
+		qcom,param-override-seq =
+			<0x63 0x6c	/* override_x0 */
+			 0xC8 0x70	/* override_x1 */
+			 0x17 0x74>;	/* override x2 */
 	};
 
 	/* Primary USB port related QMP USB DP Combo PHY */
@@ -395,12 +398,11 @@
 			linux,sysdev_is_parent;
 			snps,disable-clk-gating;
 			snps,has-lpm-erratum;
-			snps,hird-threshold = /bits/ 8 <0x10>;
+			snps,hird-threshold = /bits/ 8 <0x0>;
+			snps,is-utmi-l1-suspend;
 			snps,dis-u1-entry-quirk;
 			snps,dis-u2-entry-quirk;
 			snps,dis_u2_susphy_quirk;
-			snps,dis_enblslpm_quirk;
-			usb-core-id = <1>;
 			tx-fifo-resize;
 			maximum-speed = "super-speed";
 			dr_mode = "otg";

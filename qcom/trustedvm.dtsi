@@ -1,14 +1,12 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/clock/qcom,dispcc-lahaina.h>
+#include <dt-bindings/clock/qcom,gcc-lahaina.h>
+#include <dt-bindings/clock/qcom,rpmh.h>
 
 / {
 	#address-cells = <0x2>;
 	#size-cells = <0x2>;
 	interrupt-parent = <&vgic>;
-
-	memory@28800000 {
-		device_type = "memory";
-		reg = <0x0 0x28800000 0x0 0x76f7000>; /* Temp S2 mapping */
-	};
 
 	qcom-mem-buf {
 		compatible = "qcom,mem-buf";
@@ -99,16 +97,19 @@
 		qrtr_shbuf: qrtr-shmem {
 			no-map;
 			reg = <0x0 0x2fef7000 0x0 0x9000>;
+			qcom,label = <3>;
 		};
 
 		chan0_shbuf: neuron-block@0 {
 			no-map;
 			reg = <0x0 0x2ff00000 0x0 0x80000>;
+			qcom,label = <1>;
 		};
 
 		chan1_shbuf: neuron-block@1 {
 			no-map;
 			reg = <0x0 0x2ff80000 0x0 0x80000>;
+			qcom,label = <2>;
 		};
 	};
 
@@ -190,34 +191,92 @@
 
 		vdevices {
 			peer-default;
-		};
-	};
+			shm1 {
+				vdevice-type = "shm";
+				generate = "/hypervisor/shm1";
+				push-compatible = "qcom,neuron-channel-haven-shmem-gen";
+				peer-default;
+				memory {
+					label = <0x00000001>;
+					allocate-base;
+				};
+			};
 
-	/* Temporary node until RM dynamic overlay support present */
-	hypervisor {
-		#address-cells = <2>;
-		#size-cells = <0>;
-		compatible = "qcom,haven-hypervisor-1.0", "qcom,haven-hypervisor", "simple-bus";
-		name = "hypervisor";
+			shm2 {
+				vdevice-type = "shm";
+				generate = "/hypervisor/shm2";
+				push-compatible = "qcom,neuron-channel-haven-shmem-gen";
+				peer-default;
+				memory {
+					label = <0x00000002>;
+					allocate-base;
+				};
+			};
 
-		qcom,haven-vm {
-			compatible = "qcom,haven-vm-id-1.0", "qcom,haven-vm-id";
-			qcom,vendor = "Qualcomm Technologies, Inc.";
-			qcom,vmid = <45>;
-			qcom,owner-vmid = <3>;
-		};
+			shm3 {
+				vdevice-type = "shm";
+				generate = "/hypervisor/shm3";
+				push-compatible = "qcom,qrtr-haven-gen";
+				peer-default;
+				memory {
+					label = <0x00000003>;
+					allocate-base;
+				};
+			};
 
-		qcom,resource-manager-rpc@0000000000000001 {
-			compatible = "qcom,resource-manager-1-0", "qcom,resource-manager", "qcom,haven-message-queue", "qcom,haven-capability";
-			interrupts = <GIC_SPI 3 IRQ_TYPE_EDGE_RISING>, /* TX full IRQ */
-					<GIC_SPI 4 IRQ_TYPE_EDGE_RISING>; /* RX empty IRQ */
-			reg = <0x00000000 0x00000000>, <0x00000000 0x00000001>; /* TX, RX cap ids */
-			qcom,is-full-duplex;
-			qcom,free-irq-start = <0>;
-			qcom,tx-queue-depth = <8>;
-			qcom,tx-message-size = <0xf0>;
-			qcom,rx-queue-depth = <8>;
-			qcom,rx-message-size = <0xf0>;
+			neuron-ch1-doorbell-source {
+				vdevice-type = "doorbell-source";
+				generate = "/hypervisor/neuron-ch1-doorbell-source";
+				label = <0x00000001>;
+				peer-default;
+			};
+
+			neuron-ch1-doorbell {
+				vdevice-type = "doorbell";
+				generate = "/hypervisor/neuron-ch1-doorbell";
+				interrupts = <0x00000000 0x00000020 0x00000001>;
+				label = <0x00000001>;
+				peer-default;
+			};
+
+			neuron-ch2-doorbell-source {
+				vdevice-type = "doorbell-source";
+				generate = "/hypervisor/neuron-ch2-doorbell-source";
+				label = <0x00000002>;
+				peer-default;
+			};
+
+			neuron-ch2-doorbell {
+				vdevice-type = "doorbell";
+				generate = "/hypervisor/neuron-ch2-doorbell";
+				interrupts = <0x00000000 0x00000021 0x00000001>;
+				label = <0x00000002>;
+				peer-default;
+			};
+
+			qrtr-doorbell-source {
+				vdevice-type = "doorbell-source";
+				generate = "/hypervisor/qrtr-doorbell-source";
+				label = <0x00000003>;
+				peer-default;
+			};
+
+			qrtr-doorbell {
+				vdevice-type = "doorbell";
+				generate = "/hypervisor/qrtr-doorbell";
+				interrupts = <0x00000000 0x00000022 0x00000001>;
+				label = <0x00000003>;
+				peer-default;
+			};
+
+			mem-buf-message-queue-pair {
+				vdevice-type = "message-queue-pair";
+				generate = "/hypervisor/membuf-msgq-pair";
+				message-size = <0x000000f0>;
+				queue-depth = <0x00000008>;
+				peer-default;
+				qcom,label = <0x0000001>;
+			};
 		};
 	};
 
@@ -321,7 +380,24 @@
 		qcom,wrapper-core = <&qupv3_0>;
 		qcom,le-vm;
 		status = "ok";
+		st_fts@49 {
+			compatible = "st,fts";
+			reg = <0x49>;
+			st,x-flip = <1>;
+			st,y-flip = <1>;
+			st,regulator_dvdd = "vdd";
+			st,regulator_avdd = "avdd";
+			st,trusted-touch-mode = "vm_mode";
+			st,touch-environment = "tvm";
+			st,trusted-touch-spi-irq = <566>;
+			st,trusted-touch-io-bases = <0xF114000 0xF115000 0xF116000 0xF117000 0x990000 0x00910000>;
+			st,trusted-touch-io-sizes = <0x1000 0x1000 0x1000 0x1000 0x4000 0x4000>;
+		};
 	};
 };
 
 #include "trustedvm-ion.dtsi"
+#include "display/trustedvm-lahaina-sde.dtsi"
+#include "display/trustedvm-lahaina-sde-display.dtsi"
+#include "display/dsi-panel-sw43404-amoled-dsc-wqhd-cmd.dtsi"
+#include "display/dsi-panel-sw43404-amoled-dsc-wqhd-video.dtsi"

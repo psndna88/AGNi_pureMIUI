@@ -25,6 +25,14 @@
 				     0x10060 0x3c
 				     0x0 0x4>;
 	};
+
+	tsens0 {
+		status = "disabled";
+	};
+
+	tsens1 {
+		status = "disabled";
+	};
 };
 
 &usb0 {
@@ -33,4 +41,45 @@
 		maximum-speed = "high-speed";
 		dr_mode = "peripheral";
 	};
+};
+
+&ufsphy_mem {
+		compatible = "qcom,ufs-phy-qrbtc-sdm845";
+
+		vdda-phy-supply = <&L18A>;
+		vdda-pll-supply = <&L22A>;
+		vdda-phy-max-microamp = <62900>;
+		vdda-pll-max-microamp = <18300>;
+
+		status = "ok";
+};
+
+&ufshc_mem {
+
+		limit-tx-hs-gear = <1>;
+		limit-rx-hs-gear = <1>;
+		limit-rate = <1>; /* HS Rate-B */
+
+		vdd-hba-supply = <&gcc_ufs_phy_gdsc>;
+		vdd-hba-fixed-regulator;
+
+		vcc-supply = <&L7E>;
+		vcc-max-microamp = <800000>;
+
+		vccq2-supply = <&L12A>;
+		vccq2-max-microamp = <800000>;
+
+		qcom,vddp-ref-clk-supply = <&L22A>;
+		qcom,vddp-ref-clk-max-microamp = <100>;
+
+		qcom,disable-lpm;
+		rpm-level = <0>;
+		spm-level = <0>;
+
+		status = "ok";
+};
+
+/* Debug UART Console */
+&qupv3_se9_2uart {
+	qcom,rumi_platform;
 };
