@@ -231,6 +231,10 @@ struct hif_softc {
 	/* Handle to pktlog device */
 	void *pktlog_dev;
 #endif
+#ifdef WLAN_FEATURE_DP_EVENT_HISTORY
+	/* Pointer to the srng event history */
+	struct hif_event_history *evt_hist[HIF_NUM_INT_CONTEXTS];
+#endif
 
 /*
  * Note: For MCL, #if defined (HIF_CONFIG_SLUB_DEBUG_ON) needs to be checked
@@ -250,6 +254,8 @@ struct hif_softc {
 	/* The CPU hotplug event registration handle */
 	struct qdf_cpuhp_handler *cpuhp_event_handle;
 #endif
+	uint32_t irq_unlazy_disable;
+	/* Should the unlzay support for interrupt delivery be disabled */
 };
 
 static inline
@@ -345,6 +351,10 @@ QDF_STATUS hif_bus_open(struct hif_softc *ol_sc,
 QDF_STATUS hif_enable_bus(struct hif_softc *ol_sc, struct device *dev,
 	void *bdev, const struct hif_bus_id *bid, enum hif_enable_type type);
 void hif_disable_bus(struct hif_softc *scn);
+#ifdef FEATURE_RUNTIME_PM
+struct hif_runtime_pm_ctx *hif_bus_get_rpm_ctx(struct hif_softc *hif_sc);
+struct device *hif_bus_get_dev(struct hif_softc *hif_sc);
+#endif
 void hif_bus_prevent_linkdown(struct hif_softc *scn, bool flag);
 int hif_bus_get_context_size(enum qdf_bus_type bus_type);
 void hif_read_phy_mem_base(struct hif_softc *scn, qdf_dma_addr_t *bar_value);

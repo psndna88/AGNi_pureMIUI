@@ -1393,7 +1393,8 @@ target_if_init_spectral_param_min_max(
 		param_min_max->fft_size_min = SPECTRAL_PARAM_FFT_SIZE_MIN_GEN3;
 		param_min_max->fft_size_max[CH_WIDTH_20MHZ] =
 				SPECTRAL_PARAM_FFT_SIZE_MAX_GEN3_DEFAULT;
-		if (target_type == TARGET_TYPE_QCN9000) {
+		if (target_type == TARGET_TYPE_QCN9000 ||
+		    target_type == TARGET_TYPE_QCA5018) {
 			param_min_max->fft_size_max[CH_WIDTH_40MHZ] =
 				SPECTRAL_PARAM_FFT_SIZE_MAX_GEN3_QCN9000;
 			param_min_max->fft_size_max[CH_WIDTH_80MHZ] =
@@ -2133,7 +2134,9 @@ target_if_spectral_len_adj_swar_init(struct spectral_fft_bin_len_adj_swar *swar,
 				     uint32_t target_type)
 {
 	if (target_type == TARGET_TYPE_QCA8074V2 ||
-	    target_type == TARGET_TYPE_QCN9000)
+	    target_type == TARGET_TYPE_QCN9000 ||
+	    target_type == TARGET_TYPE_QCA5018 ||
+	    target_type == TARGET_TYPE_QCA6750)
 		swar->fftbin_size_war = SPECTRAL_FFTBIN_SIZE_WAR_2BYTE_TO_1BYTE;
 	else if (target_type == TARGET_TYPE_QCA8074 ||
 		 target_type == TARGET_TYPE_QCA6018 ||
@@ -2145,6 +2148,7 @@ target_if_spectral_len_adj_swar_init(struct spectral_fft_bin_len_adj_swar *swar,
 	if (target_type == TARGET_TYPE_QCA8074 ||
 	    target_type == TARGET_TYPE_QCA8074V2 ||
 	    target_type == TARGET_TYPE_QCA6018 ||
+	    target_type == TARGET_TYPE_QCA5018 ||
 	    target_type == TARGET_TYPE_QCN9000) {
 		swar->inband_fftbin_size_adj = 1;
 		swar->null_fftbin_adj = 1;
@@ -2182,7 +2186,9 @@ target_if_spectral_report_params_init(
 	 * initialization is done for gen3 alone. In future if other generations
 	 * needs to use them they have to add proper initial values.
 	 */
-	if (target_type == TARGET_TYPE_QCN9000) {
+	if (target_type == TARGET_TYPE_QCN9000 ||
+	    target_type == TARGET_TYPE_QCA5018 ||
+	    target_type == TARGET_TYPE_QCA6750) {
 		rparams->version = SPECTRAL_REPORT_FORMAT_VERSION_2;
 		rparams->num_spectral_detectors =
 				NUM_SPECTRAL_DETECTORS_GEN3_V2;
@@ -2340,8 +2346,10 @@ target_if_pdev_spectral_init(struct wlan_objmgr_pdev *pdev)
 	if (target_type == TARGET_TYPE_QCA8074 ||
 	    target_type == TARGET_TYPE_QCA8074V2 ||
 	    target_type == TARGET_TYPE_QCA6018 ||
+	    target_type == TARGET_TYPE_QCA5018 ||
 	    target_type == TARGET_TYPE_QCA6390 ||
-	    target_type == TARGET_TYPE_QCN9000)
+	    target_type == TARGET_TYPE_QCN9000 ||
+	    target_type == TARGET_TYPE_QCA6750)
 		spectral->direct_dma_support = true;
 
 	target_if_spectral_len_adj_swar_init(&spectral->len_adj_swar,
@@ -2354,7 +2362,8 @@ target_if_pdev_spectral_init(struct wlan_objmgr_pdev *pdev)
 	    (target_type == TARGET_TYPE_QCA5018) ||
 	    (target_type == TARGET_TYPE_QCN9000) ||
 	    (target_type == TARGET_TYPE_QCA6290) ||
-	    (target_type == TARGET_TYPE_QCA6390)) {
+	    (target_type == TARGET_TYPE_QCA6390) ||
+	    (target_type == TARGET_TYPE_QCA6750)) {
 		spectral->spectral_gen = SPECTRAL_GEN3;
 		spectral->hdr_sig_exp = SPECTRAL_PHYERR_SIGNATURE_GEN3;
 		spectral->tag_sscan_summary_exp =
@@ -3026,6 +3035,74 @@ target_if_spectral_populate_chwidth(struct target_if_spectral *spectral,
 }
 
 /**
+ * target_if_spectral_is_valid_80p80_freq() - API to check whether given
+ * (cfreq1, cfreq2) pair forms a valid 80+80 combination
+ * @pdev: pointer to pdev
+ * @cfreq1: center frequency 1
+ * @cfreq2: center frequency 2
+ *
+ * API to check whether given (cfreq1, cfreq2) pair forms a valid 80+80
+ * combination
+ *
+ * Return: true or false
+ */
+static bool
+target_if_spectral_is_valid_80p80_freq(struct wlan_objmgr_pdev *pdev,
+				       uint32_t cfreq1, uint32_t cfreq2)
+{
+	struct ch_params ch_params;
+	enum channel_state chan_state1;
+	enum channel_state chan_state2;
+	struct wlan_objmgr_psoc *psoc;
+
+	qdf_assert_always(pdev);
+	psoc = wlan_pdev_get_psoc(pdev);
+	qdf_assert_always(psoc);
+
+	/* In restricted 80P80 MHz enabled, only one 80+80 MHz
+	 * channel is supported with cfreq=5690 and cfreq=5775.
+	 */
+	if (wlan_psoc_nif_fw_ext_cap_get(
+				psoc, WLAN_SOC_RESTRICTED_80P80_SUPPORT))
+		return CHAN_WITHIN_RESTRICTED_80P80(cfreq1, cfreq2);
+
+	ch_params.center_freq_seg1 = wlan_reg_freq_to_chan(pdev, cfreq2);
+	ch_params.mhz_freq_seg1 = cfreq2;
+	ch_params.ch_width = CH_WIDTH_80P80MHZ;
+	wlan_reg_set_channel_params_for_freq(pdev, cfreq1 - FREQ_OFFSET_10MHZ,
+					     0, &ch_params);
+
+	if (ch_params.ch_width != CH_WIDTH_80P80MHZ)
+		return false;
+
+	if (ch_params.mhz_freq_seg0 != cfreq1 ||
+	    ch_params.mhz_freq_seg1 != cfreq2)
+		return false;
+
+	chan_state1 = wlan_reg_get_5g_bonded_channel_state_for_freq(
+				pdev,
+				ch_params.mhz_freq_seg0 - FREQ_OFFSET_10MHZ,
+				CH_WIDTH_80MHZ);
+	if ((chan_state1 == CHANNEL_STATE_DISABLE) ||
+	    (chan_state1 == CHANNEL_STATE_INVALID))
+		return false;
+
+	chan_state2 = wlan_reg_get_5g_bonded_channel_state_for_freq(
+				pdev,
+				ch_params.mhz_freq_seg1 - FREQ_OFFSET_10MHZ,
+				CH_WIDTH_80MHZ);
+	if ((chan_state2 == CHANNEL_STATE_DISABLE) ||
+	    (chan_state2 == CHANNEL_STATE_INVALID))
+		return false;
+
+	if (abs(ch_params.mhz_freq_seg0 - ch_params.mhz_freq_seg1) <=
+	    FREQ_OFFSET_80MHZ)
+		return false;
+
+	return true;
+}
+
+/**
  * _target_if_set_spectral_config() - Set spectral config
  * @spectral:       Pointer to spectral object
  * @param: Spectral parameter id and value
@@ -3273,6 +3350,23 @@ _target_if_set_spectral_config(struct target_if_spectral *spectral,
 				     center_freq.cfreq1, center_freq.cfreq2);
 			*err = SPECTRAL_SCAN_ERR_PARAM_INVALID_VALUE;
 			return QDF_STATUS_E_FAILURE;
+		}
+
+		if (ch_width[smode] == CH_WIDTH_80P80MHZ) {
+			bool is_valid_80p80;
+
+			is_valid_80p80 = target_if_spectral_is_valid_80p80_freq(
+						spectral->pdev_obj,
+						center_freq.cfreq1,
+						center_freq.cfreq2);
+
+			if (!is_valid_80p80) {
+				spectral_err("Agile freq %u, %u is invalid 80+80 combination",
+					     center_freq.cfreq1,
+					     center_freq.cfreq2);
+				*err = SPECTRAL_SCAN_ERR_PARAM_INVALID_VALUE;
+				return QDF_STATUS_E_FAILURE;
+			}
 		}
 
 		sparams->ss_frequency.cfreq1 = center_freq.cfreq1;
@@ -3784,10 +3878,10 @@ target_if_spectral_scan_enable_params(struct target_if_spectral *spectral,
 
 	if (!p_sops->is_spectral_active(spectral, smode)) {
 		p_sops->configure_spectral(spectral, spectral_params, smode);
+		spectral->rparams.marker[smode].is_valid = false;
 		p_sops->start_spectral_scan(spectral, smode, err);
 		spectral->timestamp_war.timestamp_war_offset[smode] = 0;
 		spectral->timestamp_war.last_fft_timestamp[smode] = 0;
-		spectral->rparams.marker[smode].is_valid = false;
 	}
 
 	/* get current spectral configuration */
@@ -4200,6 +4294,7 @@ target_if_start_spectral_scan(struct wlan_objmgr_pdev *pdev,
 			(spectral, ch_width, spectral->params
 			 [SPECTRAL_SCAN_MODE_AGILE].ss_frequency.cfreq2 > 0);
 		if (QDF_IS_STATUS_ERROR(status)) {
+			qdf_spin_unlock(&spectral->spectral_lock);
 			spectral_err("Failed to populate channel width");
 			return QDF_STATUS_E_FAILURE;
 		}

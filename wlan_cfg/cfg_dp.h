@@ -337,6 +337,10 @@
 #define WLAN_CFG_PKTLOG_MIN_BUFFER_SIZE 1
 #define WLAN_CFG_PKTLOG_MAX_BUFFER_SIZE 10
 
+#define WLAN_CFG_NUM_REO_RINGS_MAP 0xF
+#define WLAN_CFG_NUM_REO_RINGS_MAP_MIN 0x1
+#define WLAN_CFG_NUM_REO_RINGS_MAP_MAX 0xF
+
 /* DP INI Declerations */
 #define CFG_DP_HTT_PACKET_TYPE \
 		CFG_INI_UINT("dp_htt_packet_type", \
@@ -551,7 +555,53 @@
 #define CFG_DP_NAPI \
 	CFG_INI_BOOL("dp_napi_enabled", PLATFORM_VALUE(true, false), \
 	"DP Napi Enabled")
+/*
+ * <ini>
+ * gEnableP2pIpTcpUdpChecksumOffload - Enable checksum offload for P2P mode
+ * @Min: 0
+ * @Max: 1
+ * @Default: 1
+ *
+ * This ini entry is used to enable/disable TX checksum(UDP/TCP) for P2P modes.
+ * This includes P2P device mode, P2P client mode and P2P GO mode.
+ * The feature is enabled by default. To disable TX checksum for P2P, add the
+ * following entry in ini file:
+ * gEnableP2pIpTcpUdpChecksumOffload=0
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_DP_P2P_TCP_UDP_CKSUM_OFFLOAD \
+		CFG_INI_BOOL("gEnableP2pIpTcpUdpChecksumOffload", true, \
+		"DP TCP UDP Checksum Offload for P2P mode (device/cli/go)")
 
+/*
+ * <ini>
+ * gEnableNanIpTcpUdpChecksumOffload - Enable checksum offload for NAN mode
+ * @Min: 0
+ * @Max: 1
+ * @Default: 1
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_DP_NAN_TCP_UDP_CKSUM_OFFLOAD \
+		CFG_INI_BOOL("gEnableNanIpTcpUdpChecksumOffload", true, \
+		"DP TCP UDP Checksum Offload for NAN mode")
+
+/*
+ * <ini>
+ * gEnableIpTcpUdpChecksumOffload - Enable checksum offload
+ * @Min: 0
+ * @Max: 1
+ * @Default: 1
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
 #define CFG_DP_TCP_UDP_CKSUM_OFFLOAD \
 	CFG_INI_BOOL("gEnableIpTcpUdpChecksumOffload", true, \
 	"DP TCP UDP Checksum Offload")
@@ -809,6 +859,17 @@
 		CFG_INI_BOOL("full_mon_mode", \
 		false, "Full Monitor mode support")
 
+#define CFG_DP_REO_RINGS_MAP \
+		CFG_INI_UINT("dp_reo_rings_map", \
+		WLAN_CFG_NUM_REO_RINGS_MAP_MIN, \
+		WLAN_CFG_NUM_REO_RINGS_MAP_MAX, \
+		WLAN_CFG_NUM_REO_RINGS_MAP, \
+		CFG_VALUE_OR_DEFAULT, "REO Destination Rings Mapping")
+
+#define CFG_DP_PEER_EXT_STATS \
+		CFG_INI_BOOL("peer_ext_stats", \
+		false, "Peer extended stats")
+
 #define CFG_DP \
 		CFG(CFG_DP_HTT_PACKET_TYPE) \
 		CFG(CFG_DP_INT_BATCH_THRESHOLD_OTHER) \
@@ -844,6 +905,8 @@
 		CFG(CFG_DP_PEER_FLOW_CTRL) \
 		CFG(CFG_DP_NAPI) \
 		CFG(CFG_DP_TCP_UDP_CKSUM_OFFLOAD) \
+		CFG(CFG_DP_NAN_TCP_UDP_CKSUM_OFFLOAD) \
+		CFG(CFG_DP_P2P_TCP_UDP_CKSUM_OFFLOAD) \
 		CFG(CFG_DP_DEFRAG_TIMEOUT_CHECK) \
 		CFG(CFG_DP_WBM_RELEASE_RING) \
 		CFG(CFG_DP_TCL_CMD_CREDIT_RING) \
@@ -882,6 +945,8 @@
 		CFG(CFG_DP_RXDMA_MONITOR_RX_DROP_THRESHOLD) \
 		CFG(CFG_DP_PKTLOG_BUFFER_SIZE) \
 		CFG(CFG_DP_RX_FISA_ENABLE) \
-		CFG(CFG_DP_FULL_MON_MODE)
+		CFG(CFG_DP_FULL_MON_MODE) \
+		CFG(CFG_DP_REO_RINGS_MAP) \
+		CFG(CFG_DP_PEER_EXT_STATS)
 
 #endif /* _CFG_DP_H_ */

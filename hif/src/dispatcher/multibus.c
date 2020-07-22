@@ -267,6 +267,18 @@ void hif_disable_bus(struct hif_softc *hif_sc)
 	hif_sc->bus_ops.hif_disable_bus(hif_sc);
 }
 
+#ifdef FEATURE_RUNTIME_PM
+struct hif_runtime_pm_ctx *hif_bus_get_rpm_ctx(struct hif_softc *hif_sc)
+{
+	return hif_sc->bus_ops.hif_bus_get_rpm_ctx(hif_sc);
+}
+
+struct device *hif_bus_get_dev(struct hif_softc *hif_sc)
+{
+	return hif_sc->bus_ops.hif_bus_get_dev(hif_sc);
+}
+#endif
+
 int hif_bus_configure(struct hif_softc *hif_sc)
 {
 	return hif_sc->bus_ops.hif_bus_configure(hif_sc);
@@ -516,6 +528,30 @@ int hif_apps_wake_irq_enable(struct hif_opaque_softc *hif_ctx)
 	enable_irq(scn->wake_irq);
 
 	return 0;
+}
+
+int hif_apps_disable_irq_wake(struct hif_opaque_softc *hif_ctx)
+{
+	struct hif_softc *scn;
+
+	QDF_BUG(hif_ctx);
+	scn = HIF_GET_SOFTC(hif_ctx);
+	if (!scn)
+		return -EINVAL;
+
+	return disable_irq_wake(scn->wake_irq);
+}
+
+int hif_apps_enable_irq_wake(struct hif_opaque_softc *hif_ctx)
+{
+	struct hif_softc *scn;
+
+	QDF_BUG(hif_ctx);
+	scn = HIF_GET_SOFTC(hif_ctx);
+	if (!scn)
+		return -EINVAL;
+
+	return enable_irq_wake(scn->wake_irq);
 }
 
 #ifdef WLAN_FEATURE_BMI

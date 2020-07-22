@@ -359,6 +359,16 @@ static inline void dp_set_peer_isolation(struct dp_peer *peer, bool val)
 }
 #endif /* QCA_SUPPORT_PEER_ISOLATION */
 
+/**
+ * The lmac ID for a particular channel band is fixed.
+ * 2.4GHz band uses lmac_id = 1
+ * 5GHz/6GHz band uses lmac_id=0
+ */
+#define DP_MON_INVALID_LMAC_ID	(-1)
+#define DP_MON_2G_LMAC_ID	1
+#define DP_MON_5G_LMAC_ID	0
+#define DP_MON_6G_LMAC_ID	0
+
 #ifdef FEATURE_TSO_STATS
 /**
  * dp_init_tso_stats() - Clear tso stats
@@ -1655,6 +1665,11 @@ static inline QDF_STATUS dp_h2t_cfg_stats_msg_send(struct dp_pdev *pdev,
 }
 
 static inline void
+dp_pkt_log_init(struct cdp_soc_t *soc_hdl, uint8_t pdev_id, void *scn)
+{
+}
+
+static inline void
 dp_hif_update_pipe_callback(struct dp_soc *dp_soc, void *cb_context,
 			    QDF_STATUS (*callback)(void *, qdf_nbuf_t, uint8_t),
 			    uint8_t pipe_id)
@@ -1737,7 +1752,7 @@ static inline void dp_peer_unref_del_find_by_id(struct dp_peer *peer)
 #ifdef WLAN_FEATURE_DP_EVENT_HISTORY
 /**
  * dp_srng_access_start() - Wrapper function to log access start of a hal ring
- * @int_ctx: pointer to DP interrupt context
+ * @int_ctx: pointer to DP interrupt context. This should not be NULL
  * @soc: DP Soc handle
  * @hal_ring: opaque pointer to the HAL Rx Error Ring, which will be serviced
  *
@@ -1748,7 +1763,7 @@ int dp_srng_access_start(struct dp_intr *int_ctx, struct dp_soc *dp_soc,
 
 /**
  * dp_srng_access_end() - Wrapper function to log access end of a hal ring
- * @int_ctx: pointer to DP interrupt context
+ * @int_ctx: pointer to DP interrupt context. This should not be NULL
  * @soc: DP Soc handle
  * @hal_ring: opaque pointer to the HAL Rx Error Ring, which will be serviced
  *

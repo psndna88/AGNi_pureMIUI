@@ -17,24 +17,6 @@
 #include <wlan_iot_sim_tgt_api.h>
 #include <wlan_iot_sim_utils_api.h>
 
-void *
-tgt_get_target_handle(struct wlan_objmgr_pdev *pdev)
-{
-	struct iot_sim_context *isc;
-
-	if (!pdev) {
-		iot_sim_err("pdev is NULL!");
-		return NULL;
-	}
-	isc = wlan_objmgr_pdev_get_comp_private_obj(pdev,
-						    WLAN_IOT_SIM_COMP);
-	if (!isc) {
-		iot_sim_err("pdev IOT_SIM object is NULL!");
-		return NULL;
-	}
-	return isc->p_iot_sim_target_handle;
-}
-
 QDF_STATUS tgt_send_simulation_cmd(struct wlan_objmgr_pdev *pdev,
 				   struct simulation_test_params *param)
 {

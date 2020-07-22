@@ -243,9 +243,10 @@ qdf_export_symbol(wlan_reg_get_bw_value);
  *
  * Return: channel state
  */
-enum channel_state wlan_reg_get_bonded_channel_state(
-	struct wlan_objmgr_pdev *pdev, uint8_t ch,
-	enum phy_ch_width bw, uint8_t sec_ch)
+enum channel_state
+wlan_reg_get_bonded_channel_state(struct wlan_objmgr_pdev *pdev,
+				  uint8_t ch,
+				  enum phy_ch_width bw, uint8_t sec_ch)
 {
 	if (WLAN_REG_IS_24GHZ_CH(ch))
 		return reg_get_2g_bonded_channel_state(pdev, ch,
@@ -254,6 +255,7 @@ enum channel_state wlan_reg_get_bonded_channel_state(
 		return reg_get_5g_bonded_channel_state(pdev, ch,
 						       bw);
 }
+
 #endif /* CONFIG_CHAN_NUM_API */
 
 /**
@@ -481,6 +483,16 @@ QDF_STATUS regulatory_psoc_close(struct wlan_objmgr_psoc *psoc)
 QDF_STATUS regulatory_pdev_open(struct wlan_objmgr_pdev *pdev)
 {
 	struct wlan_objmgr_psoc *parent_psoc;
+	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
+
+	pdev_priv_obj = reg_get_pdev_obj(pdev);
+
+	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
+		reg_err("reg pdev private obj is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	pdev_priv_obj->pdev_opened = true;
 
 	parent_psoc = wlan_pdev_get_psoc(pdev);
 
@@ -493,6 +505,15 @@ QDF_STATUS regulatory_pdev_close(struct wlan_objmgr_pdev *pdev)
 {
 	struct wlan_objmgr_psoc *psoc;
 	struct wlan_regulatory_psoc_priv_obj *soc_reg;
+	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
+
+	pdev_priv_obj = reg_get_pdev_obj(pdev);
+	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
+		reg_err("reg pdev private obj is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	pdev_priv_obj->pdev_opened = false;
 
 	psoc = wlan_pdev_get_psoc(pdev);
 	soc_reg = reg_get_psoc_obj(psoc);
@@ -983,6 +1004,8 @@ wlan_reg_get_5g_bonded_channel_state_for_freq(struct wlan_objmgr_pdev *pdev,
 	return reg_get_5g_bonded_channel_state_for_freq(pdev, freq, bw);
 }
 
+qdf_export_symbol(wlan_reg_get_5g_bonded_channel_state_for_freq);
+
 enum channel_state
 wlan_reg_get_2g_bonded_channel_state_for_freq(struct wlan_objmgr_pdev *pdev,
 					      qdf_freq_t freq,
@@ -1002,6 +1025,8 @@ void wlan_reg_set_channel_params_for_freq(struct wlan_objmgr_pdev *pdev,
 {
 	reg_set_channel_params_for_freq(pdev, freq, sec_ch_2g_freq, ch_params);
 }
+
+qdf_export_symbol(wlan_reg_set_channel_params_for_freq);
 
 enum channel_state
 wlan_reg_get_channel_state_for_freq(struct wlan_objmgr_pdev *pdev,
@@ -1102,6 +1127,20 @@ wlan_reg_get_5g_bonded_channel_and_state_for_freq(struct wlan_objmgr_pdev *pdev,
 						  bonded_chan_ptr_ptr);
 }
 
+enum channel_state
+wlan_reg_get_bonded_channel_state_for_freq(struct wlan_objmgr_pdev *pdev,
+					   qdf_freq_t freq,
+					   enum phy_ch_width bw,
+					   qdf_freq_t sec_freq)
+{
+	if (WLAN_REG_IS_24GHZ_CH_FREQ(freq))
+		return reg_get_2g_bonded_channel_state_for_freq(pdev, freq,
+						       sec_freq, bw);
+	else
+		return reg_get_5g_bonded_channel_state_for_freq(pdev, freq,
+						       bw);
+}
+
 qdf_export_symbol(wlan_reg_get_5g_bonded_channel_and_state_for_freq);
 
 #endif /* CONFIG CHAN FREQ API */
@@ -1120,10 +1159,12 @@ bool wlan_reg_is_6ghz_op_class(struct wlan_objmgr_pdev *pdev,
 	return reg_is_6ghz_op_class(pdev, op_class);
 }
 
+#ifdef CONFIG_REG_CLIENT
 bool wlan_reg_is_6ghz_supported(struct wlan_objmgr_psoc *psoc)
 {
 	return reg_is_6ghz_supported(psoc);
 }
+#endif
 
 #ifdef HOST_OPCLASS_EXT
 qdf_freq_t

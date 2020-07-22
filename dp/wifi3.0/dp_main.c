@@ -427,7 +427,7 @@ static void dp_service_mon_rings(struct  dp_soc *soc, uint32_t quota)
 		pdev = dp_get_pdev_for_lmac_id(soc, ring);
 		if (!pdev)
 			continue;
-		work_done = dp_mon_process(soc, ring, quota);
+		work_done = dp_mon_process(soc, NULL, ring, quota);
 
 		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_DEBUG,
 			  FL("Reaped %d descs from Monitor rings"),
@@ -507,26 +507,6 @@ static void dp_pkt_log_con_service(struct cdp_soc_t *soc_hdl,
 }
 
 /**
- * dp_get_num_rx_contexts() - get number of RX contexts
- * @soc_hdl: cdp opaque soc handle
- *
- * Return: number of RX contexts
- */
-static int dp_get_num_rx_contexts(struct cdp_soc_t *soc_hdl)
-{
-	int i;
-	int num_rx_contexts = 0;
-
-	struct dp_soc *soc = (struct dp_soc *)soc_hdl;
-
-	for (i = 0; i < wlan_cfg_get_num_contexts(soc->wlan_cfg_ctx); i++)
-		if (wlan_cfg_get_rx_ring_mask(soc->wlan_cfg_ctx, i))
-			num_rx_contexts++;
-
-	return num_rx_contexts;
-}
-
-/**
  * dp_pktlogmod_exit() - API to cleanup pktlog info
  * @pdev: Pdev handle
  *
@@ -550,7 +530,34 @@ static void dp_pktlogmod_exit(struct dp_pdev *pdev)
 	pktlogmod_exit(scn);
 	pdev->pkt_log_init = false;
 }
+#else
+static void dp_pkt_log_con_service(struct cdp_soc_t *soc_hdl,
+				   uint8_t pdev_id, void *scn)
+{
+}
+
+static void dp_pktlogmod_exit(struct dp_pdev *handle) { }
 #endif
+/**
+ * dp_get_num_rx_contexts() - get number of RX contexts
+ * @soc_hdl: cdp opaque soc handle
+ *
+ * Return: number of RX contexts
+ */
+static int dp_get_num_rx_contexts(struct cdp_soc_t *soc_hdl)
+{
+	int i;
+	int num_rx_contexts = 0;
+
+	struct dp_soc *soc = (struct dp_soc *)soc_hdl;
+
+	for (i = 0; i < wlan_cfg_get_num_contexts(soc->wlan_cfg_ctx); i++)
+		if (wlan_cfg_get_rx_ring_mask(soc->wlan_cfg_ctx, i))
+			num_rx_contexts++;
+
+	return num_rx_contexts;
+}
+
 #else
 static void dp_pktlogmod_exit(struct dp_pdev *handle) { }
 
@@ -593,7 +600,7 @@ static void dp_service_lmac_rings(void *arg)
 
 		rx_refill_buf_ring = &soc->rx_refill_buf_ring[mac_for_pdev];
 
-		dp_mon_process(soc, mac_for_pdev,
+		dp_mon_process(soc, NULL, mac_for_pdev,
 			       QCA_NAPI_BUDGET);
 
 		for (i = 0;
@@ -1572,6 +1579,9 @@ int dp_srng_access_start(struct dp_intr *int_ctx, struct dp_soc *dp_soc,
 	uint32_t hp, tp;
 	uint8_t ring_id;
 
+	if (!int_ctx)
+		return hal_srng_access_start(hal_soc, hal_ring_hdl);
+
 	hal_get_sw_hptp(hal_soc, hal_ring_hdl, &tp, &hp);
 	ring_id = hal_srng_ring_id_get(hal_ring_hdl);
 
@@ -1588,6 +1598,9 @@ void dp_srng_access_end(struct dp_intr *int_ctx, struct dp_soc *dp_soc,
 	uint32_t hp, tp;
 	uint8_t ring_id;
 
+	if (!int_ctx)
+		return hal_srng_access_end(hal_soc, hal_ring_hdl);
+
 	hal_get_sw_hptp(hal_soc, hal_ring_hdl, &tp, &hp);
 	ring_id = hal_srng_ring_id_get(hal_ring_hdl);
 
@@ -1596,6 +1609,32 @@ void dp_srng_access_end(struct dp_intr *int_ctx, struct dp_soc *dp_soc,
 
 	return hal_srng_access_end(hal_soc, hal_ring_hdl);
 }
+
+static inline void dp_srng_record_timer_entry(struct dp_soc *dp_soc,
+					      uint8_t hist_group_id)
+{
+	hif_record_event(dp_soc->hif_handle, hist_group_id,
+			 0, 0, 0, HIF_EVENT_TIMER_ENTRY);
+}
+
+static inline void dp_srng_record_timer_exit(struct dp_soc *dp_soc,
+					     uint8_t hist_group_id)
+{
+	hif_record_event(dp_soc->hif_handle, hist_group_id,
+			 0, 0, 0, HIF_EVENT_TIMER_EXIT);
+}
+#else
+
+static inline void dp_srng_record_timer_entry(struct dp_soc *dp_soc,
+					      uint8_t hist_group_id)
+{
+}
+
+static inline void dp_srng_record_timer_exit(struct dp_soc *dp_soc,
+					     uint8_t hist_group_id)
+{
+}
+
 #endif /* WLAN_FEATURE_DP_EVENT_HISTORY */
 
 /*
@@ -1646,7 +1685,7 @@ static int dp_process_lmac_rings(struct dp_intr *int_ctx, int total_budget)
 		if (!pdev)
 			continue;
 		if (int_ctx->rx_mon_ring_mask & (1 << mac_for_pdev)) {
-			work_done = dp_mon_process(soc, mac_for_pdev,
+			work_done = dp_mon_process(soc, int_ctx, mac_for_pdev,
 						   remaining_quota);
 			if (work_done)
 				intr_stats->num_rx_mon_ring_masks++;
@@ -1673,8 +1712,14 @@ static int dp_process_lmac_rings(struct dp_intr *int_ctx, int total_budget)
 					(1 << mac_for_pdev)) {
 			union dp_rx_desc_list_elem_t *desc_list = NULL;
 			union dp_rx_desc_list_elem_t *tail = NULL;
-			struct dp_srng *rx_refill_buf_ring =
-				&soc->rx_refill_buf_ring[mac_for_pdev];
+			struct dp_srng *rx_refill_buf_ring;
+
+			if (wlan_cfg_per_pdev_lmac_ring(soc->wlan_cfg_ctx))
+				rx_refill_buf_ring =
+					&soc->rx_refill_buf_ring[mac_for_pdev];
+			else
+				rx_refill_buf_ring =
+					&soc->rx_refill_buf_ring[pdev->lmac_id];
 
 			intr_stats->num_host2rxdma_ring_masks++;
 			DP_STATS_INC(pdev, replenish.low_thresh_intrs,
@@ -1824,6 +1869,31 @@ budget_done:
 	return dp_budget - budget;
 }
 
+/**
+ * dp_mon_get_lmac_id_from_ch_band() - get the lmac id corresponding
+ *		to a particular channel band.
+ * @soc: Datapath soc handle
+ * @band: channel band configured
+ *
+ * Returns: lmac id corresponding to the channel band
+ *
+ * Currently the 5GHz/6GHz packets will be captured on lmac id 0
+ * and the 2.4GHz packets are captured on lmac id 1.
+ * This function returns the mapping on the basis of above information.
+ */
+static inline int dp_mon_get_lmac_id_from_ch_band(struct dp_soc *soc,
+						  enum reg_wifi_band band)
+{
+	if (band == REG_BAND_2G)
+		return DP_MON_2G_LMAC_ID;
+	else if (band == REG_BAND_5G)
+		return DP_MON_5G_LMAC_ID;
+	else if (band == REG_BAND_6G)
+		return DP_MON_6G_LMAC_ID;
+
+	return DP_MON_INVALID_LMAC_ID;
+}
+
 /* dp_interrupt_timer()- timer poll for interrupts
  *
  * @arg: SoC Handle
@@ -1834,35 +1904,44 @@ budget_done:
 static void dp_interrupt_timer(void *arg)
 {
 	struct dp_soc *soc = (struct dp_soc *) arg;
+	struct dp_pdev *pdev = soc->pdev_list[0];
 	enum timer_yield_status yield = DP_TIMER_NO_YIELD;
 	uint32_t work_done  = 0, total_work_done = 0;
 	int budget = 0xffff;
 	uint32_t remaining_quota = budget;
 	uint64_t start_time;
-	int i;
+	uint32_t lmac_id;
+	uint8_t dp_intr_id;
 
 	if (!qdf_atomic_read(&soc->cmn_init_done))
 		return;
 
+	if (pdev->mon_chan_band == REG_BAND_UNKNOWN) {
+		qdf_timer_mod(&soc->int_timer, DP_INTR_POLL_TIMER_MS);
+		return;
+	}
+
+	lmac_id = dp_mon_get_lmac_id_from_ch_band(soc, pdev->mon_chan_band);
+	if (qdf_unlikely(lmac_id == DP_MON_INVALID_LMAC_ID)) {
+		qdf_timer_mod(&soc->int_timer, DP_INTR_POLL_TIMER_MS);
+		return;
+	}
+
+	dp_intr_id = soc->mon_intr_id_lmac_map[lmac_id];
+	dp_srng_record_timer_entry(soc, dp_intr_id);
 	start_time = qdf_get_log_timestamp();
 
 	while (yield == DP_TIMER_NO_YIELD) {
-		for (i = 0;
-		     i < wlan_cfg_get_num_contexts(soc->wlan_cfg_ctx); i++) {
-			if (!soc->intr_ctx[i].rx_mon_ring_mask)
-				continue;
-
-			work_done = dp_process_lmac_rings(&soc->intr_ctx[i],
-							  remaining_quota);
-			if (work_done) {
-				budget -=  work_done;
-				if (budget <= 0) {
-					yield = DP_TIMER_WORK_EXHAUST;
-					goto budget_done;
-				}
-				remaining_quota = budget;
-				total_work_done += work_done;
+		work_done = dp_mon_process(soc, &soc->intr_ctx[dp_intr_id],
+					   lmac_id, remaining_quota);
+		if (work_done) {
+			budget -=  work_done;
+			if (budget <= 0) {
+				yield = DP_TIMER_WORK_EXHAUST;
+				goto budget_done;
 			}
+			remaining_quota = budget;
+			total_work_done += work_done;
 		}
 
 		yield = dp_should_timer_irq_yield(soc, total_work_done,
@@ -1876,7 +1955,26 @@ budget_done:
 		qdf_timer_mod(&soc->int_timer, 1);
 	else
 		qdf_timer_mod(&soc->int_timer, DP_INTR_POLL_TIMER_MS);
+
+	dp_srng_record_timer_exit(soc, dp_intr_id);
 }
+
+#ifdef WLAN_FEATURE_DP_EVENT_HISTORY
+static inline bool dp_is_mon_mask_valid(struct dp_soc *soc,
+					struct dp_intr *intr_ctx)
+{
+	if (intr_ctx->rx_mon_ring_mask)
+		return true;
+
+	return false;
+}
+#else
+static inline bool dp_is_mon_mask_valid(struct dp_soc *soc,
+					struct dp_intr *intr_ctx)
+{
+	return false;
+}
+#endif
 
 /*
  * dp_soc_attach_poll() - Register handlers for DP interrupts
@@ -1892,7 +1990,10 @@ static QDF_STATUS dp_soc_attach_poll(struct cdp_soc_t *txrx_soc)
 {
 	struct dp_soc *soc = (struct dp_soc *)txrx_soc;
 	int i;
+	int lmac_id = 0;
 
+	qdf_mem_set(&soc->mon_intr_id_lmac_map,
+		    sizeof(soc->mon_intr_id_lmac_map), DP_MON_INVALID_LMAC_ID);
 	soc->intr_mode = DP_INTR_POLL;
 
 	for (i = 0; i < wlan_cfg_get_num_contexts(soc->wlan_cfg_ctx); i++) {
@@ -1913,6 +2014,12 @@ static QDF_STATUS dp_soc_attach_poll(struct cdp_soc_t *txrx_soc)
 			wlan_cfg_get_rxdma2host_ring_mask(soc->wlan_cfg_ctx, i);
 		soc->intr_ctx[i].soc = soc;
 		soc->intr_ctx[i].lro_ctx = qdf_lro_init();
+
+		if (dp_is_mon_mask_valid(soc, &soc->intr_ctx[i])) {
+			hif_event_history_init(soc->hif_handle, i);
+			soc->mon_intr_id_lmac_map[lmac_id] = i;
+			lmac_id++;
+		}
 	}
 
 	qdf_timer_init(soc->osdev, &soc->int_timer,
@@ -2147,6 +2254,9 @@ static QDF_STATUS dp_soc_interrupt_attach(struct cdp_soc_t *txrx_soc)
 	int i = 0;
 	int num_irq = 0;
 
+	qdf_mem_set(&soc->mon_intr_id_lmac_map,
+		    sizeof(soc->mon_intr_id_lmac_map), DP_MON_INVALID_LMAC_ID);
+
 	for (i = 0; i < wlan_cfg_get_num_contexts(soc->wlan_cfg_ctx); i++) {
 		int ret = 0;
 
@@ -2203,6 +2313,8 @@ static QDF_STATUS dp_soc_interrupt_attach(struct cdp_soc_t *txrx_soc)
 
 			return QDF_STATUS_E_FAILURE;
 		}
+
+		hif_event_history_init(soc->hif_handle, i);
 		soc->intr_ctx[i].lro_ctx = qdf_lro_init();
 	}
 
@@ -2240,8 +2352,12 @@ static void dp_soc_interrupt_detach(struct cdp_soc_t *txrx_soc)
 		soc->intr_ctx[i].host2rxdma_ring_mask = 0;
 		soc->intr_ctx[i].host2rxdma_mon_ring_mask = 0;
 
+		hif_event_history_deinit(soc->hif_handle, i);
 		qdf_lro_deinit(soc->intr_ctx[i].lro_ctx);
 	}
+
+	qdf_mem_set(&soc->mon_intr_id_lmac_map,
+		    REG_BAND_UNKNOWN * sizeof(int), DP_MON_INVALID_LMAC_ID);
 }
 
 #define AVG_MAX_MPDUS_PER_TID 128
@@ -2756,33 +2872,36 @@ static uint8_t dp_soc_ring_if_nss_offloaded(struct dp_soc *soc, enum hal_ring_ty
 }
 
 /*
- * dp_soc_disable_mac2_intr_mask() - reset interrupt mask for WMAC2 hw rings
+ * dp_soc_disable_unused_mac_intr_mask() - reset interrupt mask for
+ *					  unused WMAC hw rings
  * @dp_soc - DP Soc handle
+ * @mac_num - wmac num
  *
  * Return: Return void
  */
-static void dp_soc_disable_mac2_intr_mask(struct dp_soc *soc)
+static void dp_soc_disable_unused_mac_intr_mask(struct dp_soc *soc,
+						int mac_num)
 {
 	int *grp_mask = NULL;
 	int group_number;
 
 	grp_mask = &soc->wlan_cfg_ctx->int_host2rxdma_ring_mask[0];
-	group_number = dp_srng_find_ring_in_mask(0x2, grp_mask);
+	group_number = dp_srng_find_ring_in_mask(mac_num, grp_mask);
 	wlan_cfg_set_host2rxdma_ring_mask(soc->wlan_cfg_ctx,
 					  group_number, 0x0);
 
 	grp_mask = &soc->wlan_cfg_ctx->int_rx_mon_ring_mask[0];
-	group_number = dp_srng_find_ring_in_mask(0x2, grp_mask);
+	group_number = dp_srng_find_ring_in_mask(mac_num, grp_mask);
 	wlan_cfg_set_rx_mon_ring_mask(soc->wlan_cfg_ctx,
 				      group_number, 0x0);
 
 	grp_mask = &soc->wlan_cfg_ctx->int_rxdma2host_ring_mask[0];
-	group_number = dp_srng_find_ring_in_mask(0x2, grp_mask);
+	group_number = dp_srng_find_ring_in_mask(mac_num, grp_mask);
 	wlan_cfg_set_rxdma2host_ring_mask(soc->wlan_cfg_ctx,
 					  group_number, 0x0);
 
 	grp_mask = &soc->wlan_cfg_ctx->int_host2rxdma_mon_ring_mask[0];
-	group_number = dp_srng_find_ring_in_mask(0x2, grp_mask);
+	group_number = dp_srng_find_ring_in_mask(mac_num, grp_mask);
 	wlan_cfg_set_host2rxdma_mon_ring_mask(soc->wlan_cfg_ctx,
 					      group_number, 0x0);
 }
@@ -2924,24 +3043,10 @@ static void dp_soc_reset_intr_mask(struct dp_soc *soc)
  */
 bool dp_reo_remap_config(struct dp_soc *soc, uint32_t *remap1, uint32_t *remap2)
 {
-	*remap1 = HAL_REO_REMAP_IX2(REO_REMAP_SW1, 16) |
-		  HAL_REO_REMAP_IX2(REO_REMAP_SW2, 17) |
-		  HAL_REO_REMAP_IX2(REO_REMAP_SW3, 18) |
-		  HAL_REO_REMAP_IX2(REO_REMAP_SW1, 19) |
-		  HAL_REO_REMAP_IX2(REO_REMAP_SW2, 20) |
-		  HAL_REO_REMAP_IX2(REO_REMAP_SW3, 21) |
-		  HAL_REO_REMAP_IX2(REO_REMAP_SW1, 22) |
-		  HAL_REO_REMAP_IX2(REO_REMAP_SW2, 23);
-
-	*remap2 = HAL_REO_REMAP_IX3(REO_REMAP_SW3, 24) |
-		  HAL_REO_REMAP_IX3(REO_REMAP_SW1, 25) |
-		  HAL_REO_REMAP_IX3(REO_REMAP_SW2, 26) |
-		  HAL_REO_REMAP_IX3(REO_REMAP_SW3, 27) |
-		  HAL_REO_REMAP_IX3(REO_REMAP_SW1, 28) |
-		  HAL_REO_REMAP_IX3(REO_REMAP_SW2, 29) |
-		  HAL_REO_REMAP_IX3(REO_REMAP_SW3, 30) |
-		  HAL_REO_REMAP_IX3(REO_REMAP_SW1, 31);
-
+	uint32_t ring[4] = {REO_REMAP_SW1, REO_REMAP_SW2,
+						REO_REMAP_SW3};
+	hal_compute_reo_remap_ix2_ix3(soc->hal_soc, ring,
+				      3, remap1, remap2);
 	dp_debug("remap1 %x remap2 %x", *remap1, *remap2);
 
 	return true;
@@ -2976,72 +3081,124 @@ static void dp_ipa_get_tx_comp_ring_size(int tx_comp_ring_num,
 		*tx_comp_ipa_ring_sz = WLAN_CFG_IPA_TX_COMP_RING_SIZE;
 }
 #else
+static uint8_t dp_reo_ring_selection(uint32_t value, uint32_t *ring)
+{
+	uint8_t num = 0;
+
+	switch (value) {
+	case 0xF:
+		num = 4;
+		ring[0] = REO_REMAP_SW1;
+		ring[1] = REO_REMAP_SW2;
+		ring[2] = REO_REMAP_SW3;
+		ring[3] = REO_REMAP_SW4;
+		break;
+	case 0xE:
+		num = 3;
+		ring[0] = REO_REMAP_SW2;
+		ring[1] = REO_REMAP_SW3;
+		ring[2] = REO_REMAP_SW4;
+		break;
+	case 0xD:
+		num = 3;
+		ring[0] = REO_REMAP_SW1;
+		ring[1] = REO_REMAP_SW3;
+		ring[2] = REO_REMAP_SW4;
+		break;
+	case 0xC:
+		num = 2;
+		ring[0] = REO_REMAP_SW3;
+		ring[1] = REO_REMAP_SW4;
+		break;
+	case 0xB:
+		num = 3;
+		ring[0] = REO_REMAP_SW1;
+		ring[1] = REO_REMAP_SW2;
+		ring[2] = REO_REMAP_SW4;
+		break;
+	case 0xA:
+		num = 2;
+		ring[0] = REO_REMAP_SW2;
+		ring[1] = REO_REMAP_SW4;
+		break;
+	case 0x9:
+		num = 2;
+		ring[0] = REO_REMAP_SW1;
+		ring[1] = REO_REMAP_SW4;
+		break;
+	case 0x8:
+		num = 1;
+		ring[0] = REO_REMAP_SW4;
+		break;
+	case 0x7:
+		num = 3;
+		ring[0] = REO_REMAP_SW1;
+		ring[1] = REO_REMAP_SW2;
+		ring[2] = REO_REMAP_SW3;
+		break;
+	case 0x6:
+		num = 2;
+		ring[0] = REO_REMAP_SW2;
+		ring[1] = REO_REMAP_SW3;
+		break;
+	case 0x5:
+		num = 2;
+		ring[0] = REO_REMAP_SW1;
+		ring[1] = REO_REMAP_SW3;
+		break;
+	case 0x4:
+		num = 1;
+		ring[0] = REO_REMAP_SW3;
+		break;
+	case 0x3:
+		num = 2;
+		ring[0] = REO_REMAP_SW1;
+		ring[1] = REO_REMAP_SW2;
+		break;
+	case 0x2:
+		num = 1;
+		ring[0] = REO_REMAP_SW2;
+		break;
+	case 0x1:
+		num = 1;
+		ring[0] = REO_REMAP_SW1;
+		break;
+	}
+	return num;
+}
+
 static bool dp_reo_remap_config(struct dp_soc *soc,
 				uint32_t *remap1,
 				uint32_t *remap2)
 {
 	uint8_t offload_radio = wlan_cfg_get_dp_soc_nss_cfg(soc->wlan_cfg_ctx);
-	uint8_t target_type;
+	uint32_t reo_config = wlan_cfg_get_reo_rings_mapping(soc->wlan_cfg_ctx);
+	uint8_t target_type, num;
+	uint32_t ring[4];
+	uint32_t value;
 
 	target_type = hal_get_target_type(soc->hal_soc);
 
 	switch (offload_radio) {
 	case dp_nss_cfg_default:
-		*remap1 = HAL_REO_REMAP_IX2(REO_REMAP_SW1, 16) |
-			  HAL_REO_REMAP_IX2(REO_REMAP_SW2, 17) |
-			  HAL_REO_REMAP_IX2(REO_REMAP_SW3, 18) |
-			  HAL_REO_REMAP_IX2(REO_REMAP_SW4, 19) |
-			  HAL_REO_REMAP_IX2(REO_REMAP_SW1, 20) |
-			  HAL_REO_REMAP_IX2(REO_REMAP_SW2, 21) |
-			  HAL_REO_REMAP_IX2(REO_REMAP_SW3, 22) |
-			  HAL_REO_REMAP_IX2(REO_REMAP_SW4, 23);
+		value = reo_config & 0xF;
+		num = dp_reo_ring_selection(value, ring);
+		hal_compute_reo_remap_ix2_ix3(soc->hal_soc, ring,
+					      num, remap1, remap2);
 
-		*remap2 = HAL_REO_REMAP_IX3(REO_REMAP_SW1, 24) |
-			  HAL_REO_REMAP_IX3(REO_REMAP_SW2, 25) |
-			  HAL_REO_REMAP_IX3(REO_REMAP_SW3, 26) |
-			  HAL_REO_REMAP_IX3(REO_REMAP_SW4, 27) |
-			  HAL_REO_REMAP_IX3(REO_REMAP_SW1, 28) |
-			  HAL_REO_REMAP_IX3(REO_REMAP_SW2, 29) |
-			  HAL_REO_REMAP_IX3(REO_REMAP_SW3, 30) |
-			  HAL_REO_REMAP_IX3(REO_REMAP_SW4, 31);
 		break;
 	case dp_nss_cfg_first_radio:
-		*remap1 = HAL_REO_REMAP_IX2(REO_REMAP_SW2, 16) |
-			  HAL_REO_REMAP_IX2(REO_REMAP_SW3, 17) |
-			  HAL_REO_REMAP_IX2(REO_REMAP_SW4, 18) |
-			  HAL_REO_REMAP_IX2(REO_REMAP_SW2, 19) |
-			  HAL_REO_REMAP_IX2(REO_REMAP_SW3, 20) |
-			  HAL_REO_REMAP_IX2(REO_REMAP_SW4, 21) |
-			  HAL_REO_REMAP_IX2(REO_REMAP_SW2, 22) |
-			  HAL_REO_REMAP_IX2(REO_REMAP_SW3, 23);
+		value = reo_config & 0xE;
+		num = dp_reo_ring_selection(value, ring);
+		hal_compute_reo_remap_ix2_ix3(soc->hal_soc, ring,
+					      num, remap1, remap2);
 
-		*remap2 = HAL_REO_REMAP_IX3(REO_REMAP_SW4, 24) |
-			  HAL_REO_REMAP_IX3(REO_REMAP_SW2, 25) |
-			  HAL_REO_REMAP_IX3(REO_REMAP_SW3, 26) |
-			  HAL_REO_REMAP_IX3(REO_REMAP_SW4, 27) |
-			  HAL_REO_REMAP_IX3(REO_REMAP_SW2, 28) |
-			  HAL_REO_REMAP_IX3(REO_REMAP_SW3, 29) |
-			  HAL_REO_REMAP_IX3(REO_REMAP_SW4, 30) |
-			  HAL_REO_REMAP_IX3(REO_REMAP_SW2, 31);
 		break;
 	case dp_nss_cfg_second_radio:
-		*remap1 = HAL_REO_REMAP_IX2(REO_REMAP_SW1, 16) |
-			  HAL_REO_REMAP_IX2(REO_REMAP_SW3, 17) |
-			  HAL_REO_REMAP_IX2(REO_REMAP_SW4, 18) |
-			  HAL_REO_REMAP_IX2(REO_REMAP_SW1, 19) |
-			  HAL_REO_REMAP_IX2(REO_REMAP_SW3, 20) |
-			  HAL_REO_REMAP_IX2(REO_REMAP_SW4, 21) |
-			  HAL_REO_REMAP_IX2(REO_REMAP_SW1, 22) |
-			  HAL_REO_REMAP_IX2(REO_REMAP_SW3, 23);
-
-		*remap2 = HAL_REO_REMAP_IX3(REO_REMAP_SW4, 24) |
-			  HAL_REO_REMAP_IX3(REO_REMAP_SW1, 25) |
-			  HAL_REO_REMAP_IX3(REO_REMAP_SW3, 26) |
-			  HAL_REO_REMAP_IX3(REO_REMAP_SW4, 27) |
-			  HAL_REO_REMAP_IX3(REO_REMAP_SW1, 28) |
-			  HAL_REO_REMAP_IX3(REO_REMAP_SW3, 29) |
-			  HAL_REO_REMAP_IX3(REO_REMAP_SW4, 30) |
-			  HAL_REO_REMAP_IX3(REO_REMAP_SW1, 31);
+		value = reo_config & 0xD;
+		num = dp_reo_ring_selection(value, ring);
+		hal_compute_reo_remap_ix2_ix3(soc->hal_soc, ring,
+					      num, remap1, remap2);
 
 		break;
 	case dp_nss_cfg_dbdc:
@@ -4816,6 +4973,7 @@ static QDF_STATUS dp_vdev_register_wifi3(struct cdp_soc_t *soc,
 	vdev->osif_rx_mon = txrx_ops->rx.mon;
 	vdev->osif_tx_free_ext = txrx_ops->tx.tx_free_ext;
 	vdev->tx_comp = txrx_ops->tx.tx_comp;
+	vdev->stats_cb = txrx_ops->rx.stats_rx;
 #ifdef notyet
 #if ATH_SUPPORT_WAPI
 	vdev->osif_check_wai = txrx_ops->rx.wai_check;
@@ -6505,12 +6663,15 @@ static QDF_STATUS dp_vdev_set_monitor_mode(struct cdp_soc_t *soc,
 		 * configured.
 		 */
 		mon_buf_ring = &pdev->soc->rxdma_mon_buf_ring[mac_for_pdev];
-		num_entries = mon_buf_ring->num_entries;
-		hal_set_low_threshold(pdev->soc->rxdma_mon_buf_ring[mac_for_pdev].hal_srng,
-				      num_entries >> 3);
-		htt_srng_setup(pdev->soc->htt_handle, pdev->pdev_id,
-			       pdev->soc->rxdma_mon_buf_ring[mac_for_pdev]
-			       .hal_srng, RXDMA_MONITOR_BUF);
+		if (mon_buf_ring->hal_srng) {
+			num_entries = mon_buf_ring->num_entries;
+			hal_set_low_threshold(mon_buf_ring->hal_srng,
+					      num_entries >> 3);
+			htt_srng_setup(pdev->soc->htt_handle,
+				       pdev->pdev_id,
+				       mon_buf_ring->hal_srng,
+				       RXDMA_MONITOR_BUF);
+		}
 	}
 
 	dp_soc_config_full_mon_mode(pdev, DP_FULL_MON_ENABLE);
@@ -7835,6 +7996,8 @@ static QDF_STATUS dp_set_pdev_param(struct cdp_soc_t *cdp_soc, uint8_t pdev_id,
 		break;
 	case CDP_MONITOR_FREQUENCY:
 		pdev->mon_chan_freq = val.cdp_pdev_param_mon_freq;
+		pdev->mon_chan_band =
+				wlan_reg_freq_to_band(pdev->mon_chan_freq);
 		break;
 	case CDP_CONFIG_BSS_COLOR:
 		dp_mon_set_bsscolor(pdev, val.cdp_pdev_param_bss_color);
@@ -8847,6 +9010,10 @@ QDF_STATUS dp_update_config_parameters(struct cdp_soc *psoc,
 	soc->wlan_cfg_ctx->tso_enabled = params->tso_enable;
 	soc->wlan_cfg_ctx->lro_enabled = params->lro_enable;
 	soc->wlan_cfg_ctx->rx_hash = params->flow_steering_enable;
+	soc->wlan_cfg_ctx->p2p_tcp_udp_checksumoffload =
+				params->p2p_tcp_udp_checksumoffload;
+	soc->wlan_cfg_ctx->nan_tcp_udp_checksumoffload =
+				params->nan_tcp_udp_checksumoffload;
 	soc->wlan_cfg_ctx->tcp_udp_checksumoffload =
 				params->tcp_udp_checksumoffload;
 	soc->wlan_cfg_ctx->napi_enabled = params->napi_enable;
@@ -9499,6 +9666,12 @@ static uint32_t dp_get_cfg(struct cdp_soc_t *soc, enum cdp_dp_cfg cfg)
 	switch (cfg) {
 	case cfg_dp_enable_data_stall:
 		value = dpsoc->wlan_cfg_ctx->enable_data_stall_detection;
+		break;
+	case cfg_dp_enable_p2p_ip_tcp_udp_checksum_offload:
+		value = dpsoc->wlan_cfg_ctx->p2p_tcp_udp_checksumoffload;
+		break;
+	case cfg_dp_enable_nan_ip_tcp_udp_checksum_offload:
+		value = dpsoc->wlan_cfg_ctx->nan_tcp_udp_checksumoffload;
 		break;
 	case cfg_dp_enable_ip_tcp_udp_checksum_offload:
 		value = dpsoc->wlan_cfg_ctx->tcp_udp_checksumoffload;
@@ -10254,6 +10427,7 @@ dp_request_rx_hw_stats(struct cdp_soc_t *soc_hdl, uint8_t vdev_id)
 
 	if (!rx_hw_stats) {
 		dp_err("malloc failed for hw stats structure");
+		dp_peer_unref_delete(peer);
 		return QDF_STATUS_E_NOMEM;
 	}
 
@@ -10265,6 +10439,7 @@ dp_request_rx_hw_stats(struct cdp_soc_t *soc_hdl, uint8_t vdev_id)
 		dp_err("no tid stats sent successfully");
 		qdf_mem_free(rx_hw_stats);
 		qdf_spin_unlock_bh(&soc->rx_hw_stats_lock);
+		dp_peer_unref_delete(peer);
 		return QDF_STATUS_E_INVAL;
 	}
 	qdf_atomic_set(&rx_hw_stats->pending_tid_stats_cnt,
@@ -10675,6 +10850,11 @@ dp_soc_attach(struct cdp_ctrl_objmgr_psoc *ctrl_psoc,
 	dp_soc_set_interrupt_mode(soc);
 	dp_soc_set_def_pdev(soc);
 
+	dp_info("Mem stats: DMA = %u HEAP = %u SKB = %u",
+		qdf_dma_mem_stats_read(),
+		qdf_heap_mem_stats_read(),
+		qdf_skb_mem_stats_read());
+
 	return soc;
 fail5:
 	dp_soc_srng_free(soc);
@@ -10800,10 +10980,18 @@ void *dp_soc_init(struct dp_soc *soc, HTC_HANDLE htc_handle,
 
 	/*
 	 * Skip registering hw ring interrupts for WMAC2 on IPQ6018
-	 * WMAC2 is not there in IPQ6018 platform.
+	 * and IPQ5018 WMAC2 is not there in these platforms.
 	 */
-	if (hal_get_target_type(soc->hal_soc) == TARGET_TYPE_QCA6018)
-		dp_soc_disable_mac2_intr_mask(soc);
+	if (hal_get_target_type(soc->hal_soc) == TARGET_TYPE_QCA6018 ||
+	    soc->disable_mac2_intr)
+		dp_soc_disable_unused_mac_intr_mask(soc, 0x2);
+
+	/*
+	 * Skip registering hw ring interrupts for WMAC1 on IPQ5018
+	 * WMAC1 is not there in this platform.
+	 */
+	if (soc->disable_mac1_intr)
+		dp_soc_disable_unused_mac_intr_mask(soc, 0x1);
 
 	/* Setup HW REO */
 	qdf_mem_zero(&reo_params, sizeof(reo_params));
@@ -10858,6 +11046,11 @@ void *dp_soc_init(struct dp_soc *soc, HTC_HANDLE htc_handle,
 	qdf_spinlock_create(&soc->htt_stats.lock);
 	/* initialize work queue for stats processing */
 	qdf_create_work(0, &soc->htt_stats.work, htt_t2h_stats_handler, soc);
+
+	dp_info("Mem stats: DMA = %u HEAP = %u SKB = %u",
+		qdf_dma_mem_stats_read(),
+		qdf_heap_mem_stats_read(),
+		qdf_skb_mem_stats_read());
 
 	return soc;
 fail6:
@@ -12154,6 +12347,9 @@ static void dp_soc_cfg_init(struct dp_soc *soc)
 		soc->hw_nac_monitor_support = 1;
 		soc->per_tid_basize_max_tid = 8;
 		soc->num_hw_dscp_tid_map = HAL_MAX_HW_DSCP_TID_V2_MAPS;
+		soc->disable_mac1_intr = 1;
+		soc->disable_mac2_intr = 1;
+		soc->wbm_release_desc_rx_sg_support = 1;
 		break;
 	default:
 		qdf_print("%s: Unknown tgt type %d\n", __func__, target_type);
@@ -12319,6 +12515,7 @@ static inline QDF_STATUS dp_pdev_init(struct cdp_soc_t *txrx_soc,
 	TAILQ_INIT(&pdev->neighbour_peers_list);
 	pdev->neighbour_peers_added = false;
 	pdev->monitor_configured = false;
+	pdev->mon_chan_band = REG_BAND_UNKNOWN;
 
 	DP_STATS_INIT(pdev);
 
@@ -12409,6 +12606,11 @@ static inline QDF_STATUS dp_pdev_init(struct cdp_soc_t *txrx_soc,
 
 	dp_init_tso_stats(pdev);
 	dp_tx_ppdu_stats_attach(pdev);
+
+	dp_info("Mem stats: DMA = %u HEAP = %u SKB = %u",
+		qdf_dma_mem_stats_read(),
+		qdf_heap_mem_stats_read(),
+		qdf_skb_mem_stats_read());
 
 	return QDF_STATUS_SUCCESS;
 fail9:

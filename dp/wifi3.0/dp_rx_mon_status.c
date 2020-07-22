@@ -57,13 +57,15 @@ dp_rx_populate_cfr_non_assoc_sta(struct dp_pdev *pdev,
  * Called from bottom half (tasklet/NET_RX_SOFTIRQ)
  *
  * @soc: datapath soc context
+ * @int_ctx: interrupt context
  * @mac_id: mac_id on which interrupt is received
  * @quota: Number of status ring entry that can be serviced in one shot.
  *
  * @Return: Number of reaped status ring entries
  */
 static inline uint32_t
-dp_rx_mon_process(struct dp_soc *soc, uint32_t mac_id, uint32_t quota)
+dp_rx_mon_process(struct dp_soc *soc, struct dp_intr *int_ctx,
+		  uint32_t mac_id, uint32_t quota)
 {
 	return quota;
 }
@@ -1440,14 +1442,14 @@ dp_rx_handle_ppdu_stats(struct dp_soc *soc, struct dp_pdev *pdev,
 * @soc: core txrx main context
 * @ppdu_info: Structure for rx ppdu info
 * @status_nbuf: Qdf nbuf abstraction for linux skb
-* @mac_id: mac_id/pdev_id correspondinggly for MCL and WIN
+* @pdev_id: mac_id/pdev_id correspondinggly for MCL and WIN
 *
 * Return: none
 */
 static inline void
 dp_rx_process_peer_based_pktlog(struct dp_soc *soc,
 				struct hal_rx_ppdu_info *ppdu_info,
-				qdf_nbuf_t status_nbuf, uint32_t mac_id)
+				qdf_nbuf_t status_nbuf, uint32_t pdev_id)
 {
 	struct dp_peer *peer;
 	struct dp_ast_entry *ast_entry;
@@ -1464,7 +1466,7 @@ dp_rx_process_peer_based_pktlog(struct dp_soc *soc,
 							WDI_EVENT_RX_DESC, soc,
 							status_nbuf,
 							peer->peer_id,
-							WDI_NO_VAL, mac_id);
+							WDI_NO_VAL, pdev_id);
 				}
 			}
 		}
@@ -1568,16 +1570,18 @@ dp_rx_mon_handle_mu_ul_info(struct hal_rx_ppdu_info *ppdu_info)
 #endif
 
 /**
-* dp_rx_mon_status_process_tlv() - Process status TLV in status
-*	buffer on Rx status Queue posted by status SRNG processing.
-* @soc: core txrx main context
-* @mac_id: mac_id which is one of 3 mac_ids _ring
-*
-* Return: none
-*/
+ * dp_rx_mon_status_process_tlv() - Process status TLV in status
+ *	buffer on Rx status Queue posted by status SRNG processing.
+ * @soc: core txrx main context
+ * @int_ctx: interrupt context
+ * @mac_id: mac_id which is one of 3 mac_ids _ring
+ * @quota: amount of work which can be done
+ *
+ * Return: none
+ */
 static inline void
-dp_rx_mon_status_process_tlv(struct dp_soc *soc, uint32_t mac_id,
-	uint32_t quota)
+dp_rx_mon_status_process_tlv(struct dp_soc *soc, struct dp_intr *int_ctx,
+			     uint32_t mac_id, uint32_t quota)
 {
 	struct dp_pdev *pdev = dp_get_pdev_for_lmac_id(soc, mac_id);
 	struct hal_rx_ppdu_info *ppdu_info;
@@ -1646,7 +1650,8 @@ dp_rx_mon_status_process_tlv(struct dp_soc *soc, uint32_t mac_id,
 		}
 		if (pdev->dp_peer_based_pktlog) {
 			dp_rx_process_peer_based_pktlog(soc, ppdu_info,
-							status_nbuf, mac_id);
+							status_nbuf,
+							pdev->pdev_id);
 		} else {
 			if (pdev->rx_pktlog_mode == DP_RX_PKTLOG_FULL)
 				pktlog_mode = WDI_EVENT_RX_DESC;
@@ -1657,7 +1662,7 @@ dp_rx_mon_status_process_tlv(struct dp_soc *soc, uint32_t mac_id,
 				dp_wdi_event_handler(pktlog_mode, soc,
 						     status_nbuf,
 						     HTT_INVALID_PEER,
-						     WDI_NO_VAL, mac_id);
+						     WDI_NO_VAL, pdev->pdev_id);
 		}
 
 		/* smart monitor vap and m_copy cannot co-exist */
@@ -1718,7 +1723,8 @@ dp_rx_mon_status_process_tlv(struct dp_soc *soc, uint32_t mac_id,
 			}
 
 			if (!soc->full_mon_mode)
-				dp_rx_mon_dest_process(soc, mac_id, quota);
+				dp_rx_mon_dest_process(soc, int_ctx, mac_id,
+						       quota);
 
 			pdev->mon_ppdu_status = DP_PPDU_STATUS_START;
 		}
@@ -1732,16 +1738,16 @@ dp_rx_mon_status_process_tlv(struct dp_soc *soc, uint32_t mac_id,
  *	processing when status ring is filled with status TLV.
  *	Allocate a new buffer to status ring if the filled buffer
  *	is posted.
- *
  * @soc: core txrx main context
+ * @int_ctx: interrupt context
  * @mac_id: mac_id which is one of 3 mac_ids
  * @quota: No. of ring entry that can be serviced in one shot.
 
  * Return: uint32_t: No. of ring entry that is processed.
  */
 static inline uint32_t
-dp_rx_mon_status_srng_process(struct dp_soc *soc, uint32_t mac_id,
-	uint32_t quota)
+dp_rx_mon_status_srng_process(struct dp_soc *soc, struct dp_intr *int_ctx,
+			      uint32_t mac_id, uint32_t quota)
 {
 	struct dp_pdev *pdev = dp_get_pdev_for_lmac_id(soc, mac_id);
 	hal_soc_handle_t hal_soc;
@@ -1771,7 +1777,7 @@ dp_rx_mon_status_srng_process(struct dp_soc *soc, uint32_t mac_id,
 
 	qdf_assert(hal_soc);
 
-	if (qdf_unlikely(hal_srng_access_start(hal_soc, mon_status_srng)))
+	if (qdf_unlikely(dp_srng_access_start(int_ctx, soc, mon_status_srng)))
 		goto done;
 
 	/* mon_status_ring_desc => WBM_BUFFER_RING STRUCT =>
@@ -1911,50 +1917,33 @@ dp_rx_mon_status_srng_process(struct dp_soc *soc, uint32_t mac_id,
 	}
 done:
 
-	hal_srng_access_end(hal_soc, mon_status_srng);
+	dp_srng_access_end(int_ctx, soc, mon_status_srng);
 
 	return work_done;
 
 }
 
-/*
- * dp_rx_mon_status_process() - Process monitor status ring and
- *	TLV in status ring.
- *
- * @soc: core txrx main context
- * @mac_id: mac_id which is one of 3 mac_ids
- * @quota: No. of ring entry that can be serviced in one shot.
-
- * Return: uint32_t: No. of ring entry that is processed.
- */
 uint32_t
-dp_rx_mon_status_process(struct dp_soc *soc, uint32_t mac_id, uint32_t quota) {
+dp_rx_mon_status_process(struct dp_soc *soc, struct dp_intr *int_ctx,
+			 uint32_t mac_id, uint32_t quota)
+{
 	uint32_t work_done;
 
-	work_done = dp_rx_mon_status_srng_process(soc, mac_id, quota);
+	work_done = dp_rx_mon_status_srng_process(soc, int_ctx, mac_id, quota);
 	quota -= work_done;
-	dp_rx_mon_status_process_tlv(soc, mac_id, quota);
+	dp_rx_mon_status_process_tlv(soc, int_ctx, mac_id, quota);
 
 	return work_done;
 }
 
-/**
- * dp_mon_process() - Main monitor mode processing roution.
- *	This call monitor status ring process then monitor
- *	destination ring process.
- *	Called from the bottom half (tasklet/NET_RX_SOFTIRQ)
- * @soc: core txrx main context
- * @mac_id: mac_id which is one of 3 mac_ids
- * @quota: No. of status ring entry that can be serviced in one shot.
-
- * Return: uint32_t: No. of ring entry that is processed.
- */
 uint32_t
-dp_mon_process(struct dp_soc *soc, uint32_t mac_id, uint32_t quota) {
+dp_mon_process(struct dp_soc *soc, struct dp_intr *int_ctx,
+	       uint32_t mac_id, uint32_t quota)
+{
 	if (qdf_unlikely(soc->full_mon_mode))
-		return dp_rx_mon_process(soc, mac_id, quota);
+		return dp_rx_mon_process(soc, int_ctx, mac_id, quota);
 
-	return dp_rx_mon_status_process(soc, mac_id, quota);
+	return dp_rx_mon_status_process(soc, int_ctx, mac_id, quota);
 }
 
 QDF_STATUS

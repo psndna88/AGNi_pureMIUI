@@ -36,11 +36,7 @@
 #include <linux/string.h>
 #include <qdf_list.h>
 
-#if defined(CONFIG_CNSS)
-#include <net/cnss.h>
-#endif
-
-#ifdef CONFIG_WCNSS_MEM_PRE_ALLOC
+#if IS_ENABLED(CONFIG_WCNSS_MEM_PRE_ALLOC)
 #include <net/cnss_prealloc.h>
 #endif
 
@@ -58,6 +54,18 @@ static bool is_initial_mem_debug_disabled;
 #define QDF_MEM_MAX_MALLOC (4096 * 1024) /* 4 Mega Bytes */
 #define QDF_MEM_WARN_THRESHOLD 300 /* ms */
 #define QDF_DEBUG_STRING_SIZE 512
+
+/**
+ * struct __qdf_mem_stat - qdf memory statistics
+ * @kmalloc: total kmalloc allocations
+ * @dma: total dma allocations
+ * @skb: total skb allocations
+ */
+static struct __qdf_mem_stat {
+	qdf_atomic_t kmalloc;
+	qdf_atomic_t dma;
+	qdf_atomic_t skb;
+} qdf_mem_stat;
 
 #ifdef MEMORY_DEBUG
 #include "qdf_debug_domain.h"
@@ -292,53 +300,10 @@ u_int8_t prealloc_disabled = 1;
 qdf_declare_param(prealloc_disabled, byte);
 qdf_export_symbol(prealloc_disabled);
 
-/**
- * struct __qdf_mem_stat - qdf memory statistics
- * @kmalloc:	total kmalloc allocations
- * @dma:	total dma allocations
- * @skb:	total skb allocations
- */
-static struct __qdf_mem_stat {
-	qdf_atomic_t kmalloc;
-	qdf_atomic_t dma;
-	qdf_atomic_t skb;
-} qdf_mem_stat;
-
-void qdf_mem_skb_inc(qdf_size_t size)
-{
-	qdf_atomic_add(size, &qdf_mem_stat.skb);
-}
-
-void qdf_mem_skb_dec(qdf_size_t size)
-{
-	qdf_atomic_sub(size, &qdf_mem_stat.skb);
-}
-
 #if defined WLAN_DEBUGFS
 
 /* Debugfs root directory for qdf_mem */
 static struct dentry *qdf_mem_debugfs_root;
-
-void qdf_mem_kmalloc_inc(qdf_size_t size)
-{
-	qdf_atomic_add(size, &qdf_mem_stat.kmalloc);
-}
-
-void qdf_mem_kmalloc_dec(qdf_size_t size)
-{
-	qdf_atomic_sub(size, &qdf_mem_stat.kmalloc);
-}
-
-static void qdf_mem_dma_inc(qdf_size_t size)
-{
-	qdf_atomic_add(size, &qdf_mem_stat.dma);
-}
-
-static inline void qdf_mem_dma_dec(qdf_size_t size)
-{
-	qdf_atomic_sub(size, &qdf_mem_stat.dma);
-}
-
 
 #ifdef MEMORY_DEBUG
 static int qdf_err_printer(void *priv, const char *fmt, ...)
@@ -841,9 +806,6 @@ static QDF_STATUS qdf_mem_debugfs_init(void)
 
 #else /* WLAN_DEBUGFS */
 
-static inline void qdf_mem_dma_inc(qdf_size_t size) {}
-static inline void qdf_mem_dma_dec(qdf_size_t size) {}
-
 static QDF_STATUS qdf_mem_debugfs_init(void)
 {
 	return QDF_STATUS_E_NOSUPPORT;
@@ -862,6 +824,38 @@ static QDF_STATUS qdf_mem_debug_debugfs_exit(void)
 }
 
 #endif /* WLAN_DEBUGFS */
+
+void qdf_mem_kmalloc_inc(qdf_size_t size)
+{
+	qdf_atomic_add(size, &qdf_mem_stat.kmalloc);
+}
+
+static void qdf_mem_dma_inc(qdf_size_t size)
+{
+	qdf_atomic_add(size, &qdf_mem_stat.dma);
+}
+
+#ifdef CONFIG_WLAN_SYSFS_MEM_STATS
+void qdf_mem_skb_inc(qdf_size_t size)
+{
+	qdf_atomic_add(size, &qdf_mem_stat.skb);
+}
+
+void qdf_mem_skb_dec(qdf_size_t size)
+{
+	qdf_atomic_sub(size, &qdf_mem_stat.skb);
+}
+#endif
+
+void qdf_mem_kmalloc_dec(qdf_size_t size)
+{
+	qdf_atomic_sub(size, &qdf_mem_stat.kmalloc);
+}
+
+static inline void qdf_mem_dma_dec(qdf_size_t size)
+{
+	qdf_atomic_sub(size, &qdf_mem_stat.dma);
+}
 
 /**
  * __qdf_mempool_init() - Create and initialize memory pool
@@ -1039,7 +1033,7 @@ void __qdf_mempool_free(qdf_device_t osdev, __qdf_mempool_t pool, void *buf)
 }
 qdf_export_symbol(__qdf_mempool_free);
 
-#ifdef CONFIG_WCNSS_MEM_PRE_ALLOC
+#if IS_ENABLED(CONFIG_WCNSS_MEM_PRE_ALLOC)
 /**
  * qdf_mem_prealloc_get() - conditionally pre-allocate memory
  * @size: the number of bytes to allocate
@@ -2301,4 +2295,25 @@ void qdf_ether_addr_copy(void *dst_addr, const void *src_addr)
 	ether_addr_copy(dst_addr, src_addr);
 }
 qdf_export_symbol(qdf_ether_addr_copy);
+
+int32_t qdf_dma_mem_stats_read(void)
+{
+	return qdf_atomic_read(&qdf_mem_stat.dma);
+}
+
+qdf_export_symbol(qdf_dma_mem_stats_read);
+
+int32_t qdf_heap_mem_stats_read(void)
+{
+	return qdf_atomic_read(&qdf_mem_stat.kmalloc);
+}
+
+qdf_export_symbol(qdf_heap_mem_stats_read);
+
+int32_t qdf_skb_mem_stats_read(void)
+{
+	return qdf_atomic_read(&qdf_mem_stat.skb);
+}
+
+qdf_export_symbol(qdf_skb_mem_stats_read);
 

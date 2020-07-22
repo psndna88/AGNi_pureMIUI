@@ -93,7 +93,9 @@
 				  center_freq + HALF_20MHZ_BW)
 
 #define FREQ_LEFT_SHIFT         55
-#define SIXG_STARTING_FREQ      5940
+#define SIX_GHZ_NON_ORPHAN_START_FREQ \
+	(channel_map_global[MIN_6GHZ_NON_ORPHAN_CHANNEL].center_freq  - 5)
+#define CHAN_FREQ_5935          5935
 #define NUM_80MHZ_BAND_IN_6G    16
 #define NUM_PSC_FREQ            15
 #define PSC_BAND_MHZ (FREQ_TO_CHAN_SCALE * NUM_80MHZ_BAND_IN_6G)
@@ -101,7 +103,8 @@
 #define REG_MAX_6GHZ_CHAN_FREQ channel_map[MAX_6GHZ_CHANNEL].center_freq
 #else
 #define FREQ_LEFT_SHIFT         0
-#define SIXG_STARTING_FREQ      0
+#define SIX_GHZ_NON_ORPHAN_START_FREQ       0
+#define CHAN_FREQ_5935          0
 #define NUM_80MHZ_BAND_IN_6G    0
 #define NUM_PSC_FREQ            0
 #define PSC_BAND_MHZ (FREQ_TO_CHAN_SCALE * NUM_80MHZ_BAND_IN_6G)
@@ -115,7 +118,7 @@
 /* EEPROM setting is a country code */
 #define    COUNTRY_ERD_FLAG     0x8000
 #define MIN_6GHZ_OPER_CLASS 131
-#define MAX_6GHZ_OPER_CLASS 135
+#define MAX_6GHZ_OPER_CLASS 136
 
 extern const struct chan_map *channel_map;
 extern const struct chan_map channel_map_us[];
@@ -207,6 +210,15 @@ enum channel_state reg_get_2g_bonded_channel_state(
 void reg_set_channel_params(struct wlan_objmgr_pdev *pdev,
 			    uint8_t ch, uint8_t sec_ch_2g,
 			    struct ch_params *ch_params);
+
+/**
+ * reg_is_disable_ch() - Check if the given channel in disable state
+ * @pdev: Pointer to pdev
+ * @chan: channel number
+ *
+ * Return: True if channel state is disabled, else false
+ */
+bool reg_is_disable_ch(struct wlan_objmgr_pdev *pdev, uint8_t chan);
 #endif /* CONFIG_CHAN_NUM_API */
 
 /**
@@ -461,6 +473,17 @@ QDF_STATUS reg_set_hal_reg_cap(
 		struct wlan_objmgr_psoc *psoc,
 		struct wlan_psoc_host_hal_reg_capabilities_ext *reg_cap,
 		uint16_t phy_cnt);
+
+/**
+ * reg_update_hal_reg_cap() - Update HAL REG capabilities
+ * @psoc: psoc pointer
+ * @wireless_modes: 11AX wireless modes
+ * @phy_id: phy id
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS reg_update_hal_reg_cap(struct wlan_objmgr_psoc *psoc,
+				  uint32_t wireless_modes, uint8_t phy_id);
 
 /**
  * reg_chan_in_range() - Check if the given channel is in pdev's channel range
@@ -1033,6 +1056,16 @@ reg_get_5g_bonded_channel_for_freq(struct wlan_objmgr_pdev *pdev,
 				   enum phy_ch_width ch_width,
 				   const struct bonded_channel_freq
 				   **bonded_chan_ptr_ptr);
+
+/**
+ * reg_is_disable_for_freq() - Check if the given channel frequency in
+ * disable state
+ * @pdev: Pointer to pdev
+ * @freq: Channel frequency
+ *
+ * Return: True if channel state is disabled, else false
+ */
+bool reg_is_disable_for_freq(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq);
 #endif /* CONFIG_CHAN_FREQ_API */
 
 /**
@@ -1079,12 +1112,14 @@ QDF_STATUS reg_set_6ghz_supported(struct wlan_objmgr_psoc *psoc,
 bool reg_is_6ghz_op_class(struct wlan_objmgr_pdev *pdev,
 			  uint8_t op_class);
 
+#ifdef CONFIG_REG_CLIENT
 /**
  * reg_is_6ghz_supported() - Whether 6ghz is supported
  *
  * @psoc: pointer to psoc
  */
 bool reg_is_6ghz_supported(struct wlan_objmgr_psoc *psoc);
+#endif
 
 /**
  * reg_get_unii_5g_bitmap() - get unii_5g_bitmap value

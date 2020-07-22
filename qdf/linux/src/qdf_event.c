@@ -101,8 +101,8 @@ QDF_STATUS qdf_event_set(qdf_event_t *event)
 	if (event->cookie != LINUX_EVENT_COOKIE)
 		return QDF_STATUS_E_INVAL;
 
-	complete(&event->complete);
 	event->done = true;
+	complete(&event->complete);
 
 	return QDF_STATUS_SUCCESS;
 }

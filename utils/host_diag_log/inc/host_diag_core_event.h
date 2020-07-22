@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -898,6 +898,8 @@ enum wifi_connectivity_events {
  * @WIFI_POWER_EVENT_WAKELOCK_IFACE_CHANGE_TIMER: iface change timer running
  * @WIFI_POWER_EVENT_WAKELOCK_MONITOR_MODE: Montitor mode wakelock
  * @WIFI_POWER_EVENT_WAKELOCK_DRIVER_IDLE_RESTART: Wakelock for Idle Restart
+ * @WIFI_POWER_EVENT_WAKELOCK_DRIVER_IDLE_SHUTDOWN: Wakelock for Idle Shutdown
+ * @WIFI_POWER_EVENT_WAKELOCK_TDLS: Wakelock for TDLS
  *
  * Indicates the reason for which the wakelock was taken/released
  */
@@ -925,6 +927,8 @@ enum wake_lock_reason {
 	WIFI_POWER_EVENT_WAKELOCK_IFACE_CHANGE_TIMER,
 	WIFI_POWER_EVENT_WAKELOCK_MONITOR_MODE,
 	WIFI_POWER_EVENT_WAKELOCK_DRIVER_IDLE_RESTART,
+	WIFI_POWER_EVENT_WAKELOCK_DRIVER_IDLE_SHUTDOWN,
+	WIFI_POWER_EVENT_WAKELOCK_TDLS,
 };
 
 /* The length of interface name should >= IFNAMSIZ */

@@ -69,12 +69,13 @@ static uint32_t init_deinit_alloc_host_mem_chunk(struct wlan_objmgr_psoc *psoc,
 		return 0;
 
 	/*
-	 * We have skip smaller chunks memory allocation for TXBF_CV buffer
-	 * as Firmware is expecting continuous memory
+	 * We have skip smaller chunks memory allocation for TXBF_CV and
+	 * CFR_CAPTURE buffer as Firmware is expecting continuous memory
 	 */
 	if (!((num_unit_info & HOST_CONTIGUOUS_MEM_CHUNK_REQUIRED) &&
 	      (req_id == TXBF_CV_POOL0 || req_id == TXBF_CV_POOL1 ||
-	      req_id == TXBF_CV_POOL2))) {
+	      req_id == TXBF_CV_POOL2 ||
+	      req_id == CFR_CAPTURE_HOST_MEM_REQ_ID))) {
 		ichunk = ((num_units * unit_len) >>
 			HOST_MEM_CHUNK_MAX_SIZE_POWER2);
 		if (ichunk)
@@ -361,6 +362,37 @@ void init_deinit_derive_band_to_mac_param(
 	}
 }
 
+/* if num of mac per band is sent by host then FW will not initialize
+ * its data structure with its default value. Host either have to set
+ * these value as per current HW mode or else these variable should be
+ * initialized to 0.
+ * Ex - If host is sending default HW mode as DBS in INIT_CMDID
+ * then either host should fill both the MACs (mac0 and mac1) or
+ * else don't fill for even a single mac, it should be initialized to
+ * 0 which means FW will initialize its data structures based on its
+ * default value.
+ */
+#ifdef FEATURE_NO_DBS_INTRABAND_MCC_SUPPORT
+static bool is_num_band_to_mac_required(struct wmi_unified *wmi_handle)
+{
+	bool is_required = true;
+
+	/* For target where interband MCC is not supported, num of
+	 * mac should be set to default value i.e. 0
+	 */
+	is_required = (wmi_service_enabled(wmi_handle,
+				wmi_service_dual_band_simultaneous_support) ||
+		       !wmi_service_enabled(wmi_handle,
+				wmi_service_no_interband_mcc_support));
+	return is_required;
+}
+#else
+static bool is_num_band_to_mac_required(struct wmi_unified *wmi_handle)
+{
+	return true;
+}
+#endif
+
 void init_deinit_prepare_send_init_cmd(
 		 struct wlan_objmgr_psoc *psoc,
 		 struct target_psoc_info *tgt_hdl)
@@ -391,8 +423,9 @@ void init_deinit_prepare_send_init_cmd(
 		if (info->preferred_hw_mode == WMI_HOST_HW_MODE_SINGLE)
 			init_param.hw_mode_id = WMI_HOST_HW_MODE_MAX;
 
-		init_param.num_band_to_mac = target_psoc_get_num_radios(
-								tgt_hdl);
+		if (is_num_band_to_mac_required(wmi_handle))
+			init_param.num_band_to_mac =
+					 target_psoc_get_num_radios(tgt_hdl);
 
 		init_deinit_derive_band_to_mac_param(psoc, tgt_hdl,
 						     init_param.band_to_mac);
@@ -411,6 +444,10 @@ void init_deinit_prepare_send_init_cmd(
 	ret_val = target_if_update_pdev_tgt_info(psoc, tgt_hdl);
 	if (ret_val != QDF_STATUS_SUCCESS)
 		return;
+
+	info->wlan_res_cfg.max_ndp_sessions =
+		QDF_MIN(info->wlan_res_cfg.max_ndp_sessions,
+			info->service_ext2_param.max_ndp_sessions);
 
 	target_if_debug("FW version 0x%x ", info->target_caps.fw_version);
 	if (init_deinit_is_service_ext_msg(psoc, tgt_hdl) == QDF_STATUS_SUCCESS)

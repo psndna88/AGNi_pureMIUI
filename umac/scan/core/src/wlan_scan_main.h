@@ -93,6 +93,12 @@
 /* MAX RNR entries per channel*/
 #define WLAN_MAX_RNR_COUNT 15
 
+/*
+ * Maximum numbers of callback functions that may be invoked
+ * for a particular scan event.
+ */
+#define MAX_SCAN_EVENT_LISTENERS (MAX_SCAN_EVENT_HANDLERS_PER_PDEV + 1)
+
 /**
  * struct probe_time_dwell_time - probe time, dwell time map
  * @dwell_time: dwell time
@@ -313,7 +319,6 @@ struct extscan_def_config {
  * @select_5gh_margin: Prefer connecting to 5G AP even if
  *      its RSSI is lower by select_5gh_margin dbm than 2.4G AP.
  *      applicable if prefer_5ghz is set.
- * @is_bssid_hint_priority: True if bssid_hint is given priority
  * @enable_mac_spoofing: enable mac address spoof in scan
  * @max_bss_per_pdev: maximum number of bss entries to be maintained per pdev
  * @max_active_scans_allowed: maximum number of active parallel scan allowed
@@ -397,7 +402,6 @@ struct scan_default_params {
 	qdf_time_t scan_cache_aging_time;
 	uint32_t select_5ghz_margin;
 	bool enable_mac_spoofing;
-	bool is_bssid_hint_priority;
 	uint32_t usr_cfg_probe_rpt_time;
 	uint32_t usr_cfg_num_probes;
 	uint16_t max_bss_per_pdev;
@@ -461,7 +465,6 @@ struct scan_default_params {
 		};
 		uint32_t scan_events;
 	};
-	struct scoring_config score_config;
 };
 
 /**
@@ -496,6 +499,7 @@ struct scan_cb {
  * @miracast_enabled: miracast enabled
  * @disable_timeout: command timeout disabled
  * @drop_bcn_on_chan_mismatch: drop bcn if channel mismatch
+ * @drop_bcn_on_invalid_freq: drop bcn if freq is invalid in IEs (DS/HT/HE)
  * @scan_start_request_buff: buffer used to pass
  *      scan config to event handlers
  * @rnr_channel_db: RNR channel list database
@@ -522,11 +526,128 @@ struct wlan_scan_obj {
 	bool miracast_enabled;
 	bool disable_timeout;
 	bool drop_bcn_on_chan_mismatch;
+	bool drop_bcn_on_invalid_freq;
 	struct scan_start_request scan_start_request_buff;
 #ifdef FEATURE_6G_SCAN_CHAN_SORT_ALGO
 	struct channel_list_db rnr_channel_db;
 #endif
+#ifdef ENABLE_SCAN_PROFILE
+	uint64_t scan_listener_cb_exe_dur[MAX_SCAN_EVENT_LISTENERS];
+	uint64_t scm_scan_event_duration;
+	uint64_t scm_scan_to_post_scan_duration;
+#endif
 };
+
+#ifdef ENABLE_SCAN_PROFILE
+static inline
+void scm_duration_init(struct wlan_scan_obj *scan)
+{
+	if (!scan)
+		return;
+
+	scan->scm_scan_event_duration = 0;
+	scan->scm_scan_to_post_scan_duration = 0;
+}
+
+static inline
+void scm_event_duration_start(struct wlan_scan_obj *scan)
+{
+	if (!scan)
+		return;
+
+	scan->scm_scan_event_duration =
+		qdf_ktime_to_ms(qdf_ktime_get());
+}
+
+static inline
+void scm_event_duration_end(struct wlan_scan_obj *scan)
+{
+	if (!scan)
+		return;
+
+	scan->scm_scan_event_duration =
+		(qdf_ktime_to_ms(qdf_ktime_get()) -
+		 scan->scm_scan_event_duration);
+}
+
+static inline
+void scm_to_post_scan_duration_set(struct wlan_scan_obj *scan)
+{
+	if (!scan)
+		return;
+
+	scan->scm_scan_to_post_scan_duration =
+		(qdf_ktime_to_ms(qdf_ktime_get()) -
+		 scan->scm_scan_event_duration);
+}
+
+static inline
+void scm_listener_cb_exe_dur_start(struct wlan_scan_obj *scan, uint8_t index)
+{
+	if (!scan || (index >= MAX_SCAN_EVENT_LISTENERS))
+		return;
+
+	scan->scan_listener_cb_exe_dur[index] =
+		qdf_ktime_to_ms(qdf_ktime_get());
+}
+
+static inline
+void scm_listener_cb_exe_dur_end(struct wlan_scan_obj *scan, uint8_t index)
+{
+	if (!scan || (index >= MAX_SCAN_EVENT_LISTENERS))
+		return;
+
+	scan->scan_listener_cb_exe_dur[index] =
+		(qdf_ktime_to_ms(qdf_ktime_get()) -
+		 scan->scan_listener_cb_exe_dur[index]);
+}
+
+static inline
+void scm_listener_duration_init(struct wlan_scan_obj *scan)
+{
+	if (!scan)
+		return;
+
+	qdf_mem_set(&scan->scan_listener_cb_exe_dur,
+		    sizeof(uint64_t) * MAX_SCAN_EVENT_LISTENERS,
+		    0);
+}
+#else
+static inline
+void scm_duration_init(struct wlan_scan_obj *scan)
+{
+}
+
+static inline
+void scm_event_duration_start(struct wlan_scan_obj *scan)
+{
+}
+
+static inline
+void scm_event_duration_end(struct wlan_scan_obj *scan)
+{
+}
+
+static inline
+void scm_to_post_scan_duration_set(struct wlan_scan_obj *scan)
+{
+}
+
+static inline
+void scm_listener_cb_exe_dur_start(struct wlan_scan_obj *scan, uint8_t index)
+{
+}
+
+static inline
+void scm_listener_cb_exe_dur_end(struct wlan_scan_obj *scan, uint8_t index)
+{
+}
+
+static inline
+void scm_listener_duration_init(struct wlan_scan_obj *scan)
+{
+}
+#endif
 
 /**
  * wlan_psoc_get_scan_obj() - private API to get scan object from psoc

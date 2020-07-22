@@ -36,9 +36,6 @@
 #ifdef MSM_PLATFORM
 #include <asm/arch_timer.h>
 #endif
-#ifdef CONFIG_CNSS
-#include <net/cnss.h>
-#endif
 
 typedef unsigned long __qdf_time_t;
 typedef ktime_t  __qdf_ktime_t;
@@ -75,6 +72,16 @@ static inline ktime_t __qdf_ktime_add(ktime_t ktime1, ktime_t ktime2)
 static inline ktime_t __qdf_ktime_get(void)
 {
 	return ktime_get();
+}
+
+/**
+ * __qdf_ktime_real_get() - Gets the current wall clock as ktime object
+ *
+ * Return: current wall clock as ktime object
+ */
+static inline ktime_t __qdf_ktime_real_get(void)
+{
+	return ktime_get_real();
 }
 
 /**

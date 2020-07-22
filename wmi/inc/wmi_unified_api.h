@@ -109,6 +109,10 @@
 #include "wlan_pkt_capture_public_structs.h"
 #endif
 
+#ifdef WLAN_IOT_SIM_SUPPORT
+#include "wlan_iot_sim_public_structs.h"
+#endif
+
 typedef qdf_nbuf_t wmi_buf_t;
 #define wmi_buf_data(_buf) qdf_nbuf_data(_buf)
 
@@ -1993,6 +1997,7 @@ QDF_STATUS wmi_unified_smart_ant_enable_tx_feedback_cmd_send(
 			wmi_unified_t wmi_handle,
 			struct smart_ant_enable_tx_feedback_params *param);
 
+#ifdef WLAN_IOT_SIM_SUPPORT
 /**
  *  wmi_unified_simulation_test_cmd_send() -
  *  WMI simulation test command
@@ -2004,6 +2009,7 @@ QDF_STATUS wmi_unified_smart_ant_enable_tx_feedback_cmd_send(
 QDF_STATUS wmi_unified_simulation_test_cmd_send(wmi_unified_t wmi_handle,
 						struct simulation_test_params
 						*param);
+#endif
 
 /**
  *  wmi_unified_vdev_spectral_configure_cmd_send() -
@@ -2334,6 +2340,22 @@ QDF_STATUS wmi_get_target_cap_from_service_ready(
 QDF_STATUS
 wmi_extract_hal_reg_cap(wmi_unified_t wmi_handle, void *evt_buf,
 			struct wlan_psoc_hal_reg_capability *hal_reg_cap);
+
+/**
+ * wmi_extract_hal_reg_cap_ext2() - Extract HAL reg capabilities from service
+ * ready ext2 event
+ * @wmi_handle: wmi handle
+ * @evt_buf: Pointer to event buffer
+ * @phy_idx: Phy id
+ * @wireless_modes: 11AX wireless modes
+ * @hal_reg_cap: pointer to hold HAL reg capabilities ext2 structure
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS
+wmi_extract_hal_reg_cap_ext2(
+		wmi_unified_t wmi_handle, void *evt_buf, uint8_t phy_idx,
+		struct wlan_psoc_host_hal_reg_capabilities_ext2 *hal_reg_cap);
 
 /**
  * wmi_extract_num_mem_reqs_from_service_ready() - Extract number of memory
@@ -3239,6 +3261,26 @@ QDF_STATUS wmi_extract_mac_phy_cap_service_ready_ext(
 			struct wlan_psoc_host_mac_phy_caps *param);
 
 /**
+ * wmi_extract_mac_phy_cap_service_ready_ext2() - Extract MAC phy cap from
+ * service ready ext2 event.
+ * @wmi_handle: wmi handle
+ * @evt_buf: pointer to event buffer
+ * @hw_mode_id: hw mode id of hw_mode_caps
+ * @phy_id: phy_id within hw_mode_cap
+ * @phy_idx: index to hw_mode_cap for the given hw_mode_id and phy_id
+ * @mac_phy_cap: Pointer to mac_phy_cap_ext2 structure
+ *
+ * Return: QDF_STATUS_SUCCESS for success or error code
+ */
+QDF_STATUS wmi_extract_mac_phy_cap_service_ready_ext2(
+			wmi_unified_t wmi_handle,
+			uint8_t *evt_buf,
+			uint8_t hw_mode_id,
+			uint8_t phy_id,
+			uint8_t phy_idx,
+			struct wlan_psoc_host_mac_phy_caps_ext2 *mac_phy_cap);
+
+/**
  * wmi_extract_reg_cap_service_ready_ext() -
  *       extract REG cap from service ready event
  * @wmi_handle: wmi handle
@@ -4065,4 +4107,17 @@ wmi_unified_extract_time_sync_ftm_offset(wmi_unified_t wmi_handle,
 QDF_STATUS
 wmi_unified_send_injector_frame_config_cmd(wmi_unified_t wmi_handle,
 				struct wmi_host_injector_frame_params *param);
+
+/**
+ * wmi_unified_send_cp_stats_cmd() - Send cp stats command
+ * @wmi_handle: wmi handle
+ * @buf_ptr: buf_ptr received from wifistats
+ * @buf_len: length of buffer received from wifistats
+ *
+ * This function sends cp stats cmd to get cp stats.
+ *
+ * Return QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS wmi_unified_send_cp_stats_cmd(wmi_unified_t wmi_handle,
+					 void *buf_ptr, uint32_t buf_len);
 #endif /* _WMI_UNIFIED_API_H_ */

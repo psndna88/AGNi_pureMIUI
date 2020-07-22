@@ -679,7 +679,6 @@ ucfg_scan_cancel_sync(struct scan_cancel_request *req)
 	struct wlan_objmgr_vdev *vdev;
 	struct wlan_objmgr_pdev *pdev;
 	uint32_t max_wait_iterations = SCM_CANCEL_SCAN_WAIT_ITERATION;
-	qdf_event_t cancel_scan_event;
 
 	if (!req || !req->vdev) {
 		scm_err("req or vdev within req is NULL");
@@ -699,34 +698,22 @@ ucfg_scan_cancel_sync(struct scan_cancel_request *req)
 	if (QDF_IS_STATUS_ERROR(status))
 		return status;
 
-	memset(&cancel_scan_event, 0, sizeof(cancel_scan_event));
-	/*
-	 * If cancel req is to cancel all scan of pdev or vdev
-	 * wait until all scan of pdev or vdev get cancelled
-	 */
-	qdf_event_create(&cancel_scan_event);
-	qdf_event_reset(&cancel_scan_event);
-
 	if (cancel_pdev) {
 		pdev = wlan_vdev_get_pdev(vdev);
 		while ((ucfg_scan_get_pdev_status(pdev) !=
 		     SCAN_NOT_IN_PROGRESS) && max_wait_iterations) {
 			scm_debug("wait for all pdev scan to get complete");
-				qdf_wait_single_event(&cancel_scan_event,
-					SCM_CANCEL_SCAN_WAIT_TIME);
+			qdf_sleep(SCM_CANCEL_SCAN_WAIT_TIME);
 			max_wait_iterations--;
 		}
 	} else if (cancel_vdev) {
 		while ((ucfg_scan_get_vdev_status(vdev) !=
 		     SCAN_NOT_IN_PROGRESS) && max_wait_iterations) {
 			scm_debug("wait for all vdev scan to get complete");
-				qdf_wait_single_event(&cancel_scan_event,
-					SCM_CANCEL_SCAN_WAIT_TIME);
+			qdf_sleep(SCM_CANCEL_SCAN_WAIT_TIME);
 			max_wait_iterations--;
 		}
 	}
-
-	qdf_event_destroy(&cancel_scan_event);
 
 	if (!max_wait_iterations) {
 		scm_err("Failed to wait for scans to get complete");
@@ -949,6 +936,8 @@ wlan_scan_global_init(struct wlan_objmgr_psoc *psoc,
 	scan_obj->scan_disabled = 0;
 	scan_obj->drop_bcn_on_chan_mismatch =
 			 cfg_get(psoc, CFG_DROP_BCN_ON_CHANNEL_MISMATCH);
+	scan_obj->drop_bcn_on_invalid_freq =
+			 cfg_get(psoc, CFG_DROP_BCN_ON_INVALID_FREQ);
 	scan_obj->disable_timeout = false;
 	scan_obj->scan_def.active_dwell =
 			 cfg_get(psoc, CFG_ACTIVE_MAX_CHANNEL_TIME);
@@ -1003,8 +992,6 @@ wlan_scan_global_init(struct wlan_objmgr_psoc *psoc,
 			cfg_get(psoc, CFG_HONOUR_NL_SCAN_POLICY_FLAGS);
 	scan_obj->scan_def.enable_mac_spoofing =
 			cfg_get(psoc, CFG_ENABLE_MAC_ADDR_SPOOFING);
-	scan_obj->scan_def.is_bssid_hint_priority =
-			cfg_get(psoc, CFG_IS_BSSID_HINT_PRIORITY);
 	scan_obj->scan_def.extscan_adaptive_dwell_mode =
 			cfg_get(psoc, CFG_ADAPTIVE_EXTSCAN_DWELL_MODE);
 
@@ -1503,9 +1490,6 @@ QDF_STATUS ucfg_scan_update_user_config(struct wlan_objmgr_psoc *psoc,
 	scan_def->sta_miracast_mcc_rest_time =
 				scan_cfg->sta_miracast_mcc_rest_time;
 
-	qdf_mem_copy(&scan_def->score_config, &scan_cfg->score_config,
-		sizeof(struct scoring_config));
-
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -1672,6 +1656,11 @@ static bool scm_serialization_scan_rules_cb(
 		}
 		break;
 	case WLAN_UMAC_COMP_MLME:
+		if (comp_info->scan_info.is_scan_for_connect) {
+			scm_debug("Allow scan request from connect");
+			return true;
+		}
+
 		if (comp_info->scan_info.is_mlme_op_in_progress) {
 			scm_debug("Cancel scan. MLME operation in progress");
 			return false;

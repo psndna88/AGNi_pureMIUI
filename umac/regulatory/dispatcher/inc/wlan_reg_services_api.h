@@ -556,6 +556,20 @@ enum channel_state wlan_reg_get_bonded_channel_state(
 #endif /* CONFIG_CHAN_NUM_API */
 
 /**
+ * wlan_reg_get_bonded_channel_state_for_freq() - Get bonded channel freq state
+ * @freq: channel frequency
+ * @bw: channel band width
+ * @sec_freq: secondary frequency
+ *
+ * Return: channel state
+ */
+enum channel_state
+wlan_reg_get_bonded_channel_state_for_freq(struct wlan_objmgr_pdev *pdev,
+					   qdf_freq_t freq,
+					   enum phy_ch_width bw,
+					   qdf_freq_t sec_freq);
+
+/**
  * wlan_reg_set_dfs_region() - set the dfs region
  * @pdev: pdev ptr
  * @dfs_reg: dfs region
@@ -1346,6 +1360,7 @@ uint16_t wlan_reg_get_op_class_width(struct wlan_objmgr_pdev *pdev,
 bool wlan_reg_is_6ghz_op_class(struct wlan_objmgr_pdev *pdev,
 			       uint8_t op_class);
 
+#ifdef CONFIG_REG_CLIENT
 /**
  * wlan_reg_is_6ghz_supported() - Whether 6ghz is supported
  * @psoc: psoc ptr
@@ -1353,6 +1368,7 @@ bool wlan_reg_is_6ghz_op_class(struct wlan_objmgr_pdev *pdev,
  * Return: bool
  */
 bool wlan_reg_is_6ghz_supported(struct wlan_objmgr_psoc *psoc);
+#endif
 
 #ifdef HOST_OPCLASS_EXT
 /**

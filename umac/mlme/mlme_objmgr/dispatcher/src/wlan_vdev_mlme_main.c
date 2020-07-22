@@ -33,6 +33,7 @@
 #include <cdp_txrx_cmn.h>
 #include <wlan_lmac_if_def.h>
 #include <target_if_vdev_mgr_tx_ops.h>
+#include "connection_mgr/core/src/wlan_cm_main.h"
 
 static QDF_STATUS mlme_vdev_obj_create_handler(struct wlan_objmgr_vdev *vdev,
 					       void *arg)
@@ -103,6 +104,11 @@ static QDF_STATUS mlme_vdev_obj_create_handler(struct wlan_objmgr_vdev *vdev,
 		goto init_failed;
 	}
 
+	if (QDF_IS_STATUS_ERROR(mlme_cm_init(vdev_mlme))) {
+		mlme_err("CM SM create failed");
+		goto cm_sm_create_failed;
+	}
+
 	if (mlme_vdev_ops_ext_hdl_create(vdev_mlme) !=
 						QDF_STATUS_SUCCESS) {
 		mlme_err("Legacy vdev object creation failed");
@@ -127,6 +133,8 @@ ext_hdl_post_create_failed:
 	wlan_objmgr_vdev_component_obj_detach(vdev, WLAN_UMAC_COMP_MLME,
 					      vdev_mlme);
 ext_hdl_create_failed:
+	mlme_cm_deinit(vdev_mlme);
+cm_sm_create_failed:
 	mlme_vdev_sm_destroy(vdev_mlme);
 init_failed:
 	wlan_minidump_remove(vdev_mlme);
@@ -150,6 +158,7 @@ static QDF_STATUS mlme_vdev_obj_destroy_handler(struct wlan_objmgr_vdev *vdev,
 		return QDF_STATUS_SUCCESS;
 	}
 
+	mlme_cm_deinit(vdev_mlme);
 	mlme_vdev_sm_destroy(vdev_mlme);
 
 	mlme_vdev_ops_ext_hdl_destroy(vdev_mlme);
@@ -164,9 +173,11 @@ static QDF_STATUS mlme_vdev_obj_destroy_handler(struct wlan_objmgr_vdev *vdev,
 
 static void mlme_scan_serialization_comp_info_cb(
 		struct wlan_objmgr_vdev *vdev,
-		union wlan_serialization_rules_info *comp_info)
+		union wlan_serialization_rules_info *comp_info,
+		struct wlan_serialization_command *cmd)
 {
 	struct wlan_objmgr_pdev *pdev;
+	struct scan_start_request *scan_start_req = cmd->umac_cmd;
 	QDF_STATUS status;
 
 	if (!comp_info || !vdev) {
@@ -178,6 +189,18 @@ static void mlme_scan_serialization_comp_info_cb(
 	if (!pdev) {
 		mlme_err("pdev is NULL");
 		return;
+	}
+
+	if (!scan_start_req) {
+		mlme_err("scan start request is null");
+		return;
+	}
+
+	comp_info->scan_info.is_scan_for_connect = false;
+
+	if (cmd->cmd_type == WLAN_SER_CMD_SCAN &&
+	    scan_start_req->scan_req.scan_type == SCAN_TYPE_SCAN_FOR_CONNECT) {
+		comp_info->scan_info.is_scan_for_connect = true;
 	}
 
 	comp_info->scan_info.is_mlme_op_in_progress = false;

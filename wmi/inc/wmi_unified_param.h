@@ -672,24 +672,20 @@ struct channel_param {
  * struct oem_data - oem data to be sent to firmware
  * @vdev_id: Unique identifier assigned to the vdev
  * @data_len: len of data
+ * @pdev_id: pdev id to identify the pdev
+ * @pdev_vdev_flag: 0 when vdev is valid, 1 when pdev is valid
+ * @is_host_pdev_id: 1 for host pdev id, 0 otherwise
  * @data: the pointer to the buffer containing data
  */
 struct oem_data {
 	uint8_t vdev_id;
 	size_t data_len;
+	uint8_t pdev_id;
+	bool pdev_vdev_flag;
+	bool is_host_pdev_id;
 	uint8_t *data;
 };
 #endif
-
-/**
- * struct mac_ssid - mac ssid structure
- * @length:
- * @mac_ssid[WMI_MAC_MAX_SSID_LENGTH]:
- */
-struct mac_ssid {
-	uint8_t length;
-	uint8_t mac_ssid[WMI_MAC_MAX_SSID_LENGTH];
-} qdf_packed;
 
 /**
  * enum nss_chains_band_info - Band info for dynamic nss, chains change feature
@@ -1754,7 +1750,7 @@ struct roam_offload_scan_params {
  * @auth_bit_field: auth bit field for matching WPA IE
  */
 struct wifi_epno_network_params {
-	struct mac_ssid  ssid;
+	struct wlan_ssid  ssid;
 	int8_t       rssi_threshold;
 	uint8_t      flags;
 	uint8_t      auth_bit_field;
@@ -2911,37 +2907,6 @@ struct thermal_mitigation_params {
  */
 struct smart_ant_enable_tx_feedback_params {
 	int enable;
-};
-
-/**
- * struct simulation_test_params
- * pdev_id: pdev id
- * vdev_id: vdev id
- * peer_macaddr: peer MAC address
- * test_cmd_type: test command type
- * test_subcmd_type: test command sub type
- * frame_type: frame type
- * frame_subtype: frame subtype
- * seq: sequence number
- * offset: Frame content offset
- * frame_length: Frame content length
- * buf_len: Buffer length
- * bufp: buffer
- */
-struct simulation_test_params {
-	u32 pdev_id;
-	u32 vdev_id;
-	u8 peer_mac[QDF_MAC_ADDR_SIZE];
-	u32 test_cmd_type;
-	u32 test_subcmd_type;
-	u8 frame_type;
-	u8 frame_subtype;
-	u8 seq;
-	u8 reserved;
-	u16 offset;
-	u16 frame_length;
-	u32 buf_len;
-	u8 *bufp;
 };
 
 /**
@@ -4704,6 +4669,8 @@ typedef enum {
 	wmi_roam_scan_chan_list_id,
 	wmi_muedca_params_config_eventid,
 	wmi_pdev_sscan_fw_param_eventid,
+	wmi_roam_cap_report_event_id,
+	wmi_vdev_bcn_latency_event_id,
 	wmi_events_max,
 } wmi_conv_event_id;
 
@@ -5010,6 +4977,7 @@ typedef enum {
 	wmi_vdev_param_set_cmd_obss_pd_threshold,
 	wmi_vdev_param_set_cmd_obss_pd_per_ac,
 	wmi_vdev_param_enable_srp,
+	wmi_vdev_param_nan_config_features,
 } wmi_conv_vdev_param_id;
 
 /**
@@ -5227,6 +5195,9 @@ typedef enum {
 	wmi_support_extend_address,
 	wmi_service_srg_srp_spatial_reuse_support,
 	wmi_service_suiteb_roam_support,
+	wmi_service_no_interband_mcc_support,
+	wmi_service_dual_sta_roam_support,
+	wmi_service_peer_create_conf,
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF
@@ -5366,6 +5337,8 @@ struct wmi_host_fw_abi_ver {
  * @max_rnr_neighbours: Max supported RNR neighbors in multisoc APs
  * @ema_max_vap_cnt: Number of maximum EMA tx-vaps at any instance of time
  * @ema_max_profile_period: Maximum EMA profile periodicity on any pdev
+ * @max_ndp_sessions: Max ndp sessions support
+ * @max_ndi: max number of ndi host supports
  */
 typedef struct {
 	uint32_t num_vdevs;
@@ -5467,6 +5440,8 @@ typedef struct {
 	uint32_t max_rnr_neighbours;
 	uint32_t ema_max_vap_cnt;
 	uint32_t ema_max_profile_period;
+	uint32_t max_ndp_sessions;
+	uint32_t max_ndi;
 } target_resource_config;
 
 /**

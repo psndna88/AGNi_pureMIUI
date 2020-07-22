@@ -22,6 +22,7 @@
 #include <wlan_objmgr_peer_obj.h>
 #include <wlan_objmgr_pdev_obj.h>
 #include <wlan_cfr_public_structs.h>
+#include <wlan_cfr_utils_api.h>
 
 #define MAX_CFR_PRD        (10*60*1000)        /* 10 minutes */
 
@@ -115,6 +116,26 @@ int ucfg_cfr_get_timer(struct wlan_objmgr_pdev *pdev);
  * Return: status of write CFR stop string
  */
 QDF_STATUS ucfg_cfr_stop_indication(struct wlan_objmgr_vdev *vdev);
+
+#ifdef WLAN_CFR_ADRASTEA
+/**
+ * ucfg_cfr_capture_data() - API called when HTT msg for CFR dump ind received
+ * @psoc: pointer to psoc object
+ * @vdev_id : vdev id
+ * @hdr: CFR header
+ * @mem_index: start offset index of dump in mem
+ *
+ * Return: None
+ */
+void ucfg_cfr_capture_data(struct wlan_objmgr_psoc *psoc, uint32_t vdev_id,
+			   struct csi_cfr_header *hdr, uint32_t mem_index);
+#else
+static inline
+void ucfg_cfr_capture_data(struct wlan_objmgr_psoc *psoc, uint32_t vdev_id,
+			   struct csi_cfr_header *hdr, uint32_t mem_index)
+{
+}
+#endif
 
 #ifdef WLAN_ENH_CFR_ENABLE
 /* Channel capture recipe filters */

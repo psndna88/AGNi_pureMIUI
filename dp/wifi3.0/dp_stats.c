@@ -4252,58 +4252,80 @@ void dp_htt_stats_copy_tag(struct dp_pdev *pdev, uint8_t tag_type, uint32_t *tag
 {
 	void *dest_ptr = NULL;
 	uint32_t size = 0;
+	uint32_t size_expected = 0;
 
 	switch (tag_type) {
 	case HTT_STATS_TX_PDEV_CMN_TAG:
 		dest_ptr = &pdev->stats.htt_tx_pdev_stats.cmn_tlv;
 		size = sizeof(htt_tx_pdev_stats_cmn_tlv);
+		size_expected = sizeof(struct cdp_htt_tx_pdev_stats_cmn_tlv);
 		break;
 	case HTT_STATS_TX_PDEV_UNDERRUN_TAG:
 		dest_ptr = &pdev->stats.htt_tx_pdev_stats.underrun_tlv;
 		size = sizeof(htt_tx_pdev_stats_urrn_tlv_v);
+		size_expected = sizeof(struct cdp_htt_tx_pdev_stats_urrn_tlv_v);
 		break;
 	case HTT_STATS_TX_PDEV_SIFS_TAG:
 		dest_ptr = &pdev->stats.htt_tx_pdev_stats.sifs_tlv;
 		size = sizeof(htt_tx_pdev_stats_sifs_tlv_v);
+		size_expected = sizeof(struct cdp_htt_tx_pdev_stats_sifs_tlv_v);
 		break;
 	case HTT_STATS_TX_PDEV_FLUSH_TAG:
 		dest_ptr = &pdev->stats.htt_tx_pdev_stats.flush_tlv;
 		size = sizeof(htt_tx_pdev_stats_flush_tlv_v);
+		size_expected =
+			sizeof(struct cdp_htt_tx_pdev_stats_flush_tlv_v);
 		break;
 	case HTT_STATS_TX_PDEV_PHY_ERR_TAG:
 		dest_ptr = &pdev->stats.htt_tx_pdev_stats.phy_err_tlv;
 		size = sizeof(htt_tx_pdev_stats_phy_err_tlv_v);
+		size_expected =
+			sizeof(struct cdp_htt_tx_pdev_stats_phy_err_tlv_v);
 		break;
 	case HTT_STATS_RX_PDEV_FW_STATS_TAG:
 		dest_ptr = &pdev->stats.htt_rx_pdev_stats.fw_stats_tlv;
 		size = sizeof(htt_rx_pdev_fw_stats_tlv);
+		size_expected = sizeof(struct cdp_htt_rx_pdev_fw_stats_tlv);
 		break;
 	case HTT_STATS_RX_SOC_FW_STATS_TAG:
 		dest_ptr = &pdev->stats.htt_rx_pdev_stats.soc_stats.fw_tlv;
 		size = sizeof(htt_rx_soc_fw_stats_tlv);
+		size_expected = sizeof(struct cdp_htt_rx_soc_fw_stats_tlv);
 		break;
 	case HTT_STATS_RX_SOC_FW_REFILL_RING_EMPTY_TAG:
 		dest_ptr = &pdev->stats.htt_rx_pdev_stats.soc_stats.fw_refill_ring_empty_tlv;
 		size = sizeof(htt_rx_soc_fw_refill_ring_empty_tlv_v);
+		size_expected =
+		sizeof(struct cdp_htt_rx_soc_fw_refill_ring_empty_tlv_v);
 		break;
 	case HTT_STATS_RX_SOC_FW_REFILL_RING_NUM_REFILL_TAG:
 		dest_ptr = &pdev->stats.htt_rx_pdev_stats.soc_stats.fw_refill_ring_num_refill_tlv;
 		size = sizeof(htt_rx_soc_fw_refill_ring_num_refill_tlv_v);
+		size_expected =
+		sizeof(struct cdp_htt_rx_soc_fw_refill_ring_num_refill_tlv_v);
 		break;
 	case HTT_STATS_RX_PDEV_FW_RING_MPDU_ERR_TAG:
 		dest_ptr = &pdev->stats.htt_rx_pdev_stats.fw_ring_mpdu_err_tlv;
 		size = sizeof(htt_rx_pdev_fw_ring_mpdu_err_tlv_v);
+		size_expected =
+			sizeof(struct cdp_htt_rx_pdev_fw_ring_mpdu_err_tlv_v);
 		break;
 	case HTT_STATS_RX_PDEV_FW_MPDU_DROP_TAG:
 		dest_ptr = &pdev->stats.htt_rx_pdev_stats.fw_ring_mpdu_drop;
 		size = sizeof(htt_rx_pdev_fw_mpdu_drop_tlv_v);
+		size_expected =
+			sizeof(struct cdp_htt_rx_pdev_fw_mpdu_drop_tlv_v);
 		break;
 	default:
 		break;
 	}
 
+	if (size_expected < size)
+		dp_warn("Buffer Overflow:FW Struct Size:%d Host Struct Size:%d"
+			, size, size_expected);
+
 	if (dest_ptr)
-		qdf_mem_copy(dest_ptr, tag_buf, size);
+		qdf_mem_copy(dest_ptr, tag_buf, size_expected);
 }
 
 #ifdef VDEV_PEER_PROTOCOL_COUNT
@@ -4418,6 +4440,7 @@ void dp_peer_stats_update_protocol_cnt(struct cdp_soc_t *soc,
 }
 #endif
 
+#ifdef WDI_EVENT_ENABLE
 QDF_STATUS dp_peer_stats_notify(struct dp_pdev *dp_pdev, struct dp_peer *peer)
 {
 	struct cdp_interface_peer_stats peer_stats_intf;
@@ -4452,6 +4475,7 @@ QDF_STATUS dp_peer_stats_notify(struct dp_pdev *dp_pdev, struct dp_peer *peer)
 
 	return QDF_STATUS_SUCCESS;
 }
+#endif
 
 #ifdef QCA_ENH_V3_STATS_SUPPORT
 /**
@@ -4946,6 +4970,10 @@ void dp_print_soc_cfg_params(struct dp_soc *soc)
 		       soc_cfg_ctx->peer_flow_ctrl_enabled);
 	DP_PRINT_STATS("napi enabled: %u ",
 		       soc_cfg_ctx->napi_enabled);
+	DP_PRINT_STATS("P2P Tcp Udp checksum offload: %u ",
+		       soc_cfg_ctx->p2p_tcp_udp_checksumoffload);
+	DP_PRINT_STATS("NAN Tcp Udp checksum offload: %u ",
+		       soc_cfg_ctx->nan_tcp_udp_checksumoffload);
 	DP_PRINT_STATS("Tcp Udp checksum offload: %u ",
 		       soc_cfg_ctx->tcp_udp_checksumoffload);
 	DP_PRINT_STATS("Defrag timeout check: %u ",
@@ -6110,7 +6138,7 @@ dp_print_pdev_rx_stats(struct dp_pdev *pdev)
 {
 	DP_PRINT_STATS("PDEV Rx Stats:\n");
 	DP_PRINT_STATS("Received From HW (Per Rx Ring):");
-	DP_PRINT_STATS("	Packets = %d %d %d %d",
+	DP_PRINT_STATS("	Packets = %u %u %u %u",
 		       pdev->stats.rx.rcvd_reo[0].num,
 		       pdev->stats.rx.rcvd_reo[1].num,
 		       pdev->stats.rx.rcvd_reo[2].num,
@@ -6121,50 +6149,50 @@ dp_print_pdev_rx_stats(struct dp_pdev *pdev)
 		       pdev->stats.rx.rcvd_reo[2].bytes,
 		       pdev->stats.rx.rcvd_reo[3].bytes);
 	DP_PRINT_STATS("Replenished:");
-	DP_PRINT_STATS("	Packets = %d",
+	DP_PRINT_STATS("	Packets = %u",
 		       pdev->stats.replenish.pkts.num);
-	DP_PRINT_STATS("	Buffers Added To Freelist = %d",
+	DP_PRINT_STATS("	Buffers Added To Freelist = %u",
 		       pdev->stats.buf_freelist);
 	DP_PRINT_STATS("	Low threshold intr = %d",
 		       pdev->stats.replenish.low_thresh_intrs);
 	DP_PRINT_STATS("Dropped:");
-	DP_PRINT_STATS("	msdu_not_done = %d",
+	DP_PRINT_STATS("	msdu_not_done = %u",
 		       pdev->stats.dropped.msdu_not_done);
-	DP_PRINT_STATS("        wifi parse = %d",
+	DP_PRINT_STATS("        wifi parse = %u",
 		       pdev->stats.dropped.wifi_parse);
-	DP_PRINT_STATS("        mon_rx_drop = %d",
+	DP_PRINT_STATS("        mon_rx_drop = %u",
 		       pdev->stats.dropped.mon_rx_drop);
-	DP_PRINT_STATS("        mon_radiotap_update_err = %d",
+	DP_PRINT_STATS("        mon_radiotap_update_err = %u",
 		       pdev->stats.dropped.mon_radiotap_update_err);
-	DP_PRINT_STATS("        mec_drop = %d",
+	DP_PRINT_STATS("        mec_drop = %u",
 		       pdev->stats.rx.mec_drop.num);
 	DP_PRINT_STATS("	Bytes = %llu",
 		       pdev->stats.rx.mec_drop.bytes);
 	DP_PRINT_STATS("Sent To Stack:");
-	DP_PRINT_STATS("	Packets = %d",
+	DP_PRINT_STATS("	Packets = %u",
 		       pdev->stats.rx.to_stack.num);
 	DP_PRINT_STATS("	Bytes = %llu",
 		       pdev->stats.rx.to_stack.bytes);
-	DP_PRINT_STATS("        vlan_tag_stp_cnt = %d",
+	DP_PRINT_STATS("        vlan_tag_stp_cnt = %u",
 		       pdev->stats.vlan_tag_stp_cnt);
 	DP_PRINT_STATS("Multicast/Broadcast:");
-	DP_PRINT_STATS("	Packets = %d",
+	DP_PRINT_STATS("	Packets = %u",
 		       pdev->stats.rx.multicast.num);
 	DP_PRINT_STATS("	Bytes = %llu",
 		       pdev->stats.rx.multicast.bytes);
 	DP_PRINT_STATS("Errors:");
-	DP_PRINT_STATS("	Rxdma Ring Un-inititalized = %d",
+	DP_PRINT_STATS("	Rxdma Ring Un-inititalized = %u",
 		       pdev->stats.replenish.rxdma_err);
-	DP_PRINT_STATS("	Desc Alloc Failed: = %d",
+	DP_PRINT_STATS("	Desc Alloc Failed: = %u",
 		       pdev->stats.err.desc_alloc_fail);
-	DP_PRINT_STATS("	IP checksum error = %d",
+	DP_PRINT_STATS("	IP checksum error = %u",
 		       pdev->stats.err.ip_csum_err);
-	DP_PRINT_STATS("	TCP/UDP checksum error = %d",
+	DP_PRINT_STATS("	TCP/UDP checksum error = %u",
 		       pdev->stats.err.tcp_udp_csum_err);
 
 	/* Get bar_recv_cnt */
 	dp_aggregate_pdev_ctrl_frames_stats(pdev);
-	DP_PRINT_STATS("BAR Received Count: = %d",
+	DP_PRINT_STATS("BAR Received Count: = %u",
 		       pdev->stats.rx.bar_recv_cnt);
 }
 

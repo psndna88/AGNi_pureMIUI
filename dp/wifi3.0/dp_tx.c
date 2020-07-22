@@ -1212,8 +1212,8 @@ static QDF_STATUS dp_tx_hw_enqueue(struct dp_soc *soc, struct dp_vdev *vdev,
 		hal_tx_desc_set_to_fw(hal_tx_desc_cached, 1);
 
 	/* verify checksum offload configuration*/
-	if ((wlan_cfg_get_checksum_offload(soc->wlan_cfg_ctx)) &&
-		((qdf_nbuf_get_tx_cksum(tx_desc->nbuf) == QDF_NBUF_TX_CKSUM_TCP_UDP)
+	if (vdev->csum_enabled &&
+	    ((qdf_nbuf_get_tx_cksum(tx_desc->nbuf) == QDF_NBUF_TX_CKSUM_TCP_UDP)
 		|| qdf_nbuf_is_tso(tx_desc->nbuf)))  {
 		hal_tx_desc_set_l3_checksum_en(hal_tx_desc_cached, 1);
 		hal_tx_desc_set_l4_checksum_en(hal_tx_desc_cached, 1);
@@ -1790,7 +1790,7 @@ noinline
 qdf_nbuf_t dp_tx_send_msdu_multiple(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 				    struct dp_tx_msdu_info_s *msdu_info)
 {
-	uint8_t i;
+	uint32_t i;
 	struct dp_pdev *pdev = vdev->pdev;
 	struct dp_soc *soc = pdev->soc;
 	struct dp_tx_desc_s *tx_desc;
@@ -2786,6 +2786,7 @@ dp_get_completion_indication_for_stack(struct dp_soc *soc,
 	uint32_t ppdu_id = ts->ppdu_id;
 	uint8_t first_msdu = ts->first_msdu;
 	uint8_t last_msdu = ts->last_msdu;
+	uint32_t txcap_hdr_size = sizeof(struct tx_capture_hdr);
 
 	if (qdf_unlikely(!pdev->tx_sniffer_enable && !pdev->mcopy_mode &&
 			 !pdev->latency_capture_enable))
@@ -2798,16 +2799,34 @@ dp_get_completion_indication_for_stack(struct dp_soc *soc,
 	}
 
 	if (pdev->mcopy_mode) {
-		if ((pdev->m_copy_id.tx_ppdu_id == ppdu_id) &&
-				(pdev->m_copy_id.tx_peer_id == peer_id)) {
-			return QDF_STATUS_E_INVAL;
+		/* If mcopy is enabled and mcopy_mode is M_COPY deliver 1st MSDU
+		 * per PPDU. If mcopy_mode is M_COPY_EXTENDED deliver 1st MSDU
+		 * for each MPDU
+		 */
+		if (pdev->mcopy_mode == M_COPY) {
+			if ((pdev->m_copy_id.tx_ppdu_id == ppdu_id) &&
+			    (pdev->m_copy_id.tx_peer_id == peer_id)) {
+				return QDF_STATUS_E_INVAL;
+			}
 		}
+
+		if (!first_msdu)
+			return QDF_STATUS_E_INVAL;
 
 		pdev->m_copy_id.tx_ppdu_id = ppdu_id;
 		pdev->m_copy_id.tx_peer_id = peer_id;
 	}
 
-	if (!qdf_nbuf_push_head(netbuf, sizeof(struct tx_capture_hdr))) {
+	if (qdf_unlikely(qdf_nbuf_headroom(netbuf) < txcap_hdr_size)) {
+		netbuf = qdf_nbuf_realloc_headroom(netbuf, txcap_hdr_size);
+		if (!netbuf) {
+			QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
+				  FL("No headroom"));
+			return QDF_STATUS_E_NOMEM;
+		}
+	}
+
+	if (!qdf_nbuf_push_head(netbuf, txcap_hdr_size)) {
 		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
 				FL("No headroom"));
 		return QDF_STATUS_E_NOMEM;
@@ -3367,8 +3386,51 @@ dp_tx_comp_process_desc(struct dp_soc *soc,
 	dp_tx_comp_free_buf(soc, desc);
 }
 
+#ifdef DISABLE_DP_STATS
+/**
+ * dp_tx_update_connectivity_stats() - update tx connectivity stats
+ * @soc: core txrx main context
+ * @tx_desc: tx desc
+ * @status: tx status
+ *
+ * Return: none
+ */
+static inline
+void dp_tx_update_connectivity_stats(struct dp_soc *soc,
+				     struct dp_tx_desc_s *tx_desc,
+				     uint8_t status)
+{
+}
+#else
+static inline
+void dp_tx_update_connectivity_stats(struct dp_soc *soc,
+				     struct dp_tx_desc_s *tx_desc,
+				     uint8_t status)
+{
+	void *osif_dev;
+	ol_txrx_stats_rx_fp stats_cbk;
+	uint8_t pkt_type;
+
+	qdf_assert(tx_desc);
+
+	if (!tx_desc->vdev ||
+	    !tx_desc->vdev->osif_vdev ||
+	    !tx_desc->vdev->stats_cb)
+		return;
+
+	osif_dev = tx_desc->vdev->osif_vdev;
+	stats_cbk = tx_desc->vdev->stats_cb;
+
+	stats_cbk(tx_desc->nbuf, osif_dev, PKT_TYPE_TX_HOST_FW_SENT, &pkt_type);
+	if (status == HAL_TX_TQM_RR_FRAME_ACKED)
+		stats_cbk(tx_desc->nbuf, osif_dev, PKT_TYPE_TX_ACK_CNT,
+			  &pkt_type);
+}
+#endif
+
 /**
  * dp_tx_comp_process_tx_status() - Parse and Dump Tx completion status info
+ * @soc: DP soc handle
  * @tx_desc: software descriptor head pointer
  * @ts: Tx completion status
  * @peer: peer handle
@@ -3377,13 +3439,13 @@ dp_tx_comp_process_desc(struct dp_soc *soc,
  * Return: none
  */
 static inline
-void dp_tx_comp_process_tx_status(struct dp_tx_desc_s *tx_desc,
+void dp_tx_comp_process_tx_status(struct dp_soc *soc,
+				  struct dp_tx_desc_s *tx_desc,
 				  struct hal_tx_completion_status *ts,
 				  struct dp_peer *peer, uint8_t ring_id)
 {
 	uint32_t length;
 	qdf_ether_header_t *eh;
-	struct dp_soc *soc = NULL;
 	struct dp_vdev *vdev = tx_desc->vdev;
 	qdf_nbuf_t nbuf = tx_desc->nbuf;
 	uint8_t dp_status;
@@ -3394,6 +3456,7 @@ void dp_tx_comp_process_tx_status(struct dp_tx_desc_s *tx_desc,
 	}
 
 	eh = (qdf_ether_header_t *)qdf_nbuf_data(nbuf);
+	length = qdf_nbuf_len(nbuf);
 
 	dp_status = qdf_dp_get_status_from_htt(ts->status);
 	DPTRACE(qdf_dp_trace_ptr(tx_desc->nbuf,
@@ -3433,26 +3496,24 @@ void dp_tx_comp_process_tx_status(struct dp_tx_desc_s *tx_desc,
 				ts->tones_in_ru, ts->tsf, ts->ppdu_id,
 				ts->transmit_cnt, ts->tid, ts->peer_id);
 
-	soc = vdev->pdev->soc;
-
 	/* Update SoC level stats */
 	DP_STATS_INCC(soc, tx.dropped_fw_removed, 1,
 			(ts->status == HAL_TX_TQM_RR_REM_CMD_REM));
+
+	if (!peer) {
+		dp_err_rl("peer is null or deletion in progress");
+		DP_STATS_INC_PKT(soc, tx.tx_invalid_peer, 1, length);
+		goto out;
+	}
+
+	dp_tx_update_connectivity_stats(soc, tx_desc, ts->status);
 
 	/* Update per-packet stats for mesh mode */
 	if (qdf_unlikely(vdev->mesh_vdev) &&
 			!(tx_desc->flags & DP_TX_DESC_FLAG_TO_FW))
 		dp_tx_comp_fill_tx_completion_stats(tx_desc, ts);
 
-	length = qdf_nbuf_len(nbuf);
 	/* Update peer level stats */
-	if (!peer) {
-		QDF_TRACE_DEBUG_RL(QDF_MODULE_ID_DP,
-				   "peer is null or deletion in progress");
-		DP_STATS_INC_PKT(soc, tx.tx_invalid_peer, 1, length);
-		goto out;
-	}
-
 	if (qdf_unlikely(peer->bss_peer && vdev->opmode == wlan_op_mode_ap)) {
 		if (ts->status != HAL_TX_TQM_RR_REM_CMD_REM) {
 			DP_STATS_INC_PKT(peer, tx.mcast, 1, length);
@@ -3543,7 +3604,7 @@ dp_tx_comp_process_desc_list(struct dp_soc *soc,
 		}
 		hal_tx_comp_get_status(&desc->comp, &ts, soc->hal_soc);
 		peer = dp_peer_find_by_id(soc, ts.peer_id);
-		dp_tx_comp_process_tx_status(desc, &ts, peer, ring_id);
+		dp_tx_comp_process_tx_status(soc, desc, &ts, peer, ring_id);
 
 		netbuf = desc->nbuf;
 		/* check tx complete notification */
@@ -3666,7 +3727,7 @@ void dp_tx_process_htt_completion(struct dp_tx_desc_s *tx_desc, uint8_t *status,
 		if (qdf_likely(peer))
 			dp_peer_unref_del_find_by_id(peer);
 
-		dp_tx_comp_process_tx_status(tx_desc, &ts, peer, ring_id);
+		dp_tx_comp_process_tx_status(soc, tx_desc, &ts, peer, ring_id);
 		dp_tx_comp_process_desc(soc, tx_desc, &ts, peer);
 		dp_tx_desc_release(tx_desc, tx_desc->pool_id);
 
@@ -3971,6 +4032,30 @@ qdf_nbuf_t dp_tx_non_std(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 }
 #endif
 
+static void dp_tx_vdev_update_feature_flags(struct dp_vdev *vdev)
+{
+	struct wlan_cfg_dp_soc_ctxt *cfg;
+
+	struct dp_soc *soc;
+
+	soc = vdev->pdev->soc;
+	if (!soc)
+		return;
+
+	cfg = soc->wlan_cfg_ctx;
+	if (!cfg)
+		return;
+
+	if (vdev->opmode == wlan_op_mode_ndi)
+		vdev->csum_enabled = wlan_cfg_get_nan_checksum_offload(cfg);
+	else if ((vdev->subtype == wlan_op_subtype_p2p_device) ||
+		 (vdev->subtype == wlan_op_subtype_p2p_cli) ||
+		 (vdev->subtype == wlan_op_subtype_p2p_go))
+		vdev->csum_enabled = wlan_cfg_get_p2p_checksum_offload(cfg);
+	else
+		vdev->csum_enabled = wlan_cfg_get_checksum_offload(cfg);
+}
+
 /**
  * dp_tx_vdev_attach() - attach vdev to dp tx
  * @vdev: virtual device instance
@@ -4001,6 +4086,8 @@ QDF_STATUS dp_tx_vdev_attach(struct dp_vdev *vdev)
 	HTT_TX_TCL_METADATA_VALID_HTT_SET(vdev->htt_tcl_metadata, 0);
 
 	dp_tx_vdev_update_search_flags(vdev);
+
+	dp_tx_vdev_update_feature_flags(vdev);
 
 	return QDF_STATUS_SUCCESS;
 }

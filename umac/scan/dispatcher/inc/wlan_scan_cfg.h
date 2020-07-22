@@ -60,6 +60,27 @@ enum scan_mode_6ghz {
 
 /*
  * <ini>
+ * drop_bcn_on_invalid_freq - drop the beacon or probe resp with invalid freq
+ * @Min: 0
+ * @Max: 1
+ * @Default: 1
+ *
+ * This ini is used to decide whether to drop the beacon/probe resp or not
+ * if channel received in DS param, HT info and HE IE is invalid.
+ *
+ * Related: None
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_DROP_BCN_ON_INVALID_FREQ CFG_INI_BOOL(\
+		"drop_bcn_on_invalid_freq",\
+		true,\
+		"drop bcn on invalid freq in HT, DS, HE IE")
+
+/*
+ * <ini>
  * gActiveMaxChannelTime - Set max channel time for active scan
  * @Min: 0
  * @Max: 10000
@@ -335,31 +356,6 @@ enum scan_mode_6ghz {
 			"honour_nl_scan_policy_flags",\
 			true, \
 			"honour NL80211 scan policy flags")
-
-/*
- * <ini>
- * is_bssid_hint_priority - Set priority for connection with bssid_hint
- * BSSID.
- * @Min: 0
- * @Max: 1
- * @Default: 1
- *
- * This ini is used to give priority to BSS for connection which comes
- * as part of bssid_hint
- *
- * Related: None
- *
- * Supported Feature: STA
- *
- * Usage: External
- *
- * </ini>
- */
-#define CFG_IS_BSSID_HINT_PRIORITY CFG_INI_UINT(\
-			"is_bssid_hint_priority",\
-			0, 1, 0,\
-			CFG_VALUE_OR_DEFAULT, \
-			"Set priority for connection with bssid_hint")
 
 #ifdef FEATURE_WLAN_SCAN_PNO
 /*
@@ -1231,6 +1227,7 @@ enum scan_mode_6ghz {
 
 #define CFG_SCAN_ALL \
 	CFG(CFG_DROP_BCN_ON_CHANNEL_MISMATCH) \
+	CFG(CFG_DROP_BCN_ON_INVALID_FREQ) \
 	CFG(CFG_ENABLE_WAKE_LOCK_IN_SCAN) \
 	CFG(CFG_ACTIVE_MAX_CHANNEL_TIME) \
 	CFG(CFG_ENABLE_DFS_SCAN) \
@@ -1245,7 +1242,6 @@ enum scan_mode_6ghz {
 	CFG(CFG_ADAPTIVE_SCAN_DWELL_MODE) \
 	CFG(CFG_ADAPTIVE_SCAN_DWELL_MODE_NC) \
 	CFG(CFG_HONOUR_NL_SCAN_POLICY_FLAGS) \
-	CFG(CFG_IS_BSSID_HINT_PRIORITY) \
 	CFG(CFG_PASSIVE_MAX_CHANNEL_TIME_CONC) \
 	CFG(CFG_ACTIVE_MAX_CHANNEL_TIME_CONC) \
 	CFG(CFG_MAX_REST_TIME_CONC) \

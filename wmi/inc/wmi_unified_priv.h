@@ -944,6 +944,11 @@ QDF_STATUS (*send_set_base_macaddr_indicate_cmd)(wmi_unified_t wmi_handle,
 QDF_STATUS (*send_pdev_set_pcl_cmd)(wmi_unified_t wmi_handle,
 				struct wmi_pcl_chan_weights *msg);
 
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
+QDF_STATUS (*send_vdev_set_pcl_cmd)(wmi_unified_t wmi_handle,
+				    struct set_pcl_cmd_params *params);
+#endif
+
 #ifdef WLAN_POLICY_MGR_ENABLE
 QDF_STATUS (*send_pdev_set_dual_mac_config_cmd)(wmi_unified_t wmi_handle,
 		struct policy_mgr_dual_mac_config *msg);
@@ -1205,8 +1210,10 @@ QDF_STATUS (*send_smart_ant_set_node_config_cmd)(wmi_unified_t wmi_handle,
 		struct smart_ant_node_config_params *param);
 #endif
 
+#ifdef WLAN_IOT_SIM_SUPPORT
 QDF_STATUS (*send_simulation_test_cmd)(wmi_unified_t wmi_handle,
 				       struct simulation_test_params *param);
+#endif
 
 QDF_STATUS (*send_smart_ant_enable_tx_feedback_cmd)(wmi_unified_t wmi_handle,
 		struct smart_ant_enable_tx_feedback_params *param);
@@ -1332,8 +1339,13 @@ QDF_STATUS (*extract_fw_version)(wmi_unified_t wmi_handle,
 QDF_STATUS (*extract_fw_abi_version)(wmi_unified_t wmi_handle,
 				void *ev, struct wmi_host_fw_abi_ver *fw_ver);
 
-QDF_STATUS (*extract_hal_reg_cap)(wmi_unified_t wmi_handle, void *evt_buf,
-	struct wlan_psoc_hal_reg_capability *hal_reg_cap);
+QDF_STATUS (*extract_hal_reg_cap)(
+		wmi_unified_t wmi_handle, void *evt_buf,
+		struct wlan_psoc_hal_reg_capability *hal_reg_cap);
+
+QDF_STATUS (*extract_hal_reg_cap_ext2)(
+		wmi_unified_t wmi_handle, void *evt_buf, uint8_t phy_idx,
+		struct wlan_psoc_host_hal_reg_capabilities_ext2 *hal_reg_cap);
 
 uint32_t (*extract_num_mem_reqs)(wmi_unified_t wmi_handle,
 				 void *evt_buf);
@@ -1800,6 +1812,14 @@ QDF_STATUS (*extract_mac_phy_cap_service_ready_ext)(
 			uint8_t hw_mode_id,
 			uint8_t phy_id,
 			struct wlan_psoc_host_mac_phy_caps *param);
+
+QDF_STATUS (*extract_mac_phy_cap_service_ready_ext2)(
+			wmi_unified_t wmi_handle,
+			uint8_t *evt_buf,
+			uint8_t hw_mode_id,
+			uint8_t phy_id,
+			uint8_t phy_idx,
+			struct wlan_psoc_host_mac_phy_caps_ext2 *mac_phy_cap);
 
 QDF_STATUS (*extract_reg_cap_service_ready_ext)(
 			wmi_unified_t wmi_handle,
@@ -2307,6 +2327,9 @@ QDF_STATUS (*send_roam_scan_ch_list_req_cmd)(wmi_unified_t wmi_hdl,
 
 QDF_STATUS (*send_injector_config_cmd)(wmi_unified_t wmi_handle,
 				struct wmi_host_injector_frame_params *params);
+
+QDF_STATUS (*send_cp_stats_cmd)(wmi_unified_t wmi_handle,
+				void *buf_ptr, uint32_t buf_len);
 };
 
 /* Forward declartion for psoc*/
