@@ -3556,8 +3556,8 @@ cv_estimate:
 		return rc;
 	}
 
-	/* tau is scaled linearly from 80% to 100% SOC */
-	if (msoc >= 80)
+	/* tau is scaled linearly from 70% to 100% SOC */
+	if (msoc >= 70)
 		tau = tau * 2 * (100 - msoc) / 10;
 
 	fg_dbg(chip, FG_TTF, "tau=%d\n", tau);
