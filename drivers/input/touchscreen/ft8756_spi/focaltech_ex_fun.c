@@ -1167,30 +1167,6 @@ int lct_fts_get_tpfwver(const char *cmd)
 
 EXPORT_SYMBOL(lct_fts_get_tpfwver);
 
-int lct_fts_tp_selftest_callback(unsigned char cmd)
-{
-	int ret = 0;
-	switch (cmd) {
-	case TP_SELFTEST_CMD_MMI:
-		ret = lct_tp_selftest_all();
-		break;
-	case TP_SELFTEST_CMD_AAABBB_I2C:
-		ret = 2;	//PASS
-		break;
-	case TP_SELFTEST_CMD_AAABBB_OPEN:
-		ret = lct_tp_selftest_all();
-		break;
-	case TP_SELFTEST_CMD_AAABBB_SHORT:
-		ret = lct_tp_selftest_all();
-		break;
-	default:
-		break;
-	}
-	return ret;
-}
-
-EXPORT_SYMBOL(lct_fts_tp_selftest_callback);
-
 #if LCT_TP_GRIP_AREA_EN
 int lct_fts_tp_get_screen_angle_callback(void)
 {
@@ -1284,8 +1260,6 @@ int lct_create_procfs(struct fts_ts_data *ts_data)
 		set_lct_tp_info_callback(lct_fts_get_tpfwver);
 		FTS_INFO("create /proc/tp_info & /proc/tp_lockdown_info succeeded");
 	}
-
-	lct_tp_selftest_init(lct_fts_tp_selftest_callback);
 
 	ret = init_lct_tp_gesture(lct_fts_tp_gesture_callback);
 	if (ret < 0) {
