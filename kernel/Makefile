@@ -127,6 +127,9 @@ $(obj)/config_data.gz: arch/arm64/configs/whyred-stock_defconfig FORCE
 else ifeq ($(CONFIG_KERNEL_CUSTOM_E7T),y)
 $(obj)/config_data.gz: arch/arm64/configs/tulip-stock_defconfig FORCE
 	$(call if_changed,gzip)
+else ifeq ($(CONFIG_KERNEL_CUSTOM_D2S_JASMINE),y)
+$(obj)/config_data.gz: arch/arm64/configs/jasmine-stock_defconfig FORCE
+	$(call if_changed,gzip)
 else ifeq ($(CONFIG_KERNEL_CUSTOM_D2S),y)
 $(obj)/config_data.gz: arch/arm64/configs/wayne-stock_defconfig FORCE
 	$(call if_changed,gzip)
