@@ -938,7 +938,7 @@ static int fts_irq_registration(struct fts_ts_data *ts_data)
         pdata->irq_gpio_flags = IRQF_TRIGGER_FALLING;
     FTS_INFO("irq flag:%x", pdata->irq_gpio_flags);
     ret = request_threaded_irq(ts_data->irq, NULL, fts_ts_interrupt,
-                               pdata->irq_gpio_flags | IRQF_ONESHOT | IRQF_PERF_CRITICAL,
+                               pdata->irq_gpio_flags | IRQF_ONESHOT | IRQF_PERF_CRITICAL | IRQF_NO_SUSPEND,
                                ts_data->client->name, ts_data);
 
     return ret;
@@ -1343,7 +1343,7 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
     ts_data->pdata = pdata;
     i2c_set_clientdata(client, ts_data);
 
-    ts_data->ts_workqueue = alloc_workqueue("fts_wq", WQ_FREEZABLE | WQ_HIGHPRI | WQ_UNBOUND, 0);
+    ts_data->ts_workqueue = alloc_workqueue("fts_wq", WQ_HIGHPRI | WQ_UNBOUND, 0);
     if (NULL == ts_data->ts_workqueue) {
         FTS_ERROR("failed to create fts workqueue");
     }
