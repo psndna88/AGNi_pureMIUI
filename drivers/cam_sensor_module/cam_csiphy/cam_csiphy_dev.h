@@ -268,7 +268,6 @@ struct cam_csiphy_param {
  * @start_dev_count:            Start count
  * @soc_info:                   SOC information
  * @cpas_handle:                CPAS handle
- * @config_count:               Config reg count
  * @current_data_rate:          Data rate in mbps
  * @csiphy_3phase:              To identify DPHY or CPHY at top level
  * @combo_mode:                 Info regarding combo_mode is enable / disable
@@ -298,7 +297,6 @@ struct csiphy_device {
 	uint32_t                       start_dev_count;
 	struct cam_hw_soc_info         soc_info;
 	uint32_t                       cpas_handle;
-	uint32_t                       config_count;
 	uint64_t                       current_data_rate;
 	uint64_t                       csiphy_cpas_cp_reg_mask[
 					CSIPHY_MAX_INSTANCES_PER_PHY];
