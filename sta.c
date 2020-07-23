@@ -10687,6 +10687,56 @@ static int ath_sta_send_frame_vht(struct sigma_dut *dut,
 }
 
 
+static int wcn_sta_set_pmf_config(struct sigma_dut *dut, const char *intf,
+				  enum send_frame_protection protected)
+{
+#ifdef NL80211_SUPPORT
+	struct nl_msg *msg;
+	int ret = 0;
+	struct nlattr *params;
+	int ifindex;
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s failed",
+				__func__, intf);
+		return -1;
+	}
+
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+				    NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
+	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    nla_put_u8(msg,
+		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_PMF_PROTECTION,
+		       protected)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding vendor_cmd and vendor_data",
+				__func__);
+		nlmsg_free(msg);
+		return -1;
+	}
+	nla_nest_end(msg, params);
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in send_and_recv_msgs, ret=%d",
+				__func__, ret);
+	}
+	return ret;
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"PMF config cannot be set without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
 static int cmd_sta_send_frame_vht(struct sigma_dut *dut,
 				  struct sigma_conn *conn,
 				  struct sigma_cmd *cmd)
@@ -10707,6 +10757,8 @@ static int wcn_sta_send_frame_he(struct sigma_dut *dut, struct sigma_conn *conn,
 {
 	const char *val;
 	const char *intf = get_param(cmd, "Interface");
+	enum send_frame_protection protected;
+	const char *pmf;
 
 	if (!intf)
 		return -1;
@@ -10715,6 +10767,27 @@ static int wcn_sta_send_frame_he(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (!val)
 		return -1;
 	sigma_dut_print(dut, DUT_MSG_DEBUG, "framename is %s", val);
+
+	pmf = get_param(cmd, "PMFProtected");
+	if (!pmf)
+		pmf = get_param(cmd, "Protected");
+	if (pmf) {
+		if (strcasecmp(pmf, "Correct-key") == 0 ||
+		    strcasecmp(pmf, "CorrectKey") == 0) {
+			protected = CORRECT_KEY;
+		} else if (strcasecmp(pmf, "IncorrectKey") == 0) {
+			protected = INCORRECT_KEY;
+		} else if (strcasecmp(pmf, "Unprotected") == 0) {
+			protected = UNPROTECTED;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported PMFProtected");
+			return STATUS_SENT_ERROR;
+		}
+		sigma_dut_print(dut, DUT_MSG_DEBUG, "Config PMF protection %d",
+				protected);
+		wcn_sta_set_pmf_config(dut, intf, protected);
+	}
 
 	/* Command sequence to generate Op mode notification */
 	if (val && strcasecmp(val, "action") == 0) {
