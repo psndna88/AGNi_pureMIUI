@@ -16,6 +16,7 @@
 
 #include "sdm660.dtsi"
 #include "sdm660-mtp.dtsi"
+#include "sdm660-smb1355-mtp.dtsi"
 //#include "sdm660-external-codec.dtsi"
 #include "sdm660-internal-codec.dtsi"
 
