@@ -66,7 +66,6 @@
 #include "focaltech_common.h"
 
 #include "../lct_tp_info.h"
-#include "../lct_tp_selftest.h"
 #ifdef CONFIG_PM
 #include <linux/pm_runtime.h>
 #endif
@@ -293,19 +292,6 @@ int fts_esdcheck_proc_busy(bool proc_debug);
 int fts_esdcheck_set_intr(bool intr);
 int fts_esdcheck_suspend(void);
 int fts_esdcheck_resume(void);
-#endif
-
-/* FTS TEST */
-#if FTS_TEST_EN
-int fts_test_init(struct fts_ts_data *ts_data);
-int fts_test_exit(struct fts_ts_data *ts_data);
-int lct_tp_selftest_all(void);
-#endif
-
-/* Production test */
-#if FTS_TEST_EN
-int fts_test_init(struct fts_ts_data *ts_data);
-int fts_test_exit(struct fts_ts_data *ts_data);
 #endif
 
 /* Point Report Check*/
