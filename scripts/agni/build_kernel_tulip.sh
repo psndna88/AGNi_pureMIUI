@@ -101,7 +101,9 @@ if ([ -f $KERNELDIR/$DIR/Image.gz-dtb-nc ] && [ -f $KERNELDIR/$DIR/Image.gz-dtb-
 	cp -r $KERNELDIR/anykernel3/* $KERNELDIR/$DIR/
 	sed -i 's/device.name1=/device.name1=tulip/' $KERNELDIR/$DIR/anykernel.sh
 	sed -i '/#NATIVEMIUIQ/d' $KERNELDIR/$DIR/META-INF/com/google/android/aroma-config
+	sed -i '/#SDM660/d' $KERNELDIR/$DIR/META-INF/com/google/android/aroma-config
 	sed -i '/#AGNIFW/d' $KERNELDIR/$DIR/META-INF/com/google/android/aroma-config
+	sed -i 's/SETDEVICETYPE/SDM636_tulip (Redmi Note 6 Pro)/' $KERNELDIR/$DIR/META-INF/com/google/android/aroma-config
 	mv $KERNELDIR/$DIR/wlan_pie.ko $KERNELDIR/$DIR/tools/wlan_pie.ko
 	mv $KERNELDIR/$DIR/wlan_q.ko $KERNELDIR/$DIR/tools/wlan_q.ko
 	cd $KERNELDIR/$DIR/

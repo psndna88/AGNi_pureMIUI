@@ -124,6 +124,7 @@ mount_all() {
 }
 umount_all() {
   (umount_apex;
+  $BB sync;
   if [ ! -d /postinstall/tmp ]; then
     $BB umount /system;
     $BB umount -l /system;
@@ -132,12 +133,13 @@ umount_all() {
       $BB umount -l /system_root;
     fi;
   fi;
-  umount /vendor;
-  umount -l /vendor;
+  $BB umount /vendor;
+  $BB umount -l /vendor;
+  $BB umount /firmware;
   if [ "$UMOUNT_DATA" ]; then
     $BB umount /data;
     $BB umount -l /data;
-  fi) 2>/dev/null;
+  fi;) 2>/dev/null;
 }
 setup_env() {
   $BOOTMODE && return 1;
@@ -412,7 +414,7 @@ if [ -f version ]; then
   ui_printfile version;
   ui_print " ";
 fi;
-ui_print " " "AGNi Kernel sdm660 by psndna88 @ xda-developers" " ";
+ui_print " " "AGNi Kernel by psndna88 @ xda-developers" " ";
 ui_print " " "AnyKernel3 by osm0sis @ xda-developers" " " " ";
 
 ### AGNi: ROM type detection
@@ -565,32 +567,56 @@ else
     $BB echo "Vendor is already patched for wifi.";
 fi;
 if [ "$DEVICE_NATIVE_MIUIQ" == "YES" ]; then #essentially its sdm660
-	$BB cp -f $AKHOME/tools/init.agni.rc /vendor/etc/init/hw/init.agni.rc;
-else
-	if [ "`$BB grep selected.0=1 /tmp/aroma-data/cpuoc.prop`" ]; then # CPU OC selection
-		$BB cp -f $AKHOME/tools/init.agni.rc /vendor/etc/init/hw/init.agni.rc;
-		ui_print " " "AGNi installing with DEFAULT CPU OC @ 2.2GHz !" " ";
+	if [ "`$BB grep selected.0=1 /tmp/aroma-data/cpuoc.prop`" ]; then # CPU OC 2.45 selection
+		$BB cp -f $AKHOME/tools/sdm660/init.agni_2.45.rc /vendor/etc/init/hw/init.agni.rc;
+		ui_print " " "AGNi installing with EXPERIMENTAL CPU OC @ 2.45GHz !" " ";
 	else
-		$BB cp -f $AKHOME/tools/init.agni.rc.noc /vendor/etc/init/hw/init.agni.rc;
+		$BB cp -f $AKHOME/tools/sdm660/init.agni_noc.rc /vendor/etc/init/hw/init.agni.rc;
+		ui_print " " "AGNi installing without CPU OC..." " ";
+	fi;
+else
+	if [ "`$BB grep selected.0=1 /tmp/aroma-data/cpuoc.prop`" ]; then # CPU OC 2.2 selection
+		$BB cp -f $AKHOME/tools/sdm636/init.agni_2.2.rc /vendor/etc/init/hw/init.agni.rc;
+		ui_print " " "AGNi installing with DEFAULT CPU OC @ 2.2GHz !" " ";
+	elif [ "`$BB grep selected.0=2 /tmp/aroma-data/cpuoc.prop`" ]; then # CPU OC 2.45 selection
+		$BB cp -f $AKHOME/tools/sdm636/init.agni_2.45.rc /vendor/etc/init/hw/init.agni.rc;
+		ui_print " " "AGNi installing with EXPERIMENTAL CPU OC @ 2.45GHz !" " ";
+	else
+		$BB cp -f $AKHOME/tools/sdm636/init.agni_noc.rc /vendor/etc/init/hw/init.agni.rc;
 		ui_print " " "AGNi installing without CPU OC :( ..." " ";
 	fi;
 fi;
 $BB chmod 644 /vendor/etc/init/hw/init.agni.rc;
 $BB mkdir /vendor/agni 2>/dev/null;
 $BB cp -f $AKHOME/tools/wlan*.ko /vendor/agni/;
-$BB cp -f $AKHOME/tools/switchwifi /vendor/bin/switchwifi;
-if [ "`$BB grep selected.0=2 /tmp/aroma-data/wifi.prop`" ]; then
-	$BB cp -f /vendor/agni/wlan_q.ko /vendor/agni/wlan.ko;
-	ui_print " " "AGNi now using Q-sourced Wifi driver..." " ";
-else
-	$BB cp -f /vendor/agni/wlan_pie.ko /vendor/agni/wlan.ko;
-	ui_print " " "AGNi now using its Default Pie-sourced Wifi driver..." " ";
+$BB rm /vendor/bin/switchwifi 2>/dev/null;
+$BB umount /firmware 2>/dev/null;
+$BB umount /dev/block/by-name/modem 2>/dev/null;
+$BB mkdir /firmware 2>/dev/null;
+$BB mount -t vfat -o rw,noatime,nodiratime,fmask=0337,dmask=0000,allow_utime=0022,codepage=437,iocharset=iso8859-1,shortname=mixed,errors=remount-ro /dev/block/by-name/modem /firmware;
+if [ ! -f /vendor/etc/wifi/WCNSS_qcom_cfg.ini.bak ]; then
+	mv -f /vendor/etc/wifi/WCNSS_qcom_cfg.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini.bak;
 fi;
-#if [ -f /vendor/lib/modules/qca_cld3_wlan.ko ]; then
-#	$BB cp -f /vendor/agni/wlan.ko /vendor/lib/modules/qca_cld3_wlan.ko;
-#fi;
+if [ "`$BB grep selected.0=2 /tmp/aroma-data/wifi.prop`" ]; then
+	ui_print " " "AGNi now modifying firmware for Q Wifi driver support.." " ";
+	$BB rm /firmware/image/AGNIWIFI-Pie 2>/dev/null;
+	$BB cp -f $AKHOME/tools/wlan/Q/* /firmware/image;
+	$BB cp -f $AKHOME/tools/wlan/WCNSS_qcom_cfg_Q.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
+	$BB cp -f /vendor/agni/wlan_q.ko /vendor/agni/wlan.ko;
+	ui_print " " "AGNi enabled Q-sourced Wifi driver..." " ";
+else
+	ui_print " " "AGNi now modifying firmware for Pie Wifi driver support.." " ";
+	$BB rm /firmware/image/AGNIWIFI-Q 2>/dev/null;
+	$BB cp -f $AKHOME/tools/wlan/Pie/* /firmware/image;
+	$BB cp -f $AKHOME/tools/wlan/WCNSS_qcom_cfg_Pie.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
+	$BB cp -f /vendor/agni/wlan_pie.ko /vendor/agni/wlan.ko;
+	ui_print " " "AGNi enabled Pie-sourced Wifi driver..." " ";
+fi;
 $BB chmod 644 /vendor/agni/wlan.ko;
-$BB chmod 755 /vendor/bin/switchwifi;
+$BB chmod 644 /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
+if [ -d /firmware/image/agni_bakup ]; then
+	$BB rm -rf /firmware/image/agni_bakup;
+fi;
 umount_all;
 
 setup_env;
