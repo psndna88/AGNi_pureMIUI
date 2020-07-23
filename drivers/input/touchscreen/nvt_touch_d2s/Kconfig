@@ -1,11 +1,12 @@
 #
 # Novatek NT36xxx touchscreen driver configuration
 #
-config TOUCHSCREEN_NT36xxx
-	bool "Novatek NT36xxx"
-	default y
-	help
-	  Say Y here if you have a Novatek NT36xxx touchscreen connected
-	  to your system.
-
-	  If unsure, say N.
+config TOUCHSCREEN_NVT_D2S
+       tristate "novatek touchscreens NVT_D2S"
+       help
+         Say Y here if you have a nvt touchscreen.
+		 nvt controllers are multi touch controllers which can
+		 report 5 touches at a time.
+         If unsure, say N.
+         To compile this driver as a module, choose M here: the
+         module will be called nvt.

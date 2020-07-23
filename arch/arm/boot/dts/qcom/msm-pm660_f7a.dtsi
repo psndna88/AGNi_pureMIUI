@@ -67,9 +67,10 @@
 				qcom,pon-type = <3>;
 				qcom,pull-up = <1>;
 				qcom,support-reset = <1>;
-				qcom,s1-timer = <4480>;
-				qcom,s2-timer = <1000>;
+				qcom,s1-timer = <3072>;
+				qcom,s2-timer = <2000>;
 				qcom,s2-type = <1>;
+				qcom,use-bark;
 			};
 		};
 
@@ -172,7 +173,6 @@
 		pm660_coincell: qcom,coincell@2800 {
 			compatible = "qcom,qpnp-coincell";
 			reg = <0x2800 0x100>;
-			qcom,charge-enable = <0>;
 		};
 
 		pm660_rtc: qcom,pm660_rtc {

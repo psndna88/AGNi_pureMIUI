@@ -172,7 +172,6 @@
 		pm660_coincell: qcom,coincell@2800 {
 			compatible = "qcom,qpnp-coincell";
 			reg = <0x2800 0x100>;
-			qcom,charge-enable = <0>;
 		};
 
 		pm660_rtc: qcom,pm660_rtc {

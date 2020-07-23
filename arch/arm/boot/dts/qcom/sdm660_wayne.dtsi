@@ -22,7 +22,7 @@
 #include <dt-bindings/clock/qcom,cpu-osm.h>
 
 / {
-	model = "Qualcomm Technologies, Inc. SDM 660";
+	model = "Qualcomm Technologies wayne, Inc. SDM 660";
 	compatible = "qcom,sdm660";
 	qcom,msm-id = <317 0x0>;
 	interrupt-parent = <&intc>;
