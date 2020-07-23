@@ -1675,8 +1675,16 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 		usleep(300000);
 		for (;;) {
 			if (waitpid(pid, &pid_status, WNOHANG) > 0) {
+				int status = WEXITSTATUS(pid_status);
+
 				sigma_dut_print(dut, DUT_MSG_DEBUG,
-						"dpp-nfc.py exited");
+						"dpp-nfc.py exited (status %d)",
+						status);
+				if (status == 1) {
+					send_resp(dut, conn, SIGMA_ERROR,
+						  "errorCode,dpp-nfc.py operation failed");
+					goto out;
+				}
 				break;
 			}
 
