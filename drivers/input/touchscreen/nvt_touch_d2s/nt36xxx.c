@@ -1313,7 +1313,7 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	mutex_unlock(&ts->lock);
 
 	//---create workqueue---
-	nvt_wq = alloc_workqueue("nvt_wq", WQ_FREEZABLE | WQ_HIGHPRI | WQ_UNBOUND, 0);
+	nvt_wq = alloc_workqueue("nvt_wq", WQ_HIGHPRI | WQ_UNBOUND, 0);
 	if (!nvt_wq) {
 		NVT_ERR("nvt_wq create workqueue failed\n");
 		ret = -ENOMEM;
