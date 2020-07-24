@@ -110,6 +110,12 @@ source "drivers/staging/wilc1000/Kconfig"
 
 source "drivers/staging/most/Kconfig"
 
+comment "Qualcomm Atheros CLD WLAN module"
+config QCA_CLD_WLAN_PIE
+	bool "Qualcomm Atheros CLD WLAN module from CAF Pie tag"
+	default n
+
 source "drivers/staging/qcacld-3.0/Kconfig"
+source "drivers/staging/qcacld-3.0_pie/Kconfig"
 
 endif # STAGING
