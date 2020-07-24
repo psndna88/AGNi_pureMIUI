@@ -139,6 +139,10 @@
 					05 01 00 00 32 00 01 10
 				];
 				qcom,mdss-dsi-off-command-state = "dsi_lp_mode";
+				qcom,cmd-to-video-mode-switch-commands = [
+					39 01 00 00 00 00 05 2a 00 00 02 cf
+					39 01 00 00 00 00 05 2b 00 00 09 ff
+				];
 				qcom,cmd-to-video-mode-post-switch-commands = [
 					39 00 00 00 00 00 02 ff 10
 					39 00 00 00 00 00 02 fb 01
@@ -568,6 +572,10 @@
 					39 01 00 00 00 00 02 ff 10
 					05 01 00 00 78 00 01 11
 					05 01 00 00 78 00 01 29
+				];
+				qcom,cmd-to-video-mode-switch-commands = [
+					39 01 00 00 00 00 05 2a 00 00 02 cf
+					39 01 00 00 00 00 05 2b 00 00 09 ff
 				];
 				qcom,cmd-to-video-mode-post-switch-commands = [
 					39 00 00 00 00 00 02 ff 10
