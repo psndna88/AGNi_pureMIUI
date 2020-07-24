@@ -41,15 +41,6 @@
 #include <linux/platform_data/spi-mt65xx.h>
 #endif
 
-#include "../lct_tp_info.h"
-#include "../lct_tp_selftest.h"
-#include "../lct_tp_gesture.h"
-#include "../lct_tp_grip_area.h"
-#include "../lct_tp_work.h"
-#include "../lct_tp_palm.h"
-#ifdef CONFIG_TOUCHSCREEN_AAABBB_TOUCHFEATURE
-#include "../aaabbb/aaabbb_touch.h"
-#endif
 #define NVT_DEBUG 1
 
 //---GPIO number---
@@ -98,7 +89,6 @@ extern const uint16_t touch_key_array[TOUCH_KEY_NUM];
 #if WAKEUP_GESTURE
 extern const uint16_t gesture_key_array[];
 #endif
-#define LCT_TP_PALM_EN 1
 #define BOOT_UPDATE_FIRMWARE 1
 #define FIRMWARE_NAME_LEN    256
 #define BOOT_UPDATE_FIRMWARE_NAME         "novatek_ts_fw.bin"
@@ -115,12 +105,6 @@ extern const uint16_t gesture_key_array[];
 
 //enable 'check touch vendor' feature
 #define CHECK_TOUCH_VENDOR
-
-//enable tp work feature
-#define LCT_TP_WORK_EN      1
-
-//enable tp grip area feature
-#define LCT_TP_GRIP_AREA_EN 1
 
 /*functions description*/
 //enable tp usb plugin feature
@@ -210,11 +194,6 @@ struct nvt_ts_data {
     struct mtk_chip_config spi_ctrl;
 #endif
 
-#ifdef CONFIG_TOUCHSCREEN_AAABBB_TOUCHFEATURE
-	u8 palm_sensor_switch;
-	bool palm_sensor_changed;
-	bool gamemode_enabled;
-#endif
 	struct mutex reg_lock;
 	struct device *nvt_touch_dev;
 	struct class *nvt_tp_class;
