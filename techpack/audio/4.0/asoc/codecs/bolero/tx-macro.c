@@ -958,7 +958,7 @@ static int tx_macro_enable_dec(struct snd_soc_dapm_widget *w,
 		snd_soc_write(codec, tx_gain_ctl_reg,
 			      snd_soc_read(codec,
 					tx_gain_ctl_reg));
-		if (tx_priv->bcs_enable) {
+		if (tx_priv->bcs_enable && decimator == 0) {
 			snd_soc_update_bits(codec, dec_cfg_reg,
 					0x01, 0x01);
 			tx_priv->bcs_clk_en = true;
@@ -1002,7 +1002,7 @@ static int tx_macro_enable_dec(struct snd_soc_dapm_widget *w,
 		snd_soc_update_bits(codec,
 			dec_cfg_reg, 0x06, 0x00);
 		snd_soc_update_bits(codec, tx_vol_ctl_reg, 0x10, 0x00);
-		if (tx_priv->bcs_enable) {
+		if (tx_priv->bcs_enable && decimator == 0) {
 			snd_soc_update_bits(codec, dec_cfg_reg,
 					0x01, 0x00);
 			snd_soc_update_bits(codec,
