@@ -3414,10 +3414,6 @@ int msm_venc_set_chroma_qp_offset(struct msm_vidc_inst *inst)
 	chroma_qp.chroma_offset = (chr->val + 12) << 16 | (chr->val + 12);
 	s_vpr_h(inst->sid, "%s: %x\n", __func__, chroma_qp.chroma_offset);
 
-	/* TODO: Remove this check after firmware support added for 8-bit */
-	if (inst->bit_depth == MSM_VIDC_BIT_DEPTH_8)
-		return 0;
-
 	rc = call_hfi_op(hdev, session_set_property, inst->session,
 		HFI_PROPERTY_PARAM_HEVC_PPS_CB_CR_OFFSET, &chroma_qp,
 		sizeof(chroma_qp));
