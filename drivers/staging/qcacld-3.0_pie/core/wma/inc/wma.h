@@ -100,30 +100,16 @@
 #define WMA_11P_CHANNEL_BEGIN           (170)
 #define WMA_11P_CHANNEL_END             (184)
 
-#define WMA_LOGD(args ...) \
-	QDF_TRACE(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_DEBUG, ## args)
-#define WMA_LOGI(args ...) \
-	QDF_TRACE(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_INFO, ## args)
-#define WMA_LOGW(args ...) \
-	QDF_TRACE(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_WARN, ## args)
-#define WMA_LOGE(args ...) \
-	QDF_TRACE(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_ERROR, ## args)
-#define WMA_LOGP(args ...) \
-	QDF_TRACE(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_FATAL, ## args)
-#define wma_log_rate_limit_err(rate, args...) \
-	QDF_TRACE_RATE_LIMITED(rate, QDF_MODULE_ID_WMA,\
-			QDF_TRACE_LEVEL_ERROR, ## args)
+#define WMA_LOGD(args ...)
+#define WMA_LOGI(args ...)
+#define WMA_LOGW(args ...)
+#define WMA_LOGE(args ...)
+#define WMA_LOGP(args ...)
+#define wma_log_rate_limit_err(rate, args...)
 
-#define WMA_DEBUG_ALWAYS
-
-#ifdef WMA_DEBUG_ALWAYS
-#define WMA_LOGA(args ...) \
-	QDF_TRACE(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_FATAL, ## args)
-#else
 #define WMA_LOGA(args ...)
-#endif
 
-#define     ALIGNED_WORD_SIZE       4
+#define ALIGNED_WORD_SIZE       4
 #define WLAN_HAL_MSG_TYPE_MAX_ENUM_SIZE    0x7FFF
 #define WMA_WILDCARD_PDEV_ID 0x0
 

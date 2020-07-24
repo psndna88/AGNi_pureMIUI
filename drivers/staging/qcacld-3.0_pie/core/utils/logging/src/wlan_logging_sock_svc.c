@@ -43,11 +43,7 @@
 
 #define MAX_NUM_PKT_LOG 32
 
-#define ALLOWED_LOG_LEVELS_TO_CONSOLE(level) \
-	((QDF_TRACE_LEVEL_FATAL == (level)) || \
-	 (QDF_TRACE_LEVEL_ERROR == (level)) || \
-	 (QDF_TRACE_LEVEL_WARN == (level)) || \
-	 (QDF_TRACE_LEVEL_INFO == (level)))
+#define ALLOWED_LOG_LEVELS_TO_CONSOLE(level) (QDF_TRACE_LEVEL_NONE == (level))
 
 /**
  * struct tx_status - tx status
@@ -203,11 +199,7 @@ static void set_default_logtoapp_log_level(void)
 
 	/* module id 0 is reserved */
 	for (i = 1; i < QDF_MODULE_ID_MAX; i++) {
-		if (is_data_path_module(i))
-			qdf_trace_set_module_trace_level(i,
-					QDF_DATA_PATH_TRACE_LEVEL);
-		else
-			qdf_trace_set_value(i, QDF_TRACE_LEVEL_ALL, true);
+		qdf_trace_set_value(i, QDF_TRACE_LEVEL_NONE, true);
 	}
 }
 
@@ -216,9 +208,11 @@ static void clear_default_logtoapp_log_level(void)
 	int module;
 
 	for (module = 0; module < QDF_MODULE_ID_MAX; module++) {
-		qdf_trace_set_value(module, QDF_TRACE_LEVEL_NONE, false);
-		qdf_trace_set_value(module, QDF_TRACE_LEVEL_FATAL, true);
-		qdf_trace_set_value(module, QDF_TRACE_LEVEL_ERROR, true);
+		qdf_trace_set_value(module, QDF_TRACE_LEVEL_NONE, true);
+		qdf_trace_set_value(module, QDF_TRACE_LEVEL_FATAL, false);
+		qdf_trace_set_value(module, QDF_TRACE_LEVEL_ERROR, false);
+		qdf_trace_set_value(module, QDF_TRACE_LEVEL_WARN, false);
+		qdf_trace_set_value(module, QDF_TRACE_LEVEL_INFO, false);
 	}
 
 	qdf_trace_set_value(QDF_MODULE_ID_RSV4, QDF_TRACE_LEVEL_NONE,
@@ -740,7 +734,7 @@ static void send_flush_completion_to_user(uint8_t ring_id)
 					 &recovery_needed);
 
 	/* Error on purpose, so that it will get logged in the kmsg */
-	LOGGING_TRACE(QDF_TRACE_LEVEL_DEBUG,
+	LOGGING_TRACE(QDF_TRACE_LEVEL_NONE,
 		      "%s: Sending flush done to userspace reson_code %d, recovery: %d",
 		      __func__, reason_code, recovery_needed);
 
@@ -1310,7 +1304,7 @@ static void send_packetdump_monitor(uint8_t type)
 
 	pd_hdr.type = type;
 
-	LOGGING_TRACE(QDF_TRACE_LEVEL_DEBUG,
+	LOGGING_TRACE(QDF_TRACE_LEVEL_NONE,
 			"fate Tx-Rx %s: type: %d", __func__, type);
 
 	wlan_pkt_stats_to_logger_thread(&pktlog_hdr, &pd_hdr, NULL);
@@ -1337,7 +1331,7 @@ void wlan_deregister_txrx_packetdump(void)
 		gtx_count = 0;
 		grx_count = 0;
 	} else
-		LOGGING_TRACE(QDF_TRACE_LEVEL_DEBUG,
+		LOGGING_TRACE(QDF_TRACE_LEVEL_NONE,
 			"%s: deregistered packetdump already", __func__);
 }
 
@@ -1356,7 +1350,7 @@ static bool check_txrx_packetdump_count(void)
 {
 	if (gtx_count == MAX_NUM_PKT_LOG ||
 		grx_count == MAX_NUM_PKT_LOG) {
-		LOGGING_TRACE(QDF_TRACE_LEVEL_DEBUG,
+		LOGGING_TRACE(QDF_TRACE_LEVEL_NONE,
 			"%s gtx_count: %d grx_count: %d deregister packetdump",
 			__func__, gtx_count, grx_count);
 		wlan_deregister_txrx_packetdump();

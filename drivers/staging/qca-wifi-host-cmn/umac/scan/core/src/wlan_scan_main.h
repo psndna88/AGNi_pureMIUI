@@ -31,47 +31,28 @@
 #include "wlan_scan_cache_db.h"
 #include "wlan_scan_11d.h"
 
-#define scm_log(level, args...) \
-		QDF_TRACE(QDF_MODULE_ID_SCAN, level, ## args)
-#define scm_logfl(level, format, args...) \
-		scm_log(level, FL(format), ## args)
-#define scm_alert(format, args...) \
-		scm_logfl(QDF_TRACE_LEVEL_FATAL, format, ## args)
-#define scm_err(format, args...) \
-		scm_logfl(QDF_TRACE_LEVEL_ERROR, format, ## args)
-#define scm_warn(format, args...) \
-		scm_logfl(QDF_TRACE_LEVEL_WARN, format, ## args)
-#define scm_notice(format, args...) \
-		scm_logfl(QDF_TRACE_LEVEL_INFO, format, ## args)
-#define scm_info(format, args...) \
-		scm_logfl(QDF_TRACE_LEVEL_INFO_HIGH, format, ## args)
-#define scm_debug(format, args...) \
-		scm_logfl(QDF_TRACE_LEVEL_DEBUG, format, ## args)
+#define scm_log(level, args...)
+#define scm_logfl(level, format, args...)
+#define scm_alert(format, args...)
+#define scm_err(format, args...)
+#define scm_warn(format, args...)
+#define scm_notice(format, args...)
+#define scm_info(format, args...)
+#define scm_debug(format, args...)
 /* Rate Limited Logs */
-#define scm_alert_rl(params...) \
-	QDF_TRACE_FATAL_RL(QDF_MODULE_ID_SCAN, params)
-#define scm_err_rl(params...) \
-	QDF_TRACE_ERROR_RL(QDF_MODULE_ID_SCAN, params)
-#define scm_warn_rl(params...) \
-	QDF_TRACE_WARN_RL(QDF_MODULE_ID_SCAN, params)
-#define scm_info_rl(params...) \
-	QDF_TRACE_INFO_RL(QDF_MODULE_ID_SCAN, params)
-#define scm_debug_rl(params...) \
-	QDF_TRACE_DEBUG_RL(QDF_MODULE_ID_SCAN, params)
+#define scm_alert_rl(params...)
+#define scm_err_rl(params...)
+#define scm_warn_rl(params...)
+#define scm_info_rl(params...)
+#define scm_debug_rl(params...)
 
-#define scm_nofl_alert(params...) \
-	QDF_TRACE_FATAL_NO_FL(QDF_MODULE_ID_SCAN, params)
-#define scm_nofl_err(params...) \
-	QDF_TRACE_ERROR_NO_FL(QDF_MODULE_ID_SCAN, params)
-#define scm_nofl_warn(params...) \
-	QDF_TRACE_WARN_NO_FL(QDF_MODULE_ID_SCAN, params)
-#define scm_nofl_info(params...) \
-	QDF_TRACE_INFO_NO_FL(QDF_MODULE_ID_SCAN, params)
-#define scm_nofl_debug(params...) \
-	QDF_TRACE_DEBUG_NO_FL(QDF_MODULE_ID_SCAN, params)
+#define scm_nofl_alert(params...)
+#define scm_nofl_err(params...)
+#define scm_nofl_warn(params...)
+#define scm_nofl_info(params...)
+#define scm_nofl_debug(params...)
 
-#define scm_hex_dump(level, data, buf_len) \
-		qdf_trace_hex_dump(QDF_MODULE_ID_SCAN, level, data, buf_len)
+#define scm_hex_dump(level, data, buf_len)
 
 
 #define MAX_SCAN_EVENT_HANDLERS_PER_PDEV   100

@@ -611,14 +611,13 @@ void qdf_vtrace_msg(QDF_MODULE_ID module, QDF_TRACE_LEVEL level,
 		    char *str_format, va_list val);
 
 #ifdef CONFIG_MCL
-#define qdf_print(args...) \
-	QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR, ## args)
+#define qdf_print(args...)
 
-#define qdf_alert(params...) QDF_TRACE_FATAL(QDF_MODULE_ID_QDF, ## params)
-#define qdf_err(params...) QDF_TRACE_ERROR(QDF_MODULE_ID_QDF, ## params)
-#define qdf_warn(params...) QDF_TRACE_WARN(QDF_MODULE_ID_QDF, ## params)
-#define qdf_info(params...) QDF_TRACE_INFO(QDF_MODULE_ID_QDF, ## params)
-#define qdf_debug(params...) QDF_TRACE_DEBUG(QDF_MODULE_ID_QDF, ## params)
+#define qdf_alert(params...)
+#define qdf_err(params...)
+#define qdf_warn(params...)
+#define qdf_info(params...)
+#define qdf_debug(params...)
 
 #else /* CONFIG_MCL */
 
@@ -631,33 +630,22 @@ void qdf_vtrace_msg(QDF_MODULE_ID module, QDF_TRACE_LEVEL level,
 
 #endif /* CONFIG_MCL */
 
-#define qdf_nofl_alert(params...) \
-	QDF_TRACE_FATAL_NO_FL(QDF_MODULE_ID_QDF, ## params)
-#define qdf_nofl_err(params...) \
-	QDF_TRACE_ERROR_NO_FL(QDF_MODULE_ID_QDF, ## params)
-#define qdf_nofl_warn(params...) \
-	QDF_TRACE_WARN_NO_FL(QDF_MODULE_ID_QDF, ## params)
-#define qdf_nofl_info(params...) \
-	QDF_TRACE_INFO_NO_FL(QDF_MODULE_ID_QDF, ## params)
-#define qdf_nofl_debug(params...) \
-	QDF_TRACE_DEBUG_NO_FL(QDF_MODULE_ID_QDF, ## params)
+#define qdf_nofl_alert(params...)
+#define qdf_nofl_err(params...)
+#define qdf_nofl_warn(params...)
+#define qdf_nofl_info(params...)
+#define qdf_nofl_debug(params...)
+#define qdf_rl_alert(params...)
+#define qdf_rl_err(params...)
+#define qdf_rl_warn(params...)
+#define qdf_rl_info(params...)
+#define qdf_rl_debug(params...)
 
-#define qdf_rl_alert(params...) QDF_TRACE_FATAL_RL(QDF_MODULE_ID_QDF, ## params)
-#define qdf_rl_err(params...) QDF_TRACE_ERROR_RL(QDF_MODULE_ID_QDF, ## params)
-#define qdf_rl_warn(params...) QDF_TRACE_WARN_RL(QDF_MODULE_ID_QDF, ## params)
-#define qdf_rl_info(params...) QDF_TRACE_INFO_RL(QDF_MODULE_ID_QDF, ## params)
-#define qdf_rl_debug(params...) QDF_TRACE_DEBUG_RL(QDF_MODULE_ID_QDF, ## params)
-
-#define qdf_rl_nofl_alert(params...) \
-	QDF_TRACE_FATAL_RL_NO_FL(QDF_MODULE_ID_QDF, ## params)
-#define qdf_rl_nofl_err(params...) \
-	QDF_TRACE_ERROR_RL_NO_FL(QDF_MODULE_ID_QDF, ## params)
-#define qdf_rl_nofl_warn(params...) \
-	QDF_TRACE_WARN_RL_NO_FL(QDF_MODULE_ID_QDF, ## params)
-#define qdf_rl_nofl_info(params...) \
-	QDF_TRACE_INFO_RL_NO_FL(QDF_MODULE_ID_QDF, ## params)
-#define qdf_rl_nofl_debug(params...) \
-	QDF_TRACE_DEBUG_RL_NO_FL(QDF_MODULE_ID_QDF, ## params)
+#define qdf_rl_nofl_alert(params...)
+#define qdf_rl_nofl_err(params...)
+#define qdf_rl_nofl_warn(params...)
+#define qdf_rl_nofl_info(params...)
+#define qdf_rl_nofl_debug(params...)
 
 #define qdf_vprint    __qdf_vprint
 #define qdf_snprint   __qdf_snprint
