@@ -56,11 +56,7 @@ typedef int (qdf_abstract_print)(void *priv, const char *fmt, ...);
  * log level. Debug level will be left up to the framework or user space modules
  * to be enabled when issue is detected
  */
-#define QDF_DATA_PATH_TRACE_LEVEL \
-	((1 << QDF_TRACE_LEVEL_FATAL) | (1 << QDF_TRACE_LEVEL_ERROR) | \
-	(1 << QDF_TRACE_LEVEL_WARN) | (1 << QDF_TRACE_LEVEL_INFO) | \
-	(1 << QDF_TRACE_LEVEL_INFO_HIGH) | (1 << QDF_TRACE_LEVEL_INFO_MED) | \
-	(1 << QDF_TRACE_LEVEL_INFO_LOW))
+#define QDF_DATA_PATH_TRACE_LEVEL (1 << QDF_TRACE_LEVEL_NONE)
 
 /* Preprocessor definitions and constants */
 #define ASSERT_BUFFER_SIZE (512)

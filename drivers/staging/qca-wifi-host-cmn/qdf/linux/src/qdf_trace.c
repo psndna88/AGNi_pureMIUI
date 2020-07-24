@@ -154,15 +154,15 @@ void qdf_trace_set_level(QDF_MODULE_ID module, QDF_TRACE_LEVEL level)
 	 * the bits in the bit mask so none of the traces appear. Anything
 	 * other than 'none' means we need to turn ON a bit in the bitmask
 	 */
-	if (QDF_TRACE_LEVEL_NONE == level)
+//	if (QDF_TRACE_LEVEL_NONE == level)
 		g_qdf_trace_info[module].module_trace_level =
 			QDF_TRACE_LEVEL_NONE;
-	else
+//	else
 		/* set the desired bit in the bit mask for the module trace
 		 * level
 		 */
-		g_qdf_trace_info[module].module_trace_level |=
-			QDF_TRACE_LEVEL_TO_MODULE_BITMASK(level);
+//		g_qdf_trace_info[module].module_trace_level |=
+//			QDF_TRACE_LEVEL_TO_MODULE_BITMASK(level);
 }
 qdf_export_symbol(qdf_trace_set_level);
 
@@ -447,7 +447,7 @@ void qdf_trace_init(void)
 	g_qdf_trace_data.head = INVALID_QDF_TRACE_ADDR;
 	g_qdf_trace_data.tail = INVALID_QDF_TRACE_ADDR;
 	g_qdf_trace_data.num = 0;
-	g_qdf_trace_data.enable = true;
+	g_qdf_trace_data.enable = false;
 	g_qdf_trace_data.dump_count = DEFAULT_QDF_TRACE_DUMP_COUNT;
 	g_qdf_trace_data.num_since_last_dump = 0;
 
@@ -617,7 +617,7 @@ void qdf_trace_dump_all(void *p_mac, uint8_t code, uint8_t session,
 
 	if (!g_qdf_trace_data.enable) {
 		QDF_TRACE(QDF_MODULE_ID_SYS,
-			  QDF_TRACE_LEVEL_ERROR, "Tracing Disabled");
+			  QDF_TRACE_LEVEL_NONE, "Tracing Disabled");
 		return;
 	}
 
@@ -1303,7 +1303,7 @@ int qdf_dp_trace_fill_meta_str(char *prepend_str, int size,
 {
 	char buffer[20];
 	int ret = 0;
-	bool live = info & QDF_DP_TRACE_RECORD_INFO_LIVE ? true : false;
+/*	bool live = info & QDF_DP_TRACE_RECORD_INFO_LIVE ? true : false;
 	bool throttled = info & QDF_DP_TRACE_RECORD_INFO_THROTTLED ?
 								true : false;
 
@@ -1314,7 +1314,7 @@ int qdf_dp_trace_fill_meta_str(char *prepend_str, int size,
 			rec_index,
 			record->pdev_id,
 			live ? "" : buffer,
-			qdf_dp_code_to_string(record->code));
+			qdf_dp_code_to_string(record->code)); */
 
 	return ret;
 }
@@ -1966,11 +1966,11 @@ void qdf_dp_display_mgmt_pkt(struct qdf_dp_trace_record_s *record,
 	loc = qdf_dp_trace_fill_meta_str(prepend_str, sizeof(prepend_str),
 					 index, info, record);
 
-	DPTRACE_PRINT("%s [%d] [%s %s]",
+/*	DPTRACE_PRINT("%s [%d] [%s %s]",
 		      prepend_str,
 		      buf->vdev_id,
 		      qdf_dp_type_to_str(buf->type),
-		      qdf_dp_subtype_to_str(buf->subtype));
+		      qdf_dp_subtype_to_str(buf->subtype)); */
 }
 qdf_export_symbol(qdf_dp_display_mgmt_pkt);
 
@@ -2009,11 +2009,11 @@ void qdf_dp_display_event_record(struct qdf_dp_trace_record_s *record,
 	qdf_dp_trace_fill_meta_str(prepend_str, sizeof(prepend_str),
 				   index, info, record);
 
-	DPTRACE_PRINT("%s [%d] [%s %s]",
+/*	DPTRACE_PRINT("%s [%d] [%s %s]",
 		      prepend_str,
 		      buf->vdev_id,
 		      qdf_dp_type_to_str(buf->type),
-		      qdf_dp_subtype_to_str(buf->subtype));
+		      qdf_dp_subtype_to_str(buf->subtype)); */
 }
 qdf_export_symbol(qdf_dp_display_event_record);
 
@@ -2062,7 +2062,7 @@ void qdf_dp_display_proto_pkt_debug(struct qdf_dp_trace_record_s *record,
 	qdf_mem_set(prepend_str, sizeof(prepend_str), 0);
 	loc = qdf_dp_trace_fill_meta_str(prepend_str, sizeof(prepend_str),
 					 index, info, record);
-	DPTRACE_PRINT("%s [%d] [%s] SA: "
+/*	DPTRACE_PRINT("%s [%d] [%s] SA: "
 		      QDF_MAC_ADDR_STR " %s DA: "
 		      QDF_MAC_ADDR_STR,
 		      prepend_str,
@@ -2070,7 +2070,7 @@ void qdf_dp_display_proto_pkt_debug(struct qdf_dp_trace_record_s *record,
 		      qdf_dp_subtype_to_str(buf->subtype),
 		      QDF_MAC_ADDR_ARRAY(buf->sa.bytes),
 		      qdf_dp_dir_to_str(buf->dir),
-		      QDF_MAC_ADDR_ARRAY(buf->da.bytes));
+		      QDF_MAC_ADDR_ARRAY(buf->da.bytes)); */
 }
 qdf_export_symbol(qdf_dp_display_proto_pkt_debug);
 
@@ -2085,12 +2085,12 @@ void qdf_dp_display_proto_pkt_always(struct qdf_dp_trace_record_s *record,
 	qdf_mem_zero(prepend_str, sizeof(prepend_str));
 	loc = qdf_dp_trace_fill_meta_str(prepend_str, sizeof(prepend_str),
 					 index, info, record);
-	qdf_info("%s [%d] [%s] SA: "QDF_MAC_ADDR_STR " %s DA: "
+/*	qdf_info("%s [%d] [%s] SA: "QDF_MAC_ADDR_STR " %s DA: "
 		 QDF_MAC_ADDR_STR, prepend_str,
 		 buf->vdev_id, qdf_dp_subtype_to_str(buf->subtype),
 		 QDF_MAC_ADDR_ARRAY(buf->sa.bytes),
 		 qdf_dp_dir_to_str(buf->dir),
-		 QDF_MAC_ADDR_ARRAY(buf->da.bytes));
+		 QDF_MAC_ADDR_ARRAY(buf->da.bytes)); */
 }
 qdf_export_symbol(qdf_dp_display_proto_pkt_always);
 
@@ -2136,12 +2136,12 @@ void qdf_dp_display_ptr_record(struct qdf_dp_trace_record_s *record,
 	loc = qdf_dp_trace_fill_meta_str(prepend_str, sizeof(prepend_str),
 					 index, info, record);
 
-	if (loc < sizeof(prepend_str))
+/*	if (loc < sizeof(prepend_str))
 		scnprintf(&prepend_str[loc], sizeof(prepend_str) - loc,
 			  "[msdu id %d %s %d]",
 			  buf->msdu_id,
 			  is_free_pkt_ptr_record ? "status" : "vdev_id",
-			  buf->status);
+			  buf->status); */
 
 	if (info & QDF_DP_TRACE_RECORD_INFO_LIVE) {
 		/* In live mode donot dump the contents of the cookie */
@@ -2436,7 +2436,7 @@ qdf_export_symbol(qdf_dp_trace_clear_buffer);
 
 void qdf_dp_trace_dump_stats(void)
 {
-		DPTRACE_PRINT("STATS |DPT: tx %u rx %u icmp(%u %u) arp(%u %u) icmpv6(%u %u %u %u %u %u) dhcp(%u %u %u %u %u %u) eapol(%u %u %u %u %u)",
+/*		DPTRACE_PRINT("STATS |DPT: tx %u rx %u icmp(%u %u) arp(%u %u) icmpv6(%u %u %u %u %u %u) dhcp(%u %u %u %u %u %u) eapol(%u %u %u %u %u)",
 			      g_qdf_dp_trace_data.tx_count,
 			      g_qdf_dp_trace_data.rx_count,
 			      g_qdf_dp_trace_data.icmp_req,
@@ -2459,7 +2459,7 @@ void qdf_dp_trace_dump_stats(void)
 			      g_qdf_dp_trace_data.eapol_m2,
 			      g_qdf_dp_trace_data.eapol_m3,
 			      g_qdf_dp_trace_data.eapol_m4,
-			      g_qdf_dp_trace_data.eapol_others);
+			      g_qdf_dp_trace_data.eapol_others); */
 }
 qdf_export_symbol(qdf_dp_trace_dump_stats);
 
@@ -2510,7 +2510,7 @@ static void qdf_dpt_display_proto_pkt_debugfs(qdf_debugfs_file_t file,
 
 	loc = qdf_dp_trace_fill_meta_str(prepend_str, sizeof(prepend_str),
 					 index, 0, record);
-	qdf_debugfs_printf(file, "%s [%d] [%s] SA: "
+/*	qdf_debugfs_printf(file, "%s [%d] [%s] SA: "
 			   QDF_MAC_ADDR_STR " %s DA: "
 			   QDF_MAC_ADDR_STR,
 			   prepend_str,
@@ -2519,7 +2519,7 @@ static void qdf_dpt_display_proto_pkt_debugfs(qdf_debugfs_file_t file,
 			   QDF_MAC_ADDR_ARRAY(buf->sa.bytes),
 			   qdf_dp_dir_to_str(buf->dir),
 			   QDF_MAC_ADDR_ARRAY(buf->da.bytes));
-	qdf_debugfs_printf(file, "\n");
+	qdf_debugfs_printf(file, "\n"); */
 }
 
 /**
@@ -2543,11 +2543,11 @@ static void qdf_dpt_display_mgmt_pkt_debugfs(qdf_debugfs_file_t file,
 	loc = qdf_dp_trace_fill_meta_str(prepend_str, sizeof(prepend_str),
 					 index, 0, record);
 
-	qdf_debugfs_printf(file, "%s [%d] [%s %s]\n",
+/*	qdf_debugfs_printf(file, "%s [%d] [%s %s]\n",
 			   prepend_str,
 			   buf->vdev_id,
 			   qdf_dp_type_to_str(buf->type),
-			   qdf_dp_subtype_to_str(buf->subtype));
+			   qdf_dp_subtype_to_str(buf->subtype)); */
 }
 
 /**
@@ -2594,14 +2594,14 @@ static void qdf_dpt_display_ptr_record_debugfs(qdf_debugfs_file_t file,
 	loc = qdf_dp_trace_fill_meta_str(prepend_str, sizeof(prepend_str),
 					 index, 0, record);
 
-	if (loc < sizeof(prepend_str))
+/*	if (loc < sizeof(prepend_str))
 		scnprintf(&prepend_str[loc], sizeof(prepend_str) - loc,
 			  "[msdu id %d %s %d]",
 			  buf->msdu_id,
 			  (record->code ==
 				QDF_DP_TRACE_FREE_PACKET_PTR_RECORD) ?
 			  "status" : "vdev_id",
-			  buf->status);
+			  buf->status); */
 
 	qdf_dpt_dump_hex_trace_debugfs(file, prepend_str,
 				       (uint8_t *)&buf->cookie,
@@ -2656,7 +2656,7 @@ uint32_t qdf_dpt_get_curr_pos_debugfs(qdf_debugfs_file_t file,
 	if (state == QDF_DPT_DEBUGFS_STATE_SHOW_IN_PROGRESS)
 		return g_qdf_dp_trace_data.curr_pos;
 
-	qdf_debugfs_printf(file,
+/*	qdf_debugfs_printf(file,
 		"DPT: config - bitmap 0x%x verb %u #rec %u rec_requested %u live_config %u thresh %u time_limit %u\n",
 		g_qdf_dp_trace_data.proto_bitmap,
 		g_qdf_dp_trace_data.verbosity,
@@ -2693,7 +2693,7 @@ uint32_t qdf_dpt_get_curr_pos_debugfs(qdf_debugfs_file_t file,
 	qdf_debugfs_printf(file,
 		"DPT: Total Records: %d, Head: %d, Tail: %d\n",
 		g_qdf_dp_trace_data.num, g_qdf_dp_trace_data.head,
-		g_qdf_dp_trace_data.tail);
+		g_qdf_dp_trace_data.tail); */
 
 	spin_lock_bh(&l_dp_trace_lock);
 	if (g_qdf_dp_trace_data.head != INVALID_QDF_DP_TRACE_ADDR) {
@@ -2783,10 +2783,10 @@ QDF_STATUS qdf_dpt_dump_stats_debugfs(qdf_debugfs_file_t file,
 			break;
 
 		case QDF_DP_TRACE_HDD_TX_TIMEOUT:
-			qdf_debugfs_printf(file, "DPT: %04d: %s %s\n",
+/*			qdf_debugfs_printf(file, "DPT: %04d: %s %s\n",
 				i, p_record.time,
 				qdf_dp_code_to_string(p_record.code));
-			qdf_debugfs_printf(file, "%s: HDD TX Timeout\n");
+			qdf_debugfs_printf(file, "%s: HDD TX Timeout\n"); */
 			break;
 
 		case QDF_DP_TRACE_HDD_SOFTAP_TX_TIMEOUT:
@@ -2798,11 +2798,11 @@ QDF_STATUS qdf_dpt_dump_stats_debugfs(qdf_debugfs_file_t file,
 			break;
 
 		case QDF_DP_TRACE_CE_FAST_PACKET_ERR_RECORD:
-			qdf_debugfs_printf(file, "DPT: %04d: %s %s\n",
+/*			qdf_debugfs_printf(file, "DPT: %04d: %s %s\n",
 				i, p_record.time,
 				qdf_dp_code_to_string(p_record.code));
 			qdf_debugfs_printf(file,
-					   "%s: CE Fast Packet Error\n");
+					   "%s: CE Fast Packet Error\n"); */
 			break;
 
 		case QDF_DP_TRACE_MAX:
@@ -3470,7 +3470,7 @@ static void set_default_trace_levels(struct category_info *cinfo)
 		[QDF_MODULE_ID_POWER] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_STATE] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_OUTPUT] = QDF_TRACE_LEVEL_NONE,
-		[QDF_MODULE_ID_SCAN] = QDF_TRACE_LEVEL_ERROR,
+		[QDF_MODULE_ID_SCAN] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_AUTH] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_ASSOC] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_NODE] = QDF_TRACE_LEVEL_NONE,
@@ -3489,7 +3489,7 @@ static void set_default_trace_levels(struct category_info *cinfo)
 		[QDF_MODULE_ID_WIFIPOS] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_WRAP] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_DFS] = QDF_TRACE_LEVEL_NONE,
-		[QDF_MODULE_ID_ATF] = QDF_TRACE_LEVEL_ERROR,
+		[QDF_MODULE_ID_ATF] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_SPLITMAC] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_IOCTL] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_NAC] = QDF_TRACE_LEVEL_NONE,
@@ -3505,12 +3505,12 @@ static void set_default_trace_levels(struct category_info *cinfo)
 		[QDF_MODULE_ID_PE] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_WMA] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_SYS] = QDF_TRACE_LEVEL_NONE,
-		[QDF_MODULE_ID_QDF] = QDF_TRACE_LEVEL_ERROR,
+		[QDF_MODULE_ID_QDF] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_SAP] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_HDD_SOFTAP] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_HDD_DATA] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_HDD_SAP_DATA] = QDF_TRACE_LEVEL_NONE,
-		[QDF_MODULE_ID_HIF] = QDF_TRACE_LEVEL_ERROR,
+		[QDF_MODULE_ID_HIF] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_HTC] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_TXRX] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_QDF_DEVICE] = QDF_TRACE_LEVEL_NONE,
@@ -3518,37 +3518,37 @@ static void set_default_trace_levels(struct category_info *cinfo)
 		[QDF_MODULE_ID_BMI] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_EPPING] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_QVIT] = QDF_TRACE_LEVEL_NONE,
-		[QDF_MODULE_ID_DP] = QDF_TRACE_LEVEL_FATAL,
+		[QDF_MODULE_ID_DP] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_SOC] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_OS_IF] = QDF_TRACE_LEVEL_NONE,
-		[QDF_MODULE_ID_TARGET_IF] = QDF_TRACE_LEVEL_INFO,
+		[QDF_MODULE_ID_TARGET_IF] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_SCHEDULER] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_MGMT_TXRX] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_SERIALIZATION] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_PMO] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_P2P] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_POLICY_MGR] = QDF_TRACE_LEVEL_NONE,
-		[QDF_MODULE_ID_CONFIG] = QDF_TRACE_LEVEL_ERROR,
+		[QDF_MODULE_ID_CONFIG] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_REGULATORY] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_SA_API] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_NAN] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_OFFCHAN_TXRX] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_SON] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_SPECTRAL] = QDF_TRACE_LEVEL_NONE,
-		[QDF_MODULE_ID_OBJ_MGR] = QDF_TRACE_LEVEL_FATAL,
-		[QDF_MODULE_ID_NSS] = QDF_TRACE_LEVEL_ERROR,
-		[QDF_MODULE_ID_ROAM_DEBUG] = QDF_TRACE_LEVEL_ERROR,
+		[QDF_MODULE_ID_OBJ_MGR] = QDF_TRACE_LEVEL_NONE,
+		[QDF_MODULE_ID_NSS] = QDF_TRACE_LEVEL_NONE,
+		[QDF_MODULE_ID_ROAM_DEBUG] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_CDP] = QDF_TRACE_LEVEL_NONE,
-		[QDF_MODULE_ID_DIRECT_BUF_RX] = QDF_TRACE_LEVEL_ERROR,
+		[QDF_MODULE_ID_DIRECT_BUF_RX] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_DISA] = QDF_TRACE_LEVEL_NONE,
-		[QDF_MODULE_ID_GREEN_AP] = QDF_TRACE_LEVEL_ERROR,
-		[QDF_MODULE_ID_FTM] = QDF_TRACE_LEVEL_ERROR,
+		[QDF_MODULE_ID_GREEN_AP] = QDF_TRACE_LEVEL_NONE,
+		[QDF_MODULE_ID_FTM] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_EXTAP] = QDF_TRACE_LEVEL_NONE,
-		[QDF_MODULE_ID_FD] = QDF_TRACE_LEVEL_ERROR,
-		[QDF_MODULE_ID_OCB] = QDF_TRACE_LEVEL_ERROR,
+		[QDF_MODULE_ID_FD] = QDF_TRACE_LEVEL_NONE,
+		[QDF_MODULE_ID_OCB] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_IPA] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_ACTION_OUI] = QDF_TRACE_LEVEL_NONE,
-		[QDF_MODULE_ID_CP_STATS] = QDF_TRACE_LEVEL_ERROR,
+		[QDF_MODULE_ID_CP_STATS] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_ANY] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_PKT_CAPTURE] = QDF_TRACE_LEVEL_NONE,
 	};

@@ -418,22 +418,15 @@ void __printf(3, 4) qdf_trace_msg(QDF_MODULE_ID module, QDF_TRACE_LEVEL level,
 void qdf_vtrace_msg(QDF_MODULE_ID module, QDF_TRACE_LEVEL level,
 		    char *str_format, va_list val);
 
-#define qdf_print(args...) \
-	QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR, ## args)
+#define qdf_print(args...)
 
-#define qdf_logfl(level, format, args...) \
-	QDF_TRACE(QDF_MODULE_ID_QDF, level, FL(format), ## args)
+#define qdf_logfl(level, format, args...)
 
-#define qdf_alert(format, args...) \
-	qdf_logfl(QDF_TRACE_LEVEL_FATAL, format, ## args)
-#define qdf_err(format, args...) \
-	qdf_logfl(QDF_TRACE_LEVEL_ERROR, format, ## args)
-#define qdf_warn(format, args...) \
-	qdf_logfl(QDF_TRACE_LEVEL_WARN, format, ## args)
-#define qdf_info(format, args...) \
-	qdf_logfl(QDF_TRACE_LEVEL_INFO, format, ## args)
-#define qdf_debug(format, args...) \
-	qdf_logfl(QDF_TRACE_LEVEL_DEBUG, format, ## args)
+#define qdf_alert(format, args...)
+#define qdf_err(format, args...)
+#define qdf_warn(format, args...)
+#define qdf_info(format, args...)
+#define qdf_debug(format, args...)
 
 #else
 

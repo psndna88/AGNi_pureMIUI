@@ -673,14 +673,14 @@ static void hdd_qdf_trace_enable(QDF_MODULE_ID moduleId, uint32_t bitmask)
 	qdf_trace_set_value(moduleId, QDF_TRACE_LEVEL_NONE, 0);
 
 	/* now cycle through the bitmask until all "set" bits are serviced */
-	level = QDF_TRACE_LEVEL_FATAL;
+/*	level = QDF_TRACE_LEVEL_FATAL;
 	while (0 != bitmask) {
 		if (bitmask & 1)
 			qdf_trace_set_value(moduleId, level, 1);
 
 		level++;
 		bitmask >>= 1;
-	}
+	} */
 }
 
 /**

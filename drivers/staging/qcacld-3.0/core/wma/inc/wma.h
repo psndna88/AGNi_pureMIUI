@@ -75,16 +75,11 @@
 #define WMA_INVALID_VDEV_ID                             0xFF
 
 /* Deprecated logging macros, to be removed. Please do not use in new code */
-#define WMA_LOGD(args ...) \
-	QDF_TRACE(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_DEBUG, ## args)
-#define WMA_LOGI(args ...) \
-	QDF_TRACE(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_INFO, ## args)
-#define WMA_LOGW(args ...) \
-	QDF_TRACE(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_WARN, ## args)
-#define WMA_LOGE(args ...) \
-	QDF_TRACE(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_ERROR, ## args)
-#define WMA_LOGP(args ...) \
-	QDF_TRACE(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_FATAL, ## args)
+#define WMA_LOGD(args ...)
+#define WMA_LOGI(args ...)
+#define WMA_LOGW(args ...)
+#define WMA_LOGE(args ...)
+#define WMA_LOGP(args ...)
 
 #define wma_alert(params...) QDF_TRACE_FATAL(QDF_MODULE_ID_WMA, params)
 #define wma_err(params...) QDF_TRACE_ERROR(QDF_MODULE_ID_WMA, params)
@@ -104,14 +99,7 @@
 #define wma_nofl_debug(params...) \
 	QDF_TRACE_DEBUG_NO_FL(QDF_MODULE_ID_WMA, params)
 
-#define WMA_DEBUG_ALWAYS
-
-#ifdef WMA_DEBUG_ALWAYS
-#define WMA_LOGA(args ...) \
-	QDF_TRACE(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_FATAL, ## args)
-#else
 #define WMA_LOGA(args ...)
-#endif
 
 #define WMA_WILDCARD_PDEV_ID 0x0
 
