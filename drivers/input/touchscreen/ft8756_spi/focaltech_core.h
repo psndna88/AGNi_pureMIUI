@@ -64,24 +64,8 @@
 #include <linux/kthread.h>
 #include <linux/dma-mapping.h>
 #include "focaltech_common.h"
-
-#include "../lct_tp_info.h"
 #ifdef CONFIG_PM
 #include <linux/pm_runtime.h>
-#endif
-#include "../lct_tp_gesture.h"
-#if LCT_TP_WORK_EN
-#include "../lct_tp_work.h"
-#endif
-#if LCT_TP_GRIP_AREA_EN
-#include "../lct_tp_grip_area.h"
-#endif
-#if LCT_TP_PALM_EN
-#include "../lct_tp_palm.h"
-#endif
-
-#ifdef CONFIG_TOUCHSCREEN_AAABBB_TOUCHFEATURE
-#include "../aaabbb/aaabbb_touch.h"
 #endif
 
 /*****************************************************************************
@@ -226,17 +210,9 @@ struct fts_ts_data {
 	struct early_suspend early_suspend;
 #endif
 
-#ifdef CONFIG_TOUCHSCREEN_AAABBB_TOUCHFEATURE
-    u8 palm_sensor_switch;
-    bool palm_sensor_changed;
-    bool gamemode_enabled;
-#endif
 	struct mutex reg_lock;
 	struct device *fts_touch_dev;
 	struct class *fts_tp_class;
-#if LCT_TP_PALM_EN
-	int palm_changed;
-#endif
 };
 
 #if LCT_TP_USB_PLUGIN
@@ -267,15 +243,6 @@ void fts_gesture_recovery(struct fts_ts_data *ts_data);
 int fts_gesture_readdata(struct fts_ts_data *ts_data, u8 *data);
 int fts_gesture_suspend(struct fts_ts_data *ts_data);
 int fts_gesture_resume(struct fts_ts_data *ts_data);
-
-/* Apk and functions */
-int fts_create_apk_debug_channel(struct fts_ts_data *);
-void fts_release_apk_debug_channel(struct fts_ts_data *);
-
-int lct_create_procfs(struct fts_ts_data *ts_data);
-int lct_remove_procfs(struct fts_ts_data *ts_data);
-
-int lct_fts_get_tpfwver(const char *cmd);
 
 int lct_fts_tp_gesture_callback(bool flag);
 

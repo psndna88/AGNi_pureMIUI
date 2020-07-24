@@ -182,24 +182,9 @@
 #define FTS_POWER_SOURCE_CUST_EN                0
 
 /*
- * enable/disable 'grip area' feature
- */
-#define LCT_TP_GRIP_AREA_EN                     1
-
-/*
- * enable/disable touchpad
- */
-#define LCT_TP_WORK_EN                          1
-
-/*
  *enable tp usb plugin feature
  */
 #define LCT_TP_USB_PLUGIN                       1
-
-/*
- * enable/disable palm feature
- */
-#define LCT_TP_PALM_EN                             1
 
 /****************************************************/
 
