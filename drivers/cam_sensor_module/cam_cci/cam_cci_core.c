@@ -1171,7 +1171,7 @@ static int32_t cam_cci_burst_read(struct v4l2_subdev *sd,
 					CCI_I2C_M0_READ_BUF_LEVEL_ADDR +
 					master * 0x100);
 				CAM_ERR(CAM_CCI,
-					"wait timeout for RD_DONE irq for cci: %d, master: %d, rc = %d FIFO buf_lvl:0x%x, rc: %d",
+					"wait timeout for RD_DONE irq for cci: %d, master: %d, FIFO buf_lvl:0x%x, rc: %d",
 					cci_dev->soc_info.index, master,
 					val, rc);
 				cam_cci_dump_registers(cci_dev,
