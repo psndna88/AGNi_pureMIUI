@@ -116,7 +116,7 @@ void agni_memprobe(void) {
 	if (zramzero) {
 		agni_swappiness = 0;
 	} else {
-		agni_swappiness = 100;
+		agni_swappiness = 70;
 	}
 
 	//triggerswapping = agni_memprober();
