@@ -797,13 +797,13 @@
 			qupv3_se10_spi_active: qupv3_se10_spi_active {
 				mux {
 					pins = "gpio86", "gpio87",
-							"gpio88 ", "gpio89";
+							"gpio88", "gpio89";
 					function = "qup14";
 				};
 
 				config {
 					pins = "gpio86", "gpio87",
-							"gpio88 ", "gpio89";
+							"gpio88", "gpio89";
 					drive-strength = <6>;
 					bias-disable;
 				};
@@ -812,13 +812,13 @@
 			qupv3_se10_spi_sleep: qupv3_se10_spi_sleep {
 				mux {
 					pins = "gpio86", "gpio87",
-							"gpio88 ", "gpio89";
+							"gpio88", "gpio89";
 					function = "gpio";
 				};
 
 				config {
 					pins = "gpio86", "gpio87",
-							"gpio88 ", "gpio89";
+							"gpio88", "gpio89";
 					drive-strength = <6>;
 					bias-disable;
 				};
