@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_ICP_CONTEXT_H_
@@ -19,7 +19,7 @@
 struct cam_icp_context {
 	struct cam_context *base;
 	struct cam_ctx_ops *state_machine;
-	struct cam_ctx_request req_base[CAM_CTX_REQ_MAX];
+	struct cam_ctx_request req_base[CAM_CTX_ICP_REQ_MAX];
 	uint32_t state;
 	void *ctxt_to_hw_map;
 };
