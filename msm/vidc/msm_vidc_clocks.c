@@ -999,7 +999,8 @@ int msm_dcvs_try_enable(struct msm_vidc_inst *inst)
 			inst->clk_data.low_latency_mode ||
 			inst->batch.enable ||
 			is_turbo_session(inst) ||
-		  inst->rc_type == V4L2_MPEG_VIDEO_BITRATE_MODE_CQ);
+			inst->rc_type == V4L2_MPEG_VIDEO_BITRATE_MODE_CQ ||
+			is_encode_batching(inst));
 
 	s_vpr_hp(inst->sid, "DCVS %s: %pK\n",
 		inst->clk_data.dcvs_mode ? "enabled" : "disabled", inst);

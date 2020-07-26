@@ -153,6 +153,17 @@ static inline bool is_encode_session(struct msm_vidc_inst *inst)
 	return inst->session_type == MSM_VIDC_ENCODER;
 }
 
+static inline bool is_encode_batching(struct msm_vidc_inst *inst)
+{
+	struct v4l2_ctrl *ctrl;
+
+	if (inst->session_type != MSM_VIDC_ENCODER)
+		return false;
+
+	ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDC_SUPERFRAME);
+	return !!ctrl->val;
+}
+
 static inline bool is_primary_output_mode(struct msm_vidc_inst *inst)
 {
 	return inst->stream_output_mode == HAL_VIDEO_DECODER_PRIMARY;
