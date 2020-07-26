@@ -61,38 +61,16 @@
 #define MESSAGE_MARKER 0xa5
 #define MESSAGE_PADDING 0x5a
 
-#define LOGx(func, dev, log, ...) \
-	func(dev, "%s: " log, __func__, ##__VA_ARGS__)
-
-#define LOGy(func, dev, log, ...) \
-	func(dev, "%s (line %d): " log, __func__, __LINE__, ##__VA_ARGS__)
-
-#define LOGD(dev, log, ...) LOGx(dev_dbg, dev, log, ##__VA_ARGS__)
-#define LOGI(dev, log, ...) LOGx(dev_info, dev, log, ##__VA_ARGS__)
-#define LOGN(dev, log, ...) LOGx(dev_notice, dev, log, ##__VA_ARGS__)
-#define LOGW(dev, log, ...) LOGy(dev_warn, dev, log, ##__VA_ARGS__)
-#define LOGE(dev, log, ...) LOGy(dev_err, dev, log, ##__VA_ARGS__)
-
-//wanghan add
-
-#if 1
-#define LOGV(log, ...) \
-	printk(KERN_ERR "[synaptics] %s (line %d): " log, __func__, __LINE__, ##__VA_ARGS__)
-#else
-#define LOGV(log, ...) {}
-#endif
-
-#if 0
-#define LOG_ENTRY() \
-	printk(KERN_WARNING "[synaptics][debug] %s (file %s line %d) Entry.\n", __func__, __FILE__, __LINE__)
-#define LOG_DONE() \
-	printk(KERN_WARNING "[synaptics][debug] %s (file %s line %d) Done.\n", __func__, __FILE__, __LINE__)
-#else
+#define LOGx(func, dev, log, ...)
+#define LOGy(func, dev, log, ...)
+#define LOGD(dev, log, ...)
+#define LOGI(dev, log, ...)
+#define LOGN(dev, log, ...)
+#define LOGW(dev, log, ...)
+#define LOGE(dev, log, ...)
+#define LOGV(log, ...)
 #define LOG_ENTRY() {}
 #define LOG_DONE() {}
-#endif
-
-//wanghan end
 
 #define INIT_BUFFER(buffer, is_clone) \
 	mutex_init(&buffer.buf_mutex); \

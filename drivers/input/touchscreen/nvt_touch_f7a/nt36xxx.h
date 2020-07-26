@@ -55,26 +55,11 @@
 #define I2C_FW_Address 0x01
 #define I2C_HW_Address 0x62
 
-#define NVT_LOG(fmt, args...)    pr_info("[%s] %s %d: " fmt, NVT_I2C_NAME, __func__, __LINE__, ##args)
-#define NVT_ERR(fmt, args...)    pr_err("[%s] %s %d: " fmt, NVT_I2C_NAME, __func__, __LINE__, ##args)
-//wanghan add
-#if 1
-#define LOGV(log, ...) \
-        printk("[%s] %s (line %d): " log, NVT_I2C_NAME, __func__, __LINE__, ##__VA_ARGS__)
-#else
-#define LOGV(log, ...) {}
-#endif
-
-#if 0
-#define LOG_ENTRY() \
-        printk(KERN_NOTICE "[NVT-ts][debug] %s (file %s line %d) Entry.\n", __func__, __FILE__, __LINE__)
-#define LOG_DONE() \
-        printk(KERN_NOTICE "[NVT-ts][debug] %s (file %s line %d) Done.\n", __func__, __FILE__, __LINE__)
-#else
+#define NVT_LOG(fmt, args...)
+#define NVT_ERR(fmt, args...)
+#define LOGV(log, ...)
 #define LOG_ENTRY() {}
 #define LOG_DONE() {}
-#endif
-//wanghan end
 
 //---Input device info.---
 #define NVT_TS_NAME "NVTCapacitiveTouchScreen"

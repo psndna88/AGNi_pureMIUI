@@ -139,22 +139,10 @@ struct ts_ic_info {
 /*****************************************************************************
 * DEBUG function define here
 *****************************************************************************/
-#if FTS_DEBUG_EN
-#define FTS_DEBUG_LEVEL     1
-#if (FTS_DEBUG_LEVEL == 2)
-#define FTS_DEBUG(fmt, args...) printk("[FTS][%s]"fmt"\n", __func__, ##args)
-#else
-#define FTS_DEBUG(fmt, args...) printk("[FTS]"fmt"\n", ##args)
-#endif
-#define FTS_FUNC_ENTER() printk("[FTS]%s: Enter\n", __func__)
-#define FTS_FUNC_EXIT()  printk("[FTS]%s: Exit(%d)\n", __func__, __LINE__)
-#else /* #if FTS_DEBUG_EN*/
 #define FTS_DEBUG(fmt, args...)
 #define FTS_FUNC_ENTER()
 #define FTS_FUNC_EXIT()
-#endif
-
-#define FTS_INFO(fmt, args...) printk(KERN_INFO "[FTS][Info]"fmt"\n", ##args)
-#define FTS_ERROR(fmt, args...) printk(KERN_ERR "[FTS][Error]"fmt"\n", ##args)
+#define FTS_INFO(fmt, args...)
+#define FTS_ERROR(fmt, args...)
 
 #endif /* __LINUX_FOCALTECH_COMMON_H__ */
