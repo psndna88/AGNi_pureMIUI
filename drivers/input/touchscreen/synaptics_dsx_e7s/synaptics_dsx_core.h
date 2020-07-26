@@ -74,12 +74,8 @@
 #define SYN_DEBUG 0
 #define SYN_I2C_NAME "SYN-ts"
 
-#if SYN_DEBUG
-#define SYN_LOG(fmt, args...)    pr_err("[%s] %s %d: " fmt, SYN_I2C_NAME, __func__, __LINE__, ##args)
-#else
-#define SYN_LOG(fmt, args...)    pr_info("[%s] %s %d: " fmt, SYN_I2C_NAME, __func__, __LINE__, ##args)
-#endif
-#define SYN_ERR(fmt, args...)    pr_err("[%s] %s %d: " fmt, SYN_I2C_NAME, __func__, __LINE__, ##args)
+#define SYN_LOG(fmt, args...)
+#define SYN_ERR(fmt, args...)
 
 #define PDT_PROPS (0X00EF)
 #define PDT_START (0x00E9)
