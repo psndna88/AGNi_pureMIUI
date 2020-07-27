@@ -1236,7 +1236,7 @@ int cam_sensor_power_down(struct cam_sensor_ctrl_t *s_ctrl)
 }
 
 int cam_sensor_apply_settings(struct cam_sensor_ctrl_t *s_ctrl,
-	int64_t req_id, enum cam_sensor_packet_opcodes opcode)
+	uint64_t req_id, enum cam_sensor_packet_opcodes opcode)
 {
 	int rc = 0, offset, i;
 	uint64_t top = 0, del_req_id = 0;
