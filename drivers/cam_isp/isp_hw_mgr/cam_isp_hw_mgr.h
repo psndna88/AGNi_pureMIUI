@@ -10,7 +10,6 @@
 #include "cam_isp_hw_mgr_intf.h"
 #include "cam_tasklet_util.h"
 #include "cam_isp_hw.h"
-#include "cam_cdm_intf_api.h"
 
 #define CAM_ISP_HW_NUM_MAX                       7
 
@@ -91,6 +90,5 @@ struct cam_isp_hw_mgr_res {
 struct cam_isp_ctx_base_info {
 	uint32_t                       idx;
 	enum cam_isp_hw_split_id       split_id;
-	enum cam_cdm_id                cdm_id;
 };
 #endif /* _CAM_ISP_HW_MGR_H_ */
