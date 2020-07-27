@@ -29,28 +29,19 @@
 #include <wlan_objmgr_vdev_obj.h>
 #include <wlan_ocb_public_structs.h>
 
-#define ocb_alert_rl(params...) QDF_TRACE_FATAL_RL(QDF_MODULE_ID_OCB, params)
-#define ocb_err_rl(params...) QDF_TRACE_ERROR_RL(QDF_MODULE_ID_OCB, params)
-#define ocb_warn_rl(params...) QDF_TRACE_WARN_RL(QDF_MODULE_ID_OCB, params)
-#define ocb_info_rl(params...) QDF_TRACE_INFO_RL(QDF_MODULE_ID_OCB, params)
-#define ocb_debug_rl(params...) QDF_TRACE_DEBUG_RL(QDF_MODULE_ID_OCB, params)
-
-#define ocb_log(level, args...) \
-		QDF_TRACE(QDF_MODULE_ID_OCB, level, ## args)
-#define ocb_logfl(level, format, args...) \
-		ocb_log(level, FL(format), ## args)
-#define ocb_alert(format, args...) \
-		ocb_logfl(QDF_TRACE_LEVEL_FATAL, format, ## args)
-#define ocb_err(format, args...) \
-		ocb_logfl(QDF_TRACE_LEVEL_ERROR, format, ## args)
-#define ocb_warn(format, args...) \
-		ocb_logfl(QDF_TRACE_LEVEL_WARN, format, ## args)
-#define ocb_notice(format, args...) \
-		ocb_logfl(QDF_TRACE_LEVEL_INFO, format, ## args)
-#define ocb_info(format, args...) \
-		ocb_logfl(QDF_TRACE_LEVEL_INFO_HIGH, format, ## args)
-#define ocb_debug(format, args...) \
-		ocb_logfl(QDF_TRACE_LEVEL_DEBUG, format, ## args)
+#define ocb_alert_rl(params...)
+#define ocb_err_rl(params...)
+#define ocb_warn_rl(params...)
+#define ocb_info_rl(params...)
+#define ocb_debug_rl(params...)
+#define ocb_log(level, args...)
+#define ocb_logfl(level, format, args...)
+#define ocb_alert(format, args...)
+#define ocb_err(format, args...)
+#define ocb_warn(format, args...)
+#define ocb_notice(format, args...)
+#define ocb_info(format, args...)
+#define ocb_debug(format, args...)
 
 /**
  * enum ocb_southbound_event - OCB south bound event type

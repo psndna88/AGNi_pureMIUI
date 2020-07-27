@@ -36,23 +36,14 @@
 #define WLAN_GREEN_AP_PS_ON_TIME        (0)
 #define WLAN_GREEN_AP_PS_TRANS_TIME     (20)
 
-#define green_ap_log(level, args...) \
-			QDF_TRACE(QDF_MODULE_ID_GREEN_AP, level, ## args)
-#define green_ap_logfl(level, format, args...) \
-			green_ap_log(level, FL(format), ## args)
-
-#define green_ap_alert(format, args...) \
-		green_ap_logfl(QDF_TRACE_LEVEL_FATAL, format, ## args)
-#define green_ap_err(format, args...) \
-		green_ap_logfl(QDF_TRACE_LEVEL_ERROR, format, ## args)
-#define green_apwarn(format, args...) \
-		green_ap_logfl(QDF_TRACE_LEVEL_WARN, format, ## args)
-#define green_ap_notice(format, args...) \
-		green_ap_logfl(QDF_TRACE_LEVEL_INFO, format, ## args)
-#define green_ap_info(format, args...) \
-		green_ap_logfl(QDF_TRACE_LEVEL_INFO_HIGH, format, ## args)
-#define green_ap_debug(format, args...) \
-		green_ap_logfl(QDF_TRACE_LEVEL_DEBUG, format, ## args)
+#define green_ap_log(level, args...)
+#define green_ap_logfl(level, format, args...)
+#define green_ap_alert(format, args...)
+#define green_ap_err(format, args...)
+#define green_apwarn(format, args...)
+#define green_ap_notice(format, args...)
+#define green_ap_info(format, args...)
+#define green_ap_debug(format, args...)
 
 #define WLAN_GREEN_AP_PS_DISABLE 0
 #define WLAN_GREEN_AP_PS_ENABLE 1

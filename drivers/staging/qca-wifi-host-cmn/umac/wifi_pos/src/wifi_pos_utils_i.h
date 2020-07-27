@@ -34,21 +34,13 @@
 struct wlan_objmgr_psoc;
 struct wifi_pos_req_msg;
 
-#define wifi_pos_log(level, args...) \
-	QDF_TRACE(QDF_MODULE_ID_WIFIPOS, level, ## args)
-#define wifi_pos_logfl(level, format, args...) \
-	wifi_pos_log(level, FL(format), ## args)
-
-#define wifi_pos_alert(format, args...) \
-	wifi_pos_logfl(QDF_TRACE_LEVEL_FATAL, format, ## args)
-#define wifi_pos_err(format, args...) \
-	wifi_pos_logfl(QDF_TRACE_LEVEL_ERROR, format, ## args)
-#define wifi_pos_warn(format, args...) \
-	wifi_pos_logfl(QDF_TRACE_LEVEL_WARN, format, ## args)
-#define wifi_pos_notice(format, args...) \
-	wifi_pos_logfl(QDF_TRACE_LEVEL_INFO, format, ## args)
-#define wifi_pos_debug(format, args...) \
-	wifi_pos_logfl(QDF_TRACE_LEVEL_DEBUG, format, ## args)
+#define wifi_pos_log(level, args...)
+#define wifi_pos_logfl(level, format, args...)
+#define wifi_pos_alert(format, args...)
+#define wifi_pos_err(format, args...)
+#define wifi_pos_warn(format, args...)
+#define wifi_pos_notice(format, args...)
+#define wifi_pos_debug(format, args...)
 
 #define OEM_APP_SIGNATURE_LEN      16
 #define OEM_APP_SIGNATURE_STR      "QUALCOMM-OEM-APP"

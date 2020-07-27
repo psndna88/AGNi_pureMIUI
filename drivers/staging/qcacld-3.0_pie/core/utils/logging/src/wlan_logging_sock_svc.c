@@ -68,8 +68,7 @@ enum tx_status {
 static uint8_t gtx_count;
 static uint8_t grx_count;
 
-#define LOGGING_TRACE(level, args ...) \
-	QDF_TRACE(QDF_MODULE_ID_HDD, level, ## args)
+#define LOGGING_TRACE(level, args ...)
 
 /* Global variables */
 

@@ -70,31 +70,12 @@
 #include <stdarg.h>             /* va_list */
 #include <qdf_types.h>          /* qdf_vprint */
 
-#define ol_txrx_log(level, args...) \
-		QDF_TRACE(QDF_MODULE_ID_TXRX, level, ## args)
-#define ol_txrx_logfl(level, format, args...) \
-		ol_txrx_log(level, FL(format), ## args)
-
-#define ol_txrx_alert(format, args...) \
-		ol_txrx_logfl(QDF_TRACE_LEVEL_FATAL, format, ## args)
-#define ol_txrx_err(format, args...) \
-		ol_txrx_logfl(QDF_TRACE_LEVEL_ERROR, format, ## args)
-#define ol_txrx_warn(format, args...) \
-		ol_txrx_logfl(QDF_TRACE_LEVEL_WARN, format, ## args)
-#define ol_txrx_info(format, args...) \
-		ol_txrx_logfl(QDF_TRACE_LEVEL_INFO, format, ## args)
-#define ol_txrx_info_high(format, args...) \
-		ol_txrx_logfl(QDF_TRACE_LEVEL_INFO_HIGH, format, ## args)
-#define ol_txrx_dbg(format, args...) \
-		ol_txrx_logfl(QDF_TRACE_LEVEL_DEBUG, format, ## args)
-
 /*
  * define PN check failure message print rate
  * as 1 second
  */
 #define TXRX_PN_CHECK_FAILURE_PRINT_PERIOD_MS  1000
 
-#else
 #define ol_txrx_log(level, args...)
 #define ol_txrx_logfl(level, format, args...)
 #define ol_txrx_alert(format, args...)
@@ -111,20 +92,12 @@
 #define DEBUG_CREDIT 0
 #endif
 
-#if DEBUG_CREDIT
-#define TX_CREDIT_DEBUG_PRINT(fmt, ...) qdf_print(fmt, ## __VA_ARGS__)
-#else
 #define TX_CREDIT_DEBUG_PRINT(fmt, ...)
-#endif
 
 /*--- tx scheduler debug printouts ---*/
 
-#ifdef HOST_TX_SCHED_DEBUG
-#define TX_SCHED_DEBUG_PRINT(fmt, ...) qdf_print(fmt, ## __VA_ARGS__)
-#else
 #define TX_SCHED_DEBUG_PRINT(fmt, ...)
-#endif
-#define TX_SCHED_DEBUG_PRINT_ALWAYS(fmt, ...) qdf_print(fmt, ## __VA_ARGS__)
+#define TX_SCHED_DEBUG_PRINT_ALWAYS(fmt, ...)
 
 #define OL_TXRX_LIST_APPEND(head, tail, elem) \
 	do {						\

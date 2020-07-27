@@ -30,14 +30,13 @@
 #include "wlan_pmo_priv.h"
 #include "wlan_pmo_objmgr.h"
 
-#define pmo_fatal(params...) QDF_TRACE_FATAL(QDF_MODULE_ID_PMO, params)
-#define pmo_err(params...) QDF_TRACE_ERROR(QDF_MODULE_ID_PMO, params)
-#define pmo_warn(params...) QDF_TRACE_WARN(QDF_MODULE_ID_PMO, params)
-#define pmo_info(params...) QDF_TRACE_INFO(QDF_MODULE_ID_PMO, params)
-#define pmo_debug(params...) QDF_TRACE_DEBUG(QDF_MODULE_ID_PMO, params)
-
-#define pmo_enter() pmo_debug("enter")
-#define pmo_exit() pmo_debug("exit")
+#define pmo_fatal(params...)
+#define pmo_err(params...)
+#define pmo_warn(params...)
+#define pmo_info(params...)
+#define pmo_debug(params...)
+#define pmo_enter()
+#define pmo_exit()
 
 #define PMO_VDEV_IN_STA_MODE(mode) \
 	((mode) == QDF_STA_MODE || (mode) == QDF_P2P_CLIENT_MODE ? 1 : 0)

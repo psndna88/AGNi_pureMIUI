@@ -30,28 +30,20 @@
 #include <wlan_ipa_public_struct.h>
 #include <wlan_ipa_priv.h>
 
-#define ipa_log(level, args...) QDF_TRACE(QDF_MODULE_ID_IPA, level, ## args)
-#define ipa_logfl(level, format, args...) ipa_log(level, FL(format), ## args)
-
-#define ipa_fatal(format, args...) \
-		ipa_logfl(QDF_TRACE_LEVEL_FATAL, format, ## args)
-#define ipa_err(format, args...) \
-		ipa_logfl(QDF_TRACE_LEVEL_ERROR, format, ## args)
-#define ipa_warn(format, args...) \
-		ipa_logfl(QDF_TRACE_LEVEL_WARN, format, ## args)
-#define ipa_info(format, args...) \
-		ipa_logfl(QDF_TRACE_LEVEL_INFO, format, ## args)
-#define ipa_debug(format, args...) \
-		ipa_logfl(QDF_TRACE_LEVEL_DEBUG, format, ## args)
-
-#define ipa_fatal_rl(params...) QDF_TRACE_FATAL_RL(QDF_MODULE_ID_IPA, params)
-#define ipa_err_rl(params...) QDF_TRACE_ERROR_RL(QDF_MODULE_ID_IPA, params)
-#define ipa_warn_rl(params...) QDF_TRACE_WARN_RL(QDF_MODULE_ID_IPA, params)
-#define ipa_info_rl(params...) QDF_TRACE_INFO_RL(QDF_MODULE_ID_IPA, params)
-#define ipa_debug_rl(params...) QDF_TRACE_DEBUG_RL(QDF_MODULE_ID_IPA, params)
-
-#define IPA_ENTER() ipa_debug("enter")
-#define IPA_EXIT() ipa_debug("exit")
+#define ipa_log(level, args...)
+#define ipa_logfl(level, format, args...)
+#define ipa_fatal(format, args...)
+#define ipa_err(format, args...)
+#define ipa_warn(format, args...)
+#define ipa_info(format, args...)
+#define ipa_debug(format, args...)
+#define ipa_fatal_rl(params...)
+#define ipa_err_rl(params...)
+#define ipa_warn_rl(params...)
+#define ipa_info_rl(params...)
+#define ipa_debug_rl(params...)
+#define IPA_ENTER()
+#define IPA_EXIT()
 
 /**
  * ipa_check_hw_present() - get IPA hw status

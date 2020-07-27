@@ -28,23 +28,15 @@
 #include "reg_db.h"
 #include "reg_services.h"
 
-#define reg_log(level, args...) \
-	QDF_TRACE(QDF_MODULE_ID_REGULATORY, level, ## args)
-#define reg_logfl(level, format, args...) reg_log(level, FL(format), ## args)
-#define reg_alert(format, args...) \
-		reg_logfl(QDF_TRACE_LEVEL_FATAL, format, ## args)
-#define reg_err(format, args...) \
-		reg_logfl(QDF_TRACE_LEVEL_ERROR, format, ## args)
-#define reg_warn(format, args...) \
-		reg_logfl(QDF_TRACE_LEVEL_WARN, format, ## args)
-#define reg_notice(format, args...) \
-		reg_logfl(QDF_TRACE_LEVEL_INFO, format, ## args)
-#define reg_info(format, args...) \
-		reg_logfl(QDF_TRACE_LEVEL_INFO_HIGH, format, ## args)
-#define reg_debug(format, args...) \
-		reg_logfl(QDF_TRACE_LEVEL_DEBUG, format, ## args)
-#define reg_debug_rl(params...) \
-	QDF_TRACE_DEBUG_RL(QDF_MODULE_ID_REGULATORY, params)
+#define reg_log(level, args...)
+#define reg_logfl(level, format, args...)
+#define reg_alert(format, args...)
+#define reg_err(format, args...)
+#define reg_warn(format, args...)
+#define reg_notice(format, args...)
+#define reg_info(format, args...)
+#define reg_debug(format, args...)
+#define reg_debug_rl(params...)
 
 
 /**

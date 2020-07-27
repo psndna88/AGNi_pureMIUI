@@ -32,25 +32,15 @@
 #include "wlan_action_oui_priv.h"
 #include "wlan_action_oui_objmgr.h"
 
-#define action_oui_log(level, args...) \
-	QDF_TRACE(QDF_MODULE_ID_ACTION_OUI, level, ## args)
-
-#define action_oui_logfl(level, format, args...) \
-	action_oui_log(level, FL(format), ## args)
-
-#define action_oui_fatal(format, args...) \
-		action_oui_logfl(QDF_TRACE_LEVEL_FATAL, format, ## args)
-#define action_oui_err(format, args...) \
-		action_oui_logfl(QDF_TRACE_LEVEL_ERROR, format, ## args)
-#define action_oui_warn(format, args...) \
-		action_oui_logfl(QDF_TRACE_LEVEL_WARN, format, ## args)
-#define action_oui_info(format, args...) \
-		action_oui_logfl(QDF_TRACE_LEVEL_INFO, format, ## args)
-#define action_oui_debug(format, args...) \
-		action_oui_logfl(QDF_TRACE_LEVEL_DEBUG, format, ## args)
-
-#define ACTION_OUI_ENTER() action_oui_debug("enter")
-#define ACTION_OUI_EXIT() action_oui_debug("exit")
+#define action_oui_log(level, args...)
+#define action_oui_logfl(level, format, args...)
+#define action_oui_fatal(format, args...)
+#define action_oui_err(format, args...)
+#define action_oui_warn(format, args...)
+#define action_oui_info(format, args...)
+#define action_oui_debug(format, args...)
+#define ACTION_OUI_ENTER()
+#define ACTION_OUI_EXIT()
 
 /**
  * action_oui_psoc_create_notification(): Handler for psoc create notify.

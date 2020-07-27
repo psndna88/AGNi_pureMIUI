@@ -34,7 +34,6 @@
 #define __printf(a, b)
 #endif
 
-#ifdef CONFIG_MCL
 /* QDF_TRACE is the macro invoked to add trace messages to code.  See the
  * documenation for qdf_trace_msg() for the parameters etc. for this function.
  *
@@ -45,20 +44,6 @@
  * This allows us to build 'performance' builds where we can measure performance
  * without being bogged down by all the tracing in the code
  */
-#if defined(WLAN_DEBUG) || defined(DEBUG)
-#define QDF_TRACE qdf_trace_msg
-#define QDF_VTRACE qdf_vtrace_msg
-#define QDF_TRACE_HEX_DUMP qdf_trace_hex_dump
-#define QDF_TRACE_RATE_LIMITED(rate, module, level, format, ...)\
-	do {\
-		static int rate_limit;\
-		rate_limit++;\
-		if (rate)\
-			if (0 == (rate_limit % rate))\
-				qdf_trace_msg(module, level, format,\
-						##__VA_ARGS__);\
-	} while (0)
-#else
 static inline void __printf(3, 4) no_qdf_trace_msg(QDF_MODULE_ID module, QDF_TRACE_LEVEL level,
 		   char *str_format, ...)
 {
@@ -74,48 +59,12 @@ static inline void no_qdf_trace_hex_dump(QDF_MODULE_ID module, QDF_TRACE_LEVEL l
 #define QDF_TRACE no_qdf_trace_msg
 #define QDF_VTRACE no_qdf_vtrace_msg
 #define QDF_TRACE_HEX_DUMP no_qdf_trace_hex_dump
-#define QDF_TRACE_RATE_LIMITED(rate, module, level, format, ...) \
-	no_qdf_trace_msg(module, level, format, ##__VA_ARGS__)
-#endif
-#else
-
-#define qdf_trace(log_level, args...) \
-		do {	\
-			extern int qdf_dbg_mask; \
-			if (qdf_dbg_mask >= log_level) { \
-				printk("qdf: "args); \
-				printk("\n"); \
-			} \
-		} while (0)
-#define QDF_TRACE(x, y, args...) printk(args)
-
-#endif /* CONFIG_MCL */
+#define QDF_TRACE_RATE_LIMITED(rate, module, level, format, ...)
 
 #define QDF_ENABLE_TRACING
 #define qdf_scnprintf scnprintf
 
-#ifdef QDF_ENABLE_TRACING
-
-#define QDF_ASSERT(_condition) \
-	do { \
-		if (!(_condition)) { \
-			pr_err("QDF ASSERT in %s Line %d\n", \
-			       __func__, __LINE__); \
-			WARN_ON(1); \
-		} \
-	} while (0)
-
-#else
-
-/* This code will be used for compilation if tracing is to be compiled out */
-/* of the code so these functions/macros are 'do nothing' */
-static inline void qdf_trace_msg(QDF_MODULE_ID module, ...)
-{
-}
-
 #define QDF_ASSERT(_condition)
-
-#endif
 
 #ifdef PANIC_ON_BUG
 

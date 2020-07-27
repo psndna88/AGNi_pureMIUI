@@ -73,28 +73,21 @@
 #define WMI_DIAG_RX_EVENT_DEBUG_MAX_ENTRY (256)
 #endif
 
-#define wmi_alert(params...) QDF_TRACE_FATAL(QDF_MODULE_ID_WMI, ## params)
-#define wmi_err(params...) QDF_TRACE_ERROR(QDF_MODULE_ID_WMI, ## params)
-#define wmi_warn(params...) QDF_TRACE_WARN(QDF_MODULE_ID_WMI, ## params)
-#define wmi_info(params...) QDF_TRACE_INFO(QDF_MODULE_ID_WMI, ## params)
-#define wmi_debug(params...) QDF_TRACE_DEBUG(QDF_MODULE_ID_WMI, ## params)
-
-#define wmi_nofl_alert(params...) \
-	QDF_TRACE_FATAL_NO_FL(QDF_MODULE_ID_WMI, ## params)
-#define wmi_nofl_err(params...) \
-	QDF_TRACE_ERROR_NO_FL(QDF_MODULE_ID_WMI, ## params)
-#define wmi_nofl_warn(params...) \
-	QDF_TRACE_WARN_NO_FL(QDF_MODULE_ID_WMI, ## params)
-#define wmi_nofl_info(params...) \
-	QDF_TRACE_INFO_NO_FL(QDF_MODULE_ID_WMI, ## params)
-#define wmi_nofl_debug(params...) \
-	QDF_TRACE_DEBUG_NO_FL(QDF_MODULE_ID_WMI, ## params)
-
-#define wmi_alert_rl(params...) QDF_TRACE_FATAL_RL(QDF_MODULE_ID_WMI, params)
-#define wmi_err_rl(params...) QDF_TRACE_ERROR_RL(QDF_MODULE_ID_WMI, params)
-#define wmi_warn_rl(params...) QDF_TRACE_WARN_RL(QDF_MODULE_ID_WMI, params)
-#define wmi_info_rl(params...) QDF_TRACE_INFO_RL(QDF_MODULE_ID_WMI, params)
-#define wmi_debug_rl(params...) QDF_TRACE_DEBUG_RL(QDF_MODULE_ID_WMI, params)
+#define wmi_alert(params...)
+#define wmi_err(params...)
+#define wmi_warn(params...)
+#define wmi_info(params...)
+#define wmi_debug(params...)
+#define wmi_nofl_alert(params...)
+#define wmi_nofl_err(params...)
+#define wmi_nofl_warn(params...)
+#define wmi_nofl_info(params...)
+#define wmi_nofl_debug(params...)
+#define wmi_alert_rl(params...)
+#define wmi_err_rl(params...)
+#define wmi_warn_rl(params...)
+#define wmi_info_rl(params...)
+#define wmi_debug_rl(params...)
 
 /**
  * struct wmi_command_debug - WMI command log buffer data type
