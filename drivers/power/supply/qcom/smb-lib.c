@@ -48,23 +48,8 @@ extern int hwc_check_global;
 #include <linux/fastchg.h>
 #endif
 
-#define smblib_err(chg, fmt, ...)		\
-	pr_err("%s: %s: " fmt, chg->name,	\
-		__func__, ##__VA_ARGS__)	\
-
-#ifdef CONFIG_DEBUG_SMB_LIB
-#define smblib_dbg(chg, reason, fmt, ...)			\
-	do {							\
-		if (*chg->debug_mask & (reason))		\
-			pr_info("%s: %s: " fmt, chg->name,	\
-				__func__, ##__VA_ARGS__);	\
-		else						\
-			pr_debug("%s: %s: " fmt, chg->name,	\
-				__func__, ##__VA_ARGS__);	\
-	} while (0)
-#else
+#define smblib_err(chg, fmt, ...)
 #define smblib_dbg(chg, reason, fmt, ...) do {} while (0)
-#endif
 
 static bool is_secure(struct smb_charger *chg, int addr)
 {
@@ -1013,17 +998,7 @@ int smblib_set_icl_current(struct smb_charger *chg, int icl_ua)
 			goto enable_icl_changed_interrupt;
 		}
 	} else {
-		/*
-		 * Try USB 2.0/3,0 option first on USB path when maximum input
-		 * current limit is 500mA or below for better accuracy; in case
-		 * of error, proceed to use USB high-current mode.
-		 */
-		if (icl_ua <= USBIN_500MA) {
-			rc = set_sdp_current(chg, icl_ua);
-			if (rc >= 0)
-				goto enable_icl_changed_interrupt;
-		}
-
+		set_sdp_current(chg, 100000);
 		rc = smblib_set_charge_param(chg, &chg->param.usb_icl, icl_ua);
 		if (rc < 0) {
 			smblib_err(chg, "Couldn't set HC ICL rc=%d\n", rc);
@@ -2068,15 +2043,8 @@ int smblib_set_prop_system_temp_level(struct smb_charger *chg,
 		lct_therm_lvl_reserved.intval = val->intval;
 	}
 #if defined(CONFIG_KERNEL_CUSTOM_E7S)
-		if (hwc_check_india == 1) {	
-		if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 2)) {
-		    return 0;
-		}
-	}
-	else {
-		if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 1)) {
-		    return 0;
-		}
+	if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 2)) {
+	    return 0;
 	}
 #elif defined(CONFIG_KERNEL_CUSTOM_D2S)
 	if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 2)) {
@@ -2087,15 +2055,8 @@ int smblib_set_prop_system_temp_level(struct smb_charger *chg,
 		return 0;
 	}
 #elif defined(CONFIG_KERNEL_CUSTOM_E7T)
-	if (hwc_check_india == 1) {	
-		if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 3)) {
-		    return 0;
-		}
-	}
-	else {
-		if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 3)) {
-		    return 0;
-		}
+	if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 3)) {
+	    return 0;
 	}
 #else
 	if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 0) && (hwc_check_india == 0)) {
@@ -2779,8 +2740,6 @@ int smblib_get_prop_die_health(struct smb_charger *chg,
 #define HVDCP_CURRENT_UA		2700000
 #elif defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
 #define HVDCP_CURRENT_UA		2300000
-#else
-#define HVDCP_CURRENT_UA		2500000
 #endif
 #define TYPEC_DEFAULT_CURRENT_UA	900000
 #define TYPEC_MEDIUM_CURRENT_UA		1500000
@@ -4068,8 +4027,6 @@ static void smblib_force_legacy_icl(struct smb_charger *chg, int pst)
 #elif defined(CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A)
 		vote(chg->usb_icl_votable, USER_VOTER, false, 0);
 		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 2700000);
-#else
-		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 2500000);
 #endif
 		smblib_err(chg, "lct battery smblib_force_legacy_icl qc3.0\n");
 		break;

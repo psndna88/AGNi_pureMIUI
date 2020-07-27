@@ -658,9 +658,6 @@ static int fg_get_battery_temp(struct fg_chip *chip, int *val)
 {
 	int rc = 0, temp;
 	u8 buf[2];
-#if defined(CONFIG_KERNEL_CUSTOM_E7T)
-	struct thermal_zone_device *quiet_them;
-#endif
 
 	rc = fg_read(chip, BATT_INFO_BATT_TEMP_LSB(chip), buf, 2);
 	if (rc < 0) {
@@ -668,35 +665,14 @@ static int fg_get_battery_temp(struct fg_chip *chip, int *val)
 			BATT_INFO_BATT_TEMP_LSB(chip), rc);
 		return rc;
 	}
-	pr_debug("addr=0x%04x,buf1=%04x buf0=%04x\n",
-		BATT_INFO_BATT_TEMP_LSB(chip),buf[1],buf[0]);
 	temp = ((buf[1] & BATT_TEMP_MSB_MASK) << 8) |
 		(buf[0] & BATT_TEMP_LSB_MASK);
 	temp = DIV_ROUND_CLOSEST(temp, 4);
 
 	/* Value is in Kelvin; Convert it to deciDegC */
 	temp = (temp - 273) * 10;
-	pr_debug("LCT TEMP=%d\n",temp);
-
-#if defined(CONFIG_KERNEL_CUSTOM_E7T)	
-	if (temp < -40){
-		switch (temp){
-		case -50:
-			temp = -70;
-			break;
-		case -60:
-			temp = -80;
-			break;
-		case -70:
-			temp = -90;
-			break;
-		case -80:
-			temp = -100;
-			break;
-#else
 	if (temp < -80){
 		switch (temp){
-#endif
 		case -90:
 			temp = -110;
 			break;
@@ -724,18 +700,9 @@ static int fg_get_battery_temp(struct fg_chip *chip, int *val)
 		default:
 			temp -= 50;
 			break;
-		};
+		}
 	}
 
-#if defined(CONFIG_KERNEL_CUSTOM_E7T)
-	if(rradc_die == 1){
-		quiet_them = thermal_zone_get_zone_by_name("quiet_therm");
-		if (quiet_them)
-			rc = thermal_zone_get_temp(quiet_them, &temp);
-		temp = (temp - 3) * 10;
-		pr_err("LCT USE QUIET_THERM AS BATTERY TEMP \n");
-	}
-#endif
 	*val = temp;
 	return 0;
 }
@@ -4657,11 +4624,6 @@ static int fg_hw_init(struct fg_chip *chip)
 			return rc;
 		}
 	}
-	buf[0] = 0x33;
-	buf[1] = 0x3;
-	rc = fg_sram_write(chip,4,0,buf,2,FG_IMA_DEFAULT);
-	if(rc < 0)
-		pr_err("Error in configuring Sram,rc = %d\n",rc);
 
 	return 0;
 }
@@ -4866,9 +4828,8 @@ static irqreturn_t fg_delta_bsoc_irq_handler(int irq, void *data)
 static irqreturn_t fg_delta_msoc_irq_handler(int irq, void *data)
 {
 	struct fg_chip *chip = data;
-	struct thermal_zone_device *quiet_them;
 	int rc;
-	int msoc, volt_uv, batt_temp, ibatt_now,temp_qt ;
+	int msoc, volt_uv, batt_temp, ibatt_now ;
 	bool input_present;
 	fg_dbg(chip, FG_IRQ, "irq %d triggered\n", irq);
 	fg_cycle_counter_update(chip);
@@ -4900,22 +4861,18 @@ static irqreturn_t fg_delta_msoc_irq_handler(int irq, void *data)
 		power_supply_changed(chip->batt_psy);
 
 	input_present = is_input_present(chip);
-	quiet_them = thermal_zone_get_zone_by_name("quiet_therm");
 	rc = fg_get_battery_voltage(chip, &volt_uv);
 	if (!rc)
 		rc = fg_get_prop_capacity(chip, &msoc);
 
 	if (!rc)
 		rc = fg_get_battery_temp(chip, &batt_temp);
-	if (quiet_them)
-		rc = thermal_zone_get_temp(quiet_them, &temp_qt);
 	if (!rc)
 		rc = fg_get_battery_current(chip, &ibatt_now);
 
 	if (!rc)
-		pr_err("lct battery SOC:%d voltage:%duV current:%duA temp:%d id:%dK charge_status:%d charge_type:%d health:%d input_present:%d temp_qt:%d \n",
-			msoc, volt_uv, ibatt_now, batt_temp, chip->batt_id_ohms / 1000, chip->charge_status, chip->charge_type, chip->health, input_present,temp_qt);
-
+		pr_err("lct battery SOC:%d voltage:%duV current:%duA temp:%d id:%dK charge_status:%d charge_type:%d health:%d input_present:%d \n",
+			msoc, volt_uv, ibatt_now, batt_temp, chip->batt_id_ohms / 1000, chip->charge_status, chip->charge_type, chip->health, input_present);
 	return IRQ_HANDLED;
 }
 

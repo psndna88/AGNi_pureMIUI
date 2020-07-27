@@ -222,7 +222,7 @@ module_param_named(
 	debug_mask, __debug_mask, int, S_IRUSR | S_IWUSR
 );
 
-static int __weak_chg_icl_ua = 900000;
+static int __weak_chg_icl_ua = 500000;
 module_param_named(
 	weak_chg_icl_ua, __weak_chg_icl_ua, int, S_IRUSR | S_IWUSR);
 
@@ -314,9 +314,6 @@ static int smb2_parse_dt(struct smb2 *chip)
 	if (rc < 0)
 		chip->dt.wipower_max_uw = -EINVAL;
 
-#if (defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T))	
-	if (hwc_check_india == 1) {
-#endif
 	if (of_find_property(node, "qcom,thermal-mitigation", &byte_len)) {
 		chg->thermal_mitigation = devm_kzalloc(chg->dev, byte_len,
 			GFP_KERNEL);
@@ -335,28 +332,6 @@ static int smb2_parse_dt(struct smb2 *chip)
 			return rc;
 		}
 	}
-#if (defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T))
-	} else {
-		if (of_find_property(node, "qcom,thermal-mitigation-china", &byte_len)) {
-			chg->thermal_mitigation = devm_kzalloc(chg->dev, byte_len,
-				GFP_KERNEL);
-		
-			if (chg->thermal_mitigation == NULL)
-				return -ENOMEM;
-		
-			chg->thermal_levels = byte_len / sizeof(u32);
-				rc = of_property_read_u32_array(node,
-						"qcom,thermal-mitigation-china",
-						chg->thermal_mitigation,
-						chg->thermal_levels);
-			if (rc < 0) {
-				dev_err(chg->dev,
-					"Couldn't read threm limits rc = %d\n", rc);
-				return rc;
-			}
-		}
-	}
-#endif
 
 	of_property_read_u32(node, "qcom,float-option", &chip->dt.float_option);
 	if (chip->dt.float_option < 0 || chip->dt.float_option > 4) {
@@ -470,16 +445,14 @@ static int smb2_usb_get_prop(struct power_supply *psy,
 		rc = smblib_get_prop_input_current_settled(chg, val);
 		break;
 	case POWER_SUPPLY_PROP_TYPE:
-#ifdef CONFIG_KERNEL_CUSTOM_F7A
-		if ((chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP) || (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3))
+		if((chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP) || (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3))
 		{
 			val->intval = chg->real_charger_type;
-		} else {
-#endif
-			val->intval = POWER_SUPPLY_TYPE_USB_PD;
-#ifdef CONFIG_KERNEL_CUSTOM_F7A
 		}
-#endif
+		else
+		{
+			val->intval = POWER_SUPPLY_TYPE_USB_PD;
+		}
 		break;
 	case POWER_SUPPLY_PROP_REAL_TYPE:
 		if (chip->bad_part)
@@ -1640,14 +1613,7 @@ static int smb2_init_hw(struct smb2 *chip)
 		return rc;
 	}
 
-#ifndef CONFIG_KERNEL_CUSTOM_F7A
-	if((is_poweroff_charge == false) && (stat != 0x01)) {
-#endif
-		smblib_rerun_apsd_if_required(chg);
-#ifndef CONFIG_KERNEL_CUSTOM_F7A
-	}
-#endif
-
+	smblib_rerun_apsd_if_required(chg);
 
 	/* clear the ICL override if it is set */
 	if (smblib_icl_override(chg, false) < 0) {
@@ -1708,7 +1674,6 @@ static int smb2_init_hw(struct smb2 *chip)
 		dev_err(chg->dev, "Couldn't write to USBIN_ADAPTER_ALLOW_CFG rc=%d\n", rc);
 		return rc;
 	}
-
 #else
 	/* Operate the QC2.0 in 5V/9V mode i.e. Disable 12V */
 	rc = smblib_masked_write(chg, HVDCP_PULSE_COUNT_MAX_REG,
@@ -1727,6 +1692,7 @@ static int smb2_init_hw(struct smb2 *chip)
 			"Couldn't configure QC3.0 to 6.6V rc=%d\n", rc);
 		return rc;
 	}
+
 #endif
 	/*
 	 * AICL configuration:
@@ -1882,7 +1848,9 @@ static int smb2_init_hw(struct smb2 *chip)
 		return rc;
 	}
 
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T) || defined(CONFIG_KERNEL_CUSTOM_F7A)
 	rc = vote(chg->chg_disable_votable, DEFAULT_VOTER, true, 0);
+#endif
 	switch (chip->dt.chg_inhibit_thr_mv) {
 	case 50:
 		rc = smblib_masked_write(chg, CHARGE_INHIBIT_THRESHOLD_CFG_REG,
@@ -1911,7 +1879,9 @@ static int smb2_init_hw(struct smb2 *chip)
 		break;
 	}
 
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T) || defined(CONFIG_KERNEL_CUSTOM_F7A)
 	rc = vote(chg->chg_disable_votable, DEFAULT_VOTER, false, 0);
+#endif
 	if (rc < 0) {
 		dev_err(chg->dev, "Couldn't configure charge inhibit threshold rc=%d\n",
 			rc);
