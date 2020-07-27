@@ -360,10 +360,11 @@ int32_t cam_actuator_establish_link(
 	return 0;
 }
 
-static void cam_actuator_update_req_mgr(
+static int cam_actuator_update_req_mgr(
 	struct cam_actuator_ctrl_t *a_ctrl,
 	struct cam_packet *csl_packet)
 {
+	int rc = 0;
 	struct cam_req_mgr_add_request add_req;
 
 	add_req.link_hdl = a_ctrl->bridge_intf.link_hdl;
@@ -374,13 +375,22 @@ static void cam_actuator_update_req_mgr(
 
 	if (a_ctrl->bridge_intf.crm_cb &&
 		a_ctrl->bridge_intf.crm_cb->add_req) {
-		a_ctrl->bridge_intf.crm_cb->add_req(&add_req);
+		rc = a_ctrl->bridge_intf.crm_cb->add_req(&add_req);
+		if (rc) {
+			CAM_ERR(CAM_ACTUATOR,
+				"Adding request: %llu failed: rc: %d",
+				csl_packet->header.request_id, rc);
+			return rc;
+		}
 		CAM_DBG(CAM_ACTUATOR, "Request Id: %lld added to CRM",
 			add_req.req_id);
 	} else {
 		CAM_ERR(CAM_ACTUATOR, "Can't add Request ID: %lld to CRM",
 			csl_packet->header.request_id);
+		rc = -EINVAL;
 	}
+
+	return rc;
 }
 
 int32_t cam_actuator_publish_dev_info(struct cam_req_mgr_device_info *info)
@@ -619,7 +629,12 @@ int32_t cam_actuator_i2c_pkt_parse(struct cam_actuator_ctrl_t *a_ctrl,
 				"Auto move lens parsing failed: %d", rc);
 			goto end;
 		}
-		cam_actuator_update_req_mgr(a_ctrl, csl_packet);
+		rc = cam_actuator_update_req_mgr(a_ctrl, csl_packet);
+		if (rc) {
+			CAM_ERR(CAM_ACTUATOR,
+				"Failed in adding request to request manager");
+			goto end;
+		}
 		break;
 	case CAM_ACTUATOR_PACKET_MANUAL_MOVE_LENS:
 		if (a_ctrl->cam_act_state < CAM_ACTUATOR_CONFIG) {
@@ -651,7 +666,12 @@ int32_t cam_actuator_i2c_pkt_parse(struct cam_actuator_ctrl_t *a_ctrl,
 			goto end;
 		}
 
-		cam_actuator_update_req_mgr(a_ctrl, csl_packet);
+		rc = cam_actuator_update_req_mgr(a_ctrl, csl_packet);
+		if (rc) {
+			CAM_ERR(CAM_ACTUATOR,
+				"Failed in adding request to request manager");
+			goto end;
+		}
 		break;
 	case CAM_PKT_NOP_OPCODE:
 		if (a_ctrl->cam_act_state < CAM_ACTUATOR_CONFIG) {
@@ -661,7 +681,12 @@ int32_t cam_actuator_i2c_pkt_parse(struct cam_actuator_ctrl_t *a_ctrl,
 			rc = -EINVAL;
 			goto end;
 		}
-		cam_actuator_update_req_mgr(a_ctrl, csl_packet);
+		rc = cam_actuator_update_req_mgr(a_ctrl, csl_packet);
+		if (rc) {
+			CAM_ERR(CAM_ACTUATOR,
+				"Failed in adding request to request manager");
+			goto end;
+		}
 		break;
 	case CAM_ACTUATOR_PACKET_OPCODE_READ: {
 		struct cam_buf_io_cfg *io_cfg;
