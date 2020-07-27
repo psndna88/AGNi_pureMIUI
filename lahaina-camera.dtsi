@@ -1170,7 +1170,7 @@
 			<&clock_camcc CAM_CC_CPAS_AHB_CLK>;
 		clock-rates = <0 0>;
 		clock-cntl-level = "svs";
-		cdm-client-names = "ife3", "ife4";
+		cdm-client-names = "ife3", "ife4", "dualife";
 		status = "ok";
 	};
 
