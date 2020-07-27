@@ -1565,7 +1565,7 @@ static int cam_cpas_hw_stop(void *hw_priv, void *stop_args,
 			CAM_ERR(CAM_CPAS, "disable_resorce failed, rc=%d", rc);
 			goto done;
 		}
-		CAM_DBG(CAM_CPAS, "Disabled all the resources: irq_count=%d\n",
+		CAM_DBG(CAM_CPAS, "Disabled all the resources: irq_count=%d",
 			atomic_read(&cpas_core->irq_count));
 		cpas_hw->hw_state = CAM_HW_STATE_POWER_DOWN;
 	}
