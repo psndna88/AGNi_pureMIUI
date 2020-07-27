@@ -28,22 +28,15 @@
 #include "wlan_disa_priv.h"
 #include "wlan_disa_objmgr.h"
 
-#define disa_log(level, args...) QDF_TRACE(QDF_MODULE_ID_DISA, level, ## args)
-#define disa_logfl(level, format, args...) disa_log(level, FL(format), ## args)
-
-#define disa_fatal(format, args...) \
-		disa_logfl(QDF_TRACE_LEVEL_FATAL, format, ## args)
-#define disa_err(format, args...) \
-		disa_logfl(QDF_TRACE_LEVEL_ERROR, format, ## args)
-#define disa_warn(format, args...) \
-		disa_logfl(QDF_TRACE_LEVEL_WARN, format, ## args)
-#define disa_info(format, args...) \
-		disa_logfl(QDF_TRACE_LEVEL_INFO, format, ## args)
-#define disa_debug(format, args...) \
-		disa_logfl(QDF_TRACE_LEVEL_DEBUG, format, ## args)
-
-#define DISA_ENTER() disa_debug("enter")
-#define DISA_EXIT() disa_debug("exit")
+#define disa_log(level, args...)
+#define disa_logfl(level, format, args...)
+#define disa_fatal(format, args...)
+#define disa_err(format, args...)
+#define disa_warn(format, args...)
+#define disa_info(format, args...)
+#define disa_debug(format, args...)
+#define DISA_ENTER()
+#define DISA_EXIT()
 
 /**
  * disa_allocate_ctx() - Api to allocate disa ctx

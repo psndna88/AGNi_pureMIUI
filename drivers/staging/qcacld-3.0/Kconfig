@@ -12,10 +12,6 @@ config QCACLD_WLAN_LFR3
 	bool "Enable the WLAN Legacy Fast Roaming feature Version 3"
 	default n
 
-config PRIMA_WLAN_OKC
-	bool "Enable the Prima WLAN Opportunistic Key Caching feature"
-	default n
-
 config WLAN_FEATURE_11W
 	bool "Enable the WLAN 802.11w Protected Management Frames feature"
 	default n

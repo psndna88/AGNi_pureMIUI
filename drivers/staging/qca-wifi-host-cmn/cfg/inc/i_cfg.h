@@ -28,13 +28,12 @@
 #include "qdf_types.h"
 #include "wlan_objmgr_psoc_obj.h"
 
-#define __cfg_log(level, fmt, args...) \
-	QDF_TRACE(QDF_MODULE_ID_CONFIG, level, FL(fmt), ##args)
-#define cfg_err(fmt, args...) __cfg_log(QDF_TRACE_LEVEL_ERROR, fmt, ##args)
-#define cfg_info(fmt, args...) __cfg_log(QDF_TRACE_LEVEL_INFO, fmt, ##args)
-#define cfg_debug(fmt, args...) __cfg_log(QDF_TRACE_LEVEL_DEBUG, fmt, ##args)
-#define cfg_enter() cfg_debug("enter")
-#define cfg_exit() cfg_debug("exit")
+#define __cfg_log(level, fmt, args...)
+#define cfg_err(fmt, args...)
+#define cfg_info(fmt, args...)
+#define cfg_debug(fmt, args...)
+#define cfg_enter()
+#define cfg_exit()
 
 /* define global config values structure */
 

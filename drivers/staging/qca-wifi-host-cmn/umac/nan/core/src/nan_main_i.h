@@ -33,23 +33,14 @@ struct wlan_objmgr_vdev;
 struct wlan_objmgr_psoc;
 struct scheduler_msg;
 
-#define nan_log(level, args...) \
-	QDF_TRACE(QDF_MODULE_ID_NAN, level, ## args)
-#define nan_logfl(level, format, args...) \
-	nan_log(level, FL(format), ## args)
-
-#define nan_alert(format, args...) \
-	nan_logfl(QDF_TRACE_LEVEL_FATAL, format, ## args)
-#define nan_err(format, args...) \
-	nan_logfl(QDF_TRACE_LEVEL_ERROR, format, ## args)
-#define nan_warn(format, args...) \
-	nan_logfl(QDF_TRACE_LEVEL_WARN, format, ## args)
-#define nan_notice(format, args...) \
-	nan_logfl(QDF_TRACE_LEVEL_INFO, format, ## args)
-#define nan_info(format, args...) \
-	nan_logfl(QDF_TRACE_LEVEL_INFO_HIGH, format, ## args)
-#define nan_debug(format, args...) \
-	nan_logfl(QDF_TRACE_LEVEL_DEBUG, format, ## args)
+#define nan_log(level, args...)
+#define nan_logfl(level, format, args...)
+#define nan_alert(format, args...)
+#define nan_err(format, args...)
+#define nan_warn(format, args...)
+#define nan_notice(format, args...)
+#define nan_info(format, args...)
+#define nan_debug(format, args...)
 
 #ifndef MAX_PEERS
 #define MAX_PEERS 32

@@ -38,29 +38,14 @@
 #define WLAN_PEER_HASH(addr)   \
 (((const uint8_t *)(addr))[QDF_MAC_ADDR_SIZE - 1] % WLAN_PEER_HASHSIZE)
 
-#define obj_mgr_log(level, args...) \
-		QDF_TRACE(QDF_MODULE_ID_OBJ_MGR, level, ## args)
-
-#define obj_mgr_logfl(level, format, args...) \
-		obj_mgr_log(level, FL(format), ## args)
-
-#define obj_mgr_alert(format, args...) \
-		obj_mgr_logfl(QDF_TRACE_LEVEL_FATAL, format, ## args)
-
-#define obj_mgr_err(format, args...) \
-		obj_mgr_logfl(QDF_TRACE_LEVEL_ERROR, format, ## args)
-
-#define obj_mgr_warn(format, args...) \
-		obj_mgr_logfl(QDF_TRACE_LEVEL_WARN, format, ## args)
-
-#define obj_mgr_info(format, args...) \
-		obj_mgr_logfl(QDF_TRACE_LEVEL_INFO, format, ## args)
-
-#define obj_mgr_debug(format, args...) \
-		obj_mgr_logfl(QDF_TRACE_LEVEL_DEBUG, format, ## args)
-
-#define obj_mgr_log_level(level, format, args...)\
-		obj_mgr_logfl(level, format, ## args)
+#define obj_mgr_log(level, args...) 
+#define obj_mgr_logfl(level, format, args...)
+#define obj_mgr_alert(format, args...)
+#define obj_mgr_err(format, args...)
+#define obj_mgr_warn(format, args...)
+#define obj_mgr_info(format, args...)
+#define obj_mgr_debug(format, args...)
+#define obj_mgr_log_level(level, format, args...)
 
 /**
  * enum WLAN_OBJ_STATE - State of Object

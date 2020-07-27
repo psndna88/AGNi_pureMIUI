@@ -20,31 +20,16 @@
 #define __HIF_DEBUG_H__
 #include "qdf_trace.h"
 
-#define HIF_ERROR(args ...) \
-	QDF_TRACE(QDF_MODULE_ID_HIF, QDF_TRACE_LEVEL_ERROR, ## args)
-#define HIF_WARN(args ...) \
-	QDF_TRACE(QDF_MODULE_ID_HIF, QDF_TRACE_LEVEL_WARN, ## args)
-#define HIF_INFO(args ...) \
-	QDF_TRACE(QDF_MODULE_ID_HIF, QDF_TRACE_LEVEL_INFO, ## args)
-#define HIF_INFO_HI(args ...) \
-	QDF_TRACE(QDF_MODULE_ID_HIF, QDF_TRACE_LEVEL_INFO_HIGH, ## args)
-#define HIF_INFO_MED(args ...) \
-	QDF_TRACE(QDF_MODULE_ID_HIF, QDF_TRACE_LEVEL_INFO_MED, ## args)
-#define HIF_INFO_LO(args ...) \
-	QDF_TRACE(QDF_MODULE_ID_HIF, QDF_TRACE_LEVEL_INFO_LOW, ## args)
-#define HIF_TRACE(args ...) \
-	QDF_TRACE(QDF_MODULE_ID_HIF, QDF_TRACE_LEVEL_INFO, ## args)
-#define HIF_DBG(args ...) \
-	QDF_TRACE(QDF_MODULE_ID_HIF, QDF_TRACE_LEVEL_DEBUG, ## args)
-
-#define HIF_ERROR_RL(rate, args...) \
-		QDF_TRACE_RATE_LIMITED(rate, QDF_MODULE_ID_HIF, \
-				       QDF_TRACE_LEVEL_ERROR, ## args)
-
-#define HIF_ENTER(fmt, ...) QDF_TRACE(QDF_MODULE_ID_HIF, QDF_TRACE_LEVEL_INFO, \
-		"Enter: %s "fmt, __func__, ## __VA_ARGS__)
-
-#define HIF_EXIT(fmt, ...) QDF_TRACE(QDF_MODULE_ID_HIF, QDF_TRACE_LEVEL_INFO, \
-		"Exit: %s "fmt, __func__, ## __VA_ARGS__)
+#define HIF_ERROR(args ...)
+#define HIF_WARN(args ...)
+#define HIF_INFO(args ...)
+#define HIF_INFO_HI(args ...)
+#define HIF_INFO_MED(args ...)
+#define HIF_INFO_LO(args ...)
+#define HIF_TRACE(args ...)
+#define HIF_DBG(args ...)
+#define HIF_ERROR_RL(rate, args...)
+#define HIF_ENTER(fmt, ...) 
+#define HIF_EXIT(fmt, ...)
 
 #endif /* __HIF_DEBUG_H__ */

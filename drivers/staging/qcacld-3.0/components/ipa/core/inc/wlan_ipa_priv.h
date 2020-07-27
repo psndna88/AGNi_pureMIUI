@@ -668,9 +668,7 @@ struct wlan_ipa_priv {
 #define WLAN_IPA_GET_IFACE_ID(_data) \
 	(((struct wlan_ipa_cld_hdr *) (_data))->iface_id)
 
-#define WLAN_IPA_LOG(LVL, fmt, args ...) \
-	QDF_TRACE(QDF_MODULE_ID_IPA, LVL, \
-		  "%s:%d: "fmt, __func__, __LINE__, ## args)
+#define WLAN_IPA_LOG(LVL, fmt, args ...)
 
 #define WLAN_IPA_IS_CONFIG_ENABLED(_ipa_cfg, _mask) \
 	(((_ipa_cfg)->ipa_config & (_mask)) == (_mask))

@@ -54,12 +54,7 @@
  */
 #define QDF_WMI_MTRACE_CMD_ID(message_id) ((message_id) & 0x7F)
 
-#ifdef CONFIG_MCL
-#define QDF_DEFAULT_TRACE_LEVEL \
-	((1 << QDF_TRACE_LEVEL_FATAL) | (1 << QDF_TRACE_LEVEL_ERROR))
-#else
-#define QDF_DEFAULT_TRACE_LEVEL (1 << QDF_TRACE_LEVEL_INFO)
-#endif
+#define QDF_DEFAULT_TRACE_LEVEL (1 << QDF_TRACE_LEVEL_NONE)
 
 #define QDF_CATEGORY_INFO_U16(val) (((val >> 16) & 0x0000FFFF))
 #define QDF_TRACE_LEVEL_INFO_L16(val) (val & 0x0000FFFF)
@@ -87,13 +82,8 @@ typedef int (qdf_abstract_print)(void *priv, const char *fmt, ...);
 #define QDF_MAX_OTHER_PKTS_PER_SEC      (1)
 
 /* DP Trace Implementation */
-#ifdef CONFIG_DP_TRACE
-#define DPTRACE(p) p
-#define DPTRACE_PRINT(args...)
-#else
 #define DPTRACE(p)
 #define DPTRACE_PRINT(args...)
-#endif
 
 /* By default Data Path module will have all log levels enabled, except debug
  * log level. Debug level will be left up to the framework or user space modules

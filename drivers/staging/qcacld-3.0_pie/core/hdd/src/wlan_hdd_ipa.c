@@ -519,19 +519,9 @@ struct hdd_ipa_priv {
 #define HDD_IPA_GET_IFACE_ID(_data) \
 	(((struct hdd_ipa_cld_hdr *) (_data))->iface_id)
 
-#define HDD_IPA_LOG(LVL, fmt, args ...) \
-	QDF_TRACE(QDF_MODULE_ID_HDD, LVL, \
-		  "%s:%d: "fmt, __func__, __LINE__, ## args)
-
-#define HDD_IPA_DP_LOG(LVL, fmt, args...) \
-	QDF_TRACE(QDF_MODULE_ID_HDD_DATA, LVL, \
-		  "%s:%d: "fmt, __func__, __LINE__, ## args)
-
-#define HDD_IPA_DBG_DUMP(_lvl, _prefix, _buf, _len) \
-	do { \
-		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, _lvl, "%s:", _prefix); \
-		QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_HDD_DATA, _lvl, _buf, _len); \
-	} while (0)
+#define HDD_IPA_LOG(LVL, fmt, args ...)
+#define HDD_IPA_DP_LOG(LVL, fmt, args...)
+#define HDD_IPA_DBG_DUMP(_lvl, _prefix, _buf, _len)
 
 #define HDD_IPA_IS_CONFIG_ENABLED(_hdd_ctx, _mask) \
 	(((_hdd_ctx)->config->IpaConfig & (_mask)) == (_mask))

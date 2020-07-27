@@ -76,12 +76,11 @@
 
 /* BMI LOGGING WRAPPERS */
 
-#define BMI_LOG(level, args...) QDF_TRACE(QDF_MODULE_ID_BMI, \
-					level, ##args)
-#define BMI_ERR(args ...)	BMI_LOG(QDF_TRACE_LEVEL_ERROR, args)
-#define BMI_DBG(args ...)	BMI_LOG(QDF_TRACE_LEVEL_DEBUG, args)
-#define BMI_WARN(args ...)	BMI_LOG(QDF_TRACE_LEVEL_WARN, args)
-#define BMI_INFO(args ...)	BMI_LOG(QDF_TRACE_LEVEL_INFO, args)
+#define BMI_LOG(level, args...)
+#define BMI_ERR(args ...)
+#define BMI_DBG(args ...)
+#define BMI_WARN(args ...)
+#define BMI_INFO(args ...)
 /* End of BMI Logging Wrappers */
 
 /* BMI Assert Wrappers */

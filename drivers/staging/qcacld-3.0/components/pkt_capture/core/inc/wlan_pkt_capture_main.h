@@ -32,25 +32,15 @@
 #include "wlan_pkt_capture_objmgr.h"
 #include "wlan_objmgr_vdev_obj.h"
 
-#define pkt_capture_log(level, args...) \
-	QDF_TRACE(QDF_MODULE_ID_PKT_CAPTURE, level, ## args)
-
-#define pkt_capture_logfl(level, format, args...) \
-	pkt_capture_log(level, FL(format), ## args)
-
-#define pkt_capture_fatal(format, args...) \
-		pkt_capture_logfl(QDF_TRACE_LEVEL_FATAL, format, ## args)
-#define pkt_capture_err(format, args...) \
-		pkt_capture_logfl(QDF_TRACE_LEVEL_ERROR, format, ## args)
-#define pkt_capture_warn(format, args...) \
-		pkt_capture_logfl(QDF_TRACE_LEVEL_WARN, format, ## args)
-#define pkt_capture_info(format, args...) \
-		pkt_capture_logfl(QDF_TRACE_LEVEL_INFO, format, ## args)
-#define pkt_capture_debug(format, args...) \
-		pkt_capture_logfl(QDF_TRACE_LEVEL_DEBUG, format, ## args)
-
-#define PKT_CAPTURE_ENTER() pkt_capture_debug("enter")
-#define PKT_CAPTURE_EXIT() pkt_capture_debug("exit")
+#define pkt_capture_log(level, args...)
+#define pkt_capture_logfl(level, format, args...)
+#define pkt_capture_fatal(format, args...)
+#define pkt_capture_err(format, args...)
+#define pkt_capture_warn(format, args...)
+#define pkt_capture_info(format, args...)
+#define pkt_capture_debug(format, args...)
+#define PKT_CAPTURE_ENTER()
+#define PKT_CAPTURE_EXIT()
 
 #define NORMALIZED_TO_NOISE_FLOOR (-96)
 /**

@@ -32,24 +32,15 @@
 #define WLAN_SERIALIZATION_MAX_ACTIVE_CMDS 1
 #define WLAN_SERIALIZATION_MAX_ACTIVE_SCAN_CMDS 8
 
-#define serialization_log(level, args...) \
-	QDF_TRACE(QDF_MODULE_ID_SERIALIZATION, level, ## args)
-#define serialization_logfl(level, format, args...) \
-	serialization_log(level, FL(format), ## args)
-
-#define serialization_alert(format, args...) \
-	serialization_logfl(QDF_TRACE_LEVEL_FATAL, format, ## args)
-#define serialization_err(format, args...) \
-	serialization_logfl(QDF_TRACE_LEVEL_ERROR, format, ## args)
-#define serialization_warn(format, args...) \
-	serialization_logfl(QDF_TRACE_LEVEL_WARN, format, ## args)
-#define serialization_info(format, args...) \
-	serialization_logfl(QDF_TRACE_LEVEL_INFO, format, ## args)
-#define serialization_debug(format, args...) \
-	serialization_logfl(QDF_TRACE_LEVEL_DEBUG, format, ## args)
-#define serialization_enter() \
-	serialization_logfl(QDF_TRACE_LEVEL_DEBUG, "enter")
-#define serialization_exit() serialization_logfl(QDF_TRACE_LEVEL_DEBUG, "exit")
+#define serialization_log(level, args...)
+#define serialization_logfl(level, format, args...)
+#define serialization_alert(format, args...)
+#define serialization_err(format, args...)
+#define serialization_warn(format, args...)
+#define serialization_info(format, args...)
+#define serialization_debug(format, args...)
+#define serialization_enter()
+#define serialization_exit()
 
 /**
  * struct serialization_legacy_callback - to handle legacy serialization cb

@@ -72,31 +72,13 @@
  * Example:-
  * dfs_log(NULL, WLAN_DEBUG_DFS, QDF_TRACE_LEVEL_INFO,"dfs is NULL");
  */
-#define dfs_log(dfs, sm, level, args...)  do {        \
-	if (((dfs) == NULL) ||                            \
-			((sm) == WLAN_DEBUG_DFS_ALWAYS) ||        \
-			((sm) & ((DC(dfs))->dfs_debug_mask))) {   \
-		QDF_TRACE(QDF_MODULE_ID_DFS, level, ## args); \
-	}                                                 \
-} while (0)
-
-#define dfs_logfl(dfs, level, sm, format, args...) \
-	dfs_log(dfs, sm, level, FLSM(format, sm), ## args)
-
-#define dfs_alert(dfs, sm, format, args...) \
-	dfs_logfl(dfs, QDF_TRACE_LEVEL_FATAL, sm, format, ## args)
-
-#define dfs_err(dfs, sm, format, args...) \
-	dfs_logfl(dfs, QDF_TRACE_LEVEL_ERROR, sm, format, ## args)
-
-#define dfs_warn(dfs, sm, format, args...) \
-	dfs_logfl(dfs, QDF_TRACE_LEVEL_WARN, sm, format, ## args)
-
-#define dfs_info(dfs, sm, format, args...) \
-	dfs_logfl(dfs, QDF_TRACE_LEVEL_INFO, sm, format, ## args)
-
-#define dfs_debug(dfs, sm, format, args...) \
-	dfs_logfl(dfs, QDF_TRACE_LEVEL_DEBUG, sm, format, ## args)
+#define dfs_log(dfs, sm, level, args...)
+#define dfs_logfl(dfs, level, sm, format, args...)
+#define dfs_alert(dfs, sm, format, args...)
+#define dfs_err(dfs, sm, format, args...)
+#define dfs_warn(dfs, sm, format, args...)
+#define dfs_info(dfs, sm, format, args...)
+#define dfs_debug(dfs, sm, format, args...)
 
 #define DFS_MIN(a, b) ((a) < (b)?(a):(b))
 #define DFS_MAX(a, b) ((a) > (b)?(a) : (b))

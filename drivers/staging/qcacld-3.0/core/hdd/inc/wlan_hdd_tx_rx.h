@@ -251,17 +251,8 @@ static inline void netif_trans_update(struct net_device *dev)
 {
 	dev->trans_start = jiffies;
 }
-
-#define TX_TIMEOUT_TRACE(dev, module_id) QDF_TRACE( \
-	module_id, QDF_TRACE_LEVEL_ERROR, \
-	"%s: Transmission timeout occurred jiffies %lu trans_start %lu", \
-	__func__, jiffies, dev->trans_start)
-#else
-#define TX_TIMEOUT_TRACE(dev, module_id) QDF_TRACE( \
-	module_id, QDF_TRACE_LEVEL_ERROR, \
-	"%s: Transmission timeout occurred jiffies %lu", \
-	__func__, jiffies)
 #endif
+#define TX_TIMEOUT_TRACE(dev, module_id)
 
 static inline void
 hdd_skb_fill_gso_size(struct net_device *dev, struct sk_buff *skb)

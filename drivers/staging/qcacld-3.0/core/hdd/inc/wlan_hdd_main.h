@@ -327,32 +327,24 @@ enum hdd_driver_flags {
 
 #define WLAN_CHIP_VERSION   "WCNSS"
 
-#define hdd_alert(params...) QDF_TRACE_FATAL(QDF_MODULE_ID_HDD, params)
-#define hdd_err(params...) QDF_TRACE_ERROR(QDF_MODULE_ID_HDD, params)
-#define hdd_warn(params...) QDF_TRACE_WARN(QDF_MODULE_ID_HDD, params)
-#define hdd_info(params...) QDF_TRACE_INFO(QDF_MODULE_ID_HDD, params)
-#define hdd_debug(params...) QDF_TRACE_DEBUG(QDF_MODULE_ID_HDD, params)
-
-#define hdd_nofl_alert(params...) \
-	QDF_TRACE_FATAL_NO_FL(QDF_MODULE_ID_HDD, params)
-#define hdd_nofl_err(params...) \
-	QDF_TRACE_ERROR_NO_FL(QDF_MODULE_ID_HDD, params)
-#define hdd_nofl_warn(params...) \
-	QDF_TRACE_WARN_NO_FL(QDF_MODULE_ID_HDD, params)
-#define hdd_nofl_info(params...) \
-	QDF_TRACE_INFO_NO_FL(QDF_MODULE_ID_HDD, params)
-#define hdd_nofl_debug(params...) \
-	QDF_TRACE_DEBUG_NO_FL(QDF_MODULE_ID_HDD, params)
-
-#define hdd_alert_rl(params...) QDF_TRACE_FATAL_RL(QDF_MODULE_ID_HDD, params)
-#define hdd_err_rl(params...) QDF_TRACE_ERROR_RL(QDF_MODULE_ID_HDD, params)
-#define hdd_warn_rl(params...) QDF_TRACE_WARN_RL(QDF_MODULE_ID_HDD, params)
-#define hdd_info_rl(params...) QDF_TRACE_INFO_RL(QDF_MODULE_ID_HDD, params)
-#define hdd_debug_rl(params...) QDF_TRACE_DEBUG_RL(QDF_MODULE_ID_HDD, params)
-
-#define hdd_enter() hdd_debug("enter")
-#define hdd_enter_dev(dev) hdd_debug("enter(%s)", (dev)->name)
-#define hdd_exit() hdd_debug("exit")
+#define hdd_alert(params...)
+#define hdd_err(params...)
+#define hdd_warn(params...)
+#define hdd_info(params...)
+#define hdd_debug(params...)
+#define hdd_nofl_alert(params...)
+#define hdd_nofl_err(params...)
+#define hdd_nofl_warn(params...)
+#define hdd_nofl_info(params...)
+#define hdd_nofl_debug(params...)
+#define hdd_alert_rl(params...)
+#define hdd_err_rl(params...)
+#define hdd_warn_rl(params...)
+#define hdd_info_rl(params...)
+#define hdd_debug_rl(params...)
+#define hdd_enter()
+#define hdd_enter_dev(dev)
+#define hdd_exit()
 
 #define WLAN_HDD_GET_PRIV_PTR(__dev__) \
 		(struct hdd_adapter *)(netdev_priv((__dev__)))

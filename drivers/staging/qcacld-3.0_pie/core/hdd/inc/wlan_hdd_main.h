@@ -195,49 +195,25 @@ static inline bool in_compat_syscall(void) { return is_compat_task(); }
 
 #define WLAN_CHIP_VERSION   "WCNSS"
 
-#define hdd_log_ratelimited(rate, level, args...) \
-		QDF_TRACE_RATE_LIMITED(rate, QDF_MODULE_ID_HDD, level, ## args)
-#define hdd_log_ratelimited_fl(rate, level, format, args...) \
-		hdd_log_ratelimited(rate, level, FL(format), ## args)
-#define hdd_alert_ratelimited(rate, format, args...) \
-		hdd_log_ratelimited_fl(rate, QDF_TRACE_LEVEL_FATAL,\
-			format, ## args)
-#define hdd_err_ratelimited(rate, format, args...) \
-		hdd_log_ratelimited_fl(rate, QDF_TRACE_LEVEL_ERROR,\
-			format, ## args)
-#define hdd_warn_ratelimited(rate, format, args...) \
-		hdd_log_ratelimited_fl(rate, QDF_TRACE_LEVEL_WARN,\
-			format, ## args)
-#define hdd_notice_ratelimited(rate, format, args...) \
-		hdd_log_ratelimited_fl(rate, QDF_TRACE_LEVEL_INFO,\
-			format, ## args)
-#define hdd_info_ratelimited(rate, format, args...) \
-		hdd_log_ratelimited_fl(rate, QDF_TRACE_LEVEL_INFO,\
-			format, ## args)
-#define hdd_debug_ratelimited(rate, format, args...) \
-		hdd_log_ratelimited_fl(rate, QDF_TRACE_LEVEL_DEBUG,\
-			format, ## args)
-
-#define hdd_log(level, args...) QDF_TRACE(QDF_MODULE_ID_HDD, level, ## args)
-#define hdd_logfl(level, format, args...) hdd_log(level, FL(format), ## args)
-
-#define hdd_alert(format, args...) \
-		hdd_logfl(QDF_TRACE_LEVEL_FATAL, format, ## args)
-#define hdd_err(format, args...) \
-		hdd_logfl(QDF_TRACE_LEVEL_ERROR, format, ## args)
-#define hdd_warn(format, args...) \
-		hdd_logfl(QDF_TRACE_LEVEL_WARN, format, ## args)
-#define hdd_notice(format, args...) \
-		hdd_logfl(QDF_TRACE_LEVEL_INFO, format, ## args)
-#define hdd_info(format, args...) \
-		hdd_logfl(QDF_TRACE_LEVEL_INFO, format, ## args)
-#define hdd_debug(format, args...) \
-		hdd_logfl(QDF_TRACE_LEVEL_DEBUG, format, ## args)
-
-#define ENTER() hdd_logfl(QDF_TRACE_LEVEL_INFO_LOW, "enter")
-#define ENTER_DEV(dev) \
-		hdd_logfl(QDF_TRACE_LEVEL_INFO_LOW, "enter(%s)", (dev)->name)
-#define EXIT() hdd_logfl(QDF_TRACE_LEVEL_INFO_LOW, "exit")
+#define hdd_log_ratelimited(rate, level, args...)
+#define hdd_log_ratelimited_fl(rate, level, format, args...)
+#define hdd_alert_ratelimited(rate, format, args...)
+#define hdd_err_ratelimited(rate, format, args...)
+#define hdd_warn_ratelimited(rate, format, args...)
+#define hdd_notice_ratelimited(rate, format, args...)
+#define hdd_info_ratelimited(rate, format, args...)
+#define hdd_debug_ratelimited(rate, format, args...)
+#define hdd_log(level, args...)
+#define hdd_logfl(level, format, args...)
+#define hdd_alert(format, args...)
+#define hdd_err(format, args...)
+#define hdd_warn(format, args...)
+#define hdd_notice(format, args...)
+#define hdd_info(format, args...)
+#define hdd_debug(format, args...)
+#define ENTER()
+#define ENTER_DEV(dev)
+#define EXIT()
 
 #define WLAN_HDD_GET_PRIV_PTR(__dev__) (hdd_adapter_t *)(netdev_priv((__dev__)))
 

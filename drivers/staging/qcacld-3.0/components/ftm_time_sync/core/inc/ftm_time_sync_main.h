@@ -30,25 +30,15 @@
 #include "ftm_time_sync_priv.h"
 #include "ftm_time_sync_objmgr.h"
 
-#define ftm_time_sync_log(level, args...) \
-	QDF_TRACE(QDF_MODULE_ID_FTM_TIME_SYNC, level, ## args)
-
-#define ftm_time_sync_logfl(level, format, args...) \
-	ftm_time_sync_log(level, FL(format), ## args)
-
-#define ftm_time_sync_fatal(format, args...) \
-		ftm_time_sync_logfl(QDF_TRACE_LEVEL_FATAL, format, ## args)
-#define ftm_time_sync_err(format, args...) \
-		ftm_time_sync_logfl(QDF_TRACE_LEVEL_ERROR, format, ## args)
-#define ftm_time_sync_warn(format, args...) \
-		ftm_time_sync_logfl(QDF_TRACE_LEVEL_WARN, format, ## args)
-#define ftm_time_sync_info(format, args...) \
-		ftm_time_sync_logfl(QDF_TRACE_LEVEL_INFO, format, ## args)
-#define ftm_time_sync_debug(format, args...) \
-		ftm_time_sync_logfl(QDF_TRACE_LEVEL_DEBUG, format, ## args)
-
-#define FTM_TIME_SYNC_ENTER() ftm_time_sync_debug("enter")
-#define FTM_TIME_SYNC_EXIT() ftm_time_sync_debug("exit")
+#define ftm_time_sync_log(level, args...)
+#define ftm_time_sync_logfl(level, format, args...)
+#define ftm_time_sync_fatal(format, args...)
+#define ftm_time_sync_err(format, args...)
+#define ftm_time_sync_warn(format, args...)
+#define ftm_time_sync_info(format, args...)
+#define ftm_time_sync_debug(format, args...)
+#define FTM_TIME_SYNC_ENTER()
+#define FTM_TIME_SYNC_EXIT()
 
 /**
  * ftm_time_sync_vdev_create_notification() - Handler for vdev create notify.
