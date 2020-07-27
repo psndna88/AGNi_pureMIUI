@@ -13,5 +13,7 @@
 #define _LINUX_DISPLAY_STATE_H
 
 bool is_display_on(void);
+extern bool true_gpu;
+extern bool first_boot_done;
 
 #endif
