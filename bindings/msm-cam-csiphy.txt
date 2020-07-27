@@ -17,7 +17,7 @@ First Level Node - CSIPHY device
 	"qcom,csiphy-v1.1", "qcom,csiphy-v1.2", "qcom,csiphy-v1.2.1",
 	"qcom,csiphy-v1.2.2", "qcom,csiphy-v2.0", "qcom,csiphy-v1.2.2.2",
 	"qcom,csiphy-v1.2.3", "qcom,csiphy-v2.0.1", "qcom,csiphy-v2.1.0",
-	"qcom,csiphy-v1.2.4", "qcom,csiphy".
+	"qcom,csiphy-v1.2.4", "qcom,csiphy-v1.2.5", "qcom,csiphy".
 
 - cell-index: csiphy hardware core index
   Usage: required
