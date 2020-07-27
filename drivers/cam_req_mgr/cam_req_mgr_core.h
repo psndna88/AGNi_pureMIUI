@@ -343,7 +343,8 @@ struct cam_req_mgr_connected_device {
  * @subscribe_event      : irqs that link subscribes, IFE should send
  *                         notification to CRM at those hw events.
  * @trigger_mask         : mask on which irq the req is already applied
- * @sync_link            : pointer to the sync link for synchronization
+ * @sync_link            : array of pointer to the sync link for synchronization
+ * @num_sync_links       : num of links sync associated with this link
  * @sync_link_sof_skip   : flag determines if a pkt is not available for a given
  *                         frame in a particular link skip corresponding
  *                         frame in sync link as well.
@@ -387,7 +388,9 @@ struct cam_req_mgr_core_link {
 	spinlock_t                           link_state_spin_lock;
 	uint32_t                             subscribe_event;
 	uint32_t                             trigger_mask;
-	struct cam_req_mgr_core_link        *sync_link;
+	struct cam_req_mgr_core_link
+			*sync_link[MAXIMUM_LINKS_PER_SESSION - 1];
+	int32_t                              num_sync_links;
 	bool                                 sync_link_sof_skip;
 	int32_t                              open_req_cnt;
 	uint32_t                             last_flush_id;
