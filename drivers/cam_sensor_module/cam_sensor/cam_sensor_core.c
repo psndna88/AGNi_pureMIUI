@@ -1281,7 +1281,7 @@ int cam_sensor_apply_settings(struct cam_sensor_ctrl_t *s_ctrl,
 				}
 			}
 		}
-	} else {
+	} else if (req_id > 0) {
 		offset = req_id % MAX_PER_FRAME_ARRAY;
 
 		if (opcode == CAM_SENSOR_PACKET_OPCODE_SENSOR_FRAME_SKIP_UPDATE)
