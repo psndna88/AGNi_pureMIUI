@@ -300,7 +300,7 @@ void cam_sync_util_cb_dispatch(struct work_struct *cb_dispatch_work)
 }
 
 void cam_sync_util_dispatch_signaled_cb(int32_t sync_obj,
-	uint32_t status)
+	uint32_t status, uint32_t event_cause)
 {
 	struct sync_callback_info  *sync_cb;
 	struct sync_user_payload   *payload_info;
@@ -339,7 +339,8 @@ void cam_sync_util_dispatch_signaled_cb(int32_t sync_obj,
 			sync_obj,
 			status,
 			payload_info->payload_data,
-			CAM_SYNC_PAYLOAD_WORDS * sizeof(__u64));
+			CAM_SYNC_PAYLOAD_WORDS * sizeof(__u64),
+			event_cause);
 
 		list_del_init(&payload_info->list);
 		/*
@@ -361,24 +362,40 @@ void cam_sync_util_send_v4l2_event(uint32_t id,
 	uint32_t sync_obj,
 	int status,
 	void *payload,
-	int len)
+	int len, uint32_t event_cause)
 {
 	struct v4l2_event event;
 	__u64 *payload_data = NULL;
-	struct cam_sync_ev_header *ev_header = NULL;
 
-	event.id = id;
-	event.type = CAM_SYNC_V4L_EVENT;
+	if (sync_dev->version == CAM_SYNC_V4L_EVENT_V2) {
+		struct cam_sync_ev_header_v2 *ev_header = NULL;
 
-	ev_header = CAM_SYNC_GET_HEADER_PTR(event);
-	ev_header->sync_obj = sync_obj;
-	ev_header->status = status;
+		event.id = id;
+		event.type = CAM_SYNC_V4L_EVENT_V2;
 
-	payload_data = CAM_SYNC_GET_PAYLOAD_PTR(event, __u64);
+		ev_header = CAM_SYNC_GET_HEADER_PTR_V2(event);
+		ev_header->sync_obj = sync_obj;
+		ev_header->status = status;
+		ev_header->version = sync_dev->version;
+		ev_header->evt_param[CAM_SYNC_EVENT_REASON_CODE_INDEX] =
+			event_cause;
+		payload_data = CAM_SYNC_GET_PAYLOAD_PTR_V2(event, __u64);
+	} else {
+		struct cam_sync_ev_header *ev_header = NULL;
+
+		event.id = id;
+		event.type = CAM_SYNC_V4L_EVENT;
+
+		ev_header = CAM_SYNC_GET_HEADER_PTR(event);
+		ev_header->sync_obj = sync_obj;
+		ev_header->status = status;
+		payload_data = CAM_SYNC_GET_PAYLOAD_PTR(event, __u64);
+	}
+
 	memcpy(payload_data, payload, len);
-
 	v4l2_event_queue(sync_dev->vdev, &event);
-	CAM_DBG(CAM_SYNC, "send v4l2 event for sync_obj :%d",
+	CAM_DBG(CAM_SYNC, "send v4l2 event version %d for sync_obj :%d",
+		sync_dev->version,
 		sync_obj);
 }
 
