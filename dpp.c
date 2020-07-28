@@ -1090,6 +1090,7 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 		"DPP-CONF-RECEIVED",
 		"DPP-CONF-SENT",
 		"DPP-CONF-FAILED",
+		"DPP-MUD-URL",
 		NULL
 	};
 	const char *conn_events[] = {
@@ -1112,6 +1113,8 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 	int manual = strcasecmp(type, "ManualDPP") == 0;
 	time_t start, now;
 	FILE *f;
+	char *no_mud_url = "";
+	char *mud_url = no_mud_url;
 
 	time(&start);
 
@@ -2397,6 +2400,9 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 	if (frametype && strcasecmp(frametype, "ConfigurationResponse") == 0) {
 		res = get_wpa_cli_events(dut, ctrl, conf_events,
 					 buf, sizeof(buf));
+		if (res >= 0 && strstr(buf, "DPP-MUD-URL "))
+			res = get_wpa_cli_events(dut, ctrl, conf_events,
+						 buf, sizeof(buf));
 		if (res < 0)
 			result = "BootstrapResult,OK,AuthResult,OK,ConfResult,Timeout";
 		else
@@ -2423,6 +2429,23 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 	}
 
 	res = get_wpa_cli_events(dut, ctrl, conf_events, buf, sizeof(buf));
+	if (res >= 0 && strstr(buf, "DPP-MUD-URL ")) {
+		size_t url_len;
+
+		pos = strchr(buf, ' ');
+		if (!pos)
+			goto err;
+		pos++;
+		url_len = strlen(buf);
+		mud_url = malloc(9 + url_len);
+		if (!mud_url)
+			goto err;
+		memcpy(mud_url, ",MUDURL,", 8);
+		memcpy(mud_url + 8, pos, url_len + 1);
+
+		res = get_wpa_cli_events(dut, ctrl, conf_events,
+					 buf, sizeof(buf));
+	}
 	if (res < 0) {
 		send_resp(dut, conn, SIGMA_COMPLETE,
 			  "BootstrapResult,OK,AuthResult,OK,ConfResult,Timeout");
@@ -2452,8 +2475,8 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 			} else {
 				pos += 7;
 				snprintf(buf, sizeof(buf),
-					 "BootstrapResult,OK,AuthResult,OK,ConfResult,OK,StatusResult,%d",
-					 atoi(pos));
+					 "BootstrapResult,OK,AuthResult,OK,ConfResult,OK,StatusResult,%d%s",
+					 atoi(pos), mud_url);
 				send_resp(dut, conn, SIGMA_COMPLETE, buf);
 			}
 		}
@@ -2606,9 +2629,12 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 		goto out;
 	}
 
-	send_resp(dut, conn, SIGMA_COMPLETE,
-		  "BootstrapResult,OK,AuthResult,OK,ConfResult,OK");
+	snprintf(buf, sizeof(buf),
+		 "BootstrapResult,OK,AuthResult,OK,ConfResult,OK%s", mud_url);
+	send_resp(dut, conn, SIGMA_COMPLETE, buf);
 out:
+	if (mud_url != no_mud_url)
+		free(mud_url);
 	wpa_ctrl_detach(ctrl);
 	wpa_ctrl_close(ctrl);
 	if (tcp && strcasecmp(tcp, "yes") == 0 &&
