@@ -707,6 +707,13 @@
 			qcom,display-topology = <2 2 2>;
 			qcom,default-topology-index = <0>;
 		};
+
+		timing@18 { /* WQHD  144 FPS*/
+			qcom,mdss-dsi-panel-phy-timings = [00 23 0a 09 10 0e 0a
+				0a 07 02 04 00 1d 0e];
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+		};
 	};
 };
 
