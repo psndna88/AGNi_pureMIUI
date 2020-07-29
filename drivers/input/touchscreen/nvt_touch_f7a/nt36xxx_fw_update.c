@@ -32,7 +32,7 @@
 #define SIZE_64KB 65536
 #define BLOCK_64KB_NUM 4
 
-const struct firmware *fw_entry;
+const struct firmware *fw_entry = NULL;
 /* add by yangjiangzhu compatible to shenchao and tianma TP FW  2018/3/16  start */
 extern char g_lcd_id[128];
 extern uint8_t tp_maker_cg_lamination;

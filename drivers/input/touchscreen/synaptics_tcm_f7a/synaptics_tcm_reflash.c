@@ -2086,7 +2086,7 @@ exit:
 int lct_syna_tp_callback(const char *cmd)
 {
 #if LCT_SYNA_TP_LOCKDOWN_CALLBACK_RUN_ONLY_ONCE
-	static bool run_only_once_flag;
+	static bool run_only_once_flag = false;
 #endif
 	int retval;
 	char tp_lockdown_info_buf[SYNA_TP_INFO_SIZE];

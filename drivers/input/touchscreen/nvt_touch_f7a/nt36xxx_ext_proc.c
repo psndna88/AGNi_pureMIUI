@@ -60,13 +60,13 @@ static struct proc_dir_entry *NVT_proc_pwr_plug_switch_entry;
 
 /* add touchpad information by wanghan start */
 extern char g_lcd_id[128];
-static uint8_t tp_maker_cg_lamination;
-static uint8_t display_maker;
-static uint8_t cg_ink_color;
-static uint8_t hw_version;
-static uint8_t project_id;
-static uint8_t cg_maker;
-static uint8_t reservation_byte;
+static uint8_t tp_maker_cg_lamination = 0;
+static uint8_t display_maker = 0;
+static uint8_t cg_ink_color = 0;
+static uint8_t hw_version = 0;
+static uint8_t project_id = 0;
+static uint8_t cg_maker = 0;
+static uint8_t reservation_byte = 0;
 /* add touchpad information by wanghan end */
 
 /*******************************************************
@@ -961,7 +961,7 @@ nvt_get_pwr_plug_switch_out:
 
 static ssize_t nvt_pwr_plug_switch_proc_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos)
 {
-	static int finished;
+	static int finished = 0;
 	int32_t cnt = 0;
 	char page[64] = {0};
 	uint8_t pwr_plug_switch;
