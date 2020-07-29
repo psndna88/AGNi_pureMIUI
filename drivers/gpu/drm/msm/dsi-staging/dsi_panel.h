@@ -342,7 +342,5 @@ int dsi_panel_parse_esd_reg_read_configs(struct dsi_panel *panel);
 void dsi_panel_ext_bridge_put(struct dsi_panel *panel);
 
 int dsi_panel_set_feature(struct dsi_panel *panel,enum dsi_cmd_set_type type);
-void dsi_panel_calc_dsi_transfer_time(struct dsi_host_common_cfg *config,
-		struct dsi_mode_info *timing);
 
 #endif /* _DSI_PANEL_H_ */
