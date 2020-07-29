@@ -14,6 +14,7 @@ int cam_sfe_bus_init(
 	struct cam_hw_soc_info        *soc_info,
 	struct cam_hw_intf            *hw_intf,
 	void                          *bus_hw_info,
+	void                          *sfe_irq_controller,
 	struct cam_sfe_bus           **sfe_bus)
 {
 	int rc = -ENODEV;
@@ -23,7 +24,7 @@ int cam_sfe_bus_init(
 		switch (bus_version) {
 		case CAM_SFE_BUS_WR_VER_1_0:
 			rc = cam_sfe_bus_wr_init(soc_info, hw_intf,
-				bus_hw_info, sfe_bus);
+				bus_hw_info, sfe_irq_controller, sfe_bus);
 			break;
 		default:
 			CAM_ERR(CAM_SFE, "Unsupported Bus WR Version 0x%x",
@@ -35,7 +36,7 @@ int cam_sfe_bus_init(
 		switch (bus_version) {
 		case CAM_SFE_BUS_RD_VER_1_0:
 			rc = cam_sfe_bus_rd_init(soc_info, hw_intf,
-				bus_hw_info, sfe_bus);
+				bus_hw_info, sfe_irq_controller, sfe_bus);
 			break;
 		default:
 			CAM_ERR(CAM_SFE, "Unsupported Bus RD Version 0x%x",

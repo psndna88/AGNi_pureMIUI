@@ -7,9 +7,11 @@
 #include "cam_io_util.h"
 #include "cam_cdm_util.h"
 #include "cam_sfe_hw_intf.h"
+#include "cam_tasklet_util.h"
 #include "cam_sfe_top.h"
 #include "cam_debug_util.h"
 #include "cam_sfe_soc.h"
+#include "cam_sfe_core.h"
 
 struct cam_sfe_core_cfg {
 	uint32_t   mode_sel;
@@ -18,9 +20,12 @@ struct cam_sfe_core_cfg {
 };
 
 struct cam_sfe_top_common_data {
-	struct cam_hw_soc_info                     *soc_info;
-	struct cam_hw_intf                         *hw_intf;
-	struct cam_sfe_top_common_reg_offset       *common_reg;
+	struct cam_hw_soc_info                  *soc_info;
+	struct cam_hw_intf                      *hw_intf;
+	struct cam_sfe_top_common_reg_offset    *common_reg;
+	struct cam_irq_controller               *sfe_irq_controller;
+	struct cam_sfe_top_irq_evt_payload       evt_payload[CAM_SFE_EVT_MAX];
+	struct list_head                         free_payload_list;
 };
 
 struct cam_sfe_top_priv {
@@ -38,19 +43,44 @@ struct cam_sfe_top_priv {
 		CAM_SFE_TOP_IN_PORT_MAX];
 	struct cam_sfe_core_cfg         core_cfg;
 	uint32_t                        sfe_debug_cfg;
+	spinlock_t                      spin_lock;
 };
 
 struct cam_sfe_path_data {
 	void __iomem                             *mem_base;
 	void                                     *priv;
 	struct cam_hw_intf                       *hw_intf;
+	struct cam_sfe_top_priv                  *top_priv;
 	struct cam_sfe_top_common_reg_offset     *common_reg;
 	struct cam_sfe_modules_common_reg_offset *modules_reg;
 	struct cam_sfe_path_common_reg_data      *path_reg_data;
 	struct cam_hw_soc_info                   *soc_info;
 	uint32_t                                  min_hblank_cnt;
+	int                                       error_irq_handle;
+	int                                       sof_eof_handle;
 	cam_hw_mgr_event_cb_func                  event_cb;
 };
+
+static const char *cam_sfe_top_res_id_to_string(
+	uint32_t res_id)
+{
+	switch (res_id) {
+	case CAM_ISP_HW_SFE_IN_PIX:
+		return "PP";
+	case CAM_ISP_HW_SFE_IN_RDI0:
+		return "RDI0";
+	case CAM_ISP_HW_SFE_IN_RDI1:
+		return "RDI1";
+	case CAM_ISP_HW_SFE_IN_RDI2:
+		return "RDI2";
+	case CAM_ISP_HW_SFE_IN_RDI3:
+		return "RDI3";
+	case CAM_ISP_HW_SFE_IN_RDI4:
+		return "RDI4";
+	default:
+		return "";
+	}
+}
 
 static int cam_sfe_top_core_cfg(
 	struct cam_sfe_top_priv *top_priv,
@@ -329,6 +359,7 @@ int cam_sfe_top_reserve(void *device_priv,
 				top_priv->in_rsrc[i].res_priv;
 			path_data->event_cb = args->event_cb;
 			path_data->priv = args->priv;
+			path_data->top_priv = top_priv;
 			CAM_DBG(CAM_SFE,
 				"SFE [%u] for rsrc: %u acquired",
 				top_priv->in_rsrc[i].hw_intf->hw_idx,
@@ -379,6 +410,244 @@ int cam_sfe_top_release(void *device_priv,
 	return 0;
 }
 
+static int cam_sfe_top_get_evt_payload(
+	struct cam_sfe_top_priv            *top_priv,
+	struct cam_sfe_top_irq_evt_payload    **evt_payload)
+{
+	int rc = 0;
+
+	spin_lock(&top_priv->spin_lock);
+	if (list_empty(&top_priv->common_data.free_payload_list)) {
+		CAM_ERR_RATE_LIMIT(CAM_ISP, "No free CAMIF LITE event payload");
+		*evt_payload = NULL;
+		rc = -ENODEV;
+		goto done;
+	}
+
+	*evt_payload = list_first_entry(
+		&top_priv->common_data.free_payload_list,
+		struct cam_sfe_top_irq_evt_payload, list);
+	list_del_init(&(*evt_payload)->list);
+
+done:
+	spin_unlock(&top_priv->spin_lock);
+	return rc;
+}
+
+static int cam_sfe_top_put_evt_payload(
+	struct cam_sfe_top_priv                *top_priv,
+	struct cam_sfe_top_irq_evt_payload    **evt_payload)
+{
+	unsigned long flags;
+
+	if (!top_priv) {
+		CAM_ERR(CAM_SFE, "Invalid param core_info NULL");
+		return -EINVAL;
+	}
+	if (*evt_payload == NULL) {
+		CAM_ERR(CAM_SFE, "No payload to put");
+		return -EINVAL;
+	}
+
+	spin_lock_irqsave(&top_priv->spin_lock, flags);
+	list_add_tail(&(*evt_payload)->list,
+		&top_priv->common_data.free_payload_list);
+	*evt_payload = NULL;
+	spin_unlock_irqrestore(&top_priv->spin_lock, flags);
+
+	CAM_DBG(CAM_SFE, "Done");
+	return 0;
+}
+
+static void cam_sfe_top_print_debug_reg_info(
+	struct cam_sfe_path_data           *path_data)
+{
+	CAM_INFO(CAM_SFE,
+		"Debug0: 0x%x Debug1: 0x%x Debug2: 0x%x Debug3: 0x%x",
+		cam_io_r_mb(path_data->mem_base +
+			path_data->common_reg->top_debug_0),
+		cam_io_r_mb(path_data->mem_base +
+			path_data->common_reg->top_debug_1),
+		cam_io_r_mb(path_data->mem_base +
+			path_data->common_reg->top_debug_2),
+		cam_io_r_mb(path_data->mem_base +
+			path_data->common_reg->top_debug_3));
+	CAM_INFO(CAM_SFE,
+		"Debug4: 0x%x Debug5: 0x%x Debug6: 0x%x Debug7: 0x%x",
+		cam_io_r_mb(path_data->mem_base +
+			path_data->common_reg->top_debug_4),
+		cam_io_r_mb(path_data->mem_base +
+			path_data->common_reg->top_debug_5),
+		cam_io_r_mb(path_data->mem_base +
+			path_data->common_reg->top_debug_6),
+		cam_io_r_mb(path_data->mem_base +
+			path_data->common_reg->top_debug_7));
+	CAM_INFO(CAM_SFE,
+		"Debug8: 0x%x Debug9: 0x%x Debug10: 0x%x Debug11: 0x%x",
+		cam_io_r_mb(path_data->mem_base +
+			path_data->common_reg->top_debug_8),
+		cam_io_r_mb(path_data->mem_base +
+			path_data->common_reg->top_debug_9),
+		cam_io_r_mb(path_data->mem_base +
+			path_data->common_reg->top_debug_10),
+		cam_io_r_mb(path_data->mem_base +
+			path_data->common_reg->top_debug_11));
+}
+
+static int cam_sfe_top_handle_err_irq_top_half(
+	uint32_t evt_id,
+	struct cam_irq_th_payload *th_payload)
+{
+	int rc = 0, i;
+	uint32_t irq_status = 0;
+	void __iomem *base = NULL;
+	struct cam_sfe_top_priv            *top_priv;
+	struct cam_isp_resource_node       *res;
+	struct cam_sfe_path_data           *path_data;
+	struct cam_sfe_top_irq_evt_payload *evt_payload;
+
+	res = th_payload->handler_priv;
+	path_data = res->res_priv;
+	top_priv = path_data->priv;
+
+	CAM_DBG(CAM_SFE, "Top error IRQ Received");
+
+	irq_status = th_payload->evt_status_arr[0];
+
+	base = path_data->mem_base;
+	if (irq_status & path_data->path_reg_data->error_irq_mask) {
+		CAM_ERR(CAM_SFE,
+			"SFE Violation Detected irq_status: 0x%x",
+			irq_status);
+		cam_irq_controller_disable_irq(
+			top_priv->common_data.sfe_irq_controller,
+			path_data->error_irq_handle);
+		cam_irq_controller_clear_and_mask(evt_id,
+			top_priv->common_data.sfe_irq_controller);
+	}
+
+	rc  = cam_sfe_top_get_evt_payload(top_priv, &evt_payload);
+	if (rc)
+		return rc;
+
+	for (i = 0; i < th_payload->num_registers; i++)
+		evt_payload->irq_reg_val[i] =
+			th_payload->evt_status_arr[i];
+
+	cam_isp_hw_get_timestamp(&evt_payload->ts);
+	evt_payload->violation_status =
+	cam_io_r(base +
+		top_priv->common_data.common_reg->violation_status);
+
+	th_payload->evt_payload_priv = evt_payload;
+
+	return rc;
+}
+
+static int cam_sfe_top_handle_irq_top_half(uint32_t evt_id,
+	struct cam_irq_th_payload *th_payload)
+{
+	int rc = 0, i;
+	uint32_t irq_status = 0;
+	struct cam_sfe_top_priv             *top_priv;
+	struct cam_isp_resource_node        *res;
+	struct cam_sfe_path_data            *path_data;
+	struct cam_sfe_top_irq_evt_payload  *evt_payload;
+
+	res = th_payload->handler_priv;
+	path_data = res->res_priv;
+	top_priv = path_data->top_priv;
+
+	rc  = cam_sfe_top_get_evt_payload(top_priv, &evt_payload);
+	if (rc)
+		return rc;
+
+	irq_status = th_payload->evt_status_arr[0];
+	CAM_DBG(CAM_SFE, "SFE top irq status: 0x%x",
+			irq_status);
+	for (i = 0; i < th_payload->num_registers; i++)
+		evt_payload->irq_reg_val[i] =
+			th_payload->evt_status_arr[i];
+
+	cam_isp_hw_get_timestamp(&evt_payload->ts);
+	th_payload->evt_payload_priv = evt_payload;
+	return rc;
+}
+
+static int cam_sfe_top_handle_irq_bottom_half(
+	void *handler_priv, void *evt_payload_priv)
+{
+	int i;
+	uint32_t irq_status[CAM_SFE_IRQ_REGISTERS_MAX] = {0};
+	enum cam_sfe_hw_irq_status          ret;
+	struct cam_isp_hw_event_info        evt_info;
+	struct cam_isp_resource_node       *res = handler_priv;
+	struct cam_sfe_path_data           *path_data = res->res_priv;
+	struct cam_sfe_top_priv            *top_priv = path_data->top_priv;
+	struct cam_sfe_top_irq_evt_payload *payload = evt_payload_priv;
+
+	for (i = 0; i < CAM_SFE_IRQ_REGISTERS_MAX; i++)
+		irq_status[i] = payload->irq_reg_val[i];
+
+	evt_info.hw_idx = res->hw_intf->hw_idx;
+	evt_info.res_id = res->res_id;
+	evt_info.res_type = res->res_type;
+	evt_info.reg_val = 0;
+
+	if (irq_status[0] &
+		path_data->path_reg_data->error_irq_mask) {
+		if (irq_status[0] & 0x4000)
+			CAM_ERR(CAM_SFE, "PP VIOLATION");
+
+		if (irq_status[0] & 0x8000)
+			CAM_ERR(CAM_SFE, "DIAG VIOLATION");
+
+		if (irq_status[0] & 0x10000)
+			CAM_ERR(CAM_SFE, "LINE SMOOTH VIOLATION");
+
+		CAM_INFO(CAM_SFE, "Violation status 0x%x",
+			payload->violation_status);
+
+		evt_info.err_type = CAM_SFE_IRQ_STATUS_VIOLATION;
+		cam_sfe_top_print_debug_reg_info(path_data);
+		if (path_data->event_cb)
+			path_data->event_cb(NULL,
+				CAM_ISP_HW_EVENT_ERROR, (void *)&evt_info);
+
+		ret = CAM_SFE_IRQ_STATUS_VIOLATION;
+	}
+
+	/* To Do Debugfs entry to control the enablement */
+	if (irq_status[0] & path_data->path_reg_data->subscribe_irq_mask) {
+		if (irq_status[0] & path_data->path_reg_data->sof_irq_mask) {
+			CAM_INFO_RATE_LIMIT(CAM_SFE, "SFE:%d Received %s SOF",
+				evt_info.hw_idx,
+				cam_sfe_top_res_id_to_string(res->res_id));
+		}
+
+		if (irq_status[0] &
+			path_data->path_reg_data->eof_irq_mask) {
+			CAM_INFO_RATE_LIMIT(CAM_SFE, "SFE:%d Received %s EOF",
+				evt_info.hw_idx,
+				cam_sfe_top_res_id_to_string(res->res_id));
+		}
+		ret = CAM_SFE_IRQ_STATUS_SUCCESS;
+	}
+
+	/* To DO frame counter under debugfs */
+	CAM_DBG(CAM_SFE,
+		"SFE:%d SFE_DIAG_SENSOR_STATUS0: 0x%x SFE_DIAG_SENSOR_STATUS1: 0x%x",
+		evt_info.hw_idx,
+		cam_io_r(path_data->mem_base +
+			path_data->common_reg->diag_sensor_status_0),
+		cam_io_r(path_data->mem_base +
+			path_data->common_reg->diag_sensor_status_1));
+
+	cam_sfe_top_put_evt_payload(top_priv, &payload);
+
+	return ret;
+}
+
 int cam_sfe_top_start(
 	void *priv, void *start_args, uint32_t arg_size)
 {
@@ -387,6 +656,8 @@ int cam_sfe_top_start(
 	struct cam_isp_resource_node         *sfe_res;
 	struct cam_hw_info                   *hw_info = NULL;
 	struct cam_sfe_path_data             *path_data;
+	uint32_t   error_mask[CAM_SFE_IRQ_REGISTERS_MAX];
+	uint32_t   sof_eof_mask[CAM_SFE_IRQ_REGISTERS_MAX];
 
 	if (!priv || !start_args) {
 		CAM_ERR(CAM_SFE, "Invalid args");
@@ -421,13 +692,54 @@ int cam_sfe_top_start(
 			path_data->common_reg->core_cfg));
 
 	/* Enable debug cfg registers */
-	cam_io_w_mb(path_data->path_reg_data->top_debug_cfg_en,
+	cam_io_w(path_data->path_reg_data->top_debug_cfg_en,
 		path_data->mem_base +
 		path_data->common_reg->top_debug_cfg);
 
 	/* Enable sensor diag info */
-	/* Enable SOF & EOF IRQ based on debug flag */
+	/* TO DO - debug fs to enable*/
+	cam_io_w(path_data->path_reg_data->enable_diagnostic_hw,
+		path_data->mem_base + path_data->common_reg->diag_config);
+
+	error_mask[0] = path_data->path_reg_data->error_irq_mask;
 	/* Enable error IRQ by default */
+	if (!path_data->error_irq_handle) {
+		path_data->error_irq_handle = cam_irq_controller_subscribe_irq(
+			top_priv->common_data.sfe_irq_controller,
+			CAM_IRQ_PRIORITY_0,
+			error_mask,
+			sfe_res,
+			cam_sfe_top_handle_err_irq_top_half,
+			cam_sfe_top_handle_irq_bottom_half,
+			sfe_res->tasklet_info,
+			&tasklet_bh_api);
+
+		if (path_data->error_irq_handle < 1) {
+			CAM_ERR(CAM_SFE, "Failed to subscribe Top IRQ");
+			path_data->error_irq_handle = 0;
+			return -EFAULT;
+		}
+	}
+
+	/* TO DO define the debugfs to enable/disable sof/eof irq */
+	if (!path_data->sof_eof_handle) {
+		sof_eof_mask[0] = path_data->path_reg_data->subscribe_irq_mask;
+		path_data->sof_eof_handle = cam_irq_controller_subscribe_irq(
+			top_priv->common_data.sfe_irq_controller,
+			CAM_IRQ_PRIORITY_1,
+			sof_eof_mask,
+			sfe_res,
+			cam_sfe_top_handle_irq_top_half,
+			cam_sfe_top_handle_irq_bottom_half,
+			sfe_res->tasklet_info,
+			&tasklet_bh_api);
+
+		if (path_data->sof_eof_handle < 1) {
+			CAM_ERR(CAM_SFE, "Failed to subscribe SOF/EOF IRQ");
+			path_data->sof_eof_handle = 0;
+			return -EFAULT;
+		}
+	}
 
 	sfe_res->res_state = CAM_ISP_RESOURCE_STATE_STREAMING;
 	return 0;
@@ -439,6 +751,7 @@ int cam_sfe_top_stop(
 	int i;
 	struct cam_sfe_top_priv       *top_priv;
 	struct cam_isp_resource_node  *sfe_res;
+	struct cam_sfe_path_data      *path_data;
 
 	if (!priv || !stop_args) {
 		CAM_ERR(CAM_SFE, "Invalid args");
@@ -447,6 +760,7 @@ int cam_sfe_top_stop(
 
 	top_priv = (struct cam_sfe_top_priv *)priv;
 	sfe_res = (struct cam_isp_resource_node *) stop_args;
+	path_data = sfe_res->res_priv;
 
 	if (sfe_res->res_state == CAM_ISP_RESOURCE_STATE_RESERVED ||
 		sfe_res->res_state == CAM_ISP_RESOURCE_STATE_AVAILABLE)
@@ -465,6 +779,18 @@ int cam_sfe_top_stop(
 		}
 	}
 
+	if (path_data->error_irq_handle > 0) {
+		cam_irq_controller_unsubscribe_irq(
+			top_priv->common_data.sfe_irq_controller,
+			path_data->error_irq_handle);
+	}
+
+	if (path_data->sof_eof_handle > 0) {
+		cam_irq_controller_unsubscribe_irq(
+			top_priv->common_data.sfe_irq_controller,
+			path_data->sof_eof_handle);
+	}
+
 	return 0;
 }
 
@@ -473,6 +799,7 @@ int cam_sfe_top_init(
 	struct cam_hw_soc_info             *soc_info,
 	struct cam_hw_intf                 *hw_intf,
 	void                               *top_hw_info,
+	void                               *sfe_irq_controller,
 	struct cam_sfe_top                **sfe_top_ptr)
 {
 	int i, j, rc = 0;
@@ -497,6 +824,7 @@ int cam_sfe_top_init(
 	}
 
 	sfe_top->top_priv = top_priv;
+	top_priv->common_data.sfe_irq_controller = sfe_irq_controller;
 	if (sfe_top_hw_info->num_inputs > CAM_SFE_TOP_IN_PORT_MAX) {
 		CAM_ERR(CAM_SFE,
 			"Invalid number of input resources: %d max: %d",
@@ -590,6 +918,15 @@ int cam_sfe_top_init(
 	sfe_top->hw_ops.stop = cam_sfe_top_stop;
 	sfe_top->hw_ops.reserve = cam_sfe_top_reserve;
 	sfe_top->hw_ops.release = cam_sfe_top_release;
+
+	spin_lock_init(&top_priv->spin_lock);
+	INIT_LIST_HEAD(&top_priv->common_data.free_payload_list);
+	for (i = 0; i < CAM_SFE_EVT_MAX; i++) {
+		INIT_LIST_HEAD(&top_priv->common_data.evt_payload[i].list);
+		list_add_tail(&top_priv->common_data.evt_payload[i].list,
+			&top_priv->common_data.free_payload_list);
+	}
+
 	*sfe_top_ptr = sfe_top;
 
 	return rc;
@@ -625,6 +962,7 @@ int cam_sfe_top_deinit(
 	struct cam_sfe_top **sfe_top_ptr)
 {
 	int i, rc = 0;
+	unsigned long flags;
 	struct cam_sfe_top      *sfe_top;
 	struct cam_sfe_top_priv *top_priv;
 
@@ -650,6 +988,13 @@ int cam_sfe_top_deinit(
 		"Deinit SFE [%u] top with hw_version 0x%x",
 		top_priv->common_data.hw_intf->hw_idx,
 		hw_version);
+
+	spin_lock_irqsave(&top_priv->spin_lock, flags);
+	INIT_LIST_HEAD(&top_priv->common_data.free_payload_list);
+		for (i = 0; i < CAM_SFE_EVT_MAX; i++)
+			INIT_LIST_HEAD(
+				&top_priv->common_data.evt_payload[i].list);
+	spin_unlock_irqrestore(&top_priv->spin_lock, flags);
 
 	for (i = 0; i < CAM_SFE_TOP_IN_PORT_MAX; i++) {
 		top_priv->in_rsrc[i].res_state =

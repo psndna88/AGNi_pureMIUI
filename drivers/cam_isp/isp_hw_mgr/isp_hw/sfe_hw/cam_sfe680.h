@@ -128,6 +128,14 @@ static struct cam_sfe_top_hw_info sfe680_top_hw_info = {
 	},
 };
 
+static struct cam_irq_register_set sfe680_bus_rd_irq_reg[1] = {
+	{
+		.mask_reg_offset   = 0x00000404,
+		.clear_reg_offset  = 0x00000408,
+		.status_reg_offset = 0x00000410,
+	},
+};
+
 static struct cam_sfe_bus_rd_hw_info sfe680_bus_rd_hw_info = {
 	.common_reg = {
 		.hw_version                   = 0x00000400,
@@ -136,6 +144,13 @@ static struct cam_sfe_bus_rd_hw_info sfe680_bus_rd_hw_info = {
 		.input_if_cmd                 = 0x00000414,
 		.test_bus_ctrl                = 0x0000042C,
 		.security_cfg                 = 0x00000420,
+		.cons_violation_status        = 0x00000434,
+		.irq_reg_info = {
+			.num_registers     = 1,
+			.irq_reg_set          = sfe680_bus_rd_irq_reg,
+			.global_clear_offset  = 0x0000040C,
+			.global_clear_bitmask = 0x00000001,
+		},
 	},
 	.num_client = 3,
 	.bus_client_reg = {
@@ -191,6 +206,14 @@ static struct cam_sfe_bus_rd_hw_info sfe680_bus_rd_hw_info = {
 	.top_irq_shift = 0x1,
 };
 
+static struct cam_irq_register_set sfe680_bus_wr_irq_reg[1] = {
+	{
+		.mask_reg_offset   = 0x00000818,
+		.clear_reg_offset  = 0x00000820,
+		.status_reg_offset = 0x00000828,
+	},
+};
+
 static struct cam_sfe_bus_wr_hw_info sfe680_bus_wr_hw_info = {
 	.common_reg = {
 		.hw_version                       = 0x00000800,
@@ -211,7 +234,13 @@ static struct cam_sfe_bus_wr_hw_info sfe680_bus_wr_hw_info = {
 		.debug_status_top_cfg             = 0x000008D4,
 		.debug_status_top                 = 0x000008D8,
 		.test_bus_ctrl                    = 0x000008DC,
-		.top_irq_mask_0                   = 0x00000818,
+		.top_irq_mask_0                   = 0x00000020,
+		.irq_reg_info = {
+			.num_registers     = 1,
+			.irq_reg_set          = sfe680_bus_wr_irq_reg,
+			.global_clear_offset  = 0x00000830,
+			.global_clear_bitmask = 0x00000001,
+		},
 	},
 	.num_client = 13,
 	.bus_client_reg = {
@@ -679,8 +708,23 @@ static struct cam_sfe_bus_wr_hw_info sfe680_bus_wr_hw_info = {
 	.top_irq_shift   = 0x0,
 };
 
+static struct cam_irq_register_set sfe680_top_irq_reg_set[1] = {
+{
+	.mask_reg_offset   = 0x00000020,
+	.clear_reg_offset  = 0x00000024,
+	.status_reg_offset = 0x00000028,
+	},
+};
+
+static struct cam_irq_controller_reg_info sfe680_top_irq_reg_info = {
+	.num_registers = 1,
+	.irq_reg_set = sfe680_top_irq_reg_set,
+	.global_clear_offset  = 0x0000001C,
+	.global_clear_bitmask = 0x00000001,
+};
+
 struct cam_sfe_hw_info cam_sfe680_hw_info = {
-	.irq_reg_info                  = NULL,
+	.irq_reg_info                  = &sfe680_top_irq_reg_info,
 
 	.bus_wr_version                = CAM_SFE_BUS_WR_VER_1_0,
 	.bus_wr_hw_info                = &sfe680_bus_wr_hw_info,

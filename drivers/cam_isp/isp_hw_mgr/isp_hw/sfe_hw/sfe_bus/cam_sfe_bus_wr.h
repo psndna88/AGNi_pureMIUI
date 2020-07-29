@@ -7,7 +7,6 @@
 #ifndef _CAM_SFE_BUS_WR_H_
 #define _CAM_SFE_BUS_WR_H_
 
-#include "cam_irq_controller.h"
 #include "cam_sfe_bus.h"
 
 #define CAM_SFE_BUS_WR_MAX_CLIENTS     13
@@ -72,6 +71,7 @@ struct cam_sfe_bus_reg_offset_common {
 	uint32_t debug_status_top;
 	uint32_t test_bus_ctrl;
 	uint32_t top_irq_mask_0;
+	struct cam_irq_controller_reg_info irq_reg_info;
 };
 
 /*
@@ -154,6 +154,7 @@ struct cam_sfe_bus_wr_hw_info {
  * @soc_info:                Soc Information for the associated HW
  * @hw_intf:                 HW Interface of HW to which this resource belongs
  * @bus_hw_info:             BUS HW info that contains details of BUS registers
+ * @sfe_irq_controller:      SFE irq controller
  * @sfe_bus:                 Pointer to sfe_bus structure which will be filled
  *                           and returned on successful initialize
  *
@@ -164,6 +165,7 @@ int cam_sfe_bus_wr_init(
 	struct cam_hw_soc_info               *soc_info,
 	struct cam_hw_intf                   *hw_intf,
 	void                                 *bus_hw_info,
+	void                                 *sfe_irq_controller,
 	struct cam_sfe_bus                  **sfe_bus);
 
 /*

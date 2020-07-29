@@ -37,6 +37,10 @@ static const char drv_name[] = "sfe_bus_wr";
 #define MAX_REG_VAL_PAIR_SIZE    \
 	(MAX_BUF_UPDATE_REG_NUM * 2 * CAM_PACKET_MAX_PLANES)
 
+static uint32_t bus_wr_error_irq_mask[1] = {
+	0xD0000000,
+};
+
 enum cam_sfe_bus_wr_packer_format {
 	PACKER_FMT_PLAIN_128,
 	PACKER_FMT_PLAIN_8,
@@ -63,12 +67,16 @@ struct cam_sfe_bus_wr_common_data {
 	uint32_t                                    hw_version;
 	void __iomem                               *mem_base;
 	struct cam_hw_intf                         *hw_intf;
+	void                                       *sfe_irq_controller;
 	void                                       *buf_done_controller;
+	void                                       *bus_irq_controller;
 	struct cam_sfe_bus_reg_offset_common       *common_reg;
 	uint32_t                                    io_buf_update[
 		MAX_REG_VAL_PAIR_SIZE];
 	struct list_head                            free_payload_list;
 	spinlock_t                                  spin_lock;
+	struct cam_sfe_bus_wr_irq_evt_payload       evt_payload[
+		CAM_SFE_BUS_WR_PAYLOAD_MAX];
 	struct mutex                                bus_mutex;
 	uint32_t                                    secure_mode;
 	uint32_t                                    num_sec_out;
@@ -167,10 +175,9 @@ struct cam_sfe_bus_wr_priv {
 	struct list_head                    free_comp_grp;
 	struct list_head                    used_comp_grp;
 
-	//int                                 bus_irq_handle;
-	//int                                 rup_irq_handle;
-	//int                                 error_irq_handle;
-	//void                               *tasklet_info;
+	int                                 bus_irq_handle;
+	int                                 error_irq_handle;
+	void                               *tasklet_info;
 };
 
 static int cam_sfe_bus_wr_process_cmd(
@@ -233,6 +240,54 @@ static enum cam_sfe_bus_sfe_out_type
 	default:
 		return CAM_SFE_BUS_SFE_OUT_MAX;
 	}
+}
+
+static int cam_sfe_bus_get_comp_sfe_out_res_id_list(
+	uint32_t comp_mask, uint32_t *out_list, int *num_out)
+{
+	int count = 0;
+
+	if (comp_mask & (1 << CAM_SFE_BUS_SFE_OUT_RDI0))
+		out_list[count++] = CAM_ISP_SFE_OUT_RES_RDI_0;
+
+	if (comp_mask & (1 << CAM_SFE_BUS_SFE_OUT_RDI1))
+		out_list[count++] = CAM_ISP_SFE_OUT_RES_RDI_1;
+
+	if (comp_mask & (1 << CAM_SFE_BUS_SFE_OUT_RDI2))
+		out_list[count++] = CAM_ISP_SFE_OUT_RES_RDI_2;
+
+	if (comp_mask & (1 << CAM_SFE_BUS_SFE_OUT_RDI3))
+		out_list[count++] = CAM_ISP_SFE_OUT_RES_RDI_3;
+
+	if (comp_mask & (1 << CAM_SFE_BUS_SFE_OUT_RDI4))
+		out_list[count++] = CAM_ISP_SFE_OUT_RES_RDI_4;
+
+	if (comp_mask & (1 << CAM_SFE_BUS_SFE_OUT_RAW_DUMP))
+		out_list[count++] = CAM_ISP_SFE_OUT_RES_RAW_DUMP;
+
+	if (comp_mask & (1 << CAM_SFE_BUS_SFE_OUT_BE_0))
+		out_list[count++] = CAM_ISP_SFE_OUT_BE_STATS_0;
+
+	if (comp_mask & (1 << CAM_SFE_BUS_SFE_OUT_BHIST_0))
+		out_list[count++] = CAM_ISP_SFE_OUT_BHIST_STATS_0;
+
+	if (comp_mask & (1 << CAM_SFE_BUS_SFE_OUT_BE_1))
+		out_list[count++] = CAM_ISP_SFE_OUT_BE_STATS_1;
+
+	if (comp_mask & (1 << CAM_SFE_BUS_SFE_OUT_BHIST_1))
+		out_list[count++] = CAM_ISP_SFE_OUT_BHIST_STATS_1;
+
+	if (comp_mask & (1 << CAM_SFE_BUS_SFE_OUT_BE_2))
+		out_list[count++] = CAM_ISP_SFE_OUT_BE_STATS_2;
+
+	if (comp_mask & (1 << CAM_SFE_BUS_SFE_OUT_BHIST_2))
+		out_list[count++] = CAM_ISP_SFE_OUT_BHIST_STATS_2;
+
+	if (comp_mask & (1 << CAM_SFE_BUS_SFE_OUT_LCR))
+		out_list[count++] = CAM_ISP_SFE_OUT_RES_LCR;
+
+	*num_out = count;
+	return 0;
 }
 
 static enum cam_sfe_bus_wr_packer_format
@@ -766,7 +821,9 @@ static int cam_sfe_bus_start_comp_grp(
 	if (comp_grp->res_state == CAM_ISP_RESOURCE_STATE_STREAMING)
 		return 0;
 
-	/* TO DO Enable top irq */
+	bus_irq_reg_mask[CAM_SFE_IRQ_BUS_REG_STATUS0] =
+		(0x1 << (rsrc_data->comp_grp_type +
+		rsrc_data->common_data->comp_done_shift));
 
 	CAM_DBG(CAM_SFE, "Start Done SFE:%d comp_grp:%d",
 		rsrc_data->common_data->core_index,
@@ -1073,13 +1130,73 @@ static int cam_sfe_bus_release_sfe_out(void *bus_priv, void *release_args,
 	return 0;
 }
 
+static int cam_sfe_bus_wr_get_evt_payload(
+	struct cam_sfe_bus_wr_common_data       *common_data,
+	struct cam_sfe_bus_wr_irq_evt_payload  **evt_payload)
+{
+	int rc;
+
+	spin_lock(&common_data->spin_lock);
+
+	if (!common_data->hw_init) {
+		CAM_ERR_RATE_LIMIT(CAM_SFE, "SFE:%d Bus uninitialized",
+			common_data->core_index);
+		*evt_payload = NULL;
+		rc = -EPERM;
+		goto done;
+	}
+
+	if (list_empty(&common_data->free_payload_list)) {
+		CAM_ERR_RATE_LIMIT(CAM_SFE, "No free BUS event payload");
+		*evt_payload = NULL;
+		rc = -ENODEV;
+		goto done;
+	}
+
+	*evt_payload = list_first_entry(&common_data->free_payload_list,
+		struct cam_sfe_bus_wr_irq_evt_payload, list);
+	list_del_init(&(*evt_payload)->list);
+	rc = 0;
+done:
+	spin_unlock(&common_data->spin_lock);
+	return rc;
+}
+
+static int cam_sfe_bus_wr_put_evt_payload(
+	struct cam_sfe_bus_wr_common_data      *common_data,
+	struct cam_sfe_bus_wr_irq_evt_payload **evt_payload)
+{
+	unsigned long flags;
+
+	if (!common_data) {
+		CAM_ERR(CAM_SFE, "Invalid param common_data NULL");
+		return -EINVAL;
+	}
+
+	if (*evt_payload == NULL) {
+		CAM_ERR(CAM_SFE, "No payload to put");
+		return -EINVAL;
+	}
+
+	spin_lock_irqsave(&common_data->spin_lock, flags);
+	if (common_data->hw_init)
+		list_add_tail(&(*evt_payload)->list,
+			&common_data->free_payload_list);
+	spin_unlock_irqrestore(&common_data->spin_lock, flags);
+
+	*evt_payload = NULL;
+
+	CAM_DBG(CAM_SFE, "Done");
+	return 0;
+}
+
 static int cam_sfe_bus_start_sfe_out(
 	struct cam_isp_resource_node          *sfe_out)
 {
 	int rc = 0, i;
 	struct cam_sfe_bus_wr_out_data      *rsrc_data = NULL;
 	struct cam_sfe_bus_wr_common_data   *common_data = NULL;
-	uint32_t bus_irq_reg_mask[2];
+	uint32_t bus_irq_reg_mask[CAM_SFE_IRQ_REGISTERS_MAX];
 	uint32_t source_group = 0;
 
 	if (!sfe_out) {
@@ -1112,8 +1229,21 @@ static int cam_sfe_bus_start_sfe_out(
 	if (rsrc_data->is_dual && !rsrc_data->is_master)
 		goto end;
 
-	/* TO DO IRQ handling */
-
+	sfe_out->irq_handle =  cam_irq_controller_subscribe_irq(
+		common_data->buf_done_controller,
+		CAM_IRQ_PRIORITY_1,
+		bus_irq_reg_mask,
+		sfe_out,
+		sfe_out->top_half_handler,
+		sfe_out->bottom_half_handler,
+		sfe_out->tasklet_info,
+		&tasklet_bh_api);
+	if (sfe_out->irq_handle < 1) {
+		CAM_ERR(CAM_SFE, "Subscribe IRQ failed for sfe out_res: %d",
+			sfe_out->res_id);
+		sfe_out->irq_handle = 0;
+		return -EFAULT;
+	}
 end:
 	sfe_out->res_state = CAM_ISP_RESOURCE_STATE_STREAMING;
 	return rc;
@@ -1148,7 +1278,158 @@ static int cam_sfe_bus_stop_sfe_out(
 		rc = cam_sfe_bus_stop_wm(&rsrc_data->wm_res[i]);
 
 	/* TO DO any IRQ handling */
+	if (sfe_out->irq_handle) {
+		cam_irq_controller_unsubscribe_irq(
+			common_data->buf_done_controller,
+			sfe_out->irq_handle);
+		sfe_out->irq_handle = 0;
+	}
+
 	sfe_out->res_state = CAM_ISP_RESOURCE_STATE_RESERVED;
+	return rc;
+}
+
+static int cam_sfe_bus_handle_sfe_out_done_top_half(
+	uint32_t evt_id,
+	struct cam_irq_th_payload *th_payload)
+{
+	int32_t                                     rc;
+	int                                         i;
+	struct cam_isp_resource_node               *sfe_out = NULL;
+	struct cam_sfe_bus_wr_out_data             *rsrc_data = NULL;
+	struct cam_sfe_bus_wr_irq_evt_payload      *evt_payload;
+	struct cam_sfe_bus_wr_comp_grp_data        *resource_data;
+	uint32_t                                    status_0;
+
+	sfe_out = th_payload->handler_priv;
+	if (!sfe_out) {
+		CAM_ERR_RATE_LIMIT(CAM_SFE, "No resource");
+		return -ENODEV;
+	}
+
+	rsrc_data = sfe_out->res_priv;
+	resource_data = rsrc_data->comp_grp->res_priv;
+
+	CAM_DBG(CAM_SFE, "SFE:%d Bus IRQ status_0: 0x%X status_1: 0x%X",
+		rsrc_data->common_data->core_index,
+		th_payload->evt_status_arr[0],
+		th_payload->evt_status_arr[1]);
+
+	rc  = cam_sfe_bus_wr_get_evt_payload(rsrc_data->common_data,
+			&evt_payload);
+	if (rc) {
+		CAM_INFO_RATE_LIMIT(CAM_SFE,
+			"SFE:%d Bus IRQ status_0: 0x%X status_1: 0x%X",
+			rsrc_data->common_data->core_index,
+			th_payload->evt_status_arr[0],
+			th_payload->evt_status_arr[1]);
+		return rc;
+	}
+
+	cam_isp_hw_get_timestamp(&evt_payload->ts);
+
+	evt_payload->core_index = rsrc_data->common_data->core_index;
+	evt_payload->evt_id = evt_id;
+
+	for (i = 0; i < th_payload->num_registers; i++)
+		evt_payload->irq_reg_val[i] = th_payload->evt_status_arr[i];
+
+	th_payload->evt_payload_priv = evt_payload;
+
+	status_0 = th_payload->evt_status_arr[CAM_SFE_IRQ_BUS_REG_STATUS0];
+
+	if (status_0 & BIT(resource_data->comp_grp_type +
+		rsrc_data->common_data->comp_done_shift)) {
+		trace_cam_log_event("bufdone", "bufdone_IRQ",
+			status_0, resource_data->comp_grp_type);
+	}
+
+	return rc;
+}
+
+static int cam_sfe_bus_handle_comp_done_bottom_half(
+	void                *handler_priv,
+	void                *evt_payload_priv,
+	uint32_t            *comp_mask)
+{
+	int rc = CAM_SFE_IRQ_STATUS_ERR;
+	struct cam_isp_resource_node          *comp_grp = handler_priv;
+	struct cam_sfe_bus_wr_irq_evt_payload *evt_payload = evt_payload_priv;
+	struct cam_sfe_bus_wr_comp_grp_data   *rsrc_data = comp_grp->res_priv;
+	uint32_t                              *cam_ife_irq_regs;
+	uint32_t                               status_0;
+
+	if (!evt_payload)
+		return rc;
+
+	if (rsrc_data->is_dual && (!rsrc_data->is_master)) {
+		CAM_ERR(CAM_SFE, "Invalid comp_grp:%u is_master:%u",
+			rsrc_data->comp_grp_type, rsrc_data->is_master);
+		return rc;
+	}
+
+	cam_ife_irq_regs = evt_payload->irq_reg_val;
+	status_0 = cam_ife_irq_regs[CAM_SFE_IRQ_BUS_REG_STATUS0];
+
+	if (status_0 & BIT(rsrc_data->comp_grp_type +
+		rsrc_data->common_data->comp_done_shift)) {
+		evt_payload->evt_id = CAM_ISP_HW_EVENT_DONE;
+		rc = CAM_SFE_IRQ_STATUS_SUCCESS;
+	}
+
+	CAM_DBG(CAM_SFE, "SFE:%d comp_grp:%d Bus IRQ status_0: 0x%X rc:%d",
+		rsrc_data->common_data->core_index, rsrc_data->comp_grp_type,
+		status_0, rc);
+
+	*comp_mask = rsrc_data->composite_mask;
+
+	return rc;
+}
+
+static int cam_sfe_bus_handle_sfe_out_done_bottom_half(
+	void                *handler_priv,
+	void                *evt_payload_priv)
+{
+	int                                    rc = -EINVAL, num_out = 0, i = 0;
+	struct cam_isp_resource_node          *sfe_out = handler_priv;
+	struct cam_sfe_bus_wr_out_data        *rsrc_data = sfe_out->res_priv;
+	struct cam_sfe_bus_wr_irq_evt_payload *evt_payload = evt_payload_priv;
+	struct cam_isp_hw_event_info           evt_info;
+	void                                  *ctx = NULL;
+	uint32_t                               evt_id = 0, comp_mask = 0;
+	uint32_t                       out_list[CAM_SFE_BUS_SFE_OUT_MAX];
+
+	rc = cam_sfe_bus_handle_comp_done_bottom_half(
+		rsrc_data->comp_grp, evt_payload_priv, &comp_mask);
+	CAM_DBG(CAM_SFE, "SFE:%d out_type:0x%X rc:%d",
+		rsrc_data->common_data->core_index, rsrc_data->out_type,
+		rsrc_data->out_type, rc);
+
+	ctx = rsrc_data->priv;
+	memset(out_list, 0, sizeof(out_list));
+
+	switch (rc) {
+	case CAM_SFE_IRQ_STATUS_SUCCESS:
+		evt_id = evt_payload->evt_id;
+
+		evt_info.res_type = sfe_out->res_type;
+		evt_info.hw_idx   = sfe_out->hw_intf->hw_idx;
+
+		rc = cam_sfe_bus_get_comp_sfe_out_res_id_list(
+			comp_mask, out_list, &num_out);
+		for (i = 0; i < num_out; i++) {
+			evt_info.res_id = out_list[i];
+			if (rsrc_data->common_data->event_cb)
+				rsrc_data->common_data->event_cb(ctx, evt_id,
+					(void *)&evt_info);
+		}
+		break;
+	default:
+		break;
+	}
+
+	cam_sfe_bus_wr_put_evt_payload(rsrc_data->common_data, &evt_payload);
+
 	return rc;
 }
 
@@ -1220,11 +1501,12 @@ static int cam_sfe_bus_init_sfe_out_resource(
 		return rc;
 	}
 
-	/* TO DO top & bh */
 	sfe_out->start = cam_sfe_bus_start_sfe_out;
 	sfe_out->stop = cam_sfe_bus_stop_sfe_out;
-	sfe_out->top_half_handler = NULL;
-	sfe_out->bottom_half_handler = NULL;
+	sfe_out->top_half_handler =
+		cam_sfe_bus_handle_sfe_out_done_top_half;
+	sfe_out->bottom_half_handler =
+		cam_sfe_bus_handle_sfe_out_done_bottom_half;
 	sfe_out->process_cmd = cam_sfe_bus_wr_process_cmd;
 	sfe_out->hw_intf = bus_priv->common_data.hw_intf;
 	sfe_out->irq_handle = 0;
@@ -1304,6 +1586,97 @@ static int cam_sfe_bus_wr_print_dimensions(
 			wm_data->acquired_width,
 			wm_data->acquired_height);
 	}
+	return 0;
+}
+
+static int cam_sfe_bus_wr_handle_bus_irq(uint32_t    evt_id,
+	struct cam_irq_th_payload                 *th_payload)
+{
+	struct cam_sfe_bus_wr_priv          *bus_priv;
+	int rc = 0;
+
+	bus_priv = th_payload->handler_priv;
+	rc = cam_irq_controller_handle_irq(evt_id,
+		bus_priv->common_data.bus_irq_controller);
+	return (rc == IRQ_HANDLED) ? 0 : -EINVAL;
+}
+
+static int cam_sfe_bus_wr_err_irq_top_half(uint32_t evt_id,
+	struct cam_irq_th_payload *th_payload)
+{
+
+	int i = 0, rc = 0;
+	struct cam_sfe_bus_wr_priv *bus_priv =
+		th_payload->handler_priv;
+	struct cam_sfe_bus_wr_irq_evt_payload *evt_payload;
+
+	CAM_ERR_RATE_LIMIT(CAM_ISP, "SFE:%d BUS Err IRQ",
+		bus_priv->common_data.core_index);
+
+	for (i = 0; i < th_payload->num_registers; i++) {
+		CAM_ERR_RATE_LIMIT(CAM_ISP, "SFE:%d BUS IRQ status_%d: 0x%X",
+		bus_priv->common_data.core_index, i,
+			th_payload->evt_status_arr[i]);
+	}
+	cam_irq_controller_disable_irq(
+		bus_priv->common_data.bus_irq_controller,
+		bus_priv->error_irq_handle);
+
+	rc  = cam_sfe_bus_wr_get_evt_payload(&bus_priv->common_data,
+		&evt_payload);
+	if (rc)
+		return rc;
+
+	for (i = 0; i < th_payload->num_registers; i++)
+		evt_payload->irq_reg_val[i] = th_payload->evt_status_arr[i];
+
+	evt_payload->core_index = bus_priv->common_data.core_index;
+
+	evt_payload->ccif_violation_status = cam_io_r_mb(
+		bus_priv->common_data.mem_base +
+		bus_priv->common_data.common_reg->ccif_violation_status);
+
+	evt_payload->image_size_violation_status = cam_io_r_mb(
+		bus_priv->common_data.mem_base +
+		bus_priv->common_data.common_reg->image_size_violation_status);
+
+	th_payload->evt_payload_priv = evt_payload;
+
+	return rc;
+}
+
+static int cam_sfe_bus_wr_irq_bottom_half(
+	void *handler_priv, void *evt_payload_priv)
+{
+	uint32_t status = 0;
+	struct cam_sfe_bus_wr_priv            *bus_priv = handler_priv;
+	struct cam_sfe_bus_wr_common_data     *common_data;
+	struct cam_isp_hw_event_info           evt_info;
+	struct cam_sfe_bus_wr_irq_evt_payload *evt_payload = evt_payload_priv;
+
+	if (!handler_priv || !evt_payload_priv)
+		return -EINVAL;
+
+	common_data = &bus_priv->common_data;
+
+	status = evt_payload->irq_reg_val[CAM_SFE_IRQ_BUS_REG_STATUS0];
+
+	CAM_ERR(CAM_SFE,
+		"SFE:%d status 0x%x Image Size violation status 0x%x CCIF violation status 0x%x",
+		bus_priv->common_data.core_index, status,
+		evt_payload->image_size_violation_status,
+		evt_payload->ccif_violation_status);
+
+	cam_sfe_bus_wr_put_evt_payload(common_data, &evt_payload);
+
+	evt_info.hw_idx = common_data->core_index;
+	evt_info.res_type = CAM_ISP_RESOURCE_SFE_OUT;
+	evt_info.res_id = CAM_SFE_BUS_SFE_OUT_MAX;
+	evt_info.err_type = CAM_SFE_IRQ_STATUS_VIOLATION;
+
+	if (common_data->event_cb)
+		common_data->event_cb(NULL, CAM_ISP_HW_EVENT_ERROR,
+			(void *)&evt_info);
 	return 0;
 }
 
@@ -1680,6 +2053,7 @@ static int cam_sfe_bus_wr_init_hw(void *hw_priv,
 	void *init_hw_args, uint32_t arg_size)
 {
 	struct cam_sfe_bus_wr_priv    *bus_priv = hw_priv;
+	uint32_t top_irq_reg_mask[CAM_SFE_IRQ_REGISTERS_MAX] = {0};
 
 	if (!bus_priv) {
 		CAM_ERR(CAM_SFE, "Invalid args");
@@ -1689,7 +2063,42 @@ static int cam_sfe_bus_wr_init_hw(void *hw_priv,
 	if (bus_priv->common_data.hw_init)
 		return 0;
 
-	/* To Do Subscribe IRQs */
+	/* Subscribe top IRQ */
+	top_irq_reg_mask[0] = (1 << bus_priv->top_irq_shift);
+
+	bus_priv->bus_irq_handle = cam_irq_controller_subscribe_irq(
+		bus_priv->common_data.sfe_irq_controller,
+		CAM_IRQ_PRIORITY_4,
+		top_irq_reg_mask,
+		bus_priv,
+		cam_sfe_bus_wr_handle_bus_irq,
+		NULL,
+		NULL,
+		NULL);
+
+	if (bus_priv->bus_irq_handle < 1) {
+		CAM_ERR(CAM_SFE, "Failed to subscribe BUS (buf_done) IRQ");
+		bus_priv->bus_irq_handle = 0;
+		return -EFAULT;
+	}
+
+	if (bus_priv->tasklet_info != NULL) {
+		bus_priv->error_irq_handle = cam_irq_controller_subscribe_irq(
+			bus_priv->common_data.bus_irq_controller,
+			CAM_IRQ_PRIORITY_0,
+			bus_wr_error_irq_mask,
+			bus_priv,
+			cam_sfe_bus_wr_err_irq_top_half,
+			cam_sfe_bus_wr_irq_bottom_half,
+			bus_priv->tasklet_info,
+			&tasklet_bh_api);
+
+		if (bus_priv->error_irq_handle < 1) {
+			CAM_ERR(CAM_SFE, "Failed to subscribe BUS Error IRQ");
+			bus_priv->error_irq_handle = 0;
+			return -EFAULT;
+		}
+	}
 
 	/* BUS_WR_TEST_BUS_CTRL */
 	cam_io_w_mb(0x0, bus_priv->common_data.mem_base +
@@ -1787,13 +2196,13 @@ int cam_sfe_bus_wr_init(
 	struct cam_hw_soc_info               *soc_info,
 	struct cam_hw_intf                   *hw_intf,
 	void                                 *bus_hw_info,
+	void                                 *sfe_irq_controller,
 	struct cam_sfe_bus                  **sfe_bus)
 {
 	int i, rc = 0;
 	struct cam_sfe_bus_wr_priv    *bus_priv = NULL;
 	struct cam_sfe_bus            *sfe_bus_local;
 	struct cam_sfe_bus_wr_hw_info *hw_info = bus_hw_info;
-	struct cam_sfe_soc_private    *soc_private = NULL;
 
 	CAM_DBG(CAM_SFE, "Enter");
 
@@ -1802,13 +2211,6 @@ int cam_sfe_bus_wr_init(
 			"Inval_prms soc_info:%pK hw_intf:%pK hw_info%pK",
 			soc_info, hw_intf, bus_hw_info);
 		rc = -EINVAL;
-		goto end;
-	}
-
-	soc_private = soc_info->soc_private;
-	if (!soc_private) {
-		CAM_ERR(CAM_SFE, "Invalid soc_private");
-		rc = -ENODEV;
 		goto end;
 	}
 
@@ -1841,11 +2243,11 @@ int cam_sfe_bus_wr_init(
 	bus_priv->common_data.common_reg         = &hw_info->common_reg;
 	bus_priv->common_data.comp_done_shift    = hw_info->comp_done_shift;
 	bus_priv->common_data.hw_init            = false;
-
+	bus_priv->common_data.sfe_irq_controller = sfe_irq_controller;
 	rc = cam_cpas_get_cpas_hw_version(&bus_priv->common_data.hw_version);
 	if (rc) {
 		CAM_ERR(CAM_SFE, "Failed to get hw_version rc:%d", rc);
-		goto end;
+		goto free_bus_priv;
 	}
 
 	bus_priv->comp_grp = kzalloc((sizeof(struct cam_isp_resource_node) *
@@ -1865,6 +2267,15 @@ int cam_sfe_bus_wr_init(
 	}
 
 	mutex_init(&bus_priv->common_data.bus_mutex);
+	rc = cam_irq_controller_init(drv_name,
+		bus_priv->common_data.mem_base,
+		&hw_info->common_reg.irq_reg_info,
+		&bus_priv->common_data.bus_irq_controller,
+		false);
+	if (rc) {
+		CAM_ERR(CAM_SFE, "Init bus_irq_controller failed");
+		goto free_bus_priv;
+	}
 
 	INIT_LIST_HEAD(&bus_priv->free_comp_grp);
 	INIT_LIST_HEAD(&bus_priv->used_comp_grp);
@@ -1893,6 +2304,12 @@ int cam_sfe_bus_wr_init(
 
 	spin_lock_init(&bus_priv->common_data.spin_lock);
 	INIT_LIST_HEAD(&bus_priv->common_data.free_payload_list);
+
+	for (i = 0; i < CAM_SFE_BUS_WR_PAYLOAD_MAX; i++) {
+		INIT_LIST_HEAD(&bus_priv->common_data.evt_payload[i].list);
+		list_add_tail(&bus_priv->common_data.evt_payload[i].list,
+			&bus_priv->common_data.free_payload_list);
+	}
 
 	sfe_bus_local->hw_ops.reserve      = cam_sfe_bus_acquire_sfe_out;
 	sfe_bus_local->hw_ops.release      = cam_sfe_bus_release_sfe_out;
@@ -1958,8 +2375,8 @@ int cam_sfe_bus_wr_deinit(
 
 	spin_lock_irqsave(&bus_priv->common_data.spin_lock, flags);
 	INIT_LIST_HEAD(&bus_priv->common_data.free_payload_list);
-	//for (i = 0; i < CAM_SFE_BUS_WR_PAYLOAD_MAX; i++)
-		//INIT_LIST_HEAD(&bus_priv->common_data.evt_payload[i].list);
+	for (i = 0; i < CAM_SFE_BUS_WR_PAYLOAD_MAX; i++)
+		INIT_LIST_HEAD(&bus_priv->common_data.evt_payload[i].list);
 	bus_priv->common_data.hw_init = false;
 	spin_unlock_irqrestore(&bus_priv->common_data.spin_lock, flags);
 

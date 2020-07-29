@@ -93,6 +93,7 @@ int cam_sfe_top_init(
 	struct cam_hw_soc_info             *soc_info,
 	struct cam_hw_intf                 *hw_intf,
 	void                               *top_hw_info,
+	void                               *sfe_irq_controller,
 	struct cam_sfe_top                **sfe_top);
 
 int cam_sfe_top_deinit(
