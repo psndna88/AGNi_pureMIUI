@@ -1712,7 +1712,7 @@
 		qcom,complete-ramdump;
 
 		/* Inputs from mss */
-		interrupts-extended = <&pdc 0 266 1>,
+		interrupts-extended = <&intc GIC_SPI 266 IRQ_TYPE_LEVEL_HIGH>,
 				<&modem_smp2p_in 0 0>,
 				<&modem_smp2p_in 2 0>,
 				<&modem_smp2p_in 1 0>,
@@ -1740,7 +1740,9 @@
 
 		vdd_cx-supply = <&VDD_CX_LEVEL>;
 		qcom,vdd_cx-uV-uA = <RPMH_REGULATOR_LEVEL_TURBO 0>;
-		qcom,proxy-reg-names = "vdd_cx";
+		vdd_mx-supply = <&VDD_MX_LEVEL>;
+		qcom,vdd_mx-uV-uA = <RPMH_REGULATOR_LEVEL_TURBO 0>;
+		qcom,proxy-reg-names = "vdd_cx","vdd_mx";
 
 		clocks = <&rpmhcc RPMH_CXO_CLK>;
 		clock-names = "xo";
@@ -1755,20 +1757,21 @@
 		memory-region = <&pil_adsp_mem>;
 		qcom,signal-aop;
 		qcom,complete-ramdump;
-		qcom,pil-force-shutdown;
 
 		/* Inputs from lpass */
-		interrupts-extended = <&pdc 0 162 1>,
+		interrupts-extended = <&intc GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>,
 				<&adsp_smp2p_in 0 0>,
 				<&adsp_smp2p_in 2 0>,
 				<&adsp_smp2p_in 1 0>,
-				<&adsp_smp2p_in 3 0>;
+				<&adsp_smp2p_in 3 0>,
+				<&adsp_smp2p_in 7 0>;
 
 		interrupt-names = "qcom,wdog",
 				"qcom,err-fatal",
 				"qcom,proxy-unvote",
 				"qcom,err-ready",
-				"qcom,stop-ack";
+				"qcom,stop-ack",
+				"qcom,shutdown-ack";
 
 		/* Outputs to lpass */
 		qcom,smem-states = <&adsp_smp2p_out 0>;
@@ -1806,7 +1809,7 @@
 		qcom,complete-ramdump;
 
 		/* Inputs from ssc */
-		interrupts-extended = <&pdc 0 494 1>,
+		interrupts-extended = <&pdc 14 IRQ_TYPE_LEVEL_HIGH>,
 				<&dsps_smp2p_in 0 0>,
 				<&dsps_smp2p_in 2 0>,
 				<&dsps_smp2p_in 1 0>,
