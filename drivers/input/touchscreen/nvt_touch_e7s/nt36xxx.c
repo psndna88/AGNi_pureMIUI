@@ -46,9 +46,9 @@
 #if NVT_TOUCH_ESD_PROTECT
 static struct delayed_work nvt_esd_check_work;
 static struct workqueue_struct *nvt_esd_check_wq;
-static unsigned long irq_timer;
-uint8_t esd_check;
-uint8_t esd_retry;
+static unsigned long irq_timer = 0;
+uint8_t esd_check = false;
+uint8_t esd_retry = 0;
 uint8_t esd_retry_max = 5;
 #endif /* #if NVT_TOUCH_ESD_PROTECT */
 
@@ -243,8 +243,8 @@ const uint16_t gesture_key_array[] = {
 };
 
 bool enable_gesture_mode = false;
-bool delay_gesture;
-bool suspend_state;
+bool delay_gesture = false;
+bool suspend_state = false;
 #define WAKEUP_OFF 4
 #define WAKEUP_ON 5
 
@@ -333,7 +333,7 @@ static const struct file_operations nvt_gesture_fops_wake = {
 
 #endif
 
-static uint8_t bTouchIsAwake;
+static uint8_t bTouchIsAwake = 0;
 
 /*******************************************************
 Description:
@@ -483,7 +483,7 @@ int32_t nvt_clear_fw_status(void)
 
 	if (i >= retry) {
 		NVT_ERR("failed, i=%d, buf[1]=0x%02X\n", i, buf[1]);
-		return -EPERM;
+		return -1;
 	} else {
 		return 0;
 	}
@@ -522,7 +522,7 @@ int32_t nvt_check_fw_status(void)
 
 	if (i >= retry) {
 		NVT_ERR("failed, i=%d, buf[1]=0x%02X\n", i, buf[1]);
-		return -EPERM;
+		return -1;
 	} else {
 		return 0;
 	}
