@@ -206,6 +206,9 @@ const char *cam_get_module_name(unsigned int module_id)
 	case CAM_RES:
 		name = "CAM-RES";
 		break;
+	case CAM_IO_ACCESS:
+		name = "CAM-IO-ACCESS";
+		break;
 	default:
 		name = "CAM";
 		break;
