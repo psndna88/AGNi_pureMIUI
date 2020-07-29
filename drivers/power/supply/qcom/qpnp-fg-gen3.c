@@ -844,7 +844,7 @@ static int fg_get_msoc_raw(struct fg_chip *chip, int *val)
 
 #define FULL_CAPACITY	100
 #define HIGH_CAPACITY	80
-#define LOW_CAPACITY	25
+#define LOW_CAPACITY	15
 #define FULL_SOC_RAW	255
 bool low_batt_swap_stall = false;
 bool batt_swap_push = false;
