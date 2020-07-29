@@ -17,6 +17,8 @@
  * v1.9: Account for 3GB ram devices and tune zram disksize accordingly
  * v2.0: Handle 3GB ram devices more aggressively
  * v2.1: Do not drop caches, change behaviour for miui roms, control swappiness for > 4GB ram devices
+ * v2.2: Full swappiness for 3gb devices, changes for others
+ * v2.3: Reduce swappiness only when battery < 15% & not charging
  */
 
 #include <asm/page.h>
@@ -25,7 +27,7 @@
 #include <linux/agni_meminfo.h>
 
 bool triggerswapping = false;
-int agni_swappiness = 1;
+int agni_swappiness = 30;
 long totalmemk,mem_avail_perc;
 int trigthreshold;
 bool ramchecked = false;
@@ -69,43 +71,38 @@ bool agni_memprober(void) {
 	availmem_prober();
 
 	/* Decide voting */
-	if (!charging_detected()) {
-		if (mem_avail_perc < trigthreshold) /* low available ram when not charging */
-			vote = true;
-		else
-			vote = false; /* stop swapping when enough available ram */
-	} else {
-		if (batt_swap_push && (mem_avail_perc < trigthreshold)) /* Battery > 80 % and low available ram with charging ON  */
-			vote = true;
-		else
-			vote = false; /* Allow charging faster by keeping swapping off and thus less cpu usage */
-	}
+//	if (!charging_detected()) {
+//		if (mem_avail_perc < trigthreshold) /* low available ram when not charging */
+//			vote = true;
+//		else
+//			vote = false; /* stop swapping when enough available ram */
+//	} else {
+//		if (batt_swap_push && (mem_avail_perc < trigthreshold)) /* Battery > 80 % and low available ram with charging ON  */
+//			vote = true;
+//		else
+//			vote = false; /* Allow charging faster by keeping swapping off and thus less cpu usage */
+//	}
 
-	if (adreno_load_perc > GPULOADTRIGGER) { /* High GPU usage - typically while gaming */
-		if (ramgb <= 4)
-			vote = true; /* big games need more ram so zram swapping is beneficial on 4gb devices */
-		else
-			vote = false;
-	}
+//	if (adreno_load_perc > GPULOADTRIGGER) { /* High GPU usage - typically while gaming */
+//		if (ramgb <= 4)
+//			vote = true; /* big games need more ram so zram swapping is beneficial on 4gb devices */
+//		else
+//			vote = false;
+//	}
 
-	if (low_batt_swap_stall) /* Battery below 25% */
+	if ((low_batt_swap_stall) && (!charging_detected())) { /* Battery below 25% & not charging*/
 		vote = false;
-
-	if (miuirom) {
-		if (ramgb <= 4) {
-			agni_swappiness = 60;
-		} else {
-			agni_swappiness = 30;
-		}
 	} else {
-		if (ramgb > 4) {
-			if (vote)
-				agni_swappiness = 60;
-			else
-				agni_swappiness = 1;
-		} else {
-			agni_swappiness = 60;
-		}
+		vote = true;
+	}
+
+	if (vote) {
+		if (ramgb >= 4)
+			agni_swappiness = 80;
+		else
+			agni_swappiness = 100;
+	} else {
+		agni_swappiness = 30;
 	}
 	return vote;
 }
@@ -113,12 +110,9 @@ bool agni_memprober(void) {
 void agni_memprobe(void) {
 
 	device_totalram();
-	if (zramzero) {
+	if (zramzero)
 		agni_swappiness = 0;
-	} else {
-		agni_swappiness = 70;
-	}
 
-	//triggerswapping = agni_memprober();
+	triggerswapping = agni_memprober();
 }
 
