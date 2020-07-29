@@ -76,8 +76,13 @@ static int cam_ipe_component_bind(struct device *dev,
 	of_property_read_u32(pdev->dev.of_node,
 		"cell-index", &hw_idx);
 
-	cam_cpas_get_hw_info(&query.camera_family,
-		&query.camera_version, &query.cpas_version, &cam_caps);
+	rc = cam_cpas_get_hw_info(&query.camera_family,
+			&query.camera_version, &query.cpas_version, &cam_caps);
+	if (rc) {
+		CAM_ERR(CAM_ICP, "failed to get hw info rc=%d", rc);
+		return rc;
+	}
+
 	if ((!(cam_caps & CPAS_IPE1_BIT)) && (hw_idx)) {
 		CAM_ERR(CAM_ICP, "IPE1 hw idx = %d\n", hw_idx);
 		return -EINVAL;

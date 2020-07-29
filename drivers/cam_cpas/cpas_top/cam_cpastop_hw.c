@@ -292,6 +292,9 @@ static int cam_cpastop_setup_regbase_indices(struct cam_hw_soc_info *soc_info,
 		soc_info->num_mem_block, "cam_cpas_top", &index);
 	if ((rc == 0) && (index < num_reg_map)) {
 		regbase_index[CAM_CPAS_REG_CPASTOP] = index;
+	} else if (rc) {
+		CAM_ERR(CAM_CPAS, "failed to get index for CPASTOP rc=%d", rc);
+		return rc;
 	} else {
 		CAM_ERR(CAM_CPAS, "regbase not found for CPASTOP, rc=%d, %d %d",
 			rc, index, num_reg_map);
@@ -302,6 +305,9 @@ static int cam_cpastop_setup_regbase_indices(struct cam_hw_soc_info *soc_info,
 		soc_info->num_mem_block, "cam_camnoc", &index);
 	if ((rc == 0) && (index < num_reg_map)) {
 		regbase_index[CAM_CPAS_REG_CAMNOC] = index;
+	} else if (rc) {
+		CAM_ERR(CAM_CPAS, "failed to get index for CAMNOC rc=%d", rc);
+		return rc;
 	} else {
 		CAM_ERR(CAM_CPAS, "regbase not found for CAMNOC, rc=%d, %d %d",
 			rc, index, num_reg_map);

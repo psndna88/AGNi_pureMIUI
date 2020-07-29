@@ -88,39 +88,67 @@ static int cam_vfe_rdi_put_evt_payload(
 static int cam_vfe_rdi_cpas_reg_dump(
 struct cam_vfe_mux_rdi_data *rdi_priv)
 {
+	int rc = 0;
 	struct cam_vfe_soc_private *soc_private =
 		rdi_priv->soc_info->soc_private;
 	uint32_t  val;
 
 	if (soc_private->cpas_version == CAM_CPAS_TITAN_175_V120 ||
 		soc_private->cpas_version == CAM_CPAS_TITAN_175_V130) {
-		cam_cpas_reg_read(soc_private->cpas_handle,
-			CAM_CPAS_REG_CAMNOC, 0x3A20, true, &val);
+		rc = cam_cpas_reg_read(soc_private->cpas_handle,
+				CAM_CPAS_REG_CAMNOC, 0x3A20, true, &val);
+		if (rc) {
+			CAM_ERR(CAM_ISP,
+				"IFE0_nRDI_MAXWR_LOW read failed rc=%d",
+				rc);
+			return rc;
+		}
 		CAM_INFO(CAM_ISP, "IFE0_nRDI_MAXWR_LOW offset 0x3A20 val 0x%x",
 			val);
 
-		cam_cpas_reg_read(soc_private->cpas_handle,
-			CAM_CPAS_REG_CAMNOC, 0x5420, true, &val);
+		rc = cam_cpas_reg_read(soc_private->cpas_handle,
+				CAM_CPAS_REG_CAMNOC, 0x5420, true, &val);
+		if (rc) {
+			CAM_ERR(CAM_ISP,
+				"IFE1_nRDI_MAXWR_LOW read failed rc=%d",
+				rc);
+			return rc;
+		}
 		CAM_INFO(CAM_ISP, "IFE1_nRDI_MAXWR_LOW offset 0x5420 val 0x%x",
 			val);
 
-		cam_cpas_reg_read(soc_private->cpas_handle,
-			CAM_CPAS_REG_CAMNOC, 0x3620, true, &val);
+		rc = cam_cpas_reg_read(soc_private->cpas_handle,
+				CAM_CPAS_REG_CAMNOC, 0x3620, true, &val);
+		if (rc) {
+			CAM_ERR(CAM_ISP,
+				"IFE0123_RDI_WR_MAXWR_LOW read failed rc=%d",
+				rc);
+			return rc;
+		}
 		CAM_INFO(CAM_ISP,
 			"IFE0123_RDI_WR_MAXWR_LOW offset 0x3620 val 0x%x", val);
 
 	} else if (soc_private->cpas_version < CAM_CPAS_TITAN_175_V120) {
-		cam_cpas_reg_read(soc_private->cpas_handle,
-			CAM_CPAS_REG_CAMNOC, 0x420, true, &val);
+		rc = cam_cpas_reg_read(soc_private->cpas_handle,
+				CAM_CPAS_REG_CAMNOC, 0x420, true, &val);
+		if (rc) {
+			CAM_ERR(CAM_ISP, "IFE02_MAXWR_LOW read failed rc=%d",
+				rc);
+			return rc;
+		}
 		CAM_INFO(CAM_ISP, "IFE02_MAXWR_LOW offset 0x420 val 0x%x", val);
 
-		cam_cpas_reg_read(soc_private->cpas_handle,
-			CAM_CPAS_REG_CAMNOC, 0x820, true, &val);
+		rc = cam_cpas_reg_read(soc_private->cpas_handle,
+				CAM_CPAS_REG_CAMNOC, 0x820, true, &val);
+		if (rc) {
+			CAM_ERR(CAM_ISP, "IFE13_MAXWR_LOW read failed rc=%d",
+				rc);
+			return rc;
+		}
 		CAM_INFO(CAM_ISP, "IFE13_MAXWR_LOW offset 0x820 val 0x%x", val);
 	}
 
 	return 0;
-
 }
 
 static int cam_vfe_rdi_err_irq_top_half(

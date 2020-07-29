@@ -3925,6 +3925,7 @@ static int __cam_isp_ctx_release_hw_in_top_state(struct cam_context *ctx,
 	flush_req.type = CAM_REQ_MGR_FLUSH_TYPE_ALL;
 	flush_req.link_hdl = ctx->link_hdl;
 	flush_req.dev_hdl = ctx->dev_hdl;
+	flush_req.req_id = 0;
 
 	CAM_DBG(CAM_ISP, "try to flush pending list");
 	spin_lock_bh(&ctx->lock);
@@ -3989,6 +3990,7 @@ static int __cam_isp_ctx_release_dev_in_top_state(struct cam_context *ctx,
 	flush_req.type = CAM_REQ_MGR_FLUSH_TYPE_ALL;
 	flush_req.link_hdl = ctx->link_hdl;
 	flush_req.dev_hdl = ctx->dev_hdl;
+	flush_req.req_id = 0;
 
 	CAM_DBG(CAM_ISP, "try to flush pending list");
 	spin_lock_bh(&ctx->lock);

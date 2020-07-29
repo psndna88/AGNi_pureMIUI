@@ -6092,9 +6092,18 @@ int cam_icp_hw_mgr_init(struct device_node *of_node, uint64_t *hw_mgr_hdl,
 	for (i = 0; i < CAM_ICP_CTX_MAX; i++)
 		mutex_init(&icp_hw_mgr.ctx_data[i].ctx_mutex);
 
-	cam_cpas_get_hw_info(&query.camera_family,
-		&query.camera_version, &query.cpas_version, &cam_caps);
-	cam_cpas_get_cpas_hw_version(&camera_hw_version);
+	rc = cam_cpas_get_hw_info(&query.camera_family,
+			&query.camera_version, &query.cpas_version, &cam_caps);
+	if (rc) {
+		CAM_ERR(CAM_ICP, "failed to get hw info rc=%d", rc);
+		goto destroy_mutex;
+	}
+
+	rc = cam_cpas_get_cpas_hw_version(&camera_hw_version);
+	if (rc) {
+		CAM_ERR(CAM_ICP, "failed to get hw version rc=%d", rc);
+		goto destroy_mutex;
+	}
 
 	if ((camera_hw_version == CAM_CPAS_TITAN_480_V100) ||
 		(camera_hw_version == CAM_CPAS_TITAN_580_V100) ||
@@ -6115,7 +6124,7 @@ int cam_icp_hw_mgr_init(struct device_node *of_node, uint64_t *hw_mgr_hdl,
 	rc = cam_icp_mgr_init_devs(of_node);
 	if (rc) {
 		CAM_ERR(CAM_ICP, "cam_icp_mgr_init_devs fail: rc: %d", rc);
-		goto dev_init_failed;
+		goto destroy_mutex;
 	}
 	rc = cam_smmu_get_handle("icp", &icp_hw_mgr.iommu_hdl);
 	if (rc) {
@@ -6151,7 +6160,7 @@ icp_get_hdl_failed:
 	kfree(icp_hw_mgr.devices[CAM_ICP_DEV_BPS]);
 	kfree(icp_hw_mgr.devices[CAM_ICP_DEV_IPE]);
 	kfree(icp_hw_mgr.devices[CAM_ICP_DEV_A5]);
-dev_init_failed:
+destroy_mutex:
 	mutex_destroy(&icp_hw_mgr.hw_mgr_mutex);
 	for (i = 0; i < CAM_ICP_CTX_MAX; i++)
 		mutex_destroy(&icp_hw_mgr.ctx_data[i].ctx_mutex);
