@@ -55,13 +55,13 @@ static struct proc_dir_entry *NVT_proc_baseline_entry;
 static struct proc_dir_entry *NVT_proc_raw_entry;
 static struct proc_dir_entry *NVT_proc_diff_entry;
 static struct proc_dir_entry *NVT_proc_xiaomi_lockdown_info_entry;
-static uint8_t tp_maker_cg_lamination;
-static uint8_t display_maker;
-static uint8_t cg_ink_color;
-static uint8_t hw_version;
-static uint16_t project_id;
-static uint8_t cg_maker;
-static uint8_t reservation_byte;
+static uint8_t tp_maker_cg_lamination = 0;
+static uint8_t display_maker = 0;
+static uint8_t cg_ink_color = 0;
+static uint8_t hw_version = 0;
+static uint16_t project_id = 0;
+static uint8_t cg_maker = 0;
+static uint8_t reservation_byte = 0;
 
 /*******************************************************
 Description:
