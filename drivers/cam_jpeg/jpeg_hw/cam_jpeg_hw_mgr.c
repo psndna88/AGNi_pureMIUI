@@ -14,6 +14,7 @@
 #include <linux/debugfs.h>
 #include <media/cam_defs.h>
 #include <media/cam_jpeg.h>
+#include <media/cam_sync.h>
 
 #include "cam_packet_util.h"
 #include "cam_hw.h"
@@ -43,7 +44,8 @@ static int cam_jpeg_insert_cdm_change_base(
 	struct cam_jpeg_hw_ctx_data *ctx_data,
 	struct cam_jpeg_hw_mgr *hw_mgr);
 
-static int cam_jpeg_process_next_hw_update(void *priv, void *data)
+static int cam_jpeg_process_next_hw_update(void *priv, void *data,
+	struct cam_hw_done_event_data *buf_data)
 {
 	int rc;
 	int i = 0;
@@ -68,6 +70,7 @@ static int cam_jpeg_process_next_hw_update(void *priv, void *data)
 
 	if (!hw_mgr->devices[dev_type][0]->hw_ops.reset) {
 		CAM_ERR(CAM_JPEG, "op reset null ");
+		buf_data->evt_param = CAM_SYNC_JPEG_EVENT_INVLD_CMD;
 		rc = -EFAULT;
 		goto end_error;
 	}
@@ -76,6 +79,7 @@ static int cam_jpeg_process_next_hw_update(void *priv, void *data)
 		NULL, 0);
 	if (rc) {
 		CAM_ERR(CAM_JPEG, "jpeg hw reset failed %d", rc);
+		buf_data->evt_param = CAM_SYNC_JPEG_EVENT_HW_RESET_FAILED;
 		goto end_error;
 	}
 
@@ -91,6 +95,7 @@ static int cam_jpeg_process_next_hw_update(void *priv, void *data)
 		ctx_data, hw_mgr);
 	if (rc) {
 		CAM_ERR(CAM_JPEG, "insert change base failed %d", rc);
+		buf_data->evt_param = CAM_SYNC_JPEG_EVENT_CDM_CHANGE_BASE_ERR;
 		goto end_error;
 	}
 
@@ -124,11 +129,13 @@ static int cam_jpeg_process_next_hw_update(void *priv, void *data)
 		cdm_cmd);
 	if (rc) {
 		CAM_ERR(CAM_JPEG, "Failed to apply the configs %d", rc);
+		buf_data->evt_param = CAM_SYNC_JPEG_EVENT_CDM_CONFIG_ERR;
 		goto end_error;
 	}
 
 	if (!hw_mgr->devices[dev_type][0]->hw_ops.start) {
 		CAM_ERR(CAM_JPEG, "op start null ");
+		buf_data->evt_param = CAM_SYNC_JPEG_EVENT_INVLD_CMD;
 		rc = -EINVAL;
 		goto end_error;
 	}
@@ -137,6 +144,7 @@ static int cam_jpeg_process_next_hw_update(void *priv, void *data)
 	if (rc) {
 		CAM_ERR(CAM_JPEG, "Failed to apply the configs %d",
 			rc);
+		buf_data->evt_param = CAM_SYNC_JPEG_EVENT_START_HW_ERR;
 		goto end_error;
 	}
 
@@ -199,7 +207,8 @@ static int cam_jpeg_mgr_process_irq(void *priv, void *data)
 		(p_cfg_req->num_hw_entry_processed <
 			p_cfg_req->hw_cfg_args.num_hw_update_entries - 2)) {
 		/* start processing next entry before marking device free */
-		rc  = cam_jpeg_process_next_hw_update(priv, ctx_data);
+		rc  = cam_jpeg_process_next_hw_update(priv, ctx_data,
+			&buf_data);
 		if (!rc) {
 			mutex_unlock(&g_jpeg_hw_mgr.hw_mgr_mutex);
 			return 0;
@@ -533,6 +542,7 @@ static int cam_jpeg_mgr_process_cmd(void *priv, void *data)
 	irq_cb.b_set_cb = true;
 	if (!hw_mgr->devices[dev_type][0]->hw_ops.process_cmd) {
 		CAM_ERR(CAM_JPEG, "op process_cmd null ");
+		buf_data.evt_param = CAM_SYNC_JPEG_EVENT_INVLD_CMD;
 		rc = -EFAULT;
 		goto end_callcb;
 	}
@@ -542,11 +552,12 @@ static int cam_jpeg_mgr_process_cmd(void *priv, void *data)
 		&irq_cb, sizeof(irq_cb));
 	if (rc) {
 		CAM_ERR(CAM_JPEG, "SET_IRQ_CB failed %d", rc);
+		buf_data.evt_param = CAM_SYNC_JPEG_EVENT_SET_IRQ_CB;
 		goto end_callcb;
 	}
 
 	/* insert one of the cdm payloads */
-	rc = cam_jpeg_process_next_hw_update(priv, ctx_data);
+	rc = cam_jpeg_process_next_hw_update(priv, ctx_data, &buf_data);
 	if (rc) {
 		CAM_ERR(CAM_JPEG, "next hw update failed %d", rc);
 		goto end_callcb;
