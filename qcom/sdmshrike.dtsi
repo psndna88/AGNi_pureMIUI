@@ -1434,6 +1434,7 @@
 #include "sa8195-gdsc.dtsi"
 #include "msm-arm-smmu-sdmshrike.dtsi"
 #include "sm8150-slpi-pinctrl.dtsi"
+#include "sdmshrike-ion.dtsi"
 
 &emac_gdsc {
 	status = "ok";
