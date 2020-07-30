@@ -684,55 +684,22 @@ if [ -d /data/data/com.facebook.katana ]; then
 	$BB chmod -R 660 /data/data/com.facebook.katana/app_watcher;
 fi;
 
-# EAS Perf HAL
-if [ "`$BB grep selected.0=1 /tmp/aroma-data/easperfhal.prop`" ]; then
-	if [ -f /vendor/etc/perf/commonresourceconfigs.xml ]; then
-		if [ ! -f /vendor/etc/perf/commonresourceconfigs.xml.bak ]; then
-			mv /vendor/etc/perf/commonresourceconfigs.xml /vendor/etc/perf/commonresourceconfigs.xml.bak;
-		fi;
-		$BB cp -f $AKHOME/tools/perf/commonresourceconfigs.xml /vendor/etc/perf/commonresourceconfigs.xml;
-		$BB chmod 0644 /vendor/etc/perf/commonresourceconfigs.xml;
-	fi;
-	if [ -f /vendor/etc/perf/perfboostsconfig.xml ]; then
-		if [ ! -f /vendor/etc/perf/perfboostsconfig.xml.bak ]; then
-			mv /vendor/etc/perf/perfboostsconfig.xml /vendor/etc/perf/perfboostsconfig.xml.bak;
-		fi;
-		$BB cp -f $AKHOME/tools/perf/perfboostsconfig.xml /vendor/etc/perf/perfboostsconfig.xml;
-		$BB chmod 0644 /vendor/etc/perf/perfboostsconfig.xml;
-	fi;
-	if [ -f /vendor/etc/perf/targetconfig.xml ]; then
-		if [ ! -f /vendor/etc/perf/targetconfig.xml.bak ]; then
-			mv /vendor/etc/perf/targetconfig.xml /vendor/etc/perf/targetconfig.xml.bak;
-		fi;
-		$BB cp -f $AKHOME/tools/perf/targetconfig.xml /vendor/etc/perf/targetconfig.xml;
-		$BB chmod 0644 /vendor/etc/perf/targetconfig.xml;
-	fi;
-	if [ -f /vendor/etc/perf/targetresourceconfigs.xml ]; then
-		if [ ! -f /vendor/etc/perf/targetresourceconfigs.xml.bak ]; then
-			mv /vendor/etc/perf/targetresourceconfigs.xml /vendor/etc/perf/targetresourceconfigs.xml.bak;
-		fi;
-		$BB cp -f $AKHOME/tools/perf/targetresourceconfigs.xml /vendor/etc/perf/targetresourceconfigs.xml;
-		$BB chmod 0644 /vendor/etc/perf/targetresourceconfigs.xml;
-	fi;
-	ui_print " " "AGNi has modified Perf HAL (by uvera) for EAS & schedutil compatibility..." " ";
-else
-		if [ -f /vendor/etc/perf/commonresourceconfigs.xml.bak ]; then
-			mv /vendor/etc/perf/commonresourceconfigs.xml.bak /vendor/etc/perf/commonresourceconfigs.xml;
-			$BB chmod 0644 /vendor/etc/perf/commonresourceconfigs.xml;
-		fi;
-		if [ -f /vendor/etc/perf/perfboostsconfig.xml.bak ]; then
-			mv /vendor/etc/perf/perfboostsconfig.xml.bak /vendor/etc/perf/perfboostsconfig.xml;
-			$BB chmod 0644 /vendor/etc/perf/perfboostsconfig.xml;
-		fi;
-		if [ -f /vendor/etc/perf/targetconfig.xml.bak ]; then
-			mv /vendor/etc/perf/targetconfig.xml.bak /vendor/etc/perf/targetconfig.xml;
-			$BB chmod 0644 /vendor/etc/perf/targetconfig.xml;
-		fi;
-		if [ -f /vendor/etc/perf/targetresourceconfigs.xml.bak ]; then
-			mv /vendor/etc/perf/targetresourceconfigs.xml.bak /vendor/etc/perf/targetresourceconfigs.xml;
-			$BB chmod 0644 /vendor/etc/perf/targetresourceconfigs.xml;
-		fi;
-		ui_print " " "AGNi has NOT modified Perf HAL for EAS & schedutil compatibility." " ";
+# AGNi EAS Perf HAL removal
+if [ -f /vendor/etc/perf/commonresourceconfigs.xml.bak ]; then
+	mv /vendor/etc/perf/commonresourceconfigs.xml.bak /vendor/etc/perf/commonresourceconfigs.xml;
+	$BB chmod 0644 /vendor/etc/perf/commonresourceconfigs.xml;
+fi;
+if [ -f /vendor/etc/perf/perfboostsconfig.xml.bak ]; then
+	mv /vendor/etc/perf/perfboostsconfig.xml.bak /vendor/etc/perf/perfboostsconfig.xml;
+	$BB chmod 0644 /vendor/etc/perf/perfboostsconfig.xml;
+fi;
+if [ -f /vendor/etc/perf/targetconfig.xml.bak ]; then
+	mv /vendor/etc/perf/targetconfig.xml.bak /vendor/etc/perf/targetconfig.xml;
+	$BB chmod 0644 /vendor/etc/perf/targetconfig.xml;
+fi;
+if [ -f /vendor/etc/perf/targetresourceconfigs.xml.bak ]; then
+	mv /vendor/etc/perf/targetresourceconfigs.xml.bak /vendor/etc/perf/targetresourceconfigs.xml;
+	$BB chmod 0644 /vendor/etc/perf/targetresourceconfigs.xml;
 fi;
 ## Unmount /system /vendor
 umount_all;

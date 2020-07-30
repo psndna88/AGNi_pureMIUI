@@ -25,11 +25,11 @@
 #       Binary Codename : Flamboyan
 
 # Initializing Rom Information
-ini_set("rom_name",		"AGNi Kernel");
-ini_set("rom_version",	"v9.3_stable");
+ini_set("rom_name",		"AGNi hybridEAS Kernel");
+ini_set("rom_version",	"v9.4_stable");
 ini_set("rom_author",	"psndna88@xda");
 ini_set("rom_device",	"SETDEVICETYPE");
-ini_set("rom_date",		"July, 26, 2020");
+ini_set("rom_date",		"July, 30, 2020");
 
 # Show Simple Splash
 splash(
@@ -100,7 +100,7 @@ selectbox(
 selectbox(
     "WiFi Driver","<@center><b>\nSelect the WiFi version you want</b>\n\n</@>","@install","wifi.prop",  
     "Pie Source based WiFi",		"DEFAULT -> Most widely used. Gives good speed.", 1,	#-- selected.0 = 1
-    "Q Source based Enhanced WiFi",	"TESTING: Now gives Improved Speeds.", 0 				#-- selected.0 = 2
+    "Q Source based Enhanced WiFi",	"Major revamped. Now gives Improved Speeds.", 0 		#-- selected.0 = 2
 );
 
 selectbox(
@@ -116,12 +116,6 @@ selectbox(
     "No, Not my cup of tea !",	"You dont want to use CPU OC Performance boost. CPU will still show as 2.45GHz supported but not use it", 0  	#-- selected.0 = 3  #SDM636
     "Yes",	"CPU OC to 2.45GHz (Experimental).", 0,																								#-- selected.0 = 1	#SDM660
     "No, Not my cup of tea !",	"You dont want to use CPU OC Performance boost. CPU will still show as 2.45GHz supported but not use it", 1  	#-- selected.0 = 2  #SDM660
-);
-
-selectbox(
-    "EAS Perf HAL","<@center><b>\nEAS compatible PERF HAL configuration</b>\n\n</@>","@install","easperfhal.prop",  
-    "YES",	"DEFAULT. Strongly recomended. For roms not built with EAS & schedutil support. Kills the beckground logspams for interactive. ", 1, #-- selected.0 = 1
-    "NO",	"You will get increased battery drains on roms not built for use with EAS & schedutil. This will revert changes made above also.", 0 #-- selected.0 = 2
 );
 
 setvar("retstatus",
