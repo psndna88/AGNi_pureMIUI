@@ -1625,11 +1625,9 @@ void *vidc_get_drv_data(struct device *dev)
 		goto exit;
 
 	/* Check for sku version */
-	if (of_find_property(dev->of_node, "sku-index", NULL)) {
-		rc = msm_vidc_read_efuse(driver_data, dev);
-		if (rc)
-			goto exit;
-	}
+	rc = msm_vidc_read_efuse(driver_data, dev);
+	if (rc)
+		goto exit;
 
 	if (!strcmp(match->compatible, "qcom,lahaina-vidc")) {
 		ddr_type = of_fdt_get_ddrtype();
