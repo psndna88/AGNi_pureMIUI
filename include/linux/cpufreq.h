@@ -54,6 +54,24 @@ struct cpufreq_cpuinfo {
 struct cpufreq_user_policy {
 	unsigned int		min;    /* in kHz */
 	unsigned int		max;    /* in kHz */
+	unsigned char target_loads_a;
+	unsigned int above_hispeed_delay_a;
+	unsigned int hispeed_freq_a;
+	unsigned int go_hispeed_load_a;
+	unsigned int min_sample_time_a;
+	unsigned int timer_rate_a;
+	unsigned int timer_slack_a;
+	unsigned int boost_a;
+	unsigned int boostpulse_a;
+	unsigned int boostpulse_duration_a;
+	unsigned int io_is_busy_a;
+	unsigned int use_sched_load_a;
+	unsigned int use_migration_notif_a;
+	unsigned int max_freq_hysteresis_a;
+	unsigned int align_windows_a;
+	unsigned int ignore_hispeed_on_notif_a;
+	unsigned int fast_ramp_down_a;
+	unsigned int enable_prediction_a;
 };
 
 struct cpufreq_policy {
@@ -66,6 +84,24 @@ struct cpufreq_policy {
 						should set cpufreq */
 	unsigned int		cpu;    /* cpu managing this policy, must be online */
 
+	unsigned char target_loads_a;
+	unsigned int above_hispeed_delay_a;
+	unsigned int hispeed_freq_a;
+	unsigned int go_hispeed_load_a;
+	unsigned int min_sample_time_a;
+	unsigned int timer_rate_a;
+	unsigned int timer_slack_a;
+	unsigned int boost_a;
+	unsigned int boostpulse_a;
+	unsigned int boostpulse_duration_a;
+	unsigned int io_is_busy_a;
+	unsigned int use_sched_load_a;
+	unsigned int use_migration_notif_a;
+	unsigned int max_freq_hysteresis_a;
+	unsigned int align_windows_a;
+	unsigned int ignore_hispeed_on_notif_a;
+	unsigned int fast_ramp_down_a;
+	unsigned int enable_prediction_a;
 	struct clk		*clk;
 	struct cpufreq_cpuinfo	cpuinfo;/* see above */
 
@@ -214,6 +250,48 @@ struct freq_attr {
 	ssize_t (*show)(struct cpufreq_policy *, char *);
 	ssize_t (*store)(struct cpufreq_policy *, const char *, size_t count);
 };
+
+extern int cpufreq_set_policy(struct cpufreq_policy *policy,
+				struct cpufreq_policy *new_policy);
+/**
+ * cpufreq_per_cpu_attr_read() / show_##file_name() -
+ * print out cpufreq information
+ *
+ * Write out information from cpufreq_driver->policy[cpu]; object must be
+ * "unsigned int".
+ */
+#define show_one(file_name, object)			\
+static ssize_t show_##file_name				\
+(struct cpufreq_policy *policy, char *buf)		\
+{							\
+	return sprintf(buf, "%u\n", policy->object);	\
+}
+
+/**
+ * cpufreq_per_cpu_attr_write() / store_##file_name() - sysfs write access
+ */
+#define store_one(file_name, object)			\
+static ssize_t store_##file_name					\
+(struct cpufreq_policy *policy, const char *buf, size_t count)		\
+{									\
+	int ret, temp;							\
+	struct cpufreq_policy new_policy;				\
+									\
+	memcpy(&new_policy, policy, sizeof(*policy));			\
+	new_policy.min = policy->user_policy.min;			\
+	new_policy.max = policy->user_policy.max;			\
+									\
+	ret = sscanf(buf, "%u", &new_policy.object);			\
+	if (ret != 1)							\
+		return -EINVAL;						\
+									\
+	temp = new_policy.object;					\
+	ret = cpufreq_set_policy(policy, &new_policy);		\
+	if (!ret)							\
+		policy->user_policy.object = temp;			\
+									\
+	return ret ? ret : count;					\
+}
 
 #define cpufreq_freq_attr_ro(_name)		\
 static struct freq_attr _name =			\

@@ -108,6 +108,85 @@ cpufreq_freq_attr_ro(trans_table);
 cpufreq_freq_attr_ro(total_trans);
 cpufreq_freq_attr_ro(time_in_state);
 
+show_one(target_loads, target_loads_a);
+show_one(above_hispeed_delay, above_hispeed_delay_a);
+show_one(hispeed_freq, hispeed_freq_a);
+show_one(go_hispeed_load, go_hispeed_load_a);
+show_one(min_sample_time, min_sample_time_a);
+show_one(timer_rate, timer_rate_a);
+show_one(timer_slack, timer_slack_a);
+show_one(boost, boost_a);
+show_one(boostpulse, boostpulse_a);
+show_one(boostpulse_duration, boostpulse_duration_a);
+show_one(io_is_busy, io_is_busy_a);
+show_one(use_sched_load, use_sched_load_a);
+show_one(use_migration_notif, use_migration_notif_a);
+show_one(max_freq_hysteresis, max_freq_hysteresis_a);
+show_one(align_windows, align_windows_a);
+show_one(ignore_hispeed_on_notif, ignore_hispeed_on_notif_a);
+show_one(fast_ramp_down, fast_ramp_down_a);
+show_one(enable_prediction, enable_prediction_a);
+store_one(target_loads, target_loads_a);
+store_one(above_hispeed_delay, above_hispeed_delay_a);
+store_one(hispeed_freq, hispeed_freq_a);
+store_one(go_hispeed_load, go_hispeed_load_a);
+store_one(min_sample_time, min_sample_time_a);
+store_one(timer_rate, timer_rate_a);
+store_one(timer_slack, timer_slack_a);
+store_one(boost, boost_a);
+store_one(boostpulse, boostpulse_a);
+store_one(boostpulse_duration, boostpulse_duration_a);
+store_one(io_is_busy, io_is_busy_a);
+store_one(use_sched_load, use_sched_load_a);
+store_one(use_migration_notif, use_migration_notif_a);
+store_one(max_freq_hysteresis, max_freq_hysteresis_a);
+store_one(align_windows, align_windows_a);
+store_one(ignore_hispeed_on_notif, ignore_hispeed_on_notif_a);
+store_one(fast_ramp_down, fast_ramp_down_a);
+store_one(enable_prediction, enable_prediction_a);
+cpufreq_freq_attr_rw(target_loads);
+cpufreq_freq_attr_rw(above_hispeed_delay);
+cpufreq_freq_attr_rw(hispeed_freq);
+cpufreq_freq_attr_rw(go_hispeed_load);
+cpufreq_freq_attr_rw(min_sample_time);
+cpufreq_freq_attr_rw(timer_rate);
+cpufreq_freq_attr_rw(timer_slack);
+cpufreq_freq_attr_rw(boost);
+cpufreq_freq_attr_rw(boostpulse);
+cpufreq_freq_attr_rw(boostpulse_duration);
+cpufreq_freq_attr_rw(io_is_busy);
+cpufreq_freq_attr_rw(use_sched_load);
+cpufreq_freq_attr_rw(use_migration_notif);
+cpufreq_freq_attr_rw(max_freq_hysteresis);
+cpufreq_freq_attr_rw(align_windows);
+cpufreq_freq_attr_rw(ignore_hispeed_on_notif);
+cpufreq_freq_attr_rw(fast_ramp_down);
+cpufreq_freq_attr_rw(enable_prediction);
+static struct attribute *default_attrs_interactive[] = {
+	&target_loads.attr,
+	&above_hispeed_delay.attr,
+	&hispeed_freq.attr,
+	&go_hispeed_load.attr,
+	&min_sample_time.attr,
+	&timer_rate.attr,
+	&timer_slack.attr,
+	&boost.attr,
+	&boostpulse.attr,
+	&boostpulse_duration.attr,
+	&io_is_busy.attr,
+	&use_sched_load.attr,
+	&use_migration_notif.attr,
+	&max_freq_hysteresis.attr,
+	&align_windows.attr,
+	&ignore_hispeed_on_notif.attr,
+	&fast_ramp_down.attr,
+	&enable_prediction.attr,
+	NULL
+};
+static struct attribute_group interactive_attr_group = {
+	.attrs = default_attrs_interactive,
+	.name = "interactive"
+};
 static struct attribute *default_attrs[] = {
 	&total_trans.attr,
 	&time_in_state.attr,
@@ -141,6 +220,7 @@ static void __cpufreq_stats_free_table(struct cpufreq_policy *policy)
 	pr_debug("%s: Free stats table\n", __func__);
 
 	sysfs_remove_group(&policy->kobj, &stats_attr_group);
+	sysfs_remove_group(&policy->kobj, &interactive_attr_group);
 	kfree(stats->time_in_state);
 	kfree(stats);
 	policy->stats = NULL;
@@ -213,6 +293,7 @@ static int __cpufreq_stats_create_table(struct cpufreq_policy *policy)
 	stats->last_index = freq_table_get_index(stats, policy->cur);
 
 	policy->stats = stats;
+	ret = sysfs_create_group(&policy->kobj, &interactive_attr_group);
 	ret = sysfs_create_group(&policy->kobj, &stats_attr_group);
 	if (!ret)
 		return 0;
