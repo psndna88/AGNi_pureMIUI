@@ -1403,13 +1403,13 @@ static int try_get_ctrl_for_instance(struct msm_vidc_inst *inst,
 		break;
 	case V4L2_CID_MIN_BUFFERS_FOR_CAPTURE:
 		ctrl->val = inst->fmts[OUTPUT_PORT].count_min_host;
-		s_vpr_h(inst->sid, "g_min: hal_buffer %d min buffers %d\n",
-			HAL_BUFFER_OUTPUT, ctrl->val);
+		s_vpr_h(inst->sid, "g_min: OUTPUT_PORT count_min_host %d\n",
+			ctrl->val);
 		break;
 	case V4L2_CID_MIN_BUFFERS_FOR_OUTPUT:
 		ctrl->val = inst->fmts[INPUT_PORT].count_min_host;
-		s_vpr_h(inst->sid, "g_min: hal_buffer %d min buffers %d\n",
-			HAL_BUFFER_INPUT, ctrl->val);
+		s_vpr_h(inst->sid, "g_min: INPUT_PORT count_min_host %d\n",
+			ctrl->val);
 		break;
 	case V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA:
 		ctrl->val = inst->prop.extradata_ctrls;
