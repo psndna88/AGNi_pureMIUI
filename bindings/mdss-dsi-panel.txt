@@ -201,6 +201,10 @@ Optional properties:
 					255 = default value.
 - qcom,mdss-dsi-bl-inverted-dbv:	A boolean to specify whether to invert the display brightness value.
 					When this boolean is set, will inverted display brightness value.
+- qcom,bl-dsc-cmd-state: 		String that specifies the ctrl state for sending dcs brightness commands.
+					"dsi_hs_mode" = DSI high speed mode (default)
+					"dsi_lp_mode" = DSI low power mode
+					If the string was not set, dsi_hs_mode will be set as default mode.
 - qcom,mdss-brightness-max-level:	Specifies the max brightness level supported.
 					255 = default value.
 - qcom,bl-update-flag:			A string that specifies controls for backlight update of the panel.
