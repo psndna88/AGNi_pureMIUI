@@ -406,9 +406,7 @@ static int cam_ife_hw_mgr_start_hw_res(
 					"Can not start HW:%d resources",
 					hw_intf->hw_idx);
 				goto err;
-			} else
-				CAM_INFO(CAM_ISP, "Started HW:%d",
-					hw_intf->hw_idx);
+			}
 		} else {
 			CAM_ERR(CAM_ISP, "function null");
 			goto err;
@@ -442,8 +440,6 @@ static void cam_ife_hw_mgr_stop_hw_res(
 			hw_intf->hw_ops.stop(hw_intf->hw_priv,
 				isp_hw_res->hw_res[i],
 				sizeof(struct cam_isp_resource_node));
-
-			CAM_INFO(CAM_ISP, "Stopped Hw:%d", hw_intf->hw_idx);
 		}
 		else
 			CAM_ERR(CAM_ISP, "stop null");
@@ -655,11 +651,6 @@ static int cam_ife_hw_mgr_free_hw_res(
 				CAM_ERR(CAM_ISP,
 					"Release HW:%d resource id %d failed",
 					hw_intf->hw_idx, isp_hw_res->res_id);
-			else
-				CAM_DBG(CAM_ISP,
-					"Released HW:%d resource id %d",
-					hw_intf->hw_idx, isp_hw_res->res_id);
-
 			isp_hw_res->hw_res[i] = NULL;
 		} else
 			CAM_ERR(CAM_ISP, "Release null");
