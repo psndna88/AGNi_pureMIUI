@@ -33,6 +33,7 @@
 #include <linux/sysfs.h>
 #include <linux/debugfs.h>
 #include <linux/agni_meminfo.h>
+#include <linux/adrenokgsl_state.h>
 
 #include "zram_drv.h"
 
@@ -1502,6 +1503,9 @@ static ssize_t disksize_store(struct device *dev,
 	struct zram *zram = dev_to_zram(dev);
 	int err;
 
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	true_gpu = false;
+#endif
 	disksize = memparse(buf, NULL);
 	if (!disksize) {
 		zramzero = true;
@@ -1574,6 +1578,9 @@ static ssize_t reset_store(struct device *dev,
 	if (!do_reset)
 		return -EINVAL;
 
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	true_gpu = false;
+#endif
 	zram = dev_to_zram(dev);
 	bdev = bdget_disk(zram->disk, 0);
 	if (!bdev)

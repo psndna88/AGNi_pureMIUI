@@ -12,6 +12,7 @@
 #define _LINUX_ADRENOKGSL_STATE_H
 
 bool is_adrenokgsl_on(void);
+extern bool true_gpu;
 
 #endif
 
