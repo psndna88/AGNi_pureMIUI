@@ -33,7 +33,6 @@
 #include <linux/sysfs.h>
 #include <linux/debugfs.h>
 #include <linux/agni_meminfo.h>
-#include <linux/display_state.h>
 
 #include "zram_drv.h"
 
@@ -53,7 +52,6 @@ static unsigned int num_devices = 1;
 static size_t huge_class_size;
 
 bool zramzero = true;
-bool first_boot_done = false;
 static void zram_free_page(struct zram *zram, size_t index);
 
 static void zram_slot_lock(struct zram *zram, u32 index)
@@ -1513,12 +1511,6 @@ static ssize_t disksize_store(struct device *dev,
 		return -EINVAL;
 	}
 
-	if (!first_boot_done) {
-		first_boot_done = true;
-#if (defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T))
-		true_gpu = false;
-#endif
-	}
 	down_write(&zram->init_lock);
 	if (init_done(zram)) {
 		pr_info("Cannot change disksize for initialized device\n");

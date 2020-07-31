@@ -21,7 +21,6 @@
 
 #include <linux/msm-bus-board.h>
 #include <linux/msm-bus.h>
-#include <linux/display_state.h>
 
 #include "kgsl.h"
 #include "kgsl_pwrscale.h"
@@ -56,7 +55,7 @@ MODULE_PARM_DESC(nopreempt, "Disable GPU preemption");
 #define MODEL_A512	0x05010200
 #define MODEL_A530	0x05030000
 #define MODEL_A612	0x06010200
-bool true_gpu = true;
+static bool true_gpu = true;
 module_param(true_gpu, bool, 0664);
 MODULE_PARM_DESC(true_gpu, "Toggle true adreno gpu model / fake model");
 static int fake_gpu_model = 512;
@@ -1705,11 +1704,7 @@ static int adreno_getproperty(struct kgsl_device *device,
 			if (true_gpu) {
 				devinfo.chip_id = adreno_dev->chipid;
 			} else {
-				if (first_boot_done) {
-					devinfo.chip_id = fake_gpu_hex;
-				} else {
-					devinfo.chip_id = adreno_dev->chipid;
-				}
+				devinfo.chip_id = fake_gpu_hex;
 			}
 			devinfo.mmu_enabled =
 				MMU_FEATURE(&device->mmu, KGSL_MMU_PAGED);
@@ -2694,12 +2689,8 @@ static unsigned int adreno_gpuid(struct kgsl_device *device,
 		fake_gpu_fn();
 		if (true_gpu) {
 			*chipid = adreno_dev->chipid;
-		} else {
-			if (first_boot_done) {
-				*chipid = fake_gpu_hex;
-			} else {
-				*chipid = adreno_dev->chipid;
-			}
+		} else { 
+			*chipid = fake_gpu_hex;
 		}
 	}
 	/* Standard KGSL gpuid format:
@@ -2852,19 +2843,11 @@ static void adreno_gpu_model(struct kgsl_device *device, char *str,
 				 ADRENO_CHIPID_MINOR(adreno_dev->chipid),
 				 ADRENO_CHIPID_PATCH(adreno_dev->chipid) + 1);
 	} else {
-		if (first_boot_done) {
-			snprintf(str, bufsz, "Adreno%d%d%dv%d",
-					ADRENO_CHIPID_CORE(fake_gpu_hex),
-					 ADRENO_CHIPID_MAJOR(fake_gpu_hex),
-					 ADRENO_CHIPID_MINOR(fake_gpu_hex),
-					 ADRENO_CHIPID_PATCH(fake_gpu_hex) + 1);
-		} else {
-			snprintf(str, bufsz, "Adreno%d%d%dv%d",
-					ADRENO_CHIPID_CORE(adreno_dev->chipid),
-					 ADRENO_CHIPID_MAJOR(adreno_dev->chipid),
-					 ADRENO_CHIPID_MINOR(adreno_dev->chipid),
-					 ADRENO_CHIPID_PATCH(adreno_dev->chipid) + 1);
-		}
+		snprintf(str, bufsz, "Adreno%d%d%dv%d",
+				ADRENO_CHIPID_CORE(fake_gpu_hex),
+				 ADRENO_CHIPID_MAJOR(fake_gpu_hex),
+				 ADRENO_CHIPID_MINOR(fake_gpu_hex),
+				 ADRENO_CHIPID_PATCH(fake_gpu_hex) + 1);
 	}
 }
 
