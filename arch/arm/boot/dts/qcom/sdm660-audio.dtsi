@@ -51,8 +51,8 @@
 		qcom,cdc-mclk-clk-rate = <9600000>;
 		qcom,cdc-slim-ifd = "tasha-slim-ifd";
 		qcom,cdc-slim-ifd-elemental-addr = [00 00 a0 01 17 02];
-		qcom,cdc-dmic-sample-rate = <4800000>;
-		qcom,cdc-mad-dmic-rate = <600000>;
+		qcom,cdc-dmic-sample-rate = <12288000>;
+		qcom,cdc-mad-dmic-rate = <1200000>;
 	};
 
 	wcd934x_cdc: tavil_codec {
@@ -83,8 +83,8 @@
 		qcom,cdc-mclk-clk-rate = <9600000>;
 		qcom,cdc-slim-ifd = "tavil-slim-ifd";
 		qcom,cdc-slim-ifd-elemental-addr = [00 00 50 02 17 02];
-		qcom,cdc-dmic-sample-rate = <4800000>;
-		qcom,cdc-mad-dmic-rate = <600000>;
+		qcom,cdc-dmic-sample-rate = <12288000>;
+		qcom,cdc-mad-dmic-rate = <1200000>;
 
 		qcom,wdsp-cmpnt-dev-name = "tavil_codec";
 
@@ -244,12 +244,14 @@
 
 			wsa881x_211_en: wsa881x_en@20170211 {
 				compatible = "qcom,wsa881x";
+				status = "disabled";
 				reg = <0x0 0x20170211>;
 				qcom,spkr-sd-n-node = <&wsa_spkr_en1>;
 			};
 
 			wsa881x_212_en: wsa881x_en@20170212 {
 				compatible = "qcom,wsa881x";
+				status = "disabled";
 				reg = <0x0 0x20170212>;
 				qcom,spkr-sd-n-node = <&wsa_spkr_en2>;
 			};
@@ -257,12 +259,14 @@
 			wsa881x_213_en: wsa881x_en@21170213 {
 				compatible = "qcom,wsa881x";
 				reg = <0x0 0x21170213>;
+				status = "disabled";
 				qcom,spkr-sd-n-node = <&wsa_spkr_en1>;
 			};
 
 			wsa881x_214_en: wsa881x_en@21170214 {
 				compatible = "qcom,wsa881x";
 				reg = <0x0 0x21170214>;
+				status = "disabled";
 				qcom,spkr-sd-n-node = <&wsa_spkr_en2>;
 			};
 		};
