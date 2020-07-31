@@ -422,9 +422,6 @@ static bool fg_sram_dump;
  int hwc_check_india;
  int hwc_check_global;
 extern bool is_poweroff_charge;
-#if defined(CONFIG_KERNEL_CUSTOM_E7T) || defined (CONFIG_KERNEL_CUSTOM_D2S)
-extern int rradc_die;
-#endif
 
 #define FG_RATE_LIM_MS (5 * MSEC_PER_SEC)
 
@@ -700,7 +697,7 @@ static int fg_get_battery_temp(struct fg_chip *chip, int *val)
 		default:
 			temp -= 50;
 			break;
-		}
+		};
 	}
 
 	*val = temp;
@@ -1403,7 +1400,11 @@ static int fg_save_learned_cap_to_sram(struct fg_chip *chip)
 	if (chip->battery_missing || !chip->cl.learned_cc_uah)
 		return -EPERM;
 
+#ifdef CONFIG_KERNEL_CUSTOM_D2S
+	chip->cl.learned_cc_uah = 3000000;
+#else
 	chip->cl.learned_cc_uah = 4000000;
+#endif
 	cc_mah = div64_s64(chip->cl.learned_cc_uah, 1000);
 	/* Write to a backup register to use across reboot */
 	rc = fg_sram_write(chip, chip->sp[FG_SRAM_ACT_BATT_CAP].addr_word,
@@ -1441,7 +1442,11 @@ static int fg_load_learned_cap_from_sram(struct fg_chip *chip)
 	}
 
 	chip->cl.learned_cc_uah = act_cap_mah * 1000;
+#ifdef CONFIG_KERNEL_CUSTOM_D2S
+	chip->cl.learned_cc_uah = (chip->cl.learned_cc_uah > 3000000) ? chip->cl.learned_cc_uah : 3000000;
+#else
 	chip->cl.learned_cc_uah = (chip->cl.learned_cc_uah > 4000000) ? chip->cl.learned_cc_uah : 4000000;
+#endif
 
 	if (chip->cl.learned_cc_uah != chip->cl.nom_cap_uah) {
 		if (chip->cl.learned_cc_uah == 0)
@@ -2686,8 +2691,12 @@ static void fg_ttf_update(struct fg_chip *chip)
 	chip->ttf.last_ttf = 0;
 	chip->ttf.last_ms = 0;
 	mutex_unlock(&chip->ttf.lock);
-	queue_delayed_work(system_power_efficient_wq,
-		&chip->ttf_work, msecs_to_jiffies(delay_ms));
+	if (charging_detected()) {
+		schedule_delayed_work(&chip->ttf_work, msecs_to_jiffies(delay_ms));
+	} else {
+		queue_delayed_work(system_power_efficient_wq,
+			&chip->ttf_work, msecs_to_jiffies(delay_ms));
+	}
 }
 
 static void restore_cycle_counter(struct fg_chip *chip)
@@ -3230,9 +3239,14 @@ static void sram_dump_work(struct work_struct *work)
 	fg_dbg(chip, FG_STATUS, "SRAM Dump done at %lld.%d\n",
 		quotient, remainder);
 resched:
-	queue_delayed_work(system_power_efficient_wq,
-		&chip->sram_dump_work,
-			msecs_to_jiffies(fg_sram_dump_period_ms));
+	if (charging_detected()) {
+		schedule_delayed_work(&chip->sram_dump_work,
+				msecs_to_jiffies(fg_sram_dump_period_ms));
+	} else {
+		queue_delayed_work(system_power_efficient_wq,
+			&chip->sram_dump_work,
+				msecs_to_jiffies(fg_sram_dump_period_ms));
+	}
 }
 
 static int fg_sram_dump_sysfs(const char *val, const struct kernel_param *kp)
@@ -3258,11 +3272,16 @@ static int fg_sram_dump_sysfs(const char *val, const struct kernel_param *kp)
 	}
 
 	chip = power_supply_get_drvdata(bms_psy);
-	if (fg_sram_dump)
-		queue_delayed_work(system_power_efficient_wq,
-			&chip->sram_dump_work,
-				msecs_to_jiffies(fg_sram_dump_period_ms));
-	else
+	if (fg_sram_dump) {
+		if (charging_detected()) {
+			schedule_delayed_work(&chip->sram_dump_work,
+					msecs_to_jiffies(fg_sram_dump_period_ms));
+		} else {
+			queue_delayed_work(system_power_efficient_wq,
+				&chip->sram_dump_work,
+					msecs_to_jiffies(fg_sram_dump_period_ms));
+		}
+	} else
 		cancel_delayed_work_sync(&chip->sram_dump_work);
 
 	return 0;
@@ -3845,8 +3864,13 @@ static void ttf_work(struct work_struct *work)
 		/* keep the wake lock and prime the IBATT and VBATT buffers */
 		if (ttf < 0) {
 			/* delay for one FG cycle */
-			queue_delayed_work(system_power_efficient_wq,
-				&chip->ttf_work, msecs_to_jiffies(1500));
+			if (charging_detected()) {
+				schedule_delayed_work(&chip->ttf_work,
+								msecs_to_jiffies(1500));
+			} else {
+				queue_delayed_work(system_power_efficient_wq,
+					&chip->ttf_work, msecs_to_jiffies(1500));
+			}
 			mutex_unlock(&chip->ttf.lock);
 			return;
 		}
@@ -3862,8 +3886,12 @@ static void ttf_work(struct work_struct *work)
 	}
 
 	/* recurse every 10 seconds */
-	queue_delayed_work(system_power_efficient_wq,
-		&chip->ttf_work, msecs_to_jiffies(10000));
+	if (charging_detected()) {
+		schedule_delayed_work(&chip->ttf_work, msecs_to_jiffies(10000));
+	} else {
+		queue_delayed_work(system_power_efficient_wq,
+			&chip->ttf_work, msecs_to_jiffies(10000));
+	}
 end_work:
 	vote(chip->awake_votable, TTF_PRIMING, false, 0);
 	mutex_unlock(&chip->ttf.lock);
@@ -4624,6 +4652,11 @@ static int fg_hw_init(struct fg_chip *chip)
 			return rc;
 		}
 	}
+	buf[0] = 0x33;
+	buf[1] = 0x3;
+	rc = fg_sram_write(chip,4,0,buf,2,FG_IMA_DEFAULT);
+	if(rc < 0)
+		pr_err("Error in configuring Sram,rc = %d\n",rc);
 
 	return 0;
 }
@@ -4731,8 +4764,12 @@ static irqreturn_t fg_batt_missing_irq_handler(int irq, void *data)
 	}
 
 	clear_battery_profile(chip);
-	queue_delayed_work(system_power_efficient_wq,
-		&chip->profile_load_work, 0);
+	if (charging_detected()) {
+		schedule_delayed_work(&chip->profile_load_work, 0);
+	} else {
+		queue_delayed_work(system_power_efficient_wq,
+			&chip->profile_load_work, 0);
+	}
 
 	if (chip->fg_psy)
 		power_supply_changed(chip->fg_psy);
@@ -5738,8 +5775,7 @@ static int fg_gen3_probe(struct platform_device *pdev)
 	}
 
 	device_init_wakeup(chip->dev, true);
-	queue_delayed_work(system_power_efficient_wq,
-		&chip->profile_load_work, 0);
+	schedule_delayed_work(&chip->profile_load_work, 0);
 
 	pr_debug("FG GEN3 driver probed successfully\n");
 	return 0;
@@ -5776,12 +5812,22 @@ static int fg_gen3_resume(struct device *dev)
 	if (rc < 0)
 		pr_err("Error in configuring ESR timer, rc=%d\n", rc);
 
-	queue_delayed_work(system_power_efficient_wq,
-		&chip->ttf_work, 0);
-	if (fg_sram_dump)
+	if (charging_detected()) {
+		schedule_delayed_work(&chip->ttf_work, 0);
+	} else {
+		queue_delayed_work(system_power_efficient_wq,
+			&chip->ttf_work, 0);
+	}
+	if (fg_sram_dump) {
+		if (charging_detected()) {
+			schedule_delayed_work(&chip->sram_dump_work,
+					msecs_to_jiffies(fg_sram_dump_period_ms));
+		} else {
 		queue_delayed_work(system_power_efficient_wq,
 			&chip->sram_dump_work,
 				msecs_to_jiffies(fg_sram_dump_period_ms));
+		}
+	}
 
 	if (!work_pending(&chip->status_change_work)) {
 		pm_stay_awake(chip->dev);

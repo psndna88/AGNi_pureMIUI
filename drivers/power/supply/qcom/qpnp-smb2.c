@@ -222,7 +222,7 @@ module_param_named(
 	debug_mask, __debug_mask, int, S_IRUSR | S_IWUSR
 );
 
-static int __weak_chg_icl_ua = 500000;
+static int __weak_chg_icl_ua = 900000;
 module_param_named(
 	weak_chg_icl_ua, __weak_chg_icl_ua, int, S_IRUSR | S_IWUSR);
 
@@ -445,14 +445,16 @@ static int smb2_usb_get_prop(struct power_supply *psy,
 		rc = smblib_get_prop_input_current_settled(chg, val);
 		break;
 	case POWER_SUPPLY_PROP_TYPE:
-		if((chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP) || (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3))
+#ifdef CONFIG_KERNEL_CUSTOM_F7A
+		if ((chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP) || (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3))
 		{
 			val->intval = chg->real_charger_type;
-		}
-		else
-		{
+		} else {
+#endif
 			val->intval = POWER_SUPPLY_TYPE_USB_PD;
+#ifdef CONFIG_KERNEL_CUSTOM_F7A
 		}
+#endif
 		break;
 	case POWER_SUPPLY_PROP_REAL_TYPE:
 		if (chip->bad_part)
@@ -1613,7 +1615,14 @@ static int smb2_init_hw(struct smb2 *chip)
 		return rc;
 	}
 
-	smblib_rerun_apsd_if_required(chg);
+#ifndef CONFIG_KERNEL_CUSTOM_F7A
+	if((is_poweroff_charge == false) && (stat != 0x01)) {
+#endif
+		smblib_rerun_apsd_if_required(chg);
+#ifndef CONFIG_KERNEL_CUSTOM_F7A
+	}
+#endif
+
 
 	/* clear the ICL override if it is set */
 	if (smblib_icl_override(chg, false) < 0) {
@@ -1674,6 +1683,7 @@ static int smb2_init_hw(struct smb2 *chip)
 		dev_err(chg->dev, "Couldn't write to USBIN_ADAPTER_ALLOW_CFG rc=%d\n", rc);
 		return rc;
 	}
+
 #else
 	/* Operate the QC2.0 in 5V/9V mode i.e. Disable 12V */
 	rc = smblib_masked_write(chg, HVDCP_PULSE_COUNT_MAX_REG,
@@ -1692,7 +1702,6 @@ static int smb2_init_hw(struct smb2 *chip)
 			"Couldn't configure QC3.0 to 6.6V rc=%d\n", rc);
 		return rc;
 	}
-
 #endif
 	/*
 	 * AICL configuration:
@@ -1848,9 +1857,7 @@ static int smb2_init_hw(struct smb2 *chip)
 		return rc;
 	}
 
-#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T) || defined(CONFIG_KERNEL_CUSTOM_F7A)
 	rc = vote(chg->chg_disable_votable, DEFAULT_VOTER, true, 0);
-#endif
 	switch (chip->dt.chg_inhibit_thr_mv) {
 	case 50:
 		rc = smblib_masked_write(chg, CHARGE_INHIBIT_THRESHOLD_CFG_REG,
@@ -1879,9 +1886,7 @@ static int smb2_init_hw(struct smb2 *chip)
 		break;
 	}
 
-#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T) || defined(CONFIG_KERNEL_CUSTOM_F7A)
 	rc = vote(chg->chg_disable_votable, DEFAULT_VOTER, false, 0);
-#endif
 	if (rc < 0) {
 		dev_err(chg->dev, "Couldn't configure charge inhibit threshold rc=%d\n",
 			rc);

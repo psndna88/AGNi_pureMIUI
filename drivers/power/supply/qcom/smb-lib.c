@@ -38,11 +38,7 @@ extern struct g_nvt_data g_nvt;
 #endif
 
 extern int hwc_check_global;
-#ifdef CONFIG_KERNEL_CUSTOM_E7S
-#define LCT_JEITA_CCC_AUTO_ADJUST  1
-#else
-#define LCT_JEITA_CCC_AUTO_ADJUST  0   
-#endif
+#define LCT_JEITA_CCC_AUTO_ADJUST  0
 
 #ifdef CONFIG_FORCE_FAST_CHARGE
 #include <linux/fastchg.h>
@@ -998,7 +994,17 @@ int smblib_set_icl_current(struct smb_charger *chg, int icl_ua)
 			goto enable_icl_changed_interrupt;
 		}
 	} else {
-		set_sdp_current(chg, 100000);
+		/*
+		 * Try USB 2.0/3,0 option first on USB path when maximum input
+		 * current limit is 500mA or below for better accuracy; in case
+		 * of error, proceed to use USB high-current mode.
+		 */
+		if (icl_ua <= USBIN_500MA) {
+			rc = set_sdp_current(chg, icl_ua);
+			if (rc >= 0)
+				goto enable_icl_changed_interrupt;
+		}
+
 		rc = smblib_set_charge_param(chg, &chg->param.usb_icl, icl_ua);
 		if (rc < 0) {
 			smblib_err(chg, "Couldn't set HC ICL rc=%d\n", rc);
@@ -2043,8 +2049,15 @@ int smblib_set_prop_system_temp_level(struct smb_charger *chg,
 		lct_therm_lvl_reserved.intval = val->intval;
 	}
 #if defined(CONFIG_KERNEL_CUSTOM_E7S)
-	if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 2)) {
-	    return 0;
+		if (hwc_check_india == 1) {	
+		if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 2)) {
+		    return 0;
+		}
+	}
+	else {
+		if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 1)) {
+		    return 0;
+		}
 	}
 #elif defined(CONFIG_KERNEL_CUSTOM_D2S)
 	if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 2)) {
@@ -2055,8 +2068,15 @@ int smblib_set_prop_system_temp_level(struct smb_charger *chg,
 		return 0;
 	}
 #elif defined(CONFIG_KERNEL_CUSTOM_E7T)
-	if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 3)) {
-	    return 0;
+	if (hwc_check_india == 1) {	
+		if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 3)) {
+		    return 0;
+		}
+	}
+	else {
+		if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 3)) {
+		    return 0;
+		}
 	}
 #else
 	if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 0) && (hwc_check_india == 0)) {
