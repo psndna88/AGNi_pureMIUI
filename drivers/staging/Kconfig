@@ -115,7 +115,13 @@ config QCA_CLD_WLAN_PIE
 	bool "Qualcomm Atheros CLD WLAN module from CAF Pie tag"
 	default n
 
+config QCA_CLD_WLAN_PIE_OLD
+	bool "Qualcomm Atheros CLD WLAN module from CAF Pie tag"
+	depends on QCA_CLD_WLAN_PIE
+	default n
+
 source "drivers/staging/qcacld-3.0/Kconfig"
 source "drivers/staging/qcacld-3.0_pie/Kconfig"
+source "drivers/staging/qcacld-3.0_pie_old/Kconfig"
 
 endif # STAGING
