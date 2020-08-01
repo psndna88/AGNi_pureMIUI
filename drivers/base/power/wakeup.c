@@ -46,7 +46,7 @@ static bool enable_bluedroid_timer_ws = true;
 module_param(enable_bluedroid_timer_ws, bool, 0644);
 static bool enable_ipa_ws = true;
 module_param(enable_ipa_ws, bool, 0644);
-static bool enable_qcom_rx_wakelock_ws = true;
+static bool enable_qcom_rx_wakelock_ws = false;
 module_param(enable_qcom_rx_wakelock_ws, bool, 0644);
 static bool enable_msm_hsic_ws = true;
 module_param(enable_msm_hsic_ws, bool, 0644);
