@@ -99,7 +99,7 @@ static inline void __run_timers(struct tvec_base *base);
 static DEFINE_PER_CPU(struct tvec_base, tvec_bases);
 
 #if defined(CONFIG_SMP) && defined(CONFIG_NO_HZ_COMMON)
-unsigned int sysctl_timer_migration = 1;
+unsigned int sysctl_timer_migration = 0;
 
 struct tvec_base tvec_base_deferrable;
 static atomic_t deferrable_pending;
