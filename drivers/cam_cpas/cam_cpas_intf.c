@@ -119,28 +119,56 @@ const char *cam_cpas_axi_util_trans_type_to_string(
 }
 EXPORT_SYMBOL(cam_cpas_axi_util_trans_type_to_string);
 
-int cam_cpas_is_feature_supported(uint32_t flag)
+bool cam_cpas_is_feature_supported(uint32_t flag, uint32_t hw_map,
+	uint32_t *fuse_val)
 {
 	struct cam_hw_info *cpas_hw = NULL;
 	struct cam_cpas_private_soc *soc_private = NULL;
-	uint32_t feature_mask;
+	bool supported = true;
+	int32_t i;
 
 	if (!CAM_CPAS_INTF_INITIALIZED()) {
 		CAM_ERR(CAM_CPAS, "cpas intf not initialized");
-		return -ENODEV;
+		return false;
 	}
 
 	cpas_hw = (struct cam_hw_info *) g_cpas_intf->hw_intf->hw_priv;
 	soc_private =
 		(struct cam_cpas_private_soc *)cpas_hw->soc_info.soc_private;
-	feature_mask = soc_private->feature_mask;
 
 	if (flag >= CAM_CPAS_FUSE_FEATURE_MAX) {
 		CAM_ERR(CAM_CPAS, "Unknown feature flag %x", flag);
-		return -EINVAL;
+		return false;
 	}
 
-	return feature_mask & flag ? 1 : 0;
+	for (i = 0; i < soc_private->num_feature_info; i++)
+		if (soc_private->feature_info[i].feature == flag)
+			break;
+
+	if (i == soc_private->num_feature_info) {
+		CAM_INFO(CAM_CPAS, "Feature not found, no of featues: %d",
+			soc_private->num_feature_info);
+		goto end;
+	}
+
+	if (soc_private->feature_info[i].type == CAM_CPAS_FEATURE_TYPE_DISABLE
+		|| (soc_private->feature_info[i].type ==
+		CAM_CPAS_FEATURE_TYPE_ENABLE)) {
+		if ((soc_private->feature_info[i].hw_map & hw_map) == hw_map)
+			supported = soc_private->feature_info[i].enable;
+		else
+			supported = !soc_private->feature_info[i].enable;
+	} else {
+		if (!fuse_val) {
+			CAM_ERR(CAM_CPAS,
+				"Invalid arg fuse_val");
+		} else {
+			*fuse_val = soc_private->feature_info[i].value;
+		}
+	}
+
+end:
+	return supported;
 }
 EXPORT_SYMBOL(cam_cpas_is_feature_supported);
 

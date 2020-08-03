@@ -76,6 +76,10 @@
 #define CAM_CSID_EVT_PAYLOAD_MAX                  10
 #define CAM_CSID_MIN_HBI_CFG_MAX_VAL              0xF
 
+#define CAM_CSID_RESOLUTION_22MP_WIDTH            5612
+#define CAM_CSID_RESOLUTION_25MP_WIDTH            6048
+#define CAM_CSID_RESOLUTION_28MP_WIDTH            7308
+
 /* enum cam_csid_path_halt_mode select the path halt mode control */
 enum cam_csid_path_halt_mode {
 	CSID_HALT_MODE_INTERNAL,

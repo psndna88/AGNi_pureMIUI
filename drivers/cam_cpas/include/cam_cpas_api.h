@@ -38,6 +38,22 @@ enum cam_cpas_reg_base {
 };
 
 /**
+ * enum cam_cpas_hw_index  - Enum for identify HW index
+ */
+enum cam_cpas_hw_index {
+	CAM_CPAS_HW_IDX_ANY = 0,
+	CAM_CPAS_HW_IDX_0 = 1<<0,
+	CAM_CPAS_HW_IDX_1 = 1<<1,
+	CAM_CPAS_HW_IDX_2 = 1<<2,
+	CAM_CPAS_HW_IDX_3 = 1<<3,
+	CAM_CPAS_HW_IDX_4 = 1<<4,
+	CAM_CPAS_HW_IDX_5 = 1<<5,
+	CAM_CPAS_HW_IDX_6 = 1<<6,
+	CAM_CPAS_HW_IDX_7 = 1<<7,
+	CAM_CPAS_HW_IDX_MAX = 1<<8
+};
+
+/**
  * enum cam_cpas_camera_version Enum for Titan Camera Versions
  */
 enum cam_cpas_camera_version {
@@ -608,11 +624,15 @@ int cam_cpas_get_cpas_hw_version(
  *
  * @flag  : Camera hw features to check
  *
+ * @hw_map : To indicate which HWs are supported
+ *
+ * @fule_val : Return fule value in case of value type feature
+ *
  * @return 1 if feature is supported
  *
  */
-int cam_cpas_is_feature_supported(
-	uint32_t flag);
+bool cam_cpas_is_feature_supported(uint32_t flag, uint32_t hw_map,
+	uint32_t *fuse_val);
 
 /**
  * cam_cpas_axi_util_path_type_to_string()
