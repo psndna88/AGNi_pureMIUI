@@ -214,7 +214,7 @@ struct timer_base timer_base_deferrable;
 static atomic_t deferrable_pending;
 
 #if defined(CONFIG_SMP) && defined(CONFIG_NO_HZ_COMMON)
-unsigned int sysctl_timer_migration = 1;
+unsigned int sysctl_timer_migration = 0;
 
 void timers_update_migration(bool update_nohz)
 {
