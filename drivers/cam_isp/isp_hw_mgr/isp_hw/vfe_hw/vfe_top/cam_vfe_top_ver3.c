@@ -189,6 +189,31 @@ static int cam_vfe_top_ver3_clock_update(
 	return rc;
 }
 
+static int cam_vfe_top_ver3_blanking_update(uint32_t cmd_type,
+	void *cmd_args, uint32_t arg_size)
+{
+	struct cam_isp_blanking_config       *blanking_config = NULL;
+	struct cam_isp_resource_node         *node_res = NULL;
+
+	blanking_config =
+		(struct cam_isp_blanking_config *)cmd_args;
+	node_res = blanking_config->node_res;
+
+	if (!node_res) {
+		CAM_ERR(CAM_PERF, "Invalid input res %pK", node_res);
+		return -EINVAL;
+	}
+
+	if (!node_res->process_cmd) {
+		CAM_ERR(CAM_PERF, "Invalid input res process_cmd %pK",
+			node_res->process_cmd);
+		return -EINVAL;
+	}
+
+	return node_res->process_cmd(node_res,
+		cmd_type, cmd_args, arg_size);
+}
+
 static int cam_vfe_core_config_control(
 	struct cam_vfe_top_ver3_priv *top_priv,
 	 void *cmd_args, uint32_t arg_size)
@@ -726,6 +751,10 @@ int cam_vfe_top_ver3_process_cmd(void *device_priv, uint32_t cmd_type,
 		break;
 	case CAM_ISP_HW_CMD_ADD_WAIT_TRIGGER:
 		rc = cam_vfe_top_add_wait_trigger(top_priv, cmd_args, arg_size);
+		break;
+	case CAM_ISP_HW_CMD_BLANKING_UPDATE:
+		rc = cam_vfe_top_ver3_blanking_update(cmd_type,
+			cmd_args, arg_size);
 		break;
 	default:
 		rc = -EINVAL;

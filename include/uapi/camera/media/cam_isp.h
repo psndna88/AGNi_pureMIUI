@@ -107,6 +107,7 @@
 #define CAM_ISP_GENERIC_BLOB_TYPE_CSID_CONFIG               10
 #define CAM_ISP_GENERIC_BLOB_TYPE_SENSOR_DIMENSION_CONFIG   11
 #define CAM_ISP_GENERIC_BLOB_TYPE_CSID_QCFA_CONFIG          12
+#define CAM_ISP_GENERIC_BLOB_TYPE_SENSOR_BLANKING_CONFIG    13
 
 #define CAM_ISP_VC_DT_CFG    4
 
@@ -614,6 +615,17 @@ struct cam_isp_sensor_dimension {
 	__u32 width;
 	__u32 height;
 	__u32 measure_enabled;
+} __attribute__((packed));
+
+/**
+ * struct cam_isp_sensor_blanking_config
+ *
+ * @hbi             HBI value
+ * @vbi             VBI value
+ */
+struct cam_isp_sensor_blanking_config {
+	__u32 hbi;
+	__u32 vbi;
 } __attribute__((packed));
 
 /**
