@@ -2286,7 +2286,7 @@ static enum sigma_cmd_result cmd_sta_set_psk(struct sigma_dut *dut,
 	     wpa_command(intf, "SET rsnxe_override_eapol "))) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Failed to clear RSNXE");
-		return ERROR_SEND_STATUS;
+		return STATUS_SENT_ERROR;
 	}
 
 	if (dut->sae_pwe == SAE_PWE_LOOP && get_param(cmd, "PasswordId"))
