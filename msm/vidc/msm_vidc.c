@@ -437,7 +437,9 @@ int msm_vidc_qbuf(void *instance, struct media_device *mdev,
 			msm_comm_release_timestamps(inst);
 		inst->flush_timestamps = false;
 
-		rc = msm_comm_store_timestamp(inst, timestamp_us);
+		if (!(b->flags & V4L2_BUF_FLAG_CODECCONFIG))
+			rc = msm_comm_store_timestamp(inst, timestamp_us);
+
 		if (rc)
 			goto unlock;
 		inst->clk_data.frame_rate = msm_comm_get_max_framerate(inst);
@@ -508,7 +510,9 @@ int msm_vidc_dqbuf(void *instance, struct v4l2_buffer *b)
 			return -EINVAL;
 		}
 	}
-	if (is_decode_session(inst) && b->type == OUTPUT_MPLANE)
+	if (is_decode_session(inst) &&
+		b->type == OUTPUT_MPLANE &&
+		!(b->flags & V4L2_BUF_FLAG_CODECCONFIG))
 		msm_comm_fetch_ts_framerate(inst, b);
 
 	return rc;
