@@ -20,7 +20,6 @@ extern int agni_swappiness;
 extern void mm_drop_caches(int val);
 extern unsigned long adreno_load_perc;
 extern int ramgb;
-extern bool zramzero;
 extern bool dyn_fsync_active;
 extern bool miuirom;
 
