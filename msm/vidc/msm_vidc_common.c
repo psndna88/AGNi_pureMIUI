@@ -1598,7 +1598,6 @@ static void handle_event_change(enum hal_command_response cmd, void *data)
 	struct hfi_device *hdev;
 	u32 *ptr = NULL;
 	struct msm_vidc_format *fmt;
-	struct v4l2_format *f;
 	u32 codec;
 
 	if (!event_notify) {
@@ -1650,11 +1649,12 @@ static void handle_event_change(enum hal_command_response cmd, void *data)
 			inst->pic_struct == MSM_VIDC_PIC_STRUCT_MAYBE_INTERLACED))
 			event_fields_changed = true;
 
-		f = &inst->fmts[OUTPUT_PORT].v4l2_fmt;
+		fmt = &inst->fmts[OUTPUT_PORT];
 		event_fields_changed |=
-			(f->fmt.pix_mp.height != event_notify->height);
+			(fmt->v4l2_fmt.fmt.pix_mp.height !=
+							event_notify->height);
 		event_fields_changed |=
-			(f->fmt.pix_mp.width != event_notify->width);
+			(fmt->v4l2_fmt.fmt.pix_mp.width != event_notify->width);
 
 		if (event_fields_changed) {
 			event = V4L2_EVENT_SEQ_CHANGED_INSUFFICIENT;
@@ -1670,6 +1670,10 @@ static void handle_event_change(enum hal_command_response cmd, void *data)
 						"%s: Failed to decide work mode\n",
 						__func__);
 			}
+
+			fmt->count_min = event_notify->fw_min_cnt;
+			msm_dcvs_reset(inst);
+
 			s_vpr_h(inst->sid,
 				"seq: No parameter change continue session\n");
 			rc = call_hfi_op(hdev, session_continue,
@@ -2809,6 +2813,7 @@ bool is_batching_allowed(struct msm_vidc_inst *inst)
 {
 	u32 op_pixelformat, fps, maxmbs, maxfps;
 	u32 ignore_flags = VIDC_THUMBNAIL;
+	u32 enable = 0;
 
 	if (!inst || !inst->core)
 		return false;
@@ -2827,17 +2832,23 @@ bool is_batching_allowed(struct msm_vidc_inst *inst)
 	 * as sufficient extra buffers (required for batch mode
 	 * on both ports) may not have been updated to client.
 	 */
-	return (inst->batch.enable &&
+	enable = (inst->batch.enable &&
 		inst->core->resources.decode_batching &&
 		!is_low_latency_hint(inst) &&
 		is_single_session(inst, ignore_flags) &&
 		is_decode_session(inst) &&
 		!is_thumbnail_session(inst) &&
+		is_realtime_session(inst) &&
 		!inst->clk_data.low_latency_mode &&
 		(op_pixelformat == V4L2_PIX_FMT_NV12_UBWC ||
 		 op_pixelformat	== V4L2_PIX_FMT_NV12_TP10_UBWC) &&
 		fps <= maxfps &&
 		msm_vidc_get_mbs_per_frame(inst) <= maxmbs);
+
+	s_vpr_hp(inst->sid, "%s: batching %s\n",
+		__func__, enable ? "enabled" : "disabled");
+
+	return enable;
 }
 
 static int msm_comm_session_abort(struct msm_vidc_inst *inst)
@@ -4941,7 +4952,10 @@ int msm_comm_try_get_bufreqs(struct msm_vidc_inst *inst)
 	for (i = 0; i < HAL_BUFFER_MAX; i++) {
 		struct hal_buffer_requirements req = inst->buff_req.buffer[i];
 
-		if (req.buffer_type != HAL_BUFFER_NONE) {
+		if (req.buffer_type != HAL_BUFFER_NONE &&
+			req.buffer_type != HAL_BUFFER_INPUT &&
+			req.buffer_type != HAL_BUFFER_OUTPUT &&
+			req.buffer_type != HAL_BUFFER_OUTPUT2) {
 			s_vpr_h(inst->sid, "%15s %8d %8d %8d %8d %8d\n",
 				get_buffer_name(req.buffer_type),
 				req.buffer_count_actual,
@@ -5319,7 +5333,7 @@ int msm_comm_release_persist_buffers(struct msm_vidc_inst *inst)
 }
 
 int msm_comm_set_buffer_count(struct msm_vidc_inst *inst,
-	int host_count, int act_count, enum hal_buffer type)
+	int min_count, int act_count, enum hal_buffer type)
 {
 	int rc = 0;
 	struct v4l2_ctrl *ctrl;
@@ -5334,20 +5348,22 @@ int msm_comm_set_buffer_count(struct msm_vidc_inst *inst,
 
 	buf_count.buffer_type = get_hfi_buffer(type, inst->sid);
 	buf_count.buffer_count_actual = act_count;
-	buf_count.buffer_count_min_host = host_count;
+	buf_count.buffer_count_min_host = min_count;
 	/* set total superframe buffers count */
 	ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDC_SUPERFRAME);
 	if (ctrl->val)
 		buf_count.buffer_count_actual = act_count * ctrl->val;
-	s_vpr_h(inst->sid, "%s: hal_buffer %d min_host %d actual %d\n",
-		__func__, type,	host_count, act_count);
+	s_vpr_h(inst->sid,
+		"%s: hal_buffer %d min %d actual %d superframe %d\n",
+		__func__, type,	min_count,
+		buf_count.buffer_count_actual, ctrl->val);
 	rc = call_hfi_op(hdev, session_set_property,
 		inst->session, HFI_PROPERTY_PARAM_BUFFER_COUNT_ACTUAL,
 		&buf_count, sizeof(buf_count));
 	if (rc)
 		s_vpr_e(inst->sid,
 			"Failed to set actual buffer count %d for buffer type %d\n",
-			act_count, type);
+			buf_count.buffer_count_actual, type);
 	return rc;
 }
 
