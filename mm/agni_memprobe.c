@@ -110,8 +110,6 @@ bool agni_memprober(void) {
 void agni_memprobe(void) {
 
 	device_totalram();
-	if (zramzero)
-		agni_swappiness = 0;
 
 	triggerswapping = agni_memprober();
 }
