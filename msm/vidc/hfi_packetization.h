@@ -64,8 +64,6 @@ struct hfi_packetization_ops {
 	int (*session_set_property)(
 		struct hfi_cmd_session_set_property_packet *pkt,
 		u32 sid, u32 ptype, void *pdata, u32 size);
-	int (*session_sync_process)(
-		struct hfi_cmd_session_sync_process_packet *pkt, u32 sid);
 };
 
 struct hfi_packetization_ops *hfi_get_pkt_ops_handle(

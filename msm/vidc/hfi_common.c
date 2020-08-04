@@ -2292,7 +2292,6 @@ static int venus_hfi_session_process_batch(void *sess,
 	int rc = 0, c = 0;
 	struct hal_session *session = sess;
 	struct venus_hfi_device *device = &venus_hfi_dev;
-	struct hfi_cmd_session_sync_process_packet pkt;
 
 	mutex_lock(&device->lock);
 
@@ -2318,15 +2317,6 @@ static int venus_hfi_session_process_batch(void *sess,
 			goto err_etbs_and_ftbs;
 		}
 	}
-
-	rc = call_hfi_pkt_op(device, session_sync_process, &pkt, session->sid);
-	if (rc) {
-		s_vpr_e(session->sid, "Failed to create sync packet\n");
-		goto err_etbs_and_ftbs;
-	}
-
-	if (__iface_cmdq_write(device, &pkt, session->sid))
-		rc = -ENOTEMPTY;
 
 err_etbs_and_ftbs:
 	mutex_unlock(&device->lock);
