@@ -438,7 +438,8 @@ int msm_vidc_qbuf(void *instance, struct media_device *mdev,
 		inst->flush_timestamps = false;
 
 		if (!(b->flags & V4L2_BUF_FLAG_CODECCONFIG))
-			rc = msm_comm_store_timestamp(inst, timestamp_us);
+			rc = msm_comm_store_timestamp(inst, timestamp_us,
+					b->flags & V4L2_BUF_FLAG_EOS);
 
 		if (rc)
 			goto unlock;

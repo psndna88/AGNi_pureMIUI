@@ -400,7 +400,8 @@ int msm_comm_set_cvp_skip_ratio(struct msm_vidc_inst *inst,
 	uint32_t capture_rate, uint32_t cvp_rate);
 int msm_comm_fetch_ts_framerate(struct msm_vidc_inst *inst,
 	struct v4l2_buffer *b);
-int msm_comm_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us);
+int msm_comm_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us,
+		bool is_eos);
 void msm_comm_release_timestamps(struct msm_vidc_inst *inst);
 u32 msm_comm_get_max_framerate(struct msm_vidc_inst *inst);
 u32 msm_comm_calc_framerate(struct msm_vidc_inst *inst,	u64 timestamp_us,

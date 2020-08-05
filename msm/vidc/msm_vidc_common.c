@@ -7600,7 +7600,8 @@ void msm_comm_release_timestamps(struct msm_vidc_inst *inst)
 	mutex_unlock(&inst->timestamps.lock);
 }
 
-int msm_comm_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us)
+int msm_comm_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us,
+	bool is_eos)
 {
 	struct msm_vidc_timestamps *entry, *node, *prev = NULL;
 	struct msm_vidc_timestamps *duplicate;
@@ -7618,7 +7619,8 @@ int msm_comm_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us)
 	duplicate = NULL;
 	list_for_each_entry(node, &inst->timestamps.list, list) {
 		count++;
-		if (node->is_valid && node->timestamp_us == timestamp_us)
+		if (node->is_valid && node->timestamp_us == timestamp_us &&
+			!node->is_eos)
 			duplicate = node;
 	}
 
@@ -7649,6 +7651,7 @@ int msm_comm_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us)
 		entry->timestamp_us = duplicate->timestamp_us;
 		entry->framerate = duplicate->framerate;
 		entry->is_valid = true;
+		entry->is_eos = is_eos;
 		/* add entry next to duplicate */
 		list_add(&entry->list, &duplicate->list);
 		goto unlock;
@@ -7661,7 +7664,8 @@ int msm_comm_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us)
 	prev = NULL;
 	inserted = false;
 	list_for_each_entry(node, &inst->timestamps.list, list) {
-		if (entry->timestamp_us < node->timestamp_us) {
+		if (entry->timestamp_us < node->timestamp_us &&
+			!node->is_eos) {
 			/*
 			 * if prev available add entry next to prev else
 			 * entry is first so add it at head.
@@ -7688,7 +7692,8 @@ int msm_comm_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us)
 				node->timestamp_us, prev->timestamp_us);
 			break;
 		}
-		if (node->timestamp_us == entry->timestamp_us) {
+		if (node->timestamp_us == entry->timestamp_us &&
+			!node->is_eos) {
 			if (prev)
 				node->framerate = msm_comm_calc_framerate(inst,
 					node->timestamp_us, prev->timestamp_us);
@@ -7696,6 +7701,12 @@ int msm_comm_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us)
 		}
 		prev = node;
 	}
+
+	/* mark all entries as eos if is_eos is queued */
+	if (is_eos)
+		list_for_each_entry(node, &inst->timestamps.list, list) {
+			node->is_eos = true;
+		}
 
 unlock:
 	mutex_unlock(&inst->timestamps.lock);

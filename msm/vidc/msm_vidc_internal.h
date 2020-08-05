@@ -239,6 +239,7 @@ struct msm_vidc_timestamps {
 	u64 timestamp_us;
 	u32 framerate;
 	bool is_valid;
+	bool is_eos;
 };
 
 enum efuse_purpose {
