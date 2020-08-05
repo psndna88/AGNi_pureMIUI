@@ -88,30 +88,16 @@
 "312e302f616f637069223e3c4465736372697074696f6e3e46726565207769746820796f7572" \
 "20737562736372697074696f6e213c2f4465736372697074696f6e3e3c2f506c616e3e"
 
-#define SAE_PK_KEY \
-	"MHcCAQEEIEAAgwF9/2Woycich7xv9CVdVrKsjMaT8qNXyoKr0sbooAoGCCqGSM49AwEHoUQDQgAEJm/O5y7DtVWRLJR90mvoJAUJKTofcJ1voy5l0lK5upjjK5/VJr9f6w8bdVq54VawrZsduagb6nZGK1bO5LMrIQ=="
 #define SAE_PK_KEY_1 \
-	"MHcCAQEEIBLUj3AHr/r5zZmOmdwYDN5XRQA/kF6PFqOyraAPCABRoAoGCCqGSM49AwEHoUQDQgAEazOWoUAgyRNq+al2NlYP5WLfpJVF0YezsXQIJlVr6K16qf60F+i55eWabDXQqrRuPV6gbjLbi5en2MPRKj+LDA=="
+	"MHcCAQEEIDNNDttjdQmLVyr1DOrWiapbMt15LDn4hnMLIXrBLAN+oAoGCCqGSM49AwEHoUQDQgAENAv4e3IlpYkqQjc/9KM4O4Athh6iY25wlT8Gdg+EhR7yoMR03nHri6QaaLogXxTsa9qGyXj1K9G8DEOyHMQCbg=="
 #define SAE_PK_KEY_2 \
-	"MHcCAQEEIH6P0BzOI1qVHLY5LCX649m9pbiUlTbqfJk9z1aymD1WoAoGCCqGSM49AwEHoUQDQgAE4id0MceRFeqonPMCItxxEwzo0iXZJUu/DPbOOISVlAhgfUW/D/ia44cCCls5IkMVI/4/0AaTI1SFMbvWdcHxJQ=="
-#define SAE_PK_KEY_3 \
-	"MHcCAQEEIAaHv03PwLLSFbvzYDJ0Z2RNCVxvuwBC+teJDO2xn6VsoAoGCCqGSM49AwEHoUQDQgAElKVPgiRt4FgGDiuIM9HRvIDXMxzQ0/DaODyuDv4MuoMpShaTVFmEixIyHpp6C/XUo+9cQPngj0E2NfDMgjfRzg=="
-#define SAE_PK_KEY_4 \
-	"MHcCAQEEIPBrOezbqDRk54D4tUnZ+nfkHCnQJZzfmSM5mpI5z7KFoAoGCCqGSM49AwEHoUQDQgAEVwIfiE5Osp8Bbj/2K3iJgHtiQNmbAr0Vmz+lvXpr/8AbrDXVWED5uPyB8qrXcVA0vJ8HrTPjU5sSEaiAVTCQRg=="
-#define SAE_PK_KEY_5 \
-	"MHcCAQEEIJq2et/7uy1J2AaihHPfxPAUeTxuYQp8rt4pwBcCS2zNoAoGCCqGSM49AwEHoUQDQgAEr++RAoadn9xr64vEPyWjg25eHRbYotJwv0s5nY8P5FBEvnnzXGk+QvXnCWx0G8kG7lFeUqKbhwXOHe3RmYeANQ=="
-#define SAE_PK_KEY_6 \
-	"MHcCAQEEIGU8eQz4yIN00XWmf8DLrUxEcSSsu6W/ONDpGHW24KvMoAoGCCqGSM49AwEHoUQDQgAE86ETC//LNjxPVe+XI9fxXZ/eiebKyP9XzXR2DO8ftJO311iP5xrW9uviYmhQYUUxvycY/Olio3qIHDDEcoIZJw=="
-#define SAE_PK_KEY_7 \
-	"MHcCAQEEIGU8eQz4yIN00XWmf8DLrUxEcSSsu6W/ONDpGHW24KvMoAoGCCqGSM49AwEHoUQDQgAE86ETC//LNjxPVe+XI9fxXZ/eiebKyP9XzXR2DO8ftJO311iP5xrW9uviYmhQYUUxvycY/Olio3qIHDDEcoIZJw=="
-#define SAE_PK_KEY_8_SIG \
-	"MHcCAQEEIFOu3xlEIWA1r/B/1eXv10Av/s6Ckbr0ZhewG5VTv8vGoAoGCCqGSM49AwEHoUQDQgAEIiW3UPh/XUgUKNL4uHFbGoueQd0f3B7rkfNy+R0keJe35HKgsmYAd7gztAmIXSvbswUydsbE52QaUslEZdnw3w=="
-#define SAE_PK_KEY_9 \
-	"MHcCAQEEIMKGpkSSz4CLzyuLbxfr0vAvR34rDEi43L79ShM55wPfoAoGCCqGSM49AwEHoUQDQgAEHgK4UPbjHRmz5hjc0oXrEk/Xkt2OqGL2YzuQiO9d9C09/qr09cxgE7XZ24fgMBgDv1N1nqljYghev41bOwrjKA=="
-#define SAE_PK_KEY_13 \
-	"MHcCAQEEIGTxtJh0ksgaLk3IKKrS8J5jLnaYXBLymfKS5UZ1ZqOUoAoGCCqGSM49AwEHoUQDQgAEr5pJ0f2TwXqukzgx0E2sj0/Mt6O9G6EiILsZaHu8VFHk+JxIJ0hXJRcEcz8jwSQ843vOZknFIMcULRz3UsrcWw=="
-#define SAE_PK_KEY_571 \
+	"MHcCAQEEIF4LGkE30VdIeJe1ZVOo3TmkvT9RKRx30+yOx/9nhQY9oAoGCCqGSM49AwEHoUQDQgAE3PNzZH4m41vT5q6W7p5Q6B9owz5MHLwCUnpK84YRTVDLKKZXOPYxSHRh/O5Kz0OnVeOq1QfjEZRhNH79XhHCQQ=="
+#define SAE_PK_KEY_P256 \
 	"MHcCAQEEIAJIGlfnteonDb7rQyP/SGQjwzrZAnfrXIm4280VWajYoAoGCCqGSM49AwEHoUQDQgAEeRkstKQV+FSAMqBayqFknn2nAQsdsh/MhdX6tiHOTAFin/sUMFRMyspPtIu7YvlKdsexhI0jPVhaYZn1jKWhZg=="
+#define SAE_PK_KEY_P384 \
+	"MIGkAgEBBDB7iMoR2se0sWriXYCEsiLd8WFEblxWlCqb5kD7JgZfQjjylGwqOgIE7JShOOjE0Z2gBwYFK4EEACKhZANiAATntlmb7rlUopsaA/w5Uhut9jLlcY2sJdT6IzCdQ8uzuxk9Fgh+dwS25pd+lWC91rQ7kyjfZRpoePhwQasnjGRAl6rH2VWI/XtI5Q9iFXbhEaWEdKzWjetd6B5OPWy/BQg="
+#define SAE_PK_KEY_P521 \
+	"MIHcAgEBBEIBuNKSnOQY5ZVdBgWiXcL1Gr/W+VCw69nOte1gT4sqdVeV3grCl5HJxogVG2LFdtnEDLJrs0AtFoFN9nWnIuMu+ZWgBwYFK4EEACOhgYkDgYYABADuDQkFO2102xXwNnoGpBU+13kNuxZ/gwy8+G0UG75h6iiTqNWRaQIpSWgTmPNER7Ubb7etyXaoOTnsq4v4f9m8wgDt2LMZptHvUkHCq522rRK43ITmCayelbHWY1FhhAE1ETXRItSV8nLymjliEtjdfP45dsr25ySlkSaVCBNUFrAtfw=="
 
 /*
  * MTU for Ethernet need to take into account 8-byte SNAP header
@@ -2122,30 +2108,16 @@ static enum sigma_cmd_result cmd_ap_send_addba_req(struct sigma_dut *dut,
 
 static const char * get_sae_pk_key(const char *file_name)
 {
-	if (strcasecmp(file_name, "saepk.pem") == 0)
-		return SAE_PK_KEY;
-	else if (strcasecmp(file_name, "saepk1.pem") == 0)
+	if (strcasecmp(file_name, "saepk1.pem") == 0)
 		return SAE_PK_KEY_1;
-	else if (strcasecmp(file_name, "saepk2.pem") == 0)
+	if (strcasecmp(file_name, "saepk2.pem") == 0)
 		return SAE_PK_KEY_2;
-	else if (strcasecmp(file_name, "saepk3.pem") == 0)
-		return SAE_PK_KEY_3;
-	else if (strcasecmp(file_name, "saepk4.pem") == 0)
-		return SAE_PK_KEY_4;
-	else if (strcasecmp(file_name, "saepk5.pem") == 0)
-		return SAE_PK_KEY_5;
-	else if (strcasecmp(file_name, "saepk6.pem") == 0)
-		return SAE_PK_KEY_6;
-	else if (strcasecmp(file_name, "saepk7.pem") == 0)
-		return SAE_PK_KEY_7;
-	else if (strcasecmp(file_name, "saepk8_sig.pem") == 0)
-		return SAE_PK_KEY_8_SIG;
-	else if (strcasecmp(file_name, "saepk9.pem") == 0)
-		return SAE_PK_KEY_9;
-	else if (strcasecmp(file_name, "saepk13.pem") == 0)
-		return SAE_PK_KEY_13;
-	else if (strcasecmp(file_name, "saepk5.7.1Run4thru12.pem") == 0)
-		return SAE_PK_KEY_571;
+	if (strcasecmp(file_name, "saepkP256.pem") == 0)
+		return SAE_PK_KEY_P256;
+	if (strcasecmp(file_name, "saepkP384.pem") == 0)
+		return SAE_PK_KEY_P384;
+	if (strcasecmp(file_name, "saepkP521.pem") == 0)
+		return SAE_PK_KEY_P521;
 	return NULL;
 }
 
