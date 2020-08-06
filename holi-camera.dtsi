@@ -32,7 +32,7 @@
 			"csi0phytimer_clk_src",
 			"csi0phytimer_clk";
 		src-clock-name = "csi0phytimer_clk_src";
-		clock-cntl-level = "svs", "svs_l1", "nom", "turbo";
+		clock-cntl-level = "svs", "svs_l1", "nominal", "turbo";
 		clock-rates =
 			<240000000 0 200000000 0>,
 			<341330000 0 200000000 0>,
@@ -67,7 +67,7 @@
 			"csi1phytimer_clk_src",
 			"csi1phytimer_clk";
 		src-clock-name = "csi1phytimer_clk_src";
-		clock-cntl-level = "svs", "svs_l1", "nom", "turbo";
+		clock-cntl-level = "svs", "svs_l1", "nominal", "turbo";
 		clock-rates =
 			<240000000 0 200000000 0>,
 			<341330000 0 200000000 0>,
@@ -102,7 +102,7 @@
 				"csi2phytimer_clk_src",
 				"csi2phytimer_clk";
 		src-clock-name = "csi2phytimer_clk_src";
-		clock-cntl-level = "svs", "svs_l1", "nom", "turbo";
+		clock-cntl-level = "svs", "svs_l1", "nominal", "turbo";
 		clock-rates =
 			<240000000 0 200000000 0>,
 			<341330000 0 200000000 0>,
@@ -137,7 +137,7 @@
 				"csi3phytimer_clk_src",
 				"csi3phytimer_clk";
 		src-clock-name = "csi3phytimer_clk_src";
-		clock-cntl-level = "svs", "svs_l1", "nom", "turbo";
+		clock-cntl-level = "svs", "svs_l1", "nominal", "turbo";
 		clock-rates =
 			<240000000 0 133330000 0>,
 			<341330000 0 200000000 0>,
