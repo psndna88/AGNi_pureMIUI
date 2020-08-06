@@ -1349,13 +1349,15 @@ static inline u32 calculate_vpxd_scratch_size(struct msm_vidc_inst *inst,
 			((BIN_BUFFER_THRESHOLD * 3) >> 1)) *
 			VPX_DECODER_FRAME_CONCURENCY_LVL *
 			VPX_DECODER_FRAME_BIN_HDR_BUDGET_RATIO_NUM /
-			VPX_DECODER_FRAME_BIN_HDR_BUDGET_RATIO_DEN,
+			VPX_DECODER_FRAME_BIN_HDR_BUDGET_RATIO_DEN /
+			num_vpp_pipes,
 			VENUS_DMA_ALIGNMENT);
 		binbuffer2_size = ALIGN(max_t(u32, size_yuv,
 			((BIN_BUFFER_THRESHOLD * 3) >> 1)) *
 			VPX_DECODER_FRAME_CONCURENCY_LVL *
 			VPX_DECODER_FRAME_BIN_RES_BUDGET_RATIO_NUM /
-			VPX_DECODER_FRAME_BIN_RES_BUDGET_RATIO_DEN,
+			VPX_DECODER_FRAME_BIN_RES_BUDGET_RATIO_DEN /
+			num_vpp_pipes,
 			VENUS_DMA_ALIGNMENT);
 		size = binbuffer1_size + binbuffer2_size;
 		size = size * num_vpp_pipes;
