@@ -1,3 +1,4 @@
+
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2018 - 2020, The Linux Foundation. All rights reserved.
@@ -428,6 +429,13 @@ static int ipa3_setup_wdi3_gsi_channel(u8 is_smmu_enabled,
 			(1 << 8));
 	}
 
+	/* enable/disable wdi db polling mode based on dt value*/
+	if (ipa3_ctx->gsi_wdi_db_polling) {
+		ch_scratch.wdi3.wdi_db_polling_enabled = IPA_WDI_DB_POLLING_ENABLED;
+	} else {
+		ch_scratch.wdi3.wdi_db_polling_enabled = IPA_WDI_DB_POLLING_DISABLED;
+	}
+
 	result = gsi_write_channel_scratch(ep->gsi_chan_hdl, ch_scratch);
 	if (result != GSI_STATUS_SUCCESS) {
 		IPAERR("failed to write evt ring scratch\n");
@@ -445,6 +453,53 @@ fail_smmu_mapping:
 	ipa3_release_wdi3_gsi_smmu_mappings(dir);
 	return result;
 }
+
+static int ipa3_wdi_gsi_db(phys_addr_t* db_addr, struct ipa3_ep_context *ep_ctx)
+{
+	int result = 0;
+	struct ipa_mem_buffer mem;
+	union __packed gsi_wdi3_channel_scratch_6_7_reg gsi_ch_scratch;
+
+	mem.base = kzalloc(sizeof(int), GFP_KERNEL);
+
+	if (!mem.base)
+	{
+		IPAERR("failed to alloc memory mem.base\n");
+		return -ENOMEM;
+	}
+
+	memset(mem.base, 0, sizeof(int));
+	ep_ctx->tr_doorbel_va = mem.base;
+	*db_addr = virt_to_phys((void *) mem.base);
+	mem.phys_base = dma_map_single(ipa3_ctx->pdev, mem.base, sizeof(int), DMA_BIDIRECTIONAL);
+	ep_ctx->tr_doorbel_phy = mem.phys_base;
+	IPADBG("db_addr 0x%x, mem.base = 0x%x, mem.phys_base = 0x%x\n", (*db_addr), mem.base, mem.phys_base);
+	if (dma_mapping_error(ipa3_ctx->pdev, mem.phys_base)) {
+		IPAERR("failed to do dma mapping\n");
+		kfree(mem.base);
+		return -ENOMEM;
+	}
+
+
+	/* write channel scratch */
+	memset(&gsi_ch_scratch, 0, sizeof(gsi_ch_scratch));
+	gsi_ch_scratch.wdi3.db_addr_wp_lsb = (u32)mem.phys_base;
+	gsi_ch_scratch.wdi3.db_addr_wp_msb = (u32)(mem.phys_base >> 32);
+	IPADBG("gsi written lsb value  0x%x\n", gsi_ch_scratch.wdi3.db_addr_wp_lsb);
+	IPADBG("gsi written msb value  0x%x\n", gsi_ch_scratch.wdi3.db_addr_wp_msb);
+
+	result = gsi_write_wdi3_channel_scratch_6_7_reg(ep_ctx->gsi_chan_hdl, gsi_ch_scratch);
+	if (result != GSI_STATUS_SUCCESS) {
+		IPAERR("gsi_write_channel_scratch failed %d\n",
+		result);
+		dma_unmap_single(ipa3_ctx->pdev, ep_ctx->tr_doorbel_phy, sizeof(int), DMA_BIDIRECTIONAL);
+		kfree(mem.base);
+		return result;
+	}
+
+	return result;
+}
+
 
 int ipa3_conn_wdi3_pipes(struct ipa_wdi_conn_in_params *in,
 	struct ipa_wdi_conn_out_params *out,
@@ -550,15 +605,27 @@ int ipa3_conn_wdi3_pipes(struct ipa_wdi_conn_in_params *in,
 		result = -EFAULT;
 		goto fail;
 	}
-	if (gsi_query_channel_db_addr(ep_rx->gsi_chan_hdl,
-		&gsi_db_addr_low, &gsi_db_addr_high)) {
-		IPAERR("failed to query gsi rx db addr\n");
-		result = -EFAULT;
-		goto fail;
+
+	if (ipa3_ctx->gsi_wdi_db_polling) {
+		out->is_ddr_mapped = true;
+		result = ipa3_wdi_gsi_db(&(out->rx_uc_db_pa),ep_rx);
+		if(result){
+			IPAERR("fail to write db addr \n");
+			result = -EFAULT;
+			goto fail;
+		}
+	} else {
+		out->is_ddr_mapped = false;
+		if (gsi_query_channel_db_addr(ep_rx->gsi_chan_hdl,
+			&gsi_db_addr_low, &gsi_db_addr_high)) {
+			IPAERR("failed to query gsi rx db addr\n");
+			result = -EFAULT;
+			goto fail;
+		}
+		/* only 32 bit lsb is used */
+		out->rx_uc_db_pa = (phys_addr_t)(gsi_db_addr_low);
 	}
-	/* only 32 bit lsb is used */
-	out->rx_uc_db_pa = (phys_addr_t)(gsi_db_addr_low);
-	IPADBG("out->rx_uc_db_pa %llu\n", out->rx_uc_db_pa);
+	IPADBG("out->rx_uc_db_pa 0x%x\n", out->rx_uc_db_pa);
 
 	ipa3_install_dflt_flt_rules(ipa_ep_idx_rx);
 	IPADBG("client %d (ep: %d) connected\n", rx_client,
@@ -601,14 +668,24 @@ int ipa3_conn_wdi3_pipes(struct ipa_wdi_conn_in_params *in,
 		result = -EFAULT;
 		goto fail;
 	}
-	if (gsi_query_channel_db_addr(ep_tx->gsi_chan_hdl,
-		&gsi_db_addr_low, &gsi_db_addr_high)) {
-		IPAERR("failed to query gsi tx db addr\n");
-		result = -EFAULT;
-		goto fail;
+
+	if (ipa3_ctx->gsi_wdi_db_polling) {
+		result = ipa3_wdi_gsi_db(&(out->tx_uc_db_pa),ep_tx);
+		if(result){
+			IPAERR("fail to write db addr \n");
+			result = -EFAULT;
+			goto fail;
+		}
+	} else {
+		if (gsi_query_channel_db_addr(ep_tx->gsi_chan_hdl,
+			&gsi_db_addr_low, &gsi_db_addr_high)) {
+			IPAERR("failed to query gsi tx db addr\n");
+			result = -EFAULT;
+			goto fail;
+		}
+		/* only 32 bit lsb is used */
+		out->tx_uc_db_pa = (phys_addr_t)(gsi_db_addr_low);
 	}
-	/* only 32 bit lsb is used */
-	out->tx_uc_db_pa = (phys_addr_t)(gsi_db_addr_low);
 	IPADBG("out->tx_uc_db_pa %llu\n", out->tx_uc_db_pa);
 	IPADBG("client %d (ep: %d) connected\n", tx_client,
 		ipa_ep_idx_tx);
@@ -690,6 +767,14 @@ int ipa3_disconn_wdi3_pipes(int ipa_ep_idx_tx, int ipa_ep_idx_rx)
 	ep_rx = &ipa3_ctx->ep[ipa_ep_idx_rx];
 
 	IPA_ACTIVE_CLIENTS_INC_EP(ipa3_get_client_mapping(ipa_ep_idx_tx));
+
+	if (ipa3_ctx->gsi_wdi_db_polling) {
+		IPADBG("gsi_wdi_db_polling enabled, free and unmap ddr addr\n");
+		dma_unmap_single(ipa3_ctx->pdev, ep_tx->tr_doorbel_phy, sizeof(int), DMA_BIDIRECTIONAL);
+		dma_unmap_single(ipa3_ctx->pdev, ep_rx->tr_doorbel_phy, sizeof(int), DMA_BIDIRECTIONAL);
+		kfree(ep_tx->tr_doorbel_va);
+		kfree(ep_rx->tr_doorbel_va);
+	}
 	/* tear down tx pipe */
 	result = ipa3_reset_gsi_channel(ipa_ep_idx_tx);
 	if (result != GSI_STATUS_SUCCESS) {
