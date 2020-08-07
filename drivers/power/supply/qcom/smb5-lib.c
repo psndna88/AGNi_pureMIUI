@@ -22,6 +22,7 @@
 #include <linux/pmic-voter.h>
 #include <linux/of_batterydata.h>
 #include <linux/ktime.h>
+#include <linux/board_id.h>
 #include "smb5-lib.h"
 #include "smb5-reg.h"
 #include "schgm-flash.h"
@@ -893,7 +894,7 @@ int smblib_set_fastcharge_mode(struct smb_charger *chg, bool enable)
 	if (!chg->bms_psy)
 		return 0;
 
-#ifdef CONFIG_BATT_VERIFY_BY_DS28E16
+	if (board_get_33w_supported()) {
 	rc = power_supply_get_property(chg->bms_psy,
 				POWER_SUPPLY_PROP_AUTHENTIC, &pval);
 	if (rc < 0) {
@@ -902,7 +903,7 @@ int smblib_set_fastcharge_mode(struct smb_charger *chg, bool enable)
 	}
 	if (!pval.intval)
 		enable = false;
-#endif
+	}
 
 	/*if soc > 90 do not set fastcharge flag*/
 	rc = power_supply_get_property(chg->bms_psy,
@@ -2799,7 +2800,6 @@ static void smblib_reg_work(struct work_struct *work)
 	}
 }
 
-#ifdef CONFIG_J6B_CHARGE_THERMAL
 static int smblib_therm_charging(struct smb_charger *chg)
 {
 	int thermal_icl_ua = 0;
@@ -2938,7 +2938,6 @@ static int smblib_therm_charging(struct smb_charger *chg)
 
 	return rc;
 }
-#endif
 
 int smblib_set_prop_battery_charging_enabled(struct smb_charger *chg,
 			  const union power_supply_propval *val)
@@ -2980,6 +2979,14 @@ int smblib_set_prop_system_temp_level(struct smb_charger *chg,
 {
 	int rc;
 	union power_supply_propval batt_temp ={0,};
+
+    if (board_get_33w_supported()) {
+        LCT_THERM_CALL_LEVEL = 14;
+        LCT_THERM_LCDOFF_LEVEL = 13;
+    } else {
+        LCT_THERM_CALL_LEVEL = 7;
+        LCT_THERM_LCDOFF_LEVEL = 4;
+    }
 
 	if (val->intval < 0)
 		return -EINVAL;
@@ -3040,15 +3047,15 @@ int smblib_set_prop_system_temp_level(struct smb_charger *chg,
 	if (chg->cp_disable_votable)
 		vote(chg->cp_disable_votable, THERMAL_DAEMON_VOTER, false, 0);
 
-#ifdef CONFIG_J6B_CHARGE_THERMAL
+	if (board_get_33w_supported()) {
 	smblib_therm_charging(chg);
-#else
+	} else {
 	if (chg->system_temp_level == 0)
 		return vote(chg->fcc_votable, THERMAL_DAEMON_VOTER, false, 0);
 
 	vote(chg->fcc_votable, THERMAL_DAEMON_VOTER, true,
 			chg->thermal_mitigation[chg->system_temp_level]);
-#endif
+	}
 	return 0;
 }
 
@@ -5321,9 +5328,9 @@ int smblib_set_prop_pd_active(struct smb_charger *chg,
 					msecs_to_jiffies(STEP_CHG_DELAYED_START_MS));
 		}
 
-#ifdef CONFIG_J6B_CHARGE_THERMAL
+		if (board_get_33w_supported()) {
 		smblib_therm_charging(chg);
-#endif
+		}
 	} else {
 		vote(chg->usb_icl_votable, PD_VOTER, false, 0);
 		vote(chg->limited_irq_disable_votable, CHARGER_TYPE_VOTER,
@@ -6637,10 +6644,12 @@ static void smblib_raise_qc3_vbus_work(struct work_struct *work)
 		if (rc < 0)
 			dev_err(chg->dev,
 					"HVDCP3: Couldn't enable secondary chargers  rc=%d\n", rc);
-#ifdef CONFIG_J6B_CHARGE_THERMAL
+
+		if (board_get_33w_supported()) {
 		if (chg->cp_reason == POWER_SUPPLY_CP_HVDCP3)
 			smblib_therm_charging(chg);
-#endif
+		}
+
 		chg->raise_vbus_to_detect = false;
 	}
 }
@@ -6930,7 +6939,6 @@ static void update_sw_icl_max(struct smb_charger *chg, int pst)
 	}
 }
 
-#ifdef CONFIG_J6B_CHARGE_THERMAL
 static void determine_thermal_current(struct smb_charger *chg)
 {
 	if (chg->system_temp_level > 0
@@ -6942,7 +6950,6 @@ static void determine_thermal_current(struct smb_charger *chg)
 		smblib_therm_charging(chg);
 	}
 }
-#endif
 
 static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 {
@@ -6969,9 +6976,9 @@ static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 		break;
 	}
 
-#ifdef CONFIG_J6B_CHARGE_THERMAL
+	if (board_get_33w_supported()) {
 	determine_thermal_current(chg);
-#endif
+	}
 
 	smblib_dbg(chg, PR_OEM, "IRQ: apsd-done rising; %s detected\n",
 		   apsd_result->name);
@@ -9412,9 +9419,9 @@ int smblib_init(struct smb_charger *chg)
 
 		chg->bms_psy = power_supply_get_by_name("bms");
 
-#ifdef CONFIG_BATT_VERIFY_BY_DS28E16
+		if (board_get_33w_supported()) {
 		chg->batt_verify_psy = power_supply_get_by_name("batt_verify");
-#endif
+		}
 
 		if (chg->sec_pl_present) {
 			chg->pl.psy = power_supply_get_by_name("parallel");

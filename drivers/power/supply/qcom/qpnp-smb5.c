@@ -33,6 +33,7 @@
 #include <linux/notifier.h>
 #include <linux/msm_drm_notify.h>
 #include <linux/fb.h>
+#include <linux/board_id.h>
 #ifdef CONFIG_DEBUG_USB
 #undef dev_dbg
 #undef pr_debug
@@ -42,8 +43,6 @@
 
 union power_supply_propval lct_therm_lvl_reserved;
 union power_supply_propval lct_therm_level;
-union power_supply_propval lct_therm_call_level = {LCT_THERM_CALL_LEVEL,};
-union power_supply_propval lct_therm_lcdoff_level = {LCT_THERM_LCDOFF_LEVEL,};
 
 bool lct_backlight_off;
 int LctIsInCall = 0;
@@ -573,7 +572,7 @@ static int smb5_parse_dt(struct smb5 *chip)
 		rc = of_property_read_u32(node, "qcom,chg-term-base-current-ma",
 				&chip->dt.term_current_thresh_lo_ma);
 
-#ifdef CONFIG_J6B_CHARGE_THERMAL
+	if (board_get_33w_supported()) {
 	if (of_find_property(node, "qcom,thermal-mitigation-dcp", &byte_len)) {
 		chg->thermal_mitigation_dcp = devm_kzalloc(chg->dev, byte_len,
 			GFP_KERNEL);
@@ -744,7 +743,7 @@ static int smb5_parse_dt(struct smb5 *chip)
 			return rc;
 		}
 	}
-#else
+	} else {
 	if (of_find_property(node, "qcom,thermal-mitigation", &byte_len)) {
 		chg->thermal_mitigation = devm_kzalloc(chg->dev, byte_len,
 			GFP_KERNEL);
@@ -763,7 +762,7 @@ static int smb5_parse_dt(struct smb5 *chip)
 			return rc;
 		}
 	}
-#endif
+	}
 
 	rc = of_property_read_u32(node, "qcom,charger-temp-max",
 			&chg->charger_temp_max);
@@ -3974,8 +3973,19 @@ static struct device_attribute attrs2[] = {
 
 static void thermal_fb_notifier_resume_work(struct work_struct *work)
 {
+
+    union power_supply_propval lct_therm_call_level = {LCT_THERM_CALL_LEVEL,};
+    union power_supply_propval lct_therm_lcdoff_level = {LCT_THERM_LCDOFF_LEVEL,};
 	struct smb_charger *chg = container_of(work, struct smb_charger, fb_notify_work);
 	LctThermal = 1;
+
+    if (board_get_33w_supported()) {
+        LCT_THERM_CALL_LEVEL = 14;
+        LCT_THERM_LCDOFF_LEVEL = 13;
+    } else {
+        LCT_THERM_CALL_LEVEL = 7;
+        LCT_THERM_LCDOFF_LEVEL = 4;
+    }
 
 	if ((lct_backlight_off) && (LctIsInCall == 0)) {
 		if (lct_therm_lvl_reserved.intval > LCT_THERM_LCDOFF_LEVEL)

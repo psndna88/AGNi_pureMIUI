@@ -127,7 +127,6 @@ struct qpnp_qg {
 	struct work_struct	scale_soc_work;
 	struct work_struct	qg_status_change_work;
 	struct delayed_work	qg_sleep_exit_work;
-#ifdef CONFIG_BATT_VERIFY_BY_DS28E16
 	struct delayed_work battery_authentic_work;
 	int 		battery_authentic_result;
 	struct delayed_work ds_romid_work;
@@ -138,7 +137,6 @@ struct qpnp_qg {
 	unsigned char		ds_page0[16];
 	struct delayed_work profile_load_work;
 	bool				profile_judge_done;
-#endif
 	struct notifier_block	nb;
 	struct mutex		bus_lock;
 	struct mutex		data_lock;
@@ -159,9 +157,7 @@ struct qpnp_qg {
 	struct power_supply	*usb_psy;
 	struct power_supply	*dc_psy;
 	struct power_supply	*parallel_psy;
-#ifdef CONFIG_BATT_VERIFY_BY_DS28E16
 	struct power_supply *max_verify_psy;
-#endif
 	struct qg_esr_data	esr_data[QG_MAX_ESR_COUNT];
 
 	/* status variable */

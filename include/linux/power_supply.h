@@ -366,7 +366,6 @@ enum power_supply_property {
 	POWER_SUPPLY_PROP_IRQ_STATUS,
 	POWER_SUPPLY_PROP_PARALLEL_OUTPUT_MODE,
 	POWER_SUPPLY_PROP_FFC_CHG_TERMINATION_CURRENT,
-#ifdef CONFIG_BATT_VERIFY_BY_DS28E16
 	/* battery verify properties */
 	POWER_SUPPLY_PROP_ROMID,
 	POWER_SUPPLY_PROP_DS_STATUS,
@@ -381,7 +380,6 @@ enum power_supply_property {
 	POWER_SUPPLY_PROP_PAGE0_DATA,
 	POWER_SUPPLY_PROP_PAGE1_DATA,
 	POWER_SUPPLY_PROP_VERIFY_MODEL_NAME,
-#endif
 	POWER_SUPPLY_PROP_CHIP_OK,
 
 	/* Local extensions of type int64_t */
@@ -419,9 +417,7 @@ enum power_supply_type {
 	POWER_SUPPLY_TYPE_UFP,			/* Type-C UFP */
 	POWER_SUPPLY_TYPE_DFP,			/* Type-C DFP */
 	POWER_SUPPLY_TYPE_CHARGE_PUMP,		/* Charge Pump */
-#ifdef CONFIG_BATT_VERIFY_BY_DS28E16
 	POWER_SUPPLY_TYPE_BATT_VERIFY,			/* battery verify */
-#endif
 
 };
 
@@ -464,9 +460,7 @@ union power_supply_propval {
 	int intval;
 	const char *strval;
 	int64_t int64val;
-#ifdef CONFIG_BATT_VERIFY_BY_DS28E16
 	unsigned char arrayval[50];
-#endif
 
 };
 

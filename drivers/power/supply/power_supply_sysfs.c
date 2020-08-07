@@ -16,6 +16,7 @@
 #include <linux/power_supply.h>
 #include <linux/slab.h>
 #include <linux/stat.h>
+#include <linux/board_id.h>
 
 #include "power_supply.h"
 
@@ -160,8 +161,8 @@ static ssize_t power_supply_show_property(struct device *dev,
 			       power_supply_health_text[value.intval]);
 	else if (off >= POWER_SUPPLY_PROP_MODEL_NAME)
 		return sprintf(buf, "%s\n", value.strval);
-#ifdef CONFIG_BATT_VERIFY_BY_DS28E16
-	else if ((off == POWER_SUPPLY_PROP_ROMID) || (off == POWER_SUPPLY_PROP_DS_STATUS))
+	else if (board_get_33w_supported()) {
+	if ((off == POWER_SUPPLY_PROP_ROMID) || (off == POWER_SUPPLY_PROP_DS_STATUS))
 		return scnprintf(buf, PAGE_SIZE, "%02x,%02x,%02x,%02x,%02x,%02x,%02x,%02x\n",
 			value.arrayval[0], value.arrayval[1], value.arrayval[2], value.arrayval[3],
 			value.arrayval[4], value.arrayval[5], value.arrayval[6], value.arrayval[7]);
@@ -175,7 +176,7 @@ static ssize_t power_supply_show_property(struct device *dev,
 			value.arrayval[12], value.arrayval[13], value.arrayval[14], value.arrayval[15]);
 	else if (off == POWER_SUPPLY_PROP_VERIFY_MODEL_NAME)
 		return sprintf(buf, "%s\n", value.strval);
-#endif
+	}
 
 	if (off == POWER_SUPPLY_PROP_CHARGE_COUNTER_EXT)
 		return sprintf(buf, "%lld\n", value.int64val);
@@ -449,7 +450,6 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(irq_status),
 	POWER_SUPPLY_ATTR(parallel_output_mode),
 	POWER_SUPPLY_ATTR(ffc_chg_term_current),
-#ifdef CONFIG_BATT_VERIFY_BY_DS28E16
 	/* battery verify properties */
 	POWER_SUPPLY_ATTR(romid),
 	POWER_SUPPLY_ATTR(ds_status),
@@ -464,7 +464,6 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(page0_data),
 	POWER_SUPPLY_ATTR(page1_data),
 	POWER_SUPPLY_ATTR(verify_model_name),
-#endif
 	POWER_SUPPLY_ATTR(chip_ok),
 	/* Local extensions of type int64_t */
 	POWER_SUPPLY_ATTR(charge_counter_ext),
