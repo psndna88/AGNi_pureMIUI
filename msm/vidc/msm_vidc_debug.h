@@ -19,6 +19,8 @@
 // void disable_irq_nosync(unsigned int irq);
 // void enable_irq(unsigned int irq);
 
+void do_gettimeofday(struct timeval *__ddl_tv);
+
 #ifndef CONFIG_VIDEOBUF2_CORE
 int vb2_reqbufs(struct vb2_queue *q, struct v4l2_requestbuffers *req);
 int vb2_qbuf(struct vb2_queue *q, struct media_device *mdev,
@@ -232,7 +234,7 @@ static inline void tic(struct msm_vidc_inst *i, enum profiling_points p,
 		memcpy(i->debug.pdata[p].name, b, 64);
 	if ((msm_vidc_debug & VIDC_PERF) &&
 		i->debug.pdata[p].sampling) {
-		__ddl_tv = ktime_to_timeval(ktime_get_real());
+		do_gettimeofday(&__ddl_tv);
 		i->debug.pdata[p].start =
 			(__ddl_tv.tv_sec * 1000) + (__ddl_tv.tv_usec / 1000);
 			i->debug.pdata[p].sampling = false;
@@ -245,7 +247,7 @@ static inline void toc(struct msm_vidc_inst *i, enum profiling_points p)
 
 	if ((msm_vidc_debug & VIDC_PERF) &&
 		!i->debug.pdata[p].sampling) {
-		__ddl_tv = ktime_to_timeval(ktime_get_real());
+		do_gettimeofday(&__ddl_tv);
 		i->debug.pdata[p].stop = (__ddl_tv.tv_sec * 1000)
 			+ (__ddl_tv.tv_usec / 1000);
 		i->debug.pdata[p].cumulative += i->debug.pdata[p].stop -
