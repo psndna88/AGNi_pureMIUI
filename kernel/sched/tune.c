@@ -18,7 +18,7 @@ bool schedtune_initialized = false;
 #endif
 
 #ifdef CONFIG_DYNAMIC_STUNE_BOOST
-bool dsb_boosting = true;
+bool dsb_boosting = false;
 #endif
 
 unsigned int sysctl_sched_cfs_boost __read_mostly;
