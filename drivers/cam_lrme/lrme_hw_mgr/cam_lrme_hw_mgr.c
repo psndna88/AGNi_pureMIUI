@@ -1022,7 +1022,7 @@ static int cam_lrme_mgr_create_debugfs_entry(void)
 	if (!dbgfileptr) {
 		CAM_ERR(CAM_ISP,"DebugFS could not create directory!");
 		rc = -ENOENT;
-		goto end;
+		goto err;
 	}
 	/* Store parent inode for cleanup in caller */
 	g_lrme_hw_mgr.debugfs_entry.dentry = dbgfileptr;
