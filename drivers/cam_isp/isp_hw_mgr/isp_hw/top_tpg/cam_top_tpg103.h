@@ -112,6 +112,7 @@ static struct cam_top_tpg_ver3_reg_offset cam_top_tpg103_reg = {
 	.top_mux_reg_offset = 0x1C,
 	.tpg_vc_dt_pattern_id_shift = 6,
 	.tpg_num_active_vcs_shift = 30,
+	.tpg_color_bar_qcfa_en_shift = 3,
 };
 
 struct cam_top_tpg_hw_info cam_top_tpg103_hw_info = {

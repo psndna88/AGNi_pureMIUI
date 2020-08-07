@@ -111,6 +111,7 @@ struct cam_top_tpg_ver3_reg_offset {
 	uint32_t top_mux_reg_offset;
 	uint32_t tpg_vc_dt_pattern_id_shift;
 	uint32_t tpg_num_active_vcs_shift;
+	uint32_t tpg_color_bar_qcfa_en_shift;
 };
 
 int cam_top_tpg_ver3_init(struct cam_top_tpg_hw *tpg_hw);

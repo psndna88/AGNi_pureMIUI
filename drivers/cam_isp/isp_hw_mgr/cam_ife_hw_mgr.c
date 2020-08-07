@@ -5370,6 +5370,37 @@ static int cam_isp_blob_clock_update(
 	return rc;
 }
 
+static int cam_isp_blob_tpg_config(
+	struct cam_isp_tpg_core_config        *tpg_config,
+	struct cam_hw_prepare_update_args     *prepare)
+{
+	int                                 i, rc = -EINVAL;
+	struct cam_ife_hw_mgr_ctx          *ctx = NULL;
+	struct cam_isp_hw_mgr_res          *hw_mgr_res;
+	struct cam_hw_intf                 *hw_intf;
+
+	ctx = prepare->ctxt_to_hw_map;
+	hw_mgr_res = &ctx->res_list_tpg;
+
+	for (i = 0; i < CAM_ISP_HW_SPLIT_MAX; i++) {
+		if (!hw_mgr_res->hw_res[i])
+			continue;
+		hw_intf = hw_mgr_res->hw_res[i]->hw_intf;
+		CAM_DBG(CAM_ISP, "TPG ctrl config for hw %u",
+			hw_intf->hw_idx);
+		if (hw_intf->hw_ops.process_cmd) {
+			rc = hw_intf->hw_ops.process_cmd(hw_intf->hw_priv,
+				CAM_ISP_HW_CMD_TPG_CORE_CFG_CMD, tpg_config,
+				sizeof(struct cam_isp_tpg_core_config));
+			if (rc)
+				goto end;
+		}
+	}
+
+end:
+	return rc;
+}
+
 static int cam_isp_blob_sensor_config(
 	uint32_t                               blob_type,
 	struct cam_isp_generic_blob_info      *blob_info,
@@ -6142,6 +6173,25 @@ static int cam_isp_packet_generic_blob_handler(void *user_data,
 		if (rc)
 			CAM_ERR(CAM_ISP,
 				"Sensor Dimension Update Failed rc: %d", rc);
+	}
+		break;
+	case CAM_ISP_GENERIC_BLOB_TYPE_TPG_CORE_CONFIG: {
+		struct cam_isp_tpg_core_config *tpg_config;
+
+		if (blob_size < sizeof(struct cam_isp_tpg_core_config)) {
+			CAM_ERR(CAM_ISP, "Invalid blob size %zu expected %zu",
+				blob_size,
+				sizeof(struct cam_isp_tpg_core_config));
+			return -EINVAL;
+		}
+
+		tpg_config =
+			(struct cam_isp_tpg_core_config *)blob_data;
+
+		rc = cam_isp_blob_tpg_config(tpg_config, prepare);
+		if (rc)
+			CAM_ERR(CAM_ISP,
+				"TPG config failed rc: %d", rc);
 	}
 		break;
 	default:
