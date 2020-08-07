@@ -289,6 +289,12 @@ static int32_t cam_sensor_i2c_pkt_parse(struct cam_sensor_ctrl_t *s_ctrl,
 			goto end;
 		}
 
+		i2c_reg_settings =
+			&i2c_data->per_frame[csl_packet->header.request_id %
+				MAX_PER_FRAME_ARRAY];
+		i2c_reg_settings->request_id = csl_packet->header.request_id;
+		i2c_reg_settings->is_settings_valid = 1;
+
 		rc = cam_sensor_update_req_mgr(s_ctrl, csl_packet);
 		if (rc)
 			CAM_ERR(CAM_SENSOR,
@@ -1303,6 +1309,7 @@ int cam_sensor_apply_settings(struct cam_sensor_ctrl_t *s_ctrl,
 					return rc;
 				}
 			}
+			CAM_DBG(CAM_SENSOR, "applied req_id: %llu", req_id);
 		} else {
 			CAM_DBG(CAM_SENSOR,
 				"Invalid/NOP request to apply: %lld", req_id);
