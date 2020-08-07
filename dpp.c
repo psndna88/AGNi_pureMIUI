@@ -3110,7 +3110,8 @@ static enum sigma_cmd_result dpp_reconfigure(struct sigma_dut *dut,
 		return ERROR_SEND_STATUS;
 	}
 
-	snprintf(buf, sizeof(buf), "DPP_RECONFIG %d", dut->dpp_network_id);
+	snprintf(buf, sizeof(buf), "DPP_RECONFIG %d iter=10",
+		 dut->dpp_network_id);
 	if (wpa_command(ifname, buf) < 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Failed to start reconfiguration");
