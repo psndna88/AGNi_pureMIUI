@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_SENSOR_UTIL_H_
@@ -21,12 +21,26 @@
 
 #define INVALID_VREG 100
 
+/*
+ * Constant Factors needed to change QTimer ticks to nanoseconds
+ * QTimer Freq = 19.2 MHz
+ * Time(us) = ticks/19.2
+ * Time(ns) = ticks/19.2 * 1000
+ */
+#define QTIMER_MUL_FACTOR   10000
+#define QTIMER_DIV_FACTOR   192
+
 int cam_get_dt_power_setting_data(struct device_node *of_node,
 	struct cam_hw_soc_info *soc_info,
 	struct cam_sensor_power_ctrl_t *power_info);
 
 int msm_camera_pinctrl_init
 	(struct msm_pinctrl_info *sensor_pctrl, struct device *dev);
+
+int32_t cam_sensor_util_get_current_qtimer_ns(uint64_t *qtime_ns);
+
+int32_t cam_sensor_util_write_qtimer_to_io_buffer(
+	struct cam_buf_io_cfg *io_cfg);
 
 int cam_sensor_i2c_command_parser(struct camera_io_master *io_master,
 	struct i2c_settings_array *i2c_reg_settings,
