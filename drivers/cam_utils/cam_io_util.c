@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2011-2014, 2017-2018, The Linux Foundation.
+ * Copyright (c) 2011-2014, 2017-2018, 2020, The Linux Foundation.
  * All rights reserved.
  */
 
@@ -15,7 +15,7 @@ int cam_io_w(uint32_t data, void __iomem *addr)
 	if (!addr)
 		return -EINVAL;
 
-	CAM_DBG(CAM_UTIL, "0x%pK %08x", addr, data);
+	CAM_DBG(CAM_IO_ACCESS, "0x%pK %08x", addr, data);
 	writel_relaxed_no_log(data, addr);
 
 	return 0;
@@ -26,7 +26,7 @@ int cam_io_w_mb(uint32_t data, void __iomem *addr)
 	if (!addr)
 		return -EINVAL;
 
-	CAM_DBG(CAM_UTIL, "0x%pK %08x", addr, data);
+	CAM_DBG(CAM_IO_ACCESS, "0x%pK %08x", addr, data);
 	/* Ensure previous writes are done */
 	wmb();
 	writel_relaxed_no_log(data, addr);
@@ -41,12 +41,12 @@ uint32_t cam_io_r(void __iomem *addr)
 	uint32_t data;
 
 	if (!addr) {
-		CAM_ERR(CAM_UTIL, "Invalid args");
+		CAM_ERR(CAM_IO_ACCESS, "Invalid args");
 		return 0;
 	}
 
 	data = readl_relaxed(addr);
-	CAM_DBG(CAM_UTIL, "0x%pK %08x", addr, data);
+	CAM_DBG(CAM_IO_ACCESS, "0x%pK %08x", addr, data);
 
 	return data;
 }
@@ -56,14 +56,14 @@ uint32_t cam_io_r_mb(void __iomem *addr)
 	uint32_t data;
 
 	if (!addr) {
-		CAM_ERR(CAM_UTIL, "Invalid args");
+		CAM_ERR(CAM_IO_ACCESS, "Invalid args");
 		return 0;
 	}
 
 	/* Ensure previous read is done */
 	rmb();
 	data = readl_relaxed(addr);
-	CAM_DBG(CAM_UTIL, "0x%pK %08x", addr, data);
+	CAM_DBG(CAM_IO_ACCESS, "0x%pK %08x", addr, data);
 	/* Ensure previous read is done */
 	rmb();
 
@@ -80,10 +80,10 @@ int cam_io_memcpy(void __iomem *dest_addr,
 	if (!dest_addr || !src_addr)
 		return -EINVAL;
 
-	CAM_DBG(CAM_UTIL, "%pK %pK %d", dest_addr, src_addr, len);
+	CAM_DBG(CAM_IO_ACCESS, "%pK %pK %d", dest_addr, src_addr, len);
 
 	for (i = 0; i < len/4; i++) {
-		CAM_DBG(CAM_UTIL, "0x%pK %08x", d, *s);
+		CAM_DBG(CAM_IO_ACCESS, "0x%pK %08x", d, *s);
 		writel_relaxed(*s++, d++);
 	}
 
@@ -100,7 +100,7 @@ int  cam_io_memcpy_mb(void __iomem *dest_addr,
 	if (!dest_addr || !src_addr)
 		return -EINVAL;
 
-	CAM_DBG(CAM_UTIL, "%pK %pK %d", dest_addr, src_addr, len);
+	CAM_DBG(CAM_IO_ACCESS, "%pK %pK %d", dest_addr, src_addr, len);
 
 	/*
 	 * Do not use cam_io_w_mb to avoid double wmb() after a write
@@ -108,7 +108,7 @@ int  cam_io_memcpy_mb(void __iomem *dest_addr,
 	 */
 	wmb();
 	for (i = 0; i < (len / 4); i++) {
-		CAM_DBG(CAM_UTIL, "0x%pK %08x", d, *s);
+		CAM_DBG(CAM_IO_ACCESS, "0x%pK %08x", d, *s);
 		writel_relaxed(*s++, d++);
 	}
 	/* Ensure previous writes are done */
@@ -134,7 +134,7 @@ int cam_io_poll_value(void __iomem *addr, uint32_t wait_data, uint32_t retry,
 	}
 
 	if (cnt > retry) {
-		CAM_DBG(CAM_UTIL, "Poll failed by value");
+		CAM_DBG(CAM_IO_ACCESS, "Poll failed by value");
 		rc = -EINVAL;
 	}
 
@@ -159,7 +159,7 @@ int cam_io_poll_value_wmask(void __iomem *addr, uint32_t wait_data,
 	}
 
 	if (cnt > retry) {
-		CAM_DBG(CAM_UTIL, "Poll failed with mask");
+		CAM_DBG(CAM_IO_ACCESS, "Poll failed with mask");
 		rc = -EINVAL;
 	}
 
@@ -175,7 +175,7 @@ int cam_io_w_same_offset_block(const uint32_t *data, void __iomem *addr,
 		return -EINVAL;
 
 	for (i = 0; i < len; i++) {
-		CAM_DBG(CAM_UTIL, "i= %d len =%d val=%x addr =%pK",
+		CAM_DBG(CAM_IO_ACCESS, "i= %d len =%d val=%x addr =%pK",
 			i, len, data[i], addr);
 		writel_relaxed(data[i], addr);
 	}
@@ -192,7 +192,7 @@ int cam_io_w_mb_same_offset_block(const uint32_t *data, void __iomem *addr,
 		return -EINVAL;
 
 	for (i = 0; i < len; i++) {
-		CAM_DBG(CAM_UTIL, "i= %d len =%d val=%x addr =%pK",
+		CAM_DBG(CAM_IO_ACCESS, "i= %d len =%d val=%x addr =%pK",
 			i, len, data[i], addr);
 		/* Ensure previous writes are done */
 		wmb();
@@ -213,7 +213,8 @@ int cam_io_w_offset_val_block(const uint32_t data[][2],
 		return -EINVAL;
 
 	for (i = 0; i < len; i++) {
-		CAM_DBG(CAM_UTIL, "i= %d len =%d val=%x addr_base =%pK reg=%x",
+		CAM_DBG(CAM_IO_ACCESS,
+			"i= %d len =%d val=%x addr_base =%pK reg=%x",
 			i, len, __VAL(i), addr_base, __OFFSET(i));
 		writel_relaxed(__VAL(i), addr_base + __OFFSET(i));
 	}
@@ -232,7 +233,8 @@ int cam_io_w_mb_offset_val_block(const uint32_t data[][2],
 	/* Ensure write is done */
 	wmb();
 	for (i = 0; i < len; i++) {
-		CAM_DBG(CAM_UTIL, "i= %d len =%d val=%x addr_base =%pK reg=%x",
+		CAM_DBG(CAM_IO_ACCESS,
+			"i= %d len =%d val=%x addr_base =%pK reg=%x",
 			i, len, __VAL(i), addr_base, __OFFSET(i));
 		writel_relaxed(__VAL(i), addr_base + __OFFSET(i));
 	}
@@ -250,7 +252,7 @@ int cam_io_dump(void __iomem *base_addr, uint32_t start_offset, int size)
 	int           i;
 	uint32_t      data;
 
-	CAM_DBG(CAM_UTIL, "addr=%pK offset=0x%x size=%d",
+	CAM_DBG(CAM_IO_ACCESS, "addr=%pK offset=0x%x size=%d",
 		base_addr, start_offset, size);
 
 	if (!base_addr || (size <= 0))
@@ -268,13 +270,13 @@ int cam_io_dump(void __iomem *base_addr, uint32_t start_offset, int size)
 		snprintf(p_str, 10, "%08x  ", data);
 		p_str += 9;
 		if ((i + 1) % NUM_REGISTER_PER_LINE == 0) {
-			CAM_ERR(CAM_UTIL, "%s", line_str);
+			CAM_ERR(CAM_IO_ACCESS, "%s", line_str);
 			line_str[0] = '\0';
 			p_str = line_str;
 		}
 	}
 	if (line_str[0] != '\0')
-		CAM_ERR(CAM_UTIL, "%s", line_str);
+		CAM_ERR(CAM_IO_ACCESS, "%s", line_str);
 
 	return 0;
 }
