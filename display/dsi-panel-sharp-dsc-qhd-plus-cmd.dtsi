@@ -38,6 +38,7 @@
 				qcom,mdss-dsi-v-front-porch = <39>;
 				qcom,mdss-dsi-v-pulse-width = <2>;
 				qcom,mdss-dsi-panel-framerate = <120>;
+				qcom,mdss-mdp-transfer-time-us = <7933>;
 				qcom,mdss-dsi-timing-switch-command = [
 					39 01 00 00 00 00 02 de 00
 					39 01 00 00 00 00 34 c6 00 12 45 00 08 00
