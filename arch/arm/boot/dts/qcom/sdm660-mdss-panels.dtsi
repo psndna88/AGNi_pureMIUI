@@ -39,6 +39,8 @@
 #include "dsi-panel-shenchao-td4310-1080p-video.dtsi"
 #include "dsi-panel-tianma-td4310-1080p-video.dtsi"
 #include "dsi-panel-huaxing-nt36672-1080p-video.dtsi"
+#include "dsi-panel-boe-ft8719-1080p-video.dtsi"
+#include "dsi-panel-tianma-ft8719-1080p-video.dtsi"
 
 &soc {
 	dsi_panel_pwr_supply: dsi_panel_pwr_supply {

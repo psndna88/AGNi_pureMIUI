@@ -85,8 +85,15 @@
 		qcom,mdss-dsi-ce-off-command = [
 		];
 		qcom,mdss-dsi-srgb-on-command = [
+				29 01 00 00 00 00 02 b0 04
+				29 01 00 00 00 00 02 D6 00
+				29 01 00 00 00 00 42 CA 1D FC FC FC 1D 0E EB F2 1E E3 E5 D9 E4 DE D0 C9 1F E4 10 FE FA D8 FF 00 00 FF 00 23 FF 00 FF 00 34 FD 45 FF 00 00 FF 00 3A E8 FF 00 FF FF 00 FF E7 FF FF 00 FF FC 37 E2 FF FF FF 00 FF FB 4B FF 00
+				29 01 00 00 00 00 02 b0 03
 				];
 		qcom,mdss-dsi-srgb-off-command = [
+				29 01 00 00 00 00 02 b0 04
+				29 01 00 00 00 00 02 CA 1C
+				29 01 00 00 00 00 02 b0 03
 				];
 		qcom,mdss-dsi-cabc-on-command = [
 				15 01 00 00 00 00 02 55 81
