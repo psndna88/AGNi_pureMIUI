@@ -147,10 +147,10 @@ static int mdss_fb_send_panel_event(struct msm_fb_data_type *mfd,
 static void mdss_fb_set_mdp_sync_pt_threshold(struct msm_fb_data_type *mfd,
 		int type);
 
-int ce_state,cabc_state,srgb_state,gamma_state,cabc_movie_state,cabc_still_state;
-bool ce_resume,cabc_resume,srgb_resume,gamma_resume, cabc_movie_resume,cabc_still_resume;
+int ce_state,cabc_state,srgb_state,gamma_state,cabc_movie_state,cabc_still_state,hbm_state;
+bool ce_resume,cabc_resume,srgb_resume,gamma_resume, cabc_movie_resume,cabc_still_resume,hbm_resume;
 bool first_set_bl = false;
-int first_ce_state, first_cabc_state, first_srgb_state, first_gamma_state, first_cabc_movie_state, first_cabc_still_state;
+int first_ce_state, first_cabc_state, first_srgb_state, first_gamma_state, first_cabc_movie_state, first_cabc_still_state, first_hbm_state;
 static inline void __user *to_user_ptr(uint64_t address)
 {
 	return (void __user *)(uintptr_t)address;
@@ -1104,6 +1104,14 @@ int mdss_first_set_feature(struct mdss_panel_data *pdata, int first_ce_state, in
 
 }
 
+static ssize_t mdss_fb_get_ce(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	int ret;
+
+	ret = scnprintf(buf, PAGE_SIZE, "%d\n", ce_state);
+
+	return ret;
+}
 
 static ssize_t mdss_fb_set_ce(struct device *dev,struct device_attribute *attr,const char *buf,size_t len)
 {
@@ -1185,6 +1193,15 @@ static ssize_t mdss_fb_set_ce(struct device *dev,struct device_attribute *attr,c
 	printk("tsx ##### ce over ###\n");
 	return len;
 
+}
+
+static ssize_t mdss_fb_get_cabc(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	int ret;
+
+	ret = scnprintf(buf, PAGE_SIZE, "%d\n", cabc_state);
+
+	return ret;
 }
 
 static ssize_t mdss_fb_set_cabc(struct device *dev,struct device_attribute *attr,const char *buf,size_t len)
@@ -1269,6 +1286,15 @@ static ssize_t mdss_fb_set_cabc(struct device *dev,struct device_attribute *attr
 
 }
 
+static ssize_t mdss_fb_get_srgb(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	int ret;
+
+	ret = scnprintf(buf, PAGE_SIZE, "%d\n", srgb_state);
+
+	return ret;
+}
+
 static ssize_t mdss_fb_set_srgb(struct device *dev,struct device_attribute *attr,const char *buf,size_t len)
 {
 	struct fb_info *fbi = dev_get_drvdata(dev);
@@ -1351,6 +1377,15 @@ static ssize_t mdss_fb_set_srgb(struct device *dev,struct device_attribute *attr
 
 }
 
+static ssize_t mdss_fb_get_gamma(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	int ret;
+
+	ret = scnprintf(buf, PAGE_SIZE, "%d\n", gamma_state);
+
+	return ret;
+}
+
 static ssize_t mdss_fb_set_gamma(struct device *dev,struct device_attribute *attr,const char *buf,size_t len)
 {
 	struct fb_info *fbi = dev_get_drvdata(dev);
@@ -1419,6 +1454,14 @@ static ssize_t mdss_fb_set_gamma(struct device *dev,struct device_attribute *att
 
 }
 
+static ssize_t mdss_fb_get_cabc_movie(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	int ret;
+
+	ret = scnprintf(buf, PAGE_SIZE, "%d\n", cabc_movie_state);
+
+	return ret;
+}
 
 static ssize_t mdss_fb_set_cabc_movie(struct device *dev,struct device_attribute *attr,const char *buf,size_t len)
 {
@@ -1499,6 +1542,15 @@ static ssize_t mdss_fb_set_cabc_movie(struct device *dev,struct device_attribute
 	printk(" %s: cabc movie over\n", __func__);
 	return len;
 
+}
+
+static ssize_t mdss_fb_get_cabc_still(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	int ret;
+
+	ret = scnprintf(buf, PAGE_SIZE, "%d\n", cabc_still_state);
+
+	return ret;
 }
 
 static ssize_t mdss_fb_set_cabc_still(struct device *dev,struct device_attribute *attr,const char *buf,size_t len)
@@ -1582,6 +1634,15 @@ static ssize_t mdss_fb_set_cabc_still(struct device *dev,struct device_attribute
 
 }
 
+static ssize_t mdss_fb_get_hbm_mode(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	int ret;
+
+	ret = scnprintf(buf, PAGE_SIZE, "%d\n", hbm_state);
+
+	return ret;
+}
+
 static ssize_t mdss_fb_set_hbm_mode(struct device *dev,struct device_attribute *attr,const char *buf,size_t len)
 {
 	struct fb_info *fbi = dev_get_drvdata(dev);
@@ -1610,6 +1671,7 @@ static ssize_t mdss_fb_set_hbm_mode(struct device *dev,struct device_attribute *
 		return len;
 	}
 
+	hbm_state=param;
 
 	ctl = mfd_to_ctl(mfd);
 	if(!ctl) {
@@ -1653,6 +1715,17 @@ static ssize_t mdss_fb_set_hbm_mode(struct device *dev,struct device_attribute *
 	return len;
 
 }
+
+static ssize_t mdss_fb_get_all_miui_params(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	int ret;
+
+	ret = scnprintf(buf, PAGE_SIZE," ce state: %d\n cabc state: %d\n srgb state: %d\n gamma state: %d\n cabc movie state: %d\n cabc still state: %d\n hbm state: %d\n",
+							ce_state, cabc_state, srgb_state, gamma_state, cabc_movie_state, cabc_still_state, hbm_state);
+
+	return ret;
+}
+
 static DEVICE_ATTR(msm_fb_type, S_IRUGO, mdss_fb_get_type, NULL);
 static DEVICE_ATTR(msm_fb_split, S_IRUGO | S_IWUSR, mdss_fb_show_split,
 					mdss_fb_store_split);
@@ -1674,13 +1747,14 @@ static DEVICE_ATTR(measured_fps, S_IRUGO | S_IWUSR | S_IWGRP,
 static DEVICE_ATTR(msm_fb_persist_mode, S_IRUGO | S_IWUSR,
 	mdss_fb_get_persist_mode, mdss_fb_change_persist_mode);
 static DEVICE_ATTR(idle_power_collapse, S_IRUGO, mdss_fb_idle_pc_notify, NULL);
-static DEVICE_ATTR(msm_fb_ce, 0644, NULL, mdss_fb_set_ce);
-static DEVICE_ATTR(msm_fb_cabc, 0644, NULL, mdss_fb_set_cabc);
-static DEVICE_ATTR(msm_fb_srgb, 0644, NULL, mdss_fb_set_srgb);
-static DEVICE_ATTR(msm_fb_gamma, 0644, NULL, mdss_fb_set_gamma);
-static DEVICE_ATTR(msm_fb_cabc_movie, 0644, NULL, mdss_fb_set_cabc_movie);
-static DEVICE_ATTR(msm_fb_cabc_still, 0644, NULL, mdss_fb_set_cabc_still);
-static DEVICE_ATTR(msm_fb_hbm, 0644, NULL, mdss_fb_set_hbm_mode);
+static DEVICE_ATTR(msm_fb_ce, 0644, mdss_fb_get_ce, mdss_fb_set_ce);
+static DEVICE_ATTR(msm_fb_cabc, 0644, mdss_fb_get_cabc, mdss_fb_set_cabc);
+static DEVICE_ATTR(msm_fb_srgb, 0644, mdss_fb_get_srgb, mdss_fb_set_srgb);
+static DEVICE_ATTR(msm_fb_gamma, 0644, mdss_fb_get_gamma, mdss_fb_set_gamma);
+static DEVICE_ATTR(msm_fb_cabc_movie, 0644, mdss_fb_get_cabc_movie, mdss_fb_set_cabc_movie);
+static DEVICE_ATTR(msm_fb_cabc_still, 0644, mdss_fb_get_cabc_still, mdss_fb_set_cabc_still);
+static DEVICE_ATTR(msm_fb_hbm, 0644, mdss_fb_get_hbm_mode, mdss_fb_set_hbm_mode);
+static DEVICE_ATTR(all_miui_params, 0444, mdss_fb_get_all_miui_params, NULL);
 
 static struct attribute *mdss_fb_attrs[] = {
 	&dev_attr_msm_fb_type.attr,
@@ -1703,6 +1777,7 @@ static struct attribute *mdss_fb_attrs[] = {
 	&dev_attr_msm_fb_cabc_movie.attr,
 	&dev_attr_msm_fb_cabc_still.attr,
 	&dev_attr_msm_fb_hbm.attr,
+	&dev_attr_all_miui_params.attr,
 	NULL,
 };
 
@@ -2801,6 +2876,7 @@ static int mdss_fb_blank_unblank(struct msm_fb_data_type *mfd)
     gamma_resume = false;
     cabc_movie_resume = false;
     cabc_still_resume = false;
+    hbm_resume = false;
 error:
 	return ret;
 }
@@ -2891,6 +2967,7 @@ static int mdss_fb_blank_sub(int blank_mode, struct fb_info *info,
         gamma_resume = true;
 		cabc_movie_resume = true;
 		cabc_still_resume = true;
+		hbm_resume = true;
 		printk("%s:blank powerdown called\n",__func__);
 		ret = mdss_fb_blank_blank(mfd, req_power_state);
 		break;
