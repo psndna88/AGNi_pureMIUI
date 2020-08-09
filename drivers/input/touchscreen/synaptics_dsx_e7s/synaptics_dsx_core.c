@@ -4464,8 +4464,7 @@ static int synaptics_rmi4_probe(struct platform_device *pdev)
 	interrupt_signal.si_code = SI_USER;
 #endif
 
-	rmi4_data->rb_workqueue =
-			create_singlethread_workqueue("dsx_rebuild_workqueue");
+	rmi4_data->rb_workqueue = alloc_workqueue("dsx_rebuild_workqueue", WQ_HIGHPRI | WQ_UNBOUND, 0);
 	INIT_DELAYED_WORK(&rmi4_data->rb_work, synaptics_rmi4_rebuild_work);
 
 	exp_data.workqueue = alloc_workqueue("dsx_exp_workqueue", WQ_HIGHPRI | WQ_UNBOUND, 0);
@@ -4477,8 +4476,7 @@ static int synaptics_rmi4_probe(struct platform_device *pdev)
 			0);
 
 #ifdef FB_READY_RESET
-	rmi4_data->reset_workqueue =
-			create_singlethread_workqueue("dsx_reset_workqueue");
+	rmi4_data->reset_workqueue = alloc_workqueue("dsx_reset_workqueue", WQ_HIGHPRI | WQ_UNBOUND, 0);
 	INIT_WORK(&rmi4_data->reset_work, synaptics_rmi4_reset_work);
 	queue_work(rmi4_data->reset_workqueue, &rmi4_data->reset_work);
 #endif
