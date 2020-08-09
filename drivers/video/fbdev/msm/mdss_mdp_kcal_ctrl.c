@@ -52,6 +52,7 @@
 #define DEF_PA 0xff
 #define PCC_ADJ 0x80
 
+int kcal_enable_global;
 struct kcal_lut_data {
 #if defined(CONFIG_MMI_PANEL_NOTIFICATIONS) && defined(CONFIG_FB)
 	struct mmi_notifier panel_nb;
@@ -64,7 +65,6 @@ struct kcal_lut_data {
 	int green;
 	int blue;
 	int minimum;
-	int enable;
 	int invert;
 	int sat;
 	int hue;
@@ -74,11 +74,11 @@ struct kcal_lut_data {
 
 int kcal_custom_mode = 0;
 int prev_kcal_r, prev_kcal_g, prev_kcal_b;
-int prev_kcal_min, prev_kcal_sat, prev_kcal_val, prev_kcal_cont;
+int prev_kcal_min, prev_kcal_sat, prev_kcal_val, prev_kcal_cont, prev_kcal_hue;
 int user_kcal_r, user_kcal_g, user_kcal_b;
-int user_kcal_min, user_kcal_sat, user_kcal_val, user_kcal_cont;
+int user_kcal_min, user_kcal_sat, user_kcal_val, user_kcal_cont, user_kcal_hue;
 int mode_kcal_r, mode_kcal_g, mode_kcal_b;
-int mode_kcal_min, mode_kcal_sat, mode_kcal_val, mode_kcal_cont;
+int mode_kcal_min, mode_kcal_sat, mode_kcal_val, mode_kcal_cont, mode_kcal_hue;
 bool prev_backlight_dimmer, mode_backlight_dimmer;
 extern bool backlight_dimmer;
 
@@ -99,6 +99,7 @@ static void kcal_mode_save_prev(struct device *dev) {
     prev_kcal_sat = lut_data->sat;
     prev_kcal_val = lut_data->val;
     prev_kcal_cont = lut_data->cont;
+    prev_kcal_hue = lut_data->hue;
     prev_backlight_dimmer = backlight_dimmer;
 
 }
@@ -114,6 +115,7 @@ static void kcal_mode_save_mode(struct device *dev) {
     lut_data->sat = mode_kcal_sat;
     lut_data->val = mode_kcal_val;
     lut_data->cont = mode_kcal_cont;
+    lut_data->hue = mode_kcal_hue;
     backlight_dimmer = mode_backlight_dimmer;
 
 }
@@ -132,6 +134,7 @@ static void kcal_apply_mode(struct device *dev) {
         mode_kcal_sat = user_kcal_sat;
         mode_kcal_val = user_kcal_val;
         mode_kcal_cont = user_kcal_cont;
+        mode_kcal_hue = user_kcal_hue;
         mode_backlight_dimmer = prev_backlight_dimmer;
 		break;
 	case 1:
@@ -139,10 +142,11 @@ static void kcal_apply_mode(struct device *dev) {
         mode_kcal_r = 256;
         mode_kcal_g = 256;
         mode_kcal_b = 256;
-        mode_kcal_min = 35;
-        mode_kcal_sat = 255;
-        mode_kcal_val = 255;
-        mode_kcal_cont = 255;
+        mode_kcal_min = 38;
+        mode_kcal_sat = 38;
+        mode_kcal_val = 127;
+        mode_kcal_cont = 132;
+        mode_kcal_hue = 0;
         mode_backlight_dimmer = prev_backlight_dimmer;
 		break;
 	case 2:
@@ -154,6 +158,7 @@ static void kcal_apply_mode(struct device *dev) {
         mode_kcal_sat = 265;
         mode_kcal_val = 255;
         mode_kcal_cont = 255;
+        mode_kcal_hue = 1;
         mode_backlight_dimmer = true;
 		break;
 	case 3:
@@ -165,6 +170,7 @@ static void kcal_apply_mode(struct device *dev) {
         mode_kcal_sat = 275;
         mode_kcal_val = 251;
         mode_kcal_cont = 258;
+        mode_kcal_hue = 1;
         mode_backlight_dimmer = prev_backlight_dimmer;
 		break;
 	case 4:
@@ -176,6 +182,7 @@ static void kcal_apply_mode(struct device *dev) {
         mode_kcal_sat = 270;
         mode_kcal_val = 257;
         mode_kcal_cont = 265;
+        mode_kcal_hue = 1;
         mode_backlight_dimmer = prev_backlight_dimmer;
 		break;
 	case 5:
@@ -187,6 +194,7 @@ static void kcal_apply_mode(struct device *dev) {
         mode_kcal_sat = 255;
         mode_kcal_val = 255;
         mode_kcal_cont = 255;
+        mode_kcal_hue = 1;
         mode_backlight_dimmer = prev_backlight_dimmer;
 		break;
 	case 6:
@@ -198,6 +206,7 @@ static void kcal_apply_mode(struct device *dev) {
         mode_kcal_sat = 265;
         mode_kcal_val = 257;
         mode_kcal_cont = 255;
+        mode_kcal_hue = 1;
         mode_backlight_dimmer = prev_backlight_dimmer;
  		break;
 	default:
@@ -294,7 +303,7 @@ static void mdss_mdp_kcal_update_pcc(struct kcal_lut_data *lut_data)
 
 	pcc_config.version = mdp_pcc_v1_7;
 	pcc_config.block = MDP_LOGICAL_BLOCK_DISP_0;
-	pcc_config.ops = lut_data->enable ?
+	pcc_config.ops = kcal_enable_global ?
 		MDP_PP_OPS_WRITE | MDP_PP_OPS_ENABLE :
 			MDP_PP_OPS_WRITE | MDP_PP_OPS_DISABLE;
 	pcc_config.r.r = lut_data->red * PCC_ADJ;
@@ -358,7 +367,7 @@ static void mdss_mdp_kcal_update_pa(struct kcal_lut_data *lut_data)
 		memset(&pa_config, 0, sizeof(struct mdp_pa_cfg_data));
 
 		pa_config.block = MDP_LOGICAL_BLOCK_DISP_0;
-		pa_config.pa_data.flags = lut_data->enable ?
+		pa_config.pa_data.flags = kcal_enable_global ?
 			MDP_PP_OPS_WRITE | MDP_PP_OPS_ENABLE :
 				MDP_PP_OPS_WRITE | MDP_PP_OPS_DISABLE;
 		pa_config.pa_data.hue_adj = lut_data->hue;
@@ -372,7 +381,7 @@ static void mdss_mdp_kcal_update_pa(struct kcal_lut_data *lut_data)
 
 		pa_v2_config.version = mdp_pa_v1_7;
 		pa_v2_config.block = MDP_LOGICAL_BLOCK_DISP_0;
-		pa_v2_config.pa_v2_data.flags = lut_data->enable ?
+		pa_v2_config.pa_v2_data.flags = kcal_enable_global ?
 			MDP_PP_OPS_WRITE | MDP_PP_OPS_ENABLE :
 				MDP_PP_OPS_WRITE | MDP_PP_OPS_DISABLE;
 		pa_v2_config.pa_v2_data.flags |= MDP_PP_PA_HUE_ENABLE;
@@ -446,7 +455,7 @@ static ssize_t kcal_show(struct device *dev, struct device_attribute *attr,
 {
 	struct kcal_lut_data *lut_data = dev_get_drvdata(dev);
 
-	if (mdss_mdp_kcal_is_panel_on() && lut_data->enable)
+	if (mdss_mdp_kcal_is_panel_on() && kcal_enable_global)
 		mdss_mdp_kcal_read_pcc(lut_data);
 
 	return scnprintf(buf, PAGE_SIZE, "%d %d %d\n",
@@ -491,10 +500,10 @@ static ssize_t kcal_enable_store(struct device *dev,
 
 	r = kstrtoint(buf, 10, &kcal_enable);
 	if ((r) || (kcal_enable != 0 && kcal_enable != 1) ||
-		(lut_data->enable == kcal_enable))
+		(kcal_enable_global == kcal_enable))
 		return -EINVAL;
 
-	lut_data->enable = kcal_enable;
+	kcal_enable_global = kcal_enable;
 
 	if (mdss_mdp_kcal_is_panel_on()) {
 		mdss_mdp_kcal_update_pcc(lut_data);
@@ -511,7 +520,7 @@ static ssize_t kcal_enable_show(struct device *dev,
 {
 	struct kcal_lut_data *lut_data = dev_get_drvdata(dev);
 
-	return scnprintf(buf, PAGE_SIZE, "%d\n", lut_data->enable);
+	return scnprintf(buf, PAGE_SIZE, "%d\n", kcal_enable_global);
 }
 
 static ssize_t kcal_invert_store(struct device *dev,
@@ -615,6 +624,7 @@ static ssize_t kcal_hue_store(struct device *dev,
 	if ((r) || (kcal_hue < 0 || kcal_hue > 1536))
 		return -EINVAL;
 
+	user_kcal_hue = kcal_hue;
 	lut_data->hue = kcal_hue;
 
 	if (mdss_mdp_kcal_is_panel_on()) {
@@ -780,7 +790,7 @@ static int kcal_ctrl_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, lut_data);
 
-	lut_data->enable = 0x1;
+	kcal_enable_global = 0x1;
 	lut_data->red = DEF_PCC;
 	lut_data->green = DEF_PCC;
 	lut_data->blue = DEF_PCC;
