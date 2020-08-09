@@ -48,6 +48,7 @@
 #include <linux/dma-buf.h>
 #include <linux/mdss_io_util.h>
 #include <linux/wakelock.h>
+#include <linux/android_version.h>
 #include <sync.h>
 #include <sw_sync.h>
 
@@ -75,11 +76,6 @@
 #ifndef EXPORT_COMPAT
 #define EXPORT_COMPAT(x)
 #endif
-
-//Easily enable sRGB with module param
-//Part of the sRGB reset fix!
-int srgb_enabled = 0;
-module_param(srgb_enabled, int, 0644);
 
 #define MAX_FBI_LIST 32
 
@@ -1002,11 +998,6 @@ int mdss_first_set_feature(struct mdss_panel_data *pdata, int first_ce_state, in
 		printk("%s,first_ce_state: %d,first_cabc_state: %d,first_srgb_state=%d,first_gamma_state=%d\n",__func__,
 			first_ce_state,first_cabc_state,first_srgb_state,first_gamma_state);
 
-	//This simply fixes sRGB reset after screen off/on
-	if(srgb_enabled == 1){
-		first_srgb_state = 2;
-	}
-
 	switch(first_ce_state) {
 		case 0x1:
 			if (ctrl->ce_on_cmds.cmd_cnt){
@@ -1282,6 +1273,16 @@ static ssize_t mdss_fb_set_cabc(struct device *dev,struct device_attribute *attr
 			
 	}
 	printk("guorui ##### cabc over ###\n");
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	if (get_android_version() > 9) {
+		if ((cabc_state == 1) || (cabc_state == 2))
+			gamma_state = cabc_state;
+
+		pr_info("guorui_###_%s,set_gamma_cmd: %d\n",__func__, gamma_state);
+	    mdss_dsi_set_gamma(ctrl,param);
+		printk("guorui ##### gamma over ###\n");
+	}
+#endif	
 	return len;
 
 }
@@ -1447,6 +1448,12 @@ static ssize_t mdss_fb_set_gamma(struct device *dev,struct device_attribute *att
 		return len;
 	}
 
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	if (get_android_version() > 9) {
+		if (ce_state == 2)
+			param = 1;
+	}
+#endif
     mdss_dsi_set_gamma(ctrl,param);
 
 	printk("guorui ##### gamma over ###\n");
