@@ -2306,6 +2306,11 @@ static enum sigma_cmd_result cmd_sta_set_psk(struct sigma_dut *dut,
 	    set_network(ifname, id, "sae_pk", "2") < 0)
 		return ERROR_SEND_STATUS;
 
+	val = get_param(cmd, "sae_pk_only");
+	if (val && strcmp(val, "1") == 0 &&
+	    set_network(ifname, id, "sae_pk", "1") < 0)
+		return ERROR_SEND_STATUS;
+
 	if (dut->program == PROGRAM_60GHZ && network_mode &&
 	    strcasecmp(network_mode, "PBSS") == 0 &&
 	    set_network(ifname, id, "pbss", "1") < 0)
