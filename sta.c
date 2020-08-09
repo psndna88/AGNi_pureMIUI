@@ -13792,6 +13792,12 @@ static enum sigma_cmd_result cmd_sta_scan(struct sigma_dut *dut,
 	}
 
 	scan_freq = get_param(cmd, "ChnlFreq");
+	if (scan_freq) {
+		if (strcasecmp(scan_freq, "2G") == 0)
+			scan_freq = "2412-2462";
+		else if (strcasecmp(scan_freq, "5G") == 0)
+			scan_freq = "5180-5925";
+	}
 
 	val = get_param(cmd, "WaitCompletion");
 	if (val && atoi(val) == 1) {
