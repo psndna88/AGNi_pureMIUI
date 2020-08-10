@@ -13742,7 +13742,7 @@ static enum sigma_cmd_result cmd_sta_scan(struct sigma_dut *dut,
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *val, *bssid, *ssid, *scan_freq, *short_ssid;
-	char buf[4096];
+	char buf[4096], scan_res[20];
 	char ssid_hex[65];
 	int wildcard_ssid = 0;
 	int res;
@@ -13854,7 +13854,15 @@ static enum sigma_cmd_result cmd_sta_scan(struct sigma_dut *dut,
 		goto remove_s_ssid;
 	}
 
-	if (wpa_command(intf, buf)) {
+	res = wpa_command_resp(intf, buf, scan_res, sizeof(scan_res));
+	if (strncmp(scan_res, "FAIL-BUSY", 9) == 0) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Scan request rejected with busy status, abort ongoing scan and try again");
+		wpa_command(intf, "ABORT_SCAN");
+		res = wpa_command(intf, buf);
+	}
+
+	if (res < 0) {
 		send_resp(dut, conn, SIGMA_ERROR, "errorCode,Could not start "
 			  "scan");
 		status = STATUS_SENT_ERROR;
