@@ -24,7 +24,7 @@
 #include "linux/iopoll.h"
 
 #undef CDBG
-#define CDBG(fmt, args...) pr_debug(fmt, ##args)
+#define CDBG(fmt, args...)
 
 #define VFE40_BURST_LEN 1
 #define VFE40_BURST_LEN_8916_VERSION 2

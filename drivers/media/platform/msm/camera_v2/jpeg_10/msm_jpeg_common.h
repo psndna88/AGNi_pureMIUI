@@ -13,7 +13,7 @@
 #ifndef MSM_JPEG_COMMON_H
 #define MSM_JPEG_COMMON_H
 
-#define JPEG_DBG(fmt, args...) pr_debug(fmt, ##args)
+#define JPEG_DBG(fmt, args...)
 
 #define JPEG_PR_ERR   pr_err
 #define JPEG_DBG_HIGH   pr_debug

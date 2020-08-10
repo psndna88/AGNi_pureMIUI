@@ -43,11 +43,7 @@
 
 #define CONFIG_MSM_VPE_DBG 0
 
-#if CONFIG_MSM_VPE_DBG
-#define VPE_DBG(fmt, args...) pr_err(fmt, ##args)
-#else
-#define VPE_DBG(fmt, args...) pr_debug(fmt, ##args)
-#endif
+#define VPE_DBG(fmt, args...)
 
 static void vpe_mem_dump(const char * const name, const void * const addr,
 			int size)

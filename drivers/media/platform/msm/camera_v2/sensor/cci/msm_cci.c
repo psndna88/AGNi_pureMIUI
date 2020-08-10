@@ -38,14 +38,10 @@
 #define MSM_CCI_DRV_NAME "msm_cci"
 
 #undef CDBG
-#define CDBG(fmt, args...) pr_debug(fmt, ##args)
+#define CDBG(fmt, args...)
 
 #undef CCI_DBG
-#ifdef MSM_CCI_DEBUG
-#define CCI_DBG(fmt, args...) pr_err(fmt, ##args)
-#else
-#define CCI_DBG(fmt, args...) pr_debug(fmt, ##args)
-#endif
+#define CCI_DBG(fmt, args...)
 
 #define CCI_DUMP_REG 0
 
