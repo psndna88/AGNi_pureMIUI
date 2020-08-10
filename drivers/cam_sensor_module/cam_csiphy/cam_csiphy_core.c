@@ -27,6 +27,9 @@
 #define SEC_LANE_CP_REG_LEN 32
 #define MAX_PHY_MSK_PER_REG 4
 
+/* Mask to enable skew calibration registers */
+#define SKEW_CAL_MASK 0x2
+
 static int csiphy_dump;
 module_param(csiphy_dump, int, 0644);
 
@@ -345,6 +348,8 @@ int32_t cam_cmd_buf_parser(struct csiphy_device *csiphy_dev,
 		cam_cmd_csiphy_info->data_rate;
 	csiphy_dev->csiphy_info[index].secure_mode =
 		cam_cmd_csiphy_info->secure_mode;
+	csiphy_dev->csiphy_info[index].mipi_flags =
+		cam_cmd_csiphy_info->mipi_flags;
 
 	lane_assign = csiphy_dev->csiphy_info[index].lane_assign;
 	lane_cnt = csiphy_dev->csiphy_info[index].lane_cnt;
@@ -596,6 +601,7 @@ int32_t cam_csiphy_config_dev(struct csiphy_device *csiphy_dev,
 	uint8_t      lane_cnt;
 	int          max_lanes = 0;
 	uint16_t     settle_cnt = 0;
+	uint8_t      skew_cal_enable = 0;
 	uint64_t     intermediate_var;
 	uint8_t      lane_pos = 0;
 	int          index;
@@ -735,6 +741,8 @@ int32_t cam_csiphy_config_dev(struct csiphy_device *csiphy_dev,
 	intermediate_var = csiphy_dev->csiphy_info[index].settle_time;
 	do_div(intermediate_var, 200000000);
 	settle_cnt = intermediate_var;
+	skew_cal_enable =
+		csiphy_dev->csiphy_info[index].mipi_flags & SKEW_CAL_MASK;
 
 	for (lane_pos = 0; lane_pos < max_lanes; lane_pos++) {
 		CAM_DBG(CAM_CSIPHY, "lane_pos: %d is configuring", lane_pos);
@@ -757,6 +765,12 @@ int32_t cam_csiphy_config_dev(struct csiphy_device *csiphy_dev,
 			break;
 			case CSIPHY_SETTLE_CNT_HIGHER_BYTE:
 				cam_io_w_mb((settle_cnt >> 8) & 0xFF,
+					csiphybase +
+					reg_array[lane_pos][i].reg_addr);
+			break;
+			case CSIPHY_SKEW_CAL:
+			if (skew_cal_enable)
+				cam_io_w_mb(reg_array[lane_pos][i].reg_data,
 					csiphybase +
 					reg_array[lane_pos][i].reg_addr);
 			break;

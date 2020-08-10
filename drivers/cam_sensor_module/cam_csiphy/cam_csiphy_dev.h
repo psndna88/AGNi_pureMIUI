@@ -53,6 +53,7 @@
 #define CSIPHY_DNP_PARAMS                4
 #define CSIPHY_2PH_REGS                  5
 #define CSIPHY_3PH_REGS                  6
+#define CSIPHY_SKEW_CAL                  7
 
 #define CSIPHY_MAX_INSTANCES_PER_PHY     3
 
@@ -224,6 +225,7 @@ struct csiphy_ctrl_t {
  * @settle_time                :  Settling time in ms
  * @data_rate                  :  Data rate in mbps
  * @csiphy_3phase              :  To identify DPHY or CPHY
+ * @mipi_flags                 :  MIPI phy flags
  * @csiphy_cpas_cp_reg_mask    :  CP reg mask for phy instance
  * @hdl_data                   :  CSIPHY handle table
  */
@@ -235,6 +237,7 @@ struct cam_csiphy_param {
 	uint64_t                   settle_time;
 	uint64_t                   data_rate;
 	int                        csiphy_3phase;
+	uint16_t                   mipi_flags;
 	uint64_t                   csiphy_cpas_cp_reg_mask;
 	struct csiphy_hdl_tbl      hdl_data;
 };
