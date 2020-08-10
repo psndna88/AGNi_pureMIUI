@@ -1195,10 +1195,9 @@ int msm_vdec_set_secure_mode(struct msm_vidc_inst *inst)
 	if (ctrl->val) {
 		if (!(codec == V4L2_PIX_FMT_HEVC ||
 			codec == V4L2_PIX_FMT_H264 ||
-			codec == V4L2_PIX_FMT_VP9 ||
-			codec == V4L2_PIX_FMT_MPEG2)) {
+			codec == V4L2_PIX_FMT_VP9)) {
 			s_vpr_e(inst->sid,
-				"%s: Secure allowed for HEVC/H264/VP9/MPEG2\n",
+				"%s: Secure allowed for HEVC/H264/VP9\n",
 				__func__);
 			return -EINVAL;
 		}
