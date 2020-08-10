@@ -236,7 +236,7 @@ struct msm_vidc_codec {
 
 struct msm_vidc_timestamps {
 	struct list_head list;
-	u64 timestamp_us;
+	s64 timestamp_us;
 	u32 framerate;
 	bool is_valid;
 	bool is_eos;

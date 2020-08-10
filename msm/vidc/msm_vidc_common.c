@@ -7600,7 +7600,7 @@ void msm_comm_release_timestamps(struct msm_vidc_inst *inst)
 	mutex_unlock(&inst->timestamps.lock);
 }
 
-int msm_comm_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us,
+int msm_comm_store_timestamp(struct msm_vidc_inst *inst, s64 timestamp_us,
 	bool is_eos)
 {
 	struct msm_vidc_timestamps *entry, *node, *prev = NULL;
@@ -7794,8 +7794,8 @@ int msm_comm_fetch_ts_framerate(struct msm_vidc_inst *inst,
 		if (!(b->flags & V4L2_BUF_FLAG_END_OF_SUBFRAME))
 			node->is_valid = false;
 
-		b->timestamp.tv_sec = node->timestamp_us / 1000000ull;
-		b->timestamp.tv_usec = node->timestamp_us % 1000000ull;
+		b->timestamp.tv_sec = node->timestamp_us / 1000000;
+		b->timestamp.tv_usec = node->timestamp_us % 1000000;
 		b->m.planes[0].reserved[MSM_VIDC_FRAMERATE] = node->framerate;
 		break;
 	}

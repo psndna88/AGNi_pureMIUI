@@ -366,7 +366,7 @@ int msm_vidc_qbuf(void *instance, struct media_device *mdev,
 	int rc = 0;
 	unsigned int i = 0;
 	struct buf_queue *q = NULL;
-	u64 timestamp_us = 0;
+	s64 timestamp_us = 0;
 	u32 cr = 0;
 
 	if (!inst || !inst->core || !b || !valid_v4l2_buffer(b, inst)) {
@@ -430,7 +430,7 @@ int msm_vidc_qbuf(void *instance, struct media_device *mdev,
 		&& b->type == INPUT_MPLANE)
 		b->flags |= V4L2_BUF_FLAG_PERF_MODE;
 
-	timestamp_us = (u64)((b->timestamp.tv_sec * 1000000ULL) +
+	timestamp_us = (s64)((b->timestamp.tv_sec * 1000000) +
 		b->timestamp.tv_usec);
 	if (is_decode_session(inst) && b->type == INPUT_MPLANE) {
 		if (inst->flush_timestamps)
