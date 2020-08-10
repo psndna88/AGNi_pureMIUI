@@ -720,6 +720,7 @@ post_fail:
 command_ack_q_fail:
 	msm_destroy_session(pvdev->vdev->num);
 session_fail:
+	msm_pm_qos_update_request(CAMERA_ENABLE_PC_LATENCY);
 	pm_relax(&pvdev->vdev->dev);
 stream_fail:
 	camera_v4l2_vb2_q_release(filep);
@@ -798,6 +799,7 @@ static int camera_v4l2_close(struct file *filep)
 		mutex_unlock(&session->close_lock);
 	}
 
+	msm_pm_qos_update_request(CAMERA_ENABLE_PC_LATENCY);
 	camera_v4l2_fh_release(filep);
 	mutex_unlock(&pvdev->video_drvdata_mutex);
 

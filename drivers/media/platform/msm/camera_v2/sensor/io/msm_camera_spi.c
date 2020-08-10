@@ -505,7 +505,7 @@ int32_t msm_camera_spi_write(struct msm_camera_i2c_client *client,
 		&client->spi_client->cmd_tbl.page_program;
 	uint8_t header_len = sizeof(pg->opcode) + pg->addr_len + pg->dummy_len;
 	uint16_t len = 0;
-	char buf[data_type];
+	char buf[8];
 	char *tx;
 	int rc = -EINVAL;
 	if (((client->addr_type != MSM_CAMERA_I2C_BYTE_ADDR)

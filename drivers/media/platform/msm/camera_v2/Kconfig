@@ -266,3 +266,10 @@ config AGNI_MIUI12_Q_MODE
 	default n
 	---help---
 	  Support MIUI 12 Q camera
+
+config PATCH_GCAM_FREEZE
+	bool "Patch Front Gcam freeze - Mystic"
+	depends on MSM_CAMERA_SENSOR
+	default y
+	---help---
+	  Enables for fix front Gcam freeze.
