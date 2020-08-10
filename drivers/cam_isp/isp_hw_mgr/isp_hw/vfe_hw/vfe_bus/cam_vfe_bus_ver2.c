@@ -1243,8 +1243,7 @@ static int cam_vfe_bus_start_wm(
 	if (rsrc_data->en_ubwc) {
 		rc = cam_cpas_get_cpas_hw_version(&camera_hw_version);
 		if (rc) {
-			CAM_ERR(CAM_ISP, "Failed to get HW version:%d rc:%d",
-				camera_hw_version, rc);
+			CAM_ERR(CAM_ISP, "failed to get HW version rc=%d", rc);
 			return rc;
 		}
 		if ((camera_hw_version > CAM_CPAS_TITAN_NONE) &&
