@@ -125,20 +125,10 @@ static int msm_cpp_dump_addr(struct cpp_device *cpp_dev,
 	struct msm_cpp_frame_info_t *frame_info);
 static int32_t msm_cpp_reset_vbif_and_load_fw(struct cpp_device *cpp_dev);
 
-#if CONFIG_MSM_CPP_DBG
-#define CPP_DBG(fmt, args...) pr_err(fmt, ##args)
-#else
-#define CPP_DBG(fmt, args...) pr_debug(fmt, ##args)
-#endif
-
-#define CPP_LOW(fmt, args...) do { \
-	if (ENABLE_CPP_LOW) \
-		pr_info(fmt, ##args); \
-	} while (0)
-
-#define ERR_USER_COPY(to) pr_err("copy %s user\n", \
-			((to) ? "to" : "from"))
-#define ERR_COPY_FROM_USER() ERR_USER_COPY(0)
+#define CPP_DBG(fmt, args...)
+#define CPP_LOW(fmt, args...)
+#define ERR_USER_COPY(to)
+#define ERR_COPY_FROM_USER()
 
 #define msm_dequeue(queue, member, pop_dir) ({	   \
 	unsigned long flags;		  \

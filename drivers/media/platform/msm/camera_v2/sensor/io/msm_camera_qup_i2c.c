@@ -14,13 +14,8 @@
 #include "msm_camera_i2c.h"
 
 #undef CDBG
-#ifdef CONFIG_MSMB_CAMERA_DEBUG
-#define CDBG(fmt, args...) pr_debug(fmt, ##args)
-#define S_I2C_DBG(fmt, args...) pr_debug(fmt, ##args)
-#else
-#define CDBG(fmt, args...) do { } while (0)
-#define S_I2C_DBG(fmt, args...) do { } while (0)
-#endif
+#define CDBG(fmt, args...)
+#define S_I2C_DBG(fmt, args...)
 
 static int32_t msm_camera_qup_i2c_rxdata(
 	struct msm_camera_i2c_client *dev_client, unsigned char *rxdata,
