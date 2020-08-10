@@ -120,8 +120,8 @@ bool res_is_less_than_or_equal_to(u32 width, u32 height,
 	u32 num_mbs = NUM_MBS_PER_FRAME(height, width);
 	u32 max_side = max(ref_width, ref_height);
 
-	if (num_mbs <= NUM_MBS_PER_FRAME(ref_height, ref_width) ||
-		width <= max_side ||
+	if (num_mbs <= NUM_MBS_PER_FRAME(ref_height, ref_width) &&
+		width <= max_side &&
 		height <= max_side)
 		return true;
 	else
