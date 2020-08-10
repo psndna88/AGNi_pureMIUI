@@ -11515,6 +11515,36 @@ static enum sigma_cmd_result cmd_sta_send_frame_wpa3(struct sigma_dut *dut,
 		return sta_inject_frame(dut, conn, intf, REASSOCREQ,
 					CORRECT_KEY, NULL, 0);
 
+	if (strcasecmp(val, "ANQPQuery") == 0) {
+		char buf[50];
+		const char *dest = get_param(cmd, "DestMac");
+		const char *chan = get_param(cmd, "channel");
+		int len, freq;
+
+		freq = chan ? channel_to_freq(dut, atoi(chan)) : 0;
+		if (!dest || !freq)
+			return INVALID_SEND_STATUS;
+
+		len = snprintf(buf, sizeof(buf), "ANQP_GET %s freq=%d 257",
+			       dest, freq);
+		if (len < 0 || len >= sizeof(buf)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to allocate buf");
+			return ERROR_SEND_STATUS;
+		}
+
+		if (wpa_command(intf, buf) != 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to send ANQP Query frame");
+			return STATUS_SENT_ERROR;
+		}
+
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"ANQP Query sent: %s", buf);
+
+		return SUCCESS_SEND_STATUS;
+	}
+
 	send_resp(dut, conn, SIGMA_ERROR, "errorCode,Unsupported framename");
 	return STATUS_SENT_ERROR;
 }
