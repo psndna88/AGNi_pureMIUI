@@ -90,17 +90,20 @@ mount_all() {
     $BB mount /data;
     UMOUNT_DATA=1;
   fi;
-  $BB mount -o ro -t auto /vendor 2>/dev/null;
+  $BB mount -o rw -t auto /vendor 2>/dev/null;
+  if ! is_mounted /cache; then
+    $BB mount /cache;
+  fi;
   setup_mountpoint $ANDROID_ROOT;
   if ! is_mounted $ANDROID_ROOT; then
-    $BB mount -o ro -t auto $ANDROID_ROOT 2>/dev/null;
+    $BB mount -o rw -t auto $ANDROID_ROOT 2>/dev/null;
   fi;
   case $ANDROID_ROOT in
     /system_root) setup_mountpoint /system;;
     /system)
       if ! is_mounted /system && ! is_mounted /system_root; then
         setup_mountpoint /system_root;
-        $BB mount -o ro -t auto /system_root;
+        $BB mount -o rw -t auto /system_root;
       elif [ -f /system/system/build.prop ]; then
         setup_mountpoint /system_root;
         $BB mount --move /system /system_root;
@@ -109,7 +112,7 @@ mount_all() {
         $BB umount /system;
         $BB umount -l /system 2>/dev/null;
         test -e /dev/block/bootdevice/by-name/system || local slot=$(getprop ro.boot.slot_suffix 2>/dev/null);
-        $BB mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot /system_root;
+        $BB mount -o rw -t auto /dev/block/bootdevice/by-name/system$slot /system_root;
       fi;
     ;;
   esac;
@@ -137,6 +140,7 @@ umount_all() {
   $BB umount -l /vendor;
   $BB umount /firmware;
   if [ "$UMOUNT_DATA" ]; then
+  	$BB umount /sdcard;
     $BB umount /data;
     $BB umount -l /data;
   fi;) 2>/dev/null;
@@ -419,20 +423,24 @@ ui_print " " "AnyKernel3 by osm0sis @ xda-developers" " " " ";
 
 ### AGNi: ROM type detection
 umount_all;
-$BB mount /vendor;
+$BB mount -o rw /vendor;
 if [ "`$BB grep system_root /etc/fstab`" ]; then
-	$BB mount /system_root;
+	$BB mount -o rw /system_root;
 else
-	$BB mount /system;
+	$BB mount -o rw /system;
 fi;
 if [ -f /system/build.prop ]; then
 	buildprop=/system/build.prop;
+	buildproploc=/system;
 elif [ -f /system/system/build.prop ]; then
 	buildprop=/system/system/build.prop;
+	buildproploc=/system/system;
 elif [ -f /system_root/system/build.prop ]; then
 	buildprop=/system_root/system/build.prop;
+	buildproploc=/system_root/system;
 elif [ -f /system_root/build.prop ]; then
 	buildprop=/system_root/build.prop;
+	buildproploc=/system_root;
 else
 	ui_print " " "Unable to read from build.prop" " ";
 	ui_print "   DON'T YOU HAVE ANY ROM INSTALLED ?????";
@@ -457,7 +465,7 @@ elif ([ "$aver" == "8" ] || [ "$aver" == "8.0" ] || [ "$aver" == "8.1" ]); then
 else
 	ANDROID_VER="Q";
 #	ANDROID_VER="UNSUPPORTED";
-	ui_print " " ">> Unsupported Android Version OR couldnt read from system." " ";
+	ui_print " " ">> Unsupported Android Version OR couldn't read from system." " ";
 	ui_print " " "  So, Assuming Android 10 and continuing..." " ";
 #	ui_print " " " Terminating Installation !" " ";
 #	cleanup;
@@ -558,13 +566,50 @@ elif [ "`$BB grep selected.0=4 /tmp/aroma-data/cam.prop`" ]; then
 		ui_print " " "AGNi installing with New Camera libs support (MIUI Q mode).." " ";
 fi;
 $BB echo "$KERNEL" > $AKHOME/KERNEL_TYPE;
-### AGNi: WiFi module
+### AGNi: init exec hooks
 if [ ! "`$BB grep AGNI_HERE /vendor/etc/init/hw/init.qcom.rc`" ]; then
 	$BB cp /vendor/etc/init/hw/init.qcom.rc /vendor/etc/init/hw/init.qcom.rc.bak;
     $BB echo "`$BB cat $AKHOME/tools/init.rc-append`" >> /vendor/etc/init/hw/init.qcom.rc;
-    $BB echo "Vendor was patched for wifi";
-else
-    $BB echo "Vendor is already patched for wifi.";
+    /sbin/restorecon -v /vendor/etc/init/hw/init.qcom.rc;
+fi;
+$BB sed -i '/#AGNI_HERE/d' /vendor/bin/init.qcom.early_boot.sh;
+########$BB echo "`$BB cat $AKHOME/tools/init.rc.early_boot-append`" >> /vendor/bin/init.qcom.early_boot.sh;
+$BB chmod 0755 /vendor/bin/init.qcom.early_boot.sh;
+/sbin/restorecon -v /vendor/bin/init.qcom.early_boot.sh;
+/sbin/restorecon -v /vendor/bin/init.qcom.sh;
+########$BB rm /cache/cleaned;
+### EAS Perf hal (uvera)
+if [ -f /vendor/etc/perf/commonresourceconfigs.xml ]; then
+	if [ ! -f /vendor/etc/perf/commonresourceconfigs.xml.bak ]; then
+		$BB mv /vendor/etc/perf/commonresourceconfigs.xml /vendor/etc/perf/commonresourceconfigs.xml.bak;
+	fi;
+	$BB cp -f $AKHOME/tools/perf/commonresourceconfigs.xml /vendor/etc/perf/commonresourceconfigs.xml;
+	$BB chmod 0644 /vendor/etc/perf/commonresourceconfigs.xml;
+	/sbin/restorecon -v /vendor/etc/perf/commonresourceconfigs.xml;
+fi;
+if [ -f /vendor/etc/perf/perfboostsconfig.xml ]; then
+	if [ ! -f /vendor/etc/perf/perfboostsconfig.xml.bak ]; then
+		$BB mv /vendor/etc/perf/perfboostsconfig.xml /vendor/etc/perf/perfboostsconfig.xml.bak;
+	fi;
+	$BB cp -f $AKHOME/tools/perf/perfboostsconfig.xml /vendor/etc/perf/perfboostsconfig.xml;
+	$BB chmod 0644 /vendor/etc/perf/perfboostsconfig.xml;
+	/sbin/restorecon -v /vendor/etc/perf/perfboostsconfig.xml;
+fi;
+if [ -f /vendor/etc/perf/targetconfig.xml ]; then
+	if [ ! -f /vendor/etc/perf/targetconfig.xml.bak ]; then
+		$BB mv /vendor/etc/perf/targetconfig.xml /vendor/etc/perf/targetconfig.xml.bak;
+	fi;
+	$BB cp -f $AKHOME/tools/perf/targetconfig.xml /vendor/etc/perf/targetconfig.xml;
+	$BB chmod 0644 /vendor/etc/perf/targetconfig.xml;
+	/sbin/restorecon -v /vendor/etc/perf/targetconfig.xml;
+fi;
+if [ -f /vendor/etc/perf/targetresourceconfigs.xml ]; then
+	if [ ! -f /vendor/etc/perf/targetresourceconfigs.xml.bak ]; then
+		$BB mv /vendor/etc/perf/targetresourceconfigs.xml /vendor/etc/perf/targetresourceconfigs.xml.bak;
+	fi;
+	$BB cp -f $AKHOME/tools/perf/targetresourceconfigs.xml /vendor/etc/perf/targetresourceconfigs.xml;
+	$BB chmod 0644 /vendor/etc/perf/targetresourceconfigs.xml;
+	/sbin/restorecon -v /vendor/etc/perf/targetresourceconfigs.xml;
 fi;
 if [ "$DEVICE_NATIVE_MIUIQ" == "YES" ]; then #essentially its sdm660
 	if [ "`$BB grep selected.0=1 /tmp/aroma-data/cpuoc.prop`" ]; then # CPU OC 2.45 selection
@@ -577,46 +622,138 @@ if [ "$DEVICE_NATIVE_MIUIQ" == "YES" ]; then #essentially its sdm660
 else
 	if [ "`$BB grep selected.0=1 /tmp/aroma-data/cpuoc.prop`" ]; then # CPU OC 2.2 selection
 		$BB cp -f $AKHOME/tools/sdm636/init.agni_2.2.rc /vendor/etc/init/hw/init.agni.rc;
-		ui_print " " "AGNi installing with DEFAULT CPU OC @ 2.2GHz !" " ";
+		ui_print " " "AGNi installing with Standard CPU OC @ 2.2GHz !" " ";
 	elif [ "`$BB grep selected.0=2 /tmp/aroma-data/cpuoc.prop`" ]; then # CPU OC 2.45 selection
 		$BB cp -f $AKHOME/tools/sdm636/init.agni_2.45.rc /vendor/etc/init/hw/init.agni.rc;
 		ui_print " " "AGNi installing with EXPERIMENTAL CPU OC @ 2.45GHz !" " ";
 	else
 		$BB cp -f $AKHOME/tools/sdm636/init.agni_noc.rc /vendor/etc/init/hw/init.agni.rc;
-		ui_print " " "AGNi installing without CPU OC :( ..." " ";
+		ui_print " " "AGNi installing without CPU OC..." " ";
 	fi;
 fi;
+if [ "$MIUI_ROM" == "true" ];then
+	$BB sed -i '/#AOSP/d' /vendor/etc/init/hw/init.agni.rc;
+else
+	$BB sed -i '/#MIUI/d' /vendor/etc/init/hw/init.agni.rc;
+fi;
 $BB chmod 644 /vendor/etc/init/hw/init.agni.rc;
+/sbin/restorecon -v /vendor/etc/init/hw/init.agni.rc;
 $BB mkdir /vendor/agni 2>/dev/null;
 $BB cp -f $AKHOME/tools/wlan*.ko /vendor/agni/;
-$BB rm /vendor/bin/switchwifi 2>/dev/null;
 $BB umount /firmware 2>/dev/null;
 $BB umount /dev/block/by-name/modem 2>/dev/null;
 $BB mkdir /firmware 2>/dev/null;
 $BB mount -t vfat -o rw,noatime,nodiratime,fmask=0337,dmask=0000,allow_utime=0022,codepage=437,iocharset=iso8859-1,shortname=mixed,errors=remount-ro /dev/block/by-name/modem /firmware;
 if [ ! -f /vendor/etc/wifi/WCNSS_qcom_cfg.ini.bak ]; then
-	mv -f /vendor/etc/wifi/WCNSS_qcom_cfg.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini.bak;
+	$BB mv -f /vendor/etc/wifi/WCNSS_qcom_cfg.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini.bak;
 fi;
-if [ "`$BB grep selected.0=2 /tmp/aroma-data/wifi.prop`" ]; then
-	ui_print " " "AGNi now modifying firmware for Q Wifi driver support.." " ";
+if [ "`$BB grep selected.0=2 /tmp/aroma-data/wifi.prop`" ]; then #latest Q
+	ui_print " " "AGNi now modifying firmware for latest Q Wifi driver support.." " ";
 	$BB rm /firmware/image/AGNIWIFI-Pie 2>/dev/null;
 	$BB cp -f $AKHOME/tools/wlan/Q/* /firmware/image;
 	$BB cp -f $AKHOME/tools/wlan/WCNSS_qcom_cfg_Q.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
 	$BB cp -f /vendor/agni/wlan_q.ko /vendor/agni/wlan.ko;
-	ui_print " " "AGNi enabled Q-sourced Wifi driver..." " ";
-else
+	ui_print " " "AGNi enabled latest Q-sourced Wifi driver..." " ";
+elif [ "`$BB grep selected.0=3 /tmp/aroma-data/wifi.prop`" ]; then #Old Pie
+	ui_print " " "AGNi now modifying firmware for Pie Wifi driver support.." " ";
+	$BB rm /firmware/image/AGNIWIFI-Q 2>/dev/null;
+	$BB cp -f $AKHOME/tools/wlan/Pie/* /firmware/image;
+	$BB cp -f $AKHOME/tools/wlan/WCNSS_qcom_cfg_Pie.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
+	$BB cp -f /vendor/agni/wlan_pie_old.ko /vendor/agni/wlan.ko;
+	ui_print " " "AGNi enabled OLD Pie-sourced Wifi driver..." " ";
+else #latest Pie
 	ui_print " " "AGNi now modifying firmware for Pie Wifi driver support.." " ";
 	$BB rm /firmware/image/AGNIWIFI-Q 2>/dev/null;
 	$BB cp -f $AKHOME/tools/wlan/Pie/* /firmware/image;
 	$BB cp -f $AKHOME/tools/wlan/WCNSS_qcom_cfg_Pie.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
 	$BB cp -f /vendor/agni/wlan_pie.ko /vendor/agni/wlan.ko;
-	ui_print " " "AGNi enabled Pie-sourced Wifi driver..." " ";
+	ui_print " " "AGNi enabled latest Pie-sourced Wifi driver..." " ";
 fi;
 $BB chmod 644 /vendor/agni/wlan.ko;
 $BB chmod 644 /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
+/sbin/restorecon -v /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
 if [ -d /firmware/image/agni_bakup ]; then
 	$BB rm -rf /firmware/image/agni_bakup;
 fi;
+### AGNi Games Graphics Unlock
+if [ "`$BB grep selected.0=1 /tmp/aroma-data/pubg.prop`" ]; then #PUBG
+	if [ ! -f $buildproploc/build.prop.bak.agni ];then
+		$BB cp -f $buildproploc/build.prop $buildproploc/build.prop.bak.agni;
+	else
+		$BB cp -f $buildproploc/build.prop.bak.agni $buildproploc/build.prop;
+	fi;
+	$BB sed -i '/ro.product.model/s/.*/ro.product.model=GM1917/' $buildproploc/build.prop;
+	$BB sed -i '/ro.product.system.model/s/.*/ro.product.system.model=GM1917/' $buildproploc/build.prop;
+	$BB sed -i '/ro.product.vendor.model/s/.*/ro.product.vendor.model=GM1917/' $buildproploc/build.prop;
+	$BB sed -i '/ro.product.odm.model/s/.*/ro.product.odm.model=GM1917/' $buildproploc/build.prop;
+	if [ ! -f /vendor/build.prop.bak.agni ];then
+		$BB cp -f /vendor/build.prop /vendor/build.prop.bak.agni;
+	else
+		$BB cp -f /vendor/build.prop.bak.agni /vendor/build.prop;
+	fi;
+	$BB sed -i '/ro.product.model/s/.*/ro.product.model=GM1917/' /vendor/build.prop;
+	$BB sed -i '/ro.product.system.model/s/.*/ro.product.system.model=GM1917/' /vendor/build.prop;
+	$BB sed -i '/ro.product.vendor.model/s/.*/ro.product.vendor.model=GM1917/' /vendor/build.prop;
+	$BB sed -i '/ro.product.odm.model/s/.*/ro.product.odm.model=GM1917/'/vendor/build.prop;
+	if [ ! -f /vendor/odm/etc/build.prop.bak.agni ];then
+		$BB cp -f /vendor/odm/etc/build.prop /vendor/odm/etc/build.prop.bak.agni;
+	else
+		$BB cp -f /vendor/odm/etc/build.prop.bak.agni /vendor/odm/etc/build.prop;
+	fi;
+	$BB sed -i '/ro.product.model/s/.*/ro.product.model=GM1917/' /vendor/odm/etc/build.prop;
+	$BB sed -i '/ro.product.system.model/s/.*/ro.product.system.model=GM1917/' /vendor/odm/etc/build.prop;
+	$BB sed -i '/ro.product.vendor.model/s/.*/ro.product.vendor.model=GM1917/' /vendor/odm/etc/build.prop;
+	$BB sed -i '/ro.product.odm.model/s/.*/ro.product.odm.model=GM1917/' /vendor/odm/etc/build.prop;
+	ui_print " " "AGNi applied PUBG smooth-extreme graphics tweak...(NeFeroN+)" " ";
+elif [ "`$BB grep selected.0=2 /tmp/aroma-data/pubg.prop`" ]; then #COD mobile
+	if [ ! -f $buildproploc/build.prop.bak.agni ];then
+		$BB cp -f $buildproploc/build.prop $buildproploc/build.prop.bak.agni;
+	else
+		$BB cp -f $buildproploc/build.prop.bak.agni $buildproploc/build.prop;
+	fi;
+	$BB sed -i '/ro.product.model/s/.*/ro.product.model=SM-G965F/' $buildproploc/build.prop;
+	$BB sed -i '/ro.product.system.model/s/.*/ro.product.system.model=SM-G965F/' $buildproploc/build.prop;
+	$BB sed -i '/ro.product.vendor.model/s/.*/ro.product.vendor.model=SM-G965F/' $buildproploc/build.prop;
+	$BB sed -i '/ro.product.odm.model/s/.*/ro.product.odm.model=SM-G965F/' $buildproploc/build.prop;
+	if [ ! -f /vendor/build.prop.bak.agni ];then
+		$BB cp -f /vendor/build.prop /vendor/build.prop.bak.agni;
+	else
+		$BB cp -f /vendor/build.prop.bak.agni /vendor/build.prop;
+	fi;
+	$BB sed -i '/ro.product.model/s/.*/ro.product.model=SM-G965F/' /vendor/build.prop;
+	$BB sed -i '/ro.product.system.model/s/.*/ro.product.system.model=SM-G965F/' /vendor/build.prop;
+	$BB sed -i '/ro.product.vendor.model/s/.*/ro.product.vendor.model=SM-G965F/' /vendor/build.prop;
+	$BB sed -i '/ro.product.odm.model/s/.*/ro.product.odm.model=SM-G965F/' /vendor/build.prop;
+	if [ ! -f /vendor/odm/etc/build.prop.bak.agni ];then
+		$BB cp -f /vendor/odm/etc/build.prop /vendor/odm/etc/build.prop.bak.agni;
+	else
+		$BB cp -f /vendor/odm/etc/build.prop.bak.agni /vendor/odm/etc/build.prop;
+	fi;
+	$BB sed -i '/ro.product.model/s/.*/ro.product.model=SM-G965F/' /vendor/odm/etc/build.prop;
+	$BB sed -i '/ro.product.system.model/s/.*/ro.product.system.model=SM-G965F/' /vendor/odm/etc/build.prop;
+	$BB sed -i '/ro.product.vendor.model/s/.*/ro.product.vendor.model=SM-G965F/' /vendor/odm/etc/build.prop;
+	$BB sed -i '/ro.product.odm.model/s/.*/ro.product.odm.model=SM-G965F/' /vendor/odm/etc/build.prop;
+	ui_print " " "AGNi applied COD mobile High graphics tweak...(NeFeroN+)" " ";
+else
+	if [ -f $buildproploc/build.prop.bak.agni ];then
+		$BB mv -f $buildproploc/build.prop.bak.agni $buildproploc/build.prop;
+	fi;
+	if [ -f /vendor/build.prop.bak.agni ];then
+		$BB mv -f /vendor/build.prop.bak.agni /vendor/build.prop;
+	fi;
+	if [ -f /vendor/odm/etc/build.prop.bak.agni ];then
+		$BB mv -f /vendor/odm/etc/build.prop.bak.agni /vendor/odm/etc/build.prop;
+	fi;
+	ui_print " " "AGNi NOT applied(reverted) Game Graphics Unlock." " ";
+fi;
+$BB chmod 600 $buildproploc/build.prop;
+$BB chmod 600 /vendor/build.prop;
+$BB chmod 600 /vendor/odm/etc/build.prop;
+/sbin/restorecon -v $buildproploc/build.prop;
+/sbin/restorecon -v /vendor/build.prop;
+/sbin/restorecon -v /vendor/odm/etc/build.prop;
+
+$BB sync;
 umount_all;
 
 setup_env;
@@ -675,32 +812,16 @@ if [ "`$BB grep selected.0=1 /tmp/aroma-data/sound.prop`" ]; then
 	$BB sed -i '/HPHR Volume/c\    <ctl name="HPHR Volume" value="18" />' /vendor/etc/mixer_paths.xml;
 else
 	if [ -f /vendor/etc/mixer_paths.xml.agnibak ]; then
-		$BB cp -f /vendor/etc/mixer_paths.xml.agnibak /vendor/etc/mixer_paths.xml;
+		$BB mv -f /vendor/etc/mixer_paths.xml.agnibak /vendor/etc/mixer_paths.xml;
 	fi;
 fi;
+/sbin/restorecon -v /vendor/etc/mixer_paths.xml;
 
 # Facebook app watcher killer
 if [ -d /data/data/com.facebook.katana ]; then
 	$BB chmod -R 660 /data/data/com.facebook.katana/app_watcher;
 fi;
 
-# AGNi EAS Perf HAL removal
-if [ -f /vendor/etc/perf/commonresourceconfigs.xml.bak ]; then
-	mv /vendor/etc/perf/commonresourceconfigs.xml.bak /vendor/etc/perf/commonresourceconfigs.xml;
-	$BB chmod 0644 /vendor/etc/perf/commonresourceconfigs.xml;
-fi;
-if [ -f /vendor/etc/perf/perfboostsconfig.xml.bak ]; then
-	mv /vendor/etc/perf/perfboostsconfig.xml.bak /vendor/etc/perf/perfboostsconfig.xml;
-	$BB chmod 0644 /vendor/etc/perf/perfboostsconfig.xml;
-fi;
-if [ -f /vendor/etc/perf/targetconfig.xml.bak ]; then
-	mv /vendor/etc/perf/targetconfig.xml.bak /vendor/etc/perf/targetconfig.xml;
-	$BB chmod 0644 /vendor/etc/perf/targetconfig.xml;
-fi;
-if [ -f /vendor/etc/perf/targetresourceconfigs.xml.bak ]; then
-	mv /vendor/etc/perf/targetresourceconfigs.xml.bak /vendor/etc/perf/targetresourceconfigs.xml;
-	$BB chmod 0644 /vendor/etc/perf/targetresourceconfigs.xml;
-fi;
 ## Unmount /system /vendor
 umount_all;
 
