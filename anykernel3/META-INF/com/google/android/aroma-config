@@ -25,11 +25,11 @@
 #       Binary Codename : Flamboyan
 
 # Initializing Rom Information
-ini_set("rom_name",		"AGNi hybridEAS Kernel");
-ini_set("rom_version",	"v9.4_stable");
+ini_set("rom_name",		"AGNi EAS Kernel");
+ini_set("rom_version",	"v9.5_stable");
 ini_set("rom_author",	"psndna88@xda");
 ini_set("rom_device",	"SETDEVICETYPE");
-ini_set("rom_date",		"July, 30, 2020");
+ini_set("rom_date",		"August, 10, 2020");
 
 # Show Simple Splash
 splash(
@@ -87,6 +87,33 @@ agreebox(					#AGNIFW
     "Tick to proceed !"		#AGNIFW
 );							#AGNIFW
 
+agreebox(
+  #-- Title
+    "AGNi™ Kernel Note",
+  
+  #-- Subtitle / Description
+    "CPU OC Disclaimer",
+  
+  #-- Icon:
+    "@license",
+  
+  #-- Text Content 
+    resread("AGNi_OC.txt"),
+  
+  #-- Checkbox Text
+    "Ok, I Understand...",
+  
+  #-- Unchecked Alert Message
+    "Tick to proceed !"
+);
+
+selectbox(
+    "CPU Frequency Selection","<@center><b>\nWant to Overclock CPU ?</b>\n\n</@>","@install","cpuoc.prop",
+    "Yes",	"Standard CPU OC to 2.2GHz Good for Gaming.", 0,   																							#-- selected.0 = 1	#SDM636
+    "Yes, but MORE..",	"Higher CPU OC to 2.45GHz (Experimental).", 0,																					#-- selected.0 = 2	#SDM636
+    "Yes",	"CPU OC to 2.45GHz (Experimental).", 0,																										#-- selected.0 = 1	#SDM660
+    "No, Not my cup of tea !",	"DEFAULT: You dont want to use CPU OC Performance boost. CPU will still show as 2.45GHz supported but not use it", 1  	#-- selected.0 = 3(sdm636) 2(sdm660)
+);
 
 selectbox(
     "Camera Libs Support Mode","<@center><b>\nSelect method of camera libs support</b>\n\n</@>","@install","cam.prop",  
@@ -99,8 +126,9 @@ selectbox(
 
 selectbox(
     "WiFi Driver","<@center><b>\nSelect the WiFi version you want</b>\n\n</@>","@install","wifi.prop",  
-    "Pie Source based WiFi",		"DEFAULT -> Most widely used. Gives good speed.", 1,	#-- selected.0 = 1
-    "Q Source based Enhanced WiFi",	"Major revamped. Now gives Improved Speeds.", 0 		#-- selected.0 = 2
+    "Pie Latest Source based WiFi",			"Widely used. Gives good speed.", 0,									#-- selected.0 = 1
+    "Q Latest Source based Enhanced WiFi",	"Major revamped. Now gives Improved Speeds than before.", 0, 			#-- selected.0 = 2
+    "Pie OLD Source based WiFi",			"DEFAULT: Solves all known Hotspot problems with Pie wifi driver", 1	#-- selected.0 = 3
 );
 
 selectbox(
@@ -110,12 +138,10 @@ selectbox(
 );
 
 selectbox(
-    "CPU Frequency Selection","<@center><b>\nWant to Overclock CPU ?</b>\n\n</@>","@install","cpuoc.prop",
-    "Yes",	"DEFAULT & Standard CPU OC to 2.2GHz Good for Gaming.", 1,   																		#-- selected.0 = 1	#SDM636
-    "Yes, but MORE..",	"HIGHER CPU OC to 2.45GHz (Experimental.).", 0,																			#-- selected.0 = 2	#SDM636
-    "No, Not my cup of tea !",	"You dont want to use CPU OC Performance boost. CPU will still show as 2.45GHz supported but not use it", 0  	#-- selected.0 = 3  #SDM636
-    "Yes",	"CPU OC to 2.45GHz (Experimental).", 0,																								#-- selected.0 = 1	#SDM660
-    "No, Not my cup of tea !",	"You dont want to use CPU OC Performance boost. CPU will still show as 2.45GHz supported but not use it", 1  	#-- selected.0 = 2  #SDM660
+    "AGNi Game Graphics Unlock","<@center><b>\nWant AGNi to unlock High Graphics on games ?</b>\n\n</@>","@install","pubg.prop",  
+    "PUBG Smooth-Extreme Graphics",	"PUBG is part of my soul! Note: Performance may vary and don't report for lag or heating.", 0,				#-- selected.0 = 1
+    "COD Mobile High Graphics",		"Die Hard COD lover! Note: Performance may vary and don't report for lag or heating.", 0,  					#-- selected.0 = 2
+    "No",							"DEFAULT: Also select this if using AGNi game unlock module. (This will also revert changes made above)", 1 #-- selected.0 = 3
 );
 
 setvar("retstatus",

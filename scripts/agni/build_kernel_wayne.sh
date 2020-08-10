@@ -11,6 +11,7 @@ CONFIG3="agni_wayne-MIUI-Q_defconfig"
 SYNC_CONFIG=1
 WLAN_MODQ="$COMPILEDIR/drivers/staging/qcacld-3.0"
 WLAN_MODP="$COMPILEDIR/drivers/staging/qcacld-3.0_pie"
+WLAN_MODPO="$COMPILEDIR/drivers/staging/qcacld-3.0_pie_old"
 
 . $KERNELDIR/AGNi_version.sh
 FILENAME="AGNi_kernel_$DEVICE-$AGNI_VERSION_PREFIX-$AGNI_VERSION.zip"
@@ -48,6 +49,7 @@ echo ""
 
 rm $COMPILEDIR/.config 2>/dev/null
 rm $WLAN_MODP/*.ko 2>/dev/null
+rm $WLAN_MODPO/*.ko 2>/dev/null
 
 make defconfig O=$COMPILEDIR $CONFIG1
 make -j12 O=$COMPILEDIR # COMPILE
@@ -65,7 +67,8 @@ else
 	exit;
 fi	
 ########## COMPILE new cam END
-mv -f $WLAN_MODP/wlan.ko $KERNELDIR/$DIR/wlan_pie.ko
+mv -f $WLAN_MODP/wlan.ko $KERNELDIR/$DIR/wlan_pie.ko 2>/dev/null
+mv -f $WLAN_MODPO/wlan.ko $KERNELDIR/$DIR/wlan_pie_old.ko 2>/dev/null
 
 ###### COMPILE old cam
 echo ""
@@ -131,6 +134,7 @@ if ([ -f $KERNELDIR/$DIR/Image.gz-dtb-nc ] && [ -f $KERNELDIR/$DIR/Image.gz-dtb-
 	sed -i 's/SETDEVICETYPE/SDM660_wayne (MI 6x)/' $KERNELDIR/$DIR/META-INF/com/google/android/aroma-config
 	mv $KERNELDIR/$DIR/wlan_pie.ko $KERNELDIR/$DIR/tools/wlan_pie.ko
 	mv $KERNELDIR/$DIR/wlan_q.ko $KERNELDIR/$DIR/tools/wlan_q.ko
+	mv $KERNELDIR/$DIR/tools/wlan_pie_old.ko.module $KERNELDIR/$DIR/tools/wlan_pie_old.ko 2>/dev/null
 	cd $KERNELDIR/$DIR/
 	zip -rq $KERNELDIR/READY_ZIP/$FILENAME *
 	if [ -f ~/WORKING_DIRECTORY/zipsigner-3.0.jar ]; then

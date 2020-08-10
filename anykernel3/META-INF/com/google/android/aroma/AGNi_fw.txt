@@ -5,7 +5,7 @@
 <@fill><q>AGNi recommended package of modified firmware
 (just as developer uses, for users to be on same page as AGNi developer himself)
 It also includes fixes for Indian carriers - Jio volte/vilte & Airtel vowifi.
-It has goodies of 3 different firmwares merged in one modified firmware.
+It has goodies of different firmwares merged in one modified firmware.
 
 <b>HIGHLY RECOMMENDED to be definitely used with AGNi kernel
 

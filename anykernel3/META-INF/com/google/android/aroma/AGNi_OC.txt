@@ -1,0 +1,12 @@
+<@center><b><#selectbg_g>AGNi Kernel</#></b>
+
+<q></b>
+CPU overclocking options are provided on the next page >>>>>>>>>
+
+
+Users are at their own responsibility for using CPU overclock feature in this kernel.
+The developer is not responsible whatsoever.
+
+						Thankyou !
+</b></q>
+

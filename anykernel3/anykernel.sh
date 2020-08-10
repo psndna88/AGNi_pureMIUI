@@ -4,7 +4,7 @@
 ## AnyKernel setup
 # begin properties
 properties() { '
-kernel.string=AGNi Kernel hybridEAS (AVOID 3rd Party Memory tweaks)
+kernel.string=AGNi Kernel EAS (AVOID 3rd Party Memory tweaks)
 do.devicecheck=1
 do.modules=0
 do.systemless=0

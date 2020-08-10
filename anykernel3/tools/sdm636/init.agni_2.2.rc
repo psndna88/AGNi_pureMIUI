@@ -7,7 +7,8 @@ on boot
     chown wifi wifi /sys/module/wlan/parameters/fwpath
 	write /sys/module/msm_performance/parameters/cpu_oc Y
 	write /sys/devices/system/cpu/cpufreq/policy0/scaling_max_freq 1843200
-	write /sys/devices/system/cpu/cpufreq/policy4/scaling_max_freq 2208800
+	write /sys/devices/system/cpu/cpufreq/policy4/scaling_max_freq 2208000
+	write /sys/module/adreno/parameters/true_gpu N
     # add a cpuset for the camera daemon
     mkdir /dev/cpuset/camera-daemon
     write /dev/cpuset/camera-daemon/cpus 0-3
@@ -20,17 +21,21 @@ on property:sys.boot_completed=1
 	write /sys/devices/system/cpu/cpu0/core_ctl/enable 0
 	write /sys/module/lowmemorykiller/parameters/minfree "18432,23040,27648,32256,55296,80640"
 	write /sys/module/vmpressure/parameters/allocstall_threshold 0
-	write /sys/module/adreno/parameters/true_gpu N
-	write /sys/module/adreno/parameters/fake_gpu_model 512
 	write /sys/devices/system/cpu/cpufreq/policy0/scaling_governor "schedutil"
 	write /sys/devices/system/cpu/cpufreq/policy4/scaling_governor "schedutil"
 	write /sys/block/mmcblk0/queue/scheduler "anxiety"
 	write /sys/block/mmcblk0/queue/iosched/batch_count 2
 	write /sys/block/mmcblk0/queue/iosched/sync_ratio 4
 	write /sys/block/mmcblk0/queue/nr_requests 64
+	write /sys/block/dm-0/queue/scheduler "anxiety"
+	write /sys/block/dm-0/queue/iosched/batch_count 2
+	write /sys/block/dm-0/queue/iosched/sync_ratio 4
+	write /sys/block/dm-0/queue/nr_requests 64
 	write /sys/block/mmcblk1/queue/scheduler "anxiety"
 	write /sys/block/mmcblk1/queue/iosched/batch_count 2
 	write /sys/block/mmcblk1/queue/iosched/sync_ratio 4
 	write /sys/block/mmcblk1/queue/nr_requests 64
 	write /proc/sys/fs/lease-break-time 10
+	write /sys/devices/platform/kcal_ctrl.0/kcal_enable 0	#MIUI
+	write /sys/devices/platform/kcal_ctrl.0/kcal_enable 1	#AOSP
 
