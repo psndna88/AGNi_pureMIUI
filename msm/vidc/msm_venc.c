@@ -32,8 +32,6 @@
 #define DEFAULT_QP 0xA
 #define DEFAULT_QP_PACKED 0xA0A0A
 #define MIN_CHROMA_QP_OFFSET -12
-#define MAX_CHROMA_QP_OFFSET 0
-#define DEFAULT_CHROMA_QP_OFFSET 0
 #define MAX_INTRA_REFRESH_MBS ((7680 * 4320) >> 8)
 #define MAX_LTR_FRAME_COUNT 10
 #define MAX_NUM_B_FRAMES 1
@@ -927,8 +925,8 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		.name = "Chroma QP Index Offset",
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.minimum = MIN_CHROMA_QP_OFFSET,
-		.maximum = MAX_CHROMA_QP_OFFSET,
-		.default_value = DEFAULT_CHROMA_QP_OFFSET,
+		.maximum = INT_MAX,
+		.default_value = INT_MAX,
 		.step = 1,
 	},
 	{
@@ -3381,7 +3379,7 @@ int msm_venc_set_chroma_qp_offset(struct msm_vidc_inst *inst)
 	hdev = inst->core->device;
 
 	chr = get_ctrl(inst, V4L2_CID_MPEG_VIDEO_H264_CHROMA_QP_INDEX_OFFSET);
-	if (chr->val != MIN_CHROMA_QP_OFFSET)
+	if (chr->val == INT_MAX || (chr->val != 0 && chr->val != -12))
 		return 0;
 
 	f = &inst->fmts[INPUT_PORT].v4l2_fmt;
