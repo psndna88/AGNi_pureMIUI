@@ -43,6 +43,10 @@ static struct task_struct *events_notify_thread;
 
 bool cpu_oc = true;
 module_param(cpu_oc, bool, S_IRUSR | S_IWUSR);
+bool cpu_minfreq_lock = false;
+bool cpu_maxfreq_lock = false;
+module_param(cpu_minfreq_lock, bool, S_IRUSR | S_IWUSR);
+module_param(cpu_maxfreq_lock, bool, S_IRUSR | S_IWUSR);
 /*******************************sysfs start************************************/
 static int set_cpu_min_freq(const char *buf, const struct kernel_param *kp)
 {
@@ -56,6 +60,8 @@ static int set_cpu_min_freq(const char *buf, const struct kernel_param *kp)
 	while ((cp = strpbrk(cp + 1, " :")))
 		ntokens++;
 
+	if (cpu_minfreq_lock)
+		return 0;
 	/* CPU:value pair */
 	if (!(ntokens % 2))
 		return -EINVAL;
@@ -132,6 +138,8 @@ static int set_cpu_max_freq(const char *buf, const struct kernel_param *kp)
 	while ((cp = strpbrk(cp + 1, " :")))
 		ntokens++;
 
+	if (cpu_maxfreq_lock)
+		return 0;
 	/* CPU:value pair */
 	if (!(ntokens % 2))
 		return -EINVAL;
