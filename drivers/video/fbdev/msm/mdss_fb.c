@@ -77,6 +77,11 @@
 #define EXPORT_COMPAT(x)
 #endif
 
+//Easily enable sRGB with module param
+//Part of the sRGB reset fix!
+int srgb_enabled = 1;
+module_param(srgb_enabled, int, 0644);
+extern bool miuirom;
 #define MAX_FBI_LIST 32
 
 #ifndef TARGET_HW_MDSS_MDP3
@@ -993,6 +998,13 @@ int mdss_first_set_feature(struct mdss_panel_data *pdata, int first_ce_state, in
 		pr_err("%s,not available\n",__func__);
 		return -1;
 	}
+//This simply fixes sRGB reset after screen off/on (for aosp)
+	if(srgb_enabled == 1) {
+		if (!miuirom) {
+			srgb_state = 2;
+			first_srgb_state = 2;
+		}
+	}
 	
 	if((first_ce_state != -1) || (first_cabc_state != -1) || (first_srgb_state != -1) || (first_gamma_state != -1))
 		printk("%s,first_ce_state: %d,first_cabc_state: %d,first_srgb_state=%d,first_gamma_state=%d\n",__func__,
@@ -1325,6 +1337,8 @@ static ssize_t mdss_fb_set_srgb(struct device *dev,struct device_attribute *attr
 		return len;
 	}
 
+	if (!miuirom)
+		param = 2;
 	srgb_state=param;
 
 	if(param>9){
