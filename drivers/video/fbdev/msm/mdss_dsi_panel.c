@@ -46,6 +46,8 @@ extern int first_ce_state, first_cabc_state, first_srgb_state, first_gamma_state
 extern int mdss_first_set_feature(struct mdss_panel_data *pdata, int first_ce_state, int first_cabc_state, int first_srgb_state, int first_gamma_state,
 		int first_cabc_movie_state, int first_cabc_still_state);
 extern bool first_set_bl;
+extern bool miuirom;
+extern int srgb_state;
 char g_lcd_id[128];
 struct mdss_dsi_ctrl_pdata *ctrl_pdata_whitepoint;
 EXPORT_SYMBOL(g_lcd_id);
@@ -1028,6 +1030,8 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 		led_trigger_event(bl_led_trigger, bl_level);
         if(bl_level != 0) {
               first_set_bl = true;
+              if (!miuirom)
+              		first_srgb_state = 2;
 	          if(mdss_first_set_feature(pdata, first_ce_state, first_cabc_state, first_srgb_state, first_gamma_state,
 						  first_cabc_movie_state, first_cabc_still_state))
 		            pr_err("%s first set feature fail ! \n", __func__);
@@ -1089,6 +1093,7 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	struct dsi_panel_cmds *on_cmds;
 	struct dsi_panel_cmds *ce_on_cmds;
 	struct dsi_panel_cmds *srgb_on_cmds;
+	struct dsi_panel_cmds *srgb_off_cmds;
 	struct dsi_panel_cmds *cabc_on_cmds;
 	struct dsi_panel_cmds *cabc_movie_on_cmds;
 	struct dsi_panel_cmds *cabc_still_on_cmds;
@@ -1120,9 +1125,12 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	cabc_on_cmds = &ctrl->cabc_on_cmds;
 	ce_on_cmds = &ctrl->ce_on_cmds;
 	srgb_on_cmds = &ctrl->srgb_on_cmds;
+	srgb_off_cmds = &ctrl->srgb_off_cmds;
 	cabc_movie_on_cmds = &ctrl->cabc_movie_on_cmds;
 	cabc_still_on_cmds = &ctrl->cabc_still_on_cmds;
 
+	if (!miuirom)
+		srgb_state = 2;
 	if ((pinfo->mipi.dms_mode == DYNAMIC_MODE_SWITCH_IMMEDIATE) &&
 			(pinfo->mipi.boot_mode != pinfo->mipi.mode))
 		on_cmds = &ctrl->post_dms_on_cmds;
@@ -1140,6 +1148,9 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	if(srgb_state == 1){
 	   if (srgb_on_cmds->cmd_cnt)
 	       mdss_dsi_panel_cmds_send(ctrl,srgb_on_cmds, CMD_REQ_COMMIT);
+	} else if (srgb_state == 2) {
+		if (srgb_off_cmds->cmd_cnt)
+			mdss_dsi_panel_cmds_send(ctrl,srgb_off_cmds, CMD_REQ_COMMIT);
 	}
 	if(cabc_state == 1){
 		if (cabc_on_cmds->cmd_cnt)
