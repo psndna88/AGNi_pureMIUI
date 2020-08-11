@@ -44,8 +44,6 @@ static void sde_core_irq_callback_handler(void *arg, int irq_idx)
 				&sde_kms->irq_obj.enable_counts[irq_idx]);
 	}
 
-	atomic_inc(&irq_obj->irq_counts[irq_idx]);
-
 	/*
 	 * Perform registered function callback
 	 */
@@ -72,15 +70,6 @@ static void sde_core_irq_callback_handler(void *arg, int irq_idx)
 			SDE_EVT32_IRQ(irq_idx, enable_counts, SDE_EVTLOG_ERROR);
 		}
 	}
-
-	/*
-	 * Clear pending interrupt status in HW.
-	 * NOTE: sde_core_irq_callback_handler is protected by top-level
-	 *       spinlock, so it is safe to clear any interrupt status here.
-	 */
-	sde_kms->hw_intr->ops.clear_intr_status_nolock(
-			sde_kms->hw_intr,
-			irq_idx);
 }
 
 int sde_core_irq_idx_lookup(struct sde_kms *sde_kms,
@@ -105,8 +94,7 @@ static int _sde_core_irq_enable(struct sde_kms *sde_kms, int irq_idx)
 	int ret = 0;
 
 	if (!sde_kms || !sde_kms->hw_intr ||
-			!sde_kms->irq_obj.enable_counts ||
-			!sde_kms->irq_obj.irq_counts) {
+			!sde_kms->irq_obj.enable_counts) {
 		SDE_ERROR("invalid params\n");
 		return -EINVAL;
 	}
@@ -412,15 +400,14 @@ static int sde_debugfs_core_irq_show(struct seq_file *s, void *v)
 	for (i = 0; i < irq_obj->total_irqs; i++) {
 		spin_lock_irqsave(&irq_obj->cb_lock, irq_flags);
 		cb_count = 0;
-		irq_count = atomic_read(&irq_obj->irq_counts[i]);
 		enable_count = atomic_read(&irq_obj->enable_counts[i]);
 		list_for_each_entry(cb, &irq_obj->irq_cb_tbl[i], list)
 			cb_count++;
 		spin_unlock_irqrestore(&irq_obj->cb_lock, irq_flags);
 
 		if (irq_count || enable_count || cb_count)
-			seq_printf(s, "idx:%d irq:%d enable:%d cb:%d\n",
-					i, irq_count, enable_count, cb_count);
+			seq_printf(s, "idx:%d enable:%d cb:%d\n",
+					i, enable_count, cb_count);
 	}
 
 	return 0;
@@ -494,10 +481,7 @@ void sde_core_irq_preinstall(struct sde_kms *sde_kms)
 			sizeof(struct list_head), GFP_KERNEL);
 	sde_kms->irq_obj.enable_counts = kcalloc(sde_kms->irq_obj.total_irqs,
 			sizeof(atomic_t), GFP_KERNEL);
-	sde_kms->irq_obj.irq_counts = kcalloc(sde_kms->irq_obj.total_irqs,
-			sizeof(atomic_t), GFP_KERNEL);
-	if (!sde_kms->irq_obj.irq_cb_tbl || !sde_kms->irq_obj.enable_counts
-			|| !sde_kms->irq_obj.irq_counts)
+	if (!sde_kms->irq_obj.irq_cb_tbl || !sde_kms->irq_obj.enable_counts)
 		return;
 
 	for (i = 0; i < sde_kms->irq_obj.total_irqs; i++) {
@@ -505,8 +489,6 @@ void sde_core_irq_preinstall(struct sde_kms *sde_kms)
 			INIT_LIST_HEAD(&sde_kms->irq_obj.irq_cb_tbl[i]);
 		if (sde_kms->irq_obj.enable_counts)
 			atomic_set(&sde_kms->irq_obj.enable_counts[i], 0);
-		if (sde_kms->irq_obj.irq_counts)
-			atomic_set(&sde_kms->irq_obj.irq_counts[i], 0);
 	}
 }
 
@@ -554,10 +536,8 @@ void sde_core_irq_uninstall(struct sde_kms *sde_kms)
 	spin_lock_irqsave(&sde_kms->irq_obj.cb_lock, irq_flags);
 	kfree(sde_kms->irq_obj.irq_cb_tbl);
 	kfree(sde_kms->irq_obj.enable_counts);
-	kfree(sde_kms->irq_obj.irq_counts);
 	sde_kms->irq_obj.irq_cb_tbl = NULL;
 	sde_kms->irq_obj.enable_counts = NULL;
-	sde_kms->irq_obj.irq_counts = NULL;
 	sde_kms->irq_obj.total_irqs = 0;
 	spin_unlock_irqrestore(&sde_kms->irq_obj.cb_lock, irq_flags);
 }
@@ -661,15 +641,6 @@ int sde_core_irq_domain_fini(struct sde_kms *sde_kms)
 
 irqreturn_t sde_core_irq(struct sde_kms *sde_kms)
 {
-	/*
-	 * Read interrupt status from all sources. Interrupt status are
-	 * stored within hw_intr.
-	 * Function will also clear the interrupt status after reading.
-	 * Individual interrupt status bit will only get stored if it
-	 * is enabled.
-	 */
-	sde_kms->hw_intr->ops.get_interrupt_statuses(sde_kms->hw_intr);
-
 	/*
 	 * Dispatch to HW driver to handle interrupt lookup that is being
 	 * fired. When matching interrupt is located, HW driver will call to
