@@ -1,0 +1,49 @@
+&soc {
+	onewire_gpio: onewire_gpio {
+		compatible = "aaabbb,onewire_gpio";
+		label = "xm_onewire";
+		aaabbb,version = <1>;
+		aaabbb,ow_gpio = <&tlmm 93 0x00>;
+		aaabbb,gpio_number = <93>;
+		mi,onewire-gpio-cfg-addr = <0x0395D000 0x4>;
+		pinctrl-names = "onewire_active", "onewire_sleep";
+		pinctrl-0 = <&onewire_gpio_active>;
+		pinctrl-1 = <&onewire_gpio_sleep>;
+		status = "ok";
+	};
+
+	maxim_ds28e16: maxim_ds28e16 {
+		compatible = "maxim,ds28e16";
+		label = "max_ds28e16";
+		maxim,version = <1>;
+		status = "ok";
+	};
+};
+
+&tlmm {
+	onewire_gpio_active: onewire_gpio_active {
+		mux {
+			pins = "gpio93";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio93";
+			drive-strength = <2>;
+			bias-pull-up; /* No PULL */
+		};
+	};
+
+	onewire_gpio_sleep: onewire_gpio_sleep {
+		mux {
+			pins = "gpio93";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio93";
+			drive-strength = <2>;
+			bias-pull-up;
+		};
+	};
+};

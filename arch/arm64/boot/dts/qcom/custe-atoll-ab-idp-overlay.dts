@@ -1,0 +1,39 @@
+/* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+
+#include "cust-atoll.dtsi"
+#include "cust-pm6150.dtsi"
+#include "cust-pm6150l.dtsi"
+#include "atoll-idp.dtsi"
+#include "cust-msm-audio-lpass.dtsi"
+#include "cust-atoll-pinctrl-overlay.dtsi"
+#include "cust-atoll-regulator.dtsi"
+#include "cust-atoll-sde-display.dtsi"
+#include "cust-atoll-thermal.dtsi"
+#include "cust-atoll-usb.dtsi"
+#include "cust-atoll-idp.dtsi"
+#include "atoll-wcd937x-idp-audio-overlay.dtsi"
+#include "cust-atoll-audio-overlay.dtsi"
+#include "custaeg-atoll-camera-sensor-idp.dtsi"
+#include "cust-high-charging.dtsi"
+
+/ {
+	model = "wcd937x Audio Codec AB IDP EXCALIBUR";
+	compatible = "qcom,cust-atoll";
+	qcom,msm-id = <443 0x0>;
+	qcom,board-id = <0x40022 1>;
+};

@@ -168,9 +168,7 @@
 			   "vph_voltage";
 	qcom,battery-data = <&mtp_batterydata>;
 	qcom,auto-recharge-soc = <98>;
-	qcom,step-charging-enable;
 	qcom,sw-jeita-enable;
-	qcom,fcc-stepping-enable;
 	qcom,suspend-input-on-debug-batt;
 	qcom,sec-charger-config = <3>;
 	qcom,thermal-mitigation = <4200000 3500000 3000000
