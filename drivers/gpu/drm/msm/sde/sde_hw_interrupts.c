@@ -880,12 +880,18 @@ static void sde_hw_intr_dispatch_irq(struct sde_hw_intr *intr,
 		return;
 
 	/*
-	 * The dispatcher will save the IRQ status before calling here.
 	 * Now need to go through each IRQ status and find matching
 	 * irq lookup index.
 	 */
 	spin_lock_irqsave(&intr->irq_lock, irq_flags);
 	for (reg_idx = 0; reg_idx < intr->sde_irq_size; reg_idx++) {
+		/* Read interrupt status */
+		irq_status = SDE_REG_READ(&intr->hw,
+				intr->sde_irq_tbl[reg_idx].status_off);
+
+		if (!irq_status)
+			continue;
+
 		/* get the global offset in 'sde_irq_map' */
 		sde_irq_idx = intr->sde_irq_tbl[reg_idx].sde_irq_idx;
 		if (sde_irq_idx < 0)
@@ -913,21 +919,13 @@ static void sde_hw_intr_dispatch_irq(struct sde_hw_intr *intr,
 		for (irq_idx = start_idx;
 				(irq_idx < end_idx) && irq_status;
 				irq_idx++)
-			if ((irq_status & sde_irq_map[irq_idx].irq_mask) &&
-				(sde_irq_map[irq_idx].reg_idx == reg_idx)) {
+			if (irq_status & sde_irq_map[irq_idx].irq_mask) {
 				/*
 				 * Once a match on irq mask, perform a callback
-				 * to the given cbfunc. cbfunc will take care
-				 * the interrupt status clearing. If cbfunc is
-				 * not provided, then the interrupt clearing
-				 * is here.
+				 * to the given cbfunc.
 				 */
 				if (cbfunc)
 					cbfunc(arg, irq_idx);
-				else
-					SDE_REG_WRITE(&intr->hw,
-						intr->sde_irq_tbl[reg_idx].clr_off,
-						sde_irq_map[irq_idx].irq_mask);
 
 				/*
 				 * When callback finish, clear the irq_status
@@ -936,7 +934,15 @@ static void sde_hw_intr_dispatch_irq(struct sde_hw_intr *intr,
 				 */
 				irq_status &= ~sde_irq_map[irq_idx].irq_mask;
 			}
+
+		/* Clear the interrupt */
+		SDE_REG_WRITE(&intr->hw, intr->sde_irq_tbl[reg_idx].clr_off,
+				0xffffffff);
 	}
+
+	/* ensure register writes go through */
+	wmb();
+
 	spin_unlock_irqrestore(&intr->irq_lock, irq_flags);
 }
 
