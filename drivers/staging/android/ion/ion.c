@@ -720,6 +720,7 @@ struct dma_buf *ion_alloc(size_t len, unsigned int heap_id_mask,
 
 	return dmabuf;
 }
+EXPORT_SYMBOL(ion_alloc);
 
 int ion_alloc_fd(size_t len, unsigned int heap_id_mask, unsigned int flags)
 {
