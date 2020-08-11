@@ -1661,6 +1661,8 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 			}
 			if (tag_read || tag_write_hs || tag_write_uri)
 				argv[pos++] = "--no-wait";
+			if (!tag_read && !tag_write_hs && !tag_write_uri)
+				argv[pos++] = "--handover-only";
 			if (tag_read)
 				argv[pos++] = "--tag-read-only";
 			else if (tag_write_hs)
