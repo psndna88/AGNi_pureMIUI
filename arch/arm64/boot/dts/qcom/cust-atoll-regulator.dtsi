@@ -1,0 +1,9 @@
+&L18A {
+	regulator-min-microvolt = <1696000>;
+	regulator-max-microvolt = <1904000>;
+	qcom,init-voltage = <1696000>;
+};
+
+&L7C {
+	regulator-always-on;
+};

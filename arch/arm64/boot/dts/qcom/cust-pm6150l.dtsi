@@ -1,0 +1,26 @@
+&flash_led {
+	pm6150l_flashlight: qcom,flashlight {
+		label = "flash";
+		qcom,led-name = "flashlight";
+		qcom,max-current = <750>;
+		qcom,default-led-trigger = "flashlight_trigger";
+		qcom,id = <3>;
+		qcom,current-ma = <500>;
+		qcom,duration-ms = <1280>;
+		qcom,ires-ua = <12500>;
+		qcom,hdrm-voltage-mv = <325>;
+		qcom,hdrm-vol-hi-lo-win-mv = <100>;
+	};
+};
+
+&pm6150l_wled {
+	qcom,fs-current-limit = <25000>;
+	qcom,en-cabc;
+	qcom,cabc-sel = <1>;
+	qcom,ovp = <22000>;
+};
+
+&pm6150l_lpg {
+	qcom,lut-patterns = <50 50 49 47 45 42 39 35 31 27 22
+			17 11 6 0 0 0 0 0 0 0>;
+};
