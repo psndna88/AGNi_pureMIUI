@@ -37,5 +37,6 @@
 
 &atoll_snd {
 	qcom,wsa-max-devs = <0>;
+	qcom,mi2s-audio-intf = <1>;
 	qcom,tert-mi2s-gpios = <&cdc_tert_mi2s_gpios>;
 };
