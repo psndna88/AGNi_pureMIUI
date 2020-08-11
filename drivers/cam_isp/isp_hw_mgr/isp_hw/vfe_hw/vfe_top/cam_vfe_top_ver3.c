@@ -119,6 +119,7 @@ static int cam_vfe_top_ver3_set_hw_clk_rate(
 			rc = 0;
 			goto end;
 		}
+
 		ahb_vote.type = CAM_VOTE_ABSOLUTE;
 		ahb_vote.vote.level = clk_lvl;
 		cam_cpas_update_ahb_vote(soc_private->cpas_handle, &ahb_vote);
@@ -648,6 +649,9 @@ int cam_vfe_top_ver3_stop(void *device_priv,
 	top_priv = (struct cam_vfe_top_ver3_priv   *)device_priv;
 	mux_res = (struct cam_isp_resource_node *)stop_args;
 	hw_info = (struct cam_hw_info  *)mux_res->hw_intf->hw_priv;
+	soc_info = top_priv->common_data.soc_info;
+	soc_private = soc_info->soc_private;
+
 	soc_info = top_priv->common_data.soc_info;
 	soc_private = soc_info->soc_private;
 
