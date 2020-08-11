@@ -145,16 +145,20 @@ unsigned int get_android_version(void)
 }
 
 bool miuirom = true;
+extern int srgb_enabled;
 static int __init set_miui_rom(int *val)
 {
 	int temp;
 
 	get_option(&val, &temp);
 
-	if (temp)
+	if (temp) {
 		miuirom = true;
-	else
+		srgb_enabled = 1;
+	} else {
 		miuirom = false;
+		srgb_enabled = 0;
+	}
 
 	return 0;
 }

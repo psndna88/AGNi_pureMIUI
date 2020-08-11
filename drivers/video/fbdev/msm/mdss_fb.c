@@ -79,7 +79,7 @@
 
 //Easily enable sRGB with module param
 //Part of the sRGB reset fix!
-int srgb_enabled = 1;
+int srgb_enabled = 0;
 module_param(srgb_enabled, int, 0644);
 extern bool miuirom;
 #define MAX_FBI_LIST 32
@@ -1337,8 +1337,9 @@ static ssize_t mdss_fb_set_srgb(struct device *dev,struct device_attribute *attr
 		return len;
 	}
 
-	if (!miuirom)
+	if ((srgb_enabled == 1) && (!miuirom)) {
 		param = 2;
+	}
 	srgb_state=param;
 
 	if(param>9){

@@ -47,6 +47,7 @@ extern int mdss_first_set_feature(struct mdss_panel_data *pdata, int first_ce_st
 		int first_cabc_movie_state, int first_cabc_still_state);
 extern bool first_set_bl;
 extern bool miuirom;
+extern int srgb_enabled;
 extern int srgb_state;
 char g_lcd_id[128];
 struct mdss_dsi_ctrl_pdata *ctrl_pdata_whitepoint;
@@ -1030,7 +1031,7 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 		led_trigger_event(bl_led_trigger, bl_level);
         if(bl_level != 0) {
               first_set_bl = true;
-              if (!miuirom)
+              if ((srgb_enabled == 1) && (!miuirom))
               		first_srgb_state = 2;
 	          if(mdss_first_set_feature(pdata, first_ce_state, first_cabc_state, first_srgb_state, first_gamma_state,
 						  first_cabc_movie_state, first_cabc_still_state))
@@ -1129,7 +1130,7 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	cabc_movie_on_cmds = &ctrl->cabc_movie_on_cmds;
 	cabc_still_on_cmds = &ctrl->cabc_still_on_cmds;
 
-	if (!miuirom)
+	if ((srgb_enabled == 1) && (!miuirom))
 		srgb_state = 2;
 	if ((pinfo->mipi.dms_mode == DYNAMIC_MODE_SWITCH_IMMEDIATE) &&
 			(pinfo->mipi.boot_mode != pinfo->mipi.mode))
@@ -1148,7 +1149,7 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	if(srgb_state == 1){
 	   if (srgb_on_cmds->cmd_cnt)
 	       mdss_dsi_panel_cmds_send(ctrl,srgb_on_cmds, CMD_REQ_COMMIT);
-	} else if (srgb_state == 2) {
+	} else if ((srgb_state == 2) && (!miuirom) && (srgb_enabled == 1)) {
 		if (srgb_off_cmds->cmd_cnt)
 			mdss_dsi_panel_cmds_send(ctrl,srgb_off_cmds, CMD_REQ_COMMIT);
 	}
