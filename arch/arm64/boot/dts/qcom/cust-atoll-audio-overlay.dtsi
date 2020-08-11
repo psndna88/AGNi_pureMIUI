@@ -1,0 +1,41 @@
+&bolero {
+	qcom,num-macros = <3>;
+};
+
+&wcd937x_codec {
+	qcom,cdc-micbias1-mv = <2700>;
+	qcom,cdc-micbias2-mv = <2700>;
+	qcom,cdc-micbias3-mv = <2700>;
+};
+
+&wsa_swr_gpios {
+	status = "disabled";
+};
+
+&wsa_spkr_en1 {
+	status = "disabled";
+};
+
+&wsa_spkr_en2 {
+	status = "disabled";
+};
+
+&wsa_macro {
+	status = "disabled";
+};
+
+&soc {
+	cdc_tert_mi2s_gpios: msm_cdc_pinctrl_pri {
+		compatible = "qcom,msm-cdc-pinctrl";
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&tert_i2s_sck_active &tert_i2s_ws_active
+				&tert_i2s_data0_active &tert_i2s_data1_active>;
+		pinctrl-1 = <&tert_i2s_sck_sleep &tert_i2s_ws_sleep
+				&tert_i2s_data0_sleep &tert_i2s_data1_sleep>;
+	};	
+};
+
+&atoll_snd {
+	qcom,wsa-max-devs = <0>;
+	qcom,tert-mi2s-gpios = <&cdc_tert_mi2s_gpios>;
+};

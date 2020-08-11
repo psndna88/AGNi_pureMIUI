@@ -1,4 +1,20 @@
 # SPDX-License-Identifier: GPL-2.0
+ifeq ($(CONFIG_MACH_XIAOMI_ATOLL),y)
+ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
+dtbo-$(CONFIG_ARCH_ATOLL) += \
+		curtana-atoll-ab-idp-overlay.dtbo \
+		durandal-atoll-ab-idp-overlay.dtbo \
+		excalibur-atoll-ab-idp-overlay.dtbo \
+		joyeuse-atoll-ab-idp-overlay.dtbo \
+		gram-atoll-ab-idp-overlay.dtbo
+
+curtana-atoll-ab-idp-overlay.dtbo-base := cust-atoll-ab.dtb
+durandal-atoll-ab-idp-overlay.dtbo-base := cust-atoll-ab.dtb
+excalibur-atoll-ab-idp-overlay.dtbo-base := cust-atoll-ab.dtb
+joyeuse-atoll-ab-idp-overlay.dtbo-base := cust-atoll-ab.dtb
+gram-atoll-ab-idp-overlay.dtbo-base := cust-atoll-ab.dtb
+endif
+else
 dtb-$(CONFIG_ARCH_QCOM)	+= apq8016-sbc.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= apq8096-db820c.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= ipq8074-hk01.dtb
@@ -372,6 +388,8 @@ dtb-$(CONFIG_ARCH_SDXPRAIRIE) += sdxprairie-rumi.dtb \
 	sa515m-ccard.dtb \
 	sa515m-ccard-pcie-ep.dtb \
 	sa515m-ccard-usb-ep.dtb
+
+endif
 
 ifeq ($(CONFIG_ARM64),y)
 always		:= $(dtb-y)
