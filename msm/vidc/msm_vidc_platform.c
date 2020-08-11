@@ -358,6 +358,16 @@ static struct msm_vidc_codec_capability lahaina_capabilities[] = {
 	{CAP_FRAMERATE, DEC, MPEG2, 1, 30, 1, 30},
 	{CAP_BITRATE, DEC, MPEG2, 1, 40000000, 1, 20000000},
 
+	/* VP9 decoder-specific */
+	{CAP_FRAME_WIDTH, DEC, VP9, 96, 4096, 1, 1920},
+	{CAP_FRAME_HEIGHT, DEC, VP9, 96, 4096, 1, 1080},
+	/* (4096 * 2304) / 256 */
+	{CAP_MBS_PER_FRAME, DEC, VP9, 36, 36864, 1, 36864},
+	/* ((4096 * 2304) / 256) * 60*/
+	{CAP_MBS_PER_SECOND, DEC, VP9, 36, 2211840, 1, 2211840},
+	{CAP_FRAMERATE, DEC, VP9, 1, 60, 1, 60},
+	{CAP_BITRATE, DEC, VP9, 1, 100000000, 1, 20000000},
+
 	/* Secure usecase specific */
 	{CAP_SECURE_FRAME_WIDTH, DEC, CODECS_ALL, 96, 4096, 1, 1920},
 	{CAP_SECURE_FRAME_HEIGHT, DEC, CODECS_ALL, 96, 4096, 1, 1080},
