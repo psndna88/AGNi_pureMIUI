@@ -208,7 +208,6 @@ struct sde_irq {
 	u32 total_irqs;
 	struct list_head *irq_cb_tbl;
 	atomic_t *enable_counts;
-	atomic_t *irq_counts;
 	spinlock_t cb_lock;
 	struct dentry *debugfs_file;
 };
