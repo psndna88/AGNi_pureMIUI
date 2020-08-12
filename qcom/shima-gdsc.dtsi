@@ -32,6 +32,13 @@
 		status = "disabled";
 	};
 
+	gcc_usb30_sec_gdsc: qcom,gdsc@19e004 {
+		compatible = "qcom,gdsc";
+		reg = <0x19e004 0x4>;
+		regulator-name = "gcc_usb30_sec_gdsc";
+		status = "disabled";
+	};
+
 	hlos1_vote_turing_mmu_tbu0_gdsc: qcom,gdsc@17d05c {
 		compatible = "qcom,gdsc";
 		reg = <0x17d05c 0x4>;
@@ -218,6 +225,13 @@
 		compatible = "qcom,gdsc";
 		reg = <0xabf0c98 0x4>;
 		regulator-name = "video_cc_mvs1c_gdsc";
+		status = "disabled";
+	};
+
+	video_cc_mvsc_gdsc: qcom,gdsc@aaf2004 {
+		compatible = "qcom,gdsc";
+		reg = <0xaaf2004 0x4>;
+		regulator-name = "video_cc_mvsc_gdsc";
 		status = "disabled";
 	};
 };
