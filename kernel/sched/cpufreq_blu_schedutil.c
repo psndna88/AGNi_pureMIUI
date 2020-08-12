@@ -233,6 +233,12 @@ static void sugov_set_iowait_boost(struct sugov_cpu *sg_cpu, u64 time,
 {
 
 	struct sugov_policy *sg_policy = sg_cpu->sg_policy;
+
+	if (adreno_load_perc > GPULOADTRIGGER) {
+		sg_policy->tunables->iowait_boost_enable = 1;
+	} else {
+		sg_policy->tunables->iowait_boost_enable = 0;
+	}
  	if (!sg_policy->tunables->iowait_boost_enable)
 		return;
 
