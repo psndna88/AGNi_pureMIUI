@@ -148,7 +148,7 @@
 
 	cam_cci0: qcom,cci0 {
 		cell-index = <0>;
-		compatible = "qcom,cci";
+		compatible = "qcom,cci", "simple-bus";
 		reg = <0x05C1B000 0x1000>;
 		reg-names = "cci";
 		reg-cam-base = <0x1B000>;
@@ -241,7 +241,7 @@
 
 	cam_cci1: qcom,cci1 {
 		cell-index = <1>;
-		compatible = "qcom,cci";
+		compatible = "qcom,cci", "simple-bus";
 		reg = <0x05C1C000 0x1000>;
 		reg-names = "cci";
 		reg-cam-base = <0x1C000>;
