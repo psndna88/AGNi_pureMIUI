@@ -3111,7 +3111,7 @@ static int cam_ife_csid_get_time_stamp(
 	const struct cam_ife_csid_udi_reg_offset   *udi_reg;
 	struct timespec64 ts;
 	uint32_t  time_32, id;
-	uint64_t  time_delta;
+	uint64_t  time_delta = 0;
 
 	time_stamp = (struct cam_csid_get_time_stamp_args  *)cmd_args;
 	res = time_stamp->node_res;
@@ -3196,6 +3196,8 @@ static int cam_ife_csid_get_time_stamp(
 			csid_hw->prev_qtimer_ts;
 		time_stamp->boot_timestamp =
 			csid_hw->prev_boot_timestamp + time_delta;
+		if (time_delta == 0)
+			CAM_WARN(CAM_ISP, "No qtimer update");
 	}
 	csid_hw->prev_qtimer_ts = time_stamp->time_stamp_val;
 	csid_hw->prev_boot_timestamp = time_stamp->boot_timestamp;
