@@ -2079,7 +2079,9 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 				 "DPP_CHIRP own=%d iter=10 listen=%d",
 				 dut->dpp_local_bootstrap, freq);
 		} else if (tcp && strcasecmp(tcp, "yes") == 0) {
-			snprintf(buf, sizeof(buf), "DPP_CONTROLLER_START");
+			snprintf(buf, sizeof(buf), "DPP_CONTROLLER_START%s",
+				 (strcasecmp(bs, "QR") == 0 && mutual) ?
+				 " qr=mutual" : "");
 		} else {
 			snprintf(buf, sizeof(buf),
 				 "DPP_LISTEN %d role=%s%s%s%s",
