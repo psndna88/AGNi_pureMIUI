@@ -193,6 +193,21 @@ static int proc_tcp_congestion_control(struct ctl_table *ctl, int write,
 	return ret;
 }
 
+extern bool eas_ioboost;
+void tcp_congestion_game(void) {
+	char val[TCP_CA_NAME_MAX];
+	int ret;
+
+	if (eas_ioboost)
+		*val = "cubic";
+	else
+		*val = CONFIG_DEFAULT_TCP_CONG;
+
+	tcp_get_default_congestion_control(val);
+	ret = tcp_set_default_congestion_control(val);
+
+	return;
+}
 static int proc_tcp_available_congestion_control(struct ctl_table *ctl,
 						 int write,
 						 void __user *buffer, size_t *lenp,

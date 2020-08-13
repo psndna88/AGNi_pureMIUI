@@ -13,6 +13,7 @@
 
 DEFINE_PER_CPU(struct update_util_data *, cpufreq_update_util_data);
 
+bool eas_ioboost = false;
 /**
  * cpufreq_add_update_util_hook - Populate the CPU's update_util_data pointer.
  * @cpu: The CPU to set the pointer for.
