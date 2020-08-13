@@ -3084,6 +3084,7 @@ static enum sigma_cmd_result dpp_reconfigure(struct sigma_dut *dut,
 {
 	const char *wait_conn;
 	char buf[200];
+	char *pos;
 	const char *ifname;
 	struct wpa_ctrl *ctrl;
 	const char *conf_events[] = {
@@ -3141,6 +3142,24 @@ static enum sigma_cmd_result dpp_reconfigure(struct sigma_dut *dut,
 			  "ReconfigAuthResult,OK,ConfResult,FAILED");
 		goto out;
 	}
+
+	res = get_wpa_cli_event(dut, ctrl, "DPP-NETWORK-ID", buf, sizeof(buf));
+	if (res < 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,No DPP-NETWORK-ID");
+		goto out;
+	}
+	pos = strchr(buf, ' ');
+	if (!pos) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Invalid DPP-NETWORK-ID");
+		goto out;
+	}
+	pos++;
+	dut->dpp_network_id = atoi(pos);
+	sigma_dut_print(dut, DUT_MSG_DEBUG,
+			"Network ID for the reconfigured network: %d",
+			dut->dpp_network_id);
 
 	if (strcasecmp(wait_conn, "Yes") == 0) {
 		int not_dpp_akm = 0;
