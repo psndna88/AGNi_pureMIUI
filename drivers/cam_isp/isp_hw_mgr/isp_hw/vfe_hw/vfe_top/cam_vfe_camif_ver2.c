@@ -727,6 +727,12 @@ static int cam_vfe_camif_process_cmd(struct cam_isp_resource_node *rsrc_node,
 	case CAM_ISP_HW_CMD_BLANKING_UPDATE:
 		rc = cam_vfe_camif_blanking_update(rsrc_node, cmd_args);
 		break;
+	case CAM_ISP_HW_CMD_QUERY_REGSPACE_DATA:
+		camif_priv = (struct cam_vfe_mux_camif_data *)
+			rsrc_node->res_priv;
+		*((struct cam_hw_soc_info **)cmd_args) = camif_priv->soc_info;
+		rc = 0;
+		break;
 	default:
 		CAM_ERR(CAM_ISP,
 			"unsupported process command:%d", cmd_type);
