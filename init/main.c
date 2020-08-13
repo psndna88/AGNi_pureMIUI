@@ -164,6 +164,23 @@ static int __init set_miui_rom(int *val)
 }
 __setup("androidboot.miui=", set_miui_rom);
 
+int cpuoc_state = 0;
+static int __init set_cpuoc(int *val)
+{
+	int temp;
+
+	get_option(&val, &temp);
+
+	if (temp == 1)
+		cpuoc_state = 1;
+	else if (temp == 2)
+		cpuoc_state = 2;
+	else
+		cpuoc_state = 0;	
+
+	return 0;
+}
+__setup("androidboot.cpuoc=", set_cpuoc);
 /*
  * Used to generate warnings if static_key manipulation functions are used
  * before jump_label_init is called.

@@ -41,7 +41,7 @@ struct events {
 static struct events events_group;
 static struct task_struct *events_notify_thread;
 
-bool cpu_oc = true;
+bool cpu_oc = false;
 module_param(cpu_oc, bool, S_IRUSR | S_IWUSR);
 bool cpu_minfreq_lock = false;
 bool cpu_maxfreq_lock = false;
