@@ -37,6 +37,19 @@
 	((CAM_CPAS_CLIENT_REGISTERED(cpas_core, indx)) && \
 	(cpas_core->cpas_client[indx]->started))
 
+/* Array indices to represent corresponding RPMH BCM info */
+#define CAM_RPMH_NUMBER_OF_BCMS 0
+#define CAM_RPMH_BCM_FE_OFFSET  1
+#define CAM_RPMH_BCM_BE_OFFSET  2
+#define CAM_RPMH_BCM_DDR_INDEX  3
+#define CAM_RPMH_BCM_MNOC_INDEX 4
+#define CAM_RPMH_BCM_INFO_MAX   5
+
+#define CAM_CPAS_MONITOR_MAX_ENTRIES   20
+#define CAM_CPAS_INC_MONITOR_HEAD(head, ret) \
+	div_u64_rem(atomic64_add_return(1, head),\
+	CAM_CPAS_MONITOR_MAX_ENTRIES, (ret))
+
 /**
  * enum cam_cpas_access_type - Enum for Register access type
  */
@@ -164,6 +177,56 @@ struct cam_cpas_axi_port {
 };
 
 /**
+ * struct cam_cpas_axi_port_debug_info : AXI port information
+ *
+ * @axi_port_name: Name of this AXI port
+ * @ab_bw: AB bw value for this port
+ * @ib_bw: IB bw value for this port
+ * @camnoc_bw: CAMNOC bw value for this port
+ * @applied_ab_bw: applied ab bw for this port
+ * @applied_ib_bw: applied ib bw for this port
+ */
+struct cam_cpas_axi_port_debug_info {
+	const char *axi_port_name;
+	uint64_t ab_bw;
+	uint64_t ib_bw;
+	uint64_t camnoc_bw;
+	uint64_t applied_ab_bw;
+	uint64_t applied_ib_bw;
+};
+
+/**
+ * struct cam_cpas_monitor : CPAS monitor array
+ *
+ * @timestamp: Timestamp at which this monitor entry is saved
+ * @axi_info: AXI port information
+ * @identifier_string: String passed by caller
+ * @identifier_value: Identifier value passed by caller
+ * @applied_camnoc_clk: Applied camnoc axi clock rate
+ * @applied_ahb_level: Applied camcc ahb level
+ * @fe_ddr: RPMH DDR BCM FE (front-end) status register value.
+ *          This indicates requested clock plan
+ * @be_ddr: RPMH DDR BCM BE (back-end) status register value.
+ *          This indicates actual current clock plan
+ * @fe_mnoc: RPMH MNOC BCM FE (front-end) status register value.
+ *           This indicates requested clock plan
+ * @be_mnoc: RPMH MNOC BCM BE (back-end) status register value.
+ *           This indicates actual current clock plan
+ */
+struct cam_cpas_monitor {
+	struct timespec64                   timestamp;
+	char                                identifier_string[128];
+	int32_t                             identifier_value;
+	struct cam_cpas_axi_port_debug_info axi_info[CAM_CPAS_MAX_AXI_PORTS];
+	uint64_t                            applied_camnoc_clk;
+	unsigned int                        applied_ahb_level;
+	uint32_t                            fe_ddr;
+	uint32_t                            be_ddr;
+	uint32_t                            fe_mnoc;
+	uint32_t                            be_mnoc;
+};
+
+/**
  * struct cam_cpas : CPAS core data structure info
  *
  * @hw_caps: CPAS hw capabilities
@@ -186,6 +249,9 @@ struct cam_cpas_axi_port {
  * @dentry: debugfs file entry
  * @ahb_bus_scaling_disable: ahb scaling based on src clk corner for bus
  * @applied_camnoc_axi_rate: applied camnoc axi clock rate
+ * @monitor_head: Monitor array head
+ * @monitor_entries: cpas monitor array
+ * @full_state_dump: Whether to enable full cpas state dump or not
  */
 struct cam_cpas {
 	struct cam_cpas_hw_caps hw_caps;
@@ -208,6 +274,9 @@ struct cam_cpas {
 	struct dentry *dentry;
 	bool ahb_bus_scaling_disable;
 	uint64_t applied_camnoc_axi_rate;
+	atomic64_t  monitor_head;
+	struct cam_cpas_monitor monitor_entries[CAM_CPAS_MONITOR_MAX_ENTRIES];
+	bool full_state_dump;
 };
 
 int cam_camsstop_get_internal_ops(struct cam_cpas_internal_ops *internal_ops);

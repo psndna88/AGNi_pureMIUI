@@ -834,6 +834,40 @@ int cam_cpas_get_custom_dt_info(struct cam_hw_info *cpas_hw,
 		goto cleanup_tree;
 	}
 
+	/* Optional rpmh bcm info */
+	count = of_property_count_u32_elems(of_node, "rpmh-bcm-info");
+	/*
+	 * We expect count=5(CAM_RPMH_BCM_INFO_MAX) if valid rpmh bcm info
+	 * is available.
+	 * 0 - Total number of BCMs
+	 * 1 - First BCM FE (front-end) register offset.
+	 *     These represent requested clk plan by sw
+	 * 2 - First BCM BE (back-end) register offset.
+	 *     These represent actual clk plan at hw
+	 * 3 - DDR BCM index
+	 * 4 - MMNOC BCM index
+	 */
+	if (count == CAM_RPMH_BCM_INFO_MAX) {
+		for (i = 0; i < count; i++) {
+			rc = of_property_read_u32_index(of_node,
+				"rpmh-bcm-info", i, &soc_private->rpmh_info[i]);
+			if (rc) {
+				CAM_ERR(CAM_CPAS,
+					"Incorrect rpmh info at %d, count=%d",
+					i, count);
+				break;
+			}
+			CAM_DBG(CAM_CPAS, "RPMH BCM Info [%d]=0x%x",
+				i, soc_private->rpmh_info[i]);
+		}
+
+		if (rc)
+			soc_private->rpmh_info[CAM_RPMH_NUMBER_OF_BCMS] = 0;
+	} else {
+		CAM_DBG(CAM_CPAS, "RPMH BCM info not available in DT, count=%d",
+			count);
+	}
+
 	return 0;
 
 cleanup_tree:

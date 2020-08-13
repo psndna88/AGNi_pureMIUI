@@ -314,6 +314,19 @@ static int cam_cpastop_setup_regbase_indices(struct cam_hw_soc_info *soc_info,
 		return -EINVAL;
 	}
 
+	/* optional - rpmh register map */
+	rc = cam_common_util_get_string_index(soc_info->mem_block_name,
+		soc_info->num_mem_block, "cam_rpmh", &index);
+	if ((rc == 0) && (index < num_reg_map)) {
+		regbase_index[CAM_CPAS_REG_RPMH] = index;
+		CAM_DBG(CAM_CPAS, "regbase found for RPMH, rc=%d, %d %d",
+			rc, index, num_reg_map);
+	} else {
+		CAM_DBG(CAM_CPAS, "regbase not found for RPMH, rc=%d, %d %d",
+			rc, index, num_reg_map);
+		regbase_index[CAM_CPAS_REG_RPMH] = -1;
+	}
+
 	return 0;
 }
 
