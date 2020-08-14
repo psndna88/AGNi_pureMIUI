@@ -10,7 +10,7 @@
 
 #include "exfat_fs.h"
 
-/* Upcase tabel macro */
+/* Upcase table macro */
 #define EXFAT_NUM_UPCASE	(2918)
 #define UTBL_COUNT		(0x10000)
 
