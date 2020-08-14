@@ -318,43 +318,6 @@ int cam_res_mgr_shared_pinctrl_select_state(bool active)
 }
 EXPORT_SYMBOL(cam_res_mgr_shared_pinctrl_select_state);
 
-int cam_res_mgr_shared_pinctrl_post_init(void)
-{
-	int ret = 0;
-	struct cam_soc_pinctrl_info *pinctrl_info;
-
-	if (!cam_res || !cam_res->shared_gpio_enabled) {
-		CAM_DBG(CAM_RES, "Not support shared gpio.");
-		return ret;
-	}
-
-	mutex_lock(&cam_res->gpio_res_lock);
-	if (cam_res->pstatus == PINCTRL_STATUS_PUT) {
-		CAM_DBG(CAM_RES, "The shared pinctrl alerady been put.!");
-		mutex_unlock(&cam_res->gpio_res_lock);
-		return ret;
-	}
-
-	pinctrl_info = &cam_res->dt.pinctrl_info;
-
-	/*
-	 * If no gpio resource in gpio_res_list, and
-	 * no shared clk now, it means this device
-	 * don't have shared gpio.
-	 */
-	if (list_empty(&cam_res->gpio_res_list) &&
-		cam_res->shared_clk_ref_count < 1) {
-		ret = pinctrl_select_state(pinctrl_info->pinctrl,
-			pinctrl_info->gpio_state_suspend);
-		devm_pinctrl_put(pinctrl_info->pinctrl);
-		cam_res->pstatus = PINCTRL_STATUS_PUT;
-	}
-	mutex_unlock(&cam_res->gpio_res_lock);
-
-	return ret;
-}
-EXPORT_SYMBOL(cam_res_mgr_shared_pinctrl_post_init);
-
 static int cam_res_mgr_add_device(struct device *dev,
 	struct cam_gpio_res *gpio_res)
 {
@@ -476,6 +439,35 @@ int cam_res_mgr_gpio_request(struct device *dev, uint gpio,
 	return rc;
 }
 EXPORT_SYMBOL(cam_res_mgr_gpio_request);
+
+bool cam_res_mgr_check_if_gpio_is_shared(
+	struct gpio *gpio_tbl, uint8_t size)
+{
+	bool found = false;
+	int i = 0;
+
+	if (!cam_res) {
+		CAM_DBG(CAM_RES, "cam_res data is not avaialbe");
+		return false;
+	}
+
+	if (!cam_res->shared_gpio_enabled) {
+		CAM_DBG(CAM_RES, "shared gpio support is not enabled");
+		return false;
+	}
+
+	for (i = 0; i < size; i++) {
+		found = cam_res_mgr_gpio_is_shared(gpio_tbl[i].gpio);
+		if (found) {
+			CAM_DBG(CAM_RES, "gpio: %d is shared gpio",
+				gpio_tbl[i].gpio);
+			break;
+		}
+	}
+
+	return found;
+}
+EXPORT_SYMBOL(cam_res_mgr_check_if_gpio_is_shared);
 
 static void cam_res_mgr_gpio_free(struct device *dev, uint gpio)
 {
