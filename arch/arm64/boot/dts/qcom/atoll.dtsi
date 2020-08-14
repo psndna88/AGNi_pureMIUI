@@ -2926,8 +2926,8 @@
 		"MAX";
 
 		/* PM QoS */
-		qcom,pm-qos-cpu-groups = <0x3f 0xC0>;
-		qcom,pm-qos-cpu-group-latency-us = <67 67>;
+		qcom,pm-qos-cpu-groups = <0x1 0x2 0x4 0x8 0x10 0x20 0x40 0x80>;
+		qcom,pm-qos-cpu-group-latency-us = <67 67 67 67 67 67 67 67>;
 		qcom,pm-qos-default-cpu = <0>;
 
 		pinctrl-names = "dev-reset-assert", "dev-reset-deassert";
