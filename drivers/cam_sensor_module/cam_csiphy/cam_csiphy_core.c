@@ -111,7 +111,8 @@ static int32_t cam_csiphy_update_secure_info(
 		lane_assign >>= 4;
 	}
 
-	if (csiphy_dev->hw_version == CSIPHY_VERSION_V201) {
+	if ((csiphy_dev->hw_version == CSIPHY_VERSION_V201) ||
+		(csiphy_dev->hw_version == CSIPHY_VERSION_V125)) {
 		phy_mask_len = CAM_CSIPHY_MAX_DPHY_LANES +
 			CAM_CSIPHY_MAX_CPHY_LANES + 1;
 	} else if (csiphy_dev->hw_version == CSIPHY_VERSION_V121) {
