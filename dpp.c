@@ -90,10 +90,14 @@ dpp_get_local_bootstrap(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *curve = dpp_get_curve(cmd, "DPPCryptoIdentifier");
 	const char *bs = get_param(cmd, "DPPBS");
 	const char *chan_list = get_param(cmd, "DPPChannelList");
+	const char *tcp = get_param(cmd, "DPPOverTCP");
 	char *pos, mac[50], buf[200], resp[1000], hex[2000];
 	const char *ifname = get_station_ifname(dut);
 	int res;
 	const char *type;
+	int include_mac;
+
+	include_mac = !tcp || strcasecmp(tcp, "yes") != 0;
 
 	if (success)
 		*success = 0;
@@ -151,8 +155,10 @@ dpp_get_local_bootstrap(struct sigma_dut *dut, struct sigma_conn *conn,
 	    (strcmp(chan_list, "0/0") == 0 || chan_list[0] == '\0')) {
 		/* No channel list */
 		res = snprintf(buf, sizeof(buf),
-			       "DPP_BOOTSTRAP_GEN type=%s curve=%s mac=%s",
-			       type, curve, mac);
+			       "DPP_BOOTSTRAP_GEN type=%s curve=%s%s%s",
+			       type, curve,
+			       include_mac ? " mac=" : "",
+			       include_mac ? mac : "");
 	} else if (chan_list) {
 		/* Channel list override (CTT case) - space separated tuple(s)
 		 * of OperatingClass/Channel; convert to wpa_supplicant/hostapd
@@ -163,8 +169,9 @@ dpp_get_local_bootstrap(struct sigma_dut *dut, struct sigma_conn *conn,
 				*pos = ',';
 		}
 		res = snprintf(buf, sizeof(buf),
-			       "DPP_BOOTSTRAP_GEN type=%s curve=%s chan=%s mac=%s",
-			       type, curve, resp, mac);
+			       "DPP_BOOTSTRAP_GEN type=%s curve=%s chan=%s%s%s",
+			       type, curve, resp, include_mac ? " mac=" : "",
+			       include_mac ? mac : "");
 	} else {
 		int channel = 11;
 
@@ -174,8 +181,9 @@ dpp_get_local_bootstrap(struct sigma_dut *dut, struct sigma_conn *conn,
 		    dut->ap_channel > 0 && dut->ap_channel <= 13)
 			channel = dut->ap_channel;
 		res = snprintf(buf, sizeof(buf),
-			       "DPP_BOOTSTRAP_GEN type=%s curve=%s chan=81/%d mac=%s",
-			       type, curve, channel, mac);
+			       "DPP_BOOTSTRAP_GEN type=%s curve=%s chan=81/%d%s%s",
+			       type, curve, channel, include_mac ? " mac=" : "",
+			       include_mac ? mac : "");
 	}
 
 	if (res < 0 || res >= sizeof(buf) ||
