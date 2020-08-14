@@ -1868,6 +1868,7 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 			}
 
 			if (tcp && strcasecmp(tcp, "yes") == 0) {
+				wpa_command(ifname, "DPP_STOP_LISTEN");
 				snprintf(buf, sizeof(buf),
 					 "DPP_CONTROLLER_START");
 			} else {
