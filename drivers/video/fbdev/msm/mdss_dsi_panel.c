@@ -1142,18 +1142,18 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	if (on_cmds->cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, on_cmds, CMD_REQ_COMMIT);
 
-	if(ce_state == 1){
+	if(ce_state==14){
 	   if (ce_on_cmds->cmd_cnt)
 	       mdss_dsi_panel_cmds_send(ctrl,ce_on_cmds, CMD_REQ_COMMIT);
 	}
-	if(srgb_state == 1){
+	if(srgb_state == 11){
 	   if (srgb_on_cmds->cmd_cnt)
 	       mdss_dsi_panel_cmds_send(ctrl,srgb_on_cmds, CMD_REQ_COMMIT);
 	} else if ((srgb_state == 2) && (!miuirom) && (srgb_enabled == 1)) {
 		if (srgb_off_cmds->cmd_cnt)
 			mdss_dsi_panel_cmds_send(ctrl,srgb_off_cmds, CMD_REQ_COMMIT);
 	}
-	if(cabc_state == 1){
+	if(cabc_state == 11){
 		if (cabc_on_cmds->cmd_cnt)
 	       mdss_dsi_panel_cmds_send(ctrl,cabc_on_cmds, CMD_REQ_COMMIT);
 	}
@@ -2514,11 +2514,10 @@ static void mdss_dsi_parse_panel_horizintal_line_idle(struct device_node *np,
 static int mdss_dsi_set_refresh_rate_range(struct device_node *pan_node,
 		struct mdss_panel_info *pinfo)
 {
-	int temp, rc = 0;
+	int rc = 0;
 	rc = of_property_read_u32(pan_node,
 			"qcom,mdss-dsi-min-refresh-rate",
-			&temp);
-	pinfo->min_fps = 30;
+			&pinfo->min_fps);
 	if (rc) {
 		pr_warn("%s:%d, Unable to read min refresh rate\n",
 				__func__, __LINE__);
