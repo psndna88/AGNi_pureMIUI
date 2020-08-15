@@ -1649,19 +1649,19 @@ static int cam_tfe_bus_rup_bottom_half(
 
 static uint32_t cam_tfe_bus_get_last_consumed_addr(
 	struct cam_tfe_bus_priv *bus_priv,
-	uint32_t res_id)
+	uint32_t out_id)
 {
 	uint32_t                             val = 0;
 	struct cam_isp_resource_node        *rsrc_node = NULL;
 	struct cam_tfe_bus_tfe_out_data     *rsrc_data = NULL;
 	struct cam_tfe_bus_wm_resource_data *wm_rsrc_data = NULL;
 
-	if (res_id >= CAM_TFE_BUS_TFE_OUT_MAX) {
-		CAM_ERR(CAM_ISP, "invalid res id:%u", res_id);
+	if (out_id >= CAM_TFE_BUS_TFE_OUT_MAX) {
+		CAM_ERR(CAM_ISP, "invalid out_id:%u", out_id);
 		return 0;
 	}
 
-	rsrc_node = &bus_priv->tfe_out[res_id];
+	rsrc_node = &bus_priv->tfe_out[out_id];
 	rsrc_data = rsrc_node->res_priv;
 	wm_rsrc_data = rsrc_data->wm_res[PLANE_Y]->res_priv;
 
@@ -1705,7 +1705,7 @@ static int cam_tfe_bus_bufdone_bottom_half(
 				evt_info.reg_val =
 					cam_tfe_bus_get_last_consumed_addr(
 						out_rsrc_data->bus_priv,
-						evt_info.res_id);
+						out_rsrc_data->out_id);
 				out_rsrc_data->event_cb(out_rsrc_data->priv,
 					CAM_ISP_HW_EVENT_DONE,
 					(void *)&evt_info);

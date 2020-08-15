@@ -6,6 +6,7 @@
 #ifndef _CAM_SOC_UTIL_H_
 #define _CAM_SOC_UTIL_H_
 
+#include <linux/types.h>
 #include <linux/slab.h>
 #include <linux/clk.h>
 #include <linux/interrupt.h>
