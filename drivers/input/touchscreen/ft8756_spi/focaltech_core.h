@@ -297,8 +297,8 @@ int fts_esdcheck_exit(struct fts_ts_data *ts_data);
 int fts_esdcheck_switch(bool enable);
 int fts_esdcheck_proc_busy(bool proc_debug);
 int fts_esdcheck_set_intr(bool intr);
-int fts_esdcheck_suspend(void);
-int fts_esdcheck_resume(void);
+void fts_esdcheck_suspend(void);
+void fts_esdcheck_resume(void);
 #endif
 
 /* FTS TEST */

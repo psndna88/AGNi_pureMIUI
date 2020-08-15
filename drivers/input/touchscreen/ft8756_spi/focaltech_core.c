@@ -2208,7 +2208,7 @@ static int fts_pm_suspend(struct device *dev)
 	struct fts_ts_data *ts_data = dev_get_drvdata(dev);
 
 //2020.5.6 add for TP suspend crash
-#ifdef FTS_ESDCHECK_EN
+#if FTS_ESDCHECK_EN
 	fts_esdcheck_suspend();
 #endif
 
