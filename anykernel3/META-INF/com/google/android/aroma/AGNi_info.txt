@@ -9,13 +9,13 @@ Optimised for gaming with high performance & less temperatures.
 Always updated with latest kernel commits.
 Strive for the best performing all in one kernel.
 
-<b>DO NOT INSTALL MAGICAL MAGISK MODULES LIKE FDE.AI, MAGNETAR, NFS etc. & those claiming to "BOOST RAM MANAGEMENT".
+<b>DO NOT INSTALL MAGICAL MAGISK MODULES LIKE FDE.AI, MAGNETAR, NFS etc. & those
+claiming to "BOOST RAM MANAGEMENT".
 Take this as a warning before I start blocking their running in harsh way.</b>
 
 <b>NOTE:
 1: You will not be able to change cpu max frequencies manually when NON-OC option selected in this installer.
-2: You do not need EAS or Pixel perf hal files(magisk modules) to be installed anymore.
-   This kernel is now by default compatible with EAS as well as non-EAS roms aswell.</b>
+2: You do not need EAS or Pixel perf hal files(magisk modules) to be installed anymore.</b>
 
 												Thankyou. </q></@>
 

@@ -26,10 +26,10 @@
 
 # Initializing Rom Information
 ini_set("rom_name",		"AGNi EAS Kernel");
-ini_set("rom_version",	"v9.5.2_stable");
+ini_set("rom_version",	"v9.6_stable");
 ini_set("rom_author",	"psndna88@xda");
 ini_set("rom_device",	"SETDEVICETYPE");
-ini_set("rom_date",		"August, 12, 2020");
+ini_set("rom_date",		"August, 16, 2020");
 
 # Show Simple Splash
 splash(
@@ -142,6 +142,12 @@ selectbox(
     "PUBG Smooth-Extreme Graphics",	"PUBG is part of my soul! Note: Performance may vary and don't report for lag or heating.", 0,				#-- selected.0 = 1
     "COD Mobile High Graphics",		"Die Hard COD lover! Note: Performance may vary and don't report for lag or heating.", 0,  					#-- selected.0 = 2
     "No",							"DEFAULT: Also select this if using AGNi game unlock module. (This will also revert changes made above)", 1 #-- selected.0 = 3
+);
+
+selectbox(
+    "EAS Perf HAL","<@center><b>\nEAS compatible PERF HAL configuration</b>\n\n</@>","@install","easperfhal.prop",  
+    "YES",	"DEFAULT. Strongly recomended.", 1, 												#-- selected.0 = 1
+    "NO",	"I already use a Magisk module for that. THIS WILL REVERT ABOVE CHANGES also.", 0 	#-- selected.0 = 2
 );
 
 setvar("retstatus",

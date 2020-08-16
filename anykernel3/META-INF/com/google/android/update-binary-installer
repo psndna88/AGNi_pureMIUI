@@ -578,59 +578,97 @@ $BB chmod 0755 /vendor/bin/init.qcom.early_boot.sh;
 /sbin/restorecon -v /vendor/bin/init.qcom.early_boot.sh;
 /sbin/restorecon -v /vendor/bin/init.qcom.sh;
 ########$BB rm /cache/cleaned;
-### EAS Perf hal (uvera)
-if [ -f /vendor/etc/perf/commonresourceconfigs.xml ]; then
+### EAS Perf hal
+if [ "`$BB grep selected.0=1 /tmp/aroma-data/easperfhal.prop`" ]; then
+	# Backups
 	if [ ! -f /vendor/etc/perf/commonresourceconfigs.xml.bak ]; then
-		$BB mv /vendor/etc/perf/commonresourceconfigs.xml /vendor/etc/perf/commonresourceconfigs.xml.bak;
+			$BB mv /vendor/etc/perf/commonresourceconfigs.xml /vendor/etc/perf/commonresourceconfigs.xml.bak;
 	fi;
-	$BB cp -f $AKHOME/tools/perf/commonresourceconfigs.xml /vendor/etc/perf/commonresourceconfigs.xml;
-	$BB chmod 0644 /vendor/etc/perf/commonresourceconfigs.xml;
-	/sbin/restorecon -v /vendor/etc/perf/commonresourceconfigs.xml;
-fi;
-if [ -f /vendor/etc/perf/perfboostsconfig.xml ]; then
+	if [ ! -f /vendor/etc/msm_irqbalance.conf.bak ]; then
+		$BB mv /vendor/etc/msm_irqbalance.conf /vendor/etc/msm_irqbalance.conf.bak;
+	fi;
 	if [ ! -f /vendor/etc/perf/perfboostsconfig.xml.bak ]; then
 		$BB mv /vendor/etc/perf/perfboostsconfig.xml /vendor/etc/perf/perfboostsconfig.xml.bak;
 	fi;
-	$BB cp -f $AKHOME/tools/perf/perfboostsconfig.xml /vendor/etc/perf/perfboostsconfig.xml;
-	$BB chmod 0644 /vendor/etc/perf/perfboostsconfig.xml;
-	/sbin/restorecon -v /vendor/etc/perf/perfboostsconfig.xml;
-fi;
-if [ -f /vendor/etc/perf/targetconfig.xml ]; then
+	if [ ! -f /vendor/etc/perf/perfconfigstore.xml.bak ]; then
+		$BB mv /vendor/etc/perf/perfconfigstore.xml /vendor/etc/perf/perfconfigstore.xml.bak;
+	fi;
 	if [ ! -f /vendor/etc/perf/targetconfig.xml.bak ]; then
 		$BB mv /vendor/etc/perf/targetconfig.xml /vendor/etc/perf/targetconfig.xml.bak;
 	fi;
-	$BB cp -f $AKHOME/tools/perf/targetconfig.xml /vendor/etc/perf/targetconfig.xml;
-	$BB chmod 0644 /vendor/etc/perf/targetconfig.xml;
-	/sbin/restorecon -v /vendor/etc/perf/targetconfig.xml;
-fi;
-if [ -f /vendor/etc/perf/targetresourceconfigs.xml ]; then
 	if [ ! -f /vendor/etc/perf/targetresourceconfigs.xml.bak ]; then
 		$BB mv /vendor/etc/perf/targetresourceconfigs.xml /vendor/etc/perf/targetresourceconfigs.xml.bak;
 	fi;
+	if [ ! -f /vendor/etc/powerhint.json.bak ]; then
+		$BB cp -f /vendor/etc/powerhint.json /vendor/etc/powerhint.json.bak 2>/dev/null;
+	fi;
+	# Copy files
+	$BB cp -f $AKHOME/tools/perf/commonresourceconfigs.xml /vendor/etc/perf/commonresourceconfigs.xml;
+	$BB cp -f $AKHOME/tools/perf/msm_irqbalance.conf /vendor/etc/msm_irqbalance.conf;
+	$BB cp -f $AKHOME/tools/perf/perfboostsconfig.xml /vendor/etc/perf/perfboostsconfig.xml;
+	$BB cp -f $AKHOME/tools/perf/perfconfigstore.xml /vendor/etc/perf/perfconfigstore.xml;
+	$BB cp -f $AKHOME/tools/perf/targetconfig.xml /vendor/etc/perf/targetconfig.xml;
 	$BB cp -f $AKHOME/tools/perf/targetresourceconfigs.xml /vendor/etc/perf/targetresourceconfigs.xml;
-	$BB chmod 0644 /vendor/etc/perf/targetresourceconfigs.xml;
-	/sbin/restorecon -v /vendor/etc/perf/targetresourceconfigs.xml;
+	if [ -f /vendor/etc/powerhint.json ]; then
+		$BB cp -f $AKHOME/tools/perf/powerhint.json /vendor/etc/powerhint.json;
+	fi;
+	# Permissions
+	$BB chmod 0644 /vendor/etc/perf/*;
+	$BB chmod 0644 /vendor/etc/msm_irqbalance.conf;
+	$BB chmod 0644 /vendor/etc/powerhint.json 2>/dev/null;
+	/sbin/restorecon -R -v /vendor/etc/perf;
+	/sbin/restorecon -v /vendor/etc/msm_irqbalance.conf;
+	/sbin/restorecon -v /vendor/etc/powerhint.json 2>/dev/null;
+	ui_print " " "AGNi has installed Perf HAL (uvera)" " ";
+else
+	# Restore Backups
+	$BB mv -f /vendor/etc/perf/commonresourceconfigs.xml.bak /vendor/etc/perf/commonresourceconfigs.xml;
+	$BB mv -f /vendor/etc/msm_irqbalance.conf.bak /vendor/etc/msm_irqbalance.conf 2>/dev/null;
+	$BB mv -f /vendor/etc/perf/perfboostsconfig.xml.bak /vendor/etc/perf/perfboostsconfig.xml;
+	$BB mv -f /vendor/etc/perf/perfconfigstore.xml.bak /vendor/etc/perf/perfconfigstore.xml;
+	$BB mv -f /vendor/etc/perf/targetconfig.xml.bak /vendor/etc/perf/targetconfig.xml;
+	$BB mv -f /vendor/etc/perf/targetresourceconfigs.xml.bak /vendor/etc/perf/targetresourceconfigs.xml;
+	$BB mv -f /vendor/etc/powerhint.json.bak /vendor/etc/powerhint.json 2>/dev/null;
+	# Permissions
+	$BB chmod 0644 /vendor/etc/perf/*;
+	$BB chmod 0644 /vendor/etc/msm_irqbalance.conf;
+	$BB chmod 0644 /vendor/etc/powerhint.json 2>/dev/null;
+	/sbin/restorecon -R -v /vendor/etc/perf;
+	/sbin/restorecon -v /vendor/etc/msm_irqbalance.conf;
+	/sbin/restorecon -v /vendor/etc/powerhint.json 2>/dev/null;
+	ui_print " " "AGNi has NOT installed EAS Perf HAL." " ";
 fi;
+# Delete modules placed in /sdcard in v9.6 beta 2
+$BB rm /data/media/0/Q-Project_EAS-PowerHAL-module.zip 2>/dev/null;
+$BB rm /data/media/0/Pie-EAS_PerfHAL_module.zip 2>/dev/null;
+$BB rm /data/media/0/Pie-SDM660_EAS_perfHAL_Module_200520065239.zip 2>/dev/null;
+### EAS Perf hal END
 if [ "$DEVICE_NATIVE_MIUIQ" == "YES" ]; then #essentially its sdm660
 	if [ "`$BB grep selected.0=1 /tmp/aroma-data/cpuoc.prop`" ]; then # CPU OC 2.45 selection
-		$BB cp -f $AKHOME/tools/sdm660/init.agni_2.45.rc /vendor/etc/init/hw/init.agni.rc;
+		$BB cp -f $AKHOME/tools/init.agni_2.45.rc /vendor/etc/init/hw/init.agni.rc;
+		CPUOC_SELECT="2";
 		ui_print " " "AGNi installing with EXPERIMENTAL CPU OC @ 2.45GHz !" " ";
 	else
-		$BB cp -f $AKHOME/tools/sdm660/init.agni_noc.rc /vendor/etc/init/hw/init.agni.rc;
+		$BB cp -f $AKHOME/tools/init.agni_noc.rc /vendor/etc/init/hw/init.agni.rc;
+		CPUOC_SELECT="1";
 		ui_print " " "AGNi installing without CPU OC..." " ";
 	fi;
 else
 	if [ "`$BB grep selected.0=1 /tmp/aroma-data/cpuoc.prop`" ]; then # CPU OC 2.2 selection
-		$BB cp -f $AKHOME/tools/sdm636/init.agni_2.2.rc /vendor/etc/init/hw/init.agni.rc;
+		$BB cp -f $AKHOME/tools/init.agni_2.2.rc /vendor/etc/init/hw/init.agni.rc;
+		CPUOC_SELECT="1";
 		ui_print " " "AGNi installing with Standard CPU OC @ 2.2GHz !" " ";
 	elif [ "`$BB grep selected.0=2 /tmp/aroma-data/cpuoc.prop`" ]; then # CPU OC 2.45 selection
-		$BB cp -f $AKHOME/tools/sdm636/init.agni_2.45.rc /vendor/etc/init/hw/init.agni.rc;
+		$BB cp -f $AKHOME/tools/init.agni_2.45.rc /vendor/etc/init/hw/init.agni.rc;
 		ui_print " " "AGNi installing with EXPERIMENTAL CPU OC @ 2.45GHz !" " ";
+		CPUOC_SELECT="2";
 	else
-		$BB cp -f $AKHOME/tools/sdm636/init.agni_noc.rc /vendor/etc/init/hw/init.agni.rc;
+		$BB cp -f $AKHOME/tools/init.agni_noc.rc /vendor/etc/init/hw/init.agni.rc;
+		CPUOC_SELECT="0";
 		ui_print " " "AGNi installing without CPU OC..." " ";
 	fi;
 fi;
+$BB echo "$CPUOC_SELECT" > $AKHOME/CPU_OC;
 if [ "$MIUI_ROM" == "true" ];then
 	$BB sed -i '/#AOSP/d' /vendor/etc/init/hw/init.agni.rc;
 else
@@ -822,6 +860,17 @@ if [ -d /data/data/com.facebook.katana ]; then
 	$BB chmod -R 660 /data/data/com.facebook.katana/app_watcher;
 fi;
 
+# Thermal Modules for Universal Rom Fixes
+if [ ! -d /vendor/etc/thermalbak-agni ]; then
+	$BB mkdir -p /vendor/etc/thermalbak-agni;
+	$BB mv -f /vendor/etc/thermal-engin* /vendor/etc/thermalbak-agni;
+fi;
+if [ "$DEVICE_NATIVE_MIUIQ" == "YES" ]; then #essentially its sdm660
+	$BB cp -f $AKHOME/tools/thermals-sdm660/* /vendor/etc;
+else
+	$BB cp -f $AKHOME/tools/thermals-sdm636/* /vendor/etc;
+fi;
+$BB chmod 0644 /vendor/etc/thermal-engin*;
 ## Unmount /system /vendor
 umount_all;
 

@@ -631,6 +631,14 @@ patch_cmdline() {
   if [ "$miui" == "false" ]; then
 	sed -i 's/androidboot.miui=1/androidboot.miui=0/' $cmdfile;
   fi;
+  # AGNI CPU OC selection
+  cpuoc="`cat $home/CPU_OC`";
+  if [ "$cpuoc" == "1" ]; then
+	sed -i 's/androidboot.cpuoc=0/androidboot.cpuoc=1/' $cmdfile;
+  elif [ "$cpuoc" == "2" ]; then
+  	sed -i 's/androidboot.cpuoc=0/androidboot.cpuoc=2/' $cmdfile;
+  fi;
+
   if [ -f "$home/cmdtmp" ]; then
     sed -i "s|^cmdline=.*|cmdline=$(cat $cmdfile)|" $split_img/header;
     rm -f $cmdfile;
