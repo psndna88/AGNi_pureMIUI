@@ -51,7 +51,6 @@ union power_supply_propval lct_therm_globe_level = {2,};
 union power_supply_propval lct_therm_india_level = {1,};
 #endif
 
-bool lct_backlight_off;
 int LctIsInCall = 0;
 #if defined(CONFIG_KERNEL_CUSTOM_D2S)
 int LctIsInVideo = 0; 
@@ -222,7 +221,7 @@ module_param_named(
 	debug_mask, __debug_mask, int, S_IRUSR | S_IWUSR
 );
 
-static int __weak_chg_icl_ua = 900000;
+static int __weak_chg_icl_ua = 500000;
 module_param_named(
 	weak_chg_icl_ua, __weak_chg_icl_ua, int, S_IRUSR | S_IWUSR);
 
@@ -402,7 +401,6 @@ static enum power_supply_property smb2_usb_props[] = {
 	POWER_SUPPLY_PROP_RERUN_APSD,
 };
 
-extern bool is_poweroff_charge;
 static int smb2_usb_get_prop(struct power_supply *psy,
 		enum power_supply_property psp,
 		union power_supply_propval *val)
@@ -445,16 +443,12 @@ static int smb2_usb_get_prop(struct power_supply *psy,
 		rc = smblib_get_prop_input_current_settled(chg, val);
 		break;
 	case POWER_SUPPLY_PROP_TYPE:
-#ifdef CONFIG_KERNEL_CUSTOM_F7A
 		if ((chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP) || (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3))
 		{
 			val->intval = chg->real_charger_type;
 		} else {
-#endif
 			val->intval = POWER_SUPPLY_TYPE_USB_PD;
-#ifdef CONFIG_KERNEL_CUSTOM_F7A
 		}
-#endif
 		break;
 	case POWER_SUPPLY_PROP_REAL_TYPE:
 		if (chip->bad_part)
@@ -1615,14 +1609,7 @@ static int smb2_init_hw(struct smb2 *chip)
 		return rc;
 	}
 
-#ifndef CONFIG_KERNEL_CUSTOM_F7A
-	if((is_poweroff_charge == false) && (stat != 0x01)) {
-#endif
-		smblib_rerun_apsd_if_required(chg);
-#ifndef CONFIG_KERNEL_CUSTOM_F7A
-	}
-#endif
-
+	smblib_rerun_apsd_if_required(chg);
 
 	/* clear the ICL override if it is set */
 	if (smblib_icl_override(chg, false) < 0) {
@@ -2439,124 +2426,6 @@ static struct device_attribute attrs2[] = {
 			lct_thermal_video_status_show, lct_thermal_video_status_store),
 #endif
 };
-	
-static void thermal_fb_notifier_resume_work(struct work_struct *work)
-{
-	struct smb_charger *chg = container_of(work, struct smb_charger, fb_notify_work);
-	
-	LctThermal = 1;
-#if defined(CONFIG_KERNEL_CUSTOM_E7S)
-	if ((lct_backlight_off) && (LctIsInCall == 0) /*&& (hwc_check_india == 1)*/)
-	{
-		if (hwc_check_india == 1) {				
-			if (lct_therm_lvl_reserved.intval >= 2)
-				smblib_set_prop_system_temp_level(chg,&lct_therm_india_level);
-			else
-				smblib_set_prop_system_temp_level(chg,&lct_therm_lvl_reserved);
-		}
-		else {
-			if (lct_therm_lvl_reserved.intval >= 1)
-				smblib_set_prop_system_temp_level(chg,&lct_therm_globe_level);
-			else
-				smblib_set_prop_system_temp_level(chg,&lct_therm_lvl_reserved);
-		}
-	}
-	else if (LctIsInCall == 1)
-		smblib_set_prop_system_temp_level(chg,&lct_therm_call_level);
-	else
-		smblib_set_prop_system_temp_level(chg,&lct_therm_lvl_reserved);
-	LctThermal = 0;
-#elif defined(CONFIG_KERNEL_CUSTOM_E7T)
-	if (LctIsInCall == 1)
-		smblib_set_prop_system_temp_level(chg,&lct_therm_call_level);
-	else
-		smblib_set_prop_system_temp_level(chg,&lct_therm_lvl_reserved);
-	LctThermal = 0;
-#elif defined(CONFIG_KERNEL_CUSTOM_D2S)
-	if ((lct_backlight_off) && (LctIsInCall == 0) )
-	{
-		if (lct_therm_lvl_reserved.intval >= 2)
-			smblib_set_prop_system_temp_level(chg,&lct_therm_globe_level);
-		else
-			smblib_set_prop_system_temp_level(chg,&lct_therm_level);
-	}
-	else if (LctIsInCall == 1)
-		smblib_set_prop_system_temp_level(chg,&lct_therm_call_level);
-	else
-		smblib_set_prop_system_temp_level(chg,&lct_therm_lvl_reserved);
-	LctThermal = 0;
-#elif  defined(CONFIG_KERNEL_CUSTOM_F7A)
-		if ((lct_backlight_off) && (LctIsInCall == 0) )
-		{
-			if (lct_therm_lvl_reserved.intval >= 2)
-			smblib_set_prop_system_temp_level(chg,&lct_therm_globe_level);
-		else
-			smblib_set_prop_system_temp_level(chg,&lct_therm_lvl_reserved);
-		}
-		else if (LctIsInCall == 1)
-			smblib_set_prop_system_temp_level(chg,&lct_therm_call_level);
-		else
-			smblib_set_prop_system_temp_level(chg,&lct_therm_lvl_reserved);
-		LctThermal = 0;
-
-#else
-	if((lct_backlight_off) && (LctIsInCall == 0) && (hwc_check_india == 0))
-		smblib_set_prop_system_temp_level(chg,&lct_therm_level);
-	else if ((lct_backlight_off) && (LctIsInCall == 0) && (hwc_check_india == 1))
-	{
-		if (lct_therm_lvl_reserved.intval >= 1)
-			smblib_set_prop_system_temp_level(chg,&lct_therm_india_level);
-		else
-			smblib_set_prop_system_temp_level(chg,&lct_therm_level);
-	}
-	else if (LctIsInCall == 1)
-		smblib_set_prop_system_temp_level(chg,&lct_therm_call_level);
-	else
-		smblib_set_prop_system_temp_level(chg,&lct_therm_lvl_reserved);
-	LctThermal = 0;
-#endif
-}
-
-/* frame buffer notifier block control the suspend/resume procedure */
-static int thermal_notifier_callback(struct notifier_block *noti, unsigned long event, void *data)
-{
-	struct fb_event *ev_data = data;
-	struct smb_charger *chg = container_of(noti, struct smb_charger, notifier);
-	int *blank;
-	if (ev_data && ev_data->data && chg) {
-		blank = ev_data->data;
-		if (event == FB_EARLY_EVENT_BLANK && *blank == FB_BLANK_UNBLANK) {
-			
-			lct_backlight_off = true; // fake as display off to fasten charging rate
-			schedule_work(&chg->fb_notify_work);
-		}
-		else if (event == FB_EVENT_BLANK && *blank == FB_BLANK_POWERDOWN) {
-			lct_backlight_off = true;
-			schedule_work(&chg->fb_notify_work);
-		}
-	}
-
-	return 0;
-}
-
-static int lct_register_powermanger(struct smb_charger *chg)
-{
-#if defined(CONFIG_FB)
-	chg->notifier.notifier_call = thermal_notifier_callback;
-	fb_register_client(&chg->notifier);
-#endif	
-
-	return 0;
-}
-
-static int lct_unregister_powermanger(struct smb_charger *chg)
-{
-#if defined(CONFIG_FB)
-	fb_unregister_client(&chg->notifier);		
-#endif
-
-	return 0;
-}
 #endif
 
 static int smb2_probe(struct platform_device *pdev)
@@ -2740,15 +2609,6 @@ static int smb2_probe(struct platform_device *pdev)
 
 	device_init_wakeup(chg->dev, true);
 
-#ifdef THERMAL_CONFIG_FB
- 	lct_therm_lvl_reserved.intval= 0;
- 	lct_therm_level.intval= 0;
-	lct_backlight_off = false;
-	INIT_WORK(&chg->fb_notify_work, thermal_fb_notifier_resume_work);
-	/* register suspend and resume fucntion*/
-	lct_register_powermanger(chg);
-#endif
-
 #ifdef XIAOMI_CHARGER_RUNIN
 	chg->charging_enabled = true;
 #endif
@@ -2801,7 +2661,6 @@ static int smb2_remove(struct platform_device *pdev)
 			  sysfs_remove_file(&chg->dev->kobj,
 							&attrs2[attr_count2].attr);
 			}
-	lct_unregister_powermanger(chg);
 #endif
 
 	power_supply_unregister(chg->batt_psy);

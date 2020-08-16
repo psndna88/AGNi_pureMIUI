@@ -38,7 +38,11 @@ extern struct g_nvt_data g_nvt;
 #endif
 
 extern int hwc_check_global;
+#ifdef CONFIG_KERNEL_CUSTOM_E7S
+#define LCT_JEITA_CCC_AUTO_ADJUST  1
+#else
 #define LCT_JEITA_CCC_AUTO_ADJUST  0
+#endif
 
 #ifdef CONFIG_FORCE_FAST_CHARGE
 #include <linux/fastchg.h>
@@ -46,6 +50,23 @@ extern int hwc_check_global;
 
 #define smblib_err(chg, fmt, ...)
 #define smblib_dbg(chg, reason, fmt, ...) do {} while (0)
+
+#define SDP_CURRENT_UA			500000
+#ifdef CONFIG_KERNEL_CUSTOM_FACTORY
+#define CDP_CURRENT_UA			500000
+#else
+#define CDP_CURRENT_UA			1500000
+#endif
+#define DCP_CURRENT_UA			2000000
+#define HVDCP2_CURRENT_UA		2000000
+#if defined(CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A)
+#define HVDCP3_CURRENT_UA		2700000
+#else
+#define HVDCP3_CURRENT_UA		2300000
+#endif
+#define TYPEC_DEFAULT_CURRENT_UA	 900000
+#define TYPEC_MEDIUM_CURRENT_UA		1500000
+#define TYPEC_HIGH_CURRENT_UA		2700000
 
 static bool is_secure(struct smb_charger *chg, int addr)
 {
@@ -1005,7 +1026,7 @@ int smblib_set_icl_current(struct smb_charger *chg, int icl_ua)
 				goto enable_icl_changed_interrupt;
 		}
 
-		rc = smblib_set_charge_param(chg, &chg->param.usb_icl, icl_ua);
+		rc = smblib_set_charge_param(chg, &chg->param.usb_icl, HVDCP3_CURRENT_UA); //psndna88 HACK
 		if (rc < 0) {
 			smblib_err(chg, "Couldn't set HC ICL rc=%d\n", rc);
 			goto enable_icl_changed_interrupt;
@@ -1027,7 +1048,7 @@ override_suspend_config:
 			&& icl_ua == 500000)
 #else
 		else if (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_CDP
-			&& icl_ua == 1500000)
+			&& icl_ua == CDP_CURRENT_UA)
 #endif
 			/*
 			 * For std cable with type = CDP override only if
@@ -2038,105 +2059,6 @@ int smblib_set_prop_system_temp_level(struct smb_charger *chg,
 	if (val->intval > chg->thermal_levels)
 		return -EINVAL;
 
-#ifdef THERMAL_CONFIG_FB
-	pr_err("smblib_set_prop_system_temp_level val=%d, chg->system_temp_level=%d, LctThermal=%d, lct_backlight_off= %d, IsInCall=%d, hwc_check_india=%d\n ", 
-		val->intval,chg->system_temp_level, LctThermal, lct_backlight_off, LctIsInCall, hwc_check_india);
-	
-	if (LctThermal == 0) {
-#if defined(CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A)
-		if (val->intval < 6)
-#endif
-		lct_therm_lvl_reserved.intval = val->intval;
-	}
-#if defined(CONFIG_KERNEL_CUSTOM_E7S)
-		if (hwc_check_india == 1) {	
-		if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 2)) {
-		    return 0;
-		}
-	}
-	else {
-		if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 1)) {
-		    return 0;
-		}
-	}
-#elif defined(CONFIG_KERNEL_CUSTOM_D2S)
-	if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 2)) {
-		    return 0;
-	}
-#elif defined(CONFIG_KERNEL_CUSTOM_F7A)
-	if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 2)) {
-		return 0;
-	}
-#elif defined(CONFIG_KERNEL_CUSTOM_E7T)
-	if (hwc_check_india == 1) {	
-		if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 3)) {
-		    return 0;
-		}
-	}
-	else {
-		if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 3)) {
-		    return 0;
-		}
-	}
-#else
-	if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 0) && (hwc_check_india == 0)) {
-	    return 0;
-	}
-	if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 1) && (hwc_check_india == 1)) {
-	    return 0;
-	}
-#endif
-#if defined(CONFIG_KERNEL_CUSTOM_F7A) || defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_D2S)
-	if ((LctIsInCall == 1) && (val->intval != 4)) {
-			return 0;
-		}
-#elif defined(CONFIG_KERNEL_CUSTOM_E7T)
-	if ((LctIsInCall == 1) && (val->intval != 5)) {
-		return 0;
-	}
-#endif
-#if defined(CONFIG_KERNEL_CUSTOM_D2S)
-	if ((LctIsInVideo == 1) && (val->intval != 6) && (lct_backlight_off == 0) && (hwc_check_india == 1)) {
-	    return 0;
-	}
-#endif
-	if (val->intval == chg->system_temp_level)
-		return 0;
-#endif
-
-	chg->system_temp_level = val->intval;
-	/* disable parallel charge in case of system temp level */
-	if((lct_backlight_off == 0) && (chg->system_temp_level <= 1))
-	{
-		vote(chg->pl_disable_votable, THERMAL_DAEMON_VOTER,false,0);
-	}
-#if defined(CONFIG_KERNEL_CUSTOM_E7S)
-	else if((hwc_check_india == 0) && (chg->system_temp_level <= 2))
-	{
-		vote(chg->pl_disable_votable, THERMAL_DAEMON_VOTER,false,0);
-	}
-#elif defined (CONFIG_KERNEL_CUSTOM_E7T)
-	else if(chg->system_temp_level <= 2)
-	{
-		vote(chg->pl_disable_votable, THERMAL_DAEMON_VOTER,false,0);
-	}
-#endif
-	else {
-		vote(chg->pl_disable_votable, THERMAL_DAEMON_VOTER,
-			chg->system_temp_level ? true : false, 0);
-	}
-
-	if (chg->system_temp_level == chg->thermal_levels)
-		return vote(chg->chg_disable_votable,
-			THERMAL_DAEMON_VOTER, true, 0);
-
-	vote(chg->chg_disable_votable, THERMAL_DAEMON_VOTER, false, 0);
-	if (chg->system_temp_level == 0) {
-		return vote(chg->fcc_votable, THERMAL_DAEMON_VOTER, false, 0);
-		pr_err("lct smblib_set_prop_system_temp_level 0 false fcc_votable\n");
-	}
-	pr_err("lct smblib_set_prop_system_temp_level >0 fcc_votable\n");
-
 	vote(chg->fcc_votable, THERMAL_DAEMON_VOTER, true,
 			chg->thermal_mitigation[chg->system_temp_level]);
 	return 0;
@@ -2239,9 +2161,7 @@ static int smblib_force_vbus_voltage(struct smb_charger *chg, u8 val)
 
 #if defined(CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A)
 #define MAX_PLUSE_COUNT_ALLOWED 8
-#elif defined(CONFIG_KERNEL_CUSTOM_E7S)
-#define MAX_PLUSE_COUNT_ALLOWED 15
-#elif defined(CONFIG_KERNEL_CUSTOM_E7T)
+#elif defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
 #define MAX_PLUSE_COUNT_ALLOWED 15
 #else
 #define MAX_PLUSE_COUNT_ALLOWED 8
@@ -2748,22 +2668,6 @@ int smblib_get_prop_die_health(struct smb_charger *chg,
 	return 0;
 }
 
-#define SDP_CURRENT_UA			500000
-#ifdef CONFIG_KERNEL_CUSTOM_FACTORY
-#define CDP_CURRENT_UA			500000
-#else
-#define CDP_CURRENT_UA			1500000
-#endif
-#define DCP_CURRENT_UA			2000000
-#define HVDCP2_CURRENT_UA		1500000
-#if defined(CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A)
-#define HVDCP_CURRENT_UA		2700000
-#elif defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
-#define HVDCP_CURRENT_UA		2300000
-#endif
-#define TYPEC_DEFAULT_CURRENT_UA	900000
-#define TYPEC_MEDIUM_CURRENT_UA		1500000
-#define TYPEC_HIGH_CURRENT_UA		3000000
 static int get_rp_based_dcp_current(struct smb_charger *chg, int typec_mode)
 {
 	int rp_ua;
@@ -2799,7 +2703,11 @@ int smblib_set_prop_pd_current_max(struct smb_charger *chg,
 	return rc;
 }
 
+#if defined(CONFIG_KERNEL_CUSTOM_E7S)
+#define FLOAT_CURRENT_UA		500000
+#else
 #define FLOAT_CURRENT_UA		1000000
+#endif
 static int smblib_handle_usb_current(struct smb_charger *chg,
 					int usb_current)
 {
@@ -3357,7 +3265,7 @@ int smblib_get_charge_current(struct smb_charger *chg,
 
 	/* QC 3.0 adapter */
 	if (apsd_result->bit & QC_3P0_BIT) {
-		*total_current_ua = HVDCP_CURRENT_UA;
+		*total_current_ua = HVDCP3_CURRENT_UA;
 #if defined(CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A)
 		pr_info("QC3.0 set icl to 2.7A\n");
 #else
@@ -3705,7 +3613,7 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 		/* Force 1500mA FCC on removal */
 		if (chg->fcc_stepper_mode)
 			vote(chg->fcc_votable, FCC_STEPPER_VOTER,
-						true, 1500000);
+						true, CDP_CURRENT_UA);
 
 		rc = smblib_request_dpdm(chg, false);
 		if (rc < 0)
@@ -4000,7 +3908,7 @@ static void smblib_force_legacy_icl(struct smb_charger *chg, int pst)
 #ifdef CONFIG_KERNEL_CUSTOM_FACTORY
 		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 500000);
 #else
-		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 1500000);
+		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, CDP_CURRENT_UA);
 #endif
 		break;
 	case POWER_SUPPLY_TYPE_USB_DCP:
@@ -4017,8 +3925,8 @@ static void smblib_force_legacy_icl(struct smb_charger *chg, int pst)
 		 * limit ICL to 100mA, the USB driver will enumerate to check
 		 * if this is a SDP and appropriately set the current
 		 */
-#if defined (CONFIG_KERNEL_CUSTOM_E7S)
-		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 1000000);
+#if defined(CONFIG_KERNEL_CUSTOM_E7S)
+		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 500000);
 #elif defined(CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A)
 		vote(chg->usb_icl_votable, USER_VOTER, false, 0);
 		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 1000000);
@@ -4030,23 +3938,19 @@ static void smblib_force_legacy_icl(struct smb_charger *chg, int pst)
 		smblib_err(chg, "lct battery smblib_force_legacy_icl float charger\n");
 		break;
 	case POWER_SUPPLY_TYPE_USB_HVDCP:
-#if defined(CONFIG_KERNEL_CUSTOM_E7S)
-		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 1500000);
-#elif defined(CONFIG_KERNEL_CUSTOM_E7T)
-		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 2000000);
-#elif defined(CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A)
-		vote(chg->usb_icl_votable, USER_VOTER, true, 1500000);
+#if defined(CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A)
+		vote(chg->usb_icl_votable, USER_VOTER, true, HVDCP2_CURRENT_UA);
 #else
-		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 1500000);
+		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, HVDCP2_CURRENT_UA);
 #endif
 		smblib_err(chg, "lct battery smblib_force_legacy_icl qc2.0\n");
 		break;
 	case POWER_SUPPLY_TYPE_USB_HVDCP_3:
 #if defined (CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
-		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 2300000);
-#elif defined(CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A)
+		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, HVDCP3_CURRENT_UA);
+#else
 		vote(chg->usb_icl_votable, USER_VOTER, false, 0);
-		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 2700000);
+		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, HVDCP3_CURRENT_UA);
 #endif
 		smblib_err(chg, "lct battery smblib_force_legacy_icl qc3.0\n");
 		break;

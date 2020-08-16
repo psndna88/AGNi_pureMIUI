@@ -3343,7 +3343,7 @@ module_param_cb(restart, &fg_restart_ops, &fg_restart, 0644);
 static int fg_get_time_to_full_locked(struct fg_chip *chip, int *val)
 {
 	int rc, ibatt_avg, vbatt_avg, rbatt, msoc, full_soc, act_cap_mah,
-		i_cc2cv = 0, soc_cc2cv, tau, divisor, iterm, ttf_mode,
+		i_cc2cv, soc_cc2cv, tau, divisor, iterm, ttf_mode,
 		i, soc_per_step, msoc_this_step, msoc_next_step,
 		ibatt_this_step, t_predicted_this_step, ttf_slope,
 		t_predicted_cv, t_predicted = 0;
@@ -3417,20 +3417,11 @@ static int fg_get_time_to_full_locked(struct fg_chip *chip, int *val)
 #endif
 		if (ibatt_avg < 1200)
 			ibatt_avg = 1200;
-	} else if ((msoc > 70) && (msoc <= 80)) {
-		if (ibatt_avg > 1500)
-			ibatt_avg = 1500;
-		if (ibatt_avg < 1000)
-			ibatt_avg = 1000;
-	} else if ((msoc > 80) && (msoc <= 90)) {
-		if (ibatt_avg > 1000)
-			ibatt_avg = 1000;
-		if (ibatt_avg < 800)
-			ibatt_avg = 800;
-	} else if ((msoc > 90) && (msoc < 99)) {
-		ibatt_avg = 800;
-	} else {
-		ibatt_avg = 500;
+	}
+	if (msoc == 99) {
+		/* clamp ibatt_avg to iterm */
+		if (ibatt_avg < abs(chip->dt.sys_term_curr_ma))
+			ibatt_avg = abs(chip->dt.sys_term_curr_ma);
 	}
 
 	fg_dbg(chip, FG_TTF, "ibatt_avg=%d\n", ibatt_avg);
@@ -4648,11 +4639,13 @@ static int fg_hw_init(struct fg_chip *chip)
 			return rc;
 		}
 	}
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T) || defined(CONFIG_KERNEL_CUSTOM_D2S)
 	buf[0] = 0x33;
 	buf[1] = 0x3;
 	rc = fg_sram_write(chip,4,0,buf,2,FG_IMA_DEFAULT);
 	if(rc < 0)
 		pr_err("Error in configuring Sram,rc = %d\n",rc);
+#endif
 
 	return 0;
 }

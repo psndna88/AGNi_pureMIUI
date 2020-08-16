@@ -26,7 +26,6 @@
 #include <linux/spinlock.h>
 #include <linux/workqueue.h>
 #include <linux/extcon.h>
-#include <linux/charging_state.h>
 #include <linux/usb/class-dual-role.h>
 #include <linux/usb/usbpd.h>
 #include "usbpd.h"
@@ -43,12 +42,6 @@ MODULE_PARM_DESC(disable_usb_pd, "Disable USB PD for USB3.1 compliance testing")
 static bool rev3_sink_only;
 module_param(rev3_sink_only, bool, 0644);
 MODULE_PARM_DESC(rev3_sink_only, "Enable power delivery rev3.0 sink only mode");
-
-static bool is_charging_9v = false;
-bool charging_9v(void)
-{
-	return is_charging_9v;
-}
 
 enum usbpd_state {
 	PE_UNKNOWN,
@@ -335,9 +328,6 @@ static void *usbpd_ipc_log;
 #define ID_HDR_PRODUCT_AMA	5
 #define ID_HDR_VID		0x05c6 /* qcom */
 #define PROD_VDO_PID		0x0a00 /* TBD */
-/* add for limit fixed PDO current to maxium 2A when voltage is 9V */
-#define FIXED_PDO_9V_UA				9000000
-#define MAX_FIXED_PDO_MA_FOR_9V		2000
 
 static bool check_vsafe0v = true;
 module_param(check_vsafe0v, bool, S_IRUSR | S_IWUSR);
@@ -660,18 +650,6 @@ static int pd_select_pdo(struct usbpd *pd, int pdo_pos, int uv, int ua)
 
 		pd->requested_voltage =
 			PD_SRC_PDO_FIXED_VOLTAGE(pdo) * 50 * 1000;
-		/*
-		 * set maxium allowed current for fixed pdo to 2A if request
-		 * voltage is 9V, as we should limit charger to 18W for more safety
-		 * both for charger and our device(such as charge ic inductor)
-		 */
-		if (pd->requested_voltage == FIXED_PDO_9V_UA) {
-			if (curr >= MAX_FIXED_PDO_MA_FOR_9V)
-				curr = MAX_FIXED_PDO_MA_FOR_9V;
-			is_charging_9v = true;
-		} else {
-			is_charging_9v = false;
-		}
 		pd->rdo = PD_RDO_FIXED(pdo_pos, 0, mismatch, 1, 1, curr / 10,
 				max_current / 10);
 	} else if (type == PD_SRC_PDO_TYPE_AUGMENTED) {
@@ -697,9 +675,6 @@ static int pd_select_pdo(struct usbpd *pd, int pdo_pos, int uv, int ua)
 			pd->requested_voltage > 5000000)
 		return -ENOTSUPP;
 
-	/* For pm660, 12V should not be supported, maxium voltage is 9V */
-	if (pd->requested_voltage > FIXED_PDO_9V_UA)
-		return -ENOTSUPP;
 	pd->requested_current = curr;
 	pd->requested_pdo = pdo_pos;
 
