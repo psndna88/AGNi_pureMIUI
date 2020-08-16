@@ -38,6 +38,7 @@ dump_boot;
 
 patch_cmdline androidboot.version androidboot.version=9;
 patch_cmdline androidboot.miui androidboot.miui=1;
+patch_cmdline androidboot.cpuoc androidboot.cpuoc=0;
 write_boot;
 ## end install
 

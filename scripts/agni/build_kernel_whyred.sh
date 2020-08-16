@@ -109,9 +109,15 @@ if ([ -f $KERNELDIR/$DIR/Image.gz-dtb-nc ] && [ -f $KERNELDIR/$DIR/Image.gz-dtb-
 	mv $KERNELDIR/$DIR/wlan_pie.ko $KERNELDIR/$DIR/tools/wlan_pie.ko
 	mv $KERNELDIR/$DIR/wlan_q.ko $KERNELDIR/$DIR/tools/wlan_q.ko
 	mv $KERNELDIR/$DIR/tools/wlan_pie_old.ko.module $KERNELDIR/$DIR/tools/wlan_pie_old.ko 2>/dev/null
+	rm -rf $KERNELDIR/$DIR/tools/thermals-sdm660
+	rm -rf $KERNELDIR/$DIR/tools/sdm660
+	cp -f $KERNELDIR/$DIR/tools/sdm636/* $KERNELDIR/$DIR/tools && rm -rf $KERNELDIR/$DIR/tools/sdm636
+	rm -f $KERNELDIR/$DIR/tools/perf/powerhint.json.sdm660
+	mv -f $KERNELDIR/$DIR/tools/perf/powerhint.json.sdm636 $KERNELDIR/$DIR/tools/perf/powerhint.json
 	cd $KERNELDIR/$DIR/
 	zip -rq $KERNELDIR/READY_ZIP/$FILENAME *
 	if [ -f ~/WORKING_DIRECTORY/zipsigner-3.0.jar ]; then
+		echo "  Zip Signing...."
 		java -jar ~/WORKING_DIRECTORY/zipsigner-3.0.jar $KERNELDIR/READY_ZIP/$FILENAME $KERNELDIR/READY_ZIP/$FILENAME-signed
 		mv $KERNELDIR/READY_ZIP/$FILENAME-signed $KERNELDIR/READY_ZIP/$FILENAME
 	fi
