@@ -199,7 +199,6 @@
 	};
 
 	mdss_rotator: qcom,mdss_rotator {
-		status = "disabled";
 		compatible = "qcom,sde_rotator";
 		reg = <0x5e00000 0xac000>,
 			<0x5eb0000 0x2008>;
@@ -227,7 +226,7 @@
 		interconnects = <&mmrt_virt MASTER_MDP_PORT0 &bimc SLAVE_EBI>,
 				<&bimc MASTER_AMPSS_M0
 					&config_noc SLAVE_DISPLAY_CFG>;
-		interconnect-names = "qcom,sde-data-bus0",
+		interconnect-names = "qcom,rot-data-bus0",
 				"qcom,sde-reg-bus";
 		qcom,sde-reg-bus,vectors-KBps = <0 0>,
 				<0 76800>;
