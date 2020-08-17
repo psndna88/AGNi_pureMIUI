@@ -1534,6 +1534,7 @@ void *msm_vidc_open(int core_id, int session_type)
 	inst->bse_vpp_delay = DEFAULT_BSE_VPP_DELAY;
 	inst->first_reconfig_done = 0;
 	inst->active = true;
+	inst->has_bframe = 0;
 
 	for (i = SESSION_MSG_INDEX(SESSION_MSG_START);
 		i <= SESSION_MSG_INDEX(SESSION_MSG_END); i++) {
