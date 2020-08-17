@@ -225,6 +225,11 @@
 				<GIC_SPI 409 IRQ_TYPE_LEVEL_HIGH>;
 	};
 
+	ptp_virtual {
+		compatible = "qcom,ptp_virtual";
+		reg = <0xeb600000 0x1000>;
+	};
+
 	sdhc_2: sdhci@8804000 {
 		compatible = "qcom,sdhci-msm-v5";
 		reg = <0x8804000 0x1000>;
