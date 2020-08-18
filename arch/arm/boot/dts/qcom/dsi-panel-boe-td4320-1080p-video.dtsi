@@ -227,9 +227,6 @@
 			17000 15500 30000 8000 3000>;
 		qcom,mdss-dsi-panel-peak-brightness = <4300000>;
 		qcom,mdss-dsi-panel-blackness-level = <3230>;
-		qcom,panel-ack-disabled;
-		qcom,ulps-enabled;
-		qcom,suspend-ulps-enabled;
 
 		cm,mdss-livedisplay-cabc-cmd = [
 				15 01 00 00 00 00 02 55 00
