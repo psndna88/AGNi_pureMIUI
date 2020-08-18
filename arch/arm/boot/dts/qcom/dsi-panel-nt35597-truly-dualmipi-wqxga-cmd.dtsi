@@ -59,7 +59,6 @@
 		qcom,mdss-dsi-te-dcs-command = <1>;
 		qcom,mdss-dsi-te-check-enable;
 		qcom,mdss-dsi-te-using-te-pin;
-		qcom,ulps-enabled;
 		qcom,mdss-dsi-on-command = [
 			/* CMD2_P0 */
 			15 01 00 00 00 00 02 FF 20
