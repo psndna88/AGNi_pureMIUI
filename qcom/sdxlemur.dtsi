@@ -386,6 +386,23 @@
 		status = "ok";
 	};
 
+	qnand_1: nand@1b00000 {
+		compatible = "qcom,msm-nand";
+		reg =   <0x01b00000 0x1000>,
+			<0x01b04000 0x1c000>;
+		reg-names =     "nand_phys",
+				"bam_phys";
+		qcom,reg-adjustment-offset = <0x4000>;
+
+		interrupts = <GIC_SPI 135 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "bam_irq";
+
+		clock-names = "core_clk";
+		clocks = <&rpmhcc RPMH_QPIC_CLK>;
+
+		status = "disabled";
+	};
+
 	apsscc: clock-controller@17808000 {
 		compatible = "qcom,dummycc";
 		clock-output-names = "apsscc_clocks";
