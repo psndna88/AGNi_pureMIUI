@@ -143,6 +143,7 @@
 			"shadow_byte_clk0", "shadow_pixel_clk0";
 	qcom,dsi-dyn-clk-enable;
 	qcom,dsi-dyn-clk-list = <534712320 532484352 530256384>;
+	qcom,dsi-dyn-clk-type = "constant-fps-adjust-hfp";
 
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
