@@ -663,7 +663,7 @@ int32_t cam_context_flush_ctx_to_hw(struct cam_context *ctx)
 				rc = cam_sync_signal(
 					req->out_map_entries[i].sync_id,
 					CAM_SYNC_STATE_SIGNALED_CANCEL,
-					CAM_SYNC_EVENT_FLUSH);
+					CAM_SYNC_COMMON_EVENT_FLUSH);
 				if (rc == -EALREADY) {
 					CAM_ERR(CAM_CTXT,
 					"Req: %llu already signalled, sync_id:%d",
@@ -736,7 +736,7 @@ int32_t cam_context_flush_ctx_to_hw(struct cam_context *ctx)
 				rc = cam_sync_signal(
 					req->out_map_entries[i].sync_id,
 					CAM_SYNC_STATE_SIGNALED_CANCEL,
-					CAM_SYNC_EVENT_FLUSH);
+					CAM_SYNC_COMMON_EVENT_FLUSH);
 				if (rc == -EALREADY) {
 					CAM_ERR(CAM_CTXT,
 						"Req: %llu already signalled ctx: %pK dev_name: %s dev_handle: %d ctx_state: %d",
@@ -850,7 +850,7 @@ int32_t cam_context_flush_req_to_hw(struct cam_context *ctx,
 				if (sync_id != -1) {
 					rc = cam_sync_signal(sync_id,
 						CAM_SYNC_STATE_SIGNALED_CANCEL,
-						CAM_SYNC_EVENT_FLUSH);
+						CAM_SYNC_COMMON_EVENT_FLUSH);
 					if (rc == -EALREADY) {
 						CAM_ERR(CAM_CTXT,
 						"Req: %llu already signalled, sync_id:%d",

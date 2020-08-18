@@ -937,7 +937,7 @@ static int __cam_isp_ctx_handle_buf_done_for_request(
 
 			rc = cam_sync_signal(req_isp->fence_map_out[j].sync_id,
 				CAM_SYNC_STATE_SIGNALED_SUCCESS,
-				CAM_SYNC_EVENT_SUCCESS);
+				CAM_SYNC_COMMON_EVENT_SUCCESS);
 			if (rc)
 				CAM_DBG(CAM_ISP, "Sync failed with rc = %d",
 					 rc);
@@ -1078,7 +1078,7 @@ static int __cam_isp_ctx_handle_buf_done_for_request_verify_addr(
 
 			rc = cam_sync_signal(req_isp->fence_map_out[j].sync_id,
 				CAM_SYNC_STATE_SIGNALED_SUCCESS,
-				CAM_SYNC_EVENT_SUCCESS);
+				CAM_SYNC_COMMON_EVENT_SUCCESS);
 			if (rc)
 				CAM_DBG(CAM_ISP, "Sync failed with rc = %d",
 					 rc);
