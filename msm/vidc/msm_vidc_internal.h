@@ -15,7 +15,7 @@
 #include <media/videobuf2-v4l2.h>
 #include <linux/interconnect.h>
 #include "msm_vidc.h"
-#include <media/msm_media_info.h>
+#include "vidc/media/msm_media_info.h"
 #include "vidc_hfi_api.h"
 #include "vidc_hfi_helper.h"
 

@@ -5,7 +5,7 @@
 #ifndef __H_VIDC_HFI_H__
 #define __H_VIDC_HFI_H__
 
-#include <media/msm_media_info.h>
+#include "vidc/media/msm_media_info.h"
 #include "vidc_hfi_helper.h"
 #include "vidc_hfi_api.h"
 
