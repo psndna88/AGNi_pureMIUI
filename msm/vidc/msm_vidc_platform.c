@@ -448,7 +448,7 @@ static struct msm_vidc_codec_capability shima_capabilities_v0[] = {
 	{CAP_SCALE_Y, DEC, CODECS_ALL, 65536, 65536, 1, 65536},
 	{CAP_BFRAME, ENC, H264|HEVC, 0, 1, 1, 0},
 	{CAP_HIER_P_NUM_ENH_LAYERS, ENC, H264|HEVC, 0, 6, 1, 0},
-	{CAP_LTR_COUNT, ENC, H264|HEVC, 0, 4, 1, 0},
+	{CAP_LTR_COUNT, ENC, H264|HEVC, 0, 2, 1, 0},
 	/* ((1920 * 1088) / 256) * 60 fps */
 	{CAP_MBS_PER_SECOND_POWER_SAVE, ENC, CODECS_ALL,
 		0, 489600, 1, 489600},
@@ -469,6 +469,16 @@ static struct msm_vidc_codec_capability shima_capabilities_v0[] = {
 	{CAP_MBS_PER_SECOND, DEC, MPEG2, 36, 244800, 1, 244800},
 	{CAP_FRAMERATE, DEC, MPEG2, 1, 30, 1, 30},
 	{CAP_BITRATE, DEC, MPEG2, 1, 40000000, 1, 20000000},
+
+	/* VP9 decoder-specific */
+	{CAP_FRAME_WIDTH, DEC, VP9, 96, 4096, 1, 1920},
+	{CAP_FRAME_HEIGHT, DEC, VP9, 96, 4096, 1, 1080},
+	/* (4096 * 2304) / 256 */
+	{CAP_MBS_PER_FRAME, DEC, VP9, 36, 36864, 1, 36864},
+	/* ((4096 * 2304) / 256) * 60 */
+	{CAP_MBS_PER_SECOND, DEC, VP9, 36, 2211840, 1, 2211840},
+	{CAP_FRAMERATE, DEC, VP9, 1, 60, 1, 60},
+	{CAP_BITRATE, DEC, VP9, 1, 100000000, 1, 20000000},
 
 	/* Secure usecase specific */
 	{CAP_SECURE_FRAME_WIDTH, DEC, CODECS_ALL, 96, 4096, 1, 1920},
@@ -545,7 +555,7 @@ static struct msm_vidc_codec_capability shima_capabilities_v1[] = {
 	{CAP_SCALE_Y, DEC, CODECS_ALL, 65536, 65536, 1, 65536},
 	{CAP_BFRAME, ENC, H264|HEVC, 0, 1, 1, 0},
 	{CAP_HIER_P_NUM_ENH_LAYERS, ENC, H264|HEVC, 0, 6, 1, 0},
-	{CAP_LTR_COUNT, ENC, H264|HEVC, 0, 4, 1, 0},
+	{CAP_LTR_COUNT, ENC, H264|HEVC, 0, 2, 1, 0},
 	/* ((1920 * 1088) / 256) * 30 fps */
 	{CAP_MBS_PER_SECOND_POWER_SAVE, ENC, CODECS_ALL,
 		0, 244800, 1, 244800},
@@ -566,6 +576,16 @@ static struct msm_vidc_codec_capability shima_capabilities_v1[] = {
 	{CAP_MBS_PER_SECOND, DEC, MPEG2, 36, 244800, 1, 244800},
 	{CAP_FRAMERATE, DEC, MPEG2, 1, 30, 1, 30},
 	{CAP_BITRATE, DEC, MPEG2, 1, 40000000, 1, 20000000},
+
+	/* VP9 decoder-specific */
+	{CAP_FRAME_WIDTH, DEC, VP9, 96, 4096, 1, 1920},
+	{CAP_FRAME_HEIGHT, DEC, VP9, 96, 4096, 1, 1080},
+	/* (4096 * 2304) / 256 */
+	{CAP_MBS_PER_FRAME, DEC, VP9, 36, 36864, 1, 36864},
+	/* ((4096 * 2304) / 256) * 60 */
+	{CAP_MBS_PER_SECOND, DEC, VP9, 36, 2211840, 1, 2211840},
+	{CAP_FRAMERATE, DEC, VP9, 1, 60, 1, 60},
+	{CAP_BITRATE, DEC, VP9, 1, 100000000, 1, 20000000},
 
 	/* Secure usecase specific */
 	{CAP_SECURE_FRAME_WIDTH, DEC, CODECS_ALL, 96, 4096, 1, 1920},
@@ -662,6 +682,16 @@ static struct msm_vidc_codec_capability shima_capabilities_v2[] = {
 	{CAP_MBS_PER_SECOND, DEC, MPEG2, 36, 244800, 1, 244800},
 	{CAP_FRAMERATE, DEC, MPEG2, 1, 30, 1, 30},
 	{CAP_BITRATE, DEC, MPEG2, 1, 40000000, 1, 20000000},
+
+	/* VP9 decoder-specific */
+	{CAP_FRAME_WIDTH, DEC, VP9, 96, 4096, 1, 1920},
+	{CAP_FRAME_HEIGHT, DEC, VP9, 96, 4096, 1, 1080},
+	/* (4096 * 2304) / 256 */
+	{CAP_MBS_PER_FRAME, DEC, VP9, 36, 36864, 1, 36864},
+	/* ((4096 * 2304) / 256) * 30 */
+	{CAP_MBS_PER_SECOND, DEC, VP9, 36, 1105920, 1, 1105920},
+	{CAP_FRAMERATE, DEC, VP9, 1, 60, 1, 60},
+	{CAP_BITRATE, DEC, VP9, 1, 100000000, 1, 20000000},
 
 	/* Secure usecase specific */
 	{CAP_SECURE_FRAME_WIDTH, DEC, CODECS_ALL, 96, 4096, 1, 1920},
