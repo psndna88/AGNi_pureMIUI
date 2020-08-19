@@ -1989,9 +1989,9 @@ static int ath_ap_send_addba_req(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int ath10k_debug_enable_addba_req(struct sigma_dut *dut, int tid,
-					 const char *sta_mac,
-					 const char *dir_path)
+static int mac80211_debug_enable_addba_req(struct sigma_dut *dut, int tid,
+					   const char *sta_mac,
+					   const char *dir_path)
 {
 	DIR *dir;
 	struct dirent *entry;
@@ -2019,21 +2019,21 @@ static int ath10k_debug_enable_addba_req(struct sigma_dut *dut, int tid,
 				       "echo 1 > %s/aggr_mode", path);
 			if (res < 0 || res >= sizeof(buf) || system(buf) != 0) {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"Failed to set aggr mode for ath10k");
+						"Failed to set aggr mode");
 			}
 
 			res = snprintf(buf, sizeof(buf),
 				       "echo %d 32 > %s/addba", tid, path);
 			if (res < 0 || res >= sizeof(buf) || system(buf) != 0) {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"Failed to set addbareq for ath10k");
+						"Failed to set addbareq");
 			}
 
 			break;
 		}
 
 		/* Recursively search subdirectories */
-		ath10k_debug_enable_addba_req(dut, tid, sta_mac, path);
+		mac80211_debug_enable_addba_req(dut, tid, sta_mac, path);
 	}
 
 	closedir(dir);
@@ -2042,8 +2042,8 @@ static int ath10k_debug_enable_addba_req(struct sigma_dut *dut, int tid,
 }
 
 
-static int ath10k_ap_send_addba_req(struct sigma_dut *dut,
-				    struct sigma_cmd *cmd)
+static int mac80211_ap_send_addba_req(struct sigma_dut *dut,
+				      struct sigma_cmd *cmd)
 {
 	const char *val;
 	int tid = 0;
@@ -2059,8 +2059,8 @@ static int ath10k_ap_send_addba_req(struct sigma_dut *dut,
 		return 0;
 	}
 
-	return ath10k_debug_enable_addba_req(dut, tid, val,
-					     "/sys/kernel/debug/ieee80211");
+	return mac80211_debug_enable_addba_req(dut, tid, val,
+					       "/sys/kernel/debug/ieee80211");
 }
 
 
@@ -2096,7 +2096,7 @@ static enum sigma_cmd_result cmd_ap_send_addba_req(struct sigma_dut *dut,
 		return 1;
 	case DRIVER_MAC80211:
 		if (stat("/sys/module/ath10k_core", &s) == 0)
-			return ath10k_ap_send_addba_req(dut, cmd);
+			return mac80211_ap_send_addba_req(dut, cmd);
 		/* fall through */
 	default:
 		send_resp(dut, conn, SIGMA_ERROR,
