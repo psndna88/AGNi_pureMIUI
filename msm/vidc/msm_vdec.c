@@ -1344,6 +1344,7 @@ int msm_vdec_set_priority(struct msm_vidc_inst *inst)
 int msm_vdec_set_seqchng_at_syncframe(struct msm_vidc_inst *inst)
 {
 	int rc = 0;
+	u32 codec;
 	struct hfi_device *hdev;
 	struct hfi_enable hfi_property;
 
@@ -1357,6 +1358,13 @@ int msm_vdec_set_seqchng_at_syncframe(struct msm_vidc_inst *inst)
 	if (!hfi_property.enable)
 		return 0;
 
+	codec = get_v4l2_codec(inst);
+	if (!(codec == V4L2_PIX_FMT_HEVC || codec == V4L2_PIX_FMT_H264)) {
+		s_vpr_e(inst->sid,
+			"%s:  low latency hint supported for HEVC/H264\n",
+				__func__);
+		return -EINVAL;
+	}
 	s_vpr_h(inst->sid, "%s: %#x\n", __func__, hfi_property.enable);
 	rc = call_hfi_op(hdev, session_set_property, inst->session,
 		HFI_PROPERTY_PARAM_VDEC_SEQCHNG_AT_SYNCFRM, &hfi_property,
