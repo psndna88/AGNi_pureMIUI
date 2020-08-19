@@ -111,7 +111,8 @@
 #include "qdf_periodic_work.h"
 #endif
 
-#ifdef CLD_PM_QOS
+#if defined(CLD_PM_QOS) && \
+	(LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0))
 #include <linux/pm_qos.h>
 #endif
 
@@ -1678,9 +1679,6 @@ struct hdd_fw_ver_info {
  * @country_change_work: work for updating vdev when country changes
  * @rx_aggregation: rx aggregation enable or disable state
  * @gro_force_flush: gro force flushed indication flag
- * @current_pcie_gen_speed: current pcie gen speed
- * @pm_qos_req: pm_qos request for all cpu cores
- * @qos_cpu_mask: voted cpu core mask
  */
 struct hdd_context {
 	struct wlan_objmgr_psoc *psoc;
@@ -1991,10 +1989,8 @@ struct hdd_context {
 
 	qdf_time_t runtime_resume_start_time_stamp;
 	qdf_time_t runtime_suspend_done_time_stamp;
-#if defined(CLD_PM_QOS) && defined(CLD_DEV_PM_QOS)
-	struct dev_pm_qos_request pm_qos_req[NR_CPUS];
-	struct cpumask qos_cpu_mask;
-#elif defined(CLD_PM_QOS)
+#if defined(CLD_PM_QOS) && \
+	(LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0))
 	struct pm_qos_request pm_qos_req;
 #endif
 #ifdef WLAN_FEATURE_PKT_CAPTURE
