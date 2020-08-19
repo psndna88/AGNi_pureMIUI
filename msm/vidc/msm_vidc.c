@@ -432,7 +432,8 @@ int msm_vidc_qbuf(void *instance, struct media_device *mdev,
 
 	timestamp_us = (s64)((b->timestamp.tv_sec * 1000000) +
 		b->timestamp.tv_usec);
-	if (is_decode_session(inst) && b->type == INPUT_MPLANE) {
+	if (is_decode_session(inst) && b->type == INPUT_MPLANE &&
+		!is_heif_decoder(inst)) {
 		if (inst->flush_timestamps)
 			msm_comm_release_timestamps(inst);
 		inst->flush_timestamps = false;
@@ -513,7 +514,8 @@ int msm_vidc_dqbuf(void *instance, struct v4l2_buffer *b)
 	}
 	if (is_decode_session(inst) &&
 		b->type == OUTPUT_MPLANE &&
-		!(b->flags & V4L2_BUF_FLAG_CODECCONFIG))
+		!(b->flags & V4L2_BUF_FLAG_CODECCONFIG) &&
+		!is_heif_decoder(inst))
 		msm_comm_fetch_ts_framerate(inst, b);
 
 	return rc;
