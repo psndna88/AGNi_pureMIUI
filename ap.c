@@ -1991,20 +1991,21 @@ static int ath_ap_send_addba_req(struct sigma_dut *dut, struct sigma_conn *conn,
 
 static int mac80211_debug_enable_addba_req(struct sigma_dut *dut, int tid,
 					   const char *sta_mac,
-					   const char *dir_path)
+					   const char *dir_path, int *ret)
 {
 	DIR *dir;
 	struct dirent *entry;
 	char buf[128], path[128];
-	int ret = 0, res;
+	int res;
+	struct stat s;
+
+	*ret = 0;
 
 	dir = opendir(dir_path);
 	if (!dir)
-		return 0;
+		return *ret;
 
 	while ((entry = readdir(dir))) {
-		ret = 1;
-
 		if (strcmp(entry->d_name, ".") == 0 ||
 		    strcmp(entry->d_name, "..") == 0)
 			continue;
@@ -2016,29 +2017,47 @@ static int mac80211_debug_enable_addba_req(struct sigma_dut *dut, int tid,
 
 		if (strcmp(entry->d_name, sta_mac) == 0) {
 			res = snprintf(buf, sizeof(buf),
+				       "%s/aggr_mode", path);
+			if (res < 0 || res >= sizeof(buf) || stat(buf, &s) != 0)
+				continue;
+
+			res = snprintf(buf, sizeof(buf),
+				       "%s/addba", path);
+			if (res < 0 || res >= sizeof(buf) || stat(buf, &s) != 0)
+				continue;
+
+			*ret = 1;
+
+			res = snprintf(buf, sizeof(buf),
 				       "echo 1 > %s/aggr_mode", path);
 			if (res < 0 || res >= sizeof(buf) || system(buf) != 0) {
+				*ret = 0;
 				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"Failed to set aggr mode");
+						"Failed to set aggr mode for %s",
+						sta_mac);
 			}
 
 			res = snprintf(buf, sizeof(buf),
 				       "echo %d 32 > %s/addba", tid, path);
 			if (res < 0 || res >= sizeof(buf) || system(buf) != 0) {
+				*ret = 0;
 				sigma_dut_print(dut, DUT_MSG_ERROR,
-						"Failed to set addbareq");
+						"Failed to set addbareq for %s",
+						sta_mac);
 			}
 
 			break;
 		}
 
 		/* Recursively search subdirectories */
-		mac80211_debug_enable_addba_req(dut, tid, sta_mac, path);
+		if (!*ret)
+			mac80211_debug_enable_addba_req(dut, tid, sta_mac, path,
+							ret);
 	}
 
 	closedir(dir);
 
-	return ret;
+	return *ret;
 }
 
 
@@ -2046,7 +2065,7 @@ static int mac80211_ap_send_addba_req(struct sigma_dut *dut,
 				      struct sigma_cmd *cmd)
 {
 	const char *val;
-	int tid = 0;
+	int tid = 0, ret;
 
 	val = get_param(cmd, "TID");
 	if (val)
@@ -2059,8 +2078,10 @@ static int mac80211_ap_send_addba_req(struct sigma_dut *dut,
 		return 0;
 	}
 
-	return mac80211_debug_enable_addba_req(dut, tid, val,
-					       "/sys/kernel/debug/ieee80211");
+	mac80211_debug_enable_addba_req(dut, tid, val,
+					"/sys/kernel/debug/ieee80211",
+					&ret);
+	return ret;
 }
 
 
@@ -2070,7 +2091,7 @@ static enum sigma_cmd_result cmd_ap_send_addba_req(struct sigma_dut *dut,
 {
 	/* const char *name = get_param(cmd, "NAME"); */
 	/* const char *ifname = get_param(cmd, "INTERFACE"); */
-	struct stat s;
+	int ret;
 
 	switch (get_driver_type(dut)) {
 	case DRIVER_ATHEROS:
@@ -2095,8 +2116,9 @@ static enum sigma_cmd_result cmd_ap_send_addba_req(struct sigma_dut *dut,
 				"ap_send_addba_req command ignored");
 		return 1;
 	case DRIVER_MAC80211:
-		if (stat("/sys/module/ath10k_core", &s) == 0)
-			return mac80211_ap_send_addba_req(dut, cmd);
+		ret = mac80211_ap_send_addba_req(dut, cmd);
+		if (ret)
+			return ret;
 		/* fall through */
 	default:
 		send_resp(dut, conn, SIGMA_ERROR,
