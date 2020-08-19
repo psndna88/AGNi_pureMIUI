@@ -49,4 +49,5 @@ int check_blur_restrictions(struct msm_vidc_inst *inst);
 int msm_venc_set_frame_quality(struct msm_vidc_inst *inst);
 int msm_venc_set_image_grid(struct msm_vidc_inst *inst);
 int msm_venc_set_bitrate_boost_margin(struct msm_vidc_inst *inst, u32 enable);
+int handle_vpss_restrictions(struct msm_vidc_inst *inst);
 #endif

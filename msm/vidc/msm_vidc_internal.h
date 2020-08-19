@@ -229,6 +229,11 @@ struct msm_vidc_codec_capability {
 	u32 default_value;
 };
 
+struct msm_vidc_vpss_capability {
+	u32 width;
+	u32 height;
+};
+
 struct msm_vidc_codec {
 	enum hal_domain domain;
 	enum hal_video_codec codec;
@@ -296,6 +301,8 @@ struct msm_vidc_platform_data {
 	uint32_t codecs_count;
 	struct msm_vidc_codec_capability *codec_caps;
 	uint32_t codec_caps_count;
+	struct msm_vidc_vpss_capability *vpss_caps;
+	uint32_t vpss_caps_count;
 	struct msm_vidc_csc_coeff csc_data;
 	struct msm_vidc_efuse_data *efuse_data;
 	unsigned int efuse_data_length;
