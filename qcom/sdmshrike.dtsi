@@ -503,6 +503,10 @@
 		compatible = "simple-bus";
 	};
 
+	qcom-secure-buffer {
+		compatible = "qcom,secure-buffer";
+	};
+
 	soc: soc { };
 };
 
@@ -663,6 +667,12 @@
 	qcom,msm-rtb {
 		compatible = "qcom,msm-rtb";
 		qcom,rtb-size = <0x100000>;
+	};
+
+	pil_scm_pas {
+		compatible = "qcom,pil-tz-scm-pas";
+		interconnects = <&aggre2_noc MASTER_CRYPTO
+			&mc_virt SLAVE_EBI1>;
 	};
 
 	qcom,mpm2-sleep-counter@c221000 {
@@ -1480,6 +1490,12 @@
 #include "sa8195-qupv3.dtsi"
 #include "sa8195-ssc-qupv3.dtsi"
 #include "sa8195-usb.dtsi"
+
+&firmware {
+	scm {
+		compatible = "qcom,scm";
+	};
+};
 
 &emac_gdsc {
 	status = "ok";
