@@ -243,6 +243,10 @@ skip_aon_mvp_noc:
 	/* HPG 6.1.2 Step 6 */
 	__disable_unprepare_clks(device);
 
+	/* HPG 6.1.2 Step 7 & 8 */
+	if (call_venus_op(device, reset_ahb2axi_bridge, device, sid))
+		d_vpr_e("%s: Failed to reset ahb2axi\n", __func__);
+
 	/* HPG 6.1.2 Step 5 */
 	if (__disable_regulators(device))
 		d_vpr_e("%s: Failed to disable regulators\n", __func__);
