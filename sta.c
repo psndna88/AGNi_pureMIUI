@@ -5439,7 +5439,7 @@ cmd_sta_preset_testparameters(struct sigma_dut *dut, struct sigma_conn *conn,
 		int len;
 
 		len = snprintf(buf, sizeof(buf),
-			       "MSCS add up_bitmap=0xF0 up_limit=7 stream_timeout=60000 frame_classifier=045F%032x",
+			       "MSCS add up_bitmap=F0 up_limit=7 stream_timeout=60000 frame_classifier=045F%032x",
 			       0);
 
 		if (len < 0 || len >= sizeof(buf)) {
