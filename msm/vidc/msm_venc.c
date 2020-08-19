@@ -2485,9 +2485,8 @@ int msm_venc_set_intra_period(struct msm_vidc_inst *inst)
 			V4L2_CID_MPEG_VIDC_VIDEO_HEVC_MAX_HIER_CODING_LAYER);
 	codec = get_v4l2_codec(inst);
 
-	intra_period.pframes = gop_size->val;
-
 	if (!max_layer->val && codec == V4L2_PIX_FMT_H264) {
+		intra_period.pframes = gop_size->val;
 		/*
 		 * At this point we've already made decision on bframe.
 		 * Control value gives updated bframe value.
