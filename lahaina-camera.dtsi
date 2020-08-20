@@ -20,10 +20,13 @@
 		interrupts = <GIC_SPI 477 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "csiphy0";
 		gdscr-supply = <&cam_cc_titan_top_gdsc>;
-		refgen-supply = <&refgen>;
-		regulator-names = "gdscr", "refgen";
-		csi-vdd-voltage = <1200000>;
-		mipi-csi-vdd-supply = <&pm8350_l6>;
+		csi-vdd-1p2-supply = <&pm8350_l6>;
+		csi-vdd-0p9-supply = <&pm8350_l5>;
+		rgltr-cntrl-support;
+		regulator-names = "gdscr", "csi-vdd-1p2", "csi-vdd-0p9";
+		rgltr-min-voltage = <0 1200000 880000>;
+		rgltr-max-voltage = <0 1208000 888000>;
+		rgltr-load-current = <0 54000 96400>;
 		clocks = <&clock_camcc CAM_CC_CPHY_RX_CLK_SRC>,
 			<&clock_camcc CAM_CC_CSIPHY0_CLK>,
 			<&clock_camcc CAM_CC_CSI0PHYTIMER_CLK_SRC>,
@@ -48,10 +51,13 @@
 		interrupts = <GIC_SPI 478 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "csiphy1";
 		gdscr-supply = <&cam_cc_titan_top_gdsc>;
-		refgen-supply = <&refgen>;
-		regulator-names = "gdscr", "refgen";
-		csi-vdd-voltage = <1200000>;
-		mipi-csi-vdd-supply = <&pm8350_l6>;
+		csi-vdd-1p2-supply = <&pm8350_l6>;
+		csi-vdd-0p9-supply = <&pm8350_l5>;
+		rgltr-cntrl-support;
+		regulator-names = "gdscr", "csi-vdd-1p2", "csi-vdd-0p9";
+		rgltr-min-voltage = <0 1200000 880000>;
+		rgltr-max-voltage = <0 1208000 888000>;
+		rgltr-load-current = <0 54000 96400>;
 		clocks = <&clock_camcc CAM_CC_CPHY_RX_CLK_SRC>,
 			<&clock_camcc CAM_CC_CSIPHY1_CLK>,
 			<&clock_camcc CAM_CC_CSI1PHYTIMER_CLK_SRC>,
@@ -77,10 +83,13 @@
 		interrupts = <GIC_SPI 479 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "csiphy2";
 		gdscr-supply = <&cam_cc_titan_top_gdsc>;
-		refgen-supply = <&refgen>;
-		regulator-names = "gdscr", "refgen";
-		csi-vdd-voltage = <1200000>;
-		mipi-csi-vdd-supply = <&pm8350_l6>;
+		csi-vdd-1p2-supply = <&pm8350_l6>;
+		csi-vdd-0p9-supply = <&pm8350_l5>;
+		rgltr-cntrl-support;
+		regulator-names = "gdscr", "csi-vdd-1p2", "csi-vdd-0p9";
+		rgltr-min-voltage = <0 1200000 880000>;
+		rgltr-max-voltage = <0 1208000 888000>;
+		rgltr-load-current = <0 54000 96400>;
 		clocks = <&clock_camcc CAM_CC_CPHY_RX_CLK_SRC>,
 			<&clock_camcc CAM_CC_CSIPHY2_CLK>,
 			<&clock_camcc CAM_CC_CSI2PHYTIMER_CLK_SRC>,
@@ -105,10 +114,13 @@
 		interrupts = <GIC_SPI 448 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "csiphy3";
 		gdscr-supply = <&cam_cc_titan_top_gdsc>;
-		refgen-supply = <&refgen>;
-		regulator-names = "gdscr", "refgen";
-		csi-vdd-voltage = <1200000>;
-		mipi-csi-vdd-supply = <&pm8350_l6>;
+		csi-vdd-1p2-supply = <&pm8350_l6>;
+		csi-vdd-0p9-supply = <&pm8350_l5>;
+		rgltr-cntrl-support;
+		regulator-names = "gdscr", "csi-vdd-1p2", "csi-vdd-0p9";
+		rgltr-min-voltage = <0 1200000 880000>;
+		rgltr-max-voltage = <0 1208000 888000>;
+		rgltr-load-current = <0 54000 96400>;
 		clocks = <&clock_camcc CAM_CC_CPHY_RX_CLK_SRC>,
 			<&clock_camcc CAM_CC_CSIPHY3_CLK>,
 			<&clock_camcc CAM_CC_CSI3PHYTIMER_CLK_SRC>,
@@ -133,10 +145,13 @@
 		interrupts = <GIC_SPI 122 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "csiphy4";
 		gdscr-supply = <&cam_cc_titan_top_gdsc>;
-		refgen-supply = <&refgen>;
-		regulator-names = "gdscr", "refgen";
-		csi-vdd-voltage = <1200000>;
-		mipi-csi-vdd-supply = <&pm8350_l6>;
+		csi-vdd-1p2-supply = <&pm8350_l6>;
+		csi-vdd-0p9-supply = <&pm8350_l5>;
+		rgltr-cntrl-support;
+		regulator-names = "gdscr", "csi-vdd-1p2", "csi-vdd-0p9";
+		rgltr-min-voltage = <0 1200000 880000>;
+		rgltr-max-voltage = <0 1208000 888000>;
+		rgltr-load-current = <0 54000 96400>;
 		clocks = <&clock_camcc CAM_CC_CPHY_RX_CLK_SRC>,
 			<&clock_camcc CAM_CC_CSIPHY4_CLK>,
 			<&clock_camcc CAM_CC_CSI4PHYTIMER_CLK_SRC>,
@@ -161,10 +176,13 @@
 		interrupts = <GIC_SPI 89 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "csiphy5";
 		gdscr-supply = <&cam_cc_titan_top_gdsc>;
-		refgen-supply = <&refgen>;
-		regulator-names = "gdscr", "refgen";
-		csi-vdd-voltage = <1200000>;
-		mipi-csi-vdd-supply = <&pm8350_l6>;
+		csi-vdd-1p2-supply = <&pm8350_l6>;
+		csi-vdd-0p9-supply = <&pm8350_l5>;
+		rgltr-cntrl-support;
+		regulator-names = "gdscr", "csi-vdd-1p2", "csi-vdd-0p9";
+		rgltr-min-voltage = <0 1200000 880000>;
+		rgltr-max-voltage = <0 1208000 888000>;
+		rgltr-load-current = <0 54000 96400>;
 		clocks = <&clock_camcc CAM_CC_CPHY_RX_CLK_SRC>,
 			<&clock_camcc CAM_CC_CSIPHY5_CLK>,
 			<&clock_camcc CAM_CC_CSI5PHYTIMER_CLK_SRC>,
@@ -1170,7 +1188,7 @@
 			<&clock_camcc CAM_CC_CPAS_AHB_CLK>;
 		clock-rates = <0 0>;
 		clock-cntl-level = "svs";
-		cdm-client-names = "ife3", "ife4";
+		cdm-client-names = "ife3", "ife4", "dualife";
 		status = "ok";
 	};
 
@@ -1808,7 +1826,7 @@
 
 		clock-rates =
 			<0 0 0 300000000 0>,
-			<0 0 0 475000000 0>,
+			<0 0 0 450000000 0>,
 			<0 0 0 525000000 0>,
 			<0 0 0 700000000 0>,
 			<0 0 0 700000000 0>;
