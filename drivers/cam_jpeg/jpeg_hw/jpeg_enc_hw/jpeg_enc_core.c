@@ -356,6 +356,7 @@ int cam_jpeg_enc_start_hw(void *data,
 	}
 	spin_unlock_irqrestore(&jpeg_enc_dev->hw_lock, flags);
 
+	CAM_DBG(CAM_JPEG, "Starting JPEG ENC");
 	cam_io_w_mb(hw_info->reg_val.hw_cmd_start,
 		mem_base + hw_info->reg_offset.hw_cmd);
 

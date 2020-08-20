@@ -44,6 +44,9 @@
 #define CAM_OPE        (1 << 28)
 #define CAM_PRESIL     (1 << 27)
 
+/* CAM_IO_ACCESS: Tracks IO read/write */
+#define CAM_IO_ACCESS (1 << 29)
+
 #define STR_BUFFER_MAX_LENGTH  1024
 
 /**

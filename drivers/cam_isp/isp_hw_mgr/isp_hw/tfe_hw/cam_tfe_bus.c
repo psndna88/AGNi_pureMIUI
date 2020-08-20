@@ -71,6 +71,7 @@ struct cam_tfe_bus_common_data {
 	uint32_t                                    num_sec_out;
 	uint32_t                                    comp_done_shift;
 	bool                                        is_lite;
+	bool                                        support_consumed_addr;
 	cam_hw_mgr_event_cb_func                    event_cb;
 	bool                        rup_irq_enable[CAM_TFE_BUS_RUP_GRP_MAX];
 };
@@ -95,6 +96,7 @@ struct cam_tfe_bus_wm_resource_data {
 	uint32_t             framedrop_pattern;
 
 	uint32_t             en_cfg;
+	uint32_t             image_addr_offset;
 	uint32_t             is_dual;
 
 	uint32_t             acquired_width;
@@ -124,6 +126,7 @@ struct cam_tfe_bus_tfe_out_data {
 	uint32_t                         rup_group_id;
 	uint32_t                         source_group;
 	struct cam_tfe_bus_common_data  *common_data;
+	struct cam_tfe_bus_priv         *bus_priv;
 
 	uint32_t                         num_wm;
 	struct cam_isp_resource_node    *wm_res[PLANE_MAX];
@@ -1221,6 +1224,7 @@ static int cam_tfe_bus_acquire_tfe_out(void *priv, void *acquire_args,
 	rsrc_data->common_data->event_cb = acq_args->event_cb;
 	rsrc_data->event_cb = acq_args->event_cb;
 	rsrc_data->priv = acq_args->priv;
+	rsrc_data->bus_priv = bus_priv;
 
 	secure_caps = cam_tfe_bus_can_be_secure(rsrc_data->out_id);
 	mode = out_acquire_args->out_port_info->secure_mode;
@@ -1643,6 +1647,31 @@ static int cam_tfe_bus_rup_bottom_half(
 	return 0;
 }
 
+static uint32_t cam_tfe_bus_get_last_consumed_addr(
+	struct cam_tfe_bus_priv *bus_priv,
+	uint32_t res_id)
+{
+	uint32_t                             val = 0;
+	struct cam_isp_resource_node        *rsrc_node = NULL;
+	struct cam_tfe_bus_tfe_out_data     *rsrc_data = NULL;
+	struct cam_tfe_bus_wm_resource_data *wm_rsrc_data = NULL;
+
+	if (res_id >= CAM_TFE_BUS_TFE_OUT_MAX) {
+		CAM_ERR(CAM_ISP, "invalid res id:%u", res_id);
+		return 0;
+	}
+
+	rsrc_node = &bus_priv->tfe_out[res_id];
+	rsrc_data = rsrc_node->res_priv;
+	wm_rsrc_data = rsrc_data->wm_res[PLANE_Y]->res_priv;
+
+	val = cam_io_r_mb(
+		wm_rsrc_data->common_data->mem_base +
+		wm_rsrc_data->hw_regs->addr_status_0);
+
+	return val;
+}
+
 static int cam_tfe_bus_bufdone_bottom_half(
 	struct cam_tfe_bus_priv            *bus_priv,
 	struct cam_tfe_irq_evt_payload *evt_payload)
@@ -1673,6 +1702,10 @@ static int cam_tfe_bus_bufdone_bottom_half(
 				evt_info.res_type = out_rsrc->res_type;
 				evt_info.hw_idx = out_rsrc->hw_intf->hw_idx;
 				evt_info.res_id = out_rsrc->res_id;
+				evt_info.reg_val =
+					cam_tfe_bus_get_last_consumed_addr(
+						out_rsrc_data->bus_priv,
+						evt_info.res_id);
 				out_rsrc_data->event_cb(out_rsrc_data->priv,
 					CAM_ISP_HW_EVENT_DONE,
 					(void *)&evt_info);
@@ -2117,6 +2150,7 @@ static int cam_tfe_bus_process_cmd(void *priv,
 	struct cam_tfe_bus_priv      *bus_priv;
 	int rc = -EINVAL;
 	uint32_t i, val;
+	bool *support_consumed_addr;
 
 	if (!priv || !cmd_args) {
 		CAM_ERR_RATE_LIMIT(CAM_ISP, "Invalid input arguments");
@@ -2147,6 +2181,12 @@ static int cam_tfe_bus_process_cmd(void *priv,
 			cam_io_w(val, bus_priv->common_data.mem_base +
 				bus_priv->common_data.common_reg->irq_mask[i]);
 		}
+		break;
+	case CAM_ISP_HW_CMD_IS_CONSUMED_ADDR_SUPPORT:
+		bus_priv = (struct cam_tfe_bus_priv  *) priv;
+		support_consumed_addr = (bool *)cmd_args;
+		*support_consumed_addr =
+			bus_priv->common_data.support_consumed_addr;
 		break;
 	default:
 		CAM_ERR_RATE_LIMIT(CAM_ISP, "Invalid camif process command:%d",
@@ -2208,6 +2248,8 @@ int cam_tfe_bus_init(
 	bus_priv->common_data.common_reg       = &hw_info->common_reg;
 	bus_priv->comp_buf_done_mask      = hw_info->comp_buf_done_mask;
 	bus_priv->comp_rup_done_mask      = hw_info->comp_rup_done_mask;
+	bus_priv->common_data.support_consumed_addr =
+		hw_info->support_consumed_addr;
 
 	for (i = 0; i < CAM_TFE_BUS_IRQ_REGISTERS_MAX; i++)
 		bus_priv->bus_irq_error_mask[i] =

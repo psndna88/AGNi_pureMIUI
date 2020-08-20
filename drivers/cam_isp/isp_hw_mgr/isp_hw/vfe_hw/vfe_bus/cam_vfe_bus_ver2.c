@@ -100,6 +100,7 @@ struct cam_vfe_bus_ver2_common_data {
 	uint32_t                                    addr_no_sync;
 	cam_hw_mgr_event_cb_func                    event_cb;
 	bool                                        hw_init;
+	bool                                        support_consumed_addr;
 };
 
 struct cam_vfe_bus_ver2_wm_resource_data {
@@ -1242,8 +1243,7 @@ static int cam_vfe_bus_start_wm(
 	if (rsrc_data->en_ubwc) {
 		rc = cam_cpas_get_cpas_hw_version(&camera_hw_version);
 		if (rc) {
-			CAM_ERR(CAM_ISP, "Failed to get HW version:%d rc:%d",
-				camera_hw_version, rc);
+			CAM_ERR(CAM_ISP, "failed to get HW version rc=%d", rc);
 			return rc;
 		}
 		if ((camera_hw_version > CAM_CPAS_TITAN_NONE) &&
@@ -3583,6 +3583,7 @@ static int cam_vfe_bus_process_cmd(
 	int rc = -EINVAL;
 	struct cam_vfe_bus_ver2_priv		 *bus_priv;
 	uint32_t top_mask_0 = 0;
+	bool *support_consumed_addr;
 
 	if (!priv || !cmd_args) {
 		CAM_ERR_RATE_LIMIT(CAM_ISP, "Invalid input arguments");
@@ -3628,6 +3629,12 @@ static int cam_vfe_bus_process_cmd(
 		top_mask_0 |= (1 << bus_priv->top_irq_shift);
 		cam_io_w_mb(top_mask_0, bus_priv->common_data.mem_base +
 			bus_priv->common_data.common_reg->top_irq_mask_0);
+		break;
+	case CAM_ISP_HW_CMD_IS_CONSUMED_ADDR_SUPPORT:
+		bus_priv = (struct cam_vfe_bus_ver2_priv *) priv;
+		support_consumed_addr = (bool *)cmd_args;
+		*support_consumed_addr =
+			bus_priv->common_data.support_consumed_addr;
 		break;
 	default:
 		CAM_ERR_RATE_LIMIT(CAM_ISP, "Invalid camif process command:%d",
@@ -3691,6 +3698,8 @@ int cam_vfe_bus_ver2_init(
 	bus_priv->common_data.addr_no_sync       =
 		CAM_VFE_BUS_ADDR_NO_SYNC_DEFAULT_VAL;
 	bus_priv->common_data.hw_init            = false;
+	bus_priv->common_data.support_consumed_addr =
+		ver2_hw_info->support_consumed_addr;
 
 	mutex_init(&bus_priv->common_data.bus_mutex);
 

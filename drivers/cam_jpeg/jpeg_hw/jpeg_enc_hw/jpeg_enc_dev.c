@@ -134,7 +134,7 @@ static int cam_jpeg_enc_component_bind(struct device *dev,
 	mutex_init(&jpeg_enc_dev->hw_mutex);
 	spin_lock_init(&jpeg_enc_dev->hw_lock);
 	init_completion(&jpeg_enc_dev->hw_complete);
-	CAM_DBG(CAM_JPEG, "Encoder component bound successfully");
+	CAM_DBG(CAM_JPEG, "JPEG-Encoder component bound successfully");
 
 	return rc;
 

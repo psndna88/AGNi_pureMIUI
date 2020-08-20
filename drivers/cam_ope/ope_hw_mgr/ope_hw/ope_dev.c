@@ -67,6 +67,7 @@ static int cam_ope_init_hw_version(struct cam_hw_soc_info *soc_info,
 
 	switch (core_info->hw_version) {
 	case OPE_HW_VER_1_0_0:
+	case OPE_HW_VER_1_1_0:
 		core_info->ope_hw_info->ope_hw = &ope_hw_100;
 		break;
 	default:

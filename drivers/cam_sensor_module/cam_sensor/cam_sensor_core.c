@@ -13,25 +13,34 @@
 #include "cam_packet_util.h"
 
 
-static void cam_sensor_update_req_mgr(
+static int cam_sensor_update_req_mgr(
 	struct cam_sensor_ctrl_t *s_ctrl,
 	struct cam_packet *csl_packet)
 {
+	int rc = 0;
 	struct cam_req_mgr_add_request add_req;
 
 	add_req.link_hdl = s_ctrl->bridge_intf.link_hdl;
 	add_req.req_id = csl_packet->header.request_id;
-	CAM_DBG(CAM_SENSOR, " Rxed Req Id: %lld",
+	CAM_DBG(CAM_SENSOR, " Rxed Req Id: %llu",
 		csl_packet->header.request_id);
 	add_req.dev_hdl = s_ctrl->bridge_intf.device_hdl;
 	add_req.skip_before_applying = 0;
 	add_req.trigger_eof = false;
 	if (s_ctrl->bridge_intf.crm_cb &&
-		s_ctrl->bridge_intf.crm_cb->add_req)
-		s_ctrl->bridge_intf.crm_cb->add_req(&add_req);
+		s_ctrl->bridge_intf.crm_cb->add_req) {
+		rc = s_ctrl->bridge_intf.crm_cb->add_req(&add_req);
+		if (rc) {
+			CAM_ERR(CAM_SENSOR,
+				"Adding request: %llu failed with request manager rc: %d",
+				csl_packet->header.request_id, rc);
+			return rc;
+		}
+	}
 
-	CAM_DBG(CAM_SENSOR, " add req to req mgr: %lld",
+	CAM_DBG(CAM_SENSOR, "Successfully add req: %llu to req mgr",
 			add_req.req_id);
+	return rc;
 }
 
 static void cam_sensor_release_stream_rsc(
@@ -248,7 +257,10 @@ static int32_t cam_sensor_i2c_pkt_parse(struct cam_sensor_ctrl_t *s_ctrl,
 			 * and freeze. If this log is triggered then
 			 * fix it.
 			 */
-			cam_sensor_update_req_mgr(s_ctrl, csl_packet);
+			rc = cam_sensor_update_req_mgr(s_ctrl, csl_packet);
+			if (rc)
+				CAM_ERR(CAM_SENSOR,
+					"Failed in adding request to req_mgr");
 			goto end;
 		}
 		break;
@@ -277,7 +289,10 @@ static int32_t cam_sensor_i2c_pkt_parse(struct cam_sensor_ctrl_t *s_ctrl,
 			goto end;
 		}
 
-		cam_sensor_update_req_mgr(s_ctrl, csl_packet);
+		rc = cam_sensor_update_req_mgr(s_ctrl, csl_packet);
+		if (rc)
+			CAM_ERR(CAM_SENSOR,
+				"Failed in adding request to req_mgr");
 		goto end;
 	}
 	default:
@@ -301,7 +316,12 @@ static int32_t cam_sensor_i2c_pkt_parse(struct cam_sensor_ctrl_t *s_ctrl,
 		CAM_SENSOR_PACKET_OPCODE_SENSOR_UPDATE) {
 		i2c_reg_settings->request_id =
 			csl_packet->header.request_id;
-		cam_sensor_update_req_mgr(s_ctrl, csl_packet);
+		rc = cam_sensor_update_req_mgr(s_ctrl, csl_packet);
+		if (rc) {
+			CAM_ERR(CAM_SENSOR,
+				"Failed in adding request to req_mgr");
+			goto end;
+		}
 	}
 
 	if ((csl_packet->header.op_code & 0xFFFFFF) ==
@@ -1261,7 +1281,7 @@ int cam_sensor_apply_settings(struct cam_sensor_ctrl_t *s_ctrl,
 				}
 			}
 		}
-	} else {
+	} else if (req_id > 0) {
 		offset = req_id % MAX_PER_FRAME_ARRAY;
 
 		if (opcode == CAM_SENSOR_PACKET_OPCODE_SENSOR_FRAME_SKIP_UPDATE)

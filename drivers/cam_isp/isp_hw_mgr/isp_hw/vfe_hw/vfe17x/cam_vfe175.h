@@ -1021,6 +1021,7 @@ static struct cam_vfe_bus_ver2_hw_info vfe175_bus_hw_info = {
 		},
 	},
 	.top_irq_shift = 9,
+	.support_consumed_addr = false,
 };
 
 static struct cam_vfe_hw_info cam_vfe175_hw_info = {

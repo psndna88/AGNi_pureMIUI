@@ -7,6 +7,7 @@
 #define CAM_OPE_HW_H
 
 #define OPE_HW_VER_1_0_0 0x10000000
+#define OPE_HW_VER_1_1_0 0x10010000
 
 #define OPE_DEV_OPE  0
 #define OPE_DEV_MAX  1

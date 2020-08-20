@@ -130,7 +130,7 @@ static struct cam_camnoc_specific
 			.masked_value = 0,
 			/* TFE_PRIORITYLUT_LOW */
 			.offset = 0x30,
-			.value = 0x55443333,
+			.value = 0x55554433,
 		},
 		.priority_lut_high = {
 			.enable = true,
@@ -177,7 +177,7 @@ static struct cam_camnoc_specific
 			.masked_value = 0,
 			/* TFE_PRIORITYLUT_LOW */
 			.offset = 0x4030,
-			.value = 0x55443333,
+			.value = 0x55554433,
 		},
 		.priority_lut_high = {
 			.enable = true,
@@ -216,7 +216,7 @@ static struct cam_camnoc_specific
 			.masked_value = 0,
 			/* TFE_PRIORITYLUT_LOW */
 			.offset = 0x5030,
-			.value = 0x55443333,
+			.value = 0x55554433,
 		},
 		.priority_lut_high = {
 			.enable = true,

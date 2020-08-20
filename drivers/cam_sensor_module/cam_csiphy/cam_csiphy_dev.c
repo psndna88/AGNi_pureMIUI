@@ -211,7 +211,7 @@ static int cam_csiphy_component_bind(struct device *dev,
 	rc = cam_cpas_register_client(&cpas_parms);
 	if (rc) {
 		CAM_ERR(CAM_CSIPHY, "CPAS registration failed rc: %d", rc);
-		goto csiphy_no_resource;
+		goto csiphy_unregister_subdev;
 	}
 
 	CAM_DBG(CAM_CSIPHY, "CPAS registration successful handle=%d",
@@ -220,6 +220,9 @@ static int cam_csiphy_component_bind(struct device *dev,
 	CAM_DBG(CAM_CSIPHY, "%s component bound successfully",
 		pdev->name);
 	return rc;
+
+csiphy_unregister_subdev:
+	cam_unregister_subdev(&(new_csiphy_dev->v4l2_dev_str));
 csiphy_no_resource:
 	mutex_destroy(&new_csiphy_dev->mutex);
 	kfree(new_csiphy_dev->ctrl_reg);

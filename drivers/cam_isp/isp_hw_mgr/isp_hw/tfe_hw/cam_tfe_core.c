@@ -1901,6 +1901,7 @@ static int cam_tfe_camif_resource_start(
 	uint32_t                             epoch0_irq_mask;
 	uint32_t                             epoch1_irq_mask;
 	uint32_t                             computed_epoch_line_cfg;
+	uint32_t                             camera_hw_version = 0;
 
 	if (!camif_res || !core_info) {
 		CAM_ERR(CAM_ISP, "Error Invalid input arguments");
@@ -1963,13 +1964,18 @@ static int cam_tfe_camif_resource_start(
 	CAM_DBG(CAM_ISP, "TFE:%d core_cfg 0 val:0x%x", core_info->core_index,
 		val);
 
-	val = cam_io_r(rsrc_data->mem_base +
-		rsrc_data->common_reg->core_cfg_1);
-	val &= ~BIT(0);
-	cam_io_w_mb(val, rsrc_data->mem_base +
-		rsrc_data->common_reg->core_cfg_1);
-	CAM_DBG(CAM_ISP, "TFE:%d core_cfg 1 val:0x%x", core_info->core_index,
-		val);
+	if (cam_cpas_get_cpas_hw_version(&camera_hw_version))
+		CAM_ERR(CAM_ISP, "Failed to get HW version");
+
+	if (camera_hw_version == CAM_CPAS_TITAN_540_V100) {
+		val = cam_io_r(rsrc_data->mem_base +
+			rsrc_data->common_reg->core_cfg_1);
+		val &= ~BIT(0);
+		cam_io_w_mb(val, rsrc_data->mem_base +
+			rsrc_data->common_reg->core_cfg_1);
+		CAM_DBG(CAM_ISP, "TFE:%d core_cfg 1 val:0x%x",
+			core_info->core_index, val);
+	}
 
 	/* Epoch config */
 	epoch0_irq_mask = ((rsrc_data->last_line -
@@ -2808,6 +2814,7 @@ int cam_tfe_process_cmd(void *hw_priv, uint32_t cmd_type,
 	case CAM_ISP_HW_CMD_STRIPE_UPDATE:
 	case CAM_ISP_HW_CMD_STOP_BUS_ERR_IRQ:
 	case CAM_ISP_HW_CMD_GET_SECURE_MODE:
+	case CAM_ISP_HW_CMD_IS_CONSUMED_ADDR_SUPPORT:
 		rc = core_info->tfe_bus->hw_ops.process_cmd(
 			core_info->tfe_bus->bus_priv, cmd_type, cmd_args,
 			arg_size);

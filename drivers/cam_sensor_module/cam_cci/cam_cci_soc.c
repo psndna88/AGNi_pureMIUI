@@ -17,7 +17,7 @@ static int cam_cci_init_master(struct cci_device *cci_dev,
 	soc_info = &cci_dev->soc_info;
 	base = soc_info->reg_map[0].mem_base;
 
-	if (cci_dev->hw_version != CCI_VERSION_1_2_9) {
+	if (cci_dev->hw_version == CCI_VERSION_1_2_9) {
 		max_queue_0_size = CCI_I2C_QUEUE_0_SIZE_V_1_2;
 		max_queue_1_size = CCI_I2C_QUEUE_1_SIZE_V_1_2;
 	} else {

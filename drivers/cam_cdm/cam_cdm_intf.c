@@ -702,10 +702,10 @@ struct platform_driver cam_cdm_intf_driver = {
 	.probe = cam_cdm_intf_probe,
 	.remove = cam_cdm_intf_remove,
 	.driver = {
-	.name = "msm_cam_cdm_intf",
-	.owner = THIS_MODULE,
-	.of_match_table = msm_cam_cdm_intf_dt_match,
-	.suppress_bind_attrs = true,
+		.name = "msm_cam_cdm_intf",
+		.owner = THIS_MODULE,
+		.of_match_table = msm_cam_cdm_intf_dt_match,
+		.suppress_bind_attrs = true,
 	},
 };
 

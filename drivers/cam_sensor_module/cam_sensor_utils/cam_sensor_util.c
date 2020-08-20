@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/kernel.h>
+#include <clocksource/arm_arch_timer.h>
 #include "cam_sensor_util.h"
 #include "cam_mem_mgr.h"
 #include "cam_res_mgr_api.h"
@@ -38,6 +39,29 @@ static struct i2c_settings_list*
 	tmp->i2c_settings.size = size;
 
 	return tmp;
+}
+
+int32_t cam_sensor_util_get_current_qtimer_ns(uint64_t *qtime_ns)
+{
+	uint64_t ticks = 0;
+	int32_t rc = 0;
+
+	ticks = arch_timer_read_counter();
+	if (ticks == 0) {
+		CAM_ERR(CAM_SENSOR, "qtimer returned 0, rc:%d", rc);
+		return -EINVAL;
+	}
+
+	if (qtime_ns != NULL) {
+		*qtime_ns = mul_u64_u32_div(ticks,
+			QTIMER_MUL_FACTOR, QTIMER_DIV_FACTOR);
+		CAM_DBG(CAM_SENSOR, "Qtimer time: 0x%x", *qtime_ns);
+	} else {
+		CAM_ERR(CAM_SENSOR, "NULL pointer passed");
+		return -EINVAL;
+	}
+
+	return rc;
 }
 
 int32_t delete_request(struct i2c_settings_array *i2c_array)
@@ -269,6 +293,64 @@ static int32_t cam_sensor_get_io_buffer(
 			 (uint8_t *)buf_addr + io_cfg->offsets[0];
 		i2c_settings->read_buff_len =
 			buf_size - io_cfg->offsets[0];
+	} else {
+		CAM_ERR(CAM_SENSOR, "Invalid direction: %d",
+			io_cfg->direction);
+		rc = -EINVAL;
+	}
+	return rc;
+}
+
+int32_t cam_sensor_util_write_qtimer_to_io_buffer(
+	struct cam_buf_io_cfg *io_cfg)
+{
+	uintptr_t buf_addr = 0x0, target_buf = 0x0;
+	size_t buf_size = 0, target_size = 0;
+	int32_t rc = 0;
+	uint64_t qtime_ns = 0;
+
+	if (io_cfg == NULL) {
+		CAM_ERR(CAM_SENSOR,
+			"Invalid args, io buf is NULL");
+		return -EINVAL;
+	}
+
+	if (io_cfg->direction == CAM_BUF_OUTPUT) {
+		rc = cam_mem_get_cpu_buf(io_cfg->mem_handle[0],
+			&buf_addr, &buf_size);
+		if ((rc < 0) || (!buf_addr)) {
+			CAM_ERR(CAM_SENSOR,
+				"invalid buffer, rc: %d, buf_addr: %pK",
+				rc, buf_addr);
+			return -EINVAL;
+		}
+		CAM_DBG(CAM_SENSOR,
+			"buf_addr: %pK, buf_size: %zu, offsetsize: %d",
+			(void *)buf_addr, buf_size, io_cfg->offsets[0]);
+		if (io_cfg->offsets[0] >= buf_size) {
+			CAM_ERR(CAM_SENSOR,
+				"invalid size:io_cfg->offsets[0]: %d, buf_size: %d",
+				io_cfg->offsets[0], buf_size);
+			return -EINVAL;
+		}
+
+		target_buf  = buf_addr + io_cfg->offsets[0];
+		target_size = buf_size - io_cfg->offsets[0];
+
+		if (target_size < sizeof(uint64_t)) {
+			CAM_ERR(CAM_SENSOR,
+				"not enough size for qtimer, target_size:%d",
+				target_size);
+			return -EINVAL;
+		}
+
+		rc = cam_sensor_util_get_current_qtimer_ns(&qtime_ns);
+		if (rc < 0) {
+			CAM_ERR(CAM_SENSOR, "failed to get qtimer rc:%d");
+			return rc;
+		}
+
+		memcpy((void *)target_buf, &qtime_ns, sizeof(uint64_t));
 	} else {
 		CAM_ERR(CAM_SENSOR, "Invalid direction: %d",
 			io_cfg->direction);

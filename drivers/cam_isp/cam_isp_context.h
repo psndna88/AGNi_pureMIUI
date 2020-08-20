@@ -135,8 +135,8 @@ struct cam_isp_ctx_irq_ops {
  * struct cam_isp_ctx_req - ISP context request object
  *
  * @base:                  Common request object ponter
- * @cfg_info:              ISP hardware configuration array
- * @total_num_cfg:         Number of ISP hardware configuration entries
+ * @cfg:                   ISP hardware configuration array
+ * @num_cfg:               Number of ISP hardware configuration entries
  * @fence_map_out:         Output fence mapping array
  * @num_fence_map_out:     Number of the output fence map
  * @fence_map_in:          Input fence mapping array
@@ -153,8 +153,8 @@ struct cam_isp_ctx_irq_ops {
  */
 struct cam_isp_ctx_req {
 	struct cam_ctx_request               *base;
-	struct cam_isp_hw_update_info         cfg_info[CAM_IFE_HW_NUM_MAX];
-	uint32_t                              total_num_cfg;
+	struct cam_hw_update_entry            cfg[CAM_ISP_CTX_CFG_MAX];
+	uint32_t                              num_cfg;
 	struct cam_hw_fence_map_entry         fence_map_out
 						[CAM_ISP_CTX_RES_MAX];
 	uint32_t                              num_fence_map_out;
@@ -226,7 +226,6 @@ struct cam_isp_context_event_record {
  * @substate_actiavted:        Current substate for the activated state.
  * @process_bubble:            Atomic variable to check if ctx is still
  *                             processing bubble.
- * @bubble_frame_cnt:          Count number of frames since the req is in bubble
  * @substate_machine:          ISP substate machine for external interface
  * @substate_machine_irq:      ISP substate machine for irq handling
  * @req_base:                  Common request object storage
@@ -252,6 +251,7 @@ struct cam_isp_context_event_record {
  * @split_acquire:             Indicate whether a separate acquire is expected
  * @custom_enabled:            Custom HW enabled for this ctx
  * @use_frame_header_ts:       Use frame header for qtimer ts
+ * @support_consumed_addr:     Indicate whether HW has last consumed addr reg
  * @init_timestamp:            Timestamp at which this context is initialized
  * @isp_device_type:           ISP device type
  * @rxd_epoch:                 Indicate whether epoch has been received. Used to
@@ -267,7 +267,6 @@ struct cam_isp_context {
 	uint32_t                         frame_id_meta;
 	uint32_t                         substate_activated;
 	atomic_t                         process_bubble;
-	uint32_t                         bubble_frame_cnt;
 	struct cam_ctx_ops              *substate_machine;
 	struct cam_isp_ctx_irq_ops      *substate_machine_irq;
 
@@ -296,6 +295,7 @@ struct cam_isp_context {
 	bool                                  split_acquire;
 	bool                                  custom_enabled;
 	bool                                  use_frame_header_ts;
+	bool                                  support_consumed_addr;
 	unsigned int                          init_timestamp;
 	uint32_t                              isp_device_type;
 	atomic_t                              rxd_epoch;

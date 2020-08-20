@@ -664,8 +664,8 @@ int cam_register_subdev(struct cam_subdev *csd)
 	int rc;
 
 	if (!g_dev.state) {
-		CAM_ERR(CAM_CRM, "camera root device not ready yet");
-		return -ENODEV;
+		CAM_DBG(CAM_CRM, "camera root device not ready yet");
+		return -EPROBE_DEFER;
 	}
 
 	if (!csd || !csd->name) {

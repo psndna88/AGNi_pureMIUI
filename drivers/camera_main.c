@@ -79,7 +79,6 @@ static const struct camera_submodule_component camera_base[] = {
 
 static const struct camera_submodule_component camera_tfe[] = {
 #ifdef CONFIG_SPECTRA_TFE
-	{&cam_top_tpg_init_module, &cam_top_tpg_exit_module},
 	{&cam_csid_ppi100_init_module, &cam_csid_ppi100_exit_module},
 	{&cam_tfe_init_module, &cam_tfe_exit_module},
 	{&cam_tfe_csid530_init_module, &cam_tfe_csid530_exit_module},

@@ -18,11 +18,8 @@
 #include "cam_jpeg_hw_mgr_intf.h"
 #include "cam_cpas_api.h"
 #include "cam_debug_util.h"
+#include "cam_jpeg_dma_hw_info_ver_4_2_0.h"
 #include "camera_main.h"
-
-static struct cam_jpeg_dma_device_hw_info cam_jpeg_dma_hw_info = {
-	.reserved = 0,
-};
 
 static int cam_jpeg_dma_register_cpas(struct cam_hw_soc_info *soc_info,
 	struct cam_jpeg_dma_device_core_info *core_info,
@@ -90,6 +87,9 @@ static int cam_jpeg_dma_component_bind(struct device *dev,
 	jpeg_dma_dev_intf->hw_priv = jpeg_dma_dev;
 	jpeg_dma_dev_intf->hw_ops.init = cam_jpeg_dma_init_hw;
 	jpeg_dma_dev_intf->hw_ops.deinit = cam_jpeg_dma_deinit_hw;
+	jpeg_dma_dev_intf->hw_ops.start = cam_jpeg_dma_start_hw;
+	jpeg_dma_dev_intf->hw_ops.stop = cam_jpeg_dma_stop_hw;
+	jpeg_dma_dev_intf->hw_ops.reset = cam_jpeg_dma_reset_hw;
 	jpeg_dma_dev_intf->hw_ops.process_cmd = cam_jpeg_dma_process_cmd;
 	jpeg_dma_dev_intf->hw_type = CAM_JPEG_DEV_DMA;
 
@@ -134,14 +134,11 @@ static int cam_jpeg_dma_component_bind(struct device *dev,
 	mutex_init(&jpeg_dma_dev->hw_mutex);
 	spin_lock_init(&jpeg_dma_dev->hw_lock);
 	init_completion(&jpeg_dma_dev->hw_complete);
-
-	CAM_DBG(CAM_JPEG, "JPEG:%d component bound successfully",
-		jpeg_dma_dev_intf->hw_idx);
-
+	CAM_DBG(CAM_JPEG, "JPEG-DMA component bound successfully");
 	return rc;
 
 error_reg_cpas:
-	rc = cam_soc_util_release_platform_resource(&jpeg_dma_dev->soc_info);
+	cam_soc_util_release_platform_resource(&jpeg_dma_dev->soc_info);
 error_init_soc:
 	mutex_destroy(&core_info->core_mutex);
 error_match_dev:
@@ -150,6 +147,7 @@ error_alloc_core:
 	kfree(jpeg_dma_dev);
 error_alloc_dev:
 	kfree(jpeg_dma_dev_intf);
+
 	return rc;
 }
 
@@ -198,8 +196,6 @@ deinit_soc:
 
 free_jpeg_hw_intf:
 	kfree(jpeg_dma_dev_intf);
-	return;
-
 }
 
 const static struct component_ops cam_jpeg_dma_component_ops = {

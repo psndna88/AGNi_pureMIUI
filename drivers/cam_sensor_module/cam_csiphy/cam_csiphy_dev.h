@@ -53,6 +53,7 @@
 #define CSIPHY_DNP_PARAMS                4
 #define CSIPHY_2PH_REGS                  5
 #define CSIPHY_3PH_REGS                  6
+#define CSIPHY_SKEW_CAL                  7
 
 #define CSIPHY_MAX_INSTANCES_PER_PHY     3
 
@@ -152,6 +153,11 @@ struct csiphy_reg_t {
 
 struct csiphy_device;
 
+struct csiphy_cphy_per_lane_info {
+	uint8_t lane_identifier;
+	struct csiphy_reg_t csiphy_data_rate_regs[MAX_DATA_RATE_REGS];
+};
+
 /*
  * struct data_rate_reg_info_t
  * @bandwidth: max bandwidth supported by this reg settings
@@ -161,7 +167,8 @@ struct csiphy_device;
 struct data_rate_reg_info_t {
 	uint64_t bandwidth;
 	ssize_t  data_rate_reg_array_size;
-	struct csiphy_reg_t csiphy_data_rate_regs[MAX_DATA_RATE_REGS];
+	struct   csiphy_cphy_per_lane_info per_lane_info[
+			CAM_CSIPHY_MAX_CPHY_LANES];
 };
 
 /**
@@ -218,6 +225,7 @@ struct csiphy_ctrl_t {
  * @settle_time                :  Settling time in ms
  * @data_rate                  :  Data rate in mbps
  * @csiphy_3phase              :  To identify DPHY or CPHY
+ * @mipi_flags                 :  MIPI phy flags
  * @csiphy_cpas_cp_reg_mask    :  CP reg mask for phy instance
  * @hdl_data                   :  CSIPHY handle table
  */
@@ -229,6 +237,7 @@ struct cam_csiphy_param {
 	uint64_t                   settle_time;
 	uint64_t                   data_rate;
 	int                        csiphy_3phase;
+	uint16_t                   mipi_flags;
 	uint64_t                   csiphy_cpas_cp_reg_mask;
 	struct csiphy_hdl_tbl      hdl_data;
 };

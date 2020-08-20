@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/of.h>
@@ -149,6 +149,7 @@ static int cam_ipe_handle_pc(struct cam_hw_info *ipe_dev)
 	struct cam_hw_soc_info *soc_info = NULL;
 	struct cam_ipe_device_core_info *core_info = NULL;
 	struct cam_ipe_device_hw_info *hw_info = NULL;
+	int rc = 0;
 	int pwr_ctrl;
 	int pwr_status;
 
@@ -156,13 +157,23 @@ static int cam_ipe_handle_pc(struct cam_hw_info *ipe_dev)
 	core_info = (struct cam_ipe_device_core_info *)ipe_dev->core_info;
 	hw_info = core_info->ipe_hw_info;
 
-	cam_cpas_reg_read(core_info->cpas_handle,
-		CAM_CPAS_REG_CPASTOP, hw_info->pwr_ctrl,
-		true, &pwr_ctrl);
+	rc = cam_cpas_reg_read(core_info->cpas_handle,
+			CAM_CPAS_REG_CPASTOP, hw_info->pwr_ctrl,
+			true, &pwr_ctrl);
+	if (rc) {
+		CAM_ERR(CAM_ICP, "power ctrl read failed rc=%d", rc);
+		return rc;
+	}
+
 	if (!(pwr_ctrl & IPE_COLLAPSE_MASK)) {
-		cam_cpas_reg_read(core_info->cpas_handle,
-			CAM_CPAS_REG_CPASTOP, hw_info->pwr_status,
-			true, &pwr_status);
+		rc = cam_cpas_reg_read(core_info->cpas_handle,
+				CAM_CPAS_REG_CPASTOP, hw_info->pwr_status,
+				true, &pwr_status);
+		if (rc) {
+			CAM_ERR(CAM_ICP, "power status read failed rc=%d", rc);
+			return rc;
+		}
+
 		cam_cpas_reg_write(core_info->cpas_handle,
 			CAM_CPAS_REG_CPASTOP,
 			hw_info->pwr_ctrl, true, 0x1);
@@ -172,15 +183,30 @@ static int cam_ipe_handle_pc(struct cam_hw_info *ipe_dev)
 				pwr_status, pwr_ctrl);
 
 	}
-	cam_ipe_get_gdsc_control(soc_info);
-	cam_cpas_reg_read(core_info->cpas_handle,
-		CAM_CPAS_REG_CPASTOP, hw_info->pwr_ctrl,
-		true, &pwr_ctrl);
-	cam_cpas_reg_read(core_info->cpas_handle,
-		CAM_CPAS_REG_CPASTOP, hw_info->pwr_status,
-		true, &pwr_status);
-	CAM_DBG(CAM_PERF, "pwr_ctrl = %x pwr_status = %x",
-		pwr_ctrl, pwr_status);
+
+	rc = cam_ipe_get_gdsc_control(soc_info);
+	if (rc) {
+		CAM_ERR(CAM_ICP, "failed to get gdsc control rc=%d", rc);
+		return rc;
+	}
+
+	rc = cam_cpas_reg_read(core_info->cpas_handle,
+			CAM_CPAS_REG_CPASTOP, hw_info->pwr_ctrl,
+			true, &pwr_ctrl);
+	if (rc) {
+		CAM_ERR(CAM_ICP, "power ctrl read failed rc=%d", rc);
+		return rc;
+	}
+
+	rc = cam_cpas_reg_read(core_info->cpas_handle,
+			CAM_CPAS_REG_CPASTOP, hw_info->pwr_status,
+			true, &pwr_status);
+	if (rc) {
+		CAM_ERR(CAM_ICP, "power status read failed rc=%d", rc);
+		return rc;
+	}
+
+	CAM_DBG(CAM_PERF, "pwr_ctrl=%x pwr_status=%x", pwr_ctrl, pwr_status);
 
 	return 0;
 }
@@ -198,9 +224,14 @@ static int cam_ipe_handle_resume(struct cam_hw_info *ipe_dev)
 	core_info = (struct cam_ipe_device_core_info *)ipe_dev->core_info;
 	hw_info = core_info->ipe_hw_info;
 
-	cam_cpas_reg_read(core_info->cpas_handle,
-		CAM_CPAS_REG_CPASTOP, hw_info->pwr_ctrl,
-		true, &pwr_ctrl);
+	rc = cam_cpas_reg_read(core_info->cpas_handle,
+			CAM_CPAS_REG_CPASTOP, hw_info->pwr_ctrl,
+			true, &pwr_ctrl);
+	if (rc) {
+		CAM_ERR(CAM_ICP, "power ctrl read failed rc=%d", rc);
+		return rc;
+	}
+
 	if (pwr_ctrl & IPE_COLLAPSE_MASK) {
 		CAM_DBG(CAM_PERF, "IPE pwr_ctrl set(%x)", pwr_ctrl);
 		cam_cpas_reg_write(core_info->cpas_handle,
@@ -209,13 +240,28 @@ static int cam_ipe_handle_resume(struct cam_hw_info *ipe_dev)
 	}
 
 	rc = cam_ipe_transfer_gdsc_control(soc_info);
-	cam_cpas_reg_read(core_info->cpas_handle,
-		CAM_CPAS_REG_CPASTOP, hw_info->pwr_ctrl, true, &pwr_ctrl);
-	cam_cpas_reg_read(core_info->cpas_handle,
-		CAM_CPAS_REG_CPASTOP, hw_info->pwr_status,
-		true, &pwr_status);
-	CAM_DBG(CAM_PERF, "pwr_ctrl = %x pwr_status = %x",
-		pwr_ctrl, pwr_status);
+	if (rc) {
+		CAM_ERR(CAM_ICP, "failed to transfer gdsc control rc=%d", rc);
+		return rc;
+	}
+
+	rc = cam_cpas_reg_read(core_info->cpas_handle,
+			CAM_CPAS_REG_CPASTOP, hw_info->pwr_ctrl,
+			true, &pwr_ctrl);
+	if (rc) {
+		CAM_ERR(CAM_ICP, "power ctrl read failed rc=%d", rc);
+		return rc;
+	}
+
+	rc = cam_cpas_reg_read(core_info->cpas_handle,
+			CAM_CPAS_REG_CPASTOP, hw_info->pwr_status,
+			true, &pwr_status);
+	if (rc) {
+		CAM_ERR(CAM_ICP, "power status read failed rc=%d", rc);
+		return rc;
+	}
+
+	CAM_DBG(CAM_PERF, "pwr_ctrl=%x pwr_status=%x", pwr_ctrl, pwr_status);
 
 	return rc;
 }

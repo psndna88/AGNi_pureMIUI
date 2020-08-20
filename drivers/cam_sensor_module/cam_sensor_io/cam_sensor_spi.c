@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/dma-contiguous.h>
@@ -171,12 +171,14 @@ static int32_t cam_spi_tx_helper(struct camera_io_master *client,
 		memcpy(data, crx + hlen, num_byte);
 
 out:
-	if (!tx)
+	if (!tx) {
 		vfree(vaddr_tx);
 		vaddr_tx = NULL;
-	if (!rx)
+	}
+	if (!rx) {
 		vfree(vaddr_rx);
 		vaddr_rx = NULL;
+	}
 	return rc;
 }
 

@@ -15,14 +15,6 @@
 #include "cam_tasklet_util.h"
 #include "cam_cdm_intf_api.h"
 
-/* enum cam_ife_res_master_slave - HW resource master/slave */
-enum cam_ife_res_master_slave {
-	CAM_IFE_RES_NONE,
-	CAM_IFE_RES_MASTER,
-	CAM_IFE_RES_SLAVE,
-	CAM_IFE_RES_MAX,
-};
-
 /* IFE resource constants */
 #define CAM_IFE_HW_IN_RES_MAX            (CAM_ISP_IFE_IN_RES_MAX & 0xFF)
 #define CAM_IFE_HW_OUT_RES_MAX           (CAM_ISP_IFE_OUT_RES_MAX & 0xFF)
@@ -38,6 +30,7 @@ enum cam_ife_res_master_slave {
  * @dentry:                    Debugfs entry
  * @csid_debug:                csid debug information
  * @enable_recovery:           enable recovery
+ * @enable_csid_recovery:      enable csid recovery
  * @enable_diag_sensor_status: enable sensor diagnosis status
  * @enable_req_dump:           Enable request dump on HW errors
  * @per_req_reg_dump:          Enable per request reg dump
@@ -47,6 +40,7 @@ struct cam_ife_hw_mgr_debug {
 	struct dentry  *dentry;
 	uint64_t       csid_debug;
 	uint32_t       enable_recovery;
+	uint32_t       enable_csid_recovery;
 	uint32_t       camif_debug;
 	bool           enable_req_dump;
 	bool           per_req_reg_dump;
@@ -132,7 +126,7 @@ struct cam_ife_hw_mgr_ctx {
 	uint32_t                        irq_status1_mask[CAM_IFE_HW_NUM_MAX];
 	struct cam_isp_ctx_base_info    base[CAM_IFE_HW_NUM_MAX];
 	uint32_t                        num_base;
-	uint32_t                        cdm_handle[CAM_IFE_HW_NUM_MAX];
+	uint32_t                        cdm_handle;
 	struct cam_cdm_utils_ops       *cdm_ops;
 	struct cam_cdm_bl_request      *cdm_cmd;
 
@@ -142,9 +136,7 @@ struct cam_ife_hw_mgr_ctx {
 	atomic_t                        overflow_pending;
 	atomic_t                        cdm_done;
 	uint32_t                        is_rdi_only_context;
-	struct completion               config_done_complete[
-						CAM_IFE_HW_NUM_MAX];
-	enum cam_ife_res_master_slave   master_slave[CAM_IFE_HW_NUM_MAX];
+	struct completion               config_done_complete;
 	uint32_t                        hw_version;
 	struct cam_cmd_buf_desc         reg_dump_buf_desc[
 						CAM_REG_DUMP_MAX_BUF_ENTRIES];
@@ -180,6 +172,7 @@ struct cam_ife_hw_mgr_ctx {
  * @ife_dev_caps           ife device capability per core
  * @work q                 work queue for IFE hw manager
  * @debug_cfg              debug configuration
+ * @support_consumed_addr  indicate whether hw supports last consumed address
  */
 struct cam_ife_hw_mgr {
 	struct cam_isp_hw_mgr          mgr_common;
@@ -199,6 +192,8 @@ struct cam_ife_hw_mgr {
 	struct cam_vfe_hw_get_hw_cap   ife_dev_caps[CAM_IFE_HW_NUM_MAX];
 	struct cam_req_mgr_core_workq *workq;
 	struct cam_ife_hw_mgr_debug    debug_cfg;
+	spinlock_t                     ctx_lock;
+	bool                           support_consumed_addr;
 };
 
 /**

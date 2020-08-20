@@ -174,11 +174,12 @@ struct cam_vfe_bus_ver2_vfe_out_hw_info {
  *
  * @Brief:            HW register info for entire Bus
  *
- * @common_reg:       Common register details
- * @bus_client_reg:   Bus client register info
- * @comp_reg_grp:     Composite group register info
- * @vfe_out_hw_info:  VFE output capability
- * @top_irq_shift:    Mask shift for top level BUS WR irq
+ * @common_reg:            Common register details
+ * @bus_client_reg:        Bus client register info
+ * @comp_reg_grp:          Composite group register info
+ * @vfe_out_hw_info:       VFE output capability
+ * @top_irq_shift:         Mask shift for top level BUS WR irq
+ * @support_consumed_addr: Indicate if bus support consumed address
  */
 struct cam_vfe_bus_ver2_hw_info {
 	struct cam_vfe_bus_ver2_reg_offset_common common_reg;
@@ -191,6 +192,7 @@ struct cam_vfe_bus_ver2_hw_info {
 	struct cam_vfe_bus_ver2_vfe_out_hw_info
 		vfe_out_hw_info[CAM_VFE_BUS_VER2_VFE_OUT_MAX];
 	uint32_t top_irq_shift;
+	bool support_consumed_addr;
 };
 
 /*

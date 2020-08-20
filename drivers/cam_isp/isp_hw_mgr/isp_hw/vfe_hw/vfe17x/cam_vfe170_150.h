@@ -828,6 +828,7 @@ static struct cam_vfe_bus_ver2_hw_info vfe170_150_bus_hw_info = {
 			.max_height    = -1,
 		},
 	},
+	.support_consumed_addr = false,
 };
 
 static struct cam_vfe_hw_info cam_vfe170_150_hw_info = {
