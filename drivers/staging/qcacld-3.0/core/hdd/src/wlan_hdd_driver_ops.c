@@ -380,6 +380,7 @@ static void hdd_soc_load_unlock(struct device *dev)
 	hdd_remove_pm_qos(dev);
 	hdd_allow_suspend(WIFI_POWER_EVENT_WAKELOCK_DRIVER_INIT);
 	hdd_stop_driver_ops_timer();
+	hdd_start_complete(0);
 	mutex_unlock(&hdd_init_deinit_lock);
 }
 
@@ -414,7 +415,6 @@ static int hdd_soc_probe(struct device *dev,
 
 	probe_fail_cnt = 0;
 	cds_set_driver_loaded(true);
-	hdd_start_complete(0);
 	cds_set_load_in_progress(false);
 
 	hdd_soc_load_unlock(dev);
@@ -467,7 +467,6 @@ assert_fail_count:
 
 unlock:
 	cds_set_driver_in_bad_state(true);
-	cds_set_recovery_in_progress(false);
 	hdd_soc_load_unlock(dev);
 
 	return check_for_probe_defer(errno);
@@ -1653,7 +1652,18 @@ static void wlan_hdd_pld_uevent(struct device *dev,
 static int wlan_hdd_pld_runtime_suspend(struct device *dev,
 					enum pld_bus_type bus_type)
 {
-	return wlan_hdd_runtime_suspend(dev);
+	int errno;
+
+	errno = wlan_hdd_runtime_suspend(dev);
+
+	/* If it returns other errno to kernel, it will treat
+	 * it as critical issue, so all the future runtime
+	 * PM api will return error, pm runtime can't be work
+	 * anymore. Such case found in SSR.
+	 */
+	if (errno && errno != -EAGAIN && errno != -EBUSY)
+		errno = -EAGAIN;
+	return errno;
 }
 
 /**

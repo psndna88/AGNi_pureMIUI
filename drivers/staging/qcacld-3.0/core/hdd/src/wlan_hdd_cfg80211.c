@@ -21602,7 +21602,7 @@ static int __wlan_hdd_cfg80211_connect(struct wiphy *wiphy,
 	 * Check if this is reassoc to same bssid, if reassoc is success, return
 	 */
 	status = wlan_hdd_reassoc_bssid_hint(adapter, req);
-	if (!status)
+	if (!status || status == -EPERM)
 		return status;
 
 	/* Try disconnecting if already in connected state */
@@ -23476,6 +23476,78 @@ wlan_hdd_cfg80211_update_ft_ies(struct wiphy *wiphy,
 }
 #endif
 
+#ifdef CFG80211_EXTERNAL_DH_UPDATE_SUPPORT
+/**
+ * __wlan_hdd_cfg80211_update_owe_info() - update OWE info
+ * @wiphy: Pointer to wiphy
+ * @dev: Pointer to network device
+ * @owe_info: Pointer to OWE info
+ *
+ * Return: 0 for success, non-zero for failure
+ */
+static int
+__wlan_hdd_cfg80211_update_owe_info(struct wiphy *wiphy,
+				    struct net_device *dev,
+				    struct cfg80211_update_owe_info *owe_info)
+{
+	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
+	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
+	QDF_STATUS status;
+	int errno = 0;
+
+	hdd_enter_dev(dev);
+
+	errno = wlan_hdd_validate_context(hdd_ctx);
+	if (errno)
+		return errno;
+
+	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
+		hdd_err("Command not allowed in FTM mode");
+		return -EINVAL;
+	}
+
+	if (wlan_hdd_validate_session_id(adapter->session_id)) {
+		hdd_err("invalid session id: %d", adapter->session_id);
+		return -EINVAL;
+	}
+
+	hdd_debug("owe_status %d", owe_info->status);
+
+	status = wlansap_update_owe_info(WLAN_HDD_GET_SAP_CTX_PTR(adapter),
+					 owe_info->peer, owe_info->ie,
+					 owe_info->ie_len, owe_info->status);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		hdd_err("Failed to update OWE info");
+		errno = qdf_status_to_os_return(status);
+	}
+
+	hdd_exit();
+	return errno;
+}
+
+/**
+ * wlan_hdd_cfg80211_update_owe_info() - update OWE info
+ * @wiphy: Pointer to wiphy
+ * @dev: Pointer to network device
+ * @owe_info: Pointer to OWE info
+ *
+ * Return: 0 for success, non-zero for failure
+ */
+static int
+wlan_hdd_cfg80211_update_owe_info(struct wiphy *wiphy,
+				  struct net_device *dev,
+				  struct cfg80211_update_owe_info *owe_info)
+{
+	int ret;
+
+	cds_ssr_protect(__func__);
+	ret = __wlan_hdd_cfg80211_update_owe_info(wiphy, dev, owe_info);
+	cds_ssr_unprotect(__func__);
+
+	return ret;
+}
+#endif
+
 void wlan_hdd_cfg80211_update_replay_counter_cb(
 		void *cb_ctx, struct pmo_gtk_rsp_params *gtk_rsp_param)
 
@@ -24633,6 +24705,43 @@ wlan_hdd_cfg80211_update_connect_params(struct wiphy *wiphy,
 
 #if defined(WLAN_FEATURE_SAE) && \
 	defined(CFG80211_EXTERNAL_AUTH_SUPPORT)
+#if defined(CFG80211_EXTERNAL_AUTH_AP_SUPPORT)
+/**
+ * wlan_hdd_extauth_cache_pmkid() - Extract and cache pmkid
+ * @adapter: hdd vdev/net_device context
+ * @mac_handle: Handle to the MAC
+ * @params: Pointer to external auth params.
+ *
+ * Extract the PMKID and BSS from external auth params and add to the
+ * PMKSA Cache in CSR.
+ */
+static void
+wlan_hdd_extauth_cache_pmkid(struct hdd_adapter *adapter,
+			     tHalHandle mac_handle,
+			     struct cfg80211_external_auth_params *params)
+{
+	tPmkidCacheInfo pmk_cache;
+	QDF_STATUS result;
+	if (params->pmkid) {
+		qdf_mem_zero(&pmk_cache, sizeof(pmk_cache));
+		qdf_mem_copy(pmk_cache.BSSID.bytes, params->bssid,
+			     QDF_MAC_ADDR_SIZE);
+		qdf_mem_copy(pmk_cache.PMKID, params->pmkid,
+			     CSR_RSN_PMKID_SIZE);
+		result = sme_roam_set_pmkid_cache(mac_handle,
+						  adapter->session_id,
+						  &pmk_cache, 1, false);
+		if (!QDF_IS_STATUS_SUCCESS(result))
+			hdd_debug("external_auth: Failed to cache PMKID");
+	}
+}
+#else
+static void
+wlan_hdd_extauth_cache_pmkid(struct hdd_adapter *adapter,
+			     tHalHandle mac_handle,
+			     struct cfg80211_external_auth_params *params)
+{}
+#endif
 /**
  * wlan_hdd_extauth_copy_pmkid() - Copy the pmkid received from the
  * external authentication command received from the userspace.
@@ -24653,11 +24762,18 @@ wlan_hdd_extauth_copy_pmkid(struct cfg80211_external_auth_params *params,
 
 /**
  * __wlan_hdd_cfg80211_external_auth() - Handle external auth
+ *
  * @wiphy: Pointer to wireless phy
  * @dev: net device
- * @params: Pointer to external auth params
+ * @params: Pointer to external auth params.
  *
  * Return: 0 on success, negative errno on failure
+ *
+ * Userspace sends status of the external authentication(e.g., SAE) with a peer.
+ * The message carries BSSID of the peer and auth status (WLAN_STATUS_SUCCESS/
+ * WLAN_STATUS_UNSPECIFIED_FAILURE) in params.
+ * Userspace may send PMKID in params, which can be used for
+ * further connections.
  */
 static int
 __wlan_hdd_cfg80211_external_auth(struct wiphy *wiphy,
@@ -24688,6 +24804,9 @@ __wlan_hdd_cfg80211_external_auth(struct wiphy *wiphy,
 
 	mac_handle = hdd_ctx->mac_handle;
 	qdf_mem_copy(peer_mac_addr.bytes, params->bssid, QDF_MAC_ADDR_SIZE);
+
+	wlan_hdd_extauth_cache_pmkid(adapter, mac_handle, params);
+
 	wlan_hdd_extauth_copy_pmkid(params, pmkid);
 	sme_handle_sae_msg(mac_handle, adapter->session_id, params->status,
 			   peer_mac_addr, pmkid);
@@ -24923,6 +25042,27 @@ void hdd_set_rate_bw(struct rate_info *info, enum hdd_rate_info_bw hdd_bw)
 }
 #endif
 
+#ifdef CFG80211_EXTERNAL_DH_UPDATE_SUPPORT
+void hdd_send_update_owe_info_event(struct hdd_adapter *adapter,
+				    uint8_t sta_addr[],
+				    uint8_t *owe_ie,
+				    uint32_t owe_ie_len)
+{
+	struct cfg80211_update_owe_info owe_info;
+	struct net_device *dev = adapter->dev;
+
+	hdd_enter_dev(dev);
+	qdf_mem_zero(&owe_info, sizeof(owe_info));
+	qdf_mem_copy(owe_info.peer, sta_addr, ETH_ALEN);
+	owe_info.ie = owe_ie;
+	owe_info.ie_len = owe_ie_len;
+
+	cfg80211_update_owe_info_event(dev, &owe_info, GFP_KERNEL);
+
+	hdd_exit();
+}
+#endif
+
 /**
  * struct cfg80211_ops - cfg80211_ops
  *
@@ -25015,6 +25155,9 @@ static struct cfg80211_ops wlan_hdd_cfg80211_ops = {
 	.flush_pmksa = wlan_hdd_cfg80211_flush_pmksa,
 #if defined(KERNEL_SUPPORT_11R_CFG80211)
 	.update_ft_ies = wlan_hdd_cfg80211_update_ft_ies,
+#endif
+#ifdef CFG80211_EXTERNAL_DH_UPDATE_SUPPORT
+	.update_owe_info = wlan_hdd_cfg80211_update_owe_info,
 #endif
 #ifdef FEATURE_WLAN_TDLS
 	.tdls_mgmt = wlan_hdd_cfg80211_tdls_mgmt,
