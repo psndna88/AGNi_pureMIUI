@@ -266,6 +266,7 @@
 	firmware: firmware {
 		scm {
 			compatible = "qcom,scm";
+			qcom,dload-mode = <&tcsr 0x13000>;
 		};
 
 		android {
@@ -516,10 +517,18 @@
 			reg = <0x0 0xe3300000 0x0 0x0100000>;
 			label = "dfps_data_region";
 		};
+
+		non_secure_display_memory: non_secure_display_region {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
+			reusable;
+			alignment = <0x0 0x400000>;
+			size = <0x0 0x6400000>;
+		};
 	};
 
 	chosen {
-		bootargs = "log_buf_len=256K earlycon=msm_geni_serial,0x98c000";
+		bootargs = "log_buf_len=256K earlycon=msm_geni_serial,0x98c000 rcupdate.rcu_expedited=1 rcu_nocbs=0-7";
 	};
 };
 
@@ -2071,16 +2080,19 @@
 			reg = <0x94c 0xc8>;
 		};
 
+		pil@6dc {
+			compatible = "qcom,msm-imem-pil-disable-timeout";
+			reg = <0x6dc 0x4>;
+		};
+
 		diag_dload@c8 {
 			compatible = "qcom,msm-imem-diag-dload";
 			reg = <0xc8 0xc8>;
 		};
 	};
 
-	restart: restart@c264000 {
-		compatible = "qcom,pshold";
-		reg = <0xc264000 0x4>, <0x1fd3000 0x4>;
-		reg-names = "pshold-base", "tcsr-boot-misc-detect";
+	dload_mode {
+		compatible = "qcom,dload-mode";
 	};
 
 	tlmm: pinctrl@f000000 {
@@ -3123,6 +3135,9 @@
 		qcom,iommu-dma = "fastmap";
 		dma-coherent;
 
+		rpm-level = <3>;
+		spm-level = <5>;
+
 		status = "disabled";
 		qos0 {
 			mask = <0xf0>;
@@ -3197,6 +3212,16 @@
 		qcom,iommu-dma = "bypass";
 
 		status = "disabled";
+
+		qos0 {
+			mask = <0x0f>;
+			vote = <44>;
+		};
+
+		qos1 {
+			mask = <0xf0>;
+			vote = <44>;
+		};
 	};
 
 	kryo-erp {
@@ -3215,6 +3240,11 @@
 		compatible = "qcom,tcsr-mutex";
 		syscon = <&tcsr_mutex_block 0 0x1000>;
 		#hwlock-cells = <1>;
+	};
+
+	tcsr: syscon@1fc0000 {
+		compatible = "syscon";
+		reg = <0x1fc0000 0x30000>;
 	};
 
 	smem: qcom,smem {
@@ -3741,6 +3771,16 @@
 			 &epss_l3_cpu SLAVE_EPSS_L3_CPU7>;
 	};
 
+	cpu7_cpu_l3_latfloor: qcom,cpu7-cpu-l3-latfloor {
+		compatible = "qcom,devfreq-icc-l3";
+		reg = <0x18590100 0xa0>;
+		reg-names = "ftbl-base";
+		governor = "compute";
+		interconnects =
+			<&epss_l3_cpu MASTER_EPSS_L3_APPS
+			 &epss_l3_cpu SLAVE_EPSS_L3_SHARED>;
+	};
+
 	snoop_l3_bw: qcom,snoop-l3-bw {
 		compatible = "qcom,devfreq-icc-l3bw";
 		reg = <0x18590100 0xa0>;
@@ -3959,6 +3999,14 @@
 			qcom,target-dev = <&cpu7_cpu_l3_lat>;
 			qcom,cachemiss-ev = <0x17>;
 			qcom,core-dev-table = <&cpu4_cpu_l3_tbl>;
+		};
+
+		cpu7_l3_computemon: qcom,cpu7-l3-computemon {
+			compatible = "qcom,arm-compute-mon";
+			qcom,target-dev = <&cpu7_cpu_l3_latfloor>;
+			qcom,core-dev-table =
+				< 2304000  300000000 >,
+				< 2400000 1516800000 >;
 		};
 
 		cpu4_cpu_llcc_latmon: qcom,cpu4-cpu-llcc-latmon {
@@ -4202,6 +4250,7 @@
 
 			qcom,slpi_qrtr {
 				qcom,glink-channels = "IPCRTR";
+				qcom,net-id = <2>;
 				qcom,low-latency;
 				qcom,intents = <0x800  5
 						0x2000 3
@@ -4381,12 +4430,14 @@
 		qcom,pas-id = <1>;
 		qcom,proxy-timeout-ms = <10000>;
 		qcom,smem-id = <423>;
+		qcom,minidump-id = <5>;
 		qcom,sysmon-id = <1>;
 		qcom,ssctl-instance-id = <0x14>;
 		qcom,firmware-name = "adsp";
 		memory-region = <&pil_adsp_mem>;
 		qcom,signal-aop;
 		qcom,complete-ramdump;
+		qcom,minidump-as-elf32;
 
 		/* Inputs from lpass */
 		interrupts-extended = <&pdc 6 IRQ_TYPE_LEVEL_HIGH>,
@@ -4426,11 +4477,13 @@
 		qcom,pas-id = <18>;
 		qcom,proxy-timeout-ms = <10000>;
 		qcom,smem-id = <601>;
+		qcom,minidump-id = <7>;
 		qcom,sysmon-id = <7>;
 		qcom,ssctl-instance-id = <0x17>;
 		qcom,firmware-name = "cdsp";
 		memory-region = <&pil_cdsp_mem>;
 		qcom,complete-ramdump;
+		qcom,minidump-as-elf32;
 
 		interconnects = <&nsp_noc MASTER_CDSP_PROC &mc_virt SLAVE_EBI1>;
 
@@ -5091,9 +5144,7 @@
 		qcom,hlos-ce-hw-instance = <0>;
 		qcom,qsee-ce-hw-instance = <0>;
 		qcom,disk-encrypt-pipe-pair = <2>;
-		qcom,support-fde;
 		qcom,no-clock-support;
-		qcom,fde-key-size;
 		qcom,appsbl-qseecom-support;
 		qcom,commonlib64-loaded-by-uefi;
 		qcom,qsee-reentrancy-support = <2>;
@@ -5232,8 +5283,9 @@
 
 	wlan: qcom,cnss-qca6490@b0000000 {
 		compatible = "qcom,cnss-qca6490";
-		reg = <0xb0000000 0x10000>;
-		reg-names = "smmu_iova_ipa";
+		reg = <0xb0000000 0x10000>,
+		      <0xb2e5510 0x690>;
+		reg-names = "smmu_iova_ipa", "tcs_cmd";
 		wlan-en-gpio = <&tlmm 64 0>;
 		pinctrl-names = "wlan_en_active", "wlan_en_sleep";
 		pinctrl-0 = <&cnss_wlan_en_active>;
@@ -5241,6 +5293,8 @@
 		qcom,wlan-rc-num = <0>;
 		qcom,wlan-ramdump-dynamic = <0x420000>;
 		qcom,wlan-cbc-enabled;
+		/* RPMH_PDC_WLAN_RF_TCS<6>_CMD<2> offset */
+		qcom,tcs_offset_int_pow_amp_vreg = <0x4D0>;
 
 		vdd-wlan-aon-supply = <&S2E>;
 		qcom,vdd-wlan-aon-config = <950000 952000 0 0 1>;
@@ -5254,6 +5308,24 @@
 		qcom,vdd-wlan-rfa2-config = <1350000 1350000 0 0 1>;
 		wlan-ant-switch-supply = <&L7E>;
 		qcom,wlan-ant-switch-config = <2800000 2800000 0 0 0>;
+
+		interconnects = <&aggre2_noc MASTER_PCIE_0 &mc_virt SLAVE_EBI1>;
+		qcom,bus-bw-cfg-num = <7>;
+		qcom,bus-bw-cfg =
+		/* no vote */
+		<0 0>,
+		/* idle: 0-18 Mbps ddr freq: 451.2 MHz */
+		<2250 1600000>,
+		/* low: 18-60 Mbps ddr freq: 451.2 MHz */
+		<7500 1600000>,
+		/* medium: 60-240 Mbps ddr freq: 451.2 MHz */
+		<30000 1804800>,
+		/* high: 240 - 1080 Mbps ddr freq: 451.2 MHz */
+		<100000 1804800>,
+		/* high: 1080 - 1400 Mbps ddr freq: 451.2 MHz */
+		<175000 1804800>,
+		/* low (latency critical): 18 - 60 Mbps, ddr freq: 547.2 MHz */
+		<7500 2188800>;
 
 		mhi,max-channels = <30>;
 		mhi,timeout = <10000>;
@@ -5453,8 +5525,12 @@
 
 	bluetooth: bt_qca6490 {
 		compatible = "qcom,qca6490";
+		reg = <0xb2e5510 0x690>;
+		reg-names = "tcs_cmd";
 		pinctrl-names = "default";
 		pinctrl-0 = <&bt_en_sleep>;
+		/* offset=(0xC8*6) + (0x10*2) */
+		qcom,tcs_offset_ipa = <0x4D0>;
 		qcom,bt-reset-gpio = <&tlmm 65 0>; /* BT_EN */
 		qcom,bt-sw-ctrl-gpio = <&tlmm 153 0>; /* SW_CTRL */
 		qcom,bt-vdd-aon-supply = <&S11B>;

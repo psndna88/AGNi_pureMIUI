@@ -535,6 +535,8 @@ patternProperties:
     description: LSI Corp. (LSI Logic)
   "^lwn,.*":
     description: Liebherr-Werk Nenzing GmbH
+  "^lt,.*":
+    description: Lontium Semiconductor Corporation
   "^macnica,.*":
     description: Macnica Americas
   "^mapleboard,.*":
@@ -899,7 +901,7 @@ patternProperties:
     description: Sun Microsystems, Inc
   "^swir,.*":
     description: Sierra Wireless
-  "^syna,.*":
+  "^synaptics,.*":
     description: Synaptics Inc.
   "^synology,.*":
     description: Synology, Inc.

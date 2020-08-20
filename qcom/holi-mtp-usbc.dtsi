@@ -1,0 +1,99 @@
+#include "holi-audio-overlay.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/linux-event-codes.h>
+#include "holi-pmic-overlay.dtsi"
+
+&sdhc_1 {
+	status = "ok";
+
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdc1_on>;
+	pinctrl-1 = <&sdc1_off>;
+
+	vdd-supply = <&L7E>;
+	qcom,vdd-voltage-level = <2960000 2960000>;
+	qcom,vdd-current-level = <0 570000>;
+
+	vdd-io-supply = <&L12A>;
+	qcom,vdd-io-always-on;
+	qcom,vdd-io-lpm-sup;
+	qcom,vdd-io-voltage-level = <1800000 1800000>;
+	qcom,vdd-io-current-level = <0 325000>;
+};
+
+&sdhc_2 {
+	status = "ok";
+
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdc2_on>;
+	pinctrl-1 = <&sdc2_off>;
+
+	vdd-supply = <&L9E>;
+	qcom,vdd-voltage-level = <2960000 2960000>;
+	qcom,vdd-current-level = <0 800000>;
+
+	vdd-io-supply = <&L6E>;
+	qcom,vdd-io-voltage-level = <1800000 2960000>;
+	qcom,vdd-io-current-level = <0 22000>;
+
+	cd-gpios = <&tlmm 94 GPIO_ACTIVE_LOW>;
+};
+
+&ufsphy_mem {
+		compatible = "qcom,ufs-phy-qmp-v3";
+
+		vdda-phy-supply = <&L18A>;
+		vdda-pll-supply = <&L22A>;
+		vdda-phy-max-microamp = <62900>;
+		vdda-pll-max-microamp = <18300>;
+
+		status = "ok";
+};
+
+&ufshc_mem {
+		vdd-hba-supply = <&gcc_ufs_phy_gdsc>;
+		vdd-hba-fixed-regulator;
+
+		vcc-supply = <&L7E>;
+		vcc-voltage-level = <2950000 2960000>;
+		vcc-max-microamp = <800000>;
+
+		vccq2-supply = <&L12A>;
+		vccq2-max-microamp = <800000>;
+		vccq2-voltage-level = <1800000 1800000>;
+
+		qcom,vddp-ref-clk-supply = <&L22A>;
+		qcom,vddp-ref-clk-max-microamp = <100>;
+
+		status = "ok";
+};
+
+&holi_snd {
+	qcom,msm-mbhc-usbc-audio-supported = <1>;
+	qcom,msm-mbhc-hphl-swh = <0>;
+	qcom,msm-mbhc-gnd-swh = <0>;
+};
+
+&soc {
+	gpio_keys {
+		compatible = "gpio-keys";
+		label = "gpio-keys";
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&key_vol_up_default>;
+
+		vol_up {
+			label = "volume_up";
+			gpios = <&pm6350_gpios 2 GPIO_ACTIVE_LOW>;
+			linux,input-type = <1>;
+			linux,code = <KEY_VOLUMEUP>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+			linux,can-disable;
+		};
+	};
+};
+
+&pm6150a_amoled {
+	status = "ok";
+};

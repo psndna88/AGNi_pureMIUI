@@ -6,6 +6,27 @@
 / {
 	model = "Qualcomm Technologies, Inc. Holi CDP";
 	compatible = "qcom,holi-cdp", "qcom,holi", "qcom,cdp";
-	qcom,msm-id = <454 0x10000>;
+	qcom,msm-id = <454 0x10000>, <472 0x10000>;
 	qcom,board-id = <1 0>;
+};
+
+&wsa881x_i2c_e {
+	status = "disabled";
+};
+
+&wsa881x_i2c_44 {
+	status = "disabled";
+};
+
+&wsa881x_i2c_f {
+	status = "ok";
+};
+
+&wsa881x_i2c_45 {
+	status = "ok";
+};
+
+&wsa881x_analog_reset_gpio {
+	pinctrl-0 = <&spkr_1_sd_n_active>;
+	pinctrl-1 = <&spkr_1_sd_n_sleep>;
 };

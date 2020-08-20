@@ -200,6 +200,7 @@
 		compatible = "qcom,pci-msi";
 		msi-controller;
 		reg = <0x17a10040 0x0>;
+		qcom,msi-addr-size-exp = <20>;
 		interrupt-parent = <&intc>;
 		interrupts = <GIC_SPI 768 IRQ_TYPE_EDGE_RISING>,
 			<GIC_SPI 769 IRQ_TYPE_EDGE_RISING>,
@@ -329,6 +330,7 @@
 		qcom,boot-option = <0x1>;
 		qcom,drv-supported;
 		qcom,use-19p2mhz-aux-clk;
+		qcom,wr-halt-size = <0x8>;
 		qcom,no-l0s-supported;
 		qcom,slv-addr-space-size = <0x20000000>;
 		qcom,ep-latency = <10>;

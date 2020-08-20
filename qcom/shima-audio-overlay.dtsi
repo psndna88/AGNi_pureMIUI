@@ -198,8 +198,8 @@
 			<0 ADC2 0x2 0 SWRM_TX1_CH2>,
 			<1 ADC3 0x1 0 SWRM_TX2_CH1>,
 			<1 ADC4 0x2 0 SWRM_TX2_CH2>,
-			<2 DMIC0 0x1 0 SWRM_TX2_CH1>,
-			<2 DMIC1 0x2 0 SWRM_TX2_CH2>,
+			<2 DMIC0 0x1 0 SWRM_TX1_CH3>,
+			<2 DMIC1 0x2 0 SWRM_TX1_CH4>,
 			<2 MBHC 0x4 0 SWRM_TX2_CH3>,
 			<2 DMIC2 0x4 0 SWRM_TX2_CH3>,
 			<2 DMIC3 0x8 0 SWRM_TX2_CH4>,
@@ -242,9 +242,9 @@
 };
 
 &shima_snd {
-	qcom,model = "shima-mtp-snd-card";
+	qcom,model = "lahaina-shimaidp-snd-card";
 	qcom,msm-mi2s-master = <1>, <1>, <1>, <1>, <1>, <1>;
-	qcom,wcn-bt = <0>;
+	qcom,wcn-btfm = <0>;
 	qcom,ext-disp-audio-rx = <0>;
 	qcom,audio-routing =
 		"AMIC1", "Analog Mic1",
@@ -258,15 +258,15 @@
 		"AMIC5", "Analog Mic5",
 		"Analog Mic5", "MIC BIAS4",
 		"TX DMIC0", "Digital Mic0",
-		"TX DMIC0", "MIC BIAS3",
+		"TX DMIC0", "MIC BIAS1",
 		"TX DMIC1", "Digital Mic1",
 		"TX DMIC1", "MIC BIAS3",
 		"TX DMIC2", "Digital Mic2",
-		"TX DMIC2", "MIC BIAS1",
+		"TX DMIC2", "MIC BIAS4",
 		"TX DMIC3", "Digital Mic3",
 		"TX DMIC3", "MIC BIAS1",
 		"TX DMIC4", "Digital Mic4",
-		"TX DMIC4", "MIC BIAS4",
+		"TX DMIC4", "MIC BIAS3",
 		"TX DMIC5", "Digital Mic5",
 		"TX DMIC5", "MIC BIAS4",
 		"IN1_HPHL", "HPHL_OUT",
@@ -294,11 +294,11 @@
 		"VA DMIC3", "Digital Mic3",
 		"VA DMIC4", "Digital Mic4",
 		"VA DMIC5", "Digital Mic5",
-		"VA DMIC0", "VA MIC BIAS3",
+		"VA DMIC0", "VA MIC BIAS1",
 		"VA DMIC1", "VA MIC BIAS3",
-		"VA DMIC2", "VA MIC BIAS1",
+		"VA DMIC2", "VA MIC BIAS4",
 		"VA DMIC3", "VA MIC BIAS1",
-		"VA DMIC4", "VA MIC BIAS4",
+		"VA DMIC4", "VA MIC BIAS3",
 		"VA DMIC5", "VA MIC BIAS4";
 	qcom,msm-mbhc-hphl-swh = <1>;
 	qcom,msm-mbhc-gnd-swh = <1>;
@@ -308,13 +308,17 @@
 	qcom,cdc-dmic45-gpios = <&cdc_dmic45_gpios>;
 	asoc-codec  = <&stub_codec>, <&bolero>,
 		      <&wcd938x_codec>, <&swr_haptics>,
-		      <&wsa883x_0221>, <&wsa883x_0222>,
-		      <&ext_disp_audio_codec>;
+		      <&wsa883x_0221>, <&wsa883x_0222>;
 	asoc-codec-names = "msm-stub-codec.1", "bolero_codec",
 			   "wcd938x_codec", "swr-haptics",
-			   "wsa-codec1", "wsa-codec2",
-			   "msm-ext-disp-audio-codec-rx";
+			   "wsa-codec1", "wsa-codec2";
 	qcom,wsa-max-devs = <2>;
+	qcom,cps_reg_phy_addr = <0x3250300 0x3250304 0x3250318>;
+	qcom,cps_wsa_vbatt_temp_reg_addr = <0x0000429 0x0000422>;
+	qcom,cps_threshold_levels = <148 168>;
+	qcom,cps_normal_values = <0x8E 0x8F 0x8F>;
+	qcom,cps_lower1_values = <0x10 0xD0 0xD0>;
+	qcom,cps_lower2_values = <0x0F 0x0F 0x18>;
 	qcom,msm_audio_ssr_devs = <&audio_apr>, <&q6core>, <&lpi_tlmm>,
 				  <&bolero>;
 };
@@ -408,4 +412,11 @@
 		qcom,codec-lpass-clk-id = <0x310>;
 		#clock-cells = <1>;
 	};
+};
+
+&adsp_loader {
+	nvmem-cells = <&adsp_variant>;
+	nvmem-cell-names = "adsp_variant";
+	adsp-fw-names = "adsp2";
+	adsp-fw-bit-values = <0x1>;
 };
