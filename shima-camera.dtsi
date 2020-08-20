@@ -21,8 +21,8 @@
 		interrupt-names = "csiphy0";
 		gdscr-supply = <&cam_cc_titan_top_gdsc>;
 		refgen-supply = <&refgen>;
-		csi-vdd-1p2-supply = <&L10C>;
-		csi-vdd-0p9-supply = <&L6B>;
+		csi-vdd-1p2-supply = <&L6B>;
+		csi-vdd-0p9-supply = <&L10C>;
 		regulator-names = "gdscr", "refgen", "csi-vdd-1p2",
 			"csi-vdd-0p9";
 		rgltr-cntrl-support;
@@ -55,8 +55,8 @@
 		interrupt-names = "csiphy1";
 		gdscr-supply = <&cam_cc_titan_top_gdsc>;
 		refgen-supply = <&refgen>;
-		csi-vdd-1p2-supply = <&L10C>;
-		csi-vdd-0p9-supply = <&L6B>;
+		csi-vdd-1p2-supply = <&L6B>;
+		csi-vdd-0p9-supply = <&L10C>;
 		regulator-names = "gdscr", "refgen", "csi-vdd-1p2",
 			"csi-vdd-0p9";
 		rgltr-cntrl-support;
@@ -89,8 +89,8 @@
 		interrupt-names = "csiphy2";
 		gdscr-supply = <&cam_cc_titan_top_gdsc>;
 		refgen-supply = <&refgen>;
-		csi-vdd-1p2-supply = <&L10C>;
-		csi-vdd-0p9-supply = <&L6B>;
+		csi-vdd-1p2-supply = <&L6B>;
+		csi-vdd-0p9-supply = <&L10C>;
 		regulator-names = "gdscr", "refgen", "csi-vdd-1p2",
 			"csi-vdd-0p9";
 		rgltr-cntrl-support;
@@ -123,8 +123,8 @@
 		interrupt-names = "csiphy3";
 		gdscr-supply = <&cam_cc_titan_top_gdsc>;
 		refgen-supply = <&refgen>;
-		csi-vdd-1p2-supply = <&L10C>;
-		csi-vdd-0p9-supply = <&L6B>;
+		csi-vdd-1p2-supply = <&L6B>;
+		csi-vdd-0p9-supply = <&L10C>;
 		regulator-names = "gdscr", "refgen", "csi-vdd-1p2",
 			"csi-vdd-0p9";
 		rgltr-cntrl-support;
@@ -157,8 +157,8 @@
 		interrupt-names = "csiphy4";
 		gdscr-supply = <&cam_cc_titan_top_gdsc>;
 		refgen-supply = <&refgen>;
-		csi-vdd-1p2-supply = <&L10C>;
-		csi-vdd-0p9-supply = <&L6B>;
+		csi-vdd-1p2-supply = <&L6B>;
+		csi-vdd-0p9-supply = <&L10C>;
 		regulator-names = "gdscr", "refgen", "csi-vdd-1p2",
 			"csi-vdd-0p9";
 		rgltr-cntrl-support;
@@ -191,8 +191,8 @@
 		interrupt-names = "csiphy5";
 		gdscr-supply = <&cam_cc_titan_top_gdsc>;
 		refgen-supply = <&refgen>;
-		csi-vdd-1p2-supply = <&L10C>;
-		csi-vdd-0p9-supply = <&L6B>;
+		csi-vdd-1p2-supply = <&L6B>;
+		csi-vdd-0p9-supply = <&L10C>;
 		regulator-names = "gdscr", "refgen", "csi-vdd-1p2",
 			"csi-vdd-0p9";
 		rgltr-cntrl-support;
@@ -566,7 +566,7 @@
 			<&camcc CAM_CC_CPAS_AHB_CLK>;
 		clock-rates = <0 0>;
 		clock-cntl-level = "svs";
-		cdm-client-names = "ife3", "ife4";
+		cdm-client-names = "ife3", "ife4", "dualife";
 		status = "ok";
 	};
 
@@ -1371,6 +1371,8 @@
 			"turbo", "turbo";
 		client-id-based;
 		client-names =
+			"csiphy0", "csiphy1", "csiphy2", "csiphy3",
+			"csiphy4", "csiphy5", "cci0", "cci1",
 			"csid0", "csid1", "csid2", "csid3",
 			"csid4", "ife0", "ife1", "ife2", "ife3", "ife4",
 			"ipe0", "cam-cdm-intf0","ife-cdm0", "ife-cdm1",
