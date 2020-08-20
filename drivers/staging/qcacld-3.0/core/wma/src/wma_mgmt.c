@@ -1916,6 +1916,11 @@ static QDF_STATUS wma_setup_install_key_cmd(tp_wma_handle wma_handle,
 		return QDF_STATUS_E_INVAL;
 	}
 
+	if (!wma_is_vdev_up(key_params->vdev_id)) {
+		WMA_LOGE(FL("vdev : %d not up"), key_params->vdev_id);
+		return QDF_STATUS_E_INVAL;
+	}
+
 	txrx_vdev = wma_find_vdev_by_id(wma_handle,
 					key_params->vdev_id);
 	peer = cdp_peer_find_by_addr(soc, txrx_pdev,
