@@ -509,8 +509,13 @@ void *hdmi_get_featuredata_from_sysfs_dev(struct device *device,
 {
 	struct hdmi_tx_ctrl *hdmi_ctrl = NULL;
 
-	if (!device || feature_type >= HDMI_TX_FEAT_MAX) {
-		DEV_ERR("%s: invalid input\n", __func__);
+	if (!device) {
+		DEV_ERR("%s: invalid device data\n", __func__);
+		return NULL;
+	}
+
+	if (feature_type >= HDMI_TX_FEAT_MAX) {
+		DEV_ERR("%s: feature_type exceeding max value\n", __func__);
 		return NULL;
 	}
 
@@ -583,8 +588,13 @@ static ssize_t hdmi_tx_sysfs_wta_edid(struct device *dev,
 
 	hdmi_ctrl = hdmi_tx_get_drvdata_from_sysfs_dev(dev);
 
-	if (!hdmi_ctrl || !hdmi_ctrl->edid_buf) {
-		DEV_ERR("%s: invalid data\n", __func__);
+	if (!hdmi_ctrl) {
+		DEV_ERR("%s: invalid hdmi_ctrl data\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!hdmi_ctrl->edid_buf) {
+		DEV_ERR("%s: invalid edid_buf data\n", __func__);
 		return -EINVAL;
 	}
 
@@ -635,8 +645,13 @@ static ssize_t hdmi_tx_sysfs_rda_edid(struct device *dev,
 
 	hdmi_ctrl = hdmi_tx_get_drvdata_from_sysfs_dev(dev);
 
-	if (!hdmi_ctrl || !hdmi_ctrl->edid_buf) {
-		DEV_ERR("%s: invalid data\n", __func__);
+	if (!hdmi_ctrl) {
+		DEV_ERR("%s: invalid hdmi_ctrl data\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!hdmi_ctrl->edid_buf) {
+		DEV_ERR("%s: invalid edid_buf data\n", __func__);
 		return -EINVAL;
 	}
 
@@ -1495,8 +1510,13 @@ static int hdmi_tx_sysfs_create(struct hdmi_tx_ctrl *hdmi_ctrl,
 {
 	int rc;
 
-	if (!hdmi_ctrl || !fbi) {
-		DEV_ERR("%s: invalid input\n", __func__);
+	if (!hdmi_ctrl) {
+		DEV_ERR("%s: invalid hdmi_ctrl data\n", __func__);
+		return -ENODEV;
+	}
+
+	if (!fbi) {
+		DEV_ERR("%s: invalid fb_info data\n", __func__);
 		return -ENODEV;
 	}
 
@@ -2163,8 +2183,14 @@ static int hdmi_tx_init_features(struct hdmi_tx_ctrl *hdmi_ctrl,
 	int ret = 0;
 	u32 deinit_features = 0;
 
-	if (!hdmi_ctrl || !fbi) {
-		DEV_ERR("%s: invalid input\n", __func__);
+	if (!hdmi_ctrl) {
+		DEV_ERR("%s: invalid hdmi_ctrl data\n", __func__);
+		ret = -EINVAL;
+		goto end;
+	}
+
+	if (!fbi) {
+		DEV_ERR("%s: invalid fb_info data\n", __func__);
 		ret = -EINVAL;
 		goto end;
 	}
@@ -2761,8 +2787,14 @@ static int hdmi_tx_config_power(struct hdmi_tx_ctrl *hdmi_ctrl,
 	struct dss_module_power *power_data = NULL;
 	char name[MAX_CLIENT_NAME_LEN];
 
-	if (!hdmi_ctrl || module >= HDMI_TX_MAX_PM) {
-		DEV_ERR("%s: Error: invalid input\n", __func__);
+	if (!hdmi_ctrl) {
+		DEV_ERR("%s: invalid hdmi_ctrl data\n", __func__);
+		rc = -EINVAL;
+		goto exit;
+	}
+
+	if (module >= HDMI_TX_MAX_PM) {
+		DEV_ERR("%s: power_module exceeding max value\n", __func__);
 		rc = -EINVAL;
 		goto exit;
 	}
@@ -2829,8 +2861,14 @@ static int hdmi_tx_enable_power(struct hdmi_tx_ctrl *hdmi_ctrl,
 	int rc = 0;
 	struct dss_module_power *power_data = NULL;
 
-	if (!hdmi_ctrl || module >= HDMI_TX_MAX_PM) {
-		DEV_ERR("%s: Error: invalid input\n", __func__);
+	if (!hdmi_ctrl) {
+		DEV_ERR("%s: invalid hdmi_ctrl data\n", __func__);
+		rc = -EINVAL;
+		goto error;
+	}
+
+	if (module >= HDMI_TX_MAX_PM) {
+		DEV_ERR("%s: power_module exceeding max value\n", __func__);
 		rc = -EINVAL;
 		goto error;
 	}
@@ -3170,8 +3208,13 @@ static int hdmi_tx_audio_info_setup(struct platform_device *pdev,
 	struct hdmi_tx_ctrl *hdmi_ctrl = platform_get_drvdata(pdev);
 	u32 is_mode_dvi;
 
-	if (!hdmi_ctrl || !params) {
-		DEV_ERR("%s: invalid input\n", __func__);
+	if (!hdmi_ctrl) {
+		DEV_ERR("%s: invalid hdmi_ctrl data\n", __func__);
+		return -ENODEV;
+	}
+
+	if (!params) {
+		DEV_ERR("%s: invalid audio_setup params\n", __func__);
 		return -ENODEV;
 	}
 
@@ -4637,8 +4680,14 @@ static int hdmi_tx_get_dt_clk_data(struct device *dev,
 	struct dss_module_power *hpd_power_data = NULL;
 	struct dss_module_power *core_power_data = NULL;
 
-	if (!dev || !pdata) {
-		pr_err("%s: invalid input\n", __func__);
+	if (!dev) {
+		pr_err("%s: invalid device data\n", __func__);
+		rc = -EINVAL;
+		goto exit;
+	}
+
+	if (!pdata) {
+		pr_err("%s: invalid hdmi platform data\n", __func__);
 		rc = -EINVAL;
 		goto exit;
 	}
@@ -4711,8 +4760,13 @@ static int hdmi_tx_get_dt_vreg_data(struct device *dev,
 	const char *mod_name = NULL;
 	struct device_node *of_node = NULL;
 
-	if (!dev || !mp) {
-		DEV_ERR("%s: invalid input\n", __func__);
+	if (!dev) {
+		DEV_ERR("%s: invalid device data\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!mp) {
+		DEV_ERR("%s: invalid power_module data\n", __func__);
 		return -EINVAL;
 	}
 
@@ -4901,14 +4955,19 @@ static int hdmi_tx_get_dt_gpio_data(struct device *dev,
 	struct dss_gpio *gpio_list = NULL;
 	struct device_node *of_node = NULL;
 
-	DEV_DBG("%s: module: '%s'\n", __func__, hdmi_tx_pm_name(module_type));
+	if (!dev) {
+		DEV_ERR("%s: invalid device data\n", __func__);
+		return -EINVAL;
+	}
 
-	if (!dev || !mp) {
-		DEV_ERR("%s: invalid input\n", __func__);
+	if (!mp) {
+		DEV_ERR("%s: invalid power_module data\n", __func__);
 		return -EINVAL;
 	}
 
 	of_node = dev->of_node;
+
+	DEV_DBG("%s: module: '%s'\n", __func__, hdmi_tx_pm_name(module_type));
 
 	switch (module_type) {
 	case HDMI_TX_HPD_PM:
@@ -4982,8 +5041,14 @@ static void hdmi_tx_put_dt_data(struct device *dev,
 	struct hdmi_tx_platform_data *pdata)
 {
 	int i;
-	if (!dev || !pdata) {
-		DEV_ERR("%s: invalid input\n", __func__);
+
+	if (!dev) {
+		pr_err("%s: invalid device data\n", __func__);
+		return;
+	}
+
+	if (!pdata) {
+		pr_err("%s: invalid hdmi platform data\n", __func__);
 		return;
 	}
 
@@ -5005,8 +5070,13 @@ static int hdmi_tx_get_dt_data(struct platform_device *pdev,
 	struct hdmi_tx_ctrl *hdmi_ctrl = platform_get_drvdata(pdev);
 	const char *data;
 
-	if (!pdev || !pdata) {
-		DEV_ERR("%s: invalid input\n", __func__);
+	if (!pdev) {
+		pr_err("%s: invalid platform_device data\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!pdata) {
+		pr_err("%s: invalid hdmi platform data\n", __func__);
 		return -EINVAL;
 	}
 

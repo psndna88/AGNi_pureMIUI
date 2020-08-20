@@ -348,7 +348,7 @@ static noinline void corrupt_stack(void)
 	/* Use default char array length that triggers stack protection. */
 	char data[8];
 
-	memset((void *)data, 0, 64);
+	memset((void *)data, 0, sizeof(char)*8);
 }
 
 static void execute_location(void *dst)
