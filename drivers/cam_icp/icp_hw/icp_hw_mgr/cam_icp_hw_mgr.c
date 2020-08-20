@@ -2103,6 +2103,7 @@ static int cam_icp_mgr_handle_frame_process(uint32_t *msg_ptr, int flag)
 	idx = i;
 
 	if (flag == ICP_FRAME_PROCESS_FAILURE) {
+		buf_data.evt_param = CAM_SYNC_ICP_EVENT_FRAME_PROCESS_FAILURE;
 		if (ioconfig_ack->err_type == CAMERAICP_EABORTED) {
 			CAM_WARN(CAM_ICP,
 				"ctx_id %d req %llu dev %d has been aborted[flushed]",
@@ -3860,6 +3861,7 @@ static int cam_icp_mgr_handle_config_err(
 	struct cam_hw_done_event_data buf_data;
 
 	buf_data.request_id = *(uint64_t *)config_args->priv;
+	buf_data.evt_param = CAM_SYNC_ICP_EVENT_CONFIG_ERR;
 	ctx_data->ctxt_event_cb(ctx_data->context_priv, CAM_CTX_EVT_ID_SUCCESS,
 		&buf_data);
 

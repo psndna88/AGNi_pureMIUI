@@ -1567,8 +1567,10 @@ static void cam_ope_ctx_cdm_callback(uint32_t handle, void *userdata,
 			ope_req->request_id, ctx->ctx_id);
 		cam_ope_req_timer_reset(ctx);
 		cam_ope_device_timer_reset(ope_hw_mgr);
+		buf_data.evt_param = CAM_SYNC_EVENT_SUCCESS;
 	} else if (status == CAM_CDM_CB_STATUS_HW_RESUBMIT) {
 		CAM_INFO(CAM_OPE, "After reset of CDM and OPE, reapply req");
+		buf_data.evt_param = CAM_SYNC_OPE_EVENT_HW_RESUBMIT;
 		rc = cam_ope_mgr_reapply_config(ope_hw_mgr, ctx, ope_req);
 		if (!rc)
 			goto end;
@@ -1583,6 +1585,17 @@ static void cam_ope_ctx_cdm_callback(uint32_t handle, void *userdata,
 			cam_ope_dump_req_data(ope_req);
 		rc = cam_ope_mgr_reset_hw();
 		evt_id = CAM_CTX_EVT_ID_ERROR;
+
+		if (status == CAM_CDM_CB_STATUS_PAGEFAULT)
+			buf_data.evt_param = CAM_SYNC_OPE_EVENT_PAGE_FAULT;
+		else if (status == CAM_CDM_CB_STATUS_HW_FLUSH)
+			buf_data.evt_param = CAM_SYNC_OPE_EVENT_HW_FLUSH;
+		else if (status == CAM_CDM_CB_STATUS_HW_RESET_DONE)
+			buf_data.evt_param = CAM_SYNC_OPE_EVENT_HW_RESET_DONE;
+		else if (status == CAM_CDM_CB_STATUS_HW_ERROR)
+			buf_data.evt_param = CAM_SYNC_OPE_EVENT_HW_ERROR;
+		else
+			buf_data.evt_param = CAM_SYNC_OPE_EVENT_UNKNOWN;
 	}
 
 	ctx->req_cnt--;
@@ -3201,6 +3214,7 @@ static int cam_ope_mgr_handle_config_err(
 	ope_req = config_args->priv;
 
 	buf_data.request_id = ope_req->request_id;
+	buf_data.evt_param = CAM_SYNC_OPE_EVENT_CONFIG_ERR;
 	ctx_data->ctxt_event_cb(ctx_data->context_priv, CAM_CTX_EVT_ID_ERROR,
 		&buf_data);
 

@@ -7,6 +7,7 @@
 #include <linux/kernel.h>
 #include <media/cam_cpas.h>
 #include <media/cam_req_mgr.h>
+#include <media/cam_sync.h>
 
 #include "cam_io_util.h"
 #include "cam_soc_util.h"
@@ -1032,6 +1033,9 @@ notify_context:
 
 		buf_data.num_handles = frame_req->num_hw_update_entries;
 		buf_data.request_id = frame_req->request_id;
+		buf_data.evt_param = (irq_type == CAM_FD_IRQ_FRAME_DONE) ?
+			CAM_SYNC_FD_EVENT_IRQ_FRAME_DONE :
+			CAM_SYNC_FD_EVENT_IRQ_RESET_DONE;
 
 		rc = frame_req->hw_ctx->event_cb(frame_req->hw_ctx->cb_priv,
 			evt_id, &buf_data);
