@@ -114,6 +114,7 @@ struct cam_cpas_hw_cmd_stop {
  * @camera_version: Camera version
  * @cpas_version: CPAS version
  * @camera_capability: Camera hw capabilities
+ * @fuse_info: Fuse information
  *
  */
 struct cam_cpas_hw_caps {
@@ -121,6 +122,7 @@ struct cam_cpas_hw_caps {
 	struct cam_hw_version camera_version;
 	struct cam_hw_version cpas_version;
 	uint32_t camera_capability;
+	struct cam_cpas_fuse_info fuse_info;
 };
 
 int cam_cpas_hw_probe(struct platform_device *pdev,

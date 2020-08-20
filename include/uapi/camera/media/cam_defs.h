@@ -21,7 +21,8 @@
 #define CAM_RELEASE_DEV                         (CAM_COMMON_OPCODE_BASE + 0x6)
 #define CAM_SD_SHUTDOWN                         (CAM_COMMON_OPCODE_BASE + 0x7)
 #define CAM_FLUSH_REQ                           (CAM_COMMON_OPCODE_BASE + 0x8)
-#define CAM_COMMON_OPCODE_MAX                   (CAM_COMMON_OPCODE_BASE + 0x9)
+#define CAM_QUERY_CAP_V2                        (CAM_COMMON_OPCODE_BASE + 0x9)
+#define CAM_COMMON_OPCODE_MAX                   (CAM_COMMON_OPCODE_BASE + 0xa)
 
 #define CAM_COMMON_OPCODE_BASE_v2           0x150
 #define CAM_ACQUIRE_HW                      (CAM_COMMON_OPCODE_BASE_v2 + 0x1)

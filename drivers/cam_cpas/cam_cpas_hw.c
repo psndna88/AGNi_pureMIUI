@@ -1747,6 +1747,7 @@ static int cam_cpas_hw_get_hw_info(void *hw_priv,
 	struct cam_hw_info *cpas_hw;
 	struct cam_cpas *cpas_core;
 	struct cam_cpas_hw_caps *hw_caps;
+	struct cam_cpas_private_soc *soc_private;
 
 	if (!hw_priv || !get_hw_cap_args) {
 		CAM_ERR(CAM_CPAS, "Invalid arguments %pK %pK",
@@ -1763,8 +1764,15 @@ static int cam_cpas_hw_get_hw_info(void *hw_priv,
 	cpas_hw = (struct cam_hw_info *)hw_priv;
 	cpas_core = (struct cam_cpas *) cpas_hw->core_info;
 	hw_caps = (struct cam_cpas_hw_caps *)get_hw_cap_args;
-
 	*hw_caps = cpas_core->hw_caps;
+
+	/*Extract Fuse Info*/
+	soc_private = (struct cam_cpas_private_soc *)
+		cpas_hw->soc_info.soc_private;
+
+	hw_caps->fuse_info = soc_private->fuse_info;
+	CAM_INFO(CAM_CPAS, "fuse info->num_fuses %d",
+		hw_caps->fuse_info.num_fuses);
 
 	return 0;
 }

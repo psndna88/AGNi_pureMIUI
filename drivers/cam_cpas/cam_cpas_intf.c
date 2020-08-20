@@ -173,7 +173,8 @@ int cam_cpas_get_cpas_hw_version(uint32_t *hw_version)
 int cam_cpas_get_hw_info(uint32_t *camera_family,
 	struct cam_hw_version *camera_version,
 	struct cam_hw_version *cpas_version,
-	uint32_t *cam_caps)
+	uint32_t *cam_caps,
+	struct cam_cpas_fuse_info *cam_fuse_info)
 {
 	if (!CAM_CPAS_INTF_INITIALIZED()) {
 		CAM_ERR(CAM_CPAS, "cpas intf not initialized");
@@ -186,10 +187,16 @@ int cam_cpas_get_hw_info(uint32_t *camera_family,
 		return -EINVAL;
 	}
 
-	*camera_family = g_cpas_intf->hw_caps.camera_family;
+	*camera_family  = g_cpas_intf->hw_caps.camera_family;
 	*camera_version = g_cpas_intf->hw_caps.camera_version;
-	*cpas_version = g_cpas_intf->hw_caps.cpas_version;
-	*cam_caps = g_cpas_intf->hw_caps.camera_capability;
+	*cpas_version   = g_cpas_intf->hw_caps.cpas_version;
+	*cam_caps       = g_cpas_intf->hw_caps.camera_capability;
+	if (cam_fuse_info)
+		*cam_fuse_info  = g_cpas_intf->hw_caps.fuse_info;
+
+	CAM_DBG(CAM_CPAS, "Family %d, version %d.%d cam_caps %d",
+		*camera_family, camera_version->major,
+		camera_version->minor, *cam_caps);
 
 	return 0;
 }
@@ -529,7 +536,32 @@ int cam_cpas_subdev_cmd(struct cam_cpas_intf *cpas_intf,
 
 		rc = cam_cpas_get_hw_info(&query.camera_family,
 			&query.camera_version, &query.cpas_version,
-			&query.reserved);
+			&query.reserved, NULL);
+		if (rc)
+			break;
+
+		rc = copy_to_user(u64_to_user_ptr(cmd->handle), &query,
+			sizeof(query));
+		if (rc)
+			CAM_ERR(CAM_CPAS, "Failed in copy to user, rc=%d", rc);
+
+		break;
+	}
+	case CAM_QUERY_CAP_V2: {
+		struct cam_cpas_query_cap_v2 query;
+
+		rc = copy_from_user(&query, u64_to_user_ptr(cmd->handle),
+			sizeof(query));
+		if (rc) {
+			CAM_ERR(CAM_CPAS, "Failed in copy from user, rc=%d",
+				rc);
+			break;
+		}
+
+		rc = cam_cpas_get_hw_info(&query.camera_family,
+			&query.camera_version, &query.cpas_version,
+			&query.reserved,
+			&query.fuse_info);
 		if (rc)
 			break;
 
@@ -729,6 +761,7 @@ static int cam_cpas_dev_component_bind(struct device *dev,
 
 	hw_intf = g_cpas_intf->hw_intf;
 	hw_caps = &g_cpas_intf->hw_caps;
+
 	if (hw_intf->hw_ops.get_hw_caps) {
 		rc = hw_intf->hw_ops.get_hw_caps(hw_intf->hw_priv,
 			hw_caps, sizeof(struct cam_cpas_hw_caps));
