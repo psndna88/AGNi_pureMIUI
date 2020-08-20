@@ -127,10 +127,11 @@ static struct dfc_tx_link_status_ind_msg_v01 qmap_tx_ind;
 static struct dfc_qmi_data __rcu *qmap_dfc_data;
 static atomic_t qmap_txid;
 static void *rmnet_ctl_handle;
+static bool dfc_config_acked;
 
-extern struct rmnet_ctl_client_if rmnet_ctl_if;
 static struct rmnet_ctl_client_if *rmnet_ctl;
 
+static void dfc_qmap_send_config(struct dfc_qmi_data *data);
 static void dfc_qmap_send_end_marker_cnf(struct qos_info *qos,
 					 u8 bearer_id, u16 seq, u32 tx_id);
 
@@ -320,6 +321,9 @@ static void dfc_qmap_cmd_handler(struct sk_buff *skb)
 		if (cmd->cmd_type != QMAP_CMD_ACK)
 			goto free_skb;
 	} else if (cmd->cmd_type != QMAP_CMD_REQUEST) {
+		if (cmd->cmd_type == QMAP_CMD_ACK &&
+		    cmd->cmd_name == QMAP_DFC_CONFIG)
+			dfc_config_acked = true;
 		goto free_skb;
 	}
 
@@ -329,6 +333,12 @@ static void dfc_qmap_cmd_handler(struct sk_buff *skb)
 	if (!dfc || READ_ONCE(dfc->restart_state)) {
 		rcu_read_unlock();
 		goto free_skb;
+	}
+
+	/* Re-send DFC config once if needed */
+	if (unlikely(!dfc_config_acked)) {
+		dfc_qmap_send_config(dfc);
+		dfc_config_acked = true;
 	}
 
 	switch (cmd->cmd_name) {
@@ -504,7 +514,7 @@ int dfc_qmap_client_init(void *port, int index, struct svc_info *psvc,
 
 	atomic_set(&qmap_txid, 0);
 
-	rmnet_ctl = symbol_get(rmnet_ctl_if);
+	rmnet_ctl = rmnet_ctl_if();
 	if (!rmnet_ctl) {
 		pr_err("rmnet_ctl module not loaded\n");
 		goto out;
@@ -521,6 +531,7 @@ int dfc_qmap_client_init(void *port, int index, struct svc_info *psvc,
 
 	pr_info("DFC QMAP init\n");
 
+	dfc_config_acked = false;
 	dfc_qmap_send_config(data);
 
 out:
@@ -547,11 +558,7 @@ void dfc_qmap_client_exit(void *dfc_data)
 	synchronize_rcu();
 
 	kfree(data);
-
-	if (rmnet_ctl) {
-		symbol_put(rmnet_ctl_if);
-		rmnet_ctl = NULL;
-	}
+	rmnet_ctl = NULL;
 
 	pr_info("DFC QMAP exit\n");
 }
