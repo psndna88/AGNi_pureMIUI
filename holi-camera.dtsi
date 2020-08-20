@@ -139,7 +139,7 @@
 		src-clock-name = "csi3phytimer_clk_src";
 		clock-cntl-level = "svs", "svs_l1", "nominal", "turbo";
 		clock-rates =
-			<240000000 0 133330000 0>,
+			<240000000 0 200000000 0>,
 			<341330000 0 200000000 0>,
 			<341330000 0 268800000 0>,
 			<384000000 0 268800000 0>;
