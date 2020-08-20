@@ -90,6 +90,7 @@ struct cam_hw_fence_map_entry {
  * @resrouce_handle:       list of the resource handle
  * @timestamp:             time stamp
  * @request_id:            request identifier
+ * @evt_param:             event parameter
  *
  */
 struct cam_hw_done_event_data {
@@ -97,6 +98,7 @@ struct cam_hw_done_event_data {
 	uint32_t           resource_handle[CAM_NUM_OUT_PER_COMP_IRQ_MAX];
 	struct timeval     timestamp;
 	uint64_t           request_id;
+	uint32_t           evt_param;
 };
 
 /**
