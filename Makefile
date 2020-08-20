@@ -9,7 +9,6 @@ ifeq ($(CONFIG_ARCH_KONA), y)
 LINUXINCLUDE    += -include $(srctree)/techpack/display/config/konadispconf.h
 endif
 
-ifneq ($(CONFIG_ARCH_QTI_VM), y)
 ifeq ($(CONFIG_ARCH_LAHAINA), y)
      ifeq ($(CONFIG_QGKI), y)
 		include $(srctree)/techpack/display/config/lahainadisp.conf
@@ -19,6 +18,15 @@ LINUXINCLUDE    += -include $(srctree)/techpack/display/config/lahainadispconf.h
 LINUXINCLUDE    += -include $(srctree)/techpack/display/config/gki_lahainadispconf.h
      endif
 endif
+
+ifeq ($(CONFIG_ARCH_HOLI), y)
+     ifeq ($(CONFIG_QGKI), y)
+		include $(srctree)/techpack/display/config/holidisp.conf
+LINUXINCLUDE    += -include $(srctree)/techpack/display/config/holidispconf.h
+     else
+		include $(srctree)/techpack/display/config/gki_holidisp.conf
+LINUXINCLUDE    += -include $(srctree)/techpack/display/config/gki_holidispconf.h
+     endif
 endif
 
 LINUXINCLUDE    += \
@@ -43,4 +51,3 @@ LINUXINCLUDE    += -include $(srctree)/techpack/display/config/bengaldispconf.h
 endif
 
 obj-$(CONFIG_DRM_MSM) += msm/
-obj-$(CONFIG_MSM_SDE_ROTATOR) += rotator/

@@ -115,8 +115,11 @@ static void sde_hw_dsc_disable(struct sde_hw_dsc *hw_dsc)
 	dsc_c = &hw_dsc->hw;
 	SDE_REG_WRITE(dsc_c, DSC_CFG + idx, 0);
 
-	/* common register */
-	SDE_REG_WRITE(dsc_c, DSC_CMN_MAIN_CNF, 0);
+	if (_dsc_subblk_offset(hw_dsc, SDE_DSC_ENC, &idx))
+		return;
+
+	SDE_REG_WRITE(dsc_c, ENC_DF_CTRL + idx, 0);
+	SDE_REG_WRITE(dsc_c, DSC_MAIN_CONF + idx, 0);
 }
 
 static void sde_hw_dsc_config(struct sde_hw_dsc *hw_dsc,
@@ -140,21 +143,21 @@ static void sde_hw_dsc_config(struct sde_hw_dsc *hw_dsc,
 	if (mode & DSC_MODE_SPLIT_PANEL)
 		data |= BIT(0);
 
-	if (mode & DSC_MODE_MULTIPLEX) {
-		if (dsc->dsc_4hsmerge_en)
-			slice_count_per_enc = dsc->config.slice_count >> 2;
-		else
-			slice_count_per_enc = dsc->config.slice_count >> 1;
-
+	if (mode & DSC_MODE_MULTIPLEX)
 		data |= BIT(1);
-	}
+
+	if (dsc->dsc_4hsmerge_en)
+		slice_count_per_enc = dsc->config.slice_count >> 2;
+	else if ((mode & DSC_MODE_MULTIPLEX) || (dsc->half_panel_pu))
+		slice_count_per_enc = dsc->config.slice_count >> 1;
 
 	data |= (slice_count_per_enc & 0x3) << 7;
 	SDE_REG_WRITE(dsc_c, DSC_CMN_MAIN_CNF, data);
 
 	data = (dsc->initial_lines & 0xff);
 	data |= ((mode & DSC_MODE_VIDEO) ? 1 : 0) << 9;
-	data |= (ich_reset_override ? 1 : 0) << 10;
+	if (ich_reset_override)
+		data |= 0xC00; // set bit 10 and 11
 	data |= (_dsc_calc_ob_max_addr(hw_dsc, slice_count_per_enc) << 18);
 
 	SDE_REG_WRITE(dsc_c, ENC_DF_CTRL + idx, data);

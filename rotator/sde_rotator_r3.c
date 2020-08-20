@@ -1220,7 +1220,7 @@ static void sde_hw_rotator_map_vaddr(struct sde_dbg_buf *dbgbuf,
 
 	if (dbgbuf->dmabuf && (dbgbuf->buflen > 0)) {
 		dma_buf_begin_cpu_access(dbgbuf->dmabuf, DMA_FROM_DEVICE);
-		dbgbuf->vaddr = dma_buf_kmap(dbgbuf->dmabuf, 0);
+		dbgbuf->vaddr = dma_buf_vmap(dbgbuf->dmabuf);
 		SDEROT_DBG("vaddr mapping: 0x%pK/%ld w:%d/h:%d\n",
 				dbgbuf->vaddr, dbgbuf->buflen,
 				dbgbuf->width, dbgbuf->height);
@@ -4082,12 +4082,6 @@ int sde_rotator_r3_init(struct sde_rot_mgr *mgr)
 		atomic_set(&rot->timestamp[i], 0);
 		INIT_LIST_HEAD(&rot->sbuf_ctx[i]);
 	}
-
-	/* set rotator CBCR to shutoff memory/periphery on clock off.*/
-	clk_set_flags(mgr->rot_clk[SDE_ROTATOR_CLK_MDSS_ROT].clk,
-			CLKFLAG_NORETAIN_MEM);
-	clk_set_flags(mgr->rot_clk[SDE_ROTATOR_CLK_MDSS_ROT].clk,
-			CLKFLAG_NORETAIN_PERIPH);
 
 	mdata->sde_rot_hw = rot;
 	return 0;

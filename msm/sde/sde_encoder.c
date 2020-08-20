@@ -162,7 +162,7 @@ static void _sde_encoder_pm_qos_add_request(struct drm_encoder *drm_enc)
 	cpu_dma_latency = sde_kms->catalog->perf.cpu_dma_latency;
 	cpumask_clear(&sde_enc->valid_cpu_mask);
 
-	if (sde_enc->mode_info.frame_rate > FPS60)
+	if (sde_enc->mode_info.frame_rate > DEFAULT_FPS)
 		cpu_mask = to_cpumask(&sde_kms->catalog->perf.cpu_mask_perf);
 	if (!cpu_mask &&
 			sde_encoder_check_curr_mode(drm_enc,
@@ -546,6 +546,7 @@ void sde_encoder_destroy(struct drm_encoder *drm_enc)
 {
 	struct sde_encoder_virt *sde_enc = NULL;
 	int i = 0;
+	unsigned int num_encs;
 
 	if (!drm_enc) {
 		SDE_ERROR("invalid encoder\n");
@@ -554,21 +555,29 @@ void sde_encoder_destroy(struct drm_encoder *drm_enc)
 
 	sde_enc = to_sde_encoder_virt(drm_enc);
 	SDE_DEBUG_ENC(sde_enc, "\n");
+	num_encs = sde_enc->num_phys_encs;
 
 	mutex_lock(&sde_enc->enc_lock);
 	sde_rsc_client_destroy(sde_enc->rsc_client);
 
-	for (i = 0; i < sde_enc->num_phys_encs; i++) {
+	for (i = 0; i < num_encs; i++) {
 		struct sde_encoder_phys *phys;
 
 		phys = sde_enc->phys_vid_encs[i];
 		if (phys && phys->ops.destroy) {
 			phys->ops.destroy(phys);
 			--sde_enc->num_phys_encs;
-			sde_enc->phys_encs[i] = NULL;
+			sde_enc->phys_vid_encs[i] = NULL;
 		}
 
 		phys = sde_enc->phys_cmd_encs[i];
+		if (phys && phys->ops.destroy) {
+			phys->ops.destroy(phys);
+			--sde_enc->num_phys_encs;
+			sde_enc->phys_cmd_encs[i] = NULL;
+		}
+
+		phys = sde_enc->phys_encs[i];
 		if (phys && phys->ops.destroy) {
 			phys->ops.destroy(phys);
 			--sde_enc->num_phys_encs;
@@ -1787,7 +1796,6 @@ static int _sde_encoder_rc_pre_modeset(struct drm_encoder *drm_enc,
 	}
 
 	sde_encoder_irq_control(drm_enc, false);
-	_sde_encoder_modeset_helper_locked(drm_enc, sw_event);
 
 	SDE_EVT32(DRMID(drm_enc), sw_event, sde_enc->rc_state,
 		SDE_ENC_RC_STATE_MODESET, SDE_EVTLOG_FUNC_CASE5);
@@ -1823,7 +1831,6 @@ static int _sde_encoder_rc_post_modeset(struct drm_encoder *drm_enc,
 		goto end;
 	}
 
-	_sde_encoder_modeset_helper_locked(drm_enc, sw_event);
 	sde_encoder_irq_control(drm_enc, true);
 
 	_sde_encoder_update_rsc_client(drm_enc, true);
@@ -2396,7 +2403,8 @@ static void _sde_encoder_input_handler_register(
 	struct sde_encoder_virt *sde_enc = to_sde_encoder_virt(drm_enc);
 	int rc;
 
-	if (!sde_encoder_check_curr_mode(drm_enc, MSM_DISPLAY_CMD_MODE))
+	if (!sde_encoder_check_curr_mode(drm_enc, MSM_DISPLAY_CMD_MODE) ||
+		!sde_enc->input_event_enabled)
 		return;
 
 	if (sde_enc->input_handler && !sde_enc->input_handler->private) {
@@ -2417,7 +2425,8 @@ static void _sde_encoder_input_handler_unregister(
 {
 	struct sde_encoder_virt *sde_enc = to_sde_encoder_virt(drm_enc);
 
-	if (!sde_encoder_check_curr_mode(drm_enc, MSM_DISPLAY_CMD_MODE))
+	if (!sde_encoder_check_curr_mode(drm_enc, MSM_DISPLAY_CMD_MODE) ||
+		!sde_enc->input_event_enabled)
 		return;
 
 	if (sde_enc->input_handler && sde_enc->input_handler->private) {
@@ -3690,6 +3699,53 @@ static void sde_encoder_input_event_work_handler(struct kthread_work *work)
 			SDE_ENC_RC_EVENT_EARLY_WAKEUP);
 }
 
+static void sde_encoder_early_wakeup_work_handler(struct kthread_work *work)
+{
+	struct sde_encoder_virt *sde_enc = container_of(work,
+			struct sde_encoder_virt, early_wakeup_work);
+
+	if (!sde_enc) {
+		SDE_ERROR("invalid sde encoder\n");
+		return;
+	}
+
+	SDE_ATRACE_BEGIN("encoder_early_wakeup");
+	sde_encoder_resource_control(&sde_enc->base,
+			SDE_ENC_RC_EVENT_EARLY_WAKEUP);
+	SDE_ATRACE_END("encoder_early_wakeup");
+}
+
+void sde_encoder_early_wakeup(struct drm_encoder *drm_enc)
+{
+	struct sde_encoder_virt *sde_enc = NULL;
+	struct msm_drm_thread *disp_thread = NULL;
+	struct msm_drm_private *priv = NULL;
+
+	priv = drm_enc->dev->dev_private;
+	sde_enc = to_sde_encoder_virt(drm_enc);
+
+	if (!sde_encoder_check_curr_mode(drm_enc, MSM_DISPLAY_CMD_MODE)) {
+		SDE_DEBUG_ENC(sde_enc,
+			"should only early wake up command mode display\n");
+		return;
+	}
+
+	if (!sde_enc->crtc || (sde_enc->crtc->index
+			>= ARRAY_SIZE(priv->event_thread))) {
+		SDE_DEBUG_ENC(sde_enc, "invalid CRTC: %d or crtc index: %d\n",
+			sde_enc->crtc == NULL,
+			sde_enc->crtc ? sde_enc->crtc->index : -EINVAL);
+		return;
+	}
+
+	disp_thread = &priv->disp_thread[sde_enc->crtc->index];
+
+	SDE_ATRACE_BEGIN("queue_early_wakeup_work");
+	kthread_queue_work(&disp_thread->worker,
+				&sde_enc->early_wakeup_work);
+	SDE_ATRACE_END("queue_early_wakeup_work");
+}
+
 int sde_encoder_poll_line_counts(struct drm_encoder *drm_enc)
 {
 	static const uint64_t timeout_us = 50000;
@@ -4117,7 +4173,7 @@ int sde_encoder_helper_reset_mixers(struct sde_encoder_phys *phys_enc,
 		/* only enable border color on LM */
 		if (phys_enc->hw_ctl->ops.setup_blendstage)
 			phys_enc->hw_ctl->ops.setup_blendstage(
-				phys_enc->hw_ctl, hw_lm->idx, NULL);
+				phys_enc->hw_ctl, hw_lm->idx, NULL, false);
 	}
 
 	if (!lm_valid) {
@@ -4257,7 +4313,6 @@ static ssize_t _sde_encoder_misr_setup(struct file *file,
 		const char __user *user_buf, size_t count, loff_t *ppos)
 {
 	struct sde_encoder_virt *sde_enc;
-	int rc;
 	char buf[MISR_BUFF_SIZE + 1];
 	size_t buff_copy;
 	u32 frame_count, enable;
@@ -4291,15 +4346,9 @@ static ssize_t _sde_encoder_misr_setup(struct file *file,
 	if (sscanf(buf, "%u %u", &enable, &frame_count) != 2)
 		return -EINVAL;
 
-	rc = pm_runtime_get_sync(drm_enc->dev->dev);
-	if (rc < 0)
-		return rc;
-
 	sde_enc->misr_enable = enable;
 	sde_enc->misr_reconfigure = true;
 	sde_enc->misr_frame_count = frame_count;
-	sde_encoder_misr_configure(&sde_enc->base, enable, frame_count);
-	pm_runtime_put_sync(drm_enc->dev->dev);
 	return count;
 }
 
@@ -4630,6 +4679,8 @@ static int sde_encoder_setup_display(struct sde_encoder_virt *sde_enc,
 	    (disp_info->capabilities & MSM_DISPLAY_CAP_VID_MODE))
 		sde_enc->idle_pc_enabled = sde_kms->catalog->has_idle_pc;
 
+	sde_enc->input_event_enabled = sde_kms->catalog->wakeup_with_touch;
+
 	mutex_lock(&sde_enc->enc_lock);
 	for (i = 0; i < disp_info->num_of_h_tiles && !ret; i++) {
 		/*
@@ -4796,7 +4847,8 @@ struct drm_encoder *sde_encoder_init_with_ops(
 		sde_enc->rsc_client = NULL;
 	}
 
-	if (disp_info->capabilities & MSM_DISPLAY_CAP_CMD_MODE) {
+	if (disp_info->capabilities & MSM_DISPLAY_CAP_CMD_MODE &&
+		sde_enc->input_event_enabled) {
 		ret = _sde_encoder_input_handler(sde_enc);
 		if (ret)
 			SDE_ERROR(
@@ -4811,6 +4863,9 @@ struct drm_encoder *sde_encoder_init_with_ops(
 
 	kthread_init_work(&sde_enc->input_event_work,
 			sde_encoder_input_event_work_handler);
+
+	kthread_init_work(&sde_enc->early_wakeup_work,
+			sde_encoder_early_wakeup_work_handler);
 
 	kthread_init_work(&sde_enc->esd_trigger_work,
 			sde_encoder_esd_trigger_work_handler);

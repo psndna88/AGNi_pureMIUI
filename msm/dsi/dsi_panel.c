@@ -477,6 +477,14 @@ static int dsi_panel_pinctrl_init(struct dsi_panel *panel)
 		goto error;
 	}
 
+	panel->pinctrl.pwm_pin =
+		pinctrl_lookup_state(panel->pinctrl.pinctrl, "pwm_pin");
+
+	if (IS_ERR_OR_NULL(panel->pinctrl.pwm_pin)) {
+		panel->pinctrl.pwm_pin = NULL;
+		DSI_DEBUG("failed to get pinctrl pwm_pin");
+	}
+
 error:
 	return rc;
 }
@@ -501,7 +509,8 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 	u32 bl_lvl)
 {
 	int rc = 0;
-	struct mipi_dsi_device *dsi;
+	unsigned long mode_flags = 0;
+	struct mipi_dsi_device *dsi = NULL;
 
 	if (!panel || (bl_lvl > 0xffff)) {
 		DSI_ERR("invalid params\n");
@@ -509,6 +518,10 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 	}
 
 	dsi = &panel->mipi_device;
+	if (unlikely(panel->bl_config.lp_mode)) {
+		mode_flags = dsi->mode_flags;
+		dsi->mode_flags |= MIPI_DSI_MODE_LPM;
+	}
 
 	if (panel->bl_config.bl_inverted_dbv)
 		bl_lvl = (((bl_lvl & 0xff) << 8) | (bl_lvl >> 8));
@@ -516,6 +529,9 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 	rc = mipi_dsi_dcs_set_display_brightness(dsi, bl_lvl);
 	if (rc < 0)
 		DSI_ERR("failed to update dcs backlight:%d\n", bl_lvl);
+
+	if (unlikely(panel->bl_config.lp_mode))
+		dsi->mode_flags = mode_flags;
 
 	return rc;
 }
@@ -647,6 +663,14 @@ static int dsi_panel_pwm_register(struct dsi_panel *panel)
 		DSI_ERR("[%s] failed to request pwm, rc=%d\n", panel->name,
 			rc);
 		return rc;
+	}
+
+	if (panel->pinctrl.pwm_pin) {
+		rc = pinctrl_select_state(panel->pinctrl.pinctrl,
+			panel->pinctrl.pwm_pin);
+		if (rc)
+			DSI_ERR("[%s] failed to set pwm pinctrl, rc=%d\n",
+				panel->name, rc);
 	}
 
 	return 0;
@@ -1045,7 +1069,7 @@ static int dsi_panel_parse_misc_host_config(struct dsi_host_common_cfg *host,
 					    struct dsi_parser_utils *utils,
 					    const char *name)
 {
-	u32 val = 0;
+	u32 val = 0, line_no = 0, window = 0;
 	int rc = 0;
 	bool panel_cphy_mode = false;
 
@@ -1078,6 +1102,22 @@ static int dsi_panel_parse_misc_host_config(struct dsi_host_common_cfg *host,
 	host->phy_type = panel_cphy_mode ? DSI_PHY_TYPE_CPHY
 						: DSI_PHY_TYPE_DPHY;
 
+	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-dma-schedule-line",
+				  &line_no);
+	if (rc)
+		host->dma_sched_line = 0;
+	else
+		host->dma_sched_line = line_no;
+
+	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-dma-schedule-window",
+				  &window);
+	if (rc)
+		host->dma_sched_window = 0;
+	else
+		host->dma_sched_window = window;
+
+	DSI_DEBUG("[%s] DMA scheduling parameters Line: %d Window: %d\n", name,
+			host->dma_sched_line, host->dma_sched_window);
 	return 0;
 }
 
@@ -1338,7 +1378,6 @@ static int dsi_panel_parse_video_host_config(struct dsi_video_engine_cfg *cfg,
 	const char *traffic_mode;
 	u32 vc_id = 0;
 	u32 val = 0;
-	u32 line_no = 0;
 
 	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-h-sync-pulse", &val);
 	if (rc) {
@@ -1399,17 +1438,6 @@ static int dsi_panel_parse_video_host_config(struct dsi_video_engine_cfg *cfg,
 		cfg->vc_id = 0;
 	} else {
 		cfg->vc_id = vc_id;
-	}
-
-	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-dma-schedule-line",
-				  &line_no);
-	if (rc) {
-		DSI_DEBUG("[%s] set default dma scheduling line no\n", name);
-		cfg->dma_sched_line = 0x1;
-		/* do not fail since we have default value */
-		rc = 0;
-	} else {
-		cfg->dma_sched_line = line_no;
 	}
 
 error:
@@ -1663,7 +1691,7 @@ static int dsi_panel_create_cmd_packets(const char *data,
 		cmd[i].msg.type = data[0];
 		cmd[i].last_command = (data[1] == 1);
 		cmd[i].msg.channel = data[2];
-		cmd[i].msg.flags |= (data[3] == 1 ? MIPI_DSI_MSG_REQ_ACK : 0);
+		cmd[i].msg.flags |= data[3];
 		cmd[i].msg.ctrl = 0;
 		cmd[i].post_wait_ms = cmd[i].msg.wait_ms = data[4];
 		cmd[i].msg.tx_len = ((data[5] << 8) | (data[6]));
@@ -2124,10 +2152,11 @@ static int dsi_panel_parse_bl_config(struct dsi_panel *panel)
 {
 	int rc = 0;
 	u32 val = 0;
-	const char *bl_type;
-	const char *data;
+	const char *bl_type = NULL;
+	const char *data = NULL;
+	const char *state = NULL;
 	struct dsi_parser_utils *utils = &panel->utils;
-	char *bl_name;
+	char *bl_name = NULL;
 
 	if (!strcmp(panel->type, "primary"))
 		bl_name = "qcom,mdss-dsi-bl-pmic-control-type";
@@ -2196,6 +2225,15 @@ static int dsi_panel_parse_bl_config(struct dsi_panel *panel)
 
 	panel->bl_config.bl_inverted_dbv = utils->read_bool(utils->data,
 		"qcom,mdss-dsi-bl-inverted-dbv");
+
+	state = utils->get_property(utils->data, "qcom,bl-dsc-cmd-state", NULL);
+	if (!state || !strcmp(state, "dsi_hs_mode"))
+		panel->bl_config.lp_mode = false;
+	else if (!strcmp(state, "dsi_lp_mode"))
+		panel->bl_config.lp_mode = true;
+	else
+		DSI_ERR("bl-dsc-cmd-state command state unrecognized-%s\n",
+			state);
 
 	if (panel->bl_config.type == DSI_BACKLIGHT_PWM) {
 		rc = dsi_panel_parse_bl_pwm_config(panel);
@@ -3646,7 +3684,7 @@ void dsi_panel_calc_dsi_transfer_time(struct dsi_host_common_cfg *config,
 	struct dsi_mode_info *timing = &mode->timing;
 	struct dsi_display_mode *display_mode;
 	u32 jitter_numer, jitter_denom, prefill_lines;
-	u32 min_threshold_us, prefill_time_us;
+	u32 min_threshold_us, prefill_time_us, max_transfer_us;
 	u16 bpp;
 
 	/* Packet overlead in bits,2 bytes header + 2 bytes checksum
@@ -3687,6 +3725,26 @@ void dsi_panel_calc_dsi_transfer_time(struct dsi_host_common_cfg *config,
 
 	timing->min_dsi_clk_hz = min_bitclk_hz;
 
+	min_threshold_us = mult_frac(frame_time_us,
+			jitter_numer, (jitter_denom * 100));
+	/*
+	 * Increase the prefill_lines proportionately as recommended
+	 * 35lines for 60fps, 52 for 90fps, 70lines for 120fps.
+	 */
+	prefill_lines = mult_frac(MIN_PREFILL_LINES,
+			timing->refresh_rate, 60);
+
+	prefill_time_us = mult_frac(frame_time_us, prefill_lines,
+			(timing->v_active));
+
+	/*
+	 * Threshold is sum of panel jitter time, prefill line time
+	 * plus 64usec buffer time.
+	 */
+	min_threshold_us = min_threshold_us + 64 + prefill_time_us;
+
+	DSI_DEBUG("min threshold time=%d\n", min_threshold_us);
+
 	if (timing->clk_rate_hz) {
 		/* adjust the transfer time proportionately for bit clk*/
 		dsi_transfer_time_us = frame_time_us * min_bitclk_hz;
@@ -3694,30 +3752,13 @@ void dsi_panel_calc_dsi_transfer_time(struct dsi_host_common_cfg *config,
 		timing->dsi_transfer_time_us = dsi_transfer_time_us;
 
 	} else if (mode->priv_info->mdp_transfer_time_us) {
+		max_transfer_us = frame_time_us - min_threshold_us;
+		mode->priv_info->mdp_transfer_time_us = min(
+				mode->priv_info->mdp_transfer_time_us,
+				max_transfer_us);
 		timing->dsi_transfer_time_us =
 			mode->priv_info->mdp_transfer_time_us;
 	} else {
-
-		min_threshold_us = mult_frac(frame_time_us,
-				jitter_numer, (jitter_denom * 100));
-		/*
-		 * Increase the prefill_lines proportionately as recommended
-		 * 35lines for 60fps, 52 for 90fps, 70lines for 120fps.
-		 */
-		prefill_lines = mult_frac(MIN_PREFILL_LINES,
-				timing->refresh_rate, 60);
-
-		prefill_time_us = mult_frac(frame_time_us, prefill_lines,
-				(timing->v_active));
-
-		/*
-		 * Threshold is sum of panel jitter time, prefill line time
-		 * plus 100usec buffer time.
-		 */
-		min_threshold_us = min_threshold_us + 100 + prefill_time_us;
-
-		DSI_DEBUG("min threshold time=%d\n", min_threshold_us);
-
 		if (min_threshold_us > frame_threshold_us)
 			frame_threshold_us = min_threshold_us;
 
@@ -4440,6 +4481,9 @@ int dsi_panel_pre_disable(struct dsi_panel *panel)
 	}
 
 	mutex_lock(&panel->panel_lock);
+
+	if (gpio_is_valid(panel->bl_config.en_gpio))
+		gpio_set_value(panel->bl_config.en_gpio, 0);
 
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_PRE_OFF);
 	if (rc) {

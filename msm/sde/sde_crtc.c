@@ -896,9 +896,12 @@ static u32 _sde_crtc_get_displays_affected(struct drm_crtc *crtc,
 			disp_bitmask = BIT(1);		/* right only */
 		else
 			disp_bitmask = BIT(0) | BIT(1); /* left and right */
+	} else if (sde_crtc->mixers_swapped) {
+		disp_bitmask = BIT(0);
 	} else {
 		for (i = 0; i < sde_crtc->num_mixers; i++) {
-			if (!sde_kms_rect_is_null(&crtc_state->lm_roi[i]))
+			if (!sde_kms_rect_is_null(
+					&crtc_state->lm_roi[i]))
 				disp_bitmask |= BIT(i);
 		}
 	}
@@ -1113,7 +1116,7 @@ static void _sde_crtc_program_lm_output_roi(struct drm_crtc *crtc)
 	struct sde_crtc_state *crtc_state;
 	const struct sde_rect *lm_roi;
 	struct sde_hw_mixer *hw_lm;
-	bool right_mixer;
+	bool right_mixer = false;
 	int lm_idx;
 
 	if (!crtc)
@@ -1127,14 +1130,12 @@ static void _sde_crtc_program_lm_output_roi(struct drm_crtc *crtc)
 
 		lm_roi = &crtc_state->lm_roi[lm_idx];
 		hw_lm = sde_crtc->mixers[lm_idx].hw_lm;
-		right_mixer = lm_idx % MAX_MIXERS_PER_LAYOUT;
+		if (!sde_crtc->mixers_swapped)
+			right_mixer = lm_idx % MAX_MIXERS_PER_LAYOUT;
 
 		SDE_EVT32(DRMID(crtc_state->base.crtc), lm_idx,
 				lm_roi->x, lm_roi->y, lm_roi->w, lm_roi->h,
 				right_mixer);
-
-		if (sde_kms_rect_is_null(lm_roi))
-			continue;
 
 		hw_lm->cfg.out_width = lm_roi->w;
 		hw_lm->cfg.out_height = lm_roi->h;
@@ -1664,13 +1665,8 @@ static void _sde_crtc_blend_setup(struct drm_crtc *crtc,
 		ctl = mixer[i].hw_ctl;
 		lm = mixer[i].hw_lm;
 
-		if (sde_kms_rect_is_null(lm_roi)) {
-			SDE_DEBUG(
-				"%s: lm%d leave ctl%d mask 0 since null roi\n",
-					sde_crtc->name, lm->idx - LM_0,
-					ctl->idx - CTL_0);
-			continue;
-		}
+		if (sde_kms_rect_is_null(lm_roi))
+			sde_crtc->mixers[i].mixer_op_mode = 0;
 
 		lm->ops.setup_alpha_out(lm, mixer[i].mixer_op_mode);
 
@@ -1684,8 +1680,18 @@ static void _sde_crtc_blend_setup(struct drm_crtc *crtc,
 			ctl->idx - CTL_0,
 			cfg.pending_flush_mask);
 
-		ctl->ops.setup_blendstage(ctl, mixer[i].hw_lm->idx,
-				&sde_crtc->stage_cfg[lm_layout]);
+		if (sde_kms_rect_is_null(lm_roi)) {
+			SDE_DEBUG(
+				"%s: lm%d leave ctl%d mask 0 since null roi\n",
+					sde_crtc->name, lm->idx - LM_0,
+					ctl->idx - CTL_0);
+			ctl->ops.setup_blendstage(ctl, mixer[i].hw_lm->idx,
+					NULL, true);
+		} else {
+			ctl->ops.setup_blendstage(ctl, mixer[i].hw_lm->idx,
+					&sde_crtc->stage_cfg[lm_layout],
+					false);
+		}
 	}
 
 	_sde_crtc_program_lm_output_roi(crtc);
@@ -2159,6 +2165,8 @@ static void _sde_crtc_dest_scaler_setup(struct drm_crtc *crtc)
 				hw_ctl->ops.update_bitmask_mixer(
 						hw_ctl, hw_lm->idx, 1);
 		}
+
+		sde_cp_mode_switch_prop_dirty(crtc);
 	}
 }
 
@@ -3202,7 +3210,7 @@ static void sde_crtc_atomic_begin(struct drm_crtc *crtc,
 	struct drm_device *dev;
 	struct sde_kms *sde_kms;
 	struct sde_splash_display *splash_display;
-	bool cont_splash_enabled = false;
+	bool cont_splash_enabled = false, apply_cp_prop = false;
 	size_t i;
 
 	if (!crtc) {
@@ -3274,8 +3282,10 @@ static void sde_crtc_atomic_begin(struct drm_crtc *crtc,
 			cont_splash_enabled = true;
 	}
 
+	apply_cp_prop = sde_kms->catalog->trusted_vm_env ?
+			true : sde_crtc->enabled;
 	if (sde_kms_is_cp_operation_allowed(sde_kms) &&
-			(cont_splash_enabled || sde_crtc->enabled))
+			(cont_splash_enabled || apply_cp_prop))
 		sde_cp_crtc_apply_properties(crtc);
 
 	/*
@@ -5857,7 +5867,6 @@ static ssize_t _sde_crtc_misr_setup(struct file *file,
 {
 	struct drm_crtc *crtc;
 	struct sde_crtc *sde_crtc;
-	int rc;
 	char buf[MISR_BUFF_SIZE + 1];
 	u32 frame_count, enable;
 	size_t buff_copy;
@@ -5892,14 +5901,9 @@ static ssize_t _sde_crtc_misr_setup(struct file *file,
 		return -EINVAL;
 	}
 
-	rc = pm_runtime_get_sync(crtc->dev->dev);
-	if (rc < 0)
-		return rc;
-
 	sde_crtc->misr_enable_debugfs = enable;
+	sde_crtc->misr_frame_count = frame_count;
 	sde_crtc->misr_reconfigure = true;
-	sde_crtc_misr_setup(crtc, enable, frame_count);
-	pm_runtime_put_sync(crtc->dev->dev);
 
 	return count;
 }

@@ -673,8 +673,10 @@ static int dsi_display_read_status(struct dsi_display_ctrl *ctrl,
 	lenp = config->status_valid_params ?: config->status_cmds_rlen;
 	count = config->status_cmd.count;
 	cmds = config->status_cmd.cmds;
-	flags |= (DSI_CTRL_CMD_FETCH_MEMORY | DSI_CTRL_CMD_READ |
-		  DSI_CTRL_CMD_CUSTOM_DMA_SCHED);
+	flags |= (DSI_CTRL_CMD_FETCH_MEMORY | DSI_CTRL_CMD_READ);
+
+	if (ctrl->ctrl->host_config.panel_mode == DSI_OP_VIDEO_MODE)
+		flags |= DSI_CTRL_CMD_CUSTOM_DMA_SCHED;
 
 	for (i = 0; i < count; ++i) {
 		memset(config->status_buf, 0x0, SZ_4K);
@@ -682,6 +684,10 @@ static int dsi_display_read_status(struct dsi_display_ctrl *ctrl,
 			cmds[i].msg.flags |= MIPI_DSI_MSG_LASTCOMMAND;
 			flags |= DSI_CTRL_CMD_LAST_COMMAND;
 		}
+		if ((cmds[i].msg.flags & MIPI_DSI_MSG_CMD_DMA_SCHED) &&
+			 (panel->panel_initialized))
+			flags |= DSI_CTRL_CMD_CUSTOM_DMA_SCHED;
+
 		if (config->status_cmd.state == DSI_CMD_SET_STATE_LP)
 			cmds[i].msg.flags |= MIPI_DSI_MSG_USE_LPM;
 		cmds[i].msg.rx_buf = config->status_buf;
@@ -916,6 +922,9 @@ static int dsi_display_cmd_prepare(const char *cmd_buf, u32 cmd_buf_len,
 		return -EINVAL;
 	}
 
+	if (cmd->last_command)
+		cmd->msg.flags |= MIPI_DSI_MSG_LASTCOMMAND;
+
 	for (i = 0; i < cmd->msg.tx_len; i++)
 		payload[i] = cmd_buf[7 + i];
 
@@ -972,8 +981,12 @@ static int dsi_display_cmd_rx(struct dsi_display *display,
 		goto error;
 	}
 
-	flags |= (DSI_CTRL_CMD_FETCH_MEMORY | DSI_CTRL_CMD_READ |
-			DSI_CTRL_CMD_CUSTOM_DMA_SCHED);
+	flags |= (DSI_CTRL_CMD_FETCH_MEMORY | DSI_CTRL_CMD_READ);
+	if ((m_ctrl->ctrl->host_config.panel_mode == DSI_OP_VIDEO_MODE) ||
+			((cmd->msg.flags & MIPI_DSI_MSG_CMD_DMA_SCHED) &&
+			 (display->panel->panel_initialized)))
+		flags |= DSI_CTRL_CMD_CUSTOM_DMA_SCHED;
+
 	rc = dsi_ctrl_cmd_transfer(m_ctrl->ctrl, &cmd->msg, &flags);
 	if (rc <= 0)
 		DSI_ERR("rx cmd transfer failed rc = %d\n", rc);
@@ -1617,6 +1630,107 @@ error:
 	return len;
 }
 
+static ssize_t debugfs_update_cmd_scheduling_params(struct file *file,
+				  const char __user *user_buf,
+				  size_t user_len,
+				  loff_t *ppos)
+{
+	struct dsi_display *display = file->private_data;
+	struct dsi_display_ctrl *display_ctrl;
+	char *buf;
+	int rc = 0;
+	u32 line = 0, window = 0;
+	size_t len;
+	int i;
+
+	if (!display)
+		return -ENODEV;
+
+	if (*ppos)
+		return 0;
+
+	buf = kzalloc(256, GFP_KERNEL);
+	if (ZERO_OR_NULL_PTR(buf))
+		return -ENOMEM;
+
+	len = min_t(size_t, user_len, 255);
+	if (copy_from_user(buf, user_buf, len)) {
+		rc = -EINVAL;
+		goto error;
+	}
+
+	buf[len] = '\0'; /* terminate the string */
+
+	if (sscanf(buf, "%d %d", &line, &window) != 2)
+		return -EFAULT;
+
+	display_for_each_ctrl(i, display) {
+		struct dsi_ctrl *ctrl;
+
+		display_ctrl = &display->ctrl[i];
+		if (!display_ctrl->ctrl)
+			continue;
+
+		ctrl = display_ctrl->ctrl;
+		ctrl->host_config.common_config.dma_sched_line = line;
+		ctrl->host_config.common_config.dma_sched_window = window;
+	}
+
+	rc = len;
+
+error:
+	kfree(buf);
+	return rc;
+}
+
+static ssize_t debugfs_read_cmd_scheduling_params(struct file *file,
+				 char __user *user_buf,
+				 size_t user_len,
+				 loff_t *ppos)
+{
+	struct dsi_display *display = file->private_data;
+	struct dsi_display_ctrl *m_ctrl;
+	struct dsi_ctrl *ctrl;
+	char *buf;
+	u32 len = 0;
+	int rc = 0;
+	size_t max_len = min_t(size_t, user_len, SZ_4K);
+
+	if (!display)
+		return -ENODEV;
+
+	if (*ppos)
+		return 0;
+
+	m_ctrl = &display->ctrl[display->cmd_master_idx];
+	ctrl = m_ctrl->ctrl;
+
+	buf = kzalloc(max_len, GFP_KERNEL);
+	if (ZERO_OR_NULL_PTR(buf))
+		return -ENOMEM;
+
+	len += scnprintf(buf, max_len, "Schedule command window start: %d\n",
+			ctrl->host_config.common_config.dma_sched_line);
+	len += scnprintf((buf + len), max_len - len,
+			"Schedule command window width: %d\n",
+			ctrl->host_config.common_config.dma_sched_window);
+
+	if (len > max_len)
+		len = max_len;
+
+	if (copy_to_user(user_buf, buf, len)) {
+		rc = -EFAULT;
+		goto error;
+	}
+
+	*ppos += len;
+
+error:
+	kfree(buf);
+	return len;
+
+}
+
 static const struct file_operations dump_info_fops = {
 	.open = simple_open,
 	.read = debugfs_dump_info_read,
@@ -1637,6 +1751,12 @@ static const struct file_operations esd_check_mode_fops = {
 	.open = simple_open,
 	.write = debugfs_alter_esd_check_mode,
 	.read = debugfs_read_esd_check_mode,
+};
+
+static const struct file_operations dsi_command_scheduling_fops = {
+	.open = simple_open,
+	.write = debugfs_update_cmd_scheduling_params,
+	.read = debugfs_read_cmd_scheduling_params,
 };
 
 static int dsi_display_debugfs_init(struct dsi_display *display)
@@ -1686,6 +1806,18 @@ static int dsi_display_debugfs_init(struct dsi_display *display)
 	if (IS_ERR_OR_NULL(dump_file)) {
 		rc = PTR_ERR(dump_file);
 		DSI_ERR("[%s] debugfs for esd check mode failed, rc=%d\n",
+		       display->name, rc);
+		goto error_remove_dir;
+	}
+
+	dump_file = debugfs_create_file("cmd_sched_params",
+					0644,
+					dir,
+					display,
+					&dsi_command_scheduling_fops);
+	if (IS_ERR_OR_NULL(dump_file)) {
+		rc = PTR_ERR(dump_file);
+		DSI_ERR("[%s] debugfs for cmd scheduling file failed, rc=%d\n",
 		       display->name, rc);
 		goto error_remove_dir;
 	}
@@ -2855,6 +2987,12 @@ static int dsi_display_broadcast_cmd(struct dsi_display *display,
 		m_flags |= DSI_CTRL_CMD_LAST_COMMAND;
 	}
 
+	if ((msg->flags & MIPI_DSI_MSG_CMD_DMA_SCHED) &&
+				(display->panel->panel_initialized)) {
+		flags |= DSI_CTRL_CMD_CUSTOM_DMA_SCHED;
+		m_flags |= DSI_CTRL_CMD_CUSTOM_DMA_SCHED;
+	}
+
 	if (display->queue_cmd_waits ||
 			msg->flags & MIPI_DSI_MSG_ASYNC_OVERRIDE) {
 		flags |= DSI_CTRL_CMD_ASYNC_WAIT;
@@ -3022,6 +3160,10 @@ static ssize_t dsi_host_transfer(struct mipi_dsi_host *host,
 		if (display->queue_cmd_waits ||
 				msg->flags & MIPI_DSI_MSG_ASYNC_OVERRIDE)
 			cmd_flags |= DSI_CTRL_CMD_ASYNC_WAIT;
+
+		if ((msg->flags & MIPI_DSI_MSG_CMD_DMA_SCHED) &&
+				(display->panel->panel_initialized))
+			cmd_flags |= DSI_CTRL_CMD_CUSTOM_DMA_SCHED;
 
 		rc = dsi_ctrl_cmd_transfer(display->ctrl[ctrl_idx].ctrl, msg,
 				&cmd_flags);
@@ -5324,23 +5466,18 @@ static void dsi_display_unbind(struct device *dev,
 	struct platform_device *pdev = to_platform_device(dev);
 	int i, rc = 0;
 
-	if (!dev || !pdev) {
+	if (!dev || !pdev || !master) {
 		DSI_ERR("invalid param(s)\n");
 		return;
 	}
 
 	display = platform_get_drvdata(pdev);
-	if (!display) {
+	if (!display || !display->panel_node) {
 		DSI_ERR("invalid display\n");
 		return;
 	}
 
 	mutex_lock(&display->display_lock);
-
-	rc = dsi_panel_drv_deinit(display->panel);
-	if (rc)
-		DSI_ERR("[%s] failed to deinit panel driver, rc=%d\n",
-		       display->name, rc);
 
 	rc = dsi_display_mipi_host_deinit(display);
 	if (rc)
@@ -6284,7 +6421,9 @@ static void _dsi_display_populate_bit_clks(struct dsi_display *display,
 	struct dsi_dyn_clk_caps *dyn_clk_caps;
 	struct dsi_display_mode *src, *dst;
 	struct dsi_host_common_cfg *cfg;
+	struct dsi_display_mode_priv_info *priv_info;
 	int i, j, total_modes, bpp, lanes = 0;
+	size_t size = 0;
 
 	if (!display || !mode_idx)
 		return;
@@ -6338,6 +6477,13 @@ static void _dsi_display_populate_bit_clks(struct dsi_display *display,
 				return;
 			}
 			memcpy(dst, src, sizeof(struct dsi_display_mode));
+
+			size = sizeof(struct dsi_display_mode_priv_info);
+			priv_info = kzalloc(size, GFP_KERNEL);
+			dst->priv_info = priv_info;
+			if (dst->priv_info)
+				memcpy(dst->priv_info, src->priv_info, size);
+
 			dst->timing.clk_rate_hz = dyn_clk_caps->bit_clk_list[i];
 
 			dsi_display_adjust_mode_timing(dyn_clk_caps, dst, lanes,
@@ -7546,14 +7692,12 @@ int dsi_display_pre_kickoff(struct drm_connector *connector,
 		struct dsi_display *display,
 		struct msm_display_kickoff_params *params)
 {
-	int rc = 0;
+	int rc = 0, ret = 0;
 	int i;
 
 	/* check and setup MISR */
 	if (display->misr_enable)
 		_dsi_display_setup_misr(display);
-
-	rc = dsi_display_set_roi(display, params->rois);
 
 	/* dynamic DSI clock setting */
 	if (atomic_read(&display->clkrate_change_pending)) {
@@ -7572,7 +7716,6 @@ int dsi_display_pre_kickoff(struct drm_connector *connector,
 		 */
 		display_for_each_ctrl(i, display) {
 			struct dsi_ctrl *ctrl = display->ctrl[i].ctrl;
-			int ret = 0;
 
 			ret = dsi_ctrl_wait_for_cmd_mode_mdp_idle(ctrl);
 			if (ret)
@@ -7589,6 +7732,9 @@ wait_failure:
 		dsi_panel_release_panel_lock(display->panel);
 		mutex_unlock(&display->display_lock);
 	}
+
+	if (!ret)
+		rc = dsi_display_set_roi(display, params->rois);
 
 	return rc;
 }
@@ -7875,7 +8021,8 @@ static void dsi_display_handle_poms_te(struct work_struct *work)
 {
 	struct dsi_display *display = NULL;
 	struct delayed_work *dw = to_delayed_work(work);
-	struct mipi_dsi_device *dsi;
+	struct mipi_dsi_device *dsi = NULL;
+	struct dsi_panel *panel = NULL;
 	int rc = 0;
 
 	display = container_of(dw, struct dsi_display, poms_te_work);
@@ -7884,8 +8031,18 @@ static void dsi_display_handle_poms_te(struct work_struct *work)
 		return;
 	}
 
-	dsi = &display->panel->mipi_device;
+	panel = display->panel;
+	mutex_lock(&panel->panel_lock);
+	if (!dsi_panel_initialized(panel)) {
+		rc = -EINVAL;
+		goto error;
+	}
+
+	dsi = &panel->mipi_device;
 	rc = mipi_dsi_dcs_set_tear_off(dsi);
+
+error:
+	mutex_unlock(&panel->panel_lock);
 	if (rc < 0)
 		DSI_ERR("failed to set tear off\n");
 }
