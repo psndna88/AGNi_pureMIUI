@@ -790,11 +790,10 @@ static int msm_vidc_get_extra_input_buff_count(struct msm_vidc_inst *inst)
 	core = inst->core;
 
 	/*
-	 * For a non-realtime session, extra buffers are not required.
 	 * For thumbnail session, extra buffers are not required as
 	 * neither dcvs nor batching will be enabled.
 	 */
-	if (!is_realtime_session(inst) || is_thumbnail_session(inst))
+	if (is_thumbnail_session(inst))
 		return extra_input_count;
 
 	if (is_decode_session(inst)) {
@@ -1350,13 +1349,15 @@ static inline u32 calculate_vpxd_scratch_size(struct msm_vidc_inst *inst,
 			((BIN_BUFFER_THRESHOLD * 3) >> 1)) *
 			VPX_DECODER_FRAME_CONCURENCY_LVL *
 			VPX_DECODER_FRAME_BIN_HDR_BUDGET_RATIO_NUM /
-			VPX_DECODER_FRAME_BIN_HDR_BUDGET_RATIO_DEN,
+			VPX_DECODER_FRAME_BIN_HDR_BUDGET_RATIO_DEN /
+			num_vpp_pipes,
 			VENUS_DMA_ALIGNMENT);
 		binbuffer2_size = ALIGN(max_t(u32, size_yuv,
 			((BIN_BUFFER_THRESHOLD * 3) >> 1)) *
 			VPX_DECODER_FRAME_CONCURENCY_LVL *
 			VPX_DECODER_FRAME_BIN_RES_BUDGET_RATIO_NUM /
-			VPX_DECODER_FRAME_BIN_RES_BUDGET_RATIO_DEN,
+			VPX_DECODER_FRAME_BIN_RES_BUDGET_RATIO_DEN /
+			num_vpp_pipes,
 			VENUS_DMA_ALIGNMENT);
 		size = binbuffer1_size + binbuffer2_size;
 		size = size * num_vpp_pipes;

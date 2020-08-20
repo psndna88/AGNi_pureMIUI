@@ -59,6 +59,11 @@ static inline bool is_low_power_session(struct msm_vidc_inst *inst)
 	return !!(inst->flags & VIDC_LOW_POWER);
 }
 
+static inline bool is_cvp_supported(struct msm_vidc_inst *inst)
+{
+	return inst->core && !inst->core->resources.no_cvp;
+}
+
 static inline struct v4l2_ctrl *get_ctrl(struct msm_vidc_inst *inst,
 	u32 id)
 {
@@ -151,6 +156,17 @@ static inline bool is_decode_session(struct msm_vidc_inst *inst)
 static inline bool is_encode_session(struct msm_vidc_inst *inst)
 {
 	return inst->session_type == MSM_VIDC_ENCODER;
+}
+
+static inline bool is_encode_batching(struct msm_vidc_inst *inst)
+{
+	struct v4l2_ctrl *ctrl;
+
+	if (inst->session_type != MSM_VIDC_ENCODER)
+		return false;
+
+	ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDC_SUPERFRAME);
+	return !!ctrl->val;
 }
 
 static inline bool is_primary_output_mode(struct msm_vidc_inst *inst)
@@ -384,7 +400,8 @@ int msm_comm_set_cvp_skip_ratio(struct msm_vidc_inst *inst,
 	uint32_t capture_rate, uint32_t cvp_rate);
 int msm_comm_fetch_ts_framerate(struct msm_vidc_inst *inst,
 	struct v4l2_buffer *b);
-int msm_comm_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us);
+int msm_comm_store_timestamp(struct msm_vidc_inst *inst, s64 timestamp_us,
+		bool is_eos);
 void msm_comm_release_timestamps(struct msm_vidc_inst *inst);
 u32 msm_comm_get_max_framerate(struct msm_vidc_inst *inst);
 u32 msm_comm_calc_framerate(struct msm_vidc_inst *inst,	u64 timestamp_us,

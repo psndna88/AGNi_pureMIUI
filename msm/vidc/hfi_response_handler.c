@@ -496,11 +496,21 @@ static int hfi_process_sys_rel_resource_done(u32 device_id,
 	return 0;
 }
 
+static void copy_hfi_to_hal_buf_req(struct hal_buffer_requirements *dst,
+	struct hfi_buffer_requirements *src) {
+	dst->buffer_size = src->buffer_size;
+	dst->buffer_count_min = (u16)src->buffer_count_min;
+	dst->buffer_count_min_host = (u16)src->buffer_count_min_host;
+	dst->buffer_count_actual = (u16)src->buffer_count_actual;
+	dst->buffer_alignment = (u16)src->buffer_alignment;
+}
+
 static void hfi_process_sess_get_prop_buf_req(
 	struct hfi_msg_session_property_info_packet *prop,
 	struct buffer_requirements *buffreq, u32 sid)
 {
 	struct hfi_buffer_requirements *hfi_buf_req;
+	struct hal_buffer_requirements *hal_buf_req;
 	u32 req_bytes;
 
 	if (!prop) {
@@ -529,79 +539,70 @@ static void hfi_process_sess_get_prop_buf_req(
 					hfi_buf_req->buffer_type);
 		switch (hfi_buf_req->buffer_type) {
 		case HFI_BUFFER_INPUT:
-			memcpy(&buffreq->buffer[0], hfi_buf_req,
-				sizeof(struct hfi_buffer_requirements));
-			buffreq->buffer[0].buffer_type = HAL_BUFFER_INPUT;
+			hal_buf_req = &buffreq->buffer[0];
+			hal_buf_req->buffer_type = HAL_BUFFER_INPUT;
 			break;
 		case HFI_BUFFER_OUTPUT:
-			memcpy(&buffreq->buffer[1], hfi_buf_req,
-			sizeof(struct hfi_buffer_requirements));
-			buffreq->buffer[1].buffer_type = HAL_BUFFER_OUTPUT;
+			hal_buf_req = &buffreq->buffer[1];
+			hal_buf_req->buffer_type = HAL_BUFFER_OUTPUT;
 			break;
 		case HFI_BUFFER_OUTPUT2:
-			memcpy(&buffreq->buffer[2], hfi_buf_req,
-				sizeof(struct hfi_buffer_requirements));
-			buffreq->buffer[2].buffer_type = HAL_BUFFER_OUTPUT2;
+			hal_buf_req = &buffreq->buffer[2];
+			hal_buf_req->buffer_type = HAL_BUFFER_OUTPUT2;
 			break;
 		case HFI_BUFFER_EXTRADATA_INPUT:
-			memcpy(&buffreq->buffer[3], hfi_buf_req,
-				sizeof(struct hfi_buffer_requirements));
-			buffreq->buffer[3].buffer_type =
+			hal_buf_req = &buffreq->buffer[3];
+			hal_buf_req->buffer_type =
 				HAL_BUFFER_EXTRADATA_INPUT;
 			break;
 		case HFI_BUFFER_EXTRADATA_OUTPUT:
-			memcpy(&buffreq->buffer[4], hfi_buf_req,
-				sizeof(struct hfi_buffer_requirements));
-			buffreq->buffer[4].buffer_type =
+			hal_buf_req = &buffreq->buffer[4];
+			hal_buf_req->buffer_type =
 				HAL_BUFFER_EXTRADATA_OUTPUT;
 			break;
 		case HFI_BUFFER_EXTRADATA_OUTPUT2:
-			memcpy(&buffreq->buffer[5], hfi_buf_req,
-				sizeof(struct hfi_buffer_requirements));
-			buffreq->buffer[5].buffer_type =
+			hal_buf_req = &buffreq->buffer[5];
+			hal_buf_req->buffer_type =
 				HAL_BUFFER_EXTRADATA_OUTPUT2;
 			break;
 		case HFI_BUFFER_COMMON_INTERNAL_SCRATCH:
-			memcpy(&buffreq->buffer[6], hfi_buf_req,
-			sizeof(struct hfi_buffer_requirements));
-			buffreq->buffer[6].buffer_type =
+			hal_buf_req = &buffreq->buffer[6];
+			hal_buf_req->buffer_type =
 				HAL_BUFFER_INTERNAL_SCRATCH;
 			break;
 		case HFI_BUFFER_COMMON_INTERNAL_SCRATCH_1:
-			memcpy(&buffreq->buffer[7], hfi_buf_req,
-				sizeof(struct hfi_buffer_requirements));
-			buffreq->buffer[7].buffer_type =
+			hal_buf_req = &buffreq->buffer[7];
+			hal_buf_req->buffer_type =
 				HAL_BUFFER_INTERNAL_SCRATCH_1;
 			break;
 		case HFI_BUFFER_COMMON_INTERNAL_SCRATCH_2:
-			memcpy(&buffreq->buffer[8], hfi_buf_req,
-				sizeof(struct hfi_buffer_requirements));
-			buffreq->buffer[8].buffer_type =
+			hal_buf_req = &buffreq->buffer[8];
+			hal_buf_req->buffer_type =
 				HAL_BUFFER_INTERNAL_SCRATCH_2;
 			break;
 		case HFI_BUFFER_INTERNAL_PERSIST:
-			memcpy(&buffreq->buffer[9], hfi_buf_req,
-			sizeof(struct hfi_buffer_requirements));
-			buffreq->buffer[9].buffer_type =
+			hal_buf_req = &buffreq->buffer[9];
+			hal_buf_req->buffer_type =
 				HAL_BUFFER_INTERNAL_PERSIST;
 			break;
 		case HFI_BUFFER_INTERNAL_PERSIST_1:
-			memcpy(&buffreq->buffer[10], hfi_buf_req,
-				sizeof(struct hfi_buffer_requirements));
-			buffreq->buffer[10].buffer_type =
+			hal_buf_req = &buffreq->buffer[10];
+			hal_buf_req->buffer_type =
 				HAL_BUFFER_INTERNAL_PERSIST_1;
 			break;
 		case HFI_BUFFER_COMMON_INTERNAL_RECON:
-			memcpy(&buffreq->buffer[11], hfi_buf_req,
-			sizeof(struct hfi_buffer_requirements));
-			buffreq->buffer[11].buffer_type =
+			hal_buf_req = &buffreq->buffer[11];
+			hal_buf_req->buffer_type =
 				HAL_BUFFER_INTERNAL_RECON;
 			break;
 		default:
+			hal_buf_req = NULL;
 			s_vpr_e(sid, "%s: bad_buffer_type: %d\n",
 				__func__, hfi_buf_req->buffer_type);
 			break;
 		}
+		if (hal_buf_req)
+			copy_hfi_to_hal_buf_req(hal_buf_req, hfi_buf_req);
 		req_bytes -= sizeof(struct hfi_buffer_requirements);
 		hfi_buf_req++;
 	}

@@ -366,7 +366,7 @@ int msm_vidc_qbuf(void *instance, struct media_device *mdev,
 	int rc = 0;
 	unsigned int i = 0;
 	struct buf_queue *q = NULL;
-	u64 timestamp_us = 0;
+	s64 timestamp_us = 0;
 	u32 cr = 0;
 
 	if (!inst || !inst->core || !b || !valid_v4l2_buffer(b, inst)) {
@@ -430,14 +430,17 @@ int msm_vidc_qbuf(void *instance, struct media_device *mdev,
 		&& b->type == INPUT_MPLANE)
 		b->flags |= V4L2_BUF_FLAG_PERF_MODE;
 
-	timestamp_us = (u64)((b->timestamp.tv_sec * 1000000ULL) +
+	timestamp_us = (s64)((b->timestamp.tv_sec * 1000000) +
 		b->timestamp.tv_usec);
 	if (is_decode_session(inst) && b->type == INPUT_MPLANE) {
 		if (inst->flush_timestamps)
 			msm_comm_release_timestamps(inst);
 		inst->flush_timestamps = false;
 
-		rc = msm_comm_store_timestamp(inst, timestamp_us);
+		if (!(b->flags & V4L2_BUF_FLAG_CODECCONFIG))
+			rc = msm_comm_store_timestamp(inst, timestamp_us,
+					b->flags & V4L2_BUF_FLAG_EOS);
+
 		if (rc)
 			goto unlock;
 		inst->clk_data.frame_rate = msm_comm_get_max_framerate(inst);
@@ -508,7 +511,9 @@ int msm_vidc_dqbuf(void *instance, struct v4l2_buffer *b)
 			return -EINVAL;
 		}
 	}
-	if (is_decode_session(inst) && b->type == OUTPUT_MPLANE)
+	if (is_decode_session(inst) &&
+		b->type == OUTPUT_MPLANE &&
+		!(b->flags & V4L2_BUF_FLAG_CODECCONFIG))
 		msm_comm_fetch_ts_framerate(inst, b);
 
 	return rc;
@@ -792,6 +797,11 @@ static bool msm_vidc_set_cvp_metadata(struct msm_vidc_inst *inst) {
 	if (!inst) {
 		d_vpr_e("%s: invalid params\n", __func__);
 		return false;
+	}
+
+	if (!is_cvp_supported(inst)) {
+		s_vpr_h(inst->sid, "%s cvp is not supported", __func__);
+		return true;
 	}
 
 	if (inst->prop.extradata_ctrls & EXTRADATA_ENC_INPUT_CVP)
@@ -1403,13 +1413,13 @@ static int try_get_ctrl_for_instance(struct msm_vidc_inst *inst,
 		break;
 	case V4L2_CID_MIN_BUFFERS_FOR_CAPTURE:
 		ctrl->val = inst->fmts[OUTPUT_PORT].count_min_host;
-		s_vpr_h(inst->sid, "g_min: hal_buffer %d min buffers %d\n",
-			HAL_BUFFER_OUTPUT, ctrl->val);
+		s_vpr_h(inst->sid, "g_min: OUTPUT_PORT count_min_host %d\n",
+			ctrl->val);
 		break;
 	case V4L2_CID_MIN_BUFFERS_FOR_OUTPUT:
 		ctrl->val = inst->fmts[INPUT_PORT].count_min_host;
-		s_vpr_h(inst->sid, "g_min: hal_buffer %d min buffers %d\n",
-			HAL_BUFFER_INPUT, ctrl->val);
+		s_vpr_h(inst->sid, "g_min: INPUT_PORT count_min_host %d\n",
+			ctrl->val);
 		break;
 	case V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA:
 		ctrl->val = inst->prop.extradata_ctrls;

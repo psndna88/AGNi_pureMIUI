@@ -17,7 +17,7 @@
 #define MIN_NUM_DEC_CAPTURE_BUFFERS 4
 /* Y=16(0-9bits), Cb(10-19bits)=Cr(20-29bits)=128, black by default */
 #define DEFAULT_VIDEO_CONCEAL_COLOR_BLACK 0x8020010
-#define MAX_VP9D_INST_COUNT 6
+#define MAX_VP9D_INST_COUNT 3
 
 static const char *const mpeg_video_h264_profile[] = {
 	"Baseline",
@@ -1195,10 +1195,9 @@ int msm_vdec_set_secure_mode(struct msm_vidc_inst *inst)
 	if (ctrl->val) {
 		if (!(codec == V4L2_PIX_FMT_HEVC ||
 			codec == V4L2_PIX_FMT_H264 ||
-			codec == V4L2_PIX_FMT_VP9 ||
-			codec == V4L2_PIX_FMT_MPEG2)) {
+			codec == V4L2_PIX_FMT_VP9)) {
 			s_vpr_e(inst->sid,
-				"%s: Secure allowed for HEVC/H264/VP9/MPEG2\n",
+				"%s: Secure allowed for HEVC/H264/VP9\n",
 				__func__);
 			return -EINVAL;
 		}

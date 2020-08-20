@@ -72,12 +72,12 @@ static struct msm_vidc_codec_data bengal_codec_data[] =  {
 };
 
 static struct msm_vidc_codec_data shima_codec_data[] =  {
-	CODEC_ENTRY(V4L2_PIX_FMT_H264, MSM_VIDC_ENCODER, 0, 675, 320),
-	CODEC_ENTRY(V4L2_PIX_FMT_HEVC, MSM_VIDC_ENCODER, 0, 675, 320),
-	CODEC_ENTRY(V4L2_PIX_FMT_MPEG2, MSM_VIDC_DECODER, 0, 200, 200),
-	CODEC_ENTRY(V4L2_PIX_FMT_H264, MSM_VIDC_DECODER, 0, 200, 200),
-	CODEC_ENTRY(V4L2_PIX_FMT_HEVC, MSM_VIDC_DECODER, 0, 200, 200),
-	CODEC_ENTRY(V4L2_PIX_FMT_VP9, MSM_VIDC_DECODER, 0, 200, 200),
+	CODEC_ENTRY(V4L2_PIX_FMT_H264, MSM_VIDC_ENCODER, 25, 675, 320),
+	CODEC_ENTRY(V4L2_PIX_FMT_HEVC, MSM_VIDC_ENCODER, 25, 675, 320),
+	CODEC_ENTRY(V4L2_PIX_FMT_MPEG2, MSM_VIDC_DECODER, 25, 200, 200),
+	CODEC_ENTRY(V4L2_PIX_FMT_H264, MSM_VIDC_DECODER, 25, 200, 200),
+	CODEC_ENTRY(V4L2_PIX_FMT_HEVC, MSM_VIDC_DECODER, 25, 200, 200),
+	CODEC_ENTRY(V4L2_PIX_FMT_VP9, MSM_VIDC_DECODER, 60, 200, 200),
 };
 
 static struct msm_vidc_codec_data holi_codec_data[] =  {
@@ -357,6 +357,16 @@ static struct msm_vidc_codec_capability lahaina_capabilities[] = {
 	{CAP_MBS_PER_SECOND, DEC, MPEG2, 36, 244800, 1, 244800},
 	{CAP_FRAMERATE, DEC, MPEG2, 1, 30, 1, 30},
 	{CAP_BITRATE, DEC, MPEG2, 1, 40000000, 1, 20000000},
+
+	/* VP9 decoder-specific */
+	{CAP_FRAME_WIDTH, DEC, VP9, 96, 4096, 1, 1920},
+	{CAP_FRAME_HEIGHT, DEC, VP9, 96, 4096, 1, 1080},
+	/* (4096 * 2304) / 256 */
+	{CAP_MBS_PER_FRAME, DEC, VP9, 36, 36864, 1, 36864},
+	/* ((4096 * 2304) / 256) * 60*/
+	{CAP_MBS_PER_SECOND, DEC, VP9, 36, 2211840, 1, 2211840},
+	{CAP_FRAMERATE, DEC, VP9, 1, 60, 1, 60},
+	{CAP_BITRATE, DEC, VP9, 1, 100000000, 1, 20000000},
 
 	/* Secure usecase specific */
 	{CAP_SECURE_FRAME_WIDTH, DEC, CODECS_ALL, 96, 4096, 1, 1920},
@@ -1398,6 +1408,10 @@ static struct msm_vidc_common_data holi_common_data[] = {
 		.key = "qcom,fw-vpp-cycles",
 		.value = 225975,
 	},
+	{
+		.key = "qcom,no-cvp",
+		.value = 1,
+	},
 };
 
 static struct msm_vidc_efuse_data shima_efuse_data[] = {
@@ -1621,11 +1635,9 @@ void *vidc_get_drv_data(struct device *dev)
 		goto exit;
 
 	/* Check for sku version */
-	if (of_find_property(dev->of_node, "sku-index", NULL)) {
-		rc = msm_vidc_read_efuse(driver_data, dev);
-		if (rc)
-			goto exit;
-	}
+	rc = msm_vidc_read_efuse(driver_data, dev);
+	if (rc)
+		goto exit;
 
 	if (!strcmp(match->compatible, "qcom,lahaina-vidc")) {
 		ddr_type = of_fdt_get_ddrtype();

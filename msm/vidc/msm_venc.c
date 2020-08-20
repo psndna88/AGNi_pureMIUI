@@ -32,8 +32,6 @@
 #define DEFAULT_QP 0xA
 #define DEFAULT_QP_PACKED 0xA0A0A
 #define MIN_CHROMA_QP_OFFSET -12
-#define MAX_CHROMA_QP_OFFSET 0
-#define DEFAULT_CHROMA_QP_OFFSET 0
 #define MAX_INTRA_REFRESH_MBS ((7680 * 4320) >> 8)
 #define MAX_LTR_FRAME_COUNT 10
 #define MAX_NUM_B_FRAMES 1
@@ -927,8 +925,8 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		.name = "Chroma QP Index Offset",
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.minimum = MIN_CHROMA_QP_OFFSET,
-		.maximum = MAX_CHROMA_QP_OFFSET,
-		.default_value = DEFAULT_CHROMA_QP_OFFSET,
+		.maximum = INT_MAX,
+		.default_value = INT_MAX,
 		.step = 1,
 	},
 	{
@@ -2120,6 +2118,7 @@ int msm_venc_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us)
 	struct msm_vidc_timestamps *entry, *node, *prev = NULL;
 	int count = 0;
 	int rc = 0;
+	struct v4l2_ctrl *superframe_ctrl = NULL;
 
 	if (!inst || !inst->core) {
 		d_vpr_e("%s: invalid parameters\n", __func__);
@@ -2172,7 +2171,13 @@ int msm_venc_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us)
 	/* if framerate changed and stable for 2 frames, set to firmware */
 	if (entry->framerate == prev->framerate &&
 		entry->framerate != inst->clk_data.frame_rate) {
-		inst->clk_data.frame_rate = entry->framerate;
+		superframe_ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDC_SUPERFRAME);
+		if (superframe_ctrl->val > 1)
+			inst->clk_data.frame_rate = entry->framerate * superframe_ctrl->val;
+		else
+			inst->clk_data.frame_rate = entry->framerate;
+		s_vpr_l(inst->sid, "%s: updated fps to %u\n",
+			__func__, (inst->clk_data.frame_rate >> 16));
 		msm_venc_set_frame_rate(inst);
 	}
 
@@ -2478,8 +2483,9 @@ int msm_venc_set_intra_period(struct msm_vidc_inst *inst)
 			V4L2_CID_MPEG_VIDC_VIDEO_HEVC_MAX_HIER_CODING_LAYER);
 	codec = get_v4l2_codec(inst);
 
+	intra_period.pframes = gop_size->val;
+
 	if (!max_layer->val && codec == V4L2_PIX_FMT_H264) {
-		intra_period.pframes = gop_size->val;
 		/*
 		 * At this point we've already made decision on bframe.
 		 * Control value gives updated bframe value.
@@ -3373,7 +3379,7 @@ int msm_venc_set_chroma_qp_offset(struct msm_vidc_inst *inst)
 	hdev = inst->core->device;
 
 	chr = get_ctrl(inst, V4L2_CID_MPEG_VIDEO_H264_CHROMA_QP_INDEX_OFFSET);
-	if (chr->val != MIN_CHROMA_QP_OFFSET)
+	if (chr->val == INT_MAX || (chr->val != 0 && chr->val != -12))
 		return 0;
 
 	f = &inst->fmts[INPUT_PORT].v4l2_fmt;
@@ -3405,10 +3411,6 @@ int msm_venc_set_chroma_qp_offset(struct msm_vidc_inst *inst)
 	 */
 	chroma_qp.chroma_offset = (chr->val + 12) << 16 | (chr->val + 12);
 	s_vpr_h(inst->sid, "%s: %x\n", __func__, chroma_qp.chroma_offset);
-
-	/* TODO: Remove this check after firmware support added for 8-bit */
-	if (inst->bit_depth == MSM_VIDC_BIT_DEPTH_8)
-		return 0;
 
 	rc = call_hfi_op(hdev, session_set_property, inst->session,
 		HFI_PROPERTY_PARAM_HEVC_PPS_CB_CR_OFFSET, &chroma_qp,
@@ -4603,6 +4605,12 @@ int msm_venc_set_cvp_skipratio(struct msm_vidc_inst *inst)
 		d_vpr_e("%s: invalid params %pK\n", __func__, inst);
 		return -EINVAL;
 	}
+
+	if (!is_cvp_supported(inst)) {
+		s_vpr_h(inst->sid, "%s cvp is not supported", __func__);
+		return rc;
+	}
+
 	if (!msm_vidc_cvp_usage)
 		return 0;
 
