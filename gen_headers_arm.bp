@@ -488,6 +488,8 @@ gen_headers_out_arm = [
     "linux/qbt1000.h",
     "linux/qcedev.h",
     "linux/qcota.h",
+    "linux/qg-profile.h",
+    "linux/qg.h",
     "linux/qnx4_fs.h",
     "linux/qnxtypes.h",
     "linux/qrng.h",
