@@ -1,4 +1,5 @@
-/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2020 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -54,7 +55,10 @@
 #include "dbm.h"
 #include "debug.h"
 #include "xhci.h"
-
+#undef dev_dbg
+#undef pr_debug
+#define dev_dbg dev_err
+#define pr_debug pr_err
 #define SDP_CONNETION_CHECK_TIME 10000 /* in ms */
 
 /* time out to wait for USB cable status notification (in ms)*/
@@ -3628,7 +3632,8 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 	 * in avoiding race conditions between xhci_plat_resume and
 	 * xhci_runtime_resume and also between hcd disconnect and xhci_resume.
 	 */
-	mdwc->sm_usb_wq = alloc_ordered_workqueue("k_sm_usb", WQ_FREEZABLE);
+	mdwc->sm_usb_wq = alloc_ordered_workqueue("k_sm_usb",
+						WQ_FREEZABLE | WQ_MEM_RECLAIM);
 	if (!mdwc->sm_usb_wq) {
 		destroy_workqueue(mdwc->dwc3_wq);
 		return -ENOMEM;
@@ -4516,8 +4521,10 @@ static int dwc3_msm_gadget_vbus_draw(struct dwc3_msm *mdwc, unsigned int mA)
 		 * bail out if suspend happened with float cable
 		 * connected
 		 */
+		/* xiaomi charger driver need this current config float current, so remove this qcom default return feature.
 		if (mA == 2)
 			return 0;
+		*/
 
 		if (!mA)
 			pval.intval = -ETIMEDOUT;
